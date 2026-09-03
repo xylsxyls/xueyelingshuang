@@ -1,19 +1,15 @@
 ﻿#include "Layer.h"
-
-namespace SplitViewer
+SplitViewerLayer::SplitViewerLayer() :
+root(new SplitViewerNode())
 {
-    Layer::Layer() :
-    root(new Node())
-    {
-        rect.left = 0.25;
-        rect.top = 0.25;
-        rect.right = 0.75;
-        rect.bottom = 0.75;
-    }
+    rect.left = 0.25;
+    rect.top = 0.25;
+    rect.right = 0.75;
+    rect.bottom = 0.75;
+}
 
-    Layer::~Layer()
-    {
-        delete root;
-        root = NULL;
-    }
+SplitViewerLayer::~SplitViewerLayer()
+{
+    delete root;
+    root = NULL;
 }

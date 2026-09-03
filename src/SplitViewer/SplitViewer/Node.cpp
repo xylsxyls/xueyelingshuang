@@ -1,45 +1,41 @@
 ﻿#include "Node.h"
-
-namespace SplitViewer
-{
-    Node::Node() :
-    kind(NODE_LEAF),
-    direction(SPLIT_HORIZONTAL),
+SplitViewerNode::SplitViewerNode() :
+kind(SPLITVIEWER_NODE_LEAF),
+    direction(SPLITVIEWER_SPLIT_HORIZONTAL),
     ratio(0.5),
     first(NULL),
     second(NULL)
-    {
+{
 
+}
+
+SplitViewerNode::~SplitViewerNode()
+{
+    delete first;
+    delete second;
+    first = NULL;
+    second = NULL;
+}
+
+bool SplitViewerNode::IsLeaf() const
+{
+    return kind == SPLITVIEWER_NODE_LEAF;
+}
+
+void SplitViewerNode::MakeSplit(SplitViewerSplitDirection splitDirection)
+{
+    if (!IsLeaf())
+    {
+        return;
     }
 
-    Node::~Node()
-    {
-        delete first;
-        delete second;
-        first = NULL;
-        second = NULL;
-    }
+    SplitViewerNode* oldLeaf = new SplitViewerNode();
+    oldLeaf->view.TakeFrom(view);
+    SplitViewerNode* newLeaf = new SplitViewerNode();
 
-    bool Node::IsLeaf() const
-    {
-        return kind == NODE_LEAF;
-    }
-
-    void Node::MakeSplit(SplitDirection splitDirection)
-    {
-        if (!IsLeaf())
-        {
-            return;
-        }
-
-        Node* oldLeaf = new Node();
-        oldLeaf->view.TakeFrom(view);
-        Node* newLeaf = new Node();
-
-        kind = NODE_SPLIT;
-        direction = splitDirection;
-        ratio = 0.5;
-        first = oldLeaf;
-        second = newLeaf;
-    }
+    kind = SPLITVIEWER_NODE_SPLIT;
+    direction = splitDirection;
+    ratio = 0.5;
+    first = oldLeaf;
+    second = newLeaf;
 }

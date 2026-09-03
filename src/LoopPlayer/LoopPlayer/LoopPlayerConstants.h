@@ -12,7 +12,7 @@ namespace LoopPlayer
     static const wchar_t kVideoClass[] = L"LoopPlayerVideoSurface";
     static const wchar_t kAppTitle[] = L"循环播放器";
 
-    static const UINT WM_PLAYER_EVENT = WM_APP + 1;
+    static const UINT WM_PLAYBACK_ENGINE_EVENT = WM_APP + 1;
     static const UINT_PTR TIMER_POSITION = 1;
     static const UINT_PTR TIMER_VIDEO_CLICK = 2;
     static const UINT_PTR TIMER_TITLE_DRAG = 3;

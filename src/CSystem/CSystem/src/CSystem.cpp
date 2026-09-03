@@ -24,8 +24,10 @@
 #include <termios.h>
 #include <sys/stat.h>
 #include <algorithm>
+#include <codecvt>
 #include <dirent.h>
 #include <dlfcn.h>
+#include <locale>
 #include <string.h>
 #endif
 #include <fstream>
@@ -96,6 +98,35 @@ static void Split(std::vector<std::string>& result, const std::string& splitStri
 	}
 	result.emplace_back(splitString, lastPosition);
 }
+
+// SetSystemError入参：errorText是可选错误输出对象，value是要写入的错误文本。
+// SetSystemError出参：errorText不为空时写入错误文本。
+// SetSystemError返回值：无。
+static void SetSystemError(std::string* errorText, const std::string& value)
+{
+	if (errorText != nullptr)
+	{
+		*errorText = value;
+	}
+}
+
+#ifdef __unix__
+// WidePathToUtf8入参：path是宽字符文件路径。
+// WidePathToUtf8出参：无。
+// WidePathToUtf8返回值：返回UTF-8文件路径，转换失败返回空字符串。
+static std::string WidePathToUtf8(const std::wstring& path)
+{
+	try
+	{
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+		return converter.to_bytes(path);
+	}
+	catch (...)
+	{
+		return "";
+	}
+}
+#endif
 
 #ifdef _MSC_VER
 // 枚举指定DirectShow设备类别，成功后调用方负责释放返回的枚举器。
@@ -1486,6 +1517,93 @@ bool CSystem::deleteFile(const char* path)
 		return false;
 	}
 	return ::remove(path) == 0;
+}
+
+FILE* CSystem::openBinaryOutputFile(const std::wstring& path, std::string* errorText)
+{
+	SetSystemError(errorText, "");
+	if (path.empty())
+	{
+		SetSystemError(errorText, "file path is empty");
+		return nullptr;
+	}
+
+#ifdef _WIN32
+	FILE* file = nullptr;
+	if (_wfopen_s(&file, path.c_str(), L"wb") != 0 || file == nullptr)
+	{
+		SetSystemError(errorText, "open binary output file failed");
+		return nullptr;
+	}
+	return file;
+#elif __unix__
+	std::string utf8Path = WidePathToUtf8(path);
+	if (utf8Path.empty())
+	{
+		SetSystemError(errorText, "convert file path to utf8 failed");
+		return nullptr;
+	}
+
+	FILE* file = fopen(utf8Path.c_str(), "wb");
+	if (file == nullptr)
+	{
+		SetSystemError(errorText, "open binary output file failed");
+		return nullptr;
+	}
+	return file;
+#else
+	SetSystemError(errorText, "unsupported platform");
+	return nullptr;
+#endif
+}
+
+bool CSystem::deleteFile(const std::wstring& path)
+{
+	if (path.empty())
+	{
+		return false;
+	}
+
+#ifdef _WIN32
+	return ::DeleteFileW(path.c_str()) ? true : false;
+#elif __unix__
+	std::string utf8Path = WidePathToUtf8(path);
+	if (utf8Path.empty())
+	{
+		return false;
+	}
+	return ::remove(utf8Path.c_str()) == 0;
+#else
+	return false;
+#endif
+}
+
+bool CSystem::fileExists(const std::wstring& path)
+{
+	if (path.empty())
+	{
+		return false;
+	}
+
+#ifdef _WIN32
+	DWORD attributes = ::GetFileAttributesW(path.c_str());
+	return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+#elif __unix__
+	std::string utf8Path = WidePathToUtf8(path);
+	if (utf8Path.empty())
+	{
+		return false;
+	}
+
+	struct stat fileStat;
+	if (::stat(utf8Path.c_str(), &fileStat) != 0)
+	{
+		return false;
+	}
+	return S_ISREG(fileStat.st_mode) ? true : false;
+#else
+	return false;
+#endif
 }
 
 std::string CSystem::inputString(const std::string& tip)

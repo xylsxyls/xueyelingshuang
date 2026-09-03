@@ -2,12 +2,17 @@
 #include "LoopPlayerConstants.h"
 #include "LoopPlayerUtils.h"
 #include "PlayerWindow.h"
+#include "CDump/CDumpAPI.h"
 
 using namespace LoopPlayer;
 
+/** 判断命令行参数是否表示启用debug日志
+@param [in] arg 命令行参数
+@return 是debug参数返回true，否则返回false
+*/
 static bool IsDebugArgument(const wchar_t* arg)
 {
-    if (!arg)
+    if (arg == nullptr)
     {
         return false;
     }
@@ -16,21 +21,6 @@ static bool IsDebugArgument(const wchar_t* arg)
            lstrcmpiW(arg, L"-debug") == 0 ||
            lstrcmpiW(arg, L"/debug") == 0 ||
            lstrcmpiW(arg, L"--debug") == 0;
-}
-
-// 进程异常兜底日志，便于定位未走正常退出流程的崩溃。
-static LONG WINAPI LoopPlayerUnhandledExceptionFilter(EXCEPTION_POINTERS* exceptionInfo)
-{
-    DWORD code = 0;
-    void* address = NULL;
-    if (exceptionInfo && exceptionInfo->ExceptionRecord)
-    {
-        code = exceptionInfo->ExceptionRecord->ExceptionCode;
-        address = exceptionInfo->ExceptionRecord->ExceptionAddress;
-    }
-
-    Logf(L"Unhandled exception: code=0x%08X, address=%p", code, address);
-    return EXCEPTION_EXECUTE_HANDLER;
 }
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int cmdShow)
@@ -56,16 +46,19 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int cmdShow)
     }
 
     SetLoggingEnabled(debugLogEnabled);
-    SetUnhandledExceptionFilter(LoopPlayerUnhandledExceptionFilter);
     ResetLogFile();
+    const bool dumpEnabled = CDump::declareDumpFile();
     Logf(L"================ LoopPlayer process start ================");
     Logf(L"Command line: %s", GetCommandLineW());
+    Logf(L"Debug logging enabled: %d, log files: %s", debugLogEnabled ? 1 : 0, GetLogFilePath().c_str());
+    Logf(L"CDump static library enabled: %d", dumpEnabled ? 1 : 0);
 
-    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (FAILED(hr))
     {
         Logf(L"CoInitializeEx failed: 0x%08X", static_cast<unsigned int>(hr));
-        MessageBoxW(NULL, L"COM 初始化失败。", kAppTitle, MB_ICONERROR | MB_OK);
+        MessageBoxW(nullptr, L"COM 初始化失败。", kAppTitle, MB_ICONERROR | MB_OK);
+        ShutdownLog();
         return 1;
     }
     Logf(L"CoInitializeEx succeeded");
@@ -75,7 +68,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int cmdShow)
     {
         Logf(L"MFStartup failed: 0x%08X", static_cast<unsigned int>(hr));
         CoUninitialize();
-        MessageBoxW(NULL, L"Media Foundation 初始化失败。", kAppTitle, MB_ICONERROR | MB_OK);
+        MessageBoxW(nullptr, L"Media Foundation 初始化失败。", kAppTitle, MB_ICONERROR | MB_OK);
+        ShutdownLog();
         return 1;
     }
     Logf(L"MFStartup succeeded");
@@ -85,28 +79,37 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int cmdShow)
     icc.dwICC = ICC_BAR_CLASSES | ICC_STANDARD_CLASSES;
     InitCommonControlsEx(&icc);
 
-    PlayerWindow window;
-    if (!window.Create(hInstance, cmdShow))
+    int exitCode = 0;
     {
-        MFShutdown();
-        CoUninitialize();
-        return 1;
-    }
+        PlayerWindow window;
+        if (!window.Create(hInstance, cmdShow))
+        {
+            MFShutdown();
+            CoUninitialize();
+            Logf(L"Process exit: create window failed");
+            ShutdownLog();
+            return 1;
+        }
 
-    if (!initialFilePath.empty())
-    {
-        window.LoadFile(initialFilePath.c_str());
-    }
+        if (!initialFilePath.empty())
+        {
+            window.LoadFile(initialFilePath.c_str());
+        }
 
-    MSG msg = { 0 };
-    while (GetMessageW(&msg, NULL, 0, 0) > 0)
-    {
-        TranslateMessage(&msg);
-        DispatchMessageW(&msg);
+        MSG msg = { 0 };
+        while (GetMessageW(&msg, nullptr, 0, 0) > 0)
+        {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+
+        exitCode = static_cast<int>(msg.wParam);
+        Logf(L"Message loop ended: code=%d", exitCode);
     }
 
     MFShutdown();
     CoUninitialize();
-    Logf(L"Process exit: code=%d", static_cast<int>(msg.wParam));
-    return static_cast<int>(msg.wParam);
+    Logf(L"Process exit: code=%d", exitCode);
+    ShutdownLog();
+    return exitCode;
 }

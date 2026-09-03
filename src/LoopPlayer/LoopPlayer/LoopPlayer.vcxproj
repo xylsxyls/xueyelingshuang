@@ -93,11 +93,14 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>mfplay.lib;mfplat.lib;mfuuid.lib;evr.lib;msimg32.lib;comctl32.lib;comdlg32.lib;ole32.lib;oleaut32.lib;uuid.lib;shell32.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>CDumpd.lib;LogManagerd.lib;CStringManagerd.lib;CSystemd.lib;IntDateTimed.lib;ReadWriteMutexd.lib;mfreadwrite.lib;mfplat.lib;mfuuid.lib;winmm.lib;msimg32.lib;comctl32.lib;comdlg32.lib;ole32.lib;oleaut32.lib;uuid.lib;shell32.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -107,8 +110,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -116,7 +121,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>mfplay.lib;mfplat.lib;mfuuid.lib;evr.lib;msimg32.lib;comctl32.lib;comdlg32.lib;ole32.lib;oleaut32.lib;uuid.lib;shell32.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>CDump.lib;LogManager.lib;CStringManager.lib;CSystem.lib;IntDateTime.lib;ReadWriteMutex.lib;mfreadwrite.lib;mfplat.lib;mfuuid.lib;winmm.lib;msimg32.lib;comctl32.lib;comdlg32.lib;ole32.lib;oleaut32.lib;uuid.lib;shell32.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -126,11 +132,14 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>mfplay.lib;mfplat.lib;mfuuid.lib;evr.lib;msimg32.lib;comctl32.lib;comdlg32.lib;ole32.lib;oleaut32.lib;uuid.lib;shell32.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>CDumpd.lib;LogManagerd.lib;CStringManagerd.lib;CSystemd.lib;IntDateTimed.lib;ReadWriteMutexd.lib;mfreadwrite.lib;mfplat.lib;mfuuid.lib;winmm.lib;msimg32.lib;comctl32.lib;comdlg32.lib;ole32.lib;oleaut32.lib;uuid.lib;shell32.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -140,8 +149,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -149,21 +160,28 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>mfplay.lib;mfplat.lib;mfuuid.lib;evr.lib;msimg32.lib;comctl32.lib;comdlg32.lib;ole32.lib;oleaut32.lib;uuid.lib;shell32.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>CDump.lib;LogManager.lib;CStringManager.lib;CSystem.lib;IntDateTime.lib;ReadWriteMutex.lib;mfreadwrite.lib;mfplat.lib;mfuuid.lib;winmm.lib;msimg32.lib;comctl32.lib;comdlg32.lib;ole32.lib;oleaut32.lib;uuid.lib;shell32.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AutoCriticalSectionLock.cpp" />
     <ClCompile Include="LoopPlayerUtils.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="PlayerCallback.cpp" />
+    <ClCompile Include="MfSourcePlaybackEngine.cpp" />
+    <ClCompile Include="PlaybackEngineTypes.cpp" />
     <ClCompile Include="PlayerWindow.cpp" />
+    <ClCompile Include="VideoTimelineProbe.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AutoCriticalSectionLock.h" />
     <ClInclude Include="LoopPlayerConstants.h" />
     <ClInclude Include="LoopPlayerPlatform.h" />
     <ClInclude Include="LoopPlayerUtils.h" />
-    <ClInclude Include="PlayerCallback.h" />
+    <ClInclude Include="MfSourcePlaybackEngine.h" />
+    <ClInclude Include="PlaybackEngineTypes.h" />
     <ClInclude Include="PlayerWindow.h" />
+    <ClInclude Include="VideoTimelineProbe.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

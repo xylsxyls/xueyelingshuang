@@ -1,21 +1,42 @@
 ﻿#pragma once
 
 #include "LoopPlayerPlatform.h"
-#include "PlayerCallback.h"
+#include "MfSourcePlaybackEngine.h"
+#include "VideoTimelineProbe.h"
 
 #include <string>
 
 namespace LoopPlayer
 {
+    /** 播放器主窗口，负责窗口交互、悬浮控制条、AB点、缩放拖动和播放引擎生命周期
+    */
     class PlayerWindow
     {
     public:
+        /** 构造函数，只做成员默认值初始化
+        */
         PlayerWindow();
 
+        /** 析构函数兜底释放播放引擎和字体资源
+        */
+        ~PlayerWindow();
+
+        /** 创建播放器窗口
+        @param [in] hinst 应用实例句柄
+        @param [in] cmdShow 初始显示状态
+        @return 创建成功返回true，否则返回false
+        */
         bool Create(HINSTANCE hinst, int cmdShow);
 
+        /** 获取主窗口句柄
+        @return 返回主窗口句柄
+        */
         HWND hwnd() const;
 
+        /** 加载媒体文件并自动开始播放
+        @param [in] path 媒体文件完整路径
+        @return 加载成功返回true，否则返回false
+        */
         bool LoadFile(const wchar_t* path);
 
     private:
@@ -38,6 +59,25 @@ namespace LoopPlayer
         void OnCreate();
 
         HWND CreateButton(const wchar_t* text, int id);
+
+        /** 把楷体字体应用到所有系统子控件
+        */
+        void ApplyControlFont();
+
+        /** 创建楷体字体对象，调用方负责DeleteObject
+        @param [in] height 字体高度
+        @param [in] weight 字体粗细
+        @return 创建成功返回字体句柄，否则返回NULL
+        */
+        HFONT CreateUiFont(int height, int weight) const;
+
+        /** 创建顶部加载视频图片按钮的悬浮提示
+        */
+        void CreateTopLoadToolTip();
+
+        /** 根据顶部浮层当前布局刷新加载按钮悬浮提示区域
+        */
+        void UpdateTopLoadToolTipRect();
 
         bool ReportFailure(const wchar_t* action, HRESULT hr);
 
@@ -81,7 +121,7 @@ namespace LoopPlayer
 
         void UpdatePauseIndicatorState();
 
-        void PaintPauseIndicator(int alpha);
+        void PaintPauseIndicator(HDC hdc, HWND hwnd, int alpha);
 
         void ShowZoomTip();
 
@@ -147,9 +187,17 @@ namespace LoopPlayer
 
         bool ReadDuration();
 
-        void DetectFrameDuration(IMFPMediaItem* item);
+        void DetectFrameDurationFromEngine();
 
-        bool GetPosition(REFERENCE_TIME& pos) const;
+        /** 把异常MP4的原始视频时间轴修正为播放器内部的逻辑时间轴
+        @param [in,out] info 需要修正的视频时间轴信息
+        @param [out] videoOffset 原始视频时间戳偏移量
+        */
+        void NormalizeVideoTimelineForPlayback(VideoTimelineInfo& info, REFERENCE_TIME& videoOffset) const;
+
+        void ApplyVideoTimelineDuration(const wchar_t* reason);
+
+        bool GetPosition(REFERENCE_TIME& pos);
 
         REFERENCE_TIME LoopMinLength() const;
 
@@ -170,8 +218,6 @@ namespace LoopPlayer
         bool IsShortActiveAbLoop() const;
 
         bool ShouldLogLoopReplay() const;
-
-        bool ShouldLogPlayerEvent(MFP_EVENT_TYPE eventType) const;
 
         bool IsMarkerSeekStillPending();
 
@@ -253,6 +299,8 @@ namespace LoopPlayer
 
         void ReplayFrom(REFERENCE_TIME pos, bool forcePauseBeforeSeek = false);
 
+        void LogPlaybackSnapshot(const wchar_t* reason, REFERENCE_TIME knownPos = -1);
+
         void OnTimer(bool updateUi = true);
 
         void UpdatePositionUi(REFERENCE_TIME pos);
@@ -269,7 +317,7 @@ namespace LoopPlayer
 
         void UpdateTitle();
 
-        void OnPlayerEvent(MFP_EVENT_TYPE eventType, HRESULT eventHr);
+        void OnPlaybackEngineEvent(PlaybackEngineEvent eventType, HRESULT eventHr);
 
         void OnKeyDown(WPARAM key);
 
@@ -299,11 +347,17 @@ namespace LoopPlayer
         HWND overlayPanel_;
         HWND topOverlayPanel_;
         HWND zoomTipPanel_;
+        // 顶部加载视频图片按钮的悬浮提示
+        HWND topLoadToolTip_;
+        // 所有系统控件统一使用的楷体字体
+        HFONT uiFont_;
 
-        PlayerCallback callback_;
-        IMFPMediaPlayer* player_;
+        // 自定义SourceReader播放引擎
+        MfSourcePlaybackEngine* player_;
 
         bool hasMedia_;
+        bool mediaItemReady_;
+        bool autoPlayWhenMediaReady_;
         bool isPlaying_;
         bool suppressReplay_;
         bool segmentStopApplied_;
@@ -334,6 +388,8 @@ namespace LoopPlayer
         DWORD zoomTipHideTick_;
         DWORD loopReplayCount_;
         DWORD topOverlayDragLastApplyTick_;
+        DWORD lastPositionLogTick_;
+        DWORD lastSeekDragLogTick_;
         int playbackRateTenths_;
         int nativeVideoWidth_;
         int nativeVideoHeight_;
@@ -360,7 +416,10 @@ namespace LoopPlayer
         REFERENCE_TIME loopA_;
         REFERENCE_TIME loopB_;
         REFERENCE_TIME frameDuration_;
+        VideoTimelineInfo videoTimeline_;
         std::wstring filePath_;
+        std::wstring playbackPath_;
+        std::wstring normalizedMediaPath_;
         std::wstring zoomTipText_;
     };
 }

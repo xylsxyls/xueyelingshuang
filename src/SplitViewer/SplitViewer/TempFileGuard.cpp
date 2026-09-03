@@ -1,17 +1,15 @@
 ﻿#include "TempFileGuard.h"
+#include "CSystem/CSystemAPI.h"
 
-namespace SplitViewer
+SplitViewerTempFileGuard::SplitViewerTempFileGuard()
 {
-    TempFileGuard::TempFileGuard()
-    {
 
-    }
+}
 
-    TempFileGuard::~TempFileGuard()
+SplitViewerTempFileGuard::~SplitViewerTempFileGuard()
+{
+    if (!path.empty())
     {
-        if (!path.empty())
-        {
-            DeleteFileW(path.c_str());
-        }
+        CSystem::deleteFile(path);
     }
 }

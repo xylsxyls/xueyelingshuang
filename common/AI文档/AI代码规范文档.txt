@@ -643,6 +643,8 @@ CSystem::GetCurrentExePath() + 文件名
 7. 第三方文件由脚本准备。
 第三方头文件和库文件通过 before 脚本从 tools 复制到 include/lib。业务工程不写 tools 相对路径。AI 新增或调整第三方依赖时，必须同步维护 before 脚本、VS 包含目录、库目录、Linux CMake 链接和 version 脚本。不要把第三方复制逻辑写进 rebuild_*.py。
 
+预编译第三方库目录优先参考 tools/ffmpeg：tools/库名/include/库名windows、tools/库名/include/库名linux、tools/库名/lib/x86、tools/库名/lib/x86/MD、tools/库名/lib/x64、tools/库名/lib/x64/MD。Windows 动态库接入时，.lib 一般是导入库，必须和同批次 .dll 成对保存；二次封装库根据 bit、debug/release、dll/lib 参数从对应目录复制需要的导入库、静态库和运行时 DLL。
+
 8. API.h 是外部入口。
 封装库对业务暴露 XxxAPI.h。业务工程包含该库时优先只包含 XxxAPI.h。XxxAPI.h 应包含业务常用的公开头文件。不要让业务代码为了使用一个功能去猜应该包含库内部哪个具体头文件。
 

@@ -9,6 +9,7 @@
 #include <chrono>
 #include <functional>
 #include <new>
+#include <stdio.h>
 #include "CSystemMacro.h"
 
 /** 系统工具集合，封装跨平台系统信息、文件目录、进程、时间、命令执行以及部分Windows专用能力
@@ -167,6 +168,11 @@ public:
 	@return 返回路径是否存在
 	*/
 	static bool DirOrFileExist(const std::string& dir);
+	/** 判断普通文件是否存在，支持Windows宽字符路径
+	@param [in] path 文件路径
+	@return 文件存在且不是目录时返回true，否则返回false
+	*/
+	static bool fileExists(const std::wstring& path);
 	/** 打开系统文件夹
 	@param [in] folder 文件夹路径
 	*/
@@ -349,6 +355,17 @@ public:
 	@return 返回是否删除成功
 	*/
 	static bool deleteFile(const char* path);
+	/** 打开二进制输出文件，支持Windows宽字符路径
+	@param [in] path 输出文件路径
+	@param [out] errorText 打开失败原因，可为空
+	@return 打开成功返回FILE指针，失败返回nullptr
+	*/
+	static FILE* openBinaryOutputFile(const std::wstring& path, std::string* errorText = nullptr);
+	/** 删除文件或空目录，支持Windows宽字符路径
+	@param [in] path 文件或目录路径，Windows下只删除文件，Linux下可删除文件或空目录
+	@return 返回是否删除成功
+	*/
+	static bool deleteFile(const std::wstring& path);
 	/** 控制台带提示读取一行字符串
 	@param [in] tip 输入提示文本
 	@return 返回用户输入内容

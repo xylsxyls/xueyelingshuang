@@ -1,11 +1,56 @@
 ﻿#include "LoopPlayerUtils.h"
 #include "LoopPlayerConstants.h"
+#include "LogManager/LogManagerAPI.h"
 
 #include <stdarg.h>
 
 namespace LoopPlayer
 {
+    // 当前进程是否启用调试日志
     static bool gLoggingEnabled = false;
+    // LogManager是否已经完成初始化
+    static bool gLogManagerInitialized = false;
+
+    /** 把宽字符文本转换成指定代码页的多字节文本
+    @param [in] text 需要转换的宽字符文本
+    @param [in] codePage 目标代码页
+    @return 转换后的多字节文本
+    */
+    static std::string WideToMultiByteString(const std::wstring& text, UINT codePage)
+    {
+        if (text.empty())
+        {
+            return std::string();
+        }
+
+        const int byteCount = WideCharToMultiByte(codePage, 0, text.c_str(), -1, nullptr, 0, nullptr, nullptr);
+        if (byteCount <= 1)
+        {
+            return std::string();
+        }
+
+        std::string bytes;
+        bytes.resize(byteCount - 1);
+        WideCharToMultiByte(codePage, 0, text.c_str(), -1, &bytes[0], byteCount, nullptr, nullptr);
+        return bytes;
+    }
+
+    /** 读取当前EXE所在目录，并保证末尾带反斜杠
+    @return 返回EXE所在目录
+    */
+    static std::wstring GetModuleDirectory()
+    {
+        wchar_t path[MAX_PATH] = { 0 };
+        DWORD length = GetModuleFileNameW(nullptr, path, ARRAYSIZE(path));
+        if (length == 0 || length >= ARRAYSIZE(path))
+        {
+            return L".\\";
+        }
+
+        PathRemoveFileSpecW(path);
+        PathAddBackslashW(path);
+        return path;
+    }
 
     std::wstring FormatTime(REFERENCE_TIME value)
     {
@@ -60,21 +105,17 @@ namespace LoopPlayer
 
     std::wstring GetLogFilePath()
     {
-        wchar_t path[MAX_PATH] = { 0 };
-        DWORD length = GetModuleFileNameW(NULL, path, ARRAYSIZE(path));
-        if (length == 0 || length >= ARRAYSIZE(path))
-        {
-            return L"LoopPlayer.log";
-        }
-
-        PathRemoveFileSpecW(path);
-        PathAppendW(path, L"LoopPlayer.log");
-        return path;
+        return GetModuleDirectory() + L"LoopPlayer*.log";
     }
 
     void SetLoggingEnabled(bool enabled)
     {
         gLoggingEnabled = enabled;
+        if (!gLoggingEnabled && gLogManagerInitialized)
+        {
+            LogManager::instance().uninitAll();
+            gLogManagerInitialized = false;
+        }
     }
 
     bool IsLoggingEnabled()
@@ -89,140 +130,70 @@ namespace LoopPlayer
             return;
         }
 
-        const std::wstring logPath = GetLogFilePath();
-        HANDLE file = CreateFileW(logPath.c_str(),
-                                  GENERIC_WRITE,
-                                  FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                  NULL,
-                                  CREATE_ALWAYS,
-                                  FILE_ATTRIBUTE_NORMAL,
-                                  NULL);
-        if (file != INVALID_HANDLE_VALUE)
+        if (gLogManagerInitialized)
         {
-            CloseHandle(file);
+            LogManager::instance().uninitAll();
+            gLogManagerInitialized = false;
         }
+
+        LogManagerConfig config;
+        config.m_fileId = 0;
+        config.m_path = WideToMultiByteString(GetModuleDirectory(), CP_ACP);
+        config.m_maxFileBytes = 20LL * 1024LL * 1024LL;
+        config.m_maxFileCount = 8;
+        config.m_checkFileSizeInterval = 1;
+        config.m_outputConsole = false;
+        config.m_archiveOldLog = false;
+        LogManager::instance().set(true, true);
+        LogManager::instance().init(config);
+        gLogManagerInitialized = true;
     }
 
-    static void WriteUtf8Text(HANDLE file, const wchar_t* text)
+    void ShutdownLog()
     {
-        if (!text)
+        gLoggingEnabled = false;
+        if (gLogManagerInitialized)
         {
-            return;
+            LogManager::instance().uninitAll();
+            gLogManagerInitialized = false;
         }
-
-        const int byteCount = WideCharToMultiByte(CP_UTF8, 0, text, -1, NULL, 0, NULL, NULL);
-        if (byteCount <= 1)
-        {
-            return;
-        }
-
-        std::string bytes;
-        bytes.resize(byteCount - 1);
-        WideCharToMultiByte(CP_UTF8, 0, text, -1, &bytes[0], byteCount, NULL, NULL);
-
-        DWORD written = 0;
-        WriteFile(file, bytes.data(), static_cast<DWORD>(bytes.size()), &written, NULL);
     }
 
-    void Logf(const wchar_t* format, ...)
+    void LogfImpl(const char* file, const char* function, const wchar_t* format, ...)
     {
         if (!gLoggingEnabled)
         {
             return;
         }
 
-        wchar_t message[2048] = { 0 };
+        if (!gLogManagerInitialized)
+        {
+            ResetLogFile();
+        }
+
+        wchar_t message[4096] = { 0 };
 
         va_list args;
         va_start(args, format);
         StringCchVPrintfW(message, ARRAYSIZE(message), format, args);
         va_end(args);
 
-        SYSTEMTIME now = { 0 };
-        GetLocalTime(&now);
-
-        wchar_t line[2300] = { 0 };
-        StringCchPrintfW(line,
-                         ARRAYSIZE(line),
-                         L"[%04u-%02u-%02u %02u:%02u:%02u.%03u] %s\r\n",
-                         now.wYear,
-                         now.wMonth,
-                         now.wDay,
-                         now.wHour,
-                         now.wMinute,
-                         now.wSecond,
-                         now.wMilliseconds,
-                         message);
-
-        const std::wstring logPath = GetLogFilePath();
-        HANDLE file = CreateFileW(logPath.c_str(),
-                                  FILE_APPEND_DATA,
-                                  FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                  NULL,
-                                  OPEN_ALWAYS,
-                                  FILE_ATTRIBUTE_NORMAL,
-                                  NULL);
-        if (file == INVALID_HANDLE_VALUE)
+        if (!gLogManagerInitialized)
         {
             return;
         }
 
-        WriteUtf8Text(file, line);
-        CloseHandle(file);
-    }
-
-    const wchar_t* MediaPlayerStateName(MFP_MEDIAPLAYER_STATE state)
-    {
-        switch (state)
-        {
-        case MFP_MEDIAPLAYER_STATE_EMPTY:
-            return L"EMPTY";
-        case MFP_MEDIAPLAYER_STATE_STOPPED:
-            return L"STOPPED";
-        case MFP_MEDIAPLAYER_STATE_PLAYING:
-            return L"PLAYING";
-        case MFP_MEDIAPLAYER_STATE_PAUSED:
-            return L"PAUSED";
-        case MFP_MEDIAPLAYER_STATE_SHUTDOWN:
-            return L"SHUTDOWN";
-        default:
-            return L"UNKNOWN";
-        }
-    }
-
-    const wchar_t* MediaPlayerEventName(MFP_EVENT_TYPE type)
-    {
-        switch (type)
-        {
-        case MFP_EVENT_TYPE_PLAY:
-            return L"PLAY";
-        case MFP_EVENT_TYPE_PAUSE:
-            return L"PAUSE";
-        case MFP_EVENT_TYPE_STOP:
-            return L"STOP";
-        case MFP_EVENT_TYPE_POSITION_SET:
-            return L"POSITION_SET";
-        case MFP_EVENT_TYPE_RATE_SET:
-            return L"RATE_SET";
-        case MFP_EVENT_TYPE_MEDIAITEM_CREATED:
-            return L"MEDIAITEM_CREATED";
-        case MFP_EVENT_TYPE_MEDIAITEM_SET:
-            return L"MEDIAITEM_SET";
-        case MFP_EVENT_TYPE_FRAME_STEP:
-            return L"FRAME_STEP";
-        case MFP_EVENT_TYPE_MEDIAITEM_CLEARED:
-            return L"MEDIAITEM_CLEARED";
-        case MFP_EVENT_TYPE_MF:
-            return L"MF";
-        case MFP_EVENT_TYPE_ERROR:
-            return L"ERROR";
-        case MFP_EVENT_TYPE_PLAYBACK_ENDED:
-            return L"PLAYBACK_ENDED";
-        case MFP_EVENT_TYPE_ACQUIRE_USER_CREDENTIAL:
-            return L"ACQUIRE_USER_CREDENTIAL";
-        default:
-            return L"UNKNOWN";
-        }
+        // LogManager按窄字节文本落盘，这里跟随Windows本地代码页，避免中文日志在常见工具里显示乱码。
+        const std::string text = WideToMultiByteString(message, CP_ACP);
+        LogManager::instance().print(0,
+                                     LogManager::LOG_INFO,
+                                     file ? file : "",
+                                     function ? function : "",
+                                     "",
+                                     "",
+                                     0,
+                                     "%s",
+                                     text.c_str());
     }
 
     void InitInt64PropVariant(PROPVARIANT& value, LONGLONG number)

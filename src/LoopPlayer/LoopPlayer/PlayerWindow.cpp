@@ -5,31 +5,35 @@
 namespace LoopPlayer
 {
     PlayerWindow::PlayerWindow()
-        : hinst_(NULL),
-          hwnd_(NULL),
-          videoHost_(NULL),
-          videoPanel_(NULL),
-          openButton_(NULL),
-          playButton_(NULL),
-          pauseButton_(NULL),
-          stopButton_(NULL),
-          setAButton_(NULL),
-          setBButton_(NULL),
-          aPrevFrameButton_(NULL),
-          aNextFrameButton_(NULL),
-          bPrevFrameButton_(NULL),
-          bNextFrameButton_(NULL),
-          clearButton_(NULL),
-          loopCheck_(NULL),
-          fullScreenButton_(NULL),
-          seekSlider_(NULL),
-          timeText_(NULL),
-          abText_(NULL),
-          overlayPanel_(NULL),
-          topOverlayPanel_(NULL),
-          zoomTipPanel_(NULL),
-          player_(NULL),
+        : hinst_(nullptr),
+          hwnd_(nullptr),
+          videoHost_(nullptr),
+          videoPanel_(nullptr),
+          openButton_(nullptr),
+          playButton_(nullptr),
+          pauseButton_(nullptr),
+          stopButton_(nullptr),
+          setAButton_(nullptr),
+          setBButton_(nullptr),
+          aPrevFrameButton_(nullptr),
+          aNextFrameButton_(nullptr),
+          bPrevFrameButton_(nullptr),
+          bNextFrameButton_(nullptr),
+          clearButton_(nullptr),
+          loopCheck_(nullptr),
+          fullScreenButton_(nullptr),
+          seekSlider_(nullptr),
+          timeText_(nullptr),
+          abText_(nullptr),
+          overlayPanel_(nullptr),
+          topOverlayPanel_(nullptr),
+          zoomTipPanel_(nullptr),
+          topLoadToolTip_(nullptr),
+          uiFont_(nullptr),
+          player_(nullptr),
           hasMedia_(false),
+          mediaItemReady_(false),
+          autoPlayWhenMediaReady_(false),
           isPlaying_(false),
           suppressReplay_(false),
           segmentStopApplied_(false),
@@ -60,6 +64,8 @@ namespace LoopPlayer
           zoomTipHideTick_(0),
           loopReplayCount_(0),
           topOverlayDragLastApplyTick_(0),
+          lastPositionLogTick_(0),
+          lastSeekDragLogTick_(0),
           playbackRateTenths_(10),
           nativeVideoWidth_(0),
           nativeVideoHeight_(0),
@@ -74,13 +80,14 @@ namespace LoopPlayer
           topOverlayVisiblePixels_(0),
           topHoveredButton_(TOP_BUTTON_NONE),
           hoveredMarker_(PROGRESS_MARKER_NONE),
-          hoverMarkerWindow_(NULL),
+          hoverMarkerWindow_(nullptr),
           contextMenuPosition_(0),
           duration_(0),
           loopA_(-1),
           loopB_(-1),
           frameDuration_(DEFAULT_FRAME_DURATION)
     {
+        player_ = new MfSourcePlaybackEngine();
         ZeroMemory(&savedPlacement_, sizeof(savedPlacement_));
         savedPlacement_.length = sizeof(savedPlacement_);
         ZeroMemory(&lastMouseActivityScreen_, sizeof(lastMouseActivityScreen_));
@@ -88,6 +95,26 @@ namespace LoopPlayer
         ZeroMemory(&topOverlayDragStartWindow_, sizeof(topOverlayDragStartWindow_));
         ZeroMemory(&videoDragStart_, sizeof(videoDragStart_));
         ZeroMemory(&videoDragLast_, sizeof(videoDragLast_));
+    }
+
+    PlayerWindow::~PlayerWindow()
+    {
+        ClosePlayer();
+        if (player_)
+        {
+            delete player_;
+            player_ = nullptr;
+        }
+        if (topLoadToolTip_)
+        {
+            DestroyWindow(topLoadToolTip_);
+            topLoadToolTip_ = nullptr;
+        }
+        if (uiFont_)
+        {
+            DeleteObject(uiFont_);
+            uiFont_ = nullptr;
+        }
     }
 
     bool PlayerWindow::Create(HINSTANCE hinst, int cmdShow)
@@ -99,11 +126,11 @@ namespace LoopPlayer
         wc.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
         wc.lpfnWndProc = PlayerWindow::StaticWndProc;
         wc.hInstance = hinst_;
-        wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-        wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+        wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
         wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
         wc.lpszClassName = kWindowClass;
-        wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+        wc.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
 
         if (!RegisterClassExW(&wc) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
         {
@@ -129,8 +156,8 @@ namespace LoopPlayer
             initialY,
             initialW,
             initialH,
-            NULL,
-            NULL,
+            nullptr,
+            nullptr,
             hinst_,
             this);
 
@@ -158,7 +185,7 @@ namespace LoopPlayer
             return false;
         }
 
-        Logf(L"LoadFile begin with Media Foundation: %s", path);
+        Logf(L"LoadFile begin with custom SourceReader engine: %s", path);
         WIN32_FILE_ATTRIBUTE_DATA fileInfo = { 0 };
         if (GetFileAttributesExW(path, GetFileExInfoStandard, &fileInfo))
         {
@@ -172,48 +199,66 @@ namespace LoopPlayer
 
         ClosePlayer();
 
-        callback_.SetWindow(hwnd_);
-        HRESULT hr = MFPCreateMediaPlayer(NULL, FALSE, MFP_OPTION_NONE, &callback_, videoPanel_, &player_);
-        if (FAILED(hr))
+        VideoTimelineInfo sourceTimeline;
+        VideoTimelineProbe::Probe(path, DEFAULT_FRAME_DURATION, sourceTimeline);
+
+        videoTimeline_ = sourceTimeline;
+        REFERENCE_TIME videoTimelineOffset = 0;
+        NormalizeVideoTimelineForPlayback(videoTimeline_, videoTimelineOffset);
+
+        playbackPath_ = path;
+        filePath_ = path;
+        Logf(L"LoadFile playback path selected: original=%s, playback=%s, videoOffset=%s (%I64d)",
+             path,
+             playbackPath_.c_str(),
+             FormatTime(videoTimelineOffset).c_str(),
+             videoTimelineOffset);
+
+        if (!player_)
         {
-            return ReportFailure(L"MFPCreateMediaPlayer failed", hr);
+            player_ = new MfSourcePlaybackEngine();
         }
-        Logf(L"MFPCreateMediaPlayer succeeded");
+        if (!player_)
+        {
+            return ReportFailure(L"创建播放引擎失败", E_OUTOFMEMORY);
+        }
 
-        hr = player_->SetAspectRatioMode(MFVideoARMode_PreservePicture);
-        Logf(L"SetAspectRatioMode(PreservePicture) returned 0x%08X", static_cast<unsigned int>(hr));
+        PlaybackEngineInitParam initParam;
+        initParam.m_filePath = playbackPath_;
+        initParam.m_videoWindow = videoPanel_;
+        initParam.m_eventWindow = hwnd_;
+        initParam.m_eventMessage = WM_PLAYBACK_ENGINE_EVENT;
+        initParam.m_videoTimeline = sourceTimeline;
+        initParam.m_videoTimelineOffset = videoTimelineOffset;
+        initParam.m_fallbackFrameDuration = DEFAULT_FRAME_DURATION;
 
-        IMFPMediaItem* item = NULL;
-        hr = player_->CreateMediaItemFromURL(path, TRUE, 0, &item);
+        HRESULT hr = player_->init(initParam);
         if (FAILED(hr))
         {
-            SafeRelease(item);
+            std::wstring action = L"播放引擎打开文件失败";
+            const std::wstring lastError = player_->lastError();
+            if (!lastError.empty())
+            {
+                action += L"：";
+                action += lastError;
+            }
             ClosePlayer();
-            return ReportFailure(L"CreateMediaItemFromURL failed", hr);
+            return ReportFailure(action.c_str(), hr);
         }
-        Logf(L"CreateMediaItemFromURL succeeded");
-
-        hr = player_->SetMediaItem(item);
-        if (FAILED(hr))
-        {
-            SafeRelease(item);
-            ClosePlayer();
-            return ReportFailure(L"SetMediaItem failed", hr);
-        }
-        Logf(L"SetMediaItem succeeded");
 
         duration_ = 0;
         nativeVideoWidth_ = 0;
         nativeVideoHeight_ = 0;
         ResetVideoTransform();
         ReadDuration();
-        DetectFrameDuration(item);
-        ReadNativeVideoSize();
-        SafeRelease(item);
+        DetectFrameDurationFromEngine();
+        ApplyVideoTimelineDuration(L"load-file");
 
         loopA_ = -1;
         loopB_ = -1;
         hasMedia_ = true;
+        mediaItemReady_ = true;
+        autoPlayWhenMediaReady_ = false;
         isPlaying_ = false;
         emptyPlusHovered_ = false;
         pauseIndicatorAlpha_ = 0;
@@ -227,43 +272,36 @@ namespace LoopPlayer
         manualPauseRequest_ = false;
         markerSeekPendingTick_ = 0;
         loopReplayCount_ = 0;
+        lastPositionLogTick_ = 0;
+        lastSeekDragLogTick_ = 0;
         playbackRateTenths_ = 10;
-        filePath_ = path;
 
         uiPosition_ = 0;
         InvalidateProgressViews();
-        InvalidateRect(videoHost_, NULL, TRUE);
-        InvalidateRect(videoPanel_, NULL, TRUE);
+        InvalidateRect(videoHost_, nullptr, TRUE);
+        InvalidateRect(videoPanel_, nullptr, TRUE);
 
         UpdateTitle();
         UpdateLoopText();
         UpdateTimeText(0);
         UpdateControls();
+        ReadNativeVideoSize();
         ResizeWindowToVideoDefault();
         ResizeVideoWindow();
 
-        hr = player_->Play();
-        if (SUCCEEDED(hr))
-        {
-            isPlaying_ = true;
-            ApplyPlaybackRate(false);
-            SetStatus(L"Playing");
-            Logf(L"Initial Play succeeded: 0x%08X", static_cast<unsigned int>(hr));
-        }
-        else
-        {
-            isPlaying_ = false;
-            ReportFailure(L"File opened, but playback failed", hr);
-        }
+        SetStatus(L"正在加载");
+        ApplyPlaybackRate(false);
+        Play();
 
         UpdateControls();
-        Logf(L"LoadFile end: hr=0x%08X", static_cast<unsigned int>(hr));
-        return SUCCEEDED(hr);
+        Logf(L"LoadFile end: hr=0x%08X, autoPlayWhenMediaReady=%d", static_cast<unsigned int>(hr), autoPlayWhenMediaReady_ ? 1 : 0);
+        LogPlaybackSnapshot(L"load-file-end", 0);
+        return true;
     }
 
     LRESULT CALLBACK PlayerWindow::StaticProgressWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     {
-        PlayerWindow* self = NULL;
+        PlayerWindow* self = nullptr;
 
         if (msg == WM_NCCREATE)
         {
@@ -286,7 +324,7 @@ namespace LoopPlayer
 
     LRESULT CALLBACK PlayerWindow::StaticOverlayWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     {
-        PlayerWindow* self = NULL;
+        PlayerWindow* self = nullptr;
 
         if (msg == WM_NCCREATE)
         {
@@ -309,7 +347,7 @@ namespace LoopPlayer
 
     LRESULT CALLBACK PlayerWindow::StaticTopOverlayWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     {
-        PlayerWindow* self = NULL;
+        PlayerWindow* self = nullptr;
 
         if (msg == WM_NCCREATE)
         {
@@ -332,7 +370,7 @@ namespace LoopPlayer
 
     LRESULT CALLBACK PlayerWindow::StaticZoomTipWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     {
-        PlayerWindow* self = NULL;
+        PlayerWindow* self = nullptr;
 
         if (msg == WM_NCCREATE)
         {
@@ -355,7 +393,7 @@ namespace LoopPlayer
 
     LRESULT CALLBACK PlayerWindow::StaticVideoWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     {
-        PlayerWindow* self = NULL;
+        PlayerWindow* self = nullptr;
 
         if (msg == WM_NCCREATE)
         {
@@ -378,7 +416,7 @@ namespace LoopPlayer
 
     LRESULT CALLBACK PlayerWindow::StaticWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     {
-        PlayerWindow* self = NULL;
+        PlayerWindow* self = nullptr;
 
         if (msg == WM_NCCREATE)
         {
@@ -474,8 +512,8 @@ namespace LoopPlayer
                 return 0;
             }
             break;
-        case WM_PLAYER_EVENT:
-            OnPlayerEvent(static_cast<MFP_EVENT_TYPE>(wparam), static_cast<HRESULT>(lparam));
+        case WM_PLAYBACK_ENGINE_EVENT:
+            OnPlaybackEngineEvent(static_cast<PlaybackEngineEvent>(wparam), static_cast<HRESULT>(lparam));
             return 0;
         case WM_KEYDOWN:
             OnKeyDown(wparam);
@@ -491,7 +529,6 @@ namespace LoopPlayer
             KillTimer(hwnd_, TIMER_POSITION);
             KillTimer(hwnd_, TIMER_VIDEO_CLICK);
             KillTimer(hwnd_, TIMER_TITLE_DRAG);
-            callback_.SetWindow(NULL);
             ClosePlayer();
             PostQuitMessage(0);
             return 0;
@@ -509,7 +546,7 @@ namespace LoopPlayer
         wc.style = CS_HREDRAW | CS_VREDRAW;
         wc.lpfnWndProc = PlayerWindow::StaticProgressWndProc;
         wc.hInstance = hinst_;
-        wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
         wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
         wc.lpszClassName = kProgressClass;
         RegisterClassExW(&wc);
@@ -519,7 +556,7 @@ namespace LoopPlayer
         wc.style = CS_HREDRAW | CS_VREDRAW;
         wc.lpfnWndProc = PlayerWindow::StaticOverlayWndProc;
         wc.hInstance = hinst_;
-        wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
         wc.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
         wc.lpszClassName = kOverlayClass;
         RegisterClassExW(&wc);
@@ -529,7 +566,7 @@ namespace LoopPlayer
         wc.style = CS_HREDRAW | CS_VREDRAW;
         wc.lpfnWndProc = PlayerWindow::StaticTopOverlayWndProc;
         wc.hInstance = hinst_;
-        wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
         wc.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
         wc.lpszClassName = kTopOverlayClass;
         RegisterClassExW(&wc);
@@ -539,7 +576,7 @@ namespace LoopPlayer
         wc.style = CS_HREDRAW | CS_VREDRAW;
         wc.lpfnWndProc = PlayerWindow::StaticZoomTipWndProc;
         wc.hInstance = hinst_;
-        wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
         wc.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
         wc.lpszClassName = kZoomTipClass;
         RegisterClassExW(&wc);
@@ -549,7 +586,7 @@ namespace LoopPlayer
         wc.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
         wc.lpfnWndProc = PlayerWindow::StaticVideoWndProc;
         wc.hInstance = hinst_;
-        wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
         wc.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
         wc.lpszClassName = kVideoClass;
         RegisterClassExW(&wc);
@@ -573,7 +610,7 @@ namespace LoopPlayer
         bNextFrameButton_ = CreateButton(L"B +1F", IDC_B_NEXT_FRAME);
         clearButton_ = CreateButton(L"清除AB", IDC_CLEAR_AB);
         loopCheck_ = CreateWindowExW(0, L"BUTTON", L"AB循环", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTOCHECKBOX,
-                                     0, 0, 90, 24, hwnd_, reinterpret_cast<HMENU>(IDC_LOOP_AB), hinst_, NULL);
+                                     0, 0, 90, 24, hwnd_, reinterpret_cast<HMENU>(IDC_LOOP_AB), hinst_, nullptr);
         SendMessageW(loopCheck_, BM_SETCHECK, BST_CHECKED, 0);
         fullScreenButton_ = CreateButton(L"全屏", IDC_FULLSCREEN);
 
@@ -581,9 +618,9 @@ namespace LoopPlayer
                                       0, 0, 100, NORMAL_PROGRESS_HEIGHT, hwnd_, reinterpret_cast<HMENU>(IDC_SEEK), hinst_, this);
 
         timeText_ = CreateWindowExW(0, L"STATIC", L"--:--.--- / --:--.---", WS_CHILD | WS_VISIBLE | SS_RIGHT,
-                                    0, 0, 220, 20, hwnd_, reinterpret_cast<HMENU>(IDC_TIME_TEXT), hinst_, NULL);
+                                    0, 0, 220, 20, hwnd_, reinterpret_cast<HMENU>(IDC_TIME_TEXT), hinst_, nullptr);
         abText_ = CreateWindowExW(0, L"STATIC", L"A: --:--.---   B: --:--.---", WS_CHILD | WS_VISIBLE | SS_LEFT,
-                                  0, 0, 320, 20, hwnd_, reinterpret_cast<HMENU>(IDC_AB_TEXT), hinst_, NULL);
+                                  0, 0, 320, 20, hwnd_, reinterpret_cast<HMENU>(IDC_AB_TEXT), hinst_, nullptr);
         videoHost_ = CreateWindowExW(0, kVideoClass, L"", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
                                      0, 0, 100, 100, hwnd_, reinterpret_cast<HMENU>(IDC_VIDEO_HOST), hinst_, this);
         videoPanel_ = CreateWindowExW(0, kVideoClass, L"", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
@@ -602,7 +639,7 @@ namespace LoopPlayer
                                            L"",
                                            WS_CHILD | WS_CLIPSIBLINGS,
                                            0, 0, 100, TOP_OVERLAY_HEIGHT, hwnd_,
-                                           NULL,
+                                           nullptr,
                                            hinst_,
                                            this);
         ShowWindow(topOverlayPanel_, SW_HIDE);
@@ -617,8 +654,12 @@ namespace LoopPlayer
                                         this);
         ShowWindow(zoomTipPanel_, SW_HIDE);
 
+        uiFont_ = CreateUiFont(-13, FW_NORMAL);
+        ApplyControlFont();
+        CreateTopLoadToolTip();
+
         DragAcceptFiles(hwnd_, TRUE);
-        SetTimer(hwnd_, TIMER_POSITION, 10, NULL);
+        SetTimer(hwnd_, TIMER_POSITION, 10, nullptr);
 
         LayoutControls();
         UpdateControls();
@@ -628,7 +669,113 @@ namespace LoopPlayer
     HWND PlayerWindow::CreateButton(const wchar_t* text, int id)
     {
         return CreateWindowExW(0, L"BUTTON", text, WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
-                               0, 0, 70, 26, hwnd_, reinterpret_cast<HMENU>(id), hinst_, NULL);
+                               0, 0, 70, 26, hwnd_, reinterpret_cast<HMENU>(id), hinst_, nullptr);
+    }
+
+    void PlayerWindow::ApplyControlFont()
+    {
+        if (!uiFont_)
+        {
+            return;
+        }
+
+        HWND controls[] =
+        {
+            openButton_,
+            playButton_,
+            pauseButton_,
+            stopButton_,
+            setAButton_,
+            setBButton_,
+            aPrevFrameButton_,
+            aNextFrameButton_,
+            bPrevFrameButton_,
+            bNextFrameButton_,
+            clearButton_,
+            loopCheck_,
+            fullScreenButton_,
+            timeText_,
+            abText_
+        };
+
+        for (size_t i = 0; i < ARRAYSIZE(controls); ++i)
+        {
+            if (controls[i])
+            {
+                SendMessageW(controls[i], WM_SETFONT, reinterpret_cast<WPARAM>(uiFont_), TRUE);
+            }
+        }
+    }
+
+    HFONT PlayerWindow::CreateUiFont(int height, int weight) const
+    {
+        return CreateFontW(height,
+                           0,
+                           0,
+                           0,
+                           weight,
+                           FALSE,
+                           FALSE,
+                           FALSE,
+                           DEFAULT_CHARSET,
+                           OUT_DEFAULT_PRECIS,
+                           CLIP_DEFAULT_PRECIS,
+                           CLEARTYPE_QUALITY,
+                           DEFAULT_PITCH | FF_DONTCARE,
+                           L"楷体");
+    }
+
+    void PlayerWindow::CreateTopLoadToolTip()
+    {
+        if (!topOverlayPanel_ || topLoadToolTip_)
+        {
+            return;
+        }
+
+        topLoadToolTip_ = CreateWindowExW(WS_EX_TOPMOST,
+                                          TOOLTIPS_CLASS,
+                                          nullptr,
+                                          WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
+                                          CW_USEDEFAULT,
+                                          CW_USEDEFAULT,
+                                          CW_USEDEFAULT,
+                                          CW_USEDEFAULT,
+                                          topOverlayPanel_,
+                                          nullptr,
+                                          hinst_,
+                                          nullptr);
+        if (!topLoadToolTip_)
+        {
+            Logf(L"Create top load tooltip failed: lastError=%lu", GetLastError());
+            return;
+        }
+
+        TOOLINFOW toolInfo = { 0 };
+        toolInfo.cbSize = sizeof(toolInfo);
+        toolInfo.uFlags = TTF_SUBCLASS;
+        toolInfo.hwnd = topOverlayPanel_;
+        toolInfo.uId = TOP_BUTTON_LOAD;
+        toolInfo.lpszText = const_cast<LPWSTR>(L"加载视频");
+        toolInfo.rect = GetTopButtonRect(topOverlayPanel_, TOP_BUTTON_LOAD);
+        SendMessageW(topLoadToolTip_, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&toolInfo));
+        SetWindowPos(topLoadToolTip_, HWND_TOPMOST, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        Logf(L"Top load tooltip created");
+    }
+
+    void PlayerWindow::UpdateTopLoadToolTipRect()
+    {
+        if (!topLoadToolTip_ || !topOverlayPanel_)
+        {
+            return;
+        }
+
+        TOOLINFOW toolInfo = { 0 };
+        toolInfo.cbSize = sizeof(toolInfo);
+        toolInfo.hwnd = topOverlayPanel_;
+        toolInfo.uId = TOP_BUTTON_LOAD;
+        toolInfo.rect = GetTopButtonRect(topOverlayPanel_, TOP_BUTTON_LOAD);
+        SendMessageW(topLoadToolTip_, TTM_NEWTOOLRECTW, 0, reinterpret_cast<LPARAM>(&toolInfo));
     }
 
     bool PlayerWindow::ReportFailure(const wchar_t* action, HRESULT hr)
@@ -730,6 +877,7 @@ namespace LoopPlayer
                      width,
                      visible,
                      SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        UpdateTopLoadToolTipRect();
     }
 
     void PlayerWindow::LayoutZoomTip()
@@ -783,7 +931,7 @@ namespace LoopPlayer
         {
             rect.left = 7;
             rect.top = top;
-            rect.right = 59;
+            rect.right = 28;
             rect.bottom = top + height;
             return rect;
         }
@@ -850,58 +998,69 @@ namespace LoopPlayer
         DeleteObject(pen);
         DeleteObject(brush);
 
-        SetTextColor(hdc, RGB(245, 245, 245));
         if (button == TOP_BUTTON_LOAD)
         {
-            HFONT font = CreateFontW(-11,
-                                     0,
-                                     0,
-                                     0,
-                                     FW_NORMAL,
-                                     FALSE,
-                                     FALSE,
-                                     FALSE,
-                                     DEFAULT_CHARSET,
-                                     OUT_DEFAULT_PRECIS,
-                                     CLIP_DEFAULT_PRECIS,
-                                     CLEARTYPE_QUALITY,
-                                     DEFAULT_PITCH | FF_DONTCARE,
-                                     L"Microsoft YaHei UI");
-            HGDIOBJ oldFont = NULL;
-            if (font)
+            RECT icon = rect;
+            InflateRect(&icon, -4, -4);
+            HPEN folderPen = CreatePen(PS_SOLID, 1, RGB(238, 238, 238));
+            HBRUSH folderBrush = CreateSolidBrush(hovered ? RGB(88, 88, 94) : RGB(70, 70, 76));
+            oldPen = SelectObject(hdc, folderPen);
+            oldBrush = SelectObject(hdc, folderBrush);
+            POINT points[6] =
             {
-                oldFont = SelectObject(hdc, font);
-            }
-            DrawTextW(hdc, L"加载视频", -1, &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-            if (oldFont)
+                { icon.left, icon.top + 4 },
+                { icon.left + 5, icon.top + 4 },
+                { icon.left + 7, icon.top + 2 },
+                { icon.right, icon.top + 2 },
+                { icon.right, icon.bottom },
+                { icon.left, icon.bottom }
+            };
+            Polygon(hdc, points, ARRAYSIZE(points));
+
+            HBRUSH playBrush = CreateSolidBrush(RGB(245, 245, 245));
+            SelectObject(hdc, playBrush);
+            POINT playPoints[3] =
             {
-                SelectObject(hdc, oldFont);
-            }
-            if (font)
-            {
-                DeleteObject(font);
-            }
+                { icon.left + 6, icon.top + 6 },
+                { icon.left + 6, icon.bottom - 3 },
+                { icon.right - 4, icon.top + (icon.bottom - icon.top) / 2 }
+            };
+            Polygon(hdc, playPoints, ARRAYSIZE(playPoints));
+            SelectObject(hdc, oldBrush);
+            SelectObject(hdc, oldPen);
+            DeleteObject(playBrush);
+            DeleteObject(folderBrush);
+            DeleteObject(folderPen);
             return;
         }
 
+        SetTextColor(hdc, RGB(245, 245, 245));
         HPEN iconPen = CreatePen(PS_SOLID, 1, RGB(245, 245, 245));
         oldPen = SelectObject(hdc, iconPen);
         const int cx = (rect.left + rect.right) / 2;
         const int cy = (rect.top + rect.bottom) / 2;
         if (button == TOP_BUTTON_MINIMIZE)
         {
-            MoveToEx(hdc, cx - 4, cy + 3, NULL);
+            MoveToEx(hdc, cx - 4, cy + 3, nullptr);
             LineTo(hdc, cx + 5, cy + 3);
         }
         else if (button == TOP_BUTTON_MAXIMIZE)
         {
-            Rectangle(hdc, cx - 4, cy - 4, cx + 5, cy + 5);
+            if (IsZoomed(hwnd_) || isFullScreen_)
+            {
+                Rectangle(hdc, cx - 5, cy - 2, cx + 3, cy + 6);
+                Rectangle(hdc, cx - 2, cy - 5, cx + 6, cy + 3);
+            }
+            else
+            {
+                Rectangle(hdc, cx - 4, cy - 4, cx + 5, cy + 5);
+            }
         }
         else if (button == TOP_BUTTON_CLOSE)
         {
-            MoveToEx(hdc, cx - 4, cy - 4, NULL);
+            MoveToEx(hdc, cx - 4, cy - 4, nullptr);
             LineTo(hdc, cx + 5, cy + 5);
-            MoveToEx(hdc, cx + 4, cy - 4, NULL);
+            MoveToEx(hdc, cx + 4, cy - 4, nullptr);
             LineTo(hdc, cx - 5, cy + 5);
         }
         SelectObject(hdc, oldPen);
@@ -945,7 +1104,7 @@ namespace LoopPlayer
         SetForegroundWindow(hwnd_);
         SetCapture(hwnd);
         LayoutTopOverlay();
-        SetTimer(hwnd_, TIMER_TITLE_DRAG, 15, NULL);
+        SetTimer(hwnd_, TIMER_TITLE_DRAG, 15, nullptr);
         Logf(L"Top overlay drag begin: cursor=(%ld,%ld), window=(%ld,%ld)-(%ld,%ld)",
              pt.x,
              pt.y,
@@ -975,7 +1134,7 @@ namespace LoopPlayer
         const int x = topOverlayDragStartWindow_.left + (cursor.x - topOverlayDragStartCursor_.x);
         const int y = topOverlayDragStartWindow_.top + (cursor.y - topOverlayDragStartCursor_.y);
         SetWindowPos(hwnd_,
-                     NULL,
+                     nullptr,
                      x,
                      y,
                      0,
@@ -1052,9 +1211,9 @@ namespace LoopPlayer
         const int cx = (button.left + button.right) / 2;
         const int cy = (button.top + button.bottom) / 2;
         const int half = EMPTY_PLUS_LINE_LENGTH;
-        MoveToEx(hdc, cx - half, cy, NULL);
+        MoveToEx(hdc, cx - half, cy, nullptr);
         LineTo(hdc, cx + half + 1, cy);
-        MoveToEx(hdc, cx, cy - half, NULL);
+        MoveToEx(hdc, cx, cy - half, nullptr);
         LineTo(hdc, cx, cy + half + 1);
 
         SelectObject(hdc, oldPen);
@@ -1097,7 +1256,7 @@ namespace LoopPlayer
         }
 
         HWND owner = window;
-        while ((owner = GetWindow(owner, GW_OWNER)) != NULL)
+        while ((owner = GetWindow(owner, GW_OWNER)) != nullptr)
         {
             if (owner == hwnd_ || owner == overlayPanel_ || owner == topOverlayPanel_ || owner == zoomTipPanel_)
             {
@@ -1169,15 +1328,15 @@ namespace LoopPlayer
         return true;
     }
 
-    void PlayerWindow::PaintPauseIndicator(int alpha)
+    void PlayerWindow::PaintPauseIndicator(HDC hdc, HWND hwnd, int alpha)
     {
-        if (!videoPanel_ || alpha <= 0)
+        if (!hdc || !hwnd || alpha <= 0)
         {
             return;
         }
 
         RECT panelRect = { 0 };
-        GetClientRect(videoPanel_, &panelRect);
+        GetClientRect(hwnd, &panelRect);
         const int panelW = panelRect.right - panelRect.left;
         const int panelH = panelRect.bottom - panelRect.top;
         if (panelW <= 0 || panelH <= 0)
@@ -1197,11 +1356,11 @@ namespace LoopPlayer
         bmi.bmiHeader.biBitCount = 32;
         bmi.bmiHeader.biCompression = BI_RGB;
 
-        void* bits = NULL;
-        HDC screenDc = GetDC(NULL);
-        HBITMAP bitmap = CreateDIBSection(screenDc, &bmi, DIB_RGB_COLORS, &bits, NULL, 0);
+        void* bits = nullptr;
+        HDC screenDc = GetDC(nullptr);
+        HBITMAP bitmap = CreateDIBSection(screenDc, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
         HDC memoryDc = CreateCompatibleDC(screenDc);
-        ReleaseDC(NULL, screenDc);
+        ReleaseDC(nullptr, screenDc);
         if (!bitmap || !memoryDc || !bits)
         {
             if (memoryDc)
@@ -1242,13 +1401,11 @@ namespace LoopPlayer
             }
         }
 
-        HDC targetDc = GetDC(videoPanel_);
         BLENDFUNCTION blend = { 0 };
         blend.BlendOp = AC_SRC_OVER;
         blend.SourceConstantAlpha = static_cast<BYTE>(alpha);
         blend.AlphaFormat = AC_SRC_ALPHA;
-        AlphaBlend(targetDc, left, top, size, size, memoryDc, 0, 0, size, size, blend);
-        ReleaseDC(videoPanel_, targetDc);
+        AlphaBlend(hdc, left, top, size, size, memoryDc, 0, 0, size, size, blend);
 
         SelectObject(memoryDc, oldBitmap);
         DeleteObject(bitmap);
@@ -1259,7 +1416,7 @@ namespace LoopPlayer
     void PlayerWindow::UpdatePauseIndicatorState()
     {
         const DWORD now = GetTickCount();
-        const bool targetVisible = !openFileDialogActive_ && hasMedia_ && player_ && !isPlaying_ && IsMouseUiActive(now);
+        const bool targetVisible = !openFileDialogActive_ && hasMedia_ && player_ && player_->isOpen() && !isPlaying_ && IsMouseUiActive(now);
         const int targetAlpha = targetVisible ? PAUSE_INDICATOR_MAX_ALPHA : 0;
 
         if (pauseIndicatorAlpha_ < targetAlpha)
@@ -1279,7 +1436,7 @@ namespace LoopPlayer
             }
         }
 
-        if (!player_)
+        if (!player_ || !player_->isOpen())
         {
             pauseIndicatorAlpha_ = 0;
             pauseIndicatorWasDrawn_ = false;
@@ -1288,12 +1445,12 @@ namespace LoopPlayer
 
         if (pauseIndicatorAlpha_ > 0)
         {
-            player_->UpdateVideo();
-            PaintPauseIndicator(pauseIndicatorAlpha_);
+            InvalidateRect(videoPanel_, nullptr, FALSE);
+            pauseIndicatorWasDrawn_ = true;
         }
         else if (pauseIndicatorWasDrawn_)
         {
-            player_->UpdateVideo();
+            InvalidateRect(videoPanel_, nullptr, FALSE);
             pauseIndicatorWasDrawn_ = false;
         }
     }
@@ -1311,7 +1468,7 @@ namespace LoopPlayer
         zoomTipHideTick_ = GetTickCount() + ZOOM_TIP_VISIBLE_MS;
 
         LayoutZoomTip();
-        InvalidateRect(zoomTipPanel_, NULL, TRUE);
+        InvalidateRect(zoomTipPanel_, nullptr, TRUE);
     }
 
     void PlayerWindow::HideZoomTip()
@@ -1371,8 +1528,8 @@ namespace LoopPlayer
                                  CLIP_DEFAULT_PRECIS,
                                  CLEARTYPE_QUALITY,
                                  DEFAULT_PITCH | FF_DONTCARE,
-                                 L"Microsoft YaHei UI");
-        HGDIOBJ oldFont = NULL;
+                                 L"楷体");
+        HGDIOBJ oldFont = nullptr;
         if (font)
         {
             oldFont = SelectObject(hdc, font);
@@ -1679,15 +1836,11 @@ namespace LoopPlayer
                    max(1, rect.right - rect.left),
                    max(1, rect.bottom - rect.top),
                    TRUE);
-        InvalidateRect(videoHost_, NULL, TRUE);
+        InvalidateRect(videoHost_, nullptr, TRUE);
 
-        if (player_)
+        if (player_ && player_->isOpen())
         {
-            HRESULT hr = player_->UpdateVideo();
-            if (FAILED(hr))
-            {
-                Logf(L"UpdateVideo failed: 0x%08X", static_cast<unsigned int>(hr));
-            }
+            InvalidateRect(videoPanel_, nullptr, FALSE);
         }
     }
 
@@ -1695,26 +1848,24 @@ namespace LoopPlayer
     {
         nativeVideoWidth_ = 0;
         nativeVideoHeight_ = 0;
-        if (!player_)
+        if (!player_ || !player_->isOpen())
         {
             return false;
         }
 
-        SIZE videoSize = { 0 };
-        SIZE aspectSize = { 0 };
-        HRESULT hr = player_->GetNativeVideoSize(&videoSize, &aspectSize);
-        if (SUCCEEDED(hr) && videoSize.cx > 0 && videoSize.cy > 0)
+        int videoWidth = 0;
+        int videoHeight = 0;
+        const bool ok = player_->getNativeVideoSize(videoWidth, videoHeight);
+        if (ok)
         {
-            nativeVideoWidth_ = videoSize.cx;
-            nativeVideoHeight_ = videoSize.cy;
+            nativeVideoWidth_ = videoWidth;
+            nativeVideoHeight_ = videoHeight;
         }
 
-        Logf(L"GetNativeVideoSize returned 0x%08X, video=%ldx%ld, aspect=%ldx%ld, stored=%dx%d",
-             static_cast<unsigned int>(hr),
-             videoSize.cx,
-             videoSize.cy,
-             aspectSize.cx,
-             aspectSize.cy,
+        Logf(L"GetNativeVideoSize from custom engine: ok=%d, video=%dx%d, stored=%dx%d",
+             ok ? 1 : 0,
+             videoWidth,
+             videoHeight,
              nativeVideoWidth_,
              nativeVideoHeight_);
         ApplyVideoTransform();
@@ -1760,7 +1911,7 @@ namespace LoopPlayer
         const int x = mi.rcWork.left + (workW - targetW) / 2;
         const int y = mi.rcWork.top + (workH - targetH) / 2;
         SetWindowPos(hwnd_,
-                     NULL,
+                     nullptr,
                      x,
                      y,
                      targetW,
@@ -1802,7 +1953,7 @@ namespace LoopPlayer
 
     void PlayerWindow::ToggleFullScreen()
     {
-        if (GetParent(hwnd_) != NULL || (GetWindowLongPtrW(hwnd_, GWL_STYLE) & WS_CHILD))
+        if (GetParent(hwnd_) != nullptr || (GetWindowLongPtrW(hwnd_, GWL_STYLE) & WS_CHILD))
         {
             return;
         }
@@ -1873,7 +2024,7 @@ namespace LoopPlayer
         SetWindowLongW(hwnd_, GWL_STYLE, savedStyle_);
         SetWindowLongW(hwnd_, GWL_EXSTYLE, savedExStyle_);
         SetWindowPlacement(hwnd_, &savedPlacement_);
-        SetWindowPos(hwnd_, NULL, 0, 0, 0, 0,
+        SetWindowPos(hwnd_, nullptr, 0, 0, 0, 0,
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
 
         LayoutControls();
@@ -1953,7 +2104,7 @@ namespace LoopPlayer
         }
         if (id == IDC_VIDEO_PANEL && notifyCode == STN_CLICKED)
         {
-            SetTimer(hwnd_, TIMER_VIDEO_CLICK, GetDoubleClickTime() + 30, NULL);
+            SetTimer(hwnd_, TIMER_VIDEO_CLICK, GetDoubleClickTime() + 30, nullptr);
             return;
         }
 
@@ -2053,8 +2204,17 @@ namespace LoopPlayer
 
     void PlayerWindow::Play()
     {
-        if (!player_)
+        if (!player_ || !player_->isOpen())
         {
+            return;
+        }
+
+        if (!mediaItemReady_)
+        {
+            autoPlayWhenMediaReady_ = true;
+            Logf(L"Play requested before MEDIAITEM_SET; pending autoplay enabled");
+            SetStatus(L"正在加载");
+            UpdateControls();
             return;
         }
 
@@ -2078,17 +2238,17 @@ namespace LoopPlayer
             }
         }
 
-        HRESULT hr = player_->Play();
+        HRESULT hr = player_->play();
         if (SUCCEEDED(hr))
         {
             isPlaying_ = true;
-            SetStatus(L"Playing");
+            SetStatus(L"正在播放");
             Logf(L"Play succeeded");
         }
         else
         {
             Logf(L"Play failed: 0x%08X", static_cast<unsigned int>(hr));
-            SetStatus((L"Play failed: " + HResultText(hr)).c_str());
+            SetStatus((L"播放失败：" + HResultText(hr)).c_str());
         }
 
         UpdateControls();
@@ -2115,13 +2275,13 @@ namespace LoopPlayer
 
     bool PlayerWindow::ApplyPlaybackRate(bool showStatus)
     {
-        if (!player_)
+        if (!player_ || !player_->isOpen())
         {
             return false;
         }
 
         const float rate = PlaybackRate();
-        HRESULT hr = player_->SetRate(rate);
+        HRESULT hr = player_->setRate(rate);
         wchar_t rateText[32] = { 0 };
         FormatPlaybackRate(rateText, ARRAYSIZE(rateText));
         Logf(L"Set playback rate %s returned 0x%08X", rateText, static_cast<unsigned int>(hr));
@@ -2129,7 +2289,7 @@ namespace LoopPlayer
         {
             if (showStatus)
             {
-                std::wstring status = L"Speed ";
+                std::wstring status = L"倍速 ";
                 status += rateText;
                 SetStatus(status.c_str());
             }
@@ -2138,7 +2298,7 @@ namespace LoopPlayer
 
         if (showStatus)
         {
-            std::wstring status = L"Speed change failed: ";
+            std::wstring status = L"倍速调整失败：";
             status += HResultText(hr);
             SetStatus(status.c_str());
         }
@@ -2167,7 +2327,7 @@ namespace LoopPlayer
         {
             wchar_t rateText[32] = { 0 };
             FormatPlaybackRate(rateText, ARRAYSIZE(rateText));
-            std::wstring status = L"Speed ";
+            std::wstring status = L"倍速 ";
             status += rateText;
             SetStatus(status.c_str());
             return;
@@ -2204,22 +2364,32 @@ namespace LoopPlayer
             return;
         }
 
+        if (!mediaItemReady_)
+        {
+            autoPlayWhenMediaReady_ = false;
+            isPlaying_ = false;
+            Logf(L"Pause requested before MEDIAITEM_SET; pending autoplay canceled");
+            SetStatus(L"已暂停");
+            UpdateControls();
+            return;
+        }
+
         manualPauseRequest_ = true;
-        HRESULT hr = player_->Pause();
+        HRESULT hr = player_->pause();
         if (SUCCEEDED(hr))
         {
             isPlaying_ = false;
             loopReplayPending_ = false;
             loopReplayFastAttempt_ = false;
             markerSeekPending_ = false;
-            SetStatus(L"Paused");
+            SetStatus(L"已暂停");
             Logf(L"Pause succeeded");
         }
         else
         {
             manualPauseRequest_ = false;
             Logf(L"Pause failed: 0x%08X", static_cast<unsigned int>(hr));
-            SetStatus((L"Pause failed: " + HResultText(hr)).c_str());
+            SetStatus((L"暂停失败：" + HResultText(hr)).c_str());
         }
 
         UpdateControls();
@@ -2227,8 +2397,24 @@ namespace LoopPlayer
 
     void PlayerWindow::Stop()
     {
-        if (!player_)
+        if (!player_ || !player_->isOpen())
         {
+            return;
+        }
+
+        if (!mediaItemReady_)
+        {
+            autoPlayWhenMediaReady_ = false;
+            suppressReplay_ = true;
+            loopReplayPending_ = false;
+            loopReplayFastAttempt_ = false;
+            markerSeekPending_ = false;
+            manualPauseRequest_ = false;
+            isPlaying_ = false;
+            Logf(L"Stop requested before MEDIAITEM_SET; pending autoplay canceled");
+            UpdatePositionUi(0);
+            SetStatus(L"已停止");
+            UpdateControls();
             return;
         }
 
@@ -2237,107 +2423,177 @@ namespace LoopPlayer
         loopReplayFastAttempt_ = false;
         markerSeekPending_ = false;
         manualPauseRequest_ = false;
-        HRESULT hr = player_->Stop();
+        HRESULT hr = player_->stop();
         Logf(L"Stop returned 0x%08X", static_cast<unsigned int>(hr));
         isPlaying_ = false;
         SeekTo(0, false);
         UpdatePositionUi(0);
-        SetStatus(L"Stopped");
+        SetStatus(L"已停止");
         UpdateControls();
     }
 
     bool PlayerWindow::ReadDuration()
     {
         duration_ = 0;
-        if (!player_)
+        if (!player_ || !player_->isOpen())
         {
             return false;
         }
 
-        PROPVARIANT value;
-        PropVariantInit(&value);
-        HRESULT hr = player_->GetDuration(MFP_POSITIONTYPE_100NS, &value);
-        LONGLONG duration = 0;
-        const bool ok = SUCCEEDED(hr) && ReadInt64PropVariant(value, duration);
-        if (ok)
-        {
-            duration_ = duration;
-        }
-        Logf(L"GetDuration returned 0x%08X, vt=%u, duration=%s (%I64d)",
-             static_cast<unsigned int>(hr),
-             static_cast<unsigned int>(value.vt),
+        duration_ = player_->duration();
+        const bool ok = duration_ > 0;
+        Logf(L"ReadDuration from custom engine: ok=%d, duration=%s (%I64d)",
+             ok ? 1 : 0,
              FormatTime(duration_).c_str(),
              duration_);
-        PropVariantClear(&value);
         return ok;
     }
 
-    void PlayerWindow::DetectFrameDuration(IMFPMediaItem* item)
+    void PlayerWindow::DetectFrameDurationFromEngine()
     {
         frameDuration_ = DEFAULT_FRAME_DURATION;
-
-        if (!item)
+        if (player_ && player_->isOpen() && player_->frameDuration() > 0)
         {
-            Logf(L"Frame rate unavailable: no media item. Fallback frame duration=%I64d", frameDuration_);
-            return;
+            frameDuration_ = player_->frameDuration();
+        }
+        else if (videoTimeline_.isValid && videoTimeline_.secondTime > videoTimeline_.firstTime)
+        {
+            frameDuration_ = videoTimeline_.secondTime - videoTimeline_.firstTime;
+        }
+        else if (videoTimeline_.isValid && videoTimeline_.firstDuration > 0)
+        {
+            frameDuration_ = videoTimeline_.firstDuration;
         }
 
-        DWORD streamCount = 0;
-        HRESULT hr = item->GetNumberOfStreams(&streamCount);
-        if (FAILED(hr))
-        {
-            Logf(L"GetNumberOfStreams failed: 0x%08X. Fallback frame duration=%I64d", static_cast<unsigned int>(hr), frameDuration_);
-            return;
-        }
-
-        for (DWORD i = 0; i < streamCount; ++i)
-        {
-            PROPVARIANT value;
-            PropVariantInit(&value);
-            hr = item->GetStreamAttribute(i, MF_MT_FRAME_RATE, &value);
-            if (SUCCEEDED(hr) && value.vt == VT_UI8)
-            {
-                const ULONGLONG packed = value.uhVal.QuadPart;
-                const DWORD numerator = static_cast<DWORD>(packed >> 32);
-                const DWORD denominator = static_cast<DWORD>(packed & 0xffffffff);
-                if (numerator > 0 && denominator > 0)
-                {
-                    frameDuration_ = static_cast<REFERENCE_TIME>((static_cast<double>(ONE_SECOND) * denominator / numerator) + 0.5);
-                    Logf(L"Detected frame rate from stream %lu: %lu/%lu fps, frameDuration=%I64d",
-                         i,
-                         numerator,
-                         denominator,
-                         frameDuration_);
-                    PropVariantClear(&value);
-                    return;
-                }
-            }
-            PropVariantClear(&value);
-        }
-
-        Logf(L"Frame rate not found. Fallback frame duration=%I64d, about %.3f fps",
+        Logf(L"Frame duration selected from custom engine/timeline: frameDuration=%s (%I64d), timelineValid=%d, first=%s (%I64d), second=%s (%I64d), firstDuration=%s (%I64d)",
+             FormatTime(frameDuration_).c_str(),
              frameDuration_,
-             static_cast<double>(ONE_SECOND) / frameDuration_);
+             videoTimeline_.isValid ? 1 : 0,
+             FormatTime(videoTimeline_.firstTime).c_str(),
+             videoTimeline_.firstTime,
+             FormatTime(videoTimeline_.secondTime).c_str(),
+             videoTimeline_.secondTime,
+             FormatTime(videoTimeline_.firstDuration).c_str(),
+             videoTimeline_.firstDuration);
     }
 
-    bool PlayerWindow::GetPosition(REFERENCE_TIME& pos) const
+    void PlayerWindow::NormalizeVideoTimelineForPlayback(VideoTimelineInfo& info, REFERENCE_TIME& videoOffset) const
+    {
+        videoOffset = 0;
+        if (!info.isValid || info.firstTime <= ONE_SECOND)
+        {
+            Logf(L"Video timeline offset not needed: valid=%d, first=%s (%I64d)",
+                 info.isValid ? 1 : 0,
+                 FormatTime(info.firstTime).c_str(),
+                 info.firstTime);
+            return;
+        }
+
+        videoOffset = info.firstTime;
+        const REFERENCE_TIME oldFirst = info.firstTime;
+        const REFERENCE_TIME oldSecond = info.secondTime;
+        const REFERENCE_TIME oldLast = info.lastTime;
+        const REFERENCE_TIME oldLastEnd = info.lastEndTime;
+
+        // SourceReader自定义管线直接在播放时映射视频时间戳，所以这里仅修正UI和AB逻辑看到的时间轴。
+        info.firstTime = 0;
+        if (info.secondTime >= videoOffset)
+        {
+            info.secondTime -= videoOffset;
+        }
+        if (info.lastTime >= videoOffset)
+        {
+            info.lastTime -= videoOffset;
+        }
+        if (info.lastEndTime >= videoOffset)
+        {
+            info.lastEndTime -= videoOffset;
+        }
+        if (info.maxGapStart >= videoOffset)
+        {
+            info.maxGapStart -= videoOffset;
+        }
+        if (info.maxGapEnd >= videoOffset)
+        {
+            info.maxGapEnd -= videoOffset;
+        }
+
+        Logf(L"Video timeline normalized for playback: offset=%s (%I64d), first %s->%s, second %s->%s, last %s->%s, lastEnd %s->%s",
+             FormatTime(videoOffset).c_str(),
+             videoOffset,
+             FormatTime(oldFirst).c_str(),
+             FormatTime(info.firstTime).c_str(),
+             FormatTime(oldSecond).c_str(),
+             FormatTime(info.secondTime).c_str(),
+             FormatTime(oldLast).c_str(),
+             FormatTime(info.lastTime).c_str(),
+             FormatTime(oldLastEnd).c_str(),
+             FormatTime(info.lastEndTime).c_str());
+    }
+
+    void PlayerWindow::ApplyVideoTimelineDuration(const wchar_t* reason)
+    {
+        if (!videoTimeline_.isValid)
+        {
+            Logf(L"Video timeline duration not applied: reason=%s, valid=0, currentDuration=%s (%I64d)",
+                 reason ? reason : L"",
+                 FormatTime(duration_).c_str(),
+                 duration_);
+            return;
+        }
+
+        const REFERENCE_TIME oldDuration = duration_;
+        const REFERENCE_TIME videoEnd = videoTimeline_.lastEndTime;
+        const REFERENCE_TIME tolerance = LoopMinLength();
+        const REFERENCE_TIME diff = videoEnd - oldDuration;
+        Logf(L"Video timeline duration compare: reason=%s, currentDuration=%s (%I64d), videoEnd=%s (%I64d), diff=%s (%I64d), tolerance=%s (%I64d), samples=%lu, first=%s (%I64d), second=%s (%I64d), firstDuration=%s (%I64d), maxGap=%s (%I64d)",
+             reason ? reason : L"",
+             FormatTime(oldDuration).c_str(),
+             oldDuration,
+             FormatTime(videoEnd).c_str(),
+             videoEnd,
+             FormatTime(diff).c_str(),
+             diff,
+             FormatTime(tolerance).c_str(),
+             tolerance,
+             videoTimeline_.sampleCount,
+             FormatTime(videoTimeline_.firstTime).c_str(),
+             videoTimeline_.firstTime,
+             FormatTime(videoTimeline_.secondTime).c_str(),
+             videoTimeline_.secondTime,
+             FormatTime(videoTimeline_.firstDuration).c_str(),
+             videoTimeline_.firstDuration,
+             FormatTime(videoTimeline_.maxGap).c_str(),
+             videoTimeline_.maxGap);
+
+        if (videoEnd > oldDuration + tolerance)
+        {
+            duration_ = videoEnd;
+            Logf(L"Duration expanded from source duration to video timeline end: old=%s (%I64d), new=%s (%I64d)",
+                 FormatTime(oldDuration).c_str(),
+                 oldDuration,
+                 FormatTime(duration_).c_str(),
+                 duration_);
+        }
+    }
+
+    bool PlayerWindow::GetPosition(REFERENCE_TIME& pos)
     {
         pos = 0;
-        if (!player_)
+        if (!player_ || !player_->isOpen())
         {
             return false;
         }
 
-        PROPVARIANT value;
-        PropVariantInit(&value);
-        HRESULT hr = player_->GetPosition(MFP_POSITIONTYPE_100NS, &value);
-        LONGLONG current = 0;
-        const bool ok = SUCCEEDED(hr) && ReadInt64PropVariant(value, current);
+        const bool ok = player_->getPosition(pos);
         if (ok)
         {
-            pos = current;
+            pos = ClampMediaPosition(pos);
         }
-        PropVariantClear(&value);
+        else
+        {
+            Logf(L"GetPosition failed from custom engine");
+        }
         return ok;
     }
 
@@ -2438,24 +2694,6 @@ namespace LoopPlayer
         return loopReplayCount_ <= 5 || (loopReplayCount_ % 20) == 0;
     }
 
-    bool PlayerWindow::ShouldLogPlayerEvent(MFP_EVENT_TYPE eventType) const
-    {
-        if (!IsShortActiveAbLoop())
-        {
-            return true;
-        }
-
-        switch (eventType)
-        {
-        case MFP_EVENT_TYPE_PLAY:
-        case MFP_EVENT_TYPE_PAUSE:
-        case MFP_EVENT_TYPE_POSITION_SET:
-            return ShouldLogLoopReplay();
-        default:
-            return true;
-        }
-    }
-
     bool PlayerWindow::IsMarkerSeekStillPending()
     {
         if (!markerSeekPending_)
@@ -2478,7 +2716,7 @@ namespace LoopPlayer
     {
         const bool hadSegment = segmentStopApplied_;
         segmentStopApplied_ = false;
-        if (!player_)
+        if (!player_ || !player_->isOpen())
         {
             return false;
         }
@@ -2486,14 +2724,6 @@ namespace LoopPlayer
         const bool activeAb = IsActiveAbLoop();
         if (!activeAb && !hadSegment)
         {
-            return false;
-        }
-
-        IMFPMediaItem* item = NULL;
-        HRESULT hr = player_->GetMediaItem(&item);
-        if (FAILED(hr) || !item)
-        {
-            Logf(L"GetMediaItem for segment failed: 0x%08X", static_cast<unsigned int>(hr));
             return false;
         }
 
@@ -2513,33 +2743,17 @@ namespace LoopPlayer
                  start,
                  FormatTime(stop).c_str(),
                  stop);
-            SafeRelease(item);
             return false;
         }
 
-        PROPVARIANT startValue;
-        PROPVARIANT stopValue;
-        InitInt64PropVariant(startValue, start);
-        InitInt64PropVariant(stopValue, stop);
-        hr = item->SetStartStopPosition(&MFP_POSITIONTYPE_100NS,
-                                        &startValue,
-                                        &MFP_POSITIONTYPE_100NS,
-                                        &stopValue);
-        PropVariantClear(&startValue);
-        PropVariantClear(&stopValue);
-
-        segmentStopApplied_ = activeAb && SUCCEEDED(hr);
-        Logf(L"SetStartStopPosition %s returned 0x%08X, start=%s (%I64d), stop=%s (%I64d), nativeStop=%d",
+        Logf(L"Playback segment updated for custom engine: mode=%s, start=%s (%I64d), stop=%s (%I64d), manualLoop=%d",
              activeAb ? L"AB" : L"full",
-             static_cast<unsigned int>(hr),
              FormatTime(start).c_str(),
              start,
              FormatTime(stop).c_str(),
              stop,
-             segmentStopApplied_ ? 1 : 0);
-
-        SafeRelease(item);
-        return segmentStopApplied_;
+             activeAb ? 1 : 0);
+        return activeAb;
     }
 
     void PlayerWindow::SetLoopA()
@@ -2573,7 +2787,7 @@ namespace LoopPlayer
 
         UpdateLoopText();
         ApplyPlaybackSegment();
-        SetStatus(L"A point set");
+        SetStatus(L"A点已设置");
         Logf(L"A point set: %s (%I64d), raw=%s (%I64d), frameDuration=%I64d",
              FormatTime(loopA_).c_str(),
              loopA_,
@@ -2610,7 +2824,7 @@ namespace LoopPlayer
 
         if (pos <= loopA_)
         {
-            SetStatus(L"B must be after A");
+            SetStatus(L"B点必须在A点之后");
             return;
         }
 
@@ -2621,7 +2835,7 @@ namespace LoopPlayer
         loopReplayCount_ = 0;
         UpdateLoopText();
         ApplyPlaybackSegment();
-        SetStatus(L"B point set");
+        SetStatus(L"B点已设置");
         Logf(L"B point set: %s (%I64d), raw=%s (%I64d), frameDuration=%I64d",
              FormatTime(loopB_).c_str(),
              loopB_,
@@ -2641,7 +2855,7 @@ namespace LoopPlayer
         loopReplayCount_ = 0;
         UpdateLoopText();
         ApplyPlaybackSegment();
-        SetStatus(L"AB loop cleared");
+        SetStatus(L"AB循环已清除");
         Logf(L"AB loop cleared");
     }
 
@@ -2655,7 +2869,7 @@ namespace LoopPlayer
         REFERENCE_TIME& point = isA ? loopA_ : loopB_;
         if (point < 0)
         {
-            SetStatus(isA ? L"Set A first" : L"Set B first");
+            SetStatus(isA ? L"请先设置A点" : L"请先设置B点");
             return false;
         }
 
@@ -2696,7 +2910,7 @@ namespace LoopPlayer
             }
             if (loopA_ >= 0 && next <= loopA_)
             {
-                SetStatus(L"No room to move B");
+                SetStatus(L"B点没有可移动空间");
                 return false;
             }
             loopB_ = next;
@@ -2707,10 +2921,10 @@ namespace LoopPlayer
         UpdateLoopText();
         ApplyPlaybackSegment();
 
-        if (previewFrame && isPlaying_ && player_)
+        if (previewFrame && isPlaying_ && player_ && player_->isOpen())
         {
             manualPauseRequest_ = true;
-            HRESULT pauseHr = player_->Pause();
+            HRESULT pauseHr = player_->pause();
             Logf(L"%s nudge pause for frame preview returned 0x%08X",
                  isA ? L"A" : L"B",
                  static_cast<unsigned int>(pauseHr));
@@ -2726,7 +2940,7 @@ namespace LoopPlayer
 
         SeekTo(next, !previewFrame);
         UpdatePositionUi(next);
-        SetStatus(isA ? L"A moved one frame" : L"B moved one frame");
+        SetStatus(isA ? L"A点移动一帧" : L"B点移动一帧");
         Logf(L"%s moved by %d frame(s): %s (%I64d)", isA ? L"A" : L"B", frames, FormatTime(next).c_str(), next);
         LogLoopTrigger();
         return true;
@@ -2927,8 +3141,8 @@ namespace LoopPlayer
                                  CLIP_DEFAULT_PRECIS,
                                  CLEARTYPE_QUALITY,
                                  DEFAULT_PITCH | FF_DONTCARE,
-                                 L"Microsoft YaHei UI");
-        HGDIOBJ oldFont = NULL;
+                                 L"楷体");
+        HGDIOBJ oldFont = nullptr;
         if (font)
         {
             oldFont = SelectObject(hdc, font);
@@ -3016,8 +3230,8 @@ namespace LoopPlayer
                                  CLIP_DEFAULT_PRECIS,
                                  CLEARTYPE_QUALITY,
                                  DEFAULT_PITCH | FF_DONTCARE,
-                                 L"Microsoft YaHei UI");
-        HGDIOBJ oldFont = NULL;
+                                 L"楷体");
+        HGDIOBJ oldFont = nullptr;
         if (font)
         {
             oldFont = SelectObject(hdc, font);
@@ -3037,11 +3251,11 @@ namespace LoopPlayer
     {
         if (seekSlider_)
         {
-            InvalidateRect(seekSlider_, NULL, TRUE);
+            InvalidateRect(seekSlider_, nullptr, TRUE);
         }
         if (overlayPanel_)
         {
-            InvalidateRect(overlayPanel_, NULL, TRUE);
+            InvalidateRect(overlayPanel_, nullptr, TRUE);
         }
     }
 
@@ -3051,7 +3265,7 @@ namespace LoopPlayer
         if (hoveredMarker_ != marker || hoverMarkerWindow_ != hwnd)
         {
             hoveredMarker_ = marker;
-            hoverMarkerWindow_ = marker == PROGRESS_MARKER_NONE ? NULL : hwnd;
+            hoverMarkerWindow_ = marker == PROGRESS_MARKER_NONE ? nullptr : hwnd;
             InvalidateProgressViews();
         }
 
@@ -3072,7 +3286,7 @@ namespace LoopPlayer
         if (hoverMarkerWindow_ == hwnd)
         {
             hoveredMarker_ = PROGRESS_MARKER_NONE;
-            hoverMarkerWindow_ = NULL;
+            hoverMarkerWindow_ = nullptr;
             InvalidateProgressViews();
         }
     }
@@ -3126,36 +3340,14 @@ namespace LoopPlayer
 
     void PlayerWindow::ClearNativePlaybackSegmentForSeek()
     {
-        if (!player_ || !segmentStopApplied_)
+        if (!segmentStopApplied_)
         {
             return;
         }
 
-        IMFPMediaItem* item = NULL;
-        HRESULT hr = player_->GetMediaItem(&item);
-        if (SUCCEEDED(hr) && item)
-        {
-            PROPVARIANT startValue;
-            PROPVARIANT stopValue;
-            InitInt64PropVariant(startValue, 0);
-            InitInt64PropVariant(stopValue, duration_);
-            hr = item->SetStartStopPosition(&MFP_POSITIONTYPE_100NS,
-                                            &startValue,
-                                            &MFP_POSITIONTYPE_100NS,
-                                            &stopValue);
-            PropVariantClear(&startValue);
-            PropVariantClear(&stopValue);
-            Logf(L"SetStartStopPosition full for seek drag returned 0x%08X, stop=%s (%I64d)",
-                 static_cast<unsigned int>(hr),
-                 FormatTime(duration_).c_str(),
-                 duration_);
-            SafeRelease(item);
-        }
-        else
-        {
-            Logf(L"GetMediaItem for seek drag segment clear failed: 0x%08X", static_cast<unsigned int>(hr));
-        }
-
+        Logf(L"Clear playback segment flag for custom engine seek drag: duration=%s (%I64d)",
+             FormatTime(duration_).c_str(),
+             duration_);
         segmentStopApplied_ = false;
     }
 
@@ -3168,6 +3360,20 @@ namespace LoopPlayer
 
         RECT track = GetProgressTrackRect(hwnd, overlay);
         const REFERENCE_TIME target = ProgressXToTime(x, track);
+        if (logSeek)
+        {
+            Logf(L"SeekFromProgressPoint overlay=%d x=%d track=(%ld,%ld)-(%ld,%ld) target=%s (%I64d) duration=%s (%I64d)",
+                 overlay ? 1 : 0,
+                 x,
+                 track.left,
+                 track.top,
+                 track.right,
+                 track.bottom,
+                 FormatTime(target).c_str(),
+                 target,
+                 FormatTime(duration_).c_str(),
+                 duration_);
+        }
         SeekTo(target, false, logSeek);
         UpdatePositionUi(target);
     }
@@ -3187,11 +3393,21 @@ namespace LoopPlayer
         restoreSegmentAfterDrag_ = segmentStopApplied_;
         SetFocus(hwnd_);
         SetCapture(hwnd);
+        lastSeekDragLogTick_ = GetTickCount();
+        Logf(L"Seek drag begin overlay=%d pt=(%ld,%ld) wasPlaying=%d restoreSegment=%d duration=%s (%I64d)",
+             overlay ? 1 : 0,
+             pt.x,
+             pt.y,
+             wasPlayingBeforeDrag_ ? 1 : 0,
+             restoreSegmentAfterDrag_ ? 1 : 0,
+             FormatTime(duration_).c_str(),
+             duration_);
+        LogPlaybackSnapshot(L"seek-drag-begin");
 
-        if (isPlaying_ && player_)
+        if (isPlaying_ && player_ && player_->isOpen())
         {
             manualPauseRequest_ = true;
-            HRESULT hr = player_->Pause();
+            HRESULT hr = player_->pause();
             Logf(L"Seek drag pause returned 0x%08X", static_cast<unsigned int>(hr));
             if (SUCCEEDED(hr))
             {
@@ -3216,6 +3432,20 @@ namespace LoopPlayer
         }
 
         SeekFromProgressPoint(hwnd, overlay, pt.x, false);
+        const DWORD now = GetTickCount();
+        if (IsLoggingEnabled() && (now - lastSeekDragLogTick_) >= 200)
+        {
+            lastSeekDragLogTick_ = now;
+            RECT track = GetProgressTrackRect(hwnd, overlay);
+            const REFERENCE_TIME target = ProgressXToTime(pt.x, track);
+            Logf(L"Seek drag continue overlay=%d pt=(%ld,%ld) target=%s (%I64d)",
+                 overlay ? 1 : 0,
+                 pt.x,
+                 pt.y,
+                 FormatTime(target).c_str(),
+                 target);
+            LogPlaybackSnapshot(L"seek-drag-continue", target);
+        }
     }
 
     void PlayerWindow::EndSeekDrag(HWND hwnd, bool overlay, POINT pt)
@@ -3227,6 +3457,16 @@ namespace LoopPlayer
 
         ReleaseCapture();
         draggingSeek_ = false;
+        RECT track = GetProgressTrackRect(hwnd, overlay);
+        const REFERENCE_TIME target = ProgressXToTime(pt.x, track);
+        Logf(L"Seek drag end overlay=%d pt=(%ld,%ld) target=%s (%I64d) restoreSegment=%d wasPlaying=%d",
+             overlay ? 1 : 0,
+             pt.x,
+             pt.y,
+             FormatTime(target).c_str(),
+             target,
+             restoreSegmentAfterDrag_ ? 1 : 0,
+             wasPlayingBeforeDrag_ ? 1 : 0);
         SeekFromProgressPoint(hwnd, overlay, pt.x, true);
 
         if (restoreSegmentAfterDrag_)
@@ -3235,18 +3475,19 @@ namespace LoopPlayer
         }
         restoreSegmentAfterDrag_ = false;
 
-        if (wasPlayingBeforeDrag_ && player_)
+        if (wasPlayingBeforeDrag_ && player_ && player_->isOpen())
         {
-            HRESULT hr = player_->Play();
+            HRESULT hr = player_->play();
             Logf(L"Seek drag resume Play returned 0x%08X", static_cast<unsigned int>(hr));
             isPlaying_ = SUCCEEDED(hr);
             if (isPlaying_)
             {
-                SetStatus(L"Playing");
+                SetStatus(L"正在播放");
             }
         }
         wasPlayingBeforeDrag_ = false;
         UpdateControls();
+        LogPlaybackSnapshot(L"seek-drag-end", target);
     }
 
     void PlayerWindow::ShowProgressContextMenu(HWND hwnd, bool overlay, POINT pt)
@@ -3291,7 +3532,7 @@ namespace LoopPlayer
                                            screen.y,
                                            0,
                                            menuOwner,
-                                           NULL);
+                                           nullptr);
         PostMessageW(menuOwner, WM_NULL, 0, 0);
         DestroyMenu(menu);
 
@@ -3450,7 +3691,7 @@ namespace LoopPlayer
         draggingVideo_ = false;
         if (!wasDragging)
         {
-            SetTimer(hwnd_, TIMER_VIDEO_CLICK, GetDoubleClickTime() + 30, NULL);
+            SetTimer(hwnd_, TIMER_VIDEO_CLICK, GetDoubleClickTime() + 30, nullptr);
         }
     }
 
@@ -3469,6 +3710,11 @@ namespace LoopPlayer
         }
         case WM_ERASEBKGND:
         {
+            if (hasMedia_ && hwnd == videoPanel_)
+            {
+                return 1;
+            }
+
             RECT rc = { 0 };
             GetClientRect(hwnd, &rc);
             FillRect(reinterpret_cast<HDC>(wparam), &rc, reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
@@ -3476,15 +3722,28 @@ namespace LoopPlayer
         }
         case WM_PAINT:
         {
-            if (!hasMedia_)
+            PAINTSTRUCT ps = { 0 };
+            HDC hdc = BeginPaint(hwnd, &ps);
+            RECT rc = { 0 };
+            GetClientRect(hwnd, &rc);
+            if (hasMedia_ && hwnd == videoPanel_ && player_)
             {
-                PAINTSTRUCT ps = { 0 };
-                HDC hdc = BeginPaint(hwnd, &ps);
-                PaintEmptyPlusButton(hdc, hwnd);
-                EndPaint(hwnd, &ps);
-                return 0;
+                player_->paintVideo(hdc, rc);
+                if (pauseIndicatorAlpha_ > 0)
+                {
+                    PaintPauseIndicator(hdc, hwnd, pauseIndicatorAlpha_);
+                }
             }
-            break;
+            else
+            {
+                FillRect(hdc, &rc, reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
+                if (!hasMedia_)
+                {
+                    PaintEmptyPlusButton(hdc, hwnd);
+                }
+            }
+            EndPaint(hwnd, &ps);
+            return 0;
         }
         case WM_LBUTTONDOWN:
         {
@@ -3512,8 +3771,8 @@ namespace LoopPlayer
                 if (emptyPlusHovered_ != hovered)
                 {
                     emptyPlusHovered_ = hovered;
-                    InvalidateRect(videoHost_, NULL, TRUE);
-                    InvalidateRect(videoPanel_, NULL, TRUE);
+                    InvalidateRect(videoHost_, nullptr, TRUE);
+                    InvalidateRect(videoPanel_, nullptr, TRUE);
                 }
 
                 TRACKMOUSEEVENT tme = { 0 };
@@ -3523,7 +3782,7 @@ namespace LoopPlayer
                 TrackMouseEvent(&tme);
                 if (hovered)
                 {
-                    SetCursor(LoadCursor(NULL, IDC_HAND));
+                    SetCursor(LoadCursor(nullptr, IDC_HAND));
                 }
                 return 0;
             }
@@ -3534,8 +3793,8 @@ namespace LoopPlayer
             if (!hasMedia_ && emptyPlusHovered_)
             {
                 emptyPlusHovered_ = false;
-                InvalidateRect(videoHost_, NULL, TRUE);
-                InvalidateRect(videoPanel_, NULL, TRUE);
+                InvalidateRect(videoHost_, nullptr, TRUE);
+                InvalidateRect(videoPanel_, nullptr, TRUE);
             }
             return 0;
         case WM_LBUTTONUP:
@@ -3622,7 +3881,7 @@ namespace LoopPlayer
             if (topHoveredButton_ != button)
             {
                 topHoveredButton_ = button;
-                InvalidateRect(hwnd, NULL, TRUE);
+                InvalidateRect(hwnd, nullptr, TRUE);
             }
 
             TRACKMOUSEEVENT tme = { 0 };
@@ -3646,7 +3905,7 @@ namespace LoopPlayer
                 topOverlayKeepVisibleUntil_ = GetTickCount() + MOUSE_UI_IDLE_HIDE_MS;
             }
             topHoveredButton_ = TOP_BUTTON_NONE;
-            InvalidateRect(hwnd, NULL, TRUE);
+            InvalidateRect(hwnd, nullptr, TRUE);
             return 0;
         }
         case WM_LBUTTONDOWN:
@@ -3831,12 +4090,18 @@ namespace LoopPlayer
             return;
         }
 
+        if (!mediaItemReady_)
+        {
+            if (logSeek)
+            {
+                Logf(L"SeekTo ignored before MEDIAITEM_SET: target=%s (%I64d)", FormatTime(pos).c_str(), pos);
+            }
+            return;
+        }
+
         pos = ClampMediaPosition(pos);
 
-        PROPVARIANT value;
-        InitInt64PropVariant(value, pos);
-        HRESULT hr = player_->SetPosition(MFP_POSITIONTYPE_100NS, &value);
-        PropVariantClear(&value);
+        HRESULT hr = player_->seek(pos);
 
         if (logSeek)
         {
@@ -3848,7 +4113,7 @@ namespace LoopPlayer
 
         if (keepPlaying && isPlaying_)
         {
-            HRESULT playHr = player_->Play();
+            HRESULT playHr = player_->play();
             if (logSeek)
             {
                 Logf(L"SeekTo resume Play returned 0x%08X", static_cast<unsigned int>(playHr));
@@ -3883,7 +4148,7 @@ namespace LoopPlayer
 
     void PlayerWindow::ReplayFrom(REFERENCE_TIME pos, bool forcePauseBeforeSeek)
     {
-        if (!player_)
+        if (!player_ || !player_->isOpen())
         {
             return;
         }
@@ -3910,7 +4175,7 @@ namespace LoopPlayer
         const bool pauseBeforeSeek = isPlaying_ && (forcePauseBeforeSeek || !IsShortActiveAbLoop());
         if (pauseBeforeSeek)
         {
-            HRESULT pauseHr = player_->Pause();
+            HRESULT pauseHr = player_->pause();
             if (logReplay)
             {
                 Logf(L"Replay pause-before-seek returned 0x%08X", static_cast<unsigned int>(pauseHr));
@@ -3922,7 +4187,7 @@ namespace LoopPlayer
         }
 
         SeekTo(pos, false, logReplay);
-        HRESULT hr = player_->Play();
+        HRESULT hr = player_->play();
         if (logReplay)
         {
             Logf(L"Replay Play returned 0x%08X", static_cast<unsigned int>(hr));
@@ -3936,9 +4201,78 @@ namespace LoopPlayer
         UpdatePositionUi(pos);
     }
 
+    void PlayerWindow::LogPlaybackSnapshot(const wchar_t* reason, REFERENCE_TIME knownPos)
+    {
+        if (!IsLoggingEnabled())
+        {
+            return;
+        }
+
+        REFERENCE_TIME pos = knownPos;
+        bool gotPosition = knownPos >= 0;
+        if (!gotPosition)
+        {
+            gotPosition = GetPosition(pos);
+        }
+
+        PlaybackEngineSnapshot engineSnapshot;
+        if (player_)
+        {
+            player_->snapshot(engineSnapshot);
+        }
+
+        Logf(L"Playback snapshot reason=%s stateHr=0x%08X state=%s gotPos=%d pos=%s (%I64d) enginePos=%s (%I64d) ui=%s (%I64d) duration=%s (%I64d) hasMedia=%d mediaReady=%d autoPlayReady=%d isPlaying=%d suppressReplay=%d segmentStop=%d loopPending=%d loopFast=%d markerPending=%d draggingSeek=%d wasPlayingBeforeDrag=%d restoreSegmentAfterDrag=%d manualPause=%d loopEnabled=%d loopA=%s (%I64d) loopB=%s (%I64d) frameDuration=%I64d engineFrame=%I64d rate=%.2f engineRate=%.2f videoAvailable=%d audioAvailable=%d videoEnded=%d audioEnded=%d native=%dx%d zoom=%d pan=(%d,%d) videoTimeline=%d videoEnd=%s (%I64d)",
+             reason ? reason : L"",
+             static_cast<unsigned int>(engineSnapshot.m_lastResult),
+             PlaybackEngineStateName(engineSnapshot.m_state),
+             gotPosition ? 1 : 0,
+             gotPosition ? FormatTime(pos).c_str() : L"--:--.---",
+             gotPosition ? pos : -1,
+             FormatTime(engineSnapshot.m_position).c_str(),
+             engineSnapshot.m_position,
+             FormatTime(uiPosition_).c_str(),
+             uiPosition_,
+             FormatTime(duration_).c_str(),
+             duration_,
+             hasMedia_ ? 1 : 0,
+             mediaItemReady_ ? 1 : 0,
+             autoPlayWhenMediaReady_ ? 1 : 0,
+             isPlaying_ ? 1 : 0,
+             suppressReplay_ ? 1 : 0,
+             segmentStopApplied_ ? 1 : 0,
+             loopReplayPending_ ? 1 : 0,
+             loopReplayFastAttempt_ ? 1 : 0,
+             markerSeekPending_ ? 1 : 0,
+             draggingSeek_ ? 1 : 0,
+             wasPlayingBeforeDrag_ ? 1 : 0,
+             restoreSegmentAfterDrag_ ? 1 : 0,
+             manualPauseRequest_ ? 1 : 0,
+             IsLoopEnabled() ? 1 : 0,
+             FormatTime(loopA_).c_str(),
+             loopA_,
+             FormatTime(loopB_).c_str(),
+             loopB_,
+             frameDuration_,
+             engineSnapshot.m_frameDuration,
+             PlaybackRate(),
+             engineSnapshot.m_playbackRate,
+             engineSnapshot.m_videoAvailable ? 1 : 0,
+             engineSnapshot.m_audioAvailable ? 1 : 0,
+             engineSnapshot.m_videoEnded ? 1 : 0,
+             engineSnapshot.m_audioEnded ? 1 : 0,
+             nativeVideoWidth_,
+             nativeVideoHeight_,
+             videoZoomPercent_,
+             videoPanX_,
+             videoPanY_,
+             videoTimeline_.isValid ? 1 : 0,
+             FormatTime(videoTimeline_.lastEndTime).c_str(),
+             videoTimeline_.lastEndTime);
+    }
+
     void PlayerWindow::OnTimer(bool updateUi)
     {
-        if (!hasMedia_ || !player_)
+        if (!hasMedia_ || !player_ || !player_->isOpen())
         {
             return;
         }
@@ -3949,7 +4283,19 @@ namespace LoopPlayer
             return;
         }
 
+        if (player_->state() == PlaybackEngineStateEnded)
+        {
+            OnPlaybackEngineEvent(PlaybackEngineEventEnded, S_OK);
+            return;
+        }
+
         const DWORD now = GetTickCount();
+        if (IsLoggingEnabled() && (now - lastPositionLogTick_) >= 500)
+        {
+            lastPositionLogTick_ = now;
+            LogPlaybackSnapshot(L"timer", pos);
+        }
+
         if (loopReplayPending_)
         {
             if (!IsActiveAbLoop())
@@ -4122,69 +4468,25 @@ namespace LoopPlayer
         SetWindowTextW(hwnd_, title.c_str());
     }
 
-    void PlayerWindow::OnPlayerEvent(MFP_EVENT_TYPE eventType, HRESULT eventHr)
+    void PlayerWindow::OnPlaybackEngineEvent(PlaybackEngineEvent eventType, HRESULT eventHr)
     {
-        if (FAILED(eventHr) || ShouldLogPlayerEvent(eventType))
-        {
-            Logf(L"MFPlay window event: event=%s(%d), hr=0x%08X",
-                 MediaPlayerEventName(eventType),
-                 static_cast<int>(eventType),
-                 static_cast<unsigned int>(eventHr));
-        }
+        Logf(L"Playback engine window event: event=%s(%d), hr=0x%08X",
+             PlaybackEngineEventName(eventType),
+             static_cast<int>(eventType),
+             static_cast<unsigned int>(eventHr));
+        LogPlaybackSnapshot(PlaybackEngineEventName(eventType));
 
-        if (FAILED(eventHr))
+        if (FAILED(eventHr) || eventType == PlaybackEngineEventError)
         {
             isPlaying_ = false;
             manualPauseRequest_ = false;
-            SetStatus((std::wstring(L"Playback error: ") + HResultText(eventHr)).c_str());
+            SetStatus((std::wstring(L"播放错误：") + HResultText(eventHr)).c_str());
             UpdateControls();
             return;
         }
 
-        switch (eventType)
+        if (eventType == PlaybackEngineEventPositionSet)
         {
-        case MFP_EVENT_TYPE_PLAY:
-            isPlaying_ = true;
-            manualPauseRequest_ = false;
-            break;
-        case MFP_EVENT_TYPE_PAUSE:
-            isPlaying_ = false;
-            if (manualPauseRequest_)
-            {
-                manualPauseRequest_ = false;
-                break;
-            }
-            if (loopReplayPending_)
-            {
-                break;
-            }
-            if (IsActiveAbLoop())
-            {
-                REFERENCE_TIME current = 0;
-                const REFERENCE_TIME trigger = LoopTriggerPosition();
-                if (trigger >= 0 && GetPosition(current) && current >= trigger)
-                {
-                    Logf(L"AB loop triggered by PAUSE event: pos=%s (%I64d), trigger=%s (%I64d)",
-                         FormatTime(current).c_str(),
-                         current,
-                         FormatTime(trigger).c_str(),
-                         trigger);
-                    ReplayFrom(loopA_, true);
-                    SetStatus(L"AB looping");
-                }
-            }
-            break;
-        case MFP_EVENT_TYPE_STOP:
-            isPlaying_ = false;
-            manualPauseRequest_ = false;
-            break;
-        case MFP_EVENT_TYPE_MEDIAITEM_SET:
-            ReadDuration();
-            ReadNativeVideoSize();
-            ResizeWindowToVideoDefault();
-            ResizeVideoWindow();
-            break;
-        case MFP_EVENT_TYPE_POSITION_SET:
             if (loopReplayPending_)
             {
                 REFERENCE_TIME current = 0;
@@ -4197,20 +4499,12 @@ namespace LoopPlayer
                     lastLoopReplayTick_ = GetTickCount();
                     if (ShouldLogLoopReplay())
                     {
-                        Logf(L"AB replay rearmed after POSITION_SET: pos=%s (%I64d), trigger=%s (%I64d)",
+                        Logf(L"AB replay rearmed after engine POSITION_SET: pos=%s (%I64d), trigger=%s (%I64d)",
                              gotPosition ? FormatTime(current).c_str() : L"--:--.---",
                              gotPosition ? current : -1,
                              FormatTime(trigger).c_str(),
                              trigger);
                     }
-                }
-                else if (ShouldLogLoopReplay())
-                {
-                    Logf(L"AB replay POSITION_SET still after trigger; waiting for fallback: pos=%s (%I64d), trigger=%s (%I64d)",
-                         FormatTime(current).c_str(),
-                         current,
-                         FormatTime(trigger).c_str(),
-                         trigger);
                 }
             }
             if (markerSeekPending_)
@@ -4218,40 +4512,40 @@ namespace LoopPlayer
                 markerSeekPending_ = false;
                 if (!IsShortActiveAbLoop() || ShouldLogLoopReplay())
                 {
-                    Logf(L"Marker nudge seek confirmed by POSITION_SET");
+                    Logf(L"Marker nudge seek confirmed by engine POSITION_SET");
                 }
             }
-            break;
-        case MFP_EVENT_TYPE_PLAYBACK_ENDED:
+            UpdateControls();
+            return;
+        }
+
+        if (eventType == PlaybackEngineEventEnded)
+        {
             if (suppressReplay_)
             {
                 suppressReplay_ = false;
                 isPlaying_ = false;
-                break;
+                UpdateControls();
+                return;
             }
+
+            const DWORD now = GetTickCount();
             if (IsActiveAbLoop())
             {
-                const DWORD now = GetTickCount();
                 if ((now - lastLoopReplayTick_) < LOOP_ENDED_EVENT_SUPPRESS_MS)
                 {
-                    Logf(L"Ignore PLAYBACK_ENDED after recent AB replay: elapsed=%lu", now - lastLoopReplayTick_);
-                    break;
+                    Logf(L"Ignore engine ended event after recent AB replay: elapsed=%lu", now - lastLoopReplayTick_);
+                    UpdateControls();
+                    return;
                 }
                 ReplayFrom(loopA_);
-                SetStatus(L"AB looping");
+                SetStatus(L"AB循环播放");
             }
             else
             {
                 ReplayFrom(0);
-                SetStatus(L"Looping from start");
+                SetStatus(L"从头循环播放");
             }
-            break;
-        case MFP_EVENT_TYPE_ERROR:
-            isPlaying_ = false;
-            SetStatus((std::wstring(L"Playback error: ") + HResultText(eventHr)).c_str());
-            break;
-        default:
-            break;
         }
 
         UpdateControls();
@@ -4329,13 +4623,12 @@ namespace LoopPlayer
         Logf(L"ClosePlayer begin");
         if (player_)
         {
-            player_->Stop();
-            player_->Shutdown();
+            player_->uninit();
         }
 
-        SafeRelease(player_);
-
         hasMedia_ = false;
+        mediaItemReady_ = false;
+        autoPlayWhenMediaReady_ = false;
         isPlaying_ = false;
         emptyPlusHovered_ = false;
         pauseIndicatorAlpha_ = 0;
@@ -4349,13 +4642,17 @@ namespace LoopPlayer
         manualPauseRequest_ = false;
         markerSeekPendingTick_ = 0;
         loopReplayCount_ = 0;
+        lastPositionLogTick_ = 0;
+        lastSeekDragLogTick_ = 0;
         nativeVideoWidth_ = 0;
         nativeVideoHeight_ = 0;
         ResetVideoTransform();
         duration_ = 0;
         loopA_ = -1;
         loopB_ = -1;
+        videoTimeline_ = VideoTimelineInfo();
         filePath_.clear();
+        playbackPath_.clear();
 
         uiPosition_ = 0;
         InvalidateProgressViews();
@@ -4369,11 +4666,11 @@ namespace LoopPlayer
         }
         if (videoHost_)
         {
-            InvalidateRect(videoHost_, NULL, TRUE);
+            InvalidateRect(videoHost_, nullptr, TRUE);
         }
         if (videoPanel_)
         {
-            InvalidateRect(videoPanel_, NULL, TRUE);
+            InvalidateRect(videoPanel_, nullptr, TRUE);
         }
         Logf(L"ClosePlayer end");
     }

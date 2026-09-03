@@ -13,9 +13,11 @@
 #include <windowsx.h>
 #include <commdlg.h>
 #include <commctrl.h>
-#include <evr.h>
 #include <mfapi.h>
-#include <mfplay.h>
+#include <mferror.h>
+#include <mfidl.h>
+#include <mfreadwrite.h>
+#include <mmsystem.h>
 #include <propidl.h>
 #include <shellapi.h>
 #include <shlwapi.h>
