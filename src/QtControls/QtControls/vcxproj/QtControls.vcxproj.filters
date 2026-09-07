@@ -134,9 +134,6 @@
     <CustomBuild Include="..\src\CExternalTextEdit.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\src\CGeneralStyle.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="..\src\CheckBox.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
@@ -236,6 +233,15 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="..\src\DialogShow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ExpressionConfig.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ExpressionConfigParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ExpressionConfigXmlHandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_DialogShow.cpp">
@@ -460,14 +466,8 @@
     <ClCompile Include="GeneratedFiles\Release\moc_CExternalTextEdit.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\CGeneralStyle.cpp">
+    <ClCompile Include="..\src\ControlStyleManager.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_CGeneralStyle.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_CGeneralStyle.cpp">
-      <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="..\src\CheckBox.cpp">
       <Filter>Source Files</Filter>
@@ -499,6 +499,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ControlBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ControlStyleManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ControlBorder.h">
@@ -544,6 +547,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\DialogResult.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ExpressionConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ExpressionConfigParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ExpressionConfigXmlHandler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

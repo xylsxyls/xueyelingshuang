@@ -1,28 +1,63 @@
 ﻿#include "LockedAccountPanel.h"
 #include <QPainter>
-#include "QtControls/CGeneralStyle.h"
+#include "QtControls/ControlStyleManager.h"
 #include "QtControls/CTreeViewEx.h"
 #include <QHeaderView>
 #include "DialogHelper.h"
 
-LockedAccountPanel::LockedAccountPanel(QWidget *parent)
-    :QWidget(parent)
-    ,mName(QStringLiteral("被封禁账号列表"))
-    ,mTreeView(new CTreeViewEx(this))
-    ,mModel(new QStandardItemModel(this))
+LockedAccountItem::LockedAccountItem()
 {
-    mTreeView->setModel(mModel);
-    mTreeView->setEditTriggers(CTreeViewEx::NoEditTriggers);
-    mTreeView->setIndentation(0);
-    LockedAccountItemDelegate* tDelegate = new LockedAccountItemDelegate(mTreeView);
-    mTreeView->setItemDelegate(tDelegate);
-    mTreeView->header()->setDefaultAlignment(Qt::AlignCenter);
-    mTreeView->header()->setStyleSheet(QStringLiteral("QHeaderView{border-top:1px solid #4a5980;}") +
+    setSizeHint(QSize(0, 30));
+}
+
+void LockedAccountItem::setStartDate(const QString& startDate)
+{
+    setData(startDate, Role_StartDate);
+}
+
+QString LockedAccountItem::startDate()
+{
+    return data(Role_StartDate).toString();
+}
+
+void LockedAccountItem::setReasion(const QString& reasion)
+{
+    setData(reasion, Role_Reasion);
+}
+
+QString LockedAccountItem::reasion()
+{
+    return data(Role_Reasion).toString();
+}
+
+void LockedAccountItem::setDayCount(quint64 dayCount)
+{
+    setData(dayCount, Role_DayCount);
+}
+
+quint64 LockedAccountItem::dayCount()
+{
+    return data(Role_DayCount).toULongLong();
+}
+
+LockedAccountPanel::LockedAccountPanel(QWidget* parent)
+    :QWidget(parent)
+    ,m_treeView(new CTreeViewEx(this))
+    ,m_model(new QStandardItemModel(this))
+    ,m_name(QStringLiteral("被封禁账号列表"))
+{
+    m_treeView->setModel(m_model);
+    m_treeView->setEditTriggers(CTreeViewEx::NoEditTriggers);
+    m_treeView->setIndentation(0);
+    LockedAccountItemDelegate* tDelegate = new LockedAccountItemDelegate(m_treeView);
+    m_treeView->setItemDelegate(tDelegate);
+    m_treeView->header()->setDefaultAlignment(Qt::AlignCenter);
+    m_treeView->header()->setStyleSheet(QStringLiteral("QHeaderView{border-top:1px solid #4a5980;}") +
                                        QStringLiteral("QHeaderView::section{background-color:#36415f;height:28px; border:none; text-align: center;font-style: 14px '微软雅黑'; color:#899ac7}"));
 
     QStringList labels;
     labels << QStringLiteral("封号时间") << QStringLiteral("封号原因") << QStringLiteral("封号天数");
-    mModel->setHorizontalHeaderLabels(labels);
+    m_model->setHorizontalHeaderLabels(labels);
 
     LockedAccountItemList li;
     for(int i = 0; i < 10; i++)
@@ -37,97 +72,104 @@ LockedAccountPanel::LockedAccountPanel(QWidget *parent)
     this->setLockedAccountItemList(li);
 }
 
-void LockedAccountPanel::paintEvent(QPaintEvent *e)
+void LockedAccountPanel::paintEvent(QPaintEvent* eve)
 {
+    QWidget::paintEvent(eve);
     QPainter p(this);
     p.save();
     p.fillRect(rect(), "#2c344a");
 
     QRect nameRect = rect().adjusted(0,14,0,0);
-    QFont nameFont = CGeneralStyle::instance()->font();
+    QFont nameFont = ControlStyleManager::instance().defaultFont();
     nameFont.setPixelSize(18);
 
     QColor nameColor = "#FFFFFF";
     p.setFont(nameFont);
     p.setPen(nameColor);
 
-    p.drawText(DialogHelper::rectValid(nameRect), Qt::AlignTop|Qt::AlignHCenter, mName);
+    p.drawText(DialogHelper::rectValid(nameRect), Qt::AlignTop|Qt::AlignHCenter, m_name);
     p.restore();
 }
 
-void LockedAccountPanel::resizeEvent(QResizeEvent *e)
+void LockedAccountPanel::resizeEvent(QResizeEvent* eve)
 {
-    QWidget::resizeEvent(e);
+    QWidget::resizeEvent(eve);
     this->layoutControls();
 }
 
 void LockedAccountPanel::layoutControls()
 {
-    mTreeView->setGeometry(QRect(QPoint(7,50), QPoint(this->width() - 7, this->height() - 7)));
+    m_treeView->setGeometry(QRect(QPoint(7,50), QPoint(this->width() - 7, this->height() - 7)));
 }
 
-void LockedAccountPanel::setName(const QString &s)
+void LockedAccountPanel::setName(const QString& name)
 {
-    mName = s;
+    m_name = name;
     this->update();
 }
 
 QString LockedAccountPanel::name()
 {
-    return mName;
+    return m_name;
 }
 
-void LockedAccountPanel::setLockedAccountItemList(const LockedAccountItemList &li)
+void LockedAccountPanel::setLockedAccountItemList(const LockedAccountItemList& li)
 {
-    mModel->clear();
+    m_model->clear();
     QStringList labels;
     labels << QStringLiteral("封号时间") << QStringLiteral("封号原因") << QStringLiteral("封号天数");
-    mModel->setHorizontalHeaderLabels(labels);
+    m_model->setHorizontalHeaderLabels(labels);
 
     for(int i = 0; i < li.count(); i++)
     {
-        mModel->appendRow(li[i]);
+        m_model->appendRow(li[i]);
     }
 
-    mTreeView->header()->resizeSection(0,170);
-    mTreeView->header()->resizeSection(1,110);
-    mTreeView->header()->resizeSection(2,60);
+    m_treeView->header()->resizeSection(0,170);
+    m_treeView->header()->resizeSection(1,110);
+    m_treeView->header()->resizeSection(2,60);
 }
 
 void LockedAccountPanel::appendLockedAccountItem(LockedAccountItem* item)
 {
-	mModel->appendRow(item);
+	m_model->appendRow(item);
 }
 
 void LockedAccountPanel::clearLockedAccountItem()
 {
-	mModel->clear();
+	m_model->clear();
 
 	QStringList labels;
 	labels << QStringLiteral("封号时间") << QStringLiteral("封号原因") << QStringLiteral("封号天数");
-	mModel->setHorizontalHeaderLabels(labels);
-	
-	mTreeView->header()->resizeSection(0,170);
-	mTreeView->header()->resizeSection(1,110);
-	mTreeView->header()->resizeSection(2,60);
+	m_model->setHorizontalHeaderLabels(labels);
+
+	m_treeView->header()->resizeSection(0,170);
+	m_treeView->header()->resizeSection(1,110);
+	m_treeView->header()->resizeSection(2,60);
 }
 
-LockedAccountItemDelegate::LockedAccountItemDelegate(QObject *parent)
+LockedAccountItemDelegate::LockedAccountItemDelegate(QObject* parent)
     :QStyledItemDelegate(parent)
 {
 
 }
 
-void LockedAccountItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+void LockedAccountItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     CTreeViewEx* view = qobject_cast<CTreeViewEx*>(parent());
-    if(view == NULL)
+    if(view == nullptr)
+    {
         return;
+    }
 
     QStandardItemModel* model = (QStandardItemModel*)(view->model());
     LockedAccountItem* litem = (LockedAccountItem*)(model->item(index.row(),0));
+    if (litem == nullptr)
+    {
+        return;
+    }
 
-    QFont tf = CGeneralStyle::instance()->font();
+    QFont tf = ControlStyleManager::instance().defaultFont();
     painter->setFont(tf);
 
     QModelIndex i0 = index.sibling(index.row(),0);

@@ -5,7 +5,7 @@
 class AccountDialog;
 class ClosureDialog;
 class SubAccountPanel;
-/** 账号管理框
+/** 账号管理弹框，组合子账号列表、注册子账号弹框和封号信息弹框
 */
 class DialogManagerAPI AccountManagerDialog : public BoxDialogBase
 {
@@ -39,11 +39,23 @@ public:
     ClosureDialog* closureDialogPtr();
 
 protected:
+    /** 调整子账号列表区域和标题栏按钮布局
+    @param [in] eve 窗口大小变化事件
+    */
     void resizeEvent(QResizeEvent* eve);
+
+    /** 检查内部弹框和面板是否已经创建完成
+    @return 返回true表示控件有效
+    */
     bool check();
 
 private:
+	// 注册子账号弹框
 	AccountDialog* m_accountDialog;
+
+	// 封号信息弹框
 	ClosureDialog* m_closureDialog;
+
+	// 子账号管理面板
 	SubAccountPanel* m_subAccountPanel;
 };

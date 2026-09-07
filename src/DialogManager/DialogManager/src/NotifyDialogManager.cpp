@@ -43,7 +43,7 @@ void NotifyDialogManager::showDialog(DialogParam& param)
         notifyDialogPtr = tipShowDialog;
         break;
     }
-#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+#if defined(QTCONTROLS_ENABLE_WEBKIT) && (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
     case LOGIN_SHOW_DIALOG:
     {
         LoginShowDialogParam& loginShowDialogParam = (LoginShowDialogParam&)param;

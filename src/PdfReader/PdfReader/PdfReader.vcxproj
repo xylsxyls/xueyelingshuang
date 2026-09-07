@@ -168,18 +168,24 @@
     <ClCompile Include="BitmapCacheEntry.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PageItem.cpp" />
+    <ClCompile Include="PdfReaderAboutDialog.cpp" />
+    <ClCompile Include="PdfReaderButtonToolTip.cpp" />
     <ClCompile Include="PdfReaderHelper.cpp" />
     <ClCompile Include="PdfReaderInstance.cpp" />
+    <ClCompile Include="PdfReaderPromptDialog.cpp" />
     <ClCompile Include="PdfReaderWindow.cpp" />
     <ClCompile Include="TopButtonState.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BitmapCacheEntry.h" />
     <ClInclude Include="PageItem.h" />
+    <ClInclude Include="PdfReaderAboutDialog.h" />
+    <ClInclude Include="PdfReaderButtonToolTip.h" />
     <ClInclude Include="PdfReaderConstants.h" />
     <ClInclude Include="PdfReaderPlatform.h" />
     <ClInclude Include="PdfReaderHelper.h" />
     <ClInclude Include="PdfReaderInstance.h" />
+    <ClInclude Include="PdfReaderPromptDialog.h" />
     <ClInclude Include="PdfReaderWindow.h" />
     <ClInclude Include="TopButtonState.h" />
   </ItemGroup>

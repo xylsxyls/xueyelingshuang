@@ -1,14 +1,13 @@
 ﻿#include "AdvertAskDialog.h"
 
 #include <qglobal.h>
-#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+#if defined(QTCONTROLS_ENABLE_WEBKIT) && (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
 
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
 #include "DialogManager.h"
 #include "QtControls/WebViewEx.h"
 #include "DialogHelper.h"
-#include "QtControls/CGeneralStyle.h"
 
 AdvertAskDialog::AdvertAskDialog():
 m_advert(nullptr),

@@ -14,7 +14,7 @@ CExpressionPickerDelegate::~CExpressionPickerDelegate()
 
 }
 
-void CExpressionPickerDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+void CExpressionPickerDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     painter->save();
 
@@ -58,4 +58,3 @@ void CExpressionPickerDelegate::paint(QPainter *painter, const QStyleOptionViewI
 
     painter->restore();
 }
-

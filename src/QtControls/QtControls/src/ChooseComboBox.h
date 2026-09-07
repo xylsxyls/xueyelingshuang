@@ -90,24 +90,56 @@ public:
 	void clearChoose();
 
 Q_SIGNALS:
+	/** 选择项变化后发送信号
+	@param [in] index 选中项索引
+	@param [in] id 选中项ID
+	@param [in] text 选中项文字
+	*/
 	void itemChoosed(qint32 index, qint64 id, const QString& text);
 
 protected:
+	/** 尺寸变化时同步选择图标的位置
+	@param [in] eve Qt尺寸变化事件
+	*/
 	void resizeEvent(QResizeEvent* eve);
+
+	/** 处理鼠标移动，保证下拉框悬停效果和选择图标区域一致
+	@param [in] eve Qt鼠标事件
+	*/
 	void mouseMoveEvent(QMouseEvent* eve);
+
+	/** 绘制当前选择框文本和选择图标
+	@param [in] eve Qt绘制事件
+	*/
 	void paintEvent(QPaintEvent* eve);
 
 protected:
+	/** 更新选择图标的几何位置
+	*/
 	void updateChooseGeometry();
+
+	/** 检测内部选择图标是否可用
+	@return 返回true表示内部状态可用，false表示存在空指针或异常状态
+	*/
 	bool check();
+
+	/** 初始化内部选择图标和信号连接
+	*/
 	void init();
 
 private slots:
+	/** 处理列表项按下事件，同步选择图标并发出itemChoosed信号
+	@param [in] index 被按下的列表项索引
+	*/
 	void onItemPressed(qint32 index);
 
 protected:
+	// 当前选择图标
 	Label* m_choose;
+	// 选择图标相对右侧的偏移量
 	qint32 m_chooseOrigin;
+	// 下拉列表项高度
 	qint32 m_listItemHeight;
+	// 点击框中显示的默认文字
 	QString m_comboBoxText;
 };

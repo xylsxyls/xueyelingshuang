@@ -3,6 +3,22 @@
 
 namespace LoopPlayer
 {
+    VideoTimelineInfo::VideoTimelineInfo()
+        : isValid(false),
+          sampleCount(0),
+          result(E_FAIL),
+          firstTime(-1),
+          secondTime(-1),
+          lastTime(-1),
+          lastEndTime(0),
+          firstDuration(0),
+          sourceDuration(0),
+          maxGap(0),
+          maxGapStart(-1),
+          maxGapEnd(-1)
+    {
+    }
+
     PlaybackEngineInitParam::PlaybackEngineInitParam()
         : m_videoWindow(nullptr),
           m_eventWindow(nullptr),

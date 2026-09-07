@@ -4,3 +4,4 @@
 "$CLOUD_REBUILD" ReadWriteMutex 64 lib debug same
 "$CLOUD_REBUILD" LogManager 64 lib debug same
 "$CLOUD_REBUILD" CDump 64 lib debug same
+"$CLOUD_REBUILD" FFmpegCpp 64 lib debug same

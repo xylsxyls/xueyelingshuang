@@ -1,6 +1,6 @@
 ﻿#include "DialogHelper.h"
 #include "QtControls/Label.h"
-#include "QtControls/CGeneralStyle.h"
+#include "QtControls/ControlStyleManager.h"
 #include "QtControls/COriginalButton.h"
 #include "QtControls/CPasswordInputBox.h"
 #include <QWindow>
@@ -21,7 +21,7 @@ void DialogHelper::setLabel(Label* label, const QString& text, const QColor& tex
     label->setText(text);
     label->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
     label->setTextColor(textColor);
-    label->setFontFace(CGeneralStyle::instance()->font().family());
+    label->setFontFace(ControlStyleManager::instance().defaultFont().family());
     label->setFontSize(fontSize);
 }
 
@@ -93,10 +93,10 @@ void DialogHelper::setLineEdit(LineEdit* lineEdit, const QString& defaultText, q
     lineEdit->setBorderColor(QColor(31, 36, 51, 255));
     lineEdit->setBorderRadius(4);
     lineEdit->setFontSize(16);
-    lineEdit->setFontFace(QString::fromStdWString(L"微软雅黑"));
+    lineEdit->setFontFace(ControlStyleManager::instance().defaultFont().family());
     lineEdit->setAlignment(Qt::AlignVCenter);
     lineEdit->setTextOrigin(3);
-    lineEdit->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "res/Dialog/PopupInputBox.png", 1, 1, 1, 1);
+    lineEdit->setBackgroundImage(ControlStyleManager::instance().resourcePath("res/Dialog/PopupInputBox.png"), 1, 1, 1, 1);
     lineEdit->setTextColor(QColor(0, 0, 0, 255));
     if (maxLength > 0)
     {

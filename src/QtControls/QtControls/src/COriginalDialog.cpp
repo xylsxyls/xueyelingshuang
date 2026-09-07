@@ -1,278 +1,226 @@
 ﻿#include "COriginalDialog.h"
+#include "ControlStyleManager.h"
+#include <QApplication>
+#include <QCloseEvent>
+#include <QCursor>
+#include <QKeyEvent>
+#include <QLabel>
+#include <QMouseEvent>
+#include <QResizeEvent>
 #include <QWindow>
+#include <algorithm>
+#include <stdint.h>
+
 #ifdef _MSC_VER
 #include <Windows.h>
-#elif __unix__
-#include <xcb/xcb.h>
-//#include <xcb/xfixes.h>
-#include <X11/Xlib.h>
-#include <QX11Info>
 #endif
-#include <QApplication>
-#include <QLabel>
-
-#define IS_KEY_DOWN(VK_NONAME) ((::GetAsyncKeyState(VK_NONAME) & 0x8000) ? 1 : 0)
 
 #ifndef WM_DWMCOMPOSITIONCHANGED
 #define WM_DWMCOMPOSITIONCHANGED        0x031E
 #endif
 
-#ifdef __unix__
-
-std::string eastWestResizeCursor = {-119, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0,
-0, 16, 0, 0, 0, 16, 8, 6, 0, 0, 0, 31, -13, -1, 97, 0, 0, 0, 69, 73, 68, 65, 84, 120, -100, 98, 96,
-24, 5, 40, -32, 63, 20, -112, 37, 15, -107, 32, 104, 0, 86, 53, 48, 9, 36, 75, 112, 2, 100, 117, 24,
--102, 73, -59, 96, -67, -72, 12, 96, 100, 100, -4, -49, -62, -62, 66, -40, 0, -118, -67, 64, -107, 64,
-68, 86, 64, 118, 52, -114, 96, 0, 0, 0, 0, -1, -1, 3, 0, -90, 122, -57, 72, 64, -1, -95, 0, 0,
-0, 0, 0, 73, 69, 78, 68, -82, 66, 96, -126};
-
-std::string northSouthResizeCursor = {-119, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0,
-0, 0, 16, 0, 0, 0, 16, 8, 6, 0, 0, 0, 31, -13, -1, 97, 0, 0, 0, 87, 73, 68, 65, 84, 120, -100, 98, 96,
--64, 3, -2, 67, 1, 62, 53, 120, 53, -125, 40, -104, 57, 100, 107, 38, -39, 16, 108, -102, 73, 50,
--28, 63, 18, 64, -42, 72, 114, 120, 80, 20, 6, 48, 3, 24, 25, 25, 41, 51, -128, 98, 23, -128, 40, 22,
-22, 22, -54, 12, 0, 121, -125, -66, 94, -96, 56, 26, 41, 78, 72, -72, 12, -95, 40, 63, 80, -108, 35,
-9, 105, 6, 0, 0, 0, -1, -1, 3, 0, -84, -77, -57, 75, -127, -66, -2, 30, 0, 0, 0, 0, 73, 69, 78,
-68, -82, 66, 96, -126};
-
-std::string northEastSouthWestResizeCursor = {-119, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68,
-82, 0, 0, 0, 16, 0, 0, 0, 16, 8, 6, 0, 0, 0, 31, -13, -1, 97, 0, 0, 0, -101, 73, 68, 65, 84, 120, -100,
--100, -109, 81, 14, -64, 16, 12, -122, 61, -120, -52, -13, 14, -29, 42, 46, -30, 4, 110, -32, -59,
-93, -36, 77, 76, -109, -51, 26, 70, -83, 127, -46, 20, 73, 63, -43, -106, 16, 11, -107, 82, 72,
-35, 85, -42, -38, 3, -128, -21, -19, 23, 32, -25, -52, 6, 28, 41, -91, -106, -123, 82, -86, 121, 18,
--96, -85, 98, -116, -68, 39, -100, 85, 33, -124, 33, 24, 69, -51, 1, 82, 74, -31, -100, -5, 12, -10,
--34, -9, 93, 121, 11, -123, 79, 38, 55, -61, 66, 14, 51, 112, 111, -122, 20, -73, -85, -115, 1, 95,
--123, 50, -58, -64, 66, -109, 0, -36, -94, 39, -40, 90, 11, -35, 88, -113, -20, 44, 3, 24, 30, 84,
-19, -2, 19, -74, 1, 51, -19, 2, 120, 95, -75, -22, 2, 0, 0, -1, -1, 3, 0, 39, -50, 123, -60, -11, -92,
--74, -42, 0, 0, 0, 0, 73, 69, 78, 68, -82, 66, 96, -126};
-
-std::string northWestSouthEastResizeCursor = {-119, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68,
-82, 0, 0, 0, 16, 0, 0, 0, 16, 8, 6, 0, 0, 0, 31, -13, -1, 97, 0, 0, 0, -120, 73, 68, 65, 84, 120, -100,
--84, -109, 75, 10, -64, 32, 12, 68, 69, -118, 105, -41, 93, 123, 0, 15, -104, -21, 107, 21, -116,
-68, -15, 27, 58, 32, -70, -48, -25, 76, -94, 74, -3, -95, 48, -47, 54, 32, 77, 105, 0, 64, 89, -117,
-0, -4, -80, 8, 96, -116, -87, 110, -65, -94, 68, 14, 8, -126, -120, -22, -115, -38, 2, 120, -17,
-67, 11, 99, 49, -18, 41, -128, 103, 38, -120, -42, -70, -126, 88, 107, -105, 105, -54, -90, -111, -109,
--83, 22, 63, 81, 35, 72, -118, -39, 68, -21, -117, -86, 63, 43, -16, 58, 79, 22, 65, -88, -59, 71,
-0, -106, -9, -36, -127, 115, -82, -5, -56, 68, 14, -60, 31, 109, -91, 15, 0, 0, -1, -1, 3, 0, -3,
--33, -4, 114, -51, 4, 47, 39, 0, 0, 0, 0, 73, 69, 78, 68, -82, 66, 96, -126};
-
-#endif
-
-COriginalDialog::COriginalDialog(QWidget* parent)
-	:QDialog(parent)
-	,mTouchBorderWidth(0)
-	//,mDwmInitialized(false)
-    ,mAltF4Enable(true)
-#ifdef __unix__
-	,mAltPress(false)
-	,mAltF4Close(false)
+COriginalDialog::COriginalDialog(QWidget* parent) :
+QDialog(parent),
+m_touchBorderWidth(0),
+m_customerTitleBarHeight(0),
+m_altF4Enable(true)
+#ifndef _MSC_VER
+,m_altF4Close(false)
+,m_altCloseEve(nullptr)
+,m_isLeftButtonPressed(false)
+,m_isMovePressed(false)
+,m_currentType(NORMAL)
+,m_pressedType(NORMAL)
 #endif
 {
 	setCustomerTitleBarHeight(0);
-	this->setMouseTracking(true);
-	//this->setAttribute(Qt::WA_NativeWindow);
+	setMouseTracking(true);
+	setFont(defaultDialogFont());
 }
 
 COriginalDialog::~COriginalDialog()
 {
-	//不能在closeEvent里做这段操作，因为当临时父窗口改变之后静态框无法再次显示
-	//QWindow* handle = windowHandle();
-	//if (handle != nullptr && handle->transientParent() != nullptr)
-	//{
-	//	handle->setTransientParent(nullptr);
-	//}
+
+}
+
+void COriginalDialog::setDefaultDialogFont(const QFont& font)
+{
+	ControlStyleManager::instance().setDefaultFont(font);
+}
+
+QFont COriginalDialog::defaultDialogFont()
+{
+	return ControlStyleManager::instance().defaultFont();
+}
+
+void COriginalDialog::setDefaultDialogTextColor(const QColor& color)
+{
+	ControlStyleManager::instance().setDefaultTextColor(color);
+}
+
+QColor COriginalDialog::defaultDialogTextColor()
+{
+	return ControlStyleManager::instance().defaultTextColor();
 }
 
 #ifdef _MSC_VER
 long COriginalDialog::onNcHitTest(const QPoint& pt)
 {
 	RECT windowRect;
-	::GetWindowRect(HWND(this->winId()), &windowRect);
+	::GetWindowRect(HWND(winId()), &windowRect);
 	QRect rcClient;
 	rcClient.setLeft(windowRect.left);
 	rcClient.setRight(windowRect.right);
 	rcClient.setTop(windowRect.top);
 	rcClient.setBottom(windowRect.bottom);
 
-	bool fixdWidth  = this->minimumWidth () == this->maximumWidth ();
-	bool fixdHeight = this->minimumHeight() == this->maximumHeight();
+	bool fixdWidth = minimumWidth() == maximumWidth();
+	bool fixdHeight = minimumHeight() == maximumHeight();
 
-	if((pt.x() < (rcClient.right() + mTouchBorderWidth)) &&
-		(pt.x() > (rcClient.right() - mTouchBorderWidth))   )
+	if ((pt.x() < (rcClient.right() + m_touchBorderWidth)) &&
+		(pt.x() > (rcClient.right() - m_touchBorderWidth)))
 	{
-		if((pt.y() < (rcClient.top() + mTouchBorderWidth)) &&
-			(pt.y() > (rcClient.top() - mTouchBorderWidth))   )
+		if ((pt.y() < (rcClient.top() + m_touchBorderWidth)) &&
+			(pt.y() > (rcClient.top() - m_touchBorderWidth)))
 		{
-			if(fixdWidth || fixdHeight)
+			if (fixdWidth || fixdHeight)
 			{
 				return HTCLIENT;
 			}
-			else
-			{
-				return HTTOPRIGHT;
-			}
+			return HTTOPRIGHT;
 		}
 
-		if((pt.y() < (rcClient.bottom() + mTouchBorderWidth)) &&
-			(pt.y() > (rcClient.bottom() - mTouchBorderWidth))   )
+		if ((pt.y() < (rcClient.bottom() + m_touchBorderWidth)) &&
+			(pt.y() > (rcClient.bottom() - m_touchBorderWidth)))
 		{
-			if(fixdWidth || fixdHeight)
+			if (fixdWidth || fixdHeight)
 			{
 				return HTCLIENT;
 			}
-			else
-			{
-				return HTBOTTOMRIGHT;
-			}
+			return HTBOTTOMRIGHT;
 		}
 
-		if(fixdWidth)
+		if (fixdWidth)
 		{
 			return HTCLIENT;
 		}
-		else
-		{
-			return HTRIGHT;
-		}
+		return HTRIGHT;
 	}
 
-	if((pt.x() < (rcClient.left() + mTouchBorderWidth)) &&
-		(pt.x() > (rcClient.left() - mTouchBorderWidth))   )
+	if ((pt.x() < (rcClient.left() + m_touchBorderWidth)) &&
+		(pt.x() > (rcClient.left() - m_touchBorderWidth)))
 	{
-		if((pt.y() < (rcClient.top() + mTouchBorderWidth)) &&
-			(pt.y() > (rcClient.top() - mTouchBorderWidth))   )
+		if ((pt.y() < (rcClient.top() + m_touchBorderWidth)) &&
+			(pt.y() > (rcClient.top() - m_touchBorderWidth)))
 		{
-			if(fixdWidth || fixdHeight)
+			if (fixdWidth || fixdHeight)
 			{
 				return HTCLIENT;
 			}
-			else
-			{
-				return HTTOPLEFT;
-			}
+			return HTTOPLEFT;
 		}
 
-		if((pt.y() < (rcClient.bottom() + mTouchBorderWidth)) &&
-			(pt.y() > (rcClient.bottom() - mTouchBorderWidth))   )
+		if ((pt.y() < (rcClient.bottom() + m_touchBorderWidth)) &&
+			(pt.y() > (rcClient.bottom() - m_touchBorderWidth)))
 		{
-			if(fixdWidth || fixdHeight)
+			if (fixdWidth || fixdHeight)
 			{
 				return HTCLIENT;
 			}
-			else
-			{
-				return HTBOTTOMLEFT;
-			}
+			return HTBOTTOMLEFT;
 		}
 
-		if(fixdWidth)
+		if (fixdWidth)
 		{
 			return HTCLIENT;
 		}
-		else
-		{
-			return HTLEFT;
-		}
+		return HTLEFT;
 	}
 
-	if((pt.y() < (rcClient.top() + mTouchBorderWidth)) &&
-		(pt.y() > (rcClient.top() - mTouchBorderWidth))   )
+	if ((pt.y() < (rcClient.top() + m_touchBorderWidth)) &&
+		(pt.y() > (rcClient.top() - m_touchBorderWidth)))
 	{
-		if((pt.x() < (rcClient.right() + mTouchBorderWidth)) &&
-			(pt.x() > (rcClient.right() - mTouchBorderWidth))   )
+		if ((pt.x() < (rcClient.right() + m_touchBorderWidth)) &&
+			(pt.x() > (rcClient.right() - m_touchBorderWidth)))
 		{
-			if(fixdWidth || fixdHeight)
+			if (fixdWidth || fixdHeight)
 			{
 				return HTCLIENT;
 			}
-			else
-			{
-				return HTTOPRIGHT;
-			}
+			return HTTOPRIGHT;
 		}
 
-		if((pt.x() < (rcClient.left() + mTouchBorderWidth)) &&
-			(pt.x() > (rcClient.left() - mTouchBorderWidth))   )
+		if ((pt.x() < (rcClient.left() + m_touchBorderWidth)) &&
+			(pt.x() > (rcClient.left() - m_touchBorderWidth)))
 		{
-			if(fixdWidth || fixdHeight)
+			if (fixdWidth || fixdHeight)
 			{
 				return HTCLIENT;
 			}
-			else
-			{
-				return HTTOPLEFT;
-			}
+			return HTTOPLEFT;
 		}
 
-		if(fixdHeight)
+		if (fixdHeight)
 		{
 			return HTCLIENT;
 		}
-		else
-		{
-			return HTTOP;
-		}
+		return HTTOP;
 	}
 
-	if((pt.y() < (rcClient.bottom() + mTouchBorderWidth)) &&
-		(pt.y() > (rcClient.bottom() - mTouchBorderWidth))   )
+	if ((pt.y() < (rcClient.bottom() + m_touchBorderWidth)) &&
+		(pt.y() > (rcClient.bottom() - m_touchBorderWidth)))
 	{
-
-		if((pt.x() < (rcClient.right() + mTouchBorderWidth)) &&
-			(pt.x() > (rcClient.right() - mTouchBorderWidth))   )
+		if ((pt.x() < (rcClient.right() + m_touchBorderWidth)) &&
+			(pt.x() > (rcClient.right() - m_touchBorderWidth)))
 		{
-			if(fixdWidth || fixdHeight)
+			if (fixdWidth || fixdHeight)
 			{
 				return HTCLIENT;
 			}
-			else
-			{
-				return HTBOTTOMRIGHT;
-			}
+			return HTBOTTOMRIGHT;
 		}
 
-		if((pt.x() < (rcClient.left() + mTouchBorderWidth)) &&
-			(pt.x() > (rcClient.left() - mTouchBorderWidth))   )
+		if ((pt.x() < (rcClient.left() + m_touchBorderWidth)) &&
+			(pt.x() > (rcClient.left() - m_touchBorderWidth)))
 		{
-			if(fixdWidth || fixdHeight)
+			if (fixdWidth || fixdHeight)
 			{
 				return HTCLIENT;
 			}
-			else
-			{
-				return HTBOTTOMLEFT;
-			}
+			return HTBOTTOMLEFT;
 		}
 		return HTBOTTOM;
 	}
 
-	if ((pt.y() - rcClient.top()) <= mCustomerTitleBarRect.height())
+	if ((pt.y() - rcClient.top()) <= m_customerTitleBarRect.height())
 	{
 		bool hasChild = false;
-		for(int i = 0; i < this->children().count(); i++)
+		for (int32_t i = 0; i < children().count(); ++i)
 		{
-			QWidget* w = qobject_cast<QWidget*>(this->children()[i]);
-			if(w == NULL)
+			QWidget* widget = qobject_cast<QWidget*>(children()[i]);
+			if (widget == nullptr)
+			{
 				continue;
-
-			if(!w->isVisible())
+			}
+			if (!widget->isVisible() || !widget->isEnabled())
+			{
 				continue;
+			}
 
-			if(!w->isEnabled())
+			QLabel* label = qobject_cast<QLabel*>(widget);
+			if (label != nullptr)
+			{
 				continue;
+			}
 
-			//* label不影响拖动
-			QLabel* isLabel = qobject_cast<QLabel*>(w);
-			if (isLabel && IS_KEY_DOWN(MOUSE_MOVED))
-				continue;
-
-			QPoint mousePt = this->mapFromGlobal(QCursor::pos());
-			if(w->geometry().contains(mousePt))
+			QPoint mousePt = mapFromGlobal(QCursor::pos());
+			if (widget->geometry().contains(mousePt))
 			{
 				hasChild = true;
 				break;
 			}
 		}
-		if(hasChild)
+		if (hasChild)
 		{
 			return HTCLIENT;
 		}
@@ -285,398 +233,86 @@ long COriginalDialog::onNcHitTest(const QPoint& pt)
 void COriginalDialog::resizeEvent(QResizeEvent* eve)
 {
 	QDialog::resizeEvent(eve);
-	mCustomerTitleBarRect = QRect(0, 0, width(), mCustomerTitleBarHeight);
+	m_customerTitleBarRect = QRect(0, 0, width(), m_customerTitleBarHeight);
 }
 
 bool COriginalDialog::nativeEvent(const QByteArray& eventType, void* message, long* result)
 {
 #ifdef _MSC_VER
-	if (eventType == "windows_generic_MSG" || eventType == "windows_dispatcher_MSG") {
-		MSG* msg = static_cast<MSG *>(message);
+	if (eventType == "windows_generic_MSG" || eventType == "windows_dispatcher_MSG")
+	{
+		MSG* msg = static_cast<MSG*>(message);
 		switch (msg->message)
 		{
 		case WM_NCACTIVATE:
-			{
-				msg->lParam = -1; //DefWindowProc does not repaint the nonclient area to reflect the state change
-				*result = DefWindowProc(msg->hwnd, msg->message, msg->wParam, msg->lParam);
-				emit ncActiveChanged(msg->wParam == 1);
-				return true;
-			}
-			break;
+		{
+			msg->lParam = -1;
+			*result = DefWindowProc(msg->hwnd, msg->message, msg->wParam, msg->lParam);
+			emit ncActiveChanged(msg->wParam == 1);
+			return true;
+		}
 		case WM_ACTIVATE:
-			{
-				//if( !mDwmInitialized )
-				//{
-				//	mDwmInitialized = dwm_init(msg->hwnd);
-				//}
-				emit activeChanged(msg->wParam);
-			}
+		{
+			emit activeChanged(msg->wParam);
 			break;
+		}
 		case WM_SIZE:
-			{
-				// 最大化时，窗口覆盖了windows任务栏，所以增加代码做下调整
-				//static BOOL s_bChangeFromHere = false; // 避免循环进入
-				//if( msg->wParam == SIZE_MAXIMIZED && !s_bChangeFromHere )
-				//{
-				//	HWND hwndTrayWnd=::FindWindow(L"Shell_TrayWnd",NULL);//任务栏
-				//	HMONITOR hMon = MonitorFromWindow(msg->hwnd, MONITOR_DEFAULTTONEAREST);
-				//	// HMONITOR hMonTrayWnd = (hwndTrayWnd ? MonitorFromWindow(hwndTrayWnd, NULL) : NULL);
-				//
-				//	if( hMon /*&& hMon == hMonTrayWnd*/ )
-				//	{
-				//		MONITORINFO mi;
-				//		RECT        rc, rcWnd;
-				//		// 
-				//		// get the work area or entire monitor rect. 
-				//		// 
-				//		mi.cbSize = sizeof(mi);
-				//		GetMonitorInfo(hMon, &mi);
-				//		rc = mi.rcWork;
-				//
-				//		QMargins margins = this->contentsMargins();
-				//
-				//		rc.left -= margins.left();
-				//		rc.top -= margins.top();
-				//		rc.right += margins.right();
-				//		rc.bottom += margins.bottom();
-				//
-				//		GetWindowRect(msg->hwnd, &rcWnd);
-				//		if( !EqualRect(&rcWnd, &rc) )
-				//		{
-				//			s_bChangeFromHere = true;
-				//			SetWindowPos(msg->hwnd, NULL, rc.left, rc.top, rc.right-rc.left, rc.bottom-rc.top, SWP_NOZORDER);
-				//			s_bChangeFromHere = false;
-				//
-				//			if( hwndTrayWnd )
-				//				SetWindowPos(hwndTrayWnd, msg->hwnd, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
-				//			return true;
-				//		}
-				//	}
-				//}
-			}
+		{
 			break;
+		}
 		case WM_DWMCOMPOSITIONCHANGED:
-			{
-				//if( isDwmEnabled() )
-				//{
-				//	mDwmInitialized = dwm_init(msg->hwnd);
-				//}
-				//else
-				//{
-				//	mDwmInitialized = false;
-				//}
-			}
+		{
 			break;
+		}
 		case WM_NCHITTEST:
+		{
+			int32_t xPos = static_cast<int16_t>(LOWORD(msg->lParam));
+			int32_t yPos = static_cast<int16_t>(HIWORD(msg->lParam));
+			*result = onNcHitTest(QPoint(xPos, yPos));
+			if (HTERROR != *result)
 			{
-				int xPos = (int)(short)LOWORD(msg->lParam);
-				int yPos = (int)(short)HIWORD(msg->lParam);
-
-				*result = onNcHitTest(QPoint(xPos, yPos));
-
-				if( HTERROR != *result)
-				{
-					return true;
-				}
-			}
-			break;
-		case WM_NCCALCSIZE:
-		    {
-				//if( msg->wParam )
-				//{
-				//    // do not change rect[0], keep no nc-borders
-				//
-				//    // should return 0
-				//    *result = 0;
-				//
-				//    DWORD dwOldStyle = GetWindowLong(msg->hwnd, GWL_STYLE);
-				//    if( 0 == (dwOldStyle & WS_THICKFRAME) )
-				//    {
-				//        SetWindowLong(HWND(this->winId()), GWL_STYLE, dwOldStyle
-				//            | WS_THICKFRAME   // HTLEFT, HTRIGHT, ... 会允许改变大小
-				//            | WS_MAXIMIZEBOX // 双击 HTCAPTION 部分，会自动最大化
-				//            | WS_MINIMIZEBOX //
-				//            );
-				//    }
-				//    return true;
-				//}
-		    }
-		    break;
-		case WM_ERASEBKGND:
-			{
-				*result = -1;
 				return true;
 			}
 			break;
-        //case WM_KEYDOWN:
-        case WM_SYSKEYDOWN:
-        {
-            if (mAltF4Enable && (VK_F4 == msg->wParam) && (::GetKeyState(VK_MENU) & 0xF000))
-            {
-                altF4PressedEvent();
-            }
-            return true;
-        }
-        break;
-		default:
+		}
+		case WM_NCCALCSIZE:
+		{
 			break;
 		}
-	}
-#elif __unix__
-	if (eventType == "xcb_generic_event_t")
-	{
-		xcb_generic_event_t* msg = static_cast<xcb_generic_event_t*>(message);
-		//if (msg->response_type != 35 && msg->response_type != 150 && msg->response_type != 28)
-		//{
-		//	printf("%d\n", (int32_t)msg->response_type);
-		//}
-		
-		//激活是9，后台是10，鼠标离开是8，鼠标进入是7,18是关闭
-		switch (msg->response_type)
+		case WM_ERASEBKGND:
 		{
-		case XCB_KEY_PRESS:
-		{
-			xcb_key_press_event_t* key_event = (xcb_key_press_event_t*)msg;
-			if (key_event->detail == 64)
-			{
-				mAltPress = true;
-			}
+			*result = -1;
+			return true;
 		}
-		break;
-		case XCB_KEY_RELEASE:
+		case WM_SYSKEYDOWN:
 		{
-			xcb_key_release_event_t* key_event = (xcb_key_release_event_t*)msg;
-			if (key_event->detail == 64)
+			if (m_altF4Enable && (VK_F4 == msg->wParam) && (::GetKeyState(VK_MENU) & 0xF000))
 			{
-				mAltPress = false;
+				altF4PressedEvent();
 			}
-		}
-		break;
-		case XCB_FOCUS_IN:
-		{
-			emit ncActiveChanged(true);
-		}
-		break;
-		case XCB_FOCUS_OUT:
-		{
-			emit ncActiveChanged(false);
-		}
-		break;
-		case XCB_GE_GENERIC:
-		{
-			QPoint globalPos = cursor().pos();
-			QPoint clientPos = mapFromGlobal(globalPos);
-			TouchType type = getTouchType(clientPos);
-			if (!QApplication::mouseButtons().testFlag(Qt::MouseButton::LeftButton))
-			{
-				mCurrentType = type;
-				switch (type)
-				{
-				case NORMAL:
-				{
-					unsetCursor();
-				}
-				break;
-				case EAST:
-				case WEST:
-				{
-					setCursor(mEastWest);
-				}
-				break;
-				case NORTH:
-				case SOUTH:
-				{
-					setCursor(mNorthSouth);
-				}
-				break;
-				case NORTH_EAST:
-				case SOUTH_WEST:
-				{
-					setCursor(mNorthEastSouthWest);
-				}
-				break;
-				case NORTH_WEST:
-				case SOUTH_EAST:
-				{
-					setCursor(mNorthWestSouthEast);
-				}
-				break;
-				default:
-					break;
-				}
-			}
-			else
-			{
-				QRect clientRect = geometry();
-				switch (mCurrentType)
-				{
-				case EAST:
-				{
-					int32_t width = clientPos.x();
-					setGeometry(clientRect.x(), clientRect.y(), width < mTouchBorderWidth * 2 ? mTouchBorderWidth * 2 : width, clientRect.height());
-				}
-				break;
-				case WEST:
-				{
-					int32_t width = clientRect.x() + clientRect.width() - globalPos.x();
-					int32_t left = globalPos.x() > clientRect.right() - mTouchBorderWidth * 2 ? clientRect.right() - mTouchBorderWidth * 2 : globalPos.x();
-					QRect changeRect;
-					changeRect.setLeft(left);
-					changeRect.setTop(clientRect.y());
-					changeRect.setRight(clientRect.right());
-					changeRect.setBottom(clientRect.bottom());
-					setGeometry(changeRect);
-				}
-				break;
-				case NORTH:
-				{
-					int32_t top = globalPos.y() > clientRect.bottom() - mTouchBorderWidth * 2 ? clientRect.bottom() - mTouchBorderWidth * 2 : globalPos.y();
-					QRect changeRect;
-					changeRect.setLeft(clientRect.left());
-					changeRect.setTop(top);
-					changeRect.setRight(clientRect.right());
-					changeRect.setBottom(clientRect.bottom());
-					setGeometry(changeRect);
-				}
-				break;
-				case SOUTH:
-				{
-					int32_t height = clientPos.y();
-					setGeometry(clientRect.x(), clientRect.y(), clientRect.width(), height < mTouchBorderWidth * 2 ? mTouchBorderWidth * 2 : height);
-				}
-				break;
-				case NORTH_EAST:
-				{
-					int32_t top = globalPos.y() > clientRect.bottom() - mTouchBorderWidth * 2 ? clientRect.bottom() - mTouchBorderWidth * 2 : globalPos.y();
-					int32_t right = globalPos.x() < clientRect.left() + mTouchBorderWidth * 2 ? clientRect.left() + mTouchBorderWidth * 2 : globalPos.x();
-					QRect changeRect;
-					changeRect.setLeft(clientRect.left());
-					changeRect.setTop(top);
-					changeRect.setRight(right);
-					changeRect.setBottom(clientRect.bottom());
-					setGeometry(changeRect);
-				}
-				break;
-				case SOUTH_WEST:
-				{
-					int32_t left = globalPos.x() > clientRect.right() - mTouchBorderWidth * 2 ? clientRect.right() - mTouchBorderWidth * 2 : globalPos.x();
-					int32_t bottom = globalPos.y() < clientRect.top() + mTouchBorderWidth * 2 ? clientRect.top() + mTouchBorderWidth * 2 : globalPos.y();
-					QRect changeRect;
-					changeRect.setLeft(left);
-					changeRect.setTop(clientRect.top());
-					changeRect.setRight(clientRect.right());
-					changeRect.setBottom(bottom);
-					setGeometry(changeRect);
-				}
-				break;
-				case NORTH_WEST:
-				{
-					int32_t left = globalPos.x() > clientRect.right() - mTouchBorderWidth * 2 ? clientRect.right() - mTouchBorderWidth * 2 : globalPos.x();
-					int32_t top = globalPos.y() > clientRect.bottom() - mTouchBorderWidth * 2 ? clientRect.bottom() - mTouchBorderWidth * 2 : globalPos.y();
-					QRect changeRect;
-					changeRect.setLeft(left);
-					changeRect.setTop(top);
-					changeRect.setRight(clientRect.right());
-					changeRect.setBottom(clientRect.bottom());
-					setGeometry(changeRect);
-				}
-				break;
-				case SOUTH_EAST:
-				{
-					int32_t right = globalPos.x() < clientRect.left() + mTouchBorderWidth * 2 ? clientRect.left() + mTouchBorderWidth * 2 : globalPos.x();
-					int32_t bottom = globalPos.y() < clientRect.top() + mTouchBorderWidth * 2 ? clientRect.top() + mTouchBorderWidth * 2 : globalPos.y();
-					QRect changeRect;
-					changeRect.setLeft(clientRect.left());
-					changeRect.setTop(clientRect.top());
-					changeRect.setRight(right);
-					changeRect.setBottom(bottom);
-					setGeometry(changeRect);
-				}
-				break;
-				case NORMAL:
-				{
-					if (clientPos.y() <= mCustomerTitleBarRect.height() && mCustomerTitleBarRect.height() > 0)
-					{
-						bool hasChild = false;
-						for(int i = 0; i < this->children().count(); i++)
-						{
-							QWidget* w = qobject_cast<QWidget*>(this->children()[i]);
-							if(w == NULL)
-								continue;
-
-							if(!w->isVisible())
-								continue;
-
-							if(!w->isEnabled())
-								continue;
-
-							//* label不影响拖动
-							QLabel* isLabel = qobject_cast<QLabel*>(w);
-							if (isLabel)
-								continue;
-
-							QPoint mousePt = this->mapFromGlobal(QCursor::pos());
-							if(w->geometry().contains(mousePt))
-							{
-								hasChild = true;
-								break;
-							}
-						}
-
-						if(!hasChild)
-						{
-							XEvent event;
-        					memset(&event, 0, sizeof(XEvent));
-
-        					Display *display = QX11Info::display();
-        					event.xclient.type = ClientMessage;
-        					event.xclient.message_type = XInternAtom(display, "_NET_WM_MOVERESIZE", False);
-        					event.xclient.display = display;
-        					//wid 是当前程序的 window id，可以通过 QWidget->wId()获得，QWidget 必须实例化
-        					event.xclient.window = (XID)(this->winId());
-        					event.xclient.format = 32;
-        					event.xclient.data.l[0] = globalPos.x();
-        					event.xclient.data.l[1] = globalPos.y();
-        					event.xclient.data.l[2] = 8;
-        					event.xclient.data.l[3] = Button1;
-        					event.xclient.data.l[4] = 1;
-
-        					XUngrabPointer(display, CurrentTime);
-        					XSendEvent(display, 
-        					           QX11Info::appRootWindow(QX11Info::appScreen()),
-        					           False, 
-        					           SubstructureNotifyMask | SubstructureRedirectMask,
-        					           &event);
-        					XFlush(display);
-						}
-					}
-				}
-				break;
-				default:
-					break;
-				}
-			}
+			return true;
 		}
 		default:
+		{
 			break;
 		}
+		}
 	}
+#else
+	Q_UNUSED(eventType);
+	Q_UNUSED(message);
+	Q_UNUSED(result);
 #endif
 	return QDialog::nativeEvent(eventType, message, result);
 }
 
 void COriginalDialog::altF4PressedEvent()
 {
-#ifdef _MSC_VER
-	close();
-#elif __unix__
-	if (mAltCloseEve == nullptr)
+	if (!m_altF4Enable)
 	{
-		printf("mAltCloseEve nullptr error\n");
 		return;
 	}
-	mAltCloseEve->accept();
-#endif
+	close();
 }
 
 bool COriginalDialog::eventFilter(QObject* tar, QEvent* eve)
@@ -686,6 +322,7 @@ bool COriginalDialog::eventFilter(QObject* tar, QEvent* eve)
 	{
 		return res;
 	}
+
 	switch (eve->type())
 	{
 	case QEvent::Hide:
@@ -694,247 +331,442 @@ bool COriginalDialog::eventFilter(QObject* tar, QEvent* eve)
 		{
 			close();
 		}
-	}
-	break;
-	default:
 		break;
+	}
+	default:
+	{
+		break;
+	}
 	}
 	return res;
 }
 
-#ifdef __unix__
-void COriginalDialog::closeEvent(QCloseEvent* eve)
+void COriginalDialog::keyPressEvent(QKeyEvent* eve)
 {
-	if (mAltPress)
+	if (eve != nullptr && eve->key() == Qt::Key_F4 && eve->modifiers().testFlag(Qt::AltModifier))
 	{
-		mAltCloseEve = eve;
-		eve->ignore();
-		if (mAltF4Enable)
-		{
-			mAltF4Close = true;
-			altF4PressedEvent();
-			mAltF4Close = false;
-		}
+		altF4PressedEvent();
+		eve->accept();
+		return;
 	}
-	if (!eve->isAccepted())
+	QDialog::keyPressEvent(eve);
+}
+
+#ifndef _MSC_VER
+void COriginalDialog::mousePressEvent(QMouseEvent* eve)
+{
+	if (eve == nullptr)
 	{
 		return;
 	}
+
+	if (eve->button() != Qt::LeftButton)
+	{
+		QDialog::mousePressEvent(eve);
+		return;
+	}
+
+	m_isLeftButtonPressed = true;
+	m_pressGlobalPos = eve->globalPos();
+	m_pressGeometry = geometry();
+	m_pressedType = getTouchType(eve->pos());
+	m_isMovePressed = (m_pressedType == NORMAL && isTitleDraggableArea(eve->pos()));
+
+	if (m_pressedType != NORMAL || m_isMovePressed)
+	{
+		eve->accept();
+		return;
+	}
+
+	QDialog::mousePressEvent(eve);
+}
+
+void COriginalDialog::mouseMoveEvent(QMouseEvent* eve)
+{
+	if (eve == nullptr)
+	{
+		return;
+	}
+
+	if (m_isLeftButtonPressed)
+	{
+		if (m_pressedType != NORMAL)
+		{
+			applyResizeByGlobalPos(eve->globalPos());
+			eve->accept();
+			return;
+		}
+		if (m_isMovePressed)
+		{
+			QPoint delta = eve->globalPos() - m_pressGlobalPos;
+			move(m_pressGeometry.topLeft() + delta);
+			eve->accept();
+			return;
+		}
+	}
+
+	m_currentType = getTouchType(eve->pos());
+	updateCursorByTouchType(m_currentType);
+	QDialog::mouseMoveEvent(eve);
+}
+
+void COriginalDialog::mouseReleaseEvent(QMouseEvent* eve)
+{
+	if (eve == nullptr)
+	{
+		return;
+	}
+
+	if (eve->button() == Qt::LeftButton)
+	{
+		m_isLeftButtonPressed = false;
+		m_isMovePressed = false;
+		m_pressedType = NORMAL;
+		m_pressGeometry = QRect();
+		updateCursorByTouchType(getTouchType(eve->pos()));
+	}
+	QDialog::mouseReleaseEvent(eve);
+}
+
+void COriginalDialog::closeEvent(QCloseEvent* eve)
+{
+	m_altCloseEve = eve;
 	QDialog::closeEvent(eve);
+	m_altCloseEve = nullptr;
 }
 
 void COriginalDialog::close()
 {
-	if (mAltF4Close)
-	{
-		mAltCloseEve->accept();
-	}
 	QDialog::close();
 }
 
-COriginalDialog::TouchType COriginalDialog::getTouchType(const QPoint& clientPos)
+COriginalDialog::TouchType COriginalDialog::getTouchType(const QPoint& clientPos) const
 {
-	QRect clientRect = geometry();
-	QRect northWestRect(0, 0, mTouchBorderWidth, mTouchBorderWidth);
-	QRect southEastRect(clientRect.width() - mTouchBorderWidth + 1, clientRect.height() - mTouchBorderWidth + 1, clientRect.width(), clientRect.height());
-	QRect northEastRect(clientRect.width() - mTouchBorderWidth + 1, 0, mTouchBorderWidth, mTouchBorderWidth);
-	QRect southWestRect(0, clientRect.height() - mTouchBorderWidth + 1, mTouchBorderWidth, mTouchBorderWidth);
-	QRect northRect(mTouchBorderWidth + 1, 0, clientRect.width() - mTouchBorderWidth * 2, mTouchBorderWidth);
-	QRect eastRect(clientRect.width() - mTouchBorderWidth + 1, mTouchBorderWidth + 1, mTouchBorderWidth, clientRect.height() - mTouchBorderWidth * 2);
-	QRect southRect(mTouchBorderWidth + 1, clientRect.height() - mTouchBorderWidth + 1, clientRect.width() - mTouchBorderWidth * 2, mTouchBorderWidth);
-	QRect westRect(0, mTouchBorderWidth + 1, mTouchBorderWidth, clientRect.height() - mTouchBorderWidth * 2);
+	if (m_touchBorderWidth <= 0 || isMaximized())
+	{
+		return NORMAL;
+	}
 
-	if (northWestRect.contains(clientPos))
+	QRect clientRect = rect();
+	if (!clientRect.contains(clientPos))
 	{
-		return TouchType::NORTH_WEST;
+		return NORMAL;
 	}
-	else if (southEastRect.contains(clientPos))
+
+	bool fixdWidth = minimumWidth() == maximumWidth();
+	bool fixdHeight = minimumHeight() == maximumHeight();
+	bool left = clientPos.x() <= m_touchBorderWidth;
+	bool right = clientPos.x() >= clientRect.width() - m_touchBorderWidth;
+	bool top = clientPos.y() <= m_touchBorderWidth;
+	bool bottom = clientPos.y() >= clientRect.height() - m_touchBorderWidth;
+
+	if (top && left && !fixdWidth && !fixdHeight)
 	{
-		return TouchType::SOUTH_EAST;
+		return NORTH_WEST;
 	}
-	else if (northEastRect.contains(clientPos))
+	if (top && right && !fixdWidth && !fixdHeight)
 	{
-		return TouchType::NORTH_EAST;
+		return NORTH_EAST;
 	}
-	else if(southWestRect.contains(clientPos))
+	if (bottom && left && !fixdWidth && !fixdHeight)
 	{
-		return TouchType::SOUTH_WEST;
+		return SOUTH_WEST;
 	}
-	else if (northRect.contains(clientPos))
+	if (bottom && right && !fixdWidth && !fixdHeight)
 	{
-		return TouchType::NORTH;
+		return SOUTH_EAST;
 	}
-	else if(southRect.contains(clientPos))
+	if (top && !fixdHeight)
 	{
-		return TouchType::SOUTH;
+		return NORTH;
 	}
-	else if (eastRect.contains(clientPos))
+	if (bottom && !fixdHeight)
 	{
-		return TouchType::EAST;
+		return SOUTH;
 	}
-	else if(westRect.contains(clientPos))
+	if (left && !fixdWidth)
 	{
-		return TouchType::WEST;
+		return WEST;
+	}
+	if (right && !fixdWidth)
+	{
+		return EAST;
 	}
 	return NORMAL;
 }
+
+bool COriginalDialog::isTitleDraggableArea(const QPoint& clientPos) const
+{
+	if (m_customerTitleBarRect.height() <= 0 || !m_customerTitleBarRect.contains(clientPos))
+	{
+		return false;
+	}
+
+	QWidget* child = childAt(clientPos);
+	if (child == nullptr)
+	{
+		return true;
+	}
+	if (qobject_cast<QLabel*>(child) != nullptr)
+	{
+		return true;
+	}
+	return false;
+}
+
+void COriginalDialog::updateCursorByTouchType(TouchType touchType)
+{
+	switch (touchType)
+	{
+	case EAST:
+	case WEST:
+	{
+		setCursor(Qt::SizeHorCursor);
+		break;
+	}
+	case NORTH:
+	case SOUTH:
+	{
+		setCursor(Qt::SizeVerCursor);
+		break;
+	}
+	case NORTH_EAST:
+	case SOUTH_WEST:
+	{
+		setCursor(Qt::SizeBDiagCursor);
+		break;
+	}
+	case NORTH_WEST:
+	case SOUTH_EAST:
+	{
+		setCursor(Qt::SizeFDiagCursor);
+		break;
+	}
+	case NORMAL:
+	default:
+	{
+		unsetCursor();
+		break;
+	}
+	}
+}
+
+void COriginalDialog::applyResizeByGlobalPos(const QPoint& globalPos)
+{
+	QPoint delta = globalPos - m_pressGlobalPos;
+	QRect resizeRect = m_pressGeometry;
+
+	switch (m_pressedType)
+	{
+	case EAST:
+	{
+		resizeRect.setRight(m_pressGeometry.right() + delta.x());
+		break;
+	}
+	case WEST:
+	{
+		resizeRect.setLeft(m_pressGeometry.left() + delta.x());
+		break;
+	}
+	case NORTH:
+	{
+		resizeRect.setTop(m_pressGeometry.top() + delta.y());
+		break;
+	}
+	case SOUTH:
+	{
+		resizeRect.setBottom(m_pressGeometry.bottom() + delta.y());
+		break;
+	}
+	case NORTH_EAST:
+	{
+		resizeRect.setTop(m_pressGeometry.top() + delta.y());
+		resizeRect.setRight(m_pressGeometry.right() + delta.x());
+		break;
+	}
+	case SOUTH_WEST:
+	{
+		resizeRect.setLeft(m_pressGeometry.left() + delta.x());
+		resizeRect.setBottom(m_pressGeometry.bottom() + delta.y());
+		break;
+	}
+	case NORTH_WEST:
+	{
+		resizeRect.setLeft(m_pressGeometry.left() + delta.x());
+		resizeRect.setTop(m_pressGeometry.top() + delta.y());
+		break;
+	}
+	case SOUTH_EAST:
+	{
+		resizeRect.setRight(m_pressGeometry.right() + delta.x());
+		resizeRect.setBottom(m_pressGeometry.bottom() + delta.y());
+		break;
+	}
+	case NORMAL:
+	default:
+	{
+		return;
+	}
+	}
+
+	int32_t minWidth = std::max(minimumWidth(), m_touchBorderWidth * 2);
+	int32_t minHeight = std::max(minimumHeight(), m_touchBorderWidth * 2);
+	int32_t maxWidth = maximumWidth();
+	int32_t maxHeight = maximumHeight();
+
+	if (resizeRect.width() < minWidth)
+	{
+		if (m_pressedType == WEST || m_pressedType == NORTH_WEST || m_pressedType == SOUTH_WEST)
+		{
+			resizeRect.setLeft(resizeRect.right() - minWidth + 1);
+		}
+		else
+		{
+			resizeRect.setRight(resizeRect.left() + minWidth - 1);
+		}
+	}
+	if (resizeRect.height() < minHeight)
+	{
+		if (m_pressedType == NORTH || m_pressedType == NORTH_EAST || m_pressedType == NORTH_WEST)
+		{
+			resizeRect.setTop(resizeRect.bottom() - minHeight + 1);
+		}
+		else
+		{
+			resizeRect.setBottom(resizeRect.top() + minHeight - 1);
+		}
+	}
+	if (resizeRect.width() > maxWidth)
+	{
+		if (m_pressedType == WEST || m_pressedType == NORTH_WEST || m_pressedType == SOUTH_WEST)
+		{
+			resizeRect.setLeft(resizeRect.right() - maxWidth + 1);
+		}
+		else
+		{
+			resizeRect.setRight(resizeRect.left() + maxWidth - 1);
+		}
+	}
+	if (resizeRect.height() > maxHeight)
+	{
+		if (m_pressedType == NORTH || m_pressedType == NORTH_EAST || m_pressedType == NORTH_WEST)
+		{
+			resizeRect.setTop(resizeRect.bottom() - maxHeight + 1);
+		}
+		else
+		{
+			resizeRect.setBottom(resizeRect.top() + maxHeight - 1);
+		}
+	}
+
+	setGeometry(resizeRect);
+}
 #endif
-
-//bool COriginalDialog::dwm_init(HWND hwnd)
-//{
-//	CWinOSVersion osVer;
-//
-//	if( osVer.IsWinWorkStation() && osVer.versionInfo().dwMajorVersion >= 6 )
-//	{ // Extend the frame into the client area.
-//		HRESULT hr = E_FAIL;
-//		CDllCall dwmDll(_T("Dwmapi.dll"));
-//		lpfn_DwmExtendFrameIntoClientArea lpfnExtendFrame = (lpfn_DwmExtendFrameIntoClientArea)dwmDll.resolve("DwmExtendFrameIntoClientArea");
-//		if( lpfnExtendFrame )
-//		{
-//			MARGINS margins = {0, 0, 1, 0}; // l, r, t, b
-//			hr = lpfnExtendFrame(hwnd, &margins);
-//		}
-//		return !!SUCCEEDED(hr);
-//	}
-//	return false;
-//}
-
-//bool COriginalDialog::isDwmEnabled()
-//{
-//	BOOL bEnabled = FALSE;
-//	CWinOSVersion osVer;
-//
-//	if( osVer.IsWinWorkStation() && osVer.versionInfo().dwMajorVersion >= 6 )
-//	{
-//		HRESULT hr = E_FAIL;
-//		CDllCall dwmDll(_T("Dwmapi.dll"));
-//		lpfn_DwmIsCompositionEnabled lpfnIsDwmEnabled = (lpfn_DwmIsCompositionEnabled)dwmDll.resolve("DwmIsCompositionEnabled");
-//		if( lpfnIsDwmEnabled )
-//		{
-//			hr = lpfnIsDwmEnabled(&bEnabled);
-//		}
-//
-//		return !!(SUCCEEDED(hr) && bEnabled);
-//	}
-//	return false;
-//}
 
 void COriginalDialog::setTouchBorderWidth(int n)
 {
-#ifdef __unix__
-	if (mEastWest.isNull())
-	{
-		mEastWest.loadFromData(QByteArray::fromStdString(eastWestResizeCursor));
-	}
-	if (mNorthSouth.isNull())
-	{
-		mNorthSouth.loadFromData(QByteArray::fromStdString(northSouthResizeCursor));
-	}
-	if (mNorthEastSouthWest.isNull())
-	{
-		mNorthEastSouthWest.loadFromData(QByteArray::fromStdString(northEastSouthWestResizeCursor));
-	}
-	if (mNorthWestSouthEast.isNull())
-	{
-		mNorthWestSouthEast.loadFromData(QByteArray::fromStdString(northWestSouthEastResizeCursor));
-	}
-#endif
-	mTouchBorderWidth = n;
+	m_touchBorderWidth = n;
 }
 
 int COriginalDialog::touchBorderWidth()
 {
-	return mTouchBorderWidth;
+	return m_touchBorderWidth;
 }
 
 void COriginalDialog::setCustomerTitleBarHeight(int n)
 {
-	mCustomerTitleBarHeight = n;
-	mCustomerTitleBarRect = QRect(0,0, this->width(), n);
+	m_customerTitleBarHeight = n;
+	m_customerTitleBarRect = QRect(0, 0, width(), n);
 }
 
 int COriginalDialog::customerTitleBarHeight()
 {
-	return mCustomerTitleBarHeight;
+	return m_customerTitleBarHeight;
 }
 
 QRect COriginalDialog::customerTitleBarRect()
 {
-	return mCustomerTitleBarRect;
+	return m_customerTitleBarRect;
 }
 
 void COriginalDialog::setTransientWindow(QWindow* window)
 {
-    winId();
-    QWindow* handle = windowHandle();
-    if (handle == nullptr)
-    {
-        return;
-    }
-    QWindow* realTransientWindow = getAncestorHandle(window);
+	winId();
+	QWindow* handle = windowHandle();
+	if (handle == nullptr)
+	{
+		return;
+	}
+
+	QWindow* realTransientWindow = getAncestorHandle(window);
 	if (realTransientWindow != nullptr)
 	{
 		realTransientWindow->installEventFilter(this);
 	}
-    handle->setTransientParent(realTransientWindow);
+	handle->setTransientParent(realTransientWindow);
 }
 
 QWindow* COriginalDialog::getAncestorHandle(QWindow* window)
 {
-    if (window == nullptr)
-    {
-        return nullptr;
-    }
-    QWindow* realTransientWindow = nullptr;
+	if (window == nullptr)
+	{
+		return nullptr;
+	}
+
+	QWindow* realTransientWindow = nullptr;
 #ifdef _MSC_VER
-    WId ancetorId = (WId)::GetAncestor(HWND(window->winId()), GA_ROOT);
-#elif __unix__
-    WId ancetorId = 0;
-    return nullptr;
+	WId ancetorId = (WId)::GetAncestor(HWND(window->winId()), GA_ROOT);
+	QWidget* topLevelWidget = QWidget::find(ancetorId);
+	if (topLevelWidget != nullptr)
+	{
+		realTransientWindow = topLevelWidget->windowHandle();
+	}
+	else
+	{
+		for (int32_t i = 0; i < qApp->allWindows().count(); ++i)
+		{
+			QWindow* tw = qApp->allWindows()[i];
+			if (tw != nullptr && tw->winId() == ancetorId)
+			{
+				realTransientWindow = tw;
+				break;
+			}
+		}
+	}
+	if (realTransientWindow == nullptr && ::IsWindow(HWND(ancetorId)) == TRUE)
+	{
+		realTransientWindow = QWindow::fromWinId(ancetorId);
+	}
+#else
+	QWidget* sourceWidget = QWidget::find(window->winId());
+	if (sourceWidget != nullptr && sourceWidget->window() != nullptr)
+	{
+		realTransientWindow = sourceWidget->window()->windowHandle();
+	}
+	if (realTransientWindow == nullptr)
+	{
+		realTransientWindow = window;
+	}
 #endif
-    QWidget* topLevelWidget = QWidget::find(ancetorId);
-    if (topLevelWidget)
-    {
-        realTransientWindow = topLevelWidget->windowHandle();
-    }
-    else
-    {
-        for (int i = 0; i < qApp->allWindows().count(); i++)
-        {
-            QWindow* tw = qApp->allWindows()[i];
-            if (tw->winId() == ancetorId)
-            {
-                realTransientWindow = tw;
-                break;
-            }
-        }
-    }
-    //如果是不同进程
-#ifdef _MSC_VER
-    if ((realTransientWindow == nullptr) && (::IsWindow(HWND(ancetorId)) == TRUE))
-    {
-        realTransientWindow = QWindow::fromWinId(ancetorId);
-    }
-#endif
-    return realTransientWindow;
+	return realTransientWindow;
 }
 
 QWindow* COriginalDialog::transientWindow()
 {
-    QWindow* handle = windowHandle();
-    if (handle == nullptr)
-    {
-        return nullptr;
-    }
-    return handle->transientParent();
+	QWindow* handle = windowHandle();
+	if (handle == nullptr)
+	{
+		return nullptr;
+	}
+	return handle->transientParent();
 }
 
 bool COriginalDialog::altF4Enable()
 {
-    return mAltF4Enable;
+	return m_altF4Enable;
 }
 
 void COriginalDialog::setAltF4Enable(bool enabled)
 {
-    mAltF4Enable = enabled;
+	m_altF4Enable = enabled;
 }

@@ -2,8 +2,10 @@
 #include "ControlBase.h"
 #include "QtControlsMacro.h"
 
-/**************该文件的类主要管理背景颜色相关部分**************/
+/**************该文件的类主要管理边框图片、边框颜色和文字颜色相关部分**************/
 
+/** 常态边框样式模板，适用于只有普通状态的控件或节点
+*/
 template <class QBase>
 class ControlBorderForNormal : virtual public ControlBase < QBase >
 {
@@ -32,6 +34,8 @@ public:
 	void setTextColor(const QColor& textColor, bool rePaint = false);
 };
 
+/** 常态、悬停、禁用三态边框样式模板
+*/
 template <class QBase>
 class ControlBorderForNormalHoverDisabled : virtual public ControlBase < QBase >
 {
@@ -80,6 +84,8 @@ public:
 					  bool rePaint = false);
 };
 
+/** 常态、选中、禁用三态边框样式模板，主要用于列表和菜单节点
+*/
 template <class QBase>
 class ControlBorderForNormalSelectedDisabled : virtual public ControlBase < QBase >
 {
@@ -127,6 +133,8 @@ public:
 					  bool rePaint = false);
 };
 
+/** 常态、悬停、按下、禁用四态边框样式模板
+*/
 template <class QBase>
 class ControlBorderForNormalHoverPressedDisabled : virtual public ControlBase < QBase >
 {
@@ -180,6 +188,8 @@ public:
 					  bool rePaint = false);
 };
 
+/** 未选中和选中各四态的边框样式模板，主要用于复选框和单选框
+*/
 template <class QBase>
 class ControlBorderForNormalHoverPressedDisabledAndCheck : virtual public ControlBase < QBase >
 {
@@ -247,7 +257,7 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setTextColor(const QColor& textNormalColor,
-	 	 		 	  const QColor& textHoverColor = QColor(0, 0, 0, 0),
+					  const QColor& textHoverColor = QColor(0, 0, 0, 0),
 					  const QColor& textPressedColor = QColor(0, 0, 0, 0),
 					  const QColor& textDisabledColor = QColor(0, 0, 0, 0),
 					  const QColor& textCkNormalColor = QColor(0, 0, 0, 0),
@@ -257,6 +267,8 @@ public:
 					  bool rePaint = false);
 };
 
+/** 节点常态边框样式模板，适用于列表项、菜单项等子项
+*/
 template <class QBase>
 class ControlItemBorderForNormal : virtual public ControlBase < QBase >
 {
@@ -285,6 +297,8 @@ public:
 	void setItemTextColor(const QColor& textColor, bool rePaint = false);
 };
 
+/** 节点常态、悬停、禁用三态边框样式模板
+*/
 template <class QBase>
 class ControlItemBorderForNormalHoverDisabled : virtual public ControlBase < QBase >
 {
@@ -332,6 +346,8 @@ public:
 						  bool rePaint = false);
 };
 
+/** 节点常态、选中、禁用三态边框样式模板，主要用于菜单项
+*/
 template <class QBase>
 class ControlItemBorderForNormalSelectedDisabled : virtual public ControlBase < QBase >
 {
@@ -379,6 +395,8 @@ public:
 						  bool rePaint = false);
 };
 
+/** 节点常态、悬停、按下、禁用四态边框样式模板
+*/
 template <class QBase>
 class ControlItemBorderForNormalHoverPressedDisabled : virtual public ControlBase < QBase >
 {
@@ -432,6 +450,8 @@ public:
 						  bool rePaint = false);
 };
 
+/** 节点未选中和选中各四态的边框样式模板
+*/
 template <class QBase>
 class ControlItemBorderForNormalHoverPressedDisabledAndCheck : virtual public ControlBase < QBase >
 {
@@ -499,7 +519,7 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemTextColor(const QColor& textNormalColor,
-	 	 		 		  const QColor& textHoverColor = QColor(0, 0, 0, 0),
+						  const QColor& textHoverColor = QColor(0, 0, 0, 0),
 						  const QColor& textPressedColor = QColor(0, 0, 0, 0),
 						  const QColor& textDisabledColor = QColor(0, 0, 0, 0),
 						  const QColor& textCkNormalColor = QColor(0, 0, 0, 0),

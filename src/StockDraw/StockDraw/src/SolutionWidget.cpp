@@ -1,7 +1,7 @@
 #include "SolutionWidget.h"
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
-#include "QtControls/CGeneralStyle.h"
+#include "QtControls/ControlStyleManager.h"
 #include "DialogManager/DialogManagerAPI.h"
 #include "ConfigManager/ConfigManagerAPI.h"
 #include "StockDraw.h"
@@ -32,7 +32,7 @@ void SolutionWidget::init()
 	setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint | Qt::Tool);
 
 	m_exit->show();
-	m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "res/close.png");
+	m_exit->setBkgImage(ControlStyleManager::instance().resourcePath("res/close.png"));
 	QObject::connect(m_exit, &COriginalButton::clicked, this, &SolutionWidget::reject);
 
 	m_time = new Label(this);

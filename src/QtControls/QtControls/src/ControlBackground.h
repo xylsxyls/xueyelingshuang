@@ -4,6 +4,8 @@
 
 /**************该文件的类主要管理背景颜色相关部分**************/
 
+/** 常态背景样式模板，适用于只有普通状态的控件或节点
+*/
 template <class QBase>
 class ControlBackgroundForNormal : virtual public ControlBase < QBase >
 {
@@ -13,19 +15,21 @@ public:
 	virtual ~ControlBackgroundForNormal();
 
 public:
-	/** 设置边框颜色
+	/** 设置背景颜色
 	@param [in] color 常态
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBackgroundColor(const QColor& color, bool rePaint = false);
 
-	/** 设置边框图片
+	/** 设置背景图片
 	@param [in] backgroundImgPath 图片路径
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBackgroundImage(const QString& backgroundImgPath, bool rePaint = false);
 };
 
+/** 常态、悬停、禁用三态背景样式模板
+*/
 template <class QBase>
 class ControlBackgroundForNormalHoverDisabled : virtual public ControlBase < QBase >
 {
@@ -63,6 +67,8 @@ public:
 							bool rePaint = false);
 };
 
+/** 常态、选中、禁用三态背景样式模板，主要用于列表和菜单节点
+*/
 template <class QBase>
 class ControlBackgroundForNormalSelectedDisabled : virtual public ControlBase < QBase >
 {
@@ -99,6 +105,8 @@ public:
 							bool rePaint = false);
 };
 
+/** 常态、悬停、按下、禁用四态背景样式模板
+*/
 template <class QBase>
 class ControlBackgroundForNormalHoverPressedDisabled : virtual public ControlBase < QBase >
 {
@@ -139,6 +147,8 @@ public:
 							bool rePaint = false);
 };
 
+/** 未选中和选中各四态的背景样式模板，主要用于复选框和单选框
+*/
 template <class QBase>
 class ControlBackgroundForNormalHoverPressedDisabledAndCheck : virtual public ControlBase < QBase >
 {
@@ -195,6 +205,8 @@ public:
 							bool rePaint = false);
 };
 
+/** 节点常态背景样式模板，适用于列表项、菜单项等子项
+*/
 template <class QBase>
 class ControlItemBackgroundForNormal : virtual public ControlBase < QBase >
 {
@@ -204,19 +216,21 @@ public:
 	virtual ~ControlItemBackgroundForNormal();
 
 public:
-	/** 设置边框颜色
+	/** 设置节点背景颜色
 	@param [in] color 常态
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBackgroundColor(const QColor& color, bool rePaint = false);
 
-	/** 设置边框图片
+	/** 设置节点背景图片
 	@param [in] backgroundImgPath 图片路径
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBackgroundImage(const QString& backgroundImgPath, bool rePaint = false);
 };
 
+/** 节点常态、悬停、禁用三态背景样式模板
+*/
 template <class QBase>
 class ControlItemBackgroundForNormalHoverDisabled : virtual public ControlBase < QBase >
 {
@@ -253,6 +267,8 @@ public:
 								bool rePaint = false);
 };
 
+/** 节点常态、选中、禁用三态背景样式模板，主要用于菜单项
+*/
 template <class QBase>
 class ControlItemBackgroundForNormalSelectedDisabled : virtual public ControlBase < QBase >
 {
@@ -289,6 +305,8 @@ public:
 								bool rePaint = false);
 };
 
+/** 节点常态、悬停、按下、禁用四态背景样式模板
+*/
 template <class QBase>
 class ControlItemBackgroundForNormalHoverPressedDisabled : virtual public ControlBase < QBase >
 {
@@ -329,6 +347,8 @@ public:
 								bool rePaint = false);
 };
 
+/** 节点未选中和选中各四态的背景样式模板
+*/
 template <class QBase>
 class ControlItemBackgroundForNormalHoverPressedDisabledAndCheck : virtual public ControlBase < QBase >
 {

@@ -4,7 +4,6 @@
 #include "QtControls/COriginalButton.h"
 #include "DialogManager.h"
 #include "DialogHelper.h"
-#include "QtControls/CGeneralStyle.h"
 #include "QtControls/CPasswordInputBox.h"
 
 InputDialog::InputDialog() :

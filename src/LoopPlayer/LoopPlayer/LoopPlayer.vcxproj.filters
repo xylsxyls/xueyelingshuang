@@ -38,10 +38,7 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="VideoTimelineProbe.cpp">
-      <Filter>Source Files\Media</Filter>
-    </ClCompile>
-    <ClCompile Include="MfSourcePlaybackEngine.cpp">
+    <ClCompile Include="FfmpegPlaybackEngine.cpp">
       <Filter>Source Files\Media</Filter>
     </ClCompile>
     <ClCompile Include="PlaybackEngineTypes.cpp">
@@ -67,7 +64,7 @@
     <ClInclude Include="VideoTimelineProbe.h">
       <Filter>Header Files\Media</Filter>
     </ClInclude>
-    <ClInclude Include="MfSourcePlaybackEngine.h">
+    <ClInclude Include="FfmpegPlaybackEngine.h">
       <Filter>Header Files\Media</Filter>
     </ClInclude>
     <ClInclude Include="PlaybackEngineTypes.h">

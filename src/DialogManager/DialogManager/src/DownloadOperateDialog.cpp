@@ -1,7 +1,7 @@
 ﻿#include "DownloadOperateDialog.h"
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
-#include "QtControls/CGeneralStyle.h"
+#include "QtControls/ControlStyleManager.h"
 #include "QtControls/ProgressBar.h"
 #ifdef _MSC_VER
 #include <Windows.h>
@@ -17,6 +17,7 @@ m_tip(nullptr),
 m_file(nullptr),
 m_downloadSpeed(nullptr),
 m_downloaded(nullptr),
+m_downloadTime(nullptr),
 m_progressBar(nullptr),
 m_persent(nullptr),
 m_back(nullptr),
@@ -30,7 +31,8 @@ m_downloadAddrEdit(nullptr),
 m_pathEdit(nullptr),
 m_downloadButton(nullptr),
 m_pathButton(nullptr),
-m_error(nullptr)
+m_error(nullptr),
+m_taskId(-1)
 {
     m_tip = new Label(this);
     m_file = new Label(this);
@@ -73,7 +75,7 @@ m_error(nullptr)
 	m_persent->setAlignment(Qt::AlignVCenter | Qt::AlignRight);
 	m_persent->setVisible(false);
 
-	m_back->setFontFace(CGeneralStyle::instance()->font().family());
+	m_back->setFontFace(ControlStyleManager::instance().defaultFont().family());
 	m_back->setFontSize(12);
 	m_back->setFontColor(QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#545566"));
 	m_back->setText(QString::fromStdWString(L"转到后台下载"));
@@ -81,7 +83,7 @@ m_error(nullptr)
 	m_back->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
 	m_back->setEnabled(true);
 
-	m_again->setFontFace(CGeneralStyle::instance()->font().family());
+	m_again->setFontFace(ControlStyleManager::instance().defaultFont().family());
 	m_again->setFontSize(12);
 	m_again->setFontColor(QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#545566"));
 	m_again->setText(QString::fromStdWString(L"重试"));
@@ -89,7 +91,7 @@ m_error(nullptr)
 	m_again->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
 	m_again->setVisible(false);
 
-	m_cancel->setFontFace(CGeneralStyle::instance()->font().family());
+	m_cancel->setFontFace(ControlStyleManager::instance().defaultFont().family());
 	m_cancel->setFontSize(12);
 	m_cancel->setFontColor(QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#545566"));
 	m_cancel->setText(QString::fromStdWString(L"取消下载"));
@@ -112,7 +114,7 @@ m_error(nullptr)
 
 	m_hand->installEventFilter(this);
 	m_hand->setGeometry(258, 179, 120, 18);
-	m_hand->setFontFace(CGeneralStyle::instance()->font().family());
+	m_hand->setFontFace(ControlStyleManager::instance().defaultFont().family());
 	m_hand->setFontSize(12);
 	m_hand->setFontColor(QColor("#4a6fff"));
     m_hand->setText(QStringLiteral("使用其他下载渠道"));
@@ -221,10 +223,10 @@ void DownloadOperateDialog::resizeEvent(QResizeEvent* eve)
 }
 
 #ifdef _MSC_VER
-void DownloadOperateDialog::setClipboardData(HWND hWnd, const std::string& str)
+void DownloadOperateDialog::setClipboardData(void* hWnd, const std::string& str)
 {
 	//打开剪贴板
-	if (::OpenClipboard(hWnd))
+	if (::OpenClipboard(static_cast<HWND>(hWnd)))
 	{
 		HANDLE hClip;
 		char* pBuf;
@@ -275,9 +277,9 @@ void DownloadOperateDialog::setDownloadSpeed(const QString& speed)
 	emit downloadSpeed(speed);
 }
 
-void DownloadOperateDialog::setDownloaded(const QString& download)
+void DownloadOperateDialog::setDownloaded(const QString& downloadedText)
 {
-	emit downloaded(download);
+	emit downloaded(downloadedText);
 }
 
 void DownloadOperateDialog::setDownloadTime(const QString& time)
@@ -393,7 +395,7 @@ void DownloadOperateDialog::onCopyDownloadAddr()
         return;
     }
 #ifdef _MSC_VER
-	setClipboardData((HWND)winId(), CStringManager::UnicodeToAnsi(m_downloadAddrEdit->text().toStdWString()));
+	setClipboardData(reinterpret_cast<void*>(winId()), CStringManager::UnicodeToAnsi(m_downloadAddrEdit->text().toStdWString()));
 #endif
 	emit copyDownloadAddr(m_downloadAddrEdit->text());
 }
@@ -405,7 +407,7 @@ void DownloadOperateDialog::onCopyPath()
         return;
     }
 #ifdef _MSC_VER
-	setClipboardData((HWND)winId(), CStringManager::UnicodeToAnsi(m_pathEdit->text().toStdWString()));
+	setClipboardData(reinterpret_cast<void*>(winId()), CStringManager::UnicodeToAnsi(m_pathEdit->text().toStdWString()));
 #endif
 	emit copyPath(m_pathEdit->text());
 }

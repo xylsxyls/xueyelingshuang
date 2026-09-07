@@ -2,8 +2,10 @@
 #include "DialogHelper.h"
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
-#include "QtControls/CGeneralStyle.h"
+#include "QtControls/ControlStyleManager.h"
 #include "CSystem/CSystemAPI.h"
+#include <QApplication>
+#include <QDesktopWidget>
 
 NotifyDialog::NotifyDialog():
 m_titleBar(nullptr),
@@ -30,14 +32,14 @@ m_isShow(false)
     m_titleBar->setBackgroundColor(QColor(67, 81, 117, 255));
 
     DialogHelper::setLabel(m_icon, "", QColor(0, 0, 0, 0), 12);
-    m_icon->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/11Logo.png", 1, 1, 1, 1);
+    m_icon->setBackgroundImage(ControlStyleManager::instance().resourcePath("Common/Image/NotificationView/11Logo.png"), 1, 1, 1, 1);
 
     DialogHelper::setLabel(m_title, "title", QColor(221, 213, 198, 255), 12);//QColor(163, 175, 191, 255)
     m_title->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
     m_title->raise();
 
     setNotifyButtonConfig(m_exit, "", RIGHT_TOP_EXIT, 12);
-    m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/CloseButton.png");
+    m_exit->setBkgImage(ControlStyleManager::instance().resourcePath("Common/Image/NotificationView/CloseButton.png"));
     m_exit->raise();
 
     DialogHelper::setLabel(m_time, "", QColor("#abb3d3"), 12);
@@ -130,8 +132,9 @@ void NotifyDialog::resizeEvent(QResizeEvent* eve)
     POINT rightBottom = CSystem::taskbarRightBottomPoint();
     m_beginRect.setRect(rightBottom.x - width(), rightBottom.y - height(), width(), height());
     m_endRect.setRect(rightBottom.x - width(), rightBottom.y, width(), height());
-#elif __unix__
-    QPoint rightBottom = {1920, 1032};
+#else
+    QRect availableRect = QApplication::desktop()->availableGeometry(this);
+    QPoint rightBottom = availableRect.bottomRight();
     m_beginRect.setRect(rightBottom.x() - width(), rightBottom.y() - height(), width(), height());
     m_endRect.setRect(rightBottom.x() - width(), rightBottom.y(), width(), height());
 #endif

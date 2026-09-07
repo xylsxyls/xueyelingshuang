@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "PopDialog.h"
 
-/** 提示弹出框
+/** 提示弹出框，展示提示文本并提供单个确认按钮
 */
 class TipDialog : public PopDialog
 {
@@ -24,10 +24,20 @@ public:
     void setAcceptButton(const QString& acceptText, DialogResult acceptDone);
 
 protected:
+    /** 调整提示文本和确认按钮布局
+    @param [in] eve 窗口大小变化事件
+    */
     void resizeEvent(QResizeEvent* eve);
+
+    /** 检查内部控件是否已经创建完成
+    @return 返回true表示控件有效
+    */
     bool check();
 
 private:
+	// 提示文本
 	Label* m_tip;
+
+	// 确定按钮
 	COriginalButton* m_accept;
 };

@@ -51,22 +51,33 @@ Q_SIGNALS:
 	void doubleClicked();
 
 	/** 鼠标移动信号
-	@param [in] 相对于父窗口的鼠标位置
+	@param [in] point 相对于父窗口的鼠标位置
 	*/
 	void mouseMoved(QPoint point);
 
 protected:
+	/** 处理鼠标移动，发出mouseMoved信号
+	@param [in] eve Qt鼠标事件
+	*/
 	void mouseMoveEvent(QMouseEvent* eve);
+
+	/** 过滤鼠标点击和双击事件，统一发出点击信号
+	@param [in] tar 事件目标对象
+	@param [in] eve Qt事件对象
+	@return 返回true表示事件已处理，false表示继续分发
+	*/
 	bool eventFilter(QObject* tar, QEvent* eve);
 
 protected:
+	/** 执行双击全屏或还原逻辑
+	*/
 	void onDoubleClicked();
 
 private:
-	//当前是否全屏
+	// 当前是否全屏
 	bool m_full;
-	//是否已经设置过含有双击全屏功能
+	// 是否已经设置过双击全屏功能
 	bool m_hasSetFullScreen;
-	//全屏之前的位置
+	// 全屏之前的窗口区域
 	QRect m_rect;
 };

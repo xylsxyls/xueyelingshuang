@@ -28,5 +28,6 @@ private:
 					   const QModelIndex& index) const;
 
 private:
+	// 所属HTML下拉框，用于读取绘制配置
 	HtmlComboBox* m_htmlComboBox;
 };

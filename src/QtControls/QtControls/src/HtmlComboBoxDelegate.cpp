@@ -1,7 +1,7 @@
 ﻿#include "HtmlComboBoxDelegate.h"
 #include <QPainter>
 #include "HtmlComboBox.h"
-#include "CGeneralStyle.h"
+#include "ControlStyleManager.h"
 #include "CSystem/CSystemAPI.h"
 
 HtmlComboBoxDelegate::HtmlComboBoxDelegate(HtmlComboBox* htmlComboBox):
@@ -65,10 +65,10 @@ void HtmlComboBoxDelegate::paint(QPainter* painter,
 											  -m_htmlComboBox->m_bottomOrigin -
 											  m_htmlComboBox->m_itemBorderWidth);
 
-		CGeneralStyle::instance()->drawHtmlTextByLabel(painter,
-													   CSystem::qrectValid<QRect>(drawRect),
-													   index.data().toString(),
-													   Qt::AlignLeft | Qt::AlignVCenter);
+		ControlStyleManager::instance().drawHtmlTextByLabel(painter,
+															 CSystem::qrectValid<QRect>(drawRect),
+															 index.data().toString(),
+															 Qt::AlignLeft | Qt::AlignVCenter);
 	}
 
 	painter->restore();

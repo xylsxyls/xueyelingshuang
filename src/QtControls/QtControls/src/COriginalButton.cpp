@@ -7,33 +7,33 @@
 
 COriginalButton::COriginalButton(QWidget *parent)
     :QPushButton(parent)
-	,mClassName          ("COriginalButton")
-    ,mBkgImageStateCount (4)
-    ,mBkgImageNormal     (1)
-    ,mBkgImageHover      (2)
-    ,mBkgImagePressed    (3)
-    ,mBkgImageDisabled   (4)
-    ,mBkgImageCKNormal   (1)
-    ,mBkgImageCKHover    (2)
-    ,mBkgImageCKPressed  (3)
-    ,mBkgImageCKDisabled (4)
-    ,mFontSize           (14)
-    ,mBold               (0)
-    ,mItalic             (0)
-    ,mUnderline          (0)
-    ,mBorderWidth        (0)
-    ,mBorderRadius       (0)
-    ,mTextAlign          ("center")
-    ,mLeftMargin         (0)
-    ,mRightMargin        (0)
-    ,mTopMargin          (0)
-    ,mBottomMargin       (0)
-	,mBkgImageHMargin    (0)
-	,mBkgImageVMargin    (0)
-	,mBorderStyle        ("solid")
-	,mTooltipOffset      (QPoint(0,0))
-	,mSavedEnabled       (true)
-	,mClickBreathTime    (0)
+	,m_className          ("COriginalButton")
+    ,m_bkgImageStateCount (4)
+    ,m_bkgImageNormal     (1)
+    ,m_bkgImageHover      (2)
+    ,m_bkgImagePressed    (3)
+    ,m_bkgImageDisabled   (4)
+    ,m_bkgImageCkNormal   (1)
+    ,m_bkgImageCkHover    (2)
+    ,m_bkgImageCkPressed  (3)
+    ,m_bkgImageCkDisabled (4)
+    ,m_fontSize           (14)
+    ,m_bold               (0)
+    ,m_italic             (0)
+    ,m_underline          (0)
+    ,m_borderWidth        (0)
+    ,m_borderRadius       (0)
+    ,m_textAlign          ("center")
+    ,m_leftMargin         (0)
+    ,m_rightMargin        (0)
+    ,m_topMargin          (0)
+    ,m_bottomMargin       (0)
+	,m_bkgImageHMargin    (0)
+	,m_bkgImageVMargin    (0)
+	,m_borderStyle        ("solid")
+	,m_tooltipOffset      (QPoint(0,0))
+	,m_savedEnabled       (true)
+	,m_clickBreathTime    (0)
 {
 
     this->setFontSize(14);
@@ -54,7 +54,7 @@ COriginalButton::COriginalButton(QWidget *parent)
     this->setToolTipDuration(2500);
 
 	connect(this, &COriginalButton::clicked, this, &COriginalButton::_internalOnClicked);
-	connect(&mClickBreathTimer, &QTimer::timeout, this, &COriginalButton::_internalOnClickBreathTimerTimeout);
+	connect(&m_clickBreathTimer, &QTimer::timeout, this, &COriginalButton::_internalOnClickBreathTimerTimeout);
 }
 
 COriginalButton::~COriginalButton()
@@ -65,61 +65,61 @@ COriginalButton::~COriginalButton()
 void COriginalButton::updateStyle()
 {
 	QPixmap px;
-	px.load(mBkgImage);
+	px.load(m_bkgImage);
 
 	int imgWidth   = px.width();
 	int imgHeight  = px.height();
-	int stepHeight = px.height() / mBkgImageStateCount;
+	int stepHeight = px.height() / m_bkgImageStateCount;
 
 	//normal
-	int enabledTop     = stepHeight * (mBkgImageNormal - 1);
+	int enabledTop     = stepHeight * (m_bkgImageNormal - 1);
 	int enabledBottom  = imgHeight - enabledTop - stepHeight;
 
-	int hoverTop       = stepHeight * (mBkgImageHover - 1);
+	int hoverTop       = stepHeight * (m_bkgImageHover - 1);
 	int hoverBottom    = imgHeight - hoverTop - stepHeight;
 
-	int pressedTop     = stepHeight * (mBkgImagePressed - 1);
+	int pressedTop     = stepHeight * (m_bkgImagePressed - 1);
 	int pressedBottom  = imgHeight - pressedTop - stepHeight;
 
-	int disabledTop    = stepHeight * (mBkgImageDisabled - 1);
+	int disabledTop    = stepHeight * (m_bkgImageDisabled - 1);
 	int disabledBottom = imgHeight - disabledTop - stepHeight;
 
 	//checked
-	int ckEnabledTop     = stepHeight * (mBkgImageCKNormal - 1);
+	int ckEnabledTop     = stepHeight * (m_bkgImageCkNormal - 1);
 	int ckEnabledBottom  = imgHeight - ckEnabledTop - stepHeight;
 
-	int ckHoverTop       = stepHeight * (mBkgImageCKHover - 1);
+	int ckHoverTop       = stepHeight * (m_bkgImageCkHover - 1);
 	int ckHoverBottom    = imgHeight - ckHoverTop - stepHeight;
 
-	int ckPressedTop     = stepHeight * (mBkgImageCKPressed - 1);
+	int ckPressedTop     = stepHeight * (m_bkgImageCkPressed - 1);
 	int ckPressedBottom  = imgHeight - ckPressedTop - stepHeight;
 
-	int ckDisabledTop    = stepHeight * (mBkgImageCKDisabled - 1);
+	int ckDisabledTop    = stepHeight * (m_bkgImageCkDisabled - 1);
 	int ckDisabledBottom = imgHeight - ckDisabledTop - stepHeight;
 
 
-	enabledTop     += mBkgImageVMargin;
-	enabledBottom  += mBkgImageVMargin;
-	hoverTop       += mBkgImageVMargin;
-	hoverBottom    += mBkgImageVMargin;
-	pressedTop     += mBkgImageVMargin;
-	pressedBottom  += mBkgImageVMargin;
-	disabledTop    += mBkgImageVMargin;
-	disabledBottom += mBkgImageVMargin;
+	enabledTop     += m_bkgImageVMargin;
+	enabledBottom  += m_bkgImageVMargin;
+	hoverTop       += m_bkgImageVMargin;
+	hoverBottom    += m_bkgImageVMargin;
+	pressedTop     += m_bkgImageVMargin;
+	pressedBottom  += m_bkgImageVMargin;
+	disabledTop    += m_bkgImageVMargin;
+	disabledBottom += m_bkgImageVMargin;
 
 
-	ckEnabledTop     += mBkgImageVMargin;
-	ckEnabledBottom  += mBkgImageVMargin;
-	ckHoverTop       += mBkgImageVMargin;
-	ckHoverBottom    += mBkgImageVMargin;
-	ckPressedTop     += mBkgImageVMargin;
-	ckPressedBottom  += mBkgImageVMargin;
-	ckDisabledTop    += mBkgImageVMargin;
-	ckDisabledBottom += mBkgImageVMargin;
+	ckEnabledTop     += m_bkgImageVMargin;
+	ckEnabledBottom  += m_bkgImageVMargin;
+	ckHoverTop       += m_bkgImageVMargin;
+	ckHoverBottom    += m_bkgImageVMargin;
+	ckPressedTop     += m_bkgImageVMargin;
+	ckPressedBottom  += m_bkgImageVMargin;
+	ckDisabledTop    += m_bkgImageVMargin;
+	ckDisabledBottom += m_bkgImageVMargin;
 
 
-	int left  =   mBkgImageHMargin;
-	int right =   mBkgImageHMargin;
+	int left  =   m_bkgImageHMargin;
+	int right =   m_bkgImageHMargin;
 
 
 
@@ -232,9 +232,9 @@ void COriginalButton::updateStyle()
 						  ";
 
 	buttonStyle =
-		buttonStyle.replace("@placeClassName",mClassName)
+		buttonStyle.replace("@placeClassName",m_className)
 		//BkgImage
-		.replace("@placeBkgImage", mBkgImage)
+		.replace("@placeBkgImage", m_bkgImage)
 		.replace("@placeEnabledTop", QString::number(enabledTop)).replace("@placeEnabledBottom", QString::number(enabledBottom))
 		.replace("@placeHoverTop", QString::number(hoverTop)).replace("@placeHoverBottom", QString::number(hoverBottom))
 		.replace("@placePressedTop", QString::number(pressedTop)).replace("@placePressedBottom", QString::number(pressedBottom))
@@ -245,52 +245,52 @@ void COriginalButton::updateStyle()
 		.replace("@placeCKDisabledTop", QString::number(ckDisabledTop)).replace("@placeCKDisabledBottom", QString::number(ckDisabledBottom))
 		.replace("@placeImgLeft", QString::number(left)).replace("@placeImgRight", QString::number(right))
 		//BkgColor
-		.replace("@placeBkgColorEnabled", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorNormal.red()).arg(mBkgColorNormal.green()).arg(mBkgColorNormal.blue()).arg(mBkgColorNormal.alpha()))
-		.replace("@placeBkgColorHover", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorHover.red()).arg(mBkgColorHover.green()).arg(mBkgColorHover.blue()).arg(mBkgColorHover.alpha()))
-		.replace("@placeBkgColorPressed", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorPressed.red()).arg(mBkgColorPressed.green()).arg(mBkgColorPressed.blue()).arg(mBkgColorPressed.alpha()))
-		.replace("@placeBkgColorDisabled", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorDisabled.red()).arg(mBkgColorDisabled.green()).arg(mBkgColorDisabled.blue()).arg(mBkgColorDisabled.alpha()))
-		.replace("@placeBkgColorCKEnabled", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorCKNormal.red()).arg(mBkgColorCKNormal.green()).arg(mBkgColorCKNormal.blue()).arg(mBkgColorCKNormal.alpha()))
-		.replace("@placeBkgColorCKHover", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorCKHover.red()).arg(mBkgColorCKHover.green()).arg(mBkgColorCKHover.blue()).arg(mBkgColorCKHover.alpha()))
-		.replace("@placeBkgColorCKPressed", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorCKPressed.red()).arg(mBkgColorCKPressed.green()).arg(mBkgColorCKPressed.blue()).arg(mBkgColorCKPressed.alpha()))
-		.replace("@placeBkgColorCKDisabled", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorCKDisabled.red()).arg(mBkgColorCKDisabled.green()).arg(mBkgColorCKDisabled.blue()).arg(mBkgColorCKDisabled.alpha()))
+		.replace("@placeBkgColorEnabled", QString("rgba(%1,%2,%3,%4)").arg(m_bkgColorNormal.red()).arg(m_bkgColorNormal.green()).arg(m_bkgColorNormal.blue()).arg(m_bkgColorNormal.alpha()))
+		.replace("@placeBkgColorHover", QString("rgba(%1,%2,%3,%4)").arg(m_bkgColorHover.red()).arg(m_bkgColorHover.green()).arg(m_bkgColorHover.blue()).arg(m_bkgColorHover.alpha()))
+		.replace("@placeBkgColorPressed", QString("rgba(%1,%2,%3,%4)").arg(m_bkgColorPressed.red()).arg(m_bkgColorPressed.green()).arg(m_bkgColorPressed.blue()).arg(m_bkgColorPressed.alpha()))
+		.replace("@placeBkgColorDisabled", QString("rgba(%1,%2,%3,%4)").arg(m_bkgColorDisabled.red()).arg(m_bkgColorDisabled.green()).arg(m_bkgColorDisabled.blue()).arg(m_bkgColorDisabled.alpha()))
+		.replace("@placeBkgColorCKEnabled", QString("rgba(%1,%2,%3,%4)").arg(m_bkgColorCkNormal.red()).arg(m_bkgColorCkNormal.green()).arg(m_bkgColorCkNormal.blue()).arg(m_bkgColorCkNormal.alpha()))
+		.replace("@placeBkgColorCKHover", QString("rgba(%1,%2,%3,%4)").arg(m_bkgColorCkHover.red()).arg(m_bkgColorCkHover.green()).arg(m_bkgColorCkHover.blue()).arg(m_bkgColorCkHover.alpha()))
+		.replace("@placeBkgColorCKPressed", QString("rgba(%1,%2,%3,%4)").arg(m_bkgColorCkPressed.red()).arg(m_bkgColorCkPressed.green()).arg(m_bkgColorCkPressed.blue()).arg(m_bkgColorCkPressed.alpha()))
+		.replace("@placeBkgColorCKDisabled", QString("rgba(%1,%2,%3,%4)").arg(m_bkgColorCkDisabled.red()).arg(m_bkgColorCkDisabled.green()).arg(m_bkgColorCkDisabled.blue()).arg(m_bkgColorCkDisabled.alpha()))
 		//FontColor
-		.replace("@placeFontColorEnabled", mFontColorNormal.name())
-		.replace("@placeFontColorHover", mFontColorHover.name())
-		.replace("@placeFontColorPressed", mFontColorPressed.name())
-		.replace("@placeFontColorDisabled", mFontColorDisabled.name())
-		.replace("@placeFontColorCKEnabled", mFontColorCKNormal.name())
-		.replace("@placeFontColorCKHover", mFontColorCKHover.name())
-		.replace("@placeFontColorCKPressed", mFontColorCKPressed.name())
-		.replace("@placeFontColorCKDisabled", mFontColorCKDisabled.name())
+		.replace("@placeFontColorEnabled", m_fontColorNormal.name())
+		.replace("@placeFontColorHover", m_fontColorHover.name())
+		.replace("@placeFontColorPressed", m_fontColorPressed.name())
+		.replace("@placeFontColorDisabled", m_fontColorDisabled.name())
+		.replace("@placeFontColorCKEnabled", m_fontColorCkNormal.name())
+		.replace("@placeFontColorCKHover", m_fontColorCkHover.name())
+		.replace("@placeFontColorCKPressed", m_fontColorCkPressed.name())
+		.replace("@placeFontColorCKDisabled", m_fontColorCkDisabled.name())
 		//FontSize
-		.replace("@placeFontSize", QString::number(mFontSize)+ "px")
+		.replace("@placeFontSize", QString::number(m_fontSize)+ "px")
 		//FontFace
-		.replace("@placeFontFace", mFontFace)
+		.replace("@placeFontFace", m_fontFace)
 		//Bold
-		.replace("@placeBold", mBold ? "bold" : "")
+		.replace("@placeBold", m_bold ? "bold" : "")
 		//Italic
-		.replace("@placeItalic", mItalic ? "italic" : "")
+		.replace("@placeItalic", m_italic ? "italic" : "")
 		//Underline
-		.replace("@placeUnderline", mUnderline ? "underline" : "none")
+		.replace("@placeUnderline", m_underline ? "underline" : "none")
 		//Border
-		.replace("@placeBorderWidth", QString::number(mBorderWidth) + "px")
-		.replace("@placeBorderStyle", mBorderStyle)
-		.replace("@placeBorderRadius", QString::number(mBorderRadius) + "px")
-		.replace("@placeBorderColorNormal", mBorderColorNormal.name())
-		.replace("@placeBorderColorHover", mBorderColorHover.name())
-		.replace("@placeBorderColorPressed", mBorderColorPressed.name())
-		.replace("@placeBorderColorDisabled", mBorderColorDisabled.name())
-		.replace("@placeBorderColorCKNormal", mBorderColorNormal.name())
-		.replace("@placeBorderColorCKHover", mBorderColorHover.name())
-		.replace("@placeBorderColorCKPressed", mBorderColorPressed.name())
-		.replace("@placeBorderColorCKDisabled", mBorderColorDisabled.name())
+		.replace("@placeBorderWidth", QString::number(m_borderWidth) + "px")
+		.replace("@placeBorderStyle", m_borderStyle)
+		.replace("@placeBorderRadius", QString::number(m_borderRadius) + "px")
+		.replace("@placeBorderColorNormal", m_borderColorNormal.name())
+		.replace("@placeBorderColorHover", m_borderColorHover.name())
+		.replace("@placeBorderColorPressed", m_borderColorPressed.name())
+		.replace("@placeBorderColorDisabled", m_borderColorDisabled.name())
+		.replace("@placeBorderColorCKNormal", m_borderColorNormal.name())
+		.replace("@placeBorderColorCKHover", m_borderColorHover.name())
+		.replace("@placeBorderColorCKPressed", m_borderColorPressed.name())
+		.replace("@placeBorderColorCKDisabled", m_borderColorDisabled.name())
 		//TextAlign
-		.replace("@placeTextAlign", mTextAlign)
+		.replace("@placeTextAlign", m_textAlign)
 		//Margins
-		.replace("@placeLeftMargin"  , QString::number(mLeftMargin)   + "px")
-		.replace("@placeTopMargin"   , QString::number(mTopMargin)  + "px")
-		.replace("@placeRightMargin" , QString::number(mRightMargin)    + "px")
-		.replace("@placeBottomMargin", QString::number(mBottomMargin) + "px");
+		.replace("@placeLeftMargin"  , QString::number(m_leftMargin)   + "px")
+		.replace("@placeTopMargin"   , QString::number(m_topMargin)  + "px")
+		.replace("@placeRightMargin" , QString::number(m_rightMargin)    + "px")
+		.replace("@placeBottomMargin", QString::number(m_bottomMargin) + "px");
 
 
 
@@ -304,7 +304,7 @@ bool COriginalButton::event(QEvent *e)
 	if(e->type() == QEvent::ToolTip)
 	{
 		QHelpEvent *he = (QHelpEvent*)e;
-		QHelpEvent the(QEvent::ToolTip, he->pos() + mTooltipOffset, he->globalPos() + mTooltipOffset);
+		QHelpEvent the(QEvent::ToolTip, he->pos() + m_tooltipOffset, he->globalPos() + m_tooltipOffset);
 		return QPushButton::event(&the);
 	}
 
@@ -319,26 +319,26 @@ bool COriginalButton::event(QEvent *e)
 
 void COriginalButton::_internalOnClicked()
 {
-	if(mClickBreathTime > 0)
+	if(m_clickBreathTime > 0)
 	{
 		QPushButton::setEnabled(false);
-		if(mClickBreathTimer.isActive())
-			mClickBreathTimer.stop();
+		if(m_clickBreathTimer.isActive())
+			m_clickBreathTimer.stop();
 
-		mClickBreathTimer.start();
+		m_clickBreathTimer.start();
 	}
 }
 
 void COriginalButton::_internalOnClickBreathTimerTimeout()
 {
-	mClickBreathTimer.stop();
-	QPushButton::setEnabled(mSavedEnabled);
+	m_clickBreathTimer.stop();
+	QPushButton::setEnabled(m_savedEnabled);
 }
 
 void COriginalButton::setEnabled(bool s)
 {
-	mSavedEnabled = s;
-	if(!mClickBreathTimer.isActive())
+	m_savedEnabled = s;
+	if(!m_clickBreathTimer.isActive())
 	{
 		QPushButton::setEnabled(s);
 	}
@@ -346,141 +346,141 @@ void COriginalButton::setEnabled(bool s)
 
 void COriginalButton::setClickBreathTime(quint64 t)
 {
-	mClickBreathTime = t;
-	mClickBreathTimer.setInterval(t);
+	m_clickBreathTime = t;
+	m_clickBreathTimer.setInterval(t);
 }
 
 
 void COriginalButton::setBkgImage(const QString &bkgImage, const quint64 bkgImageStateCount, const quint64 bkgImageNormal, const quint64 bkgImageHover, const quint64 bkgImagePressed, const quint64 bkgImageDisabled, const quint64 bkgImageCKNormal, const quint64 bkgImageCKHover, const quint64 bkgImageCKPressed, const quint64 bkgImageCKDisabled)
 {
-    mBkgImage             = bkgImage             ;
-    mBkgImageStateCount   = bkgImageStateCount   ;
-    mBkgImageNormal       = bkgImageNormal       ;
-    mBkgImageHover        = bkgImageHover        ;
-    mBkgImagePressed      = bkgImagePressed      ;
-    mBkgImageDisabled     = bkgImageDisabled     ;
-    mBkgImageCKNormal     = bkgImageCKNormal     ;
-    mBkgImageCKHover      = bkgImageCKHover      ;
-    mBkgImageCKPressed    = bkgImageCKPressed    ;
-    mBkgImageCKDisabled   = bkgImageCKDisabled   ;
+    m_bkgImage             = bkgImage             ;
+    m_bkgImageStateCount   = bkgImageStateCount   ;
+    m_bkgImageNormal       = bkgImageNormal       ;
+    m_bkgImageHover        = bkgImageHover        ;
+    m_bkgImagePressed      = bkgImagePressed      ;
+    m_bkgImageDisabled     = bkgImageDisabled     ;
+    m_bkgImageCkNormal     = bkgImageCKNormal     ;
+    m_bkgImageCkHover      = bkgImageCKHover      ;
+    m_bkgImageCkPressed    = bkgImageCKPressed    ;
+    m_bkgImageCkDisabled   = bkgImageCKDisabled   ;
 
     this->updateStyle();
 }
 
 void COriginalButton::setBkgColor(const QColor &bkgColorNormal, const QColor &bkgColorHover, const QColor &bkgColorPressed, const QColor &bkgColorDisabled, const QColor &bkgColorCKNormal, const QColor &bkgColorCKHover, const QColor &bkgColorCKPressed, const QColor &bkgColorCKDisabled)
 {
-    mBkgColorNormal     = bkgColorNormal    ;
-    mBkgColorHover      = bkgColorHover     ;
-    mBkgColorPressed    = bkgColorPressed   ;
-    mBkgColorDisabled   = bkgColorDisabled  ;
-    mBkgColorCKNormal   = bkgColorCKNormal  ;
-    mBkgColorCKHover    = bkgColorCKHover   ;
-    mBkgColorCKPressed  = bkgColorCKPressed ;
-    mBkgColorCKDisabled = bkgColorCKDisabled;
+    m_bkgColorNormal     = bkgColorNormal    ;
+    m_bkgColorHover      = bkgColorHover     ;
+    m_bkgColorPressed    = bkgColorPressed   ;
+    m_bkgColorDisabled   = bkgColorDisabled  ;
+    m_bkgColorCkNormal   = bkgColorCKNormal  ;
+    m_bkgColorCkHover    = bkgColorCKHover   ;
+    m_bkgColorCkPressed  = bkgColorCKPressed ;
+    m_bkgColorCkDisabled = bkgColorCKDisabled;
 
     this->updateStyle();
 }
 
 void COriginalButton::setFontColor(const QColor &fontColorNormal, const QColor &fontColorHover, const QColor &fontColorPressed, const QColor &fontColorDisabled, const QColor &fontColorCKNormal, const QColor &fontColorCKHover, const QColor &fontColorCKPressed, const QColor &fontColorCKDisabled)
 {
-    mFontColorNormal     = fontColorNormal    ;
-    mFontColorHover      = fontColorHover     ;
-    mFontColorPressed    = fontColorPressed   ;
-    mFontColorDisabled   = fontColorDisabled  ;
-    mFontColorCKNormal   = fontColorCKNormal  ;
-    mFontColorCKHover    = fontColorCKHover   ;
-    mFontColorCKPressed  = fontColorCKPressed ;
-    mFontColorCKDisabled = fontColorCKDisabled;
+    m_fontColorNormal     = fontColorNormal    ;
+    m_fontColorHover      = fontColorHover     ;
+    m_fontColorPressed    = fontColorPressed   ;
+    m_fontColorDisabled   = fontColorDisabled  ;
+    m_fontColorCkNormal   = fontColorCKNormal  ;
+    m_fontColorCkHover    = fontColorCKHover   ;
+    m_fontColorCkPressed  = fontColorCKPressed ;
+    m_fontColorCkDisabled = fontColorCKDisabled;
 
     this->updateStyle();
 }
 
 void COriginalButton::setFontFace(const QString &v)
 {
-    mFontFace = v;
+    m_fontFace = v;
     this->updateStyle();
 }
 
 void COriginalButton::setFontSize(const quint32 &v)
 {
-    mFontSize = v;
+    m_fontSize = v;
     this->updateStyle();
 }
 
 void COriginalButton::setBold(const bool &v)
 {
-    mBold = v;
+    m_bold = v;
     this->updateStyle();
 }
 
 void COriginalButton::setItalic(const bool &v)
 {
-    mItalic = v;
+    m_italic = v;
     this->updateStyle();
 }
 
 void COriginalButton::setUnderline(const bool &v)
 {
-    mUnderline = v;
+    m_underline = v;
     this->updateStyle();
 }
 
 void COriginalButton::setBorderWidth(const quint32 &v)
 {
-    mBorderWidth = v;
+    m_borderWidth = v;
     this->updateStyle();
 }
 
 void COriginalButton::setBorderRadius(const quint32 &v)
 {
-    mBorderRadius = v;
+    m_borderRadius = v;
     this->updateStyle();
 }
 
 void COriginalButton::setBorderStyle(const QString &v)
 {
-    mBorderStyle = v;
+    m_borderStyle = v;
     this->updateStyle();
 }
 
 void COriginalButton::setBorderColor(const QColor &borderColorNormal, const QColor &borderColorHover, const QColor &borderColorPressed, const QColor &borderColorDisabled, const QColor &borderColorCKNormal, const QColor &borderColorCKHover, const QColor &borderColorCKPressed, const QColor &borderColorCKDisabled)
 {
-    mBorderColorNormal     = borderColorNormal     ;
-    mBorderColorHover      = borderColorHover      ;
-    mBorderColorPressed    = borderColorPressed    ;
-    mBorderColorDisabled   = borderColorDisabled   ;
-    mBorderColorCKNormal   = borderColorCKNormal   ;
-    mBorderColorCKHover    = borderColorCKHover    ;
-    mBorderColorCKPressed  = borderColorCKPressed  ;
-    mBorderColorCKDisabled = borderColorCKDisabled ;
+    m_borderColorNormal     = borderColorNormal     ;
+    m_borderColorHover      = borderColorHover      ;
+    m_borderColorPressed    = borderColorPressed    ;
+    m_borderColorDisabled   = borderColorDisabled   ;
+    m_borderColorCkNormal   = borderColorCKNormal   ;
+    m_borderColorCkHover    = borderColorCKHover    ;
+    m_borderColorCkPressed  = borderColorCKPressed  ;
+    m_borderColorCkDisabled = borderColorCKDisabled ;
 
     this->updateStyle();
 }
 
 void COriginalButton::setTextAlign(const QString &align)
 {
-    mTextAlign = align;
+    m_textAlign = align;
     this->updateStyle();
 }
 
 void COriginalButton::setMargins(const quint32 &left, const quint32 &top, const quint32 &right, const quint32 &bottom)
 {
-    mLeftMargin   = left;
-    mTopMargin    = top;
-    mRightMargin  = right;
-    mBottomMargin = bottom;
+    m_leftMargin   = left;
+    m_topMargin    = top;
+    m_rightMargin  = right;
+    m_bottomMargin = bottom;
     this->updateStyle();
 }
 
 void COriginalButton::setBkgMargins(const quint32& hMargin, const quint32& vMargin)
 {
-	mBkgImageHMargin = hMargin;
-	mBkgImageVMargin = vMargin;
+	m_bkgImageHMargin = hMargin;
+	m_bkgImageVMargin = vMargin;
 	this->updateStyle();
 }
 
 void COriginalButton::setToolTipOffset(int x, int y)
 {
-	mTooltipOffset = QPoint(x,y);
+	m_tooltipOffset = QPoint(x,y);
 }
 

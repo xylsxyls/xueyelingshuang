@@ -1,7 +1,7 @@
 ﻿#include "COriginalWebView.h"
 
 #include <qglobal.h>
-#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+#if defined(QTCONTROLS_ENABLE_WEBKIT) && (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
 
 #include <QPainter>
 #include <QContextMenuEvent>
@@ -9,8 +9,8 @@
 
 COriginalWebView::COriginalWebView(QWidget *parent)
     : QWebView(parent)
-    , mIsLoading(true)
-	, mIsShowProgress(false)
+    , m_isLoading(true)
+	, m_isShowProgress(false)
 {
     connect(this, &COriginalWebView::loadStarted , this, &COriginalWebView::customerOnLoadStarted);
     connect(this, &COriginalWebView::loadFinished, this, &COriginalWebView::customerOnLoadFinished);
@@ -30,7 +30,7 @@ void COriginalWebView::paintEvent(QPaintEvent *e)
 		QWebView::paintEvent(e);
 		return ;
 	}
-    if(mIsLoading)
+    if(m_isLoading)
     {
         painter.save();
         painter.fillRect(this->rect(),QColor(40,45,60));
@@ -41,7 +41,7 @@ void COriginalWebView::paintEvent(QPaintEvent *e)
         painter.setPen(Qt::gray);
 
         QFontMetrics metrics(loadingTextFont);
-        QString tLoadingText = metrics.elidedText(mLoadingText, Qt::ElideRight, this->width());
+        QString tLoadingText = metrics.elidedText(m_loadingText, Qt::ElideRight, this->width());
 
         painter.drawText(this->rect(), Qt::AlignCenter, tLoadingText);
 
@@ -65,23 +65,23 @@ void COriginalWebView::contextMenuEvent(QContextMenuEvent* e)
 
 void COriginalWebView::customerOnLoadStarted()
 {
-    mLoadingText  = "Loading";
-    mIsLoading = true;
+    m_loadingText  = "Loading";
+    m_isLoading = true;
 
     this->update();
 }
 
 void COriginalWebView::customerOnLoadFinished(bool s)
 {
-    mIsLoading = false;
+    m_isLoading = false;
     if(s)
     {
-        mLoadingText  = "Loading finished.";
+        m_loadingText  = "Loading finished.";
 
     }
     else
     {
-        mLoadingText  = "Net Error.";
+        m_loadingText  = "Net Error.";
     }
 
 
@@ -90,9 +90,9 @@ void COriginalWebView::customerOnLoadFinished(bool s)
 
 void COriginalWebView::customerOnLoadProgress(int progress)
 {
-    if(mIsLoading)
+    if(m_isLoading)
     {
-        mLoadingText  = QString("Loading %1%...").arg(progress);
+        m_loadingText  = QString("Loading %1%...").arg(progress);
     }
 
     this->update();
@@ -100,12 +100,12 @@ void COriginalWebView::customerOnLoadProgress(int progress)
 
 void COriginalWebView::setIsShowProgress(bool s)
 {
-	mIsShowProgress = s;
+	m_isShowProgress = s;
 }
 
 bool COriginalWebView::isShowProgress()
 {
-	return mIsShowProgress;
+	return m_isShowProgress;
 }
 
 

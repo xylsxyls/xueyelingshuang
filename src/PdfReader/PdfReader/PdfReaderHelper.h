@@ -111,15 +111,28 @@ public:
                                          int minWindowHeight,
                                          int* leftWidth);
 
-    /** 刷新自绘窗口边框区域
-    @param [in] hwnd 窗口句柄
-    */
-    static void RefreshWindowFrame(HWND hwnd);
-
     /** 获取工程统一UI字体
     @return 返回字体句柄
     */
     static HFONT GetUiFont();
+
+    /** 禁用窗口DWM过渡动画
+    @param [in] hwnd 窗口句柄
+    */
+    static void DisableWindowTransitionAnimation(HWND hwnd);
+
+    /** 将窗口居中到所属窗口中间，所属窗口无效时居中到主显示器工作区
+    @param [in] hwnd 需要移动的窗口句柄
+    @param [in] owner 所属窗口句柄，可以为空
+    */
+    static void CenterWindowToOwner(HWND hwnd, HWND owner);
+
+    /** 运行自绘模态弹窗消息循环
+    @param [in] owner 所属窗口句柄，可以为空
+    @param [in] dialog 模态弹窗句柄
+    @param [in,out] done 弹窗结束标记
+    */
+    static void RunModalMessageLoop(HWND owner, HWND dialog, bool* done);
 
     /** 给子控件应用工程统一UI字体
     @param [in] hwnd 控件窗口句柄

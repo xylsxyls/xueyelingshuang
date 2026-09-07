@@ -24,6 +24,11 @@ public:
 	*/
 	TreeViewModel* model() const;
 
+	/** 绘制指定表头分区
+	@param [in] painter 绘画指针
+	@param [in] rect 表头分区绘制区域
+	@param [in] logicalIndex 表头逻辑列索引
+	*/
 	void paintSection(QPainter* painter, const QRect& rect, int logicalIndex) const;
 
 protected:

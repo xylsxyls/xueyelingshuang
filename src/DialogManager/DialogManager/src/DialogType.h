@@ -4,6 +4,7 @@
 #include <QMetaType>
 #include <QObject>
 #include "QtControls/DialogResult.h"
+#include <vector>
 
 class QWindow;
 
@@ -45,7 +46,7 @@ enum DialogType
     */
     DOWNLOAD_OPERATE_DIALOG,
 
-    /** 下载盒子
+    /** 账号管理框
     */
     ACCOUNT_MANAGER_DIALOG,
 
@@ -197,12 +198,14 @@ struct OperateParam
 	}
 
 	/** 获取操作类型
+	@return 返回操作类型
 	*/
 	OperateType operateType()
 	{
 		return m_operateType;
 	}
 protected:
+	// 当前操作类型
 	OperateType m_operateType;
 };
 
@@ -248,7 +251,7 @@ struct SetDownloadTimeOperateParam : public OperateParam
 {
 	//用户自定义ID
 	quint64 m_userId;
-	//已下载量
+	// 下载时间
 	QString m_time;
 
 	/** 构造函数
@@ -501,7 +504,7 @@ struct CloseStaticDialogOperateParam : public OperateParam
 */
 struct DialogExistByDialogIdOperateParam : public OperateParam
 {
-	//窗口类型
+	// 窗口ID
 	quint64 m_dialogId;
 	//窗口是否存在，out
 	bool m_isExist;
@@ -558,7 +561,7 @@ struct ChangeUserResultByDialogIdOperateParam : public OperateParam
 */
 struct ChangeUserResultByUserIdOperateParam : public OperateParam
 {
-	//窗口ID
+	// 用户自定义ID
 	quint64 m_userId;
 	//用户自定义参数
 	qint32 m_userResult;
@@ -744,12 +747,14 @@ struct SignalParam
 	}
 
 	/** 获取信号类型
+	@return 返回信号类型
 	*/
 	SignalType signalType() const
 	{
 		return m_signalType;
 	}
 protected:
+	// 当前信号类型
 	SignalType m_signalType;
 };
 Q_DECLARE_METATYPE(SignalParam)
@@ -984,6 +989,7 @@ struct DialogParam
     }
 
 	/** 获取窗口类型
+	@return 返回窗口类型
 	*/
 	DialogType dialogType()
 	{
@@ -991,6 +997,7 @@ struct DialogParam
 	}
 
 protected:
+	// 当前窗口类型
 	DialogType m_dialogType;
 };
 

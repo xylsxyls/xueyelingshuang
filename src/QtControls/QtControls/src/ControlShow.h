@@ -43,12 +43,15 @@ protected:
 	std::wstring className();
 
 protected:
+	/** 首次显示时初始化类名并刷新样式
+	@param [in] eve Qt显示事件
+	*/
 	virtual void showEvent(QShowEvent* eve);
 
 public:
-	//style字符串管理对象
+	// 控件QSS字符串管理对象
 	QssString m_controlStyle;
-	//节点名字符串
+	// 子节点QSS名称
 	std::wstring m_itemName;
 };
 

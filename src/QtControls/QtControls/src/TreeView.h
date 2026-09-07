@@ -37,7 +37,10 @@ protected:
 	bool check();
 
 private:
+	// 树节点绘制和编辑代理
 	TreeViewDelegate* m_treeViewDelegate;
+	// 自定义表头对象
 	TreeViewHeader* m_treeViewHeader;
+	// 自定义树模型对象
 	TreeViewModel* m_treeViewModel;
 };

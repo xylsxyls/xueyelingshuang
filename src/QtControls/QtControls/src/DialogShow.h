@@ -74,24 +74,47 @@ Q_SIGNALS:
     void closedSignal(DialogResult* result);
 
 protected slots:
+    /** 处理DialogBase转发的键盘确认事件，触发默认按钮或关闭逻辑
+    @param [in] tar 当前焦点所在控件指针
+    @param [in] key 按下键的值
+    */
     void onKeyboardAccept(QObject* tar, Qt::Key key);
 
 protected:
+    /** 显示时初始化按钮结果映射和倒计时展示
+    @param [in] eve Qt显示事件
+    */
     void showEvent(QShowEvent* eve);
+
+    /** 关闭时写入窗口结果并发出closedSignal信号
+    @param [in] eve Qt关闭事件
+    */
     void closeEvent(QCloseEvent* eve);
+
+    /** 检测关闭按钮、倒计时标签和结果存储区是否可用
+    @return 返回true表示内部状态可用，false表示存在空指针或异常状态
+    */
     bool check();
     //void escEvent();
     //void altF4PressedEvent();
 
 private slots:
+	/** 更新倒计时显示文字
+	@param [in] timeOut 当前剩余秒数
+	*/
 	void onTimeUpdate(qint32 timeOut);
-	
+
 protected:
+	// 右上角关闭按钮
 	COriginalButton* m_exit;
+	// 用户自定义返回值存储指针
 	qint32* m_userResult;
+	// 倒计时显示标签
     Label* m_time;
+	// 弹窗结果存储指针
 	DialogResult* m_result;
+	// 控件到弹窗结果的映射
     std::map<QWidget*, DialogResult> m_mapResult;
-	//或者和空格默认执行的按钮，子类传送指针
+	// 回车或空格默认执行的按钮，由子类传入
     COriginalButton* m_acceptButton;
 };

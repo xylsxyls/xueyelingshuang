@@ -25,6 +25,9 @@
     <ClInclude Include="..\src\FFmpegCppModels.inl">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\FFmpegCppPlaybackReader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -39,6 +42,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\FFmpegCppHelper.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FFmpegCppPlaybackReader.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

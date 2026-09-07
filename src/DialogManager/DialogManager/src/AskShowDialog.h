@@ -3,7 +3,7 @@
 #include "NotifyDialog.h"
 
 class COriginalButton;
-/** 显示提示框
+/** 通知式询问框，展示提示文本并提供确定、取消两种结果
 */
 class AskShowDialog : public NotifyDialog
 {
@@ -32,11 +32,23 @@ public:
     void setIgnoreButton(const QString& ignoreText, DialogResult ignoreDone);
 
 protected:
+    /** 调整提示文本和按钮布局
+    @param [in] eve 窗口大小变化事件
+    */
     void resizeEvent(QResizeEvent* eve);
+
+    /** 检查内部控件是否已经创建完成
+    @return 返回true表示控件有效
+    */
     bool check();
 
 private:
+	// 提示文本
 	Label* m_tip;
+
+	// 确定按钮
 	COriginalButton* m_accept;
+
+	// 取消按钮
 	COriginalButton* m_ignore;
 };

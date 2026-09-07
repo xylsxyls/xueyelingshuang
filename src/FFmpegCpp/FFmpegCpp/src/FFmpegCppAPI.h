@@ -6,6 +6,7 @@
 #include "FFmpegCppModels.h"
 #include "FFmpegCpp.h"
 #include "FFmpegCppHelper.h"
+#include "FFmpegCppPlaybackReader.h"
 
 #ifdef _WIN32
 #if defined _DEBUG

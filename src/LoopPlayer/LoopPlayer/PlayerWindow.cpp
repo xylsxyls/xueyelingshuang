@@ -12,6 +12,7 @@ namespace LoopPlayer
         REFERENCE_TIME target;
         bool keepPlaying;
         bool logSeek;
+        bool previewOnly;
         size_t previewMaxReadCount;
         HRESULT seekHr;
         HRESULT playHr;
@@ -114,10 +115,11 @@ namespace LoopPlayer
           frameDuration_(DEFAULT_FRAME_DURATION),
           asyncSeekPreviewMaxReadCount_(0),
           asyncSeekKeepPlaying_(false),
-          asyncSeekLog_(false)
+          asyncSeekLog_(false),
+          asyncSeekPreviewOnly_(false)
     {
         InitializeCriticalSection(&seekWorkerLock_);
-        player_ = new MfSourcePlaybackEngine();
+        player_ = new FfmpegPlaybackEngine();
         ZeroMemory(&savedPlacement_, sizeof(savedPlacement_));
         savedPlacement_.length = sizeof(savedPlacement_);
         ZeroMemory(&lastMouseActivityScreen_, sizeof(lastMouseActivityScreen_));
@@ -279,7 +281,7 @@ namespace LoopPlayer
             return false;
         }
 
-        Logf(L"LoadFile begin with custom SourceReader engine: %s", path);
+        Logf(L"LoadFile begin with FFmpeg engine: %s", path);
         WIN32_FILE_ATTRIBUTE_DATA fileInfo = { 0 };
         if (GetFileAttributesExW(path, GetFileExInfoStandard, &fileInfo))
         {
@@ -294,11 +296,8 @@ namespace LoopPlayer
         ClosePlayer();
 
         VideoTimelineInfo sourceTimeline;
-        VideoTimelineProbe::Probe(path, DEFAULT_FRAME_DURATION, sourceTimeline);
-
         videoTimeline_ = sourceTimeline;
         REFERENCE_TIME videoTimelineOffset = 0;
-        NormalizeVideoTimelineForPlayback(videoTimeline_, videoTimelineOffset);
 
         playbackPath_ = path;
         filePath_ = path;
@@ -310,7 +309,7 @@ namespace LoopPlayer
 
         if (!player_)
         {
-            player_ = new MfSourcePlaybackEngine();
+            player_ = new FfmpegPlaybackEngine();
         }
         if (!player_)
         {
@@ -2012,7 +2011,7 @@ namespace LoopPlayer
             nativeVideoHeight_ = videoHeight;
         }
 
-        Logf(L"GetNativeVideoSize from custom engine: ok=%d, video=%dx%d, stored=%dx%d",
+        Logf(L"GetNativeVideoSize from FFmpeg engine: ok=%d, video=%dx%d, stored=%dx%d",
              ok ? 1 : 0,
              videoWidth,
              videoHeight,
@@ -2623,7 +2622,7 @@ namespace LoopPlayer
 
         duration_ = player_->duration();
         const bool ok = duration_ > 0;
-        Logf(L"ReadDuration from custom engine: ok=%d, duration=%s (%I64d)",
+        Logf(L"ReadDuration from FFmpeg engine: ok=%d, duration=%s (%I64d)",
              ok ? 1 : 0,
              FormatTime(duration_).c_str(),
              duration_);
@@ -2646,7 +2645,7 @@ namespace LoopPlayer
             frameDuration_ = videoTimeline_.firstDuration;
         }
 
-        Logf(L"Frame duration selected from custom engine/timeline: frameDuration=%s (%I64d), timelineValid=%d, first=%s (%I64d), second=%s (%I64d), firstDuration=%s (%I64d)",
+        Logf(L"Frame duration selected from FFmpeg engine/timeline: frameDuration=%s (%I64d), timelineValid=%d, first=%s (%I64d), second=%s (%I64d), firstDuration=%s (%I64d)",
              FormatTime(frameDuration_).c_str(),
              frameDuration_,
              videoTimeline_.isValid ? 1 : 0,
@@ -2676,7 +2675,7 @@ namespace LoopPlayer
         const REFERENCE_TIME oldLast = info.lastTime;
         const REFERENCE_TIME oldLastEnd = info.lastEndTime;
 
-        // SourceReader自定义管线直接在播放时映射视频时间戳，所以这里仅修正UI和AB逻辑看到的时间轴。
+        // FFmpeg读取器输出的时间轴已经归一化，这里只保留旧异常时间轴兼容入口。
         info.firstTime = 0;
         if (info.secondTime >= videoOffset)
         {
@@ -2773,7 +2772,7 @@ namespace LoopPlayer
         }
         else
         {
-            Logf(L"GetPosition failed from custom engine");
+            Logf(L"GetPosition failed from FFmpeg engine");
         }
         return ok;
     }
@@ -2927,7 +2926,7 @@ namespace LoopPlayer
             return false;
         }
 
-        Logf(L"Playback segment updated for custom engine: mode=%s, start=%s (%I64d), stop=%s (%I64d), manualLoop=%d",
+        Logf(L"Playback segment updated for FFmpeg engine: mode=%s, start=%s (%I64d), stop=%s (%I64d), manualLoop=%d",
              activeAb ? L"AB" : L"full",
              FormatTime(start).c_str(),
              start,
@@ -3538,7 +3537,7 @@ namespace LoopPlayer
             return;
         }
 
-        Logf(L"Clear playback segment flag for custom engine seek drag: duration=%s (%I64d)",
+        Logf(L"Clear playback segment flag for FFmpeg engine seek drag: duration=%s (%I64d)",
              FormatTime(duration_).c_str(),
              duration_);
         segmentStopApplied_ = false;
@@ -3595,7 +3594,7 @@ namespace LoopPlayer
             }
         }
 
-        QueueAsyncSeek(target, false, false, SEEK_DRAG_PREVIEW_MAX_READ_COUNT, L"进度条拖动预览");
+        QueueAsyncSeek(target, false, false, SEEK_DRAG_PREVIEW_MAX_READ_COUNT, L"进度条拖动预览", true);
         seekDragLastPreviewTick_ = GetTickCount();
         seekDragLastPreviewTarget_ = target;
     }
@@ -4409,11 +4408,12 @@ namespace LoopPlayer
         asyncSeekPreviewMaxReadCount_ = 0;
         asyncSeekKeepPlaying_ = false;
         asyncSeekLog_ = false;
+        asyncSeekPreviewOnly_ = false;
         asyncSeekActiveSerial_ = 0;
         LeaveCriticalSection(&seekWorkerLock_);
     }
 
-    void PlayerWindow::QueueAsyncSeek(REFERENCE_TIME pos, bool keepPlaying, bool logSeek, size_t previewMaxReadCount, const wchar_t* reason)
+    void PlayerWindow::QueueAsyncSeek(REFERENCE_TIME pos, bool keepPlaying, bool logSeek, size_t previewMaxReadCount, const wchar_t* reason, bool previewOnly)
     {
         if (!player_ || !player_->isOpen() || !mediaItemReady_)
         {
@@ -4428,7 +4428,14 @@ namespace LoopPlayer
                  reason ? reason : L"",
                  FormatTime(pos).c_str(),
                  pos);
-            SeekTo(pos, keepPlaying, logSeek, previewMaxReadCount);
+            if (previewOnly)
+            {
+                player_->previewVideoFrame(pos, previewMaxReadCount);
+            }
+            else
+            {
+                SeekTo(pos, keepPlaying, logSeek, previewMaxReadCount);
+            }
             return;
         }
 
@@ -4439,17 +4446,19 @@ namespace LoopPlayer
         asyncSeekTarget_ = pos;
         asyncSeekKeepPlaying_ = keepPlaying;
         asyncSeekLog_ = logSeek;
+        asyncSeekPreviewOnly_ = previewOnly;
         asyncSeekPreviewMaxReadCount_ = previewMaxReadCount;
         LeaveCriticalSection(&seekWorkerLock_);
 
         SetEvent(seekRequestEvent_);
-        Logf(L"Async seek queued: serial=%lu, reason=%s, target=%s (%I64d), keepPlaying=%d, log=%d, previewMax=%u",
+        Logf(L"Async seek queued: serial=%lu, reason=%s, target=%s (%I64d), keepPlaying=%d, log=%d, previewOnly=%d, previewMax=%u",
              serial,
              reason ? reason : L"",
              FormatTime(pos).c_str(),
              pos,
              keepPlaying ? 1 : 0,
              logSeek ? 1 : 0,
+             previewOnly ? 1 : 0,
              static_cast<unsigned int>(previewMaxReadCount));
     }
 
@@ -4494,6 +4503,7 @@ namespace LoopPlayer
             REFERENCE_TIME target = 0;
             bool keepPlaying = false;
             bool logSeek = false;
+            bool previewOnly = false;
             size_t previewMaxReadCount = 0;
             bool haveRequest = false;
             EnterCriticalSection(&seekWorkerLock_);
@@ -4503,6 +4513,7 @@ namespace LoopPlayer
                 target = asyncSeekTarget_;
                 keepPlaying = asyncSeekKeepPlaying_;
                 logSeek = asyncSeekLog_;
+                previewOnly = asyncSeekPreviewOnly_;
                 previewMaxReadCount = asyncSeekPreviewMaxReadCount_;
                 asyncSeekPending_ = false;
                 asyncSeekBusy_ = true;
@@ -4518,30 +4529,39 @@ namespace LoopPlayer
             }
 
             const DWORD beginTick = GetTickCount();
-            Logf(L"Async seek begin: serial=%lu, target=%s (%I64d), keepPlaying=%d, previewMax=%u",
+            Logf(L"Async seek begin: serial=%lu, target=%s (%I64d), keepPlaying=%d, previewOnly=%d, previewMax=%u",
                  serial,
                  FormatTime(target).c_str(),
                  target,
                  keepPlaying ? 1 : 0,
+                 previewOnly ? 1 : 0,
                  static_cast<unsigned int>(previewMaxReadCount));
 
             HRESULT seekHr = E_POINTER;
             HRESULT playHr = S_FALSE;
             if (player_)
             {
-                seekHr = player_->seek(target, false, previewMaxReadCount);
-                if (SUCCEEDED(seekHr))
+                if (previewOnly)
                 {
-                    EnterCriticalSection(&seekWorkerLock_);
-                    if (serial == asyncSeekSerial_)
+                    seekHr = player_->previewVideoFrame(target, previewMaxReadCount);
+                    keepPlaying = false;
+                }
+                else
+                {
+                    seekHr = player_->seek(target, false, previewMaxReadCount);
+                    if (SUCCEEDED(seekHr))
                     {
-                        keepPlaying = asyncSeekKeepPlaying_;
-                    }
-                    LeaveCriticalSection(&seekWorkerLock_);
+                        EnterCriticalSection(&seekWorkerLock_);
+                        if (serial == asyncSeekSerial_)
+                        {
+                            keepPlaying = asyncSeekKeepPlaying_;
+                        }
+                        LeaveCriticalSection(&seekWorkerLock_);
 
-                    if (keepPlaying && WaitForSingleObject(seekExitEvent_, 0) != WAIT_OBJECT_0)
-                    {
-                        playHr = player_->play();
+                        if (keepPlaying && WaitForSingleObject(seekExitEvent_, 0) != WAIT_OBJECT_0)
+                        {
+                            playHr = player_->play();
+                        }
                     }
                 }
             }
@@ -4556,12 +4576,13 @@ namespace LoopPlayer
             }
             LeaveCriticalSection(&seekWorkerLock_);
 
-            Logf(L"Async seek end: serial=%lu, target=%s (%I64d), seekHr=0x%08X, keepPlaying=%d, playHr=0x%08X, elapsed=%lu, post=%d",
+            Logf(L"Async seek end: serial=%lu, target=%s (%I64d), seekHr=0x%08X, keepPlaying=%d, previewOnly=%d, playHr=0x%08X, elapsed=%lu, post=%d",
                  serial,
                  FormatTime(target).c_str(),
                  target,
                  static_cast<unsigned int>(seekHr),
                  keepPlaying ? 1 : 0,
+                 previewOnly ? 1 : 0,
                  static_cast<unsigned int>(playHr),
                  elapsedMs,
                  shouldPost ? 1 : 0);
@@ -4573,6 +4594,7 @@ namespace LoopPlayer
                 result->target = target;
                 result->keepPlaying = keepPlaying;
                 result->logSeek = logSeek;
+                result->previewOnly = previewOnly;
                 result->previewMaxReadCount = previewMaxReadCount;
                 result->seekHr = seekHr;
                 result->playHr = playHr;
@@ -4617,12 +4639,13 @@ namespace LoopPlayer
             return;
         }
 
-        Logf(L"Async seek complete on UI: serial=%lu, target=%s (%I64d), seekHr=0x%08X, keepPlaying=%d, playHr=0x%08X, elapsed=%lu, previewMax=%u",
+        Logf(L"Async seek complete on UI: serial=%lu, target=%s (%I64d), seekHr=0x%08X, keepPlaying=%d, previewOnly=%d, playHr=0x%08X, elapsed=%lu, previewMax=%u",
              result->serial,
              FormatTime(result->target).c_str(),
              result->target,
              static_cast<unsigned int>(result->seekHr),
              result->keepPlaying ? 1 : 0,
+             result->previewOnly ? 1 : 0,
              static_cast<unsigned int>(result->playHr),
              result->elapsedMs,
              static_cast<unsigned int>(result->previewMaxReadCount));
@@ -4641,7 +4664,7 @@ namespace LoopPlayer
                 SetStatus(L"正在播放");
             }
         }
-        else
+        else if (!result->previewOnly)
         {
             isPlaying_ = false;
             SetStatus(L"已暂停");

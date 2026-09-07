@@ -62,17 +62,29 @@ public:
 	void setToolTipBackgroundColor(const QColor& color);
 
 protected:
+	/** 初始化HTML下拉框代理、样式对象和默认文本绘制参数
+	*/
 	void init();
 
 public:
+	// 列表项常态文字颜色
 	QColor m_normalColor;
+	// 列表项选中文字颜色
 	QColor m_selectedColor;
+	// 列表项禁用文字颜色
 	QColor m_disabledColor;
+	// 列表项文字左侧偏移量
 	qint32 m_origin;
+	// 列表项左边距
 	qint32 m_leftOrigin;
+	// 列表项上边距
 	qint32 m_topOrigin;
+	// 列表项右边距
 	qint32 m_rightOrigin;
+	// 列表项下边距
 	qint32 m_bottomOrigin;
+	// 列表项边框宽度
 	qint32 m_itemBorderWidth;
+	// HTML下拉框自定义Style对象
 	HtmlComboBoxStyle* m_style;
 };

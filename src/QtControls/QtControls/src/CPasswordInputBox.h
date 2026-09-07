@@ -65,18 +65,38 @@ public:
 	void setMaskVisible(bool enable);
 
 protected:
+	/** 检测遮罩按钮是否可用
+	@return 返回true表示内部状态可用，false表示存在空指针
+	*/
 	bool check();
+
+	/** 初始化密码框默认属性、遮罩按钮和信号连接
+	*/
 	void init();
 
 private:
+    /** 根据输入框大小重新布局遮罩按钮
+    */
     void layoutControl();
+
+	/** 尺寸变化时同步遮罩按钮位置
+	@param [in] eve Qt尺寸变化事件
+	*/
 	void resizeEvent(QResizeEvent* eve);
 
 private slots:
+	/** 处理遮罩按钮点击，在明文和密码显示模式之间切换
+	*/
 	void onMaskButtonClicked();
+
+	/** 处理文本变化，同步遮罩按钮可见性和输入状态
+	@param [in] str 当前输入框文字
+	*/
 	void currentTextChanged(const QString& str);
 
 private:
+	// 密码明文/密文切换按钮
 	COriginalButton* m_maskButton;
+	// 遮罩按钮距离右侧的偏移量
 	qint32 m_rightOrigin;
 };

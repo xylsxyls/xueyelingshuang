@@ -93,21 +93,56 @@ Q_SIGNALS:
 	void alreadyShown();
 
 protected:
+	/** 显示时启动倒计时、监听键盘并发出alreadyShown信号
+	@param [in] eve Qt显示事件
+	*/
 	void showEvent(QShowEvent* eve);
+
+	/** 处理倒计时定时器事件
+	@param [in] eve Qt定时器事件
+	*/
 	void timerEvent(QTimerEvent* eve);
+
+	/** 处理键盘事件，用于Esc和监听键触发
+	@param [in] eve Qt键盘事件
+	*/
     void keyPressEvent(QKeyEvent* eve);
+
+	/** 过滤子控件键盘事件，用于回车、空格和监听键处理
+	@param [in] tar 事件目标对象
+	@param [in] eve Qt事件对象
+	@return 返回true表示事件已处理，false表示继续分发
+	*/
     bool eventFilter(QObject* tar, QEvent* eve);
+
+	/** 尺寸变化时同步标题控件位置
+	@param [in] eve Qt尺寸变化事件
+	*/
     void resizeEvent(QResizeEvent* eve);
+
+	/** 处理Esc触发的关闭行为，子类可重写
+	*/
     virtual void escEvent();
+
+	/** 检测标题和内部状态是否可用
+	@return 返回true表示内部状态可用，false表示存在空指针或异常状态
+	*/
     bool check();
 
 private:
+    /** 给当前弹窗内所有子控件安装键盘事件过滤器
+    */
     void listenAllControls();
-	
+
 protected:
+	// 倒计时定时器ID，-1表示未启动
 	qint32 m_timeId;
+	// 是否允许Esc关闭窗口
     bool m_escEnable;
+	// 当前剩余倒计时秒数
     qint32 m_timeRest;
+	// 弹窗标题标签
     Label* m_title;
+	// 需要监听并转发的键盘按键列表
     std::vector<Qt::Key> m_listenKey;
 };

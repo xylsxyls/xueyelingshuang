@@ -15,7 +15,7 @@ template<class QBase>
 ControlShow<QBase>::ControlShow(QWidget* parent) :
 QBase(parent)
 {
-	
+
 }
 
 template<class QBase>
@@ -30,7 +30,7 @@ std::wstring ControlShow<QBase>::className()
 	std::string className = typeid(*this).name();
 #ifdef _MSC_VER
 	CStringManager::Replace(className, "class ", "");
-#elif __unix__
+#else
 	for (auto it = className.begin(); it != className.end();)
 	{
 		if (*it >= 48 && *it <= 57)

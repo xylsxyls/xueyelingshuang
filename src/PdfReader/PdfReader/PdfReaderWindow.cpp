@@ -1,317 +1,22 @@
 ﻿#include "PdfReaderWindow.h"
 
+#include "PdfReaderAboutDialog.h"
 #include "PdfReaderHelper.h"
 #include "PdfReaderInstance.h"
+#include "PdfReaderPromptDialog.h"
 
 #include <CSystem/CSystemAPI.h>
 
 #include <cstring>
-
-/** 简单输入弹窗的临时窗口状态
-*/
-struct PromptState
-{
-public:
-    // 当前模块实例句柄
-    HINSTANCE instance;
-    // 父窗口句柄
-    HWND owner;
-    // 弹窗窗口句柄
-    HWND hwnd;
-    // 输入框窗口句柄
-    HWND edit;
-    // 弹窗标题
-    std::wstring title;
-    // 输入提示文本
-    std::wstring label;
-    // 输入框初始文本
-    std::wstring initialValue;
-    // 用户最终输入文本
-    std::wstring value;
-    // 是否使用密码输入模式
-    bool password;
-    // 用户是否点击确认
-    bool accepted;
-    // 弹窗消息循环是否结束
-    bool done;
-
-public:
-    /** 构造默认输入弹窗状态
-    */
-    PromptState();
-};
-
-PromptState::PromptState()
-    : instance(nullptr)
-    , owner(nullptr)
-    , hwnd(nullptr)
-    , edit(nullptr)
-    , password(false)
-    , accepted(false)
-    , done(false)
-{
-}
-
-/** 关于弹窗的临时窗口状态
-*/
-struct AboutDialogState
-{
-public:
-    // 当前模块实例句柄
-    HINSTANCE instance;
-    // 弹窗窗口句柄
-    HWND hwnd;
-    // 弹窗消息循环是否结束
-    bool done;
-
-public:
-    /** 构造默认关于弹窗状态
-    */
-    AboutDialogState();
-};
-
-AboutDialogState::AboutDialogState()
-    : instance(nullptr)
-    , hwnd(nullptr)
-    , done(false)
-{
-}
-
-/** 输入弹窗窗口过程
-入参 hwnd 窗口句柄
-入参 message 窗口消息
-入参 wParam 消息参数
-入参 lParam 消息参数
-返回值 窗口过程返回值
-*/
-static LRESULT CALLBACK PromptWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    PromptState* state = reinterpret_cast<PromptState*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
-
-    switch (message)
-    {
-    case WM_NCCREATE:
-    {
-        CREATESTRUCTW* create = reinterpret_cast<CREATESTRUCTW*>(lParam);
-        state = reinterpret_cast<PromptState*>(create->lpCreateParams);
-        SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(state));
-        state->hwnd = hwnd;
-        return TRUE;
-    }
-    case WM_CREATE:
-    {
-        RECT client;
-        GetClientRect(hwnd, &client);
-        HWND label = CreateWindowExW(0,
-                                     L"STATIC",
-                                     state->label.c_str(),
-                                     WS_CHILD | WS_VISIBLE,
-                                     14,
-                                     16,
-                                     PdfReaderHelper::RectWidth(client) - 28,
-                                     20,
-                                     hwnd,
-                                     nullptr,
-                                     state->instance,
-                                     nullptr);
-        PdfReaderHelper::ApplyDefaultFont(label);
-
-        state->edit = CreateWindowExW(WS_EX_CLIENTEDGE,
-                                      L"EDIT",
-                                      state->initialValue.c_str(),
-                                      WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
-                                      14,
-                                      44,
-                                      PdfReaderHelper::RectWidth(client) - 28,
-                                      24,
-                                      hwnd,
-                                      reinterpret_cast<HMENU>(1001),
-                                      state->instance,
-                                      nullptr);
-        PdfReaderHelper::ApplyDefaultFont(state->edit);
-        if (state->password)
-        {
-            SendMessageW(state->edit, EM_SETPASSWORDCHAR, L'*', 0);
-        }
-        SendMessageW(state->edit, EM_SETSEL, 0, -1);
-
-        HWND okButton = CreateWindowExW(0,
-                                        L"BUTTON",
-                                        L"OK",
-                                        WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
-                                        PdfReaderHelper::RectWidth(client) - 174,
-                                        82,
-                                        74,
-                                        26,
-                                        hwnd,
-                                        reinterpret_cast<HMENU>(IDOK),
-                                        state->instance,
-                                        nullptr);
-        HWND cancelButton = CreateWindowExW(0,
-                                            L"BUTTON",
-                                            L"Cancel",
-                                            WS_CHILD | WS_VISIBLE,
-                                            PdfReaderHelper::RectWidth(client) - 92,
-                                            82,
-                                            74,
-                                            26,
-                                            hwnd,
-                                            reinterpret_cast<HMENU>(IDCANCEL),
-                                            state->instance,
-                                            nullptr);
-        PdfReaderHelper::ApplyDefaultFont(okButton);
-        PdfReaderHelper::ApplyDefaultFont(cancelButton);
-        SetFocus(state->edit);
-        return 0;
-    }
-    case WM_COMMAND:
-        if (LOWORD(wParam) == IDOK && state != nullptr)
-        {
-            int length = GetWindowTextLengthW(state->edit);
-            std::vector<wchar_t> text(static_cast<size_t>(length) + 1);
-            if (length > 0)
-            {
-                GetWindowTextW(state->edit, &text[0], length + 1);
-            }
-            state->value.assign(&text[0]);
-            state->accepted = true;
-            state->done = true;
-            DestroyWindow(hwnd);
-            return 0;
-        }
-        if (LOWORD(wParam) == IDCANCEL && state != nullptr)
-        {
-            state->accepted = false;
-            state->done = true;
-            DestroyWindow(hwnd);
-            return 0;
-        }
-        break;
-    case WM_CLOSE:
-        if (state != nullptr)
-        {
-            state->accepted = false;
-            state->done = true;
-        }
-        DestroyWindow(hwnd);
-        return 0;
-    case WM_DESTROY:
-        if (state != nullptr)
-        {
-            state->hwnd = nullptr;
-        }
-        return 0;
-    default:
-        break;
-    }
-    return DefWindowProcW(hwnd, message, wParam, lParam);
-}
-
-/** 关于弹窗窗口过程
-入参 hwnd 窗口句柄
-入参 message 窗口消息
-入参 wParam 消息参数
-入参 lParam 消息参数
-返回值 窗口过程返回值
-*/
-static LRESULT CALLBACK AboutWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    AboutDialogState* state = reinterpret_cast<AboutDialogState*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
-
-    switch (message)
-    {
-    case WM_NCCREATE:
-    {
-        CREATESTRUCTW* create = reinterpret_cast<CREATESTRUCTW*>(lParam);
-        state = reinterpret_cast<AboutDialogState*>(create->lpCreateParams);
-        SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(state));
-        state->hwnd = hwnd;
-        return TRUE;
-    }
-    case WM_CREATE:
-    {
-        RECT client;
-        GetClientRect(hwnd, &client);
-        HWND okButton = CreateWindowExW(0,
-                                        L"BUTTON",
-                                        L"确定",
-                                        WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
-                                        PdfReaderHelper::RectWidth(client) - 108,
-                                        PdfReaderHelper::RectHeight(client) - 44,
-                                        84,
-                                        26,
-                                        hwnd,
-                                        reinterpret_cast<HMENU>(IDOK),
-                                        state->instance,
-                                        nullptr);
-        PdfReaderHelper::ApplyDefaultFont(okButton);
-        SetFocus(okButton);
-        return 0;
-    }
-    case WM_PAINT:
-    {
-        PAINTSTRUCT paint;
-        HDC hdc = BeginPaint(hwnd, &paint);
-        RECT client;
-        GetClientRect(hwnd, &client);
-        PdfReaderHelper::FillSolidRect(hdc, client, PdfReaderHelper::Color(255, 255, 255));
-
-        HGDIOBJ oldFont = SelectObject(hdc, PdfReaderHelper::GetUiFont());
-        SetBkMode(hdc, TRANSPARENT);
-        SetTextColor(hdc, PdfReaderHelper::Color(48, 56, 70));
-
-        std::wstring text;
-        text += kAppTitle;
-        text += L"\r\n版本号：";
-        text += kAppVersion;
-        text += L"\r\n\r\n功能说明\r\n";
-        text += L"打开和阅读PDF文件。\r\n";
-        text += L"左侧缩略图支持拖拽调整页面顺序。\r\n";
-        text += L"右键缩略图可在当前页前后插入PDF。\r\n";
-        text += L"右键左侧空白处可分页保存或按页码范围保存。\r\n";
-        text += L"按住Ctrl并滚动鼠标滚轮可缩放缩略图或正文。";
-
-        RECT textRect = PdfReaderHelper::MakeRect(24, 20, client.right - 24, client.bottom - 58);
-        DrawTextW(hdc, text.c_str(), -1, &textRect, DT_LEFT | DT_TOP | DT_WORDBREAK);
-        SelectObject(hdc, oldFont);
-        EndPaint(hwnd, &paint);
-        return 0;
-    }
-    case WM_COMMAND:
-        if ((LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) && state != nullptr)
-        {
-            state->done = true;
-            DestroyWindow(hwnd);
-            return 0;
-        }
-        break;
-    case WM_CLOSE:
-        if (state != nullptr)
-        {
-            state->done = true;
-        }
-        DestroyWindow(hwnd);
-        return 0;
-    case WM_DESTROY:
-        if (state != nullptr)
-        {
-            state->hwnd = nullptr;
-        }
-        return 0;
-    default:
-        break;
-    }
-    return DefWindowProcW(hwnd, message, wParam, lParam);
-}
 
 PdfReaderWindow::PdfReaderWindow() :
 m_instance(nullptr),
 m_hwnd(nullptr),
 m_thumbView(nullptr),
 m_documentView(nullptr),
-m_toolTip(nullptr),
+m_buttonToolTip(),
 m_engineReady(false),
-m_leftWidth(210),
+m_leftWidth(kLeftMinWidth),
 m_thumbScalePercent(100),
 m_documentZoomPercent(100),
 m_thumbScrollY(0),
@@ -338,11 +43,6 @@ m_downButton(TOP_BUTTON_NONE)
 
 PdfReaderWindow::~PdfReaderWindow()
 {
-    if (m_toolTip != nullptr && IsWindow(m_toolTip))
-    {
-        DestroyWindow(m_toolTip);
-    }
-    m_toolTip = nullptr;
     clearDocuments();
     m_engine.uninit();
 }
@@ -392,6 +92,7 @@ bool PdfReaderWindow::create(HINSTANCE instance, int showCommand)
         return false;
     }
 
+    PdfReaderHelper::DisableWindowTransitionAnimation(m_hwnd);
     PdfReaderInstance::instance().logInfo("Create main window succeeded, hwnd=%p", m_hwnd);
     ShowWindow(m_hwnd, showCommand);
     UpdateWindow(m_hwnd);
@@ -463,35 +164,18 @@ bool PdfReaderWindow::registerWindowClasses(HINSTANCE instance)
         return false;
     }
 
-    WNDCLASSEXW promptClass;
-    ZeroMemory(&promptClass, sizeof(promptClass));
-    promptClass.cbSize = sizeof(promptClass);
-    promptClass.lpfnWndProc = PromptWndProc;
-    promptClass.hInstance = instance;
-    promptClass.hCursor = LoadCursorW(nullptr, IDC_IBEAM);
-    promptClass.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-    promptClass.lpszClassName = kPromptClass;
-    if (!RegisterClassExW(&promptClass) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
+    if (!PdfReaderPromptDialog::registerWindowClass(instance))
     {
-        PdfReaderInstance::instance().logError("Register prompt window class failed, class=%s, lastError=%lu",
-                            PdfReaderHelper::WideToUtf8(kPromptClass).c_str(),
-                            GetLastError());
         return false;
     }
 
-    WNDCLASSEXW aboutClass;
-    ZeroMemory(&aboutClass, sizeof(aboutClass));
-    aboutClass.cbSize = sizeof(aboutClass);
-    aboutClass.lpfnWndProc = AboutWndProc;
-    aboutClass.hInstance = instance;
-    aboutClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-    aboutClass.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-    aboutClass.lpszClassName = kAboutClass;
-    if (!RegisterClassExW(&aboutClass) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
+    if (!PdfReaderAboutDialog::registerWindowClass(instance))
     {
-        PdfReaderInstance::instance().logError("Register about window class failed, class=%s, lastError=%lu",
-                            PdfReaderHelper::WideToUtf8(kAboutClass).c_str(),
-                            GetLastError());
+        return false;
+    }
+
+    if (!m_buttonToolTip.registerWindowClass(instance))
+    {
         return false;
     }
     PdfReaderInstance::instance().logInfo("Register window classes succeeded");
@@ -570,7 +254,7 @@ LRESULT PdfReaderWindow::handleMainMessage(HWND hwnd, UINT message, WPARAM wPara
         }
         createChildViews();
         layoutChildren();
-        createToolTips();
+        createButtonToolTip();
         PdfReaderInstance::instance().logInfo("WM_CREATE end, thumbView=%p, documentView=%p", m_thumbView, m_documentView);
         return 0;
     }
@@ -583,11 +267,13 @@ LRESULT PdfReaderWindow::handleMainMessage(HWND hwnd, UINT message, WPARAM wPara
     case WM_ERASEBKGND:
         return 1;
     case WM_ENABLE:
-        PdfReaderHelper::RefreshWindowFrame(hwnd);
         return 0;
     case WM_SIZE:
         layoutChildren();
-        invalidateAll();
+        if (wParam != SIZE_MINIMIZED)
+        {
+            invalidateMainChrome();
+        }
         return 0;
     case WM_GETMINMAXINFO:
     {
@@ -681,15 +367,27 @@ LRESULT PdfReaderWindow::handleMainMessage(HWND hwnd, UINT message, WPARAM wPara
     case WM_MOUSEMOVE:
     {
         POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+        int toolTipButton = hitTestToolTipButton(point);
+        if (toolTipButton == TOP_BUTTON_NONE)
+        {
+            hideButtonToolTip();
+        }
+        else if (toolTipButton != m_buttonToolTip.currentButton())
+        {
+            showButtonToolTip(toolTipButton, point);
+        }
+        else
+        {
+            updateButtonToolTipPosition(point);
+        }
+
         int hotButton = hitTestTopButton(point);
         if (hotButton == TOP_BUTTON_NONE)
         {
             hotButton = hitTestToolbarButton(point);
         }
-        if (hotButton != m_hotButton)
+        if (toolTipButton != TOP_BUTTON_NONE || hotButton != TOP_BUTTON_NONE)
         {
-            m_hotButton = hotButton;
-            invalidateMainChrome();
             TRACKMOUSEEVENT track;
             ZeroMemory(&track, sizeof(track));
             track.cbSize = sizeof(track);
@@ -697,15 +395,22 @@ LRESULT PdfReaderWindow::handleMainMessage(HWND hwnd, UINT message, WPARAM wPara
             track.hwndTrack = hwnd;
             TrackMouseEvent(&track);
         }
+        if (hotButton != m_hotButton)
+        {
+            m_hotButton = hotButton;
+            invalidateMainChrome();
+        }
         return 0;
     }
     case WM_MOUSELEAVE:
+        hideButtonToolTip();
         m_hotButton = TOP_BUTTON_NONE;
         invalidateMainChrome();
         return 0;
     case WM_LBUTTONDBLCLK:
     case WM_LBUTTONDOWN:
     {
+        hideButtonToolTip();
         POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
         int button = hitTestTopButton(point);
         if (button == TOP_BUTTON_NONE)
@@ -1065,88 +770,81 @@ void PdfReaderWindow::createChildViews()
     PdfReaderInstance::instance().logInfo("Create child views end, thumbView=%p, documentView=%p", m_thumbView, m_documentView);
 }
 
-void PdfReaderWindow::createToolTips()
+void PdfReaderWindow::createButtonToolTip()
 {
-    if (m_hwnd == nullptr || m_toolTip != nullptr)
+    if (m_hwnd == nullptr)
     {
         return;
     }
 
-    m_toolTip = CreateWindowExW(WS_EX_TOPMOST,
-                                TOOLTIPS_CLASS,
-                                nullptr,
-                                WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
-                                CW_USEDEFAULT,
-                                CW_USEDEFAULT,
-                                CW_USEDEFAULT,
-                                CW_USEDEFAULT,
-                                m_hwnd,
-                                nullptr,
-                                m_instance,
-                                nullptr);
-    if (m_toolTip == nullptr)
-    {
-        PdfReaderInstance::instance().logError("Create tooltip failed, lastError=%lu", GetLastError());
-        return;
-    }
-
-    addToolTip(m_topButtons[0], L"最小化");
-    addToolTip(m_topButtons[1], L"最大化/还原");
-    addToolTip(m_topButtons[2], L"关闭");
-    addToolTip(m_toolbarButtons[0], L"打开PDF");
-    addToolTip(m_toolbarButtons[1], L"保存");
-    addToolTip(m_toolbarButtons[2], L"另存为");
-    addToolTip(m_toolbarButtons[3], L"功能说明");
-    SetWindowPos(m_toolTip, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-    PdfReaderInstance::instance().logInfo("Tooltip created, hwnd=%p", m_toolTip);
+    m_buttonToolTip.create(m_instance, m_hwnd);
 }
 
-void PdfReaderWindow::addToolTip(const TopButtonState& button, const wchar_t* text)
+int PdfReaderWindow::hitTestToolTipButton(POINT point) const
 {
-    if (m_toolTip == nullptr || m_hwnd == nullptr || button.id == TOP_BUTTON_NONE || text == nullptr)
-    {
-        return;
-    }
-
-    TOOLINFOW toolInfo;
-    ZeroMemory(&toolInfo, sizeof(toolInfo));
-    toolInfo.cbSize = sizeof(toolInfo);
-    toolInfo.uFlags = TTF_SUBCLASS;
-    toolInfo.hwnd = m_hwnd;
-    toolInfo.uId = static_cast<UINT_PTR>(button.id);
-    toolInfo.rect = button.rect;
-    toolInfo.lpszText = const_cast<LPWSTR>(text);
-    SendMessageW(m_toolTip, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&toolInfo));
-}
-
-void PdfReaderWindow::updateToolTipRects()
-{
-    if (m_toolTip == nullptr || m_hwnd == nullptr)
-    {
-        return;
-    }
-
     for (int i = 0; i < kTitleButtonCount; ++i)
     {
-        TOOLINFOW toolInfo;
-        ZeroMemory(&toolInfo, sizeof(toolInfo));
-        toolInfo.cbSize = sizeof(toolInfo);
-        toolInfo.hwnd = m_hwnd;
-        toolInfo.uId = static_cast<UINT_PTR>(m_topButtons[i].id);
-        toolInfo.rect = m_topButtons[i].rect;
-        SendMessageW(m_toolTip, TTM_NEWTOOLRECTW, 0, reinterpret_cast<LPARAM>(&toolInfo));
+        if (m_topButtons[i].id != TOP_BUTTON_NONE && PdfReaderHelper::PtInRectLocal(m_topButtons[i].rect, point))
+        {
+            return m_topButtons[i].id;
+        }
     }
 
     for (int i = 0; i < kToolbarButtonCount; ++i)
     {
-        TOOLINFOW toolInfo;
-        ZeroMemory(&toolInfo, sizeof(toolInfo));
-        toolInfo.cbSize = sizeof(toolInfo);
-        toolInfo.hwnd = m_hwnd;
-        toolInfo.uId = static_cast<UINT_PTR>(m_toolbarButtons[i].id);
-        toolInfo.rect = m_toolbarButtons[i].rect;
-        SendMessageW(m_toolTip, TTM_NEWTOOLRECTW, 0, reinterpret_cast<LPARAM>(&toolInfo));
+        if (m_toolbarButtons[i].id != TOP_BUTTON_NONE && PdfReaderHelper::PtInRectLocal(m_toolbarButtons[i].rect, point))
+        {
+            return m_toolbarButtons[i].id;
+        }
     }
+
+    return TOP_BUTTON_NONE;
+}
+
+void PdfReaderWindow::showButtonToolTip(int button, POINT point)
+{
+    const wchar_t* text = buttonToolTipText(button);
+    if (text == nullptr || text[0] == L'\0')
+    {
+        hideButtonToolTip();
+        return;
+    }
+
+    m_buttonToolTip.showAt(button, text, point);
+}
+
+void PdfReaderWindow::updateButtonToolTipPosition(POINT point)
+{
+    m_buttonToolTip.moveTo(point);
+}
+
+void PdfReaderWindow::hideButtonToolTip()
+{
+    m_buttonToolTip.hide();
+}
+
+const wchar_t* PdfReaderWindow::buttonToolTipText(int button) const
+{
+    switch (button)
+    {
+    case TOP_BUTTON_MINIMIZE:
+        return L"最小化窗口";
+    case TOP_BUTTON_MAXIMIZE:
+        return L"最大化或还原窗口";
+    case TOP_BUTTON_CLOSE:
+        return L"关闭窗口";
+    case TOP_BUTTON_OPEN:
+        return L"打开PDF文件";
+    case TOP_BUTTON_SAVE:
+        return L"保存当前PDF";
+    case TOP_BUTTON_SAVE_AS:
+        return L"另存为PDF";
+    case TOP_BUTTON_HELP:
+        return L"功能说明";
+    default:
+        break;
+    }
+    return L"";
 }
 
 void PdfReaderWindow::layoutChildren()
@@ -1175,7 +873,6 @@ void PdfReaderWindow::layoutChildren()
     MoveWindow(m_thumbView, 0, contentTop, m_leftWidth, height, TRUE);
     MoveWindow(m_documentView, m_leftWidth + kSplitterWidth, contentTop, std::max(1, width - m_leftWidth - kSplitterWidth), height, TRUE);
     updateScrollbars();
-    updateToolTipRects();
 }
 
 void PdfReaderWindow::updateTitleButtons(const RECT& clientRect)
@@ -2464,161 +2161,14 @@ bool PdfReaderWindow::showTextPrompt(const std::wstring& title,
                                      bool password,
                                      std::wstring* value)
 {
-    if (value == nullptr)
-    {
-        PdfReaderInstance::instance().logError("Show text prompt failed, output value is null, title=%s",
-                            PdfReaderHelper::WideToUtf8(title).c_str());
-        return false;
-    }
-
-    PdfReaderInstance::instance().logInfo("Show text prompt begin, title=%s, password=%d, initialLength=%u",
-                       PdfReaderHelper::WideToUtf8(title).c_str(),
-                       password ? 1 : 0,
-                       static_cast<unsigned int>(initialValue.size()));
-
-    PromptState state;
-    state.instance = m_instance;
-    state.owner = m_hwnd;
-    state.hwnd = nullptr;
-    state.edit = nullptr;
-    state.title = title;
-    state.label = label;
-    state.initialValue = initialValue;
-    state.password = password;
-    state.accepted = false;
-    state.done = false;
-
-    HWND prompt = CreateWindowExW(WS_EX_DLGMODALFRAME,
-                                  kPromptClass,
-                                  title.c_str(),
-                                  WS_POPUP | WS_CAPTION | WS_SYSMENU,
-                                  CW_USEDEFAULT,
-                                  CW_USEDEFAULT,
-                                  360,
-                                  150,
-                                  m_hwnd,
-                                  nullptr,
-                                  m_instance,
-                                  &state);
-    if (prompt == nullptr)
-    {
-        PdfReaderInstance::instance().logError("Create text prompt failed, title=%s, lastError=%lu",
-                            PdfReaderHelper::WideToUtf8(title).c_str(),
-                            GetLastError());
-        return false;
-    }
-
-    RECT ownerRect;
-    RECT promptRect;
-    GetWindowRect(m_hwnd, &ownerRect);
-    GetWindowRect(prompt, &promptRect);
-    int x = ownerRect.left + (PdfReaderHelper::RectWidth(ownerRect) - PdfReaderHelper::RectWidth(promptRect)) / 2;
-    int y = ownerRect.top + (PdfReaderHelper::RectHeight(ownerRect) - PdfReaderHelper::RectHeight(promptRect)) / 2;
-    SetWindowPos(prompt, HWND_TOP, x, y, 0, 0, SWP_NOSIZE | SWP_SHOWWINDOW);
-
-    EnableWindow(m_hwnd, FALSE);
-    ShowWindow(prompt, SW_SHOW);
-    UpdateWindow(prompt);
-
-    MSG message;
-    while (!state.done)
-    {
-        BOOL messageResult = GetMessageW(&message, nullptr, 0, 0);
-        if (messageResult <= 0)
-        {
-            if (messageResult == 0)
-            {
-                PostQuitMessage(static_cast<int>(message.wParam));
-            }
-            break;
-        }
-
-        if (state.hwnd == nullptr || !IsDialogMessageW(state.hwnd, &message))
-        {
-            TranslateMessage(&message);
-            DispatchMessageW(&message);
-        }
-    }
-
-    EnableWindow(m_hwnd, TRUE);
-    SetActiveWindow(m_hwnd);
-    SetForegroundWindow(m_hwnd);
-    PdfReaderHelper::RefreshWindowFrame(m_hwnd);
-    if (state.accepted)
-    {
-        *value = state.value;
-    }
-    PdfReaderInstance::instance().logInfo("Show text prompt end, title=%s, accepted=%d, valueLength=%u",
-                       PdfReaderHelper::WideToUtf8(title).c_str(),
-                       state.accepted ? 1 : 0,
-                       state.accepted ? static_cast<unsigned int>(state.value.size()) : 0);
-    return state.accepted;
+    PdfReaderPromptDialog dialog;
+    return dialog.show(m_instance, m_hwnd, title, label, initialValue, password, value);
 }
 
 void PdfReaderWindow::showAboutDialog()
 {
-    PdfReaderInstance::instance().logInfo("Show about dialog begin");
-
-    AboutDialogState state;
-    state.instance = m_instance;
-    state.hwnd = nullptr;
-    state.done = false;
-
-    HWND dialog = CreateWindowExW(WS_EX_DLGMODALFRAME,
-                                  kAboutClass,
-                                  L"关于PDF阅读器",
-                                  WS_POPUP | WS_CAPTION | WS_SYSMENU,
-                                  CW_USEDEFAULT,
-                                  CW_USEDEFAULT,
-                                  430,
-                                  292,
-                                  m_hwnd,
-                                  nullptr,
-                                  m_instance,
-                                  &state);
-    if (dialog == nullptr)
-    {
-        PdfReaderInstance::instance().logError("Create about dialog failed, lastError=%lu", GetLastError());
-        return;
-    }
-
-    RECT ownerRect;
-    RECT dialogRect;
-    GetWindowRect(m_hwnd, &ownerRect);
-    GetWindowRect(dialog, &dialogRect);
-    int x = ownerRect.left + (PdfReaderHelper::RectWidth(ownerRect) - PdfReaderHelper::RectWidth(dialogRect)) / 2;
-    int y = ownerRect.top + (PdfReaderHelper::RectHeight(ownerRect) - PdfReaderHelper::RectHeight(dialogRect)) / 2;
-    SetWindowPos(dialog, HWND_TOP, x, y, 0, 0, SWP_NOSIZE | SWP_SHOWWINDOW);
-
-    EnableWindow(m_hwnd, FALSE);
-    ShowWindow(dialog, SW_SHOW);
-    UpdateWindow(dialog);
-
-    MSG message;
-    while (!state.done)
-    {
-        BOOL messageResult = GetMessageW(&message, nullptr, 0, 0);
-        if (messageResult <= 0)
-        {
-            if (messageResult == 0)
-            {
-                PostQuitMessage(static_cast<int>(message.wParam));
-            }
-            break;
-        }
-
-        if (state.hwnd == nullptr || !IsDialogMessageW(state.hwnd, &message))
-        {
-            TranslateMessage(&message);
-            DispatchMessageW(&message);
-        }
-    }
-
-    EnableWindow(m_hwnd, TRUE);
-    SetActiveWindow(m_hwnd);
-    SetForegroundWindow(m_hwnd);
-    PdfReaderHelper::RefreshWindowFrame(m_hwnd);
-    PdfReaderInstance::instance().logInfo("Show about dialog end");
+    PdfReaderAboutDialog dialog;
+    dialog.show(m_instance, m_hwnd);
 }
 
 PdfDocument* PdfReaderWindow::openDocumentWithPassword(const std::wstring& filePath)

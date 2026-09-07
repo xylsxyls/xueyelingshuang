@@ -3,6 +3,8 @@
 
 #include "CDump/CDumpAPI.h"
 
+#include <stdint.h>
+
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE unusedInstance, LPWSTR commandLine, int cmdShow)
 {
     UNREFERENCED_PARAMETER(unusedInstance);
@@ -63,32 +65,38 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE unusedInstance, LPWSTR comm
     InitCommonControlsEx(&icc);
     SplitViewerRegisterSvFileType();
 
-    SplitViewerWindow window;
-    if (!window.Create(hInstance, cmdShow))
+    int32_t exitCode = 0;
     {
-        SplitViewerDebugLog(L"Window creation failed.");
-        Gdiplus::GdiplusShutdown(gdiplusToken);
-        CoUninitialize();
-        SplitViewerSetDebugLoggingEnabled(false);
-        return 1;
-    }
+        SplitViewerWindow window;
+        if (!window.Create(hInstance, cmdShow))
+        {
+            SplitViewerDebugLog(L"Window creation failed.");
+            exitCode = 1;
+        }
+        else
+        {
+            if (!startupPath.empty())
+            {
+                SplitViewerDebugLogFormat(L"Loading startup path: %s", startupPath.c_str());
+                window.LoadStartupPath(startupPath.c_str());
+            }
 
-    if (!startupPath.empty())
-    {
-        SplitViewerDebugLogFormat(L"Loading startup path: %s", startupPath.c_str());
-        window.LoadStartupPath(startupPath.c_str());
+            MSG msg = { 0 };
+            while (GetMessageW(&msg, NULL, 0, 0) > 0)
+            {
+                TranslateMessage(&msg);
+                DispatchMessageW(&msg);
+            }
+            exitCode = static_cast<int32_t>(msg.wParam);
+            SplitViewerDebugLogFormat(L"Message loop ended exitCode=%d, releasing window resources before GDI+/COM shutdown.",
+                exitCode);
+        }
     }
-
-    MSG msg = { 0 };
-    while (GetMessageW(&msg, NULL, 0, 0) > 0)
-    {
-        TranslateMessage(&msg);
-        DispatchMessageW(&msg);
-    }
+    SplitViewerDebugLog(L"Window resources released.");
 
     Gdiplus::GdiplusShutdown(gdiplusToken);
     CoUninitialize();
     SplitViewerDebugLog(L"SplitViewer exiting.");
     SplitViewerSetDebugLoggingEnabled(false);
-    return static_cast<int>(msg.wParam);
+    return static_cast<int>(exitCode);
 }

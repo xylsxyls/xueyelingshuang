@@ -3,6 +3,9 @@
 #include "Layer.h"
 #include "LeafHit.h"
 #include "SplitterHit.h"
+
+#include <stdint.h>
+
 /** 分屏看图主窗口，负责图片分屏、浮动图层、窗口嵌入、保存配置和窗口绘制生命周期
 */
 class SplitViewerWindow
@@ -97,6 +100,21 @@ private:
     /** 根据当前是否需要外部窗口交互自动安装或卸载鼠标钩子
     */
     void UpdateMouseHookState();
+
+    /** 主窗口关闭前释放临时交互状态并还原嵌入窗口
+    */
+    void PrepareForClose();
+
+    /** 遍历所有图层，把仍然有效的嵌入窗口还原为独立窗口
+    */
+    void DetachAllEmbeddedWindows();
+
+    /** 遍历节点树并还原其中的嵌入窗口
+    @param [in] node 当前节点
+    @param [in,out] detachedCount 已成功还原的窗口数量
+    @param [in,out] staleCount 已失效窗口句柄数量
+    */
+    void DetachEmbeddedWindowsFromNode(SplitViewerNode* node, int32_t& detachedCount, int32_t& staleCount);
 
     /** 判断当前窗口状态是否需要低级鼠标钩子
     @return 返回true表示需要跟踪外部窗口拖拽
@@ -320,11 +338,11 @@ private:
     */
     void CreateTooltipWindow();
 
-    /** 给指定工具栏控件添加悬浮提示
+    /** 设置指定工具栏控件的悬浮提示，已注册的控件会先移除后重新添加
     @param [in] control 需要显示提示的控件句柄
-    @param [in] text 提示文案，调用方需保证文本生命周期覆盖提示使用期
+    @param [in] text 中文提示文案，调用方需保证文本生命周期覆盖提示使用期
     */
-    void AddTooltip(HWND control, const wchar_t* text);
+    void SetButtonTooltip(HWND control, const wchar_t* text);
 
     /** 根据当前内容状态刷新工具栏按钮提示文案
     */
@@ -373,6 +391,12 @@ private:
     /** 显示软件版本和使用说明模态窗口
     */
     void ShowAboutDialog();
+
+    /** 关闭关于窗口前恢复主窗口状态并刷新被覆盖区域
+    @param [in] dialog 关于窗口句柄
+    @param [in] command 关闭命令
+    */
+    void CloseAboutDialog(HWND dialog, WORD command);
 
     /** 返回拖动模式日志文本
     @param [in] mode 拖动模式枚举值
@@ -1180,6 +1204,8 @@ private:
     std::wstring primaryConfigTipText_;
     // 当前是否启用paintClipRect裁剪判断
     bool hasPaintClip_;
+    // 关闭前资源清理是否已经执行
+    bool closingPrepared_;
 
 private:
     // 当前安装低级鼠标钩子的窗口对象

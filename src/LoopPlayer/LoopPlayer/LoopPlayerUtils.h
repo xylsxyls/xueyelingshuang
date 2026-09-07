@@ -37,6 +37,24 @@ namespace LoopPlayer
     */
     std::wstring HResultText(HRESULT hr);
 
+    /** 宽字符字符串转换为UTF-8
+    @param [in] text 需要转换的宽字符文本
+    @return 返回UTF-8文本
+    */
+    std::string WideToUtf8String(const std::wstring& text);
+
+    /** 宽字符字符串转换为Windows本地代码页
+    @param [in] text 需要转换的宽字符文本
+    @return 返回本地代码页文本
+    */
+    std::string WideToAnsiString(const std::wstring& text);
+
+    /** UTF-8字符串转换为宽字符
+    @param [in] text UTF-8文本
+    @return 返回宽字符文本
+    */
+    std::wstring Utf8ToWideString(const std::string& text);
+
     /** 读取当前日志文件路径匹配规则
     @return 返回LogManager生成的日志文件路径通配符
     */

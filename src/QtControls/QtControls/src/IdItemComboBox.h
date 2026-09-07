@@ -66,13 +66,27 @@ Q_SIGNALS:
 	void idItemPressed(qint64 id, const QString& text);
 
 protected:
+	/** 初始化ID角色、信号连接和默认选择状态
+	*/
 	void init();
 
 private slots:
+	/** 处理当前文本变化，按当前项ID发出currentItemChanged信号
+	@param [in] str 当前显示文本
+	*/
 	void curIndexChanged(const QString& str);
+
+	/** 占位处理当前索引变化，避免连接重载信号时产生二义性
+	@param [in] index 当前索引
+	*/
 	void curIndexChanged(int index){}
+
+	/** 处理列表项按下事件，按当前项ID发出idItemPressed信号
+	@param [in] index 被按下的列表项索引
+	*/
 	void onItemPressed(qint32 index);
 
 private:
+	// 列表项中保存业务ID使用的Qt角色值
 	static const qint32 s_idRole = Qt::UserRole + 777;
 };

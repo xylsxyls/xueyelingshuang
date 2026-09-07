@@ -80,8 +80,12 @@ Q_SIGNALS:
 	void itemRightClicked(QTreeWidgetItem* item);
 
 protected:
+	/** 处理右键菜单事件，查找命中的树节点并发出itemRightClicked信号
+	@param [in] eve Qt右键菜单事件
+	*/
 	void contextMenuEvent(QContextMenuEvent* eve);
 
 private:
+	// 外部控件和内部树节点的映射
 	std::map<QWidget*, QTreeWidgetItem*> m_itemData;
 };

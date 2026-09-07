@@ -1,6 +1,6 @@
 ﻿#include "PopDialog.h"
 #include "QtControls/COriginalButton.h"
-#include "QtControls/CGeneralStyle.h"
+#include "QtControls/ControlStyleManager.h"
 #include <QPainter>
 #include "DialogHelper.h"
 #include "QtControls/Separator.h"
@@ -31,9 +31,9 @@ void PopDialog::init()
     setTouchBorderWidth(0);
     setPopButtonConfig(m_exit, "", QColor(), RIGHT_TOP_EXIT, 12);
     m_exit->setBkgMargins(0, 0);
-    m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "res/Dialog/PopupCloseButton.png");
+    m_exit->setBkgImage(ControlStyleManager::instance().resourcePath("res/Dialog/PopupCloseButton.png"));
     DialogHelper::setSeparator(m_separator, true, QColor(16, 20, 31, 255), QColor(46, 52, 88, 255));
-    
+
     DialogHelper::setLabel(m_time, "", QColor("#abb3d3"), 10);
     m_time->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 

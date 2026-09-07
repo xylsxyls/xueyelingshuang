@@ -26,11 +26,13 @@
     <ClInclude Include="..\src\FFmpegCppMacroLib.h" />
     <ClInclude Include="..\src\FFmpegCppModels.h" />
     <ClInclude Include="..\src\FFmpegCppModels.inl" />
+    <ClInclude Include="..\src\FFmpegCppPlaybackReader.h" />
     <ClInclude Include="..\src\FFmpegCpp.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\FFmpegCpp.cpp" />
     <ClCompile Include="..\src\FFmpegCppHelper.cpp" />
+    <ClCompile Include="..\src\FFmpegCppPlaybackReader.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>

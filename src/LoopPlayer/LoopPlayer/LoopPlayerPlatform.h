@@ -13,12 +13,13 @@
 #include <windowsx.h>
 #include <commdlg.h>
 #include <commctrl.h>
-#include <mfapi.h>
-#include <mferror.h>
-#include <mfidl.h>
-#include <mfreadwrite.h>
 #include <mmsystem.h>
 #include <propidl.h>
 #include <shellapi.h>
 #include <shlwapi.h>
 #include <strsafe.h>
+
+#ifndef _REFERENCE_TIME_DEFINED
+#define _REFERENCE_TIME_DEFINED
+typedef LONGLONG REFERENCE_TIME;
+#endif

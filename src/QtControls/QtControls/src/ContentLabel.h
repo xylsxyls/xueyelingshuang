@@ -3,6 +3,8 @@
 #include "QtControlsMacro.h"
 
 class Label;
+/** 双行内容标签组合控件，管理上下两个Label的文字、颜色、布局和单双行切换
+*/
 class QtControlsAPI ContentLabel
 {
 public:
@@ -61,23 +63,26 @@ public:
 	void setFontSize(qint32 size);
 
 private:
-	/** 更新
+	/** 根据当前单双行模式和矩形区域更新上下标签布局
 	*/
 	void update();
 
-	/**	检测
-	@return 返回成员变量是否为空
+	/** 检测内部标签对象是否可用
+	@return 返回true表示内部状态可用，false表示存在空指针
 	*/
 	bool check();
 
-	/** 初始化
+	/** 创建上下两个内部标签并设置默认布局状态
 	*/
 	void init();
 
-
 public:
+	// 上半部分文字标签
 	Label* m_up;
+	// 下半部分文字标签
 	Label* m_down;
+	// 组合控件所在矩形区域
 	QRect m_rect;
+	// 当前是否为单行显示模式
 	bool m_isOne;
 };

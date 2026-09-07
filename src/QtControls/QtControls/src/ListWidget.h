@@ -8,6 +8,8 @@
 #include "ControlBackground.h"
 #include "QtControlsMacro.h"
 
+/** 列表控件，封装列表自身和列表项的字体、边框、背景以及点击禁用控制
+*/
 class QtControlsAPI ListWidget :
 	public ControlShow < QListWidget >,
 	public ControlFont < QListWidget >,
@@ -42,11 +44,18 @@ public:
 	void setClickEnable(bool enable);
 
 Q_SIGNALS:
+	/** 列表项被鼠标按下时发送信号
+	@param [in] item 被按下的列表项
+	*/
 	void itemPressed(QListWidgetItem* item);
 
 protected:
+	/** 处理鼠标按下事件，支持全局禁用点击后拦截列表项选择
+	@param [in] eve Qt鼠标事件
+	*/
 	void mousePressEvent(QMouseEvent* eve);
 
 private:
+	// 当前列表是否允许鼠标点击
 	bool m_click;
 };

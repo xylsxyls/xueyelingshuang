@@ -8,11 +8,11 @@
 
 class AccountManagerDialog;
 class COriginalDialog;
-/** 窗口内存管理器
+/** 窗口分配管理器，维护弹框ID、用户ID、窗口类型和窗口指针之间的映射关系
 */
 class AllocManager :
 	public QObject,
-    public ManagerBase < AllocManager >
+    public ManagerBase<AllocManager>
 {
     Q_OBJECT
 public:
@@ -121,17 +121,24 @@ private:
     quint64 getDialogId();
 
 private:
-    //窗口指针，窗口ID
+    // 窗口指针到窗口ID的映射
     std::map<COriginalDialog*, quint64> m_mapDialogPtrToDialogId;
-    //窗口ID，窗口指针
+
+    // 窗口ID到窗口指针的映射
     std::map<quint64, COriginalDialog*> m_mapDialogIdToDialogPtr;
-    //用户ID，窗口ID
+
+    // 用户ID到窗口ID的映射
     std::map<quint64, quint64> m_mapUserIdToDialogId;
-    //窗口ID，用户ID
+
+    // 窗口ID到用户ID的映射
     std::map<quint64, quint64> m_mapDialogIdToUserId;
-    //窗口ID，窗口类型
+
+    // 窗口ID到窗口类型的映射
     std::map<quint64, DialogType> m_mapDialogIdToDialogType;
 
+    // 保护窗口映射表的互斥锁
     QMutex m_mutex;
+
+    // 账号管理静态弹框指针
     AccountManagerDialog* m_accountManagerDialog;
 };

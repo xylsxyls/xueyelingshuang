@@ -7,6 +7,8 @@
 #include <QtWidgets/QLineEdit>
 #include "QtControlsMacro.h"
 
+/** 单行输入框控件，封装字体、边框、背景和常用输入样式
+*/
 class QtControlsAPI LineEdit :
 	public ControlShow < QLineEdit >,
 	public ControlSelf < QLineEdit >,
@@ -26,10 +28,13 @@ public:
 	virtual ~LineEdit();
 
 private slots:
+	/** 处理文本变化，用于维护输入框默认提示和样式状态
+	@param [in] str 当前输入框文字
+	*/
 	void currentTextChanged(const QString& str);
 
 private:
-	/** 常用初始化
+	/** 设置输入框默认属性和信号连接
 	*/
 	void setDefault();
 };

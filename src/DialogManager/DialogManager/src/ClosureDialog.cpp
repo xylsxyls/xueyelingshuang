@@ -3,9 +3,9 @@
 #include "DialogHelper.h"
 
 ClosureDialog::ClosureDialog():
-mLockedAccountPanel(nullptr)
+m_lockedAccountPanel(nullptr)
 {
-    mLockedAccountPanel = new LockedAccountPanel(this);
+    m_lockedAccountPanel = new LockedAccountPanel(this);
     if (!check())
     {
         return;
@@ -15,7 +15,7 @@ mLockedAccountPanel(nullptr)
 
 LockedAccountPanel* ClosureDialog::lockedAccountPanel()
 {
-    return mLockedAccountPanel;
+    return m_lockedAccountPanel;
 }
 
 void ClosureDialog::resizeEvent(QResizeEvent* eve)
@@ -25,10 +25,10 @@ void ClosureDialog::resizeEvent(QResizeEvent* eve)
     {
         return;
     }
-    mLockedAccountPanel->setGeometry(DialogHelper::rectValid(rect().adjusted(1, customerTitleBarHeight() + 1, -1, -1)));
+    m_lockedAccountPanel->setGeometry(DialogHelper::rectValid(rect().adjusted(1, customerTitleBarHeight() + 1, -1, -1)));
 }
 
 bool ClosureDialog::check()
 {
-    return mLockedAccountPanel != nullptr && BoxDialogBase::check();
+    return m_lockedAccountPanel != nullptr && BoxDialogBase::check();
 }

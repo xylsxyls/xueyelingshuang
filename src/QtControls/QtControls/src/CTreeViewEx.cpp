@@ -5,8 +5,8 @@
 
 CTreeViewEx::CTreeViewEx(QWidget *parent)
     :QTreeView(parent)
-    ,mHoveredColumn(0)
-    ,mHoveredRow   (0)
+    ,m_hoveredColumn(0)
+    ,m_hoveredRow   (0)
 {
     this->setMouseTracking(true);
     this->header()->setMouseTracking(true);
@@ -68,13 +68,13 @@ void CTreeViewEx::mouseMoveEvent(QMouseEvent *e)
     if(rIndex.isValid())
     {
 
-        mHoveredRow = rIndex.row();
+        m_hoveredRow = rIndex.row();
     }
     else
     {
-        if(mHoveredRow != -1)
+        if(m_hoveredRow != -1)
         {
-            mHoveredRow = -1;
+            m_hoveredRow = -1;
             this->viewport()->update();
         }
     }
@@ -83,13 +83,13 @@ void CTreeViewEx::mouseMoveEvent(QMouseEvent *e)
     if(cIndex.isValid())
     {
 
-        mHoveredColumn = rIndex.column();
+        m_hoveredColumn = rIndex.column();
     }
     else
     {
-        if(mHoveredColumn != -1)
+        if(m_hoveredColumn != -1)
         {
-            mHoveredColumn = -1;
+            m_hoveredColumn = -1;
             this->viewport()->update();
         }
     }
@@ -100,15 +100,15 @@ void CTreeViewEx::leaveEvent(QEvent *e)
 {
 	QTreeView::leaveEvent(e);
 	bool needUpdate = false;
-	if(mHoveredRow != -1)
+	if(m_hoveredRow != -1)
 	{
-		mHoveredRow = -1;
+		m_hoveredRow = -1;
 		needUpdate = true;
 	}
 
-	if(mHoveredColumn != -1)
+	if(m_hoveredColumn != -1)
 	{
-		mHoveredColumn = -1;
+		m_hoveredColumn = -1;
 		needUpdate = true;
 	}
 
@@ -127,14 +127,14 @@ bool CTreeViewEx::eventFilter(QObject *obj, QEvent *e)
             case QEvent::HoverMove:
             case QEvent::HoverEnter:
             {//reset hovered column & hovered row
-                if(mHoveredColumn != -1)
+                if(m_hoveredColumn != -1)
                 {
-                    mHoveredColumn = -1;
+                    m_hoveredColumn = -1;
                     this->viewport()->update();
                 }
-                if(mHoveredRow != -1)
+                if(m_hoveredRow != -1)
                 {
-                    mHoveredRow = -1;
+                    m_hoveredRow = -1;
                     this->viewport()->update();
                 }
             }
@@ -162,11 +162,11 @@ void CTreeViewEx::setHeader(QHeaderView *header)
 
 int CTreeViewEx::hoveredRow() const
 {
-    return mHoveredRow;
+    return m_hoveredRow;
 }
 
 int CTreeViewEx::hoveredColumn() const
 {
-    return mHoveredColumn;
+    return m_hoveredColumn;
 }
 

@@ -19,12 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\EO_XmlSax2Handler.cpp" />
     <ClCompile Include="..\src\EO_XmlSax2Parser.cpp" />
+    <ClCompile Include="..\src\XMLAttribute.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\EO_XmlSax2Handler.h" />
     <ClInclude Include="..\src\EO_XmlSax2Parser.h" />
     <ClInclude Include="..\src\EO_XmlSax2ParserAPI.h" />
     <ClInclude Include="..\src\EO_XmlSax2ParserMacro.h" />
+    <ClInclude Include="..\src\XMLAttribute.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B12702AD-ABFB-343A-A199-8E24837244A3}</ProjectGuid>

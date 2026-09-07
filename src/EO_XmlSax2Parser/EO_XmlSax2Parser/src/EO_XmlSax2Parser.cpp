@@ -1,156 +1,154 @@
-#include "EO_XmlSax2Parser.h"
-#include <QXmlSimpleReader>
-#include <QDebug>
+﻿#include "EO_XmlSax2Parser.h"
+#include <QFile>
+#include <QIODevice>
+#include <QXmlStreamAttribute>
+#include <QXmlStreamAttributes>
+#include <QXmlStreamReader>
+#include <stdint.h>
 
-EO_XmlSax2Parser::EO_XmlSax2Parser()
-    :
-      mRoot(NULL),
-      mCurrentNodeCount(0)
+EO_XmlSax2Parser::EO_XmlSax2Parser() :
+m_lastError()
 {
 
 }
 
 EO_XmlSax2Parser::~EO_XmlSax2Parser()
 {
-	if(mRoot != NULL)
-	{
-		delete mRoot;
-		mRoot = NULL;
-	}
+
 }
 
-bool EO_XmlSax2Parser::parseFromFile(QString filename)
+bool EO_XmlSax2Parser::parseFile(const QString& filename, EO_XmlSax2Handler* handler)
 {
-    if(mRoot != NULL)
+    m_lastError.clear();
+    if (handler == nullptr)
     {
-        delete mRoot;
-        mRoot = NULL;
+        m_lastError = QStringLiteral("XML parse failed: handler is null");
+        return false;
     }
 
     QFile file(filename);
-    if(!file.open(QIODevice::ReadOnly))
+    if (!file.open(QIODevice::ReadOnly))
     {
-        qDebug() << "xml parser " << filename << " can not open";
+        m_lastError = QStringLiteral("XML file open failed: %1").arg(filename);
+        handler->error(m_lastError, 0, 0);
         return false;
     }
-    QXmlInputSource source(&file);
-    QXmlSimpleReader reader;
 
-    reader.setContentHandler(this);
-    bool isOk = reader.parse(source);
+    QXmlStreamReader reader(&file);
+    bool success = parseReader(&reader, handler);
     file.close();
-
-    qDebug() << "xml parser " << filename << " parse Status:" << isOk;
-
-    return isOk;
+    return success;
 }
 
-bool EO_XmlSax2Parser::parseFromData(QString data)
+bool EO_XmlSax2Parser::parseData(const QString& data, EO_XmlSax2Handler* handler)
 {
-	if(mRoot != NULL)
-	{
-		delete mRoot;
-		mRoot = NULL;
-	}
+    m_lastError.clear();
+    if (handler == nullptr)
+    {
+        m_lastError = QStringLiteral("XML parse failed: handler is null");
+        return false;
+    }
 
-	QXmlInputSource source;
-	source.setData(data);
-	QXmlSimpleReader reader;
-
-	reader.setContentHandler(this);
-	bool isOk = reader.parse(source);
-
-	qDebug() << "xml parser parse Status:" << isOk;
-
-	return isOk;
+    QXmlStreamReader reader(data);
+    return parseReader(&reader, handler);
 }
 
-XMLNode *EO_XmlSax2Parser::root()
+QString EO_XmlSax2Parser::lastError() const
 {
-    return mRoot;
+    return m_lastError;
 }
 
-bool EO_XmlSax2Parser::startElement(const QString &namespaceURI, const QString &localName, const QString &qName, const QXmlAttributes &atts)
+bool EO_XmlSax2Parser::parseReader(QXmlStreamReader* reader, EO_XmlSax2Handler* handler)
 {
-//    qDebug() << "start element:" << localName;
-
-    XMLNode* newNode = new XMLNode;
-
-    newNode->name = localName;
-
-    XMLAttributes newAttributes;
-    for(int i = 0; i < atts.count(); i++)
+    if (reader == nullptr)
     {
-        XMLAttribute newAttribute;
-        newAttribute.name = atts.localName(i);
-        newAttribute.value = atts.value(i);
-		newAttributes << newAttribute;
+        m_lastError = QStringLiteral("XML parse failed: reader is null");
+        if (handler != nullptr)
+        {
+            handler->error(m_lastError, 0, 0);
+        }
+        return false;
     }
 
-    newNode->attributes = newAttributes;
-
-
-    if(mRoot == NULL)
+    if (handler == nullptr)
     {
-        mRoot = newNode;
-    }
-    else
-    {
-		newNode->parent = mRootStack.top();
-        mRootStack.top()->children << newNode;
+        m_lastError = QStringLiteral("XML parse failed: handler is null");
+        return false;
     }
 
-    mRootStack.push(newNode);
+    while (!reader->atEnd())
+    {
+        QXmlStreamReader::TokenType tokenType = reader->readNext();
+        if (tokenType == QXmlStreamReader::StartElement)
+        {
+            QString elementName = reader->name().toString();
+            XMLAttributes attributes = readAttributes(*reader);
+            if (!handler->startElement(elementName, attributes))
+            {
+                m_lastError = QStringLiteral("XML parse stopped by startElement handler, element: %1, line: %2, column: %3")
+                    .arg(elementName)
+                    .arg(reader->lineNumber())
+                    .arg(reader->columnNumber());
+                return false;
+            }
+        }
+        else if (tokenType == QXmlStreamReader::Characters)
+        {
+            if (!handler->characters(reader->text().toString()))
+            {
+                m_lastError = QStringLiteral("XML parse stopped by characters handler, line: %1, column: %2")
+                    .arg(reader->lineNumber())
+                    .arg(reader->columnNumber());
+                return false;
+            }
+        }
+        else if (tokenType == QXmlStreamReader::EndElement)
+        {
+            QString elementName = reader->name().toString();
+            if (!handler->endElement(elementName))
+            {
+                m_lastError = QStringLiteral("XML parse stopped by endElement handler, element: %1, line: %2, column: %3")
+                    .arg(elementName)
+                    .arg(reader->lineNumber())
+                    .arg(reader->columnNumber());
+                return false;
+            }
+        }
+    }
+
+    if (reader->hasError())
+    {
+        m_lastError = QStringLiteral("XML parse failed: %1, line: %2, column: %3")
+            .arg(reader->errorString())
+            .arg(reader->lineNumber())
+            .arg(reader->columnNumber());
+        handler->error(m_lastError, static_cast<int32_t>(reader->lineNumber()), static_cast<int32_t>(reader->columnNumber()));
+        return false;
+    }
 
     return true;
 }
 
-bool EO_XmlSax2Parser::endElement(const QString &namespaceURI, const QString &localName, const QString &qName)
+XMLAttributes EO_XmlSax2Parser::readAttributes(const QXmlStreamReader& reader) const
 {
-//    qDebug() << "end element:" << localName;
-
-    if(mRootStack.count() <= 0)
+    XMLAttributes attributes;
+    QXmlStreamAttributes streamAttributes = reader.attributes();
+    for (int32_t i = 0; i < streamAttributes.count(); ++i)
     {
-        return false;
+        const QXmlStreamAttribute& attribute = streamAttributes[i];
+        attributes << XMLAttribute(attribute.name().toString(), attribute.value().toString());
     }
-
-    if(mRootStack.top()->name != localName)
-    {
-        return false;
-    }
-
-    mRootStack.pop();
-	return true;
+    return attributes;
 }
 
-bool EO_XmlSax2Parser::characters(const QString &ch)
+EO_XmlSax2Parser::EO_XmlSax2Parser(const EO_XmlSax2Parser& other) :
+m_lastError()
 {
-//    qDebug() << "characters:" << ch;
-
-    if(mRootStack.count() <= 0)
-    {
-        return false;
-    }
-
-    mRootStack.top()->characters = ch.trimmed();
-	return true;
+    Q_UNUSED(other);
 }
 
-bool EO_XmlSax2Parser::fatalError(const QXmlParseException &exception)
+EO_XmlSax2Parser& EO_XmlSax2Parser::operator=(const EO_XmlSax2Parser& other)
 {
-    qDebug() << exception.message();
-    return false;
+    Q_UNUSED(other);
+    return *this;
 }
-
-bool EO_XmlSax2Parser::error(const QXmlParseException &exception)
-{
-    qDebug() << exception.message();
-    return false;
-}
-
-bool EO_XmlSax2Parser::warning(const QXmlParseException &exception)
-{
-    qDebug() << exception.message();
-    return false;
-}
-

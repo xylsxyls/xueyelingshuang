@@ -1,8 +1,9 @@
 ﻿#include "CExpressionDialog.h"
+#include "QtControls/ExpressionConfigParser.h"
 #include <QStandardItemModel>
-#include "EO_XmlSax2Parser/EO_XmlSax2ParserAPI.h"
 #include <QDebug>
 #include <QPainter>
+#include <stdint.h>
 #ifdef _MSC_VER
 #include <Windows.h>
 #endif
@@ -10,36 +11,40 @@
 
 CExpressionDialog::CExpressionDialog(QWidget *parent)
     :QDialog(parent)
-    ,mExpressionPicker(new CExpressionPicker(this))
-    ,mExpressionGroupPicker(new CExpressionPicker(this))
+    ,m_expressionPicker(new CExpressionPicker(this))
+    ,m_expressionGroupPicker(new CExpressionPicker(this))
+    ,m_groups()
+    ,m_expressions()
 {
     this->setWindowFlags(Qt::FramelessWindowHint | Qt::Popup);
 
-    ((QStandardItemModel*)(mExpressionPicker->model()))->setColumnCount(12);
-    ((QStandardItemModel*)(mExpressionPicker->model()))->setRowCount(4);
-    mExpressionPicker->resize(33*12 + 2,33*4 + 2);
-    mExpressionPicker->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    mExpressionPicker->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    mExpressionPicker->setShowPreView(true);
+    ((QStandardItemModel*)(m_expressionPicker->model()))->setColumnCount(12);
+    ((QStandardItemModel*)(m_expressionPicker->model()))->setRowCount(4);
+    m_expressionPicker->resize(33*12 + 2,33*4 + 2);
+    m_expressionPicker->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_expressionPicker->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_expressionPicker->setShowPreView(true);
 
-    ((QStandardItemModel*)(mExpressionGroupPicker->model()))->setColumnCount(12);
-    ((QStandardItemModel*)(mExpressionGroupPicker->model()))->setRowCount(1);
-    mExpressionGroupPicker->setFixedSize(33*12 + 2,33*1 + 2);
-    mExpressionGroupPicker->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    mExpressionGroupPicker->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    mExpressionGroupPicker->setShowIconRect(false);
+    ((QStandardItemModel*)(m_expressionGroupPicker->model()))->setColumnCount(12);
+    ((QStandardItemModel*)(m_expressionGroupPicker->model()))->setRowCount(1);
+    m_expressionGroupPicker->setFixedSize(33*12 + 2,33*1 + 2);
+    m_expressionGroupPicker->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_expressionGroupPicker->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_expressionGroupPicker->setShowIconRect(false);
 
-   
 
-    connect(mExpressionGroupPicker, &CExpressionPicker::expressionClicked, this, &CExpressionDialog::selectGroup);
-    connect(mExpressionPicker     , &CExpressionPicker::expressionClicked, this, &CExpressionDialog::expressionChoosed);
+
+    connect(m_expressionGroupPicker, &CExpressionPicker::expressionClicked, this, &CExpressionDialog::selectGroup);
+    connect(m_expressionPicker     , &CExpressionPicker::expressionClicked, this, &CExpressionDialog::expressionChoosed);
     connect(this, &CExpressionDialog::expressionChoosed, [this](){
         this->accept();
     });
     connect(this, &CExpressionDialog::ncActiveChanged, [this](const bool& s)
     {
         if(!s)
+        {
             this->reject();
+        }
     });
 
 	this->setFixedSize(416,178);
@@ -53,8 +58,8 @@ CExpressionDialog::~CExpressionDialog()
 
 void CExpressionDialog::layoutControl()
 {
-    mExpressionPicker->move(10,10);
-    mExpressionGroupPicker->move(10, this->height() - mExpressionGroupPicker->height());
+    m_expressionPicker->move(10,10);
+    m_expressionGroupPicker->move(10, this->height() - m_expressionGroupPicker->height());
 }
 
 void CExpressionDialog::resizeEvent(QResizeEvent *e)
@@ -96,149 +101,64 @@ bool CExpressionDialog::nativeEvent(const QByteArray &eventType, void *message, 
 void CExpressionDialog::selectGroup(const CExpressionPicker::Expression &group)
 {
     CExpressionPicker::ExpressionList texpList;
-    for(int i = 0; i < mExpressions.count(); i++)
+    for(int32_t i = 0; i < m_expressions.count(); ++i)
     {
-        CExpressionPicker::Expression exp = mExpressions[i];
+        CExpressionPicker::Expression exp = m_expressions[i];
         if(exp.groupid == group.id)
+        {
             texpList << exp;
+        }
     }
-    mExpressionPicker->setExpressionList(texpList);
+    m_expressionPicker->setExpressionList(texpList);
 }
 
 bool CExpressionDialog::loadExpressions(const QString& emotionPath)
 {
-    EO_XmlSax2Parser parser;
-    if(!parser.parseFromFile(emotionPath + "/Emotions/emotion.xml"))
+    m_groups.clear();
+    m_expressions.clear();
+
+    ExpressionConfig config;
+    ExpressionConfigParser parser;
+    if (!parser.parse(emotionPath, &config))
     {
-        qDebug() << "load emotion error";
+        qDebug() << "load emotion error:" << parser.lastError();
         return false;
     }
 
-    XMLNode* config = parser.root();
-    if(config == NULL)
+    for (int32_t i = 0; i < config.m_groups.count(); ++i)
     {
-        qDebug() << "load emotion error";
-        return false;
-    }
-
-    if(config->name != "config")
-    {
-        qDebug() << "load emotion error";
-        return false;
-    }
-
-    XMLNodeVector groupNodeList = config->getChildrenByName("group");
-    XMLNodeVector emotionNodeList = config->getChildrenByName("emotion");
-    qDebug() << "group node:" << groupNodeList.count();
-    qDebug() << "emotion node:" << emotionNodeList.count();
-
-    for(int i = 0; i < groupNodeList.count(); i++)
-    {
+        const ExpressionGroupInfo& groupInfo = config.m_groups[i];
         CExpressionPicker::Expression group;
-
-        //id
-        XMLNodeVector idNode = groupNodeList[i]->getChildrenByName("id");
-        if(idNode.count() != 0)
-        {
-            group.id = idNode.first()->characters;
-        }
-
-        //desc
-        XMLNodeVector descNode = groupNodeList[i]->getChildrenByName("desc");
-        if(descNode.count() != 0)
-        {
-            group.desc = descNode.first()->characters;
-        }
-
-
-        if(group.id == "0")
-        {
-            group.fileName = emotionPath + "/Emotions\\def\\def_jingkong.gif";
-        }
-        else if(group.id == "1")
-        {
-            group.fileName = emotionPath + "/Emotions\\7f\\71_daxiao.gif";
-        }
-        else if(group.id == "2")
-        {
-            group.fileName = emotionPath + "/Emotions\\Smileys\\em4.bmp";
-        }
-
-        group.tooltip = group.desc;
-
-        mGroups << group;
+        group.groupid = groupInfo.m_groupId;
+        group.id = groupInfo.m_groupId;
+        group.desc = groupInfo.m_desc;
+        group.fileName = groupInfo.m_fileName;
+        group.tooltip = groupInfo.m_tooltip;
+        m_groups << group;
     }
 
-    //expressions
-    for(int j = 0; j < emotionNodeList.count(); j++)
+    for (int32_t i = 0; i < config.m_expressions.count(); ++i)
     {
-        XMLNode* emotionNode = emotionNodeList[j];
-
-        //id
-        XMLNodeVector e_groupidNode = emotionNode->getChildrenByName("groupid");
-        if(e_groupidNode.count() <= 0)
-        {
-            continue;
-        }
-
-        //到了这里emotionNode才是有效的图标
+        const ExpressionInfo& expressionInfo = config.m_expressions[i];
         CExpressionPicker::Expression expression;
-
-        //groupid
-        expression.groupid = e_groupidNode.first()->characters;
-
-        //id
-        XMLNodeVector e_idNode = emotionNode->getChildrenByName("id");
-        if(e_idNode.count() != 0)
-        {
-            expression.id = e_idNode.first()->characters;
-        }
-
-        //desc
-        XMLNodeVector e_descNode = emotionNode->getChildrenByName("desc");
-        if(e_descNode.count() != 0)
-        {
-            expression.desc = e_descNode.first()->characters;
-        }
-
-        //tooltip
-        XMLNodeVector e_tooltipNode = emotionNode->getChildrenByName("tooltip");
-        if(e_tooltipNode.count() != 0)
-        {
-            expression.tooltip = e_tooltipNode.first()->characters;
-        }
-
-        //file
-        XMLNodeVector e_fileNode = emotionNode->getChildrenByName("file");
-        if(e_fileNode.count() != 0)
-        {
-            expression.fileName = emotionPath + "/" + e_fileNode.first()->characters;
-        }
-
-        //shortcut
-        XMLNodeVector e_shortcutNode = emotionNode->getChildrenByName("shortcut");
-        if(e_shortcutNode.count() != 0)
-        {
-            expression.shortcut = e_shortcutNode.first()->characters;
-        }
-
-//        //audio
-//        XMLNodeVector e_audioNode = emotionNode->getChildrenByName("audio");
-//        if(e_audioNode.count() != 0)
-//        {
-//            expression.audio = e_audioNode.first()->characters;
-//        }
-
-//        qDebug() << expression.fileName;
-
-        mExpressions << expression;
+        expression.groupid = expressionInfo.m_groupId;
+        expression.id = expressionInfo.m_id;
+        expression.desc = expressionInfo.m_desc;
+        expression.fileName = expressionInfo.m_fileName;
+        expression.shortcut = expressionInfo.m_shortcut;
+        expression.tooltip = expressionInfo.m_tooltip;
+        m_expressions << expression;
     }
 
-    qDebug() << "load emotion ok";
+    qDebug() << "load emotion ok, group:" << m_groups.count() << "expression:" << m_expressions.count();
+    m_expressionGroupPicker->setExpressionList(m_groups);
+    if (m_groups.isEmpty())
+    {
+        m_expressionPicker->setExpressionList(CExpressionPicker::ExpressionList());
+        qDebug() << "load emotion error: group list is empty";
+        return false;
+    }
 
-    //mExpressionPicker->setExpressionList(mExpressions);
-    mExpressionGroupPicker->setExpressionList(mGroups);
-    this->selectGroup(mGroups.first());
+    this->selectGroup(m_groups.first());
     return true;
 }
-

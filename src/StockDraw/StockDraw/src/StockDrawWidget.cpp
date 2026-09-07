@@ -1,6 +1,6 @@
 #include "StockDrawWidget.h"
 #include "QtControls/COriginalButton.h"
-#include "QtControls/CGeneralStyle.h"
+#include "QtControls/ControlStyleManager.h"
 #include <stdint.h>
 #include "StockIndicator/StockIndicatorAPI.h"
 #include "StockMarket/StockMarketAPI.h"
@@ -18,7 +18,7 @@ void StockDrawWidget::init()
 	setPalette(pattle);
 
 	m_exit->show();
-	m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "res/close.png");
+	m_exit->setBkgImage(ControlStyleManager::instance().resourcePath("res/close.png"));
 	QObject::connect(m_exit, &COriginalButton::clicked, this, &StockDrawWidget::reject);
 	setCustomerTitleBarHeight(35);
 	resize(1280, 720);

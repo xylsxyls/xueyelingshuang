@@ -132,6 +132,30 @@ namespace LoopPlayer
         return bytes;
     }
 
+    /** 把指定代码页多字节文本转换为宽字符文本
+    @param [in] text 多字节文本
+    @param [in] codePage 源代码页
+    @return 返回宽字符文本
+    */
+    static std::wstring MultiByteToWideString(const std::string& text, UINT codePage)
+    {
+        if (text.empty())
+        {
+            return std::wstring();
+        }
+
+        const int charCount = MultiByteToWideChar(codePage, 0, text.c_str(), -1, nullptr, 0);
+        if (charCount <= 1)
+        {
+            return std::wstring();
+        }
+
+        std::wstring wideText;
+        wideText.resize(charCount - 1);
+        MultiByteToWideChar(codePage, 0, text.c_str(), -1, &wideText[0], charCount);
+        return wideText;
+    }
+
     /** 读取当前EXE所在目录，并保证末尾带反斜杠
     @return 返回EXE所在目录
     */
@@ -198,6 +222,21 @@ namespace LoopPlayer
         wchar_t buffer[256] = { 0 };
         StringCchPrintfW(buffer, ARRAYSIZE(buffer), L"Error 0x%08X", static_cast<unsigned int>(hr));
         return buffer;
+    }
+
+    std::string WideToUtf8String(const std::wstring& text)
+    {
+        return WideToMultiByteString(text, CP_UTF8);
+    }
+
+    std::string WideToAnsiString(const std::wstring& text)
+    {
+        return WideToMultiByteString(text, CP_ACP);
+    }
+
+    std::wstring Utf8ToWideString(const std::string& text)
+    {
+        return MultiByteToWideString(text, CP_UTF8);
     }
 
     std::wstring GetLogFilePath()

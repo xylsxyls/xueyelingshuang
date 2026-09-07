@@ -67,7 +67,7 @@ public:
 
 	/** 设置列宽
 	@param [in] width 列宽
-	@param [in] row 列索引值，-1则表示所有列
+	@param [in] column 列索引值，-1则表示所有列
 	*/
 	void setColumnWidth(int32_t width, int32_t column = -1);
 
@@ -98,10 +98,10 @@ protected:
 	bool check();
 
 private:
-	//头部文字参数
+	// 表头文字参数集合
 	std::map<int32_t, TreeText> m_headerTextMap;
-	//内部文字参数
+	// 单元格文字参数集合
 	std::map<int32_t, std::map<int32_t, TreeText>> m_bodyTextMap;
-	//背景颜色
+	// 行背景颜色集合
 	std::map<int32_t, std::vector<QColor>> m_itemBackgroundColorMap;
 };

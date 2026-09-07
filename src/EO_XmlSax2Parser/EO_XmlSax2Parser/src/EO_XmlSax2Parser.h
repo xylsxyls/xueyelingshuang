@@ -1,191 +1,71 @@
-#ifndef EO_XMLSAX2PARSER_H
+﻿#ifndef EO_XMLSAX2PARSER_H
 #define EO_XMLSAX2PARSER_H
 
-#include <QVector>
-#include <QStack>
-#include <QXmlDefaultHandler>
-#include "EO_XmlSax2ParserMacro.h"
+#include "EO_XmlSax2Handler.h"
 
-/** SAX2 ��ʽ����XML�ļ������ṩ�˼򵥵����ݽṹ���������Ҫ���Լ�����չ�����ƣ� **/
+class QXmlStreamReader;
 
-typedef struct xml_attribute_t{
-    QString name;
-    QString value;
-}XMLAttribute;
-
-typedef QVector<XMLAttribute> XMLAttributes;
-
-typedef struct xml_node_t{
-    XMLAttributes attributes;
-    QVector<xml_node_t*> children;
-    QString name;
-    QString characters;
-    xml_node_t* parent;
-
-    xml_node_t():parent(0){
-
-    }
-    ~xml_node_t(){
-		xml_node_t* p = this->parent;
-		if(p)
-		{
-			for(int i = p->children.count() - 1; i >=0; i-- )
-			{
-				if(p->children[i] == this)
-					p->children.remove(i);
-			}
-		}
-
-		for(int i = 0; i < this->children.count(); i++){
-			xml_node_t* child = this->children[i];
-			if(child)
-			{
-				child->parent = 0;
-				delete child;
-			}
-		}
-    }
-
-    QString getAttribute(const QString& name){
-        QString value = "";
-        for(int i = 0; i < attributes.count(); i++){
-            if(attributes[i].name == name){
-                value = attributes[i].value;
-                break;
-            }
-        }
-
-        return value;
-    }
-
-    void setAttribute(const QString& name, const QString& value){
-        for(int i = 0; i < attributes.count(); i++){
-            if(attributes[i].name == name){
-                attributes[i].value = value;
-                return;
-            }
-        }
-
-        XMLAttribute attr;
-        attr.name = name;
-        attr.value = value;
-
-        attributes << attr;
-    }
-
-    QVector<xml_node_t*> getChildrenByName(QString name){
-
-        QVector<xml_node_t*> result;
-        for(int i = 0; i < children.count(); i++){
-            if(children[i]->name == name){
-                result << children[i];
-            }
-        }
-        return result;
-    }
-
-	//nΪ����
-	QString toXmlString(int n = 0)
-	{
-		QString font_tag;
-		font_tag = QString("<%1 ").arg(name);
-
-
-		QString space_string;
-		for(int i = 0; i < n; i++)
-		{
-			space_string += " ";
-		}
-		//if(!space_string.isEmpty())
-		{
-			space_string.insert(0,"\n");
-		}
-
-		QString xml_string;
-
-
-		QString att_str;
-		for(int i = 0; i < attributes.count(); i++)
-		{
-			XMLAttribute a = attributes[i];
-			if(i == 0)
-			{
-				att_str += QString(" %1='%2'").arg(a.name).arg(a.value);
-			}
-			else
-			{
-				att_str += QString("%1='%2'").arg(a.name).arg(a.value);
-			}
-
-			att_str += " ";
-		}
-
-		if(characters.isEmpty())
-		{
-			if(children.isEmpty())
-			{
-				xml_string = QString("%1<%2%3/>").arg(space_string).arg(name).arg(att_str);
-			}
-			else
-			{
-				QString sub_string;
-				for(int i = 0; i < children.count(); i++)
-				{
-					sub_string += children[i]->toXmlString(n+1);
-				}
-
-				xml_string = QString("%1<%2%3>%4%5</%6>").arg(space_string).arg(name).arg(att_str).arg(sub_string).arg(space_string).arg(name);
-			}
-		}
-		else
-		{
-			if(children.isEmpty())
-			{
-				xml_string = QString("%1<%2%3>%4</%5>").arg(space_string).arg(name).arg(att_str).arg(characters).arg(name);
-			}
-			else
-			{
-				QString sub_string;
-				for(int i = 0; i < children.count(); i++)
-				{
-					sub_string += children[i]->toXmlString(n+1);
-				}
-
-				xml_string = QString("%1<%2%3>%4%5%6</%7>").arg(space_string).arg(name).arg(att_str).arg(characters).arg(sub_string).arg(space_string).arg(name);
-			}
-		}
-
-		return xml_string;
-	}
-}XMLNode;
-
-typedef QVector<XMLNode*> XMLNodeVector;
-
-
-class EO_XmlSax2ParserAPI EO_XmlSax2Parser : public QXmlDefaultHandler
+/** XML流式解析封装，按节点事件逐步通知调用方，不在库内构建完整XML树。
+*/
+class EO_XmlSax2ParserAPI EO_XmlSax2Parser
 {
-private:
-    quint64 mCurrentNodeCount;
-    QStack<XMLNode*> mRootStack;
-    XMLNode* mRoot;
+public:
+    /** 构造XML解析器。
+    */
+    explicit EO_XmlSax2Parser();
+
+    /** 析构XML解析器。
+    */
+    ~EO_XmlSax2Parser();
 
 public:
-    explicit EO_XmlSax2Parser();
-	~EO_XmlSax2Parser();
+    /** 按流式方式解析XML文件。
+    @param [in] filename XML文件路径
+    @param [in,out] handler 流式事件处理对象，不能为nullptr
+    @return 返回true表示解析成功
+    */
+    bool parseFile(const QString& filename, EO_XmlSax2Handler* handler);
 
-    bool parseFromFile(QString filename);
-	bool parseFromData(QString data);
-    XMLNode* root();
+    /** 按流式方式解析XML文本。
+    @param [in] data XML文本
+    @param [in,out] handler 流式事件处理对象，不能为nullptr
+    @return 返回true表示解析成功
+    */
+    bool parseData(const QString& data, EO_XmlSax2Handler* handler);
 
-    bool startElement(const QString &namespaceURI, const QString &localName, const QString &qName, const QXmlAttributes &atts);
-    bool endElement(const QString &namespaceURI, const QString &localName, const QString &qName);
+    /** 获取最近一次解析失败原因。
+    @return 返回错误文本
+    */
+    QString lastError() const;
 
-    bool characters(const QString &ch);
+private:
+    /** 解析Qt XML流并转发节点事件。
+    @param [in,out] reader Qt XML流读取器
+    @param [in,out] handler 流式事件处理对象，不能为nullptr
+    @return 返回true表示解析成功
+    */
+    bool parseReader(QXmlStreamReader* reader, EO_XmlSax2Handler* handler);
 
-    bool fatalError(const QXmlParseException &exception);
-    bool error(const QXmlParseException &exception);
-    bool warning(const QXmlParseException &exception);
+    /** 从当前开始节点读取属性列表。
+    @param [in] reader 已定位到开始节点的Qt XML流读取器
+    @return 返回当前节点的属性列表
+    */
+    XMLAttributes readAttributes(const QXmlStreamReader& reader) const;
 
+    /** 禁止拷贝构造，避免解析器状态被误复制。
+    @param [in] other 被拷贝对象
+    */
+    EO_XmlSax2Parser(const EO_XmlSax2Parser& other);
+
+    /** 禁止赋值，避免解析器状态被误复制。
+    @param [in] other 被赋值对象
+    @return 返回当前对象引用
+    */
+    EO_XmlSax2Parser& operator=(const EO_XmlSax2Parser& other);
+
+private:
+    // 最近一次解析失败原因
+    QString m_lastError;
 };
 
 #endif // EO_XMLSAX2PARSER_H

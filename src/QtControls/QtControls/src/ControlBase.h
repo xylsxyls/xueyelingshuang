@@ -95,6 +95,7 @@ protected:
 						  bool rePaint);
 
 private:
+	// 绑定的最终控件对象，用于写入QSS并触发重绘
 	ControlShow<QBase>* m_show;
 };
 

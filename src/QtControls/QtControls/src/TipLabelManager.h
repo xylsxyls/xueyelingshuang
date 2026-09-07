@@ -5,6 +5,8 @@
 #include "QtControlsMacro.h"
 
 class TipLabel;
+/** 提示框管理单例，统一创建、复用和关闭全局TipLabel
+*/
 class QtControlsAPI TipLabelManager : public QObject
 {
 	Q_OBJECT
@@ -29,14 +31,24 @@ public:
 	void close();
 
 Q_SIGNALS:
+	/** 请求关闭提示框的线程安全信号
+	*/
 	void closeTip();
 
 private:
+	/** 构造提示框管理单例
+	*/
 	TipLabelManager();
+
+	/** 析构函数，释放内部提示框
+	*/
 	~TipLabelManager();
 
+	/** 初始化内部提示框和跨线程关闭连接
+	*/
 	void init();
 
 private:
+	// 当前复用的提示框对象
 	TipLabel* m_tipLabel;
 };

@@ -53,7 +53,7 @@ void StaticDialogManager::popStaticDialog(DialogParam& param)
     {
         return;
     }
-    
+
     popDialogPtr->setWindowResultAddr(&(param.m_result));
     popDialogPtr->setWindowTitle(param.m_title);
     popDialogPtr->setUserResultPtr(&(param.m_userResult));

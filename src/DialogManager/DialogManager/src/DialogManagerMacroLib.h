@@ -1,3 +1,3 @@
 ﻿#pragma once
 
-#define DialogManagerAPI 
+#define DialogManagerAPI

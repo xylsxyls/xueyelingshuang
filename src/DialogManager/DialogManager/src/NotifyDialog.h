@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "QtControls/DialogShow.h"
 
-/** 通知框基类
+/** 通知框基类，封装右下角滑入滑出动画、标题栏和倒计时关闭逻辑
 */
 class NotifyDialog : public DialogShow
 {
@@ -36,12 +36,30 @@ public:
                         const QString& fontName = QString::fromStdWString(L"微软雅黑"));
 
 protected:
+    /** 通知框显示时启动进入动画
+    @param [in] eve 显示事件
+    */
     void showEvent(QShowEvent* eve);
+
+    /** 调整通知框基础控件布局并计算动画起止区域
+    @param [in] eve 窗口大小变化事件
+    */
     void resizeEvent(QResizeEvent* eve);
+
+    /** 动画结束后的关闭处理
+    */
     void end();
+
+    /** 检查基类控件是否有效
+    @return 返回true表示基类控件有效
+    */
     bool check();
 
 private:
+    /** 根据按钮指针查找弹框返回值
+    @param [in] button 被点击的按钮
+    @return 返回按钮对应的弹框结果，未找到时返回ERROR_RESULT
+    */
     DialogResult buttonResult(COriginalButton* button);
 
     /** 开始执行关闭动画
@@ -49,13 +67,26 @@ private:
     void beginExitAnimation();
 
 private slots:
+    /** 处理倒计时结束
+    */
     void onTimeUp();
 
 protected:
+    // 通知框进入和退出动画对象
     QPropertyAnimation m_animation;
+
+    // 通知框显示时的目标位置
     QRect m_beginRect;
+
+    // 通知框隐藏时的目标位置
     QRect m_endRect;
+
+    // 标题栏背景
     Label* m_titleBar;
+
+    // 标题栏图标
     Label* m_icon;
+
+    // 当前是否处于显示状态
     bool m_isShow;
 };

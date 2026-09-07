@@ -8,6 +8,8 @@
 
 class QListWidgetItem;
 class ListWidget;
+/** 下拉选择框控件，封装下拉按钮、弹出列表、列表项样式和选择行为
+*/
 class QtControlsAPI ComboBox :
 	public ControlShow < QComboBox >,
 	public ControlFont < QComboBox >,
@@ -227,37 +229,79 @@ Q_SIGNALS:
 	void itemPressed(qint32 index);
 
 protected:
+	/** 显示时完成延迟初始化和样式刷新
+	@param [in] eve Qt显示事件
+	*/
 	virtual void showEvent(QShowEvent* eve);
+
+	/** 处理鼠标移动，更新下拉按钮和列表项悬停状态
+	@param [in] eve Qt鼠标事件
+	*/
 	virtual void mouseMoveEvent(QMouseEvent* eve);
+
+	/** 处理键盘事件，兼容下拉框键盘选择行为
+	@param [in] eve Qt键盘事件
+	*/
 	virtual void keyPressEvent(QKeyEvent* eve);
+
+	/** 显示下拉列表弹窗
+	*/
 	virtual void showPopup();
+
+	/** 隐藏下拉列表弹窗
+	*/
 	virtual void hidePopup();
 
 protected:
+	/** 检测内部列表控件是否可用
+	@return 返回true表示内部状态可用，false表示存在空指针或异常状态
+	*/
 	bool check();
+
 	/** 控件初始化
 	*/
 	void init();
 
 private slots:
+	/** 处理列表项悬停信号，记录当前悬停索引
+	@param [in] item 悬停的列表项
+	*/
 	void listItemEntered(QListWidgetItem* item);
+
+	/** 处理列表项点击信号，同步当前选择并转发itemPressed信号
+	@param [in] item 被点击的列表项
+	*/
 	void listItemPressed(QListWidgetItem* item);
 
 protected:
+	// 下拉列表控件
 	ListWidget* m_listWidget;
+	// 当前悬停的列表项索引
 	qint32 m_hoverIndex;
 
 private:
+	// 下拉按钮常态图片序号
 	qint32 m_dropDownImgNormal;
+	// 下拉按钮禁用图片序号
 	qint32 m_dropDownImgDisabled;
+	// 下拉按钮展开常态图片序号
 	qint32 m_dropDownImgExpandNormal;
+	// 下拉按钮展开禁用图片序号
 	qint32 m_dropDownImgExpandDisabled;
+	// 下拉按钮图片纵向切割数量
 	qint32 m_dropDownImgStateCount;
+	// 下拉按钮各状态对应的图片序号
 	std::map<qint32, std::map<qint32, qint32>> m_imageStateMap;
+	// 下拉按钮图片路径
 	std::wstring m_imagePath;
+	// 下拉列表相对点击框的纵向偏移
 	qint32 m_listOrigin;
+	// 下拉按钮宽度
 	qint32 m_dropDownWidth;
+	// 下拉按钮高度
 	qint32 m_dropDownHeight;
+	// 下拉按钮边框宽度
 	qint32 m_dropDownBorderWidth;
+	// 下拉按钮是否可见
 	bool m_dropDownVisible;
 };

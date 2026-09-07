@@ -7,13 +7,14 @@
 
 CExpressionPicker::CExpressionPicker(QWidget *parent)
     :QTableView(parent)
-    ,mModel(new QStandardItemModel(this))
-    ,mPreView(new QLabel(this))
-    ,mShowPreView(false)
-    ,mShowIconRect(true)
-    ,mMaxColumnCount(12)
-    ,mMaxRowCount(4)
-    ,mMovie(new QMovie(this))
+    ,m_model(new QStandardItemModel(this))
+    ,m_preview(new QLabel(this))
+    ,m_movie(new QMovie(this))
+    ,m_expressionList()
+    ,m_showPreview(false)
+    ,m_showIconRect(true)
+    ,m_maxColumnCount(12)
+    ,m_maxRowCount(4)
 {
     this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -29,7 +30,7 @@ CExpressionPicker::CExpressionPicker(QWidget *parent)
     this->setMouseTracking(true);
     this->setStyleSheet("QTableView{background-color:rgba(0,0,0,0);border:none;}");
 
-    this->setModel(mModel);
+    this->setModel(m_model);
     connect(this, &CExpressionPicker::clicked, this, &CExpressionPicker::onClicked);
 
     //delegate
@@ -38,14 +39,14 @@ CExpressionPicker::CExpressionPicker(QWidget *parent)
     this->setItemDelegate(tdelegate);
 
     //pre viewer
-    mPreView->setMouseTracking(true);
-    mPreView->hide();
-    mPreView->resize(33*2,33*2);
-    mPreView->setStyleSheet("background-color:white;");
-    mPreView->installEventFilter(this);
-    mMovie->setScaledSize(mPreView->size());
-	mMovie->setCacheMode(QMovie::CacheAll);
-    mPreView->setMovie(mMovie);
+    m_preview->setMouseTracking(true);
+    m_preview->hide();
+    m_preview->resize(33*2,33*2);
+    m_preview->setStyleSheet("background-color:white;");
+    m_preview->installEventFilter(this);
+    m_movie->setScaledSize(m_preview->size());
+	m_movie->setCacheMode(QMovie::CacheAll);
+    m_preview->setMovie(m_movie);
 
 }
 
@@ -54,31 +55,31 @@ CExpressionPicker::~CExpressionPicker()
 
 }
 
-void CExpressionPicker::setShowPreView(bool s)
+void CExpressionPicker::setShowPreView(bool show)
 {
-    mShowPreView = s;
+    m_showPreview = show;
 }
 
 bool CExpressionPicker::isShowPreView()
 {
-    return mShowPreView;
+    return m_showPreview;
 }
 
-void CExpressionPicker::setShowIconRect(bool s)
+void CExpressionPicker::setShowIconRect(bool show)
 {
-    mShowIconRect = s;
+    m_showIconRect = show;
 }
 
 bool CExpressionPicker::isShowIconRect()
 {
-    return mShowIconRect;
+    return m_showIconRect;
 }
 
 void CExpressionPicker::setExpressionList(const CExpressionPicker::ExpressionList &li)
 {
-    mExpressionList = li;
+    m_expressionList = li;
 
-    mModel->clear();
+    m_model->clear();
 
     int capacity = this->maxRowCount()*this->maxColumnCount();
     int tSize = capacity <= li.count() ? capacity : li.count();
@@ -98,39 +99,39 @@ void CExpressionPicker::setExpressionList(const CExpressionPicker::ExpressionLis
 
         int currentColumn = i % this->maxColumnCount();
         int currentRow    = i / this->maxColumnCount();
-        mModel->setItem(currentRow, currentColumn, item);
+        m_model->setItem(currentRow, currentColumn, item);
     }
 }
 
 CExpressionPicker::ExpressionList CExpressionPicker::expressionList()
 {
-    return mExpressionList;
+    return m_expressionList;
 }
 
-void CExpressionPicker::setMaxColumnCount(int n)
+void CExpressionPicker::setMaxColumnCount(int count)
 {
-    mMaxColumnCount = n;
+    m_maxColumnCount = count;
 }
 
-void CExpressionPicker::setMaxRowCount(int n)
+void CExpressionPicker::setMaxRowCount(int count)
 {
-    mMaxRowCount = n;
+    m_maxRowCount = count;
 }
 
 int CExpressionPicker::maxColumnCount()
 {
-    return mMaxColumnCount;
+    return m_maxColumnCount;
 }
 
 int CExpressionPicker::maxRowCount()
 {
-    return mMaxRowCount;
+    return m_maxRowCount;
 }
 
 void CExpressionPicker::leaveEvent(QEvent *e)
 {
     QTableView::leaveEvent(e);
-    mPreView->hide();
+    m_preview->hide();
 }
 
 void CExpressionPicker::mouseMoveEvent(QMouseEvent *e)
@@ -139,7 +140,7 @@ void CExpressionPicker::mouseMoveEvent(QMouseEvent *e)
 
     if(!this->isShowPreView())
     {
-        mPreView->hide();
+        m_preview->hide();
         return;
     }
 
@@ -147,27 +148,27 @@ void CExpressionPicker::mouseMoveEvent(QMouseEvent *e)
     QModelIndex tindex = this->indexAt(e->pos());
     if(!tindex.isValid() || !tindex.data(ExpressionRole_Id).isValid())
     {
-        mPreView->hide();
+        m_preview->hide();
         return;
     }
 
-    if(e->x() <= mPreView->width())
+    if(e->x() <= m_preview->width())
     {
-        mPreView->move(this->width() - mPreView->width() - 1,
+        m_preview->move(this->width() - m_preview->width() - 1,
                        0 + 1);
     }
     else
     {
-        mPreView->move(1,1);
+        m_preview->move(1,1);
     }
-    mPreView->show();
+    m_preview->show();
 
     QString filename = tindex.data(ExpressionRole_FileName).toString();
-    if(filename != mMovie->fileName())
+    if(filename != m_movie->fileName())
     {
-        mMovie->stop();
-        mMovie->setFileName(filename);
-        mMovie->start();
+        m_movie->stop();
+        m_movie->setFileName(filename);
+        m_movie->start();
     }
 }
 
@@ -178,28 +179,28 @@ bool CExpressionPicker::eventFilter(QObject *obj, QEvent *e)
 	{
 		return res;
 	}
-    if(obj == mPreView)
+    if(obj == m_preview)
     {
         if(e->type() == QEvent::MouseMove)
         {
-            if(mPreView->pos() != QPoint(0,0))
+            if(m_preview->pos() != QPoint(0,0))
             {
-                mPreView->move(0,0);
+                m_preview->move(0,0);
             }
             else
             {
-                mPreView->move(this->width() - mPreView->width(),
+                m_preview->move(this->width() - m_preview->width(),
                                0);
             }
         }
 
 		if(e->type() == QEvent::Hide)
 		{
-			mMovie->stop();
+			m_movie->stop();
 		}
 		if(e->type() == QEvent::Show)
 		{
-			mMovie->start();
+			m_movie->start();
 		}
     }
 
@@ -209,10 +210,14 @@ bool CExpressionPicker::eventFilter(QObject *obj, QEvent *e)
 void CExpressionPicker::onClicked(const QModelIndex &index)
 {
     if(!index.isValid())
+    {
         return;
+    }
 
     if(!index.data(ExpressionRole_Id).isValid())
+    {
         return;
+    }
 
     Expression exp;
     exp.desc     = index.data(ExpressionRole_Desc     ).toString();
@@ -224,4 +229,3 @@ void CExpressionPicker::onClicked(const QModelIndex &index)
 
     emit expressionClicked(exp);
 }
-

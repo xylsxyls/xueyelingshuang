@@ -2,7 +2,7 @@
 #include "QtControls/Label.h"
 #include "AccountDialog.h"
 #include "QtControls/COriginalButton.h"
-#include "QtControls/CGeneralStyle.h"
+#include "QtControls/ControlStyleManager.h"
 #include "SubAccountPanel.h"
 #include "QtControls/CExternalTextEdit.h"
 #include <QWindow>
@@ -68,7 +68,7 @@ m_subAccountPanel(nullptr)
 	m_subAccountPanel->helpTip()->winId();
 	m_subAccountPanel->helpTip()->windowHandle()->setTransientParent(windowHandle());
 
-    m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/CloseButton.png");
+    m_exit->setBkgImage(ControlStyleManager::instance().resourcePath("Common/Image/NotificationView/CloseButton.png"));
 
     setFixedSize(340, 482);
 }

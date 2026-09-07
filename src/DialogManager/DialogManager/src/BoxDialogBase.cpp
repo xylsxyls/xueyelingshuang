@@ -2,7 +2,7 @@
 #include "QtControls/Label.h"
 #include <QPainter>
 #include "QtControls/COriginalButton.h"
-#include "QtControls/CGeneralStyle.h"
+#include "QtControls/ControlStyleManager.h"
 #include "QtControls/Separator.h"
 #include "DialogHelper.h"
 
@@ -18,7 +18,7 @@ BoxDialogBase::BoxDialogBase()
 	m_title->setTextColor(QColor(216, 218, 224, 255));
 
 	m_exit->raise();
-	m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/CloseButton.png");
+	m_exit->setBkgImage(ControlStyleManager::instance().resourcePath("Common/Image/NotificationView/CloseButton.png"));
 	m_exit->setBorderRadius(0);
 
 	m_separator->setVisible(false);
@@ -51,4 +51,3 @@ bool BoxDialogBase::check()
 {
     return PopDialog::check();
 }
-

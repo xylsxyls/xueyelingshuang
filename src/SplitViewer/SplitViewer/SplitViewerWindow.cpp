@@ -5,6 +5,21 @@
 
 #include "CStringManager/CStringManagerAPI.h"
 
+// tooltip最大显示宽度，避免中文提示框过宽。
+static const UINT kSplitViewerTooltipMaxWidth = 360;
+// tooltip弹出前停留时间，单位毫秒。
+static const UINT kSplitViewerTooltipInitialDelayMs = 250;
+// tooltip自动消失时间，单位毫秒。
+static const UINT kSplitViewerTooltipAutoPopMs = 5000;
+// 另存图片按钮悬浮提示文案。
+static const wchar_t kSplitViewerSaveImageTipText[] = L"\u53E6\u5B58\u56FE\u7247";
+// 新建图层按钮悬浮提示文案。
+static const wchar_t kSplitViewerNewLayerTipText[] = L"\u65B0\u5EFA\u56FE\u5C42";
+// 全屏按钮悬浮提示文案。
+static const wchar_t kSplitViewerFullScreenTipText[] = L"\u5168\u5C4F";
+// 关于按钮悬浮提示文案。
+static const wchar_t kSplitViewerAboutTipText[] = L"\u5173\u4E8E";
+
 SplitViewerWindow::SplitViewerWindow()
     : hinst_(NULL),
     hwnd_(NULL),
@@ -56,7 +71,9 @@ SplitViewerWindow::SplitViewerWindow()
     embeddedClickTick_(0),
     tipLayerIndex_(-2),
     tipTick_(0),
-    hasPaintClip_(false)
+    primaryConfigTipText_(L"\u52A0\u8F7D\u914D\u7F6E"),
+    hasPaintClip_(false),
+    closingPrepared_(false)
 {
     ZeroMemory(&savedPlacement_, sizeof(savedPlacement_));
     savedPlacement_.length = sizeof(savedPlacement_);
@@ -78,6 +95,7 @@ SplitViewerWindow::SplitViewerWindow()
 SplitViewerWindow::~SplitViewerWindow()
 {
     SplitViewerDebugLog(L"SplitViewerWindow destroying.");
+    PrepareForClose();
     UninstallMouseHook();
     ReleaseBackBuffer();
     DestroyEmbeddedResizePreviewFrames();
@@ -430,8 +448,14 @@ LRESULT CALLBACK SplitViewerWindow::StaticAboutWndProc(HWND hwnd, UINT msg, WPAR
             WORD command = LOWORD(wparam);
             if (command == IDOK || command == IDCANCEL)
             {
-                SplitViewerDebugLogFormat(L"About window close command=%u.", static_cast<unsigned int>(command));
-                DestroyWindow(hwnd);
+                if (self)
+                {
+                    self->CloseAboutDialog(hwnd, command);
+                }
+                else
+                {
+                    DestroyWindow(hwnd);
+                }
                 return 0;
             }
             break;
@@ -440,14 +464,28 @@ LRESULT CALLBACK SplitViewerWindow::StaticAboutWndProc(HWND hwnd, UINT msg, WPAR
         {
             if (wparam == VK_ESCAPE)
             {
-                DestroyWindow(hwnd);
+                if (self)
+                {
+                    self->CloseAboutDialog(hwnd, IDCANCEL);
+                }
+                else
+                {
+                    DestroyWindow(hwnd);
+                }
                 return 0;
             }
             break;
         }
     case WM_CLOSE:
         {
-            DestroyWindow(hwnd);
+            if (self)
+            {
+                self->CloseAboutDialog(hwnd, IDCANCEL);
+            }
+            else
+            {
+                DestroyWindow(hwnd);
+            }
             return 0;
         }
     default:
@@ -580,9 +618,14 @@ LRESULT SplitViewerWindow::WndProc(UINT msg, WPARAM wparam, LPARAM lparam)
     case WM_GETMINMAXINFO:
         OnGetMinMaxInfo(reinterpret_cast<MINMAXINFO*>(lparam));
         return 0;
+    case WM_CLOSE:
+        SplitViewerDebugLog(L"WM_CLOSE.");
+        PrepareForClose();
+        DestroyWindow(hwnd_);
+        return 0;
     case WM_DESTROY:
         SplitViewerDebugLog(L"WM_DESTROY.");
-        UninstallMouseHook();
+        PrepareForClose();
         PostQuitMessage(0);
         return 0;
     default:
@@ -668,6 +711,79 @@ void SplitViewerWindow::UpdateMouseHookState()
         }
         UninstallMouseHook();
     }
+}
+
+void SplitViewerWindow::PrepareForClose()
+{
+    if (closingPrepared_)
+    {
+        SplitViewerDebugLogFormat(L"PrepareForClose skipped hwnd=0x%p.",
+            hwnd_);
+        return;
+    }
+
+    closingPrepared_ = true;
+    SplitViewerDebugLogFormat(L"PrepareForClose begin hwnd=0x%p dragMode=%s layers=%u selectedLayer=%d.",
+        hwnd_,
+        DragModeText(dragMode_),
+        static_cast<unsigned int>(layers_.size()),
+        selectedLayer_);
+    ClearTransientNodeReferences();
+    UninstallMouseHook();
+    DetachAllEmbeddedWindows();
+    DestroyDragOutFrames();
+    DestroyEmbeddedResizePreviewFrames();
+    SplitViewerDebugLog(L"PrepareForClose end.");
+}
+
+void SplitViewerWindow::DetachAllEmbeddedWindows()
+{
+    int32_t detachedCount = 0;
+    int32_t staleCount = 0;
+    DetachEmbeddedWindowsFromNode(baseRoot_, detachedCount, staleCount);
+    for (size_t i = 0; i < layers_.size(); ++i)
+    {
+        DetachEmbeddedWindowsFromNode(layers_[i] ? layers_[i]->root : NULL, detachedCount, staleCount);
+    }
+    SplitViewerDebugLogFormat(L"DetachAllEmbeddedWindows completed detached=%d stale=%d.",
+        detachedCount,
+        staleCount);
+}
+
+void SplitViewerWindow::DetachEmbeddedWindowsFromNode(SplitViewerNode* node, int32_t& detachedCount, int32_t& staleCount)
+{
+    if (!node)
+    {
+        return;
+    }
+
+    if (node->IsLeaf())
+    {
+        HWND embeddedWindow = node->view.embeddedWindow;
+        if (!embeddedWindow)
+        {
+            return;
+        }
+
+        if (IsWindow(embeddedWindow))
+        {
+            SplitViewerDebugLogFormat(L"Detach embedded window before close window=0x%p.",
+                embeddedWindow);
+            node->view.DetachEmbeddedWindow();
+            ++detachedCount;
+        }
+        else
+        {
+            SplitViewerDebugLogFormat(L"Forget stale embedded window before close window=0x%p.",
+                embeddedWindow);
+            node->view.ForgetEmbeddedWindow();
+            ++staleCount;
+        }
+        return;
+    }
+
+    DetachEmbeddedWindowsFromNode(node->first, detachedCount, staleCount);
+    DetachEmbeddedWindowsFromNode(node->second, detachedCount, staleCount);
 }
 
 bool SplitViewerWindow::NeedsMouseHook() const
@@ -1371,34 +1487,68 @@ void SplitViewerWindow::CreateTooltipWindow()
     }
 
     ApplyFont(tooltipWindow_);
-    SendMessageW(tooltipWindow_, TTM_SETMAXTIPWIDTH, 0, 360);
+    SendMessageW(tooltipWindow_, TTM_SETMAXTIPWIDTH, 0, kSplitViewerTooltipMaxWidth);
+    SendMessageW(tooltipWindow_, TTM_SETDELAYTIME, TTDT_INITIAL, kSplitViewerTooltipInitialDelayMs);
+    SendMessageW(tooltipWindow_, TTM_SETDELAYTIME, TTDT_AUTOPOP, kSplitViewerTooltipAutoPopMs);
+    SendMessageW(tooltipWindow_, TTM_ACTIVATE, TRUE, 0);
     SetWindowPos(tooltipWindow_, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    SplitViewerDebugLogFormat(L"CreateTooltipWindow success tooltip=0x%p maxWidth=%u initialDelayMs=%u autoPopMs=%u.",
+        tooltipWindow_,
+        kSplitViewerTooltipMaxWidth,
+        kSplitViewerTooltipInitialDelayMs,
+        kSplitViewerTooltipAutoPopMs);
 }
 
-void SplitViewerWindow::AddTooltip(HWND control, const wchar_t* text)
+void SplitViewerWindow::SetButtonTooltip(HWND control, const wchar_t* text)
 {
-    if (!tooltipWindow_ || !control || !text)
+    if (!tooltipWindow_ || !control || !text || text[0] == L'\0')
     {
         return;
     }
 
+    // getTooltipInfoSize入参：无。
+    // getTooltipInfoSize出参：无。
+    // getTooltipInfoSize返回值：返回当前tooltip控件兼容的TOOLINFO字节数。
+    auto getTooltipInfoSize = []() -> UINT
+    {
+#ifdef TTTOOLINFOW_V1_SIZE
+        return static_cast<UINT>(TTTOOLINFOW_V1_SIZE);
+#else
+        return static_cast<UINT>(sizeof(TOOLINFOW));
+#endif
+    };
+
     TOOLINFOW toolInfo = { 0 };
-    toolInfo.cbSize = sizeof(toolInfo);
+    const UINT tooltipInfoSize = getTooltipInfoSize();
+    toolInfo.cbSize = tooltipInfoSize;
     toolInfo.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
     toolInfo.hwnd = hwnd_;
     toolInfo.uId = reinterpret_cast<UINT_PTR>(control);
+    SendMessageW(tooltipWindow_, TTM_DELTOOLW, 0, reinterpret_cast<LPARAM>(&toolInfo));
+
+    toolInfo.cbSize = tooltipInfoSize;
+    toolInfo.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+    toolInfo.hwnd = hwnd_;
+    toolInfo.uId = reinterpret_cast<UINT_PTR>(control);
+    toolInfo.hinst = hinst_;
     toolInfo.lpszText = const_cast<LPWSTR>(text);
-    SendMessageW(tooltipWindow_, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&toolInfo));
+
+    const BOOL added = static_cast<BOOL>(SendMessageW(tooltipWindow_, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&toolInfo)));
+    SplitViewerDebugLogFormat(L"SetButtonTooltip reset control=0x%p text=%s cbSize=%u added=%d.",
+        control,
+        text,
+        tooltipInfoSize,
+        added ? 1 : 0);
 }
 
 void SplitViewerWindow::UpdateButtonTooltips()
 {
     primaryConfigTipText_ = HasAnyContent() ? L"\u4FDD\u5B58" : L"\u52A0\u8F7D\u914D\u7F6E";
-    AddTooltip(saveConfigButton_, primaryConfigTipText_.c_str());
-    AddTooltip(saveButton_, L"\u53E6\u5B58\u56FE\u7247");
-    AddTooltip(newLayerButton_, L"\u65B0\u5EFA\u56FE\u5C42");
-    AddTooltip(fullScreenButton_, L"\u5168\u5C4F");
-    AddTooltip(aboutButton_, L"\u5173\u4E8E");
+    SetButtonTooltip(saveConfigButton_, primaryConfigTipText_.c_str());
+    SetButtonTooltip(saveButton_, kSplitViewerSaveImageTipText);
+    SetButtonTooltip(newLayerButton_, kSplitViewerNewLayerTipText);
+    SetButtonTooltip(fullScreenButton_, kSplitViewerFullScreenTipText);
+    SetButtonTooltip(aboutButton_, kSplitViewerAboutTipText);
     UpdatePrimaryButtonText();
 }
 
@@ -1467,20 +1617,9 @@ void SplitViewerWindow::UpdatePrimaryButtonText()
             primaryConfigTipText_.c_str(),
             newText.c_str());
         primaryConfigTipText_ = newText;
+        SetButtonTooltip(saveConfigButton_, primaryConfigTipText_.c_str());
+        InvalidateRect(saveConfigButton_, NULL, TRUE);
     }
-
-    if (tooltipWindow_)
-    {
-        TOOLINFOW toolInfo = { 0 };
-        toolInfo.cbSize = sizeof(toolInfo);
-        toolInfo.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
-        toolInfo.hwnd = hwnd_;
-        toolInfo.uId = reinterpret_cast<UINT_PTR>(saveConfigButton_);
-        toolInfo.lpszText = const_cast<LPWSTR>(primaryConfigTipText_.c_str());
-        SendMessageW(tooltipWindow_, TTM_UPDATETIPTEXTW, 0, reinterpret_cast<LPARAM>(&toolInfo));
-    }
-
-    InvalidateRect(saveConfigButton_, NULL, TRUE);
 }
 
 bool SplitViewerWindow::OnDrawItem(const DRAWITEMSTRUCT* drawItem)
@@ -1778,6 +1917,7 @@ void SplitViewerWindow::AppendOwnerDrawMenuItem(HMENU menu, UINT command, const 
 
 void SplitViewerWindow::ShowAboutDialog()
 {
+    const DWORD startTick = GetTickCount();
     RegisterAboutWindowClass();
 
     const int dialogWidth = 430;
@@ -1790,11 +1930,39 @@ void SplitViewerWindow::ShowAboutDialog()
 
     const int x = ownerRect.left + (SplitViewerRectWidth(ownerRect) - dialogWidth) / 2;
     const int y = ownerRect.top + (SplitViewerRectHeight(ownerRect) - dialogHeight) / 2;
-    SplitViewerDebugLogFormat(L"ShowAboutDialog create position=%d,%d size=%dx%d.", x, y, dialogWidth, dialogHeight);
-    HWND dialog = CreateWindowExW(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE,
+    const bool hadMouseHook = mouseHook_ != NULL;
+    SplitViewerDebugLogFormat(L"ShowAboutDialog begin owner=%d,%d,%d,%d position=%d,%d size=%dx%d hadMouseHook=%d.",
+        ownerRect.left,
+        ownerRect.top,
+        ownerRect.right,
+        ownerRect.bottom,
+        x,
+        y,
+        dialogWidth,
+        dialogHeight,
+        hadMouseHook ? 1 : 0);
+    if (tooltipWindow_)
+    {
+        SendMessageW(tooltipWindow_, TTM_POP, 0, 0);
+        SendMessageW(tooltipWindow_, TTM_ACTIVATE, FALSE, 0);
+    }
+    ClearHover();
+    if (hadMouseHook)
+    {
+        UninstallMouseHook();
+    }
+
+    bool ownerDisabled = false;
+    if (hwnd_ && IsWindow(hwnd_) && IsWindowEnabled(hwnd_))
+    {
+        EnableWindow(hwnd_, FALSE);
+        ownerDisabled = true;
+    }
+
+    HWND dialog = CreateWindowExW(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CONTROLPARENT,
         kSplitViewerAboutWindowClass,
         L"\u5173\u4E8E\u5206\u5C4F\u770B\u56FE",
-        WS_POPUP | WS_CAPTION | WS_SYSMENU,
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
         x,
         y,
         dialogWidth,
@@ -1806,11 +1974,19 @@ void SplitViewerWindow::ShowAboutDialog()
     if (!dialog)
     {
         SplitViewerDebugLogFormat(L"ShowAboutDialog CreateWindowEx failed error=%u.", static_cast<unsigned int>(GetLastError()));
+        if (ownerDisabled && hwnd_ && IsWindow(hwnd_))
+        {
+            EnableWindow(hwnd_, TRUE);
+        }
+        if (tooltipWindow_)
+        {
+            SendMessageW(tooltipWindow_, TTM_ACTIVATE, TRUE, 0);
+        }
+        UpdateMouseHookState();
         return;
     }
 
-    // 用本地消息循环实现轻量模态窗口，确保父窗口禁用期间仍能处理绘制和关闭消息。
-    EnableWindow(hwnd_, FALSE);
+    // 用本地消息循环实现轻量模态窗口，同时避免父窗口启停造成的可见重绘延迟。
     ShowWindow(dialog, SW_SHOW);
     UpdateWindow(dialog);
 
@@ -1838,11 +2014,62 @@ void SplitViewerWindow::ShowAboutDialog()
 
     if (IsWindow(hwnd_))
     {
-        EnableWindow(hwnd_, TRUE);
-        SetForegroundWindow(hwnd_);
+        if (!IsWindowEnabled(hwnd_))
+        {
+            EnableWindow(hwnd_, TRUE);
+        }
+        if (aboutButton_ && IsWindow(aboutButton_))
+        {
+            SendMessageW(aboutButton_, BM_SETSTATE, FALSE, 0);
+            InvalidateRect(aboutButton_, NULL, FALSE);
+        }
         SetActiveWindow(hwnd_);
     }
-    SplitViewerDebugLog(L"ShowAboutDialog finished.");
+    if (tooltipWindow_)
+    {
+        SendMessageW(tooltipWindow_, TTM_ACTIVATE, TRUE, 0);
+    }
+    UpdateMouseHookState();
+    SplitViewerDebugLogFormat(L"ShowAboutDialog finished elapsedMs=%u.",
+        static_cast<unsigned int>(GetTickCount() - startTick));
+}
+
+void SplitViewerWindow::CloseAboutDialog(HWND dialog, WORD command)
+{
+    SplitViewerDebugLogFormat(L"About window close command=%u dialog=0x%p.",
+        static_cast<unsigned int>(command),
+        dialog);
+    if (hwnd_ && IsWindow(hwnd_) && !IsWindowEnabled(hwnd_))
+    {
+        EnableWindow(hwnd_, TRUE);
+    }
+    if (aboutButton_ && IsWindow(aboutButton_))
+    {
+        SendMessageW(aboutButton_, BM_SETSTATE, FALSE, 0);
+        InvalidateRect(aboutButton_, NULL, FALSE);
+    }
+    if (hwnd_ && IsWindow(hwnd_))
+    {
+        RECT dialogRect = { 0 };
+        if (dialog && IsWindow(dialog) && GetWindowRect(dialog, &dialogRect))
+        {
+            POINT points[2] =
+            {
+                { dialogRect.left, dialogRect.top },
+                { dialogRect.right, dialogRect.bottom }
+            };
+            MapWindowPoints(NULL, hwnd_, points, 2);
+            RECT clientDialogRect = SplitViewerMakeRect(points[0].x, points[0].y, points[1].x, points[1].y);
+            RECT clientRect = { 0 };
+            GetClientRect(hwnd_, &clientRect);
+            RECT invalidRect = { 0 };
+            if (IntersectRect(&invalidRect, &clientRect, &clientDialogRect))
+            {
+                RedrawWindow(hwnd_, &invalidRect, NULL, RDW_INVALIDATE | RDW_UPDATENOW | RDW_NOERASE | RDW_ALLCHILDREN);
+            }
+        }
+    }
+    DestroyWindow(dialog);
 }
 
 void SplitViewerWindow::OnPaint()

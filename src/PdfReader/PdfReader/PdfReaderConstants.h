@@ -12,6 +12,8 @@ static const wchar_t kDocumentClass[] = L"PdfReaderDocumentView";
 static const wchar_t kPromptClass[] = L"PdfReaderPrompt";
 // 关于弹窗窗口类名
 static const wchar_t kAboutClass[] = L"PdfReaderAbout";
+// 顶部按钮提示窗口类名
+static const wchar_t kButtonToolTipClass[] = L"PdfReaderButtonToolTip";
 // 软件标题
 static const wchar_t kAppTitle[] = L"PDF阅读器";
 // 软件版本号
@@ -47,6 +49,78 @@ static const int kToolButtonSize = 24;
 static const int kTitleButtonCount = 3;
 // 工具栏按钮数量
 static const int kToolbarButtonCount = 4;
+// 顶部按钮提示窗口背景色
+static const COLORREF kToolTipBackgroundColor = RGB(255, 253, 232);
+// 顶部按钮提示窗口边框色
+static const COLORREF kToolTipBorderColor = RGB(174, 151, 92);
+// 顶部按钮提示窗口文字色
+static const COLORREF kToolTipTextColor = RGB(47, 48, 52);
+// 顶部按钮提示窗口最小宽度
+static const int kToolTipMinWidth = 64;
+// 顶部按钮提示窗口最小高度
+static const int kToolTipMinHeight = 28;
+// 顶部按钮提示窗口相对鼠标的水平偏移
+static const int kToolTipOffsetX = 14;
+// 顶部按钮提示窗口相对鼠标的垂直偏移
+static const int kToolTipOffsetY = 20;
+// 顶部按钮提示窗口文本水平边距
+static const int kToolTipPaddingX = 8;
+// 顶部按钮提示窗口文本垂直边距
+static const int kToolTipPaddingY = 4;
+// 顶部按钮提示窗口文本宽度补偿
+static const int kToolTipWidthPadding = 18;
+// 顶部按钮提示窗口文本高度补偿
+static const int kToolTipHeightPadding = 10;
+// 简单输入弹窗窗口宽度
+static const int kPromptDialogWidth = 360;
+// 简单输入弹窗窗口高度
+static const int kPromptDialogHeight = 150;
+// 简单输入弹窗内容水平边距
+static const int kPromptContentMarginX = 14;
+// 简单输入弹窗标签顶部坐标
+static const int kPromptLabelTop = 16;
+// 简单输入弹窗标签高度
+static const int kPromptLabelHeight = 20;
+// 简单输入弹窗输入框顶部坐标
+static const int kPromptEditTop = 44;
+// 简单输入弹窗输入框高度
+static const int kPromptEditHeight = 24;
+// 简单输入弹窗按钮顶部坐标
+static const int kPromptButtonTop = 82;
+// 简单输入弹窗按钮宽度
+static const int kPromptButtonWidth = 74;
+// 简单输入弹窗按钮高度
+static const int kPromptButtonHeight = 26;
+// 简单输入弹窗按钮右侧边距
+static const int kPromptButtonRightMargin = 18;
+// 简单输入弹窗按钮之间的间距
+static const int kPromptButtonGap = 8;
+// 简单输入弹窗编辑框控件ID
+static const int kPromptEditControlId = 1001;
+// 关于弹窗窗口宽度
+static const int kAboutDialogWidth = 430;
+// 关于弹窗窗口高度
+static const int kAboutDialogHeight = 292;
+// 关于弹窗内容水平边距
+static const int kAboutContentMarginX = 24;
+// 关于弹窗正文顶部坐标
+static const int kAboutTextTop = 20;
+// 关于弹窗正文底部预留高度
+static const int kAboutTextBottomReserve = 58;
+// 关于弹窗按钮宽度
+static const int kAboutButtonWidth = 84;
+// 关于弹窗按钮高度
+static const int kAboutButtonHeight = 26;
+// 关于弹窗按钮右侧边距
+static const int kAboutButtonRightMargin = 24;
+// 关于弹窗按钮底部边距
+static const int kAboutButtonBottomMargin = 18;
+// 模态弹窗背景色
+static const COLORREF kDialogBackgroundColor = RGB(255, 255, 255);
+// 模态弹窗正文文字色
+static const COLORREF kDialogTextColor = RGB(48, 56, 70);
+// 禁用DWM窗口过渡动画的属性编号
+static const DWORD kDwmTransitionsForcedDisabledAttribute = 3;
 // 缩略图内容边距
 static const int kThumbPadding = 12;
 // 缩略图条目间距

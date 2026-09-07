@@ -2,7 +2,6 @@
 #include "ListWidget.h"
 #include "Label.h"
 #include <QStylePainter>
-#include "CGeneralStyle.h"
 #include <qmath.h>
 
 ChooseComboBox::ChooseComboBox(QWidget* parent):

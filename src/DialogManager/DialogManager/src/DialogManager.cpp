@@ -8,7 +8,7 @@
 
 DialogManager::DialogManager()
 {
-	
+
 }
 
 DialogManager::~DialogManager()
@@ -19,10 +19,10 @@ DialogManager::~DialogManager()
 
 void DialogManager::makeDialog(DialogParam& param)
 {
-	static bool init = false;
-	if (init == false)
+	static bool s_init = false;
+	if (s_init == false)
 	{
-		init = true;
+		s_init = true;
 		QObject::connect(&PopDialogManager::instance(), &PopDialogManager::dialogSignal, &DialogManager::instance(), &DialogManager::dialogSignal);
 		QObject::connect(&NotifyDialogManager::instance(), &NotifyDialogManager::dialogSignal, &DialogManager::instance(), &DialogManager::dialogSignal);
 		QObject::connect(&StaticDialogManager::instance(), &StaticDialogManager::dialogSignal, &DialogManager::instance(), &DialogManager::dialogSignal);

@@ -9,6 +9,7 @@ class HtmlComboBoxStyle : public QProxyStyle
 {
 public:
 	/** 构造函数
+	@param [in] htmlComboBox 所属HTML下拉框
 	*/
 	HtmlComboBoxStyle(HtmlComboBox* htmlComboBox);
 
@@ -47,8 +48,10 @@ private:
 	@param [in] widget 父窗口指针
 	*/
 	void drawPrimitive(PrimitiveElement pe, const QStyleOption* opt, QPainter* painter, const QWidget* widget = nullptr) const;
-	
+
 private:
+	// 所属HTML下拉框，用于读取绘制参数
 	HtmlComboBox* m_htmlComboBox;
+	// tooltip背景颜色
 	QColor m_color;
 };

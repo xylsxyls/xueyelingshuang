@@ -2,6 +2,7 @@
 
 #include "BitmapCacheEntry.h"
 #include "PageItem.h"
+#include "PdfReaderButtonToolTip.h"
 #include "PdfReaderConstants.h"
 #include "PdfReaderPlatform.h"
 #include "TopButtonState.h"
@@ -102,19 +103,36 @@ private:
     */
     void createChildViews();
 
-    /** 创建顶部按钮提示控件
+    /** 创建顶部按钮提示弹窗
     */
-    void createToolTips();
+    void createButtonToolTip();
 
-    /** 给指定按钮增加提示文本
-    @param [in] button 按钮状态
-    @param [in] text 提示文本
+    /** 命中测试用于提示控件的按钮区域
+    @param [in] point 主窗口客户区坐标
+    @return 返回命中的TopButton ID，没有命中时返回TOP_BUTTON_NONE
     */
-    void addToolTip(const TopButtonState& button, const wchar_t* text);
+    int hitTestToolTipButton(POINT point) const;
 
-    /** 更新顶部按钮提示区域
+    /** 显示指定按钮提示
+    @param [in] button 按钮ID
+    @param [in] point 主窗口客户区坐标
     */
-    void updateToolTipRects();
+    void showButtonToolTip(int button, POINT point);
+
+    /** 更新按钮提示位置
+    @param [in] point 主窗口客户区坐标
+    */
+    void updateButtonToolTipPosition(POINT point);
+
+    /** 隐藏当前按钮提示
+    */
+    void hideButtonToolTip();
+
+    /** 获取按钮提示中文文案
+    @param [in] button 按钮ID
+    @return 返回提示中文文案
+    */
+    const wchar_t* buttonToolTipText(int button) const;
 
     /** 根据主窗口客户区重新布局标题栏、工具栏和内容区
     */
@@ -470,8 +488,8 @@ private:
     HWND m_thumbView;
     // 正文子窗口句柄
     HWND m_documentView;
-    // 顶部按钮提示控件句柄
-    HWND m_toolTip;
+    // 顶部按钮提示弹窗对象
+    PdfReaderButtonToolTip m_buttonToolTip;
     // PDF引擎对象
     PdfEngine m_engine;
     // PDF引擎是否初始化成功

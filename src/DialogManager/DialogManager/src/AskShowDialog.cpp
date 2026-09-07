@@ -1,7 +1,6 @@
 ﻿#include "AskShowDialog.h"
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
-#include "QtControls/CGeneralStyle.h"
 #include "DialogHelper.h"
 
 AskShowDialog::AskShowDialog():
@@ -21,7 +20,7 @@ m_ignore(nullptr)
     init(typeid(*this).name());
 
     DialogHelper::setTip(m_tip, "", QColor(205, 213, 225, 255), 13);
-    
+
 	m_accept->setBkgColor(QColor(97, 125, 197, 255), QColor(138, 169, 249, 255), QColor(67, 81, 117, 255), QColor(97, 125, 197, 255));
 	m_accept->setFontColor(QColor(255, 255, 255, 255), QColor(255, 255, 255, 255), QColor(188, 199, 226, 255));
 

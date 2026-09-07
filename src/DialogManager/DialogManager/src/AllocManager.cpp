@@ -50,7 +50,7 @@ void AllocManager::removeByDialogId(quint64 dialogId)
     {
         return;
     }
-    
+
     quint64 userId = findUserId(dialogId);
     {
         QMutexLocker locker(&m_mutex);
@@ -174,6 +174,7 @@ quint64 AllocManager::dialogTypeCount(DialogType type)
 
 std::vector<quint64> AllocManager::allDialogId()
 {
+    QMutexLocker locker(&m_mutex);
     std::vector<quint64> vecAllDialogId;
 	DialogHelper::logFile() << "m_mapDialogIdToDialogPtr.size = " << m_mapDialogIdToDialogPtr.size() << std::endl;
     for (auto itDialogId = m_mapDialogIdToDialogPtr.begin(); itDialogId != m_mapDialogIdToDialogPtr.end(); ++itDialogId)
@@ -244,7 +245,7 @@ COriginalDialog* AllocManager::createDialog(quint64& dialogId, quint64 userId, D
         dialogPtr = new TipShowDialog;
         break;
     }
-#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+#if defined(QTCONTROLS_ENABLE_WEBKIT) && (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
     case LOGIN_SHOW_DIALOG:
     {
         dialogPtr = new LoginShowDialog;
@@ -285,8 +286,8 @@ COriginalDialog* AllocManager::createDialog(quint64& dialogId, quint64 userId, D
 
 quint64 AllocManager::getDialogId()
 {
-    static quint64 dialogId = 0;
-    return ++dialogId;
+    static quint64 s_dialogId = 0;
+    return ++s_dialogId;
 }
 
 bool AllocManager::isStatic(quint64 dialogId)

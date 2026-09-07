@@ -1,5 +1,5 @@
 ﻿#include "CPasswordInputBox.h"
-#include "CGeneralStyle.h"
+#include "ControlStyleManager.h"
 #include "COriginalButton.h"
 #include <QRegExpValidator>
 
@@ -32,17 +32,17 @@ void CPasswordInputBox::setDefault()
 	}
 	setValidator(validator);
 
-	QString maskPath = CGeneralStyle::instance()->war3lobbyResourcePath() + MASK_BUTTON_PNG;
+	QString maskPath = ControlStyleManager::instance().resourcePath(MASK_BUTTON_PNG);
 	setMaskBackgroundImage(maskPath, 6, 4, 5, 6, 6, 1, 2, 3, 3);
 	setMaskSize(18, 11);
 	m_maskButton->setText(QString::fromStdWString(L""));
 	m_maskButton->setCursor(Qt::ClosedHandCursor);
 	m_maskButton->setCheckable(true);
 	setEchoMode(QLineEdit::Password);
-	setFont(CGeneralStyle::instance()->font());
+	setFont(ControlStyleManager::instance().defaultFont());
 	resize(146, 22);
 	setBackgroundColor(QColor(39, 50, 83, 255), QColor(39, 50, 83, 255), QColor(39, 50, 83, 255));
-	QColor textColor = CGeneralStyle::instance()->fontColor();
+	QColor textColor = ControlStyleManager::instance().defaultTextColor();
 	setTextColor(textColor, textColor, textColor);
 	setBorderWidth(1);
 	setBorderColor(QColor(67, 81, 117, 255), QColor(67, 81, 117, 255), QColor(67, 81, 117, 255));

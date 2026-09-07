@@ -177,26 +177,6 @@ RECT PdfReaderHelper::GetDefaultMainWindowRect(int contentTop,
     return MakeRect(left, top, left + windowWidth, top + windowHeight);
 }
 
-void PdfReaderHelper::RefreshWindowFrame(HWND hwnd)
-{
-    if (hwnd == nullptr)
-    {
-        return;
-    }
-
-    SetWindowPos(hwnd,
-                 nullptr,
-                 0,
-                 0,
-                 0,
-                 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-    RedrawWindow(hwnd,
-                 nullptr,
-                 nullptr,
-                 RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN | RDW_UPDATENOW);
-}
-
 HFONT PdfReaderHelper::GetUiFont()
 {
     static HFONT font = nullptr;
@@ -223,6 +203,111 @@ HFONT PdfReaderHelper::GetUiFont()
         return reinterpret_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
     }
     return font;
+}
+
+void PdfReaderHelper::DisableWindowTransitionAnimation(HWND hwnd)
+{
+    if (hwnd == nullptr)
+    {
+        return;
+    }
+
+    typedef HRESULT (WINAPI* DwmSetWindowAttributeProc)(HWND, DWORD, LPCVOID, DWORD);
+    HMODULE module = LoadLibraryW(L"dwmapi.dll");
+    if (module == nullptr)
+    {
+        return;
+    }
+
+    DwmSetWindowAttributeProc setWindowAttribute = reinterpret_cast<DwmSetWindowAttributeProc>(
+        GetProcAddress(module, "DwmSetWindowAttribute"));
+    if (setWindowAttribute != nullptr)
+    {
+        BOOL disabled = TRUE;
+        setWindowAttribute(hwnd, kDwmTransitionsForcedDisabledAttribute, &disabled, sizeof(disabled));
+    }
+
+    FreeLibrary(module);
+}
+
+void PdfReaderHelper::CenterWindowToOwner(HWND hwnd, HWND owner)
+{
+    if (hwnd == nullptr)
+    {
+        return;
+    }
+
+    RECT targetRect;
+    if (owner != nullptr && IsWindow(owner))
+    {
+        GetWindowRect(owner, &targetRect);
+    }
+    else
+    {
+        targetRect = GetPrimaryWorkArea();
+    }
+
+    RECT windowRect;
+    GetWindowRect(hwnd, &windowRect);
+    int x = targetRect.left + (RectWidth(targetRect) - RectWidth(windowRect)) / 2;
+    int y = targetRect.top + (RectHeight(targetRect) - RectHeight(windowRect)) / 2;
+    SetWindowPos(hwnd, HWND_TOP, x, y, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+}
+
+void PdfReaderHelper::RunModalMessageLoop(HWND owner, HWND dialog, bool* done)
+{
+    if (dialog == nullptr || done == nullptr)
+    {
+        return;
+    }
+
+    if (owner != nullptr && IsWindow(owner))
+    {
+        EnableWindow(owner, FALSE);
+    }
+    ShowWindow(dialog, SW_SHOW);
+    SetActiveWindow(dialog);
+    UpdateWindow(dialog);
+
+    MSG message;
+    while (!*done)
+    {
+        BOOL messageResult = GetMessageW(&message, nullptr, 0, 0);
+        if (messageResult <= 0)
+        {
+            if (messageResult == 0)
+            {
+                PostQuitMessage(static_cast<int>(message.wParam));
+            }
+            break;
+        }
+
+        if (!IsWindow(dialog) || !IsDialogMessageW(dialog, &message))
+        {
+            TranslateMessage(&message);
+            DispatchMessageW(&message);
+        }
+        if (!IsWindow(dialog))
+        {
+            break;
+        }
+    }
+
+    if (owner != nullptr && IsWindow(owner))
+    {
+        EnableWindow(owner, TRUE);
+        SetActiveWindow(owner);
+        SetFocus(owner);
+    }
+    if (IsWindow(dialog))
+    {
+        DestroyWindow(dialog);
+    }
+    if (owner != nullptr && IsWindow(owner))
+    {
+        SetActiveWindow(owner);
+        SetFocus(owner);
+    }
 }
 
 void PdfReaderHelper::ApplyDefaultFont(HWND hwnd)

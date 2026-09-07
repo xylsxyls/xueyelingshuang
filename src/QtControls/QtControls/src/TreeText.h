@@ -2,35 +2,39 @@
 #include <stdint.h>
 #include <QColor>
 
+/** 树控件单元格显示参数，集中保存文字、颜色、图片和嵌入控件绘制信息
+*/
 struct TreeText
 {
-	//字体大小
+public:
+	// 字体大小
 	int32_t m_fontSize;
-	//文字颜色
+	// 文字颜色
 	QColor m_textColor;
-	//字体
+	// 字体名称
 	QString m_fontFace;
-	//文字内容
+	// 文字内容
 	QString m_text;
-	//对其方式
+	// 文字对齐方式
 	Qt::Alignment m_align;
-	//左侧偏移量
+	// 左侧偏移量
 	int32_t m_origin;
-	//背景颜色
+	// 背景颜色
 	QColor m_backgroundColor;
-	//悬停颜色
+	// 悬停背景颜色
 	QColor m_hoverColor;
-	//按下颜色
+	// 选中背景颜色
 	QColor m_selectedColor;
-	//禁用颜色
+	// 禁用背景颜色
 	QColor m_disabledColor;
-	//嵌入的图片，image为空不会画图
+	// 嵌入图片，image为空时不绘制
 	QImage m_image;
-	//和当前格子左上角的相对位置
+	// 嵌入图片相对当前格子左上角的位置
 	QPoint m_imageLeftTop;
-	//widget为空时不会嵌入
+	// 嵌入控件，widget为空时不嵌入
 	QWidget* m_widget;
 
+public:
 	/** 构造函数
 	*/
 	TreeText()
@@ -56,7 +60,7 @@ struct TreeText
 		m_text = text;
 	}
 
-	/** 初始化
+	/** 初始化默认显示参数
 	*/
 	void init()
 	{

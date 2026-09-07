@@ -7,6 +7,8 @@
 #include "QtControlsMacro.h"
 
 class QWidget;
+/** 多状态单选按钮控件，封装文字、边框、背景和指示器图片的QSS样式设置
+*/
 class QtControlsAPI RadioButton :
 	public ControlShow < QRadioButton >,
 	public ControlFont < QRadioButton >,
@@ -25,7 +27,7 @@ public:
 	virtual ~RadioButton();
 
 public:
-	/** 设置CheckBox指示器图片
+	/** 设置单选按钮指示器图片
 	@param [in] indicatorImg 背景图片路径，如果路径中必须使用正斜杠
 	@param [in] indicatorImgStateCount 只能填4或8，表示4态按钮或8态按钮
 	@param [in] indicatorImgNormal 非选中常态图片，如果填1表示将图片纵向分割4份或8份，选最上面的第一份
@@ -39,7 +41,7 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setIndicatorImage(const QString& indicatorImg,
-			   			   qint32 indicatorImgStateCount = 4,
+						   qint32 indicatorImgStateCount = 4,
 						   qint32 indicatorImgNormal = 1,
 						   qint32 indicatorImgHover = 2,
 						   qint32 indicatorImgPressed = 3,

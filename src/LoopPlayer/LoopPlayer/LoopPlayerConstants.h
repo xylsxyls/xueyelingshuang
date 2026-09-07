@@ -41,7 +41,7 @@ namespace LoopPlayer
     static const int ZOOM_TIP_HEIGHT = 42;
     static const int PROGRESS_TIME_LABEL_WIDTH = 60;
     static const int PROGRESS_TIME_LABEL_GAP = 5;
-    static const DWORD SEEK_DRAG_PREVIEW_INTERVAL_MS = 120;
+    static const DWORD SEEK_DRAG_PREVIEW_INTERVAL_MS = 30;
     static const size_t SEEK_DRAG_PREVIEW_MAX_READ_COUNT = 120;
     static const size_t SEEK_FINAL_PREVIEW_MAX_READ_COUNT = 180;
     static const int EMPTY_PLUS_BUTTON_SIZE = 72;

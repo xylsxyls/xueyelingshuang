@@ -1,7 +1,7 @@
 ﻿#include "WebViewEx.h"
 
 #include <qglobal.h>
-#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+#if defined(QTCONTROLS_ENABLE_WEBKIT) && (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
 
 #include <QWebSettings>
 #include <QtNetwork/QNetworkDiskCache>
@@ -14,7 +14,7 @@ QWebPage(parent)
 {
 }
 
-bool WebPage::acceptNavigationRequest(QWebFrame *frame, const QNetworkRequest &request, NavigationType type) 
+bool WebPage::acceptNavigationRequest(QWebFrame *frame, const QNetworkRequest &request, NavigationType type)
 {
 	if (frame == nullptr)
 	{
@@ -22,7 +22,7 @@ bool WebPage::acceptNavigationRequest(QWebFrame *frame, const QNetworkRequest &r
 		return true;
 	}
 
-	if( type == QWebPage::NavigationTypeLinkClicked ) 
+	if( type == QWebPage::NavigationTypeLinkClicked )
 	{
 		QString url = request.url().toString().trimmed();
 		if (url.startsWith(QString("qfyygame:///"), Qt::CaseInsensitive))
@@ -31,7 +31,7 @@ bool WebPage::acceptNavigationRequest(QWebFrame *frame, const QNetworkRequest &r
 			return true;
 		}
 	}
-		
+
 	 return QWebPage::acceptNavigationRequest(frame,request,type);
 }
 
@@ -47,15 +47,15 @@ CWebViewEx::CWebViewEx(QWidget *parent, bool allowWebCache)
 {
 
 	QWebSettings* settings = QWebView::settings();
-	if (settings != NULL)
+	if (settings != nullptr)
 	{
 		// 防止qml里面的网页和这里有冲突，loadfinish 时发生断言
 		// 在函数 IconDatabase::setClient{ ...  ASSERT(!m_syncThreadRunning); ... }
- 		settings->setIconDatabasePath(""); 
+		settings->setIconDatabasePath("");
 		settings->setAttribute(QWebSettings::PluginsEnabled,true);
 		settings->setAttribute(QWebSettings::JavascriptEnabled, true);
 		settings->setAttribute(QWebSettings::JavascriptCanCloseWindows, false);
-		
+
 		// html5 local storage feature，持续存储，与 cookie 有区别
 		settings->setAttribute(QWebSettings::LocalStorageEnabled, true); // 代替了 LocalStorageDatabaseEnabled
 #ifdef _DEBUG
@@ -89,14 +89,14 @@ CWebViewEx::CWebViewEx(QWidget *parent, bool allowWebCache)
 
 CWebViewEx::~CWebViewEx()
 {
-	m_bDestroying = false;
+	m_bDestroying = true;
 }
 
 // 是否允许脚本关闭窗口
 void CWebViewEx::setSetting_JavaScriptCanCloseWnd(bool enable)
 {
 	QWebSettings* settings = QWebView::settings();
-	if (settings != NULL)
+	if (settings != nullptr)
 	{
 		settings->setAttribute(QWebSettings::JavascriptCanCloseWindows, enable);
 	}
@@ -106,7 +106,7 @@ void CWebViewEx::setSetting_JavaScriptCanCloseWnd(bool enable)
 void CWebViewEx::setSetting_EnableDebug(bool enable)
 {
 	QWebSettings* settings = QWebView::settings();
-	if (settings != NULL)
+	if (settings != nullptr)
 	{
 		settings->setAttribute(QWebSettings::DeveloperExtrasEnabled, enable);
 	}
@@ -174,7 +174,7 @@ void CWebViewEx::realAddJSObject()
 	if( m_bDestroying ) return;
 
 
-	QWebFrame* pFrame;
+	QWebFrame* pFrame = nullptr;
 	if( page() && page()->mainFrame())
 	{
 		pFrame = page()->mainFrame();

@@ -18,5 +18,10 @@ public:
 	virtual ~NoFocusFrameDelegate();
 
 public:
+	/** 绘制列表或树节点，去除Qt默认焦点虚线框
+	@param [in] painter 绘画指针
+	@param [in] option 节点绘制参数
+	@param [in] index 节点索引
+	*/
 	void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
 };

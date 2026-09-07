@@ -8,6 +8,8 @@
 #include "ControlBackground.h"
 #include "QtControlsMacro.h"
 
+/** 进度条控件，封装进度条本体和chunk节点的字体、边框、背景样式
+*/
 class QtControlsAPI ProgressBar :
 	public ControlShow < QProgressBar >,
 	public ControlFont < QProgressBar >,

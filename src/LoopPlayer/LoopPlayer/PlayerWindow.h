@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "LoopPlayerPlatform.h"
-#include "MfSourcePlaybackEngine.h"
+#include "FfmpegPlaybackEngine.h"
 #include "VideoTimelineProbe.h"
 
 #include <string>
@@ -335,7 +335,7 @@ namespace LoopPlayer
         @param [in] previewMaxReadCount seek后预览最多读取的视频帧数
         @param [in] reason 请求来源说明，供日志排查
         */
-        void QueueAsyncSeek(REFERENCE_TIME pos, bool keepPlaying, bool logSeek, size_t previewMaxReadCount, const wchar_t* reason);
+        void QueueAsyncSeek(REFERENCE_TIME pos, bool keepPlaying, bool logSeek, size_t previewMaxReadCount, const wchar_t* reason, bool previewOnly = false);
 
         /** 修改正在执行或等待执行的后台seek完成后的播放意图
         @param [in] keepPlaying seek完成后是否播放
@@ -420,8 +420,8 @@ namespace LoopPlayer
         HFONT uiFont_;
 
         // 自定义SourceReader播放引擎
-        MfSourcePlaybackEngine* player_;
-        // 后台seek线程，避免UI线程被SourceReader补解码阻塞
+        FfmpegPlaybackEngine* player_;
+        // 后台seek线程，避免UI线程被FFmpeg补解码阻塞
         HANDLE seekWorkerThread_;
         // 后台seek请求事件
         HANDLE seekRequestEvent_;
@@ -507,6 +507,7 @@ namespace LoopPlayer
         size_t asyncSeekPreviewMaxReadCount_;
         bool asyncSeekKeepPlaying_;
         bool asyncSeekLog_;
+        bool asyncSeekPreviewOnly_;
         VideoTimelineInfo videoTimeline_;
         std::wstring filePath_;
         std::wstring playbackPath_;

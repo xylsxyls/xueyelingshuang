@@ -6,6 +6,8 @@
 #include "ControlBackground.h"
 #include "QtControlsMacro.h"
 
+/** 多状态复选框控件，封装文字、边框、背景和指示器图片的QSS样式设置
+*/
 class QtControlsAPI CheckBox :
 	public ControlShow < QCheckBox >,
 	public ControlFont < QCheckBox >,
@@ -38,7 +40,7 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setIndicatorImage(const QString& indicatorImg,
-			   			   qint32 indicatorImgStateCount = 4,
+						   qint32 indicatorImgStateCount = 4,
 						   qint32 indicatorImgNormal = 1,
 						   qint32 indicatorImgHover = 2,
 						   qint32 indicatorImgPressed = 3,

@@ -2,54 +2,162 @@
 #include <QEvent>
 #include <QHeaderView>
 #include <QPainter>
-#include "QtControls/CGeneralStyle.h"
+#include "QtControls/ControlStyleManager.h"
 #include "QtControls/COriginalButton.h"
 #include "QtControls/CTreeViewEx.h"
 #include "QtControls/CExternalTextEdit.h"
 #include <QWindow>
 #include "DialogHelper.h"
 
-SubAccountPanel::SubAccountPanel(QWidget *parent)
-    :QWidget(parent)
-    ,mCreateSubAccountButton(new COriginalButton(this))
-    ,mHelpButton(new COriginalButton(this))
-    ,mTreeView(new CTreeViewEx(this))
-    ,mModel(new QStandardItemModel(this))
-    ,mCanCreateCount(0)
-    ,mHelpTip(new CExternalTextEdit)
+SubAccountItem::SubAccountItem()
 {
-    mTreeView->setModel(mModel);
-    mTreeView->setIndentation(0);
-    mTreeView->header()->setVisible(false);
-    mTreeView->setEditTriggers(CTreeViewEx::NoEditTriggers);
-	mTreeView->setSelectionMode(CTreeViewEx::NoSelection);
-    SubAccountItemDelegate* tDelegate = new SubAccountItemDelegate(mTreeView);
-    mTreeView->setItemDelegate(tDelegate);
+    this->setSizeHint(QSize(0, 94));
+    this->setLocked(false);
+    this->setId(0);
+    this->setIsCurrent(false);
+}
+
+void SubAccountItem::setName(const QString& name)
+{
+    setData(name, Role_Name);
+}
+
+QString SubAccountItem::name()
+{
+    return data(Role_Name).toString();
+}
+
+void SubAccountItem::setDate(const QString& date)
+{
+    setData(date, Role_Date);
+}
+
+QString SubAccountItem::date()
+{
+    return data(Role_Date).toString();
+}
+
+void SubAccountItem::setDesc(const QString& desc)
+{
+    setData(desc, Role_Desc);
+}
+
+QString SubAccountItem::desc()
+{
+    return data(Role_Desc).toString();
+}
+
+void SubAccountItem::setId(quint64 id)
+{
+    setData(id, Role_Id);
+}
+
+quint64 SubAccountItem::id()
+{
+    return data(Role_Id).toULongLong();
+}
+
+void SubAccountItem::setLocked(bool locked)
+{
+    setData(locked, Role_Locked);
+}
+
+bool SubAccountItem::locked()
+{
+    return data(Role_Locked).toBool();
+}
+
+void SubAccountItem::setIsCurrent(bool current)
+{
+    setData(current, Role_IsCurrent);
+}
+
+bool SubAccountItem::isCurrent()
+{
+    return data(Role_IsCurrent).toBool();
+}
+
+void SubAccountItem::setLockedTime(const QString& lockedTime)
+{
+    setData(lockedTime, Role_LockedTime);
+}
+
+QString SubAccountItem::lockedTime()
+{
+    return data(Role_LockedTime).toString();
+}
+
+void SubAccountItem::setLockedReasion(const QString& lockedReasion)
+{
+    setData(lockedReasion, Role_LockedReasion);
+}
+
+QString SubAccountItem::lockedReasion()
+{
+    return data(Role_LockedReasion).toString();
+}
+
+void SubAccountItem::setLockedDayCount(quint64 lockedDayCount)
+{
+    setData(lockedDayCount, Role_LockedDayCount);
+}
+
+quint64 SubAccountItem::lockedDayCount()
+{
+    return data(Role_LockedDayCount).toULongLong();
+}
+
+void SubAccountItem::setCanRename(bool canRename)
+{
+    setData(canRename, Role_CanRename);
+}
+
+bool SubAccountItem::canRename()
+{
+    return data(Role_CanRename).toBool();
+}
+
+SubAccountPanel::SubAccountPanel(QWidget* parent)
+    :QWidget(parent)
+    ,m_treeView(new CTreeViewEx(this))
+    ,m_model(new QStandardItemModel(this))
+    ,m_createSubAccountButton(new COriginalButton(this))
+    ,m_helpButton(new COriginalButton(this))
+    ,m_helpTip(new CExternalTextEdit)
+    ,m_canCreateCount(0)
+{
+    m_treeView->setModel(m_model);
+    m_treeView->setIndentation(0);
+    m_treeView->header()->setVisible(false);
+    m_treeView->setEditTriggers(CTreeViewEx::NoEditTriggers);
+	m_treeView->setSelectionMode(CTreeViewEx::NoSelection);
+    SubAccountItemDelegate* tDelegate = new SubAccountItemDelegate(m_treeView);
+    m_treeView->setItemDelegate(tDelegate);
 
 
-    mCreateSubAccountButton->setText("");
-    mCreateSubAccountButton->setFixedSize(88,21);
-    mCreateSubAccountButton->setBkgImage(CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/SubAccount/create_subaccount_button.png",
+    m_createSubAccountButton->setText("");
+    m_createSubAccountButton->setFixedSize(88,21);
+    m_createSubAccountButton->setBkgImage(ControlStyleManager::instance().resourcePath("Image/SubAccount/create_subaccount_button.png"),
                                          4,1,2,3,4,1,2,3,4);
-	connect(mCreateSubAccountButton, &COriginalButton::clicked, this, &SubAccountPanel::createSubAccount);
+	connect(m_createSubAccountButton, &COriginalButton::clicked, this, &SubAccountPanel::createSubAccount);
 
-    mHelpButton->setUnderline(true);
-    mHelpButton->setFixedSize(80,21);
-    mHelpButton->setText(QStringLiteral("[如何增加]"));
-    mHelpButton->setFontColor(QColor(255,180,120),"white", "white",QColor(255,180,120),
+    m_helpButton->setUnderline(true);
+    m_helpButton->setFixedSize(80,21);
+    m_helpButton->setText(QStringLiteral("[如何增加]"));
+    m_helpButton->setFontColor(QColor(255,180,120),"white", "white",QColor(255,180,120),
                               QColor(255,180,120),"white", "white",QColor(255,180,120));
 
-    mHelpButton->installEventFilter(this);
+    m_helpButton->installEventFilter(this);
     this->installEventFilter(this);
     this->setMouseTracking(true);
 
-    mHelpTip->setWindowFlags(mHelpTip->windowFlags() | Qt::FramelessWindowHint | Qt::Tool | Qt::WindowDoesNotAcceptFocus);
+    m_helpTip->setWindowFlags(m_helpTip->windowFlags() | Qt::FramelessWindowHint | Qt::Tool | Qt::WindowDoesNotAcceptFocus);
 
-    
-    
 
-    mHelpTip->setStyleSheet(QStringLiteral("background-color:rgba(29,29,47);border: 1px solid rgba(132,142,168); font-size:14px; font-family:'微软雅黑';color:#abb3d3;"));
-    mHelpTip->setText(QStringLiteral("1. 新建账户默认有一个账号<br><br>"                              )+
+
+
+    m_helpTip->setStyleSheet(QStringLiteral("background-color:rgba(29,29,47);border: 1px solid rgba(132,142,168); font-size:14px; font-family:'微软雅黑';color:#abb3d3;"));
+    m_helpTip->setText(QStringLiteral("1. 新建账户默认有一个账号<br><br>"                              )+
                       QStringLiteral("2. 允许立即创建第二个子账号<br><br>"                            )+
                       QStringLiteral("3. 平台等级达到5级，允许创建第三个子账号<br><br>"                 )+
                       QStringLiteral("4. 平台等级达到10级，允许创建第四个子账号<br><br>"                )+
@@ -65,13 +173,19 @@ SubAccountPanel::SubAccountPanel(QWidget *parent)
         sitem->setDate(QStringLiteral("登录时间:2018.03.07"));
         sitem->setDesc(QStringLiteral("DotaA天梯:68%胜率"));
         sitem->setId(i);
-        li << sitem;
+		li << sitem;
 		if(i == 0 )
+		{
 			sitem->setIsCurrent(true);
+		}
 		else
+		{
 			sitem->setIsCurrent(false);
+		}
         if(i > 3)
+        {
             sitem->setLocked(true);
+        }
     }
 
     this->setSubAccountList(li);
@@ -82,33 +196,34 @@ SubAccountPanel::~SubAccountPanel()
 
 }
 
-void SubAccountPanel::moveEvent(QMoveEvent *e)
+void SubAccountPanel::moveEvent(QMoveEvent* eve)
 {
-    QWidget::moveEvent(e);
-    this->layoutContorls();
+    QWidget::moveEvent(eve);
+    this->layoutControls();
 }
 
-void SubAccountPanel::layoutContorls()
+void SubAccountPanel::layoutControls()
 {
-    mCreateSubAccountButton->move(this->width() - 38 - mCreateSubAccountButton->width(),
+    m_createSubAccountButton->move(this->width() - 38 - m_createSubAccountButton->width(),
                                   14);
 
-    mHelpButton->move(this->width() - 24 - mHelpButton->width() - 6,56 - 6);
+    m_helpButton->move(this->width() - 24 - m_helpButton->width() - 6,56 - 6);
 
-    mTreeView->setGeometry(QRect(8,90, this->width() - 16, this->height() - 90 - 8));
+    m_treeView->setGeometry(QRect(8,90, this->width() - 16, this->height() - 90 - 8));
 
-    mHelpTip->setGeometry(QRect(this->mapToGlobal(mTreeView->geometry().topLeft()),
-                                this->mapToGlobal(mTreeView->geometry().bottomRight() + QPoint(1,1))));
+    m_helpTip->setGeometry(QRect(this->mapToGlobal(m_treeView->geometry().topLeft()),
+                                this->mapToGlobal(m_treeView->geometry().bottomRight() + QPoint(1,1))));
 }
 
-void SubAccountPanel::resizeEvent(QResizeEvent *e)
+void SubAccountPanel::resizeEvent(QResizeEvent* eve)
 {
-    QWidget::resizeEvent(e);
-    this->layoutContorls();
+    QWidget::resizeEvent(eve);
+    this->layoutControls();
 }
 
-void SubAccountPanel::paintEvent(QPaintEvent *e)
+void SubAccountPanel::paintEvent(QPaintEvent* eve)
 {
+    QWidget::paintEvent(eve);
     QPainter p(this);
     p.save();
     p.fillRect(rect(), "#2c344a");
@@ -117,7 +232,7 @@ void SubAccountPanel::paintEvent(QPaintEvent *e)
     p.setPen("#4a5980");
     p.drawRect(DialogHelper::rectValid(fucRect));
 
-    QFont tf = CGeneralStyle::instance()->font();
+    QFont tf = ControlStyleManager::instance().defaultFont();
     p.setPen(QColor(192,200,218));
     p.setFont(tf);
     p.drawText(DialogHelper::rectValid(fucRect.adjusted(21, 0, 0, 0)), Qt::AlignVCenter | Qt::AlignLeft, QStringLiteral("可创建的子账号数："));
@@ -125,45 +240,45 @@ void SubAccountPanel::paintEvent(QPaintEvent *e)
 
     QRect descRect(29,0,this->width(),45);
     p.setPen("#ffffff");
-    QFont tf1 = CGeneralStyle::instance()->font();
+    QFont tf1 = ControlStyleManager::instance().defaultFont();
     tf1.setPixelSize(16);
     p.setFont(tf1);
 
     p.drawText(DialogHelper::rectValid(descRect), Qt::AlignVCenter | Qt::AlignLeft, QStringLiteral("子账号管理"));
 
     QRect countRect = fucRect;
-    countRect.setRight(mHelpButton->geometry().left() - 10);
-    p.drawText(DialogHelper::rectValid(countRect), Qt::AlignVCenter | Qt::AlignRight, QString::number(mCanCreateCount));
+    countRect.setRight(m_helpButton->geometry().left() - 10);
+    p.drawText(DialogHelper::rectValid(countRect), Qt::AlignVCenter | Qt::AlignRight, QString::number(m_canCreateCount));
 
     p.restore();
-    //p.drawRect(mTreeView->geometry());
+    //p.drawRect(m_treeView->geometry());
 }
 
-bool SubAccountPanel::eventFilter(QObject *obj, QEvent *e)
+bool SubAccountPanel::eventFilter(QObject* obj, QEvent* eve)
 {
-    bool res = QWidget::eventFilter(obj, e);
-	if (obj == nullptr || e == nullptr)
+    bool res = QWidget::eventFilter(obj, eve);
+	if (obj == nullptr || eve == nullptr)
 	{
 		return res;
 	}
 
     if(obj == this)
     {
-        if(e->type() == QEvent::Enter || e->type() == QEvent::Move)
+        if(eve->type() == QEvent::Enter || eve->type() == QEvent::Move)
         {
-            mHelpTip->close();
+            m_helpTip->close();
         }
     }
-    else if(obj == mHelpButton)
+    else if(obj == m_helpButton)
     {
-        if(e->type() == QEvent::Enter)
+        if(eve->type() == QEvent::Enter)
         {
-			this->layoutContorls();
-            mHelpTip->show();
+			this->layoutControls();
+            m_helpTip->show();
         }
-        else if(e->type() == QEvent::Leave)
+        else if(eve->type() == QEvent::Leave)
         {
-            mHelpTip->close();
+            m_helpTip->close();
         }
     }
 
@@ -193,40 +308,40 @@ SubAccountItemList SubAccountPanel::standardItemLiToSubAccountItemLi(const QList
 
 CExternalTextEdit* SubAccountPanel::helpTip()
 {
-	return mHelpTip;
+	return m_helpTip;
 }
 
 quint64 SubAccountPanel::canCreateCount()
 {
-	return mCanCreateCount;
+	return m_canCreateCount;
 }
 
-void SubAccountPanel::setCanCreateCount(quint64 v)
+void SubAccountPanel::setCanCreateCount(quint64 count)
 {
-    mCanCreateCount = v;
+    m_canCreateCount = count;
     this->update();
 }
 
 void SubAccountPanel::setSubAccountList(const SubAccountItemList &li)
 {
-    mModel->clear();
-    mModel->appendColumn(this->subAccountItemLiToStandardItemLi(li));
-    for(int i = 0; i < mModel->rowCount(); i++)
+    m_model->clear();
+    m_model->appendColumn(this->subAccountItemLiToStandardItemLi(li));
+    for(int i = 0; i < m_model->rowCount(); i++)
     {
-        mTreeView->openPersistentEditor(mModel->index(i,0));
+        m_treeView->openPersistentEditor(m_model->index(i,0));
     }
 
-	//	mModel->setSortRole(SubAccountItem::Role_IsCurrent);
-	//	mModel->sort(0, Qt::DescendingOrder);
+	//	m_model->setSortRole(SubAccountItem::Role_IsCurrent);
+	//	m_model->sort(0, Qt::DescendingOrder);
 }
 
 
 SubAccountItemList SubAccountPanel::subAccountList()
 {
 	SubAccountItemList li;
-	for(int i = 0; i < mModel->rowCount(); i++)
+	for(int i = 0; i < m_model->rowCount(); i++)
 	{
-		li << (SubAccountItem*)(mModel->item(i,0));
+		li << (SubAccountItem*)(m_model->item(i,0));
 	}
 
 	return li;
@@ -234,13 +349,13 @@ SubAccountItemList SubAccountPanel::subAccountList()
 
 void SubAccountPanel::appendSubAccount(SubAccountItem* item)
 {
-	mModel->appendRow(item);
-	mTreeView->openPersistentEditor(item->index());
+	m_model->appendRow(item);
+	m_treeView->openPersistentEditor(item->index());
 }
 
 SubAccountItem* SubAccountPanel::getSubAccountItemById(quint64 id)
 {
-	SubAccountItem* res = NULL;
+	SubAccountItem* res = nullptr;
 	SubAccountItemList allLi = subAccountList();
 	for(int i = 0; i < allLi.count(); i++)
 	{
@@ -259,106 +374,116 @@ void SubAccountPanel::removeSubAccountItem(quint64 id)
 	SubAccountItem* sitem = getSubAccountItemById(id);
 	if(sitem)
 	{
-		mModel->removeRow(sitem->row());
+		m_model->removeRow(sitem->row());
 	}
 }
 
-SubAccountItemView::SubAccountItemView(QWidget *parent)
+SubAccountItemView::SubAccountItemView(QWidget* parent)
     :QWidget(parent)
-    ,mId(0)
-    ,mSwitchButton(new COriginalButton(this))
-	,mHelpButton(new COriginalButton(this))
-	,mChangeNameButton(new COriginalButton(this))
+    ,m_switchButton(new COriginalButton(this))
+	,m_helpButton(new COriginalButton(this))
+	,m_changeNameButton(new COriginalButton(this))
+	,m_blocked(false)
+    ,m_id(0)
 {
 	setBlocked(true);
-    mSwitchButton->setText("");
-    mSwitchButton->resize(51, 21);
-    mSwitchButton->setBkgImage(CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/SubAccount/switch_subaccount_button.png",
+    m_switchButton->setText("");
+    m_switchButton->resize(51, 21);
+    m_switchButton->setBkgImage(ControlStyleManager::instance().resourcePath("Image/SubAccount/switch_subaccount_button.png"),
                                4,1,2,3,4,1,2,3,4);
 
-    connect(mSwitchButton, &COriginalButton::clicked,
+    connect(m_switchButton, &COriginalButton::clicked,
             this, &SubAccountItemView::onSwitchButtonClicked);
 
 
-	mHelpButton->setText("");
-	mHelpButton->resize(19,19);
-	mHelpButton->setBkgImage(CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/SubAccount/help_button.png",
+	m_helpButton->setText("");
+	m_helpButton->resize(19,19);
+	m_helpButton->setBkgImage(ControlStyleManager::instance().resourcePath("Image/SubAccount/help_button.png"),
 		3,1,2,3,3,1,2,3,3);
 
-	connect(mHelpButton, &COriginalButton::clicked, this, &SubAccountItemView::helpButtonClicked);
+	connect(m_helpButton, &COriginalButton::clicked, this, &SubAccountItemView::helpButtonClicked);
 
-	mChangeNameButton->setText(QStringLiteral("改名"));
-	mChangeNameButton->resize(51,21);
-	mChangeNameButton->setBorderWidth(1);
-	mChangeNameButton->setBorderStyle("solid");
-	mChangeNameButton->setBorderColor(QColor(202,212,248),QColor(0,248,255), QColor(44,52,74), QColor(180,180,181));
-	mChangeNameButton->setFontColor(QColor(202,212,248),QColor(0,248,255), QColor(44,52,74), QColor(180,180,181),QColor(202,212,248),QColor(0,248,255), QColor(44,52,74), QColor(180,180,181));
+	m_changeNameButton->setText(QStringLiteral("改名"));
+	m_changeNameButton->resize(51,21);
+	m_changeNameButton->setBorderWidth(1);
+	m_changeNameButton->setBorderStyle("solid");
+	m_changeNameButton->setBorderColor(QColor(202,212,248),QColor(0,248,255), QColor(44,52,74), QColor(180,180,181));
+	m_changeNameButton->setFontColor(QColor(202,212,248),QColor(0,248,255), QColor(44,52,74), QColor(180,180,181),QColor(202,212,248),QColor(0,248,255), QColor(44,52,74), QColor(180,180,181));
 
-	connect(mChangeNameButton, &COriginalButton::clicked, this, &SubAccountItemView::onChangeNameButtonClicked);
+	connect(m_changeNameButton, &COriginalButton::clicked, this, &SubAccountItemView::onChangeNameButtonClicked);
 }
 
-void SubAccountItemView::resizeEvent(QResizeEvent *e)
+void SubAccountItemView::resizeEvent(QResizeEvent* eve)
 {
-    QWidget::resizeEvent(e);
+    QWidget::resizeEvent(eve);
     this->layoutControls();
 }
 
 void SubAccountItemView::layoutControls()
 {
-    mSwitchButton->move(this->width() - mSwitchButton->width() - 22, 17);
-	mChangeNameButton->move(mSwitchButton->x(), mSwitchButton->y() + mSwitchButton->height() + 10);
-	mHelpButton->move(this->width() - mHelpButton->width() - 2, 2);
+    m_switchButton->move(this->width() - m_switchButton->width() - 22, 17);
+	m_changeNameButton->move(m_switchButton->x(), m_switchButton->y() + m_switchButton->height() + 10);
+	m_helpButton->move(this->width() - m_helpButton->width() - 2, 2);
 }
 
 void SubAccountItemView::onSwitchButtonClicked()
 {
-    emit switchAccount(mId);
+    emit switchAccount(m_id);
 }
 
 void SubAccountItemView::onChangeNameButtonClicked()
 {
-	emit renameAccount(mId);
+	emit renameAccount(m_id);
 }
 
-void SubAccountItemView::showSwitchButton(bool s)
+void SubAccountItemView::setId(quint64 id)
 {
-	mSwitchButton->setVisible(s);
-	//mChangeNameButton->setVisible(s);
+    m_id = id;
 }
 
-void SubAccountItemView::setBlocked(bool s)
+void SubAccountItemView::showSwitchButton(bool show)
 {
-	mBlocked = s;
-	mSwitchButton->setEnabled(!s);
-	mChangeNameButton->setEnabled(!s);
-	mHelpButton->setVisible(s);
+	m_switchButton->setVisible(show);
+	//m_changeNameButton->setVisible(show);
+}
+
+void SubAccountItemView::setBlocked(bool blocked)
+{
+	m_blocked = blocked;
+	m_switchButton->setEnabled(!blocked);
+	m_changeNameButton->setEnabled(!blocked);
+	m_helpButton->setVisible(blocked);
 
 	this->update();
 }
 
-SubAccountItemDelegate::SubAccountItemDelegate(QObject *parent)
+SubAccountItemDelegate::SubAccountItemDelegate(QObject* parent)
     :QStyledItemDelegate(parent)
 {
 
 }
 
-void SubAccountItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+void SubAccountItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     if (painter == nullptr)
     {
         return;
     }
     CTreeViewEx* view = qobject_cast<CTreeViewEx*> (parent());
-    if(view == NULL)
+    if(view == nullptr)
+    {
         return ;
+    }
 
     QStandardItemModel* model = (QStandardItemModel*)(view->model());
     SubAccountItem* sitem = (SubAccountItem*)( model->item(index.row(),0));
-    if(sitem == NULL)
+    if(sitem == nullptr)
+    {
         return;
+    }
 
     QColor bkgColor;
-    QFont  tf  = CGeneralStyle::instance()->font();
+    QFont  tf  = ControlStyleManager::instance().defaultFont();
     QColor tc1 = "#ffffff";
     QColor tc2 = "#b3bfdc";
     QColor tc3 = "#efefef";
@@ -403,30 +528,40 @@ void SubAccountItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem
     switch(useTC)
     {
     case 1:
+    {
         painter->setPen(tc1);
         break;
+    }
     case 2:
+    {
         painter->setPen(tc2);
         break;
+    }
     case 3:
+    {
         painter->setPen(tc3);
         break;
+    }
+    default:
+    {
+        break;
+    }
     }
 
     painter->drawText(DialogHelper::rectValid(dateRect), Qt::AlignLeft | Qt::AlignTop, sitem->date());
     painter->drawText(DialogHelper::rectValid(descRect), Qt::AlignLeft | Qt::AlignTop, sitem->desc());
 }
 
-QWidget *SubAccountItemDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const
+QWidget* SubAccountItemDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
 	CTreeViewEx* view = qobject_cast<CTreeViewEx*> (this->parent());
-	if(view == NULL)
+	if(view == nullptr)
 	{
 		return QStyledItemDelegate::createEditor(parent, option, index);
 	}
 
 	SubAccountPanel* panel = qobject_cast<SubAccountPanel*> (view->parent());
-	if(panel == NULL)
+	if(panel == nullptr)
 	{
 		return QStyledItemDelegate::createEditor(parent, option, index);
 	}
@@ -439,16 +574,20 @@ QWidget *SubAccountItemDelegate::createEditor(QWidget *parent, const QStyleOptio
     return itemView;
 }
 
-void SubAccountItemDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
+void SubAccountItemDelegate::setEditorData(QWidget* editor, const QModelIndex& index) const
 {
     CTreeViewEx* view = qobject_cast<CTreeViewEx*> (parent());
-    if(view == NULL)
+    if(view == nullptr)
+    {
         return ;
+    }
 
     QStandardItemModel* model = (QStandardItemModel*)(view->model());
     SubAccountItem* sitem = (SubAccountItem*)( model->item(index.row(),0));
-    if(sitem == NULL)
+    if(sitem == nullptr)
+    {
         return;
+    }
 
     SubAccountItemView* itemView = (SubAccountItemView*)(editor);
     itemView->setId(sitem->id());
@@ -458,7 +597,7 @@ void SubAccountItemDelegate::setEditorData(QWidget *editor, const QModelIndex &i
 	itemView->showSwitchButton(!sitem->isCurrent());
 }
 
-void SubAccountItemDelegate::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const
+void SubAccountItemDelegate::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     QRect tagRect = option.rect.adjusted(0,0,0,-10);
     editor->setGeometry(tagRect);

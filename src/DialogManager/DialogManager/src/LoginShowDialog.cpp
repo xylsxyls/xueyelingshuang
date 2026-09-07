@@ -1,10 +1,10 @@
 ﻿#include "LoginShowDialog.h"
 
-#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+#if defined(QTCONTROLS_ENABLE_WEBKIT) && (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
 
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
-#include "QtControls/CGeneralStyle.h"
+#include "QtControls/ControlStyleManager.h"
 #include <QtWebKitWidgets/QWebView>
 #include <QDesktopServices>
 #include "DialogHelper.h"
@@ -50,8 +50,8 @@ m_preLoginTime(nullptr)
 
     DialogHelper::setSeparator(m_separator, true, QColor(60, 73, 104, 255), QColor(50, 60, 85, 255));
     DialogHelper::setLabel(m_horn, "", QColor(0, 0, 0, 0), 12);
-	m_horn->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/broadcast.png", 1, 1, 1, 1);
-	
+	m_horn->setBackgroundImage(ControlStyleManager::instance().resourcePath("Common/Image/NotificationView/broadcast.png"), 1, 1, 1, 1);
+
 	m_tip->setStyleSheet("background-color:rgb(44,52,74); padding: 0px;");
 
     QWebPage* page = m_tip->page();
@@ -72,7 +72,7 @@ m_preLoginTime(nullptr)
 	m_more->setTextAlign("right");
 	m_more->setUnderline(true);
 	QObject::connect(m_more, SIGNAL(clicked()), this, SLOT(onMoreClicked()));
-	
+
 	m_time->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
 
 	m_preLoginLabel->setBackgroundColor("#272e41");
@@ -82,7 +82,7 @@ m_preLoginTime(nullptr)
 	m_preLoginText->setAlignment(Qt::AlignVCenter);
 	m_preLoginText->setFontSize(11);
 	m_preLoginText->setFontFace(QStringLiteral("微软雅黑"));
-	m_changePassword->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/image/change_password.png", 2, 1, 2, 1, 1);
+	m_changePassword->setBkgImage(ControlStyleManager::instance().resourcePath("image/change_password.png"), 2, 1, 2, 1, 1);
 	m_changePassword->setToolTip(QStringLiteral("修改密码"));
 	QObject::connect(m_changePassword, &COriginalButton::clicked, this, &LoginShowDialog::onChangePasswordClicked);
 	m_preLoginAddr->setTextColor("#ebebeb");
@@ -93,7 +93,7 @@ m_preLoginTime(nullptr)
 	m_preLoginTime->setAlignment(Qt::AlignVCenter);
 	m_preLoginTime->setFontSize(11);
 	m_preLoginTime->setFontFace(QStringLiteral("微软雅黑"));
-	
+
 	resize(252, 193);
 }
 

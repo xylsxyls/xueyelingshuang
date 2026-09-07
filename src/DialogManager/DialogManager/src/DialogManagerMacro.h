@@ -16,5 +16,5 @@
 
 #if defined(STATIC_LIB)
     #undef DialogManagerAPI
-    #define DialogManagerAPI 
+    #define DialogManagerAPI
 #endif

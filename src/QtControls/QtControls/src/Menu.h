@@ -11,6 +11,8 @@
 
 class QMouseEvent;
 class MenuCustomStyle;
+/** 菜单控件，封装菜单项图标切换、分割线样式、子菜单生命周期和QSS样式设置
+*/
 class QtControlsAPI Menu :
 	public ControlShow < QMenu >,
 	public ControlFont < QMenu >,
@@ -92,9 +94,12 @@ private:
 	@return 返回改变后的图标
 	*/
 	QIcon ChangeIcon(QAction* action, const QIcon& icon);
-	
+
 private:
+	// 菜单项对应的原始图标集合
 	std::map<QAction*, QIcon> m_mapIconData;
+	// 菜单自定义Style对象
 	MenuCustomStyle* m_pCustomStyle;
+	// 当前菜单持有的子菜单对象列表
 	std::vector<Menu*> m_vecMenu;
 };

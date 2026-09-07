@@ -8,7 +8,7 @@
 #include "ControlBackground.h"
 #include "QtControlsMacro.h"
 
-/** 字条或图片控件，该控件的setBackground相关函数没有分割效果，必须使用setBorder相关函数
+/** 滑块控件，封装滑槽和滑块节点的字体、边框、背景样式
 */
 class QtControlsAPI Slider :
 	public ControlShow < QSlider >,

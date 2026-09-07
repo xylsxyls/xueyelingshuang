@@ -1,7 +1,7 @@
 ﻿#include "HtmlComboBoxStyle.h"
 #include <QPainter>
 #include "HtmlComboBox.h"
-#include "CGeneralStyle.h"
+#include "ControlStyleManager.h"
 
 HtmlComboBoxStyle::HtmlComboBoxStyle(HtmlComboBox* htmlComboBox) :
 m_htmlComboBox(htmlComboBox)
@@ -26,10 +26,10 @@ void HtmlComboBoxStyle::drawItemText(QPainter* painter,
 	painter->save();
 
 	painter->setPen(pal.color(textRole));
-	CGeneralStyle::instance()->drawHtmlTextByLabel(painter,
-												   rect,
-												   text,
-												   Qt::AlignLeft | Qt::AlignVCenter);
+	ControlStyleManager::instance().drawHtmlTextByLabel(painter,
+														 rect,
+														 text,
+														 Qt::AlignLeft | Qt::AlignVCenter);
 
 	painter->restore();
 }

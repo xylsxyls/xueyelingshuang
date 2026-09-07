@@ -4,7 +4,6 @@
 #include "QtControls/COriginalButton.h"
 #include <QEvent>
 #include "DialogHelper.h"
-#include "QtControls/CGeneralStyle.h"
 
 AccountDialog::AccountDialog() :
 m_sep(nullptr),
@@ -24,7 +23,7 @@ m_ignore(nullptr)
     {
         return;
     }
-	
+
 	m_sep->setBackgroundColor(QColor(74, 89, 128, 255));
 
     DialogHelper::setLabel(m_registerAlt, QString::fromStdWString(L"注册小号"), QColor(255, 255, 255, 255), 18);

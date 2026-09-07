@@ -35,9 +35,14 @@ public:
 	QString text();
 
 protected:
+	/** 显示时根据当前控件宽度刷新省略号文本
+	@param [in] eve Qt显示事件
+	*/
 	virtual void showEvent(QShowEvent* eve);
 
 private:
+	// 原始完整文本
 	std::wstring m_str;
+	// 文本左侧偏移量
 	qint32 m_leftOrigin;
 };

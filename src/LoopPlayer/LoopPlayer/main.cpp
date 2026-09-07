@@ -63,17 +63,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int cmdShow)
     }
     Logf(L"CoInitializeEx succeeded");
 
-    hr = MFStartup(MF_VERSION);
-    if (FAILED(hr))
-    {
-        Logf(L"MFStartup failed: 0x%08X", static_cast<unsigned int>(hr));
-        CoUninitialize();
-        MessageBoxW(nullptr, L"Media Foundation 初始化失败。", kAppTitle, MB_ICONERROR | MB_OK);
-        ShutdownLog();
-        return 1;
-    }
-    Logf(L"MFStartup succeeded");
-
     INITCOMMONCONTROLSEX icc = { 0 };
     icc.dwSize = sizeof(icc);
     icc.dwICC = ICC_BAR_CLASSES | ICC_STANDARD_CLASSES;
@@ -84,7 +73,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int cmdShow)
         PlayerWindow window;
         if (!window.Create(hInstance, cmdShow))
         {
-            MFShutdown();
             CoUninitialize();
             Logf(L"Process exit: create window failed");
             ShutdownLog();
@@ -107,7 +95,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int cmdShow)
         Logf(L"Message loop ended: code=%d", exitCode);
     }
 
-    MFShutdown();
     CoUninitialize();
     Logf(L"Process exit: code=%d", exitCode);
     ShutdownLog();

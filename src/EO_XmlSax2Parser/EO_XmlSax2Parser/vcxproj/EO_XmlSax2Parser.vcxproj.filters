@@ -25,11 +25,20 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\EO_XmlSax2Handler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\EO_XmlSax2Parser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\XMLAttribute.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\EO_XmlSax2Handler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\EO_XmlSax2Parser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -37,6 +46,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\EO_XmlSax2ParserMacro.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\XMLAttribute.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

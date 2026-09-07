@@ -2,6 +2,8 @@
 #include <QListWidgetItem>
 #include "QtControlsMacro.h"
 
+/** 带业务ID的列表项，给QListWidgetItem附加一个整型ID字段
+*/
 class QtControlsAPI ListWidgetIdItem : public QListWidgetItem
 {
 public:
@@ -21,5 +23,6 @@ public:
 	qint64 getId();
 
 private:
+	// 列表项对应的业务ID
 	qint64 m_id;
 };

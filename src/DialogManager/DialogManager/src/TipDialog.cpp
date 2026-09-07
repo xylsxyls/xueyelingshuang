@@ -3,7 +3,6 @@
 #include "QtControls/COriginalButton.h"
 #include "DialogManager.h"
 #include "DialogHelper.h"
-#include "QtControls/CGeneralStyle.h"
 
 TipDialog::TipDialog():
 m_tip(nullptr),

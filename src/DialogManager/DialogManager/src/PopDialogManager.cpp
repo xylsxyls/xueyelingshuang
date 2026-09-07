@@ -29,7 +29,7 @@ void PopDialogManager::popDialog(DialogParam& param)
         popDialogPtr = askDialog;
         break;
     }
-#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+#if defined(QTCONTROLS_ENABLE_WEBKIT) && (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
     case ADVERT_ASK_DIALOG:
     {
         AdvertAskDialogParam& advertAskDialogParam = (AdvertAskDialogParam&)param;
@@ -281,7 +281,7 @@ void PopDialogManager::operateDialog(OperateParam& param)
 		dialogPtr->setErrorType(operateParam.m_errorText);
 		break;
 	}
-	
+
 	default:
 		break;
 	}
