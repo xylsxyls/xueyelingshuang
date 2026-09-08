@@ -1,16 +1,20 @@
 ﻿#include "DialogShow.h"
 #include "Label.h"
-#include "COriginalButton.h"
+#include "PushButton.h"
 
 DialogShow::DialogShow() :
-m_acceptButton(nullptr),
+m_exit(nullptr),
 m_userResult(nullptr),
 m_time(nullptr),
-m_exit(nullptr),
-m_result(nullptr)
+m_result(nullptr),
+m_internalUserResult(-1),
+m_internalResult(ERROR_RESULT),
+m_acceptButton(nullptr),
+m_isUsingInternalResultStorage(false),
+m_closedSignalEmitted(false)
 {
     m_time = new Label(this);
-    m_exit = new COriginalButton(this);
+    m_exit = new PushButton(this);
     QObject::connect(this, &DialogBase::timeRest, this, &DialogShow::onTimeUpdate);
 }
 
@@ -49,6 +53,10 @@ qint32 DialogShow::userResult()
 void DialogShow::setUserResultPtr(qint32* userResult)
 {
 	m_userResult = userResult;
+	if (m_userResult != &m_internalUserResult)
+	{
+		m_isUsingInternalResultStorage = false;
+	}
 }
 
 qint32* DialogShow::userResultPtr()
@@ -56,7 +64,28 @@ qint32* DialogShow::userResultPtr()
 	return m_userResult;
 }
 
-void DialogShow::initAcceptButton(COriginalButton* button)
+void DialogShow::useInternalResultStorage(DialogResult result, qint32 userResult)
+{
+	m_internalResult = result;
+	m_internalUserResult = userResult;
+	m_result = &m_internalResult;
+	m_userResult = &m_internalUserResult;
+	m_isUsingInternalResultStorage = true;
+}
+
+void DialogShow::clearResultStorage()
+{
+	m_result = nullptr;
+	m_userResult = nullptr;
+	m_isUsingInternalResultStorage = false;
+}
+
+bool DialogShow::closeSignalEmitted() const
+{
+	return m_closedSignalEmitted;
+}
+
+void DialogShow::initAcceptButton(PushButton* button)
 {
     if (button == nullptr)
     {
@@ -72,6 +101,10 @@ void DialogShow::initAcceptButton(COriginalButton* button)
 void DialogShow::setWindowResultAddr(DialogResult* result)
 {
     m_result = result;
+	if (m_result != &m_internalResult)
+	{
+		m_isUsingInternalResultStorage = false;
+	}
 }
 
 void DialogShow::setWindowResult(DialogResult result)
@@ -125,6 +158,11 @@ bool DialogShow::check()
     return m_exit != nullptr && m_time != nullptr && DialogBase::check();
 }
 
+void DialogShow::resetCloseState()
+{
+	m_closedSignalEmitted = false;
+}
+
 //void DialogShow::escEvent()
 //{
 //    if (m_result != nullptr)
@@ -145,6 +183,11 @@ bool DialogShow::check()
 
 void DialogShow::showEvent(QShowEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
+	resetCloseState();
     if (!check())
     {
         return;
@@ -158,6 +201,14 @@ void DialogShow::showEvent(QShowEvent* eve)
 
 void DialogShow::closeEvent(QCloseEvent* eve)
 {
-    DialogBase::closeEvent(eve);
+	if (eve != nullptr)
+	{
+		DialogBase::closeEvent(eve);
+	}
+	if (m_closedSignalEmitted)
+	{
+		return;
+	}
+	m_closedSignalEmitted = true;
 	emit closedSignal(m_result);
 }

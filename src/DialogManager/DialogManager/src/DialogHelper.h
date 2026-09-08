@@ -12,7 +12,7 @@
 #define setNotifyButtonConfig(button, buttonText, acceptDone, fontSize) DialogHelper::setButton(this, button, buttonText, QColor(255, 255, 255, 255), "", acceptDone, fontSize, &m_mapResult, 0, false)
 
 class Label;
-class COriginalButton;
+class PushButton;
 class LineEdit;
 class CPasswordInputBox;
 class DialogShow;
@@ -53,7 +53,7 @@ public:
     @param [in] isPop 是否是弹窗的按钮
     */
     static void setButton(DialogShow* dialog,
-                          COriginalButton* button,
+                          PushButton* button,
                           const QString& text,
                           const QColor& textColor,
                           const QString& backgroundImage,

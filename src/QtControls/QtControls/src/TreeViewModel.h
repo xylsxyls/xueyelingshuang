@@ -1,6 +1,8 @@
 ﻿#pragma once
+#include <map>
 #include <QStandardItemModel>
 #include <stdint.h>
+#include <vector>
 #include "TreeText.h"
 #include "QtControlsMacro.h"
 

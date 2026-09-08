@@ -3,68 +3,156 @@
 #include <QTime>
 #include <QMetaType>
 #include <QObject>
+#include <QSharedPointer>
 #include "QtControls/DialogResult.h"
+#include <new>
 #include <vector>
 
 class QWindow;
 
-enum DialogType
+/** 窗口类型ID，内置窗口使用1到9999，业务自定义窗口从10000开始
+*/
+typedef quint64 DialogType;
+
+/** 业务自定义窗口类型ID起始值
+*/
+static const DialogType CUSTOM_DIALOG_TYPE_BEGIN = 10000;
+
+/** 错误类型
+*/
+static const DialogType ERROR_DIALOG_TYPE = 0;
+
+/** 询问框
+*/
+static const DialogType ASK_DIALOG = 1;
+
+/** 包含广告位的询问框
+*/
+static const DialogType ADVERT_ASK_DIALOG = 2;
+
+/** 输出框
+*/
+static const DialogType INPUT_DIALOG = 3;
+
+/** 提示框
+*/
+static const DialogType TIP_DIALOG = 4;
+
+/** 等待框
+*/
+static const DialogType WAIT_DIALOG = 5;
+
+/** 下载框（新版）
+*/
+static const DialogType DOWNLOAD_OPERATE_DIALOG = 8;
+
+/** 账号管理框
+*/
+static const DialogType ACCOUNT_MANAGER_DIALOG = 9;
+
+/** 询问通知框
+*/
+static const DialogType ASK_SHOW_DIALOG = 10;
+
+/** 提示通知框
+*/
+static const DialogType TIP_SHOW_DIALOG = 11;
+
+/** 登录通知框
+*/
+static const DialogType LOGIN_SHOW_DIALOG = 12;
+
+/** 广告通知框
+*/
+static const DialogType ADVERT_SHOW_DIALOG = 13;
+
+/** 业务窗口复用键，用来判断makeDialog时应创建新窗口还是复用已有窗口
+*/
+struct DialogUserKey
 {
-    /** 错误类型
-    */
-    ERROR_DIALOG_TYPE,
-
-    /** 询问框
-    */
-    ASK_DIALOG,
-
-    /** 包含广告位的询问框
-    */
-    ADVERT_ASK_DIALOG,
-
-    /** 输出框
-    */
-    INPUT_DIALOG,
-
-    /** 提示框
-    */
-    TIP_DIALOG,
-
-    /** 等待框
-    */
-    WAIT_DIALOG,
-
-    /** 下载框（老版）
-    */
-    DOWNLOAD_DIALOG,
-
-    /** 下载错误框（老版）
-    */
-    DOWNLOAD_ERROR_DIALOG,
-
-    /** 下载框（新版）
-    */
-    DOWNLOAD_OPERATE_DIALOG,
-
-    /** 账号管理框
-    */
-    ACCOUNT_MANAGER_DIALOG,
-
-    /** 询问通知框
-    */
-    ASK_SHOW_DIALOG,
-
-    /** 提示通知框
-    */
-    TIP_SHOW_DIALOG,
-
-    /** 登录通知框
-    */
-    LOGIN_SHOW_DIALOG,
-
-	/** 广告通知框
+	/** 业务命名空间ID，由上层保证全局唯一；传0时表示兼容旧接口的默认业务域
 	*/
-	ADVERT_SHOW_DIALOG
+	quint64 m_businessId;
+
+	/** 命名空间内的对象ID，例如订单号、下载任务ID或账号ID
+	*/
+	quint64 m_userId;
+
+	/** 构造函数
+	*/
+	DialogUserKey() :
+	m_businessId(0),
+	m_userId(0)
+	{
+
+	}
+
+	/** 构造函数
+	@param [in] businessId 业务模块ID
+	@param [in] userId 业务对象ID
+	*/
+	DialogUserKey(quint64 businessId, quint64 userId) :
+	m_businessId(businessId),
+	m_userId(userId)
+	{
+
+	}
+
+	/** 判断是否需要用这个键登记窗口；0和0表示普通弹窗，每次makeDialog都创建新实例
+	@return 返回true表示业务键有效
+	*/
+	bool isValid() const
+	{
+		return m_businessId != 0 || m_userId != 0;
+	}
+
+	/** 判断两个业务键是否相同
+	@param [in] other 另一个业务键
+	@return 返回true表示两个业务键相同
+	*/
+	bool operator==(const DialogUserKey& other) const
+	{
+		return m_businessId == other.m_businessId && m_userId == other.m_userId;
+	}
+
+	/** 判断当前业务键是否小于另一个业务键，用于std::map排序
+	@param [in] other 另一个业务键
+	@return 返回true表示当前业务键排序在前
+	*/
+	bool operator<(const DialogUserKey& other) const
+	{
+		if (m_businessId != other.m_businessId)
+		{
+			return m_businessId < other.m_businessId;
+		}
+		return m_userId < other.m_userId;
+	}
+};
+Q_DECLARE_METATYPE(DialogUserKey)
+
+/** 窗口展示模式，决定DialogManager使用exec、show还是静态窗口缓存
+*/
+enum DialogShowMode
+{
+	/** 无效展示模式
+	*/
+	ERROR_DIALOG_SHOW_MODE,
+
+	/** 模态弹窗，使用exec显示
+	*/
+	POP_DIALOG_SHOW_MODE,
+
+	/** 非模态通知窗口，使用show显示
+	*/
+	NOTIFY_DIALOG_SHOW_MODE,
+
+	/** 静态窗口，同类型只创建一个并可重复显示
+	*/
+	STATIC_DIALOG_SHOW_MODE,
+
+	/** 普通非模态自定义窗口，使用show显示
+	*/
+	MODELESS_DIALOG_SHOW_MODE
 };
 
 enum OperateType
@@ -145,7 +233,7 @@ enum OperateType
 	*/
 	DIALOG_EXIST_BY_DIALOG_ID_OPERATE,
 
-	/** 通过用户自定义ID判断窗口是否存在
+	/** 通过业务窗口复用键判断窗口是否存在
 	*/
 	DIALOG_EXIST_BY_USER_ID_OPERATE,
 
@@ -153,7 +241,7 @@ enum OperateType
 	*/
 	CHANGE_USER_RESULT_BY_DIALOG_ID_OPERATE,
 
-	/** 通过UserId改变用户自定义参数
+	/** 通过业务窗口复用键改变用户自定义参数
 	*/
 	CHANGE_USER_RESULT_BY_USER_ID_OPERATE,
 
@@ -161,7 +249,7 @@ enum OperateType
 	*/
 	DESTROY_DIALOG_BY_DIALOG_ID_OPERATE,
 
-	/** 通过用户自定义ID销毁窗口
+	/** 通过业务窗口复用键销毁窗口
 	*/
 	DESTROY_DIALOG_BY_USER_ID_OPERATE,
 
@@ -183,7 +271,11 @@ enum OperateType
 
 	/** 获取静态框窗口句柄
 	*/
-	STATIC_DIALOG_HANDLE_OPERATE
+	STATIC_DIALOG_HANDLE_OPERATE,
+
+	/** 通过业务窗口复用键获取窗口实例ID，放在末尾避免改变历史操作类型数值
+	*/
+	DIALOG_ID_BY_USER_ID_OPERATE
 };
 
 /** 操作参数
@@ -197,25 +289,62 @@ struct OperateParam
 		m_operateType = ERROR_OPERATE_TYPE;
 	}
 
+	/** 析构函数，保证操作参数可以安全进行运行时类型校验
+	*/
+	virtual ~OperateParam()
+	{
+
+	}
+
 	/** 获取操作类型
 	@return 返回操作类型
 	*/
-	OperateType operateType()
+	OperateType operateType() const
 	{
 		return m_operateType;
 	}
 protected:
-	// 当前操作类型
+	/** 当前操作类型，由派生参数在构造函数中写入，运行层用它做第一层路由
+	*/
 	OperateType m_operateType;
+};
+
+/** 需要按业务对象定位窗口的操作参数基类
+*/
+struct DialogUserOperateParam : public OperateParam
+{
+	/** 业务命名空间ID；不同业务可以复用相同的m_userId而不会互相影响
+	*/
+	quint64 m_businessId;
+
+	/** 命名空间内的对象ID；和m_businessId同时相同才会命中同一个窗口
+	*/
+	quint64 m_userId;
+
+	/** 构造函数
+	*/
+	DialogUserOperateParam() :
+	m_businessId(0),
+	m_userId(0)
+	{
+
+	}
+
+	/** 生成AllocManager查找窗口时使用的组合键
+	@return 返回由业务ID和用户ID组成的窗口复用键
+	*/
+	DialogUserKey userKey() const
+	{
+		return DialogUserKey(m_businessId, m_userId);
+	}
 };
 
 /** 设置速度（支持多线程）
 */
-struct SetDownloadSpeedOperateParam : public OperateParam
+struct SetDownloadSpeedOperateParam : public DialogUserOperateParam
 {
-	//用户自定义ID
-	quint64 m_userId;
-	//速度
+	/** 速度
+	*/
 	QString m_speed;
 
 	/** 构造函数
@@ -223,17 +352,15 @@ struct SetDownloadSpeedOperateParam : public OperateParam
 	SetDownloadSpeedOperateParam()
 	{
 		m_operateType = SET_DOWNLOAD_SPEED_OPERATE;
-		m_userId = 0;
 	}
 };
 
 /** 设置已下载量（支持多线程）
 */
-struct SetDownloadedOperateParam : public OperateParam
+struct SetDownloadedOperateParam : public DialogUserOperateParam
 {
-	//用户自定义ID
-	quint64 m_userId;
-	//已下载量
+	/** 已下载量
+	*/
 	QString m_downloaded;
 
 	/** 构造函数
@@ -241,17 +368,15 @@ struct SetDownloadedOperateParam : public OperateParam
 	SetDownloadedOperateParam()
 	{
 		m_operateType = SET_DOWNLOADED_OPERATE;
-		m_userId = 0;
 	}
 };
 
 /** 设置时间（支持多线程）
 */
-struct SetDownloadTimeOperateParam : public OperateParam
+struct SetDownloadTimeOperateParam : public DialogUserOperateParam
 {
-	//用户自定义ID
-	quint64 m_userId;
-	// 下载时间
+	/** 下载时间
+	*/
 	QString m_time;
 
 	/** 构造函数
@@ -259,17 +384,15 @@ struct SetDownloadTimeOperateParam : public OperateParam
 	SetDownloadTimeOperateParam()
 	{
 		m_operateType = SET_DOWNLOAD_TIME_OPERATE;
-		m_userId = 0;
 	}
 };
 
 /** 设置比例（支持多线程）
 */
-struct SetRateOperateParam : public OperateParam
+struct SetRateOperateParam : public DialogUserOperateParam
 {
-	//用户自定义ID
-	quint64 m_userId;
-	//下载百分比
+	/** 下载百分比
+	*/
 	qint32 m_persent;
 
 	/** 构造函数
@@ -277,18 +400,16 @@ struct SetRateOperateParam : public OperateParam
 	SetRateOperateParam()
 	{
 		m_operateType = SET_RATE_OPERATE;
-		m_userId = 0;
 		m_persent = 0;
 	}
 };
 
 /** 设置编辑框内的下载地址（支持多线程）
 */
-struct SetEditDownloadAddrOperateParam : public OperateParam
+struct SetEditDownloadAddrOperateParam : public DialogUserOperateParam
 {
-	//用户自定义ID
-	quint64 m_userId;
-	//下载地址
+	/** 下载地址
+	*/
 	QString m_addr;
 
 	/** 构造函数
@@ -296,17 +417,15 @@ struct SetEditDownloadAddrOperateParam : public OperateParam
 	SetEditDownloadAddrOperateParam()
 	{
 		m_operateType = SET_EDIT_DOWNLOAD_ADDR_OPERATE;
-		m_userId = 0;
 	}
 };
 
 /** 设置编辑框内的本地路径（支持多线程）
 */
-struct SetEditPathOperateParam : public OperateParam
+struct SetEditPathOperateParam : public DialogUserOperateParam
 {
-	//用户自定义ID
-	quint64 m_userId;
-	//本地路径
+	/** 本地路径
+	*/
 	QString m_path;
 
 	/** 构造函数
@@ -314,17 +433,15 @@ struct SetEditPathOperateParam : public OperateParam
 	SetEditPathOperateParam()
 	{
 		m_operateType = SET_EDIT_PATH_OPERATE;
-		m_userId = 0;
 	}
 };
 
 /** 设置转到后台下载按钮是否可用（支持多线程）
 */
-struct SetBackEnableOperateParam : public OperateParam
+struct SetBackEnableOperateParam : public DialogUserOperateParam
 {
-	//用户自定义ID
-	quint64 m_userId;
-	//是否可用
+	/** 是否可用
+	*/
 	bool m_enable;
 
 	/** 构造函数
@@ -332,50 +449,40 @@ struct SetBackEnableOperateParam : public OperateParam
 	SetBackEnableOperateParam()
 	{
 		m_operateType = SET_BACK_ENABLE_OPERATE;
-		m_userId = 0;
 		m_enable = false;
 	}
 };
 
 /** 当下载出错时显示下载框的出错状态（支持多线程）
 */
-struct DownloadErrorOperateParam : public OperateParam
+struct DownloadErrorOperateParam : public DialogUserOperateParam
 {
-	//用户自定义ID
-	quint64 m_userId;
-
 	/** 构造函数
 	*/
 	DownloadErrorOperateParam()
 	{
 		m_operateType = DOWNLOAD_ERROR_OPERATE;
-		m_userId = 0;
 	}
 };
 
 /** 从下载错误状态切换到常态（支持多线程）
 */
-struct DownloadNormalOperateParam : public OperateParam
+struct DownloadNormalOperateParam : public DialogUserOperateParam
 {
-	//用户自定义ID
-	quint64 m_userId;
-
 	/** 构造函数
 	*/
 	DownloadNormalOperateParam()
 	{
 		m_operateType = DOWNLOAD_NORMAL_OPERATE;
-		m_userId = 0;
 	}
 };
 
 /** 从下载错误状态切换到常态（支持多线程）
 */
-struct SetErrorTypeOperateParam : public OperateParam
+struct SetErrorTypeOperateParam : public DialogUserOperateParam
 {
-	//用户自定义ID
-	quint64 m_userId;
-	//错误内容
+	/** 错误内容
+	*/
 	QString m_errorText;
 
 	/** 构造函数
@@ -383,7 +490,6 @@ struct SetErrorTypeOperateParam : public OperateParam
 	SetErrorTypeOperateParam()
 	{
 		m_operateType = SET_ERROR_TYPE_OPERATE;
-		m_userId = 0;
 	}
 };
 
@@ -391,9 +497,11 @@ struct SetErrorTypeOperateParam : public OperateParam
 */
 struct StaticDialogDialogIdOperateParam : public OperateParam
 {
-	//窗口类型
+	/** 窗口类型
+	*/
 	DialogType m_dialogType;
-	//静态框ID，out
+	/** 静态框ID，out
+	*/
 	quint64 m_dialogId;
 
 	/** 构造函数
@@ -410,7 +518,8 @@ struct StaticDialogDialogIdOperateParam : public OperateParam
 */
 struct PopAccountDialogOperateParam : public OperateParam
 {
-	//输入的账号名，out
+	/** 输入的账号名，out
+	*/
 	QString m_accountName;
 
 	/** 构造函数
@@ -438,7 +547,8 @@ class SubAccountPanel;
 */
 struct SubAccountPanelPtrOperateParam : public OperateParam
 {
-	//内部界面指针，out
+	/** 内部界面指针，out
+	*/
 	SubAccountPanel* m_subAccountPanel;
 
 	/** 构造函数
@@ -455,7 +565,8 @@ class AccountDialog;
 */
 struct AccountDialogPtrOperateParam : public OperateParam
 {
-	//账号框指针，out
+	/** 账号框指针，out
+	*/
 	AccountDialog* m_accountDialog;
 
 	/** 构造函数
@@ -472,7 +583,8 @@ class ClosureDialog;
 */
 struct ClosureDialogPtrOperateParam : public OperateParam
 {
-	//封号窗口指针，out
+	/** 封号窗口指针，out
+	*/
 	ClosureDialog* m_closureDialog;
 
 	/** 构造函数
@@ -488,7 +600,8 @@ struct ClosureDialogPtrOperateParam : public OperateParam
 */
 struct CloseStaticDialogOperateParam : public OperateParam
 {
-	//窗口类型
+	/** 窗口类型
+	*/
 	DialogType m_dialogType;
 
 	/** 构造函数
@@ -504,9 +617,11 @@ struct CloseStaticDialogOperateParam : public OperateParam
 */
 struct DialogExistByDialogIdOperateParam : public OperateParam
 {
-	// 窗口ID
+	/** 窗口ID
+	*/
 	quint64 m_dialogId;
-	//窗口是否存在，out
+	/** 窗口是否存在，out
+	*/
 	bool m_isExist;
 
 	/** 构造函数
@@ -519,13 +634,12 @@ struct DialogExistByDialogIdOperateParam : public OperateParam
 	}
 };
 
-/** 根据用户自定义ID判断窗口是否存在
+/** 根据业务窗口复用键判断窗口是否存在
 */
-struct DialogExistByUserIdOperateParam : public OperateParam
+struct DialogExistByUserIdOperateParam : public DialogUserOperateParam
 {
-	//用户自定义ID
-	quint64 m_userId;
-	//窗口是否存在，out
+	/** 窗口是否存在，out
+	*/
 	bool m_isExist;
 
 	/** 构造函数
@@ -533,8 +647,24 @@ struct DialogExistByUserIdOperateParam : public OperateParam
 	DialogExistByUserIdOperateParam()
 	{
 		m_operateType = DIALOG_EXIST_BY_USER_ID_OPERATE;
-		m_userId = 0;
 		m_isExist = false;
+	}
+};
+
+/** 根据业务窗口复用键获取窗口实例ID
+*/
+struct DialogIdByUserIdOperateParam : public DialogUserOperateParam
+{
+	/** 窗口实例ID，未找到时为0
+	*/
+	quint64 m_dialogId;
+
+	/** 构造函数
+	*/
+	DialogIdByUserIdOperateParam()
+	{
+		m_operateType = DIALOG_ID_BY_USER_ID_OPERATE;
+		m_dialogId = 0;
 	}
 };
 
@@ -542,9 +672,11 @@ struct DialogExistByUserIdOperateParam : public OperateParam
 */
 struct ChangeUserResultByDialogIdOperateParam : public OperateParam
 {
-	//窗口ID
+	/** 窗口ID
+	*/
 	quint64 m_dialogId;
-	//用户自定义参数
+	/** 用户自定义参数
+	*/
 	qint32 m_userResult;
 
 	/** 构造函数
@@ -557,13 +689,12 @@ struct ChangeUserResultByDialogIdOperateParam : public OperateParam
 	}
 };
 
-/** 修改用户自定义参数
+/** 根据业务窗口复用键修改用户自定义参数
 */
-struct ChangeUserResultByUserIdOperateParam : public OperateParam
+struct ChangeUserResultByUserIdOperateParam : public DialogUserOperateParam
 {
-	// 用户自定义ID
-	quint64 m_userId;
-	//用户自定义参数
+	/** 用户自定义参数
+	*/
 	qint32 m_userResult;
 
 	/** 构造函数
@@ -571,7 +702,6 @@ struct ChangeUserResultByUserIdOperateParam : public OperateParam
 	ChangeUserResultByUserIdOperateParam()
 	{
 		m_operateType = CHANGE_USER_RESULT_BY_USER_ID_OPERATE;
-		m_userId = 0;
 		m_userResult = -1;
 	}
 };
@@ -580,7 +710,8 @@ struct ChangeUserResultByUserIdOperateParam : public OperateParam
 */
 struct DestroyDialogByDialogIdOperateParam : public OperateParam
 {
-	//窗口ID号
+	/** 窗口ID号
+	*/
 	quint64 m_dialogId;
 
 	/** 构造函数
@@ -592,19 +723,15 @@ struct DestroyDialogByDialogIdOperateParam : public OperateParam
 	}
 };
 
-/** 根据用户自定义ID关闭窗口（无动画效果）
+/** 根据业务窗口复用键关闭窗口（无动画效果）
 */
-struct DestroyDialogByUserIdOperateParam : public OperateParam
+struct DestroyDialogByUserIdOperateParam : public DialogUserOperateParam
 {
-	//用户自定义ID
-	quint64 m_userId;
-
 	/** 构造函数
 	*/
 	DestroyDialogByUserIdOperateParam()
 	{
 		m_operateType = DESTROY_DIALOG_BY_USER_ID_OPERATE;
-		m_userId = 0;
 	}
 };
 
@@ -636,9 +763,11 @@ struct DestroyAllOperateParam : public OperateParam
 */
 struct DialogHandleOperateParam : public OperateParam
 {
-	//窗口ID号
+	/** 窗口ID号
+	*/
 	quint64 m_dialogId;
-	//窗口句柄
+	/** 窗口句柄
+	*/
 	QWindow* m_windowHandle;
 
 	/** 构造函数
@@ -655,9 +784,11 @@ struct DialogHandleOperateParam : public OperateParam
 */
 struct DialogCountOperateParam : public OperateParam
 {
-	//窗口个数，out
+	/** 窗口个数，out
+	*/
 	quint64 m_count;
-	//窗口类型，传入需要统计的弹框类型，如果这个参数不设置就返回弹框总数
+	/** 窗口类型，传入需要统计的弹框类型，如果这个参数不设置就返回弹框总数
+	*/
 	std::vector<DialogType> m_vecOperateType;
 
 	/** 构造函数
@@ -673,9 +804,11 @@ struct DialogCountOperateParam : public OperateParam
 */
 struct StaticDialogHandleOperateParam : public OperateParam
 {
-	//窗口类型
+	/** 窗口类型
+	*/
 	DialogType m_dialogType;
-	//窗口句柄，out
+	/** 窗口句柄，out
+	*/
 	QWindow* m_windowHandle;
 
 	/** 构造函数
@@ -730,6 +863,10 @@ enum SignalType
 	*/
 	STATIC_DIALOG_DONE_SIGNAL,
 
+	/** 自定义窗口关闭发送信号
+	*/
+	CUSTOM_DIALOG_DONE_SIGNAL,
+
 	/** 窗口已经执行显示操作发送信号
 	*/
 	ALREADY_SHOWN_SIGNAL
@@ -746,6 +883,13 @@ struct SignalParam
 		m_signalType = ERROR_SIGNAL_TYPE;
 	}
 
+	/** 析构函数，保证跨线程信号通过基类指针传递时可以正确释放派生参数
+	*/
+	virtual ~SignalParam()
+	{
+
+	}
+
 	/** 获取信号类型
 	@return 返回信号类型
 	*/
@@ -754,18 +898,52 @@ struct SignalParam
 		return m_signalType;
 	}
 protected:
-	// 当前信号类型
+	/** 当前信号类型
+	*/
 	SignalType m_signalType;
 };
 Q_DECLARE_METATYPE(SignalParam)
+
+/** DialogManager信号参数共享指针，queued connection下保留实际派生对象
+*/
+typedef QSharedPointer<SignalParam> DialogSignalPtr;
+Q_DECLARE_METATYPE(DialogSignalPtr)
+
+/** 创建信号参数对象，统一处理内存分配失败和构造异常
+@return 返回信号参数共享指针，失败时返回空指针
+*/
+template<typename SignalParamType>
+DialogSignalPtr CreateDialogSignalParam()
+{
+	SignalParamType* param = nullptr;
+	try
+	{
+		param = new (std::nothrow) SignalParamType;
+		if (param == nullptr)
+		{
+			return DialogSignalPtr();
+		}
+		return DialogSignalPtr(param);
+	}
+	catch (...)
+	{
+		delete param;
+		return DialogSignalPtr();
+	}
+}
 
 /** 窗口显示完毕信号
 */
 struct AlreadyShownSignalParam : public SignalParam
 {
-	//窗口ID，out
+	/** 窗口实例ID，创建新窗口或复用已有窗口时都会回传这个ID
+	*/
 	quint64 m_dialog;
-	//用户自定义ID，out
+	/** 业务命名空间ID，和m_userId一起帮助上层定位业务对象
+	*/
+	quint64 m_businessId;
+	/** 命名空间内的对象ID
+	*/
 	quint64 m_userId;
 
 	/** 构造函数
@@ -774,6 +952,7 @@ struct AlreadyShownSignalParam : public SignalParam
 	{
 		m_signalType = ALREADY_SHOWN_SIGNAL;
 		m_dialog = 0;
+		m_businessId = 0;
 		m_userId = 0;
 	}
 };
@@ -783,7 +962,11 @@ Q_DECLARE_METATYPE(AlreadyShownSignalParam)
 */
 struct ChangeToBackSignalParam : public SignalParam
 {
-	//用户自定义ID
+	/** 业务命名空间ID，和m_userId一起定位触发信号的业务对象
+	*/
+	quint64 m_businessId;
+	/** 命名空间内的对象ID
+	*/
 	quint64 m_userId;
 
 	/** 构造函数
@@ -791,6 +974,7 @@ struct ChangeToBackSignalParam : public SignalParam
 	ChangeToBackSignalParam()
 	{
 		m_signalType = CHANGE_TO_BACK_SIGNAL;
+		m_businessId = 0;
 		m_userId = 0;
 	}
 };
@@ -800,7 +984,11 @@ Q_DECLARE_METATYPE(ChangeToBackSignalParam)
 */
 struct DownloadAgainSignalParam : public SignalParam
 {
-	//用户自定义ID
+	/** 业务命名空间ID，和m_userId一起定位触发信号的业务对象
+	*/
+	quint64 m_businessId;
+	/** 命名空间内的对象ID
+	*/
 	quint64 m_userId;
 
 	/** 构造函数
@@ -808,6 +996,7 @@ struct DownloadAgainSignalParam : public SignalParam
 	DownloadAgainSignalParam()
 	{
 		m_signalType = DOWNLOAD_AGAIN_SIGNAL;
+		m_businessId = 0;
 		m_userId = 0;
 	}
 };
@@ -817,7 +1006,11 @@ Q_DECLARE_METATYPE(DownloadAgainSignalParam)
 */
 struct CancelDownloadSignalParam : public SignalParam
 {
-	//用户自定义ID
+	/** 业务命名空间ID，和m_userId一起定位触发信号的业务对象
+	*/
+	quint64 m_businessId;
+	/** 命名空间内的对象ID
+	*/
 	quint64 m_userId;
 
 	/** 构造函数
@@ -825,6 +1018,7 @@ struct CancelDownloadSignalParam : public SignalParam
 	CancelDownloadSignalParam()
 	{
 		m_signalType = CANCEL_DOWNLOAD_SIGNAL;
+		m_businessId = 0;
 		m_userId = 0;
 	}
 };
@@ -834,7 +1028,11 @@ Q_DECLARE_METATYPE(CancelDownloadSignalParam)
 */
 struct UseOtherDownloadSignalParam : public SignalParam
 {
-	//用户自定义ID
+	/** 业务命名空间ID，和m_userId一起定位触发信号的业务对象
+	*/
+	quint64 m_businessId;
+	/** 命名空间内的对象ID
+	*/
 	quint64 m_userId;
 
 	/** 构造函数
@@ -842,6 +1040,7 @@ struct UseOtherDownloadSignalParam : public SignalParam
 	UseOtherDownloadSignalParam()
 	{
 		m_signalType = USE_OTHER_DOWNLOAD_SIGNAL;
+		m_businessId = 0;
 		m_userId = 0;
 	}
 };
@@ -851,9 +1050,14 @@ Q_DECLARE_METATYPE(UseOtherDownloadSignalParam)
 */
 struct CopyDownloadAddrSignalParam : public SignalParam
 {
-	//用户自定义ID
+	/** 业务命名空间ID，和m_userId一起定位触发信号的业务对象
+	*/
+	quint64 m_businessId;
+	/** 命名空间内的对象ID
+	*/
 	quint64 m_userId;
-	//下载地址
+	/** 下载地址
+	*/
 	QString m_addr;
 
 	/** 构造函数
@@ -861,6 +1065,7 @@ struct CopyDownloadAddrSignalParam : public SignalParam
 	CopyDownloadAddrSignalParam()
 	{
 		m_signalType = COPY_DOWNLOAD_ADDR_SIGNAL;
+		m_businessId = 0;
 		m_userId = 0;
 	}
 };
@@ -870,9 +1075,14 @@ Q_DECLARE_METATYPE(CopyDownloadAddrSignalParam)
 */
 struct CopyPathSignalParam : public SignalParam
 {
-	//用户自定义ID
+	/** 业务命名空间ID，和m_userId一起定位触发信号的业务对象
+	*/
+	quint64 m_businessId;
+	/** 命名空间内的对象ID
+	*/
 	quint64 m_userId;
-	//本地路径
+	/** 本地路径
+	*/
 	QString m_path;
 
 	/** 构造函数
@@ -880,6 +1090,7 @@ struct CopyPathSignalParam : public SignalParam
 	CopyPathSignalParam()
 	{
 		m_signalType = COPY_PATH_SIGNAL;
+		m_businessId = 0;
 		m_userId = 0;
 	}
 };
@@ -889,15 +1100,23 @@ Q_DECLARE_METATYPE(CopyPathSignalParam)
 */
 struct DialogDoneSignalParam : public SignalParam
 {
-	//窗口ID
+	/** 窗口ID
+	*/
 	quint64 m_dialogId;
-	//用户自定义ID
+	/** 业务命名空间ID，和m_userId一起定位这个关闭信号属于哪个业务对象
+	*/
+	quint64 m_businessId;
+	/** 命名空间内的对象ID
+	*/
 	quint64 m_userId;
-	//窗口类型
+	/** 窗口类型
+	*/
 	DialogType m_dialogType;
-	//窗口返回值
+	/** 窗口返回值
+	*/
 	DialogResult m_result;
-	//用户自定义参数
+	/** 用户自定义参数
+	*/
 	qint32 m_userResult;
 
 	/** 构造函数
@@ -905,6 +1124,7 @@ struct DialogDoneSignalParam : public SignalParam
 	DialogDoneSignalParam()
 	{
 		m_dialogId = 0;
+		m_businessId = 0;
 		m_userId = 0;
 		m_dialogType = ERROR_DIALOG_TYPE;
 		m_result = ERROR_RESULT;
@@ -952,26 +1172,53 @@ struct StaticDialogDoneSignalParam : public DialogDoneSignalParam
 };
 Q_DECLARE_METATYPE(StaticDialogDoneSignalParam)
 
+/** 自定义窗口关闭信号参数
+*/
+struct CustomDialogDoneSignalParam : public DialogDoneSignalParam
+{
+	/** 构造函数
+	*/
+	CustomDialogDoneSignalParam()
+	{
+		m_signalType = CUSTOM_DIALOG_DONE_SIGNAL;
+	}
+};
+Q_DECLARE_METATYPE(CustomDialogDoneSignalParam)
+
 /** 窗口参数
 */
 struct DialogParam
 {
-	//窗口ID
+	/** 窗口实例ID，创建成功后写入；复用已有窗口时写入已有窗口ID
+	*/
     quint64 m_dialogId;
-	//用户自定义ID
+	/** 业务命名空间ID；和m_userId同时相同才会复用已有窗口，0表示默认业务域
+	*/
+	quint64 m_businessId;
+	/** 命名空间内的对象ID；0和0组合时表示普通弹窗，不参与复用
+	*/
     quint64 m_userId;
-	//用户自定义值
+	/** 用户自定义值
+	*/
     qint32 m_userResult;
-	//窗口标题
+	/** 窗口标题
+	*/
     QString m_title;
-	//窗口返回值
+	/** 窗口返回值
+	*/
     DialogResult m_result;
-	//临时父窗口
+	/** 临时父窗口
+	*/
     QWindow* m_parent;
-	//倒计时关闭时间
+	/** 倒计时关闭时间
+	*/
     qint32 m_timeOut;
-	//倒计时是否显示
+	/** 倒计时是否显示
+	*/
     bool m_isCountDownVisible;
+	/** 复用已有窗口时是否主动拉到前台；只影响复用路径，不影响首次创建后的显示行为
+	*/
+	bool m_isActivateWhenReuse;
 
 	/** 构造函数
 	*/
@@ -979,6 +1226,7 @@ struct DialogParam
     {
 		m_dialogType = ERROR_DIALOG_TYPE;
         m_dialogId = 0;
+		m_businessId = 0;
         m_userId = 0;
 		m_userResult = -1;
         m_title = QStringLiteral("消息提示");
@@ -986,7 +1234,15 @@ struct DialogParam
         m_parent = nullptr;
         m_timeOut = -1;
         m_isCountDownVisible = false;
+		m_isActivateWhenReuse = true;
     }
+
+	/** 析构函数，保证创建参数可以安全进行运行时类型校验
+	*/
+	virtual ~DialogParam()
+	{
+
+	}
 
 	/** 获取窗口类型
 	@return 返回窗口类型
@@ -996,20 +1252,71 @@ struct DialogParam
 		return m_dialogType;
 	}
 
+	/** 获取窗口类型
+	@return 返回窗口类型
+	*/
+	DialogType dialogType() const
+	{
+		return m_dialogType;
+	}
+
+	/** 生成makeDialog和按业务对象操作窗口时使用的复用键
+	@return 返回由业务ID和用户ID组成的窗口复用键
+	*/
+	DialogUserKey userKey() const
+	{
+		return DialogUserKey(m_businessId, m_userId);
+	}
+
+	/** 设置窗口类型，业务自定义窗口需要传入10000以上的类型ID
+	@param [in] dialogType 窗口类型ID
+	*/
+	void setDialogType(DialogType dialogType)
+	{
+		m_dialogType = dialogType;
+	}
+
 protected:
-	// 当前窗口类型
+	/** 当前窗口类型
+	*/
 	DialogType m_dialogType;
 };
+Q_DECLARE_METATYPE(DialogParam*)
+Q_DECLARE_METATYPE(OperateParam*)
+
+/** 自定义窗口参数，业务自定义窗口类型ID需要从10000开始
+*/
+struct CustomDialogParam : public DialogParam
+{
+	/** 构造函数
+	*/
+	CustomDialogParam()
+	{
+		m_dialogType = CUSTOM_DIALOG_TYPE_BEGIN;
+	}
+
+	/** 构造函数
+	@param [in] dialogType 业务自定义窗口类型ID
+	*/
+	explicit CustomDialogParam(DialogType dialogType)
+	{
+		m_dialogType = dialogType;
+	}
+};
+Q_DECLARE_METATYPE(CustomDialogParam)
 
 /** 询问框
 */
 struct AskDialogParam : public DialogParam
 {
-	//提示内容
+	/** 提示内容
+	*/
     QString m_tip;
-	//确认按钮文字内容
+	/** 确认按钮文字内容
+	*/
     QString m_acceptText;
-	//取消按钮文字内容
+	/** 取消按钮文字内容
+	*/
     QString m_ignoreText;
 
 	/** 构造函数
@@ -1027,9 +1334,11 @@ struct AskDialogParam : public DialogParam
 */
 struct TipDialogParam : public DialogParam
 {
-	//提示内容
+	/** 提示内容
+	*/
     QString m_tip;
-	//确认按钮提示内容
+	/** 确认按钮提示内容
+	*/
     QString m_buttonText;
 
 	/** 构造函数
@@ -1046,15 +1355,20 @@ struct TipDialogParam : public DialogParam
 */
 struct InputEx
 {
-	//左侧提示
+	/** 左侧提示
+	*/
 	QString m_tip;
-	//输入框内默认内容
+	/** 输入框内默认内容
+	*/
 	QString m_defaultText;
-	//窗口关闭时传出输入框内的内容，out
+	/** 窗口关闭时传出输入框内的内容，out
+	*/
 	QString m_editText;
-	//是否是密码框
+	/** 是否是密码框
+	*/
 	bool m_isPassword;
-	//最大长度，如果没有最大长度为-1
+	/** 最大长度，如果没有最大长度为-1
+	*/
 	qint32 m_maxLength;
 
 	/** 构造函数
@@ -1070,21 +1384,29 @@ struct InputEx
 */
 struct InputDialogParam : public DialogParam
 {
-	//输入提示内容
+	/** 输入提示内容
+	*/
     QString m_editTip;
-	//确认按钮文字内容
+	/** 确认按钮文字内容
+	*/
     QString m_buttonText;
-	//输入框内默认内容
+	/** 输入框内默认内容
+	*/
     QString m_defaultText;
-    //窗口关闭时传出输入框内的内容，out
+    /** 窗口关闭时传出输入框内的内容，out
+    */
     QString m_editText;
-	//是否是密码框
+	/** 是否是密码框
+	*/
     bool m_isPassword;
-	//最大长度，如果没有最大长度为-1
+	/** 最大长度，如果没有最大长度为-1
+	*/
     qint32 m_maxLength;
-	//扩展输入，如果这里有值则为多个输入类型
+	/** 扩展输入，如果这里有值则为多个输入类型
+	*/
 	std::vector<InputEx> m_vecInputEx;
-	//是否可以主动关闭
+	/** 是否可以主动关闭
+	*/
 	bool m_enableExit;
 
 	/** 构造函数
@@ -1104,7 +1426,8 @@ struct InputDialogParam : public DialogParam
 */
 struct WaitDialogParam : public DialogParam
 {
-	//提示内容
+	/** 提示内容
+	*/
     QString m_tip;
 
 	/** 构造函数
@@ -1120,13 +1443,17 @@ struct WaitDialogParam : public DialogParam
 */
 struct AdvertAskDialogParam : public DialogParam
 {
-	//广告链接
+	/** 广告链接
+	*/
     QString m_advertUrl;
-	//提示内容
+	/** 提示内容
+	*/
     QString m_tip;
-	//确认按钮文字内容
+	/** 确认按钮文字内容
+	*/
     QString m_acceptText;
-	//取消按钮文字内容
+	/** 取消按钮文字内容
+	*/
     QString m_ignoreText;
 
 	/** 构造函数
@@ -1141,47 +1468,33 @@ struct AdvertAskDialogParam : public DialogParam
     }
 };
 
-/** 老版下载框
-*/
-struct DownloadDialogParam : public DialogParam
-{
-	//文件名
-    QString m_fileName;
-	//提示内容
-    QString m_tip;
-	//确认按钮文字内容
-    QString m_buttonText;
-
-	/** 构造函数
-	*/
-    DownloadDialogParam()
-    {
-		m_dialogType = DOWNLOAD_DIALOG;
-        m_fileName = QStringLiteral("文件名");
-        m_tip = QStringLiteral("下载框提示");
-        m_buttonText = QStringLiteral("确认");
-    }
-};
-
 /** 下载框
 */
 struct DownloadOperateDialogParam : public DialogParam
 {
-	//文件名
+	/** 文件名
+	*/
     QString m_fileName;
-	//下载速度
+	/** 下载速度
+	*/
     QString m_downloadSpeed;
-	//已下载量
+	/** 已下载量
+	*/
     QString m_hasDownloaded;
-	//下载时间
+	/** 下载时间
+	*/
     QString m_downloadTime;
-	//初始化比例
+	/** 初始化比例
+	*/
     qint32 m_rate;
-	//转到后台下载是否可用
+	/** 转到后台下载是否可用
+	*/
     bool m_backEnable;
-	//下载地址
+	/** 下载地址
+	*/
     QString m_downloadAddr;
-	//本地路径
+	/** 本地路径
+	*/
     QString m_path;
 
 	/** 构造函数
@@ -1204,9 +1517,11 @@ struct DownloadOperateDialogParam : public DialogParam
 */
 struct TipShowDialogParam : public DialogParam
 {
-	//提示内容
+	/** 提示内容
+	*/
     QString m_tip;
-	//确认按钮文字内容
+	/** 确认按钮文字内容
+	*/
     QString m_buttonText;
 
 	/** 构造函数
@@ -1223,11 +1538,14 @@ struct TipShowDialogParam : public DialogParam
 */
 struct AskShowDialogParam : public DialogParam
 {
-	//提示内容
+	/** 提示内容
+	*/
     QString m_tip;
-	//确认按钮文字内容
+	/** 确认按钮文字内容
+	*/
     QString m_acceptText;
-	//取消按钮文字内容
+	/** 取消按钮文字内容
+	*/
     QString m_ignoreText;
 
 	/** 构造函数
@@ -1245,19 +1563,26 @@ struct AskShowDialogParam : public DialogParam
 */
 struct LoginShowDialogParam : public DialogParam
 {
-	//提示内容
+	/** 提示内容
+	*/
     QString m_tip;
-	//招呼内容
+	/** 招呼内容
+	*/
     QString m_greeting;
-	//了解更多按钮文字内容
+	/** 了解更多按钮文字内容
+	*/
     QString m_urlButtonText;
-	//了解更多按钮链接地址
+	/** 了解更多按钮链接地址
+	*/
     QString m_linkUrl;
-	//了解更多按钮是否显示
+	/** 了解更多按钮是否显示
+	*/
     bool m_isUrlButtonVisible;
-	//上次登录地址
+	/** 上次登录地址
+	*/
 	QString m_preLoginAddr;
-	//上次登录时间
+	/** 上次登录时间
+	*/
 	QString m_preLoginTime;
 
 	/** 构造函数
@@ -1266,7 +1591,7 @@ struct LoginShowDialogParam : public DialogParam
     {
 		m_dialogType = LOGIN_SHOW_DIALOG;
         QTime tm = QTime::currentTime();
-        int hour = tm.hour();
+        qint32 hour = tm.hour();
         if ((hour > 0) && (hour <= 9))
         {
             m_greeting = QString::fromStdWString(L"Hi~早晨好！");
@@ -1295,7 +1620,8 @@ struct LoginShowDialogParam : public DialogParam
 */
 struct AdvertShowDialogParam : public DialogParam
 {
-	//广告链接
+	/** 广告链接
+	*/
 	QString m_advertUrl;
 
 	/** 构造函数

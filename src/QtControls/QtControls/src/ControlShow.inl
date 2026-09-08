@@ -3,10 +3,17 @@
 
 #include "ControlShow.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include <QCoreApplication>
+#include <QThread>
 
 template<class QBase>
 void ControlShow<QBase>::repaint()
 {
+	QCoreApplication* application = QCoreApplication::instance();
+	if (application != nullptr && QThread::currentThread() != application->thread())
+	{
+		return;
+	}
 	initClassName();
 	QBase::setStyleSheet(QString::fromStdWString(m_controlStyle.toWString()));
 }
@@ -59,6 +66,10 @@ void ControlShow<QBase>::setItemName(const std::wstring& itemName)
 template<class QBase>
 void ControlShow<QBase>::showEvent(QShowEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	repaint();
 	QBase::showEvent(eve);
 }

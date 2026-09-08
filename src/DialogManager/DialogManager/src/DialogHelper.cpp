@@ -1,7 +1,7 @@
 ﻿#include "DialogHelper.h"
 #include "QtControls/Label.h"
 #include "QtControls/ControlStyleManager.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include "QtControls/CPasswordInputBox.h"
 #include <QWindow>
 #include "QtControls/Separator.h"
@@ -36,7 +36,7 @@ void DialogHelper::setTip(Label* tip, const QString& text, const QColor& textCol
 }
 
 void DialogHelper::setButton(DialogShow* dialog,
-                             COriginalButton* button,
+                             PushButton* button,
                              const QString& text,
                              const QColor& textColor,
                              const QString& backgroundImage,
@@ -46,7 +46,7 @@ void DialogHelper::setButton(DialogShow* dialog,
                              qint32 imageMargin,
                              bool isPop)
 {
-    if (button == nullptr)
+    if (dialog == nullptr || button == nullptr)
     {
         return;
     }
@@ -61,11 +61,19 @@ void DialogHelper::setButton(DialogShow* dialog,
         (*mapResult)[button] = result;
         if (isPop)
         {
-            QObject::connect(button, &COriginalButton::clicked, (PopDialog*)dialog, &PopDialog::endDialog);
+			PopDialog* popDialog = qobject_cast<PopDialog*>(dialog);
+			if (popDialog != nullptr)
+			{
+				QObject::connect(button, &PushButton::clicked, popDialog, &PopDialog::endDialog);
+			}
         }
         else
         {
-            QObject::connect(button, &COriginalButton::clicked, (NotifyDialog*)dialog, &NotifyDialog::prepareExit);
+			NotifyDialog* notifyDialog = qobject_cast<NotifyDialog*>(dialog);
+			if (notifyDialog != nullptr)
+			{
+				QObject::connect(button, &PushButton::clicked, notifyDialog, &NotifyDialog::prepareExit);
+			}
         }
     }
 }
@@ -128,11 +136,15 @@ void DialogHelper::activeTransientParentWindow(QWindow* window)
 
 void DialogHelper::setLogPathFrom11Client(const std::string& path)
 {
+	delete g_11ClientLogFile;
+	g_11ClientLogFile = nullptr;
 	g_11ClientLogFile = new std::ofstream(path + "/11_controls.log", std::ios::app);
 }
 
 void DialogHelper::setLogPathFromWar3(const std::string& path)
 {
+	delete g_war3LogFile;
+	g_war3LogFile = nullptr;
 	g_war3LogFile = new std::ofstream(path + "/11_controls.log", std::ios::app);
 }
 

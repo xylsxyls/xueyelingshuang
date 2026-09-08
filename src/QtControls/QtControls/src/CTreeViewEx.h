@@ -22,9 +22,9 @@ public:
 
 private:
 	// 当前鼠标悬停行，-1表示未悬停在有效单元格上
-    int m_hoveredRow;
+    qint32 m_hoveredRow;
 	// 当前鼠标悬停列，-1表示未悬停在有效单元格上
-    int m_hoveredColumn;
+    qint32 m_hoveredColumn;
 
 protected:
 	/** 处理鼠标移动并更新悬停行列

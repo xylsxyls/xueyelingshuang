@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <string>
 #include <QColor>
 #include <QPoint>
 #include <QTimer>
@@ -11,7 +12,7 @@
 
 class QEvent;
 
-/** 轻量按钮控件，基于状态化QSS拼接提供普通按钮和旧版COriginalButton的常用能力
+/** 轻量按钮控件，基于状态化QSS拼接提供普通按钮和按钮常用能力
 */
 class QtControlsAPI PushButton :
 	public ControlShow < QPushButton >,
@@ -22,14 +23,12 @@ class QtControlsAPI PushButton :
 {
 	Q_OBJECT
 public:
-	using ControlFont<QPushButton>::setFontFace;
 	using ControlFont<QPushButton>::setFontSize;
 	using ControlFont<QPushButton>::setFontBold;
 	using ControlFont<QPushButton>::setTextOrigin;
 	using ControlFont<QPushButton>::setTextRightOrigin;
 	using ControlSelf<QPushButton>::setBorderWidth;
 	using ControlSelf<QPushButton>::setBorderRadius;
-	using ControlBorderForNormalHoverPressedDisabled<QPushButton>::setBorderColor;
 	using ControlBorderForNormalHoverPressedDisabled<QPushButton>::setBorderImage;
 	using ControlBorderForNormalHoverPressedDisabled<QPushButton>::setTextColor;
 	using ControlBackgroundForNormalHoverPressedDisabled<QPushButton>::setBackgroundColor;

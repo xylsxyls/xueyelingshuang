@@ -33,7 +33,15 @@ void Separator::setColor(const QColor& firstColor, const QColor& secondColor)
 
 void Separator::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     Label::resizeEvent(eve);
+	if (!check())
+	{
+		return;
+	}
     if (m_isHorizon)
     {
         m_colorLabel->setGeometry(0, 0, width(), height() / 2);

@@ -36,22 +36,22 @@ public:
         }
 
         // 表情分组ID
-        QString groupid;
+        QString m_groupId;
 
         // 表情ID
-        QString id;
+        QString m_id;
 
         // 表情描述
-        QString desc;
+        QString m_desc;
 
         // 表情图片文件路径
-        QString fileName;
+        QString m_fileName;
 
         // 表情快捷文本
-        QString shortcut;
+        QString m_shortcut;
 
         // 表情悬浮提示
-        QString tooltip;
+        QString m_tooltip;
     };
 
     /** 表情项列表
@@ -87,10 +87,10 @@ private:
     bool m_showIconRect;
 
     // 最大列数
-    int m_maxColumnCount;
+    qint32 m_maxColumnCount;
 
     // 最大行数
-    int m_maxRowCount;
+    qint32 m_maxRowCount;
 
     /** 鼠标离开控件时隐藏预览
     @param [in] eve 离开事件

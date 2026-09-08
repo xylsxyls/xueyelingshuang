@@ -66,7 +66,7 @@ private:
 	Label* m_editTip;
 
 	// 确定按钮
-	COriginalButton* m_accept;
+	PushButton* m_accept;
 
 	// 普通文本输入框
 	LineEdit* m_edit;

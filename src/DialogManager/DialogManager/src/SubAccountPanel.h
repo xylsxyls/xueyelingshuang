@@ -9,7 +9,7 @@
 
 class CExternalTextEdit;
 class CTreeViewEx;
-class COriginalButton;
+class PushButton;
 
 /** 子账号列表项，使用QStandardItem角色保存子账号名称、登录信息、锁定状态等数据
 */
@@ -153,13 +153,13 @@ public:
     SubAccountItemView(QWidget* parent = nullptr);
 private:
     // 切换子账号按钮
-    COriginalButton* m_switchButton;
+    PushButton* m_switchButton;
 
 	// 锁定帮助按钮
-	COriginalButton* m_helpButton;
+	PushButton* m_helpButton;
 
 	// 修改子账号名称按钮
-	COriginalButton* m_changeNameButton;
+	PushButton* m_changeNameButton;
 
 	// 当前子账号是否处于锁定状态
 	bool m_blocked;
@@ -280,10 +280,10 @@ private:
     QStandardItemModel* m_model;
 
     // 创建子账号按钮
-    COriginalButton* m_createSubAccountButton;
+    PushButton* m_createSubAccountButton;
 
     // 创建规则帮助按钮
-    COriginalButton* m_helpButton;
+    PushButton* m_helpButton;
 
     // 创建规则浮层提示
     CExternalTextEdit* m_helpTip;

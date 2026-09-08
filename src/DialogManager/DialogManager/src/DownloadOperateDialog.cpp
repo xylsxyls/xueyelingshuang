@@ -1,16 +1,14 @@
 ﻿#include "DownloadOperateDialog.h"
 #include "QtControls/Label.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include "QtControls/ControlStyleManager.h"
 #include "QtControls/ProgressBar.h"
-#ifdef _MSC_VER
-#include <Windows.h>
-#endif
 #include "DialogManager.h"
 #include "QtControls/LineEdit.h"
 #include "DialogHelper.h"
 #include "QtControls/Separator.h"
-#include <cstring>
+#include <QApplication>
+#include <QClipboard>
 
 DownloadOperateDialog::DownloadOperateDialog():
 m_tip(nullptr),
@@ -41,17 +39,17 @@ m_taskId(-1)
     m_downloadTime = new Label(this);
     m_progressBar = new ProgressBar(this);
     m_persent = new Label(this);
-    m_back = new COriginalButton(this);
-    m_again = new COriginalButton(this);
-    m_cancel = new COriginalButton(this);
+    m_back = new PushButton(this);
+    m_again = new PushButton(this);
+    m_cancel = new PushButton(this);
     m_downloadSlow = new Label(this);
-    m_hand = new COriginalButton(this);
+    m_hand = new PushButton(this);
     m_downloadAddr = new Label(this);
     m_path = new Label(this);
     m_downloadAddrEdit = new LineEdit(this);
     m_pathEdit = new LineEdit(this);
-    m_downloadButton = new COriginalButton(this);
-    m_pathButton = new COriginalButton(this);
+    m_downloadButton = new PushButton(this);
+    m_pathButton = new PushButton(this);
     m_error = new Label(this);
     if (!check())
     {
@@ -167,14 +165,14 @@ m_taskId(-1)
 	QObject::connect(this, &DownloadOperateDialog::downloadSpeed, m_downloadSpeed, &Label::setText);
 	QObject::connect(this, &DownloadOperateDialog::downloaded, m_downloaded, &Label::setText);
 	QObject::connect(this, &DownloadOperateDialog::downloadTime, m_downloadTime, &Label::setText);
-	QObject::connect(this, &DownloadOperateDialog::backEnable, m_back, &COriginalButton::setEnabled);
+	QObject::connect(this, &DownloadOperateDialog::backEnable, m_back, &PushButton::setEnabled);
 
-	QObject::connect(m_cancel, &COriginalButton::clicked, this, &DownloadOperateDialog::onCancelDownload);
-	QObject::connect(m_back, &COriginalButton::clicked, this, &DownloadOperateDialog::onBack);
-	QObject::connect(m_again, &COriginalButton::clicked, this, &DownloadOperateDialog::onAgain);
-	QObject::connect(m_hand, &COriginalButton::clicked, this, &DownloadOperateDialog::onUseOtherDownload);
-	QObject::connect(m_downloadButton, &COriginalButton::clicked, this, &DownloadOperateDialog::onCopyDownloadAddr);
-	QObject::connect(m_pathButton, &COriginalButton::clicked, this, &DownloadOperateDialog::onCopyPath);
+	QObject::connect(m_cancel, &PushButton::clicked, this, &DownloadOperateDialog::onCancelDownload);
+	QObject::connect(m_back, &PushButton::clicked, this, &DownloadOperateDialog::onBack);
+	QObject::connect(m_again, &PushButton::clicked, this, &DownloadOperateDialog::onAgain);
+	QObject::connect(m_hand, &PushButton::clicked, this, &DownloadOperateDialog::onUseOtherDownload);
+	QObject::connect(m_downloadButton, &PushButton::clicked, this, &DownloadOperateDialog::onCopyDownloadAddr);
+	QObject::connect(m_pathButton, &PushButton::clicked, this, &DownloadOperateDialog::onCopyPath);
 
 	m_exit->setVisible(false);
     setEscAltF4Enable(false);
@@ -197,6 +195,10 @@ void DownloadOperateDialog::setFileName(const QString& fileName)
 
 void DownloadOperateDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     PopDialog::resizeEvent(eve);
     if (!check())
     {
@@ -221,32 +223,6 @@ void DownloadOperateDialog::resizeEvent(QResizeEvent* eve)
     m_pathButton->setGeometry(332, 242, 72, 24);
     m_downloadSlow->setGeometry(QRect(16, 179, 255, 18));
 }
-
-#ifdef _MSC_VER
-void DownloadOperateDialog::setClipboardData(void* hWnd, const std::string& str)
-{
-	//打开剪贴板
-	if (::OpenClipboard(static_cast<HWND>(hWnd)))
-	{
-		HANDLE hClip;
-		char* pBuf;
-		//清空剪贴板
-		::EmptyClipboard();
-
-		//写入数据
-		hClip = ::GlobalAlloc(GMEM_MOVEABLE, str.size() + 1);
-		pBuf = (char*)::GlobalLock(hClip);
-		::strcpy(pBuf, str.c_str());
-		//解锁
-		::GlobalUnlock(hClip);
-		//设置格式
-		::SetClipboardData(CF_TEXT, hClip);
-
-		//关闭剪贴板
-		::CloseClipboard();
-	}
-}
-#endif
 
 bool DownloadOperateDialog::check()
 {
@@ -289,6 +265,7 @@ void DownloadOperateDialog::setDownloadTime(const QString& time)
 
 void DownloadOperateDialog::setRate(qint32 persent)
 {
+	persent = qBound(0, persent, 100);
 	emit rateChanged(persent);
 	emit persentChanged(QString::fromStdWString(CStringManager::Format(L"%d%%", persent)));
 }
@@ -394,9 +371,11 @@ void DownloadOperateDialog::onCopyDownloadAddr()
     {
         return;
     }
-#ifdef _MSC_VER
-	setClipboardData(reinterpret_cast<void*>(winId()), CStringManager::UnicodeToAnsi(m_downloadAddrEdit->text().toStdWString()));
-#endif
+	QClipboard* clipboard = QApplication::clipboard();
+	if (clipboard != nullptr)
+	{
+		clipboard->setText(m_downloadAddrEdit->text());
+	}
 	emit copyDownloadAddr(m_downloadAddrEdit->text());
 }
 
@@ -406,8 +385,10 @@ void DownloadOperateDialog::onCopyPath()
     {
         return;
     }
-#ifdef _MSC_VER
-	setClipboardData(reinterpret_cast<void*>(winId()), CStringManager::UnicodeToAnsi(m_pathEdit->text().toStdWString()));
-#endif
+	QClipboard* clipboard = QApplication::clipboard();
+	if (clipboard != nullptr)
+	{
+		clipboard->setText(m_pathEdit->text());
+	}
 	emit copyPath(m_pathEdit->text());
 }

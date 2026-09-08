@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <map>
 #include <QtWidgets/QTreeWidget>
 #include "ControlFont.h"
 #include "ControlItem.h"
@@ -84,6 +85,12 @@ protected:
 	@param [in] eve Qt右键菜单事件
 	*/
 	void contextMenuEvent(QContextMenuEvent* eve);
+
+private:
+	/** 递归移除指定树节点及其子节点关联的外部控件映射。
+	@param [in] item 待清理的树节点指针
+	*/
+	void removeItemData(QTreeWidgetItem* item);
 
 private:
 	// 外部控件和内部树节点的映射

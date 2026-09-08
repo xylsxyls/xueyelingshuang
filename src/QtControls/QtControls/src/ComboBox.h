@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include <map>
+#include <string>
 #include <QtWidgets/QComboBox>
 #include "ControlFont.h"
 #include "ControlSelf.h"
@@ -52,8 +54,8 @@ public:
 	@param [in] dropDownImgNormal 非选中常态图片，如果填1表示将图片纵向分割4份或8份，选最上面的第一份
 	@param [in] dropDownImgHover 非选中悬停图片
 	@param [in] dropDownImgDisabled 非选中禁用图片
-	@param [in] dropDownImgCkNormal 选中常态图片
-	@param [in] dropDownImgCkDisabled 选中禁用图片
+	@param [in] dropDownImgExpandNormal 下拉框展开时的常态图片
+	@param [in] dropDownImgExpandDisabled 下拉框展开时的禁用图片
 	@param [in] rePaint 是否立即重画
 	*/
 	void setDropDownImage(const QString& dropDownImgPath,

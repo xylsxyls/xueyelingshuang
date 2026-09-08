@@ -6,7 +6,7 @@
 #if defined(QTCONTROLS_ENABLE_WEBKIT) && (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
 
 class CWebViewEx;
-class COriginalButton;
+class PushButton;
 class Separator;
 /** 通知式广告展示框，WebKit可用时加载并显示广告页面
 */

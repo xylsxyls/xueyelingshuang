@@ -51,12 +51,14 @@
     <ClCompile Include="..\src\BackgroundLabel.cpp" />
     <ClCompile Include="..\src\CExternalTextEdit.cpp" />
     <ClCompile Include="..\src\ControlStyleManager.cpp" />
+    <ClCompile Include="..\src\ControlSubStyle.cpp" />
     <ClCompile Include="..\src\CheckBox.cpp" />
     <ClCompile Include="..\src\ChooseComboBox.cpp" />
     <ClCompile Include="..\src\CollapseMenu.cpp" />
     <ClCompile Include="..\src\ComboBox.cpp" />
     <ClCompile Include="..\src\ContentLabel.cpp" />
-    <ClCompile Include="..\src\COriginalButton.cpp" />
+    <ClCompile Include="..\src\COriginalButton.cpp">
+    </ClCompile>
     <ClCompile Include="..\src\COriginalDialog.cpp" />
     <ClCompile Include="..\src\COriginalWebView.cpp">
       <ExcludedFromBuild Condition="'$(QtControlsEnableWebKit)'!='true'">true</ExcludedFromBuild>
@@ -66,6 +68,9 @@
     <ClCompile Include="..\src\Dialog.cpp" />
     <ClCompile Include="..\src\DialogBase.cpp" />
     <ClCompile Include="..\src\DialogShow.cpp" />
+    <ClCompile Include="..\src\DateEdit.cpp" />
+    <ClCompile Include="..\src\DateTimeEdit.cpp" />
+    <ClCompile Include="..\src\DoubleSpinBox.cpp" />
     <ClCompile Include="..\src\ExpressionConfig.cpp" />
     <ClCompile Include="..\src\ExpressionConfigParser.cpp" />
     <ClCompile Include="..\src\ExpressionConfigXmlHandler.cpp" />
@@ -85,10 +90,20 @@
     <ClCompile Include="..\src\PushButton.cpp" />
     <ClCompile Include="..\src\RadioButton.cpp" />
     <ClCompile Include="..\src\RegExpBase.cpp" />
+    <ClCompile Include="..\src\ScrollArea.cpp" />
+    <ClCompile Include="..\src\ScrollBar.cpp" />
     <ClCompile Include="..\src\Separator.cpp" />
+    <ClCompile Include="..\src\Slider.cpp" />
+    <ClCompile Include="..\src\SpinBox.cpp" />
+    <ClCompile Include="..\src\TabBar.cpp" />
+    <ClCompile Include="..\src\TabWidget.cpp" />
+    <ClCompile Include="..\src\TableView.cpp" />
+    <ClCompile Include="..\src\TableWidget.cpp" />
     <ClCompile Include="..\src\TextEdit.cpp" />
     <ClCompile Include="..\src\TipLabel.cpp" />
     <ClCompile Include="..\src\TipLabelManager.cpp" />
+    <ClCompile Include="..\src\TimeEdit.cpp" />
+    <ClCompile Include="..\src\ToolButton.cpp" />
     <ClCompile Include="..\src\TreeView.cpp" />
     <ClCompile Include="..\src\TreeViewDelegate.cpp" />
     <ClCompile Include="..\src\TreeViewHeader.cpp" />
@@ -486,8 +501,14 @@
     <ClInclude Include="..\src\ControlItem.h" />
     <ClInclude Include="..\src\ControlSelf.h" />
     <ClInclude Include="..\src\ControlShow.h" />
+    <ClInclude Include="..\src\ControlSpinBox.h" />
     <ClInclude Include="..\src\ControlStyleManager.h" />
+    <ClInclude Include="..\src\ControlSubStyle.h" />
+    <ClInclude Include="..\src\ControlTableStyle.h" />
+    <ClInclude Include="..\src\DateEdit.h" />
+    <ClInclude Include="..\src\DateTimeEdit.h" />
     <ClInclude Include="..\src\DialogResult.h" />
+    <ClInclude Include="..\src\DoubleSpinBox.h" />
     <ClInclude Include="..\src\ExpressionConfig.h" />
     <ClInclude Include="..\src\ExpressionConfigParser.h" />
     <ClInclude Include="..\src\ExpressionConfigXmlHandler.h" />
@@ -515,6 +536,16 @@
     <ClInclude Include="..\src\QtControlsMacro.h" />
     <ClInclude Include="..\src\RegExpAttri.h" />
     <ClInclude Include="..\src\RegExpBase.h" />
+    <ClInclude Include="..\src\ScrollArea.h" />
+    <ClInclude Include="..\src\ScrollBar.h" />
+    <ClInclude Include="..\src\Slider.h" />
+    <ClInclude Include="..\src\SpinBox.h" />
+    <ClInclude Include="..\src\TabBar.h" />
+    <ClInclude Include="..\src\TabWidget.h" />
+    <ClInclude Include="..\src\TableView.h" />
+    <ClInclude Include="..\src\TableWidget.h" />
+    <ClInclude Include="..\src\TimeEdit.h" />
+    <ClInclude Include="..\src\ToolButton.h" />
     <ClInclude Include="..\src\TreeText.h" />
     <ClInclude Include="..\src\TreeViewDelegate.h" />
     <ClInclude Include="..\src\TreeViewModel.h" />
@@ -1033,6 +1064,8 @@
     <None Include="..\src\ControlItem.inl" />
     <None Include="..\src\ControlSelf.inl" />
     <None Include="..\src\ControlShow.inl" />
+    <None Include="..\src\ControlSpinBox.inl" />
+    <None Include="..\src\ControlTableStyle.inl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B12702AD-ABFB-343A-A199-8E24837244A3}</ProjectGuid>
@@ -1181,4 +1214,3 @@
     </VisualStudio>
   </ProjectExtensions>
 </Project>
-

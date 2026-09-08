@@ -1,9 +1,8 @@
 ﻿#include "NotifyDialog.h"
 #include "DialogHelper.h"
 #include "QtControls/Label.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include "QtControls/ControlStyleManager.h"
-#include "CSystem/CSystemAPI.h"
 #include <QApplication>
 #include <QDesktopWidget>
 
@@ -11,7 +10,8 @@ NotifyDialog::NotifyDialog():
 m_titleBar(nullptr),
 m_icon(nullptr),
 m_animation(this, "geometry"),
-m_isShow(false)
+m_isShow(false),
+m_isExiting(false)
 {
     m_titleBar = new Label(this);
     m_icon = new Label(m_titleBar);
@@ -62,13 +62,19 @@ void NotifyDialog::prepareExit()
 {
     if (m_result != nullptr)
     {
-        *m_result = buttonResult((COriginalButton*)sender());
+        *m_result = buttonResult(qobject_cast<PushButton*>(sender()));
     }
     beginExitAnimation();
 }
 
 void NotifyDialog::beginExitAnimation()
 {
+	if (m_isExiting)
+	{
+		return;
+	}
+	m_isExiting = true;
+
     //去掉定时器
     if (m_timeId != -1)
     {
@@ -89,6 +95,10 @@ void NotifyDialog::beginExitAnimation()
     }
 
     m_isShow = false;
+	if (m_animation.state() == QAbstractAnimation::Running)
+	{
+		m_animation.stop();
+	}
     m_animation.setDuration(250);
     m_animation.setStartValue(m_beginRect);
     m_animation.setEndValue(m_endRect);
@@ -107,8 +117,17 @@ void NotifyDialog::setWindowTitle(const QString& title,
 
 void NotifyDialog::showEvent(QShowEvent* eve)
 {
-    DialogBase::showEvent(eve);
+	if (eve == nullptr)
+	{
+		return;
+	}
+	DialogShow::showEvent(eve);
     m_isShow = true;
+	m_isExiting = false;
+	if (m_animation.state() == QAbstractAnimation::Running)
+	{
+		m_animation.stop();
+	}
     m_animation.setDuration(500);
     m_animation.setStartValue(m_endRect);
     m_animation.setEndValue(m_beginRect);
@@ -117,6 +136,10 @@ void NotifyDialog::showEvent(QShowEvent* eve)
 
 void NotifyDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     DialogShow::resizeEvent(eve);
     if (!check())
     {
@@ -128,16 +151,10 @@ void NotifyDialog::resizeEvent(QResizeEvent* eve)
     m_exit->setGeometry(QRect(width() - 34, 1, 34, 31));
     m_time->setGeometry(QRect(7, height() - 13, width() - 5, 13));
 
-#ifdef _MSC_VER
-    POINT rightBottom = CSystem::taskbarRightBottomPoint();
-    m_beginRect.setRect(rightBottom.x - width(), rightBottom.y - height(), width(), height());
-    m_endRect.setRect(rightBottom.x - width(), rightBottom.y, width(), height());
-#else
     QRect availableRect = QApplication::desktop()->availableGeometry(this);
     QPoint rightBottom = availableRect.bottomRight();
     m_beginRect.setRect(rightBottom.x() - width(), rightBottom.y() - height(), width(), height());
     m_endRect.setRect(rightBottom.x() - width(), rightBottom.y(), width(), height());
-#endif
 }
 
 void NotifyDialog::end()
@@ -149,7 +166,7 @@ void NotifyDialog::end()
     }
 }
 
-DialogResult NotifyDialog::buttonResult(COriginalButton* button)
+DialogResult NotifyDialog::buttonResult(PushButton* button)
 {
     //childAt(mapFromGlobal(QWidget::cursor().pos()))
     auto itResult = m_mapResult.find(button);

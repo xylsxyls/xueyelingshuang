@@ -31,7 +31,7 @@ private:
 	// 表情资源路径标记，例如expression/yun对应[/yun]
     QString m_expressionTag;
 	// 表情显示尺寸
-	int     m_expressionSize;
+	qint32 m_expressionSize;
 	// GIF表情刷新计时器
     QTimer m_refreshGifTimer;
 

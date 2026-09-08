@@ -3,7 +3,7 @@
 #if defined(QTCONTROLS_ENABLE_WEBKIT) && (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
 
 #include "QtControls/Label.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include "QtControls/ControlStyleManager.h"
 #include <QtWebKitWidgets/QWebView>
 #include <QDesktopServices>
@@ -25,14 +25,14 @@ m_preLoginTime(nullptr)
     m_tip = new QWebView(this);
     m_horn = new Label(this);
     m_greeting = new Label(this);
-    m_more = new COriginalButton(this);
+    m_more = new PushButton(this);
     m_separator = new Separator(this);
 	m_preLoginLabel = new Label(this);
 	if (m_preLoginLabel != nullptr)
 	{
 		m_preLoginText = new Label(m_preLoginLabel);
 		m_preLoginAddr = new Label(m_preLoginLabel);
-		m_changePassword = new COriginalButton(m_preLoginLabel);
+		m_changePassword = new PushButton(m_preLoginLabel);
 		m_preLoginTime = new Label(m_preLoginLabel);
 	}
 
@@ -84,7 +84,7 @@ m_preLoginTime(nullptr)
 	m_preLoginText->setFontFace(QStringLiteral("微软雅黑"));
 	m_changePassword->setBkgImage(ControlStyleManager::instance().resourcePath("image/change_password.png"), 2, 1, 2, 1, 1);
 	m_changePassword->setToolTip(QStringLiteral("修改密码"));
-	QObject::connect(m_changePassword, &COriginalButton::clicked, this, &LoginShowDialog::onChangePasswordClicked);
+	QObject::connect(m_changePassword, &PushButton::clicked, this, &LoginShowDialog::onChangePasswordClicked);
 	m_preLoginAddr->setTextColor("#ebebeb");
 	m_preLoginAddr->setAlignment(Qt::AlignVCenter);
 	m_preLoginAddr->setFontSize(11);
@@ -158,6 +158,10 @@ void LoginShowDialog::setPreLoginTime(const QString& preLoginTime)
 
 void LoginShowDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     NotifyDialog::resizeEvent(eve);
     if (!check())
     {

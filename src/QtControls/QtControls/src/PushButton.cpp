@@ -96,15 +96,23 @@ void PushButton::setBkgImage(const QString& bkgImage,
 							 const quint64 bkgImageCKDisabled)
 {
 	m_bkgImage = bkgImage;
-	m_bkgImageStateCount = static_cast<quint32>(bkgImageStateCount);
-	m_bkgImageNormal = static_cast<quint32>(bkgImageNormal);
-	m_bkgImageHover = static_cast<quint32>(bkgImageHover);
-	m_bkgImagePressed = static_cast<quint32>(bkgImagePressed);
-	m_bkgImageDisabled = static_cast<quint32>(bkgImageDisabled);
-	m_bkgImageCKNormal = static_cast<quint32>(bkgImageCKNormal);
-	m_bkgImageCKHover = static_cast<quint32>(bkgImageCKHover);
-	m_bkgImageCKPressed = static_cast<quint32>(bkgImageCKPressed);
-	m_bkgImageCKDisabled = static_cast<quint32>(bkgImageCKDisabled);
+	// clampImageValue入参：value是外部传入的图片状态序号。
+	// clampImageValue出参：无。
+	// clampImageValue返回值：返回限制到qint32范围内的安全状态值。
+	const quint64 maxImageValue = static_cast<quint64>((std::numeric_limits<qint32>::max)());
+	auto clampImageValue = [maxImageValue](quint64 value) -> quint32
+	{
+		return static_cast<quint32>(value > maxImageValue ? maxImageValue : value);
+	};
+	m_bkgImageStateCount = clampImageValue(bkgImageStateCount);
+	m_bkgImageNormal = clampImageValue(bkgImageNormal);
+	m_bkgImageHover = clampImageValue(bkgImageHover);
+	m_bkgImagePressed = clampImageValue(bkgImagePressed);
+	m_bkgImageDisabled = clampImageValue(bkgImageDisabled);
+	m_bkgImageCKNormal = clampImageValue(bkgImageCKNormal);
+	m_bkgImageCKHover = clampImageValue(bkgImageCKHover);
+	m_bkgImageCKPressed = clampImageValue(bkgImageCKPressed);
+	m_bkgImageCKDisabled = clampImageValue(bkgImageCKDisabled);
 	updateCompatibleStyle();
 }
 
@@ -248,7 +256,11 @@ void PushButton::setToolTipOffset(int x, int y)
 
 bool PushButton::event(QEvent* eve)
 {
-	if (eve != nullptr && eve->type() == QEvent::ToolTip)
+	if (eve == nullptr)
+	{
+		return false;
+	}
+	if (eve->type() == QEvent::ToolTip)
 	{
 		QHelpEvent* helpEvent = static_cast<QHelpEvent*>(eve);
 		QHelpEvent offsetHelpEvent(QEvent::ToolTip,

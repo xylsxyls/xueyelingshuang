@@ -1,7 +1,7 @@
 ﻿#include "AccountManagerDialog.h"
 #include "QtControls/Label.h"
 #include "AccountDialog.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include "QtControls/ControlStyleManager.h"
 #include "SubAccountPanel.h"
 #include "QtControls/CExternalTextEdit.h"
@@ -65,16 +65,35 @@ m_subAccountPanel(nullptr)
         return;
     }
 
-	m_subAccountPanel->helpTip()->winId();
-	m_subAccountPanel->helpTip()->windowHandle()->setTransientParent(windowHandle());
+	CExternalTextEdit* helpTip = m_subAccountPanel->helpTip();
+	if (helpTip != nullptr)
+	{
+		helpTip->winId();
+		if (helpTip->windowHandle() != nullptr)
+		{
+			helpTip->windowHandle()->setTransientParent(windowHandle());
+		}
+	}
 
     m_exit->setBkgImage(ControlStyleManager::instance().resourcePath("Common/Image/NotificationView/CloseButton.png"));
 
     setFixedSize(340, 482);
 }
 
+AccountManagerDialog::~AccountManagerDialog()
+{
+	delete m_accountDialog;
+	m_accountDialog = nullptr;
+	delete m_closureDialog;
+	m_closureDialog = nullptr;
+}
+
 void AccountManagerDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     BoxDialogBase::resizeEvent(eve);
     if (!check())
     {

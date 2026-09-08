@@ -1,6 +1,49 @@
 ﻿#include "StaticDialogManager.h"
 #include "AllocManager.h"
 #include "AccountManagerDialog.h"
+#include "DialogHelper.h"
+
+/** 将静态窗口创建参数转换为指定派生类型，避免传错参数导致未定义行为
+@param [in] param 调用方传入的创建参数
+@param [in] expectedType 期望的窗口类型
+@return 返回转换后的参数指针，失败时返回nullptr
+*/
+template<typename ParamType>
+static ParamType* CastStaticDialogParam(DialogParam& param, DialogType expectedType)
+{
+	if (param.dialogType() != expectedType)
+	{
+		return nullptr;
+	}
+	ParamType* castParam = dynamic_cast<ParamType*>(&param);
+	if (castParam == nullptr)
+	{
+		DialogHelper::logFile() << "StaticDialogManager dialog param type mismatch, dialogType = "
+			<< expectedType << std::endl;
+	}
+	return castParam;
+}
+
+/** 将静态窗口操作参数转换为指定派生类型，避免传错参数导致未定义行为
+@param [in] param 调用方传入的操作参数
+@param [in] expectedType 期望的操作类型
+@return 返回转换后的参数指针，失败时返回nullptr
+*/
+template<typename ParamType>
+static ParamType* CastStaticOperateParam(OperateParam& param, OperateType expectedType)
+{
+	if (param.operateType() != expectedType)
+	{
+		return nullptr;
+	}
+	ParamType* castParam = dynamic_cast<ParamType*>(&param);
+	if (castParam == nullptr)
+	{
+		DialogHelper::logFile() << "StaticDialogManager operate param type mismatch, operateType = "
+			<< expectedType << std::endl;
+	}
+	return castParam;
+}
 
 StaticDialogManager::StaticDialogManager() :
 m_accountManagerDialogId(0)
@@ -20,16 +63,22 @@ void StaticDialogManager::popStaticDialog(DialogParam& param)
     {
     case ACCOUNT_MANAGER_DIALOG:
     {
-        AccountManagerDialogParam& accountManagerDialogParam = (AccountManagerDialogParam&)param;
+		AccountManagerDialogParam* accountManagerDialogParam =
+			CastStaticDialogParam<AccountManagerDialogParam>(param, ACCOUNT_MANAGER_DIALOG);
+		if (accountManagerDialogParam == nullptr)
+		{
+			return;
+		}
 		bool bExist = false;
-		auto dialogPtr = AllocManager::instance().findDialogPtr(ACCOUNT_MANAGER_DIALOG);
+		auto dialogPtr = AllocManager::instance().findDialogPtrByType(ACCOUNT_MANAGER_DIALOG);
 		if (dialogPtr != nullptr)
 		{
 			bExist = true;
 		}
 
         quint64 dialogId = 0;
-        AccountManagerDialog* accountManagerDialog = (AccountManagerDialog*)AllocManager::instance().createDialog(dialogId, accountManagerDialogParam.m_userId, ACCOUNT_MANAGER_DIALOG);
+		AccountManagerDialog* accountManagerDialog =
+			dynamic_cast<AccountManagerDialog*>(AllocManager::instance().createDialog(dialogId, *accountManagerDialogParam));
         if (accountManagerDialog == nullptr)
         {
             return;
@@ -71,24 +120,38 @@ void StaticDialogManager::operateDialog(OperateParam& param)
 	{
 	case STATIC_DIALOG_DIALOG_ID_OPERATE:
 	{
-		StaticDialogDialogIdOperateParam& operateParam = (StaticDialogDialogIdOperateParam&)param;
-		operateParam.m_dialogId = staticDialogDialogId(operateParam.m_dialogType);
+		StaticDialogDialogIdOperateParam* operateParam =
+			CastStaticOperateParam<StaticDialogDialogIdOperateParam>(param, STATIC_DIALOG_DIALOG_ID_OPERATE);
+		if (operateParam != nullptr)
+		{
+			operateParam->m_dialogId = staticDialogDialogId(operateParam->m_dialogType);
+		}
 		break;
 	}
 	case POP_ACCOUNT_DIALOG_OPERATE:
 	{
-		PopAccountDialogOperateParam& operateParam = (PopAccountDialogOperateParam&)param;
+		PopAccountDialogOperateParam* operateParam =
+			CastStaticOperateParam<PopAccountDialogOperateParam>(param, POP_ACCOUNT_DIALOG_OPERATE);
+		if (operateParam == nullptr)
+		{
+			break;
+		}
 		AccountManagerDialog* dialogPtr = accountManagerDialogPtr();
 		if (dialogPtr == nullptr)
 		{
 			return;
 		}
-		operateParam.m_accountName = dialogPtr->popAccountDialog();
+		operateParam->m_accountName = dialogPtr->popAccountDialog();
 		break;
 	}
 	case POP_CLOSURE_DIALOG_OPERATE:
 	{
-		PopClosureDialogOperateParam& operateParam = (PopClosureDialogOperateParam&)param;
+		PopClosureDialogOperateParam* operateParam =
+			CastStaticOperateParam<PopClosureDialogOperateParam>(param, POP_CLOSURE_DIALOG_OPERATE);
+		if (operateParam == nullptr)
+		{
+			break;
+		}
 		AccountManagerDialog* dialogPtr = accountManagerDialogPtr();
 		if (dialogPtr == nullptr)
 		{
@@ -99,41 +162,60 @@ void StaticDialogManager::operateDialog(OperateParam& param)
 	}
 	case SUB_ACCOUNT_PANEL_PTR_OPERATE:
 	{
-		SubAccountPanelPtrOperateParam& operateParam = (SubAccountPanelPtrOperateParam&)param;
+		SubAccountPanelPtrOperateParam* operateParam =
+			CastStaticOperateParam<SubAccountPanelPtrOperateParam>(param, SUB_ACCOUNT_PANEL_PTR_OPERATE);
+		if (operateParam == nullptr)
+		{
+			break;
+		}
 		AccountManagerDialog* dialogPtr = accountManagerDialogPtr();
 		if (dialogPtr == nullptr)
 		{
 			return;
 		}
-		operateParam.m_subAccountPanel = dialogPtr->subAccountPanelPtr();
+		operateParam->m_subAccountPanel = dialogPtr->subAccountPanelPtr();
 		break;
 	}
 	case ACCOUNT_DIALOG_PTR_OPERATE:
 	{
-		AccountDialogPtrOperateParam& operateParam = (AccountDialogPtrOperateParam&)param;
+		AccountDialogPtrOperateParam* operateParam =
+			CastStaticOperateParam<AccountDialogPtrOperateParam>(param, ACCOUNT_DIALOG_PTR_OPERATE);
+		if (operateParam == nullptr)
+		{
+			break;
+		}
 		AccountManagerDialog* dialogPtr = accountManagerDialogPtr();
 		if (dialogPtr == nullptr)
 		{
 			return;
 		}
-		operateParam.m_accountDialog = dialogPtr->accountDialogPtr();
+		operateParam->m_accountDialog = dialogPtr->accountDialogPtr();
 		break;
 	}
 	case CLOSURE_DIALOG_PTR_OPERATE:
 	{
-		ClosureDialogPtrOperateParam& operateParam = (ClosureDialogPtrOperateParam&)param;
+		ClosureDialogPtrOperateParam* operateParam =
+			CastStaticOperateParam<ClosureDialogPtrOperateParam>(param, CLOSURE_DIALOG_PTR_OPERATE);
+		if (operateParam == nullptr)
+		{
+			break;
+		}
 		AccountManagerDialog* dialogPtr = accountManagerDialogPtr();
 		if (dialogPtr == nullptr)
 		{
 			return;
 		}
-		operateParam.m_closureDialog = dialogPtr->closureDialogPtr();
+		operateParam->m_closureDialog = dialogPtr->closureDialogPtr();
 		break;
 	}
 	case CLOSE_STATIC_DIALOG_OPERATE:
 	{
-		CloseStaticDialogOperateParam& operateParam = (CloseStaticDialogOperateParam&)param;
-		closeStaticDialog(operateParam.m_dialogType);
+		CloseStaticDialogOperateParam* operateParam =
+			CastStaticOperateParam<CloseStaticDialogOperateParam>(param, CLOSE_STATIC_DIALOG_OPERATE);
+		if (operateParam != nullptr)
+		{
+			closeStaticDialog(operateParam->m_dialogType);
+		}
 		break;
 	}
 	default:
@@ -176,40 +258,55 @@ quint64 StaticDialogManager::staticDialogDialogId(DialogType type)
 
 void StaticDialogManager::onClosedSignal(DialogResult* result)
 {
-    DialogShow* dialogPtr = (DialogShow*)sender();
+    DialogShow* dialogPtr = qobject_cast<DialogShow*>(sender());
     if (dialogPtr == nullptr)
     {
         return;
     }
-    qint32 dialogId = AllocManager::instance().findDialogId(dialogPtr);
+	quint64 dialogId = AllocManager::instance().findDialogId(dialogPtr);
     if (dialogId == 0)
     {
         return;
     }
-    qint32 userId = AllocManager::instance().findUserId(dialogId);
+	DialogUserKey currentUserKey = AllocManager::instance().findUserKey(dialogId);
     DialogType type = AllocManager::instance().findDialogType(dialogId);
     qint32 userResult = dialogPtr->userResult();
-    StaticDialogDoneSignalParam param;
-    param.m_dialogId = dialogId;
-    param.m_userId = userId;
-    param.m_dialogType = type;
+	DialogSignalPtr signalParam = CreateDialogSignalParam<StaticDialogDoneSignalParam>();
+	if (signalParam.isNull())
+	{
+		DialogHelper::logFile() << "StaticDialogManager failed to create done signal" << std::endl;
+		return;
+	}
+	StaticDialogDoneSignalParam* param = static_cast<StaticDialogDoneSignalParam*>(signalParam.data());
+    param->m_dialogId = dialogId;
+	param->m_businessId = currentUserKey.m_businessId;
+    param->m_userId = currentUserKey.m_userId;
+    param->m_dialogType = type;
     if (result != nullptr)
     {
-        param.m_result = *result;
+        param->m_result = *result;
     }
-    param.m_userResult = userResult;
-	emit dialogSignal(param);
+    param->m_userResult = userResult;
+	emit dialogSignal(signalParam);
 }
 
 void StaticDialogManager::onAlreadyShown()
 {
-	AlreadyShownSignalParam param;
-	param.m_dialog = AllocManager::instance().findDialogId((COriginalDialog*)sender());
-	param.m_userId = AllocManager::instance().findUserId(param.m_dialog);
-	emit dialogSignal(param);
+	DialogSignalPtr signalParam = CreateDialogSignalParam<AlreadyShownSignalParam>();
+	if (signalParam.isNull())
+	{
+		DialogHelper::logFile() << "StaticDialogManager failed to create already shown signal" << std::endl;
+		return;
+	}
+	AlreadyShownSignalParam* param = static_cast<AlreadyShownSignalParam*>(signalParam.data());
+	param->m_dialog = AllocManager::instance().findDialogId(qobject_cast<COriginalDialog*>(sender()));
+	DialogUserKey currentUserKey = AllocManager::instance().findUserKey(param->m_dialog);
+	param->m_businessId = currentUserKey.m_businessId;
+	param->m_userId = currentUserKey.m_userId;
+	emit dialogSignal(signalParam);
 }
 
 AccountManagerDialog* StaticDialogManager::accountManagerDialogPtr()
 {
-	return (AccountManagerDialog*)AllocManager::instance().findDialogPtr(m_accountManagerDialogId);
+	return dynamic_cast<AccountManagerDialog*>(AllocManager::instance().findDialogPtr(m_accountManagerDialogId));
 }

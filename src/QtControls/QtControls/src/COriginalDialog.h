@@ -6,15 +6,13 @@
 #include <QFont>
 #include <QPoint>
 #include <QRect>
+#include <QtGlobal>
 #include "QtControlsMacro.h"
 
 class QCloseEvent;
 class QKeyEvent;
 class QMouseEvent;
 class QWindow;
-
-//typedef HRESULT (WINAPI *lpfn_DwmExtendFrameIntoClientArea)(HWND hWnd, _In_ const MARGINS *pMarInset);
-//typedef HRESULT (WINAPI *lpfn_DwmIsCompositionEnabled)(_Out_ BOOL *pfEnabled);
 
 /** 无边框对话框基础类，封装自定义标题栏拖动、边缘缩放、激活状态和快捷键关闭控制
 */
@@ -115,7 +113,7 @@ signals:
 	void activeChanged(int activeType);
 
 protected:
-#ifdef _MSC_VER
+#ifdef Q_OS_WIN
 	/** Windows下把鼠标坐标转换成非客户区命中测试结果
 	@param [in] pt 鼠标所在屏幕坐标
 	@return 返回Windows窗口命中测试常量
@@ -151,7 +149,7 @@ protected:
 	@param [in] eve Qt键盘事件
 	*/
 	void keyPressEvent(QKeyEvent* eve);
-#ifndef _MSC_VER
+#ifndef Q_OS_WIN
 	/** 处理非Windows平台的鼠标按下，用于开始拖动或缩放
 	@param [in] eve Qt鼠标事件
 	*/
@@ -220,19 +218,17 @@ protected:
 	*/
 	void applyResizeByGlobalPos(const QPoint& globalPos);
 #endif
-	//bool dwm_init(HWND hwnd);
-	//bool isDwmEnabled();
 
 private:
 	// 鼠标命中窗口缩放边缘的宽度
-	int      m_touchBorderWidth;
+	qint32   m_touchBorderWidth;
 	// 自定义标题栏高度
-	int      m_customerTitleBarHeight;
+	qint32   m_customerTitleBarHeight;
 	// 自定义标题栏在客户区中的矩形
 	QRect    m_customerTitleBarRect;
 	// 是否允许Alt+F4触发关闭
 	bool     m_altF4Enable;
-#ifndef _MSC_VER
+#ifndef Q_OS_WIN
 	// 非Windows平台本次关闭是否来自Alt+F4
 	bool     m_altF4Close;
 	// 非Windows平台延迟处理的关闭事件指针

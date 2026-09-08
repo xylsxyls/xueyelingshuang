@@ -3,12 +3,26 @@
 ContentLabel::ContentLabel(QWidget* parent) :
 m_up(nullptr),
 m_down(nullptr),
-m_isOne(true),
-m_rect(QRect(0, 0, 0, 0))
+m_rect(QRect(0, 0, 0, 0)),
+m_isOne(true)
 {
 	m_up = new Label(parent);
 	m_down = new Label(parent);
 	init();
+}
+
+ContentLabel::~ContentLabel()
+{
+	if (m_up != nullptr && m_up->parent() == nullptr)
+	{
+		delete m_up;
+	}
+	if (m_down != nullptr && m_down->parent() == nullptr)
+	{
+		delete m_down;
+	}
+	m_up = nullptr;
+	m_down = nullptr;
 }
 
 void ContentLabel::setUpColor(const QColor& color)
@@ -97,8 +111,9 @@ void ContentLabel::setFontSize(qint32 size)
 	{
 		return;
 	}
-	m_up->setFontSize(size);
-	m_down->setFontSize(size);
+	const qint32 validSize = qMax(size, 0);
+	m_up->setFontSize(validSize);
+	m_down->setFontSize(validSize);
 	m_up->repaint();
 	m_down->repaint();
 }

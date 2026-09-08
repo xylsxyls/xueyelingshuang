@@ -5,11 +5,15 @@
 
 CTreeViewEx::CTreeViewEx(QWidget *parent)
     :QTreeView(parent)
-    ,m_hoveredColumn(0)
-    ,m_hoveredRow   (0)
+    ,m_hoveredRow(-1)
+    ,m_hoveredColumn(-1)
 {
     this->setMouseTracking(true);
-    this->header()->setMouseTracking(true);
+	if (this->header() != nullptr)
+	{
+		this->header()->setMouseTracking(true);
+		this->header()->installEventFilter(this);
+	}
 
 
     this->setStyleSheet("CTreeViewEx{                                      \n\
@@ -62,6 +66,10 @@ CTreeViewEx::~CTreeViewEx()
 
 void CTreeViewEx::mouseMoveEvent(QMouseEvent *e)
 {
+	if (e == nullptr)
+	{
+		return;
+	}
     QTreeView::mouseMoveEvent(e);
 
     QModelIndex rIndex = this->indexAt(e->pos());
@@ -75,7 +83,10 @@ void CTreeViewEx::mouseMoveEvent(QMouseEvent *e)
         if(m_hoveredRow != -1)
         {
             m_hoveredRow = -1;
-            this->viewport()->update();
+			if (this->viewport() != nullptr)
+			{
+				this->viewport()->update();
+			}
         }
     }
 
@@ -83,14 +94,17 @@ void CTreeViewEx::mouseMoveEvent(QMouseEvent *e)
     if(cIndex.isValid())
     {
 
-        m_hoveredColumn = rIndex.column();
+        m_hoveredColumn = cIndex.column();
     }
     else
     {
         if(m_hoveredColumn != -1)
         {
             m_hoveredColumn = -1;
-            this->viewport()->update();
+			if (this->viewport() != nullptr)
+			{
+				this->viewport()->update();
+			}
         }
     }
 
@@ -98,6 +112,10 @@ void CTreeViewEx::mouseMoveEvent(QMouseEvent *e)
 
 void CTreeViewEx::leaveEvent(QEvent *e)
 {
+	if (e == nullptr)
+	{
+		return;
+	}
 	QTreeView::leaveEvent(e);
 	bool needUpdate = false;
 	if(m_hoveredRow != -1)
@@ -113,11 +131,24 @@ void CTreeViewEx::leaveEvent(QEvent *e)
 	}
 
 	if(needUpdate)
-		update();
+	{
+		if (this->viewport() != nullptr)
+		{
+			this->viewport()->update();
+		}
+		else
+		{
+			update();
+		}
+	}
 }
 
 bool CTreeViewEx::eventFilter(QObject *obj, QEvent *e)
 {
+	if (obj == nullptr || e == nullptr)
+	{
+		return false;
+	}
     if(obj == this->header())
     {
         switch(e->type())
@@ -130,12 +161,18 @@ bool CTreeViewEx::eventFilter(QObject *obj, QEvent *e)
                 if(m_hoveredColumn != -1)
                 {
                     m_hoveredColumn = -1;
-                    this->viewport()->update();
+					if (this->viewport() != nullptr)
+					{
+						this->viewport()->update();
+					}
                 }
                 if(m_hoveredRow != -1)
                 {
                     m_hoveredRow = -1;
-                    this->viewport()->update();
+					if (this->viewport() != nullptr)
+					{
+						this->viewport()->update();
+					}
                 }
             }
                 break;
@@ -152,12 +189,19 @@ bool CTreeViewEx::eventFilter(QObject *obj, QEvent *e)
 
 void CTreeViewEx::setHeader(QHeaderView *header)
 {
-    if(header)
-    {
-        header->installEventFilter(this);
-    }
+	if (header == nullptr)
+	{
+		return;
+	}
 
+	QHeaderView* oldHeader = this->header();
+	if (oldHeader != nullptr)
+	{
+		oldHeader->removeEventFilter(this);
+	}
     QTreeView::setHeader(header);
+	header->setMouseTracking(true);
+    header->installEventFilter(this);
 }
 
 int CTreeViewEx::hoveredRow() const
@@ -169,4 +213,3 @@ int CTreeViewEx::hoveredColumn() const
 {
     return m_hoveredColumn;
 }
-

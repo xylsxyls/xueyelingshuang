@@ -14,5 +14,5 @@ ControlShow(parent)
 
 Slider::~Slider()
 {
-	installEventFilter(nullptr);
+	removeEventFilter(this);
 }

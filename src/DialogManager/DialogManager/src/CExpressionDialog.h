@@ -5,6 +5,8 @@
 #include "CExpressionPicker.h"
 #include "DialogManagerMacro.h"
 
+class QEvent;
+
 /** 表情选择弹窗，负责加载表情配置并组合表情分组和表情列表控件
 */
 class DialogManagerAPI CExpressionDialog : public QDialog
@@ -47,13 +49,10 @@ private:
     */
     void paintEvent(QPaintEvent* eve);
 
-    /** 处理原生窗口激活事件
-    @param [in] eventType 原生事件类型
-    @param [in] message 原生事件消息
-    @param [out] result 原生事件返回结果
-    @return 返回true表示事件已处理，否则返回false
+    /** 处理跨平台激活状态变化
+    @param [in] eve Qt状态变化事件
     */
-    bool nativeEvent(const QByteArray& eventType, void* message, long* result);
+    void changeEvent(QEvent* eve);
 
 signals:
     /** 表情被选中时发出

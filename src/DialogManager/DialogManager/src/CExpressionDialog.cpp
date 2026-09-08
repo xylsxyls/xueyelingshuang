@@ -2,11 +2,9 @@
 #include "QtControls/ExpressionConfigParser.h"
 #include <QStandardItemModel>
 #include <QDebug>
+#include <QEvent>
 #include <QPainter>
 #include <stdint.h>
-#ifdef _MSC_VER
-#include <Windows.h>
-#endif
 #include "DialogHelper.h"
 
 CExpressionDialog::CExpressionDialog(QWidget *parent)
@@ -18,15 +16,23 @@ CExpressionDialog::CExpressionDialog(QWidget *parent)
 {
     this->setWindowFlags(Qt::FramelessWindowHint | Qt::Popup);
 
-    ((QStandardItemModel*)(m_expressionPicker->model()))->setColumnCount(12);
-    ((QStandardItemModel*)(m_expressionPicker->model()))->setRowCount(4);
+	QStandardItemModel* expressionModel = qobject_cast<QStandardItemModel*>(m_expressionPicker->model());
+	if (expressionModel != nullptr)
+	{
+		expressionModel->setColumnCount(12);
+		expressionModel->setRowCount(4);
+	}
     m_expressionPicker->resize(33*12 + 2,33*4 + 2);
     m_expressionPicker->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_expressionPicker->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_expressionPicker->setShowPreView(true);
 
-    ((QStandardItemModel*)(m_expressionGroupPicker->model()))->setColumnCount(12);
-    ((QStandardItemModel*)(m_expressionGroupPicker->model()))->setRowCount(1);
+	QStandardItemModel* groupModel = qobject_cast<QStandardItemModel*>(m_expressionGroupPicker->model());
+	if (groupModel != nullptr)
+	{
+		groupModel->setColumnCount(12);
+		groupModel->setRowCount(1);
+	}
     m_expressionGroupPicker->setFixedSize(33*12 + 2,33*1 + 2);
     m_expressionGroupPicker->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_expressionGroupPicker->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -58,44 +64,47 @@ CExpressionDialog::~CExpressionDialog()
 
 void CExpressionDialog::layoutControl()
 {
+	if (m_expressionPicker == nullptr || m_expressionGroupPicker == nullptr)
+	{
+		return;
+	}
     m_expressionPicker->move(10,10);
     m_expressionGroupPicker->move(10, this->height() - m_expressionGroupPicker->height());
 }
 
 void CExpressionDialog::resizeEvent(QResizeEvent *e)
 {
+	if (e == nullptr)
+	{
+		return;
+	}
     QDialog::resizeEvent(e);
     this->layoutControl();
 }
 
 void CExpressionDialog::paintEvent(QPaintEvent *e)
 {
+	if (e == nullptr)
+	{
+		return;
+	}
     QPainter painter(this);
     painter.fillRect(this->rect(), QColor(44,52,74));
     painter.setPen(QColor("#4A5677"));
     painter.drawRect(DialogHelper::rectValid(rect().adjusted(0, 0, -1, -1)));
 }
 
-bool CExpressionDialog::nativeEvent(const QByteArray &eventType, void *message, long *result)
+void CExpressionDialog::changeEvent(QEvent* eve)
 {
-    bool res = QDialog::nativeEvent(eventType, message, result);
-#ifdef _MSC_VER
-    if (eventType == "windows_generic_MSG" || eventType == "windows_dispatcher_MSG") {
-        MSG* msg = static_cast<MSG *>(message);
-        switch (msg->message)
-        {
-        case WM_ACTIVATE:
-            {
-                emit ncActiveChanged(msg->wParam);
-            }
-            break;
-        default:
-            break;
-        }
-    }
-#endif
-
-    return res;
+	if (eve == nullptr)
+	{
+		return;
+	}
+	QDialog::changeEvent(eve);
+	if (eve->type() == QEvent::ActivationChange)
+	{
+		emit ncActiveChanged(isActiveWindow());
+	}
 }
 
 void CExpressionDialog::selectGroup(const CExpressionPicker::Expression &group)
@@ -104,7 +113,7 @@ void CExpressionDialog::selectGroup(const CExpressionPicker::Expression &group)
     for(int32_t i = 0; i < m_expressions.count(); ++i)
     {
         CExpressionPicker::Expression exp = m_expressions[i];
-        if(exp.groupid == group.id)
+        if(exp.m_groupId == group.m_id)
         {
             texpList << exp;
         }
@@ -129,11 +138,11 @@ bool CExpressionDialog::loadExpressions(const QString& emotionPath)
     {
         const ExpressionGroupInfo& groupInfo = config.m_groups[i];
         CExpressionPicker::Expression group;
-        group.groupid = groupInfo.m_groupId;
-        group.id = groupInfo.m_groupId;
-        group.desc = groupInfo.m_desc;
-        group.fileName = groupInfo.m_fileName;
-        group.tooltip = groupInfo.m_tooltip;
+        group.m_groupId = groupInfo.m_groupId;
+        group.m_id = groupInfo.m_groupId;
+        group.m_desc = groupInfo.m_desc;
+        group.m_fileName = groupInfo.m_fileName;
+        group.m_tooltip = groupInfo.m_tooltip;
         m_groups << group;
     }
 
@@ -141,12 +150,12 @@ bool CExpressionDialog::loadExpressions(const QString& emotionPath)
     {
         const ExpressionInfo& expressionInfo = config.m_expressions[i];
         CExpressionPicker::Expression expression;
-        expression.groupid = expressionInfo.m_groupId;
-        expression.id = expressionInfo.m_id;
-        expression.desc = expressionInfo.m_desc;
-        expression.fileName = expressionInfo.m_fileName;
-        expression.shortcut = expressionInfo.m_shortcut;
-        expression.tooltip = expressionInfo.m_tooltip;
+        expression.m_groupId = expressionInfo.m_groupId;
+        expression.m_id = expressionInfo.m_id;
+        expression.m_desc = expressionInfo.m_desc;
+        expression.m_fileName = expressionInfo.m_fileName;
+        expression.m_shortcut = expressionInfo.m_shortcut;
+        expression.m_tooltip = expressionInfo.m_tooltip;
         m_expressions << expression;
     }
 

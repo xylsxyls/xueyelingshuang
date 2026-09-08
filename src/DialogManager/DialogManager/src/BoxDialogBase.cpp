@@ -1,7 +1,7 @@
 ﻿#include "BoxDialogBase.h"
 #include "QtControls/Label.h"
 #include <QPainter>
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include "QtControls/ControlStyleManager.h"
 #include "QtControls/Separator.h"
 #include "DialogHelper.h"
@@ -29,6 +29,10 @@ BoxDialogBase::BoxDialogBase()
 }
 void BoxDialogBase::paintEvent(QPaintEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	PopDialog::paintEvent(eve);
 	QPainter painter(this);
     painter.save();
@@ -38,6 +42,10 @@ void BoxDialogBase::paintEvent(QPaintEvent* eve)
 
 void BoxDialogBase::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     PopDialog::resizeEvent(eve);
     if (!check())
     {

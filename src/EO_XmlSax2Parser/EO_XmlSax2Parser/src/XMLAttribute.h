@@ -1,12 +1,13 @@
 ﻿#ifndef XMLATTRIBUTE_H
 #define XMLATTRIBUTE_H
 
+#include "EO_XmlSax2ParserMacro.h"
 #include <QString>
 #include <QVector>
 
 /** XML节点属性，保存流式解析时当前节点携带的属性名和属性值。
 */
-struct XMLAttribute
+struct EO_XmlSax2ParserAPI XMLAttribute
 {
     /** 构造空属性对象。
     */

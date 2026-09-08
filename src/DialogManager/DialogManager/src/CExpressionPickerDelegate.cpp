@@ -1,6 +1,5 @@
 ﻿#include "CExpressionPickerDelegate.h"
 #include <QPainter>
-#include <QDebug>
 #include "CExpressionPicker.h"
 #include "DialogHelper.h"
 
@@ -16,6 +15,10 @@ CExpressionPickerDelegate::~CExpressionPickerDelegate()
 
 void CExpressionPickerDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
+	if (painter == nullptr || !index.isValid())
+	{
+		return;
+	}
     painter->save();
 
     QColor borderColor("#4A5677");
@@ -39,6 +42,11 @@ void CExpressionPickerDelegate::paint(QPainter* painter, const QStyleOptionViewI
 
     //fill bkg
     CExpressionPicker* picker = qobject_cast<CExpressionPicker*>(this->parent());
+	if (picker == nullptr)
+	{
+		painter->restore();
+		return;
+	}
     QRect bkgRect;
     if(picker->isShowIconRect())
     {

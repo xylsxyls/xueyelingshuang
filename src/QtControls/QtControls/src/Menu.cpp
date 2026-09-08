@@ -1,6 +1,7 @@
 ﻿#include "Menu.h"
 #include <QtWidgets/QWidgetAction>
 #include "MenuCustomStyle.h"
+#include "ControlSubStyle.h"
 #include <qglobal.h>
 #include <QMouseEvent>
 
@@ -13,6 +14,7 @@ m_pCustomStyle(nullptr)
 	m_pCustomStyle = new MenuCustomStyle;
 	if (m_pCustomStyle != nullptr)
 	{
+		m_pCustomStyle->setParent(this);
 		setStyle(m_pCustomStyle);
 	}
 	installEventFilter(this);
@@ -25,11 +27,12 @@ m_pCustomStyle(nullptr)
 
 Menu::~Menu()
 {
-
+	m_pCustomStyle = nullptr;
 }
 
 Menu::Menu(const QString& title, const QString& icon, const QSize& size, QWidget* parent) :
-ControlShow(parent)
+ControlShow(parent),
+m_pCustomStyle(nullptr)
 {
 	ControlBase::setControlShow(this);
 	setItemName(L"item");
@@ -39,6 +42,7 @@ ControlShow(parent)
 	m_pCustomStyle = new MenuCustomStyle;
 	if (m_pCustomStyle != nullptr)
 	{
+		m_pCustomStyle->setParent(this);
 		setStyle(m_pCustomStyle);
 	}
 	installEventFilter(this);
@@ -78,31 +82,41 @@ QAction* Menu::addAction(const QString& text,
 
 void Menu::addMenu(Menu* menu)
 {
+	if (menu == nullptr)
+	{
+		return;
+	}
 	QMenu::addMenu(menu);
 	m_vecMenu.push_back(menu);
 }
 
 void Menu::setSeparatorHeight(qint32 height, bool rePaint)
 {
-	m_itemName = L"separator";
-	ControlBase::setPxValue(L"height", height, true, rePaint);
-	m_itemName = L"item";
+	ControlSubStyle::setPxValue(&m_controlStyle, L"separator", L"height", qMax(height, 0));
+	if (rePaint)
+	{
+		repaint();
+	}
 }
 
 void Menu::setSeparatorColor(const QColor& color, bool rePaint)
 {
-	m_itemName = L"separator";
 	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = color;
-	ControlBase::setColorStateMap(colorStateMap, L"background-color", true, rePaint);
-	m_itemName = L"item";
+	ControlSubStyle::setColorStateMap(&m_controlStyle, L"separator", colorStateMap, L"background-color");
+	if (rePaint)
+	{
+		repaint();
+	}
 }
 
 void Menu::setItemIconOrigin(qint32 leftOrigin, bool rePaint)
 {
-	m_itemName = L"icon";
-	ControlBase::setPxValue(L"padding-left", leftOrigin, true, rePaint);
-	m_itemName = L"item";
+	ControlSubStyle::setPxValue(&m_controlStyle, L"icon", L"padding-left", qMax(leftOrigin, 0));
+	if (rePaint)
+	{
+		repaint();
+	}
 }
 
 QAction* Menu::exec(const QPoint& point)
@@ -113,31 +127,42 @@ QAction* Menu::exec(const QPoint& point)
 		return nullptr;
 	}
 	QIcon icon = action->icon();
-	action->setIcon(ChangeIcon(action, icon));
+	QIcon changedIcon;
+	if (tryChangeIcon(action, icon, &changedIcon))
+	{
+		action->setIcon(changedIcon);
+	}
 	return action;
 }
 
-QIcon Menu::ChangeIcon(QAction* action, const QIcon& icon)
+bool Menu::tryChangeIcon(QAction* action, const QIcon& icon, QIcon* changedIcon)
 {
+	if (action == nullptr || changedIcon == nullptr)
+	{
+		return false;
+	}
 	//先寻找是否在本身节点中
 	auto itIcon = m_mapIconData.find(action);
 	if (itIcon != m_mapIconData.end())
 	{
-		QIcon result = itIcon->second;
+		*changedIcon = itIcon->second;
 		m_mapIconData[action] = icon;
-		return result;
+		return true;
 	}
 	//如果本节点没有就找子节点
-	qint32 index = -1;
-	while (index++ != m_vecMenu.size() - 1)
+	const qint32 count = static_cast<qint32>(m_vecMenu.size());
+	for (qint32 index = 0; index < count; ++index)
 	{
 		Menu* menu = m_vecMenu[index];
 		if (menu != nullptr)
 		{
-			return menu->ChangeIcon(action, icon);
+			if (menu->tryChangeIcon(action, icon, changedIcon))
+			{
+				return true;
+			}
 		}
 	}
-	return QIcon();
+	return false;
 }
 
 //m_controlStyle.addClassName()(true, m_itemName)(UNCHECK)(NORMAL).AddKeyValue(L"top", L"1px");

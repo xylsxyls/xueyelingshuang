@@ -9,7 +9,7 @@ m_size(20)
 
 void MenuCustomStyle::setMaxSize(qint32 size)
 {
-	m_size = size;
+	m_size = qMax(size, 0);
 }
 
 int MenuCustomStyle::pixelMetric(PixelMetric pm, const QStyleOption * opt, const QWidget * widget) const

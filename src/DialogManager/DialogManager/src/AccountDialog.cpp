@@ -1,7 +1,7 @@
 ﻿#include "AccountDialog.h"
 #include "QtControls/Label.h"
 #include "QtControls/LineEdit.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include <QEvent>
 #include "DialogHelper.h"
 
@@ -17,8 +17,8 @@ m_ignore(nullptr)
     m_registerAlt = new Label(this);
     m_account = new LineEdit(this);
     m_errorAccount = new Label(this);
-    m_accept = new COriginalButton(this);
-    m_ignore = new COriginalButton(this);
+    m_accept = new PushButton(this);
+    m_ignore = new PushButton(this);
     if (!check())
     {
         return;
@@ -118,11 +118,15 @@ void AccountDialog::setIgnoreDown(DialogResult result)
 
 bool AccountDialog::eventFilter(QObject* tar, QEvent* eve)
 {
-	bool result = BoxDialogBase::eventFilter(tar, eve);
-	if (!check() || tar == nullptr || eve == nullptr)
+	if (tar == nullptr || eve == nullptr)
     {
-        return result;
+        return false;
     }
+	bool result = BoxDialogBase::eventFilter(tar, eve);
+	if (!check())
+	{
+		return result;
+	}
 	if (tar == m_account)
 	{
 		if (eve->type() == QEvent::FocusIn)
@@ -147,6 +151,10 @@ bool AccountDialog::eventFilter(QObject* tar, QEvent* eve)
 
 void AccountDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     BoxDialogBase::resizeEvent(eve);
     if (!check())
     {

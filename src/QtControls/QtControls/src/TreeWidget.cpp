@@ -27,7 +27,7 @@ TreeWidget::~TreeWidget()
 
 void TreeWidget::setMaxHeight(qint32 maxHeight, bool rePaint)
 {
-	ControlBase::setPxValue(L"max-height", maxHeight, false, rePaint);
+	ControlBase::setPxValue(L"max-height", qMax(maxHeight, 0), false, rePaint);
 }
 
 void TreeWidget::initScrollBar()
@@ -98,10 +98,15 @@ void TreeWidget::initScrollBar()
 
 void TreeWidget::addWidget(qint32 itemHeight, QWidget* widget, QWidget* parent, qint32 column)
 {
-	if (widget == nullptr)
+	if (widget == nullptr || parent == widget || column < 0)
 	{
 		return;
 	}
+	if (m_itemData.find(widget) != m_itemData.end())
+	{
+		removeWidget(widget, column);
+	}
+	const qint32 validItemHeight = qMax(itemHeight, 0);
 	if (parent == nullptr)
 	{
 		QTreeWidgetItem* item = new QTreeWidgetItem(this);
@@ -109,7 +114,7 @@ void TreeWidget::addWidget(qint32 itemHeight, QWidget* widget, QWidget* parent, 
 		{
 			return;
 		}
-		item->setSizeHint(0, QSize(width(), itemHeight));
+		item->setSizeHint(0, QSize(width(), validItemHeight));
 		setItemWidget(item, column, widget);
 		m_itemData[widget] = item;
 	}
@@ -125,15 +130,18 @@ void TreeWidget::addWidget(qint32 itemHeight, QWidget* widget, QWidget* parent, 
 		{
 			return;
 		}
-		item->setSizeHint(0, QSize(width(), itemHeight));
-		itData->second->addChild(item);
-		setItemWidget(item, 0, widget);
+		item->setSizeHint(0, QSize(width(), validItemHeight));
+		setItemWidget(item, column, widget);
 		m_itemData[widget] = item;
 	}
 }
 
 void TreeWidget::removeWidget(QWidget* widget, qint32 column)
 {
+	if (widget == nullptr || column < 0)
+	{
+		return;
+	}
 	auto itData = m_itemData.find(widget);
 	if (itData == m_itemData.end())
 	{
@@ -141,15 +149,17 @@ void TreeWidget::removeWidget(QWidget* widget, qint32 column)
 	}
 	
 	QTreeWidgetItem* item = itData->second;
-	m_itemData.erase(itData);
-
+	removeItemData(item);
 	removeItemWidget(item, column);
-	//delete widget;
-	//delete item;
+	delete item;
 }
 
 QWidget* TreeWidget::findWidget(QTreeWidgetItem* item)
 {
+	if (item == nullptr)
+	{
+		return nullptr;
+	}
 	for (auto itData = m_itemData.begin(); itData != m_itemData.end(); ++itData)
 	{
 		if (itData->second == item)
@@ -178,5 +188,34 @@ void TreeWidget::clear()
 
 void TreeWidget::contextMenuEvent(QContextMenuEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	emit itemRightClicked(itemAt(eve->pos()));
+}
+
+void TreeWidget::removeItemData(QTreeWidgetItem* item)
+{
+	if (item == nullptr)
+	{
+		return;
+	}
+
+	for (qint32 childIndex = 0; childIndex < item->childCount(); ++childIndex)
+	{
+		removeItemData(item->child(childIndex));
+	}
+
+	for (auto itData = m_itemData.begin(); itData != m_itemData.end();)
+	{
+		if (itData->second == item)
+		{
+			auto eraseIt = itData;
+			++itData;
+			m_itemData.erase(eraseIt);
+			continue;
+		}
+		++itData;
+	}
 }

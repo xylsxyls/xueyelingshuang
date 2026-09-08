@@ -6,7 +6,8 @@
 TreeView::TreeView(QWidget* parent):
 QTreeView(parent),
 m_treeViewDelegate(nullptr),
-m_treeViewHeader(nullptr)
+m_treeViewHeader(nullptr),
+m_treeViewModel(nullptr)
 {
 	m_treeViewDelegate = new TreeViewDelegate;
 	m_treeViewHeader = new TreeViewHeader(this);
@@ -21,7 +22,7 @@ TreeView::~TreeView()
 
 TreeViewModel* TreeView::model()
 {
-	return (TreeViewModel*)QTreeView::model();
+	return dynamic_cast<TreeViewModel*>(QTreeView::model());
 }
 
 void TreeView::init()

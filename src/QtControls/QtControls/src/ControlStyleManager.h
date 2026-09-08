@@ -125,6 +125,11 @@ private:
 	*/
 	bool ensureTextDocument();
 
+	/** 判断当前调用是否位于Qt GUI线程，避免跨线程创建或绘制Widget。
+	@return true表示当前线程允许访问内部Qt绘制对象
+	*/
+	static bool isGuiThread();
+
 private:
 	// 默认字体
 	QFont m_defaultFont;
@@ -143,4 +148,3 @@ private:
 };
 
 #endif // CONTROLSTYLEMANAGER_H
-

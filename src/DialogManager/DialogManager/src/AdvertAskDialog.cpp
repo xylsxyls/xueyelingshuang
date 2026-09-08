@@ -4,7 +4,7 @@
 #if defined(QTCONTROLS_ENABLE_WEBKIT) && (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
 
 #include "QtControls/Label.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include "DialogManager.h"
 #include "QtControls/WebViewEx.h"
 #include "DialogHelper.h"
@@ -17,8 +17,8 @@ m_ignore(nullptr)
 {
     m_tip = new Label(this);
     m_advert = new CWebViewEx(this);
-    m_accept = new COriginalButton(this);
-    m_ignore = new COriginalButton(this);
+    m_accept = new PushButton(this);
+    m_ignore = new PushButton(this);
 
     if (!check())
     {
@@ -63,6 +63,10 @@ void AdvertAskDialog::initAdvertUrl(const QString& advertUrl)
 
 void AdvertAskDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     PopDialog::resizeEvent(eve);
     if (!check())
     {

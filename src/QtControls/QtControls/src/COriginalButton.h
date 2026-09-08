@@ -1,9 +1,15 @@
 ﻿#ifndef CORIGINALBUTTON_H
 #define CORIGINALBUTTON_H
 
+/** 废弃类：COriginalButton只保留历史代码，默认不编译历史实现。
+调用方不得在新代码中继续依赖该控件；缺失能力请补到PushButton。
+如必须临时编译旧代码，需要显式定义QTCONTROLS_ENABLE_DEPRECATED_ORIGINAL_BUTTON。
+*/
 #include <QPushButton>
 #include <QTimer>
 #include "QtControlsMacro.h"
+
+#if defined(QTCONTROLS_ENABLE_DEPRECATED_ORIGINAL_BUTTON)
 
 /** 旧版状态按钮控件，内部用整段QSS模板替换方式管理背景、文字、边框和点击防抖状态
 */
@@ -140,6 +146,30 @@ protected:
 	@return 返回Qt事件分发结果
 	*/
 	bool event(QEvent *e);
+
+private:
+	/** 计算纵向状态图指定状态的上边切片位置
+	@param [in] stepHeight 单个状态图高度
+	@param [in] stateCount 状态图切片数量
+	@param [in] imageIndex 状态图序号，从1开始，0表示不裁切
+	@return 返回上边切片位置，参数无效时返回0
+	*/
+	static qint32 imageSliceTop(qint32 stepHeight, quint32 stateCount, quint32 imageIndex);
+
+	/** 计算纵向状态图指定状态的下边切片位置
+	@param [in] imageHeight 完整图片高度
+	@param [in] stepHeight 单个状态图高度
+	@param [in] stateCount 状态图切片数量
+	@param [in] imageIndex 状态图序号，从1开始，0表示不裁切
+	@return 返回下边切片位置，参数无效时返回0
+	*/
+	static qint32 imageSliceBottom(qint32 imageHeight, qint32 stepHeight, quint32 stateCount, quint32 imageIndex);
+
+	/** 将外部传入的图片状态序号限制到qint32可表达范围内
+	@param [in] value 外部传入的无符号状态值
+	@return 返回可安全参与QSS计算的状态值
+	*/
+	static quint32 clampImageValue(quint64 value);
 
 private slots:
 	/** 处理按钮点击信号，启动点击防抖计时
@@ -311,5 +341,35 @@ public:
 	*/
 	void setToolTipOffset(int x, int y);
 };
+
+#else
+
+/** 废弃占位控件，只用于让历史工程文件和Qt moc保持可编译。
+构造和析构保持私有，外部代码不能继续实例化该控件。
+*/
+class QtControlsAPI COriginalButton : public QPushButton
+{
+	Q_OBJECT
+private:
+	/** 私有构造函数，阻止外部继续创建旧按钮实例
+	@param [in] parent 父窗口指针
+	*/
+	COriginalButton(QWidget* parent = nullptr);
+
+	/** 私有析构函数，配合私有构造函数阻止外部管理旧按钮生命周期
+	*/
+	~COriginalButton();
+
+private slots:
+	/** 兼容历史moc生成文件的点击槽，占位实现不执行任何业务
+	*/
+	void _internalOnClicked();
+
+	/** 兼容历史moc生成文件的点击防抖计时槽，占位实现不执行任何业务
+	*/
+	void _internalOnClickBreathTimerTimeout();
+};
+
+#endif // QTCONTROLS_ENABLE_DEPRECATED_ORIGINAL_BUTTON
 
 #endif // CORIGINALBUTTON_H

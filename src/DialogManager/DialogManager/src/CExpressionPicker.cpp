@@ -3,8 +3,6 @@
 #include <QMouseEvent>
 #include "CExpressionPickerDelegate.h"
 
-#include <QDebug>
-
 CExpressionPicker::CExpressionPicker(QWidget *parent)
     :QTableView(parent)
     ,m_model(new QStandardItemModel(this))
@@ -79,26 +77,30 @@ void CExpressionPicker::setExpressionList(const CExpressionPicker::ExpressionLis
 {
     m_expressionList = li;
 
+	if (m_model == nullptr)
+	{
+		return;
+	}
     m_model->clear();
 
-    int capacity = this->maxRowCount()*this->maxColumnCount();
-    int tSize = capacity <= li.count() ? capacity : li.count();
+    qint32 capacity = qMax(this->maxRowCount(), 1) * qMax(this->maxColumnCount(), 1);
+    qint32 tSize = capacity <= li.count() ? capacity : li.count();
 
-    for(int i = 0; i < tSize; i++)
+    for(qint32 i = 0; i < tSize; ++i)
     {
         Expression exp = li[i];
         QStandardItem* item = new QStandardItem("expression");
-        item->setData(exp.desc     , ExpressionRole_Desc);
-        item->setData(exp.fileName , ExpressionRole_FileName);
-        item->setData(exp.groupid  , ExpressionRole_GroupId);
-        item->setData(exp.id       , ExpressionRole_Id);
-        item->setData(exp.shortcut , ExpressionRole_Shortcut);
-        item->setData(exp.tooltip  , ExpressionRole_Tooltip);
+        item->setData(exp.m_desc     , ExpressionRole_Desc);
+        item->setData(exp.m_fileName , ExpressionRole_FileName);
+        item->setData(exp.m_groupId  , ExpressionRole_GroupId);
+        item->setData(exp.m_id       , ExpressionRole_Id);
+        item->setData(exp.m_shortcut , ExpressionRole_Shortcut);
+        item->setData(exp.m_tooltip  , ExpressionRole_Tooltip);
 
-        item->setToolTip(exp.tooltip);
+        item->setToolTip(exp.m_tooltip);
 
-        int currentColumn = i % this->maxColumnCount();
-        int currentRow    = i / this->maxColumnCount();
+        qint32 currentColumn = i % this->maxColumnCount();
+        qint32 currentRow    = i / this->maxColumnCount();
         m_model->setItem(currentRow, currentColumn, item);
     }
 }
@@ -110,12 +112,12 @@ CExpressionPicker::ExpressionList CExpressionPicker::expressionList()
 
 void CExpressionPicker::setMaxColumnCount(int count)
 {
-    m_maxColumnCount = count;
+    m_maxColumnCount = qMax(count, 1);
 }
 
 void CExpressionPicker::setMaxRowCount(int count)
 {
-    m_maxRowCount = count;
+    m_maxRowCount = qMax(count, 1);
 }
 
 int CExpressionPicker::maxColumnCount()
@@ -130,17 +132,31 @@ int CExpressionPicker::maxRowCount()
 
 void CExpressionPicker::leaveEvent(QEvent *e)
 {
+	if (e == nullptr)
+	{
+		return;
+	}
     QTableView::leaveEvent(e);
-    m_preview->hide();
+	if (m_preview != nullptr)
+	{
+		m_preview->hide();
+	}
 }
 
 void CExpressionPicker::mouseMoveEvent(QMouseEvent *e)
 {
+	if (e == nullptr)
+	{
+		return;
+	}
     QTableView::mouseMoveEvent(e);
 
     if(!this->isShowPreView())
     {
-        m_preview->hide();
+		if (m_preview != nullptr)
+		{
+			m_preview->hide();
+		}
         return;
     }
 
@@ -148,10 +164,17 @@ void CExpressionPicker::mouseMoveEvent(QMouseEvent *e)
     QModelIndex tindex = this->indexAt(e->pos());
     if(!tindex.isValid() || !tindex.data(ExpressionRole_Id).isValid())
     {
-        m_preview->hide();
+		if (m_preview != nullptr)
+		{
+			m_preview->hide();
+		}
         return;
     }
 
+	if (m_preview == nullptr || m_movie == nullptr)
+	{
+		return;
+	}
     if(e->x() <= m_preview->width())
     {
         m_preview->move(this->width() - m_preview->width() - 1,
@@ -174,11 +197,11 @@ void CExpressionPicker::mouseMoveEvent(QMouseEvent *e)
 
 bool CExpressionPicker::eventFilter(QObject *obj, QEvent *e)
 {
-    bool res = QTableView::eventFilter(obj,e);
 	if (obj == nullptr || e == nullptr)
 	{
-		return res;
+		return false;
 	}
+    bool res = QTableView::eventFilter(obj,e);
     if(obj == m_preview)
     {
         if(e->type() == QEvent::MouseMove)
@@ -194,11 +217,11 @@ bool CExpressionPicker::eventFilter(QObject *obj, QEvent *e)
             }
         }
 
-		if(e->type() == QEvent::Hide)
+		if(e->type() == QEvent::Hide && m_movie != nullptr)
 		{
 			m_movie->stop();
 		}
-		if(e->type() == QEvent::Show)
+		if(e->type() == QEvent::Show && m_movie != nullptr)
 		{
 			m_movie->start();
 		}
@@ -220,12 +243,12 @@ void CExpressionPicker::onClicked(const QModelIndex &index)
     }
 
     Expression exp;
-    exp.desc     = index.data(ExpressionRole_Desc     ).toString();
-    exp.fileName = index.data(ExpressionRole_FileName ).toString();
-    exp.groupid  = index.data(ExpressionRole_GroupId  ).toString();
-    exp.id       = index.data(ExpressionRole_Id       ).toString();
-    exp.shortcut = index.data(ExpressionRole_Shortcut ).toString();
-    exp.tooltip  = index.data(ExpressionRole_Tooltip  ).toString();
+    exp.m_desc     = index.data(ExpressionRole_Desc     ).toString();
+    exp.m_fileName = index.data(ExpressionRole_FileName ).toString();
+    exp.m_groupId  = index.data(ExpressionRole_GroupId  ).toString();
+    exp.m_id       = index.data(ExpressionRole_Id       ).toString();
+    exp.m_shortcut = index.data(ExpressionRole_Shortcut ).toString();
+    exp.m_tooltip  = index.data(ExpressionRole_Tooltip  ).toString();
 
     emit expressionClicked(exp);
 }

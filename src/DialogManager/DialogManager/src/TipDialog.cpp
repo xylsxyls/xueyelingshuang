@@ -1,6 +1,6 @@
 ﻿#include "TipDialog.h"
 #include "QtControls/Label.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include "DialogManager.h"
 #include "DialogHelper.h"
 
@@ -9,7 +9,7 @@ m_tip(nullptr),
 m_accept(nullptr)
 {
     m_tip = new Label(this);
-    m_accept = new COriginalButton(this);
+    m_accept = new PushButton(this);
     if (!check())
     {
         return;
@@ -30,6 +30,10 @@ void TipDialog::setAcceptButton(const QString& acceptText, DialogResult acceptDo
 
 void TipDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     PopDialog::resizeEvent(eve);
     if (!check())
     {

@@ -27,7 +27,7 @@ Q_SIGNALS:
 	/** 窗口发出信号
 	@param [in] param 信号参数
 	*/
-	void dialogSignal(const SignalParam& param);
+	void dialogSignal(const DialogSignalPtr& param);
 
 private slots:
     /** 处理弹框关闭信号
@@ -66,14 +66,14 @@ private slots:
 	void onAlreadyShown();
 
 private:
-    /** 获取当前用户ID
-    @return 返回当前用户ID
+    /** 获取当前发送信号窗口的业务复用键，信号回传时用它让上层定位业务对象
+    @return 返回当前窗口注册到AllocManager时保存的业务复用键
     */
-    quint64 userId();
+    DialogUserKey userKey();
 
-	/** 根据用户ID查找下载操作弹框
-	@param [in] userId 用户ID
+	/** 根据业务复用键查找下载操作弹框，避免不同业务模块的下载任务ID互相误伤
+	@param [in] userKey 业务复用键
 	@return 返回下载操作弹框指针，未找到时返回nullptr
 	*/
-	DownloadOperateDialog* downloadOperateDialogPtrByUserId(quint64 userId);
+	DownloadOperateDialog* downloadOperateDialogPtrByUserKey(const DialogUserKey& userKey);
 };

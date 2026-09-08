@@ -1,6 +1,6 @@
 ﻿#include "AskShowDialog.h"
 #include "QtControls/Label.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include "DialogHelper.h"
 
 AskShowDialog::AskShowDialog():
@@ -9,8 +9,8 @@ m_accept(nullptr),
 m_ignore(nullptr)
 {
     m_tip = new Label(this);
-    m_accept = new COriginalButton(this);
-    m_ignore = new COriginalButton(this);
+    m_accept = new PushButton(this);
+    m_ignore = new PushButton(this);
 
     if (!check())
     {
@@ -53,6 +53,10 @@ void AskShowDialog::setIgnoreButton(const QString& ignoreText, DialogResult igno
 
 void AskShowDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     NotifyDialog::resizeEvent(eve);
     if (!check())
     {

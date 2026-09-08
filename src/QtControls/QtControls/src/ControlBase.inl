@@ -3,8 +3,15 @@
 
 #include "ControlBase.h"
 #include "CStringManager/CStringManagerAPI.h"
-#include "QssString/QssStringAPI.h"
+#include "ControlSubStyle.h"
 #include "ControlShow.h"
+
+template<class QBase>
+ControlBase<QBase>::ControlBase():
+m_show(nullptr)
+{
+
+}
 
 template<class QBase>
 ControlBase<QBase>::~ControlBase()
@@ -15,11 +22,6 @@ ControlBase<QBase>::~ControlBase()
 template<class QBase>
 void ControlBase<QBase>::setControlShow(ControlShow<QBase>* show)
 {
-	//理论上不该出现传空的现象，但由于以下函数中没有判空，所以在这里统一判断一下
-	if (show == nullptr)
-	{
-		abort();
-	}
 	m_show = show;
 }
 
@@ -47,7 +49,18 @@ void ControlBase<QBase>::setKeyValue(const std::wstring& keyWord,
 									 bool isItem,
 									 bool rePaint)
 {
-	m_show->m_controlStyle.addClassName()(isItem, m_show->m_itemName).AddKeyValue(keyWord, value);
+	if (m_show == nullptr)
+	{
+		return;
+	}
+	if (isItem)
+	{
+		ControlSubStyle::setKeyValue(&m_show->m_controlStyle, m_show->m_itemName, keyWord, value);
+	}
+	else
+	{
+		ControlSubStyle::setWidgetKeyValue(&m_show->m_controlStyle, keyWord, value);
+	}
 	if (rePaint)
 	{
 		m_show->repaint();
@@ -60,17 +73,17 @@ void ControlBase<QBase>::setColorStateMap(const std::map<qint32, std::map<qint32
 										  bool isItem,
 										  bool rePaint)
 {
-	for (auto itStateMap = colorStateMap.begin(); itStateMap != colorStateMap.end(); ++itStateMap)
+	if (m_show == nullptr)
 	{
-		auto& state = itStateMap->first;
-		auto& colorMap = itStateMap->second;
-		for (auto itColor = colorMap.begin(); itColor != colorMap.end(); ++itColor)
-		{
-			auto& stateInMap = itColor->first;
-			const QColor& color = itColor->second;
-			std::wstring colorString = QssHelper::QColorToWString(color);
-			m_show->m_controlStyle.addClassName()(isItem, m_show->m_itemName)(state)(stateInMap).AddKeyValue(keyWord, colorString);
-		}
+		return;
+	}
+	if (isItem)
+	{
+		ControlSubStyle::setColorStateMap(&m_show->m_controlStyle, m_show->m_itemName, colorStateMap, keyWord);
+	}
+	else
+	{
+		ControlSubStyle::setWidgetColorStateMap(&m_show->m_controlStyle, colorStateMap, keyWord);
 	}
 	if (rePaint)
 	{
@@ -86,31 +99,17 @@ void ControlBase<QBase>::setImageStateMap(const std::map<qint32, std::map<qint32
 										  bool isItem,
 										  bool rePaint)
 {
-	std::vector<qint32> vecHeight;
-	if (QssHelper::GetPicHeight(imagePath, stateCount, vecHeight) == false)
+	if (m_show == nullptr)
 	{
 		return;
 	}
-
-	for (auto itStateMap = imageStateMap.begin(); itStateMap != imageStateMap.end(); ++itStateMap)
+	if (isItem)
 	{
-		auto& state = itStateMap->first;
-		auto& imageMap = itStateMap->second;
-		for (auto itImage = imageMap.begin(); itImage != imageMap.end(); ++itImage)
-		{
-			auto& stateInMap = itImage->first;
-			const qint32& imageNum = itImage->second;
-			if (imageNum > stateCount || imageNum < 0)
-			{
-				continue;
-			}
-			std::wstring imageUrl = CStringManager::Format(L"url(%s) %d 0 %d 0 stretch stretch",
-														   imagePath.c_str(),
-														   imageNum == 0 ? 0 : vecHeight[imageNum - 1],
-														   vecHeight[stateCount - imageNum]);
-			
-			m_show->m_controlStyle.addClassName()(isItem, m_show->m_itemName)(state)(stateInMap).AddKeyValue(keyWord, imageUrl);
-		}
+		ControlSubStyle::setImageStateMap(&m_show->m_controlStyle, m_show->m_itemName, imagePath, stateCount, imageStateMap, keyWord);
+	}
+	else
+	{
+		ControlSubStyle::setWidgetImageStateMap(&m_show->m_controlStyle, imagePath, stateCount, imageStateMap, keyWord);
 	}
 	if (rePaint)
 	{
@@ -126,10 +125,15 @@ void ControlBase<QBase>::setImageStateMap(const std::map<qint32, std::map<qint32
 										  const std::wstring& itemName,
 										  bool rePaint)
 {
-	std::wstring itemNameBk = m_show->m_itemName;
-	m_show->m_itemName = itemName;
-	setImageStateMap(imageStateMap, imagePath, stateCount, keyWord, true, rePaint);
-	m_show->m_itemName = itemNameBk;
+	if (m_show == nullptr)
+	{
+		return;
+	}
+	ControlSubStyle::setImageStateMap(&m_show->m_controlStyle, itemName, imagePath, stateCount, imageStateMap, keyWord);
+	if (rePaint)
+	{
+		m_show->repaint();
+	}
 }
 
 #endif

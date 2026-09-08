@@ -1,9 +1,39 @@
-﻿#include "COriginalButton.h"
-#include <QDebug>
+﻿/** 废弃类实现：默认只编译不可实例化的占位壳，保留给老工程排查历史行为。
+新项目必须使用PushButton；需要临时启用时显式定义QTCONTROLS_ENABLE_DEPRECATED_ORIGINAL_BUTTON。
+*/
+#include "COriginalButton.h"
+
+#if defined(QTCONTROLS_ENABLE_DEPRECATED_ORIGINAL_BUTTON)
 #include <QPainter>
 #include <QEvent>
 #include <QHelpEvent>
 #include <QStyleOptionButton>
+#include <limits>
+
+qint32 COriginalButton::imageSliceTop(qint32 stepHeight, quint32 stateCount, quint32 imageIndex)
+{
+	const quint32 maxIntValue = static_cast<quint32>((std::numeric_limits<int>::max)());
+	if (stepHeight <= 0 || stateCount == 0 || imageIndex == 0 || imageIndex > stateCount || imageIndex > maxIntValue)
+	{
+		return 0;
+	}
+	return stepHeight * (static_cast<qint32>(imageIndex) - 1);
+}
+
+qint32 COriginalButton::imageSliceBottom(qint32 imageHeight, qint32 stepHeight, quint32 stateCount, quint32 imageIndex)
+{
+	if (imageHeight <= 0 || stepHeight <= 0 || stateCount == 0 || imageIndex == 0 || imageIndex > stateCount)
+	{
+		return 0;
+	}
+	return imageHeight - imageSliceTop(stepHeight, stateCount, imageIndex) - stepHeight;
+}
+
+quint32 COriginalButton::clampImageValue(quint64 value)
+{
+	const quint64 maxValue = static_cast<quint64>((std::numeric_limits<qint32>::max)());
+	return static_cast<quint32>(value > maxValue ? maxValue : value);
+}
 
 COriginalButton::COriginalButton(QWidget *parent)
     :QPushButton(parent)
@@ -67,35 +97,36 @@ void COriginalButton::updateStyle()
 	QPixmap px;
 	px.load(m_bkgImage);
 
-	int imgWidth   = px.width();
 	int imgHeight  = px.height();
-	int stepHeight = px.height() / m_bkgImageStateCount;
+	const quint32 maxIntValue = static_cast<quint32>((std::numeric_limits<int>::max)());
+	const bool validStateCount = m_bkgImageStateCount > 0 && m_bkgImageStateCount <= maxIntValue;
+	int stepHeight = (!validStateCount || imgHeight <= 0) ? 0 : imgHeight / static_cast<int>(m_bkgImageStateCount);
 
 	//normal
-	int enabledTop     = stepHeight * (m_bkgImageNormal - 1);
-	int enabledBottom  = imgHeight - enabledTop - stepHeight;
+	int enabledTop     = imageSliceTop(stepHeight, m_bkgImageStateCount, m_bkgImageNormal);
+	int enabledBottom  = imageSliceBottom(imgHeight, stepHeight, m_bkgImageStateCount, m_bkgImageNormal);
 
-	int hoverTop       = stepHeight * (m_bkgImageHover - 1);
-	int hoverBottom    = imgHeight - hoverTop - stepHeight;
+	int hoverTop       = imageSliceTop(stepHeight, m_bkgImageStateCount, m_bkgImageHover);
+	int hoverBottom    = imageSliceBottom(imgHeight, stepHeight, m_bkgImageStateCount, m_bkgImageHover);
 
-	int pressedTop     = stepHeight * (m_bkgImagePressed - 1);
-	int pressedBottom  = imgHeight - pressedTop - stepHeight;
+	int pressedTop     = imageSliceTop(stepHeight, m_bkgImageStateCount, m_bkgImagePressed);
+	int pressedBottom  = imageSliceBottom(imgHeight, stepHeight, m_bkgImageStateCount, m_bkgImagePressed);
 
-	int disabledTop    = stepHeight * (m_bkgImageDisabled - 1);
-	int disabledBottom = imgHeight - disabledTop - stepHeight;
+	int disabledTop    = imageSliceTop(stepHeight, m_bkgImageStateCount, m_bkgImageDisabled);
+	int disabledBottom = imageSliceBottom(imgHeight, stepHeight, m_bkgImageStateCount, m_bkgImageDisabled);
 
 	//checked
-	int ckEnabledTop     = stepHeight * (m_bkgImageCkNormal - 1);
-	int ckEnabledBottom  = imgHeight - ckEnabledTop - stepHeight;
+	int ckEnabledTop     = imageSliceTop(stepHeight, m_bkgImageStateCount, m_bkgImageCkNormal);
+	int ckEnabledBottom  = imageSliceBottom(imgHeight, stepHeight, m_bkgImageStateCount, m_bkgImageCkNormal);
 
-	int ckHoverTop       = stepHeight * (m_bkgImageCkHover - 1);
-	int ckHoverBottom    = imgHeight - ckHoverTop - stepHeight;
+	int ckHoverTop       = imageSliceTop(stepHeight, m_bkgImageStateCount, m_bkgImageCkHover);
+	int ckHoverBottom    = imageSliceBottom(imgHeight, stepHeight, m_bkgImageStateCount, m_bkgImageCkHover);
 
-	int ckPressedTop     = stepHeight * (m_bkgImageCkPressed - 1);
-	int ckPressedBottom  = imgHeight - ckPressedTop - stepHeight;
+	int ckPressedTop     = imageSliceTop(stepHeight, m_bkgImageStateCount, m_bkgImageCkPressed);
+	int ckPressedBottom  = imageSliceBottom(imgHeight, stepHeight, m_bkgImageStateCount, m_bkgImageCkPressed);
 
-	int ckDisabledTop    = stepHeight * (m_bkgImageCkDisabled - 1);
-	int ckDisabledBottom = imgHeight - ckDisabledTop - stepHeight;
+	int ckDisabledTop    = imageSliceTop(stepHeight, m_bkgImageStateCount, m_bkgImageCkDisabled);
+	int ckDisabledBottom = imageSliceBottom(imgHeight, stepHeight, m_bkgImageStateCount, m_bkgImageCkDisabled);
 
 
 	enabledTop     += m_bkgImageVMargin;
@@ -300,10 +331,14 @@ void COriginalButton::updateStyle()
 
 bool COriginalButton::event(QEvent *e)
 {
+	if (e == nullptr)
+	{
+		return false;
+	}
 	//TODO: prim
 	if(e->type() == QEvent::ToolTip)
 	{
-		QHelpEvent *he = (QHelpEvent*)e;
+		QHelpEvent *he = static_cast<QHelpEvent*>(e);
 		QHelpEvent the(QEvent::ToolTip, he->pos() + m_tooltipOffset, he->globalPos() + m_tooltipOffset);
 		return QPushButton::event(&the);
 	}
@@ -347,22 +382,23 @@ void COriginalButton::setEnabled(bool s)
 void COriginalButton::setClickBreathTime(quint64 t)
 {
 	m_clickBreathTime = t;
-	m_clickBreathTimer.setInterval(t);
+	quint64 maxInterval = static_cast<quint64>((std::numeric_limits<int>::max)());
+	m_clickBreathTimer.setInterval(static_cast<int>(t > maxInterval ? maxInterval : t));
 }
 
 
 void COriginalButton::setBkgImage(const QString &bkgImage, const quint64 bkgImageStateCount, const quint64 bkgImageNormal, const quint64 bkgImageHover, const quint64 bkgImagePressed, const quint64 bkgImageDisabled, const quint64 bkgImageCKNormal, const quint64 bkgImageCKHover, const quint64 bkgImageCKPressed, const quint64 bkgImageCKDisabled)
 {
     m_bkgImage             = bkgImage             ;
-    m_bkgImageStateCount   = bkgImageStateCount   ;
-    m_bkgImageNormal       = bkgImageNormal       ;
-    m_bkgImageHover        = bkgImageHover        ;
-    m_bkgImagePressed      = bkgImagePressed      ;
-    m_bkgImageDisabled     = bkgImageDisabled     ;
-    m_bkgImageCkNormal     = bkgImageCKNormal     ;
-    m_bkgImageCkHover      = bkgImageCKHover      ;
-    m_bkgImageCkPressed    = bkgImageCKPressed    ;
-    m_bkgImageCkDisabled   = bkgImageCKDisabled   ;
+    m_bkgImageStateCount   = clampImageValue(bkgImageStateCount);
+    m_bkgImageNormal       = clampImageValue(bkgImageNormal);
+    m_bkgImageHover        = clampImageValue(bkgImageHover);
+    m_bkgImagePressed      = clampImageValue(bkgImagePressed);
+    m_bkgImageDisabled     = clampImageValue(bkgImageDisabled);
+    m_bkgImageCkNormal     = clampImageValue(bkgImageCKNormal);
+    m_bkgImageCkHover      = clampImageValue(bkgImageCKHover);
+    m_bkgImageCkPressed    = clampImageValue(bkgImageCKPressed);
+    m_bkgImageCkDisabled   = clampImageValue(bkgImageCKDisabled);
 
     this->updateStyle();
 }
@@ -484,3 +520,23 @@ void COriginalButton::setToolTipOffset(int x, int y)
 	m_tooltipOffset = QPoint(x,y);
 }
 
+#else
+
+COriginalButton::COriginalButton(QWidget* parent)
+    : QPushButton(parent)
+{
+}
+
+COriginalButton::~COriginalButton()
+{
+}
+
+void COriginalButton::_internalOnClicked()
+{
+}
+
+void COriginalButton::_internalOnClickBreathTimerTimeout()
+{
+}
+
+#endif // QTCONTROLS_ENABLE_DEPRECATED_ORIGINAL_BUTTON

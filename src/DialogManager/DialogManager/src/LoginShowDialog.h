@@ -6,7 +6,7 @@
 #if defined(QTCONTROLS_ENABLE_WEBKIT) && (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
 
 class QWebView;
-class COriginalButton;
+class PushButton;
 class Separator;
 /** 登录提示通知框，WebKit可用时展示富文本提示、上次登录信息和跳转入口
 */
@@ -79,7 +79,7 @@ private:
 	Label* m_horn;
 
 	// 更多按钮
-	COriginalButton* m_more;
+	PushButton* m_more;
 
 	// 更多按钮跳转链接
 	QString m_moreLinkUrl;
@@ -100,7 +100,7 @@ private:
 	Label* m_preLoginAddr;
 
 	// 修改密码按钮
-	COriginalButton* m_changePassword;
+	PushButton* m_changePassword;
 
 	// 上次登录时间
 	Label* m_preLoginTime;

@@ -23,6 +23,10 @@ void HtmlComboBoxStyle::drawItemText(QPainter* painter,
 									 const QString& text,
 									 QPalette::ColorRole textRole) const
 {
+	if (painter == nullptr)
+	{
+		return;
+	}
 	painter->save();
 
 	painter->setPen(pal.color(textRole));
@@ -41,6 +45,10 @@ void HtmlComboBoxStyle::setToolTipBackgroundColor(const QColor& color)
 
 void HtmlComboBoxStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption* opt, QPainter* painter, const QWidget* widget) const
 {
+	if (painter == nullptr || opt == nullptr)
+	{
+		return;
+	}
 	if (m_color == QColor(0, 0, 0, 0))
 	{
 		QProxyStyle::drawPrimitive(pe, opt, painter, widget);

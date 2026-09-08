@@ -4,6 +4,7 @@
 #include <QXmlStreamAttribute>
 #include <QXmlStreamAttributes>
 #include <QXmlStreamReader>
+#include <limits>
 #include <stdint.h>
 
 EO_XmlSax2Parser::EO_XmlSax2Parser() :
@@ -70,11 +71,28 @@ bool EO_XmlSax2Parser::parseReader(QXmlStreamReader* reader, EO_XmlSax2Handler* 
         return false;
     }
 
-    if (handler == nullptr)
-    {
-        m_lastError = QStringLiteral("XML parse failed: handler is null");
-        return false;
-    }
+	if (handler == nullptr)
+	{
+		m_lastError = QStringLiteral("XML parse failed: handler is null");
+		return false;
+	}
+
+	// clampXmlLocation入参：value是Qt返回的XML行号或列号。
+	// clampXmlLocation出参：无。
+	// clampXmlLocation返回值：返回限制到int32_t范围内的错误位置。
+	auto clampXmlLocation = [](qint64 value) -> int32_t
+	{
+		const qint64 maxValue = static_cast<qint64>((std::numeric_limits<int32_t>::max)());
+		if (value > maxValue)
+		{
+			return static_cast<int32_t>(maxValue);
+		}
+		if (value < 0)
+		{
+			return 0;
+		}
+		return static_cast<int32_t>(value);
+	};
 
     while (!reader->atEnd())
     {
@@ -122,7 +140,7 @@ bool EO_XmlSax2Parser::parseReader(QXmlStreamReader* reader, EO_XmlSax2Handler* 
             .arg(reader->errorString())
             .arg(reader->lineNumber())
             .arg(reader->columnNumber());
-        handler->error(m_lastError, static_cast<int32_t>(reader->lineNumber()), static_cast<int32_t>(reader->columnNumber()));
+        handler->error(m_lastError, clampXmlLocation(reader->lineNumber()), clampXmlLocation(reader->columnNumber()));
         return false;
     }
 

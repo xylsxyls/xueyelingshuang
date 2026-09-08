@@ -19,7 +19,7 @@ void HtmlComboBoxDelegate::paint(QPainter* painter,
 								 const QStyleOptionViewItem& option,
 								 const QModelIndex& index) const
 {
-	if (painter == nullptr)
+	if (painter == nullptr || !index.isValid())
 	{
 		return;
 	}

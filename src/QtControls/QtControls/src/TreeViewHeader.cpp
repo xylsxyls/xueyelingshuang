@@ -15,14 +15,32 @@ TreeViewHeader::~TreeViewHeader()
 
 TreeViewModel* TreeViewHeader::model() const
 {
-	return (TreeViewModel*)QHeaderView::model();
+	return dynamic_cast<TreeViewModel*>(QHeaderView::model());
 }
 
 void TreeViewHeader::paintSection(QPainter* painter, const QRect& rect, int logicalIndex) const
 {
-	painter->save();
-	TreeText& text = (*(model()->headerText()))[logicalIndex];
+	if (painter == nullptr || logicalIndex < 0)
+	{
+		return;
+	}
 
+	TreeViewModel* modelPtr = model();
+	if (modelPtr == nullptr || modelPtr->headerText() == nullptr)
+	{
+		QHeaderView::paintSection(painter, rect, logicalIndex);
+		return;
+	}
+
+	TreeText text;
+	auto headerTextMap = modelPtr->headerText();
+	auto itText = headerTextMap->find(logicalIndex);
+	if (itText != headerTextMap->end())
+	{
+		text = itText->second;
+	}
+
+	painter->save();
 	QColor backgroundColor = QColor(0, 0, 0, 0);
 	QStyleOptionHeader optionHeader;
 	optionHeader.initFrom(this);

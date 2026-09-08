@@ -1,24 +1,27 @@
 ﻿#include "ComboBox.h"
 #include "NoFocusFrameDelegate.h"
 #include "ListWidget.h"
+#include "ControlSubStyle.h"
 #include <QtWidgets/QScrollBar>
 #include <QKeyEvent>
 #include <QEvent>
 
 ComboBox::ComboBox(QWidget* parent) :
 ControlShow(parent),
-m_listOrigin(0),
 m_listWidget(nullptr),
+m_hoverIndex(-1),
 m_dropDownImgNormal(1),
 m_dropDownImgDisabled(4),
 m_dropDownImgExpandNormal(5),
 m_dropDownImgExpandDisabled(8),
 m_dropDownImgStateCount(8),
-m_hoverIndex(-1),
+m_imageStateMap(),
+m_imagePath(),
+m_listOrigin(0),
 m_dropDownWidth(-1),
 m_dropDownHeight(-1),
-m_dropDownVisible(true),
-m_dropDownBorderWidth(-1)
+m_dropDownBorderWidth(-1),
+m_dropDownVisible(true)
 {
 	ControlBase::setControlShow(this);
 	setItemName(L"drop-down");
@@ -28,34 +31,34 @@ m_dropDownBorderWidth(-1)
 
 ComboBox::~ComboBox()
 {
-	
+
 }
 
 void ComboBox::setDefault()
 {
 	//下拉边框粗度设为0，因为QListWidget已有边框，此属性px无效
-	m_controlStyle.addClassName()(SPACE, L"QAbstractItemView").AddKeyValue(L"border", L"none");
+	ControlSubStyle::setDescendantKeyValue(&m_controlStyle, L"QAbstractItemView", L"border", L"none");
 	setBorderWidth(1);
 	setTextOrigin(0);
 }
 
 void ComboBox::setDropDownSize(qint32 width, qint32 height, bool rePaint)
 {
-	m_dropDownWidth = width;
-	m_dropDownHeight = GetInt(height, width);
+	m_dropDownWidth = qMax(width, 0);
+	m_dropDownHeight = qMax(GetInt(height, m_dropDownWidth), 0);
 	if (m_dropDownVisible)
 	{
-		ControlBase::setPxValue(L"width", width, true, false);
-		ControlBase::setPxValue(L"height", GetInt(height, width), true, rePaint);
+		ControlBase::setPxValue(L"width", m_dropDownWidth, true, false);
+		ControlBase::setPxValue(L"height", m_dropDownHeight, true, rePaint);
 	}
 }
 
 void ComboBox::setDropDownBorderWidth(qint32 width, bool rePaint)
 {
-	m_dropDownBorderWidth = width;
+	m_dropDownBorderWidth = qMax(width, 0);
 	if (m_dropDownVisible)
 	{
-		ControlBase::setPxSolidValue(L"border", width, true, rePaint);
+		ControlBase::setPxSolidValue(L"border", m_dropDownBorderWidth, true, rePaint);
 	}
 }
 
@@ -75,13 +78,14 @@ void ComboBox::setDropDownImage(const QString& dropDownImgPath,
 	imageStateMap[NORMAL][DISABLED] = dropDownImgDisabled;
 	std::wstring wstrImgPath = dropDownImgPath.toStdWString();
 
+	m_imageStateMap = imageStateMap;
 	m_imagePath = wstrImgPath;
 	m_dropDownImgStateCount = dropDownImgStateCount;
 	m_dropDownImgNormal = dropDownImgNormal;
 	m_dropDownImgDisabled = dropDownImgDisabled;
 	m_dropDownImgExpandNormal = dropDownImgExpandNormal;
 	m_dropDownImgExpandDisabled = dropDownImgExpandDisabled;
-	
+
 	ControlBase::setImageStateMap(imageStateMap, wstrImgPath, dropDownImgStateCount, L"border-image", L"down-arrow", rePaint);
 }
 
@@ -117,9 +121,8 @@ void ComboBox::addItems(const QStringList& textList)
 	{
 		return;
 	}
-	qint32 index = -1;
-	qint32 size = textList.size();
-	while (index++ != size - 1)
+	const qint32 size = textList.size();
+	for (qint32 index = 0; index < size; ++index)
 	{
 		QListWidgetItem* widgetItem = new QListWidgetItem(m_listWidget);
 		if (widgetItem != nullptr)
@@ -292,7 +295,7 @@ void ComboBox::setListMaxHeight(qint32 maxHeight)
 	{
 		return;
 	}
-	widget->setStyleSheet(QString("max-height:%1px").arg(maxHeight));
+	widget->setStyleSheet(QString("max-height:%1px").arg(qMax(maxHeight, 0)));
 }
 
 void ComboBox::setDropDownVisible(bool enable, bool rePaint)
@@ -308,14 +311,16 @@ void ComboBox::setDropDownVisible(bool enable, bool rePaint)
 		ControlBase::setPxValue(L"height", 0, true, false);
 		ControlBase::setPxSolidValue(L"border", 1, true, rePaint);
 	}
-	else if (m_dropDownWidth != -1 && m_dropDownHeight != -1)
+	else
 	{
-		ControlBase::setPxValue(L"min-width", m_dropDownWidth, true, false);
-		ControlBase::setPxValue(L"min-height", m_dropDownHeight, true, false);
-		ControlBase::setPxValue(L"max-width", m_dropDownWidth, true, false);
-		ControlBase::setPxValue(L"max-height", m_dropDownHeight, true, false);
-		ControlBase::setPxValue(L"width", m_dropDownWidth, true, false);
-		ControlBase::setPxValue(L"height", m_dropDownHeight, true, false);
+		qint32 dropDownWidth = m_dropDownWidth == -1 ? 16 : m_dropDownWidth;
+		qint32 dropDownHeight = m_dropDownHeight == -1 ? dropDownWidth : m_dropDownHeight;
+		ControlBase::setPxValue(L"min-width", dropDownWidth, true, false);
+		ControlBase::setPxValue(L"min-height", dropDownHeight, true, false);
+		ControlBase::setPxValue(L"max-width", dropDownWidth, true, false);
+		ControlBase::setPxValue(L"max-height", dropDownHeight, true, false);
+		ControlBase::setPxValue(L"width", dropDownWidth, true, false);
+		ControlBase::setPxValue(L"height", dropDownHeight, true, m_dropDownBorderWidth == -1 ? rePaint : false);
 		if (m_dropDownBorderWidth != -1)
 		{
 			ControlBase::setPxSolidValue(L"border", m_dropDownBorderWidth, true, rePaint);
@@ -334,6 +339,10 @@ void ComboBox::setSelectEnable(bool enable)
 
 void ComboBox::showEvent(QShowEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	//这里重写repaint为了刷新下拉列表控件
 	repaint();
 	QComboBox::showEvent(eve);
@@ -341,6 +350,10 @@ void ComboBox::showEvent(QShowEvent* eve)
 
 void ComboBox::mouseMoveEvent(QMouseEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	setToolTip(currentText());
 	QComboBox::mouseMoveEvent(eve);
 }
@@ -383,7 +396,6 @@ void ComboBox::keyPressEvent(QKeyEvent* eve)
 {
 	if (eve == nullptr)
 	{
-		QComboBox::keyPressEvent(eve);
 		return;
 	}
 	if (eve->key() == Qt::Key_Enter || eve->key() == Qt::Key_Return)
@@ -497,8 +509,8 @@ void ComboBox::listItemEntered(QListWidgetItem* item)
 	{
 		return;
 	}
-	qint32 index = -1;
-	while (index++ != m_listWidget->count() - 1)
+	const qint32 count = m_listWidget->count();
+	for (qint32 index = 0; index < count; ++index)
 	{
 		if (m_listWidget->item(index) == item)
 		{
@@ -513,8 +525,8 @@ void ComboBox::listItemPressed(QListWidgetItem* item)
 	{
 		return;
 	}
-	qint32 index = -1;
-	while (index++ != m_listWidget->count() - 1)
+	const qint32 count = m_listWidget->count();
+	for (qint32 index = 0; index < count; ++index)
 	{
 		if (m_listWidget->item(index) == item)
 		{

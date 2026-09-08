@@ -13,6 +13,10 @@ public:
 	*/
 	ContentLabel(QWidget* parent = nullptr);
 
+	/** 析构函数，释放无父对象托管的内部标签。
+	*/
+	~ContentLabel();
+
 public:
 	/** 设置上面的颜色
 	@param [in] color 文字颜色

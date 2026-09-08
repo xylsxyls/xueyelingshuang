@@ -20,7 +20,7 @@ Q_SIGNALS:
 	/** 窗口发出信号
 	@param [in] param 信号参数
 	*/
-	void dialogSignal(const SignalParam& param);
+	void dialogSignal(const DialogSignalPtr& param);
 
 private slots:
     /** 处理通知框关闭信号

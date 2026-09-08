@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <stdint.h>
 
-#ifdef _MSC_VER
+#ifdef Q_OS_WIN
 #include <Windows.h>
 #endif
 
@@ -24,7 +24,7 @@ QDialog(parent),
 m_touchBorderWidth(0),
 m_customerTitleBarHeight(0),
 m_altF4Enable(true)
-#ifndef _MSC_VER
+#ifndef Q_OS_WIN
 ,m_altF4Close(false)
 ,m_altCloseEve(nullptr)
 ,m_isLeftButtonPressed(false)
@@ -63,7 +63,7 @@ QColor COriginalDialog::defaultDialogTextColor()
 	return ControlStyleManager::instance().defaultTextColor();
 }
 
-#ifdef _MSC_VER
+#ifdef Q_OS_WIN
 long COriginalDialog::onNcHitTest(const QPoint& pt)
 {
 	RECT windowRect;
@@ -232,13 +232,21 @@ long COriginalDialog::onNcHitTest(const QPoint& pt)
 
 void COriginalDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	QDialog::resizeEvent(eve);
 	m_customerTitleBarRect = QRect(0, 0, width(), m_customerTitleBarHeight);
 }
 
 bool COriginalDialog::nativeEvent(const QByteArray& eventType, void* message, long* result)
 {
-#ifdef _MSC_VER
+	if (message == nullptr || result == nullptr)
+	{
+		return false;
+	}
+#ifdef Q_OS_WIN
 	if (eventType == "windows_generic_MSG" || eventType == "windows_dispatcher_MSG")
 	{
 		MSG* msg = static_cast<MSG*>(message);
@@ -317,11 +325,11 @@ void COriginalDialog::altF4PressedEvent()
 
 bool COriginalDialog::eventFilter(QObject* tar, QEvent* eve)
 {
-	bool res = QDialog::eventFilter(tar, eve);
 	if (tar == nullptr || eve == nullptr)
 	{
-		return res;
+		return false;
 	}
+	bool res = QDialog::eventFilter(tar, eve);
 
 	switch (eve->type())
 	{
@@ -343,7 +351,11 @@ bool COriginalDialog::eventFilter(QObject* tar, QEvent* eve)
 
 void COriginalDialog::keyPressEvent(QKeyEvent* eve)
 {
-	if (eve != nullptr && eve->key() == Qt::Key_F4 && eve->modifiers().testFlag(Qt::AltModifier))
+	if (eve == nullptr)
+	{
+		return;
+	}
+	if (eve->key() == Qt::Key_F4 && eve->modifiers().testFlag(Qt::AltModifier))
 	{
 		altF4PressedEvent();
 		eve->accept();
@@ -352,7 +364,7 @@ void COriginalDialog::keyPressEvent(QKeyEvent* eve)
 	QDialog::keyPressEvent(eve);
 }
 
-#ifndef _MSC_VER
+#ifndef Q_OS_WIN
 void COriginalDialog::mousePressEvent(QMouseEvent* eve)
 {
 	if (eve == nullptr)
@@ -430,6 +442,10 @@ void COriginalDialog::mouseReleaseEvent(QMouseEvent* eve)
 
 void COriginalDialog::closeEvent(QCloseEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	m_altCloseEve = eve;
 	QDialog::closeEvent(eve);
 	m_altCloseEve = nullptr;
@@ -665,7 +681,7 @@ void COriginalDialog::applyResizeByGlobalPos(const QPoint& globalPos)
 
 void COriginalDialog::setTouchBorderWidth(int n)
 {
-	m_touchBorderWidth = n;
+	m_touchBorderWidth = qMax(n, 0);
 }
 
 int COriginalDialog::touchBorderWidth()
@@ -675,8 +691,8 @@ int COriginalDialog::touchBorderWidth()
 
 void COriginalDialog::setCustomerTitleBarHeight(int n)
 {
-	m_customerTitleBarHeight = n;
-	m_customerTitleBarRect = QRect(0, 0, width(), n);
+	m_customerTitleBarHeight = qMax(n, 0);
+	m_customerTitleBarRect = QRect(0, 0, width(), m_customerTitleBarHeight);
 }
 
 int COriginalDialog::customerTitleBarHeight()
@@ -714,7 +730,7 @@ QWindow* COriginalDialog::getAncestorHandle(QWindow* window)
 	}
 
 	QWindow* realTransientWindow = nullptr;
-#ifdef _MSC_VER
+#ifdef Q_OS_WIN
 	WId ancetorId = (WId)::GetAncestor(HWND(window->winId()), GA_ROOT);
 	QWidget* topLevelWidget = QWidget::find(ancetorId);
 	if (topLevelWidget != nullptr)

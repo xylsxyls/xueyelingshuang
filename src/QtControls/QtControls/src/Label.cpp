@@ -15,12 +15,12 @@ m_hasSetFullScreen(false)
 
 Label::~Label()
 {
-	installEventFilter(nullptr);
+	removeEventFilter(this);
 }
 
 void Label::setLineHeight(qint32 lineHeight)
 {
-	setText("<html><head/><body><p style='line-height:" + QString::number(lineHeight) + "px;'>" + text().replace(" ", "&nbsp;") + "</p></body></html>");
+	setText("<html><head/><body><p style='line-height:" + QString::number(qMax(lineHeight, 0)) + "px;'>" + text().replace(" ", "&nbsp;") + "</p></body></html>");
 }
 
 void Label::setDoubleClickFullScreen()
@@ -34,17 +34,21 @@ void Label::setDoubleClickFullScreen()
 
 void Label::mouseMoveEvent(QMouseEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	QLabel::mouseMoveEvent(eve);
 	emit mouseMoved(QPoint(eve->x(), eve->y()));
 }
 
 bool Label::eventFilter(QObject* tar, QEvent* eve)
 {
-	bool res = QLabel::eventFilter(tar, eve);
 	if (tar == nullptr || eve == nullptr)
 	{
-		return res;
+		return false;
 	}
+	bool res = QLabel::eventFilter(tar, eve);
 	if (tar == this)
 	{
 		switch (eve->type())

@@ -9,8 +9,9 @@
 
 COriginalWebView::COriginalWebView(QWidget *parent)
     : QWebView(parent)
-    , m_isLoading(true)
 	, m_isShowProgress(false)
+    , m_isLoading(true)
+	, m_loadingText()
 {
     connect(this, &COriginalWebView::loadStarted , this, &COriginalWebView::customerOnLoadStarted);
     connect(this, &COriginalWebView::loadFinished, this, &COriginalWebView::customerOnLoadFinished);
@@ -24,7 +25,10 @@ COriginalWebView::~COriginalWebView()
 
 void COriginalWebView::paintEvent(QPaintEvent *e)
 {
-    QPainter painter(this);
+	if (e == nullptr)
+	{
+		return;
+	}
 	if(!this->isShowProgress())
 	{
 		QWebView::paintEvent(e);
@@ -32,11 +36,12 @@ void COriginalWebView::paintEvent(QPaintEvent *e)
 	}
     if(m_isLoading)
     {
+		QPainter painter(this);
         painter.save();
         painter.fillRect(this->rect(),QColor(40,45,60));
 
         QFont loadingTextFont;
-        loadingTextFont.setPixelSize(this->width()/10);
+        loadingTextFont.setPixelSize(qMax(this->width() / 10, 12));
         painter.setFont(loadingTextFont);
         painter.setPen(Qt::gray);
 
@@ -55,6 +60,10 @@ void COriginalWebView::paintEvent(QPaintEvent *e)
 
 void COriginalWebView::contextMenuEvent(QContextMenuEvent* e)
 {
+	if (e == nullptr)
+	{
+		return;
+	}
 	QMenu menu;
 	QAction* ac = menu.addAction(QStringLiteral("重新加载"));
 	if(ac == menu.exec(e->globalPos()))

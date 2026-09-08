@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <vector>
 #include "QtControlsMacro.h"
 #include "COriginalDialog.h"
 

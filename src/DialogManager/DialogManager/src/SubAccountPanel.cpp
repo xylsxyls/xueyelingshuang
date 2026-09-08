@@ -3,7 +3,7 @@
 #include <QHeaderView>
 #include <QPainter>
 #include "QtControls/ControlStyleManager.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include "QtControls/CTreeViewEx.h"
 #include "QtControls/CExternalTextEdit.h"
 #include <QWindow>
@@ -121,8 +121,8 @@ SubAccountPanel::SubAccountPanel(QWidget* parent)
     :QWidget(parent)
     ,m_treeView(new CTreeViewEx(this))
     ,m_model(new QStandardItemModel(this))
-    ,m_createSubAccountButton(new COriginalButton(this))
-    ,m_helpButton(new COriginalButton(this))
+    ,m_createSubAccountButton(new PushButton(this))
+    ,m_helpButton(new PushButton(this))
     ,m_helpTip(new CExternalTextEdit)
     ,m_canCreateCount(0)
 {
@@ -139,7 +139,7 @@ SubAccountPanel::SubAccountPanel(QWidget* parent)
     m_createSubAccountButton->setFixedSize(88,21);
     m_createSubAccountButton->setBkgImage(ControlStyleManager::instance().resourcePath("Image/SubAccount/create_subaccount_button.png"),
                                          4,1,2,3,4,1,2,3,4);
-	connect(m_createSubAccountButton, &COriginalButton::clicked, this, &SubAccountPanel::createSubAccount);
+	connect(m_createSubAccountButton, &PushButton::clicked, this, &SubAccountPanel::createSubAccount);
 
     m_helpButton->setUnderline(true);
     m_helpButton->setFixedSize(80,21);
@@ -193,17 +193,29 @@ SubAccountPanel::SubAccountPanel(QWidget* parent)
 
 SubAccountPanel::~SubAccountPanel()
 {
-
+	delete m_helpTip;
+	m_helpTip = nullptr;
 }
 
 void SubAccountPanel::moveEvent(QMoveEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     QWidget::moveEvent(eve);
     this->layoutControls();
 }
 
 void SubAccountPanel::layoutControls()
 {
+	if (m_createSubAccountButton == nullptr ||
+		m_helpButton == nullptr ||
+		m_treeView == nullptr ||
+		m_helpTip == nullptr)
+	{
+		return;
+	}
     m_createSubAccountButton->move(this->width() - 38 - m_createSubAccountButton->width(),
                                   14);
 
@@ -217,12 +229,20 @@ void SubAccountPanel::layoutControls()
 
 void SubAccountPanel::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     QWidget::resizeEvent(eve);
     this->layoutControls();
 }
 
 void SubAccountPanel::paintEvent(QPaintEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     QWidget::paintEvent(eve);
     QPainter p(this);
     p.save();
@@ -256,17 +276,20 @@ void SubAccountPanel::paintEvent(QPaintEvent* eve)
 
 bool SubAccountPanel::eventFilter(QObject* obj, QEvent* eve)
 {
-    bool res = QWidget::eventFilter(obj, eve);
 	if (obj == nullptr || eve == nullptr)
 	{
-		return res;
+		return false;
 	}
+    bool res = QWidget::eventFilter(obj, eve);
 
     if(obj == this)
     {
         if(eve->type() == QEvent::Enter || eve->type() == QEvent::Move)
         {
-            m_helpTip->close();
+			if (m_helpTip != nullptr)
+			{
+				m_helpTip->close();
+			}
         }
     }
     else if(obj == m_helpButton)
@@ -274,11 +297,17 @@ bool SubAccountPanel::eventFilter(QObject* obj, QEvent* eve)
         if(eve->type() == QEvent::Enter)
         {
 			this->layoutControls();
-            m_helpTip->show();
+			if (m_helpTip != nullptr)
+			{
+				m_helpTip->show();
+			}
         }
         else if(eve->type() == QEvent::Leave)
         {
-            m_helpTip->close();
+			if (m_helpTip != nullptr)
+			{
+				m_helpTip->close();
+			}
         }
     }
 
@@ -290,7 +319,10 @@ QList<QStandardItem *> SubAccountPanel::subAccountItemLiToStandardItemLi(const S
     QList<QStandardItem *> tli;
     for(int i = 0; i < li.count(); i++)
     {
-        tli << (QStandardItem*)(li[i]);
+		if (li[i] != nullptr)
+		{
+			tli << static_cast<QStandardItem*>(li[i]);
+		}
     }
 
     return tli;
@@ -301,7 +333,11 @@ SubAccountItemList SubAccountPanel::standardItemLiToSubAccountItemLi(const QList
     SubAccountItemList tli;
     for(int i = 0; i < li.count(); i++)
     {
-        tli << (SubAccountItem*)(li[i]);
+		SubAccountItem* item = dynamic_cast<SubAccountItem*>(li[i]);
+		if (item != nullptr)
+		{
+			tli << item;
+		}
     }
     return tli;
 }
@@ -324,6 +360,10 @@ void SubAccountPanel::setCanCreateCount(quint64 count)
 
 void SubAccountPanel::setSubAccountList(const SubAccountItemList &li)
 {
+	if (m_model == nullptr || m_treeView == nullptr)
+	{
+		return;
+	}
     m_model->clear();
     m_model->appendColumn(this->subAccountItemLiToStandardItemLi(li));
     for(int i = 0; i < m_model->rowCount(); i++)
@@ -339,9 +379,17 @@ void SubAccountPanel::setSubAccountList(const SubAccountItemList &li)
 SubAccountItemList SubAccountPanel::subAccountList()
 {
 	SubAccountItemList li;
+	if (m_model == nullptr)
+	{
+		return li;
+	}
 	for(int i = 0; i < m_model->rowCount(); i++)
 	{
-		li << (SubAccountItem*)(m_model->item(i,0));
+		SubAccountItem* item = dynamic_cast<SubAccountItem*>(m_model->item(i,0));
+		if (item != nullptr)
+		{
+			li << item;
+		}
 	}
 
 	return li;
@@ -349,6 +397,10 @@ SubAccountItemList SubAccountPanel::subAccountList()
 
 void SubAccountPanel::appendSubAccount(SubAccountItem* item)
 {
+	if (m_model == nullptr || m_treeView == nullptr || item == nullptr)
+	{
+		return;
+	}
 	m_model->appendRow(item);
 	m_treeView->openPersistentEditor(item->index());
 }
@@ -360,7 +412,7 @@ SubAccountItem* SubAccountPanel::getSubAccountItemById(quint64 id)
 	for(int i = 0; i < allLi.count(); i++)
 	{
 		SubAccountItem* t = allLi[i];
-		if(t->id() == id)
+		if(t != nullptr && t->id() == id)
 		{
 			return t;
 		}
@@ -372,7 +424,7 @@ SubAccountItem* SubAccountPanel::getSubAccountItemById(quint64 id)
 void SubAccountPanel::removeSubAccountItem(quint64 id)
 {
 	SubAccountItem* sitem = getSubAccountItemById(id);
-	if(sitem)
+	if(m_model != nullptr && sitem != nullptr)
 	{
 		m_model->removeRow(sitem->row());
 	}
@@ -380,9 +432,9 @@ void SubAccountPanel::removeSubAccountItem(quint64 id)
 
 SubAccountItemView::SubAccountItemView(QWidget* parent)
     :QWidget(parent)
-    ,m_switchButton(new COriginalButton(this))
-	,m_helpButton(new COriginalButton(this))
-	,m_changeNameButton(new COriginalButton(this))
+    ,m_switchButton(new PushButton(this))
+	,m_helpButton(new PushButton(this))
+	,m_changeNameButton(new PushButton(this))
 	,m_blocked(false)
     ,m_id(0)
 {
@@ -392,7 +444,7 @@ SubAccountItemView::SubAccountItemView(QWidget* parent)
     m_switchButton->setBkgImage(ControlStyleManager::instance().resourcePath("Image/SubAccount/switch_subaccount_button.png"),
                                4,1,2,3,4,1,2,3,4);
 
-    connect(m_switchButton, &COriginalButton::clicked,
+    connect(m_switchButton, &PushButton::clicked,
             this, &SubAccountItemView::onSwitchButtonClicked);
 
 
@@ -401,7 +453,7 @@ SubAccountItemView::SubAccountItemView(QWidget* parent)
 	m_helpButton->setBkgImage(ControlStyleManager::instance().resourcePath("Image/SubAccount/help_button.png"),
 		3,1,2,3,3,1,2,3,3);
 
-	connect(m_helpButton, &COriginalButton::clicked, this, &SubAccountItemView::helpButtonClicked);
+	connect(m_helpButton, &PushButton::clicked, this, &SubAccountItemView::helpButtonClicked);
 
 	m_changeNameButton->setText(QStringLiteral("改名"));
 	m_changeNameButton->resize(51,21);
@@ -410,17 +462,25 @@ SubAccountItemView::SubAccountItemView(QWidget* parent)
 	m_changeNameButton->setBorderColor(QColor(202,212,248),QColor(0,248,255), QColor(44,52,74), QColor(180,180,181));
 	m_changeNameButton->setFontColor(QColor(202,212,248),QColor(0,248,255), QColor(44,52,74), QColor(180,180,181),QColor(202,212,248),QColor(0,248,255), QColor(44,52,74), QColor(180,180,181));
 
-	connect(m_changeNameButton, &COriginalButton::clicked, this, &SubAccountItemView::onChangeNameButtonClicked);
+	connect(m_changeNameButton, &PushButton::clicked, this, &SubAccountItemView::onChangeNameButtonClicked);
 }
 
 void SubAccountItemView::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     QWidget::resizeEvent(eve);
     this->layoutControls();
 }
 
 void SubAccountItemView::layoutControls()
 {
+	if (m_switchButton == nullptr || m_changeNameButton == nullptr || m_helpButton == nullptr)
+	{
+		return;
+	}
     m_switchButton->move(this->width() - m_switchButton->width() - 22, 17);
 	m_changeNameButton->move(m_switchButton->x(), m_switchButton->y() + m_switchButton->height() + 10);
 	m_helpButton->move(this->width() - m_helpButton->width() - 2, 2);
@@ -443,6 +503,10 @@ void SubAccountItemView::setId(quint64 id)
 
 void SubAccountItemView::showSwitchButton(bool show)
 {
+	if (m_switchButton == nullptr)
+	{
+		return;
+	}
 	m_switchButton->setVisible(show);
 	//m_changeNameButton->setVisible(show);
 }
@@ -450,6 +514,10 @@ void SubAccountItemView::showSwitchButton(bool show)
 void SubAccountItemView::setBlocked(bool blocked)
 {
 	m_blocked = blocked;
+	if (m_switchButton == nullptr || m_changeNameButton == nullptr || m_helpButton == nullptr)
+	{
+		return;
+	}
 	m_switchButton->setEnabled(!blocked);
 	m_changeNameButton->setEnabled(!blocked);
 	m_helpButton->setVisible(blocked);
@@ -465,7 +533,7 @@ SubAccountItemDelegate::SubAccountItemDelegate(QObject* parent)
 
 void SubAccountItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
-    if (painter == nullptr)
+    if (painter == nullptr || !index.isValid())
     {
         return;
     }
@@ -475,8 +543,12 @@ void SubAccountItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem
         return ;
     }
 
-    QStandardItemModel* model = (QStandardItemModel*)(view->model());
-    SubAccountItem* sitem = (SubAccountItem*)( model->item(index.row(),0));
+    QStandardItemModel* model = qobject_cast<QStandardItemModel*>(view->model());
+	if (model == nullptr)
+	{
+		return;
+	}
+    SubAccountItem* sitem = dynamic_cast<SubAccountItem*>(model->item(index.row(),0));
     if(sitem == nullptr)
     {
         return;
@@ -554,6 +626,10 @@ void SubAccountItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem
 
 QWidget* SubAccountItemDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
+	if (parent == nullptr || !index.isValid())
+	{
+		return QStyledItemDelegate::createEditor(parent, option, index);
+	}
 	CTreeViewEx* view = qobject_cast<CTreeViewEx*> (this->parent());
 	if(view == nullptr)
 	{
@@ -576,20 +652,32 @@ QWidget* SubAccountItemDelegate::createEditor(QWidget* parent, const QStyleOptio
 
 void SubAccountItemDelegate::setEditorData(QWidget* editor, const QModelIndex& index) const
 {
+	if (editor == nullptr || !index.isValid())
+	{
+		return;
+	}
     CTreeViewEx* view = qobject_cast<CTreeViewEx*> (parent());
     if(view == nullptr)
     {
         return ;
     }
 
-    QStandardItemModel* model = (QStandardItemModel*)(view->model());
-    SubAccountItem* sitem = (SubAccountItem*)( model->item(index.row(),0));
+    QStandardItemModel* model = qobject_cast<QStandardItemModel*>(view->model());
+	if (model == nullptr)
+	{
+		return;
+	}
+    SubAccountItem* sitem = dynamic_cast<SubAccountItem*>(model->item(index.row(),0));
     if(sitem == nullptr)
     {
         return;
     }
 
-    SubAccountItemView* itemView = (SubAccountItemView*)(editor);
+    SubAccountItemView* itemView = qobject_cast<SubAccountItemView*>(editor);
+	if (itemView == nullptr)
+	{
+		return;
+	}
     itemView->setId(sitem->id());
 
     //itemView->setEnabled(!sitem->locked());
@@ -599,6 +687,10 @@ void SubAccountItemDelegate::setEditorData(QWidget* editor, const QModelIndex& i
 
 void SubAccountItemDelegate::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
+	if (editor == nullptr || !index.isValid())
+	{
+		return;
+	}
     QRect tagRect = option.rect.adjusted(0,0,0,-10);
     editor->setGeometry(tagRect);
 }

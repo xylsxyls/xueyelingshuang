@@ -45,5 +45,5 @@ void RadioButton::setIndicatorImage(const QString& indicatorImg,
 
 void RadioButton::setTextOrigin(qint32 origin, bool rePaint)
 {
-	ControlBase::setPxValue(L"spacing", origin, false, rePaint);
+	ControlBase::setPxValue(L"spacing", qMax(origin, 0), false, rePaint);
 }

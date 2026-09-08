@@ -1,3 +1,3 @@
 ﻿#pragma once
 
-#define EO_XmlSax2ParserAPI 
+#define EO_XmlSax2ParserAPI

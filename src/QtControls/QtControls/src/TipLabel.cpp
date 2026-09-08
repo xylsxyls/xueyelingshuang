@@ -1,7 +1,8 @@
 ﻿#include "TipLabel.h"
 #include <QEvent>
+#include <limits>
 
-#ifdef _MSC_VER
+#ifdef Q_OS_WIN
 #include <Windows.h>
 #endif
 
@@ -21,12 +22,12 @@ m_bottomRight(0, 0)
 
 void TipLabel::setExistTime(qint32 time)
 {
-	m_existTime = time;
+	m_existTime = qMax(time, 1);
 }
 
 void TipLabel::setMaxWidth(qint32 maxWidth)
 {
-	m_maxWidth = maxWidth;
+	m_maxWidth = qMax(maxWidth, 20);
 }
 
 void TipLabel::setHasFocus(bool hasFocus)
@@ -41,13 +42,19 @@ void TipLabel::setBottomRight(const QPoint& bottomRight)
 
 void TipLabel::showEvent(QShowEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	Label::showEvent(eve);
 	if (m_timeId != -1)
 	{
 		killTimer(m_timeId);
 		m_timeId = -1;
 	}
-	m_timeId = startTimer(m_existTime * 1000);
+	const qint32 maxSeconds = (std::numeric_limits<qint32>::max)() / 1000;
+	const qint32 seconds = qMin(m_existTime, maxSeconds);
+	m_timeId = startTimer(seconds * 1000);
 
 	qint32 margin = 3;
 	QFontMetrics fontMetrics(font());
@@ -67,7 +74,15 @@ void TipLabel::showEvent(QShowEvent* eve)
 
 void TipLabel::timerEvent(QTimerEvent* eve)
 {
-	Label::timerEvent(eve);
+	if (eve == nullptr)
+	{
+		return;
+	}
+	if (m_timeId == -1 || eve->timerId() != m_timeId)
+	{
+		Label::timerEvent(eve);
+		return;
+	}
 	if (m_timeId != -1)
 	{
 		killTimer(m_timeId);
@@ -78,11 +93,11 @@ void TipLabel::timerEvent(QTimerEvent* eve)
 
 bool TipLabel::event(QEvent* eve)
 {
-	bool res = Label::event(eve);
 	if (eve == nullptr)
 	{
-		return res;
+		return false;
 	}
+	bool res = Label::event(eve);
 
 	switch (eve->type())
 	{
@@ -118,8 +133,12 @@ bool TipLabel::event(QEvent* eve)
 
 bool TipLabel::nativeEvent(const QByteArray& eventType, void* message, long* result)
 {
+	if (message == nullptr || result == nullptr)
+	{
+		return false;
+	}
 	bool res = Label::nativeEvent(eventType, message, result);
-#ifdef _MSC_VER
+#ifdef Q_OS_WIN
 	if (eventType == "windows_generic_MSG" || eventType == "windows_dispatcher_MSG")
 	{
 		MSG* msg = static_cast<MSG*>(message);

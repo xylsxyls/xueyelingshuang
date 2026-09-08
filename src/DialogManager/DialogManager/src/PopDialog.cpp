@@ -1,5 +1,5 @@
 ﻿#include "PopDialog.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include "QtControls/ControlStyleManager.h"
 #include <QPainter>
 #include "DialogHelper.h"
@@ -67,6 +67,10 @@ void PopDialog::setBorderNormalHighLightColor(const QColor& normalColor, const Q
 
 void PopDialog::paintEvent(QPaintEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     QLinearGradient gradient(QPointF(0, 0), QPoint(0, height()));
     gradient.setColorAt(0.08, QColor(31, 37, 61, 255));
     gradient.setColorAt(0.50, QColor(29, 33, 50, 255));
@@ -85,6 +89,10 @@ void PopDialog::paintEvent(QPaintEvent* eve)
 
 void PopDialog::showEvent(QShowEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     DialogShow::showEvent(eve);
     activateWindow();
     raise();
@@ -92,6 +100,10 @@ void PopDialog::showEvent(QShowEvent* eve)
 
 void PopDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     DialogShow::resizeEvent(eve);
     if (!check())
     {
@@ -104,6 +116,10 @@ void PopDialog::resizeEvent(QResizeEvent* eve)
 
 void PopDialog::closeEvent(QCloseEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     if (m_timeId != -1)
     {
         killTimer(m_timeId);
@@ -132,7 +148,12 @@ void PopDialog::onTimeUp()
 void PopDialog::endDialog()
 {
     //childAt(mapFromGlobal(QWidget::cursor().pos()))
-    auto itResult = m_mapResult.find(focusWidget());
+	QWidget* resultWidget = qobject_cast<QWidget*>(sender());
+	if (resultWidget == nullptr)
+	{
+		resultWidget = focusWidget();
+	}
+    auto itResult = m_mapResult.find(resultWidget);
     if (itResult != m_mapResult.end())
     {
         if (m_result != nullptr)

@@ -14,18 +14,17 @@ QssString::QssString()
 
 bool operator < (const Key& key1, const Key& key2)
 {
-	std::wstring result1;
-	for (auto itKey1 = key1.m_vecKeyString.begin(); itKey1 != key1.m_vecKeyString.end(); ++itKey1)
+	const size_t key1Size = key1.m_vecKeyString.size();
+	const size_t key2Size = key2.m_vecKeyString.size();
+	const size_t minSize = key1Size < key2Size ? key1Size : key2Size;
+	for (size_t index = 0; index < minSize; ++index)
 	{
-		result1 += itKey1->m_keyStr;
+		if (key1.m_vecKeyString[index].m_keyStr != key2.m_vecKeyString[index].m_keyStr)
+		{
+			return key1.m_vecKeyString[index].m_keyStr < key2.m_vecKeyString[index].m_keyStr;
+		}
 	}
-	std::wstring result2;
-	for (auto itKey2 = key2.m_vecKeyString.begin(); itKey2 != key2.m_vecKeyString.end(); ++itKey2)
-	{
-		result2 += itKey2->m_keyStr;
-	}
-
-	return result1 < result2;
+	return key1Size < key2Size;
 }
 
 void QssString::setClassName(const std::wstring& className)
@@ -35,13 +34,16 @@ void QssString::setClassName(const std::wstring& className)
 
 QssString& QssString::addClassName()
 {
-	return operator()(m_key.m_vecKeyString.empty() ? L"." : L"::", &m_className);
+	return operator()(m_key.m_vecKeyString.empty() ? L"." : L"::", m_className.empty() ? nullptr : &m_className);
 }
 
 QssString& QssString::operator()(const std::wstring& str, std::wstring* name)
 {
-	m_key.m_vecKeyString.push_back(str);
-	m_key.m_vecKeyString.push_back(name);
+	m_key.m_vecKeyString.push_back(KeyString(str));
+	if (name != nullptr)
+	{
+		m_key.m_vecKeyString.push_back(KeyString(*name));
+	}
 	return *this;
 }
 
@@ -94,7 +96,7 @@ std::wstring QssString::toWString()
 		auto& vecKey = itmapData->first.m_vecKeyString;
 		for (auto itKey = vecKey.begin(); itKey != vecKey.end(); ++itKey)
 		{
-			result.append(itKey->m_keyPtr == nullptr ? itKey->m_keyStr : *(itKey->m_keyPtr));
+			result.append(itKey->m_keyStr);
 		}
 		
 		result.append(L"{");

@@ -203,15 +203,6 @@ private slots:
 	*/
 	void onCopyPath();
 
-#ifdef _MSC_VER
-private:
-    /** 写入文本到Windows剪贴板
-    @param [in] hWnd 所属窗口句柄
-    @param [in] str 写入的ANSI文本
-    */
-    void setClipboardData(void* hWnd, const std::string& str);
-#endif
-
 private:
 	// 下载状态提示文本
 	Label* m_tip;
@@ -235,19 +226,19 @@ private:
 	Label* m_persent;
 
 	// 转到后台下载按钮
-	COriginalButton* m_back;
+	PushButton* m_back;
 
 	// 重试按钮
-	COriginalButton* m_again;
+	PushButton* m_again;
 
 	// 取消下载按钮
-	COriginalButton* m_cancel;
+	PushButton* m_cancel;
 
 	// 下载失败后的手动下载提示
 	Label* m_downloadSlow;
 
 	// 其他下载渠道按钮
-	COriginalButton* m_hand;
+	PushButton* m_hand;
 
 	// 下载地址标签
 	Label* m_downloadAddr;
@@ -262,10 +253,10 @@ private:
 	LineEdit* m_pathEdit;
 
 	// 复制下载地址按钮
-	COriginalButton* m_downloadButton;
+	PushButton* m_downloadButton;
 
 	// 复制本地路径按钮
-	COriginalButton* m_pathButton;
+	PushButton* m_pathButton;
 
 	// 错误提示文本
 	Label* m_error;

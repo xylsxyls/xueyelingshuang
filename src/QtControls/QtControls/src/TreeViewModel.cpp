@@ -10,11 +10,15 @@ QStandardItemModel(parent)
 
 TreeViewModel::~TreeViewModel()
 {
-	
+
 }
 
 QStandardItem* TreeViewModel::getItem(int32_t row, int32_t column)
 {
+	if (row < 0 || column < 0)
+	{
+		return nullptr;
+	}
 	QStandardItem* itemPtr = item(row, column);
 	if (itemPtr != nullptr)
 	{
@@ -27,6 +31,10 @@ QStandardItem* TreeViewModel::getItem(int32_t row, int32_t column)
 
 void TreeViewModel::setHeaderText(int32_t index, const TreeText& text)
 {
+	if (index < 0)
+	{
+		return;
+	}
 	m_headerTextMap[index] = text;
 
 }
@@ -38,7 +46,11 @@ std::map<int32_t, TreeText>* TreeViewModel::headerText()
 
 void TreeViewModel::setBodyText(int32_t row, int32_t column, const TreeText& text)
 {
-	getItem(row, column);
+	QStandardItem* item = getItem(row, column);
+	if (item == nullptr)
+	{
+		return;
+	}
 	m_bodyTextMap[row][column] = text;
 
 	if (text.m_widget == nullptr)
@@ -65,15 +77,21 @@ std::map<int32_t, std::vector<QColor>>* TreeViewModel::itemBackgroundColor()
 
 void TreeViewModel::setHeaderHeight(int32_t height)
 {
+	const int32_t validHeight = qMax(height, 0);
 	int32_t count = columnCount();
 	while (count-- != 0)
 	{
-		setHeaderData(count, Qt::Horizontal, QSize(0, height), Qt::SizeHintRole);
+		setHeaderData(count, Qt::Horizontal, QSize(0, validHeight), Qt::SizeHintRole);
 	}
 }
 
 void TreeViewModel::setRowHeight(int32_t height, int32_t row)
 {
+	if (row < -1)
+	{
+		return;
+	}
+	const int32_t validHeight = qMax(height, 0);
 	if (row == -1)
 	{
 		int32_t lines = rowCount();
@@ -82,7 +100,7 @@ void TreeViewModel::setRowHeight(int32_t height, int32_t row)
 			int32_t count = columnCount();
 			while (count-- != 0)
 			{
-				setData(index(lines, count), QSize(0, height), Qt::SizeHintRole);
+				setData(index(lines, count), QSize(0, validHeight), Qt::SizeHintRole);
 			}
 		}
 		return;
@@ -90,12 +108,17 @@ void TreeViewModel::setRowHeight(int32_t height, int32_t row)
 	int32_t count = columnCount();
 	while (count-- != 0)
 	{
-		setData(index(row, count), QSize(0, height), Qt::SizeHintRole);
+		setData(index(row, count), QSize(0, validHeight), Qt::SizeHintRole);
 	}
 }
 
 void TreeViewModel::setColumnWidth(int32_t width, int32_t column)
 {
+	if (column < -1)
+	{
+		return;
+	}
+	const int32_t validWidth = qMax(width, 0);
 	TreeView* view = qobject_cast<TreeView*>(parent());
 	if (view == nullptr)
 	{
@@ -106,11 +129,11 @@ void TreeViewModel::setColumnWidth(int32_t width, int32_t column)
 		int32_t columns = columnCount();
 		while (columns-- != 0)
 		{
-			view->setColumnWidth(columns, width);
+			view->setColumnWidth(columns, validWidth);
 		}
 		return;
 	}
-	view->setColumnWidth(column, width);
+	view->setColumnWidth(column, validWidth);
 }
 
 void TreeViewModel::setListItemColor(const QColor& normalColor,
@@ -133,10 +156,15 @@ void TreeViewModel::setColumnWidthFixedMode()
 	{
 		return;
 	}
+	QHeaderView* header = view->header();
+	if (header == nullptr)
+	{
+		return;
+	}
 	int32_t columns = columnCount();
 	while (columns-- != 0)
 	{
-		view->header()->setSectionResizeMode(columns, QHeaderView::Fixed);
+		header->setSectionResizeMode(columns, QHeaderView::Fixed);
 	}
 }
 

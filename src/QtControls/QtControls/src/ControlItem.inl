@@ -12,31 +12,31 @@ ControlItem<QBase>::~ControlItem()
 template<class QBase>
 void ControlItem<QBase>::setItemBorderWidth(qint32 width, bool rePaint)
 {
-	ControlBase<QBase>::setPxSolidValue(L"border", width, true, rePaint);
+	ControlBase<QBase>::setPxSolidValue(L"border", qMax(width, 0), true, rePaint);
 }
 
 template<class QBase>
 void ControlItem<QBase>::setItemBorderRadius(qint32 radius, bool rePaint)
 {
-	ControlBase<QBase>::setPxValue(L"border-radius", radius, true, rePaint);
+	ControlBase<QBase>::setPxValue(L"border-radius", qMax(radius, 0), true, rePaint);
 }
 
 template<class QBase>
 void ControlItem<QBase>::setItemWidth(qint32 width, bool rePaint)
 {
-	ControlBase<QBase>::setPxValue(L"width", width, true, rePaint);
+	ControlBase<QBase>::setPxValue(L"width", qMax(width, 0), true, rePaint);
 }
 
 template<class QBase>
 void ControlItem<QBase>::setItemHeight(qint32 height, bool rePaint)
 {
-	ControlBase<QBase>::setPxValue(L"height", height, true, rePaint);
+	ControlBase<QBase>::setPxValue(L"height", qMax(height, 0), true, rePaint);
 }
 
 template<class QBase>
 void ControlItem<QBase>::setItemTextOrigin(qint32 origin, bool rePaint)
 {
-	ControlBase<QBase>::setPxValue(L"padding-left", origin, true, rePaint);
+	ControlBase<QBase>::setPxValue(L"padding-left", qMax(origin, 0), true, rePaint);
 }
 
 template<class QBase>

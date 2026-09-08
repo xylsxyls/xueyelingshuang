@@ -20,7 +20,6 @@ class QtControlsAPI Slider :
 	public ControlItemBorderForNormalHoverDisabled < QSlider >,
 	public ControlItemBackgroundForNormalHoverDisabled < QSlider >
 {
-	Q_OBJECT
 public:
 	/** 构造函数
 	@param [in] parent 父窗口指针

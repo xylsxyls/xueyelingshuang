@@ -20,6 +20,10 @@ LockedAccountPanel* ClosureDialog::lockedAccountPanel()
 
 void ClosureDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	BoxDialogBase::resizeEvent(eve);
     if (!check())
     {

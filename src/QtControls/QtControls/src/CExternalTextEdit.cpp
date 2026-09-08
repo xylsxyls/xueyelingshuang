@@ -1,7 +1,6 @@
 ﻿#include "CExternalTextEdit.h"
 
 #include "ExpressionConfigParser.h"
-#include <QDebug>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QMovie>
@@ -27,6 +26,10 @@ CExternalTextEdit::~CExternalTextEdit()
 
 void CExternalTextEdit::showEvent(QShowEvent *e)
 {
+	if (e == nullptr)
+	{
+		return;
+	}
     QTextEdit::showEvent(e);
     m_refreshGifTimer.start();
 	QStringList resourceKeys = m_gifResourceMapForExpression.keys();
@@ -42,6 +45,10 @@ void CExternalTextEdit::showEvent(QShowEvent *e)
 
 void CExternalTextEdit::hideEvent(QHideEvent *e)
 {
+	if (e == nullptr)
+	{
+		return;
+	}
     QTextEdit::hideEvent(e);
     m_refreshGifTimer.stop();
 	QStringList resourceKeys = m_gifResourceMapForExpression.keys();
@@ -57,6 +64,10 @@ void CExternalTextEdit::hideEvent(QHideEvent *e)
 
 void CExternalTextEdit::keyPressEvent(QKeyEvent *e)
 {
+	if (e == nullptr)
+	{
+		return;
+	}
     // 主键盘 Enter
     if ((e->key() == Qt::Key_Return) && (e->modifiers() == Qt::NoModifier))
     {
@@ -100,28 +111,42 @@ void CExternalTextEdit::keyPressEvent(QKeyEvent *e)
 
 void CExternalTextEdit::mousePressEvent(QMouseEvent *e)
 {
+	if (e == nullptr)
+	{
+		return;
+	}
 	QTextEdit::mousePressEvent(e);
 	this->activateWindow();
-	qDebug() << "edit: mouse press";
 }
 
 void CExternalTextEdit::updateGifResourceForExpression()
 {
+	QTextDocument* textDocument = document();
+	if (textDocument == nullptr)
+	{
+		return;
+	}
 	QStringList resourceKeys = m_gifResourceMapForExpression.keys();
     for(int32_t i = 0; i < resourceKeys.count(); ++i)
     {
         QMovie* movie = m_gifResourceMapForExpression.value(resourceKeys[i], nullptr);
-		if(movie == nullptr)
+        if(movie == nullptr)
 		{
 			continue;
 		}
 
-        int32_t currentFrame = movie->currentFrameNumber();
-        currentFrame = currentFrame < movie->frameCount() - 1 ? currentFrame + 1 : 0;
+		const int32_t frameCount = movie->frameCount();
+		if (frameCount <= 0)
+		{
+			continue;
+		}
+
+        int32_t currentFrame = qMax(movie->currentFrameNumber(), 0);
+        currentFrame = currentFrame < frameCount - 1 ? currentFrame + 1 : 0;
 
         movie->jumpToFrame(currentFrame);
 
-        this->document()->addResource(QTextDocument::ImageResource, resourceKeys[i], movie->currentPixmap());
+        textDocument->addResource(QTextDocument::ImageResource, resourceKeys[i], movie->currentPixmap());
     }
 
     setLineWrapColumnOrWidth(lineWrapColumnOrWidth());
@@ -130,13 +155,15 @@ void CExternalTextEdit::updateGifResourceForExpression()
 
 void CExternalTextEdit::insertFromMimeData(const QMimeData *source)
 {
-    QMimeData* n_source = new QMimeData;
+	if (source == nullptr)
+	{
+		return;
+	}
+    QMimeData n_source;
 
     QString text;
     if(source->hasHtml())
     {
-        qDebug() << "insert mimdata hasHtml:" << source->html();
-
         text = source->html();
 
         //将img替换成shortcut
@@ -157,42 +184,36 @@ void CExternalTextEdit::insertFromMimeData(const QMimeData *source)
 
         //TODO:将shortcut换成img
         text = parseShortcutToExpression(text);
-        n_source->setHtml(text);
+        n_source.setHtml(text);
 
     }
     else if(source->hasText())
     {
-        qDebug() << "insert mimdata hasText:" << source->text();
-
         text = source->text().toHtmlEscaped();
         text = text.replace("\n","<br/>");
 
 
         //TODO:将shortcut换成img
         text = parseShortcutToExpression(text);
-        n_source->removeFormat("text/plain");
+        n_source.removeFormat("text/plain");
 
 
-        n_source->setHtml(text);
+        n_source.setHtml(text);
     }
-    //delete t_source;
-    QTextEdit::insertFromMimeData(n_source);
-    delete n_source;
+    QTextEdit::insertFromMimeData(&n_source);
 }
 
 QMimeData *CExternalTextEdit::createMimeDataFromSelection() const
 {
     QMimeData* tData = QTextEdit::createMimeDataFromSelection();
+	if (tData == nullptr)
+	{
+		return nullptr;
+	}
     QString text;
-
-    foreach(QString s, tData->formats())
-    {
-        qDebug() << s;
-    }
 
     if(tData->hasHtml())
     {
-        qDebug() << "create mimdata hasHtml:" << tData->html();
         text = tData->html();
 
         text = filterExpressionToShortcut(text);
@@ -226,13 +247,11 @@ QMimeData *CExternalTextEdit::createMimeDataFromSelection() const
         //text = text.toHtmlEscaped();
         //text = text.replace("\n","<br/>");
 
-        qDebug() << "parse:" << text;
         tData->removeFormat("text/html");
         tData->setText(text);
     }
     else if(tData->hasText())
     {
-        qDebug() << "create mimdata hasText:" << tData->text();
         text = tData->text();
     }
 
@@ -250,7 +269,6 @@ void CExternalTextEdit::loadExpressions(const QString& emotionPath)
 	ExpressionConfigParser parser;
 	if (!parser.parse(emotionPath, &config))
 	{
-		qDebug() << "load emotion error:" << parser.lastError();
 		return;
 	}
 
@@ -277,7 +295,11 @@ void CExternalTextEdit::loadExpressions(const QString& emotionPath)
 		}
 
         QString docResourceUrl(m_expressionTag + shortcutKeys[i]);
-        this->document()->addResource(QTextDocument::ImageResource, docResourceUrl, m->currentPixmap());
+		QTextDocument* textDocument = document();
+		if (textDocument != nullptr)
+		{
+			textDocument->addResource(QTextDocument::ImageResource, docResourceUrl, m->currentPixmap());
+		}
 
         m_gifResourceMapForExpression[docResourceUrl] = m;
 
@@ -301,7 +323,11 @@ void CExternalTextEdit::appendText(const QString &text)
 void CExternalTextEdit::clear()
 {
     QTextEdit::clear();
-    this->document()->clear();
+	QTextDocument* textDocument = document();
+	if (textDocument != nullptr)
+	{
+		textDocument->clear();
+	}
 }
 
 QString CExternalTextEdit::message()
@@ -332,9 +358,10 @@ int CExternalTextEdit::testExpressionCount(QString msg)
     }
 
     int count = 0;
-    for(int i = 0; i < m_mappedExpression.keys().count(); i++)
+	const QStringList shortcutKeys = m_mappedExpression.keys();
+    for(int i = 0; i < shortcutKeys.count(); i++)
     {
-        QString shortcut = m_mappedExpression.keys()[i];
+        QString shortcut = shortcutKeys[i];
         for(int j = 0; j < imgShortcutList.count(); j++)
         {
             QString t_shortcut = imgShortcutList[j];
@@ -361,9 +388,10 @@ int CExternalTextEdit::testWordCount(QString msg)
     }
 
     //现将表情剔除
-    for(int i = 0; i < m_mappedExpression.keys().count(); i++)
+	const QStringList shortcutKeys = m_mappedExpression.keys();
+    for(int i = 0; i < shortcutKeys.count(); i++)
     {
-        QString shortcut = m_mappedExpression.keys()[i];
+        QString shortcut = shortcutKeys[i];
         for(int j = 0; j < imgShortcutList.count(); j++)
         {
             QString t_shortcut = imgShortcutList[j];
@@ -393,9 +421,10 @@ QString CExternalTextEdit::removeExpressionShortcut(QString msg)
     }
 
 
-    for(int i = 0; i < m_mappedExpression.keys().count(); i++)
+	const QStringList shortcutKeys = m_mappedExpression.keys();
+    for(int i = 0; i < shortcutKeys.count(); i++)
     {
-        QString shortcut = m_mappedExpression.keys()[i];
+        QString shortcut = shortcutKeys[i];
         for(int j = 0; j < imgShortcutList.count(); j++)
         {
             QString t_shortcut = imgShortcutList[j];
@@ -418,7 +447,7 @@ QString CExternalTextEdit::filterExpressionToShortcut(QString html) const
 
     QString text = html;
     QStringList imgList = exp.capturedTexts();
-    while(imgList.first() != "")
+    while(imgList.value(0) != "")
     {
         for(int i = 0; i < imgList.count(); i++)
         {
@@ -429,7 +458,12 @@ QString CExternalTextEdit::filterExpressionToShortcut(QString html) const
 
             QRegExp imgExp("\".*\"");
             imgExp.indexIn(imgElement);
-            QString src = imgExp.capturedTexts().first();
+			const QStringList capturedSrcList = imgExp.capturedTexts();
+			if (capturedSrcList.isEmpty())
+			{
+				continue;
+			}
+            QString src = capturedSrcList.value(0);
             if(src == "")
                 continue;
 
@@ -438,9 +472,10 @@ QString CExternalTextEdit::filterExpressionToShortcut(QString html) const
 
             //判断imgElement中是否能找到对应的shortcut，找到就替换
             bool isReplaced = false;
-            for(int j = 0; j < m_mappedExpression.keys().count(); j++)
+			const QStringList shortcutKeys = m_mappedExpression.keys();
+            for(int j = 0; j < shortcutKeys.count(); j++)
             {
-                QString shortcut = m_mappedExpression.keys()[j];
+                QString shortcut = shortcutKeys[j];
                 if(imgUri == (m_expressionTag + shortcut))
                 {
                     text.replace(imgElement, shortcut);
@@ -453,7 +488,6 @@ QString CExternalTextEdit::filterExpressionToShortcut(QString html) const
             if(!isReplaced) //* 不支持的img格式，直接删除<以后可以在这里添加忽略过去不删除>
             {
                 text.replace(imgElement, "");
-                qDebug() << "忽略" << imgElement;
             }
         }
         imgList.clear();
@@ -489,9 +523,11 @@ QString CExternalTextEdit::parseShortcutToExpression(QString text) const
 
     //对比现有能识别的shortcut
     QMap<QString, int> findedShortcutMap;
-    for(int i = 0; i < shortcutMap.keys().count(); i++)
+	const QStringList shortcutMapKeys = shortcutMap.keys();
+	const QStringList expressionKeys = m_mappedExpression.keys();
+    for(int i = 0; i < shortcutMapKeys.count(); i++)
     {
-        QString shortcut = shortcutMap.keys()[i];
+        QString shortcut = shortcutMapKeys[i];
         if(shortcut == "")
         {
             continue;
@@ -499,15 +535,15 @@ QString CExternalTextEdit::parseShortcutToExpression(QString text) const
 
         //查找是否有shortcut(能匹配到的最大shortcut)
         QString findedShortcut;
-        for(int i = 0; i < m_mappedExpression.keys().count(); i++)
+        for(int j = 0; j < expressionKeys.count(); j++)
         {
-            if(shortcut.contains(m_mappedExpression.keys()[i]))
+            if(shortcut.contains(expressionKeys[j]))
             {
                 /*QString img = "<img src=\"Shortcut" + shortcut + "\" />";
                 t_text.replace(shortcut, img);
                 break;*/
-                if(findedShortcut.length() < m_mappedExpression.keys()[i].length())
-                    findedShortcut = m_mappedExpression.keys()[i];
+                if(findedShortcut.length() < expressionKeys[j].length())
+                    findedShortcut = expressionKeys[j];
             }
         }
 
@@ -521,9 +557,10 @@ QString CExternalTextEdit::parseShortcutToExpression(QString text) const
         }
     }
 
-    for(int i = 0 ; i < findedShortcutMap.keys().count(); i++)
+	const QStringList foundShortcutKeys = findedShortcutMap.keys();
+    for(int i = 0 ; i < foundShortcutKeys.count(); i++)
     {
-        QString shortcut = findedShortcutMap.keys()[i];
+        QString shortcut = foundShortcutKeys[i];
         QString img = "<img src=\"" + m_expressionTag + shortcut + "\" />";
         t_text.replace(shortcut, img);
     }
@@ -554,9 +591,11 @@ QString CExternalTextEdit::parseShortcutToHTMLExpression(QString text) const
     }
 
 	QMap<QString, int> findedShortcutMap;
-    for(int i = 0; i < shortcutMap.keys().count(); i++)
+	const QStringList shortcutMapKeys = shortcutMap.keys();
+	const QStringList expressionKeys = m_mappedExpression.keys();
+    for(int i = 0; i < shortcutMapKeys.count(); i++)
     {
-        QString shortcut = shortcutMap.keys()[i];
+        QString shortcut = shortcutMapKeys[i];
         if(shortcut == "")
         {
             continue;
@@ -564,12 +603,12 @@ QString CExternalTextEdit::parseShortcutToHTMLExpression(QString text) const
 
         //查找是否有shortcut(能匹配到的最大shortcut)
         QString findedShortcut;
-        for(int ii = 0; ii < m_mappedExpression.keys().count(); ii++)
+        for(int ii = 0; ii < expressionKeys.count(); ii++)
         {
-            if(shortcut.contains(m_mappedExpression.keys()[ii]))
+            if(shortcut.contains(expressionKeys[ii]))
             {
-                if(findedShortcut.length() < m_mappedExpression.keys()[ii].length())
-                    findedShortcut = m_mappedExpression.keys()[ii];
+                if(findedShortcut.length() < expressionKeys[ii].length())
+                    findedShortcut = expressionKeys[ii];
             }
         }
 
@@ -579,13 +618,13 @@ QString CExternalTextEdit::parseShortcutToHTMLExpression(QString text) const
         }
     }
 
-	for(int i = 0 ; i < findedShortcutMap.keys().count(); i++)
+	const QStringList foundShortcutKeys = findedShortcutMap.keys();
+	for(int i = 0 ; i < foundShortcutKeys.count(); i++)
 	{
-		QString shortcut = findedShortcutMap.keys()[i];
+		QString shortcut = foundShortcutKeys[i];
 		QString img = "<div style='position:relative; display:inline;background-color:rgba(0,0,0,0); top:5px;'><img src='file:///" + m_mappedExpression[shortcut] + QString("' width='%1' height='%2' style='top:3px;' /></div>").arg(m_expressionSize).arg(m_expressionSize);
 		t_text.replace(shortcut, img);
 	}
 
 	return t_text;
 }
-

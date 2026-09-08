@@ -6,6 +6,7 @@
 #include "ControlSelf.h"
 #include "ControlBorder.h"
 #include "ControlBackground.h"
+#include <map>
 #include <vector>
 #include "QtControlsMacro.h"
 
@@ -88,12 +89,13 @@ public:
 	QAction* exec(const QPoint& point);
 
 private:
-	/** 改变图标
+	/** 尝试切换菜单项图标
 	@param [in] action 选中的菜单项
 	@param [in] icon 当前图标
-	@return 返回改变后的图标
+	@param [out] changedIcon 切换后的图标
+	@return 找到对应菜单项时返回true，否则返回false
 	*/
-	QIcon ChangeIcon(QAction* action, const QIcon& icon);
+	bool tryChangeIcon(QAction* action, const QIcon& icon, QIcon* changedIcon);
 
 private:
 	// 菜单项对应的原始图标集合

@@ -74,6 +74,10 @@ LockedAccountPanel::LockedAccountPanel(QWidget* parent)
 
 void LockedAccountPanel::paintEvent(QPaintEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     QWidget::paintEvent(eve);
     QPainter p(this);
     p.save();
@@ -93,12 +97,20 @@ void LockedAccountPanel::paintEvent(QPaintEvent* eve)
 
 void LockedAccountPanel::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     QWidget::resizeEvent(eve);
     this->layoutControls();
 }
 
 void LockedAccountPanel::layoutControls()
 {
+	if (m_treeView == nullptr)
+	{
+		return;
+	}
     m_treeView->setGeometry(QRect(QPoint(7,50), QPoint(this->width() - 7, this->height() - 7)));
 }
 
@@ -115,6 +127,10 @@ QString LockedAccountPanel::name()
 
 void LockedAccountPanel::setLockedAccountItemList(const LockedAccountItemList& li)
 {
+	if (m_model == nullptr || m_treeView == nullptr || m_treeView->header() == nullptr)
+	{
+		return;
+	}
     m_model->clear();
     QStringList labels;
     labels << QStringLiteral("封号时间") << QStringLiteral("封号原因") << QStringLiteral("封号天数");
@@ -122,7 +138,10 @@ void LockedAccountPanel::setLockedAccountItemList(const LockedAccountItemList& l
 
     for(int i = 0; i < li.count(); i++)
     {
-        m_model->appendRow(li[i]);
+		if (li[i] != nullptr)
+		{
+			m_model->appendRow(li[i]);
+		}
     }
 
     m_treeView->header()->resizeSection(0,170);
@@ -132,11 +151,19 @@ void LockedAccountPanel::setLockedAccountItemList(const LockedAccountItemList& l
 
 void LockedAccountPanel::appendLockedAccountItem(LockedAccountItem* item)
 {
+	if (m_model == nullptr || item == nullptr)
+	{
+		return;
+	}
 	m_model->appendRow(item);
 }
 
 void LockedAccountPanel::clearLockedAccountItem()
 {
+	if (m_model == nullptr || m_treeView == nullptr || m_treeView->header() == nullptr)
+	{
+		return;
+	}
 	m_model->clear();
 
 	QStringList labels;
@@ -156,14 +183,22 @@ LockedAccountItemDelegate::LockedAccountItemDelegate(QObject* parent)
 
 void LockedAccountItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
+	if (painter == nullptr || !index.isValid())
+	{
+		return;
+	}
     CTreeViewEx* view = qobject_cast<CTreeViewEx*>(parent());
     if(view == nullptr)
     {
         return;
     }
 
-    QStandardItemModel* model = (QStandardItemModel*)(view->model());
-    LockedAccountItem* litem = (LockedAccountItem*)(model->item(index.row(),0));
+    QStandardItemModel* model = qobject_cast<QStandardItemModel*>(view->model());
+	if (model == nullptr)
+	{
+		return;
+	}
+    LockedAccountItem* litem = dynamic_cast<LockedAccountItem*>(model->item(index.row(),0));
     if (litem == nullptr)
     {
         return;

@@ -35,6 +35,16 @@ Q_SIGNALS:
 	*/
 	void closeTip();
 
+private Q_SLOTS:
+	/** 在GUI线程实际弹出提示框。
+	@param [in] pos 窗口右下角
+	@param [in] text 文字
+	@param [in] maxWidth 最大宽度
+	@param [in] timeOut 最长显示时间，单位秒
+	@param [in] hasFocus 弹出时是否抢焦点
+	*/
+	void popTipInGuiThread(const QPoint& pos, const QString& text, int maxWidth, int timeOut, bool hasFocus);
+
 private:
 	/** 构造提示框管理单例
 	*/
@@ -47,6 +57,14 @@ private:
 	/** 初始化内部提示框和跨线程关闭连接
 	*/
 	void init();
+
+	/** 释放内部提示框，保证在QApplication退出前完成Widget销毁。
+	*/
+	void destroyTipLabel();
+
+	/** Qt退出前调用的提示框清理入口。
+	*/
+	static void destroyTipLabelForApplicationExit();
 
 private:
 	// 当前复用的提示框对象

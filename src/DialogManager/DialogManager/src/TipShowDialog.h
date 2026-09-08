@@ -40,5 +40,5 @@ private:
 	Label* m_tip;
 
 	// 确定按钮
-	COriginalButton* m_accept;
+	PushButton* m_accept;
 };

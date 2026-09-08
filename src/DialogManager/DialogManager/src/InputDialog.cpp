@@ -1,7 +1,7 @@
 ﻿#include "InputDialog.h"
 #include "QtControls/Label.h"
 #include "QtControls/LineEdit.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include "DialogManager.h"
 #include "DialogHelper.h"
 #include "QtControls/CPasswordInputBox.h"
@@ -16,7 +16,7 @@ m_isPassword(false),
 m_inputEx(nullptr)
 {
     m_editTip = new Label(this);
-    m_accept = new COriginalButton(this);
+    m_accept = new PushButton(this);
     m_passwordInputBox = new CPasswordInputBox(this);
     m_edit = new LineEdit(this);
 
@@ -81,12 +81,17 @@ void InputDialog::setInputEx(std::vector<InputEx>* inputEx)
 	{
 		return;
 	}
+	for (std::size_t index = 0; index < m_inputExControls.size(); ++index)
+	{
+		delete m_inputExControls[index].first;
+		delete m_inputExControls[index].second;
+	}
+	m_inputExControls.clear();
 	m_inputEx = inputEx;
 	m_edit->hide();
 	m_passwordInputBox->hide();
 
-	int32_t index = -1;
-	while (index++ != inputEx->size() - 1)
+	for (std::size_t index = 0; index < inputEx->size(); ++index)
 	{
 		const InputEx& inputDialogEx = (*inputEx)[index];
 		Label* tip = new Label(this);
@@ -96,7 +101,7 @@ void InputDialog::setInputEx(std::vector<InputEx>* inputEx)
 		if (inputDialogEx.m_isPassword)
 		{
 			lineEdit = new CPasswordInputBox(this);
-			DialogHelper::setPasswordInputBox((CPasswordInputBox*)lineEdit, inputDialogEx.m_defaultText, inputDialogEx.m_maxLength);
+			DialogHelper::setPasswordInputBox(static_cast<CPasswordInputBox*>(lineEdit), inputDialogEx.m_defaultText, inputDialogEx.m_maxLength);
 		}
 		else
 		{
@@ -106,11 +111,16 @@ void InputDialog::setInputEx(std::vector<InputEx>* inputEx)
 		m_inputExControls.push_back(std::pair<Label*, LineEdit*>(tip, lineEdit));
 	}
 
-	resize(340, 165 + 35 * (inputEx->size() - 1));
+	const int inputCount = static_cast<int>(inputEx->size());
+	resize(340, 165 + 35 * qMax(inputCount - 1, 0));
 }
 
 void InputDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     PopDialog::resizeEvent(eve);
     if (!check())
     {
@@ -120,26 +130,37 @@ void InputDialog::resizeEvent(QResizeEvent* eve)
     m_accept->setGeometry(QRect((width() - 116) / 2, height() - 38, 116, 22));
     m_edit->setGeometry(QRect(52, 74, 234, 26));
     m_passwordInputBox->setGeometry(QRect(52, 74, 234, 26));
-	int32_t index = -1;
-	while (index++ != m_inputExControls.size() - 1)
+	for (std::size_t index = 0; index < m_inputExControls.size(); ++index)
 	{
-		m_inputExControls[index].first->setGeometry(QRect(16, 74 + index * 35, 100, 26));
-		m_inputExControls[index].second->setGeometry(QRect(16 + 74, 74 + index * 35, 234, 26));
+		if (m_inputExControls[index].first == nullptr || m_inputExControls[index].second == nullptr)
+		{
+			continue;
+		}
+		const int top = 74 + static_cast<int>(index) * 35;
+		m_inputExControls[index].first->setGeometry(QRect(16, top, 100, 26));
+		m_inputExControls[index].second->setGeometry(QRect(16 + 74, top, 234, 26));
 	}
 }
 
 void InputDialog::closeEvent(QCloseEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	if (!check())
 	{
 		return;
 	}
 	if (m_inputEx != nullptr)
 	{
-		int32_t index = -1;
-		while (index++ != m_inputExControls.size() - 1)
+		const std::size_t writeCount = qMin(m_inputEx->size(), m_inputExControls.size());
+		for (std::size_t index = 0; index < writeCount; ++index)
 		{
-			(*m_inputEx)[index].m_editText = m_inputExControls[index].second->text();
+			if (m_inputExControls[index].second != nullptr)
+			{
+				(*m_inputEx)[index].m_editText = m_inputExControls[index].second->text();
+			}
 		}
 	}
 	else

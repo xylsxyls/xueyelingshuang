@@ -20,8 +20,16 @@ void RegExpBase::setRegularExpression(QComboBox* comboBox, const QString& regula
 	m_mapAttri[comboBox].m_regExp.setPattern(regularStr);
 	m_mapAttri[comboBox].m_validator.setRegExp(m_mapAttri[comboBox].m_regExp);
 	comboBox->setValidator(&(m_mapAttri[comboBox].m_validator));
-	comboBox->installEventFilter(comboBox->parent());
-	comboBox->lineEdit()->installEventFilter(comboBox->parent());
+	QObject* filterObject = comboBox->parent();
+	QLineEdit* lineEdit = comboBox->lineEdit();
+	if (filterObject != nullptr)
+	{
+		comboBox->installEventFilter(filterObject);
+		if (lineEdit != nullptr)
+		{
+			lineEdit->installEventFilter(filterObject);
+		}
+	}
 	m_mapAttri[comboBox].m_preText = preText;
 }
 
@@ -48,7 +56,7 @@ void RegExpBase::RegExpEventFilter(QObject* target, QEvent* eve)
 	{
 		if (!m_mapAttri.empty())
 		{
-			QWidget* widget = ((QWidget*)m_mapAttri.begin()->first->parent());
+			QWidget* widget = qobject_cast<QWidget*>(m_mapAttri.begin()->first->parent());
 			if (target == widget)
 			{
 				widget->setFocus();
@@ -92,15 +100,15 @@ void RegExpBase::onSetTextChanged(QComboBox* comboBox, const QString& text)
 	itAttri->second.m_regExp.indexIn(qstrText);
 	QStringList res = itAttri->second.m_regExp.capturedTexts();
 	QString capturedText;
-	int32_t index = -1;
-	while (index++ != res.size() - 1)
+	const int32_t resultCount = res.size();
+	for (int32_t index = 0; index < resultCount; ++index)
 	{
 		capturedText += res[index];
 	}
 	bool ok = (capturedText == qstrText);
 
-	index = -1;
-	while (index++ != comboBox->count() - 1)
+	const int32_t itemCount = comboBox->count();
+	for (int32_t index = 0; index < itemCount; ++index)
 	{
 		if (text == comboBox->itemText(index))
 		{
@@ -129,7 +137,11 @@ void RegExpBase::comboBoxPress(QObject* target,
 							   QString& curText,
 							   bool& finish)
 {
-	if (target == (QObject*)comboBox->lineEdit() && finish)
+	if (comboBox == nullptr || comboBox->lineEdit() == nullptr)
+	{
+		return;
+	}
+	if (target == comboBox->lineEdit() && finish)
 	{
 		finish = false;
 		if (curText != "" && comboBox->currentText() != comboBox->itemText(0))
@@ -163,6 +175,10 @@ void RegExpBase::comboBoxFocusOut(QObject* target,
 								  QString& curText,
 								  bool& finish)
 {
+	if (comboBox == nullptr)
+	{
+		return;
+	}
 	if (target == comboBox)
 	{
 		finish = true;
@@ -171,8 +187,8 @@ void RegExpBase::comboBoxFocusOut(QObject* target,
 			if (curText != comboBox->itemText(0))
 			{
 				bool add = true;
-				int32_t index = -1;
-				while (index++ != comboBox->count() - 1)
+				const int32_t itemCount = comboBox->count();
+				for (int32_t index = 0; index < itemCount; ++index)
 				{
 					if (curText == comboBox->itemText(index))
 					{
@@ -202,8 +218,8 @@ void RegExpBase::comboBoxFocusOut(QObject* target,
 			std::wstring wcurText = comboBox->currentText().toStdWString();
 
 			bool add = true;
-			int32_t index = -1;
-			while (index++ != comboBox->count() - 1)
+			const int32_t itemCount = comboBox->count();
+			for (int32_t index = 0; index < itemCount; ++index)
 			{
 				if (wcurText == comboBox->itemText(index).toStdWString())
 				{

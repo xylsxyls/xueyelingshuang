@@ -60,7 +60,7 @@ private:
     @param [in] button 被点击的按钮
     @return 返回按钮对应的弹框结果，未找到时返回ERROR_RESULT
     */
-    DialogResult buttonResult(COriginalButton* button);
+    DialogResult buttonResult(PushButton* button);
 
     /** 开始执行关闭动画
     */
@@ -89,4 +89,7 @@ protected:
 
     // 当前是否处于显示状态
     bool m_isShow;
+
+	// 当前是否已经进入退出动画，避免重复触发关闭流程
+	bool m_isExiting;
 };

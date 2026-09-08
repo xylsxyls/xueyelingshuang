@@ -1,11 +1,12 @@
 ﻿#pragma once
+#include <map>
 #include "DialogBase.h"
 #include <QPropertyAnimation>
 #include "QtControlsMacro.h"
 #include "DialogResult.h"
 
 class Label;
-class COriginalButton;
+class PushButton;
 class Separator;
 /** 窗口基本模型，实现通用部分
 */
@@ -47,10 +48,25 @@ public:
 	*/
 	qint32* userResultPtr();
 
+	/** 使用窗口内部结果存储，适用于show之后异步关闭的非模态窗口
+	@param [in] result 初始窗口结果
+	@param [in] userResult 初始用户自定义结果
+	*/
+	void useInternalResultStorage(DialogResult result = ERROR_RESULT, qint32 userResult = -1);
+
+	/** 清空结果存储指针，避免窗口关闭后继续写入外部已经失效的内存
+	*/
+	void clearResultStorage();
+
+	/** 判断关闭信号是否已经发出
+	@return 返回true表示本轮显示周期已经发出过关闭信号
+	*/
+	bool closeSignalEmitted() const;
+
     /** 设置当按下空格和回车后窗口默认点击的按钮
     @param [in] button 默认点击的按钮指针
     */
-    void initAcceptButton(COriginalButton* button);
+    void initAcceptButton(PushButton* button);
 
     /** 设置返回值存储区
     @param [in] result 外部存储区指针
@@ -95,6 +111,10 @@ protected:
     @return 返回true表示内部状态可用，false表示存在空指针或异常状态
     */
     bool check();
+
+	/** 重置关闭信号状态，窗口重新显示时允许再次发送关闭信号
+	*/
+	void resetCloseState();
     //void escEvent();
     //void altF4PressedEvent();
 
@@ -106,15 +126,23 @@ private slots:
 
 protected:
 	// 右上角关闭按钮
-	COriginalButton* m_exit;
+	PushButton* m_exit;
 	// 用户自定义返回值存储指针
 	qint32* m_userResult;
 	// 倒计时显示标签
     Label* m_time;
 	// 弹窗结果存储指针
 	DialogResult* m_result;
+	// 非模态窗口内部保存的用户自定义返回值
+	qint32 m_internalUserResult;
+	// 非模态窗口内部保存的窗口返回值
+	DialogResult m_internalResult;
 	// 控件到弹窗结果的映射
     std::map<QWidget*, DialogResult> m_mapResult;
 	// 回车或空格默认执行的按钮，由子类传入
-    COriginalButton* m_acceptButton;
+    PushButton* m_acceptButton;
+	// 当前结果指针是否指向窗口内部存储
+	bool m_isUsingInternalResultStorage;
+	// 当前显示周期是否已经发出过关闭信号
+	bool m_closedSignalEmitted;
 };

@@ -4,7 +4,7 @@
 #if defined(QTCONTROLS_ENABLE_WEBKIT) && (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
 
 #include "QtControls/Label.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 #include <QtWebKitWidgets/QWebView>
 #include <QDesktopServices>
 #include "DialogHelper.h"
@@ -45,6 +45,10 @@ void AdvertShowDialog::setAdvertUrl(const QString& advertUrl)
 
 void AdvertShowDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     NotifyDialog::resizeEvent(eve);
     if (!check())
     {

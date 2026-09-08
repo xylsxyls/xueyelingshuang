@@ -8,7 +8,8 @@ ChooseComboBox::ChooseComboBox(QWidget* parent):
 HtmlComboBox(parent),
 m_choose(nullptr),
 m_chooseOrigin(0),
-m_listItemHeight(0)
+m_listItemHeight(0),
+m_comboBoxText()
 {
 	m_choose = new Label(nullptr);
 	init();
@@ -53,13 +54,29 @@ void ChooseComboBox::setChooseByIndex(qint32 index)
 	{
 		return;
 	}
+	QWidget* oldWidget = qobject_cast<QWidget*>(m_choose->parent());
+	if (oldWidget != nullptr)
+	{
+		const qint32 count = m_listWidget->count();
+		for (qint32 itemIndex = 0; itemIndex < count; ++itemIndex)
+		{
+			QListWidgetItem* item = m_listWidget->item(itemIndex);
+			if (item != nullptr && m_listWidget->itemWidget(item) == oldWidget)
+			{
+				m_listWidget->removeItemWidget(item);
+				break;
+			}
+		}
+		m_choose->setParent(nullptr);
+		delete oldWidget;
+	}
+
 	QListWidgetItem* widgetItem = m_listWidget->item(index);
 	if (widgetItem == nullptr)
 	{
-		m_choose->setParent(nullptr);
 		return;
 	}
-	QWidget* widget = new QWidget;
+	QWidget* widget = new QWidget(m_listWidget);
 	if (widget == nullptr)
 	{
 		return;
@@ -80,7 +97,7 @@ void ChooseComboBox::setChooseSize(qint32 width, qint32 height)
 	{
 		return;
 	}
-	m_choose->resize(width, height);
+	m_choose->resize(qMax(width, 0), qMax(height, 0));
 }
 
 void ChooseComboBox::updateChooseGeometry()
@@ -89,7 +106,7 @@ void ChooseComboBox::updateChooseGeometry()
 	{
 		return;
 	}
-	QWidget* widget = (QWidget*)m_choose->parent();
+	QWidget* widget = qobject_cast<QWidget*>(m_choose->parent());
 	if (widget == nullptr)
 	{
 		return;
@@ -101,8 +118,9 @@ void ChooseComboBox::updateChooseGeometry()
 
 void ChooseComboBox::setListItemHeight(qint32 height, bool rePaint)
 {
-	HtmlComboBox::setListItemHeight(height, rePaint);
-	m_listItemHeight = height;
+	const qint32 validHeight = qMax(height, 0);
+	HtmlComboBox::setListItemHeight(validHeight, rePaint);
+	m_listItemHeight = validHeight;
 }
 
 void ChooseComboBox::clear()
@@ -121,20 +139,20 @@ qint32 ChooseComboBox::currentChoosedIndex()
 	{
 		return -1;
 	}
-	QWidget* widget = (QWidget*)m_choose->parent();
+	QWidget* widget = qobject_cast<QWidget*>(m_choose->parent());
 	if (widget == nullptr)
 	{
 		return -1;
 	}
-	qint32 index = -1;
-	while (index++ != m_listWidget->count() - 1)
+	const qint32 count = m_listWidget->count();
+	for (qint32 index = 0; index < count; ++index)
 	{
 		if (m_listWidget->itemWidget(m_listWidget->item(index)) == widget)
 		{
 			return index;
 		}
 	}
-	return 0;
+	return -1;
 }
 
 qint64 ChooseComboBox::currentChoosedId()
@@ -163,18 +181,30 @@ void ChooseComboBox::clearChoose()
 
 void ChooseComboBox::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	HtmlComboBox::resizeEvent(eve);
 	updateChooseGeometry();
 }
 
 void ChooseComboBox::mouseMoveEvent(QMouseEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	HtmlComboBox::mouseMoveEvent(eve);
 	setToolTip(currentChoosedText());
 }
 
 void ChooseComboBox::paintEvent(QPaintEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	QStylePainter painter(this);
 	// draw the combobox frame, focusrect and selected etc.
 	QStyleOptionComboBox opt;

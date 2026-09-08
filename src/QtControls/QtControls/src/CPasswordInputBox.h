@@ -4,7 +4,7 @@
 
 #define MASK_BUTTON_PNG QString::fromStdWString(L"/Image/Common/Setting/SettingPasswordIcon.png")
 
-class COriginalButton;
+class PushButton;
 /** 密码输入框
 */
 class QtControlsAPI CPasswordInputBox : public LineEdit
@@ -96,7 +96,7 @@ private slots:
 
 private:
 	// 密码明文/密文切换按钮
-	COriginalButton* m_maskButton;
+	PushButton* m_maskButton;
 	// 遮罩按钮距离右侧的偏移量
 	qint32 m_rightOrigin;
 };

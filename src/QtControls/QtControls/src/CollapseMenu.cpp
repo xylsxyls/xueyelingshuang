@@ -4,8 +4,13 @@
 
 CollapseMenu::CollapseMenu(QWidget* parent) :
 Menu(parent),
+m_normalColor(),
+m_selectedColor(),
 m_hasSetSelectedLabelTop(false),
+m_selectedLabelTop(nullptr),
 m_hasSetSelectedLabelBottom(false),
+m_selectedLabelBottom(nullptr),
+m_topLabel(nullptr),
 m_hasSetTopLabel(false)
 {
 	setItemName(L"item");
@@ -17,8 +22,13 @@ m_hasSetTopLabel(false)
 
 CollapseMenu::CollapseMenu(const QString& title, const QString& icon, const QSize& size, QWidget* parent) :
 Menu(title, icon, size, parent),
+m_normalColor(),
+m_selectedColor(),
 m_hasSetSelectedLabelTop(false),
+m_selectedLabelTop(nullptr),
 m_hasSetSelectedLabelBottom(false),
+m_selectedLabelBottom(nullptr),
+m_topLabel(nullptr),
 m_hasSetTopLabel(false)
 {
 	setBorderCollapse();
@@ -52,7 +62,10 @@ void CollapseMenu::paintEvent(QPaintEvent *eve)
 {
 	if (m_topLabel == nullptr || eve == nullptr)
 	{
-		Menu::paintEvent(eve);
+		if (eve != nullptr)
+		{
+			Menu::paintEvent(eve);
+		}
 		return;
 	}
 
@@ -67,6 +80,10 @@ void CollapseMenu::paintEvent(QPaintEvent *eve)
 
 void CollapseMenu::leaveEvent(QEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	if (m_selectedLabelTop != nullptr && m_hasSetSelectedLabelTop)
 	{
 		m_selectedLabelTop->setBackgroundColor(m_normalColor, m_normalColor, m_normalColor, true);
@@ -80,6 +97,10 @@ void CollapseMenu::leaveEvent(QEvent* eve)
 
 void CollapseMenu::mouseMoveEvent(QMouseEvent *eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
 	QAction* pAction = actionAt(mapFromGlobal(eve->globalPos()));
 	if (pAction == nullptr)
 	{

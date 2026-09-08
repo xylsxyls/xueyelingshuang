@@ -1,6 +1,6 @@
 ﻿#include "CPasswordInputBox.h"
 #include "ControlStyleManager.h"
-#include "COriginalButton.h"
+#include "PushButton.h"
 #include <QRegExpValidator>
 
 CPasswordInputBox::CPasswordInputBox(QWidget *parent):
@@ -8,7 +8,7 @@ LineEdit(parent),
 m_maskButton(nullptr),
 m_rightOrigin(5)
 {
-	m_maskButton = new COriginalButton(this);
+	m_maskButton = new PushButton(this);
 	init();
 }
 
@@ -60,7 +60,9 @@ void CPasswordInputBox::setMaskSize(qint32 width, qint32 height)
 	{
 		return;
 	}
-	m_maskButton->resize(width, GetInt(height, width));
+	const qint32 realWidth = qMax(width, 0);
+	const qint32 realHeight = qMax(GetInt(height, realWidth), 0);
+	m_maskButton->resize(realWidth, realHeight);
 }
 
 void CPasswordInputBox::setMaskRightOrigin(qint32 rightOrigin)
@@ -69,7 +71,7 @@ void CPasswordInputBox::setMaskRightOrigin(qint32 rightOrigin)
 	{
 		return;
 	}
-	m_rightOrigin = rightOrigin;
+	m_rightOrigin = qMax(rightOrigin, 0);
 	layoutControl();
 }
 
@@ -120,7 +122,7 @@ void CPasswordInputBox::init()
 	{
 		return;
 	}
-	QObject::connect(m_maskButton, &COriginalButton::clicked, this, &CPasswordInputBox::onMaskButtonClicked);
+	QObject::connect(m_maskButton, &PushButton::clicked, this, &CPasswordInputBox::onMaskButtonClicked);
 	setDefault();
 }
 
@@ -135,6 +137,10 @@ void CPasswordInputBox::layoutControl()
 
 void CPasswordInputBox::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     LineEdit::resizeEvent(eve);
     layoutControl();
 }

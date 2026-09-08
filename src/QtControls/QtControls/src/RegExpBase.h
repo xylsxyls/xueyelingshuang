@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <map>
 #include <QRegExp>
 #include <QRegExpValidator>
 #include "RegExpAttri.h"
@@ -12,8 +13,8 @@ setRegularExpression进行设置，父窗口要install，要链接QComboBox的�
 QObject::connect(htmlComboBox, &QComboBox::currentTextChanged, this, &InviteBattleDialog::onGameNetTextChanged);
 QObject::connect(htmlComboBox->lineEdit(), &QLineEdit::editingFinished, this, &InviteBattleDialog::onNetEditTextFinish);
 内部调用函数
-onSetTextChanged((QComboBox*)sender(), text);
-onSetEditTextFinish((QComboBox*)sender());
+onSetTextChanged(qobject_cast<QComboBox*>(sender()), text);
+onSetEditTextFinish(qobject_cast<QComboBox*>(sender()));
 继承eventFilter，内部调用RegExpEventFilter
 */
 class QtControlsAPI RegExpBase

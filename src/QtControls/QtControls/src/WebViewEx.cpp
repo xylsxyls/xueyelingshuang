@@ -8,6 +8,7 @@
 #include <QDesktopServices>
 #include <QWebFrame>
 #include <QDir>
+#include <QMutexLocker>
 
 WebPage::WebPage(QWidget *parent):
 QWebPage(parent)
@@ -89,6 +90,7 @@ CWebViewEx::CWebViewEx(QWidget *parent, bool allowWebCache)
 
 CWebViewEx::~CWebViewEx()
 {
+	QMutexLocker locker(&m_mutex);
 	m_bDestroying = true;
 }
 
@@ -138,6 +140,10 @@ void CWebViewEx::initWebCache(const QString& cache_dir)
 	if (!webCacheDir.isEmpty())
 	{
 		QWebPage* webPage =  QWebView::page(); //new QWebPage(this);
+		if (webPage == nullptr)
+		{
+			return;
+		}
 
 		QNetworkDiskCache*      diskCache     = new QNetworkDiskCache(this);
 		QNetworkAccessManager*  accessManager = new QNetworkAccessManager(this);
@@ -156,21 +162,29 @@ void CWebViewEx::initWebCache(const QString& cache_dir)
 
 void CWebViewEx::mousePressEvent(QMouseEvent* e)
 {
+	if (e == nullptr)
+	{
+		return;
+	}
 	QWebView::mousePressEvent(e);
 	this->activateWindow();
 }
 
 void CWebViewEx::addJSObject(QString object_name,QObject *c_object)
 {
+	if (object_name.isEmpty() || c_object == nullptr)
+	{
+		return;
+	}
 	// Add pAnalyzer to JavaScript Frame as member "imageAnalyzer".
-	m_mutex.lock();
+	QMutexLocker locker(&m_mutex);
 	m_js_object_list.insert(std::make_pair(object_name,c_object));
-	m_mutex.unlock();
 	//widget->page()->mainFrame()->addToJavaScriptWindowObject(object_name, c_object);
 }
 
 void CWebViewEx::realAddJSObject()
 {
+	QMutexLocker locker(&m_mutex);
 	if( m_bDestroying ) return;
 
 
@@ -184,7 +198,6 @@ void CWebViewEx::realAddJSObject()
 		return;
 	}
 
-	m_mutex.lock();
 	std::map<QString,QObject*>::iterator x = m_js_object_list.begin();
 	for (;x!=m_js_object_list.end();x++)
 	{
@@ -193,7 +206,6 @@ void CWebViewEx::realAddJSObject()
 #ifdef _DEBUG
 //	pFrame->addToJavaScriptWindowObject("DebugMode_7F", new QObject());
 #endif
-	m_mutex.unlock();
 }
 
 QVariant CWebViewEx::evaluateJavaScript(QString x)

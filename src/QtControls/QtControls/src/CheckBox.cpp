@@ -45,11 +45,13 @@ void CheckBox::setIndicatorImage(const QString& indicatorImg,
 
 void CheckBox::setTextOrigin(qint32 origin, bool rePaint)
 {
-	ControlBase::setPxValue(L"spacing", origin, false, rePaint);
+	ControlBase::setPxValue(L"spacing", qMax(origin, 0), false, rePaint);
 }
 
 void CheckBox::setIndicatorSize(qint32 width, qint32 height, bool rePaint)
 {
-	ControlBase::setPxValue(L"width", width, true, false);
-	ControlBase::setPxValue(L"height", GetInt(height, width), true, rePaint);
+	const qint32 realWidth = qMax(width, 0);
+	const qint32 realHeight = qMax(GetInt(height, realWidth), 0);
+	ControlBase::setPxValue(L"width", realWidth, true, false);
+	ControlBase::setPxValue(L"height", realHeight, true, rePaint);
 }

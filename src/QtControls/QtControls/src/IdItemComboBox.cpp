@@ -40,8 +40,8 @@ void IdItemComboBox::addItems(const QStringList& textList, const QList<qint64>& 
 	{
 		return;
 	}
-	qint32 index = -1;
-	while (index++ != textList.size() - 1)
+	const qint32 size = textList.size();
+	for (qint32 index = 0; index < size; ++index)
 	{
 		QListWidgetItem* widgetItem = new QListWidgetItem;
 		if (widgetItem != nullptr)
@@ -65,8 +65,8 @@ qint32 IdItemComboBox::itemIndexByFirstId(qint64 id)
 	{
 		return -1;
 	}
-	qint32 index = -1;
-	while (index++ != m_listWidget->count() - 1)
+	const qint32 count = m_listWidget->count();
+	for (qint32 index = 0; index < count; ++index)
 	{
 		QListWidgetItem* item = m_listWidget->item(index);
 		if (item != nullptr)

@@ -16,7 +16,7 @@ ListWidget::~ListWidget()
 
 void ListWidget::setMaxHeight(qint32 maxHeight, bool rePaint)
 {
-	ControlBase::setPxValue(L"max-height", maxHeight, false, rePaint);
+	ControlBase::setPxValue(L"max-height", qMax(maxHeight, 0), false, rePaint);
 }
 
 void ListWidget::setClickEnable(bool enable)
@@ -28,7 +28,6 @@ void ListWidget::mousePressEvent(QMouseEvent* eve)
 {
 	if (eve == nullptr)
 	{
-		QListWidget::mousePressEvent(eve);
 		return;
 	}
 	if (m_click == false)

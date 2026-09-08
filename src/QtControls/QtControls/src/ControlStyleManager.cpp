@@ -7,6 +7,7 @@
 #include <QPainter>
 #include <QTextDocument>
 #include <QTextOption>
+#include <QThread>
 #include <stdint.h>
 
 ControlStyleManager& ControlStyleManager::instance()
@@ -47,6 +48,10 @@ QString ControlStyleManager::resourceRootPath() const
 
 void ControlStyleManager::clearRenderCache()
 {
+	if (!isGuiThread())
+	{
+		return;
+	}
 	delete m_htmlRender;
 	m_htmlRender = nullptr;
 	delete m_doc;
@@ -85,7 +90,7 @@ void ControlStyleManager::drawHtmlTextByLabel(QPainter* painter,
 											  const QString& html,
 											  Qt::Alignment alignment)
 {
-	if (painter == nullptr || !ensureHtmlRender())
+	if (painter == nullptr || !isGuiThread() || !ensureHtmlRender())
 	{
 		return;
 	}
@@ -123,7 +128,7 @@ void ControlStyleManager::drawHtmlTextByQTextDocument(QPainter* painter,
 													  const QRect& rect,
 													  const QString& html)
 {
-	if (painter == nullptr || !ensureTextDocument())
+	if (painter == nullptr || !isGuiThread() || !ensureTextDocument())
 	{
 		return;
 	}
@@ -219,3 +224,8 @@ bool ControlStyleManager::ensureTextDocument()
 	return m_doc != nullptr;
 }
 
+bool ControlStyleManager::isGuiThread()
+{
+	QCoreApplication* app = QCoreApplication::instance();
+	return app != nullptr && QThread::currentThread() == app->thread();
+}

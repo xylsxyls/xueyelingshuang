@@ -2,7 +2,7 @@
 #include "QtControls/Label.h"
 #include "DialogManager.h"
 #include "DialogHelper.h"
-#include "QtControls/COriginalButton.h"
+#include "QtControls/PushButton.h"
 
 WaitDialog::WaitDialog():
 m_tip(nullptr)
@@ -24,6 +24,10 @@ void WaitDialog::setTip(const QString& tip)
 
 void WaitDialog::resizeEvent(QResizeEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		return;
+	}
     PopDialog::resizeEvent(eve);
     if (!check())
     {
