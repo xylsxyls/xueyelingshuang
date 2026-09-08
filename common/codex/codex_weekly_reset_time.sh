@@ -4,7 +4,7 @@
 # Requirements:
 # - Codex CLI must be installed and logged in with ChatGPT.
 # - Windows: run from Git Bash, MSYS2, Cygwin, or another Bash environment.
-# - Linux: run from Bash.
+# - Linux: run from Bash. HTTPS_PROXY=http://127.0.0.1:7897 ./codex_weekly_reset_time.sh
 
 set -euo pipefail
 
