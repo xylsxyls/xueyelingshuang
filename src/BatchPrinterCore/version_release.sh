@@ -1,0 +1,1 @@
+"$CLOUD_REBUILD" BatchPrinterCore 32 dll release same
