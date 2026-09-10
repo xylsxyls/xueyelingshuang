@@ -59,6 +59,11 @@ public:
 	*/
 	virtual ~LumaPlayer();
 
+	/** 在GUI线程异步加载媒体，供文件选择和启动参数共用
+	@param [in] filePath Qt本地文件路径，空路径不执行操作
+	*/
+	void loadMedia(const QString& filePath);
+
 protected:
 	/** 绘制当前视频、悬浮控制条与状态提示
 	@param [in] event Qt事件对象，仅在调用期间有效
@@ -138,11 +143,6 @@ private:
 	/** 打开系统文件选择窗口并加载用户选择的视频
 	*/
 	void openFileDialog();
-
-	/** 加载一个媒体文件
-	@param [in] filePath Qt本地文件路径
-	*/
-	void loadMedia(const QString& filePath);
 
 	/** 按当前媒体尺寸自动调整窗口到无黑边初始大小
 	*/
@@ -370,6 +370,10 @@ private:
 	LumaPlayerCoreCSnapshot m_snapshot;
 	// 最近一次视频图像缓存
 	QImage m_cachedFrame;
+	// 缩小显示的平滑采样缓存，仅在帧或目标尺寸变化时重新生成
+	QImage m_scaledFrame;
+	// 缩放缓存对应的源QImage标识，防止换帧后复用旧画面
+	int64_t m_scaledFrameSourceKey;
 	// 最近一次已经复制到窗口层的视频帧序号
 	uint64_t m_cachedFrameSerial;
 	// 当前是否已打开媒体

@@ -3,6 +3,7 @@
 #define LUMAPLAYERCORE_USE_C_API
 #endif
 #include "LumaPlayerCore/LumaPlayerCoreAPI.h"
+#include <QStringList>
 #include <atomic>
 #include <stdint.h>
 
@@ -17,10 +18,9 @@ public:
 	static Config& instance();
 
 	/** 解析启动参数并初始化默认Core配置
-	@param [in] argc 参数个数
-	@param [in] argv 命令行参数
+	@param [in] arguments QApplication提供的Unicode参数列表，首项为程序名
 	*/
-	void init(int argc, char* argv[]);
+	void init(const QStringList& arguments);
 
 	/** 清理配置运行状态
 	*/
@@ -81,6 +81,8 @@ public:
 	int64_t m_audioMaxQueue100ns;
 	// 命令行是否包含debug诊断标记，基础日志始终开启
 	bool m_debugEnabled;
+	// 启动时加载的首个视频路径，空字符串表示显示空窗口
+	QString m_startupMediaPath;
 	// 日志服务是否已经启动，跨线程读取
 	std::atomic<bool> m_logInitialized;
 	// 注入Core的独立实例配置

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <QString>
+#include <QStringList>
 #include <QRect>
 #include <stdint.h>
 
@@ -45,11 +46,10 @@ public:
 	static bool isOpenedState(int32_t state);
 
 	/** 检查是否包含独立的debug参数，忽略大小写
-	@param [in] argc 命令行参数个数
-	@param [in] argv 命令行参数数组
+	@param [in] arguments Unicode命令行参数列表，首项为程序名
 	@return true表示存在独立的debug参数
 	*/
-	static bool hasDebugArgument(int argc, char* argv[]);
+	static bool hasDebugArgument(const QStringList& arguments);
 
 	/** 将100纳秒时间格式化为界面时分秒文案
 	@param [in] time100ns 待格式化的媒体时间，单位100纳秒

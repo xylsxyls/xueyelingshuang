@@ -53,24 +53,11 @@ bool LumaPlayerHelper::isOpenedState(int32_t state)
 		state == LumaPlayerCoreCStateEnded;
 }
 
-bool LumaPlayerHelper::hasDebugArgument(int argc, char* argv[])
+bool LumaPlayerHelper::hasDebugArgument(const QStringList& arguments)
 {
-	if (argv == nullptr)
+	for (int32_t index = 1; index < arguments.size(); ++index)
 	{
-		return false;
-	}
-	for (int index = 1; index < argc; ++index)
-	{
-		if (argv[index] == nullptr)
-		{
-			continue;
-		}
-		std::string argument(argv[index]);
-		std::transform(argument.begin(), argument.end(), argument.begin(), [](unsigned char value) -> char
-		{
-			return static_cast<char>(std::tolower(value));
-		});
-		if (argument == "debug")
+		if (arguments.at(index).compare(QStringLiteral("debug"), Qt::CaseInsensitive) == 0)
 		{
 			return true;
 		}

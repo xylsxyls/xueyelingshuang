@@ -24,6 +24,7 @@ m_second100ns(10000000),
 m_millisecond100ns(10000),
 m_audioMaxQueue100ns(30000000),
 m_debugEnabled(false),
+m_startupMediaPath(),
 m_logInitialized(false),
 m_coreConfig()
 {
@@ -36,14 +37,25 @@ Config& Config::instance()
 	return s_config;
 }
 
-void Config::init(int argc, char* argv[])
+void Config::init(const QStringList& arguments)
 {
-	m_debugEnabled = LumaPlayerHelper::hasDebugArgument(argc, argv);
+	m_debugEnabled = LumaPlayerHelper::hasDebugArgument(arguments);
+	m_startupMediaPath.clear();
+	for (int32_t index = 1; index < arguments.size(); ++index)
+	{
+		const QString& argument = arguments.at(index);
+		if (!argument.isEmpty() && argument.compare(QStringLiteral("debug"), Qt::CaseInsensitive) != 0)
+		{
+			m_startupMediaPath = argument;
+			break;
+		}
+	}
 	lumaPlayerCoreDefaultConfig(&m_coreConfig);
 }
 
 void Config::uninit()
 {
 	m_debugEnabled = false;
+	m_startupMediaPath.clear();
 	m_logInitialized.store(false);
 }

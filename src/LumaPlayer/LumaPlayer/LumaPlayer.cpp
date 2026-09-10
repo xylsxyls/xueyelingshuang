@@ -40,6 +40,7 @@ m_core(&m_audioRender, &m_videoRender),
 m_lastCenterTipVisible(false),
 m_lastZoomTipVisible(false),
 m_snapshot(),
+m_scaledFrameSourceKey(0),
 m_cachedFrameSerial(0),
 m_hasMedia(false),
 m_pendingMediaLoad(false),
@@ -132,6 +133,8 @@ void LumaPlayer::paintEvent(QPaintEvent* event)
 	(void)event;
 	QPainter painter(this);
 	painter.setRenderHint(QPainter::Antialiasing, true);
+	// 图形抗锯齿不处理图像采样，视频缩放需单独启用平滑变换
+	painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
 	painter.fillRect(rect(), QColor(0, 0, 0));
 	paintVideo(painter);
 	paintCenterPlayTip(painter);
@@ -620,6 +623,8 @@ void LumaPlayer::loadMedia(const QString& filePath)
 	LumaPlayerLogger::log("Load media command begin: %s", utf8Path.constData());
 	m_core.pauseAsync();
 	m_cachedFrame = QImage();
+	m_scaledFrame = QImage();
+	m_scaledFrameSourceKey = 0;
 	m_cachedFrameSerial = 0;
 	m_panOffset = QPointF(0.0, 0.0);
 	m_zoomPercent = 100;
@@ -1295,6 +1300,25 @@ void LumaPlayer::paintVideo(QPainter& painter)
 	QRect drawRect = videoDrawRect();
 	if (!m_cachedFrame.isNull() && drawRect.isValid())
 	{
+		if (drawRect.width() < m_cachedFrame.width() && drawRect.height() < m_cachedFrame.height())
+		{
+			// 缩小采用面积采样，避免仅用双线性绘制时细节混叠；平移不改变缓存
+			if (m_scaledFrameSourceKey != m_cachedFrame.cacheKey() || m_scaledFrame.size() != drawRect.size())
+			{
+				m_scaledFrame = m_cachedFrame.scaled(drawRect.size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+				m_scaledFrameSourceKey = m_cachedFrame.cacheKey();
+			}
+			if (!m_scaledFrame.isNull())
+			{
+				painter.drawImage(drawRect.topLeft(), m_scaledFrame);
+				return;
+			}
+		}
+		else
+		{
+			m_scaledFrame = QImage();
+			m_scaledFrameSourceKey = 0;
+		}
 		painter.drawImage(drawRect, m_cachedFrame);
 		return;
 	}

@@ -27,15 +27,16 @@ int main(int argc, char* argv[])
 	int result = -1;
 	try
 	{
-		g_config.init(argc, argv);
+		QApplication application(argc, argv);
+		g_config.init(application.arguments());
 		LumaPlayerLogger::init(g_config.m_debugEnabled);
 		LumaPlayerLogger::log("CDump registration result=%d", dumpEnabled ? 1 : 0);
-		QApplication application(argc, argv);
 		application.setFont(QFont(QString::fromWCharArray(L"楷体"), 10));
 		const bool debugEnabled = g_config.m_debugEnabled;
 		{
 			LumaPlayer player(debugEnabled);
 			player.show();
+			player.loadMedia(g_config.m_startupMediaPath);
 			result = application.exec();
 		}
 	}

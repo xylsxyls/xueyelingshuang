@@ -5,6 +5,7 @@
 一、入口与源码导航
 common/AI文档中的工程开发规范、AI代码开发规范、仓库使用说明文档、线程开发规范为通用约束。所有路径相对仓库根目录。
 src/LumaPlayer/LumaPlayer：main注册CDump、初始化Config和日志、运行Qt；Config集中界面/音频参数；LumaPlayer负责窗口、事件及绘制；Helper提供时间、裁剪、绘图辅助；CoreBridge通过纯C ABI调用Core；VideoRender缓存QImage；AudioRender/AudioTask独立管理声卡队列；Logger仅供应用业务日志。
+启动顺序：注册CDump并取得配置/管理器实例，创建QApplication后用application.arguments()解析Unicode参数，再初始化日志和窗口。Config保存首个非debug路径及诊断开关，main在show后调用公开loadMedia，复用文件选择的异步打开、窗口尺寸调整和自动播放流程。Windows由系统关联传入路径；应用不写关联注册表。
 src/LumaPlayerCore/LumaPlayerCore/src：LumaPlayerCore为C++外观；CoreAPI通过LUMAPLAYERCORE_USE_C_API选择CoreC纯C声明，CoreC.cpp薄转发；CContext和C音视频Adapter保存句柄及回调；CoreConfig为初始化参数；CoreResult为结果枚举和中文const map；Types定义公共模型；CoreHelper承接C边界检查。
 PlayerEngine协调命令、时钟、AB和生命周期；PlayerCommand/CommandTask是单条控制意图和同步完成对象；WorkerTask调度播放；PreviewTask是常驻最新位置预览；PreviewCancelContext检查代次与退出；LoopBuffer及其任务提前准备下一轮有限缓存；MediaClock用steady_clock映射媒体时间；IAudioRender/IVideoRender为借用输出契约。
 src/FFmpegCpp/FFmpegCpp/src：PlaybackReader完成解复用、解码、BGRA/PCM转换；AdjacentReader缓存相邻展示帧。业务不包含原生FFmpeg头。src/LumaPlayerTest/LumaPlayerTest为正式测试入口；src/LoopPlayer只作迁移行为对照。
@@ -41,6 +42,7 @@ seek除flush codec外，还需清空SwrContext滤波延迟和待播PCM；否则�
 五、Qt与设备线程
 GUI16ms轮询状态，但只在帧、状态或动画变化时重绘，暂停空闲不重复刷整幅画面；不能在鼠标回调解码。鼠标移动事件button()通常为NoButton，不能按button()==LeftButton过滤；拖动状态与buttons()才用于判断按住的键。双击取消待执行单击计时器；进度拖动和画面平移分开；AB悬停只更新hover，按键才暂停编辑。菜单/文件对话框有嵌套事件循环，必须防重入并锁定悬浮条。
 VideoRender在回调内复制BGRA为QImage缓存，窗口在GUI线程绘制。读缓存用串号避免不必要复制；关闭/换媒体必须清空GUI持有的旧缓存。全屏只改显示布局，不重建播放器。
+画面缩放：QPainter分别开启Antialiasing和SmoothPixmapTransform，前者只处理图形边缘。缩小时使用QImage::scaled(..., Qt::SmoothTransformation)生成面积采样缓存，以源图cacheKey和目标尺寸判断复用；每次新帧/新尺寸才重新缩放，平移或控件重绘复用缓存。100%直接绘制，放大由QPainter平滑插值，避免生成巨大放大缓存。换媒体清空缓存。这里只增加必要的缩小输出图，不改变Core/Adapter帧传递及VideoRender原有源帧复制次数。
 AudioTask在线程内创建QEventLoop、QAudioOutput并处理事件，约每5ms服务队列，关闭也在同一线程。Core只入队PCM和暂停/flush等标记，GUI不直接操作音频设备，避免声卡调用拖住拖动事件。deviceGeneration隔离换媒体前后的设备错误，queueGeneration防止写入完成后删掉新队列头。设备打开、reset后start、write失败应上报，不能静默积压PCM。
 默认队列上限3秒；大小计算和采样对齐须检查。QAudioDeviceInfo的nearestFormat不能仅改格式声明却继续写原始PCM，否则采样率/声道错配。媒体时钟倍速不能独自替代音频变速；音频与画面实际同步需要设备实测。
 
@@ -52,7 +54,7 @@ main先CDump::declareDumpFile，再Config、常开应用日志、Qt和Core。deb
 七、构建命令与切换顺序
 Windows：VS2013/MSBuild12，Qt5.5.1的msvc2013_64；PowerShell显式调用Git bin/sh.exe。XUEYELINGSHUANG带尾部反斜杠，CLOUD_REBUILD指向仓库工具；QTDIR指向Qt实际安装目录。
 桌面Debug：先sh src/LumaPlayer/version_debug.sh，再MSBuild src/LumaPlayer/LumaPlayer.sln /p:Configuration=Debug /p:Platform=x64 /m。
-桌面Release：先sh src/LumaPlayer/version_release.sh，再MSBuild同一sln /p:Configuration=Release /p:Platform=x64 /m。version准备Core、CTaskThreadManager、Semaphore和CDump的64位DLL，传递依赖由before准备。
+桌面Release：先sh src/LumaPlayer/version_release.sh，再MSBuild同一sln /p:Configuration=Release /p:Platform=x64 /m。version仅显式构建Core和CDump的64位DLL（same），CTaskThreadManager、Semaphore沿Core的before依赖链准备，不重复编译。
 正式Test为STATIC_LIB：CloudRebuild LumaPlayerCore 64 lib debug same后构建LumaPlayerTest.sln Debug x64；Release对应64 lib release same和Release x64。不要混用桌面DLL版Macro与静态测试配置。测试完成重新运行桌面version恢复DLL依赖，再编应用。
 库自身version仍各一行32 dll，应用64位需求不改库默认入口。已有rebuild_*.py不编辑；新增源同步DLL/LIB两套vcxproj及filters，构建同步include。详见仓库使用说明。
 
@@ -66,6 +68,7 @@ src/temp/LumaPlayerTaskFix/fixture.py可生成scene.avi（64×64、25fps、4秒�
 上述temp脚本是历史验证资料，含机器路径和输出位置，运行前阅读并为本轮独立保存输出。edit.py、boundary.py、commit-frame.py、docs.py等是一次性修改脚本，不能重新运行。package-final.py会发布文件，不是只读检查；改源码、验证成功后才执行与当前产物匹配的发布逻辑。
 
 九、验收和交付证据
+最新画质及参数启动修复验证目录：src/temp/LumaPlayerQualityStartup。两配置窗口探针使用1024×768无损黑白单像素条纹缩小到512×384，修改前采样区均值0，最终面积采样127（正确中间灰度），16400个采样点全部通过；修改前后截图和日志均保留。原生启动覆盖无参、仅debug、中文空格路径、debug前后组合、真实MP4和不存在路径，按native-results.json核对退出码和加载日志。构建最终以build-final-debug/release.log为准。此验证证明缩放采样和参数路径行为，不等于HDR、色彩管理或所有视频主观画质均已验收。
 当前改造记录在src/temp/LumaPlayerCInterfaceConfig，审查与验证报告.txt汇总本轮结果；before保存本轮修改前文件，source-review.diff记录差异。历史FullReview目录本轮开始时已不存在，不作为当前验证依据。
 Debug/Release正式Test分别运行合成AVI和真实MP4，每份12组、0失败；新增配置默认值/校验/复制、C/C++一致性、多实例隔离、非默认倍率和自定义范围及PCM长度检查。报告位于debug-scene、debug-real、release-scene、release-real子目录。
 两配置完整DLL依赖与桌面构建通过；纯C /TC统一API入口、默认C++入口DLL调用通过，探针在probes-debug/probes-release。Qt实际Bridge/渲染器和窗口两素材回归在qt-debug/qt-release，覆盖配置、帧缓存、AB暂停及恢复播放。原生Windows最终包无参/debug两种启动正常退出，日志和CDump注册验证见native-smoke.json及native-*-logs。
