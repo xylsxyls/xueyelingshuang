@@ -1,10 +1,16 @@
 ﻿#include "FFmpegCppPlaybackReader.h"
+#include "FFmpegCppPlaybackReaderImpl.h"
+#include "FFmpegCppAdjacentReader.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
+#include <climits>
 #include <deque>
 #include <exception>
 #include <new>
+#include <memory>
+#include <utility>
 #include <sstream>
 
 #ifdef _MSC_VER
@@ -52,328 +58,337 @@ extern "C"
 #include <ffmpeg/libswscale/swscale.h>
 }
 
-namespace
+// 一秒包含的100纳秒计时单位，使用64位表达式
+#define FFMPEG_PLAYBACK_TICKS_PER_SECOND (static_cast<int64_t>(1000) * 1000 * 10)
+static const int64_t kPlaybackDefaultFrameDuration100ns = FFMPEG_PLAYBACK_TICKS_PER_SECOND / 30;
+// 默认允许较长GOP，调用方仍可用maxReadFrameCount设置更小预算
+static const size_t kPlaybackDefaultPreviewFrameCount = 8192;
+/** 释放独占的临时预览帧，异常退出时也归还FFmpeg引用
+@param [in] frame 待释放的帧，允许为空
+*/
+static void playbackFreePreviewFrame(AVFrame* frame)
 {
-    static const int64_t kPlaybackOneSecond100ns = 10000000LL;
-    static const int64_t kPlaybackDefaultFrameDuration100ns = kPlaybackOneSecond100ns / 30;
-    static const size_t kPlaybackDefaultPreviewFrameCount = 120;
+    av_frame_free(&frame);
+}
 
-    /** 把FFmpeg错误码转换为可读文本
-    @param [in] errorCode FFmpeg错误码
-    @return 返回错误文本
-    */
-    std::string playbackErrorText(int errorCode)
+/** 获取单调递增的微秒计时
+@return 返回当前微秒计数，仅用于耗时差值
+*/
+static int64_t playbackNowMicroseconds()
+{
+    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+/** 把FFmpeg错误码转换为可读文本
+@param [in] errorCode FFmpeg错误码
+@return 返回错误文本
+*/
+static std::string playbackErrorText(int errorCode)
+{
+    char buffer[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+    if (av_strerror(errorCode, buffer, sizeof(buffer)) == 0)
     {
-        char buffer[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-        if (av_strerror(errorCode, buffer, sizeof(buffer)) == 0)
-        {
-            return buffer;
-        }
-
-        std::ostringstream stream;
-        stream << "ffmpeg error " << errorCode;
-        return stream.str();
+        return buffer;
     }
 
-    /** 拼接带FFmpeg错误码的错误文本
-    @param [in] prefix 错误前缀
-    @param [in] errorCode FFmpeg错误码
-    @return 返回错误文本
-    */
-    std::string playbackAppendError(const char* prefix, int errorCode)
+    std::ostringstream stream;
+    stream << "ffmpeg error " << errorCode;
+    return stream.str();
+}
+
+/** 拼接带FFmpeg错误码的错误文本
+@param [in] prefix 错误前缀
+@param [in] errorCode FFmpeg错误码
+@return 返回错误文本
+*/
+static std::string playbackAppendError(const char* prefix, int errorCode)
+{
+    std::ostringstream stream;
+    stream << (prefix ? prefix : "ffmpeg failed") << ": " << playbackErrorText(errorCode);
+    return stream.str();
+}
+
+/** 把FFmpeg时间戳换算成100ns单位
+@param [in] timestamp FFmpeg时间戳
+@param [in] timeBase 时间基
+@return 返回100ns时间戳，未知时返回-1
+*/
+static int64_t playbackRescaleTo100ns(int64_t timestamp, AVRational timeBase)
+{
+    if (timestamp == AV_NOPTS_VALUE || timeBase.num == 0 || timeBase.den == 0)
     {
-        std::ostringstream stream;
-        stream << (prefix ? prefix : "ffmpeg failed") << ": " << playbackErrorText(errorCode);
-        return stream.str();
+        return -1;
     }
 
-    /** 把FFmpeg时间戳换算成100ns单位
-    @param [in] timestamp FFmpeg时间戳
-    @param [in] timeBase 时间基
-    @return 返回100ns时间戳，未知时返回-1
-    */
-    int64_t playbackRescaleTo100ns(int64_t timestamp, AVRational timeBase)
-    {
-        if (timestamp == AV_NOPTS_VALUE || timeBase.num == 0 || timeBase.den == 0)
-        {
-            return -1;
-        }
+    AVRational targetBase;
+    targetBase.num = 1;
+    targetBase.den = static_cast<int>(FFMPEG_PLAYBACK_TICKS_PER_SECOND);
+    return av_rescale_q(timestamp, timeBase, targetBase);
+}
 
-        AVRational targetBase;
-        targetBase.num = 1;
-        targetBase.den = static_cast<int>(kPlaybackOneSecond100ns);
-        return av_rescale_q(timestamp, timeBase, targetBase);
+/** 把100ns时间戳向下换算成FFmpeg时间戳，保证seek目标不会越过用户指定时刻
+@param [in] timestamp100ns 100ns时间戳
+@param [in] timeBase 目标时间基
+@return 返回FFmpeg时间戳
+*/
+static int64_t playbackRescaleFrom100ns(int64_t timestamp100ns, AVRational timeBase)
+{
+    AVRational sourceBase;
+    sourceBase.num = 1;
+    sourceBase.den = static_cast<int>(FFMPEG_PLAYBACK_TICKS_PER_SECOND);
+    return av_rescale_q_rnd(timestamp100ns, sourceBase, timeBase, AV_ROUND_DOWN);
+}
+
+/** 把微秒时间戳换算成100ns
+@param [in] timestampUs 微秒时间戳
+@return 返回100ns时间戳
+*/
+static int64_t playbackMicrosecondsTo100ns(int64_t timestampUs)
+{
+    if (timestampUs == AV_NOPTS_VALUE)
+    {
+        return -1;
     }
+    return timestampUs * 10;
+}
 
-    /** 把100ns时间戳换算成FFmpeg时间戳
-    @param [in] timestamp100ns 100ns时间戳
-    @param [in] timeBase 目标时间基
-    @return 返回FFmpeg时间戳
-    */
-    int64_t playbackRescaleFrom100ns(int64_t timestamp100ns, AVRational timeBase)
+/** 把FFmpeg媒体类型转换为公开枚举
+@param [in] mediaType FFmpeg媒体类型
+@return 返回公开媒体类型
+*/
+static FFmpegCppMediaType playbackConvertMediaType(AVMediaType mediaType)
+{
+    if (mediaType == AVMEDIA_TYPE_VIDEO)
     {
-        AVRational sourceBase;
-        sourceBase.num = 1;
-        sourceBase.den = static_cast<int>(kPlaybackOneSecond100ns);
-        return av_rescale_q(timestamp100ns, sourceBase, timeBase);
+        return FFmpegCppMediaTypeVideo;
     }
-
-    /** 把微秒时间戳换算成100ns
-    @param [in] timestampUs 微秒时间戳
-    @return 返回100ns时间戳
-    */
-    int64_t playbackMicrosecondsTo100ns(int64_t timestampUs)
+    if (mediaType == AVMEDIA_TYPE_AUDIO)
     {
-        if (timestampUs == AV_NOPTS_VALUE)
-        {
-            return -1;
-        }
-        return timestampUs * 10;
+        return FFmpegCppMediaTypeAudio;
     }
-
-    /** 把FFmpeg媒体类型转换为公开枚举
-    @param [in] mediaType FFmpeg媒体类型
-    @return 返回公开媒体类型
-    */
-    FFmpegCppMediaType playbackConvertMediaType(AVMediaType mediaType)
+    if (mediaType == AVMEDIA_TYPE_SUBTITLE)
     {
-        if (mediaType == AVMEDIA_TYPE_VIDEO)
-        {
-            return FFmpegCppMediaTypeVideo;
-        }
-        if (mediaType == AVMEDIA_TYPE_AUDIO)
-        {
-            return FFmpegCppMediaTypeAudio;
-        }
-        if (mediaType == AVMEDIA_TYPE_SUBTITLE)
-        {
-            return FFmpegCppMediaTypeSubtitle;
-        }
-        return FFmpegCppMediaTypeUnknown;
+        return FFmpegCppMediaTypeSubtitle;
     }
+    return FFmpegCppMediaTypeUnknown;
+}
 
-    /** 把FFmpeg有理数转换为公开结构
-    @param [in] rational FFmpeg有理数
-    @return 返回公开有理数
-    */
-    FFmpegCppRational playbackConvertRational(AVRational rational)
-    {
-        return FFmpegCppRational(rational.num, rational.den);
-    }
+/** 把FFmpeg有理数转换为公开结构
+@param [in] rational FFmpeg有理数
+@return 返回公开有理数
+*/
+static FFmpegCppRational playbackConvertRational(AVRational rational)
+{
+    return FFmpegCppRational(rational.num, rational.den);
+}
 
-    /** 读取帧的最佳显示时间戳
-    @param [in] frame FFmpeg帧
-    @return 返回时间戳，未知时返回AV_NOPTS_VALUE
-    */
-    int64_t playbackBestFrameTimestamp(const AVFrame* frame)
+/** 读取帧的最佳显示时间戳
+@param [in] frame FFmpeg帧
+@return 返回时间戳，未知时返回AV_NOPTS_VALUE
+*/
+static int64_t playbackBestFrameTimestamp(const AVFrame* frame)
+{
+    if (frame == nullptr)
     {
-        if (frame == nullptr)
-        {
-            return AV_NOPTS_VALUE;
-        }
-        if (frame->best_effort_timestamp != AV_NOPTS_VALUE)
-        {
-            return frame->best_effort_timestamp;
-        }
-        if (frame->pts != AV_NOPTS_VALUE)
-        {
-            return frame->pts;
-        }
-        if (frame->pkt_dts != AV_NOPTS_VALUE)
-        {
-            return frame->pkt_dts;
-        }
         return AV_NOPTS_VALUE;
     }
-
-    /** 裁剪播放位置到媒体范围内
-    @param [in] value 输入时间
-    @param [in] duration 媒体总时长
-    @return 返回裁剪后的时间
-    */
-    int64_t playbackClampPosition(int64_t value, int64_t duration)
+    if (frame->best_effort_timestamp != AV_NOPTS_VALUE)
     {
-        if (value < 0)
+        return frame->best_effort_timestamp;
+    }
+    if (frame->pts != AV_NOPTS_VALUE)
+    {
+        return frame->pts;
+    }
+    if (frame->pkt_dts != AV_NOPTS_VALUE)
+    {
+        return frame->pkt_dts;
+    }
+    return AV_NOPTS_VALUE;
+}
+
+/** 裁剪播放位置到媒体范围内
+@param [in] value 输入时间
+@param [in] duration 媒体总时长
+@return 返回裁剪后的时间
+*/
+static int64_t playbackClampPosition(int64_t value, int64_t duration)
+{
+    if (value < 0)
+    {
+        value = 0;
+    }
+    if (duration > 0 && value > duration)
+    {
+        value = duration;
+    }
+    return value;
+}
+
+/** 根据流和容器计算归一化起点
+@param [in] formatContext 容器上下文
+@param [in] stream 流
+@return 返回起点，单位100ns
+*/
+static int64_t playbackStreamStart100ns(const AVFormatContext* formatContext, const AVStream* stream)
+{
+    if (stream != nullptr && stream->start_time != AV_NOPTS_VALUE)
+    {
+        int64_t streamStart = playbackRescaleTo100ns(stream->start_time, stream->time_base);
+        if (streamStart >= 0)
         {
-            value = 0;
+            return streamStart;
         }
-        if (duration > 0 && value > duration)
-        {
-            value = duration;
-        }
-        return value;
     }
 
-    /** 根据流和容器计算归一化起点
-    @param [in] formatContext 容器上下文
-    @param [in] stream 流
-    @return 返回起点，单位100ns
-    */
-    int64_t playbackStreamStart100ns(const AVFormatContext* formatContext, const AVStream* stream)
+    if (formatContext != nullptr && formatContext->start_time != AV_NOPTS_VALUE)
     {
-        if (stream != nullptr && stream->start_time != AV_NOPTS_VALUE)
+        int64_t formatStart = playbackMicrosecondsTo100ns(formatContext->start_time);
+        if (formatStart >= 0)
         {
-            int64_t streamStart = playbackRescaleTo100ns(stream->start_time, stream->time_base);
-            if (streamStart >= 0)
-            {
-                return streamStart;
-            }
+            return formatStart;
         }
-
-        if (formatContext != nullptr && formatContext->start_time != AV_NOPTS_VALUE)
-        {
-            int64_t formatStart = playbackMicrosecondsTo100ns(formatContext->start_time);
-            if (formatStart >= 0)
-            {
-                return formatStart;
-            }
-        }
-
-        return 0;
     }
 
-    /** 根据流帧率估算视频帧时长
-    @param [in] formatContext 容器上下文
-    @param [in] stream 视频流
-    @param [in] fallback100ns 兜底帧时长
-    @return 返回估算帧时长，单位100ns
-    */
-    int64_t playbackGuessFrameDuration100ns(AVFormatContext* formatContext, AVStream* stream, int64_t fallback100ns)
+    return 0;
+}
+
+/** 根据流帧率估算视频帧时长
+@param [in] formatContext 容器上下文
+@param [in] stream 视频流
+@param [in] fallback100ns 兜底帧时长
+@return 返回估算帧时长，单位100ns
+*/
+static int64_t playbackGuessFrameDuration100ns(AVFormatContext* formatContext, AVStream* stream, int64_t fallback100ns)
+{
+    if (fallback100ns <= 0)
     {
-        if (fallback100ns <= 0)
-        {
-            fallback100ns = kPlaybackDefaultFrameDuration100ns;
-        }
+        fallback100ns = kPlaybackDefaultFrameDuration100ns;
+    }
 
-        if (stream == nullptr)
-        {
-            return fallback100ns;
-        }
-
-        AVRational frameRate = av_guess_frame_rate(formatContext, stream, nullptr);
-        if (frameRate.num == 0 || frameRate.den == 0)
-        {
-            frameRate = stream->avg_frame_rate.num != 0 && stream->avg_frame_rate.den != 0 ? stream->avg_frame_rate : stream->r_frame_rate;
-        }
-        if (frameRate.num > 0 && frameRate.den > 0)
-        {
-            AVRational targetBase;
-            targetBase.num = 1;
-            targetBase.den = static_cast<int>(kPlaybackOneSecond100ns);
-            return av_rescale_q(1, av_inv_q(frameRate), targetBase);
-        }
-
+    if (stream == nullptr)
+    {
         return fallback100ns;
     }
 
-    /** 构造公开流信息
-    @param [in] formatContext 容器上下文
-    @param [in] stream FFmpeg流
-    @param [in] mainVideoStreamIndex 主视频流下标
-    @param [in] mainAudioStreamIndex 主音频流下标
-    @return 返回公开流信息
-    */
-    FFmpegCppStreamInfo playbackMakeStreamInfo(const AVFormatContext* formatContext,
-                                               const AVStream* stream,
-                                               int32_t mainVideoStreamIndex,
-                                               int32_t mainAudioStreamIndex)
+    AVRational frameRate = av_guess_frame_rate(formatContext, stream, nullptr);
+    if (frameRate.num == 0 || frameRate.den == 0)
     {
-        FFmpegCppStreamInfo streamInfo;
-        if (formatContext == nullptr || stream == nullptr || stream->codecpar == nullptr)
-        {
-            return streamInfo;
-        }
+        frameRate = stream->avg_frame_rate.num != 0 && stream->avg_frame_rate.den != 0 ? stream->avg_frame_rate : stream->r_frame_rate;
+    }
+    if (frameRate.num > 0 && frameRate.den > 0)
+    {
+        AVRational targetBase;
+        targetBase.num = 1;
+        targetBase.den = static_cast<int>(FFMPEG_PLAYBACK_TICKS_PER_SECOND);
+        return av_rescale_q(1, av_inv_q(frameRate), targetBase);
+    }
 
-        const AVCodecParameters* codecParameters = stream->codecpar;
-        const AVCodecDescriptor* codecDescriptor = avcodec_descriptor_get(codecParameters->codec_id);
-        const char* codecName = avcodec_get_name(codecParameters->codec_id);
-        const char* profileName = avcodec_profile_name(codecParameters->codec_id, codecParameters->profile);
+    return fallback100ns;
+}
 
-        streamInfo.streamIndex = static_cast<int32_t>(stream->index);
-        streamInfo.mediaType = playbackConvertMediaType(codecParameters->codec_type);
-        streamInfo.codecName = codecName != nullptr ? codecName : std::string();
-        streamInfo.codecLongName = codecDescriptor != nullptr && codecDescriptor->long_name != nullptr ? codecDescriptor->long_name : std::string();
-        streamInfo.profile = profileName != nullptr ? profileName : std::string();
-        streamInfo.width = codecParameters->width;
-        streamInfo.height = codecParameters->height;
-        streamInfo.bitRate = codecParameters->bit_rate;
-        streamInfo.timeBase = playbackConvertRational(stream->time_base);
-        streamInfo.sampleRate = codecParameters->sample_rate;
-        streamInfo.channels = codecParameters->ch_layout.nb_channels;
-
-        AVRational frameRate = stream->avg_frame_rate.num != 0 && stream->avg_frame_rate.den != 0 ? stream->avg_frame_rate : stream->r_frame_rate;
-        streamInfo.frameRate = playbackConvertRational(frameRate);
-        if (stream->duration != AV_NOPTS_VALUE)
-        {
-            int64_t duration100ns = playbackRescaleTo100ns(stream->duration, stream->time_base);
-            streamInfo.durationMilliseconds = duration100ns > 0 ? duration100ns / 10000 : 0;
-        }
-        else if (formatContext->duration != AV_NOPTS_VALUE)
-        {
-            streamInfo.durationMilliseconds = formatContext->duration * 1000 / AV_TIME_BASE;
-        }
-
-        if (streamInfo.streamIndex == mainVideoStreamIndex)
-        {
-            streamInfo.mediaType = FFmpegCppMediaTypeVideo;
-        }
-        if (streamInfo.streamIndex == mainAudioStreamIndex)
-        {
-            streamInfo.mediaType = FFmpegCppMediaTypeAudio;
-        }
+/** 构造公开流信息
+@param [in] formatContext 容器上下文
+@param [in] stream FFmpeg流
+@param [in] mainVideoStreamIndex 主视频流下标
+@param [in] mainAudioStreamIndex 主音频流下标
+@return 返回公开流信息
+*/
+static FFmpegCppStreamInfo playbackMakeStreamInfo(const AVFormatContext* formatContext,
+                                           const AVStream* stream,
+                                           int32_t mainVideoStreamIndex,
+                                           int32_t mainAudioStreamIndex)
+{
+    FFmpegCppStreamInfo streamInfo;
+    if (formatContext == nullptr || stream == nullptr || stream->codecpar == nullptr)
+    {
         return streamInfo;
     }
 
-    /** 读取音频声道数
-    @param [in] codecContext 音频解码上下文
-    @return 返回声道数
-    */
-    int playbackAudioChannelCount(const AVCodecContext* codecContext)
+    const AVCodecParameters* codecParameters = stream->codecpar;
+    const AVCodecDescriptor* codecDescriptor = avcodec_descriptor_get(codecParameters->codec_id);
+    const char* codecName = avcodec_get_name(codecParameters->codec_id);
+    const char* profileName = avcodec_profile_name(codecParameters->codec_id, codecParameters->profile);
+
+    streamInfo.streamIndex = static_cast<int32_t>(stream->index);
+    streamInfo.mediaType = playbackConvertMediaType(codecParameters->codec_type);
+    streamInfo.codecName = codecName != nullptr ? codecName : std::string();
+    streamInfo.codecLongName = codecDescriptor != nullptr && codecDescriptor->long_name != nullptr ? codecDescriptor->long_name : std::string();
+    streamInfo.profile = profileName != nullptr ? profileName : std::string();
+    streamInfo.width = codecParameters->width;
+    streamInfo.height = codecParameters->height;
+    streamInfo.bitRate = codecParameters->bit_rate;
+    streamInfo.timeBase = playbackConvertRational(stream->time_base);
+    streamInfo.sampleRate = codecParameters->sample_rate;
+    streamInfo.channels = codecParameters->ch_layout.nb_channels;
+
+    AVRational frameRate = stream->avg_frame_rate.num != 0 && stream->avg_frame_rate.den != 0 ? stream->avg_frame_rate : stream->r_frame_rate;
+    streamInfo.frameRate = playbackConvertRational(frameRate);
+    if (stream->duration != AV_NOPTS_VALUE)
     {
-        if (codecContext == nullptr)
-        {
-            return 0;
-        }
-        if (codecContext->ch_layout.nb_channels > 0)
-        {
-            return codecContext->ch_layout.nb_channels;
-        }
-        return codecContext->channels;
+        int64_t duration100ns = playbackRescaleTo100ns(stream->duration, stream->time_base);
+        streamInfo.durationMilliseconds = duration100ns > 0 ? duration100ns / 10000 : 0;
+    }
+    else if (formatContext->duration != AV_NOPTS_VALUE)
+    {
+        streamInfo.durationMilliseconds = formatContext->duration * 1000 / AV_TIME_BASE;
     }
 
-    /** 初始化音频声道布局
-    @param [in] codecContext 音频解码上下文
-    @param [out] layout 输出声道布局
-    */
-    void playbackInitInputChannelLayout(const AVCodecContext* codecContext, AVChannelLayout* layout)
+    if (streamInfo.streamIndex == mainVideoStreamIndex)
     {
-        if (layout == nullptr)
-        {
-            return;
-        }
-
-        memset(layout, 0, sizeof(*layout));
-        if (codecContext != nullptr && av_channel_layout_check(&codecContext->ch_layout))
-        {
-            av_channel_layout_copy(layout, &codecContext->ch_layout);
-            return;
-        }
-
-        int channels = playbackAudioChannelCount(codecContext);
-        if (channels <= 0)
-        {
-            channels = 2;
-        }
-        av_channel_layout_default(layout, channels);
+        streamInfo.mediaType = FFmpegCppMediaTypeVideo;
     }
+    if (streamInfo.streamIndex == mainAudioStreamIndex)
+    {
+        streamInfo.mediaType = FFmpegCppMediaTypeAudio;
+    }
+    return streamInfo;
 }
 
-/** FFmpegCppPlaybackReader私有实现
+/** 读取音频声道数
+@param [in] codecContext 音频解码上下文
+@return 返回声道数
 */
-struct FFmpegCppPlaybackReaderImpl
+static int playbackAudioChannelCount(const AVCodecContext* codecContext)
 {
-public:
-    FFmpegCppPlaybackReaderImpl()
+    if (codecContext == nullptr)
+    {
+        return 0;
+    }
+    if (codecContext->ch_layout.nb_channels > 0)
+    {
+        return codecContext->ch_layout.nb_channels;
+    }
+    return codecContext->channels;
+}
+
+/** 初始化音频声道布局
+@param [in] codecContext 音频解码上下文
+@param [out] layout 输出声道布局
+*/
+static void playbackInitInputChannelLayout(const AVCodecContext* codecContext, AVChannelLayout* layout)
+{
+    if (layout == nullptr)
+    {
+        return;
+    }
+
+    memset(layout, 0, sizeof(*layout));
+    if (codecContext != nullptr && av_channel_layout_check(&codecContext->ch_layout))
+    {
+        av_channel_layout_copy(layout, &codecContext->ch_layout);
+        return;
+    }
+
+    int channels = playbackAudioChannelCount(codecContext);
+    if (channels <= 0)
+    {
+        channels = 2;
+    }
+    av_channel_layout_default(layout, channels);
+}
+
+FFmpegCppPlaybackReaderImpl::FFmpegCppPlaybackReaderImpl()
         : m_formatContext(nullptr),
           m_videoCodecContext(nullptr),
           m_audioCodecContext(nullptr),
@@ -401,609 +416,1044 @@ public:
           m_readPacketCount(0),
           m_videoFrameCount(0),
           m_audioFrameCount(0)
+{
+    m_videoTimeBase.num = 1;
+    m_videoTimeBase.den = static_cast<int>(FFMPEG_PLAYBACK_TICKS_PER_SECOND);
+    m_audioTimeBase = m_videoTimeBase;
+    av_log_set_level(AV_LOG_ERROR);
+}
+
+FFmpegCppPlaybackReaderImpl::~FFmpegCppPlaybackReaderImpl()
+{
+    close();
+}
+
+bool FFmpegCppPlaybackReaderImpl::open(const std::string& filePath, const FFmpegCppPlaybackOpenOption& option)
+{
+    close();
+    m_lastError.clear();
+    m_filePath = filePath;
+    m_option = option;
+    if (m_filePath.empty())
     {
-        m_videoTimeBase.num = 1;
-        m_videoTimeBase.den = static_cast<int>(kPlaybackOneSecond100ns);
-        m_audioTimeBase = m_videoTimeBase;
-        av_log_set_level(AV_LOG_ERROR);
+        m_lastError = "filePath is empty";
+        return false;
     }
 
-    ~FFmpegCppPlaybackReaderImpl()
+    int result = avformat_open_input(&m_formatContext, m_filePath.c_str(), nullptr, nullptr);
+    if (result < 0)
     {
+        m_lastError = playbackAppendError("avformat_open_input failed", result);
         close();
+        return false;
     }
 
-    bool open(const std::string& filePath, const FFmpegCppPlaybackOpenOption& option)
+    result = avformat_find_stream_info(m_formatContext, nullptr);
+    if (result < 0)
     {
+        m_lastError = playbackAppendError("avformat_find_stream_info failed", result);
         close();
-        m_lastError.clear();
-        m_filePath = filePath;
-        m_option = option;
-        if (m_filePath.empty())
-        {
-            m_lastError = "filePath is empty";
-            return false;
-        }
-
-        int result = avformat_open_input(&m_formatContext, m_filePath.c_str(), nullptr, nullptr);
-        if (result < 0)
-        {
-            m_lastError = playbackAppendError("avformat_open_input failed", result);
-            close();
-            return false;
-        }
-
-        result = avformat_find_stream_info(m_formatContext, nullptr);
-        if (result < 0)
-        {
-            m_lastError = playbackAppendError("avformat_find_stream_info failed", result);
-            close();
-            return false;
-        }
-
-        m_videoStreamIndex = option.decodeVideo ? av_find_best_stream(m_formatContext, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0) : -1;
-        m_audioStreamIndex = option.decodeAudio ? av_find_best_stream(m_formatContext, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0) : -1;
-
-        if (m_videoStreamIndex >= 0 && !openDecoder(m_videoStreamIndex, true))
-        {
-            m_videoStreamIndex = -1;
-        }
-        if (m_audioStreamIndex >= 0 && !openDecoder(m_audioStreamIndex, false))
-        {
-            m_audioStreamIndex = -1;
-        }
-
-        if (m_videoStreamIndex < 0 && m_audioStreamIndex < 0)
-        {
-            if (m_lastError.empty())
-            {
-                m_lastError = "no playable audio or video stream";
-            }
-            close();
-            return false;
-        }
-
-        m_packet = av_packet_alloc();
-        m_frame = av_frame_alloc();
-        if (m_packet == nullptr || m_frame == nullptr)
-        {
-            m_lastError = "alloc packet/frame failed";
-            close();
-            return false;
-        }
-
-        fillMediaInfo();
-        resetReadState(0);
-        m_isOpen = true;
-        m_lastError.clear();
-        return true;
+        return false;
     }
 
-    void close()
-    {
-        m_frameQueue.clear();
-        if (m_packet != nullptr)
-        {
-            av_packet_free(&m_packet);
-            m_packet = nullptr;
-        }
-        if (m_frame != nullptr)
-        {
-            av_frame_free(&m_frame);
-            m_frame = nullptr;
-        }
-        if (m_scaleContext != nullptr)
-        {
-            sws_freeContext(m_scaleContext);
-            m_scaleContext = nullptr;
-        }
-        if (m_resampleContext != nullptr)
-        {
-            swr_free(&m_resampleContext);
-            m_resampleContext = nullptr;
-        }
-        if (m_videoCodecContext != nullptr)
-        {
-            avcodec_free_context(&m_videoCodecContext);
-            m_videoCodecContext = nullptr;
-        }
-        if (m_audioCodecContext != nullptr)
-        {
-            avcodec_free_context(&m_audioCodecContext);
-            m_audioCodecContext = nullptr;
-        }
-        if (m_formatContext != nullptr)
-        {
-            avformat_close_input(&m_formatContext);
-            m_formatContext = nullptr;
-        }
+    m_videoStreamIndex = option.decodeVideo ? av_find_best_stream(m_formatContext, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0) : -1;
+    m_audioStreamIndex = option.decodeAudio ? av_find_best_stream(m_formatContext, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0) : -1;
 
-        m_mediaInfo.reset();
-        m_filePath.clear();
-        m_isOpen = false;
+    if (m_videoStreamIndex >= 0 && !openDecoder(m_videoStreamIndex, true))
+    {
         m_videoStreamIndex = -1;
+    }
+    if (m_audioStreamIndex >= 0 && !openDecoder(m_audioStreamIndex, false))
+    {
         m_audioStreamIndex = -1;
-        m_videoStartTime100ns = 0;
-        m_audioStartTime100ns = 0;
-        m_duration100ns = 0;
-        m_videoFrameDuration100ns = kPlaybackDefaultFrameDuration100ns;
-        m_nextVideoTimestamp100ns = 0;
-        m_nextAudioTimestamp100ns = 0;
-        m_videoWidth = 0;
-        m_videoHeight = 0;
-        m_audioSampleRate = 0;
-        m_audioChannels = 0;
-        m_audioBitsPerSample = 16;
-        m_drainStarted = false;
-        m_videoDrained = false;
-        m_audioDrained = false;
-        m_readPacketCount = 0;
-        m_videoFrameCount = 0;
-        m_audioFrameCount = 0;
     }
 
-    bool isOpen() const
+    if (m_videoStreamIndex < 0 && m_audioStreamIndex < 0)
     {
-        return m_isOpen && m_formatContext != nullptr;
-    }
-
-    bool getMediaInfo(FFmpegCppMediaInfo* mediaInfo) const
-    {
-        if (mediaInfo == nullptr || !isOpen())
+        if (m_lastError.empty())
         {
+            m_lastError = "no playable audio or video stream";
+        }
+        close();
+        return false;
+    }
+
+    m_packet = av_packet_alloc();
+    m_frame = av_frame_alloc();
+    if (m_packet == nullptr || m_frame == nullptr)
+    {
+        m_lastError = "alloc packet/frame failed";
+        close();
+        return false;
+    }
+
+    fillMediaInfo();
+    resetReadState(0);
+    m_isOpen = true;
+    m_lastError.clear();
+    return true;
+}
+
+void FFmpegCppPlaybackReaderImpl::close()
+{
+    m_adjacent.reset();
+    m_frameQueue.clear();
+    if (m_packet != nullptr)
+    {
+        av_packet_free(&m_packet);
+        m_packet = nullptr;
+    }
+    if (m_frame != nullptr)
+    {
+        av_frame_free(&m_frame);
+        m_frame = nullptr;
+    }
+    if (m_scaleContext != nullptr)
+    {
+        sws_freeContext(m_scaleContext);
+        m_scaleContext = nullptr;
+    }
+    if (m_resampleContext != nullptr)
+    {
+        swr_free(&m_resampleContext);
+        m_resampleContext = nullptr;
+    }
+    if (m_videoCodecContext != nullptr)
+    {
+        avcodec_free_context(&m_videoCodecContext);
+        m_videoCodecContext = nullptr;
+    }
+    if (m_audioCodecContext != nullptr)
+    {
+        avcodec_free_context(&m_audioCodecContext);
+        m_audioCodecContext = nullptr;
+    }
+    if (m_formatContext != nullptr)
+    {
+        avformat_close_input(&m_formatContext);
+        m_formatContext = nullptr;
+    }
+
+    m_mediaInfo.reset();
+    m_filePath.clear();
+    m_isOpen = false;
+    m_videoStreamIndex = -1;
+    m_audioStreamIndex = -1;
+    m_videoStartTime100ns = 0;
+    m_audioStartTime100ns = 0;
+    m_duration100ns = 0;
+    m_videoFrameDuration100ns = kPlaybackDefaultFrameDuration100ns;
+    m_nextVideoTimestamp100ns = 0;
+    m_nextAudioTimestamp100ns = 0;
+    m_videoWidth = 0;
+    m_videoHeight = 0;
+    m_audioSampleRate = 0;
+    m_audioChannels = 0;
+    m_audioBitsPerSample = 16;
+    m_drainStarted = false;
+    m_videoDrained = false;
+    m_audioDrained = false;
+    m_readPacketCount = 0;
+    m_videoFrameCount = 0;
+    m_audioFrameCount = 0;
+}
+
+bool FFmpegCppPlaybackReaderImpl::isOpen() const
+{
+    return m_isOpen && m_formatContext != nullptr;
+}
+
+bool FFmpegCppPlaybackReaderImpl::getMediaInfo(FFmpegCppMediaInfo* mediaInfo) const
+{
+    if (mediaInfo == nullptr || !isOpen())
+    {
+        return false;
+    }
+    *mediaInfo = m_mediaInfo;
+    return true;
+}
+
+bool FFmpegCppPlaybackReaderImpl::getVideoSize(int32_t* width, int32_t* height) const
+{
+    if (width != nullptr)
+    {
+        *width = m_videoWidth;
+    }
+    if (height != nullptr)
+    {
+        *height = m_videoHeight;
+    }
+    return m_videoWidth > 0 && m_videoHeight > 0;
+}
+
+bool FFmpegCppPlaybackReaderImpl::getAudioFormat(int32_t* sampleRate, int32_t* channels, int32_t* bitsPerSample) const
+{
+    if (sampleRate != nullptr)
+    {
+        *sampleRate = m_audioSampleRate;
+    }
+    if (channels != nullptr)
+    {
+        *channels = m_audioChannels;
+    }
+    if (bitsPerSample != nullptr)
+    {
+        *bitsPerSample = m_audioBitsPerSample;
+    }
+    return m_audioCodecContext != nullptr && m_audioSampleRate > 0 && m_audioChannels > 0;
+}
+
+bool FFmpegCppPlaybackReaderImpl::seek(int64_t position100ns)
+{
+    m_adjacent.reset();
+    if (!isOpen())
+    {
+        m_lastError = "reader is not open";
+        return false;
+    }
+
+    position100ns = playbackClampPosition(position100ns, m_duration100ns);
+    int targetStreamIndex = m_videoStreamIndex >= 0 ? m_videoStreamIndex : m_audioStreamIndex;
+    int result = 0;
+    if (targetStreamIndex >= 0 && m_formatContext->streams[targetStreamIndex] != nullptr)
+    {
+        AVStream* stream = m_formatContext->streams[targetStreamIndex];
+        const int64_t start100ns = targetStreamIndex == m_videoStreamIndex ? m_videoStartTime100ns : m_audioStartTime100ns;
+        const int64_t target = playbackRescaleFrom100ns(position100ns + start100ns, stream->time_base);
+        result = av_seek_frame(m_formatContext, targetStreamIndex, target, AVSEEK_FLAG_BACKWARD);
+    }
+
+    if (result < 0)
+    {
+        int64_t targetUs = position100ns / 10;
+        if (m_formatContext->start_time != AV_NOPTS_VALUE)
+        {
+            targetUs += m_formatContext->start_time;
+        }
+        result = av_seek_frame(m_formatContext, -1, targetUs, AVSEEK_FLAG_BACKWARD);
+    }
+
+    if (result < 0)
+    {
+        m_lastError = playbackAppendError("av_seek_frame failed", result);
+        return false;
+    }
+
+    if (m_videoCodecContext != nullptr)
+    {
+        avcodec_flush_buffers(m_videoCodecContext);
+    }
+    if (m_audioCodecContext != nullptr)
+    {
+        avcodec_flush_buffers(m_audioCodecContext);
+    }
+    resetReadState(position100ns);
+    if (m_resampleContext != nullptr)
+    {
+        // seek后丢弃旧位置的滤波延迟，不能混入新位置PCM
+        swr_close(m_resampleContext);
+        const int resetResult = swr_init(m_resampleContext);
+        if (resetResult < 0)
+        {
+            m_lastError = playbackAppendError("reset audio resampler failed", resetResult);
             return false;
         }
-        *mediaInfo = m_mediaInfo;
-        return true;
+    }
+    return true;
+}
+
+FFmpegCppPlaybackReadResult FFmpegCppPlaybackReaderImpl::read(FFmpegCppPlaybackFrame* frame)
+{
+    m_adjacent.reset();
+    if (frame == nullptr)
+    {
+        m_lastError = "frame is null";
+        return FFmpegCppPlaybackReadResultError;
+    }
+    frame->reset();
+    if (!isOpen())
+    {
+        m_lastError = "reader is not open";
+        return FFmpegCppPlaybackReadResultError;
     }
 
-    bool getVideoSize(int32_t* width, int32_t* height) const
+    for (;;)
     {
-        if (width != nullptr)
+        if (popQueuedFrame(frame))
         {
-            *width = m_videoWidth;
-        }
-        if (height != nullptr)
-        {
-            *height = m_videoHeight;
-        }
-        return m_videoWidth > 0 && m_videoHeight > 0;
-    }
-
-    bool getAudioFormat(int32_t* sampleRate, int32_t* channels, int32_t* bitsPerSample) const
-    {
-        if (sampleRate != nullptr)
-        {
-            *sampleRate = m_audioSampleRate;
-        }
-        if (channels != nullptr)
-        {
-            *channels = m_audioChannels;
-        }
-        if (bitsPerSample != nullptr)
-        {
-            *bitsPerSample = m_audioBitsPerSample;
-        }
-        return m_audioCodecContext != nullptr && m_audioSampleRate > 0 && m_audioChannels > 0;
-    }
-
-    bool seek(int64_t position100ns)
-    {
-        if (!isOpen())
-        {
-            m_lastError = "reader is not open";
-            return false;
+            return FFmpegCppPlaybackReadResultFrame;
         }
 
-        position100ns = playbackClampPosition(position100ns, m_duration100ns);
-        int targetStreamIndex = m_videoStreamIndex >= 0 ? m_videoStreamIndex : m_audioStreamIndex;
-        int result = 0;
-        if (targetStreamIndex >= 0 && m_formatContext->streams[targetStreamIndex] != nullptr)
+        if (m_drainStarted)
         {
-            AVStream* stream = m_formatContext->streams[targetStreamIndex];
-            const int64_t start100ns = targetStreamIndex == m_videoStreamIndex ? m_videoStartTime100ns : m_audioStartTime100ns;
-            const int64_t target = playbackRescaleFrom100ns(position100ns + start100ns, stream->time_base);
-            result = av_seek_frame(m_formatContext, targetStreamIndex, target, AVSEEK_FLAG_BACKWARD);
-        }
-
-        if (result < 0)
-        {
-            int64_t targetUs = position100ns / 10;
-            if (m_formatContext->start_time != AV_NOPTS_VALUE)
+            if (!drainOneDecoder())
             {
-                targetUs += m_formatContext->start_time;
+                return FFmpegCppPlaybackReadResultError;
             }
-            result = av_seek_frame(m_formatContext, -1, targetUs, AVSEEK_FLAG_BACKWARD);
-        }
-
-        if (result < 0)
-        {
-            m_lastError = playbackAppendError("av_seek_frame failed", result);
-            return false;
-        }
-
-        if (m_videoCodecContext != nullptr)
-        {
-            avcodec_flush_buffers(m_videoCodecContext);
-        }
-        if (m_audioCodecContext != nullptr)
-        {
-            avcodec_flush_buffers(m_audioCodecContext);
-        }
-        resetReadState(position100ns);
-        return true;
-    }
-
-    FFmpegCppPlaybackReadResult read(FFmpegCppPlaybackFrame* frame)
-    {
-        if (frame == nullptr)
-        {
-            m_lastError = "frame is null";
-            return FFmpegCppPlaybackReadResultError;
-        }
-        frame->reset();
-        if (!isOpen())
-        {
-            m_lastError = "reader is not open";
-            return FFmpegCppPlaybackReadResultError;
-        }
-
-        for (;;)
-        {
             if (popQueuedFrame(frame))
             {
                 return FFmpegCppPlaybackReadResultFrame;
             }
-
-            if (m_drainStarted)
+            if ((m_videoCodecContext == nullptr || m_videoDrained) &&
+                (m_audioCodecContext == nullptr || m_audioDrained))
             {
-                if (!drainOneDecoder())
-                {
-                    return FFmpegCppPlaybackReadResultError;
-                }
-                if (popQueuedFrame(frame))
-                {
-                    return FFmpegCppPlaybackReadResultFrame;
-                }
-                if ((m_videoCodecContext == nullptr || m_videoDrained) &&
-                    (m_audioCodecContext == nullptr || m_audioDrained))
-                {
-                    return FFmpegCppPlaybackReadResultEnd;
-                }
-                continue;
+                return FFmpegCppPlaybackReadResultEnd;
             }
+            continue;
+        }
 
-            int result = av_read_frame(m_formatContext, m_packet);
-            if (result == AVERROR_EOF)
+        int result = av_read_frame(m_formatContext, m_packet);
+        if (result == AVERROR_EOF)
+        {
+            m_drainStarted = true;
+            continue;
+        }
+        if (result < 0)
+        {
+            m_lastError = playbackAppendError("av_read_frame failed", result);
+            av_packet_unref(m_packet);
+            return FFmpegCppPlaybackReadResultError;
+        }
+
+        ++m_readPacketCount;
+        bool decodeOk = true;
+        if (m_packet->stream_index == m_videoStreamIndex && m_videoCodecContext != nullptr)
+        {
+            decodeOk = decodePacket(m_videoCodecContext, m_packet, true);
+        }
+        else if (m_packet->stream_index == m_audioStreamIndex && m_audioCodecContext != nullptr)
+        {
+            decodeOk = decodePacket(m_audioCodecContext, m_packet, false);
+        }
+        av_packet_unref(m_packet);
+        if (!decodeOk)
+        {
+            return FFmpegCppPlaybackReadResultError;
+        }
+    }
+}
+
+bool FFmpegCppPlaybackReaderImpl::readVideoFrameAt(int64_t position100ns, size_t maxReadFrameCount, FFmpegCppPlaybackVideoFrame* frame)
+{
+    FFmpegCppPlaybackPreviewOption option;
+    option.maxReadFrameCount = maxReadFrameCount;
+    return readVideoFrameAtEx(position100ns, option, frame, nullptr);
+}
+
+bool FFmpegCppPlaybackReaderImpl::readAdjacentVideoFrameEx(int64_t origin100ns, int32_t direction,
+        const FFmpegCppPlaybackPreviewOption& option, FFmpegCppPlaybackVideoFrame* frame,
+        FFmpegCppPlaybackPreviewProfile* profile)
+{
+    const AVFrame* raw = m_adjacent.read(m_formatContext, m_videoCodecContext, m_videoStreamIndex,
+        m_videoStartTime100ns, m_duration100ns, origin100ns, direction, option, frame, profile);
+    if (raw == nullptr || checkPreviewCanceled(option, profile))
+    {
+        return false;
+    }
+    if (!convertVideoFrameToBgra(raw, frame))
+    {
+        return false;
+    }
+    return !checkPreviewCanceled(option, profile);
+}
+
+bool FFmpegCppPlaybackReaderImpl::readVideoFrameAtEx(int64_t position100ns,
+                            const FFmpegCppPlaybackPreviewOption& option,
+                            FFmpegCppPlaybackVideoFrame* frame,
+                            FFmpegCppPlaybackPreviewProfile* profile)
+{
+    int64_t totalBeginUs = playbackNowMicroseconds();
+    if (profile != nullptr)
+    {
+        profile->reset();
+    }
+    if (frame == nullptr)
+    {
+        m_lastError = "video frame is null";
+        return false;
+    }
+    frame->reset();
+    if (!isOpen())
+    {
+        m_lastError = "reader is not open";
+        return false;
+    }
+    if (m_videoCodecContext == nullptr)
+    {
+        m_lastError = "video stream is not open";
+        return false;
+    }
+    if (checkPreviewCanceled(option, profile))
+    {
+        return false;
+    }
+
+    position100ns = playbackClampPosition(position100ns, m_duration100ns);
+    size_t maxReadFrameCount = option.maxReadFrameCount == 0 ? kPlaybackDefaultPreviewFrameCount : option.maxReadFrameCount;
+    int64_t seekBeginUs = playbackNowMicroseconds();
+    bool seekOk = seek(position100ns);
+    int64_t seekCostUs = playbackNowMicroseconds() - seekBeginUs;
+    if (profile != nullptr)
+    {
+        profile->seekCostUs += seekCostUs;
+    }
+    if (!seekOk)
+    {
+        return false;
+    }
+    if (checkPreviewCanceled(option, profile))
+    {
+        return false;
+    }
+
+    std::unique_ptr<AVFrame, void (*)(AVFrame*)> bestRawOwner(av_frame_alloc(), playbackFreePreviewFrame);
+    AVFrame* bestRawFrame = bestRawOwner.get();
+    if (bestRawFrame == nullptr)
+    {
+        m_lastError = "alloc preview raw frame failed";
+        return false;
+    }
+
+    bool haveFrame = false;
+    bool shouldStop = false;
+    FFmpegCppPlaybackVideoFrame bestFrameInfo;
+    const int64_t tolerance = 0;
+    int64_t nextVideoTimestamp100ns = playbackClampPosition(position100ns, m_duration100ns);
+    size_t readVideoCount = 0;
+
+    while (!shouldStop && readVideoCount < maxReadFrameCount)
+    {
+        if (checkPreviewCanceled(option, profile))
+        {
+            return false;
+        }
+        int64_t demuxBeginUs = playbackNowMicroseconds();
+        int result = av_read_frame(m_formatContext, m_packet);
+        int64_t demuxCostUs = playbackNowMicroseconds() - demuxBeginUs;
+        if (profile != nullptr)
+        {
+            profile->demuxCostUs += demuxCostUs;
+            ++profile->readPacketCount;
+        }
+        const bool inputEnded = result == AVERROR_EOF;
+        if (result < 0 && !inputEnded)
+        {
+            m_lastError = playbackAppendError("av_read_frame failed", result);
+            av_packet_unref(m_packet);
+            return false;
+        }
+        if (!inputEnded && m_packet->stream_index != m_videoStreamIndex)
+        {
+            av_packet_unref(m_packet);
+            continue;
+        }
+
+        int64_t decodeBeginUs = playbackNowMicroseconds();
+        result = avcodec_send_packet(m_videoCodecContext, inputEnded ? nullptr : m_packet);
+        if (profile != nullptr)
+        {
+            profile->decodeCostUs += playbackNowMicroseconds() - decodeBeginUs;
+        }
+        if (result == AVERROR(EAGAIN))
+        {
+            if (!receivePreviewFrames(position100ns,
+                                      tolerance,
+                                      maxReadFrameCount,
+                                      &readVideoCount,
+                                      &nextVideoTimestamp100ns,
+                                      &haveFrame,
+                                      &shouldStop,
+                                      bestRawFrame,
+                                      &bestFrameInfo,
+                                      option,
+                                      profile))
             {
-                m_drainStarted = true;
-                continue;
+                av_packet_unref(m_packet);
+                    return false;
             }
+            decodeBeginUs = playbackNowMicroseconds();
+            result = avcodec_send_packet(m_videoCodecContext, inputEnded ? nullptr : m_packet);
+            if (profile != nullptr)
+            {
+                profile->decodeCostUs += playbackNowMicroseconds() - decodeBeginUs;
+            }
+        }
+        av_packet_unref(m_packet);
+        if (result < 0 && result != AVERROR_EOF)
+        {
+            m_lastError = playbackAppendError("send video packet failed", result);
+            return false;
+        }
+        if (!receivePreviewFrames(position100ns,
+                                  tolerance,
+                                  maxReadFrameCount,
+                                  &readVideoCount,
+                                  &nextVideoTimestamp100ns,
+                                  &haveFrame,
+                                  &shouldStop,
+                                  bestRawFrame,
+                                  &bestFrameInfo,
+                                  option,
+                                  profile))
+        {
+            return false;
+        }
+        if (inputEnded)
+        {
+            break;
+        }
+    }
+
+    if (!shouldStop && !m_videoDrained)
+    {
+        m_lastError = "preview frame budget exhausted before locating target";
+        return false;
+    }
+    if (!haveFrame)
+    {
+        m_lastError = "video preview frame is not found";
+        return false;
+    }
+    if (checkPreviewCanceled(option, profile))
+    {
+        return false;
+    }
+
+    // 末帧之后没有下一PTS，保持画面到有效媒体结束，与相邻帧路径一致
+    if (m_videoDrained && m_duration100ns > bestFrameInfo.timestamp100ns)
+    {
+        bestFrameInfo.duration100ns = m_duration100ns - bestFrameInfo.timestamp100ns;
+    }
+    FFmpegCppPlaybackVideoFrame convertedFrame = bestFrameInfo;
+    int64_t convertBeginUs = playbackNowMicroseconds();
+    bool convertOk = convertVideoFrameToBgra(bestRawFrame, &convertedFrame);
+    int64_t convertCostUs = playbackNowMicroseconds() - convertBeginUs;
+    if (profile != nullptr)
+    {
+        profile->convertCostUs += convertCostUs;
+    }
+    if (!convertOk)
+    {
+        return false;
+    }
+    if (checkPreviewCanceled(option, profile))
+    {
+        return false;
+    }
+
+    *frame = std::move(convertedFrame);
+    if (profile != nullptr)
+    {
+        profile->totalCostUs = playbackNowMicroseconds() - totalBeginUs;
+    }
+    return true;
+}
+
+bool FFmpegCppPlaybackReaderImpl::checkPreviewCanceled(const FFmpegCppPlaybackPreviewOption& option, FFmpegCppPlaybackPreviewProfile* profile)
+{
+    if (!option.isCanceled())
+    {
+        return false;
+    }
+    if (profile != nullptr)
+    {
+        profile->canceled = true;
+        if (profile->totalCostUs == 0)
+        {
+            profile->totalCostUs = 0;
+        }
+    }
+    m_lastError = "preview canceled";
+    return true;
+}
+
+bool FFmpegCppPlaybackReaderImpl::fillPreviewVideoFrameInfo(const AVFrame* frame, int64_t* nextVideoTimestamp100ns, FFmpegCppPlaybackVideoFrame* frameInfo)
+{
+    if (frame == nullptr || frameInfo == nullptr || nextVideoTimestamp100ns == nullptr)
+    {
+        m_lastError = "preview frame info parameter is invalid";
+        return false;
+    }
+    if (frame->width <= 0 || frame->height <= 0 || frame->width > INT_MAX / 4)
+    {
+        m_lastError = "invalid preview video frame size";
+        return false;
+    }
+
+    frameInfo->reset();
+    frameInfo->width = frame->width;
+    frameInfo->height = frame->height;
+    frameInfo->stride = frame->width * 4;
+    frameInfo->keyFrame = frame->key_frame != 0;
+
+    const int64_t rawTimestamp = playbackBestFrameTimestamp(frame);
+    int64_t timestamp100ns = playbackRescaleTo100ns(rawTimestamp, m_videoTimeBase);
+    if (timestamp100ns >= m_videoStartTime100ns)
+    {
+        timestamp100ns -= m_videoStartTime100ns;
+    }
+    else if (timestamp100ns < 0)
+    {
+        timestamp100ns = *nextVideoTimestamp100ns;
+    }
+    else
+    {
+        timestamp100ns = 0;
+    }
+
+    int64_t duration100ns = -1;
+    if (frame->duration > 0)
+    {
+        duration100ns = playbackRescaleTo100ns(frame->duration, m_videoTimeBase);
+    }
+    if (duration100ns <= 0 && frame->pkt_duration > 0)
+    {
+        duration100ns = playbackRescaleTo100ns(frame->pkt_duration, m_videoTimeBase);
+    }
+    if (duration100ns <= 0)
+    {
+        duration100ns = m_videoFrameDuration100ns;
+    }
+
+    frameInfo->timestamp100ns = playbackClampPosition(timestamp100ns, m_duration100ns);
+    frameInfo->duration100ns = duration100ns > 0 ? duration100ns : m_videoFrameDuration100ns;
+    *nextVideoTimestamp100ns = frameInfo->timestamp100ns + frameInfo->duration100ns;
+    return true;
+}
+
+bool FFmpegCppPlaybackReaderImpl::receivePreviewFrames(int64_t position100ns,
+                              int64_t tolerance100ns,
+                              size_t maxReadFrameCount,
+                              size_t* readVideoCount,
+                              int64_t* nextVideoTimestamp100ns,
+                              bool* haveFrame,
+                              bool* shouldStop,
+                              AVFrame* bestRawFrame,
+                              FFmpegCppPlaybackVideoFrame* bestFrameInfo,
+                              const FFmpegCppPlaybackPreviewOption& option,
+                              FFmpegCppPlaybackPreviewProfile* profile)
+{
+    if (readVideoCount == nullptr || nextVideoTimestamp100ns == nullptr || haveFrame == nullptr || shouldStop == nullptr || bestRawFrame == nullptr || bestFrameInfo == nullptr)
+    {
+        m_lastError = "preview receive parameter is invalid";
+        return false;
+    }
+    for (;;)
+    {
+        if (checkPreviewCanceled(option, profile))
+        {
+            return false;
+        }
+        int64_t decodeBeginUs = playbackNowMicroseconds();
+        int result = avcodec_receive_frame(m_videoCodecContext, m_frame);
+        if (profile != nullptr)
+        {
+            profile->decodeCostUs += playbackNowMicroseconds() - decodeBeginUs;
+        }
+        if (result == AVERROR(EAGAIN))
+        {
+            return true;
+        }
+        if (result == AVERROR_EOF)
+        {
+            m_videoDrained = true;
+            return true;
+        }
+        if (result < 0)
+        {
+            m_lastError = playbackAppendError("receive video frame failed", result);
+            return false;
+        }
+        ++(*readVideoCount);
+        if (profile != nullptr)
+        {
+            ++profile->decodedVideoFrameCount;
+        }
+
+        FFmpegCppPlaybackVideoFrame frameInfo;
+        bool infoOk = fillPreviewVideoFrameInfo(m_frame, nextVideoTimestamp100ns, &frameInfo);
+        if (!infoOk)
+        {
+            av_frame_unref(m_frame);
+            return false;
+        }
+        const int64_t frameTime = frameInfo.timestamp100ns;
+        const int64_t cutoffTime = position100ns + tolerance100ns;
+        if (*haveFrame && frameTime > cutoffTime)
+        {
+            if (frameTime > bestFrameInfo->timestamp100ns)
+            {
+                bestFrameInfo->duration100ns = frameTime - bestFrameInfo->timestamp100ns;
+            }
+            av_frame_unref(m_frame);
+            *shouldStop = true;
+            return true;
+        }
+        if (!*haveFrame || frameTime <= cutoffTime)
+        {
+            av_frame_unref(bestRawFrame);
+            result = av_frame_ref(bestRawFrame, m_frame);
             if (result < 0)
             {
-                m_lastError = playbackAppendError("av_read_frame failed", result);
-                av_packet_unref(m_packet);
-                return FFmpegCppPlaybackReadResultError;
-            }
-
-            ++m_readPacketCount;
-            bool decodeOk = true;
-            if (m_packet->stream_index == m_videoStreamIndex && m_videoCodecContext != nullptr)
-            {
-                decodeOk = decodePacket(m_videoCodecContext, m_packet, true);
-            }
-            else if (m_packet->stream_index == m_audioStreamIndex && m_audioCodecContext != nullptr)
-            {
-                decodeOk = decodePacket(m_audioCodecContext, m_packet, false);
-            }
-            av_packet_unref(m_packet);
-            if (!decodeOk)
-            {
-                return FFmpegCppPlaybackReadResultError;
-            }
-        }
-    }
-
-    bool readVideoFrameAt(int64_t position100ns, size_t maxReadFrameCount, FFmpegCppPlaybackVideoFrame* frame)
-    {
-        if (frame == nullptr)
-        {
-            m_lastError = "video frame is null";
-            return false;
-        }
-        frame->reset();
-        if (!isOpen())
-        {
-            m_lastError = "reader is not open";
-            return false;
-        }
-        if (m_videoCodecContext == nullptr)
-        {
-            m_lastError = "video stream is not open";
-            return false;
-        }
-
-        position100ns = playbackClampPosition(position100ns, m_duration100ns);
-        if (maxReadFrameCount == 0)
-        {
-            maxReadFrameCount = kPlaybackDefaultPreviewFrameCount;
-        }
-
-        if (!seek(position100ns))
-        {
-            return false;
-        }
-
-        bool haveFrame = false;
-        FFmpegCppPlaybackVideoFrame bestFrame;
-        const int64_t tolerance = std::max<int64_t>(1, m_videoFrameDuration100ns / 3);
-        size_t readVideoCount = 0;
-
-        while (readVideoCount < maxReadFrameCount)
-        {
-            FFmpegCppPlaybackFrame decodedFrame;
-            FFmpegCppPlaybackReadResult result = read(&decodedFrame);
-            if (result == FFmpegCppPlaybackReadResultEnd)
-            {
-                break;
-            }
-            if (result == FFmpegCppPlaybackReadResultError)
-            {
+                av_frame_unref(m_frame);
+                m_lastError = playbackAppendError("copy preview frame reference failed", result);
                 return false;
             }
-            if (decodedFrame.type != FFmpegCppPlaybackFrameTypeVideo)
-            {
-                continue;
-            }
-
-            ++readVideoCount;
-            const int64_t frameTime = decodedFrame.videoFrame.timestamp100ns;
-            if (!haveFrame || frameTime <= position100ns + tolerance)
-            {
-                bestFrame = decodedFrame.videoFrame;
-                haveFrame = true;
-            }
-            if (frameTime > position100ns + tolerance && haveFrame)
-            {
-                break;
-            }
+            *bestFrameInfo = frameInfo;
+            *haveFrame = true;
         }
-
-        if (!haveFrame)
+        av_frame_unref(m_frame);
+        if (*readVideoCount >= maxReadFrameCount)
         {
-            m_lastError = "video preview frame is not found";
-            return false;
+            return true;
         }
+    }
+}
 
-        *frame = bestFrame;
-        return true;
+bool FFmpegCppPlaybackReaderImpl::convertVideoFrameToBgra(const AVFrame* frame, FFmpegCppPlaybackVideoFrame* playbackFrame)
+{
+    if (frame == nullptr || playbackFrame == nullptr)
+    {
+        m_lastError = "convert video frame parameter is invalid";
+        return false;
+    }
+    if (frame->width <= 0 || frame->height <= 0 || frame->width > INT_MAX / 4)
+    {
+        m_lastError = "invalid video frame size";
+        return false;
     }
 
-private:
-    bool openDecoder(int streamIndex, bool video)
+    playbackFrame->width = frame->width;
+    playbackFrame->height = frame->height;
+    playbackFrame->stride = frame->width * 4;
+    playbackFrame->keyFrame = frame->key_frame != 0;
+
+    AVPixelFormat sourceFormat = static_cast<AVPixelFormat>(frame->format);
+    m_scaleContext = sws_getCachedContext(m_scaleContext,
+                                          frame->width,
+                                          frame->height,
+                                          sourceFormat,
+                                          frame->width,
+                                          frame->height,
+                                          AV_PIX_FMT_BGRA,
+                                          SWS_BILINEAR,
+                                          nullptr,
+                                          nullptr,
+                                          nullptr);
+    if (m_scaleContext == nullptr)
     {
-        if (m_formatContext == nullptr || streamIndex < 0 || static_cast<unsigned int>(streamIndex) >= m_formatContext->nb_streams)
+        m_lastError = "sws_getCachedContext failed";
+        return false;
+    }
+
+    const int bufferSize = av_image_get_buffer_size(AV_PIX_FMT_BGRA, frame->width, frame->height, 1);
+    if (bufferSize <= 0)
+    {
+        m_lastError = "av_image_get_buffer_size failed";
+        return false;
+    }
+    try
+    {
+        playbackFrame->bgraPixels.resize(static_cast<size_t>(bufferSize));
+    }
+    catch (...)
+    {
+        m_lastError = "resize BGRA preview buffer failed";
+        return false;
+    }
+
+    uint8_t* dstData[4] = { 0 };
+    int dstLineSize[4] = { 0 };
+    int result = av_image_fill_arrays(dstData,
+                                      dstLineSize,
+                                      &playbackFrame->bgraPixels[0],
+                                      AV_PIX_FMT_BGRA,
+                                      frame->width,
+                                      frame->height,
+                                      1);
+    if (result < 0)
+    {
+        m_lastError = playbackAppendError("av_image_fill_arrays failed", result);
+        return false;
+    }
+
+    result = sws_scale(m_scaleContext,
+                       frame->data,
+                       frame->linesize,
+                       0,
+                       frame->height,
+                       dstData,
+                       dstLineSize);
+    if (result <= 0)
+    {
+        m_lastError = "sws_scale failed";
+        return false;
+    }
+    return true;
+}
+
+bool FFmpegCppPlaybackReaderImpl::openDecoder(int streamIndex, bool video)
+{
+    if (m_formatContext == nullptr || streamIndex < 0 || static_cast<unsigned int>(streamIndex) >= m_formatContext->nb_streams)
+    {
+        m_lastError = "invalid stream index";
+        return false;
+    }
+
+    AVStream* stream = m_formatContext->streams[streamIndex];
+    if (stream == nullptr || stream->codecpar == nullptr)
+    {
+        m_lastError = "invalid stream";
+        return false;
+    }
+
+    const AVCodec* codec = avcodec_find_decoder(stream->codecpar->codec_id);
+    if (codec == nullptr)
+    {
+        std::ostringstream text;
+        text << "decoder is not found for stream " << streamIndex;
+        m_lastError = text.str();
+        return false;
+    }
+
+    AVCodecContext* codecContext = avcodec_alloc_context3(codec);
+    if (codecContext == nullptr)
+    {
+        m_lastError = "avcodec_alloc_context3 failed";
+        return false;
+    }
+
+    int result = avcodec_parameters_to_context(codecContext, stream->codecpar);
+    if (result < 0)
+    {
+        m_lastError = playbackAppendError("avcodec_parameters_to_context failed", result);
+        avcodec_free_context(&codecContext);
+        return false;
+    }
+
+    codecContext->pkt_timebase = stream->time_base;
+    // 播放、预览与循环有独立解码器，限制各实例线程数避免自动线程倍增
+    codecContext->thread_count = video ? 4 : 1;
+    result = avcodec_open2(codecContext, codec, nullptr);
+    if (result < 0)
+    {
+        m_lastError = playbackAppendError("avcodec_open2 failed", result);
+        avcodec_free_context(&codecContext);
+        return false;
+    }
+
+    if (video)
+    {
+        m_videoCodecContext = codecContext;
+        m_videoTimeBase = stream->time_base;
+        m_videoStartTime100ns = playbackStreamStart100ns(m_formatContext, stream);
+        m_videoFrameDuration100ns = playbackGuessFrameDuration100ns(m_formatContext,
+                                                                     stream,
+                                                                     m_option.fallbackVideoFrameDuration100ns);
+        m_videoWidth = codecContext->width;
+        m_videoHeight = codecContext->height;
+    }
+    else
+    {
+        m_audioCodecContext = codecContext;
+        m_audioTimeBase = stream->time_base;
+        m_audioStartTime100ns = playbackStreamStart100ns(m_formatContext, stream);
+        if (!openAudioResampler())
         {
-            m_lastError = "invalid stream index";
+            avcodec_free_context(&m_audioCodecContext);
             return false;
         }
+    }
+    return true;
+}
 
-        AVStream* stream = m_formatContext->streams[streamIndex];
-        if (stream == nullptr || stream->codecpar == nullptr)
+bool FFmpegCppPlaybackReaderImpl::openAudioResampler()
+{
+    if (m_audioCodecContext == nullptr)
+    {
+        return false;
+    }
+
+    const int inputSampleRate = m_audioCodecContext->sample_rate > 0 ? m_audioCodecContext->sample_rate : 44100;
+    int inputChannels = playbackAudioChannelCount(m_audioCodecContext);
+    if (inputChannels <= 0)
+    {
+        inputChannels = 2;
+    }
+
+    m_audioSampleRate = m_option.outputSampleRate > 0 ? m_option.outputSampleRate : inputSampleRate;
+    m_audioChannels = m_option.outputChannels > 0 ? m_option.outputChannels : std::min<int>(2, std::max<int>(1, inputChannels));
+    m_audioBitsPerSample = 16;
+
+    AVChannelLayout inputLayout;
+    AVChannelLayout outputLayout;
+    playbackInitInputChannelLayout(m_audioCodecContext, &inputLayout);
+    av_channel_layout_default(&outputLayout, m_audioChannels);
+
+    int result = swr_alloc_set_opts2(&m_resampleContext,
+                                     &outputLayout,
+                                     AV_SAMPLE_FMT_S16,
+                                     m_audioSampleRate,
+                                     &inputLayout,
+                                     m_audioCodecContext->sample_fmt,
+                                     inputSampleRate,
+                                     0,
+                                     nullptr);
+    av_channel_layout_uninit(&inputLayout);
+    av_channel_layout_uninit(&outputLayout);
+    if (result < 0 || m_resampleContext == nullptr)
+    {
+        m_lastError = playbackAppendError("swr_alloc_set_opts2 failed", result);
+        return false;
+    }
+
+    result = swr_init(m_resampleContext);
+    if (result < 0)
+    {
+        m_lastError = playbackAppendError("swr_init failed", result);
+        swr_free(&m_resampleContext);
+        return false;
+    }
+    return true;
+}
+
+void FFmpegCppPlaybackReaderImpl::fillMediaInfo()
+{
+    m_mediaInfo.reset();
+    if (m_formatContext == nullptr)
+    {
+        return;
+    }
+
+    m_mediaInfo.filePath = m_filePath;
+    if (m_formatContext->iformat != nullptr)
+    {
+        m_mediaInfo.formatName = m_formatContext->iformat->name != nullptr ? m_formatContext->iformat->name : std::string();
+        m_mediaInfo.formatLongName = m_formatContext->iformat->long_name != nullptr ? m_formatContext->iformat->long_name : std::string();
+    }
+    if (m_formatContext->duration != AV_NOPTS_VALUE)
+    {
+        m_duration100ns = playbackMicrosecondsTo100ns(m_formatContext->duration);
+        m_mediaInfo.durationMilliseconds = m_duration100ns / 10000;
+    }
+    m_mediaInfo.bitRate = m_formatContext->bit_rate;
+    m_mediaInfo.mainVideoStreamIndex = m_videoStreamIndex;
+    m_mediaInfo.mainAudioStreamIndex = m_audioStreamIndex;
+    m_mediaInfo.hasVideo = m_videoStreamIndex >= 0;
+    m_mediaInfo.hasAudio = m_audioStreamIndex >= 0;
+
+    for (unsigned int i = 0; i < m_formatContext->nb_streams; ++i)
+    {
+        m_mediaInfo.streams.push_back(playbackMakeStreamInfo(m_formatContext,
+                                                             m_formatContext->streams[i],
+                                                             m_videoStreamIndex,
+                                                             m_audioStreamIndex));
+        if (m_formatContext->streams[i] != nullptr && m_formatContext->streams[i]->duration != AV_NOPTS_VALUE)
         {
-            m_lastError = "invalid stream";
+            int64_t streamDuration = playbackRescaleTo100ns(m_formatContext->streams[i]->duration,
+                                                             m_formatContext->streams[i]->time_base);
+            if (streamDuration > m_duration100ns)
+            {
+                m_duration100ns = streamDuration;
+                m_mediaInfo.durationMilliseconds = streamDuration / 10000;
+            }
+        }
+    }
+    if (m_duration100ns <= 0)
+    {
+        m_duration100ns = m_videoFrameDuration100ns;
+        m_mediaInfo.durationMilliseconds = m_duration100ns / 10000;
+    }
+}
+
+void FFmpegCppPlaybackReaderImpl::resetReadState(int64_t position100ns)
+{
+    m_frameQueue.clear();
+    m_drainStarted = false;
+    m_videoDrained = false;
+    m_audioDrained = false;
+    m_nextVideoTimestamp100ns = playbackClampPosition(position100ns, m_duration100ns);
+    m_nextAudioTimestamp100ns = m_nextVideoTimestamp100ns;
+    m_readPacketCount = 0;
+    m_videoFrameCount = 0;
+    m_audioFrameCount = 0;
+}
+
+bool FFmpegCppPlaybackReaderImpl::popQueuedFrame(FFmpegCppPlaybackFrame* frame)
+{
+    if (frame == nullptr || m_frameQueue.empty())
+    {
+        return false;
+    }
+    *frame = std::move(m_frameQueue.front());
+    m_frameQueue.pop_front();
+    return true;
+}
+
+bool FFmpegCppPlaybackReaderImpl::drainOneDecoder()
+{
+    if (m_videoCodecContext != nullptr && !m_videoDrained)
+    {
+        if (!decodePacket(m_videoCodecContext, nullptr, true))
+        {
             return false;
         }
-
-        const AVCodec* codec = avcodec_find_decoder(stream->codecpar->codec_id);
-        if (codec == nullptr)
+        if (!m_frameQueue.empty())
         {
-            std::ostringstream text;
-            text << "decoder is not found for stream " << streamIndex;
-            m_lastError = text.str();
+            return true;
+        }
+    }
+
+    if (m_audioCodecContext != nullptr && !m_audioDrained)
+    {
+        if (!decodePacket(m_audioCodecContext, nullptr, false))
+        {
             return false;
         }
+    }
+    return true;
+}
 
-        AVCodecContext* codecContext = avcodec_alloc_context3(codec);
-        if (codecContext == nullptr)
-        {
-            m_lastError = "avcodec_alloc_context3 failed";
-            return false;
-        }
-
-        int result = avcodec_parameters_to_context(codecContext, stream->codecpar);
-        if (result < 0)
-        {
-            m_lastError = playbackAppendError("avcodec_parameters_to_context failed", result);
-            avcodec_free_context(&codecContext);
-            return false;
-        }
-
-        codecContext->pkt_timebase = stream->time_base;
-        codecContext->thread_count = 0;
-        result = avcodec_open2(codecContext, codec, nullptr);
-        if (result < 0)
-        {
-            m_lastError = playbackAppendError("avcodec_open2 failed", result);
-            avcodec_free_context(&codecContext);
-            return false;
-        }
-
+bool FFmpegCppPlaybackReaderImpl::decodePacket(AVCodecContext* codecContext, AVPacket* packet, bool video)
+{
+    int result = avcodec_send_packet(codecContext, packet);
+    if (result == AVERROR_EOF)
+    {
         if (video)
         {
-            m_videoCodecContext = codecContext;
-            m_videoTimeBase = stream->time_base;
-            m_videoStartTime100ns = playbackStreamStart100ns(m_formatContext, stream);
-            m_videoFrameDuration100ns = playbackGuessFrameDuration100ns(m_formatContext,
-                                                                         stream,
-                                                                         m_option.fallbackVideoFrameDuration100ns);
-            m_videoWidth = codecContext->width;
-            m_videoHeight = codecContext->height;
+            m_videoDrained = true;
         }
         else
         {
-            m_audioCodecContext = codecContext;
-            m_audioTimeBase = stream->time_base;
-            m_audioStartTime100ns = playbackStreamStart100ns(m_formatContext, stream);
-            if (!openAudioResampler())
-            {
-                avcodec_free_context(&m_audioCodecContext);
-                return false;
-            }
+            m_audioDrained = true;
         }
         return true;
     }
-
-    bool openAudioResampler()
+    if (result == AVERROR(EAGAIN))
     {
-        if (m_audioCodecContext == nullptr)
+        if (!receiveFrames(codecContext, video))
         {
             return false;
         }
-
-        const int inputSampleRate = m_audioCodecContext->sample_rate > 0 ? m_audioCodecContext->sample_rate : 44100;
-        int inputChannels = playbackAudioChannelCount(m_audioCodecContext);
-        if (inputChannels <= 0)
-        {
-            inputChannels = 2;
-        }
-
-        m_audioSampleRate = m_option.outputSampleRate > 0 ? m_option.outputSampleRate : inputSampleRate;
-        m_audioChannels = m_option.outputChannels > 0 ? m_option.outputChannels : std::min<int>(2, std::max<int>(1, inputChannels));
-        m_audioBitsPerSample = 16;
-
-        AVChannelLayout inputLayout;
-        AVChannelLayout outputLayout;
-        playbackInitInputChannelLayout(m_audioCodecContext, &inputLayout);
-        av_channel_layout_default(&outputLayout, m_audioChannels);
-
-        int result = swr_alloc_set_opts2(&m_resampleContext,
-                                         &outputLayout,
-                                         AV_SAMPLE_FMT_S16,
-                                         m_audioSampleRate,
-                                         &inputLayout,
-                                         m_audioCodecContext->sample_fmt,
-                                         inputSampleRate,
-                                         0,
-                                         nullptr);
-        av_channel_layout_uninit(&inputLayout);
-        av_channel_layout_uninit(&outputLayout);
-        if (result < 0 || m_resampleContext == nullptr)
-        {
-            m_lastError = playbackAppendError("swr_alloc_set_opts2 failed", result);
-            return false;
-        }
-
-        result = swr_init(m_resampleContext);
-        if (result < 0)
-        {
-            m_lastError = playbackAppendError("swr_init failed", result);
-            swr_free(&m_resampleContext);
-            return false;
-        }
-        return true;
+        result = avcodec_send_packet(codecContext, packet);
     }
-
-    void fillMediaInfo()
+    if (result < 0)
     {
-        m_mediaInfo.reset();
-        if (m_formatContext == nullptr)
-        {
-            return;
-        }
-
-        m_mediaInfo.filePath = m_filePath;
-        if (m_formatContext->iformat != nullptr)
-        {
-            m_mediaInfo.formatName = m_formatContext->iformat->name != nullptr ? m_formatContext->iformat->name : std::string();
-            m_mediaInfo.formatLongName = m_formatContext->iformat->long_name != nullptr ? m_formatContext->iformat->long_name : std::string();
-        }
-        if (m_formatContext->duration != AV_NOPTS_VALUE)
-        {
-            m_duration100ns = playbackMicrosecondsTo100ns(m_formatContext->duration);
-            m_mediaInfo.durationMilliseconds = m_duration100ns / 10000;
-        }
-        m_mediaInfo.bitRate = m_formatContext->bit_rate;
-        m_mediaInfo.mainVideoStreamIndex = m_videoStreamIndex;
-        m_mediaInfo.mainAudioStreamIndex = m_audioStreamIndex;
-        m_mediaInfo.hasVideo = m_videoStreamIndex >= 0;
-        m_mediaInfo.hasAudio = m_audioStreamIndex >= 0;
-
-        for (unsigned int i = 0; i < m_formatContext->nb_streams; ++i)
-        {
-            m_mediaInfo.streams.push_back(playbackMakeStreamInfo(m_formatContext,
-                                                                 m_formatContext->streams[i],
-                                                                 m_videoStreamIndex,
-                                                                 m_audioStreamIndex));
-            if (m_formatContext->streams[i] != nullptr && m_formatContext->streams[i]->duration != AV_NOPTS_VALUE)
-            {
-                int64_t streamDuration = playbackRescaleTo100ns(m_formatContext->streams[i]->duration,
-                                                                 m_formatContext->streams[i]->time_base);
-                if (streamDuration > m_duration100ns)
-                {
-                    m_duration100ns = streamDuration;
-                    m_mediaInfo.durationMilliseconds = streamDuration / 10000;
-                }
-            }
-        }
-        if (m_duration100ns <= 0)
-        {
-            m_duration100ns = m_videoFrameDuration100ns;
-            m_mediaInfo.durationMilliseconds = m_duration100ns / 10000;
-        }
+        m_lastError = playbackAppendError(video ? "send video packet failed" : "send audio packet failed", result);
+        return false;
     }
+    return receiveFrames(codecContext, video);
+}
 
-    void resetReadState(int64_t position100ns)
+bool FFmpegCppPlaybackReaderImpl::receiveFrames(AVCodecContext* codecContext, bool video)
+{
+    for (;;)
     {
-        m_frameQueue.clear();
-        m_drainStarted = false;
-        m_videoDrained = false;
-        m_audioDrained = false;
-        m_nextVideoTimestamp100ns = playbackClampPosition(position100ns, m_duration100ns);
-        m_nextAudioTimestamp100ns = m_nextVideoTimestamp100ns;
-        m_readPacketCount = 0;
-        m_videoFrameCount = 0;
-        m_audioFrameCount = 0;
-    }
-
-    bool popQueuedFrame(FFmpegCppPlaybackFrame* frame)
-    {
-        if (frame == nullptr || m_frameQueue.empty())
+        int result = avcodec_receive_frame(codecContext, m_frame);
+        if (result == AVERROR(EAGAIN))
         {
-            return false;
+            return true;
         }
-        *frame = m_frameQueue.front();
-        m_frameQueue.pop_front();
-        return true;
-    }
-
-    bool drainOneDecoder()
-    {
-        if (m_videoCodecContext != nullptr && !m_videoDrained)
-        {
-            if (!decodePacket(m_videoCodecContext, nullptr, true))
-            {
-                return false;
-            }
-            if (!m_frameQueue.empty())
-            {
-                return true;
-            }
-        }
-
-        if (m_audioCodecContext != nullptr && !m_audioDrained)
-        {
-            if (!decodePacket(m_audioCodecContext, nullptr, false))
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    bool decodePacket(AVCodecContext* codecContext, AVPacket* packet, bool video)
-    {
-        int result = avcodec_send_packet(codecContext, packet);
         if (result == AVERROR_EOF)
         {
             if (video)
@@ -1016,303 +1466,222 @@ private:
             }
             return true;
         }
-        if (result == AVERROR(EAGAIN))
-        {
-            if (!receiveFrames(codecContext, video))
-            {
-                return false;
-            }
-            result = avcodec_send_packet(codecContext, packet);
-        }
         if (result < 0)
         {
-            m_lastError = playbackAppendError(video ? "send video packet failed" : "send audio packet failed", result);
+            m_lastError = playbackAppendError(video ? "receive video frame failed" : "receive audio frame failed", result);
             return false;
         }
-        return receiveFrames(codecContext, video);
-    }
 
-    bool receiveFrames(AVCodecContext* codecContext, bool video)
-    {
-        for (;;)
+        bool converted = video ? queueVideoFrame(m_frame) : queueAudioFrame(m_frame);
+        av_frame_unref(m_frame);
+        if (!converted)
         {
-            int result = avcodec_receive_frame(codecContext, m_frame);
-            if (result == AVERROR(EAGAIN))
-            {
-                return true;
-            }
-            if (result == AVERROR_EOF)
-            {
-                if (video)
-                {
-                    m_videoDrained = true;
-                }
-                else
-                {
-                    m_audioDrained = true;
-                }
-                return true;
-            }
-            if (result < 0)
-            {
-                m_lastError = playbackAppendError(video ? "receive video frame failed" : "receive audio frame failed", result);
-                return false;
-            }
-
-            bool converted = video ? queueVideoFrame(m_frame) : queueAudioFrame(m_frame);
-            av_frame_unref(m_frame);
-            if (!converted)
-            {
-                return false;
-            }
+            return false;
         }
     }
+}
 
-    bool queueVideoFrame(const AVFrame* frame)
+bool FFmpegCppPlaybackReaderImpl::queueVideoFrame(const AVFrame* frame)
+{
+    if (frame == nullptr || m_videoCodecContext == nullptr)
     {
-        if (frame == nullptr || m_videoCodecContext == nullptr)
-        {
-            return true;
-        }
-        if (frame->width <= 0 || frame->height <= 0)
-        {
-            m_lastError = "invalid video frame size";
-            return false;
-        }
+        return true;
+    }
+    if (frame->width <= 0 || frame->height <= 0 || frame->width > INT_MAX / 4)
+    {
+        m_lastError = "invalid video frame size";
+        return false;
+    }
 
-        FFmpegCppPlaybackFrame playbackFrame;
-        playbackFrame.type = FFmpegCppPlaybackFrameTypeVideo;
-        playbackFrame.videoFrame.width = frame->width;
-        playbackFrame.videoFrame.height = frame->height;
-        playbackFrame.videoFrame.stride = frame->width * 4;
-        playbackFrame.videoFrame.keyFrame = frame->key_frame != 0;
+    FFmpegCppPlaybackFrame playbackFrame;
+    playbackFrame.type = FFmpegCppPlaybackFrameTypeVideo;
+    playbackFrame.videoFrame.width = frame->width;
+    playbackFrame.videoFrame.height = frame->height;
+    playbackFrame.videoFrame.stride = frame->width * 4;
+    playbackFrame.videoFrame.keyFrame = frame->key_frame != 0;
 
-        const int64_t rawTimestamp = playbackBestFrameTimestamp(frame);
-        int64_t timestamp100ns = playbackRescaleTo100ns(rawTimestamp, m_videoTimeBase);
-        if (timestamp100ns >= m_videoStartTime100ns)
-        {
-            timestamp100ns -= m_videoStartTime100ns;
-        }
-        else if (timestamp100ns < 0)
-        {
-            timestamp100ns = m_nextVideoTimestamp100ns;
-        }
-        else
-        {
-            timestamp100ns = 0;
-        }
+    const int64_t rawTimestamp = playbackBestFrameTimestamp(frame);
+    int64_t timestamp100ns = playbackRescaleTo100ns(rawTimestamp, m_videoTimeBase);
+    if (timestamp100ns >= m_videoStartTime100ns)
+    {
+        timestamp100ns -= m_videoStartTime100ns;
+    }
+    else if (timestamp100ns < 0)
+    {
+        timestamp100ns = m_nextVideoTimestamp100ns;
+    }
+    else
+    {
+        timestamp100ns = 0;
+    }
 
-        int64_t duration100ns = -1;
-        if (frame->duration > 0)
-        {
-            duration100ns = playbackRescaleTo100ns(frame->duration, m_videoTimeBase);
-        }
-        if (duration100ns <= 0 && frame->pkt_duration > 0)
-        {
-            duration100ns = playbackRescaleTo100ns(frame->pkt_duration, m_videoTimeBase);
-        }
-        if (duration100ns <= 0)
-        {
-            duration100ns = m_videoFrameDuration100ns;
-        }
+    int64_t duration100ns = -1;
+    if (frame->duration > 0)
+    {
+        duration100ns = playbackRescaleTo100ns(frame->duration, m_videoTimeBase);
+    }
+    if (duration100ns <= 0 && frame->pkt_duration > 0)
+    {
+        duration100ns = playbackRescaleTo100ns(frame->pkt_duration, m_videoTimeBase);
+    }
+    if (duration100ns <= 0)
+    {
+        duration100ns = m_videoFrameDuration100ns;
+    }
 
-        playbackFrame.videoFrame.timestamp100ns = playbackClampPosition(timestamp100ns, m_duration100ns);
-        playbackFrame.videoFrame.duration100ns = duration100ns > 0 ? duration100ns : m_videoFrameDuration100ns;
-        m_nextVideoTimestamp100ns = playbackFrame.videoFrame.timestamp100ns + playbackFrame.videoFrame.duration100ns;
+    playbackFrame.videoFrame.timestamp100ns = playbackClampPosition(timestamp100ns, m_duration100ns);
+    playbackFrame.videoFrame.duration100ns = duration100ns > 0 ? duration100ns : m_videoFrameDuration100ns;
+    m_nextVideoTimestamp100ns = playbackFrame.videoFrame.timestamp100ns + playbackFrame.videoFrame.duration100ns;
 
-        AVPixelFormat sourceFormat = static_cast<AVPixelFormat>(frame->format);
-        m_scaleContext = sws_getCachedContext(m_scaleContext,
-                                              frame->width,
-                                              frame->height,
-                                              sourceFormat,
-                                              frame->width,
-                                              frame->height,
-                                              AV_PIX_FMT_BGRA,
-                                              SWS_BILINEAR,
-                                              nullptr,
-                                              nullptr,
-                                              nullptr);
-        if (m_scaleContext == nullptr)
-        {
-            m_lastError = "sws_getCachedContext failed";
-            return false;
-        }
-
-        const int bufferSize = av_image_get_buffer_size(AV_PIX_FMT_BGRA, frame->width, frame->height, 1);
-        if (bufferSize <= 0)
-        {
-            m_lastError = "av_image_get_buffer_size failed";
-            return false;
-        }
-        playbackFrame.videoFrame.bgraPixels.resize(static_cast<size_t>(bufferSize));
-
-        uint8_t* dstData[4] = { 0 };
-        int dstLineSize[4] = { 0 };
-        int result = av_image_fill_arrays(dstData,
-                                          dstLineSize,
-                                          &playbackFrame.videoFrame.bgraPixels[0],
-                                          AV_PIX_FMT_BGRA,
+    AVPixelFormat sourceFormat = static_cast<AVPixelFormat>(frame->format);
+    m_scaleContext = sws_getCachedContext(m_scaleContext,
                                           frame->width,
                                           frame->height,
-                                          1);
-        if (result < 0)
-        {
-            m_lastError = playbackAppendError("av_image_fill_arrays failed", result);
-            return false;
-        }
-
-        result = sws_scale(m_scaleContext,
-                           frame->data,
-                           frame->linesize,
-                           0,
-                           frame->height,
-                           dstData,
-                           dstLineSize);
-        if (result <= 0)
-        {
-            m_lastError = "sws_scale failed";
-            return false;
-        }
-
-        ++m_videoFrameCount;
-        m_frameQueue.push_back(playbackFrame);
-        return true;
-    }
-
-    bool queueAudioFrame(const AVFrame* frame)
+                                          sourceFormat,
+                                          frame->width,
+                                          frame->height,
+                                          AV_PIX_FMT_BGRA,
+                                          SWS_BILINEAR,
+                                          nullptr,
+                                          nullptr,
+                                          nullptr);
+    if (m_scaleContext == nullptr)
     {
-        if (frame == nullptr || m_audioCodecContext == nullptr || m_resampleContext == nullptr)
-        {
-            return true;
-        }
-        if (frame->nb_samples <= 0)
-        {
-            return true;
-        }
+        m_lastError = "sws_getCachedContext failed";
+        return false;
+    }
 
-        const int inputSampleRate = m_audioCodecContext->sample_rate > 0 ? m_audioCodecContext->sample_rate : m_audioSampleRate;
-        int64_t delay = swr_get_delay(m_resampleContext, inputSampleRate);
-        int outputSampleCount = static_cast<int>(av_rescale_rnd(delay + frame->nb_samples,
-                                                                m_audioSampleRate,
-                                                                inputSampleRate,
-                                                                AV_ROUND_UP));
-        if (outputSampleCount <= 0)
-        {
-            return true;
-        }
+    const int bufferSize = av_image_get_buffer_size(AV_PIX_FMT_BGRA, frame->width, frame->height, 1);
+    if (bufferSize <= 0)
+    {
+        m_lastError = "av_image_get_buffer_size failed";
+        return false;
+    }
+    playbackFrame.videoFrame.bgraPixels.resize(static_cast<size_t>(bufferSize));
 
-        int outputLineSize = 0;
-        int bufferSize = av_samples_get_buffer_size(&outputLineSize,
-                                                    m_audioChannels,
-                                                    outputSampleCount,
-                                                    AV_SAMPLE_FMT_S16,
-                                                    1);
-        if (bufferSize <= 0)
-        {
-            m_lastError = "av_samples_get_buffer_size failed";
-            return false;
-        }
+    uint8_t* dstData[4] = { 0 };
+    int dstLineSize[4] = { 0 };
+    int result = av_image_fill_arrays(dstData,
+                                      dstLineSize,
+                                      &playbackFrame.videoFrame.bgraPixels[0],
+                                      AV_PIX_FMT_BGRA,
+                                      frame->width,
+                                      frame->height,
+                                      1);
+    if (result < 0)
+    {
+        m_lastError = playbackAppendError("av_image_fill_arrays failed", result);
+        return false;
+    }
 
-        std::vector<unsigned char> outputBuffer;
-        outputBuffer.resize(static_cast<size_t>(bufferSize));
-        uint8_t* outputData[1] = { &outputBuffer[0] };
-        const uint8_t** inputData = const_cast<const uint8_t**>(frame->extended_data);
-        int convertedSamples = swr_convert(m_resampleContext,
-                                           outputData,
-                                           outputSampleCount,
-                                           inputData,
-                                           frame->nb_samples);
-        if (convertedSamples < 0)
-        {
-            m_lastError = playbackAppendError("swr_convert failed", convertedSamples);
-            return false;
-        }
-        if (convertedSamples == 0)
-        {
-            return true;
-        }
+    result = sws_scale(m_scaleContext,
+                       frame->data,
+                       frame->linesize,
+                       0,
+                       frame->height,
+                       dstData,
+                       dstLineSize);
+    if (result <= 0)
+    {
+        m_lastError = "sws_scale failed";
+        return false;
+    }
 
-        const int bytesPerSample = 2;
-        const int usedBytes = convertedSamples * m_audioChannels * bytesPerSample;
-        if (usedBytes <= 0)
-        {
-            return true;
-        }
+    ++m_videoFrameCount;
+    m_frameQueue.push_back(std::move(playbackFrame));
+    return true;
+}
 
-        FFmpegCppPlaybackFrame playbackFrame;
-        playbackFrame.type = FFmpegCppPlaybackFrameTypeAudio;
-        playbackFrame.audioFrame.sampleRate = m_audioSampleRate;
-        playbackFrame.audioFrame.channels = m_audioChannels;
-        playbackFrame.audioFrame.bitsPerSample = m_audioBitsPerSample;
-
-        const int64_t rawTimestamp = playbackBestFrameTimestamp(frame);
-        int64_t timestamp100ns = playbackRescaleTo100ns(rawTimestamp, m_audioTimeBase);
-        if (timestamp100ns >= m_audioStartTime100ns)
-        {
-            timestamp100ns -= m_audioStartTime100ns;
-        }
-        else if (timestamp100ns < 0)
-        {
-            timestamp100ns = m_nextAudioTimestamp100ns;
-        }
-        else
-        {
-            timestamp100ns = 0;
-        }
-
-        playbackFrame.audioFrame.timestamp100ns = playbackClampPosition(timestamp100ns, m_duration100ns);
-        playbackFrame.audioFrame.duration100ns = convertedSamples * kPlaybackOneSecond100ns / m_audioSampleRate;
-        playbackFrame.audioFrame.pcmData.assign(outputBuffer.begin(), outputBuffer.begin() + usedBytes);
-        m_nextAudioTimestamp100ns = playbackFrame.audioFrame.timestamp100ns + playbackFrame.audioFrame.duration100ns;
-
-        ++m_audioFrameCount;
-        m_frameQueue.push_back(playbackFrame);
+bool FFmpegCppPlaybackReaderImpl::queueAudioFrame(const AVFrame* frame)
+{
+    if (frame == nullptr || m_audioCodecContext == nullptr || m_resampleContext == nullptr)
+    {
+        return true;
+    }
+    if (frame->nb_samples <= 0)
+    {
         return true;
     }
 
-public:
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-    std::string m_filePath;
-    std::string m_lastError;
-    FFmpegCppMediaInfo m_mediaInfo;
-    FFmpegCppPlaybackOpenOption m_option;
-    std::deque<FFmpegCppPlaybackFrame> m_frameQueue;
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-    AVFormatContext* m_formatContext;
-    AVCodecContext* m_videoCodecContext;
-    AVCodecContext* m_audioCodecContext;
-    SwsContext* m_scaleContext;
-    SwrContext* m_resampleContext;
-    AVPacket* m_packet;
-    AVFrame* m_frame;
-    int m_videoStreamIndex;
-    int m_audioStreamIndex;
-    AVRational m_videoTimeBase;
-    AVRational m_audioTimeBase;
-    int64_t m_videoStartTime100ns;
-    int64_t m_audioStartTime100ns;
-    int64_t m_duration100ns;
-    int64_t m_videoFrameDuration100ns;
-    int64_t m_nextVideoTimestamp100ns;
-    int64_t m_nextAudioTimestamp100ns;
-    int32_t m_videoWidth;
-    int32_t m_videoHeight;
-    int32_t m_audioSampleRate;
-    int32_t m_audioChannels;
-    int32_t m_audioBitsPerSample;
-    bool m_isOpen;
-    bool m_drainStarted;
-    bool m_videoDrained;
-    bool m_audioDrained;
-    uint64_t m_readPacketCount;
-    uint64_t m_videoFrameCount;
-    uint64_t m_audioFrameCount;
-};
+    const int inputSampleRate = m_audioCodecContext->sample_rate > 0 ? m_audioCodecContext->sample_rate : m_audioSampleRate;
+    int64_t delay = swr_get_delay(m_resampleContext, inputSampleRate);
+    int outputSampleCount = static_cast<int>(av_rescale_rnd(delay + frame->nb_samples,
+                                                            m_audioSampleRate,
+                                                            inputSampleRate,
+                                                            AV_ROUND_UP));
+    if (outputSampleCount <= 0)
+    {
+        return true;
+    }
+
+    int outputLineSize = 0;
+    int bufferSize = av_samples_get_buffer_size(&outputLineSize,
+                                                m_audioChannels,
+                                                outputSampleCount,
+                                                AV_SAMPLE_FMT_S16,
+                                                1);
+    if (bufferSize <= 0)
+    {
+        m_lastError = "av_samples_get_buffer_size failed";
+        return false;
+    }
+
+    std::vector<unsigned char> outputBuffer;
+    outputBuffer.resize(static_cast<size_t>(bufferSize));
+    uint8_t* outputData[1] = { &outputBuffer[0] };
+    const uint8_t** inputData = const_cast<const uint8_t**>(frame->extended_data);
+    int convertedSamples = swr_convert(m_resampleContext,
+                                       outputData,
+                                       outputSampleCount,
+                                       inputData,
+                                       frame->nb_samples);
+    if (convertedSamples < 0)
+    {
+        m_lastError = playbackAppendError("swr_convert failed", convertedSamples);
+        return false;
+    }
+    if (convertedSamples == 0)
+    {
+        return true;
+    }
+
+    const int bytesPerSample = 2;
+    const int usedBytes = convertedSamples * m_audioChannels * bytesPerSample;
+    if (usedBytes <= 0)
+    {
+        return true;
+    }
+
+    FFmpegCppPlaybackFrame playbackFrame;
+    playbackFrame.type = FFmpegCppPlaybackFrameTypeAudio;
+    playbackFrame.audioFrame.sampleRate = m_audioSampleRate;
+    playbackFrame.audioFrame.channels = m_audioChannels;
+    playbackFrame.audioFrame.bitsPerSample = m_audioBitsPerSample;
+
+    const int64_t rawTimestamp = playbackBestFrameTimestamp(frame);
+    int64_t timestamp100ns = playbackRescaleTo100ns(rawTimestamp, m_audioTimeBase);
+    if (timestamp100ns >= m_audioStartTime100ns)
+    {
+        timestamp100ns -= m_audioStartTime100ns;
+    }
+    else if (timestamp100ns < 0)
+    {
+        timestamp100ns = m_nextAudioTimestamp100ns;
+    }
+    else
+    {
+        timestamp100ns = 0;
+    }
+
+    playbackFrame.audioFrame.timestamp100ns = playbackClampPosition(timestamp100ns, m_duration100ns);
+    playbackFrame.audioFrame.duration100ns = convertedSamples * FFMPEG_PLAYBACK_TICKS_PER_SECOND / m_audioSampleRate;
+    playbackFrame.audioFrame.pcmData.assign(outputBuffer.begin(), outputBuffer.begin() + usedBytes);
+    m_nextAudioTimestamp100ns = playbackFrame.audioFrame.timestamp100ns + playbackFrame.audioFrame.duration100ns;
+
+    ++m_audioFrameCount;
+    m_frameQueue.push_back(std::move(playbackFrame));
+    return true;
+}
 
 FFmpegCppPlaybackOpenOption::FFmpegCppPlaybackOpenOption()
     : decodeVideo(true),
@@ -1322,6 +1691,35 @@ FFmpegCppPlaybackOpenOption::FFmpegCppPlaybackOpenOption()
       outputBitsPerSample(16),
       fallbackVideoFrameDuration100ns(kPlaybackDefaultFrameDuration100ns)
 {
+}
+
+FFmpegCppPlaybackPreviewOption::FFmpegCppPlaybackPreviewOption()
+    : maxReadFrameCount(0),
+      cancelCallback(nullptr),
+      cancelUserData(nullptr)
+{
+}
+
+bool FFmpegCppPlaybackPreviewOption::isCanceled() const
+{
+    return cancelCallback != nullptr && cancelCallback(cancelUserData);
+}
+
+FFmpegCppPlaybackPreviewProfile::FFmpegCppPlaybackPreviewProfile()
+{
+    reset();
+}
+
+void FFmpegCppPlaybackPreviewProfile::reset()
+{
+    totalCostUs = 0;
+    seekCostUs = 0;
+    demuxCostUs = 0;
+    decodeCostUs = 0;
+    convertCostUs = 0;
+    readPacketCount = 0;
+    decodedVideoFrameCount = 0;
+    canceled = false;
 }
 
 FFmpegCppPlaybackVideoFrame::FFmpegCppPlaybackVideoFrame()
@@ -1553,4 +1951,55 @@ bool FFmpegCppPlaybackReader::readVideoFrameAt(int64_t position100ns, size_t max
         impl->m_lastError = "unknown exception in FFmpegCppPlaybackReader::readVideoFrameAt";
     }
     return false;
+}
+
+bool FFmpegCppPlaybackReader::readVideoFrameAtEx(int64_t position100ns,
+                                                 const FFmpegCppPlaybackPreviewOption& option,
+                                                 FFmpegCppPlaybackVideoFrame* frame,
+                                                 FFmpegCppPlaybackPreviewProfile* profile)
+{
+    FFmpegCppPlaybackReaderImpl* impl = static_cast<FFmpegCppPlaybackReaderImpl*>(m_impl);
+    if (impl == nullptr)
+    {
+        return false;
+    }
+
+    try
+    {
+        return impl->readVideoFrameAtEx(position100ns, option, frame, profile);
+    }
+    catch (const std::exception& error)
+    {
+        impl->m_lastError = error.what();
+    }
+    catch (...)
+    {
+        impl->m_lastError = "unknown exception in FFmpegCppPlaybackReader::readVideoFrameAtEx";
+    }
+    return false;
+}
+
+bool FFmpegCppPlaybackReader::readAdjacentVideoFrameEx(int64_t origin100ns, int32_t direction,
+    const FFmpegCppPlaybackPreviewOption& option, FFmpegCppPlaybackVideoFrame* frame,
+    FFmpegCppPlaybackPreviewProfile* profile)
+{
+    FFmpegCppPlaybackReaderImpl* impl = static_cast<FFmpegCppPlaybackReaderImpl*>(m_impl);
+    if (profile != nullptr)
+    {
+        profile->reset();
+    }
+    if (impl == nullptr || frame == nullptr || !impl->isOpen())
+    {
+        return false;
+    }
+    frame->reset();
+    try
+    {
+        return impl->readAdjacentVideoFrameEx(origin100ns, direction, option, frame, profile);
+    }
+    catch (...)
+    {
+        impl->m_lastError = "adjacent video frame decoding failed";
+        return false;
+    }
 }

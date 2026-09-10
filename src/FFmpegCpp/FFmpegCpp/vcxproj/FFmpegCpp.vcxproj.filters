@@ -42,6 +42,9 @@
     <ClInclude Include="..\src\FFmpegCppPlaybackReader.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\FFmpegCppPlaybackReaderImpl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\FFmpegCpp.cpp">
@@ -53,5 +56,9 @@
     <ClCompile Include="..\src\FFmpegCppPlaybackReader.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\FFmpegCppAdjacentReader.h" />
+    <ClCompile Include="..\src\FFmpegCppAdjacentReader.cpp" />
   </ItemGroup>
 </Project>

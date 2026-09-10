@@ -5,6 +5,10 @@
 #include <iomanip>
 #include <sstream>
 
+#ifdef _MSC_VER
+#pragma warning(disable:4819)
+#endif
+
 extern "C"
 {
 #include <ffmpeg/libavcodec/avcodec.h>

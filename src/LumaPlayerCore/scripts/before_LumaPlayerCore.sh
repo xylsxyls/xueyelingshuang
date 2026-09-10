@@ -42,3 +42,10 @@ LockFreeQueue_dlllib=$2
 LockFreeQueue_debugRelease=$3
 LockFreeQueue_allSame=$4
 "$CLOUD_REBUILD" LockFreeQueue $LockFreeQueue_bit $LockFreeQueue_dlllib $LockFreeQueue_debugRelease $LockFreeQueue_allSame
+
+#--------------------------------------------------------------------
+LogManager_bit=$1
+LogManager_dlllib=$2
+LogManager_debugRelease=$3
+LogManager_allSame=$4
+"$CLOUD_REBUILD" LogManager $LogManager_bit $LogManager_dlllib $LogManager_debugRelease $LogManager_allSame

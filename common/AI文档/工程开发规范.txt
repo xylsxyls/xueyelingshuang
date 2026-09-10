@@ -1,0 +1,133 @@
+﻿工程开发规范
+确认日期：2026-09-10
+本文记录用户确认的通用工程结构与开发约定，适用于后续新工程及相关重构。与历史文档描述冲突时，以用户最新明确要求及本文为准；历史代码的例外不自动成为新代码模板。配套阅读《AI代码开发规范.txt》《仓库使用说明文档.txt》《线程开发规范.txt》。不为了套用新规范回滚用户修改或批量重构无关项目。
+
+一、三类工程与五端架构
+每个此类产品至少拆成AppName、AppNameCore、AppNameTest三个工程。例如LumaPlayer、LumaPlayerCore、LumaPlayerTest。目录统一在src中，Core遵循二次开发库工程模板；应用和Test为可执行工程，不新增库式scripts目录。
+桌面Windows、Linux、macOS统一使用Qt Widgets界面，复用同一套桌面业务界面代码。当前Windows环境为VS2013/C++11、Qt 5.5.1；不得为新增功能引入C++14及以上语法。
+Android使用原生界面，可用Kotlin/Java与Android Views，现代新项目可选Jetpack Compose；通过NDK编译C++ Core，经JNI桥接。具体UI工具链选择服从目标系统版本和项目约束，不能强行升级现有工程。
+iOS使用Swift原生界面，SwiftUI适合声明式页面，UIKit适合既有界面及细粒度控件集成，两者可以结合。接入既有C++11 Core优先使用纯C ABI或Objective-C++的.mm桥接层；SwiftUI本身不要求Core依赖Qt。桌面macOS仍按本规范使用Qt。
+五端复用同一套Core源码，各平台分别编译对应架构的二进制，不能把Windows DLL当成手机可直接加载的库。平台窗口、音频设备、文件权限、生命周期和主线程派发放在适配层。
+依赖方向：桌面Qt或手机原生界面 -> Core公开接口 -> 业务引擎/二次开发库 -> 第三方库。输出由Core借用抽象接口回调平台适配器，不能反向包含界面头文件。
+Core严禁Qt，包括QString、QObject、QImage、Qt事件循环和通过其他库间接引入Qt。QtControls、DialogManager仅属于桌面层。五端是架构目标，是否已通过构建和实机测试必须逐端报告。
+官方平台资料（用于界面与桥接选型，不替代本仓库规范）：
+Apple SwiftUI：https://developer.apple.com/documentation/SwiftUI
+Apple UIKit：https://developer.apple.com/documentation/uikit
+Android NDK：https://developer.android.com/ndk
+Android JNI：https://developer.android.com/ndk/guides/concepts
+
+二、Core与接口边界
+Core以实例为单位保存业务状态，支持独立初始化、反初始化和多实例。不要把每个Core实例的状态塞进全局Manager。
+二次开发库统一使用XxxAPI.h作为调用入口；需要C接口时，在顶部通过项目专用宏选择include Xxx.h或XxxC.h，默认C++。调用方须在首次包含前选定模式，C++工程也可以选择C接口。不再额外建立XxxCAPI.h。接口选择宏只影响声明，不改变实现语言、CRT或静态/动态链接方式。
+API.h底部保留CStringManagerAPI.h原有形式：Windows下仅按_DEBUG选择Xxxd.lib或Xxx.lib，不因C/C++接口或DLL/LIB新增库名分支。DLL导入库与静态库按仓库原有命名，构建串行准备正确产物及Macro，不能混用同名文件。
+XxxC.h只放C兼容类型和函数声明；使用#ifdef __cplusplus保护extern "C"，无参数C函数写(void)。导入导出沿用项目Macro体系，确保DLL导入/导出与静态库配置正确。C头不得包含STL、C++类或内部适配器。
+XxxC.cpp使用C++编译，包含Xxx.h并转发同一份C++业务，不复制另一套算法。正常失败用返回码，必要的try/catch在C边界把异常转换为明确失败；可以用内部Helper复用句柄处理与invokeResult/invokeVoid，外部无需包含Helper。
+对外使用XxxHandle不透明句柄，可声明为内部XxxCContext的前置结构体指针。完整Context定义放内部头文件，持有一个业务对象及对应适配器，创建/销毁直接由C函数实现。每次create产生独立上下文，支持同进程多实例；Context不表示单例，不暴露内部成员或要求C调用方new/delete。
+C++虚接口在C侧用纯C参数结构、函数指针回调表与void* userData表达；库内部C++ Adapter实现原虚接口并转发C回调。Adapter只借用帧数据指针及元信息，不因桥接增加整帧复制；回调后继续使用帧数据的调用方需自行复制或采用明确的所有权协议。
+userData只是调用方上下文地址，不自动管理所有权，也不必是窗口句柄。回调表的锁保护并发读取/替换，不能保证userData对象存活。停止时先拒绝新操作、取消并等待任务和在途回调结束，再清空回调和释放上下文及输出对象；不能在自身回调中同步销毁或等待自身线程。
+智能指针是否使用取决于所有权设计，不是C接口必须或禁止的机制。C ABI不传std::shared_ptr；内部可使用，但回调须安全取得独立持有副本，避免循环引用与工作线程自等待。QWidget遵守Qt父子所有权与GUI线程规则，不改由std::shared_ptr管理。运行中更换输出绑定须有同步和在途回调协议；本次LumaPlayer保留原Adapter锁及既有生命周期，不扩展运行中更换接口。
+需要同时验证两种接口时，测试可先包含默认XxxAPI.h再包含纯声明XxxC.h；不能通过反复切宏突破#pragma once。正式C入口测试必须在纯C编译单元中定义选择宏并包含统一API.h。
+接口明确参数单位、范围、所有权、空指针规则、线程约束、同步/异步完成条件。返回“已接受”不等于执行成功，异步完成结果要通过快照或回调提供。
+Core借用的输出对象必须活到任务和回调退出之后；借用帧缓冲的有效期写清楚，外部长期持有必须复制或使用约定的共享所有权。C ABI内存由分配库提供释放接口，不跨模块随意delete，不让异常穿过C边界。
+第三方接口经二次封装库隔离。业务只包含项目公开API，原生第三方对象尽量用前置声明藏在实现中。库需要新能力时先补封装，而不是在业务直接调用tools里的API。
+
+三、应用Config与Core配置
+最外层可执行工程必须有Config.h/Config.cpp，集中管理应用路径、界面和启动参数、日志开关、Core默认配置。Config是用户指定名称，作为通用Manager命名规则的明确例外保留，不为了名字另造ConfigManager。
+应用通常提供#define g_config Config::instance()。构造函数只设置默认值，main开始阶段先显式取得Config实例并调用init，再使用它初始化日志、Core和窗口。不要在全局对象构造中读取配置。
+Core必须定义AppNameCoreConfig，例如LumaPlayerCoreConfig，放独立.h/.cpp。可使用参数class或struct；所有基础类型提供默认值，构造实现及默认值初始化列表放.cpp。
+Core::init(const AppNameCoreConfig& config)先校验配置，再复制到实例，然后创建依赖与任务，成功后才开放业务接口。初始化之前和初始化失败后不得读取运行配置推进业务；接口先返回NotInit。运行期间不修改已复制的配置，需变更时uninit后重新init。
+默认配置对象的构造与init参数校验本身允许读取默认值，这不等于未初始化业务读取配置。固定时间单位、协议标识不作为可调配置。可变的兜底值、默认倍率和倍率范围归CoreConfig；默认倍率与固定的倍率单位基准分开，1000始终表示1.0倍率。时间单位换算单处使用可就地计算，同一cpp多处使用可定义带项目含义的局部宏，宏表达式加括号并确保中间运算位宽足够。
+C ABI配置结构保持纯C布局，不添加C++构造函数；提供DefaultConfig函数设置同样的默认值。结构变化后调用方和库一起重编，不能混用旧布局。
+
+四、日志和错误结果
+最外层应用及产品Core属于业务模块，可以使用LogManager。LumaPlayer所有启动方式均生成基础日志，不以debug参数作为日志开关；debug仅作为诊断标记或额外诊断选项。日志在工作线程启动前初始化，所有业务和回调停止后关闭；配置滚动大小和数量。
+其他二次开发库，以及计划独立复用的Engine模块，不允许依赖LogManager、日志器或日志回调。不要为了诊断在底层直接打印日志。将错误、必要的性能统计和请求身份传给上层，由业务层记录。
+失败通过result返回具体枚举，0表示成功，其余表示明确失败或终止原因，包括Canceled、NotInit、InvalidParam等。禁止只返回笼统false且无法获知原因；旧接口迁移按调用兼容性逐步处理。
+在结果头文件集中定义错误枚举及const std::map<枚举, std::string>，值为明确中文原因。一个错误的含义不能随调用点改变；同一结果映射用于弹窗、测试与日志。业务日志记录枚举数值和中文描述。
+C调用方通过函数取得同一映射中的UTF-8文字，不在C头中引入std::map。未知码有统一兜底中文说明。预期取消不是解码故障，不应被旧任务失败覆盖当前成功状态。
+诊断信息应区分提交、排队、解码、转换、呈现耗时；包含实例/媒体代次/请求序号。无日志不意味着没有可测试的错误结果。
+
+五、单例与生命周期
+提供instance的管理类通常以Manager结尾，例如DownloadManager、SessionManager。默认使用函数内静态对象：
+
+DownloadManager& DownloadManager::instance()
+{
+    static DownloadManager s_downloadManager;
+    return s_downloadManager;
+}
+
+只有业务确实需要在运行中完整销毁并重建单例对象时，才使用new，并提供releaseInstance；释放之前必须停止所有使用者和回调，不能让其他线程持有悬空引用。仅释放连接等资源通常用uninit即可，不必销毁单例对象。
+所有实际使用的单例都在main开始阶段显式调用一次，如A::instance()；旧库CTaskThreadManager保留现有Instance大小写。构造只设置安全默认值，资源初始化通过init，反初始化通过uninit，按依赖顺序创建、逆序释放。
+涉及QObject、QWidget或GUI资源的Manager必须在QApplication创建之后、GUI线程上显式实例化；这仍属于main启动初始化阶段，不能为了“最开始”违反Qt生命周期。非Qt的Config可先于QApplication准备。
+ManagerBase/SingletonBase当前实现是new并支持releaseInstance，不能直接继承它却声称使用了函数内static模式。新Manager无完整重建需求时使用上面的简单实现；既有DialogManager按其实际生命周期API操作，先uninit并在QApplication结束前释放实例。
+非平凡清理由显式生命周期方法承担；必要的局部资源所有权对象可用析构释放资源，但需说明责任。类里长期借用依赖使用指针并判空，不用引用成员隐藏生命周期约束。
+
+六、文件组织与禁止事项
+原则上一类一组.h/.cpp；几个关联非常紧密的数据类/结构体可以共用Models.h/.cpp，不能把多个独立业务类堆在一个文件。
+头文件只放声明。需要内联或模板可见实现时放同名.inl并由头文件包含；构造函数也不能为了方便在.h内写实现。纯C ABI结构保持C声明。
+严禁在.cpp定义class或struct；严禁在类内定义class、struct或enum，包括匿名枚举。枚举定义在类外头文件作用域，纯常量可使用类内static const。不要为几个常量定义嵌套枚举。
+严禁自行定义namespace，包括匿名namespace；不使用using namespace。std::、Qt等既有库的限定名属于引用外部接口，不是自建命名空间，不受此禁止影响。
+除了确有需要的重载运算符，不允许friend。用有明确语义的受控接口表达协作，不让辅助类任意访问内部状态。
+.cpp中与本文件实现紧密结合、无跨类复用价值的逻辑可用文件级static函数，使用大写开头驼峰命名，定义前说明目的、各入参、出参和返回值。不要通过匿名namespace替代static。
+不紧密或可复用的辅助能力放XxxHelper.h/.cpp，Helper是内部函数全部为static成员函数的类。已属于某个对象的逻辑优先作为其成员；通用字符串和系统能力优先复用CStringManager、CSystem。Helper不保存零散全局可变状态。
+禁止mutable绕过const语义；并发状态使用atomic或锁，不用volatile。新代码不直接用int表达业务位宽，使用int32_t/int64_t/size_t等；第三方接口规定的类型按接口使用。
+
+七、注释、编码与空行
+类注释说明职责、边界和生命周期；所有头文件函数有用途、参数及返回值说明，参数名不能省略。基础类型成员在构造初始化列表中初始化。
+函数注释以/** 说明开头，下一行使用@param [in]/[out]/[in,out]及@return，不加装饰性*，结束*/单独一行；注释行末不加句号。static全局函数同样遵守。
+成员注释放前一行，//后一个空格，成员之间不留空行；函数区和成员区用访问标签分开。带函数的struct显式写public，数据成员在前，函数在后。
+构造函数签名后空格再冒号，初始化项从下一行顶格写。空函数体内部保留一行空行。if/for/while/switch/case的括号按项目规范换行，即使一行也写大括号。
+.cpp相邻函数实现之间恰好一行空行；所有代码不得连续两行或更多空行，只有空格/Tab的行也算。文件尾最后一个字节为实际内容，不保留换行、空格或Tab。
+C/C++/.inl及Windows工程文件采用UTF-8带BOM；CMakeLists.txt无BOM。普通.txt按用户要求，未特别指定时沿用项目文档编码。不要批量转码无关老文件。rebuild_*.py只读不改，不参与格式整理。
+
+八、QtControls使用说明
+QtControls提供桌面控件和状态样式封装，例如PushButton、Label、Widget、LineEdit、TableWidget等。业务优先复用这些控件，缺能力先补库，不使用已废弃的COriginalButton。
+当前源码未提供QtControlsAPI.h统一入口，不能在示例里虚构这个文件。按实际公开头文件使用，例如#include "QtControls/PushButton.h"；链接及宏配置参照现有Qt工程，后续统一API入口应作为独立兼容性变更。
+PushButton继承QPushButton相关封装，GUI线程创建并传入父QWidget，使用setText、clicked信号等Qt接口。常用增强接口：setClickBreathTime(timeMs)设置点击防抖，0关闭；setBkgColor/setFontColor分别设置普通、悬浮、按下、禁用及选中状态；setBkgImage配置纵向状态图；setBorderRadius等来自基础控件封装。具体参数顺序以PushButton.h为准。
+界面拥有的控件使用Qt父子所有权，避免与shared_ptr重复释放。同一控件不要同时用冲突的QSS和封装状态样式覆盖彼此。高DPI、字体缺失、焦点、快捷键及禁用状态必须实测。
+后台Task只能提交数据或通知，不能直接操作QWidget。将结果经Qt队列连接或GUI调度入口交给主线程；传递异步对象时明确拷贝或共享所有权。
+QtControls属于二次开发库，不在其中引入业务LogManager；错误或事件由上层处理。
+
+九、DialogManager使用说明
+入口#include "DialogManager/DialogManagerAPI.h"，启动后GUI线程调用DialogManager::instance()。不要让Core依赖它。
+makeDialog(DialogParam&)按类型创建或复用窗口，成功后参数中写入m_dialogId。具体派生参数定义在DialogType.h；先选择正确类型并填入对应字段，不把所有弹窗当作同一种参数。
+业务复用键由businessId/userId组成；有效键且已有窗口未关闭时可复用，0/0表示普通弹窗每次创建。业务域ID由应用分配，避免不同模块互相复用错误窗口。
+operateDialog(OperateParam&)按dialogId和操作类型更新或关闭窗口，不能绕过管理器长期保存内部窗口裸指针。dialogSignal(const DialogSignalPtr&)传递业务结果；共享参数保留派生数据，跨线程仍应使用排队连接及已注册的元类型。
+内置模式包括POP_DIALOG_SHOW_MODE（模态exec）、NOTIFY_DIALOG_SHOW_MODE、STATIC_DIALOG_SHOW_MODE、MODELESS_DIALOG_SHOW_MODE。模态会运行嵌套事件循环，不等于后台任务同步完成，期间仍需防重入。
+自定义完整窗口使用CustomDialogFactory及registerCustomDialogFactory；自定义内容区继承CustomViewBase，由CustomViewFactory::createView创建，再registerCustomViewFactory。自定义类型ID必须>=CUSTOM_DIALOG_TYPE_BEGIN，即10000。内容区工厂仅支持模态和普通非模态模式。
+注册成功后工厂由DialogManager托管；若传destroyFunction则按该函数释放，否则delete，失败时调用方仍需处理所有权。工厂与内容区类放各自头源文件，不写在.cpp内部。
+退出时先停止可能更新弹窗的后台任务，GUI线程调用DialogManager::instance().uninit()释放托管窗口，再按其现有ManagerBase协议releaseInstance，并保证发生在QApplication销毁之前。不要在释放后又通过instance偷偷创建新实例。
+当前LumaPlayer自绘界面不代表已全面接入QtControls/DialogManager。本文规定新工程的复用方向，不虚报既有接入状态。
+
+十、线程、测试与交付
+所有自行管理的后台线程通过CTaskThreadManager。独立业务命令优先Task，长服务按需配Semaphore/LockFreeQueue；详见《线程开发规范.txt》。无重做需求不覆盖ReExecute/Clone。停止标记在入口、耗时步骤和发布前检查，关闭前收敛回调。
+AppNameTest是独立测试工程，至少包含正常功能、非法参数、初始化前调用、重复初始化/反初始化、C/C++一致性、异步错误和取消、并发压力、多实例和退出竞争。记录输入、期望、实际、耗时及失败原因；压力测试记录队列峰值、CPU、内存、线程及句柄回落。
+渲染替身适合验证帧身份、边界与回调次数，不替代真实GUI、音频设备、手机生命周期及五端实机验收。变化涉及ABI时加入纯C头编译验证。
+构建遵守《仓库使用说明文档.txt》：库version各一行32dll，应用version准备其实际位数/链接组合，依赖放before；不修改rebuild_*.py，不擅自更改基础库Release MT。Qt应用可使用明确的64dll例外。
+编写或调整工程version_debug.sh/version_release.sh前，先沿各库before脚本核对直接和传递依赖、执行顺序及实际构建组合。已由上游依赖链完成构建的库，不在应用version中再次显式编译；只有位数、Debug/Release、dll/lib及CRT组合满足调用方要求时，才视为已覆盖。不能仅因lib目录存在旧产物就省略必要构建。
+例如LumaPlayerCore依赖CTaskThreadManager，后者依赖Semaphore；构建LumaPlayerCore时已覆盖这两个库，LumaPlayer的version无需再单独编译它们。CDump等未被该依赖链覆盖的独立依赖需单独列出，最后一个参数默认使用same；不能因当前看似没有依赖就默认写only。only仅用于已明确核实前置依赖及复制步骤均已完成的特殊构建，不作为常规version写法。
+修改公开头从src开始，通过构建同步include，不能只改include。新增文件同步DLL/静态库两份vcxproj及filters。所有临时测试产物放src/temp任务目录。
+交付前运行适用Debug/Release测试，部署同批EXE/DLL/PDB并记录哈希。报告区分源码已改、构建通过、自动测试通过和人工验收，失败或未测项目明确保留，不拿旧报告替新版本背书。
+
+十一、CDump崩溃诊断规范
+Windows可执行产品接入CDump/CDumpAPI.h，在main最早阶段、Qt和后台任务启动前调用CDump::declareDumpFile()。注册不依赖debug参数，返回结果写入随后初始化的业务日志；不要在二次开发库内部重复设置进程异常处理器。
+默认转储写入EXE目录，部署环境须具备写权限；如使用自定义路径，以当前CDump接口能力为准，不虚构参数。转储可能含进程数据，只保存在明确诊断目录，不自动上传。应用日志、CDump文本和.dmp是不同证据，不能用其中一种代替另外两种。
+通过应用version准备与位数/配置一致的CDump依赖。Qt MD应用使用已验证的DLL组合，不为静态链接强改基础库MT。公开API自动链接，业务工程不重复填写封装库.lib。
+Release保持优化，同时编译器生成源代码调试信息（MSVC /Zi）、链接器生成PDB（/DEBUG）；仅开链接器PDB不代表包含源码行号。
+每次发布同批EXE/DLL/PDB；保留旧版本符号和哈希，按PE RSDS与PDB GUID/Age核对。故障地址必须使用故障发生版本的模块解析，重编后的同名PDB不能替代。
+受控崩溃测试用独立测试进程，分别验证主线程和工作线程生成有效MDMP及文字记录，不在用户播放进程人为制造崩溃。检查注册失败、输出路径和进程退出结果。
+定位记录复现操作、媒体、时间、版本、异常码、模块偏移、线程栈和dump路径。CDump用于保留现场，不能修复崩溃；没有原始dump时明确证据限制，不能仅凭模块名断言根因。
+
+十二、需求文档怎样写
+每个产品维护一篇当前有效《需求文档.txt》，面向不了解历史的开发者。按用户可观察功能组织，先定义范围、平台和术语，再写窗口布局、控件、状态、输入与输出、异常边界及验收，不写成对话记录或版本补丁堆积。
+每项功能写清触发前提、操作、即时反馈、完成条件、结束状态，以及与其他功能的组合关系。交互须覆盖鼠标按下/移动/松开、悬停、离开、键盘重复、失焦、取消、切文件和退出。
+图形界面明确坐标基准、尺寸、边距、颜色、字体、动画、隐藏/显示条件、层级与窗口缩放规则；给布局图或精确位置公式。截图只能辅助，不能代替控件行为说明。
+时间或数值范围明确单位、闭开区间、取整和末尾边界，提供具体例子。例如AB必须明确A取帧起点、B取帧结束排他边界、是否包含B帧、同帧是否允许及逐帧移动后播放状态。
+每个功能有可重复的输入与预期；错误、边界和功能组合有验收清单。将已实现行为、明确需求和未完成能力分开，不能把缺陷写成“设计如此”。不要求读源码或旧聊天才能还原产品。
+
+十三、开发文档怎样写
+每个产品维护一篇当前有效《开发文档.txt》，说明如何接手实现：源码导航、分层依赖、接口与ABI、状态机、线程/锁/资源所有权、取消和退出顺序、配置/错误/日志/CDump。
+说明关键算法为什么这样实现、容易出错的边界及必须保持的不变量。区分产品语义和实现选择；例如解码参考帧与展示帧不同、预览取消不能仅删除排队任务、Qt资源线程归属等。
+列出构建环境、依赖准备、Debug/Release实际命令、脚本路径和参数、输入素材、执行方式、输出报告、成功标准及运行后恢复步骤。说明脚本是正式入口、可重复验证还是一次性修改，禁止将非幂等修复脚本当成例行步骤。
+记录当前验证证据与未测平台，历史报告明确日期和版本。交付和崩溃定位写清产物、符号及哈希关系。文档合并需逐条核对旧内容、解决冲突、保留有效约束并更新引用；旧文件备份到任务目录后退出正式文档集，不简单拼接四篇正文。
+需求变化同时更新需求和开发文档，通用规则归本目录规范，产品文档引用规则而非复制一份会逐渐漂移的全文。

@@ -26,6 +26,60 @@ enum FFmpegCppPlaybackReadResult
     FFmpegCppPlaybackReadResultEnd = 1,
     FFmpegCppPlaybackReadResultError = 2
 };
+/**
+ * Preview cancel callback. Return true when the current preview request should stop early.
+ */
+typedef bool (*FFmpegCppPlaybackCancelCallback)(void* userData);
+
+/**
+ * Options used by single-frame preview decoding.
+ */
+struct FFmpegCppAPI FFmpegCppPlaybackPreviewOption
+{
+public:
+    size_t maxReadFrameCount;
+    FFmpegCppPlaybackCancelCallback cancelCallback;
+    void* cancelUserData;
+
+public:
+    /**
+     * Build default preview options.
+     */
+    FFmpegCppPlaybackPreviewOption();
+
+    /**
+     * Check whether the caller has canceled the preview request.
+     * @return true if the request should stop.
+     */
+    bool isCanceled() const;
+};
+
+/**
+ * Timing information collected while decoding a preview frame.
+ */
+struct FFmpegCppAPI FFmpegCppPlaybackPreviewProfile
+{
+public:
+    int64_t totalCostUs;
+    int64_t seekCostUs;
+    int64_t demuxCostUs;
+    int64_t decodeCostUs;
+    int64_t convertCostUs;
+    size_t readPacketCount;
+    size_t decodedVideoFrameCount;
+    bool canceled;
+
+public:
+    /**
+     * Build an empty profile.
+     */
+    FFmpegCppPlaybackPreviewProfile();
+
+    /**
+     * Reset all counters to zero.
+     */
+    void reset();
+};
 
 /**
  * Playback reader open options.
@@ -274,6 +328,31 @@ public:
      * @return true if a video frame was decoded.
      */
     bool readVideoFrameAt(int64_t position100ns, size_t maxReadFrameCount, FFmpegCppPlaybackVideoFrame* frame);
+
+    /**
+     * Seek and decode a nearby video preview frame with cancellation and timing details.
+     * @param [in] position100ns Target position in 100ns units.
+     * @param [in] option Preview behavior and cancellation callback.
+     * @param [out] frame Decoded video frame output.
+     * @param [out] profile Optional timing profile output.
+     * @return true if a video frame was decoded.
+     */
+    bool readVideoFrameAtEx(int64_t position100ns,
+                            const FFmpegCppPlaybackPreviewOption& option,
+                            FFmpegCppPlaybackVideoFrame* frame,
+                            FFmpegCppPlaybackPreviewProfile* profile);
+
+    /** 可取消地读取相邻展示帧，复用有界原始帧缓存，仅转换目标帧
+    @param [in] origin100ns 当前帧起点，单位100纳秒
+    @param [in] direction 负数向左，正数向右，不允许0
+    @param [in] option 取消回调配置
+    @param [out] frame 相邻帧及完整展示时长
+    @param [out] profile 统计及取消状态，可为空
+    @return 成功返回true，失败或取消返回false
+    */
+    bool readAdjacentVideoFrameEx(int64_t origin100ns, int32_t direction,
+        const FFmpegCppPlaybackPreviewOption& option, FFmpegCppPlaybackVideoFrame* frame,
+        FFmpegCppPlaybackPreviewProfile* profile);
 
 private:
     void* m_impl;

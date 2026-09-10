@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include <condition_variable>
 #include <mutex>
+#include <string>
+#include <stdint.h>
 #include "SemaphoreMacro.h"
 #ifdef _MSC_VER
 #include <windows.h>
@@ -31,10 +33,10 @@ public:
 	void wait();
 
 	/** 信号量的等待
-	@param [in] timeout 超时时间，单位毫秒
-	@return 如果是参数是-1则一定返回true，如果参数是时间，超时返回false，等待到信号返回true
+	@param [in] timeout 总等待时间，单位毫秒，0仅检查现有计数
+	@return 取得信号返回true，超时返回false；无限等待使用无参数wait()
 	*/
-	bool wait(int32_t timeout);
+	bool wait(uint32_t timeout);
 
 	/** 进程信号量的创建
 	@param [in] name 名字

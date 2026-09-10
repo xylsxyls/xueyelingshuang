@@ -27,6 +27,7 @@
     <ClInclude Include="..\src\FFmpegCppModels.h" />
     <ClInclude Include="..\src\FFmpegCppModels.inl" />
     <ClInclude Include="..\src\FFmpegCppPlaybackReader.h" />
+    <ClInclude Include="..\src\FFmpegCppPlaybackReaderImpl.h" />
     <ClInclude Include="..\src\FFmpegCpp.h" />
   </ItemGroup>
   <ItemGroup>
@@ -193,4 +194,8 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\FFmpegCppAdjacentReader.h" />
+    <ClCompile Include="..\src\FFmpegCppAdjacentReader.cpp" />
+  </ItemGroup>
 </Project>

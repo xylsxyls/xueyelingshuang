@@ -105,6 +105,18 @@ del "%~dp0src\Dtws\Dtws\Dtws.vcxproj.user"
 rmdir /q /s "%~dp0src\Quant\Quant\GeneratedFiles\"
 del "%~dp0src\Quant\Quant\Quant.vcxproj.user"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\LumaPlayer\LumaPlayer\GeneratedFiles\"
+del "%~dp0src\LumaPlayer\LumaPlayer\LumaPlayer.vcxproj.user"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\BatchPrinter\BatchPrinter\GeneratedFiles\"
+del "%~dp0src\BatchPrinter\BatchPrinter\BatchPrinter.vcxproj.user"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\PdfReader\PdfReader\GeneratedFiles\"
+del "%~dp0src\PdfReader\PdfReader\PdfReader.vcxproj.user"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\SplitViewer\SplitViewer\GeneratedFiles\"
+del "%~dp0src\SplitViewer\SplitViewer\SplitViewer.vcxproj.user"
+::------------------------------------------------------------
 
 
 ::-------------------删除控制台临时文件-----------------------

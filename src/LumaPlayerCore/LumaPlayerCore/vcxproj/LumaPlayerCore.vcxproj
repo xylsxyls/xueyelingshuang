@@ -19,12 +19,27 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\IAudioRender.h" />
+    <ClInclude Include="..\src\IVideoRender.h" />
+    <ClInclude Include="..\src\LumaPlayerCore.h" />
     <ClInclude Include="..\src\LumaPlayerCoreAPI.h" />
     <ClInclude Include="..\src\LumaPlayerCoreMacro.h" />
-    <ClInclude Include="..\src\LumaPlayerCore.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreTypes.h" />
+    <ClInclude Include="..\src\MediaClock.h" />
+    <ClInclude Include="..\src\PlayerCommand.h" />
+    <ClInclude Include="..\src\PlayerEngine.h" />
+    <ClInclude Include="..\src\PlayerPreviewTask.h" />
+    <ClInclude Include="..\src\PlayerWorkerTask.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\IAudioRender.cpp" />
+    <ClCompile Include="..\src\IVideoRender.cpp" />
     <ClCompile Include="..\src\LumaPlayerCore.cpp" />
+    <ClCompile Include="..\src\LumaPlayerCoreTypes.cpp" />
+    <ClCompile Include="..\src\MediaClock.cpp" />
+    <ClCompile Include="..\src\PlayerEngine.cpp" />
+    <ClCompile Include="..\src\PlayerPreviewTask.cpp" />
+    <ClCompile Include="..\src\PlayerWorkerTask.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
@@ -112,6 +127,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ImportLibrary>$(ProjectDir)..\..\..\..\lib\LumaPlayerCored.lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -129,10 +145,12 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ImportLibrary>$(ProjectDir)..\..\..\..\lib\LumaPlayerCored.lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -150,10 +168,12 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ImportLibrary>$(ProjectDir)..\..\..\..\lib\LumaPlayerCore.lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -171,9 +191,42 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ImportLibrary>$(ProjectDir)..\..\..\..\lib\LumaPlayerCore.lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LumaPlayerCoreC.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreCAudioRenderAdapter.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreCContext.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreConfig.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreCVideoRenderAdapter.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreHelper.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreMacroDll.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreMacroLib.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreResult.h" />
+    <ClInclude Include="..\src\PlayerEngineHelper.h" />
+    <ClInclude Include="..\src\PlayerPreviewCancelContext.h" />
+    <ClCompile Include="..\src\LumaPlayerCoreC.cpp" />
+    <ClCompile Include="..\src\LumaPlayerCoreCAudioRenderAdapter.cpp" />
+    <ClCompile Include="..\src\LumaPlayerCoreCContext.cpp" />
+    <ClCompile Include="..\src\LumaPlayerCoreConfig.cpp" />
+    <ClCompile Include="..\src\LumaPlayerCoreCVideoRenderAdapter.cpp" />
+    <ClCompile Include="..\src\LumaPlayerCoreHelper.cpp" />
+    <ClCompile Include="..\src\PlayerCommand.cpp" />
+    <ClCompile Include="..\src\PlayerEngineHelper.cpp" />
+    <ClCompile Include="..\src\PlayerPreviewCancelContext.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\PlayerLoopBuffer.h" />
+    <ClCompile Include="..\src\PlayerLoopBuffer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\PlayerCommandTask.h" />
+    <ClCompile Include="..\src\PlayerCommandTask.cpp" />
+  </ItemGroup>
 </Project>

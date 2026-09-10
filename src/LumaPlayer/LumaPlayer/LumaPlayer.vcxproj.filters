@@ -50,6 +50,21 @@
     <ClCompile Include="LumaPlayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="LumaPlayerLogger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LumaPlayerCoreBridge.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LumaPlayerVideoRender.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LumaPlayerAudioRender.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LumaPlayerAudioTask.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="LumaPlayer.qrc">
@@ -64,5 +79,36 @@
     <CustomBuild Include="LumaPlayer.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LumaPlayerLogger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LumaPlayerCoreBridge.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LumaPlayerVideoRender.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LumaPlayerAudioRender.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LumaPlayerAudioTask.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Config.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LumaPlayerHelper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="Config.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LumaPlayerHelper.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

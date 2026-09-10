@@ -1,0 +1,111 @@
+CTaskThreadManager、Semaphore与LockFreeQueue使用说明
+核对日期：2026-09-10
+本文按仓库当前源码说明实际行为；接口大小写以头文件为准，不能按名称猜语义。配套阅读《工程开发规范.txt》《AI代码开发规范.txt》《仓库使用说明文档.txt》。新建线程统一通过CTaskThreadManager管理，不在业务代码直接new std::thread。
+
+一、职责和依赖
+CTask描述一项工作；CTaskThread拥有一个实际工作线程和按优先级分组的任务队列；CTaskThreadManager管理多个CTaskThread的创建、查询和回收。它不是自动把任务分发到任意空闲线程的通用线程池，业务需要选定threadId。
+CTaskThreadManager依赖Semaphore，内部用signal/wait唤醒工作线程。业务可再用Semaphore等待任务结果或唤醒长期任务。LockFreeQueue是独立的多生产者、单消费者数据队列，不创建线程、不提供等待或取消。
+入口：CTaskThreadManager/CTaskThreadManagerAPI.h、Semaphore/SemaphoreAPI.h、LockFreeQueue/LockFreeQueueAPI.h。通过before脚本准备依赖，不直接包含tools头文件。VS链接依赖由各库API入口处理。
+
+二、选什么业务模型
+1. 独立有限任务：导出、离线计算、解析文件、批量处理。每项业务一个Task，完成后DoTask返回。同线程同优先级按投递顺序执行；不共享可变状态的工作可放不同threadId。
+2. 最新意图优先：搜索、图片预览、拖动定位、AB端点移动。后续操作使前一结果过期，任务必须有取消标记及请求序号。根据业务停止旧任务后投递新任务；松键、失焦、换媒体也需要明确取消路径。已取消任务禁止再更新画面或业务状态。
+3. 长期服务：持续音频送设备、消息接收、按序数据消费。一个Task在DoTask中循环，配合Semaphore和LockFreeQueue；StopTask设置退出标记并唤醒等待。此时任务管理器只知道这个长期Task，不知道内部队列的每项数据。不能期待StopCurTask自动识别或丢弃内部某类业务命令。
+4. 高频绝对位置预览：允许用一个常驻Task加唯一待处理位置。新请求覆盖待处理位置并递增代次，解码过程中检查代次。这能避免每次鼠标移动分配Task，但必须明确这是业务自身实现的合并模型。
+5. 保序业务：事务、文件写入、资源打开关闭等，不能无差别StopAllTask。先区分不可丢操作、可替换操作及有副作用后不能简单重做的操作。
+6. 临时并行批次：为独立分组创建若干threadId，投递有限任务，在非GUI协调线程用WaitForEnd收敛，然后读取独立结果。
+相对操作“向右一步”不能机械等价于绝对操作“定位到时间T”。连续长按可限制为一个在途移动，完成后允许下次重复事件；松键取消剩余连续操作。一次短按应保留其一步语义。
+
+三、创建、投递和释放
+在main正常运行阶段先显式执行CTaskThreadManager::Instance()。不要在DLL全局变量构造期间创建线程。
+uint32_t threadId = CTaskThreadManager::Instance().Init();
+threadId为0表示未取得线程；Init也可能因内存分配或线程创建失败抛异常，初始化边界必须处理并回收此前成功创建的线程。
+std::shared_ptr<CTaskThread> thread = CTaskThreadManager::Instance().GetThreadInterface(threadId);
+使用前判空。thread是短期操作句柄，不要长期保留导致管理器移除后资源仍被引用。
+thread->PostTask(task, 1);
+task为std::shared_ptr<CTask>，非空，优先级至少1。数字越大优先级越高。同优先级任务不会自动打断当前任务。高优先级任务会调用当前任务StopTask，但仍须等当前DoTask返回后才能执行。
+PostTask当前返回void，空任务、非法优先级、线程退出时会直接返回，不提供成功确认；分配队列节点也可能抛异常。业务必须禁止关闭后继续投递，提交接受和执行成功应分开表达。不能捏造PostTask的bool返回值。
+禁止SendTask，它同步等待任务释放，会阻塞调用方；普通业务避免TryPostTask，因为未获得锁就可能拒绝本次请求。命令处理不能靠无休止重试挤占GUI。
+
+四、协作取消的正确实现
+以下片段属于某个具体业务Task，类声明放XxxTask.h，函数实现放XxxTask.cpp，不把class写进.cpp。
+成员：std::atomic<bool> m_exit; Semaphore m_wake;
+构造初始化列表：m_exit(false)。每个新Task使用新的退出标记；不得复用已经被取消的Task并把m_exit改回false。
+
+void XxxTask::StopTask()
+{
+    m_exit.store(true);
+    m_wake.signal();
+}
+
+void XxxTask::DoTask()
+{
+    if (m_exit.load())
+    {
+        return;
+    }
+    while (!m_exit.load())
+    {
+        // 获取本次工作；实际实现不能在此持锁等待其他线程
+        // 解码或计算前、过程中安全检查点、转格式前均检查m_exit
+        // 最终提交前再次校验m_exit和请求代次
+        m_wake.wait(20);
+    }
+}
+上例只示意退出与等待，不是可直接交付的业务实现。有限任务不需要while或Semaphore就不要添加；有必须通知的取消结果，应先完成通知再返回。资源已取得后不能直接return而遗漏释放，应通过确定的清理路径结束。
+StopTask应快速、可重复、线程安全；管理器会持有内部锁调用它。不得在StopTask里WaitForEnd、Uninit、回调同一任务管理器或等待DoTask完成，避免锁反转或自等。
+取消是协作式，不会强杀线程。外部不可中断的单次调用返回后要立即检查；能接入底层取消回调就接入。视频解码可在转BGRA前检查，取消后省去无用转换；转换完成后仍需检查，避免旧画面发布。
+检查标记与发布之间仍有竞争窗口。对严格要求“取消返回后绝无旧提交”的业务，需设计发布锁或代次校验，由接受输出的一侧验证；不能仅凭一个if宣称原子取消。
+
+五、StopCurTask、StopTask、StopAllTask与重做
+StopCurTask()只通知当前任务，不处理等待队列；适合独立预览线程上只有一个在途任务、排队策略已受控的情况。
+StopTask(taskId, taskLevel=0)按任务类别ID通知当前及指定优先级/所有优先级中的同ID任务。taskId是业务分配的类别，不是管理器自动生成的唯一请求序号；需要另设requestSerial表示一次请求。
+StopAllTask()对当前及所有排队任务调用StopTask。它不是直接clear队列，也不会等待当前任务退出。排队对象后续仍可能进入DoTask，入口必须检查m_exit后立即返回。大量排队对象仍需遍历和出队，因此不能把无限积压交给StopAllTask补救。
+这几个接口操作的是所取得的CTaskThread，不是默认停止整个进程所有线程。不要在共享多个无关业务的线程上无差别停止全部任务。
+CTask::ReExecute()已有完整实现，默认false；CTask::Clone()默认nullptr。没有重做需求的派生Task不声明、不定义这两个函数。
+只有被高优先级任务顶掉后确实需要从头重做的业务才覆盖二者。当前实现只在ReExecute为true时调用Clone提前创建备份；高优先级打断且ReExecute为true时将备份放回原优先级队头。StopCurTask/StopAllTask本身不自动安排重做。
+Clone必须复制全部业务参数并重新初始化取消标记、句柄等运行期状态。重做不是断点续跑；已经写文件、扣款或提交外部请求的任务不能无条件重做。若可按最新状态重建下一任务，通常无需ReExecute。
+
+六、临时线程和WaitForEnd
+典型顺序：创建threadId；投递全部有限任务；停止该批次生产者；释放短期thread句柄；CTaskThreadManager::Instance().WaitForEnd(threadId)；检查共享结果。
+有限批次的调用片段（task为已构造的具体业务任务，调用者处于非GUI线程）：
+
+uint32_t threadId = CTaskThreadManager::Instance().Init();
+std::shared_ptr<CTaskThread> thread = CTaskThreadManager::Instance().GetThreadInterface(threadId);
+if (thread != nullptr)
+{
+    thread->PostTask(task, 1);
+    thread.reset();
+    CTaskThreadManager::Instance().WaitForEnd(threadId);
+}
+
+实际工程必须再补充创建/投递异常的清理与结果检查；不要在失败路径留下已启动线程。
+WaitForEnd等待既有任务自然完成、线程退出，并从管理器移除线程。调用后该threadId不可继续投递，下一批重新Init。
+长期任务不会自然返回时，先通知该任务停止，再WaitForEnd；不能直接等待一个无限循环。
+Uninit(threadId)请求停止当前任务并回收线程，排队任务会被丢弃，不保证执行完毕。任务结果对象的取消/销毁协议必须覆盖这种情况。
+WaitForEnd、Uninit、UninitAll都可能阻塞，只用于受控关闭或非GUI协调阶段；禁止工作线程等待自己，禁止GUI等worker而worker又等待GUI。
+同一threadId的退出仍应由一个生命周期协调方组织。库已对并发WaitForEnd/Uninit的join串行化，管理器在等待期间持有独立shared_ptr，防止重复join和map元素失效。UninitAll只停止调用时快照中的线程，不包括随后新建的线程；不把这些防护当作取消生命周期设计的理由。多个播放器实例只回收各自线程，不使用UninitAll关闭其他实例的线程。
+返回后才能释放Task借用的对象、渲染回调目标、Semaphore和队列。共享所有权不替代退出协议。
+
+七、Semaphore实际语义
+signal()累加计数并通知一个等待者；wait()消费一个计数，先signal后wait也有效。适合任务结果通知和工作到达唤醒。
+wait(timeoutMs)返回是否取得信号。当前实现以steady_clock的固定截止时间循环等待，虚假唤醒不延长总等待预算；实际返回仍受操作系统调度影响。
+wait(uint32_t timeoutMs)接收无符号毫秒数，0表示只检查现有计数；无限等待使用无参wait()，不提供-1特殊值语义。
+event()/eventAll()是无计数通知，分别notify_one/notify_all；早于eventWait的通知不会保留，等待还可能虚假唤醒。不要直接拿它作为跨时序完成保证。业务需要持久条件和正确的同步协议，单纯先检查atomic再eventWait仍可能丢唤醒；完成通知优先signal/wait。
+停止长期等待必须在StopTask里signal。多个消费者不能假设一次signal唤醒全部；按消费者数量通知或使用各自停止通道。
+命名进程信号量使用createProcessSemaphore/openProcessSemaphore/processSignal/processWait/closeProcessSemaphore；不要与本进程signal/wait混用。平台实现、命名规则和退出清理有差异，必须实机验证。当前Windows/Linux分支不代表Apple移动端已经通过构建。
+
+八、LockFreeQueue搭配方式
+当前模板实现为MPSC：多个线程可push，只有一个执行流可pop。不能多个worker共享队列并同时pop；需要多消费者时换用明确支持的模型或由一个消费者分发。
+push(const T&)复制元素，内部会分配内存，可能失败；无锁不代表零分配或绝不阻塞，也不代表无限容量安全。业务设置队列预算和过载策略：拒绝、丢弃过期项或覆盖最新意图，不能无限堆积大图或PCM。
+生产者先完成queue.push(data)，再wake.signal()。顺序颠倒会让消费者被唤醒却看不到工作。
+消费者wait后取数据，使用while(pop(&item))批量处理时仍逐项检查退出。signal计数可能大于批量消费后的队列项数，额外唤醒应允许空队列，不以此判断错误。
+empty()/size()是并发近似统计，不作为资源销毁或严格容量判断依据。pop暂时失败不等于所有生产者已经停止。
+clear内部也会pop，因此不能与其他pop同时执行。init/destroy要求没有并发访问；即便clear允许与push并发，也不应拿它代替业务代次取消，否则可能清掉新请求。
+队列保存裸指针时不会自动解决指向对象的生命周期；优先有明确所有权的数据或shared_ptr。停止顺序：禁止新提交、停止并收敛生产者、通知并收敛消费者、处理剩余数据、销毁队列和唤醒对象。
+
+九、验收与常见错误
+至少覆盖：任务尚未开始就取消；执行中取消；停止时正阻塞；转格式前取消；结果发布后立即换媒体；连续新请求；方向反转；有限批次WaitForEnd；退出时有排队任务；多实例分别关闭。
+统计提交耗时、排队量、取消到退出耗时、完成/取消结果、线程与内存回落；不能只检查程序没有崩溃。
+常见错误：每次按键都排队且松键不取消；StopCurTask被误认为清队列；停止标记直到DoTask结尾才读；用volatile替代atomic；持锁执行慢IO；基类已有默认函数仍大量复制空重写；把WaitForEnd放GUI事件里；对同一threadId多处同时回收。
+所有临时验证代码和日志放src/temp任务子目录，测试退出码与实际结果同时检查。

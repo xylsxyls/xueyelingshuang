@@ -19,12 +19,27 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\IAudioRender.h" />
+    <ClInclude Include="..\src\IVideoRender.h" />
+    <ClInclude Include="..\src\LumaPlayerCore.h" />
     <ClInclude Include="..\src\LumaPlayerCoreAPI.h" />
     <ClInclude Include="..\src\LumaPlayerCoreMacro.h" />
-    <ClInclude Include="..\src\LumaPlayerCore.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreTypes.h" />
+    <ClInclude Include="..\src\MediaClock.h" />
+    <ClInclude Include="..\src\PlayerCommand.h" />
+    <ClInclude Include="..\src\PlayerEngine.h" />
+    <ClInclude Include="..\src\PlayerPreviewTask.h" />
+    <ClInclude Include="..\src\PlayerWorkerTask.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\IAudioRender.cpp" />
+    <ClCompile Include="..\src\IVideoRender.cpp" />
     <ClCompile Include="..\src\LumaPlayerCore.cpp" />
+    <ClCompile Include="..\src\LumaPlayerCoreTypes.cpp" />
+    <ClCompile Include="..\src\MediaClock.cpp" />
+    <ClCompile Include="..\src\PlayerEngine.cpp" />
+    <ClCompile Include="..\src\PlayerPreviewTask.cpp" />
+    <ClCompile Include="..\src\PlayerWorkerTask.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{687B15B7-A6CF-4E4C-9B33-946E184EDC4E}</ProjectGuid>
@@ -185,4 +200,36 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LumaPlayerCoreC.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreCAudioRenderAdapter.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreCContext.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreConfig.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreCVideoRenderAdapter.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreHelper.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreMacroDll.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreMacroLib.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreResult.h" />
+    <ClInclude Include="..\src\PlayerEngineHelper.h" />
+    <ClInclude Include="..\src\PlayerPreviewCancelContext.h" />
+    <ClCompile Include="..\src\LumaPlayerCoreC.cpp" />
+    <ClCompile Include="..\src\LumaPlayerCoreCAudioRenderAdapter.cpp" />
+    <ClCompile Include="..\src\LumaPlayerCoreCContext.cpp" />
+    <ClCompile Include="..\src\LumaPlayerCoreConfig.cpp" />
+    <ClCompile Include="..\src\LumaPlayerCoreCVideoRenderAdapter.cpp" />
+    <ClCompile Include="..\src\LumaPlayerCoreHelper.cpp" />
+    <ClCompile Include="..\src\PlayerCommand.cpp" />
+    <ClCompile Include="..\src\PlayerEngineHelper.cpp" />
+    <ClCompile Include="..\src\PlayerPreviewCancelContext.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\PlayerLoopBuffer.h" />
+    <ClCompile Include="..\src\PlayerLoopBuffer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\PlayerCommandTask.h" />
+    <ClCompile Include="..\src\PlayerCommandTask.cpp" />
+  </ItemGroup>
 </Project>

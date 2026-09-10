@@ -27,6 +27,7 @@
     <ClInclude Include="..\src\FFmpegCppModels.h" />
     <ClInclude Include="..\src\FFmpegCppModels.inl" />
     <ClInclude Include="..\src\FFmpegCppPlaybackReader.h" />
+    <ClInclude Include="..\src\FFmpegCppPlaybackReaderImpl.h" />
     <ClInclude Include="..\src\FFmpegCpp.h" />
   </ItemGroup>
   <ItemGroup>
@@ -143,6 +144,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -165,6 +167,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -188,4 +191,8 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\FFmpegCppAdjacentReader.h" />
+    <ClCompile Include="..\src\FFmpegCppAdjacentReader.cpp" />
+  </ItemGroup>
 </Project>

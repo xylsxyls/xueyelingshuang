@@ -46,12 +46,14 @@ void Semaphore::wait()
 	--m_count;
 }
 
-bool Semaphore::wait(int32_t timeout)
+bool Semaphore::wait(uint32_t timeout)
 {
 	std::unique_lock<std::mutex> lock(m_mtx);
+	// 固定截止时间；虚假唤醒不能让总等待时间不断延长。
+	const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout);
 	while (m_count == 0)
 	{
-		if (m_cv.wait_for(lock, std::chrono::milliseconds(timeout)) == std::cv_status::timeout)
+		if (m_cv.wait_until(lock, deadline) == std::cv_status::timeout && m_count == 0)
 		{
 			return false;
 		}

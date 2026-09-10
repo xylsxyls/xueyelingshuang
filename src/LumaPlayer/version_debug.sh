@@ -1,1 +1,2 @@
-"$CLOUD_REBUILD" LumaPlayerCore 32 dll debug same
+"$CLOUD_REBUILD" LumaPlayerCore 64 dll debug same
+"$CLOUD_REBUILD" CDump 64 dll debug same

@@ -1,0 +1,81 @@
+﻿流光播放器（LumaPlayer）开发文档
+更新日期：2026-09-10
+配套《需求文档.txt》是产品行为契约。本文件描述当前实现、接手步骤和易错点；构建通过、自动测试与人工验收分别记录，不能互相替代。
+
+一、入口与源码导航
+common/AI文档中的工程开发规范、AI代码开发规范、仓库使用说明文档、线程开发规范为通用约束。所有路径相对仓库根目录。
+src/LumaPlayer/LumaPlayer：main注册CDump、初始化Config和日志、运行Qt；Config集中界面/音频参数；LumaPlayer负责窗口、事件及绘制；Helper提供时间、裁剪、绘图辅助；CoreBridge通过纯C ABI调用Core；VideoRender缓存QImage；AudioRender/AudioTask独立管理声卡队列；Logger仅供应用业务日志。
+src/LumaPlayerCore/LumaPlayerCore/src：LumaPlayerCore为C++外观；CoreAPI通过LUMAPLAYERCORE_USE_C_API选择CoreC纯C声明，CoreC.cpp薄转发；CContext和C音视频Adapter保存句柄及回调；CoreConfig为初始化参数；CoreResult为结果枚举和中文const map；Types定义公共模型；CoreHelper承接C边界检查。
+PlayerEngine协调命令、时钟、AB和生命周期；PlayerCommand/CommandTask是单条控制意图和同步完成对象；WorkerTask调度播放；PreviewTask是常驻最新位置预览；PreviewCancelContext检查代次与退出；LoopBuffer及其任务提前准备下一轮有限缓存；MediaClock用steady_clock映射媒体时间；IAudioRender/IVideoRender为借用输出契约。
+src/FFmpegCpp/FFmpegCpp/src：PlaybackReader完成解复用、解码、BGRA/PCM转换；AdjacentReader缓存相邻展示帧。业务不包含原生FFmpeg头。src/LumaPlayerTest/LumaPlayerTest为正式测试入口；src/LoopPlayer只作迁移行为对照。
+依赖方向：Qt/移动原生UI -> Core公开接口 -> Engine/二次开发库 -> 第三方。Core无Qt。桌面目前自绘控件，不能声称已经全面接入QtControls/DialogManager；新项目复用方式见工程规范。
+
+二、配置、接口和所有权
+统一入口LumaPlayerCoreAPI.h，默认包含C++声明；调用方在首次包含前定义LUMAPLAYERCORE_USE_C_API选择纯C声明LumaPlayerCoreC.h，不能间接带STL。不再提供LumaPlayerCoreCAPI.h。DLL导入库和静态库都按原有规则命名LumaPlayerCore.lib/LumaPlayerCored.lib，依赖组合串行准备。桌面走C ABI隔离Qt MD与Core运行库边界，测试覆盖两种入口。C句柄由create创建、destroy释放，回调userdata属于调用方。
+先创建输出适配器，注入回调，再init。C配置用lumaPlayerCoreDefaultConfig后修改，传InitWithConfig；C++用LumaPlayerCoreConfig传init。配置校验并复制，运行期不替换，uninit后可重新init。结构布局改变时应用和库一起重编。
+Core借用输出接口，不负责delete。帧指针只在回调期间有效，长期持有必须复制；关闭须在任务和回调退出后释放输出对象。回调只提交异步意图，不能同步调用Core等待自身执行，更不能在回调里destroy自身。
+0成功，其余为具体错误/取消，C通过ResultDescription获取统一UTF-8中文说明。异步提交成功不等于执行成功，后续读取snapshot.m_result及状态。禁止旧请求取消覆盖新请求成功。
+
+C接口与配置本次调整（2026-09-10）
+内部LumaPlayerCoreCContext持有独立Core及两个Adapter，对外仅LumaPlayerCoreHandle。Helper异常包装、Adapter回调锁和借用生命周期保持原协议；未引入智能指针改造。
+C++及C配置新增m_defaultFrameDuration100ns（默认400000，25fps兜底）、m_defaultRatePermille（默认1000表示1.0倍率）、m_minRatePermille（默认100）、m_maxRatePermille（默认3000）。帧时长和最低倍率必须为正，最高不低于最低，默认倍率在范围内。初始化复制配置，成功打开/重开媒体使用该默认倍率，倍速设置按实例范围裁剪；真实帧时间优先于兜底。默认倍率不改变固定1000的倍率基准。配置结构布局已变，C与C++调用方全部重编，不能混用旧二进制。
+Constants类已删除；固定100ns单位换算在使用cpp内定义局部宏，FFmpeg播放/相邻帧路径同样处理。
+
+三、线程、锁和退出
+所有自行管理线程走CTaskThreadManager。控制命令各为PlayerCommandTask，在同一控制线程串行执行；PlayerWorkerTask为低优先级可中断播放任务。控制到达停止当前播放调度，执行完成按最新状态恢复播放任务，不用ReExecute/Clone重做旧业务。
+拖动预览使用独立常驻PreviewTask，只覆盖最新待处理位置和serial，不为每次移动排一个长任务。AB用独立可取消命令，UI限制在途重复，StopTask置atomic退出；入口、解码过程、转换前后和发布前检查。
+同一FFmpeg上下文不能并发使用。播放视频、播放音频、预览和循环准备各有读取器；预览reader锁也覆盖最终发布，关闭先等进入的预览回调结束再清空画面，避免旧帧在关闭后写回。共享快照与输出指针用状态锁，锁内不等待工作线程。
+停止是协作式，已进入底层调用不能保证瞬间退出。退出先禁止新提交，增加代次并唤醒任务，再等loop/preview/control结束，关闭读取器与输出，最后停止音频服务和日志。生命周期操作由宿主统一串行，不在渲染回调中执行。
+同步控制不能在工作/预览回调内重入；这会导致自身等待或在帧发布期间递归关闭读取器。现实现返回StateError；异步提交用于回调意图。
+
+四、帧、AB与缓存不变量
+时间统一100ns，10000为1ms，10000000为1s。MediaClock用千分倍率表示速度。展示帧按时间戳排序，不能将解码包顺序或平均FPS当作逐帧身份。
+压缩帧依赖参考帧：向右一展示帧有时需从前一关键帧解码多帧；B帧还可能延迟输出。AdjacentReader最多保存16个原始展示帧，像素估算目标64MiB且至少3帧，实际内存还含参考帧/对齐。右移复用解码进度，左移先查缓存，不足再定位解码；只转换选中帧。
+AB为[A帧起点,B帧结束)，B帧完整播放；下一展示帧PTS确定当前帧结束，末帧用有效结束信息。B显示标签可减最后一个毫秒，但逻辑范围不能减。音频按采样裁剪，循环不能提前几帧或短路成普通seek。
+LoopBuffer提前准备下一轮有限起始数据，端点/媒体变化时使旧缓存失效；首帧准备好后再启动时钟，不能先走时钟导致跳过A。缓存不足回退正常读取，不能改变AB语义。
+AB移动先Pause，读取候选相邻帧、校验边界和取消，再提交点、播放位置与画面。播放读取器和待播帧同时重定位，松键不自动Play。GUI清除之前拖动的临时进度，切端点依据新的点进行编辑。
+默认预览解码预算8192帧，视频解码器最多4线程、音频1线程；控制等待任务上限4096，过载返回CommandQueueFailed。资源上限不能改变帧身份。
+普通预览EOF必须向解码器发送空包并接收剩余帧，不能直接结束demux循环。若耗尽预览帧数预算仍未到目标，返回失败，不能输出关键帧附近旧画面冒充目标。临时AVFrame由独占所有权清理，异常也不能泄漏。
+seek除flush codec外，还需清空SwrContext滤波延迟和待播PCM；否则上一位置音频进入新位置。seek失败必须离开Seeking并保持可响应状态，清掉可能失配的待播帧。
+
+五、Qt与设备线程
+GUI16ms轮询状态，但只在帧、状态或动画变化时重绘，暂停空闲不重复刷整幅画面；不能在鼠标回调解码。鼠标移动事件button()通常为NoButton，不能按button()==LeftButton过滤；拖动状态与buttons()才用于判断按住的键。双击取消待执行单击计时器；进度拖动和画面平移分开；AB悬停只更新hover，按键才暂停编辑。菜单/文件对话框有嵌套事件循环，必须防重入并锁定悬浮条。
+VideoRender在回调内复制BGRA为QImage缓存，窗口在GUI线程绘制。读缓存用串号避免不必要复制；关闭/换媒体必须清空GUI持有的旧缓存。全屏只改显示布局，不重建播放器。
+AudioTask在线程内创建QEventLoop、QAudioOutput并处理事件，约每5ms服务队列，关闭也在同一线程。Core只入队PCM和暂停/flush等标记，GUI不直接操作音频设备，避免声卡调用拖住拖动事件。deviceGeneration隔离换媒体前后的设备错误，queueGeneration防止写入完成后删掉新队列头。设备打开、reset后start、write失败应上报，不能静默积压PCM。
+默认队列上限3秒；大小计算和采样对齐须检查。QAudioDeviceInfo的nearestFormat不能仅改格式声明却继续写原始PCM，否则采样率/声道错配。媒体时钟倍速不能独自替代音频变速；音频与画面实际同步需要设备实测。
+
+六、日志与CDump
+main先CDump::declareDumpFile，再Config、常开应用日志、Qt和Core。debug只作为诊断标记，Bridge始终打开Core日志。Logger为应用入口；Core业务可用LogManager，Engine及FFmpegCpp等二次开发库不引入日志器。
+应用与Core统一使用fileId=0，按20MiB、8个文件滚动，避免同秒创建两个ID却写入同名日志导致独立轮转冲突。当前archiveOldLog=false会清理上次同进程名旧日志，需要排查时先保存日志再重启。CDump转储及文本默认EXE目录，记录注册结果。
+故障现场保留原媒体、操作顺序、EXE/DLL/PDB、日志和dump。2026-09-10旧事件为FFmpegCpp.dll访问异常，RVA0x1f7784；用旧包符号解析为ff_h264_decode_mb_cabac+0x6f4。没有当次dump，不能确认具体根因，也不能将本轮修复视为已证明解决该崩溃。
+
+七、构建命令与切换顺序
+Windows：VS2013/MSBuild12，Qt5.5.1的msvc2013_64；PowerShell显式调用Git bin/sh.exe。XUEYELINGSHUANG带尾部反斜杠，CLOUD_REBUILD指向仓库工具；QTDIR指向Qt实际安装目录。
+桌面Debug：先sh src/LumaPlayer/version_debug.sh，再MSBuild src/LumaPlayer/LumaPlayer.sln /p:Configuration=Debug /p:Platform=x64 /m。
+桌面Release：先sh src/LumaPlayer/version_release.sh，再MSBuild同一sln /p:Configuration=Release /p:Platform=x64 /m。version准备Core、CTaskThreadManager、Semaphore和CDump的64位DLL，传递依赖由before准备。
+正式Test为STATIC_LIB：CloudRebuild LumaPlayerCore 64 lib debug same后构建LumaPlayerTest.sln Debug x64；Release对应64 lib release same和Release x64。不要混用桌面DLL版Macro与静态测试配置。测试完成重新运行桌面version恢复DLL依赖，再编应用。
+库自身version仍各一行32 dll，应用64位需求不改库默认入口。已有rebuild_*.py不编辑；新增源同步DLL/LIB两套vcxproj及filters，构建同步include。详见仓库使用说明。
+
+八、测试和脚本使用
+正式入口lib/LumaPlayerTestd.exe或LumaPlayerTest.exe，参数1是素材绝对路径；切镜合成素材参数2为scene，真实素材不传scene。例：在src/temp/本轮任务目录执行“仓库/lib/LumaPlayerTest.exe 素材绝对路径 scene”。程序在当前目录写LumaPlayerTestReport.txt，退出0且failed=0才通过，避免不同测试覆盖同一报告。
+现有12组包括帧尺寸/PCM倍速/时钟极值、同步重入与EOF预算，另有循环首帧（正常/极小缓存）、密集拖动、AB逐帧及恢复播放、配置、C++生命周期、重复init、C生命周期、C媒体及综合媒体控制。增加测试须验证独立行为，不能仅复制实现判断。
+src/temp/LumaPlayerTaskFix/fixture.py可生成scene.avi（64×64、25fps、4秒、1秒红蓝切镜、48k音频），使用前读脚本确认输出路径。真实素材历史使用D:/Backup/Downloads/VID_20260907122740620.mp4，其他环境传自己的路径，不把本机文件当仓库必备。
+本轮Qt事件回归源码在src/temp/LumaPlayerFullReview/GuiKeys.cpp，构建参考同目录build-gui-release.cmd及gui-release.rsp；应重新编译当前应用源码，不能直接运行旧EXE给新版本背书。它验证AB编辑后点击底部播放及持续播放。TaskFix/ABPauseFix目录另有拖动、短按长按和切点回归源码。
+本轮CDump独立测试在src/temp/LumaPlayerFullReview/DumpProbe.cpp，同目录validate-dump.py检查产物。旧DumpFix/validate-dump.py还会生成发布脚本，不得当作纯只读验证运行。受控异常只在独立子进程执行，检查MDMP与主/工作线程日志，不在正式应用制造崩溃。
+纯C头编译参考TaskFix/CHeaderCheck.c；所有临时cl输出显式/Fo /Fd /Fe和PDB路径到本轮任务目录。离屏Qt用QT_QPA_PLATFORM=offscreen，PATH含本次lib和Qt/bin，QT_PLUGIN_PATH为Qt/plugins。
+上述temp脚本是历史验证资料，含机器路径和输出位置，运行前阅读并为本轮独立保存输出。edit.py、boundary.py、commit-frame.py、docs.py等是一次性修改脚本，不能重新运行。package-final.py会发布文件，不是只读检查；改源码、验证成功后才执行与当前产物匹配的发布逻辑。
+
+九、验收和交付证据
+当前改造记录在src/temp/LumaPlayerCInterfaceConfig，审查与验证报告.txt汇总本轮结果；before保存本轮修改前文件，source-review.diff记录差异。历史FullReview目录本轮开始时已不存在，不作为当前验证依据。
+Debug/Release正式Test分别运行合成AVI和真实MP4，每份12组、0失败；新增配置默认值/校验/复制、C/C++一致性、多实例隔离、非默认倍率和自定义范围及PCM长度检查。报告位于debug-scene、debug-real、release-scene、release-real子目录。
+两配置完整DLL依赖与桌面构建通过；纯C /TC统一API入口、默认C++入口DLL调用通过，探针在probes-debug/probes-release。Qt实际Bridge/渲染器和窗口两素材回归在qt-debug/qt-release，覆盖配置、帧缓存、AB暂停及恢复播放。原生Windows最终包无参/debug两种启动正常退出，日志和CDump注册验证见native-smoke.json及native-*-logs。
+应用version统一64 dll same；先前librely把直接依赖变成MT静态库造成Qt MD链接失败，已修正并重新验证。最终include/lib保持Release DLL组合。
+正式common/LumaPlayer包含本次Release EXE、自有依赖DLL和匹配PDB，并附Qt运行库/插件及VC120运行库；published-files.json记录全部发布哈希，package-core-identities.json记录自有PE/PDB GUID/Age。
+仍未验收其他四端实机、真实声卡听感和音画同步、长GOP/VFR/损坏媒体专项矩阵及数小时压力。Qt探针不是完整鼠标交互验收；不能声称消除所有bug或解决无原始dump的历史崩溃。原C++公开头的atomic成员C4251仍在独立C++探针出现，Qt最终构建无警告。
+
+十、历史实现补充及复跑注意（旧脚本仅供定位，存在性需核对）
+时间戳与帧结束使用饱和加法，音频切片通过商余数计算采样偏移，避免时长乘采样率溢出；A端向上取整、B端向下取整，避免输出区间外采样。open/seek等命令异常必须退出Opening/Seeking，暂停时钟、记录Error并完成同步等待；临时预览reader用独占所有权，初始化异常也能释放。
+VS2013中class static const整数传给std::min/max的const引用可能触发ODR符号问题；只需值时用值表达式，不要靠静态库偶然链接成功证明DLL可链接。正式Test的Debug静态库使用/MDd，Release静态库使用/MT；Qt应用使用/MDd或/MD的对应DLL组合。
+version/CloudRebuild外层返回0不保证每个依赖成功，必须检查完整构建日志、目标更新时间和依赖。此次CStringManager曾遇到VS2013内部编译错误，单独Rebuild后0警告0错误；以final-cstring-retry.log为最终记录。
+本轮build-final-probes.cmd编译ResourceProbe、DumpProbe及CHeaderCheck，需VS2013 x64、当前Release DLL头及lib搜索路径。ResourceProbe.exe接素材绝对路径；CHeaderCheck.exe无参数。DumpProbe无参数测试主线程，任意参数测试工作线程，间隔超过1秒避免同名转储；预期异常退出，随后运行validate-dump.py。
+logging_smoke.py参数Debug或Release，验证真实Windows平台窗口的启动和正常关闭；不能用offscreen平台验证EnumWindows/WM_CLOSE。GuiKeys使用offscreen平台，build-gui-release.cmd依赖本次正式应用对象文件；更换构建环境需修改rsp路径。所有结果写本轮目录，运行前保存旧结果。

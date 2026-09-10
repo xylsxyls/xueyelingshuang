@@ -1,4 +1,4 @@
-﻿#设置CMAKE最低版本
+#设置CMAKE最低版本
 CMAKE_MINIMUM_REQUIRED(VERSION 3.10.1)
 SET(CMAKE_CXX_STANDARD 11)
 
@@ -16,7 +16,7 @@ SET(CMAKE_BUILD_TYPE "Debug")
 elseif(${DEBUGRELEASE} STREQUAL "release")
 #设置项目名称
 SET(PROJECT_NAME LumaPlayer)
-SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
+SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O2 -g")
 SET(CMAKE_BUILD_TYPE "Release")
 endif()
 
@@ -68,7 +68,7 @@ SET(Qt5_DIR "${QT5_GCC}/lib/cmake/Qt5")
 INCLUDE_DIRECTORIES("${QT5_GCC}/include/")
 
 #添加Qt依赖库
-SET(QTRELY Widgets;Core;Gui;Qml;Quick)
+SET(QTRELY Widgets;Core;Gui;Multimedia;Qml;Quick)
 
 list(APPEND QTRELYLIST ${QTRELY})
 foreach (EVERYQTRELY ${QTRELYLIST})

@@ -12,10 +12,19 @@
 #include <unistd.h>
 #include <array>
 #include <cstring>
+#include <map>
+#include <vector>
+#include <sstream>
+#include <memory>
 #endif
 
 static bool g_init = false;
 
+/** 获取路径的文件名、扩展名、主名或目录
+@param [in] path 文件路径
+@param [in] flag 1文件名，2扩展名，3主名，4目录
+@return 对应路径部分，未知flag返回空
+*/
 static std::string GetName(const std::string& path, int32_t flag)
 {
 	int32_t left = (int32_t)path.find_last_of("/\\");
@@ -44,26 +53,46 @@ static std::string GetName(const std::string& path, int32_t flag)
 	}
 }
 
+/** 获取当前可执行文件目录，失败返回空字符串 */
 static std::string GetCurrentExePath()
 {
 	char szFilePath[1024] = {};
 #ifdef _WIN32
-	::GetModuleFileNameA(NULL, szFilePath, 1024);
+	const DWORD length = ::GetModuleFileNameA(NULL, szFilePath, sizeof(szFilePath) - 1);
+	if (length == 0 || length >= sizeof(szFilePath) - 1)
+	{
+		return std::string();
+	}
 #elif __unix__
-	int ignore __attribute__((unused)) = ::readlink("/proc/self/exe", szFilePath, 1024);
+	const ssize_t length = ::readlink("/proc/self/exe", szFilePath, sizeof(szFilePath) - 1);
+	if (length <= 0 || static_cast<size_t>(length) >= sizeof(szFilePath) - 1)
+	{
+		return std::string();
+	}
 #endif
 	return GetName(szFilePath, 4);
 }
 
+/** 获取当前可执行文件名称，失败或平台未支持时返回空字符串 */
 static std::string GetCurrentExeName()
 {
 	char szFilePath[1024] = {};
 #ifdef _WIN32
-	::GetModuleFileNameA(NULL, szFilePath, 1024);
+	const DWORD length = ::GetModuleFileNameA(NULL, szFilePath, sizeof(szFilePath) - 1);
+	if (length == 0 || length >= sizeof(szFilePath) - 1)
+	{
+		return std::string();
+	}
 	return GetName(szFilePath, 3);
 #elif __unix__
-	int ignore __attribute__((unused)) = ::readlink("/proc/self/exe", szFilePath, 1024);
+	const ssize_t length = ::readlink("/proc/self/exe", szFilePath, sizeof(szFilePath) - 1);
+	if (length <= 0 || static_cast<size_t>(length) >= sizeof(szFilePath) - 1)
+	{
+		return std::string();
+	}
 	return GetName(szFilePath, 1);
+#else
+	return std::string();
 #endif
 }
 
@@ -393,17 +422,31 @@ bool CDump::declareDumpFile(const std::string& dumpFileDir)
 		return false;
 	}
 #ifdef _MSC_VER
-	WIN32DUMP::CMiniDumper::Enable(GetCurrentExeName().c_str(), false, (dumpFileDir.empty() ? GetCurrentExePath().c_str() : dumpFileDir.c_str()));
+	const std::string name = GetCurrentExeName();
+	const std::string directory = dumpFileDir.empty() ? GetCurrentExePath() : dumpFileDir;
+	if (name.empty() || directory.empty())
+	{
+		return false;
+	}
+	WIN32DUMP::CMiniDumper::Enable(name.c_str(), false, directory.c_str());
 #elif __unix__
 	//在进入signal回调函数时，有些系统会自动清空容器全局变量
-	::memcpy(s_dumpFileDir, dumpFileDir.c_str(), dumpFileDir.size());
 	std::string currentExeName = GetCurrentExeName();
-	::memcpy(s_currentExeName, currentExeName.c_str(), currentExeName.size());
 	std::string currentExePath = GetCurrentExePath();
-	::memcpy(s_currentExePath, currentExePath.c_str(), currentExePath.size());
+	if (dumpFileDir.size() >= sizeof(s_dumpFileDir) || currentExeName.empty() ||
+		currentExeName.size() >= sizeof(s_currentExeName) || currentExePath.empty() ||
+		currentExePath.size() >= sizeof(s_currentExePath))
+	{
+		return false;
+	}
+	::memcpy(s_dumpFileDir, dumpFileDir.c_str(), dumpFileDir.size() + 1);
+	::memcpy(s_currentExeName, currentExeName.c_str(), currentExeName.size() + 1);
+	::memcpy(s_currentExePath, currentExePath.c_str(), currentExePath.size() + 1);
 
 	signal(SIGSEGV, DumpFun);
 	signal(SIGABRT, DumpFun);
+#else
+	return false;
 #endif
 	g_init = true;
 	return true;
