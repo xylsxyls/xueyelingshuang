@@ -2,6 +2,7 @@
 #define EXPRESSIONCONFIGPARSER_H
 
 #include "ExpressionConfig.h"
+#include "ExpressionLoadResult.h"
 
 /** 表情配置解析器，隐藏emotion.xml路径规则和XML流式解析细节。
 */
@@ -23,6 +24,13 @@ public:
     @return 返回true表示解析成功
     */
     bool parse(const QString& emotionRootPath, ExpressionConfig* config);
+
+    /** 解析配置并直接返回明确错误码
+    @param [in] emotionRootPath 表情资源根目录
+    @param [out] config 输出配置，不能为空
+    @return 返回解析错误码，动态诊断可通过lastError读取
+    */
+    ExpressionLoadResult parseResult(const QString& emotionRootPath, ExpressionConfig* config);
 
     /** 获取最近一次失败原因。
     @return 返回错误文本

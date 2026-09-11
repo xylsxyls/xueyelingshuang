@@ -176,11 +176,6 @@ LumaPlayerCoreResult PlayerLoopBuffer::prepareVideo()
         {
             continue;
         }
-        if (frame.m_timestamp100ns >= m_end100ns)
-        {
-            m_videoComplete = true;
-            break;
-        }
         m_cachedBytes += static_cast<int64_t>(frame.m_bgraPixels.size());
         m_videoComplete = frame.endTime100ns() >= m_end100ns;
         m_videoFrames.push_back(std::move(frame));
@@ -246,11 +241,6 @@ LumaPlayerCoreResult PlayerLoopBuffer::prepareAudio()
         if (frame.endTime100ns() <= m_start100ns)
         {
             continue;
-        }
-        if (frame.m_timestamp100ns >= m_end100ns)
-        {
-            m_audioComplete = true;
-            break;
         }
         m_cachedBytes += static_cast<int64_t>(frame.m_pcmData.size());
         m_audioComplete = frame.endTime100ns() >= m_end100ns;

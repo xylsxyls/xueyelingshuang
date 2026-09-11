@@ -25,7 +25,7 @@ void PlayerWorkerTask::DoTask()
 	}
 	if (m_engine != nullptr)
 	{
-		m_engine->workerLoop(this);
+        m_engine->workerLoop(this, &m_exit);
 	}
 }
 
@@ -51,9 +51,4 @@ bool PlayerWorkerTask::wait(int32_t timeoutMs)
 		return true;
 	}
 	return m_wakeup.wait(timeoutMs);
-}
-
-bool PlayerWorkerTask::isExitRequested() const
-{
-	return m_exit;
 }

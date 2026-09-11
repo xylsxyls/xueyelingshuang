@@ -4,6 +4,7 @@
 #include <QDialog>
 #include "CExpressionPicker.h"
 #include "DialogManagerMacro.h"
+#include "QtControls/ExpressionLoadResult.h"
 
 class QEvent;
 
@@ -77,6 +78,13 @@ public :
     @return 返回true表示加载成功
     */
     bool loadExpressions(const QString& emotionPath);
+
+    /** 加载表情并返回错误码，调用方负责显示或记录诊断
+    @param [in] emotionPath Emotions文件夹所在目录
+    @param [out] detail 可空，接收本次解析动态详情
+    @return 返回加载结果，中文原因见kExpressionLoadResultDescriptions
+    */
+    ExpressionLoadResult loadExpressionsResult(const QString& emotionPath, QString* detail = nullptr);
 };
 
 #endif // CEXPRESSIONDIALOG_H

@@ -3,11 +3,15 @@
 #endif
 #include "LumaPlayer.h"
 #include "Config.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include "LumaPlayerHelper.h"
+#include "LumaPlayerHelpView.h"
+#include "DialogManager/DialogManagerAPI.h"
 
-#include "LumaPlayerLogger.h"
+#include "LogManager/LogManagerAPI.h"
 
 #include <QAction>
+#include <QCloseEvent>
 #include <QApplication>
 #include <QCursor>
 #include <QDesktopWidget>
@@ -25,23 +29,30 @@
 #include <cmath>
 #include <stdint.h>
 
-#ifdef min
-#undef min
-#endif
-#ifdef max
-#undef max
-#endif
-
 LumaPlayer::LumaPlayer(bool debugEnabled, QWidget* parent) :
 QWidget(parent),
 m_audioRender(),
 m_videoRender(),
 m_core(&m_audioRender, &m_videoRender),
+m_logic(&m_core),
+m_pinned(false),
+m_resetEnabled(false),
+m_closeReady(false),
+m_closeRequested(false),
+m_viewportGeneration(0),
+m_viewRevision(0),
+m_nextInputSerial(0),
+m_lastSeekInput(0),
+m_lastMoveInput(0),
+m_mediaGeneration(0),
 m_lastCenterTipVisible(false),
 m_lastZoomTipVisible(false),
 m_snapshot(),
 m_scaledFrameSourceKey(0),
 m_cachedFrameSerial(0),
+m_cachedFrameStart(0),
+m_cachedFrameEnd(0),
+m_leftPressed(false),
 m_hasMedia(false),
 m_pendingMediaLoad(false),
 m_pendingMediaSerial(0),
@@ -73,7 +84,8 @@ m_lastPreviewRequestMs(0),
 m_lastPreviewRequestPosition100ns(-1),
 m_progressMenuActive(false),
 m_fileDialogActive(false),
-m_wasMaximizedBeforeFullScreen(false),
+m_maximizedOutsideFullScreen(false),
+m_windowStateSerial(0),
 m_hoverArea(HitNone),
 m_pressArea(HitNone),
 m_hoverLoopPoint(-1),
@@ -81,10 +93,8 @@ m_lastActiveLoopPoint(-1),
 m_loopMoveKey(0),
 m_loopMoveRepeating(false),
 m_pendingLoopMovePoint(-1),
-m_pendingLoopMoveReference100ns(0),
-m_pendingLoopMoveDeadlineMs(0),
 m_cancelClickToggle(false),
-m_normalGeometryBeforeFullScreen()
+m_normalWindowGeometry()
 {
 	init(debugEnabled);
 }
@@ -93,39 +103,37 @@ LumaPlayer::~LumaPlayer()
 {
 	m_uiTimer.stop();
 	m_clickTimer.stop();
-	m_core.uninit();
-	m_audioRender.uninit();
-	LumaPlayerLogger::log("LumaPlayer destroyed");
+    LOGINFO("LumaPlayer destroyed");
 }
 
 void LumaPlayer::init(bool debugEnabled)
 {
-	LumaPlayerLogger::init(debugEnabled);
-	LumaPlayerLogger::log("LumaPlayer init begin, debug=%d", debugEnabled ? 1 : 0);
-	setWindowTitle(LumaPlayerHelper::qcn(L"流光播放器"));
+    LOGINFO("LumaPlayer init begin, debug=%d", debugEnabled ? 1 : 0);
+    setWindowTitle(g_config.m_windowTitle);
 	setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
 	setAttribute(Qt::WA_NoSystemBackground, true);
 	setMouseTracking(true);
 	setFocusPolicy(Qt::StrongFocus);
 	setMinimumSize(g_config.m_minWindowWidth, g_config.m_minWindowHeight);
-	setFont(QFont(LumaPlayerHelper::qcn(L"楷体"), 10));
+    setFont(QFont(g_config.m_fontFamily, g_config.m_fontSize));
 
 	m_elapsedTimer.start();
 	m_lastMouseMoveMs = m_elapsedTimer.elapsed();
-	int32_t initResult = m_core.init(debugEnabled);
-	if (initResult != LumaPlayerCoreCResultSuccess)
-	{
-		LumaPlayerLogger::log("Core初始化失败，result=%d，%s", initResult, lumaPlayerCoreResultDescription(initResult));
-	}
-	m_snapshot = m_core.snapshot();
+    QObject::connect(&m_logic, &LumaPlayerLogicController::resultReady,
+        this, &LumaPlayer::onLogicResult, Qt::QueuedConnection);
+    if (!m_logic.init())
+    {
+        LOGERROR("Logic initialization submission failed");
+        m_closeReady = true;
+    }
 	fitInitialWindowToDesktop();
 
 	m_clickTimer.setSingleShot(true);
 	connect(&m_clickTimer, SIGNAL(timeout()), this, SLOT(onVideoClick()));
 	connect(&m_uiTimer, SIGNAL(timeout()), this, SLOT(onUiTimer()));
-	m_uiTimer.start(16);
-	LumaPlayerLogger::log("LumaPlayer init end");
+    m_uiTimer.start(g_config.m_uiRefreshMs);
+    LOGINFO("LumaPlayer init end");
 }
 
 void LumaPlayer::paintEvent(QPaintEvent* event)
@@ -135,9 +143,12 @@ void LumaPlayer::paintEvent(QPaintEvent* event)
 	painter.setRenderHint(QPainter::Antialiasing, true);
 	// 图形抗锯齿不处理图像采样，视频缩放需单独启用平滑变换
 	painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
-	painter.fillRect(rect(), QColor(0, 0, 0));
+    painter.fillRect(rect(), g_config.m_videoBackgroundColor);
+    painter.save();
+    painter.setClipRect(videoViewportRect());
 	paintVideo(painter);
 	paintCenterPlayTip(painter);
+    painter.restore();
 	paintTopOverlay(painter);
 	paintBottomOverlay(painter);
 	paintZoomTip(painter);
@@ -145,6 +156,10 @@ void LumaPlayer::paintEvent(QPaintEvent* event)
 
 void LumaPlayer::resizeEvent(QResizeEvent* event)
 {
+    LumaPlayerLogicAction viewport;
+    viewport.m_type = LumaActionViewport;
+    viewport.m_viewportGeneration = ++m_viewportGeneration;
+    m_logic.submit(viewport);
 	QWidget::resizeEvent(event);
 	updateLoopMarkerHover(m_lastMousePos);
 }
@@ -188,21 +203,42 @@ void LumaPlayer::mouseMoveEvent(QMouseEvent* event)
 		m_clickTimer.stop();
 		QPoint pressLocalPos = mapFromGlobal(m_pressGlobalPos);
 		QPoint delta = event->pos() - pressLocalPos;
-		m_panOffset = m_pressPanOffset + QPointF(delta);
+        LumaPlayerLogicAction pan;
+        pan.m_type = LumaActionPan;
+        pan.m_position = m_pressPanOffset + QPointF(delta);
+        pan.m_viewportGeneration = m_viewportGeneration;
+        m_logic.submit(pan);
 		m_cancelClickToggle = true;
 		update();
 		return;
 	}
 	m_hoverArea = hitTest(event->pos());
 	updateLoopMarkerHover(event->pos());
-	if (m_hoverArea == HitLoadButton)
-	{
-		QToolTip::showText(mapToGlobal(loadButtonRect().bottomLeft()), LumaPlayerHelper::qcn(L"加载视频"), this);
-	}
-	else
-	{
-		QToolTip::hideText();
-	}
+    QString tooltip;
+    if (m_hoverArea == HitLoadButton)
+    {
+        tooltip = g_config.m_loadText;
+    }
+    else if (m_hoverArea == HitResetButton)
+    {
+        tooltip = g_config.m_resetText;
+    }
+    else if (m_hoverArea == HitPinButton)
+    {
+        tooltip = m_pinned ? g_config.m_unpinText : g_config.m_pinText;
+    }
+    else if (m_hoverArea == HitHelpButton)
+    {
+        tooltip = g_config.m_helpTooltip;
+    }
+    if (tooltip.isEmpty())
+    {
+        QToolTip::hideText();
+    }
+    else
+    {
+        QToolTip::showText(mapToGlobal(event->pos()), tooltip, this);
+    }
 	updateCursorShape(event->pos());
 	updateOverlayTargets();
 	update();
@@ -210,6 +246,8 @@ void LumaPlayer::mouseMoveEvent(QMouseEvent* event)
 
 void LumaPlayer::mousePressEvent(QMouseEvent* event)
 {
+    m_leftPressed = event->button() == Qt::LeftButton;
+    update();
 	setFocus(Qt::MouseFocusReason);
 	m_mouseInside = true;
 	m_lastMouseMoveMs = m_elapsedTimer.elapsed();
@@ -223,7 +261,7 @@ void LumaPlayer::mousePressEvent(QMouseEvent* event)
 	m_pressGlobalPos = event->globalPos();
 	m_pressWindowGeometry = geometry();
 	m_pressPanOffset = m_panOffset;
-	if (event->button() == Qt::RightButton && progressTrackRect().adjusted(0, -1, 0, 1).contains(event->pos()))
+    if (event->button() == Qt::RightButton && m_hasMedia && m_bottomVisibleHeight > 0 && progressTrackRect().adjusted(0, -g_config.m_trackHitExtra, 0, g_config.m_trackHitExtra).contains(event->pos()))
 	{
 		showProgressMenu(event->pos());
 		return;
@@ -253,12 +291,9 @@ void LumaPlayer::mousePressEvent(QMouseEvent* event)
 		m_lastPreviewRequestMs = 0;
 		m_lastPreviewRequestPosition100ns = -1;
 		m_progressWasPlaying = LumaPlayerHelper::isPlayingState(m_snapshot.m_state);
-		if (m_progressWasPlaying)
-		{
-			m_core.pauseAsync();
-		m_snapshot.m_state = LumaPlayerCoreCStatePaused;
-		}
-		previewByProgressPoint(event->pos());
+        m_lastPreviewRequestMs = m_elapsedTimer.elapsed();
+        m_lastPreviewRequestPosition100ns = m_dragPosition100ns;
+        postAction(LumaActionDragBegin, m_dragPosition100ns);
 		return;
 	}
 	if (m_pressArea == HitVideoArea && m_hasMedia)
@@ -270,6 +305,11 @@ void LumaPlayer::mousePressEvent(QMouseEvent* event)
 
 void LumaPlayer::mouseReleaseEvent(QMouseEvent* event)
 {
+    if (event->button() == Qt::LeftButton)
+    {
+        m_leftPressed = false;
+    }
+    update();
 	m_lastMousePos = event->pos();
 	if (event->button() != Qt::LeftButton)
 	{
@@ -311,24 +351,29 @@ void LumaPlayer::mouseReleaseEvent(QMouseEvent* event)
 	{
 		openFileDialog();
 	}
+    else if (m_pressArea == HitResetButton && releaseArea == HitResetButton && m_resetEnabled)
+    {
+        postAction(LumaActionReset);
+    }
+    else if (m_pressArea == HitPinButton && releaseArea == HitPinButton)
+    {
+        postAction(LumaActionPin);
+    }
+    else if (m_pressArea == HitHelpButton && releaseArea == HitHelpButton)
+    {
+        postAction(LumaActionHelp);
+    }
 	else if (m_pressArea == HitMinButton && releaseArea == HitMinButton)
 	{
-		showMinimized();
+        postAction(LumaActionMinimize);
 	}
-	else if (m_pressArea == HitMaxButton && releaseArea == HitMaxButton)
-	{
-		if (isFullScreen())
-		{
-			toggleFullScreen();
-		}
-		else
-		{
-			toggleMaximize();
-		}
-	}
+    else if (m_pressArea == HitMaxButton && releaseArea == HitMaxButton)
+    {
+        toggleMaximize();
+    }
 	else if (m_pressArea == HitCloseButton && releaseArea == HitCloseButton)
 	{
-		close();
+        postAction(LumaActionShutdown);
 	}
 	else if (m_pressArea == HitPlusButton && releaseArea == HitPlusButton)
 	{
@@ -376,7 +421,7 @@ void LumaPlayer::wheelEvent(QWheelEvent* event)
 	{
 		return;
 	}
-	int step = (QApplication::keyboardModifiers() & Qt::ControlModifier) ? 1 : 5;
+    int step = (QApplication::keyboardModifiers() & Qt::ControlModifier) ? g_config.m_zoomFineStep : g_config.m_zoomStep;
 	int newZoom = m_zoomPercent + (delta > 0 ? step : -step);
 	setZoomPercent(newZoom, event->pos());
 }
@@ -388,20 +433,7 @@ void LumaPlayer::keyPressEvent(QKeyEvent* event)
 	{
 		if (event->key() == Qt::Key_Up || event->key() == Qt::Key_Down)
 		{
-			int64_t rate = m_snapshot.m_ratePermille;
-			if (event->key() == Qt::Key_Up)
-			{
-				rate += 100;
-			}
-			else
-			{
-				rate -= 100;
-			}
-			rate = std::max<int64_t>(g_config.m_coreConfig.m_minRatePermille,
-				std::min<int64_t>(rate, g_config.m_coreConfig.m_maxRatePermille));
-			m_core.setPlaybackRatePermilleAsync(static_cast<int32_t>(rate));
-			m_snapshot.m_ratePermille = static_cast<int32_t>(rate);
-			LumaPlayerLogger::log("Playback rate changed by key, ratePermille=%d", static_cast<int32_t>(rate));
+            postAction(LumaActionRateDelta, event->key() == Qt::Key_Up ? g_config.m_rateStep : -g_config.m_rateStep);
 			event->accept();
 			return;
 		}
@@ -410,7 +442,7 @@ void LumaPlayer::keyPressEvent(QKeyEvent* event)
 	{
         if (m_loopMoveKey != event->key() || (m_pendingLoopMovePoint >= 0 && m_pendingLoopMovePoint != m_hoverLoopPoint))
         {
-            m_core.cancelLoopPointMove();
+            postAction(LumaActionCancelMove);
             m_pendingLoopMovePoint = -1;
             m_loopMoveKey = event->key();
             m_loopMoveRepeating = false;
@@ -426,6 +458,12 @@ void LumaPlayer::keyPressEvent(QKeyEvent* event)
 		event->accept();
 		return;
 	}
+    if (event->key() == Qt::Key_Left || event->key() == Qt::Key_Right)
+    {
+        postAction(LumaActionJump, event->key() == Qt::Key_Left ? -1 : 1);
+        event->accept();
+        return;
+    }
 	if (event->key() == Qt::Key_Space)
 	{
 		if (!event->isAutoRepeat())
@@ -446,7 +484,7 @@ void LumaPlayer::keyReleaseEvent(QKeyEvent* event)
         {
             if (m_loopMoveRepeating)
             {
-                m_core.cancelLoopPointMove();
+                postAction(LumaActionCancelMove);
                 m_pendingLoopMovePoint = -1;
             }
             m_loopMoveKey = 0;
@@ -460,7 +498,9 @@ void LumaPlayer::keyReleaseEvent(QKeyEvent* event)
 
 void LumaPlayer::focusOutEvent(QFocusEvent* event)
 {
-    m_core.cancelLoopPointMove();
+    m_leftPressed = false;
+    QToolTip::hideText();
+    postAction(LumaActionCancelMove);
     m_pendingLoopMovePoint = -1;
     m_loopMoveKey = 0;
     m_loopMoveRepeating = false;
@@ -489,6 +529,7 @@ void LumaPlayer::enterEvent(QEvent* event)
 
 void LumaPlayer::leaveEvent(QEvent* event)
 {
+    QToolTip::hideText();
 	(void)event;
 	m_mouseInside = false;
 	m_lastMouseMoveMs = m_elapsedTimer.elapsed();
@@ -496,60 +537,15 @@ void LumaPlayer::leaveEvent(QEvent* event)
 
 void LumaPlayer::onUiTimer()
 {
+    if (m_dragProgress)
+    {
+        previewByProgressPoint(m_lastMousePos);
+    }
 	const LumaPlayerCoreCSnapshot previous = m_snapshot;
 	const uint64_t previousFrame = m_cachedFrameSerial;
 	const bool previousDragPosition = m_hasDragPosition;
 	const int32_t previousHover = m_hoverLoopPoint;
-	int32_t previousResult = m_snapshot.m_result;
-	m_snapshot = m_core.snapshot();
-	if (m_snapshot.m_result != previousResult && m_snapshot.m_result != LumaPlayerCoreCResultSuccess)
-	{
-		LumaPlayerLogger::log("后台播放操作失败，result=%d，%s", m_snapshot.m_result, lumaPlayerCoreResultDescription(m_snapshot.m_result));
-	}
-	if (m_pendingMediaLoad)
-	{
-		bool isRequestedMedia = m_snapshot.m_mediaSerial != m_pendingMediaSerial;
-		if (m_snapshot.m_state == LumaPlayerCoreCStatePaused && isRequestedMedia)
-		{
-			m_pendingMediaLoad = false;
-			m_hasMedia = m_snapshot.m_hasVideo;
-			if (m_hasMedia)
-			{
-				fitWindowToMedia();
-			}
-			int32_t playResult = m_core.playAsync();
-			if (playResult == LumaPlayerCoreCResultSuccess)
-			{
-				m_snapshot.m_state = LumaPlayerCoreCStatePlaying;
-			}
-			LumaPlayerLogger::log("Load media completed, playPostResult=%d, duration=%lld, size=%dx%d",
-				static_cast<int>(playResult),
-				static_cast<long long>(m_snapshot.m_duration100ns),
-				m_snapshot.m_videoWidth,
-				m_snapshot.m_videoHeight);
-		}
-		else if (m_snapshot.m_state == LumaPlayerCoreCStateError)
-		{
-			m_pendingMediaLoad = false;
-			LumaPlayerLogger::log("异步打开媒体失败，result=%d，%s", m_snapshot.m_result, lumaPlayerCoreResultDescription(m_snapshot.m_result));
-		}
-	}
-	m_hasMedia = LumaPlayerHelper::isOpenedState(m_snapshot.m_state) && m_snapshot.m_hasVideo;
-	updatePendingLoopMove();
-	if (m_hasDragPosition && !m_dragProgress)
-	{
-		int64_t threshold = std::max<int64_t>(m_snapshot.m_defaultVideoFrameDuration100ns, 100000);
-		int64_t diff = m_snapshot.m_position100ns - m_dragPosition100ns;
-		if (diff < 0)
-		{
-			diff = -diff;
-		}
-		if (diff <= threshold || m_snapshot.m_state == LumaPlayerCoreCStatePlaying ||
-			m_snapshot.m_state == LumaPlayerCoreCStateError || m_snapshot.m_state == LumaPlayerCoreCStateClosed)
-		{
-			m_hasDragPosition = false;
-		}
-	}
+    postAction(LumaActionPoll);
 	uint64_t frameSerial = m_videoRender.frameSerial();
 	if (frameSerial != m_cachedFrameSerial)
 	{
@@ -557,6 +553,8 @@ void LumaPlayer::onUiTimer()
 		int64_t frameStart = 0;
 		int64_t frameEnd = 0;
 		m_videoRender.copyFrame(&frame, &frameStart, &frameEnd, &frameSerial);
+        m_cachedFrameStart = frameStart;
+        m_cachedFrameEnd = frameEnd;
 		m_cachedFrame = frame;
 		m_cachedFrameSerial = frameSerial;
 	}
@@ -589,13 +587,13 @@ void LumaPlayer::openFileDialog()
 	}
 	m_fileDialogActive = true;
 	updateOverlayTargets();
-	LumaPlayerLogger::log("Open file dialog begin");
-	QString filePath = QFileDialog::getOpenFileName(this, LumaPlayerHelper::qcn(L"加载视频"), QString(), LumaPlayerHelper::qcn(L"视频文件 (*.mp4 *.avi);;所有文件 (*.*)"));
+    LOGINFO("Open file dialog begin");
+    QString filePath = QFileDialog::getOpenFileName(this, g_config.m_loadText, QString(), g_config.m_videoFileFilter);
 	m_fileDialogActive = false;
 	updateOverlayTargets();
 	if (filePath.isEmpty())
 	{
-		LumaPlayerLogger::log("Open file dialog canceled");
+        LOGINFO("Open file dialog canceled");
 		return;
 	}
 	loadMedia(filePath);
@@ -603,50 +601,21 @@ void LumaPlayer::openFileDialog()
 
 void LumaPlayer::loadMedia(const QString& filePath)
 {
-	QByteArray utf8Path = filePath.toUtf8();
-	if (utf8Path.isEmpty())
-	{
-		return;
-	}
-	m_clickTimer.stop();
-	m_core.cancelLoopPointMove();
-	m_loopMoveKey = 0;
-	m_loopMoveRepeating = false;
-	m_pendingLoopMovePoint = -1;
-	m_hoverLoopPoint = -1;
-	m_lastActiveLoopPoint = -1;
-	m_dragProgress = false;
-	m_dragVideo = false;
-	m_dragWindow = false;
-	m_resizeWindow = false;
-	m_pressArea = HitNone;
-	LumaPlayerLogger::log("Load media command begin: %s", utf8Path.constData());
-	m_core.pauseAsync();
-	m_cachedFrame = QImage();
-	m_scaledFrame = QImage();
-	m_scaledFrameSourceKey = 0;
-	m_cachedFrameSerial = 0;
-	m_panOffset = QPointF(0.0, 0.0);
-	m_zoomPercent = 100;
-	m_baseDisplayScale = 1.0;
-	m_hasMedia = false;
-	m_hasDragPosition = false;
-	m_lastPreviewRequestMs = 0;
-	m_lastPreviewRequestPosition100ns = -1;
-	m_pendingMediaLoad = true;
-	m_pendingMediaSerial = m_snapshot.m_mediaSerial;
-	std::string mediaPathUtf8(utf8Path.constData(), static_cast<size_t>(utf8Path.size()));
-	int32_t result = m_core.openMediaAsync(mediaPathUtf8);
-	if (result != LumaPlayerCoreCResultSuccess)
-	{
-		m_pendingMediaLoad = false;
-		std::string errorText = m_core.lastError();
-		LumaPlayerLogger::log("打开媒体命令提交失败，result=%d，%s", result, lumaPlayerCoreResultDescription(result));
-		return;
-	}
-	m_snapshot.m_state = LumaPlayerCoreCStateOpening;
-	LumaPlayerLogger::log("Load media command posted: %s", utf8Path.constData());
-	update();
+    if (filePath.isEmpty() || m_closeRequested)
+    {
+        return;
+    }
+    m_clickTimer.stop();
+    m_loopMoveKey = 0;
+    m_loopMoveRepeating = false;
+    m_pendingLoopMovePoint = -1;
+    m_dragProgress = false;
+    m_dragVideo = false;
+    m_hasDragPosition = false;
+    LumaPlayerLogicAction action;
+    action.m_type = LumaActionLoad;
+    action.m_path = filePath;
+    m_logic.submit(action);
 }
 
 void LumaPlayer::fitWindowToMedia()
@@ -662,138 +631,192 @@ void LumaPlayer::fitWindowToMedia()
 		return;
 	}
 	QDesktopWidget* desktop = QApplication::desktop();
-	QRect availableRect = desktop != nullptr ? desktop->screenGeometry(this) : QRect(0, 0, 1280, 720);
-	QSize maxSize(std::max(g_config.m_minWindowWidth, availableRect.width() / 2), std::max(g_config.m_minWindowHeight, availableRect.height() / 2));
+    QRect availableRect = desktop != nullptr ? desktop->screenGeometry(this) : QRect(QPoint(0, 0), g_config.m_fallbackDesktopSize);
+    QSize maxSize((std::max)(g_config.m_minWindowWidth, static_cast<int32_t>(availableRect.width() * g_config.m_initialDesktopFraction)), (std::max)(g_config.m_minWindowHeight,
+        static_cast<int32_t>(availableRect.height() * g_config.m_initialDesktopFraction)));
 	double scale = 1.0;
 	if (videoSize.width() > maxSize.width() || videoSize.height() > maxSize.height())
 	{
-		scale = 0.5;
+        scale = g_config.m_largeMediaInitialScale;
 	}
 	if (scale <= 0.0)
 	{
 		scale = 1.0;
 	}
 	m_baseDisplayScale = scale;
-	QSize targetSize(std::max(g_config.m_minWindowWidth, static_cast<int>(videoSize.width() * scale + 0.5)), std::max(g_config.m_minWindowHeight, static_cast<int>(videoSize.height() * scale + 0.5)));
+    QSize targetSize((std::max)(g_config.m_minWindowWidth, static_cast<int>(videoSize.width() * scale + 0.5)), (std::max)(g_config.m_minWindowHeight, static_cast<int>(videoSize.height() * scale + 0.5)));
 	QPoint topLeft(availableRect.left() + (availableRect.width() - targetSize.width()) / 2, availableRect.top() + (availableRect.height() - targetSize.height()) / 2);
 	setGeometry(QRect(topLeft, targetSize));
-	m_panOffset = QPointF(0.0, 0.0);
-	m_zoomPercent = 100;
-	LumaPlayerLogger::log("Window fitted to media, window=%dx%d, scale=%.4f", targetSize.width(), targetSize.height(), m_baseDisplayScale);
+    LOGINFO("Window fitted to media, window=%dx%d, scale=%.4f", targetSize.width(), targetSize.height(), m_baseDisplayScale);
 }
 
 void LumaPlayer::fitInitialWindowToDesktop()
 {
 	QDesktopWidget* desktop = QApplication::desktop();
-	QRect availableRect = desktop != nullptr ? desktop->screenGeometry(this) : QRect(0, 0, 1280, 720);
-	QSize targetSize(std::max(g_config.m_minWindowWidth, availableRect.width() / 2), std::max(g_config.m_minWindowHeight, availableRect.height() / 2));
+    QRect availableRect = desktop != nullptr ? desktop->screenGeometry(this) : QRect(QPoint(0, 0), g_config.m_fallbackDesktopSize);
+    QSize targetSize((std::max)(g_config.m_minWindowWidth, static_cast<int32_t>(availableRect.width() * g_config.m_initialDesktopFraction)), (std::max)(g_config.m_minWindowHeight,
+        static_cast<int32_t>(availableRect.height() * g_config.m_initialDesktopFraction)));
 	QPoint topLeft(availableRect.left() + (availableRect.width() - targetSize.width()) / 2, availableRect.top() + (availableRect.height() - targetSize.height()) / 2);
 	setGeometry(QRect(topLeft, targetSize));
-	LumaPlayerLogger::log("Initial window fitted, window=%dx%d", targetSize.width(), targetSize.height());
+    LOGINFO("Initial window fitted, window=%dx%d", targetSize.width(), targetSize.height());
 }
 
 void LumaPlayer::togglePlayPause()
 {
-	if (!m_hasMedia)
-	{
-		return;
-	}
-	m_snapshot = m_core.snapshot();
-	if (LumaPlayerHelper::isPlayingState(m_snapshot.m_state))
-	{
-		m_core.pauseAsync();
-		m_snapshot.m_state = LumaPlayerCoreCStatePaused;
-		LumaPlayerLogger::log("Pause by UI");
-	}
-	else
-	{
-		m_core.playAsync();
-		m_snapshot.m_state = LumaPlayerCoreCStatePlaying;
-		LumaPlayerLogger::log("Play by UI");
-	}
+    postAction(LumaActionTogglePlayback);
 }
 
-void LumaPlayer::toggleFullScreen()
+void LumaPlayer::applyFullScreen()
 {
-	if (isFullScreen())
-	{
-		showNormal();
-		if (m_wasMaximizedBeforeFullScreen)
-		{
-			showMaximized();
-		}
-		else if (m_normalGeometryBeforeFullScreen.isValid())
-		{
-			setGeometry(m_normalGeometryBeforeFullScreen);
-		}
-		LumaPlayerLogger::log("Exit fullscreen");
-	}
-	else
-	{
-		m_wasMaximizedBeforeFullScreen = isMaximized();
-		m_normalGeometryBeforeFullScreen = isMaximized() ? normalGeometry() : geometry();
-		showFullScreen();
-		LumaPlayerLogger::log("Enter fullscreen");
-	}
+    ++m_windowStateSerial;
+    if (isFullScreen())
+    {
+        if (m_maximizedOutsideFullScreen)
+        {
+            showMaximized();
+            completeWindowState(LumaActionFullscreen, Qt::WindowMaximized);
+        }
+        else
+        {
+            showNormal();
+            completeWindowState(LumaActionFullscreen, Qt::WindowNoState);
+        }
+        LOGINFO("Exit fullscreen, maximized=%d normal=%d,%d %dx%d",
+            m_maximizedOutsideFullScreen ? 1 : 0, m_normalWindowGeometry.x(), m_normalWindowGeometry.y(),
+            m_normalWindowGeometry.width(), m_normalWindowGeometry.height());
+    }
+    else
+    {
+        m_maximizedOutsideFullScreen = isMaximized();
+        if (!m_maximizedOutsideFullScreen)
+        {
+            m_normalWindowGeometry = geometry();
+        }
+        else if (!m_normalWindowGeometry.isValid())
+        {
+            m_normalWindowGeometry = normalGeometry();
+        }
+        showFullScreen();
+        completeWindowState(LumaActionFullscreen, Qt::WindowFullScreen);
+        LOGINFO("Enter fullscreen, restoreMaximized=%d", m_maximizedOutsideFullScreen ? 1 : 0);
+    }
 }
 
-void LumaPlayer::toggleMaximize()
+void LumaPlayer::applyMaximize()
 {
-	if (isMaximized())
-	{
-		showNormal();
-		LumaPlayerLogger::log("Window restore from maximized");
-	}
-	else
-	{
-		showMaximized();
-		LumaPlayerLogger::log("Window maximized");
-	}
+    ++m_windowStateSerial;
+    if (isFullScreen())
+    {
+        m_maximizedOutsideFullScreen = !m_maximizedOutsideFullScreen;
+        update();
+        acknowledgeWindow(LumaActionMaximize, isFullScreen());
+        LOGINFO("Fullscreen retained, restoreMaximized=%d", m_maximizedOutsideFullScreen ? 1 : 0);
+    }
+    else if (isMaximized())
+    {
+        m_maximizedOutsideFullScreen = false;
+        showNormal();
+        completeWindowState(LumaActionMaximize, Qt::WindowNoState);
+    }
+    else
+    {
+        // 只在离开普通状态前捕获，最大化/全屏产生的尺寸不能覆盖用户矩形。
+        m_normalWindowGeometry = geometry();
+        showMaximized();
+        m_maximizedOutsideFullScreen = isMaximized();
+        completeWindowState(LumaActionMaximize, Qt::WindowMaximized);
+        LOGINFO("Window maximized, normal=%d,%d %dx%d", m_normalWindowGeometry.x(),
+            m_normalWindowGeometry.y(), m_normalWindowGeometry.width(), m_normalWindowGeometry.height());
+    }
+}
+
+void LumaPlayer::completeWindowState(LumaPlayerActionType type, Qt::WindowState state)
+{
+    const uint64_t serial = m_windowStateSerial;
+    // Qt5原生切换通知先完成，再核对最终状态；回调无参数、无返回值。
+    QTimer::singleShot(0, this, [this, serial, type, state]() {
+        if (m_closeRequested || m_closeReady || serial != m_windowStateSerial)
+        {
+            return;
+        }
+        setWindowState(state);
+        if (state == Qt::WindowNoState && m_normalWindowGeometry.isValid())
+        {
+            setGeometry(m_normalWindowGeometry);
+        }
+        const Qt::WindowStates actual = windowState() &
+            (Qt::WindowFullScreen | Qt::WindowMaximized | Qt::WindowMinimized);
+        const bool success = actual == state && (state != Qt::WindowNoState ||
+            !m_normalWindowGeometry.isValid() || geometry() == m_normalWindowGeometry);
+        LOGINFO("Window state applied, serial=%llu target=%d success=%d geometry=%d,%d %dx%d",
+            static_cast<unsigned long long>(serial), static_cast<int>(state), success ? 1 : 0,
+            x(), y(), width(), height());
+        acknowledgeWindow(type, success);
+    });
+}
+
+bool LumaPlayer::isMaximizedOutsideFullScreen() const
+{
+    return isFullScreen() ? m_maximizedOutsideFullScreen : isMaximized();
 }
 
 void LumaPlayer::previewByProgressPoint(const QPoint& point)
 {
-	if (!m_hasMedia || m_snapshot.m_duration100ns <= 0)
-	{
-		return;
-	}
-	m_dragPosition100ns = progressPointToTime100ns(point);
-	m_hasDragPosition = true;
-	int64_t nowMs = m_elapsedTimer.elapsed();
-	int64_t frameDuration = m_snapshot.m_defaultVideoFrameDuration100ns;
-	if (frameDuration <= 0)
-	{
-		frameDuration = 100000;
-	}
-	bool shouldRequestPreview = m_lastPreviewRequestPosition100ns < 0 || nowMs - m_lastPreviewRequestMs >= g_config.m_previewDragIntervalMs;
-	int64_t diff = m_dragPosition100ns - m_lastPreviewRequestPosition100ns;
-	if (diff < 0)
-	{
-		diff = -diff;
-	}
-	if (diff >= frameDuration / 2)
-	{
-		shouldRequestPreview = true;
-	}
-	if (shouldRequestPreview)
-	{
-		m_lastPreviewRequestMs = nowMs;
-		m_lastPreviewRequestPosition100ns = m_dragPosition100ns;
-		m_core.previewFrameAsync(m_dragPosition100ns);
-	}
-	update();
+    if (!m_dragProgress || !m_hasMedia || m_snapshot.m_duration100ns <= 0)
+    {
+        return;
+    }
+    const int64_t target = progressPointToTime100ns(point);
+    if (m_dragPosition100ns != target)
+    {
+        m_dragPosition100ns = target;
+        // 进度交互不等待后台解码，画面预览独立更新。
+        update(bottomOverlayRect());
+    }
+    const int64_t nowMs = m_elapsedTimer.elapsed();
+    if (m_dragPosition100ns == m_lastPreviewRequestPosition100ns ||
+        nowMs - m_lastPreviewRequestMs < g_config.m_previewDragIntervalMs)
+    {
+        return;
+    }
+    m_lastPreviewRequestMs = nowMs;
+    m_lastPreviewRequestPosition100ns = m_dragPosition100ns;
+    postAction(LumaActionDragPreview, m_dragPosition100ns);
 }
 
 void LumaPlayer::commitSeekByProgressPoint(const QPoint& point, bool resumeAfterSeek)
 {
+    if (m_closeRequested || m_closeReady)
+    {
+        m_hasDragPosition = false;
+        return;
+    }
 	if (!m_hasMedia || m_snapshot.m_duration100ns <= 0)
 	{
 		return;
 	}
-	m_dragPosition100ns = progressPointToTime100ns(point);
-	m_hasDragPosition = true;
-	m_core.seekToAsync(m_dragPosition100ns, resumeAfterSeek);
-	LumaPlayerLogger::log("Progress seek committed, position=%lld, resume=%d", static_cast<long long>(m_dragPosition100ns), resumeAfterSeek ? 1 : 0);
+    m_dragPosition100ns = progressPointToTime100ns(point);
+    m_hasDragPosition = m_dragProgress;
+    if (m_dragProgress)
+    {
+        LumaPlayerLogicAction action;
+        action.m_type = LumaActionDragCommit;
+        action.m_operation = LumaPlayerCoreCOperationSeek;
+        action.m_value = m_dragPosition100ns;
+        action.m_flag = resumeAfterSeek;
+        action.m_revision = ++m_nextInputSerial;
+        m_lastSeekInput = action.m_revision;
+        if (!m_logic.submit(action))
+        {
+            m_hasDragPosition = false;
+            LOGERROR("Drag commit rejected input=%llu", static_cast<unsigned long long>(action.m_revision));
+        }
+    }
+    else
+    {
+        postCore(LumaPlayerCoreCOperationSeek, m_dragPosition100ns, resumeAfterSeek);
+    }
+    LOGINFO("Progress seek committed, position=%lld, resume=%d", static_cast<long long>(m_dragPosition100ns), resumeAfterSeek ? 1 : 0);
 	update();
 }
 
@@ -807,142 +830,70 @@ void LumaPlayer::showProgressMenu(const QPoint& point)
 	m_bottomTargetVisible = true;
 	m_bottomVisibleHeight = bottomOverlayHeight();
 	int64_t position = progressPointToTime100ns(point);
-	m_core.previewFrameAsync(position);
+    if (!LumaPlayerHelper::isPlayingState(m_snapshot.m_state))
+    {
+        commitSeekByProgressPoint(point, false);
+    }
 	QMenu menu(this);
 	menu.setFont(font());
 	menu.setWindowFlags(menu.windowFlags() | Qt::WindowStaysOnTopHint);
-	menu.setStyleSheet("QMenu{background:rgba(20,20,20,235);color:white;border:1px solid rgba(255,255,255,80);font-family:'KaiTi','楷体';} QMenu::item{padding:5px 26px 5px 20px;} QMenu::item:selected{background:rgba(255,255,255,35);}");
-	QAction* setAAction = menu.addAction(LumaPlayerHelper::qcn(L"设置A点"));
-	QAction* setBAction = menu.addAction(LumaPlayerHelper::qcn(L"设置B点"));
-	QAction* clearAction = menu.addAction(LumaPlayerHelper::qcn(L"清除AB点"));
+    menu.setStyleSheet(g_config.menuStyleSheet());
+    QAction* setAAction = menu.addAction(g_config.m_setAText);
+    QAction* setBAction = menu.addAction(g_config.m_setBText);
+    QAction* clearAction = menu.addAction(g_config.m_clearABText);
 	QAction* selectedAction = menu.exec(mapToGlobal(point));
 	m_progressMenuActive = false;
-	if (selectedAction == setAAction)
-	{
-		int32_t result = m_core.setLoopAAtPositionAsync(position);
-		if (result == LumaPlayerCoreCResultSuccess)
-		{
-			m_lastActiveLoopPoint = 0;
-		}
-		LumaPlayerLogger::log("Set loop A by progress menu, result=%d, position=%lld", static_cast<int>(result), static_cast<long long>(position));
-	}
-	else if (selectedAction == setBAction)
-	{
-		int32_t result = m_core.setLoopBAtPositionAsync(position);
-		if (result == LumaPlayerCoreCResultSuccess)
-		{
-			m_lastActiveLoopPoint = 1;
-		}
-		LumaPlayerLogger::log("Set loop B by progress menu, result=%d, position=%lld", static_cast<int>(result), static_cast<long long>(position));
-	}
-	else if (selectedAction == clearAction)
-	{
-		m_core.clearLoopAsync();
-		m_lastActiveLoopPoint = -1;
-		LumaPlayerLogger::log("Clear loop by progress menu");
-	}
-	m_snapshot = m_core.snapshot();
+    if (selectedAction == setAAction)
+    {
+        postCore(LumaPlayerCoreCOperationSetA, position);
+    }
+    else if (selectedAction == setBAction)
+    {
+        postCore(LumaPlayerCoreCOperationSetB, position, false, 1);
+    }
+    else if (selectedAction == clearAction)
+    {
+        postCore(LumaPlayerCoreCOperationClearLoop);
+    }
 	update();
 }
 
 void LumaPlayer::setZoomPercent(int32_t newZoomPercent, const QPoint& anchorPoint)
 {
-	newZoomPercent = LumaPlayerHelper::clampInt(newZoomPercent, g_config.m_minZoomPercent, g_config.m_maxZoomPercent);
-	if (newZoomPercent == m_zoomPercent)
-	{
-		return;
-	}
-	QRect oldRect = videoDrawRect();
-	QPointF contentPoint(0.5, 0.5);
-	if (oldRect.width() > 0 && oldRect.height() > 0)
-	{
-		contentPoint.setX(static_cast<double>(anchorPoint.x() - oldRect.left()) / static_cast<double>(oldRect.width()));
-		contentPoint.setY(static_cast<double>(anchorPoint.y() - oldRect.top()) / static_cast<double>(oldRect.height()));
-	}
-	m_zoomPercent = newZoomPercent;
-	QRect newRect = videoDrawRect();
-	QPointF newTopLeft(anchorPoint.x() - contentPoint.x() * newRect.width(), anchorPoint.y() - contentPoint.y() * newRect.height());
-	QPointF wantedCenter(newTopLeft.x() + newRect.width() / 2.0, newTopLeft.y() + newRect.height() / 2.0);
-	QPointF windowCenter(width() / 2.0, height() / 2.0);
-	m_panOffset = wantedCenter - windowCenter;
-	m_zoomTipHideMs = m_elapsedTimer.elapsed() + 1000;
-	LumaPlayerLogger::log("Zoom changed, zoom=%d, anchor=(%d,%d)", m_zoomPercent, anchorPoint.x(), anchorPoint.y());
-	update();
+    LumaPlayerLogicAction action;
+    action.m_type = LumaActionZoom;
+    action.m_value = newZoomPercent - m_zoomPercent;
+    action.m_position = anchorPoint;
+    action.m_viewport = videoViewportRect();
+    action.m_viewportGeneration = m_viewportGeneration;
+    m_logic.submit(action);
 }
 
 void LumaPlayer::moveHoveredLoopPoint(int32_t frameOffset)
 {
-	if (m_hoverLoopPoint < 0 || frameOffset == 0)
-	{
-		return;
-	}
-	int32_t pointType = m_hoverLoopPoint;
-	bool pointIsSet = pointType == 0 ? m_snapshot.m_hasLoopA != 0 : m_snapshot.m_hasLoopB != 0;
-	if (!pointIsSet)
-	{
-		return;
-	}
-	int64_t markerTime100ns = pointType == 0 ? m_snapshot.m_loopAStart100ns : m_snapshot.m_loopBEnd100ns;
-    // 暂停独立排在移动之前，即使松键取消了尚未开始的移动，也保持暂停
-    if (m_snapshot.m_state == LumaPlayerCoreCStatePlaying)
+    if (m_hoverLoopPoint < 0 || frameOffset == 0)
     {
-        int32_t pauseResult = m_core.pauseAsync();
-        if (pauseResult != LumaPlayerCoreCResultSuccess)
-        {
-            LumaPlayerLogger::log("Pause before loop move failed, result=%d", pauseResult);
-            return;
-        }
-        m_snapshot.m_state = LumaPlayerCoreCStatePaused;
+        return;
     }
-	int32_t result = m_core.moveLoopPointAsync(pointType, frameOffset);
-	if (result != LumaPlayerCoreCResultSuccess)
-	{
-		LumaPlayerLogger::log("Move loop point post failed, point=%d, offset=%d, result=%d", pointType, frameOffset, result);
-		return;
-	}
-    // 端点编辑接管时间轴，清除上次拖动尚未收敛的显示位置
-    m_hasDragPosition = false;
-	m_lastActiveLoopPoint = pointType;
-	m_pendingLoopMovePoint = pointType;
-	m_pendingLoopMoveReference100ns = markerTime100ns;
-	m_pendingLoopMoveDeadlineMs = m_elapsedTimer.elapsed() + 1000;
-	int64_t frameDuration100ns = m_snapshot.m_defaultVideoFrameDuration100ns;
-	if (frameDuration100ns <= 0)
-	{
-		frameDuration100ns = 400000;
-	}
-	int64_t estimatedTime100ns = markerTime100ns + frameDuration100ns * frameOffset;
-	estimatedTime100ns = LumaPlayerHelper::clampTime100ns(estimatedTime100ns, 0, m_snapshot.m_duration100ns);
-	QRect track = progressTrackRect();
-	QCursor::setPos(mapToGlobal(QPoint(progressTimeToX(estimatedTime100ns), track.center().y())));
-	LumaPlayerLogger::log("Move loop point posted, point=%d, offset=%d, oldMarker=%lld", pointType, frameOffset, static_cast<long long>(markerTime100ns));
-}
-
-void LumaPlayer::updatePendingLoopMove()
-{
-	if (m_pendingLoopMovePoint < 0)
-	{
-		return;
-	}
-	bool pointIsSet = m_pendingLoopMovePoint == 0 ? m_snapshot.m_hasLoopA != 0 : m_snapshot.m_hasLoopB != 0;
-	int64_t markerTime100ns = m_pendingLoopMovePoint == 0 ? m_snapshot.m_loopAStart100ns : m_snapshot.m_loopBEnd100ns;
-	if (pointIsSet && markerTime100ns != m_pendingLoopMoveReference100ns)
-	{
-		QRect track = progressTrackRect();
-		QCursor::setPos(mapToGlobal(QPoint(progressTimeToX(markerTime100ns), track.center().y())));
-		LumaPlayerLogger::log("Move loop point applied, point=%d, marker=%lld", m_pendingLoopMovePoint, static_cast<long long>(markerTime100ns));
-		m_pendingLoopMovePoint = -1;
-		return;
-	}
-	if (m_elapsedTimer.elapsed() >= m_pendingLoopMoveDeadlineMs)
-	{
-		LumaPlayerLogger::log("Move loop point completed without marker change, point=%d", m_pendingLoopMovePoint);
-		m_pendingLoopMovePoint = -1;
-	}
+    m_pendingLoopMovePoint = m_hoverLoopPoint;
+    postCore(LumaPlayerCoreCOperationMoveLoop, frameOffset, false, m_hoverLoopPoint);
 }
 
 void LumaPlayer::updateOverlayTargets()
 {
+    if (m_pinned)
+    {
+        m_topTargetVisible = true;
+        m_bottomTargetVisible = m_hasMedia;
+        m_topVisibleHeight = topOverlayHeight();
+        m_bottomVisibleHeight = bottomOverlayHeight();
+        return;
+    }
+    if (!m_hasMedia)
+    {
+        m_bottomVisibleHeight = 0;
+        m_lastBottomOverlayActiveMs = 0;
+    }
 	int64_t nowMs = m_elapsedTimer.elapsed();
 	bool nearTop = m_mouseInside && m_lastMousePos.y() <= g_config.m_topTriggerMargin;
 	bool nearBottom = m_mouseInside && m_lastMousePos.y() >= height() - g_config.m_progressTriggerMargin;
@@ -959,7 +910,8 @@ void LumaPlayer::updateOverlayTargets()
 		m_lastBottomOverlayActiveMs = nowMs;
 	}
 	m_topTargetVisible = topActive || (m_lastTopOverlayActiveMs > 0 && nowMs - m_lastTopOverlayActiveMs <= g_config.m_mouseIdleHideMs);
-	m_bottomTargetVisible = bottomActive || (m_lastBottomOverlayActiveMs > 0 && nowMs - m_lastBottomOverlayActiveMs <= g_config.m_mouseIdleHideMs);
+    m_bottomTargetVisible = m_hasMedia && (bottomActive ||
+        (m_lastBottomOverlayActiveMs > 0 && nowMs - m_lastBottomOverlayActiveMs <= g_config.m_mouseIdleHideMs));
 }
 
 void LumaPlayer::updateOverlayAnimation()
@@ -970,19 +922,19 @@ void LumaPlayer::updateOverlayAnimation()
 	int oldBottom = m_bottomVisibleHeight;
 	if (m_topVisibleHeight < targetTop)
 	{
-		m_topVisibleHeight = std::min(targetTop, m_topVisibleHeight + g_config.m_overlayStep);
+        m_topVisibleHeight = (std::min)(targetTop, m_topVisibleHeight + g_config.m_overlayStep);
 	}
 	else if (m_topVisibleHeight > targetTop)
 	{
-		m_topVisibleHeight = std::max(targetTop, m_topVisibleHeight - g_config.m_overlayStep);
+        m_topVisibleHeight = (std::max)(targetTop, m_topVisibleHeight - g_config.m_overlayStep);
 	}
 	if (m_bottomVisibleHeight < targetBottom)
 	{
-		m_bottomVisibleHeight = std::min(targetBottom, m_bottomVisibleHeight + g_config.m_overlayStep);
+        m_bottomVisibleHeight = (std::min)(targetBottom, m_bottomVisibleHeight + g_config.m_overlayStep);
 	}
 	else if (m_bottomVisibleHeight > targetBottom)
 	{
-		m_bottomVisibleHeight = std::max(targetBottom, m_bottomVisibleHeight - g_config.m_overlayStep);
+        m_bottomVisibleHeight = (std::max)(targetBottom, m_bottomVisibleHeight - g_config.m_overlayStep);
 	}
 	if (oldTop != m_topVisibleHeight || oldBottom != m_bottomVisibleHeight)
 	{
@@ -992,6 +944,21 @@ void LumaPlayer::updateOverlayAnimation()
 
 HitArea LumaPlayer::hitTest(const QPoint& point) const
 {
+    if (m_topVisibleHeight > 0)
+    {
+        if (resetButtonRect().contains(point))
+        {
+            return m_resetEnabled ? HitResetButton : HitNone;
+        }
+        if (pinButtonRect().contains(point))
+        {
+            return HitPinButton;
+        }
+        if (helpButtonRect().contains(point))
+        {
+            return HitHelpButton;
+        }
+    }
 	if (m_topVisibleHeight > 0 && loadButtonRect().contains(point))
 	{
 		return HitLoadButton;
@@ -1016,7 +983,7 @@ HitArea LumaPlayer::hitTest(const QPoint& point) const
 	{
 		return HitPlayButton;
 	}
-	if (m_bottomVisibleHeight > 0 && progressTrackRect().adjusted(0, -1, 0, 1).contains(point))
+    if (m_bottomVisibleHeight > 0 && progressTrackRect().adjusted(0, -g_config.m_trackHitExtra, 0, g_config.m_trackHitExtra).contains(point))
 	{
 		return HitProgressTrack;
 	}
@@ -1101,25 +1068,25 @@ QRect LumaPlayer::resizeGeometryFromMouse(const QPoint& globalPos) const
 	if ((m_resizeEdge & ResizeLeft) != 0)
 	{
 		int newLeft = m_pressWindowGeometry.left() + delta.x();
-		newLeft = std::min(newLeft, m_pressWindowGeometry.right() - g_config.m_minWindowWidth + 1);
+        newLeft = (std::min)(newLeft, m_pressWindowGeometry.right() - g_config.m_minWindowWidth + 1);
 		newGeometry.setLeft(newLeft);
 	}
 	if ((m_resizeEdge & ResizeRight) != 0)
 	{
 		int newRight = m_pressWindowGeometry.right() + delta.x();
-		newRight = std::max(newRight, newGeometry.left() + g_config.m_minWindowWidth - 1);
+        newRight = (std::max)(newRight, newGeometry.left() + g_config.m_minWindowWidth - 1);
 		newGeometry.setRight(newRight);
 	}
 	if ((m_resizeEdge & ResizeTop) != 0)
 	{
 		int newTop = m_pressWindowGeometry.top() + delta.y();
-		newTop = std::min(newTop, m_pressWindowGeometry.bottom() - g_config.m_minWindowHeight + 1);
+        newTop = (std::min)(newTop, m_pressWindowGeometry.bottom() - g_config.m_minWindowHeight + 1);
 		newGeometry.setTop(newTop);
 	}
 	if ((m_resizeEdge & ResizeBottom) != 0)
 	{
 		int newBottom = m_pressWindowGeometry.bottom() + delta.y();
-		newBottom = std::max(newBottom, newGeometry.top() + g_config.m_minWindowHeight - 1);
+        newBottom = (std::max)(newBottom, newGeometry.top() + g_config.m_minWindowHeight - 1);
 		newGeometry.setBottom(newBottom);
 	}
 	return newGeometry;
@@ -1138,7 +1105,7 @@ int64_t LumaPlayer::progressPointToTime100ns(const QPoint& point) const
 		return 0;
 	}
 	int x = LumaPlayerHelper::clampInt(point.x(), track.left(), track.right());
-	int span = std::max(1, track.width() - 1);
+    int span = (std::max)(1, track.width() - 1);
 	double ratio = static_cast<double>(x - track.left()) / static_cast<double>(span);
 	int64_t position = static_cast<int64_t>(duration * ratio + 0.5);
 	return LumaPlayerHelper::clampTime100ns(position, 0, duration);
@@ -1153,14 +1120,27 @@ int LumaPlayer::progressTimeToX(int64_t time100ns) const
 		return track.left();
 	}
 	int64_t position = LumaPlayerHelper::clampTime100ns(time100ns, 0, duration);
-	int span = std::max(1, track.width() - 1);
+    int span = (std::max)(1, track.width() - 1);
 	double ratio = static_cast<double>(position) / static_cast<double>(duration);
 	return track.left() + static_cast<int>(ratio * span + 0.5);
 }
 
 int64_t LumaPlayer::displayPosition100ns() const
 {
-	return m_hasDragPosition ? m_dragPosition100ns : m_snapshot.m_position100ns;
+    if (m_dragProgress || m_hasDragPosition)
+    {
+        return m_dragPosition100ns;
+    }
+    if (!m_cachedFrame.isNull() && m_cachedFrameEnd > m_cachedFrameStart)
+    {
+        if (m_dragProgress || !LumaPlayerHelper::isPlayingState(m_snapshot.m_state))
+        {
+            return m_cachedFrameStart;
+        }
+        return (std::max)(m_cachedFrameStart,
+            (std::min)(m_snapshot.m_position100ns, m_cachedFrameEnd - 1));
+    }
+    return m_snapshot.m_position100ns;
 }
 
 double LumaPlayer::currentVideoBaseScale(const QSize& videoSize) const
@@ -1169,11 +1149,11 @@ double LumaPlayer::currentVideoBaseScale(const QSize& videoSize) const
 	{
 		return 1.0;
 	}
-	if (isFullScreen() || isMaximized())
+    if (m_pinned || isFullScreen() || isMaximized())
 	{
-		double widthScale = static_cast<double>(width()) / static_cast<double>(videoSize.width());
-		double heightScale = static_cast<double>(height()) / static_cast<double>(videoSize.height());
-		double scale = std::min(widthScale, heightScale);
+        double widthScale = static_cast<double>(videoViewportRect().width()) / static_cast<double>(videoSize.width());
+        double heightScale = static_cast<double>(videoViewportRect().height()) / static_cast<double>(videoSize.height());
+        double scale = (std::min)(widthScale, heightScale);
 		return scale > 0.0 ? scale : 1.0;
 	}
 	return m_baseDisplayScale > 0.0 ? m_baseDisplayScale : 1.0;
@@ -1186,7 +1166,7 @@ int LumaPlayer::topOverlayHeight() const
 
 int LumaPlayer::bottomOverlayHeight() const
 {
-	return g_config.m_bottomOverlayHeight;
+    return m_hasMedia ? g_config.m_bottomOverlayHeight : 0;
 }
 
 QRect LumaPlayer::topOverlayRect() const
@@ -1201,48 +1181,52 @@ QRect LumaPlayer::bottomOverlayRect() const
 
 QRect LumaPlayer::loadButtonRect() const
 {
-	QRect overlay = topOverlayRect();
-	return QRect(overlay.left() + 8, overlay.top() + 4, 20, 20);
+    return QRect(g_config.m_titleMargin, topOverlayRect().top() + g_config.m_titleButtonTop,
+        g_config.m_titleButtonSize, g_config.m_titleButtonSize);
 }
 
 QRect LumaPlayer::minimizeButtonRect() const
 {
-	QRect overlay = topOverlayRect();
-	return QRect(overlay.right() - 77, overlay.top() + 4, 20, 20);
+    return maximizeButtonRect().translated(-g_config.m_titleButtonSize - g_config.m_titleButtonGap, 0);
 }
 
 QRect LumaPlayer::maximizeButtonRect() const
 {
-	QRect overlay = topOverlayRect();
-	return QRect(overlay.right() - 51, overlay.top() + 4, 20, 20);
+    return closeButtonRect().translated(-g_config.m_titleButtonSize - g_config.m_titleButtonGap, 0);
 }
 
 QRect LumaPlayer::closeButtonRect() const
 {
-	QRect overlay = topOverlayRect();
-	return QRect(overlay.right() - 25, overlay.top() + 4, 20, 20);
+    return QRect(width() - g_config.m_titleMargin - g_config.m_titleButtonSize,
+        topOverlayRect().top() + g_config.m_titleButtonTop,
+        g_config.m_titleButtonSize, g_config.m_titleButtonSize);
 }
 
 QRect LumaPlayer::plusButtonRect() const
 {
-	int size = std::min(width(), height()) / 8;
-	size = LumaPlayerHelper::clampInt(size, 38, 76);
-	return QRect((width() - size) / 2, (height() - size) / 2, size, size);
+    int size = (std::min)(videoViewportRect().width(), videoViewportRect().height()) / g_config.m_emptySizeDivisor;
+    size = LumaPlayerHelper::clampInt(size, g_config.m_emptyMinSize, g_config.m_emptyMaxSize);
+    return QRect(videoViewportRect().center() - QPoint(size / 2, size / 2), QSize(size, size));
 }
 
 QRect LumaPlayer::playButtonRect() const
 {
 	QRect overlay = bottomOverlayRect();
 	int size = g_config.m_playButtonSize;
-	return QRect((width() - size) / 2, overlay.bottom() - size - 3, size, size);
+    return QRect((width() - size) / 2, overlay.bottom() - size - g_config.m_playButtonBottom, size, size);
 }
 
 QRect LumaPlayer::progressTrackRect() const
 {
-	QRect overlay = bottomOverlayRect();
-	int left = 82;
-	int right = 82;
-	return QRect(left, overlay.top() + g_config.m_progressTrackTop, std::max(1, width() - left - right), 4);
+    QFont timeFont = font();
+    timeFont.setPointSize(g_config.m_timeFontSize);
+    const QFontMetrics metrics(timeFont);
+    const int32_t timeWidth = (std::max)(g_config.m_timeWidth, metrics.width(LumaPlayerHelper::formatTime(m_snapshot.m_duration100ns, false)));
+    const int32_t margin = g_config.m_timeMargin +
+        (std::max)(metrics.width(LumaPlayerHelper::formatTime(m_snapshot.m_duration100ns, false)),
+            timeWidth - g_config.m_trackExtension) + g_config.m_timeTrackGap;
+    return QRect(margin, bottomOverlayRect().top() + g_config.m_progressTrackTop,
+        (std::max)(1, width() - 2 * margin), g_config.m_trackHeight);
 }
 
 QRect LumaPlayer::videoDrawRect() const
@@ -1257,10 +1241,10 @@ QRect LumaPlayer::videoDrawRect() const
 		return QRect();
 	}
 	double scale = currentVideoBaseScale(videoSize) * (static_cast<double>(m_zoomPercent) / 100.0);
-	int drawWidth = std::max(1, static_cast<int>(videoSize.width() * scale + 0.5));
-	int drawHeight = std::max(1, static_cast<int>(videoSize.height() * scale + 0.5));
-	int left = static_cast<int>((width() - drawWidth) / 2.0 + m_panOffset.x() + 0.5);
-	int top = static_cast<int>((height() - drawHeight) / 2.0 + m_panOffset.y() + 0.5);
+    int drawWidth = (std::max)(1, static_cast<int>(videoSize.width() * scale + 0.5));
+    int drawHeight = (std::max)(1, static_cast<int>(videoSize.height() * scale + 0.5));
+    int left = static_cast<int>(videoViewportRect().left() + (videoViewportRect().width() - drawWidth) / 2.0 + m_panOffset.x() + 0.5);
+    int top = static_cast<int>(videoViewportRect().top() + (videoViewportRect().height() - drawHeight) / 2.0 + m_panOffset.y() + 0.5);
 	return QRect(left, top, drawWidth, drawHeight);
 }
 
@@ -1272,13 +1256,13 @@ void LumaPlayer::updateLoopMarkerHover(const QPoint& point)
 		return;
 	}
 	QRect track = progressTrackRect();
-	QRect hitBand = track.adjusted(-8, -14, 8, 18);
+    QRect hitBand = track.adjusted(-g_config.m_markerHitWidth, -g_config.m_markerHitTop, g_config.m_markerHitWidth, g_config.m_markerHitBottom);
 	if (!hitBand.contains(point))
 	{
 		return;
 	}
-	bool hitA = m_snapshot.m_hasLoopA != 0 && std::abs(point.x() - progressTimeToX(m_snapshot.m_loopAStart100ns)) <= 8;
-	bool hitB = m_snapshot.m_hasLoopB != 0 && std::abs(point.x() - progressTimeToX(m_snapshot.m_loopBEnd100ns)) <= 8;
+    bool hitA = m_snapshot.m_hasLoopA != 0 && std::abs(point.x() - progressTimeToX(m_snapshot.m_loopAStart100ns)) <= g_config.m_markerHitWidth;
+    bool hitB = m_snapshot.m_hasLoopB != 0 && std::abs(point.x() - progressTimeToX(m_snapshot.m_loopBEnd100ns)) <= g_config.m_markerHitWidth;
 	if (hitA && hitB)
 	{
 		m_hoverLoopPoint = m_lastActiveLoopPoint == 0 ? 0 : 1;
@@ -1326,15 +1310,24 @@ void LumaPlayer::paintVideo(QPainter& painter)
 	{
 		QRect plusRect = plusButtonRect();
 		bool hover = m_hoverArea == HitPlusButton;
-		QColor circleColor = hover ? QColor(95, 95, 95, 210) : QColor(70, 70, 70, 190);
-		QPen pen(QColor(210, 210, 210, 220));
-		pen.setWidth(2);
+        QColor circleColor = hover ? g_config.m_emptyHoverColor : g_config.m_emptyButtonColor;
+        QPen pen(g_config.m_emptyIconColor);
+        pen.setWidthF(g_config.m_emptyStroke);
 		painter.setPen(pen);
 		painter.setBrush(circleColor);
-		painter.drawEllipse(plusRect.adjusted(1, 1, -1, -1));
+        painter.drawEllipse(plusRect.adjusted(g_config.m_emptyBorderInset, g_config.m_emptyBorderInset, -g_config.m_emptyBorderInset, -g_config.m_emptyBorderInset));
+        if (m_mouseInside && m_leftPressed && m_pressArea == HitPlusButton && plusRect.contains(m_lastMousePos))
+        {
+            painter.save();
+            painter.setPen(Qt::NoPen);
+            painter.setOpacity(g_config.m_buttonPressOpacity);
+            painter.setBrush(g_config.m_buttonPressColor);
+            painter.drawEllipse(plusRect);
+            painter.restore();
+        }
 		int cx = plusRect.center().x();
 		int cy = plusRect.center().y();
-		int len = plusRect.width() / 4;
+        int len = plusRect.width() / g_config.m_emptyArmDivisor;
 		painter.drawLine(QPoint(cx - len, cy), QPoint(cx + len, cy));
 		painter.drawLine(QPoint(cx, cy - len), QPoint(cx, cy + len));
 	}
@@ -1350,11 +1343,14 @@ void LumaPlayer::paintTopOverlay(QPainter& painter)
 	painter.setClipRect(QRect(0, 0, width(), m_topVisibleHeight));
 	QRect overlay = topOverlayRect();
 	painter.setPen(Qt::NoPen);
-	painter.setBrush(QColor(16, 16, 16, 220));
+    painter.setBrush(g_config.m_overlayColor);
 	painter.drawRect(overlay);
-	painter.setPen(QColor(255, 255, 255, 55));
+    painter.setPen(g_config.m_overlayBorderColor);
 	painter.drawLine(overlay.bottomLeft(), overlay.bottomRight());
-	LumaPlayerHelper::paintLoadIcon(painter, loadButtonRect(), m_hoverArea == HitLoadButton);
+    paintTitleButton(painter, loadButtonRect(), HitLoadButton);
+    paintTitleButton(painter, resetButtonRect(), HitResetButton);
+    paintTitleButton(painter, pinButtonRect(), HitPinButton);
+    paintTitleButton(painter, helpButtonRect(), HitHelpButton);
 	paintTitleButton(painter, minimizeButtonRect(), HitMinButton);
 	paintTitleButton(painter, maximizeButtonRect(), HitMaxButton);
 	paintTitleButton(painter, closeButtonRect(), HitCloseButton);
@@ -1371,29 +1367,48 @@ void LumaPlayer::paintBottomOverlay(QPainter& painter)
 	painter.setClipRect(QRect(0, height() - m_bottomVisibleHeight, width(), m_bottomVisibleHeight));
 	QRect overlay = bottomOverlayRect();
 	painter.setPen(Qt::NoPen);
-	painter.setBrush(QColor(16, 16, 16, 220));
+    painter.setBrush(g_config.m_overlayColor);
 	painter.drawRect(overlay);
-	painter.setPen(QColor(255, 255, 255, 55));
+    painter.setPen(g_config.m_overlayBorderColor);
 	painter.drawLine(overlay.topLeft(), overlay.topRight());
 
 	QFont textFont = font();
-	textFont.setPointSize(8);
+    textFont.setPointSize(g_config.m_timeFontSize);
 	painter.setFont(textFont);
-	painter.setPen(QColor(235, 235, 235, 230));
+    painter.setPen(g_config.m_timeTextColor);
 	int64_t displayPosition = displayPosition100ns();
-	painter.drawText(QRect(6, overlay.top() + g_config.m_progressTrackTop - 8, 72, 20), Qt::AlignVCenter | Qt::AlignLeft, LumaPlayerHelper::formatTime(displayPosition, false));
-	painter.drawText(QRect(width() - 78, overlay.top() + g_config.m_progressTrackTop - 8, 72, 20), Qt::AlignVCenter | Qt::AlignRight, LumaPlayerHelper::formatTime(m_snapshot.m_duration100ns, false));
+    const QRect track = progressTrackRect();
+    const int32_t textHeight = QFontMetrics(textFont).height();
+    const int32_t textTop = track.center().y() - textHeight / 2 + g_config.m_timeTextOffset;
+    painter.drawText(QRect(g_config.m_timeMargin, textTop,
+        track.left() - g_config.m_timeTrackGap - g_config.m_timeMargin, textHeight),
+        Qt::AlignVCenter | Qt::AlignLeft, LumaPlayerHelper::formatTime(displayPosition, false));
+    painter.drawText(QRect(track.right() + g_config.m_timeTrackGap, textTop,
+        width() - track.right() - g_config.m_timeTrackGap - g_config.m_timeMargin, textHeight),
+        Qt::AlignVCenter | Qt::AlignRight, LumaPlayerHelper::formatTime(m_snapshot.m_duration100ns, false));
 
-	QRect track = progressTrackRect();
 	int progressX = progressTimeToX(displayPosition);
 	painter.setPen(Qt::NoPen);
-	painter.setBrush(QColor(255, 255, 255, 70));
-	painter.drawRoundedRect(track, 2, 2);
-	QRect played(track.left(), track.top(), std::max(0, progressX - track.left()), track.height());
-	painter.setBrush(QColor(245, 245, 245, 210));
-	painter.drawRoundedRect(played, 2, 2);
-	painter.setBrush(QColor(255, 255, 255, 240));
-	painter.drawEllipse(QPoint(progressX, track.center().y()), m_dragProgress ? 6 : 5, m_dragProgress ? 6 : 5);
+    painter.setBrush(g_config.m_trackColor);
+    painter.drawRoundedRect(track, g_config.m_trackHeight / 2.0, g_config.m_trackHeight / 2.0);
+    QRect played(track.left(), track.top(), (std::max)(0, progressX - track.left()), track.height());
+    painter.setBrush(g_config.m_themeColor);
+    painter.drawRoundedRect(played, g_config.m_trackHeight / 2.0, g_config.m_trackHeight / 2.0);
+    painter.setBrush(g_config.m_playbackPositionColor);
+    const QPoint knob(progressX, track.center().y());
+    const bool hoverKnob = m_mouseInside &&
+        (m_lastMousePos - knob).manhattanLength() <= 2 * g_config.m_positionDragRadius;
+    const int32_t radius = hoverKnob && !m_dragProgress ?
+        g_config.m_positionDragRadius : g_config.m_positionRadius;
+    painter.drawEllipse(knob, radius, radius);
+    if (m_dragProgress)
+    {
+        painter.save();
+        painter.setOpacity(g_config.m_buttonPressOpacity);
+        painter.setBrush(g_config.m_buttonPressColor);
+        painter.drawEllipse(knob, radius, radius);
+        painter.restore();
+    }
 
 	bool drawA = m_snapshot.m_hasLoopA != 0;
 	bool drawB = m_snapshot.m_hasLoopB != 0;
@@ -1402,22 +1417,22 @@ void LumaPlayer::paintBottomOverlay(QPainter& painter)
 	{
 		int ax = progressTimeToX(m_snapshot.m_loopAStart100ns);
 		int bx = progressTimeToX(m_snapshot.m_loopBEnd100ns);
-		drawAOnTop = std::abs(ax - bx) <= 1 && m_lastActiveLoopPoint == 0;
+        drawAOnTop = std::abs(ax - bx) <= g_config.m_markerOverlapTolerance && m_lastActiveLoopPoint == 0;
 	}
 	if (drawAOnTop)
 	{
-		paintLoopMarker(painter, m_snapshot.m_loopBEnd100ns, LumaPlayerHelper::qcn(L"B"), m_hoverLoopPoint == 1);
-		paintLoopMarker(painter, m_snapshot.m_loopAStart100ns, LumaPlayerHelper::qcn(L"A"), m_hoverLoopPoint == 0);
+        paintLoopMarker(painter, m_snapshot.m_loopBEnd100ns, g_config.m_bLabel, m_hoverLoopPoint == 1);
+        paintLoopMarker(painter, m_snapshot.m_loopAStart100ns, g_config.m_aLabel, m_hoverLoopPoint == 0);
 	}
 	else
 	{
 		if (drawA)
 		{
-			paintLoopMarker(painter, m_snapshot.m_loopAStart100ns, LumaPlayerHelper::qcn(L"A"), m_hoverLoopPoint == 0);
+            paintLoopMarker(painter, m_snapshot.m_loopAStart100ns, g_config.m_aLabel, m_hoverLoopPoint == 0);
 		}
 		if (drawB)
 		{
-			paintLoopMarker(painter, m_snapshot.m_loopBEnd100ns, LumaPlayerHelper::qcn(L"B"), m_hoverLoopPoint == 1);
+            paintLoopMarker(painter, m_snapshot.m_loopBEnd100ns, g_config.m_bLabel, m_hoverLoopPoint == 1);
 		}
 	}
 	paintPlayIcon(painter, playButtonRect());
@@ -1435,19 +1450,17 @@ void LumaPlayer::paintCenterPlayTip(QPainter& painter)
 	{
 		return;
 	}
-	int size = std::min(width(), height()) / 7;
-	size = LumaPlayerHelper::clampInt(size, 42, 96);
-	QRect circleRect((width() - size) / 2, (height() - size) / 2, size, size);
+    int size = (std::min)(videoViewportRect().width(), videoViewportRect().height()) / g_config.m_centerTipSizeDivisor;
+    size = LumaPlayerHelper::clampInt(size, g_config.m_centerTipMinSize, g_config.m_centerTipMaxSize);
+    QRect circleRect(videoViewportRect().center() - QPoint(size / 2, size / 2), QSize(size, size));
 	painter.save();
 	painter.setPen(Qt::NoPen);
-	painter.setBrush(QColor(0, 0, 0, 95));
+    painter.setBrush(g_config.m_centerTipBackgroundColor);
 	painter.drawEllipse(circleRect);
-	QPoint p1(circleRect.left() + size * 40 / 100, circleRect.top() + size * 30 / 100);
-	QPoint p2(circleRect.left() + size * 40 / 100, circleRect.top() + size * 70 / 100);
-	QPoint p3(circleRect.left() + size * 72 / 100, circleRect.top() + size * 50 / 100);
-	QPoint triangle[3] = { p1, p2, p3 };
-	painter.setBrush(QColor(255, 255, 255, 175));
-	painter.drawPolygon(triangle, 3);
+    painter.setBrush(g_config.m_centerTipIconColor);
+    painter.translate(circleRect.topLeft());
+    painter.scale(size / g_config.m_iconCanvasSize, size / g_config.m_iconCanvasSize);
+    painter.drawPath(g_config.m_playIcon);
 	painter.restore();
 }
 
@@ -1457,113 +1470,397 @@ void LumaPlayer::paintZoomTip(QPainter& painter)
 	{
 		return;
 	}
-	QRect tipRect(width() / 2 - 42, height() / 2 - 16, 84, 32);
+    QRect tipRect(videoViewportRect().center() - QPoint(g_config.m_zoomTipWidth / 2, g_config.m_zoomTipHeight / 2), QSize(g_config.m_zoomTipWidth,
+        g_config.m_zoomTipHeight));
 	painter.save();
 	painter.setPen(Qt::NoPen);
-	painter.setBrush(QColor(0, 0, 0, 180));
-	painter.drawRoundedRect(tipRect, 4, 4);
+    painter.setBrush(g_config.m_tipBackgroundColor);
+    painter.drawRoundedRect(tipRect, g_config.m_zoomTipRadius, g_config.m_zoomTipRadius);
 	QFont tipFont = font();
-	tipFont.setPointSize(11);
+    tipFont.setPointSize(g_config.m_zoomTipFontSize);
 	painter.setFont(tipFont);
-	painter.setPen(QColor(255, 255, 255, 235));
-	painter.drawText(tipRect, Qt::AlignCenter, QString("%1%").arg(m_zoomPercent));
+    painter.setPen(g_config.m_zoomTextColor);
+    painter.drawText(tipRect, Qt::AlignCenter, QString::fromStdString(CStringManager::Format(g_config.m_zoomTextFormat.c_str(), m_zoomPercent)));
 	painter.restore();
 }
 
 void LumaPlayer::paintTitleButton(QPainter& painter, const QRect& rect, HitArea hitArea)
 {
-	bool hover = m_hoverArea == hitArea;
-	painter.save();
-	painter.setPen(Qt::NoPen);
-	painter.setBrush(hover ? QColor(255, 255, 255, 38) : QColor(255, 255, 255, 8));
-	painter.drawRoundedRect(rect, 3, 3);
-	QPen pen(hitArea == HitCloseButton && hover ? QColor(255, 120, 120, 240) : QColor(245, 245, 245, 220));
-	pen.setWidth(2);
-	painter.setPen(pen);
-	painter.setBrush(Qt::NoBrush);
-	if (hitArea == HitMinButton)
-	{
-		painter.drawLine(QPoint(rect.left() + 5, rect.center().y() + 4), QPoint(rect.right() - 5, rect.center().y() + 4));
-	}
-	else if (hitArea == HitMaxButton)
-	{
-		if (isMaximized() || isFullScreen())
-		{
-			QRect back(rect.left() + 6, rect.top() + 5, 8, 8);
-			QRect front(rect.left() + 4, rect.top() + 8, 8, 8);
-			painter.drawRect(back);
-			painter.drawRect(front);
-		}
-		else
-		{
-			painter.drawRect(rect.adjusted(5, 5, -5, -5));
-		}
-	}
-	else if (hitArea == HitCloseButton)
-	{
-		painter.drawLine(rect.left() + 6, rect.top() + 6, rect.right() - 6, rect.bottom() - 6);
-		painter.drawLine(rect.right() - 6, rect.top() + 6, rect.left() + 6, rect.bottom() - 6);
-	}
-	painter.restore();
+    const bool enabled = hitArea != HitResetButton || m_resetEnabled;
+    const bool hover = enabled && m_hoverArea == hitArea;
+    painter.save();
+    painter.setPen(Qt::NoPen);
+    const bool pressed = enabled && m_mouseInside && m_leftPressed && m_pressArea == hitArea && rect.contains(m_lastMousePos);
+    painter.setBrush(hitArea == HitCloseButton ?
+        (pressed ? g_config.m_closeButtonColor.darker(g_config.m_closePressDarkening) : g_config.m_closeButtonColor) :
+        (hover ? g_config.m_buttonHoverColor : g_config.m_buttonColor));
+    painter.drawRoundedRect(rect, g_config.m_cornerRadius, g_config.m_cornerRadius);
+    if (pressed && hitArea != HitCloseButton)
+    {
+        painter.setOpacity(g_config.m_buttonPressOpacity);
+        painter.setBrush(g_config.m_buttonPressColor);
+        painter.drawRoundedRect(rect, g_config.m_cornerRadius, g_config.m_cornerRadius);
+        painter.setOpacity(1.0);
+    }
+    const bool blue = hitArea == HitHelpButton || (hitArea == HitPinButton && m_pinned);
+    QPen pen(!enabled ? g_config.m_disabledColor : blue ? g_config.m_themeColor : g_config.m_iconColor);
+    pen.setWidthF(g_config.m_iconStroke);
+    pen.setCapStyle(Qt::RoundCap);
+    pen.setJoinStyle(Qt::RoundJoin);
+    painter.setPen(pen);
+    painter.setBrush(Qt::NoBrush);
+    painter.translate(rect.topLeft());
+    painter.scale(rect.width() / g_config.m_iconCanvasSize, rect.height() / g_config.m_iconCanvasSize);
+    const QPainterPath* path = &g_config.m_loadIcon;
+    if (hitArea == HitResetButton)
+    {
+        path = &g_config.m_resetIcon;
+    }
+    else if (hitArea == HitHelpButton)
+    {
+        path = &g_config.m_questionIcon;
+    }
+    else if (hitArea == HitPinButton)
+    {
+        path = &g_config.m_pinIcon;
+        if (!m_pinned)
+        {
+            painter.translate(g_config.m_iconCanvasSize / 2, g_config.m_iconCanvasSize / 2);
+            painter.rotate(g_config.m_pinAngle);
+            painter.translate(-g_config.m_iconCanvasSize / 2, -g_config.m_iconCanvasSize / 2);
+        }
+    }
+    else if (hitArea == HitMinButton)
+    {
+        path = &g_config.m_minimizeIcon;
+    }
+    else if (hitArea == HitMaxButton)
+    {
+        path = isMaximizedOutsideFullScreen() ? &g_config.m_restoreIcon : &g_config.m_maximizeIcon;
+    }
+    else if (hitArea == HitCloseButton)
+    {
+        path = &g_config.m_closeIcon;
+    }
+    painter.drawPath(*path);
+    painter.restore();
 }
 
 void LumaPlayer::paintPlayIcon(QPainter& painter, const QRect& rect)
 {
-	bool hover = m_hoverArea == HitPlayButton;
-	painter.save();
-	painter.setPen(Qt::NoPen);
-	painter.setBrush(hover ? QColor(255, 255, 255, 45) : QColor(255, 255, 255, 18));
-	painter.drawEllipse(rect);
-	painter.setBrush(QColor(255, 255, 255, 230));
-	if (LumaPlayerHelper::isPlayingState(m_snapshot.m_state))
-	{
-		painter.drawRect(QRect(rect.left() + rect.width() * 3 / 10, rect.top() + rect.height() / 4, rect.width() / 7, rect.height() / 2));
-		painter.drawRect(QRect(rect.left() + rect.width() * 6 / 10, rect.top() + rect.height() / 4, rect.width() / 7, rect.height() / 2));
-	}
-	else
-	{
-		QPoint p1(rect.left() + rect.width() / 3, rect.top() + rect.height() / 4);
-		QPoint p2(rect.left() + rect.width() / 3, rect.bottom() - rect.height() / 4);
-		QPoint p3(rect.right() - rect.width() / 4, rect.center().y());
-		QPoint triangle[3] = { p1, p2, p3 };
-		painter.drawPolygon(triangle, 3);
-	}
-	painter.restore();
+    painter.save();
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(m_hoverArea == HitPlayButton ? g_config.m_playHoverColor : g_config.m_playButtonColor);
+    painter.drawEllipse(rect);
+    if (m_mouseInside && m_leftPressed && m_pressArea == HitPlayButton && rect.contains(m_lastMousePos))
+    {
+        painter.setOpacity(g_config.m_buttonPressOpacity);
+        painter.setBrush(g_config.m_buttonPressColor);
+        painter.drawEllipse(rect);
+        painter.setOpacity(1.0);
+    }
+    painter.setBrush(g_config.m_textColor);
+    painter.translate(rect.topLeft());
+    painter.scale(rect.width() / g_config.m_iconCanvasSize, rect.height() / g_config.m_iconCanvasSize);
+    painter.drawPath(LumaPlayerHelper::isPlayingState(m_snapshot.m_state) ? g_config.m_pauseIcon : g_config.m_playIcon);
+    painter.restore();
 }
 
 void LumaPlayer::paintLoopMarker(QPainter& painter, int64_t markerTime100ns, const QString& label, bool hovered)
 {
-	bool isBPoint = label == LumaPlayerHelper::qcn(L"B");
-	int x = progressTimeToX(markerTime100ns);
-	QRect track = progressTrackRect();
-	int radius = hovered ? 6 : 5;
-	QColor color = isBPoint ? QColor(255, 205, 92, 235) : QColor(93, 200, 255, 235);
-	painter.save();
-	painter.setPen(Qt::NoPen);
-	painter.setBrush(color);
-	painter.drawEllipse(QPoint(x, track.center().y()), radius, radius);
-	QFont markerFont = font();
-	markerFont.setPointSize(8);
-	painter.setFont(markerFont);
-	painter.setPen(color);
-	painter.drawText(QRect(x - 10, track.bottom() + 1, 20, 12), Qt::AlignCenter, label);
-	if (hovered)
-	{
-		int64_t displayTime = markerTime100ns;
-		if (isBPoint && displayTime > 0)
-		{
-			displayTime = std::max<int64_t>(0, displayTime - g_config.m_millisecond100ns);
-		}
-		QRect overlay = bottomOverlayRect();
-		QString timeText = LumaPlayerHelper::formatTime(displayTime, true);
-		QFontMetrics metrics(painter.font());
-		int labelWidth = metrics.width(timeText) + 12;
-		int labelHeight = metrics.height() + 4;
-		int labelLeft = LumaPlayerHelper::clampInt(x - labelWidth / 2, 4, std::max(4, width() - labelWidth - 4));
-		QRect timeRect(labelLeft, track.top() - labelHeight - 5, labelWidth, labelHeight);
-		painter.setPen(QColor(255, 255, 255, 230));
-		painter.drawText(timeRect, Qt::AlignCenter, timeText);
-	}
-	painter.restore();
+    const bool isB = label == g_config.m_bLabel;
+    const int32_t x = progressTimeToX(markerTime100ns);
+    const QRect track = progressTrackRect();
+    const QColor color = isB ? g_config.m_loopBColor : g_config.m_loopAColor;
+    painter.save();
+    QPen pen(color);
+    pen.setWidth(hovered ? g_config.m_markerHoverWidth : g_config.m_markerWidth);
+    painter.setPen(pen);
+    painter.drawLine(x, track.center().y() - g_config.m_markerHeight / 2,
+        x, track.center().y() + g_config.m_markerHeight / 2);
+    QFont markerFont = font();
+    markerFont.setPointSize(g_config.m_timeFontSize);
+    painter.setFont(markerFont);
+    painter.drawText(QRect(x - g_config.m_markerLabelWidth / 2,
+        track.bottom() + g_config.m_markerLabelGap, g_config.m_markerLabelWidth,
+        g_config.m_markerLabelHeight), Qt::AlignCenter, label);
+    if (hovered)
+    {
+        const int64_t time = isB ? (std::max<int64_t>)(0, markerTime100ns - g_config.m_millisecond100ns) : markerTime100ns;
+        const QString text = LumaPlayerHelper::formatTime(time, true);
+        const QFontMetrics metrics(markerFont);
+        const int32_t labelWidth = metrics.width(text) + 2 * g_config.m_timestampPadding;
+        const int32_t labelHeight = metrics.height();
+        const int32_t left = LumaPlayerHelper::clampInt(x - labelWidth / 2,
+            g_config.m_timeMargin, (std::max)(g_config.m_timeMargin, width() - labelWidth - g_config.m_timeMargin));
+        painter.drawText(QRect(left, track.top() - labelHeight - g_config.m_timestampGap,
+            labelWidth, labelHeight), Qt::AlignCenter, text);
+    }
+    painter.restore();
+}
 
+void LumaPlayer::postAction(LumaPlayerActionType type, int64_t value, int32_t point)
+{
+    if (m_closeRequested)
+    {
+        return;
+    }
+    LumaPlayerLogicAction action;
+    action.m_type = type;
+    action.m_value = value;
+    action.m_point = point;
+    action.m_revision = ++m_nextInputSerial;
+    if (type == LumaActionJump || type == LumaActionDragBegin)
+    {
+        m_lastSeekInput = action.m_revision;
+        if (type == LumaActionJump)
+        {
+            m_hasDragPosition = false;
+        }
+    }
+    if (type == LumaActionCancelMove)
+    {
+        m_lastMoveInput = action.m_revision;
+    }
+    if (type == LumaActionShutdown)
+    {
+        m_closeRequested = m_logic.submit(action);
+        return;
+    }
+    m_logic.submit(action);
+}
+
+void LumaPlayer::postCore(int32_t operation, int64_t value, bool flag, int32_t point)
+{
+    LumaPlayerLogicAction action;
+    action.m_type = LumaActionCore;
+    action.m_operation = operation;
+    action.m_value = value;
+    action.m_flag = flag;
+    action.m_point = point;
+    action.m_revision = ++m_nextInputSerial;
+    if (operation == LumaPlayerCoreCOperationSeek)
+    {
+        m_lastSeekInput = action.m_revision;
+    }
+    if (operation == LumaPlayerCoreCOperationMoveLoop)
+    {
+        m_lastMoveInput = action.m_revision;
+    }
+    if (!m_closeRequested)
+    {
+        if (!m_logic.submit(action))
+        {
+            if (operation == LumaPlayerCoreCOperationSeek)
+            {
+                m_hasDragPosition = false;
+            }
+            if (operation == LumaPlayerCoreCOperationMoveLoop)
+            {
+                m_pendingLoopMovePoint = -1;
+            }
+            LOGERROR("GUI submission rejected operation=%d input=%llu", operation,
+                static_cast<unsigned long long>(action.m_revision));
+        }
+    }
+}
+
+void LumaPlayer::toggleFullScreen()
+{
+    postAction(LumaActionFullscreen);
+}
+
+void LumaPlayer::toggleMaximize()
+{
+    postAction(LumaActionMaximize);
+}
+
+void LumaPlayer::closeEvent(QCloseEvent* event)
+{
+    if (m_closeReady)
+    {
+        event->accept();
+        return;
+    }
+    event->ignore();
+    postAction(LumaActionShutdown);
+}
+
+void LumaPlayer::onLogicResult(const LumaPlayerLogicResult& result)
+{
+    if (result.m_type == LumaActionHelpClose || result.m_type == LumaActionWindowApplied)
+    {
+        return;
+    }
+    if (result.m_type == LumaActionShutdown)
+    {
+        if (result.m_error != 0)
+        {
+            m_closeRequested = false;
+            LOGERROR("Shutdown submission failed result=%d", result.m_error);
+            return;
+        }
+        m_closeReady = true;
+        m_uiTimer.stop();
+        m_clickTimer.stop();
+        close();
+        return;
+    }
+    if (m_closeRequested)
+    {
+        return;
+    }
+    if (result.m_mediaGeneration < m_mediaGeneration)
+    {
+        return;
+    }
+    m_mediaGeneration = result.m_mediaGeneration;
+    if (result.m_type == LumaActionHelp)
+    {
+        showHelpDialog();
+        return;
+    }
+    if (result.m_type == LumaActionMinimize)
+    {
+        ++m_windowStateSerial;
+        showMinimized();
+        acknowledgeWindow(LumaActionMinimize, isMinimized());
+        return;
+    }
+    if (result.m_type == LumaActionMaximize)
+    {
+        applyMaximize();
+        return;
+    }
+    if (result.m_type == LumaActionFullscreen)
+    {
+        applyFullScreen();
+        return;
+    }
+    m_snapshot = result.m_snapshot;
+    m_hasMedia = LumaPlayerHelper::isOpenedState(m_snapshot.m_state) && m_snapshot.m_hasVideo;
+    m_resetEnabled = result.m_dirty;
+    if (result.m_revision >= m_viewRevision &&
+        result.m_viewportGeneration == m_viewportGeneration)
+    {
+        m_zoomPercent = result.m_zoom;
+        m_panOffset = result.m_pan;
+        m_pinned = result.m_pinned;
+        m_viewRevision = result.m_revision;
+    }
+    if (result.m_type == LumaActionReset || result.m_type == LumaActionPan ||
+        result.m_type == LumaActionZoom || result.m_type == LumaActionPin)
+    {
+        LumaPlayerLogicAction applied;
+        applied.m_type = LumaActionViewApplied;
+        applied.m_revision = result.m_revision;
+        applied.m_flag = m_viewRevision == result.m_revision &&
+            m_zoomPercent == result.m_zoom && m_panOffset == result.m_pan;
+        m_logic.submit(applied);
+        if (result.m_type == LumaActionZoom)
+        {
+            m_zoomTipHideMs = m_elapsedTimer.elapsed() + g_config.m_mouseIdleHideMs;
+        }
+    }
+    if (result.m_type == LumaActionLoad)
+    {
+        m_pendingMediaLoad = result.m_requestId == 0;
+        if (!m_pendingMediaLoad && result.m_error == 0)
+        {
+            m_cachedFrame = QImage();
+            m_scaledFrame = QImage();
+            m_scaledFrameSourceKey = 0;
+            m_cachedFrameSerial = 0;
+            m_lastActiveLoopPoint = -1;
+            fitWindowToMedia();
+        }
+    }
+    if (result.m_type == LumaActionCompleted)
+    {
+        if (result.m_operation == LumaPlayerCoreCOperationPause && result.m_error != 0 &&
+            m_dragProgress && result.m_inputSerial == m_lastSeekInput)
+        {
+            m_dragProgress = false;
+            m_hasDragPosition = false;
+            m_progressWasPlaying = false;
+        }
+        if (result.m_operation == LumaPlayerCoreCOperationOpen)
+        {
+            m_pendingMediaLoad = false;
+        }
+        if (result.m_operation == LumaPlayerCoreCOperationSeek && !m_dragProgress && result.m_inputSerial == m_lastSeekInput)
+        {
+            // 完成回报到达时同步取已发布帧，避免先退回旧缓存位置再跳到最终帧。
+            m_videoRender.copyFrame(&m_cachedFrame, &m_cachedFrameStart,
+                &m_cachedFrameEnd, &m_cachedFrameSerial);
+            m_hasDragPosition = false;
+        }
+        if (result.m_operation == LumaPlayerCoreCOperationMoveLoop && result.m_inputSerial == m_lastMoveInput)
+        {
+            m_pendingLoopMovePoint = -1;
+            if (result.m_error == 0)
+            {
+                m_lastActiveLoopPoint = result.m_point;
+                const int64_t time = result.m_point == 0 ? m_snapshot.m_loopAStart100ns : m_snapshot.m_loopBEnd100ns;
+                QCursor::setPos(mapToGlobal(QPoint(progressTimeToX(time), progressTrackRect().center().y())));
+            }
+        }
+        if (result.m_error == 0 && (result.m_operation == LumaPlayerCoreCOperationSetA ||
+            result.m_operation == LumaPlayerCoreCOperationSetB))
+        {
+            m_lastActiveLoopPoint = result.m_point;
+        }
+        if (result.m_error == 0 && result.m_operation == LumaPlayerCoreCOperationClearLoop)
+        {
+            m_lastActiveLoopPoint = -1;
+        }
+    }
+    if (result.m_error != 0)
+    {
+        LOGERROR("GUI operation failed, operation=%d request=%llu result=%d, %s",
+            result.m_operation, static_cast<unsigned long long>(result.m_requestId),
+            result.m_error, lumaPlayerCoreResultDescription(result.m_error));
+    }
+    updateOverlayTargets();
+    update();
+}
+
+QRect LumaPlayer::videoViewportRect() const
+{
+    return m_pinned ? rect().adjusted(0, topOverlayHeight(), 0, -bottomOverlayHeight()) : rect();
+}
+
+QRect LumaPlayer::resetButtonRect() const
+{
+    return loadButtonRect().translated(g_config.m_titleButtonSize + g_config.m_titleButtonGap, 0);
+}
+
+QRect LumaPlayer::helpButtonRect() const
+{
+    return minimizeButtonRect().translated(-g_config.m_titleButtonSize - g_config.m_titleButtonGap - g_config.m_windowButtonGroupGap, 0);
+}
+
+QRect LumaPlayer::pinButtonRect() const
+{
+    return helpButtonRect().translated(-g_config.m_titleButtonSize - g_config.m_titleButtonGap, 0);
+}
+
+void LumaPlayer::showHelpDialog()
+{
+    LumaPlayerHelpParam param(&m_logic);
+    param.m_title = g_config.m_helpTitle;
+    param.m_parent = windowHandle();
+    param.m_businessId = CUSTOM_DIALOG_TYPE_BEGIN;
+    param.m_userId = static_cast<quint64>(reinterpret_cast<uintptr_t>(this));
+    DialogManager::instance().makeDialog(param);
+    acknowledgeWindow(LumaActionHelp, param.m_dialogId != 0);
+}
+
+void LumaPlayer::acknowledgeWindow(LumaPlayerActionType type, bool success)
+{
+    LumaPlayerLogicAction action;
+    action.m_type = LumaActionWindowApplied;
+    action.m_point = static_cast<int32_t>(type);
+    action.m_flag = success;
+    m_logic.submit(action);
 }

@@ -25,6 +25,18 @@
     <ClInclude Include="..\src\PlayerCommand.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\PlayerCompletionDelivery.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\PlayerRequestCompletion.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\PlayerCompletionTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\LumaPlayerCoreRequest.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\PlayerEngine.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -122,6 +134,18 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\PlayerCommand.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\PlayerCompletionDelivery.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\PlayerRequestCompletion.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\PlayerCompletionTask.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\LumaPlayerCoreRequest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\PlayerEngineHelper.cpp">

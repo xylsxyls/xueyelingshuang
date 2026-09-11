@@ -1,0 +1,5 @@
+﻿<RCC>
+    <qresource prefix="/">
+        <file>LumaPlayerTest.qml</file>
+    </qresource>
+</RCC>

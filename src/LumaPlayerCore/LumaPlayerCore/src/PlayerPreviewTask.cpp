@@ -20,19 +20,21 @@ PlayerPreviewTask::~PlayerPreviewTask()
 
 }
 
-void PlayerPreviewTask::request(int64_t position100ns, uint64_t requestSerial)
+void PlayerPreviewTask::request(int64_t position100ns, uint64_t requestSerial,
+    const std::shared_ptr<PlayerRequestCompletion>& completion)
 {
-	{
-		std::lock_guard<std::mutex> lock(m_requestMutex);
-		if (m_exit.load() || requestSerial <= m_requestSerial)
-		{
-			return;
-		}
-		m_position100ns = position100ns;
-		m_requestSerial = requestSerial;
-		m_pending = true;
-	}
-	m_requestReady.notify_one();
+    {
+        std::lock_guard<std::mutex> lock(m_requestMutex);
+        if (m_exit.load() || requestSerial <= m_requestSerial)
+        {
+            return;
+        }
+        m_position100ns = position100ns;
+        m_requestSerial = requestSerial;
+        m_completion = completion;
+        m_pending = true;
+    }
+    m_requestReady.notify_one();
 }
 
 void PlayerPreviewTask::DoTask()
@@ -47,6 +49,7 @@ void PlayerPreviewTask::DoTask()
 	}
 	while (!m_exit.load())
 	{
+        std::shared_ptr<PlayerRequestCompletion> completion;
 		int64_t position100ns = 0;
 		uint64_t requestSerial = 0;
 		{
@@ -61,9 +64,15 @@ void PlayerPreviewTask::DoTask()
 			}
 			position100ns = m_position100ns;
 			requestSerial = m_requestSerial;
+            completion.swap(m_completion);
 			m_pending = false;
 		}
-		m_engine->previewFrameFromTask(position100ns, requestSerial, &m_exit);
+        const LumaPlayerCoreResult result = m_engine->previewFrameFromTask(position100ns, requestSerial, &m_exit);
+        if (completion != nullptr)
+        {
+            completion->m_delivery->m_completion.m_result = result;
+            completion->m_delivery->m_completion.m_snapshot = m_engine->snapshot();
+        }
 	}
 }
 
@@ -73,6 +82,7 @@ void PlayerPreviewTask::StopTask()
 		std::lock_guard<std::mutex> lock(m_requestMutex);
 		m_exit = true;
 		m_pending = false;
+        m_completion.reset();
 	}
 	m_requestReady.notify_one();
 }

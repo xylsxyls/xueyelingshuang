@@ -1,0 +1,64 @@
+﻿仓库使用说明文档
+更新日期：2026-09-10
+
+一、先读什么、改哪里
+本文件负责仓库结构、工程生成、依赖准备、构建及发布。代码写法看《AI代码开发规范.txt》，产品分层看《工程开发规范.txt》，任务模型看《线程开发规范.txt》。进入具体产品后先读其需求文档和开发文档，不把临时验证脚本当成正式构建入口。
+源码在src；库通常为src/库名/库名/src，应用为src/应用名/应用名。公开头的源头在src，include/库名是构建复制结果，只改include会在下次构建被覆盖。
+lib是公共输出目录，保存EXE、DLL、导入库、静态库及符号；不同位数/链接组合会覆盖同名文件，不支持同时构建互相覆盖的组合。tools保存第三方原件，common保存可分发的64位正式程序及产品文档。src/temp/任务名用于审查记录、临时测试和备份；不要将日志/obj/vc120.pdb放仓库根目录。
+先检查已有修改并保留，不清理不明文件。Git报dubious ownership时不要擅自修改全局safe.directory。
+
+二、工程类型与入口职责
+二次开发库有version_debug.sh、version_release.sh、scripts/before_库名.sh、after_库名.sh、rebuild_库名.py、CMakeLists.txt，以及DLL/LIB工程。
+库自身version每个文件恰好一条命令，默认固定32 dll：
+"$CLOUD_REBUILD" 库名 32 dll debug same
+release文件对应release。依赖只能写before，不能将库version改成依赖清单。应用需要64 lib/64 dll时直接向CloudRebuild传参，不改库的默认入口。
+应用与Test是可执行工程，不新增库式scripts/rebuild框架。应用version集中准备依赖，应用自身另用sln/MSBuild或对应CMake编译，不能用CloudRebuild编应用。
+应用version先核对各库before中的传递依赖和构建顺序；已由上游按所需位数、配置、dll/lib及CRT组合构建的依赖，不重复显式编译。LumaPlayerCore -> CTaskThreadManager -> Semaphore已覆盖后，应用version不再另列后两者。未被依赖链覆盖的CDump等库单独列出，最后一个参数默认same；only不是常规version的默认选择。不能把磁盘上的旧产物当作本次依赖已覆盖。
+常规应用Debug为32 dll，Release优先64 lib（目标明确需要32位则32 lib）；Qt等明确例外按实际工程。LumaPlayer桌面Debug/Release均为64 dll依赖，Qt应用使用匹配Qt的MD/MDd。库的Release MT不为链接方便批量改MD。
+
+三、环境和命令参数
+XUEYELINGSHUANG为仓库根目录，Windows当前约定带尾部反斜杠，如D:\xueyelingshuang\。CLOUD_REBUILD是common/CloudRebuild/CloudRebuild1.2.exe完整路径。不要把机器示例绝对路径写死进通用构建脚本。
+Windows用VS2013/MSBuild12、Python构建框架及Git的bin/sh.exe。检查实际可执行文件，python可能命中WindowsApps占位程序。QTDIR指向与位数、编译器匹配的Qt目录。
+CloudRebuild参数：ProjectName Bit DllLib DebugRelease AllSame。
+Bit为32/64；其他架构只有对应工具链支持时使用。DllLib为dll/lib；DebugRelease为debug/release。debug产物一般带d后缀，最终名称以API自动链接和工程TargetName为准。
+same：先执行当前库before再构建。only：跳过before；必须确认依赖和第三方复制已准备好，不能为省时间破坏干净构建。librely：当前库按指定dll/lib构建，before依赖强制lib。历史dllrely无特殊支持，不能照抄。
+PowerShell执行单库：
+& $env:CLOUD_REBUILD LumaPlayerCore 64 dll debug same
+执行shell统一用Git sh，不用可能指向WSL的bash命令名：
+& 'C:\Program Files\Git\bin\sh.exe' src/LumaPlayer/version_debug.sh
+应用构建示例：
+& 'C:\Program Files (x86)\MSBuild\12.0\Bin\amd64\MSBuild.exe' src/LumaPlayer/LumaPlayer.sln /p:Configuration=Debug /p:Platform=x64 /m /nologo /clp:ErrorsOnly
+也可用'/p:Configuration=Debug;Platform=x64'，分号参数必须整体引用。日志重定向到src/temp任务目录。
+
+四、CloudRebuild执行与脚本维护
+Windows：before准备依赖 -> rebuild_库名.py选择DLL/LIB工程并调用MSBuild -> 复制公开.h/.inl到include -> 用MacroDll/MacroLib替换输出Macro.h -> after。已有rebuild_*.py只读不改，包括注释、换行、文件尾；依赖/复制改before/after/version或工程文件。
+Linux：before -> 从其中CLOUD_REBUILD调用收集LIBRARIESRELY -> scripts/build内cmake，传BIT/DLLLIB/DEBUGRELEASE/LIBRARIESRELY -> make -> 同步include/Macro -> 清理构建目录 -> after。不把Windows产物当跨平台验证。
+before每个依赖使用独立参数块：Xxx_bit=$1、Xxx_dlllib=$2、Xxx_debugRelease=$3、Xxx_allSame=$4，再调用CLOUD_REBUILD。通常沿用传入值，固定参数须说明原因。不要额外包环境变量非空判断来静默跳过依赖。
+after允许为空。只在确认前置步骤无其他必要副作用时使用only；不同组合构建串行进行，避免公共lib和Macro被另一个构建覆盖。
+
+五、链接规则和第三方管理
+业务包含Xxx/XxxAPI.h，不写include前缀或tools相对路径。Windows封装库入口通过#pragma comment(lib,...)选Debug/Release库，vcxproj不重复填写封装库及其传递依赖。AdditionalDependencies只列当前工程直接使用的底层第三方/系统库，库目录通常只需根lib。
+Linux库CMake将LIBRARIESRELY加入LIBRARYLIST再逐项链接。缺封装库依赖改before，不手写libCStringManager.a等补丁；直接第三方库才在本库CMake配置。静态依赖能否传播须以实际链接为准，不能将导入库改名伪装完整静态库。
+tools/库名/include/库名windows、库名linux保存对应头；lib/x86、lib/x64及其MD子目录区分位数/运行库，源码包、许可证和构建说明留在第三方根目录。动态.lib与.dll必须同批；完整静态库命名追加static32/static64。
+before按位数、配置和链接方式复制必需的第三方头及库到include/lib。业务缺能力先补封装，不直接调用第三方。不随意升级工具链或第三方；升级需核对VS2013、系统版本、C++11、CRT、位数、部署和许可证。
+dll/lib与MD/MT是两个维度。Release静态依赖应与目标CRT匹配；出现MSVCRT/LIBCMT冲突先查配置，不用/NODEFAULTLIB掩盖。跨DLL内存由分配模块提供释放接口，STL ABI不同的模块用C接口隔离。
+
+六、新建工程
+普通库使用src/DllTest模板和DllProduce生成器；Qt库使用src/QtDllTest对应生成器（本机若名为QDllProduce/QDllTest按实际名称）。运行前确认FILE_REPLACE环境变量工具存在。
+在模板目录运行生成器，输入新库名及英文逗号分隔依赖，无依赖填none。生成后检查库名替换、目录、API/Macro文件、两套工程及filters、before依赖、after、CMake和各一行32dll的version。rebuild由模板生成，生成后不手改。
+控制台应用参考ConsoleTest，Qt应用参考QtTest，MFC应用参考MFCTest。检查sln/vcxproj/filter/输出名/包含目录/CMake、Qt ui/qrc/moc或MFC资源/预编译头，去除误复制的库式scripts。产品同时有App、AppCore、AppTest，详见工程规范。
+
+七、验证和正式发布
+先准备依赖，再编译库/应用并检查真实错误、退出码和目标时间戳。CloudRebuild部分复制/清理提示不代表编译失败，脚本退出0也不能替代检查实际MSBuild错误。无.inl时xcopy的File not found通常可解释；不能忽略真正缺文件。
+公开头经构建同步后检查源头与include一致、Macro对应最终目标。C ABI必须用纯C编译器检查头文件。Debug/Release、位数、dll/lib、CRT组合分别记录；LumaPlayerTest的STATIC_LIB配置要先准备Core静态库，回到桌面时重新运行应用version恢复DLL Macro和依赖。
+保留库同名.cpp末尾已有逐行//测试main。临时启用优先使用动态库工程转EXE，结束恢复工程和注释；手动cl显式/Fo /Fd /Fe，所有临时文件放src/temp任务目录。正式功能与压力测试放产品Test。
+C/C++/.inl及Windows工程文件UTF-8 BOM，CMake无BOM，shell无BOM；文件尾不留额外换行/空白，连续空行按代码规范清理。已有rebuild_*.py不自动格式化。
+先在lib使用本次产物测试，成功后同步common正式64位Release包。EXE、DLL、PDB必须同批；核对PE依赖、PDB GUID/Age并记录哈希。保留旧包及其符号供旧dump分析，不覆盖唯一诊断依据。
+LNK4099缺第三方PDB通常不阻止链接，但影响定位能力，报告来源；应补匹配PDB或重编第三方，不能借此宣布符号完整。
+
+八、产品特定入口
+LumaPlayer：common/LumaPlayer/需求文档.txt描述产品，开发文档.txt描述源码、构建、脚本、测试与限制。桌面定义LUMAPLAYERCORE_USE_C_API并包含LumaPlayerCoreAPI.h使用Core C ABI；不再提供LumaPlayerCoreCAPI.h，DLL导入库/静态库均按配置命名LumaPlayerCore.lib或LumaPlayerCored.lib，组合必须串行切换；C/C++共享实现，C头不含STL，调用方与库结构布局一起重编。最终包包含CDump及匹配PDB，常开日志与debug无关。
+CookServer：应用version准备依赖，sln编译；历史Win32示例不能覆盖common只发布64位的规则。修改服务端后编译并同步目标CookServer1.0.exe、改动的CookServer.ini/res到common/CookServer；HiRedis.dll是现有Windows兼容部署依赖，有改动时重编同步，不随意引入其他DLL。正式CookServerTest1.0.exe到common/CookServerTest。Debug及临时测试EXE留lib/src/temp，不发布common。必须先测试后同步。
+
+九、交接记录
+交付说明实际修改、构建命令/组合、测试输入和结果、剩余风险。中断恢复文件应包含当前文件状态、已执行脚本及是否可重复、未完成事项、构建产物组合和证据路径。不能重新运行非幂等替换脚本，更不能用历史测试报告替本轮验证。

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "DialogManagerMacro.h"
 #include "DialogType.h"
 

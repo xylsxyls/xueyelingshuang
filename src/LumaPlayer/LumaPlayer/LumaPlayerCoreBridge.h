@@ -15,6 +15,15 @@ class LumaPlayerVideoRender;
 class LumaPlayerCoreBridge
 {
 public:
+    /** 提交携带身份和真实完成回报的C请求
+    @param [in] request 参数副本，字符串仅提交期间借用
+    @param [in] callback 短小结果回调
+    @param [in] userData 借用上下文，存活到uninit结束
+    @return 提交结果，非零时不回调
+    */
+    int32_t submitAsyncEx(const LumaPlayerCoreCRequest& request,
+        LumaPlayerCoreCCompletionCallback callback, void* userData);
+
 	/** 创建Core句柄并记录外部渲染器
 	@param [in] audioRender Qt音频渲染器，由窗口管理生命周期
 	@param [in] videoRender Qt视频渲染器，由窗口管理生命周期

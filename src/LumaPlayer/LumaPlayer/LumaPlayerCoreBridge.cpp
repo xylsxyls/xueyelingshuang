@@ -5,7 +5,7 @@
 #include "LumaPlayerCoreBridge.h"
 
 #include "LumaPlayerAudioRender.h"
-#include "LumaPlayerLogger.h"
+#include "LogManager/LogManagerAPI.h"
 #include "LumaPlayerVideoRender.h"
 
 LumaPlayerCoreBridge::LumaPlayerCoreBridge(LumaPlayerAudioRender* audioRender, LumaPlayerVideoRender* videoRender) :
@@ -242,4 +242,11 @@ int32_t LumaPlayerCoreBridge::renderVideoCallback(const LumaPlayerCoreCVideoFram
 void LumaPlayerCoreBridge::cancelLoopPointMove()
 {
 	lumaPlayerCoreCancelLoopPointMove(m_handle);
+}
+
+int32_t LumaPlayerCoreBridge::submitAsyncEx(const LumaPlayerCoreCRequest& request,
+    LumaPlayerCoreCCompletionCallback callback, void* userData)
+{
+    return m_handle != nullptr ? lumaPlayerCoreSubmitAsyncEx(m_handle, &request, callback, userData) :
+        LumaPlayerCoreCResultNotInit;
 }

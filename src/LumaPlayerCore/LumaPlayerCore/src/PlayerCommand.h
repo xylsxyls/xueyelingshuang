@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "LumaPlayerCoreTypes.h"
+#include "PlayerRequestCompletion.h"
 #include "Semaphore/SemaphoreAPI.h"
 
 #include <memory>
@@ -83,6 +84,8 @@ public:
 	uint64_t m_serial;
 	// 同步等待结果；为空表示调用方不等待该命令
 	std::shared_ptr<PlayerSyncResult> m_syncResult;
+    // 可选请求凭据，任务未执行而释放时回报取消
+    std::shared_ptr<PlayerRequestCompletion> m_completion;
 
 public:
 	/** 构造无效命令

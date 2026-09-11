@@ -25,17 +25,30 @@ del "%~dp0*.opensdf" /s
 ::copy "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.1user" "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.user"
 ::del "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.1user"
 
-rmdir /q /s "%~dp0src\WidgetFactory\WidgetFactory\vcxproj\GeneratedFiles\"
-rmdir /q /s "%~dp0src\QssString\QssString\vcxproj\GeneratedFiles\"
-rmdir /q /s "%~dp0src\HttpRequest\HttpRequest\vcxproj\GeneratedFiles\"
-rmdir /q /s "%~dp0src\EO_XmlSax2Parser\EO_XmlSax2Parser\vcxproj\GeneratedFiles\"
-rmdir /q /s "%~dp0src\QtControls\QtControls\vcxproj\GeneratedFiles\"
-rmdir /q /s "%~dp0src\DialogManager\DialogManager\vcxproj\GeneratedFiles\"
-rmdir /q /s "%~dp0src\StockDraw\StockDraw\vcxproj\GeneratedFiles\"
-
-rmdir /q /s "%~dp0src\QtClient\QtClient\vcxproj\GeneratedFiles\" 
-
 rmdir /q /s "%~dp0src\temp\"
+
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\QtControls\QtControls\vcxproj\GeneratedFiles\"
+::del "%~dp0src\QtControls\QtControls\vcxproj\QtControls.vcxproj.user"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\DialogManager\DialogManager\vcxproj\GeneratedFiles\"
+::del "%~dp0src\DialogManager\DialogManager\vcxproj\vcxproj\DialogManager.vcxproj.user"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\EO_XmlSax2Parser\EO_XmlSax2Parser\vcxproj\GeneratedFiles\"
+::del "%~dp0src\EO_XmlSax2Parser\EO_XmlSax2Parser\vcxproj\EO_XmlSax2Parser.vcxproj.user"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\WidgetFactory\WidgetFactory\vcxproj\GeneratedFiles\"
+::del "%~dp0src\WidgetFactory\WidgetFactory\vcxproj\WidgetFactory.vcxproj.user"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\QssString\QssString\vcxproj\GeneratedFiles\"
+::del "%~dp0src\QssString\QssString\vcxproj\QssString.vcxproj.user"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\HttpRequest\HttpRequest\vcxproj\GeneratedFiles\"
+::del "%~dp0src\HttpRequest\HttpRequest\vcxproj\HttpRequest.vcxproj.user"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\StockDraw\StockDraw\vcxproj\GeneratedFiles\"
+::del "%~dp0src\StockDraw\StockDraw\vcxproj\StockDraw.vcxproj.user"
+::------------------------------------------------------------
 
 ::-------------------É¾³ýMFCÁÙÊ±ÎÄ¼þ--------------------------
 rmdir /q /s "%~dp0src\MessageTest\ipch\"
@@ -74,9 +87,6 @@ rmdir /q /s "%~dp0src\OneKey\ipch\"
 rmdir /q /s "%~dp0src\OneKey\OneKey\Debug\"
 rmdir /q /s "%~dp0src\OneKey\OneKey\Release\"
 ::------------------------------------------------------------
-rmdir /q /s "%~dp0src\11Controls\11Controls\GeneratedFiles\"
-rmdir /q /s "%~dp0src\11Controls\11Controls\include\"
-::------------------------------------------------------------
 rmdir /q /s "%~dp0src\QtTest\QtTest\GeneratedFiles\"
 del "%~dp0src\QtTest\QtTest\QtTest.vcxproj.user"
 rmdir /q /s "%~dp0src\QtTest1\QtTest1\GeneratedFiles\"
@@ -93,8 +103,6 @@ del "%~dp0src\GetPoint\GetPoint\GetPoint.vcxproj.user"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\Dtws\Dtws\GeneratedFiles\"
 del "%~dp0src\Dtws\Dtws\Dtws.vcxproj.user"
-::------------------------------------------------------------
-rmdir /q /s "%~dp0src\QtClient\.vs\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\StockClient\StockClient\GeneratedFiles\"
 del "%~dp0src\StockClient\StockClient\StockClient.vcxproj.user"

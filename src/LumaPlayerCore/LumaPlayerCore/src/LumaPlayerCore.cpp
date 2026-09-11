@@ -6,6 +6,7 @@
 #include "LogManager/LogManagerAPI.h"
 
 #include <new>
+#include <chrono>
 
 LumaPlayerCore::LumaPlayerCore() :
 m_engine(nullptr),
@@ -32,14 +33,37 @@ LumaPlayerCoreResult LumaPlayerCore::init(const LumaPlayerCoreConfig& config)
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->init(config));
+    const LumaPlayerCoreResult result = m_engine->init(config);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 void LumaPlayerCore::uninit()
 {
 	if (m_engine != nullptr)
 	{
-		m_engine->uninit();
+        const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+        if (m_logEnabled.load())
+        {
+            LOGINFO("Core shutdown begin");
+        }
+        m_engine->uninit();
+        if (m_logEnabled.load())
+        {
+            LOGINFO("Core shutdown complete elapsedMs=%lld",
+                static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count()));
+        }
 	}
 }
 
@@ -58,7 +82,7 @@ void LumaPlayerCore::setLogEnabled(bool enabled)
 		config.m_maxFileBytes = 20 * 1024 * 1024;
 		config.m_maxFileCount = 8;
         config.m_outputConsole = false;
-        config.m_archiveOldLog = false;
+        config.m_archiveOldLog = true;
         LogManager::instance().init(config);
     }
     m_logEnabled.store(enabled);
@@ -86,7 +110,20 @@ LumaPlayerCoreResult LumaPlayerCore::openMedia(const std::string& filePath)
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->openMedia(filePath));
+    const LumaPlayerCoreResult result = m_engine->openMedia(filePath);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::openMediaAsync(const std::string& filePath)
@@ -95,7 +132,20 @@ LumaPlayerCoreResult LumaPlayerCore::openMediaAsync(const std::string& filePath)
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->openMediaAsync(filePath));
+    const LumaPlayerCoreResult result = m_engine->openMediaAsync(filePath);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 void LumaPlayerCore::closeMedia()
@@ -112,7 +162,20 @@ LumaPlayerCoreResult LumaPlayerCore::play()
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->play());
+    const LumaPlayerCoreResult result = m_engine->play();
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::playAsync()
@@ -121,7 +184,20 @@ LumaPlayerCoreResult LumaPlayerCore::playAsync()
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->playAsync());
+    const LumaPlayerCoreResult result = m_engine->playAsync();
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::pause()
@@ -130,7 +206,20 @@ LumaPlayerCoreResult LumaPlayerCore::pause()
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->pause());
+    const LumaPlayerCoreResult result = m_engine->pause();
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::pauseAsync()
@@ -139,7 +228,20 @@ LumaPlayerCoreResult LumaPlayerCore::pauseAsync()
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->pauseAsync());
+    const LumaPlayerCoreResult result = m_engine->pauseAsync();
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::stop()
@@ -148,7 +250,20 @@ LumaPlayerCoreResult LumaPlayerCore::stop()
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->stop());
+    const LumaPlayerCoreResult result = m_engine->stop();
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::seekTo(int64_t position100ns, bool keepPlayState)
@@ -157,7 +272,20 @@ LumaPlayerCoreResult LumaPlayerCore::seekTo(int64_t position100ns, bool keepPlay
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->seekTo(position100ns, keepPlayState));
+    const LumaPlayerCoreResult result = m_engine->seekTo(position100ns, keepPlayState);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::seekToAsync(int64_t position100ns, bool keepPlayState)
@@ -166,7 +294,20 @@ LumaPlayerCoreResult LumaPlayerCore::seekToAsync(int64_t position100ns, bool kee
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->seekToAsync(position100ns, keepPlayState));
+    const LumaPlayerCoreResult result = m_engine->seekToAsync(position100ns, keepPlayState);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::previewFrame(int64_t position100ns)
@@ -175,7 +316,20 @@ LumaPlayerCoreResult LumaPlayerCore::previewFrame(int64_t position100ns)
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->previewFrame(position100ns));
+    const LumaPlayerCoreResult result = m_engine->previewFrame(position100ns);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::previewFrameAsync(int64_t position100ns)
@@ -184,7 +338,20 @@ LumaPlayerCoreResult LumaPlayerCore::previewFrameAsync(int64_t position100ns)
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->previewFrameAsync(position100ns));
+    const LumaPlayerCoreResult result = m_engine->previewFrameAsync(position100ns);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::setLoopAByCurrentFrame()
@@ -193,7 +360,20 @@ LumaPlayerCoreResult LumaPlayerCore::setLoopAByCurrentFrame()
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->setLoopAByCurrentFrame());
+    const LumaPlayerCoreResult result = m_engine->setLoopAByCurrentFrame();
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::setLoopAAtPosition(int64_t position100ns)
@@ -202,7 +382,20 @@ LumaPlayerCoreResult LumaPlayerCore::setLoopAAtPosition(int64_t position100ns)
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->setLoopAAtPosition(position100ns));
+    const LumaPlayerCoreResult result = m_engine->setLoopAAtPosition(position100ns);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::setLoopAAtPositionAsync(int64_t position100ns)
@@ -211,7 +404,20 @@ LumaPlayerCoreResult LumaPlayerCore::setLoopAAtPositionAsync(int64_t position100
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->setLoopAAtPositionAsync(position100ns));
+    const LumaPlayerCoreResult result = m_engine->setLoopAAtPositionAsync(position100ns);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::setLoopBByCurrentFrame()
@@ -220,7 +426,20 @@ LumaPlayerCoreResult LumaPlayerCore::setLoopBByCurrentFrame()
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->setLoopBByCurrentFrame());
+    const LumaPlayerCoreResult result = m_engine->setLoopBByCurrentFrame();
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::setLoopBAtPosition(int64_t position100ns)
@@ -229,7 +448,20 @@ LumaPlayerCoreResult LumaPlayerCore::setLoopBAtPosition(int64_t position100ns)
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->setLoopBAtPosition(position100ns));
+    const LumaPlayerCoreResult result = m_engine->setLoopBAtPosition(position100ns);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::setLoopBAtPositionAsync(int64_t position100ns)
@@ -238,7 +470,20 @@ LumaPlayerCoreResult LumaPlayerCore::setLoopBAtPositionAsync(int64_t position100
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->setLoopBAtPositionAsync(position100ns));
+    const LumaPlayerCoreResult result = m_engine->setLoopBAtPositionAsync(position100ns);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::clearLoop()
@@ -247,7 +492,20 @@ LumaPlayerCoreResult LumaPlayerCore::clearLoop()
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->clearLoop());
+    const LumaPlayerCoreResult result = m_engine->clearLoop();
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::clearLoopAsync()
@@ -256,7 +514,20 @@ LumaPlayerCoreResult LumaPlayerCore::clearLoopAsync()
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->clearLoopAsync());
+    const LumaPlayerCoreResult result = m_engine->clearLoopAsync();
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::moveLoopPoint(LumaPlayerCoreLoopPointType pointType, int32_t frameOffset)
@@ -265,7 +536,20 @@ LumaPlayerCoreResult LumaPlayerCore::moveLoopPoint(LumaPlayerCoreLoopPointType p
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->moveLoopPoint(pointType, frameOffset));
+    const LumaPlayerCoreResult result = m_engine->moveLoopPoint(pointType, frameOffset);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::moveLoopPointAsync(LumaPlayerCoreLoopPointType pointType, int32_t frameOffset)
@@ -274,7 +558,20 @@ LumaPlayerCoreResult LumaPlayerCore::moveLoopPointAsync(LumaPlayerCoreLoopPointT
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->moveLoopPointAsync(pointType, frameOffset));
+    const LumaPlayerCoreResult result = m_engine->moveLoopPointAsync(pointType, frameOffset);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::setPlaybackRatePermille(int32_t ratePermille)
@@ -283,7 +580,20 @@ LumaPlayerCoreResult LumaPlayerCore::setPlaybackRatePermille(int32_t ratePermill
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->setPlaybackRatePermille(ratePermille));
+    const LumaPlayerCoreResult result = m_engine->setPlaybackRatePermille(ratePermille);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerCoreResult LumaPlayerCore::setPlaybackRatePermilleAsync(int32_t ratePermille)
@@ -292,7 +602,20 @@ LumaPlayerCoreResult LumaPlayerCore::setPlaybackRatePermilleAsync(int32_t ratePe
 	{
 		return LumaPlayerCoreResultInternalError;
 	}
-	return reportResult(m_engine->setPlaybackRatePermilleAsync(ratePermille));
+    const LumaPlayerCoreResult result = m_engine->setPlaybackRatePermilleAsync(ratePermille);
+    if (m_logEnabled.load())
+    {
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            LOGINFO("Core operation result=%d", static_cast<int32_t>(result));
+        }
+        else
+        {
+            LOGERROR("Core operation result=%d, %s", static_cast<int32_t>(result),
+                kLumaPlayerCoreResultDescriptions.at(result).c_str());
+        }
+    }
+    return result;
 }
 
 LumaPlayerSnapshot LumaPlayerCore::snapshot() const
@@ -322,22 +645,29 @@ std::string LumaPlayerCore::lastError() const
 	return m_engine->lastError();
 }
 
-LumaPlayerCoreResult LumaPlayerCore::reportResult(LumaPlayerCoreResult result) const
-{
-    if (m_logEnabled.load())
-    {
-        std::map<LumaPlayerCoreResult, std::string>::const_iterator it = kLumaPlayerCoreResultDescriptions.find(result);
-        const char* description = it != kLumaPlayerCoreResultDescriptions.end() ? it->second.c_str() : "未知的播放器错误码";
-        LogManager::instance().print(0, result == LumaPlayerCoreResultSuccess ? LogManager::LOG_INFO : LogManager::LOG_ERROR,
-            __FILE__, __FUNCTION__, "", "", 0, "result=%d，%s", static_cast<int32_t>(result), description);
-    }
-    return result;
-}
-
 void LumaPlayerCore::cancelLoopPointMove()
 {
 	if (m_engine != nullptr)
 	{
 		m_engine->cancelLoopPointMove();
 	}
+}
+
+LumaPlayerCoreResult LumaPlayerCore::submitAsyncEx(const LumaPlayerCoreRequest& request,
+    const LumaPlayerCoreCompletionCallback& callback)
+{
+    if (m_engine == nullptr)
+    {
+        return LumaPlayerCoreResultNotInit;
+    }
+    const LumaPlayerCoreResult result = m_engine->submitAsyncEx(request, callback);
+    if (m_logEnabled.load() && (request.m_operation != LumaPlayerCoreOperationPreview ||
+        result != LumaPlayerCoreResultSuccess))
+    {
+        LOGINFO("Core request submitted id=%llu generation=%llu operation=%d result=%d",
+            static_cast<unsigned long long>(request.m_requestId),
+            static_cast<unsigned long long>(request.m_mediaGeneration),
+            static_cast<int32_t>(request.m_operation), static_cast<int32_t>(result));
+    }
+    return result;
 }

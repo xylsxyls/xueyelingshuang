@@ -3,15 +3,11 @@
 #endif
 #include "LumaPlayerHelper.h"
 #include "Config.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include <QPainter>
 #include <algorithm>
 #include <cctype>
 #include <string>
-
-QString LumaPlayerHelper::qcn(const wchar_t* text)
-{
-	return QString::fromWCharArray(text);
-}
 
 int LumaPlayerHelper::clampInt(int value, int minValue, int maxValue)
 {
@@ -77,26 +73,26 @@ QString LumaPlayerHelper::formatTime(int64_t time100ns, bool withMillisecond)
 	int64_t second = totalSeconds % 60;
 	if (!withMillisecond)
 	{
-		return QString("%1:%2:%3").arg(hour, 2, 10, QChar('0')).arg(minute, 2, 10, QChar('0')).arg(second, 2, 10, QChar('0'));
+        return QString::fromStdString(CStringManager::Format(g_config.m_timeTextFormat.c_str(),
+            static_cast<int>(hour), static_cast<int>(minute), static_cast<int>(second)));
 	}
 	int64_t millisecond = (time100ns / g_config.m_millisecond100ns) % 1000;
-	return QString("%1:%2:%3.%4").arg(hour, 2, 10, QChar('0')).arg(minute, 2, 10, QChar('0')).arg(second, 2, 10, QChar('0')).arg(millisecond, 3, 10, QChar('0'));
+    return QString::fromStdString(CStringManager::Format(g_config.m_preciseTimeTextFormat.c_str(),
+        static_cast<int>(hour), static_cast<int>(minute), static_cast<int>(second), static_cast<int>(millisecond)));
 }
 
 void LumaPlayerHelper::paintLoadIcon(QPainter& painter, const QRect& rect, bool hover)
 {
-	painter.save();
-	painter.setPen(Qt::NoPen);
-	painter.setBrush(hover ? QColor(255, 255, 255, 38) : QColor(255, 255, 255, 8));
-	painter.drawRoundedRect(rect, 3, 3);
-	QPen pen(QColor(245, 245, 245, 220));
-	pen.setWidth(2);
-	painter.setPen(pen);
-	painter.setBrush(Qt::NoBrush);
-	QRect tray(rect.left() + 4, rect.top() + 11, rect.width() - 8, 5);
-	painter.drawRect(tray);
-	painter.drawLine(QPoint(rect.center().x(), rect.top() + 4), QPoint(rect.center().x(), rect.top() + 12));
-	painter.drawLine(QPoint(rect.center().x(), rect.top() + 4), QPoint(rect.center().x() - 4, rect.top() + 8));
-	painter.drawLine(QPoint(rect.center().x(), rect.top() + 4), QPoint(rect.center().x() + 4, rect.top() + 8));
-	painter.restore();
+    painter.save();
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(hover ? g_config.m_buttonHoverColor : g_config.m_buttonColor);
+    painter.drawRoundedRect(rect, g_config.m_cornerRadius, g_config.m_cornerRadius);
+    QPen pen(g_config.m_iconColor);
+    pen.setWidthF(g_config.m_iconStroke);
+    painter.setPen(pen);
+    painter.setBrush(Qt::NoBrush);
+    painter.translate(rect.topLeft());
+    painter.scale(rect.width() / g_config.m_iconCanvasSize, rect.height() / g_config.m_iconCanvasSize);
+    painter.drawPath(g_config.m_loadIcon);
+    painter.restore();
 }

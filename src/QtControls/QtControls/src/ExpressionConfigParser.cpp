@@ -15,11 +15,16 @@ ExpressionConfigParser::~ExpressionConfigParser()
 
 bool ExpressionConfigParser::parse(const QString& emotionRootPath, ExpressionConfig* config)
 {
+    return parseResult(emotionRootPath, config) == ExpressionLoadSuccess;
+}
+
+ExpressionLoadResult ExpressionConfigParser::parseResult(const QString& emotionRootPath, ExpressionConfig* config)
+{
     m_lastError.clear();
     if (config == nullptr)
     {
         m_lastError = QStringLiteral("expression config output is null");
-        return false;
+        return ExpressionLoadInvalidOutput;
     }
 
     config->clear();
@@ -33,22 +38,22 @@ bool ExpressionConfigParser::parse(const QString& emotionRootPath, ExpressionCon
         {
             m_lastError = parser.lastError();
         }
-        return false;
+        return ExpressionLoadParseFailed;
     }
 
     if (!handler.hasConfigRoot())
     {
         m_lastError = QStringLiteral("expression XML missing config root element");
-        return false;
+        return ExpressionLoadMissingRoot;
     }
 
     if (config->m_groups.isEmpty() && config->m_expressions.isEmpty())
     {
         m_lastError = QStringLiteral("expression config is empty");
-        return false;
+        return ExpressionLoadEmptyConfig;
     }
 
-    return true;
+    return ExpressionLoadSuccess;
 }
 
 QString ExpressionConfigParser::lastError() const

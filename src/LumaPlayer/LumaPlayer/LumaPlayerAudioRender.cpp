@@ -4,7 +4,7 @@
 #include "Config.h"
 #include "LumaPlayerAudioRender.h"
 #include "LumaPlayerAudioTask.h"
-#include "LumaPlayerLogger.h"
+#include "LogManager/LogManagerAPI.h"
 
 #include <QAudioDeviceInfo>
 #include <QAudioFormat>
@@ -13,6 +13,7 @@
 #include <QMutexLocker>
 
 #include <climits>
+#include <chrono>
 
 LumaPlayerAudioRender::LumaPlayerAudioRender() :
 m_threadId(0),
@@ -75,8 +76,12 @@ void LumaPlayerAudioRender::uninit()
 	}
 	if (m_threadId != 0)
 	{
-		CTaskThreadManager::Instance().Uninit(m_threadId);
-		m_threadId = 0;
+        const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+        LOGINFO("Audio thread stopping managerId=%u", m_threadId);
+        CTaskThreadManager::Instance().Uninit(m_threadId);
+        LOGINFO("Audio thread stopped managerId=%u elapsedMs=%lld", m_threadId,
+            static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count()));
+        m_threadId = 0;
 	}
 	m_task.reset();
 }
@@ -203,7 +208,7 @@ void LumaPlayerAudioRender::processAudioQueue()
 	}
 	if (closeDevice && !openDevice)
 	{
-		LumaPlayerLogger::log("Audio output closed in audio thread");
+        LOGINFO("Audio output closed in audio thread");
 		return;
 	}
 	if (openDevice && format.m_sampleRate > 0 && format.m_channels > 0 &&
@@ -219,7 +224,7 @@ void LumaPlayerAudioRender::processAudioQueue()
 		QAudioDeviceInfo deviceInfo = QAudioDeviceInfo::defaultOutputDevice();
 		if (!deviceInfo.isFormatSupported(qtFormat))
 		{
-			LumaPlayerLogger::log("Audio device does not support PCM format, sampleRate=%d, channels=%d, bits=%d", qtFormat.sampleRate(), qtFormat.channelCount(), qtFormat.sampleSize());
+            LOGINFO("Audio device does not support PCM format, sampleRate=%d, channels=%d, bits=%d", qtFormat.sampleRate(), qtFormat.channelCount(), qtFormat.sampleSize());
 			QMutexLocker locker(&m_mutex);
 			if (deviceGeneration == m_deviceGeneration)
 			{
@@ -244,11 +249,11 @@ void LumaPlayerAudioRender::processAudioQueue()
 				QMutexLocker locker(&m_mutex);
 				m_deviceFailed = deviceGeneration == m_deviceGeneration || m_deviceFailed;
 			}
-			LumaPlayerLogger::log("Audio output opened, sampleRate=%d, channels=%d, bits=%d, bufferBytes=%d, deviceReady=%d", format.m_sampleRate, format.m_channels, format.m_bitsPerSample, bufferSize, m_audioDevice != nullptr ? 1 : 0);
+            LOGINFO("Audio output opened, sampleRate=%d, channels=%d, bits=%d, bufferBytes=%d, deviceReady=%d", format.m_sampleRate, format.m_channels, format.m_bitsPerSample, bufferSize, m_audioDevice != nullptr ? 1 : 0);
 		}
 		else
 		{
-			LumaPlayerLogger::log("Audio output allocation failed");
+            LOGINFO("Audio output allocation failed");
 			QMutexLocker locker(&m_mutex);
 			m_deviceFailed = deviceGeneration == m_deviceGeneration || m_deviceFailed;
 		}
@@ -263,7 +268,7 @@ void LumaPlayerAudioRender::processAudioQueue()
 			m_deviceFailed = deviceGeneration == m_deviceGeneration || m_deviceFailed;
 		}
 		applyPlaybackState = true;
-		LumaPlayerLogger::log("Audio output flushed, deviceReady=%d", m_audioDevice != nullptr ? 1 : 0);
+        LOGINFO("Audio output flushed, deviceReady=%d", m_audioDevice != nullptr ? 1 : 0);
 	}
 	if (applyPlaybackState && m_audioOutput != nullptr)
 	{
@@ -275,7 +280,7 @@ void LumaPlayerAudioRender::processAudioQueue()
 		{
 			m_audioOutput->resume();
 		}
-		LumaPlayerLogger::log("Audio playback state applied, paused=%d, qtState=%d, qtError=%d", shouldPauseAudio ? 1 : 0, static_cast<int>(m_audioOutput->state()), static_cast<int>(m_audioOutput->error()));
+        LOGINFO("Audio playback state applied, paused=%d, qtState=%d, qtError=%d", shouldPauseAudio ? 1 : 0, static_cast<int>(m_audioOutput->state()), static_cast<int>(m_audioOutput->error()));
 	}
 	if (m_audioOutput == nullptr || m_audioDevice == nullptr || shouldPauseAudio)
 	{
@@ -318,7 +323,7 @@ void LumaPlayerAudioRender::processAudioQueue()
 					QMutexLocker locker(&m_mutex);
 					m_deviceFailed = deviceGeneration == m_deviceGeneration || m_deviceFailed;
 				}
-				LumaPlayerLogger::log("Audio write failed, qtState=%d, qtError=%d", static_cast<int>(m_audioOutput->state()), static_cast<int>(m_audioOutput->error()));
+                LOGINFO("Audio write failed, qtState=%d, qtError=%d", static_cast<int>(m_audioOutput->state()), static_cast<int>(m_audioOutput->error()));
 			}
 			break;
 		}

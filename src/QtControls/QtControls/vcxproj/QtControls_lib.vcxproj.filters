@@ -600,6 +600,9 @@
     <ClInclude Include="..\src\ExpressionConfigParser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\ExpressionLoadResult.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\ExpressionConfigXmlHandler.h">
       <Filter>Header Files</Filter>
     </ClInclude>

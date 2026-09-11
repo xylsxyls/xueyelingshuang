@@ -7,7 +7,7 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "LogManager/LogManagerAPI.h"
 #include "LumaPlayerHelper.h"
-#include "LumaPlayerLogger.h"
+#include "LumaPlayerDialogSession.h"
 
 #include <QApplication>
 #include <QFont>
@@ -22,16 +22,25 @@ int main(int argc, char* argv[])
 	// 在Qt和工作线程启动前注册崩溃转储，默认写入EXE目录
 	const bool dumpEnabled = CDump::declareDumpFile();
 	Config::instance();
-	LogManager::instance();
 	CTaskThreadManager::Instance();
 	int result = -1;
 	try
 	{
 		QApplication application(argc, argv);
 		g_config.init(application.arguments());
-		LumaPlayerLogger::init(g_config.m_debugEnabled);
-		LumaPlayerLogger::log("CDump registration result=%d", dumpEnabled ? 1 : 0);
-		application.setFont(QFont(QString::fromWCharArray(L"楷体"), 10));
+        LogManagerConfig logConfig;
+        logConfig.m_fileId = 0;
+        logConfig.m_maxFileBytes = g_config.m_logMaxFileBytes;
+        logConfig.m_maxFileCount = g_config.m_logMaxFileCount;
+        logConfig.m_checkFileSizeInterval = 1;
+        logConfig.m_outputConsole = false;
+        logConfig.m_archiveOldLog = true;
+        LogManager::instance().init(logConfig);
+        g_config.m_logInitialized.store(true);
+        LOGINFO("LumaPlayer startup, debug=%d", g_config.m_debugEnabled ? 1 : 0);
+        LOGINFO("CDump registration result=%d", dumpEnabled ? 1 : 0);
+        application.setFont(QFont(g_config.m_fontFamily, g_config.m_fontSize));
+        LumaPlayerDialogSession dialogSession;
 		const bool debugEnabled = g_config.m_debugEnabled;
 		{
 			LumaPlayer player(debugEnabled);
@@ -42,15 +51,20 @@ int main(int argc, char* argv[])
 	}
 	catch (const std::exception& exception)
 	{
-		LumaPlayerLogger::log("Unhandled std::exception in main: %s", exception.what());
+        LOGERROR("Unhandled std::exception in main: %s", exception.what());
 		result = -2;
 	}
 	catch (...)
 	{
-		LumaPlayerLogger::log("Unhandled unknown exception in main");
+        LOGERROR("Unhandled unknown exception in main");
 		result = -3;
 	}
-	LumaPlayerLogger::uninit();
+    if (g_config.m_logInitialized.load())
+    {
+        LOGINFO("LumaPlayer log closing");
+        LogManager::instance().uninit(0);
+        g_config.m_logInitialized.store(false);
+    }
 	g_config.uninit();
 	return result;
 }

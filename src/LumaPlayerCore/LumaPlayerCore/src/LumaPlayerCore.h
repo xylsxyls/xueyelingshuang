@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "LumaPlayerCoreRequest.h"
 #include "LumaPlayerCoreConfig.h"
 #include "IAudioRender.h"
 #include "IVideoRender.h"
@@ -13,6 +14,14 @@ class PlayerEngine;
 class LumaPlayerCoreAPI LumaPlayerCore
 {
 public:
+    /** 提交可选异步请求并通过专用结果线程回报真实完成
+    @param [in] request 参数和宿主请求身份，调用时复制
+    @param [in] callback 完成通知，禁止阻塞或在其中销毁Core
+    @return Success表示接受，其余为提交失败且不回调
+    */
+    LumaPlayerCoreResult submitAsyncEx(const LumaPlayerCoreRequest& request,
+        const LumaPlayerCoreCompletionCallback& callback);
+
 	/** 构造未初始化的播放器核心
 	*/
 	LumaPlayerCore();
@@ -226,15 +235,17 @@ public:
 	std::string lastError() const;
 
 private:
-	/** 记录操作结果并返回原始错误码
-	@param [in] result 操作返回值
-	@return 原始操作返回值
-	*/
-	LumaPlayerCoreResult reportResult(LumaPlayerCoreResult result) const;
 
 private:
 	// Core内部播放引擎，LumaPlayerCore负责创建和释放
 	PlayerEngine* m_engine;
 	// 业务日志开关，默认关闭
-	std::atomic<bool> m_logEnabled;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+    std::atomic<bool> m_logEnabled;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 };

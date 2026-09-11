@@ -1,7 +1,6 @@
 ﻿#include "CExpressionDialog.h"
 #include "QtControls/ExpressionConfigParser.h"
 #include <QStandardItemModel>
-#include <QDebug>
 #include <QEvent>
 #include <QPainter>
 #include <stdint.h>
@@ -37,8 +36,6 @@ CExpressionDialog::CExpressionDialog(QWidget *parent)
     m_expressionGroupPicker->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_expressionGroupPicker->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_expressionGroupPicker->setShowIconRect(false);
-
-
 
     connect(m_expressionGroupPicker, &CExpressionPicker::expressionClicked, this, &CExpressionDialog::selectGroup);
     connect(m_expressionPicker     , &CExpressionPicker::expressionClicked, this, &CExpressionDialog::expressionChoosed);
@@ -123,15 +120,30 @@ void CExpressionDialog::selectGroup(const CExpressionPicker::Expression &group)
 
 bool CExpressionDialog::loadExpressions(const QString& emotionPath)
 {
+    return loadExpressionsResult(emotionPath) == ExpressionLoadSuccess;
+}
+
+ExpressionLoadResult CExpressionDialog::loadExpressionsResult(const QString& emotionPath, QString* detail)
+{
+    if (detail != nullptr)
+    {
+        detail->clear();
+    }
     m_groups.clear();
     m_expressions.clear();
 
     ExpressionConfig config;
     ExpressionConfigParser parser;
-    if (!parser.parse(emotionPath, &config))
+    const ExpressionLoadResult result = parser.parseResult(emotionPath, &config);
+    if (result != ExpressionLoadSuccess)
     {
-        qDebug() << "load emotion error:" << parser.lastError();
-        return false;
+        if (detail != nullptr)
+        {
+            *detail = parser.lastError();
+        }
+        m_expressionPicker->setExpressionList(CExpressionPicker::ExpressionList());
+        m_expressionGroupPicker->setExpressionList(CExpressionPicker::ExpressionList());
+        return result;
     }
 
     for (int32_t i = 0; i < config.m_groups.count(); ++i)
@@ -159,15 +171,13 @@ bool CExpressionDialog::loadExpressions(const QString& emotionPath)
         m_expressions << expression;
     }
 
-    qDebug() << "load emotion ok, group:" << m_groups.count() << "expression:" << m_expressions.count();
     m_expressionGroupPicker->setExpressionList(m_groups);
     if (m_groups.isEmpty())
     {
         m_expressionPicker->setExpressionList(CExpressionPicker::ExpressionList());
-        qDebug() << "load emotion error: group list is empty";
-        return false;
+        return ExpressionLoadEmptyGroups;
     }
 
     this->selectGroup(m_groups.first());
-    return true;
+    return ExpressionLoadSuccess;
 }

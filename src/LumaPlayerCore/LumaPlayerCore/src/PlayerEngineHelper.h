@@ -16,20 +16,6 @@ public:
 	*/
 	static int64_t clampInt64(int64_t value, int64_t minValue, int64_t maxValue);
 
-	/** 比较两个整数并返回较小值，避开平台min宏
-	@param [in] left 左侧数值
-	@param [in] right 右侧数值
-	@return 两个值中的较小值
-	*/
-	static int64_t minInt64(int64_t left, int64_t right);
-
-	/** 比较两个整数并返回较大值，避开平台max宏
-	@param [in] left 左侧数值
-	@param [in] right 右侧数值
-	@return 两个值中的较大值
-	*/
-	static int64_t maxInt64(int64_t left, int64_t right);
-
 	/** 将千分倍率限制到播放器允许范围
 	@param [in] ratePermille 输入倍率，1000表示正常速度
 	@param [in] minRatePermille 配置的最小倍率，必须大于0

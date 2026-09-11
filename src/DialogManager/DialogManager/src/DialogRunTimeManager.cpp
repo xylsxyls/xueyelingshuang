@@ -1,4 +1,4 @@
-#include "DialogRunTimeManager.h"
+﻿#include "DialogRunTimeManager.h"
 #include "AllocManager.h"
 #include "CustomDialog.h"
 #include "DialogFactoryManager.h"

@@ -12,6 +12,7 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "FFmpegCpp/FFmpegCppAPI.h"
 
+#include <algorithm>
 #include <chrono>
 #include <limits>
 #include <new>
@@ -58,6 +59,7 @@ static size_t PlayerAudioSampleOffset(int64_t offset100ns, int32_t sampleRate, s
 
 PlayerEngine::PlayerEngine() :
 m_threadId(0),
+m_completionThreadId(0),
 m_previewThreadId(0),
 m_loopThreadId(0),
 m_isInit(false),
@@ -68,6 +70,7 @@ m_mediaSerial(0),
 m_position100ns(0),
 m_ratePermille(LumaPlayerCoreConfig().m_defaultRatePermille),
 m_enableAutoReplay(true),
+m_loopBoundaryEnabled(false),
 m_videoReader(nullptr),
 m_audioReader(nullptr),
 m_previewReader(nullptr),
@@ -200,18 +203,37 @@ LumaPlayerCoreResult PlayerEngine::init(const LumaPlayerCoreConfig& config)
 		setLastError(LumaPlayerCoreResultCommandQueueFailed);
 		return LumaPlayerCoreResultCommandQueueFailed;
 	}
-	return LumaPlayerCoreResultSuccess;
+    try
+    {
+        m_completionTask = std::make_shared<PlayerCompletionTask>();
+        m_completionThreadId = CTaskThreadManager::Instance().Init();
+        std::shared_ptr<CTaskThread> completionThread = CTaskThreadManager::Instance().GetThreadInterface(m_completionThreadId);
+        if (completionThread == nullptr)
+        {
+            uninit();
+            return LumaPlayerCoreResultThreadUnavailable;
+        }
+        completionThread->PostTask(m_completionTask, 1);
+    }
+    catch (...)
+    {
+        uninit();
+        return LumaPlayerCoreResultThreadInitException;
+    }
+    return LumaPlayerCoreResultSuccess;
 }
 
 void PlayerEngine::uninit()
 {
+    std::unique_lock<std::mutex> asyncSubmitLock(m_asyncSubmitMutex);
+    std::unique_lock<std::mutex> submitLock(m_submitMutex);
 	uint32_t threadId = 0;
 	uint32_t previewThreadId = 0;
 	uint32_t loopThreadId = 0;
 	std::shared_ptr<PlayerWorkerTask> workerTask;
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
-		if (!m_isInit && m_threadId == 0 && m_previewThreadId == 0 && m_loopThreadId == 0)
+        if (!m_isInit && m_threadId == 0 && m_previewThreadId == 0 && m_loopThreadId == 0 && m_completionThreadId == 0)
 		{
 			return;
 		}
@@ -224,28 +246,25 @@ void PlayerEngine::uninit()
 		m_loopThreadId = 0;
 		m_isInit = false;
 	}
-	nextPreviewSerial();
-	if (loopThreadId != 0)
-	{
-		CTaskThreadManager::Instance().Uninit(loopThreadId);
-	}
-	if (previewThreadId != 0)
-	{
-		std::shared_ptr<CTaskThread> previewThread = CTaskThreadManager::Instance().GetThreadInterface(previewThreadId);
-		if (previewThread != nullptr)
-		{
-			previewThread->StopTask(PlayerPreviewTask::kTaskId);
-		}
-		CTaskThreadManager::Instance().Uninit(previewThreadId);
-	}
-	if (workerTask != nullptr)
-	{
-		workerTask->StopTask();
-	}
-	if (threadId != 0)
-	{
-		CTaskThreadManager::Instance().Uninit(threadId);
-	}
+    submitLock.unlock();
+    asyncSubmitLock.unlock();
+    nextPreviewSerial();
+    if (workerTask != nullptr)
+    {
+        workerTask->StopTask();
+    }
+    if (threadId != 0)
+    {
+        CTaskThreadManager::Instance().Uninit(threadId);
+    }
+    if (previewThreadId != 0)
+    {
+        CTaskThreadManager::Instance().Uninit(previewThreadId);
+    }
+    if (loopThreadId != 0)
+    {
+        CTaskThreadManager::Instance().Uninit(loopThreadId);
+    }
 	closeMediaInternal();
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
@@ -255,6 +274,15 @@ void PlayerEngine::uninit()
 		m_previewStdThreadId = std::thread::id();
 
 	}
+    if (m_completionThreadId != 0)
+    {
+        m_completionTask->StopTask();
+        CTaskThreadManager::Instance().Uninit(m_completionThreadId);
+        m_completionThreadId = 0;
+        // 处理线程尚未运行就被回收的极快关闭，所有生产者已结束
+        m_completionTask->DoTask();
+    }
+    m_completionTask.reset();
 }
 
 bool PlayerEngine::isInit() const
@@ -793,6 +821,11 @@ uint64_t PlayerEngine::nextPreviewSerial()
 
 void PlayerEngine::completeSyncCommand(const PlayerCommand& command, LumaPlayerCoreResult result)
 {
+    if (command.m_completion != nullptr)
+    {
+        command.m_completion->m_delivery->m_completion.m_result = result;
+        command.m_completion->m_delivery->m_completion.m_snapshot = snapshot();
+    }
 	if (command.m_syncResult == nullptr)
 	{
 		return;
@@ -813,8 +846,8 @@ void PlayerEngine::handleCommand(const PlayerCommand& command, const std::atomic
 		break;
 	}
 	case PlayerCommandOpen:
-		result = openMediaInternal(command.m_filePath);
-		if (result != LumaPlayerCoreResultSuccess)
+        result = openMediaInternal(command.m_filePath, exitFlag);
+        if (result != LumaPlayerCoreResultSuccess && result != LumaPlayerCoreResultCanceled)
 		{
 			m_state = LumaPlayerCoreStateError;
 			updateSnapshot(m_state, m_position100ns);
@@ -829,9 +862,9 @@ void PlayerEngine::handleCommand(const PlayerCommand& command, const std::atomic
 			result = LumaPlayerCoreResultNotOpen;
 			break;
 		}
-		if (m_position100ns < activeSegmentStart100ns() || m_position100ns >= activeSegmentEnd100ns())
+        if (m_position100ns < 0 || m_position100ns >= m_mediaInfo.m_duration100ns)
 		{
-			result = seekInternal(activeSegmentStart100ns(), true, false);
+            result = seekInternal(0, true, false);
 		}
 		else
 		{
@@ -885,9 +918,12 @@ void PlayerEngine::handleCommand(const PlayerCommand& command, const std::atomic
 			result = LumaPlayerCoreResultNotOpen;
 			break;
 		}
-		result = seekInternal(0, false, true);
-		m_state = LumaPlayerCoreStateStopped;
-		updateSnapshot(m_state, m_position100ns);
+        result = seekInternal(0, false, true, exitFlag);
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            m_state = LumaPlayerCoreStateStopped;
+            updateSnapshot(m_state, m_position100ns);
+        }
 		break;
 	case PlayerCommandSeek:
 	{
@@ -897,7 +933,16 @@ void PlayerEngine::handleCommand(const PlayerCommand& command, const std::atomic
 			result = LumaPlayerCoreResultCanceled;
 			break;
 		}
-		result = seekInternal(command.m_position100ns, command.m_keepPlayState, !command.m_keepPlayState);
+        {
+            // 请求序号已淘汰旧预览，等待已进入的发布退出，避免旧画面覆盖最终定位。
+            std::lock_guard<std::mutex> previewLock(m_previewReaderMutex);
+        }
+        if (command.m_serial != m_previewSerial.load())
+        {
+            result = LumaPlayerCoreResultCanceled;
+            break;
+        }
+        result = seekInternal(command.m_position100ns, command.m_keepPlayState, !command.m_keepPlayState, exitFlag);
 		break;
 	}
 	case PlayerCommandPreview:
@@ -908,7 +953,7 @@ void PlayerEngine::handleCommand(const PlayerCommand& command, const std::atomic
 			result = LumaPlayerCoreResultCanceled;
 			break;
 		}
-		result = previewFrameInternal(command.m_position100ns, command.m_serial, nullptr, true);
+        result = previewFrameInternal(command.m_position100ns, command.m_serial, exitFlag, true);
 		break;
 	}
 	case PlayerCommandSetLoopA:
@@ -937,7 +982,12 @@ void PlayerEngine::handleCommand(const PlayerCommand& command, const std::atomic
 				(std::numeric_limits<int64_t>::max)() : targetPosition100ns + m_mediaInfo.m_defaultVideoFrameDuration100ns);
 			currentPoint.m_frameIndex = -1;
 		}
-		bool refined = refineLoopPointByPreview(&currentPoint, targetPosition100ns);
+        bool refined = refineLoopPointByPreview(&currentPoint, targetPosition100ns, exitFlag);
+        if (exitFlag != nullptr && exitFlag->load())
+        {
+            result = LumaPlayerCoreResultCanceled;
+            break;
+        }
 		if (m_mediaInfo.m_hasVideo && !refined)
 		{
 			result = LumaPlayerCoreResultLoopAFrameUnavailable;
@@ -980,7 +1030,12 @@ void PlayerEngine::handleCommand(const PlayerCommand& command, const std::atomic
 				(std::numeric_limits<int64_t>::max)() : targetPosition100ns + m_mediaInfo.m_defaultVideoFrameDuration100ns);
 			currentPoint.m_frameIndex = -1;
 		}
-		bool refined = refineLoopPointByPreview(&currentPoint, targetPosition100ns);
+        bool refined = refineLoopPointByPreview(&currentPoint, targetPosition100ns, exitFlag);
+        if (exitFlag != nullptr && exitFlag->load())
+        {
+            result = LumaPlayerCoreResultCanceled;
+            break;
+        }
 		if (m_mediaInfo.m_hasVideo && !refined)
 		{
 			result = LumaPlayerCoreResultLoopBFrameUnavailable;
@@ -991,9 +1046,15 @@ void PlayerEngine::handleCommand(const PlayerCommand& command, const std::atomic
 		{
 			m_loopRange.m_aPoint.m_isSet = true;
 			m_loopRange.m_aPoint.m_frameStart100ns = 0;
-			m_loopRange.m_aPoint.m_frameEnd100ns = PlayerEngineHelper::minInt64(m_mediaInfo.m_defaultVideoFrameDuration100ns, m_mediaInfo.m_duration100ns);
+            m_loopRange.m_aPoint.m_frameEnd100ns = (std::min<int64_t>)(m_mediaInfo.m_defaultVideoFrameDuration100ns, m_mediaInfo.m_duration100ns);
 			m_loopRange.m_aPoint.m_frameIndex = 0;
-			bool refinedA = refineLoopPointByPreview(&m_loopRange.m_aPoint, 0);
+            bool refinedA = refineLoopPointByPreview(&m_loopRange.m_aPoint, 0, exitFlag);
+            if (exitFlag != nullptr && exitFlag->load())
+            {
+                m_loopRange.m_aPoint.reset();
+                result = LumaPlayerCoreResultCanceled;
+                break;
+            }
 			if (m_mediaInfo.m_hasVideo && !refinedA)
 			{
 				m_loopRange.m_aPoint.reset();
@@ -1116,7 +1177,7 @@ void PlayerEngine::handleCommand(const PlayerCommand& command, const std::atomic
 		if (m_videoReader != nullptr || m_audioReader != nullptr)
 		{
 			// 清空设备中旧倍率PCM，按同一媒体位置重新准备音视频
-			result = seekInternal(currentPosition, wasPlaying, false);
+            result = seekInternal(currentPosition, wasPlaying, false, exitFlag);
 		}
 		updateSnapshot(m_state, m_position100ns);
 		break;
@@ -1125,180 +1186,222 @@ void PlayerEngine::handleCommand(const PlayerCommand& command, const std::atomic
 		result = LumaPlayerCoreResultInvalidParam;
 		break;
 	}
-	if (result == LumaPlayerCoreResultSuccess)
-	{
-		refreshLoopBuffer();
+    if (result == LumaPlayerCoreResultSuccess)
+    {
+        if (command.m_type == PlayerCommandSetLoopA || command.m_type == PlayerCommandSetLoopB ||
+            command.m_type == PlayerCommandClearLoop || command.m_type == PlayerCommandMoveLoopPoint)
+        {
+            // 编辑端点是建立新的循环意图，不是主动跳出B；当前位置已越界时从A接续。
+            const bool validLoop = m_loopRange.isValid();
+            const int64_t loopPosition = validLoop && m_position100ns >= m_loopRange.end100ns() ?
+                m_loopRange.start100ns() : m_position100ns;
+            m_loopBoundaryEnabled = validLoop;
+            // 旧B可能让读帧提前停止；新边界由下一播放步重新检查，保留待呈现帧。
+            m_videoEnded = m_videoReader == nullptr;
+            m_audioEnded = m_audioReader == nullptr;
+            if (command.m_type != PlayerCommandMoveLoopPoint && m_state != LumaPlayerCoreStatePlaying &&
+                (m_videoReader != nullptr || m_audioReader != nullptr))
+            {
+                // 暂停编辑保持画面与实际帧一致；播放中只更新边界，不重启时钟和声卡。
+                result = seekInternal(loopPosition, false, true, exitFlag);
+            }
+        }
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            refreshLoopBuffer();
+        }
 	}
 	setLastError(result);
 	completeSyncCommand(command, result);
 }
 
-LumaPlayerCoreResult PlayerEngine::openMediaInternal(const std::string& filePath)
+LumaPlayerCoreResult PlayerEngine::openMediaInternal(const std::string& filePath, const std::atomic<bool>* exitFlag)
 {
-	if (filePath.empty())
-	{
-		setLastError(LumaPlayerCoreResultInvalidParam);
-		return LumaPlayerCoreResultInvalidParam;
-	}
-	closeMediaInternal();
-	m_state = LumaPlayerCoreStateOpening;
-	updateSnapshot(m_state, 0);
+    if (filePath.empty())
+    {
+        setLastError(LumaPlayerCoreResultInvalidParam);
+        return LumaPlayerCoreResultInvalidParam;
+    }
+    if (exitFlag != nullptr && exitFlag->load())
+    {
+        closeMediaInternal();
+        return LumaPlayerCoreResultCanceled;
+    }
+    closeMediaInternal();
+    m_state = LumaPlayerCoreStateOpening;
+    updateSnapshot(m_state, 0);
 
-	FFmpegCppPlaybackOpenOption infoOption;
-	infoOption.decodeVideo = true;
-	infoOption.decodeAudio = true;
-	infoOption.outputChannels = 2;
-	infoOption.outputBitsPerSample = 16;
-	infoOption.fallbackVideoFrameDuration100ns = m_config.m_defaultFrameDuration100ns;
-	FFmpegCppPlaybackReader infoReader;
-	if (!infoReader.open(filePath, infoOption))
-	{
-		setLastError(LumaPlayerCoreResultMediaInfoOpenFailed);
-		return LumaPlayerCoreResultMediaInfoOpenFailed;
-	}
+    FFmpegCppPlaybackOpenOption infoOption;
+    infoOption.decodeVideo = true;
+    infoOption.decodeAudio = true;
+    infoOption.outputChannels = 2;
+    infoOption.outputBitsPerSample = 16;
+    infoOption.fallbackVideoFrameDuration100ns = m_config.m_defaultFrameDuration100ns;
+    FFmpegCppPlaybackReader infoReader;
+    if (!infoReader.open(filePath, infoOption))
+    {
+        setLastError(LumaPlayerCoreResultMediaInfoOpenFailed);
+        return LumaPlayerCoreResultMediaInfoOpenFailed;
+    }
 
-	m_mediaInfo.reset();
-	m_mediaInfo.m_filePath = filePath;
-	m_mediaInfo.m_duration100ns = infoReader.duration100ns();
-	m_mediaInfo.m_defaultVideoFrameDuration100ns = infoReader.videoFrameDuration100ns();
-	if (m_mediaInfo.m_defaultVideoFrameDuration100ns <= 0)
-	{
-		m_mediaInfo.m_defaultVideoFrameDuration100ns = m_config.m_defaultFrameDuration100ns;
-	}
-	m_mediaInfo.m_hasVideo = infoReader.hasVideo();
-	m_mediaInfo.m_hasAudio = infoReader.hasAudio();
-	infoReader.getVideoSize(&m_mediaInfo.m_videoFormat.m_width, &m_mediaInfo.m_videoFormat.m_height);
-	infoReader.getAudioFormat(&m_mediaInfo.m_audioFormat.m_sampleRate, &m_mediaInfo.m_audioFormat.m_channels, &m_mediaInfo.m_audioFormat.m_bitsPerSample);
+    if (exitFlag != nullptr && exitFlag->load())
+    {
+        closeMediaInternal();
+        return LumaPlayerCoreResultCanceled;
+    }
+    m_mediaInfo.reset();
+    m_mediaInfo.m_filePath = filePath;
+    m_mediaInfo.m_duration100ns = infoReader.duration100ns();
+    m_mediaInfo.m_defaultVideoFrameDuration100ns = infoReader.videoFrameDuration100ns();
+    if (m_mediaInfo.m_defaultVideoFrameDuration100ns <= 0)
+    {
+        m_mediaInfo.m_defaultVideoFrameDuration100ns = m_config.m_defaultFrameDuration100ns;
+    }
+    m_mediaInfo.m_hasVideo = infoReader.hasVideo();
+    m_mediaInfo.m_hasAudio = infoReader.hasAudio();
+    infoReader.getVideoSize(&m_mediaInfo.m_videoFormat.m_width, &m_mediaInfo.m_videoFormat.m_height);
+    infoReader.getAudioFormat(&m_mediaInfo.m_audioFormat.m_sampleRate, &m_mediaInfo.m_audioFormat.m_channels, &m_mediaInfo.m_audioFormat.m_bitsPerSample);
 
-	if (m_mediaInfo.m_duration100ns <= 0)
-	{
-		m_mediaInfo.m_duration100ns = m_mediaInfo.m_defaultVideoFrameDuration100ns;
-	}
+    if (m_mediaInfo.m_duration100ns <= 0)
+    {
+        m_mediaInfo.m_duration100ns = m_mediaInfo.m_defaultVideoFrameDuration100ns;
+    }
 
-	if (m_mediaInfo.m_hasVideo)
-	{
-		m_videoReader = new(std::nothrow) FFmpegCppPlaybackReader();
-		std::unique_ptr<FFmpegCppPlaybackReader> previewReader(new(std::nothrow) FFmpegCppPlaybackReader());
-		if (m_videoReader == nullptr || previewReader == nullptr)
-		{
-			previewReader.reset();
-			setLastError(LumaPlayerCoreResultVideoAllocationFailed);
-			closeMediaInternal();
-			return LumaPlayerCoreResultVideoAllocationFailed;
-		}
-		FFmpegCppPlaybackOpenOption videoOption;
-		videoOption.decodeVideo = true;
-		videoOption.decodeAudio = false;
-		videoOption.fallbackVideoFrameDuration100ns = m_mediaInfo.m_defaultVideoFrameDuration100ns;
-		if (!m_videoReader->open(filePath, videoOption))
-		{
-			previewReader.reset();
-			setLastError(LumaPlayerCoreResultVideoOpenFailed);
-			closeMediaInternal();
-			return LumaPlayerCoreResultVideoOpenFailed;
-		}
-		if (!previewReader->open(filePath, videoOption))
-		{
+    if (m_mediaInfo.m_hasVideo)
+    {
+        m_videoReader = new(std::nothrow) FFmpegCppPlaybackReader();
+        std::unique_ptr<FFmpegCppPlaybackReader> previewReader(new(std::nothrow) FFmpegCppPlaybackReader());
+        if (m_videoReader == nullptr || previewReader == nullptr)
+        {
+            previewReader.reset();
+            setLastError(LumaPlayerCoreResultVideoAllocationFailed);
+            closeMediaInternal();
+            return LumaPlayerCoreResultVideoAllocationFailed;
+        }
+        FFmpegCppPlaybackOpenOption videoOption;
+        videoOption.decodeVideo = true;
+        videoOption.decodeAudio = false;
+        videoOption.fallbackVideoFrameDuration100ns = m_mediaInfo.m_defaultVideoFrameDuration100ns;
+        if (!m_videoReader->open(filePath, videoOption))
+        {
+            previewReader.reset();
+            setLastError(LumaPlayerCoreResultVideoOpenFailed);
+            closeMediaInternal();
+            return LumaPlayerCoreResultVideoOpenFailed;
+        }
+        if (!previewReader->open(filePath, videoOption))
+        {
 
-			previewReader.reset();
-			setLastError(LumaPlayerCoreResultPreviewOpenFailed);
-			closeMediaInternal();
-			return LumaPlayerCoreResultPreviewOpenFailed;
-		}
-		{
-			std::lock_guard<std::mutex> previewLock(m_previewReaderMutex);
-			PlayerEngineHelper::deleteReader(&m_previewReader);
-			m_previewReader = previewReader.release();
-		}
-		IVideoRender* videoRender = nullptr;
-		{
-			std::lock_guard<std::mutex> lock(m_mutex);
-			videoRender = m_videoRender;
-		}
-		if (videoRender != nullptr && !videoRender->openVideo(m_mediaInfo.m_videoFormat))
-		{
-			setLastError(LumaPlayerCoreResultVideoRenderOpenFailed);
-			closeMediaInternal();
-			return LumaPlayerCoreResultVideoRenderOpenFailed;
-		}
-	}
+            previewReader.reset();
+            setLastError(LumaPlayerCoreResultPreviewOpenFailed);
+            closeMediaInternal();
+            return LumaPlayerCoreResultPreviewOpenFailed;
+        }
+        {
+            std::lock_guard<std::mutex> previewLock(m_previewReaderMutex);
+            PlayerEngineHelper::deleteReader(&m_previewReader);
+            m_previewReader = previewReader.release();
+        }
+        IVideoRender* videoRender = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            videoRender = m_videoRender;
+        }
+        if (videoRender != nullptr && !videoRender->openVideo(m_mediaInfo.m_videoFormat))
+        {
+            setLastError(LumaPlayerCoreResultVideoRenderOpenFailed);
+            closeMediaInternal();
+            return LumaPlayerCoreResultVideoRenderOpenFailed;
+        }
+    }
 
-	if (m_mediaInfo.m_hasAudio)
-	{
-		m_audioReader = new(std::nothrow) FFmpegCppPlaybackReader();
-		if (m_audioReader == nullptr)
-		{
-			setLastError(LumaPlayerCoreResultAudioAllocationFailed);
-			closeMediaInternal();
-			return LumaPlayerCoreResultAudioAllocationFailed;
-		}
-		FFmpegCppPlaybackOpenOption audioOption;
-		audioOption.decodeVideo = false;
-		audioOption.decodeAudio = true;
-		audioOption.outputChannels = 2;
-		audioOption.outputBitsPerSample = 16;
-		if (!m_audioReader->open(filePath, audioOption))
-		{
-			setLastError(LumaPlayerCoreResultAudioOpenFailed);
-			closeMediaInternal();
-			return LumaPlayerCoreResultAudioOpenFailed;
-		}
-		else
-		{
-			m_audioReader->getAudioFormat(&m_mediaInfo.m_audioFormat.m_sampleRate, &m_mediaInfo.m_audioFormat.m_channels, &m_mediaInfo.m_audioFormat.m_bitsPerSample);
-			IAudioRender* audioRender = nullptr;
-			{
-				std::lock_guard<std::mutex> lock(m_mutex);
-				audioRender = m_audioRender;
-			}
-			if (audioRender != nullptr)
-			{
-				if (!audioRender->openAudio(m_mediaInfo.m_audioFormat))
-				{
-					setLastError(LumaPlayerCoreResultAudioRenderOpenFailed);
-					closeMediaInternal();
-					return LumaPlayerCoreResultAudioRenderOpenFailed;
-				}
-				audioRender->pauseAudio();
-			}
-		}
-	}
+    if (exitFlag != nullptr && exitFlag->load())
+    {
+        closeMediaInternal();
+        return LumaPlayerCoreResultCanceled;
+    }
+    if (m_mediaInfo.m_hasAudio)
+    {
+        m_audioReader = new(std::nothrow) FFmpegCppPlaybackReader();
+        if (m_audioReader == nullptr)
+        {
+            setLastError(LumaPlayerCoreResultAudioAllocationFailed);
+            closeMediaInternal();
+            return LumaPlayerCoreResultAudioAllocationFailed;
+        }
+        FFmpegCppPlaybackOpenOption audioOption;
+        audioOption.decodeVideo = false;
+        audioOption.decodeAudio = true;
+        audioOption.outputChannels = 2;
+        audioOption.outputBitsPerSample = 16;
+        if (!m_audioReader->open(filePath, audioOption))
+        {
+            setLastError(LumaPlayerCoreResultAudioOpenFailed);
+            closeMediaInternal();
+            return LumaPlayerCoreResultAudioOpenFailed;
+        }
+        else
+        {
+            m_audioReader->getAudioFormat(&m_mediaInfo.m_audioFormat.m_sampleRate, &m_mediaInfo.m_audioFormat.m_channels, &m_mediaInfo.m_audioFormat.m_bitsPerSample);
+            IAudioRender* audioRender = nullptr;
+            {
+                std::lock_guard<std::mutex> lock(m_mutex);
+                audioRender = m_audioRender;
+            }
+            if (audioRender != nullptr)
+            {
+                if (!audioRender->openAudio(m_mediaInfo.m_audioFormat))
+                {
+                    setLastError(LumaPlayerCoreResultAudioRenderOpenFailed);
+                    closeMediaInternal();
+                    return LumaPlayerCoreResultAudioRenderOpenFailed;
+                }
+                audioRender->pauseAudio();
+            }
+        }
+    }
 
-	m_position100ns = 0;
-	m_decodeFloor100ns = 0;
-	m_ratePermille = m_config.m_defaultRatePermille;
-	m_clock.seek(0);
-	m_clock.setRate(m_ratePermille);
-	m_loopRange.reset();
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		m_currentVideoFrame.reset();
-	}
-	m_pendingVideoFrame.reset();
-	m_pendingAudioFrame.reset();
-	m_hasPendingVideoFrame = false;
-	m_hasPendingAudioFrame = false;
-	m_videoEnded = !m_mediaInfo.m_hasVideo;
-	m_audioEnded = !m_mediaInfo.m_hasAudio;
-	m_videoFrameIndex = 0;
-	m_state = LumaPlayerCoreStatePaused;
-	++m_mediaSerial;
+    if (exitFlag != nullptr && exitFlag->load())
+    {
+        closeMediaInternal();
+        return LumaPlayerCoreResultCanceled;
+    }
+    m_position100ns = 0;
+    m_decodeFloor100ns = 0;
+    m_ratePermille = m_config.m_defaultRatePermille;
+    m_clock.seek(0);
+    m_clock.setRate(m_ratePermille);
+    m_loopRange.reset();
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_currentVideoFrame.reset();
+    }
+    m_pendingVideoFrame.reset();
+    m_pendingAudioFrame.reset();
+    m_hasPendingVideoFrame = false;
+    m_hasPendingAudioFrame = false;
+    m_videoEnded = !m_mediaInfo.m_hasVideo;
+    m_audioEnded = !m_mediaInfo.m_hasAudio;
+    m_videoFrameIndex = 0;
+    m_state = LumaPlayerCoreStatePaused;
+    ++m_mediaSerial;
 
-	if (m_mediaInfo.m_hasVideo)
-	{
-		LumaPlayerCoreResult previewResult = previewFrameInternal(0, 0, nullptr, true);
-		if (previewResult != LumaPlayerCoreResultSuccess)
-		{
-			closeMediaInternal();
-			return previewResult;
-		}
-	}
-	updateSnapshot(m_state, m_position100ns);
-	return LumaPlayerCoreResultSuccess;
+    if (m_mediaInfo.m_hasVideo)
+    {
+        LumaPlayerCoreResult previewResult = previewFrameInternal(0, 0, exitFlag, true);
+        if (previewResult != LumaPlayerCoreResultSuccess)
+        {
+            closeMediaInternal();
+            return previewResult;
+        }
+    }
+    updateSnapshot(m_state, m_position100ns);
+    return LumaPlayerCoreResultSuccess;
 }
 
 void PlayerEngine::closeMediaInternal()
 {
+    m_loopBoundaryEnabled = false;
 	clearLoopBuffers();
 	std::lock_guard<std::mutex> previewLock(m_previewReaderMutex);
 	m_clock.pause();
@@ -1341,17 +1444,17 @@ void PlayerEngine::closeMediaInternal()
 	updateSnapshot(m_state, 0);
 }
 
-void PlayerEngine::workerLoop(PlayerWorkerTask* task)
+void PlayerEngine::workerLoop(PlayerWorkerTask* task, const std::atomic<bool>* exitFlag)
 {
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_workerStdThreadId = std::this_thread::get_id();
     }
-    while (task != nullptr && !task->isExitRequested() && m_state == LumaPlayerCoreStatePlaying)
+    while (task != nullptr && !(exitFlag != nullptr && exitFlag->load()) && m_state == LumaPlayerCoreStatePlaying)
     {
         try
         {
-            playbackStep(task);
+            playbackStep(task, exitFlag);
         }
         catch (...)
         {
@@ -1364,206 +1467,211 @@ void PlayerEngine::workerLoop(PlayerWorkerTask* task)
     }
 }
 
-void PlayerEngine::playbackStep(PlayerWorkerTask* task)
+void PlayerEngine::playbackStep(PlayerWorkerTask* task, const std::atomic<bool>* exitFlag)
 {
-	if (task == nullptr || task->isExitRequested())
-	{
-		return;
-	}
-	m_position100ns = clampPosition(m_clock.position100ns());
-	const int64_t segmentStart = activeSegmentStart100ns();
-	const int64_t segmentEnd = activeSegmentEnd100ns();
-	if (segmentEnd > segmentStart && m_position100ns >= segmentEnd)
-	{
-		replayFromLoopStart();
-		return;
-	}
+    if (task == nullptr || (exitFlag != nullptr && exitFlag->load()))
+    {
+        return;
+    }
+    m_position100ns = clampPosition(m_clock.position100ns());
+    const int64_t segmentStart = 0;
+    const int64_t segmentEnd = activeSegmentEnd100ns();
+    if (segmentEnd > segmentStart && m_position100ns >= segmentEnd)
+    {
+        replayFromLoopStart();
+        return;
+    }
 
-	if (!m_hasPendingVideoFrame && !m_videoEnded && m_videoReader != nullptr)
-	{
-		LumaPlayerCoreResult result = readNextVideoFrame(&m_pendingVideoFrame);
-		if (result == LumaPlayerCoreResultSuccess)
-		{
-			m_hasPendingVideoFrame = true;
-		}
-		else if (isReadEnd(result))
-		{
-			m_videoEnded = true;
-		}
-		else
-		{
-			m_state = LumaPlayerCoreStateError;
-			updateSnapshot(m_state, m_position100ns);
-			return;
-		}
-	}
-	if (!m_hasPendingAudioFrame && !m_audioEnded && m_audioReader != nullptr)
-	{
-		LumaPlayerCoreResult result = readNextAudioFrame(&m_pendingAudioFrame);
-		if (result == LumaPlayerCoreResultSuccess)
-		{
-			m_hasPendingAudioFrame = true;
-		}
-		else if (isReadEnd(result))
-		{
-			m_audioEnded = true;
-		}
-		else
-		{
-			m_state = LumaPlayerCoreStateError;
-			updateSnapshot(m_state, m_position100ns);
-			return;
-		}
-	}
+    if (!m_hasPendingVideoFrame && !m_videoEnded && m_videoReader != nullptr)
+    {
+        LumaPlayerCoreResult result = readNextVideoFrame(&m_pendingVideoFrame);
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            m_hasPendingVideoFrame = true;
+        }
+        else if (isReadEnd(result))
+        {
+            m_videoEnded = true;
+        }
+        else
+        {
+            m_state = LumaPlayerCoreStateError;
+            updateSnapshot(m_state, m_position100ns);
+            return;
+        }
+    }
+    if (!m_hasPendingAudioFrame && !m_audioEnded && m_audioReader != nullptr)
+    {
+        LumaPlayerCoreResult result = readNextAudioFrame(&m_pendingAudioFrame);
+        if (result == LumaPlayerCoreResultSuccess)
+        {
+            m_hasPendingAudioFrame = true;
+        }
+        else if (isReadEnd(result))
+        {
+            m_audioEnded = true;
+        }
+        else
+        {
+            m_state = LumaPlayerCoreStateError;
+            updateSnapshot(m_state, m_position100ns);
+            return;
+        }
+    }
 
-	bool didWork = false;
-	if (m_hasPendingAudioFrame)
-	{
-		if (m_pendingAudioFrame.m_timestamp100ns >= segmentEnd)
-		{
-			m_pendingAudioFrame.reset();
-			m_hasPendingAudioFrame = false;
-			m_audioEnded = true;
-			didWork = true;
-		}
-		else if (m_pendingAudioFrame.endTime100ns() <= m_decodeFloor100ns || m_pendingAudioFrame.endTime100ns() <= segmentStart)
-		{
-			m_hasPendingAudioFrame = false;
-			didWork = true;
-		}
-		else if (m_pendingAudioFrame.m_timestamp100ns <= m_position100ns ||
-			m_pendingAudioFrame.m_timestamp100ns - m_position100ns <= m_config.m_audioLead100ns)
-		{
-			LumaPlayerAudioFrame clipped;
-			int64_t clipStart = PlayerEngineHelper::maxInt64(segmentStart, m_decodeFloor100ns);
-			if (clipAudioFrame(m_pendingAudioFrame, clipStart, segmentEnd, &clipped))
-			{
-				if (renderAudioFrame(clipped) != LumaPlayerCoreResultSuccess)
-			{
-				m_state = LumaPlayerCoreStateError;
-				updateSnapshot(m_state, m_position100ns);
-				return;
-			}
-			}
-			m_hasPendingAudioFrame = false;
-			didWork = true;
-		}
-	}
+    bool didWork = false;
+    if (m_hasPendingAudioFrame)
+    {
+        if (m_pendingAudioFrame.m_timestamp100ns >= segmentEnd)
+        {
+            // 保留边界外PCM，修改范围后重新裁剪，避免为编辑端点清空声卡。
+            m_audioEnded = true;
+        }
+        else if (m_pendingAudioFrame.endTime100ns() <= m_decodeFloor100ns || m_pendingAudioFrame.endTime100ns() <= segmentStart)
+        {
+            m_hasPendingAudioFrame = false;
+            didWork = true;
+        }
+        else if (m_pendingAudioFrame.m_timestamp100ns <= m_position100ns ||
+            m_pendingAudioFrame.m_timestamp100ns - m_position100ns <= m_config.m_audioLead100ns)
+        {
+            LumaPlayerAudioFrame clipped;
+            int64_t clipStart = (std::max<int64_t>)(segmentStart, m_decodeFloor100ns);
+            if (clipAudioFrame(m_pendingAudioFrame, clipStart, segmentEnd, &clipped))
+            {
+                if (renderAudioFrame(clipped) != LumaPlayerCoreResultSuccess)
+            {
+                m_state = LumaPlayerCoreStateError;
+                updateSnapshot(m_state, m_position100ns);
+                return;
+            }
+            }
+            m_hasPendingAudioFrame = false;
+            didWork = true;
+        }
+    }
 
-	if (m_hasPendingVideoFrame)
-	{
-		if (m_pendingVideoFrame.m_timestamp100ns >= segmentEnd)
-		{
-			m_pendingVideoFrame.reset();
-			m_hasPendingVideoFrame = false;
-			m_videoEnded = true;
-			didWork = true;
-		}
-		else if (m_pendingVideoFrame.endTime100ns() <= m_decodeFloor100ns || m_pendingVideoFrame.endTime100ns() <= segmentStart)
-		{
-			m_hasPendingVideoFrame = false;
-			didWork = true;
-		}
-		else if (m_pendingVideoFrame.m_timestamp100ns <= m_position100ns ||
-			m_pendingVideoFrame.m_timestamp100ns - m_position100ns <= m_config.m_videoEarlyTolerance100ns)
-		{
-			if (renderVideoFrame(m_pendingVideoFrame, true) != LumaPlayerCoreResultSuccess)
-			{
-				m_state = LumaPlayerCoreStateError;
-				updateSnapshot(m_state, m_position100ns);
-				return;
-			}
-			m_hasPendingVideoFrame = false;
-			didWork = true;
-		}
-		else
-		{
-			int64_t wait100ns = m_pendingVideoFrame.m_timestamp100ns - m_position100ns;
-			int32_t waitMs = static_cast<int32_t>(PlayerEngineHelper::clampInt64(wait100ns / (m_ratePermille * 10), 1, 10));
-			task->wait(waitMs);
-			return;
-		}
-	}
+    if (m_hasPendingVideoFrame)
+    {
+        if (m_pendingVideoFrame.m_timestamp100ns >= segmentEnd)
+        {
+            // 保留边界外第一帧，播放中延长B时直接接续，不丢已读取帧。
+            m_videoEnded = true;
+        }
+        else if (m_pendingVideoFrame.endTime100ns() <= m_decodeFloor100ns || m_pendingVideoFrame.endTime100ns() <= segmentStart)
+        {
+            m_hasPendingVideoFrame = false;
+            didWork = true;
+        }
+        else if (m_pendingVideoFrame.m_timestamp100ns <= m_position100ns ||
+            m_pendingVideoFrame.m_timestamp100ns - m_position100ns <= m_config.m_videoEarlyTolerance100ns)
+        {
+            if (renderVideoFrame(m_pendingVideoFrame, true) != LumaPlayerCoreResultSuccess)
+            {
+                m_state = LumaPlayerCoreStateError;
+                updateSnapshot(m_state, m_position100ns);
+                return;
+            }
+            m_hasPendingVideoFrame = false;
+            didWork = true;
+        }
+        else
+        {
+            int64_t wait100ns = m_pendingVideoFrame.m_timestamp100ns - m_position100ns;
+            int32_t waitMs = static_cast<int32_t>(PlayerEngineHelper::clampInt64(wait100ns / (m_ratePermille * 10), 1, 10));
+            task->wait(waitMs);
+            return;
+        }
+    }
 
-	if ((m_videoReader == nullptr || m_videoEnded) && (m_audioReader == nullptr || m_audioEnded) && !m_hasPendingVideoFrame && !m_hasPendingAudioFrame)
-	{
-		if (segmentEnd > m_position100ns)
-		{
-			int64_t remaining100ns = segmentEnd - m_position100ns;
-			int32_t waitMs = static_cast<int32_t>(PlayerEngineHelper::clampInt64(remaining100ns / (m_ratePermille * 10), 1, 10));
-			updateSnapshot(m_state, m_position100ns);
-			task->wait(waitMs);
-			return;
-		}
-		if (m_enableAutoReplay)
-		{
-			replayFromLoopStart();
-			return;
-		}
-		m_state = LumaPlayerCoreStateEnded;
-		m_position100ns = m_mediaInfo.m_duration100ns;
-		m_clock.pause();
-		updateSnapshot(m_state, m_position100ns);
-		return;
-	}
+    if ((m_videoReader == nullptr || m_videoEnded) && (m_audioReader == nullptr || m_audioEnded) && !m_hasPendingVideoFrame && !m_hasPendingAudioFrame)
+    {
+        if (segmentEnd > m_position100ns)
+        {
+            int64_t remaining100ns = segmentEnd - m_position100ns;
+            int32_t waitMs = static_cast<int32_t>(PlayerEngineHelper::clampInt64(remaining100ns / (m_ratePermille * 10), 1, 10));
+            updateSnapshot(m_state, m_position100ns);
+            task->wait(waitMs);
+            return;
+        }
+        if (m_enableAutoReplay)
+        {
+            replayFromLoopStart();
+            return;
+        }
+        m_state = LumaPlayerCoreStateEnded;
+        m_position100ns = m_mediaInfo.m_duration100ns;
+        m_clock.pause();
+        updateSnapshot(m_state, m_position100ns);
+        return;
+    }
 
-	updateSnapshot(m_state, m_position100ns);
-	if (!didWork)
-	{
-		task->wait(2);
-	}
+    updateSnapshot(m_state, m_position100ns);
+    if (!didWork)
+    {
+        task->wait(2);
+    }
 }
 
-LumaPlayerCoreResult PlayerEngine::seekInternal(int64_t position100ns, bool resumeAfterSeek, bool renderPreview)
+LumaPlayerCoreResult PlayerEngine::seekInternal(int64_t position100ns, bool resumeAfterSeek, bool renderPreview,
+    const std::atomic<bool>* exitFlag)
 {
-	if (m_videoReader == nullptr && m_audioReader == nullptr)
-	{
-		setLastError(LumaPlayerCoreResultNotOpen);
-		return LumaPlayerCoreResultNotOpen;
-	}
-	m_activeLoopBuffer.reset();
-	position100ns = clampPosition(position100ns);
-	m_clock.pause();
-	m_state = LumaPlayerCoreStateSeeking;
-	m_position100ns = position100ns;
-	m_decodeFloor100ns = position100ns;
-	updateSnapshot(m_state, m_position100ns);
+    if (m_videoReader == nullptr && m_audioReader == nullptr)
+    {
+        setLastError(LumaPlayerCoreResultNotOpen);
+        return LumaPlayerCoreResultNotOpen;
+    }
+    m_activeLoopBuffer.reset();
+    position100ns = clampPosition(position100ns);
+    m_loopBoundaryEnabled = m_loopRange.isValid() && position100ns < m_loopRange.end100ns();
+    m_clock.pause();
+    m_state = LumaPlayerCoreStateSeeking;
+    m_position100ns = position100ns;
+    m_decodeFloor100ns = position100ns;
+    updateSnapshot(m_state, m_position100ns);
 
-	IAudioRender* audioRender = nullptr;
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		audioRender = m_audioRender;
-	}
-	if (audioRender != nullptr)
-	{
-		audioRender->pauseAudio();
-		audioRender->flushAudio();
-	}
-	m_pendingVideoFrame.reset();
-	m_pendingAudioFrame.reset();
-	m_hasPendingVideoFrame = false;
-	m_hasPendingAudioFrame = false;
-	if (m_videoReader != nullptr && !m_videoReader->seek(position100ns))
-	{
-		m_state = LumaPlayerCoreStatePaused;
-		updateSnapshot(m_state, m_position100ns);
-		setLastError(LumaPlayerCoreResultVideoSeekFailed);
-		return LumaPlayerCoreResultVideoSeekFailed;
-	}
-	if (m_audioReader != nullptr && !m_audioReader->seek(position100ns))
-	{
-		m_state = LumaPlayerCoreStatePaused;
-		updateSnapshot(m_state, m_position100ns);
-		setLastError(LumaPlayerCoreResultAudioSeekFailed);
-		return LumaPlayerCoreResultAudioSeekFailed;
-	}
-	m_pendingVideoFrame.reset();
-	m_pendingAudioFrame.reset();
-	m_hasPendingVideoFrame = false;
-	m_hasPendingAudioFrame = false;
-	m_videoEnded = m_videoReader == nullptr;
-	m_audioEnded = m_audioReader == nullptr;
-	if (resumeAfterSeek || renderPreview)
+    IAudioRender* audioRender = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        audioRender = m_audioRender;
+    }
+    if (audioRender != nullptr)
+    {
+        audioRender->pauseAudio();
+        audioRender->flushAudio();
+    }
+    m_pendingVideoFrame.reset();
+    m_pendingAudioFrame.reset();
+    m_hasPendingVideoFrame = false;
+    m_hasPendingAudioFrame = false;
+    if (m_videoReader != nullptr && !m_videoReader->seek(position100ns))
+    {
+        m_state = LumaPlayerCoreStatePaused;
+        updateSnapshot(m_state, m_position100ns);
+        setLastError(LumaPlayerCoreResultVideoSeekFailed);
+        return LumaPlayerCoreResultVideoSeekFailed;
+    }
+    if (m_audioReader != nullptr && !m_audioReader->seek(position100ns))
+    {
+        m_state = LumaPlayerCoreStatePaused;
+        updateSnapshot(m_state, m_position100ns);
+        setLastError(LumaPlayerCoreResultAudioSeekFailed);
+        return LumaPlayerCoreResultAudioSeekFailed;
+    }
+    m_pendingVideoFrame.reset();
+    m_pendingAudioFrame.reset();
+    m_hasPendingVideoFrame = false;
+    m_hasPendingAudioFrame = false;
+    m_videoEnded = m_videoReader == nullptr;
+    m_audioEnded = m_audioReader == nullptr;
+    if (exitFlag != nullptr && exitFlag->load())
+    {
+        m_clock.seek(position100ns);
+        m_state = LumaPlayerCoreStatePaused;
+        updateSnapshot(m_state, position100ns);
+        return LumaPlayerCoreResultCanceled;
+    }
+    if (resumeAfterSeek || renderPreview)
     {
         LumaPlayerCoreResult result = primePlayback(position100ns);
         if (result != LumaPlayerCoreResultSuccess)
@@ -1573,66 +1681,84 @@ LumaPlayerCoreResult PlayerEngine::seekInternal(int64_t position100ns, bool resu
             return result;
         }
     }
-	m_clock.seek(position100ns);
-	if (resumeAfterSeek)
-	{
-		if (audioRender != nullptr)
-		{
-			audioRender->resumeAudio();
-		}
-		m_clock.start(position100ns, m_ratePermille);
-		m_state = LumaPlayerCoreStatePlaying;
-	}
-	else
-	{
-		if (audioRender != nullptr)
-		{
-			audioRender->pauseAudio();
-		}
-		m_state = LumaPlayerCoreStatePaused;
-	}
-	updateSnapshot(m_state, m_position100ns);
-	return LumaPlayerCoreResultSuccess;
+    if (!resumeAfterSeek && renderPreview)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_currentVideoFrame.m_isSet && m_currentVideoFrame.m_frameStart100ns <= position100ns &&
+            position100ns < m_currentVideoFrame.m_frameEnd100ns)
+        {
+            position100ns = m_currentVideoFrame.m_frameStart100ns;
+            m_position100ns = position100ns;
+            m_decodeFloor100ns = position100ns;
+        }
+    }
+    m_clock.seek(position100ns);
+    if (resumeAfterSeek)
+    {
+        if (audioRender != nullptr)
+        {
+            audioRender->resumeAudio();
+        }
+        m_clock.start(position100ns, m_ratePermille);
+        m_state = LumaPlayerCoreStatePlaying;
+    }
+    else
+    {
+        if (audioRender != nullptr)
+        {
+            audioRender->pauseAudio();
+        }
+        m_state = LumaPlayerCoreStatePaused;
+    }
+    updateSnapshot(m_state, m_position100ns);
+    return LumaPlayerCoreResultSuccess;
 }
 
-bool PlayerEngine::refineLoopPointByPreview(LumaPlayerLoopPointInfo* pointInfo, int64_t position100ns)
+bool PlayerEngine::refineLoopPointByPreview(LumaPlayerLoopPointInfo* pointInfo, int64_t position100ns,
+    const std::atomic<bool>* exitFlag)
 {
-	if (pointInfo == nullptr || !pointInfo->m_isSet)
-	{
-		return false;
-	}
+    if (pointInfo == nullptr || !pointInfo->m_isSet || (exitFlag != nullptr && exitFlag->load()))
+    {
+        return false;
+    }
 
-	FFmpegCppPlaybackPreviewProfile profile;
-	FFmpegCppPlaybackVideoFrame ffmpegFrame;
+    FFmpegCppPlaybackPreviewProfile profile;
+    FFmpegCppPlaybackVideoFrame ffmpegFrame;
 
-	int64_t requestPosition100ns = position100ns;
-	int64_t mediaDuration100ns = 0;
+    int64_t requestPosition100ns = position100ns;
+    int64_t mediaDuration100ns = 0;
 
-	bool readOk = false;
-	{
-		std::lock_guard<std::mutex> previewLock(m_previewReaderMutex);
-		if (m_previewReader == nullptr)
-		{
-			return false;
-		}
-		mediaDuration100ns = m_previewReader->duration100ns();
-		requestPosition100ns = PlayerEngineHelper::clampInt64(requestPosition100ns, 0, mediaDuration100ns > 0 ? mediaDuration100ns : 0);
-		FFmpegCppPlaybackPreviewOption previewOption;
-		readOk = m_previewReader->readVideoFrameAtEx(requestPosition100ns, previewOption, &ffmpegFrame, &profile);
+    bool readOk = false;
+    {
+        std::lock_guard<std::mutex> previewLock(m_previewReaderMutex);
+        if (m_previewReader == nullptr)
+        {
+            return false;
+        }
+        mediaDuration100ns = m_previewReader->duration100ns();
+        requestPosition100ns = PlayerEngineHelper::clampInt64(requestPosition100ns, 0, mediaDuration100ns > 0 ? mediaDuration100ns : 0);
+        PlayerPreviewCancelContext cancelContext;
+        cancelContext.m_previewSerial = &m_previewSerial;
+        cancelContext.m_requestSerial = 0;
+        cancelContext.m_exitFlag = exitFlag;
+        FFmpegCppPlaybackPreviewOption previewOption;
+        previewOption.cancelCallback = exitFlag != nullptr ? &PlayerPreviewCancelCallback : nullptr;
+        previewOption.cancelUserData = exitFlag != nullptr ? &cancelContext : nullptr;
+        readOk = m_previewReader->readVideoFrameAtEx(requestPosition100ns, previewOption, &ffmpegFrame, &profile);
 
-	}
+    }
 
-	if (!readOk)
-	{
-		return false;
-	}
+    if (!readOk)
+    {
+        return false;
+    }
 
-	int64_t frameIndex = pointInfo->m_frameIndex;
-	pointInfo->m_isSet = true;
-	pointInfo->m_frameStart100ns = PlayerEngineHelper::clampInt64(ffmpegFrame.timestamp100ns, 0, mediaDuration100ns > 0 ? mediaDuration100ns : ffmpegFrame.timestamp100ns);
-	pointInfo->m_frameEnd100ns = PlayerEngineHelper::clampInt64(ffmpegFrame.timestamp100ns + ffmpegFrame.duration100ns, 0, mediaDuration100ns > 0 ? mediaDuration100ns : ffmpegFrame.timestamp100ns + ffmpegFrame.duration100ns);
-	pointInfo->m_frameIndex = frameIndex;
-	return true;
+    int64_t frameIndex = pointInfo->m_frameIndex;
+    pointInfo->m_isSet = true;
+    pointInfo->m_frameStart100ns = PlayerEngineHelper::clampInt64(ffmpegFrame.timestamp100ns, 0, mediaDuration100ns > 0 ? mediaDuration100ns : ffmpegFrame.timestamp100ns);
+    pointInfo->m_frameEnd100ns = PlayerEngineHelper::clampInt64(ffmpegFrame.timestamp100ns + ffmpegFrame.duration100ns, 0, mediaDuration100ns > 0 ? mediaDuration100ns : ffmpegFrame.timestamp100ns + ffmpegFrame.duration100ns);
+    pointInfo->m_frameIndex = frameIndex;
+    return true;
 }
 
 LumaPlayerCoreResult PlayerEngine::previewFrameInternal(int64_t position100ns, uint64_t requestSerial, const std::atomic<bool>* exitFlag, bool updatePlaybackPosition)
@@ -1763,7 +1889,9 @@ LumaPlayerCoreResult PlayerEngine::readNextVideoFrame(LumaPlayerVideoFrame* fram
             ++m_loopVideoIndex;
             return result;
         }
-        if (result != LumaPlayerCoreResultNotOpen)
+        const bool changedRange = !m_activeLoopBuffer->matches(m_mediaInfo,
+            activeSegmentStart100ns(), activeSegmentEnd100ns());
+        if (result != LumaPlayerCoreResultNotOpen && !(changedRange && result == LumaPlayerCoreResultEnd))
         {
             return result;
         }
@@ -1804,7 +1932,9 @@ LumaPlayerCoreResult PlayerEngine::readNextAudioFrame(LumaPlayerAudioFrame* fram
             ++m_loopAudioIndex;
             return result;
         }
-        if (result != LumaPlayerCoreResultNotOpen)
+        const bool changedRange = !m_activeLoopBuffer->matches(m_mediaInfo,
+            activeSegmentStart100ns(), activeSegmentEnd100ns());
+        if (result != LumaPlayerCoreResultNotOpen && !(changedRange && result == LumaPlayerCoreResultEnd))
         {
             return result;
         }
@@ -1870,7 +2000,7 @@ LumaPlayerCoreResult PlayerEngine::renderVideoFrame(const LumaPlayerVideoFrame& 
 		m_snapshot.m_currentVideoFrame = m_currentVideoFrame;
 		if (updatePlaybackPosition)
 		{
-			m_position100ns = PlayerEngineHelper::maxInt64(m_position100ns, frame.m_timestamp100ns);
+            m_position100ns = (std::max<int64_t>)(m_position100ns, frame.m_timestamp100ns);
 			m_snapshot.m_state = m_state;
 			m_snapshot.m_mediaSerial = m_mediaSerial;
 			m_snapshot.m_mediaInfo = m_mediaInfo;
@@ -1931,8 +2061,8 @@ bool PlayerEngine::clipAudioFrame(const LumaPlayerAudioFrame& source, int64_t st
 	}
 	int64_t sourceStart = source.m_timestamp100ns;
 	int64_t sourceEnd = source.endTime100ns();
-	int64_t clipStart = PlayerEngineHelper::maxInt64(sourceStart, start100ns);
-	int64_t clipEnd = PlayerEngineHelper::minInt64(sourceEnd, end100ns);
+    int64_t clipStart = (std::max<int64_t>)(sourceStart, start100ns);
+    int64_t clipEnd = (std::min<int64_t>)(sourceEnd, end100ns);
 	if (clipEnd <= clipStart)
 	{
 		return false;
@@ -1977,6 +2107,18 @@ bool PlayerEngine::clipAudioFrame(const LumaPlayerAudioFrame& source, int64_t st
 
 void PlayerEngine::replayFromLoopStart()
 {
+    if (!m_loopBoundaryEnabled && m_loopRange.isValid())
+    {
+        const LumaPlayerCoreResult result = seekInternal(0, true, false);
+        if (result != LumaPlayerCoreResultSuccess)
+        {
+            setLastError(result);
+            m_state = LumaPlayerCoreStateError;
+            updateSnapshot(m_state, m_position100ns);
+        }
+        refreshLoopBuffer();
+        return;
+    }
     const int64_t start = activeSegmentStart100ns();
     const int64_t end = activeSegmentEnd100ns();
     bool buffered = m_activeLoopBuffer != nullptr && m_activeLoopBuffer->matches(m_mediaInfo, start, end) && m_activeLoopBuffer->isComplete();
@@ -2048,19 +2190,10 @@ void PlayerEngine::refreshLoopBuffer()
         clearLoopBuffers();
         return;
     }
-    if (m_activeLoopBuffer != nullptr && !m_activeLoopBuffer->matches(m_mediaInfo, start, end))
-    {
-        // 端点变化后缓存不能继续参与解码，重新建立当前位置的读取器状态
-        bool playing = m_state == LumaPlayerCoreStatePlaying;
-        m_activeLoopBuffer.reset();
-        LumaPlayerCoreResult result = seekInternal(m_position100ns, playing, false);
-        if (result != LumaPlayerCoreResultSuccess)
-        {
-            setLastError(result);
-            return;
-        }
-    }
-    if (m_activeLoopBuffer != nullptr && m_activeLoopBuffer->isComplete())
+    // 编辑端点后旧缓存仍是连续读取源；不能清缓存并seek打断当前播放。
+    // 回绕时只选匹配新范围的缓存，旧缓存读尽后由原读取器接续。
+    if (m_activeLoopBuffer != nullptr && m_activeLoopBuffer->matches(m_mediaInfo, start, end) &&
+        m_activeLoopBuffer->isComplete())
     {
         return;
     }
@@ -2187,12 +2320,12 @@ int64_t PlayerEngine::clampPosition(int64_t position100ns) const
 
 int64_t PlayerEngine::activeSegmentStart100ns() const
 {
-	return m_loopRange.isValid() ? m_loopRange.start100ns() : 0;
+    return m_loopBoundaryEnabled && m_loopRange.isValid() ? m_loopRange.start100ns() : 0;
 }
 
 int64_t PlayerEngine::activeSegmentEnd100ns() const
 {
-	if (m_loopRange.isValid())
+    if (m_loopBoundaryEnabled && m_loopRange.isValid())
 	{
 		return m_loopRange.end100ns();
 	}
@@ -2202,4 +2335,61 @@ int64_t PlayerEngine::activeSegmentEnd100ns() const
 bool PlayerEngine::isReadEnd(LumaPlayerCoreResult result) const
 {
 	return result == LumaPlayerCoreResultEnd;
+}
+
+LumaPlayerCoreResult PlayerEngine::submitAsyncEx(const LumaPlayerCoreRequest& request,
+    const LumaPlayerCoreCompletionCallback& callback)
+{
+    std::lock_guard<std::mutex> asyncSubmitLock(m_asyncSubmitMutex);
+    if (!callback || request.m_requestId == 0 ||
+        request.m_operation < LumaPlayerCoreOperationOpen || request.m_operation > LumaPlayerCoreOperationRate)
+    {
+        return LumaPlayerCoreResultInvalidParam;
+    }
+    std::shared_ptr<PlayerCompletionTask> dispatcher;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (!m_isInit || m_completionTask == nullptr)
+        {
+            return LumaPlayerCoreResultNotInit;
+        }
+        dispatcher = m_completionTask;
+    }
+    PlayerCommand command;
+    command.m_type = static_cast<PlayerCommandType>(request.m_operation);
+    command.m_filePath = request.m_filePath;
+    command.m_position100ns = request.m_position100ns;
+    command.m_keepPlayState = request.m_playAfterSeek;
+    command.m_usePosition = true;
+    command.m_ratePermille = request.m_ratePermille;
+    command.m_loopPointType = request.m_point;
+    command.m_frameOffset = request.m_frameOffset;
+    command.m_serial = (command.m_type == PlayerCommandOpen || command.m_type == PlayerCommandSeek ||
+        command.m_type == PlayerCommandPreview || command.m_type == PlayerCommandMoveLoopPoint) ?
+        nextPreviewSerial() : m_previewSerial.load();
+    command.m_completion = std::make_shared<PlayerRequestCompletion>(request, callback, dispatcher);
+    if (!dispatcher->reserve(command.m_completion->m_delivery))
+    {
+        return LumaPlayerCoreResultCommandQueueFailed;
+    }
+    LumaPlayerCoreResult result = LumaPlayerCoreResultNotInit;
+    if (command.m_type == PlayerCommandPreview)
+    {
+        std::shared_ptr<PlayerPreviewTask> task;
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            task = m_previewTask;
+        }
+        if (task != nullptr)
+        {
+            task->request(command.m_position100ns, command.m_serial, command.m_completion);
+            result = LumaPlayerCoreResultSuccess;
+        }
+    }
+    else
+    {
+        result = postCommand(command);
+    }
+    command.m_completion->m_accepted.store(result == LumaPlayerCoreResultSuccess);
+    return result;
 }

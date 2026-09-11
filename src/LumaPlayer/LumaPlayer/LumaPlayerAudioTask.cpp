@@ -3,7 +3,7 @@
 #endif
 #include "LumaPlayerAudioTask.h"
 #include "LumaPlayerAudioRender.h"
-#include "LumaPlayerLogger.h"
+#include "LogManager/LogManagerAPI.h"
 
 #include <QEventLoop>
 
@@ -39,7 +39,7 @@ void LumaPlayerAudioTask::DoTask()
 	}
 	catch (...)
 	{
-		LumaPlayerLogger::log("音频设备服务异常，停止设备输出");
+        LOGINFO("音频设备服务异常，停止设备输出");
 	}
 	m_render->shutdownInAudioThread();
 }

@@ -19,16 +19,6 @@ int64_t PlayerEngineHelper::clampInt64(int64_t value, int64_t minValue, int64_t 
 	return value;
 }
 
-int64_t PlayerEngineHelper::minInt64(int64_t left, int64_t right)
-{
-	return left < right ? left : right;
-}
-
-int64_t PlayerEngineHelper::maxInt64(int64_t left, int64_t right)
-{
-	return left > right ? left : right;
-}
-
 int32_t PlayerEngineHelper::clampRate(int32_t ratePermille, int32_t minRatePermille, int32_t maxRatePermille)
 {
 	if (ratePermille < minRatePermille)

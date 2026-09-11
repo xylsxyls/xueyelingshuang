@@ -1,6 +1,7 @@
 ﻿#ifndef CEXTERNALTEXTEDIT_H
 #define CEXTERNALTEXTEDIT_H
 
+#include "ExpressionLoadResult.h"
 #include <QTextEdit>
 #include <QMap>
 #include <QTimer>
@@ -93,6 +94,13 @@ public :
 	@param [in] emotionPath Emotions文件夹所在目录
 	*/
     void loadExpressions(const QString &emotionPath);
+
+    /** 加载表情资源并返回具体错误，不在基础控件内写日志
+    @param [in] emotionPath 表情资源根目录
+    @param [out] detail 可空，接收解析动态详情
+    @return 返回ExpressionLoadResult，中文原因见共享const map
+    */
+    ExpressionLoadResult loadExpressionsResult(const QString& emotionPath, QString* detail = nullptr);
 
 	/** 按表情快捷码插入对应表情
 	@param [in] shortcut 表情快捷码

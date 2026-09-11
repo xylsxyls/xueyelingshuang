@@ -2,6 +2,7 @@
 #include "LumaPlayerAudioRender.h"
 #include "LumaPlayerVideoRender.h"
 #include "LumaPlayerCoreBridge.h"
+#include "LumaPlayerLogicController.h"
 
 #include <QElapsedTimer>
 #include <QImage>
@@ -22,6 +23,9 @@ enum HitArea
 {
 	HitNone = 0,
 	HitLoadButton,
+    HitResetButton,
+    HitPinButton,
+    HitHelpButton,
 	HitMinButton,
 	HitMaxButton,
 	HitCloseButton,
@@ -65,6 +69,11 @@ public:
 	void loadMedia(const QString& filePath);
 
 protected:
+    /** 关闭先异步收敛线程，收到完成后才允许窗口销毁
+    @param [in] event 关闭事件，借用到返回
+    */
+    virtual void closeEvent(QCloseEvent* event) override;
+
 	/** 绘制当前视频、悬浮控制条与状态提示
 	@param [in] event Qt事件对象，仅在调用期间有效
 	*/
@@ -126,6 +135,11 @@ protected:
 	virtual void leaveEvent(QEvent* event) override;
 
 private slots:
+    /** 只在GUI线程应用逻辑结果，再异步回执视图
+    @param [in] result 已复制的结果
+    */
+    void onLogicResult(const LumaPlayerLogicResult& result);
+
 	/** 定时刷新快照、视频画面并驱动悬浮层动画
 	*/
 	void onUiTimer();
@@ -135,7 +149,71 @@ private slots:
 	void onVideoClick();
 
 private:
-	/** 初始化窗口、Core和定时器
+    /** 投递短逻辑动作，GUI不执行其业务
+    @param [in] type 动作类型
+    @param [in] value 可选数值
+    @param [in] point 可选端点
+    */
+    void postAction(LumaPlayerActionType type, int64_t value = 0, int32_t point = 0);
+
+    /** 提交Core操作，不在GUI等待
+    @param [in] operation Core操作
+    @param [in] value 时间或倍率等值
+    @param [in] flag 可选播放状态
+    @param [in] point 可选端点
+    */
+    void postCore(int32_t operation, int64_t value = 0, bool flag = false, int32_t point = 0);
+
+    /** 把窗口实际应用结果送回逻辑线程
+    @param [in] type 原始窗口动作
+    @param [in] success 是否达到目标
+    */
+    void acknowledgeWindow(LumaPlayerActionType type, bool success);
+
+    /** GUI执行已由逻辑线程派发的全屏切换
+    */
+    void applyFullScreen();
+
+    /** GUI执行最大化切换，全屏内仅切换退出后的目标
+    */
+    void applyMaximize();
+
+    /** Qt状态通知处理后应用最终窗口状态、恢复普通矩形并回报原动作
+    @param [in] type 请求切换的窗口动作
+    @param [in] state 目标状态，普通、最大化或全屏
+    */
+    void completeWindowState(LumaPlayerActionType type, Qt::WindowState state);
+
+    /** 获取非全屏的最大化状态，全屏内返回退出后的目标
+    @return true表示非全屏应为最大化
+    */
+    bool isMaximizedOutsideFullScreen() const;
+
+    /** 通过DialogManager打开模态帮助窗口
+    */
+    void showHelpDialog();
+
+    /** 获取固定工具栏避让后的视频视口
+    @return 可绘制的视频区域
+    */
+    QRect videoViewportRect() const;
+
+    /** 获取重置按钮命中和绘制区域
+    @return 窗口坐标矩形
+    */
+    QRect resetButtonRect() const;
+
+    /** 获取图钉按钮命中和绘制区域
+    @return 窗口坐标矩形
+    */
+    QRect pinButtonRect() const;
+
+    /** 获取帮助按钮命中和绘制区域
+    @return 窗口坐标矩形
+    */
+    QRect helpButtonRect() const;
+
+    /** 初始化窗口、Core和定时器
 	@param [in] debugEnabled 调用所需的debugEnabled参数
 	*/
 	void init(bool debugEnabled);
@@ -190,10 +268,6 @@ private:
 	@param [in] frameOffset 移动帧数，负数向左，正数向右
 	*/
 	void moveHoveredLoopPoint(int32_t frameOffset);
-
-	/** 根据Core最新快照把鼠标校准到异步移动后的AB圆点中心
-	*/
-	void updatePendingLoopMove();
 
 	/** 更新顶部和底部悬浮层显示目标
 	*/
@@ -355,6 +429,28 @@ private:
 	LumaPlayerVideoRender m_videoRender;
 	// 播放核心C接口桥接对象，析构顺序保证它先于渲染器停止
 	LumaPlayerCoreBridge m_core;
+    // 逻辑控制器，先于Core成员析构
+    LumaPlayerLogicController m_logic;
+    // GUI仅呈现已确认的固定状态
+    bool m_pinned;
+    // GUI仅呈现逻辑线程的脏状态
+    bool m_resetEnabled;
+    // 后台关闭完成后才允许关闭
+    bool m_closeReady;
+    // 已发起关闭
+    bool m_closeRequested;
+    // 视口代次，排除旧坐标结果
+    uint64_t m_viewportGeneration;
+    // 已应用视图版本
+    uint64_t m_viewRevision;
+    // GUI输入序号
+    uint64_t m_nextInputSerial;
+    // 最近定位输入
+    uint64_t m_lastSeekInput;
+    // 最近端点移动输入
+    uint64_t m_lastMoveInput;
+    // 最近逻辑媒体代次
+    uint64_t m_mediaGeneration;
 	// 上一轮中心暂停提示可见性，用于只在显隐变化时重绘
 	bool m_lastCenterTipVisible;
 	// 上一轮缩放提示可见性
@@ -376,6 +472,12 @@ private:
 	int64_t m_scaledFrameSourceKey;
 	// 最近一次已经复制到窗口层的视频帧序号
 	uint64_t m_cachedFrameSerial;
+    // 与缓存画面在同一锁下取得的帧起点
+    int64_t m_cachedFrameStart;
+    // 与缓存画面配套的帧排他结束时间
+    int64_t m_cachedFrameEnd;
+    // 当前是否按住鼠标左键，仅控制即时视觉反馈
+    bool m_leftPressed;
 	// 当前是否已打开媒体
 	bool m_hasMedia;
 	// true表示媒体打开命令已投递，界面正在等待Core快照返回最终状态
@@ -438,8 +540,10 @@ private:
 	bool m_progressMenuActive;
 	// 文件对话框打开期间保持悬浮条
 	bool m_fileDialogActive;
-	// 进入全屏前是否为最大化状态
-	bool m_wasMaximizedBeforeFullScreen;
+    // 全屏退出后的最大化目标，可在全屏内独立切换
+    bool m_maximizedOutsideFullScreen;
+    // 窗口动作代次，防止旧恢复回调覆盖后续状态或退出
+    uint64_t m_windowStateSerial;
 	// 当前鼠标悬浮的按钮区域
 	HitArea m_hoverArea;
 	// 鼠标按下时命中的区域，用于区分点击和拖动
@@ -454,12 +558,8 @@ private:
 	bool m_loopMoveRepeating;
 	// 等待Core完成移动的AB点，-1表示没有，0表示A，1表示B
 	int32_t m_pendingLoopMovePoint;
-	// 异步移动前圆点使用的时间，用于识别Core快照已经更新，单位100纳秒
-	int64_t m_pendingLoopMoveReference100ns;
-	// 异步移动等待截止时间，避免边界移动失败后一直保留等待状态，单位毫秒
-	int64_t m_pendingLoopMoveDeadlineMs;
 	// true表示本次左键拖动已经发生，不触发点击播放暂停
 	bool m_cancelClickToggle;
-	// 全屏前保存的普通窗口矩形
-	QRect m_normalGeometryBeforeFullScreen;
+    // 离开普通窗口前保存的最新位置和尺寸，最大化/全屏切换不能覆盖
+    QRect m_normalWindowGeometry;
 };

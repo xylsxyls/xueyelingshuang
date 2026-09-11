@@ -43,11 +43,6 @@ public:
 	*/
 	bool wait(int32_t timeoutMs);
 
-	/** 判断外部是否请求退出
-	@return true表示任务应尽快退出
-	*/
-	bool isExitRequested() const;
-
 private:
 	// 播放引擎指针，不负责释放
 	PlayerEngine* m_engine;

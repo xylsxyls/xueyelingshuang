@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
+#include "PlayerRequestCompletion.h"
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
@@ -41,8 +42,10 @@ public:
 	/** 覆盖唯一待处理请求并唤醒预览线程
 	@param [in] position100ns 预览位置，单位100纳秒
 	@param [in] requestSerial 请求序号，旧请求不能覆盖新请求
+    @param [in] completion 可空，替换或退出后也产生取消终态
 	*/
-	void request(int64_t position100ns, uint64_t requestSerial);
+    void request(int64_t position100ns, uint64_t requestSerial,
+        const std::shared_ptr<PlayerRequestCompletion>& completion = std::shared_ptr<PlayerRequestCompletion>());
 
 	/** 等待并处理最新预览，解码期间不持有请求锁
 	*/
@@ -61,6 +64,8 @@ private:
 	std::condition_variable m_requestReady;
 	// 是否有尚未取出的请求
 	bool m_pending;
+    // 最新请求完成凭据，替换时释放旧凭据
+    std::shared_ptr<PlayerRequestCompletion> m_completion;
 	// 需要预览的媒体时间，单位100纳秒
 	int64_t m_position100ns;
 	// 本次预览请求序号

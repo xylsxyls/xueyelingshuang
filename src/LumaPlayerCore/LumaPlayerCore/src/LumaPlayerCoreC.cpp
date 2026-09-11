@@ -498,3 +498,59 @@ int32_t lumaPlayerCoreCancelLoopPointMove(LumaPlayerCoreHandle handle)
         return LumaPlayerCoreResultSuccess;
     });
 }
+
+int32_t lumaPlayerCoreSubmitAsyncEx(LumaPlayerCoreHandle handle,
+    const LumaPlayerCoreCRequest* request, LumaPlayerCoreCCompletionCallback callback, void* userData)
+{
+    if (request == nullptr || callback == nullptr ||
+        (request->m_operation == LumaPlayerCoreCOperationOpen && request->m_filePath == nullptr))
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    LumaPlayerCoreCContext* context = LumaPlayerCoreHelper::castHandle(handle);
+    if (context == nullptr || context->m_core == nullptr)
+    {
+        return LumaPlayerCoreCResultNotInit;
+    }
+    try
+    {
+        LumaPlayerCoreRequest value;
+        value.m_requestId = request->m_requestId;
+        value.m_mediaGeneration = request->m_mediaGeneration;
+        value.m_operation = static_cast<LumaPlayerCoreOperation>(request->m_operation);
+        value.m_filePath = request->m_filePath != nullptr ? request->m_filePath : "";
+        value.m_position100ns = request->m_position100ns;
+        value.m_playAfterSeek = request->m_playAfterSeek != 0;
+        value.m_ratePermille = request->m_ratePermille;
+        value.m_point = static_cast<LumaPlayerCoreLoopPointType>(request->m_point);
+        value.m_frameOffset = request->m_frameOffset;
+        return context->m_core->submitAsyncEx(value, [callback, userData](const LumaPlayerCoreCompletion& completed)
+        {
+            LumaPlayerCoreCCompletion result = {};
+            result.m_requestId = completed.m_request.m_requestId;
+            result.m_mediaGeneration = completed.m_request.m_mediaGeneration;
+            result.m_operation = static_cast<int32_t>(completed.m_request.m_operation);
+            result.m_result = static_cast<int32_t>(completed.m_result);
+            result.m_snapshot.m_result = static_cast<int32_t>(completed.m_snapshot.m_result);
+            result.m_snapshot.m_state = static_cast<int32_t>(completed.m_snapshot.m_state);
+            result.m_snapshot.m_mediaSerial = completed.m_snapshot.m_mediaSerial;
+            result.m_snapshot.m_duration100ns = completed.m_snapshot.m_mediaInfo.m_duration100ns;
+            result.m_snapshot.m_position100ns = completed.m_snapshot.m_position100ns;
+            result.m_snapshot.m_defaultVideoFrameDuration100ns = completed.m_snapshot.m_mediaInfo.m_defaultVideoFrameDuration100ns;
+            result.m_snapshot.m_ratePermille = completed.m_snapshot.m_ratePermille;
+            result.m_snapshot.m_hasVideo = completed.m_snapshot.m_mediaInfo.m_hasVideo ? 1 : 0;
+            result.m_snapshot.m_hasAudio = completed.m_snapshot.m_mediaInfo.m_hasAudio ? 1 : 0;
+            result.m_snapshot.m_videoWidth = completed.m_snapshot.m_mediaInfo.m_videoFormat.m_width;
+            result.m_snapshot.m_videoHeight = completed.m_snapshot.m_mediaInfo.m_videoFormat.m_height;
+            result.m_snapshot.m_hasLoopA = completed.m_snapshot.m_loopRange.m_aPoint.m_isSet ? 1 : 0;
+            result.m_snapshot.m_hasLoopB = completed.m_snapshot.m_loopRange.m_bPoint.m_isSet ? 1 : 0;
+            result.m_snapshot.m_loopAStart100ns = completed.m_snapshot.m_loopRange.m_aPoint.m_frameStart100ns;
+            result.m_snapshot.m_loopBEnd100ns = completed.m_snapshot.m_loopRange.m_bPoint.m_frameEnd100ns;
+            callback(&result, userData);
+        });
+    }
+    catch (...)
+    {
+        return LumaPlayerCoreCResultInternalError;
+    }
+}

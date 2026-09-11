@@ -49,6 +49,14 @@ public:
 	*/
 	LumaPlayerCoreResult init(const LumaPlayerCoreConfig& config);
 
+    /** 提交带真实完成通知的请求，不等待执行
+    @param [in] request 请求参数，复制保存
+    @param [in] callback 结果线程通知，必须快速返回
+    @return Success表示已接受且之后恰有一次完成回报，其他值无回报
+    */
+    LumaPlayerCoreResult submitAsyncEx(const LumaPlayerCoreRequest& request,
+        const LumaPlayerCoreCompletionCallback& callback);
+
 	/** 停止工作线程并释放所有媒体资源
 	*/
 	void uninit();
@@ -222,8 +230,9 @@ public:
 
 	/** 工作任务入口，只允许PlayerWorkerTask调用
 	@param [in] task 当前工作任务
+    @param [in] exitFlag 任务存活期间借用的退出标记，可空
 	*/
-	void workerLoop(PlayerWorkerTask* task);
+    void workerLoop(PlayerWorkerTask* task, const std::atomic<bool>* exitFlag);
 
 	/** 预览任务入口，只允许预览Task调用；该函数不推进正式播放时钟
 	@param [in] position100ns 需要预览的媒体时间，单位100纳秒
@@ -288,9 +297,10 @@ private:
 
 	/** 打开媒体文件的工作线程实现
 	@param [in] filePath UTF-8路径
+    @param [in] exitFlag 可空，单次打开返回后在安全阶段取消
 	@return 返回打开结果
 	*/
-	LumaPlayerCoreResult openMediaInternal(const std::string& filePath);
+    LumaPlayerCoreResult openMediaInternal(const std::string& filePath, const std::atomic<bool>* exitFlag = nullptr);
 
 	/** 关闭媒体文件的工作线程实现
 	*/
@@ -298,23 +308,27 @@ private:
 
 	/** 工作线程播放推进一步
 	@param [in] task 当前工作任务
+    @param [in] exitFlag 任务存活期间借用的退出标记，可空
 	*/
-	void playbackStep(PlayerWorkerTask* task);
+    void playbackStep(PlayerWorkerTask* task, const std::atomic<bool>* exitFlag);
 
 	/** 跳转到指定位置并可选恢复播放
 	@param [in] position100ns 目标位置，单位100纳秒
 	@param [in] resumeAfterSeek true表示seek后继续播放
 	@param [in] renderPreview true表示seek后同步刷新目标位置画面
+    @param [in] exitFlag 可空，定位到一致状态后检查取消
 	@return 返回seek结果
 	*/
-	LumaPlayerCoreResult seekInternal(int64_t position100ns, bool resumeAfterSeek, bool renderPreview);
+    LumaPlayerCoreResult seekInternal(int64_t position100ns, bool resumeAfterSeek, bool renderPreview,
+        const std::atomic<bool>* exitFlag = nullptr);
 
 	/** 使用预览reader重新读取循环点所在显示帧，保证B点右边界来自下一帧真实时间戳
 	@param [in,out] pointInfo 需要修正的循环点
 	@param [in] position100ns 设置循环点时的媒体位置，单位100纳秒
 	@return true表示修正成功，false表示保留原循环点
 	*/
-	bool refineLoopPointByPreview(LumaPlayerLoopPointInfo* pointInfo, int64_t position100ns);
+    bool refineLoopPointByPreview(LumaPlayerLoopPointInfo* pointInfo, int64_t position100ns,
+        const std::atomic<bool>* exitFlag);
 
 	/** 解码并显示指定位置附近的一帧
 	@param [in] position100ns 目标位置，单位100纳秒
@@ -432,7 +446,13 @@ private:
 	// 常驻预览任务，拖动只覆盖待处理位置
 	std::shared_ptr<PlayerPreviewTask> m_previewTask;
 	// CTaskThreadManager生成的工作线程ID
+    // 可选异步提交与关闭入口互斥，不在回调期间持有
+    std::mutex m_asyncSubmitMutex;
 	uint32_t m_threadId;
+    // 完成通知管理器线程ID，生产者退出后最后回收
+    uint32_t m_completionThreadId;
+    // 独立结果队列
+    std::shared_ptr<PlayerCompletionTask> m_completionTask;
 	// CTaskThreadManager生成的预览线程ID，高频拖动预览独立排队
 	uint32_t m_previewThreadId;
 	// 独立循环预备线程，不阻塞交互预览
@@ -465,6 +485,8 @@ private:
 	int32_t m_ratePermille;
 	// 是否文件结束后自动重播
 	bool m_enableAutoReplay;
+    // 当前播放路径是否在B点循环；手动跳出B后禁用，跳回B前重新启用
+    bool m_loopBoundaryEnabled;
 	// 共享给外部的播放快照
 	LumaPlayerSnapshot m_snapshot;
 	// 最后一次错误文本

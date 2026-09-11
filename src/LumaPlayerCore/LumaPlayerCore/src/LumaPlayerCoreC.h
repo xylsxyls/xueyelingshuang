@@ -563,6 +563,80 @@ LumaPlayerCoreAPI size_t lumaPlayerCoreGetLastError(LumaPlayerCoreHandle handle,
 */
 LumaPlayerCoreAPI const char* lumaPlayerCoreResultDescription(int32_t result);
 
+/** 可选异步操作，与C++操作值一致
+*/
+typedef enum LumaPlayerCoreCOperation
+{
+    LumaPlayerCoreCOperationOpen = 1,
+    LumaPlayerCoreCOperationClose = 2,
+    LumaPlayerCoreCOperationPlay = 3,
+    LumaPlayerCoreCOperationPause = 4,
+    LumaPlayerCoreCOperationStop = 5,
+    LumaPlayerCoreCOperationSeek = 6,
+    LumaPlayerCoreCOperationPreview = 7,
+    LumaPlayerCoreCOperationSetA = 8,
+    LumaPlayerCoreCOperationSetB = 9,
+    LumaPlayerCoreCOperationClearLoop = 10,
+    LumaPlayerCoreCOperationMoveLoop = 11,
+    LumaPlayerCoreCOperationRate = 12
+} LumaPlayerCoreCOperation;
+
+/** 请求数据，提交时复制；不改变任何旧结构布局
+*/
+typedef struct LumaPlayerCoreCRequest
+{
+    // 非零宿主请求ID
+    uint64_t m_requestId;
+    // 宿主管理的媒体代次，原样回报
+    uint64_t m_mediaGeneration;
+    // LumaPlayerCoreCOperation值
+    int32_t m_operation;
+    // UTF-8打开路径，仅提交期间借用，非打开操作可空
+    const char* m_filePath;
+    // 时间，100纳秒
+    int64_t m_position100ns;
+    // 定位完成后是否播放
+    int32_t m_playAfterSeek;
+    // 倍率，1000表示1倍
+    int32_t m_ratePermille;
+    // A/B点枚举值
+    int32_t m_point;
+    // 帧偏移
+    int32_t m_frameOffset;
+} LumaPlayerCoreCRequest;
+
+/** 完成数据仅在回调期间借用，宿主需复制保存
+*/
+typedef struct LumaPlayerCoreCCompletion
+{
+    // 原始请求ID
+    uint64_t m_requestId;
+    // 宿主媒体代次
+    uint64_t m_mediaGeneration;
+    // 操作枚举
+    int32_t m_operation;
+    // 真实完成结果，取消也必须回报
+    int32_t m_result;
+    // 完成时状态，尚未执行而取消时为默认值
+    LumaPlayerCoreCSnapshot m_snapshot;
+} LumaPlayerCoreCCompletion;
+
+/** 独立结果线程通知，只复制并投递，不阻塞、不在回调内销毁Core
+@param [in] completion 借用的本次结果，回调返回后失效
+@param [in] userData 宿主上下文，必须活到uninit返回
+*/
+typedef void (*LumaPlayerCoreCCompletionCallback)(const LumaPlayerCoreCCompletion* completion, void* userData);
+
+/** 提交带完成通知的可选异步请求
+@param [in] handle 有效Core句柄
+@param [in] request 不能为空，参数提交时复制
+@param [in] callback 不能为空，接受后恰有一次终态回报
+@param [in] userData 回调上下文，可空，借用到uninit结束
+@return 0表示已接受；其他值表示拒绝且不会回调
+*/
+LumaPlayerCoreAPI int32_t lumaPlayerCoreSubmitAsyncEx(LumaPlayerCoreHandle handle,
+    const LumaPlayerCoreCRequest* request, LumaPlayerCoreCCompletionCallback callback, void* userData);
+
 #ifdef __cplusplus
 }
 #endif

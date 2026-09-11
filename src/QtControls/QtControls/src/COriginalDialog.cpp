@@ -625,8 +625,8 @@ void COriginalDialog::applyResizeByGlobalPos(const QPoint& globalPos)
 	}
 	}
 
-	int32_t minWidth = std::max(minimumWidth(), m_touchBorderWidth * 2);
-	int32_t minHeight = std::max(minimumHeight(), m_touchBorderWidth * 2);
+    int32_t minWidth = (std::max)(minimumWidth(), m_touchBorderWidth * 2);
+    int32_t minHeight = (std::max)(minimumHeight(), m_touchBorderWidth * 2);
 	int32_t maxWidth = maximumWidth();
 	int32_t maxHeight = maximumHeight();
 

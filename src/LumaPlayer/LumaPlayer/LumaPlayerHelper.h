@@ -11,12 +11,6 @@ class QPainter;
 class LumaPlayerHelper
 {
 public:
-	/** 将宽字符中文文案转换为Qt字符串
-	@param [in] text 待转换的宽字符文本
-	@return 转换得到的Qt字符串
-	*/
-	static QString qcn(const wchar_t* text);
-
 	/** 将界面数值限制到指定闭区间
 	@param [in] value 待裁剪的数值
 	@param [in] minValue 允许的最小值

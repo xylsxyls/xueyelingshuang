@@ -192,11 +192,9 @@ void CExternalTextEdit::insertFromMimeData(const QMimeData *source)
         text = source->text().toHtmlEscaped();
         text = text.replace("\n","<br/>");
 
-
         //TODO:将shortcut换成img
         text = parseShortcutToExpression(text);
         n_source.removeFormat("text/plain");
-
 
         n_source.setHtml(text);
     }
@@ -255,31 +253,44 @@ QMimeData *CExternalTextEdit::createMimeDataFromSelection() const
         text = tData->text();
     }
 
-
     return tData;
 }
 
 void CExternalTextEdit::loadExpressions(const QString& emotionPath)
 {
-	qDeleteAll(m_gifResourceMapForExpression);
-	m_gifResourceMapForExpression.clear();
-	m_mappedExpression.clear();
+    loadExpressionsResult(emotionPath);
+}
 
-	ExpressionConfig config;
-	ExpressionConfigParser parser;
-	if (!parser.parse(emotionPath, &config))
-	{
-		return;
-	}
+ExpressionLoadResult CExternalTextEdit::loadExpressionsResult(const QString& emotionPath, QString* detail)
+{
+    if (detail != nullptr)
+    {
+        detail->clear();
+    }
+    qDeleteAll(m_gifResourceMapForExpression);
+    m_gifResourceMapForExpression.clear();
+    m_mappedExpression.clear();
 
-	for (int32_t i = 0; i < config.m_expressions.count(); ++i)
-	{
-		const ExpressionInfo& expression = config.m_expressions[i];
-		if (expression.isValid())
-		{
-			m_mappedExpression[expression.m_shortcut] = expression.m_fileName;
-		}
-	}
+    ExpressionConfig config;
+    ExpressionConfigParser parser;
+    const ExpressionLoadResult result = parser.parseResult(emotionPath, &config);
+    if (result != ExpressionLoadSuccess)
+    {
+        if (detail != nullptr)
+        {
+            *detail = parser.lastError();
+        }
+        return result;
+    }
+
+    for (int32_t i = 0; i < config.m_expressions.count(); ++i)
+    {
+        const ExpressionInfo& expression = config.m_expressions[i];
+        if (expression.isValid())
+        {
+            m_mappedExpression[expression.m_shortcut] = expression.m_fileName;
+        }
+    }
 
     QStringList shortcutKeys = m_mappedExpression.keys();
     for(int32_t i = 0; i < shortcutKeys.count(); ++i)
@@ -288,23 +299,24 @@ void CExternalTextEdit::loadExpressions(const QString& emotionPath)
         QMovie* m = new QMovie;
         m->setCacheMode(QMovie::CacheAll);
         m->setFileName(gifFilename);
-		m->setScaledSize(QSize(m_expressionSize,m_expressionSize));
-		if(this->isVisible())
-		{
-			m->start();
-		}
+        m->setScaledSize(QSize(m_expressionSize,m_expressionSize));
+        if(this->isVisible())
+        {
+            m->start();
+        }
 
         QString docResourceUrl(m_expressionTag + shortcutKeys[i]);
-		QTextDocument* textDocument = document();
-		if (textDocument != nullptr)
-		{
-			textDocument->addResource(QTextDocument::ImageResource, docResourceUrl, m->currentPixmap());
-		}
+        QTextDocument* textDocument = document();
+        if (textDocument != nullptr)
+        {
+            textDocument->addResource(QTextDocument::ImageResource, docResourceUrl, m->currentPixmap());
+        }
 
         m_gifResourceMapForExpression[docResourceUrl] = m;
 
         //qDebug() << "add:" <<docResourceUrl << " | file:" << gifFilename ;
     }
+    return ExpressionLoadSuccess;
 }
 
 void CExternalTextEdit::insertExpressionShortcut(const QString &shortcut)
@@ -420,7 +432,6 @@ QString CExternalTextEdit::removeExpressionShortcut(QString msg)
         pos += exp.matchedLength();
     }
 
-
 	const QStringList shortcutKeys = m_mappedExpression.keys();
     for(int i = 0; i < shortcutKeys.count(); i++)
     {
@@ -513,7 +524,6 @@ QString CExternalTextEdit::parseShortcutToExpression(QString text) const
         pos += exp.matchedLength();
     }
 
-
     //找到所有可能的shortcut
     QMap<QString, int> shortcutMap;
     for(int  i = 0; i < imgShortcutList.count(); i++)
@@ -582,7 +592,6 @@ QString CExternalTextEdit::parseShortcutToHTMLExpression(QString text) const
         imgShortcutList << exp.cap(0);
         pos += exp.matchedLength();
     }
-
 
     QMap<QString, int> shortcutMap;
     for(int  i = 0; i < imgShortcutList.count(); i++)

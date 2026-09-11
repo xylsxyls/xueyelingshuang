@@ -511,6 +511,7 @@
     <ClInclude Include="..\src\DoubleSpinBox.h" />
     <ClInclude Include="..\src\ExpressionConfig.h" />
     <ClInclude Include="..\src\ExpressionConfigParser.h" />
+    <ClInclude Include="..\src\ExpressionLoadResult.h" />
     <ClInclude Include="..\src\ExpressionConfigXmlHandler.h" />
     <ClInclude Include="..\src\HtmlComboBoxDelegate.h" />
     <ClInclude Include="..\src\HtmlComboBoxStyle.h" />

@@ -27,6 +27,10 @@
     <ClInclude Include="..\src\LumaPlayerCoreTypes.h" />
     <ClInclude Include="..\src\MediaClock.h" />
     <ClInclude Include="..\src\PlayerCommand.h" />
+    <ClInclude Include="..\src\PlayerCompletionDelivery.h" />
+    <ClInclude Include="..\src\PlayerRequestCompletion.h" />
+    <ClInclude Include="..\src\PlayerCompletionTask.h" />
+    <ClInclude Include="..\src\LumaPlayerCoreRequest.h" />
     <ClInclude Include="..\src\PlayerEngine.h" />
     <ClInclude Include="..\src\PlayerPreviewTask.h" />
     <ClInclude Include="..\src\PlayerWorkerTask.h" />
@@ -216,6 +220,10 @@
     <ClCompile Include="..\src\LumaPlayerCoreCVideoRenderAdapter.cpp" />
     <ClCompile Include="..\src\LumaPlayerCoreHelper.cpp" />
     <ClCompile Include="..\src\PlayerCommand.cpp" />
+    <ClCompile Include="..\src\PlayerCompletionDelivery.cpp" />
+    <ClCompile Include="..\src\PlayerRequestCompletion.cpp" />
+    <ClCompile Include="..\src\PlayerCompletionTask.cpp" />
+    <ClCompile Include="..\src\LumaPlayerCoreRequest.cpp" />
     <ClCompile Include="..\src\PlayerEngineHelper.cpp" />
     <ClCompile Include="..\src\PlayerPreviewCancelContext.cpp" />
   </ItemGroup>
