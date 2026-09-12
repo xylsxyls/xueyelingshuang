@@ -129,10 +129,11 @@ void CTaskThread::WorkThread()
 			break;
 		}
 
-		if (m_spCurTask != nullptr)
+		std::shared_ptr<CTask> spCurTask = std::atomic_load(&m_spCurTask);
+		if (spCurTask != nullptr)
 		{
-			m_spCurTask->DoTask();
-			Semaphore* waitForSend = m_spCurTask->GetWaitForSendHandle();
+			spCurTask->DoTask();
+			Semaphore* waitForSend = spCurTask->GetWaitForSendHandle();
 			if (waitForSend != nullptr)
 			{
 				waitForSend->event();
@@ -143,10 +144,12 @@ void CTaskThread::WorkThread()
 			break;
 		}
 		
+		// 先释放本地引用，再按原顺序清理当前任务和备份，因为取任务只有PopToCurTask在做而且还是同一条线程，所以放在前面没问题
+		spCurTask.reset();
 		//任务执行完之后清空指针执行task析构
 		{
 			std::unique_lock<std::mutex> lock(m_mutex);
-			m_spCurTask = nullptr;
+			std::atomic_store(&m_spCurTask, std::shared_ptr<CTask>());
 			m_spCurTaskBk = nullptr;
 			m_curTaskLevel = 0;
 		}
@@ -172,16 +175,17 @@ void CTaskThread::HandlePostTask(const std::shared_ptr<CTask>& spTask, int32_t t
 {
 	m_taskMap[taskLevel].push_back(spTask);
 	//如果添加任务的优先级高于当前任务则当前任务停止
-	if (m_spCurTask != nullptr && taskLevel > m_curTaskLevel)
+	std::shared_ptr<CTask> spCurTask = std::atomic_load(&m_spCurTask);
+	if (spCurTask != nullptr && taskLevel > m_curTaskLevel)
 	{
 		//如果该任务的属性是被顶掉后重做，则先添加此任务，判空是防止当前任务还没来得及退出就添加了多个优先级更高的任务
-		if (m_spCurTaskBk != nullptr && m_spCurTask->ReExecute())
+		if (m_spCurTaskBk != nullptr && spCurTask->ReExecute())
 		{
 			m_taskMap[m_curTaskLevel].push_front(m_spCurTaskBk);
 			m_spCurTaskBk = nullptr;
 			m_semaphore->signal();
 		}
-		StopCurTask();
+		spCurTask->StopTask();
 	}
 	m_semaphore->signal();
 }
@@ -194,9 +198,11 @@ bool CTaskThread::HasTask()
 
 void CTaskThread::StopCurTask()
 {
-	if (m_spCurTask != nullptr)
+	// 原子取得局部强引用；成员被替换或清空后，本次调用仍持有任务。
+	std::shared_ptr<CTask> spCurTask = std::atomic_load(&m_spCurTask);
+	if (spCurTask != nullptr)
 	{
-		m_spCurTask->StopTask();
+		spCurTask->StopTask();
 	}
 }
 
@@ -204,7 +210,7 @@ void CTaskThread::PopToCurTask()
 {
 	if (!HasTask())
 	{
-		m_spCurTask = nullptr;
+		std::atomic_store(&m_spCurTask, std::shared_ptr<CTask>());
 		m_spCurTaskBk = nullptr;
 		m_curTaskLevel = 0;
 		//::ResetEvent(m_semaphore);
@@ -215,8 +221,9 @@ void CTaskThread::PopToCurTask()
 	auto itTaskList = --(m_taskMap.end());
 	std::list<std::shared_ptr<CTask>>& listTask = itTaskList->second;
 	//将最后一个优先级队列的首个任务取出，只要有集合就必须有任务
-	m_spCurTask = listTask.front();
-	m_spCurTaskBk.reset(m_spCurTask->Clone());
+	std::shared_ptr<CTask> spCurTask = listTask.front();
+	std::atomic_store(&m_spCurTask, spCurTask);
+	m_spCurTaskBk.reset(spCurTask->Clone());
 	m_curTaskLevel = itTaskList->first;
 	listTask.pop_front();
 	//如果该级别队列中没有任务则删除该级别在map中的节点
@@ -228,36 +235,46 @@ void CTaskThread::PopToCurTask()
 
 void CTaskThread::StopTask(int32_t taskId, int32_t taskLevel)
 {
-	if (m_spCurTask != nullptr && m_spCurTask->GetTaskId() == taskId)
-	{
-		StopCurTask();
-	}
-	if (taskLevel != 0)
+	std::set<std::shared_ptr<CTask>> stopTaskSet;
 	{
 		std::unique_lock<std::mutex> lock(m_mutex);
-		auto itListTask = m_taskMap.find(taskLevel);
-		if (itListTask != m_taskMap.end())
+		if (taskLevel != 0)
 		{
-			StopTaskInList(itListTask->second, taskId);
+			auto itListTask = m_taskMap.find(taskLevel);
+			if (itListTask != m_taskMap.end())
+			{
+				CollectStopTaskToSet(itListTask->second, taskId, stopTaskSet);
+			}
+		}
+		else
+		{
+			for (auto itListTask = m_taskMap.begin(); itListTask != m_taskMap.end(); ++itListTask)
+			{
+				CollectStopTaskToSet(itListTask->second, taskId, stopTaskSet);
+			}
 		}
 	}
-	else
+	// 先收集队列，再检查当前任务，覆盖收集期间由排队转为执行的任务。
+	std::shared_ptr<CTask> spCurTask = std::atomic_load(&m_spCurTask);
+	if (spCurTask != nullptr && spCurTask->GetTaskId() == taskId)
 	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-		for (auto itListTask = m_taskMap.begin(); itListTask != m_taskMap.end(); ++itListTask)
-		{
-			StopTaskInList(itListTask->second, taskId);
-		}
+		stopTaskSet.insert(spCurTask);
+	}
+	// 强引用保证通知期间对象存活，同一个任务本次只通知一次，且不持有m_mutex。
+	for (auto itTask = stopTaskSet.begin(); itTask != stopTaskSet.end(); ++itTask)
+	{
+		(*itTask)->StopTask();
 	}
 }
 
-void CTaskThread::StopTaskInList(const std::list<std::shared_ptr<CTask>>& taskList, int32_t taskId)
+void CTaskThread::CollectStopTaskToSet(const std::list<std::shared_ptr<CTask>>& taskList, int32_t taskId,
+	std::set<std::shared_ptr<CTask>>& stopTaskSet)
 {
 	for (auto itTask = taskList.begin(); itTask != taskList.end(); ++itTask)
 	{
 		if ((*itTask)->GetTaskId() == taskId)
 		{
-			(*itTask)->StopTask();
+			stopTaskSet.insert(*itTask);
 		}
 	}
 }

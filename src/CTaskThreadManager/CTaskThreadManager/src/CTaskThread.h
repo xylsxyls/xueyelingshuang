@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "CTask.h"
 #include <list>
+#include <set>
 #include <map>
 #include <thread>
 #include <memory>
@@ -106,7 +107,13 @@ private:
 	*/
 	void PopToCurTask();
 
-	void StopTaskInList(const std::list<std::shared_ptr<CTask>>& taskList, int32_t taskId);
+	/** 收集列表中匹配的任务引用，不删除任务或执行停止通知；调用方持有m_mutex
+	@param [in] taskList 待检查的队列
+	@param [in] taskId 需要停止的任务类别
+	@param [in,out] stopTaskSet 追加匹配引用并去重，不清空已有内容
+	*/
+	void CollectStopTaskToSet(const std::list<std::shared_ptr<CTask>>& taskList, int32_t taskId,
+		std::set<std::shared_ptr<CTask>>& stopTaskSet);
 
 	//工作线程做三件事，执行当前任务，执行完后看任务队列里是否有任务，如果有则提出放到当前任务中，如果当前任务没有则跳过
 	void WorkThread();
@@ -126,7 +133,7 @@ private:
 	*/
 	std::map<int32_t, std::list<std::shared_ptr<CTask>>> m_taskMap;
 
-	/* 正在执行的任务
+	/* 正在执行的任务，运行期间统一通过std::atomic_load/std::atomic_store访问
 	*/
 	std::shared_ptr<CTask> m_spCurTask;
 
