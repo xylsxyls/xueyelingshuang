@@ -1,0 +1,31 @@
+﻿流光播放器测试程序说明
+当前工程：src/LumaPlayerTest/LumaPlayerTest.sln（Qt5.5.1、VS2013、C++11）。统一使用LumaPlayer的64位DLL依赖，CMake保持用户原文件。Release Win32/x64目标名LumaPlayerTest1.0；实际验证Windows x64 Debug/Release。
+
+运行：直接打开本目录LumaPlayerTest1.0.exe。四按钮依次为指定测试、瞬时测试、压力测试、全量测试；指定输入数字ID或范围，例如1,3,8-12。每项中文功能来自TestCaseRegistry.h/.cpp枚举和const map，不重复维护另一套清单。当前38项，30瞬时、8压力。19/20各持续2分钟，34独立启动Release60次/Debug8次，38连续200次任务切换停止回收。
+
+命令行与按钮共用选择、调度、判定和报告：
+LumaPlayerTest1.0.exe --run instant --configuration both --auto-exit
+LumaPlayerTest1.0.exe --run specified --ids 1-18,21-38 --configuration both --auto-exit
+不带--auto-exit时完成后弹窗；默认只使用Release，勾选“是否同步测试Debug程序”后同批执行Release及Debug。Debug程序和匹配测试执行程序位于同级../LumaPlayer/debug。--media和--fixture用于指定实际素材路径；--output指定报告根目录。--job-timeout-ms仅在需要调整单项看门狗或验证超时路径时使用，实际预算写入报告，不改变成功标准。
+
+最新报告：本目录测试报告.txt、report.json；完整批次及日志：reports；中间文件：temp；规则素材：fixtures。程序即时展示当前ID、进度及逐项成功/失败，批次结束统计唯一ID总数、瞬时/压力数。重复启动次数和Debug/Release执行次数单独计，不冒充多个用例。停止和未执行都不算通过。
+
+结构：TestCommandTask通过CTaskThreadManager运行输入校验任务，Qt队列连接返回界面；窗口异步调度QProcess子进程，不在GUI等待耗时测试。CoreTestTask执行原C/C++及Core用例；GuiTestRunner发Qt事件并读取真实窗口状态和像素；TestResults即刻保存断言；父进程检查真实退出码、断言完整性、超时/取消并汇总。报告不是日志转发器，日志直接使用LogManager宏。
+
+GUI测试把实际LumaPlayer源码编入测试程序，仅TestGuiAccess.h统一私有成员的测试访问声明；发布播放器不增加测试后门。Core保持纯C++，纯C API另有CApiSmoke.c验证。旧工程186条断言完整迁入LegacyTests，旧工程只作为迁移来源，验证后删除。
+
+构建：先按src/LumaPlayer/version_debug.sh和version_release.sh准备匹配依赖，再用MSBuild12构建本测试sln的Debug/Release x64。不要同时构建不同依赖组合覆盖根lib。src/LumaPlayerTest/scripts/package_tests.py部署项目依赖及符号ZIP（不包含Qt及MSVC运行库）；generate_fixture.py生成8秒25fps独立帧表素材。保留.ui/.qml/.qrc和原CMake文件。
+
+验证范围：自动验证Windows x64；Linux/macOS、32位、VFR完整矩阵、主观画质/真实听感和数小时稳定性不由短测证明。未选压力用例明确列未执行，不能看见其他通过就算全量通过。故障报告和对应符号要保留，缺第三方PDB在部署清单注明。
+
+独立Release启动测试使用同级common/LumaPlayer/LumaPlayer1.0.exe，路径以测试EXE目录解析，与启动工作目录无关；缺少该文件时明确失败，不回退到旧player副本。Debug启动使用所选Debug目录的LumaPlayerd.exe，内部用例使用同目录的LumaPlayerTestd.exe。测试打包脚本仅部署Release测试程序，不覆盖正式播放器；界面内部状态测试仍在测试程序内运行实际播放器源码。每次执行的程序路径写入报告program字段。
+
+发布依赖补充（用户明确要求）：应用发布包不携带Qt官方动态库、Qt插件及MD所需的MSVC/Windows再发行运行库或其安装程序；这些依赖由用户单独提供。LumaPlayer和LumaPlayerTest均遵守，Debug子包也不重复附带。保留仓库自有QtControls、DialogManager等业务/封装库及FFmpeg等其他所需依赖，不得按Qt前缀误删QtControls。部署清单应同步排除单独供应的依赖。
+
+路径界面：上方Debug复选框、只读路径框和选择路径按钮，下方Release路径框和选择按钮。默认目录内存在对应EXE才自动填入；可选择其他目录。开始前Release必填，勾选Debug后Debug也必填，缺失或失效会提示并等待选择，不启动测试。勾选Debug还需目录中有匹配的LumaPlayerTestd.exe用于内部状态/Core用例。运行期间路径及复选框锁定，结束后恢复。
+命令行可用--release-dir和--debug-dir指定目录，--configuration release为仅Release，both为两配置；旧debug值对应勾选Debug，也同时保留Release。报告记录实际选择目录和每个子进程路径。路径选择不改变既有测试原理：独立启动用例运行所选播放器EXE，内部状态/Core用例运行测试执行程序。
+本轮验证：Windows x64 Debug/Release构建通过；35、36两个瞬时用例在仅Release、两配置和显式目录三种方式共10次执行全部通过；Release缺失及Debug缺失均弹窗且未启动测试。未重跑压力用例。报告reports/path-controls-verification/verification.json。
+
+真实视频路径：新增顶行只读目录框与选择按钮，默认D:/Backup/Downloads，命令行用--video-dir覆盖。只搜索当前目录，不递归；找到第一个可用视频立即停止，最多20个候选，每个最多5秒。无可用视频时提示重新选择，准备阶段点击停止可取消。
+每轮启动在后台自动生成scene.avi和中文 空格.avi到报告根目录temp/fixtures，不需要Python，不读取旧fixtures目录。真实视频只读使用，报告记录所选文件。旧fixtures及frame-table.csv均可删除。--media和--fixture用于内部子用例传参，用户启动测试请使用--video-dir。
+本次验证：Release30项瞬时全部通过；两配置指定13、14、23、35、36、38全部通过（5项瞬时、1项压力，各执行两配置）。自动AVI与独立原标准逐字节一致，中文空格副本一致，仅子目录有视频时不递归且不启动用例。详见reports/media-generation-release和reports/media-preparation-checks。

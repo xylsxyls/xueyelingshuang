@@ -126,6 +126,7 @@ AppNameTest是独立测试工程，至少包含正常功能、非法参数、初
 例如LumaPlayerCore依赖CTaskThreadManager，后者依赖Semaphore；构建LumaPlayerCore时已覆盖这两个库，LumaPlayer的version无需再单独编译它们。CDump等未被该依赖链覆盖的独立依赖需单独列出，最后一个参数默认使用same；不能因当前看似没有依赖就默认写only。only仅用于已明确核实前置依赖及复制步骤均已完成的特殊构建，不作为常规version写法。
 修改公开头从src开始，通过构建同步include，不能只改include。新增文件同步DLL/静态库两份vcxproj及filters。所有临时测试产物放src/temp任务目录。
 交付前运行适用Debug/Release测试，部署同批EXE/DLL/PDB并记录哈希。报告区分源码已改、构建通过、自动测试通过和人工验收，失败或未测项目明确保留，不拿旧报告替新版本背书。
+LockFreeQueue发布例外（2026-09-12用户确认）：该库的功能由头文件和.inl实现，应用运行不需要其DLL。即使依赖准备时按dll方式编译了该库，也不将LockFreeQueue.dll或LockFreeQueued.dll复制到发布包；适用于产品及测试程序的Release、Debug发布。编译依赖准备与运行时文件发布分开处理，不能因为lib目录中生成了DLL就自动打包，也不能据此删除构建所需的头文件、.inl或擅自移除version中的依赖准备步骤。
 
 十一、CDump崩溃诊断规范
 Windows可执行产品接入CDump/CDumpAPI.h，在main最早阶段、Qt和后台任务启动前调用CDump::declareDumpFile()。注册不依赖debug参数，返回结果写入随后初始化的业务日志；不要在二次开发库内部重复设置进程异常处理器。
@@ -163,3 +164,6 @@ Release保持优化，同时编译器生成源代码调试信息（MSVC /Zi）�
 已有CMakeLists.txt及配套CMake构建逻辑经过用户验证后，默认保持原样。不得为整理风格、现代化写法、改用imported targets、清理看似冗余配置或预先适配其他平台而擅自重写或调整，也不批量修改其编码和换行。
 确因本次新增第三方库必须调整时，只允许对相关依赖发现、包含路径和链接等做必要的小范围修改，保留原有有效结构、平台设置和其他参数；不能借增加依赖顺便重构整个文件。其他改动须有用户明确授权。
 用户明确自行负责后续平台适配时，AI不得提前代为修改构建文件。当前LumaPlayer的CMakeLists已在Linux验证可用，macOS构建适配由用户后续自行调试；本次保持编码前CMakeLists原文件，不保留本轮重写。
+
+发布依赖补充（用户明确要求）：应用发布包不携带Qt官方动态库、Qt插件及MD所需的MSVC/Windows再发行运行库或其安装程序；这些依赖由用户单独提供。LumaPlayer和LumaPlayerTest均遵守，Debug子包也不重复附带。保留仓库自有QtControls、DialogManager等业务/封装库及FFmpeg等其他所需依赖，不得按Qt前缀误删QtControls。部署清单应同步排除单独供应的依赖。
+发布包不再生成package-manifest-*.json文件；测试程序不得依赖此清单。已有历史清单不作为新版发布文件校验依据。

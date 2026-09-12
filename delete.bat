@@ -116,14 +116,26 @@ del "%~dp0src\Quant\Quant\Quant.vcxproj.user"
 rmdir /q /s "%~dp0src\LumaPlayer\LumaPlayer\GeneratedFiles\"
 del "%~dp0src\LumaPlayer\LumaPlayer\LumaPlayer.vcxproj.user"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\LumaPlayerTest\LumaPlayerTest\GeneratedFiles\"
+del "%~dp0src\LumaPlayerTest\LumaPlayerTest\LumaPlayerTest.vcxproj.user"
+::------------------------------------------------------------
 rmdir /q /s "%~dp0src\BatchPrinter\BatchPrinter\GeneratedFiles\"
 del "%~dp0src\BatchPrinter\BatchPrinter\BatchPrinter.vcxproj.user"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\BatchPrinterTest\BatchPrinterTest\GeneratedFiles\"
+del "%~dp0src\BatchPrinterTest\BatchPrinterTest\BatchPrinterTest.vcxproj.user"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\PdfReader\PdfReader\GeneratedFiles\"
 del "%~dp0src\PdfReader\PdfReader\PdfReader.vcxproj.user"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\PdfReaderTest\PdfReaderTest\GeneratedFiles\"
+del "%~dp0src\PdfReaderTest\PdfReaderTest\PdfReaderTest.vcxproj.user"
+::------------------------------------------------------------
 rmdir /q /s "%~dp0src\SplitViewer\SplitViewer\GeneratedFiles\"
 del "%~dp0src\SplitViewer\SplitViewer\SplitViewer.vcxproj.user"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\SplitViewerTest\SplitViewerTest\GeneratedFiles\"
+del "%~dp0src\SplitViewerTest\SplitViewerTest\SplitViewerTest.vcxproj.user"
 ::------------------------------------------------------------
 
 
