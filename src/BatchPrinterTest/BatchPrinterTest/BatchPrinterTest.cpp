@@ -1,54 +1,54 @@
 ﻿#include "BatchPrinterTest.h"
-#include <stdint.h>
-#include <stdio.h>
-#ifdef __unix__
-#include <signal.h>
-#include <stdlib.h>
-#endif
+//#include "11Controls/controls/COriginalButton.h"
+//#include "11Controls/controls/DialogManager.h"
 
-#ifdef _MSC_VER
-BOOL CALLBACK ConsoleHandler(DWORD eve)
+BatchPrinterTest::BatchPrinterTest(QWidget* parent)
+	: QMainWindow(parent)
 {
-	if (eve == CTRL_CLOSE_EVENT)
-	{
-		//关闭退出事件
-		//RCSend("close BatchPrinterTest");
-	}
-	return FALSE;
+	ui.setupUi(this);
+	//m_button = new COriginalButton(this);
+	init();
 }
 
-int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
-
-#elif __unix__
-//ctrl+c消息捕获函数
-void CtrlCMessage(int eve)
+BatchPrinterTest::~BatchPrinterTest()
 {
-	if (eve == 2)
-	{
-		//关闭退出事件
-		//RCSend("close BatchPrinterTest");
-		exit(0);
-	}	
+
 }
 
-struct CtrlC
+void BatchPrinterTest::init()
 {
-	CtrlC()
+	if (!check())
 	{
-		struct sigaction sigIntHandler;
-		sigIntHandler.sa_handler = CtrlCMessage;
-		sigemptyset(&sigIntHandler.sa_mask);
-		sigIntHandler.sa_flags = 0;
-		sigaction(SIGINT, &sigIntHandler, nullptr);
+		return;
 	}
-};
+	QPalette pattle;
+	pattle.setColor(QPalette::Background, QColor(100, 0, 0, 255));
+	setPalette(pattle);
+	//m_button->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	//QObject::connect(m_button, &COriginalButton::clicked, this, &BatchPrinterTest::onButtonClicked);
+}
 
-CtrlC g_ctrlc;
-#endif
-
-int32_t main()
+bool BatchPrinterTest::check()
 {
-	
-	getchar();
-	return 0;
+	return true;
+	return m_button != nullptr;
+}
+
+void BatchPrinterTest::resizeEvent(QResizeEvent* eve)
+{
+	QMainWindow::resizeEvent(eve);
+
+	if (!check())
+	{
+		return;
+	}
+	//m_button->setGeometry(360, 120, 160, 80);
+}
+
+void BatchPrinterTest::onButtonClicked()
+{
+	//TipDialogParam tipDialogParam;
+	//tipDialogParam.m_tip = QStringLiteral("点击");
+	//tipDialogParam.m_parent = windowHandle();
+	//DialogManager::instance().makeDialog(tipDialogParam);
 }

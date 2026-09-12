@@ -1,0 +1,5 @@
+﻿<RCC>
+    <qresource prefix="/">
+        <file>BatchPrinterTest.qml</file>
+    </qresource>
+</RCC>
