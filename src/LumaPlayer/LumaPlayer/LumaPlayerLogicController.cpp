@@ -140,6 +140,7 @@ bool LumaPlayerLogicController::submit(const LumaPlayerLogicAction& action)
         else if (action.m_type == LumaActionWindowApplied || action.m_type == LumaActionHelpClose ||
             action.m_type == LumaActionHelp || action.m_type == LumaActionMinimize ||
             action.m_type == LumaActionMaximize || action.m_type == LumaActionFullscreen ||
+            action.m_type == LumaActionExitFullscreen ||
             action.m_type == LumaActionViewport || action.m_type == LumaActionPin)
         {
             task = std::make_shared<LumaPlayerWindowTask>(this, action);
@@ -679,7 +680,8 @@ void LumaPlayerLogicController::executeWindow(const LumaPlayerLogicAction& actio
             return;
         }
         if (action.m_type == LumaActionHelp || action.m_type == LumaActionMinimize ||
-            action.m_type == LumaActionMaximize || action.m_type == LumaActionFullscreen)
+            action.m_type == LumaActionMaximize || action.m_type == LumaActionFullscreen ||
+            action.m_type == LumaActionExitFullscreen)
         {
             publish(action.m_type);
             return;

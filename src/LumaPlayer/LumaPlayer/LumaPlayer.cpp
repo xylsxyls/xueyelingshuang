@@ -429,6 +429,15 @@ void LumaPlayer::wheelEvent(QWheelEvent* event)
 void LumaPlayer::keyPressEvent(QKeyEvent* event)
 {
 	m_clickTimer.stop();
+    if (event->key() == Qt::Key_Escape && isFullScreen())
+    {
+        if (!event->isAutoRepeat())
+        {
+            postAction(LumaActionExitFullscreen);
+        }
+        event->accept();
+        return;
+    }
 	if ((event->modifiers() & Qt::ControlModifier) != 0)
 	{
 		if (event->key() == Qt::Key_Up || event->key() == Qt::Key_Down)
@@ -1732,9 +1741,12 @@ void LumaPlayer::onLogicResult(const LumaPlayerLogicResult& result)
         applyMaximize();
         return;
     }
-    if (result.m_type == LumaActionFullscreen)
+    if (result.m_type == LumaActionFullscreen || result.m_type == LumaActionExitFullscreen)
     {
-        applyFullScreen();
+        if (result.m_type == LumaActionFullscreen || isFullScreen())
+        {
+            applyFullScreen();
+        }
         return;
     }
     m_snapshot = result.m_snapshot;

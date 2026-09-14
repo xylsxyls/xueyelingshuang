@@ -319,6 +319,8 @@ m_dragMatches(0)
             {
                 add(13, "set ordinary geometry", [this]() { m_player->setGeometry(140, 150, 680, 450); },
                     [this]() { return m_player->geometry() == QRect(140, 150, 680, 450); });
+                add(13, "ordinary Escape is inert", [this]() { key(Qt::Key_Escape); },
+                    [this]() { return m_elapsed.elapsed() >= 250 && !m_player->isFullScreen() && !m_player->isMaximized() && m_player->geometry() == QRect(140, 150, 680, 450); });
                 for (int32_t sequence = 0; sequence < 3; ++sequence)
                 {
                     add(13, "maximize", [this]() { m_normal = m_player->geometry(); click(m_player->maximizeButtonRect().center()); },
@@ -327,11 +329,28 @@ m_dragMatches(0)
                         [this]() { return m_player->isFullScreen() && m_player->m_pinned && m_player->m_bottomVisibleHeight == g_config.m_bottomOverlayHeight; });
                     add(13, "fullscreen max button only changes future state", [this]() { click(m_player->maximizeButtonRect().center()); },
                         [this]() { return m_player->isFullScreen() && !m_player->isMaximizedOutsideFullScreen(); });
-                    add(13, "exit full restores exact ordinary rectangle", [this]() { doubleClick(); },
+                    add(13, "double click or Escape restores exact ordinary rectangle", [this, sequence]() { if (sequence == 0) { doubleClick(); } else { key(Qt::Key_Escape); } },
                         [this]() { return !m_player->isFullScreen() && !m_player->isMaximized() && m_player->geometry() == m_normal; });
                     add(13, "new user ordinary rectangle", [this, sequence]() { m_player->setGeometry(170 + sequence * 10, 160, 640 + sequence * 10, 430); },
                         [this, sequence]() { return m_player->geometry() == QRect(170 + sequence * 10, 160, 640 + sequence * 10, 430); });
                 }
+                add(13, "ordinary enters fullscreen", [this]() { m_normal = m_player->geometry(); m_position = m_player->m_snapshot.m_position100ns; doubleClick(); },
+                    [this]() { return m_player->isFullScreen(); });
+                add(13, "repeated Escape exits once preserving pause position and pin", [this]() {
+                    for (int32_t i = 0; i < 12; ++i)
+                    {
+                        key(Qt::Key_Escape);
+                        QKeyEvent repeat(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier, QString(), true, 1);
+                        QApplication::sendEvent(m_player, &repeat);
+                    }
+                    }, [this]() { return m_elapsed.elapsed() >= 300 && !m_player->isFullScreen() && !m_player->isMaximized() && m_player->geometry() == m_normal && m_player->m_pinned && m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused && m_player->m_snapshot.m_position100ns == m_position; });
+                add(13, "maximize before Escape return", [this]() { click(m_player->maximizeButtonRect().center()); },
+                    [this]() { return m_player->isMaximized() && !m_player->isFullScreen(); });
+                add(13, "maximized enters fullscreen", [this]() { doubleClick(); }, [this]() { return m_player->isFullScreen(); });
+                add(13, "Escape restores maximized target", [this]() { key(Qt::Key_Escape); },
+                    [this]() { return !m_player->isFullScreen() && m_player->isMaximized() && m_player->m_pinned; });
+                add(13, "maximized Escape is inert", [this]() { key(Qt::Key_Escape); },
+                    [this]() { return m_elapsed.elapsed() >= 250 && !m_player->isFullScreen() && m_player->isMaximized(); });
                 break;
             }
             case CasePinnedUi:
@@ -342,6 +361,10 @@ m_dragMatches(0)
                             m_player->videoViewportRect().bottom() <= m_player->bottomOverlayRect().top(); });
                 add(14, "unpin hide bars", [this]() { click(m_player->pinButtonRect().center()); move(m_player->videoViewportRect().center()); },
                     [this]() { return !m_player->m_pinned && m_player->m_topVisibleHeight == 0 && m_player->m_bottomVisibleHeight == 0; }, 6000);
+                add(14, "unpinned enters fullscreen", [this]() { m_normal = m_player->geometry(); doubleClick(); },
+                    [this]() { return m_player->isFullScreen() && !m_player->m_pinned; });
+                add(14, "Escape keeps unpinned ordinary rectangle", [this]() { key(Qt::Key_Escape); },
+                    [this]() { return !m_player->isFullScreen() && !m_player->isMaximized() && !m_player->m_pinned && m_player->geometry() == m_normal; });
                 add(14, "reveal and repin", [this]() { move(QPoint(100, 5)); },
                     [this]() { return m_player->m_topVisibleHeight == g_config.m_topOverlayHeight; });
                 add(14, "pin restored", [this]() { click(m_player->pinButtonRect().center()); },

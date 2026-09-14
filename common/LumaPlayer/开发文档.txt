@@ -1,7 +1,7 @@
 ﻿流光播放器（LumaPlayer）开发文档
-更新日期：2026-09-14（按当前源码、version脚本和最新工程规范同步）
+更新日期：2026-09-15（Esc退出全屏指定测试及发布）
 配套《需求文档.txt》描述产品行为。本文件描述当前实现、构建、测试和发布规则，不保存开发阶段放行状态；新任务的阶段、确认与执行证据写入其独立工作流目录。
-本次仅核对源码和更新文档，未重新编译、运行测试或发布。历史通过记录不能证明当前源码或现有二进制已经通过同样验证。
+当前Esc改动已完成Windows x64 Debug/Release构建、AI核心验证及用户手动试运行确认；Release指定瞬时ID 30–32共3项通过（6.2秒），未执行其余35项，不宣称全量或压力通过。已发布common/LumaPlayer及common/LumaPlayerTest，正式目录启动与正常退出通过。证据见工作流验证证据及common/LumaPlayerTest/reports/20260915-023033-619。
 
 一、入口与源码导航
 common/AI文档中的代码、工程、线程、仓库使用和测试规范共同适用；需求开发按《工程软件开发工作流.txt》v1.5执行。所有路径相对仓库根目录。2026-09-14用户确认沿用当前version脚本，构建安排见第八节。
@@ -76,6 +76,7 @@ refreshLoopBuffer保留不匹配旧缓存作为顺序读取源，同时准备匹
 5. 重置、窗口和帮助
 重置先提交视图目标与默认倍率请求；GUI应用视图后回ViewApplied。倍率实际成功且达到默认值、视图应用成功、revision仍匹配时才清dirty；新操作使旧批次失效，部分失败保持可重试。保留AB、当前进度、播放状态和窗口状态。
 普通窗口矩形由m_normalWindowGeometry保存。全屏时最大化按钮只切换m_maximizedOutsideFullScreen和退出后的目标，不退出全屏；退出时恢复最新目标。completeWindowState经Qt事件队列应用最终状态，m_windowStateSerial和关闭守卫排除过时回调，再发送窗口完成回执。
+keyPressEvent在全屏时接收Esc，过滤自动重复并投递LumaActionExitFullscreen。该枚举追加在原动作末尾，经既有WindowTask和executeWindow回到GUI，与双击共用applyFullScreen及completeWindowState；处理退出意图时再次检查isFullScreen，避免多个已排队Esc退出后重新进入全屏。不设置全局快捷键，不改Core、最大化恢复或图钉算法。
 图钉固定时videoViewportRect避让悬浮条，空媒体底栏高度为0；取消固定恢复完整视口。图钉不因全屏切换改变。
 帮助由DialogManager自定义View/Factory创建；HelpView通过QPointer<QWindow>借用父窗口，首次Show按播放器全局矩形居中。标题栏可拖动，关闭按钮不参与；右上关闭与右下确认走同一HelpClose任务和token回路。LumaPlayerDialogSession在QApplication销毁前清理弹窗。
 主体仍为自绘界面，LumaPlayerButton用于帮助按钮；不能写成主体已全面使用QtControls。固定文案、字体、布局、颜色、图标和命中尺寸集中Config；保留.ui、.qml、.qrc及其工程登记。
@@ -138,10 +139,10 @@ LumaPlayerTest1.0.exe --run specified --ids 13,14,23,35,36,38 --configuration bo
 LockFreeQueue为头文件/.inl运行能力，不发布LockFreeQueue.dll/LockFreeQueued.dll，但保留当前version的依赖准备。不生成package-manifest-*.json，测试不依赖旧清单。
 PDB单独压缩并核对对应PE/PDB GUID和Age，保留故障版本及必要哈希。当前目录可见symbols-LumaPlayer1.0-20260912-234302.7z和symbols-LumaPlayerTest1.0-20260912-234403.7z；此为文件存在性核对，未在本轮重新验证包内符号匹配。
 当前src/LumaPlayerTest没有scripts/package_tests.py或scripts/generate_fixture.py，不再将其列作正式命令。临时诊断、构建日志、复制和打包辅助脚本放src/temp/任务名，长期正式构建入口仍为version和sln等实际文件。
-发布前测试当前产物，备份旧文件及符号，按授权部署后检查启动和依赖。本轮文档同步未执行发布，也未修改现有程序包。
+发布前测试当前产物，备份旧文件及符号，按授权部署后检查启动和依赖。本轮PDB包为symbols-LumaPlayer1.0-20260915-Esc.7z及测试目录的symbols-LumaPlayerTest1.0-20260915-Esc.7z，均使用7z -t7z -mx=9 -m0=lzma2 -ms=on；包内各15个PDB逐项核对PE与PDB GUID/Age且7z完整性测试通过。旧包保存在工作流历史发布备份，旧符号原位保留。
 
 十一、验证记录与接手边界
 旧文档记载2026-09-12 Windows x64 Debug/Release完成36个唯一ID（30瞬时、6压力），138次配置/重复执行、303.1秒，19/20未执行；另记载路径控件、自动素材生成及相关指定用例验证。它们仅保留为历史记录，不是本轮测试结论。
 本轮读取时，common/LumaPlayerTest下没有历史所引用的reports目录，common/LumaPlayer下也没有旧LumaPlayer需求开发工作流目录。原始报告、迁移核对、dump和恢复笔记未核实，不作为当前可用证据入口。旧版文档备份：src/temp/LumaPlayerDocsSync-20260914-1b9b31c745294054a4d69a7fd54018d5。
 本轮只完成源码、脚本和文档对应检查；未验证当前EXE是否与源码一致，未重新构建、执行测试、检查声卡或跨平台运行。历史FFmpeg异常缺完整现场，不能认定已解决。
-后续需求按《工程软件开发工作流》v1.5建立独立命名工作流：需求确认、方案确认、初版代码确认、自查编译及AI核心流程验证、用户试运行选择、合并确认测试条件和发布范围，再按授权测试修复和发布。取消旧测试用例文档及测试结果单独放行流程；不得沿用旧任务确认自动放行新需求。
+后续需求按《工程软件开发工作流》v1.6建立独立命名工作流：需求确认、方案确认、初版代码确认、自查编译及AI核心流程验证、用户试运行选择、合并确认测试条件和发布范围，再按授权测试修复和发布。退出工作流保存状态供恢复，结束工作流清理其全部临时文件并保留正式成果及必要证据。取消旧测试用例文档及测试结果单独放行流程；不得沿用旧任务确认自动放行新需求。
