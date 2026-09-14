@@ -1,38 +1,10 @@
-﻿当前交付状态（2026-09-12）：用户已完成手动试运行并授权自动测试、修复和发布；本轮工作流完成。
-正式回归报告：common/LumaPlayerTest/reports/20260912-141929-413。36个唯一ID（30瞬时、6压力）在Windows x64 Debug/Release全部通过，含138次配置/重复执行，303.1秒；19/20两项长测未执行。
-实际缺陷修复：CTaskThread::StopCurTask的当前任务指针判空/调用与工作线程清理竞争，真实dump定位StopCurTask+0x53。现统一使用原有m_mutex，内部已持锁路径用StopCurTaskUnlock，PopToCurTask及StopTask共用同步保护。新增38号200次/配置回归；没有修改Semaphore或任务优先级语义。证据及原库备份见工作流目录CTaskThread退出竞态修复。
-发布：common/LumaPlayer/LumaPlayer1.0.exe及所需DLL/Qt插件；common/LumaPlayerTest/LumaPlayerTest1.0.exe及依赖、fixtures、player和debug子包。两处PDB均为独立symbols-*.zip；manifest记录SHA256及压缩包。32份自有PE/PDB GUID+Age已核对。最终common目录播放器无参/MP4/中文空格路径及测试窗口启动关闭均通过，证据在测试reports/publish-verification。
-旧src/LumaPlayerTest_old已完整归档并删除；186条原断言迁入新Qt工程。删除后Debug/Release独立构建通过，Test EXE哈希与完整回归一致。Qt资源和原CMake保留。
-限制：只验证Windows x64；其他平台、32位、VFR完整矩阵与数小时稳定性未验证。历史FFmpegCpp一次0xc0000409本轮68次启动未复现，不能认定该历史异常根因已解决。下列旧阶段状态与旧发布记录仅为历史；当前测试入口与构建方式以第七、八节和本段为准。
-
-以下为历史实现和阶段记录。
-
-R06当前状态：窗口需求及连续推进授权已确认，代码、自查、Windows x64 Debug/Release和窗口核心流程验证完成，等待用户手动试运行。正式EXE曾一次异常退出，后三次启动正常，异常原因未定，详见报告；不能写成全部稳定性问题已解决。
-窗口实现：最大化按钮统一投递Maximize任务，全屏时只切m_maximizedOutsideFullScreen，按钮图标用isMaximizedOutsideFullScreen；非全屏执行Qt最大化/还原。m_normalWindowGeometry只在离开普通状态时采集，保存用户最新位置和尺寸，不用全屏临时几何覆盖。图钉控制浮框的原逻辑保留。
-Qt5修正：本机实测showNormal后立即setGeometry会出现尺寸恢复但全屏标志残留。completeWindowState通过Qt事件队列在原生状态通知后统一应用最终状态，普通态显式恢复矩形并验证；成功回报放到此时。QTimer绑定this，关闭守卫和m_windowStateSerial防止旧回调覆盖后续动作。无平台API、无新线程；Core/CMake/基础库不改。
-最终产物lib/LumaPlayer1.0.exe（2026-09-12 04:42:12）；common未发布。报告：LumaPlayer需求开发工作流/R06-自查编译与核心流程验证记录.txt。以下历史状态不替代当前结论。
-
-R05当前状态：需求已确认，并获授权按步骤直接推进到试运行；自查、Windows x64 Debug/Release及AI核心验证完成，等待用户试运行。
-本轮源码：LumaPlayer.cpp的tooltip仅命中顶部加载按钮，中央+无提示；PlayerEngine设置AB/清除循环时，播放态只更新边界和结束标记，不调用seekInternal重启时钟/声卡，暂停态保持原定位行为。新B已在当前位置之前时，由下一播放步按正常循环路径回A；逐帧移动端点仍保持暂停。
-缓存衔接：refreshLoopBuffer保留不匹配旧缓存作为当前顺序读取源，准备匹配新范围的下一轮缓存；旧缓存耗尽且范围已变时接续已移交的reader，不将旧缓存误用为新范围的回绕缓存。保留待呈现边界帧；PlayerLoopBuffer即使读到跨越范围间隙的第一帧也保存再结束，以免延长B时遗漏已读取帧。
-验证报告：LumaPlayer需求开发工作流/R05-自查编译与核心流程验证记录.txt。最终lib/LumaPlayer1.0.exe为2026-09-12 04:06:18，Core DLL为04:05:59。common仍未发布。下列历史状态不代表本轮已验收。
-
-R04当前状态：已完成自查、Windows x64 Debug/Release构建及AI核心验证，等待用户手动试运行。
-本轮允许跳过逐阶段确认的授权见工作流R04-需求与开发方案.txt。新程序lib/LumaPlayer1.0.exe（2026-09-12 03:48:29）；未发布到common。
-R04实现：LumaPlayer::previewByProgressPoint先更新GUI目标并请求底栏重绘，再按Config频率向后台投递预览；displayPosition100ns在拖动/等待最终定位时直接用目标。最终Seek回报按输入序号匹配，先从VideoRender同步取已发布帧，再清临时位置，防止旧缓存回跳。业务暂停、预览、最终Seek仍走逻辑Task与Core独立预览线程；GUI不解码、不等待Core。
-R04帮助定位：HelpView用QPointer<QWindow>借用param.m_parent，在实际QDialog首次Show时按播放器geometry与弹窗尺寸计算全局居中位置。m_centered防重复定位；标题拖动和版本格式沿用R03。无新配置常量、第三方依赖或工程文件。
-本轮报告：LumaPlayer需求开发工作流/R04-自查编译与核心流程验证记录.txt。后续历史状态不代表当前验收结论。
-
-R03当前状态：代码已确认，自查、两种Windows构建及核心验证完成，等待手动试运行选择；报告见R03-自查编译与核心流程验证记录.txt。
-
-R02当前实现状态（2026-09-12）：代码已确认；Windows x64 Debug/Release编译及AI核心流程验证完成，等待用户手动试运行选择；完整报告见工作流目录R02-自查编译与核心流程验证记录.txt。未正式测试或发布。
-
-流光播放器（LumaPlayer）开发文档
-更新日期：2026-09-11（R01初版，未自查、编译或测试）
-配套《需求文档.txt》是产品行为契约。本文件描述当前实现、接手步骤和易错点；构建通过、自动测试与人工验收分别记录，不能互相替代。
+﻿流光播放器（LumaPlayer）开发文档
+更新日期：2026-09-14（按当前源码、version脚本和最新工程规范同步）
+配套《需求文档.txt》描述产品行为。本文件描述当前实现、构建、测试和发布规则，不保存开发阶段放行状态；新任务的阶段、确认与执行证据写入其独立工作流目录。
+本次仅核对源码和更新文档，未重新编译、运行测试或发布。历史通过记录不能证明当前源码或现有二进制已经通过同样验证。
 
 一、入口与源码导航
-common/AI文档中的工程开发规范、AI代码开发规范、仓库使用说明文档、线程开发规范为通用约束。所有路径相对仓库根目录。
+common/AI文档中的代码、工程、线程、仓库使用和测试规范共同适用；需求开发按《工程软件开发工作流.txt》v1.5执行。所有路径相对仓库根目录。2026-09-14用户确认沿用当前version脚本，构建安排见第八节。
 src/LumaPlayer/LumaPlayer：main注册CDump、初始化Config和日志、运行Qt；Config集中界面/音频参数；LumaPlayer负责窗口、事件及绘制；Helper提供时间、裁剪、绘图辅助；CoreBridge通过纯C ABI调用Core；VideoRender缓存QImage；AudioRender/AudioTask独立管理声卡队列；LogicController/LogicTask处理异步意图与回执；LifecycleTask处理初始化和关闭。业务日志直接调用LogManager现有宏，已删除LumaPlayerLogger。
 启动顺序：注册CDump并取得配置/管理器实例，创建QApplication后用application.arguments()解析Unicode参数，再初始化日志和窗口。Config保存首个非debug路径及诊断开关，main在show后调用公开loadMedia，复用文件选择的异步打开、窗口尺寸调整和自动播放流程。Windows由系统关联传入路径；应用不写关联注册表。
 src/LumaPlayerCore/LumaPlayerCore/src：LumaPlayerCore为C++外观；CoreAPI通过LUMAPLAYERCORE_USE_C_API选择CoreC纯C声明，CoreC.cpp薄转发；CContext和C音视频Adapter保存句柄及回调；CoreConfig为初始化参数；CoreResult为结果枚举和中文const map；Types定义公共模型；CoreHelper承接C边界检查。
@@ -44,11 +16,11 @@ src/FFmpegCpp/FFmpegCpp/src：PlaybackReader完成解复用、解码、BGRA/PCM�
 统一入口LumaPlayerCoreAPI.h，默认包含C++声明；调用方在首次包含前定义LUMAPLAYERCORE_USE_C_API选择纯C声明LumaPlayerCoreC.h，不能间接带STL。不再提供LumaPlayerCoreCAPI.h。DLL导入库和静态库都按原有规则命名LumaPlayerCore.lib/LumaPlayerCored.lib，依赖组合串行准备。桌面走C ABI隔离Qt MD与Core运行库边界，测试覆盖两种入口。C句柄由create创建、destroy释放，回调userdata属于调用方。
 先创建输出适配器，注入回调，再init。C配置用lumaPlayerCoreDefaultConfig后修改，传InitWithConfig；C++用LumaPlayerCoreConfig传init。配置校验并复制，运行期不替换，uninit后可重新init。结构布局改变时应用和库一起重编。
 Core借用输出接口，不负责delete。帧指针只在回调期间有效，长期持有必须复制；关闭须在任务和回调退出后释放输出对象。回调只提交异步意图，不能同步调用Core等待自身执行，更不能在回调里destroy自身。
-0成功，其余为具体错误/取消，C通过ResultDescription获取统一UTF-8中文说明。异步提交成功不等于执行成功。R01 App使用新增submitAsyncEx完成回报，requestId、媒体代次及输入序号定位对应操作；snapshot只用于显示，不再凭状态变化猜测操作完成。旧异步接口保留兼容。
+0成功，其余为具体错误/取消，C通过ResultDescription获取统一UTF-8中文说明。异步提交成功不等于执行成功。App使用submitAsyncEx完成回报，requestId、媒体代次及输入序号定位对应操作；snapshot只用于显示，不再凭状态变化猜测操作完成。旧异步接口保留兼容。
 
-C接口与配置本次调整（2026-09-10）
+C接口与配置
 内部LumaPlayerCoreCContext持有独立Core及两个Adapter，对外仅LumaPlayerCoreHandle。Helper异常包装、Adapter回调锁和借用生命周期保持原协议；未引入智能指针改造。
-C++及C配置新增m_defaultFrameDuration100ns（默认400000，25fps兜底）、m_defaultRatePermille（默认1000表示1.0倍率）、m_minRatePermille（默认100）、m_maxRatePermille（默认3000）。帧时长和最低倍率必须为正，最高不低于最低，默认倍率在范围内。初始化复制配置，成功打开/重开媒体使用该默认倍率，倍速设置按实例范围裁剪；真实帧时间优先于兜底。默认倍率不改变固定1000的倍率基准。配置结构布局已变，C与C++调用方全部重编，不能混用旧二进制。
+C++及C配置包含m_defaultFrameDuration100ns（默认400000，25fps兜底）、m_defaultRatePermille（默认1000表示1.0倍率）、m_minRatePermille（默认100）、m_maxRatePermille（默认3000）。帧时长和最低倍率必须为正，最高不低于最低，默认倍率在范围内。初始化复制配置，成功打开/重开媒体使用该默认倍率，倍速设置按实例范围裁剪；真实帧时间优先于兜底。默认倍率不改变固定1000的倍率基准。配置结构布局已变，C与C++调用方全部重编，不能混用旧二进制。
 Constants类已删除；固定100ns单位换算在使用cpp内定义局部宏，FFmpeg播放/相邻帧路径同样处理。
 
 三、线程、锁和退出
@@ -67,6 +39,7 @@ AB移动先Pause，读取候选相邻帧、校验边界和取消，再提交点�
 默认预览解码预算8192帧，视频解码器最多4线程、音频1线程；控制等待任务上限4096，过载返回CommandQueueFailed。资源上限不能改变帧身份。
 普通预览EOF必须向解码器发送空包并接收剩余帧，不能直接结束demux循环。若耗尽预览帧数预算仍未到目标，返回失败，不能输出关键帧附近旧画面冒充目标。临时AVFrame由独占所有权清理，异常也不能泄漏。
 seek除flush codec外，还需清空SwrContext滤波延迟和待播PCM；否则上一位置音频进入新位置。seek失败必须离开Seeking并保持可响应状态，清掉可能失配的待播帧。
+时间戳及帧结束计算注意饱和加法；音频切片用商余数计算采样偏移，A端向上取整、B端向下取整，避免溢出和区间外采样。open/seek异常必须结束Opening/Seeking并回报结果，临时读取器和帧资源由明确所有者释放。
 
 五、Qt与设备线程
 GUI定时投递合并后的Poll任务，逻辑线程读取Core快照并通过Qt::QueuedConnection送回，但只在帧、状态或动画变化时重绘，暂停空闲不重复刷整幅画面；不能在鼠标回调解码。鼠标移动事件button()通常为NoButton，不能按button()==LeftButton过滤；拖动状态与buttons()才用于判断按住的键。双击取消待执行单击计时器；进度拖动和画面平移分开；AB悬停只更新hover，按键才暂停编辑。菜单/文件对话框有嵌套事件循环，必须防重入并锁定悬浮条。
@@ -76,94 +49,99 @@ AudioTask在线程内创建QEventLoop、QAudioOutput并处理事件，约每5ms�
 默认队列上限3秒；大小计算和采样对齐须检查。QAudioDeviceInfo的nearestFormat不能仅改格式声明却继续写原始PCM，否则采样率/声道错配。媒体时钟倍速不能独自替代音频变速；音频与画面实际同步需要设备实测。
 
 六、日志与CDump
-main先CDump::declareDumpFile，再Config、常开应用日志、Qt和Core。debug只作为诊断标记，Bridge始终打开Core日志。应用业务日志在调用点直接使用LOGINFO/LOGERROR等公开宏，不自建Logger或日志宏；Core业务可用LogManager，Engine及FFmpegCpp等二次开发库不引入日志器。
+main先CDump::declareDumpFile并取得Config及线程管理器实例，再创建QApplication、初始化Config和常开日志，随后创建窗口并异步初始化Core。debug只作为诊断标记，Bridge始终打开Core日志。应用业务日志在调用点直接使用LOGINFO/LOGERROR等公开宏，不自建Logger或日志宏；Core业务可用LogManager，Engine及FFmpegCpp等二次开发库不引入日志器。
 应用与Core统一使用fileId=0，按20MiB、8个文件滚动，避免同秒创建两个ID却写入同名日志导致独立轮转冲突。App/Core初始化使用archiveOldLog=true；日志归档与滚动由LogManager实现，重要问题仍需单独保留完整日志。CDump转储及文本默认EXE目录，记录注册结果。
 故障现场保留原媒体、操作顺序、EXE/DLL/PDB、日志和dump。2026-09-10旧事件为FFmpegCpp.dll访问异常，RVA0x1f7784；用旧包符号解析为ff_h264_decode_mb_cabac+0x6f4。没有当次dump，不能确认具体根因，也不能将本轮修复视为已证明解决该崩溃。
 
-七、构建命令与切换顺序
-Windows：VS2013/MSBuild12，Qt5.5.1的msvc2013_64；PowerShell显式调用Git bin/sh.exe。XUEYELINGSHUANG带尾部反斜杠，CLOUD_REBUILD指向仓库工具；QTDIR指向Qt实际安装目录。
-桌面Debug：先sh src/LumaPlayer/version_debug.sh，再MSBuild src/LumaPlayer/LumaPlayer.sln /p:Configuration=Debug /p:Platform=x64 /m。
-桌面Release：先sh src/LumaPlayer/version_release.sh，再MSBuild同一sln /p:Configuration=Release /p:Platform=x64 /m。version显式构建Core、CDump和DialogManager的64位DLL（same）；CTaskThreadManager、Semaphore沿Core依赖链准备，QtControls/ManagerBase沿DialogManager依赖链准备，不重复构建。
-正式Test为用户提供的Qt工程src/LumaPlayerTest，使用桌面同一套64位DLL依赖。完成桌面version依赖准备后，构建src/LumaPlayerTest/LumaPlayerTest.sln的Debug/Release x64即可；不再切换STATIC_LIB或使用旧控制台工程。Release Win32/x64目标名均为LumaPlayerTest1.0，实际只验证Windows x64。
-库自身version仍各一行32 dll，应用64位需求不改库默认入口。已有rebuild_*.py不编辑；新增源同步DLL/LIB两套vcxproj及filters，构建同步include。详见仓库使用说明。
+七、应用交互与完成结果
+1. 任务与结果链
+GUI输入生成LumaPlayerLogicAction，经LogicController::submit分配给SeekTask、PlaybackTask、LoopTask、ViewTask、ResetTask、LoadTask或WindowTask；通用LogicTask处理初始化结果、Core完成回报、轮询、视图回执和关闭协调。业务Task在独立逻辑线程短提交，Core承担解码，Qt控件和窗口操作在GUI线程完成。
+CoreBridge通过lumaPlayerCoreSubmitAsyncEx提交请求。requestId关联Core操作，mediaGeneration隔离媒体，inputSerial隔离连续定位与AB结果，视图revision和viewportGeneration隔离旧布局与重置回执。Core回调复制完成数据并投递Completed任务，逻辑层处理后通过resultReady的Qt::QueuedConnection通知GUI；提交成功不等于执行成功。
+连续快进和倍率按在途目标累计，避免每次从旧快照计算。普通输入有队列上限，Poll合并；完成结果与关闭不受普通输入数量限制。C/C++旧异步入口仍保留兼容。
 
-八、测试和脚本使用
-正式入口common/LumaPlayerTest/LumaPlayerTest1.0.exe，新Qt工程src/LumaPlayerTest是唯一正式测试工程。旧工程的186条断言迁到LegacyTests.cpp，原12组映射为1～12；完整迁移核对在工作流目录旧测试迁移核对.json。old只作迁移来源，验证后删除，不共同编译或调用。
-测试执行遵循common/AI文档/工程测试规范.txt。稳定枚举TestCaseId显式编号，const map集中中文功能与预期；当前38项（30瞬时、8压力）。界面按钮从左到右：指定、瞬时、压力、全量。指定支持1,3,8-12；删除ID跳过不重用，未知ID报错。全量先瞬时再压力，不把重复次数算成多个用例。
-每个用例单独进程顺序执行并自动判定，实际Core结果、Qt事件和画面用于断言。GUI通过TestGuiAccess.h仅在测试构建读取成员，操作走鼠标/键盘/公开加载入口，不直接设置内部状态。测试程序编入实际播放器源码及对应moc，统一测试访问声明以匹配MSVC符号；发布播放器不含此访问方式。独立EXE启动压力不读内部成员，检查对应PID窗口、加载日志及退出码。
-命令示例：LumaPlayerTest1.0.exe --run instant --configuration both --auto-exit；指定模式使用--run specified --ids 1-18,21-38。配置支持release/debug/both，默认release；Debug产物隔离在debug子目录，独立Release启动测试直接调用同级../LumaPlayer/LumaPlayer1.0.exe，不再使用player子目录副本。人工点击运行结束有完成弹窗，--auto-exit供AI等待进程实际结束后读报告。--job-timeout-ms可用于执行器超时自检，实际预算写入报告。
-程序根目录提供测试报告.txt和report.json；reports按批次保存断言、日志和进程退出证据；temp只放中间文件。报告统计唯一ID的实际执行、瞬时/压力、通过/失败/取消，未执行和删除跳过单列；运行中或只完成部分配置不能提前标通过。源码修复后使用新批次，保留失败现场及匹配符号。
-fixtures/scene.avi为160×90、25fps、8秒、48kHz双声道PCM的确定性素材；前1秒红色，其后蓝色，frame-table.csv给出独立起止时间。src/LumaPlayerTest/scripts/generate_fixture.py可重建合成素材；real.mp4是本机真实视频测试素材，中文空格.avi用于路径启动验证。其他环境可通过--fixture/--media给出对应素材，切镜/帧边界用例要求保持指定合成素材契约。
-设置QTDIR后运行src/LumaPlayerTest/scripts/package_tests.py release/debug部署测试包及其播放器副本，按PE依赖收集匹配DLL、Qt平台/音频插件和VC运行库，并生成哈希清单和PDB压缩包。这是部署工具，不代表测试已通过，也不直接发布common/LumaPlayer。发布播放器须本轮测试通过后按授权执行。
-测试程序自身需检查成功、失败、非法输入、缺素材、超时和取消。Core旧用例调用不可强行中断时使用独立子进程看门狗；正常结束优先回收，超时/取消给出退出机会后只终止本程序创建的进程，不能清理无关进程。
-仅Windows x64有实机验证；Linux/macOS、32位未验证。主观画质与听感依赖已完成的人工试运行，VFR、全编码格式矩阵及数小时稳定性未覆盖。19/20长期用例未选时不计通过。旧temp修改脚本不可重跑，历史报告不代替当前产物结果。
+2. Core完成协议
+LumaPlayerCoreRequest/Completion及对应纯C结构携带操作身份与结果，请求字符串在提交时复制，C完成结构仅在回调期间借用。提交失败不产生完成回报，已接受请求通过完成凭据处理成功、失败或取消。
+PlayerRequestCompletion持有共享执行凭据，PlayerCompletionDelivery在接受前预分配；PlayerCompletionTask在引擎锁外调用宿主。关闭先停止结果生产者，再排空完成结果。宿主回调必须短小，不得同步销毁同一Core或等待自身，userdata保持到uninit返回。
 
-九、历史验收和交付证据（2026-09-10及更早，不代表R01初版）
-最新画质及参数启动修复验证目录：src/temp/LumaPlayerQualityStartup。两配置窗口探针使用1024×768无损黑白单像素条纹缩小到512×384，修改前采样区均值0，最终面积采样127（正确中间灰度），16400个采样点全部通过；修改前后截图和日志均保留。原生启动覆盖无参、仅debug、中文空格路径、debug前后组合、真实MP4和不存在路径，按native-results.json核对退出码和加载日志。构建最终以build-final-debug/release.log为准。此验证证明缩放采样和参数路径行为，不等于HDR、色彩管理或所有视频主观画质均已验收。
-当前改造记录在src/temp/LumaPlayerCInterfaceConfig，审查与验证报告.txt汇总本轮结果；before保存本轮修改前文件，source-review.diff记录差异。历史FullReview目录本轮开始时已不存在，不作为当前验证依据。
-Debug/Release正式Test分别运行合成AVI和真实MP4，每份12组、0失败；新增配置默认值/校验/复制、C/C++一致性、多实例隔离、非默认倍率和自定义范围及PCM长度检查。报告位于debug-scene、debug-real、release-scene、release-real子目录。
-两配置完整DLL依赖与桌面构建通过；纯C /TC统一API入口、默认C++入口DLL调用通过，探针在probes-debug/probes-release。Qt实际Bridge/渲染器和窗口两素材回归在qt-debug/qt-release，覆盖配置、帧缓存、AB暂停及恢复播放。原生Windows最终包无参/debug两种启动正常退出，日志和CDump注册验证见native-smoke.json及native-*-logs。
-应用version统一64 dll same；先前librely把直接依赖变成MT静态库造成Qt MD链接失败，已修正并重新验证。最终include/lib保持Release DLL组合。
-正式common/LumaPlayer包含本次Release EXE、自有依赖DLL和匹配PDB，并附Qt运行库/插件及VC120运行库；published-files.json记录全部发布哈希，package-core-identities.json记录自有PE/PDB GUID/Age。
-仍未验收其他四端实机、真实声卡听感和音画同步、长GOP/VFR/损坏媒体专项矩阵及数小时压力。Qt探针不是完整鼠标交互验收；不能声称消除所有bug或解决无原始dump的历史崩溃。原C++公开头的atomic成员C4251仍在独立C++探针出现，Qt最终构建无警告。
+3. 拖动和逐帧
+SeekTask使用DragBegin/DragPreview/DragCommit会话。逻辑层等Begin对应Pause实际完成后再启动预览；同一时刻仅一个预览在途，输入覆盖最新待处理目标，完成后释放槽位再提交最新目标。GUI立即更新拖动圆点和时间，并按配置间隔与定时器向后台发送目标。
+松开提交最终Seek；期间保留目标显示和最近成功预览帧。匹配最终结果到达时先同步VideoRender的新帧，再清除临时位置，失败或取消清除临时状态。播放及AB等依赖操作按有界队列暂存，最终定位失败时不执行依赖操作。切文件清理旧会话，关闭状态下失焦不再提交定位。
+普通左右键和暂停右键复用Seek任务；播放右键不触发预览。VideoRender在同一锁内复制图像、帧起止时间和序号。非拖动暂停定位使用实际帧起点，播放时间限定在当前呈现帧内。悬停AB本身不解码，逐帧编辑保持暂停，取消标记及代次用于阻止过时输出。
 
-十、历史实现补充及复跑注意（旧脚本仅供定位，存在性需核对）
-时间戳与帧结束使用饱和加法，音频切片通过商余数计算采样偏移，避免时长乘采样率溢出；A端向上取整、B端向下取整，避免输出区间外采样。open/seek等命令异常必须退出Opening/Seeking，暂停时钟、记录Error并完成同步等待；临时预览reader用独占所有权，初始化异常也能释放。
-VS2013中class static const整数传给std::min/max的const引用可能触发ODR符号问题；只需值时用值表达式，不要靠静态库偶然链接成功证明DLL可链接。正式Test的Debug静态库使用/MDd，Release静态库使用/MT；Qt应用使用/MDd或/MD的对应DLL组合。
-version/CloudRebuild外层返回0不保证每个依赖成功，必须检查完整构建日志、目标更新时间和依赖。此次CStringManager曾遇到VS2013内部编译错误，单独Rebuild后0警告0错误；以final-cstring-retry.log为最终记录。
-本轮build-final-probes.cmd编译ResourceProbe、DumpProbe及CHeaderCheck，需VS2013 x64、当前Release DLL头及lib搜索路径。ResourceProbe.exe接素材绝对路径；CHeaderCheck.exe无参数。DumpProbe无参数测试主线程，任意参数测试工作线程，间隔超过1秒避免同名转储；预期异常退出，随后运行validate-dump.py。
-logging_smoke.py参数Debug或Release，验证真实Windows平台窗口的启动和正常关闭；不能用offscreen平台验证EnumWindows/WM_CLOSE。GuiKeys使用offscreen平台，build-gui-release.cmd依赖本次正式应用对象文件；更换构建环境需修改rsp路径。所有结果写本轮目录，运行前保存旧结果。
-十一、R01初版架构与接手说明
-当前处第三阶段，初版供代码审阅；本节的实现描述不是编译或测试结论。旧发布包未替换，新源码不能用历史测试报告背书。详细计划、用户原话和中断断点见LumaPlayer需求开发工作流-工作笔记.txt。
+4. AB与循环缓存
+m_loopBoundaryEnabled区分保留AB标记与当前播放段是否受B约束。手动定位到B及之后允许播到EOF再从0开始；定位到A之前不裁掉前段。设置端点建立新循环意图，新B在当前位置之前时由后续播放步回A。
+播放中设置A/B或清除AB只更新边界及结束状态，不通过seekInternal重启时钟和声卡；暂停态调整端点保留定位行为。逐帧移动仍暂停并同步读取位置和画面。不能将旧版“修改端点统一刷新声卡PCM”的描述用于当前播放态。
+refreshLoopBuffer保留不匹配旧缓存作为顺序读取源，同时准备匹配新范围的缓存；旧缓存耗尽且范围改变时接续reader，不将旧缓存用于新范围回绕。跨越范围间隙的第一帧仍保留，避免延长B时漏帧。B是排他结束，完整展示所选B帧。
 
-1. 应用结果闭环
-LumaPlayer成员顺序保持音视频Render、CoreBridge、LogicController；反向析构时先保住Controller直到所有Core回调停止。Controller保存管理器返回的逻辑/生命周期线程ID。GUI事件产生Action，逻辑Task串行计算并提交C请求；Core回调只复制结果、提交Completed任务，逻辑汇总后发resultReady，GUI显式QueuedConnection接收。
-requestId用于Core操作对应，mediaGeneration隔离换文件，inputSerial隔离连续seek/AB结果；视图revision和viewportGeneration隔离旧布局与重置回执。连续快进和倍率以在途目标累积，避免短时间操作都从旧快照算起。队列上限在Config；Poll合并，完成结果与关闭不被普通输入限额丢弃。
-重置先提交视图目标及倍率请求；GUI应用视图再回ViewApplied。倍率实际成功并达到默认值、视图成功且revision仍为本次重置时才清dirty。用户新操作使旧重置批次失效。仅AB或图钉变化不清dirty；失败保持可重试。
-实际Qt窗口操作在GUI执行，之后再回WindowApplied；线程中不操作QWidget。帮助关闭用同一HelpClose意图及token结果，防止旧弹窗结果关闭新弹窗。
+5. 重置、窗口和帮助
+重置先提交视图目标与默认倍率请求；GUI应用视图后回ViewApplied。倍率实际成功且达到默认值、视图应用成功、revision仍匹配时才清dirty；新操作使旧批次失效，部分失败保持可重试。保留AB、当前进度、播放状态和窗口状态。
+普通窗口矩形由m_normalWindowGeometry保存。全屏时最大化按钮只切换m_maximizedOutsideFullScreen和退出后的目标，不退出全屏；退出时恢复最新目标。completeWindowState经Qt事件队列应用最终状态，m_windowStateSerial和关闭守卫排除过时回调，再发送窗口完成回执。
+图钉固定时videoViewportRect避让悬浮条，空媒体底栏高度为0；取消固定恢复完整视口。图钉不因全屏切换改变。
+帮助由DialogManager自定义View/Factory创建；HelpView通过QPointer<QWindow>借用父窗口，首次Show按播放器全局矩形居中。标题栏可拖动，关闭按钮不参与；右上关闭与右下确认走同一HelpClose任务和token回路。LumaPlayerDialogSession在QApplication销毁前清理弹窗。
+主体仍为自绘界面，LumaPlayerButton用于帮助按钮；不能写成主体已全面使用QtControls。固定文案、字体、布局、颜色、图标和命中尺寸集中Config；保留.ui、.qml、.qrc及其工程登记。
 
-2. Core可选完成协议
-C++新增LumaPlayerCoreRequest/Completion、操作枚举和submitAsyncEx；C新增LumaPlayerCoreCRequest/Completion、回调typedef与lumaPlayerCoreSubmitAsyncEx。旧公开C结构和方法保留。请求字符串在提交时复制，C完成结构仅在回调期间借用；调用方及时复制数据。
-提交返回失败则不产生完成回调；成功接受后最终产生成功、失败或取消回报。PlayerRequestCompletion为共享执行凭据，覆盖命令及被替换预览的终态。PlayerCompletionDelivery在接受前预分配，最后凭据释放只发布，不在析构中复制字符串或分配结果包。独立PlayerCompletionTask在引擎锁之外调用宿主，不是日志线程。
-关闭先停止结果生产者，再排空已接受的完成结果。正常回调在结果线程；若结果任务尚未开始便被管理器取消，关闭协调方排空剩余结果。不依赖具体线程身份，宿主回调必须短小，不得同步uninit/destroy同一Core或等待自身回调结束。userdata必须存活到uninit返回；App借用Controller满足此生命周期。
+6. 退出与线程库边界
+GUI关闭先禁止新输入，LifecycleTask回收逻辑线程，再经Bridge停止Core及音频服务，回报Shutdown后GUI才关闭窗口。Controller析构回收生命周期协调线程，并为异常离开事件循环提供兜底；资源保持到回调收敛。
+当前CTaskThread的m_spCurTask通过std::atomic_load/std::atomic_store取得和替换。StopCurTask取局部强引用后通知；StopTask先在锁内收集队列引用，再在锁外检查当前任务并通知。旧文档中“统一改为m_mutex及StopCurTaskUnlock”的说明已不适用。
+StopTask只提出协作取消，不能假定任务已结束或每个排队任务都会执行；提交与Uninit的先后由业务收敛。详细边界以当前线程库源码及《线程开发规范》第十一节为准，不因静态猜测修改成熟基础库。
+普通open/seek进入不可中断底层调用后需等待返回，不能承诺损坏或远程媒体立即退出。Uninit按管理器ID回收本实例线程，不使用UninitAll。
 
-3. AB与中断
-m_loopBoundaryEnabled区别“保留标记”与“本段受B约束”；定位到B及之后关闭该段约束，到EOF从0重新进入循环。定位A之前不能用A裁掉应播放的前段；loop缓存回放仅在正确段落使用。端点变更刷新读取位置及旧声卡PCM，避免旧B范围音频残留。
-Task均有atomic m_exit，StopTask直接赋值；已取消排队请求按取消终态回报。预览、逐帧与AB定位解码沿既有取消回调检查。普通媒体open/seek底层若没有可取消接口，则单次调用必须完成后才能进入安全取消点；不能承诺所有损坏/远程媒体立即退出。提交帧及资源销毁是必须完成的一致性区段。
-窗口关闭立即禁止新输入，协调Task依次Uninit逻辑线程、Core线程与音频线程；Qt收到关闭完成再销毁窗口。Controller析构兜底覆盖异常离开事件循环，停止结果生产者后再释放自身。LumaPlayerDialogSession保证DialogManager在QApplication之前释放。没有UninitAll，没有修改CTaskThreadManager/Semaphore。
+八、构建入口与依赖
+Windows环境为VS2013/MSBuild12、C++11、Qt5.5.1 msvc2013_64。XUEYELINGSHUANG为带尾部反斜杠的仓库根目录；CLOUD_REBUILD指向仓库构建工具，QTDIR指向匹配Qt。PowerShell调用Git的bin/sh.exe，不使用可能指向WSL的bash。
+LumaPlayer和LumaPlayerTest各自保留version_debug.sh/version_release.sh。用户于2026-09-14明确按当前version执行；两工程同配置脚本当前一致，均准备64位DLL，依次为：
+LogManager same
+FFmpegCpp same
+CTaskThreadManager same
+LockFreeQueue same
+LumaPlayerCore only
+CDump same
+QssString only
+EO_XmlSax2Parser same
+QtControls only
+ManagerBase same
+DialogManager only
+上述only是当前完整脚本中的既有安排，不能孤立执行并假定前置依赖已准备；不按旧文档自动改写为Core/DialogManager same或删去显式依赖。同配置同时构建App与Test时，已完成且确认匹配的依赖无需重复准备。
+依赖准备后分别用MSBuild构建应用sln。以下命令从仓库根目录运行，示例为Release：
+& 'C:\Program Files\Git\bin\sh.exe' src/LumaPlayer/version_release.sh
+& 'C:\Program Files (x86)\MSBuild\12.0\Bin\amd64\MSBuild.exe' src/LumaPlayer/LumaPlayer.sln /p:Configuration=Release /p:Platform=x64 /m /nologo
+& 'C:\Program Files (x86)\MSBuild\12.0\Bin\amd64\MSBuild.exe' src/LumaPlayerTest/LumaPlayerTest.sln /p:Configuration=Release /p:Platform=x64 /m /nologo
+仅准备测试工程时可使用src/LumaPlayerTest/version_release.sh。Debug对应version_debug.sh及Configuration=Debug。库自身version仍为32 dll默认入口，不因桌面64位需求改写。
+App与当前Qt Test使用64位DLL依赖，不能照旧控制台说明切到STATIC_LIB。Release目标为LumaPlayer1.0和LumaPlayerTest1.0；Debug为LumaPlayerd和LumaPlayerTestd。公共lib与include/Macro可能被不同组合覆盖，构建必须串行切换。
+源码变更从src开始，经正式构建同步include；检查实际MSBuild错误、退出码、产物时间和Macro，不以CloudRebuild外层返回0代替成功。rebuild_*.py只读不改，新增Core文件同步DLL/LIB工程及filters。
+保留已验证的CMakeLists原结构；仅按用户授权作必要改动，不保留旧文档中的imported targets重写方案。macOS适配由用户后续调试；Windows构建不能替代其他平台验证。
 
-4. 界面与配置
-保留Config命名；布局、字体、命中区域、颜色、图标矢量路径、帮助正文和菜单样式集中其中，相同颜色复用。Config::init在QApplication创建后用字体度量计算最小窗口和时间空间。轨道蓝色、AB绿/黄竖线、播放按钮下方居中，时间仍在轨道左右同水平。
-固定图钉使videoViewportRect排除顶底条，视频/中心提示以此计算并裁剪。非固定保留原视口和显隐。帮助Factory/View与DialogSession各自独立文件；QWidget继续Qt管理。
+九、测试入口、素材与报告
+正式测试源码为src/LumaPlayerTest，入口common/LumaPlayerTest/LumaPlayerTest1.0.exe。LegacyTests保留迁移用例，旧src/LumaPlayerTest_old不是当前构建或运行依赖。TestCaseRegistry.h/.cpp以显式稳定枚举和const map登记38项：30瞬时、8压力；中文说明、分类和执行范围以登记为准。
+四按钮从左到右为指定、瞬时、压力、全量。指定支持1,3,8-12，删除ID跳过不复用，未知ID报错；全量先瞬时后压力。每项独立进程顺序执行并自动判定。重复次数、子断言和配置次数不冒充多个用例。
+GUI测试编入实际播放器源码和moc，TestGuiAccess统一测试访问声明；发布播放器不含此测试访问。CoreTestTask/LegacyTests覆盖Core及C/C++接口，CApiSmoke.c提供纯C入口检查；独立启动用例运行所选目录播放器，内部GUI/Core用例运行对应测试执行程序。
 
-5. 日志与基础库
-应用/Core业务使用LogManager现有宏；不重新获取文件函数行号，不二次包装，不新增日志工作线程。记录请求ID/代次/操作/实际结果以及关闭阶段和耗时；高频帧与鼠标绘制不逐帧记录。Engine/FFmpegCpp/基础控件仍通过结果返回错误。
-QtControls新增ExpressionLoadResult.h及const map，Parser新增parseResult，ExternalTextEdit和DialogManager的ExpressionDialog新增loadExpressionsResult；旧接口保留转发兼容。删除DialogManager表情加载的运行期qDebug，独立测试入口日志保留；没有删除LoginShowDialog。
+路径与配置：
+顶行为真实视频目录，默认D:/Backup/Downloads，可通过--video-dir修改。下方Debug复选框和只读目录，再下方Release目录；目录选择取消保留原值。默认Release为测试EXE目录的../LumaPlayer，Debug为../LumaPlayer/debug，存在对应EXE才填入。
+Release始终参与；默认不勾选Debug。--configuration release仅Release，both为两配置，兼容值debug也勾选Debug并保留Release。--release-dir和--debug-dir可指定目录。
+开始前校验Release的LumaPlayer1.0.exe；勾选Debug时同时校验LumaPlayerd.exe和匹配LumaPlayerTestd.exe。缺失时提示选择或补齐，不启动部分测试或回退旧player目录。运行期间锁定路径和配置。Release内部用例使用测试EXE同目录的LumaPlayerTest1.0.exe。
 
-6. 工程与后续阶段
-新增源已登记App以及Core DLL/LIB vcxproj/filters，LogicController增加moc入口。App CMake改用Qt5 imported targets，避免Linux专用.so路径影响macOS；version沿依赖图准备，不修改rebuild脚本。Windows/Linux/macOS须分别构建验证；当前没有运行任何本轮构建或测试。
-用户代码确认后进入第四阶段：先系统自查，再编译；随后确认测试环境/目录与测试用例文档及预计耗时、发布安排，获确认后才写并运行测试。不要运行本目录R01-实施*.py等一次性编辑脚本，它们不是验证工具。
-十二、R01代码审阅整改01
-按用户审阅意见：本轮新增/修改缩进为4空格，函数间空行和续行遵循最新代码规范；未改旧Tab行保持原样。所有App的QString::arg已替换为CStringManager::Format；界面固定文案及显示格式模板集中Config。CStringManager由Core依赖链准备，App非Windows链接列表显式引用。
-删除未使用的LumaPlayer.ui、Hello World QML及仅含该QML的qrc，移除对应生成项；实际自绘界面与DialogManager帮助不依赖这些模板。新增22个源/头的用途及项目登记见工作流/R01-代码审阅整改01/新增文件登记核对.txt。
-本轮只完成用户审阅整改及指定专项核对，未编译或执行测试；仍等待代码确认。规范、源码备份及9项处理记录见R01-代码审阅整改01/整改说明.txt。
+素材准备：
+TestCommandTask在后台调用TestMediaHelper::prepare，仅查真实视频目录当前层、不递归、不跟随符号链接，找到首个可用视频即停止。最多探测20个候选，每个探测子进程预算5秒；用户视频只读，不复制、修改或删除。无有效视频提示重新选择，不以合成素材替代真实视频覆盖。
+每轮准备自行生成scene.avi和中文 空格.avi，写入报告根目录temp/fixtures。固定160×90、25fps、200帧共8秒，首秒红色、其后蓝色，48kHz双声道16位PCM。QSaveFile完整提交后使用，可取消，失败不启动用例。
+不需要Python、generate_fixture.py、旧fixtures目录或frame-table.csv。--media和--fixture用于内部子用例传参，用户启动批次用--video-dir选择真实素材目录；不能用旧文档将它们解释为主入口素材覆盖。
 
-用户审阅纠正：.ui、.qml、.qrc三个文件不能删除。已从本轮修改前备份逐字节恢复LumaPlayer.ui/.qml/.qrc，并恢复vcxproj、filters中UI/resource及相关生成项，CMake恢复qrc输入。工程规范已明确保留例外，禁止以未使用为由删除；只有用户另行明确授权才可删除。本记录覆盖前述已删除三文件的结论。仍为第三阶段，未编译或测试。
+命令示例（所选程序目录及运行依赖须已准备）：
+LumaPlayerTest1.0.exe --run instant --configuration release --video-dir "D:/Backup/Downloads" --auto-exit
+LumaPlayerTest1.0.exe --run specified --ids 13,14,23,35,36,38 --configuration both --auto-exit
+--output设置报告根目录，默认测试EXE目录。--job-timeout-ms用于必要的看门狗调整或超时自检，不改变成功标准。无--auto-exit时完成后弹窗。
+根目录生成测试报告.txt与report.json，reports/按批次保存报告、日志和证据，temp/保存中间文件及自动素材。报告记录实际媒体、配置目录、子进程路径、结果和耗时；失败、取消、未执行分别统计，不把执行结束当成全部通过。
+测试选择、正式用例开发及执行按《工程测试规范》和工作流约定。19/20各默认持续120秒，34默认Release启动60次、Debug8次，38覆盖连续任务切换停止回收；未选压力项不能记通过。源码或产物变化后重测受影响范围，旧报告不能替新版本背书。
 
-用户最新CMake约束：禁止随意修改已验证的CMakeLists；仅新增第三方库确需时允许必要小改，macOS构建由用户后续自行适配。已将src/LumaPlayer/LumaPlayer/CMakeLists.txt按R01编码前源码基线逐字节恢复，无本轮CMake改动保留；修改前稿另存R01-代码审阅整改01/恢复前CMakeLists.txt。其他项目CMake与基线相同，无需恢复。工程规范新增第十五节。此结论覆盖此前imported targets、显式新增链接等CMake变更说明；源码和VS工程的其他审阅整改保留。仍第三阶段，没有编译、测试或发布。
+十、发布规则与当前文件
+按最新《工程开发规范》《工程测试规范》及本次明确授权发布。common默认分发Windows x64 Release：播放器到common/LumaPlayer，测试程序到common/LumaPlayerTest；需要Debug时隔离到约定目录，当前测试默认使用common/LumaPlayer/debug。
+按实际PE依赖准备匹配EXE、仓库自有DLL、FFmpeg等所需依赖及资源。Qt官方动态库、Qt插件、MSVC/Windows再发行运行库和安装程序由用户单独提供，不随包携带；QtControls、DialogManager属于仓库依赖，不按Qt前缀排除。
+LockFreeQueue为头文件/.inl运行能力，不发布LockFreeQueue.dll/LockFreeQueued.dll，但保留当前version的依赖准备。不生成package-manifest-*.json，测试不依赖旧清单。
+PDB单独压缩并核对对应PE/PDB GUID和Age，保留故障版本及必要哈希。当前目录可见symbols-LumaPlayer1.0-20260912-234302.7z和symbols-LumaPlayerTest1.0-20260912-234403.7z；此为文件存在性核对，未在本轮重新验证包内符号匹配。
+当前src/LumaPlayerTest没有scripts/package_tests.py或scripts/generate_fixture.py，不再将其列作正式命令。临时诊断、构建日志、复制和打包辅助脚本放src/temp/任务名，长期正式构建入口仍为version和sln等实际文件。
+发布前测试当前产物，备份旧文件及符号，按授权部署后检查启动和依赖。本轮文档同步未执行发布，也未修改现有程序包。
 
-R02实现说明（覆盖此前与本轮冲突的实现描述）
-独立业务任务：LumaPlayerSeekTask、PlaybackTask、LoopTask、ViewTask、ResetTask、LoadTask、WindowTask；继承LumaPlayerLogicTask公共m_exit及StopTask。各Task调用控制器独立executeX入口，不再回原大分发。通用Task仅处理初始化结果、完成回报、轮询、GUI视图回执和关闭协调。所有Task在原逻辑线程执行短提交，Core继续负责解码。
-左右键和暂停右键采用Seek任务，连续拖动使用后述Begin/Preview/Commit会话。播放右键不发送预览命令。VideoRender同锁复制帧图像、起止时间及帧序号；非拖动时圆点和时间从同一缓存帧计算，拖动及待最终提交完成时按R04显示鼠标目标。Core独立Preview公开协议保持原样。
-Core控制线程中的seek成功暂停时对齐实际帧起点；编辑AB后若当前位置已超过新B则回A，正常主动seek仍允许离开AB。B始终为排他结束，末帧不得被提前省略。后续第四阶段验证真实输出帧序列。
-帮助框自定义视图增加标题栏、分行名称版本。LumaPlayerButton绘制共享Config颜色及图标，Qt owns控件，不依赖系统按钮配色；帮助确认与关闭仍共用异步关闭回路。
-空媒体底栏高度为0，轨道上方减10、下方减5，默认89高；时间中心额外下移2。轨道默认左右延长20，在字体较宽时保留必要文本空间。按钮/圆点共用m_buttonPressColor、m_buttonPressOpacity；关闭共用m_closeButtonColor和加深参数。
-本轮未增加第三方库，未修改CMake、CTaskThreadManager、Semaphore、DialogManager和旧C ABI；新增文件仅登记App vcxproj/filters。审阅清单见工作流目录R02-初版代码审阅清单.txt。
-
-R03拖动会话与帮助框实现
-SeekTask增加DragBegin/DragPreview/DragCommit输入；逻辑线程等待Begin对应Pause的真实完成再flushDrag。移动由GUI定时器兜底发送最新目标，硬时间门限不能被距离变化绕过。Preview复用Core独立预览线程，不改播放控制时钟；R04起拖动圆点与时间直接读取GUI目标，后台画面独立更新，最终定位完成后恢复真实帧显示。
-松开或后续播放/AB动作结束拖动预览，提交最终Seek。播放和AB动作在必要时有界暂存，待最终定位实际成功后顺序提交；定位失败不执行依赖操作。切文件清理旧会话。Core控制Seek先等待预览reader发布临界区退出，再复查序号，阻止旧预览覆盖最终画面。
-常规Preview取消不作为GUI错误，预览不逐项写重复INFO；拖动开始/最终完成日志保留输入序号、结果、实际位置和预览数。LogManager宏直调，无自定义日志包装。
-HelpView标题栏与标题文字事件过滤器在GUI线程使用window()->move移动QDialog，关闭按钮不参与拖动；松开/失去抓取/隐藏清理状态。版本文字采用与说明一致的Config字体并左对齐。
-本轮复用已有源文件，无新增依赖或工程登记，未修改CMake/线程基础库/C ABI。详细验证在代码确认后执行，不能沿用R02流畅性结论。
-R03验证修订：拖动预览同一时刻只执行一个，输入只覆盖最新待处理目标；完成回报释放在途槽后再投最新目标，避免频繁取消而没有中间帧。最终定位仍取消旧预览。关闭状态下失焦不再提交最终定位。详见R03验证报告。
+十一、验证记录与接手边界
+旧文档记载2026-09-12 Windows x64 Debug/Release完成36个唯一ID（30瞬时、6压力），138次配置/重复执行、303.1秒，19/20未执行；另记载路径控件、自动素材生成及相关指定用例验证。它们仅保留为历史记录，不是本轮测试结论。
+本轮读取时，common/LumaPlayerTest下没有历史所引用的reports目录，common/LumaPlayer下也没有旧LumaPlayer需求开发工作流目录。原始报告、迁移核对、dump和恢复笔记未核实，不作为当前可用证据入口。旧版文档备份：src/temp/LumaPlayerDocsSync-20260914-1b9b31c745294054a4d69a7fd54018d5。
+本轮只完成源码、脚本和文档对应检查；未验证当前EXE是否与源码一致，未重新构建、执行测试、检查声卡或跨平台运行。历史FFmpeg异常缺完整现场，不能认定已解决。
+后续需求按《工程软件开发工作流》v1.5建立独立命名工作流：需求确认、方案确认、初版代码确认、自查编译及AI核心流程验证、用户试运行选择、合并确认测试条件和发布范围，再按授权测试修复和发布。取消旧测试用例文档及测试结果单独放行流程；不得沿用旧任务确认自动放行新需求。

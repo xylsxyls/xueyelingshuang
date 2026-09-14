@@ -1,5 +1,5 @@
 ﻿仓库使用说明文档
-更新日期：2026-09-10
+更新日期：2026-09-14（同步LumaPlayer现有version约定）
 
 一、先读什么、改哪里
 本文件负责仓库结构、工程生成、依赖准备、构建及发布。代码写法看《AI代码开发规范.txt》，产品分层看《工程开发规范.txt》，任务模型看《线程开发规范.txt》。进入具体产品后先读其需求文档和开发文档，不把临时验证脚本当成正式构建入口。
@@ -13,7 +13,7 @@ lib是公共输出目录，保存EXE、DLL、导入库、静态库及符号；�
 "$CLOUD_REBUILD" 库名 32 dll debug same
 release文件对应release。依赖只能写before，不能将库version改成依赖清单。应用需要64 lib/64 dll时直接向CloudRebuild传参，不改库的默认入口。
 应用与Test是可执行工程，不新增库式scripts/rebuild框架。应用version集中准备依赖，应用自身另用sln/MSBuild或对应CMake编译，不能用CloudRebuild编应用。
-应用version先核对各库before中的传递依赖和构建顺序；已由上游按所需位数、配置、dll/lib及CRT组合构建的依赖，不重复显式编译。LumaPlayerCore -> CTaskThreadManager -> Semaphore已覆盖后，应用version不再另列后两者。未被依赖链覆盖的CDump等库单独列出，最后一个参数默认same；only不是常规version的默认选择。不能把磁盘上的旧产物当作本次依赖已覆盖。
+应用version先核对各库before中的传递依赖和构建顺序；已由上游按所需位数、配置、dll/lib及CRT组合构建的依赖，不重复显式编译。未被依赖链覆盖的库单独列出，最后一个参数通常使用same；only须在已准备前置依赖的安排中使用。不能把磁盘上的旧产物当作本次依赖已覆盖。LumaPlayer及LumaPlayerTest按2026-09-14用户确认保留当前version：显式准备依赖后对Core、QssString、QtControls、DialogManager使用only；完整顺序见产品开发文档第八节，不按旧示例改写脚本。
 常规应用Debug为32 dll，Release优先64 lib（目标明确需要32位则32 lib）；Qt等明确例外按实际工程。LumaPlayer桌面Debug/Release均为64 dll依赖，Qt应用使用匹配Qt的MD/MDd。库的Release MT不为链接方便批量改MD。
 
 三、环境和命令参数
@@ -50,7 +50,7 @@ dll/lib与MD/MT是两个维度。Release静态依赖应与目标CRT匹配；出�
 
 七、验证和正式发布
 先准备依赖，再编译库/应用并检查真实错误、退出码和目标时间戳。CloudRebuild部分复制/清理提示不代表编译失败，脚本退出0也不能替代检查实际MSBuild错误。无.inl时xcopy的File not found通常可解释；不能忽略真正缺文件。
-公开头经构建同步后检查源头与include一致、Macro对应最终目标。C ABI必须用纯C编译器检查头文件。Debug/Release、位数、dll/lib、CRT组合分别记录；LumaPlayerTest的STATIC_LIB配置要先准备Core静态库，回到桌面时重新运行应用version恢复DLL Macro和依赖。
+公开头经构建同步后检查源头与include一致、Macro对应最终目标。C ABI必须用纯C编译器检查头文件。Debug/Release、位数、dll/lib、CRT组合分别记录；当前LumaPlayerTest为Qt工程，与桌面使用匹配的64位DLL依赖，不沿用旧控制台Test的STATIC_LIB切换说明。其他明确需要静态库的验证须单独准备，结束后恢复目标组合的Macro和依赖。
 保留库同名.cpp末尾已有逐行//测试main。临时启用优先使用动态库工程转EXE，结束恢复工程和注释；手动cl显式/Fo /Fd /Fe，所有临时文件放src/temp任务目录。正式功能与压力测试放产品Test。
 C/C++/.inl及Windows工程文件UTF-8 BOM，CMake无BOM，shell无BOM；文件尾不留额外换行/空白，连续空行按代码规范清理。已有rebuild_*.py不自动格式化。
 先在lib使用本次产物测试，成功后同步common正式64位Release包。EXE、DLL、PDB必须同批；核对PE依赖、PDB GUID/Age并记录哈希。保留旧包及其符号供旧dump分析，不覆盖唯一诊断依据。
