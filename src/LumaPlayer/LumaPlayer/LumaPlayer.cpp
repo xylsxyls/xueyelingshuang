@@ -24,6 +24,7 @@
 #include <QPaintEvent>
 #include <QToolTip>
 #include <QWheelEvent>
+#include <QWindow>
 
 #include <algorithm>
 #include <cmath>
@@ -31,6 +32,15 @@
 
 LumaPlayer::LumaPlayer(bool debugEnabled, QWidget* parent) :
 QWidget(parent),
+m_volumePercent(100),
+m_appliedVolumePercent(100),
+m_restoreVolumePercent(100),
+m_volumeRequest(0),
+m_volumePopupVisible(false),
+m_dragVolume(false),
+m_volumeMutePressed(false),
+m_volumeMuted(false),
+m_dismissVolumeClick(false),
 m_audioRender(),
 m_videoRender(),
 m_core(&m_audioRender, &m_videoRender),
@@ -101,6 +111,7 @@ m_normalWindowGeometry()
 
 LumaPlayer::~LumaPlayer()
 {
+    qApp->removeEventFilter(this);
 	m_uiTimer.stop();
 	m_clickTimer.stop();
     LOGINFO("LumaPlayer destroyed");
@@ -108,6 +119,11 @@ LumaPlayer::~LumaPlayer()
 
 void LumaPlayer::init(bool debugEnabled)
 {
+    m_volumePercent = g_config.m_volumeNormalPercent;
+    m_appliedVolumePercent = m_volumePercent;
+    m_restoreVolumePercent = m_volumePercent;
+    m_audioRender.setVolumePercent(m_volumePercent);
+    qApp->installEventFilter(this);
     LOGINFO("LumaPlayer init begin, debug=%d", debugEnabled ? 1 : 0);
     setWindowTitle(g_config.m_windowTitle);
 	setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
@@ -130,7 +146,7 @@ void LumaPlayer::init(bool debugEnabled)
 	fitInitialWindowToDesktop();
 
 	m_clickTimer.setSingleShot(true);
-	connect(&m_clickTimer, SIGNAL(timeout()), this, SLOT(onVideoClick()));
+    // 只记录首次点击的补偿窗口，不再延迟提交播放操作。
 	connect(&m_uiTimer, SIGNAL(timeout()), this, SLOT(onUiTimer()));
     m_uiTimer.start(g_config.m_uiRefreshMs);
     LOGINFO("LumaPlayer init end");
@@ -151,6 +167,7 @@ void LumaPlayer::paintEvent(QPaintEvent* event)
     painter.restore();
 	paintTopOverlay(painter);
 	paintBottomOverlay(painter);
+    paintVolume(painter, true);
 	paintZoomTip(painter);
 }
 
@@ -166,9 +183,38 @@ void LumaPlayer::resizeEvent(QResizeEvent* event)
 
 void LumaPlayer::mouseMoveEvent(QMouseEvent* event)
 {
+    if (m_dismissVolumeClick)
+    {
+        event->accept();
+        return;
+    }
 	m_mouseInside = true;
 	m_lastMouseMoveMs = m_elapsedTimer.elapsed();
-	m_lastMousePos = event->pos();
+    m_lastMousePos = event->pos();
+    if (m_volumeMutePressed)
+    {
+        update();
+        event->accept();
+        return;
+    }
+    if (m_dragVolume)
+    {
+        volumeFromPoint(event->pos());
+        showVolumeTooltip(event->pos());
+        event->accept();
+        return;
+    }
+    if ((m_volumePopupVisible && volumePopupRect().contains(event->pos())) ||
+        (m_bottomVisibleHeight > 0 && volumeButtonRect().contains(event->pos())))
+    {
+        m_hoverLoopPoint = -1;
+        m_hoverArea = hitTest(event->pos());
+        showVolumeTooltip(event->pos());
+        setCursor(Qt::ArrowCursor);
+        updateOverlayTargets();
+        update();
+        return;
+    }
 	if (m_resizeWindow)
 	{
 		setGeometry(resizeGeometryFromMouse(event->globalPos()));
@@ -246,6 +292,39 @@ void LumaPlayer::mouseMoveEvent(QMouseEvent* event)
 
 void LumaPlayer::mousePressEvent(QMouseEvent* event)
 {
+    m_dismissVolumeClick = false;
+    if (m_volumePopupVisible && !volumePopupRect().contains(event->pos()) &&
+        !volumeButtonRect().contains(event->pos()))
+    {
+        const HitArea target = hitTest(event->pos());
+        hideVolumePopup();
+        m_clickTimer.stop();
+        if (target == HitNone || target == HitTopTitle)
+        {
+            m_dismissVolumeClick = true;
+            event->accept();
+            return;
+        }
+    }
+    if (m_volumePopupVisible && volumePopupRect().contains(event->pos()))
+    {
+        m_clickTimer.stop();
+        if (event->button() == Qt::LeftButton)
+        {
+            if (volumeMuteButtonRect().contains(event->pos()))
+            {
+                m_volumeMutePressed = true;
+                update();
+            }
+            else if (event->pos().y() < volumePopupRect().bottom() - g_config.m_volumeFooterHeight + 1)
+            {
+                m_dragVolume = true;
+                volumeFromPoint(event->pos());
+            }
+        }
+        event->accept();
+        return;
+    }
     m_leftPressed = event->button() == Qt::LeftButton;
     update();
 	setFocus(Qt::MouseFocusReason);
@@ -305,6 +384,36 @@ void LumaPlayer::mousePressEvent(QMouseEvent* event)
 
 void LumaPlayer::mouseReleaseEvent(QMouseEvent* event)
 {
+    if (m_volumeMutePressed && event->button() == Qt::LeftButton)
+    {
+        m_volumeMutePressed = false;
+        if (m_volumePopupVisible && volumeMuteButtonRect().contains(event->pos()))
+        {
+            if (!m_volumeMuted)
+            {
+                m_restoreVolumePercent = m_volumePercent;
+            }
+            m_volumeMuted = !m_volumeMuted;
+            requestVolume(m_volumeMuted ? 0 : m_restoreVolumePercent, true);
+            showVolumeTooltip(event->pos());
+        }
+        update();
+        event->accept();
+        return;
+    }
+    if (m_dismissVolumeClick)
+    {
+        m_dismissVolumeClick = false;
+        event->accept();
+        return;
+    }
+    if (m_dragVolume && event->button() == Qt::LeftButton)
+    {
+        volumeFromPoint(event->pos());
+        m_dragVolume = false;
+        event->accept();
+        return;
+    }
     if (event->button() == Qt::LeftButton)
     {
         m_leftPressed = false;
@@ -379,22 +488,46 @@ void LumaPlayer::mouseReleaseEvent(QMouseEvent* event)
 	{
 		openFileDialog();
 	}
+    else if (m_pressArea == HitVolumeButton && releaseArea == HitVolumeButton)
+    {
+        m_volumePopupVisible = !m_volumePopupVisible;
+        m_bottomVisibleHeight = bottomOverlayHeight();
+        m_hoverLoopPoint = -1;
+        updateOverlayTargets();
+        update();
+    }
 	else if (m_pressArea == HitPlayButton && releaseArea == HitPlayButton)
 	{
 		togglePlayPause();
 	}
 	else if (m_pressArea == HitVideoArea && releaseArea == HitVideoArea)
 	{
-		m_clickTimer.start(QApplication::doubleClickInterval());
+        onVideoClick();
 	}
 }
 
 void LumaPlayer::mouseDoubleClickEvent(QMouseEvent* event)
 {
-	m_clickTimer.stop();
+    if ((m_volumePopupVisible && volumePopupRect().contains(event->pos())) ||
+        (m_bottomVisibleHeight > 0 && volumeButtonRect().contains(event->pos())))
+    {
+        // Qt以双击事件替代第二次按下，控件仍应在对应释放时执行一次。
+        mousePressEvent(event);
+        return;
+    }
+    if (m_dismissVolumeClick)
+    {
+        event->accept();
+        return;
+    }
+    const bool compensateClick = m_clickTimer.isActive();
+    m_clickTimer.stop();
 	if (event->button() == Qt::LeftButton && hitTest(event->pos()) == HitVideoArea)
 	{
-
+        if (compensateClick)
+        {
+            togglePlayPause();
+        }
 		m_dragVideo = false;
 		m_cancelClickToggle = true;
 		toggleFullScreen();
@@ -404,14 +537,21 @@ void LumaPlayer::mouseDoubleClickEvent(QMouseEvent* event)
 
 void LumaPlayer::onVideoClick()
 {
-	if (m_hasMedia)
+	if (m_hasMedia && !modalBlocksInput() && !m_closeRequested)
 	{
 		togglePlayPause();
+        m_clickTimer.start(QApplication::doubleClickInterval());
 	}
 }
 
 void LumaPlayer::wheelEvent(QWheelEvent* event)
 {
+    if ((m_volumePopupVisible && volumePopupRect().contains(event->pos())) ||
+        (m_bottomVisibleHeight > 0 && volumeButtonRect().contains(event->pos())))
+    {
+        event->accept();
+        return;
+    }
 	if (!m_hasMedia)
 	{
 		return;
@@ -429,6 +569,34 @@ void LumaPlayer::wheelEvent(QWheelEvent* event)
 void LumaPlayer::keyPressEvent(QKeyEvent* event)
 {
 	m_clickTimer.stop();
+    const QPoint pointer = mapFromGlobal(QCursor::pos());
+    const bool overVolume = m_volumePopupVisible && volumePopupRect().contains(pointer);
+    const bool overTop = m_topVisibleHeight > 0 && topOverlayRect().contains(pointer);
+    const bool horizontal = event->key() == Qt::Key_Left || event->key() == Qt::Key_Right;
+    const bool vertical = event->key() == Qt::Key_Up || event->key() == Qt::Key_Down;
+    if ((overVolume || overTop) && (horizontal || (vertical && (event->modifiers() & Qt::ControlModifier))))
+    {
+        cancelDeferredInput();
+        event->accept();
+        return;
+    }
+    if (overVolume && vertical)
+    {
+        if (event->modifiers() == Qt::NoModifier)
+        {
+            requestVolume(m_volumePercent + (event->key() == Qt::Key_Up ? g_config.m_volumeStep : -g_config.m_volumeStep));
+            showVolumeTooltip(pointer);
+        }
+        event->accept();
+        return;
+    }
+    if (m_volumePopupVisible && event->key() == Qt::Key_Escape)
+    {
+        hideVolumePopup();
+        event->accept();
+        return;
+    }
+    updateLoopMarkerHover(pointer);
     if (event->key() == Qt::Key_Escape && isFullScreen())
     {
         if (!event->isAutoRepeat())
@@ -507,6 +675,8 @@ void LumaPlayer::keyReleaseEvent(QKeyEvent* event)
 
 void LumaPlayer::focusOutEvent(QFocusEvent* event)
 {
+    hideVolumePopup();
+    m_dismissVolumeClick = false;
     m_leftPressed = false;
     QToolTip::hideText();
     postAction(LumaActionCancelMove);
@@ -590,6 +760,8 @@ void LumaPlayer::onUiTimer()
 
 void LumaPlayer::openFileDialog()
 {
+    hideVolumePopup();
+    cancelDeferredInput();
 	if (m_fileDialogActive)
 	{
 		return;
@@ -615,6 +787,7 @@ void LumaPlayer::loadMedia(const QString& filePath)
         return;
     }
     m_clickTimer.stop();
+    hideVolumePopup();
     m_loopMoveKey = 0;
     m_loopMoveRepeating = false;
     m_pendingLoopMovePoint = -1;
@@ -909,7 +1082,7 @@ void LumaPlayer::updateOverlayTargets()
 	bool overTop = m_mouseInside && m_topVisibleHeight > 0 && topOverlayRect().contains(m_lastMousePos);
 	bool overBottom = m_mouseInside && m_bottomVisibleHeight > 0 && bottomOverlayRect().contains(m_lastMousePos);
 	bool topActive = m_fileDialogActive || m_dragWindow || nearTop || overTop;
-	bool bottomActive = m_fileDialogActive || m_progressMenuActive || m_dragProgress || nearBottom || overBottom;
+    bool bottomActive = m_volumePopupVisible || m_dragVolume || m_fileDialogActive || m_progressMenuActive || m_dragProgress || nearBottom || overBottom;
 	if (topActive)
 	{
 		m_lastTopOverlayActiveMs = nowMs;
@@ -953,6 +1126,14 @@ void LumaPlayer::updateOverlayAnimation()
 
 HitArea LumaPlayer::hitTest(const QPoint& point) const
 {
+    if (m_volumePopupVisible && volumePopupRect().contains(point))
+    {
+        return HitVolumePopup;
+    }
+    if (m_bottomVisibleHeight > 0 && volumeButtonRect().contains(point))
+    {
+        return HitVolumeButton;
+    }
     if (m_topVisibleHeight > 0)
     {
         if (resetButtonRect().contains(point))
@@ -1260,6 +1441,11 @@ QRect LumaPlayer::videoDrawRect() const
 void LumaPlayer::updateLoopMarkerHover(const QPoint& point)
 {
 	m_hoverLoopPoint = -1;
+    if (modalBlocksInput() || (m_volumePopupVisible && volumePopupRect().contains(point)) ||
+        (m_topVisibleHeight > 0 && topOverlayRect().contains(point)))
+    {
+        return;
+    }
 	if (!m_hasMedia || m_snapshot.m_duration100ns <= 0 || m_bottomVisibleHeight <= 0)
 	{
 		return;
@@ -1366,6 +1552,258 @@ void LumaPlayer::paintTopOverlay(QPainter& painter)
 	painter.restore();
 }
 
+bool LumaPlayer::modalBlocksInput() const
+{
+    QWidget* modal = QApplication::activeModalWidget();
+    return m_fileDialogActive || (modal != nullptr && modal != this &&
+        (modal->windowModality() == Qt::ApplicationModal || isAncestorOf(modal) ||
+        (modal->windowHandle() != nullptr && modal->windowHandle()->transientParent() == windowHandle())));
+}
+
+bool LumaPlayer::eventFilter(QObject* watched, QEvent* event)
+{
+    QWidget* widget = qobject_cast<QWidget*>(watched);
+    if (event->type() == QEvent::Show && widget != nullptr && widget != this &&
+        widget->isWindow() && widget->isModal() &&
+        (widget->windowModality() == Qt::ApplicationModal || isAncestorOf(widget) ||
+        (widget->windowHandle() != nullptr && widget->windowHandle()->transientParent() == windowHandle())))
+    {
+        hideVolumePopup();
+        cancelDeferredInput();
+    }
+    if (watched != this)
+    {
+        if (m_volumePopupVisible && event->type() == QEvent::MouseButtonPress &&
+            widget != nullptr && !isAncestorOf(widget))
+        {
+            hideVolumePopup();
+        }
+        return QWidget::eventFilter(watched, event);
+    }
+    if (event->type() == QEvent::WindowDeactivate || event->type() == QEvent::Hide)
+    {
+        hideVolumePopup();
+        cancelDeferredInput();
+    }
+    const bool input = event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease ||
+        event->type() == QEvent::Shortcut || event->type() == QEvent::ShortcutOverride ||
+        event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonRelease ||
+        event->type() == QEvent::MouseButtonDblClick || event->type() == QEvent::MouseMove ||
+        event->type() == QEvent::Wheel || event->type() == QEvent::ContextMenu;
+    if (input && (modalBlocksInput() || m_closeRequested))
+    {
+        event->accept();
+        return true;
+    }
+    return QWidget::eventFilter(watched, event);
+}
+
+void LumaPlayer::cancelDeferredInput()
+{
+    m_clickTimer.stop();
+    if (m_loopMoveKey != 0 || m_pendingLoopMovePoint >= 0)
+    {
+        postAction(LumaActionCancelMove);
+        m_lastMoveInput = ++m_nextInputSerial;
+    }
+    m_loopMoveKey = 0;
+    m_loopMoveRepeating = false;
+    m_pendingLoopMovePoint = -1;
+    m_hoverLoopPoint = -1;
+    m_dragVideo = false;
+    m_dragWindow = false;
+    m_resizeWindow = false;
+    m_pressArea = HitNone;
+    m_leftPressed = false;
+    m_cancelClickToggle = true;
+}
+
+void LumaPlayer::hideVolumePopup()
+{
+    m_volumeMutePressed = false;
+    if (m_volumePopupVisible || m_dragVolume)
+    {
+        m_volumePopupVisible = false;
+        m_dragVolume = false;
+        QToolTip::hideText();
+        updateOverlayTargets();
+        update();
+    }
+}
+
+QRect LumaPlayer::volumeButtonRect() const
+{
+    const QRect play = playButtonRect();
+    return QRect(width() - g_config.m_timeMargin - play.width(), play.top(), play.width(), play.height()).translated(g_config.m_volumeIconOffset);
+}
+
+QRect LumaPlayer::volumePopupRect() const
+{
+    const int32_t top = topOverlayHeight() + g_config.m_volumeGap;
+    const int32_t bottom = bottomOverlayRect().top() - g_config.m_volumeGap;
+    const int32_t popupHeight = (std::min)(g_config.m_volumePopupSize.height(), (std::max)(1, bottom - top));
+    const int32_t popupWidth = g_config.m_volumePopupSize.width();
+    const int32_t left = (std::max)(g_config.m_volumeGap,
+        (std::min)(width() - popupWidth - g_config.m_volumeGap, volumeButtonRect().center().x() - popupWidth / 2));
+    return QRect(left, bottom - popupHeight, popupWidth, popupHeight);
+}
+
+QRect LumaPlayer::volumeTrackRect() const
+{
+    const QRect popup = volumePopupRect();
+    const int32_t sliderHeight = popup.height() - g_config.m_volumeFooterHeight;
+    const int32_t padding = (std::min)(g_config.m_volumePadding, (std::max)(1, sliderHeight / 4));
+    return QRect(popup.center().x() - g_config.m_trackHeight / 2, popup.top() + padding,
+        g_config.m_trackHeight, (std::max)(2, sliderHeight - padding * 2));
+}
+
+QRect LumaPlayer::volumeMuteButtonRect() const
+{
+    const QRect popup = volumePopupRect();
+    const int32_t size = g_config.m_titleButtonSize;
+    return QRect(popup.center().x() - size / 2,
+        popup.bottom() - g_config.m_volumeFooterHeight + 1 + (g_config.m_volumeFooterHeight - size) / 2, size, size).translated(g_config.m_volumeMuteButtonOffset);
+}
+
+void LumaPlayer::showVolumeTooltip(const QPoint& point)
+{
+    if (m_volumePopupVisible && volumeMuteButtonRect().contains(point))
+    {
+        QToolTip::showText(mapToGlobal(point), m_volumeMuted ? g_config.m_volumeRestoreText : g_config.m_volumeMuteText, this);
+        return;
+    }
+    const QString text = QString::fromStdWString(CStringManager::Format(
+        g_config.m_volumeTooltipFormat.toStdWString().c_str(), m_volumePercent));
+    QToolTip::showText(mapToGlobal(point), text, this);
+}
+
+void LumaPlayer::volumeFromPoint(const QPoint& point)
+{
+    const QRect track = volumeTrackRect();
+    const int32_t span = (std::max)(1, track.height() - 1);
+    const int32_t distance = (std::max)(0, (std::min)(span, track.bottom() - point.y()));
+    requestVolume((distance * g_config.m_volumeNormalPercent + span / 2) / span);
+}
+
+void LumaPlayer::requestVolume(int32_t percent, bool fromMuteButton)
+{
+    if (m_closeRequested)
+    {
+        return;
+    }
+    m_volumePercent = (std::max)(0, (std::min)(g_config.m_maxZoomPercent, percent));
+    if (!fromMuteButton)
+    {
+        m_volumeMuted = false;
+    }
+    submitVolume();
+    update();
+}
+
+void LumaPlayer::submitVolume()
+{
+    if (m_volumeRequest != 0 || m_volumePercent == m_appliedVolumePercent || m_closeRequested)
+    {
+        return;
+    }
+    LumaPlayerLogicAction action;
+    action.m_type = LumaActionVolume;
+    action.m_value = m_volumePercent;
+    action.m_revision = ++m_nextInputSerial;
+    if (m_logic.submit(action))
+    {
+        m_volumeRequest = action.m_revision;
+    }
+    else
+    {
+        LOGWARNING("Volume submission rejected percent=%d", m_volumePercent);
+        m_volumePercent = m_appliedVolumePercent;
+    }
+}
+
+void LumaPlayer::paintVolume(QPainter& painter, bool popup)
+{
+    if (!m_hasMedia || (popup ? !m_volumePopupVisible : m_bottomVisibleHeight <= 0))
+    {
+        return;
+    }
+    painter.save();
+    if (popup)
+    {
+        const QRect panel = volumePopupRect();
+        painter.setPen(g_config.m_overlayBorderColor);
+        painter.setBrush(g_config.m_overlayColor);
+        painter.drawRoundedRect(panel, g_config.m_volumeRadius, g_config.m_volumeRadius);
+        const QRect track = volumeTrackRect();
+        const int32_t value = (std::min)(g_config.m_volumeNormalPercent, m_volumePercent);
+        const int32_t knobY = track.bottom() - (track.height() - 1) * value / g_config.m_volumeNormalPercent;
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(g_config.m_trackColor);
+        painter.drawRoundedRect(track, g_config.m_trackHeight / 2.0, g_config.m_trackHeight / 2.0);
+        painter.setBrush(g_config.m_themeColor);
+        painter.drawRoundedRect(QRect(track.left(), knobY, track.width(), track.bottom() - knobY + 1),
+            g_config.m_trackHeight / 2.0, g_config.m_trackHeight / 2.0);
+        painter.setBrush(g_config.m_playbackPositionColor);
+        const QPointF knob = QPointF(track.center().x(), knobY) + g_config.m_volumeKnobOffset;
+        const bool hover = panel.contains(mapFromGlobal(QCursor::pos()));
+        const int32_t radius = hover && !m_dragVolume ? g_config.m_positionDragRadius : g_config.m_positionRadius;
+        painter.drawEllipse(knob, radius, radius);
+        if (m_dragVolume)
+        {
+            painter.setOpacity(g_config.m_buttonPressOpacity);
+            painter.setBrush(g_config.m_buttonPressColor);
+            painter.drawEllipse(knob, radius, radius);
+        }
+        painter.setOpacity(1.0);
+        const int32_t dividerY = panel.bottom() - g_config.m_volumeFooterHeight + 1;
+        // 填满像素行，避免抗锯齿描边将白线分摊到相邻两行而显灰。
+        painter.fillRect(QRect(panel.left() + g_config.m_volumeGap, dividerY,
+            panel.width() - 2 * g_config.m_volumeGap, g_config.m_volumeSeparatorHeight), g_config.m_volumeSeparatorColor);
+        paintVolumeButton(painter, volumeMuteButtonRect(), m_volumeMutePressed &&
+            volumeMuteButtonRect().contains(mapFromGlobal(QCursor::pos())));
+    }
+    else
+    {
+        paintVolumeButton(painter, volumeButtonRect(), m_leftPressed && m_pressArea == HitVolumeButton);
+    }
+    painter.restore();
+}
+
+void LumaPlayer::paintVolumeButton(QPainter& painter, const QRect& button, bool pressed)
+{
+    painter.save();
+    painter.setPen(Qt::NoPen);
+    if (pressed)
+    {
+        painter.setOpacity(g_config.m_buttonPressOpacity);
+        painter.setBrush(g_config.m_buttonPressColor);
+        painter.drawRoundedRect(button.translated(g_config.m_volumePressOffset), g_config.m_cornerRadius, g_config.m_cornerRadius);
+        painter.setOpacity(1.0);
+    }
+    painter.translate(button.center().x() - g_config.m_iconCanvasSize / 2,
+        button.center().y() - g_config.m_iconCanvasSize / 2);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(g_config.m_iconColor);
+    painter.drawPath(g_config.m_speakerIcon);
+    if (m_volumeMuted)
+    {
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(g_config.m_volumeMuteColor, g_config.m_iconStroke, Qt::SolidLine, Qt::RoundCap));
+        painter.drawPath(g_config.m_volumeMuteIcon);
+        painter.restore();
+        return;
+    }
+    const int32_t arcs = m_volumePercent == 0 ? 0 : m_volumePercent <= g_config.m_volumeLowPercent ? 1 :
+        m_volumePercent <= g_config.m_volumeMediumPercent ? 2 : 3;
+    painter.setBrush(Qt::NoBrush);
+    painter.setPen(QPen(g_config.m_iconColor, g_config.m_iconStroke, Qt::SolidLine, Qt::RoundCap));
+    for (int32_t index = 0; index < arcs; ++index)
+    {
+        painter.drawPath(g_config.m_volumeArcs[index]);
+    }
+    painter.restore();
+}
+
 void LumaPlayer::paintBottomOverlay(QPainter& painter)
 {
 	if (m_bottomVisibleHeight <= 0)
@@ -1404,7 +1842,7 @@ void LumaPlayer::paintBottomOverlay(QPainter& painter)
     painter.setBrush(g_config.m_themeColor);
     painter.drawRoundedRect(played, g_config.m_trackHeight / 2.0, g_config.m_trackHeight / 2.0);
     painter.setBrush(g_config.m_playbackPositionColor);
-    const QPoint knob(progressX, track.center().y());
+    const QPointF knob = QPointF(progressX, track.center().y()) + g_config.m_progressKnobOffset;
     const bool hoverKnob = m_mouseInside &&
         (m_lastMousePos - knob).manhattanLength() <= 2 * g_config.m_positionDragRadius;
     const int32_t radius = hoverKnob && !m_dragProgress ?
@@ -1445,6 +1883,7 @@ void LumaPlayer::paintBottomOverlay(QPainter& painter)
 		}
 	}
 	paintPlayIcon(painter, playButtonRect());
+    paintVolume(painter, false);
 	painter.restore();
 }
 
@@ -1686,6 +2125,7 @@ void LumaPlayer::toggleMaximize()
 
 void LumaPlayer::closeEvent(QCloseEvent* event)
 {
+    hideVolumePopup();
     if (m_closeReady)
     {
         event->accept();
@@ -1717,6 +2157,25 @@ void LumaPlayer::onLogicResult(const LumaPlayerLogicResult& result)
     }
     if (m_closeRequested)
     {
+        return;
+    }
+    if (result.m_type == LumaActionVolume)
+    {
+        if (result.m_requestId == m_volumeRequest && m_volumeRequest != 0)
+        {
+            m_volumeRequest = 0;
+            if (result.m_error == 0 && m_audioRender.setVolumePercent(result.m_point))
+            {
+                m_appliedVolumePercent = result.m_point;
+                submitVolume();
+            }
+            else
+            {
+                m_volumePercent = m_appliedVolumePercent;
+                LOGERROR("Volume application failed percent=%d", result.m_point);
+            }
+            update();
+        }
         return;
     }
     if (result.m_mediaGeneration < m_mediaGeneration)
@@ -1859,6 +2318,8 @@ QRect LumaPlayer::pinButtonRect() const
 
 void LumaPlayer::showHelpDialog()
 {
+    hideVolumePopup();
+    cancelDeferredInput();
     LumaPlayerHelpParam param(&m_logic);
     param.m_title = g_config.m_helpTitle;
     param.m_parent = windowHandle();

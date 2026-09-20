@@ -33,7 +33,9 @@ enum HitArea
 	HitPlayButton,
 	HitProgressTrack,
 	HitTopTitle,
-	HitVideoArea
+	HitVideoArea,
+    HitVolumeButton,
+    HitVolumePopup
 };
 
 /** 手动调整窗口大小时命中的边缘
@@ -69,6 +71,13 @@ public:
 	void loadMedia(const QString& filePath);
 
 protected:
+    /** 仅过滤本窗口输入，处理模态隔离及窗口外点击收起
+    @param [in] watched 事件目标，借用
+    @param [in] event 事件，借用到返回
+    @return true表示该输入已消费
+    */
+    virtual bool eventFilter(QObject* watched, QEvent* event) override;
+
     /** 关闭先异步收敛线程，收到完成后才允许窗口销毁
     @param [in] event 关闭事件，借用到返回
     */
@@ -423,7 +432,82 @@ private:
 	void updateLoopMarkerHover(const QPoint& point);
 
 private:
-	// Qt音频渲染器，Core只保存其回调目标指针不释放
+    /** 判断是否存在阻止本窗口输入的模态框
+    @return true表示只允许模态框自身交互
+    */
+    bool modalBlocksInput() const;
+
+    /** 收起音量弹框并终止拖动，不改变音量
+    */
+    void hideVolumePopup();
+
+    /** 取消延迟单击和持续AB按键，模态显示或失焦时调用
+    */
+    void cancelDeferredInput();
+
+    /** 获取右下音量按钮矩形
+    @return 本窗口逻辑像素矩形
+    */
+    QRect volumeButtonRect() const;
+
+    /** 获取避让进度条的音量弹框矩形
+    @return 本窗口逻辑像素矩形
+    */
+    QRect volumePopupRect() const;
+
+    /** 获取竖向音量轨道矩形
+    @return 本窗口逻辑像素矩形
+    */
+    QRect volumeTrackRect() const;
+
+    /** 获取弹框底部静音按钮矩形 */
+    QRect volumeMuteButtonRect() const;
+
+    /** 绘制共用喇叭和圆角按下背景 */
+    void paintVolumeButton(QPainter& painter, const QRect& button, bool pressed);
+
+    /** 绘制音量图标或弹出层，复用现有配色
+    @param [in,out] painter GUI画笔
+    @param [in] popup true只绘制弹框，false只绘制按钮
+    */
+    void paintVolume(QPainter& painter, bool popup);
+
+    /** 根据鼠标纵向位置提交0至100%的音量
+    @param [in] point 本窗口坐标，可越过轨道端点
+    */
+    void volumeFromPoint(const QPoint& point);
+
+    /** 设置最新目标并合并在途请求
+    @param [in] percent 目标百分比，自动限制到0至配置上限
+    @param [in] fromMuteButton true保留显式静音状态，否则退出静音
+    */
+    void requestVolume(int32_t percent, bool fromMuteButton = false);
+
+    /** 无在途命令时提交最新目标，失败回退已应用值
+    */
+    void submitVolume();
+
+    /** 显示真实音量，包含超过100%的增益
+    @param [in] point 本窗口悬停点
+    */
+    void showVolumeTooltip(const QPoint& point);
+
+private:
+    // 音量目标、已应用值及唯一在途序号，仅GUI访问
+    int32_t m_volumePercent;
+    int32_t m_appliedVolumePercent;
+    // 静音前音量，允许为0；不跨进程保存
+    int32_t m_restoreVolumePercent;
+    uint64_t m_volumeRequest;
+    // 音量弹框和拖动交互状态，仅GUI访问
+    bool m_volumePopupVisible;
+    bool m_dragVolume;
+    bool m_volumeMutePressed;
+    // 独立于0音量的按钮静音状态
+    bool m_volumeMuted;
+    // 仅消费上下浮框空白处收起弹框的点击
+    bool m_dismissVolumeClick;
+    // Qt音频渲染器，Core只保存其回调目标指针不释放
 	LumaPlayerAudioRender m_audioRender;
 	// Qt视频渲染器，Core只保存其回调目标指针不释放
 	LumaPlayerVideoRender m_videoRender;
@@ -457,7 +541,7 @@ private:
 	bool m_lastZoomTipVisible;
 	// GUI刷新定时器
 	QTimer m_uiTimer;
-	// 延迟视频单击，双击时取消，避免短暂改变播放状态
+    // 视频单击已即时提交；计时器只标记双击需要补偿的首次切换
 	QTimer m_clickTimer;
 
 	// 计算鼠标空闲和动画时间

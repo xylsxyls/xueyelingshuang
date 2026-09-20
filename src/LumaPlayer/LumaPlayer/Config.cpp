@@ -157,6 +157,28 @@ m_minWindowWidth(160),
 m_minWindowHeight(90),
 m_minZoomPercent(10),
 m_maxZoomPercent(500),
+m_volumeNormalPercent(100),
+m_volumeStep(5),
+m_volumePopupSize(44, 194),
+m_volumePadding(12),
+m_volumeGap(8),
+m_volumeRadius(4),
+m_volumeIconOffset(-5, 0),
+m_volumeMuteButtonOffset(2, 0),
+m_volumePressOffset(-2, -1),
+m_volumeKnobOffset(1, 0),
+m_progressKnobOffset(0, 1),
+m_volumeFooterHeight(38),
+m_volumeSeparatorColor(QColor(255, 255, 255, 140)),
+m_volumeSeparatorHeight(1),
+m_volumeMuteColor(QColor(235, 65, 65)),
+m_volumeMuteIcon(),
+m_volumeMuteText(QStringLiteral("静音")),
+m_volumeRestoreText(QStringLiteral("恢复原音量")),
+m_volumeLowPercent(33),
+m_volumeMediumPercent(66),
+m_volumeTooltipFormat(QStringLiteral("音量 %d%%")),
+m_speakerIcon(),
 m_previewDragIntervalMs(16),
 m_audioServiceIntervalMs(5),
 m_second100ns(10000000),
@@ -187,6 +209,17 @@ m_coreConfig()
     m_pauseIcon.addRect(QRectF(7, 6, 3, 12)); m_pauseIcon.addRect(QRectF(14, 6, 3, 12));
     m_questionIcon.moveTo(7, 7); m_questionIcon.cubicTo(7, 1, 20, 2, 18, 9);
     m_questionIcon.cubicTo(17, 12, 12, 12, 12, 16); m_questionIcon.moveTo(12, 20); m_questionIcon.lineTo(12, 21);
+    m_speakerIcon.moveTo(2, 9); m_speakerIcon.lineTo(6, 9);
+    m_volumeMuteIcon.moveTo(15, 9); m_volumeMuteIcon.lineTo(21, 15);
+    m_volumeMuteIcon.moveTo(21, 9); m_volumeMuteIcon.lineTo(15, 15);
+    m_speakerIcon.lineTo(11, 5); m_speakerIcon.lineTo(11, 19);
+    m_speakerIcon.lineTo(6, 15); m_speakerIcon.lineTo(2, 15); m_speakerIcon.closeSubpath();
+    for (int32_t index = 0; index < 3; ++index)
+    {
+        const qreal radius = 4 + index * 3;
+        m_volumeArcs[index].arcMoveTo(QRectF(11 - radius, 12 - radius, radius * 2, radius * 2), -55);
+        m_volumeArcs[index].arcTo(QRectF(11 - radius, 12 - radius, radius * 2, radius * 2), -55, 110);
+    }
 }
 
 Config& Config::instance()
@@ -206,6 +239,8 @@ void Config::init(const QStringList& arguments)
         2 * m_titleMargin + m_windowButtonGroupGap,
         2 * (m_timeMargin + m_timeWidth + m_timeTrackGap) + m_minTrackWidth);
     m_minWindowHeight = m_topOverlayHeight + m_bottomOverlayHeight + m_minVideoHeight;
+    m_minWindowHeight = (std::max)(m_minWindowHeight, m_topOverlayHeight + m_bottomOverlayHeight +
+        4 * m_volumePadding + 2 * m_volumeGap + m_volumeFooterHeight);
     if (!std::isfinite(m_keyboardSeekSeconds) || m_keyboardSeekSeconds <= 0.0)
     {
         m_keyboardSeekSeconds = 2.0;

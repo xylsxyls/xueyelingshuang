@@ -35,7 +35,8 @@ enum LumaPlayerActionType
     LumaActionDragPreview,
     LumaActionDragCommit,
     // 仅退出全屏，重复请求不得反向进入全屏
-    LumaActionExitFullscreen
+    LumaActionExitFullscreen,
+    LumaActionVolume
 };
 
 /** GUI输入或后台结果的值副本，不借用QWidget

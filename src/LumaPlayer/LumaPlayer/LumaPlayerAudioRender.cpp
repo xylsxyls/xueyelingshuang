@@ -14,6 +14,7 @@
 
 #include <climits>
 #include <chrono>
+#include <algorithm>
 
 LumaPlayerAudioRender::LumaPlayerAudioRender() :
 m_threadId(0),
@@ -26,7 +27,10 @@ m_pendingPlaybackState(false),
 m_queueGeneration(0),
 m_deviceGeneration(0),
 m_audioOutput(nullptr),
-m_audioDevice(nullptr)
+m_audioDevice(nullptr),
+m_volumePercent(100),
+m_outputOffset(0),
+m_outputGeneration(0)
 {
 	m_format.m_sampleRate = 0;
 	m_format.m_channels = 0;
@@ -198,6 +202,8 @@ void LumaPlayerAudioRender::processAudioQueue()
 
 	if (closeDevice || openDevice)
 	{
+        m_outputData.clear();
+        m_outputOffset = 0;
 		if (m_audioOutput != nullptr)
 		{
 			m_audioOutput->stop();
@@ -260,6 +266,8 @@ void LumaPlayerAudioRender::processAudioQueue()
 	}
 	if (flushDevice && m_audioOutput != nullptr)
 	{
+        m_outputData.clear();
+        m_outputOffset = 0;
 		m_audioOutput->reset();
 		m_audioDevice = m_audioOutput->start();
 		if (m_audioDevice == nullptr)
@@ -294,7 +302,6 @@ void LumaPlayerAudioRender::processAudioQueue()
 		{
 			break;
 		}
-		QByteArray data;
 		uint64_t queueGeneration = 0;
 		{
 			QMutexLocker locker(&m_mutex);
@@ -302,19 +309,37 @@ void LumaPlayerAudioRender::processAudioQueue()
 			{
 				break;
 			}
-			int32_t copyBytes = bytesFree > INT_MAX ? INT_MAX : static_cast<int32_t>(bytesFree);
-			if (copyBytes > m_pcmQueue.size())
-			{
-				copyBytes = m_pcmQueue.size();
-			}
-			data = m_pcmQueue.left(copyBytes);
-			queueGeneration = m_queueGeneration;
+            queueGeneration = m_queueGeneration;
+            if (m_outputGeneration != queueGeneration && m_outputOffset % bytesPerFrame() != 0)
+            {
+                // 队列裁剪遇到半帧短写时，先重置设备再输出新队列。
+                m_pendingFlush = true;
+                break;
+            }
+            if (m_outputGeneration != queueGeneration || m_outputOffset >= m_outputData.size())
+            {
+                m_outputData.clear();
+                m_outputOffset = 0;
+            }
+            if (m_outputData.isEmpty())
+            {
+                int32_t copyBytes = static_cast<int32_t>((std::min<qint64>)(bytesFree, m_pcmQueue.size()));
+                copyBytes -= copyBytes % bytesPerFrame();
+                m_outputData = m_pcmQueue.left(copyBytes);
+                m_outputGeneration = queueGeneration;
+            }
 		}
-		if (data.isEmpty())
+		if (m_outputData.isEmpty())
 		{
 			break;
 		}
-		qint64 writtenBytes = m_audioDevice->write(data.constData(), data.size());
+        // 每个块只转换一次，短写（包括奇数字节）继续输出已转换尾部。
+        if (m_outputOffset == 0)
+        {
+            applyVolume(m_outputData, m_volumePercent.load());
+        }
+        const qint64 writeSize = (std::min<qint64>)(bytesFree, m_outputData.size() - m_outputOffset);
+        qint64 writtenBytes = m_audioDevice->write(m_outputData.constData() + m_outputOffset, writeSize);
 		if (writtenBytes <= 0)
 		{
 			if (writtenBytes < 0)
@@ -325,14 +350,22 @@ void LumaPlayerAudioRender::processAudioQueue()
 				}
                 LOGINFO("Audio write failed, qtState=%d, qtError=%d", static_cast<int>(m_audioOutput->state()), static_cast<int>(m_audioOutput->error()));
 			}
+            // 写入0字节时丢弃转换副本，下次从原队列重新取样，避免再次乘增益。
+            if (m_outputOffset == 0)
+            {
+                m_outputData.clear();
+            }
 			break;
 		}
+        const int32_t previousOffset = m_outputOffset;
+        m_outputOffset += static_cast<int32_t>(writtenBytes);
 		{
 			QMutexLocker locker(&m_mutex);
 			if (queueGeneration == m_queueGeneration)
 			{
-				int32_t removeBytes = writtenBytes > m_pcmQueue.size() ? m_pcmQueue.size() : static_cast<int32_t>(writtenBytes);
-				m_pcmQueue.remove(0, removeBytes);
+                const int32_t alignment = bytesPerFrame();
+                const int32_t removeBytes = (m_outputOffset / alignment - previousOffset / alignment) * alignment;
+                m_pcmQueue.remove(0, (std::min)(removeBytes, m_pcmQueue.size()));
 			}
 		}
 	}
@@ -340,6 +373,8 @@ void LumaPlayerAudioRender::processAudioQueue()
 
 void LumaPlayerAudioRender::shutdownInAudioThread()
 {
+    m_outputData.clear();
+    m_outputOffset = 0;
 	if (m_audioOutput != nullptr)
 	{
 		m_audioOutput->stop();
@@ -355,6 +390,35 @@ void LumaPlayerAudioRender::shutdownInAudioThread()
 	m_pendingClose = false;
 	m_shouldPauseAudio = true;
 	m_pendingPlaybackState = false;
+}
+
+bool LumaPlayerAudioRender::setVolumePercent(int32_t percent)
+{
+    if (percent < 0 || percent > g_config.m_maxZoomPercent)
+    {
+        return false;
+    }
+    m_volumePercent.store(percent);
+    return true;
+}
+
+void LumaPlayerAudioRender::applyVolume(QByteArray& data, int32_t percent)
+{
+    if (percent == 100 || percent < 0 || data.size() % 2 != 0)
+    {
+        return;
+    }
+    unsigned char* bytes = reinterpret_cast<unsigned char*>(data.data());
+    for (int32_t index = 0; index < data.size(); index += 2)
+    {
+        const int32_t word = bytes[index] | (static_cast<int32_t>(bytes[index + 1]) << 8);
+        const int32_t sample = word >= 32768 ? word - 65536 : word;
+        const int64_t scaled = static_cast<int64_t>(sample) * percent / 100;
+        const int32_t limited = static_cast<int32_t>((std::max<int64_t>)(-32768, (std::min<int64_t>)(32767, scaled)));
+        const uint32_t encoded = static_cast<uint32_t>(limited) & 0xffff;
+        bytes[index] = static_cast<unsigned char>(encoded & 0xff);
+        bytes[index + 1] = static_cast<unsigned char>(encoded >> 8);
+    }
 }
 
 int64_t LumaPlayerAudioRender::bytesToDuration100ns(size_t byteCount) const

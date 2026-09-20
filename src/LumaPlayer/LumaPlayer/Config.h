@@ -346,7 +346,40 @@ public:
 	int32_t m_minZoomPercent;
 	// 最大缩放百分比
 	int32_t m_maxZoomPercent;
-	// 拖动预览提交间隔，单位毫秒
+    // 鼠标音量满量程及新窗口默认百分比
+    int32_t m_volumeNormalPercent;
+    // 音量方向键步长，单位百分点
+    int32_t m_volumeStep;
+    // 音量弹框宽、高、内边距和外间距，单位逻辑像素
+    QSize m_volumePopupSize;
+    int32_t m_volumePadding;
+    int32_t m_volumeGap;
+    // 音量弹框圆角半径，单位逻辑像素
+    int32_t m_volumeRadius;
+    // 底栏图标、相对图标的按下背景、两类滑块圆点偏移
+    QPoint m_volumeIconOffset;
+    // 音量框内部喇叭按钮整体偏移
+    QPoint m_volumeMuteButtonOffset;
+    QPoint m_volumePressOffset;
+    QPointF m_volumeKnobOffset;
+    QPointF m_progressKnobOffset;
+    // 弹框静音按钮区域高度、分隔线颜色及提示
+    int32_t m_volumeFooterHeight;
+    QColor m_volumeSeparatorColor;
+    int32_t m_volumeSeparatorHeight;
+    // 按钮静音专用红叉，不用于普通0音量
+    QColor m_volumeMuteColor;
+    QPainterPath m_volumeMuteIcon;
+    QString m_volumeMuteText;
+    QString m_volumeRestoreText;
+    // 低、中音量弧线分界百分比
+    int32_t m_volumeLowPercent;
+    int32_t m_volumeMediumPercent;
+    // 音量提示格式与图标路径（24逻辑像素坐标）
+    QString m_volumeTooltipFormat;
+    QPainterPath m_speakerIcon;
+    QPainterPath m_volumeArcs[3];
+    // 拖动预览提交间隔，单位毫秒
 	int64_t m_previewDragIntervalMs;
 	// 音频设备专用线程的服务间隔，单位毫秒
 	int32_t m_audioServiceIntervalMs;

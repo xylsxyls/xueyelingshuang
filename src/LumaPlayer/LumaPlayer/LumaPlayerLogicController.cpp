@@ -124,7 +124,7 @@ bool LumaPlayerLogicController::submit(const LumaPlayerLogicAction& action)
         {
             task = std::make_shared<LumaPlayerResetTask>(this, action);
         }
-        else if (action.m_type == LumaActionPan || action.m_type == LumaActionZoom)
+        else if (action.m_type == LumaActionPan || action.m_type == LumaActionZoom || action.m_type == LumaActionVolume)
         {
             task = std::make_shared<LumaPlayerViewTask>(this, action);
         }
@@ -506,6 +506,13 @@ void LumaPlayerLogicController::executeLoad(const LumaPlayerLogicAction& action)
 
 void LumaPlayerLogicController::executeView(const LumaPlayerLogicAction& action)
 {
+    if (action.m_type == LumaActionVolume)
+    {
+        const int32_t percent = static_cast<int32_t>((std::max<int64_t>)(0,
+            (std::min<int64_t>)(g_config.m_maxZoomPercent, action.m_value)));
+        publish(LumaActionVolume, 0, action.m_revision, 0, percent);
+        return;
+    }
     if (m_closing.load() || !m_ready)
     {
         return;

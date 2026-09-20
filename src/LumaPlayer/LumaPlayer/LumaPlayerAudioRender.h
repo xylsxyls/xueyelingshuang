@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <memory>
+#include <atomic>
 
 #include <QByteArray>
 #include <QMutex>
@@ -75,6 +76,18 @@ public:
 	*/
 	void shutdownInAudioThread();
 
+    /** 设置本实例输出增益，不访问Qt设备，不修改系统音量
+    @param [in] percent 百分比，范围0至配置的最大视频缩放百分比
+    @return 是否接受合法目标
+    */
+    bool setVolumePercent(int32_t percent);
+
+    /** 对完整16位小端PCM样本执行饱和增益，不改变数据长度
+    @param [in,out] data 独占待输出副本，长度必须为偶数
+    @param [in] percent 已校验的非负音量百分比
+    */
+    static void applyVolume(QByteArray& data, int32_t percent);
+
 private:
 	/** 根据当前格式估算缓存字节数对应的播放时长
 	@param [in] byteCount 调用所需的byteCount参数
@@ -125,4 +138,12 @@ private:
 	QAudioOutput* m_audioOutput;
 	// QAudioOutput启动后返回的写入设备
 	QIODevice* m_audioDevice;
+    // 跨线程最新增益目标，设备重开不重置
+    std::atomic<int32_t> m_volumePercent;
+    // 设备线程保留已转换块，短写后继续同一字节序列
+    QByteArray m_outputData;
+    // 当前转换块已写字节数
+    int32_t m_outputOffset;
+    // 转换块对应原始PCM队列代次
+    uint64_t m_outputGeneration;
 };
