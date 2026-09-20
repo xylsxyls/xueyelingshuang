@@ -36,7 +36,9 @@ enum PlayerCommandType
 	// 单帧移动A点或B点
 	PlayerCommandMoveLoopPoint = 11,
 	// 设置播放倍速
-	PlayerCommandSetRate = 12
+	PlayerCommandSetRate = 12,
+    // 菜单打开时后台预解析，不更新播放位置或循环点
+    PlayerCommandPrepareLoopPoint = 13
 };
 
 /** 同步命令结果，调用线程等待Semaphore，工作线程执行后写入结果并signal
@@ -86,6 +88,14 @@ public:
 	std::shared_ptr<PlayerSyncResult> m_syncResult;
     // 可选请求凭据，任务未执行而释放时回报取消
     std::shared_ptr<PlayerRequestCompletion> m_completion;
+    // 异步AB解析结果；只有控制线程提交到有效循环范围
+    LumaPlayerLoopPointInfo m_preparedLoopPoint;
+    // 先设B时所需的真实首帧边界
+    LumaPlayerLoopPointInfo m_preparedFirstPoint;
+    // 解析开始时的循环编辑代次，清除或换媒体后失效
+    uint64_t m_loopRevision;
+    // true表示已完成后台边界解析，控制线程不重复解码
+    bool m_loopPrepared;
 
 public:
 	/** 构造无效命令

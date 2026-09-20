@@ -188,11 +188,23 @@
       <AdditionalDependencies>avformatstatic64.lib;avcodecstatic64.lib;swscalestatic64.lib;swresamplestatic64.lib;avutilstatic64.lib;ws2_32.lib;ole32.lib;user32.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
+  <PropertyGroup>
+    <SonicBit Condition="'$(Platform)'=='Win32'">32</SonicBit>
+    <SonicBit Condition="'$(Platform)'=='x64'">64</SonicBit>
+    <SonicDebugSuffix Condition="'$(Configuration)'=='Debug'">d</SonicDebugSuffix>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>sonicstatic$(SonicBit)$(SonicDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ItemGroup>
     <ClInclude Include="..\src\FFmpegCppAdjacentReader.h" />
     <ClCompile Include="..\src\FFmpegCppAdjacentReader.cpp" />
+    <ClInclude Include="..\src\FFmpegCppAudioTempo.h" />
+    <ClCompile Include="..\src\FFmpegCppAudioTempo.cpp" />
   </ItemGroup>
 </Project>

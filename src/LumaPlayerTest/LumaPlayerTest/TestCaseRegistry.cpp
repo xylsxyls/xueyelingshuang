@@ -28,7 +28,7 @@ const std::map<TestCaseId, TestCaseMetadata> kTestCases =
     {CaseLongPlayback, {QStringLiteral("持续播放2分钟，帧持续输出且结尾正常重播"), TestPressure, "stress", 180000}},
     {CaseLongLoop, {QStringLiteral("短AB持续循环2分钟，输出不断流且循环正常"), TestPressure, "stress", 180000}},
     {CaseEmptyUi, {QStringLiteral("空窗口只出现上浮框，中央加号无提示"), TestInstant, "gui", 30000}},
-    {CasePlayPauseUi, {QStringLiteral("键盘、视频单击及播放按钮切换实际播放状态"), TestInstant, "gui", 30000}},
+    {CasePlayPauseUi, {QStringLiteral("单击判定后切换播放，完整双击序列不改变播放状态"), TestInstant, "gui", 30000}},
     {CaseDragUi, {QStringLiteral("32次拖动进度即时跟手，松开定位到正确帧"), TestInstant, "gui", 30000}},
     {CaseSeekKeys, {QStringLiteral("普通左右键按默认2秒跳转，不受AB范围限制"), TestInstant, "gui", 30000}},
     {CaseFractionalKeys, {QStringLiteral("配置为0.5秒时左右键按小数步长跳转"), TestInstant, "gui", 30000}},
@@ -44,14 +44,18 @@ const std::map<TestCaseId, TestCaseMetadata> kTestCases =
     {CaseDiagnostics, {QStringLiteral("日志实际落盘并包含源码文件信息"), TestInstant, "core", 30000}},
     {CaseSelectionRules, {QStringLiteral("指定范围去重、删除跳过和非法输入判定正确"), TestInstant, "core", 30000}},
     {CaseButtonVisuals, {QStringLiteral("工具提示、按钮按下态和进度圆点悬停按下态正确"), TestInstant, "gui", 30000}},
-    {CaseThreadStopRace, {QStringLiteral("任务切换中停止当前任务并回收线程200次，不得崩溃或残留线程"), TestPressure, "core", 60000}}
+    {CaseThreadStopRace, {QStringLiteral("任务切换中停止当前任务并回收线程200次，不得崩溃或残留线程"), TestPressure, "core", 60000}},
+    {CaseRatePitch, {QStringLiteral("0.1至5倍流式音频连续、分块一致且实际PCM供给充足"), TestInstant, "legacy", 30000}},
+    {CaseProgressClick, {QStringLiteral("1/2/5倍进度单击后800ms内持续播放，无暂停往返"), TestInstant, "gui", 30000}},
+    {CaseAbRateLatency, {QStringLiteral("播放2倍及暂停5倍AB实际完成及时，清除淘汰在途解析"), TestInstant, "gui", 30000}},
+    {CaseRateSeekLoopRace, {QStringLiteral("AB与连续调速后24次前后跳转，持续解码不崩溃并正常关闭"), TestPressure, "gui", 90000}}
 };
 
 const std::set<int32_t> kDeletedTestIds;
 
 QString TestCaseRegistry::validate()
 {
-    const TestCaseId declared[] = {CaseCppLifecycle, CaseRepeatedInit, CaseCApiLifecycle, CaseCApiMedia, CaseMediaControl, CaseConfiguration, CaseFullLoopCache, CasePrefixLoopCache, CaseLatestPreview, CaseLoopMoveCancel, CaseFrameAndRate, CaseReentry, CaseMediaAndPixels, CaseAbBoundary, CasePlayingAb, CaseAbReentry, CaseExitRace, CaseMultiCore, CaseLongPlayback, CaseLongLoop, CaseEmptyUi, CasePlayPauseUi, CaseDragUi, CaseSeekKeys, CaseFractionalKeys, CaseAbMenu, CasePausedMenu, CaseFrameKey, CaseResetUi, CaseWindowState, CasePinnedUi, CaseHelpUi, CaseQueuedClose, CaseStartup, CaseDiagnostics, CaseSelectionRules, CaseButtonVisuals, CaseThreadStopRace};
+    const TestCaseId declared[] = {CaseCppLifecycle, CaseRepeatedInit, CaseCApiLifecycle, CaseCApiMedia, CaseMediaControl, CaseConfiguration, CaseFullLoopCache, CasePrefixLoopCache, CaseLatestPreview, CaseLoopMoveCancel, CaseFrameAndRate, CaseReentry, CaseMediaAndPixels, CaseAbBoundary, CasePlayingAb, CaseAbReentry, CaseExitRace, CaseMultiCore, CaseLongPlayback, CaseLongLoop, CaseEmptyUi, CasePlayPauseUi, CaseDragUi, CaseSeekKeys, CaseFractionalKeys, CaseAbMenu, CasePausedMenu, CaseFrameKey, CaseResetUi, CaseWindowState, CasePinnedUi, CaseHelpUi, CaseQueuedClose, CaseStartup, CaseDiagnostics, CaseSelectionRules, CaseButtonVisuals, CaseThreadStopRace, CaseRatePitch, CaseProgressClick, CaseAbRateLatency, CaseRateSeekLoopRace};
     std::set<int32_t> ids;
     for (size_t i = 0; i < sizeof(declared) / sizeof(declared[0]); ++i)
     {

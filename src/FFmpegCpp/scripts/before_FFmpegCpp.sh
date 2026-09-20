@@ -69,3 +69,23 @@ else
         done
     fi
 fi
+
+# Sonic is a private static dependency; match the wrapper's CRT and architecture.
+sonicpath="$xueyelingshuang/tools/sonic"
+sonicinclude="$sonicpath/include/sonicwindows"
+soniclib="$sonicpath/lib/$bitfolder"
+sonicname="sonicstatic$libbitsuffix.lib"
+if [[ "$OSTYPE" =~ ^linux ]]; then
+    sonicinclude="$sonicpath/include/soniclinux"
+    sonicname="libsonicstatic$libbitsuffix.a"
+elif [[ $3 == 'debug' ]]; then
+    soniclib="$soniclib/MD"
+    sonicname="sonicstatic${libbitsuffix}d.lib"
+fi
+if [[ ! -f "$soniclib/$sonicname" || ! -f "$sonicinclude/sonic.h" ]]; then
+    echo "Missing Sonic headers or matching library: $soniclib/$sonicname" >&2
+    exit 1
+fi
+mkdir -p "$xueyelingshuang/include/sonicinclude"
+cp -f "$sonicinclude/sonic.h" "$xueyelingshuang/include/sonicinclude/" || exit 1
+cp -f "$soniclib/$sonicname" "$xueyelingshuang/lib/" || exit 1

@@ -1,11 +1,12 @@
 ﻿#include "PlayerCommandTask.h"
 #include "PlayerEngine.h"
 
-PlayerCommandTask::PlayerCommandTask(PlayerEngine* engine, const PlayerCommand& command) :
+PlayerCommandTask::PlayerCommandTask(PlayerEngine* engine, const PlayerCommand& command, bool prepareLoop) :
 CTask(static_cast<int32_t>(command.m_type) + kTaskIdBase),
 m_engine(engine),
 m_command(command),
-m_exit(false)
+m_exit(false),
+m_prepareLoop(prepareLoop)
 {
 
 }
@@ -23,7 +24,14 @@ void PlayerCommandTask::DoTask()
     }
     if (m_engine != nullptr)
     {
-        m_engine->executeCommandTask(m_command, &m_exit);
+        if (m_prepareLoop)
+        {
+            m_engine->prepareLoopCommand(m_command, &m_exit);
+        }
+        else
+        {
+            m_engine->executeCommandTask(m_command, &m_exit);
+        }
     }
 }
 

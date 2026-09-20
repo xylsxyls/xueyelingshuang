@@ -3,8 +3,12 @@
 #endif
 #include "PlayerEngineHelper.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <limits>
+#include <vector>
+
 
 int64_t PlayerEngineHelper::clampInt64(int64_t value, int64_t minValue, int64_t maxValue)
 {
@@ -76,49 +80,42 @@ void PlayerEngineHelper::convertAudioFrame(FFmpegCppPlaybackAudioFrame* source, 
 
 bool PlayerEngineHelper::scaleAudioRate(const LumaPlayerAudioFrame& source, int32_t ratePermille, LumaPlayerAudioFrame* target)
 {
-	if (target == nullptr || target == &source || ratePermille <= 0 ||
-		source.empty() || source.m_format.m_bitsPerSample != 16)
-	{
-		return false;
-	}
-	const size_t channels = static_cast<size_t>(source.m_format.m_channels);
-	const size_t bytesPerFrame = channels * sizeof(int16_t);
-	if (bytesPerFrame == 0 || source.m_pcmData.size() % bytesPerFrame != 0)
-	{
-		return false;
-	}
-	const size_t inputFrames = source.m_pcmData.size() / bytesPerFrame;
-	if (inputFrames > ((std::numeric_limits<uint64_t>::max)() - ratePermille / 2) / 1000)
-	{
-		return false;
-	}
-	const uint64_t scaledFrames = (static_cast<uint64_t>(inputFrames) * 1000 + ratePermille / 2) / ratePermille;
-	const uint64_t outputFrames64 = scaledFrames > 0 ? scaledFrames : 1;
-	if (outputFrames64 == 0 || outputFrames64 > (std::numeric_limits<size_t>::max)() / bytesPerFrame)
-	{
-		return false;
-	}
-	const size_t outputFrames = static_cast<size_t>(outputFrames64);
-	target->reset();
-	target->m_format = source.m_format;
-	target->m_timestamp100ns = source.m_timestamp100ns;
-	target->m_duration100ns = source.m_duration100ns;
-	target->m_pcmData.resize(outputFrames * bytesPerFrame);
-	for (size_t index = 0; index < outputFrames; ++index)
-	{
-		const double position = static_cast<double>(index) * inputFrames / outputFrames;
-		const size_t left = static_cast<size_t>(position);
-		const size_t right = left + 1 < inputFrames ? left + 1 : left;
-		const double fraction = position - left;
-		for (size_t channel = 0; channel < channels; ++channel)
-		{
-			int16_t first = 0;
-			int16_t second = 0;
-			std::memcpy(&first, &source.m_pcmData[left * bytesPerFrame + channel * sizeof(int16_t)], sizeof(first));
-			std::memcpy(&second, &source.m_pcmData[right * bytesPerFrame + channel * sizeof(int16_t)], sizeof(second));
-			const int16_t value = static_cast<int16_t>(first + (second - first) * fraction);
-			std::memcpy(&target->m_pcmData[index * bytesPerFrame + channel * sizeof(int16_t)], &value, sizeof(value));
-		}
-	}
-	return true;
+    if (target == nullptr || target == &source || source.empty() ||
+        source.m_format.m_bitsPerSample != 16 || ratePermille < 50 || ratePermille > 20000)
+    {
+        return false;
+    }
+    const size_t bytesPerFrame = static_cast<size_t>(source.m_format.bytesPerFrame());
+    if (bytesPerFrame == 0 || source.m_pcmData.size() % bytesPerFrame != 0)
+    {
+        return false;
+    }
+    FFmpegCppAudioTempo tempo;
+    if (!tempo.init(source.m_format.m_sampleRate, source.m_format.m_channels) || !tempo.setRate(ratePermille))
+    {
+        return false;
+    }
+    std::vector<int16_t> input(source.m_pcmData.size() / sizeof(int16_t));
+    std::memcpy(&input[0], &source.m_pcmData[0], source.m_pcmData.size());
+    if (!tempo.write(&input[0], source.m_pcmData.size() / bytesPerFrame) || !tempo.finish())
+    {
+        return false;
+    }
+    const size_t frames = tempo.available();
+    if (frames == 0)
+    {
+        return false;
+    }
+    std::vector<int16_t> output(frames * source.m_format.m_channels);
+    if (tempo.read(&output[0], frames) != frames)
+    {
+        return false;
+    }
+    target->reset();
+    target->m_format = source.m_format;
+    target->m_timestamp100ns = source.m_timestamp100ns;
+    target->m_duration100ns = source.m_duration100ns;
+    target->m_pcmData.resize(output.size() * sizeof(int16_t));
+    std::memcpy(&target->m_pcmData[0], &output[0], target->m_pcmData.size());
+    return true;
 }

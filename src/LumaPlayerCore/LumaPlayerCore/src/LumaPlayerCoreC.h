@@ -33,7 +33,7 @@ typedef struct LumaPlayerCoreCConfig
 	int32_t m_defaultRatePermille;
 	// 最低播放倍率，必须大于0，默认100表示0.1倍率，1000表示1.0倍率
 	int32_t m_minRatePermille;
-	// 最高播放倍率，不小于最低倍率，默认3000表示3.0倍率，1000表示1.0倍率
+	// 最高播放倍率，不小于最低倍率，默认5000表示5.0倍率，1000表示1.0倍率
 	int32_t m_maxRatePermille;
 } LumaPlayerCoreCConfig;
 
@@ -578,7 +578,9 @@ typedef enum LumaPlayerCoreCOperation
     LumaPlayerCoreCOperationSetB = 9,
     LumaPlayerCoreCOperationClearLoop = 10,
     LumaPlayerCoreCOperationMoveLoop = 11,
-    LumaPlayerCoreCOperationRate = 12
+    LumaPlayerCoreCOperationRate = 12,
+    /* Prepare exact frame boundaries only; no position, playback or AB changes. */
+    LumaPlayerCoreCOperationPrepareLoopPoint = 13
 } LumaPlayerCoreCOperation;
 
 /** 请求数据，提交时复制；不改变任何旧结构布局

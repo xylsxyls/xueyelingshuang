@@ -7,6 +7,7 @@
 #include "FFmpegCpp.h"
 #include "FFmpegCppHelper.h"
 #include "FFmpegCppPlaybackReader.h"
+#include "FFmpegCppAudioTempo.h"
 
 #ifdef _WIN32
 #if defined _DEBUG

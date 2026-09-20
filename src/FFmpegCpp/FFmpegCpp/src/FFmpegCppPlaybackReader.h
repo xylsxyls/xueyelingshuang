@@ -313,6 +313,26 @@ public:
      */
     bool seek(int64_t position100ns);
 
+    /** 精确定位纯视频reader并保留下一帧供read连续播放
+    @param [in] position100ns 目标媒体位置，100纳秒
+    @param [in] option 解码预算及取消条件
+    @param [out] frame 包含目标的实际展示帧，以下一PTS修正结束边界
+    @param [out] profile 可空，记录定位耗时及帧数
+    @return 成功返回true；必须以decodeAudio=false打开
+    */
+    bool seekVideoFrame(int64_t position100ns, const FFmpegCppPlaybackPreviewOption& option,
+        FFmpegCppPlaybackVideoFrame* frame, FFmpegCppPlaybackPreviewProfile* profile);
+
+    /** 精确解析所在帧及下一PTS边界，不转换或返回像素；与同一reader的其他操作串行
+    @param [in] position100ns 媒体时间，单位100纳秒
+    @param [in] option 取消和解码预算
+    @param [out] frame 真实边界及尺寸，像素为空，不能为空
+    @param [out] profile 可空，实际解析耗时
+    @return true表示真实帧边界已解析，失败返回false
+    */
+    bool readVideoFrameInfoAt(int64_t position100ns, const FFmpegCppPlaybackPreviewOption& option,
+        FFmpegCppPlaybackVideoFrame* frame, FFmpegCppPlaybackPreviewProfile* profile);
+
     /**
      * Read the next decoded video or audio frame.
      * @param [out] frame Decoded frame output.

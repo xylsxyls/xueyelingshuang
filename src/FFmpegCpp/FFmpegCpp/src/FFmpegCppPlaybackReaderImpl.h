@@ -57,7 +57,7 @@ public:
     bool readVideoFrameAtEx(int64_t position100ns,
                             const FFmpegCppPlaybackPreviewOption& option,
                             FFmpegCppPlaybackVideoFrame* frame,
-                            FFmpegCppPlaybackPreviewProfile* profile);
+                            FFmpegCppPlaybackPreviewProfile* profile, bool keepFollowingFrame = false, bool metadataOnly = false);
 
 private:
     /** 内部checkPreviewCanceled操作，调用方须串行访问此读取器 */
@@ -77,7 +77,7 @@ private:
                               AVFrame* bestRawFrame,
                               FFmpegCppPlaybackVideoFrame* bestFrameInfo,
                               const FFmpegCppPlaybackPreviewOption& option,
-                              FFmpegCppPlaybackPreviewProfile* profile);
+                              FFmpegCppPlaybackPreviewProfile* profile, bool keepFollowingFrame);
 
     /** 内部convertVideoFrameToBgra操作，调用方须串行访问此读取器 */
     bool convertVideoFrameToBgra(const AVFrame* frame, FFmpegCppPlaybackVideoFrame* playbackFrame);

@@ -191,11 +191,23 @@
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
+  <PropertyGroup>
+    <SonicBit Condition="'$(Platform)'=='Win32'">32</SonicBit>
+    <SonicBit Condition="'$(Platform)'=='x64'">64</SonicBit>
+    <SonicDebugSuffix Condition="'$(Configuration)'=='Debug'">d</SonicDebugSuffix>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Lib>
+      <AdditionalDependencies>sonicstatic$(SonicBit)$(SonicDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ItemGroup>
     <ClInclude Include="..\src\FFmpegCppAdjacentReader.h" />
     <ClCompile Include="..\src\FFmpegCppAdjacentReader.cpp" />
+    <ClInclude Include="..\src\FFmpegCppAudioTempo.h" />
+    <ClCompile Include="..\src\FFmpegCppAudioTempo.cpp" />
   </ItemGroup>
 </Project>

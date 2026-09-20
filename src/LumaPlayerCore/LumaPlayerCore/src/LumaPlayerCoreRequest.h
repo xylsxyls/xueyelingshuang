@@ -18,7 +18,9 @@ enum LumaPlayerCoreOperation
     LumaPlayerCoreOperationSetB = 9,
     LumaPlayerCoreOperationClearLoop = 10,
     LumaPlayerCoreOperationMoveLoop = 11,
-    LumaPlayerCoreOperationRate = 12
+    LumaPlayerCoreOperationRate = 12,
+    // 只预解析位置的真实帧边界供后续AB使用，不呈现画面或改变循环/播放状态
+    LumaPlayerCoreOperationPrepareLoopPoint = 13
 };
 
 /** 请求身份及参数，提交时复制；媒体代次由宿主管理并原样返回

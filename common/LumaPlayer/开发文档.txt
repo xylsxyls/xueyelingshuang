@@ -1,5 +1,5 @@
 ﻿流光播放器（LumaPlayer）开发文档
-更新日期：2026-09-20（本次仅整理规范入口、引用及历史约定；产品实现仍为2026-09-17音量发布版）
+更新日期：2026-09-21（连续音频时间伸缩、精确跳转接续及暂停AB去重）
 配套《需求文档.txt》描述产品行为。本文件描述当前实现、构建、测试和发布规则，不保存开发阶段放行状态；新任务的阶段、确认与执行证据写入其独立工作流目录。
 当前Esc改动已完成Windows x64 Debug/Release构建、AI核心验证及用户手动试运行确认；Release指定瞬时ID 30–32共3项通过（6.2秒），未执行其余35项，不宣称全量或压力通过。已发布common/LumaPlayer及common/LumaPlayerTest，正式目录启动与正常退出通过。证据见工作流验证证据及common/LumaPlayerTest/reports/20260915-023033-619。
 
@@ -20,14 +20,19 @@ Core借用输出接口，不负责delete。帧指针只在回调期间有效，�
 
 C接口与配置
 内部LumaPlayerCoreCContext持有独立Core及两个Adapter，对外仅LumaPlayerCoreHandle。Helper异常包装、Adapter回调锁和借用生命周期保持原协议；未引入智能指针改造。
-C++及C配置包含m_defaultFrameDuration100ns（默认400000，25fps兜底）、m_defaultRatePermille（默认1000表示1.0倍率）、m_minRatePermille（默认100）、m_maxRatePermille（默认3000）。帧时长和最低倍率必须为正，最高不低于最低，默认倍率在范围内。初始化复制配置，成功打开/重开媒体使用该默认倍率，倍速设置按实例范围裁剪；真实帧时间优先于兜底。默认倍率不改变固定1000的倍率基准。配置结构布局已变，C与C++调用方全部重编，不能混用旧二进制。
+C++及C配置包含m_defaultFrameDuration100ns（默认400000，25fps兜底）、m_defaultRatePermille（默认1000表示1.0倍率）、m_minRatePermille（默认100）、m_maxRatePermille（默认5000表示5.0倍率）。帧时长和最低倍率必须为正，最高不低于最低，默认倍率在范围内。初始化复制配置，成功打开/重开媒体使用该默认倍率，倍速设置按实例范围裁剪；真实帧时间优先于兜底。默认倍率不改变固定1000的倍率基准。配置结构布局已变，C与C++调用方全部重编，不能混用旧二进制。
+播放中调速实现：Ctrl+上下经LogicController::executePlayback累计在途目标，submitCore异步提交SetRate。PlayerEngine更新连续MediaClock、当前位置和音频流速度，不seek、不prime、不flush已排队PCM，避免丢失预读声音形成缺口。暂停调速同样保留读取器、待播帧和音频流，再Play直接接续。所有操作保持原Task与实际完成回执，GUI不等待Core。
+音频变速实现：每个PlayerEngine持有独立FFmpegCppAudioTempo，跨解码包持续write/read；底层使用tools/sonic中固定的release-0.2.0及已记录补丁，许可证Apache-2.0。FFmpegCppAPI是唯一封装入口，Core不直接包含sonic.h。保持原采样率、声道及音调，变速只改变样本数量。调速保留跨包历史，定位/换媒体重建，流或AB末尾finish一次，循环开始重建算法但不清空已正确裁剪的设备尾部。不得逐包finish或重建；旧逐包OLA实现已撤下。PlayerEngineHelper::scaleAudioRate仅保留整段离线转换兼容用途，播放链不调用它。
+音频调度：m_audioLead100ns为输出墙钟预读预算，按倍率折算媒体提前量；本步已经输出音频时不再为将来的视频帧sleep，立即继续补足音频。否则高倍速下几毫秒PCM后等待10ms会反复欠载。Core仍使用原播放Task，不引入额外线程。自动回归测实际400ms播放得到的PCM时长，不能只测算法函数。
+第三方依据与边界：Chromium公开的AudioRendererAlgorithm采用连续WSOLA；抖音私有算法未获公开源码验证，不宣称复刻。Sonic来源、固定版本、本地修正和构建方式见tools/sonic/来源及构建说明.txt。极慢速采样取整须累计小数余量，否则长期音画漂移；反相立体声用强信号声道做音高分析，输出仍保持各声道。
+倍率提示实现：LumaPlayer在成功的Rate完成回执中读取实际snapshot倍率，复用paintZoomTip的中央背景、圆角、字体、位置和m_mouseIdleHideMs计时，显示一位小数的倍率文本（如1.1x）。新倍率提示清除旧缩放提示并刷新计时；新缩放结果同样清除倍率提示，避免两个中央提示重叠。失败回执不显示错误倍率，连续请求按Core完成顺序更新实际值。
 Constants类已删除；固定100ns单位换算在使用cpp内定义局部宏，FFmpeg播放/相邻帧路径同样处理。
 
 三、线程、锁和退出
 所有自行管理线程走CTaskThreadManager。控制命令各为PlayerCommandTask，在同一控制线程串行执行；PlayerWorkerTask为低优先级可中断播放任务。控制到达停止当前播放调度，执行完成按最新状态恢复播放任务，不用ReExecute/Clone重做旧业务。
-拖动预览使用独立常驻PreviewTask，只覆盖最新待处理位置和serial，不为每次移动排一个长任务。AB用独立可取消命令，UI限制在途重复，StopTask置atomic退出；入口、解码过程、转换前后和发布前检查。
+拖动预览使用独立常驻PreviewTask，只覆盖最新待处理位置和serial，不为每次移动排一个长任务。异步设置AB先在控制线程捕获位置及编辑代次，再由独立loopPoint线程执行PlayerCommandTask的prepareLoop分支，只解析真实边界，随后回控制线程校验和提交；播放任务不等待该解码。同步AB接口仍在控制线程解析并等待完成，不作为桌面交互入口。所有自管线程由CTaskThreadManager创建和回收，不添加Qt或原生业务线程。
 同一FFmpeg上下文不能并发使用。播放视频、播放音频、预览和循环准备各有读取器；预览reader锁也覆盖最终发布，关闭先等进入的预览回调结束再清空画面，避免旧帧在关闭后写回。共享快照与输出指针用状态锁，锁内不等待工作线程。
-停止是协作式，已进入底层调用不能保证瞬间退出。退出先禁止新提交，增加代次并唤醒任务，再依次回收control、preview、loop，关闭读取器与输出，最后排空并停止完成回报线程；App之后停止音频服务，日志生命周期由main收尾。生命周期操作由宿主统一串行，不在渲染回调中执行。
+停止是协作式，已进入底层调用不能保证瞬间退出。退出先禁止新提交，增加预览及循环编辑代次并唤醒任务，再依次回收control、loopPoint、preview、loop，关闭读取器与输出，最后排空并停止完成回报线程；App之后停止音频服务，日志生命周期由main收尾。清除AB、逐帧编辑和换媒体使在途AB解析失效，后台和控制提交时均核对代次；旧请求返回取消，不能恢复旧标记。生命周期操作由宿主统一串行，不在渲染回调中执行。
 同步控制不能在工作/预览回调内重入；这会导致自身等待或在帧发布期间递归关闭读取器。现实现返回StateError；异步提交用于回调意图。
 
 四、帧、AB与缓存不变量
@@ -39,10 +44,11 @@ AB移动先Pause，读取候选相邻帧、校验边界和取消，再提交点�
 默认预览解码预算8192帧，视频解码器最多4线程、音频1线程；控制等待任务上限4096，过载返回CommandQueueFailed。资源上限不能改变帧身份。
 普通预览EOF必须向解码器发送空包并接收剩余帧，不能直接结束demux循环。若耗尽预览帧数预算仍未到目标，返回失败，不能输出关键帧附近旧画面冒充目标。临时AVFrame由独占所有权清理，异常也不能泄漏。
 seek除flush codec外，还需清空SwrContext滤波延迟和待播PCM；否则上一位置音频进入新位置。seek失败必须离开Seeking并保持可响应状态，清掉可能失配的待播帧。
+精确跳转使用FFmpegCppPlaybackReader::seekVideoFrame，仅限纯视频reader；预滚动保留原始参考帧，只转目标及必要的后续就绪帧为BGRA，后续帧留在read队列并接续同一解码器。下一真实PTS确定目标结束边界，EOF排空解码器；预算不足或取消明确失败。音频读取器单独seek，prime仍在时钟重启前完成必要准备。播放定位保留Playing意图和旧位置快照，不发送pauseAudio；清理旧PCM后继续输出新位置，目标真实准备完成才发布新位置。m_audioPlaybackRunning独立记录设备播放意图，避免取消定位后仅凭Playing状态误以为设备已恢复；暂停定位仍保持暂停。不能把readVideoFrameAtEx丢弃后一帧的普通预览结果直接当成可连续播放的读取器。
 时间戳及帧结束计算注意饱和加法；音频切片用商余数计算采样偏移，A端向上取整、B端向下取整，避免溢出和区间外采样。open/seek异常必须结束Opening/Seeking并回报结果，临时读取器和帧资源由明确所有者释放。
 
 五、Qt与设备线程
-GUI定时投递合并后的Poll任务，逻辑线程读取Core快照并通过Qt::QueuedConnection送回，但只在帧、状态或动画变化时重绘，暂停空闲不重复刷整幅画面；不能在鼠标回调解码。鼠标移动事件button()通常为NoButton，不能按button()==LeftButton过滤；拖动状态与buttons()才用于判断按住的键。视频单击即时提交，双击补偿首次切换，详见第十一节；进度拖动和画面平移分开；AB悬停只更新hover，按键才暂停编辑。菜单/文件对话框有嵌套事件循环，必须防重入并锁定悬浮条。
+GUI定时投递合并后的Poll任务，逻辑线程读取Core快照并通过Qt::QueuedConnection送回，但只在帧、状态或动画变化时重绘，暂停空闲不重复刷整幅画面；不能在鼠标回调解码。鼠标移动事件button()通常为NoButton，不能按button()==LeftButton过滤；拖动状态与buttons()才用于判断按住的键。视频单击等系统双击判定窗口结束再提交，双击取消该单击，详见第十一节；进度拖动和画面平移分开；AB悬停只更新hover，按键才暂停编辑。菜单/文件对话框有嵌套事件循环，必须防重入并锁定悬浮条。
 VideoRender在回调内复制BGRA为QImage缓存，窗口在GUI线程绘制。读缓存用串号避免不必要复制；关闭/换媒体必须清空GUI持有的旧缓存。全屏只改显示布局，不重建播放器。
 画面缩放：QPainter分别开启Antialiasing和SmoothPixmapTransform，前者只处理图形边缘。缩小时使用QImage::scaled(..., Qt::SmoothTransformation)生成面积采样缓存，以源图cacheKey和目标尺寸判断复用；每次新帧/新尺寸才重新缩放，平移或控件重绘复用缓存。100%直接绘制，放大由QPainter平滑插值，避免生成巨大放大缓存。换媒体清空缓存。这里只增加必要的缩小输出图，不改变Core/Adapter帧传递及VideoRender原有源帧复制次数。
 AudioTask在线程内创建QEventLoop、QAudioOutput并处理事件，约每5ms服务队列，关闭也在同一线程。Core只入队PCM和暂停/flush等标记，GUI不直接操作音频设备，避免声卡调用拖住拖动事件。deviceGeneration隔离换媒体前后的设备错误，queueGeneration防止写入完成后删掉新队列头。设备打开、reset后start、write失败应上报，不能静默积压PCM。
@@ -51,6 +57,8 @@ AudioTask在线程内创建QEventLoop、QAudioOutput并处理事件，约每5ms�
 六、日志与CDump
 main先CDump::declareDumpFile并取得Config及线程管理器实例，再创建QApplication、初始化Config和常开日志，随后创建窗口并异步初始化Core。debug只作为诊断标记，Bridge始终打开Core日志。应用业务日志在调用点直接使用LOGINFO/LOGERROR等公开宏，不自建Logger或日志宏；Core业务可用LogManager，Engine及FFmpegCpp等二次开发库不引入日志器。
 应用与Core统一使用fileId=0，按20MiB、8个文件滚动，避免同秒创建两个ID却写入同名日志导致独立轮转冲突。App/Core初始化使用archiveOldLog=true；日志归档与滚动由LogManager实现，重要问题仍需单独保留完整日志。CDump转储及文本默认EXE目录，记录注册结果。
+请求提交及完成按id/generation/operation关联，补充输入修订号、目标位置、恢复播放意图、倍率、实际AB范围、状态、结果和steady_clock毫秒计数tickMs；打开媒体记录路径及音视频格式。App启动和Core启用日志记录各自编译日期/时间。Core::snapshot使用LOGINFO_EVERY(30)记录媒体代次、实际位置/帧边界、倍率和AB；首次及之后每30次启用日志的调用采样，不保证固定一秒一次，也不逐帧记录。PlayerEngine和FFmpegCpp不新增LogManager依赖，不修改解码行为。
+2026-09-21 02:03:29现场：访问异常0xC0000005位于FFmpegCpp.dll+0x9DAF2，对应ff_refstruct_replace+0x62；栈内候选返回地址包含ff_h264_update_thread_context。完整栈未成功展开，dump不足以确认无效指针产生源，不能归因于某一库或硬件。桌面指定视频的组合操作和临时完整堆验证均未复现，用户要求停止扩大复现并补日志。原始dump、日志及当时匹配的二进制/PDB保存在common/LumaPlayerTest/reports/20260921-r5-crash-evidence；不能用新编译PDB解释旧dump。
 故障现场保留原媒体、操作顺序、EXE/DLL/PDB、日志和dump。2026-09-10旧事件为FFmpegCpp.dll访问异常，RVA0x1f7784；用旧包符号解析为ff_h264_decode_mb_cabac+0x6f4。没有当次dump，不能确认具体根因，也不能将本轮修复视为已证明解决该崩溃。
 
 七、应用交互与完成结果
@@ -66,11 +74,12 @@ PlayerRequestCompletion持有共享执行凭据，PlayerCompletionDelivery在接
 3. 拖动和逐帧
 SeekTask使用DragBegin/DragPreview/DragCommit会话。逻辑层等Begin对应Pause实际完成后再启动预览；同一时刻仅一个预览在途，输入覆盖最新待处理目标，完成后释放槽位再提交最新目标。GUI立即更新拖动圆点和时间，并按配置间隔与定时器向后台发送目标。
 松开提交最终Seek；期间保留目标显示和最近成功预览帧。匹配最终结果到达时先同步VideoRender的新帧，再清除临时位置，失败或取消清除临时状态。播放及AB等依赖操作按有界队列暂存，最终定位失败时不执行依赖操作。切文件清理旧会话，关闭状态下失焦不再提交定位。
-普通左右键和暂停右键复用Seek任务；播放右键不触发预览。VideoRender在同一锁内复制图像、帧起止时间和序号。非拖动暂停定位使用实际帧起点，播放时间限定在当前呈现帧内。悬停AB本身不解码，逐帧编辑保持暂停，取消标记及代次用于阻止过时输出。
+普通左右键和暂停右键复用Seek任务；播放右键不触发预览。VideoRender在同一锁内复制图像、帧起止时间和序号。非拖动暂停定位使用实际帧起点，播放时间限定在当前呈现帧内。进度条按下先记录目标，只有超过系统拖动距离才进入拖动；未超过时单击直接提交一次定位，避免为了判定拖动而额外暂停/恢复。悬停AB本身不解码，逐帧编辑保持暂停，取消标记及代次用于阻止过时输出。设置A/B使用Core现有定位回执，不重复追加完整Seek。
 
 4. AB与循环缓存
 m_loopBoundaryEnabled区分保留AB标记与当前播放段是否受B约束。手动定位到B及之后允许播到EOF再从0开始；定位到A之前不裁掉前段。设置端点建立新循环意图，新B在当前位置之前时由后续播放步回A。
-播放中设置A/B或清除AB只更新边界及结束状态，不通过seekInternal重启时钟和声卡；暂停态调整端点保留定位行为。逐帧移动仍暂停并同步读取位置和画面。不能将旧版“修改端点统一刷新声卡PCM”的描述用于当前播放态。
+设置A/B或清除AB通常只更新范围与结束标志；只有当前位置已越过新B才定位回A，保持原播放/暂停状态。暂停右键已执行一次实际定位，设置端点不再无条件执行第二次音视频seek。m_exactVideoFrame缓存由下一真实PTS确定的已解码边界，受预览reader锁保护，换媒体清空；命中同一帧直接用于A/B，未命中仍精确解码，不能用默认帧率估算。GUI竖线继续依据Core实际结果更新。逐帧移动仍暂停并同步读取位置和画面。
+播放中打开右键菜单先异步提交PrepareLoopPoint（C/C++操作枚举追加13），利用用户选择菜单的时间解析真实边界；不更新进度、画面、播放状态或AB。选择A/B后复用已解析边界，未完成则在后台队列等待，取消菜单仅留下可复用缓存。FFmpegCpp::readVideoFrameInfoAt只解析真实时间边界，不做BGRA转换；预览锁覆盖解码及缓存提交，避免换媒体间隙写回旧帧。压缩视频首次精确定位仍有实际解码成本，不以平均帧率估算或预画竖线替代。
 refreshLoopBuffer保留不匹配旧缓存作为顺序读取源，同时准备匹配新范围的缓存；旧缓存耗尽且范围改变时接续reader，不将旧缓存用于新范围回绕。跨越范围间隙的第一帧仍保留，避免延长B时漏帧。B是排他结束，完整展示所选B帧。
 
 5. 重置、窗口和帮助
@@ -112,7 +121,7 @@ App与当前Qt Test使用64位DLL依赖，不能照旧控制台说明切到STATI
 保留已验证的CMakeLists原结构；仅按用户授权作必要改动，不保留旧文档中的imported targets重写方案。macOS适配由用户后续调试；Windows构建不能替代其他平台验证。
 
 九、测试入口、素材与报告
-正式测试源码为src/LumaPlayerTest，入口common/LumaPlayerTest/LumaPlayerTest1.0.exe。LegacyTests保留迁移用例，旧src/LumaPlayerTest_old不是当前构建或运行依赖。TestCaseRegistry.h/.cpp以显式稳定枚举和const map登记38项：30瞬时、8压力；中文说明、分类和执行范围以登记为准。
+正式测试源码为src/LumaPlayerTest，入口common/LumaPlayerTest/LumaPlayerTest1.0.exe。LegacyTests保留迁移用例，旧src/LumaPlayerTest_old不是当前构建或运行依赖。TestCaseRegistry.h/.cpp以显式稳定枚举和const map登记42项：33瞬时、9压力；中文说明、分类和执行范围以登记及common/LumaPlayerTest/测试文档.txt为准。
 历史迁移约定：旧工程只作迁移来源，完整迁移、自查并验证新Qt工程可独立编译运行后才删除旧源码目录，保留迁移映射和证据；该清理授权不扩大到新工程资源或其他目录，本次文档整理不执行删除。Release Win32/x64均使用LumaPlayerTest1.0命名，现有实机验证范围为Windows x64，命名不代表Win32已验证。
 四按钮从左到右为指定、瞬时、压力、全量。指定支持1,3,8-12，删除ID跳过不复用，未知ID报错；全量先瞬时后压力。每项独立进程顺序执行并自动判定。重复次数、子断言和配置次数不冒充多个用例。
 GUI测试编入实际播放器源码和moc，TestGuiAccess统一测试访问声明；发布播放器不含此测试访问。CoreTestTask/LegacyTests覆盖Core及C/C++接口，CApiSmoke.c提供纯C入口检查；独立启动用例运行所选目录播放器，内部GUI/Core用例运行对应测试执行程序。
@@ -148,16 +157,20 @@ PDB单独压缩并核对对应PE/PDB GUID和Age，保留故障版本及必要哈
 术语同需求文档：上浮框=底部进度及时间浮框，音量框=竖向弹框。Config::m_volumeIconOffset=(-5,0)、m_volumeMuteButtonOffset=(2,0)、m_volumePressOffset=(-2,-1)（相对已移动图标）、m_volumeKnobOffset=(1,0)、m_progressKnobOffset=(0,1)。volumeMuteButtonRect统一平移音量框按钮绘制及命中。后两项及绘制中心采用QPointF，避免小数像素取整；圆点悬停按绘制中心计算。paintVolumeButton复用两处喇叭，按下背景复用m_cornerRadius。m_volumeFooterHeight=38，m_volumeSeparatorColor为RGBA(255,255,255,140)，背景alpha220保持不变；m_volumeSeparatorHeight=1，fillRect填满单行像素以避免抗锯齿描边分摊亮度；弹框高度194并同步最小窗口高度。
 volumeMuteButtonRect提供独立按钮命中；按下再在按钮内释放才切换，拖出释放取消，分隔线不调音量。m_volumeMuted独立表示按钮静音，与普通0音量区分；两处按钮静音均用Config::m_volumeMuteIcon及m_volumeMuteColor画小红叉，无声波。进入静音保存当时目标到m_restoreVolumePercent（允许0），再次点击恢复；requestVolume的fromMuteButton参数仅用于保留该状态，普通滑条/方向键调音量清除静音标志，仍走原异步合并路径。换媒体和开关弹框保留音量及静音状态，新窗口为未静音100%。失焦、隐藏和关闭弹框清除静音按下态，不清除静音状态。
 底部浮框右下角使用Config集中定义的喇叭路径及三条弧线；0%不画弧线，1–33%、34–66%、67%以上分别画一、二、三条。点击按钮切换竖向弹框，弹框位于进度时间行上方。外部按下先hitTest再收起；HitNone/HitTopTitle消费本次点击，其余视频、按钮、进度条继续走原mousePressEvent及释放逻辑。失焦、隐藏、换媒体、打开模态框及关闭窗口收起。最小窗口高度为弹框轨道保留空间，原播放键保持居中。
-视频单击延迟修复：原路径m_clickTimer.timeout再调用onVideoClick，故比播放按钮多等待系统doubleClickInterval。现释放时直接调用onVideoClick，提交同一LumaActionTogglePlayback；m_clickTimer只标记补偿窗口，不再连接timeout执行操作。视频双击时若该窗口仍有效，再提交一次toggle补偿首次点击，然后按原逻辑切全屏；逻辑线程已有m_playTarget处理在途切换。拖动、键盘、失焦、模态及换媒体沿用清除窗口逻辑。单击即时与双击识别不能同时保证第一次点击完全不改变状态，故可能有短暂音频变化，不宣称零间断。
+视频单击/双击互斥：r4用户确认接受画面单击等待系统双击间隔。有效释放启动m_clickTimer，timeout才调用onVideoClick并提交同一播放Task；双击停止定时器、取消随后释放的单击，只走全屏Task，不再提交补偿toggle。播放按钮、空格和进度条不等待该定时器。拖动、键盘、失焦、模态、换媒体、关闭继续取消陈旧单击。回归发送第一次按下/释放、间隔后双击、第二次释放，持续观察整个间隔，不能只检查双击最终恢复原状态。
 快速静音修复：Qt会以MouseButtonDblClick替代第二次MouseButtonPress；原弹框分支直接吞双击，导致第二次释放前m_volumeMutePressed未置位。现在音量弹框和底栏音量按钮的双击事件复用按下处理，释放执行一次动作；不改Task架构，不增加防抖或定时间隔。GUI逐次显示静音目标；ViewTask至多一个在途、合并最新目标，音频任务读取atomic增益并处理后续PCM。设备已缓冲声音不能追溯修改。2026-09-17探针使用真实双击事件类型序列，10次切换均即时改变GUI状态，最后Task回执总耗时约60ms；不是单次声学延迟或性能上限。
 鼠标将竖向轨道映射至0–100%；鼠标悬停弹框时无修饰上下键每次调5个百分点，上限复用Config::m_maxZoomPercent（当前500）。超过100%滑块保持顶部，提示真实音量；鼠标重新操作映射回0–100%。顶部浮框或音量弹框内左右键不快退快进，Ctrl+上下不调速且不改音量；其他区域保持原AB编辑、快退快进和调速规则。
 LumaActionVolume经现有ViewTask回执，GUI保留最新目标、至多一个在途请求，以输入序号过滤陈旧回执。音量不属于媒体代次，同窗口换媒体保留；新窗口初始化100%，不写磁盘。AudioRender保存实例级atomic音量，在原音频线程将16位小端有符号PCM按百分比缩放，以64位中间值运算并饱和到16位范围；100%原样通过。不调用系统混音器或QAudioOutput::setVolume，不修改Core ABI。
 输出转换副本只处理一次，设备短写继续输出其尾部，零写不得重复乘增益；原队列按完整音频帧扣除。若队列裁剪遇到半帧短写，重置设备后输出新队列，避免半帧拼接。换设备、flush及退出清除输出副本；保留原队列代次保护和音频任务退出路径。软件增益超过100%可能削波失真，不承诺音质不变。
-窗口安装应用事件过滤器，对所属窗口模态或应用模态期间送往播放器的键盘、鼠标、滚轮和快捷键消息作拦截；模态框本身及播放内部消息不拦截。打开模态框前清除单击补偿窗口和AB按键重复，防止陈旧交互继续触发。文件选择使用原m_fileDialogActive保护；关于对话框兼容QWindow transientParent归属判断。
-本轮只更改App、产品文档及用户要求的通用发布规范，不修改Core、正式Test工程、version、重建脚本或CMake。试运行版在src/temp/LumaPlayerVolume-20260916；用户认可后已仅将应用EXE增量发布至common，正式测试按明确要求跳过。没有声学测量或跨平台验证。
+窗口安装应用事件过滤器，对所属窗口模态或应用模态期间送往播放器的键盘、鼠标、滚轮和快捷键消息作拦截；模态框本身及播放内部消息不拦截。打开模态框前取消待判定单击和AB按键重复，防止陈旧交互继续触发。文件选择使用原m_fileDialogActive保护；关于对话框兼容QWindow transientParent归属判断。
+Sonic第三方接入：tools/sonic保留带本地修正及许可证的tar.xz源码包、来源及可重复构建说明；include/sonicwindows、include/soniclinux存平台头，lib/x86、lib/x64及MD子目录区分架构和CRT。Windows MT/MTd/MD/MDd共8个库已构建并链接运行验证。FFmpegCpp before按现有Release MT、Debug MDd组合复制选定头与静态库到公共include/lib，DLL直接链接、LIB合入Sonic对象，CMake从公共lib引用；撤下直接编译tools源码的登记，不改version/rebuild。Linux仅提供PIC静态库重建脚本，本机未构建验证，不以Windows库冒充其他平台产物。后续发布按实际变化同步FFmpegCpp、Core、App及各自匹配PDB，不能只拷贝EXE。
 
 十二、验证记录与接手边界
 旧文档记载2026-09-12 Windows x64 Debug/Release完成36个唯一ID（30瞬时、6压力），138次配置/重复执行、303.1秒，19/20未执行；另记载路径控件、自动素材生成及相关指定用例验证。它们仅保留为历史记录，不是本轮测试结论。
 本轮读取时，common/LumaPlayerTest下没有历史所引用的reports目录，common/LumaPlayer下也没有旧LumaPlayer需求开发工作流目录。原始报告、迁移核对、dump和恢复笔记未核实，不作为当前可用证据入口。旧版文档备份：src/temp/LumaPlayerDocsSync-20260914-1b9b31c745294054a4d69a7fd54018d5。
 上述源码、脚本和文档对应检查属于此前文档核对记录，不能替代音量改动验证。2026-09-16初版42条为历史；2026-09-17最终试运行版Windows x64 Debug/Release构建均0警告0错误，前置核心验证72条断言通过，用户认可试运行并明确跳过正式测试后发布。正式证据见发布记录/20260917-Volume，发布后启动和退出通过；不将前置断言称为正式用例或全量测试通过，未做声学测量或跨平台验证。历史FFmpeg异常缺完整现场，不能认定已解决。
+2026-09-20倍速修复补充轮：Release x64 Core、App及Test均构建成功。自动生成素材的ID 39、40、41三项均通过；ID 11帧/PCM边界回归通过。原有GUI指定回归中，ID 24、27、30、31、32通过，ID 23、26、28、37受测试程序GUI准备/合成素材交互限制未通过，失败证据保留在本轮test-batch-r2，未冒充全量通过；未执行压力、Debug或全量测试。当前尚未按本轮授权发布运行文件或符号包。
+2026-09-21 r3：FFmpegCpp、Core、App、Test Windows x64 Release构建成功。最终指定18项瞬时回归全部通过，ID为5、9、10、11、12、14、15、16、22、23、24、26、27、28、37、39、40、41；报告在common/LumaPlayerTest/reports/20260921-SeekAudio-r3-final。旧GUI准备失败通过修正真实鼠标位置和拖动阈值解决，失败报告原样保留。两份真实MP4各执行40/41通过：1/2/5倍跳转到后续帧59～183ms，5倍59～123ms，暂停5倍AB实际完成107～131ms（含100ms菜单计时），恢复新帧61ms；仅代表样本结果。39补充跨包一致性、0.1～5倍基频/时长/反相声道/跳变及Core音频供给验证。FFmpegCpp存在外部头文件编码和Sonic数值窄化警告；未测Debug、压力、全量或其他平台。真实人声与音乐听感仍待C5确认，当前产物仅在lib试运行，未发布至common。
+2026-09-21 r4：FFmpegCpp、Core、App、Test Windows x64 Release构建成功。最终21项瞬时回归全部通过，ID为5、9、10、11、12、14、15、16、22、23、24、26、27、28、30、31、32、37、39、40、41，报告common/LumaPlayerTest/reports/20260921-SeekAudio-r4-final；用户桌面指定MP4另执行22/40/41均通过，报告20260921-r4-user-final-*。播放2倍A/B/修改A耗时124/242/126ms，暂停5倍A/B为120/222ms，包含100ms菜单选择；恢复后新帧143ms，仅代表该样本。前一批20260921-SeekAudio-r4为21瞬时加ID17退出竞争压力项通过，未做长时间压力、全量、产品Debug或其他平台测试。Sonic共8个Windows架构/CRT库经实际链接、PCM冒烟及dumpbin核对；FFmpegCpp静态LIB也构建并核对Sonic对象已合入，证据在20260921-r4-sonic。当前仅更新lib试运行产物，等待C5，未正式发布。
+2026-09-21 r5：用户手动试运行未发现新增问题。App/Core/Test Release构建通过；最终ID35、40、41三项相关瞬时验证通过，报告common/LumaPlayerTest/reports/20260921-r5-diagnostics-final-v2；发布后common测试目录ID35健康检查退出码0、7项断言通过，报告20260921-r5-published-health-v3。按增量规则发布App、Core、FFmpegCpp及测试EXE到各自实际部署目录，未复制其他未变依赖。两个Diagnostics符号包均以Rate包为基线，只替换本轮变化模块PDB，以7z LZMA2 -mx=9固实压缩并通过完整性测试；旧文件备份在工作流release-20260921/backup。崩溃现场仍未稳定复现，不能把本轮日志补充称为根因修复；未执行全量、长时压力、Debug或其他平台测试，工作流等待用户结束。
 后续需求按《工程软件开发工作流》现行版执行（本次核对为v2.0）；需求理解及确认必留，同时列出本轮数字确认点，由用户选择仅免哪些后续口令，内部五阶段照常执行。提问统一为普通文本数字清单。退出保存状态供恢复，结束清理本工作流全部临时文件并保留正式成果及必要证据；不得沿用旧任务确认自动放行新需求。阶段顺序和口令以工作流正文为准，本产品文档不维护第二套流程。

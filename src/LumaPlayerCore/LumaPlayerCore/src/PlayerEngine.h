@@ -4,6 +4,7 @@
 #include "IVideoRender.h"
 #include "MediaClock.h"
 #include "PlayerCommand.h"
+#include "FFmpegCpp/FFmpegCppAPI.h"
 
 #include <atomic>
 #include <memory>
@@ -249,6 +250,12 @@ public:
     */
     void executeCommandTask(const PlayerCommand& command, const std::atomic<bool>* exitFlag);
 
+    /** 后台解析异步AB的真实帧边界，再提交控制线程应用；不改变播放状态
+    @param [in] command 包含编辑代次和独立完成凭据的命令副本
+    @param [in] exitFlag 任务取消标记，解析期间有效
+    */
+    void prepareLoopCommand(const PlayerCommand& command, const std::atomic<bool>* exitFlag);
+
     /** 取消尚未完成的端点移动，不等待解码退出
     */
     void cancelLoopPointMove();
@@ -325,10 +332,12 @@ private:
 	/** 使用预览reader重新读取循环点所在显示帧，保证B点右边界来自下一帧真实时间戳
 	@param [in,out] pointInfo 需要修正的循环点
 	@param [in] position100ns 设置循环点时的媒体位置，单位100纳秒
+	@param [in] exitFlag 可空的任务取消标记
+	@param [in] loopRevision 非零时要求解析期间循环编辑代次不变
 	@return true表示修正成功，false表示保留原循环点
 	*/
     bool refineLoopPointByPreview(LumaPlayerLoopPointInfo* pointInfo, int64_t position100ns,
-        const std::atomic<bool>* exitFlag);
+        const std::atomic<bool>* exitFlag, uint64_t loopRevision = 0);
 
 	/** 解码并显示指定位置附近的一帧
 	@param [in] position100ns 目标位置，单位100纳秒
@@ -401,6 +410,17 @@ private:
     */
     LumaPlayerCoreResult primePlayback(int64_t position100ns);
 
+    /** 输出变速流中已就绪样本，finish仅在流/AB边界使用
+    @param [in] finish 是否排空算法尾部
+    @return 渲染结果
+    */
+    LumaPlayerCoreResult drainAudioTempo(bool finish);
+
+    /** 定位或换流后丢弃时间伸缩历史
+    @return 新音频流是否准备成功
+    */
+    bool resetAudioTempo();
+
 	/** 更新共享快照中的状态和位置
 	@param [in] state 新状态
 	@param [in] position100ns 新播放位置
@@ -457,6 +477,10 @@ private:
 	uint32_t m_previewThreadId;
 	// 独立循环预备线程，不阻塞交互预览
 	uint32_t m_loopThreadId;
+    // 异步AB解析线程，不占用播放控制线程
+    uint32_t m_loopPointThreadId;
+    // 清除、逐帧编辑、换媒体或关闭时淘汰在途AB解析
+    std::atomic<uint64_t> m_loopRevision;
 	// 当前是否已经完成初始化
 	bool m_isInit;
 	// 预览线程身份，用于拒绝回调内同步等待
@@ -465,6 +489,12 @@ private:
 	std::thread::id m_workerStdThreadId;
 	// 外部音频渲染器，Core不负责释放
 	IAudioRender* m_audioRender;
+    // 播放任务独占的连续音频流，不能按解码包重建
+    FFmpegCppAudioTempo m_audioTempo;
+    // 本段音频算法是否已经输出尾部
+    bool m_audioTempoFinished;
+    // 已提交给设备的播放意图，不能由在途Seek的状态反推
+    bool m_audioPlaybackRunning;
 	// 外部视频渲染器，Core不负责释放
 	IVideoRender* m_videoRender;
 	// 当前播放时钟，仅在工作线程读写
@@ -479,6 +509,8 @@ private:
 	LumaPlayerLoopRange m_loopRange;
 	// 最近一次显示的视频帧边界
 	LumaPlayerLoopPointInfo m_currentVideoFrame;
+    // 由下一真实PTS确定的精确定位结果，受预览reader锁保护
+    LumaPlayerLoopPointInfo m_exactVideoFrame;
 	// 当前播放位置，单位100纳秒
 	int64_t m_position100ns;
 	// 播放倍速，1000表示1.0倍速

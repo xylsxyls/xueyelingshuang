@@ -1,0 +1,88 @@
+流光播放器测试工程测试文档
+更新日期：2026-09-21
+文档职责：说明测试工程如何构建、生成素材、选择用例、判定结果及维护测试登记。测试工程源码、测试程序、测试文档和报告必须保持同一版本。
+
+一、工程入口
+源码目录为src/LumaPlayerTest，解决方案为src/LumaPlayerTest/LumaPlayerTest.sln。Windows当前目标为VS2013、Qt5.5.1、C++11、x64；Release程序为LumaPlayerTest1.0.exe，Debug程序为LumaPlayerTestd.exe。正式程序位于common/LumaPlayerTest。测试程序把GUI用例编入实际LumaPlayer源码，Core用例不依赖Qt，CApiSmoke.c检查纯C入口。
+
+二、测试类型和稳定ID
+TestCaseRegistry.h/.cpp是唯一登记入口，ID、名称、类型、引擎和超时必须与本文同步。瞬时用例用于一次操作和短链路回归，压力用例用于重复、长时间或停止竞争；压力用例不因未执行而计为通过。
+1 C++生命周期边界（瞬时，legacy）
+2 反复初始化释放（压力，legacy）
+3 C接口生命周期（瞬时，legacy）
+4 C接口媒体操作（瞬时，legacy）
+5 媒体控制、预览和短AB（瞬时，legacy）
+6 配置与错误描述（瞬时，legacy）
+7 完整缓存循环（压力，legacy）
+8 前缀缓存循环（压力，legacy）
+9 最新预览与安全退出（瞬时，legacy）
+10 AB移动与取消（瞬时，legacy）
+11 帧边界、PCM倍速及倍率边界（瞬时，legacy）
+12 回调重入和关闭（瞬时，legacy）
+13 AVI/MP4切换和像素（瞬时，core）
+14 AB帧边界（瞬时，core）
+15 播放中AB（瞬时，core）
+16 AB重入（瞬时，core）
+17 退出竞争（压力，core）
+18 多Core隔离（瞬时，core）
+19 长时播放（压力，stress）
+20 长时循环（压力，stress）
+21 空窗口（瞬时，gui）
+22 单击判定后切换播放，完整双击序列不改变播放状态（瞬时，gui）
+23 进度条拖动跟手（瞬时，gui）
+24 左右键跳转（瞬时，gui）
+25 小数跳转步长（瞬时，gui）
+26 播放中AB菜单（瞬时，gui）
+27 暂停右键定位（瞬时，gui）
+28 AB逐帧编辑（瞬时，gui）
+29 重置（瞬时，gui）
+30 全屏、最大化、Esc（瞬时，gui）
+31 图钉和Esc（瞬时，gui）
+32 帮助模态框（瞬时，gui）
+33 关闭竞争（瞬时，gui）
+34 启动退出重复（压力，player）
+35 日志落盘、诊断字段、关闭与采样（瞬时，core）
+36 选择规则（瞬时，core）
+37 按钮和进度圆点视觉（瞬时，gui）
+38 线程停止竞争（压力，core）
+39 流式音频分块一致性、音调/时长/连续性及实际播放供给（瞬时，legacy入口，由CoreTestTask执行增强断言）
+40 1/2/5倍速下进度单击定位并持续输出后续真实帧（瞬时，gui）
+41 播放2倍及暂停5倍AB实际完成及时，清除淘汰在途解析（瞬时，gui）
+42 AB与连续调速后24次前后跳转并持续解码（压力，gui）
+当前登记为42项：33项瞬时、9项压力。新增用例只能追加稳定ID，禁止复用已删除ID。
+
+三、素材规则
+每轮由TestMediaHelper在报告根目录temp/fixtures自动生成scene.avi和中文 空格.avi，固定160×90、25fps、200帧、8秒，首秒红色、之后蓝色，48kHz双声道16位PCM。测试程序只读用户通过--video-dir指定的真实视频目录，当前层扫描、不递归、最多探测20个候选，每个探测预算5秒；真实视频不复制、不修改、不删除。合成素材不是对真实编码矩阵的替代。
+
+四、运行命令
+指定瞬时用例：
+LumaPlayerTest1.0.exe --run specified --ids 11,22,30,39,40,41 --configuration release --video-dir "D:/Backup/Downloads" --release-dir "D:/xueyelingshuang/lib" --output "D:/xueyelingshuang/test-report" --auto-exit
+瞬时集合：
+LumaPlayerTest1.0.exe --run instant --configuration release --video-dir "D:/Backup/Downloads" --release-dir "D:/xueyelingshuang/lib" --auto-exit
+压力集合：
+LumaPlayerTest1.0.exe --run pressure --configuration release --video-dir "D:/Backup/Downloads" --release-dir "D:/xueyelingshuang/lib" --auto-exit
+--configuration可为release、debug或both；默认不勾选Debug。--release-dir必须含LumaPlayer1.0.exe；启用Debug时还必须提供LumaPlayerd.exe和匹配LumaPlayerTestd.exe。--job-timeout-ms只能调整看门狗，不改变通过条件。
+
+五、判定和报告
+父程序按子进程退出码、正常退出、checks.json完整性、每条断言状态、超时和取消综合判定。报告根目录生成测试报告.txt和report.json，reports/保存每批次结果、process-output、checks、日志和截图，temp/保存中间文件与自动素材。通过必须同时满足所有断言为PASS且子进程正常退出；失败、取消、缺素材、未执行都不能算通过。修复后必须新建批次，旧报告不能替代新版本证据。
+
+2026-09-21 r4实测：最终批次20260921-SeekAudio-r4-final共21项瞬时全部通过（5、9、10、11、12、14、15、16、22、23、24、26、27、28、30、31、32、37、39、40、41）；用户桌面指定MP4的22/40/41另通过，证据20260921-r4-user-final-*。前一批20260921-SeekAudio-r4通过21瞬时及ID17退出竞争压力项，不能记为22项瞬时；未跑长时间压力、全量或产品Debug。Sonic8个Windows库及FFmpeg静态LIB的构建/核对证据在20260921-r4-sonic，不计入产品用例数量。以上目录均位于common/LumaPlayerTest/reports，未将本轮试运行认定为用户验收或正式发布。
+
+六、用例维护要求
+新增或修改功能时，先在本文登记受影响ID、正向/反向场景、预期状态、超时和素材条件，再修改TestCaseRegistry及测试实现。Core覆盖成功、非法参数、边界、取消、重入和释放；GUI覆盖真实输入、状态保持、命中和失败收敛；压力用例说明持续时间及停止条件。测试不能先写业务内部状态伪造成功。
+详细说明：GUI的move必须同时移动系统QCursor，因为播放器按真实鼠标位置判断键盘作用区域。拖动从按下后超过QApplication::startDragDistance才成立，不能继续用“按下立即进入拖动”的旧断言。LegacyTests在Windows以UTF-16路径写报告，否则中文工作流目录下可能丢失详细证据。
+
+用例39：程序合成2秒、48kHz、16位、220Hz反相双声道PCM；倍率0.1/0.5/1/1.5/2/3/5分别整段和257帧分块送入实际FFmpegCppAudioTempo。预期两种分块的样本完全相同，时长与输入时长除倍率相差小于50ms；剔除首尾各50ms后频率误差小于8Hz，相邻样本最大跳变量小于1800，声道反相误差不超过2。反例包括未初始化、无效采样率、0倍率、空样本；重建后无旧输出。另经真实Core解码播放1/2/5倍各400ms，要求实际提交PCM折算330至700ms，发现高倍速音频欠供；这不是声卡声学测量。保留旧440Hz及溢出断言，旧ID11的整段尾部时长误差限5ms，不再把每个解码包输出帧数严格相等当作流式算法契约。超时30秒。
+用例15补充：同步播放AB无设备pause/flush/resume往返；播放Seek替换旧PCM，flush增加一次但pause/resume计数不增，并等待后续真实帧。两条带独立ID的异步AB请求均需收到成功完成通知，25fps素材端点独立预期为[32000000,52400000)，不能用入队成功代替提交完成。
+用例22补充：单击画面经系统doubleClickInterval判定后播放；双击发送完整首次按下/释放、间隔（不超过80ms）后的双击和第二次释放。持续观察至系统双击间隔再加150ms，播放双击始终Playing，暂停双击始终Paused且实际帧不推进；窗口必须真正切换，定时器不能残留。30/31也复用完整双击序列，继续覆盖最大化、图钉和Esc。
+用例40：1/2/5倍各先按住轨道不移动200ms，要求仍播放且未进入拖动；释放才定位。分别点时间轴1/4和1/2位置，从输入观察到后续画面已越过目标80ms，临时拖动/目标状态清除且Core持续Playing，不出现Paused；每次小于800ms，不只检查曾出现目标帧。每个倍率再间隔20ms连续点两处，要求最终目标及播放意图正确，无中途Paused。23仍独立检查超过系统移动阈值后才进入暂停预览及最终准确定位。可用--mode case --case 40 --fixture指定只读真实视频。超时30秒。
+用例41：播放2倍时通过右键菜单设置A、B并再移动A，验证实际端点与像素映射位置一致（容许100ms帧边界误差），始终Playing、实际帧观察最大间隔小于200ms；每项小于800ms。菜单用100ms定时器选择，耗时及最大帧间隔含这一观察间隔，不冒充逐帧声学精度。然后提交A紧接清除，观察800ms确认无迟到端点。暂停5倍时右键依次设置A/B，验证真实端点、暂停状态及最终定位完成；每项小于800ms，然后点击播放，800ms内有后续真实帧。竖线预绘不能满足断言。26/27保留播放中菜单和暂停取消菜单语义，10/28保留逐帧编辑。超时30秒。
+用例42：针对20260921_020329崩溃补充组合回归。播放时实际菜单设置A=时长1/10、B=时长1/3，画面区域连续12次Ctrl+上调整至2.2倍；随后分别以2.2、0.7、5倍点击36%、79%、54%、45%、87%、45%、39%、6%位置，每次至少继续解码播放700ms，要求新帧、保持播放且不报错/崩溃，最终正常关闭；总预算90秒。使用真实视频补测H.264多线程解码，合成AVI不能替代该覆盖。未执行不记通过，崩溃前部分断言通过不代表整项通过。
+用例35：先验证日志关闭时Core仍能打开素材且不输出媒体诊断，再启用日志执行打开、2.2倍、设置AB和跳转。检查媒体路径、目标30000000、倍率2200、25fps素材实际AB范围[10000000,20400000)、构建标识、实际帧边界及tickMs。连续31次snapshot仅产生1～2条采样记录；只读取本次短测试的*.0.log分段，不把同内容主日志别名重复计数。每次新目录执行，失败不能沿用旧日志通过。
+r5诊断验证：最终Release产物ID35/40/41共3项瞬时全部通过，报告20260921-r5-diagnostics-final-v2；上一批final的35因主日志重复计数失败，报告保留，不记通过。此前原r4产物的真实媒体42及临时完整堆验证分别通过，报告20260921-r5-before-42-desktop、20260921-r5-pageheap-42；不能当成最终r5重测，也不能证明偶发崩溃已修复。未扩大长时压力、全量、Debug或跨平台范围。
+发布后健康检查：common/LumaPlayerTest/LumaPlayerTest1.0.exe使用实际common目录依赖执行ID35，进程退出码0，7项断言全部PASS，报告20260921-r5-published-health-v3。该报告的report.json受既有中文编码输出影响不能由PowerShell完整解析，但逐项检查输出和程序退出码有效；不扩大为全量测试。发布同步了本轮变更的LumaPlayerCore.dll和FFmpegCpp.dll，避免测试EXE与旧接口不匹配。
+Sonic接入验证：39继续经FFmpegCpp公开API验证真实流式音频；tools/sonic中8个Windows架构/CRT静态库另做dumpbin架构和CRT核对、实际链接与反相PCM变速冒烟，不冒充8个正式产品用例。Linux脚本尚未实机验证。相关正式报告区分瞬时/压力分类：17为退出竞争压力项，不因执行较短改称瞬时。
+听感边界：纯音、反相、分块一致性及PCM供给通过，只能证明所测性质；真实人声、音乐、声卡欠载和设备延迟须试听/实测。不得因此宣称与抖音或浏览器主观音质完全一致。
+
+七、构建、发布和边界
+按src/LumaPlayerTest/version_release.sh准备依赖，再用MSBuild12构建Release x64；Debug使用version_debug.sh和Configuration=Debug。发布只同步本轮实际变化的程序或库，不因测试文档变化复制全部动态库；PDB必须与对应PE核对GUID/Age后单独以7z极限压缩。Qt官方库、插件和MSVC运行库由运行环境提供。当前仅验证Windows x64；Linux/macOS、32位、完整VFR/编码矩阵、主观画质和长时稳定性需要另行验证。

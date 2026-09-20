@@ -5,7 +5,7 @@
 
 class PlayerEngine;
 
-/** 单条控制任务，在工作线程串行修改引擎状态
+/** 控制提交或专用AB解析任务，共用取消标记和完成凭据；只有控制分支修改播放状态
 */
 class PlayerCommandTask : public CTask
 {
@@ -20,8 +20,9 @@ public:
     /** 复制命令数据并初始化取消标记
     @param [in] engine 借用的引擎，必须存活到线程退出
     @param [in] command 命令及共享完成通知
+    @param [in] prepareLoop true为AB后台解析，false为控制线程提交
     */
-    PlayerCommandTask(PlayerEngine* engine, const PlayerCommand& command);
+    PlayerCommandTask(PlayerEngine* engine, const PlayerCommand& command, bool prepareLoop = false);
 
     /** 已取消时只通知结果，否则执行控制命令
     */
@@ -38,4 +39,6 @@ private:
     PlayerCommand m_command;
     // 协作退出标记
     std::atomic<bool> m_exit;
+    // true在专用任务线程只解析AB帧边界，不修改播放状态
+    bool m_prepareLoop;
 };

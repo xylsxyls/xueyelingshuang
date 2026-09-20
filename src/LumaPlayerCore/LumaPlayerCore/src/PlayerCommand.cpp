@@ -17,7 +17,9 @@ m_keepPlayState(false),
 m_ratePermille(1000),
 m_loopPointType(LumaPlayerCoreLoopPointA),
 m_frameOffset(0),
-m_serial(0)
+m_serial(0),
+m_loopRevision(0),
+m_loopPrepared(false)
 {
 
 }

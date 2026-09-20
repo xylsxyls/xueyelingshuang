@@ -13,7 +13,7 @@ m_loopBufferMaxBytes(64 * 1024 * 1024),
 m_defaultFrameDuration100ns(400000),
 m_defaultRatePermille(1000),
 m_minRatePermille(100),
-m_maxRatePermille(3000)
+m_maxRatePermille(5000)
 {
 
 }

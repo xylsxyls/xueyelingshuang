@@ -203,9 +203,12 @@ uint64_t LumaPlayerLogicController::submitCore(const LumaPlayerLogicAction& acti
     const int32_t result = m_core->submitAsyncEx(request, &LumaPlayerLogicController::coreCompleted, this);
     if (action.m_operation != LumaPlayerCoreCOperationPreview)
     {
-        LOGINFO("Request submitted id=%llu generation=%llu operation=%d result=%d",
+        LOGINFO("Request submitted id=%llu generation=%llu operation=%d result=%d value=%lld playAfterSeek=%d point=%d input=%llu tickMs=%lld file=%s",
             static_cast<unsigned long long>(request.m_requestId),
-            static_cast<unsigned long long>(request.m_mediaGeneration), request.m_operation, result);
+            static_cast<unsigned long long>(request.m_mediaGeneration), request.m_operation, result,
+            static_cast<long long>(action.m_value), request.m_playAfterSeek, request.m_point,
+            static_cast<unsigned long long>(action.m_revision),
+            static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count()), path.constData());
     }
     if (result != LumaPlayerCoreCResultSuccess)
     {
@@ -285,10 +288,15 @@ void LumaPlayerLogicController::complete(const LumaPlayerCoreCCompletion& comple
     }
     if (completion.m_operation != LumaPlayerCoreCOperationPreview)
     {
-        LOGINFO("Request completed id=%llu generation=%llu operation=%d result=%d",
+        LOGINFO("Request completed id=%llu generation=%llu operation=%d result=%d state=%d position=%lld rate=%d hasA=%d A=%lld hasB=%d B=%lld duration=%lld snapshotResult=%d tickMs=%lld",
             static_cast<unsigned long long>(completion.m_requestId),
             static_cast<unsigned long long>(completion.m_mediaGeneration),
-            completion.m_operation, completion.m_result);
+            completion.m_operation, completion.m_result, completion.m_snapshot.m_state,
+            static_cast<long long>(completion.m_snapshot.m_position100ns), completion.m_snapshot.m_ratePermille,
+            completion.m_snapshot.m_hasLoopA, static_cast<long long>(completion.m_snapshot.m_loopAStart100ns),
+            completion.m_snapshot.m_hasLoopB, static_cast<long long>(completion.m_snapshot.m_loopBEnd100ns),
+            static_cast<long long>(completion.m_snapshot.m_duration100ns), completion.m_snapshot.m_result,
+            static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count()));
     }
     if (completion.m_mediaGeneration != m_state.m_mediaGeneration)
     {

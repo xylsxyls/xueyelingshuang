@@ -42,7 +42,7 @@ public:
 	*/
 	static void convertAudioFrame(FFmpegCppPlaybackAudioFrame* source, LumaPlayerAudioFrame* target);
 
-	/** 将16位交错PCM按倍率重采样，保持媒体时间戳与AB边界不变
+	/** 将16位交错PCM按倍率进行时间伸缩并尽量保持音调，保持媒体时间戳与AB边界不变
 	@param [in] source 原始媒体PCM，不修改缓存
 	@param [in] ratePermille 正整数千分倍率，1000表示1.0倍率
 	@param [out] target 输出设备按原采样率播放的PCM

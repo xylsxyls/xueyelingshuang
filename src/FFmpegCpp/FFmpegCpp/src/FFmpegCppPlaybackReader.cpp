@@ -760,7 +760,7 @@ bool FFmpegCppPlaybackReaderImpl::readAdjacentVideoFrameEx(int64_t origin100ns, 
 bool FFmpegCppPlaybackReaderImpl::readVideoFrameAtEx(int64_t position100ns,
                             const FFmpegCppPlaybackPreviewOption& option,
                             FFmpegCppPlaybackVideoFrame* frame,
-                            FFmpegCppPlaybackPreviewProfile* profile)
+                            FFmpegCppPlaybackPreviewProfile* profile, bool keepFollowingFrame, bool metadataOnly)
 {
     int64_t totalBeginUs = playbackNowMicroseconds();
     if (profile != nullptr)
@@ -866,7 +866,7 @@ bool FFmpegCppPlaybackReaderImpl::readVideoFrameAtEx(int64_t position100ns,
                                       bestRawFrame,
                                       &bestFrameInfo,
                                       option,
-                                      profile))
+                                      profile, keepFollowingFrame))
             {
                 av_packet_unref(m_packet);
                     return false;
@@ -894,7 +894,7 @@ bool FFmpegCppPlaybackReaderImpl::readVideoFrameAtEx(int64_t position100ns,
                                   bestRawFrame,
                                   &bestFrameInfo,
                                   option,
-                                  profile))
+                                  profile, keepFollowingFrame))
         {
             return false;
         }
@@ -920,13 +920,13 @@ bool FFmpegCppPlaybackReaderImpl::readVideoFrameAtEx(int64_t position100ns,
     }
 
     // 末帧之后没有下一PTS，保持画面到有效媒体结束，与相邻帧路径一致
-    if (m_videoDrained && m_duration100ns > bestFrameInfo.timestamp100ns)
+    if (m_videoDrained && !shouldStop && m_duration100ns > bestFrameInfo.timestamp100ns)
     {
         bestFrameInfo.duration100ns = m_duration100ns - bestFrameInfo.timestamp100ns;
     }
     FFmpegCppPlaybackVideoFrame convertedFrame = bestFrameInfo;
     int64_t convertBeginUs = playbackNowMicroseconds();
-    bool convertOk = convertVideoFrameToBgra(bestRawFrame, &convertedFrame);
+    bool convertOk = metadataOnly || convertVideoFrameToBgra(bestRawFrame, &convertedFrame);
     int64_t convertCostUs = playbackNowMicroseconds() - convertBeginUs;
     if (profile != nullptr)
     {
@@ -942,6 +942,10 @@ bool FFmpegCppPlaybackReaderImpl::readVideoFrameAtEx(int64_t position100ns,
     }
 
     *frame = std::move(convertedFrame);
+    if (keepFollowingFrame && m_videoDrained)
+    {
+        m_drainStarted = true;
+    }
     if (profile != nullptr)
     {
         profile->totalCostUs = playbackNowMicroseconds() - totalBeginUs;
@@ -1031,7 +1035,7 @@ bool FFmpegCppPlaybackReaderImpl::receivePreviewFrames(int64_t position100ns,
                               AVFrame* bestRawFrame,
                               FFmpegCppPlaybackVideoFrame* bestFrameInfo,
                               const FFmpegCppPlaybackPreviewOption& option,
-                              FFmpegCppPlaybackPreviewProfile* profile)
+                              FFmpegCppPlaybackPreviewProfile* profile, bool keepFollowingFrame)
 {
     if (readVideoCount == nullptr || nextVideoTimestamp100ns == nullptr || haveFrame == nullptr || shouldStop == nullptr || bestRawFrame == nullptr || bestFrameInfo == nullptr)
     {
@@ -1070,6 +1074,17 @@ bool FFmpegCppPlaybackReaderImpl::receivePreviewFrames(int64_t position100ns,
             ++profile->decodedVideoFrameCount;
         }
 
+        if (*shouldStop && keepFollowingFrame)
+        {
+            const bool queued = queueVideoFrame(m_frame);
+            av_frame_unref(m_frame);
+            if (!queued)
+            {
+                return false;
+            }
+            continue;
+        }
+
         FFmpegCppPlaybackVideoFrame frameInfo;
         bool infoOk = fillPreviewVideoFrameInfo(m_frame, nextVideoTimestamp100ns, &frameInfo);
         if (!infoOk)
@@ -1085,8 +1100,18 @@ bool FFmpegCppPlaybackReaderImpl::receivePreviewFrames(int64_t position100ns,
             {
                 bestFrameInfo->duration100ns = frameTime - bestFrameInfo->timestamp100ns;
             }
+            // 精确定位只转换目标及其后一帧，保留解码器连续性和下一帧，避免再次seek。
+            if (keepFollowingFrame && !queueVideoFrame(m_frame))
+            {
+                av_frame_unref(m_frame);
+                return false;
+            }
             av_frame_unref(m_frame);
             *shouldStop = true;
+            if (keepFollowingFrame)
+            {
+                continue;
+            }
             return true;
         }
         if (!*haveFrame || frameTime <= cutoffTime)
@@ -1907,6 +1932,30 @@ bool FFmpegCppPlaybackReader::seek(int64_t position100ns)
     return false;
 }
 
+bool FFmpegCppPlaybackReader::seekVideoFrame(int64_t position100ns,
+    const FFmpegCppPlaybackPreviewOption& option, FFmpegCppPlaybackVideoFrame* frame,
+    FFmpegCppPlaybackPreviewProfile* profile)
+{
+    FFmpegCppPlaybackReaderImpl* impl = static_cast<FFmpegCppPlaybackReaderImpl*>(m_impl);
+    if (impl == nullptr || impl->m_audioCodecContext != nullptr)
+    {
+        return false;
+    }
+    try
+    {
+        return impl->readVideoFrameAtEx(position100ns, option, frame, profile, true);
+    }
+    catch (const std::exception& error)
+    {
+        impl->m_lastError = error.what();
+    }
+    catch (...)
+    {
+        impl->m_lastError = "unknown exception in seekVideoFrame";
+    }
+    return false;
+}
+
 FFmpegCppPlaybackReadResult FFmpegCppPlaybackReader::read(FFmpegCppPlaybackFrame* frame)
 {
     FFmpegCppPlaybackReaderImpl* impl = static_cast<FFmpegCppPlaybackReaderImpl*>(m_impl);
@@ -1949,6 +1998,30 @@ bool FFmpegCppPlaybackReader::readVideoFrameAt(int64_t position100ns, size_t max
     catch (...)
     {
         impl->m_lastError = "unknown exception in FFmpegCppPlaybackReader::readVideoFrameAt";
+    }
+    return false;
+}
+
+bool FFmpegCppPlaybackReader::readVideoFrameInfoAt(int64_t position100ns,
+    const FFmpegCppPlaybackPreviewOption& option, FFmpegCppPlaybackVideoFrame* frame,
+    FFmpegCppPlaybackPreviewProfile* profile)
+{
+    FFmpegCppPlaybackReaderImpl* impl = static_cast<FFmpegCppPlaybackReaderImpl*>(m_impl);
+    if (impl == nullptr)
+    {
+        return false;
+    }
+    try
+    {
+        return impl->readVideoFrameAtEx(position100ns, option, frame, profile, false, true);
+    }
+    catch (const std::exception& error)
+    {
+        impl->m_lastError = error.what();
+    }
+    catch (...)
+    {
+        impl->m_lastError = "unknown exception in FFmpegCppPlaybackReader::readVideoFrameInfoAt";
     }
     return false;
 }

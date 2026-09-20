@@ -18,6 +18,7 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QKeyEvent>
+#include <algorithm>
 
 GuiTestRunner::GuiTestRunner(LumaPlayer* player, const QString& media, const QString& directory, const QString& mode) :
 QObject(nullptr),
@@ -28,7 +29,12 @@ m_index(0),
 m_started(false),
 m_aborting(false),
 m_position(0),
-m_dragMatches(0)
+m_dragMatches(0),
+m_unexpectedPause(false),
+m_monitorFrames(false),
+m_observedFrame(0),
+m_lastFrameMs(0),
+m_maxFrameGapMs(0)
 {
     QObject::connect(&m_timer, &QTimer::timeout, this, &GuiTestRunner::tick);
     const int32_t id = mode.toInt();
@@ -51,8 +57,11 @@ m_dragMatches(0)
             [this]() { return m_player->m_pinned; });
         add(3, "load fixture", [this, media]() { m_player->loadMedia(media); },
             [this]() { return m_player->m_hasMedia && !m_player->m_cachedFrame.isNull(); }, 15000);
-        add(0, "prepare pause", [this]() { if (m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying) { key(Qt::Key_Space); } },
-            [this]() { return m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused && m_player->m_bottomVisibleHeight == g_config.m_bottomOverlayHeight; });
+        if (id != CaseProgressClick && id != CaseAbRateLatency && id != CaseRateSeekLoopRace)
+        {
+            add(0, "prepare pause", [this]() { if (m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying) { m_player->m_core.pauseAsync(); } },
+                [this]() { return m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused && m_player->m_bottomVisibleHeight == m_player->bottomOverlayHeight(); });
+        }
         if (id == CaseAbMenu || id == CasePausedMenu || id == CaseFrameKey || id == CaseResetUi)
         {
             add(0, "prepare A", [this]() { menuAt(10000000, 0); }, [this]() { return m_player->m_snapshot.m_hasLoopA && !m_player->m_hasDragPosition; });
@@ -174,7 +183,7 @@ m_dragMatches(0)
                     const QImage pixels = m_player->grab().toImage();
                     const QColor center(pixels.pixel(point));
                     const QColor outside(pixels.pixel(point + QPoint(0, -g_config.m_positionRadius - 2)));
-                    return m_player->m_dragProgress && center != QColor(m_image.pixel(m_image.width() / 2, m_image.height() / 2)) && outside == QColor(m_image.pixel(m_image.width() / 2, m_image.height() / 2 - g_config.m_positionRadius - 2));
+                    return m_player->m_progressPressPending && !m_player->m_isDraggingProgress && center != QColor(m_image.pixel(m_image.width() / 2, m_image.height() / 2)) && outside == QColor(m_image.pixel(m_image.width() / 2, m_image.height() / 2 - g_config.m_positionRadius - 2));
                     });
                 add(CaseButtonVisuals, "knob release restores normal color", [this]() {
                     const QPoint point(m_player->progressTimeToX(m_player->displayPosition100ns()), m_player->progressTrackRect().center().y());
@@ -182,7 +191,7 @@ m_dragMatches(0)
                     QApplication::sendEvent(m_player, &release);
                     }, [this]() {
                     const QPoint point(m_player->progressTimeToX(m_player->displayPosition100ns()), m_player->progressTrackRect().center().y());
-                    return !m_player->m_dragProgress && !m_player->m_hasDragPosition &&
+                    return !m_player->m_isDraggingProgress && !m_player->m_hasDragPosition &&
                         QColor(m_player->grab().toImage().pixel(point)) == QColor(m_image.pixel(m_image.width() / 2, m_image.height() / 2));
                     });
                 add(37, "pin pressed overlay", [this]() {
@@ -204,6 +213,26 @@ m_dragMatches(0)
                 add(22, "space plays", [this]() { key(Qt::Key_Space); }, [this]() { return m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying; });
                 add(22, "button pauses", [this]() { click(m_player->playButtonRect().center()); }, [this]() { return m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused; });
                 add(22, "video single click plays", [this]() { click(m_player->videoViewportRect().center()); }, [this]() { return m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying; });
+                add(22, "playing double click never pauses", [this]() {
+                    m_unexpectedPause = false;
+                    doubleClick();
+                    }, [this]() {
+                    m_unexpectedPause = m_unexpectedPause || m_player->m_core.snapshot().m_state != LumaPlayerCoreCStatePlaying;
+                    return m_elapsed.elapsed() >= QApplication::doubleClickInterval() + 150 &&
+                        m_player->isFullScreen() && !m_player->m_clickTimer.isActive() && !m_unexpectedPause;
+                    });
+                add(22, "pause before reverse double click", [this]() { key(Qt::Key_Space); },
+                    [this]() { return m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused; });
+                add(22, "paused double click never plays or advances a frame", [this]() {
+                    m_unexpectedPause = false;
+                    m_position = m_player->m_cachedFrameStart;
+                    doubleClick();
+                    }, [this]() {
+                    m_unexpectedPause = m_unexpectedPause || m_player->m_core.snapshot().m_state != LumaPlayerCoreCStatePaused ||
+                        m_player->m_cachedFrameStart != m_position;
+                    return m_elapsed.elapsed() >= QApplication::doubleClickInterval() + 150 &&
+                        !m_player->isFullScreen() && !m_player->m_clickTimer.isActive() && !m_unexpectedPause;
+                    });
                 break;
             }
             case CaseDragUi:
@@ -213,8 +242,9 @@ m_dragMatches(0)
                     move(p);
                     QMouseEvent event(QEvent::MouseButtonPress, p, m_player->mapToGlobal(p), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
                     QApplication::sendEvent(m_player, &event);
+                    move(p + QPoint(QApplication::startDragDistance() + 1, 0), Qt::LeftButton);
                     m_dragMatches = 0;
-                    }, [this]() { return m_player->m_dragProgress; });
+                    }, [this]() { return m_player->m_isDraggingProgress; });
                 for (int32_t sample = 1; sample <= 32; ++sample)
                 {
                     add(6, "drag immediate progress sample=" + QString::number(sample), [this, sample]() {
@@ -233,7 +263,7 @@ m_dragMatches(0)
                     m_position = m_player->progressPointToTime100ns(p);
                     QMouseEvent event(QEvent::MouseButtonRelease, p, m_player->mapToGlobal(p), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
                     QApplication::sendEvent(m_player, &event);
-                    }, [this]() { return !m_player->m_hasDragPosition && !m_player->m_dragProgress &&
+                    }, [this]() { return !m_player->m_hasDragPosition && !m_player->m_isDraggingProgress &&
                         m_player->m_cachedFrameStart <= m_position && m_player->m_cachedFrameEnd > m_position; }, 8000);
                 break;
             }
@@ -261,7 +291,7 @@ m_dragMatches(0)
             }
             case CaseAbMenu:
             {
-                add(9, "playing before AB edit", [this]() { key(Qt::Key_Space); },
+                add(9, "playing before AB edit", [this]() { m_player->m_core.playAsync(); },
                     [this]() { return m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying; });
                 add(9, "right-click A preserves playing", [this]() { menuAt(10000000, 0); },
                     [this]() { return m_player->m_snapshot.m_hasLoopA && m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying; });
@@ -371,6 +401,182 @@ m_dragMatches(0)
                     [this]() { return m_player->m_pinned; });
                 break;
             }
+            case CaseRateSeekLoopRace:
+            {
+                add(42, "wait for playing controls after media resize", [this]() {
+                    move(QPoint(m_player->width() / 2, m_player->height() - 5));
+                    }, [this]() { return m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying &&
+                        m_player->m_bottomVisibleHeight == m_player->bottomOverlayHeight(); });
+                add(42, "prepare playing AB start", [this]() {
+                    menuAt(m_player->m_snapshot.m_duration100ns / 10, 0);
+                    }, [this]() { return m_player->m_snapshot.m_hasLoopA != 0; });
+                add(42, "prepare playing AB end", [this]() {
+                    menuAt(m_player->m_snapshot.m_duration100ns / 3, 1);
+                    }, [this]() { return m_player->m_snapshot.m_hasLoopB != 0; });
+                const int32_t rates[] = {2200, 700, 5000};
+                const int32_t positions[] = {36, 79, 54, 45, 87, 45, 39, 6};
+                for (size_t round = 0; round < 3; ++round)
+                {
+                    const int32_t rate = rates[round];
+                    add(42, "change rate with AB active " + QString::number(rate), [this, rate]() {
+                        move(QPoint(m_player->width() / 2, m_player->height() / 2));
+                        if (rate == 2200)
+                        {
+                            for (int32_t index = 0; index < 12; ++index)
+                            {
+                                key(Qt::Key_Up, Qt::ControlModifier);
+                            }
+                        }
+                        else
+                        {
+                            m_player->m_core.setPlaybackRatePermilleAsync(rate);
+                        }
+                        }, [this, rate]() { return m_player->m_snapshot.m_ratePermille == rate &&
+                            m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying; });
+                    for (size_t index = 0; index < 8; ++index)
+                    {
+                        const int32_t percent = positions[index];
+                        add(42, "seek and keep decoding rate=" + QString::number(rate) + " percent=" + QString::number(percent),
+                            [this, percent]() {
+                                const QRect track = m_player->progressTrackRect();
+                                m_observedFrame = m_player->m_cachedFrameStart;
+                                m_unexpectedPause = false;
+                                click(QPoint(track.left() + track.width() * percent / 100, track.center().y()));
+                            }, [this]() {
+                                const int32_t state = m_player->m_core.snapshot().m_state;
+                                m_unexpectedPause = m_unexpectedPause || state == LumaPlayerCoreCStatePaused ||
+                                    state == LumaPlayerCoreCStateError;
+                                return m_elapsed.elapsed() >= 700 && !m_unexpectedPause &&
+                                    state == LumaPlayerCoreCStatePlaying && !m_player->m_hasDragPosition &&
+                                    m_player->m_cachedFrameStart != m_observedFrame;
+                            }, 5000);
+                    }
+                }
+                break;
+            }
+            case CaseProgressClick:
+            {
+                const int32_t rates[] = {1000, 2000, 5000};
+                for (size_t rateIndex = 0; rateIndex < 3; ++rateIndex)
+                {
+                    const int32_t rate = rates[rateIndex];
+                    add(40, "prepare playback rate " + QString::number(rate), [this, rate]() {
+                        m_player->m_core.setPlaybackRatePermilleAsync(rate);
+                        m_player->m_core.playAsync();
+                        }, [this, rate]() { return m_player->m_snapshot.m_ratePermille == rate &&
+                            m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying; });
+                    add(40, "track press without motion does not pause", [this]() {
+                        const QPoint point = m_player->progressTrackRect().center();
+                        move(point);
+                        m_unexpectedPause = false;
+                        QMouseEvent press(QEvent::MouseButtonPress, point, m_player->mapToGlobal(point),
+                            Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                        QApplication::sendEvent(m_player, &press);
+                        }, [this]() {
+                        m_unexpectedPause = m_unexpectedPause || m_player->m_core.snapshot().m_state != LumaPlayerCoreCStatePlaying;
+                        return m_elapsed.elapsed() >= 200 && !m_unexpectedPause &&
+                            m_player->m_progressPressPending && !m_player->m_isDraggingProgress;
+                        });
+                    add(40, "release stationary track press seeks without drag", [this]() {
+                        const QPoint point = m_player->progressTrackRect().center();
+                        QMouseEvent release(QEvent::MouseButtonRelease, point, m_player->mapToGlobal(point),
+                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                        QApplication::sendEvent(m_player, &release);
+                        }, [this]() { return !m_player->m_hasDragPosition && !m_player->m_progressPressPending &&
+                            m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying; });
+                    for (int32_t target = 1; target <= 2; ++target)
+                    {
+                        add(40, "click seek and actual continuing frames rate=" + QString::number(rate) + " target=" + QString::number(target),
+                            [this, target]() {
+                                const QRect track = m_player->progressTrackRect();
+                                const QPoint point(track.left() + track.width() * target / 4, track.center().y());
+                                m_position = m_player->progressPointToTime100ns(point);
+                                m_unexpectedPause = false;
+                                click(point);
+                            }, [this]() {
+                                m_unexpectedPause = m_unexpectedPause ||
+                                    m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused;
+                                return !m_unexpectedPause && !m_player->m_isDraggingProgress && !m_player->m_hasDragPosition &&
+                                    m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying &&
+                                    m_player->m_cachedFrameStart >= m_position + 800000 &&
+                                    m_player->m_cachedFrameStart < m_position + 15000000 && m_elapsed.elapsed() < 800;
+                            }, 5000);
+                    }
+                    add(40, "rapid consecutive track clicks keep playing rate=" + QString::number(rate), [this]() {
+                        const QRect track = m_player->progressTrackRect();
+                        m_unexpectedPause = false;
+                        click(QPoint(track.left() + track.width() / 3, track.center().y()));
+                        QTimer::singleShot(20, this, [this]() {
+                            const QRect currentTrack = m_player->progressTrackRect();
+                            const QPoint target(currentTrack.left() + currentTrack.width() / 2, currentTrack.center().y());
+                            m_position = m_player->progressPointToTime100ns(target);
+                            click(target);
+                            });
+                        }, [this]() {
+                        m_unexpectedPause = m_unexpectedPause || m_player->m_core.snapshot().m_state == LumaPlayerCoreCStatePaused;
+                        return m_elapsed.elapsed() >= 100 && !m_unexpectedPause && !m_player->m_hasDragPosition &&
+                            m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying &&
+                            m_player->m_cachedFrameStart >= m_position && m_player->m_cachedFrameStart < m_position + 20000000;
+                        }, 5000);
+                }
+                break;
+            }
+            case CaseAbRateLatency:
+            {
+                add(41, "play at 2x before AB edits", [this]() {
+                    m_player->m_core.setPlaybackRatePermilleAsync(2000);
+                    m_player->m_core.playAsync();
+                    }, [this]() { return m_player->m_snapshot.m_ratePermille == 2000 &&
+                        m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying; });
+                for (int32_t edit = 0; edit < 3; ++edit)
+                {
+                    add(41, "playing 2x actual AB edit=" + QString::number(edit), [this, edit]() {
+                        m_position = m_player->m_snapshot.m_duration100ns * (edit == 1 ? 4 : edit == 2 ? 3 : 2) / 8;
+                        m_position = m_player->progressPointToTime100ns(QPoint(m_player->progressTimeToX(m_position),
+                            m_player->progressTrackRect().center().y()));
+                        m_monitorFrames = true;
+                        m_observedFrame = m_player->m_cachedFrameStart;
+                        m_lastFrameMs = 0;
+                        m_maxFrameGapMs = 0;
+                        m_unexpectedPause = false;
+                        menuAt(m_position, edit == 1 ? 1 : 0);
+                        }, [this, edit]() {
+                        const LumaPlayerCoreCSnapshot snapshot = m_player->m_snapshot;
+                        const int64_t point = edit == 1 ? snapshot.m_loopBEnd100ns : snapshot.m_loopAStart100ns;
+                        return (edit == 1 ? snapshot.m_hasLoopB : snapshot.m_hasLoopA) &&
+                            std::abs(point - m_position) < 1000000 &&
+                            snapshot.m_state == LumaPlayerCoreCStatePlaying && m_elapsed.elapsed() < 800 &&
+                            !m_unexpectedPause && m_maxFrameGapMs < 200;
+                        }, 5000);
+                }
+                add(41, "clear before paused AB checks", [this]() {
+                    m_player->m_core.clearLoopAsync();
+                    }, [this]() { return !m_player->m_snapshot.m_hasLoopA && !m_player->m_snapshot.m_hasLoopB; });
+                add(41, "clear cancels in-flight AB preparation without late marker", [this]() {
+                    m_player->postCore(LumaPlayerCoreCOperationSetA, m_player->m_snapshot.m_duration100ns * 3 / 4);
+                    m_player->postCore(LumaPlayerCoreCOperationClearLoop);
+                    }, [this]() { return m_elapsed.elapsed() >= 800 && !m_player->m_snapshot.m_hasLoopA &&
+                        !m_player->m_snapshot.m_hasLoopB && m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying; });
+                add(41, "pause at 5x before actual AB menu", [this]() {
+                    m_player->m_core.setPlaybackRatePermilleAsync(5000);
+                    m_player->m_core.pauseAsync();
+                    }, [this]() { return m_player->m_snapshot.m_ratePermille == 5000 &&
+                        m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused; });
+                add(41, "paused right-click A: actual Core result within 800ms", [this]() {
+                    menuAt(m_player->m_snapshot.m_duration100ns / 4, 0);
+                    }, [this]() { return m_player->m_snapshot.m_hasLoopA && !m_player->m_hasDragPosition &&
+                        m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused && m_elapsed.elapsed() < 800; }, 5000);
+                add(41, "paused right-click B: actual Core result within 800ms", [this]() {
+                    menuAt(m_player->m_snapshot.m_duration100ns / 2, 1);
+                    }, [this]() { return m_player->m_snapshot.m_hasLoopB && !m_player->m_hasDragPosition &&
+                        m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused && m_elapsed.elapsed() < 800; }, 5000);
+                add(41, "resume at 5x after AB: advancing actual frames", [this]() {
+                    m_position = m_player->m_cachedFrameStart;
+                    click(m_player->playButtonRect().center());
+                    }, [this]() { return m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying &&
+                        m_player->m_cachedFrameStart != m_position && m_elapsed.elapsed() < 800; }, 5000);
+                break;
+            }
             default:
             {
                 m_results.check(id, false, "missing GUI implementation");
@@ -400,6 +606,17 @@ void GuiTestRunner::start()
 
 void GuiTestRunner::tick()
 {
+    if (m_monitorFrames)
+    {
+        const int64_t nowMs = m_elapsed.elapsed();
+        m_maxFrameGapMs = (std::max)(m_maxFrameGapMs, nowMs - m_lastFrameMs);
+        if (m_player->m_cachedFrameStart != m_observedFrame)
+        {
+            m_observedFrame = m_player->m_cachedFrameStart;
+            m_lastFrameMs = nowMs;
+        }
+        m_unexpectedPause = m_unexpectedPause || m_player->m_core.snapshot().m_state != LumaPlayerCoreCStatePlaying;
+    }
     if (m_aborting)
     {
         if (m_player->m_closeReady)
@@ -426,7 +643,9 @@ void GuiTestRunner::tick()
     const bool ready = m_steps[index].m_ready();
     if (ready || m_elapsed.elapsed() >= m_steps[index].m_timeout)
     {
-        m_results.check(m_steps[index].m_id, ready, m_steps[index].m_detail + " ms=" + QString::number(m_elapsed.elapsed()));
+        m_results.check(m_steps[index].m_id, ready, m_steps[index].m_detail + " ms=" + QString::number(m_elapsed.elapsed()) +
+            (m_monitorFrames ? " maxFrameGapMs=" + QString::number(m_maxFrameGapMs) : QString()));
+        m_monitorFrames = false;
         if (!ready)
         {
             m_aborting = true;
@@ -453,6 +672,7 @@ void GuiTestRunner::tick()
 
 void GuiTestRunner::move(const QPoint& point, Qt::MouseButtons buttons)
 {
+    QCursor::setPos(m_player->mapToGlobal(point));
     QEvent enter(QEvent::Enter);
     QApplication::sendEvent(m_player, &enter);
     QMouseEvent event(QEvent::MouseMove, point, m_player->mapToGlobal(point), Qt::NoButton, buttons, Qt::NoModifier);
@@ -479,11 +699,13 @@ void GuiTestRunner::key(int32_t keyValue, Qt::KeyboardModifiers modifiers)
 void GuiTestRunner::doubleClick()
 {
     const QPoint point = m_player->videoViewportRect().center();
-    move(point);
-    QMouseEvent event(QEvent::MouseButtonDblClick, point, m_player->mapToGlobal(point), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    QApplication::sendEvent(m_player, &event);
-    QMouseEvent release(QEvent::MouseButtonRelease, point, m_player->mapToGlobal(point), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
-    QApplication::sendEvent(m_player, &release);
+    click(point);
+    QTimer::singleShot((std::min)(80, (std::max)(1, QApplication::doubleClickInterval() / 3)), this, [this, point]() {
+        QMouseEvent event(QEvent::MouseButtonDblClick, point, m_player->mapToGlobal(point), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(m_player, &event);
+        QMouseEvent release(QEvent::MouseButtonRelease, point, m_player->mapToGlobal(point), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(m_player, &release);
+        });
 }
 
 void GuiTestRunner::chooseMenu(int32_t index)

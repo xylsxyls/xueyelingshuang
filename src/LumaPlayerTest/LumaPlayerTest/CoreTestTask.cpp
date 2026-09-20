@@ -13,11 +13,14 @@
 #include <QCryptographicHash>
 #include "TestResults.h"
 #include "LogManager/LogManagerAPI.h"
+#include "FFmpegCpp/FFmpegCppAPI.h"
 #include <QFileInfo>
 #include <QDir>
 #include <chrono>
 #include <thread>
 #include <exception>
+#include <algorithm>
+#include <cmath>
 #ifdef _WIN32
 #include <Windows.h>
 #include <Psapi.h>
@@ -25,6 +28,111 @@
 #endif
 
 extern "C" int RunPureCApiSmoke(void);
+
+/** 用指定分块输入执行同一连续音频流，排空后取得全部输出
+@param [in] input 双声道交错PCM
+@param [in] rate 千分比倍率
+@param [in] chunk 每次输入的每声道帧数
+@param [out] output 连续输出样本
+@return 完整处理是否成功
+*/
+static bool RunTempoChunks(const std::vector<int16_t>& input, int32_t rate, size_t chunk,
+    std::vector<int16_t>* output)
+{
+    FFmpegCppAudioTempo tempo;
+    if (output == nullptr || chunk == 0 || !tempo.init(48000, 2) || !tempo.setRate(rate))
+    {
+        return false;
+    }
+    output->clear();
+    for (size_t offset = 0; offset < input.size() / 2;)
+    {
+        const size_t count = (std::min)(chunk, input.size() / 2 - offset);
+        if (!tempo.write(&input[offset * 2], count))
+        {
+            return false;
+        }
+        offset += count;
+        const size_t ready = tempo.available();
+        if (ready > 0)
+        {
+            const size_t end = output->size();
+            output->resize(end + ready * 2);
+            if (tempo.read(&(*output)[end], ready) != ready)
+            {
+                return false;
+            }
+        }
+    }
+    if (!tempo.finish())
+    {
+        return false;
+    }
+    const size_t end = output->size();
+    const size_t ready = tempo.available();
+    output->resize(end + ready * 2);
+    return ready == 0 || tempo.read(&(*output)[end], ready) == ready;
+}
+
+/** 检查分块无关性、时长、音调、连续性和复位边界
+@param [in,out] report 用例39的正式结果
+*/
+static void CheckStreamingTempo(TestResults& report)
+{
+    const size_t frames = 96000;
+    std::vector<int16_t> input(frames * 2);
+    for (size_t index = 0; index < frames; ++index)
+    {
+        const double phase = 2.0 * 3.14159265358979323846 * 220.0 * index / 48000.0;
+        const int16_t value = static_cast<int16_t>(10000.0 * std::sin(phase));
+        input[index * 2] = value;
+        input[index * 2 + 1] = static_cast<int16_t>(-value);
+    }
+    const int32_t rates[] = {100, 500, 1000, 1500, 2000, 3000, 5000};
+    for (size_t rateIndex = 0; rateIndex < sizeof(rates) / sizeof(rates[0]); ++rateIndex)
+    {
+        const int32_t rate = rates[rateIndex];
+        std::vector<int16_t> whole;
+        std::vector<int16_t> chunks;
+        const bool ok = RunTempoChunks(input, rate, frames, &whole) &&
+            RunTempoChunks(input, rate, 257, &chunks);
+        report.check(CaseRatePitch, ok && whole == chunks,
+            QStringLiteral("流式分块257帧与整段输入结果相同，倍率=") + QString::number(rate));
+        if (!ok || chunks.size() < 9600)
+        {
+            report.check(CaseRatePitch, false, QStringLiteral("输出不足，不能判定音频质量"));
+            continue;
+        }
+        const double seconds = chunks.size() / 2.0 / 48000.0;
+        report.check(CaseRatePitch, std::fabs(seconds - 2000.0 / rate) < 0.05,
+            QStringLiteral("实际音频时长接近独立预期，秒=") + QString::number(seconds));
+        int32_t crossings = 0;
+        int32_t maxJump = 0;
+        bool channels = true;
+        const size_t begin = 2400;
+        const size_t end = chunks.size() / 2 - 2400;
+        for (size_t index = begin; index < end; ++index)
+        {
+            const int32_t previous = chunks[(index - 1) * 2];
+            const int32_t sample = chunks[index * 2];
+            crossings += previous <= 0 && sample > 0 ? 1 : 0;
+            maxJump = (std::max)(maxJump, std::abs(sample - previous));
+            channels = channels && std::abs(sample + chunks[index * 2 + 1]) <= 2;
+        }
+        const double frequency = crossings * 48000.0 / (end - begin);
+        report.check(CaseRatePitch, std::fabs(frequency - 220.0) < 8.0 && maxJump < 1800 && channels,
+            QStringLiteral("连续音频无包边界突跳、双声道不串扰；频率=") + QString::number(frequency) +
+            QStringLiteral("，最大相邻采样差=") + QString::number(maxJump));
+    }
+    FFmpegCppAudioTempo tempo;
+    report.check(CaseRatePitch, !tempo.init(0, 2) && !tempo.setRate(1000) &&
+        tempo.init(48000, 2) && !tempo.setRate(0) && !tempo.write(nullptr, 1),
+        QStringLiteral("未初始化、非法格式、非法速度及空输入被拒绝"));
+    tempo.write(&input[0], 257);
+    tempo.uninit();
+    report.check(CaseRatePitch, tempo.available() == 0 && tempo.init(48000, 2) && tempo.available() == 0,
+        QStringLiteral("定位/换媒体重建流，不残留旧音频"));
+}
 
 /** 等待真实帧输出到达门槛，退出或超时均返回false
 @param [in] video 帧计数器
@@ -75,7 +183,44 @@ void CoreTestTask::DoTask()
             m_state->m_done.store(true);
             return;
         }
-        if (id >= 1 && id <= 12)
+        if (id == CaseRatePitch)
+        {
+            CheckStreamingTempo(report);
+            LumaPlayerTestAudioRender audio;
+            LumaPlayerTestVideoRender video;
+            LumaPlayerCore core;
+            core.setAudioRender(&audio);
+            core.setVideoRender(&video);
+            const bool opened = core.init() == LumaPlayerCoreResultSuccess &&
+                core.openMedia(m_fixture.toUtf8().constData()) == LumaPlayerCoreResultSuccess;
+            report.check(id, opened, QStringLiteral("真实解码链打开本批素材"));
+            if (opened)
+            {
+                const int32_t rates[] = {1000, 2000, 5000};
+                for (size_t index = 0; index < 3 && !m_exit.load(); ++index)
+                {
+                    core.pause();
+                    const bool positioned = core.setPlaybackRatePermille(rates[index]) == LumaPlayerCoreResultSuccess &&
+                        core.seekTo(0, false) == LumaPlayerCoreResultSuccess;
+                    const size_t before = audio.stats().m_pcmBytes;
+                    const bool playing = core.play() == LumaPlayerCoreResultSuccess;
+                    LumaPlayerTestHelper::sleepMs(400);
+                    core.pause();
+                    const size_t bytes = audio.stats().m_pcmBytes - before;
+                    const LumaPlayerAudioFormat format = core.snapshot().m_mediaInfo.m_audioFormat;
+                    const int64_t duration = format.bytesPerFrame() > 0 && format.m_sampleRate > 0 ?
+                        static_cast<int64_t>(bytes / format.bytesPerFrame()) * 1000 / format.m_sampleRate : 0;
+                    report.check(id, positioned && playing && duration >= 330 && duration <= 700,
+                        QStringLiteral("400ms实际播放提供330至700msPCM，不因等待视频帧而饿死音频；倍率=") +
+                        QString::number(rates[index]) + QStringLiteral("，音频ms=") + QString::number(duration));
+                }
+            }
+            core.uninit();
+            const int32_t result = RunLegacyTest(CaseFrameAndRate, m_fixture.toUtf8().constData(), true,
+                (m_directory + "/pitch.txt").toUtf8().constData());
+            report.check(id, result == 0, kTestCases.at(static_cast<TestCaseId>(id)).m_description + QStringLiteral("；频率断言详见pitch.txt"));
+        }
+        else if (id >= 1 && id <= 12)
         {
             const int32_t result = RunLegacyTest(id, m_fixture.toUtf8().constData(), true,
                 (m_directory + "/legacy.txt").toUtf8().constData());
@@ -145,17 +290,60 @@ void CoreTestTask::DoTask()
         else if (id == CaseDiagnostics)
         {
             LOGINFO("Diagnostic case checks actual log evidence");
-            const QStringList logs = QDir(m_directory).entryList(QStringList() << "*.log", QDir::Files);
+            LumaPlayerTestAudioRender audio;
+            LumaPlayerTestVideoRender video;
+            LumaPlayerCore core;
+            core.setAudioRender(&audio);
+            core.setVideoRender(&video);
+            LOGINFO("Diagnostic logging-disabled begin");
+            const bool opened = core.init() == LumaPlayerCoreResultSuccess &&
+                core.openMedia(m_fixture.toUtf8().constData()) == LumaPlayerCoreResultSuccess;
+            core.uninit();
+            LOGINFO("Diagnostic logging-disabled end");
+            report.check(id, opened, "diagnostic disabled Core still opens media");
+            core.setLogEnabled(true);
+            const bool actionsOk = core.init() == LumaPlayerCoreResultSuccess &&
+                core.openMedia(m_fixture.toUtf8().constData()) == LumaPlayerCoreResultSuccess &&
+                core.setPlaybackRatePermille(2200) == LumaPlayerCoreResultSuccess &&
+                core.setLoopAAtPosition(10000000) == LumaPlayerCoreResultSuccess &&
+                core.setLoopBAtPosition(20000000) == LumaPlayerCoreResultSuccess &&
+                core.seekTo(30000000, true) == LumaPlayerCoreResultSuccess;
+            report.check(id, actionsOk, "diagnostic open/rate/AB/seek actual operations");
+            for (int32_t sample = 0; sample < 31; ++sample)
+            {
+                core.snapshot();
+            }
+            core.uninit();
+            // Read numbered segments only; the current-log alias repeats their contents.
+            const QStringList logs = QDir(m_directory).entryList(QStringList() << "*.0.log", QDir::Files);
             bool haveLog = false;
+            QByteArray evidence;
             for (int32_t index = 0; index < logs.size(); ++index)
             {
                 QFile log(m_directory + "/" + logs[index]);
-                if (log.open(QIODevice::ReadOnly) && log.readAll().contains("main.cpp"))
+                if (log.open(QIODevice::ReadOnly))
                 {
-                    haveLog = true;
+                    const QByteArray text = log.readAll();
+                    haveLog = haveLog || text.contains("main.cpp");
+                    evidence += text;
                 }
             }
             report.check(id, haveLog, QStringLiteral("日志实际落盘并包含源码文件信息"));
+            const int32_t disabledBegin = evidence.indexOf("Diagnostic logging-disabled begin");
+            const int32_t disabledEnd = evidence.indexOf("Diagnostic logging-disabled end");
+            report.check(id, disabledBegin >= 0 && disabledEnd > disabledBegin &&
+                !evidence.mid(disabledBegin, disabledEnd - disabledBegin).contains("Core media open"),
+                "disabled Core does not emit playback diagnostics");
+            report.check(id, evidence.contains("Core media open") && evidence.contains("target=30000000") &&
+                evidence.contains("rate=2200") && evidence.contains("hasA=1 A=10000000") &&
+                evidence.contains("hasB=1 B=20400000") && evidence.contains(m_fixture.toUtf8()),
+                "logs preserve media, requested target, actual rate and exact AB boundaries");
+            report.check(id, evidence.contains("Core playback sample") && evidence.contains("frameStart=") &&
+                evidence.contains("tickMs=") && evidence.contains("Core seek completed") &&
+                evidence.contains("Core diagnostics enabled build="),
+                "logs preserve build, actual frames and timestamps without per-frame logging");
+            report.check(id, evidence.count("Core playback sample") >= 1 && evidence.count("Core playback sample") <= 2,
+                "31 snapshot reads produce at most two sampled playback log entries");
         }
         else
         {
@@ -283,6 +471,36 @@ void CoreTestTask::DoTask()
                     report.check(9, core.snapshot().m_state == LumaPlayerCoreStatePlaying &&
                         before.m_pauseCount == after.m_pauseCount && before.m_flushCount == after.m_flushCount &&
                             before.m_resumeCount == after.m_resumeCount, "playing AB edit causes no pause/flush/resume");
+                    const LumaPlayerTestAudioStats beforeSeek = audio.stats();
+                    report.check(15, core.seekTo(4000000, true) == LumaPlayerCoreResultSuccess &&
+                        core.snapshot().m_state == LumaPlayerCoreStatePlaying &&
+                        WaitFrames(video, video.stats().m_frameCount + 3, m_exit), "playing seek produces following real frames");
+                    const LumaPlayerTestAudioStats afterSeek = audio.stats();
+                    report.check(15, beforeSeek.m_pauseCount == afterSeek.m_pauseCount &&
+                        beforeSeek.m_resumeCount == afterSeek.m_resumeCount && afterSeek.m_flushCount == beforeSeek.m_flushCount + 1,
+                        "playing seek replaces old PCM without pause/resume device round trip");
+                    const std::shared_ptr<std::atomic<int32_t>> completed(new std::atomic<int32_t>(0));
+                    const std::shared_ptr<std::atomic<int32_t>> failed(new std::atomic<int32_t>(0));
+                    for (int32_t point = 0; point < 2; ++point)
+                    {
+                        LumaPlayerCoreRequest request;
+                        request.m_requestId = 100 + point;
+                        request.m_operation = point == 0 ? LumaPlayerCoreOperationSetA : LumaPlayerCoreOperationSetB;
+                        request.m_position100ns = point == 0 ? 32000000 : 52000000;
+                        report.check(15, core.submitAsyncEx(request, [completed, failed](const LumaPlayerCoreCompletion& result) {
+                            if (result.m_result != LumaPlayerCoreResultSuccess) { ++(*failed); }
+                            ++(*completed);
+                            }) == LumaPlayerCoreResultSuccess, "asynchronous AB accepted");
+                    }
+                    const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+                    while (completed->load() < 2 && !m_exit.load() && std::chrono::steady_clock::now() < deadline)
+                    {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                    }
+                    const LumaPlayerLoopRange actual = core.snapshot().m_loopRange;
+                    report.check(15, completed->load() == 2 && failed->load() == 0 &&
+                        actual.start100ns() == 32000000 && actual.end100ns() == 52400000,
+                        "two-phase AB reports each completion with exact 25fps boundaries");
                 }
                 if (id == CaseAbReentry)
                 {

@@ -7,6 +7,7 @@
 #include "LumaPlayerCore/MediaClock.h"
 
 #include <climits>
+#include <cmath>
 #include <cstring>
 
 #include <atomic>
@@ -189,7 +190,17 @@ void LumaPlayerTestReport::writeReport(const std::string& filePath) const
 	}
 
 	std::cout << stream.str();
+#ifdef _WIN32
+    const int32_t count = MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, nullptr, 0);
+    std::vector<wchar_t> widePath(static_cast<size_t>(count > 0 ? count : 1), 0);
+    if (count > 0)
+    {
+        MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, &widePath[0], count);
+    }
+    std::ofstream file(&widePath[0], std::ios::out | std::ios::trunc);
+#else
 	std::ofstream file(filePath.c_str(), std::ios::out | std::ios::trunc);
+#endif
 	if (file.is_open())
 	{
 		file << stream.str();
@@ -487,7 +498,7 @@ static void runCppLifecycleCase(LumaPlayerTestReport& report)
 	report.check(core.snapshot().m_ratePermille == 100, "低于下限的倍速会裁剪到0.1倍");
 	result = core.setPlaybackRatePermille(6000);
 	report.check(result == LumaPlayerCoreResultSuccess, LumaPlayerTestHelper::resultMessage("set high rate", result));
-	report.check(core.snapshot().m_ratePermille == 3000, "高于上限的倍速会裁剪到3.0倍");
+	report.check(core.snapshot().m_ratePermille == 5000, "高于上限的倍速会裁剪到5.0倍");
 	result = core.openMedia("");
 	report.check(result != LumaPlayerCoreResultSuccess, "空路径打开失败且不崩溃");
 	core.uninit();
@@ -899,6 +910,15 @@ static void runMediaCase(LumaPlayerTestReport& report, const std::string& mediaP
 	{
 		report.check(videoRender.stats().m_frameCount > 0, "短时播放期间收到视频帧或至少首帧");
 	}
+	result = core.setPlaybackRatePermille(5000);
+	report.check(result == LumaPlayerCoreResultSuccess && core.snapshot().m_ratePermille == 5000,
+		"暂停状态可以设置到5.0倍且回执倍率正确");
+	int64_t resumeBeginMs = LumaPlayerTestHelper::nowMs();
+	result = core.play();
+	int64_t resumeElapsedMs = LumaPlayerTestHelper::nowMs() - resumeBeginMs;
+	report.check(result == LumaPlayerCoreResultSuccess, LumaPlayerTestHelper::resultMessage("pause-rate play", result));
+	report.check(resumeElapsedMs < 500, "暂停调速后恢复播放不触发长时间重定位");
+	core.pause();
 	if (snapshot.m_mediaInfo.m_hasAudio)
 	{
 		report.check(audioRender.stats().m_openCount > 0, "打开媒体时音频渲染器收到openAudio");
@@ -1395,8 +1415,13 @@ static void RunFrameBoundaryAndRateCase(LumaPlayerTestReport& report)
 	for (size_t i = 0; i < sizeof(rates) / sizeof(rates[0]); ++i)
 	{
 		LumaPlayerAudioFrame output;
-		correct = correct && PlayerEngineHelper::scaleAudioRate(source, rates[i], &output);
-		correct = correct && output.m_pcmData.size() == static_cast<size_t>(4800 * 1000 / rates[i] * 4);
+        const bool converted = PlayerEngineHelper::scaleAudioRate(source, rates[i], &output);
+        report.check(converted, "PCM转换倍率=" + std::to_string(rates[i]) + ", bytes=" + std::to_string(output.m_pcmData.size()));
+		correct = correct && converted;
+        // 流式音高周期在段尾允许不足一个周期的舍入，不再要求每个输入包独立精确缩放。
+        const int64_t expectedFrames = static_cast<int64_t>(4800) * 1000 / rates[i];
+        const int64_t actualFrames = static_cast<int64_t>(output.m_pcmData.size() / 4);
+        correct = correct && std::abs(actualFrames - expectedFrames) <= 240;
 		correct = correct && output.m_timestamp100ns == source.m_timestamp100ns && output.m_duration100ns == source.m_duration100ns;
 		for (size_t sample = 0; sample + 3 < output.m_pcmData.size(); sample += 4)
 		{
@@ -1404,11 +1429,66 @@ static void RunFrameBoundaryAndRateCase(LumaPlayerTestReport& report)
 			int16_t right = 0;
 			std::memcpy(&left, &output.m_pcmData[sample], 2);
 			std::memcpy(&right, &output.m_pcmData[sample + 2], 2);
-			correct = correct && left == 1234 && right == -4321;
+            correct = correct && left >= 0 && left <= 1234 && right <= 0 && right >= -4321 &&
+                std::abs(static_cast<int32_t>(left) * 4321 + static_cast<int32_t>(right) * 1234) <= 5555;
+            if (sample < output.m_pcmData.size() / 2)
+            {
+                correct = correct && std::abs(static_cast<int32_t>(left) - 1234) <= 1 &&
+                    std::abs(static_cast<int32_t>(right) + 4321) <= 1;
+            }
 		}
 	}
-	report.check(correct, "0.05至5倍PCM长度正确且声道不串扰，媒体时间不变");
+	report.check(correct, "0.05至5倍PCM时长误差不超过5ms，声道增益比例保持且媒体时间不变");
 	report.check(source.m_pcmData == original, "倍速不修改循环缓存中的源PCM");
+	LumaPlayerAudioFrame tone;
+	tone.m_format.m_sampleRate = 48000;
+	tone.m_format.m_channels = 1;
+	tone.m_format.m_bitsPerSample = 16;
+	const size_t toneFrames = 9600;
+	tone.m_pcmData.resize(toneFrames * sizeof(int16_t));
+	for (size_t index = 0; index < toneFrames; ++index)
+	{
+		const double sample = std::sin(2.0 * 3.14159265358979323846 * 440.0 * index / tone.m_format.m_sampleRate) * 12000.0;
+		const int16_t value = static_cast<int16_t>(sample);
+		std::memcpy(&tone.m_pcmData[index * sizeof(int16_t)], &value, sizeof(value));
+	}
+	int32_t inputCrossings = 0;
+	int16_t previous = 0;
+	for (size_t index = 0; index < toneFrames; ++index)
+	{
+		int16_t value = 0;
+		std::memcpy(&value, &tone.m_pcmData[index * sizeof(int16_t)], sizeof(value));
+		if (previous <= 0 && value > 0)
+		{
+			++inputCrossings;
+		}
+		previous = value;
+	}
+	const int32_t pitchRates[] = {500, 2000, 4000};
+	for (size_t rateIndex = 0; rateIndex < sizeof(pitchRates) / sizeof(pitchRates[0]); ++rateIndex)
+	{
+		LumaPlayerAudioFrame stretched;
+		const bool converted = PlayerEngineHelper::scaleAudioRate(tone, pitchRates[rateIndex], &stretched);
+		int32_t outputCrossings = 0;
+		previous = 0;
+		for (size_t index = 0; converted && index < stretched.m_pcmData.size() / sizeof(int16_t); ++index)
+		{
+			int16_t value = 0;
+			std::memcpy(&value, &stretched.m_pcmData[index * sizeof(int16_t)], sizeof(value));
+			if (previous <= 0 && value > 0)
+			{
+				++outputCrossings;
+			}
+			previous = value;
+		}
+		const double outputSeconds = converted ?
+			static_cast<double>(stretched.m_pcmData.size() / sizeof(int16_t)) / tone.m_format.m_sampleRate : 0.0;
+		const double outputFrequency = outputSeconds > 0.0 ? outputCrossings / outputSeconds : 0.0;
+		const bool pitchPreserved = converted && inputCrossings > 0 && outputCrossings > 0 &&
+			std::fabs(outputFrequency - 440.0) < 55.0;
+		report.check(pitchPreserved, "倍速=" + std::to_string(pitchRates[rateIndex] / 1000.0) +
+			"时输出频率保持在440Hz附近");
+	}
 	report.endCase();
 }
 

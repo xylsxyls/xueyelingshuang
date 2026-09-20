@@ -98,4 +98,11 @@ private:
     int64_t m_position;
     // 拖动时统计跟手次数
     int32_t m_dragMatches;
+    // 定位期间是否观察到错误暂停；观察覆盖后续真实画面推进
+    bool m_unexpectedPause;
+    // 播放中AB解析期间的实际帧间隔观察
+    bool m_monitorFrames;
+    int64_t m_observedFrame;
+    int64_t m_lastFrameMs;
+    int64_t m_maxFrameGapMs;
 };

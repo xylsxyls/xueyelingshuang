@@ -61,4 +61,8 @@
     <ClInclude Include="..\src\FFmpegCppAdjacentReader.h" />
     <ClCompile Include="..\src\FFmpegCppAdjacentReader.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\FFmpegCppAudioTempo.h" />
+    <ClCompile Include="..\src\FFmpegCppAudioTempo.cpp" />
+  </ItemGroup>
 </Project>

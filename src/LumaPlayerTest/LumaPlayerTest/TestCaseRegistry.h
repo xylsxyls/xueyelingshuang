@@ -45,7 +45,11 @@ enum TestCaseId
     CaseDiagnostics = 35,
     CaseSelectionRules = 36,
     CaseButtonVisuals = 37,
-    CaseThreadStopRace = 38
+    CaseThreadStopRace = 38,
+    CaseRatePitch = 39,
+    CaseProgressClick = 40,
+    CaseAbRateLatency = 41,
+    CaseRateSeekLoopRace = 42
 };
 
 /** 测试分类与ID独立 */

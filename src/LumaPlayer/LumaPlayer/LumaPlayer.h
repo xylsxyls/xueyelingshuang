@@ -537,7 +537,7 @@ private:
     uint64_t m_mediaGeneration;
 	// 上一轮中心暂停提示可见性，用于只在显隐变化时重绘
 	bool m_lastCenterTipVisible;
-	// 上一轮缩放提示可见性
+	// 上一轮中央缩放/倍率提示可见性
 	bool m_lastZoomTipVisible;
 	// GUI刷新定时器
 	QTimer m_uiTimer;
@@ -586,10 +586,14 @@ private:
 	int64_t m_lastBottomOverlayActiveMs;
 	// 最近一次鼠标在窗口内的位置，用于悬浮层和AB点命中判断
 	QPoint m_lastMousePos;
-	// 缩放提示隐藏时间，单位毫秒
+	// 缩放或倍率提示隐藏时间，单位毫秒
 	int64_t m_zoomTipHideMs;
 	// 当前视频缩放百分比，100表示加载后的初始显示比例
 	int32_t m_zoomPercent;
+	// 当前中央倍率提示的实际倍率，1000表示1.0倍
+	int32_t m_rateTipPermille;
+	// 中央倍率提示隐藏时间，单位毫秒
+	int64_t m_rateTipHideMs;
 	// 加载媒体时计算出的基础缩放比例，用于保证初始窗口无黑边
 	double m_baseDisplayScale;
 	// 用户平移视频后的偏移量
@@ -605,7 +609,9 @@ private:
 	// 是否正在拖动视频画面
 	bool m_dragVideo;
 	// 是否正在拖动进度条
-	bool m_dragProgress;
+	bool m_isDraggingProgress;
+	// 进度条按下后尚未判定为单击或拖动
+	bool m_progressPressPending;
 	// 是否正在拖动窗口边缘调整大小
 	bool m_resizeWindow;
 	// 当前调整大小命中的边缘组合
