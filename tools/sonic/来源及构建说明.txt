@@ -1,0 +1,15 @@
+Sonic 音频时间伸缩库
+来源：https://github.com/waywardgeek/sonic
+版本：release-0.2.0，固定提交60eeb064f62a106069d2ce148fabd724f9df9780。
+许可证：Apache-2.0，原文见LICENSE（上游COPYING）；保留上游版权，不批量格式化第三方源码。
+上游sonic.c SHA256：03E78C5AB90AEFF4B4232A1D58F47714957069AC1F74DC7F9B3FE3D8BD30C3EA
+上游sonic.h SHA256：4567E5CDEA3C8065A41C857554C6F3D9EF48C4C9E6A5432A2701382D514CA974
+本地补丁：downSampleInput改用当前窗口能量最大的声道做音高分析，输出仍对所有声道统一处理；原先声道求平均会抵消反相立体声，已由用例39复现。skipPitchPeriod/insertPitchPeriod保留采样小数余量，避免0.1倍速累积时长漂移；改变速度时清除旧速度的待复制计数及取整余量，保留输入波形。升级需保留这些回归并核对是否仍需补丁。
+源码归档：sonic-0.2.0-luma-r1.tar.xz包含上述本地修正后的sonic.c、sonic.h、LICENSE和上游README。压缩包SHA256为C2EEEAC1D15F8EF20B4B6798D3F61ECAC1DBBE2BFF9D9EE1DB7435CE3D66DEDE；修正后sonic.c为2B5D3EEDB7418C3C9F92DE185B347353AA078B1C169EE320FB89BB3E5B513135。根目录不再放参与工程编译的散装源码。
+头文件：include/sonicwindows/sonic.h和include/soniclinux/sonic.h，当前为同一跨平台原始头，SHA256与上游一致。
+Windows库目录：lib/x86、lib/x64分别存MT的sonicstatic32.lib、sonicstatic64.lib；文件名加d为MTd。各目录的MD子目录存MD及MDd对应同名库。均为真正静态库，不新增Sonic运行DLL。VS2013以/TP编译、/Z7内嵌符号，Release /O2，Debug /Od；CRT标记与目标架构已通过dumpbin核对，8个组合均完成链接和PCM转换冒烟运行。
+Windows重建：在仓库根执行tools\sonic\build-windows.cmd "绝对临时构建目录"。需要VS120COMNTOOLS、7-Zip及tar；可用SEVENZIP指定7z.exe。脚本先解压归档，再分别调用VS2013 x86/amd64环境编译8个组合，只覆盖本库对应产物，不清理用户目录；临时obj留在传入目录。系统tar缺xz支持时先用7-Zip解出tar再解包，不要求安装额外xz。
+Linux重建：tools/sonic/build-linux.sh 64 /绝对临时目录，32位传32并准备multilib。以-fPIC生成lib/x64/libsonicstatic64.a或x86对应.a，CC/AR可指定工具。当前仅提供源码、头和重建入口，未在本机编译Linux、macOS或移动端产物，不以Windows库替代。
+FFmpegCpp接入：before_FFmpegCpp.sh按平台及位数复制头至include/sonicinclude，库至公共lib；当前Windows Release封装为MT，选择普通目录；Debug为MDd，选择MD目录带d库。缺对应库直接失败，不回退其他CRT。DLL工程直接链接选定静态库，LIB工程把Sonic对象合入FFmpegCpp静态库；CMake从公共lib链接对应平台库。工程不再直接包含tools源码路径，不改原version和rebuild框架。
+使用边界：第三方细节封装在FFmpegCppAudioTempo，外部仅包含FFmpegCpp/FFmpegCppAPI.h。原生sonic.h只在封装实现中使用；分配与释放均留在同一封装模块，升级需重新核对CRT、架构、许可证和回归证据。
+流式写入保持跨解码块的音高检测及重叠状态；仅在媒体/定位断点重建，流结束时flush一次。不得逐帧flush或重建，否则会引入块边界失真。
