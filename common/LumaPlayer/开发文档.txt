@@ -1,10 +1,10 @@
 ﻿流光播放器（LumaPlayer）开发文档
-更新日期：2026-09-17（音量及交互修正已增量发布；用户明确跳过正式测试）
+更新日期：2026-09-20（本次仅整理规范入口、引用及历史约定；产品实现仍为2026-09-17音量发布版）
 配套《需求文档.txt》描述产品行为。本文件描述当前实现、构建、测试和发布规则，不保存开发阶段放行状态；新任务的阶段、确认与执行证据写入其独立工作流目录。
 当前Esc改动已完成Windows x64 Debug/Release构建、AI核心验证及用户手动试运行确认；Release指定瞬时ID 30–32共3项通过（6.2秒），未执行其余35项，不宣称全量或压力通过。已发布common/LumaPlayer及common/LumaPlayerTest，正式目录启动与正常退出通过。证据见工作流验证证据及common/LumaPlayerTest/reports/20260915-023033-619。
 
 一、入口与源码导航
-common/AI文档中的代码、工程、线程、仓库使用和测试规范共同适用；需求开发按《工程软件开发工作流.txt》v1.6执行。所有路径相对仓库根目录。2026-09-14用户确认沿用当前version脚本，构建安排见第八节。
+先读common/AI文档/仓库使用说明文档.txt，再按其中顺序阅读四份开发规范；需求开发按《工程软件开发工作流.txt》现行版执行（本次文档核对为v2.0）。所有路径相对仓库根目录。2026-09-14用户确认沿用当前version脚本，构建安排见第八节。
 src/LumaPlayer/LumaPlayer：main注册CDump、初始化Config和日志、运行Qt；Config集中界面/音频参数；LumaPlayer负责窗口、事件及绘制；Helper提供时间、裁剪、绘图辅助；CoreBridge通过纯C ABI调用Core；VideoRender缓存QImage；AudioRender/AudioTask独立管理声卡队列；LogicController/LogicTask处理异步意图与回执；LifecycleTask处理初始化和关闭。业务日志直接调用LogManager现有宏，已删除LumaPlayerLogger。
 启动顺序：注册CDump并取得配置/管理器实例，创建QApplication后用application.arguments()解析Unicode参数，再初始化日志和窗口。Config保存首个非debug路径及诊断开关，main在show后调用公开loadMedia，复用文件选择的异步打开、窗口尺寸调整和自动播放流程。Windows由系统关联传入路径；应用不写关联注册表。
 src/LumaPlayerCore/LumaPlayerCore/src：LumaPlayerCore为C++外观；CoreAPI通过LUMAPLAYERCORE_USE_C_API选择CoreC纯C声明，CoreC.cpp薄转发；CContext和C音视频Adapter保存句柄及回调；CoreConfig为初始化参数；CoreResult为结果枚举和中文const map；Types定义公共模型；CoreHelper承接C边界检查。
@@ -84,7 +84,7 @@ keyPressEvent在全屏时接收Esc，过滤自动重复并投递LumaActionExitFu
 6. 退出与线程库边界
 GUI关闭先禁止新输入，LifecycleTask回收逻辑线程，再经Bridge停止Core及音频服务，回报Shutdown后GUI才关闭窗口。Controller析构回收生命周期协调线程，并为异常离开事件循环提供兜底；资源保持到回调收敛。
 当前CTaskThread的m_spCurTask通过std::atomic_load/std::atomic_store取得和替换。StopCurTask取局部强引用后通知；StopTask先在锁内收集队列引用，再在锁外检查当前任务并通知。旧文档中“统一改为m_mutex及StopCurTaskUnlock”的说明已不适用。
-StopTask只提出协作取消，不能假定任务已结束或每个排队任务都会执行；提交与Uninit的先后由业务收敛。详细边界以当前线程库源码及《线程开发规范》第十一节为准，不因静态猜测修改成熟基础库。
+StopTask只提出协作取消，不能假定任务已结束或每个排队任务都会执行；提交与Uninit的先后由业务收敛。详细边界以当前线程库源码及《线程开发规范》“源码边界与维护注意”为准，不因静态猜测修改成熟基础库。
 普通open/seek进入不可中断底层调用后需等待返回，不能承诺损坏或远程媒体立即退出。Uninit按管理器ID回收本实例线程，不使用UninitAll。
 
 八、构建入口与依赖
@@ -113,6 +113,7 @@ App与当前Qt Test使用64位DLL依赖，不能照旧控制台说明切到STATI
 
 九、测试入口、素材与报告
 正式测试源码为src/LumaPlayerTest，入口common/LumaPlayerTest/LumaPlayerTest1.0.exe。LegacyTests保留迁移用例，旧src/LumaPlayerTest_old不是当前构建或运行依赖。TestCaseRegistry.h/.cpp以显式稳定枚举和const map登记38项：30瞬时、8压力；中文说明、分类和执行范围以登记为准。
+历史迁移约定：旧工程只作迁移来源，完整迁移、自查并验证新Qt工程可独立编译运行后才删除旧源码目录，保留迁移映射和证据；该清理授权不扩大到新工程资源或其他目录，本次文档整理不执行删除。Release Win32/x64均使用LumaPlayerTest1.0命名，现有实机验证范围为Windows x64，命名不代表Win32已验证。
 四按钮从左到右为指定、瞬时、压力、全量。指定支持1,3,8-12，删除ID跳过不复用，未知ID报错；全量先瞬时后压力。每项独立进程顺序执行并自动判定。重复次数、子断言和配置次数不冒充多个用例。
 GUI测试编入实际播放器源码和moc，TestGuiAccess统一测试访问声明；发布播放器不含此测试访问。CoreTestTask/LegacyTests覆盖Core及C/C++接口，CApiSmoke.c提供纯C入口检查；独立启动用例运行所选目录播放器，内部GUI/Core用例运行对应测试执行程序。
 
@@ -134,9 +135,9 @@ LumaPlayerTest1.0.exe --run specified --ids 13,14,23,35,36,38 --configuration bo
 测试选择、正式用例开发及执行按《工程测试规范》和工作流约定。19/20各默认持续120秒，34默认Release启动60次、Debug8次，38覆盖连续任务切换停止回收；未选压力项不能记通过。源码或产物变化后重测受影响范围，旧报告不能替新版本背书。
 
 十、发布规则与当前文件
-增量发布遵循《工程开发规范.txt》第十六节：本轮应用变化仅替换common/LumaPlayer/LumaPlayer1.0.exe，不重拷未变DLL，不部署测试EXE；匹配应用PDB单独以.7z极限压缩保存。正式测试/证据及文档更新不扩大运行文件清单，依赖/ABI变化需另列必要同步产物。
+增量发布遵循《仓库使用说明文档.txt》“增量发布与符号”：应用单独变化且Core兼容时，仅替换common/LumaPlayer/LumaPlayer1.0.exe，不重拷未变DLL，不自动部署测试EXE；符号包只换已更新模块的匹配PDB，保留未变DLL对应旧PDB，以.7z极限压缩保存。正式测试/证据及文档更新不扩大运行文件清单，依赖/ABI变化需另列必要同步产物。
 2026-09-17发布完成：播放器EXE SHA256 F799BEF8E638127678F2EB3F82B38279411DE23EA41E7E102053D3BFCF1CAFFC，14个现有DLL未修改。symbols-LumaPlayer1.0-20260917-Volume.7z以旧Esc包为基线，仅替换LumaPlayer1.0.pdb，其余14个PDB原样保留；实际部署PE与新包解压后的15个PDB均核对GUID/Age一致，7z极限压缩及完整性检查通过。旧包原位保留，旧EXE及证据在发布记录/20260917-Volume。用户明确“这次不用测试”，未执行正式指定/瞬时/压力/全量测试；此前72条仅为试运行前核心断言。发布后实际common程序可见启动、打开自动素材并正常退出，退出码0。
-按最新《工程开发规范》《工程测试规范》及本次明确授权发布。common默认分发Windows x64 Release：播放器到common/LumaPlayer，测试程序到common/LumaPlayerTest；需要Debug时隔离到约定目录，当前测试默认使用common/LumaPlayer/debug。
+按《仓库使用说明文档》的交付操作及《工程软件开发工作流》本轮授权发布，验证按《工程测试规范》执行；历史发布授权不自动覆盖新轮次。common默认分发Windows x64 Release：播放器到common/LumaPlayer，测试程序到common/LumaPlayerTest；需要Debug时隔离到约定目录，当前测试默认使用common/LumaPlayer/debug。
 按实际PE依赖准备匹配EXE、仓库自有DLL、FFmpeg等所需依赖及资源。Qt官方动态库、Qt插件、MSVC/Windows再发行运行库和安装程序由用户单独提供，不随包携带；QtControls、DialogManager属于仓库依赖，不按Qt前缀排除。
 LockFreeQueue为头文件/.inl运行能力，不发布LockFreeQueue.dll/LockFreeQueued.dll，但保留当前version的依赖准备。不生成package-manifest-*.json，测试不依赖旧清单。
 PDB单独压缩并核对对应PE/PDB GUID和Age，保留故障版本及必要哈希。当前目录可见symbols-LumaPlayer1.0-20260912-234302.7z和symbols-LumaPlayerTest1.0-20260912-234403.7z；此为文件存在性核对，未在本轮重新验证包内符号匹配。
@@ -159,4 +160,4 @@ LumaActionVolume经现有ViewTask回执，GUI保留最新目标、至多一个�
 旧文档记载2026-09-12 Windows x64 Debug/Release完成36个唯一ID（30瞬时、6压力），138次配置/重复执行、303.1秒，19/20未执行；另记载路径控件、自动素材生成及相关指定用例验证。它们仅保留为历史记录，不是本轮测试结论。
 本轮读取时，common/LumaPlayerTest下没有历史所引用的reports目录，common/LumaPlayer下也没有旧LumaPlayer需求开发工作流目录。原始报告、迁移核对、dump和恢复笔记未核实，不作为当前可用证据入口。旧版文档备份：src/temp/LumaPlayerDocsSync-20260914-1b9b31c745294054a4d69a7fd54018d5。
 上述源码、脚本和文档对应检查属于此前文档核对记录，不能替代音量改动验证。2026-09-16初版42条为历史；2026-09-17最终试运行版Windows x64 Debug/Release构建均0警告0错误，前置核心验证72条断言通过，用户认可试运行并明确跳过正式测试后发布。正式证据见发布记录/20260917-Volume，发布后启动和退出通过；不将前置断言称为正式用例或全量测试通过，未做声学测量或跨平台验证。历史FFmpeg异常缺完整现场，不能认定已解决。
-后续需求按《工程软件开发工作流》v1.6建立独立命名工作流：需求确认、方案确认、初版代码确认、自查编译及AI核心流程验证、用户试运行选择、合并确认测试条件和发布范围，再按授权测试修复和发布。退出工作流保存状态供恢复，结束工作流清理其全部临时文件并保留正式成果及必要证据。取消旧测试用例文档及测试结果单独放行流程；不得沿用旧任务确认自动放行新需求。
+后续需求按《工程软件开发工作流》现行版执行（本次核对为v2.0）；需求理解及确认必留，同时列出本轮数字确认点，由用户选择仅免哪些后续口令，内部五阶段照常执行。提问统一为普通文本数字清单。退出保存状态供恢复，结束清理本工作流全部临时文件并保留正式成果及必要证据；不得沿用旧任务确认自动放行新需求。阶段顺序和口令以工作流正文为准，本产品文档不维护第二套流程。
