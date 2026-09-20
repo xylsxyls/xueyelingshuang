@@ -1,0 +1,55 @@
+# 1. 卸载所有 NVIDIA 包
+sudo apt remove --purge nvidia-*
+sudo apt remove --purge libnvidia-*
+sudo apt remove --purge cuda-*
+
+# 2. 清理依赖
+sudo apt autoremove
+sudo apt autoclean
+
+# 3. 确认卸载干净
+dpkg -l | grep -i nvidia  # 应该没有任何输出
+
+
+# 1. 创建黑名单文件
+sudo bash -c 'echo "blacklist nouveau" >> /etc/modprobe.d/blacklist-nvidia.conf'
+sudo bash -c 'echo "options nouveau modeset=0" >> /etc/modprobe.d/blacklist-nvidia.conf'
+
+# 2. 更新内核镜像
+sudo update-initramfs -u
+
+# 3. 重启
+sudo reboot
+
+
+# 1. 查看系统推荐的驱动版本
+ubuntu-drivers devices
+
+# 2. 安装推荐版本（通常是 nvidia-driver-550 或 570）
+sudo apt install nvidia-driver-550 nvidia-utils-550 nvidia-settings
+
+# 3. 安装显卡切换工具
+sudo apt install nvidia-prime
+
+# 4. 重启
+sudo reboot
+
+# 1. 检查驱动是否加载
+nvidia-smi
+# 应该显示 GPU 信息和驱动版本，而不是报错
+
+# 2. 检查内核模块
+lsmod | grep nvidia
+# 应该看到 nvidia_drm、nvidia_modeset、nvidia 等模块
+
+# 3. 检查 NVIDIA 设置
+nvidia-settings
+# 现在左侧应该有 "X Server Display Configuration" 选项
+
+# 4. 切换到 NVIDIA 模式
+sudo prime-select nvidia
+sudo reboot
+
+# 5. 重启后再次检查显示接口
+xrandr | grep -E "HDMI|DP"
+

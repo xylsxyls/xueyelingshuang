@@ -1,0 +1,2 @@
+新建窗口后，win+alt+p弹出设置窗口
+General->Task bar->Active console only

@@ -1,0 +1,90 @@
+~/.local/bin/beyond-compare-scripts/BC-SelectLeft
+
+#!/bin/bash
+
+# 获取选中的文件路径，并去除换行符和空格
+selected_path=$(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" | tr -d '\n' | xargs)
+
+# 如果为空，尝试从参数获取
+if [ -z "$selected_path" ] && [ $# -gt 0 ]; then
+    selected_path=$(echo "$1" | tr -d '\n' | xargs)
+fi
+
+# 保存到临时文件
+if [ -n "$selected_path" ]; then
+    mkdir -p ~/.config/beyond-compare
+    echo "$selected_path" > ~/.config/beyond-compare/left_path.txt
+    
+    # 显示通知
+    notify-send "Beyond Compare" "已选择左侧文件: $(basename "$selected_path")" -t 1500
+else
+    notify-send "Beyond Compare" "错误: 无法获取选中的文件路径" -t 2000 -u critical
+fi
+
+
+~/.local/bin/beyond-compare-scripts/BC-Compare
+ 
+#!/bin/bash
+
+# 获取当前选中的文件路径，并去除换行符和空格
+right_path=$(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" | tr -d '\n' | xargs)
+
+# 如果为空，尝试从参数获取
+if [ -z "$right_path" ] && [ $# -gt 0 ]; then
+    right_path=$(echo "$1" | tr -d '\n' | xargs)
+fi
+
+# 检查是否获取到路径
+if [ -z "$right_path" ]; then
+    notify-send "Beyond Compare" "错误: 无法获取选中的文件路径" -t 2000 -u critical
+    exit 1
+fi
+
+# 读取之前保存的左侧路径（也去除可能的换行符）
+left_path=$(cat ~/.config/beyond-compare/left_path.txt 2>/dev/null | tr -d '\n' | xargs)
+
+# 检查是否有保存的左侧文件
+if [ -z "$left_path" ]; then
+    notify-send "Beyond Compare" "错误: 请先使用 BC-SelectLeft 选择左侧文件" -t 2000 -u critical
+    exit 1
+fi
+
+# 检查左侧文件是否还存在
+if [ ! -e "$left_path" ]; then
+    notify-send "Beyond Compare" "错误: 左侧文件不存在: $(basename "$left_path")" -t 2000 -u critical
+    exit 1
+fi
+
+# 检查右侧文件是否存在
+if [ ! -e "$right_path" ]; then
+    notify-send "Beyond Compare" "错误: 右侧文件不存在: $(basename "$right_path")" -t 2000 -u critical
+    exit 1
+fi
+
+# 检查是否选择了同一个文件
+if [ "$left_path" == "$right_path" ]; then
+    notify-send "Beyond Compare" "提示: 左右选择了同一个文件" -t 1500
+    exit 1
+fi
+
+# 调用 Beyond Compare
+/usr/bin/bcompare "$left_path" "$right_path" &
+
+# 显示成功通知
+notify-send "Beyond Compare" "正在比较: $(basename "$left_path") ↔ $(basename "$right_path")" -t 1500
+
+https://github.com/bassmanitram/actions-for-nautilus/releases
+
+sudo dpkg -i actions-for-nautilus_1.7.1_all.deb
+
+Command line to execute
+/home/voyah/.local/bin/beyond-compare-scripts/BC-SelectLeft %f
+
+Current working directory
+%d
+
+Command line to execute
+/home/voyah/.local/bin/beyond-compare-scripts/BC-Compare %f
+
+Current working directory
+%d
