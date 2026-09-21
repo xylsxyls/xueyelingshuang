@@ -1,7 +1,9 @@
 ﻿仓库使用说明文档
-版本：2.0
-更新日期：2026-09-20
-职责：说明仓库目录、工程生成、工具链、构建脚本、第三方管理及交付操作；规范正文和工作流口令各归其所属文档。
+版本：2.1
+更新日期：2026-09-21
+职责：说明如何生成、构建、链接、运行和交付工程；代码、架构、线程和测试规则归各自规范，阶段和口令归工作流。
+阅读顺序：入口与分工 → 目录 → 工具及version → before/after → CMake → 第三方及链接 → 新建与构建 → 增量发布 → 产品交接。
+书写约定：短标题 → 确认 → 步骤/规则 → 完成/检查 → 详细说明。字段定义见第一节第3条，其他五篇沿用此写法。
 
 一、新会话入口与文档写法
 
@@ -10,31 +12,33 @@
 步骤：
 1) 新对话首先完整阅读本文件，确认仓库根目录。
 2) 依次完整阅读同目录《代码开发规范.txt》《工程开发规范.txt》《工程测试规范.txt》《线程开发规范.txt》。
-3) 阅读目标产品的需求文档、开发文档和当前工作笔记，核对源码、调用方、脚本、环境及用户已有修改。
-4) 用户要求按工作流开发时，执行《工程软件开发工作流.txt》；已经激活的流程按笔记恢复阶段和授权。
+3) 阅读目标产品已有的需求文档.txt、开发文档.txt；有独立测试工程时读取其测试文档.txt。结合源码、调用方、脚本、环境和用户已有修改核实。
+4) 用户使用工作流时，执行《工程软件开发工作流.txt》，读取对应工作笔记并核实阶段和授权；缺失正式文档的补写也按工作流执行。未启用工作流时，不因此强制建笔记或补写全部产品文档。
 完成：知道代码写法、工程分工、任务库用法、测试要求及构建入口。
 详细说明：新会话不能只读摘要就声称读过规范；同会话恢复可核对版本变化再补读。工作流只引用本入口，不维护第二套阅读清单。
 
 2. 六篇文档分工明确，一条规则只维护一份正文。
 确认：已有规则直接遵守；改变约定按用户明确要求处理。
-职责：
-代码开发规范：命名、排版、声明、注释、类型写法和编码。
-工程开发规范：架构、类职责、依赖方向、接口、状态、配置和生命周期。
-工程测试规范：用例设计、判定、规模选择、执行和报告。
-线程开发规范：CTaskThreadManager的任务拆分、分派、同步、取消和回收。
+规则：
+代码开发规范：代码怎么写，包括命名、排版、声明、注释、类型写法和编码。
+工程开发规范：逻辑放在哪里，包括架构、类职责、依赖方向、接口、状态、配置和生命周期。
+工程测试规范：怎样验证，包括用例设计、判定、规模选择、执行和报告。
+线程开发规范：怎样使用CTaskThreadManager，包括任务拆分、分派、同步、取消和回收。
 仓库使用说明：如何生成、构建、链接、运行和交付工程。
-工程软件开发工作流：先后步骤、确认节点、记录、恢复及清理。
+工程软件开发工作流：按什么顺序工作，包括先后步骤、确认节点、记录、恢复及清理。
+检查：新增条款放入唯一归属文档；其他文档引用，不维护另一份会逐渐分歧的正文。
 详细说明：产品参数、历史授权、实际验证情况留在产品文档和笔记。其他文档引用归属章节，不复制会逐渐漂移的全文。用户最新明确要求优先，仍有效约束保留；真实冲突需列明。
 
 3. 后续文档迭代统一按短标题和固定字段书写。
 确认：已授权的整理直接执行，不逐条增加确认。
-格式：
-条目标题：一句话说明做什么。
-确认：无需口令／按工作流确认点执行／需补充信息，并说明条件。
-步骤或规则：按执行顺序列短句；规范类条目可使用“规则”。
-完成或检查：给出可核对的结果，简单条目可省略。
-详细说明：另起一行解释例外、原因、易错点和例子，不把主线埋在解释中。
-维护：更新日期、版本及引用；保留有效约束，归并重复，撤下过期规则；历史原因单列，不在末尾叠加相反补丁。未验证能力明确标记。
+规则：
+标题：一句短话说明本条做什么，一条只处理一类问题。
+确认：写无需口令、对应工作流确认点或需补的事实；规范里的“无需口令”不代表可越过工作流阶段。
+步骤：有先后顺序时按执行顺序列动作；规则：没有先后顺序时按职责或场景分项。长句拆开，两者不重复叙述。
+完成：流程条目写进入下一步的条件；检查：技术条目写可核对结果。简单规则可省略结果字段。
+详细说明：例外、原因、易错点和示例另起一行，不把主线埋在解释里，也不在解释中写与正文相反的要求。
+检查：修订时更新版本、日期及引用，保留有效约束，归并重复，替换失效句；未验证能力明确标记。
+详细说明：新增内容归位修改，不在末尾堆补丁；产品现状不是通用规则。文档编码及末尾格式按代码开发规范。
 
 二、目录和修改源头
 
@@ -46,7 +50,8 @@ include/库名是构建复制结果；公开头必须改src源头，不能只改
 lib保存EXE、DLL、导入库、静态库及符号，是共享构建输出；不同位数、配置和链接组合可能覆盖同名文件及Macro。
 tools存第三方原件；common存产品文档与正式程序，默认64位Release。
 src/temp/任务名存一次性脚本、临时验证、备份、日志和中间产物，不成为正式编译依赖。
-工作笔记及长期方案放工作流专属目录；测试程序报告及素材按测试规范。
+工作笔记、本轮方案和效果图放工作流专属目录；长期有效设计整理到目录外的开发文档。
+测试报告及素材在运行期按测试规范保存；启用工作流后的结束清理按工作流执行，目录外临时项同样登记。
 检查：保留用户已有修改，不清理不明文件；不在仓库根落obj、vc120.pdb或临时EXE。
 详细说明：Git报dubious ownership时不擅改全局safe.directory；核实仓库归属后可采用仅当前命令有效的配置。
 
@@ -61,7 +66,7 @@ CLOUD_REBUILD为common/CloudRebuild/CloudRebuild1.2.exe或对应平台工具；Q
 详细说明：通用脚本不硬编码本机路径。Windows外部shell入口用Git的bin/sh.exe；CloudRebuild内部调用bash，须核对PATH命中Git Bash而非WSL。VS2013对C++11支持有限，不能只凭语言标准判断可编译。
 
 2. 库version构建自身，应用version只准备依赖。
-确认：无需逐次口令，项目例外按产品文档。
+确认：本条只说明入口用法，不授予提前构建权限；项目例外按产品文档。
 规则：库有version_debug.sh、version_release.sh、scripts中的before/after/rebuild/CMake及DLL/LIB两套工程。
 库自身每个version恰好一条命令，默认固定32 dll：
 "$CLOUD_REBUILD" SqlString 32 dll debug same
@@ -72,9 +77,12 @@ release文件仅换为release。依赖只能写before，不将库version变成�
 
 3. 按参数和依赖链准备正确产物。
 确认：无需口令。
-参数：ProjectName Bit DllLib DebugRelease AllSame。
-Bit为32/64；arm32/arm64须有脚本与工具链支持。DllLib为dll/lib；配置为debug/release；Debug通常带d，实际名称以API和TargetName为准。
-same执行当前before后构建；only跳过before，前置依赖和第三方复制必须已完成；librely使当前库按指定方式构建、before依赖强制lib并按same继续。历史dllrely没有特殊支持。
+规则：参数顺序为ProjectName Bit DllLib DebugRelease AllSame。
+Bit：32/64；arm32/arm64还须有脚本与工具链支持。
+DllLib：dll/lib；DebugRelease：debug/release。Debug通常带d，实际名称以API和TargetName为准。
+same：执行当前before后构建。
+only：跳过before；前置依赖和第三方复制必须已完成。
+librely：当前库按指定方式构建，before中的依赖强制lib并按same继续；历史dllrely没有特殊支持。
 步骤：展开before的直接及传递依赖 → 核对顺序和位数/配置/dll-lib/CRT → 只补未被链路覆盖的库 → 构建调用方。
 详细说明：旧文件存在不等于本次依赖已覆盖。共享lib/include会互相覆盖的构建必须串行；only不得破坏干净构建。
 
@@ -82,9 +90,11 @@ same执行当前before后构建；only跳过before，前置依赖和第三方复
 
 1. 保留构建框架，仅修改必要依赖与复制。
 确认：已有rebuild_*.py只读不改；其他超出必要范围的调整须明确授权。
+规则：
 Windows链：before → rebuild_库名.py选择DLL/LIB并调用MSBuild → 复制.h/.inl到include → 由MacroDll/MacroLib生成输出Macro.h → after。
 Linux链：before → CloudRebuild提取依赖并生成LIBRARIESRELY → scripts/build内cmake/make → 同步include/Macro → 清理build → after。
-详细说明：rebuild的注释、编码和文件尾也不调整。现有CloudRebuild中system调用并不保证逐层传播失败，必须看内部构建日志、真实错误和产物；无.inl提示可解释，真正缺文件不能忽略。
+检查：rebuild的注释、编码和文件末尾也不调整。
+详细说明：现有CloudRebuild中system调用并不保证逐层传播失败，必须看内部构建日志、真实错误和产物；无.inl提示可解释，真正缺文件不能忽略。
 
 2. before沿用独立参数块，第三方复制通常追加到尾部。
 确认：无需口令。
@@ -112,6 +122,7 @@ CStringManager_allSame=$4
 3) 在.vscode/settings.json的cmake.configureArgs中传BIT、DLLLIB（库工程）、DEBUGRELEASE和LIBRARIESRELY。
 4) 依赖用分号分隔实际文件名，例如"-DLIBRARIESRELY=libCStringManagerd.so;libSemaphored.so"；静态组合使用对应.a。
 5) CMake将LIBRARIESRELY加入LIBRARYLIST，循环链接仓库lib下的文件；检查实际链接命令和运行时加载。
+完成：手动构建的依赖来自configureArgs，CloudRebuild构建库的依赖来自before；不能把两条入口混用。
 详细说明：src/SqlString/.vscode/settings.json当前依赖字段为空，只表示这条手动入口没有传入，不表示业务没有依赖。
 详细说明：CloudRebuild构建库时从before自动生成该参数，不读取VS Code设置。当前Linux实现优先选择存在的.so，其次.a；两者并存时须核实，不能仅凭dll/lib参数猜测依赖选择。
 
@@ -125,16 +136,21 @@ CStringManager_allSame=$4
 
 1. 按平台及组合管理tools原件。
 确认：新增、升级依赖按已确认方案。
-规则：tools/库名/include/库名windows、库名linux存平台头；lib/x86、lib/x64及既有MD子目录区分位数和CRT；其他平台按实际目录适配。根目录保留版本、来源、许可证和构建说明。
-动态导入.lib与.dll同批；完整静态库沿用static32/static64命名，如avformatstatic64.lib、libavformatstatic64.a。禁止将导入库改名冒充静态库。
-before按组合复制必要头与库到include/lib，业务只经工程规范规定的封装API调用。
+规则：
+头文件：tools/库名/include/库名windows、库名linux存平台头，其他平台按实际目录适配。
+库文件：tools/库名/lib/x86、lib/x64及既有MD子目录区分位数和CRT；历史布局不同先查同类例子。
+来源资料：第三方根目录保留版本、来源、许可证和构建说明。
+文件身份：动态导入.lib与.dll同批；完整静态库沿用static32/static64命名，如avformatstatic64.lib、libavformatstatic64.a。不得把导入库改名冒充静态库。
+接入位置：由使用该第三方的封装库在before按组合复制必要头和库到include/lib；业务经工程规范规定的封装API调用。
 详细说明：历史tools布局可能不同，先核对同类例子。升级核对VS2013、C++11、目标系统（包括已约定Windows Server 2012）、CRT、位数和部署条件，不擅加重依赖。
 
 2. 分清自动链接、CRT和运行时依赖。
 确认：无需口令。
-规则：Windows封装API.h通过#pragma comment(lib,...)选Debug/Release，vcxproj不重复列封装库及其传递依赖；AdditionalDependencies只列直接第三方/系统库，搜索目录通常只需仓库lib。
-dll/lib与MD/MT独立。Qt应用使用匹配MD/MDd，基础库Release MT不为方便链接批量改MD；CRT冲突先查配置，不用/NODEFAULTLIB遮盖。
-跨DLL内存由分配模块释放，STL ABI不兼容时用C接口隔离；静态依赖传播须核对最终链接。
+规则：
+封装库链接：Windows API.h通过#pragma comment(lib,...)选择Debug/Release，vcxproj不重复列封装库及其传递依赖。
+直接依赖：AdditionalDependencies只列直接第三方或系统库，搜索目录通常只需仓库lib。
+CRT组合：dll/lib与MD/MT独立。Qt应用使用匹配MD/MDd，不为方便链接把基础库Release MT批量改MD；冲突先查配置，不用/NODEFAULTLIB掩盖。
+跨模块资源：分配模块负责释放；STL ABI不兼容时用C接口隔离，静态依赖传播仍须核对最终链接。
 详细说明：LockFreeQueue由头及.inl提供运行功能，即使构建生成DLL，产品/Test的Release/Debug包不附带其DLL；仍保留必要构建依赖。
 
 七、新建与构建
@@ -150,8 +166,8 @@ dll/lib与MD/MT独立。Qt应用使用匹配MD/MDd，基础库Release MT不为�
 检查：生成成功不代表编译或运行通过。
 
 2. 使用正式入口，检查真实结果。
-确认：按工作流已放行阶段和目标配置。
-PowerShell示例：
+确认：启用工作流时须处于已放行阶段；普通任务按用户授权和目标配置。
+PowerShell示例：分别展示库构建、应用依赖准备和应用构建，不是要求重复执行的固定批次。
 & $env:CLOUD_REBUILD LumaPlayerCore 64 dll debug same
 & 'C:\Program Files\Git\bin\sh.exe' src/LumaPlayer/version_debug.sh
 & 'C:\Program Files (x86)\MSBuild\12.0\Bin\amd64\MSBuild.exe' src/LumaPlayer/LumaPlayer.sln /p:Configuration=Debug /p:Platform=x64 /m /nologo /clp:ErrorsOnly
@@ -174,7 +190,8 @@ PowerShell示例：
 2) 核对部署EXE/DLL的PE RSDS与PDB GUID/Age，记录哈希。
 3) 增量只换EXE时，解压旧的已匹配符号包到任务目录，仅替换EXE的PDB，未变DLL的旧PDB原字节保留。
 4) 用7z -t7z -mx=9 -m0=lzma2 -ms=on重新压缩，执行完整性检查，复核未变PDB哈希。
-5) 保留旧包供旧dump定位，并记录新包对应的部署组合。
+5) 保留旧符号包供旧dump定位，并记录新包对应的部署组合。
+完成：每个实际部署模块能定位到自身匹配符号；缺失项如实列出，不用同名新PDB冒充。
 详细说明：可单独归档变化模块并明确关联旧依赖符号包。同名、较新、接口兼容均不证明匹配；“同批”指模块与自身PDB匹配，不要求未变库重编。缺旧符号须找实际版本并明确缺口，不能用本次其他DLL的新PDB冒充。LNK4099可不阻止链接，但不能宣称符号完整。
 详细说明：数据迁移另列备份和回退限制，换回程序不一定恢复数据；回退只撤销授权范围，文档、调用方和产物一并核对。
 
@@ -182,7 +199,8 @@ PowerShell示例：
 
 1. 通用规则集中维护，产品约定引用实际文档。
 确认：已有效约束沿用，本轮操作授权按工作流。
-LumaPlayer：common/LumaPlayer/需求文档.txt、开发文档.txt；Test是Qt工程，桌面经LUMAPLAYERCORE_USE_C_API及LumaPlayerCoreAPI.h调用共用实现。基础日志不以debug开关，Windows接入CDump。
+规则：
+LumaPlayer：common/LumaPlayer/需求文档.txt、开发文档.txt及common/LumaPlayerTest/测试文档.txt；Test是Qt工程，桌面经LUMAPLAYERCORE_USE_C_API及LumaPlayerCoreAPI.h调用共用实现。基础日志不以debug开关，Windows接入CDump。
 CookServer：version准备依赖、sln构建，64位Release到common/CookServer。EXE、ini/res按实际变化同步；HiRedis.dll是现有Windows部署依赖，变化时同步，不随意增加DLL；Test到common/CookServerTest。Debug/临时程序留lib或任务目录，先验证后发布。
 详细说明：既有实例不是新任务已授权或五端已验证的证据。
 
