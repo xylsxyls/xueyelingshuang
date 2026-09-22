@@ -1,0 +1,5 @@
+﻿<RCC>
+    <qresource prefix="/">
+        <file>PdfReaderTest.qml</file>
+    </qresource>
+</RCC>

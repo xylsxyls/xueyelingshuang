@@ -1,72 +1,41 @@
-﻿#include "PdfReaderWindow.h"
-#include "PdfReaderHelper.h"
-#include "PdfReaderInstance.h"
+﻿#include "PdfReader.h"
+#include <QtWidgets/QApplication>
+#include <stdint.h>
 
-#include "CDump/CDumpAPI.h"
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
 
-int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR, int showCommand)
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
 {
-    static bool s_declareDumpFile = CDump::declareDumpFile();
-    (void)s_declareDumpFile;
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		exit(0);
+	}	
+}
 
-    bool debugLogEnabled = PdfReaderHelper::HasDebugCommandLineArgument();
-    PdfReaderInstance::instance().setDebugLogEnabled(debugLogEnabled);
-    if (!s_declareDumpFile)
-    {
-        SetUnhandledExceptionFilter(PdfReaderInstance::unhandledExceptionFilter);
-    }
-    PdfReaderInstance::instance().logInfo("PdfReader process start, commandLine=%s",
-                       PdfReaderHelper::WideToUtf8(GetCommandLineW()).c_str());
-    PdfReaderInstance::instance().logInfo("CDump declare result=%d", s_declareDumpFile ? 1 : 0);
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
 
-    HRESULT comResult = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    if (FAILED(comResult))
-    {
-        PdfReaderInstance::instance().logWarning("CoInitializeEx failed, hr=0x%08X", static_cast<unsigned int>(comResult));
-    }
-    else
-    {
-        PdfReaderInstance::instance().logInfo("CoInitializeEx succeeded");
-    }
+CtrlC g_ctrlc;
+#endif
 
-    INITCOMMONCONTROLSEX commonControls;
-    ZeroMemory(&commonControls, sizeof(commonControls));
-    commonControls.dwSize = sizeof(commonControls);
-    commonControls.dwICC = ICC_WIN95_CLASSES | ICC_BAR_CLASSES | ICC_STANDARD_CLASSES;
-    InitCommonControlsEx(&commonControls);
-
-    PdfReaderWindow window;
-    if (!window.create(instance, showCommand))
-    {
-        PdfReaderInstance::instance().logError("Create PdfReader window failed, lastError=%lu", GetLastError());
-        MessageBoxW(nullptr, L"创建PDF阅读器窗口失败。", kAppTitle, MB_OK | MB_ICONERROR);
-        if (SUCCEEDED(comResult))
-        {
-            CoUninitialize();
-        }
-        PdfReaderInstance::instance().uninitDebugLog();
-        return 1;
-    }
-
-    std::wstring startupFilePath = PdfReaderHelper::FirstCommandLineFilePath();
-    if (!startupFilePath.empty())
-    {
-        PdfReaderInstance::instance().logInfo("Startup file argument found, path=%s",
-                           PdfReaderHelper::WideToUtf8(startupFilePath).c_str());
-        window.openPdfFile(startupFilePath);
-    }
-    else
-    {
-        PdfReaderInstance::instance().logInfo("No startup file argument");
-    }
-
-    int result = window.runMessageLoop();
-    if (SUCCEEDED(comResult))
-    {
-        CoUninitialize();
-        PdfReaderInstance::instance().logInfo("CoUninitialize called");
-    }
-    PdfReaderInstance::instance().logInfo("PdfReader process exit, code=%d", result);
-    PdfReaderInstance::instance().uninitDebugLog();
-    return result;
+int32_t main(int argc, char* argv[])
+{
+	QApplication app(argc, argv);
+	PdfReader window;
+	window.show();
+	return app.exec();
 }

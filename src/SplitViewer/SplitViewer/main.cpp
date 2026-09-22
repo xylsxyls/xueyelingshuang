@@ -1,102 +1,41 @@
-﻿#include "Logger.h"
-#include "SplitViewerWindow.h"
-
-#include "CDump/CDumpAPI.h"
-
+﻿#include "SplitViewer.h"
+#include <QtWidgets/QApplication>
 #include <stdint.h>
 
-int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE unusedInstance, LPWSTR commandLine, int cmdShow)
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
+
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
 {
-    UNREFERENCED_PARAMETER(unusedInstance);
-    UNREFERENCED_PARAMETER(commandLine);
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		exit(0);
+	}	
+}
 
-    bool debugLogging = false;
-    std::wstring startupPath;
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
 
-    int argc = 0;
-    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    if (argv)
-    {
-        for (int i = 1; i < argc; ++i)
-        {
-            if (SplitViewerSameText(argv[i], L"debug"))
-            {
-                debugLogging = true;
-            }
-            else if (startupPath.empty())
-            {
-                startupPath = argv[i];
-            }
-        }
-        LocalFree(argv);
-    }
+CtrlC g_ctrlc;
+#endif
 
-    static bool s_declareDumpFile = CDump::declareDumpFile();
-
-    SplitViewerSetDebugLoggingEnabled(debugLogging);
-    SplitViewerDebugLogFormat(L"SplitViewer started debug=%d dumpDeclared=%d startupPath=%s.",
-        debugLogging ? 1 : 0,
-        s_declareDumpFile ? 1 : 0,
-        startupPath.c_str());
-
-    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-    if (FAILED(hr))
-    {
-        SplitViewerDebugLogFormat(L"COM initialization failed: 0x%08X.", static_cast<unsigned int>(hr));
-        SplitViewerSetDebugLoggingEnabled(false);
-        MessageBoxW(NULL, L"COM \u521D\u59CB\u5316\u5931\u8D25\u3002", kSplitViewerAppTitle, MB_ICONERROR | MB_OK);
-        return 1;
-    }
-
-    Gdiplus::GdiplusStartupInput gdiplusInput;
-    ULONG_PTR gdiplusToken = 0;
-    if (Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusInput, NULL) != Gdiplus::Ok)
-    {
-        SplitViewerDebugLog(L"GDI+ initialization failed.");
-        SplitViewerSetDebugLoggingEnabled(false);
-        CoUninitialize();
-        MessageBoxW(NULL, L"GDI+ \u521D\u59CB\u5316\u5931\u8D25\u3002", kSplitViewerAppTitle, MB_ICONERROR | MB_OK);
-        return 1;
-    }
-
-    INITCOMMONCONTROLSEX icc = { 0 };
-    icc.dwSize = sizeof(icc);
-    icc.dwICC = ICC_STANDARD_CLASSES | ICC_BAR_CLASSES | ICC_WIN95_CLASSES;
-    InitCommonControlsEx(&icc);
-    SplitViewerRegisterSvFileType();
-
-    int32_t exitCode = 0;
-    {
-        SplitViewerWindow window;
-        if (!window.Create(hInstance, cmdShow))
-        {
-            SplitViewerDebugLog(L"Window creation failed.");
-            exitCode = 1;
-        }
-        else
-        {
-            if (!startupPath.empty())
-            {
-                SplitViewerDebugLogFormat(L"Loading startup path: %s", startupPath.c_str());
-                window.LoadStartupPath(startupPath.c_str());
-            }
-
-            MSG msg = { 0 };
-            while (GetMessageW(&msg, NULL, 0, 0) > 0)
-            {
-                TranslateMessage(&msg);
-                DispatchMessageW(&msg);
-            }
-            exitCode = static_cast<int32_t>(msg.wParam);
-            SplitViewerDebugLogFormat(L"Message loop ended exitCode=%d, releasing window resources before GDI+/COM shutdown.",
-                exitCode);
-        }
-    }
-    SplitViewerDebugLog(L"Window resources released.");
-
-    Gdiplus::GdiplusShutdown(gdiplusToken);
-    CoUninitialize();
-    SplitViewerDebugLog(L"SplitViewer exiting.");
-    SplitViewerSetDebugLoggingEnabled(false);
-    return static_cast<int>(exitCode);
+int32_t main(int argc, char* argv[])
+{
+	QApplication app(argc, argv);
+	SplitViewer window;
+	window.show();
+	return app.exec();
 }
