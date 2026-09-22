@@ -1,1 +1,1 @@
-"$CLOUD_REBUILD" SplitViewerCore 32 dll release same
+"$CLOUD_REBUILD" SplitViewerCore 64 dll release same

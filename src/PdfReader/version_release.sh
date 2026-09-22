@@ -1,1 +1,1 @@
-"$CLOUD_REBUILD" PdfReaderCore 32 dll release same
+"$CLOUD_REBUILD" PdfReaderCore 64 dll release same
