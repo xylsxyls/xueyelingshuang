@@ -22,9 +22,11 @@
     <ClInclude Include="..\src\PdfReaderCoreAPI.h" />
     <ClInclude Include="..\src\PdfReaderCoreMacro.h" />
     <ClInclude Include="..\src\PdfReaderCore.h" />
+    <ClInclude Include="..\src\PdfReaderCoreC.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\PdfReaderCore.cpp" />
+    <ClCompile Include="..\src\PdfReaderCoreC.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{687B15B7-A6CF-4E4C-9B33-946E184EDC4E}</ProjectGuid>
@@ -185,4 +187,14 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\PdfReaderCoreConfig.cpp" />
+    <ClInclude Include="..\src\PdfReaderCoreConfig.h" />
+    <ClCompile Include="..\src\PdfReaderCoreCContext.cpp" />
+    <ClInclude Include="..\src\PdfReaderCoreCContext.h" />
+    <ClCompile Include="..\src\PdfReaderCoreExportHelper.cpp" />
+    <ClInclude Include="..\src\PdfReaderCoreExportHelper.h" />
+    <ClInclude Include="..\src\PdfReaderCoreModels.h" />
+  </ItemGroup>
+  <ItemGroup><ClCompile Include="..\src\PdfReaderCoreCResultHelper.cpp"></ClCompile><ClInclude Include="..\src\PdfReaderCoreCResultHelper.h"></ClInclude></ItemGroup>
 </Project>

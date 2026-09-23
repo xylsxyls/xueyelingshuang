@@ -81,7 +81,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\..\SplitViewerCore\SplitViewerCore\src\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -95,13 +95,13 @@
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;Qt5Testd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\..\SplitViewerCore\SplitViewerCore\src\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -115,14 +115,15 @@
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;Qt5Testd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DebugInformationFormat />
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\..\SplitViewerCore\SplitViewerCore\src\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>MaxSpeed</Optimization>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <WarningLevel>Level3</WarningLevel>
@@ -134,15 +135,15 @@
       <OutputFile>$(OutDir)\$(ProjectName)1.0.exe</OutputFile>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5Test.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DebugInformationFormat>
-      </DebugInformationFormat>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\..\SplitViewerCore\SplitViewerCore\src\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>MaxSpeed</Optimization>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <WarningLevel>Level3</WarningLevel>
@@ -154,7 +155,7 @@
       <OutputFile>$(OutDir)\$(ProjectName)1.0.exe</OutputFile>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5Test.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -176,6 +177,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewer.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerCanvas.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerPlatform.cpp" />
+    <ClCompile Include="GeneratedFiles\$(Configuration)\moc_SplitViewer.cpp" />
+    <ClCompile Include="SplitViewerUiTests.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="SplitViewerTest.cpp" />
   </ItemGroup>
@@ -271,6 +277,13 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
     </CustomBuild>
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\SplitViewer\SplitViewer\SplitViewer.h">
+      <Command>"$(QTDIR)\bin\moc.exe" "%(FullPath)" -o "GeneratedFiles\$(Configuration)\moc_SplitViewer.cpp"</Command>
+      <Outputs>GeneratedFiles\$(Configuration)\moc_SplitViewer.cpp</Outputs>
+    </CustomBuild>
+    <ClInclude Include="SplitViewerUiTests.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
@@ -279,4 +292,51 @@
       <UserProperties MocDir=".\GeneratedFiles\$(ConfigurationName)" UicDir=".\GeneratedFiles" RccDir=".\GeneratedFiles" lupdateOptions="" lupdateOnBuild="0" lreleaseOptions="" Qt5Version_x0020_Win32="5.5.1_32_2013" Qt5Version_x0020_x64="5.5.1_64_2013" MocOptions="" />
     </VisualStudio>
   </ProjectExtensions>
+  <ItemGroup>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerCanvas.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerFileAssociationHelper.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerFileAssociationHelper.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerForeignWindowHelper.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerForeignWindowHelper.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerHit.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerHit.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerIconHelper.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerIconHelper.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerImageHelper.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerImageHelper.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerLayoutHelper.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerLayoutHelper.h" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeClick.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseConfig.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseConfig.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseHelper.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseHelper.h" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerPlatform.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerProfileStore.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerProfileStore.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerRenderer.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerRenderer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerHitTestHelper.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerHitTestHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\Config.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\Config.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogParam.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogParam.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogView.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogView.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogFactory.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogFactory.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogSession.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogSession.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogHelper.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SplitViewerDialogTests.cpp" />
+    <ClInclude Include="SplitViewerDialogTests.h" />
+  </ItemGroup>
 </Project>

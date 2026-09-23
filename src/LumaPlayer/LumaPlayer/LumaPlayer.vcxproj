@@ -245,7 +245,29 @@
     <ClInclude Include="LumaPlayerAudioRender.h" />
     <ClInclude Include="LumaPlayerAudioTask.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="$(IntDir)LumaPlayer.rc" />
+    <Image Include="res\LumaPlayer.png" />
+    <None Include="LumaPlayerIcon.sh" />
+  </ItemGroup>
+  <ItemDefinitionGroup>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <PropertyGroup>
+    <LumaPlayerIconShell Condition="'$(LumaPlayerIconShell)'==''">$(ProgramW6432)\Git\bin\sh.exe</LumaPlayerIconShell>
+  </PropertyGroup>
+  <Target Name="GenerateLumaPlayerIcon" BeforeTargets="ResourceCompile"
+    Inputs="$(ProjectDir)res\LumaPlayer.png;$(ProjectDir)LumaPlayerIcon.sh"
+    Outputs="$(IntDir)LumaPlayer.ico;$(IntDir)LumaPlayer.rc">
+    <Error Condition="!Exists('$(LumaPlayerIconShell)')" Text="Git sh.exe not found. Set LumaPlayerIconShell to the installed Git bin\sh.exe path." />
+    <Exec Command="&quot;$(LumaPlayerIconShell)&quot; &quot;$(ProjectDir)LumaPlayerIcon.sh&quot; --source &quot;$(ProjectDir)res\LumaPlayer.png&quot; --output &quot;$(IntDir)LumaPlayer.ico&quot; --format ICO --resource &quot;$(IntDir)LumaPlayer.rc&quot; --qt-dir &quot;$(QTDIR)&quot; --vcvars &quot;$(VCInstallDir)vcvarsall.bat&quot; --arch $(Platform)" />
+  </Target>
+  <Target Name="CleanLumaPlayerIcon" AfterTargets="Clean">
+    <Delete Files="$(IntDir)LumaPlayer.ico;$(IntDir)LumaPlayer.rc" />
+  </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ProjectExtensions>
@@ -279,16 +301,16 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
     </CustomBuild>
     <CustomBuild Include="LumaPlayer.qrc">
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(FullPath);res\LumaPlayer.png;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(FullPath);res\LumaPlayer.png;%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Rcc%27ing %(Identity)...</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Rcc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(FullPath);res\LumaPlayer.png;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(FullPath);res\LumaPlayer.png;%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Rcc%27ing %(Identity)...</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Rcc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>

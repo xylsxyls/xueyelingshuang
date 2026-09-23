@@ -39,6 +39,14 @@ public:
 	*/
 	static std::string buildBaseName(const std::string& processName, int32_t pid, const std::string& timeName);
 
+	/** 根据会话基础名生成对应的历史日志目录
+	@param [in] logDir 日志目录
+	@param [in] processName 进程名
+	@param [in] baseName 会话基础名
+	@return 返回归档目录，名称无效时返回空字符串
+	*/
+	static std::string buildArchiveDir(const std::string& logDir, const std::string& processName, const std::string& baseName);
+
 	/** 生成软链接路径
 	@param [in] logDir 日志目录
 	@param [in] baseName 日志基础名
@@ -72,7 +80,7 @@ public:
 	*/
 	static bool deleteFile(const std::string& path);
 
-	/** 移动文件或软链接
+	/** 移动文件或软链接，目标存在时拒绝覆盖
 	@param [in] oldPath 原路径
 	@param [in] newPath 新路径
 	@return 返回是否移动成功

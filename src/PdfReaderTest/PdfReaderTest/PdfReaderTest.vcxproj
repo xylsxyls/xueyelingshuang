@@ -95,7 +95,7 @@
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ole32.lib;gdi32.lib;uuid.lib;shell32.lib;qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -115,14 +115,14 @@
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ole32.lib;gdi32.lib;uuid.lib;shell32.lib;qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DebugInformationFormat />
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <WarningLevel>Level3</WarningLevel>
@@ -134,15 +134,14 @@
       <OutputFile>$(OutDir)\$(ProjectName)1.0.exe</OutputFile>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ole32.lib;gdi32.lib;uuid.lib;shell32.lib;qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DebugInformationFormat>
-      </DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <WarningLevel>Level3</WarningLevel>
@@ -154,7 +153,7 @@
       <OutputFile>$(OutDir)\$(ProjectName)1.0.exe</OutputFile>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ole32.lib;gdi32.lib;uuid.lib;shell32.lib;qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -176,10 +175,27 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="PdfReaderRegression.cpp" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReader.cpp" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderCoreBridge.cpp" />
+    <ClCompile Include="GeneratedFiles\$(Configuration)\moc_PdfReader.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PdfReaderTest.cpp" />
+    <ClCompile Include="CApiSmoke.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <ForcedIncludeFiles />
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="PdfReaderRegression.h" />
+    <CustomBuild Include="..\..\PdfReader\PdfReader\PdfReader.h">
+      <Command>"$(QTDIR)\bin\moc.exe" "%(FullPath)" -o "GeneratedFiles\$(Configuration)\moc_PdfReader.cpp" -I"$(QTDIR)\include" -I"$(QTDIR)\include\QtWidgets"</Command>
+      <Outputs>GeneratedFiles\$(Configuration)\moc_PdfReader.cpp</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\..\PdfReader\PdfReader\PdfReaderThumbnailList.h">
+      <Command>"$(QTDIR)\bin\moc.exe" "%(FullPath)" -o "GeneratedFiles\$(Configuration)\moc_PdfReaderThumbnailList.cpp" -I"$(QTDIR)\include" -I"$(QTDIR)\include\QtWidgets"</Command>
+      <Outputs>GeneratedFiles\$(Configuration)\moc_PdfReaderThumbnailList.cpp</Outputs>
+    </CustomBuild>
     <CustomBuild Include="PdfReaderTest.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
@@ -253,16 +269,16 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="PdfReaderTest.qrc">
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(FullPath);$(ProjectDir)..\..\PdfReader\PdfReader\res\PdfReader.png;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(FullPath);$(ProjectDir)..\..\PdfReader\PdfReader\res\PdfReader.png;%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Rcc%27ing %(Identity)...</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Rcc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(FullPath);$(ProjectDir)..\..\PdfReader\PdfReader\res\PdfReader.png;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(FullPath);$(ProjectDir)..\..\PdfReader\PdfReader\res\PdfReader.png;%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Rcc%27ing %(Identity)...</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Rcc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
@@ -279,4 +295,31 @@
       <UserProperties MocDir=".\GeneratedFiles\$(ConfigurationName)" UicDir=".\GeneratedFiles" RccDir=".\GeneratedFiles" lupdateOptions="" lupdateOnBuild="0" lreleaseOptions="" Qt5Version_x0020_Win32="5.5.1_32_2013" Qt5Version_x0020_x64="5.5.1_64_2013" MocOptions="" />
     </VisualStudio>
   </ProjectExtensions>
+  <ItemGroup>
+    <ClCompile Include="..\..\PdfReader\PdfReader\Config.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\Config.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderThumbnailList.cpp" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderThumbnailDelegate.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderThumbnailDelegate.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderIconHelper.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderIconHelper.h" />
+    <ClCompile Include="GeneratedFiles\Debug\moc_PdfReaderThumbnailList.cpp"><ExcludedFromBuild Condition="'$(Configuration)'!='Debug'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PdfReaderThumbnailList.cpp"><ExcludedFromBuild Condition="'$(Configuration)'!='Release'">true</ExcludedFromBuild></ClCompile>
+  </ItemGroup>
+  <ItemGroup><ClCompile Include="PdfReaderConfigurationTests.cpp" /><ClInclude Include="PdfReaderConfigurationTests.h" /></ItemGroup>
+  <ItemGroup><ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderFileHelper.cpp" /><ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderFileHelper.h" /><ClCompile Include="CppConfigSmoke.cpp" /></ItemGroup>
+  <ItemGroup><ClCompile Include="PdfReaderTestHelper.cpp" /><ClInclude Include="PdfReaderTestHelper.h" /><ClCompile Include="PdfReaderTestUiHelper.cpp" /><ClInclude Include="PdfReaderTestUiHelper.h" /></ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogView.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogView.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogFactory.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogFactory.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogHelper.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogHelper.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogRuntime.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogRuntime.h" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogParam.h" />
+  </ItemGroup>
+  <ItemGroup><ClCompile Include="PdfReaderDialogTests.cpp" /><ClInclude Include="PdfReaderDialogTests.h" /></ItemGroup>
+  <ItemGroup><ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderControlHelper.cpp" /><ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderControlHelper.h" /></ItemGroup>
 </Project>

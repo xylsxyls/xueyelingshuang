@@ -1,5 +1,6 @@
 ﻿<RCC>
     <qresource prefix="/">
         <file>SplitViewer.qml</file>
+        <file alias="icons/SplitViewer.png">res/SplitViewer.png</file>
     </qresource>
 </RCC>

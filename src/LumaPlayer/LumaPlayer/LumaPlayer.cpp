@@ -19,6 +19,7 @@
 #include <QKeyEvent>
 #include <QMenu>
 #include <QFontMetrics>
+#include <QIcon>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
@@ -129,6 +130,7 @@ void LumaPlayer::init(bool debugEnabled)
     qApp->installEventFilter(this);
     LOGINFO("LumaPlayer init begin, debug=%d", debugEnabled ? 1 : 0);
     setWindowTitle(g_config.m_windowTitle);
+    setWindowIcon(QIcon(g_config.m_applicationIconPath));
 	setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
 	setAttribute(Qt::WA_NoSystemBackground, true);
@@ -1393,8 +1395,16 @@ QRect LumaPlayer::bottomOverlayRect() const
 
 QRect LumaPlayer::loadButtonRect() const
 {
-    return QRect(g_config.m_titleMargin, topOverlayRect().top() + g_config.m_titleButtonTop,
+    return QRect(g_config.m_titleMargin + g_config.m_titleIconSize + g_config.m_titleButtonGap,
+        topOverlayRect().top() + g_config.m_titleButtonTop,
         g_config.m_titleButtonSize, g_config.m_titleButtonSize);
+}
+
+QRect LumaPlayer::titleIconRect() const
+{
+    return QRect(g_config.m_titleMargin,
+        topOverlayRect().top() + (topOverlayHeight() - g_config.m_titleIconSize) / 2,
+        g_config.m_titleIconSize, g_config.m_titleIconSize);
 }
 
 QRect LumaPlayer::minimizeButtonRect() const
@@ -1564,6 +1574,7 @@ void LumaPlayer::paintTopOverlay(QPainter& painter)
 	painter.drawRect(overlay);
     painter.setPen(g_config.m_overlayBorderColor);
 	painter.drawLine(overlay.bottomLeft(), overlay.bottomRight());
+    windowIcon().paint(&painter, titleIconRect());
     paintTitleButton(painter, loadButtonRect(), HitLoadButton);
     paintTitleButton(painter, resetButtonRect(), HitResetButton);
     paintTitleButton(painter, pinButtonRect(), HitPinButton);

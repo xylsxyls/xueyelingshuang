@@ -361,6 +361,19 @@ public:
 	@return 打开成功返回FILE指针，失败返回nullptr
 	*/
 	static FILE* openBinaryOutputFile(const std::wstring& path, std::string* errorText = nullptr);
+    /** 写入由 openBinaryOutputFile 创建的文件，避免跨 DLL 使用不同 CRT 的 FILE
+    @param [in] file CSystem 创建的输出文件
+    @param [in] data 待写字节
+    @param [in] size 字节数量
+    @return 完整写入返回 true
+    */
+    static bool writeBinaryOutputFile(FILE* file, const void* data, size_t size);
+
+    /** 关闭 CSystem 创建的输出文件并检查缓冲写入结果
+    @param [in] file 输出文件，关闭后不再有效
+    @return 刷新及关闭成功返回 true
+    */
+    static bool closeBinaryOutputFile(FILE* file);
 	/** 删除文件或空目录，支持Windows宽字符路径
 	@param [in] path 文件或目录路径，Windows下只删除文件，Linux下可删除文件或空目录
 	@return 返回是否删除成功
@@ -381,6 +394,12 @@ public:
 	@return 返回是否重命名成功
 	*/
 	static bool rename(const std::string& oldPath, const std::string& newPath);
+    /** 将同文件系统临时文件替换目标文件，不预先删除目标
+    @param [in] sourcePath 已写完并关闭的临时文件，失败时保留
+    @param [in] destinationPath 目标宽字符路径，允许已存在
+    @return 替换成功返回 true；失败保留原目标
+    */
+    static bool replaceFile(const std::wstring& sourcePath, const std::wstring& destinationPath);
 	/** 将time_t转换为时间字符串
 	@param [in] timet 时间值
 	@param [in] isLocal 是否按本地时间转换，false表示格林威治时间

@@ -65,4 +65,78 @@
       <Filter>Header Files</Filter>
     </CustomBuild>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="SplitViewerUiTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerCanvas.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerPlatform.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="GeneratedFiles\$(Configuration)\moc_SplitViewer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SplitViewerUiTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\SplitViewer\SplitViewer\SplitViewer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files\Storage"><UniqueIdentifier>{9b0c2a98-de41-4ce7-bb08-bb182ee58eb5}</UniqueIdentifier></Filter>
+    <Filter Include="Header Files\Presentation"><UniqueIdentifier>{deabd76d-5e41-4071-a371-8799ad70c9b3}</UniqueIdentifier></Filter>
+    <Filter Include="Source Files\Presentation"><UniqueIdentifier>{09b2fb53-240e-4499-9b3e-eaeed7af56cc}</UniqueIdentifier></Filter>
+    <Filter Include="Header Files\Platform"><UniqueIdentifier>{086d1a62-055e-4b15-abfe-442a6f66f830}</UniqueIdentifier></Filter>
+    <Filter Include="Source Files\Platform"><UniqueIdentifier>{2a82904f-8975-4680-a487-ffe0783b35a0}</UniqueIdentifier></Filter>
+    <Filter Include="Header Files\Storage"><UniqueIdentifier>{74269304-07d9-4fb9-be23-31c58c505a23}</UniqueIdentifier></Filter>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerCanvas.h"><Filter>Header Files\Storage</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerFileAssociationHelper.cpp"><Filter>Source Files\Platform</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerFileAssociationHelper.h"><Filter>Header Files\Platform</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerForeignWindowHelper.cpp"><Filter>Source Files\Platform</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerForeignWindowHelper.h"><Filter>Header Files\Platform</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerHit.cpp"><Filter>Source Files\Presentation</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerHit.h"><Filter>Header Files\Presentation</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerIconHelper.cpp"><Filter>Source Files\Presentation</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerIconHelper.h"><Filter>Header Files\Presentation</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerImageHelper.cpp"><Filter>Source Files\Presentation</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerImageHelper.h"><Filter>Header Files\Presentation</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerLayoutHelper.cpp"><Filter>Source Files\Presentation</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerLayoutHelper.h"><Filter>Header Files\Presentation</Filter></ClInclude>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeClick.h"><Filter>Header Files\Platform</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseConfig.cpp"><Filter>Source Files\Platform</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseConfig.h"><Filter>Header Files\Platform</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseHelper.cpp"><Filter>Source Files\Platform</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseHelper.h"><Filter>Header Files\Platform</Filter></ClInclude>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerPlatform.h"><Filter>Header Files\Storage</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerProfileStore.cpp"><Filter>Source Files\Storage</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerProfileStore.h"><Filter>Header Files\Storage</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerRenderer.cpp"><Filter>Source Files\Presentation</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerRenderer.h"><Filter>Header Files\Presentation</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerHitTestHelper.cpp"><Filter>Source Files\Presentation</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerHitTestHelper.h"><Filter>Header Files\Presentation</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\Config.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\Config.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogParam.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogParam.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogView.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogView.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogFactory.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogFactory.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogSession.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogSession.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogHelper.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogHelper.h"><Filter>Header Files</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SplitViewerDialogTests.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="SplitViewerDialogTests.h"><Filter>Header Files</Filter></ClInclude>
+  </ItemGroup>
 </Project>

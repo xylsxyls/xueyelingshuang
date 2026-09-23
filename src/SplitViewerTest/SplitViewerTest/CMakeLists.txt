@@ -1,4 +1,4 @@
-﻿#设置CMAKE最低版本
+#设置CMAKE最低版本
 CMAKE_MINIMUM_REQUIRED(VERSION 3.10.1)
 SET(CMAKE_CXX_STANDARD 11)
 
@@ -16,7 +16,7 @@ SET(CMAKE_BUILD_TYPE "Debug")
 elseif(${DEBUGRELEASE} STREQUAL "release")
 #设置项目名称
 SET(PROJECT_NAME SplitViewerTest)
-SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
+SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O2 -g")
 SET(CMAKE_BUILD_TYPE "Release")
 endif()
 
@@ -27,17 +27,23 @@ if(${BIT} STREQUAL "32")
     SET(QT5_GCC "$ENV{QT5GCC32}")
 elseif(${BIT} STREQUAL "64")
     MESSAGE(STATUS "using 64bits (x86_64)")
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64")
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
+    if(NOT APPLE AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+        SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64")
+        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
+    endif()
     SET(QT5_GCC "$ENV{QT5GCC64}")
 elseif(${BIT} STREQUAL "arm32")
     MESSAGE(STATUS "using arm32 (armhf)")
+    if(NOT CMAKE_TOOLCHAIN_FILE AND NOT APPLE AND NOT ANDROID)
     SET(CMAKE_C_COMPILER "arm-linux-gnueabihf-gcc")
     SET(CMAKE_CXX_COMPILER "arm-linux-gnueabihf-g++")
+    endif()
 elseif(${BIT} STREQUAL "arm64")
     MESSAGE(STATUS "using arm64 (aarch64)")
+    if(NOT CMAKE_TOOLCHAIN_FILE AND NOT APPLE AND NOT ANDROID)
     SET(CMAKE_C_COMPILER "aarch64-linux-gnu-gcc")
     SET(CMAKE_CXX_COMPILER "aarch64-linux-gnu-g++")
+    endif()
 else()
     MESSAGE(FATAL_ERROR "Unknown BIT value: ${BIT}. Please set BIT to '32', '64', 'arm32', or 'arm64'")
 endif()
@@ -52,6 +58,7 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../../../lib/)
 
 #添加包含目录
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../include/)
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../SplitViewerCore/SplitViewerCore/src/)
 
 #添加库目录
 LINK_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../lib/)
@@ -68,14 +75,23 @@ SET(Qt5_DIR "${QT5_GCC}/lib/cmake/Qt5")
 INCLUDE_DIRECTORIES("${QT5_GCC}/include/")
 
 #添加Qt依赖库
-SET(QTRELY Widgets;Core;Gui;Qml;Quick)
+SET(QTRELY Widgets;Core;Gui;Test)
 
 list(APPEND QTRELYLIST ${QTRELY})
 foreach (EVERYQTRELY ${QTRELYLIST})
 SET(Qt5${EVERYQTRELY}_DIR "${QT5_GCC}/lib/cmake/Qt5${EVERYQTRELY}")
-FIND_PACKAGE(Qt5${EVERYQTRELY})
+FIND_PACKAGE(Qt5${EVERYQTRELY} REQUIRED)
 INCLUDE_DIRECTORIES("${QT5_GCC}/include/Qt${EVERYQTRELY}/")
 endforeach ()
+
+if(NOT DEFINED LIBRARIESRELY OR "${LIBRARIESRELY}" STREQUAL "")
+if(DEBUGRELEASE STREQUAL "debug")
+SET(CORE_SUFFIX d)
+else()
+SET(CORE_SUFFIX "")
+endif()
+SET(LIBRARIESRELY "${CMAKE_SHARED_LIBRARY_PREFIX}SplitViewerCore${CORE_SUFFIX}${CMAKE_SHARED_LIBRARY_SUFFIX};${CMAKE_SHARED_LIBRARY_PREFIX}LogManager${CORE_SUFFIX}${CMAKE_SHARED_LIBRARY_SUFFIX};${CMAKE_SHARED_LIBRARY_PREFIX}QtControls${CORE_SUFFIX}${CMAKE_SHARED_LIBRARY_SUFFIX};${CMAKE_SHARED_LIBRARY_PREFIX}DialogManager${CORE_SUFFIX}${CMAKE_SHARED_LIBRARY_SUFFIX};${CMAKE_SHARED_LIBRARY_PREFIX}QssString${CORE_SUFFIX}${CMAKE_SHARED_LIBRARY_SUFFIX};${CMAKE_SHARED_LIBRARY_PREFIX}CStringManager${CORE_SUFFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+endif()
 
 #查找当前文件夹中的所有源代码文件，也可以通过Set命令将所有文件设置为一个变量
 AUX_SOURCE_DIRECTORY("${PROJECT_SOURCE_DIR}/" DIR_SRCS)
@@ -87,13 +103,34 @@ QT5_WRAP_UI(WRAP_FILES ${UI_FILES})
 SET(RCC_FILES "${PROJECT_SOURCE_DIR}/SplitViewerTest.qrc")
 
 #编译可执行程序
-ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES})
+SET(PRODUCT_UI ${PROJECT_SOURCE_DIR}/../../SplitViewer/SplitViewer)
+ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES}
+    ${PRODUCT_UI}/SplitViewer.cpp ${PRODUCT_UI}/SplitViewer.h
+    ${PRODUCT_UI}/SplitViewerCanvas.cpp
+    ${PRODUCT_UI}/SplitViewerFileAssociationHelper.cpp
+    ${PRODUCT_UI}/SplitViewerForeignWindowHelper.cpp
+    ${PRODUCT_UI}/SplitViewerHitTestHelper.cpp
+    ${PRODUCT_UI}/SplitViewerHit.cpp
+    ${PRODUCT_UI}/SplitViewerIconHelper.cpp
+    ${PRODUCT_UI}/SplitViewerImageHelper.cpp
+    ${PRODUCT_UI}/SplitViewerLayoutHelper.cpp
+    ${PRODUCT_UI}/SplitViewerNativeMouseConfig.cpp
+    ${PRODUCT_UI}/SplitViewerNativeMouseHelper.cpp
+    ${PRODUCT_UI}/SplitViewerPlatform.cpp
+    ${PRODUCT_UI}/SplitViewerProfileStore.cpp
+    ${PRODUCT_UI}/SplitViewerRenderer.cpp
+    ${PRODUCT_UI}/Config.cpp
+    ${PRODUCT_UI}/SplitViewerFileDialogParam.cpp
+    ${PRODUCT_UI}/SplitViewerFileDialogView.cpp
+    ${PRODUCT_UI}/SplitViewerFileDialogFactory.cpp
+    ${PRODUCT_UI}/SplitViewerDialogSession.cpp
+    ${PRODUCT_UI}/SplitViewerDialogHelper.cpp)
 ##如果要生成静态链接库
 ##ADD_LIBRARY(${PROJECT_NAME} STATIC ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES)
 ##如果要生成动态链接库
 ##ADD_LIBRARY(${PROJECT_NAME} SHARED ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES)
 foreach (EVERYQTRELY ${QTRELYLIST})
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} "${QT5_GCC}/lib/libQt5${EVERYQTRELY}.so")
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} Qt5::${EVERYQTRELY})
 endforeach ()
 
 #添加库
@@ -101,3 +138,9 @@ list(APPEND LIBRARYLIST ${LIBRARIESRELY})
 foreach (EVERYLIBRARY ${LIBRARYLIST})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/${EVERYLIBRARY})
 endforeach ()
+
+if(APPLE)
+SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE INSTALL_RPATH "@loader_path")
+elseif(UNIX)
+SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE INSTALL_RPATH "$ORIGIN")
+endif()

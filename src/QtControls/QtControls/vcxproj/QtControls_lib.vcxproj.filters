@@ -663,4 +663,12 @@
     <None Include="..\src\ControlSpinBox.inl" />
     <None Include="..\src\ControlTableStyle.inl" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\MainWindow.cpp" /><ClInclude Include="..\src\MainWindow.h" />
+    <ClCompile Include="..\src\ToolBar.cpp" /><ClInclude Include="..\src\ToolBar.h" />
+    <ClCompile Include="..\src\StatusBar.cpp" /><ClInclude Include="..\src\StatusBar.h" />
+    <ClCompile Include="..\src\Splitter.cpp" /><ClInclude Include="..\src\Splitter.h" />
+    <ClCompile Include="..\src\GroupBox.cpp" /><ClInclude Include="..\src\GroupBox.h" />
+    <ClCompile Include="..\src\FileDialog.cpp" /><ClInclude Include="..\src\FileDialog.h" />
+  </ItemGroup>
 </Project>

@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "LogManagerConfig.h"
 #include <fstream>
+#include <set>
 #include <stdint.h>
 #include <string>
 
@@ -27,8 +28,14 @@ public:
 	LogManagerConfig m_config;
 	// 日志目录，带路径分隔符
 	std::string m_logDir;
-	// 日志基础名，格式为进程名_pid_YYYYMMDD_HHMMSS
+	// 本次会话的唯一日志基础名，同秒重名时追加序号
 	std::string m_baseName;
+	// 本次会话的归档目录，初始化时确定，关闭时才创建
+	std::string m_archiveDir;
+	// 本次会话成功创建且尚未滚删的实体日志路径
+	std::set<std::string> m_entityPaths;
+	// 当前软链接是否由本次会话成功创建
+	bool m_linkCreated;
 	// 当前日志软链接路径
 	std::string m_linkPath;
 	// 当前实体日志路径

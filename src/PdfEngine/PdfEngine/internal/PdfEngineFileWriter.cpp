@@ -1,5 +1,7 @@
 ﻿#include "PdfEngineFileWriter.h"
 
+#include "CSystem/CSystemAPI.h"
+
 #include <new>
 
 #include <pdfium/fpdf_save.h>
@@ -74,8 +76,7 @@ int PdfEngineFileWriter::operator()(const void* data, unsigned long size)
         return 0;
     }
 
-    size_t written = fwrite(data, 1, size, m_file);
-    if (written != size)
+    if (!CSystem::writeBinaryOutputFile(m_file, data, size))
     {
         m_failed = true;
         return 0;

@@ -14,7 +14,13 @@ LineEdit::~LineEdit()
 
 void LineEdit::currentTextChanged(const QString& str)
 {
-	setToolTip(str);
+	setToolTip(echoMode() == QLineEdit::Normal ? str : QString());
+}
+
+void LineEdit::setEchoMode(QLineEdit::EchoMode mode)
+{
+    QLineEdit::setEchoMode(mode);
+    currentTextChanged(text());
 }
 
 void LineEdit::setDefault()

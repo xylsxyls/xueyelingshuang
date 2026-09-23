@@ -1,31 +1,40 @@
-﻿#ifndef QTTEST_H
-#define QTTEST_H
+﻿#ifndef PDFREADERTEST_H
+#define PDFREADERTEST_H
 
-#include <QtWidgets/QMainWindow>
-#include "ui_PdfReaderTest.h"
+#include "QtControls/MainWindow.h"
 
-class COriginalButton;
+#define PDFREADERCORE_USE_C_API
+#include "PdfReaderCore/PdfReaderCoreAPI.h"
+#undef PDFREADERCORE_USE_C_API
 
-class PdfReaderTest : public QMainWindow
+class LineEdit;
+class TextEdit;
+class Label;
+
+class PdfReaderTest : public MainWindow
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	PdfReaderTest(QWidget* parent = nullptr);
-	~PdfReaderTest();
-
-protected:
-	void init();
-	bool check();
-
-protected:
-	void resizeEvent(QResizeEvent* eve);
+    explicit PdfReaderTest(QWidget* parent = nullptr);
+    ~PdfReaderTest();
 
 private slots:
-	void onButtonClicked();
+    void chooseFile();
+    void initCore();
+    void openDocument();
+    void renderFirstPage();
+    void runApiSmoke();
 
 private:
-	Ui::PdfReaderTestClass ui;
-	COriginalButton* m_button;
+    void log(const QString& text);
+    QString lastError() const;
+
+private:
+    PdfReaderCoreHandle m_handle;
+    LineEdit* m_pathEdit;
+    LineEdit* m_passwordEdit;
+    Label* m_pageCountLabel;
+    TextEdit* m_logEdit;
 };
 
-#endif // QTTEST_H
+#endif

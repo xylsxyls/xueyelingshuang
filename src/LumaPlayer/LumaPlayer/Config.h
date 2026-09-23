@@ -54,6 +54,8 @@ private:
 public:
     // 窗口标题
     QString m_windowTitle;
+    // 编译进Qt资源的应用图标路径
+    QString m_applicationIconPath;
     // 加载按钮和文件对话框标题
     QString m_loadText;
     // 文件选择过滤器
@@ -186,6 +188,8 @@ public:
     int32_t m_titleMargin;
     // 标题按钮上边距，像素
     int32_t m_titleButtonTop;
+    // 标题栏应用图标边长，像素
+    int32_t m_titleIconSize;
     // 帮助与窗口按钮组的额外间距，像素
     int32_t m_windowButtonGroupGap;
     // 左右时间区最小宽度，像素

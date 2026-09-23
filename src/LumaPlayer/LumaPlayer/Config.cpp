@@ -11,6 +11,7 @@
 
 Config::Config() :
 m_windowTitle(QStringLiteral("流光播放器")),
+m_applicationIconPath(QStringLiteral(":/icons/LumaPlayer.png")),
 m_loadText(QStringLiteral("加载视频")),
 m_videoFileFilter(QStringLiteral("视频文件 (*.mp4 *.avi);;所有文件 (*.*)")),
 m_setAText(QStringLiteral("设置A点")),
@@ -77,6 +78,7 @@ m_titleButtonSize(22),
 m_titleButtonGap(6),
 m_titleMargin(8),
 m_titleButtonTop(5),
+m_titleIconSize(22),
 m_windowButtonGroupGap(10),
 m_timeWidth(72),
 m_timeMargin(6),
@@ -235,7 +237,7 @@ void Config::init(const QStringList& arguments)
     m_progressTrackTop = (std::max)(m_progressTrackTop, timeMetrics.height() + m_timestampGap);
     m_bottomOverlayHeight = (std::max)(m_bottomOverlayHeight, m_progressTrackTop + m_trackHeight +
         m_markerLabelGap + m_markerLabelHeight + m_playButtonSize + m_playButtonBottom);
-    m_minWindowWidth = (std::max)(7 * m_titleButtonSize + 6 * m_titleButtonGap +
+    m_minWindowWidth = (std::max)(m_titleIconSize + 7 * m_titleButtonSize + 7 * m_titleButtonGap +
         2 * m_titleMargin + m_windowButtonGroupGap,
         2 * (m_timeMargin + m_timeWidth + m_timeTrackGap) + m_minTrackWidth);
     m_minWindowHeight = m_topOverlayHeight + m_bottomOverlayHeight + m_minVideoHeight;

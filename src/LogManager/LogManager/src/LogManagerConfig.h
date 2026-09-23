@@ -32,6 +32,6 @@ struct LogManagerAPI LogManagerConfig
 	int32_t m_checkFileSizeInterval;
 	// 是否同步输出到控制台
 	bool m_outputConsole;
-	// 启动时是否归档旧日志，false表示直接删除旧日志
+	// 正常关闭时是否归档本次会话日志；false留在原目录，启动不处理任何历史日志
 	bool m_archiveOldLog;
 };

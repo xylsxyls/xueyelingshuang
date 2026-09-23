@@ -212,6 +212,11 @@ private:
     */
     QRect resetButtonRect() const;
 
+    /** 获取标题栏应用图标区域，沿用标题空白处拖动行为
+    @return 窗口坐标矩形
+    */
+    QRect titleIconRect() const;
+
     /** 获取图钉按钮命中和绘制区域
     @return 窗口坐标矩形
     */

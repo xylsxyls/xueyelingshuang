@@ -4,6 +4,7 @@
     <ClInclude Include="..\src\PdfReaderCore.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\PdfReaderCoreC.h"><Filter>Bridge</Filter></ClInclude>
     <ClInclude Include="..\src\PdfReaderCoreAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -23,5 +24,21 @@
     <ClCompile Include="..\src\PdfReaderCore.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\PdfReaderCoreC.cpp"><Filter>Bridge</Filter></ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\PdfReaderCoreConfig.cpp"><Filter>Configuration</Filter></ClCompile>
+    <ClInclude Include="..\src\PdfReaderCoreConfig.h"><Filter>Configuration</Filter></ClInclude>
+    <ClCompile Include="..\src\PdfReaderCoreCContext.cpp"><Filter>Bridge</Filter></ClCompile>
+    <ClInclude Include="..\src\PdfReaderCoreCContext.h"><Filter>Bridge</Filter></ClInclude>
+    <ClCompile Include="..\src\PdfReaderCoreExportHelper.cpp"><Filter>Export</Filter></ClCompile>
+    <ClInclude Include="..\src\PdfReaderCoreExportHelper.h"><Filter>Export</Filter></ClInclude>
+    <ClInclude Include="..\src\PdfReaderCoreModels.h"><Filter>Models</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup><Filter Include="Configuration"><UniqueIdentifier>{3f9a10ba-fc4f-4d34-bea3-a1d3da67ac38}</UniqueIdentifier></Filter></ItemGroup>
+  <ItemGroup><Filter Include="UI"><UniqueIdentifier>{1506c637-c4d6-4896-ad08-59469fa605ad}</UniqueIdentifier></Filter></ItemGroup>
+  <ItemGroup><Filter Include="Bridge"><UniqueIdentifier>{55cb0ad1-8caf-4b36-9123-1938d8401af4}</UniqueIdentifier></Filter></ItemGroup>
+  <ItemGroup><Filter Include="Export"><UniqueIdentifier>{750bd97c-e3c9-4681-adfd-ee4cfe72d796}</UniqueIdentifier></Filter></ItemGroup>
+  <ItemGroup><Filter Include="Models"><UniqueIdentifier>{cb489b29-dde6-4ee7-9360-482ea80f2fb4}</UniqueIdentifier></Filter></ItemGroup>
+  <ItemGroup><ClCompile Include="..\src\PdfReaderCoreCResultHelper.cpp"><Filter>Bridge</Filter></ClCompile><ClInclude Include="..\src\PdfReaderCoreCResultHelper.h"><Filter>Bridge</Filter></ClInclude></ItemGroup>
 </Project>

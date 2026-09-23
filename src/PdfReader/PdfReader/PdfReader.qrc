@@ -2,4 +2,5 @@
     <qresource prefix="/">
         <file>PdfReader.qml</file>
     </qresource>
+    <qresource prefix="/icons"><file alias="PdfReader.png">res/PdfReader.png</file></qresource>
 </RCC>

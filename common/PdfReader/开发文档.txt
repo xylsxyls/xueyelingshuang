@@ -1,0 +1,149 @@
+﻿开发文档
+版本：1.0
+更新日期：2026-09-23
+状态：C1已确认，Explorer 使用固定 PDF 图标；弹窗接入 DialogManager、界面使用 QtControls；工作流已结束，其他平台待实机验证
+
+一、现有工程基线
+
+src/PdfReader_old/PdfReader 是完整 Win32 工程。PdfReaderWindow.cpp/h 集中承担窗口创建、标题栏和工具栏自绘、缩略图/正文绘制、滚动、缩放、拖拽、右键菜单、文件对话框、密码提示、帮助窗口和保存命令。PdfReaderPromptDialog、PdfReaderAboutDialog、PdfReaderButtonToolTip、TopButtonState、PdfReaderHelper 中与 HWND、HDC、RECT、Win32 对话框或路径 API 相关的部分属于界面和平台适配。
+
+旧工程的 PageItem、BitmapCacheEntry 是页面顺序和渲染缓存数据；PdfReaderWindow 还直接拥有 PdfEngine、PdfDocument、文档列表和页面列表。PdfEngine 已在 src/PdfEngine 中提供无 Qt 的 Pdfium 初始化、PDF 打开、页面尺寸、BGRA 渲染、页面导入保存和页码范围解析能力。
+
+迁移开始时三个工程为模板；目前已实现 Qt 产品窗口、共享 Core C/C++ API 和真实窗口回归测试，模板描述仅作为历史基线。
+
+首轮落地后，Core 已以 PdfReaderCore/PdfReaderCoreC 两个实现文件承载 C++ 和 C 边界；PdfReaderCoreAPI.h 按 PDFREADERCORE_USE_C_API 选择声明。PdfReaderCoreBridge 只包含该入口，PdfReaderTest 的 CApiSmoke.c 直接以C编译该入口。
+
+二、代码分类和归属
+
+1. Core 归属
+
+将文档生命周期、文档列表、当前页面顺序、页面来源标识、当前主文件路径、打开/密码重试所需状态、页面尺寸和渲染请求、页面插入和重排、保存当前顺序、另存为、分页保存、页码范围解析以及错误结果放入 PdfReaderCore。Core 只包含 C++11 和跨平台库，不包含 Qt、QWidget、QImage、QString、Qt 事件循环或平台窗口句柄。
+
+页面位图数据使用现有 PdfEngineBitmap 或等价的 Core 数据结构；界面缩放、滚动位置、选中高亮、命中测试、缓存淘汰和绘制矩形属于 PdfReader。Core 的文档和页面对象由 Core 负责释放，保存或渲染期间不允许调用方提前关闭来源文档。
+
+2. PdfReader 归属
+
+将旧 PdfReaderWindow 的 Win32 消息处理改为 Qt Widgets 事件和信号槽：主窗口、标题栏/工具栏、左侧缩略图视图、右侧正文视图、滚动条、Ctrl 加滚轮缩放、缩略图长按拖拽、插入位置提示、右键菜单、打开/保存/文件夹选择、密码输入、帮助和按钮提示均由 PdfReader 实现。Qt 代码只通过 PdfReaderCore API 操作文档和页面，不直接访问 PDFium 或 Core 内部类型。
+
+3. PdfReaderTest 归属
+
+保留 Qt 测试界面，同时增加可独立选择的 Core 用例。用例使用稳定数字 ID、中文名、类型、输入、独立预期、实际结果、超时、取消和报告；重点覆盖打开失败和密码、页面数及尺寸、渲染输出、插入/重排、页码范围、分页保存、另存为、空状态、重复关闭和失败后清理。
+
+4. C/C++ API 和 Qt 对接
+
+PdfReaderCoreAPI.h 是唯一对外包含入口。调用方在首次包含前定义 PDFREADERCORE_USE_C_API，入口随后包含 PdfReaderCoreC.h；未定义时包含 PdfReaderCore.h。Windows 下沿用 API.h 的导入宏和 Debug/Release 自动链接，Linux、macOS、Android 和 iOS 使用已有可见性宏。
+
+PdfReaderCoreC.h 只使用 C 可表达的类型，包含 stdint.h、stddef.h，并在 C++ 编译时用 extern "C" 包住函数声明。句柄是不透明指针；结果和状态使用显式枚举；字符串统一为以零结尾的 UTF-8；位图、页面信息和操作结果使用固定布局结构体，借用数据的有效期写入注释。PdfReaderCoreC.cpp 创建和销毁 C 上下文，内部持有 PdfReaderCore C++ 对象，所有入口检查空参数、捕获异常并转换为 C 结果码；不让 C++ 异常、STL 或 Core 私有对象穿过 C 边界。
+
+PdfReader 的桥接类仿照 src/LumaPlayer/LumaPlayer/LumaPlayerCoreBridge：桥接头先定义 PDFREADERCORE_USE_C_API，再只包含 PdfReaderCoreAPI.h；桥接类拥有 Core 不透明句柄，负责 init/uninit/destroy 顺序、路径和结构体转换、结果读取及QImage缓冲区转换。Qt 窗口、模型和测试代码不直接 include PdfReaderCore.h 或 Core 内部头。PdfReaderTest 另设一个 .c 编译单元，直接定义宏并包含 PdfReaderCoreAPI.h，验证纯 C 头可以独立编译和调用。
+
+Qt 缩略图使用 TopToBottom + wrapping=false 的单列布局。关闭 QListWidget 内部拖放和框选，改为一秒长按、源项单选、插入线、边缘滚动及明确取消事件；先由 Core 完成移动，再重建视图并选择源页的新位置。缩略图页图使用固定基准尺寸，Ctrl 滚轮只改变灰色条目背景的高度；自定义 delegate 将页图居中绘制，条目整块命中，所以页图周围灰色区域与页图具有相同选择逻辑。选中左侧条目后通过 ensureWidgetVisible 将对应正文页带入右侧视口。正文与缩略图独立缩放，仅视口相交页持有位图，离屏即释放。
+
+保存和导出先写同目录唯一临时文件，再由 CSystem::replaceFile 替换；Windows 使用 MoveFileExW(REPLACE_EXISTING|WRITE_THROUGH)，不预先删除目标。主文件覆盖先释放来源句柄，替换后重新打开；失败保留恢复 PDF 并报告路径。CSystem 和 PdfEngine Release 各自使用 MT，因此 FILE 的打开/写入/关闭必须全部回到 CSystem 的同一运行库，不能直接在 PdfEngine 内 fwrite/fclose。
+
+C API 增加 pdfReaderCoreSaveEachPageEx 的明确覆盖参数，原函数默认禁止覆盖；所有目标先查冲突。pdfReaderCoreValidatePageRange 在文件对话框前验证范围，解析仍归 Core/PdfEngine，Qt 不复制解析逻辑。
+
+三、拟定 Core 边界
+
+PdfReaderCore 对外提供初始化/释放、打开和关闭文档、查询页面数量和来源、读取页面尺寸、渲染 BGRA、插入 PDF、移动页面、保存当前顺序、另存为、分页保存、指定页保存及页码范围解析。所有操作返回明确成功/失败/取消结果和 UTF-8 错误文字；不能把入队、目标值相等或返回路径当作实际完成。
+
+Core 内部优先复用 PdfEngine::PdfDocument、PdfEngine::PdfEngine 和 PdfEnginePageRef。必要的临时保存路径、文件名和目录处理使用 CSystem/CStringManager 等跨平台库，不能把 PathFindFileNameW、SHBrowseForFolderW 等 Win32 API带入 Core。Core 不维护 Qt 事件循环，也不创建 Qt 或平台线程。
+
+四、界面迁移边界
+
+Qt 主窗口保持旧功能关系：顶部操作区，下面为左缩略图区和右正文区；无文档时显示打开引导；缩略图与正文分别滚动和缩放；缩略图拖拽改变 Core 页面顺序；右键菜单根据页面或空白区域提供插入、分页保存和指定页保存；密码、错误和帮助使用 Qt 对话框。界面绘制可以使用 Qt 等价控件和布局，功能入口、状态转换、范围、取消和错误语义必须与需求文档一致。
+
+五、构建和依赖
+
+PdfReaderCore version_debug.sh/version_release.sh 继续编译 Core 本体。PdfReader 和 PdfReaderTest 的 version 脚本改为准备 PdfReaderCore 及其传递依赖，调用参数使用当前工程的 64 位 Release 动态库组合，并以 only/same 区分已由依赖链覆盖的库，避免同一库重复编译：PdfEngine same（含 CStringManager、CSystem 和 PDFium 准备）→ ReadWriteMutex same → IntDateTime only → LogManager only → CTaskThreadManager same（含 Semaphore）→ LockFreeQueue same → PdfReaderCore only。version 脚本不设置 set -e，按顺序执行各依赖构建命令。Qt 工程链接 PdfReaderCore 动态库及 Qt 依赖；Core 工程不得链接 Qt。
+LockFreeQueue 只作为头文件和 inl 的构建依赖，按仓库规范不进入 PdfReader 或 PdfReaderTest 的发布目录；发布目录只保留实际运行需要的二进制。
+
+正式入口、CMake 参数、工程登记、动态库和符号身份按仓库使用说明执行。共享 include/lib 输出可能互相覆盖时保持串行；构建返回成功、旧文件存在或时间戳变化均不能单独证明产物正确。
+
+六、风险和验证重点
+
+主要风险是旧 Win32 自绘交互在 Qt 中的等价实现、页面顺序与来源文档生命周期、密码错误和保存失败清理、不同平台路径/编码、PDFium 动态库组合以及 Core API 的跨语言和跨平台边界。开发期先验证 Core 最小完整链路，再验证 Qt 调用链和组合交互；正式测试按 C6 确认的环境、配置和范围执行。未能提供目标平台真实证据时，只记录为未验证，不以 Windows 通过推断五端通过。
+
+七、验证和发布记录
+
+当前修复的正式证据已在工作流结束后清理；最终测试规格和报告见 common/PdfReaderTest/测试文档.txt 及 common/PdfReaderTest/reports。旧版工作流记录不随发布目录保留。
+本轮采用 VS2013、Qt 5.5.1、Windows x64 Release，依赖按 CSystem → PdfEngine → PdfReaderCore → PdfReader/Test 串行构建；QTDIR=C:/Qt/Qt5.5.1_64_2013/5.5/msvc2013_64。MSBuild 路径 C:/Program Files (x86)/MSBuild/12.0/Bin/amd64/MSBuild.exe；项目参数 /p:Configuration=Release /p:Platform=x64。
+发布测试入口：common/PdfReaderTest/PdfReaderTest1.0.exe --regression，使用用户提供的 Windows Qt 平台插件；报告须完整到 TOTAL 且 FAIL=0，进程须正常退出。测试编入真实 PdfReader 窗口和桥接源码，经鼠标、键盘及对话框入口操作，Core 从动态库调用。无需额外 QtTest 运行库。
+交付要求：同步产品 EXE、PdfReaderCore、PdfEngine、CSystem，以及桌面依赖 QtControls、DialogManager、QssString、CStringManager、EO_XmlSax2Parser 和匹配 PDB；PDB 复制到 common 后使用 7z 极限参数 -mx=9 -m0=lzma2 -ms=on 压缩并校验，随后删除 common 中的 PDB。Qt5 DLL、platforms 及 OpenGL/Qt 资源不进入发布目录，由用户运行环境提供；QtControls 是仓库自研控件库，随产品发布。LockFreeQueue.dll 不发布。
+Linux、macOS、Android、iOS 尚未真实构建运行，不以本轮 Windows 回归推断五端通过。Qt/CRT 官方运行时由用户提供；发布不复制外部 Qt 运行时。
+
+
+八、本次配置与职责拆分
+
+Qt 源码位于 src/PdfReader/PdfReader，VS 过滤器按 Configuration、UI、Bridge 等功能分组：
+Config：运行时值对象，默认布局 1180x780，最小 860x560，侧栏初始 210、最小 150；正文倍率默认 1、范围 0.25..4、步长 0.05，缩略背景倍率 0.5..2、步长 0.1。默认页图宽 112；长按 1000ms，边缘滚动周期 16ms。参数边界在 validate 检查，invalid_argument 表示调用者配置错误。
+PdfReader：窗口和命令编排；不持有引擎或实现页序算法。
+PdfReaderThumbnailList：单列条目、选择、长按拖动、边缘滚动与取消；独立 moc。
+PdfReaderThumbnailDelegate：固定页图、居中、灰背景、文字及选择绘制。
+PdfReaderCoreBridge：唯一 Core C 入口、句柄生命周期、UTF-8/Qt 类型转换、QImage 分配前限制像素数。
+PdfReaderIconHelper：问号图标与程序资源图标；矢量绘制坐标为图形数据，不作为业务配置。
+PdfReaderFileHelper：输出 PDF 后缀规范化；空路径仍代表取消。
+
+Core 源码位于 src/PdfReaderCore/PdfReaderCore/src：
+PdfReaderCore：每个实例独立维护文档、来源页面、工作页序和引擎。
+PdfReaderCoreConfig：默认 maxRenderPixels=64000000（支持 1..268435456），exportNumberWidth=3（支持 1..9）；限制渲染资源、指定导出序号最少位数，不截断大页码。
+PdfReaderCoreExportHelper：无状态的文件名与临时写入/原子替换；失败保留恢复文件。
+PdfReaderCoreModels：页面来源记录；PdfReaderCoreCContext：每个 C 句柄拥有独立 C++ Core 与错误/结果缓存；PdfReaderCoreC：边界参数和异常转换；PdfReaderCoreCResultHelper：错误分类与调用结果记录。
+线程归属不变，Core 同一个句柄要求串行使用；拆分未引入业务线程或全局单例。
+
+唯一公开包含文件仍是 PdfReaderCore/PdfReaderCoreAPI.h。C++ 示例：
+  PdfReaderCoreConfig config;
+  config.maxRenderPixels = 16000000;
+  config.exportNumberWidth = 4;
+  PdfReaderCore reader;
+  reader.init(config, &error);
+C/Qt 示例（首次 include 前定义 PDFREADERCORE_USE_C_API）：
+  PdfReaderCoreCConfig config;
+  pdfReaderCoreDefaultConfig(&config);
+  config.maxRenderPixels = 16000000;
+  PdfReaderCoreHandle reader = pdfReaderCoreCreate();
+  pdfReaderCoreInitWithConfig(reader, &config);
+必须检查结果码，并最终 pdfReaderCoreDestroy。默认 init 保持原接口兼容。显式配置 init 在已初始化时拒绝，防止无提示更改资源限制。init 失败不进入可打开状态，配置复制后修改调用方变量不改变实例。
+Qt 在 QApplication 创建后构造 Config，修改 config.core 及界面参数，再 PdfReader window(nullptr, config)。窗口和子控件复制本次配置；没有配置文件持久化需求，不额外引入 JSON 配置或单例。
+
+九、Windows 资源管理器固定 PDF 图标
+
+用户最终取消 PDF 内容缩略图，改为所有 PDF 显示同一固定图标。旧机器级 COM 处理器已按原备份卸载，两项原缩略图关联值均为空；卸载后删除 common 中的注册脚本、备份 JSON 和 PdfReaderThumbnail.dll。
+图标取正式 PdfReader1.0.exe 的第 0 个图标，不打开 PDF、不调用 PdfEngine，不要求密码。当前用户注册值为 Software\Classes\.pdf\DefaultIcon 及 Software\Classes\Applications\PdfReader1.0.exe\DefaultIcon，内容为正式 EXE 完整路径加 ,0；仅设置图标，不改变 UserChoice 或打开命令。换发布目录时需要同步图标路径。
+设置后发送 SHChangeNotify 通知 Shell 更新图标。核验通过 SHGetFileInfo 的 USEFILEATTRIBUTES 获取 .pdf/.PDF 类型图标，无需实际文件，并逐像素对比 EXE 图标；只容许系统半透明边缘预乘导致的 1 级 RGB 舍入。
+src/PdfReader/WindowsThumbnail 已删除；主工程已无对应构建引用，发布脚本不再复制此 DLL、注册脚本或备份。原缩略图用例 17/18 退役，不复用编号。主程序图标源文件仅保留 res/PdfReader.png。
+参考：https://learn.microsoft.com/en-us/windows/win32/shell/how-to-assign-a-custom-icon-to-a-file-type
+
+十、图标与发布
+
+除保留的 version_debug.sh/version_release.sh 依赖入口外，只维护编译必需的图标脚本：src/PdfReader/PdfReader/PdfReaderIcon.sh，与 cpp/h 同级。原 generate_icon.ps1、generate_icns.cmake 的图标逻辑已合并；publish_release.ps1 已删除，发布逻辑不保留在工程中。Windows 图标转换需要的 PowerShell 辅助代码由 Shell 临时写入构建中间目录，完成后删除，不需要额外维护或手动执行。
+Windows 手动编译：在 src/PdfReader 下用 Git Bash 执行 bash version_release.sh，准备 64 位动态库依赖；打开 PdfReader.sln，选择 Release | x64，右键 PdfReader 项目“生成”，输出 lib/PdfReader1.0.exe。图标在编译时自动生成。Debug 对应 version_debug.sh 和 Debug | Win32。Qt 5.5.1 VS 插件或 QTDIR 应与所选位数匹配。项目通过 Git for Windows 注册表定位 bin/sh.exe；自定义安装可设置 MSBuild 属性 PdfReaderShell。图标转换不用 Python、Pillow 或额外图片软件。
+PdfReaderIcon.sh 仅支持图标生成，不包含产品复制、发布备份、符号压缩或发布清单生成；交付按仓库规范另行操作。
+
+程序图标只维护 src/PdfReader/PdfReader/res/PdfReader.png。主工程和 Test 的 qrc 引用同一 PNG，资源别名保持 :/icons/PdfReader.png。VS2013 在 ResourceCompile 前调用 PdfReaderIcon.sh icon，将 16/24/32/48/64/128/256 七个透明图像帧写入 $(IntDir)res/PdfReader.ico；Release x64 对应 src/temp/PdfReader/x64/Release/res/PdfReader.ico，脚本同时在该目录生成 PdfReader.rc，由 ResourceCompile 编译后嵌入 EXE。PNG 和转换脚本登记为构建输入，删除中间 ICO 或 RC 都会重新生成；PNG 更新同时触发 ICO 和两工程的 rcc。源码不保存 ICO 或 RC，发布程序不依赖临时文件。问号绘制参考 SplitViewer。
+CMake 同样调用 PdfReaderIcon.sh icon；Windows 分支使用系统 PowerShell，声明生成的 ICO 和 RC 为构建输出，并编译中间目录中的 RC；macOS 分支通过系统 sips/iconutil 生成 ICNS 并登记到应用包，输出位于 src/temp/PdfReader/CMake/<系统>-<位数>-<配置>/res。Linux 的 Qt 界面直接读取 PNG。仅 Windows 构建和原生 EXE 图标已经验证，macOS 图标生成及其原有整体构建配置仍需当地工具链验证；当前 PNG 为 1024x1024 RGBA，采用蓝青色透明折页与字母 P 组合造型；2026-09-23 已替换并通过 Windows Release x64 构建。
+所有 std::min/std::max 使用括号避免 Windows 宏。构建时生成的 VS2013 RC 文件为 ASCII，无 UTF-8 BOM（编译器限制）；C++ 文件为 UTF-8 BOM/CRLF。
+交付前须核对 PE RSDS GUID/age 与 PDB stream 1 身份一致，不以文件名相同认定匹配。
+
+十一、2026-09-23 类型与静态作用域整理
+
+遵循一类一组头源文件；强关联数据模型可合并。手写 cpp 不定义 class/struct；文件级 static 函数优先归 Helper，仅在与本 cpp 紧密相关、无跨模块复用价值且多次调用时例外保留，并按头文件格式注释。
+本次去除 PdfReaderCoreBridge 的 Utf8 转发函数，直接调用 QString::toUtf8。Core 错误分类/结果记录进入 PdfReaderCoreCResultHelper。测试样本、字节读取、Core 结果断言进入 PdfReaderTestHelper；Qt 事件和弹窗操作进入 PdfReaderTestUiHelper，配置用例复用同一断言/等待逻辑。
+历史 Shell 扩展曾将类标识与资源限额归 PdfReaderThumbnailConfig、运行状态归 PdfReaderThumbnailModuleManager；该扩展现已删除，不再构建、发布或注册到 Explorer。
+本次检查手写源文件无 cpp 类/结构体定义、无文件级 static 函数/变量；Qt moc/rcc 自动生成文件不手工修改。新增头文件中的静态成员函数均声明用途、参数和返回值。
+历史批次 20260923-120644 曾通过 18 项测试，其中内容缩略图的 17/18 已随需求取消。当前回归登记为 1..16 和 19，共 17 项；最新正式批次、EXE 哈希及测试证据见 common/PdfReaderTest/测试文档.txt。产品和 Test 均重编，Core 不改。其他平台仍未实际构建验证。
+
+固定图标验证还覆盖了历史已生成页面预览的 PDF：仅修改关联时 Windows 仍会返回旧页图缓存，随后调用 Windows Thumbnail Cache 清理器清理可重建的缓存，并通过 IShellItemImageFactory 默认模式核验与 ICONONLY 模式在 256px 下逐像素相同。没有关闭 Explorer、修改 PDF 内容或关闭其他类型的缩略图显示；其他文件缓存可按需重建。发布目录中的 register_thumbnail.ps1、原注册备份 JSON 和内容缩略图 DLL 均已移除。
+
+十二、默认日志与启动诊断
+
+日志默认策略：main 在窗口和 DialogManager 创建前初始化 LogManager，不依赖 Debug 构建或命令行参数；业务对象和 QApplication 销毁后写退出结果并 uninit。Config::log 保存与 LumaPlayer 一致的配置：默认 EXE 目录、文件 ID 0、20 MB/文件、保留 8 个滚动文件、每条检查大小、关闭控制台输出、启动归档旧日志。历史启动日志由 LogManager 归档到 EXE 旁 PdfReader1.0_log 子目录，8 个文件是单次会话的滚动保留数，不代表历史归档总数。
+PdfReaderCoreBridge 直接使用 LOGINFO/LOGERROR 记录 Core 初始化、文档打开/插入、页移动、保存和导出的结果；失败记录错误码和 Core 错误说明，不记录密码或文档正文，不逐帧记录正常渲染。Core 的 C API 和五端业务实现不变。Windows main 最早阶段注册 CDump，注册结果写启动日志。
+桌面 version 脚本增加 CDump same 依赖；现有 LogManager only 继续复用前面准备的 CSystem、ReadWriteMutex、IntDateTime。CMake App 增加 LogManager/CDump，Test 因复用 Config 和 Bridge 增加 LogManager。交付时还需携带这些实际依赖 DLL 及匹配符号，遵循原有符号归档规则。
+
+十三、桌面控件与弹窗
+
+PdfReader 与 PdfReaderTest 使用 QtControls 的 MainWindow、ToolBar、StatusBar、Splitter、GroupBox、Widget、Label、LineEdit、PushButton、TextEdit、ListWidget、ScrollArea、ScrollBar 和 Menu；列表业务交互继承 ListWidget，绘制委托、布局、事件、定时器、图像及 QAction 保留 Qt 类型。未调用的 .ui 模板不参与实际窗口创建。
+新添的 MainWindow/ToolBar/StatusBar/Splitter/GroupBox/FileDialog 沿用 ControlShow、ControlSelf、ControlFont、ControlBorder、ControlBackground 模板，通过 QssString 生成状态化 QSS；MainWindow 合并产品附加 QSS，首次显示不会丢失对子控件的配置。PdfReaderControlHelper 按 Config 配置按钮四态颜色和尺寸。页面选中状态使用属性选择器，避免控件 showEvent 重画时覆盖选中样式。
+PdfReaderDialogRuntime 在 QApplication 之后创建、应用退出时之前销毁，注册 PdfReaderDialogFactory，并在退出时 uninit/releaseInstance。PdfReaderDialogHelper 组织强类型 PdfReaderDialogParam，经 DialogManager::makeDialog 创建 CustomDialog；PdfReaderDialogView 只负责提示、确认、文本/密码和文件选择内容。文件选择复合控件封装在 QtControls::FileDialog（全局类名 FileDialog），以子控件方式嵌入管理器窗口；关闭、模态和销毁统一归管理器。参数通过共享结果回传，不持有调用栈数据。确认默认焦点为取消，保存路径归一成 .pdf 后再确认覆盖。
+Config 保存弹窗尺寸、边距、文本和按钮样式，初始化时传入。QtControls::LineEdit 在密码模式不生成明文 tooltip，切换回显模式时也立即刷新提示。应用和 Test 的 version 脚本在既有依赖之后准备 QssString、EO_XmlSax2Parser、QtControls、ManagerBase、DialogManager；已准备依赖使用 only，独立依赖准备使用 same。

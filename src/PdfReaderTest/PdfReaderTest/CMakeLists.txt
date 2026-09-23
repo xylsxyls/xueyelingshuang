@@ -1,4 +1,4 @@
-﻿#设置CMAKE最低版本
+#设置CMAKE最低版本
 CMAKE_MINIMUM_REQUIRED(VERSION 3.10.1)
 SET(CMAKE_CXX_STANDARD 11)
 
@@ -52,6 +52,7 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../../../lib/)
 
 #添加包含目录
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../include/)
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../PdfReaderCore/PdfReaderCore/src/)
 
 #添加库目录
 LINK_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../lib/)
@@ -87,7 +88,24 @@ QT5_WRAP_UI(WRAP_FILES ${UI_FILES})
 SET(RCC_FILES "${PROJECT_SOURCE_DIR}/PdfReaderTest.qrc")
 
 #编译可执行程序
-ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES})
+ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES}
+    ../../PdfReader/PdfReader/PdfReader.cpp
+    ../../PdfReader/PdfReader/PdfReaderCoreBridge.cpp
+    ../../PdfReader/PdfReader/Config.cpp
+    ../../PdfReader/PdfReader/Config.h
+    ../../PdfReader/PdfReader/PdfReaderThumbnailList.cpp
+    ../../PdfReader/PdfReader/PdfReaderThumbnailList.h
+    ../../PdfReader/PdfReader/PdfReaderThumbnailDelegate.cpp
+    ../../PdfReader/PdfReader/PdfReaderThumbnailDelegate.h
+    ../../PdfReader/PdfReader/PdfReaderIconHelper.cpp
+    ../../PdfReader/PdfReader/PdfReaderIconHelper.h
+    ../../PdfReader/PdfReader/PdfReaderFileHelper.cpp
+    ../../PdfReader/PdfReader/PdfReaderDialogView.cpp
+    ../../PdfReader/PdfReader/PdfReaderDialogFactory.cpp
+    ../../PdfReader/PdfReader/PdfReaderControlHelper.cpp
+    ../../PdfReader/PdfReader/PdfReaderDialogHelper.cpp
+    ../../PdfReader/PdfReader/PdfReaderDialogRuntime.cpp
+    ../../PdfReader/PdfReader/PdfReader.h)
 ##如果要生成静态链接库
 ##ADD_LIBRARY(${PROJECT_NAME} STATIC ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES)
 ##如果要生成动态链接库
@@ -101,3 +119,12 @@ list(APPEND LIBRARYLIST ${LIBRARIESRELY})
 foreach (EVERYLIBRARY ${LIBRARYLIST})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/${EVERYLIBRARY})
 endforeach ()
+IF(WIN32)
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} ole32 gdi32 uuid shell32)
+ENDIF()
+# Desktop UI uses the shared control and dialog libraries.
+IF(DEBUGRELEASE STREQUAL "debug")
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControlsd DialogManagerd QssStringd CStringManagerd LogManagerd)
+ELSE()
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControls DialogManager QssString CStringManager LogManager)
+ENDIF()

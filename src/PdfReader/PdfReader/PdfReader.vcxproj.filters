@@ -50,6 +50,7 @@
     <ClCompile Include="PdfReader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PdfReaderCoreBridge.cpp"><Filter>Bridge</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="PdfReader.qrc">
@@ -64,5 +65,32 @@
     <CustomBuild Include="PdfReader.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
+    <ClInclude Include="PdfReaderCoreBridge.h"><Filter>Bridge</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Config.cpp"><Filter>Configuration</Filter></ClCompile>
+    <ClInclude Include="Config.h"><Filter>Configuration</Filter></ClInclude>
+    <ClCompile Include="PdfReaderThumbnailList.cpp"><Filter>UI</Filter></ClCompile>
+    <CustomBuild Include="PdfReaderThumbnailList.h"><Filter>UI</Filter></CustomBuild>
+    <ClCompile Include="PdfReaderThumbnailDelegate.cpp"><Filter>UI</Filter></ClCompile>
+    <ClInclude Include="PdfReaderThumbnailDelegate.h"><Filter>UI</Filter></ClInclude>
+    <ClCompile Include="PdfReaderIconHelper.cpp"><Filter>UI</Filter></ClCompile>
+    <ClInclude Include="PdfReaderIconHelper.h"><Filter>UI</Filter></ClInclude>
+    <ResourceCompile Include="$(IntDir)res\PdfReader.rc"><Filter>Resource Files</Filter></ResourceCompile>
+    <None Include="res\PdfReader.png"><Filter>Resource Files</Filter></None>
+  </ItemGroup>
+  <ItemGroup><Filter Include="Configuration"><UniqueIdentifier>{940543df-2e95-4e87-8ca4-b94da47d3566}</UniqueIdentifier></Filter></ItemGroup>
+  <ItemGroup><Filter Include="UI"><UniqueIdentifier>{4d048a8f-724d-4375-a704-8b6c3f851fd8}</UniqueIdentifier></Filter></ItemGroup>
+  <ItemGroup><Filter Include="Bridge"><UniqueIdentifier>{f60dc384-8817-46e2-b705-eecdacd2762f}</UniqueIdentifier></Filter></ItemGroup>
+  <ItemGroup><Filter Include="Export"><UniqueIdentifier>{33c02b41-d24f-41a4-bb53-84fd583773da}</UniqueIdentifier></Filter></ItemGroup>
+  <ItemGroup><Filter Include="Models"><UniqueIdentifier>{1298141c-c1a3-4cd1-aa61-3ed38e35400f}</UniqueIdentifier></Filter></ItemGroup>
+  <ItemGroup><ClCompile Include="PdfReaderFileHelper.cpp"><Filter>Export</Filter></ClCompile><ClInclude Include="PdfReaderFileHelper.h"><Filter>Export</Filter></ClInclude></ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PdfReaderDialogView.cpp" /><ClInclude Include="PdfReaderDialogView.h" />
+    <ClCompile Include="PdfReaderDialogFactory.cpp" /><ClInclude Include="PdfReaderDialogFactory.h" />
+    <ClCompile Include="PdfReaderDialogHelper.cpp" /><ClInclude Include="PdfReaderDialogHelper.h" />
+    <ClCompile Include="PdfReaderDialogRuntime.cpp" /><ClInclude Include="PdfReaderDialogRuntime.h" />
+    <ClInclude Include="PdfReaderDialogParam.h" />
+  </ItemGroup>
+  <ItemGroup><ClCompile Include="PdfReaderControlHelper.cpp" /><ClInclude Include="PdfReaderControlHelper.h" /><None Include="PdfReaderIcon.sh" /></ItemGroup>
 </Project>

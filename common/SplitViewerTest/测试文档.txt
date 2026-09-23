@@ -1,0 +1,108 @@
+﻿SplitViewerTest测试文档
+版本：0.8
+更新日期：2026-09-23
+范围：Windows Release x64，Core及真实Qt产品界面；本轮为瞬时功能/兼容性回归，无长期压力测试。
+
+一、入口和独立执行
+当前0.8源码新增172—177，本次测试EXE位于lib/SplitViewerTest1.0.exe；common/SplitViewerTest里的旧EXE未随本次产品增量发布更新。Windows Release x64的101—177共77项瞬时回归通过；保留发布依赖的组合另复测172—177及160共7项、6项Core冒烟通过。新增真实弹窗用例有10秒看门狗，旧用例仍保持原有超时边界。Debug、Linux/macOS及压力未执行。
+1. 在已有Qt运行时的部署环境启动common/SplitViewerTest/SplitViewerTest1.0.exe，在下拉框选择全部或数字用例，点击“运行所选回归并保存报告”；开发回归直接使用lib/SplitViewerTest1.0.exe和开发环境Qt路径。
+2. 命令行：SplitViewerTest1.0.exe --ui-audit <报告目录>；单项追加--case=119。目录为可写绝对路径，运行自动生成纯色PNG和.sv素材，不使用用户文件。
+3. 无效数字/缺参数返回2；用例失败返回非0；成功返回0并写total和failures。每个独立选择在新窗口/文档中重建该场景的前置动作，只统计所选断言，不依赖上批次残留。共享准备分为基础层、浮动层、全屏、原生、Core等场景。
+4. 正式批次必须在可接收鼠标输入的Windows桌面运行。原生用例154—156/159/160通过SendInput和系统钩子操作自产窗口，不能用offscreen结果冒充通过。沙箱内SendInput曾报访问拒绝，已在具备桌面输入权限的环境重测。
+5. 保留原6项Core冒烟按钮及--autotest兼容入口；其成功不能替代101—171全回归。默认界面支持独立选择新增回归。161—168需真实LumaPlayer1.0.exe及其已有依赖，可用--player=<完整EXE路径>指定；默认从Test相邻LumaPlayer目录查找，开发lib入口则查common/LumaPlayer。缺失启动失败不得计通过。
+
+二、预期和判定
+基线来自旧src/SplitViewer_old的颜色、舞台/边框尺寸、图层默认0.22和0.46、像素偏移、滚轮步长及窗口行为。绘图使用红/蓝/绿合成图像，按叶子中心及邻区像素独立判定，不读取产品私有模型来伪造成功。
+界面测试执行真实鼠标、QContextMenuEvent菜单点击、QWheelEvent、拖放事件、F1/F11/Esc及实际绘制。文件选择采用browseFile测试适配返回路径，错误记录采用reportError，除此之外复用产品代码。保存后重新读取真实文件检查语义；旧配置由测试手写UTF-16字段，避免仅测试同源往返。
+138—160原生测试创建Windows测试窗口，检查句柄和几何；不能证明真实视频呈现。161—168另以QProcess启动真实LumaPlayer，Test直接写入160x96、10fps、40秒的无压缩索引AVI，四象限颜色固定、亮度每3帧变化。用桌面grabWindow(0)截取预期叶子区域，以独立视频宽高比计算采样点检查四象限，而非读取产品绘制矩形；红象限含9位逐帧编号条，屏幕解码得到不同编号才判定播放；常规窗口800ms，单击恢复覆盖两层双击等待加800ms。两档亮度只用于肉眼观察，不再作为播放判据，暂停时必须画面可见且色块不变，排除中心播放图标动画。分屏同时检查桌面上的相邻图片像素。拖动从展开的播放器标题栏发起，视频区域拖动属于播放器自己的平移；执行前核对源窗口属于本批播放器进程。播放器控制条收起按其1000ms空闲与动画预算等待1300ms，避免把遮罩当成视频颜色错误。
+JPEG像素允许每通道3以内的有损误差，PNG/BMP/TIFF验证能实际保存并解码。缩略图保持最大320px，整数取整允许高度相差1px。提示观察1100ms，对照产品1000ms定时器。
+失败保留截图、素材和报告；每个测试窗口退出释放容器，系统鼠标恢复原位置。真实播放器启动、查找窗口、正常退出各设5秒上限，无法正常退出仅终止本批子进程并判失败。现有入口没有全局看门狗和GUI取消实现，不再沿用此前“整体保护超时20秒”的不准确描述。
+
+三、稳定数字用例
+本次公共控件/弹窗改造追加172—177，均为Windows Release x64瞬时用例；先定义预期再执行，不沿用历史批次结果。172检查实际产品主窗口、画布、工具栏、状态栏和标签使用QtControls并保持显示；173点击真实加号后取消托管文件框，空白画布保持；174真实文件框选择含中文与空格路径的红色PNG，确认后画布中心显示红色；175保存选择既有文件时取消覆盖后可继续选择，再确认覆盖返回原路径，文件内容不由选择器改写；176实际关于按钮打开DialogManager提示框并确认关闭；177输入框接受文本和取消均正确回传。弹窗观察实际模态窗口及DialogManager数量，执行真实按钮点击，不通过browseFile替身返回结果。单项10秒看门狗超时记失败并关闭本项托管窗口，结束检查数量回到0。原101—171用于控件替换后的相邻功能回归。
+101. 空状态配色与加号（报告名称：empty colors and plus）
+102. 加号取消保持空状态（报告名称：plus cancel keeps empty）
+103. 菜单水平分割（报告名称：horizontal context split）
+104. 上下分屏独立加号（报告名称：both split plus visible）
+105. 上半加号加载可见（报告名称：upper plus loads visible image）
+106. 下半加号加载可见（报告名称：lower plus loads visible image）
+107. 放大不越过分屏（报告名称：zoom clipped to own split）
+108. 保存落盘反映界面状态（报告名称：save profile reflects real UI）
+109. 图片偏移使用像素（报告名称：image pan uses pixels）
+110. 嵌套垂直分割（报告名称：nested vertical split）
+111. 嵌套保留内容及加号（报告名称：nested content retained and plus visible）
+112. 拖放按落点加载（报告名称：drop uses actual target）
+113. 基础层删除分屏（报告名称：delete base split leaf）
+114. 分割线拖动落盘（报告名称：splitter drag persists）
+115. 删除折叠保留兄弟图片（报告名称：delete collapse preserves image）
+116. 根叶子删除禁用（报告名称：root delete disabled）
+117. 错误图片保留原内容（报告名称：bad image retains document）
+118. 新建图层按钮（报告名称：new layer toolbar）
+119. 浮动图层放大裁剪（报告名称：floating zoom cannot escape layer）
+120. 浮动图层平移裁剪（报告名称：floating pan cannot escape layer）
+121. Ctrl只移动图层（报告名称：ctrl drag moves layer only）
+122. 图层右边缘调整（报告名称：layer right edge resize）
+123. 浮动层内分屏（报告名称：layer split）
+124. 浮动层下半加号（报告名称：layer split lower plus）
+125. 浮动层下半加载图片（报告名称：layer split lower image）
+126. 按屏幕舞台尺寸导出（报告名称：export uses screen-fit stage only）
+127. SV缩略图界限（报告名称：sv PNG thumbnail bounded and stage only）
+128. 拖入配置恢复（报告名称：drop sv restores layers）
+129. 恢复图层图片可见（报告名称：loaded layer image visible）
+130. 损坏配置不破坏文档（报告名称：invalid profile keeps existing layout）
+131. 重载后继续交互（报告名称：interaction after reload remains valid）
+132. 边距双击不全屏（报告名称：double click margin does not fullscreen）
+133. 双击只显示舞台（报告名称：double click fullscreen content only）
+134. Esc恢复窗口及工具栏（报告名称：escape restores geometry and toolbar）
+135. F11进入全屏（报告名称：F11 enters fullscreen）
+136. F11恢复最大化（报告名称：F11 restores maximized state）
+137. F1隐藏边框落盘（报告名称：F1 hides borders in persisted state）
+138. 原生容器创建（报告名称：native embed creates child）
+139. 原生窗口快照（报告名称：native snapshot）
+140. 解除恢复原窗口（报告名称：native detach restores surviving original）
+141. 独立旧配置字段解析（报告名称：legacy fields decoded independently）
+142. 循环节点拒绝且不换文档（报告名称：cyclic profile rejected without replacing state）
+143. 缺失节点拒绝（报告名称：missing node rejected）
+144. 奇数UTF16拒绝（报告名称：odd UTF16 rejected）
+145. 未知版本拒绝（报告名称：unsupported profile version rejected）
+146. 配置CRC损坏拒绝（报告名称：corrupt svCf CRC rejected）
+147. 旧尾部标记兼容（报告名称：old trailing marker accepted）
+148. 绝对分割矩形尺寸（报告名称：split geometry exact absolute bounds）
+149. 无边框分割无缝（报告名称：borderless geometry has no separator gap）
+150. 多格滚轮运算（报告名称：wheel notch arithmetic）
+151. Ctrl精细缩放（报告名称：ctrl fine wheel arithmetic）
+152. 缩放上下界（报告名称：zoom min max bounds）
+153. 手动视图重映射（报告名称：manual view resize preserves pixel proportions）
+154. Windows系统鼠标拖入（报告名称：native hook drag in to empty leaf）
+155. Windows拖出还原（报告名称：native drag out restores top level）
+156. 关闭恢复被拖入窗口（报告名称：closing viewer restores dragged window）
+157. PNG/JPEG/BMP/TIFF及GIF失败反馈（报告名称：Qt image format exports and unsupported GIF feedback）
+158. 缩放提示按时消失（报告名称：zoom percentage popup expires）
+159. 两个原生分屏分别恢复（报告名称：two native panes restored independently on close）
+160. 原生嵌入窗口随内容全屏缩放（报告名称：embedded panes scale with content fullscreen）
+161. 真实播放器拖入后视频像素可见、适配且帧持续变化。
+162. 真实双击进入全屏，四象限画面等比放大，播放持续且窗口仍嵌入。
+163. 再次真实双击退出全屏，视频恢复原分屏位置与尺寸。
+164. 移动并调整宿主窗口后，视频四象限继续适配。
+165. 原生视频分屏后与相邻图片均在桌面可见，互不遮挡。
+166. 单击暂停、单击继续、再次全屏及恢复后播放状态正确；实际帧停止和变化分别判定。
+167. 拖出舞台后播放器窗口独立存活且恢复非最大化状态。
+168. 再嵌入后关闭宿主，播放器保持可见、进程存活且非最大化；随后正常关闭子进程返回0。
+
+169. 重复设置已持有根节点保留原树结构及内容。
+170. 重复接收已持有图层不增加数量，重置安全释放一次。
+171. 有效外部窗口搭配空宿主时拒绝嵌入，原窗口保持可见、独立且几何未改变。
+
+四、本轮执行证据
+当前完整批次：common/SplitViewerTest/reports/refactor/final-release/ui-results.txt，total=71 failures=0，进程退出0。101—160保留原GUI/Core覆盖，161—168使用真实播放器跨进程与实际屏幕像素。全部为瞬时功能回归，没有执行长期压力；新增八项共享场景前置，独立选择只统计所选断言。缺播放器、启动超时或屏幕不可用视为失败，不以零执行成功。此前60项通过不能证明实际视频可见或继续播放，0.5的相应结论明确撤回。
+缺陷检出证据：visible-video/actual-old/actual-product-results.txt中旧发布程序的drag_video_pixels和fullscreen_video_pixels均为False；同输入修正版在actual-new下均为True。final批次还检出了真正双击退出后误暂停，修正点击转发后final-verified的166记录stopped=1、resumed=1、pixels=1、playing=1。前期失败结果均保留。
+独立正式产品与Test源码一致，当前最终哈希见refactor/release.txt；发布后common正式产品的视频拖入/全屏像素检查均为True，证据visible-video/refactor-product/actual-product-results.txt；发布版Test单独166通过，报告refactor/published-case166/ui-results.txt。此前真实MP4屏幕证据保留在visible-video/published-mp4，属于上轮版本。真实媒体为只读common/CookServer/res/video/cook_000001.mp4；没有修改播放器工程或用户素材。测试使用开发环境Qt路径，common发布目录不携带Qt运行库、插件、OpenGL运行库或qt.conf。
+修复前最小基线：20260922-audit/baseline，水平分屏加号和内容全屏两项均失败；后续中间失败保留在20260923-audit各轮目录中。部分测试前提曾误用0.25默认图层位置，已按旧AddLayer源码0.22+0.46纠正，不把该测试错误宣称为产品缺陷。最终报告不覆盖旧失败记录。
+本轮替换产品/Test的EXE及Core DLL，其余依赖哈希与测试组合一致并保持原文件。EXE/Core符号归档为symbols-SplitViewer-refactor-20260923-124048.7z及symbols-SplitViewerTest-refactor-20260923-124048.7z；其他未变DLL继续对应各目录20260923-022021符号包。已核对PDB身份、执行7z -mx=9和7z t，归档后删除发布目录散装PDB。
+
+本轮169—171全部通过；--autotest保留6项Core冒烟，退出0，见refactor/core-smoke.txt。播放器166在修正后独立重复通过；失败批次原样保留在refactor各中间目录。播放器行为以实际屏幕帧编号和四象限像素判定，未删除用例或降低断言。可选--native-trace仅为测试子进程启用Qt事件日志，当前Qt发布构建可能不输出该类别，空日志不作为通过证据。
+
+五、覆盖限制
+未执行：Linux/macOS/Android/iOS编译和运行、Debug、长期压力、极端DPI、多显示器交互、任意第三方进程的嵌入兼容性、系统原生文件选择框的人工作业、资源管理器缩略图的实际显示、故意崩溃后的dump解析。注册成功不等于Shell缩略图视觉验收；UI适配器选择路径不等于原生文件对话框测试。
+GIF使用本机Qt插件时不能编码，测试要求明确报错；不把该格式标成已支持写出。其他Qt插件未逐格式穷尽解码。
+无后台业务任务和网络协议，因此任务取消/并发网络故障不适用本轮主场景；文档树替换、窗口所有权、关闭回收及输入错误路径已经针对性覆盖。

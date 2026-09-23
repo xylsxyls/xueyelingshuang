@@ -153,12 +153,12 @@ public:
 	*/
 	void print(int32_t fileId, LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...);
 
-	/** 关闭一个日志文件
+	/** 关闭一个日志文件，并按配置归档本次会话自己创建的文件
 	@param [in] fileId 日志文件ID
 	*/
 	void uninit(int32_t fileId);
 
-	/** 关闭所有日志文件
+	/** 关闭所有日志文件，并按各自配置归档；不会处理其他进程或崩溃遗留文件
 	*/
 	void uninitAll();
 
@@ -234,11 +234,15 @@ private:
 	*/
 	void updateLinkNoLock(LogManagerFile* logFile);
 
-	/** 在已经持有写锁时归档或删除旧日志
-	@param [in] logDir 日志目录
-	@param [in] archiveOldLog 是否归档旧日志
+	/** 在已经持有写锁时为本次会话分配不重复的文件名和归档路径
+	@param [in,out] logFile 日志文件状态
 	*/
-	void prepareOldLogNoLock(const std::string& logDir, bool archiveOldLog);
+	void prepareSessionNoLock(LogManagerFile* logFile);
+
+	/** 文件和保护锁关闭后，仅归档本次会话记录的文件；失败保留源文件
+	@param [in] logFile 日志文件状态
+	*/
+	void archiveSessionNoLock(LogManagerFile* logFile);
 
 	/** 在已经持有写锁时删除超过保留数量的旧滚动文件
 	@param [in] logFile 日志文件状态
@@ -281,8 +285,8 @@ private:
 	std::string m_processName;
 	// 日志文件ID到文件状态的映射
 	std::map<int32_t, LogManagerFile*> m_logMap;
-	// 已经做过启动归档或删除处理的日志目录
-	std::map<std::string, bool> m_preparedLogDirMap;
+	// 本进程已经分配过的会话名，防止同秒多ID或重新初始化共用文件
+	std::map<std::string, bool> m_usedLogNames;
 	// 是否写BEGIN和END标记
 	std::atomic<bool> m_writeBeginEnd;
 	// 是否写日志

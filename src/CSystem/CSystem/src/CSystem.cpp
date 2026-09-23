@@ -36,6 +36,10 @@
 #include <iterator>
 #include <cstring>
 #include <cstdlib>
+#ifdef __APPLE__
+#include <codecvt>
+#include <locale>
+#endif
 #ifdef __unix__
 #include <signal.h>
 #endif
@@ -110,7 +114,7 @@ static void SetSystemError(std::string* errorText, const std::string& value)
 	}
 }
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 // WidePathToUtf8入参：path是宽字符文件路径。
 // WidePathToUtf8出参：无。
 // WidePathToUtf8返回值：返回UTF-8文件路径，转换失败返回空字符串。
@@ -1557,6 +1561,16 @@ FILE* CSystem::openBinaryOutputFile(const std::wstring& path, std::string* error
 #endif
 }
 
+bool CSystem::writeBinaryOutputFile(FILE* file, const void* data, size_t size)
+{
+    return file != nullptr && data != nullptr && fwrite(data, 1, size, file) == size;
+}
+
+bool CSystem::closeBinaryOutputFile(FILE* file)
+{
+    return file != nullptr && fclose(file) == 0;
+}
+
 bool CSystem::deleteFile(const std::wstring& path)
 {
 	if (path.empty())
@@ -1640,6 +1654,23 @@ void CSystem::killProcess(int32_t pid)
 bool CSystem::rename(const std::string& oldPath, const std::string& newPath)
 {
 	return ::rename(oldPath.c_str(), newPath.c_str()) == 0;
+}
+
+bool CSystem::replaceFile(const std::wstring& sourcePath, const std::wstring& destinationPath)
+{
+    if (sourcePath.empty() || destinationPath.empty())
+    {
+        return false;
+    }
+#ifdef _WIN32
+    return MoveFileExW(sourcePath.c_str(), destinationPath.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+#elif defined(__unix__) || defined(__APPLE__)
+    const std::string source = WidePathToUtf8(sourcePath);
+    const std::string destination = WidePathToUtf8(destinationPath);
+    return !source.empty() && !destination.empty() && ::rename(source.c_str(), destination.c_str()) == 0;
+#else
+    return false;
+#endif
 }
 
 std::string CSystem::GetSysUserName()

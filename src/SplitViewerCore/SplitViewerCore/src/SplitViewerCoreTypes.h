@@ -1,0 +1,19 @@
+﻿#pragma once
+enum SplitViewerCoreNodeKind
+{
+    SPLITVIEWER_CORE_NODE_LEAF = 0,
+    SPLITVIEWER_CORE_NODE_SPLIT = 1
+};
+
+enum SplitViewerCoreSplitDirection
+{
+    SPLITVIEWER_CORE_SPLIT_HORIZONTAL = 0,
+    SPLITVIEWER_CORE_SPLIT_VERTICAL = 1
+};
+
+enum SplitViewerCoreContentKind
+{
+    SPLITVIEWER_CORE_CONTENT_EMPTY = 0,
+    SPLITVIEWER_CORE_CONTENT_IMAGE = 1,
+    SPLITVIEWER_CORE_CONTENT_EMBEDDED = 2
+};

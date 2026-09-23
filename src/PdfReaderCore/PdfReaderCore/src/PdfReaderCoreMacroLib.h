@@ -1,3 +1,3 @@
 ﻿#pragma once
 
-#define PdfReaderCoreAPI 
+#define PdfReaderCoreAPI

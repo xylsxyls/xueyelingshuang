@@ -81,7 +81,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\..\SplitViewerCore\SplitViewerCore\src\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -101,7 +101,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\..\SplitViewerCore\SplitViewerCore\src\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -121,8 +121,9 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DebugInformationFormat />
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\..\SplitViewerCore\SplitViewerCore\src\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>MaxSpeed</Optimization>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <WarningLevel>Level3</WarningLevel>
@@ -140,9 +141,9 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DebugInformationFormat>
-      </DebugInformationFormat>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\..\SplitViewerCore\SplitViewerCore\src\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>MaxSpeed</Optimization>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <WarningLevel>Level3</WarningLevel>
@@ -178,6 +179,8 @@
     </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="SplitViewer.cpp" />
+    <ClCompile Include="SplitViewerCanvas.cpp" />
+    <ClCompile Include="SplitViewerPlatform.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="SplitViewer.h">
@@ -198,6 +201,8 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(ProjectDir)..\..\..\include"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(ProjectDir)..\..\..\include"</Command>
     </CustomBuild>
+    <ClInclude Include="SplitViewerCanvas.h" />
+    <ClInclude Include="SplitViewerPlatform.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="SplitViewer.ui">
@@ -253,16 +258,16 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="SplitViewer.qrc">
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(FullPath);$(ProjectDir)res\SplitViewer.png;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(FullPath);$(ProjectDir)res\SplitViewer.png;%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Rcc%27ing %(Identity)...</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Rcc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(FullPath);$(ProjectDir)res\SplitViewer.png;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(FullPath);$(ProjectDir)res\SplitViewer.png;%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Rcc%27ing %(Identity)...</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Rcc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
@@ -271,7 +276,35 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
     </CustomBuild>
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="$(IntDir)SplitViewer.rc" />
+    <Image Include="res\SplitViewer.png" />
+    <None Include="SplitViewerIcon.sh" />
+  </ItemGroup>
+  <ItemDefinitionGroup>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <PropertyGroup>
+    <SplitViewerIconShell Condition="'$(SplitViewerIconShell)'==''">$(ProgramW6432)\Git\bin\sh.exe</SplitViewerIconShell>
+  </PropertyGroup>
+  <Target Name="GenerateSplitViewerIcon" BeforeTargets="ResourceCompile"
+    Inputs="$(ProjectDir)res\SplitViewer.png;$(ProjectDir)SplitViewerIcon.sh"
+    Outputs="$(IntDir)SplitViewer.ico;$(IntDir)SplitViewer.rc">
+    <Error Condition="!Exists('$(SplitViewerIconShell)')" Text="Git sh.exe not found. Set SplitViewerIconShell to the installed Git bin\sh.exe path." />
+    <Exec Command="&quot;$(SplitViewerIconShell)&quot; &quot;$(ProjectDir)SplitViewerIcon.sh&quot; --source &quot;$(ProjectDir)res\SplitViewer.png&quot; --output &quot;$(IntDir)SplitViewer.ico&quot; --format ICO --resource &quot;$(IntDir)SplitViewer.rc&quot; --qt-dir &quot;$(QTDIR)&quot; --vcvars &quot;$(VCInstallDir)vcvarsall.bat&quot; --arch $(Platform)" />
+  </Target>
+  <Target Name="CleanSplitViewerIcon" AfterTargets="Clean">
+    <Delete Files="$(IntDir)SplitViewer.ico;$(IntDir)SplitViewer.rc" />
+  </Target>
+  <Target Name="GenerateSplitViewerQtResource" BeforeTargets="CustomBuild"
+    Inputs="$(ProjectDir)SplitViewer.qrc;$(ProjectDir)res\SplitViewer.png"
+    Outputs="$(ProjectDir)GeneratedFiles\qrc_SplitViewer.cpp">
+    <MakeDir Directories="$(ProjectDir)GeneratedFiles" />
+    <Exec Command="&quot;$(QTDIR)\bin\rcc.exe&quot; -name SplitViewer -no-compress &quot;$(ProjectDir)SplitViewer.qrc&quot; -o &quot;$(ProjectDir)GeneratedFiles\qrc_SplitViewer.cpp&quot;" />
+  </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ProjectExtensions>
@@ -279,4 +312,45 @@
       <UserProperties MocDir=".\GeneratedFiles\$(ConfigurationName)" UicDir=".\GeneratedFiles" RccDir=".\GeneratedFiles" lupdateOptions="" lupdateOnBuild="0" lreleaseOptions="" Qt5Version_x0020_Win32="5.5.1_32_2013" Qt5Version_x0020_x64="5.5.1_64_2013" MocOptions="" />
     </VisualStudio>
   </ProjectExtensions>
+  <ItemGroup>
+    <ClCompile Include="SplitViewerFileAssociationHelper.cpp" />
+    <ClInclude Include="SplitViewerFileAssociationHelper.h" />
+    <ClCompile Include="SplitViewerForeignWindowHelper.cpp" />
+    <ClInclude Include="SplitViewerForeignWindowHelper.h" />
+    <ClCompile Include="SplitViewerHit.cpp" />
+    <ClInclude Include="SplitViewerHit.h" />
+    <ClCompile Include="SplitViewerIconHelper.cpp" />
+    <ClInclude Include="SplitViewerIconHelper.h" />
+    <ClCompile Include="SplitViewerImageHelper.cpp" />
+    <ClInclude Include="SplitViewerImageHelper.h" />
+    <ClCompile Include="SplitViewerLayoutHelper.cpp" />
+    <ClInclude Include="SplitViewerLayoutHelper.h" />
+    <ClInclude Include="SplitViewerNativeClick.h" />
+    <ClCompile Include="SplitViewerNativeMouseConfig.cpp" />
+    <ClInclude Include="SplitViewerNativeMouseConfig.h" />
+    <ClCompile Include="SplitViewerNativeMouseHelper.cpp" />
+    <ClInclude Include="SplitViewerNativeMouseHelper.h" />
+    <ClCompile Include="SplitViewerProfileStore.cpp" />
+    <ClInclude Include="SplitViewerProfileStore.h" />
+    <ClCompile Include="SplitViewerRenderer.cpp" />
+    <ClInclude Include="SplitViewerRenderer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SplitViewerHitTestHelper.cpp" />
+    <ClInclude Include="SplitViewerHitTestHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Config.cpp" />
+    <ClInclude Include="Config.h" />
+    <ClCompile Include="SplitViewerFileDialogParam.cpp" />
+    <ClInclude Include="SplitViewerFileDialogParam.h" />
+    <ClCompile Include="SplitViewerFileDialogView.cpp" />
+    <ClInclude Include="SplitViewerFileDialogView.h" />
+    <ClCompile Include="SplitViewerFileDialogFactory.cpp" />
+    <ClInclude Include="SplitViewerFileDialogFactory.h" />
+    <ClCompile Include="SplitViewerDialogSession.cpp" />
+    <ClInclude Include="SplitViewerDialogSession.h" />
+    <ClCompile Include="SplitViewerDialogHelper.cpp" />
+    <ClInclude Include="SplitViewerDialogHelper.h" />
+  </ItemGroup>
 </Project>

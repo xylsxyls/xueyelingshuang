@@ -1,5 +1,6 @@
 ﻿<RCC>
     <qresource prefix="/">
         <file>LumaPlayer.qml</file>
+        <file alias="icons/LumaPlayer.png">res/LumaPlayer.png</file>
     </qresource>
 </RCC>

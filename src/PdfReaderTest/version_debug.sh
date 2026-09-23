@@ -1,1 +1,12 @@
-"$CLOUD_REBUILD" PdfReaderCore 32 dll debug same
+"$CLOUD_REBUILD" PdfEngine 32 dll debug same
+"$CLOUD_REBUILD" ReadWriteMutex 32 dll debug same
+"$CLOUD_REBUILD" IntDateTime 32 dll debug only
+"$CLOUD_REBUILD" LogManager 32 dll debug only
+"$CLOUD_REBUILD" CTaskThreadManager 32 dll debug same
+"$CLOUD_REBUILD" LockFreeQueue 32 dll debug same
+"$CLOUD_REBUILD" PdfReaderCore 32 dll debug only
+"$CLOUD_REBUILD" QssString 32 dll debug only
+"$CLOUD_REBUILD" EO_XmlSax2Parser 32 dll debug same
+"$CLOUD_REBUILD" QtControls 32 dll debug only
+"$CLOUD_REBUILD" ManagerBase 32 dll debug same
+"$CLOUD_REBUILD" DialogManager 32 dll debug only

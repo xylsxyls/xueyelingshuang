@@ -147,7 +147,7 @@ bool PdfEngine::savePages(const std::wstring& outputFilePath,
     std::unique_ptr<PdfEngineFileWriter> writer(new (std::nothrow) PdfEngineFileWriter(outputFile));
     if (writer.get() == nullptr || writer->nativeWriter() == nullptr)
     {
-        fclose(outputFile);
+        CSystem::closeBinaryOutputFile(outputFile);
         FPDF_CloseDocument(outputDocument);
         CSystem::deleteFile(outputFilePath);
         PdfEngineHelper::setErrorText(errorText, "create pdf file writer failed");
@@ -156,13 +156,13 @@ bool PdfEngine::savePages(const std::wstring& outputFilePath,
 
     bool saved = FPDF_SaveAsCopy(outputDocument, writer->nativeWriter(), FPDF_NO_INCREMENTAL | FPDF_REMOVE_SECURITY) ? true : false;
     std::string saveError = saved ? "" : PdfEngineHelper::pdfiumErrorText();
-    fclose(outputFile);
+    const bool closed = CSystem::closeBinaryOutputFile(outputFile);
     FPDF_CloseDocument(outputDocument);
 
-    if (!saved || writer->failed())
+    if (!saved || writer->failed() || !closed)
     {
         CSystem::deleteFile(outputFilePath);
-        PdfEngineHelper::setErrorText(errorText, writer->failed() ? "write output pdf file failed" : saveError);
+        PdfEngineHelper::setErrorText(errorText, (writer->failed() || !closed) ? "write output pdf file failed" : saveError);
         return false;
     }
 

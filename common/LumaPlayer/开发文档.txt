@@ -1,5 +1,5 @@
 ﻿流光播放器（LumaPlayer）开发文档
-更新日期：2026-09-21（连续音频时间伸缩、精确跳转接续及暂停AB去重）
+更新日期：2026-09-23（增加Windows应用图标资源及图片替换方法）
 配套《需求文档.txt》描述产品行为。本文件描述当前实现、构建、测试和发布规则，不保存开发阶段放行状态；新任务的阶段、确认与执行证据写入其独立工作流目录。
 当前Esc改动已完成Windows x64 Debug/Release构建、AI核心验证及用户手动试运行确认；Release指定瞬时ID 30–32共3项通过（6.2秒），未执行其余35项，不宣称全量或压力通过。已发布common/LumaPlayer及common/LumaPlayerTest，正式目录启动与正常退出通过。证据见工作流验证证据及common/LumaPlayerTest/reports/20260915-023033-619。
 
@@ -11,6 +11,14 @@ src/LumaPlayerCore/LumaPlayerCore/src：LumaPlayerCore为C++外观；CoreAPI通�
 PlayerEngine协调命令、时钟、AB和生命周期；PlayerCommand/CommandTask是单条控制意图和同步完成对象；WorkerTask调度播放；PreviewTask是常驻最新位置预览；PreviewCancelContext检查代次与退出；LoopBuffer及其任务提前准备下一轮有限缓存；MediaClock用steady_clock映射媒体时间；IAudioRender/IVideoRender为借用输出契约。
 src/FFmpegCpp/FFmpegCpp/src：PlaybackReader完成解复用、解码、BGRA/PCM转换；AdjacentReader缓存相邻展示帧。业务不包含原生FFmpeg头。src/LumaPlayerTest/LumaPlayerTest为正式测试入口；src/LoopPlayer只作迁移行为对照。
 依赖方向：Qt/移动原生UI -> Core公开接口 -> Engine/二次开发库 -> 第三方。Core无Qt。桌面主体自绘控件；帮助通过DialogManager自定义View/Factory接入，不能声称主体已经全面改成QtControls。
+
+应用图标资源：res目录只维护一份res/LumaPlayer.png，Qt的LumaPlayer.qrc将其嵌入为:/icons/LumaPlayer.png，Config::m_applicationIconPath保持不变。唯一维护的图标生成脚本为源码同目录LumaPlayerIcon.sh，不保留上层scripts目录、Python/PowerShell转换入口或源码RC文件。Windows的GenerateLumaPlayerIcon构建目标在ResourceCompile之前调用Git sh，输出到各配置独立的$(IntDir)LumaPlayer.ico和LumaPlayer.rc；自动生成的RC以ID 1嵌入ICO。RC为纯ASCII、无BOM；Debug/Release和Win32/x64共用规则，Clean清理生成ICO及RC。PNG和脚本登记为增量输入，rcc同样追踪PNG，换图后两套内嵌图标同时更新，转换失败中止构建，不继续链接旧图标。
+Windows转换工具：shell在$(IntDir)/icon-builder生成一个小型Qt图像转换工具的.cpp、.pro和构建.cmd，以工程现有QTDIR、VCInstallDir及Platform调用qmake、VS2013编译器和nmake；这些全部是构建产物，不是额外维护的源码，不进入common。工具复用Qt的PNG解码和平滑缩放，再写入多尺寸ICO，不自制图片解码器，也不需要Python、PowerShell、Pillow或ImageMagick。
+标题图标绘制：init从内嵌资源setWindowIcon，paintTopOverlay用windowIcon().paint绘到titleIconRect；图标随顶部栏动画和裁剪移动，Config::m_titleIconSize默认22。loadButtonRect右移图标宽度加按钮间隔，resetButtonRect继续派生，绘制和命中使用同一矩形。Config最小宽度计算加入图标及间距，避免窄窗口左右按钮组重叠。图标不新增HitArea或业务Task，命中属于HitTopTitle，沿用标题拖窗语义；不改播放、文件关联及缩略图处理器。
+替换方式：只替换src/LumaPlayer/LumaPlayer/res/LumaPlayer.png，再按第八节正常构建；不手动维护ICO或ICNS，不需要修改C++或手动调用转换脚本。原图保持正方形、透明PNG，建议至少1024×1024以支持macOS Retina；Windows转换最低256×256。Windows构建自动保留透明通道并生成16/20/24/32/40/48/64/96/128/256像素ICO；原图、转换脚本和生成ICO均不分发到common，图像已包含于EXE。Explorer可能缓存旧图标，验证优先从新EXE提取，不自动清系统缓存或重启Explorer。
+Linux/macOS图标构建：CMakeLists尾部直接将同目录LumaPlayerIcon.sh挂入构建，系统sh执行，复用原AUTORCC内嵌PNG；不再包含额外.cmake脚本或.desktop模板。Linux无需另转格式，构建复制PNG到native-icons，并由同一脚本生成与目标名匹配的.desktop；显式执行安装目标时分别放入bin、share/pixmaps和share/applications。仅创建启动器，不设置MimeType、默认文件关联或缩略图处理器；Linux裸可执行文件不按Windows的PE图标方式展示，桌面图标依赖已安装的启动器/图片。macOS分支用系统sips生成标准1x/2x iconset，再用iconutil生成native-icons/LumaPlayer.icns，加入.app/Contents/Resources并设置Info.plist图标字段，产物不放回res。脚本统一参数为--source、--output、--format（ICO/PNG/ICNS），Windows另由工程传--resource、--qt-dir、--vcvars和--arch；Linux传--name生成匹配的启动器，ICNS需要在macOS执行。
+平台验证边界：单一shell方案已完成Windows x64 Release完整重新生成（MSBuild 12，0警告0错误）、10尺寸EXE图标提取和标题栏显示；PNG/启动器分支在Git sh下验证，不能冒充Linux桌面验收。Linux/macOS尚未原生构建或实机验收；尤其既有CMake仍含Linux Qt .so链接及工具链约定，macOS工程整体适配继续按原约定另行完成，本次整理图标规则不代表macOS播放器已经可构建运行。平台机制参考Qt官方说明：https://doc.qt.io/archives/qt-5.15/appicon.html。
+当前图案使用内置图像生成工具制作；设计提示为“透明背景、蓝色和青色流光丝带构成向右播放三角、明亮流光绕过左下方、简洁轮廓适配小尺寸、无文字水印”。此图案为可替换素材，不参与播放、解码或缩略图生成。
 
 二、配置、接口和所有权
 统一入口LumaPlayerCoreAPI.h，默认包含C++声明；调用方在首次包含前定义LUMAPLAYERCORE_USE_C_API选择纯C声明LumaPlayerCoreC.h，不能间接带STL。不再提供LumaPlayerCoreCAPI.h。DLL导入库和静态库都按原有规则命名LumaPlayerCore.lib/LumaPlayerCored.lib，依赖组合串行准备。桌面走C ABI隔离Qt MD与Core运行库边界，测试覆盖两种入口。C句柄由create创建、destroy释放，回调userdata属于调用方。
@@ -112,6 +120,7 @@ ManagerBase same
 DialogManager only
 上述only是当前完整脚本中的既有安排，不能孤立执行并假定前置依赖已准备；不按旧文档自动改写为Core/DialogManager same或删去显式依赖。同配置同时构建App与Test时，已完成且确认匹配的依赖无需重复准备。
 依赖准备后分别用MSBuild构建应用sln。以下命令从仓库根目录运行，示例为Release：
+手动VS2013流程保持不变：先执行对应version脚本准备依赖，再打开src/LumaPlayer/LumaPlayer.sln，选择匹配的x64 Release或Debug配置，直接点击“生成解决方案”或“重新生成解决方案”。图标、RC及Qt资源自动生成，不需要用户先运行图标脚本，不需要另行维护ICO；QTDIR和Git沿用已有构建环境。工程默认使用64位Windows常见安装位置$(ProgramW6432)/Git/bin/sh.exe；Git安装在其他位置时，通过用户属性表设置LumaPlayerIconShell为实际Git bin/sh.exe路径，不使用可能指向WSL的bash。version仍只准备依赖，本次未修改version或rebuild脚本。
 & 'C:\Program Files\Git\bin\sh.exe' src/LumaPlayer/version_release.sh
 & 'C:\Program Files (x86)\MSBuild\12.0\Bin\amd64\MSBuild.exe' src/LumaPlayer/LumaPlayer.sln /p:Configuration=Release /p:Platform=x64 /m /nologo
 & 'C:\Program Files (x86)\MSBuild\12.0\Bin\amd64\MSBuild.exe' src/LumaPlayerTest/LumaPlayerTest.sln /p:Configuration=Release /p:Platform=x64 /m /nologo
@@ -144,6 +153,8 @@ LumaPlayerTest1.0.exe --run specified --ids 13,14,23,35,36,38 --configuration bo
 测试选择、正式用例开发及执行按《工程测试规范》和工作流约定。19/20各默认持续120秒，34默认Release启动60次、Debug8次，38覆盖连续任务切换停止回收；未选压力项不能记通过。源码或产物变化后重测受影响范围，旧报告不能替新版本背书。
 
 十、发布规则与当前文件
+同日自动图标构建调整：res只维护LumaPlayer.png，Windows通过清理重建、增量生成和非法输入检查；仅再次更新common/LumaPlayer/LumaPlayer1.0.exe及symbols-LumaPlayer1.0-20260923-AutoIcon.7z。14个DLL及其归档PDB内容保持不变，新EXE/PDB GUID/Age匹配，.7z为LZMA2极限固实压缩并完成解压核对；发布目录无独立图片，标题栏显示及正常退出通过。Linux/macOS仅增加图标生成和打包规则，未运行验证，不代表其播放器构建或部署已通过。
+2026-09-23图标发布：只更新LumaPlayer1.0.exe；Windows原生ICON与Qt标题栏图片均内嵌，不分发独立图片。Release x64编译0警告0错误；10种EXE图标尺寸提取及透明度/像素核对通过，640和244像素宽度的实际窗口截图检查通过；新EXE配正式目录原14个DLL启动、绘制和正常退出通过，发布前后DLL SHA256未变。symbols-LumaPlayer1.0-20260923-Icon.7z以Diagnostics旧包为基线，仅替换应用PDB，其他14个PDB保持逐字节一致；全部原模块符号及新EXE符号核对GUID/Age，LZMA2 -mx=9固实压缩、完整性与解压核对通过。本轮仅相关构建/资源/界面冒烟验证，未执行全量、压力、Debug或跨平台测试；不把该验证视为全部播放功能回归。
 增量发布遵循《仓库使用说明文档.txt》“增量发布与符号”：应用单独变化且Core兼容时，仅替换common/LumaPlayer/LumaPlayer1.0.exe，不重拷未变DLL，不自动部署测试EXE；符号包只换已更新模块的匹配PDB，保留未变DLL对应旧PDB，以.7z极限压缩保存。正式测试/证据及文档更新不扩大运行文件清单，依赖/ABI变化需另列必要同步产物。
 2026-09-17发布完成：播放器EXE SHA256 F799BEF8E638127678F2EB3F82B38279411DE23EA41E7E102053D3BFCF1CAFFC，14个现有DLL未修改。symbols-LumaPlayer1.0-20260917-Volume.7z以旧Esc包为基线，仅替换LumaPlayer1.0.pdb，其余14个PDB原样保留；实际部署PE与新包解压后的15个PDB均核对GUID/Age一致，7z极限压缩及完整性检查通过。旧包原位保留，旧EXE及证据在发布记录/20260917-Volume。用户明确“这次不用测试”，未执行正式指定/瞬时/压力/全量测试；此前72条仅为试运行前核心断言。发布后实际common程序可见启动、打开自动素材并正常退出，退出码0。
 按《仓库使用说明文档》的交付操作及《工程软件开发工作流》本轮授权发布，验证按《工程测试规范》执行；历史发布授权不自动覆盖新轮次。common默认分发Windows x64 Release：播放器到common/LumaPlayer，测试程序到common/LumaPlayerTest；需要Debug时隔离到约定目录，当前测试默认使用common/LumaPlayer/debug。

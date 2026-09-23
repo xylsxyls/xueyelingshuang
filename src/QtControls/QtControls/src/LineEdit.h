@@ -27,6 +27,11 @@ public:
 	*/
 	virtual ~LineEdit();
 
+    /** 设置回显方式并立即清理密码提示，防止切换后保留明文 tooltip。
+    @param [in] mode Qt 输入回显方式。
+    */
+    void setEchoMode(QLineEdit::EchoMode mode);
+
 private slots:
 	/** 处理文本变化，用于维护输入框默认提示和样式状态
 	@param [in] str 当前输入框文字

@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <string>
 
-/** 启动时发现的旧日志文件信息，用于决定归档目录和移动目标
+/** 日志文件名解析结果，用于计算本次会话的归档目录；不负责启动扫描
 */
 struct LogManagerOldFile
 {

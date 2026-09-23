@@ -1,1 +1,14 @@
-"$CLOUD_REBUILD" SplitViewerCore 32 dll debug same
+"$CLOUD_REBUILD" CStringManager 64 dll debug same
+"$CLOUD_REBUILD" CSystem 64 dll debug same
+"$CLOUD_REBUILD" ReadWriteMutex 64 dll debug same
+"$CLOUD_REBUILD" IntDateTime 64 dll debug only
+"$CLOUD_REBUILD" LogManager 64 dll debug only
+"$CLOUD_REBUILD" Semaphore 64 dll debug same
+"$CLOUD_REBUILD" CTaskThreadManager 64 dll debug only
+"$CLOUD_REBUILD" LockFreeQueue 64 dll debug same
+"$CLOUD_REBUILD" SplitViewerCore 64 dll debug only
+"$CLOUD_REBUILD" QssString 64 dll debug only
+"$CLOUD_REBUILD" EO_XmlSax2Parser 64 dll debug same
+"$CLOUD_REBUILD" QtControls 64 dll debug only
+"$CLOUD_REBUILD" ManagerBase 64 dll debug same
+"$CLOUD_REBUILD" DialogManager 64 dll debug only

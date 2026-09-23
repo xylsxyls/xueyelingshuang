@@ -1,4 +1,4 @@
-﻿#设置CMAKE最低版本
+#设置CMAKE最低版本
 CMAKE_MINIMUM_REQUIRED(VERSION 3.10.1)
 SET(CMAKE_CXX_STANDARD 11)
 
@@ -52,6 +52,7 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../../../lib/)
 
 #添加包含目录
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../include/)
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../PdfReaderCore/PdfReaderCore/src/)
 
 #添加库目录
 LINK_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../lib/)
@@ -101,3 +102,39 @@ list(APPEND LIBRARYLIST ${LIBRARIESRELY})
 foreach (EVERYLIBRARY ${LIBRARYLIST})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/${EVERYLIBRARY})
 endforeach ()
+
+
+IF(WIN32 OR APPLE)
+    FIND_PROGRAM(PDFREADER_SHELL NAMES bash sh HINTS "$ENV{ProgramW6432}/Git/bin" "$ENV{ProgramFiles}/Git/bin")
+    IF(NOT PDFREADER_SHELL)
+        MESSAGE(FATAL_ERROR "Bash is required for PNG icon generation; use Git Bash on Windows")
+    ENDIF()
+    SET(ICON_DIR "${PROJECT_SOURCE_DIR}/../../temp/PdfReader/CMake/${CMAKE_SYSTEM_NAME}-${BIT}-${DEBUGRELEASE}/res")
+ENDIF()
+IF(WIN32)
+    ADD_CUSTOM_COMMAND(OUTPUT "${ICON_DIR}/PdfReader.ico" "${ICON_DIR}/PdfReader.rc"
+        COMMAND "${PDFREADER_SHELL}" "${PROJECT_SOURCE_DIR}/PdfReaderIcon.sh" icon
+            "${PROJECT_SOURCE_DIR}/res/PdfReader.png" "${ICON_DIR}/PdfReader.ico"
+        DEPENDS "${PROJECT_SOURCE_DIR}/res/PdfReader.png" "${PROJECT_SOURCE_DIR}/PdfReaderIcon.sh"
+        VERBATIM)
+    SET_SOURCE_FILES_PROPERTIES("${ICON_DIR}/PdfReader.rc" PROPERTIES
+        GENERATED TRUE OBJECT_DEPENDS "${ICON_DIR}/PdfReader.ico")
+    TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE "${ICON_DIR}")
+    TARGET_SOURCES(${PROJECT_NAME} PRIVATE "${ICON_DIR}/PdfReader.rc")
+ELSEIF(APPLE)
+    ADD_CUSTOM_COMMAND(OUTPUT "${ICON_DIR}/PdfReader.icns"
+        COMMAND "${PDFREADER_SHELL}" "${PROJECT_SOURCE_DIR}/PdfReaderIcon.sh" icon
+            "${PROJECT_SOURCE_DIR}/res/PdfReader.png" "${ICON_DIR}/PdfReader.icns"
+        DEPENDS "${PROJECT_SOURCE_DIR}/res/PdfReader.png" "${PROJECT_SOURCE_DIR}/PdfReaderIcon.sh"
+        VERBATIM)
+    SET_SOURCE_FILES_PROPERTIES("${ICON_DIR}/PdfReader.icns" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    TARGET_SOURCES(${PROJECT_NAME} PRIVATE "${ICON_DIR}/PdfReader.icns")
+    SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES MACOSX_BUNDLE TRUE MACOSX_BUNDLE_ICON_FILE PdfReader.icns)
+ENDIF()
+
+# Desktop UI uses the shared control and dialog libraries.
+IF(DEBUGRELEASE STREQUAL "debug")
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControlsd DialogManagerd QssStringd CStringManagerd LogManagerd CDumpd)
+ELSE()
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControls DialogManager QssString CStringManager LogManager CDump)
+ENDIF()

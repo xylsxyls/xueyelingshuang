@@ -9,7 +9,7 @@
 #ifdef _WIN32
 #include <io.h>
 #include <windows.h>
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 #include <dirent.h>
 #include <unistd.h>
 #endif
@@ -95,6 +95,22 @@ std::string LogManagerHelper::buildBaseName(const std::string& processName, int3
 	return result;
 }
 
+std::string LogManagerHelper::buildArchiveDir(const std::string& logDir, const std::string& processName, const std::string& baseName)
+{
+	LogManagerOldFile file;
+	if (!parseOldLogFile(baseName + ".0.log", processName, file))
+	{
+		return "";
+	}
+	std::string directory = logDir + processName + "_log/" + file.m_date + "_" + file.m_time + "_" + CStringManager::toStringInt32(file.m_pid);
+	std::vector<std::string> parts = CStringManager::split(baseName.substr(processName.size() + 1), "_");
+	if (parts.size() == 4)
+	{
+		directory += "_" + parts[3];
+	}
+	return directory;
+}
+
 std::string LogManagerHelper::buildLinkPath(const std::string& logDir, const std::string& baseName)
 {
 	return logDir + baseName + ".log";
@@ -116,7 +132,7 @@ int64_t LogManagerHelper::fileSize(const std::string& path)
 		return 0;
 	}
 	return static_cast<int64_t>(fileStat.st_size);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	struct stat fileStat;
 	if (stat(path.c_str(), &fileStat) != 0)
 	{
@@ -130,7 +146,14 @@ int64_t LogManagerHelper::fileSize(const std::string& path)
 
 bool LogManagerHelper::exist(const std::string& path)
 {
+#ifdef _WIN32
+	return GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES;
+#elif defined(__unix__) || defined(__APPLE__)
+	struct stat fileStat;
+	return lstat(path.c_str(), &fileStat) == 0;
+#else
 	return CSystem::DirOrFileExist(path);
+#endif
 }
 
 bool LogManagerHelper::deleteFile(const std::string& path)
@@ -144,12 +167,15 @@ bool LogManagerHelper::deleteFile(const std::string& path)
 
 bool LogManagerHelper::renameFile(const std::string& oldPath, const std::string& newPath)
 {
-	if (oldPath.empty() || newPath.empty() || !exist(oldPath))
+	if (oldPath.empty() || newPath.empty() || !exist(oldPath) || exist(newPath))
 	{
 		return false;
 	}
-	deleteFile(newPath);
+#ifdef _WIN32
+	return MoveFileA(oldPath.c_str(), newPath.c_str()) != FALSE;
+#else
 	return CSystem::rename(oldPath, newPath);
+#endif
 }
 
 std::vector<std::string> LogManagerHelper::listTopFiles(const std::string& logDir)
@@ -178,7 +204,7 @@ std::vector<std::string> LogManagerHelper::listTopFiles(const std::string& logDi
 	}
 	while (_findnext(handle, &fileInfo) == 0);
 	_findclose(handle);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	DIR* dir = opendir(realLogDir.c_str());
 	if (dir == nullptr)
 	{
@@ -241,7 +267,8 @@ bool LogManagerHelper::parseOldLogFile(const std::string& filePath, const std::s
 	}
 	std::string remain = baseName.substr(prefix.size());
 	std::vector<std::string> parts = CStringManager::split(remain, "_");
-	if (parts.size() != 3 || !isNumber(parts[0]) || !isNumber(parts[1]) || !isNumber(parts[2]))
+	if ((parts.size() != 3 && parts.size() != 4) || !isNumber(parts[0]) || !isNumber(parts[1]) || !isNumber(parts[2]) ||
+		(parts.size() == 4 && !isNumber(parts[3])))
 	{
 		return false;
 	}
@@ -262,7 +289,7 @@ bool LogManagerHelper::createSymbolicLinkFile(const std::string& linkPath, const
 #ifdef _WIN32
 	enableSymbolicLinkPrivilege();
 	return ::CreateSymbolicLinkA(linkPath.c_str(), targetPath.c_str(), 0) != FALSE;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	return symlink(targetPath.c_str(), linkPath.c_str()) == 0;
 #else
 	return false;

@@ -155,6 +155,11 @@ rmdir /q /s "%~dp0common\AutoPlayGame\ScreenScriptTemp\"
 rmdir /q /s "%~dp0common\Dtws\ScreenScriptTemp\"
 rmdir /q /s "%~dp0common\OneKey\ScreenScriptTemp\"
 
+::-------------------删除日志-----------------------------
+rmdir /q /s "%~dp0common\LumaPlayer\LumaPlayer1.0_log\"
+rmdir /q /s "%~dp0common\SplitViewer\SplitViewer1.0_log\"
+rmdir /q /s "%~dp0common\PdfReader\PdfReader1.0_log\"
+
 ::-------------------删除临时代码-----------------------------
 del "%~dp0src\ProtoMessage\ProtoMessage\src\ProtoMessage.pb.h"
 del "%~dp0src\ProtoMessage\ProtoMessage\src\ProtoMessage.pb.cc"

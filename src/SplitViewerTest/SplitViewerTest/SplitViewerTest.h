@@ -1,31 +1,28 @@
-﻿#ifndef QTTEST_H
-#define QTTEST_H
+﻿#ifndef SPLITVIEWER_TEST_H
+#define SPLITVIEWER_TEST_H
 
 #include <QtWidgets/QMainWindow>
-#include "ui_SplitViewerTest.h"
 
-class COriginalButton;
+class QPlainTextEdit;
+class QComboBox;
 
 class SplitViewerTest : public QMainWindow
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	SplitViewerTest(QWidget* parent = nullptr);
-	~SplitViewerTest();
-
-protected:
-	void init();
-	bool check();
-
-protected:
-	void resizeEvent(QResizeEvent* eve);
+    explicit SplitViewerTest(QWidget* parent = NULL);
+    ~SplitViewerTest();
+    bool allTestsPassed() const;
 
 private slots:
-	void onButtonClicked();
+    void runTests();
+    void runUiTests();
 
 private:
-	Ui::SplitViewerTestClass ui;
-	COriginalButton* m_button;
+    void appendResult(const QString& name, bool passed, const QString& detail = QString());
+    QPlainTextEdit* m_output;
+    bool m_allTestsPassed;
+    QComboBox* m_uiCases;
 };
 
-#endif // QTTEST_H
+#endif

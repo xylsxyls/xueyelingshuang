@@ -1,1 +1,13 @@
-"$CLOUD_REBUILD" PdfReaderCore 64 dll release same
+"$CLOUD_REBUILD" PdfEngine 64 dll release same
+"$CLOUD_REBUILD" ReadWriteMutex 64 dll release same
+"$CLOUD_REBUILD" IntDateTime 64 dll release only
+"$CLOUD_REBUILD" LogManager 64 dll release only
+"$CLOUD_REBUILD" CDump 64 dll release same
+"$CLOUD_REBUILD" CTaskThreadManager 64 dll release same
+"$CLOUD_REBUILD" LockFreeQueue 64 dll release same
+"$CLOUD_REBUILD" PdfReaderCore 64 dll release only
+"$CLOUD_REBUILD" QssString 64 dll release only
+"$CLOUD_REBUILD" EO_XmlSax2Parser 64 dll release same
+"$CLOUD_REBUILD" QtControls 64 dll release only
+"$CLOUD_REBUILD" ManagerBase 64 dll release same
+"$CLOUD_REBUILD" DialogManager 64 dll release only

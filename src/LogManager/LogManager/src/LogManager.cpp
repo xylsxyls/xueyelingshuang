@@ -16,7 +16,7 @@ LogManager::LogManager() :
 m_exeName(CSystem::GetCurrentExeFullName()),
 m_processName(CSystem::GetCurrentExeName()),
 m_logMap(),
-m_preparedLogDirMap(),
+m_usedLogNames(),
 m_writeBeginEnd(true),
 m_writeLog(true),
 m_isProcessMutex(false),
@@ -181,11 +181,11 @@ void LogManager::deleteFile(int32_t fileId)
 		{
 			return;
 		}
-		deletePaths.push_back(logFile->m_linkPath);
-		for (int32_t fileIndex = 0; fileIndex <= logFile->m_currentIndex; ++fileIndex)
+		if (logFile->m_linkCreated)
 		{
-			deletePaths.push_back(LogManagerHelper::buildEntityPath(logFile->m_logDir, logFile->m_baseName, fileIndex));
+			deletePaths.push_back(logFile->m_linkPath);
 		}
+		deletePaths.insert(deletePaths.end(), logFile->m_entityPaths.begin(), logFile->m_entityPaths.end());
 		uninitNoLock(fileId, false);
 	}
 
@@ -259,8 +259,6 @@ LogManagerFile* LogManager::initNoLock(const LogManagerConfig& config)
 		return nullptr;
 	}
 
-	prepareOldLogNoLock(logDir, realConfig.m_archiveOldLog);
-
 	LogManagerFile* logFile = new (std::nothrow) LogManagerFile;
 	if (logFile == nullptr)
 	{
@@ -268,9 +266,7 @@ LogManagerFile* LogManager::initNoLock(const LogManagerConfig& config)
 	}
 	logFile->m_config = realConfig;
 	logFile->m_logDir = logDir;
-	std::string timeName = LogManagerHelper::currentTimeName();
-	logFile->m_baseName = LogManagerHelper::buildBaseName(m_processName, static_cast<int32_t>(CSystem::currentProcessPid()), timeName);
-	logFile->m_linkPath = LogManagerHelper::buildLinkPath(logDir, logFile->m_baseName);
+	prepareSessionNoLock(logFile);
 
 	if (!openLogFileNoLock(logFile, 0))
 	{
@@ -301,6 +297,15 @@ void LogManager::uninitNoLock(int32_t fileId, bool writeEnd)
 	{
 		std::string line = formatLineText(LOG_END, __FILE__, __FUNCTION__, "", "", 0, "");
 		writeLineNoLock(logFile, LOG_END, line);
+	}
+	if (logFile != nullptr)
+	{
+		closeLogFileNoLock(logFile);
+		LogManagerHelper::closeFileLock(logFile->m_linkFileLock);
+		if (writeEnd && logFile->m_config.m_archiveOldLog)
+		{
+			archiveSessionNoLock(logFile);
+		}
 	}
 	m_logMap.erase(it);
 	delete logFile;
@@ -346,7 +351,9 @@ void LogManager::checkRollNoLock(LogManagerFile* logFile)
 	}
 
 	logFile->m_writeCountSinceSizeCheck = 0;
-	if (LogManagerHelper::fileSize(logFile->m_currentEntityPath) > logFile->m_config.m_maxFileBytes)
+	// 使用已打开写流的实际位置，避免Windows目录元数据滞后导致一直不滚动。
+	std::streampos position = logFile->m_logFile->tellp();
+	if (position != std::streampos(-1) && static_cast<std::streamoff>(position) > logFile->m_config.m_maxFileBytes)
 	{
 		rollNoLock(logFile);
 	}
@@ -378,9 +385,12 @@ bool LogManager::openLogFileNoLock(LogManagerFile* logFile, int32_t fileIndex)
 		return false;
 	}
 
-	logFile->m_currentIndex = fileIndex;
-	logFile->m_currentEntityPath = LogManagerHelper::buildEntityPath(logFile->m_logDir, logFile->m_baseName, fileIndex);
-	logFile->m_logFile = new (std::nothrow) std::ofstream(logFile->m_currentEntityPath.c_str(), std::ios::out | std::ios::app);
+	std::string entityPath = LogManagerHelper::buildEntityPath(logFile->m_logDir, logFile->m_baseName, fileIndex);
+	if (logFile->m_entityPaths.find(entityPath) == logFile->m_entityPaths.end() && LogManagerHelper::exist(entityPath))
+	{
+		return false;
+	}
+	logFile->m_logFile = new (std::nothrow) std::ofstream(entityPath.c_str(), std::ios::out | std::ios::app);
 	if (logFile->m_logFile == nullptr || !logFile->m_logFile->is_open())
 	{
 		if (logFile->m_logFile != nullptr)
@@ -390,6 +400,9 @@ bool LogManager::openLogFileNoLock(LogManagerFile* logFile, int32_t fileIndex)
 		}
 		return false;
 	}
+	logFile->m_currentIndex = fileIndex;
+	logFile->m_currentEntityPath = entityPath;
+	logFile->m_entityPaths.insert(entityPath);
 	logFile->m_currentFileLock = LogManagerHelper::lockFileDelete(logFile->m_currentEntityPath, false);
 	logFile->m_writeCountSinceSizeCheck = 0;
 	return true;
@@ -418,41 +431,61 @@ void LogManager::updateLinkNoLock(LogManagerFile* logFile)
 		return;
 	}
 	LogManagerHelper::closeFileLock(logFile->m_linkFileLock);
-	if (LogManagerHelper::createSymbolicLinkFile(logFile->m_linkPath, LogManagerHelper::fileName(logFile->m_currentEntityPath)))
+	logFile->m_linkCreated = LogManagerHelper::createSymbolicLinkFile(logFile->m_linkPath, LogManagerHelper::fileName(logFile->m_currentEntityPath));
+	if (logFile->m_linkCreated)
 	{
 		logFile->m_linkFileLock = LogManagerHelper::lockFileDelete(logFile->m_linkPath, true);
 	}
 }
 
-void LogManager::prepareOldLogNoLock(const std::string& logDir, bool archiveOldLog)
+void LogManager::prepareSessionNoLock(LogManagerFile* logFile)
 {
-	std::string preparedKey = logDir + "|" + m_processName;
-	if (m_preparedLogDirMap.find(preparedKey) != m_preparedLogDirMap.end())
+	std::string base = LogManagerHelper::buildBaseName(m_processName, static_cast<int32_t>(CSystem::currentProcessPid()), LogManagerHelper::currentTimeName());
+	for (uint64_t sequence = 0; ; ++sequence)
+	{
+		std::ostringstream name;
+		name << base;
+		if (sequence != 0)
+		{
+			name << "_" << sequence;
+		}
+		std::string candidate = name.str();
+		std::string linkPath = LogManagerHelper::buildLinkPath(logFile->m_logDir, candidate);
+		std::string archiveDir = LogManagerHelper::buildArchiveDir(logFile->m_logDir, m_processName, candidate);
+		if (m_usedLogNames.find(candidate) == m_usedLogNames.end() &&
+			!LogManagerHelper::exist(linkPath) &&
+			!LogManagerHelper::exist(LogManagerHelper::buildEntityPath(logFile->m_logDir, candidate, 0)) &&
+			!LogManagerHelper::exist(archiveDir))
+		{
+			m_usedLogNames[candidate] = true;
+			logFile->m_baseName = candidate;
+			logFile->m_linkPath = linkPath;
+			logFile->m_archiveDir = archiveDir;
+			return;
+		}
+	}
+}
+
+void LogManager::archiveSessionNoLock(LogManagerFile* logFile)
+{
+	if (logFile->m_entityPaths.empty() || logFile->m_archiveDir.empty() ||
+		!LogManagerHelper::createDirectoryRecursive(logFile->m_archiveDir))
 	{
 		return;
 	}
-	m_preparedLogDirMap[preparedKey] = true;
-
-	std::vector<std::string> files = LogManagerHelper::listTopFiles(logDir);
-	for (size_t i = 0; i < files.size(); ++i)
+	std::string destination = LogManagerHelper::normalizeLogDir(logFile->m_archiveDir);
+	bool currentMoved = false;
+	for (std::set<std::string>::const_iterator it = logFile->m_entityPaths.begin(); it != logFile->m_entityPaths.end(); ++it)
 	{
-		LogManagerOldFile oldFile;
-		if (!LogManagerHelper::parseOldLogFile(files[i], m_processName, oldFile))
+		bool moved = LogManagerHelper::renameFile(*it, destination + LogManagerHelper::fileName(*it));
+		if (*it == logFile->m_currentEntityPath)
 		{
-			continue;
+			currentMoved = moved;
 		}
-		if (!archiveOldLog)
-		{
-			LogManagerHelper::deleteFile(oldFile.m_filePath);
-			continue;
-		}
-
-		std::string archiveRoot = logDir + m_processName + "_log";
-		LogManagerHelper::createDirectoryRecursive(archiveRoot);
-		std::string archiveDir = archiveRoot + "/" + oldFile.m_date + "_" + oldFile.m_time + "_" + CStringManager::toStringInt32(oldFile.m_pid);
-		LogManagerHelper::createDirectoryRecursive(archiveDir);
-		std::string targetPath = LogManagerHelper::normalizeLogDir(archiveDir) + oldFile.m_fileName;
-		LogManagerHelper::renameFile(oldFile.m_filePath, targetPath);
+	}
+	if (logFile->m_linkCreated && currentMoved)
+	{
+		LogManagerHelper::renameFile(logFile->m_linkPath, destination + LogManagerHelper::fileName(logFile->m_linkPath));
 	}
 }
 
@@ -466,7 +499,11 @@ void LogManager::deleteExpiredLogNoLock(LogManagerFile* logFile)
 	int32_t firstKeepIndex = logFile->m_currentIndex - keepRollingCount;
 	for (int32_t fileIndex = 1; fileIndex < firstKeepIndex; ++fileIndex)
 	{
-		LogManagerHelper::deleteFile(LogManagerHelper::buildEntityPath(logFile->m_logDir, logFile->m_baseName, fileIndex));
+		std::string path = LogManagerHelper::buildEntityPath(logFile->m_logDir, logFile->m_baseName, fileIndex);
+		if (logFile->m_entityPaths.find(path) != logFile->m_entityPaths.end() && LogManagerHelper::deleteFile(path))
+		{
+			logFile->m_entityPaths.erase(path);
+		}
 	}
 }
 
@@ -478,7 +515,7 @@ std::string LogManager::formatLine(LogLevel flag, const std::string& fileMacro, 
 #ifdef _WIN32
 		va_list argsCopy = args;
 		int32_t size = _vscprintf(format, argsCopy);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 		va_list argsCopy;
 		va_copy(argsCopy, args);
 		int32_t size = vsnprintf(nullptr, 0, format, argsCopy);
@@ -491,7 +528,7 @@ std::string LogManager::formatLine(LogLevel flag, const std::string& fileMacro, 
 			std::vector<char> buffer(static_cast<size_t>(size) + 1);
 #ifdef _WIN32
 			vsprintf_s(&buffer[0], buffer.size(), format, args);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 			vsnprintf(&buffer[0], buffer.size(), format, args);
 #endif
 			message.assign(&buffer[0], static_cast<size_t>(size));
@@ -575,9 +612,13 @@ std::string LogManager::formatLineText(LogLevel flag, const std::string& fileMac
 	return oss.str();
 }
 
+// 自测入口：临时取消下面整个区块的行注释，将本工程临时编译为控制台程序；测完恢复注释。
+// 全部用例与子进程分支都在同一个main内，无独立Test工程；Windows软链接用例需要对应权限。
 //#include "CSystem/CSystemAPI.h"
 //#include "CStringManager/CStringManagerAPI.h"
 //#include <atomic>
+//#include <chrono>
+//#include <stdexcept>
 //#include <cstdlib>
 //#include <fstream>
 //#include <functional>
@@ -587,10 +628,65 @@ std::string LogManager::formatLineText(LogLevel flag, const std::string& fileMac
 //
 //#ifdef _WIN32
 //#include <process.h>
+//#include <windows.h>
+//#elif defined(__unix__) || defined(__APPLE__)
+//#include <dirent.h>
+//#include <sys/stat.h>
 //#endif
 //
 //int main(int32_t argc, char** argv)
 //{
+//	// 同一个main的子进程分支，供父进程检查析构和多实例隔离。
+//	if (argc == 6 && std::string(argv[1]) == "--archive-child")
+//	{
+//		const std::string mode = argv[3];
+//		LogManagerConfig config;
+//		config.m_fileId = 17;
+//		config.m_path = argv[2];
+//		config.m_maxFileBytes = 700;
+//		config.m_maxFileCount = 3;
+//		config.m_checkFileSizeInterval = 1;
+//		config.m_archiveOldLog = mode != "noarchive";
+//		LogManager::instance().init(config);
+//		if (mode == "multi")
+//		{
+//			config.m_fileId = 18;
+//			LogManager::instance().init(config);
+//		}
+//		const std::string payload(240, 'x');
+//		for (int i = 0; i < 30; ++i)
+//		{
+//			LOGINFO_EX(17, "OWNER17 row=%d %s", i, payload.c_str());
+//			if (mode == "multi") { LOGINFO_EX(18, "OWNER18 row=%d %s", i, payload.c_str()); }
+//		}
+//		std::ofstream(argv[4]) << "ready";
+//		const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+//		while (!std::ifstream(argv[5]).good())
+//		{
+//			if (std::chrono::steady_clock::now() >= deadline) { return 3; }
+//			std::this_thread::sleep_for(std::chrono::milliseconds(20));
+//		}
+//		LOGINFO_EX(17, "LAST17 before closing");
+//		if (mode == "destructor") { return 0; }
+//		if (mode == "delete")
+//		{
+//			LogManager::instance().deleteFile(17);
+//			return 0;
+//		}
+//		LogManager::instance().uninit(17);
+//		if (mode == "reinit")
+//		{
+//			LogManager::instance().init(config);
+//			LOGINFO_EX(17, "SECOND_SESSION");
+//			LogManager::instance().uninit(17);
+//		}
+//		if (mode == "multi") { LOGINFO_EX(18, "LAST18 still writable after closing 17"); }
+//		LogManager::instance().uninit(17);
+//		LogManager::instance().uninitAll();
+//		LogManager::instance().uninitAll();
+//		return 0;
+//	}
+//
 //	int32_t totalCount = 0;
 //	int32_t failCount = 0;
 //	int32_t skipCount = 0;
@@ -614,14 +710,81 @@ std::string LogManager::formatLineText(LogLevel flag, const std::string& fileMac
 //		LogManagerHelper::createDirectoryRecursive(root);
 //		return root;
 //	};
+//
+//	// 仅测试使用的局部辅助逻辑：读取实际目录与文件，不访问日志管理器私有状态。
+//	auto directories = [](const std::string& path) -> std::vector<std::string>
+//	{
+//		std::vector<std::string> result;
+//		std::string directory = LogManagerHelper::normalizeLogDir(path);
+//#ifdef _WIN32
+//		WIN32_FIND_DATAA data;
+//		HANDLE find = FindFirstFileA((directory + "*").c_str(), &data);
+//		if (find == INVALID_HANDLE_VALUE) { return result; }
+//		do
+//		{
+//			std::string name = data.cFileName;
+//			if (name != "." && name != ".." && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
+//				!(data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) { result.push_back(directory + name); }
+//		} while (FindNextFileA(find, &data));
+//		FindClose(find);
+//#elif defined(__unix__) || defined(__APPLE__)
+//		DIR* dir = opendir(directory.c_str());
+//		if (dir == nullptr) { return result; }
+//		struct dirent* item = nullptr;
+//		while ((item = readdir(dir)) != nullptr)
+//		{
+//			std::string name = item->d_name;
+//			struct stat status;
+//			if (name != "." && name != ".." && lstat((directory + name).c_str(), &status) == 0 &&
+//				S_ISDIR(status.st_mode)) { result.push_back(directory + name); }
+//		}
+//		closedir(dir);
+//#endif
+//		return result;
+//	};
+//	std::function<std::vector<std::string>(const std::string&)> allFiles;
+//	allFiles = [&allFiles, &directories](const std::string& path) -> std::vector<std::string>
+//	{
+//		std::vector<std::string> result = LogManagerHelper::listTopFiles(path);
+//		std::vector<std::string> dirs = directories(path);
+//		for (size_t i = 0; i < dirs.size(); ++i)
+//		{
+//			std::vector<std::string> nested = allFiles(dirs[i]);
+//			result.insert(result.end(), nested.begin(), nested.end());
+//		}
+//		return result;
+//	};
+//	auto readFile = [](const std::string& path) -> std::string
+//	{
+//#ifdef _WIN32
+//		HANDLE file = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+//			nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+//		if (file == INVALID_HANDLE_VALUE) { throw std::runtime_error("cannot read " + path); }
+//		std::string text;
+//		char bytes[4096];
+//		DWORD count = 0;
+//		BOOL ok = TRUE;
+//		while ((ok = ReadFile(file, bytes, sizeof(bytes), &count, nullptr)) && count != 0) { text.append(bytes, count); }
+//		CloseHandle(file);
+//		if (!ok) { throw std::runtime_error("read failed " + path); }
+//		return text;
+//#else
+//		std::ifstream file(path.c_str(), std::ios::in | std::ios::binary);
+//		if (!file) { throw std::runtime_error("cannot read " + path); }
+//		std::ostringstream text;
+//		text << file.rdbuf();
+//		return text.str();
+//#endif
+//	};
+//
 //	std::function<int32_t(const std::string&)> countTopFiles = [](const std::string& path) -> int32_t
 //	{
 //		return static_cast<int32_t>(LogManagerHelper::listTopFiles(path).size());
 //	};
-//	std::function<std::string(const std::string&)> readLogText = [](const std::string& path) -> std::string
+//	std::function<std::string(const std::string&)> readLogText = [&allFiles](const std::string& path) -> std::string
 //	{
 //		std::ostringstream oss;
-//		std::vector<std::string> files = LogManagerHelper::listTopFiles(path);
+//		std::vector<std::string> files = allFiles(path);
 //		for (size_t i = 0; i < files.size(); ++i)
 //		{
 //			LogManagerOldFile oldFile;
@@ -919,7 +1082,7 @@ std::string LogManager::formatLineText(LogLevel flag, const std::string& fileMac
 //	archiveConfig.m_archiveOldLog = true;
 //	LogManager::instance().init(archiveConfig);
 //	LogManager::instance().uninit(1005);
-//	check(LogManagerHelper::exist(archiveRoot + CSystem::GetCurrentExeName() + "_log/20260809_034122_456/" + archiveOldName), "LogManager archive old log directory");
+//	check(LogManagerHelper::exist(archiveRoot + archiveOldName), "LogManager leaves old log in original directory");
 //
 //	std::string deleteRoot = root + "delete_old/";
 //	LogManagerHelper::createDirectoryRecursive(deleteRoot);
@@ -934,7 +1097,7 @@ std::string LogManager::formatLineText(LogLevel flag, const std::string& fileMac
 //	deleteConfig.m_archiveOldLog = false;
 //	LogManager::instance().init(deleteConfig);
 //	LogManager::instance().uninit(1006);
-//	check(!LogManagerHelper::exist(deleteRoot + oldName), "LogManager delete old log");
+//	check(LogManagerHelper::exist(deleteRoot + oldName), "LogManager disabled archive also preserves old logs");
 //
 //	check(LogManager::needPrintEvery(0, -1), "LogManager every first");
 //	check(!LogManager::needPrintEvery(1, -1), "LogManager once only");
@@ -1009,7 +1172,7 @@ std::string LogManager::formatLineText(LogLevel flag, const std::string& fileMac
 //	LogManager::instance().uninit(1011);
 //	if (canCreateSymbolicLink)
 //	{
-//		std::vector<std::string> relativeFiles = LogManagerHelper::listTopFiles(relativeRoot);
+//		std::vector<std::string> relativeFiles = allFiles(relativeRoot);
 //		std::string relativeLinkPath;
 //		for (size_t i = 0; i < relativeFiles.size(); ++i)
 //		{
@@ -1068,9 +1231,244 @@ std::string LogManager::formatLineText(LogLevel flag, const std::string& fileMac
 //		processThreads[i].join();
 //	}
 //	check(processFailCount.load() == 0, "LogManager multiprocess macro pressure");
-//	check(countTopFiles(processRoot) > 0, "LogManager multiprocess file output");
+//	check(!allFiles(processRoot).empty() && countTopFiles(processRoot) == 0, "LogManager multiprocess output archived on close");
 //
+//
+//#ifdef _WIN32
+//	// 归档集成回归：只创建本测试目录和本测试子进程，失败时也负责回收子进程。
+//	{
+//		const std::string processName = CSystem::GetCurrentExeName();
+//		const std::string executable = CSystem::GetCurrentExePath() + CSystem::GetCurrentExeFullName();
+//		const std::string suiteRoot = root + "archive_close/";
+//		LogManagerHelper::createDirectoryRecursive(suiteRoot);
+//		std::vector<PROCESS_INFORMATION> children;
+//		std::map<DWORD, std::string> stops;
+//		std::map<DWORD, std::string> paths;
+//		auto require = [&check](bool ok, const std::string& name) -> void
+//		{
+//			check(ok, name);
+//			if (!ok) { throw std::runtime_error(name); }
+//		};
+//		auto start = [&](const std::string& path, const std::string& mode) -> DWORD
+//		{
+//			LogManagerHelper::createDirectoryRecursive(path);
+//			std::ostringstream ticket;
+//			ticket << suiteRoot << "child_" << children.size();
+//			std::string ready = ticket.str() + ".ready";
+//			std::string stop = ticket.str() + ".stop";
+//			std::string command = "\"" + executable + "\" --archive-child \"" + path + "\" " + mode +
+//				" \"" + ready + "\" \"" + stop + "\"";
+//			std::vector<char> buffer(command.begin(), command.end());
+//			buffer.push_back('\0');
+//			STARTUPINFOA startup = {};
+//			startup.cb = sizeof(startup);
+//			PROCESS_INFORMATION child = {};
+//			require(CreateProcessA(executable.c_str(), &buffer[0], nullptr, nullptr, FALSE, CREATE_NO_WINDOW,
+//				nullptr, nullptr, &startup, &child) != FALSE, "archive child starts");
+//			CloseHandle(child.hThread);
+//			child.hThread = nullptr;
+//			children.push_back(child);
+//			stops[child.dwProcessId] = stop;
+//			paths[child.dwProcessId] = path;
+//			auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+//			while (!LogManagerHelper::exist(ready))
+//			{
+//				if (WaitForSingleObject(child.hProcess, 0) != WAIT_TIMEOUT) { throw std::runtime_error("archive child exited before ready"); }
+//				if (std::chrono::steady_clock::now() >= deadline) { throw std::runtime_error("archive child ready timeout"); }
+//				std::this_thread::sleep_for(std::chrono::milliseconds(25));
+//			}
+//			require(true, "archive child ready within timeout");
+//			return child.dwProcessId;
+//		};
+//		auto finish = [&](DWORD pid) -> void
+//		{
+//			std::ofstream(stops.at(pid).c_str()) << "stop";
+//			for (size_t i = 0; i < children.size(); ++i)
+//			{
+//				if (children[i].dwProcessId != pid) { continue; }
+//				require(WaitForSingleObject(children[i].hProcess, 10000) == WAIT_OBJECT_0, "archive child exits within timeout");
+//				DWORD code = 0;
+//				require(GetExitCodeProcess(children[i].hProcess, &code) && code == 0, "archive child exit status");
+//				return;
+//			}
+//			throw std::runtime_error("unknown archive child");
+//		};
+//		auto ownFiles = [&](DWORD pid) -> std::vector<std::string>
+//		{
+//			std::vector<std::string> result;
+//			std::vector<std::string> files = LogManagerHelper::listTopFiles(paths.at(pid));
+//			for (size_t i = 0; i < files.size(); ++i)
+//			{
+//				LogManagerOldFile info;
+//				if (LogManagerHelper::parseOldLogFile(files[i], processName, info) &&
+//					info.m_pid == static_cast<int32_t>(pid)) { result.push_back(files[i]); }
+//			}
+//			return result;
+//		};
+//		auto entityCount = [&](const std::vector<std::string>& files) -> size_t
+//		{
+//			size_t count = 0;
+//			for (size_t i = 0; i < files.size(); ++i)
+//			{
+//				LogManagerOldFile info;
+//				if (LogManagerHelper::parseOldLogFile(files[i], processName, info) && info.m_fileIndex >= 0) { ++count; }
+//			}
+//			return count;
+//		};
+//		auto snapshot = [&](DWORD pid) -> std::map<std::string, std::string>
+//		{
+//			std::map<std::string, std::string> result;
+//			std::vector<std::string> files = ownFiles(pid);
+//			for (size_t i = 0; i < files.size(); ++i) { result[files[i]] = readFile(files[i]); }
+//			return result;
+//		};
+//		auto unchanged = [&](const std::map<std::string, std::string>& saved, const std::string& name) -> void
+//		{
+//			for (auto it = saved.begin(); it != saved.end(); ++it)
+//			{
+//				require(LogManagerHelper::exist(it->first) && readFile(it->first) == it->second, name);
+//			}
+//		};
+//		auto verifyArchive = [&](DWORD pid, size_t expectedSessions) -> std::string
+//		{
+//			require(ownFiles(pid).empty(), "normal close removes only own top-level logs");
+//			std::vector<std::string> dirs = directories(paths.at(pid) + "/" + processName + "_log");
+//			size_t sessions = 0;
+//			std::string combined;
+//			for (size_t d = 0; d < dirs.size(); ++d)
+//			{
+//				std::vector<std::string> files = LogManagerHelper::listTopFiles(dirs[d]);
+//				std::string text, link, latest;
+//				int32_t maxIndex = -1;
+//				size_t count = 0, zero = 0, links = 0;
+//				for (size_t f = 0; f < files.size(); ++f)
+//				{
+//					LogManagerOldFile info;
+//					if (!LogManagerHelper::parseOldLogFile(files[f], processName, info) || info.m_pid != static_cast<int32_t>(pid)) { continue; }
+//					if (info.m_fileIndex < 0) { ++links; link = files[f]; continue; }
+//					++count;
+//					if (info.m_fileIndex == 0) { ++zero; }
+//					if (info.m_fileIndex > maxIndex) { maxIndex = info.m_fileIndex; latest = files[f]; }
+//					text += readFile(files[f]);
+//				}
+//				if (count == 0) { continue; }
+//				++sessions;
+//				require(count <= 3 && zero == 1, "archive retains zero and rolling file limit");
+//				require(text.find("BEGIN") != std::string::npos && text.find("END") != std::string::npos, "BEGIN and END archived");
+//				require(links == 1, "owned symbolic link archived");
+//				require(readFile(link) == readFile(latest), "archived relative link resolves to latest file");
+//				combined += text;
+//			}
+//			require(sessions == expectedSessions, "separate archive directory per session");
+//			return combined;
+//		};
+//		try
+//		{
+//			const char* modes[] = { "explicit", "destructor", "reinit", "multi", "noarchive", "delete" };
+//			for (size_t m = 0; m < sizeof(modes) / sizeof(modes[0]); ++m)
+//			{
+//				std::string mode = modes[m], path = suiteRoot + mode;
+//				LogManagerHelper::createDirectoryRecursive(path);
+//				std::string old = path + "/" + processName + "_123_20000101_010101.0.log";
+//				std::ofstream(old.c_str()) << "untouched crash evidence";
+//				DWORD pid = start(path, mode);
+//				require(readFile(old) == "untouched crash evidence", mode + ": startup preserves residual log");
+//				size_t expected = mode == "multi" ? 2 : 1;
+//				require(entityCount(ownFiles(pid)) == 3 * expected, mode + ": live rolling files remain at top level");
+//				require(!LogManagerHelper::exist(path + "/" + processName + "_log"), mode + ": no archive before close");
+//				finish(pid);
+//				require(readFile(old) == "untouched crash evidence", mode + ": close preserves residual log");
+//				if (mode == "noarchive")
+//				{
+//					require(entityCount(ownFiles(pid)) == 3, "disabled archive leaves files in place");
+//					require(!LogManagerHelper::exist(path + "/" + processName + "_log"), "disabled archive creates no history");
+//				}
+//				else if (mode == "delete")
+//				{
+//					require(ownFiles(pid).empty(), "deleteFile removes owned files");
+//					require(!LogManagerHelper::exist(path + "/" + processName + "_log"), "deleteFile does not archive");
+//				}
+//				else
+//				{
+//					std::string text = verifyArchive(pid, mode == "reinit" ? 2 : expected);
+//					require(text.find("LAST17") != std::string::npos, "last message retained");
+//					if (mode == "reinit") { require(text.find("SECOND_SESSION") != std::string::npos, "reopened session retained"); }
+//					if (mode == "multi") { require(text.find("LAST18") != std::string::npos, "second ID writable after first closes"); }
+//				}
+//			}
+//			std::string shared = suiteRoot + "multiple_processes";
+//			DWORD first = start(shared, "explicit");
+//			auto firstSnapshot = snapshot(first);
+//			DWORD second = start(shared, "explicit");
+//			unchanged(firstSnapshot, "second startup preserves first process files");
+//			auto secondSnapshot = snapshot(second);
+//			finish(first);
+//			verifyArchive(first, 1);
+//			unchanged(secondSnapshot, "first close preserves second process files");
+//			finish(second);
+//			verifyArchive(second, 1);
+//			std::string collision = suiteRoot + "collision";
+//			DWORD pid = start(collision, "explicit");
+//			std::vector<std::string> files = ownFiles(pid);
+//			std::string zero;
+//			LogManagerOldFile info;
+//			for (size_t i = 0; i < files.size(); ++i)
+//			{
+//				if (LogManagerHelper::parseOldLogFile(files[i], processName, info) && info.m_fileIndex == 0) { zero = files[i]; break; }
+//			}
+//			require(!zero.empty(), "collision setup has first entity");
+//			std::string original = readFile(zero);
+//			std::string foreign = collision + "/" + info.m_baseName + ".999999.log";
+//			std::ofstream(foreign.c_str()) << "not created by logger";
+//			std::string archive = collision + "/" + processName + "_log/" + info.m_date + "_" + info.m_time + "_" + CStringManager::toStringInt32(info.m_pid);
+//			LogManagerHelper::createDirectoryRecursive(archive);
+//			std::string target = archive + "/" + info.m_fileName;
+//			std::ofstream(target.c_str()) << "existing archive";
+//			finish(pid);
+//			require(readFile(foreign) == "not created by logger", "unowned matching-name file not moved");
+//			require(readFile(target) == "existing archive", "target collision does not overwrite");
+//			require(readFile(zero) == original, "failed move retains source bytes");
+//			std::string blocked = suiteRoot + "blocked";
+//			pid = start(blocked, "explicit");
+//			std::ofstream((blocked + "/" + processName + "_log").c_str()) << "directory blocker";
+//			finish(pid);
+//			require(entityCount(ownFiles(pid)) == 3, "archive directory failure preserves sources");
+//			std::string abnormal = suiteRoot + "abnormal_exit";
+//			DWORD crashed = start(abnormal, "explicit");
+//			for (size_t i = 0; i < children.size(); ++i)
+//			{
+//				if (children[i].dwProcessId == crashed)
+//				{
+//					require(TerminateProcess(children[i].hProcess, 23) != FALSE, "terminate own test child");
+//					require(WaitForSingleObject(children[i].hProcess, 5000) == WAIT_OBJECT_0, "abnormal child stopped");
+//				}
+//			}
+//			auto crashSnapshot = snapshot(crashed);
+//			require(crashSnapshot.size() == 4, "abnormal exit leaves entities and link");
+//			DWORD next = start(abnormal, "explicit");
+//			finish(next);
+//			verifyArchive(next, 1);
+//			unchanged(crashSnapshot, "later startup and shutdown preserve crash evidence");
+//		}
+//		catch (const std::exception& exception)
+//		{
+//			check(false, std::string("archive suite exception: ") + exception.what());
+//		}
+//		for (size_t i = 0; i < children.size(); ++i)
+//		{
+//			if (WaitForSingleObject(children[i].hProcess, 0) == WAIT_TIMEOUT)
+//			{
+//				TerminateProcess(children[i].hProcess, 24);
+//				WaitForSingleObject(children[i].hProcess, 5000);
+//			}
+//			CloseHandle(children[i].hProcess);
+//		}
+//	}
+//#else
+//	skip("close-time archive child-process regression currently requires Windows");
+//#endif
 //	LogManager::instance().uninitAll();
 //	std::cout << "LogManager test " << (failCount == 0 ? "PASS" : "FAIL") << ", total=" << totalCount << ", failed=" << failCount << ", skipped=" << skipCount << std::endl;
 //	return failCount == 0 ? 0 : 1;
 //}
+//

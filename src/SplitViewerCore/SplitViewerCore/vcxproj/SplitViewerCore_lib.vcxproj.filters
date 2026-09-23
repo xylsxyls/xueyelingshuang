@@ -24,4 +24,40 @@
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\SplitViewerCoreProfile.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="源文件\Codec"><UniqueIdentifier>{829da56a-63d7-41b0-a362-60dd20f62753}</UniqueIdentifier></Filter>
+    <Filter Include="源文件\Model"><UniqueIdentifier>{601711f0-6315-4b6f-8512-b595e56807ee}</UniqueIdentifier></Filter>
+    <Filter Include="源文件\Geometry"><UniqueIdentifier>{4908bd47-39b3-42f0-84f8-b63a2b2bfce3}</UniqueIdentifier></Filter>
+    <ClCompile Include="..\src\SplitViewerCoreConfig.cpp"><Filter>源文件\Geometry</Filter></ClCompile>
+    <ClInclude Include="..\src\SplitViewerCoreConfig.h"><Filter>头文件\Geometry</Filter></ClInclude>
+    <ClCompile Include="..\src\SplitViewerCoreDocument.cpp"><Filter>源文件\Model</Filter></ClCompile>
+    <ClInclude Include="..\src\SplitViewerCoreDocument.h"><Filter>头文件\Model</Filter></ClInclude>
+    <ClCompile Include="..\src\SplitViewerCoreGeometryHelper.cpp"><Filter>源文件\Geometry</Filter></ClCompile>
+    <ClInclude Include="..\src\SplitViewerCoreGeometryHelper.h"><Filter>头文件\Geometry</Filter></ClInclude>
+    <ClCompile Include="..\src\SplitViewerCoreLayer.cpp"><Filter>源文件\Model</Filter></ClCompile>
+    <ClInclude Include="..\src\SplitViewerCoreLayer.h"><Filter>头文件\Model</Filter></ClInclude>
+    <ClCompile Include="..\src\SplitViewerCoreLeafState.cpp"><Filter>源文件\Model</Filter></ClCompile>
+    <ClInclude Include="..\src\SplitViewerCoreLeafState.h"><Filter>头文件\Model</Filter></ClInclude>
+    <ClCompile Include="..\src\SplitViewerCoreNode.cpp"><Filter>源文件\Model</Filter></ClCompile>
+    <ClInclude Include="..\src\SplitViewerCoreNode.h"><Filter>头文件\Model</Filter></ClInclude>
+    <ClCompile Include="..\src\SplitViewerCorePackageHelper.cpp"><Filter>源文件\Codec</Filter></ClCompile>
+    <ClInclude Include="..\src\SplitViewerCorePackageHelper.h"><Filter>头文件\Codec</Filter></ClInclude>
+    <ClCompile Include="..\src\SplitViewerCoreProfileHelper.cpp"><Filter>源文件\Codec</Filter></ClCompile>
+    <ClInclude Include="..\src\SplitViewerCoreProfileHelper.h"><Filter>头文件\Codec</Filter></ClInclude>
+    <ClCompile Include="..\src\SplitViewerCoreRect.cpp"><Filter>源文件\Model</Filter></ClCompile>
+    <ClInclude Include="..\src\SplitViewerCoreRect.h"><Filter>头文件\Model</Filter></ClInclude>
+    <ClInclude Include="..\src\SplitViewerCoreTypes.h"><Filter>头文件\Model</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="头文件\Model"><UniqueIdentifier>{5178fc26-d58a-4952-bcc8-5b4f49491b67}</UniqueIdentifier></Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="头文件\Geometry"><UniqueIdentifier>{d49ed3f4-d7e0-470f-9afb-69f6c0db0672}</UniqueIdentifier></Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="头文件\Codec"><UniqueIdentifier>{dbcacae5-dad0-4d2e-bd93-9376aec5402c}</UniqueIdentifier></Filter>
+  </ItemGroup>
 </Project>
