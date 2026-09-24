@@ -1,7 +1,7 @@
-﻿SplitViewer开发文档
+﻿﻿SplitViewer开发文档
 版本：0.11
 更新日期：2026-09-24
-状态：Windows Release x64试运行构建已通过；本轮修改尚未复制到common发布目录，不携带Qt运行库/插件的交付规则保持。
+状态：Windows Release x64图片缩放与原生文件选择修订已发布；不携带Qt运行库/插件的交付规则保持。
 
 一、基线与职责
 旧版行为基线为src/SplitViewer_old/SplitViewer，不修改旧源码。Node/Layer/FloatRect、图片视图数值、配置字段、PNG自定义chunk归Core；窗口消息、菜单、画图、文件选择、图片编解码、句柄和平台注册归Qt工程。
@@ -67,9 +67,9 @@ macOS：shell用系统sips生成iconset，再以iconutil生成ICNS；CMake纳入
 七、QtControls和DialogManager
 规则：主窗口使用MainWindow，画布继承Widget，工具栏、状态栏、菜单、标签、占位控件和Windows嵌入宿主使用现有QtControls。QAction、布局、事件、绘制器和Qt内部组合控件不另造封装；Linux/macOS的原生窗口容器由Qt平台接口创建。现有库已经覆盖所需可见控件，本轮无需重复新增包装类。
 Config保存桌面QSS、文件选择尺寸和自定义内容类型。主窗口附加QSS经MainWindow接口与通用样式合并；缩放提示样式由父窗口的对象名选择器提供，避免Label首次显示时覆盖局部样式。
-SplitViewerDialogSession在QApplication存活期间注册文件选择内容工厂，窗口释放后uninit/releaseInstance。SplitViewerDialogHelper把关于、错误、句柄输入和文件选择交给DialogManager；不再直接弹QMessageBox/QInputDialog或调用QFileDialog静态窗口接口。
-文件选择使用SplitViewerFileDialogParam/Factory/View：内容区持有QtControls::FileDialog及标题Label，外层模态窗口由DialogManager创建、关闭和销毁。参数通过共享QString回传确认路径，不借用调用方栈变量。打开要求ExistingFile；保存允许AnyFile，覆盖确认由DialogManager询问框处理，取消覆盖后重新显示文件选择器。选择器本身不写图片文件；实际写入仍归原产品保存接口。Test主入口也持有同一生命周期对象。
-验证：新增172—177检查封装控件、实际加号取消/选择中文空格路径、嵌套覆盖确认、关于按钮和输入接受/取消；实际点击控件并检查管理器窗口数量归零。关于覆盖测试，原定时器在文件按钮的嵌套模态调用内不能重入，测试改为独立确认驱动，未因此降低断言。
+SplitViewerDialogSession在QApplication存活期间注册文件选择内容工厂，窗口释放后uninit/releaseInstance。SplitViewerDialogHelper的生产路径使用Qt平台原生QFileDialog，与PdfReader保持一致；关于、错误和句柄输入仍交给DialogManager。Test在173—175用例内临时启用托管选择器，以便驱动内部控件而不接管操作系统模态窗口。
+生产文件选择打开使用ExistingFile，保存使用AnyFile并由系统文件窗口处理覆盖提示；选择器本身不写图片文件，实际写入仍归原产品保存接口。保留SplitViewerFileDialogParam/Factory/View作为Test自动化入口，不改变生产界面风格。
+验证：172—177继续检查QtControls、托管文件框的取消/中文空格路径/覆盖确认、关于按钮和输入接受/取消；本轮实际产品入口改为原生文件框，源码核对其打开和保存静态调用。
 
 八、本次验证和交付
 本轮Windows Release x64执行101—177共77项瞬时回归，全部通过；包括真实LumaPlayer视频拖入、双击全屏、暂停继续、混排和退出恢复。另用保留发布依赖的组合复测172—177及160共7项，并执行6项Core冒烟，全部通过。新增测试报告中文编码同步修正。无长期压力、Debug或其他系统运行结论。
@@ -147,3 +147,8 @@ SplitViewerDialogSession在QApplication存活期间注册文件选择内容工�
 十九、2026-09-24叉号垂直位置最终微调
 1. 圆角外框保持下移1像素；移除图标底部2像素补偿，使自绘叉号也同步下移1像素。
 2. 其他图标线宽、按钮尺寸、关闭行为不变；183用例重新通过。
+
+二十、2026-09-24图片缩放与原生文件选择发布
+1. SplitViewerRenderer在自动适配或手动缩放比例小于1时，先以Qt::SmoothTransformation生成目标尺寸QImage，再在叶子裁剪区域绘制；比例不小于1时继续直接绘制原图，避免无意义放大预滤波。
+2. SplitViewerDialogHelper生产路径调用QFileDialog::getOpenFileName/getSaveFileName，使用系统文件窗口；测试用例173—175通过动态属性选择托管QtControls::FileDialog，保留可重复的覆盖确认和中文空格路径验证。
+3. Windows Release x64重新构建SplitViewer和SplitViewerTest，目标回归用例通过；只更新common中的两个EXE。新PDB替换到common/SplitViewerTest/symbols-SplitViewerTest-image-dialog-20260924-220624.7z，7z极限压缩测试通过，lib和发布目录散装PDB为零。

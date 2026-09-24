@@ -1,10 +1,10 @@
-﻿SplitViewerTest测试文档
-版本：0.9
+﻿﻿SplitViewerTest测试文档
+版本：1.0
 更新日期：2026-09-24
-范围：Windows Release x64，Core及真实Qt产品界面；本轮为图层删除、移动热区和自定义关于窗口的瞬时回归，无长期压力测试。
+范围：Windows Release x64，Core及真实Qt产品界面；本轮覆盖图片缩小平滑绘制、原生文件选择、图层删除、移动热区和自定义关于窗口，无长期压力测试。
 
 一、入口和独立执行
-当前0.9源码新增178—182并将176改为自定义关于窗口检查，本次测试EXE位于lib/SplitViewerTest1.0.exe；common/SplitViewerTest里的旧EXE未随本次试运行增量复制。Windows Release x64构建通过，6项本轮目标UI用例（176、178—182）和新增Core整层删除冒烟通过；完整历史批次仅作回归参考，Debug、Linux/macOS及压力未执行。
+当前1.0源码新增178—182并将176改为自定义关于窗口检查；本轮更新后的Test EXE已发布到common/SplitViewerTest/SplitViewerTest1.0.exe。Windows Release x64构建通过，目标UI用例和Core整层删除冒烟通过；完整历史批次仅作回归参考，Debug、Linux/macOS及压力未执行。
 1. 在已有Qt运行时的部署环境启动common/SplitViewerTest/SplitViewerTest1.0.exe，在下拉框选择全部或数字用例，点击“运行所选回归并保存报告”；开发回归直接使用lib/SplitViewerTest1.0.exe和开发环境Qt路径。
 2. 命令行：SplitViewerTest1.0.exe --ui-audit <报告目录>；单项追加--case=119。目录为可写绝对路径，运行自动生成纯色PNG和.sv素材，不使用用户文件。
 3. 无效数字/缺参数返回2；用例失败返回非0；成功返回0并写total和failures。每个独立选择在新窗口/文档中重建该场景的前置动作，只统计所选断言，不依赖上批次残留。共享准备分为基础层、浮动层、全屏、原生、Core等场景。
@@ -166,3 +166,9 @@ QtControls无阴影DialogBase的1px外边框用于保持无边框窗口拖动目
 十六、2026-09-24叉号位置最终验证
 1. 移除图标底部补偿，叉号与圆角外框同步下移1像素。
 2. 183用例通过，报告位于common/SplitViewerTest/reports/about-title-close-183-final/ui-results.txt。
+
+十七、2026-09-24图片缩放与原生文件选择验证
+1. 105、106、107、118、119、125、126、157、158、169—183在Windows Release x64逐项执行，均为total=1 failures=0；核心冒烟以--autotest退出码0通过。
+2. SplitViewer生产代码的路径选择分支通过源码核对为QFileDialog平台原生静态入口；173—175自动化用例临时启用托管选择器，分别验证取消、中文空格路径加载和覆盖确认，均PASS。
+3. 图片缩小路径使用SmoothTransformation预滤波，绘制比例和叶子裁剪回归通过；本机未执行Linux/macOS实机编译或显示器人工对比。
+4. 发布文件为common/SplitViewer/SplitViewer1.0.exe和common/SplitViewerTest/SplitViewerTest1.0.exe；匹配符号包为common/SplitViewerTest/symbols-SplitViewerTest-image-dialog-20260924-220624.7z，执行7z t通过，lib与发布目录未保留散装PDB。

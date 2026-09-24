@@ -1,7 +1,8 @@
-﻿#include "SplitViewerRenderer.h"
+﻿﻿#include "SplitViewerRenderer.h"
 #include "SplitViewerLayoutHelper.h"
 #include "SplitViewerImageHelper.h"
 #include "SplitViewerPlatform.h"
+#include <algorithm>
 #include <QtGui/QPainter>
 #include <QtWidgets/QWidget>
 
@@ -79,10 +80,22 @@ void SplitViewerRenderer::drawLeaf(QPainter& painter, SplitViewerCoreNode* node,
         if (!image.isNull())
         {
             const double scale=node->view.autoFit ? SplitViewerCoreFitScale(image.width(), image.height(), rect.width(), rect.height()) : node->view.scale;
-            // Draw directly from the source; no allocation of an enormous scaled bitmap while zooming.
             const QSizeF size(image.width()*scale, image.height()*scale);
             const QPointF center=rect.center()+QPointF(node->view.offsetX,node->view.offsetY);
-            painter.drawImage(QRectF(center-QPointF(size.width()/2,size.height()/2),size), image);
+            if (scale < 1.0)
+            {
+                // Pre-filter large images before the final paint. QPainter's
+                // bilinear transform alone can leave high-contrast edges
+                // jagged after a strong reduction.
+                const QSize filteredSize((std::max)(1, qRound(size.width())), (std::max)(1, qRound(size.height())));
+                const QImage filtered=image.scaled(filteredSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                const QSizeF actualSize(filtered.size());
+                painter.drawImage(QRectF(center-QPointF(actualSize.width()/2.0,actualSize.height()/2.0),actualSize), filtered);
+            }
+            else
+            {
+                painter.drawImage(QRectF(center-QPointF(size.width()/2,size.height()/2),size), image);
+            }
             return;
         }
     }

@@ -1,4 +1,4 @@
-﻿#include "SplitViewerDialogTests.h"
+﻿﻿#include "SplitViewerDialogTests.h"
 #include "../../SplitViewer/SplitViewer/SplitViewer.h"
 #include "../../SplitViewer/SplitViewer/SplitViewerDialogHelper.h"
 #include "DialogManager/DialogManagerAPI.h"
@@ -12,6 +12,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QTimer>
 #include <QtCore/QTextStream>
+#include <QtCore/QVariant>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QAction>
@@ -58,6 +59,11 @@ bool SplitViewerDialogTests::runCase(int id, const QString& directory)
     }
     QTextStream details(&evidence);
     details.setCodec("UTF-8");
+    const QVariant previousFileDialogMode = qApp->property("splitViewerTestUseCustomFileDialog");
+    if (id >= 173 && id <= 175)
+    {
+        qApp->setProperty("splitViewerTestUseCustomFileDialog", true);
+    }
     QTimer watchdog;
     watchdog.setSingleShot(true);
     // 看门狗只把挂起转成失败，并清理本项唯一会话中的弹窗。
@@ -342,5 +348,6 @@ bool SplitViewerDialogTests::runCase(int id, const QString& directory)
     details << "phase=" << phase << " valid=" << valid << " observed=" << observed <<
         " timeout=" << timedOut << " remaining=" << remaining.m_count << "\n";
     canvas->grab().save(QDir(directory).filePath(QStringLiteral("dialog-canvas.png")));
+    qApp->setProperty("splitViewerTestUseCustomFileDialog", previousFileDialogMode);
     return valid && observed && !timedOut && remaining.m_count == 0;
 }

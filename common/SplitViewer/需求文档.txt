@@ -1,6 +1,6 @@
-﻿SplitViewer需求文档
-版本：0.8
-状态：C1/C2已确认；2026-09-24图层交互与关于窗口改造已完成Windows Release x64试运行构建，尚未发布；其他平台未实测
+﻿﻿SplitViewer需求文档
+版本：0.9
+状态：Windows Release x64图片缩放与原生文件选择修订已发布；其他平台未实测
 更新日期：2026-09-24
 职责：记录SplitViewer从SplitViewer_old迁移到Qt、Core和Test三工程后的用户可观察行为及验收依据。
 
@@ -126,3 +126,8 @@ SplitViewer1.0.exe在Windows资源管理器中使用固定的专用图标，采�
 十一、2026-09-24移动命中与边框复核
 1. 阴影不能额外绘制一层同级深色矩形框；可见卡片边框和系统移动外沿各自只保留一层。
 2. 阴影预留区域不能缩小可拖动标题栏的命中范围，标题栏的实际客户区位置必须完整返回Windows的HTCAPTION。
+
+十二、2026-09-24图片缩放与文件选择增量
+1. 原图按比例缩小时，界面先对大图执行高质量平滑预滤波，再绘制到分屏区域；人物和高对比边缘的锯齿应明显减少，图片比例、裁剪、缩放和平移语义保持不变。
+2. SplitViewer生产环境的加载、配置保存和图片导出路径选择使用Qt平台原生QFileDialog，打开仍要求已有文件，保存由系统文件窗口处理覆盖提示；测试自动化保留托管选择器作为仅测试驱动路径。
+3. Windows Release x64发布只替换common/SplitViewer/SplitViewer1.0.exe和common/SplitViewerTest/SplitViewerTest1.0.exe；Qt运行库、插件和未变动态库不重复复制。匹配PDB统一压缩存放在common/SplitViewerTest，发布目录和lib不保留散装PDB。
