@@ -21,7 +21,13 @@ public:
     LogManagerConfig log;
     // 弹窗默认尺寸、边距、样式及按钮文字
     QSize dialogSize;
+    QSize aboutDialogSize;
     QSize fileDialogSize;
+    bool dialogShadowEnabled;
+    int dialogShadowSize;
+    int dialogTitleBarHeight;
+    // useNativeFileDialog 配置；默认使用操作系统原生文件窗口，测试可关闭
+    bool useNativeFileDialog;
     int dialogMargin;
     int dialogSpacing;
     QString dialogStyle;
@@ -230,6 +236,8 @@ public:
     QString reorderFailedText;
     // aboutTitle 配置
     QString aboutTitle;
+    // aboutVersionText 配置
+    QString aboutVersionText;
     // aboutText 配置
     QString aboutText;
     // documentTitlePrefix 配置

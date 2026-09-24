@@ -29,7 +29,7 @@ SplitViewerTest::SplitViewerTest(QWidget* parent) : QMainWindow(parent), m_outpu
     m_output->setReadOnly(true);
     layout->addWidget(run);
     m_uiCases=new QComboBox(central);
-    m_uiCases->addItem(QStringLiteral("全部界面与兼容性回归（101—177）"),0);
+    m_uiCases->addItem(QStringLiteral("全部界面与兼容性回归（101—183）"),0);
     foreach (const QString& name,SplitViewerAuditCaseNames()) m_uiCases->addItem(name,name.left(3).toInt());
     layout->addWidget(m_uiCases);
     QPushButton* uiRun=new QPushButton(QStringLiteral("运行所选回归并保存报告"),central);
@@ -74,12 +74,24 @@ void SplitViewerTest::runTests()
     passed += layerOk ? 1 : 0;
 
     ++total;
+    SplitViewerCoreDocument layerDeleteDocument;
+    SplitViewerCoreLayer* deletableLayer = layerDeleteDocument.addLayer();
+    if (deletableLayer)
+    {
+        deletableLayer->root->makeSplit(SPLITVIEWER_CORE_SPLIT_HORIZONTAL);
+    }
+    const bool deleteLayerOk = deletableLayer != NULL && layerDeleteDocument.deleteLayer(0) &&
+        layerDeleteDocument.layerCount() == 0 && layerDeleteDocument.selectedLayer() == -1;
+    appendResult(QStringLiteral("SVCORE-003 整层删除释放嵌套分屏"), deleteLayerOk);
+    passed += deleteLayerOk ? 1 : 0;
+
+    ++total;
     SplitViewerCoreRect first;
     SplitViewerCoreRect splitter;
     SplitViewerCoreRect second;
     SplitViewerCoreSplitNodeRects(SplitViewerCoreRect(), document.baseRoot(), first, splitter, second);
     const bool geometryOk = first.width() > 0.0 && second.width() > 0.0 && splitter.width() > 0.0;
-    appendResult(QStringLiteral("SVCORE-003 分割区域计算"), geometryOk);
+    appendResult(QStringLiteral("SVCORE-004 分割区域计算"), geometryOk);
     passed += geometryOk ? 1 : 0;
 
     ++total;
@@ -90,7 +102,7 @@ void SplitViewerTest::runTests()
     const bool serializeOk = SplitViewerCoreSerializeProfile(document, profile);
     SplitViewerCoreDocument restored;
     const bool deserializeOk = serializeOk && SplitViewerCoreDeserializeProfile(profile, restored) && restored.layerCount() == 1 && restored.baseRoot()->kind == SPLITVIEWER_CORE_NODE_SPLIT;
-    appendResult(QStringLiteral("SVCORE-004 配置序列化和反序列化"), deserializeOk);
+    appendResult(QStringLiteral("SVCORE-005 配置序列化和反序列化"), deserializeOk);
     passed += deserializeOk ? 1 : 0;
 
     ++total;
@@ -104,12 +116,12 @@ void SplitViewerTest::runTests()
     std::vector<uint8_t> package;
     std::vector<uint8_t> extracted;
     const bool packageOk = SplitViewerCoreBuildConfigPackage(png, profile, package) && SplitViewerCoreExtractEmbeddedConfig(package, extracted) && extracted == profile;
-    appendResult(QStringLiteral("SVCORE-005 PNG配置包写入和提取"), packageOk);
+    appendResult(QStringLiteral("SVCORE-006 PNG配置包写入和提取"), packageOk);
     passed += packageOk ? 1 : 0;
 
     ++total;
     const bool scaleOk = SplitViewerCoreFitScale(400.0, 200.0, 200.0, 200.0) == 0.5;
-    appendResult(QStringLiteral("SVCORE-006 图片自动适配比例"), scaleOk);
+    appendResult(QStringLiteral("SVCORE-007 图片自动适配比例"), scaleOk);
     passed += scaleOk ? 1 : 0;
     m_output->appendPlainText(QStringLiteral("\n结果：%1/%2 项通过").arg(passed).arg(total));
     m_allTestsPassed = passed == total;

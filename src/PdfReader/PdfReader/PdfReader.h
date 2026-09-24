@@ -4,6 +4,7 @@
 #include "Config.h"
 #include "PdfReaderThumbnailList.h"
 #include "PdfReaderThumbnailDelegate.h"
+#include "PdfReaderEmptyState.h"
 #include "QtControls/MainWindow.h"
 #include <QtWidgets/QListWidget>
 #include "QtControls/Label.h"
@@ -57,6 +58,7 @@ private slots:
     void zoomIn();
     void zoomOut();
     void resetZoom();
+    void onPageScrollChanged();
     /** 仅渲染视口相交的缩略图和正文，释放离开视口的位图 */
     void renderVisiblePages();
 
@@ -66,6 +68,8 @@ private:
     Q_SLOT void refreshThumbnails();
     void refreshPages();
     void updateActions();
+    void updateSelectionState(bool ensureVisible);
+    void syncSelectionFromPageScroll();
     bool openWithPassword(const QString& filePath);
     bool askForPassword(QString* password);
     bool showCoreError(const QString& operation);
@@ -83,7 +87,7 @@ private:
     ScrollArea* m_pageScroll;
     QWidget* m_pageContainer;
     QVBoxLayout* m_pageLayout;
-    Label* m_emptyLabel;
+    PdfReaderEmptyState* m_emptyState;
     ToolBar* m_toolbar;
     QAction* m_openAction;
     QAction* m_saveAction;
@@ -96,6 +100,8 @@ private:
     QAction* m_helpAction;
     double m_zoom;
     double m_thumbnailZoom;
+    bool m_pageRefreshInProgress;
+    bool m_selectionScrollInProgress;
     QString m_currentPath;
 };
 

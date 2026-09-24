@@ -165,6 +165,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PdfReaderEmptyState.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="GeneratedFiles\qrc_PdfReader.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </PrecompiledHeader>
@@ -176,6 +180,10 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_PdfReader.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PdfReaderEmptyState.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -305,20 +313,48 @@
   <ItemGroup>
     <ClCompile Include="Config.cpp" />
     <ClInclude Include="Config.h" />
+    <ClCompile Include="PdfReaderEmptyState.cpp" />
     <ClCompile Include="PdfReaderThumbnailList.cpp" />
     <ClCompile Include="PdfReaderThumbnailDelegate.cpp" />
+    <CustomBuild Include="PdfReaderEmptyState.h">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing PdfReaderEmptyState.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(ProjectDir)..\..\..\include"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing PdfReaderEmptyState.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(ProjectDir)..\..\..\include"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Moc%27ing PdfReaderEmptyState.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(ProjectDir)..\..\..\include"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing PdfReaderEmptyState.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(ProjectDir)..\..\..\include"</Command>
+    </CustomBuild>
     <ClInclude Include="PdfReaderThumbnailDelegate.h" />
     <ClCompile Include="PdfReaderIconHelper.cpp" />
     <ClInclude Include="PdfReaderIconHelper.h" />
-    <ClCompile Include="GeneratedFiles\Debug\moc_PdfReaderThumbnailList.cpp"><ExcludedFromBuild Condition="'$(Configuration)'!='Debug'">true</ExcludedFromBuild></ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_PdfReaderThumbnailList.cpp"><ExcludedFromBuild Condition="'$(Configuration)'!='Release'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PdfReaderThumbnailList.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Debug'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PdfReaderThumbnailList.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Release'">true</ExcludedFromBuild>
+    </ClCompile>
     <ResourceCompile Include="$(IntDir)res\PdfReader.rc">
       <AdditionalIncludeDirectories>$(IntDir)res;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <None Include="res\PdfReader.png" />
   </ItemGroup>
-  <ItemGroup><ClCompile Include="PdfReaderFileHelper.cpp" /><ClInclude Include="PdfReaderFileHelper.h" /></ItemGroup>
   <ItemGroup>
+    <ClCompile Include="PdfReaderFileHelper.cpp" />
+    <ClInclude Include="PdfReaderFileHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PdfReaderDialog.cpp" />
+    <ClInclude Include="PdfReaderDialog.h" />
     <ClCompile Include="PdfReaderDialogView.cpp" />
     <ClInclude Include="PdfReaderDialogView.h" />
     <ClCompile Include="PdfReaderDialogFactory.cpp" />
@@ -329,10 +365,12 @@
     <ClInclude Include="PdfReaderDialogRuntime.h" />
     <ClInclude Include="PdfReaderDialogParam.h" />
   </ItemGroup>
-  <ItemGroup><ClCompile Include="PdfReaderControlHelper.cpp" /><ClInclude Include="PdfReaderControlHelper.h" /><None Include="PdfReaderIcon.sh" /></ItemGroup>
-  <Target Name="GeneratePdfReaderIcon" BeforeTargets="ResourceCompile"
-    Inputs="$(ProjectDir)res\PdfReader.png;$(ProjectDir)PdfReaderIcon.sh"
-    Outputs="$(IntDir)res\PdfReader.ico;$(IntDir)res\PdfReader.rc">
+  <ItemGroup>
+    <ClCompile Include="PdfReaderControlHelper.cpp" />
+    <ClInclude Include="PdfReaderControlHelper.h" />
+    <None Include="PdfReaderIcon.sh" />
+  </ItemGroup>
+  <Target Name="GeneratePdfReaderIcon" BeforeTargets="ResourceCompile" Inputs="$(ProjectDir)res\PdfReader.png;$(ProjectDir)PdfReaderIcon.sh" Outputs="$(IntDir)res\PdfReader.ico;$(IntDir)res\PdfReader.rc">
     <Error Condition="!Exists('$(PdfReaderShell)')" Text="Git Bash is required for PNG icon generation. Install Git for Windows or set PdfReaderShell to its bin/sh.exe." />
     <Exec Command="&quot;$(PdfReaderShell)&quot; &quot;$(ProjectDir)PdfReaderIcon.sh&quot; icon &quot;$(ProjectDir)res\PdfReader.png&quot; &quot;$(IntDir)res\PdfReader.ico&quot;" />
   </Target>

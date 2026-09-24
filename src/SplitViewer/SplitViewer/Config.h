@@ -9,6 +9,8 @@ class Config
 public:
     // DialogManager自定义文件选择内容类型，和其他产品的类型分离
     static const uint64_t kFileDialogType = 10732;
+    // DialogManager自定义关于内容类型，和其他产品的类型分离
+    static const uint64_t kAboutDialogType = 10733;
 
     /** 返回主窗口及子控件共用的QSS
     @return 主窗口样式文本
@@ -20,8 +22,18 @@ public:
     */
     static QString fileDialogStyle();
 
+    /** 返回关于窗口内容区的QSS
+    @return 关于窗口样式文本
+    */
+    static QString aboutDialogStyle();
+
     /** 返回文件选择窗口的默认尺寸
     @return 逻辑像素尺寸
     */
     static QSize fileDialogSize();
+
+    /** 返回关于窗口内容区的默认尺寸
+    @return 逻辑像素尺寸
+    */
+    static QSize aboutDialogSize();
 };

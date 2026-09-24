@@ -1,7 +1,7 @@
 ﻿开发文档
-版本：1.0
-更新日期：2026-09-23
-状态：C1已确认，Explorer 使用固定 PDF 图标；弹窗接入 DialogManager、界面使用 QtControls；工作流已结束，其他平台待实机验证
+版本：1.1
+更新日期：2026-09-24
+状态：开发期验证已完成，等待 C5 手动试运行；C1/C2已确认，C3、C4、C6、C7免口令；Explorer 使用固定 PDF 图标，其他平台待实机验证
 
 一、现有工程基线
 
@@ -37,7 +37,7 @@ PdfReaderCoreC.h 只使用 C 可表达的类型，包含 stdint.h、stddef.h，�
 
 PdfReader 的桥接类仿照 src/LumaPlayer/LumaPlayer/LumaPlayerCoreBridge：桥接头先定义 PDFREADERCORE_USE_C_API，再只包含 PdfReaderCoreAPI.h；桥接类拥有 Core 不透明句柄，负责 init/uninit/destroy 顺序、路径和结构体转换、结果读取及QImage缓冲区转换。Qt 窗口、模型和测试代码不直接 include PdfReaderCore.h 或 Core 内部头。PdfReaderTest 另设一个 .c 编译单元，直接定义宏并包含 PdfReaderCoreAPI.h，验证纯 C 头可以独立编译和调用。
 
-Qt 缩略图使用 TopToBottom + wrapping=false 的单列布局。关闭 QListWidget 内部拖放和框选，改为一秒长按、源项单选、插入线、边缘滚动及明确取消事件；先由 Core 完成移动，再重建视图并选择源页的新位置。缩略图页图使用固定基准尺寸，Ctrl 滚轮只改变灰色条目背景的高度；自定义 delegate 将页图居中绘制，条目整块命中，所以页图周围灰色区域与页图具有相同选择逻辑。选中左侧条目后通过 ensureWidgetVisible 将对应正文页带入右侧视口。正文与缩略图独立缩放，仅视口相交页持有位图，离屏即释放。
+Qt 缩略图使用 TopToBottom + wrapping=false 的单列布局。关闭 QListWidget 内部拖放和框选，改为一秒长按、源项单选、插入线、边缘滚动及明确取消事件；先由 Core 完成移动，再重建视图并选择源页的新位置。缩略图页图使用固定基准尺寸，Ctrl 滚轮只改变灰色条目背景的高度；自定义 delegate 将页图居中绘制，条目整块命中，所以页图周围灰色区域与页图具有相同选择逻辑。选中左侧条目后通过 ensureWidgetVisible 将对应正文页带入右侧视口；正文滚动时按视口内可见面积最大的页面更新当前选择，并确保左侧对应缩略图可见。正文与缩略图独立缩放，仅视口相交页持有位图，离屏即释放。
 
 保存和导出先写同目录唯一临时文件，再由 CSystem::replaceFile 替换；Windows 使用 MoveFileExW(REPLACE_EXISTING|WRITE_THROUGH)，不预先删除目标。主文件覆盖先释放来源句柄，替换后重新打开；失败保留恢复 PDF 并报告路径。CSystem 和 PdfEngine Release 各自使用 MT，因此 FILE 的打开/写入/关闭必须全部回到 CSystem 的同一运行库，不能直接在 PdfEngine 内 fwrite/fclose。
 
@@ -131,7 +131,7 @@ CMake 同样调用 PdfReaderIcon.sh icon；Windows 分支使用系统 PowerShell
 本次去除 PdfReaderCoreBridge 的 Utf8 转发函数，直接调用 QString::toUtf8。Core 错误分类/结果记录进入 PdfReaderCoreCResultHelper。测试样本、字节读取、Core 结果断言进入 PdfReaderTestHelper；Qt 事件和弹窗操作进入 PdfReaderTestUiHelper，配置用例复用同一断言/等待逻辑。
 历史 Shell 扩展曾将类标识与资源限额归 PdfReaderThumbnailConfig、运行状态归 PdfReaderThumbnailModuleManager；该扩展现已删除，不再构建、发布或注册到 Explorer。
 本次检查手写源文件无 cpp 类/结构体定义、无文件级 static 函数/变量；Qt moc/rcc 自动生成文件不手工修改。新增头文件中的静态成员函数均声明用途、参数和返回值。
-历史批次 20260923-120644 曾通过 18 项测试，其中内容缩略图的 17/18 已随需求取消。当前回归登记为 1..16 和 19，共 17 项；最新正式批次、EXE 哈希及测试证据见 common/PdfReaderTest/测试文档.txt。产品和 Test 均重编，Core 不改。其他平台仍未实际构建验证。
+历史批次 20260923-120644 曾通过 18 项测试，其中内容缩略图的 17/18 已随需求取消。当前回归登记为 1..16、19 和 20，共 18 项；20 覆盖正文滚动后的当前页、蓝色焦点和缩略图同步，最新正式批次、EXE 哈希及测试证据见 common/PdfReaderTest/测试文档.txt。产品和 Test 均重编，Core 不改。其他平台仍未实际构建验证。
 
 固定图标验证还覆盖了历史已生成页面预览的 PDF：仅修改关联时 Windows 仍会返回旧页图缓存，随后调用 Windows Thumbnail Cache 清理器清理可重建的缓存，并通过 IShellItemImageFactory 默认模式核验与 ICONONLY 模式在 256px 下逐像素相同。没有关闭 Explorer、修改 PDF 内容或关闭其他类型的缩略图显示；其他文件缓存可按需重建。发布目录中的 register_thumbnail.ps1、原注册备份 JSON 和内容缩略图 DLL 均已移除。
 
@@ -145,5 +145,16 @@ PdfReaderCoreBridge 直接使用 LOGINFO/LOGERROR 记录 Core 初始化、文档
 
 PdfReader 与 PdfReaderTest 使用 QtControls 的 MainWindow、ToolBar、StatusBar、Splitter、GroupBox、Widget、Label、LineEdit、PushButton、TextEdit、ListWidget、ScrollArea、ScrollBar 和 Menu；列表业务交互继承 ListWidget，绘制委托、布局、事件、定时器、图像及 QAction 保留 Qt 类型。未调用的 .ui 模板不参与实际窗口创建。
 新添的 MainWindow/ToolBar/StatusBar/Splitter/GroupBox/FileDialog 沿用 ControlShow、ControlSelf、ControlFont、ControlBorder、ControlBackground 模板，通过 QssString 生成状态化 QSS；MainWindow 合并产品附加 QSS，首次显示不会丢失对子控件的配置。PdfReaderControlHelper 按 Config 配置按钮四态颜色和尺寸。页面选中状态使用属性选择器，避免控件 showEvent 重画时覆盖选中样式。
-PdfReaderDialogRuntime 在 QApplication 之后创建、应用退出时之前销毁，注册 PdfReaderDialogFactory，并在退出时 uninit/releaseInstance。PdfReaderDialogHelper 组织强类型 PdfReaderDialogParam，经 DialogManager::makeDialog 创建 CustomDialog；PdfReaderDialogView 只负责提示、确认、文本/密码和文件选择内容。文件选择复合控件封装在 QtControls::FileDialog（全局类名 FileDialog），以子控件方式嵌入管理器窗口；关闭、模态和销毁统一归管理器。参数通过共享结果回传，不持有调用栈数据。确认默认焦点为取消，保存路径归一成 .pdf 后再确认覆盖。
+PdfReaderDialogRuntime 在 QApplication 之后创建、应用退出时之前销毁，注册 PdfReaderDialogFactory，并在退出时 uninit/releaseInstance。PdfReaderDialogHelper 组织强类型 PdfReaderDialogParam，经 DialogManager::makeDialog 创建 CustomDialog；PdfReaderDialogView 负责提示、确认、文本/密码以及自动化回退文件选择内容。生产配置默认使用 Qt 平台原生 QFileDialog，让 Windows/Linux/macOS 使用系统常用外观；测试或需要统一自绘外观时可将 Config.useNativeFileDialog 设为 false，使用 QtControls::FileDialog 子控件嵌入管理器窗口。应用自有窗口的关闭、模态和销毁统一归管理器，文件选择结果、取消和保存覆盖确认仍由 PdfReaderDialogHelper 统一处理。参数通过共享结果回传，不持有调用栈数据。确认默认焦点为取消，保存路径归一成 .pdf 后再确认覆盖。
 Config 保存弹窗尺寸、边距、文本和按钮样式，初始化时传入。QtControls::LineEdit 在密码模式不生成明文 tooltip，切换回显模式时也立即刷新提示。应用和 Test 的 version 脚本在既有依赖之后准备 QssString、EO_XmlSax2Parser、QtControls、ManagerBase、DialogManager；已准备依赖使用 only，独立依赖准备使用 same。
+
+十四、2026-09-24 界面与弹窗优化方案
+
+本轮 C1/C2 已确认，用户明确 C3、C4、C6、C7 免口令、C5 保留；以下为已授权执行的开发边界和验证范围：
+
+1. 公共窗口参数：在 DialogManager 的 `DialogParam` 追加阴影开关、阴影像素长度和自定义标题栏高度，保留现有默认值以兼容其他产品。QtControls `DialogBase`/`CustomDialog` 读取参数并统一创建轻量右下阴影、设置标题栏高度和内容区几何；标题栏拖动复用 `COriginalDialog`，不在 PdfReader 重写窗口拖动。
+2. PdfReader 弹窗：Config 增加标题、帮助版本行、帮助窗口尺寸、阴影开关/长度和标题栏高度。`PdfReaderDialogHelper` 将配置写入 `PdfReaderDialogParam`，PdfReader 默认使用 2 像素阴影和可拖动标题栏。`PdfReaderDialogView` 移除重复的内容区标题，帮助正文按“1.0版本”首行及左对齐的 1、2、3、4 编号显示。
+3. 文件选择：`PdfReaderDialogHelper::file` 改用 Qt 平台原生 `QFileDialog::getOpenFileName`、`getSaveFileName` 和 `getExistingDirectory`；调用入口、父窗口、取消结果、PDF 后缀规范化及覆盖确认保持不变。操作系统文件窗口由平台绘制，应用自有提示和确认窗口仍由 DialogManager 管理。
+4. 空状态：新增 PdfReader 专用 `Widget` 派生控件，使用 SplitViewer 相同的方框和十字绘制规则，始终在右侧正文视口中心显示；点击控件进入现有打开流程，刷新和取消时恢复该控件。
+5. 开发期自动验证：DialogParam 默认/启用/关闭阴影参数、标题栏高度和内容区偏移；Config 标题和帮助正文；空状态加号尺寸、居中几何和点击入口；现有 PdfReader 回归、Core 测试和 CMake/VS2013 工程登记。
+6. C5 手动验证：Windows x64 Release 启动无文档窗口，检查标题、加号、帮助标题居中、版本行、左对齐编号、右下 2px 阴影和标题栏拖动；打开/另存为/选目录检查系统原生文件窗口；打开 PDF 检查标题追加文件名和原有页面交互。

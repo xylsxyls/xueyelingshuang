@@ -4,7 +4,12 @@
 
 Config::Config() :
 dialogSize(QSize(540, 260)),
+aboutDialogSize(QSize(540, 320)),
 fileDialogSize(QSize(820, 580)),
+dialogShadowEnabled(true),
+dialogShadowSize(2),
+dialogTitleBarHeight(32),
+useNativeFileDialog(true),
 dialogMargin(20),
 dialogSpacing(12),
 dialogStyle(QStringLiteral("QWidget#pdfReaderDialogView{background:#f5f7fb;}QLabel{color:#283548;}QLabel#dialogTitle{font-size:18px;font-weight:bold;}QPushButton{padding:7px 18px;background:#e4ebf7;border:1px solid #becde3;border-radius:4px;}QPushButton:focus{border:2px solid #306fd2;}QLineEdit{padding:6px;background:white;border:1px solid #becde3;}")),
@@ -69,8 +74,8 @@ selectionColor(QColor(48,111,210)),
 thumbnailBorderColor(QColor(192,198,207)),
 thumbnailTextColor(QColor(72,81,95)),
 aboutTooltip(QStringLiteral("关于与使用说明")),
-applicationTitle(QStringLiteral("PdfReader")),
-windowStyle(QStringLiteral("QMainWindow{background:#f2f4f7;}QToolBar{background:#ffffff;border:0;border-bottom:1px solid #d9dee7;padding:6px;spacing:5px;}QToolButton{color:#283548;padding:6px 10px;border-radius:5px;}QToolButton:hover{background:#e8eef8;}QListWidget{background:#e8edf4;border:0;padding:12px;}QListWidget::item{background:#ffffff;border:1px solid #d8dee9;border-radius:5px;padding:5px;color:#374151;}QListWidget::item:selected{border:2px solid #3b82f6;background:#eef5ff;}QScrollArea{background:#dfe5ed;border:0;}QLabel#pageLabel{background:#ffffff;border:1px solid #d0d6df;}")),
+applicationTitle(QStringLiteral("PDF阅读器")),
+windowStyle(QStringLiteral("QMainWindow{background:#f2f4f7;}QToolBar{background:#ffffff;border:0;border-bottom:1px solid #d9dee7;padding:6px;spacing:5px;}QToolButton{color:#283548;padding:6px 10px;border-radius:5px;}QToolButton:hover{background:#e8eef8;}QListWidget{background:#e8edf4;border:0;padding:12px;}QListWidget::item{background:#ffffff;border:1px solid #d8dee9;border-radius:5px;padding:5px;color:#374151;}QListWidget::item:selected{border:2px solid #3b82f6;background:#eef5ff;}QScrollArea{background:#dfe5ed;border:0;}QLabel#pageLabel{background:#ffffff;border:1px solid #d0d6df;}QMenu{background:#ffffff;color:#283548;border:1px solid #cbd5e1;padding:4px;}QMenu::item{padding:6px 18px;}QMenu::item:selected{background:#e8eef8;color:#283548;}QMenu::item:disabled{color:#94a3b8;}")),
 toolbarTitle(QStringLiteral("文件")),
 openText(QStringLiteral("打开")),
 saveText(QStringLiteral("保存")),
@@ -113,9 +118,10 @@ normalPageStyle(QStringLiteral("background:white;border:1px solid #808691;")),
 insertBeforeText(QStringLiteral("在此页之前插入")),
 insertAfterText(QStringLiteral("在此页之后插入")),
 reorderFailedText(QStringLiteral("调整页面顺序失败")),
-aboutTitle(QStringLiteral("PdfReader帮助")),
-aboutText(QStringLiteral("打开 PDF 后，长按左侧缩略图，再拖动到插入线处调整页面顺序。\n工具栏支持保存、另存为、范围导出、逐页导出和缩放。\n右键缩略图可以在当前页前后插入 PDF；右键左侧空白处可分页或按范围保存。\nCtrl+滚轮独立缩放缩略图或正文，Esc 取消拖动。")),
-documentTitlePrefix(QStringLiteral("PdfReader - ")),
+aboutTitle(QStringLiteral("PDF阅读器")),
+aboutVersionText(QStringLiteral("1.0版本")),
+aboutText(QStringLiteral("1. 页面缩略图：打开 PDF 后在左侧查看页面缩略图。\n2. 页面查看：右侧显示正文，支持缩放和滚动。\n3. 保存与导出：支持保存、另存为、范围导出和逐页导出。\n4. 页面调整：可插入 PDF，并拖动缩略图调整页面顺序。")),
+documentTitlePrefix(QStringLiteral("PDF阅读器 - ")),
 openedFormat(QStringLiteral("已打开：%s，共 %d 页")),
 pageStatusFormat(QStringLiteral("第 %d / %d 页"))
 {
@@ -129,7 +135,7 @@ pageStatusFormat(QStringLiteral("第 %d / %d 页"))
 
 void Config::validate() const
 {
-    if (!dialogSize.isValid() || !fileDialogSize.isValid() || !buttonSize.isValid() || dialogMargin < 0 || dialogSpacing < 0)
+    if (!dialogSize.isValid() || !aboutDialogSize.isValid() || !fileDialogSize.isValid() || !buttonSize.isValid() || dialogMargin < 0 || dialogSpacing < 0 || dialogShadowSize < 0 || dialogTitleBarHeight < 0)
         throw std::invalid_argument("invalid PdfReader dialog configuration");
     if (!std::isfinite(minimumZoom) || !std::isfinite(maximumZoom) || !std::isfinite(initialZoom) || !std::isfinite(zoomStep) ||
         minimumZoom <= 0 || maximumZoom < minimumZoom || maximumZoom > 16.0 || initialZoom < minimumZoom || initialZoom > maximumZoom || zoomStep <= 0 ||

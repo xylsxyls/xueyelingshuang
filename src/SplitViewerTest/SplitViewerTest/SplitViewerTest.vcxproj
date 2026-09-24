@@ -330,6 +330,14 @@
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogView.h" />
     <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogFactory.cpp" />
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogFactory.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialogParam.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialogParam.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialogView.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialogView.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialogFactory.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialogFactory.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialog.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialog.h" />
     <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogSession.cpp" />
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogSession.h" />
     <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogHelper.cpp" />

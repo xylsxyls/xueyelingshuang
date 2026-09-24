@@ -1219,6 +1219,15 @@ struct DialogParam
 	/** 复用已有窗口时是否主动拉到前台；只影响复用路径，不影响首次创建后的显示行为
 	*/
 	bool m_isActivateWhenReuse;
+	/** 是否构建窗口阴影；关闭或阴影长度为0时不创建阴影
+	*/
+	bool m_hasShadow;
+	/** 阴影扩散级别；保留给QtControls实现，当前不改变窗口布局
+	*/
+	qint32 m_shadowSize;
+	/** 自定义标题栏高度；0表示不显示自定义标题栏
+	*/
+	qint32 m_titleBarHeight;
 
 	/** 构造函数
 	*/
@@ -1233,9 +1242,12 @@ struct DialogParam
         m_result = ERROR_RESULT;
         m_parent = nullptr;
         m_timeOut = -1;
-        m_isCountDownVisible = false;
+		m_isCountDownVisible = false;
 		m_isActivateWhenReuse = true;
-    }
+		m_hasShadow = false;
+		m_shadowSize = 0;
+		m_titleBarHeight = 0;
+	}
 
 	/** 析构函数，保证创建参数可以安全进行运行时类型校验
 	*/

@@ -124,6 +124,14 @@
     <ClInclude Include="SplitViewerFileDialogView.h"><Filter>Header Files</Filter></ClInclude>
     <ClCompile Include="SplitViewerFileDialogFactory.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClInclude Include="SplitViewerFileDialogFactory.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="SplitViewerAboutDialogParam.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="SplitViewerAboutDialogParam.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="SplitViewerAboutDialogView.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="SplitViewerAboutDialogView.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="SplitViewerAboutDialogFactory.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="SplitViewerAboutDialogFactory.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="SplitViewerAboutDialog.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="SplitViewerAboutDialog.h"><Filter>Header Files</Filter></ClInclude>
     <ClCompile Include="SplitViewerDialogSession.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClInclude Include="SplitViewerDialogSession.h"><Filter>Header Files</Filter></ClInclude>
     <ClCompile Include="SplitViewerDialogHelper.cpp"><Filter>Source Files</Filter></ClCompile>

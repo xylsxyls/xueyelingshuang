@@ -1,5 +1,7 @@
 ﻿#include "DialogBase.h"
 #include "Label.h"
+#include <QPainter>
+#include <QPaintEvent>
 #include <QWindow>
 #include <QKeyEvent>
 
@@ -7,10 +9,13 @@ DialogBase::DialogBase():
 m_timeId(-1),
 m_escEnable(true),
 m_timeRest(-1),
-m_title(nullptr)
+m_title(nullptr),
+m_shadowEnabled(false),
+m_shadowSize(0)
 {
 	setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
     m_title = new Label(this);
+    m_title->setObjectName(QStringLiteral("dialogTitle"));
 }
 
 DialogBase::~DialogBase()
@@ -116,6 +121,27 @@ void DialogBase::setWindowTitle(const QString& title,
     m_title->setFontFace(fontName);
 }
 
+void DialogBase::setWindowShadow(bool enabled, qint32 size)
+{
+    m_shadowEnabled = enabled && size > 0;
+    m_shadowSize = m_shadowEnabled ? qMax<qint32>(size, 0) : 0;
+    // Keep the parameters for API and future implementation compatibility.
+    // Shadow rendering is intentionally disabled for the current rectangular
+    // dialog style.
+    setAttribute(Qt::WA_TranslucentBackground, false);
+    update();
+}
+
+bool DialogBase::windowShadowEnabled() const
+{
+    return m_shadowEnabled;
+}
+
+qint32 DialogBase::windowShadowSize() const
+{
+    return m_shadowSize;
+}
+
 void DialogBase::showEvent(QShowEvent* eve)
 {
 	if (eve == nullptr)
@@ -214,14 +240,38 @@ void DialogBase::resizeEvent(QResizeEvent* eve)
 	if (eve == nullptr)
 	{
 		return;
-	}
+    }
     COriginalDialog::resizeEvent(eve);
     if (!check())
     {
         return;
     }
     qint32 titleHeight = customerTitleBarHeight();
-    m_title->setGeometry(0, 0, width(), titleHeight);
+    const qint32 frame = 1;
+    m_title->setGeometry(frame, frame,
+        qMax(width() - (frame * 2), 0),
+        qMax(titleHeight, 0));
+    setCustomerTitleBarTop(frame);
+}
+
+void DialogBase::paintEvent(QPaintEvent* eve)
+{
+    Q_UNUSED(eve);
+    QPainter painter(this);
+    QColor background = palette().color(QPalette::Window);
+    if (!background.isValid() || background.alpha() == 0)
+    {
+        background = QColor(245, 247, 251);
+    }
+
+    painter.setCompositionMode(QPainter::CompositionMode_Source);
+    painter.fillRect(rect(), background);
+    // Frameless dialogs have no native non-client frame.  Keep a simple
+    // rectangular client edge; the shadow parameters remain API-only until a
+    // future QtControls implementation is enabled.
+    painter.setPen(QPen(QColor(32, 38, 48), 1));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRect(rect().adjusted(0, 0, -1, -1));
 }
 
 void DialogBase::escEvent()

@@ -192,7 +192,10 @@ long COriginalDialog::onNcHitTest(const QPoint& pt)
 		return HTBOTTOM;
 	}
 
-	if ((pt.y() - rcClient.top()) <= m_customerTitleBarRect.height())
+	const qint32 titleTop = m_customerTitleBarRect.top();
+	const qint32 titleBottom = titleTop + m_customerTitleBarRect.height();
+	if ((pt.y() - rcClient.top()) >= titleTop &&
+		(pt.y() - rcClient.top()) < titleBottom)
 	{
 		bool hasChild = false;
 		for (int32_t i = 0; i < children().count(); ++i)
@@ -265,6 +268,20 @@ bool COriginalDialog::nativeEvent(const QByteArray& eventType, void* message, lo
 			break;
 		}
 		case WM_SIZE:
+		{
+			break;
+		}
+		case WM_ENTERSIZEMOVE:
+		{
+			// The native move loop owns the target rectangle.  Do not paint a
+			// client-side outline that would describe the old window position.
+			break;
+		}
+		case WM_MOVING:
+		{
+			break;
+		}
+		case WM_EXITSIZEMOVE:
 		{
 			break;
 		}
@@ -693,6 +710,11 @@ void COriginalDialog::setCustomerTitleBarHeight(int n)
 {
 	m_customerTitleBarHeight = qMax(n, 0);
 	m_customerTitleBarRect = QRect(0, 0, width(), m_customerTitleBarHeight);
+}
+
+void COriginalDialog::setCustomerTitleBarTop(int n)
+{
+	m_customerTitleBarRect.moveTop(qMax(n, 0));
 }
 
 int COriginalDialog::customerTitleBarHeight()

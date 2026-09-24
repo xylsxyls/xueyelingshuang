@@ -4,6 +4,7 @@
 #include "QtControls/Widget.h"
 
 class SplitViewer;
+class QKeyEvent;
 
 class SplitViewerCanvas : public Widget
 {
@@ -25,6 +26,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event);
     void mouseDoubleClickEvent(QMouseEvent* event);
     void wheelEvent(QWheelEvent* event);
+    void keyPressEvent(QKeyEvent* event);
     void contextMenuEvent(QContextMenuEvent* event);
     void dragEnterEvent(QDragEnterEvent* event);
     void dropEvent(QDropEvent* event);

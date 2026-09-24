@@ -3,6 +3,7 @@
 #include "DialogType.h"
 #include "QtControls/DialogShow.h"
 #include "ViewBaseController.h"
+#include <QRect>
 
 class CustomViewBase;
 class QResizeEvent;
@@ -88,6 +89,20 @@ protected:
 	void resizeEvent(QResizeEvent* eve);
 
 private:
+	/** 应用窗口阴影、标题栏和内容区布局参数
+	@param [in] param 窗口参数
+	*/
+	void applyWindowOptions(const DialogParam& param);
+
+	/** 返回扣除自定义标题栏后的内容区矩形
+	@return 内容区矩形
+	*/
+	QRect contentGeometry();
+
+	/** 将标题标签置于内容区之上，保证标题栏可见
+	*/
+	void raiseTitleBar();
+
 	/** 禁止拷贝构造，避免Qt窗口对象被复制
 	@param [in] other 另一个自定义窗口对象
 	*/

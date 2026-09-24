@@ -65,6 +65,11 @@ public:
 	*/
 	void setCustomerTitleBarHeight(int n);
 
+	/** 设置自定义标题栏在客户区中的顶端偏移
+	@param [in] n 标题栏顶端相对客户区的偏移，单位为像素
+	*/
+	void setCustomerTitleBarTop(int n);
+
 	/** 获取自定义标题栏高度
 	@return 标题栏高度，单位为像素
 	*/

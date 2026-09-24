@@ -21,8 +21,10 @@ m_pCustomStyle(nullptr)
 	setMouseTracking(true);
 
 	setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
-	//背景透明
-	setAttribute(Qt::WA_TranslucentBackground);
+	// Context menus use an opaque client surface so the normal menu background
+	// remains visible when a parent window supplies QMenu stylesheet rules.
+	setAttribute(Qt::WA_TranslucentBackground, false);
+	setAutoFillBackground(true);
 }
 
 Menu::~Menu()
@@ -47,6 +49,8 @@ m_pCustomStyle(nullptr)
 	}
 	installEventFilter(this);
 	setMouseTracking(true);
+	setAttribute(Qt::WA_TranslucentBackground, false);
+	setAutoFillBackground(true);
 }
 
 QAction* Menu::addAction(const QString& text,

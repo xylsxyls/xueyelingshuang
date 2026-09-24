@@ -1,5 +1,5 @@
 ﻿PdfReader 测试文档
-更新日期：2026-09-23
+更新日期：2026-09-24
 范围：Windows x64 Release，VS2013 + Qt 5.5.1；Core C API 和产品 Qt 窗口交互。
 最近发布批次：reports/20260923-161643-462/results.txt，17/17 通过、退出码 0；发布 Test EXE SHA256=9e19a639a8763f4ec5b20962e650607c262f9c7cf35e580ca9d7aaddcc889b92。Qt 平台插件从用户安装的 Qt 5.5.1 提供，common 不携带 Qt5 DLL 或 Qt 资源；自研 QtControls、DialogManager 及实际依赖随程序发布。运行时已核对这些 DLL 从 common/PdfReaderTest 加载。
 
@@ -33,9 +33,10 @@ GUI 自动回归短时间显示产品窗口和弹窗。没有注册压力用例�
 
 15 Core 配置：分别通过 C/C++ 入口检查默认值、无效初始化、配置复制、精确像素数边界、运行期禁止重配、uninit 后重配、两实例隔离、定制补零位数与磁盘小写后缀。
 16 桌面配置和问号：实际构造定制窗口，检查初始尺寸与非默认缩放/上下限、窗口图标、最右侧图标按钮没有“帮助”文字，点击出现说明弹窗并截图。
+20 正文滚动同步当前页与缩略图：通过真实无 Ctrl 滚轮滚动正文，检查当前可见页的蓝色焦点、左侧选中行和缩略图可见性同步；左侧点击仍保持目标页选择。
 原 17/18 是 Explorer 内容缩略图扩展测试，随用户取消此功能而退役，不复用编号，不计入通过或跳过。
 19 DialogManager 与 QtControls：检查主窗口、列表、正文、滚动条、工具栏和分隔栏实际封装类型；通过公共接口设置常态/悬停/禁用背景和边框，检查 show 后保留 QSS。经真实弹窗验证密码遮蔽及无明文 tooltip、确认回传、Esc 取消保留原值、覆盖默认焦点为取消、文件选择取消、帮助内容和父窗口恢复。每个弹窗检查管理器登记，收集五次关闭信号，最终窗口计数为零；保存密码、确认、帮助截图。
-当前 GUI 与 CLI 全量入口为 1..16 和 19，共 17 项；指定全部可用 --cases 1-16,19。无效 ID（包括已退役 17/18）返回 2，不生成虚假通过记录。
+当前 GUI 与 CLI 全量入口为 1..16、19 和 20，共 18 项；指定全部可用 --cases 1-16,19,20。无效 ID（包括已退役 17/18）返回 2，不生成虚假通过记录。
 
 三、边界和收尾
 每个用例独立生成素材、创建窗口或 Core 句柄，结束销毁上下文；不读取或修改用户 PDF。
@@ -58,3 +59,15 @@ GUI 自动回归短时间显示产品窗口和弹窗。没有注册压力用例�
 用例 16 增加默认文件 ID/目录、20 MB、8 个文件、每条检查大小、归档旧日志和不输出控制台的配置断言。完整回归报告为 src/temp/PdfReaderLogReports/20260923-192020-522/results.txt，TOTAL=17 PASS=17 FAIL=0；测试 EXE SHA256=882077C6BF5C0BB83B6BF3E11B91379462A239255FFFBDFBD2FE3FDB2F3E50CC。
 产品 EXE 无参数启动、携带测试 PDF 启动均实际验证，未传 debug：日志含 startup、Core init，带文件时含 open completed；正常 WM_CLOSE 后先记录 Core destroyed，再记录 exitCode=0 和 END。第二次启动后，前次实体日志进入 PdfReader1.0_log 归档目录。产品 EXE SHA256=0BB3E5AB6A9964E482964FB1F7589511C011702663B91E674383912D20806D11。
 复测时在 EXE 可写目录运行以上两种启动方式，正常关闭后检查日志；日志文件使用共享读写方式打开才能在运行时读取。未在 Linux/macOS 执行日志专项。当前机器 version 链路的 Python 3 启动器报告未安装，CloudRebuild 仍返回成功；本次通过 VS2013 MSBuild 逐项补编依赖，再编译 App/Test，不将 version 返回码视为构建成功证据。
+
+2026-09-24 界面与弹窗优化开发期验证：
+VS2013 Release|x64 重编 PdfReader 和 PdfReaderTest 均通过；PdfReaderEmptyState 新控件没有 C4819 编码告警。完整 CLI 回归报告为 `temp/PdfReaderRegression-final2/20260924-112918-787/results.txt`，退出码 0，TOTAL=17 PASS=17 FAIL=0，测试 EXE SHA256=d38abff4cd01420bd88ad9e6922c7026c0271827df62068c8f067c91612ea2b5。测试用例通过 Config.useNativeFileDialog=false 验证 DialogManager 管理的嵌入式回退路径；产品默认值为 true，C5 手动试运行需实际观察 Windows 原生文件选择器的外观和系统语言。
+
+2026-09-24 弹窗透明背景修正复测：
+DialogBase 改为不透明客户区绘制，标题栏使用不透明背景并为右下阴影预留 2px；回归用例增加标题区域和边缘像素检查。最终报告为 `temp/PdfReaderRegression-shadow-final3/20260924-115915-954/results.txt`，退出码 0，TOTAL=17 PASS=17 FAIL=0，测试 EXE SHA256=446ca94443b9980116bbd3dbdb783f30df2bd17706c9c1d4511fd30f6ad645ea。
+
+2026-09-24 阴影渐变复测：
+DialogBase 的右下阴影改为多层渐变和角部过渡，size=2 仍表示右下偏移 2 像素；完整 CLI 回归报告为 	emp/PdfReaderRegression-shadow-final7/20260924-141813-113/results.txt，TOTAL=17 PASS=17 FAIL=0，退出码 0，测试 EXE SHA256=ecccc5ae2c38491d2c56f21c280e185ee5cf54c743e09791a5cfa191c99b8681。
+
+2026-09-24 阴影参数边界复测：
+补充修正关闭阴影时不再保留阴影客户区，QtControls、DialogManager、PdfReader、PdfReaderTest 重新以 Release|x64 构建通过；最终完整 CLI 回归报告为 	emp/PdfReaderRegression-shadow-final8/20260924-142103-634/results.txt，退出码 0，TOTAL=17 PASS=17 FAIL=0，测试 EXE SHA256=ca0ff6ef6252e5b5a162186381584a27c3e7a9c883d047315049ea0dde881d43。

@@ -56,12 +56,17 @@ void PdfReaderConfigurationTests::run(int id, const QString& input, const QStrin
         PdfReaderTestHelper::require(config.log.m_archiveOldLog && !config.log.m_outputConsole,
             "archive old logs without console output");
         config.windowSize=QSize(1040,700);
+        config.useNativeFileDialog = false;
         config.initialZoom=0.5; config.minimumZoom=0.4; config.maximumZoom=0.6; config.zoomStep=0.2;
         config.thumbnailWidth=90; config.sidebarWidth=320;
         PdfReader window(nullptr,config);
         window.show();
+        PdfReaderTestHelper::require(window.findChild<PdfReaderEmptyState*>() != nullptr,
+            "empty document uses centered plus control");
         PdfReaderTestHelper::require(window.openFile(input),"configured window open");
         PdfReaderTestUiHelper::wait(60);
+        PdfReaderTestHelper::require(window.windowTitle() == QStringLiteral("PDF阅读器 - 中文样本.pdf"),
+            "document title uses PDF阅读器 prefix");
         PdfReaderTestHelper::require(window.size()==QSize(1040,700),"configured initial window size");
         PdfReaderTestHelper::require(!window.windowIcon().isNull(),"runtime application icon");
         const QList<QLabel*> pages=window.findChildren<QLabel*>(QStringLiteral("pageLabel"));

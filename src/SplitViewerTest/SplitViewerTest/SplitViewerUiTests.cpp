@@ -439,7 +439,7 @@ int SplitViewerRunUiTests(const QString& reportDirectory, int selectedCase)
     fixtureClass.hbrBackground=reinterpret_cast<HBRUSH>(COLOR_WINDOW+1);
     RegisterClassW(&fixtureClass);
 #endif
-    if (selectedCase!=0 && (selectedCase<101 || selectedCase>177)) return 2;
+    if (selectedCase!=0 && (selectedCase<101 || selectedCase>183)) return 2;
     QDir().mkpath(reportDirectory);
     QFile report(reportDirectory+QStringLiteral("/ui-results.txt"));
     if (!report.open(QIODevice::WriteOnly|QIODevice::Text)) return 1;
@@ -950,6 +950,49 @@ int SplitViewerRunUiTests(const QString& reportDirectory, int selectedCase)
         check("embed rejects missing host without touching foreign window", SplitViewerEmbedForeignWindow(foreignId, nullptr) == nullptr &&
             foreign.isVisible() && foreign.geometry() == originalGeometry && foreign.parentWidget() == nullptr);
     }
+    if (selectedCase == 0 || selectedCase >= 178)
+    {
+        nextId = 177;
+        SplitViewerTestWindow window;
+        QWidget* canvas = window.centralWidget();
+        const QRectF stage = ExpectedStage(canvas);
+        const QPoint baseCenter = stage.center().toPoint();
+        Drop(canvas, baseCenter, redPath);
+        check("base layer delete action disabled", !ChooseMenu(canvas, baseCenter, QStringLiteral("删除图层")) && Pixel(canvas, baseCenter, red));
+
+        const bool created = Toolbar(window, QStringLiteral("新建图层"));
+        const QRectF layer(stage.left() + stage.width() * .22, stage.top() + stage.height() * .22,
+            stage.width() * .46, stage.height() * .46);
+        const QPoint layerCenter = layer.center().toPoint();
+        window.nextFile = bluePath;
+        QTest::mouseClick(canvas, Qt::LeftButton, Qt::NoModifier, layerCenter);
+        const bool split = ChooseMenu(canvas, layerCenter, QStringLiteral("水平分割"));
+        const QPoint lower(layerCenter.x(), qRound(layer.top() + layer.height() * .75));
+        const bool deletedByMenu = ChooseMenu(canvas, lower, QStringLiteral("删除图层"));
+        check("context menu deletes complete floating layer", created && split && deletedByMenu && Pixel(canvas, baseCenter, red) && Pixel(canvas, layerCenter, red));
+
+        Toolbar(window, QStringLiteral("新建图层"));
+        window.nextFile = greenPath;
+        QTest::mouseClick(canvas, Qt::LeftButton, Qt::NoModifier, layerCenter);
+        QTest::keyClick(canvas, Qt::Key_Delete);
+        check("Delete key removes focused floating layer", Pixel(canvas, layerCenter, red));
+        QTest::keyClick(canvas, Qt::Key_Delete);
+        check("Delete key leaves base layer intact", Pixel(canvas, baseCenter, red));
+
+        Toolbar(window, QStringLiteral("新建图层"));
+        const QPoint topLeft = QPoint(qRound(layer.left()) + 3, qRound(layer.top()) + 3);
+        QMouseEvent hover(QEvent::MouseMove, topLeft, canvas->mapToGlobal(topLeft), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(canvas, &hover);
+        QApplication::processEvents();
+        const bool moveCursor = canvas->cursor().shape() == Qt::SizeAllCursor;
+        Drag(canvas, topLeft, topLeft + QPoint(24, 16));
+        const QString movedProfile = reportDirectory + QStringLiteral("/layer-move.sv");
+        window.nextFile = movedProfile;
+        Toolbar(window, QStringLiteral("保存配置"));
+        SplitViewerCoreDocument moved;
+        const bool movedSaved = ReadDocument(movedProfile, moved);
+        check("floating layer upper-left uses move cursor and moves whole layer", moveCursor && movedSaved && moved.layerCount() == 1 && moved.layerAt(0)->rect.left > .22);
+    }
     nextId = 171;
     for (int id = 172; id <= 177; ++id)
     {
@@ -959,6 +1002,12 @@ int SplitViewerRunUiTests(const QString& reportDirectory, int selectedCase)
             check(SplitViewerAuditCaseNames().at(id - 101).mid(4).toUtf8().constData(),
                 SplitViewerDialogTests::runCase(id, reportDirectory));
         }
+    }
+    if (selectedCase == 0 || selectedCase == 183)
+    {
+        nextId = 182;
+        check(SplitViewerAuditCaseNames().at(183 - 101).mid(4).toUtf8().constData(),
+            SplitViewerDialogTests::runCase(183, reportDirectory));
     }
     out << "total=" << total << " failures=" << failures << "\n";
     return failures;
@@ -1044,5 +1093,11 @@ QStringList SplitViewerAuditCaseNames()
         << QStringLiteral("175 托管覆盖确认取消重选及确认")
         << QStringLiteral("176 关于按钮使用DialogManager提示框")
         << QStringLiteral("177 托管输入框接受及取消")
+        << QStringLiteral("178 基础层删除图层置灰")
+        << QStringLiteral("179 右键删除浮动图层包含嵌套分屏")
+        << QStringLiteral("180 Delete键按焦点删除浮动图层")
+        << QStringLiteral("181 Delete键不影响基础层")
+        << QStringLiteral("182 浮动图层左上角移动光标与整体拖动")
+        << QStringLiteral("183 关于窗口标题栏叉号关闭")
         ;
 }

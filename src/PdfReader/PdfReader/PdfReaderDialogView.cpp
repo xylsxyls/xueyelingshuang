@@ -6,7 +6,6 @@
 #include "QtControls/FileDialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QFileInfo>
 
 PdfReaderDialogView::PdfReaderDialogView() :
 m_input(nullptr), m_files(nullptr), m_cancel(nullptr), m_accept(nullptr)
@@ -25,12 +24,12 @@ bool PdfReaderDialogView::initView(const DialogParam& param)
     layout->setContentsMargins(m_param.config.dialogMargin, m_param.config.dialogMargin,
         m_param.config.dialogMargin, m_param.config.dialogMargin);
     layout->setSpacing(m_param.config.dialogSpacing);
-    Label* title = new Label(this);
-    title->setObjectName(QStringLiteral("dialogTitle"));
-    title->setText(m_param.m_title);
-    layout->addWidget(title);
     if (m_param.mode >= PdfReaderDialogParam::OpenFile)
     {
+        if (m_param.config.useNativeFileDialog)
+        {
+            return false;
+        }
         m_files = new FileDialog(this);
         m_files->setWindowFlags(Qt::Widget);
         m_files->setNameFilter(m_param.filter);
@@ -48,6 +47,7 @@ bool PdfReaderDialogView::initView(const DialogParam& param)
     message->setObjectName(QStringLiteral("dialogMessage"));
     message->setTextFormat(Qt::PlainText);
     message->setWordWrap(true);
+    message->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     message->setText(m_param.text);
     layout->addWidget(message, 1);
     if (m_param.mode == PdfReaderDialogParam::Input)
@@ -83,7 +83,12 @@ bool PdfReaderDialogView::initView(const DialogParam& param)
 
 QSize PdfReaderDialogView::preferredSize() const
 {
-    return m_files ? m_param.config.fileDialogSize : m_param.config.dialogSize;
+    if (m_files)
+    {
+        return m_param.config.fileDialogSize;
+    }
+    return m_param.mode == PdfReaderDialogParam::Message && m_param.m_title == m_param.config.aboutTitle ?
+        m_param.config.aboutDialogSize : m_param.config.dialogSize;
 }
 
 QWidget* PdfReaderDialogView::defaultFocusWidget() const

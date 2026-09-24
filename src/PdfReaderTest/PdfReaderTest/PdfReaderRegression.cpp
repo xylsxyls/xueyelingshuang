@@ -7,6 +7,7 @@
 
 #define PDFREADERCORE_USE_C_API
 #include "PdfReaderCore/PdfReaderCoreAPI.h"
+#include "QtControls/DialogBase.h"
 
 #include <QEventLoop>
 #include <QKeyEvent>
@@ -25,6 +26,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QAbstractButton>
+#include <QDialog>
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QSet>
@@ -44,6 +46,7 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
         {11, QStringLiteral("多页可见渲染与边缘拖动滚动")}, {12, QStringLiteral("失败打开与覆盖取消保留状态")},
         {13, QStringLiteral("保存失败保留原件和恢复文件")}, {14, QStringLiteral("范围先验证再选择输出")},
         {15, QStringLiteral("Core配置校验快照与实例隔离")}, {16, QStringLiteral("桌面配置问号按钮与图标")},
+        {20, QStringLiteral("正文滚动同步当前页与缩略图")},
         {19, QStringLiteral("DialogManager生命周期与QtControls控件")}
     };
     QSet<int> ids;
@@ -91,7 +94,7 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
             {
                 PdfReaderDialogTests::run(input, dir);
             }
-            else if (id >= 15)
+            else if (id >= 15 && id != 20)
             {
                 PdfReaderConfigurationTests::run(id, input, dir);
             }
@@ -149,7 +152,9 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
             }
             else
             {
-                PdfReader window;
+                Config testConfig;
+                testConfig.useNativeFileDialog = false;
+                PdfReader window(nullptr, testConfig);
                 window.show();
                 PdfReaderTestHelper::require(window.openFile(input), "UI open fixture");
                 PdfReaderTestUiHelper::wait(80);
@@ -282,6 +287,7 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
                     PdfReaderTestUiHelper::mouse(list->viewport(), QEvent::MouseButtonPress, pageTwoPoint);
                     PdfReaderTestUiHelper::mouse(list->viewport(), QEvent::MouseButtonRelease, pageTwoPoint);
                     PdfReaderTestUiHelper::wait(60);
+                    PdfReaderTestHelper::require(list->currentRow() == 2, "thumbnail selection remains on clicked page");
                     const QRect selectedPage = PdfReaderTestUiHelper::page(window, 2)->rect().translated(PdfReaderTestUiHelper::page(window, 2)->mapTo(scroll->viewport(), QPoint(0, 0)));
                     PdfReaderTestHelper::require(selectedPage.intersects(scroll->viewport()->rect()), "thumbnail click shows corresponding body page");
                     PdfReaderTestUiHelper::mouse(PdfReaderTestUiHelper::page(window, 1), QEvent::MouseButtonPress, QPoint(10,10));
@@ -320,6 +326,34 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
                     PdfReaderTestUiHelper::escape(list);
                     window.grab().save(dir + "/reader.png");
                 }
+                if (id == 20)
+                {
+                    scroll->verticalScrollBar()->setValue(0);
+                    list->setCurrentRow(0);
+                    PdfReaderTestUiHelper::wait(40);
+                    for (int i = 0; i < 160 && list->currentRow() < 1; ++i)
+                    {
+                        PdfReaderTestUiHelper::scrollWheel(scroll->viewport(), -120);
+                    }
+                    PdfReaderTestHelper::require(list->currentRow() >= 1, "downward body scrolling advances current page");
+                    const int firstScrolledPage = list->currentRow();
+                    PdfReaderTestHelper::require(PdfReaderTestUiHelper::page(window, firstScrolledPage)->property("selectedPage").toBool(), "blue body focus follows current page");
+                    PdfReaderTestHelper::require(list->visualItemRect(list->item(firstScrolledPage)).intersects(list->viewport()->rect()), "thumbnail follows body scrolling");
+                    for (int i = 0; i < 160 && list->currentRow() < 2; ++i)
+                    {
+                        PdfReaderTestUiHelper::scrollWheel(scroll->viewport(), -120);
+                    }
+                    const QString lastPageMessage = QStringLiteral("continued downward scrolling reaches the last page row=%1 value=%2 max=%3 page0=%4 page1=%5 page2=%6")
+                        .arg(list->currentRow())
+                        .arg(scroll->verticalScrollBar()->value())
+                        .arg(scroll->verticalScrollBar()->maximum())
+                        .arg(PdfReaderTestUiHelper::page(window, 0)->mapTo(scroll->viewport(), QPoint(0, 0)).y())
+                        .arg(PdfReaderTestUiHelper::page(window, 1)->mapTo(scroll->viewport(), QPoint(0, 0)).y())
+                        .arg(PdfReaderTestUiHelper::page(window, 2)->mapTo(scroll->viewport(), QPoint(0, 0)).y());
+                    PdfReaderTestHelper::require(list->currentRow() == 2, lastPageMessage.toLocal8Bit().constData());
+                    PdfReaderTestHelper::require(PdfReaderTestUiHelper::page(window, 2)->property("selectedPage").toBool(), "last page focus follows body scrolling");
+                    PdfReaderTestHelper::require(list->visualItemRect(list->item(2)).intersects(list->viewport()->rect()), "last thumbnail follows body scrolling");
+                }
                 if (id == 12)
                 {
                     list->setCurrentRow(1);
@@ -337,7 +371,7 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
                 }
                 if (id == 14)
                 {
-                    bool inputSeen = false, errorSeen = false, fileSeen = false, cancel = false;
+                    bool inputSeen = false, errorSeen = false, fileSeen = false, cancel = false, rangeDialogOptions = false;
                     QTimer timer;
                     QObject::connect(&timer, &QTimer::timeout, [&]() {
                         if (QWidget* dialog = PdfReaderTestUiHelper::dialogView())
@@ -346,6 +380,13 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
                             if (mode >= 3) { fileSeen = true; if (QFileDialog* files = PdfReaderTestUiHelper::fileDialog()) files->reject(); return; }
                             if (mode != 2) { errorSeen = true; PdfReaderTestUiHelper::answerDialog(true); return; }
                             inputSeen = true;
+                            QDialog* rangeDialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
+                            DialogBase* rangeBase = dynamic_cast<DialogBase*>(rangeDialog);
+                            QAbstractButton* rangeClose = rangeDialog != nullptr ?
+                                rangeDialog->findChild<QAbstractButton*>(QStringLiteral("dialogCloseButton")) : nullptr;
+                            rangeDialogOptions = rangeDialogOptions || (rangeBase != nullptr &&
+                                rangeBase->customerTitleBarHeight() == 40 && rangeClose != nullptr &&
+                                rangeClose->isVisible() && !rangeClose->icon().isNull());
                             if (cancel) { PdfReaderTestUiHelper::answerDialog(false); }
                             else
                             {
@@ -374,6 +415,7 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
                     PdfReaderTestHelper::require(QMetaObject::invokeMethod(&window, "savePageRange", Qt::DirectConnection), "range cancel action exists");
                     timer.stop();
                     PdfReaderTestHelper::require(inputSeen && !errorSeen && !fileSeen, "cancel range does not reach output dialog");
+                    PdfReaderTestHelper::require(rangeDialogOptions, "range dialog uses the managed title bar close button and height");
                 }
                 window.grab().save(dir + "/reader.png");
                 window.close();

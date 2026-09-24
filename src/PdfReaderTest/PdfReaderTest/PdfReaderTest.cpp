@@ -78,12 +78,12 @@ PdfReaderTest::PdfReaderTest(QWidget* parent)
         connect(button, &PushButton::clicked, this, [this, central, i]() {
             if (i == 2)
             {
-                PdfReaderDialogHelper::message(this, QStringLiteral("测试范围"), QStringLiteral("当前登记为 17 项瞬时回归，未登记压力用例，不启动空批次。"));
+                PdfReaderDialogHelper::message(this, QStringLiteral("测试范围"), QStringLiteral("当前登记为 18 项瞬时回归，未登记压力用例，不启动空批次。"));
                 return;
             }
             bool accepted = true;
-            QString selection = i == 0 ? QStringLiteral("1-16,19") : QString();
-            if (i == 0) accepted = PdfReaderDialogHelper::input(this, QStringLiteral("指定测试"), QStringLiteral("ID 或范围，例如 1,3-6；有效 ID 1-16,19"), selection);
+            QString selection = i == 0 ? QStringLiteral("1-16,19,20") : QString();
+            if (i == 0) accepted = PdfReaderDialogHelper::input(this, QStringLiteral("指定测试"), QStringLiteral("ID 或范围，例如 1,3-6；有效 ID 1-16,19,20"), selection);
             if (!accepted) { return; }
             central->setEnabled(false);
             const int result = PdfReaderRegression::run(selection);

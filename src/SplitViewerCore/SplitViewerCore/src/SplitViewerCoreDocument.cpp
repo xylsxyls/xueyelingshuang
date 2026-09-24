@@ -65,6 +65,29 @@ SplitViewerCoreLayer* SplitViewerCoreDocument::addLayer()
     return layer;
 }
 
+bool SplitViewerCoreDocument::deleteLayer(int index)
+{
+    if (index < 0 || index >= layerCount())
+    {
+        return false;
+    }
+    delete m_layers[static_cast<size_t>(index)];
+    m_layers.erase(m_layers.begin() + index);
+    if (m_layers.empty())
+    {
+        m_selectedLayer = -1;
+    }
+    else if (m_selectedLayer == index)
+    {
+        m_selectedLayer = index < layerCount() ? index : layerCount() - 1;
+    }
+    else if (m_selectedLayer > index)
+    {
+        --m_selectedLayer;
+    }
+    return true;
+}
+
 void SplitViewerCoreDocument::setBaseRoot(SplitViewerCoreNode* root)
 {
     if (root == m_baseRoot)

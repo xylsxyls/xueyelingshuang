@@ -90,6 +90,7 @@ SET(RCC_FILES "${PROJECT_SOURCE_DIR}/PdfReaderTest.qrc")
 #编译可执行程序
 ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES}
     ../../PdfReader/PdfReader/PdfReader.cpp
+    ../../PdfReader/PdfReader/PdfReaderEmptyState.cpp
     ../../PdfReader/PdfReader/PdfReaderCoreBridge.cpp
     ../../PdfReader/PdfReader/Config.cpp
     ../../PdfReader/PdfReader/Config.h
@@ -100,12 +101,15 @@ ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES}
     ../../PdfReader/PdfReader/PdfReaderIconHelper.cpp
     ../../PdfReader/PdfReader/PdfReaderIconHelper.h
     ../../PdfReader/PdfReader/PdfReaderFileHelper.cpp
+    ../../PdfReader/PdfReader/PdfReaderDialog.cpp
+    ../../PdfReader/PdfReader/PdfReaderDialog.h
     ../../PdfReader/PdfReader/PdfReaderDialogView.cpp
     ../../PdfReader/PdfReader/PdfReaderDialogFactory.cpp
     ../../PdfReader/PdfReader/PdfReaderControlHelper.cpp
     ../../PdfReader/PdfReader/PdfReaderDialogHelper.cpp
     ../../PdfReader/PdfReader/PdfReaderDialogRuntime.cpp
-    ../../PdfReader/PdfReader/PdfReader.h)
+    ../../PdfReader/PdfReader/PdfReader.h
+    ../../PdfReader/PdfReader/PdfReaderEmptyState.h)
 ##如果要生成静态链接库
 ##ADD_LIBRARY(${PROJECT_NAME} STATIC ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES)
 ##如果要生成动态链接库

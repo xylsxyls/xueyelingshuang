@@ -35,7 +35,7 @@ PdfReader::PdfReader(QWidget* parent, const Config& config)
     , m_pageScroll(nullptr)
     , m_pageContainer(nullptr)
     , m_pageLayout(nullptr)
-    , m_emptyLabel(nullptr)
+    , m_emptyState(nullptr)
     , m_toolbar(nullptr)
     , m_openAction(nullptr)
     , m_saveAction(nullptr)
@@ -48,6 +48,8 @@ PdfReader::PdfReader(QWidget* parent, const Config& config)
     , m_helpAction(nullptr)
     , m_zoom(config.initialZoom)
     , m_thumbnailZoom(config.initialThumbnailZoom)
+    , m_pageRefreshInProgress(false)
+    , m_selectionScrollInProgress(false)
 {
     m_config.validate();
     m_core = new PdfReaderCoreBridge(m_config);
@@ -68,8 +70,7 @@ void PdfReader::buildUi()
     setWindowTitle(m_config.applicationTitle);
     resize(m_config.windowSize);
     setMinimumSize(m_config.minimumWindowSize);
-    setStyleSheet(m_config.windowStyle + QStringLiteral("QLabel#emptyDocumentLabel{") + m_config.emptyDocumentStyle +
-        QStringLiteral("}QLabel#pageLabel{") + m_config.normalPageStyle +
+    setStyleSheet(m_config.windowStyle + QStringLiteral("QLabel#pageLabel{") + m_config.normalPageStyle +
         QStringLiteral("}QLabel#pageLabel[selectedPage=\"true\"]{") + m_config.selectedPageStyle + QStringLiteral("}"));
 
     m_toolbar = new ToolBar(this);
@@ -116,17 +117,14 @@ void PdfReader::buildUi()
     m_pageLayout = new QVBoxLayout(m_pageContainer);
     m_pageLayout->setContentsMargins(m_config.bodyMarginX, m_config.bodyMarginY, m_config.bodyMarginX, m_config.bodyMarginY);
     m_pageLayout->setSpacing(m_config.bodySpacing);
-    m_emptyLabel = new Label(m_pageContainer);
-    m_emptyLabel->setText(m_config.emptyDocumentText);
-    m_emptyLabel->setObjectName(QStringLiteral("emptyDocumentLabel"));
-    m_emptyLabel->setAlignment(Qt::AlignCenter);
-    m_pageLayout->addWidget(m_emptyLabel);
-    m_pageLayout->addStretch(1);
+    m_emptyState = new PdfReaderEmptyState(m_pageContainer);
+    connect(m_emptyState, SIGNAL(clicked()), this, SLOT(chooseAndOpen()));
+    m_pageLayout->addWidget(m_emptyState, 1);
     m_pageScroll->setWidget(m_pageContainer);
     splitter->setStretchFactor(1, 1);
     setCentralWidget(splitter);
     splitter->setSizes(QList<int>() << m_config.sidebarWidth << m_config.bodyWidth);
-    connect(m_pageScroll->verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(renderVisiblePages()));
+    connect(m_pageScroll->verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(onPageScrollChanged()));
     connect(m_pageScroll->horizontalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(renderVisiblePages()));
     connect(m_thumbnails->verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(renderVisiblePages()));
     m_openAction->setShortcut(QKeySequence::Open);
@@ -234,6 +232,7 @@ void PdfReader::refreshThumbnails()
 
 void PdfReader::refreshPages()
 {
+    m_pageRefreshInProgress = true;
     const int scrollY = m_pageScroll->verticalScrollBar()->value();
     const int scrollX = m_pageScroll->horizontalScrollBar()->value();
     m_pageScroll->blockSignals(true);
@@ -243,14 +242,12 @@ void PdfReader::refreshPages()
         delete item->widget();
         delete item;
     }
-    m_emptyLabel = nullptr;
+    m_emptyState = nullptr;
     if (!m_core->isOpen())
     {
-        m_emptyLabel = new Label(m_pageContainer);
-        m_emptyLabel->setText(m_config.emptyDocumentText);
-        m_emptyLabel->setObjectName(QStringLiteral("emptyDocumentLabel"));
-        m_emptyLabel->setAlignment(Qt::AlignCenter);
-        m_pageLayout->addWidget(m_emptyLabel);
+        m_emptyState = new PdfReaderEmptyState(m_pageContainer);
+        connect(m_emptyState, SIGNAL(clicked()), this, SLOT(chooseAndOpen()));
+        m_pageLayout->addWidget(m_emptyState, 1);
     }
     for (int i = 0; i < m_core->pageCount(); ++i)
     {
@@ -268,12 +265,16 @@ void PdfReader::refreshPages()
         page->installEventFilter(this);
         m_pageLayout->addWidget(page, 0, Qt::AlignHCenter);
     }
-    m_pageLayout->addStretch(1);
+    if (m_core->isOpen())
+    {
+        m_pageLayout->addStretch(1);
+    }
     m_pageLayout->activate();
     m_pageContainer->adjustSize();
     m_pageScroll->blockSignals(false);
     m_pageScroll->verticalScrollBar()->setValue(scrollY);
     m_pageScroll->horizontalScrollBar()->setValue(scrollX);
+    m_pageRefreshInProgress = false;
     onSelectionChanged();
     QTimer::singleShot(0, this, SLOT(renderVisiblePages()));
 }
@@ -286,7 +287,7 @@ void PdfReader::renderVisiblePages()
     {
         QLayoutItem* layoutItem = m_pageLayout->itemAt(i);
         Label* page = layoutItem ? dynamic_cast<Label*>(layoutItem->widget()) : nullptr;
-        if (page && page != m_emptyLabel)
+        if (page)
         {
             const QRect rect(page->mapTo(m_pageScroll->viewport(), QPoint(0, 0)), page->size());
             if (rect.intersects(viewport))
@@ -498,6 +499,11 @@ void PdfReader::insertDocument(int index)
 
 void PdfReader::onSelectionChanged()
 {
+    updateSelectionState(true);
+}
+
+void PdfReader::updateSelectionState(bool ensureVisible)
+{
     const int selected = selectedPage();
     if (selected >= 0)
     {
@@ -514,15 +520,74 @@ void PdfReader::onSelectionChanged()
             item->widget()->update();
         }
     }
-    if (selected >= 0 && selected < m_pageLayout->count())
+    if (ensureVisible && selected >= 0 && selected < m_pageLayout->count())
     {
         QLayoutItem* selectedItem = m_pageLayout->itemAt(selected);
         QWidget* selectedPageWidget = selectedItem ? selectedItem->widget() : nullptr;
         if (selectedPageWidget != nullptr)
         {
             // 左侧点击后让对应正文页进入右侧视口，灰色条目点击也走同一选择路径。
+            m_selectionScrollInProgress = true;
             m_pageScroll->ensureWidgetVisible(selectedPageWidget, m_config.selectionMargin, m_config.selectionMargin);
+            m_selectionScrollInProgress = false;
         }
+    }
+}
+
+void PdfReader::onPageScrollChanged()
+{
+    if (m_pageRefreshInProgress || m_selectionScrollInProgress)
+    {
+        renderVisiblePages();
+        return;
+    }
+    syncSelectionFromPageScroll();
+    renderVisiblePages();
+}
+
+void PdfReader::syncSelectionFromPageScroll()
+{
+    if (!m_core->isOpen() || !m_pageScroll || !m_thumbnails || m_core->pageCount() <= 0)
+    {
+        return;
+    }
+    const QRect viewport(QPoint(0, 0), m_pageScroll->viewport()->size());
+    int visiblePage = -1;
+    int mostVisibleHeight = 0;
+    const int currentPage = selectedPage();
+    for (int i = 0; i < m_core->pageCount(); ++i)
+    {
+        QLayoutItem* item = m_pageLayout->itemAt(i);
+        QWidget* page = item ? item->widget() : nullptr;
+        if (!page)
+        {
+            continue;
+        }
+        const QRect pageRect(page->mapTo(m_pageScroll->viewport(), QPoint(0, 0)), page->size());
+        const QRect visibleRect = pageRect.intersected(viewport);
+        if (visibleRect.isEmpty())
+        {
+            continue;
+        }
+        const int visibleHeight = visibleRect.height();
+        if (visibleHeight > mostVisibleHeight || (visibleHeight == mostVisibleHeight && i == currentPage))
+        {
+            mostVisibleHeight = visibleHeight;
+            visiblePage = i;
+        }
+    }
+    if (visiblePage < 0 || visiblePage == selectedPage())
+    {
+        return;
+    }
+    m_thumbnails->blockSignals(true);
+    m_thumbnails->setCurrentRow(visiblePage, QItemSelectionModel::ClearAndSelect);
+    m_thumbnails->blockSignals(false);
+    updateSelectionState(false);
+    QListWidgetItem* item = m_thumbnails->item(visiblePage);
+    if (item)
+    {
+        m_thumbnails->scrollToItem(item, QAbstractItemView::EnsureVisible);
     }
 }
 
@@ -587,7 +652,7 @@ void PdfReader::resetZoom()
 void PdfReader::showHelp()
 {
     PdfReaderDialogHelper::message(this, m_config.aboutTitle,
-                             m_config.aboutText, m_config);
+                             m_config.aboutVersionText + QStringLiteral("\n") + m_config.aboutText, m_config);
 }
 
 void PdfReader::setWindowDocumentTitle()

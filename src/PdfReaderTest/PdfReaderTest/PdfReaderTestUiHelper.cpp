@@ -18,7 +18,14 @@
 QWidget* PdfReaderTestUiHelper::dialogView()
 {
     QWidget* modal = QApplication::activeModalWidget();
-    return modal ? modal->findChild<QWidget*>(QStringLiteral("pdfReaderDialogView")) : nullptr;
+    while (modal != nullptr)
+    {
+        if (modal->objectName() == QStringLiteral("pdfReaderDialogView")) return modal;
+        QWidget* view = modal->findChild<QWidget*>(QStringLiteral("pdfReaderDialogView"));
+        if (view != nullptr) return view;
+        modal = modal->parentWidget();
+    }
+    return nullptr;
 }
 
 QFileDialog* PdfReaderTestUiHelper::fileDialog()
@@ -64,6 +71,13 @@ void PdfReaderTestUiHelper::mouse(QWidget* target, QEvent::Type type, const QPoi
 void PdfReaderTestUiHelper::wheel(QWidget* target, int delta)
 {
     QWheelEvent event(QPointF(20, 20), delta, Qt::NoButton, Qt::ControlModifier);
+    QApplication::sendEvent(target, &event);
+    PdfReaderTestUiHelper::wait(30);
+}
+
+void PdfReaderTestUiHelper::scrollWheel(QWidget* target, int delta)
+{
+    QWheelEvent event(QPointF(20, 20), delta, Qt::NoButton, Qt::NoModifier);
     QApplication::sendEvent(target, &event);
     PdfReaderTestUiHelper::wait(30);
 }

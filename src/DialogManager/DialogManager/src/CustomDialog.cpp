@@ -1,5 +1,6 @@
 ﻿#include "CustomDialog.h"
 #include "CustomViewBase.h"
+#include "QtControls/Label.h"
 #include <QResizeEvent>
 
 CustomDialog::CustomDialog() :
@@ -21,7 +22,18 @@ CustomDialog::~CustomDialog()
 
 bool CustomDialog::initDialog(const DialogParam& param)
 {
-	setWindowTitle(param.m_title);
+	applyWindowOptions(param);
+	setWindowTitle(param.m_title, QColor(40, 53, 72), 14, Qt::AlignCenter);
+	if (m_title != nullptr)
+	{
+		m_title->setBackgroundColor(QColor(232, 238, 248));
+		m_title->setAutoFillBackground(true);
+		QPalette titlePalette = m_title->palette();
+		titlePalette.setColor(QPalette::Window, QColor(232, 238, 248));
+		titlePalette.setColor(QPalette::WindowText, QColor(40, 53, 72));
+		titlePalette.setColor(QPalette::Text, QColor(40, 53, 72));
+		m_title->setPalette(titlePalette);
+	}
 	setTimeRest(param.m_timeOut);
 	setTimeRestVisible(param.m_isCountDownVisible);
 	setTransientWindow(param.m_parent);
@@ -48,6 +60,11 @@ bool CustomDialog::initDialog(const DialogParam& param)
 	{
 		focusWidget->setFocus();
 	}
+	if (m_view != nullptr)
+	{
+		m_view->setGeometry(contentGeometry());
+	}
+	raiseTitleBar();
 	return true;
 }
 
@@ -71,7 +88,8 @@ bool CustomDialog::setView(CustomViewBase* view)
 	m_view->setParent(this);
 	m_view->setController(this);
 	m_view->show();
-	m_view->setGeometry(rect());
+	m_view->setGeometry(contentGeometry());
+	raiseTitleBar();
 	return true;
 }
 
@@ -101,6 +119,7 @@ bool CustomDialog::isModalMode() const
 
 void CustomDialog::updateCustomView(const DialogParam& param)
 {
+	applyWindowOptions(param);
 	if (m_view == nullptr)
 	{
 		return;
@@ -149,5 +168,29 @@ void CustomDialog::resizeEvent(QResizeEvent* eve)
 	{
 		return;
 	}
-	m_view->setGeometry(rect());
+	m_view->setGeometry(contentGeometry());
+	raiseTitleBar();
+}
+
+void CustomDialog::applyWindowOptions(const DialogParam& param)
+{
+	setWindowShadow(param.m_hasShadow, param.m_shadowSize);
+	setCustomerTitleBarHeight(param.m_titleBarHeight);
+}
+
+QRect CustomDialog::contentGeometry()
+{
+	QRect content = rect();
+	const qint32 frame = 1;
+	content.adjust(frame, customerTitleBarHeight() + frame,
+		-frame, -frame);
+	return content;
+}
+
+void CustomDialog::raiseTitleBar()
+{
+	if (m_title != nullptr && customerTitleBarHeight() > 0)
+	{
+		m_title->raise();
+	}
 }

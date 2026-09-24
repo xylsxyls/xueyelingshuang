@@ -157,6 +157,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialog.cpp" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderEmptyState.cpp" />
+    <ClCompile Include="GeneratedFiles\Debug\moc_PdfReaderEmptyState.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_PdfReaderTest.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -170,6 +176,10 @@
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PdfReaderEmptyState.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_PdfReaderTest.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -187,6 +197,25 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialog.h" />
+    <CustomBuild Include="..\..\PdfReader\PdfReader\PdfReaderEmptyState.h">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing PdfReaderEmptyState.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(ProjectDir)..\..\..\include"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing PdfReaderEmptyState.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(ProjectDir)..\..\..\include"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Moc%27ing PdfReaderEmptyState.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(ProjectDir)..\..\..\include"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing PdfReaderEmptyState.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(ProjectDir)..\..\..\include"</Command>
+    </CustomBuild>
     <ClInclude Include="PdfReaderRegression.h" />
     <CustomBuild Include="..\..\PdfReader\PdfReader\PdfReader.h">
       <Command>"$(QTDIR)\bin\moc.exe" "%(FullPath)" -o "GeneratedFiles\$(Configuration)\moc_PdfReader.cpp" -I"$(QTDIR)\include" -I"$(QTDIR)\include\QtWidgets"</Command>
@@ -303,12 +332,28 @@
     <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderThumbnailDelegate.h" />
     <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderIconHelper.cpp" />
     <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderIconHelper.h" />
-    <ClCompile Include="GeneratedFiles\Debug\moc_PdfReaderThumbnailList.cpp"><ExcludedFromBuild Condition="'$(Configuration)'!='Debug'">true</ExcludedFromBuild></ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_PdfReaderThumbnailList.cpp"><ExcludedFromBuild Condition="'$(Configuration)'!='Release'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PdfReaderThumbnailList.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Debug'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PdfReaderThumbnailList.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Release'">true</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
-  <ItemGroup><ClCompile Include="PdfReaderConfigurationTests.cpp" /><ClInclude Include="PdfReaderConfigurationTests.h" /></ItemGroup>
-  <ItemGroup><ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderFileHelper.cpp" /><ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderFileHelper.h" /><ClCompile Include="CppConfigSmoke.cpp" /></ItemGroup>
-  <ItemGroup><ClCompile Include="PdfReaderTestHelper.cpp" /><ClInclude Include="PdfReaderTestHelper.h" /><ClCompile Include="PdfReaderTestUiHelper.cpp" /><ClInclude Include="PdfReaderTestUiHelper.h" /></ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PdfReaderConfigurationTests.cpp" />
+    <ClInclude Include="PdfReaderConfigurationTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderFileHelper.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderFileHelper.h" />
+    <ClCompile Include="CppConfigSmoke.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PdfReaderTestHelper.cpp" />
+    <ClInclude Include="PdfReaderTestHelper.h" />
+    <ClCompile Include="PdfReaderTestUiHelper.cpp" />
+    <ClInclude Include="PdfReaderTestUiHelper.h" />
+  </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogView.cpp" />
     <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogView.h" />
@@ -320,6 +365,12 @@
     <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogRuntime.h" />
     <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogParam.h" />
   </ItemGroup>
-  <ItemGroup><ClCompile Include="PdfReaderDialogTests.cpp" /><ClInclude Include="PdfReaderDialogTests.h" /></ItemGroup>
-  <ItemGroup><ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderControlHelper.cpp" /><ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderControlHelper.h" /></ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PdfReaderDialogTests.cpp" />
+    <ClInclude Include="PdfReaderDialogTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderControlHelper.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderControlHelper.h" />
+  </ItemGroup>
 </Project>

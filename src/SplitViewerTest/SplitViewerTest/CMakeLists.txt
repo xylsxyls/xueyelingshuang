@@ -123,6 +123,14 @@ ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES}
     ${PRODUCT_UI}/SplitViewerFileDialogParam.cpp
     ${PRODUCT_UI}/SplitViewerFileDialogView.cpp
     ${PRODUCT_UI}/SplitViewerFileDialogFactory.cpp
+    ${PRODUCT_UI}/SplitViewerAboutDialogParam.cpp
+    ${PRODUCT_UI}/SplitViewerAboutDialogParam.h
+    ${PRODUCT_UI}/SplitViewerAboutDialogView.cpp
+    ${PRODUCT_UI}/SplitViewerAboutDialogView.h
+    ${PRODUCT_UI}/SplitViewerAboutDialogFactory.cpp
+    ${PRODUCT_UI}/SplitViewerAboutDialogFactory.h
+    ${PRODUCT_UI}/SplitViewerAboutDialog.cpp
+    ${PRODUCT_UI}/SplitViewerAboutDialog.h
     ${PRODUCT_UI}/SplitViewerDialogSession.cpp
     ${PRODUCT_UI}/SplitViewerDialogHelper.cpp)
 ##如果要生成静态链接库

@@ -4,6 +4,7 @@
 #include "COriginalDialog.h"
 
 class Label;
+class QPaintEvent;
 /** 弹出框基类，增加倒计时和Esc和Alt+F4屏蔽功能，exec增加堵塞模式
 */
 class QtControlsAPI DialogBase : public COriginalDialog
@@ -73,6 +74,15 @@ public:
                         qint32 origin = 0,
                         const QString& fontName = QString::fromStdWString(L"微软雅黑"));
 
+	/** 保留窗口阴影参数；当前QtControls矩形窗口不绘制阴影。 */
+    void setWindowShadow(bool enabled, qint32 size);
+
+    /** 返回窗口阴影是否启用。 */
+    bool windowShadowEnabled() const;
+
+	/** 返回窗口阴影扩散级别。 */
+    qint32 windowShadowSize() const;
+
 Q_SIGNALS:
     /** 倒计时时间剩余，每秒发送一次
     @param [in] seconds 当前还剩多少秒
@@ -119,7 +129,12 @@ protected:
 	/** 尺寸变化时同步标题控件位置
 	@param [in] eve Qt尺寸变化事件
 	*/
-    void resizeEvent(QResizeEvent* eve);
+	void resizeEvent(QResizeEvent* eve);
+
+	/** 绘制弹窗客户区底色和矩形边框
+	@param [in] eve Qt绘制事件
+	*/
+	void paintEvent(QPaintEvent* eve);
 
 	/** 处理Esc触发的关闭行为，子类可重写
 	*/
@@ -142,8 +157,12 @@ protected:
     bool m_escEnable;
 	// 当前剩余倒计时秒数
     qint32 m_timeRest;
-	// 弹窗标题标签
+    // 弹窗标题标签
     Label* m_title;
+	// 阴影开关
+	bool m_shadowEnabled;
+	// 阴影扩散级别，仅保留参数兼容性，当前不参与绘制
+	qint32 m_shadowSize;
 	// 需要监听并转发的键盘按键列表
     std::vector<Qt::Key> m_listenKey;
 };

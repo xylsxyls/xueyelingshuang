@@ -1,7 +1,7 @@
 ﻿SplitViewer开发文档
-版本：0.10
-更新日期：2026-09-23
-状态：Windows Release x64已按最新反馈重新发布；不携带Qt运行库/插件，PDB已极限压缩归档后从发布目录移除。
+版本：0.11
+更新日期：2026-09-24
+状态：Windows Release x64试运行构建已通过；本轮修改尚未复制到common发布目录，不携带Qt运行库/插件的交付规则保持。
 
 一、基线与职责
 旧版行为基线为src/SplitViewer_old/SplitViewer，不修改旧源码。Node/Layer/FloatRect、图片视图数值、配置字段、PNG自定义chunk归Core；窗口消息、菜单、画图、文件选择、图片编解码、句柄和平台注册归Qt工程。
@@ -27,7 +27,7 @@ Test：SplitViewerUiTests编译真实SplitViewer/Canvas/Platform源码，并通�
 5. 图片偏移单位为像素。滚轮每120单位一格，普通1.05、Ctrl为1.01；范围为适配比例0.05倍到50倍。首次缩放退出自动适配，提示相对适配百分比并在约1秒后消失。整舞台尺寸变化按旧宽高比例重映射手动比例/偏移；独立图层调整只重新适配自动视图，手动图像比例保持旧规则。
 6. 分割继承第一子叶子内容。删除允许基础层和浮动层非根叶子，兄弟替换父节点；移除/重载后清空交互指针。单个根不能删除。Windows原生窗口以节点到容器的QMap独立持有，分割、折叠时重绑定存活窗口，不能只用一个全局容器。
 7. 全屏是舞台全屏：隐藏工具栏/状态栏，舞台边距0，外侧黑18。记录普通几何和最大化状态；从最大化退出全屏直接showMaximized，避免连续showNormal/restoreGeometry产生延迟消息将窗口还原。每次舞台尺寸变化都主动同步所有嵌入容器的几何，视频内容继续占满原分屏。
-8. 关于按钮使用程序绘制的蓝色问号圆形图标，保留“关于”悬浮提示。
+8. 关于按钮使用res/SplitViewer.png资源图标，保留“关于”悬浮提示。
 
 三、配置与导出
 Core按旧Version=2字段读写UTF-16LE，保留BaseNodeN、LayerN_NodeN、Direction、Ratio、Path、AutoFit、Scale、OffsetX/Y等语义；wchar_t为32位的平台转换代理对。数字格式固定经典locale。
@@ -79,3 +79,71 @@ SplitViewerDialogSession在QApplication存活期间注册文件选择内容工�
 本次EXE匹配PDB归档为symbols-SplitViewer-forest-icon-20260923-185930.7z，GUID为b75c3696-380e-4cf7-9394-5092e0a8b439、Age为5；以7z -mx=9压缩，通过7z t、解压哈希及PE/PDB身份检查，发布目录散装PDB已删除。QtControls等四个未变公共库仍对应symbols-SplitViewer-controls-20260923-174754.7z中的符号；其他旧符号包继续保留定位旧程序和未变依赖。本次图标验证记录及回退副本位于src/temp/SplitViewerIconB2。
 原src/SplitViewer/publish_release.ps1已删除，不属于工程源文件或正式构建入口。以后发布按具体任务临时编写脚本，不能加入version、图标脚本或VS/CMake构建目标。
 本次临时证据和回退副本位于src/temp/SplitViewerControls；上一工作流已结束，其旧报告/备份目录不作为当前验证入口。
+
+九、2026-09-24图层交互与关于窗口实现
+1. SplitViewerCoreDocument新增deleteLayer(int)，只接受非负浮动层索引，释放图层根节点并在删除后修正selectedLayer；接口不引用Qt。
+2. SplitViewer新增deleteLayerAt/detachEmbeddedTree，删除图层前遍历叶节点解除外部窗口；canvasContextMenu新增“删除图层”，基础层动作禁用，分屏删除路径保持独立。
+3. SplitViewerCanvas启用StrongFocus并转发Delete键；SplitViewer::deleteSelectedLayer要求画布有焦点且文档选中浮动层，避免误删基础层或单个分屏。
+4. 左上角8像素区域优先进入SizeAllCursor和整层拖动模式，其他边缘/角点继续使用原缩放边界；Ctrl移动兼容保留。
+5. SplitViewerAboutDialogParam/View/Factory按一类一文件加入DialogManager会话注册。View只使用QtControls::Label/PushButton和局部QSS，按钮通过ViewBase回调关闭；全局TipDialog和Core不改。
+6. Test增加Core整层释放冒烟及178—182真实画布用例；176检查自定义关于窗口对象名、QSS和DialogManager回收。Windows Release x64构建及目标用例通过，完整历史批次中播放器依赖缺失和旧覆盖弹窗问题已单独记录，未作为本轮通过依据。
+
+十、2026-09-24关于窗口视觉方案落地
+1. Config::aboutDialogStyle改为浅色卡片、细边框、分屏图标色块、深色标题层级和青蓝色按钮；不在SplitViewer中实现阴影。
+2. SplitViewerAboutDialogView使用QtControls::Label加载:/icons/SplitViewer.png资源；不再使用QPainter手绘图标。正文居中，按钮由QtControls接口设置状态色，继续通过DialogManager回调关闭。
+3. aboutDialogSize调整为520x340，showAbout关闭m_hasShadow并保留DialogManager标题栏。
+4. SplitViewerDialogTests::176更新为浅色QSS断言并保存最新视觉证据；Windows Release x64构建及176、178—182目标用例通过。
+十一、2026-09-24关于窗口与移动边框修订
+1. 关于窗口左侧图像改为读取Qt资源路径:/icons/SplitViewer.png，对应唯一源文件SplitViewer/res/SplitViewer.png；删除View中的QPainter手绘图标逻辑。
+2. 关于窗口使用SplitViewerAboutDialog外壳，在DialogManager完成内容区初始化后通过QtControls::Label接口将标题“关于分屏看图”设置为18px并加粗；标题控件固定对象名dialogTitle，便于测试和后续样式维护。
+3. showAbout把主画布的全局矩形传入centerRect，外壳在完成内容区布局后按矩形中心定位，因此内容增高或换行时仍保持上下左右居中。当前可见内容保持520x340，外层按阴影预留扩展。
+4. 无阴影的DialogBase以前只填充不绘制边界，透明度为0的灰色客户区会覆盖Windows无边框拖动时的黑色目标轮廓。本轮在shadow<=0路径绘制1px深色外边框，并让无阴影标题/内容区各内缩1px，避免子控件再次覆盖边界；保留客户区不透明，拖动轮廓可见；阴影仍预留给QtControls统一实现。
+5. SplitViewerTest用例176新增PNG非空、标题QSS字号/粗体、画布中心偏差不超过1px、静态卡片边缘和Windows标题命中断言；178—182继续验证基础层置灰、整层删除、Delete焦点、左上角四向移动和拖动落盘。
+
+十三、2026-09-24阴影复核修订
+1. 删除DialogBase阴影路径中重复的body矩形边框，只保留窗口外沿；关于内容卡片自己的QSS边框继续保留，避免出现两个同级深色窗口框。
+2. 阴影预留的顶端偏移同步写入COriginalDialog标题栏命中区域，Windows可命中完整可见标题栏并返回HTCAPTION；此前只有顶部未被阴影偏移的窄区域能触发系统移动。
+3. 176测试增加Windows原生标题栏命中检查并确认静态阴影不再绘制重复黑框；移动期间的外沿由COriginalDialog的WM_ENTERSIZEMOVE、WM_MOVING、WM_EXITSIZEMOVE状态控制。修订版176、178—182全部通过，报告位于common/SplitViewerTest/reports/shadow-corrected-176及shadow-corrected-178至182。
+
+十二、2026-09-24关于窗口阴影与移动轮廓修订
+1. QtControls::DialogBase的阴影改为四边对称的蓝灰色渐变，使用四条线性渐变和四个角部径向渐变，保留卡片边缘与柔和外沿；不使用透明顶层窗口，避免Windows移动反馈被底色覆盖。
+2. 启用阴影时，CustomDialog为客户区四周预留阴影带并扩展外层窗口尺寸，关于框内容仍保持520x340的设计尺寸；标题和内容区使用同一预留边距，阴影不会侵入可见控件。
+3. 关于窗口通过DialogParam启用阴影，当前扩散级别为6；窗口仍以主画布矩形中心定位，阴影扩展后整体中心不变。
+4. DialogBase的无阴影路径保留1px深色外沿；阴影路径只在Windows原生移动状态下绘制黑色目标外沿，客户区和标题不覆盖该状态外沿；无阴影窗口继续使用1px内缩兼容路径。
+5. Windows Release x64重新构建QtControls、DialogManager、SplitViewer和SplitViewerTest，0警告0错误；176、178—182全部通过。关于框阴影截图与结果保存在common/SplitViewerTest/reports/about-dialog-shadow。
+
+十三、2026-09-24关于窗口阴影最终修订
+1. 阴影启用时，DialogBase使用透明顶层客户区，仅在内容外沿绘制低透明度圆角软阴影；不再填充整块不透明灰色矩形，也不再绘制任何静态或移动状态的自定义黑色外框。
+2. 阴影预留改为阴影级别的两倍且至少8像素，CustomDialog和DialogBase使用同一计算规则；关于内容仍保持520x340并按主画布中心定位。
+3. Windows移动轮廓完全交给系统原生移动循环。WM_ENTERSIZEMOVE、WM_MOVING和WM_EXITSIZEMOVE只刷新状态，不向客户区叠加旧位置边框，透明外沿避免遮挡系统目标矩形。
+4. 176截图四边像素alpha为0且无第二层黑框，标题中心WM_NCHITTEST返回HTCAPTION；176、178—182在Windows Release x64重新构建后全部通过，最新证据位于common/SplitViewerTest/reports/shadow-final-176及shadow-final-178至182。
+
+十四、2026-09-24按用户要求停用阴影
+1. QtControls继续保留DialogParam、DialogBase的阴影参数和查询接口，SplitViewer仍传入m_hasShadow=true、m_shadowSize=2；参数仅用于兼容调用方，当前不产生视觉效果。
+2. DialogBase不再设置透明背景、不再预留阴影带、不再绘制阴影或圆角；客户区恢复不透明的普通矩形，并保留1像素矩形边框。CustomDialog的preferredSize和contentGeometry也不再因阴影扩展。
+3. 关于窗口外层QSS移除border-radius，尺寸恢复为520x340并继续按主画布中心定位；内部按钮和图标的局部样式不受影响。
+4. Windows Release x64重新构建QtControls、DialogManager、SplitViewer和SplitViewerTest。176、178、179、180、181、182及Core冒烟均通过；最新报告位于common/SplitViewerTest/reports/shadow-disabled-176及shadow-disabled-178至182。
+
+十五、2026-09-24关于窗口标题栏关闭按钮
+1. SplitViewerAboutDialog复用QtControls::DialogShow已有的m_exit按钮，在标题栏右上角显示圆角叉号；没有新建重复标题栏控件。
+2. 叉号使用QtControls::PushButton接口设置文字、颜色、边框和圆角，按钮对象名为dialogCloseButton，随标题栏尺寸变化保持在右上角并置于标题标签之上。
+3. 点击叉号写入RIGHT_TOP_EXIT结果并调用close()，继续由DialogManager的closedSignal回收窗口；底部“知道了”按钮保持原有圆角样式和关闭流程。
+4. 新增183用例验证叉号可见、字符正确、点击后窗口关闭且DialogManager数量归零；176底部按钮关闭回归也再次通过。Windows Release x64构建无警告无错误。
+
+十六、2026-09-24叉号字号调整
+1. 叉号使用文字字符，因此仅将QtControls::PushButton的字号从20调整为40；标题栏位置、按钮尺寸、颜色、圆角和关闭逻辑均保持不变。
+2. Windows Release x64重新构建SplitViewer和SplitViewerTest，183用例通过；实际截图确认叉号大小已明显增大。
+
+十七、2026-09-24叉号细线与悬停位置微调
+1. 保持40号字号但关闭加粗，恢复细线叉号。
+2. 标题栏右上角PushButton外框和叉号整体同步下移1像素，继续使用居中对齐，悬停时叉号位于圆角外框中心。
+3. 本次未改动按钮尺寸、颜色、圆角半径或关闭流程；Windows Release x64构建及183用例通过。
+
+十八、2026-09-24叉号改为自绘图标
+1. 删除标题栏叉号文字和字体依赖，使用QPainter在透明QPixmap上绘制两条细线，再通过QtControls::PushButton的图标接口显示。
+2. 外部圆角按钮仍位于下移1像素的位置；图标通过底部内边距向上补回1像素，保持叉号原有垂直位置。
+3. Windows Release x64重新构建SplitViewer和SplitViewerTest，183用例通过，截图确认叉号细且大小保持两倍。
+
+十九、2026-09-24叉号垂直位置最终微调
+1. 圆角外框保持下移1像素；移除图标底部2像素补偿，使自绘叉号也同步下移1像素。
+2. 其他图标线宽、按钮尺寸、关闭行为不变；183用例重新通过。

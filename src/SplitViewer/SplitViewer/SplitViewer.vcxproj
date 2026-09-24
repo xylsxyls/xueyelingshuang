@@ -348,6 +348,14 @@
     <ClInclude Include="SplitViewerFileDialogView.h" />
     <ClCompile Include="SplitViewerFileDialogFactory.cpp" />
     <ClInclude Include="SplitViewerFileDialogFactory.h" />
+    <ClCompile Include="SplitViewerAboutDialogParam.cpp" />
+    <ClInclude Include="SplitViewerAboutDialogParam.h" />
+    <ClCompile Include="SplitViewerAboutDialogView.cpp" />
+    <ClInclude Include="SplitViewerAboutDialogView.h" />
+    <ClCompile Include="SplitViewerAboutDialogFactory.cpp" />
+    <ClInclude Include="SplitViewerAboutDialogFactory.h" />
+    <ClCompile Include="SplitViewerAboutDialog.cpp" />
+    <ClInclude Include="SplitViewerAboutDialog.h" />
     <ClCompile Include="SplitViewerDialogSession.cpp" />
     <ClInclude Include="SplitViewerDialogSession.h" />
     <ClCompile Include="SplitViewerDialogHelper.cpp" />

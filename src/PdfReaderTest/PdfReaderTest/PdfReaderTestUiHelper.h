@@ -46,6 +46,12 @@ public:
     */
     static void wheel(QWidget* target, int delta);
 
+    /** 发送不带 Ctrl 的滚轮，验证正文滚动后的当前页同步
+    @param [in] target 同步接收滚轮事件的控件，不得为空
+    @param [in] delta Qt 滚轮角度增量
+    */
+    static void scrollWheel(QWidget* target, int delta);
+
     /** 获取第 index 页的正文控件，缺页会使测试失败
     @param [in] window 借用被测窗口
     @param [in] index 零起始页号

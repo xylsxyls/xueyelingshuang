@@ -76,6 +76,10 @@ public:
     @param [in] point 工作区坐标
     */
     void canvasDoubleClick(const QPoint& point);
+    /** 在画布获得焦点且选中浮动图层时删除整层。
+    @return 是否实际删除了图层
+    */
+    bool deleteSelectedLayer();
 
 public slots:
     /** 调整视图比例并同步嵌入窗口尺寸。
@@ -181,6 +185,15 @@ private:
     @param [in] hit 命中结果
     */
     void deleteAt(const SplitViewerHit& hit);
+    /** 解除指定图层子树中所有外部窗口的嵌入。
+    @param [in] root 图层根节点
+    */
+    void detachEmbeddedTree(SplitViewerCoreNode* root);
+    /** 删除浮动图层并同步嵌入窗口及界面状态。
+    @param [in] index 浮动图层索引
+    @return 是否实际删除了图层
+    */
+    bool deleteLayerAt(int index);
     /** 解码图片后替换叶节点内容，失败保留原内容。
     @param [in] leaf 目标叶节点
     @param [in] path 文件路径

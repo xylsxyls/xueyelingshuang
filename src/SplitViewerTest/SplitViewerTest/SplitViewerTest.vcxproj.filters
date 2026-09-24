@@ -130,6 +130,14 @@
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogView.h"><Filter>Header Files</Filter></ClInclude>
     <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogFactory.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerFileDialogFactory.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialogParam.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialogParam.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialogView.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialogView.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialogFactory.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialogFactory.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialog.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerAboutDialog.h"><Filter>Header Files</Filter></ClInclude>
     <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogSession.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogSession.h"><Filter>Header Files</Filter></ClInclude>
     <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerDialogHelper.cpp"><Filter>Source Files</Filter></ClCompile>

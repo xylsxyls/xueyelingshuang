@@ -7,6 +7,7 @@
 #include <QtGui/QDragEnterEvent>
 #include <QtGui/QDropEvent>
 #include <QtGui/QMouseEvent>
+#include <QtGui/QKeyEvent>
 #include <QtGui/QPainter>
 #include <QtGui/QWheelEvent>
 
@@ -14,6 +15,7 @@ SplitViewerCanvas::SplitViewerCanvas(SplitViewer* owner, QWidget* parent) : Widg
 {
     setAcceptDrops(true);
     setMouseTracking(true);
+    setFocusPolicy(Qt::StrongFocus);
     setMinimumSize(320, 220);
     setAutoFillBackground(false);
 }
@@ -30,6 +32,7 @@ void SplitViewerCanvas::paintEvent(QPaintEvent* event)
 
 void SplitViewerCanvas::mousePressEvent(QMouseEvent* event)
 {
+    setFocus(Qt::MouseFocusReason);
     if (m_owner)
     {
         m_owner->canvasMousePress(event->pos(), event->button(), event->modifiers());
@@ -100,4 +103,15 @@ void SplitViewerCanvas::resizeEvent(QResizeEvent* event)
 {
     Widget::resizeEvent(event);
     if (m_owner) m_owner->canvasResized();
+}
+
+void SplitViewerCanvas::keyPressEvent(QKeyEvent* event)
+{
+    if (m_owner && event != nullptr && event->key() == Qt::Key_Delete &&
+        event->modifiers() == Qt::NoModifier && m_owner->deleteSelectedLayer())
+    {
+        event->accept();
+        return;
+    }
+    Widget::keyPressEvent(event);
 }

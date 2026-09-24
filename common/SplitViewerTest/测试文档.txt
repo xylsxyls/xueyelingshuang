@@ -1,10 +1,10 @@
 ﻿SplitViewerTest测试文档
-版本：0.8
-更新日期：2026-09-23
-范围：Windows Release x64，Core及真实Qt产品界面；本轮为瞬时功能/兼容性回归，无长期压力测试。
+版本：0.9
+更新日期：2026-09-24
+范围：Windows Release x64，Core及真实Qt产品界面；本轮为图层删除、移动热区和自定义关于窗口的瞬时回归，无长期压力测试。
 
 一、入口和独立执行
-当前0.8源码新增172—177，本次测试EXE位于lib/SplitViewerTest1.0.exe；common/SplitViewerTest里的旧EXE未随本次产品增量发布更新。Windows Release x64的101—177共77项瞬时回归通过；保留发布依赖的组合另复测172—177及160共7项、6项Core冒烟通过。新增真实弹窗用例有10秒看门狗，旧用例仍保持原有超时边界。Debug、Linux/macOS及压力未执行。
+当前0.9源码新增178—182并将176改为自定义关于窗口检查，本次测试EXE位于lib/SplitViewerTest1.0.exe；common/SplitViewerTest里的旧EXE未随本次试运行增量复制。Windows Release x64构建通过，6项本轮目标UI用例（176、178—182）和新增Core整层删除冒烟通过；完整历史批次仅作回归参考，Debug、Linux/macOS及压力未执行。
 1. 在已有Qt运行时的部署环境启动common/SplitViewerTest/SplitViewerTest1.0.exe，在下拉框选择全部或数字用例，点击“运行所选回归并保存报告”；开发回归直接使用lib/SplitViewerTest1.0.exe和开发环境Qt路径。
 2. 命令行：SplitViewerTest1.0.exe --ui-audit <报告目录>；单项追加--case=119。目录为可写绝对路径，运行自动生成纯色PNG和.sv素材，不使用用户文件。
 3. 无效数字/缺参数返回2；用例失败返回非0；成功返回0并写total和failures。每个独立选择在新窗口/文档中重建该场景的前置动作，只统计所选断言，不依赖上批次残留。共享准备分为基础层、浮动层、全屏、原生、Core等场景。
@@ -19,7 +19,7 @@ JPEG像素允许每通道3以内的有损误差，PNG/BMP/TIFF验证能实际保
 失败保留截图、素材和报告；每个测试窗口退出释放容器，系统鼠标恢复原位置。真实播放器启动、查找窗口、正常退出各设5秒上限，无法正常退出仅终止本批子进程并判失败。现有入口没有全局看门狗和GUI取消实现，不再沿用此前“整体保护超时20秒”的不准确描述。
 
 三、稳定数字用例
-本次公共控件/弹窗改造追加172—177，均为Windows Release x64瞬时用例；先定义预期再执行，不沿用历史批次结果。172检查实际产品主窗口、画布、工具栏、状态栏和标签使用QtControls并保持显示；173点击真实加号后取消托管文件框，空白画布保持；174真实文件框选择含中文与空格路径的红色PNG，确认后画布中心显示红色；175保存选择既有文件时取消覆盖后可继续选择，再确认覆盖返回原路径，文件内容不由选择器改写；176实际关于按钮打开DialogManager提示框并确认关闭；177输入框接受文本和取消均正确回传。弹窗观察实际模态窗口及DialogManager数量，执行真实按钮点击，不通过browseFile替身返回结果。单项10秒看门狗超时记失败并关闭本项托管窗口，结束检查数量回到0。原101—171用于控件替换后的相邻功能回归。
+本次公共控件/弹窗改造保留172—177并新增178—182，均为Windows Release x64瞬时用例；先定义预期再执行，不沿用历史批次结果。172检查实际产品主窗口、画布、工具栏、状态栏和标签使用QtControls并保持显示；173点击真实加号后取消托管文件框，空白画布保持；174真实文件框选择含中文与空格路径的红色PNG，确认后画布中心显示红色；175保存选择既有文件时取消覆盖后可继续选择，再确认覆盖返回原路径，文件内容不由选择器改写；176实际关于按钮打开DialogManager自定义内容窗口，检查浅色QSS、分屏图标、标题/版本文案、关闭按钮和窗口回收；177输入框接受文本和取消均正确回传。178验证基础层的“删除图层”置灰；179验证带嵌套分屏的浮动图层通过右键删除整层；180验证画布获得焦点时Delete键删除浮动图层；181验证Delete键不影响基础层；182验证左上角四向移动光标及整层拖动结果。弹窗观察实际模态窗口及DialogManager数量，执行真实按钮点击，不通过browseFile替身返回结果。单项10秒看门狗超时记失败并关闭本项托管窗口，结束检查数量回到0。原101—171用于控件替换后的相邻功能回归。
 101. 空状态配色与加号（报告名称：empty colors and plus）
 102. 加号取消保持空状态（报告名称：plus cancel keeps empty）
 103. 菜单水平分割（报告名称：horizontal context split）
@@ -93,7 +93,20 @@ JPEG像素允许每通道3以内的有损误差，PNG/BMP/TIFF验证能实际保
 170. 重复接收已持有图层不增加数量，重置安全释放一次。
 171. 有效外部窗口搭配空宿主时拒绝嵌入，原窗口保持可见、独立且几何未改变。
 
+172. 可见控件使用QtControls并保持显示。
+173. 真实文件框取消保持空白工作区。
+174. 真实文件框确认加载中文空格路径图片。
+175. 托管覆盖确认取消重选及确认。
+176. 关于按钮打开DialogManager自定义内容窗口并正确关闭。
+177. 托管输入框接受及取消。
+178. 基础层删除图层置灰。
+179. 右键删除浮动图层包含嵌套分屏。
+180. Delete键按焦点删除浮动图层。
+181. Delete键不影响基础层。
+182. 浮动图层左上角移动光标与整体拖动。
+
 四、本轮执行证据
+2026-09-24本轮试运行：VS2013 Release|x64下SplitViewerCore、SplitViewer和SplitViewerTest均构建成功；--autotest Core冒烟返回0。目标UI用例176、178、179、180、181、182分别执行通过，报告位于common/SplitViewerTest/reports/layer-dialog-workflow-final/对应编号/ui-results.txt。完整历史批次本次启动后，161—168因本机LumaPlayer依赖未启动而失败，175在旧的嵌套覆盖弹窗场景中未完成；该批次已停止，不把它记为本轮通过依据。
 当前完整批次：common/SplitViewerTest/reports/refactor/final-release/ui-results.txt，total=71 failures=0，进程退出0。101—160保留原GUI/Core覆盖，161—168使用真实播放器跨进程与实际屏幕像素。全部为瞬时功能回归，没有执行长期压力；新增八项共享场景前置，独立选择只统计所选断言。缺播放器、启动超时或屏幕不可用视为失败，不以零执行成功。此前60项通过不能证明实际视频可见或继续播放，0.5的相应结论明确撤回。
 缺陷检出证据：visible-video/actual-old/actual-product-results.txt中旧发布程序的drag_video_pixels和fullscreen_video_pixels均为False；同输入修正版在actual-new下均为True。final批次还检出了真正双击退出后误暂停，修正点击转发后final-verified的166记录stopped=1、resumed=1、pixels=1、playing=1。前期失败结果均保留。
 独立正式产品与Test源码一致，当前最终哈希见refactor/release.txt；发布后common正式产品的视频拖入/全屏像素检查均为True，证据visible-video/refactor-product/actual-product-results.txt；发布版Test单独166通过，报告refactor/published-case166/ui-results.txt。此前真实MP4屏幕证据保留在visible-video/published-mp4，属于上轮版本。真实媒体为只读common/CookServer/res/video/cook_000001.mp4；没有修改播放器工程或用户素材。测试使用开发环境Qt路径，common发布目录不携带Qt运行库、插件、OpenGL运行库或qt.conf。
@@ -106,3 +119,50 @@ JPEG像素允许每通道3以内的有损误差，PNG/BMP/TIFF验证能实际保
 未执行：Linux/macOS/Android/iOS编译和运行、Debug、长期压力、极端DPI、多显示器交互、任意第三方进程的嵌入兼容性、系统原生文件选择框的人工作业、资源管理器缩略图的实际显示、故意崩溃后的dump解析。注册成功不等于Shell缩略图视觉验收；UI适配器选择路径不等于原生文件对话框测试。
 GIF使用本机Qt插件时不能编码，测试要求明确报错；不把该格式标成已支持写出。其他Qt插件未逐格式穷尽解码。
 无后台业务任务和网络协议，因此任务取消/并发网络故障不适用本轮主场景；文档树替换、窗口所有权、关闭回收及输入错误路径已经针对性覆盖。
+
+六、2026-09-24关于窗口视觉试运行补充
+本轮将已确认设计图落地为浅色卡片关于窗口，关闭阴影以等待QtControls统一实现。重新构建SplitViewer和SplitViewerTest的Windows Release x64版本，0警告0错误；176、178、179、180、181、182分别通过。176最新截图位于common/SplitViewerTest/reports/layer-dialog-workflow-final/about-dialog.png；其他目标用例报告仍位于对应编号目录。当前仅作为lib目录试运行证据，不把历史完整批次的播放器依赖问题和旧覆盖弹窗未完成计入本轮通过依据。
+七、2026-09-24关于窗口最终试运行验证
+176用例额外检查：aboutLogo的QPixmap非空且来自:/icons/SplitViewer.png；dialogTitle样式包含font-size:18px和font-weight:bold；关于框全局中心与主画布中心的横纵偏差均不超过1px；关闭后DialogManager托管数量归零。报告目录：common/SplitViewerTest/reports/about-dialog-final（含about-dialog.png内容区截图和about-window.png含标题栏截图）。
+QtControls无阴影DialogBase的1px外边框用于保持无边框窗口拖动目标轮廓可见。178—182用例分别通过基础层删除置灰、右键整层删除、Delete焦点删除、基础层保护、左上角SizeAllCursor及整层拖动。
+
+八、2026-09-24关于窗口阴影与移动轮廓验证
+1. 176在启用DialogBase四周阴影后继续验证资源图标、18px加粗标题、主画布中心偏差不超过1px、静态卡片边缘和DialogManager回收；结果为PASS，报告目录为common/SplitViewerTest/reports/shadow-corrected-176，截图不再包含重复黑色外框。
+2. 178—182在同一Release x64试运行版上重复执行，分别验证基础层删除置灰、右键整层删除、Delete焦点删除、基础层保护和左上角整体拖动；5项均PASS，均为total=1 failures=0。
+3. 影子绘制使用QtControls源码静态检查和Windows实际截图验证；Linux/macOS仍只做源码兼容性检查，未在本机编译。
+
+九、2026-09-24阴影复核修订验证
+1. 176新增Windows原生WM_NCHITTEST检查：取实际标题控件中心发送命中测试，必须返回HTCAPTION；静态截图检查阴影不再叠加第二个黑色框。移动期间外沿由WM_ENTERSIZEMOVE、WM_MOVING、WM_EXITSIZEMOVE状态绘制。
+2. 修订后176、178、179、180、181、182均为total=1 failures=0；关于框截图位于common/SplitViewerTest/reports/shadow-corrected-176/about-window.png。
+
+十、2026-09-24关于窗口阴影最终复核
+1. 176改为读取PNG证据的RGBA边缘像素，确认顶层透明外沿没有静态黑框；同时保留资源图标、标题18px加粗、中心定位、HTCAPTION和DialogManager回收断言。
+2. 透明阴影仅由DialogBase圆角软阴影绘制，移动状态不再绘制自定义边框；Windows目标矩形由系统移动循环负责，源码已检查WM_ENTERSIZEMOVE、WM_MOVING和WM_EXITSIZEMOVE路径。
+3. 最新176报告common/SplitViewerTest/reports/shadow-final-176为total=1 failures=0；178—182报告位于shadow-final-178至182，均为total=1 failures=0。Windows Release x64构建0警告0错误；本机未执行Linux/macOS实机拖动。
+
+十一、2026-09-24阴影停用后的回归验证
+1. 阴影参数仍保留在DialogParam和DialogBase接口中，SplitViewer继续传入2像素；测试不要求参数为false，而是确认参数存在时窗口仍为不透明矩形且不预留阴影空间。
+2. 176额外检查窗口四边为不透明矩形边缘、尺寸为520x340、关于内容居中、标题命中HTCAPTION、资源图标和DialogManager回收；结果PASS。
+3. 178—182分别检查基础层删除置灰、右键整层删除、Delete焦点删除、基础层保护和左上角整层拖动；结果均为total=1 failures=0。Core冒烟退出码为0。
+4. 本轮Windows Release x64构建QtControls、DialogManager、SplitViewer和SplitViewerTest通过；Linux/macOS仍只做源码兼容性检查，未在本机编译运行。最新报告位于common/SplitViewerTest/reports/shadow-disabled-176及shadow-disabled-178至182。
+
+十二、2026-09-24关于窗口标题栏关闭按钮验证
+1. 176继续验证关于框底部圆角“知道了”按钮关闭，并额外确认标题栏叉号存在且显示在右上角。
+2. 新增183“关于窗口标题栏叉号关闭”：检查dialogCloseButton可见、文字为Unicode乘号、点击后关闭窗口且托管DialogManager数量归零，结果PASS。
+3. 报告位于common/SplitViewerTest/reports/about-title-close-183-final/ui-results.txt；176回归报告位于common/SplitViewerTest/reports/about-dialog-close-176-final/ui-results.txt。Windows Release x64构建0警告0错误。
+
+十三、2026-09-24叉号字号调整验证
+1. 叉号文字字号调整为40，未改变按钮几何位置和关闭行为。
+2. 183用例及截图验证通过，最新报告位于common/SplitViewerTest/reports/about-title-close-183-font40-final/ui-results.txt。
+
+十四、2026-09-24叉号细线与悬停位置验证
+1. 叉号保持40号但取消粗体，标题栏关闭按钮几何位置下移1像素。
+2. 183用例验证叉号仍可见、可点击关闭、DialogManager回收数量为零；截图位于common/SplitViewerTest/reports/about-title-close-183-thin/about-window.png。
+
+十五、2026-09-24自绘叉号验证
+1. 183用例检查标题栏关闭按钮不再使用文字，图标非空且点击关闭流程正常。
+2. 截图位于common/SplitViewerTest/reports/about-title-close-183-drawn/about-window.png；Windows Release x64构建通过。
+
+十六、2026-09-24叉号位置最终验证
+1. 移除图标底部补偿，叉号与圆角外框同步下移1像素。
+2. 183用例通过，报告位于common/SplitViewerTest/reports/about-title-close-183-final/ui-results.txt。

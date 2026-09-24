@@ -53,6 +53,24 @@
     <ClCompile Include="CApiSmoke.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PdfReaderThumbnailList.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PdfReaderThumbnailList.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderEmptyState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PdfReaderEmptyState.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PdfReaderEmptyState.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="PdfReaderTest.qrc">
@@ -67,40 +85,118 @@
     <CustomBuild Include="PdfReaderTest.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\..\PdfReader\PdfReader\PdfReaderEmptyState.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PdfReaderRegression.cpp" />
     <ClCompile Include="..\..\PdfReader\PdfReader\PdfReader.cpp" />
-    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderCoreBridge.cpp"><Filter>Bridge</Filter></ClCompile>
-    <ClCompile Include="GeneratedFiles\$(Configuration)\moc_PdfReader.cpp"><Filter>UI</Filter></ClCompile>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderCoreBridge.cpp">
+      <Filter>Bridge</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\$(Configuration)\moc_PdfReader.cpp">
+      <Filter>UI</Filter>
+    </ClCompile>
     <ClInclude Include="PdfReaderRegression.h" />
     <CustomBuild Include="..\..\PdfReader\PdfReader\PdfReader.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\PdfReader\PdfReader\Config.cpp"><Filter>Configuration</Filter></ClCompile>
-    <ClInclude Include="..\..\PdfReader\PdfReader\Config.h"><Filter>Configuration</Filter></ClInclude>
-    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderThumbnailList.cpp"><Filter>UI</Filter></ClCompile>
-    <CustomBuild Include="..\..\PdfReader\PdfReader\PdfReaderThumbnailList.h"><Filter>UI</Filter></CustomBuild>
-    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderThumbnailDelegate.cpp"><Filter>UI</Filter></ClCompile>
-    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderThumbnailDelegate.h"><Filter>UI</Filter></ClInclude>
-    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderIconHelper.cpp"><Filter>UI</Filter></ClCompile>
-    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderIconHelper.h"><Filter>UI</Filter></ClInclude>
+    <ClCompile Include="..\..\PdfReader\PdfReader\Config.cpp">
+      <Filter>Configuration</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\PdfReader\PdfReader\Config.h">
+      <Filter>Configuration</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderThumbnailList.cpp">
+      <Filter>UI</Filter>
+    </ClCompile>
+    <CustomBuild Include="..\..\PdfReader\PdfReader\PdfReaderThumbnailList.h">
+      <Filter>UI</Filter>
+    </CustomBuild>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderThumbnailDelegate.cpp">
+      <Filter>UI</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderThumbnailDelegate.h">
+      <Filter>UI</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderIconHelper.cpp">
+      <Filter>UI</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderIconHelper.h">
+      <Filter>UI</Filter>
+    </ClInclude>
   </ItemGroup>
-  <ItemGroup><ClCompile Include="PdfReaderConfigurationTests.cpp"><Filter>Configuration</Filter></ClCompile><ClInclude Include="PdfReaderConfigurationTests.h"><Filter>Configuration</Filter></ClInclude></ItemGroup>
-  <ItemGroup><Filter Include="Configuration"><UniqueIdentifier>{23587d62-6a3c-4e4d-a460-e25427b5b823}</UniqueIdentifier></Filter></ItemGroup>
-  <ItemGroup><Filter Include="UI"><UniqueIdentifier>{2c9f76ce-3685-4a5b-ad68-436f5f302382}</UniqueIdentifier></Filter></ItemGroup>
-  <ItemGroup><Filter Include="Bridge"><UniqueIdentifier>{e2d8ddc6-10b0-4672-9e00-68a73f36c1bd}</UniqueIdentifier></Filter></ItemGroup>
-  <ItemGroup><Filter Include="Export"><UniqueIdentifier>{736ce155-fb49-487a-80b3-c94c99bcd077}</UniqueIdentifier></Filter></ItemGroup>
-  <ItemGroup><Filter Include="Models"><UniqueIdentifier>{fee72e6f-0257-4e9c-a430-13844e30d454}</UniqueIdentifier></Filter></ItemGroup>
-  <ItemGroup><ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderFileHelper.cpp"><Filter>Export</Filter></ClCompile><ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderFileHelper.h"><Filter>Export</Filter></ClInclude><ClCompile Include="CppConfigSmoke.cpp" /></ItemGroup>
-  <ItemGroup><ClCompile Include="PdfReaderTestHelper.cpp" /><ClInclude Include="PdfReaderTestHelper.h" /><ClCompile Include="PdfReaderTestUiHelper.cpp" /><ClInclude Include="PdfReaderTestUiHelper.h" /></ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogView.cpp" /><ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogView.h" />
-    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogFactory.cpp" /><ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogFactory.h" />
-    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogHelper.cpp" /><ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogHelper.h" />
-    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogRuntime.cpp" /><ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogRuntime.h" />
+    <ClCompile Include="PdfReaderConfigurationTests.cpp">
+      <Filter>Configuration</Filter>
+    </ClCompile>
+    <ClInclude Include="PdfReaderConfigurationTests.h">
+      <Filter>Configuration</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Configuration">
+      <UniqueIdentifier>{23587d62-6a3c-4e4d-a460-e25427b5b823}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="UI">
+      <UniqueIdentifier>{2c9f76ce-3685-4a5b-ad68-436f5f302382}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Bridge">
+      <UniqueIdentifier>{e2d8ddc6-10b0-4672-9e00-68a73f36c1bd}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Export">
+      <UniqueIdentifier>{736ce155-fb49-487a-80b3-c94c99bcd077}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Models">
+      <UniqueIdentifier>{fee72e6f-0257-4e9c-a430-13844e30d454}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderFileHelper.cpp">
+      <Filter>Export</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderFileHelper.h">
+      <Filter>Export</Filter>
+    </ClInclude>
+    <ClCompile Include="CppConfigSmoke.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PdfReaderTestHelper.cpp" />
+    <ClInclude Include="PdfReaderTestHelper.h" />
+    <ClCompile Include="PdfReaderTestUiHelper.cpp" />
+    <ClInclude Include="PdfReaderTestUiHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogView.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogView.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogFactory.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogFactory.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogHelper.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogHelper.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogRuntime.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogRuntime.h" />
     <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialogParam.h" />
   </ItemGroup>
-  <ItemGroup><ClCompile Include="PdfReaderDialogTests.cpp" /><ClInclude Include="PdfReaderDialogTests.h" /></ItemGroup>
-  <ItemGroup><ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderControlHelper.cpp" /><ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderControlHelper.h" /></ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PdfReaderDialogTests.cpp" />
+    <ClInclude Include="PdfReaderDialogTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderControlHelper.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderControlHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderDialog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

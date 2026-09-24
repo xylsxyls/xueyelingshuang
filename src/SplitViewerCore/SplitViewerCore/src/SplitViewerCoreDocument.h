@@ -79,6 +79,11 @@ public:
     @return 计算结果或借用对象，具体语义见函数说明。
     */
     SplitViewerCoreLayer* addLayer();
+    /** 删除指定浮动图层并释放其整棵分屏树。
+    @param [in] index 浮动图层索引，基础层使用-1且不会被删除
+    @return 是否找到并删除图层
+    */
+    bool deleteLayer(int index);
     /** 接收独立根节点的所有权；重复设置当前根节点不作改动。
     @param [in] root 树根
     */

@@ -18,5 +18,10 @@ struct PdfReaderDialogParam : public CustomDialogParam
 
     /** 初始化普通提示框参数和独立结果。 */
     PdfReaderDialogParam() : CustomDialogParam(static_cast<DialogType>(TypeId)),
-        mode(Message), password(false), value(new QString) {}
+        mode(Message), password(false), value(new QString)
+    {
+        m_hasShadow = true;
+        m_shadowSize = 2;
+        m_titleBarHeight = 32;
+    }
 };

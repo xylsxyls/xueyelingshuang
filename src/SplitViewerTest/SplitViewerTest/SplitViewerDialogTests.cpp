@@ -19,6 +19,9 @@
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
 #include <QtTest/QtTest>
+#ifdef Q_OS_WIN
+#include <Windows.h>
+#endif
 
 bool SplitViewerDialogTests::runCase(int id, const QString& directory)
 {
@@ -171,6 +174,87 @@ bool SplitViewerDialogTests::runCase(int id, const QString& directory)
         {
             return;
         }
+        if (id == 176 || id == 183)
+        {
+            QWidget* about = modal->findChild<QWidget*>(QStringLiteral("splitViewerAboutView"));
+            QPushButton* close = modal->findChild<QPushButton*>(QStringLiteral("aboutCloseButton"));
+            QPushButton* titleClose = modal->findChild<QPushButton*>(QStringLiteral("dialogCloseButton"));
+            QLabel* logo = modal->findChild<QLabel*>(QStringLiteral("aboutLogo"));
+            QLabel* dialogTitle = modal->findChild<QLabel*>(QStringLiteral("dialogTitle"));
+            const QRect canvasGlobal(window.centralWidget()->mapToGlobal(QPoint(0, 0)), window.centralWidget()->size());
+            const QRect dialogGlobal(modal->mapToGlobal(QPoint(0, 0)), modal->size());
+            const QImage windowShot = modal->grab().toImage();
+            const QString windowShotPath = QDir(directory).filePath(QStringLiteral("about-window.png"));
+            windowShot.save(windowShotPath);
+            const QImage evidenceShot(windowShotPath);
+            const QColor leftBorder = evidenceShot.isNull() ? QColor() : QColor::fromRgba(evidenceShot.pixel(0, evidenceShot.height() / 2));
+            const QColor rightBorder = evidenceShot.isNull() ? QColor() : QColor::fromRgba(evidenceShot.pixel(evidenceShot.width() - 1, evidenceShot.height() / 2));
+            const QColor topBorder = evidenceShot.isNull() ? QColor() : QColor::fromRgba(evidenceShot.pixel(evidenceShot.width() / 2, 0));
+            const QColor bottomBorder = evidenceShot.isNull() ? QColor() : QColor::fromRgba(evidenceShot.pixel(evidenceShot.width() / 2, evidenceShot.height() - 1));
+            const bool opaqueRectangularEdge =
+                leftBorder.alpha() >= 220 && rightBorder.alpha() >= 220 &&
+                topBorder.alpha() >= 220 && bottomBorder.alpha() >= 220;
+            const bool rectangularWindow = !evidenceShot.isNull() && opaqueRectangularEdge;
+            bool titleHit = true;
+#ifdef Q_OS_WIN
+            RECT nativeRect = {};
+            HWND nativeHandle = reinterpret_cast<HWND>(modal->winId());
+            if (nativeHandle == nullptr || dialogTitle == nullptr || !GetWindowRect(nativeHandle, &nativeRect))
+            {
+                titleHit = false;
+            }
+            else
+            {
+                const LONG titleX = (nativeRect.left + nativeRect.right) / 2;
+                const LONG titleY = nativeRect.top + dialogTitle->geometry().center().y();
+                const LPARAM titlePoint = MAKELPARAM(static_cast<WORD>(titleX), static_cast<WORD>(titleY));
+                titleHit = SendMessage(nativeHandle, WM_NCHITTEST, 0, titlePoint) == HTCAPTION;
+                details << "native title hit=" << titleHit << " rectangular window=" << rectangularWindow
+                    << " edge colors=" << leftBorder.red() << "," << leftBorder.green() << ","
+                    << leftBorder.blue() << "," << leftBorder.alpha() << ";"
+                    << rightBorder.red() << "," << rightBorder.green() << "," << rightBorder.blue()
+                    << "," << rightBorder.alpha() << ";" << topBorder.red() << ","
+                    << topBorder.green() << "," << topBorder.blue() << "," << topBorder.alpha()
+                    << ";" << bottomBorder.red() << "," << bottomBorder.green() << ","
+                    << bottomBorder.blue() << "," << bottomBorder.alpha() << "\n";
+            }
+#endif
+            details << "aboutTitle style=" << (dialogTitle != nullptr ? dialogTitle->styleSheet() : QString())
+                << " dialog=" << dialogGlobal.x() << "," << dialogGlobal.y() << "," << dialogGlobal.width() << "," << dialogGlobal.height()
+                << " canvas=" << canvasGlobal.x() << "," << canvasGlobal.y() << "," << canvasGlobal.width() << "," << canvasGlobal.height() << "\n";
+            valid = valid && about != nullptr && close != nullptr && titleClose != nullptr &&
+                titleClose->text().isEmpty() && !titleClose->icon().isNull() &&
+                close->styleSheet().contains(QStringLiteral("border-radius:9px")) &&
+                titleClose->styleSheet().contains(QStringLiteral("border-radius:6px")) &&
+                about->styleSheet().contains(QStringLiteral("#f7faff")) &&
+                logo != nullptr && logo->pixmap() != nullptr && !logo->pixmap()->isNull() &&
+                dialogTitle != nullptr && dialogTitle->styleSheet().contains(QStringLiteral("font-size:18px")) &&
+                dialogTitle->styleSheet().contains(QStringLiteral("font-weight:bold")) &&
+                rectangularWindow &&
+                !about->styleSheet().contains(QStringLiteral("border-radius:12px")) &&
+                dialogGlobal.size() == QSize(520, 340) &&
+                titleHit &&
+                qAbs(dialogGlobal.center().x() - canvasGlobal.center().x()) <= 1 &&
+                qAbs(dialogGlobal.center().y() - canvasGlobal.center().y()) <= 1;
+            details << "titleClose visible=" << (titleClose != nullptr && titleClose->isVisible())
+                << " text=" << (titleClose != nullptr ? titleClose->text() : QString())
+                << " aboutCloseStyle=" << (close != nullptr ? close->styleSheet() : QString()) << "\n";
+            if (about != nullptr)
+            {
+                about->grab().save(QDir(directory).filePath(QStringLiteral("about-dialog.png")));
+            }
+            if (id == 183 && titleClose != nullptr && titleClose->isVisible())
+            {
+                ++phase;
+                QTest::mouseClick(titleClose, Qt::LeftButton);
+            }
+            else if (id == 176 && close != nullptr && close->isVisible())
+            {
+                ++phase;
+                QTest::mouseClick(close, Qt::LeftButton);
+            }
+            return;
+        }
         if (id == 177 && phase == 1)
         {
             driver.stop();
@@ -228,7 +312,7 @@ bool SplitViewerDialogTests::runCase(int id, const QString& directory)
         valid = valid && phase == 4 && selected == fixture;
         valid = valid && original.open(QIODevice::ReadOnly) && original.readAll() == bytesBefore;
     }
-    else if (id == 176)
+    else if (id == 176 || id == 183)
     {
         QToolBar* bar = window.findChild<QToolBar*>();
         foreach (QAction* action, bar->actions())

@@ -3,6 +3,7 @@
 #include "SplitViewerCanvas.h"
 #include "Config.h"
 #include "SplitViewerDialogHelper.h"
+#include "SplitViewerAboutDialogParam.h"
 #include "SplitViewerLayoutHelper.h"
 #include "SplitViewerHitTestHelper.h"
 #include "SplitViewerImageHelper.h"
@@ -201,7 +202,6 @@ void SplitViewer::setSelectedHit(const SplitViewerHit& hit)
 
 void SplitViewer::canvasMousePress(const QPoint& point, Qt::MouseButton button, Qt::KeyboardModifiers modifiers)
 {
-    Q_UNUSED(modifiers);
     if (button != Qt::LeftButton)
     {
         return;
@@ -228,17 +228,24 @@ void SplitViewer::canvasMousePress(const QPoint& point, Qt::MouseButton button, 
     m_dragStartRect = hit.rect;
     m_resizeEdges = 0;
     m_resizingLayer = false;
+    bool moveFromTopLeft = false;
     if (hit.layer >= 0)
     {
         const qreal edge = 8.0;
-        if (std::abs(point.x() - hit.layerRect.left()) <= edge) m_resizeEdges |= 1;
-        if (std::abs(point.x() - hit.layerRect.right()) <= edge) m_resizeEdges |= 2;
-        if (std::abs(point.y() - hit.layerRect.top()) <= edge) m_resizeEdges |= 4;
-        if (std::abs(point.y() - hit.layerRect.bottom()) <= edge) m_resizeEdges |= 8;
-        m_resizingLayer = m_resizeEdges != 0;
+        moveFromTopLeft = std::abs(point.x() - hit.layerRect.left()) <= edge &&
+            std::abs(point.y() - hit.layerRect.top()) <= edge;
+        if (!moveFromTopLeft)
+        {
+            if (std::abs(point.x() - hit.layerRect.left()) <= edge) m_resizeEdges |= 1;
+            if (std::abs(point.x() - hit.layerRect.right()) <= edge) m_resizeEdges |= 2;
+            if (std::abs(point.y() - hit.layerRect.top()) <= edge) m_resizeEdges |= 4;
+            if (std::abs(point.y() - hit.layerRect.bottom()) <= edge) m_resizeEdges |= 8;
+            m_resizingLayer = m_resizeEdges != 0;
+        }
     }
-    m_draggingImage = !hit.splitter && hit.node && hit.node->isLeaf() && hit.node->view.hasImage && !m_resizingLayer && !(hit.layer >= 0 && (modifiers & Qt::ControlModifier));
-    m_draggingLayer = hit.layer >= 0 && (modifiers & Qt::ControlModifier) && !m_resizingLayer;
+    m_draggingImage = !moveFromTopLeft && !hit.splitter && hit.node && hit.node->isLeaf() && hit.node->view.hasImage && !m_resizingLayer && !(hit.layer >= 0 && (modifiers & Qt::ControlModifier));
+    m_draggingLayer = hit.layer >= 0 && !m_resizingLayer &&
+        (moveFromTopLeft || (modifiers & Qt::ControlModifier));
 }
 
 void SplitViewer::canvasMouseMove(const QPoint& point, Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers)
@@ -250,9 +257,15 @@ void SplitViewer::canvasMouseMove(const QPoint& point, Qt::MouseButtons buttons,
         Qt::CursorShape cursor=Qt::ArrowCursor;
         if (hitAll(point,hover))
         {
-            const bool x=hover.layer>=0 && ((std::abs(point.x()-hover.layerRect.left())<=7) || (std::abs(point.x()-hover.layerRect.right())<=7));
-            const bool y=hover.layer>=0 && ((std::abs(point.y()-hover.layerRect.top())<=7) || (std::abs(point.y()-hover.layerRect.bottom())<=7));
-            if (x && y) cursor=((point.x()<hover.layerRect.center().x())==(point.y()<hover.layerRect.center().y())) ? Qt::SizeFDiagCursor : Qt::SizeBDiagCursor;
+            const bool nearLeft=hover.layer>=0 && std::abs(point.x()-hover.layerRect.left())<=7;
+            const bool nearTop=hover.layer>=0 && std::abs(point.y()-hover.layerRect.top())<=7;
+            const bool nearRight=hover.layer>=0 && std::abs(point.x()-hover.layerRect.right())<=7;
+            const bool nearBottom=hover.layer>=0 && std::abs(point.y()-hover.layerRect.bottom())<=7;
+            const bool topLeftMove=nearLeft && nearTop;
+            const bool x=nearLeft || nearRight;
+            const bool y=nearTop || nearBottom;
+            if (topLeftMove) cursor=Qt::SizeAllCursor;
+            else if (x && y) cursor=((point.x()<hover.layerRect.center().x())==(point.y()<hover.layerRect.center().y())) ? Qt::SizeFDiagCursor : Qt::SizeBDiagCursor;
             else if (x) cursor=Qt::SizeHorCursor;
             else if (y) cursor=Qt::SizeVerCursor;
             else if (hover.layer>=0 && (modifiers & Qt::ControlModifier)) cursor=Qt::SizeAllCursor;
@@ -391,6 +404,8 @@ void SplitViewer::canvasContextMenu(const QPoint& point, const QPoint& globalPoi
     Menu menu(this);
     QAction* horizontal = menu.addAction(QStringLiteral("水平分割"));
     QAction* vertical = menu.addAction(QStringLiteral("垂直分割"));
+    QAction* deleteLayerAction = menu.addAction(QStringLiteral("删除图层"));
+    deleteLayerAction->setEnabled(hit.layer >= 0);
     QAction* deleteAction = menu.addAction(QStringLiteral("删除当前分屏"));
     deleteAction->setEnabled(hit.node != hit.root);
     menu.addSeparator();
@@ -420,6 +435,10 @@ void SplitViewer::canvasContextMenu(const QPoint& point, const QPoint& globalPoi
     else if (chosen == deleteAction)
     {
         deleteAt(hit);
+    }
+    else if (chosen == deleteLayerAction)
+    {
+        deleteLayerAt(hit.layer);
     }
     else if (chosen == load && hit.node)
     {
@@ -468,6 +487,51 @@ void SplitViewer::deleteAt(const SplitViewerHit& hit)
     clearInteraction();
     updateStatus();
     m_canvas->update();
+}
+
+void SplitViewer::detachEmbeddedTree(SplitViewerCoreNode* root)
+{
+    if (!root)
+    {
+        return;
+    }
+    std::vector<SplitViewerCoreNode*> leaves;
+    SplitViewerCoreNode::collectLeaves(root, leaves);
+    for (size_t i = 0; i < leaves.size(); ++i)
+    {
+        QWidget* container = m_embedded.take(leaves[i]);
+        if (container)
+        {
+            SplitViewerDetachForeignWindow(container);
+        }
+    }
+}
+
+bool SplitViewer::deleteLayerAt(int index)
+{
+    SplitViewerCoreLayer* layer = m_document.layerAt(index);
+    if (!layer)
+    {
+        return false;
+    }
+    detachEmbeddedTree(layer->root);
+    if (!m_document.deleteLayer(index))
+    {
+        return false;
+    }
+    clearInteraction();
+    updateStatus();
+    m_canvas->update();
+    return true;
+}
+
+bool SplitViewer::deleteSelectedLayer()
+{
+    if (!m_canvas || !m_canvas->hasFocus())
+    {
+        return false;
+    }
+    return deleteLayerAt(m_document.selectedLayer());
 }
 
 void SplitViewer::loadImageToLeaf(SplitViewerCoreNode* leaf, const QString& path)
@@ -696,7 +760,15 @@ void SplitViewer::toggleBorder()
 
 void SplitViewer::showAbout()
 {
-    SplitViewerDialogHelper::showMessage(this, QStringLiteral("关于分屏看图"), QStringLiteral("分屏看图 1.0\nQt跨平台界面 + SplitViewerCore共享核心\n支持分屏、浮动图层、图片缩放、配置保存和外部窗口嵌入。"));
+    SplitViewerAboutDialogParam param;
+    param.m_title = QStringLiteral("关于分屏看图");
+    param.m_parent = windowHandle();
+    param.m_hasShadow = true;
+    param.m_shadowSize = 2;
+    param.m_titleBarHeight = 42;
+    param.centerRect = QRect(m_canvas->mapToGlobal(QPoint(0, 0)), m_canvas->size());
+    param.message = QStringLiteral("把多张图片的精彩区域组合到同一屏幕，也可以嵌入动态窗口。");
+    DialogManager::instance().makeDialog(param);
 }
 
 void SplitViewer::embedExternalWindow()
