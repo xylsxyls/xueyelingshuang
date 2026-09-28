@@ -9,6 +9,7 @@
 #include <cmath>
 
 DialogShadow::DialogShadow(QWidget* dialog) :
+m_config(),
 m_dialog(dialog),
 m_size(0),
 m_imageSize(0),
@@ -35,10 +36,15 @@ DialogShadow::~DialogShadow()
 
 void DialogShadow::setShadowSize(qint32 size)
 {
-    m_size = (std::max)(0, (std::min)(static_cast<int>(size), static_cast<int>(DialogShadowConfig::kMaximumSize)));
-    if (m_size == 0 && m_outlineMove)
+    m_size = (std::max)(0, (std::min)(static_cast<int>(size), static_cast<int>(m_config.m_maximumSize)));
+    if (m_size == 0)
     {
-        finishOutlineMove(false);
+        if (m_outlineMove)
+        {
+            finishOutlineMove(false);
+        }
+        m_image = QImage();
+        m_bodySize = QSize();
     }
     synchronize();
 }
@@ -48,6 +54,10 @@ void DialogShadow::synchronize()
     if (m_size <= 0 || !m_dialog->isVisible() || m_dialog->isMinimized() ||
         m_dialog->isMaximized() || m_dialog->isFullScreen())
     {
+        if (m_outlineMove)
+        {
+            finishOutlineMove(false);
+        }
         hide();
         return;
     }
@@ -56,6 +66,11 @@ void DialogShadow::synchronize()
         return;
     }
     updateImage(m_dialog->size(), m_dialog->devicePixelRatio());
+    if (m_image.isNull())
+    {
+        hide();
+        return;
+    }
     const QRect body(m_dialog->mapToGlobal(QPoint(0, 0)), m_dialog->size());
     setGeometry(body.adjusted(-m_margin, -m_margin, m_margin, m_margin));
     show();
@@ -66,6 +81,10 @@ void DialogShadow::synchronize()
 
 void DialogShadow::beginOutlineMove(const QPoint& globalPos)
 {
+    if (m_size <= 0 || m_outlineMove || !m_dialog->isVisible())
+    {
+        return;
+    }
     m_outlineMove = true;
     m_targetVisible = false;
     m_dragStart = globalPos;
@@ -96,9 +115,16 @@ void DialogShadow::moveOutline(const QPoint& globalPos)
 
 void DialogShadow::finishOutlineMove(bool accepted)
 {
+    if (!m_outlineMove)
+    {
+        return;
+    }
     m_outlineMove = false;
     m_targetVisible = false;
-    m_dialog->releaseMouse();
+    if (QWidget::mouseGrabber() == m_dialog)
+    {
+        m_dialog->releaseMouse();
+    }
     if (accepted)
     {
         m_dialog->move(m_dragTarget.topLeft());
@@ -126,6 +152,7 @@ bool DialogShadow::eventFilter(QObject* watched, QEvent* event)
             hide();
             break;
         }
+        case QEvent::UngrabMouse:
         case QEvent::WindowDeactivate:
         {
             if (m_outlineMove)
@@ -139,6 +166,7 @@ bool DialogShadow::eventFilter(QObject* watched, QEvent* event)
         case QEvent::Show:
         case QEvent::WindowStateChange:
         case QEvent::WindowActivate:
+        case QEvent::ScreenChangeInternal:
         case QEvent::ZOrderChange:
         {
             synchronize();
@@ -164,9 +192,10 @@ void DialogShadow::paintEvent(QPaintEvent* event)
         if (m_targetVisible)
         {
             // Only the tracked target is drawn; no native XOR frame runs in parallel.
-            painter.setPen(QPen(Qt::black, DialogShadowConfig::kOutlineWidth));
+            painter.setPen(QPen(m_config.m_outlineColor, m_config.m_outlineWidth));
             painter.setBrush(Qt::NoBrush);
-            painter.drawRect(rect().adjusted(1, 1, -1, -1));
+            const int inset = (m_config.m_outlineWidth + 1) / 2;
+            painter.drawRect(rect().adjusted(inset, inset, -inset, -inset));
         }
         return;
     }
@@ -182,6 +211,12 @@ qreal DialogShadow::coverage(qreal sample, qreal start, qreal end, qreal sigma) 
 
 void DialogShadow::updateImage(const QSize& bodySize, qreal ratio)
 {
+    if (bodySize.isEmpty() || !std::isfinite(ratio) || ratio <= 0)
+    {
+        m_image = QImage();
+        m_bodySize = QSize();
+        return;
+    }
     if (m_bodySize == bodySize && m_imageSize == m_size && qFuzzyCompare(m_ratio, ratio))
     {
         return;
@@ -189,11 +224,18 @@ void DialogShadow::updateImage(const QSize& bodySize, qreal ratio)
     m_bodySize = bodySize;
     m_imageSize = m_size;
     m_ratio = ratio;
-    const qreal sigma = m_size * DialogShadowConfig::kBroadSigmaFactor;
-    const qreal offset = m_size * DialogShadowConfig::kDownwardOffsetFactor;
-    m_margin = qCeil(sigma * DialogShadowConfig::kCutoffSigma + offset);
-    m_image = QImage(qCeil((bodySize.width() + m_margin * 2) * ratio),
-        qCeil((bodySize.height() + m_margin * 2) * ratio), QImage::Format_ARGB32_Premultiplied);
+    const qreal sigma = m_size * m_config.m_broadSigmaFactor;
+    const qreal offset = m_size * m_config.m_downwardOffsetFactor;
+    m_margin = qCeil(sigma * m_config.m_cutoffSigma + offset);
+    const qreal width = (bodySize.width() + qreal(m_margin) * 2) * ratio;
+    const qreal height = (bodySize.height() + qreal(m_margin) * 2) * ratio;
+    if (width > m_config.m_maxImagePixels || height > m_config.m_maxImagePixels ||
+        std::ceil(width) * std::ceil(height) > m_config.m_maxImagePixels)
+    {
+        m_image = QImage();
+        return;
+    }
+    m_image = QImage(qCeil(width), qCeil(height), QImage::Format_ARGB32_Premultiplied);
     if (m_image.isNull())
     {
         m_bodySize = QSize();
@@ -205,13 +247,13 @@ void DialogShadow::updateImage(const QSize& bodySize, qreal ratio)
     const qreal top = m_margin;
     const qreal right = left + bodySize.width();
     const qreal bottom = top + bodySize.height();
-    const QColor color = DialogShadowConfig::color();
+    const QColor color = m_config.m_color;
     for (int y = 0; y < m_image.height(); ++y)
     {
         QRgb* scan = reinterpret_cast<QRgb*>(m_image.scanLine(y));
         const qreal py = (y + 0.5) / ratio;
         const qreal broadY = coverage(py, top + offset, bottom + offset, sigma);
-        const qreal contactY = coverage(py, top + DialogShadowConfig::kContactOffset, bottom + DialogShadowConfig::kContactOffset, m_size);
+        const qreal contactY = coverage(py, top + m_config.m_contactOffset, bottom + m_config.m_contactOffset, m_size);
         for (int x = 0; x < m_image.width(); ++x)
         {
             const qreal px = (x + 0.5) / ratio;
@@ -221,7 +263,7 @@ void DialogShadow::updateImage(const QSize& bodySize, qreal ratio)
             }
             const qreal broad = broadY * coverage(px, left, right, sigma);
             const qreal contact = contactY * coverage(px, left, right, m_size);
-            const int alpha = qRound(255 * (DialogShadowConfig::kBroadOpacity * broad + DialogShadowConfig::kContactOpacity * contact));
+            const int alpha = qRound(255 * (m_config.m_broadOpacity * broad + m_config.m_contactOpacity * contact));
             scan[x] = qPremultiply(qRgba(color.red(), color.green(), color.blue(), alpha));
         }
     }

@@ -1,4 +1,8 @@
-﻿#include "PdfReaderRegression.h"
+﻿#include "PdfReaderTestConfigGuard.h"
+#include "PdfReaderRegression.h"
+#include "PdfReaderReviewTests.h"
+#include "PdfReaderTestModalGuard.h"
+#include "PdfReaderTestWorkerGate.h"
 #include "PdfReaderTestHelper.h"
 #include "PdfReaderTestUiHelper.h"
 #include "PdfReaderConfigurationTests.h"
@@ -46,6 +50,14 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
         {11, QStringLiteral("多页可见渲染与边缘拖动滚动")}, {12, QStringLiteral("失败打开与覆盖取消保留状态")},
         {13, QStringLiteral("保存失败保留原件和恢复文件")}, {14, QStringLiteral("范围先验证再选择输出")},
         {15, QStringLiteral("Core配置校验快照与实例隔离")}, {16, QStringLiteral("桌面配置问号按钮与图标")},
+        {21, QStringLiteral("配置单例和显式标题选项")},
+        {22, QStringLiteral("阴影生命周期和菜单像素")},
+        {23, QStringLiteral("异步接纳身份与忙碌拒绝")},
+        {24, QStringLiteral("旧预览与新文档隔离")},
+        {25, QStringLiteral("在途关闭与多窗口隔离")},
+        {26, QStringLiteral("失败终态及错误信息隔离")},
+        {27, QStringLiteral("覆盖原件失败保留工作页序并可重试")},
+        {28, QStringLiteral("渲染预算失败终态与缩小后恢复")},
         {20, QStringLiteral("正文滚动同步当前页与缩略图")},
         {19, QStringLiteral("DialogManager生命周期与QtControls控件")}
     };
@@ -85,12 +97,19 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
         elapsed.start();
         log << "RUN " << id << " " << names[id] << "\n";
         log.flush();
+        bool completed = false;
         try
         {
+            PdfReaderTestConfigGuard configGuard;
+            PdfReaderTestModalGuard modalGuard;
             const QString dir = batch + "/case" + QString::number(id);
             PdfReaderTestHelper::require(QDir().mkpath(dir), "case directory");
             const QString input = PdfReaderTestHelper::fixture(dir, QStringLiteral("中文样本.pdf"), id == 11 ? 120 : 3);
-            if (id == 19)
+            if (id >= 21)
+            {
+                PdfReaderReviewTests::run(id, input, dir);
+            }
+            else if (id == 19)
             {
                 PdfReaderDialogTests::run(input, dir);
             }
@@ -152,11 +171,13 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
             }
             else
             {
-                Config testConfig;
-                testConfig.useNativeFileDialog = false;
-                PdfReader window(nullptr, testConfig);
+
+                g_config.m_useNativeFileDialog = false;
+                PdfReader window(nullptr);
                 window.show();
                 PdfReaderTestHelper::require(window.openFile(input), "UI open fixture");
+        PdfReaderTestUiHelper::waitIdle(window);
+        PdfReaderTestHelper::require(window.lastOperationSucceeded(), "open actually completed");
                 PdfReaderTestUiHelper::wait(80);
                 PdfReaderThumbnailList* list = window.findChild<PdfReaderThumbnailList*>();
                 QScrollArea* scroll = window.findChild<QScrollArea*>(QStringLiteral("documentScroll"));
@@ -365,7 +386,9 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
                         PdfReaderTestUiHelper::answerDialog(true);
                     });
                     timer.start(20);
-                    PdfReaderTestHelper::require(!window.openFile(dir + "/missing.pdf"), "missing document rejected");
+                    PdfReaderTestHelper::require(window.openFile(dir + "/missing.pdf"), "missing document request accepted");
+                    PdfReaderTestUiHelper::waitIdle(window);
+                    PdfReaderTestHelper::require(!window.lastOperationSucceeded(), "missing document completed with failure");
                     timer.stop();
                     PdfReaderTestHelper::require(list->currentRow() == 1 && list->count() == 3, "failed open preserves old view");
                 }
@@ -407,26 +430,49 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
                     });
                     timer.start(20);
                     PdfReaderTestHelper::require(QMetaObject::invokeMethod(&window, "savePageRange", Qt::DirectConnection), "range action exists");
+                    PdfReaderTestUiHelper::waitIdle(window);
                     timer.stop();
                     PdfReaderTestHelper::require(inputSeen && errorSeen && !fileSeen, "invalid range rejected before file dialog");
                     cancel = true;
                     inputSeen = errorSeen = fileSeen = false;
                     timer.start(20);
                     PdfReaderTestHelper::require(QMetaObject::invokeMethod(&window, "savePageRange", Qt::DirectConnection), "range cancel action exists");
+                    PdfReaderTestUiHelper::waitIdle(window);
                     timer.stop();
                     PdfReaderTestHelper::require(inputSeen && !errorSeen && !fileSeen, "cancel range does not reach output dialog");
                     PdfReaderTestHelper::require(rangeDialogOptions, "range dialog uses the managed title bar close button and height");
                 }
                 window.grab().save(dir + "/reader.png");
                 window.close();
+                PdfReaderTestUiHelper::waitIdle(window);
             }
-            ++passed;
-            log << "PASS " << id << " " << elapsed.elapsed() << "ms\n";
+            PdfReaderTestHelper::require(!modalGuard.m_timedOut, "modal dialog exceeded deadline");
+            completed = true;
         }
         catch (const std::exception& error)
         {
-            ++failed;
+            completed = false;
             log << "FAIL " << id << " " << error.what() << " " << elapsed.elapsed() << "ms\n";
+        }
+        try
+        {
+            PdfReaderTestWorkerGate cleanupFence;
+            PdfReaderTestUiHelper::waitUntil([&]() { return cleanupFence.m_entered->load(); }, "previous session cleanup completed");
+            PdfReaderTestHelper::require(!cleanupFence.m_timedOut->load(), "cleanup dispatch succeeded");
+        }
+        catch (const std::exception& error)
+        {
+            log << "CLEANUP FAIL " << error.what() << "\n";
+            completed = false;
+        }
+        if (completed)
+        {
+            ++passed;
+            log << "PASS " << id << " " << elapsed.elapsed() << "ms\n";
+        }
+        else
+        {
+            ++failed;
         }
         log.flush();
     }

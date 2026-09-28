@@ -128,7 +128,37 @@ IF(WIN32)
 ENDIF()
 # Desktop UI uses the shared control and dialog libraries.
 IF(DEBUGRELEASE STREQUAL "debug")
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControlsd DialogManagerd QssStringd CStringManagerd LogManagerd)
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControlsd DialogManagerd QssStringd CStringManagerd LogManagerd CTaskThreadManagerd Semaphored)
 ELSE()
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControls DialogManager QssString CStringManager LogManager)
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControls DialogManager QssString CStringManager LogManager CTaskThreadManager Semaphore)
 ENDIF()
+
+TARGET_SOURCES(${PROJECT_NAME} PRIVATE PdfReaderTestConfigGuard.cpp PdfReaderTestConfigGuard.h)
+
+TARGET_SOURCES(${PROJECT_NAME} PRIVATE
+    ../../PdfReader/PdfReader/PdfReaderDialogParam.cpp
+)
+
+TARGET_SOURCES(${PROJECT_NAME} PRIVATE
+    ../../PdfReader/PdfReader/PdfReaderTask.h
+    ../../PdfReader/PdfReader/PdfReaderTask.cpp
+    ../../PdfReader/PdfReader/PdfReaderTaskManager.h
+    ../../PdfReader/PdfReader/PdfReaderTaskManager.cpp
+    ../../PdfReader/PdfReader/PdfReaderRequest.h
+    ../../PdfReader/PdfReader/PdfReaderRequest.cpp
+    ../../PdfReader/PdfReader/PdfReaderResult.h
+    ../../PdfReader/PdfReader/PdfReaderResult.cpp
+    ../../PdfReader/PdfReader/PdfReaderSessionState.h
+    ../../PdfReader/PdfReader/PdfReaderSessionState.cpp
+    ../../PdfReader/PdfReader/PdfReaderSession.h
+    ../../PdfReader/PdfReader/PdfReaderSession.cpp
+)
+
+TARGET_SOURCES(${PROJECT_NAME} PRIVATE
+    PdfReaderTestWorkerGate.h
+    PdfReaderTestWorkerGate.cpp
+    PdfReaderTestModalGuard.h
+    PdfReaderTestModalGuard.cpp
+    PdfReaderReviewTests.h
+    PdfReaderReviewTests.cpp
+)

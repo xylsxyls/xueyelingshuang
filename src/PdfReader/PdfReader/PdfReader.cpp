@@ -1,5 +1,5 @@
 ﻿#include "PdfReader.h"
-#include "PdfReaderCoreBridge.h"
+#include "PdfReaderSession.h"
 #include "PdfReaderIconHelper.h"
 #include "PdfReaderFileHelper.h"
 #include "PdfReaderDialogHelper.h"
@@ -27,10 +27,13 @@
 #include <QtCore/QDir>
 #include "CStringManager/CStringManagerAPI.h"
 
-PdfReader::PdfReader(QWidget* parent, const Config& config)
+PdfReader::PdfReader(QWidget* parent)
     : MainWindow(parent)
-    , m_config(config)
     , m_core(nullptr)
+    , m_closeRequested(false)
+    , m_closeReady(false)
+    , m_lastOperationSucceeded(false)
+    , m_viewGeneration(1)
     , m_thumbnails(nullptr)
     , m_pageScroll(nullptr)
     , m_pageContainer(nullptr)
@@ -46,62 +49,59 @@ PdfReader::PdfReader(QWidget* parent, const Config& config)
     , m_zoomOutAction(nullptr)
     , m_zoomResetAction(nullptr)
     , m_helpAction(nullptr)
-    , m_zoom(config.initialZoom)
-    , m_thumbnailZoom(config.initialThumbnailZoom)
+    , m_zoom(g_config.m_initialZoom)
+    , m_thumbnailZoom(g_config.m_initialThumbnailZoom)
     , m_pageRefreshInProgress(false)
     , m_selectionScrollInProgress(false)
 {
-    m_config.validate();
-    m_core = new PdfReaderCoreBridge(m_config);
+    g_config.validate();
+    m_core.reset(new PdfReaderSession(this));
     buildUi();
-    QString error;
-    if (!m_core->init(m_config.core, &error))
-        PdfReaderDialogHelper::message(this, m_config.applicationTitle, error, m_config);
     updateActions();
 }
 
 PdfReader::~PdfReader()
 {
-    delete m_core;
+
 }
 
 void PdfReader::buildUi()
 {
-    setWindowTitle(m_config.applicationTitle);
-    resize(m_config.windowSize);
-    setMinimumSize(m_config.minimumWindowSize);
-    setStyleSheet(m_config.windowStyle + QStringLiteral("QLabel#pageLabel{") + m_config.normalPageStyle +
-        QStringLiteral("}QLabel#pageLabel[selectedPage=\"true\"]{") + m_config.selectedPageStyle + QStringLiteral("}"));
+    setWindowTitle(g_config.m_applicationTitle);
+    resize(g_config.m_windowSize);
+    setMinimumSize(g_config.m_minimumWindowSize);
+    setStyleSheet(g_config.m_windowStyle + QStringLiteral("QLabel#pageLabel{") + QString::fromStdWString(CStringManager::Format(g_config.m_normalPageStyle.toStdWString().c_str(), g_config.m_pageBorderWidth)) +
+        QStringLiteral("}QLabel#pageLabel[selectedPage=\"true\"]{") + QString::fromStdWString(CStringManager::Format(g_config.m_selectedPageStyle.toStdWString().c_str(), g_config.m_pageBorderWidth)) + QStringLiteral("}"));
 
     m_toolbar = new ToolBar(this);
-    m_toolbar->setWindowTitle(m_config.toolbarTitle);
+    m_toolbar->setWindowTitle(g_config.m_toolbarTitle);
     addToolBar(m_toolbar);
     m_toolbar->setMovable(false);
-    m_openAction = m_toolbar->addAction(m_config.openText, this, SLOT(chooseAndOpen()));
-    m_saveAction = m_toolbar->addAction(m_config.saveText, this, SLOT(saveMain()));
-    m_saveAsAction = m_toolbar->addAction(m_config.saveAsText, this, SLOT(saveAs()));
+    m_openAction = m_toolbar->addAction(g_config.m_openText, this, SLOT(chooseAndOpen()));
+    m_saveAction = m_toolbar->addAction(g_config.m_saveText, this, SLOT(saveMain()));
+    m_saveAsAction = m_toolbar->addAction(g_config.m_saveAsText, this, SLOT(saveAs()));
     m_toolbar->addSeparator();
-    m_saveRangeAction = m_toolbar->addAction(m_config.exportRangeText, this, SLOT(savePageRange()));
-    m_saveEachAction = m_toolbar->addAction(m_config.exportEachText, this, SLOT(saveEachPage()));
+    m_saveRangeAction = m_toolbar->addAction(g_config.m_exportRangeText, this, SLOT(savePageRange()));
+    m_saveEachAction = m_toolbar->addAction(g_config.m_exportEachText, this, SLOT(saveEachPage()));
     m_toolbar->addSeparator();
-    m_zoomOutAction = m_toolbar->addAction(m_config.zoomOutText, this, SLOT(zoomOut()));
-    m_zoomResetAction = m_toolbar->addAction(m_config.zoomResetText, this, SLOT(resetZoom()));
+    m_zoomOutAction = m_toolbar->addAction(g_config.m_zoomOutText, this, SLOT(zoomOut()));
+    m_zoomResetAction = m_toolbar->addAction(g_config.m_zoomResetText, this, SLOT(resetZoom()));
     m_zoomResetAction->setText(QString::number(qRound(m_zoom * 100)) + QStringLiteral("%"));
-    m_zoomInAction = m_toolbar->addAction(m_config.zoomInText, this, SLOT(zoomIn()));
+    m_zoomInAction = m_toolbar->addAction(g_config.m_zoomInText, this, SLOT(zoomIn()));
     m_toolbar->addSeparator();
     QWidget* spacer = new Widget(m_toolbar);
     spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     m_toolbar->addWidget(spacer);
     m_helpAction = m_toolbar->addAction(PdfReaderIconHelper::aboutIcon(), QString(), this, SLOT(showHelp()));
     m_helpAction->setObjectName(QStringLiteral("aboutAction"));
-    m_helpAction->setToolTip(m_config.aboutTooltip);
+    m_helpAction->setToolTip(g_config.m_aboutTooltip);
     setWindowIcon(PdfReaderIconHelper::applicationIcon());
 
     Splitter* splitter = new Splitter(this);
     splitter->setOrientation(Qt::Horizontal);
-    m_thumbnails = new PdfReaderThumbnailList(splitter, m_config);
-    m_thumbnails->setMinimumWidth(m_config.sidebarMinimumWidth);
-    m_thumbnails->setItemDelegate(new PdfReaderThumbnailDelegate(m_thumbnails, m_config));
+    m_thumbnails = new PdfReaderThumbnailList(splitter);
+    m_thumbnails->setMinimumWidth(g_config.m_sidebarMinimumWidth);
+    m_thumbnails->setItemDelegate(new PdfReaderThumbnailDelegate(m_thumbnails));
     m_thumbnails->installEventFilter(this);
     m_thumbnails->viewport()->installEventFilter(this);
     connect(m_thumbnails, SIGNAL(currentRowChanged(int)), this, SLOT(onSelectionChanged()));
@@ -115,69 +115,97 @@ void PdfReader::buildUi()
     m_pageScroll->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
     m_pageContainer = new Widget(m_pageScroll);
     m_pageLayout = new QVBoxLayout(m_pageContainer);
-    m_pageLayout->setContentsMargins(m_config.bodyMarginX, m_config.bodyMarginY, m_config.bodyMarginX, m_config.bodyMarginY);
-    m_pageLayout->setSpacing(m_config.bodySpacing);
+    m_pageLayout->setContentsMargins(g_config.m_bodyMarginX, g_config.m_bodyMarginY, g_config.m_bodyMarginX, g_config.m_bodyMarginY);
+    m_pageLayout->setSpacing(g_config.m_bodySpacing);
     m_emptyState = new PdfReaderEmptyState(m_pageContainer);
     connect(m_emptyState, SIGNAL(clicked()), this, SLOT(chooseAndOpen()));
     m_pageLayout->addWidget(m_emptyState, 1);
     m_pageScroll->setWidget(m_pageContainer);
     splitter->setStretchFactor(1, 1);
     setCentralWidget(splitter);
-    splitter->setSizes(QList<int>() << m_config.sidebarWidth << m_config.bodyWidth);
+    splitter->setSizes(QList<int>() << g_config.m_sidebarWidth << g_config.m_bodyWidth);
     connect(m_pageScroll->verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(onPageScrollChanged()));
     connect(m_pageScroll->horizontalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(renderVisiblePages()));
     connect(m_thumbnails->verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(renderVisiblePages()));
     m_openAction->setShortcut(QKeySequence::Open);
     m_saveAction->setShortcut(QKeySequence::Save);
     m_saveAsAction->setShortcut(QKeySequence::SaveAs);
-    statusBar()->showMessage(m_config.readyText);
+    statusBar()->showMessage(g_config.m_readyText);
 }
 
 bool PdfReader::askForPassword(QString* password)
 {
     QString value;
-    if (!PdfReaderDialogHelper::input(this, m_config.passwordTitle, m_config.passwordPrompt, value, true, m_config)) return false;
-    if (password) *password = value;
+    if (!PdfReaderDialogHelper::input(this, g_config.m_passwordTitle, g_config.m_passwordPrompt, value, true))
+    {
+        return false;
+    }
+    if (password)
+    {
+        *password = value;
+    }
     return true;
 }
 
-bool PdfReader::openWithPassword(const QString& filePath)
+bool PdfReader::openWithPassword(const PdfReaderRequest& request)
 {
-    QString password;
-    for (;;)
-    {
-        QString error;
-        if (m_core->open(filePath, password, &error))
-            return true;
-        if (!error.contains(QStringLiteral("password"), Qt::CaseInsensitive))
+    return submitOperation(request, [this](const PdfReaderResult& result) {
+        if (!result.m_success)
         {
-            PdfReaderDialogHelper::message(this, m_config.openFailedText, error, m_config);
-            return false;
+            if (result.m_code == PdfReaderCoreCResultPasswordRequired)
+            {
+                PdfReaderRequest retry = result.m_request;
+                if (askForPassword(&retry.m_password))
+                {
+                    openWithPassword(retry);
+                }
+            }
+            else
+            {
+                PdfReaderDialogHelper::message(this,
+                    result.m_request.m_operation == PdfReaderOpen ? g_config.m_openFailedText : g_config.m_insertFailedText,
+                    result.m_error);
+            }
+            return;
         }
-        if (!askForPassword(&password)) return false;
-    }
-
+        const bool opening = result.m_request.m_operation == PdfReaderOpen;
+        if (opening)
+        {
+            m_currentPath = result.m_request.m_path;
+            m_thumbnails->clear();
+        }
+        refreshDocument();
+        m_thumbnails->setCurrentRow(opening ? 0 : result.m_request.m_index, QItemSelectionModel::ClearAndSelect);
+        if (opening)
+        {
+            m_thumbnails->verticalScrollBar()->setValue(0);
+            m_pageScroll->verticalScrollBar()->setValue(0);
+            m_pageScroll->horizontalScrollBar()->setValue(0);
+            statusBar()->showMessage(QString::fromStdWString(CStringManager::Format(g_config.m_openedFormat.toStdWString().c_str(),
+                QFileInfo(m_currentPath).fileName().toStdWString().c_str(), m_core->pageCount())));
+        }
+    });
 }
 
 bool PdfReader::openFile(const QString& filePath)
 {
-    QString path = filePath;
-    if (path.isEmpty())
-        path = PdfReaderDialogHelper::file(this, PdfReaderDialogParam::OpenFile, m_config.openDialogTitle, QString(), m_config.openFilter, m_config);
-    if (path.isEmpty()) return false;
-    if (!openWithPassword(path))
+    if (m_core->busy())
     {
         return false;
     }
-    m_currentPath = path;
-    m_thumbnails->clear();
-    refreshDocument();
-    m_thumbnails->setCurrentRow(0);
-    m_thumbnails->verticalScrollBar()->setValue(0);
-    m_pageScroll->verticalScrollBar()->setValue(0);
-    m_pageScroll->horizontalScrollBar()->setValue(0);
-    statusBar()->showMessage(QString::fromStdWString(CStringManager::Format(m_config.openedFormat.toStdWString().c_str(), QFileInfo(path).fileName().toStdWString().c_str(), m_core->pageCount())));
-    return true;
+    QString path = filePath;
+    if (path.isEmpty())
+    {
+        path = PdfReaderDialogHelper::file(this, PdfReaderDialogOpenFile, g_config.m_openDialogTitle, QString(), g_config.m_openFilter);
+    }
+    if (path.isEmpty())
+    {
+        return false;
+    }
+    PdfReaderRequest request;
+    request.m_operation = PdfReaderOpen;
+    request.m_path = path;
+    return openWithPassword(request);
 }
 
 void PdfReader::chooseAndOpen()
@@ -195,31 +223,34 @@ void PdfReader::refreshDocument()
 
 void PdfReader::refreshThumbnails()
 {
+    ++m_viewGeneration;
+    m_failedImages.clear();
+    m_core->invalidateRenders();
     const int selected = qBound(0, selectedPage(), m_core->pageCount() - 1);
     const int scroll = m_thumbnails->verticalScrollBar()->value();
     m_thumbnails->blockSignals(true);
     m_thumbnails->clear();
     // 放大只扩大条目的灰色可点击背景，PDF 页图保持基准尺寸；缩小时仍保留旧版缩小能力。
     const double pageScale = qMin(1.0, m_thumbnailZoom);
-    const int width = qMax(m_config.thumbnailMinWidth, qMin(qRound(m_config.thumbnailWidth * pageScale), m_thumbnails->viewport()->width() - m_config.thumbnailSidePadding));
+    const int width = qMax(g_config.m_thumbnailMinWidth, qMin(qRound(g_config.m_thumbnailWidth * pageScale), m_thumbnails->viewport()->width() - g_config.m_thumbnailSidePadding));
     int maxHeight = 1;
     for (int i = 0; i < m_core->pageCount(); ++i)
     {
         PdfReaderCoreCPageInfo info;
         if (!m_core->pageInfo(i, &info) || info.width <= 0 || info.height <= 0)
         {
-            info.width = m_config.fallbackPageWidth;
-            info.height = m_config.fallbackPageHeight;
+            info.width = g_config.m_fallbackPageWidth;
+            info.height = g_config.m_fallbackPageHeight;
         }
         const int height = qMax(1, qRound(width * info.height / info.width));
         const int itemHeight = m_thumbnailZoom > 1.0 ?
-            qRound((height + m_config.thumbnailRowPadding) * m_thumbnailZoom) : height + m_config.thumbnailRowPadding;
+            qRound((height + g_config.m_thumbnailRowPadding) * m_thumbnailZoom) : height + g_config.m_thumbnailRowPadding;
         QListWidgetItem* item = new QListWidgetItem(QString::number(i + 1), m_thumbnails);
         item->setTextAlignment(Qt::AlignHCenter);
         item->setData(Qt::UserRole, i);
         item->setData(Qt::UserRole + 1, QSize(width, height));
         item->setData(Qt::UserRole + 2, itemHeight);
-        item->setSizeHint(QSize(qMax(m_config.thumbnailItemMinWidth, m_thumbnails->viewport()->width() - m_config.thumbnailItemSideInset), itemHeight));
+        item->setSizeHint(QSize(qMax(g_config.m_thumbnailItemMinWidth, m_thumbnails->viewport()->width() - g_config.m_thumbnailItemSideInset), itemHeight));
         maxHeight = qMax(maxHeight, height);
     }
     m_thumbnails->setIconSize(QSize(width, maxHeight));
@@ -232,6 +263,9 @@ void PdfReader::refreshThumbnails()
 
 void PdfReader::refreshPages()
 {
+    ++m_viewGeneration;
+    m_failedImages.clear();
+    m_core->invalidateRenders();
     m_pageRefreshInProgress = true;
     const int scrollY = m_pageScroll->verticalScrollBar()->value();
     const int scrollX = m_pageScroll->horizontalScrollBar()->value();
@@ -254,13 +288,13 @@ void PdfReader::refreshPages()
         PdfReaderCoreCPageInfo info;
         if (!m_core->pageInfo(i, &info) || info.width <= 0 || info.height <= 0)
         {
-            info.width = m_config.fallbackPageWidth;
-            info.height = m_config.fallbackPageHeight;
+            info.width = g_config.m_fallbackPageWidth;
+            info.height = g_config.m_fallbackPageHeight;
         }
         Label* page = new Label(m_pageContainer);
         page->setObjectName(QStringLiteral("pageLabel"));
         page->setProperty("pageIndex", i);
-        page->setFixedSize(qMax(1, qRound(info.width * m_zoom)) + 2, qMax(1, qRound(info.height * m_zoom)) + 2);
+        page->setFixedSize(qMax(1, qRound(info.width * m_zoom)) + g_config.m_pageBorderWidth * 2, qMax(1, qRound(info.height * m_zoom)) + g_config.m_pageBorderWidth * 2);
         page->setAlignment(Qt::AlignCenter);
         page->installEventFilter(this);
         m_pageLayout->addWidget(page, 0, Qt::AlignHCenter);
@@ -281,12 +315,15 @@ void PdfReader::refreshPages()
 
 void PdfReader::renderVisiblePages()
 {
-    // 使用实际视口，不创建整份文档的像素副本；离屏缓存即时释放。
-    const QRect viewport(QPoint(0, 0), m_pageScroll->viewport()->size());
-    for (int i = 0; i < m_core->pageCount(); ++i)
+    if (m_closeRequested || m_core->busy() || m_pageRefreshInProgress)
     {
-        QLayoutItem* layoutItem = m_pageLayout->itemAt(i);
-        Label* page = layoutItem ? dynamic_cast<Label*>(layoutItem->widget()) : nullptr;
+        return;
+    }
+    const QRect viewport(QPoint(0, 0), m_pageScroll->viewport()->size());
+    for (int32_t index = 0; index < m_core->pageCount(); ++index)
+    {
+        QLayoutItem* item = m_pageLayout->itemAt(index);
+        Label* page = item ? dynamic_cast<Label*>(item->widget()) : nullptr;
         if (page)
         {
             const QRect rect(page->mapTo(m_pageScroll->viewport(), QPoint(0, 0)), page->size());
@@ -294,16 +331,7 @@ void PdfReader::renderVisiblePages()
             {
                 if (!page->pixmap())
                 {
-                    QString error;
-                    const QImage image = m_core->renderPage(i, page->width() - 2, page->height() - 2, &error);
-                    if (image.isNull())
-                    {
-                        page->setText(error);
-                    }
-                    else
-                    {
-                        page->setPixmap(QPixmap::fromImage(image));
-                    }
+                    requestImage(index, page->size() - QSize(g_config.m_pageBorderWidth * 2, g_config.m_pageBorderWidth * 2), false);
                 }
             }
             else if (page->pixmap())
@@ -311,7 +339,7 @@ void PdfReader::renderVisiblePages()
                 page->clear();
             }
         }
-        QListWidgetItem* thumb = m_thumbnails->item(i);
+        QListWidgetItem* thumb = m_thumbnails->item(index);
         if (!thumb)
         {
             continue;
@@ -320,13 +348,7 @@ void PdfReader::renderVisiblePages()
         {
             if (thumb->icon().isNull())
             {
-                const QSize size = thumb->data(Qt::UserRole + 1).toSize();
-                const QPixmap pixmap = QPixmap::fromImage(m_core->renderPage(i, size.width(), size.height()));
-                QIcon icon(pixmap);
-                // 选中只改变外框，PDF 预览颜色不交给系统主题重新着色。
-                icon.addPixmap(pixmap, QIcon::Selected);
-                icon.addPixmap(pixmap, QIcon::Active);
-                thumb->setIcon(icon);
+                requestImage(index, thumb->data(Qt::UserRole + 1).toSize(), true);
             }
         }
         else if (!thumb->icon().isNull())
@@ -338,7 +360,9 @@ void PdfReader::renderVisiblePages()
 
 void PdfReader::updateActions()
 {
-    const bool open = m_core->isOpen();
+    const bool open = m_core->isOpen() && !m_core->busy();
+    m_openAction->setEnabled(!m_core->busy());
+    m_thumbnails->setEnabled(!m_core->busy());
     m_saveAction->setEnabled(open);
     m_saveAsAction->setEnabled(open);
     m_saveRangeAction->setEnabled(open);
@@ -353,106 +377,109 @@ int PdfReader::selectedPage() const
     return m_thumbnails ? m_thumbnails->currentRow() : -1;
 }
 
-bool PdfReader::showCoreError(const QString& operation)
+bool PdfReader::submitOperation(const PdfReaderRequest& request,
+    const std::function<void(const PdfReaderResult&)>& completion)
 {
-    PdfReaderDialogHelper::message(this, operation, m_core->lastError(), m_config);
-    return false;
+    const uint64_t id = m_core->submit(request, [this, completion](const PdfReaderResult& result) {
+        m_lastOperationSucceeded = result.m_success;
+        updateActions();
+        completion(result);
+        emit operationFinished(result.m_request.m_id, result.m_success);
+    });
+    if (id)
+    {
+        updateActions();
+    }
+    return id != 0;
 }
 
 void PdfReader::saveMain()
 {
-    if (!m_core->isOpen()) { return; }
-    if (!PdfReaderDialogHelper::question(this, m_config.confirmSaveTitle,
-        m_config.confirmSavePrompt + m_currentPath, m_config))
+    if (!m_core->isOpen() || m_core->busy())
     {
         return;
     }
-    QString error;
-    const bool saved = m_core->saveToMain(&error);
-    // 保存会关闭并重开源文档；失败恢复的 Core 状态也必须反映到界面。
-    refreshDocument();
-    if (!saved)
+    if (!PdfReaderDialogHelper::question(this, g_config.m_confirmSaveTitle, g_config.m_confirmSavePrompt + m_currentPath))
     {
-        PdfReaderDialogHelper::message(this, m_config.saveFailedText, error, m_config);
+        return;
     }
-    else
-    {
-        statusBar()->showMessage(m_config.savedText, m_config.statusMessageMs);
-    }
+    PdfReaderRequest request;
+    request.m_operation = PdfReaderSaveMain;
+    exportDocument(request, g_config.m_savedText);
 }
 
 void PdfReader::saveAs()
 {
-    if (!m_core->isOpen()) { return; }
-    const QString suggested = QFileInfo(m_currentPath).completeBaseName() + m_config.editedSuffix;
-    const QString path = PdfReaderFileHelper::pdfOutputPath(PdfReaderDialogHelper::file(this, PdfReaderDialogParam::SaveFile, m_config.saveAsText, suggested, m_config.saveFilter, m_config));
-    if (path.isEmpty()) { return; }
+    if (!m_core->isOpen() || m_core->busy())
+    {
+        return;
+    }
+    const QString suggested = QFileInfo(m_currentPath).completeBaseName() + g_config.m_editedSuffix;
+    const QString path = PdfReaderDialogHelper::file(this, PdfReaderDialogSaveFile, g_config.m_saveAsText, suggested, g_config.m_saveFilter);
+    if (path.isEmpty())
+    {
+        return;
+    }
     if (QFileInfo(path).canonicalFilePath() == QFileInfo(m_currentPath).canonicalFilePath())
     {
         saveMain();
         return;
     }
-    QString error;
-    if (!m_core->saveTo(path, &error))
-    {
-        PdfReaderDialogHelper::message(this, m_config.saveFailedText, error, m_config);
-    }
-    else
-    {
-        statusBar()->showMessage(m_config.savedAsText, m_config.statusMessageMs);
-    }
+    PdfReaderRequest request;
+    request.m_operation = PdfReaderSave;
+    request.m_path = path;
+    exportDocument(request, g_config.m_savedAsText);
 }
 
 void PdfReader::savePageRange()
 {
-    if (!m_core->isOpen()) { return; }
-    QString range = QStringLiteral("1-") + QString::number(m_core->pageCount());
-    const bool accepted = PdfReaderDialogHelper::input(this, m_config.rangeTitle, m_config.rangeExample, range, false, m_config);
-    if (!accepted || range.isEmpty()) { return; }
-    QString error;
-    if (!m_core->validatePageRange(range, &error))
+    if (!m_core->isOpen() || m_core->busy())
     {
-        PdfReaderDialogHelper::message(this, m_config.invalidRangeText, error, m_config);
         return;
     }
-    const QString suggested = QFileInfo(m_currentPath).completeBaseName() + m_config.pagesSuffix;
-    const QString path = PdfReaderFileHelper::pdfOutputPath(PdfReaderDialogHelper::file(this, PdfReaderDialogParam::SaveFile, m_config.saveRangeTitle, suggested, m_config.saveFilter, m_config));
-    if (path.isEmpty()) { return; }
-    if (!m_core->savePageRange(range, path, &error))
+    QString range = QStringLiteral("1-") + QString::number(m_core->pageCount());
+    if (!PdfReaderDialogHelper::input(this, g_config.m_rangeTitle, g_config.m_rangeExample, range, false, true) || range.isEmpty())
     {
-        PdfReaderDialogHelper::message(this, m_config.exportFailedText, error, m_config);
+        return;
     }
-    else
-    {
-        statusBar()->showMessage(m_config.rangeSavedText, m_config.statusMessageMs);
-    }
+    PdfReaderRequest request;
+    request.m_operation = PdfReaderValidateRange;
+    request.m_text = range;
+    submitOperation(request, [this](const PdfReaderResult& result) {
+        if (!result.m_success)
+        {
+            PdfReaderDialogHelper::message(this, g_config.m_invalidRangeText, result.m_error);
+            return;
+        }
+        const QString suggested = QFileInfo(m_currentPath).completeBaseName() + g_config.m_pagesSuffix;
+        const QString path = PdfReaderDialogHelper::file(this, PdfReaderDialogSaveFile, g_config.m_saveRangeTitle, suggested, g_config.m_saveFilter);
+        if (path.isEmpty())
+        {
+            return;
+        }
+        PdfReaderRequest save = result.m_request;
+        save.m_operation = PdfReaderSaveRange;
+        save.m_path = path;
+        exportDocument(save, g_config.m_rangeSavedText);
+    });
 }
 
 void PdfReader::saveEachPage()
 {
-    if (!m_core->isOpen()) { return; }
-    const QString directory = PdfReaderDialogHelper::file(this, PdfReaderDialogParam::Directory, m_config.exportDirectoryTitle, QString(), QString(), m_config);
-    if (directory.isEmpty()) { return; }
-    QString error;
-    const QString prefix = QFileInfo(m_currentPath).completeBaseName();
-    bool saved = m_core->saveEachPage(directory, prefix, &error);
-    if (!saved && error.contains(QStringLiteral("already exists")))
+    if (!m_core->isOpen() || m_core->busy())
     {
-        if (!PdfReaderDialogHelper::question(this, m_config.confirmOverwriteTitle,
-            m_config.confirmOverwritePrompt + error, m_config))
-        {
-            return;
-        }
-        saved = m_core->saveEachPage(directory, prefix, &error, true);
+        return;
     }
-    if (!saved)
+    const QString directory = PdfReaderDialogHelper::file(this, PdfReaderDialogDirectory, g_config.m_exportDirectoryTitle, QString(), QString());
+    if (directory.isEmpty())
     {
-        PdfReaderDialogHelper::message(this, m_config.exportFailedText, error, m_config);
+        return;
     }
-    else
-    {
-        statusBar()->showMessage(m_config.eachSavedText, m_config.statusMessageMs);
-    }
+    PdfReaderRequest request;
+    request.m_operation = PdfReaderSaveEach;
+    request.m_path = directory;
+    request.m_text = QFileInfo(m_currentPath).completeBaseName();
+    exportDocument(request, g_config.m_eachSavedText);
 }
 
 void PdfReader::insertBefore()
@@ -470,31 +497,20 @@ void PdfReader::insertAfter()
 
 void PdfReader::insertDocument(int index)
 {
-    if (index < 0 || !m_core->isOpen())
+    if (index < 0 || !m_core->isOpen() || m_core->busy())
     {
         return;
     }
-    const QString path = PdfReaderDialogHelper::file(this, PdfReaderDialogParam::OpenFile, m_config.insertDialogTitle, QString(), m_config.saveFilter, m_config);
+    const QString path = PdfReaderDialogHelper::file(this, PdfReaderDialogOpenFile, g_config.m_insertDialogTitle, QString(), g_config.m_saveFilter);
     if (path.isEmpty())
     {
         return;
     }
-    QString password;
-    QString error;
-    while (!m_core->insertDocument(path, password, index, &error))
-    {
-        if (!error.contains(QStringLiteral("password"), Qt::CaseInsensitive))
-        {
-            PdfReaderDialogHelper::message(this, m_config.insertFailedText, error, m_config);
-            return;
-        }
-        if (!askForPassword(&password))
-        {
-            return;
-        }
-    }
-    refreshDocument();
-    m_thumbnails->setCurrentRow(index, QItemSelectionModel::ClearAndSelect);
+    PdfReaderRequest request;
+    request.m_operation = PdfReaderInsert;
+    request.m_path = path;
+    request.m_index = index;
+    openWithPassword(request);
 }
 
 void PdfReader::onSelectionChanged()
@@ -507,7 +523,7 @@ void PdfReader::updateSelectionState(bool ensureVisible)
     const int selected = selectedPage();
     if (selected >= 0)
     {
-        statusBar()->showMessage(QString::fromStdWString(CStringManager::Format(m_config.pageStatusFormat.toStdWString().c_str(), selected + 1, m_core->pageCount())));
+        statusBar()->showMessage(QString::fromStdWString(CStringManager::Format(g_config.m_pageStatusFormat.toStdWString().c_str(), selected + 1, m_core->pageCount())));
     }
     for (int i = 0; i < m_core->pageCount(); ++i)
     {
@@ -528,7 +544,7 @@ void PdfReader::updateSelectionState(bool ensureVisible)
         {
             // 左侧点击后让对应正文页进入右侧视口，灰色条目点击也走同一选择路径。
             m_selectionScrollInProgress = true;
-            m_pageScroll->ensureWidgetVisible(selectedPageWidget, m_config.selectionMargin, m_config.selectionMargin);
+            m_pageScroll->ensureWidgetVisible(selectedPageWidget, g_config.m_selectionMargin, g_config.m_selectionMargin);
             m_selectionScrollInProgress = false;
         }
     }
@@ -594,12 +610,15 @@ void PdfReader::syncSelectionFromPageScroll()
 void PdfReader::onThumbnailContextMenu(const QPoint& position)
 {
     QListWidgetItem* hitItem = m_thumbnails->itemAt(position);
-    if (hitItem) m_thumbnails->setCurrentItem(hitItem, QItemSelectionModel::ClearAndSelect);
+    if (hitItem)
+    {
+        m_thumbnails->setCurrentItem(hitItem, QItemSelectionModel::ClearAndSelect);
+    }
     Menu menu(this);
     if (hitItem)
     {
-        connect(menu.addAction(m_config.insertBeforeText), SIGNAL(triggered()), this, SLOT(insertBefore()));
-        connect(menu.addAction(m_config.insertAfterText), SIGNAL(triggered()), this, SLOT(insertAfter()));
+        connect(menu.addAction(g_config.m_insertBeforeText), SIGNAL(triggered()), this, SLOT(insertBefore()));
+        connect(menu.addAction(g_config.m_insertAfterText), SIGNAL(triggered()), this, SLOT(insertAfter()));
     }
     else
     {
@@ -611,21 +630,30 @@ void PdfReader::onThumbnailContextMenu(const QPoint& position)
 
 void PdfReader::onThumbnailReordered(int fromRow, int toRow)
 {
-    QString error;
-    if (!m_core->movePage(fromRow, toRow, &error))
-    {
-        PdfReaderDialogHelper::message(this, m_config.reorderFailedText, error, m_config);
+    PdfReaderRequest request;
+    request.m_operation = PdfReaderMove;
+    request.m_index = fromRow;
+    request.m_target = toRow;
+    if (!submitOperation(request, [this](const PdfReaderResult& result) {
         refreshDocument();
-        return;
+        if (result.m_success)
+        {
+            m_thumbnails->setCurrentRow(result.m_request.m_target, QItemSelectionModel::ClearAndSelect);
+        }
+        else
+        {
+            PdfReaderDialogHelper::message(this, g_config.m_reorderFailedText, result.m_error);
+        }
+    }))
+    {
+        refreshDocument();
     }
-    refreshDocument();
-    m_thumbnails->setCurrentRow(toRow, QItemSelectionModel::ClearAndSelect);
 }
 
 void PdfReader::setZoom(double zoom)
 {
-    const double bounded = qBound(m_config.minimumZoom, zoom, m_config.maximumZoom);
-    if (!m_core->isOpen() || qAbs(bounded - m_zoom) < 0.001)
+    const double bounded = qBound(g_config.m_minimumZoom, zoom, g_config.m_maximumZoom);
+    if (!m_core->isOpen() || qAbs(bounded - m_zoom) < g_config.m_zoomComparisonTolerance)
     {
         return;
     }
@@ -636,34 +664,50 @@ void PdfReader::setZoom(double zoom)
 
 void PdfReader::zoomIn()
 {
-    setZoom(m_zoom + m_config.zoomStep);
+    setZoom(m_zoom + g_config.m_zoomStep);
 }
 
 void PdfReader::zoomOut()
 {
-    setZoom(m_zoom - m_config.zoomStep);
+    setZoom(m_zoom - g_config.m_zoomStep);
 }
 
 void PdfReader::resetZoom()
 {
-    setZoom(m_config.initialZoom);
+    setZoom(g_config.m_initialZoom);
 }
 
 void PdfReader::showHelp()
 {
-    PdfReaderDialogHelper::message(this, m_config.aboutTitle,
-                             m_config.aboutVersionText + QStringLiteral("\n") + m_config.aboutText, m_config);
+    PdfReaderDialogHelper::message(this, g_config.m_aboutTitle,
+                             g_config.m_aboutVersionText + QStringLiteral("\n") + g_config.m_aboutText, true);
 }
 
 void PdfReader::setWindowDocumentTitle()
 {
-    setWindowTitle(m_core->isOpen() ? m_config.documentTitlePrefix + QFileInfo(m_currentPath).fileName() : m_config.applicationTitle);
+    setWindowTitle(m_core->isOpen() ? g_config.m_documentTitlePrefix + QFileInfo(m_currentPath).fileName() : g_config.m_applicationTitle);
 }
 
 void PdfReader::closeEvent(QCloseEvent* event)
 {
-    if (m_core) m_core->shutdown();
-    event->accept();
+    if (m_closeReady)
+    {
+        event->accept();
+        return;
+    }
+    event->ignore();
+    if (!m_closeRequested)
+    {
+        m_closeRequested = true;
+        m_core->close([this](const PdfReaderResult& result) {
+            if (result.m_success)
+            {
+                m_closeReady = true;
+                close();
+            }
+        });
+        updateActions();
+    }
 }
 
 void PdfReader::wheelEvent(QWheelEvent* event)
@@ -699,12 +743,12 @@ bool PdfReader::eventFilter(QObject* watched, QEvent* event)
             {
                 if (thumbnail)
                 {
-                    m_thumbnailZoom = qBound(m_config.minimumThumbnailZoom, m_thumbnailZoom + wheel->delta() / 120.0 * m_config.thumbnailZoomStep, m_config.maximumThumbnailZoom);
+                    m_thumbnailZoom = qBound(g_config.m_minimumThumbnailZoom, m_thumbnailZoom + wheel->delta() / 120.0 * g_config.m_thumbnailZoomStep, g_config.m_maximumThumbnailZoom);
                     refreshThumbnails();
                 }
                 else
                 {
-                    setZoom(m_zoom + wheel->delta() / 120.0 * m_config.zoomStep);
+                    setZoom(m_zoom + wheel->delta() / 120.0 * g_config.m_zoomStep);
                 }
             }
             wheel->accept();
@@ -712,4 +756,108 @@ bool PdfReader::eventFilter(QObject* watched, QEvent* event)
         }
     }
     return MainWindow::eventFilter(watched, event);
+}
+
+void PdfReader::processCoreResults()
+{
+    m_core->processResults();
+    renderVisiblePages();
+}
+
+bool PdfReader::idle() const
+{
+    return m_core->idle();
+}
+
+bool PdfReader::lastOperationSucceeded() const
+{
+    return m_lastOperationSucceeded;
+}
+
+void PdfReader::exportDocument(const PdfReaderRequest& request, const QString& successText)
+{
+    submitOperation(request, [this, successText](const PdfReaderResult& result) {
+        if (result.m_request.m_operation == PdfReaderSaveMain)
+        {
+            refreshDocument();
+        }
+        if (result.m_success)
+        {
+            statusBar()->showMessage(successText, g_config.m_statusMessageMs);
+        }
+        else if (result.m_request.m_operation == PdfReaderSaveEach && result.m_code == PdfReaderCoreCResultFileExists)
+        {
+            if (PdfReaderDialogHelper::question(this, g_config.m_confirmOverwriteTitle, g_config.m_confirmOverwritePrompt + result.m_error))
+            {
+                PdfReaderRequest retry = result.m_request;
+                retry.m_overwrite = true;
+                exportDocument(retry, successText);
+            }
+        }
+        else
+        {
+            PdfReaderDialogHelper::message(this,
+                result.m_request.m_operation == PdfReaderSave || result.m_request.m_operation == PdfReaderSaveMain ?
+                    g_config.m_saveFailedText : g_config.m_exportFailedText, result.m_error);
+        }
+    });
+}
+
+void PdfReader::requestImage(int32_t index, const QSize& size, bool thumbnail)
+{
+    const uint64_t generation = m_viewGeneration;
+    const QString key = QString::number(generation) + ":" + QString::number(thumbnail) + ":" +
+        QString::number(index) + ":" + QString::number(size.width()) + ":" + QString::number(size.height());
+    if (m_pendingImages.contains(key) || m_failedImages.contains(key))
+    {
+        return;
+    }
+    PdfReaderRequest request;
+    request.m_operation = PdfReaderRender;
+    request.m_index = index;
+    request.m_size = size;
+    const uint64_t id = m_core->submit(request, [this, generation, key, thumbnail](const PdfReaderResult& result) {
+        m_pendingImages.remove(key);
+        if (result.m_cancelled || generation != m_viewGeneration)
+        {
+            return;
+        }
+        if (!result.m_success)
+        {
+            m_failedImages.insert(key);
+        }
+        const int index = result.m_request.m_index;
+        if (thumbnail)
+        {
+            QListWidgetItem* item = m_thumbnails->item(index);
+            if (item && result.m_success && m_thumbnails->visualItemRect(item).intersects(m_thumbnails->viewport()->rect()))
+            {
+                const QPixmap pixmap = QPixmap::fromImage(result.m_image);
+                QIcon icon(pixmap);
+                icon.addPixmap(pixmap, QIcon::Selected);
+                icon.addPixmap(pixmap, QIcon::Active);
+                item->setIcon(icon);
+            }
+        }
+        else
+        {
+            QLayoutItem* item = m_pageLayout->itemAt(index);
+            Label* page = item ? dynamic_cast<Label*>(item->widget()) : nullptr;
+            if (page && QRect(page->mapTo(m_pageScroll->viewport(), QPoint(0, 0)), page->size()).intersects(m_pageScroll->viewport()->rect()))
+            {
+                if (result.m_success)
+                {
+                    page->setPixmap(QPixmap::fromImage(result.m_image));
+                }
+                else
+                {
+                    page->setText(result.m_error);
+                }
+            }
+        }
+    });
+    if (id)
+    {
+        m_pendingImages.insert(key);
+    }
 }

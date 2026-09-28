@@ -199,4 +199,35 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PdfReaderTestConfigGuard.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="PdfReaderTestConfigGuard.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderDialogParam.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderTask.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderTask.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderTaskManager.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderTaskManager.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderRequest.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderRequest.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderResult.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderResult.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderSessionState.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderSessionState.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderSession.h" />
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderSession.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="PdfReaderTestWorkerGate.h" />
+    <ClCompile Include="PdfReaderTestWorkerGate.cpp" />
+    <ClInclude Include="PdfReaderTestModalGuard.h" />
+    <ClCompile Include="PdfReaderTestModalGuard.cpp" />
+    <ClInclude Include="PdfReaderReviewTests.h" />
+    <ClCompile Include="PdfReaderReviewTests.cpp" />
+  </ItemGroup>
 </Project>

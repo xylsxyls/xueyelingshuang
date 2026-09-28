@@ -348,7 +348,8 @@ void DialogBase::paintEvent(QPaintEvent* eve)
     painter.setCompositionMode(QPainter::CompositionMode_Source);
     painter.fillRect(rect(), background);
     // The only body border stays inside the opaque dialog; its shadow is external.
-    painter.setPen(QPen(m_shadowEnabled ? DialogShadowConfig::borderColor() : QColor(32, 38, 48), 1));
+    const DialogShadowConfig shadowConfig;
+    painter.setPen(QPen(m_shadowEnabled ? shadowConfig.m_borderColor : QColor(32, 38, 48), 1));
     painter.setBrush(Qt::NoBrush);
     painter.drawRect(rect().adjusted(0, 0, -1, -1));
 }

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <QString>
+#include <functional>
 #include <QEvent>
 #include <QPoint>
 #include <QImage>
@@ -14,6 +15,15 @@ class QFileDialog;
 class PdfReaderTestUiHelper
 {
 public:
+    /** 处理Qt事件直到可观察条件成立，期限5秒；超时失败
+    @param [in] condition 仅GUI执行的独立观察
+    @param [in] description 失败说明
+    */
+    static void waitUntil(const std::function<bool()>& condition, const char* description);
+    /** 等待已接纳请求的实际终态，超时抛出测试失败
+    @param [in] window 被测窗口
+    */
+    static void waitIdle(PdfReader& window);
     /** 获取管理器当前弹窗中的文件选择复合控件；没有则返回空。 */
     static QFileDialog* fileDialog();
     /** 获取当前 PdfReader 内容区；没有则返回空。 */

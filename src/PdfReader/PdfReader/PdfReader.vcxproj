@@ -377,4 +377,21 @@
   <Target Name="CleanPdfReaderIcon" AfterTargets="Clean">
     <Delete Files="$(IntDir)res\PdfReader.ico;$(IntDir)res\PdfReader.rc" />
   </Target>
+  <ItemGroup>
+    <ClCompile Include="PdfReaderDialogParam.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="PdfReaderTask.h" />
+    <ClCompile Include="PdfReaderTask.cpp" />
+    <ClInclude Include="PdfReaderTaskManager.h" />
+    <ClCompile Include="PdfReaderTaskManager.cpp" />
+    <ClInclude Include="PdfReaderRequest.h" />
+    <ClCompile Include="PdfReaderRequest.cpp" />
+    <ClInclude Include="PdfReaderResult.h" />
+    <ClCompile Include="PdfReaderResult.cpp" />
+    <ClInclude Include="PdfReaderSessionState.h" />
+    <ClCompile Include="PdfReaderSessionState.cpp" />
+    <ClInclude Include="PdfReaderSession.h" />
+    <ClCompile Include="PdfReaderSession.cpp" />
+  </ItemGroup>
 </Project>

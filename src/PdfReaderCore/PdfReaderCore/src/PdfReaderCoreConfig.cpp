@@ -1,13 +1,13 @@
 ﻿#include "PdfReaderCoreConfig.h"
 
 PdfReaderCoreConfig::PdfReaderCoreConfig() :
-maxRenderPixels(64000000), exportNumberWidth(3)
+m_maxRenderPixels(64000000), m_exportNumberWidth(3)
 {
 
 }
 
 bool PdfReaderCoreConfig::isValid() const
 {
-    return maxRenderPixels > 0 && maxRenderPixels <= 268435456 &&
-        exportNumberWidth >= 1 && exportNumberWidth <= 9;
+    return m_maxRenderPixels > 0 && m_maxRenderPixels <= 268435456 &&
+        m_exportNumberWidth >= 1 && m_exportNumberWidth <= 9;
 }

@@ -13,7 +13,10 @@ bool PdfReaderCoreExportHelper::savePages(PdfEngine& engine, const std::wstring&
 {
     if (outputPath.empty())
     {
-        if (errorText) { *errorText = "output path is empty"; }
+        if (errorText)
+        {
+            *errorText = "output path is empty";
+        }
         return false;
     }
     const std::wstring temporary = outputPath + L".pdfreader-" + CStringManager::Utf8ToUnicode(CSystem::uuid()) + L".tmp";

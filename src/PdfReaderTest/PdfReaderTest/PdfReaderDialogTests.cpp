@@ -1,4 +1,5 @@
-﻿#include "PdfReaderDialogTests.h"
+﻿#include "PdfReaderTestConfigGuard.h"
+#include "PdfReaderDialogTests.h"
 #include "PdfReaderTestHelper.h"
 #include "PdfReaderTestUiHelper.h"
 #include "../../PdfReader/PdfReader/PdfReader.h"
@@ -23,11 +24,14 @@
 
 void PdfReaderDialogTests::run(const QString& input, const QString& directory)
 {
-    Config testConfig;
-    testConfig.useNativeFileDialog = false;
-    PdfReader window(nullptr, testConfig);
+    PdfReaderTestConfigGuard configGuard;
+
+    g_config.m_useNativeFileDialog = false;
+    PdfReader window(nullptr);
     window.show();
     PdfReaderTestHelper::require(window.openFile(input), "dialog fixture open");
+        PdfReaderTestUiHelper::waitIdle(window);
+        PdfReaderTestHelper::require(window.lastOperationSucceeded(), "open actually completed");
     PdfReaderTestUiHelper::wait(30);
     PdfReaderTestHelper::require(dynamic_cast<MainWindow*>(&window) &&
         dynamic_cast<ListWidget*>(window.findChild<QListWidget*>()) &&
@@ -157,8 +161,8 @@ void PdfReaderDialogTests::run(const QString& input, const QString& directory)
     PdfReaderTestHelper::require(!PdfReaderDialogHelper::question(&window, "Overwrite", input), "overwrite canceled");
     PdfReaderTestHelper::require(defaultCancel, "destructive confirmation defaults to cancel");
     action = 3; deadline.restart();
-    PdfReaderTestHelper::require(PdfReaderDialogHelper::file(&window, PdfReaderDialogParam::OpenFile,
-        "Open", input, "PDF (*.pdf)", testConfig).isEmpty(), "file picker cancellation");
+    PdfReaderTestHelper::require(PdfReaderDialogHelper::file(&window, PdfReaderDialogOpenFile,
+        "Open", input, "PDF (*.pdf)").isEmpty(), "file picker cancellation");
     action = 4; deadline.restart();
     QMetaObject::invokeMethod(&window, "showHelp", Qt::DirectConnection);
     timer.stop();
@@ -173,4 +177,8 @@ void PdfReaderDialogTests::run(const QString& input, const QString& directory)
     PdfReaderTestHelper::require(doneCount == 5 && count.m_count == 0,
         "managed dialogs leave no retained windows");
     PdfReaderTestHelper::require(window.isEnabled() && window.openFile(input), "parent works after modal dialogs");
+        PdfReaderTestUiHelper::waitIdle(window);
+        PdfReaderTestHelper::require(window.lastOperationSucceeded(), "open actually completed");
+    window.close();
+    PdfReaderTestUiHelper::waitIdle(window);
 }

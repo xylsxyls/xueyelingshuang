@@ -1,4 +1,5 @@
-﻿#include "PdfReaderConfigurationTests.h"
+﻿#include "PdfReaderTestConfigGuard.h"
+#include "PdfReaderConfigurationTests.h"
 #include "PdfReaderTestHelper.h"
 #include "PdfReaderTestUiHelper.h"
 #include "../../PdfReader/PdfReader/PdfReader.h"
@@ -15,6 +16,7 @@
 
 void PdfReaderConfigurationTests::run(int id, const QString& input, const QString& directory)
 {
+    PdfReaderTestConfigGuard configGuard;
     if (id == 15)
     {
         PdfReaderTestHelper::require(PdfReaderCppConfigSmoke(),"C++ API configuration and lifecycle");
@@ -47,23 +49,25 @@ void PdfReaderConfigurationTests::run(int id, const QString& input, const QStrin
     }
     if (id == 16)
     {
-        Config config;
-        PdfReaderTestHelper::require(config.log.m_fileId == 0 && config.log.m_path.empty(),
+
+        PdfReaderTestHelper::require(g_config.m_log.m_fileId == 0 && g_config.m_log.m_path.empty(),
             "default logging uses the executable directory and default file id");
-        PdfReaderTestHelper::require(config.log.m_maxFileBytes == 20LL * 1024 * 1024 &&
-            config.log.m_maxFileCount == 8 && config.log.m_checkFileSizeInterval == 1,
+        PdfReaderTestHelper::require(g_config.m_log.m_maxFileBytes == 20LL * 1024 * 1024 &&
+            g_config.m_log.m_maxFileCount == 8 && g_config.m_log.m_checkFileSizeInterval == 1,
             "default rolling log policy matches LumaPlayer");
-        PdfReaderTestHelper::require(config.log.m_archiveOldLog && !config.log.m_outputConsole,
+        PdfReaderTestHelper::require(g_config.m_log.m_archiveOldLog && !g_config.m_log.m_outputConsole,
             "archive old logs without console output");
-        config.windowSize=QSize(1040,700);
-        config.useNativeFileDialog = false;
-        config.initialZoom=0.5; config.minimumZoom=0.4; config.maximumZoom=0.6; config.zoomStep=0.2;
-        config.thumbnailWidth=90; config.sidebarWidth=320;
-        PdfReader window(nullptr,config);
+        g_config.m_windowSize=QSize(1040,700);
+        g_config.m_useNativeFileDialog = false;
+        g_config.m_initialZoom=0.5; g_config.m_minimumZoom=0.4; g_config.m_maximumZoom=0.6; g_config.m_zoomStep=0.2;
+        g_config.m_thumbnailWidth=90; g_config.m_sidebarWidth=320;
+        PdfReader window(nullptr);
         window.show();
         PdfReaderTestHelper::require(window.findChild<PdfReaderEmptyState*>() != nullptr,
             "empty document uses centered plus control");
         PdfReaderTestHelper::require(window.openFile(input),"configured window open");
+        PdfReaderTestUiHelper::waitIdle(window);
+        PdfReaderTestHelper::require(window.lastOperationSucceeded(), "open actually completed");
         PdfReaderTestUiHelper::wait(60);
         PdfReaderTestHelper::require(window.windowTitle() == QStringLiteral("PDF阅读器 - 中文样本.pdf"),
             "document title uses PDF阅读器 prefix");
@@ -93,6 +97,8 @@ void PdfReaderConfigurationTests::run(int id, const QString& input, const QStrin
         timer.start(20); about->trigger(); timer.stop();
         PdfReaderTestHelper::require(shown,"about button opens populated dialog");
         window.grab().save(directory+"/configured-window.png");
+        window.close();
+        PdfReaderTestUiHelper::waitIdle(window);
         return;
     }
     throw std::runtime_error("unsupported configuration test id/platform");

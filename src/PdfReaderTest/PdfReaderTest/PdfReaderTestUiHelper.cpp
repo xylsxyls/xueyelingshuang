@@ -66,6 +66,13 @@ void PdfReaderTestUiHelper::mouse(QWidget* target, QEvent::Type type, const QPoi
         type == QEvent::MouseButtonRelease ? Qt::NoButton : Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(target, &event);
     QApplication::processEvents();
+    if (type == QEvent::MouseButtonRelease)
+    {
+        if (PdfReader* window = qobject_cast<PdfReader*>(target->window()))
+        {
+            waitIdle(*window);
+        }
+    }
 }
 
 void PdfReaderTestUiHelper::wheel(QWidget* target, int delta)
@@ -95,8 +102,10 @@ QLabel* PdfReaderTestUiHelper::page(PdfReader& window, int index)
 void PdfReaderTestUiHelper::color(PdfReader& window, int index, QRgb expected)
 {
     QScrollArea* scroll = window.findChild<QScrollArea*>(QStringLiteral("documentScroll"));
+    waitIdle(window);
     scroll->ensureWidgetVisible(PdfReaderTestUiHelper::page(window, index));
     PdfReaderTestUiHelper::wait(50);
+    waitIdle(window);
     const QPixmap* pixmap = PdfReaderTestUiHelper::page(window, index)->pixmap();
     PdfReaderTestHelper::require(pixmap && !pixmap->isNull(), "visible page has rendered pixels");
     const QImage image = pixmap->toImage();
@@ -148,8 +157,55 @@ void PdfReaderTestUiHelper::dialogAction(PdfReader& window, const char* slot, co
     });
     timer.start(20);
     PdfReaderTestHelper::require(QMetaObject::invokeMethod(&window, slot, Qt::DirectConnection), "product action exists");
+    waitIdle(window);
     timer.stop();
     PdfReaderTestHelper::require(handled, "expected confirmation/file dialog shown");
     PdfReaderTestHelper::require(!timedOut, "dialog input timed out");
     PdfReaderTestUiHelper::wait(40);
+}
+
+void PdfReaderTestUiHelper::waitIdle(PdfReader& window)
+{
+    QEventLoop loop;
+    QElapsedTimer deadline;
+    deadline.start();
+    bool timedOut = false;
+    QTimer timer;
+    QObject::connect(&timer, &QTimer::timeout, [&]() {
+        if (deadline.elapsed() > 5000)
+        {
+            timedOut = true;
+            if (QDialog* modal = qobject_cast<QDialog*>(QApplication::activeModalWidget()))
+            {
+                modal->reject();
+            }
+            loop.quit();
+        }
+        else if (window.idle())
+        {
+            loop.quit();
+        }
+    });
+    timer.start(5);
+    loop.exec();
+    PdfReaderTestHelper::require(!timedOut, "actual asynchronous completion timed out");
+}
+
+void PdfReaderTestUiHelper::waitUntil(const std::function<bool()>& condition, const char* description)
+{
+    QEventLoop loop;
+    QElapsedTimer deadline;
+    deadline.start();
+    bool done = false;
+    QTimer timer;
+    QObject::connect(&timer, &QTimer::timeout, [&]() {
+        done = condition();
+        if (done || deadline.elapsed() > 5000)
+        {
+            loop.quit();
+        }
+    });
+    timer.start(5);
+    loop.exec();
+    PdfReaderTestHelper::require(done, description);
 }

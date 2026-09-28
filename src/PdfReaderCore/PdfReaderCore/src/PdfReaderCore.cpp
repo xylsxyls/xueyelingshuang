@@ -11,11 +11,13 @@
 PdfReaderCorePageInfo::PdfReaderCorePageInfo()
     : width(0.0), height(0.0)
 {
+
 }
 
 PdfReaderCore::PdfReaderCore()
     : m_isInit(false)
 {
+
 }
 
 PdfReaderCore::~PdfReaderCore()
@@ -38,14 +40,20 @@ bool PdfReaderCore::init(const PdfReaderCoreConfig& config, std::string* errorTe
     {
         const std::string error = m_isInit ? "uninit before changing configuration" : "invalid core configuration";
         setError(error);
-        if (errorText) { *errorText = error; }
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     std::string error;
     if (!m_engine.init(&error))
     {
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     m_config = config;
@@ -75,19 +83,28 @@ PdfDocument* PdfReaderCore::openDocument(const std::wstring& filePath,
 {
     if (filePath.empty())
     {
-        if (errorText) *errorText = "file path is empty";
+        if (errorText)
+        {
+            *errorText = "file path is empty";
+        }
         return nullptr;
     }
     if (!CSystem::fileExists(filePath))
     {
-        if (errorText) *errorText = "file does not exist";
+        if (errorText)
+        {
+            *errorText = "file does not exist";
+        }
         return nullptr;
     }
     std::unique_ptr<PdfDocument> document(new PdfDocument());
     std::string error;
     if (!document->open(filePath, password, &error))
     {
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return nullptr;
     }
     PdfDocument* result = document.get();
@@ -103,7 +120,10 @@ bool PdfReaderCore::open(const std::wstring& filePath,
     {
         const std::string error = "pdf engine is not initialized";
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     std::string error;
@@ -111,29 +131,41 @@ bool PdfReaderCore::open(const std::wstring& filePath,
     {
         error = filePath.empty() ? "file path is empty" : "file does not exist";
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     std::unique_ptr<PdfDocument> document(new PdfDocument());
     if (!document->open(filePath, password, &error))
     {
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
-    close();
     PdfDocument* documentPtr = document.get();
-    m_documents.push_back(std::move(document));
-    m_mainPath = filePath;
-    m_mainPassword = password;
+    std::vector<std::unique_ptr<PdfDocument>> documents;
+    std::vector<PdfReaderCorePageEntry> pages;
+    std::wstring mainPath = filePath;
+    std::string mainPassword = password;
+    documents.push_back(std::move(document));
+    pages.reserve(documentPtr->pageCount());
     for (int32_t i = 0; i < documentPtr->pageCount(); ++i)
     {
         PdfReaderCorePageEntry entry;
         entry.document = documentPtr;
         entry.pageIndex = i;
         entry.sourcePath = filePath;
-        m_pages.push_back(entry);
+        pages.push_back(entry);
     }
+    m_pages.swap(pages);
+    m_documents.swap(documents);
+    m_mainPath.swap(mainPath);
+    m_mainPassword.swap(mainPassword);
     m_lastError.clear();
     return true;
 }
@@ -171,12 +203,19 @@ bool PdfReaderCore::validatePageIndex(int32_t pageIndex, std::string* errorText)
 {
     if (!isOpen())
     {
-        if (errorText) *errorText = "no PDF document is open";
+        setError("no PDF document is open");
+        if (errorText)
+        {
+            *errorText = m_lastError;
+        }
         return false;
     }
     if (pageIndex < 0 || pageIndex >= pageCount())
     {
-        if (errorText) *errorText = "page index is out of range";
+        if (errorText)
+        {
+            *errorText = "page index is out of range";
+        }
         return false;
     }
     return true;
@@ -190,14 +229,20 @@ bool PdfReaderCore::pageInfo(int32_t pageIndex,
     {
         const std::string error = "page info output is null";
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     std::string error;
     if (!validatePageIndex(pageIndex, &error))
     {
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     PdfEnginePageSize size;
@@ -205,7 +250,10 @@ bool PdfReaderCore::pageInfo(int32_t pageIndex,
     if (!entry.document->getPageSize(entry.pageIndex, &size, &error))
     {
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     info->width = size.width;
@@ -221,18 +269,24 @@ bool PdfReaderCore::renderPage(int32_t pageIndex,
                                std::string* errorText)
 {
     if (!bitmap || pixelWidth <= 0 || pixelHeight <= 0 ||
-        static_cast<uint64_t>(pixelWidth) * static_cast<uint64_t>(pixelHeight) > m_config.maxRenderPixels)
+        static_cast<uint64_t>(pixelWidth) * static_cast<uint64_t>(pixelHeight) > m_config.m_maxRenderPixels)
     {
         const std::string error = "invalid render parameters";
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     std::string error;
     if (!validatePageIndex(pageIndex, &error))
     {
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     const PdfReaderCorePageEntry& entry = m_pages[static_cast<size_t>(pageIndex)];
@@ -240,7 +294,10 @@ bool PdfReaderCore::renderPage(int32_t pageIndex,
                                           bitmap, &error))
     {
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     m_lastError.clear();
@@ -256,14 +313,20 @@ bool PdfReaderCore::insertDocument(const std::wstring& filePath,
     {
         const std::string error = "no PDF document is open";
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     if (insertIndex < 0 || insertIndex > pageCount())
     {
         const std::string error = "insert index is out of range";
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     std::string error;
@@ -271,7 +334,10 @@ bool PdfReaderCore::insertDocument(const std::wstring& filePath,
     if (!document)
     {
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     std::vector<PdfReaderCorePageEntry> inserted;
@@ -294,9 +360,15 @@ bool PdfReaderCore::movePage(int32_t fromIndex, int32_t toIndex, std::string* er
     if (!validatePageIndex(fromIndex, &error) ||
         toIndex < 0 || toIndex >= pageCount())
     {
-        if (error.empty()) error = "destination page index is out of range";
+        if (error.empty())
+        {
+            error = "destination page index is out of range";
+        }
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     if (fromIndex != toIndex)
@@ -325,14 +397,20 @@ bool PdfReaderCore::saveTo(const std::wstring& outputFilePath,
     {
         const std::string error = outputFilePath.empty() ? "output path is empty" : "no PDF document is open";
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     std::string error;
     if (!savePages(outputFilePath, pageRefs(), &error))
     {
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     m_lastError.clear();
@@ -345,7 +423,10 @@ bool PdfReaderCore::saveToMain(std::string* errorText)
     {
         const std::string error = "main PDF path is empty";
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     const std::string utf8Path = CStringManager::UnicodeToUtf8(m_mainPath);
@@ -357,7 +438,10 @@ bool PdfReaderCore::saveToMain(std::string* errorText)
     if (!saveTo(temporaryPath, &error))
     {
         CSystem::deleteFile(temporaryPath);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     close();
@@ -365,14 +449,28 @@ bool PdfReaderCore::saveToMain(std::string* errorText)
     {
         error = "failed to replace the main PDF file; recovered PDF: " + temporaryUtf8;
         std::string restoreError;
-        open(path, password, &restoreError);
+        if (open(temporaryPath, std::string(), &restoreError))
+        {
+            m_mainPath = path;
+            m_mainPassword = password;
+        }
+        else
+        {
+            error += "; failed to reopen recovery PDF: " + restoreError;
+        }
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     if (!open(path, password, &error))
     {
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     return true;
@@ -381,7 +479,14 @@ bool PdfReaderCore::saveToMain(std::string* errorText)
 bool PdfReaderCore::validatePageRange(const std::string& rangeText, std::string* errorText)
 {
     std::vector<int32_t> indexes;
-    return PdfEngine::parsePageRanges(rangeText, pageCount(), &indexes, errorText);
+    std::string error;
+    const bool valid = PdfEngine::parsePageRanges(rangeText, pageCount(), &indexes, &error);
+    setError(error);
+    if (errorText)
+    {
+        *errorText = error;
+    }
+    return valid;
 }
 
 bool PdfReaderCore::savePageRange(const std::string& rangeText,
@@ -390,7 +495,11 @@ bool PdfReaderCore::savePageRange(const std::string& rangeText,
 {
     if (!isOpen())
     {
-        if (errorText) *errorText = "no PDF document is open";
+        setError("no PDF document is open");
+        if (errorText)
+        {
+            *errorText = m_lastError;
+        }
         return false;
     }
     std::vector<int32_t> indexes;
@@ -398,7 +507,10 @@ bool PdfReaderCore::savePageRange(const std::string& rangeText,
     if (!PdfEngine::parsePageRanges(rangeText, pageCount(), &indexes, &error))
     {
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     std::vector<PdfEnginePageRef> refs;
@@ -411,7 +523,10 @@ bool PdfReaderCore::savePageRange(const std::string& rangeText,
     if (!savePages(outputFilePath, refs, &error))
     {
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     m_lastError.clear();
@@ -426,7 +541,10 @@ bool PdfReaderCore::saveEachPage(const std::wstring& outputDirectory,
     {
         const std::string error = outputDirectory.empty() ? "output directory is empty" : "no PDF document is open";
         setError(error);
-        if (errorText) *errorText = error;
+        if (errorText)
+        {
+            *errorText = error;
+        }
         return false;
     }
     std::string directory = CStringManager::UnicodeToUtf8(outputDirectory);
@@ -438,19 +556,22 @@ bool PdfReaderCore::saveEachPage(const std::wstring& outputDirectory,
         // 写入任何页面之前检查全部目标，取消覆盖不能留下部分导出。
         for (int32_t i = 0; i < pageCount(); ++i)
         {
-            const std::string output = PdfReaderCoreExportHelper::pageFileName(directory, prefix, i + 1, m_config.exportNumberWidth);
+            const std::string output = PdfReaderCoreExportHelper::pageFileName(directory, prefix, i + 1, m_config.m_exportNumberWidth);
             if (CSystem::fileExists(CStringManager::Utf8ToUnicode(output)))
             {
                 const std::string error = "output file already exists: " + output;
                 setError(error);
-                if (errorText) { *errorText = error; }
+                if (errorText)
+                {
+                    *errorText = error;
+                }
                 return false;
             }
         }
     }
     for (int32_t i = 0; i < pageCount(); ++i)
     {
-        const std::string output = PdfReaderCoreExportHelper::pageFileName(directory, prefix, i + 1, m_config.exportNumberWidth);
+        const std::string output = PdfReaderCoreExportHelper::pageFileName(directory, prefix, i + 1, m_config.m_exportNumberWidth);
         const std::wstring outputPath = CStringManager::Utf8ToUnicode(output);
         std::string error;
         std::vector<PdfEnginePageRef> refs;
@@ -459,7 +580,10 @@ bool PdfReaderCore::saveEachPage(const std::wstring& outputDirectory,
         if (!savePages(outputPath, refs, &error))
         {
             setError(error);
-            if (errorText) *errorText = error;
+            if (errorText)
+            {
+                *errorText = error;
+            }
             return false;
         }
     }

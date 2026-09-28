@@ -78,12 +78,12 @@ PdfReaderTest::PdfReaderTest(QWidget* parent)
         connect(button, &PushButton::clicked, this, [this, central, i]() {
             if (i == 2)
             {
-                PdfReaderDialogHelper::message(this, QStringLiteral("测试范围"), QStringLiteral("当前登记为 18 项瞬时回归，未登记压力用例，不启动空批次。"));
+                PdfReaderDialogHelper::message(this, QStringLiteral("测试范围"), QStringLiteral("当前登记为 26 项瞬时回归，未登记压力用例，不启动空批次。"));
                 return;
             }
             bool accepted = true;
-            QString selection = i == 0 ? QStringLiteral("1-16,19,20") : QString();
-            if (i == 0) accepted = PdfReaderDialogHelper::input(this, QStringLiteral("指定测试"), QStringLiteral("ID 或范围，例如 1,3-6；有效 ID 1-16,19,20"), selection);
+            QString selection = i == 0 ? QStringLiteral("1-16,19-28") : QString();
+            if (i == 0) accepted = PdfReaderDialogHelper::input(this, QStringLiteral("指定测试"), QStringLiteral("ID 或范围，例如 1,3-6；有效 ID 1-16,19-28"), selection);
             if (!accepted) { return; }
             central->setEnabled(false);
             const int result = PdfReaderRegression::run(selection);
@@ -92,9 +92,9 @@ PdfReaderTest::PdfReaderTest(QWidget* parent)
         });
     }
     root->addLayout(regression);
-    const Config controlConfig;
+
     foreach (PushButton* button, central->findChildren<PushButton*>())
-        PdfReaderControlHelper::configureButton(button, controlConfig);
+        PdfReaderControlHelper::configureButton(button);
     setCentralWidget(central);
 
     connect(browse, SIGNAL(clicked()), this, SLOT(chooseFile()));
@@ -133,7 +133,7 @@ QString PdfReaderTest::lastError() const
 
 void PdfReaderTest::chooseFile()
 {
-    const QString path = PdfReaderDialogHelper::file(this, PdfReaderDialogParam::OpenFile, QStringLiteral("选择PDF"), QString(), QStringLiteral("PDF文件 (*.pdf);;所有文件 (*.*)"));
+    const QString path = PdfReaderDialogHelper::file(this, PdfReaderDialogOpenFile, QStringLiteral("选择PDF"), QString(), QStringLiteral("PDF文件 (*.pdf);;所有文件 (*.*)"));
     if (!path.isEmpty()) m_pathEdit->setText(path);
 }
 

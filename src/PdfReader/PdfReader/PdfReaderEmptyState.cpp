@@ -1,4 +1,5 @@
-#include "PdfReaderEmptyState.h"
+﻿#include "PdfReaderEmptyState.h"
+#include "Config.h"
 #include <algorithm>
 #include <QMouseEvent>
 #include <QPainter>
@@ -13,7 +14,7 @@ Widget(parent)
 
 QRectF PdfReaderEmptyState::plusButtonRect() const
 {
-    const qreal side = (std::min<qreal>)(42.0, (std::min<qreal>)(width(), height()) - 8.0);
+    const qreal side = (std::min<qreal>)(g_config.m_emptyPlusSize, (std::min<qreal>)(width(), height()) - g_config.m_emptyPlusMargin);
     if (side <= 0.0)
     {
         return QRectF();
@@ -31,13 +32,13 @@ void PdfReaderEmptyState::paintEvent(QPaintEvent* event)
         return;
     }
     painter.setRenderHint(QPainter::Antialiasing, false);
-    painter.fillRect(rect, QColor(238, 238, 238));
-    painter.setPen(QPen(QColor(96, 96, 96), 1));
+    painter.fillRect(rect, g_config.m_emptyPlusBackground);
+    painter.setPen(QPen(g_config.m_emptyPlusBorder, 1));
     painter.drawRect(rect.adjusted(0.5, 0.5, -0.5, -0.5));
     const QPointF center = rect.center();
-    painter.setPen(QPen(QColor(55, 65, 81), 3, Qt::SolidLine, Qt::SquareCap));
-    painter.drawLine(QPointF(center.x() - 10.0, center.y()), QPointF(center.x() + 10.0, center.y()));
-    painter.drawLine(QPointF(center.x(), center.y() - 10.0), QPointF(center.x(), center.y() + 10.0));
+    painter.setPen(QPen(g_config.m_emptyPlusColor, g_config.m_emptyPlusStroke, Qt::SolidLine, Qt::SquareCap));
+    painter.drawLine(QPointF(center.x() - g_config.m_emptyPlusHalfLength, center.y()), QPointF(center.x() + g_config.m_emptyPlusHalfLength, center.y()));
+    painter.drawLine(QPointF(center.x(), center.y() - g_config.m_emptyPlusHalfLength), QPointF(center.x(), center.y() + g_config.m_emptyPlusHalfLength));
 }
 
 void PdfReaderEmptyState::mousePressEvent(QMouseEvent* event)

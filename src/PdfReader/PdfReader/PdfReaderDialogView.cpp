@@ -10,34 +10,41 @@
 PdfReaderDialogView::PdfReaderDialogView() :
 m_input(nullptr), m_files(nullptr), m_cancel(nullptr), m_accept(nullptr)
 {
+
 }
 
 bool PdfReaderDialogView::initView(const DialogParam& param)
 {
     const PdfReaderDialogParam* data = dynamic_cast<const PdfReaderDialogParam*>(&param);
-    if (!data) return false;
+    if (!data)
+    {
+        return false;
+    }
     m_param = *data;
     setObjectName(QStringLiteral("pdfReaderDialogView"));
-    setProperty("dialogMode", static_cast<int>(m_param.mode));
-    setStyleSheet(m_param.config.dialogStyle);
+    setProperty("dialogMode", static_cast<int>(m_param.m_mode));
+    setStyleSheet(g_config.m_dialogStyle);
     QVBoxLayout* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(m_param.config.dialogMargin, m_param.config.dialogMargin,
-        m_param.config.dialogMargin, m_param.config.dialogMargin);
-    layout->setSpacing(m_param.config.dialogSpacing);
-    if (m_param.mode >= PdfReaderDialogParam::OpenFile)
+    layout->setContentsMargins(g_config.m_dialogMargin, g_config.m_dialogMargin,
+        g_config.m_dialogMargin, g_config.m_dialogMargin);
+    layout->setSpacing(g_config.m_dialogSpacing);
+    if (m_param.m_mode >= PdfReaderDialogOpenFile)
     {
-        if (m_param.config.useNativeFileDialog)
+        if (g_config.m_useNativeFileDialog)
         {
             return false;
         }
         m_files = new FileDialog(this);
         m_files->setWindowFlags(Qt::Widget);
-        m_files->setNameFilter(m_param.filter);
-        m_files->setAcceptMode(m_param.mode == PdfReaderDialogParam::SaveFile ? QFileDialog::AcceptSave : QFileDialog::AcceptOpen);
-        m_files->setFileMode(m_param.mode == PdfReaderDialogParam::Directory ? QFileDialog::Directory :
-            (m_param.mode == PdfReaderDialogParam::SaveFile ? QFileDialog::AnyFile : QFileDialog::ExistingFile));
-        m_files->setOption(QFileDialog::ShowDirsOnly, m_param.mode == PdfReaderDialogParam::Directory);
-        if (!m_param.initial.isEmpty()) m_files->selectFile(m_param.initial);
+        m_files->setNameFilter(m_param.m_filter);
+        m_files->setAcceptMode(m_param.m_mode == PdfReaderDialogSaveFile ? QFileDialog::AcceptSave : QFileDialog::AcceptOpen);
+        m_files->setFileMode(m_param.m_mode == PdfReaderDialogDirectory ? QFileDialog::Directory :
+            (m_param.m_mode == PdfReaderDialogSaveFile ? QFileDialog::AnyFile : QFileDialog::ExistingFile));
+        m_files->setOption(QFileDialog::ShowDirsOnly, m_param.m_mode == PdfReaderDialogDirectory);
+        if (!m_param.m_initial.isEmpty())
+        {
+            m_files->selectFile(m_param.m_initial);
+        }
         layout->addWidget(m_files);
         connect(m_files, &QFileDialog::accepted, this, &PdfReaderDialogView::acceptValue);
         connect(m_files, &QFileDialog::rejected, this, &PdfReaderDialogView::cancel);
@@ -48,14 +55,14 @@ bool PdfReaderDialogView::initView(const DialogParam& param)
     message->setTextFormat(Qt::PlainText);
     message->setWordWrap(true);
     message->setAlignment(Qt::AlignLeft | Qt::AlignTop);
-    message->setText(m_param.text);
+    message->setText(m_param.m_text);
     layout->addWidget(message, 1);
-    if (m_param.mode == PdfReaderDialogParam::Input)
+    if (m_param.m_mode == PdfReaderDialogInput)
     {
         m_input = new LineEdit(this);
         m_input->setObjectName(QStringLiteral("dialogInput"));
-        m_input->setEchoMode(m_param.password ? QLineEdit::Password : QLineEdit::Normal);
-        m_input->setText(m_param.initial);
+        m_input->setEchoMode(m_param.m_password ? QLineEdit::Password : QLineEdit::Normal);
+        m_input->setText(m_param.m_initial);
         m_input->selectAll();
         layout->addWidget(m_input);
         connect(m_input, &QLineEdit::returnPressed, this, &PdfReaderDialogView::acceptValue);
@@ -64,16 +71,16 @@ bool PdfReaderDialogView::initView(const DialogParam& param)
     buttons->addStretch();
     m_accept = new PushButton(this);
     m_accept->setObjectName(QStringLiteral("dialogAccept"));
-    m_accept->setText(m_param.config.dialogAcceptText);
-    PdfReaderControlHelper::configureButton(m_accept, m_param.config);
+    m_accept->setText(g_config.m_dialogAcceptText);
+    PdfReaderControlHelper::configureButton(m_accept);
     buttons->addWidget(m_accept);
     connect(m_accept, &QPushButton::clicked, this, &PdfReaderDialogView::acceptValue);
-    if (m_param.mode != PdfReaderDialogParam::Message)
+    if (m_param.m_mode != PdfReaderDialogMessage)
     {
         m_cancel = new PushButton(this);
         m_cancel->setObjectName(QStringLiteral("dialogCancel"));
-        m_cancel->setText(m_param.config.dialogCancelText);
-        PdfReaderControlHelper::configureButton(m_cancel, m_param.config);
+        m_cancel->setText(g_config.m_dialogCancelText);
+        PdfReaderControlHelper::configureButton(m_cancel);
         buttons->addWidget(m_cancel);
         connect(m_cancel, &QPushButton::clicked, this, &PdfReaderDialogView::cancel);
     }
@@ -85,27 +92,39 @@ QSize PdfReaderDialogView::preferredSize() const
 {
     if (m_files)
     {
-        return m_param.config.fileDialogSize;
+        return g_config.m_fileDialogSize;
     }
-    return m_param.mode == PdfReaderDialogParam::Message && m_param.m_title == m_param.config.aboutTitle ?
-        m_param.config.aboutDialogSize : m_param.config.dialogSize;
+    return m_param.m_about ?
+        g_config.m_aboutDialogSize : g_config.m_dialogSize;
 }
 
 QWidget* PdfReaderDialogView::defaultFocusWidget() const
 {
-    if (m_input) return m_input;
-    if (m_files) return m_files;
+    if (m_input)
+    {
+        return m_input;
+    }
+    if (m_files)
+    {
+        return m_files;
+    }
     return m_cancel ? m_cancel : m_accept;
 }
 
 void PdfReaderDialogView::acceptValue()
 {
-    if (m_input) *m_param.value = m_input->text();
+    if (m_input)
+    {
+        *m_param.m_value = m_input->text();
+    }
     if (m_files)
     {
         const QStringList selected = m_files->selectedFiles();
-        if (selected.isEmpty()) return;
-        *m_param.value = selected.first();
+        if (selected.isEmpty())
+        {
+            return;
+        }
+        *m_param.m_value = selected.first();
     }
     notifyCloseRequested(ACCEPT_BUTTON, 0);
 }

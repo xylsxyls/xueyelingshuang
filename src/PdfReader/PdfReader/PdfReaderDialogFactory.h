@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include "DialogManager/DialogManagerAPI.h"
 
-/** Register the PdfReader dialog shell; ownership is transferred to DialogManager. */
+/** Register the PdfReader dialog shell; ownership is transferred to DialogManager
+*/
 class PdfReaderDialogFactory : public CustomDialogFactory
 {
 public:

@@ -4,15 +4,15 @@
 bool PdfReaderCppConfigSmoke()
 {
     PdfReaderCoreConfig config;
-    if (!config.isValid() || config.maxRenderPixels != 64000000 || config.exportNumberWidth != 3)
+    if (!config.isValid() || config.m_maxRenderPixels != 64000000 || config.m_exportNumberWidth != 3)
     {
         return false;
     }
     PdfReaderCore core;
-    config.exportNumberWidth = 2;
+    config.m_exportNumberWidth = 2;
     if (!core.init(config) || !core.isInit()) { return false; }
     if (core.init(config)) { return false; }
     core.uninit();
-    config.exportNumberWidth = 10;
+    config.m_exportNumberWidth = 10;
     return !core.init(config) && !core.isInit();
 }

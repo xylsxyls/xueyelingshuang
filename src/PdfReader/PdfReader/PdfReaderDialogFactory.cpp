@@ -1,4 +1,4 @@
-#include "PdfReaderDialogFactory.h"
+﻿#include "PdfReaderDialogFactory.h"
 #include "PdfReaderDialog.h"
 #include "PdfReaderDialogView.h"
 #include <new>

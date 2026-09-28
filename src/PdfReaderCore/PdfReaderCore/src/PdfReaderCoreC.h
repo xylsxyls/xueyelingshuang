@@ -35,7 +35,9 @@ typedef struct PdfReaderCoreCPageInfo
 /* 初始化配置：默认值由 DefaultConfig 填充；InitWithConfig 校验、复制，运行期不可更改。 */
 typedef struct PdfReaderCoreCConfig
 {
+    // C入口初始化时复制给Core的单页渲染宽×高上限，单位为像素个数，范围1..268435456
     uint64_t maxRenderPixels;
+    // 逐页导出文件名页码的最少十进制位数，范围1..9；不足时左补0，不截断更长页码
     int32_t exportNumberWidth;
 } PdfReaderCoreCConfig;
 

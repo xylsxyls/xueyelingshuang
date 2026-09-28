@@ -7,9 +7,8 @@
 #include <QStyle>
 #include "QtControls/ScrollBar.h"
 
-PdfReaderThumbnailList::PdfReaderThumbnailList(QWidget* parent, const Config& config) :
+PdfReaderThumbnailList::PdfReaderThumbnailList(QWidget* parent) :
 ListWidget(parent),
-m_config(config),
 m_holdTimer(new QTimer(this)),
 m_scrollTimer(new QTimer(this)),
 m_sourceRow(-1),
@@ -33,8 +32,8 @@ m_dragging(false)
     setSpacing(0);
     setContextMenuPolicy(Qt::CustomContextMenu);
     m_holdTimer->setSingleShot(true);
-    m_holdTimer->setInterval(m_config.dragHoldMs);
-    m_scrollTimer->setInterval(m_config.dragScrollMs);
+    m_holdTimer->setInterval(g_config.m_dragHoldMs);
+    m_scrollTimer->setInterval(g_config.m_dragScrollMs);
     connect(m_holdTimer, SIGNAL(timeout()), this, SLOT(beginDrag()));
     connect(m_scrollTimer, SIGNAL(timeout()), this, SLOT(autoScrollDrag()));
 }
@@ -119,13 +118,13 @@ void PdfReaderThumbnailList::cancelDrag()
 void PdfReaderThumbnailList::autoScrollDrag()
 {
     int speed = 0;
-    if (m_dragPoint.y() < m_config.dragEdgePixels)
+    if (m_dragPoint.y() < g_config.m_dragEdgePixels)
     {
-        speed = -qBound(m_config.dragMinSpeed, m_config.dragMinSpeed + (m_config.dragEdgePixels - m_dragPoint.y()) / m_config.dragAcceleration, m_config.dragMaxSpeed);
+        speed = -qBound(g_config.m_dragMinSpeed, g_config.m_dragMinSpeed + (g_config.m_dragEdgePixels - m_dragPoint.y()) / g_config.m_dragAcceleration, g_config.m_dragMaxSpeed);
     }
-    else if (m_dragPoint.y() > viewport()->height() - m_config.dragEdgePixels)
+    else if (m_dragPoint.y() > viewport()->height() - g_config.m_dragEdgePixels)
     {
-        speed = qBound(m_config.dragMinSpeed, m_config.dragMinSpeed + (m_dragPoint.y() - viewport()->height() + 70) / m_config.dragAcceleration, m_config.dragMaxSpeed);
+        speed = qBound(g_config.m_dragMinSpeed, g_config.m_dragMinSpeed + (m_dragPoint.y() - viewport()->height() + g_config.m_dragEdgePixels) / g_config.m_dragAcceleration, g_config.m_dragMaxSpeed);
     }
     verticalScrollBar()->setValue(verticalScrollBar()->value() + speed);
     viewport()->update();
@@ -138,12 +137,12 @@ void PdfReaderThumbnailList::paintEvent(QPaintEvent* event)
     {
         QPainter painter(viewport());
         const QRect source = visualItemRect(item(m_sourceRow));
-        painter.fillRect(source.adjusted(m_config.dragGhostInset, m_config.dragGhostInset, -m_config.dragGhostInset, -m_config.dragGhostBottomInset), m_config.dragGhostColor);
+        painter.fillRect(source.adjusted(g_config.m_dragGhostInset, g_config.m_dragGhostInset, -g_config.m_dragGhostInset, -g_config.m_dragGhostBottomInset), g_config.m_dragGhostColor);
         const int gap = insertionRow();
-        const int y = gap < count() ? visualItemRect(item(gap)).top() - m_config.dragLineOffset :
-            visualItemRect(item(count() - 1)).bottom() + m_config.dragLineOffset;
-        painter.setPen(QPen(m_config.dragLineColor, m_config.dragLineWidth));
-        painter.drawLine(m_config.dragLineInset, y, viewport()->width() - m_config.dragLineInset, y);
+        const int y = gap < count() ? visualItemRect(item(gap)).top() - g_config.m_dragLineOffset :
+            visualItemRect(item(count() - 1)).bottom() + g_config.m_dragLineOffset;
+        painter.setPen(QPen(g_config.m_dragLineColor, g_config.m_dragLineWidth));
+        painter.drawLine(g_config.m_dragLineInset, y, viewport()->width() - g_config.m_dragLineInset, y);
     }
 }
 

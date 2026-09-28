@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Widget.h"
+#include "DialogShadowConfig.h"
 #include <QImage>
 
 class QPaintEvent;
@@ -38,7 +39,7 @@ public:
     */
     void moveOutline(const QPoint& globalPos);
 
-    /** 结束轮廓拖动并恢复阴影，捕获释放由调用方处理
+    /** 结束轮廓拖动并释放本次捕获；重复结束无副作用
     @param [in] accepted 为true提交目标位置，为false保持原位置
     */
     void finishOutlineMove(bool accepted);
@@ -78,6 +79,8 @@ private:
     qreal coverage(qreal sample, qreal start, qreal end, qreal sigma) const;
 
 private:
+    // 此阴影实例的只读默认配置
+    const DialogShadowConfig m_config;
     // 借用父弹窗，父对象销毁时本对象同步销毁
     QWidget* m_dialog;
     // 0禁用，正值为已限幅的扩散级别

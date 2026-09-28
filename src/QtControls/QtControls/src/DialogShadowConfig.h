@@ -2,34 +2,36 @@
 #include <QtCore/QtGlobal>
 #include <QtGui/QColor>
 
-/** 弹窗投影样式；不可变默认值，不依赖应用或保存窗口状态 */
+/** 弹窗投影默认配置；按需构造，不在 main 前初始化 Qt 资源
+*/
 class DialogShadowConfig
 {
 public:
-    // 阴影扩散级别上限
-    static const qint32 kMaximumSize;
-    // 主阴影标准差倍率
-    static const qreal kBroadSigmaFactor;
-    // 主阴影向下偏移倍率
-    static const qreal kDownwardOffsetFactor;
-    // 透明边缘距离的标准差倍数
-    static const qreal kCutoffSigma;
-    // 接触阴影下偏移逻辑像素
-    static const qreal kContactOffset;
-    // 主阴影不透明度
-    static const qreal kBroadOpacity;
-    // 接触阴影不透明度
-    static const qreal kContactOpacity;
-    // 移动目标框线宽
-    static const qint32 kOutlineWidth;
-
-    /** 返回中性灰投影色
-    @return 不含渐变透明度的基础色
+    /** 构造当前阴影效果的默认参数，不创建窗口
     */
-    static QColor color();
-
-    /** 返回启用阴影时的主体轮廓色
-    @return 不透明轮廓颜色
-    */
-    static QColor borderColor();
+    DialogShadowConfig();
+    // DialogShadow接收阴影扩散级别时的上限，超过此值按上限处理；传入0仍表示关闭阴影
+    qint32 m_maximumSize;
+    // 主阴影高斯标准差相对扩散级别的倍数，标准差用于计算四周模糊覆盖范围，单位为逻辑像素
+    qreal m_broadSigmaFactor;
+    // 主阴影向下偏移量相对扩散级别的倍数；计算得到的偏移使用逻辑像素
+    qreal m_downwardOffsetFactor;
+    // 生成主阴影缓存时保留的标准差倍数，与向下偏移一起计算主体四周所需透明边距
+    qreal m_cutoffSigma;
+    // 贴近弹窗的接触阴影相对主体向下移动的距离，逻辑像素，不随主阴影偏移倍率计算
+    qreal m_contactOffset;
+    // 主阴影高斯覆盖值合成到输出Alpha时的权重，0..1；数值越大远处阴影越深
+    qreal m_broadOpacity;
+    // 接触阴影高斯覆盖值合成到输出Alpha时的权重，0..1；与主阴影权重相加生成最终透明度
+    qreal m_contactOpacity;
+    // 系统关闭实时拖窗内容时，拖动预览矩形框的画笔宽度，逻辑像素
+    qint32 m_outlineWidth;
+    // 拖动预览矩形框的线条颜色，不是正常弹窗投影颜色
+    QColor m_outlineColor;
+    // 生成阴影缓存时采用的RGB基础色；输出Alpha由两层高斯覆盖和不透明度权重计算
+    QColor m_color;
+    // DialogBase启用阴影时绘制主体一像素轮廓的颜色，用于区分弹窗边缘与外部投影
+    QColor m_borderColor;
+    // 按屏幕像素倍率生成阴影缓存的最大像素总数，超限时不分配缓存并保留主体边框
+    qint64 m_maxImagePixels;
 };

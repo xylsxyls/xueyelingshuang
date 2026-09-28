@@ -1,13 +1,13 @@
-﻿PdfReader 测试文档
-更新日期：2026-09-24
+PdfReader 测试文档
+更新日期：2026-09-28
 范围：Windows x64 Release，VS2013 + Qt 5.5.1；Core C API 和产品 Qt 窗口交互。
-最近发布批次：reports/20260923-161643-462/results.txt，17/17 通过、退出码 0；发布 Test EXE SHA256=9e19a639a8763f4ec5b20962e650607c262f9c7cf35e580ca9d7aaddcc889b92。Qt 平台插件从用户安装的 Qt 5.5.1 提供，common 不携带 Qt5 DLL 或 Qt 资源；自研 QtControls、DialogManager 及实际依赖随程序发布。运行时已核对这些 DLL 从 common/PdfReaderTest 加载。
+上轮配置与阴影复核发布验证：2026-09-28，Windows x64 Release，26/26通过，进程退出码0；Test EXE SHA256=558fd133ed3ffa1755a025e9a7d72be5b9d7fc1be4f606ed6b8014a58514088f。工作流已按用户指令结束；过程报告、截图、测试素材及临时备份已按结束规则清理，保留以下正式结论和可复用测试入口。
 
 一、执行入口和证据
 GUI 的指定测试、瞬时测试、全量测试以及 CLI --regression 共用 PdfReaderRegression::run。
 指定：PdfReaderTest1.0.exe --regression --cases 1,3-4
 全部：PdfReaderTest1.0.exe --regression
-可用 --reports 指定报告目录。退出码 0=全部通过，1=断言失败，2=选择参数错误，3=报告创建失败。
+可用 --reports 指定报告目录。退出码 0=全部通过，1=断言失败，2=选择参数错误，3=报告创建失败，4=初始化或外层异常，5=退出收尾后任务线程数未恢复到启动前。
 每次运行建立独立 reports/时间戳/case编号 目录，自行生成红/绿/蓝、尺寸分别为 200x300、300x150、400x300 的 PDF。
 预期来自原工程行为以及生成素材的已知颜色/尺寸，不使用产品保存算法生成预期。
 报告记录测试 EXE 身份、各项开始/结果/耗时和汇总；截图、导出 PDF 留在各用例目录，供核验。程序异常退出且报告没有 TOTAL 时，批次不算通过。
@@ -36,38 +36,39 @@ GUI 自动回归短时间显示产品窗口和弹窗。没有注册压力用例�
 20 正文滚动同步当前页与缩略图：通过真实无 Ctrl 滚轮滚动正文，检查当前可见页的蓝色焦点、左侧选中行和缩略图可见性同步；左侧点击仍保持目标页选择。
 原 17/18 是 Explorer 内容缩略图扩展测试，随用户取消此功能而退役，不复用编号，不计入通过或跳过。
 19 DialogManager 与 QtControls：检查主窗口、列表、正文、滚动条、工具栏和分隔栏实际封装类型；通过公共接口设置常态/悬停/禁用背景和边框，检查 show 后保留 QSS。经真实弹窗验证密码遮蔽及无明文 tooltip、确认回传、Esc 取消保留原值、覆盖默认焦点为取消、文件选择取消、帮助内容和父窗口恢复。每个弹窗检查管理器登记，收集五次关闭信号，最终窗口计数为零；保存密码、确认、帮助截图。
-当前 GUI 与 CLI 全量入口为 1..16、19 和 20，共 18 项；指定全部可用 --cases 1-16,19,20。无效 ID（包括已退役 17/18）返回 2，不生成虚假通过记录。
+当前 GUI 与 CLI 全量入口为 1..16、19..28，共 26 项；指定全部可用 --cases 1-16,19-28。无效 ID（包括已退役 17/18）返回 2，不生成虚假通过记录。
 
-三、边界和收尾
-每个用例独立生成素材、创建窗口或 Core 句柄，结束销毁上下文；不读取或修改用户 PDF。
-保留批次输出和失败记录，不将中途失败、未执行或人工检查自动计入通过。
-未验证：其他四端真实编译运行、加密 PDF 的真实密码重试、多小时压力、复杂外部 PDF 字体/表单/批注兼容性。
-密码逻辑已按旧工程核对取消和无限重试；尚未有本批次加密素材证据，不据此宣称密码全场景通过。
-发布验证须从 common/PdfReaderTest 的最终 EXE/DLL 再运行全部用例，并核对与 lib 构建产物的哈希一致。
+21 配置单例与标题选项：相同instance地址、public字段生效、无效缩放拒绝、测试后恢复；关于/范围明确指定关闭与标题高度，不按标题文字猜测。
+22 阴影与菜单像素：初始0不创建阴影，启用后中心透明、外沿具有递减半透明像素、主体和菜单保持不透明；启停/移动/尺寸变化不改变客户区；隐藏/最小化/恢复/销毁没有孤立窗口。模拟ScreenChangeInternal只能覆盖刷新入口，不能代替真实混合DPI显示器测试。
+23 异步请求身份与忙碌拒绝：受控阻塞唯一执行者，打开提交立即返回且GUI定时器继续执行；第二个业务请求明确拒绝；释放执行者后只收到被接纳请求的终态，核对页数和实际像素。
+24 旧结果隔离：受控阻塞执行者时连续缩放和换文档，旧代次预览不得进入新视图；最终尺寸和页色取自独立素材，不只看排队标志。
+25 在途关闭和多窗口隔离：在执行者阻塞时关闭窗口，GUI继续响应；释放后窗口才关闭，关闭终态只有一次；另一窗口文档不受影响，最终两个会话均关闭，无遗留Core请求。
+26 失败与错误信息隔离：GUI缺失文件异步失败后旧文档/选中页/原文件保持；关闭GUI Core后，通过C API构造输出目录冲突，再触发空指针参数错误，不得返回前次保存错误。异步无效范围由14号覆盖，保存恢复与重试由27号覆盖。
+27 Windows覆盖原件失败恢复：先移动首到尾，再用独立文件句柄拒绝替换，断言原件字节保持、Core工作页序仍为300/400/200且主路径不变；释放冲突后重试成功并重新打开核验页序。其他平台不冒充通过。
+28 渲染预算：Core像素上限设为10000，在默认缩放实际失败时显示错误且请求收尾；连续缩小到25%后必须重新渲染并核对红色中心，证明失败没有留下永久在途标志。
 
+三、判定、隔离和复现
+每个用例独立生成素材、创建窗口或Core句柄，结束销毁上下文，不读取或修改用户PDF。自动化用可控文件对话框回退验证业务结果，原生文件选择器外观由C5人工试运行确认。密码输入遮蔽测试不代表真实加密PDF密码重试已验证。
+异步用例等待真实完成状态，再断言页序、磁盘文件及独立素材像素；23..25以受控任务阻塞构造在途窗口，检查GUI心跳、请求身份和红/蓝独立素材，避免只凭延时或入队成功判通过。失败用例也收敛自身任务后才进入下一项；配置改动用RAII恢复。测试main最后核对任务线程数量恢复到启动前，否则返回5。
+本机复现：在Qt5.5.1 x64的bin位于进程PATH首项、QT_PLUGIN_PATH为对应plugins且QT_QPA_PLATFORM=windows的环境，从common/PdfReaderTest运行PdfReaderTest1.0.exe --regression --cases 1-16,19-28 --reports <独立报告目录>。新增边界可用--cases 21-28单独选择。必须核对完整TOTAL和真实进程退出码，不能把终止或缺失退出码判为通过。
+运行期保留成功及失败批次，工作流结束后按规则清理；报告目录会在下次执行时新建。自动弹窗有5秒保护，外部监督设90秒批次上限，只收敛自己启动的进程。Windows PowerShell监督时启动后保留进程句柄，以GetExitCodeProcess取得真实退出码，避免Start-Process对象返回空ExitCode造成误判。
+测试辅助分别为PdfReaderTestHelper（独立素材/断言）、PdfReaderTestUiHelper（实际Qt交互）、PdfReaderTestConfigGuard（配置恢复）、PdfReaderTestModalGuard（弹窗超时）和PdfReaderTestWorkerGate（受控任务时序）。可复用测试源码保留，临时监督脚本不作为工程依赖。
 
-本次补充验证说明：
-原 14 项未覆盖配置注入和 EXE 资源，因此保留新增的 15/16。原用例 1 仍按三档真实侧栏宽度核验条目中心和红色像素中心，避免只断言布局枚举而漏掉绘制偏移。
-本次用 ExtractIconExW 从构建 EXE 直接抽取大/小图标，补充窗口 QIcon 非空以外的原生资源证据。
-图标构建专项：源码仅 res/PdfReader.png；删除 src/temp/PdfReader/x64/Release/res/PdfReader.ico 后由 MSBuild 自动重建，未改 PNG 的下一次构建不重写 ICO；触碰 PNG 修改时间后，ICO 与 App/Test 的 rcc 均重新执行。独立解码 ICO 七个 16..256 图像帧并检查透明角像素。发布前核对全部实际 EXE/DLL 的 RSDS GUID/age 与对应 PDB 一致，7z -mx=9 归档测试通过后删除散装 PDB。
-历史 17/18 验证过内容缩略图扩展；该扩展现已卸载。固定图标另外通过 Shell 文件类型取图核验，.pdf/.PDF 均不读取文件就能取得 EXE 的同一图标。没有改变 UAC 或其他文件类型的缩略图显示策略。
-本次构建/发布的最终报告保留在 common/PdfReaderTest/reports；工作流结束后的临时迁移记录已清理。
+四、上轮配置与阴影复核的验证及发布身份（2026-09-28）
+构建：QtControls、PdfReaderCore、PdfReader、PdfReaderTest通过VS2013 MSBuild12、Qt5.5.1、Release|x64构建。C/C++单头文件API编译验证保留在Test；未重建或验证其他平台。
+开发期完整26项通过；共享SplitViewerTest阴影184、187、191各通过一次。用户已给出“界面效果及手动试运行已确认，可以进入测试环节。”。正式有效批次26项通过，退出0，13.172秒；首批26项断言虽通过但监督脚本未取到退出码，不算完整通过，修正监督后才执行有效新批次。
+用户随后授权“继续后面的流程啊，到发布”。发布后从common/PdfReaderTest实际EXE再跑26项瞬时回归，26通过、0失败、0取消、范围内0未执行，进程退出0，13.379秒；测试main的任务线程收尾检查同时通过。17/18为需求取消后的历史退役编号，不作为本批跳过或通过；本批没有压力用例。
+产品：common/PdfReader/PdfReader1.0.exe，SHA256=7165652c0464ff1108395fe71c03583b72652b48f1c90cf6a3f89552115d3993；空启动、带独立测试PDF启动、正确窗口标题及WM_CLOSE正常退出均已验证，两次退出码0。产品16个、Test15个运行二进制逐项核对发布哈希及真实模块路径，均从对应common目录加载；Qt官方库和qwindows由本机Qt5.5.1 x64安装目录提供。
+产品符号包symbols-PdfReader-1.0-20260928-161213-ConfigReview.7z包含15份匹配PDB；Test符号包symbols-PdfReaderTest-1.0-20260928-161213-ConfigReview.7z包含14份。RSDS GUID/Age匹配、7z最高压缩、归档完整性和解压后PDB哈希均已验证。第三方pdfium没有可用PDB，明确为符号缺口。正式程序、资源、新旧正式符号包均保留，发布目录无散装PDB、Qt官方资源或LockFreeQueue.dll。
+本轮测试发现并修复C API错误文本残留，以及覆盖原件失败后工作页序丢失；26/27固定相应回归。关闭、旧预览、渲染失败恢复等边界由23..25/28覆盖。
+历史专项结论继续有效：侧栏三档宽度核验真实条目与像素居中；EXE原生图标提取非空，PNG构建生成多尺寸透明ICO并由资源编译嵌入，增量生成随PNG更新；固定Explorer图标不读取PDF内容。默认日志配置由用例16校验；产品日志可记录启动、Core初始化/打开/释放与正常退出，下一次启动轮换旧日志。
+2026-09-28用户明确“结束工作流”：原始报告、截图、素材、试运行包、一次性脚本、备份和本轮中间文件均按归属清理；上述结论与版本身份保留，不再将已清理路径作为可打开的证据或回退入口。后续复测使用正式Test重新生成报告。
 
-测试辅助已拆为 PdfReaderTestHelper（独立素材/断言）和 PdfReaderTestUiHelper（真实 Qt 交互）。配置测试复用这些 helper，不再定义文件级静态辅助函数。
+五、覆盖限制
+其他四端真实构建运行、真实加密PDF密码重试、复杂外部PDF字体/表单/批注、多小时压力、真实混合DPI屏幕切换及OS线程创建失败注入尚未完整验证。原生轮廓拖动自动用例185/186/188本轮未执行；184/187/191及人工总体效果确认不替代其专项证据。
+ScreenChangeInternal合成事件只证明刷新入口，不代替真实跨DPI显示器；自动像素检查不能代替人工评价阴影观感。Windows的锁文件覆盖失败测试不冒充其他平台通过。26项通过不表示全部功能边界或五端无缺陷。
 
-2026-09-23 默认日志专项（lib 构建验证，未更新 common 发布产物）：
-用例 16 增加默认文件 ID/目录、20 MB、8 个文件、每条检查大小、归档旧日志和不输出控制台的配置断言。完整回归报告为 src/temp/PdfReaderLogReports/20260923-192020-522/results.txt，TOTAL=17 PASS=17 FAIL=0；测试 EXE SHA256=882077C6BF5C0BB83B6BF3E11B91379462A239255FFFBDFBD2FE3FDB2F3E50CC。
-产品 EXE 无参数启动、携带测试 PDF 启动均实际验证，未传 debug：日志含 startup、Core init，带文件时含 open completed；正常 WM_CLOSE 后先记录 Core destroyed，再记录 exitCode=0 和 END。第二次启动后，前次实体日志进入 PdfReader1.0_log 归档目录。产品 EXE SHA256=0BB3E5AB6A9964E482964FB1F7589511C011702663B91E674383912D20806D11。
-复测时在 EXE 可写目录运行以上两种启动方式，正常关闭后检查日志；日志文件使用共享读写方式打开才能在运行时读取。未在 Linux/macOS 执行日志专项。当前机器 version 链路的 Python 3 启动器报告未安装，CloudRebuild 仍返回成功；本次通过 VS2013 MSBuild 逐项补编依赖，再编译 App/Test，不将 version 返回码视为构建成功证据。
-
-2026-09-24 界面与弹窗优化开发期验证：
-VS2013 Release|x64 重编 PdfReader 和 PdfReaderTest 均通过；PdfReaderEmptyState 新控件没有 C4819 编码告警。完整 CLI 回归报告为 `temp/PdfReaderRegression-final2/20260924-112918-787/results.txt`，退出码 0，TOTAL=17 PASS=17 FAIL=0，测试 EXE SHA256=d38abff4cd01420bd88ad9e6922c7026c0271827df62068c8f067c91612ea2b5。测试用例通过 Config.useNativeFileDialog=false 验证 DialogManager 管理的嵌入式回退路径；产品默认值为 true，C5 手动试运行需实际观察 Windows 原生文件选择器的外观和系统语言。
-
-2026-09-24 弹窗透明背景修正复测：
-DialogBase 改为不透明客户区绘制，标题栏使用不透明背景并为右下阴影预留 2px；回归用例增加标题区域和边缘像素检查。最终报告为 `temp/PdfReaderRegression-shadow-final3/20260924-115915-954/results.txt`，退出码 0，TOTAL=17 PASS=17 FAIL=0，测试 EXE SHA256=446ca94443b9980116bbd3dbdb783f30df2bd17706c9c1d4511fd30f6ad645ea。
-
-2026-09-24 阴影渐变复测：
-DialogBase 的右下阴影改为多层渐变和角部过渡，size=2 仍表示右下偏移 2 像素；完整 CLI 回归报告为 	emp/PdfReaderRegression-shadow-final7/20260924-141813-113/results.txt，TOTAL=17 PASS=17 FAIL=0，退出码 0，测试 EXE SHA256=ecccc5ae2c38491d2c56f21c280e185ee5cf54c743e09791a5cfa191c99b8681。
-
-2026-09-24 阴影参数边界复测：
-补充修正关闭阴影时不再保留阴影客户区，QtControls、DialogManager、PdfReader、PdfReaderTest 重新以 Release|x64 构建通过；最终完整 CLI 回归报告为 	emp/PdfReaderRegression-shadow-final8/20260924-142103-634/results.txt，退出码 0，TOTAL=17 PASS=17 FAIL=0，测试 EXE SHA256=ca0ff6ef6252e5b5a162186381584a27c3e7a9c883d047315049ea0dde881d43。
+六、当前配置注释整改版本（2026-09-28）
+用户明确本轮只改注释，重新编译并发布，不用测试。本轮未执行回归、压力或启动检查，不把上轮26项结论写成当前产物已复测。测试代码和用例登记未修改。
+PdfReaderCore、QtControls、产品和Test的Windows x64 Release构建均成功；4个变更头文件的注释外文本核对一致。当前Test EXE SHA256=afc30ae1b937e30040303cf0d1aedaf0d3e85b56bbe2db38bf7ae9666cad050d；产品EXE SHA256=be4a633f2ef822bc3ba8683c7a4137f9c595bc8354e3addc7054b88fc636f884。
+已同步两个common发布目录中的EXE及变化的Core/QtControls DLL，其余依赖和资源保留；发布身份、PDB GUID/Age、7z最高压缩归档完整性及解压哈希已核对。新符号包名称及发布身份见开发文档末节；本轮已按用户指令结束，临时备份和清单已清理。其他平台未新增编译验证。

@@ -6,7 +6,7 @@
 PdfReaderDialogRuntime::PdfReaderDialogRuntime()
 {
     PdfReaderDialogFactory* factory = new PdfReaderDialogFactory;
-    if (!DialogManager::instance().registerCustomDialogFactory(static_cast<DialogType>(PdfReaderDialogParam::TypeId), factory))
+    if (!DialogManager::instance().registerCustomDialogFactory(static_cast<DialogType>(g_config.m_dialogType), factory))
     {
         delete factory;
         throw std::runtime_error("PdfReader dialog factory registration failed");

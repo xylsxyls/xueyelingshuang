@@ -1,20 +1,17 @@
 ﻿#include "DialogShadowConfig.h"
 
-const qint32 DialogShadowConfig::kMaximumSize = 16;
-const qreal DialogShadowConfig::kBroadSigmaFactor = 4.0;
-const qreal DialogShadowConfig::kDownwardOffsetFactor = 2.0;
-const qreal DialogShadowConfig::kCutoffSigma = 3.0;
-const qreal DialogShadowConfig::kContactOffset = 1.0;
-const qreal DialogShadowConfig::kBroadOpacity = 0.28;
-const qreal DialogShadowConfig::kContactOpacity = 0.12;
-const qint32 DialogShadowConfig::kOutlineWidth = 2;
-
-QColor DialogShadowConfig::color()
+DialogShadowConfig::DialogShadowConfig() :
+m_maximumSize(16),
+m_broadSigmaFactor(4.0),
+m_downwardOffsetFactor(2.0),
+m_cutoffSigma(3.0),
+m_contactOffset(1.0),
+m_broadOpacity(0.28),
+m_contactOpacity(0.12),
+m_outlineWidth(2),
+m_outlineColor(Qt::black),
+m_color(20, 24, 32),
+m_borderColor(151, 156, 166),
+m_maxImagePixels(64000000)
 {
-    return QColor(20, 24, 32);
-}
-
-QColor DialogShadowConfig::borderColor()
-{
-    return QColor(151, 156, 166);
 }

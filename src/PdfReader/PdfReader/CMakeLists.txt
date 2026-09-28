@@ -134,7 +134,7 @@ ENDIF()
 
 # Desktop UI uses the shared control and dialog libraries.
 IF(DEBUGRELEASE STREQUAL "debug")
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControlsd DialogManagerd QssStringd CStringManagerd LogManagerd CDumpd)
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControlsd DialogManagerd QssStringd CStringManagerd LogManagerd CTaskThreadManagerd Semaphored CDumpd)
 ELSE()
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControls DialogManager QssString CStringManager LogManager CDump)
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControls DialogManager QssString CStringManager LogManager CTaskThreadManager Semaphore CDump)
 ENDIF()

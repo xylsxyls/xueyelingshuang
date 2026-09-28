@@ -20,7 +20,10 @@ PdfReaderCoreAPI void pdfReaderCoreDestroy(PdfReaderCoreHandle handle)
 
 PdfReaderCoreAPI int32_t pdfReaderCoreInit(PdfReaderCoreHandle handle)
 {
-    if (!handle) return PdfReaderCoreCResultInvalidParam;
+    if (!handle)
+    {
+        return PdfReaderCoreCResultInvalidParam;
+    }
     try
     {
         std::string error;
@@ -32,20 +35,26 @@ PdfReaderCoreAPI int32_t pdfReaderCoreInit(PdfReaderCoreHandle handle)
 
 PdfReaderCoreAPI void pdfReaderCoreDefaultConfig(PdfReaderCoreCConfig* config)
 {
-    if (!config) { return; }
+    if (!config)
+    {
+        return;
+    }
     const PdfReaderCoreConfig defaults;
-    config->maxRenderPixels = defaults.maxRenderPixels;
-    config->exportNumberWidth = defaults.exportNumberWidth;
+    config->maxRenderPixels = defaults.m_maxRenderPixels;
+    config->exportNumberWidth = defaults.m_exportNumberWidth;
 }
 
 PdfReaderCoreAPI int32_t pdfReaderCoreInitWithConfig(PdfReaderCoreHandle handle, const PdfReaderCoreCConfig* config)
 {
-    if (!handle || !config) { return PdfReaderCoreCResultInvalidParam; }
+    if (!handle || !config)
+    {
+        return handle ? PdfReaderCoreCResultHelper::runResult(handle, PdfReaderCoreCResultInvalidParam) : PdfReaderCoreCResultInvalidParam;
+    }
     try
     {
         PdfReaderCoreConfig value;
-        value.maxRenderPixels = config->maxRenderPixels;
-        value.exportNumberWidth = config->exportNumberWidth;
+        value.m_maxRenderPixels = config->maxRenderPixels;
+        value.m_exportNumberWidth = config->exportNumberWidth;
         std::string error;
         return handle->core.init(value, &error) ? PdfReaderCoreCResultHelper::runResult(handle, PdfReaderCoreCResultSuccess) :
             PdfReaderCoreCResultHelper::runError(handle, PdfReaderCoreCResultInvalidParam, error);
@@ -55,17 +64,26 @@ PdfReaderCoreAPI int32_t pdfReaderCoreInitWithConfig(PdfReaderCoreHandle handle,
 
 PdfReaderCoreAPI void pdfReaderCoreUninit(PdfReaderCoreHandle handle)
 {
-    if (!handle) return;
+    if (!handle)
+    {
+        return;
+    }
     try { handle->core.uninit(); handle->lastResult = PdfReaderCoreCResultSuccess; handle->lastError.clear(); }
-    catch (...) { handle->lastResult = PdfReaderCoreCResultInternalError; }
+    catch (...) { PdfReaderCoreCResultHelper::runResult(handle, PdfReaderCoreCResultInternalError); }
 }
 
 PdfReaderCoreAPI int32_t pdfReaderCoreOpen(PdfReaderCoreHandle handle, const char* filePath, const char* password)
 {
-    if (!handle || !filePath || !*filePath) return handle ? PdfReaderCoreCResultHelper::runError(handle, PdfReaderCoreCResultInvalidParam, "file path is empty") : PdfReaderCoreCResultInvalidParam;
+    if (!handle || !filePath || !*filePath)
+    {
+        return handle ? PdfReaderCoreCResultHelper::runError(handle, PdfReaderCoreCResultInvalidParam, "file path is empty") : PdfReaderCoreCResultInvalidParam;
+    }
     try
     {
-        if (!handle->core.isInit()) return PdfReaderCoreCResultHelper::runError(handle, PdfReaderCoreCResultNotInit, "pdf engine is not initialized");
+        if (!handle->core.isInit())
+        {
+            return PdfReaderCoreCResultHelper::runError(handle, PdfReaderCoreCResultNotInit, "pdf engine is not initialized");
+        }
         std::string error;
         const std::wstring path = CStringManager::Utf8ToUnicode(filePath);
         const bool ok = handle->core.open(path, password ? password : std::string(), &error);
@@ -77,28 +95,40 @@ PdfReaderCoreAPI int32_t pdfReaderCoreOpen(PdfReaderCoreHandle handle, const cha
 
 PdfReaderCoreAPI void pdfReaderCoreClose(PdfReaderCoreHandle handle)
 {
-    if (!handle) return;
+    if (!handle)
+    {
+        return;
+    }
     try { handle->core.close(); handle->lastResult = PdfReaderCoreCResultSuccess; handle->lastError.clear(); }
-    catch (...) { handle->lastResult = PdfReaderCoreCResultInternalError; }
+    catch (...) { PdfReaderCoreCResultHelper::runResult(handle, PdfReaderCoreCResultInternalError); }
 }
 
 PdfReaderCoreAPI int32_t pdfReaderCoreIsOpen(PdfReaderCoreHandle handle)
 {
-    if (!handle) return 0;
+    if (!handle)
+    {
+        return 0;
+    }
     try { return handle->core.isOpen() ? 1 : 0; }
     catch (...) { return 0; }
 }
 
 PdfReaderCoreAPI int32_t pdfReaderCorePageCount(PdfReaderCoreHandle handle)
 {
-    if (!handle) return 0;
+    if (!handle)
+    {
+        return 0;
+    }
     try { return handle->core.pageCount(); }
     catch (...) { return 0; }
 }
 
 PdfReaderCoreAPI size_t pdfReaderCoreGetFilePath(PdfReaderCoreHandle handle, char* buffer, size_t bufferSize)
 {
-    if (!handle) return 0;
+    if (!handle)
+    {
+        return 0;
+    }
     try
     {
         const std::string path = CStringManager::UnicodeToUtf8(handle->core.filePath());
@@ -106,7 +136,10 @@ PdfReaderCoreAPI size_t pdfReaderCoreGetFilePath(PdfReaderCoreHandle handle, cha
         if (buffer && bufferSize)
         {
             const size_t copySize = (std::min)(bufferSize - 1, path.size());
-            if (copySize) std::memcpy(buffer, path.data(), copySize);
+            if (copySize)
+            {
+                std::memcpy(buffer, path.data(), copySize);
+            }
             buffer[copySize] = 0;
         }
         return required;
@@ -116,7 +149,10 @@ PdfReaderCoreAPI size_t pdfReaderCoreGetFilePath(PdfReaderCoreHandle handle, cha
 
 PdfReaderCoreAPI int32_t pdfReaderCoreGetPageInfo(PdfReaderCoreHandle handle, int32_t pageIndex, PdfReaderCoreCPageInfo* info)
 {
-    if (!handle || !info) return handle ? PdfReaderCoreCResultHelper::runResult(handle, PdfReaderCoreCResultInvalidParam) : PdfReaderCoreCResultInvalidParam;
+    if (!handle || !info)
+    {
+        return handle ? PdfReaderCoreCResultHelper::runResult(handle, PdfReaderCoreCResultInvalidParam) : PdfReaderCoreCResultInvalidParam;
+    }
     try
     {
         PdfReaderCorePageInfo pageInfo;
@@ -160,7 +196,10 @@ PdfReaderCoreAPI int32_t pdfReaderCoreRenderPage(PdfReaderCoreHandle handle, int
 PdfReaderCoreAPI int32_t pdfReaderCoreInsertDocument(PdfReaderCoreHandle handle, const char* filePath,
                                                       const char* password, int32_t insertIndex)
 {
-    if (!handle || !filePath || !*filePath) return handle ? PdfReaderCoreCResultHelper::runResult(handle, PdfReaderCoreCResultInvalidParam) : PdfReaderCoreCResultInvalidParam;
+    if (!handle || !filePath || !*filePath)
+    {
+        return handle ? PdfReaderCoreCResultHelper::runResult(handle, PdfReaderCoreCResultInvalidParam) : PdfReaderCoreCResultInvalidParam;
+    }
     try
     {
         std::string error;
@@ -173,7 +212,10 @@ PdfReaderCoreAPI int32_t pdfReaderCoreInsertDocument(PdfReaderCoreHandle handle,
 
 PdfReaderCoreAPI int32_t pdfReaderCoreMovePage(PdfReaderCoreHandle handle, int32_t fromIndex, int32_t toIndex)
 {
-    if (!handle) return PdfReaderCoreCResultInvalidParam;
+    if (!handle)
+    {
+        return PdfReaderCoreCResultInvalidParam;
+    }
     try
     {
         std::string error;
@@ -185,7 +227,10 @@ PdfReaderCoreAPI int32_t pdfReaderCoreMovePage(PdfReaderCoreHandle handle, int32
 
 PdfReaderCoreAPI int32_t pdfReaderCoreSaveTo(PdfReaderCoreHandle handle, const char* outputFilePath)
 {
-    if (!handle || !outputFilePath || !*outputFilePath) return handle ? PdfReaderCoreCResultHelper::runResult(handle, PdfReaderCoreCResultInvalidParam) : PdfReaderCoreCResultInvalidParam;
+    if (!handle || !outputFilePath || !*outputFilePath)
+    {
+        return handle ? PdfReaderCoreCResultHelper::runResult(handle, PdfReaderCoreCResultInvalidParam) : PdfReaderCoreCResultInvalidParam;
+    }
     try
     {
         std::string error;
@@ -197,7 +242,10 @@ PdfReaderCoreAPI int32_t pdfReaderCoreSaveTo(PdfReaderCoreHandle handle, const c
 
 PdfReaderCoreAPI int32_t pdfReaderCoreSaveToMain(PdfReaderCoreHandle handle)
 {
-    if (!handle) return PdfReaderCoreCResultInvalidParam;
+    if (!handle)
+    {
+        return PdfReaderCoreCResultInvalidParam;
+    }
     try
     {
         std::string error;
@@ -209,7 +257,10 @@ PdfReaderCoreAPI int32_t pdfReaderCoreSaveToMain(PdfReaderCoreHandle handle)
 
 PdfReaderCoreAPI int32_t pdfReaderCoreValidatePageRange(PdfReaderCoreHandle handle, const char* rangeText)
 {
-    if (!handle || !rangeText) { return PdfReaderCoreCResultInvalidParam; }
+    if (!handle || !rangeText)
+    {
+        return handle ? PdfReaderCoreCResultHelper::runResult(handle, PdfReaderCoreCResultInvalidParam) : PdfReaderCoreCResultInvalidParam;
+    }
     try
     {
         std::string error;
@@ -252,15 +303,22 @@ PdfReaderCoreAPI int32_t pdfReaderCoreSaveEachPageEx(PdfReaderCoreHandle handle,
 
 PdfReaderCoreAPI size_t pdfReaderCoreGetLastError(PdfReaderCoreHandle handle, char* buffer, size_t bufferSize)
 {
-    if (!handle) return 0;
+    if (!handle)
+    {
+        return 0;
+    }
     try
     {
-        const std::string error = handle->lastError;
+        const std::string error = handle->lastError.empty() && handle->lastResult != PdfReaderCoreCResultSuccess ?
+            pdfReaderCoreResultDescription(handle->lastResult) : handle->lastError;
         const size_t required = error.size() + 1;
         if (buffer && bufferSize)
         {
             const size_t copySize = (std::min)(bufferSize - 1, error.size());
-            if (copySize) std::memcpy(buffer, error.data(), copySize);
+            if (copySize)
+            {
+                std::memcpy(buffer, error.data(), copySize);
+            }
             buffer[copySize] = 0;
         }
         return required;

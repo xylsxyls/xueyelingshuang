@@ -6,244 +6,339 @@
 #include "PdfReaderCore/PdfReaderCoreAPI.h"
 #include "LogManager/LogManagerAPI.h"
 
-/** 桌面配置值对象。main/QApplication 初始化后创建，窗口复制快照；不含静态初始化业务资源 */
+/** 桌面配置单例。QApplication 初始化后首次访问；仅 GUI 线程修改，工作任务使用提交时快照
+*/
 class Config
 {
 public:
-    /** 创建安全默认配置；Core 默认值来自同一 C API */
+    /** 按需取得进程配置；Core 默认值来自同一 C API
+    @return GUI 线程使用的配置引用
+    */
+    static Config& instance();
+
+private:
+    /** 初始化界面默认值，再调用init补齐Core和日志参数
+    */
     Config();
-    /** 检查缩放、布局及拖动边界；无效配置抛出 invalid_argument */
+
+    /** 从Core的C接口读取默认参数，并设置应用文件日志的滚动与归档策略
+    */
+    void init();
+
+    /** 禁止复制进程配置，避免各窗口持有不同的配置副本
+    @param [in] other 被禁止复制的配置对象
+    */
+    Config(const Config& other);
+
+    /** 禁止整体赋值覆盖单例；需要调整时显式修改对应公开成员
+    @param [in] other 被禁止复制的配置对象
+    @return 不提供实现
+    */
+    Config& operator=(const Config& other);
+
+public:
+    /** 检查缩放、布局及拖动边界；无效配置抛出 invalid_argument
+    */
     void validate() const;
 public:
-    // 五端 Core 的初始化参数，独立于 Qt 布局
-    PdfReaderCoreCConfig core;
-    // 默认日志：EXE 所在目录，20 MB 滚动、保留 8 个文件、归档旧日志
-    LogManagerConfig log;
-    // 弹窗默认尺寸、边距、样式及按钮文字
-    QSize dialogSize;
-    QSize aboutDialogSize;
-    QSize fileDialogSize;
-    bool dialogShadowEnabled;
-    int dialogShadowSize;
-    int dialogTitleBarHeight;
-    // useNativeFileDialog 配置；默认使用操作系统原生文件窗口，测试可关闭
-    bool useNativeFileDialog;
-    int dialogMargin;
-    int dialogSpacing;
-    QString dialogStyle;
-    QString dialogAcceptText;
-    QString dialogCancelText;
-    // 公用按钮的四态配色、尺寸及圆角
-    QColor buttonNormal;
-    QColor buttonHover;
-    QColor buttonPressed;
-    QColor buttonDisabled;
-    QColor buttonTextColor;
-    QSize buttonSize;
-    unsigned int buttonRadius;
-    // thumbnailItemMinWidth 配置
-    int thumbnailItemMinWidth;
-    // thumbnailItemSideInset 配置
-    int thumbnailItemSideInset;
-    // thumbnailImagePaddingX 配置
-    int thumbnailImagePaddingX;
-    // thumbnailImagePaddingY 配置
-    int thumbnailImagePaddingY;
-    // dragGhostInset 配置
-    int dragGhostInset;
-    // dragGhostBottomInset 配置
-    int dragGhostBottomInset;
-    // dragLineOffset 配置
-    int dragLineOffset;
-    // dragLineWidth 配置
-    int dragLineWidth;
-    // dragLineInset 配置
-    int dragLineInset;
-    // dragGhostColor 配置
-    QColor dragGhostColor;
-    // dragLineColor 配置
-    QColor dragLineColor;
-    // bridgeCreateError 配置
-    QString bridgeCreateError;
-    // bridgeInternalError 配置
-    QString bridgeInternalError;
-    // pageParameterError 配置
-    QString pageParameterError;
-    // renderParameterError 配置
-    QString renderParameterError;
-
-    // windowSize 配置
-    QSize windowSize;
-    // minimumWindowSize 配置
-    QSize minimumWindowSize;
-    // sidebarMinimumWidth 配置
-    int sidebarMinimumWidth;
-    // sidebarWidth 配置
-    int sidebarWidth;
-    // bodyWidth 配置
-    int bodyWidth;
-    // bodyMarginX 配置
-    int bodyMarginX;
-    // bodyMarginY 配置
-    int bodyMarginY;
-    // bodySpacing 配置
-    int bodySpacing;
-    // selectionMargin 配置
-    int selectionMargin;
-    // thumbnailWidth 配置
-    int thumbnailWidth;
-    // thumbnailMinWidth 配置
-    int thumbnailMinWidth;
-    // thumbnailSidePadding 配置
-    int thumbnailSidePadding;
-    // thumbnailRowPadding 配置
-    int thumbnailRowPadding;
-    // thumbnailLabelHeight 配置
-    int thumbnailLabelHeight;
-    // statusMessageMs 配置
-    int statusMessageMs;
-    // dragHoldMs 配置
-    int dragHoldMs;
-    // dragScrollMs 配置
-    int dragScrollMs;
-    // dragEdgePixels 配置
-    int dragEdgePixels;
-    // dragMinSpeed 配置
-    int dragMinSpeed;
-    // dragMaxSpeed 配置
-    int dragMaxSpeed;
-    // dragAcceleration 配置
-    int dragAcceleration;
-    // initialZoom 配置
-    double initialZoom;
-    // minimumZoom 配置
-    double minimumZoom;
-    // maximumZoom 配置
-    double maximumZoom;
-    // zoomStep 配置
-    double zoomStep;
-    // initialThumbnailZoom 配置
-    double initialThumbnailZoom;
-    // minimumThumbnailZoom 配置
-    double minimumThumbnailZoom;
-    // maximumThumbnailZoom 配置
-    double maximumThumbnailZoom;
-    // thumbnailZoomStep 配置
-    double thumbnailZoomStep;
-    // fallbackPageWidth 配置
-    double fallbackPageWidth;
-    // fallbackPageHeight 配置
-    double fallbackPageHeight;
-    // thumbnailSelectedColor 配置
-    QColor thumbnailSelectedColor;
-    // thumbnailBackground 配置
-    QColor thumbnailBackground;
-    // selectionColor 配置
-    QColor selectionColor;
-    // thumbnailBorderColor 配置
-    QColor thumbnailBorderColor;
-    // thumbnailTextColor 配置
-    QColor thumbnailTextColor;
-    // aboutTooltip 配置
-    QString aboutTooltip;
-    // applicationTitle 配置
-    QString applicationTitle;
-    // windowStyle 配置
-    QString windowStyle;
-    // toolbarTitle 配置
-    QString toolbarTitle;
-    // openText 配置
-    QString openText;
-    // saveText 配置
-    QString saveText;
-    // saveAsText 配置
-    QString saveAsText;
-    // exportRangeText 配置
-    QString exportRangeText;
-    // exportEachText 配置
-    QString exportEachText;
-    // zoomOutText 配置
-    QString zoomOutText;
-    // zoomResetText 配置
-    QString zoomResetText;
-    // zoomInText 配置
-    QString zoomInText;
-    // emptyDocumentText 配置
-    QString emptyDocumentText;
-    // emptyDocumentStyle 配置
-    QString emptyDocumentStyle;
-    // readyText 配置
-    QString readyText;
-    // passwordTitle 配置
-    QString passwordTitle;
-    // passwordPrompt 配置
-    QString passwordPrompt;
-    // openFailedText 配置
-    QString openFailedText;
-    // openDialogTitle 配置
-    QString openDialogTitle;
-    // openFilter 配置
-    QString openFilter;
-    // confirmSaveTitle 配置
-    QString confirmSaveTitle;
-    // confirmSavePrompt 配置
-    QString confirmSavePrompt;
-    // saveFailedText 配置
-    QString saveFailedText;
-    // savedText 配置
-    QString savedText;
-    // editedSuffix 配置
-    QString editedSuffix;
-    // saveFilter 配置
-    QString saveFilter;
-    // savedAsText 配置
-    QString savedAsText;
-    // rangeTitle 配置
-    QString rangeTitle;
-    // rangeExample 配置
-    QString rangeExample;
-    // invalidRangeText 配置
-    QString invalidRangeText;
-    // pagesSuffix 配置
-    QString pagesSuffix;
-    // saveRangeTitle 配置
-    QString saveRangeTitle;
-    // exportFailedText 配置
-    QString exportFailedText;
-    // rangeSavedText 配置
-    QString rangeSavedText;
-    // exportDirectoryTitle 配置
-    QString exportDirectoryTitle;
-    // confirmOverwriteTitle 配置
-    QString confirmOverwriteTitle;
-    // confirmOverwritePrompt 配置
-    QString confirmOverwritePrompt;
-    // eachSavedText 配置
-    QString eachSavedText;
-    // insertDialogTitle 配置
-    QString insertDialogTitle;
-    // insertFailedText 配置
-    QString insertFailedText;
-    // selectedPageStyle 配置
-    QString selectedPageStyle;
-    // normalPageStyle 配置
-    QString normalPageStyle;
-    // insertBeforeText 配置
-    QString insertBeforeText;
-    // insertAfterText 配置
-    QString insertAfterText;
-    // reorderFailedText 配置
-    QString reorderFailedText;
-    // aboutTitle 配置
-    QString aboutTitle;
-    // aboutVersionText 配置
-    QString aboutVersionText;
-    // aboutText 配置
-    QString aboutText;
-    // documentTitlePrefix 配置
-    QString documentTitlePrefix;
-    // openedFormat 配置
-    QString openedFormat;
-    // pageStatusFormat 配置
-    QString pageStatusFormat;
+    // 关于和范围弹窗关闭叉号的方形位图边长，像素；按钮外框大小由titleCloseSize控制
+    int32_t m_titleCloseIconSize;
+    // 关闭叉号两条线的画笔宽度，按24×24基准坐标绘制后随图标尺寸缩放，必须大于0
+    double m_titleCloseStroke;
+    // 关闭按钮悬停和按下时的文字色；当前按钮无文字，叉号位图仍使用titleCloseColor
+    QColor m_titleCloseActiveText;
+    // 关闭按钮禁用时的文字色；不参与叉号位图的绘制配色
+    QColor m_titleCloseDisabledText;
+    // 工具栏最右端问号图标的方形位图边长，像素；圆形底图和问号按此尺寸等比缩放
+    int32_t m_aboutIconSize;
+    // 工具栏问号图标圆形底图的填充颜色，白色问号绘制在其上
+    QColor m_aboutIconColor;
+    // 问号曲线和下方圆点的画笔宽度，按32×32基准坐标绘制后随图标尺寸缩放
+    double m_aboutIconStroke;
+    // 带右上角关闭按钮的关于及范围输入弹窗标题栏高度，逻辑像素；覆盖普通弹窗的标题高度
+    int32_t m_titleCloseHeight;
+    // 弹窗右上角关闭按钮的正方形边长，逻辑像素；同时决定悬停背景和点击区域大小
+    int32_t m_titleCloseSize;
+    // 关闭按钮右边缘距弹窗右边缘的距离，逻辑像素；窗口改变大小时据此重新定位
+    int32_t m_titleCloseRight;
+    // 关闭按钮上边缘距弹窗上边缘的距离，逻辑像素；叉号和悬停框作为整体随按钮移动
+    int32_t m_titleCloseTop;
+    // 关闭按钮悬停或按下背景与边框的圆角半径，逻辑像素
+    uint32_t m_titleCloseRadius;
+    // 绘制关闭叉号位图的颜色，同时用于关闭按钮常态文字色；悬停时不重新绘制叉号
+    QColor m_titleCloseColor;
+    // 弹窗关闭按钮被鼠标悬停时的背景色，常态背景保持透明
+    QColor m_titleCloseHover;
+    // 弹窗关闭按钮被按住时的背景色，用于区分悬停与按下反馈
+    QColor m_titleClosePressed;
+    // 弹窗关闭按钮悬停背景框的边框颜色
+    QColor m_titleCloseHoverBorder;
+    // 弹窗关闭按钮按下背景框的边框颜色
+    QColor m_titleClosePressedBorder;
+    // 无文档时右侧居中加号方框的最大边长，逻辑像素；可用区域不足时方框缩小
+    int32_t m_emptyPlusSize;
+    // 计算空状态方框边长时从可用短边扣除的留白总量，逻辑像素；不是每侧分别扣除此值
+    int32_t m_emptyPlusMargin;
+    // 空状态加号从中心向各方向延伸的长度，逻辑像素；横线与竖线全长均为此值的两倍
+    int32_t m_emptyPlusHalfLength;
+    // 空状态加号横线和竖线的画笔宽度，逻辑像素，必须大于0
+    int32_t m_emptyPlusStroke;
+    // 无文档时居中加号方框内部的填充色，不影响整个正文视口的背景
+    QColor m_emptyPlusBackground;
+    // 无文档时加号方框的一像素外框颜色
+    QColor m_emptyPlusBorder;
+    // 无文档时加号横线和竖线的绘制颜色
+    QColor m_emptyPlusColor;
+    // 右侧每页正文边框的单边宽度，逻辑像素；控件宽高各增加两倍此值，渲染位图不含边框
+    int32_t m_pageBorderWidth;
+    // 判断正文倍率是否实际改变的绝对差阈值，小于此值不重建页面；单位为倍率而非百分数
+    double m_zoomComparisonTolerance;
+    // 每个文档会话可接纳的预览请求数上限，含排队、执行及等待GUI消费的结果；满额时暂不接纳
+    int32_t m_maxPendingRenders;
+    // PdfReader自定义弹窗在DialogManager中注册和查找工厂使用的类型ID，须避免与其他弹窗类型冲突
+    uint64_t m_dialogType;
+    // 创建文档会话时复制给Core的初始化参数；像素上限还用于桥接校验及会话在途预览的总像素预算
+    PdfReaderCoreCConfig m_core;
+    // main启动LogManager时使用的文件日志策略，控制单文件大小、保留数量、大小检查频率与旧日志归档
+    LogManagerConfig m_log;
+    // 普通消息、确认和输入弹窗内容视图的期望尺寸，逻辑像素；关于与文件选择视图有独立尺寸
+    QSize m_dialogSize;
+    // 关于弹窗内容视图的期望尺寸，逻辑像素，用于容纳版本行及功能说明
+    QSize m_aboutDialogSize;
+    // 关闭原生文件选择后，DialogManager内嵌文件选择视图的期望尺寸；不控制系统原生窗口
+    QSize m_fileDialogSize;
+    // 经DialogManager创建的PdfReader自有弹窗是否启用外部阴影，不控制系统原生文件对话框
+    bool m_dialogShadowEnabled;
+    // 传给QtControls的阴影扩散级别，0不创建阴影；不是固定外延像素数，实际模糊和偏移由阴影配置计算
+    int m_dialogShadowSize;
+    // 不带右上角关闭按钮的普通自有弹窗标题栏高度，逻辑像素；关于和范围弹窗使用titleCloseHeight
+    int m_dialogTitleBarHeight;
+    // 打开、另存为和选目录时是否使用系统原生窗口；false时改用DialogManager内嵌文件选择视图
+    bool m_useNativeFileDialog;
+    // 自有弹窗内容布局到视图四边各自的内边距，逻辑像素，不包含标题栏和外部阴影
+    int m_dialogMargin;
+    // 自有弹窗内容纵向布局中说明文字、输入框和按钮区域之间的间距，逻辑像素
+    int m_dialogSpacing;
+    // 应用于PdfReaderDialogView及其子控件的QSS，设置内容背景、说明文字、输入框和按钮基础外观
+    QString m_dialogStyle;
+    // 自有消息、确认和输入弹窗底部确认按钮的显示文字
+    QString m_dialogAcceptText;
+    // 自有确认和输入弹窗底部取消按钮的显示文字；仅消息弹窗不创建此按钮
+    QString m_dialogCancelText;
+    // 自有弹窗底部确认及取消按钮在常态下的背景色
+    QColor m_buttonNormal;
+    // 自有弹窗底部确认及取消按钮被鼠标悬停时的背景色
+    QColor m_buttonHover;
+    // 自有弹窗底部确认及取消按钮被按住时的背景色
+    QColor m_buttonPressed;
+    // 自有弹窗底部确认及取消按钮被禁用时的背景色
+    QColor m_buttonDisabled;
+    // 自有弹窗底部确认及取消按钮在常态、悬停、按下和禁用四态共用的文字色
+    QColor m_buttonTextColor;
+    // 自有弹窗底部确认及取消按钮的最小宽高，逻辑像素；布局可分配更大空间
+    QSize m_buttonSize;
+    // 自有弹窗底部确认及取消按钮背景边框的圆角半径，逻辑像素
+    uint32_t m_buttonRadius;
+    // 设置左侧缩略图条目sizeHint时的最小宽度，逻辑像素；不代表缩略图页图宽度
+    int m_thumbnailItemMinWidth;
+    // 从左侧视口宽度扣除以计算条目sizeHint宽度的总量，逻辑像素；最终仍受条目最小宽度限制
+    int m_thumbnailItemSideInset;
+    // 绘制缩略图时从条目宽度扣除的左右留白总量，逻辑像素；页图在剩余空间水平居中
+    int m_thumbnailImagePaddingX;
+    // 绘制缩略图时从扣除页码区后的可用高度再扣除的上下留白总量，逻辑像素
+    int m_thumbnailImagePaddingY;
+    // 缩略图拖动时，源条目遮罩相对条目左、上、右三边分别缩进的距离，逻辑像素
+    int m_dragGhostInset;
+    // 缩略图拖动时源条目遮罩底边的缩进距离，逻辑像素；用于留出下方页码区
+    int m_dragGhostBottomInset;
+    // 插入指示线距目标条目顶边的向上偏移；插入末尾时为距最后条目底边的向下偏移，逻辑像素
+    int m_dragLineOffset;
+    // 缩略图重排时插入位置横线的画笔宽度，逻辑像素，必须大于0
+    int m_dragLineWidth;
+    // 插入位置横线左右两端分别距缩略图视口边缘的距离，逻辑像素
+    int m_dragLineInset;
+    // 拖动缩略图时覆盖源条目的半透明遮罩颜色，含透明度
+    QColor m_dragGhostColor;
+    // 缩略图拖动过程中指示新插入位置的横线颜色
+    QColor m_dragLineColor;
+    // Core句柄创建失败或取错误时没有句柄可用的桥接层提示，创建桥接对象时保存快照
+    QString m_bridgeCreateError;
+    // Core未提供可读取错误详情时使用的桥接层兜底提示，创建桥接对象时保存快照
+    QString m_bridgeInternalError;
+    // 查询页面尺寸时，桥接层发现Core句柄或输出信息指针为空所返回的提示；索引错误使用Core的详情
+    QString m_pageParameterError;
+    // 渲染时缺少Core句柄、宽高无效、超出像素预算或QImage分配失败的桥接提示；索引错误使用Core的详情
+    QString m_renderParameterError;
+    // 主窗口创建时的初始宽高，逻辑像素，不限制用户后续调整窗口大小
+    QSize m_windowSize;
+    // 主窗口允许缩小到的最小宽高，逻辑像素，用于保障工具栏和双栏内容的基本空间
+    QSize m_minimumWindowSize;
+    // 左侧缩略图列表允许的最小宽度，逻辑像素，限制分隔栏向左收缩
+    int m_sidebarMinimumWidth;
+    // 主窗口初次设置分隔栏时分配给左侧列表的期望宽度，逻辑像素；布局会按实际可用空间调整
+    int m_sidebarWidth;
+    // 主窗口初次设置分隔栏时分配给右侧正文区的期望宽度，与sidebarWidth共同确定初始分配
+    int m_bodyWidth;
+    // 右侧正文纵向布局左右两侧各自的内边距，逻辑像素
+    int m_bodyMarginX;
+    // 右侧正文纵向布局顶部和底部各自的内边距，逻辑像素
+    int m_bodyMarginY;
+    // 右侧正文纵向排列的相邻PDF页控件之间的距离，逻辑像素
+    int m_bodySpacing;
+    // 点击选页时ensureWidgetVisible使用的横向和纵向留白，逻辑像素，用于将目标页滚入视口
+    int m_selectionMargin;
+    // 左侧页图在缩略倍率1.0时的基准宽度，逻辑像素；窄视口或缩小时可减小，放大背景时页图不再增大
+    int m_thumbnailWidth;
+    // 计算左侧页图尺寸时采用的宽度下限，逻辑像素；实际绘制仍会被条目可用区域约束
+    int m_thumbnailMinWidth;
+    // 计算左侧页图宽度时从视口扣除的左右留白总量，逻辑像素；也用于委托无条目宽度时的回退尺寸
+    int m_thumbnailSidePadding;
+    // 左侧条目在页图高度之外预留的页码和留白总高度，逻辑像素；倍率大于1时随条目背景一起放大
+    int m_thumbnailRowPadding;
+    // 左侧缩略图条目底部用于居中绘制页码的区域高度，逻辑像素，绘制页图时先扣除该区域
+    int m_thumbnailLabelHeight;
+    // 保存、另存为或导出成功后状态栏提示的显示时长，毫秒；0表示持续显示到下次更新
+    int m_statusMessageMs;
+    // 按住缩略图后进入拖动状态的等待时间，毫秒；未达到时仅按普通选择处理
+    int m_dragHoldMs;
+    // 缩略图拖动过程中边缘自动滚动定时器的触发间隔，毫秒
+    int m_dragScrollMs;
+    // 缩略图视口顶部或底部触发拖动自动滚动的边缘带高度，逻辑像素
+    int m_dragEdgePixels;
+    // 拖动进入边缘带时每次定时器触发的最小滚动步长，逻辑像素；不是每秒速度
+    int m_dragMinSpeed;
+    // 拖动靠近或越过视口边缘时每次定时器触发的最大滚动步长，逻辑像素
+    int m_dragMaxSpeed;
+    // 边缘深入距离换算为额外滚动步长时使用的除数，必须大于0；数值越大步长增长越缓
+    int m_dragAcceleration;
+    // 正文初始倍率及点击倍率重置按钮时恢复的倍率，1.0表示100%
+    double m_initialZoom;
+    // 正文按钮和Ctrl滚轮缩小时允许的最低倍率，须大于0
+    double m_minimumZoom;
+    // 正文按钮和Ctrl滚轮放大时允许的最高倍率，须不低于最低倍率且不超过16.0
+    double m_maximumZoom;
+    // 正文缩放按钮每次点击或Ctrl滚轮每标准刻度改变的倍率，0.05表示5个百分点
+    double m_zoomStep;
+    // 左侧缩略图条目初始倍率；不改变右侧正文倍率
+    double m_initialThumbnailZoom;
+    // 左侧Ctrl滚轮缩小允许的最低倍率，低于1.0时页图随倍率缩小并受最小宽度限制
+    double m_minimumThumbnailZoom;
+    // 左侧Ctrl滚轮放大允许的最高倍率；超过1.0时仅增大条目背景高度，页图保持基准大小
+    double m_maximumThumbnailZoom;
+    // 左侧Ctrl滚轮每标准刻度改变的倍率，0.1表示10个百分点
+    double m_thumbnailZoomStep;
+    // 无法取得页面尺寸时用于占位布局的PDF页宽，单位为PDF点；与回退高度一起保持占位比例
+    double m_fallbackPageWidth;
+    // 无法取得页面尺寸时用于占位布局的PDF页高，单位为PDF点；正文再乘倍率换算显示尺寸
+    double m_fallbackPageHeight;
+    // 左侧已选中缩略图条目整块背景的填充色，包含页图周围的灰色区域
+    QColor m_thumbnailSelectedColor;
+    // 左侧未选中缩略图条目整块背景的填充色
+    QColor m_thumbnailBackground;
+    // 左侧选中缩略图页图的细边框颜色；右侧正文选中边框由selectedPageStyle设置
+    QColor m_selectionColor;
+    // 左侧未选中缩略图页图的细边框颜色
+    QColor m_thumbnailBorderColor;
+    // 左侧每个缩略图底部页码文字的绘制颜色
+    QColor m_thumbnailTextColor;
+    // 鼠标悬停在工具栏蓝色问号按钮时显示的说明文字
+    QString m_aboutTooltip;
+    // 尚未打开文档时主窗口标题栏显示的产品名称
+    QString m_applicationTitle;
+    // 主窗口及工具栏、列表、正文区和右键菜单使用的基础QSS，正文选中状态样式在初始化时追加
+    QString m_windowStyle;
+    // 主工具栏的窗口标题，用于Qt工具栏标识，不是主窗口产品标题
+    QString m_toolbarTitle;
+    // 工具栏打开PDF操作的按钮文字
+    QString m_openText;
+    // 工具栏覆盖保存当前PDF操作的按钮文字
+    QString m_saveText;
+    // 工具栏另存为操作的按钮文字，同时作为另存为文件选择窗口标题
+    QString m_saveAsText;
+    // 工具栏打开页码范围导出输入框的按钮文字
+    QString m_exportRangeText;
+    // 工具栏将当前文档逐页导出到目录的按钮文字
+    QString m_exportEachText;
+    // 工具栏正文缩小按钮的显示文字
+    QString m_zoomOutText;
+    // 创建正文倍率重置按钮时的初始文字；随后会被实际倍率百分比动态覆盖
+    QString m_zoomResetText;
+    // 工具栏正文放大按钮的显示文字
+    QString m_zoomInText;
+    // 主窗口初始化完成、尚未显示操作结果时的状态栏提示
+    QString m_readyText;
+    // 打开或插入加密PDF需要输入密码时，密码输入弹窗的标题
+    QString m_passwordTitle;
+    // 密码输入弹窗中显示在输入框上方的说明文字
+    QString m_passwordPrompt;
+    // 异步打开PDF失败后显示错误详情的消息弹窗标题
+    QString m_openFailedText;
+    // 通过打开按钮或空状态加号选择PDF时的文件窗口标题
+    QString m_openDialogTitle;
+    // 打开PDF文件窗口的扩展名过滤器，按Qt的双分号规则分隔多个筛选项
+    QString m_openFilter;
+    // 覆盖保存当前原PDF前的确认弹窗标题
+    QString m_confirmSaveTitle;
+    // 覆盖保存确认弹窗的说明前缀，显示时在末尾拼接当前PDF完整路径
+    QString m_confirmSavePrompt;
+    // 覆盖保存或另存为失败时显示错误详情的消息弹窗标题
+    QString m_saveFailedText;
+    // 覆盖原PDF成功后在状态栏显示的提示，显示时长由statusMessageMs控制
+    QString m_savedText;
+    // 另存为建议文件名拼接在原文件基本名后的后缀，包含.pdf扩展名
+    QString m_editedSuffix;
+    // 另存为、范围导出保存及插入PDF文件窗口使用的PDF过滤器
+    QString m_saveFilter;
+    // 另存为PDF成功后在状态栏显示的提示
+    QString m_savedAsText;
+    // 输入待导出页码范围的自有弹窗标题，使用带关闭按钮的标题栏
+    QString m_rangeTitle;
+    // 页码范围输入框上方展示的格式示例；输入框初始值另按当前文档总页数生成
+    QString m_rangeExample;
+    // 输入的页码范围校验失败时，错误详情弹窗的标题
+    QString m_invalidRangeText;
+    // 范围导出建议文件名拼接在原文件基本名后的后缀，包含.pdf扩展名
+    QString m_pagesSuffix;
+    // 页码范围验证通过后，选择导出PDF保存位置的文件窗口标题
+    QString m_saveRangeTitle;
+    // 范围导出或逐页导出失败时，错误详情弹窗的标题
+    QString m_exportFailedText;
+    // 指定页码范围成功导出后在状态栏显示的提示
+    QString m_rangeSavedText;
+    // 逐页导出时选择目标文件夹的系统或内嵌文件窗口标题
+    QString m_exportDirectoryTitle;
+    // 导出操作遇到已有同名PDF时，询问是否覆盖的确认弹窗标题
+    QString m_confirmOverwriteTitle;
+    // 已有同名输出文件的覆盖确认说明前缀，显示时追加Core返回的冲突详情
+    QString m_confirmOverwritePrompt;
+    // 当前文档逐页导出完成后在状态栏显示的提示
+    QString m_eachSavedText;
+    // 从左侧右键菜单选择另一份PDF插入当前文档时的文件窗口标题
+    QString m_insertDialogTitle;
+    // 异步插入PDF失败后显示错误详情的消息弹窗标题
+    QString m_insertFailedText;
+    // 右侧选中页控件的QSS片段，%d由pageBorderWidth替换为边框像素宽度
+    QString m_selectedPageStyle;
+    // 右侧未选中页控件的QSS片段，%d由pageBorderWidth替换为边框像素宽度
+    QString m_normalPageStyle;
+    // 左侧缩略图右键菜单中，在当前页之前插入PDF的菜单文字
+    QString m_insertBeforeText;
+    // 左侧缩略图右键菜单中，在当前页之后插入PDF的菜单文字
+    QString m_insertAfterText;
+    // 拖动缩略图提交页面重排失败时，错误详情弹窗的标题
+    QString m_reorderFailedText;
+    // 蓝色问号打开的关于弹窗标题；弹窗类型由显式参数决定，不按此文字识别
+    QString m_aboutTitle;
+    // 关于弹窗内容第一行显示的版本说明，不加功能列表编号
+    QString m_aboutVersionText;
+    // 关于弹窗版本行下方的功能说明正文，包含编号及换行，按左上对齐显示
+    QString m_aboutText;
+    // 打开文档后的主窗口标题前缀，显示时追加PDF文件名而非完整路径
+    QString m_documentTitlePrefix;
+    // 打开成功时状态栏的格式串，依次以%s填入PDF文件名、%d填入总页数
+    QString m_openedFormat;
+    // 选择页面后状态栏的格式串，两个%d依次为从1开始的当前页号和总页数
+    QString m_pageStatusFormat;
 };
+
+#define g_config Config::instance()

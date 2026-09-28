@@ -1,4 +1,5 @@
-﻿#include "PdfReader.h"
+﻿#include "PdfReaderTaskManager.h"
+#include "PdfReader.h"
 #include "Config.h"
 #include "PdfReaderDialogRuntime.h"
 #include "CDump/CDumpAPI.h"
@@ -15,13 +16,15 @@ int main(int argc, char* argv[])
     try
     {
         QApplication app(argc, argv);
-        Config config;
-        LogManager::instance().init(config.log);
+
+        Config::instance();
+        LogManager::instance().init(g_config.m_log);
         logInitialized = true;
         LOGINFO("PdfReader startup, build=%s %s", __DATE__, __TIME__);
         LOGINFO("CDump registration result=%d", dumpEnabled ? 1 : 0);
+        PdfReaderTaskManager::instance().init();
         PdfReaderDialogRuntime dialogs;
-        PdfReader window(nullptr, config);
+        PdfReader window(nullptr);
         window.show();
         if (app.arguments().size() > 1)
         {
@@ -40,6 +43,7 @@ int main(int argc, char* argv[])
         LOGERROR("Unhandled unknown exception in main");
         result = -3;
     }
+    PdfReaderTaskManager::instance().finish();
     if (logInitialized)
     {
         LOGINFO("PdfReader log closing, exitCode=%d", result);

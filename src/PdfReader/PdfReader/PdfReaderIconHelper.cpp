@@ -1,18 +1,20 @@
 ﻿#include "PdfReaderIconHelper.h"
+#include "Config.h"
 #include <QPixmap>
 #include <QPainter>
 #include <QPainterPath>
 
 QIcon PdfReaderIconHelper::aboutIcon()
 {
-    QPixmap pixmap(32, 32);
+    QPixmap pixmap(g_config.m_aboutIconSize, g_config.m_aboutIconSize);
     pixmap.fill(Qt::transparent);
     QPainter painter(&pixmap);
+    painter.scale(g_config.m_aboutIconSize / 32.0, g_config.m_aboutIconSize / 32.0);
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(43, 125, 214));
+    painter.setBrush(g_config.m_aboutIconColor);
     painter.drawEllipse(QRectF(2.0, 2.0, 28.0, 28.0));
-    painter.setPen(QPen(Qt::white, 2.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.setPen(QPen(Qt::white, g_config.m_aboutIconStroke, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     painter.setBrush(Qt::NoBrush);
     QPainterPath question;
     question.moveTo(12.0, 12.0);
@@ -22,7 +24,6 @@ QIcon PdfReaderIconHelper::aboutIcon()
     painter.drawPoint(QPointF(16.0, 23.5));
     return QIcon(pixmap);
 }
-
 
 QIcon PdfReaderIconHelper::applicationIcon()
 {

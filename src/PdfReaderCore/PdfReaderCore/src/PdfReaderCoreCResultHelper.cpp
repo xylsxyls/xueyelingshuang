@@ -5,15 +5,15 @@
 int32_t PdfReaderCoreCResultHelper::classifyError(int32_t fallback, const std::string& error)
 {
     const std::string lower = CStringManager::MakeLower(error);
-    if (lower.find("already exists") != std::string::npos)
+    if (lower.find("output file already exists:") == 0)
     {
         return PdfReaderCoreCResultFileExists;
     }
     if (lower.find("no pdf document") != std::string::npos)
         return PdfReaderCoreCResultNotOpen;
-    if (lower.find("index") != std::string::npos || lower.find("parameter") != std::string::npos)
+    if (lower.find("page index") == 0 || lower.find("insert index") == 0 || lower.find("invalid ") == 0)
         return PdfReaderCoreCResultInvalidParam;
-    if (lower.find("password") != std::string::npos)
+    if (fallback == PdfReaderCoreCResultOpenFailed && lower.find("password") != std::string::npos)
         return PdfReaderCoreCResultPasswordRequired;
     if (fallback == PdfReaderCoreCResultOpenFailed && lower.find("parse") != std::string::npos)
         return PdfReaderCoreCResultParseFailed;
@@ -25,7 +25,8 @@ int32_t PdfReaderCoreCResultHelper::runResult(PdfReaderCoreCContext* context, in
     if (context)
     {
         context->lastResult = result;
-        if (result == PdfReaderCoreCResultSuccess) context->lastError.clear();
+        // A status-only failure must not keep details from an earlier request.
+        context->lastError.clear();
     }
     return result;
 }
