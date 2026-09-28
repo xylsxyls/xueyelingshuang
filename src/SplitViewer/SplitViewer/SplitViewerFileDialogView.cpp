@@ -20,7 +20,7 @@ bool SplitViewerFileDialogView::initView(const DialogParam& param)
     }
     m_param = *data;
     setObjectName(QStringLiteral("splitViewerFileView"));
-    setStyleSheet(Config::fileDialogStyle());
+    setStyleSheet(g_config.m_fileDialogStyle);
     QVBoxLayout* layout = new QVBoxLayout(this);
     Label* title = new Label(this);
     title->setObjectName(QStringLiteral("fileDialogTitle"));
@@ -51,7 +51,7 @@ bool SplitViewerFileDialogView::initView(const DialogParam& param)
 
 QSize SplitViewerFileDialogView::preferredSize() const
 {
-    return Config::fileDialogSize();
+    return g_config.m_fileDialogSize;
 }
 
 QWidget* SplitViewerFileDialogView::defaultFocusWidget() const
@@ -69,8 +69,8 @@ void SplitViewerFileDialogView::acceptSelection()
     if (m_param.save && QFileInfo::exists(selected.first()))
     {
         AskDialogParam confirm;
-        confirm.m_title = QStringLiteral("确认覆盖");
-        confirm.m_tip = QStringLiteral("文件已经存在，是否覆盖？\n") + selected.first();
+        confirm.m_title = g_config.m_overwriteTitle;
+        confirm.m_tip = g_config.m_overwritePrompt + selected.first();
         confirm.m_parent = window()->windowHandle();
         DialogManager::instance().makeDialog(confirm);
         if (confirm.m_result != ACCEPT_BUTTON)

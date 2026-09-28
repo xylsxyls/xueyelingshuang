@@ -201,7 +201,7 @@ long COriginalDialog::onNcHitTest(const QPoint& pt)
 		for (int32_t i = 0; i < children().count(); ++i)
 		{
 			QWidget* widget = qobject_cast<QWidget*>(children()[i]);
-			if (widget == nullptr)
+			if (widget == nullptr || widget->isWindow())
 			{
 				continue;
 			}
@@ -216,7 +216,7 @@ long COriginalDialog::onNcHitTest(const QPoint& pt)
 				continue;
 			}
 
-			QPoint mousePt = mapFromGlobal(QCursor::pos());
+			QPoint mousePt = mapFromGlobal(pt);
 			if (widget->geometry().contains(mousePt))
 			{
 				hasChild = true;

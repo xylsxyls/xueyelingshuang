@@ -1249,4 +1249,10 @@
     <ClCompile Include="..\src\FileDialog.cpp" />
     <ClInclude Include="..\src\FileDialog.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\DialogShadow.cpp" />
+    <ClCompile Include="..\src\DialogShadowConfig.cpp" />
+    <ClInclude Include="..\src\DialogShadow.h" />
+    <ClInclude Include="..\src\DialogShadowConfig.h" />
+  </ItemGroup>
 </Project>

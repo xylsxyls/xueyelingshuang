@@ -1,4 +1,5 @@
 ﻿#include "SplitViewerHitTestHelper.h"
+#include "Config.h"
 #include "SplitViewerLayoutHelper.h"
 #include <algorithm>
 
@@ -19,7 +20,7 @@ bool SplitViewerHitTestHelper::hitNode(SplitViewerCoreNode* node, const QRectF& 
     }
     QRectF first, splitterRect, second;
     SplitViewerLayoutHelper::nodeRects(rect, node, first, splitterRect, second, borderVisible);
-    if (splitterRect.adjusted(-4, -4, 4, 4).contains(point))
+    if (splitterRect.adjusted(-g_config.m_splitterHitPadding, -g_config.m_splitterHitPadding, g_config.m_splitterHitPadding, g_config.m_splitterHitPadding).contains(point))
     {
         hit.node = node;
         hit.layer = layerIndex;

@@ -1,10 +1,11 @@
 ﻿#pragma once
-#include "SplitViewerCoreAPI.h"
+#include "SplitViewerCore/SplitViewerCoreAPI.h"
 #include <QtCore/QRectF>
 
 /** 工作区命中结果，节点由Core文档持有，树修改后立即丢弃 */
 struct SplitViewerHit
 {
+public:
     SplitViewerCoreNode* node;
     SplitViewerCoreNode* root;
     int layer;
@@ -12,7 +13,8 @@ struct SplitViewerHit
     QRectF ownerRect;
     QRectF layerRect;
     bool splitter;
-    /** 初始化对象及其默认状态。
+
+    /** 初始化对象及其默认状态
     */
     SplitViewerHit();
 };

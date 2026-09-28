@@ -671,4 +671,10 @@
     <ClCompile Include="..\src\GroupBox.cpp" /><ClInclude Include="..\src\GroupBox.h" />
     <ClCompile Include="..\src\FileDialog.cpp" /><ClInclude Include="..\src\FileDialog.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\DialogShadow.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="..\src\DialogShadowConfig.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="..\src\DialogShadow.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="..\src\DialogShadowConfig.h"><Filter>Header Files</Filter></ClInclude>
+  </ItemGroup>
 </Project>

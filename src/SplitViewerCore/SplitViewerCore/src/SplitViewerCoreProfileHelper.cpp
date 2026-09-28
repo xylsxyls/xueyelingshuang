@@ -107,13 +107,16 @@ SplitViewerCoreNode* SplitViewerCoreProfileHelper::loadNode(const SplitViewerCor
     int depth,
     std::set<int>& visited)
 {
-    if (depth > 128 || id < 0 || visited.size() >= 4096 || !visited.insert(id).second)
+    if (depth > SplitViewerCoreConfig::kMaximumTreeDepth || id < 0 || visited.size() >= static_cast<size_t>(SplitViewerCoreConfig::kMaximumNodes) || !visited.insert(id).second)
     {
-        return NULL;
+        return nullptr;
     }
     const std::wstring section = prefix + L"Node" + formatInt(id);
     const std::wstring kind = getValue(profile, section, L"Kind", L"");
-    if (kind != L"Leaf" && kind != L"leaf" && kind != L"Split" && kind != L"split") return nullptr;
+    if (kind != L"Leaf" && kind != L"leaf" && kind != L"Split" && kind != L"split")
+    {
+        return nullptr;
+    }
     SplitViewerCoreNode* node = new SplitViewerCoreNode();
     if (kind == L"Split" || kind == L"split")
     {
@@ -122,7 +125,7 @@ SplitViewerCoreNode* SplitViewerCoreProfileHelper::loadNode(const SplitViewerCor
             getValue(profile, section, L"Direction", L"0"), 0) == 0 ?
             SPLITVIEWER_CORE_SPLIT_HORIZONTAL : SPLITVIEWER_CORE_SPLIT_VERTICAL;
         node->ratio = SplitViewerCoreGeometryHelper::clampDouble(parseDouble(
-            getValue(profile, section, L"Ratio", L"0.5"), 0.5), 0.02, 0.98);
+            getValue(profile, section, L"Ratio", formatDouble(SplitViewerCoreConfig::kDefaultSplitRatio)), SplitViewerCoreConfig::kDefaultSplitRatio), SplitViewerCoreConfig::kMinimumSplitRatio, SplitViewerCoreConfig::kMaximumSplitRatio);
         delete node->first;
         delete node->second;
         node->first = loadNode(profile, prefix, parseInt(
@@ -144,6 +147,11 @@ SplitViewerCoreNode* SplitViewerCoreProfileHelper::loadNode(const SplitViewerCor
         getValue(profile, section, L"AutoFit", L"1"), 1) != 0;
     node->view.scale = parseDouble(
         getValue(profile, section, L"Scale", L"1"), 1.0);
+    if (node->view.scale <= 0.0)
+    {
+        delete node;
+        return nullptr;
+    }
     node->view.offsetX = parseDouble(
         getValue(profile, section, L"OffsetX", L"0"), 0.0);
     node->view.offsetY = parseDouble(
@@ -185,7 +193,7 @@ bool SplitViewerCoreProfileHelper::parseProfileText(const std::vector<uint8_t>& 
     SplitViewerCoreProfile& profile)
 {
     profile.values.clear();
-    if (bytes.size() < 2 || bytes.size() > 16*1024*1024)
+    if (bytes.size() < 2 || bytes.size() > SplitViewerCoreConfig::kMaximumProfileBytes)
     {
         return false;
     }
@@ -201,9 +209,15 @@ bool SplitViewerCoreProfileHelper::parseProfileText(const std::vector<uint8_t>& 
         uint32_t value=bytes[i] | (static_cast<uint16_t>(bytes[i+1])<<8);
         if (sizeof(wchar_t)>2 && value>=0xD800 && value<=0xDBFF)
         {
-            if (i+3>=bytes.size()) return false;
+            if (i+3>=bytes.size())
+            {
+                return false;
+            }
             const uint32_t low=bytes[i+2] | (static_cast<uint16_t>(bytes[i+3])<<8);
-            if (low<0xDC00 || low>0xDFFF) return false;
+            if (low<0xDC00 || low>0xDFFF)
+            {
+                return false;
+            }
             value=0x10000+((value-0xD800)<<10)+(low-0xDC00);
             i+=2;
         }
@@ -266,13 +280,13 @@ bool SplitViewerCoreProfileHelper::serializeProfile(const SplitViewerCoreDocumen
     {
         const SplitViewerCoreLayer* layer = document.layerAt(i);
         const std::wstring section = L"Layer" + formatInt(i);
-        setValue(profile, section, L"Left", formatDouble(layer ? layer->rect.left : 0.25));
-        setValue(profile, section, L"Top", formatDouble(layer ? layer->rect.top : 0.25));
-        setValue(profile, section, L"Right", formatDouble(layer ? layer->rect.right : 0.75));
-        setValue(profile, section, L"Bottom", formatDouble(layer ? layer->rect.bottom : 0.75));
+        setValue(profile, section, L"Left", formatDouble(layer ? layer->rect.left : SplitViewerCoreConfig::kDefaultLayerStart));
+        setValue(profile, section, L"Top", formatDouble(layer ? layer->rect.top : SplitViewerCoreConfig::kDefaultLayerStart));
+        setValue(profile, section, L"Right", formatDouble(layer ? layer->rect.right : SplitViewerCoreConfig::kDefaultLayerEnd));
+        setValue(profile, section, L"Bottom", formatDouble(layer ? layer->rect.bottom : SplitViewerCoreConfig::kDefaultLayerEnd));
         int layerNextId = 0;
         setValue(profile, section, L"Root", formatInt(layerNextId));
-        saveNode(profile, section + L"_", layer ? layer->root : NULL, layerNextId);
+        saveNode(profile, section + L"_", layer ? layer->root : nullptr, layerNextId);
         setValue(profile, section, L"NodeCount", formatInt(layerNextId));
     }
 
@@ -286,7 +300,10 @@ bool SplitViewerCoreProfileHelper::serializeProfile(const SplitViewerCoreDocumen
         uint32_t scalar=static_cast<uint32_t>(text[i]);
         if (sizeof(wchar_t)>2 && scalar>0xFFFF)
         {
-            if (scalar>0x10FFFF) return false;
+            if (scalar>0x10FFFF)
+            {
+                return false;
+            }
             scalar-=0x10000;
             const uint16_t high=static_cast<uint16_t>(0xD800+(scalar>>10));
             bytes.push_back(static_cast<uint8_t>(high & 0xFF));
@@ -307,7 +324,10 @@ bool SplitViewerCoreProfileHelper::deserializeProfile(const std::vector<uint8_t>
     {
         return false;
     }
-    if (getValue(profile,L"SplitViewer",L"Version",L"") != L"2") return false;
+    if (getValue(profile,L"SplitViewer",L"Version",L"") != L"2")
+    {
+        return false;
+    }
     std::set<int> baseVisited;
     SplitViewerCoreNode* base = loadNode(profile, L"Base",
         parseInt(getValue(profile, L"Base", L"Root", L"-1"), -1), 0, baseVisited);
@@ -318,21 +338,25 @@ bool SplitViewerCoreProfileHelper::deserializeProfile(const std::vector<uint8_t>
 
     SplitViewerCoreDocument loaded;
     loaded.setBaseRoot(base);
-    const int layerCount = (std::max)(0, (std::min)(256, parseInt(
-        getValue(profile, L"SplitViewer", L"LayerCount", L"0"), 0)));
+    const int layerCount = parseInt(getValue(profile, L"SplitViewer", L"LayerCount", L"0"), -1);
+    // Reject invalid counts instead of silently truncating saved content.
+    if (layerCount < 0 || layerCount > SplitViewerCoreConfig::kMaximumLayers)
+    {
+        return false;
+    }
     for (int i = 0; i < layerCount; ++i)
     {
         SplitViewerCoreLayer* layer = new SplitViewerCoreLayer();
         const std::wstring section = L"Layer" + formatInt(i);
         layer->rect.left = SplitViewerCoreGeometryHelper::clampDouble(parseDouble(
-            getValue(profile, section, L"Left", L"0.25"), 0.25), 0.0, 1.0);
+            getValue(profile, section, L"Left", formatDouble(SplitViewerCoreConfig::kDefaultLayerStart)), SplitViewerCoreConfig::kDefaultLayerStart), 0.0, 1.0);
         layer->rect.top = SplitViewerCoreGeometryHelper::clampDouble(parseDouble(
-            getValue(profile, section, L"Top", L"0.25"), 0.25), 0.0, 1.0);
+            getValue(profile, section, L"Top", formatDouble(SplitViewerCoreConfig::kDefaultLayerStart)), SplitViewerCoreConfig::kDefaultLayerStart), 0.0, 1.0);
         layer->rect.right = SplitViewerCoreGeometryHelper::clampDouble(parseDouble(
-            getValue(profile, section, L"Right", L"0.75"), 0.75), 0.0, 1.0);
+            getValue(profile, section, L"Right", formatDouble(SplitViewerCoreConfig::kDefaultLayerEnd)), SplitViewerCoreConfig::kDefaultLayerEnd), 0.0, 1.0);
         layer->rect.bottom = SplitViewerCoreGeometryHelper::clampDouble(parseDouble(
-            getValue(profile, section, L"Bottom", L"0.75"), 0.75), 0.0, 1.0);
-        SplitViewerCoreGeometryHelper::constrainLayerRect(layer->rect, SplitViewerCoreRect(0.0, 0.0, 1.0, 1.0), 0.12, 0.10);
+            getValue(profile, section, L"Bottom", formatDouble(SplitViewerCoreConfig::kDefaultLayerEnd)), SplitViewerCoreConfig::kDefaultLayerEnd), 0.0, 1.0);
+        SplitViewerCoreGeometryHelper::constrainLayerRect(layer->rect, SplitViewerCoreRect(0.0, 0.0, 1.0, 1.0), SplitViewerCoreConfig::kProfileMinimumLayerWidth, SplitViewerCoreConfig::kProfileMinimumLayerHeight);
         delete layer->root;
         std::set<int> visited;
         layer->root = loadNode(profile, section + L"_",
@@ -349,7 +373,7 @@ bool SplitViewerCoreProfileHelper::deserializeProfile(const std::vector<uint8_t>
     loaded.setBorderVisible(parseInt(
         getValue(profile, L"SplitViewer", L"BorderVisible", L"1"), 1) != 0);
     loaded.setStageAspect(parseDouble(
-        getValue(profile, L"SplitViewer", L"StageAspect", L"1.3333333333"), 4.0 / 3.0));
+        getValue(profile, L"SplitViewer", L"StageAspect", formatDouble(SplitViewerCoreConfig::kDefaultStageAspect)), SplitViewerCoreConfig::kDefaultStageAspect));
     loaded.setWindowRect(
         parseInt(getValue(profile, L"Window", L"Left", L"-1"), -1),
         parseInt(getValue(profile, L"Window", L"Top", L"-1"), -1),

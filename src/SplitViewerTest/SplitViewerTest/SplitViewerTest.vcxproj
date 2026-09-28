@@ -307,8 +307,8 @@
     <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerLayoutHelper.cpp" />
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerLayoutHelper.h" />
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeClick.h" />
-    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseConfig.cpp" />
-    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseConfig.h" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseManager.cpp" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseManager.h" />
     <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseHelper.cpp" />
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseHelper.h" />
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerPlatform.h" />
@@ -347,4 +347,7 @@
     <ClCompile Include="SplitViewerDialogTests.cpp" />
     <ClInclude Include="SplitViewerDialogTests.h" />
   </ItemGroup>
+  <ItemGroup><ClCompile Include="SplitViewerShadowTests.cpp" />
+    <ClCompile Include="SplitViewerConfigTests.cpp" /><ClInclude Include="SplitViewerShadowTests.h" />
+    <ClInclude Include="SplitViewerConfigTests.h" /></ItemGroup>
 </Project>

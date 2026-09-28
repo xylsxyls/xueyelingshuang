@@ -59,7 +59,7 @@ bool SplitViewerCorePackageHelper::appendChunk(std::vector<uint8_t>& bytes,
     bytes.insert(bytes.end(), type, type + 4);
     bytes.insert(bytes.end(), data.begin(), data.end());
     appendUInt32(bytes, chunkCrc(type,
-        data.empty() ? NULL : &data[0], data.size()));
+        data.empty() ? nullptr : &data[0], data.size()));
     return true;
 }
 
@@ -118,7 +118,10 @@ bool SplitViewerCorePackageHelper::extractEmbeddedConfig(const std::vector<uint8
             if (std::memcmp(type, SplitViewerCoreConfig::ConfigChunk, 4) == 0)
             {
                 const size_t dataStart = chunkStart + 8;
-                if (readUInt32(bytes,dataStart+length) != chunkCrc(type,&bytes[dataStart],length)) return false;
+                if (readUInt32(bytes,dataStart+length) != chunkCrc(type,&bytes[dataStart],length))
+                {
+                    return false;
+                }
                 configBytes.assign(bytes.begin() + dataStart, bytes.begin() + dataStart + length);
                 return true;
             }

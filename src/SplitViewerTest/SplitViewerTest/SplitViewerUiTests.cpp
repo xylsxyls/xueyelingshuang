@@ -1,6 +1,9 @@
 ﻿#include "SplitViewerUiTests.h"
 #include "../../SplitViewer/SplitViewer/SplitViewer.h"
 #include "SplitViewerDialogTests.h"
+#include "SplitViewerShadowTests.h"
+#include "SplitViewerConfigTests.h"
+#include "LogManager/LogManagerAPI.h"
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QTextStream>
@@ -82,7 +85,8 @@ SplitViewerTestWindow::SplitViewerTestWindow() : browseCount(0)
 
 QString SplitViewerTestWindow::browseFile(bool save, const QString& title, const QString& initial, const QString& filter)
 {
-    Q_UNUSED(save); Q_UNUSED(title); Q_UNUSED(initial); Q_UNUSED(filter);
+    Q_UNUSED(save); Q_UNUSED(title); Q_UNUSED(initial);
+    lastFilter = filter;
     ++browseCount;
     const QString result=nextFile;
     nextFile.clear();
@@ -424,7 +428,12 @@ static bool NativePlayerClick(HWND player, const QPoint& point)
     const bool down = SendInput(1,&input,sizeof(input)) == 1;
     QTest::qWait(30);
     input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
-    return SendInput(1,&input,sizeof(input)) == 1 && down;
+    const bool up = SendInput(1,&input,sizeof(input)) == 1;
+    // SendInput queues the release. Pump it before a caller teleports the
+    // cursor with SetCursorPos, which can otherwise overtake that release
+    // and make the low-level hook observe a drag instead of a single click.
+    QTest::qWait(30);
+    return up && down;
 }
 #endif
 
@@ -439,10 +448,16 @@ int SplitViewerRunUiTests(const QString& reportDirectory, int selectedCase)
     fixtureClass.hbrBackground=reinterpret_cast<HBRUSH>(COLOR_WINDOW+1);
     RegisterClassW(&fixtureClass);
 #endif
-    if (selectedCase!=0 && (selectedCase<101 || selectedCase>183)) return 2;
+    if (selectedCase!=0 && (selectedCase<101 || selectedCase>193)) return 2;
+    LogManager::instance().set(true, false);
+    LogManager::instance().init();
     QDir().mkpath(reportDirectory);
     QFile report(reportDirectory+QStringLiteral("/ui-results.txt"));
-    if (!report.open(QIODevice::WriteOnly|QIODevice::Text)) return 1;
+    if (!report.open(QIODevice::WriteOnly|QIODevice::Text))
+    {
+        LogManager::instance().uninitAll();
+        return 1;
+    }
     QTextStream out(&report);
     out.setCodec("UTF-8");
     int failures=0,total=0,nextId=100;
@@ -1009,7 +1024,62 @@ int SplitViewerRunUiTests(const QString& reportDirectory, int selectedCase)
         check(SplitViewerAuditCaseNames().at(183 - 101).mid(4).toUtf8().constData(),
             SplitViewerDialogTests::runCase(183, reportDirectory));
     }
+    for (int id = 184; id <= 188; ++id)
+    {
+        if (selectedCase == 0 || selectedCase == id)
+        {
+            nextId = id - 1;
+            check(SplitViewerAuditCaseNames().at(id - 101).mid(4).toUtf8().constData(),
+                SplitViewerShadowTests::runCase(id, reportDirectory));
+        }
+    }
+    if (selectedCase == 0 || selectedCase == 189)
+    {
+        nextId = 188;
+        SplitViewerTestWindow window;
+        QWidget* canvas = window.centralWidget();
+        Toolbar(window, QStringLiteral("新建图层"));
+        const QRectF stage = ExpectedStage(canvas);
+        const QPoint corner(qCeil(stage.left() + stage.width() * .22), qCeil(stage.top() + stage.height() * .22));
+        // Coordinates independently select the previously missed 7-to-8px strip.
+        const QPoint target = corner + QPoint(7, 7);
+        QMouseEvent hover(QEvent::MouseMove, target, canvas->mapToGlobal(target),
+            Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(canvas, &hover);
+        const bool cursor = canvas->cursor().shape() == Qt::SizeAllCursor;
+        Drag(canvas, target, target + QPoint(24, 16));
+        window.nextFile = reportDirectory + QStringLiteral("/edge-config.sv");
+        Toolbar(window, QStringLiteral("保存配置"));
+        SplitViewerCoreDocument document;
+        const bool loaded = ReadDocument(reportDirectory + QStringLiteral("/edge-config.sv"), document);
+        const SplitViewerCoreLayer* layer = loaded ? document.layerAt(0) : nullptr;
+        check(QStringLiteral("浮动层8像素热区光标与拖动一致").toUtf8().constData(), cursor && layer != nullptr && layer->rect.left > .22 &&
+            std::abs(layer->rect.width() - .46) < .0001 && std::abs(layer->rect.height() - .46) < .0001);
+    }
+    if (selectedCase == 0 || selectedCase == 190)
+    {
+        nextId = 189;
+        SplitViewerTestWindow window;
+        QWidget* canvas = window.centralWidget();
+        const QPoint center = ExpectedStage(canvas).center().toPoint();
+        QTest::mouseClick(canvas, Qt::LeftButton, Qt::NoModifier, center);
+        const QString plusFilter = window.lastFilter;
+        const bool selected = ChooseMenu(canvas, center, QStringLiteral("载入图片到当前分屏"));
+        check(QStringLiteral("加号与右键图片过滤器一致且支持TIFF").toUtf8().constData(), selected && window.browseCount == 2 &&
+            plusFilter == window.lastFilter && plusFilter.contains(QStringLiteral("*.tif")) &&
+            plusFilter.contains(QStringLiteral("*.tiff")) && window.errors.isEmpty());
+    }
+    for (int id = 191; id <= 193; ++id)
+    {
+        if (selectedCase == 0 || selectedCase == id)
+        {
+            nextId = id - 1;
+            check(SplitViewerAuditCaseNames().at(id - 101).mid(4).toUtf8().constData(),
+                SplitViewerConfigTests::runCase(id, reportDirectory));
+        }
+    }
     out << "total=" << total << " failures=" << failures << "\n";
+    LogManager::instance().uninitAll();
     return failures;
 }
 
@@ -1099,5 +1169,15 @@ QStringList SplitViewerAuditCaseNames()
         << QStringLiteral("181 Delete键不影响基础层")
         << QStringLiteral("182 浮动图层左上角移动光标与整体拖动")
         << QStringLiteral("183 关于窗口标题栏叉号关闭")
+        << QStringLiteral("184 阴影参数、主体几何与透明渐变")
+        << QStringLiteral("185 关于框桌面轮廓拖动四边完整")
+        << QStringLiteral("186 关于框桌面整窗拖动无额外框")
+        << QStringLiteral("187 阴影显示隐藏、焦点与回收")
+        << QStringLiteral("188 轮廓拖动Esc取消并释放捕获")
+        << QStringLiteral("189 浮动层8像素热区光标与拖动一致")
+        << QStringLiteral("190 加号与右键图片过滤器一致且支持TIFF")
+        << QStringLiteral("191 阴影2与4切换保持主体几何")
+        << QStringLiteral("192 异常配置拒绝并保留原文档")
+        << QStringLiteral("193 Core非有限比例和非叶删除防护")
         ;
 }

@@ -1,15 +1,17 @@
 ﻿#include "SplitViewerCoreLayer.h"
+#include "SplitViewerCoreConfig.h"
 #include <algorithm>
 #include <cmath>
 
 SplitViewerCoreLayer::SplitViewerCoreLayer() :
-    rect(0.25, 0.25, 0.75, 0.75),
-    root(new SplitViewerCoreNode())
+rect(SplitViewerCoreConfig::kDefaultLayerStart, SplitViewerCoreConfig::kDefaultLayerStart, SplitViewerCoreConfig::kDefaultLayerEnd, SplitViewerCoreConfig::kDefaultLayerEnd),
+root(new SplitViewerCoreNode())
 {
+
 }
 
 SplitViewerCoreLayer::~SplitViewerCoreLayer()
 {
     delete root;
-    root = NULL;
+    root = nullptr;
 }

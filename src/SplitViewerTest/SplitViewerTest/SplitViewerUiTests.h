@@ -8,6 +8,8 @@ class SplitViewerTestWindow : public SplitViewer
 {
 public:
     QString nextFile;
+    // 记录真实产品入口传入的文件过滤器，取消路径选择不替换文档
+    QString lastFilter;
     QStringList errors;
     int browseCount;
     SplitViewerTestWindow();

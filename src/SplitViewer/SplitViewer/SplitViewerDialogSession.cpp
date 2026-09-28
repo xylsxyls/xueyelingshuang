@@ -8,7 +8,7 @@
 SplitViewerDialogSession::SplitViewerDialogSession()
 {
     std::unique_ptr<SplitViewerFileDialogFactory> factory(new SplitViewerFileDialogFactory);
-    if (!DialogManager::instance().registerCustomViewFactory(Config::kFileDialogType,
+    if (!DialogManager::instance().registerCustomViewFactory(g_config.m_fileDialogType,
         factory.get(), POP_DIALOG_SHOW_MODE, &SplitViewerFileDialogFactory::destroy))
     {
         throw std::runtime_error("SplitViewer file dialog factory registration failed");
@@ -16,7 +16,7 @@ SplitViewerDialogSession::SplitViewerDialogSession()
     factory.release();
 
     std::unique_ptr<SplitViewerAboutDialogFactory> aboutFactory(new SplitViewerAboutDialogFactory);
-    if (!DialogManager::instance().registerCustomDialogFactory(Config::kAboutDialogType,
+    if (!DialogManager::instance().registerCustomDialogFactory(g_config.m_aboutDialogType,
         aboutFactory.get(), &SplitViewerAboutDialogFactory::destroy))
     {
         throw std::runtime_error("SplitViewer about dialog factory registration failed");

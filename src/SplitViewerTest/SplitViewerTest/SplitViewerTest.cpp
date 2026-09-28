@@ -5,7 +5,7 @@
 #include <QtCore/QDateTime>
 #include <QtCore/QCoreApplication>
 
-#include "SplitViewerCoreAPI.h"
+#include "SplitViewerCore/SplitViewerCoreAPI.h"
 
 #include <vector>
 
@@ -29,7 +29,7 @@ SplitViewerTest::SplitViewerTest(QWidget* parent) : QMainWindow(parent), m_outpu
     m_output->setReadOnly(true);
     layout->addWidget(run);
     m_uiCases=new QComboBox(central);
-    m_uiCases->addItem(QStringLiteral("全部界面与兼容性回归（101—183）"),0);
+    m_uiCases->addItem(QStringLiteral("全部界面与兼容性回归（101—193）"),0);
     foreach (const QString& name,SplitViewerAuditCaseNames()) m_uiCases->addItem(name,name.left(3).toInt());
     layout->addWidget(m_uiCases);
     QPushButton* uiRun=new QPushButton(QStringLiteral("运行所选回归并保存报告"),central);

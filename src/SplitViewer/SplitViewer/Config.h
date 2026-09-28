@@ -1,39 +1,317 @@
 ﻿#pragma once
 #include <QtCore/QString>
 #include <QtCore/QSize>
+#include <QtCore/QMargins>
+#include <QtGui/QColor>
 #include <stdint.h>
 
-/** 桌面显示常量，不包含Core状态或平台窗口所有权 */
+/** 桌面进程共享配置，在QApplication创建后的GUI线程初始化
+*/
 class Config
 {
 public:
+    /** 获取进程配置，在QApplication创建后首次调用
+    @return 生命周期覆盖进程的配置单例引用
+    */
+    static Config& instance();
+
+private:
+    /** 在初始化列表中设置配置默认值
+    */
+    Config();
+
+    /** 禁止复制进程配置
+    @param [in] other 不可复制的源配置
+    */
+    Config(const Config& other);
+
+    /** 禁止覆盖配置单例
+    @param [in] other 不可赋值的源配置
+    @return 不提供实现
+    */
+    Config& operator=(const Config& other);
+
+public:
     // DialogManager自定义文件选择内容类型，和其他产品的类型分离
-    static const uint64_t kFileDialogType = 10732;
+    uint64_t m_fileDialogType;
     // DialogManager自定义关于内容类型，和其他产品的类型分离
-    static const uint64_t kAboutDialogType = 10733;
-
-    /** 返回主窗口及子控件共用的QSS
-    @return 主窗口样式文本
-    */
-    static QString windowStyle();
-
-    /** 返回托管文件选择窗口的QSS
-    @return 文件选择窗口样式文本
-    */
-    static QString fileDialogStyle();
-
-    /** 返回关于窗口内容区的QSS
-    @return 关于窗口样式文本
-    */
-    static QString aboutDialogStyle();
-
-    /** 返回文件选择窗口的默认尺寸
-    @return 逻辑像素尺寸
-    */
-    static QSize fileDialogSize();
-
-    /** 返回关于窗口内容区的默认尺寸
-    @return 逻辑像素尺寸
-    */
-    static QSize aboutDialogSize();
+    uint64_t m_aboutDialogType;
+    // 主窗口及子控件共用的QSS
+    QString m_windowStyle;
+    // 托管文件选择窗口的QSS
+    QString m_fileDialogStyle;
+    // 关于窗口内容区的QSS
+    QString m_aboutDialogStyle;
+    // 文件选择窗口的默认尺寸
+    QSize m_fileDialogSize;
+    // 关于窗口内容区的默认尺寸
+    QSize m_aboutDialogSize;
+    // 关于窗口阴影开关
+    bool m_aboutShadowEnabled;
+    // 关于窗口阴影扩散级别；2改4只需重编应用，非可见厚度像素
+    int32_t m_aboutShadowSize;
+    // 关于标题栏高度，逻辑像素
+    int32_t m_aboutTitleHeight;
+    // 关于标题字号，像素
+    int32_t m_aboutTitleFontSize;
+    // 标题关闭按钮边长，逻辑像素
+    int32_t m_aboutCloseSize;
+    // 标题关闭按钮右边距
+    int32_t m_aboutCloseRight;
+    // 关闭按钮含叉号的上边距，保留已确认下移位置
+    int32_t m_aboutCloseTop;
+    // 标题关闭按钮圆角
+    int32_t m_aboutCloseRadius;
+    // 知道了按钮圆角
+    int32_t m_aboutAcceptRadius;
+    // 关于按钮边框宽度
+    int32_t m_buttonBorderWidth;
+    // 关于图标容器边长
+    int32_t m_aboutLogoSize;
+    // 关于PNG显示边长
+    int32_t m_aboutIconSize;
+    // 关于内容区域间距
+    int32_t m_aboutSpacing;
+    // 关于标题和版本间距
+    int32_t m_aboutTextSpacing;
+    // 关于内容分隔线高度
+    int32_t m_aboutSeparatorHeight;
+    // 关闭叉图标画布边长
+    int32_t m_closeIconSize;
+    // 关闭叉线端内缩
+    double m_closeIconInset;
+    // 关闭叉线宽，保持细线
+    double m_closeIconStroke;
+    // 非全屏舞台外边距
+    int32_t m_stageMargin;
+    // 初始窗口为工具栏预留高度
+    int32_t m_toolbarHeightAllowance;
+    // 工具栏图标边长
+    int32_t m_toolbarIconSize;
+    // 状态文案最小宽度
+    int32_t m_statusMinimumWidth;
+    // 初始舞台占桌面宽高的比例
+    double m_initialScreenFraction;
+    // 浮动层悬停与按下共用热区宽度
+    double m_layerEdgeHitWidth;
+    // 分割线额外命中宽度
+    double m_splitterHitPadding;
+    // 显示边框时分割线厚度
+    double m_splitterWidth;
+    // 舞台和图层边框宽度
+    double m_borderWidth;
+    // 拖动分割线的最小窗格尺寸
+    double m_minimumPaneSize;
+    // 浮动图层最小宽度
+    double m_minimumLayerWidth;
+    // 浮动图层最小高度
+    double m_minimumLayerHeight;
+    // 空叶子加号按钮边长
+    double m_plusButtonSize;
+    // 加号按钮预留边距及最小可见尺寸
+    double m_plusButtonPadding;
+    // 加号半臂长
+    double m_plusArmLength;
+    // 加号线宽
+    double m_plusStroke;
+    // 外部窗口拖入提示线宽
+    int32_t m_previewStroke;
+    // 外部窗口拖入提示内缩
+    int32_t m_previewInset;
+    // 缩放提示向上偏移
+    int32_t m_zoomTipOffset;
+    // 缩放提示持续毫秒
+    int32_t m_zoomTipDurationMs;
+    // 原生全屏异步布局后的补同步延迟毫秒
+    int32_t m_fullscreenSettleMs;
+    // 配置PNG缩略图最大边长
+    int32_t m_thumbnailSize;
+    // 导出计算宽高比的参考宽度
+    int32_t m_exportAspectWidth;
+    // 原生点击消息响应上限毫秒
+    int32_t m_nativeClickTimeoutMs;
+    // 配置文件读取上限字节
+    int64_t m_profileMaximumBytes;
+    // 单个日志文件上限字节
+    int64_t m_logMaximumBytes;
+    // 保留日志文件数量
+    int32_t m_logMaximumCount;
+    // 是否向控制台输出日志
+    bool m_logConsoleEnabled;
+    // 基础日志开关
+    bool m_logEnabled;
+    // 问号图标设计画布边长
+    int32_t m_aboutGlyphCanvas;
+    // 问号线宽
+    double m_aboutGlyphStroke;
+    // 界面文案或资源路径：applicationTitle
+    QString m_applicationTitle;
+    // 界面文案或资源路径：toolbarTitle
+    QString m_toolbarTitle;
+    // 界面文案或资源路径：openProfileText
+    QString m_openProfileText;
+    // 界面文案或资源路径：profileToolTip
+    QString m_profileToolTip;
+    // 界面文案或资源路径：saveImageText
+    QString m_saveImageText;
+    // 界面文案或资源路径：saveImageToolTip
+    QString m_saveImageToolTip;
+    // 界面文案或资源路径：newLayerText
+    QString m_newLayerText;
+    // 界面文案或资源路径：fullscreenText
+    QString m_fullscreenText;
+    // 界面文案或资源路径：borderText
+    QString m_borderText;
+    // 界面文案或资源路径：aboutText
+    QString m_aboutText;
+    // 界面文案或资源路径：selectImageText
+    QString m_selectImageText;
+    // 界面文案或资源路径：imageFilter
+    QString m_imageFilter;
+    // 界面文案或资源路径：horizontalSplitText
+    QString m_horizontalSplitText;
+    // 界面文案或资源路径：verticalSplitText
+    QString m_verticalSplitText;
+    // 界面文案或资源路径：deleteLayerText
+    QString m_deleteLayerText;
+    // 界面文案或资源路径：deleteSplitText
+    QString m_deleteSplitText;
+    // 界面文案或资源路径：loadImageText
+    QString m_loadImageText;
+    // 界面文案或资源路径：embedWindowText
+    QString m_embedWindowText;
+    // 界面文案或资源路径：detachWindowText
+    QString m_detachWindowText;
+    // 界面文案或资源路径：readImageError
+    QString m_readImageError;
+    // 界面文案或资源路径：openProfileFilter
+    QString m_openProfileFilter;
+    // 界面文案或资源路径：saveProfileText
+    QString m_saveProfileText;
+    // 界面文案或资源路径：defaultProfileName
+    QString m_defaultProfileName;
+    // 界面文案或资源路径：saveProfileFilter
+    QString m_saveProfileFilter;
+    // 界面文案或资源路径：profileExtension
+    QString m_profileExtension;
+    // 界面文案或资源路径：profileSuffix
+    QString m_profileSuffix;
+    // 界面文案或资源路径：writeProfileError
+    QString m_writeProfileError;
+    // 界面文案或资源路径：defaultImageName
+    QString m_defaultImageName;
+    // 界面文案或资源路径：exportImageFilter
+    QString m_exportImageFilter;
+    // 界面文案或资源路径：imageExtension
+    QString m_imageExtension;
+    // 界面文案或资源路径：writeImageError
+    QString m_writeImageError;
+    // 界面文案或资源路径：aboutTitle
+    QString m_aboutTitle;
+    // 界面文案或资源路径：aboutMessage
+    QString m_aboutMessage;
+    // 界面文案或资源路径：windowHandlePrompt
+    QString m_windowHandlePrompt;
+    // 界面文案或资源路径：invalidHandleTitle
+    QString m_invalidHandleTitle;
+    // 界面文案或资源路径：invalidHandleMessage
+    QString m_invalidHandleMessage;
+    // 界面文案或资源路径：embedFailedTitle
+    QString m_embedFailedTitle;
+    // 界面文案或资源路径：embedFailedMessage
+    QString m_embedFailedMessage;
+    // 界面文案或资源路径：windowMissingTitle
+    QString m_windowMissingTitle;
+    // 界面文案或资源路径：windowMissingMessage
+    QString m_windowMissingMessage;
+    // 界面文案或资源路径：baseLayerText
+    QString m_baseLayerText;
+    // 界面文案或资源路径：operationFailedTitle
+    QString m_operationFailedTitle;
+    // 界面文案或资源路径：readProfileError
+    QString m_readProfileError;
+    // 界面文案或资源路径：profileTooLargeError
+    QString m_profileTooLargeError;
+    // 界面文案或资源路径：invalidProfileError
+    QString m_invalidProfileError;
+    // 界面文案或资源路径：overwriteTitle
+    QString m_overwriteTitle;
+    // 界面文案或资源路径：overwritePrompt
+    QString m_overwritePrompt;
+    // 界面文案或资源路径：iconPath
+    QString m_iconPath;
+    // 界面文案或资源路径：versionText
+    QString m_versionText;
+    // 界面文案或资源路径：acceptAboutText
+    QString m_acceptAboutText;
+    // 界面文案或资源路径：debugArgument
+    QString m_debugArgument;
+    // 界面文案或资源路径：associationDescription
+    QString m_associationDescription;
+    // stageColor颜色配置
+    QColor m_stageColor;
+    // canvasColor颜色配置
+    QColor m_canvasColor;
+    // fullscreenColor颜色配置
+    QColor m_fullscreenColor;
+    // borderColor颜色配置
+    QColor m_borderColor;
+    // selectedBorderColor颜色配置
+    QColor m_selectedBorderColor;
+    // splitterHoverColor颜色配置
+    QColor m_splitterHoverColor;
+    // splitterColor颜色配置
+    QColor m_splitterColor;
+    // plusBorderColor颜色配置
+    QColor m_plusBorderColor;
+    // plusColor颜色配置
+    QColor m_plusColor;
+    // previewColor颜色配置
+    QColor m_previewColor;
+    // aboutGlyphColor颜色配置
+    QColor m_aboutGlyphColor;
+    // closeColor颜色配置
+    QColor m_closeColor;
+    // transparentColor颜色配置
+    QColor m_transparentColor;
+    // closeHoverColor颜色配置
+    QColor m_closeHoverColor;
+    // closePressedColor颜色配置
+    QColor m_closePressedColor;
+    // closeActiveTextColor颜色配置
+    QColor m_closeActiveTextColor;
+    // closeDisabledTextColor颜色配置
+    QColor m_closeDisabledTextColor;
+    // closeHoverBorderColor颜色配置
+    QColor m_closeHoverBorderColor;
+    // closePressedBorderColor颜色配置
+    QColor m_closePressedBorderColor;
+    // acceptColor颜色配置
+    QColor m_acceptColor;
+    // acceptHoverColor颜色配置
+    QColor m_acceptHoverColor;
+    // acceptPressedColor颜色配置
+    QColor m_acceptPressedColor;
+    // acceptDisabledColor颜色配置
+    QColor m_acceptDisabledColor;
+    // acceptTextColor颜色配置
+    QColor m_acceptTextColor;
+    // acceptDisabledTextColor颜色配置
+    QColor m_acceptDisabledTextColor;
+    // acceptBorderColor颜色配置
+    QColor m_acceptBorderColor;
+    // acceptPressedBorderColor颜色配置
+    QColor m_acceptPressedBorderColor;
+    // acceptDisabledBorderColor颜色配置
+    QColor m_acceptDisabledBorderColor;
+    // 画布最小尺寸
+    QSize m_canvasMinimumSize;
+    // 知道了按钮最小尺寸
+    QSize m_aboutAcceptSize;
+    // 关于内容四边距
+    QMargins m_aboutMargins;
+    // 状态栏格式模板
+    const wchar_t* m_statusFormat;
 };
+
+#define g_config Config::instance()

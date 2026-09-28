@@ -9,8 +9,9 @@
 #include <QtWidgets/QVBoxLayout>
 
 SplitViewerAboutDialogView::SplitViewerAboutDialogView() :
-    m_closeButton(nullptr)
+m_closeButton(nullptr)
 {
+
 }
 
 bool SplitViewerAboutDialogView::initView(const DialogParam& param)
@@ -21,69 +22,69 @@ bool SplitViewerAboutDialogView::initView(const DialogParam& param)
         return false;
     }
     setObjectName(QStringLiteral("splitViewerAboutView"));
-    setStyleSheet(Config::aboutDialogStyle());
+    setStyleSheet(g_config.m_aboutDialogStyle);
 
     QVBoxLayout* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(30, 26, 30, 24);
+    layout->setContentsMargins(g_config.m_aboutMargins);
     layout->setSpacing(0);
 
     QHBoxLayout* heading = new QHBoxLayout;
-    heading->setSpacing(22);
+    heading->setSpacing(g_config.m_aboutSpacing);
     Label* logo = new Label(this);
     logo->setObjectName(QStringLiteral("aboutLogo"));
-    logo->setFixedSize(106, 106);
+    logo->setFixedSize(g_config.m_aboutLogoSize, g_config.m_aboutLogoSize);
     logo->setAlignment(Qt::AlignCenter);
-    const QPixmap icon = QPixmap(QStringLiteral(":/icons/SplitViewer.png"));
+    const QPixmap icon = QPixmap(g_config.m_iconPath);
     if (!icon.isNull())
     {
-        logo->setPixmap(icon.scaled(94, 94, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        logo->setPixmap(icon.scaled(g_config.m_aboutIconSize, g_config.m_aboutIconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
     heading->addWidget(logo);
 
     QVBoxLayout* titleLayout = new QVBoxLayout;
-    titleLayout->setSpacing(4);
+    titleLayout->setSpacing(g_config.m_aboutTextSpacing);
     titleLayout->addStretch(1);
     Label* title = new Label(this);
     title->setObjectName(QStringLiteral("aboutTitle"));
-    title->setText(QStringLiteral("分屏看图"));
+    title->setText(g_config.m_applicationTitle);
     titleLayout->addWidget(title);
     Label* version = new Label(this);
     version->setObjectName(QStringLiteral("aboutVersion"));
-    version->setText(QStringLiteral("SplitViewer 1.0"));
+    version->setText(g_config.m_versionText);
     titleLayout->addWidget(version);
     titleLayout->addStretch(1);
     heading->addLayout(titleLayout, 1);
     layout->addLayout(heading);
 
-    layout->addSpacing(22);
+    layout->addSpacing(g_config.m_aboutSpacing);
     Label* separator = new Label(this);
     separator->setObjectName(QStringLiteral("aboutSeparator"));
-    separator->setFixedHeight(1);
+    separator->setFixedHeight(g_config.m_aboutSeparatorHeight);
     layout->addWidget(separator);
-    layout->addSpacing(22);
+    layout->addSpacing(g_config.m_aboutSpacing);
 
     Label* message = new Label(this);
     message->setObjectName(QStringLiteral("aboutMessage"));
     message->setWordWrap(true);
     message->setAlignment(Qt::AlignCenter);
-    message->setText(data->message.isEmpty() ? QStringLiteral("在同一块画布中组合多张图片，按分屏、图层和嵌入窗口自由呈现精彩内容。") : data->message);
+    message->setText(data->message.isEmpty() ? g_config.m_aboutMessage : data->message);
     layout->addWidget(message, 1);
 
     QHBoxLayout* actions = new QHBoxLayout;
     actions->addStretch(1);
     m_closeButton = new PushButton(this);
     m_closeButton->setObjectName(QStringLiteral("aboutCloseButton"));
-    m_closeButton->setText(QStringLiteral("知道了"));
-    m_closeButton->setMinimumSize(128, 40);
-    m_closeButton->setBkgColor(QColor(63, 159, 202), QColor(82, 173, 213), QColor(47, 131, 170), QColor(170, 188, 207),
-        QColor(63, 159, 202), QColor(82, 173, 213), QColor(47, 131, 170), QColor(170, 188, 207));
-    m_closeButton->setFontColor(QColor(255, 255, 255), QColor(255, 255, 255), QColor(255, 255, 255), QColor(120, 140, 160),
-        QColor(255, 255, 255), QColor(255, 255, 255), QColor(255, 255, 255), QColor(120, 140, 160));
-    m_closeButton->setBorderColor(QColor(50, 141, 181), QColor(63, 159, 202), QColor(40, 117, 149), QColor(145, 165, 185),
-        QColor(50, 141, 181), QColor(63, 159, 202), QColor(40, 117, 149), QColor(145, 165, 185));
-    m_closeButton->setBorderWidth(1);
+    m_closeButton->setText(g_config.m_acceptAboutText);
+    m_closeButton->setMinimumSize(g_config.m_aboutAcceptSize);
+    m_closeButton->setBkgColor(g_config.m_acceptColor, g_config.m_acceptHoverColor, g_config.m_acceptPressedColor, g_config.m_acceptDisabledColor,
+        g_config.m_acceptColor, g_config.m_acceptHoverColor, g_config.m_acceptPressedColor, g_config.m_acceptDisabledColor);
+    m_closeButton->setFontColor(g_config.m_acceptTextColor, g_config.m_acceptTextColor, g_config.m_acceptTextColor, g_config.m_acceptDisabledTextColor,
+        g_config.m_acceptTextColor, g_config.m_acceptTextColor, g_config.m_acceptTextColor, g_config.m_acceptDisabledTextColor);
+    m_closeButton->setBorderColor(g_config.m_acceptBorderColor, g_config.m_acceptColor, g_config.m_acceptPressedBorderColor, g_config.m_acceptDisabledBorderColor,
+        g_config.m_acceptBorderColor, g_config.m_acceptColor, g_config.m_acceptPressedBorderColor, g_config.m_acceptDisabledBorderColor);
+    m_closeButton->setBorderWidth(g_config.m_buttonBorderWidth);
     // Set the radius after all state colors so every PushButton state is rounded.
-    m_closeButton->setBorderRadius(static_cast<quint32>(9));
+    m_closeButton->setBorderRadius(static_cast<quint32>(g_config.m_aboutAcceptRadius));
     actions->addWidget(m_closeButton);
     actions->addStretch(1);
     layout->addLayout(actions);
@@ -97,7 +98,7 @@ bool SplitViewerAboutDialogView::initView(const DialogParam& param)
 
 QSize SplitViewerAboutDialogView::preferredSize() const
 {
-    return Config::aboutDialogSize();
+    return g_config.m_aboutDialogSize;
 }
 
 QWidget* SplitViewerAboutDialogView::defaultFocusWidget() const

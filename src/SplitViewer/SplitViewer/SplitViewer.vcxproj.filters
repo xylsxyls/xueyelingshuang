@@ -97,8 +97,8 @@
     <ClCompile Include="SplitViewerLayoutHelper.cpp"><Filter>Source Files\Presentation</Filter></ClCompile>
     <ClInclude Include="SplitViewerLayoutHelper.h"><Filter>Header Files\Presentation</Filter></ClInclude>
     <ClInclude Include="SplitViewerNativeClick.h"><Filter>Header Files\Platform</Filter></ClInclude>
-    <ClCompile Include="SplitViewerNativeMouseConfig.cpp"><Filter>Source Files\Platform</Filter></ClCompile>
-    <ClInclude Include="SplitViewerNativeMouseConfig.h"><Filter>Header Files\Platform</Filter></ClInclude>
+    <ClCompile Include="SplitViewerNativeMouseManager.cpp"><Filter>Source Files\Platform</Filter></ClCompile>
+    <ClInclude Include="SplitViewerNativeMouseManager.h"><Filter>Header Files\Platform</Filter></ClInclude>
     <ClCompile Include="SplitViewerNativeMouseHelper.cpp"><Filter>Source Files\Platform</Filter></ClCompile>
     <ClInclude Include="SplitViewerNativeMouseHelper.h"><Filter>Header Files\Platform</Filter></ClInclude>
     <ClCompile Include="SplitViewerProfileStore.cpp"><Filter>Source Files\Storage</Filter></ClCompile>

@@ -107,8 +107,8 @@
     <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerLayoutHelper.cpp"><Filter>Source Files\Presentation</Filter></ClCompile>
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerLayoutHelper.h"><Filter>Header Files\Presentation</Filter></ClInclude>
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeClick.h"><Filter>Header Files\Platform</Filter></ClInclude>
-    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseConfig.cpp"><Filter>Source Files\Platform</Filter></ClCompile>
-    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseConfig.h"><Filter>Header Files\Platform</Filter></ClInclude>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseManager.cpp"><Filter>Source Files\Platform</Filter></ClCompile>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseManager.h"><Filter>Header Files\Platform</Filter></ClInclude>
     <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseHelper.cpp"><Filter>Source Files\Platform</Filter></ClCompile>
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeMouseHelper.h"><Filter>Header Files\Platform</Filter></ClInclude>
     <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerPlatform.h"><Filter>Header Files\Storage</Filter></ClInclude>
@@ -147,4 +147,7 @@
     <ClCompile Include="SplitViewerDialogTests.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClInclude Include="SplitViewerDialogTests.h"><Filter>Header Files</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup><ClCompile Include="SplitViewerShadowTests.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="SplitViewerConfigTests.cpp"><Filter>Source Files</Filter></ClCompile><ClInclude Include="SplitViewerShadowTests.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="SplitViewerConfigTests.h"><Filter>Header Files</Filter></ClInclude></ItemGroup>
 </Project>

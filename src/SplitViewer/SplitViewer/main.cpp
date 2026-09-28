@@ -1,4 +1,5 @@
 ﻿#include "SplitViewer.h"
+#include "Config.h"
 #include "SplitViewerPlatform.h"
 #include "SplitViewerDialogSession.h"
 #include "LogManager/LogManagerAPI.h"
@@ -18,15 +19,16 @@ int main(int argc, char* argv[])
     const bool dumpReady=false;
 #endif
     QApplication app(argc,argv);
-    app.setWindowIcon(QIcon(QStringLiteral(":/icons/SplitViewer.png")));
+    Config::instance();
+    app.setWindowIcon(QIcon(g_config.m_iconPath));
     LogManagerConfig config;
-    config.m_outputConsole=false;
-    config.m_maxFileBytes=20LL*1024LL*1024LL;
-    config.m_maxFileCount=5;
-    LogManager::instance().set(true,false);
+    config.m_outputConsole=g_config.m_logConsoleEnabled;
+    config.m_maxFileBytes=g_config.m_logMaximumBytes;
+    config.m_maxFileCount=g_config.m_logMaximumCount;
+    LogManager::instance().set(g_config.m_logEnabled,false);
     LogManager::instance().init(config);
     const QStringList arguments=app.arguments();
-    const bool debug=arguments.contains(QStringLiteral("debug"),Qt::CaseInsensitive);
+    const bool debug=arguments.contains(g_config.m_debugArgument,Qt::CaseInsensitive);
     app.setProperty("debug",debug);
     LOGINFO("SplitViewer 1.0 started; debug=%d dump=%d",debug,dumpReady);
     const bool association=SplitViewerRegisterSvFileAssociation(app.applicationFilePath());
@@ -37,7 +39,7 @@ int main(int argc, char* argv[])
         SplitViewer window;
         for (int i=1;i<arguments.size();++i)
         {
-            if (arguments.at(i).compare(QStringLiteral("debug"),Qt::CaseInsensitive)!=0)
+            if (arguments.at(i).compare(g_config.m_debugArgument,Qt::CaseInsensitive)!=0)
             {
                 window.canvasFileDropped(arguments.at(i));
                 break;

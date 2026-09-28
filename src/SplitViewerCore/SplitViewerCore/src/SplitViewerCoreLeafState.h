@@ -6,6 +6,7 @@
 
 struct SplitViewerCoreAPI SplitViewerCoreLeafState
 {
+public:
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
@@ -21,14 +22,16 @@ struct SplitViewerCoreAPI SplitViewerCoreLeafState
     double offsetX;
     double offsetY;
 
-    /** 初始化对象及其默认状态。
+    /** 初始化对象及其默认状态
     */
     SplitViewerCoreLeafState();
-    /** 清除内容标记并恢复默认图片变换。
+
+    /** 清除内容标记并恢复默认图片变换
     */
     void clear();
-    /** 查询是否包含内容。
-    @return 是否满足条件或操作成功。
+
+    /** 查询是否包含内容
+    @return 是否满足条件或操作成功
     */
     bool hasContent() const;
 };

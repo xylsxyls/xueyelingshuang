@@ -1,5 +1,5 @@
 ﻿#include "SplitViewerImageHelper.h"
-#include "SplitViewerCoreAPI.h"
+#include "SplitViewerCore/SplitViewerCoreAPI.h"
 #include <QtCore/QMap>
 #include <QtGui/QImage>
 
@@ -16,7 +16,10 @@ void SplitViewerImageHelper::setImageStatus(SplitViewerCoreNode* node, QMap<QStr
     }
     if (node->isLeaf())
     {
-        if (node->view.contentKind == SPLITVIEWER_CORE_CONTENT_EMBEDDED) node->view.clear();
+        if (node->view.contentKind == SPLITVIEWER_CORE_CONTENT_EMBEDDED)
+        {
+            node->view.clear();
+        }
         if (!node->view.path.empty())
         {
             const QString path = SplitViewerImageHelper::path(node->view.path);

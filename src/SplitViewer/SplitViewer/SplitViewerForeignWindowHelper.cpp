@@ -1,5 +1,6 @@
 ﻿#include "SplitViewerForeignWindowHelper.h"
-#include "SplitViewerNativeMouseConfig.h"
+#include "Config.h"
+#include "SplitViewerNativeMouseManager.h"
 #include "QtControls/Widget.h"
 #include <algorithm>
 #include <QtCore/QVariant>
@@ -14,7 +15,7 @@ QWidget* SplitViewerForeignWindowHelper::embedForeignWindow(WId windowId, QWidge
 {
     if (!windowId || !parent)
     {
-        return NULL;
+        return nullptr;
     }
 #if defined(Q_OS_WIN) || defined(Q_OS_LINUX) || defined(Q_OS_MAC) || defined(Q_OS_MACX)
 #ifdef Q_OS_WIN
@@ -37,7 +38,7 @@ QWidget* SplitViewerForeignWindowHelper::embedForeignWindow(WId windowId, QWidge
     QWindow* foreignWindow = QWindow::fromWinId(windowId);
     if (!foreignWindow)
     {
-        return NULL;
+        return nullptr;
     }
     QWidget* container = QWidget::createWindowContainer(foreignWindow, parent);
 #endif
@@ -66,7 +67,7 @@ QWidget* SplitViewerForeignWindowHelper::embedForeignWindow(WId windowId, QWidge
         // Maximize inside the dedicated child host, never on the desktop.
         // Qt players then use their fitted viewport rendering policy.
         ShowWindow(hwnd, SW_SHOWMAXIMIZED);
-        SplitViewerNativeMouseConfig::instance().embeddedWindows.insert(hwnd);
+        SplitViewerNativeMouseManager::instance().m_embeddedWindows.insert(hwnd);
 #endif
         container->setFocusPolicy(Qt::StrongFocus);
         container->show();
@@ -74,7 +75,7 @@ QWidget* SplitViewerForeignWindowHelper::embedForeignWindow(WId windowId, QWidge
     return container;
 #else
     Q_UNUSED(parent);
-    return NULL;
+    return nullptr;
 #endif
 }
 
@@ -122,15 +123,18 @@ void SplitViewerForeignWindowHelper::syncForeignWindow(QWidget* container, const
 
 void SplitViewerForeignWindowHelper::detachForeignWindow(QWidget* container)
 {
-    if (!container) return;
+    if (!container)
+    {
+        return;
+    }
     QWindow* foreign=reinterpret_cast<QWindow*>(static_cast<quintptr>(container->property("foreignWindow").toULongLong()));
 #ifdef Q_OS_WIN
     HWND hwnd=reinterpret_cast<HWND>(static_cast<quintptr>(container->property("foreignId").toULongLong()));
-    SplitViewerNativeMouseConfig::instance().embeddedWindows.remove(hwnd);
-    SplitViewerNativeMouseConfig::instance().lastClickTicks.remove(hwnd);
-    SplitViewerNativeMouseConfig::instance().lastClickPoints.remove(hwnd);
-    SplitViewerNativeMouseConfig::instance().suppressButtonUp.remove(hwnd);
-    SplitViewerNativeMouseConfig::instance().pendingClicks.remove(hwnd);
+    SplitViewerNativeMouseManager::instance().m_embeddedWindows.remove(hwnd);
+    SplitViewerNativeMouseManager::instance().m_lastClickTicks.remove(hwnd);
+    SplitViewerNativeMouseManager::instance().m_lastClickPoints.remove(hwnd);
+    SplitViewerNativeMouseManager::instance().m_suppressButtonUp.remove(hwnd);
+    SplitViewerNativeMouseManager::instance().m_pendingClicks.remove(hwnd);
     const QRect rect=container->property("oldRect").toRect();
     const HWND parent=reinterpret_cast<HWND>(static_cast<quintptr>(container->property("oldParent").toULongLong()));
     const LONG_PTR style=static_cast<LONG_PTR>(container->property("oldStyle").toLongLong());
@@ -166,7 +170,7 @@ WId SplitViewerForeignWindowHelper::windowUnderCursor(WId ownWindowId)
         return 0;
     }
     HWND window = WindowFromPoint(point);
-    window = window ? GetAncestor(window, GA_ROOT) : NULL;
+    window = window ? GetAncestor(window, GA_ROOT) : nullptr;
     if (!window || reinterpret_cast<WId>(window) == ownWindowId)
     {
         return 0;
@@ -183,14 +187,20 @@ WId SplitViewerForeignWindowHelper::windowUnderCursor(WId ownWindowId)
 
 QImage SplitViewerForeignWindowHelper::foreignWindowSnapshot(QWidget* container)
 {
-    if (!container) return QImage();
+    if (!container)
+    {
+        return QImage();
+    }
     const WId id=static_cast<WId>(container->property("foreignId").toULongLong());
 #ifdef Q_OS_WIN
     HWND hwnd=reinterpret_cast<HWND>(id);
     RECT rect;
-    if (!IsWindow(hwnd) || !GetClientRect(hwnd,&rect) || rect.right<=0 || rect.bottom<=0) return QImage();
+    if (!IsWindow(hwnd) || !GetClientRect(hwnd,&rect) || rect.right<=0 || rect.bottom<=0)
+    {
+        return QImage();
+    }
     QImage image(rect.right,rect.bottom,QImage::Format_RGB32);
-    image.fill(QColor(128,128,128));
+    image.fill(g_config.m_stageColor);
     HDC dc=GetDC(hwnd);
     HDC memory=CreateCompatibleDC(dc);
     HBITMAP bitmap=CreateCompatibleBitmap(dc,rect.right,rect.bottom);
@@ -204,7 +214,10 @@ QImage SplitViewerForeignWindowHelper::foreignWindowSnapshot(QWidget* container)
     info.bmiHeader.biPlanes=1;
     info.bmiHeader.biBitCount=32;
     info.bmiHeader.biCompression=BI_RGB;
-    if (ok) GetDIBits(memory,bitmap,0,rect.bottom,image.bits(),&info,DIB_RGB_COLORS);
+    if (ok)
+    {
+        GetDIBits(memory,bitmap,0,rect.bottom,image.bits(),&info,DIB_RGB_COLORS);
+    }
     DeleteObject(bitmap);
     DeleteDC(memory);
     ReleaseDC(hwnd,dc);
@@ -230,7 +243,10 @@ bool SplitViewerForeignWindowHelper::isExternalWindow(WId id,WId own)
 
 bool SplitViewerForeignWindowHelper::foreignWindowValid(QWidget* container)
 {
-    if (!container) return false;
+    if (!container)
+    {
+        return false;
+    }
 #ifdef Q_OS_WIN
     return IsWindow(reinterpret_cast<HWND>(static_cast<quintptr>(container->property("foreignId").toULongLong())))!=FALSE;
 #else

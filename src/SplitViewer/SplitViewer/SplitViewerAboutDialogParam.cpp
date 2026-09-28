@@ -1,8 +1,9 @@
 ﻿#include "SplitViewerAboutDialogParam.h"
 
 SplitViewerAboutDialogParam::SplitViewerAboutDialogParam() :
-    CustomDialogParam(Config::kAboutDialogType),
-    message(),
-    centerRect()
+CustomDialogParam(g_config.m_aboutDialogType),
+message(),
+centerRect()
 {
+
 }

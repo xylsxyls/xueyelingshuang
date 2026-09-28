@@ -1,4 +1,4 @@
-﻿﻿#include "SplitViewerDialogHelper.h"
+﻿#include "SplitViewerDialogHelper.h"
 #include "SplitViewerFileDialogParam.h"
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QFileDialog>

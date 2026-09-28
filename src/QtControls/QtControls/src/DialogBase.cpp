@@ -1,9 +1,15 @@
 ﻿#include "DialogBase.h"
 #include "Label.h"
+#include "DialogShadow.h"
+#include "DialogShadowConfig.h"
 #include <QPainter>
 #include <QPaintEvent>
 #include <QWindow>
 #include <QKeyEvent>
+#include <QCursor>
+#ifdef Q_OS_WIN
+#include <Windows.h>
+#endif
 
 DialogBase::DialogBase():
 m_timeId(-1),
@@ -15,6 +21,9 @@ m_shadowSize(0)
 {
 	setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
     m_title = new Label(this);
+    // Deferred setters build selector keys immediately; initialize the class
+    // before the first style value, not only when Label is first shown.
+    m_title->initClassName();
     m_title->setObjectName(QStringLiteral("dialogTitle"));
 }
 
@@ -124,12 +133,78 @@ void DialogBase::setWindowTitle(const QString& title,
 void DialogBase::setWindowShadow(bool enabled, qint32 size)
 {
     m_shadowEnabled = enabled && size > 0;
-    m_shadowSize = m_shadowEnabled ? qMax<qint32>(size, 0) : 0;
-    // Keep the parameters for API and future implementation compatibility.
-    // Shadow rendering is intentionally disabled for the current rectangular
-    // dialog style.
-    setAttribute(Qt::WA_TranslucentBackground, false);
+    m_shadowSize = m_shadowEnabled ? size : 0;
+    DialogShadow* shadow = shadowWindow();
+    if (m_shadowEnabled && shadow == nullptr)
+    {
+        shadow = new DialogShadow(this);
+    }
+    if (shadow != nullptr)
+    {
+        shadow->setShadowSize(m_shadowSize);
+    }
     update();
+}
+
+DialogShadow* DialogBase::shadowWindow() const
+{
+    return dynamic_cast<DialogShadow*>(findChild<QWidget*>(QStringLiteral("qtControlsDialogShadow"),
+        Qt::FindDirectChildrenOnly));
+}
+
+bool DialogBase::nativeEvent(const QByteArray& eventType, void* message, long* result)
+{
+#ifdef Q_OS_WIN
+    DialogShadow* shadow = shadowWindow();
+    if (shadow != nullptr && message != nullptr && result != nullptr &&
+        (eventType == "windows_generic_MSG" || eventType == "windows_dispatcher_MSG"))
+    {
+        MSG* msg = static_cast<MSG*>(message);
+        if (msg->message == WM_NCLBUTTONDOWN && msg->wParam == HTCAPTION && m_shadowEnabled)
+        {
+            BOOL fullWindowDrag = TRUE;
+            SystemParametersInfo(SPI_GETDRAGFULLWINDOWS, 0, &fullWindowDrag, 0);
+            if (!fullWindowDrag)
+            {
+                shadow->beginOutlineMove(QCursor::pos());
+                if (GetCapture() != msg->hwnd)
+                {
+                    shadow->finishOutlineMove(false);
+                }
+                else
+                {
+                    *result = 0;
+                    return true;
+                }
+            }
+        }
+        else if (shadow->outlineMoveActive())
+        {
+            if (msg->message == WM_MOUSEMOVE)
+            {
+                shadow->moveOutline(QCursor::pos());
+                *result = 0;
+                return true;
+            }
+            if (msg->message == WM_LBUTTONUP || msg->message == WM_CANCELMODE ||
+                (msg->message == WM_KEYDOWN && msg->wParam == VK_ESCAPE))
+            {
+                if (msg->message == WM_LBUTTONUP)
+                {
+                    shadow->moveOutline(QCursor::pos());
+                }
+                shadow->finishOutlineMove(msg->message == WM_LBUTTONUP);
+                *result = 0;
+                return true;
+            }
+            if (msg->message == WM_CAPTURECHANGED)
+            {
+                shadow->finishOutlineMove(false);
+            }
+        }
+    }
+#endif
+    return COriginalDialog::nativeEvent(eventType, message, result);
 }
 
 bool DialogBase::windowShadowEnabled() const
@@ -166,6 +241,12 @@ void DialogBase::showEvent(QShowEvent* eve)
 
 	QDialog::showEvent(eve);
 	raise();
+
+    DialogShadow* shadow = shadowWindow();
+    if (shadow != nullptr)
+    {
+        shadow->synchronize();
+    }
 	emit alreadyShown();
 }
 
@@ -266,10 +347,8 @@ void DialogBase::paintEvent(QPaintEvent* eve)
 
     painter.setCompositionMode(QPainter::CompositionMode_Source);
     painter.fillRect(rect(), background);
-    // Frameless dialogs have no native non-client frame.  Keep a simple
-    // rectangular client edge; the shadow parameters remain API-only until a
-    // future QtControls implementation is enabled.
-    painter.setPen(QPen(QColor(32, 38, 48), 1));
+    // The only body border stays inside the opaque dialog; its shadow is external.
+    painter.setPen(QPen(m_shadowEnabled ? DialogShadowConfig::borderColor() : QColor(32, 38, 48), 1));
     painter.setBrush(Qt::NoBrush);
     painter.drawRect(rect().adjusted(0, 0, -1, -1));
 }

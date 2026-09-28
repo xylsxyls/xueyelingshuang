@@ -5,6 +5,7 @@
 
 class Label;
 class QPaintEvent;
+class DialogShadow;
 /** 弹出框基类，增加倒计时和Esc和Alt+F4屏蔽功能，exec增加堵塞模式
 */
 class QtControlsAPI DialogBase : public COriginalDialog
@@ -74,13 +75,20 @@ public:
                         qint32 origin = 0,
                         const QString& fontName = QString::fromStdWString(L"微软雅黑"));
 
-	/** 保留窗口阴影参数；当前QtControls矩形窗口不绘制阴影。 */
+    /** 设置主体外侧的柔和阴影，GUI线程调用，不改变主体尺寸
+    @param [in] enabled 是否启用阴影
+    @param [in] size 扩散级别，非正值禁用，绘制时上限为16；2对应8px主模糊标准差
+    */
     void setWindowShadow(bool enabled, qint32 size);
 
-    /** 返回窗口阴影是否启用。 */
+    /** 查询窗口阴影开关
+    @return 启用且扩散级别为正时返回true
+    */
     bool windowShadowEnabled() const;
 
-	/** 返回窗口阴影扩散级别。 */
+    /** 查询调用方设置的阴影扩散级别
+    @return 禁用时为0，否则返回原始正值
+    */
     qint32 windowShadowSize() const;
 
 Q_SIGNALS:
@@ -104,6 +112,14 @@ Q_SIGNALS:
 	void alreadyShown();
 
 protected:
+    /** Windows轮廓拖动使用独立目标框，整窗拖动和其他消息交基类处理
+    @param [in] eventType 原生事件类型
+    @param [in] message 平台消息指针
+    @param [out] result 原生消息结果
+    @return 是否由本窗口处理消息
+    */
+    bool nativeEvent(const QByteArray& eventType, void* message, long* result);
+
 	/** 显示时启动倒计时、监听键盘并发出alreadyShown信号
 	@param [in] eve Qt显示事件
 	*/
@@ -146,6 +162,11 @@ protected:
     bool check();
 
 private:
+    /** 取得本弹窗拥有的阴影窗口，不创建新对象
+    @return 阴影窗口，尚未启用时返回nullptr
+    */
+    DialogShadow* shadowWindow() const;
+
     /** 给当前弹窗内所有子控件安装键盘事件过滤器
     */
     void listenAllControls();
@@ -161,7 +182,7 @@ protected:
     Label* m_title;
 	// 阴影开关
 	bool m_shadowEnabled;
-	// 阴影扩散级别，仅保留参数兼容性，当前不参与绘制
+	// 阴影扩散级别，绘制层单独限幅，不改变调用方查询值
 	qint32 m_shadowSize;
 	// 需要监听并转发的键盘按键列表
     std::vector<Qt::Key> m_listenKey;

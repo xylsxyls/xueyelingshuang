@@ -1,45 +1,171 @@
 ﻿#include "Config.h"
 
-QString Config::windowStyle()
+Config::Config() :
+m_fileDialogType(10732),
+m_aboutDialogType(10733),
+m_windowStyle(QString::fromLatin1("QMainWindow { background:#eeeeee; } "
+    "QToolBar { background:#f6f6f6; border:0; spacing:6px; padding:6px; } "
+    "QToolButton { color:#202020; background:#f6f6f6; border:1px solid #bebebe; border-radius:2px; padding:5px 10px; } "
+    "QToolButton:hover { background:#d2e2f6; border-color:#4e84be; } "
+    "QStatusBar { color:#222222; background:#f6f6f6; } "
+    "QLabel#zoomTip { background:#fffcd6; color:#222222; border:1px solid #5c5c46; padding:5px; } "
+    "QMenu { background:#f6f6f6; color:#202020; border:1px solid #bebebe; } "
+    "QMenu::item { padding:6px 20px; } QMenu::item:selected { background:#d2e2f6; } "
+    "QMenu::item:disabled { color:#909090; }")),
+m_fileDialogStyle(QString::fromLatin1("QWidget#splitViewerFileView { background:#f6f6f6; color:#202020; } "
+    "QLabel#fileDialogTitle { font-weight:bold; padding:4px; } "
+    "QPushButton { padding:5px 14px; } QLineEdit { padding:4px; }")),
+m_aboutDialogStyle(QString::fromLatin1(
+    "QWidget#splitViewerAboutView { background:#f7faff; color:#162b48; border:1px solid #cad8e8; } "
+    "QLabel#aboutLogo { background:#ffffff; border:1px solid #dce9f5; border-radius:18px; padding:5px; } "
+    "QLabel#aboutTitle { color:#102a4a; font-family:'Microsoft YaHei'; font-size:24px; font-weight:bold; } "
+    "QLabel#aboutVersion { color:#7187a3; font-family:'Microsoft YaHei'; font-size:13px; } "
+    "QLabel#aboutSeparator { background:#dce6f0; } "
+    "QLabel#aboutMessage { color:#263f5c; font-family:'Microsoft YaHei'; font-size:14px; } "
+    "QPushButton#aboutCloseButton { color:#ffffff; background:#3f9fca; border:1px solid #328db7; border-radius:9px; padding:8px 30px; font-family:'Microsoft YaHei'; font-weight:bold; } "
+    "QPushButton#aboutCloseButton:hover { background:#52add5; border-color:#3f9fca; } "
+    "QPushButton#aboutCloseButton:pressed { background:#2f83aa; border-color:#287595; } ")),
+m_fileDialogSize(QSize(760, 520)),
+m_aboutDialogSize(QSize(520, 340)),
+m_aboutShadowEnabled(true),
+m_aboutShadowSize(2),
+m_aboutTitleHeight(42),
+m_aboutTitleFontSize(18),
+m_aboutCloseSize(34),
+m_aboutCloseRight(4),
+m_aboutCloseTop(5),
+m_aboutCloseRadius(6),
+m_aboutAcceptRadius(9),
+m_buttonBorderWidth(1),
+m_aboutLogoSize(106),
+m_aboutIconSize(94),
+m_aboutSpacing(22),
+m_aboutTextSpacing(4),
+m_aboutSeparatorHeight(1),
+m_closeIconSize(24),
+m_closeIconInset(5.0),
+m_closeIconStroke(1.2),
+m_stageMargin(10),
+m_toolbarHeightAllowance(42),
+m_toolbarIconSize(20),
+m_statusMinimumWidth(280),
+m_initialScreenFraction(0.5),
+m_layerEdgeHitWidth(8.0),
+m_splitterHitPadding(4.0),
+m_splitterWidth(2.0),
+m_borderWidth(1.0),
+m_minimumPaneSize(48.0),
+m_minimumLayerWidth(90.0),
+m_minimumLayerHeight(70.0),
+m_plusButtonSize(42.0),
+m_plusButtonPadding(8.0),
+m_plusArmLength(10.0),
+m_plusStroke(3.0),
+m_previewStroke(3),
+m_previewInset(2),
+m_zoomTipOffset(40),
+m_zoomTipDurationMs(1000),
+m_fullscreenSettleMs(50),
+m_thumbnailSize(320),
+m_exportAspectWidth(4000),
+m_nativeClickTimeoutMs(100),
+m_profileMaximumBytes(64LL * 1024 * 1024),
+m_logMaximumBytes(20LL * 1024 * 1024),
+m_logMaximumCount(5),
+m_logConsoleEnabled(false),
+m_logEnabled(true),
+m_aboutGlyphCanvas(32),
+m_aboutGlyphStroke(2.6),
+m_applicationTitle(QStringLiteral("分屏看图")),
+m_toolbarTitle(QStringLiteral("工具")),
+m_openProfileText(QStringLiteral("加载配置")),
+m_profileToolTip(QStringLiteral("空工作区加载配置，有内容时保存配置")),
+m_saveImageText(QStringLiteral("另存图片")),
+m_saveImageToolTip(QStringLiteral("另存当前工作区图片")),
+m_newLayerText(QStringLiteral("新建图层")),
+m_fullscreenText(QStringLiteral("全屏")),
+m_borderText(QStringLiteral("边框")),
+m_aboutText(QStringLiteral("关于")),
+m_selectImageText(QStringLiteral("选择图片")),
+m_imageFilter(QStringLiteral("图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp *.tif *.tiff);;所有文件 (*)")),
+m_horizontalSplitText(QStringLiteral("水平分割")),
+m_verticalSplitText(QStringLiteral("垂直分割")),
+m_deleteLayerText(QStringLiteral("删除图层")),
+m_deleteSplitText(QStringLiteral("删除当前分屏")),
+m_loadImageText(QStringLiteral("载入图片到当前分屏")),
+m_embedWindowText(QStringLiteral("嵌入外部窗口")),
+m_detachWindowText(QStringLiteral("解除嵌入")),
+m_readImageError(QStringLiteral("无法读取图片：")),
+m_openProfileFilter(QStringLiteral("SplitViewer配置 (*.sv);;所有文件 (*)")),
+m_saveProfileText(QStringLiteral("保存配置")),
+m_defaultProfileName(QStringLiteral("layout.sv")),
+m_saveProfileFilter(QStringLiteral("SplitViewer配置 (*.sv)")),
+m_profileExtension(QStringLiteral(".sv")),
+m_profileSuffix(QStringLiteral("sv")),
+m_writeProfileError(QStringLiteral("无法写入配置文件。")),
+m_defaultImageName(QStringLiteral("split-view.png")),
+m_exportImageFilter(QStringLiteral("PNG图片 (*.png);;JPEG图片 (*.jpg *.jpeg);;BMP图片 (*.bmp);;TIFF图片 (*.tif *.tiff);;所有文件 (*)")),
+m_imageExtension(QStringLiteral(".png")),
+m_writeImageError(QStringLiteral("图片保存失败：")),
+m_aboutTitle(QStringLiteral("关于分屏看图")),
+m_aboutMessage(QStringLiteral("把多张图片的精彩区域组合到同一屏幕，也可以嵌入动态窗口。")),
+m_windowHandlePrompt(QStringLiteral("输入窗口句柄（十进制或0x十六进制）：")),
+m_invalidHandleTitle(QStringLiteral("句柄错误")),
+m_invalidHandleMessage(QStringLiteral("无法解析窗口句柄。")),
+m_embedFailedTitle(QStringLiteral("嵌入失败")),
+m_embedFailedMessage(QStringLiteral("当前平台无法创建外部窗口容器。")),
+m_windowMissingTitle(QStringLiteral("未找到窗口")),
+m_windowMissingMessage(QStringLiteral("当前平台未找到可嵌入的外部窗口。")),
+m_baseLayerText(QStringLiteral("基础层")),
+m_operationFailedTitle(QStringLiteral("操作失败")),
+m_readProfileError(QStringLiteral("无法读取配置：")),
+m_profileTooLargeError(QStringLiteral("配置文件过大。")),
+m_invalidProfileError(QStringLiteral("不是有效的SplitViewer配置文件。")),
+m_overwriteTitle(QStringLiteral("确认覆盖")),
+m_overwritePrompt(QStringLiteral("文件已经存在，是否覆盖？\n")),
+m_iconPath(QStringLiteral(":/icons/SplitViewer.png")),
+m_versionText(QStringLiteral("SplitViewer 1.0")),
+m_acceptAboutText(QStringLiteral("知道了")),
+m_debugArgument(QStringLiteral("debug")),
+m_associationDescription(QStringLiteral("SplitViewer configuration")),
+m_stageColor(QColor(128,128,128)),
+m_canvasColor(QColor(238,238,238)),
+m_fullscreenColor(QColor(18,18,18)),
+m_borderColor(QColor(32,32,32)),
+m_selectedBorderColor(QColor(255,0,0)),
+m_splitterHoverColor(QColor(214,214,214)),
+m_splitterColor(QColor(188,188,188)),
+m_plusBorderColor(QColor(96,96,96)),
+m_plusColor(QColor(70,70,70)),
+m_previewColor(QColor(32,144,255)),
+m_aboutGlyphColor(QColor(43,125,214)),
+m_closeColor(QColor(63,84,108)),
+m_transparentColor(QColor(0,0,0,0)),
+m_closeHoverColor(QColor(215,228,241)),
+m_closePressedColor(QColor(199,216,233)),
+m_closeActiveTextColor(QColor(35,61,88)),
+m_closeDisabledTextColor(QColor(150,165,180)),
+m_closeHoverBorderColor(QColor(191,210,227)),
+m_closePressedBorderColor(QColor(176,199,219)),
+m_acceptColor(QColor(63,159,202)),
+m_acceptHoverColor(QColor(82,173,213)),
+m_acceptPressedColor(QColor(47,131,170)),
+m_acceptDisabledColor(QColor(170,188,207)),
+m_acceptTextColor(QColor(255,255,255)),
+m_acceptDisabledTextColor(QColor(120,140,160)),
+m_acceptBorderColor(QColor(50,141,181)),
+m_acceptPressedBorderColor(QColor(40,117,149)),
+m_acceptDisabledBorderColor(QColor(145,165,185)),
+m_canvasMinimumSize(QSize(320, 220)),
+m_aboutAcceptSize(QSize(128, 40)),
+m_aboutMargins(QMargins(30, 26, 30, 24)),
+m_statusFormat(L"图层 %d · 当前 %ls · 滚轮缩放 · 拖动平移 · 右键分割")
 {
-    return QString::fromLatin1("QMainWindow { background:#eeeeee; } "
-        "QToolBar { background:#f6f6f6; border:0; spacing:6px; padding:6px; } "
-        "QToolButton { color:#202020; background:#f6f6f6; border:1px solid #bebebe; border-radius:2px; padding:5px 10px; } "
-        "QToolButton:hover { background:#d2e2f6; border-color:#4e84be; } "
-        "QStatusBar { color:#222222; background:#f6f6f6; } "
-        "QLabel#zoomTip { background:#fffcd6; color:#222222; border:1px solid #5c5c46; padding:5px; } "
-        "QMenu { background:#f6f6f6; color:#202020; border:1px solid #bebebe; } "
-        "QMenu::item { padding:6px 20px; } QMenu::item:selected { background:#d2e2f6; } "
-        "QMenu::item:disabled { color:#909090; }");
+
 }
 
-QString Config::fileDialogStyle()
+Config& Config::instance()
 {
-    return QString::fromLatin1("QWidget#splitViewerFileView { background:#f6f6f6; color:#202020; } "
-        "QLabel#fileDialogTitle { font-weight:bold; padding:4px; } "
-        "QPushButton { padding:5px 14px; } QLineEdit { padding:4px; }");
-}
-
-QString Config::aboutDialogStyle()
-{
-    return QString::fromLatin1(
-        "QWidget#splitViewerAboutView { background:#f7faff; color:#162b48; border:1px solid #cad8e8; } "
-        "QLabel#aboutLogo { background:#ffffff; border:1px solid #dce9f5; border-radius:18px; padding:5px; } "
-        "QLabel#aboutTitle { color:#102a4a; font-family:'Microsoft YaHei'; font-size:24px; font-weight:bold; } "
-        "QLabel#aboutVersion { color:#7187a3; font-family:'Microsoft YaHei'; font-size:13px; } "
-        "QLabel#aboutSeparator { background:#dce6f0; } "
-        "QLabel#aboutMessage { color:#263f5c; font-family:'Microsoft YaHei'; font-size:14px; } "
-        "QPushButton#aboutCloseButton { color:#ffffff; background:#3f9fca; border:1px solid #328db7; border-radius:9px; padding:8px 30px; font-family:'Microsoft YaHei'; font-weight:bold; } "
-        "QPushButton#aboutCloseButton:hover { background:#52add5; border-color:#3f9fca; } "
-        "QPushButton#aboutCloseButton:pressed { background:#2f83aa; border-color:#287595; } ");
-}
-
-QSize Config::fileDialogSize()
-{
-    return QSize(760, 520);
-}
-
-QSize Config::aboutDialogSize()
-{
-    return QSize(520, 340);
+    static Config s_config;
+    return s_config;
 }

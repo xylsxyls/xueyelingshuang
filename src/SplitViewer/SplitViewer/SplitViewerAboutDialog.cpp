@@ -1,8 +1,10 @@
 ﻿#include "SplitViewerAboutDialog.h"
+#include "Config.h"
 
 #include "SplitViewerAboutDialogParam.h"
 #include "QtControls/Label.h"
 #include "QtControls/PushButton.h"
+#include <algorithm>
 #include <QIcon>
 #include <QPainter>
 #include <QPen>
@@ -11,33 +13,33 @@
 #include <QResizeEvent>
 
 SplitViewerAboutDialog::SplitViewerAboutDialog() :
-    CustomDialog()
+CustomDialog()
 {
     setExitVisible(true);
     if (m_exit != nullptr)
     {
         m_exit->setObjectName(QStringLiteral("dialogCloseButton"));
-        QPixmap closeIcon(24, 24);
+        QPixmap closeIcon(g_config.m_closeIconSize, g_config.m_closeIconSize);
         closeIcon.fill(Qt::transparent);
         QPainter iconPainter(&closeIcon);
         iconPainter.setRenderHint(QPainter::Antialiasing, true);
-        iconPainter.setPen(QPen(QColor(63, 84, 108), 1.2, Qt::SolidLine, Qt::RoundCap));
-        iconPainter.drawLine(QPointF(5.0, 5.0), QPointF(19.0, 19.0));
-        iconPainter.drawLine(QPointF(19.0, 5.0), QPointF(5.0, 19.0));
+        iconPainter.setPen(QPen(g_config.m_closeColor, g_config.m_closeIconStroke, Qt::SolidLine, Qt::RoundCap));
+        iconPainter.drawLine(QPointF(g_config.m_closeIconInset, g_config.m_closeIconInset), QPointF(g_config.m_closeIconSize - g_config.m_closeIconInset, g_config.m_closeIconSize - g_config.m_closeIconInset));
+        iconPainter.drawLine(QPointF(g_config.m_closeIconSize - g_config.m_closeIconInset, g_config.m_closeIconInset), QPointF(g_config.m_closeIconInset, g_config.m_closeIconSize - g_config.m_closeIconInset));
         iconPainter.end();
         m_exit->setText(QString());
         m_exit->setIcon(QIcon(closeIcon));
         m_exit->setIconSize(closeIcon.size());
         m_exit->setTextAlign(QStringLiteral("center"));
-        m_exit->setBkgColor(QColor(0, 0, 0, 0), QColor(215, 228, 241), QColor(199, 216, 233), QColor(0, 0, 0, 0),
-            QColor(0, 0, 0, 0), QColor(215, 228, 241), QColor(199, 216, 233), QColor(0, 0, 0, 0));
-        m_exit->setFontColor(QColor(63, 84, 108), QColor(35, 61, 88), QColor(35, 61, 88), QColor(150, 165, 180),
-            QColor(63, 84, 108), QColor(35, 61, 88), QColor(35, 61, 88), QColor(150, 165, 180));
-        m_exit->setBorderColor(QColor(0, 0, 0, 0), QColor(191, 210, 227), QColor(176, 199, 219), QColor(0, 0, 0, 0),
-            QColor(0, 0, 0, 0), QColor(191, 210, 227), QColor(176, 199, 219), QColor(0, 0, 0, 0));
-        m_exit->setBorderWidth(1);
+        m_exit->setBkgColor(g_config.m_transparentColor, g_config.m_closeHoverColor, g_config.m_closePressedColor, g_config.m_transparentColor,
+            g_config.m_transparentColor, g_config.m_closeHoverColor, g_config.m_closePressedColor, g_config.m_transparentColor);
+        m_exit->setFontColor(g_config.m_closeColor, g_config.m_closeActiveTextColor, g_config.m_closeActiveTextColor, g_config.m_closeDisabledTextColor,
+            g_config.m_closeColor, g_config.m_closeActiveTextColor, g_config.m_closeActiveTextColor, g_config.m_closeDisabledTextColor);
+        m_exit->setBorderColor(g_config.m_transparentColor, g_config.m_closeHoverBorderColor, g_config.m_closePressedBorderColor, g_config.m_transparentColor,
+            g_config.m_transparentColor, g_config.m_closeHoverBorderColor, g_config.m_closePressedBorderColor, g_config.m_transparentColor);
+        m_exit->setBorderWidth(g_config.m_buttonBorderWidth);
         // Set the radius after all state colors so every PushButton state is rounded.
-        m_exit->setBorderRadius(static_cast<quint32>(6));
+        m_exit->setBorderRadius(static_cast<quint32>(g_config.m_aboutCloseRadius));
         // Keep the icon aligned with the frame after its one-pixel downward move.
         m_exit->setMargins(static_cast<quint32>(0), static_cast<quint32>(0),
             static_cast<quint32>(0), static_cast<quint32>(0));
@@ -58,7 +60,7 @@ bool SplitViewerAboutDialog::initDialog(const DialogParam& param)
     Label* title = findChild<Label*>(QStringLiteral("dialogTitle"));
     if (title != nullptr)
     {
-        title->setFontSize(18);
+        title->setFontSize(g_config.m_aboutTitleFontSize);
         title->setFontBold(true);
     }
     const SplitViewerAboutDialogParam* aboutParam = dynamic_cast<const SplitViewerAboutDialogParam*>(&param);
@@ -82,8 +84,8 @@ void SplitViewerAboutDialog::updateTitleCloseButtonGeometry()
     {
         return;
     }
-    const int buttonSize = 34;
-    const int titleHeight = qMax(customerTitleBarHeight() - 2, buttonSize);
-    m_exit->setGeometry(width() - buttonSize - 4, 5, buttonSize, qMin(titleHeight, buttonSize));
+    const int buttonSize = g_config.m_aboutCloseSize;
+    const int titleHeight = (std::max)(customerTitleBarHeight() - 2, buttonSize);
+    m_exit->setGeometry(width() - buttonSize - g_config.m_aboutCloseRight, g_config.m_aboutCloseTop, buttonSize, (std::min)(titleHeight, buttonSize));
     m_exit->raise();
 }

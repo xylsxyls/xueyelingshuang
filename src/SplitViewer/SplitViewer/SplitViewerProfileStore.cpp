@@ -1,4 +1,5 @@
 ﻿#include "SplitViewerProfileStore.h"
+#include "Config.h"
 #include <QtCore/QSaveFile>
 #include <QtCore/QFile>
 #include "LogManager/LogManagerAPI.h"
@@ -32,12 +33,12 @@ bool SplitViewerProfileStore::read(const QString& path, SplitViewerCoreDocument&
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly))
     {
-        error = QStringLiteral("无法读取配置：")+path;
+        error = g_config.m_readProfileError+path;
         return false;
     }
-    if (file.size()>64*1024*1024)
+    if (file.size()>g_config.m_profileMaximumBytes)
     {
-        error = QStringLiteral("配置文件过大。");
+        error = g_config.m_profileTooLargeError;
         return false;
     }
     const QByteArray data = file.readAll();
@@ -45,7 +46,7 @@ bool SplitViewerProfileStore::read(const QString& path, SplitViewerCoreDocument&
     std::vector<uint8_t> config;
     if (!SplitViewerCoreExtractEmbeddedConfig(bytes, config) || !SplitViewerCoreDeserializeProfile(config, document))
     {
-        error = QStringLiteral("不是有效的SplitViewer配置文件。");
+        error = g_config.m_invalidProfileError;
         return false;
     }
     return true;

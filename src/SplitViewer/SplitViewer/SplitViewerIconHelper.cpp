@@ -1,18 +1,19 @@
 ﻿#include "SplitViewerIconHelper.h"
+#include "Config.h"
 #include <QtGui/QIcon>
 #include <QtGui/QPainter>
 #include <QtGui/QPainterPath>
 
 QIcon SplitViewerIconHelper::aboutIcon()
 {
-    QPixmap pixmap(32, 32);
+    QPixmap pixmap(g_config.m_aboutGlyphCanvas, g_config.m_aboutGlyphCanvas);
     pixmap.fill(Qt::transparent);
     QPainter painter(&pixmap);
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(43, 125, 214));
+    painter.setBrush(g_config.m_aboutGlyphColor);
     painter.drawEllipse(QRectF(2.0, 2.0, 28.0, 28.0));
-    painter.setPen(QPen(Qt::white, 2.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.setPen(QPen(Qt::white, g_config.m_aboutGlyphStroke, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     painter.setBrush(Qt::NoBrush);
     QPainterPath question;
     question.moveTo(12.0, 12.0);

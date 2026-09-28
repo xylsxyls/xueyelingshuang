@@ -114,7 +114,7 @@ ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES}
     ${PRODUCT_UI}/SplitViewerIconHelper.cpp
     ${PRODUCT_UI}/SplitViewerImageHelper.cpp
     ${PRODUCT_UI}/SplitViewerLayoutHelper.cpp
-    ${PRODUCT_UI}/SplitViewerNativeMouseConfig.cpp
+    ${PRODUCT_UI}/SplitViewerNativeMouseManager.cpp
     ${PRODUCT_UI}/SplitViewerNativeMouseHelper.cpp
     ${PRODUCT_UI}/SplitViewerPlatform.cpp
     ${PRODUCT_UI}/SplitViewerProfileStore.cpp

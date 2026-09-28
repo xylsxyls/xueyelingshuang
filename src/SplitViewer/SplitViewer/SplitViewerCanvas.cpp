@@ -1,4 +1,5 @@
 ﻿#include "SplitViewerCanvas.h"
+#include "Config.h"
 
 #include "SplitViewer.h"
 
@@ -16,7 +17,7 @@ SplitViewerCanvas::SplitViewerCanvas(SplitViewer* owner, QWidget* parent) : Widg
     setAcceptDrops(true);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
-    setMinimumSize(320, 220);
+    setMinimumSize(g_config.m_canvasMinimumSize);
     setAutoFillBackground(false);
 }
 
@@ -102,7 +103,10 @@ void SplitViewerCanvas::dropEvent(QDropEvent* event)
 void SplitViewerCanvas::resizeEvent(QResizeEvent* event)
 {
     Widget::resizeEvent(event);
-    if (m_owner) m_owner->canvasResized();
+    if (m_owner)
+    {
+        m_owner->canvasResized();
+    }
 }
 
 void SplitViewerCanvas::keyPressEvent(QKeyEvent* event)

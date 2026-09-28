@@ -1,4 +1,5 @@
 ﻿#include "SplitViewer.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 #include "SplitViewerCanvas.h"
 #include "Config.h"
@@ -41,28 +42,33 @@
 #include "QtControls/Widget.h"
 
 SplitViewer::SplitViewer(QWidget* parent) :
-    MainWindow(parent),
-    m_canvas(NULL),
-    m_toolbar(NULL),
-    m_saveProfileAction(NULL),
-    m_statusLabel(NULL),
-    m_exporting(false),
-    m_contentFullscreen(false),
-    m_wasMaximized(false),
-    m_zoomTip(nullptr),
-    m_draggingLayer(false),
-    m_resizingLayer(false),
-    m_resizeEdges(0),
-    m_draggingImage(false),
-    m_dragStart(),
-    m_dragStartRect(),
-    m_activeHit(),
-    m_profilePath(),
-    m_nativeDragWindow(0),
-    m_nativeDragNode(nullptr),
-    m_nativeClickTime(0)
+MainWindow(parent),
+m_canvas(nullptr),
+m_toolbar(nullptr),
+m_saveProfileAction(nullptr),
+m_statusLabel(nullptr),
+m_exporting(false),
+m_contentFullscreen(false),
+m_wasMaximized(false),
+m_zoomTip(nullptr),
+m_zoomTipTimer(new QTimer(this)),
+m_draggingLayer(false),
+m_resizingLayer(false),
+m_resizeEdges(0),
+m_draggingImage(false),
+m_dragStart(),
+m_dragStartRect(),
+m_activeHit(),
+m_profilePath(),
+m_nativeDragWindow(0),
+m_nativeDragNode(nullptr),
+m_nativeClickTime(0)
 {
     buildUi();
+    m_zoomTipTimer->setSingleShot(true);
+    m_zoomTipTimer->setTimerType(Qt::PreciseTimer);
+    m_zoomTipTimer->setInterval(g_config.m_zoomTipDurationMs);
+    connect(m_zoomTipTimer, &QTimer::timeout, m_zoomTip, &QWidget::hide);
     SplitViewerWatchNativeMouse(this,[this](int event,const QPoint& point,WId id)
     {
         nativeMouseEvent(event,point,id);
@@ -81,33 +87,33 @@ SplitViewer::~SplitViewer()
 
 void SplitViewer::buildUi()
 {
-    setWindowTitle(QStringLiteral("分屏看图"));
+    setWindowTitle(g_config.m_applicationTitle);
     const QRect screen = QApplication::desktop()->screenGeometry(this);
-    const int stageWidth = (std::max)(1, screen.width() / 2);
-    const int stageHeight = (std::max)(1, screen.height() / 2);
+    const int stageWidth = (std::max)(1, qRound(screen.width() * g_config.m_initialScreenFraction));
+    const int stageHeight = (std::max)(1, qRound(screen.height() * g_config.m_initialScreenFraction));
     m_document.setStageAspect(static_cast<double>(screen.width()) / static_cast<double>(screen.height()));
-    resize(stageWidth + 20, stageHeight + 42 + 20);
+    resize(stageWidth + g_config.m_stageMargin * 2, stageHeight + g_config.m_toolbarHeightAllowance + g_config.m_stageMargin * 2);
     setAcceptDrops(true);
 
     m_toolbar = new ToolBar(this);
-    m_toolbar->setWindowTitle(QStringLiteral("工具"));
+    m_toolbar->setWindowTitle(g_config.m_toolbarTitle);
     addToolBar(m_toolbar);
     m_toolbar->setMovable(false);
-    m_toolbar->setIconSize(QSize(20, 20));
-    m_saveProfileAction = m_toolbar->addAction(QStringLiteral("加载配置"));
-    m_saveProfileAction->setToolTip(QStringLiteral("空工作区加载配置，有内容时保存配置"));
+    m_toolbar->setIconSize(QSize(g_config.m_toolbarIconSize, g_config.m_toolbarIconSize));
+    m_saveProfileAction = m_toolbar->addAction(g_config.m_openProfileText);
+    m_saveProfileAction->setToolTip(g_config.m_profileToolTip);
     connect(m_saveProfileAction, SIGNAL(triggered()), this, SLOT(saveProfile()));
-    QAction* exportAction = m_toolbar->addAction(QStringLiteral("另存图片"));
-    exportAction->setToolTip(QStringLiteral("另存当前工作区图片"));
+    QAction* exportAction = m_toolbar->addAction(g_config.m_saveImageText);
+    exportAction->setToolTip(g_config.m_saveImageToolTip);
     connect(exportAction, SIGNAL(triggered()), this, SLOT(saveImage()));
     m_toolbar->addSeparator();
-    QAction* layerAction = m_toolbar->addAction(QStringLiteral("新建图层"));
+    QAction* layerAction = m_toolbar->addAction(g_config.m_newLayerText);
     connect(layerAction, SIGNAL(triggered()), this, SLOT(newLayer()));
-    QAction* fullAction = m_toolbar->addAction(QStringLiteral("全屏"));
+    QAction* fullAction = m_toolbar->addAction(g_config.m_fullscreenText);
     addAction(fullAction);
     fullAction->setShortcut(QKeySequence(Qt::Key_F11));
     connect(fullAction, SIGNAL(triggered()), this, SLOT(toggleFullscreen()));
-    QAction* borderAction = new QAction(QStringLiteral("边框"), this);
+    QAction* borderAction = new QAction(g_config.m_borderText, this);
     addAction(borderAction);
     borderAction->setShortcut(QKeySequence(Qt::Key_F1));
     connect(borderAction, SIGNAL(triggered()), this, SLOT(toggleBorder()));
@@ -121,13 +127,13 @@ void SplitViewer::buildUi()
     m_toolbar->addWidget(spacer);
     QAction* aboutAction = m_toolbar->addAction(SplitViewerIconHelper::aboutIcon(), QString());
     aboutAction->setObjectName(QStringLiteral("aboutAction"));
-    aboutAction->setToolTip(QStringLiteral("关于"));
+    aboutAction->setToolTip(g_config.m_aboutText);
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(showAbout()));
 
     m_canvas = new SplitViewerCanvas(this, this);
     setCentralWidget(m_canvas);
     m_statusLabel = new Label(this);
-    m_statusLabel->setMinimumWidth(280);
+    m_statusLabel->setMinimumWidth(g_config.m_statusMinimumWidth);
     statusBar()->addPermanentWidget(m_statusLabel);
     statusBar()->hide();
     m_canvas->setObjectName(QStringLiteral("SplitViewerCanvas"));
@@ -135,7 +141,7 @@ void SplitViewer::buildUi()
     m_zoomTip->setObjectName(QStringLiteral("zoomTip"));
     m_zoomTip->setAttribute(Qt::WA_TransparentForMouseEvents);
     m_zoomTip->hide();
-    setStyleSheet(Config::windowStyle());
+    setStyleSheet(g_config.m_windowStyle);
     const QRect desktop=QApplication::desktop()->availableGeometry(this);
     move(desktop.center()-QPoint(width()/2,height()/2));
     canvasResized();
@@ -166,14 +172,14 @@ void SplitViewer::paintCanvas(QPainter& painter, const QSize& size)
 {
     painter.setRenderHint(QPainter::Antialiasing, false);
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
-    painter.fillRect(QRect(QPoint(0, 0), size), m_contentFullscreen ? QColor(18,18,18) : QColor(238,238,238));
+    painter.fillRect(QRect(QPoint(0, 0), size), m_contentFullscreen ? g_config.m_fullscreenColor : g_config.m_canvasColor);
     SplitViewerRenderer renderer(m_document, m_imageCache, m_embedded, m_canvas->mapFromGlobal(QCursor::pos()), false, false);
     renderer.drawStage(painter, stageRect(size));
     if (m_nativePreview.isValid())
     {
-        painter.setPen(QPen(QColor(32,144,255),3));
+        painter.setPen(QPen(g_config.m_previewColor,g_config.m_previewStroke));
         painter.setBrush(Qt::NoBrush);
-        painter.drawRect(m_nativePreview.adjusted(2,2,-2,-2));
+        painter.drawRect(m_nativePreview.adjusted(g_config.m_previewInset,g_config.m_previewInset,-g_config.m_previewInset,-g_config.m_previewInset));
     }
 }
 
@@ -216,8 +222,8 @@ void SplitViewer::canvasMousePress(const QPoint& point, Qt::MouseButton button, 
     if (!(modifiers & Qt::ControlModifier) && !hit.splitter && hit.node && hit.node->isLeaf() && !hit.node->view.hasContent() &&
         plusButtonRect(hit.rect).contains(point))
     {
-        const QString path = browseFile(false, QStringLiteral("选择图片"), QString(),
-            QStringLiteral("图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp *.tif *.tiff);;所有文件 (*)"));
+        const QString path = browseFile(false, g_config.m_selectImageText, QString(),
+            g_config.m_imageFilter);
         if (!path.isEmpty())
         {
             loadImageToLeaf(hit.node, path);
@@ -231,15 +237,27 @@ void SplitViewer::canvasMousePress(const QPoint& point, Qt::MouseButton button, 
     bool moveFromTopLeft = false;
     if (hit.layer >= 0)
     {
-        const qreal edge = 8.0;
+        const qreal edge = g_config.m_layerEdgeHitWidth;
         moveFromTopLeft = std::abs(point.x() - hit.layerRect.left()) <= edge &&
             std::abs(point.y() - hit.layerRect.top()) <= edge;
         if (!moveFromTopLeft)
         {
-            if (std::abs(point.x() - hit.layerRect.left()) <= edge) m_resizeEdges |= 1;
-            if (std::abs(point.x() - hit.layerRect.right()) <= edge) m_resizeEdges |= 2;
-            if (std::abs(point.y() - hit.layerRect.top()) <= edge) m_resizeEdges |= 4;
-            if (std::abs(point.y() - hit.layerRect.bottom()) <= edge) m_resizeEdges |= 8;
+            if (std::abs(point.x() - hit.layerRect.left()) <= edge)
+            {
+                m_resizeEdges |= 1;
+            }
+            if (std::abs(point.x() - hit.layerRect.right()) <= edge)
+            {
+                m_resizeEdges |= 2;
+            }
+            if (std::abs(point.y() - hit.layerRect.top()) <= edge)
+            {
+                m_resizeEdges |= 4;
+            }
+            if (std::abs(point.y() - hit.layerRect.bottom()) <= edge)
+            {
+                m_resizeEdges |= 8;
+            }
             m_resizingLayer = m_resizeEdges != 0;
         }
     }
@@ -257,20 +275,41 @@ void SplitViewer::canvasMouseMove(const QPoint& point, Qt::MouseButtons buttons,
         Qt::CursorShape cursor=Qt::ArrowCursor;
         if (hitAll(point,hover))
         {
-            const bool nearLeft=hover.layer>=0 && std::abs(point.x()-hover.layerRect.left())<=7;
-            const bool nearTop=hover.layer>=0 && std::abs(point.y()-hover.layerRect.top())<=7;
-            const bool nearRight=hover.layer>=0 && std::abs(point.x()-hover.layerRect.right())<=7;
-            const bool nearBottom=hover.layer>=0 && std::abs(point.y()-hover.layerRect.bottom())<=7;
+            const bool nearLeft=hover.layer>=0 && std::abs(point.x()-hover.layerRect.left())<=g_config.m_layerEdgeHitWidth;
+            const bool nearTop=hover.layer>=0 && std::abs(point.y()-hover.layerRect.top())<=g_config.m_layerEdgeHitWidth;
+            const bool nearRight=hover.layer>=0 && std::abs(point.x()-hover.layerRect.right())<=g_config.m_layerEdgeHitWidth;
+            const bool nearBottom=hover.layer>=0 && std::abs(point.y()-hover.layerRect.bottom())<=g_config.m_layerEdgeHitWidth;
             const bool topLeftMove=nearLeft && nearTop;
             const bool x=nearLeft || nearRight;
             const bool y=nearTop || nearBottom;
-            if (topLeftMove) cursor=Qt::SizeAllCursor;
-            else if (x && y) cursor=((point.x()<hover.layerRect.center().x())==(point.y()<hover.layerRect.center().y())) ? Qt::SizeFDiagCursor : Qt::SizeBDiagCursor;
-            else if (x) cursor=Qt::SizeHorCursor;
-            else if (y) cursor=Qt::SizeVerCursor;
-            else if (hover.layer>=0 && (modifiers & Qt::ControlModifier)) cursor=Qt::SizeAllCursor;
-            else if (hover.splitter) cursor=hover.node->direction==SPLITVIEWER_CORE_SPLIT_VERTICAL ? Qt::SizeHorCursor : Qt::SizeVerCursor;
-            else if (!hover.node->view.hasContent() && plusButtonRect(hover.rect).contains(point)) cursor=Qt::PointingHandCursor;
+            if (topLeftMove)
+            {
+                cursor=Qt::SizeAllCursor;
+            }
+            else if (x && y)
+            {
+                cursor=((point.x()<hover.layerRect.center().x())==(point.y()<hover.layerRect.center().y())) ? Qt::SizeFDiagCursor : Qt::SizeBDiagCursor;
+            }
+            else if (x)
+            {
+                cursor=Qt::SizeHorCursor;
+            }
+            else if (y)
+            {
+                cursor=Qt::SizeVerCursor;
+            }
+            else if (hover.layer>=0 && (modifiers & Qt::ControlModifier))
+            {
+                cursor=Qt::SizeAllCursor;
+            }
+            else if (hover.splitter)
+            {
+                cursor=hover.node->direction==SPLITVIEWER_CORE_SPLIT_VERTICAL ? Qt::SizeHorCursor : Qt::SizeVerCursor;
+            }
+            else if (!hover.node->view.hasContent() && plusButtonRect(hover.rect).contains(point))
+            {
+                cursor=Qt::PointingHandCursor;
+            }
         }
         m_canvas->setCursor(cursor);
         m_canvas->update();
@@ -281,9 +320,9 @@ void SplitViewer::canvasMouseMove(const QPoint& point, Qt::MouseButtons buttons,
         const QRectF owner = m_activeHit.ownerRect;
         const bool vertical=m_activeHit.node->direction == SPLITVIEWER_CORE_SPLIT_VERTICAL;
         const double length=vertical ? owner.width() : owner.height();
-        const double thickness=m_document.borderVisible() ? 2.0 : 0.0;
+        const double thickness=m_document.borderVisible() ? g_config.m_splitterWidth : 0.0;
         const double ratio=((vertical ? point.x()-owner.left() : point.y()-owner.top())-thickness/2.0)/(std::max)(1.0,length-thickness);
-        const double minimum=(std::min)(0.5,48.0/(std::max)(1.0,length-thickness));
+        const double minimum=(std::min)(0.5,g_config.m_minimumPaneSize/(std::max)(1.0,length-thickness));
         m_activeHit.node->ratio=(std::max)(minimum,(std::min)(1.0-minimum,ratio));
         m_canvas->update();
         return;
@@ -325,7 +364,7 @@ void SplitViewer::canvasMouseMove(const QPoint& point, Qt::MouseButtons buttons,
             layer->rect.top += dy;
             layer->rect.bottom += dy;
             SplitViewerCoreRect bounds(0.0, 0.0, 1.0, 1.0);
-            SplitViewerCoreConstrainLayerRect(layer->rect, bounds, 90.0/stage.width(), 70.0/stage.height());
+            SplitViewerCoreConstrainLayerRect(layer->rect, bounds, g_config.m_minimumLayerWidth/stage.width(), g_config.m_minimumLayerHeight/stage.height());
             m_dragStart = point;
             m_canvas->update();
         }
@@ -339,10 +378,22 @@ void SplitViewer::canvasMouseMove(const QPoint& point, Qt::MouseButtons buttons,
             const QPoint delta = point - m_dragStart;
             const double dx = delta.x() / (std::max)(1.0, stage.width());
             const double dy = delta.y() / (std::max)(1.0, stage.height());
-            if (m_resizeEdges & 1) layer->rect.left=(std::max)(0.0,(std::min)(layer->rect.right-90.0/stage.width(),layer->rect.left+dx));
-            if (m_resizeEdges & 2) layer->rect.right=(std::min)(1.0,(std::max)(layer->rect.left+90.0/stage.width(),layer->rect.right+dx));
-            if (m_resizeEdges & 4) layer->rect.top=(std::max)(0.0,(std::min)(layer->rect.bottom-70.0/stage.height(),layer->rect.top+dy));
-            if (m_resizeEdges & 8) layer->rect.bottom=(std::min)(1.0,(std::max)(layer->rect.top+70.0/stage.height(),layer->rect.bottom+dy));
+            if (m_resizeEdges & 1)
+            {
+                layer->rect.left=(std::max)(0.0,(std::min)(layer->rect.right-g_config.m_minimumLayerWidth/stage.width(),layer->rect.left+dx));
+            }
+            if (m_resizeEdges & 2)
+            {
+                layer->rect.right=(std::min)(1.0,(std::max)(layer->rect.left+g_config.m_minimumLayerWidth/stage.width(),layer->rect.right+dx));
+            }
+            if (m_resizeEdges & 4)
+            {
+                layer->rect.top=(std::max)(0.0,(std::min)(layer->rect.bottom-g_config.m_minimumLayerHeight/stage.height(),layer->rect.top+dy));
+            }
+            if (m_resizeEdges & 8)
+            {
+                layer->rect.bottom=(std::min)(1.0,(std::max)(layer->rect.top+g_config.m_minimumLayerHeight/stage.height(),layer->rect.bottom+dy));
+            }
             m_dragStart = point;
             m_canvas->update();
         }
@@ -379,17 +430,10 @@ void SplitViewer::canvasWheel(const QPoint& point, int delta, Qt::KeyboardModifi
     setSelectedHit(hit);
     m_zoomTip->setText(QString::number(hit.node->view.scale/fit*100.0,'f',0)+QStringLiteral("%"));
     m_zoomTip->adjustSize();
-    m_zoomTip->move((std::max)(0,point.x()-m_zoomTip->width()/2),(std::max)(0,point.y()-40));
+    m_zoomTip->move((std::max)(0,point.x()-m_zoomTip->width()/2),(std::max)(0,point.y()-g_config.m_zoomTipOffset));
     m_zoomTip->show();
     m_zoomTip->raise();
-    m_zoomTip->setProperty("lastZoom",QDateTime::currentMSecsSinceEpoch());
-    QTimer::singleShot(1000,this,[this]()
-    {
-        if (QDateTime::currentMSecsSinceEpoch()-m_zoomTip->property("lastZoom").toLongLong()>=950)
-        {
-            m_zoomTip->hide();
-        }
-    });
+    m_zoomTipTimer->start();
     m_canvas->update();
 }
 
@@ -402,16 +446,16 @@ void SplitViewer::canvasContextMenu(const QPoint& point, const QPoint& globalPoi
     }
     setSelectedHit(hit);
     Menu menu(this);
-    QAction* horizontal = menu.addAction(QStringLiteral("水平分割"));
-    QAction* vertical = menu.addAction(QStringLiteral("垂直分割"));
-    QAction* deleteLayerAction = menu.addAction(QStringLiteral("删除图层"));
+    QAction* horizontal = menu.addAction(g_config.m_horizontalSplitText);
+    QAction* vertical = menu.addAction(g_config.m_verticalSplitText);
+    QAction* deleteLayerAction = menu.addAction(g_config.m_deleteLayerText);
     deleteLayerAction->setEnabled(hit.layer >= 0);
-    QAction* deleteAction = menu.addAction(QStringLiteral("删除当前分屏"));
+    QAction* deleteAction = menu.addAction(g_config.m_deleteSplitText);
     deleteAction->setEnabled(hit.node != hit.root);
     menu.addSeparator();
-    QAction* load = menu.addAction(QStringLiteral("载入图片到当前分屏"));
-    QAction* embed = menu.addAction(QStringLiteral("嵌入外部窗口"));
-    QAction* detach = menu.addAction(QStringLiteral("解除嵌入"));
+    QAction* load = menu.addAction(g_config.m_loadImageText);
+    QAction* embed = menu.addAction(g_config.m_embedWindowText);
+    QAction* detach = menu.addAction(g_config.m_detachWindowText);
     detach->setEnabled(m_embedded.contains(hit.node));
     QAction* chosen = menu.exec(globalPoint);
     if (chosen == embed)
@@ -442,7 +486,7 @@ void SplitViewer::canvasContextMenu(const QPoint& point, const QPoint& globalPoi
     }
     else if (chosen == load && hit.node)
     {
-        const QString path = browseFile(false, QStringLiteral("选择图片"), QString(), QStringLiteral("图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;所有文件 (*)"));
+        const QString path = browseFile(false, g_config.m_selectImageText, QString(), g_config.m_imageFilter);
         if (!path.isEmpty())
         {
             loadImageToLeaf(hit.node, path);
@@ -474,6 +518,10 @@ void SplitViewer::deleteAt(const SplitViewerHit& hit)
     }
     // The surviving sibling may move into its parent; rebind its native window before deleting nodes.
     SplitViewerCoreNode* parent=SplitViewerCoreFindParent(hit.root,hit.node);
+    if (!parent)
+    {
+        return;
+    }
     SplitViewerCoreNode* sibling=parent->first == hit.node ? parent->second : parent->first;
     if (m_embedded.contains(hit.node))
     {
@@ -541,10 +589,13 @@ void SplitViewer::loadImageToLeaf(SplitViewerCoreNode* leaf, const QString& path
         return;
     }
     QImage image(path);
-    if (qApp->property("debug").toBool()) LOGINFO("Load image size=%dx%d valid=%d",image.width(),image.height(),!image.isNull());
+    if (qApp->property("debug").toBool())
+    {
+        LOGINFO("Load image size=%dx%d valid=%d",image.width(),image.height(),!image.isNull());
+    }
     if (image.isNull())
     {
-        reportError(QStringLiteral("无法读取图片：")+path);
+        reportError(g_config.m_readImageError+path);
         return;
     }
     if (m_embedded.contains(leaf))
@@ -569,7 +620,7 @@ void SplitViewer::canvasFileDropped(const QString& path)
     {
         return;
     }
-    if (QFileInfo(path).suffix().compare(QStringLiteral("sv"), Qt::CaseInsensitive) == 0)
+    if (QFileInfo(path).suffix().compare(g_config.m_profileSuffix, Qt::CaseInsensitive) == 0)
     {
         readProfile(path);
         return;
@@ -595,7 +646,7 @@ QByteArray SplitViewer::renderPng()
 {
     const QRectF stage=stageRect(m_canvas->size());
     QSize size=stage.size().toSize();
-    size.scale(320,320,Qt::KeepAspectRatio);
+    size.scale(g_config.m_thumbnailSize,g_config.m_thumbnailSize,Qt::KeepAspectRatio);
     const QImage image=renderStage(size,false);
     QBuffer buffer;
     buffer.open(QIODevice::WriteOnly);
@@ -655,7 +706,7 @@ bool SplitViewer::readProfile(const QString& path)
 
 void SplitViewer::openProfile()
 {
-    const QString path = browseFile(false, QStringLiteral("加载配置"), QString(), QStringLiteral("SplitViewer配置 (*.sv);;所有文件 (*)"));
+    const QString path = browseFile(false, g_config.m_openProfileText, QString(), g_config.m_openProfileFilter);
     if (!path.isEmpty())
     {
         canvasFileDropped(path);
@@ -672,39 +723,42 @@ void SplitViewer::saveProfile()
     QString path = m_profilePath;
     if (path.isEmpty())
     {
-        path = browseFile(true, QStringLiteral("保存配置"), QStringLiteral("layout.sv"), QStringLiteral("SplitViewer配置 (*.sv)"));
+        path = browseFile(true, g_config.m_saveProfileText, g_config.m_defaultProfileName, g_config.m_saveProfileFilter);
     }
     if (!path.isEmpty())
     {
-        if (!path.endsWith(QStringLiteral(".sv"), Qt::CaseInsensitive))
+        if (!path.endsWith(g_config.m_profileExtension, Qt::CaseInsensitive))
         {
-            path += QStringLiteral(".sv");
+            path += g_config.m_profileExtension;
         }
         if (!writeProfile(path))
         {
-            reportError(QStringLiteral("无法写入配置文件。"));
+            reportError(g_config.m_writeProfileError);
         }
     }
 }
 
 void SplitViewer::saveImage()
 {
-    QString path=browseFile(true,QStringLiteral("另存图片"),QStringLiteral("split-view.png"),
-        QStringLiteral("PNG图片 (*.png);;JPEG图片 (*.jpg *.jpeg);;BMP图片 (*.bmp);;TIFF图片 (*.tif *.tiff);;所有文件 (*)"));
+    QString path=browseFile(true,g_config.m_saveImageText,g_config.m_defaultImageName,
+        g_config.m_exportImageFilter);
     if (path.isEmpty())
     {
         return;
     }
-    if (QFileInfo(path).suffix().isEmpty()) path+=QStringLiteral(".png");
+    if (QFileInfo(path).suffix().isEmpty())
+    {
+        path+=g_config.m_imageExtension;
+    }
     const QRect screen=QApplication::desktop()->screenGeometry(this);
     QSize target(screen.width(),screen.height());
-    QSize aspectSize(4000,static_cast<int>(4000/m_document.stageAspect()));
+    QSize aspectSize(g_config.m_exportAspectWidth,static_cast<int>(g_config.m_exportAspectWidth/m_document.stageAspect()));
     aspectSize.scale(target,Qt::KeepAspectRatio);
     const QImage image=renderStage(aspectSize,true);
     QImageWriter writer(path);
     if (!writer.write(image))
     {
-        reportError(QStringLiteral("图片保存失败：")+writer.errorString());
+        reportError(g_config.m_writeImageError+writer.errorString());
     }
 }
 
@@ -726,12 +780,15 @@ void SplitViewer::toggleFullscreen()
     showFullScreen();
     canvasResized();
     QTimer::singleShot(0, this, SLOT(canvasResized()));
-    QTimer::singleShot(50, this, SLOT(canvasResized()));
+    QTimer::singleShot(g_config.m_fullscreenSettleMs, this, SLOT(canvasResized()));
 }
 
 void SplitViewer::leaveFullscreen()
 {
-    if (!m_contentFullscreen) return;
+    if (!m_contentFullscreen)
+    {
+        return;
+    }
     clearInteraction();
     m_contentFullscreen=false;
     LOGINFO("Content fullscreen exited");
@@ -747,7 +804,7 @@ void SplitViewer::leaveFullscreen()
     }
     canvasResized();
     QTimer::singleShot(0, this, SLOT(canvasResized()));
-    QTimer::singleShot(50, this, SLOT(canvasResized()));
+    QTimer::singleShot(g_config.m_fullscreenSettleMs, this, SLOT(canvasResized()));
 }
 
 void SplitViewer::toggleBorder()
@@ -761,20 +818,20 @@ void SplitViewer::toggleBorder()
 void SplitViewer::showAbout()
 {
     SplitViewerAboutDialogParam param;
-    param.m_title = QStringLiteral("关于分屏看图");
+    param.m_title = g_config.m_aboutTitle;
     param.m_parent = windowHandle();
-    param.m_hasShadow = true;
-    param.m_shadowSize = 2;
-    param.m_titleBarHeight = 42;
+    param.m_hasShadow = g_config.m_aboutShadowEnabled;
+    param.m_shadowSize = g_config.m_aboutShadowSize;
+    param.m_titleBarHeight = g_config.m_aboutTitleHeight;
     param.centerRect = QRect(m_canvas->mapToGlobal(QPoint(0, 0)), m_canvas->size());
-    param.message = QStringLiteral("把多张图片的精彩区域组合到同一屏幕，也可以嵌入动态窗口。");
+    param.message = g_config.m_aboutMessage;
     DialogManager::instance().makeDialog(param);
 }
 
 void SplitViewer::embedExternalWindow()
 {
     bool ok = false;
-    const QString text = SplitViewerDialogHelper::inputText(this, QStringLiteral("嵌入外部窗口"), QStringLiteral("输入窗口句柄（十进制或0x十六进制）："), ok);
+    const QString text = SplitViewerDialogHelper::inputText(this, g_config.m_embedWindowText, g_config.m_windowHandlePrompt, ok);
     if (!ok || text.trimmed().isEmpty())
     {
         return;
@@ -784,12 +841,12 @@ void SplitViewer::embedExternalWindow()
     qulonglong value = normalized.startsWith(QStringLiteral("0x"), Qt::CaseInsensitive) ? normalized.mid(2).toULongLong(&parsed, 16) : normalized.toULongLong(&parsed, 10);
     if (!parsed || value == 0)
     {
-        SplitViewerDialogHelper::showMessage(this, QStringLiteral("句柄错误"), QStringLiteral("无法解析窗口句柄。"));
+        SplitViewerDialogHelper::showMessage(this, g_config.m_invalidHandleTitle, g_config.m_invalidHandleMessage);
         return;
     }
     if (!embedWindowId(static_cast<WId>(value)))
     {
-        SplitViewerDialogHelper::showMessage(this, QStringLiteral("嵌入失败"), QStringLiteral("当前平台无法创建外部窗口容器。"));
+        SplitViewerDialogHelper::showMessage(this, g_config.m_embedFailedTitle, g_config.m_embedFailedMessage);
     }
 }
 
@@ -798,7 +855,7 @@ void SplitViewer::embedWindowUnderCursor()
     const WId windowId = SplitViewerWindowUnderCursor(winId());
     if (!windowId || !embedWindowId(windowId))
     {
-        SplitViewerDialogHelper::showMessage(this, QStringLiteral("未找到窗口"), QStringLiteral("当前平台未找到可嵌入的外部窗口。"));
+        SplitViewerDialogHelper::showMessage(this, g_config.m_windowMissingTitle, g_config.m_windowMissingMessage);
     }
 }
 
@@ -843,10 +900,11 @@ void SplitViewer::updateStatus()
     {
         return;
     }
-    m_statusLabel->setText(QStringLiteral("图层 %1 · 当前 %2 · 滚轮缩放 · 拖动平移 · 右键分割").arg(m_document.layerCount()).arg(m_document.selectedLayer() < 0 ? QStringLiteral("基础层") : QString::number(m_document.selectedLayer() + 1)));
+    const std::wstring selected = (m_document.selectedLayer() < 0 ? g_config.m_baseLayerText : QString::number(m_document.selectedLayer() + 1)).toStdWString();
+    m_statusLabel->setText(QString::fromStdWString(CStringManager::Format(g_config.m_statusFormat, m_document.layerCount(), selected.c_str())));
     if (m_saveProfileAction)
     {
-        m_saveProfileAction->setText(hasContent() ? QStringLiteral("保存配置") : QStringLiteral("加载配置"));
+        m_saveProfileAction->setText(hasContent() ? g_config.m_saveProfileText : g_config.m_openProfileText);
     }
 }
 
@@ -875,7 +933,7 @@ QString SplitViewer::browseFile(bool save, const QString& title, const QString& 
 void SplitViewer::reportError(const QString& message)
 {
     LOGERROR("%s",message.toUtf8().constData());
-    SplitViewerDialogHelper::showMessage(this,QStringLiteral("操作失败"),message);
+    SplitViewerDialogHelper::showMessage(this,g_config.m_operationFailedTitle,message);
 }
 
 void SplitViewer::clearInteraction()
@@ -900,7 +958,7 @@ void SplitViewer::canvasDoubleClick(const QPoint& point)
 
 void SplitViewer::canvasFileDroppedAt(const QString& path,const QPoint& point)
 {
-    if (QFileInfo(path).suffix().compare(QStringLiteral("sv"),Qt::CaseInsensitive)==0)
+    if (QFileInfo(path).suffix().compare(g_config.m_profileSuffix,Qt::CaseInsensitive)==0)
     {
         readProfile(path);
         return;
@@ -915,7 +973,10 @@ void SplitViewer::canvasFileDroppedAt(const QString& path,const QPoint& point)
 
 void SplitViewer::scaleViews(SplitViewerCoreNode* node,const QRectF& oldRect,const QRectF& newRect)
 {
-    if (!node || oldRect.width()<=0 || oldRect.height()<=0 || newRect.width()<=0 || newRect.height()<=0) return;
+    if (!node || oldRect.width()<=0 || oldRect.height()<=0 || newRect.width()<=0 || newRect.height()<=0)
+    {
+        return;
+    }
     if (node->isLeaf())
     {
         SplitViewerCoreResizeView(node->view,oldRect.width(),oldRect.height(),newRect.width(),newRect.height());
@@ -930,7 +991,10 @@ void SplitViewer::scaleViews(SplitViewerCoreNode* node,const QRectF& oldRect,con
 
 void SplitViewer::canvasResized()
 {
-    if (!m_canvas) return;
+    if (!m_canvas)
+    {
+        return;
+    }
     const QRectF stage=stageRect(m_canvas->size());
     if (m_lastStage.isValid() && m_lastStage!=stage)
     {
@@ -995,9 +1059,15 @@ QImage SplitViewer::renderStage(const QSize& size,bool includeEmbedded)
     // Export is a projection; restore exact live view states afterwards, including manual scale.
     std::vector<SplitViewerCoreNode*> leaves;
     SplitViewerCoreNode::collectLeaves(m_document.baseRoot(),leaves);
-    for (int i=0;i<m_document.layerCount();++i) SplitViewerCoreNode::collectLeaves(m_document.layerAt(i)->root,leaves);
+    for (int i=0;i<m_document.layerCount();++i)
+    {
+        SplitViewerCoreNode::collectLeaves(m_document.layerAt(i)->root,leaves);
+    }
     std::vector<SplitViewerCoreLeafState> states;
-    for (size_t i=0;i<leaves.size();++i) states.push_back(leaves[i]->view);
+    for (size_t i=0;i<leaves.size();++i)
+    {
+        states.push_back(leaves[i]->view);
+    }
     scaleViews(m_document.baseRoot(),contentRect(source),contentRect(target));
     for (int i=0;i<m_document.layerCount();++i)
     {
@@ -1005,19 +1075,25 @@ QImage SplitViewer::renderStage(const QSize& size,bool includeEmbedded)
         scaleViews(layer->root,contentRect(normalizedToPixel(layer->rect,source)),contentRect(normalizedToPixel(layer->rect,target)));
     }
     QImage image(size,QImage::Format_RGB32);
-    image.fill(QColor(128,128,128));
+    image.fill(g_config.m_stageColor);
     QPainter painter(&image);
     painter.setRenderHint(QPainter::SmoothPixmapTransform,true);
     QScopedValueRollback<bool> exporting(m_exporting, true);
     SplitViewerRenderer renderer(m_document, m_imageCache, m_embedded, QPoint(), true, includeEmbedded);
     renderer.drawStage(painter,target);
-    for (size_t i=0;i<leaves.size();++i) leaves[i]->view=states[i];
+    for (size_t i=0;i<leaves.size();++i)
+    {
+        leaves[i]->view=states[i];
+    }
     return image;
 }
 
 void SplitViewer::nativeMouseEvent(int event,const QPoint& screenPoint,WId id)
 {
-    if (!isVisible() || QApplication::activeModalWidget() || QApplication::activePopupWidget()) return;
+    if (!isVisible() || QApplication::activeModalWidget() || QApplication::activePopupWidget())
+    {
+        return;
+    }
     const QPoint point=m_canvas->mapFromGlobal(screenPoint);
     SplitViewerHit hit;
     const bool found=hitAll(point,hit) && !hit.splitter;
@@ -1047,12 +1123,18 @@ void SplitViewer::nativeMouseEvent(int event,const QPoint& screenPoint,WId id)
         }
         return;
     }
-    if (!m_nativeDragWindow) return;
+    if (!m_nativeDragWindow)
+    {
+        return;
+    }
     const bool moved=(screenPoint-m_nativeDragStart).manhattanLength()>=QApplication::startDragDistance();
     const bool outside=!stageRect(m_canvas->size()).contains(point);
     m_nativePreview=moved && !m_nativeDragNode && found && !hit.node->view.hasContent() ? hit.rect : QRectF();
     m_canvas->update();
-    if (event!=3) return;
+    if (event!=3)
+    {
+        return;
+    }
     const WId dragged=m_nativeDragWindow;
     SplitViewerCoreNode* source=m_nativeDragNode;
     m_nativeDragWindow=0;

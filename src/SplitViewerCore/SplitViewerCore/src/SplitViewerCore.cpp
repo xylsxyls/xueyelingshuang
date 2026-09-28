@@ -61,8 +61,14 @@ bool SplitViewerCoreExtractEmbeddedConfig(const std::vector<uint8_t>& bytes,
 
 SplitViewerCoreNode* SplitViewerCoreFindParent(SplitViewerCoreNode* root, SplitViewerCoreNode* target)
 {
-    if (!root || root->isLeaf() || !target) return nullptr;
-    if (root->first==target || root->second==target) return root;
+    if (!root || root->isLeaf() || !target)
+    {
+        return nullptr;
+    }
+    if (root->first==target || root->second==target)
+    {
+        return root;
+    }
     SplitViewerCoreNode* parent=SplitViewerCoreFindParent(root->first,target);
     return parent ? parent : SplitViewerCoreFindParent(root->second,target);
 }

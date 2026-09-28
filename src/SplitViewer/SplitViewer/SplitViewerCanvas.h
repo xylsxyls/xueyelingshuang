@@ -9,14 +9,14 @@ class QKeyEvent;
 class SplitViewerCanvas : public Widget
 {
 public:
-    /** 初始化对象及其默认状态。
+    /** 初始化对象及其默认状态
     @param [in] owner 父区域或事件接收者
     @param [in] parent Qt宿主窗口
     */
     explicit SplitViewerCanvas(SplitViewer* owner, QWidget* parent = NULL);
 
 protected:
-    /** 窗口尺寸变化后刷新工作区布局。
+    /** 窗口尺寸变化后刷新工作区布局
     @param [in] event 输入事件
     */
     void resizeEvent(QResizeEvent* event);

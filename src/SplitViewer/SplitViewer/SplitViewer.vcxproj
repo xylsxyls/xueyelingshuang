@@ -326,8 +326,8 @@
     <ClCompile Include="SplitViewerLayoutHelper.cpp" />
     <ClInclude Include="SplitViewerLayoutHelper.h" />
     <ClInclude Include="SplitViewerNativeClick.h" />
-    <ClCompile Include="SplitViewerNativeMouseConfig.cpp" />
-    <ClInclude Include="SplitViewerNativeMouseConfig.h" />
+    <ClCompile Include="SplitViewerNativeMouseManager.cpp" />
+    <ClInclude Include="SplitViewerNativeMouseManager.h" />
     <ClCompile Include="SplitViewerNativeMouseHelper.cpp" />
     <ClInclude Include="SplitViewerNativeMouseHelper.h" />
     <ClCompile Include="SplitViewerProfileStore.cpp" />

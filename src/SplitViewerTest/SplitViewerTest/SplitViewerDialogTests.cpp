@@ -1,4 +1,4 @@
-﻿﻿#include "SplitViewerDialogTests.h"
+﻿#include "SplitViewerDialogTests.h"
 #include "../../SplitViewer/SplitViewer/SplitViewer.h"
 #include "../../SplitViewer/SplitViewer/SplitViewerDialogHelper.h"
 #include "DialogManager/DialogManagerAPI.h"
@@ -226,6 +226,8 @@ bool SplitViewerDialogTests::runCase(int id, const QString& directory)
             }
 #endif
             details << "aboutTitle style=" << (dialogTitle != nullptr ? dialogTitle->styleSheet() : QString())
+                << " actualPixelSize=" << (dialogTitle != nullptr ? dialogTitle->font().pixelSize() : -1)
+                << " actualBold=" << (dialogTitle != nullptr && dialogTitle->font().bold())
                 << " dialog=" << dialogGlobal.x() << "," << dialogGlobal.y() << "," << dialogGlobal.width() << "," << dialogGlobal.height()
                 << " canvas=" << canvasGlobal.x() << "," << canvasGlobal.y() << "," << canvasGlobal.width() << "," << canvasGlobal.height() << "\n";
             valid = valid && about != nullptr && close != nullptr && titleClose != nullptr &&
@@ -236,6 +238,7 @@ bool SplitViewerDialogTests::runCase(int id, const QString& directory)
                 logo != nullptr && logo->pixmap() != nullptr && !logo->pixmap()->isNull() &&
                 dialogTitle != nullptr && dialogTitle->styleSheet().contains(QStringLiteral("font-size:18px")) &&
                 dialogTitle->styleSheet().contains(QStringLiteral("font-weight:bold")) &&
+                dialogTitle->font().pixelSize() == 18 && dialogTitle->font().bold() &&
                 rectangularWindow &&
                 !about->styleSheet().contains(QStringLiteral("border-radius:12px")) &&
                 dialogGlobal.size() == QSize(520, 340) &&

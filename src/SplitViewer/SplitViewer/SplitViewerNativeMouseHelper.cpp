@@ -1,5 +1,7 @@
 ﻿#include "SplitViewerNativeMouseHelper.h"
-#include "SplitViewerNativeMouseConfig.h"
+#include "Config.h"
+#include "SplitViewerNativeMouseManager.h"
+#include "LogManager/LogManagerAPI.h"
 #include <algorithm>
 #include <cmath>
 #include <QtCore/QTimer>
@@ -8,34 +10,45 @@
 #ifdef Q_OS_WIN
 void SplitViewerNativeMouseHelper::replayClick(HWND embedded, bool downOnly)
 {
-    if (!SplitViewerNativeMouseConfig::instance().pendingClicks.contains(embedded))
+    if (!SplitViewerNativeMouseManager::instance().m_pendingClicks.contains(embedded))
     {
         return;
     }
-    const SplitViewerNativeClick click = SplitViewerNativeMouseConfig::instance().pendingClicks.take(embedded);
+    const SplitViewerNativeClick click = SplitViewerNativeMouseManager::instance().m_pendingClicks.take(embedded);
     const HWND target = reinterpret_cast<HWND>(click.target);
-    if (!SplitViewerNativeMouseConfig::instance().embeddedWindows.contains(embedded) || !IsWindow(target))
+    if (!SplitViewerNativeMouseManager::instance().m_embeddedWindows.contains(embedded) || !IsWindow(target))
     {
         return;
     }
     const LPARAM position = MAKELPARAM(click.clientPoint.x(),click.clientPoint.y());
-    // Complete the target's press handler before delivering release. Queuing
-    // both messages allowed native input and deferred Qt input to interleave.
-    // Bound cross-process waits so an unresponsive player cannot block the UI.
-    DWORD_PTR result = 0;
-    const UINT flags = SMTO_ABORTIFHUNG | SMTO_BLOCK;
-    if (!SendMessageTimeoutW(target, WM_LBUTTONDOWN, MK_LBUTTON|click.modifiers,
-        position, flags, 100, &result))
-    {
-        if (!downOnly) PostMessageW(target, WM_LBUTTONUP, click.modifiers, position);
-        return;
-    }
     if (!downOnly)
     {
-        if (!SendMessageTimeoutW(target, WM_LBUTTONUP, click.modifiers, position, flags, 100, &result))
+        // Keep a completed click in the target's input queue. A synchronous
+        // press can establish capture before the release is sent and insert
+        // a cursor-position move between the two deferred Qt mouse events.
+        if (!PostMessageW(target, WM_LBUTTONDOWN, MK_LBUTTON|click.modifiers, position))
         {
-            PostMessageW(target, WM_LBUTTONUP, click.modifiers, position);
+            LOGERROR("Native click press queue failed; target=%p error=%lu", target, GetLastError());
+            return;
         }
+        if (!PostMessageW(target, WM_LBUTTONUP, click.modifiers, position))
+        {
+            LOGERROR("Native click release queue failed; target=%p error=%lu", target, GetLastError());
+            DWORD_PTR result = 0;
+            SendMessageTimeoutW(target, WM_LBUTTONUP, click.modifiers, position,
+                SMTO_ABORTIFHUNG | SMTO_BLOCK, g_config.m_nativeClickTimeoutMs, &result);
+        }
+        return;
+    }
+    // An ongoing physical drag needs capture before its next native move.
+    // Bound the wait so an unresponsive player cannot block the host UI.
+    DWORD_PTR result = 0;
+    const UINT flags = SMTO_ABORTIFHUNG | SMTO_BLOCK;
+    SetLastError(ERROR_SUCCESS);
+    if (!SendMessageTimeoutW(target, WM_LBUTTONDOWN, MK_LBUTTON|click.modifiers,
+        position, flags, g_config.m_nativeClickTimeoutMs, &result))
+    {
+        LOGERROR("Native click press failed; target=%p error=%lu downOnly=%d", target, GetLastError(), downOnly);
     }
 }
 
@@ -46,7 +59,10 @@ HWND SplitViewerNativeMouseHelper::embeddedAncestor(HWND window)
     HWND current=window;
     while (current)
     {
-        if (SplitViewerNativeMouseConfig::instance().embeddedWindows.contains(current)) return current;
+        if (SplitViewerNativeMouseManager::instance().m_embeddedWindows.contains(current))
+        {
+            return current;
+        }
         current=GetParent(current);
     }
     return nullptr;
@@ -70,19 +86,19 @@ LRESULT CALLBACK SplitViewerNativeMouseHelper::mouseHook(int code,WPARAM message
         if (embedded && message==WM_LBUTTONDOWN)
         {
             const DWORD now=GetTickCount();
-            const DWORD lastTick=SplitViewerNativeMouseConfig::instance().lastClickTicks.value(embedded,0);
-            const QPoint lastPoint=SplitViewerNativeMouseConfig::instance().lastClickPoints.value(embedded);
+            const DWORD lastTick=SplitViewerNativeMouseManager::instance().m_lastClickTicks.value(embedded,0);
+            const QPoint lastPoint=SplitViewerNativeMouseManager::instance().m_lastClickPoints.value(embedded);
             const int doubleClickWidth=(std::max)(1,GetSystemMetrics(SM_CXDOUBLECLK));
             const int doubleClickHeight=(std::max)(1,GetSystemMetrics(SM_CYDOUBLECLK));
             if (lastTick!=0 && now-lastTick<=GetDoubleClickTime() &&
                 std::abs(point.x()-lastPoint.x())<=doubleClickWidth &&
                 std::abs(point.y()-lastPoint.y())<=doubleClickHeight)
             {
-                SplitViewerNativeMouseConfig::instance().pendingClicks.remove(embedded);
-                SplitViewerNativeMouseConfig::instance().suppressButtonUp.insert(embedded);
+                SplitViewerNativeMouseManager::instance().m_pendingClicks.remove(embedded);
+                SplitViewerNativeMouseManager::instance().m_suppressButtonUp.insert(embedded);
                 suppress=true;
-                SplitViewerNativeMouseConfig::instance().lastClickTicks.remove(embedded);
-                SplitViewerNativeMouseConfig::instance().lastClickPoints.remove(embedded);
+                SplitViewerNativeMouseManager::instance().m_lastClickTicks.remove(embedded);
+                SplitViewerNativeMouseManager::instance().m_lastClickPoints.remove(embedded);
             }
             else
             {
@@ -99,24 +115,24 @@ LRESULT CALLBACK SplitViewerNativeMouseHelper::mouseHook(int code,WPARAM message
                 click.modifiers = ((GetKeyState(VK_SHIFT)&0x8000) ? MK_SHIFT : 0) |
                     ((GetKeyState(VK_CONTROL)&0x8000) ? MK_CONTROL : 0);
                 click.released = false;
-                click.generation = ++SplitViewerNativeMouseConfig::instance().clickGeneration;
-                SplitViewerNativeMouseConfig::instance().pendingClicks.insert(embedded,click);
+                click.generation = ++SplitViewerNativeMouseManager::instance().m_clickGeneration;
+                SplitViewerNativeMouseManager::instance().m_pendingClicks.insert(embedded,click);
                 suppress = true;
-                SplitViewerNativeMouseConfig::instance().lastClickTicks.insert(embedded,now);
-                SplitViewerNativeMouseConfig::instance().lastClickPoints.insert(embedded,point);
+                SplitViewerNativeMouseManager::instance().m_lastClickTicks.insert(embedded,now);
+                SplitViewerNativeMouseManager::instance().m_lastClickPoints.insert(embedded,point);
             }
         }
-        else if (message==WM_LBUTTONUP && !SplitViewerNativeMouseConfig::instance().suppressButtonUp.isEmpty())
+        else if (message==WM_LBUTTONUP && !SplitViewerNativeMouseManager::instance().m_suppressButtonUp.isEmpty())
         {
-            SplitViewerNativeMouseConfig::instance().suppressButtonUp.clear();
+            SplitViewerNativeMouseManager::instance().m_suppressButtonUp.clear();
             suppress=true;
         }
         else if (message==WM_MOUSEMOVE || message==WM_LBUTTONUP)
         {
-            const QList<HWND> pendingWindows = SplitViewerNativeMouseConfig::instance().pendingClicks.keys();
+            const QList<HWND> pendingWindows = SplitViewerNativeMouseManager::instance().m_pendingClicks.keys();
             foreach (HWND pending, pendingWindows)
             {
-                SplitViewerNativeClick& click = SplitViewerNativeMouseConfig::instance().pendingClicks[pending];
+                SplitViewerNativeClick& click = SplitViewerNativeMouseManager::instance().m_pendingClicks[pending];
                 if (click.released)
                 {
                     continue;
@@ -125,9 +141,9 @@ LRESULT CALLBACK SplitViewerNativeMouseHelper::mouseHook(int code,WPARAM message
                     (point-click.screenPoint).manhattanLength()>=QApplication::startDragDistance())
                 {
                     SplitViewerNativeMouseHelper::replayClick(pending,true);
-                    SplitViewerNativeMouseConfig::instance().lastClickTicks.remove(pending);
+                    SplitViewerNativeMouseManager::instance().m_lastClickTicks.remove(pending);
                 }
-                else if (message==WM_LBUTTONUP && !SplitViewerNativeMouseConfig::instance().mouseClients.isEmpty())
+                else if (message==WM_LBUTTONUP && !SplitViewerNativeMouseManager::instance().m_mouseClients.isEmpty())
                 {
                     click.released = true;
                     const quint64 generation = click.generation;
@@ -135,8 +151,8 @@ LRESULT CALLBACK SplitViewerNativeMouseHelper::mouseHook(int code,WPARAM message
                     // Detach removes the entry; generation rejects stale callbacks.
                     QTimer::singleShot(GetDoubleClickTime(),qApp,[pending,generation]()
                     {
-                        if (SplitViewerNativeMouseConfig::instance().pendingClicks.contains(pending) &&
-                            SplitViewerNativeMouseConfig::instance().pendingClicks.value(pending).generation==generation)
+                        if (SplitViewerNativeMouseManager::instance().m_pendingClicks.contains(pending) &&
+                            SplitViewerNativeMouseManager::instance().m_pendingClicks.value(pending).generation==generation)
                         {
                             SplitViewerNativeMouseHelper::replayClick(pending,false);
                         }
@@ -145,22 +161,28 @@ LRESULT CALLBACK SplitViewerNativeMouseHelper::mouseHook(int code,WPARAM message
             }
         }
         // 不在系统钩子内嵌套改父窗口；复制通知，交回各接收者所属的GUI事件循环。
-        for (auto it=SplitViewerNativeMouseConfig::instance().mouseClients.constBegin();it!=SplitViewerNativeMouseConfig::instance().mouseClients.constEnd();++it)
+        for (auto it=SplitViewerNativeMouseManager::instance().m_mouseClients.constBegin();it!=SplitViewerNativeMouseManager::instance().m_mouseClients.constEnd();++it)
         {
             const std::function<void(int,const QPoint&,WId)> callback=it.value();
             QTimer::singleShot(0,it.key(),[callback,event,point,id]() { callback(event,point,id); });
         }
     }
-    if (suppress) return 1;
-    return CallNextHookEx(SplitViewerNativeMouseConfig::instance().mouseHook,code,message,data);
+    if (suppress)
+    {
+        return 1;
+    }
+    return CallNextHookEx(SplitViewerNativeMouseManager::instance().m_mouseHook,code,message,data);
 }
 
 #endif
 void SplitViewerNativeMouseHelper::watchNativeMouse(QObject* owner,const std::function<void(int,const QPoint&,WId)>& callback)
 {
 #ifdef Q_OS_WIN
-    SplitViewerNativeMouseConfig::instance().mouseClients.insert(owner,callback);
-    if (!SplitViewerNativeMouseConfig::instance().mouseHook) SplitViewerNativeMouseConfig::instance().mouseHook=SetWindowsHookExW(WH_MOUSE_LL,SplitViewerNativeMouseHelper::mouseHook,GetModuleHandleW(nullptr),0);
+    SplitViewerNativeMouseManager::instance().m_mouseClients.insert(owner,callback);
+    if (!SplitViewerNativeMouseManager::instance().m_mouseHook)
+    {
+        SplitViewerNativeMouseManager::instance().m_mouseHook=SetWindowsHookExW(WH_MOUSE_LL,SplitViewerNativeMouseHelper::mouseHook,GetModuleHandleW(nullptr),0);
+    }
 #else
     Q_UNUSED(owner); Q_UNUSED(callback);
 #endif
@@ -169,11 +191,11 @@ void SplitViewerNativeMouseHelper::watchNativeMouse(QObject* owner,const std::fu
 void SplitViewerNativeMouseHelper::unwatchNativeMouse(QObject* owner)
 {
 #ifdef Q_OS_WIN
-    SplitViewerNativeMouseConfig::instance().mouseClients.remove(owner);
-    if (SplitViewerNativeMouseConfig::instance().mouseClients.isEmpty() && SplitViewerNativeMouseConfig::instance().mouseHook)
+    SplitViewerNativeMouseManager::instance().m_mouseClients.remove(owner);
+    if (SplitViewerNativeMouseManager::instance().m_mouseClients.isEmpty() && SplitViewerNativeMouseManager::instance().m_mouseHook)
     {
-        UnhookWindowsHookEx(SplitViewerNativeMouseConfig::instance().mouseHook);
-        SplitViewerNativeMouseConfig::instance().mouseHook=nullptr;
+        UnhookWindowsHookEx(SplitViewerNativeMouseManager::instance().m_mouseHook);
+        SplitViewerNativeMouseManager::instance().m_mouseHook=nullptr;
     }
 #else
     Q_UNUSED(owner);
