@@ -49,7 +49,8 @@ enum TestCaseId
     CaseRatePitch = 39,
     CaseProgressClick = 40,
     CaseAbRateLatency = 41,
-    CaseRateSeekLoopRace = 42
+    CaseRateSeekLoopRace = 42,
+    CaseInitialMediaFit = 43
 };
 
 /** 测试分类与ID独立 */

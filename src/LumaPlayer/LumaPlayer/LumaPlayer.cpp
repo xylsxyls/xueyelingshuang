@@ -832,13 +832,15 @@ void LumaPlayer::fitWindowToMedia()
 	}
 	QDesktopWidget* desktop = QApplication::desktop();
     QRect availableRect = desktop != nullptr ? desktop->screenGeometry(this) : QRect(QPoint(0, 0), g_config.m_fallbackDesktopSize);
-    QSize maxSize((std::max)(g_config.m_minWindowWidth, static_cast<int32_t>(availableRect.width() * g_config.m_initialDesktopFraction)), (std::max)(g_config.m_minWindowHeight,
-        static_cast<int32_t>(availableRect.height() * g_config.m_initialDesktopFraction)));
+    const int32_t maxVideoWidth = (std::max)(1, static_cast<int32_t>(availableRect.width() * g_config.m_initialDesktopFraction));
+    const int32_t maxVideoHeight = (std::max)(1, static_cast<int32_t>(availableRect.height() * g_config.m_initialDesktopFraction));
 	double scale = 1.0;
-	if (videoSize.width() > maxSize.width() || videoSize.height() > maxSize.height())
-	{
-        scale = g_config.m_largeMediaInitialScale;
-	}
+    if (videoSize.width() > maxVideoWidth || videoSize.height() > maxVideoHeight)
+    {
+        const double widthScale = static_cast<double>(maxVideoWidth) / videoSize.width();
+        const double heightScale = static_cast<double>(maxVideoHeight) / videoSize.height();
+        scale = (std::min)(widthScale, heightScale);
+    }
 	if (scale <= 0.0)
 	{
 		scale = 1.0;

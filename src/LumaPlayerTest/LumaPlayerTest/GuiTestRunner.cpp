@@ -57,7 +57,7 @@ m_maxFrameGapMs(0)
             [this]() { return m_player->m_pinned; });
         add(3, "load fixture", [this, media]() { m_player->loadMedia(media); },
             [this]() { return m_player->m_hasMedia && !m_player->m_cachedFrame.isNull(); }, 15000);
-        if (id != CaseProgressClick && id != CaseAbRateLatency && id != CaseRateSeekLoopRace)
+        if (id != CaseProgressClick && id != CaseAbRateLatency && id != CaseRateSeekLoopRace && id != CaseInitialMediaFit)
         {
             add(0, "prepare pause", [this]() { if (m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying) { m_player->m_core.pauseAsync(); } },
                 [this]() { return m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused && m_player->m_bottomVisibleHeight == m_player->bottomOverlayHeight(); });
@@ -381,6 +381,78 @@ m_maxFrameGapMs(0)
                     [this]() { return !m_player->isFullScreen() && m_player->isMaximized() && m_player->m_pinned; });
                 add(13, "maximized Escape is inert", [this]() { key(Qt::Key_Escape); },
                     [this]() { return m_elapsed.elapsed() >= 250 && !m_player->isFullScreen() && m_player->isMaximized(); });
+                break;
+            }
+            case CaseInitialMediaFit:
+            {
+                add(43, "fixture settles before size-policy checks", [this]() {
+                    if (m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying)
+                    {
+                        m_player->m_core.pauseAsync();
+                    }
+                    }, [this]() { return m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused ||
+                        m_player->m_snapshot.m_state == LumaPlayerCoreCStateError; });
+                add(43, "unpin before checking full video viewport", [this]() {
+                    if (m_player->m_pinned)
+                    {
+                        click(m_player->pinButtonRect().center());
+                    }
+                    }, [this]() { return !m_player->m_pinned; });
+
+                const QRect screen = QApplication::desktop()->screenGeometry(m_player);
+                const int32_t maxVideoWidth = (std::max)(1, static_cast<int32_t>(screen.width() * g_config.m_initialDesktopFraction));
+                const int32_t maxVideoHeight = (std::max)(1, static_cast<int32_t>(screen.height() * g_config.m_initialDesktopFraction));
+                const int32_t sourceWidths[] = {screen.width() * 2, screen.width() * 4, screen.width(), (std::max)(1, maxVideoWidth / 2)};
+                const int32_t sourceHeights[] = {screen.height() * 2, screen.height(), screen.height() * 4, (std::max)(1, maxVideoHeight / 2)};
+                const char* scenarios[] = {"screen aspect reaches both half-screen bounds", "ultrawide source limits width only",
+                    "tall source limits height only", "small source is not enlarged"};
+                for (size_t index = 0; index < sizeof(sourceWidths) / sizeof(sourceWidths[0]); ++index)
+                {
+                    const int32_t sourceWidth = sourceWidths[index];
+                    const int32_t sourceHeight = sourceHeights[index];
+                    const double widthScale = static_cast<double>(maxVideoWidth) / sourceWidth;
+                    const double heightScale = static_cast<double>(maxVideoHeight) / sourceHeight;
+                    const double expectedScale = (std::min)(1.0, (std::min)(widthScale, heightScale));
+                    const int32_t expectedWidth = (std::max)(1, static_cast<int32_t>(sourceWidth * expectedScale + 0.5));
+                    const int32_t expectedHeight = (std::max)(1, static_cast<int32_t>(sourceHeight * expectedScale + 0.5));
+                    const int32_t expectedWindowWidth = (std::max)(g_config.m_minWindowWidth, expectedWidth);
+                    const int32_t expectedWindowHeight = (std::max)(g_config.m_minWindowHeight, expectedHeight);
+                    add(43, scenarios[index], [this, sourceWidth, sourceHeight]() {
+                        LumaPlayerCoreCVideoFormat format = {};
+                        format.m_width = sourceWidth;
+                        format.m_height = sourceHeight;
+                        m_player->m_videoRender.openVideo(format);
+                        m_player->fitWindowToMedia();
+                        }, [this, screen, maxVideoWidth, maxVideoHeight, expectedScale, expectedWidth, expectedHeight,
+                            expectedWindowWidth, expectedWindowHeight]() {
+                        const QRect draw = m_player->videoDrawRect();
+                        const QPoint imageCenter = m_player->mapToGlobal(draw.center());
+                        return QApplication::desktop()->screenGeometry(m_player) == screen &&
+                            qAbs(m_player->m_baseDisplayScale - expectedScale) < 0.000001 &&
+                            draw.size() == QSize(expectedWidth, expectedHeight) &&
+                            draw.width() <= maxVideoWidth && draw.height() <= maxVideoHeight &&
+                            qAbs(imageCenter.x() - screen.center().x()) <= 1 &&
+                            qAbs(imageCenter.y() - screen.center().y()) <= 1 &&
+                            m_player->geometry().size() == QSize(expectedWindowWidth, expectedWindowHeight);
+                    });
+                }
+                add(43, "reveal ordinary window controls", [this]() { move(QPoint(100, 5)); },
+                    [this]() { return m_player->m_topVisibleHeight == g_config.m_topOverlayHeight; });
+                add(43, "fitted window can maximize", [this]() {
+                    m_normal = m_player->geometry();
+                    click(m_player->maximizeButtonRect().center());
+                    }, [this]() { return m_elapsed.elapsed() >= 150 && m_player->isMaximized() && !m_player->isFullScreen() &&
+                        m_player->geometry().size() == QApplication::desktop()->availableGeometry(m_player).size(); });
+                add(43, "maximized window can enter fullscreen", [this]() { m_player->toggleFullScreen(); },
+                    [this]() { return m_elapsed.elapsed() >= QApplication::doubleClickInterval() + 150 && m_player->isFullScreen(); });
+                add(43, "Escape restores maximized target", [this]() { key(Qt::Key_Escape); },
+                    [this]() { return m_elapsed.elapsed() >= 150 && !m_player->isFullScreen() && m_player->isMaximized(); });
+                add(43, "reveal maximized title controls after Escape", [this]() { move(QPoint(100, 5)); },
+                    [this]() { return m_player->m_topVisibleHeight == g_config.m_topOverlayHeight; });
+                add(43, "restoring maximized window returns to fitted rectangle", [this]() {
+                    click(m_player->maximizeButtonRect().center());
+                    }, [this]() { return m_elapsed.elapsed() >= 150 && !m_player->isMaximized() &&
+                        !m_player->isFullScreen() && m_player->geometry() == m_normal; });
                 break;
             }
             case CasePinnedUi:

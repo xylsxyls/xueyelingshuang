@@ -124,8 +124,6 @@ public:
     QSize m_fallbackDesktopSize;
     // 初始窗口占桌面宽高的比例
     double m_initialDesktopFraction;
-    // 大视频初始显示比例
-    double m_largeMediaInitialScale;
     // AB重叠绘制判定距离，像素
     int32_t m_markerOverlapTolerance;
     // 菜单项上下留白，像素

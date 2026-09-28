@@ -1,5 +1,5 @@
 ﻿流光播放器（LumaPlayer）开发文档
-更新日期：2026-09-23（增加Windows应用图标资源及图片替换方法）
+更新日期：2026-09-27（修复新视频超大素材的初始尺寸适配）
 配套《需求文档.txt》描述产品行为。本文件描述当前实现、构建、测试和发布规则，不保存开发阶段放行状态；新任务的阶段、确认与执行证据写入其独立工作流目录。
 当前Esc改动已完成Windows x64 Debug/Release构建、AI核心验证及用户手动试运行确认；Release指定瞬时ID 30–32共3项通过（6.2秒），未执行其余35项，不宣称全量或压力通过。已发布common/LumaPlayer及common/LumaPlayerTest，正式目录启动与正常退出通过。证据见工作流验证证据及common/LumaPlayerTest/reports/20260915-023033-619。
 
@@ -93,6 +93,7 @@ refreshLoopBuffer保留不匹配旧缓存作为顺序读取源，同时准备匹
 5. 重置、窗口和帮助
 重置先提交视图目标与默认倍率请求；GUI应用视图后回ViewApplied。倍率实际成功且达到默认值、视图应用成功、revision仍匹配时才清dirty；新操作使旧批次失效，部分失败保持可重试。保留AB、当前进度、播放状态和窗口状态。
 普通窗口矩形由m_normalWindowGeometry保存。全屏时最大化按钮只切换m_maximizedOutsideFullScreen和退出后的目标，不退出全屏；退出时恢复最新目标。completeWindowState经Qt事件队列应用最终状态，m_windowStateSerial和关闭守卫排除过时回调，再发送窗口完成回执。
+初始媒体尺寸适配：资源管理器启动参数及播放器内加载/切换共用loadMedia成功回路，onLogicResult收到成功的LumaActionLoad后调用fitWindowToMedia。当前实现以screenGeometry完整屏幕矩形乘m_initialDesktopFraction（默认0.5）为画面最大宽高，scale=min(1, maxWidth/videoWidth, maxHeight/videoHeight)，两轴共用系数；小素材不放大。m_largeMediaInitialScale已删除。画面目标大小与最小窗口几何分开计算，因此小素材触发窗口最小尺寸时允许黑边，画面本身仍受半屏约束。窗口按同一screenGeometry居中，不改全屏、最大化、图钉及手动窗口行为。GUI用例ID43以受控VideoRender尺寸通知验证适配几何和窗口状态，不代表高分辨率文件解码测试。
 keyPressEvent在全屏时接收Esc，过滤自动重复并投递LumaActionExitFullscreen。该枚举追加在原动作末尾，经既有WindowTask和executeWindow回到GUI，与双击共用applyFullScreen及completeWindowState；处理退出意图时再次检查isFullScreen，避免多个已排队Esc退出后重新进入全屏。不设置全局快捷键，不改Core、最大化恢复或图钉算法。
 图钉固定时videoViewportRect避让悬浮条，空媒体底栏高度为0；取消固定恢复完整视口。图钉不因全屏切换改变。
 帮助由DialogManager自定义View/Factory创建；HelpView通过QPointer<QWindow>借用父窗口，首次Show按播放器全局矩形居中。标题栏可拖动，关闭按钮不参与；右上关闭与右下确认走同一HelpClose任务和token回路。LumaPlayerDialogSession在QApplication销毁前清理弹窗。
@@ -130,7 +131,7 @@ App与当前Qt Test使用64位DLL依赖，不能照旧控制台说明切到STATI
 保留已验证的CMakeLists原结构；仅按用户授权作必要改动，不保留旧文档中的imported targets重写方案。macOS适配由用户后续调试；Windows构建不能替代其他平台验证。
 
 九、测试入口、素材与报告
-正式测试源码为src/LumaPlayerTest，入口common/LumaPlayerTest/LumaPlayerTest1.0.exe。LegacyTests保留迁移用例，旧src/LumaPlayerTest_old不是当前构建或运行依赖。TestCaseRegistry.h/.cpp以显式稳定枚举和const map登记42项：33瞬时、9压力；中文说明、分类和执行范围以登记及common/LumaPlayerTest/测试文档.txt为准。
+正式测试源码为src/LumaPlayerTest，入口common/LumaPlayerTest/LumaPlayerTest1.0.exe。LegacyTests保留迁移用例，旧src/LumaPlayerTest_old不是当前构建或运行依赖。TestCaseRegistry.h/.cpp以显式稳定枚举和const map登记43项：34瞬时、9压力；中文说明、分类和执行范围以登记及common/LumaPlayerTest/测试文档.txt为准。
 历史迁移约定：旧工程只作迁移来源，完整迁移、自查并验证新Qt工程可独立编译运行后才删除旧源码目录，保留迁移映射和证据；该清理授权不扩大到新工程资源或其他目录，本次文档整理不执行删除。Release Win32/x64均使用LumaPlayerTest1.0命名，现有实机验证范围为Windows x64，命名不代表Win32已验证。
 四按钮从左到右为指定、瞬时、压力、全量。指定支持1,3,8-12，删除ID跳过不复用，未知ID报错；全量先瞬时后压力。每项独立进程顺序执行并自动判定。重复次数、子断言和配置次数不冒充多个用例。
 GUI测试编入实际播放器源码和moc，TestGuiAccess统一测试访问声明；发布播放器不含此测试访问。CoreTestTask/LegacyTests覆盖Core及C/C++接口，CApiSmoke.c提供纯C入口检查；独立启动用例运行所选目录播放器，内部GUI/Core用例运行对应测试执行程序。
@@ -184,4 +185,5 @@ Sonic第三方接入：tools/sonic保留带本地修正及许可证的tar.xz源�
 2026-09-21 r3：FFmpegCpp、Core、App、Test Windows x64 Release构建成功。最终指定18项瞬时回归全部通过，ID为5、9、10、11、12、14、15、16、22、23、24、26、27、28、37、39、40、41；报告在common/LumaPlayerTest/reports/20260921-SeekAudio-r3-final。旧GUI准备失败通过修正真实鼠标位置和拖动阈值解决，失败报告原样保留。两份真实MP4各执行40/41通过：1/2/5倍跳转到后续帧59～183ms，5倍59～123ms，暂停5倍AB实际完成107～131ms（含100ms菜单计时），恢复新帧61ms；仅代表样本结果。39补充跨包一致性、0.1～5倍基频/时长/反相声道/跳变及Core音频供给验证。FFmpegCpp存在外部头文件编码和Sonic数值窄化警告；未测Debug、压力、全量或其他平台。真实人声与音乐听感仍待C5确认，当前产物仅在lib试运行，未发布至common。
 2026-09-21 r4：FFmpegCpp、Core、App、Test Windows x64 Release构建成功。最终21项瞬时回归全部通过，ID为5、9、10、11、12、14、15、16、22、23、24、26、27、28、30、31、32、37、39、40、41，报告common/LumaPlayerTest/reports/20260921-SeekAudio-r4-final；用户桌面指定MP4另执行22/40/41均通过，报告20260921-r4-user-final-*。播放2倍A/B/修改A耗时124/242/126ms，暂停5倍A/B为120/222ms，包含100ms菜单选择；恢复后新帧143ms，仅代表该样本。前一批20260921-SeekAudio-r4为21瞬时加ID17退出竞争压力项通过，未做长时间压力、全量、产品Debug或其他平台测试。Sonic共8个Windows架构/CRT库经实际链接、PCM冒烟及dumpbin核对；FFmpegCpp静态LIB也构建并核对Sonic对象已合入，证据在20260921-r4-sonic。当前仅更新lib试运行产物，等待C5，未正式发布。
 2026-09-21 r5：用户手动试运行未发现新增问题。App/Core/Test Release构建通过；最终ID35、40、41三项相关瞬时验证通过，发布后common测试目录ID35健康检查退出码0、7项断言通过；两批报告已在结束工作流时按规则删除，结论保留在本文和测试文档。按增量规则发布App、Core、FFmpegCpp及测试EXE到各自实际部署目录，未复制其他未变依赖。两个Diagnostics符号包均以Rate包为基线，只替换本轮变化模块PDB，以7z LZMA2 -mx=9固实压缩并通过完整性测试；旧文件备份随工作流目录删除。崩溃现场仍未稳定复现，不能把本轮日志补充称为根因修复；未执行全量、长时压力、Debug或其他平台测试，工作流已结束。
+2026-09-27 r1：修复超大视频初始窗口超过半屏的问题。App、Test均以VS2013 Release x64构建成功，新增ID43最终执行1项并通过；检查等比例半屏上限、小/超宽/超高尺寸、居中、最大化、全屏、Esc恢复及窗口还原。未验证真实高分辨率文件解码。ID31一次通过；另一轮在“准备暂停”前置失败，日志显示音频设备不支持48kHz双声道16位PCM；ID30基线也因相同音频前置问题未到窗口断言，均不计为功能通过。无Debug、压力、全量、其他平台或人工高分辨率试运行。增量发布仅替换common/LumaPlayer/LumaPlayer1.0.exe与common/LumaPlayerTest/LumaPlayerTest1.0.exe，没有更新DLL；分别生成symbols-LumaPlayer1.0-20260927-WindowFit.7z和symbols-LumaPlayerTest1.0-20260927-WindowFit.7z，基于原包只更换相应PDB，LZMA2 -mx=9固实压缩；7z完整性及PE/PDB GUID、Age匹配通过。
 后续需求按《工程软件开发工作流》现行版执行（本次核对为v2.0）；需求理解及确认必留，同时列出本轮数字确认点，由用户选择仅免哪些后续口令，内部五阶段照常执行。提问统一为普通文本数字清单。退出保存状态供恢复，结束清理本工作流全部临时文件并保留正式成果及必要证据；不得沿用旧任务确认自动放行新需求。阶段顺序和口令以工作流正文为准，本产品文档不维护第二套流程。
