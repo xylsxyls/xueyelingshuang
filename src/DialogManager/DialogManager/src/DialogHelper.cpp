@@ -9,9 +9,6 @@
 #include "NotifyDialog.h"
 #include "CSystem/CSystemAPI.h"
 
-std::ofstream* g_11ClientLogFile = nullptr;
-std::ofstream* g_war3LogFile = nullptr;
-
 void DialogHelper::setLabel(Label* label, const QString& text, const QColor& textColor, qint32 fontSize)
 {
     if (label == nullptr)
@@ -132,34 +129,6 @@ void DialogHelper::activeTransientParentWindow(QWindow* window)
     }
     transParent->requestActivate();
     window->setTransientParent(nullptr);
-}
-
-void DialogHelper::setLogPathFrom11Client(const std::string& path)
-{
-	delete g_11ClientLogFile;
-	g_11ClientLogFile = nullptr;
-	g_11ClientLogFile = new std::ofstream(path + "/11_controls.log", std::ios::app);
-}
-
-void DialogHelper::setLogPathFromWar3(const std::string& path)
-{
-	delete g_war3LogFile;
-	g_war3LogFile = nullptr;
-	g_war3LogFile = new std::ofstream(path + "/11_controls.log", std::ios::app);
-}
-
-std::ofstream& DialogHelper::logFile()
-{
-	if (g_11ClientLogFile != nullptr)
-	{
-		return *g_11ClientLogFile;
-	}
-	else if (g_war3LogFile != nullptr)
-	{
-		return *g_war3LogFile;
-	}
-	static std::ofstream expFile("11_controls.log", std::ios::app);
-	return expFile;
 }
 
 QRect DialogHelper::rectValid(const QRect& rect)

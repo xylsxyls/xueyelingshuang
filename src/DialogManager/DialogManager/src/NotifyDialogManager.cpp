@@ -5,6 +5,7 @@
 #include "AllocManager.h"
 #include "AdvertShowDialog.h"
 #include "DialogHelper.h"
+#include "DialogLog.h"
 #include "QtControls/COriginalDialog.h"
 #include "QtControls/DialogShow.h"
 
@@ -23,8 +24,8 @@ static ParamType* CastNotifyDialogParam(DialogParam& param, DialogType expectedT
 	ParamType* castParam = dynamic_cast<ParamType*>(&param);
 	if (castParam == nullptr)
 	{
-		DialogHelper::logFile() << "NotifyDialogManager dialog param type mismatch, dialogType = "
-			<< expectedType << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "NotifyDialogManager dialog param type mismatch, dialogType = "
+			<< expectedType;
 	}
 	return castParam;
 }
@@ -157,7 +158,7 @@ void NotifyDialogManager::onClosedSignal(DialogResult* result)
 	DialogSignalPtr signalParam = CreateDialogSignalParam<NotifyDialogDoneSignalParam>();
 	if (signalParam.isNull())
 	{
-		DialogHelper::logFile() << "NotifyDialogManager failed to create done signal" << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "NotifyDialogManager failed to create done signal";
 		return;
 	}
 	NotifyDialogDoneSignalParam* param = static_cast<NotifyDialogDoneSignalParam*>(signalParam.data());
@@ -181,7 +182,7 @@ void NotifyDialogManager::onAlreadyShown()
 	DialogSignalPtr signalParam = CreateDialogSignalParam<AlreadyShownSignalParam>();
 	if (signalParam.isNull())
 	{
-		DialogHelper::logFile() << "NotifyDialogManager failed to create already shown signal" << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "NotifyDialogManager failed to create already shown signal";
 		return;
 	}
 	AlreadyShownSignalParam* param = static_cast<AlreadyShownSignalParam*>(signalParam.data());

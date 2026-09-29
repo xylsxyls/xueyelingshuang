@@ -6,6 +6,10 @@ attrib -a -h -s -r "%~dp0*.aps" /s
 del "%~dp0*.aps" /s
 attrib -a -h -s -r "%~dp0*.opensdf" /s
 del "%~dp0*.opensdf" /s
+attrib -a -h -s -r "%~dp0@AutomationLog.txt" /s
+del "%~dp0@AutomationLog.txt" /s
+attrib -a -h -s -r "%~dp0msbuild.log" /s
+del "%~dp0msbuild.log" /s
 
 ::copy "%~dp0src\QtCore\QtCore\vcxproj\QtCore.vcxproj.user" "%~dp0src\QtCore\QtCore\vcxproj\QtCore.vcxproj.1user"
 

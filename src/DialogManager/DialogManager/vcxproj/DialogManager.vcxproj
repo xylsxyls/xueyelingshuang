@@ -49,6 +49,7 @@
     <ClCompile Include="..\src\CustomViewBase.cpp" />
     <ClCompile Include="..\src\CustomViewFactory.cpp" />
     <ClCompile Include="..\src\DialogHelper.cpp" />
+    <ClCompile Include="..\src\DialogLog.cpp" />
     <ClCompile Include="..\src\DialogFactoryManager.cpp" />
     <ClCompile Include="..\src\DialogManager.cpp" />
     <ClCompile Include="..\src\DialogRunTimeManager.cpp" />
@@ -322,6 +323,7 @@
     <ClInclude Include="..\src\CustomViewFactory.h" />
     <ClInclude Include="..\src\DialogFactoryManager.h" />
     <ClInclude Include="..\src\DialogHelper.h" />
+    <ClInclude Include="..\src\DialogLog.h" />
     <ClInclude Include="..\src\DialogTemplate.h" />
     <ClInclude Include="..\src\DialogManagerAPI.h" />
     <ClInclude Include="..\src\DialogManagerMacro.h" />

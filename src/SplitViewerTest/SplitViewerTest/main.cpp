@@ -11,11 +11,10 @@ int32_t main(int argc, char* argv[])
 {
 	QApplication app(argc, argv);
     Config::instance();
-    if (app.arguments().contains(QStringLiteral("--shadow-drag-driver")))
+	if (app.arguments().contains(QStringLiteral("--shadow-drag-driver")))
     {
         return SplitViewerShadowTests::runDragDriver(app.arguments());
     }
-    SplitViewerDialogSession dialogs;
 	if (app.arguments().contains(QStringLiteral("--ui-audit")))
 	{
 		const QStringList args=app.arguments();
@@ -33,6 +32,7 @@ int32_t main(int argc, char* argv[])
         }
         return SplitViewerRunUiTests(args.at(index+1),selected);
 	}
+	SplitViewerDialogSession dialogs;
 	SplitViewerTest window;
 	window.show();
 	if (app.arguments().contains(QStringLiteral("--autotest")))

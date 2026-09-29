@@ -2,6 +2,7 @@
 #include "AllocManager.h"
 #include "AccountManagerDialog.h"
 #include "DialogHelper.h"
+#include "DialogLog.h"
 
 /** 将静态窗口创建参数转换为指定派生类型，避免传错参数导致未定义行为
 @param [in] param 调用方传入的创建参数
@@ -18,8 +19,8 @@ static ParamType* CastStaticDialogParam(DialogParam& param, DialogType expectedT
 	ParamType* castParam = dynamic_cast<ParamType*>(&param);
 	if (castParam == nullptr)
 	{
-		DialogHelper::logFile() << "StaticDialogManager dialog param type mismatch, dialogType = "
-			<< expectedType << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "StaticDialogManager dialog param type mismatch, dialogType = "
+			<< expectedType;
 	}
 	return castParam;
 }
@@ -39,8 +40,8 @@ static ParamType* CastStaticOperateParam(OperateParam& param, OperateType expect
 	ParamType* castParam = dynamic_cast<ParamType*>(&param);
 	if (castParam == nullptr)
 	{
-		DialogHelper::logFile() << "StaticDialogManager operate param type mismatch, operateType = "
-			<< expectedType << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "StaticDialogManager operate param type mismatch, operateType = "
+			<< expectedType;
 	}
 	return castParam;
 }
@@ -274,7 +275,7 @@ void StaticDialogManager::onClosedSignal(DialogResult* result)
 	DialogSignalPtr signalParam = CreateDialogSignalParam<StaticDialogDoneSignalParam>();
 	if (signalParam.isNull())
 	{
-		DialogHelper::logFile() << "StaticDialogManager failed to create done signal" << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "StaticDialogManager failed to create done signal";
 		return;
 	}
 	StaticDialogDoneSignalParam* param = static_cast<StaticDialogDoneSignalParam*>(signalParam.data());
@@ -295,7 +296,7 @@ void StaticDialogManager::onAlreadyShown()
 	DialogSignalPtr signalParam = CreateDialogSignalParam<AlreadyShownSignalParam>();
 	if (signalParam.isNull())
 	{
-		DialogHelper::logFile() << "StaticDialogManager failed to create already shown signal" << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "StaticDialogManager failed to create already shown signal";
 		return;
 	}
 	AlreadyShownSignalParam* param = static_cast<AlreadyShownSignalParam*>(signalParam.data());

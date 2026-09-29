@@ -223,6 +223,7 @@ void PdfReader::refreshDocument()
 
 void PdfReader::refreshThumbnails()
 {
+    m_thumbnails->cancelDrag();
     ++m_viewGeneration;
     m_failedImages.clear();
     m_core->invalidateRenders();
@@ -737,6 +738,10 @@ bool PdfReader::eventFilter(QObject* watched, QEvent* event)
     if (event->type() == QEvent::Wheel)
     {
         QWheelEvent* wheel = static_cast<QWheelEvent*>(event);
+        if (thumbnail && m_thumbnails->gestureActive())
+        {
+            return false;
+        }
         if (wheel->modifiers() & Qt::ControlModifier)
         {
             if (wheel->delta() != 0 && m_core->isOpen())

@@ -1,10 +1,11 @@
 ﻿流光播放器（LumaPlayer）开发文档
-更新日期：2026-09-27（修复新视频超大素材的初始尺寸适配）
+更新日期：2026-09-29（关于标题栏铺满、无描边与扩散级别2阴影及DialogManager宿主日志回调）
 配套《需求文档.txt》描述产品行为。本文件描述当前实现、构建、测试和发布规则，不保存开发阶段放行状态；新任务的阶段、确认与执行证据写入其独立工作流目录。
 当前Esc改动已完成Windows x64 Debug/Release构建、AI核心验证及用户手动试运行确认；Release指定瞬时ID 30–32共3项通过（6.2秒），未执行其余35项，不宣称全量或压力通过。已发布common/LumaPlayer及common/LumaPlayerTest，正式目录启动与正常退出通过。证据见工作流验证证据及common/LumaPlayerTest/reports/20260915-023033-619。
+2026-09-29本轮：DialogManager、LumaPlayer/Test、PdfReader/Test、SplitViewer/Test均完成Windows x64 Release构建；LumaPlayerTest ID32为12/12，PdfReaderTest ID19、SplitViewerTest ID176通过，用户手动试运行确认。已增量发布至common/LumaPlayer、common/PdfReader、common/SplitViewer：各自EXE及DialogManager.dll、QtControls.dll；Test EXE未发布。三款产品均有本轮匹配符号包，LumaPlayer旧符号包保留且未变的12份PDB原样沿用。未做全量、压力、Debug或其他平台验证。
 
 一、入口与源码导航
-先读common/AI文档/仓库使用说明文档.txt，再按其中顺序阅读四份开发规范；需求开发按《工程软件开发工作流.txt》现行版执行（本次文档核对为v2.0）。所有路径相对仓库根目录。2026-09-14用户确认沿用当前version脚本，构建安排见第八节。
+先读common/AI文档/仓库使用说明文档.txt，再按其中顺序阅读五份开发规范（含界面开发规范）；需求开发按《工程软件开发工作流.txt》现行版执行（阅读入口已于2026-09-29同步）。所有路径相对仓库根目录。2026-09-14用户确认沿用当前version脚本，构建安排见第八节。
 src/LumaPlayer/LumaPlayer：main注册CDump、初始化Config和日志、运行Qt；Config集中界面/音频参数；LumaPlayer负责窗口、事件及绘制；Helper提供时间、裁剪、绘图辅助；CoreBridge通过纯C ABI调用Core；VideoRender缓存QImage；AudioRender/AudioTask独立管理声卡队列；LogicController/LogicTask处理异步意图与回执；LifecycleTask处理初始化和关闭。业务日志直接调用LogManager现有宏，已删除LumaPlayerLogger。
 启动顺序：注册CDump并取得配置/管理器实例，创建QApplication后用application.arguments()解析Unicode参数，再初始化日志和窗口。Config保存首个非debug路径及诊断开关，main在show后调用公开loadMedia，复用文件选择的异步打开、窗口尺寸调整和自动播放流程。Windows由系统关联传入路径；应用不写关联注册表。
 src/LumaPlayerCore/LumaPlayerCore/src：LumaPlayerCore为C++外观；CoreAPI通过LUMAPLAYERCORE_USE_C_API选择CoreC纯C声明，CoreC.cpp薄转发；CContext和C音视频Adapter保存句柄及回调；CoreConfig为初始化参数；CoreResult为结果枚举和中文const map；Types定义公共模型；CoreHelper承接C边界检查。
@@ -63,6 +64,8 @@ AudioTask在线程内创建QEventLoop、QAudioOutput并处理事件，约每5ms�
 默认队列上限3秒；大小计算和采样对齐须检查。QAudioDeviceInfo的nearestFormat不能仅改格式声明却继续写原始PCM，否则采样率/声道错配。媒体时钟倍速不能独自替代音频变速；音频与画面实际同步需要设备实测。
 
 六、日志与CDump
+
+DialogManager不依赖LogManager，而用DialogManager::setLogCallback把级别和完整消息同步交给宿主。main先初始化LogManager再注册回调；退出需先销毁窗口/会话并停止可能调用DialogManager的任务，再传nullptr解除回调，最后卸载LogManager。消息指针只在回调期间有效，回调不得保存该指针供异步使用。
 main先CDump::declareDumpFile并取得Config及线程管理器实例，再创建QApplication、初始化Config和常开日志，随后创建窗口并异步初始化Core。debug只作为诊断标记，Bridge始终打开Core日志。应用业务日志在调用点直接使用LOGINFO/LOGERROR等公开宏，不自建Logger或日志宏；Core业务可用LogManager，Engine及FFmpegCpp等二次开发库不引入日志器。
 应用与Core统一使用fileId=0，按20MiB、8个文件滚动，避免同秒创建两个ID却写入同名日志导致独立轮转冲突。App/Core初始化使用archiveOldLog=true；日志归档与滚动由LogManager实现，重要问题仍需单独保留完整日志。CDump转储及文本默认EXE目录，记录注册结果。
 请求提交及完成按id/generation/operation关联，补充输入修订号、目标位置、恢复播放意图、倍率、实际AB范围、状态、结果和steady_clock毫秒计数tickMs；打开媒体记录路径及音视频格式。App启动和Core启用日志记录各自编译日期/时间。Core::snapshot使用LOGINFO_EVERY(30)记录媒体代次、实际位置/帧边界、倍率和AB；首次及之后每30次启用日志的调用采样，不保证固定一秒一次，也不逐帧记录。PlayerEngine和FFmpegCpp不新增LogManager依赖，不修改解码行为。
@@ -96,7 +99,7 @@ refreshLoopBuffer保留不匹配旧缓存作为顺序读取源，同时准备匹
 初始媒体尺寸适配：资源管理器启动参数及播放器内加载/切换共用loadMedia成功回路，onLogicResult收到成功的LumaActionLoad后调用fitWindowToMedia。当前实现以screenGeometry完整屏幕矩形乘m_initialDesktopFraction（默认0.5）为画面最大宽高，scale=min(1, maxWidth/videoWidth, maxHeight/videoHeight)，两轴共用系数；小素材不放大。m_largeMediaInitialScale已删除。画面目标大小与最小窗口几何分开计算，因此小素材触发窗口最小尺寸时允许黑边，画面本身仍受半屏约束。窗口按同一screenGeometry居中，不改全屏、最大化、图钉及手动窗口行为。GUI用例ID43以受控VideoRender尺寸通知验证适配几何和窗口状态，不代表高分辨率文件解码测试。
 keyPressEvent在全屏时接收Esc，过滤自动重复并投递LumaActionExitFullscreen。该枚举追加在原动作末尾，经既有WindowTask和executeWindow回到GUI，与双击共用applyFullScreen及completeWindowState；处理退出意图时再次检查isFullScreen，避免多个已排队Esc退出后重新进入全屏。不设置全局快捷键，不改Core、最大化恢复或图钉算法。
 图钉固定时videoViewportRect避让悬浮条，空媒体底栏高度为0；取消固定恢复完整视口。图钉不因全屏切换改变。
-帮助由DialogManager自定义View/Factory创建；HelpView通过QPointer<QWindow>借用父窗口，首次Show按播放器全局矩形居中。标题栏可拖动，关闭按钮不参与；右上关闭与右下确认走同一HelpClose任务和token回路。LumaPlayerDialogSession在QApplication销毁前清理弹窗。
+帮助由DialogManager自定义View/Factory创建；HelpView通过QPointer<QWindow>借用父窗口，首次Show按播放器全局矩形居中。HelpView取得DialogBase外壳后关闭主体描边并启用扩散级别2的DialogShadow，与PdfReader采用同一阴影级别；QtControls主体描边默认开启，新增运行时开关以动态属性记录，不改变DialogBase对象布局；`CustomDialog::contentGeometry`仅在描边关闭时使用零边距，默认描边窗口仍保持原1px内容框。标题栏因此铺满窗口最上沿和全宽；标题高度与preferredSize宽度对奇数向上取偶。左右内缩统一取(titleHeight-titleButtonSize)/2，关闭按钮垂直居中；正文水平位置通过把helpMargin移入内容布局保持不变，原正文顶部偏移仍由titleButtonTop保持。标题栏可拖动，关闭按钮不参与；右上关闭与右下确认走同一HelpClose任务和token回路。LumaPlayerDialogSession在QApplication销毁前清理弹窗。
 主体仍为自绘界面，LumaPlayerButton用于帮助按钮；不能写成主体已全面使用QtControls。固定文案、字体、布局、颜色、图标和命中尺寸集中Config；保留.ui、.qml、.qrc及其工程登记。
 
 6. 退出与线程库边界

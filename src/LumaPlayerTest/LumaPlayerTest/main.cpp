@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "LumaPlayerDialogSession.h"
 #include "CDump/CDumpAPI.h"
+#include "DialogManager/DialogManagerAPI.h"
 #include "FFmpegCpp/FFmpegCppAPI.h"
 #include "LogManager/LogManagerAPI.h"
 #include <QApplication>
@@ -17,6 +18,30 @@
 #include <QTimer>
 #include <memory>
 #include <exception>
+
+/** 将DialogManager日志交给LumaPlayerTest的LogManager
+@param [in] level DialogManager日志级别
+@param [in] message 完整日志消息
+*/
+static void ForwardDialogLog(DialogLogLevel level, const char* message)
+{
+    if (message == nullptr)
+    {
+        return;
+    }
+    switch (level)
+    {
+    case DIALOG_LOG_ERROR:
+        LOGERROR("%s", message);
+        break;
+    case DIALOG_LOG_WARNING:
+        LOGWARNING("%s", message);
+        break;
+    default:
+        LOGINFO("%s", message);
+        break;
+    }
+}
 
 /** 从命令行读取完整参数值
 @param [in] arguments 已按操作系统规则解析的参数
@@ -51,6 +76,7 @@ int main(int argc, char* argv[])
     log.m_outputConsole = false;
     log.m_archiveOldLog = true;
     LogManager::instance().init(log);
+    DialogManager::setLogCallback(ForwardDialogLog);
     LOGINFO("LumaPlayerTest1.0 startup mode=%s dump=%d", mode.toUtf8().constData(), dump ? 1 : 0);
     int result = 1;
     uint32_t threadId = 0;
@@ -141,6 +167,7 @@ int main(int argc, char* argv[])
         CTaskThreadManager::Instance().Uninit(threadId);
     }
     LOGINFO("LumaPlayerTest finish result=%d", result);
+    DialogManager::setLogCallback(nullptr);
     LogManager::instance().uninit(0);
     return result;
 }

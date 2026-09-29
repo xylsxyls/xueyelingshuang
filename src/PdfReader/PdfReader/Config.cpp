@@ -67,7 +67,7 @@ m_dragGhostBottomInset(24),
 m_dragLineOffset(3),
 m_dragLineWidth(3),
 m_dragLineInset(8),
-m_dragGhostColor(QColor(210,215,224,220)),
+m_dragGhostColor(QColor(100,170,255,72)),
 m_dragLineColor(QColor(49,105,200)),
 m_bridgeCreateError(QStringLiteral("PdfReaderCore句柄创建失败")),
 m_bridgeInternalError(QStringLiteral("PdfReaderCore内部错误")),
@@ -88,8 +88,9 @@ m_thumbnailSidePadding(32),
 m_thumbnailRowPadding(32),
 m_thumbnailLabelHeight(22),
 m_statusMessageMs(3000),
-m_dragHoldMs(1000),
+m_dragHoldMs(500),
 m_dragScrollMs(16),
+m_dragWheelPixels(60),
 m_dragEdgePixels(70),
 m_dragMinSpeed(4),
 m_dragMaxSpeed(46),
@@ -194,7 +195,7 @@ void Config::validate() const
         m_minimumZoom <= 0 || m_maximumZoom < m_minimumZoom || m_maximumZoom > 16.0 || m_initialZoom < m_minimumZoom || m_initialZoom > m_maximumZoom || m_zoomStep <= 0 ||
         !std::isfinite(m_minimumThumbnailZoom) || !std::isfinite(m_maximumThumbnailZoom) || !std::isfinite(m_initialThumbnailZoom) || !std::isfinite(m_thumbnailZoomStep) ||
         m_minimumThumbnailZoom <= 0 || m_maximumThumbnailZoom < m_minimumThumbnailZoom || m_initialThumbnailZoom < m_minimumThumbnailZoom || m_initialThumbnailZoom > m_maximumThumbnailZoom || m_thumbnailZoomStep <= 0 ||
-        m_dragHoldMs <= 0 || m_dragScrollMs <= 0 || m_dragEdgePixels <= 0 || m_dragMinSpeed <= 0 || m_dragMaxSpeed < m_dragMinSpeed || m_dragAcceleration <= 0 ||
+        m_dragHoldMs <= 0 || m_dragWheelPixels <= 0 || m_dragScrollMs <= 0 || m_dragEdgePixels <= 0 || m_dragMinSpeed <= 0 || m_dragMaxSpeed < m_dragMinSpeed || m_dragAcceleration <= 0 ||
         m_sidebarMinimumWidth <= 0 || m_sidebarWidth <= 0 || m_bodyWidth <= 0 || m_thumbnailWidth <= 0 || m_thumbnailMinWidth <= 0 || m_thumbnailMinWidth > m_thumbnailWidth ||
         m_thumbnailRowPadding < m_thumbnailLabelHeight || m_thumbnailLabelHeight <= 0 || m_thumbnailSidePadding < 0 || m_bodyMarginX < 0 || m_bodyMarginY < 0 || m_bodySpacing < 0 ||
         m_windowSize.isEmpty() || m_minimumWindowSize.isEmpty() || !std::isfinite(m_fallbackPageWidth) || !std::isfinite(m_fallbackPageHeight) || m_fallbackPageWidth <= 0 || m_fallbackPageHeight <= 0 ||

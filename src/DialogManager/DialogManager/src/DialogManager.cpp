@@ -1,4 +1,5 @@
 ﻿#include "DialogManager.h"
+#include "DialogLog.h"
 #include "DialogRunTimeManager.h"
 
 DialogManager::DialogManager()
@@ -13,6 +14,11 @@ DialogManager::DialogManager()
 DialogManager::~DialogManager()
 {
 	uninit();
+}
+
+void DialogManager::setLogCallback(DialogLogCallback callback)
+{
+	DialogLog::setCallback(callback);
 }
 
 bool DialogManager::registerCustomDialogFactory(DialogType dialogType,

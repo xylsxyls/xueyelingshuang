@@ -119,6 +119,9 @@
     <ClCompile Include="..\src\DialogHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\DialogLog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\DialogManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -373,6 +376,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\DialogHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\DialogLog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\DialogManagerAPI.h">

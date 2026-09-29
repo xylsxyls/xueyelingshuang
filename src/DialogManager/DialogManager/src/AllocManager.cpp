@@ -2,6 +2,7 @@
 #include "AccountManagerDialog.h"
 #include "DialogFactoryManager.h"
 #include "DialogHelper.h"
+#include "DialogLog.h"
 #include "QtControls/COriginalDialog.h"
 #include <QCoreApplication>
 #include <QMetaObject>
@@ -53,18 +54,18 @@ COriginalDialog* AllocManager::createDialog(quint64& dialogId, DialogParam& para
 	COriginalDialog* dialogPtr = DialogFactoryManager::instance().createDialog(param);
 	if (dialogPtr == nullptr)
 	{
-		DialogHelper::logFile() << "AllocManager createDialog failed, type = " << param.dialogType()
+		DialogLog(DIALOG_LOG_ERROR) << "AllocManager createDialog failed, type = " << param.dialogType()
 			<< ", businessId = " << param.m_businessId
-			<< ", userId = " << param.m_userId << std::endl;
+			<< ", userId = " << param.m_userId;
 		return nullptr;
 	}
 
 	dialogId = add(dialogPtr, param.dialogType(), param.userKey());
 	if (dialogId == 0)
 	{
-		DialogHelper::logFile() << "AllocManager add dialog failed, type = " << param.dialogType()
+		DialogLog(DIALOG_LOG_ERROR) << "AllocManager add dialog failed, type = " << param.dialogType()
 			<< ", businessId = " << param.m_businessId
-			<< ", userId = " << param.m_userId << std::endl;
+			<< ", userId = " << param.m_userId;
 		releaseDialog(dialogPtr, true);
 		return nullptr;
 	}
@@ -175,8 +176,8 @@ COriginalDialog* AllocManager::findDialogPtr(quint64 dialogId)
 	QCoreApplication* application = QCoreApplication::instance();
 	if (application != nullptr && QThread::currentThread() != application->thread())
 	{
-		DialogHelper::logFile() << "AllocManager findDialogPtr rejected outside GUI thread, dialogId = "
-			<< dialogId << std::endl;
+		DialogLog(DIALOG_LOG_WARNING) << "AllocManager findDialogPtr rejected outside GUI thread, dialogId = "
+			<< dialogId;
 		return nullptr;
 	}
 	QMutexLocker locker(&m_mutex);
@@ -206,8 +207,8 @@ COriginalDialog* AllocManager::findDialogPtrByType(DialogType type)
 	QCoreApplication* application = QCoreApplication::instance();
 	if (application != nullptr && QThread::currentThread() != application->thread())
 	{
-		DialogHelper::logFile() << "AllocManager findDialogPtrByType rejected outside GUI thread, type = "
-			<< type << std::endl;
+		DialogLog(DIALOG_LOG_WARNING) << "AllocManager findDialogPtrByType rejected outside GUI thread, type = "
+			<< type;
 		return nullptr;
 	}
 	QMutexLocker locker(&m_mutex);
@@ -392,15 +393,14 @@ void AllocManager::releaseDialog(COriginalDialog* dialogPtr, bool deleteNow)
 		}
 		if (QCoreApplication::closingDown())
 		{
-			DialogHelper::logFile() << "AllocManager cannot delete dialog during QCoreApplication closingDown from another thread"
-				<< std::endl;
+			DialogLog(DIALOG_LOG_ERROR) << "AllocManager cannot delete dialog during QCoreApplication closingDown from another thread";
 			return;
 		}
 	}
 	bool invokeOk = QMetaObject::invokeMethod(dialogPtr, "deleteLater", Qt::QueuedConnection);
 	if (!invokeOk)
 	{
-		DialogHelper::logFile() << "AllocManager deleteLater invokeMethod failed" << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "AllocManager deleteLater invokeMethod failed";
 	}
 }
 
@@ -440,6 +440,6 @@ void AllocManager::onDialogDestroyed(QObject* object)
 			m_accountManagerDialog = nullptr;
 		}
 	}
-	DialogHelper::logFile() << "AllocManager cleaned destroyed dialog, dialogId = "
-		<< dialogId << std::endl;
+	DialogLog(DIALOG_LOG_INFO) << "AllocManager cleaned destroyed dialog, dialogId = "
+		<< dialogId;
 }

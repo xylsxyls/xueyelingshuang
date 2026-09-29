@@ -2,6 +2,7 @@
 #include "CustomDialog.h"
 #include "CustomViewBase.h"
 #include "DialogHelper.h"
+#include "DialogLog.h"
 #include "DialogTemplate.h"
 #include "QtControls/COriginalDialog.h"
 #include <new>
@@ -98,8 +99,8 @@ bool DialogFactoryManager::registerCustomDialogFactory(DialogType dialogType,
 	}
 	catch (...)
 	{
-		DialogHelper::logFile() << "DialogFactoryManager register custom dialog factory failed, type = "
-			<< dialogType << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogFactoryManager register custom dialog factory failed, type = "
+			<< dialogType;
 		return false;
 	}
 	return true;
@@ -159,8 +160,8 @@ bool DialogFactoryManager::registerCustomViewFactory(DialogType dialogType,
 	}
 	catch (...)
 	{
-		DialogHelper::logFile() << "DialogFactoryManager register custom view factory failed, type = "
-			<< dialogType << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogFactoryManager register custom view factory failed, type = "
+			<< dialogType;
 		return false;
 	}
 	return true;

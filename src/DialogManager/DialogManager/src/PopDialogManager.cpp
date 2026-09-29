@@ -8,6 +8,7 @@
 #include "DownloadOperateDialog.h"
 #include "DialogType.h"
 #include "DialogHelper.h"
+#include "DialogLog.h"
 #include "QtControls/COriginalDialog.h"
 #include "QtControls/DialogShow.h"
 
@@ -26,8 +27,8 @@ static ParamType* CastPopDialogParam(DialogParam& param, DialogType expectedType
 	ParamType* castParam = dynamic_cast<ParamType*>(&param);
 	if (castParam == nullptr)
 	{
-		DialogHelper::logFile() << "PopDialogManager dialog param type mismatch, dialogType = "
-			<< expectedType << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "PopDialogManager dialog param type mismatch, dialogType = "
+			<< expectedType;
 	}
 	return castParam;
 }
@@ -47,8 +48,8 @@ static ParamType* CastPopOperateParam(OperateParam& param, OperateType expectedT
 	ParamType* castParam = dynamic_cast<ParamType*>(&param);
 	if (castParam == nullptr)
 	{
-		DialogHelper::logFile() << "PopDialogManager operate param type mismatch, operateType = "
-			<< expectedType << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "PopDialogManager operate param type mismatch, operateType = "
+			<< expectedType;
 	}
 	return castParam;
 }

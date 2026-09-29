@@ -162,3 +162,5 @@ TARGET_SOURCES(${PROJECT_NAME} PRIVATE
     PdfReaderReviewTests.h
     PdfReaderReviewTests.cpp
 )
+
+TARGET_SOURCES(${PROJECT_NAME} PRIVATE PdfReaderDragTests.cpp)

@@ -230,4 +230,8 @@
     <ClInclude Include="PdfReaderReviewTests.h" />
     <ClCompile Include="PdfReaderReviewTests.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PdfReaderDragTests.cpp" />
+    <ClInclude Include="PdfReaderDragTests.h" />
+  </ItemGroup>
 </Project>

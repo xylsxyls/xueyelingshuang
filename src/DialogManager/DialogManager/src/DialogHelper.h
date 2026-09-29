@@ -6,7 +6,6 @@
 #include "DialogType.h"
 #include "DialogManagerMacro.h"
 #include "QtControls/ControlStyleManager.h"
-#include <fstream>
 
 #define setPopButtonConfig(button, buttonText, textColor, acceptDone, fontSize) DialogHelper::setButton(this, button, buttonText, textColor, ControlStyleManager::instance().resourcePath("res/Dialog/PopupButton.png"), acceptDone, fontSize, &m_mapResult, 4, true)
 #define setNotifyButtonConfig(button, buttonText, acceptDone, fontSize) DialogHelper::setButton(this, button, buttonText, QColor(255, 255, 255, 255), "", acceptDone, fontSize, &m_mapResult, 0, false)
@@ -89,21 +88,6 @@ public:
     @param [in] window 需要激活父窗口的子窗口句柄
     */
 	static void activeTransientParentWindow(QWindow* window);
-
-	/** 设置日志路径
-	@param [in] path 日志路径
-	*/
-	static void setLogPathFrom11Client(const std::string& path);
-
-	/** 设置日志路径
-	@param [in] path 日志路径
-	*/
-	static void setLogPathFromWar3(const std::string& path);
-
-	/** 获取日志文件
-	@return 返回日志文件输出流
-	*/
-	static std::ofstream& logFile();
 
 	/** 矩形转换，将小于0的点转换为0
 	@param [in] rect 原矩形

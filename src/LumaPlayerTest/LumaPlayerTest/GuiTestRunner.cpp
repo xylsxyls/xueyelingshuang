@@ -9,6 +9,7 @@
 #include "LumaPlayerLogicController.h"
 #include "Config.h"
 #include "LogManager/LogManagerAPI.h"
+#include "QtControls/DialogBase.h"
 #include <QtWidgets>
 #include <QElapsedTimer>
 // 仅测试观察器读取现有成员，不修改其状态，不影响产品编译与布局
@@ -34,7 +35,8 @@ m_unexpectedPause(false),
 m_monitorFrames(false),
 m_observedFrame(0),
 m_lastFrameMs(0),
-m_maxFrameGapMs(0)
+m_maxFrameGapMs(0),
+m_originalHelpWidth(g_config.m_helpWidth)
 {
     QObject::connect(&m_timer, &QTimer::timeout, this, &GuiTestRunner::tick);
     const int32_t id = mode.toInt();
@@ -57,7 +59,8 @@ m_maxFrameGapMs(0)
             [this]() { return m_player->m_pinned; });
         add(3, "load fixture", [this, media]() { m_player->loadMedia(media); },
             [this]() { return m_player->m_hasMedia && !m_player->m_cachedFrame.isNull(); }, 15000);
-        if (id != CaseProgressClick && id != CaseAbRateLatency && id != CaseRateSeekLoopRace && id != CaseInitialMediaFit)
+        if (id != CaseProgressClick && id != CaseAbRateLatency && id != CaseRateSeekLoopRace &&
+            id != CaseInitialMediaFit && id != CaseHelpUi)
         {
             add(0, "prepare pause", [this]() { if (m_player->m_snapshot.m_state == LumaPlayerCoreCStatePlaying) { m_player->m_core.pauseAsync(); } },
                 [this]() { return m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused && m_player->m_bottomVisibleHeight == m_player->bottomOverlayHeight(); });
@@ -73,9 +76,12 @@ m_maxFrameGapMs(0)
             {
                 for (int32_t closeKind = 0; closeKind < 2; ++closeKind)
                 {
-                    add(15, "open modal via help", [this]() { click(m_player->helpButtonRect().center()); },
+                    add(15, "open modal via help", [this]() {
+                        g_config.m_helpWidth = m_originalHelpWidth + (m_originalHelpWidth % 2 == 0 ? 1 : 0);
+                        click(m_player->helpButtonRect().center());
+                    },
                         []() { return QApplication::activeModalWidget() != nullptr; });
-                    add(15, "modal centered and version left aligned", [this]() {
+                    add(15, "modal title fills edge with level-2 shadow and no outline", [this]() {
                         QWidget* dialog = QApplication::activeModalWidget();
                         if (dialog != nullptr)
                         {
@@ -87,15 +93,88 @@ m_maxFrameGapMs(0)
                         {
                             return false;
                         }
+                        DialogBase* shell = qobject_cast<DialogBase*>(dialog);
+                        if (shell == nullptr || shell->windowBorderEnabled() ||
+                            !shell->windowShadowEnabled() || shell->windowShadowSize() != 2)
+                        {
+                            return false;
+                        }
+                        QWidget* shadow = shell->findChild<QWidget*>(QStringLiteral("qtControlsDialogShadow"),
+                            Qt::FindDirectChildrenOnly);
+                        if (shadow == nullptr || !shadow->isVisible() ||
+                            shadow->width() <= dialog->width() || shadow->height() <= dialog->height())
+                        {
+                            return false;
+                        }
+                        QWidget* titleBar = dialog->findChild<QWidget*>(QStringLiteral("helpTitleBar"));
+                        if (titleBar == nullptr || titleBar->parentWidget() == nullptr)
+                        {
+                            return false;
+                        }
+                        const int32_t titleHeight = g_config.m_topOverlayHeight + (g_config.m_topOverlayHeight % 2);
+                        const int32_t titleInset = (titleHeight - g_config.m_titleButtonSize) / 2;
+                        const int32_t oddHelpWidth = m_originalHelpWidth + (m_originalHelpWidth % 2 == 0 ? 1 : 0);
+                        const QPoint titleInDialog = titleBar->mapTo(dialog, QPoint(0, 0));
+                        const bool titleBandValid = dialog->width() == oddHelpWidth + 1 && titleHeight % 2 == 0 &&
+                            titleBar->geometry() == QRect(0, 0, titleBar->parentWidget()->width(), titleHeight) &&
+                            titleInDialog == QPoint(0, 0) && titleBar->width() == dialog->width();
+                        const QImage shellImage = dialog->grab().toImage();
+                        if (shellImage.isNull())
+                        {
+                            return false;
+                        }
+                        const QColor titleCenter(shellImage.pixel(shellImage.width() / 2, 0));
+                        const bool topEdgeHasNoOutline =
+                            QColor(shellImage.pixel(0, 0)) == titleCenter &&
+                            QColor(shellImage.pixel(shellImage.width() - 1, 0)) == titleCenter;
                         const QList<QLabel*> labels = dialog->findChildren<QLabel*>();
+                        bool titleTextInset = false;
+                        bool versionPositionPreserved = false;
+                        QLabel* productLabel = nullptr;
                         for (int32_t i = 0; i < labels.size(); ++i)
                         {
+                            if (labels[i]->text() == g_config.m_helpTitle)
+                            {
+                                titleTextInset = labels[i]->parentWidget() == titleBar &&
+                                    labels[i]->geometry().left() == titleInset;
+                            }
                             if (labels[i]->text() == g_config.m_versionLabel)
                             {
-                                return (labels[i]->alignment() & Qt::AlignLeft) && labels[i]->font().pointSize() == g_config.m_fontSize;
+                                versionPositionPreserved = (labels[i]->alignment() & Qt::AlignLeft) &&
+                                    labels[i]->font().pointSize() == g_config.m_fontSize &&
+                                    labels[i]->geometry().left() == g_config.m_helpMargin;
+                            }
+                            if (labels[i]->text() == g_config.m_windowTitle)
+                            {
+                                productLabel = labels[i];
                             }
                         }
-                        return false;
+                        if (productLabel != nullptr)
+                        {
+                            for (int32_t i = 0; i < labels.size(); ++i)
+                            {
+                                if (labels[i]->text() == g_config.m_versionLabel)
+                                {
+                                    const int32_t expectedVersionTop = titleHeight + g_config.m_helpSpacing +
+                                        g_config.m_titleButtonTop + productLabel->height() + g_config.m_helpSpacing;
+                                    versionPositionPreserved = versionPositionPreserved &&
+                                        labels[i]->geometry().top() == expectedVersionTop;
+                                }
+                            }
+                        }
+                        bool closeButtonCentered = false;
+                        const QList<QPushButton*> buttons = dialog->findChildren<QPushButton*>();
+                        for (int32_t i = 0; i < buttons.size(); ++i)
+                        {
+                            if (buttons[i]->text() == g_config.m_closeText && buttons[i]->parentWidget() == titleBar)
+                            {
+                                closeButtonCentered = titleBar->width() - buttons[i]->geometry().right() - 1 == titleInset &&
+                                    buttons[i]->geometry().top() == (titleHeight - g_config.m_titleButtonSize) / 2;
+                                break;
+                            }
+                        }
+                        return titleBandValid && topEdgeHasNoOutline && titleTextInset &&
+                            closeButtonCentered && versionPositionPreserved;
                         });
                     add(15, "title mouse drag", [this]() {
                         QWidget* dialog = QApplication::activeModalWidget();
@@ -137,6 +216,10 @@ m_maxFrameGapMs(0)
                                 buttons[i]->click();
                                 break;
                             }
+                        }
+                        if (closeKind == 1)
+                        {
+                            g_config.m_helpWidth = m_originalHelpWidth;
                         }
                         }, []() { return QApplication::activeModalWidget() == nullptr; });
                 }

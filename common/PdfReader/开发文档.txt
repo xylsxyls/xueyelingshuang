@@ -1,7 +1,8 @@
 开发文档
-版本：1.2
-更新日期：2026-09-28
-状态：2026-09-28配置注释整改已完成，Windows x64 Release重新编译并发布至common/PdfReader和common/PdfReaderTest；用户明确本轮不测试，未启动产品或Test；本轮工作流已按用户指令结束，临时过程文件已清理
+版本：1.3
+更新日期：2026-09-29（缩略图拖拽修复）
+状态：2026-09-29缩略图拖拽修复已编译、测试并发布到common/PdfReader及common/PdfReaderTest。发布组合与发布后全30项分别通过，退出码0；用户已查看并反馈“看着没啥问题”，随后明确结束工作流；本轮过程文件按规则清理，正式成果保留。
+2026-09-29 DialogManager日志回调接入：PdfReader及Test Release x64构建通过，PdfReaderTest ID19 1/1通过；用户确认试运行后，已将PdfReader1.0.exe、DialogManager.dll、QtControls.dll增量发布至common/PdfReader。symbols-PdfReader1.0-20260929-DialogManagerQtControls.7z包含这三个已部署模块匹配的PDB；未执行全量、压力、Debug或其他平台验证。
 
 一、现有工程基线
 
@@ -37,7 +38,7 @@ PdfReaderCoreC.h 只使用 C 可表达的类型，包含 stdint.h、stddef.h，�
 
 PdfReader 的桥接类仿照 src/LumaPlayer/LumaPlayer/LumaPlayerCoreBridge：桥接头先定义 PDFREADERCORE_USE_C_API，再只包含 PdfReaderCoreAPI.h；桥接类拥有 Core 不透明句柄，负责 init/uninit/destroy 顺序、路径和结构体转换、结果读取及QImage缓冲区转换。Qt 窗口、模型和测试代码不直接 include PdfReaderCore.h 或 Core 内部头。PdfReaderTest 另设一个 .c 编译单元，直接定义宏并包含 PdfReaderCoreAPI.h，验证纯 C 头可以独立编译和调用。
 
-Qt 缩略图使用 TopToBottom + wrapping=false 的单列布局。关闭 QListWidget 内部拖放和框选，改为一秒长按、源项单选、插入线、边缘滚动及明确取消事件；先由 Core 完成移动，再重建视图并选择源页的新位置。缩略图页图使用固定基准尺寸，Ctrl 滚轮只改变灰色条目背景的高度；自定义 delegate 将页图居中绘制，条目整块命中，所以页图周围灰色区域与页图具有相同选择逻辑。选中左侧条目后通过 ensureWidgetVisible 将对应正文页带入右侧视口；正文滚动时按视口内可见面积最大的页面更新当前选择，并确保左侧对应缩略图可见。正文与缩略图独立缩放，仅视口相交页持有位图，离屏即释放。
+Qt 缩略图使用 TopToBottom + wrapping=false 的单列布局。关闭 QListWidget 内部拖放和框选，改为500毫秒长按、源项单选、插入线、滚轮/边缘滚动及明确取消事件；先由 Core 完成移动，再重建视图并选择源页的新位置。缩略图页图使用固定基准尺寸，Ctrl 滚轮只改变灰色条目背景的高度；自定义 delegate 将页图居中绘制，条目整块命中，所以页图周围灰色区域与页图具有相同选择逻辑。选中左侧条目后通过 ensureWidgetVisible 将对应正文页带入右侧视口；正文滚动时按视口内可见面积最大的页面更新当前选择，并确保左侧对应缩略图可见。正文与缩略图独立缩放，仅视口相交页持有位图，离屏即释放。
 
 保存和导出先写同目录唯一临时文件，再由 CSystem::replaceFile 替换；Windows 使用 MoveFileExW(REPLACE_EXISTING|WRITE_THROUGH)，不预先删除目标。主文件覆盖先释放来源句柄，替换后重新打开；失败保留恢复 PDF 并报告路径。CSystem 和 PdfEngine Release 各自使用 MT，因此 FILE 的打开/写入/关闭必须全部回到 CSystem 的同一运行库，不能直接在 PdfEngine 内 fwrite/fclose。
 
@@ -137,6 +138,8 @@ CMake 同样调用 PdfReaderIcon.sh icon；Windows 分支使用系统 PowerShell
 
 十二、默认日志与启动诊断
 
+DialogManager不再写自己的11_controls.log或依赖LogManager；PdfReader main在初始化LogManager后注册DialogManager::setLogCallback，将级别映射到LOGINFO/LOGWARNING/LOGERROR并转发完整消息。PdfReaderDialogRuntime销毁、任务收尾后先清除回调，再卸载LogManager，保证回调目标存活。PdfReaderTest采用相同宿主接入，并由ID19验证回调的级别和完整消息。
+
 日志默认策略：main 在窗口和 DialogManager 创建前初始化 LogManager，不依赖 Debug 构建或命令行参数；业务对象和 QApplication 销毁后写退出结果并 uninit。Config::log 保存与 LumaPlayer 一致的配置：默认 EXE 目录、文件 ID 0、20 MB/文件、保留 8 个滚动文件、每条检查大小、关闭控制台输出、启动归档旧日志。历史启动日志由 LogManager 归档到 EXE 旁 PdfReader1.0_log 子目录，8 个文件是单次会话的滚动保留数，不代表历史归档总数。
 PdfReaderCoreBridge 直接使用 LOGINFO/LOGERROR 记录 Core 初始化、文档打开/插入、页移动、保存和导出的结果；失败记录错误码和 Core 错误说明，不记录密码或文档正文，不逐帧记录正常渲染。Core 的 C API 和五端业务实现不变。Windows main 最早阶段注册 CDump，注册结果写启动日志。
 桌面 version 脚本增加 CDump same 依赖；现有 LogManager only 继续复用前面准备的 CSystem、ReadWriteMutex、IntDateTime。CMake App 增加 LogManager/CDump，Test 因复用 Config 和 Bridge 增加 LogManager。交付时还需携带这些实际依赖 DLL 及匹配符号，遵循原有符号归档规则。
@@ -195,3 +198,17 @@ PdfReader符号包：symbols-PdfReader-1.0-20260928-164049-ConfigComments.7z，�
 PdfReaderTest符号包：symbols-PdfReaderTest-1.0-20260928-164049-ConfigComments.7z，位于对应common目录，包含14份PDB；变化模块匹配新PE RSDS GUID/Age，未变DLL符号从原已匹配归档按原字节保留。
 7z使用-t7z -mx=9 -m0=lzma2 -ms=on，完整性检查与解压后PDB哈希核对通过；未复制散装PDB、Qt官方库/插件或LockFreeQueue.dll。第三方pdfium无可用PDB，保留原符号缺口说明。旧正式符号包保留。
 本轮已按用户“结束工作流”指令清理工作笔记、临时源码快照、编译日志、展开的PDB、发布备份、清单及本轮构建中间文件；临时回退入口不再保留。正式源码、共享lib/include输出、产品资源、发布程序和正式新旧符号包保留。本轮按用户要求未运行测试或启动程序，不能以编译成功冒充运行验证。
+
+2026-09-29 缩略图拖拽交互实现
+PdfReaderThumbnailList用m_targetGap保存插入间隙，绘制和释放共用同一状态；beginDrag固定从源页前间隙开始，源页后间隙归一为同一不移动位置。蓝线笔画限制在视口内，首前/尾后不会被边缘裁掉；指针纵向移出时按当前可见边缘计算落点，避免越过不可见远页。鼠标移动、滚动条变化和scrollContentsBy均刷新落点和完整视口，避免滚动复制旧像素造成残线。
+Config默认m_dragHoldMs=500，计时器使用PreciseTimer；m_dragGhostColor=RGBA(100,170,255,72)，保持底图可见；新增m_dragWheelPixels=60，表示拖动中传统滚轮每刻度的滚动像素，必须为正。已有蓝线宽度/偏移/内缩及自动滚动速度继续由Config配置。触控滚轮优先使用像素增量，角度滚轮累计不足一个像素的残量。
+从按下到释放期间，PdfReader事件过滤器把滚轮交给列表；即使按Ctrl也不重建模型，避免丢失源项。非手势状态保持原缩放入口。模型重置/删行、缩略图刷新、失去鼠标捕获、隐藏、失活及Esc均取消旧手势；不保留指向旧模型的源行和落点。本轮没有修改Core或共享库源码。
+新增PdfReaderDragTests头源文件承载29至32号交互和像素测试，同步登记VS2013与CMake，既有拖动等待改用配置值。测试识别跨越几乎整个视口的蓝线，排除较短的PDF选中边框；页面颜色取自独立PDF素材而非产品生成的预期。
+
+2026-09-29 缩略图拖拽修复发布记录
+Windows x64 Release，VS2013 MSBuild12、Qt5.5.1：PdfReader及PdfReaderTest构建通过；本轮未重编或替换Core及其他未变产品依赖。产品只更新PdfReader1.0.exe；Test更新PdfReaderTest1.0.exe，并同步产品已部署的DialogManager.dll、QtControls.dll以配套当日新增日志回调接口。其余DLL、资源、旧符号包逐项核对哈希保持原文件，没有拿共享lib内其他任务生成的版本整批覆盖。
+产品EXE SHA256=ad85eb7bdce2ad3cb81475f74e792d19917bc376f629c526a512951f79b5fba3；Test EXE SHA256=972e26ba63df793024f625e5720599b8a910bebf1951e8e14494b017e483196f。
+产品新符号包symbols-PdfReader1.0-20260929-ThumbnailDrag.7z含14份匹配PDB；Test新符号包symbols-PdfReaderTest1.0-20260929-ThumbnailDrag.7z含14份匹配PDB。未变模块从20260928-164049-ConfigComments旧Test包按原字节取回匹配符号，变化EXE及DialogManager/QtControls使用各自匹配PDB；逐项核对PE RSDS GUID/Age，7z -t7z -mx=9 -m0=lzma2 -ms=on极限压缩、完整性检查和解压哈希均通过。产品现有CDump.dll未找到其匹配PDB（RSDS d002494d534c5b4c920e9679b2709ea2:1），不以其他构建的CDump.pdb冒充；产品和Test中的第三方pdfium均无可用PDB。这两项为既有符号缺口，未为补符号替换未变DLL。
+发布目录没有散装PDB、官方Qt库/插件、LockFreeQueue.dll或发布脚本。本机运行通过进程环境使用现有Qt5.5.1 x64，未更改全局PATH。产品16个和Test15个实际模块的路径及部署哈希均已核对来自对应common目录。产品空启动、打开独立测试PDF、正确标题及WM_CLOSE退出均通过，退出码0。
+最终依赖组合在临时目录全30项通过，14.383秒；发布后从common/PdfReaderTest全30项通过，61.038秒，均退出0。新增29至32覆盖长按阈值、源页上方蓝线、蒙层透内容、首尾落点、邻页4像素移动、滚轮/自动滚动及取消重建。自动截图已检查；用户发布后查看并反馈“看着没啥问题”；此反馈与自动验证分别记录，不扩展为所有硬件或平台均已人工验证。未验证Debug、Linux/macOS/手机端及多小时压力。
+用户于2026-09-29明确结束本轮工作流。工作流目录、src/temp/PdfReaderDragFix、PdfReaderTest/reports、本轮可确认的生成文件/编译中间文件及自动试运行日志已清理；临时备份和回退计划不再保留。正式源码、需求/开发/测试文档、发布程序、资源及匹配的新旧符号包保留。其他工作流、预存共享中间产物和用户试用日志未清理。

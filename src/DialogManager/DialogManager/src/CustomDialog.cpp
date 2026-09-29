@@ -180,11 +180,11 @@ void CustomDialog::applyWindowOptions(const DialogParam& param)
 
 QRect CustomDialog::contentGeometry()
 {
-	QRect content = rect();
-	const qint32 frame = 1;
-	content.adjust(frame, customerTitleBarHeight() + frame,
-		-frame, -frame);
-	return content;
+    QRect content = rect();
+    const qint32 frame = windowBorderEnabled() ? 1 : 0;
+    content.adjust(frame, customerTitleBarHeight() + frame,
+        -frame, -frame);
+    return content;
 }
 
 void CustomDialog::raiseTitleBar()

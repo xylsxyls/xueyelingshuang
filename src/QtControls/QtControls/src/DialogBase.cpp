@@ -4,12 +4,18 @@
 #include "DialogShadowConfig.h"
 #include <QPainter>
 #include <QPaintEvent>
+#include <QVariant>
 #include <QWindow>
 #include <QKeyEvent>
 #include <QCursor>
 #ifdef Q_OS_WIN
 #include <Windows.h>
 #endif
+
+namespace
+{
+const char kWindowBorderEnabledProperty[] = "_qtControlsWindowBorderEnabled";
+}
 
 DialogBase::DialogBase():
 m_timeId(-1),
@@ -217,6 +223,18 @@ qint32 DialogBase::windowShadowSize() const
     return m_shadowSize;
 }
 
+void DialogBase::setWindowBorderEnabled(bool enabled)
+{
+    setProperty(kWindowBorderEnabledProperty, enabled);
+    update();
+}
+
+bool DialogBase::windowBorderEnabled() const
+{
+    const QVariant enabled = property(kWindowBorderEnabledProperty);
+    return !enabled.isValid() || enabled.toBool();
+}
+
 void DialogBase::showEvent(QShowEvent* eve)
 {
 	if (eve == nullptr)
@@ -347,6 +365,10 @@ void DialogBase::paintEvent(QPaintEvent* eve)
 
     painter.setCompositionMode(QPainter::CompositionMode_Source);
     painter.fillRect(rect(), background);
+    if (!windowBorderEnabled())
+    {
+        return;
+    }
     // The only body border stays inside the opaque dialog; its shadow is external.
     const DialogShadowConfig shadowConfig;
     painter.setPen(QPen(m_shadowEnabled ? shadowConfig.m_borderColor : QColor(32, 38, 48), 1));

@@ -1,10 +1,12 @@
-SplitViewerTest测试文档
+﻿SplitViewerTest测试文档
 版本：1.5
-更新日期：2026-09-28
+更新日期：2026-09-29（UI审计宿主接入DialogManager日志回调）
 范围：Windows Release x64，Core及真实Qt产品界面；本轮覆盖图片缩小平滑绘制、原生文件选择、图层删除、移动热区和自定义关于窗口，无长期压力测试。
 
 一、入口和独立执行
 当前Test EXE支持101—193数字用例，已于2026-09-28随产品增量发布。Windows Release x64完整93项瞬时回归通过；含真实视频、关于阴影和配置异常。Debug、非Windows实机及压力未执行。
+--ui-audit入口初始化LogManager并注册DialogManager日志回调，然后创建弹窗会话；报告失败或正常结束时，先销毁会话，再解除回调并卸载LogManager。该宿主生命周期检查不新增独立用例ID，DialogManager消息内容由PdfReaderTest ID19断言覆盖。
+2026-09-29定向及最终部署组合复核：Windows x64 Release执行UI审计ID176，PASS=1/FAIL=0；发布后使用最终DialogManager/QtControls复跑，进程真实退出码0。素材、截图与报告在当次工作流reports目录，结束工作流时清理。
 1. 在已有Qt运行时的部署环境启动common/SplitViewerTest/SplitViewerTest1.0.exe，在下拉框选择全部或数字用例，点击“运行所选回归并保存报告”；开发回归直接使用lib/SplitViewerTest1.0.exe和开发环境Qt路径。
 2. 命令行：SplitViewerTest1.0.exe --ui-audit <报告目录>；单项追加--case=119。目录为可写绝对路径，运行自动生成纯色PNG和.sv素材，不使用用户文件。
 3. 无效数字/缺参数返回2；用例失败返回非0；成功返回0并写total和failures。每个独立选择在新窗口/文档中重建该场景的前置动作，只统计所选断言，不依赖上批次残留。共享准备分为基础层、浮动层、全屏、原生、Core等场景。

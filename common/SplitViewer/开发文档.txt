@@ -1,7 +1,8 @@
-SplitViewer开发文档
+﻿SplitViewer开发文档
 版本：0.15
-更新日期：2026-09-28
+更新日期：2026-09-29（DialogManager宿主日志回调接入）
 状态：2026-09-28按用户要求完成桌面Config单例成员化，Windows Release x64编译、93项回归及正式程序启动检查通过，已增量发布两个EXE和匹配符号包。本次普通修改没有重新进入已结束的工作流。
+2026-09-29 DialogManager日志回调接入：SplitViewer及Test Release x64构建通过，UI审计ID176通过；用户确认试运行后，已将SplitViewer1.0.exe、DialogManager.dll、QtControls.dll增量发布至common/SplitViewer。symbols-SplitViewer1.0-20260929-DialogManagerQtControls.7z包含这三个已部署模块匹配的PDB；未执行全量、压力、Debug或其他平台验证。
 
 一、基线与职责
 旧版行为基线为src/SplitViewer_old/SplitViewer，不修改旧源码。Node/Layer/FloatRect、图片视图数值、配置字段、PNG自定义chunk归Core；窗口消息、菜单、画图、文件选择、图片编解码、句柄和平台注册归Qt工程。
@@ -68,6 +69,7 @@ macOS：shell用系统sips生成iconset，再以iconutil生成ICNS；CMake纳入
 规则：主窗口使用MainWindow，画布继承Widget，工具栏、状态栏、菜单、标签、占位控件和Windows嵌入宿主使用现有QtControls。QAction、布局、事件、绘制器和Qt内部组合控件不另造封装；Linux/macOS的原生窗口容器由Qt平台接口创建。现有库已经覆盖所需可见控件，本轮无需重复新增包装类。
 Config保存桌面QSS、文件选择尺寸和自定义内容类型。主窗口附加QSS经MainWindow接口与通用样式合并；缩放提示样式由父窗口的对象名选择器提供，避免Label首次显示时覆盖局部样式。
 SplitViewerDialogSession在QApplication存活期间注册文件选择内容工厂，窗口释放后uninit/releaseInstance。SplitViewerDialogHelper的生产路径使用Qt平台原生QFileDialog，与PdfReader保持一致；关于、错误和句柄输入仍交给DialogManager。Test在173—175用例内临时启用托管选择器，以便驱动内部控件而不接管操作系统模态窗口。
+SplitViewer main在LogManager初始化后注册DialogManager::setLogCallback，将完整消息按INFO/WARNING/ERROR映射给LogManager；DialogSession析构收尾后解除回调，再卸载日志。DialogManager不直接依赖LogManager，回调消息指针只在同步回调期间有效。
 生产文件选择打开使用ExistingFile，保存使用AnyFile并由系统文件窗口处理覆盖提示；选择器本身不写图片文件，实际写入仍归原产品保存接口。保留SplitViewerFileDialogParam/Factory/View作为Test自动化入口，不改变生产界面风格。
 验证：172—177继续检查QtControls、托管文件框的取消/中文空格路径/覆盖确认、关于按钮和输入接受/取消；本轮实际产品入口改为原生文件框，源码核对其打开和保存静态调用。
 
@@ -113,4 +115,4 @@ common/SplitViewer/SplitViewerCore.dll = 7929fd777a846f018c4e026c73502f9e29b9c25
 桌面Config通过Config::instance()返回函数内static单例，Config.h定义#define g_config Config::instance()。140项配置全部为public的m_成员，调用方直接使用g_config.m_成员，不再用静态常量或逐项getter。默认值在.cpp构造函数初始化列表中按成员声明顺序设置；目前都是直接默认表达式，不添加空init。以后需要运行时计算的配置放入独立init函数，并由构造函数调用。产品和Test在QApplication创建后、GUI线程显式初始化单例，再创建会话和窗口；配置不承担可变运行状态，不支持跨线程热修改。窗口/舞台尺寸、颜色、QSS、文案、文件过滤器、计时、读写上限及关于窗口参数统一归该类。调整阴影2为4只改src/SplitViewer/SplitViewer/Config.cpp初始化列表中的m_aboutShadowSize并重编产品；QtControls的通用高斯比例、颜色、透明度和上限归DialogShadowConfig，不将产品参数写入库。
 Core默认矩形、浮动层位置、比例/缩放范围、读取上限归SplitViewerCoreConfig；Core无Qt或系统窗口类型。原NativeMouseConfig是可变运行状态，现改为NativeMouseManager，成员m_前缀、单例s_manager；不能把运行状态当配置常量。
 修复左上角按下/悬停命中范围不一致；加号及菜单共同使用包含tif/tiff的图片过滤器。Core拒绝负数或超上限图层数以及非正图片缩放，不再静默截断；解析失败保留完整旧文档。非有限舞台宽高比恢复有限默认值，非法适配比例拒绝，删除非叶节点拒绝；分割和新增图层在成功交接前使用unique_ptr持有，避免分配异常泄漏。
-调整公开API入口、借用成员注释、头文件声明/排版/编码及工程登记；CPP不新增类定义。此轮未改文件IO任务模型，不把局部规范整理描述为整个仓库或所有既有线程路径已完全满足四份规范。
+调整公开API入口、借用成员注释、头文件声明/排版/编码及工程登记；CPP不新增类定义。此轮未改文件IO任务模型，不把局部规范整理描述为整个仓库或所有既有线程路径已完全满足现行五份规范。

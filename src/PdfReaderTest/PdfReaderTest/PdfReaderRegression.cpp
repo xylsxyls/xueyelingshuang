@@ -1,6 +1,7 @@
 ﻿#include "PdfReaderTestConfigGuard.h"
 #include "PdfReaderRegression.h"
 #include "PdfReaderReviewTests.h"
+#include "PdfReaderDragTests.h"
 #include "PdfReaderTestModalGuard.h"
 #include "PdfReaderTestWorkerGate.h"
 #include "PdfReaderTestHelper.h"
@@ -58,6 +59,10 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
         {26, QStringLiteral("失败终态及错误信息隔离")},
         {27, QStringLiteral("覆盖原件失败保留工作页序并可重试")},
         {28, QStringLiteral("渲染预算失败终态与缩小后恢复")},
+        {29, QStringLiteral("500毫秒初始蓝线和浅蓝透内容蒙层")},
+        {30, QStringLiteral("首前尾后蓝线可见并与落点一致")},
+        {31, QStringLiteral("按住滚轮及Ctrl滚轮保留拖动状态")},
+        {32, QStringLiteral("相邻短距离蓝线及取消重建清理")},
         {20, QStringLiteral("正文滚动同步当前页与缩略图")},
         {19, QStringLiteral("DialogManager生命周期与QtControls控件")}
     };
@@ -104,8 +109,12 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
             PdfReaderTestModalGuard modalGuard;
             const QString dir = batch + "/case" + QString::number(id);
             PdfReaderTestHelper::require(QDir().mkpath(dir), "case directory");
-            const QString input = PdfReaderTestHelper::fixture(dir, QStringLiteral("中文样本.pdf"), id == 11 ? 120 : 3);
-            if (id >= 21)
+            const QString input = PdfReaderTestHelper::fixture(dir, QStringLiteral("中文样本.pdf"), (id == 11 || id == 31) ? 120 : 3);
+            if (id >= 29)
+            {
+                PdfReaderDragTests::run(id, input, dir);
+            }
+            else if (id >= 21)
             {
                 PdfReaderReviewTests::run(id, input, dir);
             }
@@ -227,7 +236,7 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
                     const QPoint source = list->visualItemRect(list->item(0)).center();
                     const QRect target = list->visualItemRect(list->item(2));
                     PdfReaderTestUiHelper::mouse(list->viewport(), QEvent::MouseButtonPress, source);
-                    if (id != 2) { PdfReaderTestUiHelper::wait(1050); }
+                    if (id != 2) { PdfReaderTestUiHelper::wait(g_config.m_dragHoldMs + 50); }
                     PdfReaderTestUiHelper::mouse(list->viewport(), QEvent::MouseMove, QPoint(target.center().x(), target.bottom() - 3));
                     PdfReaderTestHelper::require(list->selectedItems().size() == 1 && list->currentRow() == 0, "drag never selects hovered row");
                     if (id == 4) { PdfReaderTestUiHelper::escape(list); }
@@ -249,7 +258,7 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
                         // 再反向拖回第一位，验证向上插入间隙及保存后的继续编辑。
                         list->scrollToItem(list->item(2));
                         PdfReaderTestUiHelper::mouse(list->viewport(), QEvent::MouseButtonPress, list->visualItemRect(list->item(2)).center());
-                        PdfReaderTestUiHelper::wait(1050);
+                        PdfReaderTestUiHelper::wait(g_config.m_dragHoldMs + 50);
                         const QPoint top = list->visualItemRect(list->item(0)).topLeft() + QPoint(20, 2);
                         PdfReaderTestUiHelper::mouse(list->viewport(), QEvent::MouseMove, top);
                         PdfReaderTestUiHelper::mouse(list->viewport(), QEvent::MouseButtonRelease, top);
@@ -266,7 +275,7 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
                     {
                         const QPoint start = list->visualItemRect(list->item(0)).center();
                         PdfReaderTestUiHelper::mouse(list->viewport(), QEvent::MouseButtonPress, start);
-                        PdfReaderTestUiHelper::wait(1050);
+                        PdfReaderTestUiHelper::wait(g_config.m_dragHoldMs + 50);
                         QPoint end = start;
                         if (mode == 1) { end = QPoint(list->viewport()->width() + 10, 450); }
                         if (mode == 2)
@@ -340,7 +349,7 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
                     for (int i = 0; i < 120; ++i) { if (PdfReaderTestUiHelper::page(window, i)->pixmap()) { ++cached; } }
                     PdfReaderTestHelper::require(cached > 0 && cached < 10, "only visible pages allocate bitmaps");
                     PdfReaderTestUiHelper::mouse(list->viewport(), QEvent::MouseButtonPress, list->visualItemRect(list->item(0)).center());
-                    PdfReaderTestUiHelper::wait(1050);
+                    PdfReaderTestUiHelper::wait(g_config.m_dragHoldMs + 50);
                     PdfReaderTestUiHelper::mouse(list->viewport(), QEvent::MouseMove, QPoint(50, list->viewport()->height()-2));
                     PdfReaderTestUiHelper::wait(120);
                     PdfReaderTestHelper::require(list->verticalScrollBar()->value() > 0 && list->currentRow() == 0, "drag edge auto scroll retains source");

@@ -157,7 +157,7 @@ public:
     int m_dragLineWidth;
     // 插入位置横线左右两端分别距缩略图视口边缘的距离，逻辑像素
     int m_dragLineInset;
-    // 拖动缩略图时覆盖源条目的半透明遮罩颜色，含透明度
+    // 拖动缩略图时覆盖源条目的浅蓝蒙层颜色；默认Alpha72，保留PDF内容可辨认
     QColor m_dragGhostColor;
     // 缩略图拖动过程中指示新插入位置的横线颜色
     QColor m_dragLineColor;
@@ -199,10 +199,12 @@ public:
     int m_thumbnailLabelHeight;
     // 保存、另存为或导出成功后状态栏提示的显示时长，毫秒；0表示持续显示到下次更新
     int m_statusMessageMs;
-    // 按住缩略图后进入拖动状态的等待时间，毫秒；未达到时仅按普通选择处理
+    // 按住缩略图后进入拖动状态的等待时间，毫秒，默认500；未达到时仅按普通选择处理
     int m_dragHoldMs;
     // 缩略图拖动过程中边缘自动滚动定时器的触发间隔，毫秒
     int m_dragScrollMs;
+    // 拖动时每标准滚轮刻度滚动列表的距离，逻辑像素；Ctrl同时按住仍滚动而不缩放
+    int m_dragWheelPixels;
     // 缩略图视口顶部或底部触发拖动自动滚动的边缘带高度，逻辑像素
     int m_dragEdgePixels;
     // 拖动进入边缘带时每次定时器触发的最小滚动步长，逻辑像素；不是每秒速度

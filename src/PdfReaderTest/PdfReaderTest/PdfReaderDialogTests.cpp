@@ -12,6 +12,7 @@
 #include "QtControls/ScrollBar.h"
 #include "QtControls/GroupBox.h"
 #include "QtControls/StatusBar.h"
+#include "LogManager/LogManagerAPI.h"
 #include <QApplication>
 #include <QDialog>
 #include <QAbstractButton>
@@ -21,6 +22,46 @@
 #include <QFileDialog>
 #include <QImage>
 #include <QKeyEvent>
+#include <string>
+
+static DialogLogLevel s_capturedDialogLogLevel = DIALOG_LOG_INFO;
+static std::string s_capturedDialogLogMessage;
+static int32_t s_capturedDialogLogCount = 0;
+
+/** 保存测试触发的DialogManager日志消息
+@param [in] level 日志级别
+@param [in] message 完整消息
+*/
+static void CapturePdfReaderDialogLog(DialogLogLevel level, const char* message)
+{
+    s_capturedDialogLogLevel = level;
+    s_capturedDialogLogMessage = message == nullptr ? std::string() : message;
+    ++s_capturedDialogLogCount;
+}
+
+/** 将DialogManager日志交给PdfReaderTest的LogManager
+@param [in] level 日志级别
+@param [in] message 完整日志消息
+*/
+static void ForwardPdfReaderDialogLog(DialogLogLevel level, const char* message)
+{
+    if (message == nullptr)
+    {
+        return;
+    }
+    switch (level)
+    {
+    case DIALOG_LOG_ERROR:
+        LOGERROR("%s", message);
+        break;
+    case DIALOG_LOG_WARNING:
+        LOGWARNING("%s", message);
+        break;
+    default:
+        LOGINFO("%s", message);
+        break;
+    }
+}
 
 void PdfReaderDialogTests::run(const QString& input, const QString& directory)
 {
@@ -176,6 +217,21 @@ void PdfReaderDialogTests::run(const QString& input, const QString& directory)
     PdfReaderTestHelper::require(aboutCloseButton, "about dialog has a title-bar close button");
     PdfReaderTestHelper::require(doneCount == 5 && count.m_count == 0,
         "managed dialogs leave no retained windows");
+
+    s_capturedDialogLogLevel = DIALOG_LOG_INFO;
+    s_capturedDialogLogMessage.clear();
+    s_capturedDialogLogCount = 0;
+    DialogManager::setLogCallback(CapturePdfReaderDialogLog);
+    DialogParam unsupportedParam;
+    unsupportedParam.setDialogType(999);
+    DialogManager::instance().makeDialog(unsupportedParam);
+    const bool callbackReceivedCompleteError = s_capturedDialogLogCount == 1 &&
+        s_capturedDialogLogLevel == DIALOG_LOG_ERROR &&
+        s_capturedDialogLogMessage.find("unsupported built-in dialogType = 999") != std::string::npos;
+    DialogManager::setLogCallback(ForwardPdfReaderDialogLog);
+    PdfReaderTestHelper::require(callbackReceivedCompleteError,
+        "DialogManager callback receives severity and the complete formatted message");
+
     PdfReaderTestHelper::require(window.isEnabled() && window.openFile(input), "parent works after modal dialogs");
         PdfReaderTestUiHelper::waitIdle(window);
         PdfReaderTestHelper::require(window.lastOperationSucceeded(), "open actually completed");

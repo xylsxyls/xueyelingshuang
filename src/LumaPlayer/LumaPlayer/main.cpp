@@ -5,6 +5,7 @@
 #include "Config.h"
 #include "CDump/CDumpAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "DialogManager/DialogManagerAPI.h"
 #include "LogManager/LogManagerAPI.h"
 #include "LumaPlayerHelper.h"
 #include "LumaPlayerDialogSession.h"
@@ -16,6 +17,30 @@
 #include <cctype>
 #include <exception>
 #include <string>
+
+/** 将DialogManager日志交给LumaPlayer的LogManager
+@param [in] level DialogManager日志级别
+@param [in] message 完整日志消息
+*/
+static void ForwardDialogLog(DialogLogLevel level, const char* message)
+{
+	if (message == nullptr)
+	{
+		return;
+	}
+	switch (level)
+	{
+	case DIALOG_LOG_ERROR:
+		LOGERROR("%s", message);
+		break;
+	case DIALOG_LOG_WARNING:
+		LOGWARNING("%s", message);
+		break;
+	default:
+		LOGINFO("%s", message);
+		break;
+	}
+}
 
 int main(int argc, char* argv[])
 {
@@ -36,6 +61,7 @@ int main(int argc, char* argv[])
         logConfig.m_outputConsole = false;
         logConfig.m_archiveOldLog = true;
         LogManager::instance().init(logConfig);
+        DialogManager::setLogCallback(ForwardDialogLog);
         g_config.m_logInitialized.store(true);
         LOGINFO("LumaPlayer startup, debug=%d build=%s %s", g_config.m_debugEnabled ? 1 : 0, __DATE__, __TIME__);
         LOGINFO("CDump registration result=%d", dumpEnabled ? 1 : 0);
@@ -59,6 +85,7 @@ int main(int argc, char* argv[])
         LOGERROR("Unhandled unknown exception in main");
 		result = -3;
 	}
+    DialogManager::setLogCallback(nullptr);
     if (g_config.m_logInitialized.load())
     {
         LOGINFO("LumaPlayer log closing");

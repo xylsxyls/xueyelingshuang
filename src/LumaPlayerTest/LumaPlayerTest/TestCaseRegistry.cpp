@@ -38,7 +38,7 @@ const std::map<TestCaseId, TestCaseMetadata> kTestCases =
     {CaseResetUi, {QStringLiteral("平移缩放倍率重置，保留AB进度和播放状态"), TestInstant, "gui", 30000}},
     {CaseWindowState, {QStringLiteral("Esc与双击退出全屏恢复目标窗口，重复Esc不反向切换且保持暂停、进度与图钉"), TestInstant, "gui", 30000}},
     {CasePinnedUi, {QStringLiteral("固定浮框避让视频，取消固定后隐藏，Esc退出保持未固定状态"), TestInstant, "gui", 30000}},
-    {CaseHelpUi, {QStringLiteral("关于弹窗居中、版本左对齐、可拖动且两按钮关闭"), TestInstant, "gui", 30000}},
+    {CaseHelpUi, {QStringLiteral("关于框标题贴边、无描边带阴影、可拖动且两按钮关闭"), TestInstant, "gui", 30000}},
     {CaseQueuedClose, {QStringLiteral("重置尚在执行时关闭窗口，应正常收敛退出"), TestInstant, "gui", 30000}},
     {CaseStartup, {QStringLiteral("独立播放器重复启动，窗口可见并正常退出"), TestPressure, "player", 60000}},
     {CaseDiagnostics, {QStringLiteral("日志实际落盘并包含源码文件信息"), TestInstant, "core", 30000}},

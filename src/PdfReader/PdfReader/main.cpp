@@ -3,10 +3,35 @@
 #include "Config.h"
 #include "PdfReaderDialogRuntime.h"
 #include "CDump/CDumpAPI.h"
+#include "DialogManager/DialogManagerAPI.h"
 #include "LogManager/LogManagerAPI.h"
 #include <QApplication>
 #include <QTimer>
 #include <exception>
+
+/** 将DialogManager日志交给PdfReader的LogManager
+@param [in] level DialogManager日志级别
+@param [in] message 完整日志消息
+*/
+static void ForwardDialogLog(DialogLogLevel level, const char* message)
+{
+    if (message == nullptr)
+    {
+        return;
+    }
+    switch (level)
+    {
+    case DIALOG_LOG_ERROR:
+        LOGERROR("%s", message);
+        break;
+    case DIALOG_LOG_WARNING:
+        LOGWARNING("%s", message);
+        break;
+    default:
+        LOGINFO("%s", message);
+        break;
+    }
+}
 
 int main(int argc, char* argv[])
 {
@@ -19,6 +44,7 @@ int main(int argc, char* argv[])
 
         Config::instance();
         LogManager::instance().init(g_config.m_log);
+        DialogManager::setLogCallback(ForwardDialogLog);
         logInitialized = true;
         LOGINFO("PdfReader startup, build=%s %s", __DATE__, __TIME__);
         LOGINFO("CDump registration result=%d", dumpEnabled ? 1 : 0);
@@ -44,6 +70,7 @@ int main(int argc, char* argv[])
         result = -3;
     }
     PdfReaderTaskManager::instance().finish();
+    DialogManager::setLogCallback(nullptr);
     if (logInitialized)
     {
         LOGINFO("PdfReader log closing, exitCode=%d", result);

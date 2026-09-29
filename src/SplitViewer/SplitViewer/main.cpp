@@ -2,6 +2,7 @@
 #include "Config.h"
 #include "SplitViewerPlatform.h"
 #include "SplitViewerDialogSession.h"
+#include "DialogManager/DialogManagerAPI.h"
 #include "LogManager/LogManagerAPI.h"
 #include <QtWidgets/QApplication>
 #include <QtCore/QStringList>
@@ -10,6 +11,30 @@
 #ifdef Q_OS_WIN
 #include "CDump/CDumpAPI.h"
 #endif
+
+/** 将DialogManager日志交给SplitViewer的LogManager
+@param [in] level DialogManager日志级别
+@param [in] message 完整日志消息
+*/
+static void ForwardDialogLog(DialogLogLevel level, const char* message)
+{
+    if (message == nullptr)
+    {
+        return;
+    }
+    switch (level)
+    {
+    case DIALOG_LOG_ERROR:
+        LOGERROR("%s", message);
+        break;
+    case DIALOG_LOG_WARNING:
+        LOGWARNING("%s", message);
+        break;
+    default:
+        LOGINFO("%s", message);
+        break;
+    }
+}
 
 int main(int argc, char* argv[])
 {
@@ -27,6 +52,7 @@ int main(int argc, char* argv[])
     config.m_maxFileCount=g_config.m_logMaximumCount;
     LogManager::instance().set(g_config.m_logEnabled,false);
     LogManager::instance().init(config);
+    DialogManager::setLogCallback(ForwardDialogLog);
     const QStringList arguments=app.arguments();
     const bool debug=arguments.contains(g_config.m_debugArgument,Qt::CaseInsensitive);
     app.setProperty("debug",debug);
@@ -48,6 +74,7 @@ int main(int argc, char* argv[])
         window.show();
         result=app.exec();
     }
+    DialogManager::setLogCallback(nullptr);
     LOGINFO("SplitViewer stopped; result=%d",result);
     LogManager::instance().uninitAll();
     return result;

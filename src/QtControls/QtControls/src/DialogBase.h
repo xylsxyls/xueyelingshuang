@@ -91,6 +91,16 @@ public:
     */
     qint32 windowShadowSize() const;
 
+    /** 设置主体边框线是否绘制；默认绘制，不影响外部阴影
+    @param [in] enabled true绘制一像素主体轮廓，false不描边
+    */
+    void setWindowBorderEnabled(bool enabled);
+
+    /** 查询主体边框线是否绘制；未设置时默认返回true
+    @return true表示绘制一像素主体轮廓
+    */
+    bool windowBorderEnabled() const;
+
 Q_SIGNALS:
     /** 倒计时时间剩余，每秒发送一次
     @param [in] seconds 当前还剩多少秒

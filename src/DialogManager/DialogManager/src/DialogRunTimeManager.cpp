@@ -3,6 +3,7 @@
 #include "CustomDialog.h"
 #include "DialogFactoryManager.h"
 #include "DialogHelper.h"
+#include "DialogLog.h"
 #include "NotifyDialogManager.h"
 #include "PopDialogManager.h"
 #include "StaticDialogManager.h"
@@ -28,8 +29,8 @@ static ParamType* CastRunTimeOperateParam(OperateParam* param, OperateType expec
 	ParamType* castParam = dynamic_cast<ParamType*>(param);
 	if (castParam == nullptr)
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager operate param type mismatch, operateType = "
-			<< expectedType << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager operate param type mismatch, operateType = "
+			<< expectedType;
 	}
 	return castParam;
 }
@@ -97,14 +98,14 @@ void DialogRunTimeManager::makeDialog(DialogParam& param)
 	}
 	catch (...)
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager makeDialog invokeMethod caught exception, type = "
-			<< param.dialogType() << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager makeDialog invokeMethod caught exception, type = "
+			<< param.dialogType();
 		return;
 	}
 	if (!invokeOk)
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager makeDialog invokeMethod failed, type = "
-			<< param.dialogType() << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager makeDialog invokeMethod failed, type = "
+			<< param.dialogType();
 	}
 }
 
@@ -130,14 +131,14 @@ void DialogRunTimeManager::operateDialog(OperateParam& param)
 	}
 	catch (...)
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager operateDialog invokeMethod caught exception, operateType = "
-			<< param.operateType() << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager operateDialog invokeMethod caught exception, operateType = "
+			<< param.operateType();
 		return;
 	}
 	if (!invokeOk)
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager operateDialog invokeMethod failed, operateType = "
-			<< param.operateType() << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager operateDialog invokeMethod failed, operateType = "
+			<< param.operateType();
 	}
 }
 
@@ -159,7 +160,7 @@ void DialogRunTimeManager::uninit()
 	}
 	if (!canBlockInvokeGuiThread("uninit"))
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager uninit falls back to AllocManager::uninit" << std::endl;
+		DialogLog(DIALOG_LOG_WARNING) << "DialogRunTimeManager uninit falls back to AllocManager::uninit";
 		AllocManager::instance().uninit();
 		return;
 	}
@@ -170,12 +171,12 @@ void DialogRunTimeManager::uninit()
 	}
 	catch (...)
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager uninit invokeMethod caught exception" << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager uninit invokeMethod caught exception";
 		return;
 	}
 	if (!invokeOk)
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager uninit invokeMethod failed" << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager uninit invokeMethod failed";
 	}
 }
 
@@ -189,8 +190,8 @@ void DialogRunTimeManager::makeDialogInGuiThread(DialogParam* param)
 		QMutexLocker locker(&m_mutex);
 		if (m_isUninit)
 		{
-			DialogHelper::logFile() << "DialogRunTimeManager makeDialog ignored during uninit, type = "
-				<< param->dialogType() << std::endl;
+			DialogLog(DIALOG_LOG_WARNING) << "DialogRunTimeManager makeDialog ignored during uninit, type = "
+				<< param->dialogType();
 			return;
 		}
 	}
@@ -389,8 +390,8 @@ void DialogRunTimeManager::operateDialogInGuiThread(OperateParam* param)
 		break;
 	}
 	default:
-		DialogHelper::logFile() << "DialogRunTimeManager unsupported operateType = "
-			<< param->operateType() << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager unsupported operateType = "
+			<< param->operateType();
 		break;
 	}
 }
@@ -420,7 +421,7 @@ void DialogRunTimeManager::onCustomDialogClosed(DialogResult* result)
 	DialogSignalPtr signalParam = CreateDialogSignalParam<CustomDialogDoneSignalParam>();
 	if (signalParam.isNull())
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager failed to create custom done signal" << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager failed to create custom done signal";
 		return;
 	}
 	CustomDialogDoneSignalParam* param = static_cast<CustomDialogDoneSignalParam*>(signalParam.data());
@@ -451,7 +452,7 @@ void DialogRunTimeManager::onCustomDialogAlreadyShown()
 	DialogSignalPtr signalParam = CreateDialogSignalParam<AlreadyShownSignalParam>();
 	if (signalParam.isNull())
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager failed to create already shown signal" << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager failed to create already shown signal";
 		return;
 	}
 	AlreadyShownSignalParam* param = static_cast<AlreadyShownSignalParam*>(signalParam.data());
@@ -478,7 +479,7 @@ void DialogRunTimeManager::ensureObjectInGuiThread()
 		moveToThread(application->thread());
 		return;
 	}
-	DialogHelper::logFile() << "DialogRunTimeManager cannot move object to GUI thread from current thread" << std::endl;
+	DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager cannot move object to GUI thread from current thread";
 }
 
 bool DialogRunTimeManager::canBlockInvokeGuiThread(const char* operationName) const
@@ -486,20 +487,20 @@ bool DialogRunTimeManager::canBlockInvokeGuiThread(const char* operationName) co
 	QCoreApplication* application = QCoreApplication::instance();
 	if (application == nullptr)
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager " << operationName
-			<< " failed because QCoreApplication is null" << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager " << operationName
+			<< " failed because QCoreApplication is null";
 		return false;
 	}
 	if (QCoreApplication::closingDown())
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager " << operationName
-			<< " ignored because QCoreApplication is closing down" << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager " << operationName
+			<< " ignored because QCoreApplication is closing down";
 		return false;
 	}
 	if (thread() != application->thread())
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager " << operationName
-			<< " failed because manager object is not in GUI thread" << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager " << operationName
+			<< " failed because manager object is not in GUI thread";
 		return false;
 	}
 	return true;
@@ -552,9 +553,9 @@ bool DialogRunTimeManager::reuseExistingUserDialog(DialogParam& param)
 	DialogType oldType = AllocManager::instance().findDialogType(dialogId);
 	if (oldType != param.dialogType())
 	{
-		DialogHelper::logFile() << "DialogRunTimeManager reuse existing dialog with different type, businessId = "
+		DialogLog(DIALOG_LOG_WARNING) << "DialogRunTimeManager reuse existing dialog with different type, businessId = "
 			<< userKey.m_businessId << ", userId = " << userKey.m_userId
-			<< ", oldType = " << oldType << ", newType = " << param.dialogType() << std::endl;
+			<< ", oldType = " << oldType << ", newType = " << param.dialogType();
 	}
 	CustomDialog* customDialog = dynamic_cast<CustomDialog*>(dialogPtr);
 	if (customDialog != nullptr)
@@ -600,8 +601,8 @@ void DialogRunTimeManager::makeBuiltInDialog(DialogParam& param)
 		StaticDialogManager::instance().popStaticDialog(param);
 		break;
 	default:
-		DialogHelper::logFile() << "DialogRunTimeManager unsupported built-in dialogType = "
-			<< param.dialogType() << std::endl;
+		DialogLog(DIALOG_LOG_ERROR) << "DialogRunTimeManager unsupported built-in dialogType = "
+			<< param.dialogType();
 		break;
 	}
 }

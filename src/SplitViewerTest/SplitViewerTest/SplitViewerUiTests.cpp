@@ -3,6 +3,8 @@
 #include "SplitViewerDialogTests.h"
 #include "SplitViewerShadowTests.h"
 #include "SplitViewerConfigTests.h"
+#include "../../SplitViewer/SplitViewer/SplitViewerDialogSession.h"
+#include "DialogManager/DialogManagerAPI.h"
 #include "LogManager/LogManagerAPI.h"
 #include <QtCore/QDir>
 #include <QtCore/QFile>
@@ -30,10 +32,35 @@
 #include "../../SplitViewer/SplitViewer/SplitViewerPlatform.h"
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
+
+/** 将DialogManager日志交给SplitViewerTest的LogManager
+@param [in] level DialogManager日志级别
+@param [in] message 完整日志消息
+*/
+static void ForwardDialogLog(DialogLogLevel level, const char* message)
+{
+    if (message == nullptr)
+    {
+        return;
+    }
+    switch (level)
+    {
+    case DIALOG_LOG_ERROR:
+        LOGERROR("%s", message);
+        break;
+    case DIALOG_LOG_WARNING:
+        LOGWARNING("%s", message);
+        break;
+    default:
+        LOGINFO("%s", message);
+        break;
+    }
+}
 #include <windows.h>
 #endif
 
@@ -451,10 +478,14 @@ int SplitViewerRunUiTests(const QString& reportDirectory, int selectedCase)
     if (selectedCase!=0 && (selectedCase<101 || selectedCase>193)) return 2;
     LogManager::instance().set(true, false);
     LogManager::instance().init();
+    DialogManager::setLogCallback(ForwardDialogLog);
+    std::unique_ptr<SplitViewerDialogSession> dialogs(new SplitViewerDialogSession());
     QDir().mkpath(reportDirectory);
     QFile report(reportDirectory+QStringLiteral("/ui-results.txt"));
     if (!report.open(QIODevice::WriteOnly|QIODevice::Text))
     {
+        dialogs.reset();
+        DialogManager::setLogCallback(nullptr);
         LogManager::instance().uninitAll();
         return 1;
     }
@@ -1079,6 +1110,8 @@ int SplitViewerRunUiTests(const QString& reportDirectory, int selectedCase)
         }
     }
     out << "total=" << total << " failures=" << failures << "\n";
+    dialogs.reset();
+    DialogManager::setLogCallback(nullptr);
     LogManager::instance().uninitAll();
     return failures;
 }

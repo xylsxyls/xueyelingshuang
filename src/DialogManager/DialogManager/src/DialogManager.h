@@ -6,6 +6,21 @@
 #include "DialogType.h"
 #include "ManagerBase/ManagerBaseAPI.h"
 
+/** DialogManager向宿主转发日志时使用的严重级别
+*/
+enum DialogLogLevel
+{
+	DIALOG_LOG_INFO,
+	DIALOG_LOG_WARNING,
+	DIALOG_LOG_ERROR
+};
+
+/** 接收DialogManager完整日志消息的宿主回调
+@param [in] level 日志级别
+@param [in] message 完整消息，仅在回调期间有效
+*/
+typedef void (*DialogLogCallback)(DialogLogLevel level, const char* message);
+
 /** 弹框统一对外入口，内部委托DialogRunTimeManager管理窗口运行期状态
 */
 class DialogManagerAPI DialogManager :
@@ -21,6 +36,11 @@ public:
 	/** 析构函数
 	*/
 	~DialogManager();
+
+	/** 设置宿主日志回调；传入nullptr时停止转发
+	@param [in] callback 接收日志级别和完整消息的函数指针
+	*/
+	static void setLogCallback(DialogLogCallback callback);
 
 public:
 	/** 注册业务自定义窗口工厂

@@ -105,4 +105,6 @@ private:
     int64_t m_observedFrame;
     int64_t m_lastFrameMs;
     int64_t m_maxFrameGapMs;
+    // 保留默认帮助框宽度，用奇数配置覆盖实际弹窗的向上取偶路径
+    int32_t m_originalHelpWidth;
 };
