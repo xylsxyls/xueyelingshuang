@@ -26,6 +26,8 @@
 #include <QtWidgets/QStyle>
 #include <QtCore/QDir>
 #include "CStringManager/CStringManagerAPI.h"
+#include "CSystem/CSystemAPI.h"
+#include <QPointer>
 
 PdfReader::PdfReader(QWidget* parent)
     : MainWindow(parent)
@@ -182,7 +184,7 @@ bool PdfReader::openWithPassword(const PdfReaderRequest& request)
             m_pageScroll->verticalScrollBar()->setValue(0);
             m_pageScroll->horizontalScrollBar()->setValue(0);
             statusBar()->showMessage(QString::fromStdWString(CStringManager::Format(g_config.m_openedFormat.toStdWString().c_str(),
-                QFileInfo(m_currentPath).fileName().toStdWString().c_str(), m_core->pageCount())));
+                QString::fromUtf8(CSystem::GetName(m_currentPath.toUtf8().constData(), 1).c_str()).toStdWString().c_str(), m_core->pageCount())));
         }
     });
 }
@@ -384,8 +386,12 @@ bool PdfReader::submitOperation(const PdfReaderRequest& request,
     const uint64_t id = m_core->submit(request, [this, completion](const PdfReaderResult& result) {
         m_lastOperationSucceeded = result.m_success;
         updateActions();
+        const QPointer<PdfReader> guard(this);
         completion(result);
-        emit operationFinished(result.m_request.m_id, result.m_success);
+        if (guard)
+        {
+            emit operationFinished(result.m_request.m_id, result.m_success);
+        }
     });
     if (id)
     {
@@ -415,13 +421,14 @@ void PdfReader::saveAs()
     {
         return;
     }
-    const QString suggested = QFileInfo(m_currentPath).completeBaseName() + g_config.m_editedSuffix;
+    const QString suggested = QString::fromUtf8(CSystem::GetName(m_currentPath.toUtf8().constData(), 3).c_str()) + g_config.m_editedSuffix;
     const QString path = PdfReaderDialogHelper::file(this, PdfReaderDialogSaveFile, g_config.m_saveAsText, suggested, g_config.m_saveFilter);
     if (path.isEmpty())
     {
         return;
     }
-    if (QFileInfo(path).canonicalFilePath() == QFileInfo(m_currentPath).canonicalFilePath())
+    const QString currentCanonicalPath = QFileInfo(m_currentPath).canonicalFilePath();
+    if (!currentCanonicalPath.isEmpty() && QFileInfo(path).canonicalFilePath() == currentCanonicalPath)
     {
         saveMain();
         return;
@@ -452,7 +459,7 @@ void PdfReader::savePageRange()
             PdfReaderDialogHelper::message(this, g_config.m_invalidRangeText, result.m_error);
             return;
         }
-        const QString suggested = QFileInfo(m_currentPath).completeBaseName() + g_config.m_pagesSuffix;
+        const QString suggested = QString::fromUtf8(CSystem::GetName(m_currentPath.toUtf8().constData(), 3).c_str()) + g_config.m_pagesSuffix;
         const QString path = PdfReaderDialogHelper::file(this, PdfReaderDialogSaveFile, g_config.m_saveRangeTitle, suggested, g_config.m_saveFilter);
         if (path.isEmpty())
         {
@@ -479,7 +486,7 @@ void PdfReader::saveEachPage()
     PdfReaderRequest request;
     request.m_operation = PdfReaderSaveEach;
     request.m_path = directory;
-    request.m_text = QFileInfo(m_currentPath).completeBaseName();
+    request.m_text = QString::fromUtf8(CSystem::GetName(m_currentPath.toUtf8().constData(), 3).c_str());
     exportDocument(request, g_config.m_eachSavedText);
 }
 
@@ -686,7 +693,7 @@ void PdfReader::showHelp()
 
 void PdfReader::setWindowDocumentTitle()
 {
-    setWindowTitle(m_core->isOpen() ? g_config.m_documentTitlePrefix + QFileInfo(m_currentPath).fileName() : g_config.m_applicationTitle);
+    setWindowTitle(m_core->isOpen() ? g_config.m_documentTitlePrefix + QString::fromUtf8(CSystem::GetName(m_currentPath.toUtf8().constData(), 1).c_str()) : g_config.m_applicationTitle);
 }
 
 void PdfReader::closeEvent(QCloseEvent* event)
@@ -706,14 +713,15 @@ void PdfReader::closeEvent(QCloseEvent* event)
                 m_closeReady = true;
                 close();
             }
+            else
+            {
+                m_closeRequested = false;
+                updateActions();
+                statusBar()->showMessage(result.m_error, g_config.m_statusMessageMs);
+            }
         });
         updateActions();
     }
-}
-
-void PdfReader::wheelEvent(QWheelEvent* event)
-{
-    MainWindow::wheelEvent(event);
 }
 
 bool PdfReader::eventFilter(QObject* watched, QEvent* event)
@@ -765,8 +773,12 @@ bool PdfReader::eventFilter(QObject* watched, QEvent* event)
 
 void PdfReader::processCoreResults()
 {
+    const QPointer<PdfReader> guard(this);
     m_core->processResults();
-    renderVisiblePages();
+    if (guard)
+    {
+        renderVisiblePages();
+    }
 }
 
 bool PdfReader::idle() const

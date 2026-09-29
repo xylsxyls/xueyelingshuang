@@ -1,5 +1,6 @@
 PdfReader 测试文档
-更新日期：2026-09-29（新增29至32缩略图拖拽回归）
+更新日期：2026-09-29（基础库复用整改，33项发布验证通过）
+当前状态：用户已明确授权继续至common发布。Windows x64 Release构建成功；新增用例及日志设施4/4通过；最终部署组合发布前后均33/33通过，退出码均0。以下历史结果仍只对应其原版本。
 范围：Windows x64 Release，VS2013 + Qt 5.5.1；Core C API 和产品 Qt 窗口交互。
 上轮配置与阴影复核发布验证：2026-09-28，Windows x64 Release，26/26通过，进程退出码0；Test EXE SHA256=558fd133ed3ffa1755a025e9a7d72be5b9d7fc1be4f606ed6b8014a58514088f。工作流已按用户指令结束；过程报告、截图、测试素材及临时备份已按结束规则清理，保留以下正式结论和可复用测试入口。
 
@@ -36,7 +37,7 @@ GUI 自动回归短时间显示产品窗口和弹窗。没有注册压力用例�
 20 正文滚动同步当前页与缩略图：通过真实无 Ctrl 滚轮滚动正文，检查当前可见页的蓝色焦点、左侧选中行和缩略图可见性同步；左侧点击仍保持目标页选择。
 原 17/18 是 Explorer 内容缩略图扩展测试，随用户取消此功能而退役，不复用编号，不计入通过或跳过。
 19 DialogManager 与 QtControls：检查主窗口、列表、正文、滚动条、工具栏和分隔栏实际封装类型；通过公共接口设置常态/悬停/禁用背景和边框，检查 show 后保留 QSS。经真实弹窗验证密码遮蔽及无明文 tooltip、确认回传、Esc 取消保留原值、覆盖默认焦点为取消、文件选择取消、帮助内容和父窗口恢复。每个弹窗检查管理器登记，收集五次关闭信号，最终窗口计数为零；保存密码、确认、帮助截图。
-当前 GUI 与 CLI 全量入口为 1..16、19..32，共 30 项；指定全部可用 --cases 1-16,19-32。无效 ID（包括已退役 17/18）返回 2，不生成虚假通过记录。
+当前 GUI 与 CLI 全量入口为 1..16、19..35，共 33 项；指定全部可用 --cases 1-16,19-35。无效 ID（包括已退役 17/18）返回 2，不生成虚假通过记录。新增33..35已在本轮定向及完整批次中实际执行通过。
 ID19补充：将DialogManager日志回调临时换成捕获器，传入不支持的内置窗口类型999；预期同步收到一次ERROR级别和包含完整格式化字段“unsupported built-in dialogType = 999”的消息，随后恢复LogManager转发回调。该断言验证库向宿主提交完整记录，不代表验证滚动文件或宿主异步策略。
 2026-09-29定向及最终部署组合复核：Windows x64 Release仅执行ID19，PASS=1/FAIL=0；发布后使用最终DialogManager/QtControls再执行一次，进程真实退出码0。完整报告记录EXE SHA256并保存在当次工作流reports目录，结束工作流时清理。
 
@@ -55,12 +56,23 @@ ID19补充：将DialogManager日志回调临时换成捕获器，传入不支持
 31 拖动滚轮与自动滚动：独立120页素材，按住左键时滚轮向下、Ctrl滚轮向上均滚动列表，行高和源项不变；之后边缘自动滚动仍有效、蓝线可见；Esc及释放不重排。
 32 邻页细微移动与重绘取消：跨过邻页中心仅移动4像素就改变插入线位置；局部重绘后蓝线仍在。Esc消除指示、不移动源页；再次拖动中触发侧栏尺寸变化重建列表，旧手势取消，不使用过期源行提交。
 
+33 字符串缓冲区与路径规则：独立常量覆盖空串、空指针、零容量、仅NUL容量、精确容量和截断哨兵；经Core C入口核对中文路径所需字节数和截断终止。CSystem验证正反斜杠拼接、空目录、原有后缀大小写、不同后缀追加和目录名含.pdf的边界。无效渲染必须清零输出并保持像素缓冲区不变。
+34 Core失败编辑和导出隔离：越界目标返回InvalidParam并保持页序；缺失文件插入失败保留工作页序，之后插入和移动仍成功。含../、反斜杠或盘符的导出前缀须在任何写入前拒绝，既有文件和目录内容保持不变。分配失败强异常保证只做源码审查，本用例没有注入OOM，不冒充已验证。
+35 完成回调内销毁窗口：真实异步打开成功的operationFinished直连处理里删除堆上PdfReader；要求收到一次成功终态，窗口确实销毁，后续唯一执行者屏障可进入且无超时。用于检查GUI回调返回后不再访问已释放会话，不等同于内存检测器证明无全部泄漏。
+
+本轮证据（2026-09-29，基础库复用整改）
+配置：VS2013、Qt5.5.1、Windows x64 Release；最终EXE与保留依赖组合执行，不借共享lib目录的新DLL代替common未变DLL。ID19,33-35定向4/4通过，退出0。
+发布前33项：TOTAL=33 PASS=33 FAIL=0，退出0，14.672秒；发布后common/PdfReaderTest/PdfReaderTest1.0.exe同批33项全部通过，退出0，15.056秒。模块实际路径、PE x64、EXE哈希、完整TOTAL及进程真实退出码均已核对；产品空启动和中文PDF打开也正常关闭，2/2通过。
+当前Test SHA256=be66ed88d299ee3785f8b41a1ef89d785d50a34c80e41cac10871f8aed98b5d4。PDB配对及压缩身份见common/PdfReader/开发文档.txt，本次没有复制Qt官方运行资源或LockFreeQueue.dll。
+原始报告、试运行记录及空批次目录已按用户结束指令清理，实际批次统计与版本身份保留于本节。初次监督脚本因Python3.6缺少CREATE_NO_WINDOW常量未启动测试进程；修正为Win32常量后才执行有效批次，空批次不计通过。依赖首次启动器失败原因及最终16库、产品/Test成功构建方式见正式开发文档。
+未执行：Debug、其他平台、真实加密PDF、多小时压力、OOM/线程启动或投递失败注入、内存检测器、真实混合DPI及系统文件选择器人工外观验收。33项通过不推断未覆盖的异常路径全部可靠。用户随后已明确结束工作流；正式测试代码、测试文档和已发布Test保留，原始临时证据已清理。
+
 三、判定、隔离和复现
 每个用例独立生成素材、创建窗口或Core句柄，结束销毁上下文，不读取或修改用户PDF。自动化用可控文件对话框回退验证业务结果，原生文件选择器外观由C5人工试运行确认。密码输入遮蔽测试不代表真实加密PDF密码重试已验证。
 异步用例等待真实完成状态，再断言页序、磁盘文件及独立素材像素；23..25以受控任务阻塞构造在途窗口，检查GUI心跳、请求身份和红/蓝独立素材，避免只凭延时或入队成功判通过。失败用例也收敛自身任务后才进入下一项；配置改动用RAII恢复。测试main最后核对任务线程数量恢复到启动前，否则返回5。
-本机复现：在Qt5.5.1 x64的bin位于进程PATH首项、QT_PLUGIN_PATH为对应plugins且QT_QPA_PLATFORM=windows的环境，从common/PdfReaderTest运行PdfReaderTest1.0.exe --regression --cases 1-16,19-32 --reports <独立报告目录>。新增边界可用--cases 21-28单独选择。必须核对完整TOTAL和真实进程退出码，不能把终止或缺失退出码判为通过。
+当前common发布Test包含33..35，本机复现：在Qt5.5.1 x64的bin位于进程PATH首项、QT_PLUGIN_PATH为对应plugins且QT_QPA_PLATFORM=windows的环境，从common/PdfReaderTest运行PdfReaderTest1.0.exe --regression --cases 1-16,19-35 --reports <独立报告目录>。新增边界可用--cases 33-35单独选择；21-28仍为既有配置与异步边界。必须核对完整TOTAL和真实进程退出码，不能把终止或缺失退出码判为通过。
 运行期保留成功及失败批次，工作流结束后按规则清理；报告目录会在下次执行时新建。自动弹窗有5秒保护，外部监督设90秒批次上限，只收敛自己启动的进程。Windows PowerShell监督时启动后保留进程句柄，以GetExitCodeProcess取得真实退出码，避免Start-Process对象返回空ExitCode造成误判。
-拖拽像素及滚轮测试集中在PdfReaderDragTests。测试辅助分别为PdfReaderTestHelper（独立素材/断言）、PdfReaderTestUiHelper（实际Qt交互）、PdfReaderTestConfigGuard（配置恢复）、PdfReaderTestModalGuard（弹窗超时）和PdfReaderTestWorkerGate（受控任务时序）。可复用测试源码保留，临时监督脚本不作为工程依赖。
+拖拽像素及滚轮测试集中在PdfReaderDragTests。测试辅助分别为PdfReaderTestHelper（独立素材/断言）、PdfReaderTestUiHelper（实际Qt交互）、PdfReaderTestConfigGuard（配置恢复）、PdfReaderTestModalGuard（弹窗超时）和PdfReaderTestWorkerGate（受控任务时序）、PdfReaderTestLogGuard（线程安全日志捕获及异常恢复）。可复用测试源码保留，临时监督脚本不作为工程依赖。
 
 四、上轮配置与阴影复核的验证及发布身份（2026-09-28）
 构建：QtControls、PdfReaderCore、PdfReader、PdfReaderTest通过VS2013 MSBuild12、Qt5.5.1、Release|x64构建。C/C++单头文件API编译验证保留在Test；未重建或验证其他平台。

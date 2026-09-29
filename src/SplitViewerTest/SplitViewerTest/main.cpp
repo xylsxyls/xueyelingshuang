@@ -3,7 +3,6 @@
 #include <QtWidgets/QApplication>
 #include "SplitViewerUiTests.h"
 #include "SplitViewerShadowTests.h"
-#include "../../SplitViewer/SplitViewer/SplitViewerDialogSession.h"
 #include <QtCore/QTimer>
 #include <stdint.h>
 
@@ -11,6 +10,7 @@ int32_t main(int argc, char* argv[])
 {
 	QApplication app(argc, argv);
     Config::instance();
+    SplitViewerTestConfig::instance();
 	if (app.arguments().contains(QStringLiteral("--shadow-drag-driver")))
     {
         return SplitViewerShadowTests::runDragDriver(app.arguments());
@@ -27,12 +27,11 @@ int32_t main(int argc, char* argv[])
             {
                 bool ok=false;
                 selected=arg.mid(7).toInt(&ok);
-                if (!ok || selected<101 || selected>193) return 2;
+                if (!ok || selected<101 || selected>202) return 2;
             }
         }
         return SplitViewerRunUiTests(args.at(index+1),selected);
 	}
-	SplitViewerDialogSession dialogs;
 	SplitViewerTest window;
 	window.show();
 	if (app.arguments().contains(QStringLiteral("--autotest")))

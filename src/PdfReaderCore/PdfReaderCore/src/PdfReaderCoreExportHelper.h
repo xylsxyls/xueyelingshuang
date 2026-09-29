@@ -8,7 +8,12 @@
 class PdfReaderCoreExportHelper
 {
 public:
-    /** 生成带小写 .pdf 后缀的分页路径；directory 已含末尾分隔符
+    /** 生成带小写.pdf后缀的分页路径，目录分隔符由CSystem统一拼接
+    @param [in] directory 输出目录，可带或不带末尾分隔符
+    @param [in] prefix 经过Core校验的文件名前缀，不含路径分隔符
+    @param [in] page 从1开始的输出页号
+    @param [in] numberWidth 页号最小十进制位数
+    @return UTF8完整输出路径
     */
     static std::string pageFileName(const std::string& directory, const std::string& prefix, int32_t page, int32_t numberWidth);
 

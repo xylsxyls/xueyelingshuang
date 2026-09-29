@@ -1,6 +1,7 @@
 ﻿#include "SplitViewerImageHelper.h"
 #include "SplitViewerCore/SplitViewerCoreAPI.h"
 #include <QtCore/QMap>
+#include <QtCore/QSet>
 #include <QtGui/QImage>
 
 QString SplitViewerImageHelper::path(const std::wstring& value)
@@ -41,4 +42,33 @@ void SplitViewerImageHelper::setImageStatus(SplitViewerCoreNode* node, QMap<QStr
     }
     SplitViewerImageHelper::setImageStatus(node->first, cache);
     SplitViewerImageHelper::setImageStatus(node->second, cache);
+}
+
+void SplitViewerImageHelper::pruneUnusedImages(const SplitViewerCoreDocument& document, QMap<QString, QImage>& cache)
+{
+    std::vector<SplitViewerCoreNode*> leaves;
+    SplitViewerCoreNode::collectLeaves(document.baseRoot(), leaves);
+    for (int index = 0; index < document.layerCount(); ++index)
+    {
+        SplitViewerCoreNode::collectLeaves(document.layerAt(index)->root, leaves);
+    }
+    QSet<QString> used;
+    for (size_t index = 0; index < leaves.size(); ++index)
+    {
+        if (leaves[index]->view.hasImage)
+        {
+            used.insert(path(leaves[index]->view.path));
+        }
+    }
+    for (QMap<QString, QImage>::iterator it = cache.begin(); it != cache.end();)
+    {
+        if (!used.contains(it.key()))
+        {
+            it = cache.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
 }

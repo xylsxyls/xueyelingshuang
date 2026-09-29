@@ -94,7 +94,7 @@ ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES})
 ##如果要生成动态链接库
 ##ADD_LIBRARY(${PROJECT_NAME} SHARED ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES)
 foreach (EVERYQTRELY ${QTRELYLIST})
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} "${QT5_GCC}/lib/libQt5${EVERYQTRELY}.so")
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} Qt5::${EVERYQTRELY})
 endforeach ()
 
 #添加库
@@ -134,7 +134,7 @@ ENDIF()
 
 # Desktop UI uses the shared control and dialog libraries.
 IF(DEBUGRELEASE STREQUAL "debug")
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControlsd DialogManagerd QssStringd CStringManagerd LogManagerd CTaskThreadManagerd Semaphored CDumpd)
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControlsd DialogManagerd QssStringd CStringManagerd CSystemd LogManagerd CTaskThreadManagerd Semaphored CDumpd)
 ELSE()
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControls DialogManager QssString CStringManager LogManager CTaskThreadManager Semaphore CDump)
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} QtControls DialogManager QssString CStringManager CSystem LogManager CTaskThreadManager Semaphore CDump)
 ENDIF()

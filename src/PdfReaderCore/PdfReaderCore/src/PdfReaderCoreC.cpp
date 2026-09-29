@@ -76,7 +76,7 @@ PdfReaderCoreAPI int32_t pdfReaderCoreOpen(PdfReaderCoreHandle handle, const cha
 {
     if (!handle || !filePath || !*filePath)
     {
-        return handle ? PdfReaderCoreCResultHelper::runError(handle, PdfReaderCoreCResultInvalidParam, "file path is empty") : PdfReaderCoreCResultInvalidParam;
+        return handle ? PdfReaderCoreCResultHelper::runResult(handle, PdfReaderCoreCResultInvalidParam) : PdfReaderCoreCResultInvalidParam;
     }
     try
     {
@@ -132,17 +132,7 @@ PdfReaderCoreAPI size_t pdfReaderCoreGetFilePath(PdfReaderCoreHandle handle, cha
     try
     {
         const std::string path = CStringManager::UnicodeToUtf8(handle->core.filePath());
-        const size_t required = path.size() + 1;
-        if (buffer && bufferSize)
-        {
-            const size_t copySize = (std::min)(bufferSize - 1, path.size());
-            if (copySize)
-            {
-                std::memcpy(buffer, path.data(), copySize);
-            }
-            buffer[copySize] = 0;
-        }
-        return required;
+        return CStringManager::CopyToBuffer(path, buffer, bufferSize);
     }
     catch (...) { return 0; }
 }
@@ -172,6 +162,10 @@ PdfReaderCoreAPI int32_t pdfReaderCoreRenderPage(PdfReaderCoreHandle handle, int
                                                   int32_t* outWidth, int32_t* outHeight,
                                                   int32_t* outStride, size_t* outBytes)
 {
+    if (outWidth) *outWidth = 0;
+    if (outHeight) *outHeight = 0;
+    if (outStride) *outStride = 0;
+    if (outBytes) *outBytes = 0;
     if (!handle || !outWidth || !outHeight || !outStride || !outBytes || pixelWidth <= 0 || pixelHeight <= 0)
         return handle ? PdfReaderCoreCResultHelper::runResult(handle, PdfReaderCoreCResultInvalidParam) : PdfReaderCoreCResultInvalidParam;
     try
@@ -311,17 +305,7 @@ PdfReaderCoreAPI size_t pdfReaderCoreGetLastError(PdfReaderCoreHandle handle, ch
     {
         const std::string error = handle->lastError.empty() && handle->lastResult != PdfReaderCoreCResultSuccess ?
             pdfReaderCoreResultDescription(handle->lastResult) : handle->lastError;
-        const size_t required = error.size() + 1;
-        if (buffer && bufferSize)
-        {
-            const size_t copySize = (std::min)(bufferSize - 1, error.size());
-            if (copySize)
-            {
-                std::memcpy(buffer, error.data(), copySize);
-            }
-            buffer[copySize] = 0;
-        }
-        return required;
+        return CStringManager::CopyToBuffer(error, buffer, bufferSize);
     }
     catch (...) { return 0; }
 }

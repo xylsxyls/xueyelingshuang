@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <utility>
+#include <limits>
 
 PdfReaderCorePageInfo::PdfReaderCorePageInfo()
     : width(0.0), height(0.0)
@@ -75,41 +76,6 @@ void PdfReaderCore::uninit()
 bool PdfReaderCore::isInit() const
 {
     return m_isInit && m_engine.isInit();
-}
-
-PdfDocument* PdfReaderCore::openDocument(const std::wstring& filePath,
-                                         const std::string& password,
-                                         std::string* errorText)
-{
-    if (filePath.empty())
-    {
-        if (errorText)
-        {
-            *errorText = "file path is empty";
-        }
-        return nullptr;
-    }
-    if (!CSystem::fileExists(filePath))
-    {
-        if (errorText)
-        {
-            *errorText = "file does not exist";
-        }
-        return nullptr;
-    }
-    std::unique_ptr<PdfDocument> document(new PdfDocument());
-    std::string error;
-    if (!document->open(filePath, password, &error))
-    {
-        if (errorText)
-        {
-            *errorText = error;
-        }
-        return nullptr;
-    }
-    PdfDocument* result = document.get();
-    m_documents.push_back(std::move(document));
-    return result;
 }
 
 bool PdfReaderCore::open(const std::wstring& filePath,
@@ -330,8 +296,26 @@ bool PdfReaderCore::insertDocument(const std::wstring& filePath,
         return false;
     }
     std::string error;
-    PdfDocument* document = openDocument(filePath, password, &error);
-    if (!document)
+    std::unique_ptr<PdfDocument> document(new PdfDocument());
+    if (filePath.empty() || !CSystem::fileExists(filePath))
+    {
+        error = filePath.empty() ? "file path is empty" : "file does not exist";
+    }
+    else if (!document->open(filePath, password, &error))
+    {
+        if (error.empty())
+        {
+            error = "failed to open PDF";
+        }
+    }
+    else
+    {
+        if (document->pageCount() > (std::numeric_limits<int32_t>::max)() - pageCount())
+        {
+            error = "invalid total page count";
+        }
+    }
+    if (!error.empty())
     {
         setError(error);
         if (errorText)
@@ -341,15 +325,20 @@ bool PdfReaderCore::insertDocument(const std::wstring& filePath,
         return false;
     }
     std::vector<PdfReaderCorePageEntry> inserted;
+    inserted.reserve(document->pageCount());
     for (int32_t i = 0; i < document->pageCount(); ++i)
     {
         PdfReaderCorePageEntry entry;
-        entry.document = document;
+        entry.document = document.get();
         entry.pageIndex = i;
         entry.sourcePath = filePath;
         inserted.push_back(entry);
     }
-    m_pages.insert(m_pages.begin() + insertIndex, inserted.begin(), inserted.end());
+    // 所有可能分配内存的操作先在临时页表完成，再一并提交文档所有权和页序。
+    std::vector<PdfReaderCorePageEntry> pages = m_pages;
+    pages.insert(pages.begin() + insertIndex, inserted.begin(), inserted.end());
+    m_documents.push_back(std::move(document));
+    m_pages.swap(pages);
     m_lastError.clear();
     return true;
 }
@@ -374,8 +363,10 @@ bool PdfReaderCore::movePage(int32_t fromIndex, int32_t toIndex, std::string* er
     if (fromIndex != toIndex)
     {
         PdfReaderCorePageEntry entry = m_pages[static_cast<size_t>(fromIndex)];
-        m_pages.erase(m_pages.begin() + fromIndex);
-        m_pages.insert(m_pages.begin() + toIndex, entry);
+        std::vector<PdfReaderCorePageEntry> pages = m_pages;
+        pages.erase(pages.begin() + fromIndex);
+        pages.insert(pages.begin() + toIndex, entry);
+        m_pages.swap(pages);
     }
     m_lastError.clear();
     return true;
@@ -547,9 +538,16 @@ bool PdfReaderCore::saveEachPage(const std::wstring& outputDirectory,
         }
         return false;
     }
-    std::string directory = CStringManager::UnicodeToUtf8(outputDirectory);
-    if (!directory.empty() && directory[directory.size() - 1] != '/' && directory[directory.size() - 1] != '\\')
-        directory += "/";
+    if (namePrefix.find_first_of("/\\:") != std::string::npos || namePrefix.find('\0') != std::string::npos)
+    {
+        setError("invalid export file name prefix");
+        if (errorText)
+        {
+            *errorText = m_lastError;
+        }
+        return false;
+    }
+    const std::string directory = CStringManager::UnicodeToUtf8(outputDirectory);
     const std::string prefix = namePrefix.empty() ? "page" : namePrefix;
     if (!overwrite)
     {

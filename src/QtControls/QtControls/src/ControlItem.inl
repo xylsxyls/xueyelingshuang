@@ -40,6 +40,15 @@ void ControlItem<QBase>::setItemTextOrigin(qint32 origin, bool rePaint)
 }
 
 template<class QBase>
+void ControlItem<QBase>::setItemPadding(qint32 left, qint32 top, qint32 right, qint32 bottom, bool rePaint)
+{
+    ControlBase<QBase>::setPxValue(L"padding-left", qMax(left, 0), true, false);
+    ControlBase<QBase>::setPxValue(L"padding-top", qMax(top, 0), true, false);
+    ControlBase<QBase>::setPxValue(L"padding-right", qMax(right, 0), true, false);
+    ControlBase<QBase>::setPxValue(L"padding-bottom", qMax(bottom, 0), true, rePaint);
+}
+
+template<class QBase>
 void ControlItem<QBase>::setItemAroundOrigin(qint32 leftOrigin,
 										     qint32 topOrigin,
 										     qint32 rightOrigin,

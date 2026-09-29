@@ -1,6 +1,7 @@
 ﻿#include "SplitViewerNativeMouseHelper.h"
 #include "Config.h"
 #include "SplitViewerNativeMouseManager.h"
+#include "CSystem/CSystemAPI.h"
 #include "LogManager/LogManagerAPI.h"
 #include <algorithm>
 #include <cmath>
@@ -85,7 +86,7 @@ LRESULT CALLBACK SplitViewerNativeMouseHelper::mouseHook(int code,WPARAM message
         const int event=message==WM_LBUTTONDOWN ? 1 : message==WM_MOUSEMOVE ? 2 : 3;
         if (embedded && message==WM_LBUTTONDOWN)
         {
-            const DWORD now=GetTickCount();
+            const DWORD now = CSystem::GetTickCount();
             const DWORD lastTick=SplitViewerNativeMouseManager::instance().m_lastClickTicks.value(embedded,0);
             const QPoint lastPoint=SplitViewerNativeMouseManager::instance().m_lastClickPoints.value(embedded);
             const int doubleClickWidth=(std::max)(1,GetSystemMetrics(SM_CXDOUBLECLK));
@@ -163,8 +164,18 @@ LRESULT CALLBACK SplitViewerNativeMouseHelper::mouseHook(int code,WPARAM message
         // 不在系统钩子内嵌套改父窗口；复制通知，交回各接收者所属的GUI事件循环。
         for (auto it=SplitViewerNativeMouseManager::instance().m_mouseClients.constBegin();it!=SplitViewerNativeMouseManager::instance().m_mouseClients.constEnd();++it)
         {
-            const std::function<void(int,const QPoint&,WId)> callback=it.value();
-            QTimer::singleShot(0,it.key(),[callback,event,point,id]() { callback(event,point,id); });
+            QObject* owner = it.key();
+            const quint64 generation = SplitViewerNativeMouseManager::instance().m_clientGenerations.value(owner);
+            // 上下文还活着也可能已经注销或重新订阅，投递后再次核对订阅身份。
+            QTimer::singleShot(0, owner, [owner, generation, event, point, id]()
+            {
+                SplitViewerNativeMouseManager& manager = SplitViewerNativeMouseManager::instance();
+                if (manager.m_clientGenerations.value(owner) == generation && manager.m_mouseClients.contains(owner))
+                {
+                    const std::function<void(int, const QPoint&, WId)> callback = manager.m_mouseClients.value(owner);
+                    callback(event, point, id);
+                }
+            });
         }
     }
     if (suppress)
@@ -178,7 +189,13 @@ LRESULT CALLBACK SplitViewerNativeMouseHelper::mouseHook(int code,WPARAM message
 void SplitViewerNativeMouseHelper::watchNativeMouse(QObject* owner,const std::function<void(int,const QPoint&,WId)>& callback)
 {
 #ifdef Q_OS_WIN
+    if (owner == nullptr || !callback)
+    {
+        return;
+    }
     SplitViewerNativeMouseManager::instance().m_mouseClients.insert(owner,callback);
+    SplitViewerNativeMouseManager::instance().m_clientGenerations.insert(owner,
+        ++SplitViewerNativeMouseManager::instance().m_clientGeneration);
     if (!SplitViewerNativeMouseManager::instance().m_mouseHook)
     {
         SplitViewerNativeMouseManager::instance().m_mouseHook=SetWindowsHookExW(WH_MOUSE_LL,SplitViewerNativeMouseHelper::mouseHook,GetModuleHandleW(nullptr),0);
@@ -192,6 +209,7 @@ void SplitViewerNativeMouseHelper::unwatchNativeMouse(QObject* owner)
 {
 #ifdef Q_OS_WIN
     SplitViewerNativeMouseManager::instance().m_mouseClients.remove(owner);
+    SplitViewerNativeMouseManager::instance().m_clientGenerations.remove(owner);
     if (SplitViewerNativeMouseManager::instance().m_mouseClients.isEmpty() && SplitViewerNativeMouseManager::instance().m_mouseHook)
     {
         UnhookWindowsHookEx(SplitViewerNativeMouseManager::instance().m_mouseHook);

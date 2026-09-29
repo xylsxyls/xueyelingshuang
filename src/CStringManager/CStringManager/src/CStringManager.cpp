@@ -1,10 +1,14 @@
 ﻿#include "CStringManager.h"
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <cstdlib>
 #include <cwctype>
 #include <new>
 #include <sstream>
+#include <cmath>
+#include <locale>
+#include <limits>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -17,6 +21,152 @@
 #if (_MSC_VER == 1900)
 #include <iterator>
 #endif
+
+int32_t CStringManager::parseInt32(const std::wstring& text, int32_t defaultValue)
+{
+    std::wistringstream stream(text);
+    stream.imbue(std::locale::classic());
+    int64_t value = 0;
+    if (!(stream >> value) || value < (std::numeric_limits<int32_t>::min)() ||
+        value > (std::numeric_limits<int32_t>::max)())
+    {
+        return defaultValue;
+    }
+    stream >> std::ws;
+    return stream.eof() ? static_cast<int32_t>(value) : defaultValue;
+}
+
+double CStringManager::parseFiniteDouble(const std::wstring& text, double defaultValue)
+{
+    std::wistringstream stream(text);
+    stream.imbue(std::locale::classic());
+    double value = 0.0;
+    if (!(stream >> value) || !std::isfinite(value))
+    {
+        return defaultValue;
+    }
+    stream >> std::ws;
+    return stream.eof() ? value : defaultValue;
+}
+
+std::wstring CStringManager::formatFixedDouble(double value, int32_t precision)
+{
+    if (!std::isfinite(value) || precision < 0 || precision > 17)
+    {
+        return std::wstring();
+    }
+    std::wostringstream stream;
+    stream.imbue(std::locale::classic());
+    stream.setf(std::ios::fixed);
+    stream.precision(precision);
+    stream << value;
+    return stream.str();
+}
+
+bool CStringManager::utf16LeToWide(const std::vector<uint8_t>& bytes, std::wstring& text)
+{
+    if ((bytes.size() & 1) != 0 ||
+        (bytes.size() >= 2 && bytes[0] == 0xfe && bytes[1] == 0xff))
+    {
+        return false;
+    }
+    const size_t offset = bytes.size() >= 2 && bytes[0] == 0xff && bytes[1] == 0xfe ? 2 : 0;
+    std::wstring result;
+    result.reserve((bytes.size() - offset) / 2);
+    for (size_t index = offset; index < bytes.size(); index += 2)
+    {
+        const uint32_t unit = bytes[index] | (static_cast<uint32_t>(bytes[index + 1]) << 8);
+        if (unit >= 0xdc00 && unit <= 0xdfff)
+        {
+            return false;
+        }
+        if (unit >= 0xd800 && unit <= 0xdbff)
+        {
+            if (bytes.size() - index < 4)
+            {
+                return false;
+            }
+            const uint32_t low = bytes[index + 2] | (static_cast<uint32_t>(bytes[index + 3]) << 8);
+            if (low < 0xdc00 || low > 0xdfff)
+            {
+                return false;
+            }
+            if (sizeof(wchar_t) == 2)
+            {
+                result.push_back(static_cast<wchar_t>(unit));
+                result.push_back(static_cast<wchar_t>(low));
+            }
+            else
+            {
+                result.push_back(static_cast<wchar_t>(0x10000 + ((unit - 0xd800) << 10) + low - 0xdc00));
+            }
+            index += 2;
+        }
+        else
+        {
+            result.push_back(static_cast<wchar_t>(unit));
+        }
+    }
+    text.swap(result);
+    return true;
+}
+
+bool CStringManager::wideToUtf16Le(const std::wstring& text, std::vector<uint8_t>& bytes, bool addBom)
+{
+    std::vector<uint8_t> result;
+    if (addBom)
+    {
+        result.push_back(0xff);
+        result.push_back(0xfe);
+    }
+    for (size_t index = 0; index < text.size(); ++index)
+    {
+        uint32_t scalar = static_cast<uint32_t>(text[index]);
+        if (sizeof(wchar_t) == 2 && scalar >= 0xd800 && scalar <= 0xdbff)
+        {
+            if (text.size() - index < 2)
+            {
+                return false;
+            }
+            const uint32_t low = static_cast<uint32_t>(text[++index]);
+            if (low < 0xdc00 || low > 0xdfff)
+            {
+                return false;
+            }
+            scalar = 0x10000 + ((scalar - 0xd800) << 10) + low - 0xdc00;
+        }
+        else if (scalar > 0x10ffff || (scalar >= 0xd800 && scalar <= 0xdfff))
+        {
+            return false;
+        }
+        if (scalar > 0xffff)
+        {
+            scalar -= 0x10000;
+            const uint32_t high = 0xd800 + (scalar >> 10);
+            result.push_back(static_cast<uint8_t>(high & 0xff));
+            result.push_back(static_cast<uint8_t>(high >> 8));
+            scalar = 0xdc00 + (scalar & 0x3ff);
+        }
+        result.push_back(static_cast<uint8_t>(scalar & 0xff));
+        result.push_back(static_cast<uint8_t>(scalar >> 8));
+    }
+    bytes.swap(result);
+    return true;
+}
+
+size_t CStringManager::CopyToBuffer(const std::string& value, char* buffer, size_t capacity)
+{
+    if (buffer != nullptr && capacity != 0)
+    {
+        const size_t length = (std::min)(capacity - 1, value.size());
+        if (length != 0)
+        {
+            std::memcpy(buffer, value.data(), length);
+        }
+        buffer[length] = '\0';
+    }
+    return value.size() + 1;
+}
 
 size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight, size_t nSelect)
 {

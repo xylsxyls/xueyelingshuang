@@ -394,4 +394,8 @@
     <ClInclude Include="PdfReaderSession.h" />
     <ClCompile Include="PdfReaderSession.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PdfReaderLogHelper.cpp" />
+    <ClInclude Include="PdfReaderLogHelper.h" />
+  </ItemGroup>
 </Project>

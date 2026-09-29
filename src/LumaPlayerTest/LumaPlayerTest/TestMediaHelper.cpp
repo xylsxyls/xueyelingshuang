@@ -110,6 +110,7 @@ QString TestMediaHelper::prepare(const QString& directory, const QString& output
     const QString& executable, const std::atomic<bool>& exit, QString* media, QString* fixture)
 {
     const TestConfig config;
+    QString selectedMedia;
     QDirIterator files(directory, config.m_videoFilters, QDir::Files | QDir::Readable | QDir::NoSymLinks,
         QDirIterator::NoIteratorFlags);
     int32_t tried = 0;
@@ -144,8 +145,8 @@ QString TestMediaHelper::prepare(const QString& directory, const QString& output
         }
         if (probe.exitStatus() == QProcess::NormalExit && probe.exitCode() == 0)
         {
-            *media = QFileInfo(candidate).absoluteFilePath();
-            LOGINFO("Selected real video path=%s candidates=%d recursive=0", media->toUtf8().constData(), tried);
+            selectedMedia = QFileInfo(candidate).absoluteFilePath();
+            LOGINFO("Selected real video path=%s candidates=%d recursive=0", selectedMedia.toUtf8().constData(), tried);
             break;
         }
         LOGWARNING("Video probe rejected path=%s", candidate.toUtf8().constData());
@@ -154,7 +155,7 @@ QString TestMediaHelper::prepare(const QString& directory, const QString& output
     {
         return config.m_mediaCanceled;
     }
-    if (media->isEmpty())
+    if (selectedMedia.isEmpty())
     {
         return config.m_noVideo;
     }
@@ -180,6 +181,7 @@ QString TestMediaHelper::prepare(const QString& directory, const QString& output
             return config.m_fixtureFailed + file.fileName();
         }
     }
+    *media = selectedMedia;
     *fixture = output + "/scene.avi";
     LOGINFO("Generated deterministic fixture bytes=%d path=%s", data.size(), fixture->toUtf8().constData());
     return QString();

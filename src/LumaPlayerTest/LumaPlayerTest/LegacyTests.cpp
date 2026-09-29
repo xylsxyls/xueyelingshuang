@@ -5,6 +5,8 @@
 #include "TestCaseRegistry.h"
 #include "LumaPlayerCore/PlayerEngineHelper.h"
 #include "LumaPlayerCore/MediaClock.h"
+#include "CSystem/CSystemAPI.h"
+#include <QString>
 
 #include <climits>
 #include <cmath>
@@ -12,12 +14,12 @@
 
 #include <atomic>
 #include <chrono>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <thread>
 #include <stdexcept>
+#include <memory>
 
 int64_t LumaPlayerTestHelper::nowMs()
 {
@@ -162,7 +164,7 @@ int32_t LumaPlayerTestReport::failedCount() const
 	return failed;
 }
 
-void LumaPlayerTestReport::writeReport(const std::string& filePath) const
+bool LumaPlayerTestReport::writeReport(const std::string& filePath) const
 {
 	std::ostringstream stream;
 	{
@@ -189,22 +191,16 @@ void LumaPlayerTestReport::writeReport(const std::string& filePath) const
 		}
 	}
 
-	std::cout << stream.str();
-#ifdef _WIN32
-    const int32_t count = MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, nullptr, 0);
-    std::vector<wchar_t> widePath(static_cast<size_t>(count > 0 ? count : 1), 0);
-    if (count > 0)
+    const std::string text = stream.str();
+    std::cout << text;
+    FILE* file = CSystem::openBinaryOutputFile(QString::fromUtf8(filePath.c_str()).toStdWString());
+    if (file == nullptr)
     {
-        MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, &widePath[0], count);
+        return false;
     }
-    std::ofstream file(&widePath[0], std::ios::out | std::ios::trunc);
-#else
-	std::ofstream file(filePath.c_str(), std::ios::out | std::ios::trunc);
-#endif
-	if (file.is_open())
-	{
-		file << stream.str();
-	}
+    const bool written = CSystem::writeBinaryOutputFile(file, text.data(), text.size());
+    const bool closed = CSystem::closeBinaryOutputFile(file);
+    return written && closed;
 }
 
 LumaPlayerTestAudioRender::LumaPlayerTestAudioRender()
@@ -477,9 +473,9 @@ static int32_t cRenderVideoCallback(const LumaPlayerCoreCVideoFrame* frame, void
 static void runCppLifecycleCase(LumaPlayerTestReport& report)
 {
 	report.beginCase("C++接口生命周期和错误路径");
-	LumaPlayerCore core;
 	LumaPlayerTestAudioRender audioRender;
 	LumaPlayerTestVideoRender videoRender;
+	LumaPlayerCore core;
 	core.setAudioRender(&audioRender);
 	core.setVideoRender(&videoRender);
 	core.setLogEnabled(true);
@@ -525,7 +521,9 @@ static void runCppRepeatedInitCase(LumaPlayerTestReport& report)
 static void runCApiLifecycleCase(LumaPlayerTestReport& report)
 {
 	report.beginCase("C接口生命周期和错误路径");
+	LumaPlayerTestCRenderState renderState;
 	LumaPlayerCoreHandle handle = lumaPlayerCoreCreate();
+    std::unique_ptr<LumaPlayerCoreCContext, decltype(&lumaPlayerCoreDestroy)> lifetime(handle, &lumaPlayerCoreDestroy);
 	report.check(handle != nullptr, "C接口create返回非空句柄");
 	if (handle == nullptr)
 	{
@@ -533,7 +531,6 @@ static void runCApiLifecycleCase(LumaPlayerTestReport& report)
 		return;
 	}
 
-	LumaPlayerTestCRenderState renderState;
 	LumaPlayerCoreCRenderCallbacks callbacks;
 	callbacks.m_openAudio = cOpenAudioCallback;
 	callbacks.m_closeAudio = cCloseAudioCallback;
@@ -566,10 +563,25 @@ static void runCApiLifecycleCase(LumaPlayerTestReport& report)
 	report.check(snapshot.m_ratePermille == 100, "C接口倍速下限裁剪正确");
 	result = lumaPlayerCoreOpenMedia(handle, "");
 	report.check(result != LumaPlayerCoreCResultSuccess, "C接口空路径打开失败且不崩溃");
+    const std::string expected = kLumaPlayerCoreResultDescriptions.at(static_cast<LumaPlayerCoreResult>(result));
+    const size_t required = expected.size() + 1;
+    char one[] = {'x', 'z'};
+    char zero[] = {'x'};
+    char truncated[3] = {'x', 'x', 'z'};
+    std::vector<char> full(required + 1, 'z');
+    report.check(lumaPlayerCoreGetLastError(handle, nullptr, 0) == required &&
+        lumaPlayerCoreGetLastError(handle, zero, 0) == required && zero[0] == 'x', "查询错误长度不写零容量缓冲");
+    report.check(lumaPlayerCoreGetLastError(handle, one, 1) == required && one[0] == '\0' && one[1] == 'z',
+        "单字节缓冲只写终止符");
+    report.check(lumaPlayerCoreGetLastError(handle, truncated, 2) == required && truncated[0] == expected[0] &&
+        truncated[1] == '\0' && truncated[2] == 'z', "截断不越界且保留终止符");
+    report.check(lumaPlayerCoreGetLastError(handle, &full[0], required) == required &&
+        std::string(&full[0]) == expected && full[required] == 'z', "完整错误文本与独立错误映射一致");
+    report.check(lumaPlayerCoreGetLastError(nullptr, one, 1) == 0 && one[0] == '\0', "空句柄清空有效输出");
 	report.check(lumaPlayerCoreOpenMedia(handle, nullptr) == LumaPlayerCoreCResultInvalidParam, "C接口空路径指针返回InvalidParam");
 	report.check(lumaPlayerCoreMoveLoopPoint(handle, 2, 1) == LumaPlayerCoreCResultInvalidParam, "C接口拒绝无效循环点类型");
 	lumaPlayerCoreUninit(handle);
-	lumaPlayerCoreDestroy(handle);
+	lifetime.reset();
 	report.endCase();
 }
 
@@ -584,7 +596,9 @@ static void runCApiMediaCase(LumaPlayerTestReport& report, const std::string& me
 		return;
 	}
 
+	LumaPlayerTestCRenderState renderState;
 	LumaPlayerCoreHandle handle = lumaPlayerCoreCreate();
+    std::unique_ptr<LumaPlayerCoreCContext, decltype(&lumaPlayerCoreDestroy)> lifetime(handle, &lumaPlayerCoreDestroy);
 	report.check(handle != nullptr, "C接口为真实媒体创建Core句柄");
 	if (handle == nullptr)
 	{
@@ -592,7 +606,6 @@ static void runCApiMediaCase(LumaPlayerTestReport& report, const std::string& me
 		return;
 	}
 
-	LumaPlayerTestCRenderState renderState;
 	LumaPlayerCoreCRenderCallbacks callbacks = {};
 	callbacks.m_openAudio = cOpenAudioCallback;
 	callbacks.m_closeAudio = cCloseAudioCallback;
@@ -613,7 +626,7 @@ static void runCApiMediaCase(LumaPlayerTestReport& report, const std::string& me
 	report.check(result == LumaPlayerCoreCResultSuccess, "C接口真实媒体Core初始化成功");
 	if (result != LumaPlayerCoreCResultSuccess)
 	{
-		lumaPlayerCoreDestroy(handle);
+		lifetime.reset();
 		report.endCase();
 		return;
 	}
@@ -644,7 +657,7 @@ static void runCApiMediaCase(LumaPlayerTestReport& report, const std::string& me
 		char errorBuffer[1024] = { 0 };
 		lumaPlayerCoreGetLastError(handle, errorBuffer, sizeof(errorBuffer));
 		report.info(std::string("C API lastError=") + errorBuffer);
-		lumaPlayerCoreDestroy(handle);
+		lifetime.reset();
 		report.endCase();
 		return;
 	}
@@ -741,7 +754,7 @@ static void runCApiMediaCase(LumaPlayerTestReport& report, const std::string& me
 	report.check(requiredErrorSize >= 1 && errorBuffer[sizeof(errorBuffer) - 1] == '\0', "C接口错误缓冲区契约有效");
 	lumaPlayerCoreCloseMedia(handle);
 	lumaPlayerCoreUninit(handle);
-	lumaPlayerCoreDestroy(handle);
+	lifetime.reset();
 	report.endCase();
 }
 
@@ -755,9 +768,9 @@ static void runMediaCase(LumaPlayerTestReport& report, const std::string& mediaP
 		return;
 	}
 
-	LumaPlayerCore core;
 	LumaPlayerTestAudioRender audioRender;
 	LumaPlayerTestVideoRender videoRender;
+	LumaPlayerCore core;
 	core.setAudioRender(&audioRender);
 	core.setVideoRender(&videoRender);
 	core.setLogEnabled(true);
@@ -954,6 +967,7 @@ static void RunConfigurationCase(LumaPlayerTestReport& report, const std::string
     report.check(lumaPlayerCoreDefaultConfig(&cOptions) == LumaPlayerCoreCResultSuccess, "C调用方获得默认配置");
     report.check(lumaPlayerCoreDefaultConfig(nullptr) == LumaPlayerCoreCResultInvalidParam, "C默认配置接口检查空指针");
     LumaPlayerCoreHandle handle = lumaPlayerCoreCreate();
+    std::unique_ptr<LumaPlayerCoreCContext, decltype(&lumaPlayerCoreDestroy)> lifetime(handle, &lumaPlayerCoreDestroy);
     report.check(handle != nullptr, "创建C句柄");
     report.check(lumaPlayerCoreInitWithConfig(handle, nullptr) == LumaPlayerCoreCResultInvalidParam, "C初始化接口检查空配置");
     cOptions.m_controlCommandTimeoutMs = 0;
@@ -963,7 +977,7 @@ static void RunConfigurationCase(LumaPlayerTestReport& report, const std::string
     lumaPlayerCoreUninit(handle);
     LumaPlayerCoreConfig defaults;
     report.check(cOptions.m_defaultFrameDuration100ns == defaults.m_defaultFrameDuration100ns &&
-        cOptions.m_defaultRatePermille == 1000 && cOptions.m_minRatePermille == 100 && cOptions.m_maxRatePermille == 3000,
+        cOptions.m_defaultRatePermille == 1000 && cOptions.m_minRatePermille == 100 && cOptions.m_maxRatePermille == 5000,
         "C与C++新增配置默认值一致，1000表示1倍速");
     options = defaults;
     options.m_defaultFrameDuration100ns = 0;
@@ -975,7 +989,7 @@ static void RunConfigurationCase(LumaPlayerTestReport& report, const std::string
     options.m_minRatePermille = 2000;
     options.m_maxRatePermille = 1000;
     report.check(core.init(options) == LumaPlayerCoreResultInvalidParam, "拒绝倒置倍率范围");
-    cOptions.m_defaultRatePermille = 4000;
+    cOptions.m_defaultRatePermille = 6000;
     report.check(lumaPlayerCoreInitWithConfig(handle, &cOptions) == LumaPlayerCoreCResultInvalidParam, "C接口拒绝范围外默认倍率");
     options = defaults;
     options.m_defaultFrameDuration100ns = 700000;
@@ -1021,7 +1035,36 @@ static void RunConfigurationCase(LumaPlayerTestReport& report, const std::string
     {
         report.check(it->second == lumaPlayerCoreResultDescription(static_cast<int32_t>(it->first)), "C和C++错误中文描述一致");
     }
-    lumaPlayerCoreDestroy(handle);
+    lifetime.reset();
+    if (!path.empty())
+    {
+        LumaPlayerTestVideoRender video;
+        LumaPlayerCore extreme;
+        LumaPlayerCoreConfig bounds;
+        bounds.m_maxRatePermille = INT_MAX;
+        bounds.m_audioLead100ns = INT64_MAX;
+        extreme.setVideoRender(&video);
+        const bool opened = extreme.init(bounds) == LumaPlayerCoreResultSuccess &&
+            extreme.openMedia(path) == LumaPlayerCoreResultSuccess;
+        report.check(opened && extreme.mediaInfo().m_hasAudio, "打开带音频的极值配置素材");
+        if (opened && extreme.mediaInfo().m_hasAudio)
+        {
+            const LumaPlayerSnapshot before = extreme.snapshot();
+            report.check(extreme.setPlaybackRatePermille(INT_MAX) == LumaPlayerCoreResultAudioRenderFailed &&
+                extreme.snapshot().m_ratePermille == before.m_ratePermille &&
+                extreme.snapshot().m_state == before.m_state, "音频拒绝倍率后不改变原时钟倍率和暂停状态");
+            const int32_t frames = video.stats().m_frameCount;
+            report.check(extreme.setPlaybackRatePermille(5000) == LumaPlayerCoreResultSuccess &&
+                extreme.play() == LumaPlayerCoreResultSuccess, "超大预写时长仍可正常起播");
+            const int64_t deadline = LumaPlayerTestHelper::nowMs() + 1000;
+            while (video.stats().m_frameCount == frames && LumaPlayerTestHelper::nowMs() < deadline)
+            {
+                LumaPlayerTestHelper::sleepMs(5);
+            }
+            report.check(video.stats().m_frameCount > frames, "极值配置未阻止真实视频帧输出");
+        }
+        extreme.uninit();
+    }
     report.endCase();
 }
 
@@ -1040,11 +1083,11 @@ static void RunLoopStartCase(LumaPlayerTestReport& report, const std::string& pa
         report.endCase();
         return;
     }
-    LumaPlayerCore core;
     LumaPlayerCoreConfig config;
     config.m_loopBufferMaxBytes = budget;
     LumaPlayerTestAudioRender audio;
     LumaPlayerTestVideoRender video;
+    LumaPlayerCore core;
     core.setAudioRender(&audio);
     core.setVideoRender(&video);
     report.check(core.init(config) == LumaPlayerCoreResultSuccess, "初始化缓存测试");
@@ -1168,9 +1211,9 @@ static void RunDragPreviewCase(LumaPlayerTestReport& report, const std::string& 
 		report.endCase();
 		return;
 	}
-	LumaPlayerCore core;
 	LumaPlayerTestAudioRender audio;
 	LumaPlayerTestVideoRender video;
+	LumaPlayerCore core;
 	core.setAudioRender(&audio);
 	core.setVideoRender(&video);
 	report.check(core.init() == LumaPlayerCoreResultSuccess, "初始化预览测试");
@@ -1365,6 +1408,11 @@ bool LumaPlayerTestReentryRender::renderVideo(const LumaPlayerVideoFrame& frame)
 	return LumaPlayerTestVideoRender::renderVideo(frame);
 }
 
+void LumaPlayerTestReentryRender::setCore(LumaPlayerCore* core)
+{
+    m_core = core;
+}
+
 int32_t LumaPlayerTestReentryRender::result() const
 {
 	return m_result.load();
@@ -1505,8 +1553,9 @@ bool LumaPlayerTestThrowingVideoRender::openVideo(const LumaPlayerVideoFormat& f
 static void RunReentryAndPreviewEndCase(LumaPlayerTestReport& report, const std::string& mediaPath)
 {
 	report.beginCase("ReentryAndPreviewEnd");
-	LumaPlayerCore core;
-	LumaPlayerTestReentryRender video(&core);
+    LumaPlayerTestReentryRender video(nullptr);
+    LumaPlayerCore core;
+    video.setCore(&core);
 	core.setVideoRender(&video);
 	report.check(core.init() == LumaPlayerCoreResultSuccess, "初始化重入测试");
 	report.check(core.setLoopAAtPosition(0) == LumaPlayerCoreResultNotOpen, "未打开媒体不能设置AB");
@@ -1623,6 +1672,6 @@ int RunLegacyTest(int32_t caseId, const std::string& mediaPath, bool sceneFixtur
         return 2;
     }
     }
-    report.writeReport(reportPath);
-    return report.failedCount() == 0 ? 0 : 1;
+    const bool written = report.writeReport(reportPath);
+    return written && report.failedCount() == 0 ? 0 : 1;
 }

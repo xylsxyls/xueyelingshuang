@@ -29,7 +29,8 @@ bool SplitViewerCoreNode::isLeaf() const
 
 void SplitViewerCoreNode::makeSplit(SplitViewerCoreSplitDirection splitDirection)
 {
-    if (!isLeaf())
+    if (!isLeaf() || (splitDirection != SPLITVIEWER_CORE_SPLIT_HORIZONTAL &&
+        splitDirection != SPLITVIEWER_CORE_SPLIT_VERTICAL))
     {
         return;
     }

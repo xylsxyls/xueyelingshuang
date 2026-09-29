@@ -3,10 +3,12 @@
 #include "QtControls/FileDialog.h"
 #include "QtControls/Label.h"
 #include <QtCore/QFileInfo>
+#include <QtCore/QPointer>
 #include <QtWidgets/QVBoxLayout>
 
 SplitViewerFileDialogView::SplitViewerFileDialogView() :
-m_files(nullptr)
+m_files(nullptr),
+m_accepting(false)
 {
 
 }
@@ -61,6 +63,10 @@ QWidget* SplitViewerFileDialogView::defaultFocusWidget() const
 
 void SplitViewerFileDialogView::acceptSelection()
 {
+    if (m_accepting || m_files == nullptr)
+    {
+        return;
+    }
     const QStringList selected = m_files->selectedFiles();
     if (selected.isEmpty())
     {
@@ -68,11 +74,18 @@ void SplitViewerFileDialogView::acceptSelection()
     }
     if (m_param.save && QFileInfo::exists(selected.first()))
     {
+        m_accepting = true;
+        const QPointer<SplitViewerFileDialogView> owner(this);
         AskDialogParam confirm;
         confirm.m_title = g_config.m_overwriteTitle;
         confirm.m_tip = g_config.m_overwritePrompt + selected.first();
         confirm.m_parent = window()->windowHandle();
         DialogManager::instance().makeDialog(confirm);
+        if (!owner)
+        {
+            return;
+        }
+        m_accepting = false;
         if (confirm.m_result != ACCEPT_BUTTON)
         {
             // QFileDialog已发出accepted，取消覆盖时仍需重新显示内容以便改名或取消。

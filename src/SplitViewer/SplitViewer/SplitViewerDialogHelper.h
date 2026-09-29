@@ -1,12 +1,19 @@
 ﻿#pragma once
 #include <QtCore/QString>
+#include "DialogManager/DialogManagerAPI.h"
 
 class QWidget;
 
-/** 无状态的产品弹窗适配，显示和销毁统一委托DialogManager */
+/** 业务弹窗交由DialogManager；系统原生文件选择框按约定直接调用Qt接口 */
 class SplitViewerDialogHelper
 {
 public:
+    /** 将公共弹窗日志交给当前宿主LogManager；产品和Test共用适配
+    @param [in] level 弹窗日志级别
+    @param [in] message 完整消息，可空
+    */
+    static void forwardLog(DialogLogLevel level, const char* message);
+
     /** 显示同步文件选择窗口
     @param [in] parent 借用的父窗口，调用期间有效
     @param [in] save 是否选择保存路径

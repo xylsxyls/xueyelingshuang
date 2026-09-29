@@ -1,7 +1,8 @@
 ﻿#include "SplitViewerProfileStore.h"
 #include "Config.h"
+#include "CSystem/CSystemAPI.h"
 #include <QtCore/QSaveFile>
-#include <QtCore/QFile>
+#include <limits>
 #include "LogManager/LogManagerAPI.h"
 
 bool SplitViewerProfileStore::write(const QString& path, const SplitViewerCoreDocument& document, const QByteArray& thumbnail)
@@ -30,19 +31,18 @@ bool SplitViewerProfileStore::write(const QString& path, const SplitViewerCoreDo
 bool SplitViewerProfileStore::read(const QString& path, SplitViewerCoreDocument& document, QString& error)
 {
     error.clear();
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly))
-    {
-        error = g_config.m_readProfileError+path;
-        return false;
-    }
-    if (file.size()>g_config.m_profileMaximumBytes)
+    if (g_config.m_profileMaximumBytes <= 0 ||
+        static_cast<quint64>(g_config.m_profileMaximumBytes) > (std::numeric_limits<size_t>::max)())
     {
         error = g_config.m_profileTooLargeError;
         return false;
     }
-    const QByteArray data = file.readAll();
-    std::vector<uint8_t> bytes(reinterpret_cast<const uint8_t*>(data.constData()), reinterpret_cast<const uint8_t*>(data.constData()) + data.size());
+    std::vector<uint8_t> bytes;
+    if (!CSystem::readBinaryFile(path.toStdWString(), static_cast<size_t>(g_config.m_profileMaximumBytes), bytes))
+    {
+        error = g_config.m_readProfileError + path;
+        return false;
+    }
     std::vector<uint8_t> config;
     if (!SplitViewerCoreExtractEmbeddedConfig(bytes, config) || !SplitViewerCoreDeserializeProfile(config, document))
     {

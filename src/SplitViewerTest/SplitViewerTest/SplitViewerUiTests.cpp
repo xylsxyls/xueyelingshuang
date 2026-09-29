@@ -1,11 +1,15 @@
 ﻿#include "SplitViewerUiTests.h"
+#include "../../SplitViewer/SplitViewer/SplitViewerDialogHelper.h"
 #include "../../SplitViewer/SplitViewer/SplitViewer.h"
 #include "SplitViewerDialogTests.h"
 #include "SplitViewerShadowTests.h"
 #include "SplitViewerConfigTests.h"
+#include "SplitViewerHarnessTests.h"
 #include "../../SplitViewer/SplitViewer/SplitViewerDialogSession.h"
 #include "DialogManager/DialogManagerAPI.h"
 #include "LogManager/LogManagerAPI.h"
+#include "CSystem/CSystemAPI.h"
+#include "QtControls/Widget.h"
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QTextStream>
@@ -34,33 +38,6 @@
 #include <cmath>
 #include <memory>
 #ifdef Q_OS_WIN
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
-/** 将DialogManager日志交给SplitViewerTest的LogManager
-@param [in] level DialogManager日志级别
-@param [in] message 完整日志消息
-*/
-static void ForwardDialogLog(DialogLogLevel level, const char* message)
-{
-    if (message == nullptr)
-    {
-        return;
-    }
-    switch (level)
-    {
-    case DIALOG_LOG_ERROR:
-        LOGERROR("%s", message);
-        break;
-    case DIALOG_LOG_WARNING:
-        LOGWARNING("%s", message);
-        break;
-    default:
-        LOGINFO("%s", message);
-        break;
-    }
-}
 #include <windows.h>
 #endif
 
@@ -117,6 +94,12 @@ QString SplitViewerTestWindow::browseFile(bool save, const QString& title, const
     ++browseCount;
     const QString result=nextFile;
     nextFile.clear();
+    const std::function<void()> action = duringBrowse;
+    duringBrowse = std::function<void()>();
+    if (action)
+    {
+        action();
+    }
     return result;
 }
 
@@ -262,19 +245,6 @@ static bool WriteVideoFixture(const QString& path)
     stream.device()->seek(4); stream << quint32(bytes.size() - 8);
     QFile file(path);
     return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size();
-}
-
-/** Find the visible top-level window belonging exclusively to our child process */
-static BOOL CALLBACK FindPlayerWindow(HWND hwnd, LPARAM parameter)
-{
-    QPair<DWORD, HWND>* found = reinterpret_cast<QPair<DWORD, HWND>*>(parameter);
-    DWORD process = 0;
-    GetWindowThreadProcessId(hwnd, &process);
-    if (process == found->first && IsWindowVisible(hwnd))
-    {
-        found->second = hwnd;
-    }
-    return TRUE;
 }
 
 /** Capture actual desktop pixels in a pane, rather than an offscreen widget render */
@@ -475,10 +445,10 @@ int SplitViewerRunUiTests(const QString& reportDirectory, int selectedCase)
     fixtureClass.hbrBackground=reinterpret_cast<HBRUSH>(COLOR_WINDOW+1);
     RegisterClassW(&fixtureClass);
 #endif
-    if (selectedCase!=0 && (selectedCase<101 || selectedCase>193)) return 2;
+    if (selectedCase!=0 && (selectedCase<101 || selectedCase>202)) return 2;
     LogManager::instance().set(true, false);
     LogManager::instance().init();
-    DialogManager::setLogCallback(ForwardDialogLog);
+    DialogManager::setLogCallback(SplitViewerDialogHelper::forwardLog);
     std::unique_ptr<SplitViewerDialogSession> dialogs(new SplitViewerDialogSession());
     QDir().mkpath(reportDirectory);
     QFile report(reportDirectory+QStringLiteral("/ui-results.txt"));
@@ -843,13 +813,16 @@ int SplitViewerRunUiTests(const QString& reportDirectory, int selectedCase)
             player.setStandardErrorFile(reportDirectory + QStringLiteral("/player-qpa.log"));
         }
         player.setWorkingDirectory(QFileInfo(playerPath).absolutePath());
-        player.start(playerPath, QStringList() << videoPath);
+        if (fixtureReady)
+        {
+            player.start(playerPath, QStringList() << videoPath);
+        }
         const bool started = fixtureReady && player.waitForStarted(5000);
         QPair<DWORD, HWND> found(started ? player.pid()->dwProcessId : 0, nullptr);
         for (int i = 0; started && !found.second && i < 50; ++i)
         {
             QTest::qWait(100);
-            EnumWindows(FindPlayerWindow, reinterpret_cast<LPARAM>(&found));
+            found.second = CSystem::findVisibleWindowByProcessId(found.first);
         }
         const HWND hwnd = found.second;
         out << "player=" << playerPath << " pid=" << found.first << " fixture=" << videoPath << "\n";
@@ -988,7 +961,7 @@ int SplitViewerRunUiTests(const QString& reportDirectory, int selectedCase)
         check("append owned layer is idempotent and reset releases once", document.layerCount() == 1 &&
             document.layerAt(0)->root->view.path == L"layer-marker");
         document.reset();
-        QWidget foreign;
+        Widget foreign;
         foreign.setGeometry(20,20,160,100);
         foreign.show();
         const WId foreignId = foreign.winId();
@@ -1100,14 +1073,53 @@ int SplitViewerRunUiTests(const QString& reportDirectory, int selectedCase)
             plusFilter == window.lastFilter && plusFilter.contains(QStringLiteral("*.tif")) &&
             plusFilter.contains(QStringLiteral("*.tiff")) && window.errors.isEmpty());
     }
-    for (int id = 191; id <= 193; ++id)
+    for (int id = 191; id <= 201; ++id)
     {
-        if (selectedCase == 0 || selectedCase == id)
+        if (id != 200 && (selectedCase == 0 || selectedCase == id))
         {
             nextId = id - 1;
             check(SplitViewerAuditCaseNames().at(id - 101).mid(4).toUtf8().constData(),
                 SplitViewerConfigTests::runCase(id, reportDirectory));
         }
+    }
+    if (selectedCase == 0 || selectedCase == 200)
+    {
+        nextId = 199;
+        SplitViewerTestWindow window;
+        window.canvasFileDropped(bluePath);
+        window.newLayer();
+        QWidget* canvas = window.centralWidget();
+        canvas->setFocus();
+        bool deleted = false;
+        window.nextFile = redPath;
+        window.duringBrowse = [&window, &deleted]() { deleted = window.deleteSelectedLayer(); };
+        const QRectF stage = ExpectedStage(canvas);
+        // 独立预期：新层从0.22开始、宽高0.46，加号位于舞台的0.45处。
+        const QPoint plusPoint = QPointF(stage.left() + stage.width() * .45,
+            stage.top() + stage.height() * .45).toPoint();
+        QTest::mouseClick(canvas, Qt::LeftButton, Qt::NoModifier, plusPoint);
+        const QString saved = QDir(reportDirectory).filePath(QStringLiteral("stale-file-result.sv"));
+        window.nextFile = saved;
+        window.saveProfile();
+        SplitViewerCoreDocument state;
+        check(QStringLiteral("文件框返回时目标已删除则忽略旧结果").toUtf8().constData(),
+            deleted && window.browseCount == 2 && window.errors.isEmpty() && ReadDocument(saved, state) && state.layerCount() == 0 &&
+            state.baseRoot()->view.hasImage && state.baseRoot()->view.path == bluePath.toStdWString());
+    }
+    if (selectedCase == 0 || selectedCase == 202)
+    {
+        nextId = 201;
+        check(QStringLiteral("Test主界面异步批次与关闭收尾").toUtf8().constData(),
+            SplitViewerHarnessTests::run(reportDirectory));
+    }
+    bool complete = total > 0 && (selectedCase == 0 || total == 1);
+#ifdef Q_OS_WIN
+    complete = complete && (selectedCase != 0 || total == SplitViewerAuditCaseNames().size());
+#endif
+    if (!complete)
+    {
+        ++failures;
+        out << "ERROR missing expected cases\n";
     }
     out << "total=" << total << " failures=" << failures << "\n";
     dialogs.reset();
@@ -1212,5 +1224,14 @@ QStringList SplitViewerAuditCaseNames()
         << QStringLiteral("191 阴影2与4切换保持主体几何")
         << QStringLiteral("192 异常配置拒绝并保留原文档")
         << QStringLiteral("193 Core非有限比例和非叶删除防护")
+        << QStringLiteral("194 严格数值解析与坏配置事务性")
+        << QStringLiteral("195 UTF16代理对及失败保留输出")
+        << QStringLiteral("196 几何溢出与非法分屏方向")
+        << QStringLiteral("197 图片缓存共享引用与回收")
+        << QStringLiteral("198 中文路径二进制限长读取")
+        << QStringLiteral("199 PNG配置原位封装与长度边界")
+        << QStringLiteral("200 文件框返回时删除目标图层")
+        << QStringLiteral("201 配置保存树深度与图层上限")
+        << QStringLiteral("202 Test主界面异步批次与关闭收尾")
         ;
 }

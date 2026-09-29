@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "PdfReaderDialogParam.h"
 
-/** 同步 UI 弹窗入口；只组织参数，所有显示和生命周期由 DialogManager 处理
+/** 同步UI入口；业务弹窗由DialogManager管理，系统原生文件选择器为明确例外
 */
 class PdfReaderDialogHelper
 {
@@ -33,13 +33,13 @@ public:
     */
     static bool input(QWidget* parent, const QString& title, const QString& text, QString& value, bool password = false, bool titleClose = false);
 
-    /** 选择文件或目录；保存到已有文件时由管理器再次确认。
+    /** 选择文件或目录；保存时先规范后缀，再由管理器确认最终路径是否覆盖一次。
     @param [in] parent 父窗口。
     @param [in] mode OpenFile、SaveFile 或 Directory。
     @param [in] title 标题。
     @param [in] initial 默认路径。
     @param [in] filter 文件过滤器。
-    @return 确认后的路径，取消或创建失败返回空。
+    @return 确认后的路径；取消、创建失败或父窗口已销毁返回空。
     */
     static QString file(QWidget* parent, PdfReaderDialogMode mode, const QString& title,
         const QString& initial, const QString& filter);

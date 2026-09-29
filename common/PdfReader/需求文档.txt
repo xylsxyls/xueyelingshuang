@@ -1,7 +1,13 @@
 需求文档
-版本：1.3
-更新日期：2026-09-29（缩略图拖拽修复）
-状态：2026-09-29缩略图拖拽修复已编译、测试并发布到common/PdfReader及common/PdfReaderTest。发布组合与发布后全30项分别通过，退出码0；用户已查看并反馈“看着没啥问题”，随后明确结束工作流；本轮过程文件按规则清理，正式成果保留。
+版本：1.4
+更新日期：2026-09-29（界面与基础库复用整改已发布，工作流已结束）
+状态：本轮Windows x64 Release已编译并发布至common/PdfReader和common/PdfReaderTest；发布前及发布后33项回归均通过、退出码0，产品空启动/中文PDF打开及正常关闭均通过。用户随后明确“结束工作流”；本轮人工验收未单独记录，自动验证结果不替代人工验收。
+历史状态：2026-09-29缩略图拖拽修复已编译、测试并发布到common/PdfReader及common/PdfReaderTest。发布组合与发布后全30项分别通过，退出码0；用户已查看并反馈“看着没啥问题”，随后明确结束工作流；本轮过程文件按规则清理，正式成果保留。
+
+本轮补充约束
+1. 覆盖PdfReader、Core、Test维护源码；QtControls已有可用控件和继承能力优先复用，业务弹窗统一DialogManager，系统原生路径选择器按用户明确例外保留。
+2. 通用字符串复制、路径拼接和扩展名处理归CStringManager/CSystem；Core不引入Qt，Qt继续通过唯一API头的C分支对接。
+3. 保持默认界面和500毫秒拖动行为，修正失败操作、输出参数、回调销毁及资源所有权边界。起始阶段只做源码和静态自查；用户后续明确授权继续到发布，已执行配套构建、回归和增量发布。
 
 一、产品范围
 
@@ -47,7 +53,7 @@ PdfReaderTest 是 Qt 测试工程，包含核心 Core 的可判定测试和必�
 
 四、构建和交付约束
 
-默认 Release 使用 64 位和动态库。PdfReaderCore 的 version 脚本是编译 Core 本体，沿用现有本体构建入口；PdfReader 和 PdfReaderTest 的 version 脚本只准备依赖，需按依赖链使用 only 与 same，避免重复编译同一个库。Windows x64 Release 是本轮必测组合；Linux、macOS、Android、iOS 在工具和环境可用时验证，环境不可用时记录未验证。
+默认 Release 使用 64 位和动态库。PdfReaderCore 的 version 脚本是编译 Core 本体，沿用现有本体构建入口；PdfReader 和 PdfReaderTest 的 version 脚本只准备依赖，需按依赖链使用 only 与 same，避免重复编译同一个库。进入构建测试阶段后，Windows x64 Release是优先验证组合；Linux、macOS、Android、iOS 在工具和环境可用时验证，环境不可用时记录未验证。
 
 五、验收依据
 
@@ -78,7 +84,7 @@ PdfReaderTest 是 Qt 测试工程，包含核心 Core 的可判定测试和必�
 6. Core 使用有默认值的 PdfReaderCoreConfig，并提供等价纯 C 配置结构。init 时校验复制，运行期间不可重配置，uninit 后可重新传值；多实例互不影响。按窗口编排、缩略图交互、绘制、桥接、图标、文件名，以及 Core 会话、导出、配置和 C 上下文拆分，不为无共享状态的功能强行建立全局 instance。
 
 旧 Windows 内容缩略图扩展已卸载，发布目录不再提供其 DLL、注册脚本或注册备份。固定图标使用 PdfReader EXE 内嵌图标，通过当前用户的 PDF 文件类型图标关联提供，不改变默认打开程序。
-图形界面控件使用 QtControls；缺少的封装在 QtControls 内按原有 ControlShow 等模板和 QSS 方式补充。提示、密码、范围输入、覆盖确认及文件选择交给 DialogManager 管理。布局、事件、定时器、图像等非控件类不额外封装。保持左侧单列居中、拖动唯一选择及点击定位正文的既有行为。
+图形界面控件使用 QtControls；缺少的封装在 QtControls 内按原有 ControlShow 等模板和 QSS 方式补充。提示、密码、范围输入、覆盖确认及其他业务弹窗交给DialogManager管理；用户明确允许系统原生打开/保存/文件夹选择器直接调用，非原生文件浏览弹窗仍归管理器。布局、事件、定时器、图像等非控件类不额外封装。保持左侧单列居中、拖动唯一选择及点击定位正文的既有行为。
 
 ## 七、2026-09-24 界面与弹窗优化需求
 

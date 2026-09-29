@@ -31,6 +31,8 @@
 #include <string.h>
 #endif
 #include <fstream>
+#include <memory>
+#include <utility>
 #include <queue>
 #include <iostream>
 #include <iterator>
@@ -398,6 +400,30 @@ HWND CSystem::GetHwndByProcessId(uint32_t dwProcessId)
 	info.dwPid = dwProcessId;
 	EnumWindows(EnumWindowsProc, (LPARAM)&info);
 	return info.hWnd;
+}
+
+BOOL CALLBACK CSystem::findVisibleWindowCallback(HWND window, LPARAM context)
+{
+    std::pair<uint32_t, HWND>* query = reinterpret_cast<std::pair<uint32_t, HWND>*>(context);
+    DWORD processId = 0;
+    GetWindowThreadProcessId(window, &processId);
+    if (processId == query->first && IsWindowVisible(window))
+    {
+        query->second = window;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+HWND CSystem::findVisibleWindowByProcessId(uint32_t processId)
+{
+    if (processId == 0)
+    {
+        return nullptr;
+    }
+    std::pair<uint32_t, HWND> query(processId, nullptr);
+    EnumWindows(findVisibleWindowCallback, reinterpret_cast<LPARAM>(&query));
+    return query.second;
 }
 
 std::string CSystem::GetRegOcxPath(const std::string& classid)
@@ -1486,6 +1512,39 @@ std::string CSystem::GetSystemTempPath()
 #endif
 }
 
+std::string CSystem::joinPath(const std::string& directory, const std::string& name)
+{
+    if (directory.empty())
+    {
+        return name;
+    }
+    if (name.empty())
+    {
+        return directory;
+    }
+    const char last = directory[directory.size() - 1];
+    return directory + (last == '/' || last == '\\' ? "" : "/") + name;
+}
+
+std::string CSystem::ensureFileExtension(const std::string& path, const std::string& extension)
+{
+    if (path.empty() || extension.empty())
+    {
+        return path;
+    }
+    bool matches = path.size() >= extension.size();
+    const size_t offset = matches ? path.size() - extension.size() : 0;
+    for (size_t index = 0; matches && index < extension.size(); ++index)
+    {
+        const char left = path[offset + index];
+        const char right = extension[index];
+        const char foldedLeft = left >= 'A' && left <= 'Z' ? static_cast<char>(left + ('a' - 'A')) : left;
+        const char foldedRight = right >= 'A' && right <= 'Z' ? static_cast<char>(right + ('a' - 'A')) : right;
+        matches = foldedLeft == foldedRight;
+    }
+    return (matches ? path.substr(0, offset) : path) + extension;
+}
+
 std::string CSystem::GetName(const std::string& path, int32_t flag)
 {
 	int32_t left = (int32_t)path.find_last_of("/\\");
@@ -1540,7 +1599,7 @@ FILE* CSystem::openBinaryOutputFile(const std::wstring& path, std::string* error
 		return nullptr;
 	}
 	return file;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	std::string utf8Path = WidePathToUtf8(path);
 	if (utf8Path.empty())
 	{
@@ -1559,6 +1618,52 @@ FILE* CSystem::openBinaryOutputFile(const std::wstring& path, std::string* error
 	SetSystemError(errorText, "unsupported platform");
 	return nullptr;
 #endif
+}
+
+bool CSystem::readBinaryFile(const std::wstring& path, size_t maximumBytes, std::vector<uint8_t>& data)
+{
+    if (path.empty() || path.find(L'\0') != std::wstring::npos)
+    {
+        return false;
+    }
+#ifdef _WIN32
+    FILE* opened = _wfopen(path.c_str(), L"rb");
+#elif defined(__unix__) || defined(__APPLE__)
+    const std::string utf8Path = WidePathToUtf8(path);
+    FILE* opened = utf8Path.empty() ? nullptr : fopen(utf8Path.c_str(), "rb");
+#else
+    FILE* opened = nullptr;
+#endif
+    std::unique_ptr<FILE, int (*)(FILE*)> file(opened, &fclose);
+    if (!file)
+    {
+        return false;
+    }
+    std::vector<uint8_t> result;
+    uint8_t buffer[16384];
+    for (;;)
+    {
+        const size_t read = fread(buffer, 1, sizeof(buffer), file.get());
+        if (read > maximumBytes - result.size())
+        {
+            return false;
+        }
+        result.insert(result.end(), buffer, buffer + read);
+        if (read < sizeof(buffer))
+        {
+            if (ferror(file.get()) || !feof(file.get()))
+            {
+                return false;
+            }
+            break;
+        }
+    }
+    if (fclose(file.release()) != 0)
+    {
+        return false;
+    }
+    data.swap(result);
+    return true;
 }
 
 bool CSystem::writeBinaryOutputFile(FILE* file, const void* data, size_t size)

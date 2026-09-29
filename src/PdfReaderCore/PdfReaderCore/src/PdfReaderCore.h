@@ -174,7 +174,7 @@ public:
 
     /** 逐页输出，覆盖须显式允许
     @param [in] outputDirectory 输出目录
-    @param [in] namePrefix 分页输出文件名前缀
+    @param [in] namePrefix 分页输出文件名前缀，不能包含路径分隔符、冒号或NUL；空值使用page
     @param [out] errorText 可空的本次错误详情输出
     @param [in] overwrite 是否已明确允许覆盖
     @return 操作成功返回true；失败返回false
@@ -184,16 +184,6 @@ public:
         std::string* errorText = nullptr, bool overwrite = false);
 
 private:
-    /** 打开并登记一份由Core拥有的源文档
-    @param [in] filePath 源PDF路径
-    @param [in] password 密码；空字符串表示未提供
-    @param [out] errorText 可空的本次错误详情输出
-    @return 当前状态或结果值；返回对象的所有权保持不变
-    */
-    PdfDocument* openDocument(const std::wstring& filePath,
-        const std::string& password,
-        std::string* errorText);
-
     /** 检查页码是否属于当前工作文档
     @param [in] pageIndex 从0开始的页码
     @param [out] errorText 可空的本次错误详情输出

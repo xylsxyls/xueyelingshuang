@@ -64,8 +64,9 @@ public:
 	/**
 	* 输出报告到控制台和文件。
 	* @param [in] filePath 报告文件路径。
+	* @return 打开、完整写入及关闭全部成功才返回true。
 	*/
-	void writeReport(const std::string& filePath) const;
+	bool writeReport(const std::string& filePath) const;
 
 private:
 	/** 保护测试用例和日志消息，Core日志可能从后台线程写入报告。 */
@@ -237,6 +238,11 @@ public:
 	@param [in] core 待测Core，必须活到回调结束
 	*/
 	LumaPlayerTestReentryRender(LumaPlayerCore* core);
+
+    /** 初始化前绑定Core，绑定后至uninit完成不得更改
+    @param [in] core 必须先于渲染器析构的Core
+    */
+    void setCore(LumaPlayerCore* core);
 
 	/** 回调中尝试同步暂停并记录结果
 	@param [in] frame 借用的视频帧

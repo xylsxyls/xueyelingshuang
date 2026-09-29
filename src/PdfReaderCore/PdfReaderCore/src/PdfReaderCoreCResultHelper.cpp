@@ -11,7 +11,8 @@ int32_t PdfReaderCoreCResultHelper::classifyError(int32_t fallback, const std::s
     }
     if (lower.find("no pdf document") != std::string::npos)
         return PdfReaderCoreCResultNotOpen;
-    if (lower.find("page index") == 0 || lower.find("insert index") == 0 || lower.find("invalid ") == 0)
+    if (lower.find("page index") == 0 || lower.find("destination page index") == 0 ||
+        lower.find("insert index") == 0 || lower.find("invalid ") == 0)
         return PdfReaderCoreCResultInvalidParam;
     if (fallback == PdfReaderCoreCResultOpenFailed && lower.find("password") != std::string::npos)
         return PdfReaderCoreCResultPasswordRequired;

@@ -2,6 +2,7 @@
 #include "SplitViewerCoreConfig.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 double SplitViewerCoreGeometryHelper::clampDouble(double value, double low, double high)
 {
@@ -85,11 +86,14 @@ void SplitViewerCoreGeometryHelper::constrainLayerRect(SplitViewerCoreRect& rect
 
 double SplitViewerCoreGeometryHelper::fitScale(double imageWidth, double imageHeight, double contentWidth, double contentHeight)
 {
-    if (imageWidth <= 0.0 || imageHeight <= 0.0 || contentWidth <= 0.0 || contentHeight <= 0.0)
+    if (!std::isfinite(imageWidth) || !std::isfinite(imageHeight) ||
+        !std::isfinite(contentWidth) || !std::isfinite(contentHeight) ||
+        imageWidth <= 0.0 || imageHeight <= 0.0 || contentWidth <= 0.0 || contentHeight <= 0.0)
     {
         return 1.0;
     }
-    return (std::min)(contentWidth / imageWidth, contentHeight / imageHeight);
+    const double result = (std::min)(contentWidth / imageWidth, contentHeight / imageHeight);
+    return std::isfinite(result) && result > 0.0 ? result : 1.0;
 }
 
 void SplitViewerCoreGeometryHelper::zoom(SplitViewerCoreLeafState& view, double fitScale, int delta, bool fine)
@@ -98,7 +102,7 @@ void SplitViewerCoreGeometryHelper::zoom(SplitViewerCoreLeafState& view, double 
     {
         return;
     }
-    if (view.autoFit)
+    if (view.autoFit || !std::isfinite(view.scale) || view.scale <= 0.0)
     {
         view.scale=fitScale;
     }
@@ -109,22 +113,29 @@ void SplitViewerCoreGeometryHelper::zoom(SplitViewerCoreLeafState& view, double 
         steps=delta>0 ? 1 : -1;
     }
     const double minimum=(std::max)(SplitViewerCoreConfig::kMinimumScale,fitScale*SplitViewerCoreConfig::kMinimumFitScale);
-    const double maximum=(std::max)(minimum*SplitViewerCoreConfig::kMinimumZoomRange,fitScale*SplitViewerCoreConfig::kMaximumFitScale);
+    const double maximum = (std::min)((std::numeric_limits<double>::max)(),
+        (std::max)(minimum * SplitViewerCoreConfig::kMinimumZoomRange, fitScale * SplitViewerCoreConfig::kMaximumFitScale));
     view.scale=clampDouble(view.scale*std::pow(fine ? SplitViewerCoreConfig::kFineZoomStep : SplitViewerCoreConfig::kZoomStep,steps),minimum,maximum);
 }
 
 void SplitViewerCoreGeometryHelper::resizeView(SplitViewerCoreLeafState& view, double oldWidth, double oldHeight, double newWidth, double newHeight)
 {
-    if (!view.hasImage || oldWidth<=0 || oldHeight<=0 || newWidth<=0 || newHeight<=0)
+    if (!view.hasImage || !std::isfinite(oldWidth) || !std::isfinite(oldHeight) ||
+        !std::isfinite(newWidth) || !std::isfinite(newHeight) ||
+        oldWidth <= 0 || oldHeight <= 0 || newWidth <= 0 || newHeight <= 0)
     {
         return;
     }
     const double sx=newWidth/oldWidth;
     const double sy=newHeight/oldHeight;
-    view.offsetX*=sx;
-    view.offsetY*=sy;
-    if (!view.autoFit)
+    const double offsetX = view.offsetX * sx;
+    const double offsetY = view.offsetY * sy;
+    const double scale = view.autoFit ? view.scale : view.scale * (sx * 0.5 + sy * 0.5);
+    if (!std::isfinite(offsetX) || !std::isfinite(offsetY) || !std::isfinite(scale) || scale <= 0.0)
     {
-        view.scale*=(sx+sy)*0.5;
+        return;
     }
+    view.offsetX = offsetX;
+    view.offsetY = offsetY;
+    view.scale = scale;
 }

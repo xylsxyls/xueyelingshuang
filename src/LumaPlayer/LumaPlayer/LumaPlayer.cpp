@@ -17,7 +17,7 @@
 #include <QDesktopWidget>
 #include <QFileDialog>
 #include <QKeyEvent>
-#include <QMenu>
+#include "QtControls/Menu.h"
 #include <QFontMetrics>
 #include <QIcon>
 #include <QMouseEvent>
@@ -32,7 +32,7 @@
 #include <stdint.h>
 
 LumaPlayer::LumaPlayer(bool debugEnabled, QWidget* parent) :
-QWidget(parent),
+Widget(parent),
 m_volumePercent(100),
 m_appliedVolumePercent(100),
 m_restoreVolumePercent(100),
@@ -182,7 +182,7 @@ void LumaPlayer::resizeEvent(QResizeEvent* event)
     viewport.m_type = LumaActionViewport;
     viewport.m_viewportGeneration = ++m_viewportGeneration;
     m_logic.submit(viewport);
-	QWidget::resizeEvent(event);
+	Widget::resizeEvent(event);
 	updateLoopMarkerHover(m_lastMousePos);
 }
 
@@ -667,7 +667,7 @@ void LumaPlayer::keyPressEvent(QKeyEvent* event)
 		event->accept();
 		return;
 	}
-	QWidget::keyPressEvent(event);
+	Widget::keyPressEvent(event);
 }
 
 void LumaPlayer::keyReleaseEvent(QKeyEvent* event)
@@ -687,33 +687,16 @@ void LumaPlayer::keyReleaseEvent(QKeyEvent* event)
         event->accept();
         return;
     }
-    QWidget::keyReleaseEvent(event);
+    Widget::keyReleaseEvent(event);
 }
 
 void LumaPlayer::focusOutEvent(QFocusEvent* event)
 {
     hideVolumePopup();
     m_dismissVolumeClick = false;
-    m_leftPressed = false;
     QToolTip::hideText();
-    postAction(LumaActionCancelMove);
-    m_pendingLoopMovePoint = -1;
-    m_loopMoveKey = 0;
-    m_loopMoveRepeating = false;
-    m_clickTimer.stop();
-    m_dragWindow = false;
-    m_dragVideo = false;
-    m_resizeWindow = false;
-    m_resizeEdge = ResizeNone;
-	if (m_isDraggingProgress || m_progressPressPending)
-	{
-		commitSeekByProgressPoint(m_lastMousePos, false);
-		m_isDraggingProgress = false;
-		m_progressPressPending = false;
-		m_progressWasPlaying = false;
-	}
-    m_pressArea = HitNone;
-    QWidget::focusOutEvent(event);
+    cancelDeferredInput();
+    Widget::focusOutEvent(event);
 }
 
 void LumaPlayer::enterEvent(QEvent* event)
@@ -804,13 +787,8 @@ void LumaPlayer::loadMedia(const QString& filePath)
     {
         return;
     }
-    m_clickTimer.stop();
     hideVolumePopup();
-    m_loopMoveKey = 0;
-    m_loopMoveRepeating = false;
-    m_pendingLoopMovePoint = -1;
-    m_isDraggingProgress = false;
-    m_dragVideo = false;
+    cancelDeferredInput(false);
     m_hasDragPosition = false;
     LumaPlayerLogicAction action;
     action.m_type = LumaActionLoad;
@@ -1042,10 +1020,16 @@ void LumaPlayer::showProgressMenu(const QPoint& point)
         // 利用用户选择菜单的时间后台解析真实边界，不移动画面或预画AB竖线。
         postCore(LumaPlayerCoreCOperationPrepareLoopPoint, position);
     }
-	QMenu menu(this);
+	Menu menu(this);
 	menu.setFont(font());
 	menu.setWindowFlags(menu.windowFlags() | Qt::WindowStaysOnTopHint);
-    menu.setStyleSheet(g_config.menuStyleSheet());
+    menu.setBackgroundColor(g_config.m_menuBackgroundColor);
+    menu.setTextColor(QColor(g_config.m_textColor.name()));
+    menu.setBorderWidth(g_config.m_menuBorderWidth);
+    menu.setBorderColor(g_config.m_menuBorderColor);
+    menu.setItemPadding(g_config.m_menuPaddingLeft, g_config.m_menuPaddingVertical,
+        g_config.m_menuPaddingRight, g_config.m_menuPaddingVertical);
+    menu.setItemBackgroundColor(Qt::transparent, g_config.m_menuSelectionColor, Qt::transparent);
     QAction* setAAction = menu.addAction(g_config.m_setAText);
     QAction* setBAction = menu.addAction(g_config.m_setBText);
     QAction* clearAction = menu.addAction(g_config.m_clearABText);
@@ -1613,7 +1597,7 @@ bool LumaPlayer::eventFilter(QObject* watched, QEvent* event)
         {
             hideVolumePopup();
         }
-        return QWidget::eventFilter(watched, event);
+        return Widget::eventFilter(watched, event);
     }
     if (event->type() == QEvent::WindowDeactivate || event->type() == QEvent::Hide)
     {
@@ -1630,12 +1614,25 @@ bool LumaPlayer::eventFilter(QObject* watched, QEvent* event)
         event->accept();
         return true;
     }
-    return QWidget::eventFilter(watched, event);
+    return Widget::eventFilter(watched, event);
 }
 
-void LumaPlayer::cancelDeferredInput()
+void LumaPlayer::cancelDeferredInput(bool finishProgress)
 {
     m_clickTimer.stop();
+    if (m_isDraggingProgress && finishProgress)
+    {
+        commitSeekByProgressPoint(m_lastMousePos, false);
+    }
+    else if (m_isDraggingProgress || m_progressPressPending)
+    {
+        m_hasDragPosition = false;
+    }
+    m_isDraggingProgress = false;
+    m_progressPressPending = false;
+    m_progressWasPlaying = false;
+    m_lastPreviewRequestMs = 0;
+    m_lastPreviewRequestPosition100ns = -1;
     if (m_loopMoveKey != 0 || m_pendingLoopMovePoint >= 0)
     {
         postAction(LumaActionCancelMove);
@@ -1648,6 +1645,7 @@ void LumaPlayer::cancelDeferredInput()
     m_dragVideo = false;
     m_dragWindow = false;
     m_resizeWindow = false;
+    m_resizeEdge = ResizeNone;
     m_pressArea = HitNone;
     m_leftPressed = false;
     m_cancelClickToggle = true;

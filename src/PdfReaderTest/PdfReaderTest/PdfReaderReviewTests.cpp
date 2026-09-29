@@ -17,6 +17,9 @@
 #include <QEventLoop>
 #include <limits>
 #include <stdexcept>
+#include <cstring>
+#include "CStringManager/CStringManagerAPI.h"
+#include "CSystem/CSystemAPI.h"
 #ifdef Q_OS_WIN
 #include <Windows.h>
 #endif
@@ -25,7 +28,15 @@ void PdfReaderReviewTests::run(int32_t id, const QString& input, const QString& 
 {
     PdfReaderTestConfigGuard guard;
     g_config.m_useNativeFileDialog = false;
-    if (id == 21)
+    if (id == 33 || id == 34)
+    {
+        libraryBoundaries(id, input, directory);
+    }
+    else if (id == 35)
+    {
+        callbackDestruction(input);
+    }
+    else if (id == 21)
     {
         configuration(directory);
     }
@@ -37,6 +48,79 @@ void PdfReaderReviewTests::run(int32_t id, const QString& input, const QString& 
     {
         asynchronous(id, input, directory);
     }
+}
+
+void PdfReaderReviewTests::libraryBoundaries(int32_t id, const QString& input, const QString& directory)
+{
+    std::shared_ptr<PdfReaderCoreCContext> core = PdfReaderTestHelper::core(input);
+    if (id == 33)
+    {
+        char output[6] = {'x', 'x', 'x', 'x', 'x', 'x'};
+        PdfReaderTestHelper::require(CStringManager::CopyToBuffer("abc", nullptr, 0) == 4, "query includes NUL");
+        PdfReaderTestHelper::require(CStringManager::CopyToBuffer("abc", output, 0) == 4 && output[0] == 'x', "zero capacity writes nothing");
+        PdfReaderTestHelper::require(CStringManager::CopyToBuffer("abc", output, 1) == 4 && output[0] == 0 && output[1] == 'x', "NUL-only capacity preserves sentinel");
+        PdfReaderTestHelper::require(CStringManager::CopyToBuffer("abc", output, 3) == 4 && std::strcmp(output, "ab") == 0 && output[3] == 'x', "truncated text terminated without overrun");
+        PdfReaderTestHelper::require(CStringManager::CopyToBuffer("abc", output, 4) == 4 && std::strcmp(output, "abc") == 0 && output[4] == 'x', "exact capacity includes full text");
+        PdfReaderTestHelper::require(CStringManager::CopyToBuffer("", output, 1) == 1 && output[0] == 0, "empty string writes only NUL");
+        const QByteArray path = input.toUtf8();
+        PdfReaderTestHelper::require(pdfReaderCoreGetFilePath(core.get(), nullptr, 0) == static_cast<size_t>(path.size() + 1), "C API UTF8 path byte count");
+        output[2] = 'x';
+        PdfReaderTestHelper::require(pdfReaderCoreGetFilePath(core.get(), output, 2) == static_cast<size_t>(path.size() + 1) &&
+            output[0] == path[0] && output[1] == 0 && output[2] == 'x', "C API path uses bounded protocol");
+        PdfReaderTestHelper::require(CSystem::joinPath("a", "b.pdf") == "a/b.pdf" &&
+            CSystem::joinPath("a/", "b.pdf") == "a/b.pdf" && CSystem::joinPath("a\\", "b.pdf") == "a\\b.pdf" &&
+            CSystem::joinPath("", "b.pdf") == "b.pdf", "path joins retain delimiters and relative names");
+        PdfReaderTestHelper::require(CSystem::ensureFileExtension("", ".pdf").empty() &&
+            CSystem::ensureFileExtension("a.PdF", ".pdf") == "a.pdf" &&
+            CSystem::ensureFileExtension("a.txt", ".pdf") == "a.txt.pdf" &&
+            CSystem::ensureFileExtension("folder.pdf/a", ".pdf") == "folder.pdf/a.pdf", "extension normalization independent cases");
+        int32_t width = 99, height = 99, stride = 99;
+        size_t bytes = 99;
+        unsigned char pixels[4] = {1, 2, 3, 4};
+        PdfReaderTestHelper::require(pdfReaderCoreRenderPage(core.get(), 0, -1, 2, pixels, sizeof(pixels),
+            &width, &height, &stride, &bytes) == PdfReaderCoreCResultInvalidParam && width == 0 && height == 0 && stride == 0 && bytes == 0 &&
+            pixels[0] == 1 && pixels[3] == 4, "invalid render clears metadata without touching pixels");
+        return;
+    }
+    PdfReaderTestHelper::require(pdfReaderCoreMovePage(core.get(), 0, 3) == PdfReaderCoreCResultInvalidParam, "destination out of range is invalid parameter");
+    PdfReaderTestHelper::widths(core.get(), QList<int>() << 200 << 300 << 400);
+    PdfReaderTestHelper::require(pdfReaderCoreInsertDocument(core.get(), (directory + "/missing.pdf").toUtf8().constData(), "", 1) != 0, "missing insertion fails");
+    PdfReaderTestHelper::widths(core.get(), QList<int>() << 200 << 300 << 400);
+    const QStringList before = QDir(directory).entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
+    const QByteArray original = PdfReaderTestHelper::bytes(input);
+    const char* prefixes[] = {"../escape", "child\\escape", "C:escape"};
+    for (size_t index = 0; index < sizeof(prefixes) / sizeof(prefixes[0]); ++index)
+    {
+        PdfReaderTestHelper::require(pdfReaderCoreSaveEachPageEx(core.get(), directory.toUtf8().constData(), prefixes[index], 1) ==
+            PdfReaderCoreCResultInvalidParam, "export prefix must stay a file name");
+    }
+    PdfReaderTestHelper::require(QDir(directory).entryList(QDir::AllEntries | QDir::NoDotAndDotDot) == before &&
+        PdfReaderTestHelper::bytes(input) == original, "rejected exports change no case files");
+    PdfReaderTestHelper::require(pdfReaderCoreInsertDocument(core.get(), input.toUtf8().constData(), "", 1) == 0 &&
+        pdfReaderCoreMovePage(core.get(), 0, 5) == 0, "editing remains usable after failures");
+    PdfReaderTestHelper::widths(core.get(), QList<int>() << 200 << 300 << 400 << 300 << 400 << 200);
+}
+
+void PdfReaderReviewTests::callbackDestruction(const QString& input)
+{
+    QObject connectionScope;
+    std::unique_ptr<PdfReader> owner(new PdfReader);
+    const QPointer<PdfReader> window(owner.get());
+    int completed = 0;
+    bool succeeded = false;
+    QObject::connect(owner.get(), &PdfReader::operationFinished, &connectionScope, [&](quint64, bool success) {
+        ++completed;
+        succeeded = success;
+        owner.reset();
+    });
+    owner->show();
+    PdfReaderTestHelper::require(owner->openFile(input), "callback destruction request accepted");
+    PdfReaderTestUiHelper::waitUntil([&]() { return window.isNull(); }, "window deleted inside actual completion");
+    PdfReaderTestHelper::require(completed == 1 && succeeded, "one successful completion before deletion");
+    PdfReaderTestWorkerGate fence;
+    PdfReaderTestUiHelper::waitUntil([&]() { return fence.m_entered->load(); }, "destroyed session cleanup reaches worker fence");
+    PdfReaderTestHelper::require(!fence.m_timedOut->load(), "cleanup fence did not fail");
+    fence.release();
 }
 
 void PdfReaderReviewTests::configuration(const QString& directory)

@@ -68,7 +68,7 @@ SET(Qt5_DIR "${QT5_GCC}/lib/cmake/Qt5")
 INCLUDE_DIRECTORIES("${QT5_GCC}/include/")
 
 #添加Qt依赖库
-SET(QTRELY Widgets;Core;Gui;Qml;Quick)
+SET(QTRELY Widgets;Core;Gui;Multimedia;Qml;Quick)
 
 list(APPEND QTRELYLIST ${QTRELY})
 foreach (EVERYQTRELY ${QTRELYLIST})
@@ -101,3 +101,18 @@ list(APPEND LIBRARYLIST ${LIBRARIESRELY})
 foreach (EVERYLIBRARY ${LIBRARYLIST})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/${EVERYLIBRARY})
 endforeach ()
+
+# Match the VS test target: exercise real player code, excluding its entry point.
+GET_FILENAME_COMPONENT(LUMAPLAYER_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../LumaPlayer/LumaPlayer" ABSOLUTE)
+FILE(GLOB LUMAPLAYER_TEST_SOURCES "${LUMAPLAYER_SOURCE_DIR}/*.cpp")
+LIST(REMOVE_ITEM LUMAPLAYER_TEST_SOURCES "${LUMAPLAYER_SOURCE_DIR}/main.cpp")
+TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE "${LUMAPLAYER_SOURCE_DIR}")
+TARGET_SOURCES(${PROJECT_NAME} PRIVATE ${LUMAPLAYER_TEST_SOURCES}
+    "${LUMAPLAYER_SOURCE_DIR}/LumaPlayer.h"
+    "${LUMAPLAYER_SOURCE_DIR}/LumaPlayerLogicController.h"
+    "${LUMAPLAYER_SOURCE_DIR}/LumaPlayer.qrc"
+    "${PROJECT_SOURCE_DIR}/../../LumaPlayerCore/LumaPlayerCore/src/MediaClock.cpp"
+    "${PROJECT_SOURCE_DIR}/../../LumaPlayerCore/LumaPlayerCore/src/PlayerEngineHelper.cpp")
+TARGET_COMPILE_OPTIONS(${PROJECT_NAME} PRIVATE
+    "$<$<COMPILE_LANGUAGE:CXX>:-include>"
+    "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/TestGuiAccess.h>")

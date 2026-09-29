@@ -7,6 +7,7 @@
 #include "LumaPlayerCoreCContext.h"
 #include "LumaPlayerCoreCVideoRenderAdapter.h"
 #include "LumaPlayerCoreCAudioRenderAdapter.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 #include <mutex>
 #include <new>
@@ -417,21 +418,7 @@ size_t lumaPlayerCoreGetLastError(LumaPlayerCoreHandle handle, char* buffer, siz
 	try
 	{
 		std::string errorText = instance->m_core->lastError();
-		size_t requiredSize = errorText.size() + 1;
-		if (buffer != nullptr && bufferSize > 0)
-		{
-			size_t copySize = errorText.size();
-			if (copySize >= bufferSize)
-			{
-				copySize = bufferSize - 1;
-			}
-			if (copySize > 0)
-			{
-				memcpy(buffer, errorText.data(), copySize);
-			}
-			buffer[copySize] = '\0';
-		}
-		return requiredSize;
+        return CStringManager::CopyToBuffer(errorText, buffer, bufferSize);
 	}
 	catch (...)
 	{

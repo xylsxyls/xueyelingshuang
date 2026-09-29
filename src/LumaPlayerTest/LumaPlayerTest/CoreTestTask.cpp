@@ -6,6 +6,8 @@
 #include "TestConfig.h"
 #include "TestCaseRegistry.h"
 #include "TestCommandTask.h"
+#include "TestMediaHelper.h"
+#include <QTemporaryDir>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QFile>
@@ -219,6 +221,41 @@ void CoreTestTask::DoTask()
             const int32_t result = RunLegacyTest(CaseFrameAndRate, m_fixture.toUtf8().constData(), true,
                 (m_directory + "/pitch.txt").toUtf8().constData());
             report.check(id, result == 0, kTestCases.at(static_cast<TestCaseId>(id)).m_description + QStringLiteral("；频率断言详见pitch.txt"));
+        }
+        else if (id == CaseTestIoBoundary)
+        {
+            QTemporaryDir temporary(m_directory + "/io-XXXXXX");
+            report.check(id, temporary.isValid(), QStringLiteral("创建本批独占临时目录"));
+            if (temporary.isValid())
+            {
+                QString media = "previous.mp4";
+                QString fixture = "previous.avi";
+                std::atomic<bool> canceled(false);
+                const TestConfig config;
+                const QString error = TestMediaHelper::prepare(temporary.path(), temporary.path() + "/fixtures",
+                    QCoreApplication::applicationFilePath(), canceled, &media, &fixture);
+                report.check(id, error == config.m_noVideo && media == "previous.mp4" && fixture == "previous.avi",
+                    QStringLiteral("空目录返回未找到视频，不能把上次路径当本次结果"));
+                canceled.store(true);
+                report.check(id, TestMediaHelper::prepare(temporary.path(), temporary.path() + "/fixtures",
+                    QCoreApplication::applicationFilePath(), canceled, &media, &fixture) == config.m_mediaCanceled &&
+                    media == "previous.mp4" && fixture == "previous.avi", QStringLiteral("取消不发布半成品输出"));
+                LumaPlayerTestReport legacy;
+                legacy.beginCase("report-boundary");
+                legacy.check(true, "report-sentinel");
+                legacy.endCase();
+                report.check(id, !legacy.writeReport((temporary.path() + "/absent/report.txt").toUtf8().constData()),
+                    QStringLiteral("报告父目录不存在时返回失败"));
+                const QString path = temporary.path() + QStringLiteral("/中文 报告.txt");
+                const bool written = legacy.writeReport(path.toUtf8().constData());
+                QFile file(path);
+                report.check(id, written && file.open(QIODevice::ReadOnly) && file.readAll().contains("report-sentinel"),
+                    QStringLiteral("中文路径完整写入后读回实际报告"));
+                file.close();
+                TestResults failedOutput(path);
+                failedOutput.check(id, true, "expected-report-write-failure");
+                report.check(id, failedOutput.failures() == 1, QStringLiteral("JSON落盘失败增加失败数，不伪报通过"));
+            }
         }
         else if (id >= 1 && id <= 12)
         {
@@ -540,8 +577,8 @@ void CoreTestTask::DoTask()
                     {
                         for (int32_t iteration = 0; iteration < 5 && !m_exit.load(); ++iteration)
                         {
-                            LumaPlayerCore instance;
                             LumaPlayerTestVideoRender output;
+                            LumaPlayerCore instance;
                             instance.setVideoRender(&output);
                             instance.init();
                             if (action == 0)
@@ -585,10 +622,10 @@ void CoreTestTask::DoTask()
                 }
                 if (id == CaseMultiCore)
                 {
-                    LumaPlayerCore first;
-                    LumaPlayerCore second;
                     LumaPlayerTestVideoRender firstVideo;
                     LumaPlayerTestVideoRender secondVideo;
+                    LumaPlayerCore first;
+                    LumaPlayerCore second;
                     first.setVideoRender(&firstVideo);
                     second.setVideoRender(&secondVideo);
                     first.init();

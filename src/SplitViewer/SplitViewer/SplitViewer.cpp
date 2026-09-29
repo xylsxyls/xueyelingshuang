@@ -20,6 +20,7 @@
 
 #include <QtCore/QBuffer>
 #include <QtCore/QScopedValueRollback>
+#include <QtCore/QPointer>
 #include <QtCore/QByteArray>
 #include <QtCore/QFileInfo>
 #include <QtCore/QTimer>
@@ -47,6 +48,8 @@ m_canvas(nullptr),
 m_toolbar(nullptr),
 m_saveProfileAction(nullptr),
 m_statusLabel(nullptr),
+m_documentRevision(0),
+m_closing(false),
 m_exporting(false),
 m_contentFullscreen(false),
 m_wasMaximized(false),
@@ -222,9 +225,11 @@ void SplitViewer::canvasMousePress(const QPoint& point, Qt::MouseButton button, 
     if (!(modifiers & Qt::ControlModifier) && !hit.splitter && hit.node && hit.node->isLeaf() && !hit.node->view.hasContent() &&
         plusButtonRect(hit.rect).contains(point))
     {
+        const QPointer<SplitViewer> owner(this);
+        const quint64 revision = m_documentRevision;
         const QString path = browseFile(false, g_config.m_selectImageText, QString(),
             g_config.m_imageFilter);
-        if (!path.isEmpty())
+        if (owner && !m_closing && revision == m_documentRevision && !path.isEmpty())
         {
             loadImageToLeaf(hit.node, path);
         }
@@ -445,7 +450,15 @@ void SplitViewer::canvasContextMenu(const QPoint& point, const QPoint& globalPoi
         return;
     }
     setSelectedHit(hit);
+    const QPointer<SplitViewer> owner(this);
+    const quint64 revision = m_documentRevision;
     Menu menu(this);
+    // 栈菜单不能在宿主的QObject析构中被删除；先解除父所有权并退出exec。
+    connect(this, &QObject::destroyed, &menu, [&menu]()
+    {
+        menu.setParent(nullptr);
+        menu.close();
+    });
     QAction* horizontal = menu.addAction(g_config.m_horizontalSplitText);
     QAction* vertical = menu.addAction(g_config.m_verticalSplitText);
     QAction* deleteLayerAction = menu.addAction(g_config.m_deleteLayerText);
@@ -458,6 +471,10 @@ void SplitViewer::canvasContextMenu(const QPoint& point, const QPoint& globalPoi
     QAction* detach = menu.addAction(g_config.m_detachWindowText);
     detach->setEnabled(m_embedded.contains(hit.node));
     QAction* chosen = menu.exec(globalPoint);
+    if (!owner || m_closing || revision != m_documentRevision)
+    {
+        return;
+    }
     if (chosen == embed)
     {
         embedExternalWindow();
@@ -487,7 +504,7 @@ void SplitViewer::canvasContextMenu(const QPoint& point, const QPoint& globalPoi
     else if (chosen == load && hit.node)
     {
         const QString path = browseFile(false, g_config.m_selectImageText, QString(), g_config.m_imageFilter);
-        if (!path.isEmpty())
+        if (owner && !m_closing && revision == m_documentRevision && !path.isEmpty())
         {
             loadImageToLeaf(hit.node, path);
         }
@@ -532,6 +549,7 @@ void SplitViewer::deleteAt(const SplitViewerHit& hit)
         m_embedded.insert(parent,m_embedded.take(sibling));
     }
     m_document.deleteLeaf(hit.root,hit.node);
+    SplitViewerImageHelper::pruneUnusedImages(m_document, m_imageCache);
     clearInteraction();
     updateStatus();
     m_canvas->update();
@@ -567,6 +585,7 @@ bool SplitViewer::deleteLayerAt(int index)
     {
         return false;
     }
+    SplitViewerImageHelper::pruneUnusedImages(m_document, m_imageCache);
     clearInteraction();
     updateStatus();
     m_canvas->update();
@@ -610,6 +629,7 @@ void SplitViewer::loadImageToLeaf(SplitViewerCoreNode* leaf, const QString& path
     leaf->view.scale = 1.0;
     leaf->view.offsetX = 0.0;
     leaf->view.offsetY = 0.0;
+    SplitViewerImageHelper::pruneUnusedImages(m_document, m_imageCache);
     m_canvas->update();
     updateStatus();
 }
@@ -691,11 +711,14 @@ bool SplitViewer::readProfile(const QString& path)
             SplitViewerImageHelper::setImageStatus(layer->root, m_imageCache);
         }
     }
-    if (m_document.windowRight() > m_document.windowLeft() && m_document.windowBottom() > m_document.windowTop())
+    SplitViewerImageHelper::pruneUnusedImages(m_document, m_imageCache);
+    const qint64 restoredWidth = static_cast<qint64>(m_document.windowRight()) - m_document.windowLeft();
+    const qint64 restoredHeight = static_cast<qint64>(m_document.windowBottom()) - m_document.windowTop();
+    if (restoredWidth > 0 && restoredHeight > 0 &&
+        restoredWidth <= QWIDGETSIZE_MAX && restoredHeight <= QWIDGETSIZE_MAX)
     {
         setGeometry(m_document.windowLeft(), m_document.windowTop(),
-            m_document.windowRight() - m_document.windowLeft(),
-            m_document.windowBottom() - m_document.windowTop());
+            static_cast<int>(restoredWidth), static_cast<int>(restoredHeight));
     }
     m_profilePath = path;
     LOGINFO("Load profile success; layers=%d",m_document.layerCount());
@@ -706,8 +729,10 @@ bool SplitViewer::readProfile(const QString& path)
 
 void SplitViewer::openProfile()
 {
+    const QPointer<SplitViewer> owner(this);
+    const quint64 revision = m_documentRevision;
     const QString path = browseFile(false, g_config.m_openProfileText, QString(), g_config.m_openProfileFilter);
-    if (!path.isEmpty())
+    if (owner && !m_closing && revision == m_documentRevision && !path.isEmpty())
     {
         canvasFileDropped(path);
     }
@@ -720,12 +745,14 @@ void SplitViewer::saveProfile()
         openProfile();
         return;
     }
+    const QPointer<SplitViewer> owner(this);
+    const quint64 revision = m_documentRevision;
     QString path = m_profilePath;
     if (path.isEmpty())
     {
         path = browseFile(true, g_config.m_saveProfileText, g_config.m_defaultProfileName, g_config.m_saveProfileFilter);
     }
-    if (!path.isEmpty())
+    if (owner && !m_closing && revision == m_documentRevision && !path.isEmpty())
     {
         if (!path.endsWith(g_config.m_profileExtension, Qt::CaseInsensitive))
         {
@@ -740,9 +767,11 @@ void SplitViewer::saveProfile()
 
 void SplitViewer::saveImage()
 {
+    const QPointer<SplitViewer> owner(this);
+    const quint64 revision = m_documentRevision;
     QString path=browseFile(true,g_config.m_saveImageText,g_config.m_defaultImageName,
         g_config.m_exportImageFilter);
-    if (path.isEmpty())
+    if (!owner || m_closing || revision != m_documentRevision || path.isEmpty())
     {
         return;
     }
@@ -752,7 +781,8 @@ void SplitViewer::saveImage()
     }
     const QRect screen=QApplication::desktop()->screenGeometry(this);
     QSize target(screen.width(),screen.height());
-    QSize aspectSize(g_config.m_exportAspectWidth,static_cast<int>(g_config.m_exportAspectWidth/m_document.stageAspect()));
+    QSize aspectSize(g_config.m_exportAspectWidth,
+        (std::max)(1, static_cast<int>(g_config.m_exportAspectWidth / m_document.stageAspect())));
     aspectSize.scale(target,Qt::KeepAspectRatio);
     const QImage image=renderStage(aspectSize,true);
     QImageWriter writer(path);
@@ -830,9 +860,11 @@ void SplitViewer::showAbout()
 
 void SplitViewer::embedExternalWindow()
 {
+    const QPointer<SplitViewer> owner(this);
+    const quint64 revision = m_documentRevision;
     bool ok = false;
     const QString text = SplitViewerDialogHelper::inputText(this, g_config.m_embedWindowText, g_config.m_windowHandlePrompt, ok);
-    if (!ok || text.trimmed().isEmpty())
+    if (!owner || m_closing || revision != m_documentRevision || !ok || text.trimmed().isEmpty())
     {
         return;
     }
@@ -910,6 +942,7 @@ void SplitViewer::updateStatus()
 
 void SplitViewer::closeEvent(QCloseEvent* event)
 {
+    m_closing = true;
     SplitViewerUnwatchNativeMouse(this);
     foreach (QWidget* container,m_embedded)
     {
@@ -938,6 +971,7 @@ void SplitViewer::reportError(const QString& message)
 
 void SplitViewer::clearInteraction()
 {
+    ++m_documentRevision;
     m_nativeDragWindow=0;
     m_nativeDragNode=nullptr;
     m_nativePreview=QRectF();
@@ -1090,7 +1124,7 @@ QImage SplitViewer::renderStage(const QSize& size,bool includeEmbedded)
 
 void SplitViewer::nativeMouseEvent(int event,const QPoint& screenPoint,WId id)
 {
-    if (!isVisible() || QApplication::activeModalWidget() || QApplication::activePopupWidget())
+    if (m_closing || !isVisible() || QApplication::activeModalWidget() || QApplication::activePopupWidget())
     {
         return;
     }

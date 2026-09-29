@@ -25,7 +25,7 @@ public:
     /** 初始化对象及其默认状态
     @param [in] parent Qt宿主窗口
     */
-    explicit SplitViewer(QWidget* parent = NULL);
+    explicit SplitViewer(QWidget* parent = nullptr);
 
     /** 释放本对象持有的资源
     */
@@ -323,6 +323,10 @@ private:
     Label* m_statusLabel;
     // 主窗口唯一拥有的Core文档，GUI线程访问
     SplitViewerCoreDocument m_document;
+    // 树或交互上下文重置时递增，用于拒绝嵌套窗口返回的过期操作
+    quint64 m_documentRevision;
+    // 关闭后拒绝排队的鼠标和文件选择结果
+    bool m_closing;
     // 当前文档解码图片缓存
     QMap<QString, QImage> m_imageCache;
     // 按叶子登记的借用窗口宿主；删树前解除嵌入

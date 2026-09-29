@@ -67,13 +67,12 @@ bool SplitViewerCorePackageHelper::buildConfigPackage(const std::vector<uint8_t>
     const std::vector<uint8_t>& configBytes,
     std::vector<uint8_t>& packageBytes)
 {
-    packageBytes.clear();
-    if (!startsWithPng(thumbnailPng))
+    if (!startsWithPng(thumbnailPng) || configBytes.size() > static_cast<size_t>(SplitViewerCoreConfig::kMaximumProfileBytes))
     {
         return false;
     }
     size_t position = sizeof(SplitViewerCoreConfig::PngSignature);
-    while (position + 12 <= thumbnailPng.size())
+    while (thumbnailPng.size() - position >= 12)
     {
         const size_t chunkStart = position;
         const uint32_t length = readUInt32(thumbnailPng, position);
@@ -84,13 +83,17 @@ bool SplitViewerCorePackageHelper::buildConfigPackage(const std::vector<uint8_t>
         }
         if (std::memcmp(&thumbnailPng[chunkStart + 4], SplitViewerCoreConfig::PngIend, 4) == 0)
         {
-            packageBytes.assign(thumbnailPng.begin(), thumbnailPng.begin() + chunkStart);
-            if (!appendChunk(packageBytes, SplitViewerCoreConfig::ConfigChunk, configBytes))
+            if (length != 0)
             {
-                packageBytes.clear();
                 return false;
             }
-            packageBytes.insert(packageBytes.end(), thumbnailPng.begin() + chunkStart, thumbnailPng.end());
+            std::vector<uint8_t> result(thumbnailPng.begin(), thumbnailPng.begin() + chunkStart);
+            if (!appendChunk(result, SplitViewerCoreConfig::ConfigChunk, configBytes))
+            {
+                return false;
+            }
+            result.insert(result.end(), thumbnailPng.begin() + chunkStart, thumbnailPng.end());
+            packageBytes.swap(result);
             return true;
         }
         position += static_cast<size_t>(length) + 12;
@@ -101,11 +104,10 @@ bool SplitViewerCorePackageHelper::buildConfigPackage(const std::vector<uint8_t>
 bool SplitViewerCorePackageHelper::extractEmbeddedConfig(const std::vector<uint8_t>& bytes,
     std::vector<uint8_t>& configBytes)
 {
-    configBytes.clear();
     if (startsWithPng(bytes))
     {
         size_t position = sizeof(SplitViewerCoreConfig::PngSignature);
-        while (position + 12 <= bytes.size())
+        while (bytes.size() - position >= 12)
         {
             const size_t chunkStart = position;
             const uint32_t length = readUInt32(bytes, position);
@@ -117,12 +119,17 @@ bool SplitViewerCorePackageHelper::extractEmbeddedConfig(const std::vector<uint8
             const uint8_t* type = &bytes[chunkStart + 4];
             if (std::memcmp(type, SplitViewerCoreConfig::ConfigChunk, 4) == 0)
             {
+                if (length > static_cast<uint32_t>(SplitViewerCoreConfig::kMaximumProfileBytes))
+                {
+                    return false;
+                }
                 const size_t dataStart = chunkStart + 8;
                 if (readUInt32(bytes,dataStart+length) != chunkCrc(type,&bytes[dataStart],length))
                 {
                     return false;
                 }
-                configBytes.assign(bytes.begin() + dataStart, bytes.begin() + dataStart + length);
+                std::vector<uint8_t> result(bytes.begin() + dataStart, bytes.begin() + dataStart + length);
+                configBytes.swap(result);
                 return true;
             }
             if (std::memcmp(type, SplitViewerCoreConfig::PngIend, 4) == 0)
@@ -141,7 +148,12 @@ bool SplitViewerCorePackageHelper::extractEmbeddedConfig(const std::vector<uint8
         {
             if (std::memcmp(&bytes[i], marker, markerSize) == 0 && i + markerSize < bytes.size())
             {
-                configBytes.assign(bytes.begin() + i + markerSize, bytes.end());
+                if (bytes.size() - i - markerSize > static_cast<size_t>(SplitViewerCoreConfig::kMaximumProfileBytes))
+                {
+                    return false;
+                }
+                std::vector<uint8_t> result(bytes.begin() + i + markerSize, bytes.end());
+                configBytes.swap(result);
                 return true;
             }
         }

@@ -8,31 +8,11 @@
 class SplitViewerCoreProfileHelper
 {
 public:
-    /** 使用固定区域设置格式化整数
-    @param [in] value 输入值
-    @return 计算结果或借用对象，具体语义见函数说明
-    */
-    static std::wstring formatInt(int value);
-
     /** 使用固定区域设置格式化浮点数
     @param [in] value 输入值
     @return 计算结果或借用对象，具体语义见函数说明
     */
     static std::wstring formatDouble(double value);
-
-    /** 解析整数；失败返回默认值
-    @param [in] value 输入值
-    @param [in] defaultValue 解析失败或字段缺失时的默认值
-    @return 计算结果或借用对象，具体语义见函数说明
-    */
-    static int parseInt(const std::wstring& value, int defaultValue);
-
-    /** 解析有限浮点数；失败返回默认值
-    @param [in] value 输入值
-    @param [in] defaultValue 解析失败或字段缺失时的默认值
-    @return 计算结果或借用对象，具体语义见函数说明
-    */
-    static double parseDouble(const std::wstring& value, double defaultValue);
 
     /** 写入配置节中的键值
     @param [in,out] profile 配置键值集合
@@ -57,16 +37,18 @@ public:
     const std::wstring& key,
     const std::wstring& defaultValue);
 
-    /** 按先序编号保存节点及其子树
+    /** 按先序编号保存节点及其子树；限制深度与数量，避免生成无法读回的配置
     @param [in,out] profile 配置键值集合
     @param [in] prefix 节点节名前缀
     @param [in] node 文档持有的节点
     @param [in,out] nextId 下一个节点编号
+    @param [in] depth 当前深度，根为0
+    @return 节点有效且未超过读入限制
     */
-    static void saveNode(SplitViewerCoreProfile& profile,
+    static bool saveNode(SplitViewerCoreProfile& profile,
     const std::wstring& prefix,
     const SplitViewerCoreNode* node,
-    int& nextId);
+    int& nextId, int depth = 0);
 
     /** 验证深度、节点编号及循环引用后加载子树；失败返回空
     @param [in] profile 配置键值集合

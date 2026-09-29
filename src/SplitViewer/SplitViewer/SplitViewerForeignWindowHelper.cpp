@@ -20,10 +20,17 @@ QWidget* SplitViewerForeignWindowHelper::embedForeignWindow(WId windowId, QWidge
 #if defined(Q_OS_WIN) || defined(Q_OS_LINUX) || defined(Q_OS_MAC) || defined(Q_OS_MACX)
 #ifdef Q_OS_WIN
     HWND hwnd=reinterpret_cast<HWND>(windowId);
-    if (!IsWindow(hwnd) || hwnd==GetDesktopWindow() || hwnd==GetShellWindow() ||
-        GetAncestor(hwnd,GA_ROOT)==reinterpret_cast<HWND>(parent->window()->winId())) return nullptr;
+    if (!IsWindow(hwnd) || hwnd == GetDesktopWindow() || hwnd == GetShellWindow() ||
+        SplitViewerNativeMouseManager::instance().m_embeddedWindows.contains(hwnd) ||
+        GetAncestor(hwnd, GA_ROOT) == reinterpret_cast<HWND>(parent->window()->winId()))
+    {
+        return nullptr;
+    }
     RECT original;
-    GetWindowRect(hwnd,&original);
+    if (!GetWindowRect(hwnd, &original))
+    {
+        return nullptr;
+    }
     const LONG_PTR style=GetWindowLongPtrW(hwnd,GWL_STYLE);
     const LONG_PTR exStyle=GetWindowLongPtrW(hwnd,GWL_EXSTYLE);
     const HWND oldParent=GetParent(hwnd);
@@ -200,13 +207,38 @@ QImage SplitViewerForeignWindowHelper::foreignWindowSnapshot(QWidget* container)
         return QImage();
     }
     QImage image(rect.right,rect.bottom,QImage::Format_RGB32);
+    if (image.isNull())
+    {
+        return QImage();
+    }
     image.fill(g_config.m_stageColor);
     HDC dc=GetDC(hwnd);
+    if (!dc)
+    {
+        return QImage();
+    }
     HDC memory=CreateCompatibleDC(dc);
     HBITMAP bitmap=CreateCompatibleBitmap(dc,rect.right,rect.bottom);
+    if (!memory || !bitmap)
+    {
+        if (bitmap)
+        {
+            DeleteObject(bitmap);
+        }
+        if (memory)
+        {
+            DeleteDC(memory);
+        }
+        ReleaseDC(hwnd, dc);
+        return QImage();
+    }
     HGDIOBJ old=SelectObject(memory,bitmap);
-    const BOOL ok=PrintWindow(hwnd,memory,PW_CLIENTONLY);
-    SelectObject(memory,old);
+    const bool selected = old != nullptr && old != HGDI_ERROR;
+    const BOOL ok = selected ? PrintWindow(hwnd, memory, PW_CLIENTONLY) : FALSE;
+    if (selected)
+    {
+        SelectObject(memory, old);
+    }
     BITMAPINFO info={0};
     info.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
     info.bmiHeader.biWidth=rect.right;
@@ -214,14 +246,11 @@ QImage SplitViewerForeignWindowHelper::foreignWindowSnapshot(QWidget* container)
     info.bmiHeader.biPlanes=1;
     info.bmiHeader.biBitCount=32;
     info.bmiHeader.biCompression=BI_RGB;
-    if (ok)
-    {
-        GetDIBits(memory,bitmap,0,rect.bottom,image.bits(),&info,DIB_RGB_COLORS);
-    }
+    const int copied = ok ? GetDIBits(memory, bitmap, 0, rect.bottom, image.bits(), &info, DIB_RGB_COLORS) : 0;
     DeleteObject(bitmap);
     DeleteDC(memory);
     ReleaseDC(hwnd,dc);
-    return image;
+    return copied == rect.bottom ? image : QImage();
 #elif defined(Q_OS_LINUX) || defined(Q_OS_MAC) || defined(Q_OS_MACX)
     QScreen* screen=QGuiApplication::primaryScreen();
     return screen ? screen->grabWindow(id).toImage() : QImage();

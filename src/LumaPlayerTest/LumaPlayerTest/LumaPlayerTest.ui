@@ -16,12 +16,17 @@
    <string>LumaPlayerTest</string>
   </property>
   <widget class="QMenuBar" name="menuBar" />
-  <widget class="QToolBar" name="mainToolBar" />
-  <widget class="QWidget" name="centralWidget" />
-  <widget class="QStatusBar" name="statusBar" />
+  <widget class="ToolBar" name="mainToolBar" />
+  <widget class="Widget" name="centralWidget" />
+  <widget class="StatusBar" name="statusBar" />
  </widget>
  <layoutDefault spacing="6" margin="11" />
  <pixmapfunction></pixmapfunction>
+ <customwidgets>
+  <customwidget><class>ToolBar</class><extends>QToolBar</extends><header>QtControls/ToolBar.h</header><container>1</container></customwidget>
+  <customwidget><class>Widget</class><extends>QWidget</extends><header>QtControls/Widget.h</header><container>1</container></customwidget>
+  <customwidget><class>StatusBar</class><extends>QStatusBar</extends><header>QtControls/StatusBar.h</header><container>1</container></customwidget>
+ </customwidgets>
  <resources>
    <include location="LumaPlayerTest.qrc"/>
  </resources>

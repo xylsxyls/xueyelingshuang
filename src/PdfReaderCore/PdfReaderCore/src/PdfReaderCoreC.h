@@ -56,6 +56,7 @@ PdfReaderCoreAPI int32_t pdfReaderCoreIsOpen(PdfReaderCoreHandle handle);
 PdfReaderCoreAPI int32_t pdfReaderCorePageCount(PdfReaderCoreHandle handle);
 PdfReaderCoreAPI size_t pdfReaderCoreGetFilePath(PdfReaderCoreHandle handle, char* buffer, size_t bufferSize);
 PdfReaderCoreAPI int32_t pdfReaderCoreGetPageInfo(PdfReaderCoreHandle handle, int32_t pageIndex, PdfReaderCoreCPageInfo* info);
+/* 失败时尺寸/字节数输出清零；BufferTooSmall例外，返回实际所需尺寸且不修改pixels。 */
 PdfReaderCoreAPI int32_t pdfReaderCoreRenderPage(PdfReaderCoreHandle handle, int32_t pageIndex,
                                                   int32_t pixelWidth, int32_t pixelHeight,
                                                   unsigned char* pixels, size_t capacity,

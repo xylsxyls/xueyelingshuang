@@ -1,8 +1,35 @@
 开发文档
-版本：1.3
-更新日期：2026-09-29（缩略图拖拽修复）
-状态：2026-09-29缩略图拖拽修复已编译、测试并发布到common/PdfReader及common/PdfReaderTest。发布组合与发布后全30项分别通过，退出码0；用户已查看并反馈“看着没啥问题”，随后明确结束工作流；本轮过程文件按规则清理，正式成果保留。
+版本：1.4
+更新日期：2026-09-29（界面与基础库复用整改已发布，工作流已结束）
+状态：本轮Windows x64 Release已编译并发布至common/PdfReader和common/PdfReaderTest；发布前及发布后33项回归均通过、退出码0，产品空启动/中文PDF打开及正常关闭均通过。用户随后明确“结束工作流”；本轮人工验收未单独记录，自动验证结果不替代人工验收。
+历史状态：2026-09-29缩略图拖拽修复已编译、测试并发布到common/PdfReader及common/PdfReaderTest。发布组合与发布后全30项分别通过，退出码0；用户已查看并反馈“看着没啥问题”，随后明确结束工作流；本轮过程文件按规则清理，正式成果保留。
 2026-09-29 DialogManager日志回调接入：PdfReader及Test Release x64构建通过，PdfReaderTest ID19 1/1通过；用户确认试运行后，已将PdfReader1.0.exe、DialogManager.dll、QtControls.dll增量发布至common/PdfReader。symbols-PdfReader1.0-20260929-DialogManagerQtControls.7z包含这三个已部署模块匹配的PDB；未执行全量、压力、Debug或其他平台验证。
+
+本轮实现与验证
+1. 控件核对：PdfReader/PdfReaderTest继承MainWindow；PdfReaderThumbnailList继承ListWidget，PdfReaderEmptyState继承Widget；按钮、文本、正文标签、菜单、工具栏、状态栏、滚动及分隔栏均沿QtControls封装。移除只转调基类的wheelEvent；未调用setupUi的历史.ui模板也提升到对应QtControls类型并移除无用途的菜单栏，避免后续重新接入时绕过封装。QML模板未被实例化，未创建新的窗口入口。
+2. 例外依据：QStyledItemDelegate是缩略图业务绘制委托，不是QWidget控件，现有树/组合框专用委托不符合页图绘制语义；CustomViewBase遵守DialogManager既有内容契约，不叠加第二条QWidget继承链。QAction、布局、事件、图像、借用QWidget指针以及控件内部子对象不做机械封装。
+3. 业务弹窗继续经PdfReaderDialogHelper→DialogManager→注册工厂管理；原生QFileDialog打开、保存及目录选择为本轮用户明确豁免。文件选择和业务模态返回后用QPointer确认父对象仍有效；保存先规范最终.pdf路径，再进行一次管理器覆盖确认，原生窗口不重复询问。工厂用unique_ptr保护窗口和内容区在所有权交接前的异常路径。本轮最终没有修改DialogManager或QtControls源码；共享工作区中这两个库的其他改动不属于本轮。
+4. 通用能力：CStringManager::CopyToBuffer统一C接口所需容量查询、NUL终止和按字节截断；CSystem::joinPath、ensureFileExtension统一路径末尾分隔符和ASCII扩展名。桌面文件名提取复用CSystem::GetName；保留QFileInfo规范真实路径用于原件身份判断，避免把纯词法拼接误当成文件系统路径解析；两个空canonicalFilePath不再判为同一原件。
+5. Core插入和移动先在临时页表完成所有分配再交换提交；插入检查总页数溢出。分页前缀在写文件前拒绝路径分隔符、冒号或内嵌NUL，避免逃出输出目录；移动目标越界返回InvalidParam；无效渲染先清零元数据，BufferTooSmall仍保留所需真实尺寸/字节数，调用方像素缓冲区不被无效参数改写。
+6. 生命周期：任务结果仍在邮箱锁内交换、锁外执行GUI回调，Core仍由唯一执行者串行访问。完成回调可能直连删除窗口，Session和窗口槽返回后先查QPointer再读取成员；命令行singleShot绑定窗口上下文。关闭工作派发失败且Core尚未释放的终态解除关闭标志并恢复操作，允许重试；Core已释放、只是完成通知派发失败时仍交付关闭成功，不能重新开放访问已释放Core的操作。线程管理器必须先停止GUI生产者，再按逻辑屏障→工作线程→逻辑线程顺序收尾，不允许外部提前停止私有线程。
+7. 日志：PdfReaderLogHelper共享宿主转发，删除产品/Test重复文件级函数；Test使用PdfReaderTestLogGuard及加锁状态，异常退出恢复宿主回调，在途消息不借用已销毁栈对象。测试运行状态不放入Config。
+8. 工程登记：新helper已登记VS源文件/过滤器，CMake登记对应共享源码，Qt链接改用导入目标，增加直接使用的CSystem依赖。PdfReaderIcon.sh移除set -e，以显式错误返回保留图标转换失败反馈；授权后已准备include/lib并通过VS2013真实构建，图标由正式构建目标生成，UI/moc/qrc均实际生成编译；CMake及其他平台未执行，未宣称跨平台配置或编译通过。
+9. 静态与动态边界：新增ID33..35覆盖缓冲区、路径、失败编辑和回调内销毁，ID19日志捕获改为RAII；当前共33项在册，发布前后分别33/33通过。没有注入OOM、线程启动/投递异常，没有运行内存检测器或多小时压力；内存严重耗尽时任务构造/错误回报自身再分配的失败路径仍需专项验证，不能由本轮静态审查宣称完全无泄漏、无卡死。UI生成和Qt5.5.1/VS2013编译已通过；原生文件框的人工外观验收、故障注入及其他平台仍未验证。
+10. 后续构建必须将本轮CStringManager/CSystem新导出与PdfReaderCore、产品、Test配套更新；不能只替换EXE并继续加载旧DLL。当前common已按本轮配套组合更新，详情见下列交付记录。
+
+本轮构建、测试与发布身份（2026-09-29）
+授权：用户明确继续到common发布，随后明确结束工作流；本轮已执行结束清理，未把AI验证记成人工验收。
+工具：Windows x64 Release，MSBuild12/VS2013、Qt5.5.1 msvc2013_64。真实编译记录含/O2、/Zi和链接/DEBUG，C入口冒烟单元实际按C编译。未执行Debug、CMake或其他平台。
+正式version已执行依赖准备，但Windows py.exe未登记Python 3，内部构建失败而CloudRebuild外层返回0；该失败不算通过，其原因和后续实际成功的构建方式记录如下。随后使用C:/Users/Administrator/AppData/Local/Programs/Python/Python36/python.exe，在各库scripts目录直接执行原有rebuild_库名.py 64 dll release，按已展开依赖顺序全部成功，再用MSBuild构建产品和Test。没有改受保护rebuild脚本、CloudRebuild、全局Python关联或注册表；本机version单独执行仍需先解决Python启动器登记问题，后续可在各库scripts目录使用上述Python36绝对路径执行原有rebuild脚本，再以MSBuild12对产品与Test解决方案执行Release x64构建；一次性构建脚本已随工作流清理，不作为正式构建依赖。
+增量范围：两个发布目录分别只替换各自EXE、PdfReaderCore.dll、CStringManager.dll、CSystem.dll；未变QtControls/DialogManager/PdfEngine等运行DLL及资源保留原哈希。QtControls为准备依赖曾在lib构建，但common未同步它；新增通用库API与调用方配套发布，不混用旧导出。
+发布组合：先将保留的common依赖复制到独立stage，只覆盖上述四个模块，再验证；产品空启动及中文PDF打开均显示正确标题、正常关闭，两个进程退出0。实际加载15个产品DLL均来自对应stage/common，Test的14个DLL亦同；qwindows.dll来自本机Qt安装目录，无Qt官方DLL/插件或LockFreeQueue.dll进入发布目录。
+新增及日志设施定向：ID19,33-35，4/4通过，退出0，0.631秒。完整组合发布前1-16,19-35共33项，33通过、0失败，退出0，14.672秒；common实际路径发布后同批33项全部通过，退出0，15.056秒。未登记压力用例，无压力通过声明；17/18保持历史退役。
+产品SHA256：3141e498e4c03d4d088ed8ddc0e0c2c9f90d1d7279c8cc8bac66c0b21c17a720
+Test SHA256：be66ed88d299ee3785f8b41a1ef89d785d50a34c80e41cac10871f8aed98b5d4
+产品符号包：symbols-PdfReader1.0-20260929-222902-LibraryReuse.7z
+Test符号包：symbols-PdfReaderTest1.0-20260929-222902-LibraryReuse.7z
+符号：每包14份匹配PDB，变化模块来自本次构建，未变DLL符号从既有匹配包按原字节复用；逐个核对PE RSDS GUID/Age。PDB先复制到各自common，再用7z -t7z -mx=9 -m0=lzma2 -ms=on -mmt=2压缩，完整性检查及解压哈希复核成功后删除散装PDB。旧符号包保留。既有缺口：产品CDump.dll、两边第三方pdfium.dll没有匹配符号，未拿其他版本PDB冒充、未为补符号替换未变DLL。
+结束清理：工作流目录及PdfReader专属临时脚本、报告、截图、样本、暂存发布组合、备份、解压符号、构建中间文件、GeneratedFiles和本轮试运行日志已删除；验证结果及发布身份保留于正式文档，临时备份不再提供回退入口。正式源码、测试代码、资源、common发布程序及新旧符号包保留。为避免干扰并行LumaPlayer构建，共享依赖库的缓存/日志及lib/include输出保留；用户随后自行运行产品产生的日志亦保留。
 
 一、现有工程基线
 
@@ -77,7 +104,7 @@ Linux、macOS、Android、iOS 尚未真实构建运行，不以本轮 Windows �
 八、本次配置与职责拆分
 
 Qt 源码位于 src/PdfReader/PdfReader，VS 过滤器按 Configuration、UI、Bridge 等功能分组：
-Config：QApplication之后显式取得Config::instance()，Config.h定义g_config宏，public m_成员直接访问；默认值在.cpp初始化列表，关联的Core和日志默认值在构造调用的init()中设置。默认布局 1180x780，最小 860x560，侧栏初始 210、最小 150；正文倍率默认 1、范围 0.25..4、步长 0.05，缩略背景倍率 0.5..2、步长 0.1。默认页图宽 112；长按 1000ms，边缘滚动周期 16ms。参数边界在 validate 检查，invalid_argument 表示调用者配置错误。
+Config：QApplication之后显式取得Config::instance()，Config.h定义g_config宏，public m_成员直接访问；默认值在.cpp初始化列表，关联的Core和日志默认值在构造调用的init()中设置。默认布局 1180x780，最小 860x560，侧栏初始 210、最小 150；正文倍率默认 1、范围 0.25..4、步长 0.05，缩略背景倍率 0.5..2、步长 0.1。默认页图宽 112；长按500ms，边缘滚动周期 16ms。参数边界在 validate 检查，invalid_argument 表示调用者配置错误。
 PdfReader：窗口和命令编排；不持有引擎或实现页序算法。
 PdfReaderThumbnailList：单列条目、选择、长按拖动、边缘滚动与取消；独立 moc。
 PdfReaderThumbnailDelegate：固定页图、居中、灰背景、文字及选择绘制。
@@ -140,7 +167,7 @@ CMake 同样调用 PdfReaderIcon.sh icon；Windows 分支使用系统 PowerShell
 
 DialogManager不再写自己的11_controls.log或依赖LogManager；PdfReader main在初始化LogManager后注册DialogManager::setLogCallback，将级别映射到LOGINFO/LOGWARNING/LOGERROR并转发完整消息。PdfReaderDialogRuntime销毁、任务收尾后先清除回调，再卸载LogManager，保证回调目标存活。PdfReaderTest采用相同宿主接入，并由ID19验证回调的级别和完整消息。
 
-日志默认策略：main 在窗口和 DialogManager 创建前初始化 LogManager，不依赖 Debug 构建或命令行参数；业务对象和 QApplication 销毁后写退出结果并 uninit。Config::log 保存与 LumaPlayer 一致的配置：默认 EXE 目录、文件 ID 0、20 MB/文件、保留 8 个滚动文件、每条检查大小、关闭控制台输出、启动归档旧日志。历史启动日志由 LogManager 归档到 EXE 旁 PdfReader1.0_log 子目录，8 个文件是单次会话的滚动保留数，不代表历史归档总数。
+日志默认策略：main 在窗口和 DialogManager 创建前初始化 LogManager，不依赖 Debug 构建或命令行参数；业务对象和 QApplication 销毁后写退出结果并 uninit。g_config.m_log保存与 LumaPlayer 一致的配置：默认 EXE 目录、文件 ID 0、20 MB/文件、保留 8 个滚动文件、每条检查大小、关闭控制台输出、启动归档旧日志。历史启动日志由 LogManager 归档到 EXE 旁 PdfReader1.0_log 子目录，8 个文件是单次会话的滚动保留数，不代表历史归档总数。
 PdfReaderCoreBridge 直接使用 LOGINFO/LOGERROR 记录 Core 初始化、文档打开/插入、页移动、保存和导出的结果；失败记录错误码和 Core 错误说明，不记录密码或文档正文，不逐帧记录正常渲染。Core 的 C API 和五端业务实现不变。Windows main 最早阶段注册 CDump，注册结果写启动日志。
 桌面 version 脚本增加 CDump same 依赖；现有 LogManager only 继续复用前面准备的 CSystem、ReadWriteMutex、IntDateTime。CMake App 增加 LogManager/CDump，Test 因复用 Config 和 Bridge 增加 LogManager。交付时还需携带这些实际依赖 DLL 及匹配符号，遵循原有符号归档规则。
 

@@ -30,11 +30,6 @@ public:
 	*/
 	void uninit();
 
-    /** 按共享颜色及留白生成菜单样式，不在绘制处散落常量
-    @return Qt菜单样式字符串
-    */
-    QString menuStyleSheet() const;
-
 private:
 	/** 构造配置默认值
 	*/
@@ -82,10 +77,6 @@ public:
     std::string m_timeTextFormat;
     // 毫秒时间格式
     std::string m_preciseTimeTextFormat;
-    // 菜单颜色格式
-    std::string m_rgbaFormat;
-    // 菜单样式格式
-    std::string m_menuStyleFormat;
     // 空窗口加载按钮相对尺寸除数
     int32_t m_emptySizeDivisor;
     // 空窗口加载按钮最小边长，像素

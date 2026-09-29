@@ -133,6 +133,12 @@ void PdfReaderSessionState::deliver(const std::shared_ptr<PdfReaderResult>& resu
 
 void PdfReaderSessionState::fail(const std::shared_ptr<PdfReaderResult>& result, const std::string& error)
 {
+    if (result->m_request.m_operation == PdfReaderClose && result->m_success)
+    {
+        // Core已释放后仅通知派发失败，仍交付关闭成功；不能恢复对已释放Core的操作。
+        deliver(result);
+        return;
+    }
     result->m_success = false;
     result->m_code = PdfReaderCoreCResultInternalError;
     result->m_error = QString::fromUtf8(error.c_str());

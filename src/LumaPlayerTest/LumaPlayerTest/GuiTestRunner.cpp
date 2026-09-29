@@ -10,6 +10,8 @@
 #include "Config.h"
 #include "LogManager/LogManagerAPI.h"
 #include "QtControls/DialogBase.h"
+#include "QtControls/Widget.h"
+#include "QtControls/Menu.h"
 #include <QtWidgets>
 #include <QElapsedTimer>
 // 仅测试观察器读取现有成员，不修改其状态，不影响产品编译与布局
@@ -86,6 +88,17 @@ m_originalHelpWidth(g_config.m_helpWidth)
                         if (dialog != nullptr)
                         {
                             dialog->grab().save(m_directory + "/help.png");
+                            QWidget* title = dialog->findChild<QWidget*>(QStringLiteral("helpTitleBar"));
+                            if (title != nullptr)
+                            {
+                                LOGINFO("Help title style=%s class=%s", title->styleSheet().toUtf8().constData(), title->metaObject()->className());
+                                const QList<QLabel*> labels = title->findChildren<QLabel*>();
+                                for (int32_t i = 0; i < labels.size(); ++i)
+                                {
+                                    LOGINFO("Help label style=%s color=%s", labels[i]->styleSheet().toUtf8().constData(),
+                                        labels[i]->palette().color(QPalette::WindowText).name().toUtf8().constData());
+                                }
+                            }
                         }
                         }, [this]() {
                         QWidget* dialog = QApplication::activeModalWidget();
@@ -124,6 +137,16 @@ m_originalHelpWidth(g_config.m_helpWidth)
                             return false;
                         }
                         const QColor titleCenter(shellImage.pixel(shellImage.width() / 2, 0));
+                        QImage expectedTitle(1, 1, QImage::Format_ARGB32);
+                        expectedTitle.fill(g_config.m_helpBackground.rgba());
+                        {
+                            QPainter painter(&expectedTitle);
+                            painter.fillRect(expectedTitle.rect(), g_config.m_overlayColor);
+                        }
+                        const QColor expectedColor(expectedTitle.pixel(0, 0));
+                        const bool titleColorPreserved = std::abs(titleCenter.red() - expectedColor.red()) <= 1 &&
+                            std::abs(titleCenter.green() - expectedColor.green()) <= 1 &&
+                            std::abs(titleCenter.blue() - expectedColor.blue()) <= 1;
                         const bool topEdgeHasNoOutline =
                             QColor(shellImage.pixel(0, 0)) == titleCenter &&
                             QColor(shellImage.pixel(shellImage.width() - 1, 0)) == titleCenter;
@@ -136,7 +159,8 @@ m_originalHelpWidth(g_config.m_helpWidth)
                             if (labels[i]->text() == g_config.m_helpTitle)
                             {
                                 titleTextInset = labels[i]->parentWidget() == titleBar &&
-                                    labels[i]->geometry().left() == titleInset;
+                                    labels[i]->geometry().left() == titleInset &&
+                                    labels[i]->palette().color(QPalette::WindowText) == g_config.m_textColor;
                             }
                             if (labels[i]->text() == g_config.m_versionLabel)
                             {
@@ -166,14 +190,14 @@ m_originalHelpWidth(g_config.m_helpWidth)
                         const QList<QPushButton*> buttons = dialog->findChildren<QPushButton*>();
                         for (int32_t i = 0; i < buttons.size(); ++i)
                         {
-                            if (buttons[i]->text() == g_config.m_closeText && buttons[i]->parentWidget() == titleBar)
+                            if (buttons[i]->accessibleName() == g_config.m_closeText && buttons[i]->parentWidget() == titleBar)
                             {
                                 closeButtonCentered = titleBar->width() - buttons[i]->geometry().right() - 1 == titleInset &&
                                     buttons[i]->geometry().top() == (titleHeight - g_config.m_titleButtonSize) / 2;
                                 break;
                             }
                         }
-                        return titleBandValid && topEdgeHasNoOutline && titleTextInset &&
+                        return titleBandValid && titleColorPreserved && topEdgeHasNoOutline && titleTextInset &&
                             closeButtonCentered && versionPositionPreserved;
                         });
                     add(15, "title mouse drag", [this]() {
@@ -211,7 +235,8 @@ m_originalHelpWidth(g_config.m_helpWidth)
                         const QList<QPushButton*> buttons = dialog->findChildren<QPushButton*>();
                         for (int32_t i = 0; i < buttons.size(); ++i)
                         {
-                            if (buttons[i]->text() == (closeKind == 0 ? g_config.m_confirmText : g_config.m_closeText))
+                            if ((closeKind == 0 && buttons[i]->text() == g_config.m_confirmText) ||
+                                (closeKind == 1 && buttons[i]->accessibleName() == g_config.m_closeText))
                             {
                                 buttons[i]->click();
                                 break;
@@ -232,6 +257,19 @@ m_originalHelpWidth(g_config.m_helpWidth)
             }
             case CaseButtonVisuals:
             {
+                add(CaseButtonVisuals, "QtControls item padding preserves content insets", [this]() {
+                    Menu menu;
+                    menu.setItemPadding(3, 4, 5, 6, true);
+                    const QString style = menu.styleSheet();
+                    m_results.check(CaseButtonVisuals, style.contains(".Menu::item{") && style.contains("padding-left:3px") &&
+                        style.contains("padding-top:4px") && style.contains("padding-right:5px") &&
+                        style.contains("padding-bottom:6px"), QStringLiteral("菜单项内边距不混用外边距"));
+                    menu.setItemPadding(-1, -2, -3, -4, true);
+                    const QString clamped = menu.styleSheet();
+                    m_results.check(CaseButtonVisuals, clamped.contains("padding-left:0px") &&
+                        clamped.contains("padding-top:0px") && clamped.contains("padding-right:0px") &&
+                        clamped.contains("padding-bottom:0px"), QStringLiteral("负内边距归零"));
+                    }, []() { return true; });
                 add(4, "played color AB colors and layout", [this]() { m_player->grab().save(m_directory + "/layout.png"); },
                     [this]() { return g_config.m_loopAColor != g_config.m_themeColor && g_config.m_loopBColor != g_config.m_themeColor &&
                         m_player->playButtonRect().center().x() == m_player->rect().center().x() &&
@@ -289,6 +327,74 @@ m_originalHelpWidth(g_config.m_helpWidth)
                     QMouseEvent release(QEvent::MouseButtonRelease, p, m_player->mapToGlobal(p), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
                     QApplication::sendEvent(m_player, &release);
                     }, [this]() { return !m_player->m_leftPressed; });
+                break;
+            }
+            case CaseInputCancel:
+            {
+                const QEvent::Type cancelEvents[] = {QEvent::FocusOut, QEvent::WindowDeactivate};
+                for (size_t i = 0; i < sizeof(cancelEvents) / sizeof(cancelEvents[0]); ++i)
+                {
+                    const QEvent::Type type = cancelEvents[i];
+                    add(id, "cancel pending click without seek", [this, type]() {
+                        const QPoint point(m_player->progressTrackRect().center());
+                        move(point);
+                        m_position = m_player->m_lastSeekInput;
+                        QMouseEvent press(QEvent::MouseButtonPress, point, m_player->mapToGlobal(point), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                        QApplication::sendEvent(m_player, &press);
+                        m_results.check(CaseInputCancel, m_player->m_progressPressPending, "timeline press pending before cancel");
+                        if (type == QEvent::FocusOut)
+                        {
+                            QFocusEvent cancel(type);
+                            QApplication::sendEvent(m_player, &cancel);
+                        }
+                        else
+                        {
+                            QEvent cancel(type);
+                            QApplication::sendEvent(m_player, &cancel);
+                        }
+                        QMouseEvent release(QEvent::MouseButtonRelease, point, m_player->mapToGlobal(point), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                        QApplication::sendEvent(m_player, &release);
+                        }, [this]() {
+                        return m_elapsed.elapsed() >= 150 && !m_player->m_progressPressPending &&
+                            !m_player->m_isDraggingProgress && !m_player->m_hasDragPosition &&
+                            !m_player->m_leftPressed && m_player->m_lastSeekInput == static_cast<uint64_t>(m_position) &&
+                            m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused;
+                        });
+                }
+                add(id, "start real progress drag", [this]() {
+                    const QPoint point = m_player->progressTrackRect().center();
+                    move(point);
+                    QMouseEvent press(QEvent::MouseButtonPress, point, m_player->mapToGlobal(point), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                    QApplication::sendEvent(m_player, &press);
+                    move(point + QPoint(QApplication::startDragDistance() + 10, 0), Qt::LeftButton);
+                    }, [this]() { return m_player->m_isDraggingProgress && m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused; });
+                add(id, "focus loss finishes drag paused and stops previews", [this]() {
+                    m_position = m_player->m_dragPosition100ns;
+                    QFocusEvent cancel(QEvent::FocusOut);
+                    QApplication::sendEvent(m_player, &cancel);
+                    }, [this]() {
+                    return m_elapsed.elapsed() >= 150 && !m_player->m_isDraggingProgress &&
+                        !m_player->m_progressPressPending && !m_player->m_hasDragPosition &&
+                        m_player->m_lastPreviewRequestPosition100ns == -1 &&
+                        m_player->m_snapshot.m_state == LumaPlayerCoreCStatePaused &&
+                        std::abs(m_player->m_snapshot.m_position100ns - m_position) <= 400000;
+                    });
+                add(id, "old timeline release cannot seek replacement media", [this, media]() {
+                    const QPoint point = m_player->progressTrackRect().center();
+                    move(point);
+                    m_position = m_player->m_lastSeekInput;
+                    QMouseEvent press(QEvent::MouseButtonPress, point, m_player->mapToGlobal(point), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                    QApplication::sendEvent(m_player, &press);
+                    m_results.check(CaseInputCancel, m_player->m_progressPressPending, "timeline press pending before load");
+                    m_player->loadMedia(media);
+                    QMouseEvent release(QEvent::MouseButtonRelease, point, m_player->mapToGlobal(point), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                    QApplication::sendEvent(m_player, &release);
+                    }, [this]() {
+                    return m_elapsed.elapsed() >= 500 && m_player->m_hasMedia && !m_player->m_cachedFrame.isNull() &&
+                        !m_player->m_progressPressPending && !m_player->m_isDraggingProgress &&
+                        !m_player->m_hasDragPosition && !m_player->m_leftPressed &&
+                        m_player->m_lastSeekInput == static_cast<uint64_t>(m_position);
+                    });
                 break;
             }
             case CasePlayPauseUi:

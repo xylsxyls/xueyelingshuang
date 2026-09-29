@@ -84,6 +84,7 @@ int main(int argc, char* argv[])
     {
         if (mode == "runner")
         {
+            LumaPlayerDialogSession dialogs;
             LumaPlayerTest window(root, media, fixture, args.contains("--self-check"));
             window.show();
             QTimer::singleShot(0, &window, [&window]() { window.start(); });

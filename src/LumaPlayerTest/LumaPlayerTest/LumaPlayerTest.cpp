@@ -8,6 +8,14 @@
 #include <stdexcept>
 #include "CStringManager/CStringManagerAPI.h"
 #include "LogManager/LogManagerAPI.h"
+#include "DialogManager/DialogManagerAPI.h"
+#include "QtControls/Widget.h"
+#include "QtControls/CheckBox.h"
+#include "QtControls/LineEdit.h"
+#include "QtControls/Label.h"
+#include "QtControls/PushButton.h"
+#include "QtControls/ProgressBar.h"
+#include "QtControls/PlainTextEdit.h"
 #include <QtWidgets>
 #include <QSaveFile>
 #include <QJsonDocument>
@@ -51,14 +59,15 @@ m_output(nullptr)
     m_ui.setupUi(this);
     setWindowTitle(m_config.m_title);
     resize(900, 580);
-    QWidget* panel = new QWidget(this);
+    Widget* panel = new Widget(this);
     QVBoxLayout* layout = new QVBoxLayout(panel);
     QGridLayout* paths = new QGridLayout();
-    m_debugCheck = new QCheckBox(m_config.m_debugLabel, panel);
-    m_debugPath = new QLineEdit(panel);
-    m_releasePath = new QLineEdit(panel);
-    m_debugBrowse = new QPushButton(m_config.m_choosePath, panel);
-    m_releaseBrowse = new QPushButton(m_config.m_choosePath, panel);
+    m_debugCheck = new CheckBox(panel);
+    m_debugCheck->setText(m_config.m_debugLabel);
+    m_debugPath = new LineEdit(panel);
+    m_releasePath = new LineEdit(panel);
+    m_debugBrowse = createButton(m_config.m_choosePath, panel);
+    m_releaseBrowse = createButton(m_config.m_choosePath, panel);
     m_debugPath->setReadOnly(true);
     m_releasePath->setReadOnly(true);
     m_debugCheck->setObjectName("debugCheck");
@@ -69,15 +78,19 @@ m_output(nullptr)
     paths->addWidget(m_debugCheck, 1, 0);
     paths->addWidget(m_debugPath, 1, 1);
     paths->addWidget(m_debugBrowse, 1, 2);
-    paths->addWidget(new QLabel(m_config.m_releaseLabel, panel), 2, 0);
+    Label* releaseLabel = new Label(panel);
+    releaseLabel->setText(m_config.m_releaseLabel);
+    paths->addWidget(releaseLabel, 2, 0);
     paths->addWidget(m_releasePath, 2, 1);
     paths->addWidget(m_releaseBrowse, 2, 2);
-    m_videoPath = new QLineEdit(panel);
+    m_videoPath = new LineEdit(panel);
     m_videoPath->setObjectName("videoPath");
     m_videoPath->setReadOnly(true);
-    m_videoBrowse = new QPushButton(m_config.m_choosePath, panel);
+    m_videoBrowse = createButton(m_config.m_choosePath, panel);
     m_videoBrowse->setObjectName("videoBrowse");
-    paths->addWidget(new QLabel(m_config.m_videoLabel, panel), 0, 0);
+    Label* videoLabel = new Label(panel);
+    videoLabel->setText(m_config.m_videoLabel);
+    paths->addWidget(videoLabel, 0, 0);
     paths->addWidget(m_videoPath, 0, 1);
     paths->addWidget(m_videoBrowse, 0, 2);
     const QStringList mediaOptions = QApplication::arguments();
@@ -116,7 +129,7 @@ m_output(nullptr)
     const QStringList modes = QStringList() << "specified" << "instant" << "pressure" << "all";
     for (int32_t index = 0; index < 4; ++index)
     {
-        QPushButton* button = new QPushButton(m_config.m_buttons[index], panel);
+        PushButton* button = createButton(m_config.m_buttons[index], panel);
         m_buttons.push_back(button);
         controls->addWidget(button);
         const QString mode = modes[index];
@@ -128,26 +141,31 @@ m_output(nullptr)
             QString ids;
             if (mode == "specified")
             {
-                bool accepted = false;
-                ids = QInputDialog::getText(this, m_config.m_buttons[0], m_config.m_idPrompt, QLineEdit::Normal, QString(), &accepted);
-                if (!accepted)
+                InputDialogParam param;
+                param.m_parent = windowHandle();
+                param.m_title = m_config.m_buttons[0];
+                param.m_editTip = m_config.m_idPrompt;
+                DialogManager::instance().makeDialog(param);
+                if (param.m_dialogId == 0 || param.m_result != ACCEPT_BUTTON)
                 {
                     return;
                 }
+                ids = param.m_editText;
             }
             beginRun(mode, ids);
         });
     }
-    m_stop = new QPushButton(m_config.m_stopText, panel);
+    m_stop = createButton(m_config.m_stopText, panel);
     m_stop->setEnabled(false);
     controls->addWidget(m_stop);
     QObject::connect(m_stop, &QPushButton::clicked, this, [this]() {
         beginRun("stop", QString());
     });
-    m_status = new QLabel(m_config.m_title, panel);
+    m_status = new Label(panel);
+    m_status->setText(m_config.m_title);
     m_status->setWordWrap(true);
-    m_progress = new QProgressBar(panel);
-    m_output = new QPlainTextEdit(panel);
+    m_progress = new ProgressBar(panel);
+    m_output = new PlainTextEdit(panel);
     m_output->setReadOnly(true);
     m_output->setMaximumBlockCount(600);
     layout->addLayout(controls);
@@ -428,7 +446,7 @@ void LumaPlayerTest::next()
         }
         else
         {
-            QMessageBox::information(this, m_config.m_title, m_status->text() + "\n" + m_root);
+            showInformation(m_status->text() + "\n" + m_root);
         }
         return;
     }
@@ -710,7 +728,7 @@ void LumaPlayerTest::closeEvent(QCloseEvent* event)
         event->ignore();
         return;
     }
-    QMainWindow::closeEvent(event);
+    MainWindow::closeEvent(event);
     QApplication::quit();
 }
 
@@ -737,7 +755,7 @@ void LumaPlayerTest::choosePath(bool debug)
     const QString exe = debug ? "/LumaPlayerd.exe" : "/LumaPlayer1.0.exe";
     if (!QFileInfo(path + exe).isFile())
     {
-        QMessageBox::information(this, m_config.m_title, m_config.m_pathRequired + exe.mid(1));
+        showInformation(m_config.m_pathRequired + exe.mid(1));
         return;
     }
     edit->setText(QDir::cleanPath(path));
@@ -747,7 +765,7 @@ bool LumaPlayerTest::validatePaths()
 {
     if (m_videoPath->text().isEmpty() || !QDir(m_videoPath->text()).exists())
     {
-        QMessageBox::information(this, m_config.m_title, m_config.m_videoLabel + ": " + m_config.m_choosePath);
+        showInformation(m_config.m_videoLabel + ": " + m_config.m_choosePath);
         return false;
     }
     QStringList missing;
@@ -773,8 +791,34 @@ bool LumaPlayerTest::validatePaths()
     {
         m_status->setText(error);
         m_output->appendPlainText(error);
-        QMessageBox::information(this, m_config.m_title, error);
+        showInformation(error);
         return false;
     }
     return true;
+}
+
+PushButton* LumaPlayerTest::createButton(const QString& text, QWidget* parent)
+{
+    PushButton* button = new PushButton(parent);
+    // 测试工具保留系统主题，不使用PushButton默认的透明底白字样式。
+    button->m_controlStyle = QssString();
+    button->repaint();
+    button->setFont(parent->font());
+    button->setText(text);
+    button->setClickBreathTime(0);
+    return button;
+}
+
+void LumaPlayerTest::showInformation(const QString& message)
+{
+    TipDialogParam param;
+    param.m_parent = windowHandle();
+    param.m_title = m_config.m_title;
+    param.m_tip = message;
+    DialogManager::instance().makeDialog(param);
+    if (param.m_dialogId == 0)
+    {
+        m_status->setText(message);
+        LOGERROR("Cannot create test information dialog");
+    }
 }

@@ -38,4 +38,6 @@ private:
     SplitViewerFileDialogParam m_param;
     // Qt父子关系持有的文件控件
     FileDialog* m_files;
+    // 覆盖确认未结束时拒绝重复提交
+    bool m_accepting;
 };

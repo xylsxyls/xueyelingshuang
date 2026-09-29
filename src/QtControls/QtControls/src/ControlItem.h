@@ -43,6 +43,15 @@ public:
 	*/
 	void setItemTextOrigin(qint32 origin, bool rePaint = false);
 
+    /** 设置主子控件的内边距，不改变命中区域为外边距
+    @param [in] left 左内边距，像素
+    @param [in] top 上内边距，像素
+    @param [in] right 右内边距，像素
+    @param [in] bottom 下内边距，像素
+    @param [in] rePaint 是否立即应用样式
+    */
+    void setItemPadding(qint32 left, qint32 top, qint32 right, qint32 bottom, bool rePaint = false);
+
 	/** 设置主子控件节点到控件本体的四个外边距
 	@param [in] leftOrigin 左侧偏移量
 	@param [in] topOrigin 上侧偏移量

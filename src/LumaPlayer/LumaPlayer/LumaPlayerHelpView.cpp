@@ -10,7 +10,8 @@
 #include "QtControls/DialogBase.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
-#include <QLabel>
+#include "QtControls/Label.h"
+#include "QtControls/Widget.h"
 #include <QMouseEvent>
 #include <QPushButton>
 #include <QWindow>
@@ -62,27 +63,27 @@ bool LumaPlayerHelpView::initView(const DialogParam& param)
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, g_config.m_helpMargin);
     layout->setSpacing(g_config.m_helpSpacing);
-    QWidget* titleBar = new QWidget(this);
+    Widget* titleBar = new Widget(this);
     m_titleBar = titleBar;
     titleBar->setObjectName(QStringLiteral("helpTitleBar"));
     titleBar->installEventFilter(this);
     const int32_t titleHeight = g_config.m_topOverlayHeight + (g_config.m_topOverlayHeight % 2);
     titleBar->setFixedHeight(titleHeight);
-    QPalette titlePalette = titleBar->palette();
-    titlePalette.setColor(QPalette::Window, g_config.m_overlayColor);
-    titleBar->setPalette(titlePalette);
-    titleBar->setAutoFillBackground(true);
+    titleBar->setBackgroundColor(g_config.m_overlayColor);
+    titleBar->setAttribute(Qt::WA_StyledBackground, true);
     QHBoxLayout* titleRow = new QHBoxLayout(titleBar);
     const int32_t titleInset = (titleHeight - g_config.m_titleButtonSize) / 2;
     titleRow->setContentsMargins(titleInset, 0, titleInset, 0);
-    QLabel* title = new QLabel(g_config.m_helpTitle, this);
+    Label* title = new Label(this);
+    title->setText(g_config.m_helpTitle);
     m_titleLabel = title;
     title->installEventFilter(this);
     QFont titleFont(g_config.m_fontFamily, g_config.m_helpTitleSize);
     titleFont.setBold(true);
     title->setFont(titleFont);
+    title->setTextColor(g_config.m_textColor);
     LumaPlayerButton* close = new LumaPlayerButton(true, this);
-    close->setText(g_config.m_closeText);
+    close->setAccessibleName(g_config.m_closeText);
     close->setFixedSize(g_config.m_titleButtonSize, g_config.m_titleButtonSize);
     titleRow->addWidget(title);
     titleRow->addStretch();
@@ -92,16 +93,19 @@ bool LumaPlayerHelpView::initView(const DialogParam& param)
     content->setContentsMargins(g_config.m_helpMargin, g_config.m_titleButtonTop,
         g_config.m_helpMargin, 0);
     content->setSpacing(g_config.m_helpSpacing);
-    QLabel* product = new QLabel(g_config.m_windowTitle, this);
+    Label* product = new Label(this);
+    product->setText(g_config.m_windowTitle);
     product->setFont(titleFont);
     product->setAlignment(Qt::AlignCenter);
     content->addWidget(product);
-    QLabel* version = new QLabel(g_config.m_versionLabel, this);
+    Label* version = new Label(this);
+    version->setText(g_config.m_versionLabel);
     version->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     version->setFont(QFont(g_config.m_fontFamily, g_config.m_fontSize));
     content->addWidget(version);
-    QLabel* instructions = new QLabel(QString::fromStdWString(CStringManager::Format(
-        g_config.m_helpText.toStdWString().c_str(), g_config.m_keyboardSeekSeconds)), this);
+    Label* instructions = new Label(this);
+    instructions->setText(QString::fromStdWString(CStringManager::Format(
+        g_config.m_helpText.toStdWString().c_str(), g_config.m_keyboardSeekSeconds)));
     instructions->setWordWrap(true);
     instructions->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     instructions->setFont(QFont(g_config.m_fontFamily, g_config.m_fontSize));

@@ -150,4 +150,12 @@
   <ItemGroup><ClCompile Include="SplitViewerShadowTests.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="SplitViewerConfigTests.cpp"><Filter>Source Files</Filter></ClCompile><ClInclude Include="SplitViewerShadowTests.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="SplitViewerConfigTests.h"><Filter>Header Files</Filter></ClInclude></ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SplitViewerTestConfig.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="SplitViewerTestConfig.h"><Filter>Header Files</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SplitViewerHarnessTests.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="SplitViewerHarnessTests.h"><Filter>Header Files</Filter></ClInclude>
+  </ItemGroup>
 </Project>

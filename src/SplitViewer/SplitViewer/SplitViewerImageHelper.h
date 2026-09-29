@@ -6,6 +6,12 @@
 class SplitViewerImageHelper
 {
 public:
+    /** 释放当前文档不再引用的图片，保留多个叶子共享的同一路径
+    @param [in] document 当前文档，仅GUI线程调用
+    @param [in,out] cache 文档图片缓存
+    */
+    static void pruneUnusedImages(const SplitViewerCoreDocument& document, QMap<QString, QImage>& cache);
+
     /** 将Core路径转换为Qt路径
     @param [in] value 输入值
     @return 计算结果或借用对象，具体语义见函数说明

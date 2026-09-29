@@ -53,6 +53,8 @@ void ControlBase<QBase>::setKeyValue(const std::wstring& keyWord,
 	{
 		return;
 	}
+	// QssString saves selector values when written, before the first showEvent.
+	m_show->initClassName();
 	if (isItem)
 	{
 		ControlSubStyle::setKeyValue(&m_show->m_controlStyle, m_show->m_itemName, keyWord, value);
@@ -77,6 +79,7 @@ void ControlBase<QBase>::setColorStateMap(const std::map<qint32, std::map<qint32
 	{
 		return;
 	}
+	m_show->initClassName();
 	if (isItem)
 	{
 		ControlSubStyle::setColorStateMap(&m_show->m_controlStyle, m_show->m_itemName, colorStateMap, keyWord);
@@ -103,6 +106,7 @@ void ControlBase<QBase>::setImageStateMap(const std::map<qint32, std::map<qint32
 	{
 		return;
 	}
+	m_show->initClassName();
 	if (isItem)
 	{
 		ControlSubStyle::setImageStateMap(&m_show->m_controlStyle, m_show->m_itemName, imagePath, stateCount, imageStateMap, keyWord);

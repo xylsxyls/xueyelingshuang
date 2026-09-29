@@ -6,6 +6,7 @@
 #include "Config.h"
 #include <QtWidgets>
 #include <QElapsedTimer>
+#include "QtControls/Widget.h"
 // 仅测试构建统一访问权限，避免MSVC访问级别参与符号修饰造成不一致
 #define private public
 #include "LumaPlayer.h"

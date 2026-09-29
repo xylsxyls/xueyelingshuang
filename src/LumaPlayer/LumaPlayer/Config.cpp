@@ -2,7 +2,6 @@
 #pragma execution_character_set("utf-8")
 #endif
 #include "Config.h"
-#include "CStringManager/CStringManagerAPI.h"
 #include "LumaPlayerHelper.h"
 #include <algorithm>
 #include <cmath>
@@ -25,8 +24,6 @@ m_timeMeasureText(QStringLiteral("00:00:00")),
 m_zoomTextFormat("%d%%"),
 m_timeTextFormat("%02d:%02d:%02d"),
 m_preciseTimeTextFormat("%02d:%02d:%02d.%03d"),
-m_rgbaFormat("rgba(%d,%d,%d,%d)"),
-m_menuStyleFormat("QMenu{background:%s;color:%s;border:%dpx solid %s;} QMenu::item{padding:%dpx %dpx %dpx %dpx;} QMenu::item:selected{background:%s;}"),
 m_emptySizeDivisor(8),
 m_emptyMinSize(38),
 m_emptyMaxSize(76),
@@ -265,18 +262,4 @@ void Config::uninit()
 	m_debugEnabled = false;
 	m_startupMediaPath.clear();
 	m_logInitialized.store(false);
-}
-
-QString Config::menuStyleSheet() const
-{
-    const std::string background = CStringManager::Format(m_rgbaFormat.c_str(),
-        m_menuBackgroundColor.red(), m_menuBackgroundColor.green(), m_menuBackgroundColor.blue(), m_menuBackgroundColor.alpha());
-    const std::string border = CStringManager::Format(m_rgbaFormat.c_str(),
-        m_menuBorderColor.red(), m_menuBorderColor.green(), m_menuBorderColor.blue(), m_menuBorderColor.alpha());
-    const std::string selection = CStringManager::Format(m_rgbaFormat.c_str(),
-        m_menuSelectionColor.red(), m_menuSelectionColor.green(), m_menuSelectionColor.blue(), m_menuSelectionColor.alpha());
-    const std::string textColor = m_textColor.name().toStdString();
-    return QString::fromStdString(CStringManager::Format(m_menuStyleFormat.c_str(),
-        background.c_str(), textColor.c_str(), m_menuBorderWidth, border.c_str(),
-        m_menuPaddingVertical, m_menuPaddingRight, m_menuPaddingVertical, m_menuPaddingLeft, selection.c_str()));
 }

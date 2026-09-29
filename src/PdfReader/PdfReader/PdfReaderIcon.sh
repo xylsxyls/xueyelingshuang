@@ -3,7 +3,6 @@
 # Usage: bash PdfReaderIcon.sh icon SOURCE.png OUTPUT.{ico,icns,png}
 # ICO output also generates a sibling .rc file for the Windows resource compiler.
 # Windows: Git Bash + system PowerShell; macOS: sips/iconutil; Linux: PNG directly.
-set -euo pipefail
 
 system_name="$(uname -s)"
 case "$system_name" in
@@ -26,15 +25,14 @@ generate_icon() {
     output="$(shell_path "$2")"
     [[ -f "$source" ]] || { echo "Missing PNG: $source" >&2; return 2; }
     output_dir="$(dirname "$output")"
-    mkdir -p "$output_dir"
+    mkdir -p "$output_dir" || return 1
     case "$output" in
         *.ico)
             [[ "$platform" == windows ]] || { echo "ICO generation requires Windows PowerShell." >&2; return 2; }
             local icon_name
             icon_name="$(basename "$output")"
             case "$icon_name" in *[!A-Za-z0-9_.-]*) echo "Invalid ICO filename." >&2; return 2 ;; esac
-            helper="$(mktemp "$output_dir/pdfreader-icon.XXXXXX.ps1")"
-            trap 'rm -f -- "$helper"' EXIT
+            helper="$(mktemp "$output_dir/pdfreader-icon.XXXXXX.ps1")" || return 1
             cat > "$helper" <<'PDFREADER_ICON_POWERSHELL'
 param(
     [Parameter(Mandatory=$true)] [string]$Source,
@@ -113,24 +111,30 @@ finally
     $image.Dispose()
 }
 PDFREADER_ICON_POWERSHELL
-            powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(cygpath -w "$helper")" \
-                -Source "$(cygpath -w "$source")" -Output "$(cygpath -w "$output")"
+            if [[ $? != 0 ]]; then
+                rm -f -- "$helper"
+                return 1
+            fi
+            if ! powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(cygpath -w "$helper")" \
+                -Source "$(cygpath -w "$source")" -Output "$(cygpath -w "$output")"; then
+                rm -f -- "$helper"
+                return 1
+            fi
             rm -f -- "$helper"
-            trap - EXIT
             printf '101 ICON "%s"\n' "$icon_name" > "${output%.ico}.rc"
             ;;
         *.icns)
             [[ "$platform" == macos ]] || { echo "ICNS generation requires macOS sips/iconutil." >&2; return 2; }
             local iconset size scale pixels suffix
             iconset="$output_dir/PdfReader.iconset"
-            mkdir -p "$iconset"
+            mkdir -p "$iconset" || return 1
             for size in 16 32 128 256 512; do
                 for scale in 1 2; do
                     pixels=$((size * scale))
                     suffix=""
                     [[ "$scale" == 1 ]] || suffix="@2x"
                     /usr/bin/sips -z "$pixels" "$pixels" "$source" \
-                        --out "$iconset/icon_${size}x${size}${suffix}.png" >/dev/null
+                        --out "$iconset/icon_${size}x${size}${suffix}.png" >/dev/null || return 1
                 done
             done
             /usr/bin/iconutil -c icns "$iconset" -o "$output"

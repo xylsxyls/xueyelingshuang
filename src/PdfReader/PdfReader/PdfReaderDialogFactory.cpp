@@ -1,7 +1,7 @@
 ﻿#include "PdfReaderDialogFactory.h"
 #include "PdfReaderDialog.h"
 #include "PdfReaderDialogView.h"
-#include <new>
+#include <memory>
 
 CustomDialog* PdfReaderDialogFactory::createDialog(const DialogParam& param)
 {
@@ -9,14 +9,15 @@ CustomDialog* PdfReaderDialogFactory::createDialog(const DialogParam& param)
     {
         return nullptr;
     }
-    PdfReaderDialog* dialog = new (std::nothrow) PdfReaderDialog;
-    PdfReaderDialogView* view = new (std::nothrow) PdfReaderDialogView;
-    if (dialog == nullptr || view == nullptr || !dialog->setView(view))
+    std::unique_ptr<PdfReaderDialog> dialog(new PdfReaderDialog);
+    std::unique_ptr<PdfReaderDialogView> view(new PdfReaderDialogView);
+    // 先交给Qt父子所有权；setView后续抛出时外壳仍持有有效内容对象。
+    view->setParent(dialog.get());
+    PdfReaderDialogView* attachedView = view.release();
+    if (!dialog->setView(attachedView))
     {
-        delete view;
-        delete dialog;
         return nullptr;
     }
     dialog->setShowMode(POP_DIALOG_SHOW_MODE);
-    return dialog;
+    return dialog.release();
 }

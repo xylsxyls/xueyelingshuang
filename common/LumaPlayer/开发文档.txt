@@ -1,8 +1,8 @@
 ﻿流光播放器（LumaPlayer）开发文档
-更新日期：2026-09-29（关于标题栏铺满、无描边与扩散级别2阴影及DialogManager宿主日志回调）
+更新日期：2026-09-29（基础库复用、输入取消与边界修正；Release相关验证及增量发布完成）
 配套《需求文档.txt》描述产品行为。本文件描述当前实现、构建、测试和发布规则，不保存开发阶段放行状态；新任务的阶段、确认与执行证据写入其独立工作流目录。
 当前Esc改动已完成Windows x64 Debug/Release构建、AI核心验证及用户手动试运行确认；Release指定瞬时ID 30–32共3项通过（6.2秒），未执行其余35项，不宣称全量或压力通过。已发布common/LumaPlayer及common/LumaPlayerTest，正式目录启动与正常退出通过。证据见工作流验证证据及common/LumaPlayerTest/reports/20260915-023033-619。
-2026-09-29本轮：DialogManager、LumaPlayer/Test、PdfReader/Test、SplitViewer/Test均完成Windows x64 Release构建；LumaPlayerTest ID32为12/12，PdfReaderTest ID19、SplitViewerTest ID176通过，用户手动试运行确认。已增量发布至common/LumaPlayer、common/PdfReader、common/SplitViewer：各自EXE及DialogManager.dll、QtControls.dll；Test EXE未发布。三款产品均有本轮匹配符号包，LumaPlayer旧符号包保留且未变的12份PDB原样沿用。未做全量、压力、Debug或其他平台验证。
+2026-09-29此前关于框工作流：DialogManager、LumaPlayer/Test、PdfReader/Test、SplitViewer/Test均完成Windows x64 Release构建；LumaPlayerTest ID32为12/12，PdfReaderTest ID19、SplitViewerTest ID176通过，用户手动试运行确认。已增量发布至common/LumaPlayer、common/PdfReader、common/SplitViewer：各自EXE及DialogManager.dll、QtControls.dll；Test EXE未发布。三款产品均有该轮匹配符号包，LumaPlayer旧符号包保留且未变的12份PDB原样沿用。未做全量、压力、Debug或其他平台验证；这些结果不能证明下述源码整理已通过。
 
 一、入口与源码导航
 先读common/AI文档/仓库使用说明文档.txt，再按其中顺序阅读五份开发规范（含界面开发规范）；需求开发按《工程软件开发工作流.txt》现行版执行（阅读入口已于2026-09-29同步）。所有路径相对仓库根目录。2026-09-14用户确认沿用当前version脚本，构建安排见第八节。
@@ -11,7 +11,19 @@ src/LumaPlayer/LumaPlayer：main注册CDump、初始化Config和日志、运行Q
 src/LumaPlayerCore/LumaPlayerCore/src：LumaPlayerCore为C++外观；CoreAPI通过LUMAPLAYERCORE_USE_C_API选择CoreC纯C声明，CoreC.cpp薄转发；CContext和C音视频Adapter保存句柄及回调；CoreConfig为初始化参数；CoreResult为结果枚举和中文const map；Types定义公共模型；CoreHelper承接C边界检查。
 PlayerEngine协调命令、时钟、AB和生命周期；PlayerCommand/CommandTask是单条控制意图和同步完成对象；WorkerTask调度播放；PreviewTask是常驻最新位置预览；PreviewCancelContext检查代次与退出；LoopBuffer及其任务提前准备下一轮有限缓存；MediaClock用steady_clock映射媒体时间；IAudioRender/IVideoRender为借用输出契约。
 src/FFmpegCpp/FFmpegCpp/src：PlaybackReader完成解复用、解码、BGRA/PCM转换；AdjacentReader缓存相邻展示帧。业务不包含原生FFmpeg头。src/LumaPlayerTest/LumaPlayerTest为正式测试入口；src/LoopPlayer只作迁移行为对照。
-依赖方向：Qt/移动原生UI -> Core公开接口 -> Engine/二次开发库 -> 第三方。Core无Qt。桌面主体自绘控件；帮助通过DialogManager自定义View/Factory接入，不能声称主体已经全面改成QtControls。
+依赖方向：Qt/移动原生UI -> Core公开接口 -> Engine/二次开发库 -> 第三方。Core无Qt。LumaPlayer继承QtControls库的Widget，主体视频及时间轴保留产品自绘；帮助通过DialogManager自定义View/Factory接入。不是将自绘视频逐项改成独立子控件。
+
+基础库复用整理的现状与边界（2026-09-29，Windows x64 Release相关验证及增量发布完成）：
+控件映射：LumaPlayer QWidget -> Widget；LumaPlayerButton QPushButton -> PushButton，背景、字体、圆角和按下态复用公共接口，仅保留产品关闭图标；关于框标题容器和文字使用Widget/Label；AB菜单QMenu -> Menu，删除Config重复QSS拼接。QtControls库的ControlItem模板新增四边setItemPadding，区别于已有外边距setItemAroundOrigin，不改变类布局或默认状态。
+样式修正：QssString按值保存选择器；ControlBase在写入属性、颜色、图片前先初始化控件类名，避免首次showEvent前写成空类名的.{...}。关于框标题Widget启用WA_StyledBackground，Label通过setTextColor设置浅色文字，保留原深色半透明标题。实测截图发现退化后补强ID32像素及ID37选择器断言，已验证补强用例能检出改前问题；不是只靠生成的QSS文字推断显示正确。
+测试窗口QMainWindow -> MainWindow；创建的标签、按钮、输入框、复选框、进度和输出区分别使用Label/PushButton/LineEdit/CheckBox/ProgressBar/PlainTextEdit；.ui中的工具栏、容器、状态栏也提升。测试窗口按钮保留系统主题，不使用库默认白字透明底。PlainTextEdit来自同工作区并行会话新增封装，本轮复用，不重写。QMenuBar没有现成对应封装且仅为未使用菜单容器，保留Qt类型；布局、事件、QImage、QProcess和借用Qt基类指针不是控件迁移目标。LumaPlayer.ui/.qml是未实例化模板资源，保留但不据此声称存在运行时原生控件。
+弹窗映射：关于框沿用原CustomViewFactory；测试窗口的指定编号输入改用InputDialogParam，提示改用TipDialogParam，并补runner模式的DialogManager会话收尾。原生文件/目录选择器按用户明确例外继续由宿主调用QFileDialog。菜单、tooltip和窗口内部自绘音量层不是独立业务弹窗。本轮没有改DialogManager源码。
+通用函数复用：CoreC错误文本复制使用CStringManager::CopyToBuffer，保留长度含终止符、截断及空句柄契约；该接口由并行会话补入，本轮只接入。Legacy报告用CSystem打开/完整写入/关闭接口，Qt测试宿主转换UTF-8路径，不在Core引入Qt；CSystem仅补openBinaryOutputFile的Apple条件分支，复用已有标准C++路径转换。Win32测试进程的枚举可见无主窗口并WM_CLOSE协议仍留在平台测试适配器，现有CSystem只取首窗口的接口语义不同，不机械替换。
+修正依据：loadMedia原来未清m_progressPressPending等旧手势，focusOut原来把待定点击也提交定位，WindowDeactivate仅清部分标记。统一cancelDeferredInput，区分实际拖动收尾与待定点击取消，换媒体不提交旧手势。Core调速先取得音频接受结果再修改时钟；音频预读倍率乘法饱和，等待时间除数先转64位，AB边界复用VideoFrame::endTime100ns避免有符号溢出。
+测试可靠性：更新默认最大倍率独立预期5000及范围外6000；测试渲染器先构造、后析构，C句柄以unique_ptr<LumaPlayerCoreCContext, decltype(&lumaPlayerCoreDestroy)>管理，异常路径先关闭Core再释放回调数据。素材prepare从空的局部候选重新选择，仅全部成功才发布输出；Legacy/JSON报告检查完整落盘，失败不能返回通过。登记新增44输入取消/换媒体、45素材/报告边界，补充3、6、32、37；执行结果见下条及测试文档。
+工程登记与构建：CMake测试目标补入与VS目标一致的播放器源文件（排除main）、私有观察头、Core测试辅助源及Multimedia依赖；保持纯C smoke不注入C++观察头。VS2013下16个依赖、App及Test实际编译成功，App/Test最终构建无警告或错误，CApiSmoke.c实际按C编译；CMake仅静态检查，未宣称其他平台构建通过。version已准备before/头文件，但本机py启动器未登记Python 3，内部失败而外层返回0；改以已安装Python36直接执行原有各库rebuild脚本64 dll release，并逐项核对实际输出。未改保护脚本、全局关联或注册表；本机单独version构建仍需解决启动器登记。
+验证与交付：源码自查后按用户“继续吧，直到发布到common”恢复。最终隔离组合staged-final02执行24项瞬时全部通过（3、6、11、12、18、22、23、24、26、27、28、29、30、31、32、33、36、37、39、40、41、43、44、45），34.3秒；前一批32的旧断言虽通过，但截图发现浅色标题，补强断言先失败后通过，不能以旧通过代替最终版。受限运行环境曾拒绝音频设备初始化，真实桌面权限下复测通过，未放宽断言。实际产品隔离组合及发布目录分别打开合成AVI，画面和时间推进、48kHz双声道音频设备打开、正常WM_CLOSE退出0；加载的15个模块哈希与部署清单一致。以上为已执行结论，原始临时证据随本轮工作流结束清理。
+审查边界：已阅读三工程维护的C/C++实现与声明，并核对控件继承/创建、任务与回调退出、锁内等待、代次隔离和资源所有权，未凭猜测改任务管理器锁协议。不宣称不存在竞态或泄漏；未做Debug、压力17/长时压力、全量、跨平台、主观听感或本轮用户手动验收。测试工具使用新CSystem文件写入接口，而产品保留原CSystem.dll；产品真实启动单独验证其实际15模块组合。系统原生选择器人工取消及测试GUI指定输入/提示交互本轮未手动验证。未更新common/LumaPlayerTest的旧EXE；隔离测试程序随工作流结束删除，测试源码及include/lib保留。
 
 应用图标资源：res目录只维护一份res/LumaPlayer.png，Qt的LumaPlayer.qrc将其嵌入为:/icons/LumaPlayer.png，Config::m_applicationIconPath保持不变。唯一维护的图标生成脚本为源码同目录LumaPlayerIcon.sh，不保留上层scripts目录、Python/PowerShell转换入口或源码RC文件。Windows的GenerateLumaPlayerIcon构建目标在ResourceCompile之前调用Git sh，输出到各配置独立的$(IntDir)LumaPlayer.ico和LumaPlayer.rc；自动生成的RC以ID 1嵌入ICO。RC为纯ASCII、无BOM；Debug/Release和Win32/x64共用规则，Clean清理生成ICO及RC。PNG和脚本登记为增量输入，rcc同样追踪PNG，换图后两套内嵌图标同时更新，转换失败中止构建，不继续链接旧图标。
 Windows转换工具：shell在$(IntDir)/icon-builder生成一个小型Qt图像转换工具的.cpp、.pro和构建.cmd，以工程现有QTDIR、VCInstallDir及Platform调用qmake、VS2013编译器和nmake；这些全部是构建产物，不是额外维护的源码，不进入common。工具复用Qt的PNG解码和平滑缩放，再写入多尺寸ICO，不自制图片解码器，也不需要Python、PowerShell、Pillow或ImageMagick。
@@ -30,7 +42,7 @@ Core借用输出接口，不负责delete。帧指针只在回调期间有效，�
 C接口与配置
 内部LumaPlayerCoreCContext持有独立Core及两个Adapter，对外仅LumaPlayerCoreHandle。Helper异常包装、Adapter回调锁和借用生命周期保持原协议；未引入智能指针改造。
 C++及C配置包含m_defaultFrameDuration100ns（默认400000，25fps兜底）、m_defaultRatePermille（默认1000表示1.0倍率）、m_minRatePermille（默认100）、m_maxRatePermille（默认5000表示5.0倍率）。帧时长和最低倍率必须为正，最高不低于最低，默认倍率在范围内。初始化复制配置，成功打开/重开媒体使用该默认倍率，倍速设置按实例范围裁剪；真实帧时间优先于兜底。默认倍率不改变固定1000的倍率基准。配置结构布局已变，C与C++调用方全部重编，不能混用旧二进制。
-播放中调速实现：Ctrl+上下经LogicController::executePlayback累计在途目标，submitCore异步提交SetRate。PlayerEngine更新连续MediaClock、当前位置和音频流速度，不seek、不prime、不flush已排队PCM，避免丢失预读声音形成缺口。暂停调速同样保留读取器、待播帧和音频流，再Play直接接续。所有操作保持原Task与实际完成回执，GUI不等待Core。
+播放中调速实现：Ctrl+上下经LogicController::executePlayback累计在途目标，submitCore异步提交SetRate。PlayerEngine先向音频流设置目标速度，成功后更新连续MediaClock和当前位置；失败保留原倍率，不发布错误的已生效状态。不seek、不prime、不flush已排队PCM，避免丢失预读声音形成缺口。暂停调速同样保留读取器、待播帧和音频流，再Play直接接续。所有操作保持原Task与实际完成回执，GUI不等待Core。
 音频变速实现：每个PlayerEngine持有独立FFmpegCppAudioTempo，跨解码包持续write/read；底层使用tools/sonic中固定的release-0.2.0及已记录补丁，许可证Apache-2.0。FFmpegCppAPI是唯一封装入口，Core不直接包含sonic.h。保持原采样率、声道及音调，变速只改变样本数量。调速保留跨包历史，定位/换媒体重建，流或AB末尾finish一次，循环开始重建算法但不清空已正确裁剪的设备尾部。不得逐包finish或重建；旧逐包OLA实现已撤下。PlayerEngineHelper::scaleAudioRate仅保留整段离线转换兼容用途，播放链不调用它。
 音频调度：m_audioLead100ns为输出墙钟预读预算，按倍率折算媒体提前量；本步已经输出音频时不再为将来的视频帧sleep，立即继续补足音频。否则高倍速下几毫秒PCM后等待10ms会反复欠载。Core仍使用原播放Task，不引入额外线程。自动回归测实际400ms播放得到的PCM时长，不能只测算法函数。
 第三方依据与边界：Chromium公开的AudioRendererAlgorithm采用连续WSOLA；抖音私有算法未获公开源码验证，不宣称复刻。Sonic来源、固定版本、本地修正和构建方式见tools/sonic/来源及构建说明.txt。极慢速采样取整须累计小数余量，否则长期音画漂移；反相立体声用强信号声道做音高分析，输出仍保持各声道。
@@ -157,6 +169,9 @@ LumaPlayerTest1.0.exe --run specified --ids 13,14,23,35,36,38 --configuration bo
 测试选择、正式用例开发及执行按《工程测试规范》和工作流约定。19/20各默认持续120秒，34默认Release启动60次、Debug8次，38覆盖连续任务切换停止回收；未选压力项不能记通过。源码或产物变化后重测受影响范围，旧报告不能替新版本背书。
 
 十、发布规则与当前文件
+2026-09-29基础库复用发布：仅替换common/LumaPlayer中的LumaPlayer1.0.exe、LumaPlayerCore.dll、CStringManager.dll、QtControls.dll；其余11个DLL哈希保持原值，未更新DialogManager.dll、CSystem.dll或测试EXE，未分发独立图片、Qt官方运行库、平台插件或松散PDB。产品EXE SHA256为14BC68103193E917430F752BEAD6B6274E945A69DF6887EDC9C9BFF0031E7214。
+本轮符号包symbols-LumaPlayer1.0-20260929-232241-LibraryReuse.7z包含实际15模块匹配PDB，使用LZMA2 -mx=9固实压缩，完整性和解压逐文件哈希通过。以旧HelpDialogDeps包为基线，仅替换4个变更模块PDB；另发现原DialogManager PDB GUID相同但Age1不匹配已部署Age4，从已有SplitViewer的DialogManagerQtControls包找回GUID dfe8c62c-ea9a-49fd-b99c-2db626b61b2b/Age4的正确旧符号，不为配符号更换DLL。其他10份旧PDB原字节保留，旧包原位保留。新包SHA256为75DAA28136F11A51FD0A352C6809DF6DDF65F78FB10DE7720D297A38864721D5。
+本轮结束与证据：2026-09-29按用户“结束工作流”清理整个LumaPlayer基础库复用与稳定性整理目录、src/temp/LumaPlayerLibraryReuse-20260929及本轮可确认归属的构建中间文件和日志；其中包含staged-final02报告、截图、自动素材、隔离程序、符号展开文件及backup-20260929-232241旧文件备份。这些路径仅作历史批次标识，不再是可读取的证据或回退入口；验证结论和产物身份保留于正式文档。正式源码、需求/开发/测试文档、common发布程序与符号包、include/lib均保留，其他会话文件及用户运行日志不清理。需要回退时须另取得可信且符号匹配的旧程序，不能再引用已删除备份。
 同日自动图标构建调整：res只维护LumaPlayer.png，Windows通过清理重建、增量生成和非法输入检查；仅再次更新common/LumaPlayer/LumaPlayer1.0.exe及symbols-LumaPlayer1.0-20260923-AutoIcon.7z。14个DLL及其归档PDB内容保持不变，新EXE/PDB GUID/Age匹配，.7z为LZMA2极限固实压缩并完成解压核对；发布目录无独立图片，标题栏显示及正常退出通过。Linux/macOS仅增加图标生成和打包规则，未运行验证，不代表其播放器构建或部署已通过。
 2026-09-23图标发布：只更新LumaPlayer1.0.exe；Windows原生ICON与Qt标题栏图片均内嵌，不分发独立图片。Release x64编译0警告0错误；10种EXE图标尺寸提取及透明度/像素核对通过，640和244像素宽度的实际窗口截图检查通过；新EXE配正式目录原14个DLL启动、绘制和正常退出通过，发布前后DLL SHA256未变。symbols-LumaPlayer1.0-20260923-Icon.7z以Diagnostics旧包为基线，仅替换应用PDB，其他14个PDB保持逐字节一致；全部原模块符号及新EXE符号核对GUID/Age，LZMA2 -mx=9固实压缩、完整性与解压核对通过。本轮仅相关构建/资源/界面冒烟验证，未执行全量、压力、Debug或跨平台测试；不把该验证视为全部播放功能回归。
 增量发布遵循《仓库使用说明文档.txt》“增量发布与符号”：应用单独变化且Core兼容时，仅替换common/LumaPlayer/LumaPlayer1.0.exe，不重拷未变DLL，不自动部署测试EXE；符号包只换已更新模块的匹配PDB，保留未变DLL对应旧PDB，以.7z极限压缩保存。正式测试/证据及文档更新不扩大运行文件清单，依赖/ABI变化需另列必要同步产物。

@@ -52,7 +52,7 @@ public:
     const uint8_t* type,
     const std::vector<uint8_t>& data);
 
-    /** 在PNG结束块前插入配置块
+    /** 在PNG结束块前插入配置块；允许输入输出为同一容器，失败保留输出
     @param [in] thumbnailPng PNG预览字节
     @param [in] configBytes UTF-16LE配置字节
     @param [in,out] packageBytes 封装结果
@@ -62,7 +62,7 @@ public:
     const std::vector<uint8_t>& configBytes,
     std::vector<uint8_t>& packageBytes);
 
-    /** 从PNG配置块或旧版尾部标记提取配置
+    /** 从PNG配置块或旧版尾部标记提取配置；允许原位提取，失败保留输出
     @param [in] bytes 字节缓冲区
     @param [in,out] configBytes UTF-16LE配置字节
     @return 是否满足条件或操作成功

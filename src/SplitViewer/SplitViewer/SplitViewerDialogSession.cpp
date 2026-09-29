@@ -15,13 +15,22 @@ SplitViewerDialogSession::SplitViewerDialogSession()
     }
     factory.release();
 
-    std::unique_ptr<SplitViewerAboutDialogFactory> aboutFactory(new SplitViewerAboutDialogFactory);
-    if (!DialogManager::instance().registerCustomDialogFactory(g_config.m_aboutDialogType,
-        aboutFactory.get(), &SplitViewerAboutDialogFactory::destroy))
+    try
     {
-        throw std::runtime_error("SplitViewer about dialog factory registration failed");
+        std::unique_ptr<SplitViewerAboutDialogFactory> aboutFactory(new SplitViewerAboutDialogFactory);
+        if (!DialogManager::instance().registerCustomDialogFactory(g_config.m_aboutDialogType,
+            aboutFactory.get(), &SplitViewerAboutDialogFactory::destroy))
+        {
+            throw std::runtime_error("SplitViewer about dialog factory registration failed");
+        }
+        aboutFactory.release();
     }
-    aboutFactory.release();
+    catch (...)
+    {
+        // 构造失败不会调用本会话析构，只撤销本次已经转交的工厂。
+        DialogManager::instance().unregisterCustomViewFactory(g_config.m_fileDialogType);
+        throw;
+    }
 }
 
 SplitViewerDialogSession::~SplitViewerDialogSession()

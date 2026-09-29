@@ -53,6 +53,12 @@ public:
 	@return 返回匹配进程的窗口句柄，找不到返回NULL
 	*/
 	static HWND GetHwndByProcessId(uint32_t dwProcessId);
+
+    /** 查找指定进程的可见顶层窗口，不改变原GetHwndByProcessId的筛选语义
+    @param [in] processId 进程ID，0不匹配
+    @return 首个匹配的可见窗口，未找到返回nullptr；仅Windows提供
+    */
+    static HWND findVisibleWindowByProcessId(uint32_t processId);
 	/** 返回OCX注册路径
 	@param [in] classid OCX的ClassId
 	@return 返回OCX所在目录，带路径分隔符，失败返回空字符串
@@ -350,6 +356,19 @@ public:
 	@return 返回指定部分字符串，无法解析时返回空字符串
 	*/
 	static std::string GetName(const std::string& path, int32_t flag);
+    /** 拼接目录和相对文件名，只处理末尾分隔符，不访问文件系统或解析..路径
+    @param [in] directory 目录，可空；支持正斜杠和反斜杠，已有末尾分隔符不重复添加
+    @param [in] name 相对文件名；调用方负责拒绝绝对路径和不允许的子目录
+    @return 拼接路径；任一参数为空时返回另一参数
+    */
+    static std::string joinPath(const std::string& directory, const std::string& name);
+
+    /** 保证文件扩展名，匹配已有后缀时规范其大小写，否则追加后缀
+    @param [in] path 原路径，空路径保持空
+    @param [in] extension 含点的目标ASCII扩展名，例如.pdf；空扩展名保持原路径
+    @return 新路径，不访问文件系统；ASCII大小写不敏感，保留路径其他字节
+    */
+    static std::string ensureFileExtension(const std::string& path, const std::string& extension);
 	/** 删除文件或空目录
 	@param [in] path 文件或目录路径，Windows下只删除文件，Linux下可删除文件或空目录
 	@return 返回是否删除成功
@@ -416,6 +435,14 @@ public:
 	@return 返回文件内容，失败返回空字符串
 	*/
 	static std::string readFile(const std::string& path);
+
+    /** 按预算读取二进制文件，逐块限制内存，不依赖预先查询的文件大小
+    @param [in] path Unicode路径，不能为空或含零字符
+    @param [in] maximumBytes 允许读取的最大字节数，超出即失败
+    @param [out] data 成功替换结果，打开、读取、超限或关闭失败保留原值
+    @return 完整读取且关闭成功返回true；分配异常传播但文件会关闭；同步IO须在合适的执行线程调用
+    */
+    static bool readBinaryFile(const std::wstring& path, size_t maximumBytes, std::vector<uint8_t>& data);
 	/** 保存文件内容
 	@param [in] content 要写入的内容
 	@param [in] path 文件路径
@@ -434,6 +461,16 @@ public:
 		const std::string& fileStr = "",
 		const std::function<bool (const std::string&)>& EveryFilePath = nullptr,
 		std::vector<std::string>* unVisitPath = nullptr);
+
+private:
+#ifdef _WIN32
+    /** 枚举本次请求的可见窗口，找到后停止
+    @param [in] window 当前顶层窗口
+    @param [in,out] context 同步调用期间有效的进程ID与结果对
+    @return 继续枚举返回TRUE，匹配后返回FALSE
+    */
+    static BOOL CALLBACK findVisibleWindowCallback(HWND window, LPARAM context);
+#endif
 };
 
 #include "CSystem.inl"

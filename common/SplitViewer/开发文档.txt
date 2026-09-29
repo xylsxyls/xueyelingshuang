@@ -1,12 +1,12 @@
-﻿SplitViewer开发文档
-版本：0.15
-更新日期：2026-09-29（DialogManager宿主日志回调接入）
-状态：2026-09-28按用户要求完成桌面Config单例成员化，Windows Release x64编译、93项回归及正式程序启动检查通过，已增量发布两个EXE和匹配符号包。本次普通修改没有重新进入已结束的工作流。
+SplitViewer开发文档
+版本：0.17
+更新日期：2026-09-30（基础库复用与安全审查，已增量发布）
+状态：用户追加“继续吧，直到发布到common”后，已完成Windows Release x64依赖及两个EXE构建、102项完整回归和common增量发布；本轮证据见第十三节。工作流已按用户2026-09-30结束指令完成清理，未伪记人工验收。以下历史记录只对应当时版本。
 2026-09-29 DialogManager日志回调接入：SplitViewer及Test Release x64构建通过，UI审计ID176通过；用户确认试运行后，已将SplitViewer1.0.exe、DialogManager.dll、QtControls.dll增量发布至common/SplitViewer。symbols-SplitViewer1.0-20260929-DialogManagerQtControls.7z包含这三个已部署模块匹配的PDB；未执行全量、压力、Debug或其他平台验证。
 
 一、基线与职责
 旧版行为基线为src/SplitViewer_old/SplitViewer，不修改旧源码。Node/Layer/FloatRect、图片视图数值、配置字段、PNG自定义chunk归Core；窗口消息、菜单、画图、文件选择、图片编解码、句柄和平台注册归Qt工程。
-Core：src/SplitViewerCore/SplitViewerCore/src/；SplitViewerCore.h/.cpp保留兼容入口。只含C++11标准库；公开API为SplitViewerCoreAPI.h。Document拥有基础树、浮动层、边框/选择/舞台和窗口几何；Node拥有子节点；LeafState保存路径、内容类型、自动适配、比例与像素偏移。禁止放Qt类型、HWND或操作系统嵌入组合代码。
+Core：src/SplitViewerCore/SplitViewerCore/src/；SplitViewerCore.h/.cpp保留兼容入口。使用C++11标准库和CStringManager非Qt公共接口；公开API为SplitViewerCoreAPI.h。Document拥有基础树、浮动层、边框/选择/舞台和窗口几何；Node拥有子节点；LeafState保存路径、内容类型、自动适配、比例与像素偏移。禁止放Qt类型、HWND或操作系统嵌入组合代码。
 UI：SplitViewer.h/.cpp持有文档、QImage缓存和交互状态；SplitViewerCanvas负责Qt事件转发；SplitViewerPlatform按Q_OS_WIN/Q_OS_LINUX/Q_OS_MAC分离原生功能。Qt只通过Core公开API调用共享数据和算法。
 Test：SplitViewerUiTests编译真实SplitViewer/Canvas/Platform源码，并通过鼠标、菜单、拖放、快捷键、截图和落盘文件观察结果；protected browseFile只替换文件选择结果，reportError只记录错误。预期不从产品内部命中算法推导。测试细则见common/SplitViewerTest/测试文档.txt。
 
@@ -78,7 +78,7 @@ SplitViewer main在LogManager初始化后注册DialogManager::setLogCallback，�
 现有version_release.sh准备15个Windows Release x64依赖均build succeed，VS2013/Qt5.5.1构建SplitViewer和SplitViewerTest成功，无编译警告或错误。以两个新EXE搭配common原有DLL执行101—193全部93项瞬时回归，93通过、0失败、0取消、0跳过；真实播放器、阴影及默认界面尺寸继续满足独立预期。
 仅增量覆盖common/SplitViewer/SplitViewer1.0.exe和common/SplitViewerTest/SplitViewerTest1.0.exe，25处DLL哈希不变，Qt官方库/插件/资源未复制。正式发布程序已实际启动，打开520x340关于框并正常退出。第一次启动检查把独立阴影工具窗口误计为另一个正文弹窗，修正外部判定后通过，未因此改产品行为。
 匹配符号包为common/SplitViewerTest/symbols-SplitViewer-20260928-config-instance.7z；从前版最终符号包解压15份PDB，仅替换两个EXE的PDB，13份未变DLL符号保持原字节。27个模块的RSDS与对应PDB GUID/Age全部一致；7z -t7z -mx=9 -m0=lzma2 -ms=on压缩、完整性及解压哈希复核通过，散装PDB在验证后删除。旧发布符号包保留。
-本次按普通修改和用户明确的编译运行发布指令执行，不重新进入工作流。上轮阴影工作流已结束并清理；本次报告在src/temp/SplitViewerConfigSingleton/results/ui-results.txt，临时构建/发布脚本不是工程依赖。未验证Debug、其他操作系统、长期压力、多显示器或分数DPI；没有宣称用户人工验收。
+本次按普通修改和用户明确的编译运行发布指令执行，不重新进入工作流。上轮阴影工作流已结束并清理；历史原始报告与临时构建/发布脚本已清理，验证摘要保留于本节；临时脚本不是工程依赖。未验证Debug、其他操作系统、长期压力、多显示器或分数DPI；没有宣称用户人工验收。
 当前发布身份（SHA256）：
 common/SplitViewer/SplitViewer1.0.exe = da5dd7c5c97f9bb64b35fda56b76358e546c2e5a058539f4b4091aa94f120875
 common/SplitViewerTest/SplitViewerTest1.0.exe = 33d7cd2be0599efb22aaba2f668deb5b71cd70f651601732c4d0298c02eb8c09
@@ -116,3 +116,45 @@ common/SplitViewer/SplitViewerCore.dll = 7929fd777a846f018c4e026c73502f9e29b9c25
 Core默认矩形、浮动层位置、比例/缩放范围、读取上限归SplitViewerCoreConfig；Core无Qt或系统窗口类型。原NativeMouseConfig是可变运行状态，现改为NativeMouseManager，成员m_前缀、单例s_manager；不能把运行状态当配置常量。
 修复左上角按下/悬停命中范围不一致；加号及菜单共同使用包含tif/tiff的图片过滤器。Core拒绝负数或超上限图层数以及非正图片缩放，不再静默截断；解析失败保留完整旧文档。非有限舞台宽高比恢复有限默认值，非法适配比例拒绝，删除非叶节点拒绝；分割和新增图层在成功交接前使用unique_ptr持有，避免分配异常泄漏。
 调整公开API入口、借用成员注释、头文件声明/排版/编码及工程登记；CPP不新增类定义。此轮未改文件IO任务模型，不把局部规范整理描述为整个仓库或所有既有线程路径已完全满足现行五份规范。
+
+十三、基础库复用与安全审查（2026-09-29，未构建）
+授权：仅三个SplitViewer工程及必要公共能力；最初仅源码与自查，后按用户明确继续发布授权准备匹配头库并构建、验证和发布。不清理其他会话产物。原生文件选择器可以不归DialogManager，是用户本轮明确例外。
+控件：产品主窗口、画布、工具栏、状态栏、菜单、Label、PushButton等原本已使用QtControls。Test遗留QMainWindow/QWidget/QPushButton/QComboBox/QPlainTextEdit改为MainWindow/Widget/PushButton/ComboBox/PlainTextEdit。PlainTextEdit在QtControls新增独立头源，沿用ControlShow/Self/Font/Border/Background的QSS组合；动态库、静态库及filters登记同步。两个.ui占位模板提升为MainWindow和Widget，实际界面仍由cpp布局；原有qml/qrc保留。非Windows外部句柄容器必须由QWidget::createWindowContainer创建，Qt规定该工厂持有foreign QWindow，不能换普通Widget伪造容器。布局、QImage、QTimer、QProcess、QAction及Qt基类借用指针不属于待封装可见控件。
+弹窗：现有CustomView/CustomDialog注册工厂足够，本轮没有修改DialogManager。原生QFileDialog直接保留；自绘测试选择器、覆盖确认、关于、错误和输入框仍经管理器。会话构造后半段失败时撤销已经成功转交的文件工厂；关于工厂在交接前用unique_ptr持有窗口和视图；测试选择器覆盖确认防重入并核对QPointer。产品和Test共用DialogHelper日志转接，不再复制文件级静态函数。
+公共库：CStringManager新增严格经典区域整数/有限浮点解析、固定精度格式化、UTF-16LE与16/32位wchar_t转换。输出仅成功时替换，非法代理、奇数字节、错误BOM、尾随垃圾及溢出拒绝；分配异常仍由调用方处理，局部资源按RAII释放。ProfileHelper保留配置字段和协议组织，删去无意义数值包装。CSystem新增按字节预算读取Unicode路径二进制文件（逐块限长、文件RAII、失败保留输出）及Windows按PID查找可见顶层窗口；原GetHwndByProcessId语义不变。Qt保留QSaveFile原子落盘、QImage编解码等现有成熟能力，不为形式复用降低保存语义。
+边界：loadNode、基础根和浮动层在完整成功前由unique_ptr托管，最终document.swap事务提交。保存遵守读取同样的128深度/4096每树节点/256层及16MiB文本上限；PNG配置在分配前限长，拒绝非零IEND，支持输入输出别名且失败不清空原输出。适配比例排除NaN/Inf和下溢，resize中间结果溢出时保留原视图，zoom上限保持有限，非法分屏方向拒绝。恢复窗口坐标差用qint64，超Qt尺寸范围不恢复；导出高度至少1。
+生命周期：文件选择/输入/菜单返回核对QPointer、关闭标记及文档代次。树变更使旧目标失效；关闭后排队鼠标回调不可操作旧窗口。NativeMouseManager订阅增加代次，注销或重订阅后旧通知失效；仍只在GUI线程访问，不新增跨线程共享模型或互斥锁。替换图片、删除节点/层和读配置后清理无引用缓存，保留共享路径。外部窗口重复嵌入拒绝，读取原矩形失败即退出，GDI快照检查每步资源并在失败路径释放。
+Test：UI回归经QProcess启动同一Test的--ui-audit入口，GUI不再同步执行长批次；轻量Core冒烟保留7项。每批用时间及CSystem::uuid生成唯一目录，stdout/stderr写文件避免进程缓冲无限累积。运行中禁用入口，关闭请求等待本批恢复系统选项后再退出；不强杀测试子进程。失败启动恢复输入，退出码和报告共同判定，CRLF按文本模式读取，0项或Windows全批缺项判失败。Test界面配置归SplitViewerTestConfig::instance()、public m_成员和.cpp初始化列表；独立g_testConfig宏避免与被测产品g_config冲突。194—202源码与预期见Test文档，本轮完整102项均已通过；202覆盖真实Test主界面的异步批次、防连点和关闭收尾。ComboBox使用已有addItem(text)与setItemData接口，避免QtControls隐藏Qt同名重载产生VS2013编译错误。
+依赖：Core通过CStringManagerAPI引用新增入口；现有version已准备CStringManager和CSystem，无需改Core version。app/Test CMake默认依赖补CSystem，Core直接CMake补CStringManager默认依赖；保留调用方传入的依赖列表。本次已从源头准备CStringManager、CSystem、QtControls和SplitViewerCore等匹配头库再构建两个EXE；更新目录也携带匹配DialogManager.dll，避免和旧公共控件模板混用；DialogManager源码未改。
+自查范围：维护目录全部cpp/h、模型所有权、Qt工厂、原生分支、构建入口及资源登记。静态核对后继续执行VS2013/Qt5.5.1 Release x64构建、实际界面和真实桌面嵌入回归。五端实机仍未执行。工作笔记保留静态记录和当前实际构建、回归证据。
+保留限制：产品图片解码、配置IO和导出仍沿既有同步模型；PrintWindow等外部进程窗口操作仍依赖系统及对端响应，不宣称已实现完整异步Task链或所有无响应隔离。Core模型是调用方串行持有的树，公开裸节点要求无环、独占，不支持并发读写。内存不足异常没有在全应用新增统一恢复策略。后续若调整这些架构，需独立回归，不能以本轮有限瞬时回归替代长期压力及故障隔离验证。
+
+十三、2026-09-29基础库复用发布记录（9月30日完成记录）
+平台：VS2013、Qt5.5.1，Windows Release x64；未执行Debug和其他平台构建。
+构建：version_release.sh完成依赖头文件准备，但其Python关联在自动化环境报Requested Python version (3) is not installed，脚本0退出不能视作库构建成功。未修改rebuild框架；临时shell用明确的Python36解释器顺序调用现有15个rebuild脚本，逐项核对DLL时间和返回值成功，再构建两个EXE。Test首次C2660在调用既有ComboBox重载处修正，最终两个EXE构建成功。
+正式回归：候选目录保留原有未变依赖，替换下面6个模块后执行101—202共102项，PASS=102、FAIL=0、取消/跳过=0，退出0，约32.89秒。161—168使用真实common/LumaPlayer播放器和自产AVI；184—188使用真实桌面输入并恢复系统拖动设置。194—202另执行独立项；200首次点击位置错误，修正为浮动层独立几何中心45%并增加文件框调用次数断言后，单项及全批通过。
+发布：common/SplitViewer与common/SplitViewerTest各替换对应EXE、CStringManager.dll、CSystem.dll、QtControls.dll、SplitViewerCore.dll、DialogManager.dll，共12处；其余15处二进制保留原哈希，不复制Qt运行库、插件或资源。DialogManager没有本轮源码改动，发布DLL与本次公共控件及接口匹配。
+发布后检查：产品直接打开本批红色PNG，中心像素(230,30,40)与素材一致，正常退出0；实际加载12个本地模块逐一核对哈希，全部6个更新模块已加载。目录内14个模块不代表启动时全部装载，未使用依赖可以不加载。common Test --autotest的7项Core冒烟通过并退出0。启动检查先前对隐藏启动标记、红色素材值和模块总数的假设有误，已据窗口枚举、素材像素和加载模块事实修正检查脚本，未因此修改产品或降低功能回归断言。
+符号：先解压旧完整15份PDB，保留8份未变符号，替换7份变化符号。27个目录模块逐一核对PE RSDS GUID/Age与对应PDB一致且均为x64；7z使用-t7z -mx=9 -m0=lzma2 -ms=on，归档测试及解压后15份SHA256均通过。新完整归档仅位于common/SplitViewerTest/symbols-SplitViewer-20260929-LibraryReuse.7z（5,747,312字节），旧包保留；两发布目录没有散装PDB，未清理并行构建使用的lib符号。
+符号包SHA256：b0c6587060b23084dfd4fdf4f3b8e0c05d922f49e499b8a5bb96dd87648c91cb
+模块SHA256（两个目录共享DLL相同）：
+CStringManager.dll 41b395f64417e0b7280556ff89e9f2c851b1b4ef7452f6f7a5ef116488631bb1；PDB 8f80ab68-04d6-46b2-b51e-4a07332fef73 age=1
+CSystem.dll 0ccf1c1475f7938349489491ff3cf3131a282e1aba7a11c7658df5a0da3f3ba4；PDB a43269a0-b74e-4e76-8cf3-c215ce16a42f age=1
+DialogManager.dll cd6498730560cf82f902682460ef1e66e4e7599ec2dfa425c669672079e51f83；PDB fce1daf5-5161-4cd4-8aa2-4e7f1f8dfcfd age=1
+QtControls.dll 289fa377983a9fe0268249eccfa6280c76c6c1050e547c124abe9064e3fc94e7；PDB 3c54d973-116c-466a-9ec4-959b33cfc324 age=1
+SplitViewer1.0.exe ede012adfe97b2aa9b39847c37472849064cd294e550126c803b6c3e586bcf13；PDB 84e59bd3-c9b0-4944-89df-d59d7c1725a8 age=1
+SplitViewerCore.dll f19264b54160eb43baa9e244257754439d89b5c48e86b1a50a78570589c95386；PDB 49e6ec76-2e04-4610-96ec-69a541a876cb age=1
+SplitViewerTest1.0.exe c9b61f5a8f923e1b5551a140acdbb7606807b91b98d1a6af1b7fb151562aebad；PDB e124766c-a98a-4a25-a2ec-4bc183ae4797 age=2
+结束交接：本节保留正式构建、102项回归、7项Core冒烟、发布健康检查、模块及PDB身份摘要。用户已要求结束，原始构建记录、报告、截图、素材、候选副本、临时脚本及备份已按规则删除，不再保留失效链接。已检查产品、关于框及真实视频截图；人工体验验收、原生文件框人工作业、Debug、长期压力、分数DPI、多显示器及非Windows实机均不在通过结论中。
+
+结束清理状态：2026-09-30已完成。删除209项经归属核实的目录或文件，以及6个指向同目录日志的符号链接；复核83项源码、发布模块、符号归档及用户后续运行日志哈希未变，全部删除目标不存在。范围为本轮工作流目录、专用临时目录、SplitViewer三工程中间构建、两个Qt工程GeneratedFiles、本轮库构建日志和可核实归属的中间文件，以及本轮测试进程日志。3份SplitViewer模块散装PDB已有完整匹配归档后清理；源码、永久测试、资源、common发布文件及完整符号包保留。共享库原有生成文件、其他会话产物、共享include/lib依赖及用户发布后运行日志保留。
+静态摘要：55项源码/工程/文档核对，格式、XML、工程登记和预处理检查通过，未新增cpp类定义；共享库已有chs_codecvt和VS_VERSIONINFO定义未纳入此次公共库全量风格重构。未实测平台及同步IO等既有限制仍按本节前述说明。
+
+十四、2026-09-30 JFIF最小修改及发布（普通任务）
+生产源码仅改Config.cpp的m_imageFilter初始化字符串一行，在*.jpeg后补*.jfif。Test源码、Core、QtControls、DialogManager和构建脚本均未因本项修改。复用现有依赖构建两个EXE的Windows Release x64，无需重编库。
+验证：既有190加号/右键过滤器一致性用例通过；实际Windows系统选择框默认图片过滤器包含*.jfif，列表可见JFIF，确认后图像像素正确、退出0。common发布后再次加载JFIF并正常退出。本次未重复102项全批，也未新增永久测试。
+只替换common/SplitViewer及common/SplitViewerTest对应EXE；25处DLL保持原SHA256，不复制Qt运行库或资源。完整15份PDB从上一包解压后只换2份EXE符号，13份DLL符号字节不变；全部27个目录模块PE RSDS GUID/Age与PDB匹配。新完整包symbols-SplitViewer-20260930-jfif.7z位于common/SplitViewerTest，7z -t7z -mx=9 -m0=lzma2 -ms=on极限压缩并完整性检查通过，旧包保留。
+本次临时构建、素材、脚本、候选及备份已清理；两份散装EXE PDB已有匹配完整归档后删除。正式结果摘要及身份信息保留，没有重新进入工作流。
+符号包SHA256：46d86e712b65be6f27e456d574a63942198df52eb67124edf8c006ce6c85cfa7
+SplitViewer1.0.exe SHA256=487b1b99d7d139f99349e0517011a1d34378ca5f903b918fed78da6114eb8a1f; PDB=b704548b-48a5-4562-bb97-950bbc5e6cd5 age=1
+SplitViewerTest1.0.exe SHA256=28ab88e3b55f3e053a9973c0d11cd898482fc3ab6504af35ed4d2539d0dc58f3; PDB=e9253134-01ef-4915-bb8f-c50c54a23e32 age=1

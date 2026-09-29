@@ -350,4 +350,12 @@
   <ItemGroup><ClCompile Include="SplitViewerShadowTests.cpp" />
     <ClCompile Include="SplitViewerConfigTests.cpp" /><ClInclude Include="SplitViewerShadowTests.h" />
     <ClInclude Include="SplitViewerConfigTests.h" /></ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SplitViewerTestConfig.cpp"></ClCompile>
+    <ClInclude Include="SplitViewerTestConfig.h"></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SplitViewerHarnessTests.cpp"></ClCompile>
+    <ClInclude Include="SplitViewerHarnessTests.h"></ClInclude>
+  </ItemGroup>
 </Project>

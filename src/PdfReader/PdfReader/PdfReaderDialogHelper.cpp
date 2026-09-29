@@ -2,9 +2,11 @@
 #include "PdfReaderFileHelper.h"
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QPointer>
 
 bool PdfReaderDialogHelper::run(QWidget* parent, PdfReaderDialogParam& param)
 {
+    const QPointer<QWidget> owner(parent);
     param.m_hasShadow = g_config.m_dialogShadowEnabled;
     param.m_shadowSize = g_config.m_dialogShadowSize;
     param.m_titleBarHeight = param.m_titleClose ? g_config.m_titleCloseHeight : g_config.m_dialogTitleBarHeight;
@@ -14,7 +16,7 @@ bool PdfReaderDialogHelper::run(QWidget* parent, PdfReaderDialogParam& param)
         param.m_parent = parent->windowHandle();
     }
     DialogManager::instance().makeDialog(param);
-    return param.m_dialogId != 0 && param.m_result == ACCEPT_BUTTON;
+    return (parent == nullptr || !owner.isNull()) && param.m_dialogId != 0 && param.m_result == ACCEPT_BUTTON;
 }
 
 void PdfReaderDialogHelper::message(QWidget* parent, const QString& title, const QString& text, bool about)
@@ -52,6 +54,7 @@ bool PdfReaderDialogHelper::input(QWidget* parent, const QString& title, const Q
 QString PdfReaderDialogHelper::file(QWidget* parent, PdfReaderDialogMode mode, const QString& title,
     const QString& initial, const QString& filter)
 {
+    const QPointer<QWidget> owner(parent);
     QString path;
     if (!g_config.m_useNativeFileDialog)
     {
@@ -72,7 +75,8 @@ QString PdfReaderDialogHelper::file(QWidget* parent, PdfReaderDialogMode mode, c
             path = QFileDialog::getOpenFileName(parent, title, initial, filter);
             break;
         case PdfReaderDialogSaveFile:
-            path = QFileDialog::getSaveFileName(parent, title, initial, filter);
+            // 后缀规范化后由业务确认最终文件，只询问一次覆盖。
+            path = QFileDialog::getSaveFileName(parent, title, initial, filter, nullptr, QFileDialog::DontConfirmOverwrite);
             break;
         case PdfReaderDialogDirectory:
             path = QFileDialog::getExistingDirectory(parent, title, initial, QFileDialog::ShowDirsOnly);
@@ -81,7 +85,7 @@ QString PdfReaderDialogHelper::file(QWidget* parent, PdfReaderDialogMode mode, c
             return QString();
         }
     }
-    if (path.isEmpty())
+    if (path.isEmpty() || (parent != nullptr && owner.isNull()))
     {
         return QString();
     }

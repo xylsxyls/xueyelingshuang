@@ -2,46 +2,13 @@
 #include "SplitViewerCore.h"
 #include "SplitViewerCoreConfig.h"
 #include "SplitViewerCoreGeometryHelper.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include <algorithm>
-#include <cmath>
-#include <cstring>
-#include <sstream>
-#include <locale>
-
-std::wstring SplitViewerCoreProfileHelper::formatInt(int value)
-{
-    std::wostringstream stream;
-    stream.imbue(std::locale::classic());
-    stream << value;
-    return stream.str();
-}
+#include <memory>
 
 std::wstring SplitViewerCoreProfileHelper::formatDouble(double value)
 {
-    std::wostringstream stream;
-    stream.imbue(std::locale::classic());
-    stream.setf(std::ios::fixed);
-    stream.precision(10);
-    stream << value;
-    return stream.str();
-}
-
-int SplitViewerCoreProfileHelper::parseInt(const std::wstring& value, int defaultValue)
-{
-    std::wistringstream stream(value);
-    stream.imbue(std::locale::classic());
-    int result = defaultValue;
-    stream >> result;
-    return stream.fail() ? defaultValue : result;
-}
-
-double SplitViewerCoreProfileHelper::parseDouble(const std::wstring& value, double defaultValue)
-{
-    std::wistringstream stream(value);
-    stream.imbue(std::locale::classic());
-    double result = defaultValue;
-    stream >> result;
-    return stream.fail() || !std::isfinite(result) ? defaultValue : result;
+    return CStringManager::formatFixedDouble(value, 10);
 }
 
 void SplitViewerCoreProfileHelper::setValue(SplitViewerCoreProfile& profile,
@@ -66,39 +33,48 @@ std::wstring SplitViewerCoreProfileHelper::getValue(const SplitViewerCoreProfile
     return valueIt == sectionIt->second.end() ? defaultValue : valueIt->second;
 }
 
-void SplitViewerCoreProfileHelper::saveNode(SplitViewerCoreProfile& profile,
+bool SplitViewerCoreProfileHelper::saveNode(SplitViewerCoreProfile& profile,
     const std::wstring& prefix,
     const SplitViewerCoreNode* node,
-    int& nextId)
+    int& nextId, int depth)
 {
+    if (node == nullptr || depth > SplitViewerCoreConfig::kMaximumTreeDepth ||
+        nextId >= SplitViewerCoreConfig::kMaximumNodes)
+    {
+        return false;
+    }
     const int id = nextId++;
-    const std::wstring section = prefix + L"Node" + formatInt(id);
-    if (!node || node->isLeaf())
+    const std::wstring section = prefix + L"Node" + CStringManager::Format(L"%d", id);
+    if (node->isLeaf())
     {
         setValue(profile, section, L"Kind", L"Leaf");
-        if (node)
-        {
-            setValue(profile, section, L"Path", node->view.path);
-            setValue(profile, section, L"HasImage", formatInt(node->view.hasImage ? 1 : 0));
-            setValue(profile, section, L"AutoFit", formatInt(node->view.autoFit ? 1 : 0));
-            setValue(profile, section, L"Scale", formatDouble(node->view.scale));
-            setValue(profile, section, L"OffsetX", formatDouble(node->view.offsetX));
-            setValue(profile, section, L"OffsetY", formatDouble(node->view.offsetY));
-            setValue(profile, section, L"ContentKind", formatInt(static_cast<int>(node->view.contentKind)));
-        }
-        return;
+        setValue(profile, section, L"Path", node->view.path);
+        setValue(profile, section, L"HasImage", CStringManager::Format(L"%d", node->view.hasImage ? 1 : 0));
+        setValue(profile, section, L"AutoFit", CStringManager::Format(L"%d", node->view.autoFit ? 1 : 0));
+        setValue(profile, section, L"Scale", formatDouble(node->view.scale));
+        setValue(profile, section, L"OffsetX", formatDouble(node->view.offsetX));
+        setValue(profile, section, L"OffsetY", formatDouble(node->view.offsetY));
+        setValue(profile, section, L"ContentKind", CStringManager::Format(L"%d", static_cast<int>(node->view.contentKind)));
+        return true;
     }
 
     setValue(profile, section, L"Kind", L"Split");
     setValue(profile, section, L"Direction",
-        formatInt(node->direction == SPLITVIEWER_CORE_SPLIT_HORIZONTAL ? 0 : 1));
+        CStringManager::Format(L"%d", node->direction == SPLITVIEWER_CORE_SPLIT_HORIZONTAL ? 0 : 1));
     setValue(profile, section, L"Ratio", formatDouble(node->ratio));
     const int firstId = nextId;
-    saveNode(profile, prefix, node->first, nextId);
+    if (!saveNode(profile, prefix, node->first, nextId, depth + 1))
+    {
+        return false;
+    }
     const int secondId = nextId;
-    saveNode(profile, prefix, node->second, nextId);
-    setValue(profile, section, L"First", formatInt(firstId));
-    setValue(profile, section, L"Second", formatInt(secondId));
+    if (!saveNode(profile, prefix, node->second, nextId, depth + 1))
+    {
+        return false;
+    }
+    setValue(profile, section, L"First", CStringManager::Format(L"%d", firstId));
+    setValue(profile, section, L"Second", CStringManager::Format(L"%d", secondId));
+    return true;
 }
 
 SplitViewerCoreNode* SplitViewerCoreProfileHelper::loadNode(const SplitViewerCoreProfile& profile,
@@ -111,59 +87,55 @@ SplitViewerCoreNode* SplitViewerCoreProfileHelper::loadNode(const SplitViewerCor
     {
         return nullptr;
     }
-    const std::wstring section = prefix + L"Node" + formatInt(id);
+    const std::wstring section = prefix + L"Node" + CStringManager::Format(L"%d", id);
     const std::wstring kind = getValue(profile, section, L"Kind", L"");
     if (kind != L"Leaf" && kind != L"leaf" && kind != L"Split" && kind != L"split")
     {
         return nullptr;
     }
-    SplitViewerCoreNode* node = new SplitViewerCoreNode();
+    std::unique_ptr<SplitViewerCoreNode> node(new SplitViewerCoreNode());
     if (kind == L"Split" || kind == L"split")
     {
         node->kind = SPLITVIEWER_CORE_NODE_SPLIT;
-        node->direction = parseInt(
+        node->direction = CStringManager::parseInt32(
             getValue(profile, section, L"Direction", L"0"), 0) == 0 ?
             SPLITVIEWER_CORE_SPLIT_HORIZONTAL : SPLITVIEWER_CORE_SPLIT_VERTICAL;
-        node->ratio = SplitViewerCoreGeometryHelper::clampDouble(parseDouble(
+        node->ratio = SplitViewerCoreGeometryHelper::clampDouble(CStringManager::parseFiniteDouble(
             getValue(profile, section, L"Ratio", formatDouble(SplitViewerCoreConfig::kDefaultSplitRatio)), SplitViewerCoreConfig::kDefaultSplitRatio), SplitViewerCoreConfig::kMinimumSplitRatio, SplitViewerCoreConfig::kMaximumSplitRatio);
-        delete node->first;
-        delete node->second;
-        node->first = loadNode(profile, prefix, parseInt(
+        node->first = loadNode(profile, prefix, CStringManager::parseInt32(
             getValue(profile, section, L"First", L"-1"), -1), depth + 1, visited);
-        node->second = loadNode(profile, prefix, parseInt(
+        node->second = loadNode(profile, prefix, CStringManager::parseInt32(
             getValue(profile, section, L"Second", L"-1"), -1), depth + 1, visited);
         if (!node->first || !node->second)
         {
-            delete node;
             return nullptr;
         }
-        return node;
+        return node.release();
     }
 
     node->view.path = getValue(profile, section, L"Path", L"");
-    node->view.hasImage = parseInt(
+    node->view.hasImage = CStringManager::parseInt32(
         getValue(profile, section, L"HasImage", L"0"), 0) != 0;
-    node->view.autoFit = parseInt(
+    node->view.autoFit = CStringManager::parseInt32(
         getValue(profile, section, L"AutoFit", L"1"), 1) != 0;
-    node->view.scale = parseDouble(
-        getValue(profile, section, L"Scale", L"1"), 1.0);
+    node->view.scale = CStringManager::parseFiniteDouble(
+        getValue(profile, section, L"Scale", L"1"), 0.0);
     if (node->view.scale <= 0.0)
     {
-        delete node;
         return nullptr;
     }
-    node->view.offsetX = parseDouble(
+    node->view.offsetX = CStringManager::parseFiniteDouble(
         getValue(profile, section, L"OffsetX", L"0"), 0.0);
-    node->view.offsetY = parseDouble(
+    node->view.offsetY = CStringManager::parseFiniteDouble(
         getValue(profile, section, L"OffsetY", L"0"), 0.0);
-    const int contentKind = parseInt(getValue(profile, section, L"ContentKind",
+    const int contentKind = CStringManager::parseInt32(getValue(profile, section, L"ContentKind",
         node->view.hasImage ? L"1" : L"0"), node->view.hasImage ? 1 : 0);
     node->view.contentKind = static_cast<SplitViewerCoreContentKind>((std::max)(0, (std::min)(2, contentKind)));
     if (!node->view.hasImage && node->view.contentKind == SPLITVIEWER_CORE_CONTENT_IMAGE)
     {
         node->view.contentKind = SPLITVIEWER_CORE_CONTENT_EMPTY;
     }
-    return node;
+    return node.release();
 }
 
 void SplitViewerCoreProfileHelper::writeProfileText(const SplitViewerCoreProfile& profile, std::wstring& text)
@@ -197,31 +169,10 @@ bool SplitViewerCoreProfileHelper::parseProfileText(const std::vector<uint8_t>& 
     {
         return false;
     }
-    const size_t offset = bytes[0] == 0xFF && bytes[1] == 0xFE ? 2 : 0;
-    if (((bytes.size() - offset) & 1) != 0)
+    std::wstring text;
+    if (!CStringManager::utf16LeToWide(bytes, text))
     {
         return false;
-    }
-    std::wstring text;
-    text.reserve((bytes.size() - offset) / 2);
-    for (size_t i = offset; i + 1 < bytes.size(); i += 2)
-    {
-        uint32_t value=bytes[i] | (static_cast<uint16_t>(bytes[i+1])<<8);
-        if (sizeof(wchar_t)>2 && value>=0xD800 && value<=0xDBFF)
-        {
-            if (i+3>=bytes.size())
-            {
-                return false;
-            }
-            const uint32_t low=bytes[i+2] | (static_cast<uint16_t>(bytes[i+3])<<8);
-            if (low<0xDC00 || low>0xDFFF)
-            {
-                return false;
-            }
-            value=0x10000+((value-0xD800)<<10)+(low-0xDC00);
-            i+=2;
-        }
-        text.push_back(static_cast<wchar_t>(value));
     }
 
     std::wstring section;
@@ -261,60 +212,55 @@ bool SplitViewerCoreProfileHelper::parseProfileText(const std::vector<uint8_t>& 
 
 bool SplitViewerCoreProfileHelper::serializeProfile(const SplitViewerCoreDocument& document, std::vector<uint8_t>& bytes)
 {
+    if (document.layerCount() > SplitViewerCoreConfig::kMaximumLayers)
+    {
+        return false;
+    }
     SplitViewerCoreProfile profile;
     setValue(profile, L"SplitViewer", L"Version", L"2");
     setValue(profile, L"SplitViewer", L"StageAspect", formatDouble(document.stageAspect()));
-    setValue(profile, L"SplitViewer", L"BorderVisible", formatInt(document.borderVisible() ? 1 : 0));
-    setValue(profile, L"SplitViewer", L"SelectedLayer", formatInt(document.selectedLayer()));
-    setValue(profile, L"SplitViewer", L"LayerCount", formatInt(document.layerCount()));
-    setValue(profile, L"Window", L"Left", formatInt(document.windowLeft()));
-    setValue(profile, L"Window", L"Top", formatInt(document.windowTop()));
-    setValue(profile, L"Window", L"Right", formatInt(document.windowRight()));
-    setValue(profile, L"Window", L"Bottom", formatInt(document.windowBottom()));
+    setValue(profile, L"SplitViewer", L"BorderVisible", CStringManager::Format(L"%d", document.borderVisible() ? 1 : 0));
+    setValue(profile, L"SplitViewer", L"SelectedLayer", CStringManager::Format(L"%d", document.selectedLayer()));
+    setValue(profile, L"SplitViewer", L"LayerCount", CStringManager::Format(L"%d", document.layerCount()));
+    setValue(profile, L"Window", L"Left", CStringManager::Format(L"%d", document.windowLeft()));
+    setValue(profile, L"Window", L"Top", CStringManager::Format(L"%d", document.windowTop()));
+    setValue(profile, L"Window", L"Right", CStringManager::Format(L"%d", document.windowRight()));
+    setValue(profile, L"Window", L"Bottom", CStringManager::Format(L"%d", document.windowBottom()));
 
     int baseNextId = 0;
-    setValue(profile, L"Base", L"Root", formatInt(baseNextId));
-    saveNode(profile, L"Base", document.baseRoot(), baseNextId);
-    setValue(profile, L"Base", L"NodeCount", formatInt(baseNextId));
+    setValue(profile, L"Base", L"Root", CStringManager::Format(L"%d", baseNextId));
+    if (!saveNode(profile, L"Base", document.baseRoot(), baseNextId))
+    {
+        return false;
+    }
+    setValue(profile, L"Base", L"NodeCount", CStringManager::Format(L"%d", baseNextId));
     for (int i = 0; i < document.layerCount(); ++i)
     {
         const SplitViewerCoreLayer* layer = document.layerAt(i);
-        const std::wstring section = L"Layer" + formatInt(i);
+        const std::wstring section = L"Layer" + CStringManager::Format(L"%d", i);
         setValue(profile, section, L"Left", formatDouble(layer ? layer->rect.left : SplitViewerCoreConfig::kDefaultLayerStart));
         setValue(profile, section, L"Top", formatDouble(layer ? layer->rect.top : SplitViewerCoreConfig::kDefaultLayerStart));
         setValue(profile, section, L"Right", formatDouble(layer ? layer->rect.right : SplitViewerCoreConfig::kDefaultLayerEnd));
         setValue(profile, section, L"Bottom", formatDouble(layer ? layer->rect.bottom : SplitViewerCoreConfig::kDefaultLayerEnd));
         int layerNextId = 0;
-        setValue(profile, section, L"Root", formatInt(layerNextId));
-        saveNode(profile, section + L"_", layer ? layer->root : nullptr, layerNextId);
-        setValue(profile, section, L"NodeCount", formatInt(layerNextId));
+        setValue(profile, section, L"Root", CStringManager::Format(L"%d", layerNextId));
+        if (!saveNode(profile, section + L"_", layer ? layer->root : nullptr, layerNextId))
+        {
+            return false;
+        }
+        setValue(profile, section, L"NodeCount", CStringManager::Format(L"%d", layerNextId));
     }
 
     std::wstring text;
     writeProfileText(profile, text);
-    bytes.clear();
-    bytes.push_back(0xFF);
-    bytes.push_back(0xFE);
-    for (size_t i = 0; i < text.size(); ++i)
+    std::vector<uint8_t> encoded;
+    if (!CStringManager::wideToUtf16Le(text, encoded) ||
+        encoded.size() > static_cast<size_t>(SplitViewerCoreConfig::kMaximumProfileBytes))
     {
-        uint32_t scalar=static_cast<uint32_t>(text[i]);
-        if (sizeof(wchar_t)>2 && scalar>0xFFFF)
-        {
-            if (scalar>0x10FFFF)
-            {
-                return false;
-            }
-            scalar-=0x10000;
-            const uint16_t high=static_cast<uint16_t>(0xD800+(scalar>>10));
-            bytes.push_back(static_cast<uint8_t>(high & 0xFF));
-            bytes.push_back(static_cast<uint8_t>(high >> 8));
-            scalar=0xDC00+(scalar & 0x3FF);
-        }
-        const uint16_t value = static_cast<uint16_t>(scalar);
-        bytes.push_back(static_cast<uint8_t>(value & 0xFF));
-        bytes.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
+        return false;
     }
-    return !bytes.empty();
+    bytes.swap(encoded);
+    return true;
 }
 
 bool SplitViewerCoreProfileHelper::deserializeProfile(const std::vector<uint8_t>& bytes, SplitViewerCoreDocument& document)
@@ -329,16 +275,16 @@ bool SplitViewerCoreProfileHelper::deserializeProfile(const std::vector<uint8_t>
         return false;
     }
     std::set<int> baseVisited;
-    SplitViewerCoreNode* base = loadNode(profile, L"Base",
-        parseInt(getValue(profile, L"Base", L"Root", L"-1"), -1), 0, baseVisited);
+    std::unique_ptr<SplitViewerCoreNode> base(loadNode(profile, L"Base",
+        CStringManager::parseInt32(getValue(profile, L"Base", L"Root", L"-1"), -1), 0, baseVisited));
     if (!base)
     {
         return false;
     }
 
     SplitViewerCoreDocument loaded;
-    loaded.setBaseRoot(base);
-    const int layerCount = parseInt(getValue(profile, L"SplitViewer", L"LayerCount", L"0"), -1);
+    loaded.setBaseRoot(base.release());
+    const int layerCount = CStringManager::parseInt32(getValue(profile, L"SplitViewer", L"LayerCount", L"0"), -1);
     // Reject invalid counts instead of silently truncating saved content.
     if (layerCount < 0 || layerCount > SplitViewerCoreConfig::kMaximumLayers)
     {
@@ -346,39 +292,40 @@ bool SplitViewerCoreProfileHelper::deserializeProfile(const std::vector<uint8_t>
     }
     for (int i = 0; i < layerCount; ++i)
     {
-        SplitViewerCoreLayer* layer = new SplitViewerCoreLayer();
-        const std::wstring section = L"Layer" + formatInt(i);
-        layer->rect.left = SplitViewerCoreGeometryHelper::clampDouble(parseDouble(
+        std::unique_ptr<SplitViewerCoreLayer> layer(new SplitViewerCoreLayer());
+        const std::wstring section = L"Layer" + CStringManager::Format(L"%d", i);
+        layer->rect.left = SplitViewerCoreGeometryHelper::clampDouble(CStringManager::parseFiniteDouble(
             getValue(profile, section, L"Left", formatDouble(SplitViewerCoreConfig::kDefaultLayerStart)), SplitViewerCoreConfig::kDefaultLayerStart), 0.0, 1.0);
-        layer->rect.top = SplitViewerCoreGeometryHelper::clampDouble(parseDouble(
+        layer->rect.top = SplitViewerCoreGeometryHelper::clampDouble(CStringManager::parseFiniteDouble(
             getValue(profile, section, L"Top", formatDouble(SplitViewerCoreConfig::kDefaultLayerStart)), SplitViewerCoreConfig::kDefaultLayerStart), 0.0, 1.0);
-        layer->rect.right = SplitViewerCoreGeometryHelper::clampDouble(parseDouble(
+        layer->rect.right = SplitViewerCoreGeometryHelper::clampDouble(CStringManager::parseFiniteDouble(
             getValue(profile, section, L"Right", formatDouble(SplitViewerCoreConfig::kDefaultLayerEnd)), SplitViewerCoreConfig::kDefaultLayerEnd), 0.0, 1.0);
-        layer->rect.bottom = SplitViewerCoreGeometryHelper::clampDouble(parseDouble(
+        layer->rect.bottom = SplitViewerCoreGeometryHelper::clampDouble(CStringManager::parseFiniteDouble(
             getValue(profile, section, L"Bottom", formatDouble(SplitViewerCoreConfig::kDefaultLayerEnd)), SplitViewerCoreConfig::kDefaultLayerEnd), 0.0, 1.0);
         SplitViewerCoreGeometryHelper::constrainLayerRect(layer->rect, SplitViewerCoreRect(0.0, 0.0, 1.0, 1.0), SplitViewerCoreConfig::kProfileMinimumLayerWidth, SplitViewerCoreConfig::kProfileMinimumLayerHeight);
-        delete layer->root;
         std::set<int> visited;
-        layer->root = loadNode(profile, section + L"_",
-            parseInt(getValue(profile, section, L"Root", L"-1"), -1), 0, visited);
-        if (!layer->root)
+        std::unique_ptr<SplitViewerCoreNode> root(loadNode(profile, section + L"_",
+            CStringManager::parseInt32(getValue(profile, section, L"Root", L"-1"), -1), 0, visited));
+        if (!root)
         {
-            delete layer;
             return false;
         }
-        loaded.appendLayer(layer);
+        delete layer->root;
+        layer->root = root.release();
+        loaded.appendLayer(layer.get());
+        layer.release();
     }
-    loaded.setSelectedLayer(parseInt(
+    loaded.setSelectedLayer(CStringManager::parseInt32(
         getValue(profile, L"SplitViewer", L"SelectedLayer", L"-1"), -1));
-    loaded.setBorderVisible(parseInt(
+    loaded.setBorderVisible(CStringManager::parseInt32(
         getValue(profile, L"SplitViewer", L"BorderVisible", L"1"), 1) != 0);
-    loaded.setStageAspect(parseDouble(
+    loaded.setStageAspect(CStringManager::parseFiniteDouble(
         getValue(profile, L"SplitViewer", L"StageAspect", formatDouble(SplitViewerCoreConfig::kDefaultStageAspect)), SplitViewerCoreConfig::kDefaultStageAspect));
     loaded.setWindowRect(
-        parseInt(getValue(profile, L"Window", L"Left", L"-1"), -1),
-        parseInt(getValue(profile, L"Window", L"Top", L"-1"), -1),
-        parseInt(getValue(profile, L"Window", L"Right", L"-1"), -1),
-        parseInt(getValue(profile, L"Window", L"Bottom", L"-1"), -1));
+        CStringManager::parseInt32(getValue(profile, L"Window", L"Left", L"-1"), -1),
+        CStringManager::parseInt32(getValue(profile, L"Window", L"Top", L"-1"), -1),
+        CStringManager::parseInt32(getValue(profile, L"Window", L"Right", L"-1"), -1),
+        CStringManager::parseInt32(getValue(profile, L"Window", L"Bottom", L"-1"), -1));
     document.swap(loaded);
     return true;
 }

@@ -71,11 +71,6 @@ protected:
     */
     void closeEvent(QCloseEvent* event) override;
 
-    /** 委托基类处理普通滚轮事件
-    @param [in] event 当前Qt事件，调用期间借用
-    */
-    void wheelEvent(QWheelEvent* event) override;
-
     /** 转发缩放、页选择和尺寸变化交互
     @param [in] watched 事件所属Qt对象
     @param [in] event 当前Qt事件，调用期间借用

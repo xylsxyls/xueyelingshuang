@@ -49,14 +49,16 @@ const std::map<TestCaseId, TestCaseMetadata> kTestCases =
     {CaseProgressClick, {QStringLiteral("1/2/5倍进度单击后800ms内持续播放，无暂停往返"), TestInstant, "gui", 30000}},
     {CaseAbRateLatency, {QStringLiteral("播放2倍及暂停5倍AB实际完成及时，清除淘汰在途解析"), TestInstant, "gui", 30000}},
     {CaseRateSeekLoopRace, {QStringLiteral("AB与连续调速后24次前后跳转，持续解码不崩溃并正常关闭"), TestPressure, "gui", 90000}},
-    {CaseInitialMediaFit, {QStringLiteral("超大视频初始尺寸不超半屏，等比例居中且保留窗口状态"), TestInstant, "gui", 30000}}
+    {CaseInitialMediaFit, {QStringLiteral("超大视频初始尺寸不超半屏，等比例居中且保留窗口状态"), TestInstant, "gui", 30000}},
+    {CaseInputCancel, {QStringLiteral("失焦取消未完成单击、收尾实际拖动，旧手势不影响新媒体"), TestInstant, "gui", 30000}},
+    {CaseTestIoBoundary, {QStringLiteral("空素材目录不复用旧路径，报告落盘失败不得计通过"), TestInstant, "core", 30000}}
 };
 
 const std::set<int32_t> kDeletedTestIds;
 
 QString TestCaseRegistry::validate()
 {
-    const TestCaseId declared[] = {CaseCppLifecycle, CaseRepeatedInit, CaseCApiLifecycle, CaseCApiMedia, CaseMediaControl, CaseConfiguration, CaseFullLoopCache, CasePrefixLoopCache, CaseLatestPreview, CaseLoopMoveCancel, CaseFrameAndRate, CaseReentry, CaseMediaAndPixels, CaseAbBoundary, CasePlayingAb, CaseAbReentry, CaseExitRace, CaseMultiCore, CaseLongPlayback, CaseLongLoop, CaseEmptyUi, CasePlayPauseUi, CaseDragUi, CaseSeekKeys, CaseFractionalKeys, CaseAbMenu, CasePausedMenu, CaseFrameKey, CaseResetUi, CaseWindowState, CasePinnedUi, CaseHelpUi, CaseQueuedClose, CaseStartup, CaseDiagnostics, CaseSelectionRules, CaseButtonVisuals, CaseThreadStopRace, CaseRatePitch, CaseProgressClick, CaseAbRateLatency, CaseRateSeekLoopRace, CaseInitialMediaFit};
+    const TestCaseId declared[] = {CaseCppLifecycle, CaseRepeatedInit, CaseCApiLifecycle, CaseCApiMedia, CaseMediaControl, CaseConfiguration, CaseFullLoopCache, CasePrefixLoopCache, CaseLatestPreview, CaseLoopMoveCancel, CaseFrameAndRate, CaseReentry, CaseMediaAndPixels, CaseAbBoundary, CasePlayingAb, CaseAbReentry, CaseExitRace, CaseMultiCore, CaseLongPlayback, CaseLongLoop, CaseEmptyUi, CasePlayPauseUi, CaseDragUi, CaseSeekKeys, CaseFractionalKeys, CaseAbMenu, CasePausedMenu, CaseFrameKey, CaseResetUi, CaseWindowState, CasePinnedUi, CaseHelpUi, CaseQueuedClose, CaseStartup, CaseDiagnostics, CaseSelectionRules, CaseButtonVisuals, CaseThreadStopRace, CaseRatePitch, CaseProgressClick, CaseAbRateLatency, CaseRateSeekLoopRace, CaseInitialMediaFit, CaseInputCancel, CaseTestIoBoundary};
     std::set<int32_t> ids;
     for (size_t i = 0; i < sizeof(declared) / sizeof(declared[0]); ++i)
     {

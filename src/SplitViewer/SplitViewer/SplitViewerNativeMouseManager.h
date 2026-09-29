@@ -30,6 +30,10 @@ public:
     QMap<HWND, SplitViewerNativeClick> m_pendingClicks;
     // 拒绝已撤销点击的单调代次
     quint64 m_clickGeneration;
+    // 订阅代次，注销后已经排队的通知失效
+    quint64 m_clientGeneration;
+    // 每个存活订阅的身份，仅GUI线程访问
+    QMap<QObject*, quint64> m_clientGenerations;
     // 本管理器拥有的鼠标钩子，最后客户端退出时释放
     HHOOK m_mouseHook;
     // 借用GUI接收者；销毁前注销，其上下文控制回调有效期

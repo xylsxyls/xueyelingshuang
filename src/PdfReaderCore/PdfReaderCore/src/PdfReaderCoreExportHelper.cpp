@@ -5,7 +5,7 @@
 std::string PdfReaderCoreExportHelper::pageFileName(const std::string& directory,
     const std::string& prefix, int32_t page, int32_t numberWidth)
 {
-    return directory + prefix + "_" + CStringManager::Format("%0*d", numberWidth, page) + ".pdf";
+    return CSystem::joinPath(directory, prefix + "_" + CStringManager::Format("%0*d", numberWidth, page) + ".pdf");
 }
 
 bool PdfReaderCoreExportHelper::savePages(PdfEngine& engine, const std::wstring& outputPath,

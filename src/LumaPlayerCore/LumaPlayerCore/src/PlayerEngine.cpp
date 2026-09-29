@@ -1292,14 +1292,16 @@ void PlayerEngine::handleCommand(const PlayerCommand& command, const std::atomic
 	case PlayerCommandSetRate:
 	{
 		const int64_t currentPosition = clampPosition(m_clock.position100ns());
-		m_ratePermille = PlayerEngineHelper::clampRate(command.m_ratePermille, m_config.m_minRatePermille, m_config.m_maxRatePermille);
-		m_clock.setRate(m_ratePermille);
+        const int32_t rate = PlayerEngineHelper::clampRate(command.m_ratePermille, m_config.m_minRatePermille, m_config.m_maxRatePermille);
         // 保留流历史及已排队的短音频，避免调速清空预读PCM后形成可听见的缺口。
-        m_position100ns = currentPosition;
-        if (m_mediaInfo.m_hasAudio && !m_audioTempo.setRate(m_ratePermille))
+        if (m_mediaInfo.m_hasAudio && !m_audioTempo.setRate(rate))
         {
             result = LumaPlayerCoreResultAudioRenderFailed;
+            break;
         }
+        m_ratePermille = rate;
+        m_clock.setRate(rate);
+        m_position100ns = currentPosition;
 		updateSnapshot(m_state, m_position100ns);
 		break;
 	}
@@ -1652,6 +1654,9 @@ void PlayerEngine::playbackStep(PlayerWorkerTask* task, const std::atomic<bool>*
     }
 
     bool didWork = false;
+    const int64_t leadUnits = m_config.m_audioLead100ns / 1000;
+    const int64_t audioLead = leadUnits > (std::numeric_limits<int64_t>::max)() / m_ratePermille ?
+        (std::numeric_limits<int64_t>::max)() : leadUnits * m_ratePermille;
     if (m_hasPendingAudioFrame)
     {
         if (m_pendingAudioFrame.m_timestamp100ns >= segmentEnd)
@@ -1666,7 +1671,7 @@ void PlayerEngine::playbackStep(PlayerWorkerTask* task, const std::atomic<bool>*
         }
         else if (m_pendingAudioFrame.m_timestamp100ns <= m_position100ns ||
             m_pendingAudioFrame.m_timestamp100ns - m_position100ns <=
-                m_config.m_audioLead100ns / 1000 * m_ratePermille)
+                audioLead)
         {
             LumaPlayerAudioFrame clipped;
             int64_t clipStart = (std::max<int64_t>)(segmentStart, m_decodeFloor100ns);
@@ -1711,7 +1716,7 @@ void PlayerEngine::playbackStep(PlayerWorkerTask* task, const std::atomic<bool>*
         else if (!didWork)
         {
             int64_t wait100ns = m_pendingVideoFrame.m_timestamp100ns - m_position100ns;
-            int32_t waitMs = static_cast<int32_t>(PlayerEngineHelper::clampInt64(wait100ns / (m_ratePermille * 10), 1, 10));
+            int32_t waitMs = static_cast<int32_t>(PlayerEngineHelper::clampInt64(wait100ns / (static_cast<int64_t>(m_ratePermille) * 10), 1, 10));
             task->wait(waitMs);
             return;
         }
@@ -1732,7 +1737,7 @@ void PlayerEngine::playbackStep(PlayerWorkerTask* task, const std::atomic<bool>*
         if (segmentEnd > m_position100ns)
         {
             int64_t remaining100ns = segmentEnd - m_position100ns;
-            int32_t waitMs = static_cast<int32_t>(PlayerEngineHelper::clampInt64(remaining100ns / (m_ratePermille * 10), 1, 10));
+            int32_t waitMs = static_cast<int32_t>(PlayerEngineHelper::clampInt64(remaining100ns / (static_cast<int64_t>(m_ratePermille) * 10), 1, 10));
             updateSnapshot(m_state, m_position100ns);
             task->wait(waitMs);
             return;
@@ -1938,9 +1943,12 @@ bool PlayerEngine::refineLoopPointByPreview(LumaPlayerLoopPointInfo* pointInfo, 
     }
 
     int64_t frameIndex = pointInfo->m_frameIndex;
+    LumaPlayerVideoFrame frame;
+    PlayerEngineHelper::convertVideoFrame(&ffmpegFrame, frameIndex, &frame);
+    const int64_t frameEnd = frame.endTime100ns();
     pointInfo->m_isSet = true;
-    pointInfo->m_frameStart100ns = PlayerEngineHelper::clampInt64(ffmpegFrame.timestamp100ns, 0, mediaDuration100ns > 0 ? mediaDuration100ns : ffmpegFrame.timestamp100ns);
-    pointInfo->m_frameEnd100ns = PlayerEngineHelper::clampInt64(ffmpegFrame.timestamp100ns + ffmpegFrame.duration100ns, 0, mediaDuration100ns > 0 ? mediaDuration100ns : ffmpegFrame.timestamp100ns + ffmpegFrame.duration100ns);
+    pointInfo->m_frameStart100ns = PlayerEngineHelper::clampInt64(frame.m_timestamp100ns, 0, mediaDuration100ns > 0 ? mediaDuration100ns : frame.m_timestamp100ns);
+    pointInfo->m_frameEnd100ns = PlayerEngineHelper::clampInt64(frameEnd, 0, mediaDuration100ns > 0 ? mediaDuration100ns : frameEnd);
     pointInfo->m_frameIndex = frameIndex;
     m_exactVideoFrame = *pointInfo;
     return true;

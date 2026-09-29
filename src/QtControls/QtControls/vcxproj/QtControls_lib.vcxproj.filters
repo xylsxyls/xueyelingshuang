@@ -677,4 +677,8 @@
     <ClInclude Include="..\src\DialogShadow.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="..\src\DialogShadowConfig.h"><Filter>Header Files</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\PlainTextEdit.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="..\src\PlainTextEdit.h"><Filter>Header Files</Filter></ClInclude>
+  </ItemGroup>
 </Project>

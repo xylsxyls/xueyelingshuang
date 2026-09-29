@@ -63,6 +63,9 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
         {30, QStringLiteral("首前尾后蓝线可见并与落点一致")},
         {31, QStringLiteral("按住滚轮及Ctrl滚轮保留拖动状态")},
         {32, QStringLiteral("相邻短距离蓝线及取消重建清理")},
+        {33, QStringLiteral("字符串缓冲区与路径边界")},
+        {34, QStringLiteral("失败编辑和导出前缀隔离")},
+        {35, QStringLiteral("完成回调销毁窗口后的安全收尾")},
         {20, QStringLiteral("正文滚动同步当前页与缩略图")},
         {19, QStringLiteral("DialogManager生命周期与QtControls控件")}
     };
@@ -92,7 +95,7 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
     if (!report.open(QIODevice::WriteOnly | QIODevice::Text)) { return 3; }
     QTextStream log(&report);
     log.setCodec("UTF-8");
-    log << "PdfReader Windows x64 Release regression\nEXE=" << QApplication::applicationFilePath()
+    log << "PdfReader regression\nPOINTER_BITS=" << sizeof(void*) * 8 << "\nEXE=" << QApplication::applicationFilePath()
         << "\nSHA256=" << QCryptographicHash::hash(PdfReaderTestHelper::bytes(QApplication::applicationFilePath()), QCryptographicHash::Sha256).toHex() << "\n";
     int passed = 0, failed = 0;
     foreach (int id, names.keys())
@@ -110,7 +113,11 @@ int PdfReaderRegression::run(const QString& selection, const QString& reportRoot
             const QString dir = batch + "/case" + QString::number(id);
             PdfReaderTestHelper::require(QDir().mkpath(dir), "case directory");
             const QString input = PdfReaderTestHelper::fixture(dir, QStringLiteral("中文样本.pdf"), (id == 11 || id == 31) ? 120 : 3);
-            if (id >= 29)
+            if (id >= 33)
+            {
+                PdfReaderReviewTests::run(id, input, dir);
+            }
+            else if (id >= 29)
             {
                 PdfReaderDragTests::run(id, input, dir);
             }

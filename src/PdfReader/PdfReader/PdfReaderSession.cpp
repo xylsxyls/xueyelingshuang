@@ -2,6 +2,7 @@
 #include "PdfReaderTaskManager.h"
 #include "Config.h"
 #include <algorithm>
+#include <QPointer>
 
 PdfReaderSession::PdfReaderSession(QObject* receiver) : m_state(new PdfReaderSessionState(receiver)),
 m_nextId(0), m_businessId(0), m_maxPending(g_config.m_maxPendingRenders),
@@ -80,8 +81,10 @@ uint64_t PdfReaderSession::submit(PdfReaderRequest request, const std::function<
 void PdfReaderSession::processResults()
 {
     std::deque<std::shared_ptr<PdfReaderResult>> results;
+    QPointer<QObject> receiver;
     {
         std::lock_guard<std::mutex> lock(m_state->m_mutex);
+        receiver = m_state->m_receiver;
         results.swap(m_state->m_results);
     }
     for (size_t index = 0; index < results.size(); ++index)
@@ -112,9 +115,19 @@ void PdfReaderSession::processResults()
         {
             m_pages = result.m_pages;
         }
+        if (result.m_request.m_operation == PdfReaderClose && !result.m_success)
+        {
+            // 工作投递失败仍有终态，允许宿主再次请求关闭。
+            m_state->m_closing.store(false);
+        }
         if (callback && (!m_state->m_closing.load() || result.m_request.m_operation == PdfReaderClose))
         {
             callback(result);
+            // 回调可能发出直连信号并销毁窗口/本会话，不再读取任何成员。
+            if (receiver.isNull())
+            {
+                return;
+            }
         }
     }
 }

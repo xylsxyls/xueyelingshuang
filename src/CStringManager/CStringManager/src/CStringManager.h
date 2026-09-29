@@ -9,6 +9,14 @@
 class CStringManagerAPI CStringManager
 {
 public:
+    /** 按容量复制字符串并补NUL，支持先查询完整缓冲区大小
+    @param [in] value 输入字节串，按字节截断，不保证截断后UTF-8字符完整
+    @param [out] buffer 输出缓冲区，可空；不可与value存储区重叠
+    @param [in] capacity 缓冲区容量，0时不写入；非0时最多写capacity-1字节并补NUL
+    @return 完整字节数加1（包含NUL），与实际截断长度无关
+    */
+    static size_t CopyToBuffer(const std::string& value, char* buffer, size_t capacity);
+
 	/** 查找左右成对符号中与指定位置匹配的另一侧位置，从0开始计数
 	@param [in] str 要查找的字符串
 	@param [in] cLeft 左侧符号
@@ -280,6 +288,42 @@ public:
 	@return 返回Unicode宽字符串，转换失败返回空字符串
 	*/
 	static std::wstring Utf8ToUnicode(const std::string& strSrc);
+
+    /** 严格解析十进制32位整数，允许首尾空白，不接受尾随垃圾或溢出
+    @param [in] text 待解析宽字符串
+    @param [in] defaultValue 解析失败返回的值
+    @return 完整解析的整数或defaultValue
+    */
+    static int32_t parseInt32(const std::wstring& text, int32_t defaultValue);
+
+    /** 按经典区域设置严格解析有限浮点数
+    @param [in] text 使用小数点的宽字符串，允许首尾空白
+    @param [in] defaultValue 非法、溢出或非有限输入的返回值
+    @return 完整解析的有限值或defaultValue
+    */
+    static double parseFiniteDouble(const std::wstring& text, double defaultValue);
+
+    /** 使用经典区域设置输出固定小数位的有限数值，供持久化格式使用
+    @param [in] value 有限数值
+    @param [in] precision 小数位数，范围0至17
+    @return 固定小数点的宽字符串，非法参数返回空串
+    */
+    static std::wstring formatFixedDouble(double value, int32_t precision);
+
+    /** 严格解码UTF-16LE，兼容16位及32位wchar_t，不依赖系统代码页
+    @param [in] bytes 输入字节，允许LE BOM；拒绝BE BOM、奇数长度及孤立代理项
+    @param [out] text 成功时替换输出，失败保留原值
+    @return 编码有效且转换完成返回true；内存分配异常由调用方处理
+    */
+    static bool utf16LeToWide(const std::vector<uint8_t>& bytes, std::wstring& text);
+
+    /** 严格编码为UTF-16LE，兼容16位及32位wchar_t
+    @param [in] text 输入Unicode宽字符串，拒绝孤立代理项及越界码点
+    @param [out] bytes 成功时替换输出，失败保留原值
+    @param [in] addBom 是否在开头写入LE BOM
+    @return 编码有效且转换完成返回true；内存分配异常由调用方处理
+    */
+    static bool wideToUtf16Le(const std::wstring& text, std::vector<uint8_t>& bytes, bool addBom = true);
 
 	/** URL编码字符串
 	@param [in] sIn 原字符串

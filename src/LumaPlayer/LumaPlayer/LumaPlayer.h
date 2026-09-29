@@ -11,7 +11,7 @@
 #include <QRect>
 #include <QSize>
 #include <QTimer>
-#include <QWidget>
+#include "QtControls/Widget.h"
 
 #include <stdint.h>
 
@@ -51,7 +51,7 @@ enum ResizeEdge
 
 /** 流光播放器桌面Qt窗口，负责绘制视频、悬浮控制层和用户交互
 */
-class LumaPlayer : public QWidget
+class LumaPlayer : public Widget
 {
 	Q_OBJECT
 public:
@@ -446,9 +446,10 @@ private:
     */
     void hideVolumePopup();
 
-    /** 取消延迟单击和持续AB按键，模态显示或失焦时调用
+    /** 取消未完成输入，模态显示或失焦时调用
+    @param [in] finishProgress 是否提交已开始的拖动；换媒体时丢弃旧手势
     */
-    void cancelDeferredInput();
+    void cancelDeferredInput(bool finishProgress = true);
 
     /** 获取右下音量按钮矩形
     @return 本窗口逻辑像素矩形

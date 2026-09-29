@@ -234,4 +234,10 @@
     <ClCompile Include="PdfReaderDragTests.cpp" />
     <ClInclude Include="PdfReaderDragTests.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\PdfReader\PdfReader\PdfReaderLogHelper.cpp" />
+    <ClInclude Include="..\..\PdfReader\PdfReader\PdfReaderLogHelper.h" />
+    <ClCompile Include="PdfReaderTestLogGuard.cpp" />
+    <ClInclude Include="PdfReaderTestLogGuard.h" />
+  </ItemGroup>
 </Project>

@@ -1,8 +1,29 @@
 ﻿#include "SplitViewerDialogHelper.h"
 #include "SplitViewerFileDialogParam.h"
+#include "LogManager/LogManagerAPI.h"
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QWidget>
+
+void SplitViewerDialogHelper::forwardLog(DialogLogLevel level, const char* message)
+{
+    if (message == nullptr)
+    {
+        return;
+    }
+    switch (level)
+    {
+    case DIALOG_LOG_ERROR:
+        LOGERROR("%s", message);
+        break;
+    case DIALOG_LOG_WARNING:
+        LOGWARNING("%s", message);
+        break;
+    default:
+        LOGINFO("%s", message);
+        break;
+    }
+}
 
 QString SplitViewerDialogHelper::browseFile(QWidget* parent, bool save, const QString& title,
     const QString& initial, const QString& filter)

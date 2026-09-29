@@ -3,7 +3,7 @@
 #include "SplitViewerAboutDialog.h"
 #include "SplitViewerAboutDialogParam.h"
 #include "SplitViewerAboutDialogView.h"
-#include <new>
+#include <memory>
 
 CustomDialog* SplitViewerAboutDialogFactory::createDialog(const DialogParam& param)
 {
@@ -11,16 +11,15 @@ CustomDialog* SplitViewerAboutDialogFactory::createDialog(const DialogParam& par
     {
         return nullptr;
     }
-    SplitViewerAboutDialog* dialog = new (std::nothrow) SplitViewerAboutDialog;
-    SplitViewerAboutDialogView* view = new (std::nothrow) SplitViewerAboutDialogView;
-    if (dialog == nullptr || view == nullptr || !dialog->setView(view))
+    std::unique_ptr<SplitViewerAboutDialog> dialog(new SplitViewerAboutDialog);
+    std::unique_ptr<SplitViewerAboutDialogView> view(new SplitViewerAboutDialogView);
+    if (!dialog->setView(view.get()))
     {
-        delete view;
-        delete dialog;
         return nullptr;
     }
+    view.release();
     dialog->setShowMode(POP_DIALOG_SHOW_MODE);
-    return dialog;
+    return dialog.release();
 }
 
 void SplitViewerAboutDialogFactory::destroy(CustomDialogFactory* factory)

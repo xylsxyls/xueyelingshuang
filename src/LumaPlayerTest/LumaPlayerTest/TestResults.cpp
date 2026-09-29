@@ -46,8 +46,9 @@ void TestResults::append(int32_t id, const QString& status, const QString& detai
     item["detail"] = detail;
     item["time"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
     m_checks.append(item);
+    const QByteArray data = QJsonDocument(m_checks).toJson();
     QSaveFile file(m_directory + "/checks.json");
-    if (!file.open(QIODevice::WriteOnly) || file.write(QJsonDocument(m_checks).toJson()) < 0 || !file.commit())
+    if (!file.open(QIODevice::WriteOnly) || file.write(data) != data.size() || !file.commit())
     {
         ++m_failures;
         std::cerr << "REPORT_WRITE_FAILED" << std::endl;

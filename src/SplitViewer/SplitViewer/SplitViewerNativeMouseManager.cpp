@@ -1,6 +1,9 @@
 ﻿#include "SplitViewerNativeMouseManager.h"
 #ifdef Q_OS_WIN
-SplitViewerNativeMouseManager::SplitViewerNativeMouseManager() : m_clickGeneration(0), m_mouseHook(nullptr)
+SplitViewerNativeMouseManager::SplitViewerNativeMouseManager() :
+m_clickGeneration(0),
+m_clientGeneration(0),
+m_mouseHook(nullptr)
 {
 
 }

@@ -3,7 +3,7 @@
 #include "TestCaseRegistry.h"
 #include "TestJob.h"
 #include "ui_LumaPlayerTest.h"
-#include <QMainWindow>
+#include "QtControls/MainWindow.h"
 #include <QProcess>
 #include <QTimer>
 #include <QElapsedTimer>
@@ -18,9 +18,10 @@ class QLineEdit;
 class QProgressBar;
 class QPlainTextEdit;
 class QPushButton;
+class PushButton;
 
 /** 独立运行测试调度窗口，子进程隔离异常，报告持续落盘 */
-class LumaPlayerTest : public QMainWindow
+class LumaPlayerTest : public MainWindow
 {
     Q_OBJECT
 public:
@@ -75,6 +76,18 @@ private slots:
     void processError(QProcess::ProcessError error);
 
 private:
+    /** 组合测试窗口的原生主题按钮，业务动作由调用方连接
+    @param [in] text 按钮文字
+    @param [in] parent 持有控件的Qt父对象
+    @return 父对象持有的QtControls按钮
+    */
+    static PushButton* createButton(const QString& text, QWidget* parent);
+
+    /** 通过DialogManager显示测试状态或路径错误
+    @param [in] message 提示内容
+    */
+    void showInformation(const QString& message);
+
     /** 命令结果到达GUI后执行非阻塞进程状态机
     @param [in] mode 测试方式或stop
     @param [in] ids 数字选择
