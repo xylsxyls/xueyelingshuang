@@ -32,6 +32,9 @@ public:
 	*/
 	static std::string supportedSchemaVersion();
 
+    /** 校验步骤图。@param [in] recipe 菜谱 @param [out] errorMessage 错误说明 @return 图有效 */
+    static bool validateTaskGraph(const Recipe& recipe, std::string* errorMessage);
+
 private:
 	/** 判断必填字符串是否缺失
 	@param [in] text 待检查文本

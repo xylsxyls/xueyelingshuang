@@ -7,6 +7,7 @@
 "$CLOUD_REBUILD" LogManager 64 lib release only
 "$CLOUD_REBUILD" CDump 64 lib release same
 "$CLOUD_REBUILD" Cini 64 lib release same
+"$CLOUD_REBUILD" Semaphore 64 lib release same
 "$CLOUD_REBUILD" CTaskThreadManager 64 lib release same
 "$CLOUD_REBUILD" HiRedis 64 lib release same
 "$CLOUD_REBUILD" HiRedis 64 dll release only

@@ -70,6 +70,7 @@ PlanResult& PlanResult::operator=(const PlanResult& other)
 	m_freeSeconds = other.m_freeSeconds;
 	m_edgeSeconds = other.m_edgeSeconds;
 	m_warnings = other.m_warnings;
+	m_errorMessage = other.m_errorMessage;
 
 	m_recipes.clear();
 	if (!m_recipeCopies.empty())
@@ -89,6 +90,7 @@ PlanResult& PlanResult::operator=(const PlanResult& other)
 }
 
 UserAccount::UserAccount() :
+m_menuInitialized(false),
 m_coins(0),
 m_yuanbao(0),
 m_createdAtSeconds(0),
@@ -99,6 +101,7 @@ m_personalizationRecordEnabled(true)
 }
 
 UserContactInfo::UserContactInfo() :
+m_receivedLikeCount(0),
 m_following(false),
 m_friend(false),
 m_followingCount(0),

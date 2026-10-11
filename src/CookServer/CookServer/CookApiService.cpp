@@ -5,6 +5,7 @@
 #include "CookSchedule.h"
 #include "CookServerHelper.h"
 #include "CookStorageService.h"
+#include "CookVideoSegmentService.h"
 #include "CookVoiceService.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
@@ -13,10 +14,48 @@
 #include "RapidJson/RapidJsonAPI.h"
 #include <stdint.h>
 #include <algorithm>
+#include <cstdlib>
+#include <atomic>
+#include <cstdlib>
 #include <fstream>
 #include <map>
 #include <set>
 #include <sstream>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#else
+#include <sys/stat.h>
+#endif
+
+static std::string videoContentVersion(const VideoInfo& video)
+{
+	std::ostringstream version;
+	version << video.m_createdAtSeconds;
+#ifdef _WIN32
+	WIN32_FILE_ATTRIBUTE_DATA attributes = {};
+	if (GetFileAttributesExA(video.m_filePath.c_str(), GetFileExInfoStandard, &attributes))
+	{
+		ULARGE_INTEGER stamp;
+		stamp.LowPart = attributes.ftLastWriteTime.dwLowDateTime;
+		stamp.HighPart = attributes.ftLastWriteTime.dwHighDateTime;
+		ULARGE_INTEGER size;
+		size.LowPart = attributes.nFileSizeLow;
+		size.HighPart = attributes.nFileSizeHigh;
+		version << '_' << size.QuadPart << '_' << stamp.QuadPart;
+	}
+#else
+	struct stat attributes;
+	if (stat(video.m_filePath.c_str(), &attributes) == 0)
+	{
+		version << '_' << static_cast<unsigned long long>(attributes.st_size)
+		        << '_' << static_cast<long long>(attributes.st_mtime);
+	}
+#endif
+	return version.str();
+}
 
 std::string CookApiService::headerValue(const HttpRequest& request, const std::string& headerName) const
 {
@@ -210,16 +249,18 @@ bool CookApiService::recipeMatchesMenuCategory(const Recipe& recipe, const UserA
 	}
 	if (categoryName == "购买区")
 	{
-		return AccountStore::isRecipeOwned(recipe, account) && !recipe.m_systemRecipe;
+		return AccountStore::isRecipeOwned(recipe, account) && !recipe.m_systemRecipe &&
+			recipe.m_authorUserId != account.m_userId;
 	}
 	if (categoryName == "创作区")
 	{
-		return !recipe.m_systemRecipe;
+		return !recipe.m_systemRecipe && !recipe.m_authorUserId.empty() &&
+			recipe.m_authorUserId == account.m_userId;
 	}
 	return recipe.m_category == categoryName;
 }
 
-std::string CookApiService::buildRecipesJson(const std::string& userId)
+std::string CookApiService::buildRecipesJson(const std::string& userId, bool catalog)
 {
 	RapidJsonDocument document;
 	document.setObject();
@@ -232,22 +273,22 @@ std::string CookApiService::buildRecipesJson(const std::string& userId)
 	std::set<std::string> categorySet;
 	for (size_t i = 0; i < recipes.size(); ++i)
 	{
-		if (recipes[i].m_status == "published" || AccountStore::isRecipeOwned(recipes[i], account))
+		if ((catalog || AccountStore::isRecipeInMenu(recipes[i], account)) && (recipes[i].m_status == "published" || AccountStore::isRecipeOwned(recipes[i], account)))
 		{
 			visibleRecipes.push_back(recipes[i]);
 			categorySet.insert(recipes[i].m_category);
 		}
 	}
 
-	std::vector<std::string> categoryNames;
-	categoryNames.reserve(categorySet.size() + 3);
-	categoryNames.push_back("最喜欢");
-	categoryNames.push_back("购买区");
-	categoryNames.push_back("创作区");
-	for (std::set<std::string>::const_iterator it = categorySet.begin(); it != categorySet.end(); ++it)
-	{
-		categoryNames.push_back(*it);
-	}
+    std::stable_sort(visibleRecipes.begin(), visibleRecipes.end(), [&account](const Recipe& first, const Recipe& second)
+    {
+        const std::vector<std::string>::const_iterator a = std::find(account.m_menuRecipeOrder.begin(), account.m_menuRecipeOrder.end(), first.m_id);
+        const std::vector<std::string>::const_iterator b = std::find(account.m_menuRecipeOrder.begin(), account.m_menuRecipeOrder.end(), second.m_id);
+        return a < b;
+    });
+    std::vector<std::string> categoryNames;
+    const char* names[] = { "荤菜", "小荤", "蔬菜", "汤饮", "主食" };
+    for (size_t i = 0; i < 5; ++i) categoryNames.push_back(CookServerHelper::textToJsonUtf8(names[i]));
 
 	RapidJsonValue categories;
 	categories.setArray();
@@ -304,6 +345,8 @@ std::string CookApiService::buildRecipeDetailJson(const std::string& userId, con
 	CookServerHelper::addString(document, "message", ok ? "ok" : message);
 	if (ok)
 	{
+        m_accountStore.touchMenuRecipe(userId, recipeId);
+        account = m_accountStore.getAccount(userId);
 		document.addValue("recipe", CookServerHelper::recipeToJson(recipe, &account));
 	}
 	document.addValue("account", CookServerHelper::accountToJson(account));
@@ -375,7 +418,9 @@ std::string CookApiService::buildFeedJson(const HttpRequest& request, const std:
 	feed.reserve(videos.size());
 	for (size_t i = 0; i < videos.size(); ++i)
 	{
-		feed.pushValue(feedVideoToJson(request, videos[i], account, recipesById, static_cast<int32_t>(i)));
+		std::string videoAuthor = videos[i].m_ownerUserId == "qmzdc" ? "系统厨友" : m_accountStore.getUserDisplayName(videos[i].m_ownerUserId);
+		if (videoAuthor.empty()) videoAuthor = "厨友";
+		feed.pushValue(feedVideoToJson(request, videos[i], account, recipesById, videoAuthor, static_cast<int32_t>(i)));
 	}
 	document.addValue("feed", feed);
 	CookServerHelper::addInt(document, "count", static_cast<int32_t>(videos.size()));
@@ -411,31 +456,20 @@ std::string CookApiService::buildAccountJson(const std::string& userId)
 	document.setObject();
 	document.addBool("ok", true);
 	document.addValue("account", CookServerHelper::accountToJson(account));
+    UserContactInfo profile;
+    if (m_accountStore.getPublicProfile(userId, userId, profile)) document.addValue("profile", publicProfileToJson(profile));
 	document.addValue("followingUsers", userContactListToJson(followingUsers));
 	document.addValue("friendUsers", userContactListToJson(friendUsers));
 	return document.toString();
 }
 
-std::string CookApiService::buildRechargeJson(const std::string& userId, int32_t coins)
-{
-	bool ok = false;
-	std::string message;
-	UserAccount account = m_accountStore.recharge(userId, coins, &ok, &message);
-	RapidJsonDocument document;
-	document.setObject();
-	document.addBool("ok", ok);
-	CookServerHelper::addString(document, "message", message);
-	document.addValue("account", CookServerHelper::accountToJson(account));
-	return document.toString();
-}
-
-std::string CookApiService::buildJoinRecipeJson(const std::string& userId, const std::string& recipeId, const std::string& idempotencyKey)
+std::string CookApiService::buildJoinRecipeJson(const std::string& userId, const std::string& recipeId, const std::string& idempotencyKey, bool purchase)
 {
 	bool ok = false;
 	bool alreadyOwned = false;
 	std::string message;
 	Recipe recipe;
-	UserAccount account = m_accountStore.joinRecipe(userId, recipeId, idempotencyKey, &ok, &alreadyOwned, &message, &recipe);
+	UserAccount account = purchase ? m_accountStore.purchaseRecipeWithKey(userId, recipeId, idempotencyKey, &ok, &alreadyOwned, &message, &recipe) : m_accountStore.joinRecipe(userId, recipeId, idempotencyKey, &ok, &alreadyOwned, &message, &recipe);
 	RapidJsonDocument document;
 	document.setObject();
 	document.addBool("ok", ok);
@@ -526,7 +560,12 @@ std::string CookApiService::buildPlanJson(const std::vector<std::string>& ids, c
 	std::string effectivePlanId = planId;
 	if (includePlanId && effectivePlanId.empty())
 	{
-		effectivePlanId = "plan_" + CStringManager::toStringInt32(static_cast<int32_t>(::time(nullptr)));
+		static std::atomic<unsigned long long> planSequence(0);
+		unsigned long long sequence = ++planSequence;
+		effectivePlanId = "plan_" +
+			CStringManager::toStringInt64(static_cast<int64_t>(::time(nullptr))) + "_" +
+			CStringManager::toStringInt64(static_cast<int64_t>(CSystem::currentProcessPid())) + "_" +
+			CStringManager::toStringInt64(static_cast<int64_t>(sequence));
 	}
 	RapidJsonValue root;
 	if (summaryOnly)
@@ -1047,6 +1086,74 @@ HttpResponse CookApiService::buildVideoFileResponse(const HttpRequest& request)
 	return response;
 }
 
+HttpResponse CookApiService::buildVideoSegmentResponse(const HttpRequest& request)
+{
+	VideoInfo video;
+	std::string sourcePath;
+	std::string sourceContentType;
+	std::string videoId = CookHelper::queryValue(request, "videoId");
+	if (!m_accountStore.getVideoFile(videoId, video, sourcePath, sourceContentType) || video.m_mediaType != "video")
+	{
+		return errorResponse("video file not found", kHttpStatusNotFound, "VIDEO_NOT_FOUND");
+	}
+	(void)sourceContentType;
+	std::string startText = CookHelper::queryValue(request, "startSeconds");
+	std::string durationText = CookHelper::queryValue(request, "durationSeconds");
+	char* startEnd = nullptr;
+	char* durationEnd = nullptr;
+	long startSeconds = std::strtol(startText.c_str(), &startEnd, 10);
+	long durationSeconds = std::strtol(durationText.c_str(), &durationEnd, 10);
+	if (startText.empty() || durationText.empty() || startEnd == startText.c_str() || *startEnd != '\0' ||
+	    durationEnd == durationText.c_str() || *durationEnd != '\0' || startSeconds < 0 ||
+	    durationSeconds < 1 || durationSeconds > g_config.m_videoSegmentMaxSeconds ||
+	    startSeconds > INT32_MAX / 1000 || durationSeconds > INT32_MAX / 1000)
+	{
+		return errorResponse("invalid video segment range", kHttpStatusBadRequest, "VIDEO_SEGMENT_RANGE_INVALID");
+	}
+
+	const std::string cacheDirectory = CookHelper::appendPathSeparator(CSystem::GetCurrentExePath()) + g_config.m_videoSegmentCacheDirectoryName;
+	std::string segmentPath;
+	std::string errorMessage;
+	int32_t actualStartMilliseconds = 0;
+	int32_t mediaDurationMilliseconds = 0;
+	int32_t startMilliseconds = static_cast<int32_t>(startSeconds * 1000);
+	int32_t durationMilliseconds = static_cast<int32_t>(durationSeconds * 1000);
+	if (!CookVideoSegmentService::createSegment(sourcePath, cacheDirectory, video.m_id, video.m_createdAtSeconds,
+	                                            g_config.m_videoSegmentMaxBytes,
+	                                            startMilliseconds, durationMilliseconds, segmentPath,
+	                                            actualStartMilliseconds, mediaDurationMilliseconds, errorMessage))
+	{
+		LOGWARNING("CookApiService video segment failed videoId=%s startMs=%d durationMs=%d error=%s",
+		           video.m_id.c_str(), startMilliseconds, durationMilliseconds, errorMessage.c_str());
+		if (errorMessage.find("outside media duration") != std::string::npos)
+		{
+			return errorResponse("video segment is outside media duration", 416, "VIDEO_SEGMENT_RANGE_INVALID");
+		}
+		if (errorMessage.find("configured size limit") != std::string::npos)
+		{
+			return errorResponse("video segment exceeds configured size limit", 413, "VIDEO_SEGMENT_TOO_LARGE");
+		}
+		return errorResponse("video segment is unavailable", kHttpStatusInternalServerError, "VIDEO_SEGMENT_FAILED");
+	}
+	std::string body = CSystem::readFile(segmentPath);
+	if (body.empty())
+	{
+		return errorResponse("video segment is empty", kHttpStatusInternalServerError, "VIDEO_SEGMENT_EMPTY");
+	}
+	HttpResponse response(kHttpStatusOk);
+	response.m_contentType = "video/mp4";
+	response.m_body.swap(body);
+	response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+	response.setHeader("Content-Disposition", "inline; filename=\"" + video.m_id + "_" + CStringManager::toStringInt32(startSeconds) + ".mp4\"");
+	response.setHeader("X-Video-Segment-Start-Ms", CStringManager::toStringInt32(actualStartMilliseconds));
+	response.setHeader("X-Video-Segment-Request-Start-Ms", CStringManager::toStringInt32(startMilliseconds));
+	response.setHeader("X-Video-Duration-Ms", CStringManager::toStringInt32(mediaDurationMilliseconds));
+	LOGINFO("CookApiService video segment videoId=%s requestStartMs=%d durationMs=%d actualStartMs=%d mediaDurationMs=%d bytes=%d",
+	        video.m_id.c_str(), startMilliseconds, durationMilliseconds, actualStartMilliseconds,
+	        mediaDurationMilliseconds, static_cast<int32_t>(response.m_body.size()));
+	return response;
+}
+
 bool CookApiService::readVideoPosterCache(const std::string& videoId, std::string& body, std::string& contentType)
 {
 	std::string realVideoId = CookHelper::normalizeVideoId(videoId);
@@ -1125,7 +1232,7 @@ HttpResponse CookApiService::buildVideoPosterResponse(const HttpRequest& request
 		return response;
 	}
 
-	if (!m_accountStore.getVideoFile(videoId, video, videoFilePath, videoContentType))
+	if (!m_accountStore.getVideoFile(videoId, video, videoFilePath, videoContentType) || video.m_mediaType != "video")
 	{
 		LOGWARNING("CookApiService video poster source not found videoId=%s", videoId.c_str());
 		return errorResponse("video file not found", kHttpStatusNotFound, "VIDEO_NOT_FOUND");
@@ -1191,6 +1298,15 @@ bool CookApiService::parsePersonalizationConfig(const std::string& body,
 	config = PersonalizationConfig();
 	config.m_userId = userId;
 	config.m_recipeId = document.getStringOrDefault("recipeId", "");
+    RapidJson orderFields;
+    orderFields.parse(body);
+    if (orderFields.hasMember("taskOrder"))
+    {
+        const RapidJsonValue order = document.getValue("taskOrder");
+        config.m_taskOrder = document.getStringArrayOrEmpty("taskOrder");
+        if (!order.isArray() || order.size() == 0 || order.size() > 256 || order.size() != config.m_taskOrder.size())
+        { message = "taskOrder must be a nonempty array of step IDs, at most 256"; return false; }
+    }
 	if (config.m_recipeId.empty())
 	{
 		message = "recipeId is required";
@@ -1275,10 +1391,7 @@ bool CookApiService::parsePersonalizationConfig(const std::string& body,
 				message = "addedTask durationSeconds is invalid";
 				return false;
 			}
-			if (task.m_voiceText.empty())
-			{
-				task.m_voiceText = task.m_title + "。" + task.m_detail;
-			}
+			task.m_voiceText = task.m_title;
 			config.m_addedTasks.push_back(task);
 		}
 	}
@@ -1347,6 +1460,7 @@ RapidJsonValue CookApiService::personalizationConfigToJson(const Personalization
 		addedTasks.pushValue(personalizationTaskToJson(config.m_addedTasks[i]));
 	}
 	object.addValue("addedTasks", addedTasks);
+    CookServerHelper::addStringArray(object, "taskOrder", config.m_taskOrder);
 	return object;
 }
 
@@ -1425,6 +1539,7 @@ RapidJsonValue CookApiService::feedVideoToJson(const HttpRequest& request,
                                                const VideoInfo& video,
                                                const UserAccount& account,
                                                const std::map<std::string, Recipe>& recipesById,
+                                               const std::string& videoAuthor,
                                                int32_t index)
 {
 	RapidJsonValue item;
@@ -1448,20 +1563,21 @@ RapidJsonValue CookApiService::feedVideoToJson(const HttpRequest& request,
 		title = video.m_id;
 	}
 	std::string description = video.m_caption.empty() && hasRecipe ? recipe.m_subtitle : video.m_caption;
-	std::string author = hasRecipe ? recipe.m_author : (video.m_ownerUserId.empty() ? "厨友" : video.m_ownerUserId);
-	std::string authorUserId = hasRecipe ? recipe.m_authorUserId : video.m_ownerUserId;
+    UserContactInfo profile;
+    const bool hasProfile = m_accountStore.getPublicProfile(account.m_userId, video.m_ownerUserId, profile, false);
+	std::string author = hasProfile && !profile.m_nickname.empty() ? profile.m_nickname : (videoAuthor.empty() ? (video.m_ownerUserId.empty() ? "厨友" : video.m_ownerUserId) : videoAuthor);
+	std::string authorUserId = video.m_ownerUserId;
 	if (authorUserId.empty())
 	{
 		if (author == "示例创作者")
 		{
 			authorUserId = "creator_demo";
 		}
-		else if (author == "系统菜谱" || video.m_ownerUserId == "system")
+		else if (author == "系统菜谱" || video.m_ownerUserId == "qmzdc")
 		{
-			authorUserId = "system";
+			authorUserId = "qmzdc";
 		}
 	}
-	std::string coverColor = hasRecipe ? recipe.m_coverColor : "#17211d";
 	std::string targetKey = "video:" + video.m_id;
 	bool authorSelf = !authorUserId.empty() && authorUserId == account.m_userId;
 	bool authorFollowing = !authorUserId.empty() && account.m_followingUserIds.find(authorUserId) != account.m_followingUserIds.end();
@@ -1469,7 +1585,7 @@ RapidJsonValue CookApiService::feedVideoToJson(const HttpRequest& request,
 	CookServerHelper::addString(item, "id", video.m_id);
 	CookServerHelper::addString(item, "videoId", video.m_id);
 	CookServerHelper::addString(item, "mediaType", video.m_mediaType);
-	CookServerHelper::addString(item, "videoUrl", buildVideoFileUrl(request, video.m_id));
+	CookServerHelper::addString(item, "videoUrl", buildVideoFileUrl(request, video.m_id) + "&v=" + videoContentVersion(video));
 	CookServerHelper::addString(item, "posterUrl", buildVideoPosterUrl(request, video.m_id));
 	CookServerHelper::addString(item, "title", title);
 	CookServerHelper::addString(item, "description", description);
@@ -1477,7 +1593,9 @@ RapidJsonValue CookApiService::feedVideoToJson(const HttpRequest& request,
 	CookServerHelper::addString(item, "authorUserId", authorUserId);
 	CookServerHelper::addBool(item, "authorSelf", authorSelf);
 	CookServerHelper::addBool(item, "authorFollowing", authorFollowing);
-	CookServerHelper::addString(item, "coverColor", coverColor);
+    CookServerHelper::addBool(item, "inMenu", hasRecipe && AccountStore::isRecipeInMenu(recipe, account));
+    if (hasProfile)
+        CookServerHelper::addString(item, "authorAvatarUrl", profile.m_avatarUrl);
 	CookServerHelper::addString(item, "priceType", hasRecipe ? recipe.m_priceType : "free");
 	CookServerHelper::addInt(item, "priceCoins", hasRecipe ? recipe.m_priceCoins : 0);
 	CookServerHelper::addInt(item, "priceAmount", hasRecipe ? recipe.m_priceAmount : 0);
@@ -1486,7 +1604,7 @@ RapidJsonValue CookApiService::feedVideoToJson(const HttpRequest& request,
 	CookServerHelper::addBool(item, "liked", account.m_likedTargetIds.find(targetKey) != account.m_likedTargetIds.end());
 	CookServerHelper::addBool(item, "spoonVisible", hasRecipe);
 	CookServerHelper::addBool(item, "canPlayVideo", true);
-	CookServerHelper::addString(item, "sourceType", video.m_ownerUserId == "system" ? "resource" : "uploaded");
+	CookServerHelper::addString(item, "sourceType", video.m_ownerUserId == "qmzdc" ? "resource" : "uploaded");
 	CookServerHelper::addInt(item, "likes", m_accountStore.countTargetLikes("video", video.m_id));
 	CookServerHelper::addInt(item, "comments", m_accountStore.countTargetComments("video", video.m_id));
 	CookServerHelper::addInt(item, "rankIndex", index);
@@ -1535,9 +1653,17 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 	{
 		response = buildVoiceAudioResponse(request);
 	}
+	else if (request.m_method == "GET" && request.m_uri == "/api/users/avatar")
+	{
+		response = buildAvatarResponse(request);
+	}
 	else if (request.m_method == "GET" && request.m_uri == "/api/videos/file")
 	{
 		response = buildVideoFileResponse(request);
+	}
+	else if (request.m_method == "GET" && request.m_uri == "/api/videos/segment")
+	{
+		response = buildVideoSegmentResponse(request);
 	}
 	else if (request.m_method == "GET" && request.m_uri == (g_config.m_videoPosterApiPath.empty() ? "/api/videos/poster" : g_config.m_videoPosterApiPath))
 	{
@@ -1557,42 +1683,20 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 		UserAccount account;
 		HttpResponse authFailedResponse;
 		bool authenticated = authorize(request, userId, account, authFailedResponse);
-		bool legacyAllowed = false;
 		if (!authenticated)
-		{
-			std::string legacyUserId = jsonFieldString(request.m_body, "userId");
-			if (legacyUserId.empty())
-			{
-				legacyUserId = CookHelper::queryValue(request, "userId");
-			}
-			if (legacyUserId.empty() && request.m_uri == "/api/account/recharge")
-			{
-				legacyUserId = "demo_user";
-			}
-			if (!legacyUserId.empty() &&
-				(request.m_uri == "/api/account/recharge" ||
-				request.m_uri == "/api/recipes/purchase" ||
-				request.m_uri == "/api/favorites/toggle" ||
-				request.m_uri == "/api/plan/preview" ||
-				request.m_uri == "/api/plan/start" ||
-				request.m_uri == "/api/voice/prepare" ||
-				request.m_uri == "/api/voice/fetch" ||
-				request.m_uri == "/api/voice/tts" ||
-				request.m_uri == "/api/recipes" ||
-				request.m_uri == "/api/recipes/personalization/detail" ||
-				request.m_uri == "/api/feed" ||
-				request.m_uri == "/api/feed/watch" ||
-				request.m_uri == "/api/account"))
-			{
-				userId = legacyUserId;
-				account = m_accountStore.getAccount(userId);
-				legacyAllowed = true;
-			}
-		}
-		if (!authenticated && !legacyAllowed)
 		{
 			response = authFailedResponse;
 		}
+        else if (request.m_method == "POST" && request.m_uri == "/api/users/avatar/upload")
+        {
+            response = uploadAvatarResponse(request, userId);
+        }
+        else if ((request.m_method == "GET" && (request.m_uri == "/api/users/profile" || request.m_uri == "/api/users/feed" ||
+            request.m_uri == "/api/users/fans" || request.m_uri == "/api/videos/detail" || request.m_uri == "/api/messages/conversation")) ||
+            (request.m_method == "POST" && (request.m_uri == "/api/users/profile/update" || request.m_uri == "/api/messages/read" || request.m_uri == "/api/recipes/menu/remove")))
+        {
+            response = CookServerHelper::jsonResponse(buildSocialJson(request, userId));
+        }
 		else if (request.m_method == "GET" && request.m_uri == "/api/auth/session")
 		{
 			response = CookServerHelper::jsonResponse(buildSessionJson(account));
@@ -1604,7 +1708,7 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 		}
 		else if (request.m_method == "GET" && request.m_uri == "/api/recipes")
 		{
-			response = CookServerHelper::jsonResponse(buildRecipesJson(userId));
+			response = CookServerHelper::jsonResponse(buildRecipesJson(userId, CookHelper::queryValue(request, "scope") == "catalog"));
 		}
 		else if (request.m_method == "GET" && request.m_uri == "/api/recipes/detail")
 		{
@@ -1625,10 +1729,6 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 		else if (request.m_method == "GET" && (request.m_uri == "/api/account" || request.m_uri == "/api/wallet"))
 		{
 			response = CookServerHelper::jsonResponse(buildAccountJson(userId));
-		}
-		else if (request.m_method == "POST" && request.m_uri == "/api/account/recharge")
-		{
-			response = CookServerHelper::jsonResponse(buildRechargeJson(userId, jsonFieldInt(request.m_body, "coins", 0)));
 		}
 		else if (request.m_method == "POST" && request.m_uri == "/api/wallet/checkin")
 		{
@@ -1666,7 +1766,6 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 			std::string message;
 			UserAccount newAccount = m_accountStore.finishAdReward(userId,
 				jsonFieldString(request.m_body, "adToken"),
-				jsonFieldInt(request.m_body, "debugElapsedSeconds", -1),
 				&ok,
 				&alreadyRewarded,
 				&message);
@@ -1686,7 +1785,7 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 			{
 				idempotencyKey = jsonFieldString(request.m_body, "idempotencyKey");
 			}
-			response = CookServerHelper::jsonResponse(buildJoinRecipeJson(userId, recipeId, idempotencyKey));
+			response = CookServerHelper::jsonResponse(buildJoinRecipeJson(userId, recipeId, idempotencyKey, request.m_uri == "/api/recipes/purchase"));
 		}
 		else if (request.m_method == "POST" && request.m_uri == "/api/favorites/toggle")
 		{
@@ -1707,6 +1806,7 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 			document.setObject();
 			document.addBool("ok", ok);
 			CookServerHelper::addBool(document, "liked", liked);
+            CookServerHelper::addInt(document, "likes", m_accountStore.countTargetLikes(jsonFieldString(request.m_body, "targetType"), jsonFieldString(request.m_body, "targetId")));
 			response = CookServerHelper::jsonResponse(document.toString());
 		}
 		else if (request.m_method == "POST" && request.m_uri == "/api/follows/toggle")
@@ -1776,7 +1876,13 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 			list.reserve(messages.size());
 			for (size_t i = 0; i < messages.size(); ++i)
 			{
-				list.pushValue(messageToJson(messages[i]));
+				RapidJsonValue item = messageToJson(messages[i]);
+                UserContactInfo sender;
+                const bool found = m_accountStore.getPublicProfile(userId, messages[i].m_fromUserId, sender, false);
+                item.addBool("friend", found && sender.m_friend);
+                item.addBool("muted", messages[i].m_type == "chat" && (!found || !sender.m_friend));
+                if (found) item.addValue("sender", publicProfileToJson(sender));
+                list.pushValue(item);
 			}
 			document.addValue("messages", list);
 			document.addValue("followingUsers", userContactListToJson(followingUsers));
@@ -1803,15 +1909,16 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 			}
 			response = CookServerHelper::jsonResponse(document.toString());
 		}
-		else if (request.m_method == "POST" && request.m_uri == "/api/videos/upload")
+		else if (request.m_method == "POST" && request.m_uri == "/api/videos/upload/start")
 		{
-			VideoInfo video;
+			VideoUploadInfo upload;
 			std::string message;
-			bool ok = m_accountStore.uploadVideo(userId,
+			bool ok = m_videoUploadService.start(userId,
 				jsonFieldString(request.m_body, "mediaType"),
-				jsonFieldString(request.m_body, "filePath"),
+				jsonFieldString(request.m_body, "fileName"),
 				jsonFieldInt(request.m_body, "fileSizeBytes", 0),
-				video,
+				g_config.m_maxVideoBytes,
+				upload,
 				message);
 			RapidJsonDocument document;
 			document.setObject();
@@ -1819,8 +1926,67 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 			CookServerHelper::addString(document, "message", message);
 			if (ok)
 			{
-				document.addValue("video", videoToJson(video));
+				CookServerHelper::addString(document, "uploadId", upload.m_uploadId);
+				CookServerHelper::addInt(document, "receivedBytes", static_cast<int32_t>(upload.m_receivedBytes));
+				CookServerHelper::addInt(document, "expectedBytes", static_cast<int32_t>(upload.m_expectedBytes));
+				CookServerHelper::addInt(document, "chunkBytes", 512 * 1024);
 			}
+			response = CookServerHelper::jsonResponse(document.toString());
+		}
+		else if (request.m_method == "POST" && request.m_uri == "/api/videos/upload/chunk")
+		{
+			std::string uploadId = CookHelper::queryValue(request, "uploadId");
+			std::string offsetText = CookHelper::queryValue(request, "offset");
+			char* end = nullptr;
+			long long offset = -1;
+			if (!offsetText.empty())
+			{
+#ifdef _WIN32
+				offset = _strtoi64(offsetText.c_str(), &end, 10);
+#else
+				offset = std::strtoll(offsetText.c_str(), &end, 10);
+#endif
+			}
+			bool validOffset = !offsetText.empty() && end != offsetText.c_str() && *end == '\0' && offset >= 0;
+			int64_t receivedBytes = 0;
+			std::string message;
+			bool ok = validOffset && m_videoUploadService.append(userId, uploadId, offset, request.m_body, receivedBytes, message);
+			if (!validOffset) message = "视频分块偏移无效";
+			RapidJsonDocument document;
+			document.setObject();
+			document.addBool("ok", ok);
+			CookServerHelper::addString(document, "message", message);
+			if (ok) CookServerHelper::addInt(document, "receivedBytes", static_cast<int32_t>(receivedBytes));
+			response = CookServerHelper::jsonResponse(document.toString());
+		}
+		else if (request.m_method == "POST" && request.m_uri == "/api/videos/upload/complete")
+		{
+			const std::string uploadId = jsonFieldString(request.m_body, "uploadId");
+			std::string relativeFilePath;
+			std::string mediaType;
+			std::string message;
+			int32_t fileSizeBytes = 0;
+			bool ok = m_videoUploadService.finish(userId, uploadId, relativeFilePath, fileSizeBytes, mediaType, message);
+			VideoInfo video;
+			if (ok)
+			{
+				ok = m_accountStore.uploadVideo(userId, mediaType, relativeFilePath, fileSizeBytes, video, message);
+				if (!ok) CookVideoUploadService::removeFile(relativeFilePath);
+			}
+			RapidJsonDocument document;
+			document.setObject();
+			document.addBool("ok", ok);
+			CookServerHelper::addString(document, "message", message);
+			if (ok) document.addValue("video", videoToJson(video));
+			response = CookServerHelper::jsonResponse(document.toString());
+		}
+		else if (request.m_method == "POST" && request.m_uri == "/api/videos/upload/cancel")
+		{
+			const bool cancelled = m_videoUploadService.cancel(userId, jsonFieldString(request.m_body, "uploadId"));
+			RapidJsonDocument document;
+			document.setObject();
+			document.addBool("ok", cancelled);
+			CookServerHelper::addString(document, "message", cancelled ? "上传已取消" : "上传任务不存在");
 			response = CookServerHelper::jsonResponse(document.toString());
 		}
 		else if (request.m_method == "POST" && (request.m_uri == "/api/videos/publish" || request.m_uri == "/api/videos/attach"))
@@ -1832,7 +1998,7 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 				jsonFieldString(request.m_body, "caption"),
 				parseRecipeIds(request.m_body),
 				video,
-				message);
+				message, jsonFieldString(request.m_body, "coverImageId"));
 			RapidJsonDocument document;
 			document.setObject();
 			document.addBool("ok", ok);
@@ -1845,7 +2011,12 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 		}
 		else if (request.m_method == "POST" && (request.m_uri == "/api/recipes/custom/save" || request.m_uri == "/api/recipes/custom/publish"))
 		{
-			std::string recipeJson = jsonFieldString(request.m_body, "recipeJson");
+            std::string recipeJson = jsonFieldString(request.m_body, "recipeJson");
+            if (recipeJson.empty())
+            {
+                RapidJsonDocument body;
+                if (parseBody(request.m_body, body) && body.getValue("recipe").isObject()) recipeJson = body.getValue("recipe").toString();
+            }
 			if (recipeJson.empty() && request.m_body.find("\"schemaVersion\"") != std::string::npos)
 			{
 				recipeJson = request.m_body;

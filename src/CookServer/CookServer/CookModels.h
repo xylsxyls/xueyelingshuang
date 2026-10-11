@@ -79,11 +79,13 @@ struct Recipe
 	std::string m_subtitle;
 	// 难度标签，给用户判断是否适合当前能力
 	std::string m_difficulty;
-	// 示例封面颜色，简易版前端用它模拟封面视觉
-	std::string m_coverColor;
+    // 用户上传的正方形封面，引用服务端已校验图片。
+    std::string m_coverImageId;
+    // 查询时解析出的原视频ID，不写入菜谱版本。
+    std::string m_videoId;
 	// 作者名称
 	std::string m_author;
-	// 作者用户ID，系统菜谱为空或system
+	// 作者用户ID，系统菜谱为qmzdc
 	std::string m_authorUserId;
 	// 菜谱标签，用于展示和后续推荐
 	std::vector<std::string> m_tags;
@@ -175,6 +177,8 @@ struct PlanResult
 	int32_t m_edgeSeconds;
 	// 排程提示或非致命告警，例如已应用个性化配置
 	std::vector<std::string> m_warnings;
+	// 排程失败时提供原因；失败计划不得被当作完整结果使用
+	std::string m_errorMessage;
 };
 
 /** 用户账号状态，包含登录、钱包、菜谱关系和社交关系
@@ -187,8 +191,17 @@ struct UserAccount
 
 	// 用户ID，服务端生成的稳定账号标识
 	std::string m_userId;
+    // 公开头像地址与个人介绍。
+    std::string m_avatarUrl;
+    std::string m_introduction;
+    // 菜单按最近加入或查看顺序保存；移除记录防止默认菜再次加入。
+    std::vector<std::string> m_menuRecipeOrder;
+    std::set<std::string> m_removedMenuRecipeIds;
+    bool m_menuInitialized;
 	// 登录账号名，注册和登录时由用户填写
 	std::string m_account;
+	// 服务端账号类别：super_admin/admin/user；旧快照缺字段时为空待迁移
+	std::string m_role;
 	// 昵称，用于信息流、评论和创作者展示
 	std::string m_nickname;
 	// 密码盐，当前第一期使用本地模拟存储，后续接MySQL时迁移到用户表
@@ -239,6 +252,10 @@ struct UserContactInfo
 	std::string m_account;
 	// 昵称
 	std::string m_nickname;
+    // 公开头像、介绍与获赞数量。
+    std::string m_avatarUrl;
+    std::string m_introduction;
+    int32_t m_receivedLikeCount;
 	// 当前账号是否关注该用户
 	bool m_following;
 	// 双方是否互相关注
@@ -321,7 +338,7 @@ struct MessageInfo
 
 	// 消息ID
 	std::string m_id;
-	// 发送者用户ID，系统消息为system
+	// 发送者用户ID，系统消息为qmzdc
 	std::string m_fromUserId;
 	// 接收者用户ID
 	std::string m_toUserId;
@@ -381,6 +398,8 @@ struct PersonalizationConfig
 	std::map<std::string, int32_t> m_durationOverrides;
 	// 用户新增步骤
 	std::vector<CookTask> m_addedTasks;
+    // 原始与新增步骤的完整展示及插入顺序；缺失时兼容旧追加模式。
+    std::vector<std::string> m_taskOrder;
 	// 更新时间，Unix秒
 	int32_t m_updatedAtSeconds;
 };

@@ -10,13 +10,22 @@
 
 static const char* kCookServerRoutes[] =
 {
+    "/api/recipes/menu/remove",
+    "/api/users/profile",
+    "/api/users/profile/update",
+    "/api/users/avatar",
+    "/api/users/avatar/upload",
+    "/api/users/feed",
+    "/api/users/fans",
+    "/api/videos/detail",
+    "/api/messages/conversation",
+    "/api/messages/read",
 	"/api/health",
 	"/api/auth/register",
 	"/api/auth/login",
 	"/api/auth/session",
 	"/api/auth/logout",
 	"/api/account",
-	"/api/account/recharge",
 	"/api/wallet",
 	"/api/wallet/checkin",
 	"/api/wallet/ad/start",
@@ -43,8 +52,12 @@ static const char* kCookServerRoutes[] =
 	"/api/messages/list",
 	"/api/messages/send",
 	"/api/videos/file",
+	"/api/videos/segment",
 	"/api/videos/poster",
-	"/api/videos/upload",
+	"/api/videos/upload/start",
+	"/api/videos/upload/chunk",
+	"/api/videos/upload/complete",
+	"/api/videos/upload/cancel",
 	"/api/videos/publish",
 	"/api/videos/attach",
 	"/api/plan/preview",
@@ -219,6 +232,7 @@ RapidJsonValue CookServerHelper::accountToJson(const UserAccount& account)
 	object.setObject();
 	CookServerHelper::addString(object, "userId", account.m_userId);
 	CookServerHelper::addString(object, "account", account.m_account);
+	CookServerHelper::addString(object, "role", account.m_role);
 	CookServerHelper::addString(object, "nickname", account.m_nickname);
 	CookServerHelper::addInt(object, "coins", account.m_coins);
 	CookServerHelper::addInt(object, "yuanbao", account.m_yuanbao);
@@ -312,7 +326,20 @@ RapidJsonValue CookServerHelper::recipeToJson(const Recipe& recipe, const UserAc
 	CookServerHelper::addString(object, "category", recipe.m_category);
 	CookServerHelper::addString(object, "subtitle", recipe.m_subtitle);
 	CookServerHelper::addString(object, "difficulty", recipe.m_difficulty);
-	CookServerHelper::addString(object, "coverColor", recipe.m_coverColor);
+	CookServerHelper::addString(object, "coverImageId", recipe.m_coverImageId);
+    CookServerHelper::addString(object, "coverImageUrl", recipe.m_coverImageId.empty() ? "" : "/api/videos/file?videoId=" + recipe.m_coverImageId);
+    CookServerHelper::addString(object, "videoId", recipe.m_videoId);
+    CookServerHelper::addString(object, "videoUrl", recipe.m_videoId.empty() ? "" : "/api/videos/file?videoId=" + recipe.m_videoId);
+    CookServerHelper::addString(object, "posterUrl", recipe.m_videoId.empty() ? "" : "/api/videos/poster?videoId=" + recipe.m_videoId);
+    CookServerHelper::addBool(object, "inMenu", account != nullptr && AccountStore::isRecipeInMenu(recipe, *account));
+    CookServerHelper::addBool(object, "purchased", account != nullptr && account->m_purchasedRecipeIds.count(recipe.m_id) != 0);
+    int32_t menuPosition = -1;
+    if (account != nullptr)
+    {
+        std::vector<std::string>::const_iterator menu = std::find(account->m_menuRecipeOrder.begin(), account->m_menuRecipeOrder.end(), recipe.m_id);
+        if (menu != account->m_menuRecipeOrder.end()) menuPosition = static_cast<int32_t>(menu - account->m_menuRecipeOrder.begin());
+    }
+    CookServerHelper::addInt(object, "menuPosition", menuPosition);
 	CookServerHelper::addString(object, "author", recipe.m_author);
 	CookServerHelper::addString(object, "authorUserId", recipe.m_authorUserId);
 	CookServerHelper::addInt(object, "priceCoins", recipe.m_priceCoins);
@@ -398,7 +425,20 @@ RapidJsonValue CookServerHelper::recipeSummaryToJson(const Recipe& recipe, const
 	CookServerHelper::addString(object, "category", recipe.m_category);
 	CookServerHelper::addString(object, "subtitle", recipe.m_subtitle);
 	CookServerHelper::addString(object, "difficulty", recipe.m_difficulty);
-	CookServerHelper::addString(object, "coverColor", recipe.m_coverColor);
+	CookServerHelper::addString(object, "coverImageId", recipe.m_coverImageId);
+    CookServerHelper::addString(object, "coverImageUrl", recipe.m_coverImageId.empty() ? "" : "/api/videos/file?videoId=" + recipe.m_coverImageId);
+    CookServerHelper::addString(object, "videoId", recipe.m_videoId);
+    CookServerHelper::addString(object, "videoUrl", recipe.m_videoId.empty() ? "" : "/api/videos/file?videoId=" + recipe.m_videoId);
+    CookServerHelper::addString(object, "posterUrl", recipe.m_videoId.empty() ? "" : "/api/videos/poster?videoId=" + recipe.m_videoId);
+    CookServerHelper::addBool(object, "inMenu", account != nullptr && AccountStore::isRecipeInMenu(recipe, *account));
+    CookServerHelper::addBool(object, "purchased", account != nullptr && account->m_purchasedRecipeIds.count(recipe.m_id) != 0);
+    int32_t menuPosition = -1;
+    if (account != nullptr)
+    {
+        std::vector<std::string>::const_iterator menu = std::find(account->m_menuRecipeOrder.begin(), account->m_menuRecipeOrder.end(), recipe.m_id);
+        if (menu != account->m_menuRecipeOrder.end()) menuPosition = static_cast<int32_t>(menu - account->m_menuRecipeOrder.begin());
+    }
+    CookServerHelper::addInt(object, "menuPosition", menuPosition);
 	CookServerHelper::addString(object, "author", recipe.m_author);
 	CookServerHelper::addString(object, "authorUserId", recipe.m_authorUserId);
 	CookServerHelper::addInt(object, "priceCoins", recipe.m_priceCoins);
@@ -429,6 +469,12 @@ RapidJsonValue CookServerHelper::planToJson(const PlanResult& plan, const UserAc
 {
 	RapidJsonValue root;
 	root.setObject();
+	if (!plan.m_errorMessage.empty())
+	{
+		root.addBool("ok", false);
+		CookServerHelper::addString(root, "message", plan.m_errorMessage);
+		return root;
+	}
 	root.addBool("ok", true);
 	root.addBool("lite", lite);
 	const int32_t recipeTotal = static_cast<int32_t>(plan.m_recipes.size());
@@ -559,6 +605,12 @@ RapidJsonValue CookServerHelper::planSummaryToJson(const PlanResult& plan, bool 
 {
 	RapidJsonValue root;
 	root.setObject();
+	if (!plan.m_errorMessage.empty())
+	{
+		root.addBool("ok", false);
+		CookServerHelper::addString(root, "message", plan.m_errorMessage);
+		return root;
+	}
 	root.addBool("ok", true);
 	CookServerHelper::addBool(root, "summaryOnly", true);
 	CookServerHelper::addBool(root, "includeTimeBlocks", includeTimeBlocks);

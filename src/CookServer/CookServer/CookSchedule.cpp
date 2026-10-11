@@ -39,7 +39,8 @@ bool CookSchedule::isFreeBackgroundWait(const CookTask& task)
 	{
 		return false;
 	}
-	if (task.m_backgroundWaitMode == "free")
+	if (task.m_backgroundWaitMode == "free" &&
+	    task.m_safetyLevel != "attention" && task.m_safetyLevel != "danger")
 	{
 		return true;
 	}
@@ -307,6 +308,7 @@ void CookSchedule::schedulePreparedPlan(PlanResult& plan, const std::vector<Cook
 			LOGERROR("CookSchedule buildPlan stopped, unresolved dependencies totalTasks=%d scheduledTasks=%d",
 			         static_cast<int32_t>(tasks.size()),
 			         static_cast<int32_t>(scheduledIds.size()));
+			plan.m_errorMessage = "Plan contains unresolved task dependencies";
 			break;
 		}
 
@@ -336,6 +338,16 @@ void CookSchedule::schedulePreparedPlan(PlanResult& plan, const std::vector<Cook
 			resourceAvailable[scheduled.m_resource] = scheduled.m_endSeconds;
 		}
 		plan.m_totalSeconds = std::max(plan.m_totalSeconds, scheduled.m_endSeconds);
+	}
+	if (!plan.m_errorMessage.empty())
+	{
+		plan.m_timeline.clear();
+		plan.m_freeBlocks.clear();
+		plan.m_totalSeconds = 0;
+		plan.m_activeSeconds = 0;
+		plan.m_freeSeconds = 0;
+		plan.m_edgeSeconds = 0;
+		return;
 	}
 
 	std::sort(plan.m_timeline.begin(), plan.m_timeline.end(), [](const ScheduledTask& lhs, const ScheduledTask& rhs) {

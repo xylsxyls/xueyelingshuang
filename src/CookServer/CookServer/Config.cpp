@@ -38,8 +38,13 @@ m_storageSyncThreadCount(0),
 m_storageSyncTaskPriority(0),
 m_accountDefaultCoins(0),
 m_accountDefaultYuanbao(0),
-m_accountMaxRechargeCoins(0),
 m_authTokenExpireSeconds(0),
+m_systemAccountName("qmzdc"),
+m_systemPasswordHash("pbkdf2_sha256$120000$2c93103b36c469a2ce7aa7d00167640a6cd7ea9606363d177a103dc9d60e7012"),
+m_systemPasswordSalt("eee1865e-5f05-45e3-a985-5cf44e840cdd"),
+m_avatarDirectoryName("data/avatars"),
+m_avatarMaxBytes(512 * 1024),
+m_avatarMaxSide(1024),
 m_checkinRewardCoins(0),
 m_adRewardCoins(0),
 m_adRequiredSeconds(0),
@@ -48,6 +53,8 @@ m_videoResourceScanIntervalSeconds(0),
 m_videoFeedDefaultCount(0),
 m_videoSeenExpireDays(0),
 m_videoStreamChunkBytes(0),
+m_videoSegmentMaxSeconds(0),
+m_videoSegmentMaxBytes(0),
 m_videoPosterGenerateEnabled(false),
 m_videoPosterCommandUseShell(false),
 m_videoPosterMaxWidth(0),
@@ -145,7 +152,6 @@ void Config::setDefaults()
 	m_recipeResourceDirectoryName = "res/recipes";
 	m_accountDefaultCoins = 0;
 	m_accountDefaultYuanbao = 100;
-	m_accountMaxRechargeCoins = 10000;
 	m_authTokenExpireSeconds = 7 * 24 * 60 * 60;
 	m_checkinRewardCoins = 5;
 	m_adRewardCoins = 30;
@@ -157,6 +163,9 @@ void Config::setDefaults()
 	m_videoFeedDefaultCount = 2;
 	m_videoSeenExpireDays = 1;
 	m_videoStreamChunkBytes = 4LL * 1024LL * 1024LL;
+	m_videoSegmentCacheDirectoryName = "data/videos/segments";
+	m_videoSegmentMaxSeconds = 10;
+	m_videoSegmentMaxBytes = 48LL * 1024LL * 1024LL;
 	m_videoPosterApiPath = "/api/videos/poster";
 	m_videoPosterGenerateEnabled = true;
 	m_videoPosterCommandTemplate = "";
@@ -330,7 +339,6 @@ void Config::loadIniOverrides()
 
 	m_accountDefaultCoins = readIniInt32(ini, "Account", "DefaultCoins", m_accountDefaultCoins);
 	m_accountDefaultYuanbao = readIniInt32(ini, "Account", "DefaultYuanbao", m_accountDefaultYuanbao);
-	m_accountMaxRechargeCoins = readIniInt32(ini, "Account", "MaxRechargeCoins", m_accountMaxRechargeCoins);
 	m_authTokenExpireSeconds = readIniInt32(ini, "Account", "AuthTokenExpireSeconds", m_authTokenExpireSeconds);
 	m_checkinRewardCoins = readIniInt32(ini, "Account", "CheckinRewardCoins", m_checkinRewardCoins);
 	m_adRewardCoins = readIniInt32(ini, "Account", "AdRewardCoins", m_adRewardCoins);
@@ -356,6 +364,13 @@ void Config::loadIniOverrides()
 	{
 		m_videoStreamChunkBytes = 0;
 	}
+	m_videoSegmentCacheDirectoryName = readIniString(ini, "Feed", "VideoSegmentCacheDirectoryName", m_videoSegmentCacheDirectoryName);
+	m_videoSegmentMaxSeconds = readIniInt32(ini, "Feed", "VideoSegmentMaxSeconds", m_videoSegmentMaxSeconds);
+	if (m_videoSegmentMaxSeconds < 1) m_videoSegmentMaxSeconds = 1;
+	if (m_videoSegmentMaxSeconds > 60) m_videoSegmentMaxSeconds = 60;
+	m_videoSegmentMaxBytes = readIniInt64(ini, "Feed", "VideoSegmentMaxBytes", m_videoSegmentMaxBytes);
+	if (m_videoSegmentMaxBytes < 1024LL * 1024LL) m_videoSegmentMaxBytes = 1024LL * 1024LL;
+	if (m_videoSegmentMaxBytes > 512LL * 1024LL * 1024LL) m_videoSegmentMaxBytes = 512LL * 1024LL * 1024LL;
 	m_videoPosterApiPath = readIniString(ini, "Feed", "VideoPosterApiPath", m_videoPosterApiPath);
 	m_videoPosterGenerateEnabled = readIniBool(ini, "Feed", "VideoPosterGenerateEnabled", m_videoPosterGenerateEnabled);
 	m_videoPosterCommandTemplate = readIniString(ini, "Feed", "VideoPosterCommandTemplate", m_videoPosterCommandTemplate);
@@ -583,7 +598,6 @@ void Config::uninit()
 	m_recipeResourceDirectoryName.clear();
 	m_accountDefaultCoins = 0;
 	m_accountDefaultYuanbao = 0;
-	m_accountMaxRechargeCoins = 0;
 	m_authTokenExpireSeconds = 0;
 	m_checkinRewardCoins = 0;
 	m_adRewardCoins = 0;
@@ -595,6 +609,9 @@ void Config::uninit()
 	m_videoFeedDefaultCount = 0;
 	m_videoSeenExpireDays = 0;
 	m_videoStreamChunkBytes = 0;
+	m_videoSegmentCacheDirectoryName.clear();
+	m_videoSegmentMaxSeconds = 0;
+	m_videoSegmentMaxBytes = 0;
 	m_videoPosterApiPath.clear();
 	m_videoPosterGenerateEnabled = false;
 	m_videoPosterCommandTemplate.clear();

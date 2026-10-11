@@ -11,6 +11,29 @@
 class AccountStore
 {
 public:
+	/** 加载状态并升级系统账号，在HTTP服务开放前调用
+	@param [out] message 升级失败原因
+	@return 成功返回true；身份冲突或持久化失败返回false
+	*/
+	bool initialize(std::string& message);
+
+	/** 替换本人头像引用，数据库提交失败保留旧引用
+	@param [in] userId token所属用户ID
+	@param [in] imageKey 服务端生成的图片键
+	@param [out] oldKey 被替换的旧头像键，可为空
+	@param [out] message 错误说明
+	@return 持久化成功返回true
+	*/
+	bool updateAvatar(const std::string& userId, const std::string& imageKey,
+	    std::string& oldKey, std::string& message);
+
+	/** 读取当前头像键，不创建未知用户
+	@param [in] userId 目标用户
+	@param [out] imageKey 当前头像键
+	@return 存在有效头像返回true
+	*/
+	bool getAvatarKey(const std::string& userId, std::string& imageKey);
+
 	/** 构造函数
 	*/
 	AccountStore();
@@ -76,16 +99,14 @@ public:
 	@return 返回账号快照
 	*/
 	UserAccount getAccount(const std::string& userId);
-
-	/** 给账号充值金币，兼容早期测试接口
+    /** 修改本人简介。@param [in] userId 鉴权账号 @param [in] introduction 最多20字UTF-8文本
+    @param [out] message 错误说明 @return 保存成功 */
+    bool updateIntroduction(const std::string& userId, const std::string& introduction, std::string& message);
+	/** 读取公开昵称，不创建不存在的账号
 	@param [in] userId 用户ID
-	@param [in] coins 充值金币数，必须为正数且不能过大
-	@param [out] ok 返回充值是否成功，可为空
-	@param [out] message 返回给前端展示的结果说明，可为空
-	@return 返回操作后的账号快照
+	@return 返回已存在账号昵称；账号不存在时返回空字符串
 	*/
-	UserAccount recharge(const std::string& userId, int32_t coins, bool* ok, std::string* message);
-
+	std::string getUserDisplayName(const std::string& userId);
 	/** 加入或购买菜谱，支持金币、元宝和幂等键
 	@param [in] userId 用户ID
 	@param [in] recipeId 菜谱ID
@@ -134,7 +155,6 @@ public:
 	/** 完成广告奖励
 	@param [in] userId 用户ID
 	@param [in] adToken 广告奖励token
-	@param [in] debugElapsedSeconds 测试用已观看秒数，负数表示使用真实时间
 	@param [out] ok 返回操作是否成功
 	@param [out] alreadyRewarded 返回是否已领取过
 	@param [out] message 结果说明
@@ -142,7 +162,6 @@ public:
 	*/
 	UserAccount finishAdReward(const std::string& userId,
 	                           const std::string& adToken,
-	                           int32_t debugElapsedSeconds,
 	                           bool* ok,
 	                           bool* alreadyRewarded,
 	                           std::string* message);
@@ -275,7 +294,7 @@ public:
 	                  const std::string& caption,
 	                  const std::vector<std::string>& recipeIds,
 	                  VideoInfo& video,
-	                  std::string& message);
+	                  std::string& message, const std::string& coverImageId = "");
 
 	/** 发布或保存自定义菜谱
 	@param [in] userId 用户ID
@@ -389,7 +408,7 @@ public:
 	@param [in] userId 用户ID
 	@param [in] count 需要返回的视频数量
 	@param [in] excludeVideoIds 客户端当前已持有的视频ID，避免一页内重复
-	@param [in] mode 推荐模式，liked/favorite用于“我的”页筛选，空字符串表示推荐流
+	@param [in] mode liked筛选喜欢；favorite筛选视频收藏；collection合并视频与关联菜谱收藏；created筛选本人的已发布作品；空字符串表示推荐流
 	@param [in] avoidVideoId 本次返回时尽量避开的当前视频ID
 	@param [out] resetSeen 返回本次是否因为看完全部视频而重置了看过状态
 	@return 返回视频列表
@@ -436,7 +455,33 @@ public:
 	*/
 	int32_t countTargetComments(const std::string& targetType, const std::string& targetId);
 
+
+    /** 判断是否免费。@param [in] recipe 菜谱 @return 是否免费 */
+    static bool isRecipeFree(const Recipe& recipe);
+    /** 判断菜单归属。@param [in] recipe 菜谱 @param [in] account 账号 @return 是否已加入 */
+    static bool isRecipeInMenu(const Recipe& recipe, const UserAccount& account);
+    /** 购买并绑定幂等键。@param [in] userId 用户 @param [in] recipeId 菜谱 @param [in] key 幂等键
+    @param [out] ok 成功 @param [out] alreadyOwned 原权限 @param [out] message 说明 @param [out] recipe 快照 @return 账号 */
+    UserAccount purchaseRecipeWithKey(const std::string& userId, const std::string& recipeId, const std::string& key,
+        bool* ok, bool* alreadyOwned, std::string* message, Recipe* recipe);
+    /** 移出非购买菜。@param [in] userId 用户 @param [in] recipeId 菜谱 @param [out] message 说明 @return 成功 */
+    bool removeMenuRecipe(const std::string& userId, const std::string& recipeId, std::string& message);
+    /** 查看后前移已有菜单项。@param [in] userId 用户 @param [in] recipeId 菜谱 */
+    void touchMenuRecipe(const std::string& userId, const std::string& recipeId);
+    /** 只读公开资料。@param [in] viewerId 查看者 @param [in] targetId 作者 @param [out] info 公开字段 @return 存在 */
+    bool getPublicProfile(const std::string& viewerId, const std::string& targetId, UserContactInfo& info, bool includeStatistics = true);
+    /** 查询自己的粉丝。@param [in] userId 用户 @return 粉丝列表 */
+    std::vector<UserContactInfo> listFollowers(const std::string& userId);
+    /** 查询与一个用户的私信。@param [in] userId 用户 @param [in] peerId 对方 @return 双向消息 */
+    std::vector<MessageInfo> listConversation(const std::string& userId, const std::string& peerId);
+    /** 标记自己的入站消息已读。@param [in] userId 用户 @param [in] peerId 对方 */
+    void readConversation(const std::string& userId, const std::string& peerId);
+
 private:
+    /** 兼容旧菜单并补齐系统免费菜。@param [in,out] account 账号；调用方持锁 */
+    void refreshMenuNoLock(UserAccount& account) const;
+    /** 解析原视频。@param [in,out] recipe 菜谱；调用方持锁 */
+    void decorateRecipeMediaNoLock(Recipe& recipe);
 	/** 归一化用户ID
 	@param [in] userId 用户ID
 	@return 返回可用于持久化的用户ID
@@ -478,8 +523,10 @@ private:
 	void loadIfNeededNoLock();
 
 	/** 将内存中的账号数据写回Redis+MySQL，调用方必须已持有锁
+	@param [in] durable 为true时同步确认MySQL提交
+	@return 存储层接受或同步提交成功返回true
 	*/
-	void saveNoLock();
+	bool saveNoLock(bool durable = false);
 
 	/** 确保账号存在，调用方必须已持有锁
 	@param [in] userId 用户ID
@@ -617,6 +664,13 @@ private:
 	std::string targetKeyNoLock(const std::string& targetType, const std::string& targetId) const;
 
 private:
+	/** 迁移旧系统用户ID的所有关联，调用方必须持有锁并在启动期间执行
+	@param [out] changed 是否迁移了旧数据
+	@param [out] message 失败原因
+	@return 返回是否没有身份或个性化键冲突
+	*/
+	bool migrateSystemIdNoLock(bool& changed, std::string& message);
+
 	// 保护仓库内存表和加载状态
 	std::mutex m_mutex;
 	// 已加载的账号表，key为用户ID
@@ -649,4 +703,6 @@ private:
 	int32_t m_sequence;
 	// 是否已经尝试加载过Redis+MySQL状态快照
 	bool m_loaded;
+	// 快照读取失败时拒绝启动，避免把故障当成新数据库覆盖旧数据。
+	bool m_loadFailed;
 };

@@ -147,9 +147,13 @@ bool CookStorageService::isEnabled() const
 	return m_enabled.load();
 }
 
-bool CookStorageService::loadAccountState(std::string& stateText)
+bool CookStorageService::loadAccountState(std::string& stateText, bool* readError)
 {
 	stateText.clear();
+	if (readError != nullptr)
+	{
+		*readError = false;
+	}
 	if (!isEnabled())
 	{
 		return false;
@@ -168,7 +172,7 @@ bool CookStorageService::loadAccountState(std::string& stateText)
 		        static_cast<int32_t>(stateText.size()));
 		return true;
 	}
-	if (loadMysqlStateSnapshot(stateText, version))
+	if (loadMysqlStateSnapshot(stateText, version, readError))
 	{
 		int64_t currentVersion = m_stateVersion.load();
 		if (version > currentVersion)
@@ -393,10 +397,14 @@ bool CookStorageService::initRedisSnapshotFromMysql()
 	return true;
 }
 
-bool CookStorageService::loadMysqlStateSnapshot(std::string& stateText, int64_t& version)
+bool CookStorageService::loadMysqlStateSnapshot(std::string& stateText, int64_t& version, bool* readError)
 {
 	stateText.clear();
 	version = 0;
+	if (readError != nullptr)
+	{
+		*readError = true;
+	}
 	std::shared_ptr<MysqlCpp> mysql = acquireMysql();
 	if (mysql == nullptr)
 	{
@@ -417,6 +425,10 @@ bool CookStorageService::loadMysqlStateSnapshot(std::string& stateText, int64_t&
 	}
 	if (!resultSet->next())
 	{
+		if (readError != nullptr)
+		{
+			*readError = false;
+		}
 		return false;
 	}
 	std::istream* blobStream = resultSet->getBlob("snapshotValue");
@@ -429,6 +441,10 @@ bool CookStorageService::loadMysqlStateSnapshot(std::string& stateText, int64_t&
 	oss << blobStream->rdbuf();
 	stateText = oss.str();
 	version = resultSet->getInt64("updateVersion");
+	if (readError != nullptr)
+	{
+		*readError = false;
+	}
 	return true;
 }
 

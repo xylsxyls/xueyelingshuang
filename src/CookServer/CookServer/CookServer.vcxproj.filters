@@ -42,9 +42,14 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CookAvatarHelper.h"><Filter>头文件</Filter></ClInclude>
     <ClInclude Include="AccountStore.h">
       <Filter>账号状态</Filter>
     </ClInclude>
+    <ClInclude Include="CookVideoSegmentService.h">
+      <Filter>API服务</Filter>
+    </ClInclude>
+    <ClInclude Include="CookVideoUploadService.h" />
     <ClInclude Include="CookApiService.h">
       <Filter>API服务</Filter>
     </ClInclude>
@@ -60,6 +65,8 @@
     <ClInclude Include="CookHttpServer.h">
       <Filter>HTTP层</Filter>
     </ClInclude>
+    <ClInclude Include="CookRecipePresentation.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="CookPersonalizationFlow.h"><Filter>头文件</Filter></ClInclude>
     <ClInclude Include="CookModels.h">
       <Filter>业务模型</Filter>
     </ClInclude>
@@ -84,6 +91,9 @@
     <ClInclude Include="CookVoiceService.h">
       <Filter>API服务</Filter>
     </ClInclude>
+    <ClInclude Include="CookWindowsVoiceSelector.h">
+      <Filter>API服务</Filter>
+    </ClInclude>
     <ClInclude Include="CookStorageService.h">
       <Filter>存储层</Filter>
     </ClInclude>
@@ -92,12 +102,25 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CookApiServiceAvatar.cpp"><Filter>API服务</Filter></ClCompile>
+    <ClCompile Include="AccountStoreAvatar.cpp"><Filter>账号状态</Filter></ClCompile>
+    <ClCompile Include="AccountStoreIdentity.cpp"><Filter>账号状态</Filter></ClCompile>
+    <ClCompile Include="CookAvatarHelper.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="AccountStoreMenu.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="AccountStoreSocial.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="CookApiServiceSocial.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="CookRecipePresentation.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="CookPersonalizationFlow.cpp"><Filter>源文件</Filter></ClCompile>
     <ClCompile Include="AccountStore.cpp">
       <Filter>账号状态</Filter>
     </ClCompile>
     <ClCompile Include="Config.cpp">
       <Filter>配置</Filter>
     </ClCompile>
+    <ClCompile Include="CookVideoSegmentService.cpp">
+      <Filter>API服务</Filter>
+    </ClCompile>
+    <ClCompile Include="CookVideoUploadService.cpp" />
     <ClCompile Include="CookApiService.cpp">
       <Filter>API服务</Filter>
     </ClCompile>
@@ -132,6 +155,9 @@
       <Filter>存储层</Filter>
     </ClCompile>
     <ClCompile Include="CookVoiceService.cpp">
+      <Filter>API服务</Filter>
+    </ClCompile>
+    <ClCompile Include="CookWindowsVoiceSelector.cpp">
       <Filter>API服务</Filter>
     </ClCompile>
     <ClCompile Include="CookStorageService.cpp">

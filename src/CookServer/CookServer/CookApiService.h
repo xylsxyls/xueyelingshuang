@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "AccountStore.h"
 #include "CookModels.h"
+#include "CookVideoUploadService.h"
 #include "HttpService/HttpServiceAPI.h"
 #include <deque>
 #include <map>
@@ -15,6 +16,12 @@ class RapidJsonValue;
 class CookApiService
 {
 public:
+	/** 初始化账号身份，在开始接受HTTP请求前调用
+	@param [out] message 启动失败说明
+	@return 初始化成功返回true
+	*/
+	bool initialize(std::string& message);
+
 	/** 处理一条HTTP请求
 	@param [in] request HttpService解析出的请求对象
 	@return 返回HTTP响应，响应体当前统一为JSON字符串
@@ -22,6 +29,23 @@ public:
 	HttpResponse handle(const HttpRequest& request);
 
 private:
+    /** 构造头像图片响应，只公开当前头像
+    @param [in] request 请求中的目标用户和版本键
+    @return 图片响应或404
+    */
+    HttpResponse buildAvatarResponse(const HttpRequest& request);
+
+    /** 保存裁剪后的原始图片并替换本人头像
+    @param [in] request 图片二进制请求
+    @param [in] userId token所属用户
+    @return 业务JSON响应
+    */
+    HttpResponse uploadAvatarResponse(const HttpRequest& request, const std::string& userId);
+
+    /** 构造公开资料白名单。@param [in] info 公开字段 @return JSON */
+    RapidJsonValue publicProfileToJson(const UserContactInfo& info) const;
+    /** 处理菜单移除、公开主页、粉丝和会话。@param [in] request 请求 @param [in] userId 认证用户 @return JSON */
+    std::string buildSocialJson(const HttpRequest& request, const std::string& userId);
 	struct VideoPosterCacheEntry
 	{
 		std::string m_body;
@@ -130,7 +154,7 @@ private:
 	@param [in] request HTTP请求，用于读取分包参数
 	@return 返回菜谱列表、分类和账号状态
 	*/
-	std::string buildRecipesJson(const std::string& userId);
+	std::string buildRecipesJson(const std::string& userId, bool catalog = false);
 
 	/** 构建菜谱详情JSON
 	@param [in] userId 用户ID
@@ -166,20 +190,13 @@ private:
 	*/
 	std::string buildAccountJson(const std::string& userId);
 
-	/** 构建充值结果JSON
-	@param [in] userId 用户ID
-	@param [in] coins 充值金币数
-	@return 返回充值结果和账号状态
-	*/
-	std::string buildRechargeJson(const std::string& userId, int32_t coins);
-
 	/** 构建加入菜谱结果JSON
 	@param [in] userId 用户ID
 	@param [in] recipeId 菜谱ID
 	@param [in] idempotencyKey 幂等键
 	@return 返回加入结果、账号状态和菜谱状态
 	*/
-	std::string buildJoinRecipeJson(const std::string& userId, const std::string& recipeId, const std::string& idempotencyKey);
+	std::string buildJoinRecipeJson(const std::string& userId, const std::string& recipeId, const std::string& idempotencyKey, bool purchase = false);
 
 	/** 构建收藏切换结果JSON
 	@param [in] userId 用户ID
@@ -230,6 +247,7 @@ private:
 	@return 返回视频二进制响应
 	*/
 	HttpResponse buildVideoFileResponse(const HttpRequest& request);
+	HttpResponse buildVideoSegmentResponse(const HttpRequest& request);
 
 	/** 构建视频第一帧图片响应，通过FFmpegCpp在内存中生成
 	@param [in] request HTTP请求
@@ -345,11 +363,13 @@ private:
 	                               const VideoInfo& video,
 	                               const UserAccount& account,
 	                               const std::map<std::string, Recipe>& recipesById,
+	                               const std::string& videoAuthor,
 	                               int32_t index);
 
 private:
 	// 账号、钱包、内容和用户菜谱状态仓库
 	AccountStore m_accountStore;
+	CookVideoUploadService m_videoUploadService;
 	// 视频第一帧图片内存缓存，避免重复解析同一个视频文件
 	std::mutex m_videoPosterCacheMutex;
 	std::map<std::string, VideoPosterCacheEntry> m_videoPosterCache;

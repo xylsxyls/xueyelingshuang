@@ -139,6 +139,16 @@ int32_t main()
 	LOGINFO("CookServer signal handlers registered.");
 
 	CookApiService apiService;
+	std::string identityMessage;
+	if (!apiService.initialize(identityMessage))
+	{
+		LOGERROR("CookServer identity initialization failed reason=%s", identityMessage.c_str());
+		CookStorageService::instance().shutdown();
+		CookCatalog::uninit();
+		LogManager::instance().uninitAll();
+		Config::instance().uninit();
+		return 1;
+	}
 	CookHttpServer httpServer(&apiService);
 	if (!httpServer.start())
 	{

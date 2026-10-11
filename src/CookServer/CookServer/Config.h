@@ -201,10 +201,20 @@ public:
 	int32_t m_accountDefaultCoins;
 	// 新账号默认赠送元宝数
 	int32_t m_accountDefaultYuanbao;
-	// 单次充值允许的最大金币数
-	int32_t m_accountMaxRechargeCoins;
 	// 登录token有效期，单位秒
 	int32_t m_authTokenExpireSeconds;
+	// 系统账号首次升级的登录名；系统用户ID为qmzdc
+	std::string m_systemAccountName;
+	// 系统账号首次升级用加盐PBKDF2散列，后续不重置
+	std::string m_systemPasswordHash;
+	// 与系统账号初始散列匹配的盐
+	std::string m_systemPasswordSalt;
+	// 头像目录，只保存服务端生成的图片键
+	std::string m_avatarDirectoryName;
+	// 单次头像上传上限，字节
+	int32_t m_avatarMaxBytes;
+	// 头像最长边上限，像素
+	int32_t m_avatarMaxSide;
 	// 每日签到奖励金币
 	int32_t m_checkinRewardCoins;
 	// 看完广告奖励金币
@@ -225,6 +235,12 @@ public:
 	int32_t m_videoSeenExpireDays;
 	// 视频Range响应的最大分段字节数，0表示按客户端Range原样返回
 	int64_t m_videoStreamChunkBytes;
+	// 时间片段MP4缓存目录，相对于CookServer.exe
+	std::string m_videoSegmentCacheDirectoryName;
+	// 单次时间片段请求的最大秒数
+	int32_t m_videoSegmentMaxSeconds;
+	// 单个MP4时间片段最大响应字节数
+	int64_t m_videoSegmentMaxBytes;
 	// 视频第一帧图片下载接口路径
 	std::string m_videoPosterApiPath;
 	// 是否在扫描视频资源时生成第一帧图片

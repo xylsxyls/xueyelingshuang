@@ -2,6 +2,7 @@
 #include "CookServerHelper.h"
 #include "CSystem/CSystemAPI.h"
 #include "RapidJson/RapidJsonAPI.h"
+#include <map>
 #include <set>
 
 bool CookRecipeConfig::loadRecipeFromFile(const std::string& filePath, Recipe& recipe, std::string* errorMessage)
@@ -119,6 +120,11 @@ bool CookRecipeConfig::parseTask(const RapidJsonValue& value, const std::string&
 	{
 		task.m_backgroundWaitMode = task.m_canLeaveKitchen && task.m_safetyLevel != "attention" && task.m_safetyLevel != "danger" ? "free" : "watch";
 	}
+	if (!task.m_active && task.m_backgroundWaitMode == "free" &&
+	    (task.m_safetyLevel == "attention" || task.m_safetyLevel == "danger"))
+	{
+		task.m_backgroundWaitMode = "watch";
+	}
 	if (!task.m_active)
 	{
 		task.m_canLeaveKitchen = task.m_backgroundWaitMode == "free";
@@ -131,10 +137,7 @@ bool CookRecipeConfig::parseTask(const RapidJsonValue& value, const std::string&
 	{
 		return CookRecipeConfig::setError(errorMessage, "task durationSeconds is invalid: " + task.m_id);
 	}
-	if (task.m_voiceText.empty())
-	{
-		task.m_voiceText = CookServerHelper::joinJsonUtf8Text(task.m_title, "。", task.m_detail);
-	}
+	task.m_voiceText = task.m_title;
 	std::vector<std::string> dependencies = value.getStringArrayOrEmpty("dependencies");
 	for (size_t i = 0; i < dependencies.size(); ++i)
 	{
@@ -168,6 +171,35 @@ bool CookRecipeConfig::validateRecipeTasks(const Recipe& recipe, std::string* er
 			}
 		}
 	}
+	std::map<std::string, size_t> remainingDependencies;
+	std::map<std::string, std::vector<std::string>> dependents;
+	std::vector<std::string> ready;
+	for (size_t i = 0; i < recipe.m_tasks.size(); ++i)
+	{
+		remainingDependencies[recipe.m_tasks[i].m_id] = recipe.m_tasks[i].m_dependencies.size();
+		if (recipe.m_tasks[i].m_dependencies.empty()) ready.push_back(recipe.m_tasks[i].m_id);
+		for (size_t j = 0; j < recipe.m_tasks[i].m_dependencies.size(); ++j)
+		{
+			dependents[recipe.m_tasks[i].m_dependencies[j]].push_back(recipe.m_tasks[i].m_id);
+		}
+	}
+	for (size_t next = 0; next < ready.size(); ++next)
+	{
+		std::map<std::string, std::vector<std::string>>::const_iterator children = dependents.find(ready[next]);
+		if (children == dependents.end()) continue;
+		for (size_t i = 0; i < children->second.size(); ++i)
+		{
+			std::map<std::string, size_t>::iterator count = remainingDependencies.find(children->second[i]);
+			if (count != remainingDependencies.end() && count->second > 0 && --count->second == 0)
+			{
+				ready.push_back(count->first);
+			}
+		}
+	}
+	if (ready.size() != recipe.m_tasks.size())
+	{
+		return CookRecipeConfig::setError(errorMessage, "task dependency cycle found in recipe: " + recipe.m_id);
+	}
 	return true;
 }
 
@@ -179,7 +211,7 @@ bool CookRecipeConfig::parseRecipe(const RapidJsonValue& value, Recipe& recipe, 
 	recipe.m_category = value.getStringOrDefault("category", "");
 	recipe.m_subtitle = value.getStringOrDefault("subtitle", "");
 	recipe.m_difficulty = value.getStringOrDefault("difficulty", "");
-	recipe.m_coverColor = value.getStringOrDefault("coverColor", "");
+	recipe.m_coverImageId = value.getStringOrDefault("coverImageId", "");
 	recipe.m_author = value.getStringOrDefault("author", "");
 	recipe.m_authorUserId = value.getStringOrDefault("authorUserId", value.getStringOrDefault("authorId", ""));
 	recipe.m_tags = value.getStringArrayOrEmpty("tags");
@@ -264,7 +296,7 @@ bool CookRecipeConfig::parseRecipe(const RapidJsonDocument& document, Recipe& re
 	recipe.m_category = document.getStringOrDefault("category", "");
 	recipe.m_subtitle = document.getStringOrDefault("subtitle", "");
 	recipe.m_difficulty = document.getStringOrDefault("difficulty", "");
-	recipe.m_coverColor = document.getStringOrDefault("coverColor", "");
+	recipe.m_coverImageId = document.getStringOrDefault("coverImageId", "");
 	recipe.m_author = document.getStringOrDefault("author", "");
 	recipe.m_authorUserId = document.getStringOrDefault("authorUserId", document.getStringOrDefault("authorId", ""));
 	recipe.m_tags = document.getStringArrayOrEmpty("tags");
@@ -358,4 +390,9 @@ bool CookRecipeConfig::setError(std::string* errorMessage, const std::string& me
 		*errorMessage = message;
 	}
 	return false;
+}
+
+bool CookRecipeConfig::validateTaskGraph(const Recipe& recipe, std::string* errorMessage)
+{
+    return validateRecipeTasks(recipe, errorMessage);
 }

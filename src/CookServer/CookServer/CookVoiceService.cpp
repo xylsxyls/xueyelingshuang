@@ -1,4 +1,5 @@
-#include "CookVoiceService.h"
+﻿#include "CookVoiceService.h"
+#include "CookWindowsVoiceSelector.h"
 #include "Config.h"
 #include "CookHelper.h"
 #include "CSystem/CSystemAPI.h"
@@ -58,84 +59,6 @@
 		return oss.str();
 	}
 
-	std::wstring lowerWide(const std::wstring& text)
-	{
-		std::wstring result = text;
-		for (size_t i = 0; i < result.size(); ++i)
-		{
-			if (result[i] >= L'A' && result[i] <= L'Z')
-			{
-				result[i] = static_cast<wchar_t>(result[i] - L'A' + L'a');
-			}
-		}
-		return result;
-	}
-
-	bool tokenMatchesGender(ISpObjectToken* token, const std::string& gender)
-	{
-		if (token == nullptr)
-		{
-			return false;
-		}
-		ISpDataKey* attributes = nullptr;
-		if (FAILED(token->OpenKey(L"Attributes", &attributes)) || attributes == nullptr)
-		{
-			return false;
-		}
-
-		LPWSTR genderValue = nullptr;
-		bool matched = false;
-		if (SUCCEEDED(attributes->GetStringValue(L"Gender", &genderValue)) && genderValue != nullptr)
-		{
-			std::wstring lower = lowerWide(genderValue);
-			std::wstring expected = gender == "male" ? L"male" : L"female";
-			matched = lower.find(expected) != std::wstring::npos;
-		}
-		if (genderValue != nullptr)
-		{
-			::CoTaskMemFree(genderValue);
-		}
-		releaseCom(attributes);
-		return matched;
-	}
-
-	void trySelectVoiceByGender(ISpVoice* voice, const std::string& gender)
-	{
-		if (voice == nullptr)
-		{
-			return;
-		}
-
-		ISpObjectTokenCategory* category = nullptr;
-		IEnumSpObjectTokens* enumTokens = nullptr;
-		HRESULT hr = ::CoCreateInstance(CLSID_SpObjectTokenCategory, nullptr, CLSCTX_ALL, IID_ISpObjectTokenCategory, reinterpret_cast<void**>(&category));
-		if (FAILED(hr) || category == nullptr)
-		{
-			return;
-		}
-		hr = category->SetId(SPCAT_VOICES, FALSE);
-		if (SUCCEEDED(hr))
-		{
-			hr = category->EnumTokens(nullptr, nullptr, &enumTokens);
-		}
-		if (SUCCEEDED(hr) && enumTokens != nullptr)
-		{
-			ISpObjectToken* token = nullptr;
-			ULONG fetched = 0;
-			while (enumTokens->Next(1, &token, &fetched) == S_OK && fetched == 1)
-			{
-				if (tokenMatchesGender(token, gender))
-				{
-					voice->SetVoice(token);
-					releaseCom(token);
-					break;
-				}
-				releaseCom(token);
-			}
-		}
-		releaseCom(enumTokens);
-		releaseCom(category);
-	}
 #endif
 
 	struct CookVoicePreparedJob
@@ -986,7 +909,8 @@ std::string CookVoiceService::buildAudioKey(const std::string& textUtf8, const s
 {
 	std::string provider = configuredProvider();
 	std::string format = audioFormatForProvider(provider);
-	return gender + "_" + CookHelper::hashHex128(provider + "|" + format + "|" + gender + "|" + textUtf8) + "." + format;
+	const std::string selectionVersion = provider == kVoiceProviderWindowsSapi ? "sapi-selector-v2|" : "";
+	return gender + "_" + CookHelper::hashHex128(selectionVersion + provider + "|" + format + "|" + gender + "|" + textUtf8) + "." + format;
 }
 
 std::string CookVoiceService::buildVoiceId(const std::string& textUtf8, const std::string& gender) const
@@ -1032,27 +956,18 @@ std::string CookVoiceService::contentTypeForFormat(const std::string& format) co
 
 bool CookVoiceService::isSafeAudioKey(const std::string& audioKey) const
 {
-	if (audioKey.size() < 42 || audioKey.size() > 80)
-	{
-		return false;
-	}
-	if (audioKey.find("..") != std::string::npos)
-	{
-		return false;
-	}
-	if (audioKey.size() < 4)
-	{
-		return false;
-	}
+	const size_t prefixBytes = audioKey.find("male_") == 0 ? 5 : audioKey.find("female_") == 0 ? 7 : 0;
+	// male_ + 32位缓存哈希 + .wav 为41字节，不能沿用女声长度下限。
+	if (prefixBytes == 0 || audioKey.size() != prefixBytes + 32 + 4) return false;
 	std::string extension = audioKey.substr(audioKey.size() - 4);
 	if (extension != ".wav" && extension != ".mp3")
 	{
 		return false;
 	}
-	for (size_t i = 0; i < audioKey.size(); ++i)
+	for (size_t i = prefixBytes; i < prefixBytes + 32; ++i)
 	{
 		unsigned char ch = static_cast<unsigned char>(audioKey[i]);
-		if (std::isalnum(ch) || ch == '_' || ch == '-' || ch == '.')
+		if (std::isxdigit(ch))
 		{
 			continue;
 		}
@@ -1301,10 +1216,10 @@ bool CookVoiceService::generateWindowsSapiWav(const std::string& textUtf8, const
 	HRESULT hr = ::CoCreateInstance(CLSID_SpVoice, nullptr, CLSCTX_ALL, IID_ISpVoice, reinterpret_cast<void**>(&voice));
 	if (SUCCEEDED(hr) && voice != nullptr)
 	{
-		trySelectVoiceByGender(voice, gender);
+		if (!CookWindowsVoiceSelector::select(voice, gender, CStringManager::Utf8ToUnicode(textUtf8), message)) hr = E_FAIL;
 		voice->SetVolume(100);
 		voice->SetRate(gender == "male" ? -1 : 0);
-		hr = ::CoCreateInstance(CLSID_SpStream, nullptr, CLSCTX_ALL, IID_ISpStream, reinterpret_cast<void**>(&stream));
+		if (SUCCEEDED(hr)) hr = ::CoCreateInstance(CLSID_SpStream, nullptr, CLSCTX_ALL, IID_ISpStream, reinterpret_cast<void**>(&stream));
 	}
 	if (SUCCEEDED(hr) && stream != nullptr)
 	{
@@ -1368,7 +1283,7 @@ bool CookVoiceService::generateWindowsSapiWav(const std::string& textUtf8, const
 	}
 	if (FAILED(hr))
 	{
-		message = "Windows SAPI synthesize failed " + hresultText(hr);
+		if (message.empty()) message = "Windows SAPI synthesize failed " + hresultText(hr);
 		return false;
 	}
 	return fileSizeBytes(filePath) > 44;

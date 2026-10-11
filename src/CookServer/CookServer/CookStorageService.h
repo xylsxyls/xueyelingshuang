@@ -37,9 +37,10 @@ public:
 
 	/** 加载AccountStore状态快照
 	@param [out] stateText 状态快照文本
+	@param [out] readError 可选，区分无快照和MySQL读取失败
 	@return 成功加载返回true，无快照或失败返回false
 	*/
-	bool loadAccountState(std::string& stateText);
+	bool loadAccountState(std::string& stateText, bool* readError = nullptr);
 
 	/** 先写Redis，再投递MySQL后台同步任务
 	@param [in] stateText 状态快照文本
@@ -118,9 +119,10 @@ private:
 	/** 读取MySQL状态快照
 	@param [out] stateText 状态文本
 	@param [out] version 状态版本
+	@param [out] readError 可选，区分无数据和读取错误
 	@return 读取到快照返回true，否则返回false
 	*/
-	bool loadMysqlStateSnapshot(std::string& stateText, int64_t& version);
+	bool loadMysqlStateSnapshot(std::string& stateText, int64_t& version, bool* readError = nullptr);
 
 	/** 读取Redis状态快照
 	@param [out] stateText 状态文本

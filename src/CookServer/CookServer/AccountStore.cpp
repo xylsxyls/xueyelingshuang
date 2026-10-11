@@ -1,4 +1,6 @@
 ﻿#include "AccountStore.h"
+#include "CookPersonalizationFlow.h"
+#include "CookRecipePresentation.h"
 #include "Config.h"
 #include "CookCatalog.h"
 #include "CookHelper.h"
@@ -10,14 +12,155 @@
 #include "LogManager/LogManagerAPI.h"
 #include "RapidJson/RapidJsonAPI.h"
 #include <algorithm>
+#include <cctype>
 #include <cstdio>
+#include <cstdlib>
 #include <ctime>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
+#ifndef _WIN32
+#include <limits.h>
+#endif
+
+#ifdef _WIN32
+#include <windows.h>
+#include <bcrypt.h>
+#else
+#include <openssl/evp.h>
+#endif
+
+static const uint32_t kPasswordHashIterations = 120000;
+static const char* kPasswordHashPrefix = "pbkdf2_sha256$120000$";
+
+static bool securePasswordHash(const std::string& password, const std::string& salt, std::string& passwordHash)
+{
+	if (password.empty() || password.size() > 1024 || salt.empty())
+	{
+		return false;
+	}
+	unsigned char derived[32] = {};
+	bool ok = false;
+#ifdef _WIN32
+	BCRYPT_ALG_HANDLE algorithm = nullptr;
+	NTSTATUS status = BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, BCRYPT_ALG_HANDLE_HMAC_FLAG);
+	if (status >= 0 && algorithm != nullptr)
+	{
+		status = BCryptDeriveKeyPBKDF2(algorithm,
+			reinterpret_cast<PUCHAR>(const_cast<char*>(password.data())),
+			static_cast<ULONG>(password.size()),
+		reinterpret_cast<PUCHAR>(const_cast<char*>(salt.data())),
+			static_cast<ULONG>(salt.size()),
+			kPasswordHashIterations,
+			derived,
+			static_cast<ULONG>(sizeof(derived)),
+			0);
+		ok = status >= 0;
+		BCryptCloseAlgorithmProvider(algorithm, 0);
+	}
+#else
+	ok = PKCS5_PBKDF2_HMAC(password.data(), static_cast<int>(password.size()),
+		reinterpret_cast<const unsigned char*>(salt.data()), static_cast<int>(salt.size()),
+		static_cast<int>(kPasswordHashIterations), EVP_sha256(), sizeof(derived), derived) == 1;
+#endif
+	if (!ok)
+	{
+		return false;
+	}
+	static const char hex[] = "0123456789abcdef";
+	std::string encoded;
+	encoded.reserve(sizeof(derived) * 2);
+	for (size_t i = 0; i < sizeof(derived); ++i)
+	{
+		encoded.push_back(hex[(derived[i] >> 4) & 0x0f]);
+		encoded.push_back(hex[derived[i] & 0x0f]);
+	}
+	passwordHash = kPasswordHashPrefix + encoded;
+	return true;
+}
+
+static bool secureTextEquals(const std::string& left, const std::string& right)
+{
+	if (left.size() != right.size()) return false;
+	unsigned char difference = 0;
+	for (size_t i = 0; i < left.size(); ++i)
+	{
+		difference |= static_cast<unsigned char>(left[i] ^ right[i]);
+	}
+	return difference == 0;
+}
+
+static std::string canonicalVideoPath(const std::string& path, bool requireExisting)
+{
+	if (path.empty()) return std::string();
+#ifdef _WIN32
+	if (requireExisting)
+	{
+		HANDLE handle = CreateFileA(path.c_str(), GENERIC_READ,
+			FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+			nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+		if (handle == INVALID_HANDLE_VALUE) return std::string();
+		DWORD required = GetFinalPathNameByHandleA(handle, nullptr, 0, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+		std::string result;
+		if (required > 0)
+		{
+			std::vector<char> buffer(static_cast<size_t>(required) + 1, '\0');
+			DWORD written = GetFinalPathNameByHandleA(handle, &buffer[0], static_cast<DWORD>(buffer.size()), FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+			if (written > 0 && written < buffer.size()) result.assign(&buffer[0], written);
+		}
+		CloseHandle(handle);
+		if (result.compare(0, 4, "\\\\?\\") == 0) result.erase(0, 4);
+		for (size_t i = 0; i < result.size(); ++i)
+		{
+			if (result[i] == '/') result[i] = '\\';
+			result[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(result[i])));
+		}
+		return result;
+	}
+	DWORD required = GetFullPathNameA(path.c_str(), 0, nullptr, nullptr);
+	if (required == 0) return std::string();
+	std::vector<char> buffer(static_cast<size_t>(required) + 1, '\0');
+	DWORD written = GetFullPathNameA(path.c_str(), static_cast<DWORD>(buffer.size()), &buffer[0], nullptr);
+	if (written == 0 || written >= buffer.size()) return std::string();
+	std::string result(&buffer[0], written);
+	for (size_t i = 0; i < result.size(); ++i)
+	{
+		if (result[i] == '/') result[i] = '\\';
+		result[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(result[i])));
+	}
+	return result;
+#else
+	if (!requireExisting) return CookHelper::normalizePathSeparators(path);
+	char buffer[PATH_MAX] = {};
+	if (realpath(path.c_str(), buffer) == nullptr) return std::string();
+	return CookHelper::normalizePathSeparators(buffer);
+#endif
+}
+
+static bool isPathInsideDirectory(const std::string& path, const std::string& directory)
+{
+	std::string canonicalPath = canonicalVideoPath(path, true);
+	std::string canonicalDirectory = canonicalVideoPath(directory, false);
+	if (canonicalPath.empty() || canonicalDirectory.empty()) return false;
+#ifdef _WIN32
+	std::string::size_type separator = canonicalDirectory.find_last_of("\\/");
+#else
+	std::string::size_type separator = canonicalDirectory.find_last_of("\\/");
+#endif
+	if (separator == std::string::npos || separator + 1 != canonicalDirectory.size()) canonicalDirectory.push_back(
+#ifdef _WIN32
+		'\\'
+#else
+		'/'
+#endif
+	);
+	if (canonicalPath.size() <= canonicalDirectory.size()) return false;
+	return canonicalPath.compare(0, canonicalDirectory.size(), canonicalDirectory) == 0;
+}
 
 bool AccountStore::isRecipeOwned(const Recipe& recipe, const UserAccount& account)
 {
-	return recipe.m_defaultOwned ||
+	return (recipe.m_status == "published" && isRecipeFree(recipe)) ||
 		recipe.m_authorUserId == account.m_userId ||
 		account.m_ownedRecipeIds.find(recipe.m_id) != account.m_ownedRecipeIds.end();
 }
@@ -26,7 +169,8 @@ AccountStore::AccountStore() :
 m_sequence(0),
 m_resourceVideosSynced(false),
 m_lastResourceVideoSyncSeconds(0),
-m_loaded(false)
+m_loaded(false),
+m_loadFailed(false)
 {
 
 }
@@ -118,11 +262,16 @@ void AccountStore::refreshOwnedRecipesNoLock(UserAccount& account) const
 	const std::vector<Recipe>& recipes = CookCatalog::recipeCatalog();
 	for (size_t i = 0; i < recipes.size(); ++i)
 	{
-		if (recipes[i].m_defaultOwned || recipes[i].m_authorUserId == account.m_userId)
+		if (isRecipeFree(recipes[i]) || recipes[i].m_authorUserId == account.m_userId)
 		{
 			account.m_ownedRecipeIds.insert(recipes[i].m_id);
 		}
 	}
+    for (size_t i = 0; i < recipes.size(); ++i)
+    {
+        if (!isRecipeFree(recipes[i]) && account.m_purchasedRecipeIds.count(recipes[i].m_id) == 0 && recipes[i].m_authorUserId != account.m_userId)
+            account.m_ownedRecipeIds.erase(recipes[i].m_id);
+    }
 	account.m_ownedRecipeIds.insert(account.m_purchasedRecipeIds.begin(), account.m_purchasedRecipeIds.end());
 	account.m_ownedRecipeIds.insert(account.m_customRecipeIds.begin(), account.m_customRecipeIds.end());
 	if (account.m_account.empty())
@@ -165,8 +314,13 @@ std::string AccountStore::todayTextNoLock() const
 std::string AccountStore::makeIdNoLock(const std::string& prefix)
 {
 	++m_sequence;
-	std::string seed = prefix + "|" + CStringManager::toStringInt32(nowSecondsNoLock()) + "|" + CStringManager::toStringInt32(m_sequence);
-	return prefix + "_" + hashTextNoLock(seed).substr(0, 16);
+	std::string randomId = CSystem::uuid(0);
+	if (randomId.empty())
+	{
+		std::string seed = prefix + "|" + CStringManager::toStringInt32(nowSecondsNoLock()) + "|" + CStringManager::toStringInt32(m_sequence);
+		randomId = hashTextNoLock(seed);
+	}
+	return prefix + "_" + randomId + "_" + CStringManager::toStringInt32(m_sequence);
 }
 
 std::string AccountStore::hashTextNoLock(const std::string& text) const
@@ -275,7 +429,7 @@ void AccountStore::syncResourceVideosNoLock(bool force)
 		foundIds.insert(videoId);
 
 		std::map<std::string, VideoInfo>::iterator videoIt = m_videos.find(videoId);
-		if (videoIt != m_videos.end() && videoIt->second.m_ownerUserId != "system")
+		if (videoIt != m_videos.end() && videoIt->second.m_ownerUserId != "qmzdc")
 		{
 			LOGWARNING("AccountStore resource video id conflict ignored videoId=%s ownerUserId=%s filePath=%s",
 			           videoId.c_str(),
@@ -287,7 +441,7 @@ void AccountStore::syncResourceVideosNoLock(bool force)
 		VideoInfo video = videoIt == m_videos.end() ? VideoInfo() : videoIt->second;
 		bool created = video.m_id.empty();
 		video.m_id = videoId;
-		video.m_ownerUserId = "system";
+		video.m_ownerUserId = "qmzdc";
 		video.m_mediaType = "video";
 		video.m_filePath = CookHelper::normalizePathSeparators(files[i]);
 		video.m_status = "published";
@@ -323,7 +477,7 @@ void AccountStore::syncResourceVideosNoLock(bool force)
 	for (std::map<std::string, VideoInfo>::iterator it = m_videos.begin(); it != m_videos.end();)
 	{
 		std::string filePath = resolveVideoFilePathNoLock(it->second.m_filePath);
-		bool resourceVideo = it->second.m_ownerUserId == "system" &&
+		bool resourceVideo = it->second.m_ownerUserId == "qmzdc" &&
 			it->second.m_status == "published" &&
 			filePath.find(resourcePrefix) == 0;
 		if (resourceVideo && foundIds.find(it->first) == foundIds.end())
@@ -374,6 +528,18 @@ void AccountStore::applyPersonalizationNoLock(const std::string& userId, Recipe&
 	}
 
 	const PersonalizationConfig& config = it->second;
+    if (!config.m_taskOrder.empty())
+    {
+        Recipe personalized;
+        std::string message;
+        if (CookPersonalizationFlow::Build(recipe, config, personalized, message))
+        {
+            recipe = personalized;
+            recipe.m_personalizationApplied = true;
+            recipe.m_personalizationSummary = "已应用你的菜谱个性化设置";
+        }
+        return;
+    }
 	std::vector<CookTask> keptTasks;
 	keptTasks.reserve(recipe.m_tasks.size() + config.m_addedTasks.size());
 	for (size_t i = 0; i < recipe.m_tasks.size(); ++i)
@@ -472,7 +638,7 @@ std::string AccountStore::recipeToStorageJsonNoLock(const Recipe& recipe) const
 	CookServerHelper::addString(document, "category", recipe.m_category);
 	CookServerHelper::addString(document, "subtitle", recipe.m_subtitle);
 	CookServerHelper::addString(document, "difficulty", recipe.m_difficulty);
-	CookServerHelper::addString(document, "coverColor", recipe.m_coverColor);
+	CookServerHelper::addString(document, "coverImageId", recipe.m_coverImageId);
 	CookServerHelper::addString(document, "author", recipe.m_author);
 	CookServerHelper::addString(document, "authorUserId", recipe.m_authorUserId);
 	CookServerHelper::addString(document, "priceType", recipe.m_priceType);
@@ -599,6 +765,7 @@ std::string AccountStore::personalizationToStorageJsonNoLock(const Personalizati
 		addedTasks.pushValue(item);
 	}
 	document.addValue("addedTasks", addedTasks);
+    document.addStringArray("taskOrder", config.m_taskOrder);
 	return document.toString();
 }
 
@@ -617,6 +784,7 @@ bool AccountStore::personalizationFromStorageJsonNoLock(const std::string& userI
 	config.m_userId = userId;
 	config.m_recipeId = recipeId;
 	config.m_updatedAtSeconds = document.getIntOrDefault("updatedAtSeconds", nowSecondsNoLock());
+    config.m_taskOrder = document.getStringArrayOrEmpty("taskOrder");
 	insertRecipeIdsNoLock(config.m_disabledTaskIds, document.getStringArrayOrEmpty("disabledTaskIds"));
 
 	std::vector<RapidJsonValue> overrides = document.getArrayValueOrEmpty("durationOverrides");
@@ -669,6 +837,11 @@ bool AccountStore::personalizationFromStorageJsonNoLock(const std::string& userI
 		{
 			task.m_backgroundWaitMode = task.m_canLeaveKitchen && task.m_safetyLevel != "attention" && task.m_safetyLevel != "danger" ? "free" : "watch";
 		}
+		if (!task.m_active && task.m_backgroundWaitMode == "free" &&
+		    (task.m_safetyLevel == "attention" || task.m_safetyLevel == "danger"))
+		{
+			task.m_backgroundWaitMode = "watch";
+		}
 		if (!task.m_active)
 		{
 			task.m_canLeaveKitchen = task.m_backgroundWaitMode == "free";
@@ -705,7 +878,7 @@ void AccountStore::loadIfNeededNoLock()
 	std::string storageStateText;
 	std::istringstream storageInput;
 	std::istream* input = nullptr;
-	if (CookStorageService::instance().isEnabled() && CookStorageService::instance().loadAccountState(storageStateText))
+	if (CookStorageService::instance().isEnabled() && CookStorageService::instance().loadAccountState(storageStateText, &m_loadFailed))
 	{
 		storageInput.str(storageStateText);
 		input = &storageInput;
@@ -785,6 +958,9 @@ void AccountStore::loadIfNeededNoLock()
 			}
 			account.m_createdAtSeconds = parts.size() >= 17 ? static_cast<int32_t>(CStringManager::atoi64(parts[16].c_str())) : 0;
 			account.m_lastLoginAtSeconds = parts.size() >= 18 ? static_cast<int32_t>(CStringManager::atoi64(parts[17].c_str())) : 0;
+            account.m_avatarUrl = parts.size() >= 20 ? parts[19] : "";
+            account.m_introduction = parts.size() >= 21 ? parts[20] : "";
+            account.m_role = parts.size() >= 22 ? parts[21] : "";
 			account.m_personalizationRecordEnabled = parts.size() >= 19 ? CookHelper::textToBool(parts[18], true) : true;
 			if (!account.m_userId.empty())
 			{
@@ -796,6 +972,17 @@ void AccountStore::loadIfNeededNoLock()
 				}
 			}
 		}
+        else if (parts[0] == "MENU" && parts.size() >= 4)
+        {
+            std::map<std::string, UserAccount>::iterator user = m_accounts.find(parts[1]);
+            if (user != m_accounts.end())
+            {
+                user->second.m_menuRecipeOrder = CookServerHelper::split(parts[2], ',');
+                const std::vector<std::string> removed = CookServerHelper::split(parts[3], ',');
+                user->second.m_removedMenuRecipeIds.insert(removed.begin(), removed.end());
+                user->second.m_menuInitialized = true;
+            }
+        }
 		else if (parts[0] == "SESSION" && parts.size() >= 4)
 		{
 			AuthSessionInfo session;
@@ -828,7 +1015,7 @@ void AccountStore::loadIfNeededNoLock()
 			{
 				recipe.m_authorUserId = parts[1];
 				recipe.m_customRecipe = true;
-				recipe.m_systemRecipe = false;
+				recipe.m_systemRecipe = recipe.m_authorUserId == "qmzdc";
 				m_customRecipes[recipe.m_id] = recipe;
 			}
 		}
@@ -927,12 +1114,12 @@ void AccountStore::loadIfNeededNoLock()
 	        favoriteRecipeCount);
 }
 
-void AccountStore::saveNoLock()
+bool AccountStore::saveNoLock(bool durable)
 {
 	if (!CookStorageService::instance().isEnabled())
 	{
 		LOGERROR("AccountStore save failed, Redis/MySQL storage service is disabled.");
-		return;
+		return false;
 	}
 	std::ostringstream memoryOutput;
 	std::ostream& output = memoryOutput;
@@ -959,7 +1146,16 @@ void AccountStore::saveNoLock()
 			<< "\t" << account.m_createdAtSeconds
 			<< "\t" << account.m_lastLoginAtSeconds
 			<< "\t" << CookHelper::boolToText(account.m_personalizationRecordEnabled)
+            << "\t" << safeFieldNoLock(account.m_avatarUrl)
+            << "\t" << safeFieldNoLock(account.m_introduction)
+            << "\t" << safeFieldNoLock(account.m_role)
 			<< "\n";
+        if (account.m_menuInitialized)
+        {
+            output << "MENU\t" << safeFieldNoLock(account.m_userId) << "\t"
+                << CookHelper::joinVector(account.m_menuRecipeOrder, ',') << "\t"
+                << CookServerHelper::joinSet(account.m_removedMenuRecipeIds, ',') << "\n";
+        }
 	}
 	for (std::map<std::string, UserAccount>::const_iterator it = m_accounts.begin(); it != m_accounts.end(); ++it)
 	{
@@ -1066,19 +1262,21 @@ void AccountStore::saveNoLock()
 	if (!output.good())
 	{
 		LOGERROR("AccountStore save failed, write memory stream failed.");
-		return;
+		return false;
 	}
 	std::string stateText = memoryOutput.str();
-	if (!CookStorageService::instance().saveAccountStateAsync(stateText))
+	if (!(durable ? CookStorageService::instance().saveAccountStateSync(stateText) :
+	    CookStorageService::instance().saveAccountStateAsync(stateText)))
 	{
 		LOGERROR("AccountStore save failed, storage service rejected accountCount=%d bytes=%d",
 		         static_cast<int32_t>(m_accounts.size()),
 		         static_cast<int32_t>(stateText.size()));
-		return;
+		return false;
 	}
 	LOGDEBUG("AccountStore state saved to Redis/MySQL accountCount=%d bytes=%d",
 	         static_cast<int32_t>(m_accounts.size()),
 	         static_cast<int32_t>(stateText.size()));
+	return true;
 }
 
 UserAccount& AccountStore::ensureNoLock(const std::string& userId)
@@ -1091,15 +1289,17 @@ UserAccount& AccountStore::ensureNoLock(const std::string& userId)
 		UserAccount account;
 		account.m_userId = id;
 		account.m_account = id;
+		account.m_role = "user";
 		account.m_nickname = id;
 		account.m_coins = g_config.m_accountDefaultCoins;
 		account.m_yuanbao = g_config.m_accountDefaultYuanbao;
 		account.m_createdAtSeconds = nowSecondsNoLock();
 		account.m_lastLoginAtSeconds = account.m_createdAtSeconds;
 		refreshOwnedRecipesNoLock(account);
+        refreshMenuNoLock(account);
 		m_accounts[id] = account;
 		m_accountIndex[account.m_account] = account.m_userId;
-		addMessageNoLock("system", id, "system", "欢迎使用会做饭", "第一期账号已创建，默认菜谱已经加入菜单。");
+		addMessageNoLock("qmzdc", id, "system", "欢迎使用会做饭", "第一期账号已创建，默认菜谱已经加入菜单。");
 		saveNoLock();
 		LOGINFO("AccountStore create compatibility account userId=%s", id.c_str());
 	}
@@ -1107,6 +1307,7 @@ UserAccount& AccountStore::ensureNoLock(const std::string& userId)
 	{
 		refreshOwnedRecipesNoLock(it->second);
 	}
+    refreshMenuNoLock(m_accounts[id]);
 	return m_accounts[id];
 }
 
@@ -1163,9 +1364,14 @@ bool AccountStore::registerAccount(const std::string& accountName,
 		message = "账号长度需要为3-64个字符";
 		return false;
 	}
-	if (password.size() < 4)
+	if (password.size() < 8)
 	{
-		message = "密码至少需要4个字符";
+		message = "密码至少需要8个字符";
+		return false;
+	}
+	if (password.size() > 1024)
+	{
+		message = "密码不能超过1024个字符";
 		return false;
 	}
 	if (m_accountIndex.find(realAccountName) != m_accountIndex.end())
@@ -1181,19 +1387,25 @@ bool AccountStore::registerAccount(const std::string& accountName,
 		newAccount.m_userId = makeIdNoLock("user");
 	}
 	newAccount.m_account = realAccountName;
+	newAccount.m_role = "user";
 	newAccount.m_nickname = nickname.empty() ? realAccountName : nickname;
-	newAccount.m_passwordSalt = makeIdNoLock("salt");
-	newAccount.m_passwordHash = hashTextNoLock(password + "|" + newAccount.m_passwordSalt);
+	newAccount.m_passwordSalt = CSystem::uuid(0);
+	if (newAccount.m_passwordSalt.empty() || !securePasswordHash(password, newAccount.m_passwordSalt, newAccount.m_passwordHash))
+	{
+		message = "安全密码存储初始化失败";
+		return false;
+	}
 	newAccount.m_coins = g_config.m_accountDefaultCoins;
 	newAccount.m_yuanbao = g_config.m_accountDefaultYuanbao;
 	newAccount.m_createdAtSeconds = nowSecondsNoLock();
 	newAccount.m_lastLoginAtSeconds = newAccount.m_createdAtSeconds;
 	refreshOwnedRecipesNoLock(newAccount);
+    refreshMenuNoLock(newAccount);
 
 	m_accounts[newAccount.m_userId] = newAccount;
 	m_accountIndex[newAccount.m_account] = newAccount.m_userId;
 	createSessionNoLock(newAccount.m_userId, token, expireInSeconds);
-	addMessageNoLock("system", newAccount.m_userId, "system", "注册成功", "默认免费菜谱已加入菜单，可以先从糖醋排骨配米饭开始。");
+	addMessageNoLock("qmzdc", newAccount.m_userId, "system", "注册成功", "默认免费菜谱已加入菜单，可以先从糖醋排骨配米饭开始。");
 	account = m_accounts[newAccount.m_userId];
 	saveNoLock();
 	message = "注册成功";
@@ -1217,7 +1429,23 @@ bool AccountStore::loginAccount(const std::string& accountName,
 		return false;
 	}
 	UserAccount& current = ensureNoLock(indexIt->second);
-	if (current.m_passwordHash.empty() || current.m_passwordHash != hashTextNoLock(password + "|" + current.m_passwordSalt))
+	bool passwordMatched = false;
+	const std::string hashPrefix(kPasswordHashPrefix);
+	if (current.m_passwordHash.find(hashPrefix) == 0)
+	{
+		std::string expectedHash;
+		if (securePasswordHash(password, current.m_passwordSalt, expectedHash))
+		{
+			passwordMatched = secureTextEquals(current.m_passwordHash, expectedHash);
+		}
+	}
+	else if (!current.m_passwordHash.empty() && current.m_passwordHash == hashTextNoLock(password + "|" + current.m_passwordSalt))
+	{
+		passwordMatched = true;
+		current.m_passwordSalt = CSystem::uuid(0);
+		passwordMatched = !current.m_passwordSalt.empty() && securePasswordHash(password, current.m_passwordSalt, current.m_passwordHash);
+	}
+	if (!passwordMatched)
 	{
 		message = "账号或密码错误";
 		return false;
@@ -1279,36 +1507,15 @@ UserAccount AccountStore::getAccount(const std::string& userId)
 	return ensureNoLock(userId);
 }
 
-UserAccount AccountStore::recharge(const std::string& userId, int32_t coins, bool* ok, std::string* message)
+std::string AccountStore::getUserDisplayName(const std::string& userId)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
-	UserAccount& account = ensureNoLock(userId);
-	if (coins <= 0 || coins > g_config.m_accountMaxRechargeCoins)
-	{
-		if (ok)
-		{
-			*ok = false;
-		}
-		if (message)
-		{
-			*message = "coins must be 1-" + CStringManager::toStringInt32(g_config.m_accountMaxRechargeCoins);
-		}
-		return account;
-	}
-	account.m_coins += coins;
-	saveNoLock();
-	if (ok)
-	{
-		*ok = true;
-	}
-	if (message)
-	{
-		*message = "充值成功";
-	}
-	return account;
+	loadIfNeededNoLock();
+	std::map<std::string, UserAccount>::const_iterator accountIt = m_accounts.find(userId);
+	return accountIt == m_accounts.end() ? std::string() : accountIt->second.m_nickname;
 }
 
-UserAccount AccountStore::joinRecipe(const std::string& userId,
+UserAccount AccountStore::purchaseRecipeWithKey(const std::string& userId,
                                      const std::string& recipeId,
                                      const std::string& idempotencyKey,
                                      bool* ok,
@@ -1337,7 +1544,15 @@ UserAccount AccountStore::joinRecipe(const std::string& userId,
 		return account;
 	}
 
-	std::string idemKey = idempotencyKey.empty() ? "" : (account.m_userId + "|join|" + idempotencyKey);
+	if (baseRecipe->m_status != "published")
+	{
+		if (ok) *ok = false;
+		if (alreadyOwned) *alreadyOwned = false;
+		if (message) *message = "Recipe is not published";
+		return account;
+	}
+
+	std::string idemKey = idempotencyKey.empty() ? "" : (account.m_userId + "|purchase|" + realRecipeId + "|" + idempotencyKey);
 	if (!idemKey.empty() && m_idempotencyKeys.find(idemKey) != m_idempotencyKeys.end())
 	{
 		Recipe snapshot = *baseRecipe;
@@ -1389,6 +1604,7 @@ UserAccount AccountStore::joinRecipe(const std::string& userId,
 		{
 			*message = "已经拥有该菜谱";
 		}
+        refreshMenuNoLock(account);
 		saveNoLock();
 		return account;
 	}
@@ -1482,6 +1698,7 @@ UserAccount AccountStore::joinRecipe(const std::string& userId,
 	{
 		*message = "已加入菜单";
 	}
+    refreshMenuNoLock(account);
 	saveNoLock();
 	return account;
 }
@@ -1490,7 +1707,7 @@ UserAccount AccountStore::purchaseRecipe(const std::string& userId, const std::s
 {
 	bool alreadyOwned = false;
 	Recipe recipe;
-	return joinRecipe(userId, recipeId, "", ok, &alreadyOwned, message, &recipe);
+	return purchaseRecipeWithKey(userId, recipeId, "", ok, &alreadyOwned, message, &recipe);
 }
 
 UserAccount AccountStore::checkin(const std::string& userId, bool* ok, bool* alreadyCheckedIn, std::string* message)
@@ -1552,7 +1769,6 @@ UserAccount AccountStore::startAdReward(const std::string& userId, std::string& 
 
 UserAccount AccountStore::finishAdReward(const std::string& userId,
                                          const std::string& adToken,
-                                         int32_t debugElapsedSeconds,
                                          bool* ok,
                                          bool* alreadyRewarded,
                                          std::string* message)
@@ -1592,7 +1808,7 @@ UserAccount AccountStore::finishAdReward(const std::string& userId,
 		}
 		return account;
 	}
-	int32_t elapsed = debugElapsedSeconds >= 0 ? debugElapsedSeconds : (nowSecondsNoLock() - rewardIt->second.m_createdAtSeconds);
+	int32_t elapsed = nowSecondsNoLock() - rewardIt->second.m_createdAtSeconds;
 	if (elapsed < g_config.m_adRequiredSeconds)
 	{
 		if (ok)
@@ -1784,7 +2000,7 @@ void AccountStore::addMessageNoLock(const std::string& fromUserId,
 	}
 	MessageInfo message;
 	message.m_id = makeIdNoLock("msg");
-	message.m_fromUserId = fromUserId.empty() ? "system" : fromUserId;
+	message.m_fromUserId = fromUserId.empty() ? "qmzdc" : fromUserId;
 	message.m_toUserId = toUserId;
 	message.m_type = type.empty() ? "system" : type;
 	message.m_title = title;
@@ -1805,14 +2021,28 @@ bool AccountStore::toggleFollow(const std::string& userId, const std::string& ta
 		message = "关注目标不能为空";
 		return false;
 	}
-	std::string targetId = normalizeUserId(targetInput);
-	if (targetId.empty() || targetId == account.m_userId)
+	std::string targetId;
+	std::map<std::string, std::string>::const_iterator accountIt = m_accountIndex.find(targetInput);
+	if (accountIt != m_accountIndex.end())
+	{
+		targetId = accountIt->second;
+	}
+	else if (m_accounts.find(targetInput) != m_accounts.end())
+	{
+		targetId = targetInput;
+	}
+	if (targetId.empty())
+	{
+		following = false;
+		message = "用户不存在";
+		return false;
+	}
+	if (targetId == account.m_userId)
 	{
 		following = false;
 		message = "不能关注自己";
 		return false;
 	}
-	ensureNoLock(targetId);
 	std::set<std::string>::iterator it = account.m_followingUserIds.find(targetId);
 	if (it == account.m_followingUserIds.end())
 	{
@@ -1917,6 +2147,11 @@ bool AccountStore::createComment(const std::string& userId,
 	UserAccount& account = ensureNoLock(userId);
 	std::string realType = targetType.empty() ? "recipe" : targetType;
 	std::string realTargetId = realType == "recipe" ? normalizeRecipeIdNoLock(targetId) : CookHelper::normalizeVideoId(targetId);
+	if (realType != "recipe" && realType != "video")
+	{
+		message = "评论目标类型无效";
+		return false;
+	}
 	if (content.empty())
 	{
 		message = "评论内容不能为空";
@@ -1970,7 +2205,12 @@ std::vector<CommentInfo> AccountStore::listComments(const std::string& targetTyp
 	std::lock_guard<std::mutex> lock(m_mutex);
 	loadIfNeededNoLock();
 	std::string realType = targetType.empty() ? "recipe" : targetType;
-	std::string realTargetId = realType == "recipe" ? normalizeRecipeIdNoLock(targetId) : targetId;
+	std::string realTargetId = realType == "recipe" ? normalizeRecipeIdNoLock(targetId) :
+		(realType == "video" ? CookHelper::normalizeVideoId(targetId) : std::string());
+	if (realTargetId.empty())
+	{
+		return std::vector<CommentInfo>();
+	}
 	std::vector<CommentInfo> result;
 	for (size_t i = 0; i < m_comments.size(); ++i)
 	{
@@ -2004,18 +2244,43 @@ bool AccountStore::uploadVideo(const std::string& userId,
                                VideoInfo& video,
                                std::string& message)
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
-	UserAccount& account = ensureNoLock(userId);
-	if (fileSizeBytes > 0 && static_cast<int64_t>(fileSizeBytes) > g_config.m_maxVideoBytes)
+	if ((mediaType != "video" && mediaType != "image") || filePath.empty() || fileSizeBytes <= 0)
 	{
-		message = "视频文件过大";
+		message = "video bytes must be uploaded before registration";
 		return false;
 	}
+	if (static_cast<int64_t>(fileSizeBytes) > g_config.m_maxVideoBytes)
+	{
+		message = "video file exceeds configured size limit";
+		return false;
+	}
+	const std::string resolvedPath = resolveVideoFilePathNoLock(filePath);
+	const std::string exeDirectory = CookHelper::appendPathSeparator(CSystem::GetCurrentExePath());
+	const std::string uploadDirectory = exeDirectory + g_config.m_videoStorageDirectoryName;
+	if (!isPathInsideDirectory(resolvedPath, uploadDirectory) || !(mediaType == "image" ? CookRecipePresentation::IsImagePath(resolvedPath) : CookHelper::isSupportedVideoFile(resolvedPath)))
+	{
+		message = "video file must be stored under the server upload directory";
+		return false;
+	}
+	std::ifstream uploadedFile(resolvedPath.c_str(), std::ios::binary | std::ios::ate);
+	const std::streamoff uploadedBytes = static_cast<std::streamoff>(uploadedFile.tellg());
+	if (!uploadedFile.good() || uploadedBytes <= 0 || uploadedBytes != static_cast<std::streamoff>(fileSizeBytes))
+	{
+		message = "uploaded video file is missing or has a different size";
+		return false;
+	}
+    if (mediaType == "image" && (fileSizeBytes > 4 * 1024 * 1024 || !CookRecipePresentation::IsSquareImage(resolvedPath)))
+    {
+        message = "Cover must be a square PNG or JPEG, at most 4 MiB and 4096 pixels";
+        return false;
+    }
+	std::lock_guard<std::mutex> lock(m_mutex);
+	UserAccount& account = ensureNoLock(userId);
 	video = VideoInfo();
 	video.m_id = makeIdNoLock("video");
 	video.m_ownerUserId = account.m_userId;
-	video.m_mediaType = mediaType.empty() ? "video" : mediaType;
-	video.m_filePath = filePath.empty() ? (g_config.m_videoStorageDirectoryName + "/" + video.m_id) : filePath;
+	video.m_mediaType = mediaType;
+	video.m_filePath = CookHelper::normalizePathSeparators(filePath);
 	video.m_status = "uploaded";
 	video.m_createdAtSeconds = nowSecondsNoLock();
 	m_videos[video.m_id] = video;
@@ -2029,15 +2294,10 @@ bool AccountStore::publishVideo(const std::string& userId,
                                 const std::string& caption,
                                 const std::vector<std::string>& recipeIds,
                                 VideoInfo& video,
-                                std::string& message)
+                                std::string& message, const std::string& coverImageId)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 	UserAccount& account = ensureNoLock(userId);
-	if (recipeIds.empty())
-	{
-		message = "至少挂载一个菜谱";
-		return false;
-	}
 	for (size_t i = 0; i < recipeIds.size(); ++i)
 	{
 		const Recipe* recipe = findBaseRecipeNoLock(recipeIds[i]);
@@ -2053,25 +2313,48 @@ bool AccountStore::publishVideo(const std::string& userId,
 		}
 	}
 
-	std::string realVideoId = videoId;
-	if (realVideoId.empty() || m_videos.find(realVideoId) == m_videos.end())
+	std::string realVideoId = CookHelper::normalizeVideoId(videoId);
+	std::map<std::string, VideoInfo>::iterator videoIt = m_videos.find(realVideoId);
+	if (realVideoId.empty() || videoIt == m_videos.end())
 	{
-		video = VideoInfo();
-		video.m_id = makeIdNoLock("video");
-		video.m_ownerUserId = account.m_userId;
-		video.m_mediaType = "video";
-		video.m_filePath = g_config.m_videoStorageDirectoryName + "/" + video.m_id;
-		video.m_createdAtSeconds = nowSecondsNoLock();
-		m_videos[video.m_id] = video;
-		realVideoId = video.m_id;
+		message = "video upload must be completed before publishing";
+		return false;
 	}
 
-	VideoInfo& storedVideo = m_videos[realVideoId];
+	VideoInfo& storedVideo = videoIt->second;
 	if (storedVideo.m_ownerUserId != account.m_userId)
 	{
 		message = "不能发布他人的视频";
 		return false;
 	}
+	if ((storedVideo.m_status != "uploaded" && storedVideo.m_status != "published") || storedVideo.m_mediaType != "video")
+	{
+		message = "video is not ready to publish";
+		return false;
+	}
+	const std::string resolvedPath = resolveVideoFilePathNoLock(storedVideo.m_filePath);
+	const std::string exeDirectory = CookHelper::appendPathSeparator(CSystem::GetCurrentExePath());
+	const std::string uploadDirectory = exeDirectory + g_config.m_videoStorageDirectoryName;
+	if (!isPathInsideDirectory(resolvedPath, uploadDirectory) || !CookHelper::isSupportedVideoFile(resolvedPath) ||
+	    !CSystem::DirOrFileExist(resolvedPath))
+	{
+		message = "uploaded video file is unavailable";
+		return false;
+	}
+    if (!coverImageId.empty())
+    {
+        std::map<std::string, VideoInfo>::iterator cover = m_videos.find(coverImageId);
+        if (cover == m_videos.end() || cover->second.m_mediaType != "image" || cover->second.m_ownerUserId != userId || recipeIds.empty())
+        { message = "Invalid cover image"; return false; }
+        for (size_t i = 0; i < recipeIds.size(); ++i)
+        {
+            std::map<std::string, Recipe>::const_iterator recipe = m_customRecipes.find(recipeIds[i]);
+            if (recipe == m_customRecipes.end() || recipe->second.m_authorUserId != userId)
+            { message = "Only your own recipes can receive a cover image"; return false; }
+        }
+        cover->second.m_status = "published";
+        for (size_t i = 0; i < recipeIds.size(); ++i) m_customRecipes[recipeIds[i]].m_coverImageId = coverImageId;
+    }
 	storedVideo.m_caption = caption;
 	storedVideo.m_recipeIds = recipeIds;
 	storedVideo.m_status = "published";
@@ -2094,6 +2377,7 @@ bool AccountStore::saveCustomRecipe(const std::string& userId,
 		message = "菜谱ID、标题和步骤不能为空";
 		return false;
 	}
+    if (!CookRecipePresentation::Validate(sourceRecipe, message)) return false;
 	std::map<std::string, Recipe>::const_iterator existingIt = m_customRecipes.find(sourceRecipe.m_id);
 	if (existingIt != m_customRecipes.end() && existingIt->second.m_authorUserId != account.m_userId)
 	{
@@ -2106,10 +2390,17 @@ bool AccountStore::saveCustomRecipe(const std::string& userId,
 		return false;
 	}
 
+    if (!sourceRecipe.m_coverImageId.empty())
+    {
+        std::map<std::string, VideoInfo>::iterator cover = m_videos.find(sourceRecipe.m_coverImageId);
+        if (cover == m_videos.end() || cover->second.m_mediaType != "image" || cover->second.m_ownerUserId != userId)
+        { message = "Invalid cover image"; return false; }
+
+    }
 	recipe = sourceRecipe;
 	recipe.m_authorUserId = account.m_userId;
 	recipe.m_author = account.m_nickname;
-	recipe.m_systemRecipe = false;
+	recipe.m_systemRecipe = account.m_userId == "qmzdc";
 	recipe.m_customRecipe = true;
 	recipe.m_defaultOwned = false;
 	recipe.m_status = published ? "published" : "draft";
@@ -2143,10 +2434,11 @@ bool AccountStore::saveCustomRecipe(const std::string& userId,
 		}
 	}
 
+    if (published && !recipe.m_coverImageId.empty()) m_videos[recipe.m_coverImageId].m_status = "published";
 	m_customRecipes[recipe.m_id] = recipe;
 	account.m_customRecipeIds.insert(recipe.m_id);
 	account.m_ownedRecipeIds.insert(recipe.m_id);
-	addMessageNoLock("system", account.m_userId, "recipe", published ? "菜谱发布成功" : "菜谱已保存草稿", "《" + recipe.m_title + "》已经保存。");
+	addMessageNoLock("qmzdc", account.m_userId, "recipe", published ? "菜谱发布成功" : "菜谱已保存草稿", "《" + recipe.m_title + "》已经保存。");
 	saveNoLock();
 	message = published ? "发布成功" : "保存成功";
 	return true;
@@ -2154,6 +2446,8 @@ bool AccountStore::saveCustomRecipe(const std::string& userId,
 
 bool AccountStore::savePersonalization(const std::string& userId, const PersonalizationConfig& config, std::string& message)
 {
+    for (size_t i = 0; i < config.m_addedTasks.size(); ++i)
+        if (!CookRecipePresentation::ValidateTitle(config.m_addedTasks[i].m_title)) { message = "Step title must contain 1 to 8 characters"; return false; }
 	std::lock_guard<std::mutex> lock(m_mutex);
 	UserAccount& account = ensureNoLock(userId);
 	const Recipe* recipe = findBaseRecipeNoLock(config.m_recipeId);
@@ -2167,6 +2461,7 @@ bool AccountStore::savePersonalization(const std::string& userId, const Personal
 		message = "拥有菜谱后才能个性化";
 		return false;
 	}
+    if (!config.m_taskOrder.empty()) { Recipe check; if (!CookPersonalizationFlow::Build(*recipe, config, check, message)) return false; }
 	PersonalizationConfig storedConfig = config;
 	storedConfig.m_userId = account.m_userId;
 	storedConfig.m_recipeId = recipe->m_id;
@@ -2230,6 +2525,7 @@ bool AccountStore::syncPersonalizationDurations(const std::string& userId,
 			}
 
 			const CookTask* matchedTask = nullptr;
+			int32_t addedTaskIndex = -1;
 			for (size_t i = 0; i < recipe->m_tasks.size(); ++i)
 			{
 				if (CookHelper::taskIdMatches(recipe->m_tasks[i], taskIt->first))
@@ -2240,7 +2536,16 @@ bool AccountStore::syncPersonalizationDurations(const std::string& userId,
 			}
 			if (matchedTask == nullptr)
 			{
-				continue;
+				for (size_t i = 0; i < config.m_addedTasks.size(); ++i)
+				{
+					if (CookHelper::taskIdMatches(config.m_addedTasks[i], taskIt->first))
+					{
+						matchedTask = &config.m_addedTasks[i];
+						addedTaskIndex = static_cast<int32_t>(i);
+						break;
+					}
+				}
+				if (matchedTask == nullptr) continue;
 			}
 
 			bool disabled = false;
@@ -2259,7 +2564,8 @@ bool AccountStore::syncPersonalizationDurations(const std::string& userId,
 				continue;
 			}
 
-			config.m_durationOverrides[matchedTask->m_id] = taskIt->second;
+			if (addedTaskIndex >= 0) config.m_addedTasks[addedTaskIndex].m_durationSeconds = taskIt->second;
+			else config.m_durationOverrides[matchedTask->m_id] = taskIt->second;
 			++updatedTaskCount;
 			recipeUpdated = true;
 		}
@@ -2352,6 +2658,7 @@ std::vector<Recipe> AccountStore::listRecipesForUser(const std::string& userId)
 		{
 			applyPersonalizationNoLock(account.m_userId, recipe);
 		}
+        decorateRecipeMediaNoLock(recipe);
 		result.push_back(recipe);
 	}
 	for (std::map<std::string, Recipe>::const_iterator it = m_customRecipes.begin(); it != m_customRecipes.end(); ++it)
@@ -2361,6 +2668,7 @@ std::vector<Recipe> AccountStore::listRecipesForUser(const std::string& userId)
 		{
 			applyPersonalizationNoLock(account.m_userId, recipe);
 		}
+        decorateRecipeMediaNoLock(recipe);
 		result.push_back(recipe);
 	}
 	return result;
@@ -2381,11 +2689,17 @@ bool AccountStore::getRecipeForUser(const std::string& userId, const std::string
 		message = "请先购买菜谱：" + baseRecipe->m_title;
 		return false;
 	}
+	if (baseRecipe->m_status != "published" && !AccountStore::isRecipeOwned(*baseRecipe, account))
+	{
+		message = "Recipe is not available";
+		return false;
+	}
 	recipe = *baseRecipe;
 	if (AccountStore::isRecipeOwned(recipe, account))
 	{
 		applyPersonalizationNoLock(account.m_userId, recipe);
 	}
+    decorateRecipeMediaNoLock(recipe);
 	message = "ok";
 	return true;
 }
@@ -2424,6 +2738,7 @@ bool AccountStore::getPersonalizationDetail(const std::string& userId,
 		config.m_userId = account.m_userId;
 		config.m_recipeId = baseRecipe->m_id;
 	}
+    decorateRecipeMediaNoLock(recipe);
 	message = "ok";
 	return true;
 }
@@ -2473,7 +2788,8 @@ std::vector<VideoInfo> AccountStore::listFeedVideosForUser(const std::string& us
 	pruneExpiredVideoSeenNoLock(account, nowSeconds);
 	bool needSave = watchedCountBeforePrune != account.m_watchedVideoAtSeconds.size();
 	std::string realMode = CookHelper::lowerAscii(mode);
-	if (realMode != "liked" && realMode != "favorite")
+	if (realMode != "liked" && realMode != "favorite" && realMode != "collection" && realMode != "created" &&
+        realMode != "featured" && realMode != "following" && realMode != "friends")
 	{
 		realMode.clear();
 	}
@@ -2499,6 +2815,39 @@ std::vector<VideoInfo> AccountStore::listFeedVideosForUser(const std::string& us
 		if (realMode == "favorite" && account.m_favoriteTargetIds.find(targetKey) == account.m_favoriteTargetIds.end())
 		{
 			continue;
+		}
+        if (realMode == "created" && it->second.m_ownerUserId != account.m_userId)
+        {
+            continue;
+        }
+        if (realMode == "collection" && account.m_favoriteTargetIds.find(targetKey) == account.m_favoriteTargetIds.end())
+        {
+            bool hasFavoriteRecipe = false;
+            for (size_t recipeIndex = 0; recipeIndex < it->second.m_recipeIds.size(); ++recipeIndex)
+            {
+                if (account.m_favoriteRecipeIds.find(it->second.m_recipeIds[recipeIndex]) != account.m_favoriteRecipeIds.end())
+                {
+                    hasFavoriteRecipe = true;
+                    break;
+                }
+            }
+            if (!hasFavoriteRecipe)
+            {
+                continue;
+            }
+        }
+		if (realMode == "following" && account.m_followingUserIds.find(it->second.m_ownerUserId) == account.m_followingUserIds.end())
+		{
+			continue;
+		}
+		if (realMode == "friends")
+		{
+			std::map<std::string, UserAccount>::const_iterator ownerIt = m_accounts.find(it->second.m_ownerUserId);
+			if (account.m_followingUserIds.find(it->second.m_ownerUserId) == account.m_followingUserIds.end() ||
+				ownerIt == m_accounts.end() || ownerIt->second.m_followingUserIds.find(account.m_userId) == ownerIt->second.m_followingUserIds.end())
+			{
+				continue;
+			}
 		}
 		candidates.push_back(it->second);
 	}
@@ -2546,7 +2895,13 @@ std::vector<VideoInfo> AccountStore::listFeedVideosForUser(const std::string& us
 	}
 	else
 	{
-		eligible = candidates;
+		for (size_t i = 0; i < candidates.size(); ++i)
+		{
+			if (excludeVideoIds.find(candidates[i].m_id) == excludeVideoIds.end())
+			{
+				eligible.push_back(candidates[i]);
+			}
+		}
 	}
 	if (!realAvoidVideoId.empty() && eligible.size() > 1)
 	{
@@ -2565,16 +2920,48 @@ std::vector<VideoInfo> AccountStore::listFeedVideosForUser(const std::string& us
 		}
 	}
 
+	std::map<std::string, int32_t> likeCounts;
+	if (realMode == "featured")
+	{
+		for (std::map<std::string, UserAccount>::const_iterator accountIt = m_accounts.begin(); accountIt != m_accounts.end(); ++accountIt)
+		{
+			for (size_t i = 0; i < candidates.size(); ++i)
+			{
+				if (accountIt->second.m_likedTargetIds.find(targetKeyNoLock("video", candidates[i].m_id)) != accountIt->second.m_likedTargetIds.end())
+				{
+					++likeCounts[candidates[i].m_id];
+				}
+			}
+		}
+	}
 	std::vector<std::pair<std::string, VideoInfo>> scored;
 	scored.reserve(eligible.size());
 	std::string seed = CStringManager::toStringInt32(nowSeconds) + "|" + CStringManager::toStringInt32(static_cast<int32_t>(std::clock()));
 	for (size_t i = 0; i < eligible.size(); ++i)
 	{
-		scored.push_back(std::make_pair(videoRecommendScoreNoLock(account.m_userId, eligible[i].m_id, seed), eligible[i]));
+		std::string score = realMode == "featured"
+			? CStringManager::toStringInt32(-likeCounts[eligible[i].m_id])
+			: videoRecommendScoreNoLock(account.m_userId, eligible[i].m_id, seed);
+		scored.push_back(std::make_pair(score, eligible[i]));
 	}
 	std::sort(scored.begin(), scored.end(),
-		[](const std::pair<std::string, VideoInfo>& left, const std::pair<std::string, VideoInfo>& right)
+		[&](const std::pair<std::string, VideoInfo>& left, const std::pair<std::string, VideoInfo>& right)
 		{
+            if (realMode == "created")
+            {
+                return left.second.m_createdAtSeconds == right.second.m_createdAtSeconds
+                    ? left.second.m_id < right.second.m_id
+                    : left.second.m_createdAtSeconds > right.second.m_createdAtSeconds;
+            }
+			if (realMode == "featured")
+			{
+				int32_t leftLikes = likeCounts[left.second.m_id];
+				int32_t rightLikes = likeCounts[right.second.m_id];
+				if (leftLikes != rightLikes)
+				{
+					return leftLikes > rightLikes;
+				}
+			}
 			return left.first == right.first ? left.second.m_id < right.second.m_id : left.first < right.first;
 		});
 
@@ -2654,13 +3041,18 @@ bool AccountStore::getVideoFile(const std::string& videoId, VideoInfo& video, st
 		return false;
 	}
 	std::string resolvedPath = resolveVideoFilePathNoLock(videoIt->second.m_filePath);
-	if (!CookHelper::isSupportedVideoFile(resolvedPath) || !CSystem::DirOrFileExist(resolvedPath))
+	std::string exeDirectory = CookHelper::appendPathSeparator(CSystem::GetCurrentExePath());
+	std::string uploadDirectory = exeDirectory + g_config.m_videoStorageDirectoryName;
+	std::string resourceDirectory = exeDirectory + g_config.m_videoResourceDirectoryName;
+	bool allowedPath = isPathInsideDirectory(resolvedPath, uploadDirectory) || isPathInsideDirectory(resolvedPath, resourceDirectory);
+	if (!allowedPath || !(videoIt->second.m_mediaType == "image" ? CookRecipePresentation::IsImagePath(resolvedPath) : CookHelper::isSupportedVideoFile(resolvedPath)) || !CSystem::DirOrFileExist(resolvedPath))
 	{
+		LOGWARNING("AccountStore rejected video path outside media roots videoId=%s path=%s", realVideoId.c_str(), resolvedPath.c_str());
 		return false;
 	}
 	video = videoIt->second;
 	filePath = resolvedPath;
-	contentType = CookHelper::videoContentType(filePath);
+	contentType = video.m_mediaType == "image" ? (filePath.substr(filePath.find_last_of('.')) == ".png" ? "image/png" : "image/jpeg") : CookHelper::videoContentType(filePath);
 	return true;
 }
 
