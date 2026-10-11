@@ -105,7 +105,7 @@ m_iconCanvasSize(24.0),
 m_iconStroke(1.6),
 m_pinAngle(35.0),
 m_helpWidth(480),
-m_helpHeight(390),
+m_helpHeight(450),
 m_helpMargin(20),
 m_helpSpacing(14),
 m_helpTitleSize(15),
@@ -138,7 +138,7 @@ m_unpinText(QStringLiteral("取消固定工具栏")),
 m_helpTitle(QStringLiteral("关于流光播放器")),
 m_helpTooltip(QStringLiteral("帮助")),
 m_versionLabel(QStringLiteral("版本 1.0")),
-m_helpText(QStringLiteral("加载：点击文件夹或中央加号选择视频，也可双击关联的视频文件。\n播放：空格或播放按钮切换播放/暂停，双击画面切换全屏。\n跳转：左右键前进/后退%g秒；进度条支持点击和拖动。\nAB循环：右键进度条设置A/B；悬停端点后按左右键逐帧调整。手动跳出B点后正常播放，回到区间后恢复循环。\n画面：拖动平移，滚轮缩放，Ctrl+滚轮精调；Ctrl+上下键调整倍速。\n重置：恢复居中、缩放和倍速，保留AB、播放进度和播放状态。\n图钉：斜放时工具栏自动显隐；竖直时固定显示并为视频留出空间。")),
+m_helpText(QStringLiteral("加载：点击文件夹或中央加号选择视频，也可双击关联的视频文件。\n播放：空格或播放按钮切换播放/暂停，双击画面切换全屏。\n跳转：左右键前进/后退%g秒；进度条支持点击和拖动。\nAB循环：右键进度条设置A/B；悬停端点后按左右键逐帧调整。手动跳出B点后正常播放，回到区间后恢复循环。\n画面：拖动平移，滚轮缩放，Ctrl+滚轮精调；Ctrl+上下键调整倍速。\n重置：恢复居中、缩放和倍速，保留AB、播放进度和播放状态。\n图钉：斜放时工具栏自动显隐；竖直时固定显示并为视频留出空间。\n第三方：FFmpeg、SoundTouch（LGPL 2.1或更新版）；Qt（LGPL）。\n许可、来源、源码与替换说明：karaoke/licenses/。")),
 m_keyboardSeekSeconds(2.0),
 m_logicQueueLimit(512),
 m_corePendingLimit(512),
@@ -157,6 +157,12 @@ m_minZoomPercent(10),
 m_maxZoomPercent(500),
 m_volumeNormalPercent(100),
 m_volumeStep(5),
+m_microphoneMaxGainPercent(500),
+m_microphoneGainStep(10),
+m_microphoneGainScale(10),
+m_karaokeSeparationWindowFrames(261120),
+m_karaokeSeparationOverlapFrames(130560),
+m_microphoneMaxCount(3),
 m_volumePopupSize(44, 194),
 m_volumePadding(12),
 m_volumeGap(8),
@@ -179,6 +185,9 @@ m_volumeTooltipFormat(QStringLiteral("音量 %d%%")),
 m_speakerIcon(),
 m_previewDragIntervalMs(16),
 m_audioServiceIntervalMs(5),
+m_microphoneDeviceBufferMs(20),
+m_microphoneMonitorQueueMs(40),
+m_microphoneServiceIntervalMs(2),
 m_second100ns(10000000),
 m_millisecond100ns(10000),
 m_audioMaxQueue100ns(30000000),
@@ -190,28 +199,65 @@ m_logInitialized(false),
 m_coreConfig()
 {
 
-    m_loadIcon.moveTo(3, 8); m_loadIcon.lineTo(3, 5); m_loadIcon.lineTo(9, 5);
-    m_loadIcon.lineTo(11, 8); m_loadIcon.lineTo(21, 8); m_loadIcon.lineTo(19, 19);
-    m_loadIcon.lineTo(3, 19); m_loadIcon.closeSubpath();
-    m_loadIcon.moveTo(10, 11); m_loadIcon.lineTo(10, 16); m_loadIcon.lineTo(15, 13.5); m_loadIcon.closeSubpath();
-    m_resetIcon.moveTo(5, 9); m_resetIcon.cubicTo(8, 2, 20, 5, 20, 13);
-    m_resetIcon.cubicTo(20, 21, 8, 24, 4, 16); m_resetIcon.moveTo(5, 4); m_resetIcon.lineTo(5, 10); m_resetIcon.lineTo(11, 10);
-    m_pinIcon.moveTo(8, 3); m_pinIcon.lineTo(16, 3); m_pinIcon.moveTo(9, 3);
-    m_pinIcon.lineTo(9, 10); m_pinIcon.lineTo(6, 14); m_pinIcon.lineTo(18, 14);
-    m_pinIcon.lineTo(15, 10); m_pinIcon.lineTo(15, 3); m_pinIcon.moveTo(12, 14); m_pinIcon.lineTo(12, 22);
-    m_minimizeIcon.moveTo(6, 17); m_minimizeIcon.lineTo(18, 17);
+    m_loadIcon.moveTo(3, 8);
+    m_loadIcon.lineTo(3, 5);
+    m_loadIcon.lineTo(9, 5);
+    m_loadIcon.lineTo(11, 8);
+    m_loadIcon.lineTo(21, 8);
+    m_loadIcon.lineTo(19, 19);
+    m_loadIcon.lineTo(3, 19);
+    m_loadIcon.closeSubpath();
+    m_loadIcon.moveTo(10, 11);
+    m_loadIcon.lineTo(10, 16);
+    m_loadIcon.lineTo(15, 13.5);
+    m_loadIcon.closeSubpath();
+    m_resetIcon.moveTo(5, 9);
+    m_resetIcon.cubicTo(8, 2, 20, 5, 20, 13);
+    m_resetIcon.cubicTo(20, 21, 8, 24, 4, 16);
+    m_resetIcon.moveTo(5, 4);
+    m_resetIcon.lineTo(5, 10);
+    m_resetIcon.lineTo(11, 10);
+    m_pinIcon.moveTo(8, 3);
+    m_pinIcon.lineTo(16, 3);
+    m_pinIcon.moveTo(9, 3);
+    m_pinIcon.lineTo(9, 10);
+    m_pinIcon.lineTo(6, 14);
+    m_pinIcon.lineTo(18, 14);
+    m_pinIcon.lineTo(15, 10);
+    m_pinIcon.lineTo(15, 3);
+    m_pinIcon.moveTo(12, 14);
+    m_pinIcon.lineTo(12, 22);
+    m_minimizeIcon.moveTo(6, 17);
+    m_minimizeIcon.lineTo(18, 17);
     m_maximizeIcon.addRect(QRectF(6, 6, 12, 12));
-    m_restoreIcon.addRect(QRectF(8, 5, 10, 10)); m_restoreIcon.addRect(QRectF(5, 9, 10, 10));
-    m_closeIcon.moveTo(7, 7); m_closeIcon.lineTo(17, 17); m_closeIcon.moveTo(17, 7); m_closeIcon.lineTo(7, 17);
-    m_playIcon.moveTo(9, 6); m_playIcon.lineTo(9, 18); m_playIcon.lineTo(19, 12); m_playIcon.closeSubpath();
-    m_pauseIcon.addRect(QRectF(7, 6, 3, 12)); m_pauseIcon.addRect(QRectF(14, 6, 3, 12));
-    m_questionIcon.moveTo(7, 7); m_questionIcon.cubicTo(7, 1, 20, 2, 18, 9);
-    m_questionIcon.cubicTo(17, 12, 12, 12, 12, 16); m_questionIcon.moveTo(12, 20); m_questionIcon.lineTo(12, 21);
-    m_speakerIcon.moveTo(2, 9); m_speakerIcon.lineTo(6, 9);
-    m_volumeMuteIcon.moveTo(15, 9); m_volumeMuteIcon.lineTo(21, 15);
-    m_volumeMuteIcon.moveTo(21, 9); m_volumeMuteIcon.lineTo(15, 15);
-    m_speakerIcon.lineTo(11, 5); m_speakerIcon.lineTo(11, 19);
-    m_speakerIcon.lineTo(6, 15); m_speakerIcon.lineTo(2, 15); m_speakerIcon.closeSubpath();
+    m_restoreIcon.addRect(QRectF(8, 5, 10, 10));
+    m_restoreIcon.addRect(QRectF(5, 9, 10, 10));
+    m_closeIcon.moveTo(7, 7);
+    m_closeIcon.lineTo(17, 17);
+    m_closeIcon.moveTo(17, 7);
+    m_closeIcon.lineTo(7, 17);
+    m_playIcon.moveTo(9, 6);
+    m_playIcon.lineTo(9, 18);
+    m_playIcon.lineTo(19, 12);
+    m_playIcon.closeSubpath();
+    m_pauseIcon.addRect(QRectF(7, 6, 3, 12));
+    m_pauseIcon.addRect(QRectF(14, 6, 3, 12));
+    m_questionIcon.moveTo(7, 7);
+    m_questionIcon.cubicTo(7, 1, 20, 2, 18, 9);
+    m_questionIcon.cubicTo(17, 12, 12, 12, 12, 16);
+    m_questionIcon.moveTo(12, 20);
+    m_questionIcon.lineTo(12, 21);
+    m_speakerIcon.moveTo(2, 9);
+    m_speakerIcon.lineTo(6, 9);
+    m_volumeMuteIcon.moveTo(15, 9);
+    m_volumeMuteIcon.lineTo(21, 15);
+    m_volumeMuteIcon.moveTo(21, 9);
+    m_volumeMuteIcon.lineTo(15, 15);
+    m_speakerIcon.lineTo(11, 5);
+    m_speakerIcon.lineTo(11, 19);
+    m_speakerIcon.lineTo(6, 15);
+    m_speakerIcon.lineTo(2, 15);
+    m_speakerIcon.closeSubpath();
     for (int32_t index = 0; index < 3; ++index)
     {
         const qreal radius = 4 + index * 3;
@@ -222,8 +268,8 @@ m_coreConfig()
 
 Config& Config::instance()
 {
-	static Config s_config;
-	return s_config;
+    static Config s_config;
+    return s_config;
 }
 
 void Config::init(const QStringList& arguments)
@@ -231,35 +277,33 @@ void Config::init(const QStringList& arguments)
     const QFontMetrics timeMetrics(QFont(m_fontFamily, m_timeFontSize));
     m_timeWidth = (std::max)(m_timeWidth, timeMetrics.width(m_timeMeasureText));
     m_progressTrackTop = (std::max)(m_progressTrackTop, timeMetrics.height() + m_timestampGap);
-    m_bottomOverlayHeight = (std::max)(m_bottomOverlayHeight, m_progressTrackTop + m_trackHeight +
-        m_markerLabelGap + m_markerLabelHeight + m_playButtonSize + m_playButtonBottom);
+    m_bottomOverlayHeight = (std::max)(m_bottomOverlayHeight, m_progressTrackTop + m_trackHeight + m_markerLabelGap + m_markerLabelHeight + m_playButtonSize + m_playButtonBottom);
     m_minWindowWidth = (std::max)(m_titleIconSize + 7 * m_titleButtonSize + 7 * m_titleButtonGap +
-        2 * m_titleMargin + m_windowButtonGroupGap,
+            2 * m_titleMargin + m_windowButtonGroupGap,
         2 * (m_timeMargin + m_timeWidth + m_timeTrackGap) + m_minTrackWidth);
     m_minWindowHeight = m_topOverlayHeight + m_bottomOverlayHeight + m_minVideoHeight;
-    m_minWindowHeight = (std::max)(m_minWindowHeight, m_topOverlayHeight + m_bottomOverlayHeight +
-        4 * m_volumePadding + 2 * m_volumeGap + m_volumeFooterHeight);
+    m_minWindowHeight = (std::max)(m_minWindowHeight, m_topOverlayHeight + m_bottomOverlayHeight + 4 * m_volumePadding + 2 * m_volumeGap + m_volumeFooterHeight);
     if (!std::isfinite(m_keyboardSeekSeconds) || m_keyboardSeekSeconds <= 0.0)
     {
         m_keyboardSeekSeconds = 2.0;
     }
-	m_debugEnabled = LumaPlayerHelper::hasDebugArgument(arguments);
-	m_startupMediaPath.clear();
-	for (int32_t index = 1; index < arguments.size(); ++index)
-	{
-		const QString& argument = arguments.at(index);
-		if (!argument.isEmpty() && argument.compare(QStringLiteral("debug"), Qt::CaseInsensitive) != 0)
-		{
-			m_startupMediaPath = argument;
-			break;
-		}
-	}
-	lumaPlayerCoreDefaultConfig(&m_coreConfig);
+    m_debugEnabled = LumaPlayerHelper::hasDebugArgument(arguments);
+    m_startupMediaPath.clear();
+    for (int32_t index = 1; index < arguments.size(); ++index)
+    {
+        const QString& argument = arguments.at(index);
+        if (!argument.isEmpty() && argument.compare(QStringLiteral("debug"), Qt::CaseInsensitive) != 0)
+        {
+            m_startupMediaPath = argument;
+            break;
+        }
+    }
+    lumaPlayerCoreDefaultConfig(&m_coreConfig);
 }
 
 void Config::uninit()
 {
-	m_debugEnabled = false;
-	m_startupMediaPath.clear();
-	m_logInitialized.store(false);
+    m_debugEnabled = false;
+    m_startupMediaPath.clear();
+    m_logInitialized.store(false);
 }

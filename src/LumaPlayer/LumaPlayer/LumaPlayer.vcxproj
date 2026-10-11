@@ -188,6 +188,8 @@
     <ClCompile Include="LumaPlayerVideoRender.cpp" />
     <ClCompile Include="LumaPlayerAudioRender.cpp" />
     <ClCompile Include="LumaPlayerAudioTask.cpp" />
+    <ClCompile Include="LumaPlayerMicrophoneCapture.cpp" />
+    <ClCompile Include="LumaPlayerKaraokeTask.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="LumaPlayer.h">
@@ -241,9 +243,12 @@
     <ClInclude Include="LumaPlayerLifecycleTask.h" />
     <ClInclude Include="LumaPlayerLogicTask.h" />
     <ClInclude Include="LumaPlayerLogicModels.h" />
+    <ClInclude Include="LumaPlayerMicrophoneRetireTask.h" />
     <ClInclude Include="LumaPlayerVideoRender.h" />
     <ClInclude Include="LumaPlayerAudioRender.h" />
     <ClInclude Include="LumaPlayerAudioTask.h" />
+    <ClInclude Include="LumaPlayerMicrophoneCapture.h" />
+    <ClInclude Include="LumaPlayerKaraokeTask.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="$(IntDir)LumaPlayer.rc" />
@@ -259,9 +264,7 @@
   <PropertyGroup>
     <LumaPlayerIconShell Condition="'$(LumaPlayerIconShell)'==''">$(ProgramW6432)\Git\bin\sh.exe</LumaPlayerIconShell>
   </PropertyGroup>
-  <Target Name="GenerateLumaPlayerIcon" BeforeTargets="ResourceCompile"
-    Inputs="$(ProjectDir)res\LumaPlayer.png;$(ProjectDir)LumaPlayerIcon.sh"
-    Outputs="$(IntDir)LumaPlayer.ico;$(IntDir)LumaPlayer.rc">
+  <Target Name="GenerateLumaPlayerIcon" BeforeTargets="ResourceCompile" Inputs="$(ProjectDir)res\LumaPlayer.png;$(ProjectDir)LumaPlayerIcon.sh" Outputs="$(IntDir)LumaPlayer.ico;$(IntDir)LumaPlayer.rc">
     <Error Condition="!Exists('$(LumaPlayerIconShell)')" Text="Git sh.exe not found. Set LumaPlayerIconShell to the installed Git bin\sh.exe path." />
     <Exec Command="&quot;$(LumaPlayerIconShell)&quot; &quot;$(ProjectDir)LumaPlayerIcon.sh&quot; --source &quot;$(ProjectDir)res\LumaPlayer.png&quot; --output &quot;$(IntDir)LumaPlayer.ico&quot; --format ICO --resource &quot;$(IntDir)LumaPlayer.rc&quot; --qt-dir &quot;$(QTDIR)&quot; --vcvars &quot;$(VCInstallDir)vcvarsall.bat&quot; --arch $(Platform)" />
   </Target>
@@ -378,5 +381,14 @@
     <ClCompile Include="LumaPlayerPlaybackTask.cpp" />
     <ClCompile Include="LumaPlayerSeekTask.cpp" />
     <ClCompile Include="LumaPlayerButton.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LumaPlayerKaraokeJob.h" />
+    <ClCompile Include="LumaPlayerKaraokeJob.cpp" />
+    <ClInclude Include="LumaPlayerKaraokeProgressView.h" />
+    <ClCompile Include="LumaPlayerKaraokeProgressView.cpp" />
+  </ItemGroup>
+<ItemGroup><ClCompile Include="LumaPlayerRecordingSaveView.cpp" /><ClInclude Include="LumaPlayerRecordingSaveView.h" /></ItemGroup><ItemGroup><ClCompile Include="LumaPlayerMicrophoneChannel.cpp" /><ClInclude Include="LumaPlayerMicrophoneChannel.h" /><ClCompile Include="LumaPlayerMicrophoneView.cpp" /><ClInclude Include="LumaPlayerMicrophoneView.h" /></ItemGroup>  <ItemGroup>
+    <ClCompile Include="LumaPlayerMicrophoneRetireTask.cpp" />
   </ItemGroup>
 </Project>

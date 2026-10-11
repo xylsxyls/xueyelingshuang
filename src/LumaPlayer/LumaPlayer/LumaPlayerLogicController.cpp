@@ -85,6 +85,29 @@ bool LumaPlayerLogicController::init()
     }
 }
 
+bool LumaPlayerLogicController::submitCleanup(const std::shared_ptr<CTask>& task)
+{
+    std::lock_guard<std::mutex> lock(m_submitMutex);
+    if (m_closing.load() || !task)
+    {
+        return false;
+    }
+    try
+    {
+        std::shared_ptr<CTaskThread> thread = CTaskThreadManager::Instance().GetThreadInterface(m_lifecycleThreadId);
+        if (!thread || thread->GetWaitTaskCount() >= g_config.m_logicQueueLimit)
+        {
+            return false;
+        }
+        thread->PostTask(task, 1);
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
 bool LumaPlayerLogicController::submit(const LumaPlayerLogicAction& action)
 {
     std::lock_guard<std::mutex> lock(m_submitMutex);
@@ -111,8 +134,7 @@ bool LumaPlayerLogicController::submit(const LumaPlayerLogicAction& action)
         }
         std::shared_ptr<CTask> task;
         if (action.m_type == LumaActionDragBegin || action.m_type == LumaActionDragPreview ||
-            action.m_type == LumaActionDragCommit || action.m_type == LumaActionJump || (action.m_type == LumaActionCore &&
-            (action.m_operation == LumaPlayerCoreCOperationSeek || action.m_operation == LumaPlayerCoreCOperationPreview)))
+            action.m_type == LumaActionDragCommit || action.m_type == LumaActionJump || (action.m_type == LumaActionCore && (action.m_operation == LumaPlayerCoreCOperationSeek || action.m_operation == LumaPlayerCoreCOperationPreview)))
         {
             task = std::make_shared<LumaPlayerSeekTask>(this, action);
         }
@@ -128,8 +150,7 @@ bool LumaPlayerLogicController::submit(const LumaPlayerLogicAction& action)
         {
             task = std::make_shared<LumaPlayerViewTask>(this, action);
         }
-        else if (action.m_type == LumaActionCancelMove || (action.m_type == LumaActionCore &&
-            action.m_operation >= LumaPlayerCoreCOperationSetA && action.m_operation <= LumaPlayerCoreCOperationMoveLoop))
+        else if (action.m_type == LumaActionCancelMove || (action.m_type == LumaActionCore && action.m_operation >= LumaPlayerCoreCOperationSetA && action.m_operation <= LumaPlayerCoreCOperationMoveLoop))
         {
             task = std::make_shared<LumaPlayerLoopTask>(this, action);
         }
@@ -462,7 +483,6 @@ void LumaPlayerLogicController::execute(const LumaPlayerLogicAction& action)
             }
             return;
         }
-
     }
     catch (...)
     {
@@ -648,8 +668,7 @@ void LumaPlayerLogicController::executePlayback(const LumaPlayerLogicAction& act
         LumaPlayerLogicAction operation = action;
         if (action.m_type == LumaActionTogglePlayback)
         {
-            const bool playing = m_playRequest != 0 ? m_playTarget :
-                m_core->snapshot().m_state == LumaPlayerCoreCStatePlaying;
+            const bool playing = m_playRequest != 0 ? m_playTarget : m_core->snapshot().m_state == LumaPlayerCoreCStatePlaying;
             operation.m_operation = playing ? LumaPlayerCoreCOperationPause : LumaPlayerCoreCOperationPlay;
         }
         if (action.m_type == LumaActionRateDelta)
@@ -767,13 +786,13 @@ void LumaPlayerLogicController::executeSeek(const LumaPlayerLogicAction& action)
         if (action.m_type == LumaActionJump)
         {
             const LumaPlayerCoreCSnapshot snapshot = m_core->snapshot();
-            const int64_t origin = m_dragActive ? m_dragLatest.m_value :
-                m_seekRequest != 0 ? m_seekTarget : snapshot.m_position100ns;
+            const int64_t origin = m_dragActive ? m_dragLatest.m_value : m_seekRequest != 0 ? m_seekTarget
+                                                                                            : snapshot.m_position100ns;
             const long double target = static_cast<long double>(origin) +
                 action.m_value * static_cast<long double>(g_config.m_keyboardSeekSeconds) * g_config.m_second100ns;
             operation.m_operation = LumaPlayerCoreCOperationSeek;
-            operation.m_value = target <= 0 ? 0 : target >= snapshot.m_duration100ns ?
-                snapshot.m_duration100ns : static_cast<int64_t>(target);
+            operation.m_value = target <= 0 ? 0 : target >= snapshot.m_duration100ns ? snapshot.m_duration100ns
+                                                                                     : static_cast<int64_t>(target);
             operation.m_flag = m_seekRequest != 0 ? m_seekPlaying : snapshot.m_state == LumaPlayerCoreCStatePlaying;
         }
         m_dragActive = false;

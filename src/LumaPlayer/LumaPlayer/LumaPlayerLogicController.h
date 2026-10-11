@@ -5,6 +5,8 @@
 #include <map>
 #include <deque>
 #include <mutex>
+#include <memory>
+class CTask;
 
 /** 每播放器独立逻辑控制器；Qt对象只发送信号，不从后台操作窗口
 */
@@ -31,6 +33,12 @@ public:
     @return true表示接受，false表示关闭或队列已满
     */
     bool submit(const LumaPlayerLogicAction& action);
+
+    /** 提交有限的设备回收任务，关闭前串行完成，不阻塞UI线程
+    @param [in] task 由调用方拥有的任务，弹窗处理期间保持有效
+    @return true表示任务已入队，不代表清理完成
+    */
+    bool submitCleanup(const std::shared_ptr<CTask>& task);
 
     /** 只允许逻辑Task调用，串行维护状态
     @param [in] action 本次输入

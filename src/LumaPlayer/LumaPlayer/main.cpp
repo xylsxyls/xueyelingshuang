@@ -18,41 +18,48 @@
 #include <exception>
 #include <string>
 
-/** 将DialogManager日志交给LumaPlayer的LogManager
+/** 将DialogManager日志回调交给LogManager
 @param [in] level DialogManager日志级别
-@param [in] message 完整日志消息
+@param [in] message 借用的诊断文本，空值使用入口约定的默认文本
 */
 static void ForwardDialogLog(DialogLogLevel level, const char* message)
 {
-	if (message == nullptr)
-	{
-		return;
-	}
-	switch (level)
-	{
-	case DIALOG_LOG_ERROR:
-		LOGERROR("%s", message);
-		break;
-	case DIALOG_LOG_WARNING:
-		LOGWARNING("%s", message);
-		break;
-	default:
-		LOGINFO("%s", message);
-		break;
-	}
+    if (message == nullptr)
+    {
+        return;
+    }
+    switch (level)
+    {
+    case DIALOG_LOG_ERROR:
+    {
+        LOGERROR("%s", message);
+        break;
+    }
+    case DIALOG_LOG_WARNING:
+    {
+        LOGWARNING("%s", message);
+        break;
+    }
+    default:
+    {
+        LOGINFO("%s", message);
+        break;
+    }
+    }
 }
 
 int main(int argc, char* argv[])
 {
-	// 在Qt和工作线程启动前注册崩溃转储，默认写入EXE目录
-	const bool dumpEnabled = CDump::declareDumpFile();
-	Config::instance();
-	CTaskThreadManager::Instance();
-	int result = -1;
-	try
-	{
-		QApplication application(argc, argv);
-		g_config.init(application.arguments());
+    const uint32_t karaokeRuntimeError = LumaPlayerHelper::prepareKaraokeRuntime();
+    // 在Qt和工作线程启动前注册崩溃转储，默认写入EXE目录
+    const bool dumpEnabled = CDump::declareDumpFile();
+    Config::instance();
+    CTaskThreadManager::Instance();
+    int result = -1;
+    try
+    {
+        QApplication application(argc, argv);
+        g_config.init(application.arguments());
         LogManagerConfig logConfig;
         logConfig.m_fileId = 0;
         logConfig.m_maxFileBytes = g_config.m_logMaxFileBytes;
@@ -65,26 +72,27 @@ int main(int argc, char* argv[])
         g_config.m_logInitialized.store(true);
         LOGINFO("LumaPlayer startup, debug=%d build=%s %s", g_config.m_debugEnabled ? 1 : 0, __DATE__, __TIME__);
         LOGINFO("CDump registration result=%d", dumpEnabled ? 1 : 0);
+        LOGINFO("Karaoke system CRT bootstrap Win32=%u", karaokeRuntimeError);
         application.setFont(QFont(g_config.m_fontFamily, g_config.m_fontSize));
         LumaPlayerDialogSession dialogSession;
-		const bool debugEnabled = g_config.m_debugEnabled;
-		{
-			LumaPlayer player(debugEnabled);
-			player.show();
-			player.loadMedia(g_config.m_startupMediaPath);
-			result = application.exec();
-		}
-	}
-	catch (const std::exception& exception)
-	{
+        const bool debugEnabled = g_config.m_debugEnabled;
+        {
+            LumaPlayer player(debugEnabled);
+            player.show();
+            player.loadMedia(g_config.m_startupMediaPath);
+            result = application.exec();
+        }
+    }
+    catch (const std::exception& exception)
+    {
         LOGERROR("Unhandled std::exception in main: %s", exception.what());
-		result = -2;
-	}
-	catch (...)
-	{
+        result = -2;
+    }
+    catch (...)
+    {
         LOGERROR("Unhandled unknown exception in main");
-		result = -3;
-	}
+        result = -3;
+    }
     DialogManager::setLogCallback(nullptr);
     if (g_config.m_logInitialized.load())
     {
@@ -92,6 +100,6 @@ int main(int argc, char* argv[])
         LogManager::instance().uninit(0);
         g_config.m_logInitialized.store(false);
     }
-	g_config.uninit();
-	return result;
+    g_config.uninit();
+    return result;
 }

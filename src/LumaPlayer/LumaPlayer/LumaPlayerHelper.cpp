@@ -8,75 +8,90 @@
 #include <algorithm>
 #include <cctype>
 #include <string>
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
+uint32_t LumaPlayerHelper::prepareKaraokeRuntime()
+{
+#ifdef _WIN32
+    // Keep this process-lifetime dependency loaded before shell extensions can select an older CRT.
+    static HMODULE s_runtime = LoadLibraryExW(L"msvcp140.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    static const DWORD s_error = s_runtime != nullptr ? ERROR_SUCCESS : GetLastError();
+    return s_error;
+#else
+    return 0;
+#endif
+}
 
 int LumaPlayerHelper::clampInt(int value, int minValue, int maxValue)
 {
-	if (value < minValue)
-	{
-		return minValue;
-	}
-	if (value > maxValue)
-	{
-		return maxValue;
-	}
-	return value;
+    if (value < minValue)
+    {
+        return minValue;
+    }
+    if (value > maxValue)
+    {
+        return maxValue;
+    }
+    return value;
 }
 
 int64_t LumaPlayerHelper::clampTime100ns(int64_t value, int64_t minValue, int64_t maxValue)
 {
-	if (value < minValue)
-	{
-		return minValue;
-	}
-	if (value > maxValue)
-	{
-		return maxValue;
-	}
-	return value;
+    if (value < minValue)
+    {
+        return minValue;
+    }
+    if (value > maxValue)
+    {
+        return maxValue;
+    }
+    return value;
 }
 
 bool LumaPlayerHelper::isPlayingState(int32_t state)
 {
-	return state == LumaPlayerCoreCStatePlaying;
+    return state == LumaPlayerCoreCStatePlaying;
 }
 
 bool LumaPlayerHelper::isOpenedState(int32_t state)
 {
-	return state == LumaPlayerCoreCStateStopped ||
-		state == LumaPlayerCoreCStatePlaying ||
-		state == LumaPlayerCoreCStatePaused ||
-		state == LumaPlayerCoreCStateSeeking ||
-		state == LumaPlayerCoreCStateEnded;
+    return state == LumaPlayerCoreCStateStopped ||
+        state == LumaPlayerCoreCStatePlaying ||
+        state == LumaPlayerCoreCStatePaused ||
+        state == LumaPlayerCoreCStateSeeking ||
+        state == LumaPlayerCoreCStateEnded;
 }
 
 bool LumaPlayerHelper::hasDebugArgument(const QStringList& arguments)
 {
-	for (int32_t index = 1; index < arguments.size(); ++index)
-	{
-		if (arguments.at(index).compare(QStringLiteral("debug"), Qt::CaseInsensitive) == 0)
-		{
-			return true;
-		}
-	}
-	return false;
+    for (int32_t index = 1; index < arguments.size(); ++index)
+    {
+        if (arguments.at(index).compare(QStringLiteral("debug"), Qt::CaseInsensitive) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 QString LumaPlayerHelper::formatTime(int64_t time100ns, bool withMillisecond)
 {
-	if (time100ns < 0)
-	{
-		time100ns = 0;
-	}
-	int64_t totalSeconds = time100ns / g_config.m_second100ns;
-	int64_t hour = totalSeconds / 3600;
-	int64_t minute = (totalSeconds / 60) % 60;
-	int64_t second = totalSeconds % 60;
-	if (!withMillisecond)
-	{
+    if (time100ns < 0)
+    {
+        time100ns = 0;
+    }
+    int64_t totalSeconds = time100ns / g_config.m_second100ns;
+    int64_t hour = totalSeconds / 3600;
+    int64_t minute = (totalSeconds / 60) % 60;
+    int64_t second = totalSeconds % 60;
+    if (!withMillisecond)
+    {
         return QString::fromStdString(CStringManager::Format(g_config.m_timeTextFormat.c_str(),
             static_cast<int>(hour), static_cast<int>(minute), static_cast<int>(second)));
-	}
-	int64_t millisecond = (time100ns / g_config.m_millisecond100ns) % 1000;
+    }
+    int64_t millisecond = (time100ns / g_config.m_millisecond100ns) % 1000;
     return QString::fromStdString(CStringManager::Format(g_config.m_preciseTimeTextFormat.c_str(),
         static_cast<int>(hour), static_cast<int>(minute), static_cast<int>(second), static_cast<int>(millisecond)));
 }

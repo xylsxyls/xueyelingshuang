@@ -16,35 +16,35 @@
 class Config
 {
 public:
-	/** 获取进程配置实例
-	@return 配置单例引用
-	*/
-	static Config& instance();
+    /** 获取进程配置实例
+    @return 配置单例引用
+    */
+    static Config& instance();
 
-	/** 解析启动参数并初始化默认Core配置
-	@param [in] arguments QApplication提供的Unicode参数列表，首项为程序名
-	*/
-	void init(const QStringList& arguments);
+    /** 解析启动参数并初始化默认Core配置
+    @param [in] arguments QApplication提供的Unicode参数列表，首项为程序名
+    */
+    void init(const QStringList& arguments);
 
-	/** 清理配置运行状态
-	*/
-	void uninit();
+    /** 清理配置运行状态
+    */
+    void uninit();
 
 private:
-	/** 构造配置默认值
-	*/
-	Config();
+    /** 构造配置默认值
+    */
+    Config();
 
-	/** 禁止复制进程配置
-	@param [in] other 其他配置对象
-	*/
-	Config(const Config& other);
+    /** 禁止复制进程配置
+    @param [in] other 其他配置对象
+    */
+    Config(const Config& other);
 
-	/** 禁止覆盖配置实例
-	@param [in] other 其他配置对象
-	@return 当前对象引用
-	*/
-	Config& operator=(const Config& other);
+    /** 禁止覆盖配置实例
+    @param [in] other 其他配置对象
+    @return 当前对象引用
+    */
+    Config& operator=(const Config& other);
 
 public:
     // 窗口标题
@@ -313,87 +313,118 @@ public:
     int32_t m_logicQueueLimit;
     // 尚未完成Core请求上限
     int32_t m_corePendingLimit;
-	// 顶部悬浮条高度，单位像素
-	int32_t m_topOverlayHeight;
-	// 底部悬浮条高度，单位像素
-	int32_t m_bottomOverlayHeight;
-	// 底部播放按钮边长，单位像素
-	int32_t m_playButtonSize;
-	// 进度轨道到下浮框顶部的距离，单位像素
-	int32_t m_progressTrackTop;
-	// 悬浮条单次移动距离，单位像素
-	int32_t m_overlayStep;
-	// 鼠标静止隐藏延时，单位毫秒
-	int32_t m_mouseIdleHideMs;
-	// 窗口边缘缩放判定宽度，单位像素
-	int32_t m_resizeMargin;
-	// 进度条触发边距，单位像素
-	int32_t m_progressTriggerMargin;
-	// 顶部悬浮触发边距，单位像素
-	int32_t m_topTriggerMargin;
-	// 最小窗口宽度，单位像素
-	int32_t m_minWindowWidth;
-	// 最小窗口高度，单位像素
-	int32_t m_minWindowHeight;
-	// 最小缩放百分比
-	int32_t m_minZoomPercent;
-	// 最大缩放百分比
-	int32_t m_maxZoomPercent;
+    // 顶部悬浮条高度，单位像素
+    int32_t m_topOverlayHeight;
+    // 底部悬浮条高度，单位像素
+    int32_t m_bottomOverlayHeight;
+    // 底部播放按钮边长，单位像素
+    int32_t m_playButtonSize;
+    // 进度轨道到下浮框顶部的距离，单位像素
+    int32_t m_progressTrackTop;
+    // 悬浮条单次移动距离，单位像素
+    int32_t m_overlayStep;
+    // 鼠标静止隐藏延时，单位毫秒
+    int32_t m_mouseIdleHideMs;
+    // 窗口边缘缩放判定宽度，单位像素
+    int32_t m_resizeMargin;
+    // 进度条触发边距，单位像素
+    int32_t m_progressTriggerMargin;
+    // 顶部悬浮触发边距，单位像素
+    int32_t m_topTriggerMargin;
+    // 最小窗口宽度，单位像素
+    int32_t m_minWindowWidth;
+    // 最小窗口高度，单位像素
+    int32_t m_minWindowHeight;
+    // 最小缩放百分比
+    int32_t m_minZoomPercent;
+    // 最大缩放百分比
+    int32_t m_maxZoomPercent;
     // 鼠标音量满量程及新窗口默认百分比
     int32_t m_volumeNormalPercent;
     // 音量方向键步长，单位百分点
     int32_t m_volumeStep;
-    // 音量弹框宽、高、内边距和外间距，单位逻辑像素
+    // 麦克风显示增益独立上限，默认500%，实际PCM百分比另乘m_microphoneGainScale
+    int32_t m_microphoneMaxGainPercent;
+    // 键盘每次增减的显示百分点，默认10，对应实际100个百分点
+    int32_t m_microphoneGainStep;
+    // 显示百分比到PCM增益百分比的倍率；100显示值对应1000%实际增益
+    int32_t m_microphoneGainScale;
+    // MDX-HQ5固定输入261120个44.1kHz双声道采样帧，不能沿用旧模型8秒
+    int32_t m_karaokeSeparationWindowFrames;
+    // 重叠采样帧数，默认130560即50%，至少5120且小于窗口帧数
+    int32_t m_karaokeSeparationOverlapFrames;
+    // 可同时配置的麦克风通道上限，默认3个
+    int32_t m_microphoneMaxCount;
+    // 音量弹框宽和高，单位逻辑像素
     QSize m_volumePopupSize;
+    // 音量弹框内部留白，单位逻辑像素
     int32_t m_volumePadding;
+    // 浮框避让间距与分隔线左右边距，逻辑像素
     int32_t m_volumeGap;
     // 音量弹框圆角半径，单位逻辑像素
     int32_t m_volumeRadius;
-    // 底栏图标、相对图标的按下背景、两类滑块圆点偏移
+    // 上浮框音量图标整体偏移，单位逻辑像素，负值向左或向上
     QPoint m_volumeIconOffset;
-    // 音量框内部喇叭按钮整体偏移
+    // 音量框内部喇叭按钮整体偏移，单位逻辑像素
     QPoint m_volumeMuteButtonOffset;
+    // 上浮框音量键按下背景相对图标的偏移，单位逻辑像素
     QPoint m_volumePressOffset;
+    // 音量滑块圆点的绘制偏移，单位逻辑像素，支持小数
     QPointF m_volumeKnobOffset;
+    // 视频进度条圆点的绘制偏移，单位逻辑像素，支持小数
     QPointF m_progressKnobOffset;
-    // 弹框静音按钮区域高度、分隔线颜色及提示
+    // 音量弹框底部静音按钮区域高度，单位逻辑像素
     int32_t m_volumeFooterHeight;
+    // 音量弹框分隔线颜色，包含透明度
     QColor m_volumeSeparatorColor;
+    // 音量弹框分隔线高度，单位逻辑像素
     int32_t m_volumeSeparatorHeight;
     // 按钮静音专用红叉，不用于普通0音量
     QColor m_volumeMuteColor;
+    // 静音状态红叉路径，以图标坐标基准绘制，不表示普通0音量
     QPainterPath m_volumeMuteIcon;
+    // 进入静音操作的提示文字
     QString m_volumeMuteText;
+    // 退出静音并恢复先前音量的提示文字
     QString m_volumeRestoreText;
-    // 低、中音量弧线分界百分比
+    // 低音量与中音量图标弧线的分界百分比
     int32_t m_volumeLowPercent;
+    // 中音量与高音量图标弧线的分界百分比
     int32_t m_volumeMediumPercent;
-    // 音量提示格式与图标路径（24逻辑像素坐标）
+    // 音量提示格式，包含一个整数百分比占位符
     QString m_volumeTooltipFormat;
+    // 喇叭主体路径，以图标坐标基准绘制
     QPainterPath m_speakerIcon;
+    // 由小到大的三条音量弧线路径，以图标坐标基准绘制
     QPainterPath m_volumeArcs[3];
     // 拖动预览提交间隔，单位毫秒
-	int64_t m_previewDragIntervalMs;
-	// 音频设备专用线程的服务间隔，单位毫秒
-	int32_t m_audioServiceIntervalMs;
-	// 每秒对应的100纳秒刻度数
-	int64_t m_second100ns;
-	// 每毫秒对应的100纳秒刻度数
-	int64_t m_millisecond100ns;
-	// 音频排队上限，单位100纳秒
-	int64_t m_audioMaxQueue100ns;
-	// 命令行是否包含debug诊断标记，基础日志始终开启
-	bool m_debugEnabled;
-	// 启动时加载的首个视频路径，空字符串表示显示空窗口
-	QString m_startupMediaPath;
+    int64_t m_previewDragIntervalMs;
+    // 音频设备专用线程的服务间隔，单位毫秒
+    int32_t m_audioServiceIntervalMs;
+    // 麦克风设备缓冲预算，单位毫秒
+    int32_t m_microphoneDeviceBufferMs;
+    // 麦克风监听积压上限，单位毫秒，不裁剪录音队列
+    int32_t m_microphoneMonitorQueueMs;
+    // 麦克风设备服务间隔，单位毫秒
+    int32_t m_microphoneServiceIntervalMs;
+    // 每秒对应的100纳秒刻度数
+    int64_t m_second100ns;
+    // 每毫秒对应的100纳秒刻度数
+    int64_t m_millisecond100ns;
+    // 音频排队上限，单位100纳秒
+    int64_t m_audioMaxQueue100ns;
+    // 命令行是否包含debug诊断标记，基础日志始终开启
+    bool m_debugEnabled;
+    // 启动时加载的首个视频路径，空字符串表示显示空窗口
+    QString m_startupMediaPath;
     // 单个日志文件上限，单位字节
     int64_t m_logMaxFileBytes;
     // 滚动日志保留文件数
     int32_t m_logMaxFileCount;
-	// 日志服务是否已经启动，跨线程读取
-	std::atomic<bool> m_logInitialized;
-	// 注入Core的独立实例配置
-	LumaPlayerCoreCConfig m_coreConfig;
+    // 日志服务是否已经启动，跨线程读取
+    std::atomic<bool> m_logInitialized;
+    // 注入Core的独立实例配置
+    LumaPlayerCoreCConfig m_coreConfig;
 };
 
 #define g_config Config::instance()

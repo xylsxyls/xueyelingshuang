@@ -86,6 +86,12 @@
     <ClCompile Include="LumaPlayerAudioTask.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="LumaPlayerMicrophoneCapture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LumaPlayerKaraokeTask.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="LumaPlayer.h">
@@ -124,6 +130,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="LumaPlayerAudioTask.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LumaPlayerMicrophoneCapture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LumaPlayerKaraokeTask.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -217,5 +229,14 @@
     <None Include="LumaPlayerIcon.sh">
       <Filter>Resource Files</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LumaPlayerKaraokeJob.h" />
+    <ClCompile Include="LumaPlayerKaraokeJob.cpp" />
+    <ClInclude Include="LumaPlayerKaraokeProgressView.h" />
+    <ClCompile Include="LumaPlayerKaraokeProgressView.cpp" />
+  </ItemGroup>
+<ItemGroup><ClCompile Include="LumaPlayerRecordingSaveView.cpp" /><ClInclude Include="LumaPlayerRecordingSaveView.h" /></ItemGroup><ItemGroup><ClCompile Include="LumaPlayerMicrophoneChannel.cpp" /><ClInclude Include="LumaPlayerMicrophoneChannel.h" /><ClCompile Include="LumaPlayerMicrophoneView.cpp" /><ClInclude Include="LumaPlayerMicrophoneView.h" /></ItemGroup>  <ItemGroup>
+    <ClCompile Include="LumaPlayerMicrophoneRetireTask.cpp" />
   </ItemGroup>
 </Project>
