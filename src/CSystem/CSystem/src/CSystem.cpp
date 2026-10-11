@@ -1,5 +1,5 @@
 ﻿#include "CSystem.h"
-#if (_MSC_VER >= 1800 || __unix__)
+#if (_MSC_VER >= 1800 || defined(__unix__) || defined(__APPLE__))
 #include <thread>
 #endif
 #ifdef _MSC_VER
@@ -18,7 +18,7 @@
 #pragma comment(lib, "setupapi.lib")
 #pragma comment(lib, "shell32.lib")
 #pragma warning(disable: 4200)
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 #include <unistd.h>
 #include <pwd.h>
 #include <termios.h>
@@ -38,11 +38,20 @@
 #include <iterator>
 #include <cstring>
 #include <cstdlib>
+#include <functional>
+#include <stdexcept>
 #ifdef __APPLE__
 #include <codecvt>
 #include <locale>
+#include <TargetConditionals.h>
+#include <mach-o/dyld.h>
+#include <pthread.h>
+#include <uuid/uuid.h>
 #endif
-#ifdef __unix__
+#if defined(__linux__)
+#include <sys/syscall.h>
+#endif
+#if defined(__unix__) || defined(__APPLE__)
 #include <signal.h>
 #endif
 
@@ -678,7 +687,7 @@ std::map<std::string, std::vector<std::string>> CSystem::allDeviceInfo()
 
 #endif
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 // 获取当前CPU周期计数，不支持的平台返回0。
 static uint64_t GetCycleCount()
 {
@@ -797,7 +806,7 @@ double CSystem::GetCPUSpeedGHz()
 	SetPriorityClass(GetCurrentProcess(), priority_class);
 	SetThreadPriority(GetCurrentThread(), thread_priority);
 	return double(total) / 5.0 / 1000.0;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	int delayms = 700;
 	uint64_t oldTime = GetCycleCount();
 	usleep(delayms * 1000);
@@ -808,7 +817,7 @@ double CSystem::GetCPUSpeedGHz()
 
 void CSystem::Sleep(long long milliseconds)
 {
-#if (_MSC_VER >= 1800 || __unix__)
+#if (_MSC_VER >= 1800 || defined(__unix__) || defined(__APPLE__))
 	std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
 #endif
 }
@@ -834,7 +843,15 @@ std::string CSystem::uuid(int flag)
 		guid.Data4[3], guid.Data4[4], guid.Data4[5],
 		guid.Data4[6], guid.Data4[7]);
 	return buffer;
-#elif __unix__
+#elif defined(__APPLE__)
+    uuid_t value;
+    uuid_generate_random(value);
+    char buffer[37] = {};
+    uuid_unparse_lower(value, buffer);
+    std::string result(buffer);
+    if (flag == 0) result.erase(std::remove(result.begin(), result.end(), '-'), result.end());
+    return result;
+#elif defined(__unix__)
 	std::string result = CSystem::readFile("/proc/sys/kernel/random/uuid");
 	if(result.empty())
 	{
@@ -861,7 +878,7 @@ void CSystem::CopyFileOver(const std::string& dstFile, const std::string& srcFil
 {
 #ifdef _WIN32
 	::CopyFileA(srcFile.c_str(), dstFile.c_str(), over == false);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	if(CSystem::DirOrFileExist(dstFile) && !over)
 	{
 		return;
@@ -912,17 +929,8 @@ int CSystem::GetSystemBits()
         return 64;
     }
     return 32;
-#elif __unix__
-	std::string result;
-	if (SystemCommand("uname -a", result) == -1 || result.empty())
-	{
-		return 0;
-	}
-	if (result.find("x86_64") != -1)
-	{
-		return 64;
-	}
-	return 32;
+#elif defined(__unix__) || defined(__APPLE__)
+    return sizeof(void*) * 8;
 #endif
 }
 
@@ -976,7 +984,7 @@ std::vector<std::string> CSystem::exeParam(int argc, char** argv)
 	{
 		result.push_back(__argv[index]);
 	}
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 for (int32_t index = 0; index < argc; ++index)
 	{
 		result.push_back(argv[index]);
@@ -985,7 +993,7 @@ for (int32_t index = 0; index < argc; ++index)
 	return result;
 }
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 int _getch()
 {
     struct termios oldt, newt;
@@ -1005,7 +1013,7 @@ std::string CSystem::PasswordScanf()
 #ifdef _WIN32
 	char returnCode = '\r';
 	char backspace = 8;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	char returnCode = '\n';
 	char backspace = 127;
 #endif
@@ -1040,6 +1048,10 @@ std::string CSystem::PasswordScanf()
 
 int32_t CSystem::SystemCommand(const std::string& command, std::string& result, bool isShowCmd)
 {
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+    result.clear();
+    return -1; // iOS forbids spawning a shell; the host must provide the corresponding capability.
+#else
 	if (command.size() == 0)
 	{
 		//command is empty
@@ -1101,7 +1113,7 @@ int32_t CSystem::SystemCommand(const std::string& command, std::string& result, 
 	std::string fresult;
 #ifdef _WIN32
 	FILE* pin = _popen((command + " &").c_str(), "r");
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	FILE* pin = popen((command + " &").c_str(), "r");
 #endif
 	if (!pin)
@@ -1121,8 +1133,9 @@ int32_t CSystem::SystemCommand(const std::string& command, std::string& result, 
 	//-1:pclose failed; else shell ret
 #ifdef _WIN32
 	return _pclose(pin);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	return pclose(pin);
+#endif
 #endif
 }
 
@@ -1131,9 +1144,14 @@ uint32_t CSystem::SystemThreadId()
 #ifdef _WIN32
 	return ::GetCurrentThreadId();
 	//return ((_Thrd_t*)(char*)&(std::this_thread::get_id()))->_Id;
-#elif __unix__
-	std::thread::id threadId = std::this_thread::get_id();
-	return (uint32_t)(*(__gthread_t*)(char*)(&threadId));
+#elif defined(__APPLE__)
+    uint64_t id = 0;
+    pthread_threadid_np(nullptr, &id);
+    return static_cast<uint32_t>(id);
+#elif defined(__linux__)
+    return static_cast<uint32_t>(syscall(SYS_gettid));
+#else
+    return static_cast<uint32_t>(std::hash<std::thread::id>()(std::this_thread::get_id()));
 #endif
 }
 
@@ -1143,14 +1161,8 @@ int32_t CSystem::GetCPUCoreCount()
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
 	return si.dwNumberOfProcessors;
-#elif __unix__
-	std::string result;
-	if (SystemCommand("grep 'processor' /proc/cpuinfo | sort -u | wc -l", result) == -1 || result.empty())
-	{
-		return 0;
-	}
-	result.pop_back();
-	return atoi(result.c_str());
+#elif defined(__unix__) || defined(__APPLE__)
+    return static_cast<int32_t>(std::thread::hardware_concurrency());
 #endif
 }
 
@@ -1185,7 +1197,7 @@ int32_t CSystem::GetSystemVersionNum()
 		FreeLibrary(hinstDLL);
 	}
 	return dwVersion;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	std::string result;
 	if (SystemCommand("cat /etc/issue", result) == -1 || result.empty())
 	{
@@ -1213,7 +1225,7 @@ uint32_t CSystem::currentProcessPid()
 {
 #ifdef _WIN32
 	return GetCurrentProcessId();
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	return getpid();
 #endif
 }
@@ -1241,7 +1253,7 @@ uint32_t CSystem::processFirstPid(const std::string& processName)
 	}
 	::CloseHandle(hSnapshot);
 	return 0;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	std::string result;
 	if (SystemCommand("pidof " + processName, result) == -1 || result.empty())
 	{
@@ -1281,7 +1293,7 @@ std::vector<uint32_t> CSystem::processPid(const std::string& processName)
 	}
 	::CloseHandle(hSnapshot);
 	return result;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	std::vector<uint32_t> vecResult;
 	std::string result;
 	if (SystemCommand("pidof " + processName, result) == -1 || result.empty())
@@ -1326,7 +1338,7 @@ std::string CSystem::processName(uint32_t pid)
 		::CloseHandle(snapshot);
 	}
 	return result;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	std::string result;
 	if (SystemCommand("cat /proc/" + std::to_string(pid) + "/cmdline", result) == -1 || result.empty())
 	{
@@ -1342,7 +1354,7 @@ uint64_t CSystem::currentMemory()
 	PROCESS_MEMORY_COUNTERS pmc;
 	GetProcessMemoryInfo(::GetCurrentProcess(), &pmc, sizeof(pmc));
 	return pmc.WorkingSetSize;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	std::string stat_info = CSystem::readFile("/proc/self/status");
 	const std::string key = "VmRSS:";
 	size_t first = stat_info.find(key);
@@ -1361,10 +1373,10 @@ uint32_t CSystem::GetTickCount()
 {
 #ifdef _MSC_VER
 	return ::GetTickCount();
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+    return static_cast<uint32_t>(static_cast<uint64_t>(ts.tv_sec) * 1000 + ts.tv_nsec / 1000000);
 #endif
 }
 
@@ -1409,13 +1421,13 @@ std::string CSystem::getComputerName()
 #ifdef _WIN32
 	DWORD length = 256;
 	GetComputerNameA(computerName, &length);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	gethostname(computerName, 256);
 #endif
 	return computerName;
 }
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 // 获取当前动态库所在目录，入参为空时返回nullptr。
 static char* GetModuleCurPath(char* sCurPath)
 {
@@ -1444,7 +1456,7 @@ std::string CSystem::GetCurrentDllPath()
 	char szFilePath[1024] = {};
 #ifdef _MSC_VER
 	::GetModuleFileNameA(GetCurrentModule(), szFilePath, 1024);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	GetModuleCurPath(szFilePath);
 #endif
 	return CSystem::GetName(szFilePath, 4);
@@ -1455,7 +1467,10 @@ std::string CSystem::GetCurrentExePath()
 	char szFilePath[1024] = {};
 #ifdef _WIN32
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
-#elif __unix__
+#elif defined(__APPLE__)
+    uint32_t size = sizeof(szFilePath);
+    if (_NSGetExecutablePath(szFilePath, &size) != 0) return "";
+#elif defined(__unix__) || defined(__APPLE__)
 	ssize_t len = ::readlink("/proc/self/exe", szFilePath, sizeof(szFilePath) - 1);
 	if (len < 0)
 	{
@@ -1471,7 +1486,10 @@ std::string CSystem::GetCurrentExeName()
 	char szFilePath[1024] = {};
 #ifdef _WIN32
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
-#elif __unix__
+#elif defined(__APPLE__)
+    uint32_t size = sizeof(szFilePath);
+    if (_NSGetExecutablePath(szFilePath, &size) != 0) return "";
+#elif defined(__unix__) || defined(__APPLE__)
 	ssize_t len = ::readlink("/proc/self/exe", szFilePath, sizeof(szFilePath) - 1);
 	if (len < 0)
 	{
@@ -1487,7 +1505,10 @@ std::string CSystem::GetCurrentExeFullName()
 	char szFilePath[1024] = {};
 #ifdef _WIN32
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
-#elif __unix__
+#elif defined(__APPLE__)
+    uint32_t size = sizeof(szFilePath);
+    if (_NSGetExecutablePath(szFilePath, &size) != 0) return "";
+#elif defined(__unix__) || defined(__APPLE__)
 	ssize_t len = ::readlink("/proc/self/exe", szFilePath, sizeof(szFilePath) - 1);
 	if (len < 0)
 	{
@@ -1507,8 +1528,9 @@ std::string CSystem::GetSystemTempPath()
 		return "";
 	}
 	return std::string(szPath) + "\\";
-#elif __unix__
-	return "/tmp/";
+#elif defined(__unix__) || defined(__APPLE__)
+    const char* directory = std::getenv("TMPDIR");
+    return directory && *directory ? joinPath(directory, "") + (directory[std::strlen(directory) - 1] == '/' ? "" : "/") : "/tmp/";
 #endif
 }
 
@@ -1685,7 +1707,7 @@ bool CSystem::deleteFile(const std::wstring& path)
 
 #ifdef _WIN32
 	return ::DeleteFileW(path.c_str()) ? true : false;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	std::string utf8Path = WidePathToUtf8(path);
 	if (utf8Path.empty())
 	{
@@ -1707,7 +1729,7 @@ bool CSystem::fileExists(const std::wstring& path)
 #ifdef _WIN32
 	DWORD attributes = ::GetFileAttributesW(path.c_str());
 	return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	std::string utf8Path = WidePathToUtf8(path);
 	if (utf8Path.empty())
 	{
@@ -1751,7 +1773,7 @@ void CSystem::killProcess(int32_t pid)
 	char command[256] = {};
 	::_snprintf(command, 256, "taskkill /f /pid %d", pid);
 	::WinExec(command, SW_HIDE);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	::kill(static_cast<pid_t>(pid), SIGKILL);
 #endif
 }
@@ -1785,7 +1807,7 @@ std::string CSystem::GetSysUserName()
     char szName[1024] = {};
     ::GetUserNameA(szName, &size);
     return szName;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	uid_t userid = 0;
     struct passwd* pwd = nullptr;
     userid = getuid();
@@ -1822,7 +1844,7 @@ bool CSystem::CreateDir(const std::string& dir)
 {
 #ifdef _WIN32
 	return _mkdir(dir.c_str()) == 0;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	return mkdir(dir.c_str() ,S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0;
 #endif
 }
@@ -1831,7 +1853,7 @@ bool CSystem::DestroyDir(const std::string& dir)
 {
 #ifdef _WIN32
 	return _rmdir(dir.c_str()) == 0;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	return rmdir(dir.c_str()) == 0;
 #endif
 }
@@ -1840,7 +1862,7 @@ bool CSystem::DirOrFileExist(const std::string& dir)
 {
 #ifdef _WIN32
 	return _access(dir.c_str(), 0) == 0;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	return access(dir.c_str(), 0) == 0;
 #endif
 }
@@ -1849,7 +1871,9 @@ void CSystem::OpenFolder(const std::string& folder)
 {
 #ifdef _WIN32
 	ShellExecuteA(NULL, "open", NULL, NULL, folder.c_str(), SW_SHOWNORMAL);
-#elif __unix__
+#elif defined(__APPLE__) && TARGET_OS_IPHONE
+    throw std::runtime_error("Opening folders on iOS requires a host UI adapter");
+#elif defined(__unix__) || defined(__APPLE__)
 	if (fork() == 0)
 	{
 		std::string result;
@@ -1863,7 +1887,9 @@ void CSystem::OpenFolderAndSelectFile(const std::string& file)
 {
 #ifdef _WIN32
 	ShellExecuteA(NULL, "open", "Explorer.exe", ("/select, " + file).c_str(), NULL, SW_SHOWDEFAULT);
-#elif __unix__
+#elif defined(__APPLE__) && TARGET_OS_IPHONE
+    throw std::runtime_error("Selecting files on iOS requires a host UI adapter");
+#elif defined(__unix__) || defined(__APPLE__)
 	if (fork() == 0)
 	{
 		std::string result;
@@ -1877,7 +1903,9 @@ void CSystem::OpenFile(const std::string& file)
 {
 #ifdef _WIN32
 	ShellExecuteA(NULL, "open", file.c_str(), NULL, NULL, SW_SHOWNORMAL);
-#elif __unix__
+#elif defined(__APPLE__) && TARGET_OS_IPHONE
+    throw std::runtime_error("Opening external files on iOS requires a host UI adapter");
+#elif defined(__unix__) || defined(__APPLE__)
 	if (fork() == 0)
 	{
 		std::string result;
@@ -1891,7 +1919,7 @@ void CSystem::childProcessExit(int32_t exitCode)
 {
 #ifdef _MSC_VER
 	::_exit(exitCode);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	::_exit(exitCode);
 #else
 	std::_Exit(exitCode);
@@ -1908,7 +1936,7 @@ std::string CSystem::timetToStr(time_t timet, bool isLocal)
 		//转为本地时间
 #ifdef _WIN32
 		if (localtime_s(&timeInfo, &timet) != 0)
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 		if (localtime_r(&timet, &timeInfo) == nullptr)
 #endif
 		{
@@ -1920,7 +1948,7 @@ std::string CSystem::timetToStr(time_t timet, bool isLocal)
 		//转为格林威治时间
 #ifdef _WIN32
 		if (gmtime_s(&timeInfo, &timet) != 0)
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 		if (gmtime_r(&timet, &timeInfo) == nullptr)
 #endif
 		{
@@ -1935,7 +1963,7 @@ std::string CSystem::commonFile(const std::string& name)
 {
 #ifdef _WIN32
 	std::string path = CSystem::GetEnvironment("XUEYELINGSHUANG") + "common\\";
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	std::string path = CSystem::GetEnvironment("XUEYELINGSHUANG") + "common/";
 #endif
 	double version = 0;
@@ -1956,7 +1984,7 @@ std::string CSystem::commonFile(const std::string& name)
 		fileName.pop_back();
 		fileName.pop_back();
 		fileName.pop_back();
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 		if (std::count(fileName.begin(), fileName.end(), '.') != 1)
 		{
 			continue;
@@ -2045,7 +2073,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 	}
 #ifdef _WIN32
 	char level = '\\';
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	char level = '/';
 #endif
 	if (dir.back() != level)
@@ -2058,7 +2086,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 
 #ifdef _WIN32
 	_finddata_t fileDir;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	struct dirent *pDirent = nullptr;
 #endif
 
@@ -2072,14 +2100,14 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 		queue_dir.pop();
 #ifdef _WIN32
 		auto lfDir = _findfirst(curDir.c_str(), &fileDir);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 		DIR* pDir = opendir(curDir.c_str());
 #endif
 
 		//如果是-1表示该文件夹不可访问
 #ifdef _WIN32
 		if (lfDir == -1)
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 		if (pDir == nullptr)
 #endif
 		{
@@ -2101,19 +2129,19 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 
 #ifdef _WIN32
 		do
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 		while ((pDirent = readdir(pDir)) != 0)
 #endif
 		{
 #ifdef _WIN32
 			std::string strName = fileDir.name;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 			std::string strName = pDirent->d_name;
 #endif
 			//是目录，加入队列
 #ifdef _WIN32
 			if ((fileDir.attrib & _A_SUBDIR) != 0)
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 			if (pDirent->d_type == DT_DIR)
 #endif
 			{
@@ -2197,12 +2225,12 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 			}
 #ifdef _WIN32
 		} while (_findnext(lfDir, &fileDir) == 0);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 		}
 #endif
 #ifdef _WIN32
 		_findclose(lfDir);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 		closedir(pDir);
 #endif
 	}
