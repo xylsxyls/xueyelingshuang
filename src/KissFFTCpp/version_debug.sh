@@ -1,0 +1,1 @@
+"$CLOUD_REBUILD" KissFFTCpp 32 dll debug same
