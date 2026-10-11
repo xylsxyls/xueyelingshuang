@@ -7,11 +7,27 @@
 SplitViewerCoreNode::SplitViewerCoreNode() :
 kind(SPLITVIEWER_CORE_NODE_LEAF),
 direction(SPLITVIEWER_CORE_SPLIT_HORIZONTAL),
-ratio(SplitViewerCoreConfig::kDefaultSplitRatio),
+ratio(SplitViewerCoreConfig().m_defaultSplitRatio),
 first(nullptr),
 second(nullptr)
 {
 
+}
+
+SplitViewerCoreNode::SplitViewerCoreNode(const SplitViewerCoreConfig& config) :
+kind(SPLITVIEWER_CORE_NODE_LEAF),
+direction(SPLITVIEWER_CORE_SPLIT_HORIZONTAL),
+ratio(config.m_defaultSplitRatio),
+first(nullptr),
+second(nullptr),
+m_config(config)
+{
+
+}
+
+const SplitViewerCoreConfig& SplitViewerCoreNode::config() const
+{
+    return m_config;
 }
 
 SplitViewerCoreNode::~SplitViewerCoreNode()
@@ -29,17 +45,17 @@ bool SplitViewerCoreNode::isLeaf() const
 
 void SplitViewerCoreNode::makeSplit(SplitViewerCoreSplitDirection splitDirection)
 {
-    if (!isLeaf() || (splitDirection != SPLITVIEWER_CORE_SPLIT_HORIZONTAL &&
-        splitDirection != SPLITVIEWER_CORE_SPLIT_VERTICAL))
+    if (!m_config.isValid() || !isLeaf() ||
+        (splitDirection != SPLITVIEWER_CORE_SPLIT_HORIZONTAL && splitDirection != SPLITVIEWER_CORE_SPLIT_VERTICAL))
     {
         return;
     }
-    std::unique_ptr<SplitViewerCoreNode> oldLeaf(new SplitViewerCoreNode());
+    std::unique_ptr<SplitViewerCoreNode> oldLeaf(new SplitViewerCoreNode(m_config));
     oldLeaf->view = view;
-    std::unique_ptr<SplitViewerCoreNode> newLeaf(new SplitViewerCoreNode());
+    std::unique_ptr<SplitViewerCoreNode> newLeaf(new SplitViewerCoreNode(m_config));
     kind = SPLITVIEWER_CORE_NODE_SPLIT;
     direction = splitDirection;
-    ratio = SplitViewerCoreConfig::kDefaultSplitRatio;
+    ratio = m_config.m_defaultSplitRatio;
     first = oldLeaf.release();
     second = newLeaf.release();
     view.clear();

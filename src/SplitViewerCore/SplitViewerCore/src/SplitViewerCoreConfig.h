@@ -1,59 +1,67 @@
 ﻿#pragma once
+#include "SplitViewerCoreMacro.h"
 #include <stdint.h>
-/** 核心默认值、读取预算和格式常量；无Qt依赖，不存放会话状态 */
-class SplitViewerCoreConfig
+/** 单个Core文档的默认布局、缩放和读取预算；初始化校验后复制，不依赖Qt或应用单例
+*/
+class SplitViewerCoreAPI SplitViewerCoreConfig
 {
 public:
-    static const uint8_t PngSignature[8];
-    static const uint8_t PngIend[4];
-    static const uint8_t ConfigChunk[4];
-    static const char LegacyMarker[35];
+    /** 在初始化列表中设置旧版兼容的默认值
+    */
+    SplitViewerCoreConfig();
+
+    /** 校验有限数、尺寸比例及读取预算的安全范围
+    @return 全部配置有效
+    */
+    bool isValid() const;
+
+public:
     // 默认舞台宽高比
-    static const double kDefaultStageAspect;
+    double m_defaultStageAspect;
     // 最小舞台宽高比
-    static const double kMinimumStageAspect;
+    double m_minimumStageAspect;
     // 新分屏默认比例
-    static const double kDefaultSplitRatio;
+    double m_defaultSplitRatio;
     // 最小分屏比例
-    static const double kMinimumSplitRatio;
+    double m_minimumSplitRatio;
     // 最大分屏比例
-    static const double kMaximumSplitRatio;
+    double m_maximumSplitRatio;
     // 新层起点
-    static const double kLayerOrigin;
+    double m_layerOrigin;
     // 新层错位步长
-    static const double kLayerOffset;
+    double m_layerOffset;
     // 图层错位循环数
-    static const int32_t kLayerOffsetPeriod;
+    int32_t m_layerOffsetPeriod;
     // 新层归一化宽高
-    static const double kLayerExtent;
+    double m_layerExtent;
     // 新层起点上限
-    static const double kLayerOriginLimit;
+    double m_layerOriginLimit;
     // 独立图层默认起点
-    static const double kDefaultLayerStart;
+    double m_defaultLayerStart;
     // 独立图层默认终点
-    static const double kDefaultLayerEnd;
+    double m_defaultLayerEnd;
     // 配置恢复最小图层宽度
-    static const double kProfileMinimumLayerWidth;
+    double m_profileMinimumLayerWidth;
     // 配置恢复最小图层高度
-    static const double kProfileMinimumLayerHeight;
+    double m_profileMinimumLayerHeight;
     // 普通滚轮缩放倍率
-    static const double kZoomStep;
+    double m_zoomStep;
     // 精细滚轮缩放倍率
-    static const double kFineZoomStep;
+    double m_fineZoomStep;
     // 缩放绝对下限
-    static const double kMinimumScale;
+    double m_minimumScale;
     // 相对适配的最小缩放
-    static const double kMinimumFitScale;
+    double m_minimumFitScale;
     // 相对适配的最大缩放
-    static const double kMaximumFitScale;
+    double m_maximumFitScale;
     // 极小适配比例时最小倍率范围
-    static const double kMinimumZoomRange;
+    double m_minimumZoomRange;
     // 读取树深度上限
-    static const int32_t kMaximumTreeDepth;
+    int32_t m_maximumTreeDepth;
     // 单树读取节点上限
-    static const int32_t kMaximumNodes;
+    int32_t m_maximumNodes;
     // 配置读取图层上限
-    static const int32_t kMaximumLayers;
+    int32_t m_maximumLayers;
     // UTF16配置内容字节上限
-    static const int32_t kMaximumProfileBytes;
+    int32_t m_maximumProfileBytes;
 };

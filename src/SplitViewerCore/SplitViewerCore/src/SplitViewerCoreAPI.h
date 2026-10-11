@@ -6,8 +6,8 @@
 
 #ifdef _WIN32
 #if defined _DEBUG
-#pragma comment(lib,"SplitViewerCored.lib")
+#pragma comment(lib, "SplitViewerCored.lib")
 #else
-#pragma comment(lib,"SplitViewerCore.lib")
+#pragma comment(lib, "SplitViewerCore.lib")
 #endif
 #endif

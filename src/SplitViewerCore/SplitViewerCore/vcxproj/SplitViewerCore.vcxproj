@@ -19,12 +19,19 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\SplitViewerCoreResult.h" />
+    <ClInclude Include="..\src\SplitViewerCoreSnapshotHelper.h" />
+    <ClInclude Include="..\src\SplitViewerCoreMacroLib.h" />
+    <ClInclude Include="..\src\SplitViewerCoreMacroDll.h" />
+    <ClInclude Include="..\src\SplitViewerCoreFormat.h" />
     <ClInclude Include="..\src\SplitViewerCoreAPI.h" />
     <ClInclude Include="..\src\SplitViewerCoreMacro.h" />
     <ClInclude Include="..\src\SplitViewerCore.h" />
     <ClInclude Include="..\src\SplitViewerCoreProfile.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\SplitViewerCoreSnapshotHelper.cpp" />
+    <ClCompile Include="..\src\SplitViewerCoreFormat.cpp" />
     <ClCompile Include="..\src\SplitViewerCore.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -199,5 +206,9 @@
     <ClCompile Include="..\src\SplitViewerCoreRect.cpp" />
     <ClInclude Include="..\src\SplitViewerCoreRect.h" />
     <ClInclude Include="..\src\SplitViewerCoreTypes.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\SplitViewerCoreMoveHelper.cpp" />
+    <ClInclude Include="..\src\SplitViewerCoreMoveHelper.h" />
   </ItemGroup>
 </Project>

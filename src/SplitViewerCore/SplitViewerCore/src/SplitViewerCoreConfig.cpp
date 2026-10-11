@@ -1,31 +1,121 @@
 ﻿#include "SplitViewerCoreConfig.h"
+#include <cmath>
 
-const uint8_t SplitViewerCoreConfig::PngSignature[8] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
-const uint8_t SplitViewerCoreConfig::PngIend[4] = { 'I', 'E', 'N', 'D' };
-const uint8_t SplitViewerCoreConfig::ConfigChunk[4] = { 's', 'v', 'C', 'f' };
-const char SplitViewerCoreConfig::LegacyMarker[35] = "\r\n--SPLITVIEWER_CONFIG_UTF16LE--\r\n";
+SplitViewerCoreConfig::SplitViewerCoreConfig() :
+m_defaultStageAspect(4.0 / 3.0),
+m_minimumStageAspect(0.1),
+m_defaultSplitRatio(0.5),
+m_minimumSplitRatio(0.02),
+m_maximumSplitRatio(0.98),
+m_layerOrigin(0.22),
+m_layerOffset(0.03),
+m_layerOffsetPeriod(6),
+m_layerExtent(0.46),
+m_layerOriginLimit(0.72),
+m_defaultLayerStart(0.25),
+m_defaultLayerEnd(0.75),
+m_profileMinimumLayerWidth(0.12),
+m_profileMinimumLayerHeight(0.10),
+m_zoomStep(1.05),
+m_fineZoomStep(1.01),
+m_minimumScale(0.0001),
+m_minimumFitScale(0.05),
+m_maximumFitScale(50.0),
+m_minimumZoomRange(10.0),
+m_maximumTreeDepth(128),
+m_maximumNodes(4096),
+m_maximumLayers(256),
+m_maximumProfileBytes(16 * 1024 * 1024)
+{
 
-const double SplitViewerCoreConfig::kDefaultStageAspect = 4.0 / 3.0;
-const double SplitViewerCoreConfig::kMinimumStageAspect = 0.1;
-const double SplitViewerCoreConfig::kDefaultSplitRatio = 0.5;
-const double SplitViewerCoreConfig::kMinimumSplitRatio = 0.02;
-const double SplitViewerCoreConfig::kMaximumSplitRatio = 0.98;
-const double SplitViewerCoreConfig::kLayerOrigin = 0.22;
-const double SplitViewerCoreConfig::kLayerOffset = 0.03;
-const int32_t SplitViewerCoreConfig::kLayerOffsetPeriod = 6;
-const double SplitViewerCoreConfig::kLayerExtent = 0.46;
-const double SplitViewerCoreConfig::kLayerOriginLimit = 0.72;
-const double SplitViewerCoreConfig::kDefaultLayerStart = 0.25;
-const double SplitViewerCoreConfig::kDefaultLayerEnd = 0.75;
-const double SplitViewerCoreConfig::kProfileMinimumLayerWidth = 0.12;
-const double SplitViewerCoreConfig::kProfileMinimumLayerHeight = 0.10;
-const double SplitViewerCoreConfig::kZoomStep = 1.05;
-const double SplitViewerCoreConfig::kFineZoomStep = 1.01;
-const double SplitViewerCoreConfig::kMinimumScale = 0.0001;
-const double SplitViewerCoreConfig::kMinimumFitScale = 0.05;
-const double SplitViewerCoreConfig::kMaximumFitScale = 50.0;
-const double SplitViewerCoreConfig::kMinimumZoomRange = 10.0;
-const int32_t SplitViewerCoreConfig::kMaximumTreeDepth = 128;
-const int32_t SplitViewerCoreConfig::kMaximumNodes = 4096;
-const int32_t SplitViewerCoreConfig::kMaximumLayers = 256;
-const int32_t SplitViewerCoreConfig::kMaximumProfileBytes = 16 * 1024 * 1024;
+}
+
+bool SplitViewerCoreConfig::isValid() const
+{
+    if (!std::isfinite(m_defaultStageAspect) || m_defaultStageAspect < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_minimumStageAspect) || m_minimumStageAspect < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_defaultSplitRatio) || m_defaultSplitRatio < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_minimumSplitRatio) || m_minimumSplitRatio < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_maximumSplitRatio) || m_maximumSplitRatio < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_layerOrigin) || m_layerOrigin < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_layerOffset) || m_layerOffset < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_layerExtent) || m_layerExtent < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_layerOriginLimit) || m_layerOriginLimit < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_defaultLayerStart) || m_defaultLayerStart < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_defaultLayerEnd) || m_defaultLayerEnd < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_profileMinimumLayerWidth) || m_profileMinimumLayerWidth < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_profileMinimumLayerHeight) || m_profileMinimumLayerHeight < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_zoomStep) || m_zoomStep < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_fineZoomStep) || m_fineZoomStep < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_minimumScale) || m_minimumScale < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_minimumFitScale) || m_minimumFitScale < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_maximumFitScale) || m_maximumFitScale < 0.0)
+    {
+        return false;
+    }
+    if (!std::isfinite(m_minimumZoomRange) || m_minimumZoomRange < 0.0)
+    {
+        return false;
+    }
+    return m_minimumStageAspect > 0.0 && m_defaultStageAspect >= m_minimumStageAspect && m_minimumSplitRatio > 0.0 &&
+        m_maximumSplitRatio < 1.0 && m_minimumSplitRatio <= m_defaultSplitRatio &&
+        m_defaultSplitRatio <= m_maximumSplitRatio && m_layerOffsetPeriod > 0 && m_layerExtent > 0.0 &&
+        m_layerExtent <= 1.0 && m_layerOriginLimit <= 1.0 && m_layerOrigin <= m_layerOriginLimit &&
+        m_defaultLayerStart < m_defaultLayerEnd && m_defaultLayerEnd <= 1.0 && m_profileMinimumLayerWidth > 0.0 &&
+        m_profileMinimumLayerWidth <= 1.0 && m_profileMinimumLayerHeight > 0.0 && m_profileMinimumLayerHeight <= 1.0 &&
+        m_zoomStep > 1.0 && m_fineZoomStep > 1.0 && m_minimumScale > 0.0 && m_minimumFitScale > 0.0 &&
+        m_maximumFitScale >= m_minimumFitScale && m_minimumZoomRange >= 1.0 && m_maximumTreeDepth > 0 &&
+        m_maximumTreeDepth <= 256 && m_maximumNodes > 0 && m_maximumNodes <= 1000000 && m_maximumLayers > 0 &&
+        m_maximumLayers <= 1000000 && m_maximumProfileBytes >= 2;
+}

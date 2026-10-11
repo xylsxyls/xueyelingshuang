@@ -1,6 +1,21 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClInclude Include="..\src\SplitViewerCoreResult.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SplitViewerCoreSnapshotHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SplitViewerCoreMacroLib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SplitViewerCoreMacroDll.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SplitViewerCoreFormat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\SplitViewerCore.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -20,6 +35,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\SplitViewerCoreSnapshotHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SplitViewerCoreFormat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\SplitViewerCore.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -59,5 +80,9 @@
   </ItemGroup>
   <ItemGroup>
     <Filter Include="头文件\Codec"><UniqueIdentifier>{dbcacae5-dad0-4d2e-bd93-9376aec5402c}</UniqueIdentifier></Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\SplitViewerCoreMoveHelper.cpp"><Filter>源文件\Geometry</Filter></ClCompile>
+    <ClInclude Include="..\src\SplitViewerCoreMoveHelper.h"><Filter>头文件\Geometry</Filter></ClInclude>
   </ItemGroup>
 </Project>

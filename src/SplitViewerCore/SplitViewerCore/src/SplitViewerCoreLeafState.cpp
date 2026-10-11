@@ -26,5 +26,6 @@ void SplitViewerCoreLeafState::clear()
 
 bool SplitViewerCoreLeafState::hasContent() const
 {
-    return hasImage || contentKind == SPLITVIEWER_CORE_CONTENT_EMBEDDED;
+    return hasImage || contentKind == SPLITVIEWER_CORE_CONTENT_EMBEDDED ||
+        (contentKind == SPLITVIEWER_CORE_CONTENT_VIDEO && !path.empty());
 }
