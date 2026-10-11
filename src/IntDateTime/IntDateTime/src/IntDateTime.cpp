@@ -210,7 +210,7 @@ bool IntDateTime::localTime(time_t time, struct tm& timeInfo)
 	timeInfo = tm();
 #ifdef _WIN32
 	return localtime_s(&timeInfo, &time) == 0;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	return localtime_r(&time, &timeInfo) != nullptr;
 #else
 	(void)time;
