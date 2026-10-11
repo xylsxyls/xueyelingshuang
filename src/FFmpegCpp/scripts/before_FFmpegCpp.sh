@@ -14,6 +14,14 @@ libname="ffmpeg"
 ffmpegpath=$xueyelingshuang"/tools/"$libname
 includecreatedir=0
 
+# Cross builds use the SDK entry in LumaPlayerCore/scripts/PortableCore.cmake.
+# Never treat macOS/Android/iOS as Windows and copy incompatible vendor headers.
+if [[ "${LUMAPLAYER_TARGET_PLATFORM:-}" == android || "${LUMAPLAYER_TARGET_PLATFORM:-}" == ios ||
+      "${LUMAPLAYER_TARGET_PLATFORM:-}" == macos || "$OSTYPE" == darwin* ]]; then
+    echo 'Use -DLUMAPLAYER_DEPS_ROOT=<target SDK> for Core cross builds; shared Windows include/lib are not a target SDK.' >&2
+    exit 1
+fi
+
 if [[ "$OSTYPE" =~ ^linux ]]; then
     includepath=$ffmpegpath"/include/ffmpeglinux/"
 else
@@ -46,46 +54,53 @@ fi
 
 if [[ "$OSTYPE" =~ ^linux ]]; then
     ffmpeglibpath=$ffmpegpath"/lib/"$bitfolder"/"
-    for libfile in libavformatstatic libavcodecstatic libswscalestatic libswresamplestatic libavutilstatic
+    for libfile in libavformat.so libavcodec.so libswscale.so libswresample.so libavutil.so
     do
-        cp -rf "$ffmpeglibpath$libfile$libbitsuffix.a" "$xueyelingshuang/lib/"
+        if [[ ! -f "$ffmpeglibpath$libfile" ]]; then
+            echo "Missing shared FFmpeg library: $ffmpeglibpath$libfile; rebuild the target SDK with --enable-shared --disable-static." >&2
+            exit 1
+        fi
+        cp -Pf "$ffmpeglibpath$libfile"* "$xueyelingshuang/lib/" || exit 1
     done
 else
     if [[ $3 == 'debug' ]]; then
         ffmpeglibpath=$ffmpegpath"/lib/"$bitfolder"/MD/"
-        for libfile in avformat avcodec swscale swresample avutil
-        do
-            cp -rf "$ffmpeglibpath$libfile.lib" "$xueyelingshuang/lib/"
-        done
-        for dllfile in avformat-60.dll avcodec-60.dll swscale-7.dll swresample-4.dll avutil-58.dll
-        do
-            cp -rf "$ffmpeglibpath$dllfile" "$xueyelingshuang/lib/"
-        done
     else
         ffmpeglibpath=$ffmpegpath"/lib/"$bitfolder"/"
-        for libfile in avformatstatic avcodecstatic swscalestatic swresamplestatic avutilstatic
-        do
-            cp -rf "$ffmpeglibpath$libfile$libbitsuffix.lib" "$xueyelingshuang/lib/"
-        done
     fi
+    for libfile in avformat avcodec swscale swresample avutil
+    do
+        cp -f "$ffmpeglibpath$libfile.lib" "$xueyelingshuang/lib/" || exit 1
+    done
+    for dllfile in avformat-60.dll avcodec-60.dll swscale-7.dll swresample-4.dll avutil-58.dll
+    do
+        cp -f "$ffmpeglibpath$dllfile" "$xueyelingshuang/lib/" || exit 1
+    done
 fi
 
-# Sonic is a private static dependency; match the wrapper's CRT and architecture.
-sonicpath="$xueyelingshuang/tools/sonic"
-sonicinclude="$sonicpath/include/sonicwindows"
-soniclib="$sonicpath/lib/$bitfolder"
-sonicname="sonicstatic$libbitsuffix.lib"
+# SoundTouch is a private dependency; keep the archive, license and CRT variants in tools.
+soundtouchpath="$xueyelingshuang/tools/LumaPlayerKaraoke/soundtouch"
+soundtouchinclude="$soundtouchpath/include/soundtouchwindows"
+soundtouchlib="$soundtouchpath/lib/$bitfolder"
+soundtouchname="SoundTouchDLL$libbitsuffix.lib"
+soundtouchruntime="SoundTouchDLL.dll"
 if [[ "$OSTYPE" =~ ^linux ]]; then
-    sonicinclude="$sonicpath/include/soniclinux"
-    sonicname="libsonicstatic$libbitsuffix.a"
+    soundtouchinclude="$soundtouchpath/include/soundtouchlinux"
+    soundtouchname="libSoundTouchDLL.so"
+    soundtouchruntime="$soundtouchname"
 elif [[ $3 == 'debug' ]]; then
-    soniclib="$soniclib/MD"
-    sonicname="sonicstatic${libbitsuffix}d.lib"
+    soundtouchlib="$soundtouchlib/MD"
+    soundtouchname="SoundTouchDLL${libbitsuffix}d.lib"
+    soundtouchruntime="SoundTouchDLLd.dll"
 fi
-if [[ ! -f "$soniclib/$sonicname" || ! -f "$sonicinclude/sonic.h" ]]; then
-    echo "Missing Sonic headers or matching library: $soniclib/$sonicname" >&2
+if [[ ! -f "$soundtouchlib/$soundtouchname" || ! -f "$soundtouchlib/$soundtouchruntime" ||
+      ! -f "$soundtouchinclude/SoundTouchDLL.h" || ! -f "$soundtouchinclude/SoundTouch.h" ]]; then
+    echo "Missing SoundTouch headers or matching library: $soundtouchlib/$soundtouchname" >&2
     exit 1
 fi
-mkdir -p "$xueyelingshuang/include/sonicinclude"
-cp -f "$sonicinclude/sonic.h" "$xueyelingshuang/include/sonicinclude/" || exit 1
-cp -f "$soniclib/$sonicname" "$xueyelingshuang/lib/" || exit 1
+mkdir -p "$xueyelingshuang/include/soundtouchinclude"
+cp -f "$soundtouchinclude/"*.h "$xueyelingshuang/include/soundtouchinclude/" || exit 1
+cp -f "$soundtouchlib/$soundtouchname" "$xueyelingshuang/lib/" || exit 1
+if [[ "$soundtouchname" != "$soundtouchruntime" ]]; then
+    cp -f "$soundtouchlib/$soundtouchruntime" "$xueyelingshuang/lib/" || exit 1
+fi

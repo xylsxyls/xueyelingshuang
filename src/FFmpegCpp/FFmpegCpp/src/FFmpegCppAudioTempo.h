@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/** 实例级流式音频时间伸缩；调用方串行访问，内部持有并释放Sonic流 */
+/** 实例级流式音乐时间伸缩；调用方串行访问，内部持有并释放SoundTouch浮点流 */
 class FFmpegCppAPI FFmpegCppAudioTempo
 {
 public:
@@ -28,6 +28,12 @@ public:
     @return 参数及流是否有效
     */
     bool setRate(int32_t ratePermille);
+
+    /** 设置音高偏移，不改变当前播放时长
+    @param [in] semitones 半音数，范围-7至+7，0表示原调
+    @return 参数及流是否有效
+    */
+    bool setPitchSemitones(int32_t semitones);
 
     /** 追加完整交错PCM帧，数据只在调用中借用
     @param [in] samples 含frames乘声道数个样本

@@ -19,27 +19,11 @@
 #endif
 
 #ifdef _WIN32
-#ifdef _DEBUG
 #pragma comment(lib, "avformat.lib")
 #pragma comment(lib, "avcodec.lib")
 #pragma comment(lib, "swscale.lib")
 #pragma comment(lib, "swresample.lib")
 #pragma comment(lib, "avutil.lib")
-#else
-#ifdef _WIN64
-#pragma comment(lib, "avformatstatic64.lib")
-#pragma comment(lib, "avcodecstatic64.lib")
-#pragma comment(lib, "swscalestatic64.lib")
-#pragma comment(lib, "swresamplestatic64.lib")
-#pragma comment(lib, "avutilstatic64.lib")
-#else
-#pragma comment(lib, "avformatstatic32.lib")
-#pragma comment(lib, "avcodecstatic32.lib")
-#pragma comment(lib, "swscalestatic32.lib")
-#pragma comment(lib, "swresamplestatic32.lib")
-#pragma comment(lib, "avutilstatic32.lib")
-#endif
-#endif
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "user32.lib")

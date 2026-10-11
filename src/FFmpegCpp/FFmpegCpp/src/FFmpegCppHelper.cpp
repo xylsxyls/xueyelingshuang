@@ -4,6 +4,7 @@
 #include <cctype>
 #include <iomanip>
 #include <sstream>
+#include <cstring>
 
 #ifdef _MSC_VER
 #pragma warning(disable:4819)
@@ -12,6 +13,52 @@
 extern "C"
 {
 #include <ffmpeg/libavcodec/avcodec.h>
+#include <ffmpeg/libswscale/swscale.h>
+}
+
+bool FFmpegCppHelper::fitBgraFrame(const std::vector<unsigned char>& pixels, int32_t width, int32_t height,
+    int32_t stride, int32_t outputWidth, int32_t outputHeight, std::vector<unsigned char>* output)
+{
+    if (!output || width < 1 || height < 1 || outputWidth < 1 || outputHeight < 1 ||
+        width > 32768 || height > 32768 || outputWidth > 32768 || outputHeight > 32768 ||
+        stride < width * 4 || static_cast<uint64_t>(stride) * height > pixels.size() ||
+        static_cast<uint64_t>(outputWidth) * outputHeight * 4 > 512ULL * 1024 * 1024)
+    {
+        return false;
+    }
+    try
+    {
+        output->assign(static_cast<size_t>(outputWidth) * outputHeight * 4, 0);
+        int32_t fitWidth = width, fitHeight = height;
+        if (width > outputWidth || height > outputHeight || outputWidth - width > 1 || outputHeight - height > 1)
+        {
+            const double factor = (std::min)(static_cast<double>(outputWidth) / width, static_cast<double>(outputHeight) / height);
+            fitWidth = (std::max)(1, static_cast<int32_t>(width * factor));
+            fitHeight = (std::max)(1, static_cast<int32_t>(height * factor));
+        }
+        unsigned char* destination = output->data() + ((outputHeight - fitHeight) / 2 * outputWidth + (outputWidth - fitWidth) / 2) * 4;
+        if (width == fitWidth && height == fitHeight)
+        {
+            for (int32_t y = 0; y < height; ++y)
+            {
+                std::memcpy(destination + y * outputWidth * 4, pixels.data() + static_cast<size_t>(y) * stride, width * 4);
+            }
+            return true;
+        }
+        SwsContext* scaler = sws_getContext(width, height, AV_PIX_FMT_BGRA, fitWidth, fitHeight,
+            AV_PIX_FMT_BGRA, SWS_BICUBIC, nullptr, nullptr, nullptr);
+        if (!scaler) return false;
+        const unsigned char* inputs[4] = {pixels.data(), nullptr, nullptr, nullptr};
+        unsigned char* outputs[4] = {destination, nullptr, nullptr, nullptr};
+        const int inputStride[4] = {stride, 0, 0, 0}, outputStride[4] = {outputWidth * 4, 0, 0, 0};
+        const int lines = sws_scale(scaler, inputs, inputStride, 0, height, outputs, outputStride);
+        sws_freeContext(scaler);
+        return lines == fitHeight;
+    }
+    catch (...)
+    {
+        return false;
+    }
 }
 
 static std::string ffmpegCppLowerString(const std::string& value)

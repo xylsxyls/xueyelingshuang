@@ -162,7 +162,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>avformatstatic32.lib;avcodecstatic32.lib;swscalestatic32.lib;swresamplestatic32.lib;avutilstatic32.lib;ws2_32.lib;ole32.lib;user32.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>avformat.lib;avcodec.lib;swscale.lib;swresample.lib;avutil.lib;ws2_32.lib;ole32.lib;user32.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -185,17 +185,17 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>avformatstatic64.lib;avcodecstatic64.lib;swscalestatic64.lib;swresamplestatic64.lib;avutilstatic64.lib;ws2_32.lib;ole32.lib;user32.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>avformat.lib;avcodec.lib;swscale.lib;swresample.lib;avutil.lib;ws2_32.lib;ole32.lib;user32.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <PropertyGroup>
-    <SonicBit Condition="'$(Platform)'=='Win32'">32</SonicBit>
-    <SonicBit Condition="'$(Platform)'=='x64'">64</SonicBit>
-    <SonicDebugSuffix Condition="'$(Configuration)'=='Debug'">d</SonicDebugSuffix>
+    <SoundTouchBit Condition="'$(Platform)'=='Win32'">32</SoundTouchBit>
+    <SoundTouchBit Condition="'$(Platform)'=='x64'">64</SoundTouchBit>
+    <SoundTouchDebugSuffix Condition="'$(Configuration)'=='Debug'">d</SoundTouchDebugSuffix>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>sonicstatic$(SonicBit)$(SonicDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SoundTouchDLL$(SoundTouchBit)$(SoundTouchDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
@@ -205,6 +205,10 @@
     <ClInclude Include="..\src\FFmpegCppAdjacentReader.h" />
     <ClCompile Include="..\src\FFmpegCppAdjacentReader.cpp" />
     <ClInclude Include="..\src\FFmpegCppAudioTempo.h" />
+    <ClInclude Include="..\src\FFmpegCppMediaWriter.h" />
+    <ClCompile Include="..\src\FFmpegCppMediaWriter.cpp" />
+    <ClInclude Include="..\src\FFmpegCppNativeMediaWriter.h" />
+    <ClCompile Include="..\src\FFmpegCppNativeMediaWriter.cpp" />
     <ClCompile Include="..\src\FFmpegCppAudioTempo.cpp" />
   </ItemGroup>
 </Project>

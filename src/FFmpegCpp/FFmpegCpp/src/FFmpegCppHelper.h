@@ -142,4 +142,17 @@ public:
     @return 返回HH:MM:SS.mmm格式文本
     */
     static std::string formatMilliseconds(int64_t milliseconds);
+
+    /** Fit BGRA pixels into a fixed canvas with black padding, preserving aspect ratio
+    @param [in] pixels Source top-down BGRA bytes
+    @param [in] width Source width
+    @param [in] height Source height
+    @param [in] stride Source positive row stride
+    @param [in] outputWidth Canvas width
+    @param [in] outputHeight Canvas height
+    @param [out] output Contiguous BGRA canvas
+    @return True on valid conversion; odd dimensions are padded, not cropped
+    */
+    static bool fitBgraFrame(const std::vector<unsigned char>& pixels, int32_t width, int32_t height,
+        int32_t stride, int32_t outputWidth, int32_t outputHeight, std::vector<unsigned char>* output);
 };

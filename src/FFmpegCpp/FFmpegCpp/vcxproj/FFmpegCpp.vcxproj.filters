@@ -63,6 +63,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\FFmpegCppAudioTempo.h" />
+    <ClInclude Include="..\src\FFmpegCppMediaWriter.h" />
+    <ClCompile Include="..\src\FFmpegCppMediaWriter.cpp" />
+    <ClInclude Include="..\src\FFmpegCppNativeMediaWriter.h" />
+    <ClCompile Include="..\src\FFmpegCppNativeMediaWriter.cpp" />
     <ClCompile Include="..\src\FFmpegCppAudioTempo.cpp" />
   </ItemGroup>
 </Project>
