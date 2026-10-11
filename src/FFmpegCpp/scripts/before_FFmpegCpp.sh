@@ -14,7 +14,7 @@ libname="ffmpeg"
 ffmpegpath=$xueyelingshuang"/tools/"$libname
 includecreatedir=0
 
-# Cross builds use the SDK entry in LumaPlayerCore/scripts/PortableCore.cmake.
+# Cross builds use the SDK branch in LumaPlayerCore/scripts/CMakeLists.txt.
 # Never treat macOS/Android/iOS as Windows and copy incompatible vendor headers.
 if [[ "${LUMAPLAYER_TARGET_PLATFORM:-}" == android || "${LUMAPLAYER_TARGET_PLATFORM:-}" == ios ||
       "${LUMAPLAYER_TARGET_PLATFORM:-}" == macos || "$OSTYPE" == darwin* ]]; then
