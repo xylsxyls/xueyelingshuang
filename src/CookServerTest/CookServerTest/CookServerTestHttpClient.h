@@ -113,6 +113,11 @@ public:
 	             const std::map<std::string, std::string>& headers,
 	             CookServerTestHttpResponse& response) const;
 
+	/** 设置默认Bearer token；显式传入Authorization头的请求不会被覆盖
+	@param [in] token 登录token；传空值表示不自动认证
+	*/
+	void setDefaultToken(const std::string& token);
+
 private:
 	/** 初始化当前平台socket库
 	@param [out] error 错误信息
@@ -199,6 +204,8 @@ private:
 #endif
 	// 目标主机地址
 	std::string m_host;
+	// 默认认证token；测试需要验证未登录时临时清空
+	std::string m_defaultToken;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

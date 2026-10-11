@@ -1,6 +1,7 @@
 ﻿#include "CookServerTestHttpClient.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include <cctype>
 #include <cstring>
 #include <sstream>
 
@@ -79,6 +80,11 @@ bool CookServerTestHttpClient::request(const std::string& method,
                                        const std::map<std::string, std::string>& headers,
                                        CookServerTestHttpResponse& response) const
 {
+	std::map<std::string, std::string> effectiveHeaders = headers;
+	if (!m_defaultToken.empty() && effectiveHeaders.find("Authorization") == effectiveHeaders.end())
+	{
+		effectiveHeaders["Authorization"] = "Bearer " + m_defaultToken;
+	}
 	std::chrono::high_resolution_clock::time_point beginTime = CSystem::GetHighTickCount();
 	response = CookServerTestHttpResponse();
 
@@ -94,7 +100,7 @@ bool CookServerTestHttpClient::request(const std::string& method,
 	bool ok = false;
 	if (connectServer(socketValue, error))
 	{
-		std::string requestText = buildRequestText(method, path, body, headers);
+		std::string requestText = buildRequestText(method, path, body, effectiveHeaders);
 		std::string rawResponse;
 		if (sendAll(socketValue, requestText, error) && receiveAll(socketValue, rawResponse, error))
 		{
@@ -119,6 +125,11 @@ bool CookServerTestHttpClient::request(const std::string& method,
 	response.m_costMs = CSystem::GetHighTickCountMilliRunTime(beginTime);
 	response.m_networkOk = ok;
 	return ok;
+}
+
+void CookServerTestHttpClient::setDefaultToken(const std::string& token)
+{
+	m_defaultToken = token;
 }
 
 bool CookServerTestHttpClient::initializeSocketLibrary(std::string& error) const
@@ -480,7 +491,20 @@ std::string CookServerTestHttpClient::buildRequestText(const std::string& method
 	oss << "Host: " << m_host << ":" << m_port << "\r\n";
 	oss << "User-Agent: CookServerTest/1.0\r\n";
 	oss << "Accept: application/json\r\n";
-	if (!body.empty())
+	bool contentTypeProvided = false;
+	for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it)
+	{
+		if (it->first.size() == 12)
+		{
+			std::string name = it->first;
+			for (size_t i = 0; i < name.size(); ++i)
+			{
+				name[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(name[i])));
+			}
+			if (name == "content-type") contentTypeProvided = true;
+		}
+	}
+	if (!body.empty() && !contentTypeProvided)
 	{
 		oss << "Content-Type: application/json; charset=utf-8\r\n";
 	}

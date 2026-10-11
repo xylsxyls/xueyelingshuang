@@ -15,13 +15,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CookServerTestIdentityCases.h"><Filter>头文件</Filter></ClInclude>
     <ClInclude Include="CookServerTest.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="CookServerTestConfig.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="CookServerTestDocumentWriter.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="CookServerTestHelper.h">
@@ -39,15 +37,19 @@
     <ClInclude Include="CookServerTestRunner.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="CookServerTestMediaCases.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="CookServerTestMenuSocialCases.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="CookServerTestCoverCases.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="CookServerTestUiRefineCases.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="CookServerTestFeedCases.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="CookServerTestStressTask.h"><Filter>头文件</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CookServerTestIdentityCases.cpp"><Filter>源文件</Filter></ClCompile>
     <ClCompile Include="CookServerTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="CookServerTestConfig.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="CookServerTestDocumentWriter.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="CookServerTestHelper.cpp">
@@ -65,5 +67,11 @@
     <ClCompile Include="CookServerTestRunner.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="CookServerTestMediaCases.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="CookServerTestMenuSocialCases.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="CookServerTestCoverCases.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="CookServerTestUiRefineCases.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="CookServerTestFeedCases.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="CookServerTestStressTask.cpp"><Filter>源文件</Filter></ClCompile>
   </ItemGroup>
 </Project>

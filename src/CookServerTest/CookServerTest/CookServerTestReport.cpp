@@ -23,7 +23,16 @@ std::string CookServerTestReport::build(const std::vector<CookServerTestCaseResu
 	oss << "CookServerTest测试报告\r\n";
 	oss << "生成时间：" << currentTimeText() << "\r\n";
 	oss << "测试目标：http://" << g_cookServerTestConfig.m_host << ":" << g_cookServerTestConfig.m_port << "\r\n";
-	oss << "整体结果：" << (allPass ? "通过" : "失败") << "\r\n";
+	int32_t notRunCount = 0;
+	int32_t passedCount = 0;
+	for (size_t i = 0; i < caseResults.size(); ++i)
+	{
+		if (caseResults[i].m_notRun) ++notRunCount;
+		if (caseResults[i].m_pass) ++passedCount;
+	}
+	oss << "整体结果：" << (allPass ? "通过（仅已执行项）" : "失败") << "\r\n";
+	oss << "功能通过数量：" << passedCount << "\r\n";
+	oss << "功能未执行数量：" << notRunCount << "\r\n";
 	oss << "\r\n";
 
 	oss << "一、功能测试结果\r\n";
@@ -31,7 +40,8 @@ std::string CookServerTestReport::build(const std::vector<CookServerTestCaseResu
 	for (size_t i = 0; i < caseResults.size(); ++i)
 	{
 		const CookServerTestCaseResult& result = caseResults[i];
-		oss << (result.m_pass ? "[PASS] " : "[FAIL] ");
+		oss << (result.m_notRun ? "[NOT-RUN] " : result.m_pass ? "[PASS] " : "[FAIL] ");
+		oss << result.m_id << " ";
 		oss << result.m_name;
 		oss << " status=" << result.m_statusCode;
 		oss << " costMs=" << result.m_costMs;
@@ -84,9 +94,27 @@ std::string CookServerTestReport::build(const std::vector<CookServerTestCaseResu
 	oss << "GET /api/videos/poster\r\n";
 	oss << "POST /api/feed/watch\r\n";
 	oss << "GET /api/account\r\n";
-	oss << "POST /api/account/recharge\r\n";
 	oss << "POST /api/recipes/purchase\r\n";
+    oss << "POST /api/recipes/join\r\n";
+    oss << "POST /api/recipes/menu/remove\r\n";
+    oss << "GET /api/recipes/detail\r\n";
+    oss << "GET /api/users/profile\r\n";
+    oss << "POST /api/users/profile/update\r\n";
+    oss << "GET /api/users/feed\r\n";
+    oss << "GET /api/users/fans\r\n";
+    oss << "GET /api/videos/detail\r\n";
+    oss << "POST /api/follows/toggle\r\n";
+    oss << "GET /api/messages/list\r\n";
+    oss << "GET /api/messages/conversation\r\n";
+    oss << "POST /api/messages/send\r\n";
+    oss << "POST /api/messages/read\r\n";
+    oss << "POST /api/videos/upload/start/chunk/complete/cancel\r\n";
+    oss << "POST /api/videos/publish\r\n";
+    oss << "POST /api/recipes/custom/save/publish\r\n";
 	oss << "POST /api/favorites/toggle\r\n";
+    oss << "POST /api/likes/toggle\r\n";
+    oss << "GET /api/recipes/personalization/detail\r\n";
+    oss << "POST /api/recipes/personalization/save/reset\r\n";
 	oss << "POST /api/plan/preview\r\n";
 	oss << "POST /api/plan/start\r\n";
 	oss << "POST /api/voice/prepare\r\n";

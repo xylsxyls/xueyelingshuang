@@ -38,21 +38,6 @@ public:
 	*/
 	std::string reportPath() const;
 
-	/** 获取CookServer功能说明文档完整路径，优先输出到common/CookServer目录
-	@return 返回CookServer功能说明文档完整路径
-	*/
-	std::string cookServerFeatureDocumentPath() const;
-
-	/** 获取CookServer部署说明文档完整路径，优先输出到common/CookServer目录
-	@return 返回CookServer部署说明文档完整路径
-	*/
-	std::string cookServerDeployDocumentPath() const;
-
-	/** 获取CookServer文档目录
-	@return 返回CookServer文档目录，目录不存在时返回测试程序所在目录
-	*/
-	std::string cookServerDocumentDirectoryPath() const;
-
 private:
 	/** 从命令行参数中解析--key=value形式的配置项
 	@param [in] argument 单个命令行参数
@@ -80,10 +65,6 @@ public:
 	std::string m_userIdPrefix;
 	// 测试报告输出文件名
 	std::string m_reportFileName;
-	// CookServer功能说明文档文件名
-	std::string m_featureDocumentFileName;
-	// CookServer部署文档文件名
-	std::string m_deployDocumentFileName;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -99,6 +80,8 @@ public:
 	int32_t m_stressLoopCount;
 	// 是否执行压力测试
 	bool m_enableStress;
+	// 是否允许明确禁用语音的环境；合成用例报告为未执行，不计通过
+	bool m_allowDisabledVoice;
 	// 是否已经完成初始化
 	bool m_isInit;
 };

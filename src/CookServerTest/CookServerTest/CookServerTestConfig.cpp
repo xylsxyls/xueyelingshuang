@@ -16,6 +16,7 @@ m_maxResponseBytes(0),
 m_stressThreadCount(0),
 m_stressLoopCount(0),
 m_enableStress(false),
+m_allowDisabledVoice(false),
 m_isInit(false)
 {
 
@@ -35,9 +36,8 @@ bool CookServerTestConfig::init(int32_t argc, char* argv[])
 	m_stressThreadCount = 16;
 	m_stressLoopCount = 50;
 	m_enableStress = true;
+	m_allowDisabledVoice = false;
 	m_reportFileName = "CookServerTestReport.txt";
-	m_featureDocumentFileName = "CookServer功能说明文档.txt";
-	m_deployDocumentFileName = "CookServer部署文档.txt";
 	m_userIdPrefix = "cook_test_" +
 		CStringManager::toStringInt32(static_cast<int32_t>(CSystem::currentProcessPid())) +
 		"_" +
@@ -60,14 +60,13 @@ void CookServerTestConfig::uninit()
 	m_host.clear();
 	m_userIdPrefix.clear();
 	m_reportFileName.clear();
-	m_featureDocumentFileName.clear();
-	m_deployDocumentFileName.clear();
 	m_port = 0;
 	m_timeoutMs = 0;
 	m_maxResponseBytes = 0;
 	m_stressThreadCount = 0;
 	m_stressLoopCount = 0;
 	m_enableStress = false;
+	m_allowDisabledVoice = false;
 	m_isInit = false;
 }
 
@@ -76,28 +75,13 @@ std::string CookServerTestConfig::reportPath() const
 	return CSystem::GetCurrentExePath() + m_reportFileName;
 }
 
-std::string CookServerTestConfig::cookServerFeatureDocumentPath() const
-{
-	return cookServerDocumentDirectoryPath() + m_featureDocumentFileName;
-}
-
-std::string CookServerTestConfig::cookServerDeployDocumentPath() const
-{
-	return cookServerDocumentDirectoryPath() + m_deployDocumentFileName;
-}
-
-std::string CookServerTestConfig::cookServerDocumentDirectoryPath() const
-{
-	std::string documentPath = CSystem::GetCurrentExePath() + "../common/CookServer/";
-	if (CSystem::DirOrFileExist(documentPath))
-	{
-		return documentPath;
-	}
-	return CSystem::GetCurrentExePath();
-}
-
 bool CookServerTestConfig::parseArgument(const std::string& argument)
 {
+	if (argument == "--allowDisabledVoice")
+	{
+		m_allowDisabledVoice = true;
+		return true;
+	}
 	if (argument.find("--host=") == 0)
 	{
 		m_host = argument.substr(7);

@@ -146,13 +146,6 @@ private:
 	*/
 	std::string accountQueryPath(const std::string& userId) const;
 
-	/** 构造充值JSON
-	@param [in] userId 用户ID
-	@param [in] coins 金币数量
-	@return 返回JSON文本
-	*/
-	std::string rechargeBody(const std::string& userId, int32_t coins) const;
-
 	/** 构造菜谱ID JSON
 	@param [in] userId 用户ID
 	@param [in] recipeId 菜谱ID
@@ -180,6 +173,10 @@ private:
 #endif
 	// 功能测试结果列表
 	std::vector<CookServerTestCaseResult> m_caseResults;
+	// 功能测试注册的会话token，所有受保护请求都使用该token
+	std::string m_authToken;
+    // 功能账号稳定ID，用于压力测试的公开主页读取。
+    std::string m_authUserId;
 	// 压力测试结果写入锁
 	std::mutex m_stressMutex;
 	// 压力测试汇总

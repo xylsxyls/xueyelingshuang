@@ -24,6 +24,10 @@ struct CookServerTestCaseResult
 #endif
 	// 测试是否通过
 	bool m_pass;
+	// 明确环境限制导致实际能力未执行；不能计入通过数量
+	bool m_notRun;
+	// 稳定数字编号，历史用例顺序不变，新用例只追加
+	int32_t m_id;
 	// 关键HTTP请求返回状态码，没有请求时为0
 	int32_t m_statusCode;
 	// 用例执行耗时，单位毫秒

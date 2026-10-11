@@ -2,6 +2,8 @@
 
 CookServerTestCaseResult::CookServerTestCaseResult() :
 m_pass(false),
+m_notRun(false),
+m_id(0),
 m_statusCode(0),
 m_costMs(0)
 {

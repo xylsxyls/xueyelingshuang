@@ -1,3 +1,5 @@
 "$CLOUD_REBUILD" CStringManager 64 lib release same
 "$CLOUD_REBUILD" CSystem 64 lib release same
 "$CLOUD_REBUILD" RapidJson 64 lib release same
+"$CLOUD_REBUILD" Semaphore 64 lib release same
+"$CLOUD_REBUILD" CTaskThreadManager 64 lib release same
