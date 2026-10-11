@@ -2,20 +2,21 @@
 #ifdef _MSC_VER
 #include <windows.h>
 #include <thread>
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
 #include <stdio.h>
+#include <cstdlib>
 
 std::string FileReadWriteMutex::s_tempDir = FileReadWriteMutex::tempDir();
 
 FileReadWriteMutex::FileReadWriteMutex(const std::string& filePath) :
 #ifdef _MSC_VER
 m_file(nullptr),
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 m_fd(-1),
 #endif
 m_filePath(""),
@@ -32,7 +33,7 @@ m_isLocked(false)
 		m_filePath = s_tempDir + filePath + ".lock";
 		m_isName = true;
 	}
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 	m_fd = open(m_filePath.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 #endif
 }
@@ -43,7 +44,7 @@ FileReadWriteMutex::~FileReadWriteMutex()
 	{
 		unwrite();
 	}
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 	if (m_fd != -1)
 	{
 		close(m_fd);
@@ -88,7 +89,7 @@ void FileReadWriteMutex::write()
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	if(m_fd < 0)
 	{
 		printf("open file failed, m_fd = %d\n", m_fd);
@@ -149,7 +150,7 @@ void FileReadWriteMutex::unwrite()
 	{
 		DeleteFileA(m_filePath.c_str());
 	}
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	if (m_fd < 0)
 	{
 		printf("open file failed, m_fd = %d\n", m_fd);
@@ -169,7 +170,7 @@ void FileReadWriteMutex::unwrite()
 #endif
 }
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 void FileReadWriteMutex::trywrite()
 {
 	if(m_fd < 0)
@@ -198,7 +199,10 @@ std::string FileReadWriteMutex::tempDir()
 	TCHAR szPath[MAX_PATH] = { 0 };
 	GetTempPathA(MAX_PATH, szPath);
 	return szPath;
-#elif __unix__
-	return "/tmp/";
+#elif defined(__unix__) || defined(__APPLE__)
+    const char* value = std::getenv("TMPDIR");
+    std::string directory = value && *value ? value : "/tmp";
+    if (directory.back() != '/') directory += '/';
+    return directory;
 #endif
 }

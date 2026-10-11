@@ -10,7 +10,7 @@ ReadWriteMutex::ReadWriteMutex()
 #ifndef __SUPPORT_XP__
 	InitializeSRWLock(&m_writeMutex);
 #endif
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	int result = pthread_rwlock_init(&m_writeMutex, nullptr);
 	if (result != 0)
 	{
@@ -19,7 +19,7 @@ ReadWriteMutex::ReadWriteMutex()
 #endif
 }
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 ReadWriteMutex::~ReadWriteMutex()
 {
 	int result = pthread_rwlock_destroy(&m_writeMutex);
@@ -43,7 +43,7 @@ void ReadWriteMutex::read()
 #else
 	AcquireSRWLockShared(&m_writeMutex);
 #endif
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	int result = pthread_rwlock_rdlock(&m_writeMutex);
 	if (result != 0)
 	{
@@ -65,7 +65,7 @@ void ReadWriteMutex::unread()
 #else
 	ReleaseSRWLockShared(&m_writeMutex);
 #endif
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	int result = pthread_rwlock_unlock(&m_writeMutex);
 	if (result != 0)
 	{
@@ -87,7 +87,7 @@ void ReadWriteMutex::write()
 #else
 	AcquireSRWLockExclusive(&m_writeMutex);
 #endif
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	int result = pthread_rwlock_wrlock(&m_writeMutex);
 	if (result != 0)
 	{
@@ -107,7 +107,7 @@ void ReadWriteMutex::unwrite()
 #else
 	ReleaseSRWLockExclusive(&m_writeMutex);
 #endif
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	int result = pthread_rwlock_unlock(&m_writeMutex);
 	if (result != 0)
 	{

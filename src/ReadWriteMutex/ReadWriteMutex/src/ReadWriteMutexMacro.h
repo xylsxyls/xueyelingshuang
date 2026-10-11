@@ -16,5 +16,5 @@
 
 #if defined(STATIC_LIB)
     #undef ReadWriteMutexAPI
-    #define ReadWriteMutexAPI 
+    #define ReadWriteMutexAPI
 #endif
