@@ -1,0 +1,88 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const { spawnSync } = require('node:child_process')
+const { parseIds, selectCases } = require('../lib/selection')
+const { catalog, requirements } = require('../lib/catalog')
+const { Reporter, redact, escapeHtml } = require('../lib/report')
+const { until, sleep } = require('../lib/wait')
+const { executeCase } = require('../lib/runner')
+const { instrumentWxml, runtimeSelector } = require('../lib/selectors')
+const selfcheckRoot = path.resolve(__dirname, '../temp/selfcheck')
+fs.mkdirSync(selfcheckRoot, { recursive: true })
+
+test('ID 去重、升序和闭区间', () => assert.deepEqual(parseIds('3,1,2-3', catalog), [1, 2, 3]))
+test('无效选择全部报错', () => {
+  for (const input of ['', '0', '-1', '1,', '1.5', '2-1', '999', '1-999999', '1,,2']) assert.throws(() => parseIds(input, catalog))
+  assert.throws(() => selectCases(['--instant', '--all'], catalog))
+  assert.throws(() => selectCases(['--unknown'], catalog))
+})
+test('四入口同源且全量不重复', () => {
+  assert.equal(selectCases(['--all'], catalog).length, catalog.length)
+  assert.deepEqual(selectCases(['--stress'], catalog).map(item => item.id), [35, 36])
+  assert.equal(new Set(catalog.map(item => item.id)).size, catalog.length)
+  for (const item of catalog) assert.ok(item.name && item.expected && item.requirements.length)
+})
+
+test('隔离定位标记保留表达式和真实事件，转换对应选择器', () => {
+  const source = '<button wx:if="{{seconds > 0}}" class="btn {{active ? \'on\' : \'off\'}}" bindtap="submit">发送</button>'
+  const result = instrumentWxml(source)
+  assert.ok(result.includes('wx:if="{{seconds > 0}}"'))
+  assert.ok(result.includes('bindtap="submit"'))
+  assert.ok(result.includes('cook-test-submit'))
+  assert.equal(runtimeSelector('button[bindtap="submit"][data-id="1"]'), 'button.cook-test-submit[data-id="1"]')
+})
+test('实际条件成功与禁止事件断言有效', async () => {
+  let counter = 0
+  assert.equal(await until(() => ++counter > 1 && counter, '真实条件', 1000), 2)
+  assert.throws(() => assert.equal(['禁止事件'].length, 0))
+})
+test('保护超时不是通过', async () => assert.rejects(until(() => false, '永不完成', 40), /超时/))
+test('取消立即生效且不留下等待', async () => {
+  const controller = new AbortController()
+  const waiting = sleep(10000, controller.signal)
+  controller.abort()
+  await assert.rejects(waiting, { name: 'AbortError' })
+})
+test('子进程崩溃可观测', () => {
+  const result = spawnSync(process.execPath, ['-e', 'throw new Error("controlled crash")'], { encoding: 'utf8', windowsHide: true })
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /controlled crash/)
+})
+test('秘密不进入报告且 HTML 转义', () => {
+  assert.ok(!redact('Bearer my-secret-token password=secret').includes('my-secret-token'))
+  assert.ok(!redact('password=secret').includes('secret'))
+  assert.equal(escapeHtml('<script>'), '&lt;script&gt;')
+})
+test('报告逐项统计、失败与取消不会变为通过', async () => {
+  const root = fs.mkdtempSync(path.join(selfcheckRoot, 'harness-'))
+  const reporter = new Reporter({ reportRoot: root }, catalog, requirements, catalog.slice(0, 3))
+  const batch = new AbortController()
+  await executeCase(catalog[0], async () => ({ observed: true }), { config: { caseTimeoutMs: 1000, serverPort: 15207 } }, reporter, batch.signal)
+  await executeCase(catalog[1], async () => { throw new Error('controlled failure') }, { config: { caseTimeoutMs: 1000, serverPort: 15207 } }, reporter, batch.signal)
+  batch.abort()
+  await executeCase(catalog[2], async () => assert.fail('取消后不应触发输入'), { config: { caseTimeoutMs: 1000, serverPort: 15207 } }, reporter, batch.signal)
+  reporter.finish('canceled')
+  const report = JSON.parse(fs.readFileSync(path.join(reporter.directory, 'report.json'), 'utf8'))
+  assert.equal(report.summary.passed, 1)
+  assert.equal(report.summary.failed, 1)
+  assert.equal(report.summary.canceled, 1)
+  assert.equal(report.summary.executed, 3)
+  assert.ok(fs.readFileSync(path.join(reporter.directory, 'report.html'), 'utf8').includes('controlled failure'))
+  assert.equal(report.coverage.find(item => item.id === 'AUTH').state, 'failed')
+})
+test('报告写入失败必须抛错', () => {
+  const root = fs.mkdtempSync(path.join(selfcheckRoot, 'report-failure-'))
+  const file = path.join(root, 'file')
+  fs.writeFileSync(file, 'not a directory')
+  assert.throws(() => new Reporter({ reportRoot: file }, catalog, requirements, [catalog[0]]))
+})
+
+test('隔离定位标记保留无class输入框的自闭合斜线', () => {
+  const source = '<input value="{{text}}" bindinput="onInput" bindconfirm="send"/>'
+  const result = instrumentWxml(source)
+  assert.ok(result.includes('class="cook-test-onInput"'))
+  assert.ok(/\s\/>$/.test(result))
+  assert.ok(!result.includes('/ class='))
+})

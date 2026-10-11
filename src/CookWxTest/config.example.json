@@ -1,0 +1,18 @@
+{
+  "cliPath": "",
+  "nodePath": "",
+  "automationPort": 9421,
+  "serverPort": 15207,
+  "mysqlPort": 13316,
+  "redisPort": 16389,
+  "mysqlHome": "C:/mysql_cook-5.6.24-win32",
+  "redisHome": "C:/redis_cook7.4.2",
+  "voiceProvider": "windows_sapi",
+  "serverExecutable": "",
+  "serverTestExecutable": "",
+  "caseTimeoutMs": 60000,
+  "startupTimeoutMs": 90000,
+  "stressLoops": 20,
+  "serverStressThreads": 8,
+  "serverStressLoops": 20
+}

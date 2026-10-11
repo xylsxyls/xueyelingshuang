@@ -1,0 +1,15 @@
+{
+  "name": "cook-wx-test",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CookWx 微信开发者工具模拟器自动化回归测试",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "node index.js --instant",
+    "test:all": "node index.js --all",
+    "test:stress": "node index.js --stress",
+    "list": "node index.js --list",
+    "selfcheck": "node selfcheck/run.js"
+  },
+  "dependencies": { "miniprogram-automator": "0.12.1", "ws": "6.2.6" }
+}
