@@ -3,8 +3,8 @@
 
 SplitViewerFileDialogParam::SplitViewerFileDialogParam() :
 CustomDialogParam(g_config.m_fileDialogType),
-save(false),
-selectedPath(new QString)
+m_save(false),
+m_selectedPath(new QString)
 {
 
 }

@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include "DialogManager/DialogManagerAPI.h"
 
-/** 只创建文件选择内容区，工厂注册成功后归DialogManager */
+/** 只创建文件选择内容区，工厂注册成功后归DialogManager
+*/
 class SplitViewerFileDialogFactory : public CustomViewFactory
 {
 public:

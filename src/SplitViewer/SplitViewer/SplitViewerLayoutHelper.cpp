@@ -6,6 +6,28 @@
 #include <algorithm>
 #include <cmath>
 
+bool SplitViewerLayoutHelper::findLeafRect(
+    SplitViewerCoreNode* root, const QRectF& rect, SplitViewerCoreNode* target, QRectF& result, bool borderVisible)
+{
+    if (!root || !target)
+    {
+        return false;
+    }
+    if (root->isLeaf())
+    {
+        if (root == target)
+        {
+            result = rect;
+            return true;
+        }
+        return false;
+    }
+    QRectF first, splitter, second;
+    nodeRects(rect, root, first, splitter, second, borderVisible);
+    return findLeafRect(root->first, first, target, result, borderVisible) ||
+        findLeafRect(root->second, second, target, result, borderVisible);
+}
+
 QRectF SplitViewerLayoutHelper::rectFromCore(const SplitViewerCoreRect& value)
 {
     return QRectF(value.left, value.top, value.width(), value.height());
@@ -18,7 +40,7 @@ QRectF SplitViewerLayoutHelper::stageRect(const QSize& size, double aspect, bool
         (std::max)(1, size.height() - static_cast<int>(margin * 2.0)));
     if (!std::isfinite(aspect) || aspect <= 0.0)
     {
-        aspect = SplitViewerCoreDocument().stageAspect();
+        aspect = g_config.m_coreConfig.m_defaultStageAspect;
     }
     qreal width = available.width();
     qreal height = width / aspect;
@@ -38,7 +60,8 @@ QRectF SplitViewerLayoutHelper::normalizedToPixel(const SplitViewerCoreRect& rec
 
 QRectF SplitViewerLayoutHelper::plusButtonRect(const QRectF& rect)
 {
-    const qreal size = (std::min<qreal>)(g_config.m_plusButtonSize, (std::min)(rect.width(), rect.height()) - g_config.m_plusButtonPadding);
+    const qreal size = (std::min<qreal>)(g_config.m_plusButtonSize,
+        (std::min)(rect.width(), rect.height()) - g_config.m_plusButtonPadding);
     if (size <= 0.0)
     {
         return QRectF();
@@ -48,14 +71,18 @@ QRectF SplitViewerLayoutHelper::plusButtonRect(const QRectF& rect)
 
 QRectF SplitViewerLayoutHelper::contentRect(const QRectF& owner, bool borderVisible)
 {
-    return borderVisible && owner.width() > g_config.m_borderWidth * 2 && owner.height() > g_config.m_borderWidth * 2 ? owner.adjusted(g_config.m_borderWidth,g_config.m_borderWidth,-g_config.m_borderWidth,-g_config.m_borderWidth) : owner;
+    return borderVisible && owner.width() > g_config.m_borderWidth * 2 && owner.height() > g_config.m_borderWidth * 2
+        ? owner.adjusted(
+              g_config.m_borderWidth, g_config.m_borderWidth, -g_config.m_borderWidth, -g_config.m_borderWidth)
+        : owner;
 }
 
-void SplitViewerLayoutHelper::nodeRects(const QRectF& owner, SplitViewerCoreNode* node, QRectF& first, QRectF& splitter, QRectF& second, bool borderVisible)
+void SplitViewerLayoutHelper::nodeRects(
+    const QRectF& owner, SplitViewerCoreNode* node, QRectF& first, QRectF& splitter, QRectF& second, bool borderVisible)
 {
     SplitViewerCoreRect a, line, b;
-    SplitViewerCoreSplitNodeRects(SplitViewerCoreRect(owner.left(), owner.top(), owner.right(), owner.bottom()),
-        node, a, line, b, borderVisible ? g_config.m_splitterWidth : 0.0);
+    SplitViewerCoreSplitNodeRects(SplitViewerCoreRect(owner.left(), owner.top(), owner.right(), owner.bottom()), node,
+        a, line, b, borderVisible ? g_config.m_splitterWidth : 0.0);
     first = SplitViewerLayoutHelper::rectFromCore(a);
     splitter = SplitViewerLayoutHelper::rectFromCore(line);
     second = SplitViewerLayoutHelper::rectFromCore(b);

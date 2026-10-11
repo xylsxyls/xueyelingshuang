@@ -1,9 +1,12 @@
 ﻿#pragma once
+#include "SplitViewerCore/SplitViewerCoreAPI.h"
 #include <QtCore/QString>
 #include <QtCore/QSize>
 #include <QtCore/QMargins>
 #include <QtGui/QColor>
 #include <stdint.h>
+#include <set>
+#include <string>
 
 /** 桌面进程共享配置，在QApplication创建后的GUI线程初始化
 */
@@ -32,6 +35,16 @@ private:
     Config& operator=(const Config& other);
 
 public:
+    // 新建文档的Core配置，在窗口创建前校验和复制
+    SplitViewerCoreConfig m_coreConfig;
+    // GUI结果呈现轮询间隔，毫秒
+    int m_taskPollIntervalMs;
+    // 嵌入窗口位置和客户区同步间隔，毫秒；用于纠正外部程序延后改位
+    int32_t m_embeddedSyncIntervalMs;
+    // 新请求未被接纳时的提示
+    QString m_taskBusyError;
+    // 加号边框宽度，像素
+    double m_plusBorderWidth;
     // DialogManager自定义文件选择内容类型，和其他产品的类型分离
     uint64_t m_fileDialogType;
     // DialogManager自定义关于内容类型，和其他产品的类型分离
@@ -312,6 +325,54 @@ public:
     QMargins m_aboutMargins;
     // 状态栏格式模板
     const wchar_t* m_statusFormat;
+    // 四方向移动菜单文案
+    QString m_moveLeftText;
+    // 向右移动菜单文案
+    QString m_moveRightText;
+    // 向上移动菜单文案
+    QString m_moveUpText;
+    // 向下移动菜单文案
+    QString m_moveDownText;
+    // 覆盖分屏的询问标题和正文
+    QString m_moveOverwriteTitle;
+    // 覆盖分屏询问正文
+    QString m_moveOverwritePrompt;
+    // 播放器路径环境变量名称
+    QString m_playerEnvironmentName;
+    // 有效播放器条件下的加载入口文案与文件筛选
+    QString m_selectMediaText;
+    // 媒体加载菜单文案
+    QString m_loadMediaText;
+    // 包含视频的媒体文件筛选
+    QString m_mediaFilter;
+    // 小写视频扩展名，不含点
+    std::set<QString> m_videoExtensions;
+    // 移除时关闭的完整小写进程名，其余应用恢复独立窗口
+    std::set<std::wstring> m_closeEmbeddedProcessNames;
+    // 视频窗口发现及正常关闭的毫秒预算
+    int32_t m_videoStartTimeoutMs;
+    // 联动视频正常关闭预算，毫秒
+    int32_t m_videoCloseTimeoutMs;
+    // GUI异步进程状态查询间隔及同时启动预算
+    int32_t m_videoPollIntervalMs;
+    // 每窗口同时启动视频的上限
+    int32_t m_maximumPendingVideos;
+    // 视频操作失败文案，路径由调用方补充
+    QString m_videoPlayerMissingError;
+    // 视频文件不存在提示
+    QString m_videoFileMissingError;
+    // 播放器启动失败提示
+    QString m_videoStartError;
+    // 视频窗口发现超时提示
+    QString m_videoWindowError;
+    // 视频窗口嵌入失败提示
+    QString m_videoEmbedError;
+    // 关闭失败时的可见错误
+    QString m_videoCloseError;
+    // 本平台不支持视频窗口发现提示
+    QString m_videoPlatformError;
+    // 视频请求超过接纳预算提示
+    QString m_videoBusyError;
 };
 
 #define g_config Config::instance()

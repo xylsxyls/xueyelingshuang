@@ -2,7 +2,8 @@
 
 #include "DialogManager/DialogManagerAPI.h"
 
-/** 创建专用关于窗口；成功返回的窗口所有权交DialogManager */
+/** 创建专用关于窗口；成功返回的窗口所有权交DialogManager
+*/
 class SplitViewerAboutDialogFactory : public CustomDialogFactory
 {
 public:

@@ -1,8 +1,6 @@
 ﻿#include "SplitViewerCanvas.h"
 #include "Config.h"
-
 #include "SplitViewer.h"
-
 #include <QtCore/QMimeData>
 #include <QtGui/QContextMenuEvent>
 #include <QtGui/QDragEnterEvent>
@@ -12,7 +10,9 @@
 #include <QtGui/QPainter>
 #include <QtGui/QWheelEvent>
 
-SplitViewerCanvas::SplitViewerCanvas(SplitViewer* owner, QWidget* parent) : Widget(parent), m_owner(owner)
+SplitViewerCanvas::SplitViewerCanvas(SplitViewer* owner, QWidget* parent) :
+Widget(parent),
+m_owner(owner)
 {
     setAcceptDrops(true);
     setMouseTracking(true);
@@ -95,7 +95,7 @@ void SplitViewerCanvas::dropEvent(QDropEvent* event)
 {
     if (m_owner && event->mimeData()->hasUrls() && !event->mimeData()->urls().isEmpty())
     {
-        m_owner->canvasFileDroppedAt(event->mimeData()->urls().first().toLocalFile(),event->pos());
+        m_owner->canvasFileDroppedAt(event->mimeData()->urls().first().toLocalFile(), event->pos());
         event->acceptProposedAction();
     }
 }
@@ -111,8 +111,8 @@ void SplitViewerCanvas::resizeEvent(QResizeEvent* event)
 
 void SplitViewerCanvas::keyPressEvent(QKeyEvent* event)
 {
-    if (m_owner && event != nullptr && event->key() == Qt::Key_Delete &&
-        event->modifiers() == Qt::NoModifier && m_owner->deleteSelectedLayer())
+    if (m_owner && event != nullptr && event->key() == Qt::Key_Delete && event->modifiers() == Qt::NoModifier &&
+        m_owner->deleteSelectedLayer())
     {
         event->accept();
         return;

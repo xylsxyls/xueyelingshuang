@@ -3,14 +3,18 @@
 #include "SplitViewerLayoutHelper.h"
 #include "SplitViewerImageHelper.h"
 #include "SplitViewerPlatform.h"
-#include <algorithm>
 #include <QtGui/QPainter>
 #include <QtWidgets/QWidget>
+#include <algorithm>
 
-SplitViewerRenderer::SplitViewerRenderer(SplitViewerCoreDocument& document, const QMap<QString,QImage>& images,
-    QMap<SplitViewerCoreNode*,QWidget*>& embedded, const QPoint& mouse, bool exporting, bool includeEmbedded) :
-    m_document(&document), m_imageCache(&images), m_embedded(&embedded), m_mouse(mouse),
-    m_exporting(exporting), m_includeEmbedded(includeEmbedded)
+SplitViewerRenderer::SplitViewerRenderer(SplitViewerCoreDocument& document, const QMap<QString, QImage>& images,
+    QMap<SplitViewerCoreNode*, QWidget*>& embedded, const QPoint& mouse, bool exporting, bool includeEmbedded) :
+m_document(&document),
+m_imageCache(&images),
+m_embedded(&embedded),
+m_mouse(mouse),
+m_exporting(exporting),
+m_includeEmbedded(includeEmbedded)
 {
 
 }
@@ -20,17 +24,19 @@ void SplitViewerRenderer::drawStage(QPainter& painter, const QRectF& stage)
     painter.save();
     painter.setClipRect(stage, Qt::IntersectClip);
     painter.fillRect(stage, g_config.m_stageColor);
-    drawNode(painter, m_document->baseRoot(), SplitViewerLayoutHelper::contentRect(stage, m_document->borderVisible()), -1);
+    drawNode(
+        painter, m_document->baseRoot(), SplitViewerLayoutHelper::contentRect(stage, m_document->borderVisible()), -1);
     if (m_document->borderVisible())
     {
         painter.setPen(QPen(g_config.m_borderColor, g_config.m_borderWidth));
         painter.setBrush(Qt::NoBrush);
-        painter.drawRect(stage.adjusted(g_config.m_borderWidth/2,g_config.m_borderWidth/2,-g_config.m_borderWidth/2,-g_config.m_borderWidth/2));
+        painter.drawRect(stage.adjusted(g_config.m_borderWidth / 2, g_config.m_borderWidth / 2,
+            -g_config.m_borderWidth / 2, -g_config.m_borderWidth / 2));
     }
-    for (int i=0; i<m_document->layerCount(); ++i)
+    for (int i = 0; i < m_document->layerCount(); ++i)
     {
-        SplitViewerCoreLayer* layer=m_document->layerAt(i);
-        const QRectF owner=SplitViewerLayoutHelper::normalizedToPixel(layer->rect, stage);
+        SplitViewerCoreLayer* layer = m_document->layerAt(i);
+        const QRectF owner = SplitViewerLayoutHelper::normalizedToPixel(layer->rect, stage);
         painter.save();
         painter.setClipRect(owner, Qt::IntersectClip);
         painter.fillRect(owner, g_config.m_stageColor);
@@ -38,9 +44,12 @@ void SplitViewerRenderer::drawStage(QPainter& painter, const QRectF& stage)
         painter.restore();
         if (m_document->borderVisible())
         {
-            painter.setPen(QPen(i == m_document->selectedLayer() ? g_config.m_selectedBorderColor : g_config.m_borderColor, g_config.m_borderWidth));
+            painter.setPen(
+                QPen(i == m_document->selectedLayer() ? g_config.m_selectedBorderColor : g_config.m_borderColor,
+                    g_config.m_borderWidth));
             painter.setBrush(Qt::NoBrush);
-            painter.drawRect(owner.adjusted(g_config.m_borderWidth/2,g_config.m_borderWidth/2,-g_config.m_borderWidth/2,-g_config.m_borderWidth/2));
+            painter.drawRect(owner.adjusted(g_config.m_borderWidth / 2, g_config.m_borderWidth / 2,
+                -g_config.m_borderWidth / 2, -g_config.m_borderWidth / 2));
         }
     }
     painter.restore();
@@ -66,8 +75,12 @@ void SplitViewerRenderer::drawNode(QPainter& painter, SplitViewerCoreNode* node,
     drawNode(painter, node->second, second, layerIndex);
     if (m_document->borderVisible())
     {
-        const QPoint mouse=m_mouse;
-        const bool hover=!m_exporting && splitter.adjusted(-g_config.m_splitterHitPadding,-g_config.m_splitterHitPadding,g_config.m_splitterHitPadding,g_config.m_splitterHitPadding).contains(mouse);
+        const QPoint mouse = m_mouse;
+        const bool hover = !m_exporting &&
+            splitter
+                .adjusted(-g_config.m_splitterHitPadding, -g_config.m_splitterHitPadding, g_config.m_splitterHitPadding,
+                    g_config.m_splitterHitPadding)
+                .contains(mouse);
         painter.fillRect(splitter, hover ? g_config.m_splitterHoverColor : g_config.m_splitterColor);
     }
 }
@@ -78,42 +91,38 @@ void SplitViewerRenderer::drawLeaf(QPainter& painter, SplitViewerCoreNode* node,
     painter.fillRect(rect, g_config.m_stageColor);
     if (node->view.hasImage)
     {
-        const QImage image=m_imageCache->value(SplitViewerImageHelper::path(node->view.path));
+        const QImage image = m_imageCache->value(SplitViewerImageHelper::path(node->view.path));
         if (!image.isNull())
         {
-            const double scale=node->view.autoFit ? SplitViewerCoreFitScale(image.width(), image.height(), rect.width(), rect.height()) : node->view.scale;
-            const QSizeF size(image.width()*scale, image.height()*scale);
-            const QPointF center=rect.center()+QPointF(node->view.offsetX,node->view.offsetY);
+            const double scale = node->view.autoFit
+                ? SplitViewerCoreFitScale(image.width(), image.height(), rect.width(), rect.height())
+                : node->view.scale;
+            const QSizeF size(image.width() * scale, image.height() * scale);
+            const QPointF center = rect.center() + QPointF(node->view.offsetX, node->view.offsetY);
             if (scale < 1.0)
             {
                 // Pre-filter large images before the final paint. QPainter's
                 // bilinear transform alone can leave high-contrast edges
                 // jagged after a strong reduction.
                 const QSize filteredSize((std::max)(1, qRound(size.width())), (std::max)(1, qRound(size.height())));
-                const QImage filtered=image.scaled(filteredSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                const QImage filtered = image.scaled(filteredSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
                 const QSizeF actualSize(filtered.size());
-                painter.drawImage(QRectF(center-QPointF(actualSize.width()/2.0,actualSize.height()/2.0),actualSize), filtered);
+                painter.drawImage(
+                    QRectF(center - QPointF(actualSize.width() / 2.0, actualSize.height() / 2.0), actualSize),
+                    filtered);
             }
             else
             {
-                painter.drawImage(QRectF(center-QPointF(size.width()/2,size.height()/2),size), image);
+                painter.drawImage(QRectF(center - QPointF(size.width() / 2, size.height() / 2), size), image);
             }
             return;
         }
     }
-    if (m_embedded->contains(node) && !SplitViewerForeignWindowValid(m_embedded->value(node)))
-    {
-        SplitViewerDetachForeignWindow(m_embedded->take(node));
-        node->view.clear();
-    }
     if (m_embedded->contains(node))
     {
-        QWidget* container=m_embedded->value(node);
+        QWidget* container = m_embedded->value(node);
         if (!m_exporting)
         {
-            container->show();
-            container->raise();
-            SplitViewerSyncForeignWindow(container, rect.toAlignedRect());
             return;
         }
         if (m_includeEmbedded)
@@ -122,16 +131,19 @@ void SplitViewerRenderer::drawLeaf(QPainter& painter, SplitViewerCoreNode* node,
             return;
         }
     }
-    const QRectF plus=SplitViewerLayoutHelper::plusButtonRect(rect);
+    const QRectF plus = SplitViewerLayoutHelper::plusButtonRect(rect);
     if (plus.width() <= g_config.m_plusButtonPadding)
     {
         return;
     }
     painter.fillRect(plus, g_config.m_canvasColor);
     painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(g_config.m_plusBorderColor,1));
-    painter.drawRect(plus.adjusted(0.5,0.5,-0.5,-0.5));
-    painter.setPen(QPen(g_config.m_plusColor,g_config.m_plusStroke));
-    painter.drawLine(plus.center()+QPointF(-g_config.m_plusArmLength,0),plus.center()+QPointF(g_config.m_plusArmLength,0));
-    painter.drawLine(plus.center()+QPointF(0,-g_config.m_plusArmLength),plus.center()+QPointF(0,g_config.m_plusArmLength));
+    painter.setPen(QPen(g_config.m_plusBorderColor, g_config.m_plusBorderWidth));
+    painter.drawRect(plus.adjusted(g_config.m_plusBorderWidth / 2, g_config.m_plusBorderWidth / 2,
+        -g_config.m_plusBorderWidth / 2, -g_config.m_plusBorderWidth / 2));
+    painter.setPen(QPen(g_config.m_plusColor, g_config.m_plusStroke));
+    painter.drawLine(
+        plus.center() + QPointF(-g_config.m_plusArmLength, 0), plus.center() + QPointF(g_config.m_plusArmLength, 0));
+    painter.drawLine(
+        plus.center() + QPointF(0, -g_config.m_plusArmLength), plus.center() + QPointF(0, g_config.m_plusArmLength));
 }

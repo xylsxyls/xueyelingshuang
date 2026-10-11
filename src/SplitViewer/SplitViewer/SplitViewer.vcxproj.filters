@@ -35,6 +35,36 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="SplitViewerWorkTask.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerTaskManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerTaskLifecycleManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerTaskContext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerRetireTask.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerNativeClick.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerLogicTask.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerDocumentSnapshot.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerVideoTarget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerVideoRequest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -58,6 +88,27 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="SplitViewerWorkTask.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerTaskManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerTaskLifecycleManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerTaskContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerRetireTask.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerLogicTask.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerDocumentSnapshot.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <CustomBuild Include="SplitViewer.qrc">
       <Filter>Resource Files</Filter>
     </CustomBuild>
@@ -136,5 +187,15 @@
     <ClInclude Include="SplitViewerDialogSession.h"><Filter>Header Files</Filter></ClInclude>
     <ClCompile Include="SplitViewerDialogHelper.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClInclude Include="SplitViewerDialogHelper.h"><Filter>Header Files</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SplitViewerMediaManager.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="GeneratedFiles\$(Configuration)\moc_SplitViewerMediaManager.cpp"><Filter>Generated Files</Filter></ClCompile>
+    <CustomBuild Include="SplitViewerMediaManager.h"><Filter>Header Files</Filter></CustomBuild>
+    <ClCompile Include="SplitViewerVideoSession.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="GeneratedFiles\$(Configuration)\moc_SplitViewerVideoSession.cpp"><Filter>Generated Files</Filter></ClCompile>
+    <CustomBuild Include="SplitViewerVideoSession.h"><Filter>Header Files</Filter></CustomBuild>
+    <ClInclude Include="SplitViewerVideoRequest.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="SplitViewerVideoTarget.h"><Filter>Header Files</Filter></ClInclude>
   </ItemGroup>
 </Project>

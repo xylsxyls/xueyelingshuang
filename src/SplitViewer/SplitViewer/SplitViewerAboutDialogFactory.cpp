@@ -1,5 +1,4 @@
 ﻿#include "SplitViewerAboutDialogFactory.h"
-
 #include "SplitViewerAboutDialog.h"
 #include "SplitViewerAboutDialogParam.h"
 #include "SplitViewerAboutDialogView.h"

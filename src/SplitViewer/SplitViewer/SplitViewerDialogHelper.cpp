@@ -25,25 +25,25 @@ void SplitViewerDialogHelper::forwardLog(DialogLogLevel level, const char* messa
     }
 }
 
-QString SplitViewerDialogHelper::browseFile(QWidget* parent, bool save, const QString& title,
-    const QString& initial, const QString& filter)
+QString SplitViewerDialogHelper::browseFile(
+    QWidget* parent, bool save, const QString& title, const QString& initial, const QString& filter)
 {
     // Production uses the platform-native dialog, matching PdfReader. The custom
     // DialogManager view remains available to the UI audit so the test can drive
     // file selection without taking over an operating-system modal window.
     if (qApp == nullptr || !qApp->property("splitViewerTestUseCustomFileDialog").toBool())
     {
-        return save ? QFileDialog::getSaveFileName(parent, title, initial, filter) :
-            QFileDialog::getOpenFileName(parent, title, initial, filter);
+        return save ? QFileDialog::getSaveFileName(parent, title, initial, filter)
+                    : QFileDialog::getOpenFileName(parent, title, initial, filter);
     }
     SplitViewerFileDialogParam param;
     param.m_parent = parent != nullptr ? parent->window()->windowHandle() : nullptr;
     param.m_title = title;
-    param.save = save;
-    param.initial = initial;
-    param.filter = filter;
+    param.m_save = save;
+    param.m_initial = initial;
+    param.m_filter = filter;
     DialogManager::instance().makeDialog(param);
-    return param.m_result == ACCEPT_BUTTON ? *param.selectedPath : QString();
+    return param.m_result == ACCEPT_BUTTON ? *param.m_selectedPath : QString();
 }
 
 void SplitViewerDialogHelper::showMessage(QWidget* parent, const QString& title, const QString& message)

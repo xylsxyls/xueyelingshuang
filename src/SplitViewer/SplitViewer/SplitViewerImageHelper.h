@@ -3,6 +3,8 @@
 #include <QtCore/QMap>
 #include <QtGui/QImage>
 
+/** Qt图片解码和缓存引用整理，不解释配置协议或操作原生窗口；调用方持有图像结果
+*/
 class SplitViewerImageHelper
 {
 public:
@@ -14,7 +16,7 @@ public:
 
     /** 将Core路径转换为Qt路径
     @param [in] value 输入值
-    @return 计算结果或借用对象，具体语义见函数说明
+    @return 将Core路径转换为Qt路径
     */
     static QString path(const std::wstring& value);
 

@@ -1,7 +1,10 @@
 ﻿#include "SplitViewerHit.h"
 
 SplitViewerHit::SplitViewerHit() :
-node(nullptr), root(nullptr), layer(-1), splitter(false)
+m_node(nullptr),
+m_root(nullptr),
+m_layer(-1),
+m_splitter(false)
 {
 
 }

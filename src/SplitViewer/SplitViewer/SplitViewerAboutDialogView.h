@@ -4,11 +4,13 @@
 
 class PushButton;
 
-/** SplitViewer关于窗口内容区，负责局部视觉样式和关闭交互。*/
+/** SplitViewer关于窗口内容区，负责局部视觉样式和关闭交互
+*/
 class SplitViewerAboutDialogView : public CustomViewBase
 {
 public:
-    /** 创建空的关于窗口内容区。*/
+    /** 创建空的关于窗口内容区
+    */
     SplitViewerAboutDialogView();
 
     /** 按关于窗口参数创建控件和样式

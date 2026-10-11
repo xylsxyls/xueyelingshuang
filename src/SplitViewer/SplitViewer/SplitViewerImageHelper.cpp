@@ -17,6 +17,11 @@ void SplitViewerImageHelper::setImageStatus(SplitViewerCoreNode* node, QMap<QStr
     }
     if (node->isLeaf())
     {
+        if (node->view.contentKind == SPLITVIEWER_CORE_CONTENT_VIDEO)
+        {
+            node->view.hasImage = false;
+            return;
+        }
         if (node->view.contentKind == SPLITVIEWER_CORE_CONTENT_EMBEDDED)
         {
             node->view.clear();

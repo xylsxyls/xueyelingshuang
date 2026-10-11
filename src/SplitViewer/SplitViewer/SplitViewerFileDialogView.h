@@ -3,11 +3,13 @@
 
 class FileDialog;
 
-/** 文件选择内容区，窗口显示和销毁归DialogManager，控件归Qt父子关系 */
+/** 文件选择内容区，窗口显示和销毁归DialogManager，控件归Qt父子关系
+*/
 class SplitViewerFileDialogView : public CustomViewBase
 {
 public:
-    /** 创建空的文件选择内容区 */
+    /** 创建空的文件选择内容区
+    */
     SplitViewerFileDialogView();
 
     /** 根据路径及过滤器配置文件控件
@@ -27,10 +29,12 @@ public:
     QWidget* defaultFocusWidget() const override;
 
 private:
-    /** 检查保存覆盖确认，提交结果并请求管理器关闭 */
+    /** 检查保存覆盖确认，提交结果并请求管理器关闭
+    */
     void acceptSelection();
 
-    /** 保留调用方数据并请求管理器取消窗口 */
+    /** 保留调用方数据并请求管理器取消窗口
+    */
     void cancelSelection();
 
 private:

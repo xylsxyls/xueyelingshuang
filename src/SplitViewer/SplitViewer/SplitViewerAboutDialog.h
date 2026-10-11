@@ -4,11 +4,13 @@
 
 class QResizeEvent;
 
-/** 关于窗口外壳；由DialogManager持有，负责标题和关闭交互 */
+/** 关于窗口外壳；由DialogManager持有，负责标题和关闭交互
+*/
 class SplitViewerAboutDialog : public CustomDialog
 {
 public:
-    /** 创建标题栏和细线关闭图标 */
+    /** 创建标题栏和细线关闭图标
+    */
     SplitViewerAboutDialog();
 
     /** 初始化主体并按画布区域居中
@@ -24,6 +26,7 @@ protected:
     void resizeEvent(QResizeEvent* event) override;
 
 private:
-    /** 按Config摆放标题栏右上角的叉号按钮 */
+    /** 按Config摆放标题栏右上角的叉号按钮
+    */
     void updateTitleCloseButtonGeometry();
 };

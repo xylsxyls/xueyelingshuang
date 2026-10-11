@@ -31,18 +31,18 @@ bool SplitViewerFileDialogView::initView(const DialogParam& param)
     m_files = new FileDialog(this);
     m_files->setObjectName(QStringLiteral("splitViewerFilePicker"));
     m_files->setWindowFlags(Qt::Widget);
-    m_files->setAcceptMode(m_param.save ? QFileDialog::AcceptSave : QFileDialog::AcceptOpen);
-    m_files->setFileMode(m_param.save ? QFileDialog::AnyFile : QFileDialog::ExistingFile);
-    m_files->setNameFilter(m_param.filter);
-    if (!m_param.initial.isEmpty())
+    m_files->setAcceptMode(m_param.m_save ? QFileDialog::AcceptSave : QFileDialog::AcceptOpen);
+    m_files->setFileMode(m_param.m_save ? QFileDialog::AnyFile : QFileDialog::ExistingFile);
+    m_files->setNameFilter(m_param.m_filter);
+    if (!m_param.m_initial.isEmpty())
     {
-        if (QFileInfo(m_param.initial).isDir())
+        if (QFileInfo(m_param.m_initial).isDir())
         {
-            m_files->setDirectory(m_param.initial);
+            m_files->setDirectory(m_param.m_initial);
         }
         else
         {
-            m_files->selectFile(m_param.initial);
+            m_files->selectFile(m_param.m_initial);
         }
     }
     layout->addWidget(m_files);
@@ -72,7 +72,7 @@ void SplitViewerFileDialogView::acceptSelection()
     {
         return;
     }
-    if (m_param.save && QFileInfo::exists(selected.first()))
+    if (m_param.m_save && QFileInfo::exists(selected.first()))
     {
         m_accepting = true;
         const QPointer<SplitViewerFileDialogView> owner(this);
@@ -93,7 +93,7 @@ void SplitViewerFileDialogView::acceptSelection()
             return;
         }
     }
-    *m_param.selectedPath = selected.first();
+    *m_param.m_selectedPath = selected.first();
     notifyCloseRequested(ACCEPT_BUTTON, 0);
 }
 

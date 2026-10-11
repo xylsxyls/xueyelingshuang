@@ -1,5 +1,4 @@
 ﻿#include "SplitViewerAboutDialogView.h"
-
 #include "Config.h"
 #include "SplitViewerAboutDialogParam.h"
 #include "QtControls/Label.h"
@@ -37,7 +36,8 @@ bool SplitViewerAboutDialogView::initView(const DialogParam& param)
     const QPixmap icon = QPixmap(g_config.m_iconPath);
     if (!icon.isNull())
     {
-        logo->setPixmap(icon.scaled(g_config.m_aboutIconSize, g_config.m_aboutIconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        logo->setPixmap(icon.scaled(
+            g_config.m_aboutIconSize, g_config.m_aboutIconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
     heading->addWidget(logo);
 
@@ -67,7 +67,7 @@ bool SplitViewerAboutDialogView::initView(const DialogParam& param)
     message->setObjectName(QStringLiteral("aboutMessage"));
     message->setWordWrap(true);
     message->setAlignment(Qt::AlignCenter);
-    message->setText(data->message.isEmpty() ? g_config.m_aboutMessage : data->message);
+    message->setText(data->m_message.isEmpty() ? g_config.m_aboutMessage : data->m_message);
     layout->addWidget(message, 1);
 
     QHBoxLayout* actions = new QHBoxLayout;
@@ -76,12 +76,15 @@ bool SplitViewerAboutDialogView::initView(const DialogParam& param)
     m_closeButton->setObjectName(QStringLiteral("aboutCloseButton"));
     m_closeButton->setText(g_config.m_acceptAboutText);
     m_closeButton->setMinimumSize(g_config.m_aboutAcceptSize);
-    m_closeButton->setBkgColor(g_config.m_acceptColor, g_config.m_acceptHoverColor, g_config.m_acceptPressedColor, g_config.m_acceptDisabledColor,
-        g_config.m_acceptColor, g_config.m_acceptHoverColor, g_config.m_acceptPressedColor, g_config.m_acceptDisabledColor);
-    m_closeButton->setFontColor(g_config.m_acceptTextColor, g_config.m_acceptTextColor, g_config.m_acceptTextColor, g_config.m_acceptDisabledTextColor,
-        g_config.m_acceptTextColor, g_config.m_acceptTextColor, g_config.m_acceptTextColor, g_config.m_acceptDisabledTextColor);
-    m_closeButton->setBorderColor(g_config.m_acceptBorderColor, g_config.m_acceptColor, g_config.m_acceptPressedBorderColor, g_config.m_acceptDisabledBorderColor,
-        g_config.m_acceptBorderColor, g_config.m_acceptColor, g_config.m_acceptPressedBorderColor, g_config.m_acceptDisabledBorderColor);
+    m_closeButton->setBkgColor(g_config.m_acceptColor, g_config.m_acceptHoverColor, g_config.m_acceptPressedColor,
+        g_config.m_acceptDisabledColor, g_config.m_acceptColor, g_config.m_acceptHoverColor,
+        g_config.m_acceptPressedColor, g_config.m_acceptDisabledColor);
+    m_closeButton->setFontColor(g_config.m_acceptTextColor, g_config.m_acceptTextColor, g_config.m_acceptTextColor,
+        g_config.m_acceptDisabledTextColor, g_config.m_acceptTextColor, g_config.m_acceptTextColor,
+        g_config.m_acceptTextColor, g_config.m_acceptDisabledTextColor);
+    m_closeButton->setBorderColor(g_config.m_acceptBorderColor, g_config.m_acceptColor,
+        g_config.m_acceptPressedBorderColor, g_config.m_acceptDisabledBorderColor, g_config.m_acceptBorderColor,
+        g_config.m_acceptColor, g_config.m_acceptPressedBorderColor, g_config.m_acceptDisabledBorderColor);
     m_closeButton->setBorderWidth(g_config.m_buttonBorderWidth);
     // Set the radius after all state colors so every PushButton state is rounded.
     m_closeButton->setBorderRadius(static_cast<quint32>(g_config.m_aboutAcceptRadius));
@@ -89,10 +92,11 @@ bool SplitViewerAboutDialogView::initView(const DialogParam& param)
     actions->addStretch(1);
     layout->addLayout(actions);
 
-    connect(m_closeButton, &QPushButton::clicked, [this]()
-    {
-        notifyCloseRequested(ACCEPT_BUTTON, 0);
-    });
+    connect(m_closeButton, &QPushButton::clicked,
+        [this]()
+        {
+            notifyCloseRequested(ACCEPT_BUTTON, 0);
+        });
     return true;
 }
 

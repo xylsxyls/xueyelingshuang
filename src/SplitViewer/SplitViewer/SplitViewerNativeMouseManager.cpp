@@ -3,10 +3,12 @@
 SplitViewerNativeMouseManager::SplitViewerNativeMouseManager() :
 m_clickGeneration(0),
 m_clientGeneration(0),
+m_suppressRightButtonUp(false),
 m_mouseHook(nullptr)
 {
 
 }
+
 SplitViewerNativeMouseManager::~SplitViewerNativeMouseManager()
 {
     if (m_mouseHook)
@@ -14,6 +16,7 @@ SplitViewerNativeMouseManager::~SplitViewerNativeMouseManager()
         UnhookWindowsHookEx(m_mouseHook);
     }
 }
+
 SplitViewerNativeMouseManager& SplitViewerNativeMouseManager::instance()
 {
     static SplitViewerNativeMouseManager s_manager;

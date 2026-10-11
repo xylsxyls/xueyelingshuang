@@ -1,8 +1,8 @@
 ﻿#include "SplitViewerPlatform.h"
-#include <QtGui/QImage>
 #include "SplitViewerForeignWindowHelper.h"
 #include "SplitViewerFileAssociationHelper.h"
 #include "SplitViewerNativeMouseHelper.h"
+#include <QtGui/QImage>
 
 QWidget* SplitViewerEmbedForeignWindow(WId windowId, QWidget* parent)
 {
@@ -29,7 +29,7 @@ QImage SplitViewerForeignWindowSnapshot(QWidget* container)
     return SplitViewerForeignWindowHelper::foreignWindowSnapshot(container);
 }
 
-bool SplitViewerIsExternalWindow(WId id,WId own)
+bool SplitViewerIsExternalWindow(WId id, WId own)
 {
     return SplitViewerForeignWindowHelper::isExternalWindow(id, own);
 }
@@ -39,7 +39,7 @@ bool SplitViewerForeignWindowValid(QWidget* container)
     return SplitViewerForeignWindowHelper::foreignWindowValid(container);
 }
 
-void SplitViewerMoveDetachedWindow(WId id,const QPoint& center)
+void SplitViewerMoveDetachedWindow(WId id, const QPoint& center)
 {
     SplitViewerForeignWindowHelper::moveDetachedWindow(id, center);
 }
@@ -54,7 +54,7 @@ bool SplitViewerRegisterSvThumbnailHandler(const QString& applicationPath)
     return SplitViewerFileAssociationHelper::registerSvThumbnailHandler(applicationPath);
 }
 
-void SplitViewerWatchNativeMouse(QObject* owner,const std::function<void(int,const QPoint&,WId)>& callback)
+void SplitViewerWatchNativeMouse(QObject* owner, const std::function<void(int, const QPoint&, WId)>& callback)
 {
     SplitViewerNativeMouseHelper::watchNativeMouse(owner, callback);
 }

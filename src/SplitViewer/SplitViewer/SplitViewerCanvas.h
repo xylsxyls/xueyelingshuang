@@ -6,6 +6,8 @@
 class SplitViewer;
 class QKeyEvent;
 
+/** 工作区可见控件，仅转发Qt事件和绘制请求，生命周期由主窗口持有
+*/
 class SplitViewerCanvas : public Widget
 {
 public:

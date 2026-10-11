@@ -1,9 +1,15 @@
 ﻿#include "Config.h"
 
 Config::Config() :
+m_coreConfig(),
+m_taskPollIntervalMs(10),
+m_embeddedSyncIntervalMs(100),
+m_taskBusyError(QStringLiteral("正在处理当前操作，请稍后再试")),
+m_plusBorderWidth(1.0),
 m_fileDialogType(10732),
 m_aboutDialogType(10733),
-m_windowStyle(QString::fromLatin1("QMainWindow { background:#eeeeee; } "
+m_windowStyle(QString::fromLatin1(
+    "QMainWindow { background:#eeeeee; } "
     "QToolBar { background:#f6f6f6; border:0; spacing:6px; padding:6px; } "
     "QToolButton { color:#202020; background:#f6f6f6; border:1px solid #bebebe; border-radius:2px; padding:5px 10px; } "
     "QToolButton:hover { background:#d2e2f6; border-color:#4e84be; } "
@@ -13,8 +19,8 @@ m_windowStyle(QString::fromLatin1("QMainWindow { background:#eeeeee; } "
     "QMenu::item { padding:6px 20px; } QMenu::item:selected { background:#d2e2f6; } "
     "QMenu::item:disabled { color:#909090; }")),
 m_fileDialogStyle(QString::fromLatin1("QWidget#splitViewerFileView { background:#f6f6f6; color:#202020; } "
-    "QLabel#fileDialogTitle { font-weight:bold; padding:4px; } "
-    "QPushButton { padding:5px 14px; } QLineEdit { padding:4px; }")),
+                                      "QLabel#fileDialogTitle { font-weight:bold; padding:4px; } "
+                                      "QPushButton { padding:5px 14px; } QLineEdit { padding:4px; }")),
 m_aboutDialogStyle(QString::fromLatin1(
     "QWidget#splitViewerAboutView { background:#f7faff; color:#162b48; border:1px solid #cad8e8; } "
     "QLabel#aboutLogo { background:#ffffff; border:1px solid #dce9f5; border-radius:18px; padding:5px; } "
@@ -22,7 +28,8 @@ m_aboutDialogStyle(QString::fromLatin1(
     "QLabel#aboutVersion { color:#7187a3; font-family:'Microsoft YaHei'; font-size:13px; } "
     "QLabel#aboutSeparator { background:#dce6f0; } "
     "QLabel#aboutMessage { color:#263f5c; font-family:'Microsoft YaHei'; font-size:14px; } "
-    "QPushButton#aboutCloseButton { color:#ffffff; background:#3f9fca; border:1px solid #328db7; border-radius:9px; padding:8px 30px; font-family:'Microsoft YaHei'; font-weight:bold; } "
+    "QPushButton#aboutCloseButton { color:#ffffff; background:#3f9fca; border:1px solid #328db7; border-radius:9px; "
+    "padding:8px 30px; font-family:'Microsoft YaHei'; font-weight:bold; } "
     "QPushButton#aboutCloseButton:hover { background:#52add5; border-color:#3f9fca; } "
     "QPushButton#aboutCloseButton:pressed { background:#2f83aa; border-color:#287595; } ")),
 m_fileDialogSize(QSize(760, 520)),
@@ -104,7 +111,8 @@ m_profileExtension(QStringLiteral(".sv")),
 m_profileSuffix(QStringLiteral("sv")),
 m_writeProfileError(QStringLiteral("无法写入配置文件。")),
 m_defaultImageName(QStringLiteral("split-view.png")),
-m_exportImageFilter(QStringLiteral("PNG图片 (*.png);;JPEG图片 (*.jpg *.jpeg);;BMP图片 (*.bmp);;TIFF图片 (*.tif *.tiff);;所有文件 (*)")),
+m_exportImageFilter(
+    QStringLiteral("PNG图片 (*.png);;JPEG图片 (*.jpg *.jpeg);;BMP图片 (*.bmp);;TIFF图片 (*.tif *.tiff);;所有文件 (*)")),
 m_imageExtension(QStringLiteral(".png")),
 m_writeImageError(QStringLiteral("图片保存失败：")),
 m_aboutTitle(QStringLiteral("关于分屏看图")),
@@ -128,38 +136,66 @@ m_versionText(QStringLiteral("SplitViewer 1.0")),
 m_acceptAboutText(QStringLiteral("知道了")),
 m_debugArgument(QStringLiteral("debug")),
 m_associationDescription(QStringLiteral("SplitViewer configuration")),
-m_stageColor(QColor(128,128,128)),
-m_canvasColor(QColor(238,238,238)),
-m_fullscreenColor(QColor(18,18,18)),
-m_borderColor(QColor(32,32,32)),
-m_selectedBorderColor(QColor(255,0,0)),
-m_splitterHoverColor(QColor(214,214,214)),
-m_splitterColor(QColor(188,188,188)),
-m_plusBorderColor(QColor(96,96,96)),
-m_plusColor(QColor(70,70,70)),
-m_previewColor(QColor(32,144,255)),
-m_aboutGlyphColor(QColor(43,125,214)),
-m_closeColor(QColor(63,84,108)),
-m_transparentColor(QColor(0,0,0,0)),
-m_closeHoverColor(QColor(215,228,241)),
-m_closePressedColor(QColor(199,216,233)),
-m_closeActiveTextColor(QColor(35,61,88)),
-m_closeDisabledTextColor(QColor(150,165,180)),
-m_closeHoverBorderColor(QColor(191,210,227)),
-m_closePressedBorderColor(QColor(176,199,219)),
-m_acceptColor(QColor(63,159,202)),
-m_acceptHoverColor(QColor(82,173,213)),
-m_acceptPressedColor(QColor(47,131,170)),
-m_acceptDisabledColor(QColor(170,188,207)),
-m_acceptTextColor(QColor(255,255,255)),
-m_acceptDisabledTextColor(QColor(120,140,160)),
-m_acceptBorderColor(QColor(50,141,181)),
-m_acceptPressedBorderColor(QColor(40,117,149)),
-m_acceptDisabledBorderColor(QColor(145,165,185)),
+m_stageColor(QColor(128, 128, 128)),
+m_canvasColor(QColor(238, 238, 238)),
+m_fullscreenColor(QColor(18, 18, 18)),
+m_borderColor(QColor(32, 32, 32)),
+m_selectedBorderColor(QColor(255, 0, 0)),
+m_splitterHoverColor(QColor(214, 214, 214)),
+m_splitterColor(QColor(188, 188, 188)),
+m_plusBorderColor(QColor(96, 96, 96)),
+m_plusColor(QColor(70, 70, 70)),
+m_previewColor(QColor(32, 144, 255)),
+m_aboutGlyphColor(QColor(43, 125, 214)),
+m_closeColor(QColor(63, 84, 108)),
+m_transparentColor(QColor(0, 0, 0, 0)),
+m_closeHoverColor(QColor(215, 228, 241)),
+m_closePressedColor(QColor(199, 216, 233)),
+m_closeActiveTextColor(QColor(35, 61, 88)),
+m_closeDisabledTextColor(QColor(150, 165, 180)),
+m_closeHoverBorderColor(QColor(191, 210, 227)),
+m_closePressedBorderColor(QColor(176, 199, 219)),
+m_acceptColor(QColor(63, 159, 202)),
+m_acceptHoverColor(QColor(82, 173, 213)),
+m_acceptPressedColor(QColor(47, 131, 170)),
+m_acceptDisabledColor(QColor(170, 188, 207)),
+m_acceptTextColor(QColor(255, 255, 255)),
+m_acceptDisabledTextColor(QColor(120, 140, 160)),
+m_acceptBorderColor(QColor(50, 141, 181)),
+m_acceptPressedBorderColor(QColor(40, 117, 149)),
+m_acceptDisabledBorderColor(QColor(145, 165, 185)),
 m_canvasMinimumSize(QSize(320, 220)),
 m_aboutAcceptSize(QSize(128, 40)),
 m_aboutMargins(QMargins(30, 26, 30, 24)),
-m_statusFormat(L"图层 %d · 当前 %ls · 滚轮缩放 · 拖动平移 · 右键分割")
+m_statusFormat(L"图层 %d · 当前 %ls · 滚轮缩放 · 拖动平移 · 右键分割"),
+m_moveLeftText(QStringLiteral("移动到左边")),
+m_moveRightText(QStringLiteral("移动到右边")),
+m_moveUpText(QStringLiteral("移动到上面")),
+m_moveDownText(QStringLiteral("移动到下面")),
+m_moveOverwriteTitle(QStringLiteral("覆盖分屏内容")),
+m_moveOverwritePrompt(QStringLiteral("目标分屏已有内容，是否覆盖？")),
+m_playerEnvironmentName(QStringLiteral("LUMAPLAYER")),
+m_selectMediaText(QStringLiteral("选择图片或视频")),
+m_loadMediaText(QStringLiteral("载入图片/视频到当前分屏")),
+m_mediaFilter(QStringLiteral(
+    "图片和视频 (*.png *.jpg *.jpeg *.jfif *.bmp *.gif *.webp *.tif *.tiff *.mp4 *.mkv *.avi *.mov *.wmv *.flv *.webm *.m4v *.mpg *.mpeg *.ts *.mts *.m2ts *.3gp *.ogv);;图片 (*.png *.jpg *.jpeg *.jfif *.bmp *.gif *.webp *.tif *.tiff);;视频 (*.mp4 *.mkv *.avi *.mov *.wmv *.flv *.webm *.m4v *.mpg *.mpeg *.ts *.mts *.m2ts *.3gp *.ogv);;所有文件 (*)")),
+m_videoExtensions({QStringLiteral("mp4"), QStringLiteral("mkv"), QStringLiteral("avi"), QStringLiteral("mov"),
+    QStringLiteral("wmv"), QStringLiteral("flv"), QStringLiteral("webm"), QStringLiteral("m4v"), QStringLiteral("mpg"),
+    QStringLiteral("mpeg"), QStringLiteral("ts"), QStringLiteral("mts"), QStringLiteral("m2ts"), QStringLiteral("3gp"),
+    QStringLiteral("ogv")}),
+m_closeEmbeddedProcessNames({L"lumaplayer1.0.exe", L"lumaplayer.exe", L"lumaplayer1.0", L"lumaplayer"}),
+m_videoStartTimeoutMs(5000),
+m_videoCloseTimeoutMs(5000),
+m_videoPollIntervalMs(50),
+m_maximumPendingVideos(32),
+m_videoPlayerMissingError(QStringLiteral("LUMAPLAYER未设置或没有指向有效的播放器程序。")),
+m_videoFileMissingError(QStringLiteral("无法读取视频文件：")),
+m_videoStartError(QStringLiteral("无法启动播放器：")),
+m_videoWindowError(QStringLiteral("未能在限定时间内找到本次启动的播放器窗口：")),
+m_videoEmbedError(QStringLiteral("无法将播放器嵌入目标分屏：")),
+m_videoCloseError(QStringLiteral("无法确认播放器已关闭，请检查播放器进程或访问权限。")),
+m_videoPlatformError(QStringLiteral("当前平台尚未实现按进程识别播放器窗口，视频未加载。")),
+m_videoBusyError(QStringLiteral("正在加载的视频数量已达到上限，请稍后再试。"))
 {
 
 }

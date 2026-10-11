@@ -159,6 +159,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="SplitViewerWorkTask.cpp" />
+    <ClCompile Include="SplitViewerTaskManager.cpp" />
+    <ClCompile Include="SplitViewerTaskLifecycleManager.cpp" />
+    <ClCompile Include="SplitViewerTaskContext.cpp" />
+    <ClCompile Include="SplitViewerRetireTask.cpp" />
+    <ClCompile Include="SplitViewerNativeClick.cpp" />
+    <ClCompile Include="SplitViewerLogicTask.cpp" />
+    <ClCompile Include="SplitViewerDocumentSnapshot.cpp" />
+    <ClCompile Include="SplitViewerVideoTarget.cpp" />
+    <ClCompile Include="SplitViewerVideoRequest.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_SplitViewer.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -183,6 +193,13 @@
     <ClCompile Include="SplitViewerPlatform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="SplitViewerWorkTask.h" />
+    <ClInclude Include="SplitViewerTaskManager.h" />
+    <ClInclude Include="SplitViewerTaskLifecycleManager.h" />
+    <ClInclude Include="SplitViewerTaskContext.h" />
+    <ClInclude Include="SplitViewerRetireTask.h" />
+    <ClInclude Include="SplitViewerLogicTask.h" />
+    <ClInclude Include="SplitViewerDocumentSnapshot.h" />
     <CustomBuild Include="SplitViewer.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
@@ -360,5 +377,21 @@
     <ClInclude Include="SplitViewerDialogSession.h" />
     <ClCompile Include="SplitViewerDialogHelper.cpp" />
     <ClInclude Include="SplitViewerDialogHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SplitViewerMediaManager.cpp" />
+    <ClCompile Include="GeneratedFiles\$(Configuration)\moc_SplitViewerMediaManager.cpp" />
+    <CustomBuild Include="SplitViewerMediaManager.h">
+      <Command>"$(QTDIR)\bin\moc.exe" "%(FullPath)" -o "GeneratedFiles\$(Configuration)\moc_SplitViewerMediaManager.cpp" -I"$(ProjectDir)..\..\..\include"</Command>
+      <Outputs>GeneratedFiles\$(Configuration)\moc_SplitViewerMediaManager.cpp</Outputs>
+    </CustomBuild>
+    <ClCompile Include="SplitViewerVideoSession.cpp" />
+    <ClCompile Include="GeneratedFiles\$(Configuration)\moc_SplitViewerVideoSession.cpp" />
+    <CustomBuild Include="SplitViewerVideoSession.h">
+      <Command>"$(QTDIR)\bin\moc.exe" "%(FullPath)" -o "GeneratedFiles\$(Configuration)\moc_SplitViewerVideoSession.cpp" -I"$(ProjectDir)..\..\..\include"</Command>
+      <Outputs>GeneratedFiles\$(Configuration)\moc_SplitViewerVideoSession.cpp</Outputs>
+    </CustomBuild>
+    <ClInclude Include="SplitViewerVideoRequest.h" />
+    <ClInclude Include="SplitViewerVideoTarget.h" />
   </ItemGroup>
 </Project>

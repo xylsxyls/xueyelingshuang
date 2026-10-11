@@ -1,10 +1,11 @@
 ﻿#pragma once
-#include <QtCore/QString>
 #include "DialogManager/DialogManagerAPI.h"
+#include <QtCore/QString>
 
 class QWidget;
 
-/** 业务弹窗交由DialogManager；系统原生文件选择框按约定直接调用Qt接口 */
+/** 业务弹窗交由DialogManager；系统原生文件选择框按约定直接调用Qt接口
+*/
 class SplitViewerDialogHelper
 {
 public:
@@ -22,8 +23,8 @@ public:
     @param [in] filter Qt文件过滤规则
     @return 确认的路径，取消返回空字符串
     */
-    static QString browseFile(QWidget* parent, bool save, const QString& title,
-        const QString& initial, const QString& filter);
+    static QString browseFile(
+        QWidget* parent, bool save, const QString& title, const QString& initial, const QString& filter);
 
     /** 显示提示或关于窗口
     @param [in] parent 借用的父窗口，调用期间有效

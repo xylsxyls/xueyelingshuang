@@ -1,20 +1,21 @@
 ﻿#include "SplitViewerProfileStore.h"
-#include "Config.h"
 #include "CSystem/CSystemAPI.h"
+#include "LogManager/LogManagerAPI.h"
 #include <QtCore/QSaveFile>
 #include <limits>
-#include "LogManager/LogManagerAPI.h"
 
-bool SplitViewerProfileStore::write(const QString& path, const SplitViewerCoreDocument& document, const QByteArray& thumbnail)
+bool SplitViewerProfileStore::write(
+    const QString& path, const SplitViewerCoreDocument& document, const QByteArray& thumbnail)
 {
     std::vector<uint8_t> config;
     if (!SplitViewerCoreSerializeProfile(document, config))
     {
         return false;
     }
-    const std::vector<uint8_t> thumb(reinterpret_cast<const uint8_t*>(thumbnail.constData()), reinterpret_cast<const uint8_t*>(thumbnail.constData()) + thumbnail.size());
+    const std::vector<uint8_t> thumb(reinterpret_cast<const uint8_t*>(thumbnail.constData()),
+        reinterpret_cast<const uint8_t*>(thumbnail.constData()) + thumbnail.size());
     std::vector<uint8_t> package;
-    if (!SplitViewerCoreBuildConfigPackage(thumb, config, package))
+    if (!SplitViewerCoreBuildConfigPackage(thumb, config, package, document.config()))
     {
         return false;
     }
@@ -23,30 +24,33 @@ bool SplitViewerProfileStore::write(const QString& path, const SplitViewerCoreDo
     {
         return false;
     }
-    const bool written = file.write(reinterpret_cast<const char*>(&package[0]), static_cast<qint64>(package.size())) == static_cast<qint64>(package.size()) && file.commit();
-    LOGINFO("Save profile bytes=%u success=%d",static_cast<unsigned int>(package.size()),written);
+    const bool written = file.write(reinterpret_cast<const char*>(&package[0]), static_cast<qint64>(package.size())) ==
+            static_cast<qint64>(package.size()) &&
+        file.commit();
+    LOGINFO("Save profile bytes=%u success=%d", static_cast<unsigned int>(package.size()), written);
     return written;
 }
 
-bool SplitViewerProfileStore::read(const QString& path, SplitViewerCoreDocument& document, QString& error)
+bool SplitViewerProfileStore::read(const QString& path, SplitViewerCoreDocument& document, QString& error,
+    qint64 maximumBytes, const QString& readError, const QString& invalidError, const QString& limitError)
 {
     error.clear();
-    if (g_config.m_profileMaximumBytes <= 0 ||
-        static_cast<quint64>(g_config.m_profileMaximumBytes) > (std::numeric_limits<size_t>::max)())
+    if (maximumBytes <= 0 || static_cast<quint64>(maximumBytes) > (std::numeric_limits<size_t>::max)())
     {
-        error = g_config.m_profileTooLargeError;
+        error = limitError;
         return false;
     }
     std::vector<uint8_t> bytes;
-    if (!CSystem::readBinaryFile(path.toStdWString(), static_cast<size_t>(g_config.m_profileMaximumBytes), bytes))
+    if (!CSystem::readBinaryFile(path.toStdWString(), static_cast<size_t>(maximumBytes), bytes))
     {
-        error = g_config.m_readProfileError + path;
+        error = readError + path;
         return false;
     }
     std::vector<uint8_t> config;
-    if (!SplitViewerCoreExtractEmbeddedConfig(bytes, config) || !SplitViewerCoreDeserializeProfile(config, document))
+    if (!SplitViewerCoreExtractEmbeddedConfig(bytes, config, document.config()) ||
+        !SplitViewerCoreDeserializeProfile(config, document))
     {
-        error = g_config.m_invalidProfileError;
+        error = invalidError;
         return false;
     }
     return true;

@@ -1,12 +1,15 @@
 ﻿#ifndef SPLITVIEWER_H
 #define SPLITVIEWER_H
 
+#include "SplitViewerHit.h"
 #include "QtControls/MainWindow.h"
+#include "SplitViewerCore/SplitViewerCoreAPI.h"
 #include <QtCore/QMap>
 #include <QtCore/QRectF>
 #include <QtGui/QImage>
-
-#include "SplitViewerCore/SplitViewerCoreAPI.h"
+#include <atomic>
+#include <functional>
+#include <memory>
 
 class QPainter;
 class QResizeEvent;
@@ -15,9 +18,12 @@ class QAction;
 class ToolBar;
 class Label;
 class QTimer;
+class SplitViewerMediaManager;
+class SplitViewerTaskManager;
+struct SplitViewerDocumentSnapshot;
 
-#include "SplitViewerHit.h"
-
+/** Qt桌面主窗口，持有文档和资源映射，协调输入请求及GUI结果；核心算法通过Core调用
+*/
 class SplitViewer : public MainWindow
 {
     Q_OBJECT
@@ -30,6 +36,11 @@ public:
     /** 释放本对象持有的资源
     */
     ~SplitViewer();
+
+    /** 观察后台请求，供输入接纳及测试等待使用
+    @return 是否存在尚未交付的结果或关闭回收
+    */
+    bool processing() const;
 
     /** 绘制工作区及原生窗口拖放预览
     @param [in,out] painter 绘图目标
@@ -167,6 +178,21 @@ protected:
     virtual void reportError(const QString& message);
 
 private:
+    /** 捕获独立场景并提交有限逻辑修改
+    @param [in] work 仅接触快照的Core业务，不借用GUI对象
+    @return 是否接纳了本次请求
+    */
+    bool submitDocumentEdit(const std::function<bool(SplitViewerDocumentSnapshot&)>& work);
+
+    /** 应用完整后台结果，先同步容器映射再替换文档
+    @param [in] snapshot 已完成的独立场景
+    */
+    void applyDocument(const std::shared_ptr<SplitViewerDocumentSnapshot>& snapshot);
+
+    /** 根据接纳状态启用输入，关闭阶段不重新启用
+    */
+    void updateProcessing();
+
     /** 创建工具栏、工作区和状态栏
     */
     void buildUi();
@@ -184,27 +210,27 @@ private:
 
     /** 根据背景板比例和窗口尺寸计算居中区域
     @param [in] size 数据长度或区域尺寸
-    @return 计算结果或借用对象，具体语义见函数说明
+    @return 根据背景板比例和窗口尺寸计算居中区域
     */
     QRectF stageRect(const QSize& size) const;
 
     /** 将归一化图层矩形转换为背景板像素坐标
     @param [in] rect 区域矩形
     @param [in] stage 背景板像素矩形
-    @return 计算结果或借用对象，具体语义见函数说明
+    @return 将归一化图层矩形转换为背景板像素坐标
     */
     QRectF normalizedToPixel(const SplitViewerCoreRect& rect, const QRectF& stage) const;
 
     /** 计算空白分屏中央加号的可点击区域
     @param [in] rect 区域矩形
-    @return 计算结果或借用对象，具体语义见函数说明
+    @return 计算空白分屏中央加号的可点击区域
     */
     QRectF plusButtonRect(const QRectF& rect) const;
 
     /** 按图层层叠顺序查询当前命中区域
     @param [in] point 工作区坐标
     @param [in,out] hit 命中结果
-    @return 是否满足条件或操作成功
+    @return 按图层层叠顺序查询当前命中区域是否成功
     */
     bool hitAll(const QPointF& point, SplitViewerHit& hit) const;
 
@@ -213,6 +239,12 @@ private:
     @param [in] direction 分屏方向
     */
     void splitAt(const SplitViewerHit& hit, SplitViewerCoreSplitDirection direction);
+
+    /** 将命中内容移动到同图层的固定方向目标，覆盖须经询问
+    @param [in] hit 源叶子命中
+    @param [in] direction 移动方向
+    */
+    void moveAt(const SplitViewerHit& hit, SplitViewerCoreMoveDirection direction);
 
     /** 删除命中分屏并同步借用节点和嵌入映射
     @param [in] hit 命中结果
@@ -238,31 +270,26 @@ private:
 
     /** 将窗口状态及文档交给文件适配层保存
     @param [in] path 文件路径
-    @return 是否满足条件或操作成功
+    @return 将窗口状态及文档交给文件适配层保存是否成功
     */
     bool writeProfile(const QString& path);
 
     /** 成功加载配置后恢复图片资源并重置交互状态
     @param [in] path 文件路径
-    @return 是否满足条件或操作成功
+    @return 成功加载配置后恢复图片资源并重置交互状态是否成功
     */
     bool readProfile(const QString& path);
-
-    /** 生成配置文件使用的PNG缩略图
-    @return 计算结果或借用对象，具体语义见函数说明
-    */
-    QByteArray renderPng();
 
     /** 导出背景板图像并恢复所有现场图片变换
     @param [in] size 数据长度或区域尺寸
     @param [in] includeEmbedded 是否导出嵌入窗口快照
-    @return 计算结果或借用对象，具体语义见函数说明
+    @return 导出背景板图像并恢复所有现场图片变换
     */
     QImage renderStage(const QSize& size, bool includeEmbedded);
 
     /** 按边框可见性计算内容区域
     @param [in] owner 父区域或事件接收者
-    @return 计算结果或借用对象，具体语义见函数说明
+    @return 按边框可见性计算内容区域
     */
     QRectF contentRect(const QRectF& owner) const;
 
@@ -273,7 +300,8 @@ private:
     @param [in,out] splitter 分割线区域
     @param [in,out] second 第二子区域
     */
-    void nodeRects(const QRectF& owner, SplitViewerCoreNode* node, QRectF& first, QRectF& splitter, QRectF& second) const;
+    void nodeRects(
+        const QRectF& owner, SplitViewerCoreNode* node, QRectF& first, QRectF& splitter, QRectF& second) const;
 
     /** 递归按新区域尺寸更新图片变换
     @param [in] node 文档持有的节点
@@ -293,7 +321,7 @@ private:
     void syncEmbeddedViews();
 
     /** 查询是否包含内容
-    @return 是否满足条件或操作成功
+    @return 内容类型或图片资源有效时返回true
     */
     bool hasContent() const;
 
@@ -308,7 +336,7 @@ private:
 
     /** 将外部窗口嵌入当前选中的空白分屏
     @param [in] windowId 借用的外部窗口句柄
-    @return 是否满足条件或操作成功
+    @return 将外部窗口嵌入当前选中的空白分屏是否成功
     */
     bool embedWindowId(WId windowId);
 
@@ -325,12 +353,18 @@ private:
     SplitViewerCoreDocument m_document;
     // 树或交互上下文重置时递增，用于拒绝嵌套窗口返回的过期操作
     quint64 m_documentRevision;
+    // 输入暂停结束后恢复原画布焦点，避免Delete和拖动落到其他控件
+    bool m_resumeCanvasFocus;
     // 关闭后拒绝排队的鼠标和文件选择结果
     bool m_closing;
     // 当前文档解码图片缓存
     QMap<QString, QImage> m_imageCache;
     // 按叶子登记的借用窗口宿主；删树前解除嵌入
     QMap<SplitViewerCoreNode*, QWidget*> m_embedded;
+    // 每窗口独立的任务提交与结果交付
+    SplitViewerTaskManager* m_taskManager;
+    // 本窗口拥有的媒体协调者，须在文档和映射成员析构前显式释放
+    SplitViewerMediaManager* m_mediaManager;
     // 导出期间禁止改变原生窗口几何
     bool m_exporting;
     // 当前内容全屏状态
@@ -345,6 +379,8 @@ private:
     Label* m_zoomTip;
     // GUI线程单次计时器，归主窗口所有，每次滚轮操作重新计时
     QTimer* m_zoomTipTimer;
+    // QObject子对象：独立同步原生窗口布局，不依赖绘制或用户再次操作
+    QTimer* m_embeddedSyncTimer;
     // 是否正在拖动整层
     bool m_draggingLayer;
     // 是否正在缩放浮动层

@@ -16,14 +16,19 @@ bool SplitViewerFileAssociationHelper::registerSvFileAssociation(const QString& 
     extension.setValue(QStringLiteral("Content Type"), QStringLiteral("image/png"));
     extension.setValue(QStringLiteral("PerceivedType"), QStringLiteral("image"));
     extension.setValue(QStringLiteral("PersistentHandler/."), QStringLiteral("{098f2470-bae0-11cd-b579-08002b30bfeb}"));
-    extension.setValue(QStringLiteral("ShellEx/{8895b1c6-b41f-4c1c-a562-0d564250836f}/."), QStringLiteral("{d7ac9243-9d84-4498-8192-d7ad263b63c8}"));
-    extension.setValue(QStringLiteral("ShellEx/{e357fccd-a995-4576-b01f-234630154e96}/."), QStringLiteral("{C7657C4A-9F68-40fa-A4DF-96BC08EB3551}"));
+    extension.setValue(QStringLiteral("ShellEx/{8895b1c6-b41f-4c1c-a562-0d564250836f}/."),
+        QStringLiteral("{d7ac9243-9d84-4498-8192-d7ad263b63c8}"));
+    extension.setValue(QStringLiteral("ShellEx/{e357fccd-a995-4576-b01f-234630154e96}/."),
+        QStringLiteral("{C7657C4A-9F68-40fa-A4DF-96BC08EB3551}"));
     QSettings type(QStringLiteral("HKEY_CURRENT_USER\\Software\\Classes\\SplitViewer.sv"), QSettings::NativeFormat);
     type.setValue(QStringLiteral("."), g_config.m_associationDescription);
     type.setValue(QStringLiteral("DefaultIcon/."), applicationPath + QStringLiteral(",0"));
-    type.setValue(QStringLiteral("ShellEx/{8895b1c6-b41f-4c1c-a562-0d564250836f}/."), QStringLiteral("{d7ac9243-9d84-4498-8192-d7ad263b63c8}"));
-    type.setValue(QStringLiteral("ShellEx/{e357fccd-a995-4576-b01f-234630154e96}/."), QStringLiteral("{C7657C4A-9F68-40fa-A4DF-96BC08EB3551}"));
-    type.setValue(QStringLiteral("shell/open/command/."), QStringLiteral("\"") + applicationPath + QStringLiteral("\" \"%1\""));
+    type.setValue(QStringLiteral("ShellEx/{8895b1c6-b41f-4c1c-a562-0d564250836f}/."),
+        QStringLiteral("{d7ac9243-9d84-4498-8192-d7ad263b63c8}"));
+    type.setValue(QStringLiteral("ShellEx/{e357fccd-a995-4576-b01f-234630154e96}/."),
+        QStringLiteral("{C7657C4A-9F68-40fa-A4DF-96BC08EB3551}"));
+    type.setValue(
+        QStringLiteral("shell/open/command/."), QStringLiteral("\"") + applicationPath + QStringLiteral("\" \"%1\""));
 #ifdef Q_OS_WIN
     SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
 #endif

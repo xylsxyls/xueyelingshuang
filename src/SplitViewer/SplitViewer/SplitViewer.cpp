@@ -1,6 +1,6 @@
 ﻿#include "SplitViewer.h"
-#include "CStringManager/CStringManagerAPI.h"
-
+#include "SplitViewerTaskManager.h"
+#include "SplitViewerDocumentSnapshot.h"
 #include "SplitViewerCanvas.h"
 #include "Config.h"
 #include "SplitViewerDialogHelper.h"
@@ -12,13 +12,16 @@
 #include "SplitViewerRenderer.h"
 #include "SplitViewerProfileStore.h"
 #include "SplitViewerPlatform.h"
+#include "SplitViewerMediaManager.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include "LogManager/LogManagerAPI.h"
-
-#include <algorithm>
-#include <cmath>
-#include <vector>
-
+#include "QtControls/Label.h"
+#include "QtControls/Menu.h"
+#include "QtControls/StatusBar.h"
+#include "QtControls/ToolBar.h"
+#include "QtControls/Widget.h"
 #include <QtCore/QBuffer>
+#include <QtCore/QSaveFile>
 #include <QtCore/QScopedValueRollback>
 #include <QtCore/QPointer>
 #include <QtCore/QByteArray>
@@ -36,11 +39,9 @@
 #include <QtGui/QPainter>
 #include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
-#include "QtControls/Label.h"
-#include "QtControls/Menu.h"
-#include "QtControls/StatusBar.h"
-#include "QtControls/ToolBar.h"
-#include "QtControls/Widget.h"
+#include <algorithm>
+#include <cmath>
+#include <vector>
 
 SplitViewer::SplitViewer(QWidget* parent) :
 MainWindow(parent),
@@ -48,13 +49,18 @@ m_canvas(nullptr),
 m_toolbar(nullptr),
 m_saveProfileAction(nullptr),
 m_statusLabel(nullptr),
+m_document(g_config.m_coreConfig),
 m_documentRevision(0),
+m_resumeCanvasFocus(false),
 m_closing(false),
+m_taskManager(new SplitViewerTaskManager(this)),
+m_mediaManager(nullptr),
 m_exporting(false),
 m_contentFullscreen(false),
 m_wasMaximized(false),
 m_zoomTip(nullptr),
 m_zoomTipTimer(new QTimer(this)),
+m_embeddedSyncTimer(new QTimer(this)),
 m_draggingLayer(false),
 m_resizingLayer(false),
 m_resizeEdges(0),
@@ -68,24 +74,80 @@ m_nativeDragNode(nullptr),
 m_nativeClickTime(0)
 {
     buildUi();
+    if (!m_taskManager->init())
+    {
+        LOGERROR("Window task queues could not be initialized");
+    }
+    m_mediaManager =
+        new SplitViewerMediaManager(&m_document, &m_imageCache, &m_embedded, m_canvas, m_taskManager, this);
+    connect(m_mediaManager, &SplitViewerMediaManager::changed, this,
+        [this]()
+        {
+            syncEmbeddedViews();
+            updateStatus();
+            m_canvas->update();
+        });
+    connect(m_mediaManager, &SplitViewerMediaManager::error, this,
+        [this](const QString& message)
+        {
+            if (!m_closing)
+            {
+                reportError(message);
+            }
+        });
+    connect(m_mediaManager, &SplitViewerMediaManager::idle, this,
+        [this]()
+        {
+            if (m_closing)
+            {
+                QTimer::singleShot(0, this,
+                    [this]()
+                    {
+                        close();
+                    });
+            }
+        });
+    QTimer* closePoll = new QTimer(this);
+    closePoll->setInterval(g_config.m_taskPollIntervalMs);
+    connect(closePoll, &QTimer::timeout, this,
+        [this]()
+        {
+            updateProcessing();
+            if (m_closing && !processing() && !m_mediaManager->busy())
+            {
+                close();
+            }
+        });
+    closePoll->start();
+    m_embeddedSyncTimer->setInterval((std::max)(1, g_config.m_embeddedSyncIntervalMs));
+    connect(m_embeddedSyncTimer, &QTimer::timeout, this,
+        [this]()
+        {
+            if (!m_closing && !m_embedded.isEmpty())
+            {
+                syncEmbeddedViews();
+            }
+        });
+    m_embeddedSyncTimer->start();
     m_zoomTipTimer->setSingleShot(true);
     m_zoomTipTimer->setTimerType(Qt::PreciseTimer);
     m_zoomTipTimer->setInterval(g_config.m_zoomTipDurationMs);
     connect(m_zoomTipTimer, &QTimer::timeout, m_zoomTip, &QWidget::hide);
-    SplitViewerWatchNativeMouse(this,[this](int event,const QPoint& point,WId id)
-    {
-        nativeMouseEvent(event,point,id);
-    });
+    SplitViewerWatchNativeMouse(this,
+        [this](int event, const QPoint& point, WId id)
+        {
+            nativeMouseEvent(event, point, id);
+        });
 }
 
 SplitViewer::~SplitViewer()
 {
+    m_embeddedSyncTimer->stop();
     SplitViewerUnwatchNativeMouse(this);
-    foreach (QWidget* container, m_embedded)
-    {
-        SplitViewerDetachForeignWindow(container);
-    }
-    m_embedded.clear();
+    delete m_taskManager;
+    m_taskManager = nullptr;
+    delete m_mediaManager;
+    m_mediaManager = nullptr;
 }
 
 void SplitViewer::buildUi()
@@ -95,7 +157,8 @@ void SplitViewer::buildUi()
     const int stageWidth = (std::max)(1, qRound(screen.width() * g_config.m_initialScreenFraction));
     const int stageHeight = (std::max)(1, qRound(screen.height() * g_config.m_initialScreenFraction));
     m_document.setStageAspect(static_cast<double>(screen.width()) / static_cast<double>(screen.height()));
-    resize(stageWidth + g_config.m_stageMargin * 2, stageHeight + g_config.m_toolbarHeightAllowance + g_config.m_stageMargin * 2);
+    resize(stageWidth + g_config.m_stageMargin * 2,
+        stageHeight + g_config.m_toolbarHeightAllowance + g_config.m_stageMargin * 2);
     setAcceptDrops(true);
 
     m_toolbar = new ToolBar(this);
@@ -145,8 +208,8 @@ void SplitViewer::buildUi()
     m_zoomTip->setAttribute(Qt::WA_TransparentForMouseEvents);
     m_zoomTip->hide();
     setStyleSheet(g_config.m_windowStyle);
-    const QRect desktop=QApplication::desktop()->availableGeometry(this);
-    move(desktop.center()-QPoint(width()/2,height()/2));
+    const QRect desktop = QApplication::desktop()->availableGeometry(this);
+    move(desktop.center() - QPoint(width() / 2, height() / 2));
     canvasResized();
     updateStatus();
 }
@@ -163,7 +226,8 @@ QRectF SplitViewer::normalizedToPixel(const SplitViewerCoreRect& rect, const QRe
 
 bool SplitViewer::hasContent() const
 {
-    return !m_profilePath.isEmpty() || m_document.layerCount() > 0 || SplitViewerCoreNode::hasContent(m_document.baseRoot());
+    return !m_profilePath.isEmpty() || m_document.layerCount() > 0 ||
+        SplitViewerCoreNode::hasContent(m_document.baseRoot());
 }
 
 QRectF SplitViewer::plusButtonRect(const QRectF& rect) const
@@ -175,14 +239,17 @@ void SplitViewer::paintCanvas(QPainter& painter, const QSize& size)
 {
     painter.setRenderHint(QPainter::Antialiasing, false);
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
-    painter.fillRect(QRect(QPoint(0, 0), size), m_contentFullscreen ? g_config.m_fullscreenColor : g_config.m_canvasColor);
-    SplitViewerRenderer renderer(m_document, m_imageCache, m_embedded, m_canvas->mapFromGlobal(QCursor::pos()), false, false);
+    painter.fillRect(
+        QRect(QPoint(0, 0), size), m_contentFullscreen ? g_config.m_fullscreenColor : g_config.m_canvasColor);
+    SplitViewerRenderer renderer(
+        m_document, m_imageCache, m_embedded, m_canvas->mapFromGlobal(QCursor::pos()), false, false);
     renderer.drawStage(painter, stageRect(size));
     if (m_nativePreview.isValid())
     {
-        painter.setPen(QPen(g_config.m_previewColor,g_config.m_previewStroke));
+        painter.setPen(QPen(g_config.m_previewColor, g_config.m_previewStroke));
         painter.setBrush(Qt::NoBrush);
-        painter.drawRect(m_nativePreview.adjusted(g_config.m_previewInset,g_config.m_previewInset,-g_config.m_previewInset,-g_config.m_previewInset));
+        painter.drawRect(m_nativePreview.adjusted(
+            g_config.m_previewInset, g_config.m_previewInset, -g_config.m_previewInset, -g_config.m_previewInset));
     }
 }
 
@@ -191,20 +258,22 @@ QRectF SplitViewer::contentRect(const QRectF& owner) const
     return SplitViewerLayoutHelper::contentRect(owner, m_document.borderVisible());
 }
 
-void SplitViewer::nodeRects(const QRectF& owner, SplitViewerCoreNode* node, QRectF& first, QRectF& splitter, QRectF& second) const
+void SplitViewer::nodeRects(
+    const QRectF& owner, SplitViewerCoreNode* node, QRectF& first, QRectF& splitter, QRectF& second) const
 {
     SplitViewerLayoutHelper::nodeRects(owner, node, first, splitter, second, m_document.borderVisible());
 }
 
 bool SplitViewer::hitAll(const QPointF& point, SplitViewerHit& hit) const
 {
-    return SplitViewerHitTestHelper::hitAll(m_document, stageRect(m_canvas ? m_canvas->size() : QSize(1, 1)), point, hit);
+    return SplitViewerHitTestHelper::hitAll(
+        m_document, stageRect(m_canvas ? m_canvas->size() : QSize(1, 1)), point, hit);
 }
 
 void SplitViewer::setSelectedHit(const SplitViewerHit& hit)
 {
     m_activeHit = hit;
-    m_document.setSelectedLayer(hit.layer);
+    m_document.setSelectedLayer(hit.m_layer);
     updateStatus();
     m_canvas->update();
 }
@@ -222,53 +291,54 @@ void SplitViewer::canvasMousePress(const QPoint& point, Qt::MouseButton button, 
     }
     clearInteraction();
     setSelectedHit(hit);
-    if (!(modifiers & Qt::ControlModifier) && !hit.splitter && hit.node && hit.node->isLeaf() && !hit.node->view.hasContent() &&
-        plusButtonRect(hit.rect).contains(point))
+    if (!(modifiers & Qt::ControlModifier) && !hit.m_splitter && hit.m_node && hit.m_node->isLeaf() &&
+        !hit.m_node->view.hasImage && !m_embedded.contains(hit.m_node) && !m_mediaManager->pending(hit.m_node) &&
+        plusButtonRect(hit.m_rect).contains(point))
     {
         const QPointer<SplitViewer> owner(this);
         const quint64 revision = m_documentRevision;
-        const QString path = browseFile(false, g_config.m_selectImageText, QString(),
-            g_config.m_imageFilter);
+        const QString path =
+            browseFile(false, m_mediaManager->selectionTitle(), QString(), m_mediaManager->fileFilter());
         if (owner && !m_closing && revision == m_documentRevision && !path.isEmpty())
         {
-            loadImageToLeaf(hit.node, path);
+            loadImageToLeaf(hit.m_node, path);
         }
         return;
     }
     m_dragStart = point;
-    m_dragStartRect = hit.rect;
+    m_dragStartRect = hit.m_rect;
     m_resizeEdges = 0;
     m_resizingLayer = false;
     bool moveFromTopLeft = false;
-    if (hit.layer >= 0)
+    if (hit.m_layer >= 0)
     {
         const qreal edge = g_config.m_layerEdgeHitWidth;
-        moveFromTopLeft = std::abs(point.x() - hit.layerRect.left()) <= edge &&
-            std::abs(point.y() - hit.layerRect.top()) <= edge;
+        moveFromTopLeft =
+            std::abs(point.x() - hit.m_layerRect.left()) <= edge && std::abs(point.y() - hit.m_layerRect.top()) <= edge;
         if (!moveFromTopLeft)
         {
-            if (std::abs(point.x() - hit.layerRect.left()) <= edge)
+            if (std::abs(point.x() - hit.m_layerRect.left()) <= edge)
             {
                 m_resizeEdges |= 1;
             }
-            if (std::abs(point.x() - hit.layerRect.right()) <= edge)
+            if (std::abs(point.x() - hit.m_layerRect.right()) <= edge)
             {
                 m_resizeEdges |= 2;
             }
-            if (std::abs(point.y() - hit.layerRect.top()) <= edge)
+            if (std::abs(point.y() - hit.m_layerRect.top()) <= edge)
             {
                 m_resizeEdges |= 4;
             }
-            if (std::abs(point.y() - hit.layerRect.bottom()) <= edge)
+            if (std::abs(point.y() - hit.m_layerRect.bottom()) <= edge)
             {
                 m_resizeEdges |= 8;
             }
             m_resizingLayer = m_resizeEdges != 0;
         }
     }
-    m_draggingImage = !moveFromTopLeft && !hit.splitter && hit.node && hit.node->isLeaf() && hit.node->view.hasImage && !m_resizingLayer && !(hit.layer >= 0 && (modifiers & Qt::ControlModifier));
-    m_draggingLayer = hit.layer >= 0 && !m_resizingLayer &&
-        (moveFromTopLeft || (modifiers & Qt::ControlModifier));
+    m_draggingImage = !moveFromTopLeft && !hit.m_splitter && hit.m_node && hit.m_node->isLeaf() &&
+        hit.m_node->view.hasImage && !m_resizingLayer && !(hit.m_layer >= 0 && (modifiers & Qt::ControlModifier));
+    m_draggingLayer = hit.m_layer >= 0 && !m_resizingLayer && (moveFromTopLeft || (modifiers & Qt::ControlModifier));
 }
 
 void SplitViewer::canvasMouseMove(const QPoint& point, Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers)
@@ -277,66 +347,74 @@ void SplitViewer::canvasMouseMove(const QPoint& point, Qt::MouseButtons buttons,
     if (!(buttons & Qt::LeftButton))
     {
         SplitViewerHit hover;
-        Qt::CursorShape cursor=Qt::ArrowCursor;
-        if (hitAll(point,hover))
+        Qt::CursorShape cursor = Qt::ArrowCursor;
+        if (hitAll(point, hover))
         {
-            const bool nearLeft=hover.layer>=0 && std::abs(point.x()-hover.layerRect.left())<=g_config.m_layerEdgeHitWidth;
-            const bool nearTop=hover.layer>=0 && std::abs(point.y()-hover.layerRect.top())<=g_config.m_layerEdgeHitWidth;
-            const bool nearRight=hover.layer>=0 && std::abs(point.x()-hover.layerRect.right())<=g_config.m_layerEdgeHitWidth;
-            const bool nearBottom=hover.layer>=0 && std::abs(point.y()-hover.layerRect.bottom())<=g_config.m_layerEdgeHitWidth;
-            const bool topLeftMove=nearLeft && nearTop;
-            const bool x=nearLeft || nearRight;
-            const bool y=nearTop || nearBottom;
+            const bool nearLeft =
+                hover.m_layer >= 0 && std::abs(point.x() - hover.m_layerRect.left()) <= g_config.m_layerEdgeHitWidth;
+            const bool nearTop =
+                hover.m_layer >= 0 && std::abs(point.y() - hover.m_layerRect.top()) <= g_config.m_layerEdgeHitWidth;
+            const bool nearRight =
+                hover.m_layer >= 0 && std::abs(point.x() - hover.m_layerRect.right()) <= g_config.m_layerEdgeHitWidth;
+            const bool nearBottom =
+                hover.m_layer >= 0 && std::abs(point.y() - hover.m_layerRect.bottom()) <= g_config.m_layerEdgeHitWidth;
+            const bool topLeftMove = nearLeft && nearTop;
+            const bool x = nearLeft || nearRight;
+            const bool y = nearTop || nearBottom;
             if (topLeftMove)
             {
-                cursor=Qt::SizeAllCursor;
+                cursor = Qt::SizeAllCursor;
             }
             else if (x && y)
             {
-                cursor=((point.x()<hover.layerRect.center().x())==(point.y()<hover.layerRect.center().y())) ? Qt::SizeFDiagCursor : Qt::SizeBDiagCursor;
+                cursor = ((point.x() < hover.m_layerRect.center().x()) == (point.y() < hover.m_layerRect.center().y()))
+                    ? Qt::SizeFDiagCursor
+                    : Qt::SizeBDiagCursor;
             }
             else if (x)
             {
-                cursor=Qt::SizeHorCursor;
+                cursor = Qt::SizeHorCursor;
             }
             else if (y)
             {
-                cursor=Qt::SizeVerCursor;
+                cursor = Qt::SizeVerCursor;
             }
-            else if (hover.layer>=0 && (modifiers & Qt::ControlModifier))
+            else if (hover.m_layer >= 0 && (modifiers & Qt::ControlModifier))
             {
-                cursor=Qt::SizeAllCursor;
+                cursor = Qt::SizeAllCursor;
             }
-            else if (hover.splitter)
+            else if (hover.m_splitter)
             {
-                cursor=hover.node->direction==SPLITVIEWER_CORE_SPLIT_VERTICAL ? Qt::SizeHorCursor : Qt::SizeVerCursor;
+                cursor =
+                    hover.m_node->direction == SPLITVIEWER_CORE_SPLIT_VERTICAL ? Qt::SizeHorCursor : Qt::SizeVerCursor;
             }
-            else if (!hover.node->view.hasContent() && plusButtonRect(hover.rect).contains(point))
+            else if (!hover.m_node->view.hasContent() && plusButtonRect(hover.m_rect).contains(point))
             {
-                cursor=Qt::PointingHandCursor;
+                cursor = Qt::PointingHandCursor;
             }
         }
         m_canvas->setCursor(cursor);
         m_canvas->update();
         return;
     }
-    if (!m_resizingLayer && !m_draggingLayer && m_activeHit.splitter && m_activeHit.node)
+    if (!m_resizingLayer && !m_draggingLayer && m_activeHit.m_splitter && m_activeHit.m_node)
     {
-        const QRectF owner = m_activeHit.ownerRect;
-        const bool vertical=m_activeHit.node->direction == SPLITVIEWER_CORE_SPLIT_VERTICAL;
-        const double length=vertical ? owner.width() : owner.height();
-        const double thickness=m_document.borderVisible() ? g_config.m_splitterWidth : 0.0;
-        const double ratio=((vertical ? point.x()-owner.left() : point.y()-owner.top())-thickness/2.0)/(std::max)(1.0,length-thickness);
-        const double minimum=(std::min)(0.5,g_config.m_minimumPaneSize/(std::max)(1.0,length-thickness));
-        m_activeHit.node->ratio=(std::max)(minimum,(std::min)(1.0-minimum,ratio));
+        const QRectF owner = m_activeHit.m_ownerRect;
+        const bool vertical = m_activeHit.m_node->direction == SPLITVIEWER_CORE_SPLIT_VERTICAL;
+        const double length = vertical ? owner.width() : owner.height();
+        const double thickness = m_document.borderVisible() ? g_config.m_splitterWidth : 0.0;
+        const double ratio = ((vertical ? point.x() - owner.left() : point.y() - owner.top()) - thickness / 2.0) /
+            (std::max)(1.0, length - thickness);
+        const double minimum = (std::min)(0.5, g_config.m_minimumPaneSize / (std::max)(1.0, length - thickness));
+        m_activeHit.m_node->ratio = (std::max)(minimum, (std::min)(1.0 - minimum, ratio));
         m_canvas->update();
         return;
     }
-    if (m_draggingImage && m_activeHit.node)
+    if (m_draggingImage && m_activeHit.m_node)
     {
-        if (m_activeHit.node->view.autoFit)
+        if (m_activeHit.m_node->view.autoFit)
         {
-            const QString imagePath = SplitViewerImageHelper::path(m_activeHit.node->view.path);
+            const QString imagePath = SplitViewerImageHelper::path(m_activeHit.m_node->view.path);
             if (!m_imageCache.contains(imagePath))
             {
                 m_imageCache.insert(imagePath, QImage(imagePath));
@@ -344,20 +422,21 @@ void SplitViewer::canvasMouseMove(const QPoint& point, Qt::MouseButtons buttons,
             const QImage image = m_imageCache.value(imagePath);
             if (!image.isNull())
             {
-                m_activeHit.node->view.scale = SplitViewerCoreFitScale(image.width(), image.height(), m_activeHit.rect.width(), m_activeHit.rect.height());
+                m_activeHit.m_node->view.scale = SplitViewerCoreFitScale(
+                    image.width(), image.height(), m_activeHit.m_rect.width(), m_activeHit.m_rect.height());
             }
-            m_activeHit.node->view.autoFit = false;
+            m_activeHit.m_node->view.autoFit = false;
         }
         const QPoint delta = point - m_dragStart;
-        m_activeHit.node->view.offsetX += delta.x();
-        m_activeHit.node->view.offsetY += delta.y();
+        m_activeHit.m_node->view.offsetX += delta.x();
+        m_activeHit.m_node->view.offsetY += delta.y();
         m_dragStart = point;
         m_canvas->update();
         return;
     }
-    if (m_draggingLayer && m_activeHit.layer >= 0 && m_activeHit.layer < m_document.layerCount())
+    if (m_draggingLayer && m_activeHit.m_layer >= 0 && m_activeHit.m_layer < m_document.layerCount())
     {
-        SplitViewerCoreLayer* layer = m_document.layerAt(m_activeHit.layer);
+        SplitViewerCoreLayer* layer = m_document.layerAt(m_activeHit.m_layer);
         if (layer)
         {
             const QRectF stage = stageRect(m_canvas->size());
@@ -369,14 +448,15 @@ void SplitViewer::canvasMouseMove(const QPoint& point, Qt::MouseButtons buttons,
             layer->rect.top += dy;
             layer->rect.bottom += dy;
             SplitViewerCoreRect bounds(0.0, 0.0, 1.0, 1.0);
-            SplitViewerCoreConstrainLayerRect(layer->rect, bounds, g_config.m_minimumLayerWidth/stage.width(), g_config.m_minimumLayerHeight/stage.height());
+            SplitViewerCoreConstrainLayerRect(layer->rect, bounds, g_config.m_minimumLayerWidth / stage.width(),
+                g_config.m_minimumLayerHeight / stage.height());
             m_dragStart = point;
             m_canvas->update();
         }
     }
-    if (m_resizingLayer && m_activeHit.layer >= 0 && m_activeHit.layer < m_document.layerCount())
+    if (m_resizingLayer && m_activeHit.m_layer >= 0 && m_activeHit.m_layer < m_document.layerCount())
     {
-        SplitViewerCoreLayer* layer = m_document.layerAt(m_activeHit.layer);
+        SplitViewerCoreLayer* layer = m_document.layerAt(m_activeHit.m_layer);
         if (layer)
         {
             const QRectF stage = stageRect(m_canvas->size());
@@ -385,19 +465,27 @@ void SplitViewer::canvasMouseMove(const QPoint& point, Qt::MouseButtons buttons,
             const double dy = delta.y() / (std::max)(1.0, stage.height());
             if (m_resizeEdges & 1)
             {
-                layer->rect.left=(std::max)(0.0,(std::min)(layer->rect.right-g_config.m_minimumLayerWidth/stage.width(),layer->rect.left+dx));
+                layer->rect.left = (std::max)(0.0,
+                    (std::min)(layer->rect.right - g_config.m_minimumLayerWidth / stage.width(),
+                        layer->rect.left + dx));
             }
             if (m_resizeEdges & 2)
             {
-                layer->rect.right=(std::min)(1.0,(std::max)(layer->rect.left+g_config.m_minimumLayerWidth/stage.width(),layer->rect.right+dx));
+                layer->rect.right = (std::min)(1.0,
+                    (std::max)(layer->rect.left + g_config.m_minimumLayerWidth / stage.width(),
+                        layer->rect.right + dx));
             }
             if (m_resizeEdges & 4)
             {
-                layer->rect.top=(std::max)(0.0,(std::min)(layer->rect.bottom-g_config.m_minimumLayerHeight/stage.height(),layer->rect.top+dy));
+                layer->rect.top = (std::max)(0.0,
+                    (std::min)(layer->rect.bottom - g_config.m_minimumLayerHeight / stage.height(),
+                        layer->rect.top + dy));
             }
             if (m_resizeEdges & 8)
             {
-                layer->rect.bottom=(std::min)(1.0,(std::max)(layer->rect.top+g_config.m_minimumLayerHeight/stage.height(),layer->rect.bottom+dy));
+                layer->rect.bottom = (std::min)(1.0,
+                    (std::max)(layer->rect.top + g_config.m_minimumLayerHeight / stage.height(),
+                        layer->rect.bottom + dy));
             }
             m_dragStart = point;
             m_canvas->update();
@@ -421,21 +509,22 @@ void SplitViewer::canvasMouseRelease(const QPoint& point, Qt::MouseButton button
 void SplitViewer::canvasWheel(const QPoint& point, int delta, Qt::KeyboardModifiers modifiers)
 {
     SplitViewerHit hit;
-    if (delta == 0 || !hitAll(point, hit) || hit.splitter || !hit.node || !hit.node->view.hasImage)
+    if (delta == 0 || !hitAll(point, hit) || hit.m_splitter || !hit.m_node || !hit.m_node->view.hasImage)
     {
         return;
     }
-    const QImage image=m_imageCache.value(SplitViewerImageHelper::path(hit.node->view.path));
+    const QImage image = m_imageCache.value(SplitViewerImageHelper::path(hit.m_node->view.path));
     if (image.isNull())
     {
         return;
     }
-    const double fit=SplitViewerCoreFitScale(image.width(),image.height(),hit.rect.width(),hit.rect.height());
-    SplitViewerCoreZoom(hit.node->view,fit,delta,(modifiers & Qt::ControlModifier)!=0);
+    const double fit = SplitViewerCoreFitScale(image.width(), image.height(), hit.m_rect.width(), hit.m_rect.height());
+    SplitViewerCoreZoom(hit.m_node->view, fit, delta, (modifiers & Qt::ControlModifier) != 0, m_document.config());
     setSelectedHit(hit);
-    m_zoomTip->setText(QString::number(hit.node->view.scale/fit*100.0,'f',0)+QStringLiteral("%"));
+    m_zoomTip->setText(QString::number(hit.m_node->view.scale / fit * 100.0, 'f', 0) + QStringLiteral("%"));
     m_zoomTip->adjustSize();
-    m_zoomTip->move((std::max)(0,point.x()-m_zoomTip->width()/2),(std::max)(0,point.y()-g_config.m_zoomTipOffset));
+    m_zoomTip->move(
+        (std::max)(0, point.x() - m_zoomTip->width() / 2), (std::max)(0, point.y() - g_config.m_zoomTipOffset));
     m_zoomTip->show();
     m_zoomTip->raise();
     m_zoomTipTimer->start();
@@ -445,7 +534,7 @@ void SplitViewer::canvasWheel(const QPoint& point, int delta, Qt::KeyboardModifi
 void SplitViewer::canvasContextMenu(const QPoint& point, const QPoint& globalPoint)
 {
     SplitViewerHit hit;
-    if (!hitAll(point, hit) || hit.splitter)
+    if (!hitAll(point, hit) || hit.m_splitter)
     {
         return;
     }
@@ -454,22 +543,37 @@ void SplitViewer::canvasContextMenu(const QPoint& point, const QPoint& globalPoi
     const quint64 revision = m_documentRevision;
     Menu menu(this);
     // 栈菜单不能在宿主的QObject析构中被删除；先解除父所有权并退出exec。
-    connect(this, &QObject::destroyed, &menu, [&menu]()
-    {
-        menu.setParent(nullptr);
-        menu.close();
-    });
+    connect(this, &QObject::destroyed, &menu,
+        [&menu]()
+        {
+            menu.setParent(nullptr);
+            menu.close();
+        });
     QAction* horizontal = menu.addAction(g_config.m_horizontalSplitText);
     QAction* vertical = menu.addAction(g_config.m_verticalSplitText);
     QAction* deleteLayerAction = menu.addAction(g_config.m_deleteLayerText);
-    deleteLayerAction->setEnabled(hit.layer >= 0);
+    deleteLayerAction->setEnabled(hit.m_layer >= 0);
     QAction* deleteAction = menu.addAction(g_config.m_deleteSplitText);
-    deleteAction->setEnabled(hit.node != hit.root);
+    deleteAction->setEnabled(hit.m_node != hit.m_root);
     menu.addSeparator();
-    QAction* load = menu.addAction(g_config.m_loadImageText);
+    QAction* moveLeft = menu.addAction(g_config.m_moveLeftText);
+    QAction* moveRight = menu.addAction(g_config.m_moveRightText);
+    QAction* moveUp = menu.addAction(g_config.m_moveUpText);
+    QAction* moveDown = menu.addAction(g_config.m_moveDownText);
+    const bool movable = hit.m_node && hit.m_node->isLeaf() && hit.m_node->view.hasContent();
+    moveLeft->setEnabled(
+        movable && SplitViewerCoreDirectionalTarget(hit.m_root, hit.m_node, SPLITVIEWER_CORE_MOVE_LEFT));
+    moveRight->setEnabled(
+        movable && SplitViewerCoreDirectionalTarget(hit.m_root, hit.m_node, SPLITVIEWER_CORE_MOVE_RIGHT));
+    moveUp->setEnabled(movable && SplitViewerCoreDirectionalTarget(hit.m_root, hit.m_node, SPLITVIEWER_CORE_MOVE_UP));
+    moveDown->setEnabled(
+        movable && SplitViewerCoreDirectionalTarget(hit.m_root, hit.m_node, SPLITVIEWER_CORE_MOVE_DOWN));
+    menu.addSeparator();
+    QAction* load = menu.addAction(m_mediaManager->loadActionText());
     QAction* embed = menu.addAction(g_config.m_embedWindowText);
     QAction* detach = menu.addAction(g_config.m_detachWindowText);
-    detach->setEnabled(m_embedded.contains(hit.node));
+    detach->setEnabled(m_embedded.contains(hit.m_node) || m_mediaManager->pending(hit.m_node) ||
+        hit.m_node->view.contentKind == SPLITVIEWER_CORE_CONTENT_VIDEO);
     QAction* chosen = menu.exec(globalPoint);
     if (!owner || m_closing || revision != m_documentRevision)
     {
@@ -485,7 +589,15 @@ void SplitViewer::canvasContextMenu(const QPoint& point, const QPoint& globalPoi
         detachExternalWindow();
         return;
     }
-    if (chosen == horizontal)
+    if (chosen == moveLeft || chosen == moveRight || chosen == moveUp || chosen == moveDown)
+    {
+        const SplitViewerCoreMoveDirection direction = chosen == moveLeft ? SPLITVIEWER_CORE_MOVE_LEFT
+            : chosen == moveRight                                         ? SPLITVIEWER_CORE_MOVE_RIGHT
+            : chosen == moveUp                                            ? SPLITVIEWER_CORE_MOVE_UP
+                                                                          : SPLITVIEWER_CORE_MOVE_DOWN;
+        moveAt(hit, direction);
+    }
+    else if (chosen == horizontal)
     {
         splitAt(hit, SPLITVIEWER_CORE_SPLIT_HORIZONTAL);
     }
@@ -499,60 +611,124 @@ void SplitViewer::canvasContextMenu(const QPoint& point, const QPoint& globalPoi
     }
     else if (chosen == deleteLayerAction)
     {
-        deleteLayerAt(hit.layer);
+        deleteLayerAt(hit.m_layer);
     }
-    else if (chosen == load && hit.node)
+    else if (chosen == load && hit.m_node)
     {
-        const QString path = browseFile(false, g_config.m_selectImageText, QString(), g_config.m_imageFilter);
+        const QString path =
+            browseFile(false, m_mediaManager->selectionTitle(), QString(), m_mediaManager->fileFilter());
         if (owner && !m_closing && revision == m_documentRevision && !path.isEmpty())
         {
-            loadImageToLeaf(hit.node, path);
+            loadImageToLeaf(hit.m_node, path);
         }
     }
 }
 
-void SplitViewer::splitAt(const SplitViewerHit& hit, SplitViewerCoreSplitDirection direction)
+void SplitViewer::moveAt(const SplitViewerHit& hit, SplitViewerCoreMoveDirection direction)
 {
-    if (!hit.node || !hit.node->isLeaf())
+    SplitViewerCoreNode* target = SplitViewerCoreDirectionalTarget(hit.m_root, hit.m_node, direction);
+    if (!target || !hit.m_node->view.hasContent())
     {
         return;
     }
-    hit.node->makeSplit(direction);
-    if (m_embedded.contains(hit.node))
+    const QPointer<SplitViewer> owner(this);
+    const quint64 documentRevision = m_documentRevision;
+    const quint64 mediaRevision = m_mediaManager->revision();
+    if (target->view.hasContent() || m_mediaManager->pending(target))
     {
-        m_embedded.insert(hit.node->first,m_embedded.take(hit.node));
+        AskDialogParam confirm;
+        confirm.m_parent = windowHandle();
+        confirm.m_title = g_config.m_moveOverwriteTitle;
+        confirm.m_tip = g_config.m_moveOverwritePrompt;
+        DialogManager::instance().makeDialog(confirm);
+        if (!owner || m_closing || documentRevision != m_documentRevision ||
+            mediaRevision != m_mediaManager->revision() || confirm.m_result != ACCEPT_BUTTON)
+        {
+            return;
+        }
     }
-    clearInteraction();
-    m_canvas->update();
-    updateStatus();
+    const QRectF stage = stageRect(m_canvas->size());
+    SplitViewerCoreLayer* layer = hit.m_layer >= 0 ? m_document.layerAt(hit.m_layer) : nullptr;
+    const QRectF rootRect = contentRect(layer ? normalizedToPixel(layer->rect, stage) : stage);
+    QRectF sourceRect, targetRect;
+    if (!SplitViewerLayoutHelper::findLeafRect(
+            hit.m_root, rootRect, hit.m_node, sourceRect, m_document.borderVisible()) ||
+        !SplitViewerLayoutHelper::findLeafRect(hit.m_root, rootRect, target, targetRect, m_document.borderVisible()))
+    {
+        return;
+    }
+    const SplitViewerCoreNode* source = hit.m_node;
+    const SplitViewerCoreNode* root = hit.m_root;
+    submitDocumentEdit(
+        [source, target, root, sourceRect, targetRect](SplitViewerDocumentSnapshot& snapshot)
+        {
+            SplitViewerCoreNode* from = snapshot.m_nodes.at(source);
+            SplitViewerCoreNode* to = snapshot.m_nodes.at(target);
+            if (!SplitViewerCoreMoveContent(snapshot.m_nodes.at(root), from, to))
+            {
+                return false;
+            }
+            SplitViewerCoreResizeView(
+                to->view, sourceRect.width(), sourceRect.height(), targetRect.width(), targetRect.height());
+            snapshot.m_releaseTarget = target;
+            snapshot.m_nodes[source] = to;
+            snapshot.m_nodes[target] = nullptr;
+            return true;
+        });
+}
+
+void SplitViewer::splitAt(const SplitViewerHit& hit, SplitViewerCoreSplitDirection direction)
+{
+    const SplitViewerCoreNode* source = hit.m_node;
+    if (!source || !source->isLeaf())
+    {
+        return;
+    }
+    submitDocumentEdit(
+        [source, direction](SplitViewerDocumentSnapshot& snapshot)
+        {
+            SplitViewerCoreNode* node = snapshot.m_nodes.at(source);
+            if (!snapshot.m_document.splitNode(node, direction) || node->isLeaf())
+            {
+                return false;
+            }
+            snapshot.m_nodes[source] = node->first;
+            return true;
+        });
 }
 
 void SplitViewer::deleteAt(const SplitViewerHit& hit)
 {
-    if (!hit.node || !hit.root || hit.node == hit.root || !hit.node->isLeaf())
+    if (!hit.m_node || !hit.m_root || hit.m_node == hit.m_root || !hit.m_node->isLeaf())
     {
         return;
     }
-    // The surviving sibling may move into its parent; rebind its native window before deleting nodes.
-    SplitViewerCoreNode* parent=SplitViewerCoreFindParent(hit.root,hit.node);
-    if (!parent)
-    {
-        return;
-    }
-    SplitViewerCoreNode* sibling=parent->first == hit.node ? parent->second : parent->first;
-    if (m_embedded.contains(hit.node))
-    {
-        SplitViewerDetachForeignWindow(m_embedded.take(hit.node));
-    }
-    if (m_embedded.contains(sibling))
-    {
-        m_embedded.insert(parent,m_embedded.take(sibling));
-    }
-    m_document.deleteLeaf(hit.root,hit.node);
-    SplitViewerImageHelper::pruneUnusedImages(m_document, m_imageCache);
-    clearInteraction();
-    updateStatus();
-    m_canvas->update();
+    const SplitViewerCoreNode* source = hit.m_node;
+    const SplitViewerCoreNode* root = hit.m_root;
+    submitDocumentEdit(
+        [source, root](SplitViewerDocumentSnapshot& snapshot)
+        {
+            SplitViewerCoreNode* node = snapshot.m_nodes.at(source);
+            SplitViewerCoreNode* tree = snapshot.m_nodes.at(root);
+            SplitViewerCoreNode* parent = SplitViewerCoreFindParent(tree, node);
+            if (!parent)
+            {
+                return false;
+            }
+            SplitViewerCoreNode* sibling = parent->first == node ? parent->second : parent->first;
+            if (sibling && sibling->isLeaf())
+            {
+                for (auto& mapping : snapshot.m_nodes)
+                {
+                    if (mapping.second == sibling)
+                    {
+                        mapping.second = parent;
+                    }
+                }
+            }
+            snapshot.m_nodes[source] = nullptr;
+            return snapshot.m_document.deleteLeaf(tree, node);
+        });
 }
 
 void SplitViewer::detachEmbeddedTree(SplitViewerCoreNode* root)
@@ -565,31 +741,21 @@ void SplitViewer::detachEmbeddedTree(SplitViewerCoreNode* root)
     SplitViewerCoreNode::collectLeaves(root, leaves);
     for (size_t i = 0; i < leaves.size(); ++i)
     {
-        QWidget* container = m_embedded.take(leaves[i]);
-        if (container)
-        {
-            SplitViewerDetachForeignWindow(container);
-        }
+        m_mediaManager->release(leaves[i]);
     }
 }
 
 bool SplitViewer::deleteLayerAt(int index)
 {
-    SplitViewerCoreLayer* layer = m_document.layerAt(index);
-    if (!layer)
+    if (!m_document.layerAt(index))
     {
         return false;
     }
-    detachEmbeddedTree(layer->root);
-    if (!m_document.deleteLayer(index))
-    {
-        return false;
-    }
-    SplitViewerImageHelper::pruneUnusedImages(m_document, m_imageCache);
-    clearInteraction();
-    updateStatus();
-    m_canvas->update();
-    return true;
+    return submitDocumentEdit(
+        [index](SplitViewerDocumentSnapshot& snapshot)
+        {
+            return snapshot.m_document.deleteLayer(index);
+        });
 }
 
 bool SplitViewer::deleteSelectedLayer()
@@ -603,35 +769,8 @@ bool SplitViewer::deleteSelectedLayer()
 
 void SplitViewer::loadImageToLeaf(SplitViewerCoreNode* leaf, const QString& path)
 {
-    if (!leaf || !leaf->isLeaf() || path.isEmpty())
-    {
-        return;
-    }
-    QImage image(path);
-    if (qApp->property("debug").toBool())
-    {
-        LOGINFO("Load image size=%dx%d valid=%d",image.width(),image.height(),!image.isNull());
-    }
-    if (image.isNull())
-    {
-        reportError(g_config.m_readImageError+path);
-        return;
-    }
-    if (m_embedded.contains(leaf))
-    {
-        SplitViewerDetachForeignWindow(m_embedded.take(leaf));
-    }
-    m_imageCache.insert(path, image);
-    leaf->view.path = path.toStdWString();
-    leaf->view.contentKind = SPLITVIEWER_CORE_CONTENT_IMAGE;
-    leaf->view.hasImage = true;
-    leaf->view.autoFit = true;
-    leaf->view.scale = 1.0;
-    leaf->view.offsetX = 0.0;
-    leaf->view.offsetY = 0.0;
-    SplitViewerImageHelper::pruneUnusedImages(m_document, m_imageCache);
-    m_canvas->update();
-    updateStatus();
+    m_mediaManager->load(leaf, path);
+    updateProcessing();
 }
 
 void SplitViewer::canvasFileDropped(const QString& path)
@@ -646,85 +785,146 @@ void SplitViewer::canvasFileDropped(const QString& path)
         return;
     }
     SplitViewerHit hit = m_activeHit;
-    if (!hit.node || !hit.node->isLeaf())
+    if (!hit.m_node || !hit.m_node->isLeaf())
     {
-        hit.node = m_document.firstLeaf(m_document.baseRoot());
-        hit.layer = -1;
+        hit.m_node = m_document.firstLeaf(m_document.baseRoot());
+        hit.m_layer = -1;
     }
-    loadImageToLeaf(hit.node, path);
+    loadImageToLeaf(hit.m_node, path);
 }
 
 void SplitViewer::newLayer()
 {
-    m_document.addLayer();
-    clearInteraction();
-    m_canvas->update();
-    updateStatus();
-}
-
-QByteArray SplitViewer::renderPng()
-{
-    const QRectF stage=stageRect(m_canvas->size());
-    QSize size=stage.size().toSize();
-    size.scale(g_config.m_thumbnailSize,g_config.m_thumbnailSize,Qt::KeepAspectRatio);
-    const QImage image=renderStage(size,false);
-    QBuffer buffer;
-    buffer.open(QIODevice::WriteOnly);
-    image.save(&buffer,"PNG");
-    return buffer.data();
+    submitDocumentEdit(
+        [](SplitViewerDocumentSnapshot& snapshot)
+        {
+            return snapshot.m_document.addLayer() != nullptr;
+        });
 }
 
 bool SplitViewer::writeProfile(const QString& path)
 {
-    const QRect windowRect = m_contentFullscreen ? normalGeometry() : geometry();
-    m_document.setWindowRect(windowRect.left(), windowRect.top(), windowRect.x()+windowRect.width(), windowRect.y()+windowRect.height());
-    const bool written = SplitViewerProfileStore::write(path, m_document, renderPng());
-    if (written)
+    if (processing() || m_closing)
     {
-        m_profilePath = path;
+        return false;
     }
-    return written;
+    const std::shared_ptr<SplitViewerDocumentSnapshot> snapshot =
+        std::make_shared<SplitViewerDocumentSnapshot>(m_document.config());
+    if (!m_document.copyTo(snapshot->m_document, snapshot->m_nodes))
+    {
+        return false;
+    }
+    const QRect rect = m_contentFullscreen ? normalGeometry() : geometry();
+    snapshot->m_document.setWindowRect(rect.left(), rect.top(), rect.x() + rect.width(), rect.y() + rect.height());
+    const QRectF stage = stageRect(m_canvas->size());
+    QSize size = stage.size().toSize();
+    size.scale(g_config.m_thumbnailSize, g_config.m_thumbnailSize, Qt::KeepAspectRatio);
+    const QImage thumbnail = renderStage(size, false);
+    const bool accepted = m_taskManager->submit(
+        true,
+        [snapshot, thumbnail, path](const std::atomic<bool>& exit)
+        {
+            if (exit.load())
+            {
+                return false;
+            }
+            QBuffer buffer;
+            if (!buffer.open(QIODevice::WriteOnly) || !thumbnail.save(&buffer, "PNG") || exit.load())
+            {
+                return false;
+            }
+            return SplitViewerProfileStore::write(path, snapshot->m_document, buffer.data());
+        },
+        [this, path](bool success)
+        {
+            updateProcessing();
+            if (!m_closing)
+            {
+                if (success)
+                {
+                    m_profilePath = path;
+                }
+                else
+                {
+                    reportError(g_config.m_writeProfileError);
+                }
+            }
+        });
+    updateProcessing();
+    return accepted;
 }
 
 bool SplitViewer::readProfile(const QString& path)
 {
-    QString error;
-    if (!SplitViewerProfileStore::read(path, m_document, error))
+    if (processing() || m_closing)
     {
-        reportError(error);
         return false;
     }
-    foreach (QWidget* container,m_embedded)
-    {
-        SplitViewerDetachForeignWindow(container);
-    }
-    m_embedded.clear();
-    clearInteraction();
-    m_lastStage=QRectF();
-    m_imageCache.clear();
-    SplitViewerImageHelper::setImageStatus(m_document.baseRoot(), m_imageCache);
-    for (int i = 0; i < m_document.layerCount(); ++i)
-    {
-        SplitViewerCoreLayer* layer = m_document.layerAt(i);
-        if (layer)
+    const std::shared_ptr<SplitViewerDocumentSnapshot> snapshot =
+        std::make_shared<SplitViewerDocumentSnapshot>(m_document.config());
+    const quint64 revision = m_documentRevision;
+    const qint64 maximum = g_config.m_profileMaximumBytes;
+    const QString readError = g_config.m_readProfileError;
+    const QString invalidError = g_config.m_invalidProfileError;
+    const QString limitError = g_config.m_profileTooLargeError;
+    const bool accepted = m_taskManager->submit(
+        true,
+        [snapshot, path, maximum, readError, invalidError, limitError](const std::atomic<bool>& exit)
         {
-            SplitViewerImageHelper::setImageStatus(layer->root, m_imageCache);
-        }
-    }
-    SplitViewerImageHelper::pruneUnusedImages(m_document, m_imageCache);
-    const qint64 restoredWidth = static_cast<qint64>(m_document.windowRight()) - m_document.windowLeft();
-    const qint64 restoredHeight = static_cast<qint64>(m_document.windowBottom()) - m_document.windowTop();
-    if (restoredWidth > 0 && restoredHeight > 0 &&
-        restoredWidth <= QWIDGETSIZE_MAX && restoredHeight <= QWIDGETSIZE_MAX)
-    {
-        setGeometry(m_document.windowLeft(), m_document.windowTop(),
-            static_cast<int>(restoredWidth), static_cast<int>(restoredHeight));
-    }
-    m_profilePath = path;
-    LOGINFO("Load profile success; layers=%d",m_document.layerCount());
-    m_canvas->update();
-    updateStatus();
-    return true;
+            if (exit.load() ||
+                !SplitViewerProfileStore::read(
+                    path, snapshot->m_document, snapshot->m_error, maximum, readError, invalidError, limitError))
+            {
+                return false;
+            }
+            std::vector<SplitViewerCoreNode*> leaves;
+            SplitViewerCoreNode::collectLeaves(snapshot->m_document.baseRoot(), leaves);
+            for (int index = 0; index < snapshot->m_document.layerCount(); ++index)
+            {
+                SplitViewerCoreNode::collectLeaves(snapshot->m_document.layerAt(index)->root, leaves);
+            }
+            for (SplitViewerCoreNode* leaf : leaves)
+            {
+                if (exit.load())
+                {
+                    return false;
+                }
+                SplitViewerImageHelper::setImageStatus(leaf, snapshot->m_images);
+            }
+            return !exit.load();
+        },
+        [this, snapshot, revision, path](bool success)
+        {
+            updateProcessing();
+            if (m_closing || revision != m_documentRevision)
+            {
+                return;
+            }
+            if (!success)
+            {
+                reportError(snapshot->m_error.isEmpty() ? g_config.m_invalidProfileError : snapshot->m_error);
+                return;
+            }
+            m_mediaManager->releaseAll();
+            m_document.swap(snapshot->m_document);
+            m_imageCache.swap(snapshot->m_images);
+            clearInteraction();
+            m_lastStage = QRectF();
+            const qint64 width = static_cast<qint64>(m_document.windowRight()) - m_document.windowLeft();
+            const qint64 height = static_cast<qint64>(m_document.windowBottom()) - m_document.windowTop();
+            if (width > 0 && height > 0 && width <= QWIDGETSIZE_MAX && height <= QWIDGETSIZE_MAX)
+            {
+                setGeometry(
+                    m_document.windowLeft(), m_document.windowTop(), static_cast<int>(width), static_cast<int>(height));
+            }
+            m_profilePath = path;
+            m_mediaManager->restoreVideos();
+            canvasResized();
+            updateStatus();
+            LOGINFO("Profile restored; layers=%d", m_document.layerCount());
+        });
+    updateProcessing();
+    return accepted;
 }
 
 void SplitViewer::openProfile()
@@ -750,7 +950,8 @@ void SplitViewer::saveProfile()
     QString path = m_profilePath;
     if (path.isEmpty())
     {
-        path = browseFile(true, g_config.m_saveProfileText, g_config.m_defaultProfileName, g_config.m_saveProfileFilter);
+        path =
+            browseFile(true, g_config.m_saveProfileText, g_config.m_defaultProfileName, g_config.m_saveProfileFilter);
     }
     if (owner && !m_closing && revision == m_documentRevision && !path.isEmpty())
     {
@@ -769,27 +970,68 @@ void SplitViewer::saveImage()
 {
     const QPointer<SplitViewer> owner(this);
     const quint64 revision = m_documentRevision;
-    QString path=browseFile(true,g_config.m_saveImageText,g_config.m_defaultImageName,
-        g_config.m_exportImageFilter);
+    QString path =
+        browseFile(true, g_config.m_saveImageText, g_config.m_defaultImageName, g_config.m_exportImageFilter);
     if (!owner || m_closing || revision != m_documentRevision || path.isEmpty())
     {
         return;
     }
     if (QFileInfo(path).suffix().isEmpty())
     {
-        path+=g_config.m_imageExtension;
+        path += g_config.m_imageExtension;
     }
-    const QRect screen=QApplication::desktop()->screenGeometry(this);
-    QSize target(screen.width(),screen.height());
+    const QRect screen = QApplication::desktop()->screenGeometry(this);
+    QSize target(screen.width(), screen.height());
     QSize aspectSize(g_config.m_exportAspectWidth,
         (std::max)(1, static_cast<int>(g_config.m_exportAspectWidth / m_document.stageAspect())));
-    aspectSize.scale(target,Qt::KeepAspectRatio);
-    const QImage image=renderStage(aspectSize,true);
-    QImageWriter writer(path);
-    if (!writer.write(image))
+    aspectSize.scale(target, Qt::KeepAspectRatio);
+    const QImage image = renderStage(aspectSize, true);
+    const QByteArray format = QFileInfo(path).suffix().toLatin1();
+    const QString failure = g_config.m_writeImageError;
+    const std::shared_ptr<QString> error = std::make_shared<QString>();
+    if (!m_taskManager->submit(
+            true,
+            [image, path, format, error](const std::atomic<bool>& exit)
+            {
+                if (exit.load())
+                {
+                    return false;
+                }
+                QSaveFile file(path);
+                if (!file.open(QIODevice::WriteOnly))
+                {
+                    *error = file.errorString();
+                    return false;
+                }
+                QImageWriter writer(&file, format);
+                if (!writer.write(image))
+                {
+                    *error = writer.errorString();
+                    return false;
+                }
+                if (exit.load())
+                {
+                    return false;
+                }
+                const bool committed = file.commit();
+                if (!committed)
+                {
+                    *error = file.errorString();
+                }
+                return committed;
+            },
+            [this, error, failure](bool success)
+            {
+                updateProcessing();
+                if (!m_closing && !success)
+                {
+                    reportError(failure + *error);
+                }
+            }))
     {
-        reportError(g_config.m_writeImageError+writer.errorString());
+        reportError(g_config.m_taskBusyError);
     }
+    updateProcessing();
 }
 
 void SplitViewer::toggleFullscreen()
@@ -800,11 +1042,11 @@ void SplitViewer::toggleFullscreen()
         leaveFullscreen();
         return;
     }
-    m_normalGeometry=saveGeometry();
-    m_wasMaximized=isMaximized();
+    m_normalGeometry = saveGeometry();
+    m_wasMaximized = isMaximized();
 
-    m_contentFullscreen=true;
-    LOGINFO("Content fullscreen entered; wasMaximized=%d",m_wasMaximized);
+    m_contentFullscreen = true;
+    LOGINFO("Content fullscreen entered; wasMaximized=%d", m_wasMaximized);
     m_toolbar->hide();
     statusBar()->hide();
     showFullScreen();
@@ -820,7 +1062,7 @@ void SplitViewer::leaveFullscreen()
         return;
     }
     clearInteraction();
-    m_contentFullscreen=false;
+    m_contentFullscreen = false;
     LOGINFO("Content fullscreen exited");
     m_toolbar->show();
     if (m_wasMaximized)
@@ -839,7 +1081,7 @@ void SplitViewer::leaveFullscreen()
 
 void SplitViewer::toggleBorder()
 {
-    const bool old=m_document.borderVisible();
+    const bool old = m_document.borderVisible();
     m_document.setBorderVisible(!old);
     clearInteraction();
     m_canvas->update();
@@ -853,8 +1095,8 @@ void SplitViewer::showAbout()
     param.m_hasShadow = g_config.m_aboutShadowEnabled;
     param.m_shadowSize = g_config.m_aboutShadowSize;
     param.m_titleBarHeight = g_config.m_aboutTitleHeight;
-    param.centerRect = QRect(m_canvas->mapToGlobal(QPoint(0, 0)), m_canvas->size());
-    param.message = g_config.m_aboutMessage;
+    param.m_centerRect = QRect(m_canvas->mapToGlobal(QPoint(0, 0)), m_canvas->size());
+    param.m_message = g_config.m_aboutMessage;
     DialogManager::instance().makeDialog(param);
 }
 
@@ -863,14 +1105,17 @@ void SplitViewer::embedExternalWindow()
     const QPointer<SplitViewer> owner(this);
     const quint64 revision = m_documentRevision;
     bool ok = false;
-    const QString text = SplitViewerDialogHelper::inputText(this, g_config.m_embedWindowText, g_config.m_windowHandlePrompt, ok);
+    const QString text =
+        SplitViewerDialogHelper::inputText(this, g_config.m_embedWindowText, g_config.m_windowHandlePrompt, ok);
     if (!owner || m_closing || revision != m_documentRevision || !ok || text.trimmed().isEmpty())
     {
         return;
     }
     QString normalized = text.trimmed();
     bool parsed = false;
-    qulonglong value = normalized.startsWith(QStringLiteral("0x"), Qt::CaseInsensitive) ? normalized.mid(2).toULongLong(&parsed, 16) : normalized.toULongLong(&parsed, 10);
+    qulonglong value = normalized.startsWith(QStringLiteral("0x"), Qt::CaseInsensitive)
+        ? normalized.mid(2).toULongLong(&parsed, 16)
+        : normalized.toULongLong(&parsed, 10);
     if (!parsed || value == 0)
     {
         SplitViewerDialogHelper::showMessage(this, g_config.m_invalidHandleTitle, g_config.m_invalidHandleMessage);
@@ -893,33 +1138,21 @@ void SplitViewer::embedWindowUnderCursor()
 
 bool SplitViewer::embedWindowId(WId windowId)
 {
-    SplitViewerHit hit=m_activeHit;
-    if (!windowId || !hit.node || !hit.node->isLeaf() || hit.node->view.hasContent())
+    SplitViewerHit hit = m_activeHit;
+    if (!m_mediaManager->embedWindow(hit.m_node, windowId))
     {
         return false;
     }
-    QWidget* container=SplitViewerEmbedForeignWindow(windowId,m_canvas);
-    if (!container)
-    {
-        return false;
-    }
-    m_embedded.insert(hit.node,container);
-    LOGINFO("Native window embedded; layer=%d",hit.layer);
-    hit.node->view.clear();
-    hit.node->view.contentKind=SPLITVIEWER_CORE_CONTENT_EMBEDDED;
-    container->show();
-    SplitViewerSyncForeignWindow(container, hit.rect.toAlignedRect());
-    m_canvas->update();
-    updateStatus();
+    LOGINFO("Native window embedded; layer=%d", hit.m_layer);
     return true;
 }
 
 void SplitViewer::detachExternalWindow()
 {
-    SplitViewerCoreNode* node=m_activeHit.node;
-    if (m_embedded.contains(node))
+    SplitViewerCoreNode* node = m_activeHit.m_node;
+    if (node && node->isLeaf())
     {
-        SplitViewerDetachForeignWindow(m_embedded.take(node));
+        m_mediaManager->release(node);
         node->view.clear();
     }
     m_canvas->update();
@@ -932,8 +1165,11 @@ void SplitViewer::updateStatus()
     {
         return;
     }
-    const std::wstring selected = (m_document.selectedLayer() < 0 ? g_config.m_baseLayerText : QString::number(m_document.selectedLayer() + 1)).toStdWString();
-    m_statusLabel->setText(QString::fromStdWString(CStringManager::Format(g_config.m_statusFormat, m_document.layerCount(), selected.c_str())));
+    const std::wstring selected =
+        (m_document.selectedLayer() < 0 ? g_config.m_baseLayerText : QString::number(m_document.selectedLayer() + 1))
+            .toStdWString();
+    m_statusLabel->setText(QString::fromStdWString(
+        CStringManager::Format(g_config.m_statusFormat, m_document.layerCount(), selected.c_str())));
     if (m_saveProfileAction)
     {
         m_saveProfileAction->setText(hasContent() ? g_config.m_saveProfileText : g_config.m_openProfileText);
@@ -944,12 +1180,16 @@ void SplitViewer::closeEvent(QCloseEvent* event)
 {
     m_closing = true;
     SplitViewerUnwatchNativeMouse(this);
-    foreach (QWidget* container,m_embedded)
-    {
-        SplitViewerDetachForeignWindow(container);
-    }
-    m_embedded.clear();
+    m_canvas->setEnabled(false);
+    m_toolbar->setEnabled(false);
+    m_taskManager->stop();
+    m_mediaManager->shutdown();
     clearInteraction();
+    if (m_mediaManager->busy() || processing())
+    {
+        event->ignore();
+        return;
+    }
     MainWindow::closeEvent(event);
 }
 
@@ -965,21 +1205,21 @@ QString SplitViewer::browseFile(bool save, const QString& title, const QString& 
 
 void SplitViewer::reportError(const QString& message)
 {
-    LOGERROR("%s",message.toUtf8().constData());
-    SplitViewerDialogHelper::showMessage(this,g_config.m_operationFailedTitle,message);
+    LOGERROR("%s", message.toUtf8().constData());
+    SplitViewerDialogHelper::showMessage(this, g_config.m_operationFailedTitle, message);
 }
 
 void SplitViewer::clearInteraction()
 {
     ++m_documentRevision;
-    m_nativeDragWindow=0;
-    m_nativeDragNode=nullptr;
-    m_nativePreview=QRectF();
-    m_activeHit=SplitViewerHit();
-    m_draggingImage=false;
-    m_draggingLayer=false;
-    m_resizingLayer=false;
-    m_resizeEdges=0;
+    m_nativeDragWindow = 0;
+    m_nativeDragNode = nullptr;
+    m_nativePreview = QRectF();
+    m_activeHit = SplitViewerHit();
+    m_draggingImage = false;
+    m_draggingLayer = false;
+    m_resizingLayer = false;
+    m_resizeEdges = 0;
 }
 
 void SplitViewer::canvasDoubleClick(const QPoint& point)
@@ -990,37 +1230,37 @@ void SplitViewer::canvasDoubleClick(const QPoint& point)
     }
 }
 
-void SplitViewer::canvasFileDroppedAt(const QString& path,const QPoint& point)
+void SplitViewer::canvasFileDroppedAt(const QString& path, const QPoint& point)
 {
-    if (QFileInfo(path).suffix().compare(g_config.m_profileSuffix,Qt::CaseInsensitive)==0)
+    if (QFileInfo(path).suffix().compare(g_config.m_profileSuffix, Qt::CaseInsensitive) == 0)
     {
         readProfile(path);
         return;
     }
     SplitViewerHit hit;
-    if (hitAll(point,hit) && !hit.splitter)
+    if (hitAll(point, hit) && !hit.m_splitter)
     {
         setSelectedHit(hit);
-        loadImageToLeaf(hit.node,path);
+        loadImageToLeaf(hit.m_node, path);
     }
 }
 
-void SplitViewer::scaleViews(SplitViewerCoreNode* node,const QRectF& oldRect,const QRectF& newRect)
+void SplitViewer::scaleViews(SplitViewerCoreNode* node, const QRectF& oldRect, const QRectF& newRect)
 {
-    if (!node || oldRect.width()<=0 || oldRect.height()<=0 || newRect.width()<=0 || newRect.height()<=0)
+    if (!node || oldRect.width() <= 0 || oldRect.height() <= 0 || newRect.width() <= 0 || newRect.height() <= 0)
     {
         return;
     }
     if (node->isLeaf())
     {
-        SplitViewerCoreResizeView(node->view,oldRect.width(),oldRect.height(),newRect.width(),newRect.height());
+        SplitViewerCoreResizeView(node->view, oldRect.width(), oldRect.height(), newRect.width(), newRect.height());
         return;
     }
-    QRectF a,line,b,c,newLine,d;
-    nodeRects(oldRect,node,a,line,b);
-    nodeRects(newRect,node,c,newLine,d);
-    scaleViews(node->first,a,c);
-    scaleViews(node->second,b,d);
+    QRectF a, line, b, c, newLine, d;
+    nodeRects(oldRect, node, a, line, b);
+    nodeRects(newRect, node, c, newLine, d);
+    scaleViews(node->first, a, c);
+    scaleViews(node->second, b, d);
 }
 
 void SplitViewer::canvasResized()
@@ -1029,17 +1269,18 @@ void SplitViewer::canvasResized()
     {
         return;
     }
-    const QRectF stage=stageRect(m_canvas->size());
-    if (m_lastStage.isValid() && m_lastStage!=stage)
+    const QRectF stage = stageRect(m_canvas->size());
+    if (m_lastStage.isValid() && m_lastStage != stage)
     {
-        scaleViews(m_document.baseRoot(),contentRect(m_lastStage),contentRect(stage));
-        for (int i=0;i<m_document.layerCount();++i)
+        scaleViews(m_document.baseRoot(), contentRect(m_lastStage), contentRect(stage));
+        for (int i = 0; i < m_document.layerCount(); ++i)
         {
-            SplitViewerCoreLayer* layer=m_document.layerAt(i);
-            scaleViews(layer->root,contentRect(normalizedToPixel(layer->rect,m_lastStage)),contentRect(normalizedToPixel(layer->rect,stage)));
+            SplitViewerCoreLayer* layer = m_document.layerAt(i);
+            scaleViews(layer->root, contentRect(normalizedToPixel(layer->rect, m_lastStage)),
+                contentRect(normalizedToPixel(layer->rect, stage)));
         }
     }
-    m_lastStage=stage;
+    m_lastStage = stage;
     syncEmbeddedViews();
     m_canvas->update();
 }
@@ -1055,6 +1296,15 @@ void SplitViewer::syncEmbeddedNode(SplitViewerCoreNode* node, const QRectF& rect
         if (m_embedded.contains(node))
         {
             QWidget* container = m_embedded.value(node);
+            if (!m_mediaManager->windowValid(container))
+            {
+                m_mediaManager->release(node);
+                if (node->view.contentKind != SPLITVIEWER_CORE_CONTENT_VIDEO)
+                {
+                    node->view.clear();
+                }
+                return;
+            }
             container->show();
             container->raise();
             SplitViewerSyncForeignWindow(container, rect.toAlignedRect());
@@ -1080,80 +1330,95 @@ void SplitViewer::syncEmbeddedViews()
         SplitViewerCoreLayer* layer = m_document.layerAt(i);
         if (layer)
         {
-            syncEmbeddedNode(layer->root,
-                contentRect(normalizedToPixel(layer->rect, stage)));
+            syncEmbeddedNode(layer->root, contentRect(normalizedToPixel(layer->rect, stage)));
         }
     }
 }
 
-QImage SplitViewer::renderStage(const QSize& size,bool includeEmbedded)
+QImage SplitViewer::renderStage(const QSize& size, bool includeEmbedded)
 {
-    const QRectF source=stageRect(m_canvas->size());
-    const QRectF target(QPointF(0,0),QSizeF(size));
-    // Export is a projection; restore exact live view states afterwards, including manual scale.
-    std::vector<SplitViewerCoreNode*> leaves;
-    SplitViewerCoreNode::collectLeaves(m_document.baseRoot(),leaves);
-    for (int i=0;i<m_document.layerCount();++i)
+    SplitViewerCoreDocument projection(m_document.config());
+    std::map<const SplitViewerCoreNode*, SplitViewerCoreNode*> nodes;
+    if (!m_document.copyTo(projection, nodes))
     {
-        SplitViewerCoreNode::collectLeaves(m_document.layerAt(i)->root,leaves);
+        return QImage();
     }
-    std::vector<SplitViewerCoreLeafState> states;
-    for (size_t i=0;i<leaves.size();++i)
+    QMap<SplitViewerCoreNode*, QWidget*> containers;
+    for (auto it = m_embedded.begin(); it != m_embedded.end(); ++it)
     {
-        states.push_back(leaves[i]->view);
+        containers.insert(nodes.at(it.key()), it.value());
     }
-    scaleViews(m_document.baseRoot(),contentRect(source),contentRect(target));
-    for (int i=0;i<m_document.layerCount();++i)
+    const QRectF source = stageRect(m_canvas->size());
+    const QRectF target(QPointF(0, 0), QSizeF(size));
+    scaleViews(projection.baseRoot(), contentRect(source), contentRect(target));
+    for (int index = 0; index < projection.layerCount(); ++index)
     {
-        SplitViewerCoreLayer* layer=m_document.layerAt(i);
-        scaleViews(layer->root,contentRect(normalizedToPixel(layer->rect,source)),contentRect(normalizedToPixel(layer->rect,target)));
+        SplitViewerCoreLayer* layer = projection.layerAt(index);
+        scaleViews(layer->root, contentRect(normalizedToPixel(layer->rect, source)),
+            contentRect(normalizedToPixel(layer->rect, target)));
     }
-    QImage image(size,QImage::Format_RGB32);
+    QImage image(size, QImage::Format_RGB32);
+    if (image.isNull())
+    {
+        return image;
+    }
     image.fill(g_config.m_stageColor);
     QPainter painter(&image);
-    painter.setRenderHint(QPainter::SmoothPixmapTransform,true);
-    QScopedValueRollback<bool> exporting(m_exporting, true);
-    SplitViewerRenderer renderer(m_document, m_imageCache, m_embedded, QPoint(), true, includeEmbedded);
-    renderer.drawStage(painter,target);
-    for (size_t i=0;i<leaves.size();++i)
-    {
-        leaves[i]->view=states[i];
-    }
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+    SplitViewerRenderer renderer(projection, m_imageCache, containers, QPoint(), true, includeEmbedded);
+    renderer.drawStage(painter, target);
     return image;
 }
 
-void SplitViewer::nativeMouseEvent(int event,const QPoint& screenPoint,WId id)
+void SplitViewer::nativeMouseEvent(int event, const QPoint& screenPoint, WId id)
 {
+    if (m_closing || processing())
+    {
+        return;
+    }
     if (m_closing || !isVisible() || QApplication::activeModalWidget() || QApplication::activePopupWidget())
     {
         return;
     }
-    const QPoint point=m_canvas->mapFromGlobal(screenPoint);
+    const QPoint point = m_canvas->mapFromGlobal(screenPoint);
     SplitViewerHit hit;
-    const bool found=hitAll(point,hit) && !hit.splitter;
-    if (event==1)
+    const bool found = hitAll(point, hit) && !hit.m_splitter;
+    if (event == 4)
     {
-        m_nativeDragStart=screenPoint;
-        m_nativeDragNode=nullptr;
-        m_nativeDragWindow=0;
-        if (id==winId() && found && m_embedded.contains(hit.node))
+        if (id == winId() && found && m_embedded.contains(hit.m_node))
         {
-            const qint64 now=QDateTime::currentMSecsSinceEpoch();
-            if (now-m_nativeClickTime<QApplication::doubleClickInterval() && (screenPoint-m_nativeLastClick).manhattanLength()<QApplication::startDragDistance())
+            canvasContextMenu(point, screenPoint);
+        }
+        return;
+    }
+    if (event == 5)
+    {
+        return;
+    }
+    if (event == 1)
+    {
+        m_nativeDragStart = screenPoint;
+        m_nativeDragNode = nullptr;
+        m_nativeDragWindow = 0;
+        if (id == winId() && found && m_embedded.contains(hit.m_node))
+        {
+            const qint64 now = QDateTime::currentMSecsSinceEpoch();
+            if (now - m_nativeClickTime < QApplication::doubleClickInterval() &&
+                (screenPoint - m_nativeLastClick).manhattanLength() < QApplication::startDragDistance())
             {
-                m_nativeClickTime=0;
+                m_nativeClickTime = 0;
                 toggleFullscreen();
                 return;
             }
-            m_nativeClickTime=now;
-            m_nativeLastClick=screenPoint;
-            m_nativeDragNode=hit.node;
-            m_nativeDragWindow=static_cast<WId>(m_embedded.value(hit.node)->property("foreignId").toULongLong());
+            m_nativeClickTime = now;
+            m_nativeLastClick = screenPoint;
+            m_nativeDragNode = hit.m_node;
+            m_nativeDragWindow = static_cast<WId>(m_embedded.value(hit.m_node)->property("foreignId").toULongLong());
             setSelectedHit(hit);
         }
-        else if (SplitViewerIsExternalWindow(id,winId()))
+        else if (SplitViewerIsExternalWindow(id, winId()))
         {
-            m_nativeDragWindow=id;
+            m_nativeDragWindow = id;
         }
         return;
     }
@@ -1161,30 +1426,137 @@ void SplitViewer::nativeMouseEvent(int event,const QPoint& screenPoint,WId id)
     {
         return;
     }
-    const bool moved=(screenPoint-m_nativeDragStart).manhattanLength()>=QApplication::startDragDistance();
-    const bool outside=!stageRect(m_canvas->size()).contains(point);
-    m_nativePreview=moved && !m_nativeDragNode && found && !hit.node->view.hasContent() ? hit.rect : QRectF();
+    const bool moved = (screenPoint - m_nativeDragStart).manhattanLength() >= QApplication::startDragDistance();
+    const bool outside = !stageRect(m_canvas->size()).contains(point);
+    m_nativePreview = moved && !m_nativeDragNode && found && !hit.m_node->view.hasContent() ? hit.m_rect : QRectF();
     m_canvas->update();
-    if (event!=3)
+    if (event != 3)
     {
         return;
     }
-    const WId dragged=m_nativeDragWindow;
-    SplitViewerCoreNode* source=m_nativeDragNode;
-    m_nativeDragWindow=0;
-    m_nativeDragNode=nullptr;
-    m_nativePreview=QRectF();
+    const WId dragged = m_nativeDragWindow;
+    SplitViewerCoreNode* source = m_nativeDragNode;
+    m_nativeDragWindow = 0;
+    m_nativeDragNode = nullptr;
+    m_nativePreview = QRectF();
     if (source && moved && outside && m_embedded.contains(source))
     {
-        SplitViewerDetachForeignWindow(m_embedded.take(source));
+        const bool restored = m_mediaManager->release(source);
         source->view.clear();
-        SplitViewerMoveDetachedWindow(dragged,screenPoint);
+        if (restored)
+        {
+            SplitViewerMoveDetachedWindow(dragged, screenPoint);
+        }
     }
-    else if (!source && moved && found && !hit.node->view.hasContent() && SplitViewerIsExternalWindow(dragged,winId()))
+    else if (!source && moved && found && !hit.m_node->view.hasContent() &&
+        SplitViewerIsExternalWindow(dragged, winId()))
     {
         setSelectedHit(hit);
         embedWindowId(dragged);
     }
+    updateStatus();
+    m_canvas->update();
+}
+
+bool SplitViewer::processing() const
+{
+    return m_taskManager && m_taskManager->busy();
+}
+
+void SplitViewer::updateProcessing()
+{
+    if (!m_closing)
+    {
+        const bool enabled = !processing();
+        if (!enabled && m_canvas->isEnabled())
+        {
+            m_resumeCanvasFocus = m_canvas->hasFocus();
+        }
+        const bool restoreFocus = enabled && !m_canvas->isEnabled() && m_resumeCanvasFocus;
+        m_canvas->setEnabled(enabled);
+        m_toolbar->setEnabled(enabled);
+        if (restoreFocus)
+        {
+            m_canvas->setFocus(Qt::OtherFocusReason);
+            m_resumeCanvasFocus = false;
+        }
+    }
+}
+
+bool SplitViewer::submitDocumentEdit(const std::function<bool(SplitViewerDocumentSnapshot&)>& work)
+{
+    if (processing() || m_closing)
+    {
+        return false;
+    }
+    const std::shared_ptr<SplitViewerDocumentSnapshot> snapshot =
+        std::make_shared<SplitViewerDocumentSnapshot>(m_document.config());
+    if (!m_document.copyTo(snapshot->m_document, snapshot->m_nodes))
+    {
+        return false;
+    }
+    snapshot->m_images = m_imageCache;
+    const quint64 revision = m_documentRevision + 1;
+    const quint64 mediaRevision = m_mediaManager->revision();
+    const bool accepted = m_taskManager->submit(
+        false,
+        [snapshot, work](const std::atomic<bool>& exit)
+        {
+            return !exit.load() && work(*snapshot) && !exit.load();
+        },
+        [this, snapshot, revision, mediaRevision](bool success)
+        {
+            updateProcessing();
+            if (m_closing || revision != m_documentRevision || mediaRevision != m_mediaManager->revision())
+            {
+                LOGINFO("Discard obsolete document request; revision=%llu", revision);
+                return;
+            }
+            if (success)
+            {
+                applyDocument(snapshot);
+            }
+            else
+            {
+                LOGERROR("Document request failed; revision=%llu", revision);
+            }
+        });
+    if (accepted)
+    {
+        clearInteraction();
+    }
+    updateProcessing();
+    return accepted;
+}
+
+void SplitViewer::applyDocument(const std::shared_ptr<SplitViewerDocumentSnapshot>& snapshot)
+{
+    std::vector<SplitViewerCoreNode*> leaves;
+    SplitViewerCoreNode::collectLeaves(snapshot->m_document.baseRoot(), leaves);
+    for (int index = 0; index < snapshot->m_document.layerCount(); ++index)
+    {
+        SplitViewerCoreNode::collectLeaves(snapshot->m_document.layerAt(index)->root, leaves);
+    }
+    if (snapshot->m_releaseTarget)
+    {
+        m_mediaManager->release(const_cast<SplitViewerCoreNode*>(snapshot->m_releaseTarget));
+    }
+    for (const auto& mapping : snapshot->m_nodes)
+    {
+        SplitViewerCoreNode* original = const_cast<SplitViewerCoreNode*>(mapping.first);
+        if (mapping.second && std::find(leaves.begin(), leaves.end(), mapping.second) != leaves.end())
+        {
+            m_mediaManager->rebind(original, mapping.second);
+        }
+        else
+        {
+            m_mediaManager->release(original);
+        }
+    }
+    m_document.swap(snapshot->m_document);
+    clearInteraction();
+    SplitViewerImageHelper::pruneUnusedImages(m_document, m_imageCache);
+    syncEmbeddedViews();
     updateStatus();
     m_canvas->update();
 }
