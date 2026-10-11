@@ -12,7 +12,6 @@
 #ifdef _WIN32
 #include <windows.h>
 #else
-#include <iconv.h>
 #include <string.h>
 #include <stdarg.h>
 #include <codecvt>
@@ -479,7 +478,7 @@ void CStringManager::Format(std::string& str, const char* fmt, ...)
 #ifdef _WIN32
 	va_list argcopy = args;
 	int32_t size = static_cast<int32_t>(_vscprintf(fmt, argcopy));
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	va_list argcopy;
 	va_copy(argcopy, args);
 	int32_t size = static_cast<int32_t>(vsnprintf(nullptr, 0, fmt, argcopy));
@@ -494,7 +493,7 @@ void CStringManager::Format(std::string& str, const char* fmt, ...)
 	str.resize(static_cast<size_t>(size) + 1);
 #ifdef _WIN32
 	int32_t writeSize = static_cast<int32_t>(vsprintf_s(&str[0], str.size(), fmt, args));
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	int32_t writeSize = static_cast<int32_t>(vsnprintf(&str[0], str.size(), fmt, args));
 #endif
 	if (writeSize < 0)
@@ -519,7 +518,7 @@ std::string CStringManager::Format(const char* fmt, ...)
 #ifdef _WIN32
 	va_list argcopy = args;
 	int32_t size = static_cast<int32_t>(_vscprintf(fmt, argcopy));
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	va_list argcopy;
 	va_copy(argcopy, args);
 	int32_t size = static_cast<int32_t>(vsnprintf(nullptr, 0, fmt, argcopy));
@@ -533,7 +532,7 @@ std::string CStringManager::Format(const char* fmt, ...)
 	result.resize(static_cast<size_t>(size) + 1);
 #ifdef _WIN32
 	int32_t writeSize = static_cast<int32_t>(vsprintf_s(&result[0], result.size(), fmt, args));
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	int32_t writeSize = static_cast<int32_t>(vsnprintf(&result[0], result.size(), fmt, args));
 #endif
 	if (writeSize < 0)
@@ -575,7 +574,7 @@ void CStringManager::Format(std::wstring& wstr, const wchar_t* wfmt, ...)
 	}
 	wstr.resize(static_cast<size_t>(writeSize));
 	va_end(args);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	//linux下unicode参数传入了vswprintf也无法识别，传入ansi参数在vswprintf下也会自动转成unicode，所以可以整体转换
 	//vswprintf函数无法在不提供长度时获取缓冲区长度
 	std::string strFmt = UnicodeToAnsi(wfmt);
@@ -634,7 +633,7 @@ std::wstring CStringManager::Format(const wchar_t* wfmt, ...)
 	result.resize(static_cast<size_t>(writeSize));
 	va_end(args);
 	return result;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	//linux下unicode参数传入了vswprintf也无法识别，传入ansi参数在vswprintf下也会自动转成unicode，所以可以整体转换
 	//vswprintf函数无法在不提供长度时获取缓冲区长度
 	std::string strFmt = UnicodeToAnsi(wfmt);
@@ -761,7 +760,7 @@ std::string CStringManager::toStringInt64(int64_t value)
 	return oss.str();
 }
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 
 class chs_codecvt : public std::codecvt_byname<wchar_t, char, std::mbstate_t>
 {
@@ -773,54 +772,6 @@ public:
 
 	}
 };
-
-// 转换字符集，outlen传入输出缓冲容量，返回实际输出长度。
-static int32_t codeConvert(const char* from_charset, const char* to_charset, const char* inbuf, size_t inlen, char* outbuf, size_t* outlen)
-{
-	iconv_t cd = iconv_open(to_charset, from_charset);
-	if (cd == (iconv_t)-1)
-	{
-		return -1;
-	}
-
-	char* input = const_cast<char*>(inbuf);
-	char* output = outbuf;
-	char** pin = &input;
-	char** pout = &output;
-	size_t outLength = *outlen;
-	if (iconv(cd, pin, &inlen, pout, outlen) == -1)
-	{
-		iconv_close(cd);
-		return -1;
-	}
-	*outlen = outLength - *outlen;
-	iconv_close(cd);
-	return 0;
-}
-
-// 按指定字符集转换字符串，转换失败返回空字符串。
-static std::string codeConvertString(const char* from_charset, const char* to_charset, const std::string& src)
-{
-	if (src.empty())
-	{
-		return "";
-	}
-
-	size_t outLength = src.size() * 6;
-	char* out = new (std::nothrow) char[outLength];
-	if (out == nullptr)
-	{
-		return "";
-	}
-	if (codeConvert(from_charset, to_charset, src.c_str(), src.size(), out, &outLength) != 0)
-	{
-		delete[] out;
-		return "";
-	}
-	std::string result(out, outLength);
-	delete[] out;
-	return result;
-}
 
 #endif
 
@@ -845,7 +796,7 @@ std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
 
 	delete[] pwszBuffer;
 	return strRet;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	std::string str;
 	try
 	{
@@ -882,7 +833,7 @@ std::wstring CStringManager::AnsiToUnicode(const std::string& strSrc)
 
 	delete[] pwszBuffer;
 	return wstrRet;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	std::wstring wstr;
 	try
 	{
@@ -921,7 +872,7 @@ std::string CStringManager::AnsiToUtf8(const std::string& strSrc)
 	// 释放内存
 	delete[] pwszBuffer;
 	return UnicodeToUtf8(wstrTemp);
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	return UnicodeToUtf8(AnsiToUnicode(strSrc));
 	//return codeConvertString("gb2312", "utf-8//TRANSLIT", strSrc);
 #endif
@@ -952,7 +903,7 @@ std::string CStringManager::Utf8ToAnsi(const std::string& strSrc)
 	// 释放内存
 	delete[] pszBuffer;
 	return strRet;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	return UnicodeToAnsi(Utf8ToUnicode(strSrc));
 	//return codeConvertString("utf-8", "gb2312//TRANSLIT", strSrc);
 #endif
@@ -981,7 +932,7 @@ std::string CStringManager::UnicodeToUtf8(const std::wstring& wstrSrc)
 	// 释放内存
 	delete[] pszBuffer;
 	return strRet;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	std::string str;
 	try
 	{
@@ -1021,7 +972,7 @@ std::wstring CStringManager::Utf8ToUnicode(const std::string& strSrc)
 	// 释放内存
 	delete[] pwszBuffer;
 	return wstrRet;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	std::wstring wstr;
 	try
 	{
