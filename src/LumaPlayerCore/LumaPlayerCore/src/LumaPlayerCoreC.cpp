@@ -7,12 +7,15 @@
 #include "LumaPlayerCoreCContext.h"
 #include "LumaPlayerCoreCVideoRenderAdapter.h"
 #include "LumaPlayerCoreCAudioRenderAdapter.h"
+#include "KaraokePcmProcessor.h"
 #include "CStringManager/CStringManagerAPI.h"
 
 #include <mutex>
+#include <limits>
 #include <new>
 #include <string>
 #include <string.h>
+#include <vector>
 
 static_assert(LumaPlayerCoreCResultSuccess == LumaPlayerCoreResultSuccess, "C and C++ result values must match");
 static_assert(LumaPlayerCoreCResultInvalidParam == LumaPlayerCoreResultInvalidParam, "C and C++ result values must match");
@@ -29,461 +32,462 @@ static_assert(LumaPlayerCoreCLoopPointB == LumaPlayerCoreLoopPointB, "C and C++ 
 
 LumaPlayerCoreHandle lumaPlayerCoreCreate()
 {
-	LumaPlayerCoreCContext* instance = nullptr;
-	try
-	{
-		instance = new(std::nothrow) LumaPlayerCoreCContext();
-		if (instance == nullptr)
-		{
-			return nullptr;
-		}
-		instance->m_core = nullptr;
-		instance->m_audioRender = nullptr;
-		instance->m_videoRender = nullptr;
-		instance->m_core = new(std::nothrow) LumaPlayerCore();
-		instance->m_audioRender = new(std::nothrow) LumaPlayerCoreCAudioRenderAdapter();
-		instance->m_videoRender = new(std::nothrow) LumaPlayerCoreCVideoRenderAdapter();
-		if (instance->m_core == nullptr || instance->m_audioRender == nullptr || instance->m_videoRender == nullptr)
-		{
-			lumaPlayerCoreDestroy(instance);
-			return nullptr;
-		}
-		return instance;
-	}
-	catch (...)
-	{
-		lumaPlayerCoreDestroy(instance);
-		return nullptr;
-	}
+    LumaPlayerCoreCContext* instance = nullptr;
+    try
+    {
+        instance = new (std::nothrow) LumaPlayerCoreCContext();
+        if (instance == nullptr)
+        {
+            return nullptr;
+        }
+        instance->m_core = nullptr;
+        instance->m_audioRender = nullptr;
+        instance->m_videoRender = nullptr;
+        instance->m_core = new (std::nothrow) LumaPlayerCore();
+        instance->m_audioRender = new (std::nothrow) LumaPlayerCoreCAudioRenderAdapter();
+        instance->m_videoRender = new (std::nothrow) LumaPlayerCoreCVideoRenderAdapter();
+        if (instance->m_core == nullptr || instance->m_audioRender == nullptr || instance->m_videoRender == nullptr)
+        {
+            lumaPlayerCoreDestroy(instance);
+            return nullptr;
+        }
+        return instance;
+    }
+    catch (...)
+    {
+        lumaPlayerCoreDestroy(instance);
+        return nullptr;
+    }
 }
 
 void lumaPlayerCoreDestroy(LumaPlayerCoreHandle handle)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	if (instance == nullptr)
-	{
-		return;
-	}
-	LumaPlayerCoreHelper::invokeVoid(instance, "C API exception in lumaPlayerCoreDestroy/uninit", [](LumaPlayerCore& core)
-	{
-		core.uninit();
-		core.setAudioRender(nullptr);
-		core.setVideoRender(nullptr);
-
-	});
-	delete instance->m_core;
-	delete instance->m_audioRender;
-	delete instance->m_videoRender;
-	delete instance;
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    if (instance == nullptr)
+    {
+        return;
+    }
+    LumaPlayerCoreHelper::invokeVoid(instance, "C API exception in lumaPlayerCoreDestroy/uninit", [](LumaPlayerCore& core)
+        {
+            core.uninit();
+            core.setAudioRender(nullptr);
+            core.setVideoRender(nullptr);
+        });
+    delete instance->m_core;
+    delete instance->m_audioRender;
+    delete instance->m_videoRender;
+    delete instance;
 }
 
 int32_t lumaPlayerCoreInit(LumaPlayerCoreHandle handle)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreInit", [](LumaPlayerCore& core)
-	{
-		return core.init();
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreInit", [](LumaPlayerCore& core)
+        {
+            return core.init();
+        });
 }
 
 void lumaPlayerCoreUninit(LumaPlayerCoreHandle handle)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	LumaPlayerCoreHelper::invokeVoid(instance, "C API exception in lumaPlayerCoreUninit", [](LumaPlayerCore& core)
-	{
-		core.uninit();
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    LumaPlayerCoreHelper::invokeVoid(instance, "C API exception in lumaPlayerCoreUninit", [](LumaPlayerCore& core)
+        {
+            core.uninit();
+        });
 }
 
 void lumaPlayerCoreSetLogEnabled(LumaPlayerCoreHandle handle, int32_t enabled)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	LumaPlayerCoreHelper::invokeVoid(instance, "C API exception in lumaPlayerCoreSetLogEnabled", [enabled](LumaPlayerCore& core)
-	{
-		core.setLogEnabled(enabled != 0);
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    LumaPlayerCoreHelper::invokeVoid(instance, "C API exception in lumaPlayerCoreSetLogEnabled", [enabled](LumaPlayerCore& core)
+        {
+            core.setLogEnabled(enabled != 0);
+        });
 }
 
 void lumaPlayerCoreSetRenderCallbacks(LumaPlayerCoreHandle handle, const LumaPlayerCoreCRenderCallbacks* callbacks)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	if (instance == nullptr || instance->m_core == nullptr || instance->m_audioRender == nullptr || instance->m_videoRender == nullptr)
-	{
-		return;
-	}
-	try
-	{
-		if (callbacks == nullptr)
-		{
-			instance->m_core->setAudioRender(nullptr);
-			instance->m_core->setVideoRender(nullptr);
-			instance->m_audioRender->clear();
-			instance->m_videoRender->clear();
-			return;
-		}
-		instance->m_audioRender->setCallbacks(*callbacks);
-		instance->m_videoRender->setCallbacks(*callbacks);
-		instance->m_core->setAudioRender(instance->m_audioRender);
-		instance->m_core->setVideoRender(instance->m_videoRender);
-	}
-	catch (...)
-	{
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    if (instance == nullptr || instance->m_core == nullptr || instance->m_audioRender == nullptr || instance->m_videoRender == nullptr)
+    {
+        return;
+    }
+    try
+    {
+        if (callbacks == nullptr)
+        {
+            instance->m_core->setAudioRender(nullptr);
+            instance->m_core->setVideoRender(nullptr);
+            instance->m_audioRender->clear();
+            instance->m_videoRender->clear();
+            return;
+        }
+        instance->m_audioRender->setCallbacks(*callbacks);
+        instance->m_videoRender->setCallbacks(*callbacks);
+        instance->m_core->setAudioRender(instance->m_audioRender);
+        instance->m_core->setVideoRender(instance->m_videoRender);
+    }
+    catch (...)
+    {
 
-	}
+    }
 }
 
 int32_t lumaPlayerCoreOpenMedia(LumaPlayerCoreHandle handle, const char* filePath)
 {
-	if (filePath == nullptr)
-	{
-		return LumaPlayerCoreCResultInvalidParam;
-	}
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreOpenMedia", [filePath](LumaPlayerCore& core)
-	{
-		return core.openMedia(filePath);
-	});
+    if (filePath == nullptr)
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreOpenMedia", [filePath](LumaPlayerCore& core)
+        {
+            return core.openMedia(filePath);
+        });
 }
 
 int32_t lumaPlayerCoreOpenMediaAsync(LumaPlayerCoreHandle handle, const char* filePath)
 {
-	if (filePath == nullptr)
-	{
-		return LumaPlayerCoreCResultInvalidParam;
-	}
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreOpenMediaAsync", [filePath](LumaPlayerCore& core)
-	{
-		return core.openMediaAsync(filePath);
-	});
+    if (filePath == nullptr)
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreOpenMediaAsync", [filePath](LumaPlayerCore& core)
+        {
+            return core.openMediaAsync(filePath);
+        });
 }
 
 void lumaPlayerCoreCloseMedia(LumaPlayerCoreHandle handle)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	LumaPlayerCoreHelper::invokeVoid(instance, "C API exception in lumaPlayerCoreCloseMedia", [](LumaPlayerCore& core)
-	{
-		core.closeMedia();
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    LumaPlayerCoreHelper::invokeVoid(instance, "C API exception in lumaPlayerCoreCloseMedia", [](LumaPlayerCore& core)
+        {
+            core.closeMedia();
+        });
 }
 
 int32_t lumaPlayerCorePlay(LumaPlayerCoreHandle handle)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCorePlay", [](LumaPlayerCore& core)
-	{
-		return core.play();
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCorePlay", [](LumaPlayerCore& core)
+        {
+            return core.play();
+        });
 }
 
 int32_t lumaPlayerCorePlayAsync(LumaPlayerCoreHandle handle)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCorePlayAsync", [](LumaPlayerCore& core)
-	{
-		return core.playAsync();
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCorePlayAsync", [](LumaPlayerCore& core)
+        {
+            return core.playAsync();
+        });
 }
 
 int32_t lumaPlayerCorePause(LumaPlayerCoreHandle handle)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCorePause", [](LumaPlayerCore& core)
-	{
-		return core.pause();
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCorePause", [](LumaPlayerCore& core)
+        {
+            return core.pause();
+        });
 }
 
 int32_t lumaPlayerCorePauseAsync(LumaPlayerCoreHandle handle)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCorePauseAsync", [](LumaPlayerCore& core)
-	{
-		return core.pauseAsync();
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCorePauseAsync", [](LumaPlayerCore& core)
+        {
+            return core.pauseAsync();
+        });
 }
 
 int32_t lumaPlayerCoreStop(LumaPlayerCoreHandle handle)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreStop", [](LumaPlayerCore& core)
-	{
-		return core.stop();
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreStop", [](LumaPlayerCore& core)
+        {
+            return core.stop();
+        });
 }
 
 int32_t lumaPlayerCoreSeekTo(LumaPlayerCoreHandle handle, int64_t position100ns, int32_t keepPlayState)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSeekTo", [position100ns, keepPlayState](LumaPlayerCore& core)
-	{
-		return core.seekTo(position100ns, keepPlayState != 0);
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSeekTo", [position100ns, keepPlayState](LumaPlayerCore& core)
+        {
+            return core.seekTo(position100ns, keepPlayState != 0);
+        });
 }
 
 int32_t lumaPlayerCoreSeekToAsync(LumaPlayerCoreHandle handle, int64_t position100ns, int32_t keepPlayState)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSeekToAsync", [position100ns, keepPlayState](LumaPlayerCore& core)
-	{
-		return core.seekToAsync(position100ns, keepPlayState != 0);
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSeekToAsync", [position100ns, keepPlayState](LumaPlayerCore& core)
+        {
+            return core.seekToAsync(position100ns, keepPlayState != 0);
+        });
 }
 
 int32_t lumaPlayerCorePreviewFrame(LumaPlayerCoreHandle handle, int64_t position100ns)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCorePreviewFrame", [position100ns](LumaPlayerCore& core)
-	{
-		return core.previewFrame(position100ns);
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCorePreviewFrame", [position100ns](LumaPlayerCore& core)
+        {
+            return core.previewFrame(position100ns);
+        });
 }
 
 int32_t lumaPlayerCorePreviewFrameAsync(LumaPlayerCoreHandle handle, int64_t position100ns)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCorePreviewFrameAsync", [position100ns](LumaPlayerCore& core)
-	{
-		return core.previewFrameAsync(position100ns);
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCorePreviewFrameAsync", [position100ns](LumaPlayerCore& core)
+        {
+            return core.previewFrameAsync(position100ns);
+        });
 }
 
 int32_t lumaPlayerCoreSetLoopAByCurrentFrame(LumaPlayerCoreHandle handle)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetLoopAByCurrentFrame", [](LumaPlayerCore& core)
-	{
-		return core.setLoopAByCurrentFrame();
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetLoopAByCurrentFrame", [](LumaPlayerCore& core)
+        {
+            return core.setLoopAByCurrentFrame();
+        });
 }
 
 int32_t lumaPlayerCoreSetLoopAAtPosition(LumaPlayerCoreHandle handle, int64_t position100ns)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetLoopAAtPosition", [position100ns](LumaPlayerCore& core)
-	{
-		return core.setLoopAAtPosition(position100ns);
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetLoopAAtPosition", [position100ns](LumaPlayerCore& core)
+        {
+            return core.setLoopAAtPosition(position100ns);
+        });
 }
 
 int32_t lumaPlayerCoreSetLoopAAtPositionAsync(LumaPlayerCoreHandle handle, int64_t position100ns)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetLoopAAtPositionAsync", [position100ns](LumaPlayerCore& core)
-	{
-		return core.setLoopAAtPositionAsync(position100ns);
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetLoopAAtPositionAsync", [position100ns](LumaPlayerCore& core)
+        {
+            return core.setLoopAAtPositionAsync(position100ns);
+        });
 }
 
 int32_t lumaPlayerCoreSetLoopBByCurrentFrame(LumaPlayerCoreHandle handle)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetLoopBByCurrentFrame", [](LumaPlayerCore& core)
-	{
-		return core.setLoopBByCurrentFrame();
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetLoopBByCurrentFrame", [](LumaPlayerCore& core)
+        {
+            return core.setLoopBByCurrentFrame();
+        });
 }
 
 int32_t lumaPlayerCoreSetLoopBAtPosition(LumaPlayerCoreHandle handle, int64_t position100ns)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetLoopBAtPosition", [position100ns](LumaPlayerCore& core)
-	{
-		return core.setLoopBAtPosition(position100ns);
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetLoopBAtPosition", [position100ns](LumaPlayerCore& core)
+        {
+            return core.setLoopBAtPosition(position100ns);
+        });
 }
 
 int32_t lumaPlayerCoreSetLoopBAtPositionAsync(LumaPlayerCoreHandle handle, int64_t position100ns)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetLoopBAtPositionAsync", [position100ns](LumaPlayerCore& core)
-	{
-		return core.setLoopBAtPositionAsync(position100ns);
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetLoopBAtPositionAsync", [position100ns](LumaPlayerCore& core)
+        {
+            return core.setLoopBAtPositionAsync(position100ns);
+        });
 }
 
 int32_t lumaPlayerCoreClearLoop(LumaPlayerCoreHandle handle)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreClearLoop", [](LumaPlayerCore& core)
-	{
-		return core.clearLoop();
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreClearLoop", [](LumaPlayerCore& core)
+        {
+            return core.clearLoop();
+        });
 }
 
 int32_t lumaPlayerCoreClearLoopAsync(LumaPlayerCoreHandle handle)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreClearLoopAsync", [](LumaPlayerCore& core)
-	{
-		return core.clearLoopAsync();
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreClearLoopAsync", [](LumaPlayerCore& core)
+        {
+            return core.clearLoopAsync();
+        });
 }
 
 int32_t lumaPlayerCoreMoveLoopPoint(LumaPlayerCoreHandle handle, int32_t pointType, int32_t frameOffset)
 {
-	if (pointType != LumaPlayerCoreCLoopPointA && pointType != LumaPlayerCoreCLoopPointB)
-	{
-		return LumaPlayerCoreCResultInvalidParam;
-	}
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreMoveLoopPoint", [pointType, frameOffset](LumaPlayerCore& core)
-	{
-		return core.moveLoopPoint(static_cast<LumaPlayerCoreLoopPointType>(pointType), frameOffset);
-	});
+    if (pointType != LumaPlayerCoreCLoopPointA && pointType != LumaPlayerCoreCLoopPointB)
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreMoveLoopPoint", [pointType, frameOffset](LumaPlayerCore& core)
+        {
+            return core.moveLoopPoint(static_cast<LumaPlayerCoreLoopPointType>(pointType), frameOffset);
+        });
 }
 
 int32_t lumaPlayerCoreMoveLoopPointAsync(LumaPlayerCoreHandle handle, int32_t pointType, int32_t frameOffset)
 {
-	if (pointType != LumaPlayerCoreCLoopPointA && pointType != LumaPlayerCoreCLoopPointB)
-	{
-		return LumaPlayerCoreCResultInvalidParam;
-	}
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreMoveLoopPointAsync", [pointType, frameOffset](LumaPlayerCore& core)
-	{
-		return core.moveLoopPointAsync(static_cast<LumaPlayerCoreLoopPointType>(pointType), frameOffset);
-	});
+    if (pointType != LumaPlayerCoreCLoopPointA && pointType != LumaPlayerCoreCLoopPointB)
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreMoveLoopPointAsync", [pointType, frameOffset](LumaPlayerCore& core)
+        {
+            return core.moveLoopPointAsync(static_cast<LumaPlayerCoreLoopPointType>(pointType), frameOffset);
+        });
 }
 
 int32_t lumaPlayerCoreSetPlaybackRatePermille(LumaPlayerCoreHandle handle, int32_t ratePermille)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetPlaybackRatePermille", [ratePermille](LumaPlayerCore& core)
-	{
-		return core.setPlaybackRatePermille(ratePermille);
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetPlaybackRatePermille", [ratePermille](LumaPlayerCore& core)
+        {
+            return core.setPlaybackRatePermille(ratePermille);
+        });
 }
 
 int32_t lumaPlayerCoreSetPlaybackRatePermilleAsync(LumaPlayerCoreHandle handle, int32_t ratePermille)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetPlaybackRatePermilleAsync", [ratePermille](LumaPlayerCore& core)
-	{
-		return core.setPlaybackRatePermilleAsync(ratePermille);
-	});
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    return LumaPlayerCoreHelper::invokeResult(instance, "C API exception in lumaPlayerCoreSetPlaybackRatePermilleAsync", [ratePermille](LumaPlayerCore& core)
+        {
+            return core.setPlaybackRatePermilleAsync(ratePermille);
+        });
 }
 
 int32_t lumaPlayerCoreGetSnapshot(LumaPlayerCoreHandle handle, LumaPlayerCoreCSnapshot* snapshot)
 {
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	if (snapshot == nullptr)
-	{
-		return 0;
-	}
-	memset(snapshot, 0, sizeof(*snapshot));
-	if (instance == nullptr || instance->m_core == nullptr)
-	{
-		return 0;
-	}
-	try
-	{
-		LumaPlayerSnapshot cppSnapshot = instance->m_core->snapshot();
-		snapshot->m_result = static_cast<int32_t>(cppSnapshot.m_result);
-		snapshot->m_state = static_cast<int32_t>(cppSnapshot.m_state);
-		snapshot->m_mediaSerial = cppSnapshot.m_mediaSerial;
-		snapshot->m_duration100ns = cppSnapshot.m_mediaInfo.m_duration100ns;
-		snapshot->m_position100ns = cppSnapshot.m_position100ns;
-		snapshot->m_defaultVideoFrameDuration100ns = cppSnapshot.m_mediaInfo.m_defaultVideoFrameDuration100ns;
-		snapshot->m_ratePermille = cppSnapshot.m_ratePermille;
-		snapshot->m_hasVideo = cppSnapshot.m_mediaInfo.m_hasVideo ? 1 : 0;
-		snapshot->m_hasAudio = cppSnapshot.m_mediaInfo.m_hasAudio ? 1 : 0;
-		snapshot->m_videoWidth = cppSnapshot.m_mediaInfo.m_videoFormat.m_width;
-		snapshot->m_videoHeight = cppSnapshot.m_mediaInfo.m_videoFormat.m_height;
-		snapshot->m_hasLoopA = cppSnapshot.m_loopRange.m_aPoint.m_isSet ? 1 : 0;
-		snapshot->m_hasLoopB = cppSnapshot.m_loopRange.m_bPoint.m_isSet ? 1 : 0;
-		snapshot->m_loopAStart100ns = cppSnapshot.m_loopRange.m_aPoint.m_frameStart100ns;
-		snapshot->m_loopBEnd100ns = cppSnapshot.m_loopRange.m_bPoint.m_frameEnd100ns;
-		return 1;
-	}
-	catch (...)
-	{
-		memset(snapshot, 0, sizeof(*snapshot));
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    if (snapshot == nullptr)
+    {
+        return 0;
+    }
+    memset(snapshot, 0, sizeof(*snapshot));
+    if (instance == nullptr || instance->m_core == nullptr)
+    {
+        return 0;
+    }
+    try
+    {
+        LumaPlayerSnapshot cppSnapshot = instance->m_core->snapshot();
+        snapshot->m_result = static_cast<int32_t>(cppSnapshot.m_result);
+        snapshot->m_state = static_cast<int32_t>(cppSnapshot.m_state);
+        snapshot->m_mediaSerial = cppSnapshot.m_mediaSerial;
+        snapshot->m_recordingSerial = cppSnapshot.m_recordingSerial;
+        snapshot->m_recordingPosition100ns = cppSnapshot.m_recordingPosition100ns;
+        snapshot->m_duration100ns = cppSnapshot.m_mediaInfo.m_duration100ns;
+        snapshot->m_position100ns = cppSnapshot.m_position100ns;
+        snapshot->m_defaultVideoFrameDuration100ns = cppSnapshot.m_mediaInfo.m_defaultVideoFrameDuration100ns;
+        snapshot->m_ratePermille = cppSnapshot.m_ratePermille;
+        snapshot->m_hasVideo = cppSnapshot.m_mediaInfo.m_hasVideo ? 1 : 0;
+        snapshot->m_hasAudio = cppSnapshot.m_mediaInfo.m_hasAudio ? 1 : 0;
+        snapshot->m_videoWidth = cppSnapshot.m_mediaInfo.m_videoFormat.m_width;
+        snapshot->m_videoHeight = cppSnapshot.m_mediaInfo.m_videoFormat.m_height;
+        snapshot->m_hasLoopA = cppSnapshot.m_loopRange.m_aPoint.m_isSet ? 1 : 0;
+        snapshot->m_hasLoopB = cppSnapshot.m_loopRange.m_bPoint.m_isSet ? 1 : 0;
+        snapshot->m_loopAStart100ns = cppSnapshot.m_loopRange.m_aPoint.m_frameStart100ns;
+        snapshot->m_loopBEnd100ns = cppSnapshot.m_loopRange.m_bPoint.m_frameEnd100ns;
+        return 1;
+    }
+    catch (...)
+    {
+        memset(snapshot, 0, sizeof(*snapshot));
 
-		return 0;
-	}
+        return 0;
+    }
 }
 
 size_t lumaPlayerCoreGetLastError(LumaPlayerCoreHandle handle, char* buffer, size_t bufferSize)
 {
-	if (buffer != nullptr && bufferSize > 0)
-	{
-		buffer[0] = '\0';
-	}
-	LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
-	if (instance == nullptr || instance->m_core == nullptr)
-	{
-		return 0;
-	}
-	try
-	{
-		std::string errorText = instance->m_core->lastError();
+    if (buffer != nullptr && bufferSize > 0)
+    {
+        buffer[0] = '\0';
+    }
+    LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
+    if (instance == nullptr || instance->m_core == nullptr)
+    {
+        return 0;
+    }
+    try
+    {
+        std::string errorText = instance->m_core->lastError();
         return CStringManager::CopyToBuffer(errorText, buffer, bufferSize);
-	}
-	catch (...)
-	{
+    }
+    catch (...)
+    {
 
-		return 0;
-	}
+        return 0;
+    }
 }
 
 int32_t lumaPlayerCoreDefaultConfig(LumaPlayerCoreCConfig* config)
 {
-	if (config == nullptr)
-	{
-		return LumaPlayerCoreCResultInvalidParam;
-	}
-	LumaPlayerCoreConfig defaults;
-	config->m_controlCommandTimeoutMs = defaults.m_controlCommandTimeoutMs;
-	config->m_openCommandTimeoutMs = defaults.m_openCommandTimeoutMs;
-	config->m_idleWaitMs = defaults.m_idleWaitMs;
-	config->m_videoEarlyTolerance100ns = defaults.m_videoEarlyTolerance100ns;
-	config->m_audioLead100ns = defaults.m_audioLead100ns;
-	config->m_loopBufferMaxBytes = defaults.m_loopBufferMaxBytes;
-	config->m_defaultFrameDuration100ns = defaults.m_defaultFrameDuration100ns;
-	config->m_defaultRatePermille = defaults.m_defaultRatePermille;
-	config->m_minRatePermille = defaults.m_minRatePermille;
-	config->m_maxRatePermille = defaults.m_maxRatePermille;
-	return LumaPlayerCoreCResultSuccess;
+    if (config == nullptr)
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    LumaPlayerCoreConfig defaults;
+    config->m_controlCommandTimeoutMs = defaults.m_controlCommandTimeoutMs;
+    config->m_openCommandTimeoutMs = defaults.m_openCommandTimeoutMs;
+    config->m_idleWaitMs = defaults.m_idleWaitMs;
+    config->m_videoEarlyTolerance100ns = defaults.m_videoEarlyTolerance100ns;
+    config->m_audioLead100ns = defaults.m_audioLead100ns;
+    config->m_loopBufferMaxBytes = defaults.m_loopBufferMaxBytes;
+    config->m_defaultFrameDuration100ns = defaults.m_defaultFrameDuration100ns;
+    config->m_defaultRatePermille = defaults.m_defaultRatePermille;
+    config->m_minRatePermille = defaults.m_minRatePermille;
+    config->m_maxRatePermille = defaults.m_maxRatePermille;
+    return LumaPlayerCoreCResultSuccess;
 }
 
 int32_t lumaPlayerCoreInitWithConfig(LumaPlayerCoreHandle handle, const LumaPlayerCoreCConfig* config)
 {
-	if (config == nullptr)
-	{
-		return LumaPlayerCoreCResultInvalidParam;
-	}
-	LumaPlayerCoreConfig options;
-	options.m_controlCommandTimeoutMs = config->m_controlCommandTimeoutMs;
-	options.m_openCommandTimeoutMs = config->m_openCommandTimeoutMs;
-	options.m_idleWaitMs = config->m_idleWaitMs;
-	options.m_videoEarlyTolerance100ns = config->m_videoEarlyTolerance100ns;
-	options.m_audioLead100ns = config->m_audioLead100ns;
-	options.m_loopBufferMaxBytes = config->m_loopBufferMaxBytes;
-	options.m_defaultFrameDuration100ns = config->m_defaultFrameDuration100ns;
-	options.m_defaultRatePermille = config->m_defaultRatePermille;
-	options.m_minRatePermille = config->m_minRatePermille;
-	options.m_maxRatePermille = config->m_maxRatePermille;
-	return LumaPlayerCoreHelper::invokeResult(LumaPlayerCoreHelper::castHandle(handle), "init", [&options](LumaPlayerCore& core)
-	{
-		return core.init(options);
-	});
+    if (config == nullptr)
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    LumaPlayerCoreConfig options;
+    options.m_controlCommandTimeoutMs = config->m_controlCommandTimeoutMs;
+    options.m_openCommandTimeoutMs = config->m_openCommandTimeoutMs;
+    options.m_idleWaitMs = config->m_idleWaitMs;
+    options.m_videoEarlyTolerance100ns = config->m_videoEarlyTolerance100ns;
+    options.m_audioLead100ns = config->m_audioLead100ns;
+    options.m_loopBufferMaxBytes = config->m_loopBufferMaxBytes;
+    options.m_defaultFrameDuration100ns = config->m_defaultFrameDuration100ns;
+    options.m_defaultRatePermille = config->m_defaultRatePermille;
+    options.m_minRatePermille = config->m_minRatePermille;
+    options.m_maxRatePermille = config->m_maxRatePermille;
+    return LumaPlayerCoreHelper::invokeResult(LumaPlayerCoreHelper::castHandle(handle), "init", [&options](LumaPlayerCore& core)
+        {
+            return core.init(options);
+        });
 }
 
 const char* lumaPlayerCoreResultDescription(int32_t result)
 {
-	std::map<LumaPlayerCoreResult, std::string>::const_iterator it = kLumaPlayerCoreResultDescriptions.find(static_cast<LumaPlayerCoreResult>(result));
-	return it != kLumaPlayerCoreResultDescriptions.end() ? it->second.c_str() : "未知的播放器错误码";
+    std::map<LumaPlayerCoreResult, std::string>::const_iterator it = kLumaPlayerCoreResultDescriptions.find(static_cast<LumaPlayerCoreResult>(result));
+    return it != kLumaPlayerCoreResultDescriptions.end() ? it->second.c_str() : "未知的播放器错误码";
 }
 
 int32_t lumaPlayerCoreCancelLoopPointMove(LumaPlayerCoreHandle handle)
 {
     LumaPlayerCoreCContext* instance = LumaPlayerCoreHelper::castHandle(handle);
     return LumaPlayerCoreHelper::invokeResult(instance, "cancel loop move", [](LumaPlayerCore& core)
-    {
-        core.cancelLoopPointMove();
-        return LumaPlayerCoreResultSuccess;
-    });
+        {
+            core.cancelLoopPointMove();
+            return LumaPlayerCoreResultSuccess;
+        });
 }
 
 int32_t lumaPlayerCoreSubmitAsyncEx(LumaPlayerCoreHandle handle,
@@ -511,30 +515,283 @@ int32_t lumaPlayerCoreSubmitAsyncEx(LumaPlayerCoreHandle handle,
         value.m_ratePermille = request->m_ratePermille;
         value.m_point = static_cast<LumaPlayerCoreLoopPointType>(request->m_point);
         value.m_frameOffset = request->m_frameOffset;
-        return context->m_core->submitAsyncEx(value, [callback, userData](const LumaPlayerCoreCompletion& completed)
+        return context->m_core->submitAsyncEx(value, [context, callback, userData](const LumaPlayerCoreCompletion& completed)
+            {
+                LumaPlayerCoreCCompletion result = {};
+                result.m_requestId = completed.m_request.m_requestId;
+                result.m_mediaGeneration = completed.m_request.m_mediaGeneration;
+                result.m_operation = static_cast<int32_t>(completed.m_request.m_operation);
+                result.m_result = static_cast<int32_t>(completed.m_result);
+                if (completed.m_result == LumaPlayerCoreResultSuccess &&
+                    completed.m_request.m_operation == LumaPlayerCoreOperationKaraokeRecording &&
+                    completed.m_request.m_ratePermille == 1)
+                {
+                    std::lock_guard<std::mutex> lock(context->m_karaokeMutex);
+                    if (context->m_karaokePcmTimeline.sampleRate() > 0 &&
+                        !context->m_karaokePcmTimeline.configureSong(completed.m_snapshot.m_mediaInfo.m_duration100ns,
+                            completed.m_snapshot.m_ratePermille))
+                    {
+                        result.m_result = LumaPlayerCoreCResultStateError;
+                    }
+                }
+                result.m_snapshot.m_result = static_cast<int32_t>(completed.m_snapshot.m_result);
+                result.m_snapshot.m_state = static_cast<int32_t>(completed.m_snapshot.m_state);
+                result.m_snapshot.m_mediaSerial = completed.m_snapshot.m_mediaSerial;
+                result.m_snapshot.m_duration100ns = completed.m_snapshot.m_mediaInfo.m_duration100ns;
+                result.m_snapshot.m_position100ns = completed.m_snapshot.m_position100ns;
+                result.m_snapshot.m_defaultVideoFrameDuration100ns = completed.m_snapshot.m_mediaInfo.m_defaultVideoFrameDuration100ns;
+                result.m_snapshot.m_recordingSerial = completed.m_snapshot.m_recordingSerial;
+                result.m_snapshot.m_recordingPosition100ns = completed.m_snapshot.m_recordingPosition100ns;
+                result.m_snapshot.m_ratePermille = completed.m_snapshot.m_ratePermille;
+                result.m_snapshot.m_hasVideo = completed.m_snapshot.m_mediaInfo.m_hasVideo ? 1 : 0;
+                result.m_snapshot.m_hasAudio = completed.m_snapshot.m_mediaInfo.m_hasAudio ? 1 : 0;
+                result.m_snapshot.m_videoWidth = completed.m_snapshot.m_mediaInfo.m_videoFormat.m_width;
+                result.m_snapshot.m_videoHeight = completed.m_snapshot.m_mediaInfo.m_videoFormat.m_height;
+                result.m_snapshot.m_hasLoopA = completed.m_snapshot.m_loopRange.m_aPoint.m_isSet ? 1 : 0;
+                result.m_snapshot.m_hasLoopB = completed.m_snapshot.m_loopRange.m_bPoint.m_isSet ? 1 : 0;
+                result.m_snapshot.m_loopAStart100ns = completed.m_snapshot.m_loopRange.m_aPoint.m_frameStart100ns;
+                result.m_snapshot.m_loopBEnd100ns = completed.m_snapshot.m_loopRange.m_bPoint.m_frameEnd100ns;
+                callback(&result, userData);
+            });
+    }
+    catch (...)
+    {
+        return LumaPlayerCoreCResultInternalError;
+    }
+}
+
+int32_t lumaPlayerCoreKaraokeInit(LumaPlayerCoreHandle handle,
+    int32_t sampleRate, int32_t channels, size_t maxPcmBytes)
+{
+    LumaPlayerCoreCContext* context = LumaPlayerCoreHelper::castHandle(handle);
+    if (context == nullptr)
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    try
+    {
+        std::lock_guard<std::mutex> lock(context->m_karaokeMutex);
+        return context->m_karaokePcmTimeline.init(sampleRate, channels, maxPcmBytes)
+            ? LumaPlayerCoreCResultSuccess
+            : LumaPlayerCoreCResultInvalidParam;
+    }
+    catch (...)
+    {
+        return LumaPlayerCoreCResultInternalError;
+    }
+}
+
+int32_t lumaPlayerCoreKaraokeClear(LumaPlayerCoreHandle handle)
+{
+    LumaPlayerCoreCContext* context = LumaPlayerCoreHelper::castHandle(handle);
+    if (context == nullptr)
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    try
+    {
+        std::lock_guard<std::mutex> lock(context->m_karaokeMutex);
+        if (context->m_karaokePcmTimeline.sampleRate() <= 0)
         {
-            LumaPlayerCoreCCompletion result = {};
-            result.m_requestId = completed.m_request.m_requestId;
-            result.m_mediaGeneration = completed.m_request.m_mediaGeneration;
-            result.m_operation = static_cast<int32_t>(completed.m_request.m_operation);
-            result.m_result = static_cast<int32_t>(completed.m_result);
-            result.m_snapshot.m_result = static_cast<int32_t>(completed.m_snapshot.m_result);
-            result.m_snapshot.m_state = static_cast<int32_t>(completed.m_snapshot.m_state);
-            result.m_snapshot.m_mediaSerial = completed.m_snapshot.m_mediaSerial;
-            result.m_snapshot.m_duration100ns = completed.m_snapshot.m_mediaInfo.m_duration100ns;
-            result.m_snapshot.m_position100ns = completed.m_snapshot.m_position100ns;
-            result.m_snapshot.m_defaultVideoFrameDuration100ns = completed.m_snapshot.m_mediaInfo.m_defaultVideoFrameDuration100ns;
-            result.m_snapshot.m_ratePermille = completed.m_snapshot.m_ratePermille;
-            result.m_snapshot.m_hasVideo = completed.m_snapshot.m_mediaInfo.m_hasVideo ? 1 : 0;
-            result.m_snapshot.m_hasAudio = completed.m_snapshot.m_mediaInfo.m_hasAudio ? 1 : 0;
-            result.m_snapshot.m_videoWidth = completed.m_snapshot.m_mediaInfo.m_videoFormat.m_width;
-            result.m_snapshot.m_videoHeight = completed.m_snapshot.m_mediaInfo.m_videoFormat.m_height;
-            result.m_snapshot.m_hasLoopA = completed.m_snapshot.m_loopRange.m_aPoint.m_isSet ? 1 : 0;
-            result.m_snapshot.m_hasLoopB = completed.m_snapshot.m_loopRange.m_bPoint.m_isSet ? 1 : 0;
-            result.m_snapshot.m_loopAStart100ns = completed.m_snapshot.m_loopRange.m_aPoint.m_frameStart100ns;
-            result.m_snapshot.m_loopBEnd100ns = completed.m_snapshot.m_loopRange.m_bPoint.m_frameEnd100ns;
-            callback(&result, userData);
-        });
+            return LumaPlayerCoreCResultStateError;
+        }
+        context->m_karaokePcmTimeline.clear();
+        return LumaPlayerCoreCResultSuccess;
+    }
+    catch (...)
+    {
+        return LumaPlayerCoreCResultInternalError;
+    }
+}
+
+int32_t lumaPlayerCoreKaraokeAdvanceTo(LumaPlayerCoreHandle handle,
+    int64_t mediaPosition100ns)
+{
+    LumaPlayerCoreCContext* context = LumaPlayerCoreHelper::castHandle(handle);
+    if (context == nullptr)
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    try
+    {
+        std::lock_guard<std::mutex> lock(context->m_karaokeMutex);
+        if (context->m_karaokePcmTimeline.sampleRate() <= 0)
+        {
+            return LumaPlayerCoreCResultStateError;
+        }
+        return context->m_karaokePcmTimeline.advanceTo(mediaPosition100ns)
+            ? LumaPlayerCoreCResultSuccess
+            : LumaPlayerCoreCResultInvalidParam;
+    }
+    catch (...)
+    {
+        return LumaPlayerCoreCResultInternalError;
+    }
+}
+
+int32_t lumaPlayerCoreKaraokeWritePcm(LumaPlayerCoreHandle handle,
+    int64_t mediaStart100ns, int64_t mediaEnd100ns, int32_t ratePermille,
+    const int16_t* interleavedPcm, size_t frameCount)
+{
+    LumaPlayerCoreCContext* context = LumaPlayerCoreHelper::castHandle(handle);
+    if (context == nullptr)
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    try
+    {
+        std::lock_guard<std::mutex> lock(context->m_karaokeMutex);
+        if (context->m_karaokePcmTimeline.sampleRate() <= 0)
+        {
+            return LumaPlayerCoreCResultStateError;
+        }
+        return context->m_karaokePcmTimeline.replaceCapturedRange(mediaStart100ns,
+                   mediaEnd100ns, ratePermille, interleavedPcm, frameCount)
+            ? LumaPlayerCoreCResultSuccess
+            : LumaPlayerCoreCResultInvalidParam;
+    }
+    catch (...)
+    {
+        return LumaPlayerCoreCResultInternalError;
+    }
+}
+
+int32_t lumaPlayerCoreKaraokeProcessMicrophone(LumaPlayerCoreHandle handle,
+    int64_t mediaStart100ns, int64_t mediaEnd100ns, int32_t ratePermille,
+    const int16_t* inputPcm, size_t frameCount, int32_t gainPercent,
+    int32_t microphoneMuted, int32_t monitoringEnabled,
+    int32_t recordingEnabled, int32_t playbackRunning, int16_t* monitorPcm)
+{
+    return lumaPlayerCoreKaraokeProcessMicrophoneSlot(handle, 0, mediaStart100ns,
+        mediaEnd100ns, ratePermille, inputPcm, frameCount, gainPercent,
+        microphoneMuted, monitoringEnabled, recordingEnabled, playbackRunning, monitorPcm);
+}
+
+int32_t lumaPlayerCoreKaraokeProcessMicrophoneSlot(LumaPlayerCoreHandle handle, int32_t microphone,
+    int64_t mediaStart100ns, int64_t mediaEnd100ns, int32_t ratePermille,
+    const int16_t* inputPcm, size_t frameCount, int32_t gainPercent,
+    int32_t microphoneMuted, int32_t monitoringEnabled,
+    int32_t recordingEnabled, int32_t playbackRunning, int16_t* monitorPcm)
+{
+    LumaPlayerCoreCContext* context = LumaPlayerCoreHelper::castHandle(handle);
+    if (microphone < 0 || microphone >= 3 || context == nullptr || inputPcm == nullptr || monitorPcm == nullptr ||
+        frameCount == 0 || gainPercent < 0 || gainPercent > 5000 ||
+        (ratePermille < 100 || ratePermille > 5000))
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    try
+    {
+        std::lock_guard<std::mutex> lock(context->m_karaokeMutex);
+        const int32_t channels = context->m_karaokePcmTimeline.channels();
+        if (context->m_karaokePcmTimeline.sampleRate() <= 0 || channels <= 0)
+        {
+            return LumaPlayerCoreCResultStateError;
+        }
+        if (frameCount > (std::numeric_limits<size_t>::max)() /
+                static_cast<size_t>(channels))
+        {
+            return LumaPlayerCoreCResultInvalidParam;
+        }
+        const size_t sampleCount = frameCount * static_cast<size_t>(channels);
+        context->m_karaokeRecordingScratch.resize(sampleCount);
+        if (!KaraokePcmProcessor::processMicrophone(inputPcm, sampleCount,
+                gainPercent, microphoneMuted != 0, monitoringEnabled != 0,
+                context->m_karaokeRecordingScratch.data(), monitorPcm))
+        {
+            return LumaPlayerCoreCResultInvalidParam;
+        }
+        if (playbackRunning != 0)
+        {
+            if (mediaStart100ns < 0 || mediaEnd100ns <= mediaStart100ns)
+            {
+                return LumaPlayerCoreCResultInvalidParam;
+            }
+            if (recordingEnabled != 0)
+            {
+                if (!context->m_karaokePcmTimeline.replaceCapturedRange(
+                        mediaStart100ns, mediaEnd100ns, ratePermille,
+                        context->m_karaokeRecordingScratch.data(), frameCount, microphone))
+                {
+                    return LumaPlayerCoreCResultInvalidParam;
+                }
+            }
+            else if (!context->m_karaokePcmTimeline.advanceTo(mediaEnd100ns))
+            {
+                return LumaPlayerCoreCResultInvalidParam;
+            }
+        }
+        return LumaPlayerCoreCResultSuccess;
+    }
+    catch (...)
+    {
+        return LumaPlayerCoreCResultInternalError;
+    }
+}
+
+int32_t lumaPlayerCoreKaraokeOutputFrameCount(LumaPlayerCoreHandle handle,
+    uint64_t* frameCount)
+{
+    LumaPlayerCoreCContext* context = LumaPlayerCoreHelper::castHandle(handle);
+    if (context == nullptr || frameCount == nullptr)
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    try
+    {
+        std::lock_guard<std::mutex> lock(context->m_karaokeMutex);
+        if (context->m_karaokePcmTimeline.sampleRate() <= 0)
+        {
+            return LumaPlayerCoreCResultStateError;
+        }
+        return context->m_karaokePcmTimeline.outputFrameCount(frameCount)
+            ? LumaPlayerCoreCResultSuccess
+            : LumaPlayerCoreCResultInternalError;
+    }
+    catch (...)
+    {
+        return LumaPlayerCoreCResultInternalError;
+    }
+}
+
+int32_t lumaPlayerCoreKaraokeReadPcm(LumaPlayerCoreHandle handle,
+    uint64_t startFrame, size_t frameCount, int16_t* interleavedOutput)
+{
+    LumaPlayerCoreCContext* context = LumaPlayerCoreHelper::castHandle(handle);
+    if (context == nullptr || (frameCount > 0 && interleavedOutput == nullptr))
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    try
+    {
+        std::lock_guard<std::mutex> lock(context->m_karaokeMutex);
+        if (context->m_karaokePcmTimeline.sampleRate() <= 0)
+        {
+            return LumaPlayerCoreCResultStateError;
+        }
+        return context->m_karaokePcmTimeline.renderOutputFrames(startFrame,
+                   frameCount, interleavedOutput)
+            ? LumaPlayerCoreCResultSuccess
+            : LumaPlayerCoreCResultInvalidParam;
+    }
+    catch (...)
+    {
+        return LumaPlayerCoreCResultInternalError;
+    }
+}
+
+int32_t lumaPlayerCoreKaraokeCapturedFrameCount(LumaPlayerCoreHandle handle, uint64_t* frameCount)
+{
+    LumaPlayerCoreCContext* context = LumaPlayerCoreHelper::castHandle(handle);
+    if (context == nullptr || frameCount == nullptr)
+    {
+        return LumaPlayerCoreCResultInvalidParam;
+    }
+    try
+    {
+        std::lock_guard<std::mutex> lock(context->m_karaokeMutex);
+        *frameCount = context->m_karaokePcmTimeline.capturedFrameCount();
+        return LumaPlayerCoreCResultSuccess;
     }
     catch (...)
     {

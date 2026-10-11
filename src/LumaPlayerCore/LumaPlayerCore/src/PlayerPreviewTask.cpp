@@ -39,50 +39,50 @@ void PlayerPreviewTask::request(int64_t position100ns, uint64_t requestSerial,
 
 void PlayerPreviewTask::DoTask()
 {
-	if (m_exit.load())
-	{
-		return;
-	}
-	if (m_engine == nullptr)
-	{
-		return;
-	}
-	while (!m_exit.load())
-	{
+    if (m_exit.load())
+    {
+        return;
+    }
+    if (m_engine == nullptr)
+    {
+        return;
+    }
+    while (!m_exit.load())
+    {
         std::shared_ptr<PlayerRequestCompletion> completion;
-		int64_t position100ns = 0;
-		uint64_t requestSerial = 0;
-		{
-			std::unique_lock<std::mutex> lock(m_requestMutex);
-			while (!m_pending && !m_exit.load())
-			{
-				m_requestReady.wait(lock);
-			}
-			if (m_exit.load())
-			{
-				return;
-			}
-			position100ns = m_position100ns;
-			requestSerial = m_requestSerial;
+        int64_t position100ns = 0;
+        uint64_t requestSerial = 0;
+        {
+            std::unique_lock<std::mutex> lock(m_requestMutex);
+            while (!m_pending && !m_exit.load())
+            {
+                m_requestReady.wait(lock);
+            }
+            if (m_exit.load())
+            {
+                return;
+            }
+            position100ns = m_position100ns;
+            requestSerial = m_requestSerial;
             completion.swap(m_completion);
-			m_pending = false;
-		}
+            m_pending = false;
+        }
         const LumaPlayerCoreResult result = m_engine->previewFrameFromTask(position100ns, requestSerial, &m_exit);
         if (completion != nullptr)
         {
             completion->m_delivery->m_completion.m_result = result;
             completion->m_delivery->m_completion.m_snapshot = m_engine->snapshot();
         }
-	}
+    }
 }
 
 void PlayerPreviewTask::StopTask()
 {
-	{
-		std::lock_guard<std::mutex> lock(m_requestMutex);
-		m_exit = true;
-		m_pending = false;
+    {
+        std::lock_guard<std::mutex> lock(m_requestMutex);
+        m_exit = true;
+        m_pending = false;
         m_completion.reset();
-	}
-	m_requestReady.notify_one();
+    }
+    m_requestReady.notify_one();
 }

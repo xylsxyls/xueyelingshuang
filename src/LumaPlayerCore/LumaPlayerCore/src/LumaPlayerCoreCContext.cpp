@@ -6,7 +6,10 @@
 LumaPlayerCoreCContext::LumaPlayerCoreCContext() :
 m_core(nullptr),
 m_audioRender(nullptr),
-m_videoRender(nullptr)
+m_videoRender(nullptr),
+m_karaokeMutex(),
+m_karaokePcmTimeline(),
+m_karaokeRecordingScratch()
 {
 
 }

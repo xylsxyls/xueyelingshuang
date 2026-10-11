@@ -19,36 +19,36 @@ PlayerWorkerTask::~PlayerWorkerTask()
 
 void PlayerWorkerTask::DoTask()
 {
-	if (m_exit.load())
-	{
-		return;
-	}
-	if (m_engine != nullptr)
-	{
+    if (m_exit.load())
+    {
+        return;
+    }
+    if (m_engine != nullptr)
+    {
         m_engine->workerLoop(this, &m_exit);
-	}
+    }
 }
 
 void PlayerWorkerTask::StopTask()
 {
-	m_exit = true;
-	wake();
+    m_exit = true;
+    wake();
 }
 
 void PlayerWorkerTask::wake()
 {
-	m_wakeup.signal();
+    m_wakeup.signal();
 }
 
 bool PlayerWorkerTask::wait(int32_t timeoutMs)
 {
-	if (m_exit)
-	{
-		return false;
-	}
-	if (timeoutMs <= 0)
-	{
-		return true;
-	}
-	return m_wakeup.wait(timeoutMs);
+    if (m_exit)
+    {
+        return false;
+    }
+    if (timeoutMs <= 0)
+    {
+        return true;
+    }
+    return m_wakeup.wait(timeoutMs);
 }

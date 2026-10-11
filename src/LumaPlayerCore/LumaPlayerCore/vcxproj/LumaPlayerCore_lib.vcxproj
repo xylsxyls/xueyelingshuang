@@ -205,6 +205,9 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\KaraokeTimeline.h" />
+    <ClInclude Include="..\src\KaraokePcmTimeline.h" />
+    <ClInclude Include="..\src\KaraokePcmProcessor.h" />
     <ClInclude Include="..\src\LumaPlayerCoreC.h" />
     <ClInclude Include="..\src\LumaPlayerCoreCAudioRenderAdapter.h" />
     <ClInclude Include="..\src\LumaPlayerCoreCContext.h" />
@@ -216,6 +219,9 @@
     <ClInclude Include="..\src\LumaPlayerCoreResult.h" />
     <ClInclude Include="..\src\PlayerEngineHelper.h" />
     <ClInclude Include="..\src\PlayerPreviewCancelContext.h" />
+    <ClCompile Include="..\src\KaraokeTimeline.cpp" />
+    <ClCompile Include="..\src\KaraokePcmTimeline.cpp" />
+    <ClCompile Include="..\src\KaraokePcmProcessor.cpp" />
     <ClCompile Include="..\src\LumaPlayerCoreC.cpp" />
     <ClCompile Include="..\src\LumaPlayerCoreCAudioRenderAdapter.cpp" />
     <ClCompile Include="..\src\LumaPlayerCoreCContext.cpp" />
@@ -239,5 +245,36 @@
   <ItemGroup>
     <ClInclude Include="..\src\PlayerCommandTask.h" />
     <ClCompile Include="..\src\PlayerCommandTask.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\KaraokeNativeAudio.h" />
+    <ClInclude Include="..\src\KaraokeNativeBackend.h" />
+    <ClCompile Include="..\src\KaraokeNativeAudio.cpp" />
+    <ClCompile Include="..\src\KaraokeNativeAudioC.cpp" />
+    <ClCompile Include="..\src\KaraokeMiniaudio.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\KaraokeOrt.h" />
+    <ClInclude Include="..\src\KaraokeOrtContext.h" />
+    <ClInclude Include="..\src\KaraokeSpectrum.h" />
+    <ClInclude Include="..\src\KaraokeSeparation.h" />
+    <ClCompile Include="..\src\KaraokeOrt.c"><ForcedIncludeFiles></ForcedIncludeFiles></ClCompile>
+    <ClCompile Include="..\src\KaraokeSpectrum.cpp" />
+    <ClCompile Include="..\src\KaraokeSeparation.cpp" />
+    <ClCompile Include="..\src\KaraokeSeparationTask.cpp" />
+    <ClInclude Include="..\src\KaraokeSeparationTask.h" />
+    <ClCompile Include="..\src\KaraokeSeparationC.cpp" />
+    <ClCompile Include="..\src\KaraokeExport.cpp" />
+    <ClCompile Include="..\src\KaraokeMediaWriter.cpp" />
+    <ClInclude Include="..\src\KaraokeMediaWriter.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\KaraokeStorage.h" />
+    <ClCompile Include="..\src\KaraokeStorage.cpp" />
+  </ItemGroup>
+<ItemGroup><ClCompile Include="..\src\KaraokeRecordingTracks.cpp" /><ClInclude Include="..\src\KaraokeRecordingTracks.h" /></ItemGroup>  <ItemGroup>
+    <ClCompile Include="..\src\KaraokeMicrophoneControls.cpp" />
+    <ClInclude Include="..\src\KaraokeMicrophoneControls.h" />
+    <ClInclude Include="..\src\KaraokeExport.h" />
   </ItemGroup>
 </Project>

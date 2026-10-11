@@ -9,73 +9,72 @@
 #include <limits>
 #include <vector>
 
-
 int64_t PlayerEngineHelper::clampInt64(int64_t value, int64_t minValue, int64_t maxValue)
 {
-	if (value < minValue)
-	{
-		return minValue;
-	}
-	if (value > maxValue)
-	{
-		return maxValue;
-	}
-	return value;
+    if (value < minValue)
+    {
+        return minValue;
+    }
+    if (value > maxValue)
+    {
+        return maxValue;
+    }
+    return value;
 }
 
 int32_t PlayerEngineHelper::clampRate(int32_t ratePermille, int32_t minRatePermille, int32_t maxRatePermille)
 {
-	if (ratePermille < minRatePermille)
-	{
-		return minRatePermille;
-	}
-	if (ratePermille > maxRatePermille)
-	{
-		return maxRatePermille;
-	}
-	return ratePermille;
+    if (ratePermille < minRatePermille)
+    {
+        return minRatePermille;
+    }
+    if (ratePermille > maxRatePermille)
+    {
+        return maxRatePermille;
+    }
+    return ratePermille;
 }
 
 void PlayerEngineHelper::deleteReader(FFmpegCppPlaybackReader** reader)
 {
-	if (reader == nullptr || *reader == nullptr)
-	{
-		return;
-	}
-	delete *reader;
-	*reader = nullptr;
+    if (reader == nullptr || *reader == nullptr)
+    {
+        return;
+    }
+    delete *reader;
+    *reader = nullptr;
 }
 
 void PlayerEngineHelper::convertVideoFrame(FFmpegCppPlaybackVideoFrame* source, int64_t frameIndex, LumaPlayerVideoFrame* target)
 {
-	if (source == nullptr || target == nullptr)
-	{
-		return;
-	}
-	target->reset();
-	target->m_bgraPixels.swap(source->bgraPixels);
-	target->m_width = source->width;
-	target->m_height = source->height;
-	target->m_stride = source->stride;
-	target->m_timestamp100ns = source->timestamp100ns;
-	target->m_duration100ns = source->duration100ns;
-	target->m_keyFrame = source->keyFrame;
-	target->m_frameIndex = frameIndex;
+    if (source == nullptr || target == nullptr)
+    {
+        return;
+    }
+    target->reset();
+    target->m_bgraPixels.swap(source->bgraPixels);
+    target->m_width = source->width;
+    target->m_height = source->height;
+    target->m_stride = source->stride;
+    target->m_timestamp100ns = source->timestamp100ns;
+    target->m_duration100ns = source->duration100ns;
+    target->m_keyFrame = source->keyFrame;
+    target->m_frameIndex = frameIndex;
 }
 
 void PlayerEngineHelper::convertAudioFrame(FFmpegCppPlaybackAudioFrame* source, LumaPlayerAudioFrame* target)
 {
-	if (source == nullptr || target == nullptr)
-	{
-		return;
-	}
-	target->reset();
-	target->m_pcmData.swap(source->pcmData);
-	target->m_format.m_sampleRate = source->sampleRate;
-	target->m_format.m_channels = source->channels;
-	target->m_format.m_bitsPerSample = source->bitsPerSample;
-	target->m_timestamp100ns = source->timestamp100ns;
-	target->m_duration100ns = source->duration100ns;
+    if (source == nullptr || target == nullptr)
+    {
+        return;
+    }
+    target->reset();
+    target->m_pcmData.swap(source->pcmData);
+    target->m_format.m_sampleRate = source->sampleRate;
+    target->m_format.m_channels = source->channels;
+    target->m_format.m_bitsPerSample = source->bitsPerSample;
+    target->m_timestamp100ns = source->timestamp100ns;
+    target->m_duration100ns = source->duration100ns;
 }
 
 bool PlayerEngineHelper::scaleAudioRate(const LumaPlayerAudioFrame& source, int32_t ratePermille, LumaPlayerAudioFrame* target)

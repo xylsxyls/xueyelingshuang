@@ -5,5 +5,5 @@
 
 LumaPlayerCoreCContext* LumaPlayerCoreHelper::castHandle(LumaPlayerCoreHandle handle)
 {
-	return static_cast<LumaPlayerCoreCContext*>(handle);
+    return static_cast<LumaPlayerCoreCContext*>(handle);
 }

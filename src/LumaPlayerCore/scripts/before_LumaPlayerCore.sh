@@ -42,3 +42,33 @@ LogManager_dlllib=$2
 LogManager_debugRelease=$3
 LogManager_allSame=$4
 "$CLOUD_REBUILD" LogManager $LogManager_bit $LogManager_dlllib $LogManager_debugRelease $LogManager_allSame
+
+#--------------------------------------------------------------------
+KissFFTCpp_bit=$1
+KissFFTCpp_dlllib=$2
+KissFFTCpp_debugRelease=$3
+KissFFTCpp_allSame=$4
+"$CLOUD_REBUILD" KissFFTCpp $KissFFTCpp_bit $KissFFTCpp_dlllib $KissFFTCpp_debugRelease $KissFFTCpp_allSame
+
+# Header-only audio capture stays inside Core; FFT implementation belongs to KissFFTCpp.
+root="$(cd "$(dirname "$0")/../../.." && pwd)"
+mkdir -p "$root/include/miniaudio"
+cp "$root/tools/LumaPlayerKaraoke/miniaudio/include/miniaudio.h" "$root/include/miniaudio/miniaudio.h"
+mkdir -p "$root/include/onnxruntime"
+cp "$root/tools/LumaPlayerKaraoke/directml-1.24.4/include/"*.h "$root/include/onnxruntime/" || exit 1
+# Prepare local build resources, not common publication or server model downloads.
+karaoke="$root/tools/LumaPlayerKaraoke"
+mkdir -p "$root/lib/karaoke" || exit 1
+cp -f "$karaoke/models/UVR-MDX-NET-Inst_HQ_5.onnx" "$root/lib/karaoke/" || exit 1
+if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]]; then
+    if [[ "$1" != '64' ]]; then
+        echo 'The bundled ONNX Runtime is Windows x64; provide a matching runtime for other architectures.' >&2
+        exit 1
+    fi
+    runtime="$karaoke/directml-1.24.4"
+    mkdir -p "$root/lib/karaoke/licenses" || exit 1
+    for file in onnxruntime.dll onnxruntime_providers_shared.dll DirectML.dll; do
+        cp -f "$runtime/lib/x64/$file" "$root/lib/karaoke/" || exit 1
+    done
+    cp -f "$runtime/licenses/"*.txt "$root/lib/karaoke/licenses/" || exit 1
+fi

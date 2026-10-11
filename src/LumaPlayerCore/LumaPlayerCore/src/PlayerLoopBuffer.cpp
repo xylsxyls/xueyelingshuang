@@ -30,12 +30,12 @@ PlayerLoopBuffer::~PlayerLoopBuffer()
 
 void PlayerLoopBuffer::DoTask()
 {
-	if (m_exit.load())
-	{
-		m_result = LumaPlayerCoreResultCanceled;
-		m_ready.store(true);
-		return;
-	}
+    if (m_exit.load())
+    {
+        m_result = LumaPlayerCoreResultCanceled;
+        m_ready.store(true);
+        return;
+    }
     try
     {
         m_result = prepareVideo();
