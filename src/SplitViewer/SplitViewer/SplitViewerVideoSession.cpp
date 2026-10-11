@@ -164,6 +164,7 @@ void SplitViewerVideoSession::accept(quint64 id)
             finish(id);
             return;
         }
+        // 嵌入成功仍须保留稳定进程句柄；窗口先销毁时也能精确关闭原实例
         m_embeddedRequests.insert(request.m_windowId, m_requests.take(id));
         LOGINFO("Keep linked embedded process identity; pid=%lld", request.m_processId);
         m_timer->start();
@@ -336,6 +337,7 @@ bool SplitViewerVideoSession::windowAvailable(const SplitViewerVideoRequest& req
         return false;
     }
     GetWindowThreadProcessId(window, &processId);
+    // 只检查窗口自身的可见位；宿主暂时隐藏不代表播放器主动关闭，不能用父链可见性判断
     return processId == request.m_processId && (GetWindowLongPtrW(window, GWL_STYLE) & WS_VISIBLE) != 0;
 #else
     Q_UNUSED(request);

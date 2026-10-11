@@ -25,6 +25,10 @@ m_stopping(false)
     connect(m_session, &SplitViewerVideoSession::windowReady, this, &SplitViewerMediaManager::windowReady);
     connect(m_session, &SplitViewerVideoSession::idle, this, &SplitViewerMediaManager::idle);
     connect(m_session, &SplitViewerVideoSession::failed, this,
+        /** 移除失败请求的目标映射并更新媒体代次，只上报仍相关的错误
+        @param [in] id 本会话请求编号，0表示不关联特定加载目标的关闭错误
+        @param [in] message 错误正文，回调期间借用
+        */
         [this](quint64 id, const QString& message)
         {
             const bool relevant = m_targets.remove(id) > 0;
@@ -143,6 +147,10 @@ void SplitViewerMediaManager::load(SplitViewerCoreNode* leaf, const QString& pat
     const QString readError = g_config.m_readImageError;
     const bool accepted = m_tasks->submit(
         true,
+        /** 后台解码到请求独占的图片对象，不借用叶子或窗口
+        @param [in] exit 所属请求的共享停止标志
+        @return 解码结果非空且前后均未取消
+        */
         [image, path](const std::atomic<bool>& exit)
         {
             if (exit.load())
@@ -152,6 +160,9 @@ void SplitViewerMediaManager::load(SplitViewerCoreNode* leaf, const QString& pat
             image->load(path);
             return !exit.load() && !image->isNull();
         },
+        /** 核对媒体代次及叶子存活后在GUI替换内容，失败保留原图片
+        @param [in] success 本次后台图片解码的实际结果
+        */
         [this, image, leaf, path, readError, revision](bool success)
         {
             if (m_stopping || revision != m_revision || !validLeaf(leaf))

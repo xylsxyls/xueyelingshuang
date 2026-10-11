@@ -81,6 +81,8 @@ m_nativeClickTime(0)
     m_mediaManager =
         new SplitViewerMediaManager(&m_document, &m_imageCache, &m_embedded, m_canvas, m_taskManager, this);
     connect(m_mediaManager, &SplitViewerMediaManager::changed, this,
+        /** 媒体状态改变后在GUI线程同步嵌入布局、状态栏及画布
+        */
         [this]()
         {
             syncEmbeddedViews();
@@ -88,6 +90,9 @@ m_nativeClickTime(0)
             m_canvas->update();
         });
     connect(m_mediaManager, &SplitViewerMediaManager::error, this,
+        /** 仅在宿主未关闭时显示媒体操作错误
+        @param [in] message 本次媒体错误正文，回调期间借用
+        */
         [this](const QString& message)
         {
             if (!m_closing)
@@ -96,11 +101,15 @@ m_nativeClickTime(0)
             }
         });
     connect(m_mediaManager, &SplitViewerMediaManager::idle, this,
+        /** 媒体请求收敛后安排下一轮GUI关闭检查，避免在当前信号栈中销毁窗口
+        */
         [this]()
         {
             if (m_closing)
             {
                 QTimer::singleShot(0, this,
+                    /** 回到GUI事件循环后重新尝试关闭宿主，由closeEvent核验收尾条件
+                    */
                     [this]()
                     {
                         close();
@@ -110,6 +119,8 @@ m_nativeClickTime(0)
     QTimer* closePoll = new QTimer(this);
     closePoll->setInterval(g_config.m_taskPollIntervalMs);
     connect(closePoll, &QTimer::timeout, this,
+        /** 轮询任务完成和媒体收尾，全部收敛后才再次请求窗口关闭
+        */
         [this]()
         {
             updateProcessing();
@@ -121,6 +132,8 @@ m_nativeClickTime(0)
     closePoll->start();
     m_embeddedSyncTimer->setInterval((std::max)(1, g_config.m_embeddedSyncIntervalMs));
     connect(m_embeddedSyncTimer, &QTimer::timeout, this,
+        /** 静置期间保持原生窗口填满分屏，关闭中不再同步几何
+        */
         [this]()
         {
             if (!m_closing && !m_embedded.isEmpty())
@@ -134,6 +147,11 @@ m_nativeClickTime(0)
     m_zoomTipTimer->setInterval(g_config.m_zoomTipDurationMs);
     connect(m_zoomTipTimer, &QTimer::timeout, m_zoomTip, &QWidget::hide);
     SplitViewerWatchNativeMouse(this,
+        /** 将原生鼠标通知交给所属窗口的GUI输入入口
+        @param [in] event 原生点击、拖动或释放事件编号
+        @param [in] point 事件发生时的屏幕坐标
+        @param [in] id 借用的外部窗口句柄
+        */
         [this](int event, const QPoint& point, WId id)
         {
             nativeMouseEvent(event, point, id);
@@ -544,6 +562,8 @@ void SplitViewer::canvasContextMenu(const QPoint& point, const QPoint& globalPoi
     Menu menu(this);
     // 栈菜单不能在宿主的QObject析构中被删除；先解除父所有权并退出exec。
     connect(this, &QObject::destroyed, &menu,
+        /** 宿主销毁时取消菜单的父对象所有权并退出嵌套菜单循环
+        */
         [&menu]()
         {
             menu.setParent(nullptr);
@@ -660,6 +680,10 @@ void SplitViewer::moveAt(const SplitViewerHit& hit, SplitViewerCoreMoveDirection
     const SplitViewerCoreNode* source = hit.m_node;
     const SplitViewerCoreNode* root = hit.m_root;
     submitDocumentEdit(
+        /** 仅在独立文档快照中迁移内容并更新旧节点到新节点的资源映射
+        @param [in,out] snapshot 待提交的独占快照，成功后由GUI接纳
+        @return 内容迁移实际成功；失败不提交该快照
+        */
         [source, target, root, sourceRect, targetRect](SplitViewerDocumentSnapshot& snapshot)
         {
             SplitViewerCoreNode* from = snapshot.m_nodes.at(source);
@@ -685,6 +709,10 @@ void SplitViewer::splitAt(const SplitViewerHit& hit, SplitViewerCoreSplitDirecti
         return;
     }
     submitDocumentEdit(
+        /** 在快照中分割叶子，并将原内容映射到第一子区域
+        @param [in,out] snapshot 待编辑的独立文档及节点映射
+        @return Core分割成功且节点实际成为分割节点
+        */
         [source, direction](SplitViewerDocumentSnapshot& snapshot)
         {
             SplitViewerCoreNode* node = snapshot.m_nodes.at(source);
@@ -706,6 +734,10 @@ void SplitViewer::deleteAt(const SplitViewerHit& hit)
     const SplitViewerCoreNode* source = hit.m_node;
     const SplitViewerCoreNode* root = hit.m_root;
     submitDocumentEdit(
+        /** 在快照中删除叶子并修正兄弟节点折叠后的身份映射
+        @param [in,out] snapshot 待编辑的独立文档及节点映射
+        @return 父节点存在且Core实际删除成功
+        */
         [source, root](SplitViewerDocumentSnapshot& snapshot)
         {
             SplitViewerCoreNode* node = snapshot.m_nodes.at(source);
@@ -752,6 +784,10 @@ bool SplitViewer::deleteLayerAt(int index)
         return false;
     }
     return submitDocumentEdit(
+        /** 在快照中删除整个浮动图层，其全部子分屏一起释放
+        @param [in,out] snapshot 待提交的独立文档快照
+        @return 指定图层实际存在并删除成功
+        */
         [index](SplitViewerDocumentSnapshot& snapshot)
         {
             return snapshot.m_document.deleteLayer(index);
@@ -796,6 +832,10 @@ void SplitViewer::canvasFileDropped(const QString& path)
 void SplitViewer::newLayer()
 {
     submitDocumentEdit(
+        /** 在快照中创建浮动图层，是否接纳取决于Core实例预算
+        @param [in,out] snapshot 待提交的独立文档快照
+        @return Core返回了新建图层
+        */
         [](SplitViewerDocumentSnapshot& snapshot)
         {
             return snapshot.m_document.addLayer() != nullptr;
@@ -822,6 +862,10 @@ bool SplitViewer::writeProfile(const QString& path)
     const QImage thumbnail = renderStage(size, false);
     const bool accepted = m_taskManager->submit(
         true,
+        /** 后台编码当前快照和PNG预览，提交前检查停止，返回真实写入结果
+        @param [in] exit 共享停止标志，只读原子访问
+        @return 未在编码阶段取消且配置包实际写入并提交成功
+        */
         [snapshot, thumbnail, path](const std::atomic<bool>& exit)
         {
             if (exit.load())
@@ -835,6 +879,9 @@ bool SplitViewer::writeProfile(const QString& path)
             }
             return SplitViewerProfileStore::write(path, snapshot->m_document, buffer.data());
         },
+        /** 在GUI线程接纳配置保存结果；关闭中不再弹出失败提示
+        @param [in] success 后台实际保存结果，不等于仅提交接受
+        */
         [this, path](bool success)
         {
             updateProcessing();
@@ -869,6 +916,10 @@ bool SplitViewer::readProfile(const QString& path)
     const QString limitError = g_config.m_profileTooLargeError;
     const bool accepted = m_taskManager->submit(
         true,
+        /** 后台读取配置并解码图片资源，失败或取消时保留当前界面文档
+        @param [in] exit 共享停止标志，只读原子访问
+        @return 配置解析有效且未取消；图片失效通过叶子状态保留，不使整个配置恢复失败
+        */
         [snapshot, path, maximum, readError, invalidError, limitError](const std::atomic<bool>& exit)
         {
             if (exit.load() ||
@@ -893,6 +944,9 @@ bool SplitViewer::readProfile(const QString& path)
             }
             return !exit.load();
         },
+        /** 核对文档代次后在GUI提交读取快照，过期结果不得替换新文档
+        @param [in] success 本次后台配置读取与资源恢复的实际结果
+        */
         [this, snapshot, revision, path](bool success)
         {
             updateProcessing();
@@ -991,6 +1045,10 @@ void SplitViewer::saveImage()
     const std::shared_ptr<QString> error = std::make_shared<QString>();
     if (!m_taskManager->submit(
             true,
+            /** 后台编码导出图像并原子提交文件，提交前允许协作取消
+            @param [in] exit 共享停止标志，提交前检查
+            @return QSaveFile实际提交成功；提交后的取消不伪造回滚
+            */
             [image, path, format, error](const std::atomic<bool>& exit)
             {
                 if (exit.load())
@@ -1020,6 +1078,9 @@ void SplitViewer::saveImage()
                 }
                 return committed;
             },
+            /** 在GUI线程报告导出失败并恢复处理状态，成功不重复写文件
+            @param [in] success 后台编码和提交的实际结果
+            */
             [this, error, failure](bool success)
             {
                 updateProcessing();
@@ -1500,10 +1561,17 @@ bool SplitViewer::submitDocumentEdit(const std::function<bool(SplitViewerDocumen
     const quint64 mediaRevision = m_mediaManager->revision();
     const bool accepted = m_taskManager->submit(
         false,
+        /** 在逻辑队列执行快照编辑，编辑前后均检查所属窗口的停止标志
+        @param [in] exit 本窗口任务上下文的共享停止标志
+        @return 快照编辑成功且前后均未收到停止请求
+        */
         [snapshot, work](const std::atomic<bool>& exit)
         {
             return !exit.load() && work(*snapshot) && !exit.load();
         },
+        /** 仅在窗口、文档和媒体代次仍有效时接纳后台快照
+        @param [in] success 后台快照编辑的实际结果
+        */
         [this, snapshot, revision, mediaRevision](bool success)
         {
             updateProcessing();

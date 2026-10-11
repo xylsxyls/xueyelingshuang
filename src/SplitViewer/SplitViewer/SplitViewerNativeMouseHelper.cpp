@@ -167,6 +167,8 @@ LRESULT CALLBACK SplitViewerNativeMouseHelper::mouseHook(int code, WPARAM messag
                     suppress = true;
                     // Detach removes the entry; generation rejects stale callbacks.
                     QTimer::singleShot(GetDoubleClickTime(), qApp,
+                        /** 双击等待期结束后仅为仍匹配代次的自产待点击记录补发单击
+                        */
                         [pending, generation]()
                         {
                             if (SplitViewerNativeMouseManager::instance().m_pendingClicks.contains(pending) &&
@@ -187,6 +189,8 @@ LRESULT CALLBACK SplitViewerNativeMouseHelper::mouseHook(int code, WPARAM messag
             const quint64 generation = SplitViewerNativeMouseManager::instance().m_clientGenerations.value(owner);
             // 上下文还活着也可能已经注销或重新订阅，投递后再次核对订阅身份。
             QTimer::singleShot(0, owner,
+                /** 回到接收者GUI线程后再次核对订阅代次，过期钩子通知不交付
+                */
                 [owner, generation, event, point, id]()
                 {
                     SplitViewerNativeMouseManager& manager = SplitViewerNativeMouseManager::instance();

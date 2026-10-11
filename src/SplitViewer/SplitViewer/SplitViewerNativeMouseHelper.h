@@ -31,13 +31,13 @@ public:
     static LRESULT CALLBACK mouseHook(int code, WPARAM message, LPARAM data);
 #endif
     /** 登记GUI线程接收者，按需安装进程级鼠标钩子
-    @param [in] owner 父区域或事件接收者
+    @param [in] owner 借用的GUI上下文对象，须存活到所属回调停止
     @param [in] callback GUI线程通知回调
     */
     static void watchNativeMouse(QObject* owner, const std::function<void(int, const QPoint&, WId)>& callback);
 
     /** 移除接收者；无接收者时卸载钩子
-    @param [in] owner 父区域或事件接收者
+    @param [in] owner 借用的GUI上下文对象，须存活到所属回调停止
     */
     static void unwatchNativeMouse(QObject* owner);
 };

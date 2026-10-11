@@ -27,7 +27,7 @@ public:
     static QRectF rectFromCore(const SplitViewerCoreRect& value);
 
     /** 根据背景板比例和窗口尺寸计算居中区域
-    @param [in] size 数据长度或区域尺寸
+    @param [in] size 目标区域尺寸，逻辑像素
     @param [in] aspect 背景板宽高比
     @param [in] fullscreen 是否内部全屏
     @return 根据背景板比例和窗口尺寸计算居中区域
@@ -48,14 +48,14 @@ public:
     static QRectF plusButtonRect(const QRectF& rect);
 
     /** 按边框可见性计算内容区域
-    @param [in] owner 父区域或事件接收者
+    @param [in] owner 父内容矩形，与子区域使用同一坐标系
     @param [in] borderVisible 是否显示边框
     @return 按边框可见性计算内容区域
     */
     static QRectF contentRect(const QRectF& owner, bool borderVisible);
 
     /** 将Core分屏几何转换为Qt矩形
-    @param [in] owner 父区域或事件接收者
+    @param [in] owner 父内容矩形，与子区域使用同一坐标系
     @param [in] node 文档持有的节点
     @param [in,out] first 第一子区域
     @param [in,out] splitter 分割线区域

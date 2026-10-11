@@ -40,6 +40,7 @@ void SplitViewerWorkTask::DoTask()
     }
     try
     {
+        // 与窗口停止使用同一短提交锁，避免停止后向正在回收的逻辑队列投递完成任务
         const std::lock_guard<std::mutex> admission(m_context->m_dispatchMutex);
         if (!m_context->m_exit.load())
         {

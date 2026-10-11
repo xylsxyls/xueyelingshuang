@@ -38,7 +38,7 @@ public:
     static QImage foreignWindowSnapshot(QWidget* container);
 
     /** 判断是否为可嵌入的外部顶层窗口
-    @param [in] id 窗口句柄或节点编号
+    @param [in] id 借用的外部原生窗口句柄，不持有其所有权
     @param [in] own 宿主窗口句柄
     @return 判断是否为可嵌入的外部顶层窗口是否成功
     */
@@ -51,7 +51,7 @@ public:
     static bool foreignWindowValid(QWidget* container);
 
     /** 将脱离宿主的窗口移至指定中心
-    @param [in] id 窗口句柄或节点编号
+    @param [in] id 借用的外部原生窗口句柄，不持有其所有权
     @param [in] center 目标中心坐标
     */
     static void moveDetachedWindow(WId id, const QPoint& center);

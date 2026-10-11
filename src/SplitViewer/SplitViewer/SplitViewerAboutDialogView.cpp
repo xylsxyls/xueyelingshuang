@@ -93,6 +93,8 @@ bool SplitViewerAboutDialogView::initView(const DialogParam& param)
     layout->addLayout(actions);
 
     connect(m_closeButton, &QPushButton::clicked,
+        /** 确认按钮发出内容完成信号，由DialogManager负责关闭窗口
+        */
         [this]()
         {
             notifyCloseRequested(ACCEPT_BUTTON, 0);

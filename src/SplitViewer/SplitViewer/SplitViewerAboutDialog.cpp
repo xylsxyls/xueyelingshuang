@@ -49,6 +49,8 @@ CustomDialog()
         m_exit->setMargins(
             static_cast<quint32>(0), static_cast<quint32>(0), static_cast<quint32>(0), static_cast<quint32>(0));
         QObject::connect(m_exit, &QPushButton::clicked, this,
+            /** 通过托管关于窗口的关闭入口响应标题栏叉，生命周期仍归DialogManager
+            */
             [this]()
             {
                 setWindowResult(RIGHT_TOP_EXIT);

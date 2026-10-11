@@ -157,165 +157,165 @@ public:
     int32_t m_aboutGlyphCanvas;
     // 问号线宽
     double m_aboutGlyphStroke;
-    // 界面文案或资源路径：applicationTitle
+    // 主窗口标题及应用名称
     QString m_applicationTitle;
-    // 界面文案或资源路径：toolbarTitle
+    // 主工具栏标题
     QString m_toolbarTitle;
-    // 界面文案或资源路径：openProfileText
+    // 打开分屏配置的工具栏按钮文案
     QString m_openProfileText;
-    // 界面文案或资源路径：profileToolTip
+    // 配置按钮的悬停说明，空工作区加载、有内容时保存
     QString m_profileToolTip;
-    // 界面文案或资源路径：saveImageText
+    // 导出当前画面的工具栏按钮文案
     QString m_saveImageText;
-    // 界面文案或资源路径：saveImageToolTip
+    // 导出图片按钮的悬停说明
     QString m_saveImageToolTip;
-    // 界面文案或资源路径：newLayerText
+    // 创建浮动图片图层的按钮文案
     QString m_newLayerText;
-    // 界面文案或资源路径：fullscreenText
+    // 进入内部全屏的按钮文案
     QString m_fullscreenText;
-    // 界面文案或资源路径：borderText
+    // 切换背景板和图层边框的按钮文案
     QString m_borderText;
-    // 界面文案或资源路径：aboutText
+    // 关于按钮的悬停说明
     QString m_aboutText;
-    // 界面文案或资源路径：selectImageText
+    // 仅加载图片时系统文件选择框的标题
     QString m_selectImageText;
-    // 界面文案或资源路径：imageFilter
+    // 系统文件框的图片格式筛选，包含jfif
     QString m_imageFilter;
-    // 界面文案或资源路径：horizontalSplitText
+    // 形成上下分屏的右键菜单文案
     QString m_horizontalSplitText;
-    // 界面文案或资源路径：verticalSplitText
+    // 形成左右分屏的右键菜单文案
     QString m_verticalSplitText;
-    // 界面文案或资源路径：deleteLayerText
+    // 删除整个浮动图层的右键菜单文案
     QString m_deleteLayerText;
-    // 界面文案或资源路径：deleteSplitText
+    // 删除当前叶子分屏的右键菜单文案
     QString m_deleteSplitText;
-    // 界面文案或资源路径：loadImageText
+    // 仅加载图片时右键菜单的加载文案
     QString m_loadImageText;
-    // 界面文案或资源路径：embedWindowText
+    // 通过句柄嵌入外部窗口的菜单文案
     QString m_embedWindowText;
-    // 界面文案或资源路径：detachWindowText
+    // 从当前分屏移除嵌入窗口的菜单文案
     QString m_detachWindowText;
-    // 界面文案或资源路径：readImageError
+    // 图片解码失败提示前缀，调用方附加路径
     QString m_readImageError;
-    // 界面文案或资源路径：openProfileFilter
+    // 系统文件框打开分屏配置时的格式筛选
     QString m_openProfileFilter;
-    // 界面文案或资源路径：saveProfileText
+    // 保存分屏配置时系统文件框的标题
     QString m_saveProfileText;
-    // 界面文案或资源路径：defaultProfileName
+    // 保存分屏配置时建议的文件名
     QString m_defaultProfileName;
-    // 界面文案或资源路径：saveProfileFilter
+    // 系统文件框保存分屏配置时的格式筛选
     QString m_saveProfileFilter;
-    // 界面文案或资源路径：profileExtension
+    // 保存分屏配置时补全的默认扩展名，含点号.sv
     QString m_profileExtension;
-    // 界面文案或资源路径：profileSuffix
+    // QFileInfo识别分屏配置文件的后缀，不含点号sv
     QString m_profileSuffix;
-    // 界面文案或资源路径：writeProfileError
+    // 分屏配置写入或提交失败的提示前缀
     QString m_writeProfileError;
-    // 界面文案或资源路径：defaultImageName
+    // 导出图片时建议的文件名
     QString m_defaultImageName;
-    // 界面文案或资源路径：exportImageFilter
+    // 系统文件框导出图片时的编码格式筛选
     QString m_exportImageFilter;
-    // 界面文案或资源路径：imageExtension
+    // 导出图片时补全的默认扩展名，含点号.png
     QString m_imageExtension;
-    // 界面文案或资源路径：writeImageError
+    // 图片编码或原子提交失败的提示前缀
     QString m_writeImageError;
-    // 界面文案或资源路径：aboutTitle
+    // 关于窗口标题栏文案
     QString m_aboutTitle;
-    // 界面文案或资源路径：aboutMessage
+    // 关于窗口内的软件用途介绍
     QString m_aboutMessage;
-    // 界面文案或资源路径：windowHandlePrompt
+    // 手动输入外部窗口句柄时的说明
     QString m_windowHandlePrompt;
-    // 界面文案或资源路径：invalidHandleTitle
+    // 窗口句柄无效提示框的标题
     QString m_invalidHandleTitle;
-    // 界面文案或资源路径：invalidHandleMessage
+    // 窗口句柄无效提示正文
     QString m_invalidHandleMessage;
-    // 界面文案或资源路径：embedFailedTitle
+    // 外部窗口嵌入失败提示框的标题
     QString m_embedFailedTitle;
-    // 界面文案或资源路径：embedFailedMessage
+    // 外部窗口嵌入失败提示正文
     QString m_embedFailedMessage;
-    // 界面文案或资源路径：windowMissingTitle
+    // 未找到可嵌入窗口时的提示标题
     QString m_windowMissingTitle;
-    // 界面文案或资源路径：windowMissingMessage
+    // 未找到可嵌入窗口时的提示正文
     QString m_windowMissingMessage;
-    // 界面文案或资源路径：baseLayerText
+    // 状态栏表示基础背景板的文案
     QString m_baseLayerText;
-    // 界面文案或资源路径：operationFailedTitle
+    // 通用操作失败提示框的标题
     QString m_operationFailedTitle;
-    // 界面文案或资源路径：readProfileError
+    // 读取分屏配置失败的提示前缀
     QString m_readProfileError;
-    // 界面文案或资源路径：profileTooLargeError
+    // 分屏配置超过读取预算的提示
     QString m_profileTooLargeError;
-    // 界面文案或资源路径：invalidProfileError
+    // 分屏配置结构、编码或内容校验失败的提示
     QString m_invalidProfileError;
-    // 界面文案或资源路径：overwriteTitle
+    // 保存文件覆盖已有路径的确认标题
     QString m_overwriteTitle;
-    // 界面文案或资源路径：overwritePrompt
+    // 保存文件覆盖已有路径的确认正文
     QString m_overwritePrompt;
-    // 界面文案或资源路径：iconPath
+    // qrc中产品PNG图标的资源路径
     QString m_iconPath;
-    // 界面文案或资源路径：versionText
+    // 关于窗口中显示的产品版本
     QString m_versionText;
-    // 界面文案或资源路径：acceptAboutText
+    // 关闭关于窗口的确认按钮文案
     QString m_acceptAboutText;
-    // 界面文案或资源路径：debugArgument
+    // 启用应用诊断模式的命令行选项
     QString m_debugArgument;
-    // 界面文案或资源路径：associationDescription
+    // Explorer中分屏配置文件类型的说明
     QString m_associationDescription;
-    // stageColor颜色配置
+    // 基础背景板内空叶子的背景颜色
     QColor m_stageColor;
-    // canvasColor颜色配置
+    // 背景板外工作区的灰色背景
     QColor m_canvasColor;
-    // fullscreenColor颜色配置
+    // 内部全屏状态下画布背景颜色
     QColor m_fullscreenColor;
-    // borderColor颜色配置
+    // 背景板及未选中图层的边框颜色
     QColor m_borderColor;
-    // selectedBorderColor颜色配置
+    // 当前选中浮动图层的边框颜色
     QColor m_selectedBorderColor;
-    // splitterHoverColor颜色配置
+    // 鼠标悬停在分割线时的提示颜色
     QColor m_splitterHoverColor;
-    // splitterColor颜色配置
+    // 分割线默认颜色
     QColor m_splitterColor;
-    // plusBorderColor颜色配置
+    // 空叶子加号按钮的边框颜色
     QColor m_plusBorderColor;
-    // plusColor颜色配置
+    // 空叶子加号线条颜色
     QColor m_plusColor;
-    // previewColor颜色配置
+    // 外部窗口拖入时目标区域的预览颜色
     QColor m_previewColor;
-    // aboutGlyphColor颜色配置
+    // 问号按钮圆形背景的蓝色，内部问号笔触另用白色
     QColor m_aboutGlyphColor;
-    // closeColor颜色配置
+    // 关于标题栏关闭叉的默认颜色
     QColor m_closeColor;
-    // transparentColor颜色配置
+    // 标题栏关闭按钮的透明默认背景
     QColor m_transparentColor;
-    // closeHoverColor颜色配置
+    // 关闭按钮悬停时的背景颜色
     QColor m_closeHoverColor;
-    // closePressedColor颜色配置
+    // 关闭按钮按下时的背景颜色
     QColor m_closePressedColor;
-    // closeActiveTextColor颜色配置
+    // 关闭叉在悬停和按下时的笔触颜色
     QColor m_closeActiveTextColor;
-    // closeDisabledTextColor颜色配置
+    // 关闭叉禁用时的笔触颜色
     QColor m_closeDisabledTextColor;
-    // closeHoverBorderColor颜色配置
+    // 关闭按钮悬停时的边框颜色
     QColor m_closeHoverBorderColor;
-    // closePressedBorderColor颜色配置
+    // 关闭按钮按下时的边框颜色
     QColor m_closePressedBorderColor;
-    // acceptColor颜色配置
+    // 关于确认按钮的默认背景颜色
     QColor m_acceptColor;
-    // acceptHoverColor颜色配置
+    // 关于确认按钮悬停时的背景颜色
     QColor m_acceptHoverColor;
-    // acceptPressedColor颜色配置
+    // 关于确认按钮按下时的背景颜色
     QColor m_acceptPressedColor;
-    // acceptDisabledColor颜色配置
+    // 关于确认按钮禁用时的背景颜色
     QColor m_acceptDisabledColor;
-    // acceptTextColor颜色配置
+    // 关于确认按钮的默认文字颜色
     QColor m_acceptTextColor;
-    // acceptDisabledTextColor颜色配置
+    // 关于确认按钮禁用时的文字颜色
     QColor m_acceptDisabledTextColor;
-    // acceptBorderColor颜色配置
+    // 关于确认按钮的默认边框颜色
     QColor m_acceptBorderColor;
-    // acceptPressedBorderColor颜色配置
+    // 关于确认按钮按下时的边框颜色
     QColor m_acceptPressedBorderColor;
-    // acceptDisabledBorderColor颜色配置
+    // 关于确认按钮禁用时的边框颜色
     QColor m_acceptDisabledBorderColor;
     // 画布最小尺寸
     QSize m_canvasMinimumSize;
@@ -325,7 +325,7 @@ public:
     QMargins m_aboutMargins;
     // 状态栏格式模板
     const wchar_t* m_statusFormat;
-    // 四方向移动菜单文案
+    // 向左移动到同层相邻分屏的菜单文案
     QString m_moveLeftText;
     // 向右移动菜单文案
     QString m_moveRightText;
@@ -333,7 +333,7 @@ public:
     QString m_moveUpText;
     // 向下移动菜单文案
     QString m_moveDownText;
-    // 覆盖分屏的询问标题和正文
+    // 覆盖已有内容分屏的确认窗口标题
     QString m_moveOverwriteTitle;
     // 覆盖分屏询问正文
     QString m_moveOverwritePrompt;
@@ -349,11 +349,11 @@ public:
     std::set<QString> m_videoExtensions;
     // 移除时关闭的完整小写进程名，其余应用恢复独立窗口
     std::set<std::wstring> m_closeEmbeddedProcessNames;
-    // 视频窗口发现及正常关闭的毫秒预算
+    // 从接纳启动请求到发现视频窗口的总预算，毫秒
     int32_t m_videoStartTimeoutMs;
     // 联动视频正常关闭预算，毫秒
     int32_t m_videoCloseTimeoutMs;
-    // GUI异步进程状态查询间隔及同时启动预算
+    // GUI非阻塞查询视频进程和窗口状态的间隔，毫秒
     int32_t m_videoPollIntervalMs;
     // 每窗口同时启动视频的上限
     int32_t m_maximumPendingVideos;

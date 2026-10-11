@@ -44,7 +44,7 @@ public:
 
     /** 绘制工作区及原生窗口拖放预览
     @param [in,out] painter 绘图目标
-    @param [in] size 数据长度或区域尺寸
+    @param [in] size 当前画布尺寸，逻辑像素
     */
     void paintCanvas(QPainter& painter, const QSize& size);
 
@@ -71,7 +71,7 @@ public:
 
     /** 处理图片滚轮缩放和缩放提示
     @param [in] point 工作区坐标
-    @param [in] delta 滚轮角度
+    @param [in] delta Qt滚轮angleDelta单位，120表示一个标准刻度
     @param [in] modifiers 键盘修饰键
     */
     void canvasWheel(const QPoint& point, int delta, Qt::KeyboardModifiers modifiers);
@@ -200,7 +200,7 @@ private:
     /** 处理平台鼠标通知中的拖入、拖出和双击
     @param [in] event 输入事件
     @param [in] screenPoint 鼠标屏幕位置
-    @param [in] id 窗口句柄或节点编号
+    @param [in] id 借用的外部原生窗口句柄，不持有其所有权
     */
     void nativeMouseEvent(int event, const QPoint& screenPoint, WId id);
 
@@ -209,7 +209,7 @@ private:
     void updateStatus();
 
     /** 根据背景板比例和窗口尺寸计算居中区域
-    @param [in] size 数据长度或区域尺寸
+    @param [in] size 当前画布尺寸，逻辑像素
     @return 根据背景板比例和窗口尺寸计算居中区域
     */
     QRectF stageRect(const QSize& size) const;
@@ -281,20 +281,20 @@ private:
     bool readProfile(const QString& path);
 
     /** 导出背景板图像并恢复所有现场图片变换
-    @param [in] size 数据长度或区域尺寸
+    @param [in] size 当前画布尺寸，逻辑像素
     @param [in] includeEmbedded 是否导出嵌入窗口快照
     @return 导出背景板图像并恢复所有现场图片变换
     */
     QImage renderStage(const QSize& size, bool includeEmbedded);
 
     /** 按边框可见性计算内容区域
-    @param [in] owner 父区域或事件接收者
+    @param [in] owner 父内容矩形，与子区域使用同一坐标系
     @return 按边框可见性计算内容区域
     */
     QRectF contentRect(const QRectF& owner) const;
 
     /** 将Core分屏几何转换为Qt矩形
-    @param [in] owner 父区域或事件接收者
+    @param [in] owner 父内容矩形，与子区域使用同一坐标系
     @param [in] node 文档持有的节点
     @param [in,out] first 第一子区域
     @param [in,out] splitter 分割线区域

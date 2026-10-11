@@ -14,6 +14,11 @@
 #include "CDump/CDumpAPI.h"
 #endif
 
+/** 创建桌面运行环境并按依赖顺序初始化，窗口和任务收敛后释放进程级资源
+@param [in] argc 操作系统传入的命令行参数数量，交由QApplication处理
+@param [in] argv 操作系统传入的参数数组，支持首个文件路径和诊断选项
+@return 初始化失败返回1，否则返回Qt事件循环的实际退出码
+*/
 int main(int argc, char* argv[])
 {
 #ifdef Q_OS_WIN
