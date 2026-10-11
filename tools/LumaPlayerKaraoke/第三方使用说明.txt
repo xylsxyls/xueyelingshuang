@@ -1,0 +1,40 @@
+流光播放器第三方组件及分发说明
+核查日期：2026-10-08；目录整理日期：2026-10-11。本文件为单独保存的详细授权核查材料，不随安装包默认复制；随包精简说明位于common/LumaPlayer/karaoke/licenses/第三方使用说明.txt，不代替具体商业产品的法律审核。
+本文许可文件名对应common/LumaPlayer/karaoke/licenses/；SoundTouch源码及构建资料在tools/LumaPlayerKaraoke/soundtouch/，FFmpeg资料在tools/ffmpeg/。模型核查在models/UVR模型来源及授权说明.txt；原始第三方许可证仍保留于各tools依赖目录，本地移动不是公开源码下载服务。
+
+一、LGPL组件：采用可替换动态库，不公开独立的FFmpegCpp业务源码。
+1. SoundTouch 2.4.0：Copyright (c) Olli Parviainen。SoundTouchDLL.dll提供官方C接口，由FFmpegCpp调用；许可为LGPL 2.1或更新版本。完整条款见SoundTouch-LICENSE.txt，完整对应源码和实际构建脚本见tools/LumaPlayerKaraoke/soundtouch/。本版未修改上游源码，编译启用浮点采样及跨速率防点击选项。
+2. FFmpeg 6.1.6：avformat-60.dll、avcodec-60.dll、avutil-58.dll、swscale-7.dll、swresample-4.dll均通过导入库动态链接，不再静态合入FFmpegCpp。实际五个DLL均报告LGPL 2.1或更新版本，构建配置未启用GPL/nonfree，也没有libx264、libx265等外部编码器。条款见FFmpeg-COPYING.LGPLv2.1.txt及FFmpeg-LICENSE.md。
+详细说明：官方6.1.6完整源码归档、固定下载地址、SHA-256、优先本地归档的重建脚本及从DLL读取的configuration.txt统一保留于tools/ffmpeg；sources/FFmpeg/重复目录已删除，原README中的许可和历史核查说明合并到tools/ffmpeg/README.txt。播放器常规编译不下载源码。历史临时构建目录已不存在，尚未核实是否曾修改上游源码，不能把上游归档宣称为已证实完全对应的源码。新重建脚本尚未完成实际重建。对外商业分发前必须从可追溯源码重建，保留实际补丁和构建说明，并提供完整对应源码；仅有当前LICENSE、版本号或上游下载链接不够。
+FFmpeg所用IJG实现署名：This software is based in part on the work of the Independent JPEG Group. 相应DCT文件的原始条款和版权在完整源码中保留，是否存在历史修改仍受上述构建溯源限制，不宣称未经核实的无修改。
+3. Qt 5.5.1：产品使用动态QtCore/QtGui/QtWidgets/QtXml及平台插件，运行环境另外提供。随包目录附Qt-LICENSE.LGPLv21.txt、Qt-LICENSE.LGPLv3.txt及Qt-LGPL_EXCEPTION.txt；实际采用哪项许可须与安装包内每个模块的版本、构建及既有商业许可一致。
+详细说明：自行打包Qt时还需相应模块及插件的完整对应源码、修改和所含第三方版权声明。当前没有对外Qt安装包，也没有核实这台机器Qt二进制的全部构建来源，不宣称其分发审核完成。购买并适用Qt商业许可时按该合同处理，不能以本文代替合同。
+动态链接不是LGPL唯一允许的闭源方式；本产品选择它是为了允许替换库并减少重新链接交付复杂度。程序关于框提供LGPL使用及材料位置说明。替换方法、用户权利及分发条款例外见LGPL库替换及权利说明.txt。
+
+二、可保留源码编译方式的宽松许可组件。
+1. miniaudio 0.11.23：原生采集及监听代码编译入LumaPlayerCore；选择MIT No Attribution条款，不要求随二进制提供署名或许可正文。安装包不再携带重复的miniaudio-LICENSE.txt，tools/LumaPlayerKaraoke/miniaudio/LICENSE原件保留。它不要求闭源调用方公开源码，也不要求动态链接。设备权限和平台API要求仍由各平台宿主处理。
+2. KissFFT 131.1.0：当前源码将double精度FFT封装为KissFFTCpp，原始C源码/私有头迁入src/KissFFTCpp/KissFFTCpp/src；Core通过公开API链接该库，既有common二进制在本次调整中未更新。BSD-3-Clause要求保留真实版权声明、条款及免责，不得借作者名称背书。实际采用文件的版权人为Copyright (c) 2003-2010, Mark Borgerding. All rights reserved.，完整条款见二次开发库LICENSE.txt及随包kissfft-BSD-3-Clause.txt；COPYING只是上游索引，原件独立保留于tools/KissFFT/，安装包不再重复携带。
+3. ONNX Runtime 1.24.4：独立运行库，保留onnxruntime-LICENSE.txt和完整onnxruntime-ThirdPartyNotices.txt；主项目为MIT，但包内其他第三方组件仍按各自通知履约，不能将整包一概称为纯MIT。iOS可按目标SDK链接ORT，其本身不因MIT而必须使用动态库。
+4. DirectML 1.15.4：只在Windows推理包中使用微软发布的二进制。保留DirectML-LICENSE.txt、DirectML-LICENSE-CODE.txt及DirectML-ThirdPartyNotices.txt；二进制适用微软分发条款，不等同于源码的MIT许可。当前许可针对Windows/Xbox，不把DirectML.dll复制到Linux、macOS、Android或iOS包。
+
+三、模型及署名：程序代码许可不能自动代替权重许可。
+当前模型为UVR-MDX-NET-Inst_HQ_5.onnx，59074342字节，SHA-256为811cb24095d865763752310848b7ec86aeede0626cb05749ab35350e46897000。来自UVR官方程序使用的TRvlvr/model_repo发布目录，不携带旧RoFormer大模型。
+安装包保留UVR-MIT.txt中的上游版权和MIT正文，随包第三方使用说明保留模型及作者署名；详细说明单独保存于models/UVR模型来源及授权说明.txt。UVR官网仓库明确要求第三方模型使用者遵守MIT并署名；署名为Ultimate Vocal Remover、Anjok07、aufr33，MDX-Net架构署名Kuielab及Woosung Choi。
+详细说明：上述是上游通用模型许可声明及软件内许可正文，不是针对该文件SHA-256的独立授权证明；训练数据、第三方权利及精确权重商用再分发仍需权利人或法律审核确认。不将镜像网站的MIT标签或模型可下载事实当作充分授权，不代替用户联系权利人，也不自动将本机common目录变成对外商用发布。
+
+四、跨平台与对外分发检查。
+1. Windows使用上述DLL；Linux/Android使用目标ABI的.so；macOS/iOS使用目标架构动态库或动态framework。闭源调用方不再通过缺库回退静态FFmpeg/SoundTouch；库文件、头文件、浮点模式和接口版本必须匹配。
+2. iOS代码签名、App Store条款和用户替换/重新链接权利要另行评估；独立动态framework本身不保证LGPL合规。若商店政策不兼容，应准备符合许可证的重新链接材料、取得适用商业许可或更换实现，不能通过藏入静态Core规避。
+3. 分发方应在自己的下载位置同时提供所需LGPL源码及构建资料，保留所有许可和署名，并在安装包、下载页面及全部语言版本的用户条款中说明LGPL组件。现无产品下载网站或EULA，本文不能代替尚未建立的分发流程。
+4. 音视频格式可能涉及专利，开源许可证不授予所有专利、商标或素材权利。商业地区和分发渠道的专利/商店审核不由复制LICENSE自动完成。
+5. 旧Sonic与旧大模型仅保留tools中的历史对照，不属于本轮产品运行依赖；不因仓库里存在某个库就把它列为已分发。
+
+上游依据：
+FFmpeg：https://www.ffmpeg.org/legal.html
+SoundTouch：https://www.surina.net/soundtouch/license.html
+Qt：https://www.qt.io/development/open-source-lgpl-obligations
+miniaudio：https://github.com/mackron/miniaudio/tree/0.11.23
+KissFFT：https://github.com/mborgerding/kissfft/tree/131.1.0
+ONNX Runtime：https://github.com/microsoft/onnxruntime/tree/v1.24.4
+DirectML：https://www.nuget.org/packages/Microsoft.AI.DirectML/1.15.4
+UVR：https://github.com/Anjok07/ultimatevocalremovergui

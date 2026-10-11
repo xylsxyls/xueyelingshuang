@@ -1,0 +1,19 @@
+UVR模型来源、许可证据与署名
+模型：UVR-MDX-NET-Inst_HQ_5.onnx
+大小：59074342字节
+SHA-256：811cb24095d865763752310848b7ec86aeede0626cb05749ab35350e46897000
+发布资产：https://github.com/TRvlvr/model_repo/releases/tag/all_public_uvr_models
+配置表：https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/model_data.json
+
+署名：Ultimate Vocal Remover (UVR)，开发者Anjok07及aufr33。
+MDX-Net架构：Kuielab及Woosung Choi。
+项目：https://github.com/Anjok07/ultimatevocalremovergui
+
+许可证据核查于2026-10-08：
+1. 官方README的License节说明GUI代码为MIT，另外明确要求使用其模型的第三方开发者遵守MIT并为UVR及开发者署名；不是仅从代码许可证推断权重许可。
+2. 官方gui_data/constants.py内LICENSE_TEXT包含Copyright (c) 2022 Ultimate Vocal Remover及MIT完整正文，并要求使用其模型或代码时署名；对应文字保留于common/LumaPlayer/karaoke/licenses/UVR-MIT.txt，署名保留于同目录第三方使用说明.txt，不引入或运行其Python程序。
+3. 同文件NORMAL_REPO使用上述TRvlvr官方发布目录，与本模型下载来源一致。
+依据：https://raw.githubusercontent.com/Anjok07/ultimatevocalremovergui/master/README.md
+依据：https://raw.githubusercontent.com/Anjok07/ultimatevocalremovergui/master/gui_data/constants.py
+
+边界：此处保留上游一般模型使用声明及许可，不宣称已经取得该精确权重文件的个别书面商用再分发确认。正式收费或广泛对外打包前，仍应确认权重所有权、训练数据及其他第三方权利；镜像标注MIT或能免费下载本身不能代替该核查。当前本机验证与部署不代表完成商业法律审核。
