@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "会做饭"
+  "navigationBarTitleText": "会做饭",
+  "usingComponents": {
+    "cached-video-player": "/components/cachedVideoPlayer/cachedVideoPlayer"
+  }
 }

@@ -1,7 +1,5 @@
 const time = require('./time')
 
-const REST_WAIT_OFFSET_SECONDS = 1
-const REST_WAIT_BUCKET_SECONDS = 5
 
 function toNumber(value, fallback) {
   const number = Number(value)
@@ -63,6 +61,61 @@ function create(plan) {
   return runtime
 }
 
+function calculateWaitSummary(timeline, totalSeconds, skippedTaskIds, minimumFreeSeconds) {
+  const activeIntervals = []
+  timeline.forEach((task) => {
+    if (task.active && !skippedTaskIds[task.id] && task.endSeconds > task.startSeconds) {
+      activeIntervals.push([task.startSeconds, task.endSeconds])
+    }
+  })
+  activeIntervals.sort((left, right) => left[0] - right[0] || left[1] - right[1])
+  const mergedActive = []
+  activeIntervals.forEach((interval) => {
+    const last = mergedActive[mergedActive.length - 1]
+    if (last && interval[0] <= last[1]) last[1] = Math.max(last[1], interval[1])
+    else mergedActive.push(interval.slice())
+  })
+
+  const freeBlocks = []
+  let freeSeconds = 0
+  let edgeSeconds = 0
+  let cursor = 0
+  const addGap = (start, end) => {
+    if (end <= start) return
+    const blockers = timeline.filter((task) => !task.active && !skippedTaskIds[task.id] &&
+      backgroundWaitMode(task) !== 'free' && task.startSeconds < end && task.endSeconds > start)
+      .map((task) => [Math.max(start, task.startSeconds), Math.min(end, task.endSeconds)])
+      .sort((left, right) => left[0] - right[0] || left[1] - right[1])
+    let segmentStart = start
+    blockers.forEach((blocker) => {
+      const blockerStart = Math.max(segmentStart, blocker[0])
+      if (blockerStart > segmentStart) addGapSegment(segmentStart, blockerStart)
+      const blockerEnd = Math.max(blockerStart, blocker[1])
+      edgeSeconds += blockerEnd - blockerStart
+      segmentStart = Math.max(segmentStart, blockerEnd)
+    })
+    if (segmentStart < end) addGapSegment(segmentStart, end)
+  }
+  const addGapSegment = (start, end) => {
+    if (end <= start) return
+    const hasFreeWait = timeline.some((task) => !task.active && !skippedTaskIds[task.id] &&
+      backgroundWaitMode(task) === 'free' && task.startSeconds < end && task.endSeconds > start)
+    if (hasFreeWait && end - start >= minimumFreeSeconds) {
+      freeBlocks.push({ startSeconds: start, endSeconds: end, durationSeconds: end - start })
+      freeSeconds += end - start
+    } else {
+      edgeSeconds += end - start
+    }
+  }
+
+  mergedActive.forEach((interval) => {
+    if (interval[0] > cursor) addGap(cursor, interval[0])
+    cursor = Math.max(cursor, interval[1])
+  })
+  if (totalSeconds > cursor) addGap(cursor, totalSeconds)
+  return { freeBlocks, freeSeconds, edgeSeconds }
+}
+
 function recalculate(runtime) {
   let totalSeconds = 0
   let activeSeconds = 0
@@ -77,10 +130,19 @@ function recalculate(runtime) {
   runtime.activeSeconds = activeSeconds
   runtime.elapsedSeconds = Math.max(0, Math.min(runtime.elapsedSeconds, totalSeconds))
   const summary = Object.assign({}, runtime.plan.summary || {})
+  const waitSummary = calculateWaitSummary(runtime.timeline, totalSeconds, runtime.skippedTaskIds,
+    Math.max(0, Math.floor(toNumber(summary.freeBlockMinimumSeconds, 0))))
+  runtime.plan.freeBlocks = waitSummary.freeBlocks
   summary.totalSeconds = totalSeconds
   summary.totalMinutes = ceilMinutes(totalSeconds)
   summary.activeSeconds = activeSeconds
   summary.activeMinutes = ceilMinutes(activeSeconds)
+  summary.freeSeconds = waitSummary.freeSeconds
+  summary.freeMinutes = ceilMinutes(waitSummary.freeSeconds)
+  summary.edgeSeconds = waitSummary.edgeSeconds
+  summary.edgeMinutes = ceilMinutes(waitSummary.edgeSeconds)
+  summary.watchSeconds = waitSummary.edgeSeconds
+  summary.watchMinutes = ceilMinutes(waitSummary.edgeSeconds)
   summary.headline = `预计 ${summary.totalMinutes} 分钟吃上，真正动手约 ${summary.activeMinutes} 分钟`
   runtime.plan.summary = summary
 }
@@ -106,8 +168,10 @@ function isBackgroundTask(task) {
 }
 
 function canSkipTask(runtime, task) {
-  if (!task || !task.id || task.manualSkippable === false || isBackgroundTask(task)) return false
+  if (!task || !task.id) return false
   if (isFinished(runtime, task)) return false
+  if (isBackgroundTask(task)) return runtime.elapsedSeconds >= task.startSeconds
+  if (task.manualSkippable === false) return false
   const currentTask = findCurrentTask(runtime)
   return !!currentTask && currentTask.id === task.id && runtime.elapsedSeconds >= task.startSeconds
 }
@@ -120,7 +184,8 @@ function canFinishTask(runtime, task) {
 }
 
 function canAddTimeTask(runtime, task) {
-  if (!task || !task.id || isBackgroundTask(task) || isFinished(runtime, task)) return false
+  if (!task || !task.id || isFinished(runtime, task)) return false
+  if (isBackgroundTask(task)) return runtime.elapsedSeconds >= task.startSeconds
   const currentTask = findCurrentTask(runtime)
   return !!currentTask && currentTask.id === task.id && runtime.elapsedSeconds >= task.startSeconds
 }
@@ -190,6 +255,34 @@ function repairDependencies(runtime, lockedTaskIds) {
   }
 }
 
+function repairResourceConflicts(runtime, lockedTaskIds) {
+  for (let round = 0; round < runtime.timeline.length; round += 1) {
+    sortTimeline(runtime.timeline)
+    const resourceAvailable = {}
+    let userAvailable = 0
+    let changed = false
+    runtime.timeline.forEach((task) => {
+      const locked = lockedTaskIds && lockedTaskIds[task.id]
+      let requiredStart = task.startSeconds
+      ;(task.dependencies || []).forEach((dependencyId) => {
+        const dependency = findTask(runtime, dependencyId)
+        if (dependency) requiredStart = Math.max(requiredStart, dependency.endSeconds)
+      })
+      if (task.resource) requiredStart = Math.max(requiredStart, resourceAvailable[task.resource] || 0)
+      if (task.active) requiredStart = Math.max(requiredStart, userAvailable)
+      if (!locked && requiredStart > task.startSeconds) {
+        const duration = Math.max(0, task.endSeconds - task.startSeconds)
+        task.startSeconds = requiredStart
+        task.endSeconds = requiredStart + duration
+        changed = true
+      }
+      if (task.resource) resourceAvailable[task.resource] = Math.max(resourceAvailable[task.resource] || 0, task.endSeconds)
+      if (task.active) userAvailable = Math.max(userAvailable, task.endSeconds)
+    })
+    if (!changed) break
+  }
+}
+
 function shiftAffectedTasks(runtime, sourceTask, deltaSeconds, boundarySeconds) {
   if (!deltaSeconds) return
   const affected = buildAffectedIds(runtime, sourceTask, boundarySeconds)
@@ -218,6 +311,7 @@ function shiftAffectedTasks(runtime, sourceTask, deltaSeconds, boundarySeconds) 
     task.durationSeconds = locked.durationSeconds
   })
   repairDependencies(runtime, lockedBackgroundMap)
+  repairResourceConflicts(runtime, lockedBackgroundMap)
   sortTimeline(runtime.timeline)
   recalculate(runtime)
 }
@@ -256,7 +350,9 @@ function canLeaveKitchenDuring(task) {
 
 function backgroundWaitMode(task) {
   if (!task || isBackgroundTask(task) === false) return ''
-  if (task.backgroundWaitMode === 'free') return 'free'
+  if (task.backgroundWaitMode === 'free') {
+    return task.safetyLevel === 'attention' || task.safetyLevel === 'danger' ? 'watch' : 'free'
+  }
   if (task.backgroundWaitMode === 'watch') return 'watch'
   return task.canLeaveKitchen === true && task.safetyLevel !== 'attention' && task.safetyLevel !== 'danger' ? 'free' : 'watch'
 }
@@ -266,8 +362,7 @@ function formatVoiceWaitDuration(seconds) {
 }
 
 function adjustRestWaitSeconds(seconds) {
-  const safeSeconds = Math.max(0, Math.floor(seconds || 0) - REST_WAIT_OFFSET_SECONDS)
-  return Math.floor(safeSeconds / REST_WAIT_BUCKET_SECONDS) * REST_WAIT_BUCKET_SECONDS
+  return Math.max(0, Math.floor(seconds || 0))
 }
 
 function buildRestDisplayWaitText(canLeaveKitchen, seconds) {
@@ -466,6 +561,12 @@ function tick(runtime, seconds) {
   const deltaSeconds = Math.max(0, Math.floor(seconds || 0))
   if (!deltaSeconds) return false
   runtime.elapsedSeconds = Math.min(runtime.totalSeconds, runtime.elapsedSeconds + deltaSeconds)
+  runtime.timeline.forEach((task) => {
+    if (runtime.skippedTaskIds[task.id] || runtime.actualTimeMap[task.id] !== undefined) return
+    if (runtime.elapsedSeconds >= task.endSeconds) {
+      runtime.actualTimeMap[task.id] = Math.max(0, task.endSeconds - task.startSeconds)
+    }
+  })
   return runtime.elapsedSeconds >= runtime.totalSeconds
 }
 

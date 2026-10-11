@@ -1,8 +1,6 @@
 <view class="page personalization-page" wx:if="{{recipe}}">
-  <view class="header" style="background: {{recipe.coverColor}}">
-    <view class="title">{{recipe.title}}</view>
-    <view class="subtitle">{{recipe.subtitle}}</view>
-  </view>
+  <view class="recipe-hero" bindtap="openVideo"><image wx:if="{{recipe.thumbnailUrl}}" class="recipe-hero-image" src="{{recipe.thumbnailUrl}}" mode="aspectFill" data-url="{{recipe.thumbnailUrl}}" binderror="onCoverError"></image><view class="recipe-hero-empty" wx:else>暂无视频封面</view><view class="recipe-hero-gradient"></view><view class="recipe-hero-play" wx:if="{{recipe.videoId}}"><view class="recipe-hero-triangle"></view></view></view>
+  <view class="header"><view class="title">{{recipe.title}}</view><view class="subtitle">{{recipe.subtitle}}</view></view>
 
   <view class="toolbar">
     <button class="ghost-btn" bindtap="addStep">新增</button>
@@ -24,9 +22,10 @@
         <view class="step-title">{{item.index}}. {{item.title}}</view>
         <view class="muted">{{item.modeText}} · 原始 {{item.originalDurationText}}</view>
       </view>
-      <button class="toggle-btn {{item.disabled ? 'restore' : ''}}" data-index="{{index}}" bindtap="toggleDisabled">
+      <button wx:if="{{!item.added}}" disabled="{{saving}}" class="toggle-btn {{item.disabled ? 'restore' : ''}}" data-index="{{index}}" bindtap="toggleDisabled">
         {{item.disabled ? '恢复' : '禁用'}}
       </button>
+      <button wx:else class="toggle-btn restore" data-index="{{index}}" bindtap="removeAddedTask" disabled="{{saving}}">删除</button>
     </view>
 
     <view class="detail">{{item.detail}}</view>
@@ -47,8 +46,7 @@
       <view class="duration-text">{{item.disabled ? '不参与排程' : item.durationText}}</view>
     </view>
   </view>
+
 </view>
 
-<view class="page" wx:else>
-  <view class="card empty">{{error || (loading ? '正在加载个性化...' : '个性化不存在')}}</view>
-</view>
+<view class="page" wx:else><view class="card empty">{{error || (loading ? '正在加载个性化...' : '个性化不存在')}}</view></view>

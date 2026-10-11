@@ -1,0 +1,8 @@
+@import "../home/home.wxss";
+.standalone-shell { height: 100vh; overflow: hidden; }
+.standalone-page { height: calc(100vh - 50px - env(safe-area-inset-bottom)); position: relative; overflow: hidden; }
+.standalone-page .feed-info { bottom: 106rpx; }
+.standalone-page .feed-actions { bottom: 230rpx; }
+.standalone-progress { position: absolute; bottom: 20rpx; left: 24rpx; right: 24rpx; z-index: 9; display: flex; align-items: center; color: white; font-size: 24rpx; }
+.standalone-progress slider { flex: 1; margin: 0 16rpx; }
+.metadata-error { position: absolute; top: 60rpx; left: 24rpx; right: 24rpx; z-index: 12; color: white; text-align: center; }

@@ -1,0 +1,12 @@
+.conversation { display: flex; flex-direction: column; height: 100vh; background: #f8f5ef; }
+.chat-header { padding: 24rpx; font-weight: 700; }
+.chat-header .muted { font-size: 24rpx; font-weight: normal; }
+.chat-list { flex: 1; height: 0; }
+.chat-row { display: flex; padding: 14rpx 24rpx; }
+.chat-row.outgoing { justify-content: flex-end; }
+.bubble { max-width: 70%; padding: 20rpx; border-radius: 14rpx; background: white; word-break: break-all; }
+.outgoing .bubble { background: #dce7da; }
+.chat-compose { display: flex; gap: 18rpx; padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom)); background: white; }
+.chat-compose input { flex: 1; height: 72rpx; background: #f5f2ed; padding: 0 18rpx; }
+.chat-compose button { margin: 0; line-height: 72rpx; height: 72rpx; padding: 0 24rpx; font-size: 28rpx; }
+.load-older, .chat-hint, .chat-error { padding: 22rpx; text-align: center; color: #8c857b; font-size: 24rpx; }

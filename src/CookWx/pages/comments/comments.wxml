@@ -1,0 +1,17 @@
+<view class="comments-page">
+  <view class="comments-title">评论 · {{comments.length}}</view>
+  <view wx:if="{{loading && !comments.length}}" class="empty">正在加载评论…</view>
+  <view wx:elif="{{!comments.length}}" class="empty">还没有评论，来写第一条吧。</view>
+  <view class="comment-row" wx:for="{{comments}}" wx:key="id">
+    <view class="avatar">{{item.avatarText}}</view>
+    <view class="comment-content">
+      <view class="comment-author">{{item.nickname || '厨友'}}</view>
+      <view class="comment-text">{{item.content}}</view>
+      <view class="comment-time">{{item.createdAtText}}</view>
+    </view>
+  </view>
+  <view class="composer">
+    <textarea class="comment-input" value="{{content}}" maxlength="600" auto-height="true" placeholder="说说你的看法…" bindinput="onInput" />
+    <button class="send-button" type="primary" disabled="{{submitting || !content}}" loading="{{submitting}}" bindtap="submitComment">发送</button>
+  </view>
+</view>

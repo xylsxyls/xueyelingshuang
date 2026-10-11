@@ -1,0 +1,23 @@
+<view class="page profile-page">
+  <view class="public-profile card">
+    <view class="profile">
+      <view class="avatar user-avatar"><image wx:if="{{profile.avatarUrl}}" src="{{profile.avatarUrl}}" mode="aspectFill"></image><text wx:else>{{profile.avatarInitial || '厨'}}</text></view>
+      <view class="profile-main">
+        <view class="profile-name-row"><view class="name">{{profile.nickname || '厨友'}}</view><text class="account-copy">微信小程序 / Android / iOS 共用账户</text></view>
+        <view class="introduction-row"><text class="introduction-text">{{profile.introduction || '开心做大厨'}}</text></view>
+        <view class="public-stats"><text>{{profile.receivedLikeCount || 0}} 获赞</text><text>{{profile.followerCount || 0}} 粉丝</text></view>
+      </view>
+    </view>
+    <view class="public-actions" wx:if="{{!ownProfile}}">
+      <button class="follow-button {{profile.following ? 'followed' : ''}}" bindtap="follow" loading="{{followingBusy}}" disabled="{{followingBusy || !profile.userId}}">{{profile.following ? '已关注' : '关注'}}</button>
+      <button class="message-button" wx:if="{{profile.following}}" bindtap="sendMessage">私信{{profile.friend ? ' · 好友' : ''}}</button>
+    </view>
+  </view>
+  <view class="asset-section">
+    <view class="profile-tabs asset-tabs"><view class="asset-tab {{activeTab === 'created' ? 'active' : ''}}" data-key="created" bindtap="switchTab" hover-class="asset-tab-pressed" hover-stay-time="80">创作</view><view class="asset-tab {{activeTab === 'liked' ? 'active' : ''}}" data-key="liked" bindtap="switchTab" hover-class="asset-tab-pressed" hover-stay-time="80">喜欢</view></view>
+    <view class="media-grid"><view class="media-tile" wx:for="{{items}}" wx:key="videoId" data-index="{{index}}" bindtap="openVideo"><image wx:if="{{item.posterUrl}}" class="media-cover" src="{{item.posterUrl}}" mode="aspectFill" lazy-load="{{true}}" data-index="{{index}}" data-id="{{item.videoId}}" binderror="onPosterError"></image><view class="media-cover-empty" wx:else>暂无封面</view><view class="media-title">{{item.title}}</view></view></view>
+    <view class="empty" wx:if="{{!items.length && !loading && !error}}">暂时没有内容</view>
+    <view class="empty" wx:if="{{loading || loadingMore}}">加载中…</view>
+    <view class="empty" wx:if="{{error}}" bindtap="retry">{{error}}，点击重试</view>
+  </view>
+</view>

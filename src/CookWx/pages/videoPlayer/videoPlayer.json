@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "视频播放",
+  "usingComponents": {
+    "cached-video-player": "/components/cachedVideoPlayer/cachedVideoPlayer",
+    "bottom-navigation": "/components/bottomNavigation/bottomNavigation"
+  },
+  "disableScroll": true
+}

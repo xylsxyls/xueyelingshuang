@@ -255,15 +255,22 @@
   white-space: nowrap;
 }
 
+.current-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
 .current-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14rpx;
-  margin-top: 22rpx;
+  flex: 0 0 118rpx;
+  gap: 8rpx;
 }
 
 .current-actions button {
-  height: 68rpx;
+  height: 52rpx;
+  line-height: 52rpx;
 }
 
 .next-list {
@@ -364,7 +371,7 @@
   right: 0;
   bottom: 0;
   display: grid;
-  grid-template-columns: 180rpx 1fr 150rpx;
+  grid-template-columns: 180rpx 1fr;
   gap: 14rpx;
   padding: 20rpx 22rpx 34rpx;
   background: #fffdf8;

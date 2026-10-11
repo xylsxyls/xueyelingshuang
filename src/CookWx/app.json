@@ -1,16 +1,24 @@
 {
   "pages": [
     "pages/home/home",
+    "pages/comments/comments",
+    "pages/videoDecoderLab/videoDecoderLab",
+    "pages/videoPlayer/videoPlayer",
     "pages/auth/login/login",
     "pages/menu/menu",
     "pages/plan/plan",
     "pages/cook/cook",
     "pages/recipe/recipe",
     "pages/personalization/personalization",
+    "pages/personalization/taskEditor",
     "pages/voice/voice",
     "pages/publish/publish",
     "pages/messages/messages",
-    "pages/mine/mine"
+    "pages/mine/mine",
+    "pages/avatarCrop/avatarCrop",
+    "pages/profile/profile",
+    "pages/fans/fans",
+    "pages/conversation/conversation"
   ],
   "window": {
     "navigationBarTitleText": "会做饭",

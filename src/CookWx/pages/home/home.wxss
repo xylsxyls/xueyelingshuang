@@ -1,3 +1,4 @@
+@import "../../styles/userAvatar.wxss";
 .home-page {
   height: 100vh;
   background: #111814;
@@ -123,15 +124,6 @@
 }
 
 .creator-avatar {
-  width: 84rpx;
-  height: 84rpx;
-  line-height: 84rpx;
-  text-align: center;
-  border-radius: 42rpx;
-  background: #fffdf8;
-  color: #18231f;
-  font-size: 34rpx;
-  font-weight: 900;
   box-shadow: 0 6rpx 22rpx rgba(0, 0, 0, 0.22);
 }
 

@@ -4,6 +4,8 @@ const planRuntime = require('../../utils/planRuntime')
 const voice = require('../../utils/voice')
 const cookVoiceText = require('../../utils/cookVoiceText')
 const debugLog = require('../../utils/debugLog')
+const { createCookExitAlert } = require('../../utils/cookExitAlert')
+const personalizationSync = require('../../utils/cookPersonalizationSync')
 
 const BACKGROUND_ALARM_FILE_NAME = 'cook_background_end_alarm.wav'
 const BACKGROUND_ALARM_SAMPLE_RATE = 8000
@@ -86,24 +88,31 @@ Page({
   },
 
   onLoad() {
+    this.pageActive = true
     const app = getApp()
     const plan = app.globalData.lastPlan || {}
     this.voiceGender = app.globalData.currentCookVoiceGender || voice.getGender()
     this.runtime = plan.summary ? planRuntime.create(plan) : null
+    this.syncPersonalization = !!(plan.cookOptions && plan.cookOptions.syncPersonalization)
+    this.syncReportQueued = false
+    this.cookOwnerId = app.globalData.userId || ''
     this.lastTickAt = 0
     this.lastRemindedTaskId = ''
     this.lastCurrentTaskId = ''
     this.lastRunningBackgroundTaskMap = {}
     this.lastRuntimeAlertElapsedSeconds = 0
     this.backgroundEndAlertedMap = {}
-    this.restWaitDurationTextMap = {}
     this.backgroundEndReminderPromise = Promise.resolve()
     this.backgroundAlarmFilePathPromise = null
     this.backgroundAlarmContext = null
     this.pendingBackgroundCurrentReminderToken = ''
     this.finishModalShown = false
     this.completionSharePromptShown = false
-    this.beforeUnloadAlertEnabled = false
+    this.unloaded = false
+    this.exiting = false
+    this.exitAlert = createCookExitAlert(wx, (error) => {
+      debugLog.warn('COOK', 'EXIT_ALERT_FAIL', { error: error.message || String(error) })
+    })
     this.suppressUnloadRedirect = false
     this.cleanupDone = false
     debugLog.info('COOK', 'LOAD', {
@@ -120,31 +129,39 @@ Page({
   },
 
   onShow() {
+    if (this.cleanupDone || this.unloaded) return
+    this.pageActive = true
     this.setData({
       voiceLabel: voice.genderLabel(this.getCookVoiceGender())
     })
     if (this.data.started && (this.data.running || this.data.pausedContinuing)) {
       this.startTicker()
     }
+    if (this.data.complete && !this.completionSharePromptShown) this.presentCompletionPrompts()
   },
 
   onHide() {
+    this.pageActive = false
     this.clearTicker()
   },
 
   onUnload() {
+    this.pageActive = false
+    this.captureElapsedTime()
+    this.rememberCookSync()
+    this.unloaded = true
     if (this.shouldExitCookFlowOnUnload()) {
       debugLog.warn('COOK', 'SYSTEM_BACK_EXIT_CONFIRMED', {
         elapsedSeconds: this.data.elapsedSeconds,
         currentTaskId: this.data.currentTask && this.data.currentTask.id
       })
-      this.cleanupCookFlow({ redirectToMenuAfterUnload: true })
+      this.cleanupCookFlow()
       return
     }
     this.clearTicker()
     this.stopBackgroundAlarm()
     voice.stop()
-    this.disableExitAlertBeforeUnload()
+    this.disableExitAlertBeforeUnload().catch(() => {})
   },
 
   shouldExitCookFlowOnUnload() {
@@ -152,31 +169,20 @@ Page({
   },
 
   enableExitAlertBeforeUnload() {
-    if (this.beforeUnloadAlertEnabled || !wx.enableAlertBeforeUnload) return
-    wx.enableAlertBeforeUnload({
-      message: '是否退出做菜流程？退出后当前步骤计时会清空。',
-      success: () => {
-        this.beforeUnloadAlertEnabled = true
-        debugLog.info('COOK', 'EXIT_ALERT_ENABLE_OK')
-      },
-      fail: (err) => {
-        debugLog.warn('COOK', 'EXIT_ALERT_ENABLE_FAIL', {
-          errMsg: err && err.errMsg ? err.errMsg : String(err || '')
-        })
-      }
-    })
+    if (!this.exitAlert || this.cleanupDone || this.unloaded) return
+    this.exitAlert.enable('是否退出做菜流程？退出后当前步骤计时会清空。')
   },
 
   disableExitAlertBeforeUnload() {
-    if (!this.beforeUnloadAlertEnabled || !wx.disableAlertBeforeUnload) return
-    wx.disableAlertBeforeUnload({
-      complete: () => {
-        this.beforeUnloadAlertEnabled = false
-      }
+    if (!this.exitAlert) return Promise.resolve()
+    return this.exitAlert.disable().catch((error) => {
+      debugLog.warn('COOK', 'EXIT_ALERT_DISABLE_FAIL', { error: error.message || String(error) })
+      throw error
     })
   },
 
   refreshView(callback, options) {
+    if (this.cleanupDone || this.unloaded || this.exiting) return
     if (!this.runtime) {
       if (callback) callback()
       return
@@ -206,6 +212,7 @@ Page({
       completedText: `${view.completedCount}/${view.totalCount}`
     }
     this.setData(data, () => {
+      if (this.cleanupDone || this.unloaded || this.exiting) return
       if (!options || options.alerts !== false) {
         this.handleRuntimeAlerts(view)
       }
@@ -543,7 +550,7 @@ Page({
   },
 
   toggleRunning() {
-    if (!this.runtime) return
+    if (!this.runtime || this.cleanupDone || this.unloaded || this.exiting) return
     if (this.data.complete) {
       this.finishCookFlow()
       return
@@ -557,6 +564,7 @@ Page({
         running: true,
         pausedContinuing: false
       }, () => {
+        if (this.cleanupDone || this.unloaded || this.exiting) return
         this.refreshView(() => {
           this.remindCurrent(true)
         }, { prefetch: false, alerts: false })
@@ -577,6 +585,7 @@ Page({
       running: true,
       pausedContinuing: false
     }, () => {
+      if (this.cleanupDone || this.unloaded || this.exiting) return
       this.startTicker()
       this.tick()
     })
@@ -621,6 +630,7 @@ Page({
 
   startTicker() {
     this.clearTicker()
+    if (!this.runtime || this.cleanupDone || this.unloaded || this.exiting) return
     if (!this.lastTickAt) {
       this.lastTickAt = Date.now()
     }
@@ -636,7 +646,7 @@ Page({
   },
 
   tick() {
-    if (!this.runtime || (!this.data.running && !this.data.pausedContinuing)) return
+    if (!this.runtime || this.unloaded || this.exiting || (!this.data.running && !this.data.pausedContinuing)) return
     const now = Date.now()
     const deltaSeconds = Math.floor((now - this.lastTickAt) / 1000)
     if (deltaSeconds <= 0) return
@@ -646,6 +656,7 @@ Page({
   },
 
   remindCurrent(force) {
+    if (!this.runtime || this.cleanupDone || this.unloaded || this.exiting) return
     const task = this.data.currentTask || {}
     if (!task.id) return
     if (!force && this.lastRemindedTaskId === task.id) return
@@ -709,30 +720,15 @@ Page({
 
   getRestWaitDurationText(task, fixedTexts, fallbackText) {
     if (!task || !task.id) return fallbackText || ''
-    this.restWaitDurationTextMap = this.restWaitDurationTextMap || {}
-    if (this.restWaitDurationTextMap[task.id]) {
-      return this.restWaitDurationTextMap[task.id]
-    }
     return this.computeRestWaitDurationText(task, fixedTexts, fallbackText)
   },
 
   computeRestWaitDurationText(task, fixedTexts, fallbackText) {
     const remainingSeconds = Math.max(0, Math.floor(task && task.remainingSeconds ? task.remainingSeconds : 0))
-    const fixedVoiceSeconds = voice.estimateTextsDurationSeconds
-      ? voice.estimateTextsDurationSeconds(fixedTexts || [], this.getCookVoiceGender())
-      : 0
-    const waitBaseSeconds = Math.max(0, remainingSeconds - Math.ceil(fixedVoiceSeconds))
-    const waitText = cookVoiceText.buildRestVoiceWaitDurationText(waitBaseSeconds) || fallbackText || ''
-    if (task && task.id) {
-      this.restWaitDurationTextMap = this.restWaitDurationTextMap || {}
-      this.restWaitDurationTextMap[task.id] = waitText
-    }
+    const waitText = cookVoiceText.buildRestVoiceWaitDurationText(remainingSeconds) || fallbackText || ''
     debugLog.info('COOK_STEP', 'REST_WAIT_DURATION_COMPUTE', {
       taskId: task && task.id,
       remainingSeconds,
-      fixedVoiceSeconds: Number(fixedVoiceSeconds.toFixed ? fixedVoiceSeconds.toFixed(2) : fixedVoiceSeconds),
-      waitBaseSeconds,
-      fixedOffsetSeconds: cookVoiceText.REST_VOICE_WAIT_OFFSET_SECONDS,
       waitText
     })
     return waitText
@@ -807,8 +803,11 @@ Page({
     voice.speak(payload.actualFullText, gender)
   },
 
-  markDone() {
-    const task = this.data.currentTask || {}
+  markDone(e) {
+    if (!this.runtime || this.unloaded || this.exiting || this.data.finishing) return
+    this.captureElapsedTime()
+    const id = e && e.currentTarget && e.currentTarget.dataset.id
+    const task = id ? (planRuntime.buildView(this.runtime).timelineBars.find(item => item.id === id) || {}) : (this.data.currentTask || {})
     if (!this.runtime || !task.id) return
     if (!task.canFinish) {
       debugLog.warn('COOK_ACTION', 'MARK_DONE_BLOCKED', { taskId: task.id, title: task.title, rest: !!task.rest, background: !!task.background })
@@ -821,6 +820,8 @@ Page({
       return
     }
     const finish = () => {
+      if (!this.runtime || this.unloaded || this.exiting) return
+      this.captureElapsedTime()
       debugLog.info('COOK_ACTION', 'MARK_DONE', { taskId: task.id, title: task.title, elapsedSeconds: this.runtime.elapsedSeconds })
       const completed = planRuntime.finishTask(this.runtime, task.id, 'early')
       this.refreshView(() => {
@@ -850,30 +851,33 @@ Page({
   },
 
   skipTaskById(taskId) {
-    if (!this.runtime || !taskId) return
+    if (!this.runtime || !taskId || !this.data.started || this.data.finishing || this.exiting || this.unloaded) return
+    this.captureElapsedTime()
     const task = this.getTaskById(taskId)
     if (!task || this.runtime.skippedTaskIds[taskId]) return
-    const viewTask = (this.data.timelineBars || []).find((item) => item.id === taskId) || task
+    const viewTask = planRuntime.buildView(this.runtime).timelineBars.find((item) => item.id === taskId) || task
     if (!viewTask.canSkip) {
       debugLog.warn('COOK_ACTION', 'SKIP_BLOCKED', { taskId, title: viewTask.title, background: !!viewTask.background })
-      wx.showToast({ title: viewTask.background ? '后台计时不能跳过' : '只能跳过当前步骤', icon: 'none' })
+      wx.showToast({ title: '当前步骤不能跳过', icon: 'none' })
       return
     }
-    const content = this.needSafetyConfirm(task) ? '这个步骤可能影响安全或成品稳定，确认跳过当前步骤吗？' : '跳过可能影响成品，确认跳过当前步骤吗？'
+    const skip = () => {
+      if (!this.runtime || this.exiting || this.unloaded) return
+      this.captureElapsedTime()
+      const completed = planRuntime.skipTask(this.runtime, taskId)
+      this.refreshView(() => {
+        if (!this.data.running && !this.data.pausedContinuing) this.remindCurrent(true)
+        if (completed) this.markRuntimeComplete()
+      })
+    }
+    if (!this.needSafetyConfirm(task)) { skip(); return }
     wx.showModal({
       title: '跳过当前步骤？',
-      content,
+      content: '这个步骤可能影响安全或成品稳定，确认跳过吗？',
       confirmText: '确认跳过',
       success: (res) => {
         if (!res.confirm) return
-        debugLog.info('COOK_ACTION', 'SKIP', { taskId, title: task.title, elapsedSeconds: this.runtime.elapsedSeconds })
-        const completed = planRuntime.skipTask(this.runtime, taskId)
-        this.refreshView(() => {
-          if (!this.data.running && !this.data.pausedContinuing) {
-            this.remindCurrent(true)
-          }
-          if (completed) this.markRuntimeComplete()
-        })
+        skip()
       }
     })
   },
@@ -884,44 +888,17 @@ Page({
   },
 
   addTimeForTask(taskId) {
-    if (!this.runtime || !taskId) return
+    if (!this.runtime || !taskId || !this.data.started || this.data.finishing || this.exiting || this.unloaded) return
+    this.captureElapsedTime()
     const task = this.getTaskById(taskId)
     if (!task || this.runtime.skippedTaskIds[taskId]) return
-    const viewTask = (this.data.timelineBars || []).find((item) => item.id === taskId) || task
+    const viewTask = planRuntime.buildView(this.runtime).timelineBars.find((item) => item.id === taskId) || task
     if (!viewTask.canAddTime) {
       debugLog.warn('COOK_ACTION', 'ADD_TIME_BLOCKED', { taskId, title: viewTask.title })
-      wx.showToast({ title: '只能给当前步骤加时', icon: 'none' })
+      wx.showToast({ title: '只能给正在执行的步骤加时', icon: 'none' })
       return
     }
-    wx.showActionSheet({
-      itemList: ['+30 秒', '+1 分钟', '+2 分钟', '自定义秒数'],
-      success: (res) => {
-        const options = [30, 60, 120]
-        if (res.tapIndex < options.length) {
-          this.applyAddTime(taskId, options[res.tapIndex])
-          return
-        }
-        this.openCustomAddTime(taskId)
-      }
-    })
-  },
-
-  openCustomAddTime(taskId) {
-    wx.showModal({
-      title: '自定义加时',
-      editable: true,
-      placeholderText: '输入加时秒数',
-      confirmText: '加时',
-      success: (res) => {
-        if (!res.confirm) return
-        const seconds = Math.floor(Number(res.content))
-        if (!isFinite(seconds) || seconds <= 0) {
-          wx.showToast({ title: '请输入大于 0 的秒数', icon: 'none' })
-          return
-        }
-        this.applyAddTime(taskId, seconds)
-      }
-    })
+    this.applyAddTime(taskId, 10)
   },
 
   applyAddTime(taskId, seconds) {
@@ -951,13 +928,15 @@ Page({
     this.clearTicker()
     this.stopBackgroundAlarm()
     voice.stop()
-    this.disableExitAlertBeforeUnload()
     this.setData({
       running: false,
       pausedContinuing: false,
-      complete: true
+      complete: true,
+      finishing: true
     }, () => {
-      this.showCompletionSharePrompt()
+      if (this.unloaded || this.cleanupDone) return
+      this.rememberCookSync()
+      this.presentCompletionPrompts()
     })
     debugLog.info('COOK', 'COMPLETE', {
       elapsedSeconds: this.data.elapsedSeconds,
@@ -965,8 +944,29 @@ Page({
     })
   },
 
+  presentCompletionPrompts() {
+    const isActive = () => this.pageActive && !this.unloaded && !this.cleanupDone
+    if (!isActive() || this.completionSharePromptShown || this.completionPromptPending) return
+    this.completionPromptPending = true
+    const settled = () => {
+      if (!isActive()) return
+      this.setData({ finishing: false })
+      this.showCompletionSharePrompt()
+    }
+    this.disableExitAlertBeforeUnload().then(() => {
+      if (!isActive()) return
+      const app = getApp()
+      if (!personalizationSync.showPending(app, wx, api, { isActive, onSettled: settled }) &&
+        !(app.globalData.pendingCookSyncReports || []).length) settled()
+    }).catch(() => {
+      if (!isActive()) return
+      this.setData({ finishing: false })
+      wx.showToast({ title: '退出提醒未关闭，请点击完成重试', icon: 'none' })
+    }).then(() => { this.completionPromptPending = false })
+  },
+
   showCompletionSharePrompt() {
-    if (this.completionSharePromptShown || this.cleanupDone) return
+    if (this.completionSharePromptShown || this.cleanupDone || this.unloaded || !this.pageActive) return
     this.completionSharePromptShown = true
     wx.showModal({
       title: '流程完成',
@@ -988,95 +988,35 @@ Page({
     if (this.data.finishing) return
     const safeOptions = options || {}
     const preferredExit = safeOptions.preferredExit || ''
-    const tailText = preferredExit === 'publish' ? '，然后去秀一秀' : '并退出'
-    wx.showModal({
-      title: '同步到个性化？',
-      content: `计划 ${this.data.totalText}，实际 ${this.data.elapsedText}。是否把本次步骤用时同步到个性化菜谱${tailText}？`,
-      confirmText: '同步',
-      cancelText: '不同步',
-      success: (res) => {
-        if (res.confirm) {
-          this.syncTimesAndExit({ preferredExit })
-          return
-        }
-        this.exitAfterFinish(preferredExit || 'home')
-      }
-    })
-  },
-
-  syncTimesAndExit(options) {
-    const safeOptions = options || {}
-    const items = this.buildPersonalizationSyncItems()
-    const taskCount = items.reduce((sum, item) => sum + (item.durationOverrides || []).length, 0)
-    debugLog.info('COOK', 'SYNC_PERSONALIZATION_START', {
-      recipeCount: items.length,
-      taskCount,
-      preferredExit: safeOptions.preferredExit || ''
-    })
-    if (!items.length) {
-      wx.showToast({ title: '没有可同步的步骤', icon: 'none' })
-      this.exitAfterFinish(safeOptions.preferredExit || 'mine')
-      return
-    }
-    this.setData({ finishing: true })
-    api.syncPersonalizationTimes(items)
-      .then((res) => {
-        if (!res.ok) throw new Error(res.message || '同步失败')
-        debugLog.info('COOK', 'SYNC_PERSONALIZATION_OK', {
-          ok: !!res.ok,
-          updatedRecipeCount: res.updatedRecipeCount,
-          updatedTaskCount: res.updatedTaskCount,
-          message: res.message
-        })
-        wx.showToast({ title: res.message || '已同步到个性化', icon: res.ok ? 'success' : 'none' })
-        this.exitAfterFinish(safeOptions.preferredExit || 'mine')
-      })
-      .catch((err) => {
-        debugLog.error('COOK', 'SYNC_PERSONALIZATION_FAIL', {
-          error: err && err.message ? err.message : String(err)
-        })
-        this.setData({ finishing: false })
-        wx.showToast({ title: '同步失败，请稍后重试', icon: 'none' })
-      })
+    this.exitAfterFinish(preferredExit || 'home')
   },
 
   buildPersonalizationSyncItems() {
-    if (!this.runtime || !Array.isArray(this.runtime.timeline)) return []
-    const actualTimeMap = this.runtime.actualTimeMap || {}
-    const skippedTaskIds = this.runtime.skippedTaskIds || {}
-    const recipeMap = {}
-    this.runtime.timeline.forEach((task) => {
-      if (!task || !task.id || !task.recipeId || task.rest) return
-      if (skippedTaskIds[task.id]) return
-      const actualSeconds = actualTimeMap[task.id] !== undefined ? Number(actualTimeMap[task.id]) : Number(task.durationSeconds)
-      if (!isFinite(actualSeconds) || actualSeconds <= 0) return
-      if (!recipeMap[task.recipeId]) {
-        recipeMap[task.recipeId] = {
-          recipeId: task.recipeId,
-          durationOverrides: []
-        }
-      }
-      recipeMap[task.recipeId].durationOverrides.push({
-        taskId: task.id,
-        durationSeconds: Math.max(1, Math.floor(actualSeconds))
-      })
-    })
-    return Object.keys(recipeMap).map((recipeId) => recipeMap[recipeId]).filter((item) => item.durationOverrides.length)
+    return personalizationSync.buildItems(this.runtime)
   },
 
-  cleanupCookFlow(options) {
-    const safeOptions = options || {}
-    if (this.cleanupDone) {
-      if (safeOptions.redirectToMenuAfterUnload) {
-        getApp().globalData.exitCookFlowToMenu = true
-      }
-      return
+  captureElapsedTime() {
+    if (!this.runtime || !this.data.started || (!this.data.running && !this.data.pausedContinuing) || !this.lastTickAt) return
+    const seconds = Math.max(0, Math.floor((Date.now() - this.lastTickAt) / 1000))
+    if (seconds) {
+      this.lastTickAt += seconds * 1000
+      planRuntime.tick(this.runtime, seconds)
     }
+  },
+
+  rememberCookSync() {
+    if (!this.syncPersonalization || !this.data.started || this.syncReportQueued || !this.runtime) return
+    this.syncReportQueued = true
+    personalizationSync.enqueue(getApp(), this.runtime, this.cookOwnerId)
+  },
+
+  cleanupCookFlow() {
+    if (this.cleanupDone) return
     this.cleanupDone = true
     this.clearTicker()
     this.stopBackgroundAlarm()
     voice.stop()
-    this.disableExitAlertBeforeUnload()
+    this.disableExitAlertBeforeUnload().catch(() => {})
     const app = getApp()
     app.globalData.lastPlan = null
     app.globalData.lastPreview = null
@@ -1086,7 +1026,6 @@ Page({
     app.globalData.currentCookVoiceGender = ''
     app.globalData.selectedRecipeIds = []
     app.globalData.selectedRecipes = []
-    app.globalData.exitCookFlowToMenu = !!safeOptions.redirectToMenuAfterUnload
     this.pendingBackgroundCurrentReminderToken = ''
     this.completionSharePromptShown = true
     this.runtime = null
@@ -1119,34 +1058,49 @@ Page({
 
   exitCookToPublish() {
     const recipeIds = this.buildCookedRecipeIds()
-    const app = getApp()
-    this.suppressUnloadRedirect = true
-    this.cleanupCookFlow()
-    app.globalData.selectedRecipeIds = recipeIds
-    app.globalData.selectedRecipes = []
-    debugLog.info('COOK', 'EXIT_PUBLISH', {
-      recipeIds
+    this.exitCookToTab('/pages/publish/publish', () => {
+      const app = getApp()
+      app.globalData.selectedRecipeIds = recipeIds
+      app.globalData.selectedRecipes = []
+      debugLog.info('COOK', 'EXIT_PUBLISH', { recipeIds })
     })
-    wx.switchTab({ url: '/pages/publish/publish' })
   },
 
   exitCookToMinePersonalization() {
-    const app = getApp()
-    app.globalData.mineInitialTab = 'personal'
-    this.suppressUnloadRedirect = true
-    this.cleanupCookFlow()
-    wx.switchTab({ url: '/pages/mine/mine' })
+    this.exitCookToTab('/pages/mine/mine', () => { getApp().globalData.mineInitialTab = 'personal' })
   },
 
   exitCookToHome() {
-    this.suppressUnloadRedirect = true
-    this.cleanupCookFlow()
-    wx.switchTab({ url: '/pages/home/home' })
+    this.exitCookToTab('/pages/home/home')
   },
 
   backMenu() {
-    this.suppressUnloadRedirect = true
-    this.cleanupCookFlow()
-    wx.switchTab({ url: '/pages/menu/menu' })
+    this.exitCookToTab('/pages/menu/menu')
+  },
+
+  exitCookToTab(url, afterCleanup) {
+    if (this.exiting || this.unloaded) return
+    this.exiting = true
+    this.disableExitAlertBeforeUnload().then(() => {
+      if (this.unloaded) return
+      this.captureElapsedTime()
+      this.rememberCookSync()
+      this.suppressUnloadRedirect = true
+      this.cleanupCookFlow()
+      if (afterCleanup) afterCleanup()
+      wx.switchTab({
+        url,
+        fail: (error) => {
+          if (this.unloaded) return
+          this.exiting = false
+          debugLog.warn('COOK', 'EXIT_NAVIGATION_FAIL', { url, error: error.errMsg })
+          wx.showToast({ title: '返回失败，请重试', icon: 'none' })
+        }
+      })
+    }).catch(() => {
+      if (this.unloaded) return
+      this.exiting = false
+      wx.showToast({ title: '退出提醒未关闭，请再试一次', icon: 'none' })
+    })
   }
 })

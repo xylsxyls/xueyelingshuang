@@ -17,7 +17,7 @@ App({
     voiceGender: 'female',
     currentCookVoiceGender: '',
     pendingCookVoiceTexts: [],
-    exitCookFlowToMenu: false,
+    pendingCookSyncReports: [],
     mineInitialTab: '',
     messageInitialTab: '',
     messageTargetUserId: '',

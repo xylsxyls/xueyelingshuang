@@ -1,16 +1,15 @@
+@import "../../styles/recipeHero.wxss";
 .personalization-page {
   padding-bottom: 140rpx;
 }
 
 .header {
-  min-height: 250rpx;
-  padding: 42rpx 32rpx;
-  border-radius: 8rpx;
-  color: #fffdf8;
+  padding: 12rpx 0 28rpx;
+  color: #18231f;
 }
 
 .title {
-  margin-top: 70rpx;
+  margin-top: 0;
   font-size: 44rpx;
   font-weight: 900;
 }
@@ -19,6 +18,7 @@
   margin-top: 12rpx;
   font-size: 27rpx;
   line-height: 1.5;
+  color: #7b746a;
 }
 
 .toolbar {
@@ -133,7 +133,13 @@
   text-align: right;
 }
 
+.added-section { margin-top: 28rpx; }
+.section-title { margin: 0 0 14rpx; font-size: 30rpx; font-weight: 600; }
+.added-task { margin-bottom: 14rpx; }
+
 .empty {
   padding: 32rpx;
   color: #7b746a;
 }
+
+.personal-recipe-cover { width: 104rpx; height: 104rpx; border-radius: 8rpx; margin-bottom: 16rpx; }

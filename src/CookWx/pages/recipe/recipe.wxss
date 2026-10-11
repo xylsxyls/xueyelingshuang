@@ -1,3 +1,4 @@
+@import "../../styles/recipeHero.wxss";
 .recipe-page {
   padding-bottom: 150rpx;
 }
@@ -119,3 +120,17 @@
 .empty {
   padding: 32rpx;
 }
+
+.hero { position: relative; height: 360rpx; min-height: 0; padding: 0; overflow: hidden; background: #eeeae4; }
+.hero-image { width: 100%; height: 100%; }
+.hero-gradient { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: linear-gradient(to bottom, rgba(248,245,239,0) 50%, #f8f5ef 100%); pointer-events: none; }
+.hero-play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 28rpx; }
+.hero-triangle { width: 0; height: 0; border-top: 28rpx solid transparent; border-bottom: 28rpx solid transparent; border-left: 44rpx solid rgba(255,255,255,.8); filter: drop-shadow(0 1rpx 4rpx rgba(0,0,0,.4)); }
+.hero-empty { height: 100%; display: flex; align-items: center; justify-content: center; color: #8c857b; }
+.recipe-heading { margin: 12rpx 0 28rpx; }
+.recipe-author { color: #8c857b; margin-top: 12rpx; font-size: 24rpx; }
+.action-bar { display: flex; gap: 20rpx; }
+.action-bar button { flex: 1; width: 0; display: flex; align-items: center; justify-content: center; }
+.recipe-heading .hero-title { margin-top: 0; }
+.action-bar button { height: 80rpx; padding: 0; }
+.purchase button { min-height: 72rpx; display: flex; align-items: center; justify-content: center; }

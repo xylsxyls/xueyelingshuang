@@ -1,0 +1,54 @@
+<view class="standalone-shell">
+<view class="home-page standalone-page">
+  <image wx:if="{{posterUrl && !frameReady}}" class="feed-poster" src="{{posterUrl}}" mode="aspectFill"></image>
+  <cached-video-player id="standaloneVideoPlayer" class="feed-video" video-id="{{videoId}}" video-url="{{videoUrl}}" active="{{active}}" autoplay="{{active && !paused}}" bindplayertap="togglePlayback" bindloadedmetadata="onMetadata" bindtimeupdate="onTimeUpdate" bindplay="onPlay" bindpause="onPause" bindended="onEnded" bindframe="onFrame" binderror="onError"></cached-video-player>
+  <view class="video-shade"></view>
+  <view class="pause-overlay" wx:if="{{paused}}" bindtap="togglePlayback"><view class="pause-triangle"></view></view>
+        <view class="feed-actions" wx:if="{{item.videoUrl}}">
+          <view class="creator-action">
+            <view class="creator-avatar user-avatar" data-index="0" bindtap="openAuthor"><image wx:if="{{item.authorAvatarUrl}}" class="creator-avatar-image" src="{{item.authorAvatarUrl}}" mode="aspectFill"></image><text wx:else>{{item.authorInitial}}</text></view>
+            <view class="creator-follow" wx:if="{{item.canFollowAuthor}}" data-index="0" bindtap="followAuthor">+</view>
+            <view class="creator-follow followed" wx:elif="{{item.followConfirmVisible}}">
+              <view class="check-shape"></view>
+            </view>
+          </view>
+          <view class="action-item" data-index="0" bindtap="toggleLike">
+            <view class="action-icon heart {{item.liked ? 'active' : ''}}">
+              <view class="heart-shape"></view>
+            </view>
+            <view class="action-label">{{item.likes || 0}}</view>
+          </view>
+          <view class="action-item" data-index="0" bindtap="openComments">
+            <view class="action-icon comment">
+              <view class="comment-icon-shape">
+                <view class="comment-tail"></view>
+              </view>
+            </view>
+            <view class="action-label">{{item.comments || 0}}</view>
+          </view>
+          <view class="action-item" data-index="0" bindtap="favorite">
+            <view class="action-icon star {{item.favorite ? 'active' : ''}}">
+              <view class="star-shape"></view>
+            </view>
+            <view class="action-label">{{item.favorite ? '已收藏' : '收藏'}}</view>
+          </view>
+        </view>
+
+        <view class="feed-info" wx:if="{{item.videoUrl}}">
+          <view class="author">@{{item.author}}</view>
+          <view class="title">{{item.title}}</view>
+          <view class="desc">{{item.description}}</view>
+          <view class="metrics">{{item.likes}}赞 · {{item.comments}}评论</view>
+          <view class="recipe-row">
+            <button class="recipe-btn" data-index="0" bindtap="handleRecipeAction" loading="{{buyingRecipeId && buyingRecipeId === item.primaryRecipeId}}">
+              {{item.actionText}}
+            </button>
+            <button class="ghost-recipe-btn" data-index="0" bindtap="addToMenu" wx:if="{{item.canAddToMenu}}">{{item.menuText}}</button>
+          </view>
+        </view>
+
+  <view class="standalone-progress"><text>{{currentLabel}}</text><slider min="0" max="{{durationSeconds || 1}}" value="{{currentSeconds}}" step="0.1" bindchange="onSeek" activeColor="#ffffff" backgroundColor="#666666" block-size="12"/><text>{{durationLabel}}</text></view>
+  <view class="metadata-error" wx:if="{{metadataError}}" bindtap="loadMetadata">{{metadataError}}，点击重试</view>
+</view>
+<bottom-navigation />
+</view>

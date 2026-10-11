@@ -1,7 +1,5 @@
 const time = require('./time')
 
-const REST_VOICE_WAIT_OFFSET_SECONDS = 1
-const VOICE_WAIT_BUCKET_SECONDS = 5
 const VOICE_CONNECTOR_AND = '并且。'
 
 function isBackgroundTask(task) {
@@ -23,11 +21,7 @@ function detailWithExpectedTime(task) {
 function buildTaskVoiceText(task) {
   if (!task) return ''
   if (task.rest && task.voiceText) return task.voiceText
-  const title = task.title || ''
-  const detail = task.detailText || detailWithExpectedTime(task)
-  if (!title) return detail
-  if (!detail) return title
-  return `${title}。${detail}`
+  return Array.from(String(task.title || '').trim()).slice(0, 8).join('')
 }
 
 function buildTaskVoiceTexts(task) {
@@ -166,8 +160,7 @@ function formatVoiceWaitDuration(seconds) {
 }
 
 function adjustVoiceWaitSeconds(seconds) {
-  const safeSeconds = Math.max(0, Math.floor(seconds || 0) - REST_VOICE_WAIT_OFFSET_SECONDS)
-  return Math.floor(safeSeconds / VOICE_WAIT_BUCKET_SECONDS) * VOICE_WAIT_BUCKET_SECONDS
+  return Math.max(0, Math.floor(seconds || 0))
 }
 
 function buildRestVoiceWaitText(canLeaveKitchen, waitSeconds) {
@@ -319,8 +312,6 @@ function buildFixedPlanVoiceTexts(plan) {
 }
 
 module.exports = {
-  REST_VOICE_WAIT_OFFSET_SECONDS,
-  VOICE_WAIT_BUCKET_SECONDS,
   VOICE_CONNECTOR_AND,
   isBackgroundTask,
   detailWithExpectedTime,

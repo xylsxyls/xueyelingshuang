@@ -1,0 +1,11 @@
+.task-editor { padding-bottom: 40rpx; }
+.field-label { margin: 22rpx 0 10rpx; color: #706b62; font-size: 25rpx; }
+.field-input, .field-textarea, .picker-value { box-sizing: border-box; width: 100%; padding: 16rpx 18rpx; border: 1rpx solid #e7e0d5; border-radius: 14rpx; background: #fffdf8; font-size: 28rpx; }
+.field-input { min-height: 78rpx; }
+.field-textarea { min-height: 180rpx; }
+.picker-value { min-height: 74rpx; color: #2c2a25; }
+.duration-row { display: flex; gap: 12rpx; }
+.time-field { display: flex; align-items: center; gap: 8rpx; padding: 8rpx 12rpx; border-radius: 12rpx; background: #f6f2ea; }
+.time-field input { width: 88rpx; text-align: center; }
+.time-field text { color: #706b62; font-size: 24rpx; }
+.save-button { margin-top: 24rpx; }

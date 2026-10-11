@@ -1,0 +1,2 @@
+.menu-buy-button, .menu-row-actions .menu-buy-button { flex-shrink: 0; width: 60rpx; height: 60rpx; min-height: 60rpx; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; line-height: normal; border-radius: 30rpx; background: #18231f; color: #fffdf8; font-size: 32rpx; }
+.menu-buy-button::after { border: none; }

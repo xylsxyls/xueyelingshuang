@@ -24,12 +24,13 @@
       暂时没有消息。
     </view>
 
-    <view class="msg card" wx:for="{{messages}}" wx:key="id">
+    <view class="msg card" wx:for="{{messages}}" wx:key="id" data-index="{{index}}" bindtap="openMessage">
       <view class="icon">{{item.icon}}</view>
       <view class="msg-main">
-        <view class="title">{{item.title}}</view>
+        <view class="title">{{item.type === 'chat' ? (item.sender.nickname || item.title) : item.title}}</view>
         <view class="muted">{{item.text}}</view>
       </view>
+      <text wx:if="{{item.unreadCount}}" class="unread {{item.muted ? 'muted-unread' : 'friend-unread'}}">{{item.unreadCount}}</text>
     </view>
   </block>
 
@@ -43,7 +44,7 @@
       wx:for="{{contactItems}}"
       wx:key="id"
       data-index="{{index}}"
-      bindtap="selectContact"
+      bindtap="openContactConversation"
     >
       <view class="contact-avatar">{{item.avatarText}}</view>
       <view class="contact-main">

@@ -1,11 +1,21 @@
 const api = require('../../utils/api')
+const assets = require('../../utils/recipeAssets')
+const actions = require('../../utils/menuActions')
+const selection = require('../../utils/mealSelection')
+const viewport = require('../../utils/menuViewport')
 const config = require('../../utils/config')
 const debugLog = require('../../utils/debugLog')
 const tabBar = require('../../utils/tabBar')
+const personalizationSync = require('../../utils/cookPersonalizationSync')
 
 Page({
   data: {
-    categories: [],
+    categories: assets.CATEGORIES,
+    menuSections: [],
+    scrollTarget: '',
+    categoryScrollTop: 0,
+    recipeBottomSpace: 24,
+    buyingRecipeId: '',
     activeCategory: '',
     recipes: [],
     categoryGroups: [],
@@ -24,7 +34,15 @@ Page({
   onShow() {
     tabBar.showHome()
     this.pageActive = true
+    const selectedMap = {}
+    ;(getApp().globalData.selectedRecipeIds || []).forEach((id) => { selectedMap[id] = true })
+    this.setData({ starting: false, previewing: false, buyingRecipeId: '', cartOpen: false, selectedMap }, () => {
+      this.refreshRecipeSelectionState()
+      this.refreshSelected(false)
+      if (!this.currentSelectedIds().length) this.schedulePreview([])
+    })
     this.loadRecipes()
+    personalizationSync.showPending(getApp(), wx, api, { isActive: () => this.pageActive !== false })
   },
 
   onHide() {
@@ -61,10 +79,13 @@ Page({
         const selectedMap = {}
         selectedIds.forEach((id) => { selectedMap[id] = true })
         const recipes = this.decorateRecipes(res.recipes || [], selectedMap)
+        Object.keys(selectedMap).forEach(id => { if (!recipes.some(item => item.id === id && item.accessible)) delete selectedMap[id] })
+        app.globalData.selectedRecipeIds = Object.keys(selectedMap)
         const categoryGroups = this.decorateCategoryGroups(res.categoryGroups || [], selectedMap)
-        const activeCategory = this.chooseActiveCategory(res.categories || [], recipes)
+        const categories = assets.CATEGORIES.concat(Array.from(new Set(recipes.map(item => item.category))).filter(name => assets.CATEGORIES.indexOf(name) < 0))
+        const activeCategory = this.chooseActiveCategory(categories, recipes)
         this.setData({
-          categories: res.categories || [],
+          categories,
           categoryGroups,
           recipes,
           activeCategory,
@@ -92,16 +113,14 @@ Page({
       const priceAmount = Number(item.priceAmount || priceCoins || 0)
       const priceType = item.priceType || (priceCoins > 0 ? 'coin' : 'free')
       const owned = !!item.owned
-      const accessible = owned || !!item.systemRecipe || priceType === 'free' || priceAmount <= 0
-      let priceText = '免费'
-      if (owned) priceText = '已拥有'
-      else if (priceType === 'yuanbao') priceText = `${priceAmount}元宝`
-      else if (priceType === 'coin') priceText = `${priceAmount}金币`
-      return Object.assign({}, item, {
+      const accessible = owned || priceType === 'free' || priceAmount <= 0
+      const normalized = assets.normalize(item)
+      const priceText = normalized.priceText
+      return Object.assign({}, normalized, {
         id,
         title: item.title || '',
         subtitle: item.subtitle || '',
-        category: item.category || '',
+        category: normalized.category,
         tags: Array.isArray(item.tags) ? item.tags : [],
         selected: !!selectedMap[id],
         owned,
@@ -126,43 +145,88 @@ Page({
   },
 
   chooseActiveCategory(categories, recipes) {
-    if (this.data.activeCategory && categories.indexOf(this.data.activeCategory) >= 0) {
-      return this.data.activeCategory
-    }
-    const hasFavorite = recipes.some((item) => !!item.favorite)
-    if (hasFavorite && categories.indexOf('最喜欢') >= 0) {
-      return '最喜欢'
-    }
-    const category = categories.find((name) => {
-      if (name === '最喜欢' || name === '购买区' || name === '创作区') return false
-      return recipes.some((item) => item.category === name)
-    })
-    return category || categories[0] || ''
+    return categories.indexOf(this.data.activeCategory) >= 0 ? this.data.activeCategory : (categories[0] || '')
   },
 
   applyFilter() {
-    const { recipes, categoryGroups, activeCategory, keyword, selectedMap } = this.data
-    const key = (keyword || '').trim()
-    const group = (categoryGroups || []).find((item) => item && item.name === activeCategory)
-    const sourceRecipes = group && Array.isArray(group.recipes) ? group.recipes : recipes
-    const list = sourceRecipes.filter((item) => {
-      const title = item.title || ''
-      const subtitle = item.subtitle || ''
-      const category = item.category || ''
-      const matchKeyword = !key || title.indexOf(key) >= 0 || subtitle.indexOf(key) >= 0 || category.indexOf(key) >= 0
-      let matchCategory = true
-      if (group) return matchKeyword
-      if (activeCategory === '最喜欢') matchCategory = item.favorite
-      else if (activeCategory === '购买区') matchCategory = item.owned && !item.systemRecipe
-      else if (activeCategory === '创作区') matchCategory = !item.systemRecipe
-      else matchCategory = category === activeCategory
-      return matchKeyword && matchCategory
-    }).map((item) => Object.assign({}, item, { selected: !!selectedMap[item.id] }))
-    this.setData({ filteredRecipes: list })
+    const key = String(this.data.keyword || '').trim()
+    const list = (this.data.recipes || []).filter(item => !key || [item.title, item.subtitle, item.category].some(text => String(text || '').indexOf(key) >= 0))
+      .map(item => Object.assign({}, item, { selected: !!this.data.selectedMap[item.id] }))
+    const menuSections = this.data.categories.map((name, index) => ({ name, id: 'menu-section-' + index, recipes: list.filter(item => item.category === name) }))
+    this.setData({ filteredRecipes: list, menuSections }, () => this.measureSections())
   },
 
-  selectCategory(e) {
-    this.setData({ activeCategory: e.currentTarget.dataset.name }, () => this.applyFilter())
+  measureSections() {
+    if (!this.pageActive || !this.createSelectorQuery) return
+    const requestId = this.measureRequestId = (this.measureRequestId || 0) + 1
+    const query = this.createSelectorQuery()
+    query.select('#recipeScroll').boundingClientRect()
+    query.select('#recipeScroll').scrollOffset()
+    query.selectAll('.recipe-group').boundingClientRect()
+    query.select('#categoryScroll').boundingClientRect()
+    query.select('#categoryScroll').scrollOffset()
+    query.selectAll('.cat').boundingClientRect()
+    query.select('#menuCart').boundingClientRect()
+    query.exec(result => {
+      if (!this.pageActive || requestId !== this.measureRequestId || !result || !result[0] || !result[1]) return
+      this.sectionOffsets = (result[2] || []).map(rect => rect.top - result[0].top + result[1].scrollTop)
+      if (result[3] && result[4]) {
+        this.categoryHeight = result[3].height
+        this.categoryCurrentScrollTop = result[4].scrollTop || 0
+        this.categoryRects = (result[5] || []).map(rect => ({ top: rect.top - result[3].top + this.categoryCurrentScrollTop, bottom: rect.bottom - result[3].top + this.categoryCurrentScrollTop }))
+        this.categoryContentHeight = this.categoryRects.length ? this.categoryRects[this.categoryRects.length - 1].bottom : 0
+        this.ensureCategoryVisible(this.data.categories.indexOf(this.data.activeCategory))
+      }
+      const space = result[6] ? Math.max(24, Math.ceil(result[0].bottom - result[6].top + 16)) : 24
+      if (space !== this.data.recipeBottomSpace) this.setData({ recipeBottomSpace: space })
+    })
+  },
+
+  selectCategory(event) {
+    const name = event.currentTarget.dataset.name
+    const index = this.data.categories.indexOf(name)
+    if (index < 0) return
+    this.ensureCategoryVisible(index)
+    this.setData({ activeCategory: name, scrollTarget: '' }, () => this.setData({ scrollTarget: 'menu-section-' + index }))
+  },
+
+  onRecipeScroll(event) {
+    const offsets = this.sectionOffsets || []
+    if (!offsets.length) return
+    const top = Math.max(0, Number(event.detail.scrollTop) || 0) + 8
+    let index = 0
+    while (index + 1 < offsets.length && offsets[index + 1] <= top) index += 1
+    const name = this.data.categories[index]
+    if (name !== this.data.activeCategory) { this.setData({ activeCategory: name }); this.ensureCategoryVisible(index) }
+  },
+
+  onRecipeScrollBottom() {
+    const index = this.data.categories.length - 1
+    this.setData({ activeCategory: this.data.categories[index] }); this.ensureCategoryVisible(index)
+  },
+  onResize() { this.measureSections() },
+  onCategoryScroll(event) { this.categoryCurrentScrollTop = Math.max(0, Number(event.detail.scrollTop) || 0) },
+  ensureCategoryVisible(index) {
+    const rects = this.categoryRects || []
+    const current = this.categoryCurrentScrollTop || 0
+    const next = viewport.ensureVisible(rects[index], this.categoryHeight, current, this.categoryContentHeight)
+    if (next !== current) { this.categoryCurrentScrollTop = next; this.setData({ categoryScrollTop: next }) }
+  },
+
+  onCoverError(event) {
+    const { id, url } = event.currentTarget.dataset
+    const recipes = this.data.recipes.map(item => item.id === id ? assets.thumbnailFallback(item, url) : item)
+    this.setData({ recipes }, () => this.applyFilter())
+  },
+
+  async buyRecipe(event) {
+    if (this.data.buyingRecipeId) return
+    const recipe = this.data.recipes.find(item => item.id === event.currentTarget.dataset.id)
+    if (!recipe) return
+    this.setData({ buyingRecipeId: recipe.id })
+    try { if (await actions.purchase(recipe, () => this.pageActive)) { if (this.pageActive) this.loadRecipes() } }
+    catch (err) { if (this.pageActive) wx.showToast({ title: err.message || '购买失败', icon: 'none' }) }
+    finally { if (this.pageActive) this.setData({ buyingRecipeId: '' }) }
   },
 
   onSearch(e) {
@@ -172,8 +236,8 @@ Page({
   addRecipe(e) {
     const id = e.currentTarget.dataset.id
     const recipe = this.data.recipes.find((item) => item.id === id)
-    if (!recipe || !recipe.owned) {
-      wx.navigateTo({ url: `/pages/recipe/recipe?id=${id}` })
+    if (!recipe || !assets.normalize(recipe).accessible) {
+      this.openRecipe(e)
       return
     }
     const selectedMap = Object.assign({}, this.data.selectedMap)
@@ -301,7 +365,7 @@ Page({
 
   syncSelectedIds() {
     const ids = this.currentSelectedIds()
-    getApp().globalData.selectedRecipeIds = ids
+    selection.replace(getApp(), ids, this.data.recipes)
     this.refreshSelected(false)
     this.schedulePreview(ids)
   },
@@ -330,7 +394,7 @@ Page({
         previewError: '',
         cartOpen: false,
         previewing: false
-      })
+      }, () => this.measureSections())
       return
     }
 
@@ -339,7 +403,7 @@ Page({
       planRecipeKey: '',
       previewError: '',
       previewing: true
-    })
+    }, () => this.measureSections())
     debugLog.info('MENU', 'PREVIEW_SCHEDULED', { requestId, recipeIds: snapshotIds, recipeKey: snapshotKey })
 
     this.previewTimer = setTimeout(() => {
@@ -355,7 +419,7 @@ Page({
             planRecipeKey: snapshotKey,
             previewError: '',
             previewing: false
-          })
+          }, () => this.measureSections())
           debugLog.info('MENU', 'PREVIEW_OK', {
             requestId,
             recipeKey: snapshotKey,
@@ -374,7 +438,7 @@ Page({
             planRecipeKey: '',
             previewError: err.message || '计划生成失败',
             previewing: false
-          })
+          }, () => this.measureSections())
           debugLog.error('MENU', 'PREVIEW_FAIL', { requestId, recipeKey: snapshotKey, error: err.message || '计划生成失败' })
           wx.showToast({ title: err.message || '计划生成失败', icon: 'none' })
         })
@@ -385,8 +449,8 @@ Page({
     const ids = this.currentSelectedIds()
     const selectedRecipes = this.data.recipes.filter((item) => ids.indexOf(item.id) >= 0)
     getApp().globalData.selectedRecipes = selectedRecipes
-    this.setData({ selectedRecipes })
-    if (needPreview !== false && ids.length) {
+    this.setData({ selectedRecipes }, () => this.measureSections())
+    if (needPreview !== false) {
       this.schedulePreview(ids)
     }
   },
@@ -397,7 +461,7 @@ Page({
 
   canOpenRecipeDetail(recipe) {
     if (!recipe) return false
-    return !!(recipe.accessible || recipe.owned || recipe.systemRecipe || recipe.priceType === 'free' || Number(recipe.priceAmount || recipe.priceCoins || 0) <= 0)
+    return true
   },
 
   openRecipeFromCard(e) {
@@ -410,11 +474,11 @@ Page({
       return
     }
     debugLog.info('MENU', 'OPEN_RECIPE_DETAIL', { recipeId: id, owned: !!recipe.owned, accessible: !!recipe.accessible })
-    wx.navigateTo({ url: `/pages/recipe/recipe?id=${id}` })
+    this.openRecipe(e)
   },
 
   openRecipe(e) {
-    wx.navigateTo({ url: `/pages/recipe/recipe?id=${e.currentTarget.dataset.id}` })
+    wx.navigateTo({ url: `/pages/recipe/recipe?id=${encodeURIComponent(e.currentTarget.dataset.id)}&selection=meal` })
   },
 
   openPlanPage(ids, selectedKey, previewPlan) {

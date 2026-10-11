@@ -1,12 +1,15 @@
 <view class="page publish-page">
+  <view class="cover-upload card"><view>菜谱正方形封面（可选）</view><view class="muted">仅用于自己创作的菜谱；未上传时使用视频缩略图。</view><image wx:if="{{coverPath}}" class="cover-preview" src="{{coverPath}}" mode="aspectFill"></image><button bindtap="chooseCover" disabled="{{publishing}}">选择正方形图片</button><button wx:if="{{coverPath}}" bindtap="removeCover" disabled="{{publishing}}">移除图片</button></view>
   <view class="card media" bindtap="chooseMedia">
-    <view wx:if="{{mediaPath}}">
-      <video wx:if="{{mediaType === 'video'}}" src="{{mediaPath}}" class="preview" controls></video>
-      <image wx:else src="{{mediaPath}}" class="preview" mode="aspectFill"></image>
+    <view wx:if="{{mediaPath}}" class="media-selected">
+      <view class="media-icon">▶</view>
+      <view>已选择视频</view>
+      <view class="muted">{{mediaFileName}}</view>
+      <view class="muted">{{mediaFileSizeBytes}} bytes</view>
     </view>
     <view wx:else class="placeholder">
       <view class="plus">+</view>
-      <view>选择示例视频或图片</view>
+      <view>选择要发布的视频</view>
     </view>
   </view>
 
@@ -14,7 +17,7 @@
 
   <view class="section-title">挂载菜谱</view>
   <view class="recipe card" wx:for="{{ownedRecipes}}" wx:key="id" data-id="{{item.id}}" bindtap="toggleRecipe">
-    <view class="cover" style="background: {{item.coverColor}}"></view>
+    <image wx:if="{{item.thumbnailUrl}}" class="cover" src="{{item.thumbnailUrl}}" mode="aspectFill" lazy-load="{{true}}"></image><view class="cover" wx:else>暂无封面</view>
     <view class="recipe-main">
       <view>{{item.title}}</view>
       <view class="muted">{{item.category}} · {{item.estimatedMinutes}} 分</view>
@@ -22,5 +25,6 @@
     <view class="checked">{{item.selected ? '已选' : ''}}</view>
   </view>
 
-  <button class="primary-btn publish-btn" bindtap="publish">发布示例作品</button>
+  <view wx:if="{{publishing}}" class="upload-progress">正在上传 {{uploadProgress}}%</view>
+  <button class="primary-btn publish-btn" bindtap="publish" disabled="{{publishing}}">{{publishing ? '正在发布…' : '发布视频'}}</button>
 </view>

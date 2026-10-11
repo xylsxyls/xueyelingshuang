@@ -161,3 +161,6 @@
   font-size: 25rpx;
   font-weight: 800;
 }
+.unread { align-self: center; min-width: 34rpx; height: 34rpx; padding: 0 8rpx; line-height: 34rpx; border-radius: 18rpx; text-align: center; color: white; font-size: 22rpx; }
+.muted-unread { background: #aaa6a0; }
+.friend-unread { background: #e34e4e; }

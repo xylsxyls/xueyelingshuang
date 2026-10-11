@@ -1,3 +1,4 @@
+@import "../../styles/recipeBuyButton.wxss";
 .menu-page {
   min-height: 100vh;
   padding: 20rpx 20rpx 160rpx;
@@ -58,7 +59,8 @@
 }
 
 .recipe-title {
-  max-width: 250rpx;
+  flex: 1;
+  min-width: 0;
   font-size: 30rpx;
   font-weight: 800;
   overflow: hidden;
@@ -67,6 +69,8 @@
 }
 
 .price {
+  flex-shrink: 0;
+  white-space: nowrap;
   color: #8d4b35;
   font-size: 23rpx;
 }
@@ -188,7 +192,42 @@ button[disabled] {
 
 .chosen {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 16rpx;
   padding: 14rpx 0;
   border-top: 1rpx solid #eee6d8;
 }
+
+.chosen-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chosen-time {
+  flex-shrink: 0;
+}
+
+.chosen-remove {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.content { grid-template-columns: 112rpx minmax(0, 1fr); gap: 12rpx; }
+.recipe-card { grid-template-columns: 90rpx minmax(0, 1fr) 60rpx; gap: 12rpx; padding: 12rpx; }
+.cover { width: 90rpx; height: 90rpx; flex-shrink: 0; }
+.cover-empty { display: flex; align-items: center; justify-content: center; color: #8c857b; font-size: 18rpx; background: #eeeae4; }
+.recipe-main { min-width: 0; }
+.recipe-title { font-size: 28rpx; }
+.recipe-heading-row { display: flex; align-items: center; min-width: 0; gap: 8rpx; }
+.recipe-group-title { padding: 20rpx 8rpx; font-weight: 700; }
+.section-empty { padding: 18rpx; color: #8c857b; font-size: 24rpx; }
+.cart .primary-btn { display: flex; align-items: center; justify-content: center; padding: 0 28rpx; line-height: normal; height: 82rpx; box-sizing: border-box; }
+.menu-page { height: 100vh; min-height: 0; display: flex; flex-direction: column; padding: 20rpx 20rpx 0; overflow: hidden; }
+.search-wrap { flex-shrink: 0; }
+.content { display: flex; flex: 1; min-height: 0; height: auto; gap: 12rpx; overflow: hidden; }
+.categories { width: 112rpx; flex-shrink: 0; height: 100%; min-height: 0; }
+.recipes { flex: 1; min-width: 0; width: 0; height: 100%; min-height: 0; }
+.recipe-bottom-space { width: 100%; flex-shrink: 0; }

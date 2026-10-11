@@ -1,0 +1,18 @@
+.avatar-page { height: 100vh; display: flex; flex-direction: column; background: #f7f4ee; }
+.crop-help { padding: 28rpx 24rpx; text-align: center; font-size: 26rpx; color: #655e56; }
+.crop-stage { position: relative; flex: 1; min-height: 0; margin: 0 24rpx; background: #242424; overflow: hidden; }
+.preview-canvas { width: 100%; height: 100%; }
+.crop-placeholder { position: absolute; top: 45%; width: 100%; text-align: center; color: #eee; font-size: 28rpx; pointer-events: none; }
+.crop-mask { position: absolute; background: rgba(0, 0, 0, .58); pointer-events: none; }
+.crop-box { position: absolute; border: 2px solid #fff; box-sizing: border-box; }
+.crop-grid { position: absolute; background: rgba(255, 255, 255, .38); pointer-events: none; }
+.vertical-one, .vertical-two { top: 0; bottom: 0; width: 1px; }
+.vertical-one { left: 33.333%; } .vertical-two { left: 66.667%; }
+.horizontal-one, .horizontal-two { left: 0; right: 0; height: 1px; }
+.horizontal-one { top: 33.333%; } .horizontal-two { top: 66.667%; }
+.crop-handle { position: absolute; right: -14px; bottom: -14px; width: 38px; height: 38px; }
+.crop-handle::after { content: ''; position: absolute; left: 9px; top: 9px; width: 16px; height: 16px; border-right: 4px solid #fff; border-bottom: 4px solid #fff; }
+.crop-controls { display: flex; gap: 20rpx; padding: 24rpx; padding-bottom: calc(24rpx + env(safe-area-inset-bottom)); }
+.crop-controls button { flex: 1; margin: 0; font-size: 30rpx; }
+.save-button { background: #e66332; color: #fff; }
+.output-canvas { position: fixed; left: -2000px; top: 0; width: 512px; height: 512px; pointer-events: none; }

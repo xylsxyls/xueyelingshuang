@@ -1,0 +1,14 @@
+@import "userAvatar.wxss";
+.profile { display: flex; align-items: flex-start; gap: 16rpx; padding: 18rpx; }
+.profile-main { min-width: 0; flex: 1; }
+.profile-name-row { display: flex; align-items: center; gap: 10rpx; }
+.name { flex-shrink: 1; min-width: 0; font-size: 30rpx; font-weight: 800; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.account-copy { margin-left: auto; flex-shrink: 0; font-size: 17rpx; color: #7b746a; white-space: nowrap; }
+.introduction-row { display: flex; align-items: center; gap: 10rpx; margin-top: 12rpx; min-height: 44rpx; }
+.introduction-text { flex: 1; min-width: 0; font-size: 25rpx; color: #7b746a; }
+.public-stats { display: flex; align-items: center; gap: 18rpx; margin-top: 10rpx; font-size: 24rpx; }
+.asset-section { margin-top: 24rpx; }
+.asset-tabs { display: flex; width: 100%; overflow: hidden; margin-bottom: 18rpx; }
+.asset-tab { flex: 1 1 0%; min-width: 0; height: 70rpx; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; border-radius: 0; background: #ebe5d9; color: #5d564d; font-size: 26rpx; font-weight: 700; border-bottom: 4rpx solid transparent; }
+.asset-tab.active { background: #d9d0bf; color: #18231f; border-bottom-color: #18231f; box-shadow: inset 0 3rpx 7rpx rgba(24,35,31,.12); }
+.asset-tab-pressed { background: #cfc5b4; box-shadow: inset 0 3rpx 9rpx rgba(24,35,31,.2); }

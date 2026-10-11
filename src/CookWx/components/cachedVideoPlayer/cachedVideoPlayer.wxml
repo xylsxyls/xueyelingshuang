@@ -1,0 +1,15 @@
+<view class="cached-player" data-index="{{index}}" catchtap="onTap">
+  <block wx:if="{{localPreview}}">
+    <video
+      wx:for="{{previewSegments}}" wx:key="generation"
+      id="{{item.id}}" class="cached-preview" style="opacity: {{item.ready ? 1 : 0}}" src="{{item.path}}"
+      data-generation="{{item.generation}}" controls="{{false}}" autoplay="{{false}}" loop="{{false}}"
+      show-center-play-btn="{{false}}" enable-progress-gesture="{{false}}" object-fit="cover"
+      muted="{{!item.ready}}"
+      bindloadedmetadata="onPreviewEvent" bindplay="onPreviewEvent" bindtimeupdate="onPreviewEvent"
+      bindwaiting="onPreviewEvent" bindended="onPreviewEvent" binderror="onPreviewEvent"
+    ></video>
+  </block>
+  <canvas wx:else type="webgl" id="videoCanvas" class="cached-canvas"></canvas>
+  <view class="player-status" wx:if="{{status}}">{{status}}</view>
+</view>

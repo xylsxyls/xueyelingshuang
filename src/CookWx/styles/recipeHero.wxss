@@ -1,0 +1,6 @@
+.recipe-hero { position: relative; height: 360rpx; overflow: hidden; background: #eeeae4; }
+.recipe-hero-image { width: 100%; height: 100%; }
+.recipe-hero-gradient { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: linear-gradient(to bottom, rgba(248,245,239,0) 50%, #f8f5ef 100%); pointer-events: none; }
+.recipe-hero-play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 28rpx; }
+.recipe-hero-triangle { width: 0; height: 0; border-top: 28rpx solid transparent; border-bottom: 28rpx solid transparent; border-left: 44rpx solid rgba(255,255,255,.8); filter: drop-shadow(0 1rpx 4rpx rgba(0,0,0,.4)); }
+.recipe-hero-empty { height: 100%; display: flex; align-items: center; justify-content: center; color: #8c857b; }

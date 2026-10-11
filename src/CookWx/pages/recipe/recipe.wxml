@@ -1,10 +1,15 @@
 <view class="page recipe-page" wx:if="{{recipe}}">
-  <view class="hero" style="background: {{recipe.coverColor}}">
+  <view class="recipe-hero" bindtap="openVideo">
+    <image wx:if="{{recipe.thumbnailUrl}}" class="recipe-hero-image" src="{{recipe.thumbnailUrl}}" mode="aspectFill" data-url="{{recipe.thumbnailUrl}}" binderror="onCoverError"></image>
+    <view class="recipe-hero-empty" wx:else>暂无视频封面</view>
+    <view class="recipe-hero-gradient"></view>
+    <view class="recipe-hero-play" wx:if="{{recipe.videoId}}"><view class="recipe-hero-triangle"></view></view>
+  </view>
+  <view class="recipe-heading">
     <view class="hero-title">{{recipe.title}}</view>
     <view class="hero-subtitle">{{recipe.subtitle}}</view>
-    <view class="tag-row">
-      <view wx:for="{{recipe.tags}}" wx:key="*this" class="tag">{{item}}</view>
-    </view>
+    <view class="recipe-author">{{recipe.author}}</view>
+    <view class="tag-row"><view wx:for="{{recipe.tags}}" wx:key="*this" class="tag">{{item}}</view></view>
   </view>
 
   <view class="summary card">
@@ -45,18 +50,17 @@
     </view>
   </view>
 
-  <view class="purchase card" wx:if="{{!recipe.owned}}">
+  <view class="purchase card" wx:if="{{!recipe.accessible}}">
     <view>
       <view class="section-title">购买后解锁详细步骤</view>
-      <view class="muted">购买后会加入菜单，可参与多菜并行排程。</view>
+      <view class="muted">加入菜单不扣费，购买后可参与多菜并行排程。</view>
     </view>
     <button class="primary-btn" bindtap="purchase" loading="{{buying}}" disabled="{{buying}}">{{recipe.purchaseText}}</button>
   </view>
 
   <view class="action-bar">
-    <button class="ghost-btn" bindtap="favorite" loading="{{favoriting}}" disabled="{{favoriting}}">{{recipe.favorite ? '取消收藏' : '收藏'}}</button>
-    <button class="ghost-btn" bindtap="openPersonalization" disabled="{{!recipe.owned}}">个性化</button>
-    <button class="primary-btn" bindtap="addToMenu" disabled="{{!recipe.owned}}">{{recipe.owned ? '加入菜单' : '先购买'}}</button>
+    <button class="ghost-btn" bindtap="openPersonalization" disabled="{{!recipe.accessible}}">个性化</button>
+    <button class="primary-btn" bindtap="addToMenu" loading="{{joining}}" disabled="{{joining || (mealSelection ? selectedForMeal : recipe.inMenu)}}">{{(mealSelection ? selectedForMeal : recipe.inMenu) ? '已加入菜单' : '加入菜单'}}</button>
   </view>
 </view>
 

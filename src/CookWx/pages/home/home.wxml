@@ -21,25 +21,17 @@
           bindload="onPosterLoad"
           binderror="onPosterError"
         ></image>
-        <video
+        <cached-video-player
           wx:if="{{item.videoUrl}}"
-          id="feedVideo{{index}}"
+          id="feedPlayer{{index}}"
           class="feed-video"
           data-index="{{index}}"
-          src="{{item.videoUrl}}"
-          poster="{{item.posterSrc}}"
+          index="{{index}}"
+          video-id="{{item.videoId}}"
+          video-url="{{item.videoUrl}}"
+          active="{{index === currentIndex}}"
           autoplay="{{index === currentIndex && !videoPaused}}"
-          loop="{{true}}"
-          muted="{{false}}"
-          controls="{{false}}"
-          show-center-play-btn="{{false}}"
-          show-play-btn="{{false}}"
-          show-fullscreen-btn="{{false}}"
-          enable-progress-gesture="{{false}}"
-          enable-play-gesture="{{false}}"
-          preload="{{index === currentIndex ? 'auto' : 'metadata'}}"
-          object-fit="cover"
-          bindtap="onVideoTap"
+          bindplayertap="onVideoTap"
           bindplay="onVideoPlay"
           bindpause="onVideoPause"
           bindtimeupdate="onVideoTimeUpdate"
@@ -48,7 +40,9 @@
           bindwaiting="onVideoWaiting"
           bindseekcomplete="onVideoSeekComplete"
           binderror="onVideoError"
-        ></video>
+          bindended="onVideoEnded"
+          bindframe="onVideoFrame"
+        ></cached-video-player>
         <view class="video-shade" wx:if="{{item.videoUrl}}"></view>
         <view class="pause-overlay" wx:if="{{item.videoUrl && index === currentIndex && videoPaused}}">
           <view class="pause-triangle"></view>
@@ -56,7 +50,7 @@
 
         <view class="feed-actions" wx:if="{{item.videoUrl}}">
           <view class="creator-action">
-            <view class="creator-avatar">{{item.authorInitial}}</view>
+            <view class="creator-avatar user-avatar" data-index="{{index}}" bindtap="openAuthor"><image wx:if="{{item.authorAvatarUrl}}" class="creator-avatar-image" src="{{item.authorAvatarUrl}}" mode="aspectFill"></image><text wx:else>{{item.authorInitial}}</text></view>
             <view class="creator-follow" wx:if="{{item.canFollowAuthor}}" data-index="{{index}}" bindtap="followAuthor">+</view>
             <view class="creator-follow followed" wx:elif="{{item.followConfirmVisible}}">
               <view class="check-shape"></view>
@@ -68,7 +62,7 @@
             </view>
             <view class="action-label">{{item.likes || 0}}</view>
           </view>
-          <view class="action-item" bindtap="openComments">
+          <view class="action-item" data-index="{{index}}" bindtap="openComments">
             <view class="action-icon comment">
               <view class="comment-icon-shape">
                 <view class="comment-tail"></view>

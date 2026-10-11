@@ -2,40 +2,48 @@ const api = require('../../utils/api')
 const time = require('../../utils/time')
 const debugLog = require('../../utils/debugLog')
 const tabBar = require('../../utils/tabBar')
+const personalizationSync = require('../../utils/cookPersonalizationSync')
+const config = require('../../utils/config')
+const mediaAssets = require('../../utils/mineMediaAssets')
+const assets = require('../../utils/recipeAssets')
+const actions = require('../../utils/menuActions')
+const users = require('../../utils/userPresentation')
 
 const ASSET_TABS = [
   { key: 'liked', title: '喜欢' },
   { key: 'favorite', title: '收藏' },
   { key: 'created', title: '创作' },
-  { key: 'menu', title: '菜单' },
-  { key: 'personal', title: '个性化' },
-  { key: 'following', title: '关注' },
-  { key: 'friends', title: '好友' }
+  { key: 'menu', title: '菜谱库' },
+  { key: 'personal', title: '个性化' }
 ]
-
-function firstDisplayChar(text, fallback) {
-  const value = text === undefined || text === null ? '' : String(text).trim()
-  if (!value) return fallback || ''
-  return value.charAt(0)
-}
 
 Page({
   data: {
     account: {},
+    profile: {},
+    editingIntroduction: false,
+    introductionDraft: '',
+    savingIntroduction: false,
+    menuActionId: '',
     recipes: [],
-    purchased: [],
     rewarding: false,
+    adSecondsLeft: 0,
     assetTabs: ASSET_TABS,
     activeAssetTab: 'favorite',
     assetGroups: {},
     assetItems: [],
-    stats: [],
+    mediaGrid: true,
+    assetHasMore: {},
+    assetErrors: {},
+    loadingMore: false,
     loading: false
   },
 
   onShow() {
     tabBar.showHome()
     this.pageActive = true
+    this.setData({ menuActionId: '', savingIntroduction: false })
+    personalizationSync.showPending(getApp(), wx, api, { isActive: () => this.pageActive !== false })
     const app = getApp()
     const initialTab = app.globalData.mineInitialTab || ''
     if (initialTab) {
@@ -43,28 +51,39 @@ Page({
       this.setData({ activeAssetTab: initialTab })
     }
     this.load()
+    this.resumeAdCountdown()
+  },
+
+  editAvatar() {
+    if (this.pageActive === false || !getApp().globalData.userId) return
+    wx.navigateTo({ url: '/pages/avatarCrop/avatarCrop' })
   },
 
   onHide() {
     this.pageActive = false
     this.loadRequestId = (this.loadRequestId || 0) + 1
+    this.introductionGeneration = (this.introductionGeneration || 0) + 1
+    this.pauseAdCountdown()
   },
 
   onUnload() {
     this.pageActive = false
     this.loadRequestId = (this.loadRequestId || 0) + 1
+    this.pauseAdCountdown()
   },
 
   load() {
     this.loadRequestId = (this.loadRequestId || 0) + 1
     const requestId = this.loadRequestId
     const isStale = () => requestId !== this.loadRequestId || this.pageActive === false
+    const introductionGeneration = this.introductionGeneration || 0
+    const count = this.mediaPageSize()
+    this.mediaLoading = false
     debugLog.info('MINE', 'LOAD_START', { requestId })
-    this.setData({ loading: true })
-    const likedFeedPromise = api.getFeed({ isStale, mode: 'liked', count: 100 }).catch(() => ({ ok: false, feed: [] }))
-    const favoriteFeedPromise = api.getFeed({ isStale, mode: 'favorite', count: 100 }).catch(() => ({ ok: false, feed: [] }))
-    Promise.all([api.getAccount({ isStale }), api.getRecipes({ isStale }), likedFeedPromise, favoriteFeedPromise])
-      .then(([accountRes, recipeRes, likedFeedRes, favoriteFeedRes]) => {
+    this.setData({ loading: true, loadingMore: false })
+    const feeds = ['liked', 'favorite', 'created'].map(key => api.getFeed({ isStale, mode: mediaAssets.mediaMode(key), count }).catch(() => ({ ok: false, feed: [] })))
+    Promise.all([api.getAccount({ isStale }), api.getRecipes({ isStale, catalog: true }), ...feeds])
+      .then(([accountRes, recipeRes, likedFeedRes, favoriteFeedRes, createdFeedRes]) => {
         if (!accountRes.ok || !recipeRes.ok) throw new Error('load failed')
         if (isStale()) return
         const account = Object.assign({}, accountRes.account || {}, {
@@ -72,17 +91,23 @@ Page({
           friendUsers: accountRes.friendUsers || (accountRes.account || {}).friendUsers || []
         })
         const recipes = recipeRes.recipes || []
-        const purchasedIds = Array.isArray(account.purchasedRecipeIds) ? account.purchasedRecipeIds : []
-        const purchased = recipes.filter((item) => purchasedIds.indexOf(item.id) >= 0)
-        const assetGroups = this.buildAssetGroups(account, recipes, likedFeedRes.feed || [], favoriteFeedRes.feed || [])
+        const assetGroups = this.buildAssetGroups(account, recipes, likedFeedRes.feed || [], favoriteFeedRes.feed || [], createdFeedRes.feed || [])
+        const assetHasMore = {}
+        const assetErrors = {}
+        ;[likedFeedRes, favoriteFeedRes, createdFeedRes].forEach((res, index) => {
+          const key = ['liked', 'favorite', 'created'][index]
+          assetHasMore[key] = res.ok && (res.feed || []).length >= count
+          assetErrors[key] = !res.ok
+        })
         this.setData({
           account,
+          profile: introductionGeneration === (this.introductionGeneration || 0) ? users.fromServer(accountRes.profile, account) : this.data.profile,
           recipes,
-          purchased,
-          stats: this.buildStats(account, assetGroups),
           assetGroups,
+          assetHasMore,
+          assetErrors,
           loading: false
-        }, () => this.refreshAssetItems())
+        }, () => { if (!isStale()) this.refreshAssetItems() })
         debugLog.info('MINE', 'LOAD_OK', {
           requestId,
           recipeCount: recipes.length,
@@ -107,83 +132,19 @@ Page({
       })
   },
 
-  buildStats(account, groups) {
-    return [
-      { label: '收藏', value: (groups.favorite || []).length },
-      { label: '关注', value: (groups.following || []).length },
-      { label: '好友', value: (groups.friends || []).length },
-      { label: '已购', value: Array.isArray(account.purchasedRecipeIds) ? account.purchasedRecipeIds.length : 0 }
-    ]
-  },
-
-  buildAssetGroups(account, recipes, likedFeed, favoriteFeed) {
-    const favoriteIds = Array.isArray(account.favoriteRecipeIds) ? account.favoriteRecipeIds : []
-    const customIds = Array.isArray(account.customRecipeIds) ? account.customRecipeIds : []
-    const liked = (likedFeed || []).map((item) => this.feedToAsset(item, '已点赞'))
-    const favoriteVideos = (favoriteFeed || []).map((item) => this.feedToAsset(item, '已收藏'))
-    const favoriteRecipes = recipes.filter((item) => favoriteIds.indexOf(item.id) >= 0 || !!item.favorite).map((item) => this.recipeToAsset(item, '已收藏'))
-    const favorite = favoriteVideos.concat(favoriteRecipes)
-    const created = recipes.filter((item) => customIds.indexOf(item.id) >= 0 || item.authorUserId === account.userId).map((item) => this.recipeToAsset(item, '我的创作'))
-    const menu = recipes.filter((item) => !!item.owned).map((item) => this.recipeToAsset(item, item.defaultOwned ? '免费菜谱' : '已拥有'))
+  buildAssetGroups(account, recipes, likedFeed, favoriteFeed, createdFeed) {
+    const liked = mediaAssets.toMediaAssets(likedFeed, '已点赞')
+    const favorite = mediaAssets.toMediaAssets(favoriteFeed, '已收藏')
+    const created = mediaAssets.toMediaAssets(createdFeed, '我的创作', account.userId || '')
+    const menu = recipes.filter(item => item.inMenu && !(assets.normalize(item).free && (item.systemRecipe || (account.userId && item.authorUserId === account.userId))))
+      .sort((a, b) => Number(a.menuPosition) - Number(b.menuPosition))
+      .map(item => this.recipeToAsset(item, item.purchased ? '已拥有' : (assets.normalize(item).free ? '免费菜谱' : '')))
     const personal = recipes.filter((item) => !!item.personalizationApplied).map((item) => this.recipeToAsset(item, '已个性化'))
-    const following = this.normalizeContactAssets(account.followingUsers || [], account.followingUserIds || [], false)
-    const friends = this.normalizeContactAssets(account.friendUsers || [], [], true)
-    return { liked, favorite, created, menu, personal, following, friends }
-  },
-
-  normalizeContactAssets(users, fallbackIds, friendOnly) {
-    const result = []
-    const used = {}
-    const list = Array.isArray(users) ? users : []
-    for (let i = 0; i < list.length; i += 1) {
-      const item = list[i] || {}
-      const userId = item.userId || ''
-      if (!userId || used[userId]) continue
-      if (friendOnly && !item.friend) continue
-      used[userId] = true
-      result.push(this.contactToAsset(item, item.friend ? '好友' : '已关注'))
-    }
-    const ids = Array.isArray(fallbackIds) ? fallbackIds : []
-    for (let i = 0; i < ids.length; i += 1) {
-      const userId = ids[i] || ''
-      if (!userId || used[userId]) continue
-      used[userId] = true
-      result.push(this.contactToAsset({ userId, nickname: userId, following: true, friend: false }, '已关注'))
-    }
-    return result
-  },
-
-  contactToAsset(contact, badge) {
-    const name = contact.nickname || contact.account || contact.userId || '厨友'
-    const fans = Number(contact.followerCount || 0)
-    const following = Number(contact.followingCount || 0)
-    return {
-      type: 'user',
-      id: `user_${contact.userId || name}`,
-      userId: contact.userId || '',
-      title: name,
-      subtitle: `${contact.friend ? '互相关注' : '已关注'} · 粉丝 ${fans} · 关注 ${following}`,
-      coverText: firstDisplayChar(name, '厨'),
-      coverColor: contact.friend ? '#214c3a' : '#18231f',
-      badge: badge || ''
-    }
-  },
-
-  feedToAsset(item, badge) {
-    const recipeIds = Array.isArray(item.recipeIds) ? item.recipeIds.filter((id) => !!id) : []
-    const recipeId = recipeIds.length ? recipeIds[0] : ''
-    return {
-      type: 'feed',
-      id: `feed_${item.id || recipeId}`,
-      recipeId,
-      title: item.title || '做饭动态',
-      subtitle: `${item.author || '厨友'} · ${Number(item.likes || 0)}赞 · ${Number(item.comments || 0)}评论`,
-      coverColor: item.coverColor || '#ebe5d9',
-      badge: badge || '已点赞'
-    }
+    return { liked, favorite, created, menu, personal }
   },
 
   recipeToAsset(recipe, badge) {
+    const normalized = assets.normalize(recipe)
     const estimatedSeconds = Number(recipe.estimatedSeconds || 0)
     const activeSeconds = Number(recipe.activeSeconds || 0)
     const totalText = estimatedSeconds > 0 ? time.formatDurationText(estimatedSeconds) : `${recipe.estimatedMinutes || 0}分钟`
@@ -194,7 +155,13 @@ Page({
       recipeId: recipe.id || '',
       title: recipe.title || '未命名菜谱',
       subtitle: `${recipe.category || '未分类'} · ${totalText} · 动手 ${activeText}`,
-      coverColor: recipe.coverColor || '#ebe5d9',
+      thumbnailUrl: normalized.thumbnailUrl,
+      posterUrl: normalized.posterUrl,
+      canBuy: normalized.canBuy,
+      canRemove: normalized.canRemove,
+      accessible: normalized.accessible,
+      priceAmount: normalized.priceAmount,
+      priceType: normalized.priceType,
       badge: badge || '',
       personalizationSummary: recipe.personalizationSummary || ''
     }
@@ -202,16 +169,67 @@ Page({
 
   refreshAssetItems() {
     const groups = this.data.assetGroups || {}
-    const tabs = ASSET_TABS.map((tab) => Object.assign({}, tab, {
-      count: (groups[tab.key] || []).length
-    }))
+    const tabs = ASSET_TABS
     const validKeys = tabs.map((item) => item.key)
     const activeAssetTab = validKeys.indexOf(this.data.activeAssetTab) >= 0 ? this.data.activeAssetTab : tabs[0].key
     this.setData({
       assetTabs: tabs,
       activeAssetTab,
+      mediaGrid: !!mediaAssets.mediaMode(activeAssetTab),
       assetItems: groups[activeAssetTab] || []
     })
+  },
+
+  editIntroduction() {
+    if (this.data.savingIntroduction) return
+    this.setData({ editingIntroduction: true, introductionDraft: this.data.profile.introduction || '开心做大厨' })
+  },
+  onIntroductionInput(event) { this.setData({ introductionDraft: Array.from(String(event.detail.value || '')).slice(0, 20).join('') }) },
+  cancelIntroduction() { if (!this.data.savingIntroduction) this.setData({ editingIntroduction: false }) },
+  async saveIntroduction() {
+    if (this.data.savingIntroduction || !this.pageActive) return
+    const introduction = String(this.data.introductionDraft || '').trim()
+    if (Array.from(introduction).length > 20) return wx.showToast({ title: '自我介绍最多20个字', icon: 'none' })
+    const generation = this.introductionGeneration = (this.introductionGeneration || 0) + 1
+    const isActive = () => this.pageActive && generation === (this.introductionGeneration || 0)
+    this.setData({ savingIntroduction: true })
+    try {
+      const result = actions.requireOk(await api.updateIntroduction(introduction))
+      if (isActive()) this.setData({ profile: users.fromServer(Object.assign({}, this.data.profile, result.profile || {}, { introduction }), this.data.account), editingIntroduction: false })
+    } catch (error) { if (isActive()) wx.showToast({ title: error.message || '介绍保存失败', icon: 'none' }) }
+    finally { if (isActive()) this.setData({ savingIntroduction: false }) }
+  },
+
+  openFans() { wx.navigateTo({ url: '/pages/fans/fans' }) },
+
+  async buyAsset(event) {
+    const item = this.data.assetItems[Number(event.currentTarget.dataset.index)]
+    if (!item || this.data.menuActionId) return
+    this.setData({ menuActionId: item.id })
+    try { if (await actions.purchase(item, () => this.pageActive)) { if (this.pageActive) this.load() } }
+    catch (err) { if (this.pageActive) wx.showToast({ title: err.message || '购买失败', icon: 'none' }) }
+    finally { if (this.pageActive) this.setData({ menuActionId: '' }) }
+  },
+
+  async removeMenuAsset(event) {
+    const item = this.data.assetItems[Number(event.currentTarget.dataset.index)]
+    if (!item || this.data.menuActionId) return
+    this.setData({ menuActionId: item.id })
+    try {
+      if (await actions.remove(item, () => this.pageActive)) {
+        const app = getApp()
+        app.globalData.selectedRecipeIds = (app.globalData.selectedRecipeIds || []).filter(id => id !== item.recipeId)
+        if (this.pageActive) this.load()
+      }
+    } catch (err) { if (this.pageActive) wx.showToast({ title: err.message || '移出失败', icon: 'none' }) }
+    finally { if (this.pageActive) this.setData({ menuActionId: '' }) }
+  },
+
+  onRecipeCoverError(event) {
+    const { id, url } = event.currentTarget.dataset
+    const groups = Object.assign({}, this.data.assetGroups)
+    ;['menu', 'personal'].forEach(key => { groups[key] = (groups[key] || []).map(item => item.id === id ? assets.thumbnailFallback(item, url) : item) })
+    this.setData({ assetGroups: groups }, () => this.refreshAssetItems())
   },
 
   switchAssetTab(e) {
@@ -219,14 +237,49 @@ Page({
     this.setData({ activeAssetTab: key }, () => this.refreshAssetItems())
   },
 
-  recharge(e) {
-    const coins = Number(e.currentTarget.dataset.coins)
-    api.recharge(coins)
-      .then((res) => {
-        wx.showToast({ title: res.message || '充值成功', icon: res.ok ? 'success' : 'none' })
-        this.load()
-      })
-      .catch(() => wx.showToast({ title: '充值失败', icon: 'none' }))
+  mediaPageSize() {
+    return Math.max(3, Math.min(60, Math.floor(Number(config.MINE_MEDIA_PAGE_SIZE) || 24)))
+  },
+
+  onReachBottom() { this.loadMoreAssets(false) },
+
+  retryAssetTab() { this.loadMoreAssets(true) },
+
+  async loadMoreAssets(replace) {
+    const key = this.data.activeAssetTab
+    const mode = mediaAssets.mediaMode(key)
+    if (!mode || this.data.loading || this.mediaLoading || (!replace && !this.data.assetHasMore[key])) return
+    const requestId = this.loadRequestId
+    const isStale = () => requestId !== this.loadRequestId || this.pageActive === false
+    const previous = replace ? [] : (this.data.assetGroups[key] || [])
+    this.mediaLoading = true
+    this.setData({ loadingMore: true })
+    try {
+      const count = this.mediaPageSize()
+      const res = await api.getFeed({ mode, count, excludeIds: previous.map(item => item.videoId), isStale })
+      if (isStale()) return
+      if (!res.ok) throw new Error(res.message || '分区加载失败')
+      const incoming = mediaAssets.toMediaAssets(res.feed, '', key === 'created' ? this.data.account.userId || '' : undefined)
+      const items = mediaAssets.appendMediaAssets(previous, incoming)
+      const groups = Object.assign({}, this.data.assetGroups, { [key]: items })
+      const hasMore = Object.assign({}, this.data.assetHasMore, { [key]: (res.feed || []).length >= count && items.length > previous.length })
+      this.setData({
+        assetGroups: groups,
+        assetHasMore: hasMore,
+        [`assetErrors.${key}`]: false
+      }, () => { if (!isStale()) this.refreshAssetItems() })
+    } catch (error) {
+      if (!isStale() && !api.isStaleError(error)) this.setData({ [`assetErrors.${key}`]: true })
+    } finally {
+      if (!isStale()) { this.mediaLoading = false; this.setData({ loadingMore: false }) }
+    }
+  },
+
+  onAssetCoverError(event) {
+    const { index, id, tab, url } = event.currentTarget.dataset
+    const item = this.data.assetItems[index]
+    if (this.data.activeAssetTab !== tab || !item || item.id !== id || item.posterUrl !== url || item.coverFailed) return
+    this.setData({ [`assetItems[${index}].coverFailed`]: true, [`assetGroups.${tab}[${index}].coverFailed`]: true })
   },
 
   checkin() {
@@ -240,21 +293,48 @@ Page({
 
   watchAd() {
     if (this.data.rewarding) return
-    this.setData({ rewarding: true })
     api.startAdReward()
       .then((res) => {
         if (!res.ok) throw new Error(res.message)
-        return api.finishAdReward(res.adToken, res.requiredSeconds || 31)
-      })
-      .then((res) => {
-        wx.showToast({ title: res.message || '奖励到账', icon: res.ok ? 'success' : 'none' })
-        this.setData({ rewarding: false })
-        this.load()
+        this.adToken = res.adToken
+        this.adRemainingSeconds = Math.max(1, Number(res.requiredSeconds) || 1)
+        this.setData({ rewarding: true, adSecondsLeft: this.adRemainingSeconds })
+        this.resumeAdCountdown()
       })
       .catch((err) => {
-        this.setData({ rewarding: false })
         wx.showToast({ title: err.message || '奖励失败', icon: 'none' })
       })
+  },
+
+  resumeAdCountdown() {
+    if (!this.pageActive || !this.adToken || this._adCountdownTimer) return
+    this._adCountdownTimer = setTimeout(() => {
+      this._adCountdownTimer = null
+      this.adRemainingSeconds = Math.max(0, (this.adRemainingSeconds || 0) - 1)
+      this.setData({ adSecondsLeft: this.adRemainingSeconds })
+      if (this.adRemainingSeconds > 0) {
+        this.resumeAdCountdown()
+        return
+      }
+      const adToken = this.adToken
+      this.adToken = ''
+      api.finishAdReward(adToken)
+        .then((res) => {
+          wx.showToast({ title: res.message || '奖励到账', icon: res.ok ? 'success' : 'none' })
+          this.setData({ rewarding: false, adSecondsLeft: 0 })
+          this.load()
+        })
+        .catch((err) => {
+          this.setData({ rewarding: false, adSecondsLeft: 0 })
+          wx.showToast({ title: err.message || '奖励失败', icon: 'none' })
+        })
+    }, 1000)
+  },
+
+  pauseAdCountdown() {
+    if (!this._adCountdownTimer) return
+    clearTimeout(this._adCountdownTimer)
+    this._adCountdownTimer = null
   },
 
   logout() {
@@ -275,11 +355,14 @@ Page({
   openAsset(e) {
     const index = Number(e.currentTarget.dataset.index)
     const item = this.data.assetItems[index] || {}
-    if (item.type === 'user') {
-      const app = getApp()
-      app.globalData.messageInitialTab = this.data.activeAssetTab === 'friends' ? 'friends' : 'following'
-      app.globalData.messageTargetUserId = item.userId || ''
-      wx.switchTab({ url: '/pages/messages/messages' })
+    if (item.type === 'feed') {
+      if (!item.videoId || !item.videoUrl) {
+        wx.showToast({ title: '视频暂不可播放', icon: 'none' })
+        return
+      }
+      wx.navigateTo({
+        url: `/pages/videoPlayer/videoPlayer?videoId=${encodeURIComponent(item.videoId)}&src=${encodeURIComponent(item.videoUrl)}&poster=${encodeURIComponent(item.posterUrl || '')}&title=${encodeURIComponent(item.title || '')}`
+      })
       return
     }
     if (!item.recipeId) {

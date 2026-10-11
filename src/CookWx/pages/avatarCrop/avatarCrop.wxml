@@ -1,0 +1,24 @@
+<view class="avatar-page">
+  <view class="crop-help">移动正方形选框，拖动右下角或双指缩放</view>
+  <view class="crop-stage">
+    <canvas id="avatar-preview" type="2d" class="preview-canvas" />
+    <view wx:if="!ready" class="crop-placeholder">{{loading ? '正在处理图片…' : '请选择相册照片或拍照'}}</view>
+    <block wx:if="ready">
+      <view class="crop-mask" style="left:0;top:0;width:100%;height:{{crop.y}}px" />
+      <view class="crop-mask" style="left:0;top:{{crop.y}}px;width:{{crop.x}}px;height:{{crop.size}}px" />
+      <view class="crop-mask" style="left:{{crop.x + crop.size}}px;top:{{crop.y}}px;right:0;height:{{crop.size}}px" />
+      <view class="crop-mask" style="left:0;top:{{crop.y + crop.size}}px;width:100%;bottom:0" />
+      <view class="crop-box" style="left:{{crop.x}}px;top:{{crop.y}}px;width:{{crop.size}}px;height:{{crop.size}}px"
+        data-mode="move" catchtouchstart="touchStart" catchtouchmove="touchMove" catchtouchend="touchEnd" catchtouchcancel="touchEnd">
+        <view class="crop-grid vertical-one" /><view class="crop-grid vertical-two" />
+        <view class="crop-grid horizontal-one" /><view class="crop-grid horizontal-two" />
+        <view class="crop-handle" data-mode="resize" catchtouchstart="touchStart" catchtouchmove="touchMove" catchtouchend="touchEnd" catchtouchcancel="touchEnd" />
+      </view>
+    </block>
+  </view>
+  <view class="crop-controls">
+    <button class="choose-button" bindtap="choose" disabled="{{loading || saving}}">选择图片</button>
+    <button class="save-button" bindtap="save" loading="{{saving}}" disabled="{{!ready || loading || saving}}">保存头像</button>
+  </view>
+  <canvas id="avatar-output" type="2d" class="output-canvas" />
+</view>

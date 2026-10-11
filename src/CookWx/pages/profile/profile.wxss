@@ -1,0 +1,7 @@
+@import "../../styles/userProfile.wxss";
+@import "../../styles/mediaGrid.wxss";
+.public-actions { padding: 0 18rpx 18rpx; }
+.follow-button { width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; height: 76rpx; padding: 0; background: #b45232; color: #fff; }
+.follow-button.followed { background: #eeeae4; color: #665f56; }
+.message-button { width: 100%; margin: 12rpx 0 0; display: flex; align-items: center; justify-content: center; height: 60rpx; padding: 0; background: #ebe5d9; font-size: 26rpx; }
+.empty { padding: 28rpx; color: #7b746a; }

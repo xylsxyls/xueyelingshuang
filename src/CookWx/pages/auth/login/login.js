@@ -34,6 +34,10 @@ Page({
       wx.showToast({ title: '请输入账号和密码', icon: 'none' })
       return
     }
+    if (this.data.mode === 'register' && password.length < 8) {
+      wx.showToast({ title: '注册密码至少需要8个字符', icon: 'none' })
+      return
+    }
     this.setData({ submitting: true })
     const action = this.data.mode === 'login'
       ? api.login(account, password)

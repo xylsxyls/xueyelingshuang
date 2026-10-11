@@ -1,0 +1,30 @@
+<view class="page task-editor">
+  <view class="card">
+    <view class="field-label">插入位置</view>
+    <view wx:if="{{insertionSteps.length}}"><picker range="{{insertionSteps}}" range-key="label" value="{{insertionIndex}}" bindchange="onInsertionStepChange"><view class="picker-value">{{insertionSteps[insertionIndex].label}}</view></picker><picker range="{{insertionPositions}}" value="{{insertionPositionIndex}}" bindchange="onInsertionPositionChange"><view class="picker-value">{{insertionPositions[insertionPositionIndex]}}</view></picker></view>
+    <view class="muted" wx:else>添加为第一个步骤</view>
+    <view class="field-label">步骤名称</view>
+    <input class="field-input" placeholder="例如：检查米饭熟度" value="{{title}}" data-field="title" bindinput="onInput" maxlength="8" />
+    <view class="field-label">操作说明</view>
+    <textarea class="field-textarea" placeholder="写清楚要做什么" value="{{detail}}" data-field="detail" bindinput="onInput" maxlength="500" />
+    <view class="field-label">步骤类型</view>
+    <picker range="{{taskModes}}" value="{{taskModeIndex}}" bindchange="onTaskModeChange">
+      <view class="picker-value">{{taskModes[taskModeIndex]}}</view>
+    </picker>
+    <view class="field-label">安全级别</view>
+    <picker range="{{safetyLevels}}" value="{{safetyIndex}}" bindchange="onSafetyChange">
+      <view class="picker-value">{{safetyLevels[safetyIndex]}}</view>
+    </picker>
+    <view class="field-label" wx:if="{{taskModeIndex === 1}}">等待时是否可以离开厨房</view>
+    <picker wx:if="{{taskModeIndex === 1}}" range="{{waitModes}}" value="{{waitModeIndex}}" bindchange="onWaitModeChange">
+      <view class="picker-value">{{waitModes[waitModeIndex]}}</view>
+    </picker>
+    <view class="field-label">预计用时</view>
+    <view class="duration-row">
+      <view class="time-field"><input type="number" value="{{hours}}" data-field="hours" bindinput="onDurationInput" /><text>时</text></view>
+      <view class="time-field"><input type="number" value="{{minutes}}" data-field="minutes" bindinput="onDurationInput" /><text>分</text></view>
+      <view class="time-field"><input type="number" value="{{seconds}}" data-field="seconds" bindinput="onDurationInput" /><text>秒</text></view>
+    </view>
+  </view>
+  <button class="primary-btn save-button" bindtap="save">添加到流程</button>
+</view>

@@ -1,155 +1,79 @@
 const api = require('../../utils/api')
 const time = require('../../utils/time')
+const assets = require('../../utils/recipeAssets')
+const actions = require('../../utils/menuActions')
+const selection = require('../../utils/mealSelection')
 
 Page({
-  data: {
-    recipeId: '',
-    recipe: null,
-    loading: false,
-    buying: false,
-    favoriting: false,
-    error: ''
-  },
-
-  onLoad(options) {
-    this.setData({ recipeId: options.id || '' })
-  },
-
-  onShow() {
-    this.loadRecipe()
-  },
-
+  data: { recipeId: '', recipe: null, mealSelection: false, selectedForMeal: false, loading: false, buying: false, joining: false, error: '' },
+  onLoad(options) { this.setData({ recipeId: options.id || '', mealSelection: options.selection === 'meal' }) },
+  onShow() { this.pageActive = true; this.setData({ buying: false, joining: false }); this.refreshMealSelection(); this.loadRecipe() },
+  onHide() { this.invalidate() },
+  onUnload() { this.invalidate() },
+  invalidate() { this.pageActive = false; this.loadRequestId = (this.loadRequestId || 0) + 1 },
+  refreshMealSelection() { this.setData({ selectedForMeal: this.data.mealSelection && selection.has(getApp(), this.data.recipeId) }) },
   loadRecipe() {
-    if (!this.data.recipeId) {
-      this.setData({ recipe: null, error: '菜谱不存在' })
-      return
-    }
-    this.loadRequestId = (this.loadRequestId || 0) + 1
-    const requestId = this.loadRequestId
+    if (!this.data.recipeId) return this.setData({ recipe: null, error: '菜谱不存在' })
+    const requestId = this.loadRequestId = (this.loadRequestId || 0) + 1
+    const isStale = () => !this.pageActive || requestId !== this.loadRequestId
     this.setData({ loading: true, error: '' })
-    api.getRecipeDetail(this.data.recipeId)
-      .then((res) => {
-        if (!res.ok) throw new Error(res.message)
-        if (requestId !== this.loadRequestId) return
-        const recipe = res.recipe
-        this.setData({
-          recipe: recipe ? this.normalizeRecipe(recipe) : null,
-          loading: false,
-          error: recipe ? '' : '菜谱不存在'
-        })
-      })
-      .catch(() => {
-        if (requestId !== this.loadRequestId) return
-        this.setData({ loading: false, error: '菜谱加载失败' })
-        wx.showToast({ title: '菜谱加载失败', icon: 'none' })
-      })
+    api.getRecipeDetail(this.data.recipeId, { isStale }).then(res => {
+      actions.requireOk(res)
+      if (!isStale()) {
+        this.setData({ recipe: this.normalizeRecipe(res.recipe), loading: false })
+        this.refreshMealSelection()
+      }
+    }).catch(err => { if (!isStale()) this.setData({ loading: false, error: err.message || '菜谱加载失败' }) })
   },
-
   normalizeRecipe(recipe) {
-    const priceCoins = Number(recipe.priceCoins || 0)
-    const priceAmount = Number(recipe.priceAmount || priceCoins || 0)
-    const priceType = recipe.priceType || (priceCoins > 0 ? 'coin' : 'free')
-    const owned = !!recipe.owned
-    const accessible = owned || !!recipe.systemRecipe || priceType === 'free' || priceAmount <= 0
-    let priceLabel = '免费'
-    let priceText = '免费'
-    if (priceType === 'yuanbao' && priceAmount > 0) {
-      priceLabel = '元宝'
-      priceText = `${priceAmount} 元宝`
-    } else if (priceType === 'coin' && priceAmount > 0) {
-      priceLabel = '金币'
-      priceText = `${priceAmount} 金币`
-    }
-    const tasks = Array.isArray(recipe.tasks) ? recipe.tasks.map((task) => {
-      const detail = (task.detail || '').trim()
-      const expectedText = `预计用时${time.formatDurationText(task.durationSeconds)}。`
-      const detailText = detail.indexOf('预计用时') >= 0 ? detail : `${detail}${detail && !/[。！？!?]$/.test(detail) ? '。' : ''}${expectedText}`
-      return Object.assign({}, task, {
-        durationText: time.formatDurationText(task.durationSeconds),
-        detailText
-      })
-    }) : []
-    return Object.assign({}, recipe, {
-      ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
-      tools: Array.isArray(recipe.tools) ? recipe.tools : [],
-      tasks,
-      tags: Array.isArray(recipe.tags) ? recipe.tags : [],
-      priceCoins,
-      priceAmount,
-      priceType,
-      priceLabel,
-      priceText,
-      purchaseText: priceAmount > 0 ? `加入 ${priceText}` : '免费加入',
-      owned,
-      accessible,
-      favorite: !!recipe.favorite
+    const item = assets.normalize(recipe)
+    return Object.assign(item, {
+      ingredients: item.ingredients || [], tools: item.tools || [], tags: item.tags || [],
+      priceLabel: item.free ? '免费' : (item.priceType === 'yuanbao' ? '元宝' : '金币'),
+      purchaseText: `购买 ${item.priceText}`,
+      tasks: (item.tasks || []).map(task => Object.assign({}, task, { durationText: time.formatDurationText(task.durationSeconds), detailText: task.detail || '' }))
     })
   },
-
-  purchase() {
+  async purchase() {
+    if (this.data.buying) return
+    this.setData({ buying: true })
+    try {
+      const result = await actions.purchase(this.data.recipe, () => this.pageActive)
+      if (result && this.pageActive) this.loadRecipe()
+    } catch (err) { if (this.pageActive) wx.showToast({ title: err.message || '购买失败', icon: 'none' }) }
+    finally { if (this.pageActive) this.setData({ buying: false }) }
+  },
+  async addToMenu() {
     const recipe = this.data.recipe
-    if (!recipe || this.data.buying) return
-    if (recipe.owned) {
-      wx.showToast({ title: '已经拥有菜谱', icon: 'none' })
+    if (!recipe || !this.pageActive || this.data.joining) return
+    if (this.data.mealSelection) {
+      if (!recipe.accessible) return wx.showToast({ title: '请先购买菜谱', icon: 'none' })
+      const added = selection.add(getApp(), recipe)
+      this.refreshMealSelection()
+      if (added) wx.showToast({ title: '已加入本次做菜列表', icon: 'success' })
       return
     }
-    this.setData({ buying: true })
-    api.joinRecipe(recipe.id)
-      .then((res) => {
-        wx.showToast({ title: res.message || (res.ok ? '购买成功' : '购买失败'), icon: res.ok ? 'success' : 'none' })
-        this.setData({
-          buying: false,
-          recipe: res.recipe ? this.normalizeRecipe(res.recipe) : recipe
-        })
-        if (!res.recipe) this.loadRecipe()
-      })
-      .catch((err) => {
-        this.setData({ buying: false })
-        wx.showToast({ title: err.message || '购买失败', icon: 'none' })
-      })
+    if (recipe.inMenu) return
+    const requestId = this.loadRequestId = (this.loadRequestId || 0) + 1
+    const isActive = () => this.pageActive && requestId === this.loadRequestId && this.data.recipe && this.data.recipe.id === recipe.id
+    this.setData({ joining: true, loading: false })
+    try {
+      await actions.join(recipe.id)
+      if (isActive()) { this.setData({ 'recipe.inMenu': true }); wx.showToast({ title: '已加入菜单', icon: 'success' }) }
+    } catch (err) { if (isActive()) wx.showToast({ title: err.message || '加入失败', icon: 'none' }) }
+    finally { if (isActive()) this.setData({ joining: false }) }
   },
-
-  favorite() {
-    const recipe = this.data.recipe
-    if (!recipe || this.data.favoriting) return
-    this.setData({ favoriting: true })
-    api.toggleFavorite(recipe.id)
-      .then((res) => {
-        if (!res.ok) throw new Error(res.message)
-        this.setData({
-          favoriting: false,
-          recipe: res.recipe ? this.normalizeRecipe(res.recipe) : Object.assign({}, recipe, { favorite: !!res.favorite })
-        })
-      })
-      .catch((err) => {
-        this.setData({ favoriting: false })
-        wx.showToast({ title: err.message || '收藏失败', icon: 'none' })
-      })
-  },
-
   openPersonalization() {
     const recipe = this.data.recipe
-    if (!recipe || !recipe.owned) {
-      wx.showToast({ title: '请先拥有菜谱', icon: 'none' })
-      return
-    }
-    wx.navigateTo({ url: `/pages/personalization/personalization?id=${recipe.id}` })
+    if (recipe && recipe.accessible) wx.navigateTo({ url: `/pages/personalization/personalization?id=${encodeURIComponent(recipe.id)}` })
   },
-
-  addToMenu() {
+  openVideo() {
     const recipe = this.data.recipe
-    if (!recipe || !recipe.owned) {
-      wx.showToast({ title: '请先购买菜谱', icon: 'none' })
-      return
-    }
-    const app = getApp()
-    const ids = app.globalData.selectedRecipeIds || []
-    if (ids.indexOf(recipe.id) < 0) {
-      ids.push(recipe.id)
-      app.globalData.selectedRecipeIds = ids
-      wx.showToast({ title: '已加入菜单', icon: 'success' })
-      return
-    }
-    wx.showToast({ title: '已在菜单中', icon: 'none' })
+    if (recipe && recipe.videoId) wx.navigateTo({ url: assets.videoPage(recipe) })
+    else wx.showToast({ title: '暂未发布原视频', icon: 'none' })
+  },
+  onCoverError(event) {
+    const recipe = this.data.recipe
+    if (recipe) this.setData({ recipe: assets.thumbnailFallback(recipe, event.currentTarget.dataset.url) })
   }
 })

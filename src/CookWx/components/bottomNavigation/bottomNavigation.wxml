@@ -1,0 +1,1 @@
+<view class="bottom-navigation"><view class="navigation-item" wx:for="{{tabs}}" wx:key="path" data-index="{{index}}" bindtap="switchTab" hover-class="navigation-pressed">{{item.label}}</view></view>

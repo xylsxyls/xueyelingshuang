@@ -13,11 +13,13 @@ Page({
     timeBlocksLoading: false,
     startButtonText: '开始排程',
     voiceGender: 'female',
-    voiceLabel: '女声'
+    voiceLabel: '女声',
+    syncPersonalization: false
   },
 
   onLoad() {
     this.pageActive = true
+    this.startRequestId = this.startRequestId || 0
     const app = getApp()
     debugLog.info('PLAN', 'LOAD', { selectedCount: (app.globalData.selectedRecipeIds || []).length })
     this.setData({
@@ -31,16 +33,10 @@ Page({
   onUnload() {
     this.pageActive = false
     this.timeBlocksRequestId = (this.timeBlocksRequestId || 0) + 1
+    this.startRequestId = (this.startRequestId || 0) + 1
   },
 
   onShow() {
-    const app = getApp()
-    if (app.globalData.exitCookFlowToMenu) {
-      app.globalData.exitCookFlowToMenu = false
-      debugLog.info('PLAN', 'COOK_EXIT_REDIRECT_MENU')
-      wx.switchTab({ url: '/pages/menu/menu' })
-      return
-    }
     const gender = voice.getGender()
     this.setData({
       voiceGender: gender,
@@ -176,9 +172,14 @@ Page({
       return
     }
     debugLog.info('PLAN', 'START_REQUEST', { recipeIds: ids })
+    this.startRequestId = (this.startRequestId || 0) + 1
+    const requestId = this.startRequestId
+    const isStartStale = () => !this.pageActive || requestId !== this.startRequestId
+    const syncPersonalization = this.data.syncPersonalization
     this.setData({ starting: true, startButtonText: '生成排程...' })
     api.startPlan(ids)
       .then((res) => {
+        if (isStartStale()) return null
         if (!res.ok) throw new Error(res.message)
         this.setData({ startButtonText: '准备语音...' })
         const cookVoiceGender = voice.getGender()
@@ -208,22 +209,26 @@ Page({
             concurrency
           }))
           .then(() => {
+            if (isStartStale()) return
             debugLog.info('PLAN', 'VOICE_REQUIRED_OK', {
               requiredCount: requiredTexts.length,
               backgroundCount: backgroundTexts.length,
               gender: cookVoiceGender
             })
             app.globalData.lastPlan = res
+            res.cookOptions = { syncPersonalization }
             this.setData({ starting: false, startButtonText: '开始排程' })
             debugLog.info('PLAN', 'NAVIGATE_COOK', {
               recipeIds: ids,
               totalSeconds: res.summary && res.summary.totalSeconds,
               activeSeconds: res.summary && res.summary.activeSeconds
             })
-            wx.navigateTo({ url: '/pages/cook/cook' })
+            // 计时页替换计划页，系统返回直接落到菜单，不在 onShow 内嵌套第二次导航。
+            wx.redirectTo({ url: '/pages/cook/cook' })
           })
       })
       .catch((err) => {
+        if (api.isStaleError(err) || isStartStale()) return
         debugLog.error('PLAN', 'START_FAIL', { recipeIds: ids, error: err.message || '开始失败' })
         this.setData({ starting: false, startButtonText: '开始排程' })
         wx.showToast({ title: err.message || '开始失败', icon: 'none' })
@@ -237,6 +242,10 @@ Page({
       voiceGender: gender,
       voiceLabel: voice.genderLabel(gender)
     })
+  },
+
+  choosePersonalizationSync(e) {
+    this.setData({ syncPersonalization: !!e.detail.value })
   },
 
   backMenu() {

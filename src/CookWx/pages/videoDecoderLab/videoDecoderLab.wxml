@@ -1,0 +1,26 @@
+<view class="lab-page">
+  <view class="intro">
+    <view class="title">逐帧播放器验证</view>
+    <view class="description">本页使用 VideoDecoder + Canvas + MediaAudioPlayer，不创建 video 组件。先验证微信端自绘解码链路。</view>
+  </view>
+
+  <view class="canvas-shell">
+    <canvas id="decoderCanvas" type="2d" class="decoder-canvas"></canvas>
+    <view wx:if="{{!videoPath}}" class="empty-hint">选择一个本地视频开始验证</view>
+  </view>
+
+  <view class="status">{{status}}</view>
+  <view class="controls">
+    <button size="mini" bindtap="chooseVideo">选择视频</button>
+    <button size="mini" type="primary" disabled="{{!videoPath || running}}" bindtap="startDecoder">开始解码</button>
+    <button size="mini" disabled="{{!running}}" bindtap="stopDecoder">停止</button>
+  </view>
+
+  <view wx:if="{{durationSeconds > 0}}" class="seek-row">
+    <text>{{currentSeconds}}s</text>
+    <slider min="0" max="{{durationSeconds}}" value="{{currentSeconds}}" step="1" bindchange="onSeek" />
+    <text>{{durationSeconds}}s</text>
+  </view>
+
+  <view class="detail">{{detail}}</view>
+</view>

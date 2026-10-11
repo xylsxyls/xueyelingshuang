@@ -35,7 +35,14 @@
 
   <view class="current card">
     <view class="muted">当前步骤</view>
-    <view class="current-title">{{currentTask.title || '等待开始'}}</view>
+    <view class="current-header">
+      <view class="current-title">{{currentTask.title || '等待开始'}}</view>
+      <view class="step-actions current-actions" hidden="{{!currentTask.id || currentTask.rest}}">
+        <button class="step-btn" data-id="{{currentTask.id}}" bindtap="addTime" disabled="{{!started || finishing || !currentTask.canAddTime}}">加10秒</button>
+        <button wx:if="{{!currentTask.background}}" class="step-btn" data-id="{{currentTask.id}}" bindtap="markDone" disabled="{{!started || finishing || !currentTask.canFinish}}">完成</button>
+        <button wx:else class="step-btn" data-id="{{currentTask.id}}" bindtap="skipTask" disabled="{{!started || finishing || !currentTask.canSkip}}">跳过</button>
+      </view>
+    </view>
     <view class="current-recipe">{{currentTask.recipeTitle}}</view>
     <view class="detail">{{currentTask.detailText || '点击开始后，我会按时间线提醒每一步。'}}</view>
     <view class="current-meta" hidden="{{!currentTask.id}}">
@@ -60,12 +67,14 @@
             <view class="mini-fill" style="width: {{item.progressPercent}}%"></view>
           </view>
         </view>
-        <text class="muted">剩余 {{item.remainingText}}</text>
+        <view>
+          <text class="muted">剩余 {{item.remainingText}}</text>
+          <view class="step-actions">
+            <button class="step-btn" data-id="{{item.id}}" bindtap="skipTask" disabled="{{!started || finishing || !item.canSkip}}">跳过</button>
+            <button class="step-btn" data-id="{{item.id}}" bindtap="addTime" disabled="{{!started || finishing || !item.canAddTime}}">加10秒</button>
+          </view>
+        </view>
       </view>
-    </view>
-    <view class="current-actions" hidden="{{!currentTask.id || currentTask.rest || currentTask.background}}">
-      <button class="ghost-btn" data-id="{{currentTask.id}}" bindtap="addTime" disabled="{{!currentTask.canAddTime}}">加时</button>
-      <button class="ghost-btn" data-id="{{currentTask.id}}" bindtap="skipTask" disabled="{{!currentTask.canSkip}}">{{currentTask.canSkip ? '跳过' : '不可跳过'}}</button>
     </view>
   </view>
 
@@ -81,17 +90,17 @@
           <view class="mini-fill" style="width: {{item.progressPercent}}%"></view>
         </view>
       </view>
-      <view class="step-actions" hidden="{{item.background || item.rest}}">
-        <button class="step-btn" data-id="{{item.id}}" bindtap="addTime" disabled="{{!item.canAddTime}}">加时</button>
-        <button class="step-btn" data-id="{{item.id}}" bindtap="skipTask" disabled="{{!item.canSkip}}">{{item.canSkip ? '跳过' : '锁定'}}</button>
+      <view class="step-actions" hidden="{{item.rest}}">
+        <button wx:if="{{item.background}}" class="step-btn" data-id="{{item.id}}" bindtap="skipTask" disabled="{{!started || finishing || !item.canSkip}}">跳过</button>
+        <button class="step-btn" data-id="{{item.id}}" bindtap="addTime" disabled="{{!started || finishing || !item.canAddTime}}">加10秒</button>
+        <button wx:if="{{!item.background}}" class="step-btn" data-id="{{item.id}}" bindtap="markDone" disabled="{{!started || finishing || !item.canFinish}}">完成</button>
       </view>
     </view>
   </view>
 
   <view class="control-bar">
-    <button class="ghost-btn" bindtap="markDone" disabled="{{complete || finishing || !currentTask.canFinish}}">完成当前</button>
+    <button class="ghost-btn" bindtap="backMenu" disabled="{{finishing}}">退出</button>
     <button class="primary-btn" bindtap="toggleRunning" disabled="{{finishing}}">{{complete ? '完成' : (running ? '暂停指导' : (started ? '继续' : '开始'))}}</button>
-    <button class="ghost-btn" bindtap="skipTask" disabled="{{complete || finishing || !currentTask.canSkip}}">跳过</button>
   </view>
 </view>
 

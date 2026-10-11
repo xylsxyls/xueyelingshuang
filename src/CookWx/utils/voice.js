@@ -417,6 +417,8 @@ function applyPlaybackRate(audio, gender) {
 }
 
 function stop() {
+  speakToken += 1
+  activeSequenceHandlerId = 0
   if (audioContext) {
     clearSequenceEndedHandler(audioContext)
     audioContext.stop()

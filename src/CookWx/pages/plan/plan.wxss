@@ -196,3 +196,17 @@
   grid-template-columns: 1fr 1fr;
   gap: 16rpx;
 }
+
+.sync-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 20rpx;
+  margin-top: 20rpx;
+}
+
+.sync-card .muted {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+}

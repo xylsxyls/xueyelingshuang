@@ -1,7 +1,11 @@
 const api = require('../../utils/api')
+const menuActions = require('../../utils/menuActions')
+const socialActions = require('../../utils/socialActions')
+const presentation = require('../../utils/videoPresentation')
 const config = require('../../utils/config')
 const debugLog = require('../../utils/debugLog')
 const tabBar = require('../../utils/tabBar')
+const personalizationSync = require('../../utils/cookPersonalizationSync')
 
 function normalizeVideoId(videoId) {
   const text = videoId === undefined || videoId === null ? '' : String(videoId)
@@ -79,6 +83,7 @@ Page({
     }
     this.homeHidden = false
     this.pageActive = true
+    personalizationSync.showPending(getApp(), wx, api, { isActive: () => this.pageActive !== false })
     this.transitionSourceIndex = -1
     this.logUserAction('PAGE_SHOW', {
       currentIndex: this.data.currentIndex,
@@ -86,6 +91,7 @@ Page({
       restoredFromOtherTab
     })
     this.applyGlobalFollowState()
+    this.refreshCurrentInteractions()
     if (!this.data.feed.length) this.loadData()
     else {
       this.prefetchPosterImages(this.data.currentIndex)
@@ -118,7 +124,6 @@ Page({
     this.hiddenAtMilliseconds = Date.now()
     this.loadRequestId = (this.loadRequestId || 0) + 1
     this.transitionSourceIndex = -1
-    this.clearSeekFallbackTimer()
     this.pendingSeek = null
     this.progressDragging = false
     this.clearPosterPrefetchRequests()
@@ -139,7 +144,6 @@ Page({
     this.suppressNextHomeTabRefreshUntil = 0
     this.loadRequestId = (this.loadRequestId || 0) + 1
     this.transitionSourceIndex = -1
-    this.clearSeekFallbackTimer()
     this.pendingSeek = null
     this.progressDragging = false
     this.clearPosterPrefetchRequests()
@@ -164,21 +168,15 @@ Page({
     return item.videoId || item.id || ''
   },
 
-  clearSeekFallbackTimer() {
-    if (this.seekFallbackTimer) {
-      clearTimeout(this.seekFallbackTimer)
-      this.seekFallbackTimer = null
-    }
-  },
-
   playVideoAfterSeek(index, reason) {
     if (index !== this.data.currentIndex || !this.pageActive) return
     const item = (this.data.feed || [])[index] || {}
-    const ctx = wx.createVideoContext(`feedVideo${index}`, this)
+    const ctx = this.videoContextFor(index)
     if (!ctx) return
     const delayMs = Math.max(0, numberOrDefault(config.VIDEO_SEEK_PLAY_DELAY_MS, 120))
+    const generation = ctx._generation
     setTimeout(() => {
-      if (index !== this.data.currentIndex || !this.pageActive) return
+      if (index !== this.data.currentIndex || !this.pageActive || this.pendingSeek || ctx._generation !== generation || (this.data.feed[index] || {}).videoId !== item.videoId) return
       ctx.play()
       this.setData({ videoPaused: false })
       debugLog.info('HOME', 'VIDEO_SEEK_PLAY', {
@@ -195,6 +193,17 @@ Page({
 
   loadMoreBatchSize() {
     return Math.max(1, this.metadataAheadCount())
+  },
+
+  videoContextFor(index) {
+    try { return this.selectComponent(`#feedPlayer${index}`) } catch (error) { return null }
+  },
+
+  serverFeedMode(tab) {
+    if (tab === '精选') return 'featured'
+    if (tab === '关注') return 'following'
+    if (tab === '好友') return 'friends'
+    return ''
   },
 
   metadataAheadCount() {
@@ -235,7 +244,7 @@ Page({
       count: this.feedBatchSize(),
       activeTab: this.data.activeTab
     })
-    api.getFeed({ isStale, count: this.feedBatchSize(), purpose: 'feed_initial' })
+    api.getFeed({ isStale, count: this.feedBatchSize(), mode: this.serverFeedMode(this.data.activeTab), purpose: 'feed_initial' })
       .then((res) => {
         if (!res.ok) throw new Error(res.message || '加载失败')
         if (isStale()) return
@@ -300,6 +309,7 @@ Page({
     api.getFeed({
       isStale,
       count: this.loadMoreBatchSize(),
+      mode: this.serverFeedMode(this.data.activeTab),
       excludeIds,
       currentVideoId: normalizeVideoId(current.videoId || current.id || ''),
       purpose: foreground ? 'feed_next' : 'background_prefetch',
@@ -337,8 +347,20 @@ Page({
       })
   },
 
+  async refreshCurrentInteractions() {
+    const item = this.data.feed[this.data.currentIndex]
+    if (!item || !item.videoId) return
+    const requestId = this.interactionRequestId = (this.interactionRequestId || 0) + 1
+    const isStale = () => this.pageActive === false || requestId !== this.interactionRequestId
+    try {
+      const result = await api.getVideoDetail(item.videoId, { isStale })
+      if (result.ok && !isStale()) this.updateFeedByVideoId(item.videoId, () => presentation.interactionPatch(result.item))
+    } catch (error) { if (!isStale()) debugLog.warn('HOME', 'INTERACTIONS_REFRESH_FAIL', { videoId: item.videoId, error: error.message }) }
+  },
+
   normalizeFeed(feed, batchKey) {
     return feed.map((item, index) => {
+      const metadata = presentation.fromServer(item)
       const recipeIds = Array.isArray(item.recipeIds) ? item.recipeIds.filter((id) => !!id) : []
       const primaryRecipeId = recipeIds.length ? recipeIds[0] : ''
       const priceCoins = Number(item.priceCoins || 0)
@@ -355,7 +377,7 @@ Page({
       const followingUserIds = Array.isArray(account.followingUserIds) ? account.followingUserIds : []
       const authorUserId = item.authorUserId || ''
       const authorSelf = !!item.authorSelf || (!!account.userId && authorUserId === account.userId)
-      const authorFollowing = !!item.authorFollowing || followingUserIds.indexOf(authorUserId) >= 0
+      const authorFollowing = typeof item.authorFollowing === 'boolean' ? item.authorFollowing : followingUserIds.indexOf(authorUserId) >= 0
       return Object.assign({}, item, {
         feedKey: `${videoId || primaryRecipeId || 'feed'}_${batchKey || 'batch'}_${index}_${Math.floor(Math.random() * 100000)}`,
         id: videoId || item.id || '',
@@ -374,16 +396,17 @@ Page({
         priceType,
         priceText,
         owned,
-        authorInitial: firstDisplayChar(item.author || authorUserId, '\u53a8'),
+        authorInitial: metadata.authorInitial,
+        authorAvatarUrl: metadata.authorAvatarUrl,
         authorSelf,
         authorFollowing,
         canFollowAuthor: !!authorUserId && !authorSelf && !authorFollowing,
         followConfirmVisible: false,
         favorite: !!item.favorite,
         liked: !!item.liked,
-        actionText: !primaryRecipeId ? '暂无菜谱' : (owned ? '查看菜谱' : (priceAmount > 0 ? `加入菜谱 ${priceText}` : '免费加入菜谱')),
-        menuText: recipeIds.length > 1 ? '加入套餐' : '加入菜单',
-        canAddToMenu: owned && recipeIds.length > 0,
+        actionText: !primaryRecipeId ? '暂无菜谱' : '查看菜谱',
+        menuText: item.inMenu ? '已加入菜单' : '加入菜单',
+        canAddToMenu: recipeIds.length > 0,
         watchMarked: false
       })
     })
@@ -413,7 +436,6 @@ Page({
       toVideoId: item.videoId || item.id || '',
       feedCount: feed.length
     })
-    this.clearSeekFallbackTimer()
     this.pendingSeek = null
     this.progressDragging = false
     this.transitionSourceIndex = -1
@@ -537,7 +559,7 @@ Page({
       })
       return
     }
-    const ctx = wx.createVideoContext(`feedVideo${index}`, this)
+    const ctx = this.videoContextFor(index)
     if (!ctx) return
     const item = this.data.feed[index] || {}
     this.logUserAction('VIDEO_TAP', {
@@ -560,7 +582,6 @@ Page({
     const detail = e.detail || {}
     const duration = Number(detail.duration || this.data.videoDurationSeconds || 0)
     const currentTime = Number(detail.currentTime || 0)
-    this.markVideoFrameReady(index, 'timeupdate')
     if (!this.progressDragging) this.tryMarkCurrentVideoWatched(index, currentTime)
     if (this.progressDragging) return
     const progressValue = duration > 0 ? Math.max(0, Math.min(1000, Math.round(currentTime * 1000 / duration))) : 0
@@ -633,7 +654,6 @@ Page({
     this.progressDragMoved = false
     this.ignoreVideoTapUntil = now + Math.max(0, numberOrDefault(config.VIDEO_PROGRESS_TAP_IGNORE_MS, 500))
     this.lastProgressUiUpdateMs = now
-    this.clearSeekFallbackTimer()
     this.setData({
       videoProgressValue: value,
       videoProgressPercent: progressPercentFromValue(value),
@@ -651,7 +671,7 @@ Page({
       return
     }
     const seekSeconds = secondsFromProgress(duration, value)
-    const ctx = wx.createVideoContext(`feedVideo${index}`, this)
+    const ctx = this.videoContextFor(index)
     const item = this.data.feed[index] || {}
     const token = `${now}_${Math.floor(Math.random() * 100000)}`
     this.pendingSeek = {
@@ -672,20 +692,7 @@ Page({
     })
     if (ctx) {
       ctx.seek(seekSeconds)
-      const fallbackMs = Math.max(300, numberOrDefault(config.VIDEO_SEEK_FALLBACK_PLAY_MS, 1200))
-      this.seekFallbackTimer = setTimeout(() => {
-        const pendingSeek = this.pendingSeek
-        if (!pendingSeek || pendingSeek.token !== token) return
-        debugLog.info('HOME', 'VIDEO_SEEK_FALLBACK_PLAY', {
-          index,
-          videoId: item.videoId || '',
-          seekSeconds,
-          waitMilliseconds: Date.now() - now
-        })
-        this.pendingSeek = null
-        this.clearSeekFallbackTimer()
-        this.playVideoAfterSeek(index, 'fallback')
-      }, fallbackMs)
+      this.pendingSeek.generation = ctx._generation
     } else {
       this.pendingSeek = null
       debugLog.warn('HOME', 'VIDEO_SEEK_CONTEXT_MISSING', {
@@ -879,7 +886,8 @@ Page({
     const item = this.data.feed[index] || {}
     const position = e.detail && e.detail.position !== undefined ? Number(e.detail.position) : 0
     const pendingSeek = this.pendingSeek
-    const matchedPendingSeek = !!(pendingSeek && pendingSeek.index === index)
+    const matchedPendingSeek = !!(pendingSeek && pendingSeek.index === index && pendingSeek.videoId === item.videoId &&
+      e.detail && e.detail.generation === pendingSeek.generation && Math.abs(Number(e.detail.requestedPosition) - pendingSeek.seekSeconds) < 0.001)
     debugLog.info('HOME', 'VIDEO_SEEK_COMPLETE', {
       index,
       videoId: item.videoId || '',
@@ -889,10 +897,24 @@ Page({
       waitMilliseconds: pendingSeek ? Date.now() - pendingSeek.startMilliseconds : 0
     })
     if (matchedPendingSeek) {
-      this.clearSeekFallbackTimer()
       this.pendingSeek = null
-      this.playVideoAfterSeek(index, 'seekcomplete')
+      this.setData({ videoPaused: false })
     }
+  },
+
+  onVideoFrame(e) {
+    const index = Number(e.currentTarget.dataset.index)
+    if (index === this.data.currentIndex) this.markVideoFrameReady(index, e.detail && e.detail.backend === 'local-preview' ? 'local_preview' : 'canvas_frame')
+  },
+
+  onVideoEnded(e) {
+    const index = Number(e.currentTarget.dataset.index)
+    if (index !== this.data.currentIndex) return
+    this.setData({
+      videoCurrentSeconds: 0,
+      videoProgressValue: 0,
+      videoProgressPercent: 0
+    })
   },
 
   onPosterLoad(e) {
@@ -951,11 +973,11 @@ Page({
   onVideoError(e) {
     const index = Number(e.currentTarget.dataset.index)
     const item = this.data.feed[index] || {}
-    if (index === this.data.currentIndex) this.clearWatchTimer()
+    if (index === this.data.currentIndex) { this.clearWatchTimer(); this.pendingSeek = null }
     debugLog.warn('HOME', 'VIDEO_ERROR', {
       index,
       videoId: item.videoId || '',
-      errMsg: e && e.detail && e.detail.errMsg ? e.detail.errMsg : ''
+      errMsg: e && e.detail ? (e.detail.message || e.detail.errMsg || '') : ''
     })
     wx.showToast({ title: '视频加载失败', icon: 'none' })
   },
@@ -1166,7 +1188,7 @@ Page({
     const safeOptions = options || {}
     const feed = this.data.feed || []
     for (let i = 0; i < feed.length; i += 1) {
-      const ctx = wx.createVideoContext(`feedVideo${i}`, this)
+      const ctx = this.videoContextFor(i)
       if (!ctx) continue
       if (i === this.data.currentIndex && this.pageActive) {
         if (safeOptions.restorePosition && this.data.videoCurrentSeconds > 0) {
@@ -1193,14 +1215,14 @@ Page({
   pauseAllVideos() {
     const feed = this.data.feed || []
     for (let i = 0; i < feed.length; i += 1) {
-      const ctx = wx.createVideoContext(`feedVideo${i}`, this)
+      const ctx = this.videoContextFor(i)
       if (ctx) ctx.pause()
     }
   },
 
   pauseVideoIndexes(indexes) {
     ;(indexes || []).forEach((index) => {
-      const ctx = wx.createVideoContext(`feedVideo${index}`, this)
+      const ctx = this.videoContextFor(index)
       const item = (this.data.feed || [])[index] || {}
       if (ctx) {
         ctx.seek(0)
@@ -1277,93 +1299,29 @@ Page({
     wx.navigateTo({ url: `/pages/recipe/recipe?id=${recipeId}` })
   },
 
-  addToMenu(e) {
-    const index = Number(e.currentTarget.dataset.index)
-    const item = this.data.feed[index] || {}
-    const recipeIds = item.recipeIds || []
-    this.logUserAction('ADD_TO_MENU_TAP', {
-      index,
-      videoId: item.videoId || '',
-      recipeIds,
-      owned: !!item.owned
-    })
-    if (!item.owned) {
-      wx.showToast({ title: '请先购买菜谱', icon: 'none' })
-      return
-    }
-    const app = getApp()
-    const ids = app.globalData.selectedRecipeIds || []
-    let added = 0
-    recipeIds.forEach((recipeId) => {
-      if (recipeId && ids.indexOf(recipeId) < 0) {
-        ids.push(recipeId)
-        added += 1
-      }
-    })
-    app.globalData.selectedRecipeIds = ids
-    debugLog.info('HOME', 'ADD_TO_MENU_OK', {
-      videoId: item.videoId || '',
-      recipeIds,
-      added,
-      selectedCount: ids.length
-    })
-    wx.showToast({ title: added ? '已加入菜单' : '已在菜单中', icon: added ? 'success' : 'none' })
+  openAuthor(event) {
+    const item = this.data.feed[Number(event.currentTarget.dataset.index)] || {}
+    socialActions.openProfile(item.authorUserId)
   },
 
-  handleRecipeAction(e) {
-    const index = Number(e.currentTarget.dataset.index)
+  async addToMenu(event) {
+    const index = Number(event.currentTarget.dataset.index)
     const item = this.data.feed[index] || {}
-    this.logUserAction('RECIPE_ACTION_TAP', {
-      index,
-      videoId: item.videoId || '',
-      recipeId: item.primaryRecipeId || '',
-      owned: !!item.owned,
-      priceAmount: item.priceAmount || 0,
-      priceType: item.priceType || ''
-    })
-    if (!item.primaryRecipeId) {
-      wx.showToast({ title: '菜谱不存在', icon: 'none' })
-      return
-    }
-    if (item.owned) {
-      this.openRecipe(e)
-      return
-    }
-    if (this.data.buyingRecipeId) return
-    wx.showModal({
-      title: '购买菜谱',
-      content: item.priceAmount > 0 ? `确认花费 ${item.priceText} 购买《${item.title}》吗？` : `确认加入免费菜谱《${item.title}》吗？`,
-      confirmText: item.priceAmount > 0 ? '购买' : '加入',
-      success: (modalRes) => {
-        this.logUserAction('RECIPE_ACTION_MODAL', {
-          index,
-          recipeId: item.primaryRecipeId,
-          confirm: !!modalRes.confirm
-        })
-        if (!modalRes.confirm) return
-        this.setData({ buyingRecipeId: item.primaryRecipeId })
-        api.joinRecipe(item.primaryRecipeId)
-          .then((res) => {
-            debugLog.info('HOME', 'RECIPE_JOIN_OK', {
-              recipeId: item.primaryRecipeId,
-              ok: !!res.ok,
-              message: res.message || ''
-            })
-            wx.showToast({ title: res.message || (res.ok ? '购买成功' : '购买失败'), icon: res.ok ? 'success' : 'none' })
-            this.setData({ buyingRecipeId: '' })
-            this.loadData()
-          })
-          .catch((err) => {
-            debugLog.warn('HOME', 'RECIPE_JOIN_FAIL', {
-              recipeId: item.primaryRecipeId,
-              error: err && err.message ? err.message : String(err)
-            })
-            wx.showToast({ title: err.message || '购买失败', icon: 'none' })
-            this.setData({ buyingRecipeId: '' })
-          })
-      }
-    })
+    if (!item.primaryRecipeId || item.inMenu || this.menuJoining) return
+    this.menuJoining = true
+    this.interactionRequestId = (this.interactionRequestId || 0) + 1
+    const videoId = item.videoId
+    try {
+      await menuActions.join(item.primaryRecipeId)
+      if (this.pageActive === false) return
+      const feed = this.data.feed.map(entry => entry.primaryRecipeId === item.primaryRecipeId ? Object.assign({}, entry, { inMenu: true, menuText: '已加入菜单' }) : entry)
+      this.setData({ feed })
+      wx.showToast({ title: '已加入菜单', icon: 'success' })
+    } catch (err) { if (this.pageActive !== false) wx.showToast({ title: err.message || '加入失败', icon: 'none' }) }
+    finally { this.menuJoining = false }
   },
+
+  handleRecipeAction(event) { this.openRecipe(event) },
 
   isActionRequestPending(storeName, key) {
     if (!key) return false
@@ -1409,6 +1367,7 @@ Page({
       return
     }
     this.setActionRequestPending('followRequestMap', authorUserId, true)
+    this.interactionRequestId = (this.interactionRequestId || 0) + 1
     api.toggleFollow(authorUserId)
       .then((res) => {
         this.setActionRequestPending('followRequestMap', authorUserId, false)
@@ -1515,6 +1474,7 @@ Page({
       return
     }
     this.setActionRequestPending('favoriteRequestMap', videoId, true)
+    this.interactionRequestId = (this.interactionRequestId || 0) + 1
     api.toggleFavorite(videoId, 'video')
       .then((res) => {
         this.setActionRequestPending('favoriteRequestMap', videoId, false)
@@ -1555,6 +1515,7 @@ Page({
       return
     }
     this.setActionRequestPending('likeRequestMap', videoId, true)
+    this.interactionRequestId = (this.interactionRequestId || 0) + 1
     api.toggleLike('video', videoId)
       .then((res) => {
         this.setActionRequestPending('likeRequestMap', videoId, false)
@@ -1562,9 +1523,7 @@ Page({
         const liked = !!res.liked
         let nextLikes = 0
         this.updateFeedByVideoId(videoId, (feedItem) => {
-          const oldLiked = !!feedItem.liked
-          const oldLikes = Number(feedItem.likes || 0)
-          const likes = oldLiked === liked ? oldLikes : Math.max(0, oldLikes + (liked ? 1 : -1))
+          const likes = Math.max(0, Number(res.likes) || 0)
           nextLikes = likes
           return { liked, likes }
         })
@@ -1585,8 +1544,15 @@ Page({
       })
   },
 
-  openComments() {
-    this.logUserAction('OPEN_COMMENTS', {})
-    wx.showToast({ title: '评论区稍后接入', icon: 'none' })
+  openComments(e) {
+    const index = Number(e.currentTarget.dataset.index)
+    const item = (this.data.feed || [])[index] || {}
+    const videoId = normalizeVideoId(item.videoId || item.id || '')
+    this.logUserAction('OPEN_COMMENTS', { videoId })
+    if (!videoId) {
+      wx.showToast({ title: '视频不存在', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url: `/pages/comments/comments?targetType=video&targetId=${encodeURIComponent(videoId)}` })
   }
 })

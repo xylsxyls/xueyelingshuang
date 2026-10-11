@@ -1,0 +1,76 @@
+.lab-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 32rpx;
+  color: #21302a;
+  background: #f6f3ec;
+}
+
+.intro {
+  margin-bottom: 24rpx;
+}
+
+.title {
+  font-size: 36rpx;
+  font-weight: 700;
+}
+
+.description,
+.detail {
+  margin-top: 12rpx;
+  color: #64716a;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.canvas-shell {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 720rpx;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 18rpx;
+  background: #111814;
+}
+
+.decoder-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.empty-hint {
+  position: absolute;
+  color: #fffdf8;
+  font-size: 26rpx;
+  pointer-events: none;
+}
+
+.status {
+  min-height: 42rpx;
+  margin-top: 24rpx;
+  color: #263b31;
+  font-size: 25rpx;
+}
+
+.controls {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 18rpx;
+}
+
+.controls button {
+  flex: 1;
+}
+
+.seek-row {
+  display: flex;
+  align-items: center;
+  margin-top: 20rpx;
+  font-size: 22rpx;
+}
+
+.seek-row slider {
+  flex: 1;
+}

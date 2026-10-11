@@ -4,21 +4,24 @@
   </view>
 
   <view class="content">
-    <scroll-view class="categories" scroll-y="true">
+    <scroll-view id="categoryScroll" class="categories" scroll-y="true" scroll-top="{{categoryScrollTop}}" bindscroll="onCategoryScroll">
       <view
         wx:for="{{categories}}"
         wx:key="*this"
         class="cat {{activeCategory === item ? 'active' : ''}}"
-        data-name="{{item}}"
+        id="menu-category-{{index}}" data-name="{{item}}"
         bindtap="selectCategory"
       >{{item}}</view>
     </scroll-view>
 
-    <scroll-view class="recipes" scroll-y="true">
-      <view class="recipe-card card" wx:for="{{filteredRecipes}}" wx:key="id" data-id="{{item.id}}" bindtap="openRecipeFromCard">
-        <view class="cover" style="background: {{item.coverColor}}"></view>
+    <scroll-view id="recipeScroll" class="recipes" scroll-y="true" scroll-into-view="{{scrollTarget}}" bindscroll="onRecipeScroll" bindscrolltolower="onRecipeScrollBottom">
+      <view class="recipe-group" wx:for="{{menuSections}}" wx:for-item="section" wx:key="id" id="{{section.id}}">
+        <view class="recipe-group-title">{{section.name}}</view>
+        <view class="section-empty" wx:if="{{!section.recipes.length}}">暂无菜谱</view>
+      <view class="recipe-card card" wx:for="{{section.recipes}}" wx:key="id" data-id="{{item.id}}" bindtap="openRecipeFromCard">
+        <image wx:if="{{item.thumbnailUrl}}" class="cover" src="{{item.thumbnailUrl}}" mode="aspectFill" lazy-load="{{true}}" data-id="{{item.id}}" data-url="{{item.thumbnailUrl}}" binderror="onCoverError"></image><view class="cover cover-empty" wx:else>暂无封面</view>
         <view class="recipe-main">
-          <view class="between">
+          <view class="recipe-heading-row">
             <view class="recipe-title">{{item.title}}</view>
             <view class="price">{{item.priceText}}</view>
           </view>
@@ -30,14 +33,16 @@
         </view>
         <view class="pick">
           <button class="minus" data-id="{{item.id}}" catchtap="removeRecipe" disabled="{{!item.selected}}">-</button>
-          <button wx:if="{{item.owned}}" class="plus" data-id="{{item.id}}" catchtap="addRecipe" disabled="{{item.selected}}">+</button>
-          <button wx:else class="buy" data-id="{{item.id}}" catchtap="openRecipe">买</button>
+          <button wx:if="{{item.accessible}}" class="plus" data-id="{{item.id}}" catchtap="addRecipe" disabled="{{item.selected}}">+</button>
+          <button wx:else class="buy menu-buy-button" data-id="{{item.id}}" catchtap="buyRecipe" loading="{{buyingRecipeId === item.id}}">买</button>
         </view>
       </view>
+      </view>
+      <view class="recipe-bottom-space" style="height: {{recipeBottomSpace}}px;"></view>
     </scroll-view>
   </view>
 
-  <view class="cart" wx:if="{{selectedRecipes.length}}">
+  <view id="menuCart" class="cart" wx:if="{{selectedRecipes.length}}">
     <view class="cart-info" bindtap="toggleCart">
       <view>{{selectedRecipes.length}} 道菜</view>
       <view class="muted" wx:if="{{plan.summary}}">总 {{plan.summary.totalMinutes}} 分 · 动手 {{plan.summary.activeMinutes}} 分</view>
@@ -53,8 +58,9 @@
       <button bindtap="toggleCart">收起</button>
     </view>
     <view class="chosen" wx:for="{{selectedRecipes}}" wx:key="id">
-      <text>{{item.title}}</text>
-      <text class="muted">{{item.estimatedMinutes}}分</text>
+      <text class="chosen-title">{{item.title}}</text>
+      <text class="chosen-time muted">{{item.estimatedMinutes}}分</text>
+      <button class="minus chosen-remove" data-id="{{item.id}}" catchtap="removeRecipe">-</button>
     </view>
   </view>
 </view>

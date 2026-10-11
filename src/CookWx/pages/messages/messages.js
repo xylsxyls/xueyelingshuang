@@ -2,6 +2,7 @@ const api = require('../../utils/api')
 const config = require('../../utils/config')
 const debugLog = require('../../utils/debugLog')
 const tabBar = require('../../utils/tabBar')
+const personalizationSync = require('../../utils/cookPersonalizationSync')
 
 const CONTACT_TABS = [
   { key: 'messages', title: '消息' },
@@ -34,6 +35,7 @@ Page({
   onShow() {
     tabBar.showHome()
     this.pageActive = true
+    personalizationSync.showPending(getApp(), wx, api, { isActive: () => this.pageActive !== false })
     const app = getApp()
     const initialTab = app.globalData.messageInitialTab || ''
     this.pendingTargetUserId = app.globalData.messageTargetUserId || ''
@@ -77,7 +79,17 @@ Page({
         if (background) this.backgroundLoading = false
         if (!res.ok) throw new Error(res.message)
         if (isStale()) return
-        const messages = this.decorateMessages(res.messages || [])
+        const allMessages = res.messages || []
+        const chats = {}
+        allMessages.forEach(item => {
+          if (item.type !== 'chat') return
+          const id = item.fromUserId
+          if (!chats[id]) chats[id] = { latest: item, unreadCount: 0 }
+          if (!item.read) chats[id].unreadCount += 1
+          if (Number(item.createdAtSeconds) >= Number(chats[id].latest.createdAtSeconds)) chats[id].latest = item
+        })
+        const messages = this.decorateMessages(allMessages.filter(item => item.type !== 'chat').concat(Object.keys(chats).map(id => Object.assign({}, chats[id].latest, { unreadCount: chats[id].unreadCount }))))
+          .sort((a, b) => Number(b.createdAtSeconds || 0) - Number(a.createdAtSeconds || 0))
         const followingContacts = this.decorateContacts(res.followingUsers || [])
         const friendContacts = this.decorateContacts(res.friendUsers || [])
         const contactItems = this.contactsForTab(this.data.activeContactTab, followingContacts, friendContacts)
@@ -151,6 +163,16 @@ Page({
       debugLog.info('MESSAGES', 'POLL_STOP', {})
     }
     this.backgroundLoading = false
+  },
+
+  openMessage(event) {
+    const item = this.data.messages[Number(event.currentTarget.dataset.index)]
+    if (item && item.type === 'chat') wx.navigateTo({ url: '/pages/conversation/conversation?userId=' + encodeURIComponent(item.fromUserId) })
+  },
+
+  openContactConversation(event) {
+    const contact = this.data.contactItems[Number(event.currentTarget.dataset.index)]
+    if (contact && contact.userId) wx.navigateTo({ url: '/pages/conversation/conversation?userId=' + encodeURIComponent(contact.userId) })
   },
 
   decorateMessages(messages) {

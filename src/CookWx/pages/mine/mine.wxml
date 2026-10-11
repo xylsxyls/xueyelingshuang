@@ -4,72 +4,63 @@
   </view>
 
   <view class="profile card">
-    <view class="avatar">厨</view>
+    <view class="avatar user-avatar" bindtap="editAvatar"><image wx:if="{{profile.avatarUrl}}" src="{{profile.avatarUrl}}" mode="aspectFill"></image><text wx:else>{{profile.avatarInitial || '厨'}}</text></view>
     <view class="profile-main">
-      <view class="name">{{account.nickname || account.account || '厨友'}}</view>
-      <view class="muted">微信小程序 / Android / iOS 共用账户</view>
+      <view class="profile-name-row"><view class="name">{{account.nickname || account.account || '厨友'}}</view><text class="account-copy">微信小程序 / Android / iOS 共用账户</text></view>
+      <view class="introduction-row"><input wx:if="{{editingIntroduction}}" class="introduction-input" value="{{introductionDraft}}" maxlength="20" bindinput="onIntroductionInput" placeholder="开心做大厨" focus="{{editingIntroduction}}" disabled="{{savingIntroduction}}" /><text class="introduction-text" wx:else>{{profile.introduction || '开心做大厨'}}</text><button wx:if="{{!editingIntroduction}}" class="introduction-action" bindtap="editIntroduction">修改</button><block wx:else><button class="introduction-action" bindtap="saveIntroduction" loading="{{savingIntroduction}}" disabled="{{savingIntroduction}}">保存</button><button class="introduction-action" bindtap="cancelIntroduction" disabled="{{savingIntroduction}}">取消</button></block></view>
+      <view class="public-stats"><text>{{profile.receivedLikeCount || 0}} 获赞</text><text>{{profile.followerCount || 0}} 粉丝</text><text class="fans-link" bindtap="openFans">查看</text><button class="logout-inline" bindtap="logout">退出登录</button></view>
     </view>
   </view>
 
-  <view class="wallet card">
-    <view>
-      <view class="wallet-num">{{account.coins || 0}}</view>
-      <view class="muted">金币余额</view>
-    </view>
-    <view>
-      <view class="wallet-num small">{{account.yuanbao || 0}}</view>
-      <view class="muted">元宝余额</view>
-    </view>
-    <view class="recharge">
-      <button bindtap="checkin">签到</button>
-      <button bindtap="watchAd" loading="{{rewarding}}" disabled="{{rewarding}}">广告</button>
-      <button data-coins="30" bindtap="recharge">充30</button>
-    </view>
-  </view>
-
-  <view class="stats card">
-    <view class="stat" wx:for="{{stats}}" wx:key="label">
-      <view class="stat-value">{{item.value}}</view>
-      <view class="muted">{{item.label}}</view>
-    </view>
+  <view class="wallet card"><view class="wallet-balances">
+    <view><view class="wallet-num">{{account.yuanbao || 0}}</view><view class="muted">元宝余额</view></view>
+    <view><view class="wallet-num">{{account.coins || 0}}</view><view class="muted">金币余额</view></view>
+    </view><view class="wallet-actions"><button bindtap="checkin">签到</button><button bindtap="watchAd" loading="{{rewarding}}" disabled="{{rewarding}}">{{rewarding ? adSecondsLeft + '秒' : '观看广告'}}</button></view>
   </view>
 
   <view class="asset-section">
-    <scroll-view class="asset-tabs" scroll-x="true">
+    <view class="asset-tabs">
       <view
         wx:for="{{assetTabs}}"
         wx:key="key"
         class="asset-tab {{activeAssetTab == item.key ? 'active' : ''}}"
         data-key="{{item.key}}"
-        bindtap="switchAssetTab"
+        bindtap="switchAssetTab" hover-class="asset-tab-pressed" hover-stay-time="80"
       >
         <text>{{item.title}}</text>
-        <text class="asset-count">{{item.count || 0}}</text>
       </view>
-    </scroll-view>
+    </view>
 
-    <view class="card empty" wx:if="{{!assetItems.length}}">
+    <view class="card empty" wx:if="{{!assetItems.length && !loading && !assetErrors[activeAssetTab]}}">
       当前分区还没有内容。
     </view>
 
-    <view
-      class="asset-card card"
-      wx:for="{{assetItems}}"
-      wx:key="id"
-      data-index="{{index}}"
-      bindtap="openAsset"
-    >
-      <view class="cover {{item.type == 'user' ? 'user-cover' : ''}}" style="background: {{item.coverColor}}">{{item.coverText}}</view>
-      <view class="asset-main">
-        <view class="asset-title-row">
-          <view class="recipe-title">{{item.title}}</view>
-          <view class="asset-badge" wx:if="{{item.badge}}">{{item.badge}}</view>
-        </view>
-        <view class="muted">{{item.subtitle}}</view>
-        <view class="asset-summary" wx:if="{{item.personalizationSummary}}">{{item.personalizationSummary}}</view>
+    <view class="media-grid" wx:if="{{mediaGrid}}">
+      <view class="media-tile" wx:for="{{assetItems}}" wx:key="id" data-index="{{index}}" bindtap="openAsset">
+        <image wx:if="{{item.posterUrl && !item.coverFailed}}" class="media-cover" src="{{item.posterUrl}}" mode="aspectFill" lazy-load="{{true}}" data-index="{{index}}" data-id="{{item.id}}" data-tab="{{activeAssetTab}}" data-url="{{item.posterUrl}}" binderror="onAssetCoverError"></image>
+        <view class="media-cover-empty" wx:else>封面暂不可用</view>
+        <view class="media-title">{{item.title}}</view>
       </view>
     </view>
+    <block wx:else>
+      <view class="asset-card card" wx:for="{{assetItems}}" wx:key="id" data-index="{{index}}" bindtap="openAsset">
+        <image wx:if="{{item.thumbnailUrl}}" class="cover" src="{{item.thumbnailUrl}}" mode="aspectFill" lazy-load="{{true}}" data-id="{{item.id}}" data-url="{{item.thumbnailUrl}}" binderror="onRecipeCoverError"></image><view class="cover cover-empty" wx:else>暂无封面</view>
+        <view class="asset-main">
+          <view class="asset-title-row">
+            <view class="recipe-title">{{item.title}}</view>
+            <view class="asset-badge" wx:if="{{item.badge}}">{{item.badge}}</view><button wx:if="{{activeAssetTab === 'menu' && item.canBuy}}" class="buy-button menu-buy-button" data-index="{{index}}" catchtap="buyAsset" disabled="{{menuActionId}}">买</button>
+          </view>
+          <view class="muted">{{item.subtitle}}</view>
+          <view class="menu-row-actions" wx:if="{{activeAssetTab === 'menu'}}">
+            <button wx:if="{{item.canRemove}}" class="remove-menu" data-index="{{index}}" catchtap="removeMenuAsset" disabled="{{menuActionId}}">移出菜单</button>
+          </view>
+          <view class="asset-summary" wx:if="{{item.personalizationSummary}}">{{item.personalizationSummary}}</view>
+        </view>
+      </view>
+    </block>
+    <view class="asset-load-error" wx:if="{{assetErrors[activeAssetTab]}}" bindtap="retryAssetTab">此分区加载失败，点击重试</view>
+    <view class="asset-load-more" wx:elif="{{mediaGrid && loadingMore}}">正在加载更多...</view>
+    <view class="asset-load-more" wx:elif="{{mediaGrid && assetHasMore[activeAssetTab]}}" bindtap="onReachBottom">继续向下查看</view>
   </view>
 
-  <button class="ghost-btn logout" bindtap="logout">退出登录</button>
 </view>

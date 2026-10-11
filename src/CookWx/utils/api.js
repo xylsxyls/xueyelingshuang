@@ -105,6 +105,8 @@ function appState() {
 function saveSession(res) {
   if (!res || !res.token) return
   const state = appState()
+  const nextUserId = res.account && res.account.userId ? res.account.userId : ''
+  if (state.userId && nextUserId && state.userId !== nextUserId) resetUserScopedState(state)
   state.token = res.token
   state.account = res.account || {}
   state.userId = state.account.userId || ''
@@ -112,8 +114,27 @@ function saveSession(res) {
   wx.setStorageSync(ACCOUNT_KEY, state.account)
 }
 
+function resetUserScopedState(state) {
+  if (!state) return
+  state.selectedRecipeIds = []
+  state.selectedRecipes = []
+  state.lastPreview = null
+  state.lastPreviewRecipeKey = ''
+  state.lastPreviewNeedsTimeBlocks = false
+  state.lastPlan = null
+  state.currentCookVoiceGender = ''
+  state.pendingCookVoiceTexts = []
+  state.pendingCookSyncReports = []
+  state.mineInitialTab = ''
+  state.messageInitialTab = ''
+  state.messageTargetUserId = ''
+  state.followStateChanges = {}
+  state.socialStateVersion = Number(state.socialStateVersion || 0) + 1
+}
+
 function clearSession() {
   const state = appState()
+  resetUserScopedState(state)
   state.token = ''
   state.account = null
   state.userId = ''
@@ -153,6 +174,7 @@ function isStaleError(err) {
 }
 
 function isRequestStale(options) {
+  if (options && options.__authBound === true && token() !== options.__authToken) return true
   if (!options || typeof options.isStale !== 'function') return false
   try {
     return !!options.isStale()
@@ -166,21 +188,28 @@ function isRequestStale(options) {
 }
 
 function request(options) {
-  const safeOptions = options || {}
+  const safeOptions = Object.assign({}, options || {})
+  if (safeOptions.__authBound !== true && !isPublicRequest(safeOptions)) {
+    safeOptions.__authBound = true
+    safeOptions.__authToken = token()
+  }
   const method = safeOptions.method || 'GET'
   const timeout = safeOptions.timeout || config.DEFAULT_REQUEST_TIMEOUT_MS || 30000
   const requestId = safeOptions.__requestId || ++requestSerial
   const attempt = Math.max(1, Number(safeOptions.__attempt || 1))
-  const maxAttempts = Math.max(1, Number(safeOptions.maxAttempts || config.DEFAULT_REQUEST_MAX_ATTEMPTS || 3))
+  const defaultMaxAttempts = method === 'GET' ? (config.DEFAULT_REQUEST_MAX_ATTEMPTS || 3) : 1
+  const maxAttempts = Math.max(1, Number(safeOptions.maxAttempts || defaultMaxAttempts))
   const queueEnterTime = Date.now()
   const purpose = safeOptions.purpose || ''
   const traceId = `${REQUEST_RUN_ID}:${requestId}:${attempt}`
   const priority = requestPriority(safeOptions)
   const queueSerial = ++requestQueueSerial
-  const data = Object.assign({}, safeOptions.data || {}, {
-    clientType: appState().clientType || 'wechat_mini',
-    clientVersion: appState().clientVersion || '0.2.0'
-  })
+  const data = safeOptions.rawBody === true
+    ? safeOptions.data
+    : Object.assign({}, safeOptions.data || {}, {
+      clientType: appState().clientType || 'wechat_mini',
+      clientVersion: appState().clientVersion || '0.2.0'
+    })
 
   debugLog.info('API', 'REQUEST_START', {
     runId: REQUEST_RUN_ID,
@@ -206,7 +235,13 @@ function request(options) {
         const headers = Object.assign({
           'content-type': 'application/json'
         }, safeOptions.headers || {})
-        const currentToken = token()
+        const currentToken = safeOptions.__authBound ? safeOptions.__authToken : token()
+        if (safeOptions.__authBound === true && token() !== currentToken) {
+          const finishQueue = () => finishRequestTask(priority)
+          finishQueue()
+          reject(staleError())
+          return
+        }
         if (!isPublicRequest(safeOptions) && !currentToken) {
           const finishQueue = () => finishRequestTask(priority)
           debugLog.warn('API', 'AUTH_REQUIRED_LOCAL', {
@@ -445,19 +480,15 @@ function markVideoWatched(videoId) {
 }
 
 function getRecipes(options) {
-  return request(Object.assign({ url: '/api/recipes', maxAttempts: 3, retryDelayMs: 300 }, options || {}))
+  return request(Object.assign({ url: options && options.catalog ? '/api/recipes?scope=catalog' : '/api/recipes', maxAttempts: 3, retryDelayMs: 300 }, options || {}))
 }
 
-function getRecipeDetail(recipeId) {
-  return request({ url: `/api/recipes/detail?recipeId=${encodeURIComponent(recipeId)}` })
+function getRecipeDetail(recipeId, options) {
+  return request(Object.assign({ url: `/api/recipes/detail?recipeId=${encodeURIComponent(recipeId)}` }, options || {}))
 }
 
 function getAccount(options) {
   return request(Object.assign({ url: '/api/account' }, options || {}))
-}
-
-function recharge(coins) {
-  return request({ url: '/api/account/recharge', method: 'POST', data: { coins } })
 }
 
 function checkin() {
@@ -468,8 +499,8 @@ function startAdReward() {
   return request({ url: '/api/wallet/ad/start', method: 'POST' })
 }
 
-function finishAdReward(adToken, debugElapsedSeconds) {
-  return request({ url: '/api/wallet/ad/finish', method: 'POST', data: { adToken, debugElapsedSeconds } })
+function finishAdReward(adToken) {
+  return request({ url: '/api/wallet/ad/finish', method: 'POST', data: { adToken } })
 }
 
 function makeIdempotencyKey(prefix, id) {
@@ -486,9 +517,28 @@ function joinRecipe(recipeId, idempotencyKey) {
   })
 }
 
-function purchaseRecipe(recipeId) {
-  return joinRecipe(recipeId)
+function purchaseRecipe(recipeId, idempotencyKey) {
+  const key = idempotencyKey || makeIdempotencyKey('purchase', recipeId)
+  return request({ url: '/api/recipes/purchase', method: 'POST', headers: { 'X-Idempotency-Key': key }, data: { recipeId, idempotencyKey: key } })
 }
+
+function removeMenuRecipe(recipeId) { return request({ url: '/api/recipes/menu/remove', method: 'POST', data: { recipeId } }) }
+function updateIntroduction(introduction, options) { return request(Object.assign({ url: '/api/users/profile/update', method: 'POST', data: { introduction } }, options || {})) }
+function uploadAvatar(data, options) {
+  return request(Object.assign({}, options || {}, {
+    url: '/api/users/avatar/upload', method: 'POST', data, rawBody: true,
+    headers: { 'content-type': 'application/octet-stream' }, maxAttempts: 1
+  }))
+}
+function getUserProfile(userId, options) { return request(Object.assign({ url: '/api/users/profile', data: { userId } }, options || {})) }
+function getUserFeed(userId, mode, options) {
+  const settings = options || {}
+  return request(Object.assign({}, settings, { url: '/api/users/feed', data: { userId, mode, count: settings.count || 18, excludeIds: (settings.excludeIds || []).join(',') } }))
+}
+function getFans(options) { return request(Object.assign({ url: '/api/users/fans', data: { count: 30 } }, options || {})) }
+function getVideoDetail(videoId, options) { return request(Object.assign({ url: '/api/videos/detail', data: { videoId } }, options || {})) }
+function getConversation(userId, options) { return request(Object.assign({ url: '/api/messages/conversation', data: { userId } }, options || {})) }
+function readConversation(targetUserId) { return request({ url: '/api/messages/read', method: 'POST', data: { targetUserId } }) }
 
 function toggleFavorite(recipeId, targetType) {
   const type = targetType || 'recipe'
@@ -499,8 +549,8 @@ function toggleLike(targetType, targetId) {
   return request({ url: '/api/likes/toggle', method: 'POST', data: { targetType, targetId } })
 }
 
-function listComments(targetType, targetId) {
-  return request({ url: `/api/comments/list?targetType=${encodeURIComponent(targetType)}&targetId=${encodeURIComponent(targetId)}` })
+function listComments(targetType, targetId, options) {
+  return request(Object.assign({ url: `/api/comments/list?targetType=${encodeURIComponent(targetType)}&targetId=${encodeURIComponent(targetId)}` }, options || {}))
 }
 
 function createComment(targetType, targetId, content, score) {
@@ -573,19 +623,39 @@ function resetPersonalization(recipeId) {
   return request({ url: '/api/recipes/personalization/reset', method: 'POST', data: { recipeId } })
 }
 
-function syncPersonalizationTimes(items) {
+function syncPersonalizationTimes(items, options = {}) {
   return request({
     url: '/api/recipes/personalization/sync-times',
     method: 'POST',
     data: { items: Array.isArray(items) ? items : [] },
     timeout: config.DEFAULT_REQUEST_TIMEOUT_MS || 30000,
-    maxAttempts: config.DEFAULT_REQUEST_MAX_ATTEMPTS || 3,
-    retryDelayMs: 300
+    maxAttempts: 1,
+    isStale: options.isStale
   })
 }
 
-function uploadVideoMeta(data) {
-  return request({ url: '/api/videos/upload', method: 'POST', data })
+function uploadVideoStart(data) {
+	return request({ url: '/api/videos/upload/start', method: 'POST', data, maxAttempts: 1 })
+}
+
+function uploadVideoChunk(uploadId, offset, data) {
+	return request({
+		url: `/api/videos/upload/chunk?uploadId=${encodeURIComponent(uploadId)}&offset=${offset}`,
+		method: 'POST',
+		data,
+		rawBody: true,
+		headers: { 'content-type': 'application/octet-stream' },
+		timeout: config.DEFAULT_REQUEST_TIMEOUT_MS || 30000,
+		maxAttempts: 1
+	})
+}
+
+function uploadVideoComplete(uploadId) {
+	return request({ url: '/api/videos/upload/complete', method: 'POST', data: { uploadId }, maxAttempts: 1 })
+}
+
+function cancelVideoUpload(uploadId) {
+	return request({ url: '/api/videos/upload/cancel', method: 'POST', data: { uploadId }, maxAttempts: 1 })
 }
 
 function publishVideo(data) {
@@ -651,6 +721,8 @@ function voiceFetch(voiceId, options) {
 }
 
 module.exports = {
+  uploadAvatar,
+  updateIntroduction, removeMenuRecipe, getUserProfile, getUserFeed, getFans, getVideoDetail, getConversation, readConversation,
   TOKEN_KEY,
   ACCOUNT_KEY,
   saveSession,
@@ -667,7 +739,6 @@ module.exports = {
   getRecipes,
   getRecipeDetail,
   getAccount,
-  recharge,
   checkin,
   startAdReward,
   finishAdReward,
@@ -687,7 +758,10 @@ module.exports = {
   getPersonalizationDetail,
   resetPersonalization,
   syncPersonalizationTimes,
-  uploadVideoMeta,
+  uploadVideoStart,
+  uploadVideoChunk,
+  uploadVideoComplete,
+  cancelVideoUpload,
   publishVideo,
   publishCookResult,
   voiceTts,
