@@ -4,30 +4,45 @@
 #include <stdint.h>
 #include <string>
 
-/** 测试程序的文字、规模和超时配置，构造后只读使用 */
+/** 测试程序的文字、规模和超时配置，构造后只读使用
+*/
 class TestConfig
 {
 public:
-    /** 初始化本轮已授权的默认测试规模和界面文字 */
+    /** 初始化本轮已授权的默认测试规模和界面文字
+    */
     TestConfig();
 
 public:
     // 真实素材目录、提示和有界探测参数
     QString m_videoLabel;
+    // 测试媒体目录标签文本
     QString m_videoDirectory;
+    // 素材准备中的状态文本
     QString m_mediaPreparing;
+    // 素材生成取消文本
     QString m_mediaCanceled;
+    // 未发现可用视频的诊断文本
     QString m_noVideo;
+    // 测试自产素材生成失败文本
     QString m_fixtureFailed;
+    // 媒体探测失败文本
     QString m_mediaProbeFailed;
+    // 可读测试媒体扩展名列表
     QStringList m_videoFilters;
+    // 最多探测的候选媒体数量
     int32_t m_videoProbeLimit;
+    // 单次媒体探测超时，毫秒
     int32_t m_videoProbeMs;
     // 路径配置界面文案
     QString m_debugLabel;
+    // Release路径标签文本
     QString m_releaseLabel;
+    // 路径选择按钮文本
     QString m_choosePath;
+    // 缺少有效路径的错误文本
     QString m_pathRequired;
+    // 缺少Debug测试产物的错误文本
     QString m_debugRunnerRequired;
     // 窗口标题
     QString m_title;
@@ -43,6 +58,7 @@ public:
     QString m_commandFailed;
     // 执行前显示实际选择和跳过项
     QString m_selectionText;
+    // 未执行用例的说明文本
     QString m_skippedText;
     // 按钮依次为指定、瞬时、压力、全量
     QStringList m_buttons;

@@ -3,7 +3,8 @@
 #include <atomic>
 #include <functional>
 
-/** 有限命令任务；结果通过调用方的Qt队列连接返回GUI */
+/** 有限命令任务；结果通过调用方的Qt队列连接返回GUI
+*/
 class TestCommandTask : public CTask
 {
 public:
@@ -12,10 +13,12 @@ public:
     */
     explicit TestCommandTask(const std::function<void(const std::atomic<bool>&)>& command);
 
-    /** 安全边界执行一次命令 */
+    /** 安全边界执行一次命令
+    */
     virtual void DoTask();
 
-    /** 可重复请求退出，不等待线程 */
+    /** 可重复请求退出，不等待线程
+    */
     virtual void StopTask();
 
 private:

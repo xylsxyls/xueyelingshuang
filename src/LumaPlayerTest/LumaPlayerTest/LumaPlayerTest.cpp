@@ -5,7 +5,6 @@
 #include "TestProcessHelper.h"
 #include "TestCommandTask.h"
 #include "TestMediaHelper.h"
-#include <stdexcept>
 #include "CStringManager/CStringManagerAPI.h"
 #include "LogManager/LogManagerAPI.h"
 #include "DialogManager/DialogManagerAPI.h"
@@ -95,15 +94,15 @@ m_output(nullptr)
     paths->addWidget(m_videoBrowse, 0, 2);
     const QStringList mediaOptions = QApplication::arguments();
     const int32_t mediaIndex = mediaOptions.indexOf("--video-dir");
-    m_videoPath->setText(mediaIndex >= 0 && mediaIndex + 1 < mediaOptions.size() ?
-        QFileInfo(mediaOptions[mediaIndex + 1]).absoluteFilePath() : m_config.m_videoDirectory);
-    QObject::connect(m_videoBrowse, &QPushButton::clicked, this, [this]() {
-        const QString path = QFileDialog::getExistingDirectory(this, m_config.m_choosePath, m_videoPath->text());
-        if (!path.isEmpty())
+    m_videoPath->setText(mediaIndex >= 0 && mediaIndex + 1 < mediaOptions.size() ? QFileInfo(mediaOptions[mediaIndex + 1]).absoluteFilePath() : m_config.m_videoDirectory);
+    QObject::connect(m_videoBrowse, &QPushButton::clicked, this, [this]()
         {
-            m_videoPath->setText(QDir::cleanPath(path));
-        }
-    });
+            const QString path = QFileDialog::getExistingDirectory(this, m_config.m_choosePath, m_videoPath->text());
+            if (!path.isEmpty())
+            {
+                m_videoPath->setText(QDir::cleanPath(path));
+            }
+        });
     paths->setColumnStretch(1, 1);
     layout->addLayout(paths);
     const QStringList options = QApplication::arguments();
@@ -113,17 +112,28 @@ m_output(nullptr)
     for (int32_t i = 0; i < 2; ++i)
     {
         const int32_t index = options.indexOf(i == 0 ? "--release-dir" : "--debug-dir");
-        const QString directory = QDir::cleanPath(index >= 0 && index + 1 < options.size() ?
-            QFileInfo(options[index + 1]).absoluteFilePath() :
-            QApplication::applicationDirPath() + (i == 0 ? "/../LumaPlayer" : "/../LumaPlayer/debug"));
+        const QString directory = QDir::cleanPath(index >= 0 && index + 1 < options.size() ? QFileInfo(options[index + 1]).absoluteFilePath() : QApplication::applicationDirPath() + (i == 0 ? "/../LumaPlayer" : "/../LumaPlayer/debug"));
         if (QFileInfo(directory + (i == 0 ? "/LumaPlayer1.0.exe" : "/LumaPlayerd.exe")).isFile())
         {
             (i == 0 ? m_releasePath : m_debugPath)->setText(directory);
         }
     }
-    QObject::connect(m_debugCheck, &QCheckBox::toggled, this, [this](bool) { updatePathControls(); });
-    QObject::connect(m_debugBrowse, &QPushButton::clicked, this, [this]() { choosePath(true); });
-    QObject::connect(m_releaseBrowse, &QPushButton::clicked, this, [this]() { choosePath(false); });
+    /** 根据当前Debug选择刷新路径控件
+    @param [in] checked 新勾选值，刷新函数统一读取控件状态
+    */
+    QObject::connect(m_debugCheck, &QCheckBox::toggled, this, [this](bool checked)
+        {
+            Q_UNUSED(checked);
+            updatePathControls();
+        });
+    QObject::connect(m_debugBrowse, &QPushButton::clicked, this, [this]()
+        {
+            choosePath(true);
+        });
+    QObject::connect(m_releaseBrowse, &QPushButton::clicked, this, [this]()
+        {
+            choosePath(false);
+        });
     updatePathControls();
     QHBoxLayout* controls = new QHBoxLayout();
     const QStringList modes = QStringList() << "specified" << "instant" << "pressure" << "all";
@@ -133,34 +143,36 @@ m_output(nullptr)
         m_buttons.push_back(button);
         controls->addWidget(button);
         const QString mode = modes[index];
-        QObject::connect(button, &QPushButton::clicked, this, [this, mode]() {
-            if (!validatePaths())
+        QObject::connect(button, &QPushButton::clicked, this, [this, mode]()
             {
-                return;
-            }
-            QString ids;
-            if (mode == "specified")
-            {
-                InputDialogParam param;
-                param.m_parent = windowHandle();
-                param.m_title = m_config.m_buttons[0];
-                param.m_editTip = m_config.m_idPrompt;
-                DialogManager::instance().makeDialog(param);
-                if (param.m_dialogId == 0 || param.m_result != ACCEPT_BUTTON)
+                if (!validatePaths())
                 {
                     return;
                 }
-                ids = param.m_editText;
-            }
-            beginRun(mode, ids);
-        });
+                QString ids;
+                if (mode == "specified")
+                {
+                    InputDialogParam param;
+                    param.m_parent = windowHandle();
+                    param.m_title = m_config.m_buttons[0];
+                    param.m_editTip = m_config.m_idPrompt;
+                    DialogManager::instance().makeDialog(param);
+                    if (param.m_dialogId == 0 || param.m_result != ACCEPT_BUTTON)
+                    {
+                        return;
+                    }
+                    ids = param.m_editText;
+                }
+                beginRun(mode, ids);
+            });
     }
     m_stop = createButton(m_config.m_stopText, panel);
     m_stop->setEnabled(false);
     controls->addWidget(m_stop);
-    QObject::connect(m_stop, &QPushButton::clicked, this, [this]() {
-        beginRun("stop", QString());
-    });
+    QObject::connect(m_stop, &QPushButton::clicked, this, [this]()
+        {
+            beginRun("stop", QString());
+        });
     m_status = new Label(panel);
     m_status->setText(m_config.m_title);
     m_status->setWordWrap(true);
@@ -177,9 +189,13 @@ m_output(nullptr)
     {
         m_output->appendPlainText(QString::number(it->first) + "  " + m_config.m_buttons[it->second.m_type == TestInstant ? 1 : 2] + "  " + it->second.m_description);
     }
-    QObject::connect(&m_process, SIGNAL(finished(int,QProcess::ExitStatus)), this, SLOT(finished(int,QProcess::ExitStatus)));
+    QObject::connect(&m_process, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(finished(int, QProcess::ExitStatus)));
     QObject::connect(&m_process, SIGNAL(error(QProcess::ProcessError)), this, SLOT(processError(QProcess::ProcessError)));
-    QObject::connect(&m_process, &QProcess::started, this, [this]() { m_childPid = m_process.processId(); saveReport(); });
+    QObject::connect(&m_process, &QProcess::started, this, [this]()
+        {
+            m_childPid = m_process.processId();
+            saveReport();
+        });
     QObject::connect(&m_timer, &QTimer::timeout, this, &LumaPlayerTest::tick);
     QObject::connect(&m_process, &QProcess::readyReadStandardOutput, this, &LumaPlayerTest::drainOutput);
     QObject::connect(&m_process, &QProcess::readyReadStandardError, this, &LumaPlayerTest::drainOutput);
@@ -234,44 +250,51 @@ void LumaPlayerTest::beginRun(const QString& mode, const QString& ids)
         std::shared_ptr<CTaskThread> thread = CTaskThreadManager::Instance().GetThreadInterface(m_commandThread);
         if (thread == nullptr)
         {
-            throw std::runtime_error("test command thread unavailable");
+            m_status->setText(m_config.m_commandFailed);
+            LOGERROR("Test command thread unavailable");
+            if (m_autoExit)
+            {
+                QApplication::exit(2);
+            }
+            return;
         }
         const QString directory = m_videoPath->text();
         const QString output = m_root + "/temp/fixtures";
         const QString executable = QApplication::applicationFilePath();
-        std::shared_ptr<TestCommandTask> task(new TestCommandTask([this, mode, ids, directory, output, executable](const std::atomic<bool>& exit) {
-            std::vector<int32_t> selected;
-            std::vector<int32_t> skipped;
-            QString error;
-            QString media;
-            QString fixture;
-            try
+        std::shared_ptr<TestCommandTask> task(new TestCommandTask([this, mode, ids, directory, output, executable](const std::atomic<bool>& exit)
             {
-                if (mode != "stop")
+                std::vector<int32_t> selected;
+                std::vector<int32_t> skipped;
+                QString error;
+                QString media;
+                QString fixture;
+                try
                 {
-                    error = TestCaseRegistry::select(mode, ids, &selected, &skipped);
-                    if (error.isEmpty())
+                    if (mode != "stop")
                     {
-                        error = TestMediaHelper::prepare(directory, output, executable, exit, &media, &fixture);
+                        error = TestCaseRegistry::select(mode, ids, &selected, &skipped);
+                        if (error.isEmpty())
+                        {
+                            error = TestMediaHelper::prepare(directory, output, executable, exit, &media, &fixture);
+                        }
                     }
                 }
-            }
-            catch (...)
-            {
-                error = m_config.m_commandFailed;
-            }
-            QStringList selectedText;
-            QStringList skippedText;
-            for (size_t i = 0; i < selected.size(); ++i)
-            {
-                selectedText << QString::number(selected[i]);
-            }
-            for (size_t i = 0; i < skipped.size(); ++i)
-            {
-                skippedText << QString::number(skipped[i]);
-            }
-            emit commandReady(mode, selectedText, skippedText, error, media, fixture);
-        }));
+                catch (...)
+                {
+                    error = m_config.m_commandFailed;
+                }
+                QStringList selectedText;
+                QStringList skippedText;
+                for (size_t i = 0; i < selected.size(); ++i)
+                {
+                    selectedText << QString::number(selected[i]);
+                }
+                for (size_t i = 0; i < skipped.size(); ++i)
+                {
+                    skippedText << QString::number(skipped[i]);
+                }
+                emit commandReady(mode, selectedText, skippedText, error, media, fixture);
+            }));
         m_prepareTask = task;
         m_commandPending = true;
         m_stop->setEnabled(true);
@@ -334,8 +357,7 @@ void LumaPlayerTest::executeCommand(const QString& mode, const QStringList& sele
     m_output->appendPlainText(m_config.m_videoLabel + ": " + m_media);
     const QStringList options = QApplication::arguments();
     const int32_t configurationOption = options.indexOf("--configuration");
-    if (configurationOption >= 0 && (configurationOption + 1 >= options.size() ||
-        (options[configurationOption + 1] != "release" && options[configurationOption + 1] != "debug" && options[configurationOption + 1] != "both")))
+    if (configurationOption >= 0 && (configurationOption + 1 >= options.size() || (options[configurationOption + 1] != "release" && options[configurationOption + 1] != "debug" && options[configurationOption + 1] != "both")))
     {
         m_status->setText(m_config.m_invalidConfiguration);
         if (m_autoExit)
@@ -553,6 +575,7 @@ void LumaPlayerTest::finished(int code, QProcess::ExitStatus status)
     {
         QFile checks(job.m_directory + "/checks.json");
         bool hasChecks = false;
+        bool guiComplete = false;
         if (checks.open(QIODevice::ReadOnly))
         {
             const QJsonArray values = QJsonDocument::fromJson(checks.readAll()).array();
@@ -561,11 +584,16 @@ void LumaPlayerTest::finished(int code, QProcess::ExitStatus status)
                 QJsonObject value = values[i].toObject();
                 hasChecks = true;
                 passed = passed && value["case"].toInt() == job.m_caseId && value["status"].toString() == "PASS";
+                guiComplete = guiComplete || value["detail"].toString() == "GUI sequence complete";
                 value["job"] = job.m_name;
                 m_checks.append(value);
             }
         }
         passed = passed && hasChecks;
+        if (kTestCases.at(static_cast<TestCaseId>(job.m_caseId)).m_engine == "gui")
+        {
+            passed = passed && guiComplete;
+        }
     }
     QJsonObject record;
     record["id"] = job.m_caseId;
@@ -773,8 +801,7 @@ bool LumaPlayerTest::validatePaths()
     {
         missing << "LumaPlayer1.0.exe";
     }
-    if (m_debugCheck->isChecked() && (m_debugPath->text().isEmpty() ||
-        !QFileInfo(m_debugPath->text() + "/LumaPlayerd.exe").isFile()))
+    if (m_debugCheck->isChecked() && (m_debugPath->text().isEmpty() || !QFileInfo(m_debugPath->text() + "/LumaPlayerd.exe").isFile()))
     {
         missing << "LumaPlayerd.exe";
     }

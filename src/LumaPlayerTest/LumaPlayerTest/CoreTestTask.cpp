@@ -2,6 +2,7 @@
 #pragma execution_character_set("utf-8")
 #endif
 #include "CoreTestTask.h"
+#include "KaraokeBackendTests.h"
 #include "LegacyTests.h"
 #include "TestConfig.h"
 #include "TestCaseRegistry.h"
@@ -124,11 +125,10 @@ static void CheckStreamingTempo(TestResults& report)
         const double frequency = crossings * 48000.0 / (end - begin);
         report.check(CaseRatePitch, std::fabs(frequency - 220.0) < 8.0 && maxJump < 1800 && channels,
             QStringLiteral("连续音频无包边界突跳、双声道不串扰；频率=") + QString::number(frequency) +
-            QStringLiteral("，最大相邻采样差=") + QString::number(maxJump));
+                QStringLiteral("，最大相邻采样差=") + QString::number(maxJump));
     }
     FFmpegCppAudioTempo tempo;
-    report.check(CaseRatePitch, !tempo.init(0, 2) && !tempo.setRate(1000) &&
-        tempo.init(48000, 2) && !tempo.setRate(0) && !tempo.write(nullptr, 1),
+    report.check(CaseRatePitch, !tempo.init(0, 2) && !tempo.setRate(1000) && tempo.init(48000, 2) && !tempo.setRate(0) && !tempo.write(nullptr, 1),
         QStringLiteral("未初始化、非法格式、非法速度及空输入被拒绝"));
     tempo.write(&input[0], 257);
     tempo.uninit();
@@ -210,11 +210,10 @@ void CoreTestTask::DoTask()
                     core.pause();
                     const size_t bytes = audio.stats().m_pcmBytes - before;
                     const LumaPlayerAudioFormat format = core.snapshot().m_mediaInfo.m_audioFormat;
-                    const int64_t duration = format.bytesPerFrame() > 0 && format.m_sampleRate > 0 ?
-                        static_cast<int64_t>(bytes / format.bytesPerFrame()) * 1000 / format.m_sampleRate : 0;
+                    const int64_t duration = format.bytesPerFrame() > 0 && format.m_sampleRate > 0 ? static_cast<int64_t>(bytes / format.bytesPerFrame()) * 1000 / format.m_sampleRate : 0;
                     report.check(id, positioned && playing && duration >= 330 && duration <= 700,
                         QStringLiteral("400ms实际播放提供330至700msPCM，不因等待视频帧而饿死音频；倍率=") +
-                        QString::number(rates[index]) + QStringLiteral("，音频ms=") + QString::number(duration));
+                            QString::number(rates[index]) + QStringLiteral("，音频ms=") + QString::number(duration));
                 }
             }
             core.uninit();
@@ -237,9 +236,7 @@ void CoreTestTask::DoTask()
                 report.check(id, error == config.m_noVideo && media == "previous.mp4" && fixture == "previous.avi",
                     QStringLiteral("空目录返回未找到视频，不能把上次路径当本次结果"));
                 canceled.store(true);
-                report.check(id, TestMediaHelper::prepare(temporary.path(), temporary.path() + "/fixtures",
-                    QCoreApplication::applicationFilePath(), canceled, &media, &fixture) == config.m_mediaCanceled &&
-                    media == "previous.mp4" && fixture == "previous.avi", QStringLiteral("取消不发布半成品输出"));
+                report.check(id, TestMediaHelper::prepare(temporary.path(), temporary.path() + "/fixtures", QCoreApplication::applicationFilePath(), canceled, &media, &fixture) == config.m_mediaCanceled && media == "previous.mp4" && fixture == "previous.avi", QStringLiteral("取消不发布半成品输出"));
                 LumaPlayerTestReport legacy;
                 legacy.beginCase("report-boundary");
                 legacy.check(true, "report-sentinel");
@@ -267,6 +264,62 @@ void CoreTestTask::DoTask()
                 report.check(id, RunPureCApiSmoke() == 0, QStringLiteral("独立.c文件编译及C生命周期实际运行"));
             }
         }
+        else if (id == CaseKaraokeTimeline)
+        {
+            const int32_t result = RunLegacyTest(id, m_fixture.toUtf8().constData(), true,
+                (m_directory + "/karaoke-timeline.txt").toUtf8().constData());
+            report.check(id, result == 0,
+                kTestCases.at(static_cast<TestCaseId>(id)).m_description + QStringLiteral("；分段断言详见karaoke-timeline.txt"));
+        }
+        else if (id == CaseKaraokePcmTimeline)
+        {
+            const int32_t result = RunLegacyTest(id, m_fixture.toUtf8().constData(), true,
+                (m_directory + "/karaoke-pcm-timeline.txt").toUtf8().constData());
+            report.check(id, result == 0,
+                kTestCases.at(static_cast<TestCaseId>(id)).m_description + QStringLiteral("；分段断言详见karaoke-pcm-timeline.txt"));
+        }
+        else if (id == CaseKaraokeCApi)
+        {
+            const int32_t result = RunLegacyTest(id, m_fixture.toUtf8().constData(), true,
+                (m_directory + "/karaoke-c-api.txt").toUtf8().constData());
+            report.check(id, result == 0,
+                kTestCases.at(static_cast<TestCaseId>(id)).m_description + QStringLiteral("；分段断言详见karaoke-c-api.txt"));
+        }
+        else if (id == CaseKaraokePitchShift)
+        {
+            const int32_t result = RunLegacyTest(id, m_fixture.toUtf8().constData(), true,
+                (m_directory + "/karaoke-pitch-shift.txt").toUtf8().constData());
+            report.check(id, result == 0,
+                kTestCases.at(static_cast<TestCaseId>(id)).m_description + QStringLiteral("；频率和时长断言详见karaoke-pitch-shift.txt"));
+        }
+        else if (id == CaseKaraokePcmProcessing)
+        {
+            const int32_t result = RunLegacyTest(id, m_fixture.toUtf8().constData(), true,
+                (m_directory + "/karaoke-pcm-processing.txt").toUtf8().constData());
+            report.check(id, result == 0,
+                kTestCases.at(static_cast<TestCaseId>(id)).m_description + QStringLiteral("；增益和混音断言详见karaoke-pcm-processing.txt"));
+        }
+        else if (id == CaseKaraokeCaptureFlow)
+        {
+            const int32_t result = RunLegacyTest(id, m_fixture.toUtf8().constData(), true,
+                (m_directory + "/karaoke-capture-flow.txt").toUtf8().constData());
+            report.check(id, result == 0,
+                kTestCases.at(static_cast<TestCaseId>(id)).m_description + QStringLiteral("；暂停门控和时间线断言详见karaoke-capture-flow.txt"));
+        }
+        else if (id == CaseKaraokeMonitorPcmConversion)
+        {
+            const QString detailsPath = m_directory + "/karaoke-monitor-conversion.txt";
+            const int32_t result = RunLegacyTest(id, m_fixture.toUtf8().constData(), true,
+                detailsPath.toUtf8().constData());
+            report.check(id, result == 0,
+                kTestCases.at(static_cast<TestCaseId>(id)).m_description + QStringLiteral("；legacyResult=") +
+                    QString::number(result) + QStringLiteral("，断言报告=") + detailsPath +
+                    QStringLiteral("，报告存在=") + (QFileInfo::exists(detailsPath) ? QStringLiteral("是") : QStringLiteral("否")));
+        }
+        else if (id == CaseKaraokeNativeBoundary || id == CaseKaraokeSpectrum || id == CaseKaraokeSeparation || id == CaseKaraokeExport || id == CaseKaraokeRecordingEof || id == CaseKaraokeDiskRecording || id == CaseKaraokeOddVideo || id == CaseKaraokeRecordingClock || id == CaseKaraokePortableWriter || id == CaseKaraokeErrorReturns)
+        {
+            RunKaraokeBackendCase(id, report, m_directory, m_fixture);
+        }
         else if (id == CaseThreadStopRace)
         {
             const int32_t before = CTaskThreadManager::Instance().Count();
@@ -281,13 +334,17 @@ void CoreTestTask::DoTask()
                 }
                 // 有限空任务可能恰好在StopCurTask判空与调用之间完成并被清空。
                 std::shared_ptr<std::atomic<bool>> started(new std::atomic<bool>(false));
-                std::shared_ptr<TestCommandTask> task(new TestCommandTask([started](const std::atomic<bool>& exit) {
-                    started->store(true);
-                    for (int32_t step = 0; step < 32 && !exit.load(); ++step)
+                /** 发布任务开始后执行有限让步，用于覆盖停止与正常完成交错
+                @param [in] exit 借用的任务退出标记，仅在本任务执行期间读取
+                */
+                std::shared_ptr<TestCommandTask> task(new TestCommandTask([started](const std::atomic<bool>& exit)
                     {
-                        std::this_thread::yield();
-                    }
-                }));
+                        started->store(true);
+                        for (int32_t step = 0; step < 32 && !exit.load(); ++step)
+                        {
+                            std::this_thread::yield();
+                        }
+                    }));
                 thread->PostTask(task, 1);
                 const int64_t deadline = LumaPlayerTestHelper::nowMs() + 1000;
                 while (!started->load() && !m_exit.load() && LumaPlayerTestHelper::nowMs() < deadline)
@@ -308,13 +365,15 @@ void CoreTestTask::DoTask()
         else if (id == CaseSelectionRules)
         {
             std::set<int32_t> active;
-            active.insert(8); active.insert(9); active.insert(11); active.insert(12);
+            active.insert(8);
+            active.insert(9);
+            active.insert(11);
+            active.insert(12);
             std::set<int32_t> deleted;
             deleted.insert(10);
             std::vector<int32_t> selected;
             std::vector<int32_t> skipped;
-            report.check(id, TestCaseRegistry::parse("8-12,8", active, deleted, &selected, &skipped).isEmpty() &&
-                selected == std::vector<int32_t>({8, 9, 11, 12}) && skipped == std::vector<int32_t>({10}),
+            report.check(id, TestCaseRegistry::parse("8-12,8", active, deleted, &selected, &skipped).isEmpty() && selected == std::vector<int32_t>({8, 9, 11, 12}) && skipped == std::vector<int32_t>({10}),
                 QStringLiteral("闭区间去重并自动跳过已删除10号"));
             const char* invalid[] = {"0", "12-8", "8,99", "8,,9", "-1", "2147483648", "10"};
             for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
@@ -368,16 +427,11 @@ void CoreTestTask::DoTask()
             report.check(id, haveLog, QStringLiteral("日志实际落盘并包含源码文件信息"));
             const int32_t disabledBegin = evidence.indexOf("Diagnostic logging-disabled begin");
             const int32_t disabledEnd = evidence.indexOf("Diagnostic logging-disabled end");
-            report.check(id, disabledBegin >= 0 && disabledEnd > disabledBegin &&
-                !evidence.mid(disabledBegin, disabledEnd - disabledBegin).contains("Core media open"),
+            report.check(id, disabledBegin >= 0 && disabledEnd > disabledBegin && !evidence.mid(disabledBegin, disabledEnd - disabledBegin).contains("Core media open"),
                 "disabled Core does not emit playback diagnostics");
-            report.check(id, evidence.contains("Core media open") && evidence.contains("target=30000000") &&
-                evidence.contains("rate=2200") && evidence.contains("hasA=1 A=10000000") &&
-                evidence.contains("hasB=1 B=20400000") && evidence.contains(m_fixture.toUtf8()),
+            report.check(id, evidence.contains("Core media open") && evidence.contains("target=30000000") && evidence.contains("rate=2200") && evidence.contains("hasA=1 A=10000000") && evidence.contains("hasB=1 B=20400000") && evidence.contains(m_fixture.toUtf8()),
                 "logs preserve media, requested target, actual rate and exact AB boundaries");
-            report.check(id, evidence.contains("Core playback sample") && evidence.contains("frameStart=") &&
-                evidence.contains("tickMs=") && evidence.contains("Core seek completed") &&
-                evidence.contains("Core diagnostics enabled build="),
+            report.check(id, evidence.contains("Core playback sample") && evidence.contains("frameStart=") && evidence.contains("tickMs=") && evidence.contains("Core seek completed") && evidence.contains("Core diagnostics enabled build="),
                 "logs preserve build, actual frames and timestamps without per-frame logging");
             report.check(id, evidence.count("Core playback sample") >= 1 && evidence.count("Core playback sample") <= 2,
                 "31 snapshot reads produce at most two sampled playback log entries");
@@ -405,8 +459,7 @@ void CoreTestTask::DoTask()
                     core.clearLoop();
                     if (phase == 1)
                     {
-                        report.check(19, core.setLoopAAtPosition(10000000) == LumaPlayerCoreResultSuccess &&
-                            core.setLoopBAtPosition(11600000) == LumaPlayerCoreResultSuccess, "short AB setup");
+                        report.check(19, core.setLoopAAtPosition(10000000) == LumaPlayerCoreResultSuccess && core.setLoopBAtPosition(11600000) == LumaPlayerCoreResultSuccess, "short AB setup");
                     }
                     core.seekTo(phase == 0 ? 0 : 10000000, false);
                     report.check(19, core.play() == LumaPlayerCoreResultSuccess, "stress play actual result");
@@ -449,8 +502,7 @@ void CoreTestTask::DoTask()
                                 LumaPlayerTestHelper::nowMs() - begin, previous,
                                 static_cast<unsigned long long>(memory.WorkingSetSize), handles);
 #endif
-                            report.check(19, alive, "playback liveness checkpoint phase=" + QString::number(phase) +
-                                " elapsedMs=" + QString::number(LumaPlayerTestHelper::nowMs() - begin));
+                            report.check(19, alive, "playback liveness checkpoint phase=" + QString::number(phase) + " elapsedMs=" + QString::number(LumaPlayerTestHelper::nowMs() - begin));
                         }
                     }
                     core.pause();
@@ -475,8 +527,7 @@ void CoreTestTask::DoTask()
                 }
                 if (id == CaseAbBoundary)
                 {
-                    report.check(8, core.setLoopAAtPosition(10100000) == LumaPlayerCoreResultSuccess &&
-                        core.setLoopBAtPosition(20100000) == LumaPlayerCoreResultSuccess, "set frame-rounded AB");
+                    report.check(8, core.setLoopAAtPosition(10100000) == LumaPlayerCoreResultSuccess && core.setLoopBAtPosition(20100000) == LumaPlayerCoreResultSuccess, "set frame-rounded AB");
                     LumaPlayerLoopRange range = core.snapshot().m_loopRange;
                     report.check(8, range.start100ns() == 10000000 && range.end100ns() == 20400000,
                         "25fps independent boundary expected [10000000,20400000)");
@@ -502,19 +553,13 @@ void CoreTestTask::DoTask()
                     core.play();
                     WaitFrames(video, video.stats().m_frameCount + 3, m_exit);
                     LumaPlayerTestAudioStats before = audio.stats();
-                    report.check(9, core.setLoopAAtPosition(30000000) == LumaPlayerCoreResultSuccess &&
-                        core.setLoopBAtPosition(50000000) == LumaPlayerCoreResultSuccess, "edit AB while playing");
+                    report.check(9, core.setLoopAAtPosition(30000000) == LumaPlayerCoreResultSuccess && core.setLoopBAtPosition(50000000) == LumaPlayerCoreResultSuccess, "edit AB while playing");
                     LumaPlayerTestAudioStats after = audio.stats();
-                    report.check(9, core.snapshot().m_state == LumaPlayerCoreStatePlaying &&
-                        before.m_pauseCount == after.m_pauseCount && before.m_flushCount == after.m_flushCount &&
-                            before.m_resumeCount == after.m_resumeCount, "playing AB edit causes no pause/flush/resume");
+                    report.check(9, core.snapshot().m_state == LumaPlayerCoreStatePlaying && before.m_pauseCount == after.m_pauseCount && before.m_flushCount == after.m_flushCount && before.m_resumeCount == after.m_resumeCount, "playing AB edit causes no pause/flush/resume");
                     const LumaPlayerTestAudioStats beforeSeek = audio.stats();
-                    report.check(15, core.seekTo(4000000, true) == LumaPlayerCoreResultSuccess &&
-                        core.snapshot().m_state == LumaPlayerCoreStatePlaying &&
-                        WaitFrames(video, video.stats().m_frameCount + 3, m_exit), "playing seek produces following real frames");
+                    report.check(15, core.seekTo(4000000, true) == LumaPlayerCoreResultSuccess && core.snapshot().m_state == LumaPlayerCoreStatePlaying && WaitFrames(video, video.stats().m_frameCount + 3, m_exit), "playing seek produces following real frames");
                     const LumaPlayerTestAudioStats afterSeek = audio.stats();
-                    report.check(15, beforeSeek.m_pauseCount == afterSeek.m_pauseCount &&
-                        beforeSeek.m_resumeCount == afterSeek.m_resumeCount && afterSeek.m_flushCount == beforeSeek.m_flushCount + 1,
+                    report.check(15, beforeSeek.m_pauseCount == afterSeek.m_pauseCount && beforeSeek.m_resumeCount == afterSeek.m_resumeCount && afterSeek.m_flushCount == beforeSeek.m_flushCount + 1,
                         "playing seek replaces old PCM without pause/resume device round trip");
                     const std::shared_ptr<std::atomic<int32_t>> completed(new std::atomic<int32_t>(0));
                     const std::shared_ptr<std::atomic<int32_t>> failed(new std::atomic<int32_t>(0));
@@ -524,10 +569,18 @@ void CoreTestTask::DoTask()
                         request.m_requestId = 100 + point;
                         request.m_operation = point == 0 ? LumaPlayerCoreOperationSetA : LumaPlayerCoreOperationSetB;
                         request.m_position100ns = point == 0 ? 32000000 : 52000000;
-                        report.check(15, core.submitAsyncEx(request, [completed, failed](const LumaPlayerCoreCompletion& result) {
-                            if (result.m_result != LumaPlayerCoreResultSuccess) { ++(*failed); }
-                            ++(*completed);
-                            }) == LumaPlayerCoreResultSuccess, "asynchronous AB accepted");
+                        /** 只累计真实完成及失败数，不阻塞Core完成线程
+                        @param [in] result 借用的本次异步AB结果，回调返回后不得保留引用
+                        */
+                        report.check(15, core.submitAsyncEx(request, [completed, failed](const LumaPlayerCoreCompletion& result)
+                                             {
+                                                 if (result.m_result != LumaPlayerCoreResultSuccess)
+                                                 {
+                                                     ++(*failed);
+                                                 }
+                                                 ++(*completed);
+                                             }) == LumaPlayerCoreResultSuccess,
+                            "asynchronous AB accepted");
                     }
                     const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
                     while (completed->load() < 2 && !m_exit.load() && std::chrono::steady_clock::now() < deadline)
@@ -535,8 +588,7 @@ void CoreTestTask::DoTask()
                         std::this_thread::sleep_for(std::chrono::milliseconds(5));
                     }
                     const LumaPlayerLoopRange actual = core.snapshot().m_loopRange;
-                    report.check(15, completed->load() == 2 && failed->load() == 0 &&
-                        actual.start100ns() == 32000000 && actual.end100ns() == 52400000,
+                    report.check(15, completed->load() == 2 && failed->load() == 0 && actual.start100ns() == 32000000 && actual.end100ns() == 52400000,
                         "two-phase AB reports each completion with exact 25fps boundaries");
                 }
                 if (id == CaseAbReentry)
@@ -545,8 +597,7 @@ void CoreTestTask::DoTask()
                     core.setLoopAAtPosition(10000000);
                     core.setLoopBAtPosition(20000000);
                     core.seekTo(30000000, true);
-                    report.check(10, WaitFrames(video, video.stats().m_frameCount + 8, m_exit) &&
-                        video.stats().m_lastTimestamp100ns >= 30000000, "manual seek outside AB continues outside");
+                    report.check(10, WaitFrames(video, video.stats().m_frameCount + 8, m_exit) && video.stats().m_lastTimestamp100ns >= 30000000, "manual seek outside AB continues outside");
                     core.seekTo(12000000, true);
                     video.clearFrameHistory();
                     WaitFrames(video, video.stats().m_frameCount + 40, m_exit);

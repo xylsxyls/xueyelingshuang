@@ -4,7 +4,8 @@
 #include <QString>
 #include <memory>
 
-/** 耗时测试在专用线程运行，进程外看门狗处理不可中断旧测试 */
+/** 耗时测试在专用线程运行，进程外看门狗处理不可中断旧测试
+*/
 class CoreTestTask : public CTask
 {
 public:
@@ -18,10 +19,12 @@ public:
     CoreTestTask(const QString& mode, const QString& media, const QString& fixture,
         const QString& directory, const std::shared_ptr<TestRunState>& state);
 
-    /** 执行有限批次，不在GUI线程等待 */
+    /** 执行有限批次，不在GUI线程等待
+    */
     virtual void DoTask();
 
-    /** 只设置退出标记；长调用在返回后的安全点检查 */
+    /** 只设置退出标记；长调用在返回后的安全点检查
+    */
     virtual void StopTask();
 
 private:

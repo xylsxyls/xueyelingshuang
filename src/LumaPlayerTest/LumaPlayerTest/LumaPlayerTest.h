@@ -20,7 +20,8 @@ class QPlainTextEdit;
 class QPushButton;
 class PushButton;
 
-/** 独立运行测试调度窗口，子进程隔离异常，报告持续落盘 */
+/** 独立运行测试调度窗口，子进程隔离异常，报告持续落盘
+*/
 class LumaPlayerTest : public MainWindow
 {
     Q_OBJECT
@@ -33,18 +34,26 @@ public:
     */
     LumaPlayerTest(const QString& root, const QString& media, const QString& fixture, bool selfCheck = false);
 
-    /** 队列启动，不阻塞构造 */
+    /** 队列启动，不阻塞构造
+    */
     void start();
 
-    /** 事件循环退出后按管理器ID回收有限命令线程 */
+    /** 事件循环退出后按管理器ID回收有限命令线程
+    */
     virtual ~LumaPlayerTest();
 
 signals:
-    /** 后台命令结果经队列返回，Qt对象不跨线程操作 */
+    /** 后台命令结果经队列返回，Qt对象不跨线程操作
+    @param [in] mode 测试运行模式
+    @param [in] selected 选择执行的稳定用例ID列表
+    @param [in] skipped 未执行的稳定用例ID列表
+    @param [in] error 可为空的诊断输出缓冲区或对象
+    @param [in] media 媒体路径
+    @param [in] fixture 自产素材路径，调用期间有效
+    */
     void commandReady(const QString& mode, const QStringList& selected, const QStringList& skipped, const QString& error, const QString& media, const QString& fixture);
 
 public:
-
     /** 从按钮或命令行选择同一执行路径
     @param [in] mode specified/instant/pressure/all
     @param [in] ids 指定ID文本
@@ -58,10 +67,12 @@ protected:
     virtual void closeEvent(QCloseEvent* event);
 
 private slots:
-    /** 启动下一子进程或发布完成报告 */
+    /** 启动下一子进程或发布完成报告
+    */
     void next();
 
-    /** 检查超时、启动压力的就绪及正常退出 */
+    /** 检查超时、启动压力的就绪及正常退出
+    */
     void tick();
 
     /** 接收真实退出结果
@@ -91,6 +102,11 @@ private:
     /** 命令结果到达GUI后执行非阻塞进程状态机
     @param [in] mode 测试方式或stop
     @param [in] ids 数字选择
+    @param [in] selected 选择执行的稳定用例ID列表
+    @param [in] skipped 未执行的稳定用例ID列表
+    @param [in] error 可为空的诊断输出缓冲区或对象
+    @param [in] media 媒体路径
+    @param [in] fixture 自产素材路径，调用期间有效
     */
     void executeCommand(const QString& mode, const QStringList& selected, const QStringList& skipped, const QString& error, const QString& media, const QString& fixture);
 
@@ -104,13 +120,16 @@ private:
     */
     void choosePath(bool debug);
 
-    /** 按批次状态更新路径控件 */
+    /** 按批次状态更新路径控件
+    */
     void updatePathControls();
 
-    /** 原子保存本批报告和最新入口 */
+    /** 原子保存本批报告和最新入口
+    */
     void saveReport();
 
-    /** 保存stdout/stderr而非丢弃异常现场 */
+    /** 保存stdout/stderr而非丢弃异常现场
+    */
     void drainOutput();
 
 private:
@@ -134,14 +153,19 @@ private:
     std::vector<QPushButton*> m_buttons;
     // 真实视频目录控件，由Qt管理
     QLineEdit* m_videoPath;
+    // Qt父对象拥有的视频目录选择按钮
     QPushButton* m_videoBrowse;
     // 准备阶段任务，用于协作取消
     std::shared_ptr<TestCommandTask> m_prepareTask;
     // Debug选择及只读路径控件，由Qt管理
     QCheckBox* m_debugCheck;
+    // Qt父对象拥有的Debug产物路径输入框
     QLineEdit* m_debugPath;
+    // Qt父对象拥有的Release产物路径输入框
     QLineEdit* m_releasePath;
+    // Qt父对象拥有的Debug路径选择按钮
     QPushButton* m_debugBrowse;
+    // Qt父对象拥有的Release路径选择按钮
     QPushButton* m_releaseBrowse;
     // 停止按钮
     QPushButton* m_stop;

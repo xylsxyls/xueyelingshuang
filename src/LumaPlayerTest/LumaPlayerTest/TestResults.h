@@ -3,12 +3,14 @@
 #include <QString>
 #include <stdint.h>
 
-/** 单个隔离子进程的断言结果，每次检查即落盘，不能当作日志包装 */
+/** 单个隔离子进程的断言结果，每次检查即落盘，不能当作日志包装
+*/
 class TestResults
 {
 public:
     /** 绑定结果目录
     @param [in] directory 此批子进程独占目录
+    @param [in] caseId 报告归属的稳定用例ID
     */
     explicit TestResults(const QString& directory, int32_t caseId = 0);
 

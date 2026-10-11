@@ -2,7 +2,8 @@
 #include <atomic>
 #include <stdint.h>
 
-/** 工作线程只在全部报告落盘后发布终态，GUI不读取未完成数据 */
+/** 工作线程只在全部报告落盘后发布终态，GUI不读取未完成数据
+*/
 struct TestRunState
 {
 public:
@@ -12,6 +13,7 @@ public:
     std::atomic<int32_t> m_result;
 
 public:
-    /** 初始为未完成 */
+    /** 初始为未完成
+    */
     TestRunState();
 };

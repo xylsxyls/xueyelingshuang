@@ -3,7 +3,8 @@
 #include <QStringList>
 #include <stdint.h>
 
-/** 隔离进程任务，结果目录与参数在启动前固定 */
+/** 隔离进程任务，结果目录与参数在启动前固定
+*/
 struct TestJob
 {
 public:

@@ -2,7 +2,7 @@
 "$CLOUD_REBUILD" FFmpegCpp 64 dll debug same
 "$CLOUD_REBUILD" CTaskThreadManager 64 dll debug same
 "$CLOUD_REBUILD" LockFreeQueue 64 dll debug same
-"$CLOUD_REBUILD" LumaPlayerCore 64 dll debug only
+"$CLOUD_REBUILD" LumaPlayerCore 64 dll debug same
 "$CLOUD_REBUILD" CDump 64 dll debug same
 "$CLOUD_REBUILD" QssString 64 dll debug only
 "$CLOUD_REBUILD" EO_XmlSax2Parser 64 dll debug same

@@ -1,4 +1,4 @@
-﻿#设置CMAKE最低版本
+#设置CMAKE最低版本
 CMAKE_MINIMUM_REQUIRED(VERSION 3.10.1)
 SET(CMAKE_CXX_STANDARD 11)
 
@@ -56,7 +56,7 @@ INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../include/)
 #添加库目录
 LINK_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../lib/)
 
-SET(CMAKE_INCLUDE_CURRENT_DIR ON) 
+SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 #添加QT库
 SET(CMAKE_AUTOMOC ON)
@@ -112,7 +112,14 @@ TARGET_SOURCES(${PROJECT_NAME} PRIVATE ${LUMAPLAYER_TEST_SOURCES}
     "${LUMAPLAYER_SOURCE_DIR}/LumaPlayerLogicController.h"
     "${LUMAPLAYER_SOURCE_DIR}/LumaPlayer.qrc"
     "${PROJECT_SOURCE_DIR}/../../LumaPlayerCore/LumaPlayerCore/src/MediaClock.cpp"
-    "${PROJECT_SOURCE_DIR}/../../LumaPlayerCore/LumaPlayerCore/src/PlayerEngineHelper.cpp")
+    "${PROJECT_SOURCE_DIR}/../../LumaPlayerCore/LumaPlayerCore/src/PlayerEngineHelper.cpp"
+    "${PROJECT_SOURCE_DIR}/../../LumaPlayerCore/LumaPlayerCore/src/KaraokeTimeline.cpp"
+    "${PROJECT_SOURCE_DIR}/../../LumaPlayerCore/LumaPlayerCore/src/KaraokePcmTimeline.cpp"
+    "${PROJECT_SOURCE_DIR}/../../LumaPlayerCore/LumaPlayerCore/src/KaraokeRecordingTracks.cpp"
+    "${PROJECT_SOURCE_DIR}/../../LumaPlayerCore/LumaPlayerCore/src/KaraokeStorage.cpp"
+    "${PROJECT_SOURCE_DIR}/../../LumaPlayerCore/LumaPlayerCore/src/KaraokePcmProcessor.cpp"
+    "${PROJECT_SOURCE_DIR}/../../LumaPlayerCore/LumaPlayerCore/src/KaraokeMicrophoneControls.cpp"
+    "${PROJECT_SOURCE_DIR}/../../LumaPlayerCore/LumaPlayerCore/src/KaraokeSpectrum.cpp")
 TARGET_COMPILE_OPTIONS(${PROJECT_NAME} PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:-include>"
     "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/TestGuiAccess.h>")

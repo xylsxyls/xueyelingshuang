@@ -12,6 +12,34 @@
 #include <QElapsedTimer>
 #include <cmath>
 
+bool TestMediaHelper::writeSeparationWave(const QString& path, int32_t frames)
+{
+    if (frames < 1 || frames > 44100 * 60)
+    {
+        return false;
+    }
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly))
+    {
+        return false;
+    }
+    QDataStream stream(&file);
+    stream.setByteOrder(QDataStream::LittleEndian);
+    stream.writeRawData("RIFF", 4);
+    stream << quint32(36 + frames * 4);
+    stream.writeRawData("WAVEfmt ", 8);
+    stream << quint32(16) << quint16(1) << quint16(2);
+    stream << quint32(44100) << quint32(176400) << quint16(4) << quint16(16);
+    stream.writeRawData("data", 4);
+    stream << quint32(frames * 4);
+    for (int32_t i = 0; i < frames; ++i)
+    {
+        stream << qint16(6000 * std::sin(6.283185307179586 * 220 * i / 44100))
+               << qint16(4000 * std::cos(6.283185307179586 * 880 * i / 44100));
+    }
+    return stream.status() == QDataStream::Ok && file.commit();
+}
+
 QByteArray TestMediaHelper::chunk(const QByteArray& tag, const QByteArray& data)
 {
     QByteArray result = tag;
@@ -31,13 +59,15 @@ QByteArray TestMediaHelper::list(const QByteArray& tag, const QByteArray& data)
     return chunk("LIST", tag + data);
 }
 
-QByteArray TestMediaHelper::generate(const std::atomic<bool>& exit)
+QByteArray TestMediaHelper::generate(const std::atomic<bool>& exit, bool asymmetric, bool odd)
 {
+    const quint32 width = odd ? 161 : 160, height = odd ? 91 : 90;
+    const quint32 stride = (width * 3 + 3) / 4 * 4, bytes = stride * height;
     // 独立固定标准：160x90，25fps，200帧；首秒红色，其余蓝色，48kHz双声道PCM
     QByteArray avih;
     QDataStream a(&avih, QIODevice::WriteOnly);
     a.setByteOrder(QDataStream::LittleEndian);
-    const quint32 values[] = {40000, 1272000, 0, 16, 200, 0, 2, 43200, 160, 90, 0, 0, 0, 0};
+    const quint32 values[] = {40000, 1272000, 0, 16, 200, 0, 2, bytes, width, height, 0, 0, 0, 0};
     for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); ++i)
     {
         a << values[i];
@@ -50,16 +80,16 @@ QByteArray TestMediaHelper::generate(const std::atomic<bool>& exit)
         s.setByteOrder(QDataStream::LittleEndian);
         s << quint32(0) << quint16(0) << quint16(0) << quint32(0);
         s << quint32(kind == 0 ? 1 : 4) << quint32(kind == 0 ? 25 : 192000) << quint32(0);
-        s << quint32(kind == 0 ? 200 : 384000) << quint32(kind == 0 ? 43200 : 7680);
+        s << quint32(kind == 0 ? 200 : 384000) << quint32(kind == 0 ? bytes : 7680);
         s << quint32(0xffffffff) << quint32(kind == 0 ? 0 : 4);
-        s << qint16(0) << qint16(0) << qint16(kind == 0 ? 160 : 0) << qint16(kind == 0 ? 90 : 0);
+        s << qint16(0) << qint16(0) << qint16(kind == 0 ? width : 0) << qint16(kind == 0 ? height : 0);
         QByteArray format;
         QDataStream f(&format, QIODevice::WriteOnly);
         f.setByteOrder(QDataStream::LittleEndian);
         if (kind == 0)
         {
-            f << quint32(40) << qint32(160) << qint32(90) << quint16(1) << quint16(24);
-            f << quint32(0) << quint32(43200) << qint32(0) << qint32(0) << quint32(0) << quint32(0);
+            f << quint32(40) << qint32(width) << qint32(height) << quint16(1) << quint16(24);
+            f << quint32(0) << bytes << qint32(0) << qint32(0) << quint32(0) << quint32(0);
         }
         else
         {
@@ -77,10 +107,11 @@ QByteArray TestMediaHelper::generate(const std::atomic<bool>& exit)
         {
             return QByteArray();
         }
-        QByteArray video(43200, char(0));
-        for (int32_t pixel = 0; pixel < 14400; ++pixel)
+        QByteArray video(bytes, char(0));
+        for (quint32 pixel = 0; pixel < width * height; ++pixel)
         {
-            video[pixel * 3 + (i < 25 ? 2 : 0)] = char(255);
+            const bool red = asymmetric ? ((i < 25) == (pixel / width >= height / 2)) : i < 25;
+            video[(pixel / width) * stride + (pixel % width) * 3 + (red ? 2 : 0)] = char(255);
         }
         QByteArray pcm;
         QDataStream sound(&pcm, QIODevice::WriteOnly);
@@ -120,8 +151,7 @@ QString TestMediaHelper::prepare(const QString& directory, const QString& output
         ++tried;
         QProcess probe;
         probe.setProcessChannelMode(QProcess::ForwardedErrorChannel);
-        probe.start(executable, QStringList() << "--mode" << "media-probe" << "--media" << candidate
-            << "--output" << output + "/probe");
+        probe.start(executable, QStringList() << "--mode" << "media-probe" << "--media" << candidate << "--output" << output + "/probe");
         QElapsedTimer timer;
         timer.start();
         while (!exit.load() && probe.state() != QProcess::NotRunning && timer.elapsed() < config.m_videoProbeMs)

@@ -5,10 +5,10 @@
 #ifdef _WIN32
 #include <Windows.h>
 
-/** 只匹配调用者已核实的测试进程窗口
-@param [in] window 枚举窗口
-@param [in] value 同步借用查询参数
-@return TRUE继续枚举
+/** 查找指定测试进程的可见窗口
+@param [in] window 枚举得到的原生窗口句柄
+@param [in] value TestWindowQuery指针转为LPARAM的值
+@return 找到目标时返回FALSE停止枚举，否则返回TRUE
 */
 static BOOL CALLBACK VisitTestWindow(HWND window, LPARAM value)
 {

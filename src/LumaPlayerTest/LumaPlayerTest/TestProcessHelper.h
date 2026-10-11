@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include <stdint.h>
 
-/** 进程窗口观察适配，非Windows实现明确返回不支持 */
+/** 进程窗口观察适配，非Windows实现明确返回不支持
+*/
 class TestProcessHelper
 {
 public:
@@ -18,7 +19,8 @@ public:
     static bool closeWindow(int64_t pid);
 };
 
-/** Win32枚举窗口时的短期参数，不保存窗口所有权 */
+/** Win32枚举窗口时的短期参数，不保存窗口所有权
+*/
 struct TestWindowQuery
 {
 public:

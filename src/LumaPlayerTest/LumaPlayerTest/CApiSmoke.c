@@ -21,3 +21,13 @@ int RunPureCApiSmoke(void)
     lumaPlayerCoreDestroy(handle);
     return result;
 }
+
+#ifdef LUMAPLAYER_CORE_LINK_CHECK
+/** 纯C入口，链接检查目标使用全部Core对象而不由静态归档隐藏缺失符号
+@return 零表示纯C初始化和清理检查通过
+*/
+int main(void)
+{
+    return RunPureCApiSmoke();
+}
+#endif

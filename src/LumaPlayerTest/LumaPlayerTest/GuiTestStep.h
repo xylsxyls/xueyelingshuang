@@ -3,7 +3,8 @@
 #include <functional>
 #include <stdint.h>
 
-/** GUI事件动作和独立可观察完成条件，单次运行，不创建工作线程 */
+/** GUI事件动作和独立可观察完成条件，单次运行，不创建工作线程
+*/
 struct GuiTestStep
 {
 public:

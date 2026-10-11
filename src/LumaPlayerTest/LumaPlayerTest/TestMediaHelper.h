@@ -3,7 +3,8 @@
 #include <QByteArray>
 #include <atomic>
 
-/** 后台查找真实视频并生成确定性AVI，用户素材只读访问 */
+/** 后台查找真实视频并生成确定性AVI，用户素材只读访问
+*/
 class TestMediaHelper
 {
 public:
@@ -19,13 +20,22 @@ public:
     static QString prepare(const QString& directory, const QString& output,
         const QString& executable, const std::atomic<bool>& exit, QString* media, QString* fixture);
 
-private:
     /** 生成固定RIFF素材，每帧检查取消
     @param [in] exit 协作退出标记
+    @param [in] asymmetric 是否生成非对称首帧，以检出错误居中或翻转
+    @param [in] odd 是否生成奇数尺寸，用于布局边界断言
     @return 完整AVI数据，取消时为空
     */
-    static QByteArray generate(const std::atomic<bool>& exit);
+    static QByteArray generate(const std::atomic<bool>& exit, bool asymmetric = false, bool odd = false);
 
+    /** 生成44.1kHz双声道非零PCM，帧数明确，用于分离时长和尾段测试
+    @param [in] path 输出路径，调用期间保持有效
+    @param [in] frames PCM帧数，不是交错样本数或字节数
+    @return 文件完整写入成功才返回true
+    */
+    static bool writeSeparationWave(const QString& path, int32_t frames);
+
+private:
     /** 封装RIFF块并处理偶数字节对齐
     @param [in] tag 四字节标识
     @param [in] data 内容
