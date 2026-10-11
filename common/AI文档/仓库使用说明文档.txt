@@ -1,6 +1,6 @@
-﻿仓库使用说明文档
-版本：2.3
-更新日期：2026-09-29
+仓库使用说明文档
+版本：2.4
+更新日期：2026-10-12
 职责：说明如何生成、构建、链接、运行和交付工程；代码、架构、线程、测试和窗口规则归各自规范，阶段和口令归工作流。
 阅读顺序：入口与分工 → 目录 → 工具及version → before/after → CMake → 第三方及链接 → 新建与构建 → 增量发布 → 产品交接。
 书写约定：短标题 → 确认 → 步骤/规则 → 完成/检查 → 详细说明。字段定义见第一节第3条，五份规范及工作流沿用此写法。
@@ -209,7 +209,7 @@ PowerShell示例：分别展示库构建、应用依赖准备和应用构建，�
 1. 通用规则集中维护，产品约定引用实际文档。
 确认：已有效约束沿用，本轮操作授权按工作流。
 规则：
-LumaPlayer：common/LumaPlayer/需求文档.txt、开发文档.txt及common/LumaPlayerTest/测试文档.txt；Test是Qt工程，桌面经LUMAPLAYERCORE_USE_C_API及LumaPlayerCoreAPI.h调用共用实现。基础日志不以debug开关，Windows接入CDump。
+LumaPlayer：需求文档.txt、开发文档.txt和测试文档.txt均在common/LumaPlayer；正式LumaPlayer1.0.exe与LumaPlayerTest1.0.exe也共用该目录及一套DLL、res、karaoke模型/运行库/许可，不再创建common/LumaPlayerTest。源码工程及构建目标仍为src/LumaPlayer和src/LumaPlayerTest，各自符号身份保留；公共依赖变化需验证两个调用方兼容。Test是Qt工程，桌面经LUMAPLAYERCORE_USE_C_API及LumaPlayerCoreAPI.h调用共用实现。基础日志不以debug开关，Windows接入CDump。
 CookServer：version准备依赖、sln构建，64位Release到common/CookServer。EXE、ini/res按实际变化同步；HiRedis.dll是现有Windows部署依赖，变化时同步，不随意增加DLL；Test到common/CookServerTest。Debug/临时程序留lib或任务目录，先验证后发布。
 详细说明：既有实例不是新任务已授权或五端已验证的证据。
 

@@ -8,5 +8,5 @@ ONNX Runtime当前构建与运行依赖
 
 运行：Windows至少需要当前支持的系统及系统MSVC运行库；应用提前选择System32 CRT以避免壳扩展旧CRT冲突。缺依赖必须报告实际失败，文件存在不能代替Session/Run验证。
 
-平台：DirectML二进制仅用于Windows/Xbox；其他平台使用各自ORT目标SDK，不能复制Windows DLL。PortableCore.cmake仍读取固定C头；iOS另链接目标ORT。Windows通过不代表其他四端已编译或运行。
+平台：DirectML二进制仅用于Windows/Xbox；其他平台使用各自ORT目标SDK，不能复制Windows DLL。src/LumaPlayerCore/scripts/CMakeLists.txt的LUMAPLAYER_DEPS_ROOT分支读取固定C头；iOS另链接目标ORT。Windows通过不代表其他四端已编译或运行。
 许可：保留当前五份官方LICENSE/ThirdPartyNotices原件，安装包也保留适用条款；ORT MIT与DirectML二进制许可不同，不以清理下载包为理由删通知。

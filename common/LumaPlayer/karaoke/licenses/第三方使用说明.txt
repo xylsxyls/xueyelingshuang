@@ -15,6 +15,6 @@ This software is based in part on the work of the Independent JPEG Group.
 
 二、源码获取和用户权利
 LGPL库的替换方法及修改、调试逆向等权利见LGPL库替换及权利说明.txt。独立业务实现FFmpegCpp不因动态调用这些库而自动公开源码。
-源码与构建材料单独提供。当前开发仓库位置为tools/LumaPlayerKaraoke/sources/，详细授权核查材料为tools/LumaPlayerKaraoke/license/；这些仓库路径不是安装目录，也不是已建立的公开下载地址。
+源码与构建材料单独提供。当前开发仓库中，SoundTouch资料在tools/LumaPlayerKaraoke/soundtouch/，FFmpeg资料在tools/ffmpeg/；详细授权核查为tools/LumaPlayerKaraoke/第三方使用说明.txt，模型来源说明在其models/目录。这些仓库路径不是安装目录，也不是已建立的公开下载地址。
 对外提供下载时，分发方须把与本版二进制实际对应的完整LGPL源码、修改及构建材料放到自己的下载位置，保证用户能取得，并在安装包说明、程序关于框及下载页面给出实际获取入口。只移动本地文件或链接通用上游网站不能代替这项义务。
 当前仅完成本机部署，尚无公开源码下载入口；历史FFmpeg共享DLL的完整源码对应关系、Qt随实际分发组合的材料及模型权利来源仍待核实，不把本目录存在视为整套产品已获商业分发许可。

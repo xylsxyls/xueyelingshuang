@@ -11,6 +11,6 @@ FFmpeg依赖及重建说明
 详细说明：旧DLL中的构建路径指向已不存在的src/temp/ffmpeg_windows_build，没有保留源码补丁及全部构建记录；不能仅凭版本和配置证明官方归档完全对应这些旧DLL，不虚构changes.diff或“无修改”结论。此前GNU Make工具执行受阻，至本次材料合并仍未完成实际重建，不能记作新DLL已验证。完成可追溯重建后，必须保留实际修改、完整源码、最终配置及脚本再交付，对外商业发布前该事项必须解决。
 This software is based in part on the work of the Independent JPEG Group. 完整归档保留其DCT文件条款；后续重建若有修改，应明确记录文件、日期和修改内容。
 
-其他平台：须分别生成目标ABI共享SDK；Linux/Android为.so，macOS/iOS为动态库或动态framework，不复用Windows头和库。Core的PortableCore.cmake拒绝FFmpeg/SoundTouch静态.a，要求对应公开接口和目标编码能力。平台SDK和签名/商店许可未验证，不能将Windows验证当作五端通过。
+其他平台：须分别生成目标ABI共享SDK；Linux/Android为.so，macOS/iOS为动态库或动态framework，不复用Windows头和库。src/LumaPlayerCore/scripts/CMakeLists.txt的LUMAPLAYER_DEPS_ROOT分支拒绝FFmpeg/SoundTouch静态.a，要求对应公开接口和目标编码能力。平台SDK和签名/商店许可未验证，不能将Windows验证当作五端通过。
 分发：common/LumaPlayer/karaoke/licenses保留许可正文、状态说明、源码获取说明和用户替换权利；详细构建配置及核查材料统一在tools/ffmpeg。本机功能测试和材料整理不代表已经完成对外分发义务：仍须核实并提供与实际DLL对应的完整源码、修改和构建说明，在关于框、下载页面及用户条款说明FFmpeg和LGPL，不能用通用上游链接冒充已经核实的对应源码。动态链接不等于只带LICENSE；用户兼容替换及必要的调试逆向权利、下载网站/EULA和专利条件仍须分别审核。
 依据：https://www.ffmpeg.org/legal.html

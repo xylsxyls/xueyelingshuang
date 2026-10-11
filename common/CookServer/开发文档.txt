@@ -1,0 +1,144 @@
+Cook 工程开发文档
+版本：1.16
+更新日期：2026-10-10
+对应需求：common/CookServer/需求文档.txt
+
+一、工程结构与边界
+
+1. src/CookServer/CookServer 是 Windows C++11 HTTP 服务端工程。CookServer 负责生命周期；Config 解析 CookServer.ini；CookHttpServer/CookHttpApiHandler 处理网络和 HTTP；CookApiService 做鉴权、参数解析、路由及结果序列化；AccountStore 管理账号、菜谱关系和社区状态；CookRecipeConfig 解析与校验菜谱；CookSchedule 仅处理排程算法；CookStorageService/CookStorageSyncTask 负责 Redis/MySQL 快照读写和异步同步；CookVideoUploadService 管理分块上传会话；CookVideoSegmentService 用 FFmpeg 对已授权媒体做时间片重封装；CookVoiceService 管理语音任务。
+
+2. src/CookServerTest/CookServerTest 是独立 HTTP 黑盒测试工程，通过配置中的 host、port、超时和最大响应字节数访问服务。测试报告由 CookServerTestReport 写到测试程序目录。测试可以创建账号、钱包记录、评论、菜谱和视频，因此只可指向一次性或隔离测试数据。
+
+3. src/CookWx 是微信小程序前端工程。页面只组织界面与用户操作；utils/api.js 管理 token、请求并发、优先级、失效回调和重试；utils/videoUpload.js 读文件块并顺序上传；utils/videoSegmentCache.js 下载、持久索引、去重、pin 和 LRU；components/cachedVideoPlayer 管理解码器、播放时钟、分段切换和预取；utils/videoFrameRenderer.js 以 WebGL 渲染 I420/RGBA 帧。微信小程序不是 C++ 工程，不能链接 src 下的二次开发库。
+
+二、身份、状态与接口约定
+
+受保护请求由 Authorization Bearer token 找到 userId；HTTP 请求体中的 userId 不作为身份依据。认证失败返回 401。API 的业务错误一般用 JSON `{ "ok": false, "message": "..." }`；媒体字节响应另用 HTTP 状态和响应头。POST 默认不自动重试，避免 toggle、创建、发布等操作因响应丢失而重复执行；只对具有服务端幂等保障的具体调用显式开启重试。
+
+AccountStore 以互斥锁保护当前进程业务快照。持久化使用 CookStorageService：Redis 缓存快照，MySQL 保存 cook_state_snapshot 并通过版本号避免旧异步任务覆盖新版本。该结构是兼容性快照层，不等于拆分后的领域表。配置存储不可用或首次加载失败的处理要结合启动日志和当前配置确认，不可把旧 EXE 的运行表现归于新源码。
+
+HTTP 主要路由包括：
+- `/api/auth/register`、`/api/auth/login`、`/api/auth/session`、`/api/auth/logout`。
+- `/api/recipes`、`/api/recipes/detail`、`/api/recipes/join`、`/api/recipes/purchase`、`/api/recipes/menu/remove`、`/api/recipes/custom/save`、`/api/recipes/custom/publish`。
+- `/api/recipes/personalization/detail`、`save`、`reset`、`sync-times`。
+- `/api/plan/preview`、`/api/plan/start`，以及做菜结果与历史接口。
+- `/api/wallet/checkin`、`/api/wallet/ad/start`、`/api/wallet/ad/finish`；没有面向正式客户端的任意充值路由。
+- `/api/feed`、`/api/feed/watch`、`/api/videos/file`、`/api/videos/poster`、`/api/videos/segment`、`/api/videos/publish`。
+- `/api/videos/upload/start`、`/api/videos/upload/chunk`、`/api/videos/upload/complete`、`/api/videos/upload/cancel`。
+- 评论、点赞、收藏、关注、消息及语音相关接口。
+
+菜单归属、可制作权限和购买记录分别表达。GET /api/recipes默认只返回已加入菜单；scope=catalog用于发布、个性化及个人资产的可见目录，不自动加入。POST /api/recipes/join只加入菜单，不扣钱、不授予付费菜制作权限；purchase才校验余额及扣款，购买幂等键按账号/菜谱/操作隔离。系统默认只加入免费菜；旧快照迁移时清理误授予的系统付费菜拥有关系，保留真实购买。MENU快照行记录有序菜谱ID与移除集合，旧USER行继续读取。最近加入或打开已加入菜谱详情置顶；未加入的公开详情不自动加入。购买菜不能移出，其他菜移除幂等；免费系统菜的移除记录阻止刷新自动补回。
+AccountStoreMenu.cpp集中菜单归属和媒体解析，AccountStoreSocial.cpp集中公开资料、粉丝及双向私信读取，CookApiServiceSocial.cpp集中相关HTTP序列化。共享状态仍由AccountStore互斥锁保护。recipeSummary/recipeToJson输出inMenu、purchased、menuPosition、coverImageId/coverImageUrl、videoId/videoUrl/posterUrl，删除coverColor。原视频优先作者本人作品；没有正方形图时用真实视频poster。utils/recipeAssets集中相对URL补全、封面优先级、五类归一及购买/移除权限，menuActions集中确认和操作，socialActions集中公开主页和取消关注确认。
+
+底部菜单连续展示荤菜、小荤、蔬菜、汤饮、主食，按组保留服务端最近顺序；分类点击使用scroll-into-view，滚动根据分组实测位置联动，只在选中项变化时setData。分组位置在数据变化后测量，不逐帧扫描DOM。未加入菜不出现在菜单；付费已加入未买显示买字，确认后调用purchase。我的菜单排除系统免费菜，其余按menuPosition排序，购买显示已拥有，免费用户菜显示免费菜谱及移出确认。搜索只在当前菜单中执行，移除会清掉本顿选择。recipe-heading-row使用不换行flex，名称flex:1/min-width:0/省略，右侧价格flex-shrink:0/white-space:nowrap，避免旧display:block将状态挤到下一行。
+选菜菜单的所有详情路由携带selection=meal；recipe页保存mealSelection并从App选择集合派生selectedForMeal，进入、返回和详情加载后重新读取。此上下文按钮以selectedForMeal决定文案/禁用，点击调用utils/mealSelection，只有已购买或免费菜可添加；不请求长期菜单join/purchase。mealSelection以selectedRecipeIds为权威，selectedRecipes为展示数据，添加/替换去重、保留其他菜并在集合变化时清掉lastPreview缓存。菜单“＋/－”提交同一选择集合，返回onShow重新取选择并预览。悬浮框展开列表每行的chosen-remove减号通过data-id/catchtap复用removeRecipe，不另建选择状态、不调用长期移出接口；名称可收缩省略，用时和按钮不收缩，避免长名称挤掉减号。删除后刷新菜卡/共享选择并按剩余ID预览；清空时沿用schedulePreview空集合分支关闭列表/悬浮框、清除计划与时间块，旧请求按代次及选择集合失效。其他详情入口默认长期菜单语义，按服务端inMenu显示；加入请求使旧详情读取失效，隐藏/换菜后的响应不能误将新页面置为已加入。
+
+“我的菜单”排除官方免费和本人免费创作，后者保留创作区；购买与移出优先取资产recipeId，避免把recipe_界面行编号发送服务端。“我的”固定喜欢、收藏、创作、菜单、个性化五项，无分区计数或横向拖动，删除旧统计与底部退出。头像区域显示自己的获赞/粉丝及查看，退出在账户说明右侧；钱包元宝左、金币次之，签到/广告在右侧竖排。utils/mineMediaAssets转换媒体列表；liked/collection/created模式含义不变，按videoId去重并保留不同视频，创作仅本人已发布。前三项三列3:4竖版封面、4rpx间隔、aspectFill和lazy-load；菜单/个性化使用正方形用户图或poster，不再用纯色模拟封面。MINE_MEDIA_PAGE_SIZE默认24、范围3至60，excludeIds分页，无进展停止；页/分区/ID/URL隔离旧响应和封面错误。列表不预取视频片段。
+
+GET /api/videos/detail返回与首页同一序列化器的完整公开视频元数据，图片不能作为原视频。所有菜单/媒体入口进入现有cached-video-player，右侧头像/点赞/评论/收藏和底部作者/菜名/介绍/查看菜谱/加入菜单均保留，顶部只有返回。刷新社交信息不重复替换解码器源，继续复用既有分段缓存。
+GET /api/users/profile只输出userId、nickname、avatarUrl、introduction、following、friend、receivedLikeCount和followerCount；不输出钱包、账号凭据或私人资产。GET /api/users/feed仅允许created/liked，默认18条、上限30，excludeIds分页；视频动作字段按访问者身份计算。GET /api/users/fans只允许本人，默认30、上限60、userId游标；公开主页只有创作/喜欢，关注为长条按钮、取消需确认。新增profile/fans页面按可见生命周期隔离请求。
+GET /api/messages/conversation只读当前账号与指定用户的双向chat，单页最多60条，beforeId读取更早内容；POST /api/messages/read只修改当前用户收到的该会话消息。发送需关注；互关即好友，取消任何一侧立即更新关系。消息列表按会话合并，后端按当前关系输出friend/muted，单向未读灰色、互关红色，均不自动弹提醒。conversation页仅可见时每15秒轮询，隐藏取消后续计时并隔离旧响应；发送成功使旧轮询失效，隐藏再返回的旧发送不能覆盖新草稿，读取后更新已读。
+
+简介接口POST /api/users/profile/update仅使用token所属账号；可选userId必须为本人。introduction必须为字符串、合法UTF-8、至多20字且不含控制字符，空串重置默认展示。返回publicProfile字段白名单，失败不改旧值/钱包。AccountStore以稳定userId作为资料/关注/点赞/菜单/个性化归属，支持继续注册用户；只自动创建资源系统账号，不自动虚构creator_demo。系统昵称先从公开资料确定再序列化feed，解决首次首页与详情头像缩写不同。点赞响应增加真实likes总数。
+
+头像与身份升级实现
+pages/avatarCrop是独立裁剪页，utils/avatarCrop只计算CSS坐标与8种照片方向变换，utils/avatarMedia负责有界读图、缩小、Canvas导出和清理。使用2D Canvas只绘制一次预览；拖动只移动选框及遮罩，按16ms合并setData，导出时将当前CSS方形映射至512×512。来源不超过10MiB/16MP，超过2048长边先缩小再解码；JPEG质量0.82、输出最多512KiB，可在utils/config调整。相册/拍照由chooseMedia选择；裁剪框可移动、角点缩放、双指缩放；导出Canvas使用自身Image节点。页面存活、请求代次及userId一起拒绝过期回调；换图取消或失败保留原选择；页面卸载及重新选图只删本次压缩结果，不删用户原图。
+CookApiServiceAvatar处理POST /api/users/avatar/upload（二进制Content-Type application/octet-stream，Bearer认证，可选userId只能为本人）和GET /api/users/avatar?userId=...&key=...（公开字节）。CookAvatarHelper生成32位十六进制文件键，校验PNG/JPEG真实格式、正方形与最大1024边长、512KiB，再将独有.part原子改名；文件位于EXE同级data/avatars。AccountStoreAvatar同步写Redis和MySQL头像引用，持久化失败恢复旧值并删除新文件，成功后删除旧文件；GET只接受当前账户所引用的键，拒绝任意路径或旧键，返回正确MIME及版本缓存头。照片不塞进全量数据库快照，数据库只存头像引用；data/avatars必须与数据库一起保留和备份。
+AccountStoreIdentity在HTTP启动前加载并迁移，qmzdc是登录名及内部userId，昵称全民做大厨；旧system账户、作者、视频、关注集合、私信、会话、奖励、评论、头像URL、个性化键、分享及幂等键完整改为qmzdc。旧数据的余额、购买/菜单/收藏/点赞/观看关系保留。现有xylsxyls保留原内部ID并设admin，qmzdc设super_admin，旧缺字段普通账号迁为user；USER快照在末尾追加role，历史字段位置不变，新注册只写user而不采用请求中的role。初次将无密码系统账户配置为指定加盐PBKDF2凭据，重复启动不重置密码或昵称；只分类，不增加管理权限分支。账号名/内部ID/个性化键冲突或快照读取及同步写入失败拒绝开放HTTP；迁移失败回滚完整内存状态。单进程全量快照及同步迁移所需内存仍受既有模型限制，高并发及大型数据集未验证。
+所有7份内置JSON及C++兜底统一归qmzdc；资源视频属于同一账号。系统账号发布的新免费菜按默认系统免费菜单规则同步，付费新菜必须主动加入/购买。
+
+三、菜谱解析与排程
+
+CookRecipeConfig 读取 schemaVersion 1.0 的单菜 JSON，检查 ID、标题、步骤、重复 ID、缺失依赖和依赖环。个人新增步骤与基础步骤在排程前合并；CookSchedule 使用依赖完成时间、共享资源可用时间和前台操作时间安排步骤。若仍存在无法排程的节点，PlanResult.m_errorMessage 带出错误，清空部分时间线，序列化器返回 ok=false。
+
+PlanResult 拥有临时 Recipe 副本时，其拷贝赋值必须同步修正 m_recipes 指针。排程代码不访问 HTTP、数据库、文件、token 或小程序状态。服务端 serializer 同时产生完整计划、摘要计划和可选时间块；失败结果不可被标记为成功。
+
+个性化的后台等待模式最终按安全等级校验：attention/danger 不允许 free，服务端解析、运行时排程和小程序运行时均再次降级为 watch。运行时提前完成、跳过或加时后，客户端重算总时长、动手时间、freeBlocks、freeSeconds 和 edge/watch 汇总；移动受影响任务后重新修复依赖、资源和前台串行冲突。
+
+CookPersonalizationFlow独立处理personalization.taskOrder：包含原始与新增全部步骤ID；原步骤相对顺序不改变。连续新增段继承下一原步骤的依赖并等待上一原步骤完成，再将下一原步骤连到新增段末尾；尾插等待前一步。提交图和插入后图都校验未知依赖/循环，禁用原步骤时穿透到有效先决条件。最多256步；验证失败不覆盖配置。快照新增taskOrder，旧快照缺字段沿用历史追加路径；同步实际用时保留顺序。
+
+四、视频上传与分段播放
+
+1. 上传
+客户端声明文件名、类型和长度后创建 session；服务端只从扩展名白名单选择保存扩展名，上传 ID 由 UUID 产生，路径由服务端生成。每块最大 512 KiB；偏移必须连续。已经写入的同一块只有逐字节相同才允许重试。session 绑定登录用户，空闲一小时清除，每用户最多两个，进程最多 64 个。服务重启后首次上传会清理上传目录顶层遗留的 `.part` 文件。完成时核实长度并原子改名，再由 AccountStore 核实文件位于服务端媒体目录、大小和扩展名匹配后登记。发布必须引用该账号真实登记的文件。
+
+2. 服务端片段
+`GET /api/videos/segment` 先经 getVideoFile 校验媒体访问权，参数为 videoId、startSeconds、durationSeconds。Config 限制单次时长和输出大小。CookVideoSegmentService 按视频流向前 seek 到关键帧，复制音视频流包并重新封装为 MP4，不做手机侧软件解码；`.meta` 保存片段实际起点和源媒体时长。缓存键包含视频 ID、媒体版本、文件长度、最后修改时间、请求起点和长度，避免服务端把已修改文件映射到旧分段。输出受大小限制，出错会删除临时文件。
+
+当前分段重封装仅在 Windows 编译路径实现；其他平台明确返回不支持。服务端通过 HTTP 响应体返回完整分段，内存占用约受并发请求数乘以单片段上限影响。`VideoSegmentMaxBytes` 默认 50331648 字节，最大配置值 512 MiB；这只是单响应上限，不是服务端磁盘缓存总配额。服务端分段缓存需要后续补充总容量、过期与并发读取安全的回收策略，部署前需监控 `data/videos/segments` 空间。
+
+3. 小程序缓存与播放器
+`VIDEO_CACHE_INITIAL_SECONDS=3`、`VIDEO_CACHE_INITIAL_PREFETCH_AT_SECONDS=1`、`VIDEO_CACHE_NEXT_SECONDS=5`、`VIDEO_CACHE_PREFETCH_LEAD_SECONDS=2` 定义首段和后续预取规则。缓存身份包括视频ID、含版本的URL、请求起点和长度。videoDownloadQueue.js合并同片段任务，读者各有代次有效条件；新读者登记后再剔除过期读者，避免同片段被相互取消。VIDEO_CACHE_DOWNLOAD_CONCURRENCY默认1、范围1至2；VIDEO_CACHE_DOWNLOAD_START_DELAY_MS默认150、范围0至1000毫秒，缓存命中不等待。前台请求优先，排队过期任务不发HTTP，运行中过期任务abort，待其回调及文件清理后释放名额。预取每代次同目标只提交一次。
+videoSegmentDownload.js向wx.downloadFile传入filePath，直接写USER_DATA_PATH/cook-video-cache/片段键.mp4.part；成功响应应为filePath而非tempFilePath。从onHeadersReceived取时间元数据，校验HTTP200、大小、源时长和实际起点，再rename成.mp4、复核大小并提交索引。超限进度中止下载，取消/失败删除本次暂存，不调用copyFile/saveFile；移动不复制媒体内容。持久索引仍用原storage键，可复用已有合格缓存。
+
+videoCacheFiles.js独立维护实际磁盘占用与回收队列。首次发起下载前或固定缓存命中时异步校准目录（先给下载临时文件留出空间），每批最多四个stat；权限/读取错误不提交半份清单，下次重试。仅回收本目录中符合内部片段命名的文件，不删除未知文件、其他缓存或用户文件。先清理失去索引的遗留片段，再按lastAccess从旧到新回收；删除成功或确认ENOENT才删除索引和扣减占用，EBUSY/权限失败保留实际占用。扫描期间完成的写入/删除覆盖旧快照，避免并发提交丢失。常规回收使用内存文件清单，不逐帧扫目录或同步删除整批文件。
+
+videoSegmentCache.js在下载前串行准入，共用容量预留；VIDEO_CACHE_DOWNLOAD_RESERVE_BYTES默认4MiB，用于提前腾出下载空间，完成后按真实大小调整并再次回收，未通过容量校验不得提交索引。默认总预算VIDEO_CACHE_MAX_BYTES=100MiB、最低10MiB，单段VIDEO_CACHE_MAX_SEGMENT_BYTES=48MiB、最低1MiB。下载途中实际字节量可能大于初始预留，但受单段上限和下载并发限制；100MiB指缓存准入预算，不能据此证明下载瞬时磁盘占用始终低于该值。统计包括本目录未知文件、暂存和预留；固定片段、交接片段、pending目标和写入目标不可淘汰。getAt(...,true,wanted)在固定前核对读者仍有效；取消释放借用引用，采用后由stopDecoder实际停止后释放。删除失败仍计账并要求重新校准；空间不足有界失败，不覆盖正在播放文件。
+
+微信全局配额还可能被其他目录占用。下载触发原生配额错误时清理本次半成品，重新校准并额外淘汰本工程LRU；只有确实回收了文件才允许重试一次，最多两次下载。不能假设unlink临时路径成功：本次现场只读http://tmp文件实际报permission denied，旧copyFile产生双份文件。已有旧临时目录未建立归属清单，不能整目录误删；新版本通过直接下载到可回收目录避免继续累积。移动前按已校验大小记录可能的目标，移动后stat/删除失败仍保留占用并要求校准。上述缓存修复批次没有服务端变动；本轮菜单与社交接口升级必须同步新的CookServer。
+
+播放器每次 source/seek 递增 generation，丢弃旧异步结果；一个播放器持有一个 VideoDecoder，循环片段播放时切换到下一段；页面隐藏、组件销毁、视频切换时停止帧循环、音频和 decoder。`wx.createVideoDecoder` 输出 I420/RGBA 时由 WebGL 贴图绘制；帧率上限来自 `VIDEO_RENDER_MAX_FPS`，最长边缩放上限为 720。`wx.createMediaAudioPlayer` 不可用或启动失败时当前代码保留静音视频降级路径，需在真机确认目标基础库的音频能力。
+定位开始即停止旧解码与时钟；新片段就绪前保留旧暂停画面。模拟器移除initial-time定位依赖，在loadedmetadata后显式VideoContext.seek/play；部分原生节点需先play才加载元数据，启动时新节点透明且静音，定位确认后才显示并恢复声音。最多保留一个已就绪旧节点和一个加载中新节点，确认后删除旧节点；加载中暂停只保留已确认的旧画面，避免保留透明节点导致黑屏。就绪要求真实时间位于目标前0.05秒至后0.5秒，提前/大幅越过目标的事件无效。旧代次事件不推进时间，已就绪后忽略时间倒退；失败状态拒绝晚到的元数据、播放和时间事件。seekcomplete携带generation/requestedPosition及实际position；首页据目标、视频及代次匹配，删除1200毫秒兜底播放，延迟恢复也核对代次。页面隐藏时的play、seek和晚到就绪不能重新启动；原生错误停止预取并剔除过期下载。VIDEO_SEEK_END_MARGIN_SECONDS默认0.2秒，拖到终点读取最后可播放帧，播放结束保留最后画面；独立页暂停/播放回调避免重复setData。相邻切段仍可能等待，本次不声称无缝播放。
+2026-10-08契约修复：下载响应头从DownloadTask.onHeadersReceived取得，success回调没有header；时长和关键帧起点不能依赖success.header。新增videoDecoderLifecycle.js等待原生start/seek事件，返回void不代表完成；VIDEO_DECODER_OPERATION_TIMEOUT_MS默认15000ms，取消或超时清理监听。停播先取消在途解码操作，再释放解码/音频与片段pin；组件销毁清除source切换定时器。暂停后的非活跃播放器不长期固定缓存文件。Node回归已验证这些契约，真实解码仍待模拟器/真机。
+
+2026-10-09播放修复：WebGL初始化成功后必须设置supported=true，避免已有上下文却被createCanvas拒绝。独立播放页解码导航参数，恢复完整src、封面和中文标题；首页错误日志同时保留message与errMsg。停止解码时清除旧时钟，恢复播放不能把暂停期间的时间算入进度。
+
+Stable v2.01.2510290/基础库3.17.0实际调用VideoDecoder会报“开发者工具暂时不支持此 API 调试，请使用真机进行开发”，不能仅用typeof判断可调试。utils/videoLocalPreview.js只在platform=devtools启用，通过原下载缓存模块取得本地片段，再由原生video节点解码该本地文件；USER_DATA_PATH在工具内为http://usr，属于虚拟本地文件路径。真机仍使用VideoDecoder/WebGL/MediaAudioPlayer，不把远程完整视频URL交给video。预览以真实loadedmetadata、play和目标位置timeupdate共同确认就绪，事件按generation隔离，超时或取消清理等待。预览的frame通知带backend=local-preview，表示原生预览就绪，不表示取得VideoDecoder帧数据。
+
+cached-video-player内部catchtap拦截原生点击，向页面只发playertap，防止同一次点击沿原生tap和自定义tap两条路径执行暂停/恢复。独立播放页togglePlayback先保存目标paused值，再调用播放器，避免同步pause回调改变data后又被取反恢复。显式暂停保留预览最后画面，隐藏、切源和销毁释放节点；暂停或取消加载不遗留加载提示。真实模拟器已验证顺序分段与缓存回拖，普通模式首页可显示视频。详细边界及结果见src/CookWxTest/测试文档.txt；真机解码、声音及流畅程度仍待验收。上述拖拽修复没有服务端变动；FFmpeg移动moov是正常faststart处理信息。本轮菜单与社交接口升级须重新部署服务器。
+
+4. 配置
+视频参数在 src/CookWx/utils/config.js；服务端时间片路径、单段秒数、单段字节上限及上传上限在 CookServer.ini 的 Feed/视频配置中。改动默认配置后需同步更新 common/CookServer/CookServer.ini 与本文档；发布包的已有用户自定义值不要覆盖。
+
+五、资源与退出
+
+2026-10-08返回点单修复：用户反馈已进入做菜计时页并点击开始后返回，点单界面无法操作。源码及平台契约回归确认旧实现没有等待异步disableAlertBeforeUnload结束，快速返回也会漏掉仍在开启中的提醒；系统返回还会先经过计划页，并在其onShow中立即switchTab，造成嵌套导航。进入计时页改用redirectTo替换计划页，页面栈为菜单→计时；删除旧的exitCookFlowToMenu中转标记。原生退出询问保留，取消时仍继续本次计时。
+
+utils/cookExitAlert.js按流程持有提醒，串行处理开启/关闭，有3000ms操作期限、失败重试及旧流程晚到回调保护。页面主动退出等待关闭成功再清理并跳转，重复退出合并；系统卸载只清理资源，不发起新的导航。渲染回调、提醒与计时器启动在卸载/清理后失效。菜单onShow先恢复本地选择并清掉旧交互锁和购物清单，空选择同步清掉预览，目录网络失败也能操作已显示的菜谱。辅助回归及新增模拟器37号用例见CookWxTest测试文档；尚不能据源码确认微信原生界面的卡死已经消失。本次仅修改CookWx及测试代码，无服务端接口或发布包变更。
+
+HTTP worker 数、请求队列、媒体响应体大小和后台任务线程都影响并发资源。大响应须受超时和字节限制；上传块顺序发送，媒体预取为低优先级请求，不占满交互请求并发。退出服务时先停止接收请求，再停止并回收工作线程；存储同步任务应在销毁存储对象之前收敛。锁内不等待网络、磁盘长任务或未知回调。
+
+六、构建、发布与当前状态
+
+CookServer.sln 与 CookServer.vcxproj 面向 Windows、VS2013/MSBuild 12、C++11。FFmpeg 头文件和库来自 tools/ffmpeg 对应目标位数；vcxproj 和 CMakeLists 都要登记新增源文件，filters 只影响 VS 分组。CookServerTest.sln/vcxproj 为独立测试入口。CookWx 使用微信开发者工具导入 src/CookWx/project.config.json。
+
+本轮使用 VS2013/MSBuild 12 构建 CookServer 与 CookServerTest 的 Release|x64 配置，均成功。依赖库由仓库脚本和目标工具链构建；CloudRebuild 的 Python 版本探测失败后，改用已安装的 Python 3.6 直接执行各依赖构建脚本。构建仅有第三方 FFmpeg 头文件编码警告，无编译错误。
+
+CookServerTest 使用隔离的 MySQL、Redis 和本地 CookServer 实例运行，43 项功能用例通过、0 项失败；压力测试 16 线程×50 次，共 800/800 成功，平均 9 ms、最大 33 ms。语音用例走了受支持的降级路径；本机 Windows SAPI 合成返回 HRESULT=0x80070005（拒绝访问），因此该机未验证语音实际生成。测试数据和运行服务均使用隔离目录，不连接生产存储。
+
+本轮 CookServer 构建已发布到 common/CookServer，正式程序为 CookServer1.0.exe，包含当前构建所需 HiRedis.dll；libmysql.dll 与构建输出哈希相同，原包文件可复用。CookWx 只做源码静态自查，未在微信开发者工具或真机运行。客户端解码、音画同步、缓存命中、基础库兼容和设备性能仍需人工验收。服务端分段缓存目前有单段上限，尚无缓存目录总配额、过期回收和并发回收安全机制，部署后需监控 `data/videos/segments`。
+以上构建与43项历史结果属于2026-09-30批次。2026-10-08续作新增src/CookWxTest（官方模拟器驱动独立Node工程），测试设计/入口/实际结果统一见src/CookWxTest/测试文档.txt；不需要服务端测试后门或生产接口变更，当时CookServer发布EXE仍使用上次版本。当时只重编并更新CookServerTest：媒体边界独立类CookServerTestMediaCases，压力类CookServerTestStressTask交由CTaskThreadManager，报告将语音环境限制记NOT-RUN。Release|x64构建使用VS2013/MSBuild12，应用version先准备依赖；CloudRebuild的Python探测仍失效，本轮未改只读rebuild脚本，核对before复制结果后用MSBuild逐个完成CStringManager、CSystem、RapidJson、Semaphore、CTaskThreadManager静态Release64及测试本体。测试EXE/PDB的GUID与age核对一致，匹配符号归档至common/CookServerTest。
+
+2026-10-09 做菜微调、实际用时同步及男声修补
+utils/cookVoiceText与planRuntime直接格式化剩余秒数；cook页不再缓存某次等待语音的时长，也不扣固定播报估计。前台加10秒/完成、后台跳过/加10秒均作用于实时运行任务，加时无操作菜单；跳过后台允许旧manualSkippable=false，安全确认仍保留。调整后重算依赖、独占资源和空闲摘要，其他运行中的后台计时锁定起止。
+plan页开关写入本次plan.cookOptions.syncPersonalization，默认false；点击开始时捕获选项。planRuntime记录自然完成和手动完成的实际时长。utils/cookPersonalizationSync按菜谱构造已完成快照，跳过/未完成不使用计划值补全，兼容多菜。主动退出先关闭原生提醒、保存快照、清理并switchTab；系统onUnload只保存/清理；menu/home/mine/publish/messages可见页在nextTick后询问。完成时等提醒关闭后询问，再提示成果分享。确认同步与取消、失败重试、重复确认、页面隐藏和账号切换都有保护，POST同步不自动重试。队列仅在当前小程序进程内保存，不承诺全进程杀死后的恢复。
+AccountStore::syncPersonalizationDurations同时匹配原步骤和用户新增步骤，新增步骤直接更新自身durationSeconds，后续排程使用该值；未知、未拥有及被禁用的步骤仍不写入，不清除未提交的旧用时。
+男声确定故障：male_+32位哈希+.wav为41字节，旧isSafeAudioKey下限42导致GET音频404；female_为43字节所以不受影响。现按准确前缀、32位十六进制哈希与wav/mp3扩展校验，目录/错位键/错误扩展/非十六进制拒绝。CookWindowsVoiceSelector独立类读取普通SAPI与OneCore声音，按Gender/Language选择并检查SetVoice；不写注册表、不自动安装资源、不用女声降级冒充男声。windows_sapi缓存键加入sapi-selector-v2版本避免沿用旧选声结果。
+Release|x64服务端已通过真实SAPI及HTTP测试后发布。CookServer1.0.exe SHA-256 5A8B474DC6B550E946105C1C562F59866B56A3AC777B6A86691611ADB90B925E。符号symbols-CookServer1.0-20261009-voice.7z内EXE/PDB的CodeView GUID/age已一致核对，PDB SHA-256 AA33C15066A518CB4D035F04EAD5A31D7D3B366BA4B1990F77608755405BEB0E。已有CookServer.ini、DLL、业务数据及资源未覆盖。复制整目录并重启服务，远端须具备中文声音资源。
+完成提示由presentCompletionPrompts集中处理；onHide标记不可见，提醒关闭或网络回调晚到时不在旧页弹框，onShow恢复尚未处理的同步询问。最终辅助回归47/47通过，原生界面仍待验收。
+
+2026-10-09 提交前清理：按用户要求删除Cook本轮报告、隔离运行副本/数据库、构建中间文件、一次性脚本、发布前临时备份及node_modules下载依赖。测试结论及产物哈希留在正式开发/测试文档；原始日志不再作为可打开的文件引用。发布EXE、DLL、配置、资源和匹配符号保留，符号包与临时产物加入Git忽略规则。当前工作笔记保留在本机并忽略，流程尚有真实微信界面验收待完成。src/CookWxTest保留可复用入口和固定依赖锁，运行测试.cmd按需重新安装依赖并生成temp/reports，不需要一次性安装目录。
+
+2026-10-09 发布名称统一：VS 工程 Release 的 TargetName 为 $(ProjectName)1.0，实际输出 CookServer1.0.exe。删除发布时因旧启动描述而额外复制的无版本号副本，该次保留的版本程序哈希不变，无服务端代码或二进制行为变更。CookWxTest隔离副本的候选覆盖、报告哈希与启动入口统一使用serverExecutablePath，默认文件名同为CookServer1.0.exe。
+
+2026-10-09 我的媒体分区改版及收藏重复修复
+原收藏列表把favoriteFeed与favoriteRecipeAssets拼接，同一糖醋排骨视频及其关联菜谱各生成一项；原创作取作者菜谱而非视频作品。本轮按上述个人媒体模式与稳定视频身份修复，不按标题合并不同视频。Release|x64服务端和测试工程构建成功；CookServerTest最终53/53功能通过、0失败、0未执行，真实Windows SAPI男女声已验证；压力8线程×20共160/160成功，新created/collection路由包含在压力轮询中。CookWxTest Node辅助自检68/68通过，增加七项个人媒体回归。实际微信第24项在App.enableLog超时前未执行；独立官方函数观察又在App.callFunction超时，没有取得几何结果，不能据此确认模拟器或真机视觉。
+服务端已发布common/CookServer/CookServer1.0.exe，SHA-256 92DFD78FE48DCBE4747D02DB7AE55E0F11B1634B81B69477C802A4E976F552BC；测试程序已发布common/CookServerTest/CookServerTest1.0.exe，SHA-256 0A7461F9AC07EF6800B9DDC178949F147A0AC5D28DB70F933E1A508C9D6FD743。新增客户端模式需要配套更新服务器程序并重启；无数据库结构或INI变更。发布与lib候选哈希一致，测试使用发布目录原DLL和独立数据。
+新增EXE对应PDB已核对PE RSDS/PDB GUID与age，分别归档symbols-CookServer1.0-20261009-mine.7z和symbols-CookServerTest1.0-20261009-mine.7z，极限压缩及完整性检查通过。PDB SHA-256分别F72A8D7289F7F2A22DC37A9F27C2AEE4DFA1CAB5330C02D9D71CA50448E8901E与D3F7930A71729E4A0192B38CC618229675E43B3874D9D2B1224116959C351C2B；未变依赖仍关联此前voice符号包，静态库缺vc120.pdb的LNK4099警告仍存在，不宣称依赖符号完整。必要结果归档后清理本轮临时数据、报告、依赖和构建中间文件。
+
+2026-10-10 菜单、公开主页与私信改版
+新增CookRecipePresentation校验新输入：步骤名为合法UTF-8的1至8字；食材用量为有限正数克数，拒绝零/负值/非克单位。随包7道菜及C++兜底数据同步克数、操作短标题，普通voiceText只用标题，等待和安全提醒不删。历史用户快照兼容读取，不擅自改写购买内容。
+图片走原分块上传流程，限制PNG/JPEG、4MiB、正方形不超过4096像素；完成时核验真实文件和尺寸。当前Windows采用系统GDI+解码器，因为随包FFmpeg不包含PNG解码；解码串行且在账户锁外，不增加部署DLL。非Windows依赖FFmpeg图像能力，未测不宣称支持。封面绑定须属于当前作者并引用其自己的菜谱；未发布图片不能读取，他人图片不能绑定，图片不能请求视频详情/分段/poster。发布页可选择正方形封面，失败保留已成功上传ID供重试。菜谱详情固定360rpx图片，下半部渐变至背景、透明三角，名称说明位于图片下方，底部等宽80rpx个性化/加入菜单。
+Release|x64应用构建通过；先通过version准备依赖，CloudRebuild的Python探测失败时按既有规范使用本机Python3.6执行只读构建脚本。Semaphore和CTaskThreadManager均准备静态Release64，EXE不依赖Semaphore.dll。发布前使用候选EXE及本次HiRedis.dll实际通过CookServerTest 62/62（包括Windows SAPI男女声）和8线程×20次160/160短压力；独立冷重启测试确认MySQL恢复菜单和私信状态。CookWxTest辅助123/123，官方WXML/WXSS编译通过；真实元素查询仍超时，完整GUI与真机验收没有通过结论。精确批次、哈希及符号见测试文档。
+本次增量发布CookServer1.0.exe、HiRedis.dll、CookServerTest1.0.exe和7份菜谱JSON，INI、业务数据、原视频和libmysql.dll保留。只保留带1.0的正式程序名；拷贝common/CookServer并保留服务器现有数据和配置后重启即可，不需要安装GDI+或额外FFmpeg组件。公开接口和客户端须配套更新。
+
+个人页与原视频的现行界面实现
+utils/userPresentation统一昵称、Unicode首字及头像URL；videoPresentation、mine和profile共用，头像不再显示整个昵称。styles/userAvatar.wxss统一84rpx圆形白底深色单字及真实图片；首页保留外部阴影。主页返回刷新及独立视频页加载有请求代次。点赞/收藏/关注/加入开始时使旧元数据请求失效，避免晚返回覆盖新状态；返回刷新不替换解码源。videoPlayer使用默认原生导航箭头，components/bottomNavigation调用真实switchTab，视频区域为视口减底部导航和安全区，与首页一样保持留白。
+styles/recipeHero.wxss和recipeBuyButton.wxss分别共用渐变封面/三角及圆形买按钮。styles/userProfile.wxss共用左头像右资料、账户说明、简介、获赞/粉丝及方形等宽标签；mediaGrid.wxss共用三列媒体封面，公开主页不再import整个我的页面样式。我的五个tab和公开两项均居中且有按压/选中反馈；菜单文案为菜谱库，简介保存用代次保护，旧账户加载不得覆盖新简介，钱包按钮右侧竖排。公开profile资料下面保留长条关注及关注后的私信，无编辑/退出/钱包；按访问者ID派生ownProfile，不能关注本人。
+utils/personalizationFlow合并原步骤/新增/顺序/禁用/时长，短ID包含点时保持完整；taskEditor经真实eventChannel传入锚点和前/后选择，父页立即插入和编号，保留未保存草稿。保存只发送业务字段；保存/重置加载前清除忙状态，旧响应不能改重新进入的页面。
+点单menu固定高度并disableScroll，左右scroll-view独立。utils/menuViewport用实际矩形计算保持当前类可见的最小左侧移动；五类放得下返回0。分类可扩展，未知有效分类在固定五类之后追加。右侧尾部留白按菜单购物浮栏测量，选择、预览完成/失败和尺寸变化后复测；滚动只在分组变化时setData，不逐帧重绘。
+多用户数据已用三账号HTTP隔离及MySQL冷恢复验证。现有数据库仍是account_store快照保存各userId关系，不是规范化多表/分布式存储；全量快照和账户互斥锁的高并发容量未验证，不将本轮短压力称为生产容量结论。
+
+当前发布与验证
+本轮头像与系统身份功能已完成Release|x64构建，服务端69项与8×20压力、旧快照整体迁移及MySQL冷重启通过；正式部署哈希和客户端验证边界以测试文档为准。需配套更新common/CookServer完整目录与CookWx源码，保留服务器现有CookServer.ini、数据库、上传视频及data/avatars后重启CookServer1.0.exe；首次升级自动将旧system身份迁移为qmzdc，无需手工SQL或新安装组件；先备份数据库和data，回退旧EXE时必须一起恢复旧数据，不能用旧程序直接读取已迁移的数据。匹配符号归档沿用既有极限7z规则，未改HiRedis/libmysql和既有依赖。
+客户端头像裁剪的真实相册/拍照权限、照片方向、双指触摸和低端手机耗时仍需人工验收；Node与官方语法编译不代替手机测试。
