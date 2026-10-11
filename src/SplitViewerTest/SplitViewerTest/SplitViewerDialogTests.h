@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include <QtCore/QString>
 
-/** 公共控件和真实托管弹窗回归，不替换产品文件选择结果 */
+/** 公共控件和真实托管弹窗回归，不替换产品文件选择结果
+*/
 class SplitViewerDialogTests
 {
 public:

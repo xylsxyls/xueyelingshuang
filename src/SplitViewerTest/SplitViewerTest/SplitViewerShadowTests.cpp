@@ -61,7 +61,7 @@ bool SplitViewerShadowTests::checkParameters(const QString& directory)
     const int height = dialog.height() * ratio;
     const int cx = body.x() + width / 2;
     const int cy = body.y() + height / 2;
-    const int distances[] = { 1, 4, 8, 16, 26 };
+    const int distances[] = {1, 4, 8, 16, 26};
     int previous = 256;
     QFile file(QDir(directory).filePath(QStringLiteral("shadow-parameters.txt")));
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
@@ -80,10 +80,11 @@ bool SplitViewerShadowTests::checkParameters(const QString& directory)
     const int top = qAlpha(image.pixel(cx, body.y() - ratio));
     const int bottom = qAlpha(image.pixel(cx, body.y() + height + ratio));
     valid = valid && side > 0 && side < 100 && top > 0 && bottom > top && bottom < 120 && previous <= 1 &&
-        qAlpha(image.pixel(cx, cy)) == 0 && qAlpha(image.pixel(0, cy)) <= 1 &&
-        dialog.geometry() == original && !dialog.testAttribute(Qt::WA_TranslucentBackground) &&
+        qAlpha(image.pixel(cx, cy)) == 0 && qAlpha(image.pixel(0, cy)) <= 1 && dialog.geometry() == original &&
+        !dialog.testAttribute(Qt::WA_TranslucentBackground) &&
         shadow->windowFlags().testFlag(Qt::WindowTransparentForInput);
-    log << "side=" << side << " top=" << top << " bottom=" << bottom << " geometry=" << (dialog.geometry() == original) << "\n";
+    log << "side=" << side << " top=" << top << " bottom=" << bottom << " geometry=" << (dialog.geometry() == original)
+        << "\n";
     dialog.setWindowShadow(true, INT_MAX);
     QTest::qWait(50);
     valid = valid && shadow->width() <= 1000 && shadow->height() <= 850 && dialog.geometry() == original;
@@ -169,46 +170,55 @@ bool SplitViewerShadowTests::checkNativeDrag(const QString& directory, bool full
     QTest::qWait(150);
     QProcess driver;
     // Grant only our child the foreground permission owned by this test process.
-    QObject::connect(&driver, &QProcess::started, [&driver]()
-    {
-        AllowSetForegroundWindow(static_cast<DWORD>(driver.processId()));
-    });
+    QObject::connect(&driver, &QProcess::started,
+        /** 仅授权本测试创建的子进程取得前台，避免向无关窗口发送输入
+        */
+        [&driver]()
+        {
+            AllowSetForegroundWindow(static_cast<DWORD>(driver.processId()));
+        });
     bool started = false;
     bool timedOut = false;
     QElapsedTimer time;
     time.start();
     QTimer poll;
     // 参数和输出仅传给本Test子进程；结束后通过真实Esc关闭产品关于框。
-    QObject::connect(&poll, &QTimer::timeout, [&]()
-    {
-        QWidget* modal = QApplication::activeModalWidget();
-        if (time.elapsed() > 20000)
+    QObject::connect(&poll, &QTimer::timeout,
+        /** 轮询本测试子进程的模态窗口，通过真实Esc输入结束关于框
+        */
+        [&]()
         {
-            timedOut = true;
-            if (modal != nullptr)
+            QWidget* modal = QApplication::activeModalWidget();
+            if (time.elapsed() > 20000)
             {
-                modal->close();
+                timedOut = true;
+                if (modal != nullptr)
+                {
+                    modal->close();
+                }
+                return;
             }
-            return;
-        }
-        if (modal == nullptr)
-        {
-            return;
-        }
-        if (!started)
-        {
-            started = true;
-            QStringList arguments;
-            arguments << QStringLiteral("--shadow-drag-driver") << QString::number(static_cast<qulonglong>(modal->winId())) <<
-                QString::number(QCoreApplication::applicationPid()) << directory << (cancelMove ? QStringLiteral("cancel") :
-                fullWindowDrag ? QStringLiteral("full") : QStringLiteral("outline"));
-            driver.start(QCoreApplication::applicationFilePath(), arguments);
-        }
-        else if (driver.state() == QProcess::NotRunning)
-        {
-            QTest::keyClick(modal, Qt::Key_Escape);
-        }
-    });
+            if (modal == nullptr)
+            {
+                return;
+            }
+            if (!started)
+            {
+                started = true;
+                QStringList arguments;
+                arguments << QStringLiteral("--shadow-drag-driver")
+                          << QString::number(static_cast<qulonglong>(modal->winId()))
+                          << QString::number(QCoreApplication::applicationPid()) << directory
+                          << (cancelMove              ? QStringLiteral("cancel")
+                                     : fullWindowDrag ? QStringLiteral("full")
+                                                      : QStringLiteral("outline"));
+                driver.start(QCoreApplication::applicationFilePath(), arguments);
+            }
+            else if (driver.state() == QProcess::NotRunning)
+            {
+                QTest::keyClick(modal, Qt::Key_Escape);
+            }
+        });
     poll.start(30);
     QAction* about = window.findChild<QAction*>(QStringLiteral("aboutAction"));
     if (about != nullptr)
@@ -224,8 +234,8 @@ bool SplitViewerShadowTests::checkNativeDrag(const QString& directory, bool full
     const bool restored = SystemParametersInfo(SPI_SETDRAGFULLWINDOWS, previous, nullptr, 0) != FALSE;
     DialogCountOperateParam count;
     DialogManager::instance().operateDialog(count);
-    return restored && started && !timedOut && driver.exitStatus() == QProcess::NormalExit &&
-        driver.exitCode() == 0 && count.m_count == 0;
+    return restored && started && !timedOut && driver.exitStatus() == QProcess::NormalExit && driver.exitCode() == 0 &&
+        count.m_count == 0;
 #else
     Q_UNUSED(directory);
     Q_UNUSED(fullWindowDrag);
@@ -249,9 +259,10 @@ bool SplitViewerShadowTests::hasDarkOutline(const QImage& desktop, const QRect& 
             bool dark = false;
             for (int offset = -2; offset <= 2; ++offset)
             {
-                const QPoint point = edge == 0 ? QPoint(target.left() + offset, y) :
-                    edge == 1 ? QPoint(target.right() + offset, y) :
-                    edge == 2 ? QPoint(x, target.top() + offset) : QPoint(x, target.bottom() + offset);
+                const QPoint point = edge == 0 ? QPoint(target.left() + offset, y)
+                    : edge == 1                ? QPoint(target.right() + offset, y)
+                    : edge == 2                ? QPoint(x, target.top() + offset)
+                                               : QPoint(x, target.bottom() + offset);
                 const QColor color(desktop.pixel(point));
                 dark = dark || (color.red() < 40 && color.green() < 40 && color.blue() < 40);
             }
@@ -277,8 +288,8 @@ bool SplitViewerShadowTests::hasSoftShadow(const QImage& desktop, const QRect& b
     const int farSide = qGray(desktop.pixel(body.right() + 18, y));
     const int top = qGray(desktop.pixel(x, body.top() - 3));
     const int bottom = qGray(desktop.pixel(x, body.bottom() + 3));
-    return nearSide < farSide && farSide <= backdrop && backdrop - farSide <= 3 &&
-        nearSide > backdrop - 65 && bottom < top && top < backdrop;
+    return nearSide < farSide && farSide <= backdrop && backdrop - farSide <= 3 && nearSide > backdrop - 65 &&
+        bottom < top && top < backdrop;
 }
 
 int SplitViewerShadowTests::runDragDriver(const QStringList& arguments)
@@ -321,7 +332,7 @@ int SplitViewerShadowTests::runDragDriver(const QStringList& arguments)
     bool activationClick = false;
     if (GetForegroundWindow() != target)
     {
-        POINT titlePoint = { before.left + 180, before.top + 21 };
+        POINT titlePoint = {before.left + 180, before.top + 21};
         if (GetAncestor(WindowFromPoint(titlePoint), GA_ROOT) == target)
         {
             SetCursorPos(titlePoint.x, titlePoint.y);
@@ -333,8 +344,8 @@ int SplitViewerShadowTests::runDragDriver(const QStringList& arguments)
             activationClick = SendInput(2, click, sizeof(INPUT)) == 2;
         }
     }
-    SetWindowPos(target, wasTopmost ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0,
-        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    SetWindowPos(
+        target, wasTopmost ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     // Exclude a title double-click from the subsequent drag, and let DWM present.
     QTest::qWait(activationClick ? GetDoubleClickTime() + 30 : 250);
     const HWND foreground = GetForegroundWindow();
@@ -342,8 +353,8 @@ int SplitViewerShadowTests::runDragDriver(const QStringList& arguments)
     GetWindowTextW(foreground, foregroundTitle, 256);
     BOOL actualFull = FALSE;
     SystemParametersInfo(SPI_GETDRAGFULLWINDOWS, 0, &actualFull, 0);
-    log << "foregroundMatches=" << (foreground == target) << " actualFull=" << actualFull <<
-        " foregroundTitle=" << QString::fromWCharArray(foregroundTitle) << "\n";
+    log << "foregroundMatches=" << (foreground == target) << " actualFull=" << actualFull
+        << " foregroundTitle=" << QString::fromWCharArray(foregroundTitle) << "\n";
     if (foreground != target || (actualFull != FALSE) != full)
     {
         SetCursorPos(savedCursor.x, savedCursor.y);
@@ -351,8 +362,9 @@ int SplitViewerShadowTests::runDragDriver(const QStringList& arguments)
     }
     const QImage rest = QGuiApplication::primaryScreen()->grabWindow(0).toImage();
     rest.save(QDir(directory).filePath(QStringLiteral("desktop-rest.png")));
-    QGuiApplication::primaryScreen()->grabWindow(0, body.left() - 40, body.top() - 40,
-        body.width() + 80, body.height() + 80).save(QDir(directory).filePath(QStringLiteral("about-shadow.png")));
+    QGuiApplication::primaryScreen()
+        ->grabWindow(0, body.left() - 40, body.top() - 40, body.width() + 80, body.height() + 80)
+        .save(QDir(directory).filePath(QStringLiteral("about-shadow.png")));
     bool valid = hasSoftShadow(rest, body) && !hasDarkOutline(rest, desired);
     const int x = before.left + 180;
     const int y = before.top + 21;
@@ -373,11 +385,11 @@ int SplitViewerShadowTests::runDragDriver(const QStringList& arguments)
     const QImage moving = QGuiApplication::primaryScreen()->grabWindow(0).toImage();
     moving.save(QDir(directory).filePath(QStringLiteral("desktop-moving.png")));
     const bool outline = hasDarkOutline(moving, desired);
-    log << "full=" << full << " before=" << before.left << "," << before.top <<
-        " during=" << during.left << "," << during.top << " outline=" << outline <<
-        " initialShadow=" << hasSoftShadow(rest, body) << "\n";
-    valid = valid && (full ? (during.left == before.left + 96 && during.top == before.top + 56 && !outline) :
-        (during.left == before.left && during.top == before.top && outline));
+    log << "full=" << full << " before=" << before.left << "," << before.top << " during=" << during.left << ","
+        << during.top << " outline=" << outline << " initialShadow=" << hasSoftShadow(rest, body) << "\n";
+    valid = valid &&
+        (full ? (during.left == before.left + 96 && during.top == before.top + 56 && !outline)
+              : (during.left == before.left && during.top == before.top && outline));
     if (cancel)
     {
         INPUT escape[2] = {};
@@ -398,13 +410,14 @@ int SplitViewerShadowTests::runDragDriver(const QStringList& arguments)
     const QRect finalBody = cancel ? body : desired;
     GUITHREADINFO thread = {};
     thread.cbSize = sizeof(thread);
-    const bool released = GetGUIThreadInfo(GetWindowThreadProcessId(target, nullptr), &thread) && thread.hwndCapture == nullptr;
+    const bool released =
+        GetGUIThreadInfo(GetWindowThreadProcessId(target, nullptr), &thread) && thread.hwndCapture == nullptr;
     valid = valid && IsWindowVisible(target) && after.left == finalBody.left() && after.top == finalBody.top() &&
         hasSoftShadow(moved, finalBody) && !hasDarkOutline(moved, desired) && released;
     SetCursorPos(savedCursor.x, savedCursor.y);
-    log << "after=" << after.left << "," << after.top << " finalShadow=" << hasSoftShadow(moved, finalBody) <<
-        " noRemainingFrame=" << !hasDarkOutline(moved, desired) << " captureReleased=" << released <<
-        " cancel=" << cancel << " passed=" << valid << "\n";
+    log << "after=" << after.left << "," << after.top << " finalShadow=" << hasSoftShadow(moved, finalBody)
+        << " noRemainingFrame=" << !hasDarkOutline(moved, desired) << " captureReleased=" << released
+        << " cancel=" << cancel << " passed=" << valid << "\n";
     return valid ? 0 : 1;
 #else
     Q_UNUSED(arguments);

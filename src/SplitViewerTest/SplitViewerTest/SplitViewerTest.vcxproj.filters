@@ -35,6 +35,46 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="SplitViewerCoreTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerWorkTask.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerTaskManager.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerTaskLifecycleManager.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerTaskContext.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerRetireTask.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeClick.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerLogicTask.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerDocumentSnapshot.cpp" />
+    <ClCompile Include="SplitViewerTestRuntime.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerVideoTarget.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerVideoRequest.cpp" />
+    <ClCompile Include="SplitViewerTestWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerTestVideoHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerTestUiHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerTestNativeHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerTestCaseHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerTestCase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerTestBatchHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SplitViewerComplianceTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -66,6 +106,36 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="SplitViewerCoreTests.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerTestRuntime.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerTestWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerTestVideoHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerTestUiHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerTestNativeHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerTestCaseHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerTestCase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerTestBatchHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SplitViewerComplianceTests.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="SplitViewerUiTests.h" />
   </ItemGroup>
   <ItemGroup>
@@ -157,5 +227,21 @@
   <ItemGroup>
     <ClCompile Include="SplitViewerHarnessTests.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClInclude Include="SplitViewerHarnessTests.h"><Filter>Header Files</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerMediaManager.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="GeneratedFiles\$(Configuration)\moc_SplitViewerMediaManager.cpp"><Filter>Generated Files</Filter></ClCompile>
+    <CustomBuild Include="..\..\SplitViewer\SplitViewer\SplitViewerMediaManager.h"><Filter>Header Files</Filter></CustomBuild>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerVideoSession.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="GeneratedFiles\$(Configuration)\moc_SplitViewerVideoSession.cpp"><Filter>Generated Files</Filter></ClCompile>
+    <CustomBuild Include="..\..\SplitViewer\SplitViewer\SplitViewerVideoSession.h"><Filter>Header Files</Filter></CustomBuild>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerVideoRequest.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerVideoTarget.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="SplitViewerMoveVideoTests.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="SplitViewerMoveVideoTests.h"><Filter>Header Files</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SplitViewerMoveUiTests.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClInclude Include="SplitViewerMoveUiTests.h"><Filter>Header Files</Filter></ClInclude>
   </ItemGroup>
 </Project>

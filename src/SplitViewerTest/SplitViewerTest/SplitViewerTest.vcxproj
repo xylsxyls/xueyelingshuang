@@ -159,6 +159,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="SplitViewerCoreTests.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerWorkTask.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerTaskManager.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerTaskLifecycleManager.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerTaskContext.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerRetireTask.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerNativeClick.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerLogicTask.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerDocumentSnapshot.cpp" />
+    <ClCompile Include="SplitViewerTestRuntime.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerVideoTarget.cpp" />
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerVideoRequest.cpp" />
+    <ClCompile Include="SplitViewerTestWindow.cpp" />
+    <ClCompile Include="SplitViewerTestVideoHelper.cpp" />
+    <ClCompile Include="SplitViewerTestUiHelper.cpp" />
+    <ClCompile Include="SplitViewerTestNativeHelper.cpp" />
+    <ClCompile Include="SplitViewerTestCaseHelper.cpp" />
+    <ClCompile Include="SplitViewerTestCase.cpp" />
+    <ClCompile Include="SplitViewerTestBatchHelper.cpp" />
+    <ClCompile Include="SplitViewerComplianceTests.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_SplitViewerTest.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -278,6 +298,16 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="SplitViewerCoreTests.h" />
+    <ClInclude Include="SplitViewerTestRuntime.h" />
+    <ClInclude Include="SplitViewerTestWindow.h" />
+    <ClInclude Include="SplitViewerTestVideoHelper.h" />
+    <ClInclude Include="SplitViewerTestUiHelper.h" />
+    <ClInclude Include="SplitViewerTestNativeHelper.h" />
+    <ClInclude Include="SplitViewerTestCaseHelper.h" />
+    <ClInclude Include="SplitViewerTestCase.h" />
+    <ClInclude Include="SplitViewerTestBatchHelper.h" />
+    <ClInclude Include="SplitViewerComplianceTests.h" />
     <CustomBuild Include="..\..\SplitViewer\SplitViewer\SplitViewer.h">
       <Command>"$(QTDIR)\bin\moc.exe" "%(FullPath)" -o "GeneratedFiles\$(Configuration)\moc_SplitViewer.cpp"</Command>
       <Outputs>GeneratedFiles\$(Configuration)\moc_SplitViewer.cpp</Outputs>
@@ -357,5 +387,27 @@
   <ItemGroup>
     <ClCompile Include="SplitViewerHarnessTests.cpp"></ClCompile>
     <ClInclude Include="SplitViewerHarnessTests.h"></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerMediaManager.cpp" />
+    <ClCompile Include="GeneratedFiles\$(Configuration)\moc_SplitViewerMediaManager.cpp" />
+    <CustomBuild Include="..\..\SplitViewer\SplitViewer\SplitViewerMediaManager.h">
+      <Command>"$(QTDIR)\bin\moc.exe" "%(FullPath)" -o "GeneratedFiles\$(Configuration)\moc_SplitViewerMediaManager.cpp" -I"$(ProjectDir)..\..\..\include"</Command>
+      <Outputs>GeneratedFiles\$(Configuration)\moc_SplitViewerMediaManager.cpp</Outputs>
+    </CustomBuild>
+    <ClCompile Include="..\..\SplitViewer\SplitViewer\SplitViewerVideoSession.cpp" />
+    <ClCompile Include="GeneratedFiles\$(Configuration)\moc_SplitViewerVideoSession.cpp" />
+    <CustomBuild Include="..\..\SplitViewer\SplitViewer\SplitViewerVideoSession.h">
+      <Command>"$(QTDIR)\bin\moc.exe" "%(FullPath)" -o "GeneratedFiles\$(Configuration)\moc_SplitViewerVideoSession.cpp" -I"$(ProjectDir)..\..\..\include"</Command>
+      <Outputs>GeneratedFiles\$(Configuration)\moc_SplitViewerVideoSession.cpp</Outputs>
+    </CustomBuild>
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerVideoRequest.h" />
+    <ClInclude Include="..\..\SplitViewer\SplitViewer\SplitViewerVideoTarget.h" />
+    <ClCompile Include="SplitViewerMoveVideoTests.cpp" />
+    <ClInclude Include="SplitViewerMoveVideoTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SplitViewerMoveUiTests.cpp" />
+    <ClInclude Include="SplitViewerMoveUiTests.h" />
   </ItemGroup>
 </Project>

@@ -8,6 +8,8 @@
 class PlainTextEdit;
 class ComboBox;
 class PushButton;
+class LineEdit;
+class CheckBox;
 
 /** 测试主界面；UI回归在本Test子进程执行，控件始终由GUI线程管理
 */
@@ -44,6 +46,22 @@ private slots:
     */
     void runUiTests();
 
+    /** 启动全部瞬时场景，使用与指定选择相同的调度
+    */
+    void runInstantTests();
+
+    /** 启动登记的压力场景，参数由用例目录固定
+    */
+    void runPressureTests();
+
+    /** 启动整个有效目录
+    */
+    void runAllTests();
+
+    /** 请求批次在当前场景安全收尾后取消
+    */
+    void cancelTests();
+
     /** 读取当前批次结果，更新界面并按需完成关闭
     @param [in] exitCode 进程退出码
     @param [in] status 正常退出或崩溃
@@ -56,17 +74,15 @@ private slots:
     void uiProcessError(QProcess::ProcessError error);
 
 private:
-    /** 追加单个Core结果
-    @param [in] name 用例名称
-    @param [in] passed 独立断言结果
-    @param [in] detail 补充信息，可空
-    */
-    void appendResult(const QString& name, bool passed, const QString& detail = QString());
-
     /** 统一切换批次输入可用性
     @param [in] running 是否已有在途批次
     */
     void setRunning(bool running);
+
+    /** 校验选择后异步创建本批次子进程
+    @param [in] selection 数字选择表达式
+    */
+    void startBatch(const QString& selection);
 
 private:
     // Qt父子关系持有的纯文本输出
@@ -87,6 +103,24 @@ private:
     bool m_closeRequested;
     // 当前批次唯一报告目录
     QString m_reportDirectory;
+    // 指定编号的编辑入口
+    LineEdit* m_caseSelection;
+    // 全部瞬时入口，由Qt持有
+    PushButton* m_instantRun;
+    // 全部压力入口，由Qt持有
+    PushButton* m_pressureRun;
+    // 整个目录入口，由Qt持有
+    PushButton* m_allRun;
+    // 协作取消入口，由Qt持有
+    PushButton* m_cancelRun;
+    // 被测Release主程序路径，只读文本框
+    LineEdit* m_releasePath;
+    // 被测Debug主程序路径，只读文本框
+    LineEdit* m_debugPath;
+    // 选择Debug时启动对应Debug Test入口
+    CheckBox* m_useDebug;
+    // 本批选择数，报告必须完整覆盖才能通过
+    int32_t m_expectedCaseCount;
 };
 
 #endif

@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include <QtCore/QString>
 
-/** Test主界面真实控件和异步批次收尾回归 */
+/** Test主界面真实控件和异步批次收尾回归
+*/
 class SplitViewerHarnessTests
 {
 public:

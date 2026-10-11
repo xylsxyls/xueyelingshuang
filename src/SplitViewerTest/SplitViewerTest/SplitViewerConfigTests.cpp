@@ -1,9 +1,9 @@
 ﻿#include "SplitViewerConfigTests.h"
+#include "../../SplitViewer/SplitViewer/SplitViewerImageHelper.h"
 #include "SplitViewerCore/SplitViewerCoreAPI.h"
 #include "QtControls/DialogBase.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
-#include "../../SplitViewer/SplitViewer/SplitViewerImageHelper.h"
 #include <QtCore/QBuffer>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
@@ -17,19 +17,41 @@ bool SplitViewerConfigTests::runCase(int id, const QString& directory)
     bool passed = false;
     switch (id)
     {
-    case 191: passed = shadowSize(directory); break;
-    case 192: passed = invalidProfile(); break;
-    case 193: passed = modelGuards(); break;
-    case 194: passed = numericParsing(); break;
-    case 195: passed = unicodeConversion(); break;
-    case 196: passed = geometryBounds(); break;
-    case 197: passed = imageCacheLifetime(); break;
-    case 198: passed = boundedFileRead(directory); break;
-    case 199: passed = packageBounds(); break;
-    case 201: passed = serializationBounds(); break;
-    default: return false;
+    case 191:
+        passed = shadowSize(directory);
+        break;
+    case 192:
+        passed = invalidProfile();
+        break;
+    case 193:
+        passed = modelGuards();
+        break;
+    case 194:
+        passed = numericParsing();
+        break;
+    case 195:
+        passed = unicodeConversion();
+        break;
+    case 196:
+        passed = geometryBounds();
+        break;
+    case 197:
+        passed = imageCacheLifetime();
+        break;
+    case 198:
+        passed = boundedFileRead(directory);
+        break;
+    case 199:
+        passed = packageBounds();
+        break;
+    case 201:
+        passed = serializationBounds();
+        break;
+    default:
+        return false;
     }
-    QFile file(QDir(directory).filePath(QStringLiteral("config-review-") + QString::number(id) + QStringLiteral(".txt")));
+    QFile file(
+        QDir(directory).filePath(QStringLiteral("config-review-") + QString::number(id) + QStringLiteral(".txt")));
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
     {
         return false;
@@ -58,9 +80,8 @@ bool SplitViewerConfigTests::shadowSize(const QString& directory)
     const QImage image = shadow->grab().toImage();
     const bool saved = image.save(QDir(directory).filePath(QStringLiteral("shadow-size4.png")));
     const bool expanded = shadow->isVisible() && large.width() > shadowRect2.width() &&
-        large.height() > shadowRect2.height() && large.center() == shadowRect2.center() &&
-        dialog.geometry() == body && dialog.windowShadowSize() == 4 &&
-        qAlpha(image.pixel(image.width() / 2, image.height() / 2)) == 0;
+        large.height() > shadowRect2.height() && large.center() == shadowRect2.center() && dialog.geometry() == body &&
+        dialog.windowShadowSize() == 4 && qAlpha(image.pixel(image.width() / 2, image.height() / 2)) == 0;
     dialog.setWindowShadow(true, 2);
     QTest::qWait(40);
     return saved && expanded && shadow->geometry() == shadowRect2 && dialog.geometry() == body &&
@@ -69,13 +90,14 @@ bool SplitViewerConfigTests::shadowSize(const QString& directory)
 
 bool SplitViewerConfigTests::invalidProfile()
 {
-    const char* counts[] = { "-1", "257", "0", "0", "0", "0", "0", "1x", "2147483648" };
-    const char* scales[] = { "1", "1", "0", "-2", "NaN", "1x", "1e500", "1", "1" };
+    const char* counts[] = {"-1", "257", "0", "0", "0", "0", "0", "1x", "2147483648"};
+    const char* scales[] = {"1", "1", "0", "-2", "NaN", "1x", "1e500", "1", "1"};
     for (size_t i = 0; i < sizeof(counts) / sizeof(counts[0]); ++i)
     {
         // Handwritten UTF16 fixture is independent of the product serializer.
         const QString text = QStringLiteral("[SplitViewer]\r\nVersion=2\r\nLayerCount=") +
-            QString::fromLatin1(counts[i]) + QStringLiteral("\r\n[Base]\r\nRoot=0\r\n[BaseNode0]\r\nKind=Leaf\r\nScale=") +
+            QString::fromLatin1(counts[i]) +
+            QStringLiteral("\r\n[Base]\r\nRoot=0\r\n[BaseNode0]\r\nKind=Leaf\r\nScale=") +
             QString::fromLatin1(scales[i]) + QStringLiteral("\r\n");
         std::vector<uint8_t> bytes;
         bytes.push_back(0xff);
@@ -117,17 +139,15 @@ bool SplitViewerConfigTests::modelGuards()
     root->makeSplit(SPLITVIEWER_CORE_SPLIT_HORIZONTAL);
     root->first->makeSplit(SPLITVIEWER_CORE_SPLIT_VERTICAL);
     SplitViewerCoreNode* subtree = root->first;
-    return !document.deleteLeaf(root, subtree) && !root->isLeaf() && root->first == subtree &&
-        !subtree->isLeaf() && subtree->first != nullptr && subtree->second != nullptr;
+    return !document.deleteLeaf(root, subtree) && !root->isLeaf() && root->first == subtree && !subtree->isLeaf() &&
+        subtree->first != nullptr && subtree->second != nullptr;
 }
 
 bool SplitViewerConfigTests::numericParsing()
 {
     return CStringManager::parseInt32(L"2147483648", -7) == -7 &&
-        CStringManager::parseInt32(L"-2147483649", -7) == -7 &&
-        CStringManager::parseInt32(L"12x", -7) == -7 &&
-        CStringManager::parseInt32(L" 42 \t", -7) == 42 &&
-        CStringManager::parseFiniteDouble(L"NaN", -7.0) == -7.0 &&
+        CStringManager::parseInt32(L"-2147483649", -7) == -7 && CStringManager::parseInt32(L"12x", -7) == -7 &&
+        CStringManager::parseInt32(L" 42 \t", -7) == 42 && CStringManager::parseFiniteDouble(L"NaN", -7.0) == -7.0 &&
         CStringManager::parseFiniteDouble(L"Inf", -7.0) == -7.0 &&
         CStringManager::parseFiniteDouble(L"1e500", -7.0) == -7.0 &&
         CStringManager::parseFiniteDouble(L"1.5px", -7.0) == -7.0 &&
@@ -138,17 +158,17 @@ bool SplitViewerConfigTests::numericParsing()
 bool SplitViewerConfigTests::unicodeConversion()
 {
     // U+1F600的独立UTF-16LE代理对，前后为ASCII。
-    const uint8_t fixture[] = { 0xff, 0xfe, 0x41, 0, 0x3d, 0xd8, 0, 0xde, 0x5a, 0 };
+    const uint8_t fixture[] = {0xff, 0xfe, 0x41, 0, 0x3d, 0xd8, 0, 0xde, 0x5a, 0};
     const std::vector<uint8_t> bytes(fixture, fixture + sizeof(fixture));
     std::wstring wide;
     std::vector<uint8_t> encoded;
-    if (!CStringManager::utf16LeToWide(bytes, wide) ||
-        wide.size() != (sizeof(wchar_t) == 2 ? 4U : 3U) || wide.front() != L'A' || wide.back() != L'Z' ||
-        !CStringManager::wideToUtf16Le(wide, encoded) || encoded != bytes)
+    if (!CStringManager::utf16LeToWide(bytes, wide) || wide.size() != (sizeof(wchar_t) == 2 ? 4U : 3U) ||
+        wide.front() != L'A' || wide.back() != L'Z' || !CStringManager::wideToUtf16Le(wide, encoded) ||
+        encoded != bytes)
     {
         return false;
     }
-    const uint8_t malformed[][4] = { { 0xff, 0xfe, 0, 0xd8 }, { 0xff, 0xfe, 0, 0xdc }, { 0xfe, 0xff, 0, 0x41 } };
+    const uint8_t malformed[][4] = {{0xff, 0xfe, 0, 0xd8}, {0xff, 0xfe, 0, 0xdc}, {0xfe, 0xff, 0, 0x41}};
     for (size_t i = 0; i < sizeof(malformed) / sizeof(malformed[0]); ++i)
     {
         wide = L"preserve";
@@ -245,7 +265,7 @@ bool SplitViewerConfigTests::boundedFileRead(const QString& directory)
     }
     file.close();
     std::vector<uint8_t> bytes(1, 99);
-    const uint8_t expectedData[] = { 'a', 'b', 'c', 'd' };
+    const uint8_t expectedData[] = {'a', 'b', 'c', 'd'};
     const std::vector<uint8_t> expected(expectedData, expectedData + 4);
     if (!CSystem::readBinaryFile(path.toStdWString(), 4, bytes) || bytes != expected ||
         CSystem::readBinaryFile(path.toStdWString(), 3, bytes) || bytes != expected ||
@@ -273,7 +293,7 @@ bool SplitViewerConfigTests::packageBounds()
     }
     const uint8_t* start = reinterpret_cast<const uint8_t*>(pngBytes.constData());
     const std::vector<uint8_t> png(start, start + pngBytes.size());
-    const uint8_t raw[] = { 0xff, 0xfe, 'A', 0 };
+    const uint8_t raw[] = {0xff, 0xfe, 'A', 0};
     const std::vector<uint8_t> config(raw, raw + sizeof(raw));
     std::vector<uint8_t> inplace(png);
     if (!SplitViewerCoreBuildConfigPackage(inplace, config, inplace) ||
@@ -317,7 +337,7 @@ bool SplitViewerConfigTests::serializationBounds()
     SplitViewerCoreDocument layers;
     for (int i = 0; i < 257; ++i)
     {
-        layers.addLayer();
+        layers.appendLayer(new SplitViewerCoreLayer());
     }
     if (SplitViewerCoreSerializeProfile(layers, bytes) || bytes != sentinel)
     {

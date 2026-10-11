@@ -106,7 +106,19 @@ SET(RCC_FILES "${PROJECT_SOURCE_DIR}/SplitViewerTest.qrc")
 SET(PRODUCT_UI ${PROJECT_SOURCE_DIR}/../../SplitViewer/SplitViewer)
 ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES}
     ${PRODUCT_UI}/SplitViewer.cpp ${PRODUCT_UI}/SplitViewer.h
+    ${PRODUCT_UI}/SplitViewerVideoRequest.cpp
+    ${PRODUCT_UI}/SplitViewerVideoTarget.cpp
+    ${PRODUCT_UI}/SplitViewerDocumentSnapshot.cpp
+    ${PRODUCT_UI}/SplitViewerLogicTask.cpp
+    ${PRODUCT_UI}/SplitViewerNativeClick.cpp
+    ${PRODUCT_UI}/SplitViewerRetireTask.cpp
+    ${PRODUCT_UI}/SplitViewerTaskContext.cpp
+    ${PRODUCT_UI}/SplitViewerTaskLifecycleManager.cpp
+    ${PRODUCT_UI}/SplitViewerTaskManager.cpp
+    ${PRODUCT_UI}/SplitViewerWorkTask.cpp
     ${PRODUCT_UI}/SplitViewerCanvas.cpp
+    ${PRODUCT_UI}/SplitViewerMediaManager.cpp ${PRODUCT_UI}/SplitViewerMediaManager.h
+    ${PRODUCT_UI}/SplitViewerVideoSession.cpp ${PRODUCT_UI}/SplitViewerVideoSession.h
     ${PRODUCT_UI}/SplitViewerFileAssociationHelper.cpp
     ${PRODUCT_UI}/SplitViewerForeignWindowHelper.cpp
     ${PRODUCT_UI}/SplitViewerHitTestHelper.cpp
@@ -140,6 +152,21 @@ ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES}
 foreach (EVERYQTRELY ${QTRELYLIST})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} Qt5::${EVERYQTRELY})
 endforeach ()
+
+# Task dispatch is a direct dependency, including when callers override the older library list.
+if(DEBUGRELEASE STREQUAL "debug")
+    SET(SPLITVIEWER_TASK_SUFFIX d)
+else()
+    SET(SPLITVIEWER_TASK_SUFFIX "")
+endif()
+if(WIN32)
+    LIST(APPEND LIBRARIESRELY "CTaskThreadManager${SPLITVIEWER_TASK_SUFFIX}.lib")
+else()
+    LIST(APPEND LIBRARIESRELY "${CMAKE_SHARED_LIBRARY_PREFIX}CTaskThreadManager${SPLITVIEWER_TASK_SUFFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+endif()
+LIST(REMOVE_DUPLICATES LIBRARIESRELY)
+FIND_PACKAGE(Threads REQUIRED)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} Threads::Threads)
 
 #添加库
 list(APPEND LIBRARYLIST ${LIBRARIESRELY})

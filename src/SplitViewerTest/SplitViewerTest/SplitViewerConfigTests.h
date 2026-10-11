@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include <QtCore/QString>
 
-/** 配置边界回归；使用公开接口和独立输入，不读取产品默认常量作为预期 */
+/** 配置边界回归；使用公开接口和独立输入，不读取产品默认常量作为预期
+*/
 class SplitViewerConfigTests
 {
 public:

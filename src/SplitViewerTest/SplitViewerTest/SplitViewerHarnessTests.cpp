@@ -20,8 +20,8 @@ bool SplitViewerHarnessTests::run(const QString& directory)
     PushButton* core = window.findChild<PushButton*>(QStringLiteral("coreRun"));
     QPlainTextEdit* output = window.findChild<QPlainTextEdit*>(QStringLiteral("testOutput"));
     QProcess* process = window.findChild<QProcess*>();
-    if (choices == nullptr || run == nullptr || core == nullptr ||
-        dynamic_cast<PlainTextEdit*>(output) == nullptr || process == nullptr)
+    if (choices == nullptr || run == nullptr || core == nullptr || dynamic_cast<PlainTextEdit*>(output) == nullptr ||
+        process == nullptr)
     {
         return false;
     }
@@ -35,7 +35,13 @@ bool SplitViewerHarnessTests::run(const QString& directory)
     QSignalSpy starts(process, SIGNAL(started()));
     int beats = 0;
     QTimer heartbeat;
-    QObject::connect(&heartbeat, &QTimer::timeout, [&beats]() { ++beats; });
+    QObject::connect(&heartbeat, &QTimer::timeout,
+        /** 累计GUI心跳次数，独立观察测试批次期间事件循环是否持续处理
+        */
+        [&beats]()
+        {
+            ++beats;
+        });
     heartbeat.start(1);
     QTest::mouseClick(run, Qt::LeftButton);
     const bool locked = !run->isEnabled() && !core->isEnabled() && !choices->isEnabled() && !window.allTestsPassed();
@@ -64,8 +70,8 @@ bool SplitViewerHarnessTests::run(const QString& directory)
     {
         return false;
     }
-    QTextStream(&report) << "passed=" << passed << " locked=" << locked << " closeWait=" << waitsForClose <<
-        " starts=" << starts.count() << " heartbeats=" << beats << " finished=" << finished << "\n" <<
-        output->toPlainText();
+    QTextStream(&report) << "passed=" << passed << " locked=" << locked << " closeWait=" << waitsForClose
+                         << " starts=" << starts.count() << " heartbeats=" << beats << " finished=" << finished << "\n"
+                         << output->toPlainText();
     return passed;
 }
