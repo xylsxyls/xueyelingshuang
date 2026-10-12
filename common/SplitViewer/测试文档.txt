@@ -1,9 +1,10 @@
 ﻿SplitViewerTest测试文档
-版本：2.7
+版本：2.9
 更新日期：2026-10-12
-状态：2026-10-12注释补全版本完成Windows Release x64编译及common增量发布；按用户要求未运行测试，135项目录及测试逻辑保持。此前工作流已结束。
+状态：App/Test共用common/SplitViewer，原Test目录已移除；2026-10-12注释补全版的EXE/DLL及符号未变。本次整理目录并修复打包入口，Windows实际打包退出0；未运行功能测试或安装产品。
 
 一、入口、目录与结果含义
+正式入口：common/SplitViewer/SplitViewer1.0.exe与SplitViewerTest1.0.exe同目录，使用同一套DLL及res；测试文档、符号包也位于common/SplitViewer。默认reports以测试EXE目录计算，即common/SplitViewer/reports；不得把共用产品目录作为临时测试目录删除。源码和构建目标仍独立。
 唯一目录为SplitViewerTestCaseHelper::kCases，共135项：1—7为Core，101—228为保留及新增场景，8—100保留不用；134瞬时、220一项压力。enum固定数字，不重编号。每项有中文名称、类型、前置/触发、独立预期及时间预算，源码和本文一致。
 GUI有指定编号、全部瞬时、全部压力、全部四入口；Core兼容按钮调用同一批次的1—7。数字框支持1,3,101-105等严格表达式，升序去重；空项、逆序、多连字符、后缀、溢出、未登记编号、重复命令行选择器均拒绝。指定框为空时保留原下拉选择，全部回归默认只选瞬时。只有显式选择压力或全部才包括220。
 Release和Debug产品路径在只读框显示，复选框选择对应Test构建；产品或Test文件缺失明确拒绝，Debug不退回Release。UI断言执行编入同一Test的真实产品UI源码，路径存在检查不等于启动外部App验证；外部App的实际运行单独记录。
@@ -13,6 +14,7 @@ CLI：SplitViewerTest1.0.exe --ui-audit <可写绝对目录> --cases=1-7,101-219
 场景内部已有窗口/播放器/输入等待和弹窗看门狗，时间预算用于目录说明；当前没有能强制中断所有类型卡死的进程级全局看门狗，不能宣称预算字段本身会自动杀死卡住的场景。压力不在默认开发期执行。
 
 二、验证方法与独立依据
+2026-10-12目录与脚本整理的核验：22个同名DLL/资源副本均按SHA256相同才去重；145份业务源码及部署模块、PDB包字节保持。sh语法、--help、脚本源头/发布副本一致性、VS生成后复制的含空格路径及安装清单静态核对通过。没有执行登记的135个业务用例，也未重编App/Core/Test；历史134项及13项结果仅对应原批次。前次ISCC校验因本机组件完整性记录不符失败；用户实际setup弹框是ISIDE不接受/D参数。修正为ISIDE /cc和ISS路径，输出通过环境变量传递后，从common/SplitViewer实际打包成功，退出0；成品17083841字节、SHA256=393fc7eb1939dfb268eb5b0816cfe1ba0d7fa0a581e77bebbf20d330734976f8，PE有效，26个原有产品/资源/符号文件哈希保持，未把仅语法检查当成打包通过。当前ISCC、Linux/macOS打包、安装/升级/卸载及业务GUI运行未验证；本次未执行135项业务用例。安装脚本排除Test及PDB，不改变当前测试程序和既有用例ID。
 布局、颜色、图层默认位置、像素偏移、滚轮步长及窗口行为来自旧版基线和用户需求。图像使用红蓝绿PNG及独立预期坐标；实际鼠标/菜单、拖放、滚轮、F1/F11/Esc/Delete驱动产品。输入辅助先等待真实processing完成，再发送下一操作，不用固定小延时推断业务成功。
 browseFile替身只提供文件选择结果，reportError只记录错误；除此之外执行真实产品代码。173—175临时使用托管选择器自动化内部控件，不能据此称系统原生选择框已人工验收。保存检查真实落盘字段；旧配置手写UTF16，坏字节反例与产品编码器独立。
 Windows原生场景必须在能接收系统输入的实际桌面执行，核对本批窗口/PID后才SendInput；不能用offscreen、句柄出现或Qt容器尺寸代替真实视频呈现。系统拖动设置和鼠标位置在结束恢复，只关闭本批持有的自产窗口与播放器。
@@ -595,7 +597,7 @@ C5真实路径补查：空启动后通过系统文件选择框加载MP4，旧候
 2026-10-10上一批移动视频正式116项（101—216）全部通过，PID26944退出0、47.53秒；common发布后7项Core及实际App视频恢复/退出通过。符号为symbols-SplitViewer-20261010-MoveVideo.7z；身份见开发文档。该程序已由本轮最终版替换，原身份仅供历史查证。
 此前71、93、102项各批结论只对应各自历史二进制。已结束流程的原始临时证据已清理，保留结论而不再把过期目录列为当前入口。
 未执行：220压力、Debug、Linux/macOS/Android/iOS编译运行、长时间或海量图片压力、分数DPI、多屏、任意第三方窗口兼容、原生文件框人工操作、Explorer缩略图视觉检查、故意崩溃和dump解析。当前无网络业务；本次任务取消、在途关闭和多实例协议有定向覆盖，但不据此声称穷尽所有并发或内存泄露场景。
-当前正式入口为common/SplitViewer/SplitViewer1.0.exe，Test入口为common/SplitViewerTest/SplitViewerTest1.0.exe；135项目录与源码一致。正式发布已完成，工作流已结束；原试运行脚本、候选副本及测试报告已按规则清理。
+当前正式入口为common/SplitViewer/SplitViewer1.0.exe，Test入口为common/SplitViewer/SplitViewerTest1.0.exe；135项目录与源码一致。正式发布已完成，工作流已结束；原试运行脚本、候选副本及测试报告已按规则清理。
 
 结束清理（2026-10-10）：用户明确结束本轮工作流。正式源码、可复用测试、产品资源、三份正式文档、common发布程序及匹配PDB压缩包保留；工作流过程目录、测试reports、试运行副本、一次性脚本、私有依赖副本、中间构建、临时备份和本轮自产诊断日志清理。原始过程证据已按结束规则删除，以上结论仅对应所列版本与实际验证范围。用户素材、用户运行日志及其他会话产物保留。
 
@@ -604,7 +606,7 @@ C5真实路径补查：空启动后通过系统文件选择框加载MP4，旧候
 Core、App、Test均使用VS2013/MSBuild12和Qt5.5.1 msvc2013_64完成Windows Release x64隔离编译，最终构建均0警告0错误。使用已发布的动态依赖及本次独立的导入库、中间目录，不刷新并行会话使用的共享include/lib，也不重编底层库。
 按用户“只改注释、不用测试”要求，本轮未启动App或Test、未执行功能测试或压力测试。前述134项回归、发布后13项及MP4实际操作结论仅属于2026-10-10所列二进制，不能作为本次新二进制的运行验证结论。
 增量发布更新common/SplitViewer的EXE和Core DLL、common/SplitViewerTest的EXE和Core DLL，共4处文件；另外24处模块保持原哈希，未复制Qt官方动态库、插件或资源，用户数据和运行日志保持。
-完整符号包common/SplitViewerTest/symbols-SplitViewer-20261012-Comments.7z，6286125字节，SHA256=8914cc062aa693360a9629c95f141f3acd747f6e84db5677ad44f152e0eb671c。从上一完整包解压后仅替换本次App/Core/Test三份PDB，其余12份逐字节保持；使用-t7z -mx=9 -m0=lzma2 -ms=on，完整性检查及重新解压逐文件核验通过，28处发布模块均与15份PDB的GUID/Age匹配。旧符号包保留，common不存散装PDB。
+完整符号包common/SplitViewer/symbols-SplitViewer-20261012-Comments.7z，6286125字节，SHA256=8914cc062aa693360a9629c95f141f3acd747f6e84db5677ad44f152e0eb671c。从上一完整包解压后仅替换本次App/Core/Test三份PDB，其余12份逐字节保持；使用-t7z -mx=9 -m0=lzma2 -ms=on，完整性检查及重新解压逐文件核验通过，28处发布模块均与15份PDB的GUID/Age匹配。旧符号包保留，common不存散装PDB。
 SplitViewer1.0.exe：SHA256=9c12ed01ded74245c7d881198cb15d97d9d3c13ef359d8fe7cf90255fa476127；PDB GUID=290dacab-3935-4687-81ad-5ec94a5117b5，Age=3。
 SplitViewerCore.dll：SHA256=249a87b9862921e6c48b04b4f58647b1ae4a85de0d2e81b8a6e3b6fb0922baf4；PDB GUID=f069bbe7-82ee-4a26-ab96-c08b926b0188，Age=2。
 SplitViewerTest1.0.exe：SHA256=b9c01e0b7f06604a389aa3941ae7d8f1e908ac481fde202082a617c44c16fe0c；PDB GUID=e5a55a46-14d1-4963-8cba-6c3acdea0e5d，Age=2。

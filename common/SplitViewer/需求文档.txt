@@ -1,12 +1,13 @@
 ﻿SplitViewer需求文档
-版本：0.24
-更新日期：2026-10-10
-状态：三工程规范整改、尺寸同步及进程残留修正完成，Windows Release x64验证通过，已增量发布common；工作流已按用户指令结束。
+版本：0.26
+更新日期：2026-10-12
+状态：正式App/Test部署已合并到common/SplitViewer，打包脚本及构建后同步入口已整理；业务程序沿用2026-10-12注释补全版，本次未重编或运行功能测试；Windows setup入口已修复并实际生成安装包，未安装产品。
 
 一、工程范围和平台
 旧版行为依据为src/SplitViewer_old/SplitViewer，旧代码和旧交付物保持。SplitViewer是Windows、Linux、macOS的Qt桌面界面；SplitViewerCore是五端共用的C++11模型和算法，禁止Qt、原生窗口句柄和系统界面代码；SplitViewerTest覆盖Core与实际产品界面。Android、iOS的界面另做。
 本轮只整改SplitViewer、SplitViewerCore、SplitViewerTest及相应文档，不修改LumaPlayer、PdfReader或共享底层库。使用现有QtControls可见控件及CStringManager、CSystem、CTaskThreadManager等开发库。主界面之外的业务弹窗统一交DialogManager；系统原生文件选择框为用户明确允许的例外。
 保持VS2013、Qt5.5.1和C++11兼容，Release默认x64动态库。应用和Test的version脚本只准备依赖，only与same配合避免批内重复编译，不包含发布；Core的version不改。普通手动构建仍为执行version后在VS2013生成工程。
+正式App与Test共用common/SplitViewer及一套DLL、res；测试文档和符号包同目录保存，不再创建common/SplitViewerTest。源码工程与构建目标仍独立，不能合并EXE或改变Core接口。
 
 二、启动、工作区及图片
 不带文件启动时工作区宽高分别为桌面分辨率的一半，宽高比与桌面一致，窗口居中；基础层覆盖工作区，初始为空灰色叶子及独立加号。启动参数可以是图片、.sv或联动视频；debug参数仅用于诊断。
@@ -47,9 +48,15 @@ Config的public集合记录应关闭的完整进程名，默认包含LumaPlayer�
 Test提供指定编号、全部瞬时、全部压力、全部四入口，使用同一严格数字和范围解析；报告区、路径区只读，Debug缺失明确失败。保留独立Core冒烟和旧数字ID，压力不自动混入开发期回归。
 
 八、验收与状态
-Windows Release x64三工程构建和145源文件规范自查通过；最终134项瞬时回归、common发布后13项及真实MP4的播放器内部关闭/宿主退出两条路径均通过，精确证据见测试文档。新增226—228覆盖窗口先销毁而进程仍在的边界。
+2026-10-10历史验证：Windows Release x64三工程构建和145源文件规范自查通过；最终134项瞬时回归、common发布后13项及真实MP4的播放器内部关闭/宿主退出两条路径均通过，精确证据见测试文档。新增226—228覆盖窗口先销毁而进程仍在的边界。
 用户在尺寸同步修正版C5反馈“可以了，执行后面的流程吧”，授权继续；期间进程残留作为原需求实现修正完成后继续增量发布。不把新生命周期修正的AI自动验证冒称人工验收。
-增量发布：首轮更新App/Test EXE及两处Core DLL；收到残留反馈后仅再次替换App、Test两个EXE，Core和其余26处模块哈希不变，没有重编或复制共享库。最终28处x64 EXE/DLL全部与15份PDB的GUID和Age匹配，不复制Qt官方库、插件或资源，common无散装PDB。完整符号包common/SplitViewerTest/symbols-SplitViewer-20261010-ComplianceLifetimeFix.7z，6487383字节，SHA256=80dd0a17f3cf65782a089dc991efa50da5984f187a761cb08ed08a16751c43ba；从上一完整包解压后只更新实际变动的App/Test PDB，另外13份哈希保持，使用-t7z -mx=9 -m0=lzma2 -ms=on，已完整性检查及重新解压逐文件核验。旧符号包保留。
-Debug、220压力、非Windows编译和实机、长期/海量压力、分数DPI、多屏、原生选择器人工操作、Explorer缩略图视觉检查及故意崩溃未执行。发布不属于工程脚本；用户已明确结束工作流，原始过程证据与临时产物按规则清理，正式源码、文档、程序和匹配符号保留。
+2026-10-12注释补全版仅做源码注释修改及三工程Release x64编译，按用户要求未测试；模块和符号身份见开发文档。此次目录合并去重前核对全部同名文件：13个DLL及9个资源逐字节相同，Test EXE、测试文档及完整符号包移入common/SplitViewer；主程序、Test、Core和依赖二进制字节均未改变。最新匹配符号包为同目录symbols-SplitViewer-20261012-Comments.7z，旧历史包保留已有文件。
+Debug、220压力、非Windows编译和实机、长期/海量压力、分数DPI、多屏、原生选择器人工操作、Explorer缩略图视觉检查及故意崩溃未执行。发布复制不属于version或setup脚本；用户已明确结束工作流，原始过程证据与临时产物按规则清理，正式源码、文档、程序和匹配符号保留。
 
 结束清理（2026-10-10）：用户明确结束本轮工作流。正式源码、可复用测试、产品资源、三份正式文档、common发布程序及匹配PDB压缩包保留；工作流过程目录、测试reports、试运行副本、一次性脚本、私有依赖副本、中间构建、临时备份和本轮自产诊断日志清理。原始过程证据已按结束规则删除，以上结论仅对应所列版本与实际验证范围。用户素材、用户运行日志及其他会话产物保留。
+
+九、部署目录与打包入口
+在common/SplitViewer或已构建输出目录执行sh setup.sh，按当前系统生成安装包，成品在脚本同级；脚本只打包已有产物，不编译、发布或自动安装。正式源头为src/SplitViewer/SplitViewer/setup.sh和SplitViewer.iss，VS2013生成后事件及CMake POST_BUILD同步脚本、配置及必要资源；version仍只准备依赖。
+Windows安装包仅包含产品EXE、13个仓库DLL、必要res、匹配Qt官方运行库/平台及图片插件、VS2013 x64 CRT和许可材料，排除Test EXE、PDB/7z、开发文档、日志及旧安装包。Qt官方DLL、插件和CRT在打包时读取已安装SDK，不复制到common。JFIF使用JPEG插件，并保留GIF、TIFF和WebP插件。
+Windows成品名为SplitViewer-1.0-Windows-x64-Setup.exe，默认安装至当前用户的LocalAppData/Programs/SplitViewer，提供开始菜单快捷方式及可选桌面快捷方式。保留图片/.sv缩略图和现有文件关联行为，不在打包过程修改系统关联。LumaPlayer联动继续以LUMAPLAYER环境变量指定外部播放器。
+Linux分支要求本平台64位ELF、linuxdeployqt/dpkg-deb及Qt资源，生成deb；macOS分支要求原生.app、macdeployqt及系统工具，生成dmg。缺工具、产物、架构或许可即失败，不能沿用旧安装包冒充本次成功；成功直接退出，交互失败显示错误后等待Enter，可用SPLITVIEWER_PACK_NO_PAUSE=1禁用等待。Windows已实际通过setup.sh生成安装包，成品及符号身份见开发文档；非Windows打包和实机、安装/升级/卸载未验证。

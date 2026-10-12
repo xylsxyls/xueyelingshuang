@@ -1,7 +1,7 @@
 ﻿SplitViewer开发文档
-版本：0.26
+版本：0.28
 更新日期：2026-10-12
-状态：2026-10-12三个工程注释补全，Windows Release x64编译通过，已增量发布common及匹配符号包；本次按用户要求未执行测试。此前工作流已结束。
+状态：App/Test共用common/SplitViewer；已修复setup.sh的ISIDE参数，Windows真实打包退出0，安装包已生成并核对身份。业务程序和符号未变，未安装产品或运行业务测试。
 
 一、工程边界与源码导航
 旧版基线在src/SplitViewer_old/SplitViewer，未修改。SplitViewerCore/SplitViewerCore/src提供纯C++模型、几何、方向迁移、UTF16配置和PNG封装；SplitViewer/SplitViewer承担Qt事件、显示、图片资源、文件系统适配及原生窗口；SplitViewerTest/SplitViewerTest编译真实产品UI源文件并连接同一Core DLL。
@@ -16,7 +16,7 @@ Qt资源：ImageHelper提供解码和引用清理；ProfileStore提供限长读�
 
 二、配置、初始化及API
 应用Config::instance()返回函数内static s_config；Config.h定义g_config。配置public m_成员默认值在.cpp初始化列表，运行计算归init并由构造调用。main在QApplication之后的GUI线程首次取得配置，启动前定制，运行期不支持无同步改共享成员。日志、错误文案、资源、等待预算和UI尺寸均归对应配置，不把锁、请求ID和进程状态放Config。
-Test用SplitViewerTestConfig及g_testConfig，避免与一起编入Test的产品g_config冲突。Release/Debug App和Test路径按EXE目录计算，只读展示；候选目录优先，发布Test则查相邻SplitViewer目录；选Debug而文件缺失时拒绝，不能退回Release。
+Test用SplitViewerTestConfig及g_testConfig，避免与一起编入Test的产品g_config冲突。Release/Debug App和Test路径按EXE目录计算，只读展示；优先定位Test同目录的产品EXE，找不到时才兼容查相邻SplitViewer目录；选Debug而文件缺失时拒绝，不能退回Release。
 Core配置为SplitViewerCoreConfig，每个Document、Node及Layer在构造或init复制。isValid核验有限数值、比例、缩放及深度/数量/字节预算。改变运行配置先uninit再init；重复uninit安全，已初始化init拒绝，非法输入保留原状态。lastResult区分Success、NotInit、InvalidParam、AlreadyInit、LimitExceeded和NotFound；保留旧构造即空文档的兼容行为。
 Document::splitNode检查叶子归属、深度和节点预算，addLayer检查初始化和层数预算；旧底层makeSplit/appendLayer保留为模型构造入口，调用方负责独立所有权，不能传仍被别树拥有的节点。序列化与快照再次核验所属Document预算，不能用较宽松的Node配置绕过文档节点或深度上限；失败保留输出。Test201用底层appendLayer制造超限反例，不放宽保存断言。
 Core::copyTo复制树、路径、变换、图层及窗口几何，返回借用身份映射；失败不改目的文档或映射。调用方须确保复制期间源不被修改。不同场景不共享可变树；raw节点指针只能在所属GUI代次内借用。
@@ -52,6 +52,15 @@ version使用only/same既有去重顺序，新增Test直接使用的CDump same�
 所有145个手写.h/.cpp统一UTF-8 BOM/CRLF、四空格、Allman控制块、顶格构造初始化项、一行函数间距及无尾空白。CPP无类型定义、namespace或文件级static辅助；模型与函数声明在头文件，类职责、成员所有权及private/拷贝/参数契约齐全；min/max加括号且显式algorithm。导出STL成员C4251只局部屏蔽必要成员。
 本轮多个会话共用lib，曾读到CStringManager静态MT库与本工程动态MD不一致；因此使用本轮独有的独立include、由已发布DLL导出生成的import lib、中间目录及stage。未覆写共享include或其他工程产物，冻结已发布依赖，不重编底层库；不是用静态库改成动态链接的假通过。
 隔离构建已通过Core、App、Test Release x64。CMake与版本脚本仅审查和shell语法检查，未在本轮运行version刷新共享lib，也未编译非Windows。普通version再VS构建方式由正式登记保持；并行会话期间不要把不匹配的共享中间库当有效候选。
+
+正式部署：common/SplitViewer同时保存SplitViewer1.0.exe、SplitViewerTest1.0.exe、13个共用DLL、res及需求/开发/测试文档，common/SplitViewerTest已移除。原目录51个文件合并成29个不同文件，仅去重22个哈希一致副本；业务源码145份及原EXE/DLL、资源和符号压缩包保持字节不变。TestConfig本来优先查同目录产品，无需修改业务代码。
+打包源头：src/SplitViewer/SplitViewer/setup.sh及SplitViewer.iss；输出目录和common为同步副本。新增两文件登记到VS工程及Resource Files过滤器。VS生成后事件用带引号的copy/xcopy同步脚本及common/SplitViewer/res，逐条检查errorlevel；CMake用TARGET POST_BUILD同步，脚本/ISS登记LINK_DEPENDS；macOS入口位于.app外同级，Linux另同步生成的SplitViewer.png。复制失败使构建失败，不在version/before/after或配置阶段复制，不自动生成安装包。
+使用入口：在已部署或构建输出目录执行sh setup.sh；sh setup.sh --help查看工具及环境变量。Windows可用QTDIR/VC120DIR选择匹配Qt5.5.1 MSVC2013 x64和CRT，QTSOURCEDIR选择含Qt/图片插件许可的匹配Qt源码树，INNO_COMPILER指定已安装ISIDE.exe或ISCC.exe，默认优先ISIDE。ISIDE只接收/cc和ISS路径；输出目录通过SPLITVIEWER_INSTALLER_OUTPUT_DIR环境变量交给ISS预处理器，单独打开ISS且未设置该变量时仍输出同级。ISCC直接接收ISS路径，使用同一个环境变量。不能把ISCC的/D宏参数传给ISIDE。默认SDK路径沿既有Qt/VS安装位置定位，不成为安装后的绝对路径依赖。当前部署PE实际导入Qt5Core/Gui/Widgets及MSVCP/MSVCR120，未照搬LumaPlayer的FFmpeg、K歌、v14或Multimedia/Network依赖。
+安装输入：明确列出产品EXE、13个仓库DLL、res以及许可；SDK提供Qt Core/Gui/Widgets、ANGLE/软件OpenGL组件、qwindows和qgif/qico/qjpeg/qtiff/qwebp。Qt/CRT不复制到common。Test、PDB/7z、文档、日志、历史安装包均不打包。Qt DLL和插件的实际文件、PE x64与必要许可已静态检查；LumaPlayer为可选外部联动程序，仍由LUMAPLAYER定位。
+成品与失败：Windows用Inno在新建的受控临时目录生成后核对非空及MZ文件头，再移到脚本同级，避免错误复用旧包；Inno引导程序位数与安装的x64产品分别核对。Linux使用linuxdeployqt/ldd/dpkg-deb，按ELF机器码生成amd64/arm64 deb；macOS使用ditto/macdeployqt生成dmg。临时目录完成或失败均清理；成功不等待，交互失败保留错误码并等待Enter，非交互不等待。脚本不安装、启动产品、修改关联或下载工具。
+本次核验：sh语法及--help通过；VS PostBuildEvent单独执行至含空格的隔离输出目录，两脚本及9个资源逐文件哈希一致，不代表重新构建了App。安装清单静态展开45个文件、29个x64 EXE/DLL，均存在；产品/Test及PDB包哈希核对通过。未重编产品、未运行功能测试。前次ISCC校验在加载ISCmplr.dll时因大小记录不符失败，这不证明用户已有ISIDE无法打包。用户反馈的弹框是ISIDE显示command-line usage，根因是setup把/DInstallerOutputDir误传给仅接收/cc及ISS路径的IDE。已修正调用，并保持受控临时输出；没有修改安装工具、删除完整性记录或添加绕过开关。
+修正后从common/SplitViewer运行setup.sh，默认定位C:/Program Files/Inno Setup 7/ISIDE.exe，实际编译并打包成功，退出码0。成品common/SplitViewer/SplitViewer-1.0-Windows-x64-Setup.exe，17083841字节，SHA256=393fc7eb1939dfb268eb5b0816cfe1ba0d7fa0a581e77bebbf20d330734976f8；MZ/PE头有效，引导程序机器码0x014C、安装的产品及运行DLL为x64，不混淆引导位数与安装架构。26个原产品模块/资源/符号归档哈希保持，源码和common两脚本字节一致。正常打包的临时输出已自动清理，复现错误调用时的自有窗口及临时目录已按归属收尾。当前ISCC入口仍受本机组件完整性不匹配限制；ISIDE实际成功结果不冒称ISCC通过。Linux/macOS打包、产品安装/升级/卸载及业务GUI运行未验证。
+当前完整匹配符号：common/SplitViewer/symbols-SplitViewer-20261012-Comments.7z，SHA256=8914cc062aa693360a9629c95f141f3acd747f6e84db5677ad44f152e0eb671c；15份PDB对应合并后的15个不同发布模块，本次仅移动压缩包，不重压、不生成散装PDB。另保留现有20260929历史包。第八、九节的其他历史包只记录当时身份，当前目录没有这些包，不作为现行恢复入口。
 
 七、本轮尺寸同步验证过程（历史阶段）
 
@@ -99,7 +108,7 @@ SplitViewerTest1.0.exe：SHA256=eff09950868411ae2e46aa075aada6f687f711df383fbf13
 Core、App、Test均使用VS2013/MSBuild12和Qt5.5.1 msvc2013_64完成Windows Release x64隔离编译，最终构建均0警告0错误。使用已发布的动态依赖及本次独立的导入库、中间目录，不刷新并行会话使用的共享include/lib，也不重编底层库。
 按用户“只改注释、不用测试”要求，本轮未启动App或Test、未执行功能测试或压力测试。前述134项回归、发布后13项及MP4实际操作结论仅属于2026-10-10所列二进制，不能作为本次新二进制的运行验证结论。
 增量发布更新common/SplitViewer的EXE和Core DLL、common/SplitViewerTest的EXE和Core DLL，共4处文件；另外24处模块保持原哈希，未复制Qt官方动态库、插件或资源，用户数据和运行日志保持。
-完整符号包common/SplitViewerTest/symbols-SplitViewer-20261012-Comments.7z，6286125字节，SHA256=8914cc062aa693360a9629c95f141f3acd747f6e84db5677ad44f152e0eb671c。从上一完整包解压后仅替换本次App/Core/Test三份PDB，其余12份逐字节保持；使用-t7z -mx=9 -m0=lzma2 -ms=on，完整性检查及重新解压逐文件核验通过，28处发布模块均与15份PDB的GUID/Age匹配。旧符号包保留，common不存散装PDB。
+完整符号包common/SplitViewer/symbols-SplitViewer-20261012-Comments.7z，6286125字节，SHA256=8914cc062aa693360a9629c95f141f3acd747f6e84db5677ad44f152e0eb671c。从上一完整包解压后仅替换本次App/Core/Test三份PDB，其余12份逐字节保持；使用-t7z -mx=9 -m0=lzma2 -ms=on，完整性检查及重新解压逐文件核验通过，28处发布模块均与15份PDB的GUID/Age匹配。旧符号包保留，common不存散装PDB。
 SplitViewer1.0.exe：SHA256=9c12ed01ded74245c7d881198cb15d97d9d3c13ef359d8fe7cf90255fa476127；PDB GUID=290dacab-3935-4687-81ad-5ec94a5117b5，Age=3。
 SplitViewerCore.dll：SHA256=249a87b9862921e6c48b04b4f58647b1ae4a85de0d2e81b8a6e3b6fb0922baf4；PDB GUID=f069bbe7-82ee-4a26-ab96-c08b926b0188，Age=2。
 SplitViewerTest1.0.exe：SHA256=b9c01e0b7f06604a389aa3941ae7d8f1e908ac481fde202082a617c44c16fe0c；PDB GUID=e5a55a46-14d1-4963-8cba-6c3acdea0e5d，Age=2。
