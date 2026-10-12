@@ -142,3 +142,31 @@ IF(APPLE OR UNIX)
             DESTINATION share/applications)
     ENDIF()
 ENDIF()
+
+# Keep packaging inputs beside the product only after a successful build.
+SET(LUMAPLAYER_PACKAGE_DIR "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
+IF(APPLE)
+    SET(LUMAPLAYER_PACKAGE_DIR "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/..")
+ENDIF()
+SET_PROPERTY(TARGET ${PROJECT_NAME} APPEND PROPERTY LINK_DEPENDS
+    "${PROJECT_SOURCE_DIR}/setup.sh" "${PROJECT_SOURCE_DIR}/LumaPlayer.iss")
+ADD_CUSTOM_COMMAND(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "${PROJECT_SOURCE_DIR}/setup.sh" "${LUMAPLAYER_PACKAGE_DIR}/setup.sh"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "${PROJECT_SOURCE_DIR}/LumaPlayer.iss" "${LUMAPLAYER_PACKAGE_DIR}/LumaPlayer.iss"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory
+        "${PROJECT_SOURCE_DIR}/../../../common/LumaPlayer/res"
+        "${LUMAPLAYER_PACKAGE_DIR}/res"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory
+        "${PROJECT_SOURCE_DIR}/../../../common/LumaPlayer/karaoke/licenses"
+        "${LUMAPLAYER_PACKAGE_DIR}/karaoke/licenses"
+    COMMENT "Copying LumaPlayer packaging inputs to the output directory"
+    VERBATIM)
+IF(UNIX AND NOT APPLE)
+    ADD_CUSTOM_COMMAND(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${PROJECT_SOURCE_DIR}/res/LumaPlayer.png"
+            "${LUMAPLAYER_PACKAGE_DIR}/LumaPlayer.png"
+        VERBATIM)
+ENDIF()

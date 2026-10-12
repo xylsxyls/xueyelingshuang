@@ -11,7 +11,7 @@ class QPainter;
 class LumaPlayerHelper
 {
 public:
-    /** 在Qt及系统文件框启动前选择K歌依赖的系统C++运行库
+    /** 在Qt及系统文件框启动前优先选择EXE同目录完整私有CRT，无私有文件时使用系统CRT
     @return Windows加载错误码，0表示成功或非Windows无需准备；仅主线程启动时调用
     */
     static uint32_t prepareKaraokeRuntime();

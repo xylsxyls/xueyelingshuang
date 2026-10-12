@@ -229,6 +229,12 @@
     <None Include="LumaPlayerIcon.sh">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="setup.sh">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="LumaPlayer.iss">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LumaPlayerKaraokeJob.h" />

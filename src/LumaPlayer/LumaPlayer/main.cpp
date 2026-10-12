@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
         g_config.m_logInitialized.store(true);
         LOGINFO("LumaPlayer startup, debug=%d build=%s %s", g_config.m_debugEnabled ? 1 : 0, __DATE__, __TIME__);
         LOGINFO("CDump registration result=%d", dumpEnabled ? 1 : 0);
-        LOGINFO("Karaoke system CRT bootstrap Win32=%u", karaokeRuntimeError);
+        LOGINFO("Karaoke CRT bootstrap Win32=%u", karaokeRuntimeError);
         application.setFont(QFont(g_config.m_fontFamily, g_config.m_fontSize));
         LumaPlayerDialogSession dialogSession;
         const bool debugEnabled = g_config.m_debugEnabled;

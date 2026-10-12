@@ -7,6 +7,7 @@
 #include <QPainter>
 #include <algorithm>
 #include <cctype>
+#include <cwchar>
 #include <string>
 #ifdef _WIN32
 #include <Windows.h>
@@ -15,9 +16,79 @@
 uint32_t LumaPlayerHelper::prepareKaraokeRuntime()
 {
 #ifdef _WIN32
-    // Keep this process-lifetime dependency loaded before shell extensions can select an older CRT.
-    static HMODULE s_runtime = LoadLibraryExW(L"msvcp140.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-    static const DWORD s_error = s_runtime != nullptr ? ERROR_SUCCESS : GetLastError();
+    // Pin the selected CRT before native file-dialog extensions can load an older copy.
+    static const DWORD s_error = []() -> DWORD
+    {
+        wchar_t path[32768];
+        const DWORD capacity = static_cast<DWORD>(sizeof(path) / sizeof(path[0]));
+        const DWORD length = GetModuleFileNameW(nullptr, path, capacity);
+        if (length == 0)
+        {
+            return GetLastError();
+        }
+        if (length >= capacity)
+        {
+            return ERROR_INSUFFICIENT_BUFFER;
+        }
+        DWORD directoryLength = length;
+        while (directoryLength > 0 && path[directoryLength - 1] != L'\\' && path[directoryLength - 1] != L'/')
+        {
+            --directoryLength;
+        }
+        if (directoryLength == 0)
+        {
+            return ERROR_BAD_PATHNAME;
+        }
+        const wchar_t* names[] = { L"vcruntime140.dll", L"vcruntime140_1.dll", L"msvcp140.dll", L"msvcp140_1.dll" };
+        const DWORD count = static_cast<DWORD>(sizeof(names) / sizeof(names[0]));
+        DWORD localCount = 0;
+        for (DWORD index = 0; index < count; ++index)
+        {
+            const size_t nameLength = std::wcslen(names[index]);
+            if (directoryLength + nameLength >= capacity)
+            {
+                return ERROR_INSUFFICIENT_BUFFER;
+            }
+            std::copy(names[index], names[index] + nameLength + 1, path + directoryLength);
+            const DWORD attributes = GetFileAttributesW(path);
+            if (attributes != INVALID_FILE_ATTRIBUTES)
+            {
+                if ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
+                {
+                    return ERROR_BAD_EXE_FORMAT;
+                }
+                ++localCount;
+            }
+            else
+            {
+                const DWORD error = GetLastError();
+                if (error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND)
+                {
+                    return error;
+                }
+            }
+        }
+        if (localCount == 0)
+        {
+            const HMODULE runtime = LoadLibraryExW(L"msvcp140.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+            return runtime != nullptr ? ERROR_SUCCESS : GetLastError();
+        }
+        if (localCount != count)
+        {
+            return ERROR_FILE_NOT_FOUND;
+        }
+        for (DWORD index = 0; index < count; ++index)
+        {
+            const size_t nameLength = std::wcslen(names[index]);
+            std::copy(names[index], names[index] + nameLength + 1, path + directoryLength);
+            // References intentionally last for the process lifetime.
+            if (LoadLibraryExW(path, nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32) == nullptr)
+            {
+                return GetLastError();
+            }
+        }
+        return ERROR_SUCCESS;
+    }();
     return s_error;
 #else
     return 0;

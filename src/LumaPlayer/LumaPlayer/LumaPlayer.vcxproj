@@ -254,11 +254,24 @@
     <ResourceCompile Include="$(IntDir)LumaPlayer.rc" />
     <Image Include="res\LumaPlayer.png" />
     <None Include="LumaPlayerIcon.sh" />
+    <None Include="setup.sh" />
+    <None Include="LumaPlayer.iss" />
   </ItemGroup>
   <ItemDefinitionGroup>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <PostBuildEvent>
+      <Message>Copying LumaPlayer packaging inputs to the output directory...</Message>
+      <Command>copy /Y "$(ProjectDir)setup.sh" "$(OutDir)setup.sh" &gt;nul
+if errorlevel 1 exit /b 1
+copy /Y "$(ProjectDir)LumaPlayer.iss" "$(OutDir)LumaPlayer.iss" &gt;nul
+if errorlevel 1 exit /b 1
+xcopy "$(ProjectDir)..\..\..\common\LumaPlayer\res\*" "$(OutDir)res\" /E /I /Y &gt;nul
+if errorlevel 1 exit /b 1
+xcopy "$(ProjectDir)..\..\..\common\LumaPlayer\karaoke\licenses\*" "$(OutDir)karaoke\licenses\" /E /I /Y &gt;nul
+if errorlevel 1 exit /b 1</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <PropertyGroup>
