@@ -1,5 +1,5 @@
 #!/bin/sh
-# Source entry: setup.sh --prepare (called by version). Deployment entry: sh setup.sh.
+# Packaging entry: sh setup.sh beside the compiled product.
 # Product inputs/output are beside the script; system runtimes come from installed SDKs.
 set -eu
 
@@ -7,7 +7,6 @@ base=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 host=$(uname -s)
 version=1.0
 stage=
-mode=${1:-}
 
 fail()
 {
@@ -38,7 +37,7 @@ finish()
     if [ "$status" -ne 0 ]; then
         printf 'Packaging exited with status %s.\n' "$status" >&2
     fi
-    if [ "$status" -ne 0 ] && [ "$mode" != --prepare ] && [ -t 0 ] && [ "${LUMAPLAYER_PACK_NO_PAUSE:-0}" != 1 ]; then
+    if [ "$status" -ne 0 ] && [ -t 0 ] && [ "${LUMAPLAYER_PACK_NO_PAUSE:-0}" != 1 ]; then
         printf '\nPress Enter to close...'
         read -r answer || :
     fi
@@ -73,33 +72,6 @@ require_pe_x64()
     offset=$(($2 + $3 * 256 + $4 * 65536 + $5 * 16777216))
     signature=$(od -An -tx1 -j"$offset" -N6 "$1" | tr -d ' \r\n')
     [ "$signature" = 504500006486 ] || fail "Expected a Windows x64 binary: $1"
-}
-
-prepare()
-{
-    [ -f "$base/LumaPlayer.cpp" ] && [ -f "$base/../version_release.sh" ] ||
-        fail '--prepare must be called on src/LumaPlayer/LumaPlayer/setup.sh'
-    root=$(CDPATH= cd "$base/../../.." && pwd -P)
-    output="$root/lib"
-    assets="$root/common/LumaPlayer"
-    mkdir -p "$output"
-    copy_file "$base/setup.sh" "$output/setup.sh"
-    copy_file "$base/LumaPlayer.iss" "$output/LumaPlayer.iss"
-    # These are existing, maintained distribution assets, not trial/build output.
-    [ -d "$assets/res" ] && [ -d "$assets/karaoke/licenses" ] ||
-        fail 'Repository product resources and license materials are required'
-    mkdir -p "$output/res" "$output/karaoke/licenses"
-    cp -pR "$assets/res/." "$output/res/"
-    cp -pR "$assets/karaoke/licenses/." "$output/karaoke/licenses/"
-    case "$host" in
-        MINGW*|MSYS*|CYGWIN*) ;;
-        Linux)
-            copy_file "$base/res/LumaPlayer.png" "$output/LumaPlayer.png"
-            ;;
-        Darwin) ;;
-        *) fail "Unsupported preparation platform: $host" ;;
-    esac
-    printf 'Prepared local packaging inputs: %s\n' "$output"
 }
 
 pack_windows()
@@ -306,10 +278,8 @@ pack_macos()
 }
 
 case "${1:-}" in
-    --prepare) [ "$#" -eq 1 ] || fail 'Unexpected arguments'; prepare; exit 0 ;;
     --help)
         printf '%s\n' 'sh setup.sh: package this directory for the current OS, without compiling or installing.' \
-            'Source-only --prepare: stage setup.sh, its configuration and product resources into lib.' \
             'Tools: Windows Inno Setup; Ubuntu linuxdeployqt/dpkg-deb; macOS macdeployqt.' \
             'Windows: QTDIR/VC120DIR select SDK runtimes; VC14DIR selects four app-local v14 DLLs.' \
             'INNO_COMPILER/LINUXDEPLOYQT/MACDEPLOYQT can select installed tools.'
