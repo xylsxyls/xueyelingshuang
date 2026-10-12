@@ -1,0 +1,6 @@
+@import "../creationEditor/creationEditor.wxss";
+.review-status { font-weight: 600; color: #a14b10; margin-bottom: 12rpx; }
+.review-reason { color: #a33f33; white-space: pre-wrap; word-break: break-all; }
+.review-change { margin-top: 18rpx; word-break: break-all; }
+.previous-value { margin-top: 10rpx; color: #9b5316; background: #fff2d9; padding: 12rpx; white-space: pre-wrap; word-break: break-all; }
+.history-link { padding: 20rpx 0; font-weight: 600; }

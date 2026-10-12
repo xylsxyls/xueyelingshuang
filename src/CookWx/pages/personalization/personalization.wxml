@@ -1,5 +1,5 @@
 <view class="page personalization-page" wx:if="{{recipe}}">
-  <view class="recipe-hero" bindtap="openVideo"><image wx:if="{{recipe.thumbnailUrl}}" class="recipe-hero-image" src="{{recipe.thumbnailUrl}}" mode="aspectFill" data-url="{{recipe.thumbnailUrl}}" binderror="onCoverError"></image><view class="recipe-hero-empty" wx:else>暂无视频封面</view><view class="recipe-hero-gradient"></view><view class="recipe-hero-play" wx:if="{{recipe.videoId}}"><view class="recipe-hero-triangle"></view></view></view>
+  <view class="recipe-hero" bindtap="openVideo"><image wx:if="{{recipe.thumbnailUrl}}" class="recipe-hero-image" src="{{recipe.thumbnailUrl}}" mode="aspectFill" data-url="{{recipe.thumbnailUrl}}" binderror="onCoverError"></image><view class="recipe-hero-empty" wx:else>暂无视频封面</view><view class="recipe-hero-gradient"></view><view class="recipe-hero-play" wx:if="{{recipe.videoId || recipe.mediaIds.length}}"><view class="recipe-hero-triangle"></view></view></view>
   <view class="header"><view class="title">{{recipe.title}}</view><view class="subtitle">{{recipe.subtitle}}</view></view>
 
   <view class="toolbar">
@@ -20,7 +20,7 @@
     <view class="step-head">
       <view>
         <view class="step-title">{{item.index}}. {{item.title}}</view>
-        <view class="muted">{{item.modeText}} · 原始 {{item.originalDurationText}}</view>
+        <view class="muted">{{item.modeText}} · <text class="{{!item.added && item.durationSeconds !== item.originalDurationSeconds ? 'personal-time-original-changed' : ''}}">{{item.added ? '新增' : '作者'}} {{item.originalDurationText}}</text></view>
       </view>
       <button wx:if="{{!item.added}}" disabled="{{saving}}" class="toggle-btn {{item.disabled ? 'restore' : ''}}" data-index="{{index}}" bindtap="toggleDisabled">
         {{item.disabled ? '恢复' : '禁用'}}
@@ -43,7 +43,7 @@
         <input type="number" value="{{item.seconds}}" data-index="{{index}}" data-field="seconds" bindinput="onDurationInput" disabled="{{item.disabled}}" />
         <text>秒</text>
       </view>
-      <view class="duration-text">{{item.disabled ? '不参与排程' : item.durationText}}</view>
+      <view class="duration-text personal-time-summary"><text class="personal-time-change" wx:if="{{!item.added && item.durationSeconds !== item.originalDurationSeconds}}">已改时间</text><text class="personal-time-current">{{item.disabled ? '不参与排程' : item.durationText}}</text></view>
     </view>
   </view>
 

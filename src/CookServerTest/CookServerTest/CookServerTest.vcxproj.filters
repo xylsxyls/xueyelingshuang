@@ -15,7 +15,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CookServerTestReviewCases.h"><Filter>头文件</Filter></ClInclude>
     <ClInclude Include="CookServerTestIdentityCases.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="CookServerTestRecipeEditingCases.h"><Filter>头文件</Filter></ClInclude>
     <ClInclude Include="CookServerTest.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -45,7 +47,11 @@
     <ClInclude Include="CookServerTestStressTask.h"><Filter>头文件</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CookServerTestReviewCases.cpp"><Filter>源文件</Filter></ClCompile>
     <ClCompile Include="CookServerTestIdentityCases.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="CookServerTestRecipeEditingCases.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="CookServerTestRecipePricingCases.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="CookServerTestRecipeStructureCases.cpp"><Filter>源文件</Filter></ClCompile>
     <ClCompile Include="CookServerTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>

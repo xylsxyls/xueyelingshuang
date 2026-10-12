@@ -188,10 +188,26 @@
     <ClInclude Include="CookStorageSyncTask.h" />
     <ClInclude Include="CookVoiceService.h" />
     <ClInclude Include="CookWindowsVoiceSelector.h" />
+
+    <ClInclude Include="CookCreationFlow.h" />
+      <ClInclude Include="CookResourcePaths.h" />
+      <ClInclude Include="CookReviewRevision.h" />
+      <ClInclude Include="CookRecipeDelta.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CookRecipeImagePoster.cpp" />
+    <ClCompile Include="AccountStoreReviewIdentity.cpp" />
+    <ClCompile Include="AccountStoreVideoPublication.cpp" />
+    <ClCompile Include="AccountStoreCreationState.cpp" />
+    <ClCompile Include="AccountStoreCreationSubmission.cpp" />
+    <ClCompile Include="AccountStoreCustomSubmission.cpp" />
+    <ClCompile Include="AccountStoreRecipeReviews.cpp" />
+    <ClCompile Include="AccountStoreReviewHistory.cpp" />
+    <ClCompile Include="CookApiServiceReviews.cpp" />
     <ClCompile Include="AccountStoreIdentity.cpp" />
     <ClCompile Include="AccountStoreAvatar.cpp" />
+    <ClCompile Include="CookApiServiceRecipeEditing.cpp" />
+    <ClCompile Include="AccountStoreRecipeEditing.cpp" />
     <ClCompile Include="CookApiServiceAvatar.cpp" />
     <ClCompile Include="CookAvatarHelper.cpp" />
     <ClCompile Include="AccountStore.cpp" />
@@ -218,6 +234,13 @@
     <ClCompile Include="CookStorageSyncTask.cpp" />
     <ClCompile Include="CookVoiceService.cpp" />
     <ClCompile Include="CookWindowsVoiceSelector.cpp" />
+
+    <ClCompile Include="CookCreationFlow.cpp" />
+
+    <ClCompile Include="CookCreationPersonalization.cpp" />
+      <ClCompile Include="CookResourcePaths.cpp" />
+      <ClCompile Include="CookReviewRevision.cpp" />
+      <ClCompile Include="CookRecipeDelta.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

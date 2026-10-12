@@ -194,3 +194,27 @@ else()
     INSTALL(FILES "${SPLITVIEWER_NATIVE_ICON}" DESTINATION share/pixmaps)
     INSTALL(FILES "${SPLITVIEWER_ICON_DIR}/${PROJECT_NAME}.desktop" DESTINATION share/applications)
 endif()
+
+# Packaging inputs follow the successfully built product; this does not package or publish.
+SET(SPLITVIEWER_PACKAGE_DIR "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
+IF(APPLE)
+    SET(SPLITVIEWER_PACKAGE_DIR "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/..")
+ENDIF()
+SET_PROPERTY(TARGET ${PROJECT_NAME} APPEND PROPERTY LINK_DEPENDS
+    "${PROJECT_SOURCE_DIR}/setup.sh" "${PROJECT_SOURCE_DIR}/SplitViewer.iss")
+ADD_CUSTOM_COMMAND(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "${PROJECT_SOURCE_DIR}/setup.sh" "${SPLITVIEWER_PACKAGE_DIR}/setup.sh"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "${PROJECT_SOURCE_DIR}/SplitViewer.iss" "${SPLITVIEWER_PACKAGE_DIR}/SplitViewer.iss"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory
+        "${PROJECT_SOURCE_DIR}/../../../common/SplitViewer/res"
+        "${SPLITVIEWER_PACKAGE_DIR}/res"
+    COMMENT "Copying SplitViewer packaging inputs to the output directory"
+    VERBATIM)
+IF(UNIX AND NOT APPLE)
+    ADD_CUSTOM_COMMAND(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${SPLITVIEWER_NATIVE_ICON}" "${SPLITVIEWER_PACKAGE_DIR}/SplitViewer.png"
+        VERBATIM)
+ENDIF()

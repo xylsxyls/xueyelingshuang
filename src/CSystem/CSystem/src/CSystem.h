@@ -434,6 +434,35 @@ public:
     */
     static std::string joinPath(const std::string& directory, const std::string& name);
 
+    /** 规范绝对路径，可按要求解析实际文件和目录链接
+    @param [in] path 非空路径，不允许零字符
+    @param [in] requireExisting 为true时解析实际存在目标，为false时规范词法绝对路径
+    @return 规范路径；失败返回空，Windows比较用路径统一ASCII大小写
+    */
+    static std::string canonicalPath(const std::string& path, bool requireExisting = true);
+
+    /** 判断路径是否严格位于目录内，存在目标会解析链接
+    @param [in] path 待核对路径
+    @param [in] directory 允许的根目录
+    @param [in] requireExisting 是否要求目标实际存在
+    @return 存在有效规范路径且严格包含时返回true，目录自身不算子项
+    */
+    static bool isPathWithin(const std::string& path, const std::string& directory, bool requireExisting = true);
+
+    /** 将静止目录迁到不重叠目录，逐文件核对内容后才删除源
+    @param [in] source 源目录；不存在视为已完成，拒绝符号链接和重解析点
+    @param [in] destination 目标目录；同名文件不同内容时不覆盖
+    @param [out] errorText 失败原因；失败保留尚未验证的源数据，可幂等重试
+    @return 全部文件完成且源空目录移除时返回true；同步IO不应在交互线程运行
+    */
+    static bool migrateDirectory(const std::string& source, const std::string& destination, std::string& errorText);
+
+    /** 创建普通目录及缺失父目录，已有普通目录视为成功
+    @param [in] path 待创建的非空目录路径，拒绝目标重解析点或符号链接
+    @return 完整目录存在且为普通目录返回true
+    */
+    static bool createDirectories(const std::string& path);
+
     /** 保证文件扩展名，匹配已有后缀时规范其大小写，否则追加后缀
     @param [in] path 原路径，空路径保持空
     @param [in] extension 含点的目标ASCII扩展名，例如.pdf；空扩展名保持原路径
@@ -547,6 +576,47 @@ public:
 		std::vector<std::string>* unVisitPath = nullptr);
 
 private:
+    /** 判断存在路径是普通目录，不接受链接或重解析点
+    @param [in] path 待检查目录
+    @return 普通无链接目录返回true
+    */
+    static bool plainDirectory(const std::string& path);
+
+    /** 判断存在路径是普通文件，不接受链接或重解析点
+    @param [in] path 待检查文件
+    @return 普通无链接文件返回true
+    */
+    static bool plainFile(const std::string& path);
+
+    /** 以固定缓冲逐字节比较两个文件
+    @param [in] first 第一文件
+    @param [in] second 第二文件
+    @return 两个文件完整读取且全部字节相同返回true
+    */
+    static bool equalFiles(const std::string& first, const std::string& second);
+    /** 保留迁移文件时间，使依赖修改时间的内容版本保持稳定
+    @param [in] source 已验证源文件
+    @param [in] destination 已复制的目标文件
+    @return 时间读取及写入成功返回true
+    */
+    static bool copyFileMetadata(const std::string& source, const std::string& destination);
+
+    /** 复制到目标同目录临时文件，核对后无覆盖提交，再删源文件
+    @param [in] source 普通源文件，调用方保证迁移期间没有并发写入
+    @param [in] destination 目标路径
+    @param [out] errorText 错误原因
+    @return 目标字节完整、源移除成功返回true
+    */
+    static bool migrateFile(const std::string& source, const std::string& destination, std::string& errorText);
+
+    /** 迁移已经核对为非重叠的目录树
+    @param [in] source 普通源目录，调用方保证迁移期间没有并发写入
+    @param [in] destination 普通目标目录
+    @param [out] errorText 错误原因
+    @return 所有子项完成且源空目录移除返回true
+    */
+    static bool migrateTree(const std::string& source, const std::string& destination, std::string& errorText);
+
 #ifdef _WIN32
     /** 枚举本次请求的可见窗口，找到后停止
     @param [in] window 当前顶层窗口

@@ -165,6 +165,8 @@
     <ResourceCompile Include="$(IntDir)SplitViewer.rc"><Filter>Generated Files</Filter></ResourceCompile>
     <Image Include="res\SplitViewer.png"><Filter>Resource Files</Filter></Image>
     <None Include="SplitViewerIcon.sh"><Filter>Resource Files</Filter></None>
+    <None Include="setup.sh"><Filter>Resource Files</Filter></None>
+    <None Include="SplitViewer.iss"><Filter>Resource Files</Filter></None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Config.cpp"><Filter>Source Files</Filter></ClCompile>

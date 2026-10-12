@@ -20,9 +20,11 @@
 #pragma warning(disable: 4200)
 #elif defined(__unix__) || defined(__APPLE__)
 #include <unistd.h>
+#include <utime.h>
 #include <pwd.h>
 #include <termios.h>
 #include <sys/stat.h>
+#include <limits.h>
 #include <algorithm>
 #include <codecvt>
 #include <dirent.h>
@@ -37,6 +39,7 @@
 #include <iostream>
 #include <iterator>
 #include <cstring>
+#include <cctype>
 #include <cstdlib>
 #include <functional>
 #include <stdexcept>
@@ -1548,6 +1551,396 @@ std::string CSystem::joinPath(const std::string& directory, const std::string& n
     return directory + (last == '/' || last == '\\' ? "" : "/") + name;
 }
 
+std::string CSystem::canonicalPath(const std::string& path, bool requireExisting)
+{
+    if (path.empty() || path.find('\0') != std::string::npos)
+    {
+        return "";
+    }
+#ifdef _WIN32
+    std::string result;
+    if (requireExisting)
+    {
+        HANDLE handle = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+        if (handle == INVALID_HANDLE_VALUE)
+        {
+            return "";
+        }
+        std::unique_ptr<void, decltype(&::CloseHandle)> handleGuard(handle, &::CloseHandle);
+        const DWORD required = GetFinalPathNameByHandleA(handle, nullptr, 0, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+        if (required > 0)
+        {
+            std::vector<char> buffer(static_cast<size_t>(required) + 1, '\0');
+            const DWORD written = GetFinalPathNameByHandleA(handle, &buffer[0], static_cast<DWORD>(buffer.size()), FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+            if (written > 0 && written < buffer.size())
+            {
+                result.assign(&buffer[0], written);
+            }
+        }
+        if (result.compare(0, 8, "\\\\?\\UNC\\") == 0)
+        {
+            result = "\\\\" + result.substr(8);
+        }
+        else if (result.compare(0, 4, "\\\\?\\") == 0)
+        {
+            result.erase(0, 4);
+        }
+    }
+    else
+    {
+        const DWORD required = GetFullPathNameA(path.c_str(), 0, nullptr, nullptr);
+        if (required == 0)
+        {
+            return "";
+        }
+        std::vector<char> buffer(static_cast<size_t>(required) + 1, '\0');
+        const DWORD written = GetFullPathNameA(path.c_str(), static_cast<DWORD>(buffer.size()), &buffer[0], nullptr);
+        if (written == 0 || written >= buffer.size())
+        {
+            return "";
+        }
+        result.assign(&buffer[0], written);
+    }
+    for (size_t i = 0; i < result.size(); ++i)
+    {
+        result[i] = result[i] == '/' ? '\\' : static_cast<char>(std::tolower(static_cast<unsigned char>(result[i])));
+    }
+    while (result.size() > 3 && result.back() == '\\')
+    {
+        result.pop_back();
+    }
+    return result;
+#elif defined(__linux__) || defined(__APPLE__) || defined(__ANDROID__)
+    char buffer[PATH_MAX] = {};
+    if (requireExisting)
+    {
+        return realpath(path.c_str(), buffer) == nullptr ? "" : std::string(buffer);
+    }
+    if (getcwd(buffer, sizeof(buffer)) == nullptr)
+    {
+        return "";
+    }
+    const std::string absolute = path[0] == '/' ? path : joinPath(buffer, path);
+    std::vector<std::string> parts;
+    size_t begin = 0;
+    while (begin < absolute.size())
+    {
+        const size_t slash = absolute.find('/', begin);
+        const std::string part = absolute.substr(begin, slash == std::string::npos ? std::string::npos : slash - begin);
+        if (part == "..")
+        {
+            if (!parts.empty())
+            {
+                parts.pop_back();
+            }
+        }
+        else if (!part.empty() && part != ".")
+        {
+            parts.push_back(part);
+        }
+        if (slash == std::string::npos)
+        {
+            break;
+        }
+        begin = slash + 1;
+    }
+    std::string result;
+    for (size_t i = 0; i < parts.size(); ++i)
+    {
+        result += "/" + parts[i];
+    }
+    return result.empty() ? "/" : result;
+#else
+    return "";
+#endif
+}
+
+bool CSystem::isPathWithin(const std::string& path, const std::string& directory, bool requireExisting)
+{
+    const std::string normalized = canonicalPath(path, requireExisting);
+    std::string root = canonicalPath(directory, true);
+    if (root.empty())
+    {
+        root = canonicalPath(directory, false);
+    }
+    if (normalized.empty() || root.empty())
+    {
+        return false;
+    }
+#ifdef _WIN32
+    const char separator = '\\';
+#else
+    const char separator = '/';
+#endif
+    if (root.back() != separator)
+    {
+        root += separator;
+    }
+    return normalized.size() > root.size() && normalized.compare(0, root.size(), root) == 0;
+}
+
+bool CSystem::migrateDirectory(const std::string& source, const std::string& destination, std::string& errorText)
+{
+    errorText.clear();
+    const std::string from = canonicalPath(source, false), to = canonicalPath(destination, false);
+    if (from.empty() || to.empty() || from == to || isPathWithin(from, to, false) || isPathWithin(to, from, false))
+    {
+        errorText = "Invalid or overlapping migration roots";
+        return false;
+    }
+    if (!DirOrFileExist(source))
+    {
+        return true;
+    }
+    if (!plainDirectory(source) ||
+        (DirOrFileExist(destination) && !plainDirectory(destination)))
+    {
+        errorText = "Migration root is not a plain directory";
+        return false;
+    }
+    return migrateTree(source, destination, errorText);
+}
+
+bool CSystem::createDirectories(const std::string& path)
+{
+    const std::string target = canonicalPath(path, false);
+    if (target.empty())
+    {
+        return false;
+    }
+    if (DirOrFileExist(target))
+    {
+        return plainDirectory(target);
+    }
+    const size_t slash = target.find_last_of("\\/");
+    if (slash == std::string::npos || slash == 0)
+    {
+        return CreateDir(target) && plainDirectory(target);
+    }
+    const std::string parent = target.substr(0, slash + 1);
+    return parent != target && createDirectories(parent) && CreateDir(target) && plainDirectory(target);
+}
+
+bool CSystem::plainDirectory(const std::string& path)
+{
+#ifdef _WIN32
+    const DWORD attributes = GetFileAttributesA(path.c_str());
+    return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && (attributes & FILE_ATTRIBUTE_REPARSE_POINT) == 0;
+#elif defined(__linux__) || defined(__APPLE__) || defined(__ANDROID__)
+    struct stat value;
+    return lstat(path.c_str(), &value) == 0 && S_ISDIR(value.st_mode);
+#else
+    return false;
+#endif
+}
+
+bool CSystem::plainFile(const std::string& path)
+{
+#ifdef _WIN32
+    const DWORD attributes = GetFileAttributesA(path.c_str());
+    return attributes != INVALID_FILE_ATTRIBUTES && (attributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) == 0;
+#elif defined(__linux__) || defined(__APPLE__) || defined(__ANDROID__)
+    struct stat value;
+    return lstat(path.c_str(), &value) == 0 && S_ISREG(value.st_mode);
+#else
+    return false;
+#endif
+}
+
+bool CSystem::equalFiles(const std::string& first, const std::string& second)
+{
+    std::ifstream a(first.c_str(), std::ios::binary), b(second.c_str(), std::ios::binary);
+    if (!a.good() || !b.good())
+    {
+        return false;
+    }
+    char left[65536], right[65536];
+    do
+    {
+        a.read(left, sizeof(left));
+        b.read(right, sizeof(right));
+        if (a.gcount() != b.gcount() || std::memcmp(left, right, static_cast<size_t>(a.gcount())) != 0)
+        {
+            return false;
+        }
+    } while (a.gcount() != 0);
+    return a.eof() && b.eof() && !a.bad() && !b.bad();
+}
+
+bool CSystem::copyFileMetadata(const std::string& source, const std::string& destination)
+{
+#ifdef _WIN32
+    WIN32_FILE_ATTRIBUTE_DATA attributes = {};
+    if (!GetFileAttributesExA(source.c_str(), GetFileExInfoStandard, &attributes))
+    {
+        return false;
+    }
+    HANDLE handle = CreateFileA(destination.c_str(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE,
+        nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (handle == INVALID_HANDLE_VALUE)
+    {
+        return false;
+    }
+    const bool result = SetFileTime(handle, &attributes.ftCreationTime, &attributes.ftLastAccessTime, &attributes.ftLastWriteTime) != FALSE;
+    CloseHandle(handle);
+    return result;
+#elif defined(__linux__) || defined(__APPLE__) || defined(__ANDROID__)
+    struct stat attributes;
+    if (stat(source.c_str(), &attributes) != 0)
+    {
+        return false;
+    }
+    struct utimbuf times;
+    times.actime = attributes.st_atime;
+    times.modtime = attributes.st_mtime;
+    return utime(destination.c_str(), &times) == 0;
+#else
+    return false;
+#endif
+}
+
+bool CSystem::migrateFile(const std::string& source, const std::string& destination, std::string& errorText)
+{
+    if (!plainFile(source) || (CSystem::DirOrFileExist(destination) && !plainFile(destination)))
+    {
+        errorText = "Migration encountered a linked or non-file entry";
+        return false;
+    }
+    if (CSystem::DirOrFileExist(destination))
+    {
+        if (!equalFiles(source, destination))
+        {
+            errorText = "Migration destination has different content: " + destination;
+            return false;
+        }
+        if (!copyFileMetadata(source, destination))
+        {
+            errorText = "Migration cannot preserve file times: " + destination;
+            return false;
+        }
+    }
+    else
+    {
+        const std::string temporary = destination + ".migration_" + CSystem::uuid(0);
+        if (CSystem::DirOrFileExist(temporary))
+        {
+            errorText = "Migration temporary path already exists";
+            return false;
+        }
+        bool copied = false;
+        {
+            std::ifstream input(source.c_str(), std::ios::binary);
+            std::ofstream output(temporary.c_str(), std::ios::binary | std::ios::trunc);
+            char buffer[65536];
+            while (input.good() && output.good())
+            {
+                input.read(buffer, sizeof(buffer));
+                output.write(buffer, input.gcount());
+            }
+            output.flush();
+            copied = input.eof() && !input.bad() && output.good();
+            output.close();
+            copied = copied && !output.fail();
+        }
+        bool committed = false;
+        if (copied && equalFiles(source, temporary) && copyFileMetadata(source, temporary))
+        {
+#ifdef _WIN32
+            committed = MoveFileExA(temporary.c_str(), destination.c_str(), MOVEFILE_WRITE_THROUGH) != FALSE;
+#elif defined(__linux__) || defined(__APPLE__) || defined(__ANDROID__)
+            committed = link(temporary.c_str(), destination.c_str()) == 0;
+#endif
+        }
+        CSystem::deleteFile(temporary.c_str());
+        if (!committed)
+        {
+            errorText = "Migration copy or verified commit failed: " + destination;
+            return false;
+        }
+    }
+    if (!CSystem::deleteFile(source.c_str()))
+    {
+        errorText = "Verified destination saved but source could not be removed: " + source;
+        return false;
+    }
+    return true;
+}
+
+bool CSystem::migrateTree(const std::string& source, const std::string& destination, std::string& errorText)
+{
+    if (!CSystem::createDirectories(destination))
+    {
+        errorText = "Cannot create plain migration destination";
+        return false;
+    }
+    std::vector<std::string> names;
+#ifdef _WIN32
+    WIN32_FIND_DATAA info;
+    HANDLE search = FindFirstFileA(CSystem::joinPath(source, "*").c_str(), &info);
+    if (search == INVALID_HANDLE_VALUE)
+    {
+        errorText = "Cannot enumerate migration source";
+        return false;
+    }
+    do
+    {
+        const std::string name(info.cFileName);
+        if (name != "." && name != "..")
+        {
+            names.push_back(name);
+        }
+    } while (FindNextFileA(search, &info));
+    const DWORD enumerationError = GetLastError();
+    FindClose(search);
+    if (enumerationError != ERROR_NO_MORE_FILES)
+    {
+        errorText = "Migration enumeration failed";
+        return false;
+    }
+#elif defined(__linux__) || defined(__APPLE__) || defined(__ANDROID__)
+    DIR* directory = opendir(source.c_str());
+    if (directory == nullptr)
+    {
+        errorText = "Cannot enumerate migration source";
+        return false;
+    }
+    struct dirent* entry;
+    while ((entry = readdir(directory)) != nullptr)
+    {
+        const std::string name(entry->d_name);
+        if (name != "." && name != "..")
+        {
+            names.push_back(name);
+        }
+    }
+    closedir(directory);
+#else
+    errorText = "Directory migration is unsupported on this platform";
+    return false;
+#endif
+    for (size_t i = 0; i < names.size(); ++i)
+    {
+        const std::string from = CSystem::joinPath(source, names[i]), to = CSystem::joinPath(destination, names[i]);
+        if (!(plainDirectory(from) ? migrateTree(from, to, errorText) : migrateFile(from, to, errorText)))
+        {
+            return false;
+        }
+    }
+#ifdef _WIN32
+    const bool removed = RemoveDirectoryA(source.c_str()) != FALSE;
+#elif defined(__linux__) || defined(__APPLE__) || defined(__ANDROID__)
+    const bool removed = rmdir(source.c_str()) == 0;
+#else
+    const bool removed = false;
+#endif
+    if (!removed)
+    {
+        errorText = "Cannot remove migrated empty source directory";
+    }
+    return removed;
+}
+
 std::string CSystem::ensureFileExtension(const std::string& path, const std::string& extension)
 {
     if (path.empty() || extension.empty())
@@ -2293,6 +2686,38 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 //	std::string renamePath = root + separator + "rename.txt";
 //	check(CSystem::CreateDir(root), "CSystem CreateDir");
 //	check(CSystem::DirOrFileExist(root), "CSystem DirOrFileExist dir");
+//	check(CSystem::canonicalPath("").empty(), "CSystem canonicalPath empty");
+//	check(CSystem::canonicalPath(std::string("a\0b", 3), false).empty(), "CSystem canonicalPath embedded null");
+//	check(!CSystem::canonicalPath(root).empty(), "CSystem canonicalPath existing");
+//	check(CSystem::canonicalPath(root, false) == CSystem::canonicalPath(root), "CSystem canonicalPath lexical and existing");
+//	check(CSystem::canonicalPath(CSystem::joinPath(root, "missing")).empty(), "CSystem canonicalPath missing");
+//	check(CSystem::isPathWithin(CSystem::joinPath(root, "child"), root, false), "CSystem isPathWithin child");
+//	check(!CSystem::isPathWithin(root, root, false), "CSystem isPathWithin excludes root");
+//	check(!CSystem::isPathWithin(root + "_sibling", root, false), "CSystem isPathWithin excludes shared prefix");
+//	std::string migrationParent = CSystem::joinPath(root, "migration source");
+//	std::string migrationSource = CSystem::joinPath(migrationParent, "nested");
+//	std::string migrationTarget = CSystem::joinPath(root, "migration target");
+//	std::string migrationError;
+//	check(CSystem::createDirectories(migrationSource), "CSystem createDirectories recursive");
+//	check(CSystem::createDirectories(migrationSource), "CSystem createDirectories existing");
+//	check(CSystem::createDirectories(migrationTarget), "CSystem createDirectories target");
+//	CSystem::saveFile("migration content", CSystem::joinPath(migrationSource, "data.bin"));
+//	CSystem::saveFile("", CSystem::joinPath(migrationSource, "empty.bin"));
+//	CSystem::saveFile("migration content", CSystem::joinPath(migrationTarget, "data.bin"));
+//	check(!CSystem::migrateDirectory(migrationSource, CSystem::joinPath(migrationSource, "child"), migrationError), "CSystem migrateDirectory rejects overlap");
+//	check(!CSystem::DirOrFileExist(CSystem::joinPath(migrationSource, "child")) && CSystem::readFile(CSystem::joinPath(migrationSource, "data.bin")) == "migration content", "CSystem migrateDirectory overlap has no side effect");
+//	check(CSystem::migrateDirectory(migrationSource, migrationTarget, migrationError), "CSystem migrateDirectory merges matching content");
+//	check(!CSystem::DirOrFileExist(migrationSource) && CSystem::readFile(CSystem::joinPath(migrationTarget, "data.bin")) == "migration content", "CSystem migrateDirectory verifies bytes before source removal");
+//	check(CSystem::DirOrFileExist(CSystem::joinPath(migrationTarget, "empty.bin")), "CSystem migrateDirectory preserves empty file");
+//	check(!CSystem::createDirectories(CSystem::joinPath(migrationTarget, "data.bin")), "CSystem createDirectories rejects file");
+//	check(CSystem::createDirectories(migrationSource), "CSystem migration conflict source");
+//	CSystem::saveFile("different content", CSystem::joinPath(migrationSource, "data.bin"));
+//	check(!CSystem::migrateDirectory(migrationSource, migrationTarget, migrationError) && !migrationError.empty(), "CSystem migrateDirectory rejects conflict");
+//	check(CSystem::readFile(CSystem::joinPath(migrationSource, "data.bin")) == "different content" && CSystem::readFile(CSystem::joinPath(migrationTarget, "data.bin")) == "migration content", "CSystem migrateDirectory conflict preserves both files");
+//	check(CSystem::deleteFile(CSystem::joinPath(migrationSource, "data.bin").c_str()) && CSystem::DestroyDir(migrationSource), "CSystem migration source cleanup");
+//	check(CSystem::migrateDirectory(migrationSource, migrationTarget, migrationError), "CSystem migrateDirectory missing source is complete");
+//	check(CSystem::deleteFile(CSystem::joinPath(migrationTarget, "data.bin").c_str()) && CSystem::deleteFile(CSystem::joinPath(migrationTarget, "empty.bin").c_str()), "CSystem migration target file cleanup");
+//	check(CSystem::DestroyDir(migrationTarget) && CSystem::DestroyDir(migrationParent), "CSystem migration directory cleanup");
 //	CSystem::saveFile("hello system", filePath);
 //	check(CSystem::readFile(filePath) == "hello system", "CSystem saveFile readFile");
 //	CSystem::saveFile("", emptyFilePath);

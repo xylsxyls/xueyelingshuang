@@ -9,6 +9,8 @@
 #include "CookServerTestCoverCases.h"
 #include "CookServerTestUiRefineCases.h"
 #include "CookServerTestIdentityCases.h"
+#include "CookServerTestRecipeEditingCases.h"
+#include "CookServerTestReviewCases.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
@@ -653,7 +655,10 @@ void CookServerTestRunner::runFunctionalTests()
 		CookServerTestHttpResponse response;
 		client.post("/api/recipes/custom/save", customRecipePublishBody(customRecipeId), authHeaders(phase1Token), response);
 		statusCode = response.m_statusCode;
-		return expectNetworkOk(response, message) &&
+		RapidJsonDocument saved;
+        if (!saved.parse(response.m_body)) return false;
+        customRecipeId = saved.getValue("recipe").getStringOrDefault("id", "");
+        return !customRecipeId.empty() && expectNetworkOk(response, message) &&
 			expectStatus(response, 200, message) &&
 			expectJsonOk(response, true, message) &&
 			expectBodyContains(response, customRecipeId, message);
@@ -795,7 +800,7 @@ void CookServerTestRunner::runFunctionalTests()
 			std::max(g_cookServerTestConfig.m_timeoutMs, 30000),
 			std::max(g_cookServerTestConfig.m_maxResponseBytes, 50 * 1024 * 1024));
 
-		const std::string samplePath = CSystem::GetCurrentExePath() + "../CookServer/res/video/cook_000001.mp4";
+		const std::string samplePath = CookServerTestHelper::videoFixturePath();
 		const std::string media = CSystem::readFile(samplePath);
 		if (media.empty() || media.size() > 100U * 1024U * 1024U)
 		{
@@ -1011,7 +1016,7 @@ void CookServerTestRunner::runFunctionalTests()
 		std::vector<RapidJsonValue> feed = document.getArrayValueOrEmpty("feed");
 		if (feed.empty())
 		{
-			message = "feed video list is empty, check CookServer res/video deployment";
+			message = "feed video list is empty, check CookServer external video resources";
 			return false;
 		}
 		feedVideoId = feed[0].getStringOrDefault("videoId", "");
@@ -1690,6 +1695,13 @@ void CookServerTestRunner::runFunctionalTests()
     CookServerTestIdentityCases::run(client,
         [this](const std::string& name, const CookServerTestFeedCases::CaseFunction& action)
         { runCase(name, action); });
+    CookServerTestRecipeEditingCases::run(client,
+        [this](const std::string& name, const CookServerTestFeedCases::CaseFunction& action)
+        { runCase(name, action); });
+    CookServerTestReviewCases::run(client,
+        [this](const std::string& name, const CookServerTestFeedCases::CaseFunction& action)
+        { runCase(name, action); });
+
 
 }
 

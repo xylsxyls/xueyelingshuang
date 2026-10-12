@@ -1,5 +1,6 @@
 ﻿#include "CookServerTestCoverCases.h"
 #include "CookServerTestConfig.h"
+#include "CookServerTestHelper.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "RapidJson/RapidJsonAPI.h"
@@ -43,16 +44,19 @@ void CookServerTestCoverCases::Run(CookServerTestHttpClient& client, const CookS
             upload("image", ".png", rectangle, false);
             upload("image", ".jpg", "not an image", false);
             CookServerTestHttpResponse hidden;
-            client.get("/api/videos/file?videoId=" + imageId, headers, hidden);
+            std::map<std::string, std::string> anonymous;
+            anonymous["Authorization"] = "";
+            client.get("/api/videos/file?videoId=" + imageId, anonymous, hidden);
             if (hidden.m_statusCode != 404) throw std::runtime_error("Unpublished image readable");
-            const std::string recipeId = name + "_recipe";
+            const std::string nonce = name + "_recipe";
+            std::string recipeId = nonce;
             const std::string recipe = "{\"recipe\":{\"schemaVersion\":\"1.0\",\"id\":\"" + recipeId + "\",\"title\":\"Cover recipe\",\"category\":\"\\u852c\\u83dc\",\"priceType\":\"free\",\"coverImageId\":\"" + imageId + "\",\"tasks\":[{\"id\":\"cut\",\"title\":\"Cut\",\"durationSeconds\":10,\"active\":true}]}}";
-            request("/api/recipes/custom/publish", recipe, true);
+            recipeId = request("/api/recipes/custom/publish", recipe, true).getValue("recipe").getStringOrDefault("id", "");
             CookServerTestHttpResponse image;
             client.get("/api/videos/file?videoId=" + imageId, headers, image);
             if (!image.m_networkOk || image.m_statusCode != 200 || image.m_body != square) throw std::runtime_error("Published cover bytes differ");
-            request("/api/videos/detail?videoId=" + imageId, "", false);
-            const std::string fixture = CSystem::readFile(CSystem::GetCurrentExePath() + "../CookServer/res/video/cook_000001.mp4");
+            request("/api/videos/detail?videoId=" + imageId, "", true);
+            const std::string fixture = CSystem::readFile(CookServerTestHelper::videoFixturePath());
             if (fixture.empty()) throw std::runtime_error("Missing upload video fixture");
             const std::string videoId = upload("video", ".mp4", fixture, true);
             request("/api/videos/publish", "{\"videoId\":\"" + videoId + "\",\"recipeIds\":[\"" + recipeId + "\"],\"coverImageId\":\"" + imageId + "\"}", true);
@@ -62,7 +66,7 @@ void CookServerTestCoverCases::Run(CookServerTestHttpClient& client, const CookS
             const RapidJsonDocument stranger = request("/api/auth/register", "{\"account\":\"" + name + "_peer\",\"password\":\"cookTest123\",\"nickname\":\"Peer\"}", true);
             headers["Authorization"] = "Bearer " + stranger.getStringOrDefault("token", "");
             std::string foreign = recipe;
-            foreign.replace(foreign.find(recipeId), recipeId.size(), recipeId + "_peer");
+            foreign.replace(foreign.find(nonce), nonce.size(), nonce + "_peer");
             request("/api/recipes/custom/publish", foreign, false);
             return true;
         }

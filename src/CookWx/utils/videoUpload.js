@@ -22,9 +22,9 @@ function readFileChunk(fs, filePath, position, length) {
 }
 
 async function uploadVideoFile(filePath, fileName, fileSizeBytes, onProgress, mediaType) {
-  const type = mediaType === 'image' ? 'image' : 'video'
+  const type = ['image', 'photo'].includes(mediaType) ? mediaType : 'video'
   const size = Math.floor(Number(fileSizeBytes) || 0)
-  const maxBytes = type === 'image' ? 4 * 1024 * 1024 : Math.max(1, Number(config.VIDEO_UPLOAD_MAX_BYTES) || 100 * 1024 * 1024)
+  const maxBytes = type !== 'video' ? 4 * 1024 * 1024 : Math.max(1, Number(config.VIDEO_UPLOAD_MAX_BYTES) || 100 * 1024 * 1024)
   const chunkBytes = Math.max(64 * 1024, Number(config.VIDEO_UPLOAD_CHUNK_BYTES) || 512 * 1024)
   if (!filePath || size <= 0 || size > maxBytes) throw new Error('视频文件为空或超过上传大小限制')
   if (!wx.getFileSystemManager) throw new Error('当前基础库不支持分块读取视频文件')

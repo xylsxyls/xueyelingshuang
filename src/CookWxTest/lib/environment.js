@@ -46,6 +46,7 @@ class TestEnvironment {
     this.root = path.join(config.projectRoot, 'temp', reporter.runId)
     this.projectPath = path.join(config.projectRoot, 'temp/project')
     this.serverPath = path.join(this.root, 'server')
+    this.resourcePath = path.join(this.root, 'CookServerRes')
     this.serverExecutablePath = path.join(this.serverPath, 'CookServer1.0.exe')
     this.children = []
     this.stopped = false
@@ -101,16 +102,17 @@ class TestEnvironment {
       if (entry.isFile() && /\.(exe|dll)$/i.test(entry.name)) fs.copyFileSync(path.join(config.serverRoot, entry.name), path.join(this.serverPath, entry.name))
     }
     if (config.serverExecutable) fs.copyFileSync(config.serverExecutable, this.serverExecutablePath)
-    copyDirectory(path.join(config.serverRoot, 'res/recipes'), path.join(this.serverPath, 'res/recipes'))
+    copyDirectory(path.join(config.serverResourceRoot || config.serverRoot, config.serverRecipesDirectory || 'res/recipes'), path.join(this.serverPath, 'res/recipes'))
     fs.mkdirSync(path.join(this.serverPath, 'res/video'), { recursive: true })
     // 真实素材只读；只复制一条，减少初始化耗时、流量与磁盘使用。
-    this.fixture = path.join(config.serverRoot, 'res/video/cook_000001.mp4')
+    this.fixture = path.join(config.serverResourceRoot || config.serverRoot, config.serverVideoDirectory || 'res/video', 'cook_000001.mp4')
     fs.copyFileSync(this.fixture, path.join(this.serverPath, 'res/video/cook_000001.mp4'))
+    this.fixtureLastWriteTime = fs.statSync(path.join(this.serverPath, 'res/video/cook_000001.mp4')).mtimeMs
     fs.mkdirSync(path.join(this.root, 'mysql/data'), { recursive: true })
     fs.mkdirSync(path.join(this.root, 'mysql/tmp'), { recursive: true })
     fs.mkdirSync(path.join(this.root, 'redis'), { recursive: true })
     const ini = `[Server]\r\nPublicIp=127.0.0.1\r\nListenHost=127.0.0.1\r\nPort=${config.serverPort}\r\nWorkerThreads=8\r\nMaxRequestBytes=1048576\r\n[Storage]\r\nBackend=redis_mysql\r\nRecipeResourceDirectoryName=res/recipes\r\nVideoStorageDirectoryName=data/videos/files\r\n[Dependencies]\r\nAutoStart=false\r\n[MySQL]\r\nHost=127.0.0.1\r\nPort=${config.mysqlPort}\r\nUser=root\r\nPassword=\r\nDatabase=cook_wx_test\r\nAutoStart=false\r\n[Redis]\r\nHost=127.0.0.1\r\nPort=${config.redisPort}\r\nDbIndex=0\r\nKeyPrefix=cook_wx_test\r\nAutoStart=false\r\n[Account]\r\nDefaultCoins=100\r\nDefaultYuanbao=100\r\nAdRequiredSeconds=3\r\nCheckinRewardCoins=5\r\nAdRewardCoins=30\r\n[Voice]\r\nTtsProvider=${config.voiceProvider}\r\n[Log]\r\nPath=${this.reporter.directory.replace(/\\/g, '/')}\r\nOutputConsole=false\r\nArchiveOldLog=false\r\n`
-    fs.writeFileSync(path.join(this.serverPath, 'CookServer.ini'), ini)
+    fs.writeFileSync(path.join(this.serverPath, 'CookServer.ini'), ini.replace('[Storage]\r\n', '[Storage]\r\nResourceRoot=' + this.resourcePath.replace(/\\/g, '/') + '\r\n'))
     this.reporter.report.environment = {
       ...this.reporter.report.environment, projectPath: this.projectPath, sourcePath: config.sourceRoot,
       serverPath: this.serverExecutablePath, serverSha256: hashFile(this.serverExecutablePath),
@@ -172,9 +174,8 @@ class TestEnvironment {
     fs.mkdirSync(directory, { recursive: true })
     const executable = path.join(directory, 'CookServerTest1.0.exe')
     fs.copyFileSync(this.config.serverTestExecutable || path.join(this.config.serverTestRoot, 'CookServerTest1.0.exe'), executable)
-    // 现有 C++ Test 按 EXE 位置寻找真实素材，保留对应目录关系。
-    copyDirectory(path.join(this.serverPath, 'res'), path.join(this.root, 'CookServer/res'))
-    const args = [`--host=127.0.0.1`, `--port=${this.config.serverPort}`, '--timeoutMs=15000', `--userPrefix=cw_${stress ? 's' : 'i'}_${this.reporter.runId.replace(/[^a-zA-Z0-9]/g, '').slice(-24)}`]
+    // C++ Test直接只读本批外部资源，不再为旧目录关系复制整份视频。
+    const args = [`--host=127.0.0.1`, `--port=${this.config.serverPort}`, '--timeoutMs=15000', `--resourceRoot=${this.resourcePath}`, `--userPrefix=cw_${stress ? 's' : 'i'}_${this.reporter.runId.replace(/[^a-zA-Z0-9]/g, '').slice(-24)}`]
     if (this.config.voiceProvider === 'disabled') args.push('--allowDisabledVoice')
     if (stress) args.push(`--stressThreads=${this.config.serverStressThreads}`, `--stressLoops=${this.config.serverStressLoops}`)
     else args.push('--noStress')

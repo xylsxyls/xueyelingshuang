@@ -123,9 +123,10 @@ public:
 	/** 将菜谱转换成JSON对象
 	@param [in] recipe 菜谱数据
 	@param [in] account 当前账号，可为空
+    @param [in] includeReviewDetails 已校验审核权限的完整展示，不授予购买关系
 	@return 返回JSON对象
 	*/
-	static RapidJsonValue recipeToJson(const Recipe& recipe, const UserAccount* account);
+    static RapidJsonValue recipeToJson(const Recipe& recipe, const UserAccount* account, bool includeReviewDetails = false);
 
 	/** 将菜谱转换成菜单列表使用的摘要JSON对象
 	@param [in] recipe 菜谱数据

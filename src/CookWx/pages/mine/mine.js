@@ -1,4 +1,7 @@
 const api = require('../../utils/api')
+const reviews = require('../../utils/mineRecipeReviews')
+const privateMedia = require('../../utils/privateMediaCache')
+const creationAssets = require('../../utils/creationAssets')
 const time = require('../../utils/time')
 const debugLog = require('../../utils/debugLog')
 const tabBar = require('../../utils/tabBar')
@@ -19,6 +22,7 @@ const ASSET_TABS = [
 
 Page({
   data: {
+    reviewState: 'pending',
     account: {},
     profile: {},
     editingIntroduction: false,
@@ -45,6 +49,13 @@ Page({
     this.setData({ menuActionId: '', savingIntroduction: false })
     personalizationSync.showPending(getApp(), wx, api, { isActive: () => this.pageActive !== false })
     const app = getApp()
+    if (this.mineOwner !== app.globalData.userId) {
+      reviews.stop(this)
+      this.mineOwner = app.globalData.userId
+      this.createdMediaAssets = []
+      this.setData({ account: {}, profile: {}, recipes: [], assetGroups: {}, assetItems: [], assetHasMore: {}, assetErrors: {},
+        assetTabs: ASSET_TABS, activeAssetTab: 'favorite', reviewState: 'pending', loadingMore: false })
+    }
     const initialTab = app.globalData.mineInitialTab || ''
     if (initialTab) {
       app.globalData.mineInitialTab = ''
@@ -58,8 +69,10 @@ Page({
     if (this.pageActive === false || !getApp().globalData.userId) return
     wx.navigateTo({ url: '/pages/avatarCrop/avatarCrop' })
   },
+  newCreation() { if (this.pageActive !== false && getApp().globalData.userId) wx.navigateTo({ url: '/pages/creationEditor/creationEditor?new=1' }) },
 
   onHide() {
+    reviews.stop(this)
     this.pageActive = false
     this.loadRequestId = (this.loadRequestId || 0) + 1
     this.introductionGeneration = (this.introductionGeneration || 0) + 1
@@ -67,6 +80,7 @@ Page({
   },
 
   onUnload() {
+    reviews.stop(this)
     this.pageActive = false
     this.loadRequestId = (this.loadRequestId || 0) + 1
     this.pauseAdCountdown()
@@ -83,7 +97,7 @@ Page({
     this.setData({ loading: true, loadingMore: false })
     const feeds = ['liked', 'favorite', 'created'].map(key => api.getFeed({ isStale, mode: mediaAssets.mediaMode(key), count }).catch(() => ({ ok: false, feed: [] })))
     Promise.all([api.getAccount({ isStale }), api.getRecipes({ isStale, catalog: true }), ...feeds])
-      .then(([accountRes, recipeRes, likedFeedRes, favoriteFeedRes, createdFeedRes]) => {
+      .then(async ([accountRes, recipeRes, likedFeedRes, favoriteFeedRes, createdFeedRes]) => {
         if (!accountRes.ok || !recipeRes.ok) throw new Error('load failed')
         if (isStale()) return
         const account = Object.assign({}, accountRes.account || {}, {
@@ -91,7 +105,14 @@ Page({
           friendUsers: accountRes.friendUsers || (accountRes.account || {}).friendUsers || []
         })
         const recipes = recipeRes.recipes || []
-        const assetGroups = this.buildAssetGroups(account, recipes, likedFeedRes.feed || [], favoriteFeedRes.feed || [], createdFeedRes.feed || [])
+        let publicRecipes = recipes
+        if (recipes.some(recipe => recipe.authorUserId === account.userId && recipe.status && recipe.status !== 'published')) {
+          const publicResult = await api.getRecipes({ publicCatalog: true, isStale })
+          if (isStale()) return
+          if (!publicResult.ok) throw new Error('公开菜谱加载失败')
+          publicRecipes = publicResult.recipes || []
+        }
+        const assetGroups = this.buildAssetGroups(account, recipes, likedFeedRes.feed || [], favoriteFeedRes.feed || [], createdFeedRes.feed || [], publicRecipes)
         const assetHasMore = {}
         const assetErrors = {}
         ;[likedFeedRes, favoriteFeedRes, createdFeedRes].forEach((res, index) => {
@@ -107,7 +128,11 @@ Page({
           assetHasMore,
           assetErrors,
           loading: false
-        }, () => { if (!isStale()) this.refreshAssetItems() })
+        }, () => { if (!isStale()) {
+          this.refreshAssetItems()
+          if (this.data.activeAssetTab === 'review') { reviews.load(this); reviews.poll(this) }
+          this.loadCreationCovers(requestId)
+        } })
         debugLog.info('MINE', 'LOAD_OK', {
           requestId,
           recipeCount: recipes.length,
@@ -132,14 +157,15 @@ Page({
       })
   },
 
-  buildAssetGroups(account, recipes, likedFeed, favoriteFeed, createdFeed) {
+  buildAssetGroups(account, recipes, likedFeed, favoriteFeed, createdFeed, publicRecipes = recipes) {
     const liked = mediaAssets.toMediaAssets(likedFeed, '已点赞')
     const favorite = mediaAssets.toMediaAssets(favoriteFeed, '已收藏')
-    const created = mediaAssets.toMediaAssets(createdFeed, '我的创作', account.userId || '')
-    const menu = recipes.filter(item => item.inMenu && !(assets.normalize(item).free && (item.systemRecipe || (account.userId && item.authorUserId === account.userId))))
+    this.createdMediaAssets = mediaAssets.toMediaAssets(createdFeed, '我的创作', account.userId || '')
+    const created = creationAssets.build(recipes, this.createdMediaAssets, account.userId || '', this.recipeToAsset.bind(this))
+    const menu = publicRecipes.filter(item => item.inMenu && !(assets.normalize(item).free && (item.systemRecipe || (account.userId && item.authorUserId === account.userId))))
       .sort((a, b) => Number(a.menuPosition) - Number(b.menuPosition))
       .map(item => this.recipeToAsset(item, item.purchased ? '已拥有' : (assets.normalize(item).free ? '免费菜谱' : '')))
-    const personal = recipes.filter((item) => !!item.personalizationApplied).map((item) => this.recipeToAsset(item, '已个性化'))
+    const personal = publicRecipes.filter((item) => !!item.personalizationApplied).map((item) => this.recipeToAsset(item, '已个性化'))
     return { liked, favorite, created, menu, personal }
   },
 
@@ -169,15 +195,25 @@ Page({
 
   refreshAssetItems() {
     const groups = this.data.assetGroups || {}
-    const tabs = ASSET_TABS
+    const tabs = reviews.tabs(ASSET_TABS, this.data.account, this.data.reviewState)
     const validKeys = tabs.map((item) => item.key)
     const activeAssetTab = validKeys.indexOf(this.data.activeAssetTab) >= 0 ? this.data.activeAssetTab : tabs[0].key
     this.setData({
       assetTabs: tabs,
       activeAssetTab,
-      mediaGrid: !!mediaAssets.mediaMode(activeAssetTab),
+      mediaGrid: activeAssetTab !== 'created' && !!mediaAssets.mediaMode(activeAssetTab),
       assetItems: groups[activeAssetTab] || []
     })
+  },
+
+  async loadCreationCovers(requestId) {
+    const owner = getApp().globalData.userId
+    const stale = () => requestId !== this.loadRequestId || this.pageActive === false || owner !== getApp().globalData.userId
+    for (const row of (this.data.assetGroups.created || []).slice(0, this.mediaPageSize())) {
+      if (stale()) break
+      if (!row.privateMedia || !row.mediaId) continue
+      try { const file = await privateMedia.get(row.mediaId); if (!stale()) { const index = (this.data.assetGroups.created || []).findIndex(item => item.id === row.id); if (index >= 0) this.setData({ ['assetGroups.created[' + index + '].thumbnailUrl']: file }, () => this.refreshAssetItems()) } } catch (_) {}
+    }
   },
 
   editIntroduction() {
@@ -228,22 +264,25 @@ Page({
   onRecipeCoverError(event) {
     const { id, url } = event.currentTarget.dataset
     const groups = Object.assign({}, this.data.assetGroups)
-    ;['menu', 'personal'].forEach(key => { groups[key] = (groups[key] || []).map(item => item.id === id ? assets.thumbnailFallback(item, url) : item) })
+    ;['menu', 'personal', 'created'].forEach(key => { groups[key] = (groups[key] || []).map(item => item.id === id ? assets.thumbnailFallback(item, url) : item) })
     this.setData({ assetGroups: groups }, () => this.refreshAssetItems())
   },
 
   switchAssetTab(e) {
     const key = e.currentTarget.dataset.key || ''
-    this.setData({ activeAssetTab: key }, () => this.refreshAssetItems())
+    reviews.stop(this)
+    if (key === 'review' && !reviews.allowed(this.data.account)) return
+    const reviewState = key === 'review' && this.data.activeAssetTab === 'review' ? (this.data.reviewState === 'pending' ? 'processed' : 'pending') : this.data.reviewState
+    this.setData({ activeAssetTab: key, reviewState, loadingMore: false }, () => { this.refreshAssetItems(); if (key === 'review') { reviews.load(this); reviews.poll(this) } })
   },
 
   mediaPageSize() {
     return Math.max(3, Math.min(60, Math.floor(Number(config.MINE_MEDIA_PAGE_SIZE) || 24)))
   },
 
-  onReachBottom() { this.loadMoreAssets(false) },
+  onReachBottom() { if (this.data.activeAssetTab === 'review') reviews.load(this, true); else this.loadMoreAssets(false) },
 
-  retryAssetTab() { this.loadMoreAssets(true) },
+  retryAssetTab() { if (this.data.activeAssetTab === 'review') reviews.load(this); else this.loadMoreAssets(true) },
 
   async loadMoreAssets(replace) {
     const key = this.data.activeAssetTab
@@ -260,9 +299,12 @@ Page({
       if (isStale()) return
       if (!res.ok) throw new Error(res.message || '分区加载失败')
       const incoming = mediaAssets.toMediaAssets(res.feed, '', key === 'created' ? this.data.account.userId || '' : undefined)
-      const items = mediaAssets.appendMediaAssets(previous, incoming)
+      const previousMedia = replace ? [] : (this.createdMediaAssets || [])
+      const combinedMedia = mediaAssets.appendMediaAssets(key === 'created' ? previousMedia : previous, incoming)
+      const items = key === 'created' ? creationAssets.build(this.data.recipes, combinedMedia, this.data.account.userId || '', this.recipeToAsset.bind(this)) : combinedMedia
+      if (key === 'created') this.createdMediaAssets = combinedMedia
       const groups = Object.assign({}, this.data.assetGroups, { [key]: items })
-      const hasMore = Object.assign({}, this.data.assetHasMore, { [key]: (res.feed || []).length >= count && items.length > previous.length })
+      const hasMore = Object.assign({}, this.data.assetHasMore, { [key]: (res.feed || []).length >= count && combinedMedia.length > (key === 'created' ? previousMedia.length : previous.length) })
       this.setData({
         assetGroups: groups,
         assetHasMore: hasMore,
@@ -353,8 +395,17 @@ Page({
   },
 
   openAsset(e) {
+    if (this.data.activeAssetTab === 'review') {
+      const row = this.data.assetItems[Number(e.currentTarget.dataset.index)]
+      if (row) wx.navigateTo({ url: '/pages/recipeReview/recipeReview?recipeId=' + encodeURIComponent(row.recipeId) + '&reviewId=' + encodeURIComponent(row.id) })
+      return
+    }
     const index = Number(e.currentTarget.dataset.index)
     const item = this.data.assetItems[index] || {}
+    if (this.data.activeAssetTab === 'created' && item.creation && item.recipeId) {
+      wx.navigateTo({ url: '/pages/creationEditor/creationEditor?id=' + encodeURIComponent(item.recipeId) })
+      return
+    }
     if (item.type === 'feed') {
       if (!item.videoId || !item.videoUrl) {
         wx.showToast({ title: '视频暂不可播放', icon: 'none' })

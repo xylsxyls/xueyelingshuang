@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $testRoot = Split-Path -Parent $PSScriptRoot
 $testArguments = @($args)
 try {
@@ -20,7 +20,7 @@ try {
             '5' { $testArguments = @('--list') }
             '6' { $testArguments = @('--selfcheck') }
             '7' { $testArguments = @('--prepare') }
-            '8' { $testArguments = @('--backend-only', '--ids=34,36,44,51') }
+            '8' { $testArguments = @('--backend-only', '--ids=34,36,44,51,52,53,54') }
             '9' { $testArguments = @('--compile') }
             default { throw '选项无效。' }
         }
@@ -36,7 +36,7 @@ try {
         New-Item -ItemType Directory -Path $installRoot -Force | Out-Null
         $archive = Join-Path $installRoot 'npm-10.8.2.tgz'
         if (-not (Test-Path -LiteralPath $archive)) { Invoke-WebRequest -UseBasicParsing -Uri 'https://registry.npmjs.org/npm/-/npm-10.8.2.tgz' -OutFile $archive }
-        & tar.exe -xf $archive -C $installRoot
+        & tar.exe -xf $archive -C $installRoot '--exclude=.gitignore' '--exclude=.gitattributes' '--exclude=*/.gitignore' '--exclude=*/.gitattributes'
         if ($LASTEXITCODE -ne 0) { throw 'npm 压缩包解压失败。' }
         Push-Location $testRoot
         try {

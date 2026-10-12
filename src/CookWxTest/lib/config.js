@@ -14,6 +14,14 @@ function loadConfig() {
   config.repositoryRoot = repositoryRoot
   config.sourceRoot = path.join(repositoryRoot, 'src/CookWx')
   config.serverRoot = path.join(repositoryRoot, 'common/CookServer')
+  const serverIni = fs.readFileSync(path.join(config.serverRoot, 'CookServer.ini'), 'utf8')
+  const resourceSetting = serverIni.match(/^ResourceRoot=(.+)$/m)
+  const configuredRoot = resourceSetting ? resourceSetting[1].trim() : config.serverRoot
+  config.serverResourceRoot = path.isAbsolute(configuredRoot) ? configuredRoot : path.resolve(config.serverRoot, configuredRoot)
+  // 首次迁移前正式素材仍在旧程序目录；测试只读该素材，不代迁正式数据。
+  if (!fs.existsSync(path.join(config.serverResourceRoot, 'recipes')) && !fs.existsSync(path.join(config.serverResourceRoot, 'res/recipes'))) config.serverResourceRoot = config.serverRoot
+  config.serverRecipesDirectory = fs.existsSync(path.join(config.serverResourceRoot, 'recipes')) ? 'recipes' : 'res/recipes'
+  config.serverVideoDirectory = fs.existsSync(path.join(config.serverResourceRoot, 'video')) ? 'video' : 'res/video'
   config.serverTestRoot = path.join(repositoryRoot, 'common/CookServerTest')
   config.reportRoot = path.join(projectRoot, 'reports')
   config.voiceProvider = config.voiceProvider || 'disabled'

@@ -29,6 +29,26 @@ public:
 	HttpResponse handle(const HttpRequest& request);
 
 private:
+    /** 构造审核列表、详情及唯一决定的响应
+    @param [in] request 实际HTTP请求
+    @param [in] userId token校验后的调用者
+    @return 真实业务结果JSON，失败不会伪造决定成功
+    */
+    std::string buildReviewJson(const HttpRequest& request, const std::string& userId);
+
+    /** 获取媒体请求可选认证身份；匿名仍可读取公开媒体
+    @param [in] request 媒体请求
+    @return 有效token所属身份，缺失或无效为空
+    */
+    std::string mediaViewer(const HttpRequest& request);
+
+    /** 处理作者原始菜谱读取及步骤编辑
+    @param [in] request 带菜谱ID或完整编辑列表的请求
+    @param [in] userId token所属作者ID
+    @return 包含校验结果及已保存菜谱的JSON
+    */
+    std::string buildCreationJson(const HttpRequest& request, const std::string& userId);
+
     /** 构造头像图片响应，只公开当前头像
     @param [in] request 请求中的目标用户和版本键
     @return 图片响应或404
@@ -151,10 +171,11 @@ private:
 
 	/** 构建菜单菜谱列表JSON
 	@param [in] userId 用户ID
-	@param [in] request HTTP请求，用于读取分包参数
+	@param [in] catalog 是否返回全部可见菜谱
+    @param [in] includeCreationDrafts 作者列表是否采用最新私有投稿，公开目录不采用
 	@return 返回菜谱列表、分类和账号状态
 	*/
-	std::string buildRecipesJson(const std::string& userId, bool catalog = false);
+	std::string buildRecipesJson(const std::string& userId, bool catalog = false, bool includeCreationDrafts = true);
 
 	/** 构建菜谱详情JSON
 	@param [in] userId 用户ID

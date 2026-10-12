@@ -11,6 +11,7 @@
     "pages/recipe/recipe",
     "pages/personalization/personalization",
     "pages/personalization/taskEditor",
+    "pages/creationEditor/creationEditor",
     "pages/voice/voice",
     "pages/publish/publish",
     "pages/messages/messages",
@@ -18,7 +19,9 @@
     "pages/avatarCrop/avatarCrop",
     "pages/profile/profile",
     "pages/fans/fans",
-    "pages/conversation/conversation"
+    "pages/conversation/conversation",
+    "pages/recipeReview/recipeReview",
+    "pages/reviewMedia/reviewMedia"
   ],
   "window": {
     "navigationBarTitleText": "会做饭",

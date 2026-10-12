@@ -6,6 +6,11 @@
 class CookServerTestHelper
 {
 public:
+	/** 获取只读视频素材路径，优先使用新目录，兼容历史res层
+	@return 配置资源根下的视频文件路径，不创建或迁移素材
+	*/
+	static std::string videoFixturePath();
+
 	/** 将当前进程本地代码页文本转换为UTF-8文本
 	@param [in] text 当前进程本地代码页文本
 	@return Windows下返回UTF-8文本，非Windows平台原样返回

@@ -123,6 +123,18 @@ public:
 	std::string m_corsAllowOrigin;
 	// 业务状态存储后端，第一期正式支持redis_mysql，Redis热层加MySQL最终落库
 	std::string m_storageBackend;
+    // 用户资源和缓存的独立根目录，必须在程序目录外
+    std::string m_resourceRootPath;
+    // 普通账号每个北京时间自然日可提交或修改的不同菜数量
+    int32_t m_recipeDailyDistinctLimit;
+    // 普通账号对已有菜每个自然日可成功修改的次数
+    int32_t m_recipeDailyChangesLimit;
+    // 审核说明UTF-8字节上限
+    int32_t m_reviewReasonMaxBytes;
+    // 审核列表单页最多条数
+    int32_t m_reviewPageMaxItems;
+    // 投稿自然日相对UTC的分钟偏移，默认北京时间
+    int32_t m_submissionTimezoneMinutes;
 	// MySQL服务器地址
 	std::string m_mysqlHost;
 	// MySQL服务器端口
@@ -215,6 +227,10 @@ public:
 	int32_t m_avatarMaxBytes;
 	// 头像最长边上限，像素
 	int32_t m_avatarMaxSide;
+    // 作者编辑步骤说明的UTF-8字节上限
+    int32_t m_creationStepMaxDetailBytes;
+    // 作者编辑单步骤用时上限，秒
+    int32_t m_creationStepMaxSeconds;
 	// 每日签到奖励金币
 	int32_t m_checkinRewardCoins;
 	// 看完广告奖励金币

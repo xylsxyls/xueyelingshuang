@@ -297,11 +297,24 @@
     <ResourceCompile Include="$(IntDir)SplitViewer.rc" />
     <Image Include="res\SplitViewer.png" />
     <None Include="SplitViewerIcon.sh" />
+    <None Include="setup.sh" />
+    <None Include="SplitViewer.iss" />
   </ItemGroup>
   <ItemDefinitionGroup>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <PostBuildEvent>
+      <Message>Copying SplitViewer packaging inputs to the output directory...</Message>
+      <Command>copy /Y "$(ProjectDir)setup.sh" "$(OutDir)setup.sh" &gt;nul
+if errorlevel 1 exit /b 1
+copy /Y "$(ProjectDir)SplitViewer.iss" "$(OutDir)SplitViewer.iss" &gt;nul
+if errorlevel 1 exit /b 1
+xcopy "$(ProjectDir)..\..\..\common\SplitViewer\res\*" "$(OutDir)res\" /E /I /Y &gt;nul
+if errorlevel 1 exit /b 1</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <PropertyGroup>

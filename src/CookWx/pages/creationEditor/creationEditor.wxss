@@ -1,0 +1,26 @@
+@import "../personalization/personalization.wxss";
+.creation-step-card { position: relative; }
+.creation-editor .step-head { gap: 12rpx; align-items: center; }
+.creation-step-title { display: flex; flex: 1; min-width: 0; align-items: center; gap: 12rpx; font-size: 30rpx; font-weight: 800; }
+.creation-step-title text { flex-shrink: 0; }
+.creation-step-title input { flex: 1; min-width: 0; font-size: 30rpx; font-weight: 800; height: 62rpx; }
+.step-mode { flex-shrink: 0; font-size: 25rpx; color: #2e6f45; }
+.step-mode > view { padding: 12rpx 0 12rpx 8rpx; }
+.mode-arrow { margin-left: 8rpx; color: #7b746a; }
+.step-drag-handle { width: 48rpx; height: 64rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6rpx; flex-shrink: 0; }
+.step-drag-handle > view { width: 6rpx; height: 6rpx; border-radius: 50%; background: #7b746a; }
+.step-detail-editor { box-sizing: border-box; width: 100%; min-height: 110rpx; margin-top: 16rpx; padding: 16rpx; border: 1rpx solid #eee6d8; border-radius: 8rpx; background: #fffdf8; font-size: 26rpx; line-height: 1.55; }
+.step-delete { justify-self: end; }
+.step-drag-source { opacity: 0.45; }
+.step-drop-before::before, .step-drop-after::after { content: ''; position: absolute; left: 0; right: 0; height: 5rpx; background: #2e6f45; border-radius: 3rpx; }
+.step-drop-before::before { top: -10rpx; }
+.step-drop-after::after { bottom: -10rpx; }
+.step-drag-preview { position: fixed; left: 24rpx; right: 24rpx; z-index: 20; padding: 22rpx; border: 1rpx solid #c7d7bd; border-radius: 8rpx; background: #fffdf8; box-shadow: 0 10rpx 32rpx rgba(24,35,31,0.16); color: #18231f; font-size: 30rpx; font-weight: 800; pointer-events: none; }
+.pricing-card { padding: 22rpx; margin-bottom: 16rpx; }
+.price-options { display: flex; align-items: center; margin: 24rpx 0; }
+.price-options label { flex: 1; display: flex; align-items: center; }
+.price-input-row { display: flex; align-items: center; gap: 20rpx; padding: 16rpx; background: #f8f5ef; }
+.price-input-row input { flex: 1; min-width: 0; }
+.pricing-hint { margin-top: 16rpx; font-size: 25rpx; line-height: 1.5; }
+.creation-load-state { padding: 32rpx; line-height: 1.7; }
+.creation-load-state button { margin-top: 24rpx; padding: 20rpx; }

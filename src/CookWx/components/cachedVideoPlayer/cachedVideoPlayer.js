@@ -3,6 +3,8 @@ const Renderer = require('../../utils/videoFrameRenderer')
 const config = require('../../utils/config')
 const { decoderOperation } = require('../../utils/videoDecoderLifecycle')
 const { LocalVideoPreview, isDeveloperTools } = require('../../utils/videoLocalPreview')
+const timing = require('../../utils/videoPlaybackTiming')
+const PreparedLocalSegment = require('../../utils/videoSegmentPrefetch')
 
 function numberOr(value, fallback) {
   const number = Number(value)
@@ -42,7 +44,7 @@ Component({
       this._timeTimer = null
       this._frameRequestId = null
       this._renderErrorReported = false
-      this._previewMode = isDeveloperTools()
+      this._previewMode = config.VIDEO_PLAYER_BACKEND !== 'frame' || isDeveloperTools()
       this._readyPromise = this._previewMode
         ? new Promise(resolve => this.setData({ localPreview: true }, resolve))
         : this.createCanvas()
@@ -56,6 +58,7 @@ Component({
       this._sourceChangeTimer = null
       this._generation += 1
       this._desiredPlaying = false
+      this.clearPreparedSegment()
       cache.cancelUnused()
       this.stopDecoder()
       cache.unpin(this._currentEntry)
@@ -111,6 +114,7 @@ Component({
         this._identity = identity
         this._generation += 1
         this._desiredPlaying = false
+        this.clearPreparedSegment()
         cache.cancelUnused()
         this._loadInFlight = false
         this._positionSeconds = 0
@@ -152,6 +156,7 @@ Component({
       const wasLoading = this._loadInFlight
       this._positionSeconds = this.currentPosition()
       this._desiredPlaying = false
+      this.clearPreparedSegment()
       this._generation += 1
       this._loadInFlight = false
       cache.cancelUnused()
@@ -167,8 +172,44 @@ Component({
       this._positionSeconds = this._durationSeconds
         ? Math.min(this._requestedPosition, Math.max(0, this._durationSeconds - endMargin)) : this._requestedPosition
       this._desiredPlaying = true
+      this.clearPreparedSegment()
       this.triggerEvent('waiting', { currentTime: this._positionSeconds, duration: this._durationSeconds })
+      const entry = this._currentEntry
+      if (this._preview && entry && this._preview.metadata && !this._preview.failed && this._positionSeconds >= entry.startSeconds &&
+          this._positionSeconds < entry.startSeconds + entry.durationSeconds) {
+        this.seekLocal(this._positionSeconds)
+        return
+      }
       this.loadAndPlay(this._positionSeconds)
+    },
+
+    async seekLocal(position) {
+      const generation = ++this._generation
+      const preview = this._preview
+      this.stopTimeUpdates()
+      this._clockStartAt = 0
+      this._loadInFlight = true
+      try {
+        const metadata = await preview.seek(position, generation)
+        if (this._alive && generation === this._generation && this._desiredPlaying && this._preview === preview) this.finishPlayback(preview.currentPosition(), metadata, true)
+      } catch (error) { await this.handlePlaybackError(error, generation) }
+      finally { this.finishLoad(generation) }
+    },
+
+    clearPreparedSegment() {
+      const prepared = this._nextSegment
+      this._nextSegment = null
+      if (prepared) prepared.close()
+      this._prefetchKey = ''
+    },
+
+    finishLoad(generation) {
+      if (generation !== this._generation) return
+      this._loadInFlight = false
+      if (this._pendingSegmentEnd === generation) {
+        this._pendingSegmentEnd = null
+        this.onSegmentEnded(generation)
+      }
     },
 
     async loadAndPlay(positionSeconds) {
@@ -177,6 +218,8 @@ Component({
       const videoId = this.properties.videoId
       const videoUrl = this.properties.videoUrl
       const wanted = () => this._alive && this._pageVisible !== false && generation === this._generation && this._desiredPlaying && this.properties.active
+      const prepared = this._nextSegment && this._nextSegment.position === positionSeconds ? this._nextSegment : null
+      if (!prepared) this.clearPreparedSegment()
       // 先停旧时钟与旧画面，避免网络等待期间仍推进旧位置。
       const stopped = this.stopDecoder(true)
       if (!this._previewMode && typeof wx.createVideoDecoder !== 'function') {
@@ -185,12 +228,31 @@ Component({
         this.triggerEvent('error', { message: '当前基础库不支持逐帧视频解码' })
         return
       }
-      this.setData({ status: '正在加载缓存片段…' })
+      this.setData({ status: cache.findAt(videoId, videoUrl, positionSeconds) ? '' : '视频缓冲中…' })
       let borrowedEntry = null
       try {
         await this._readyPromise
         if (!wanted()) return
-        const request = cache.getAt(videoId, videoUrl, positionSeconds, true, wanted)
+        if (prepared) {
+          const ready = prepared.take()
+          this._nextSegment = null
+          if (ready) {
+            borrowedEntry = ready.entry
+            await stopped
+            if (!wanted()) { ready.preview.stop(false); return }
+            this._currentEntry = ready.entry
+            borrowedEntry = null
+            this._preview = ready.preview
+            this._durationSeconds = ready.entry.mediaDurationSeconds || this._durationSeconds
+            const metadata = await ready.preview.activate(generation)
+            if (wanted()) this.finishPlayback(ready.preview.currentPosition(), metadata, true)
+            return
+          }
+        }
+        const request = cache.getAt(videoId, videoUrl, positionSeconds, true, wanted, 100,
+          () => this._alive && this._pageVisible !== false && this._desiredPlaying && this.properties.active &&
+            this.properties.videoId === videoId && this.properties.videoUrl === videoUrl)
+        if (prepared) prepared.close()
         cache.cancelUnused()
         const entry = await request
         borrowedEntry = entry
@@ -208,14 +270,15 @@ Component({
         await this.handlePlaybackError(error, generation)
       } finally {
         if (borrowedEntry) cache.unpin(borrowedEntry)
-        if (generation === this._generation) this._loadInFlight = false
+        this.finishLoad(generation)
       }
     },
 
     async startDecoder(entry, positionSeconds, generation) {
       if (this._previewMode) {
         const timeout = Math.max(1000, numberOr(config.VIDEO_DECODER_OPERATION_TIMEOUT_MS, 15000))
-        const preview = new LocalVideoPreview(this, entry, positionSeconds, generation, timeout)
+        const token = this._previewSequence = (this._previewSequence || 0) + 1
+        const preview = new LocalVideoPreview(this, entry, positionSeconds, token, timeout, { operationGeneration: generation })
         this._preview = preview
         const metadata = await preview.start()
         if (!this._alive || generation !== this._generation || !this._desiredPlaying || this._preview !== preview) return
@@ -288,11 +351,13 @@ Component({
 
     onPreviewEvent(event) {
       if (this._preview) this._preview.handle(event)
+      if (this._nextSegment && this._nextSegment.preview) this._nextSegment.preview.handle(event)
     },
 
     async handlePlaybackError(error, generation) {
       if (!this._alive || this._pageVisible === false || !this.properties.active || generation !== this._generation) return
       this._desiredPlaying = false
+      this.clearPreparedSegment()
       cache.cancelUnused()
       await this.stopDecoder()
       if (!this._alive || generation !== this._generation) return
@@ -307,11 +372,15 @@ Component({
         this._frameRequestId = null
         const decoder = this._decoder
         const now = Date.now()
-        if (decoder && this._renderer && this._desiredPlaying && now - this._lastRenderAt >= this._renderIntervalMs) {
+        if (decoder && this._renderer && this._desiredPlaying) {
           try {
-            const frame = decoder.getFrameData()
-            if (frame && frame.data) {
-              this._lastRenderAt = now
+            const frame = timing.latestFrame(decoder, Math.max(1, numberOr(config.VIDEO_FRAME_DRAIN_LIMIT, 4)))
+            if (frame) this._pendingFrame = frame
+            const renderAt = timing.renderTime(this._lastRenderAt, now, this._renderIntervalMs)
+            if (this._pendingFrame && renderAt !== this._lastRenderAt) {
+              this._lastRenderAt = renderAt
+              const frame = this._pendingFrame
+              this._pendingFrame = null
               if (this._renderer.draw(frame)) {
                 if (!this._frameReady) {
                   this._frameReady = true
@@ -334,6 +403,7 @@ Component({
     stopFrameLoop() {
       if (this._frameRequestId != null && this._canvas) this._canvas.cancelAnimationFrame(this._frameRequestId)
       this._frameRequestId = null
+      this._pendingFrame = null
     },
 
     startTimeUpdates() {
@@ -343,6 +413,7 @@ Component({
         this._positionSeconds = this.currentPosition()
         this.triggerEvent('timeupdate', { currentTime: this._positionSeconds, duration: this._durationSeconds })
         this.schedulePrefetch()
+        if (!this._loadInFlight && this._positionSeconds >= this._currentEntry.startSeconds + this._currentEntry.durationSeconds) this.onSegmentEnded(this._generation)
       }, Math.max(200, numberOr(config.VIDEO_PROGRESS_UPDATE_INTERVAL_MS, 500)))
     },
 
@@ -355,7 +426,8 @@ Component({
       const entry = this._currentEntry
       if (!entry || !this._desiredPlaying || !this._durationSeconds) return
       const end = entry.startSeconds + entry.durationSeconds
-      const lead = Math.max(0, numberOr(config.VIDEO_CACHE_PREFETCH_LEAD_SECONDS, 2))
+      const lead = timing.prefetchLead(Math.max(0, numberOr(config.VIDEO_CACHE_PREFETCH_LEAD_SECONDS, 2)),
+        cache.lastDownloadSeconds, config.VIDEO_CACHE_ADAPTIVE_PREFETCH !== false, entry.durationSeconds)
       const triggerAt = entry.startSeconds === 0
         ? Math.max(0, numberOr(config.VIDEO_CACHE_INITIAL_PREFETCH_AT_SECONDS, 1))
         : Math.max(0, end - lead)
@@ -364,6 +436,12 @@ Component({
       const key = this._generation + ':' + end + ':' + duration
       if (this._prefetchKey === key) return
       this._prefetchKey = key
+      if (this._previewMode) {
+        this._nextSegment = new PreparedLocalSegment(this, cache, end,
+          Math.max(1000, numberOr(config.VIDEO_DECODER_OPERATION_TIMEOUT_MS, 15000)))
+        this._nextSegment.promise.catch(error => { if (!error || error.code !== 'VIDEO_REQUEST_CANCELED') console.warn('video prefetch failed', error && error.message) })
+        return
+      }
       const generation = this._generation
       cache.getSegment(this.properties.videoId, this.properties.videoUrl, end, duration,
         () => this._alive && this._pageVisible !== false && generation === this._generation && this._desiredPlaying && this.properties.active)
@@ -372,6 +450,7 @@ Component({
 
     async onSegmentEnded(generation) {
       if (this._pageVisible === false || generation !== this._generation || !this._desiredPlaying || !this._currentEntry) return
+      if (this._loadInFlight) { this._pendingSegmentEnd = generation; return }
       const nextPosition = this._currentEntry.startSeconds + this._currentEntry.durationSeconds
       if (this._durationSeconds && nextPosition >= this._durationSeconds) {
         this._positionSeconds = this._durationSeconds
@@ -388,7 +467,7 @@ Component({
         return
       }
       this._positionSeconds = nextPosition
-      this.loadAndPlay(nextPosition)
+      return this.loadAndPlay(nextPosition)
     },
 
     async stopDecoder(keepPreviewFrame = false) {

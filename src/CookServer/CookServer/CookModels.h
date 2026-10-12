@@ -65,12 +65,35 @@ struct CookTask
 */
 struct Recipe
 {
+public:
 	/** 构造函数
 	*/
 	Recipe();
 
 	// 菜谱ID，作为购买、收藏、排程时的稳定标识
 	std::string m_id;
+    // 服务端创建的稳定创作ID；旧菜谱首次投稿时补齐
+    std::string m_creationId;
+    // 本版原始媒体文件ID，视频一个或图片组最多九个；历史保留独立文件
+    std::vector<std::string> m_mediaIds;
+    // 以下审核/额度为查询派生值，不单独成为状态权威
+    std::string m_reviewState;
+    // 最新或当前选择的审核版本
+    std::string m_reviewId;
+    // 当前审核次数
+    int32_t m_reviewNumber;
+    // 当前结果说明
+    std::string m_reviewReason;
+    // 提交时间，Unix秒
+    int32_t m_submittedAtSeconds;
+    // 实际审核时间，Unix秒
+    int32_t m_reviewedAtSeconds;
+    // 今日仍可修改本菜次数，管理员不限额
+    int32_t m_changesRemaining;
+    // 今日还能涉及不同菜数量
+    int32_t m_dailyRecipesRemaining;
+    // 是否适用普通账号额度
+    bool m_submissionLimited;
 	// 菜谱标题
 	std::string m_title;
 	// 菜谱分类，用于菜单左侧分类和搜索筛选

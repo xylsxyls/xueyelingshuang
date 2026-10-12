@@ -94,7 +94,7 @@ test('旧会话清理不会删除新会话节点，停止只暂停已持有的�
   assert.deepEqual(calls[calls.length - 1], ['pause'])
 })
 
-test('仅开发工具走本地预览，真机保持VideoDecoder路径', () => {
+test('平台识别不会把Android或iOS误认为开发者工具', () => {
   assert.equal(fixture().isDeveloperTools(), true)
   assert.equal(fixture({ platform: 'ios' }).isDeveloperTools(), false)
   assert.equal(fixture({ platform: 'android' }).isDeveloperTools(), false)

@@ -177,6 +177,11 @@ bool AccountStore::initialize(std::string& message)
     const std::map<std::string, PersonalizationConfig> personalizations = m_personalizations;
     const std::map<std::string, PersonalizationConfig> shares = m_sharedPersonalizations;
     const std::set<std::string> idempotency = m_idempotencyKeys;
+    const std::map<std::string, Recipe> drafts = m_creationDrafts;
+    const std::map<std::string, std::string> bases = m_reviewBases;
+    const std::map<std::string, CookReviewRevision> reviews = m_recipeReviews;
+    const std::map<std::string, std::string> aliases = m_creationAliases;
+    const std::map<std::string, std::map<std::string, int32_t>> usage = m_submissionUsage;
     // 冲突在任何修改前检查。
     const std::string sourceId = m_accounts.count("system") != 0 ? "system" : systemId;
     if (m_accounts.count(sourceId) != 0 && !m_accounts[sourceId].m_passwordHash.empty() && m_accounts[sourceId].m_account != name)
@@ -187,6 +192,13 @@ bool AccountStore::initialize(std::string& message)
     bool changed = false;
     if (!migrateSystemIdNoLock(changed, message))
     {
+        return false;
+    }
+    if (!migrateReviewIdentityNoLock(changed, message))
+    {
+        m_accounts = accounts; m_accountIndex = index; m_sessions = sessions; m_adRewards = rewards;
+        m_customRecipes = recipes; m_comments = comments; m_messages = messages; m_videos = videos;
+        m_personalizations = personalizations; m_sharedPersonalizations = shares; m_idempotencyKeys = idempotency;
         return false;
     }
     const bool created = m_accounts.count(systemId) == 0;
@@ -250,6 +262,11 @@ bool AccountStore::initialize(std::string& message)
         m_personalizations = personalizations;
         m_sharedPersonalizations = shares;
         m_idempotencyKeys = idempotency;
+        m_creationDrafts = drafts;
+        m_reviewBases = bases;
+        m_recipeReviews = reviews;
+        m_creationAliases = aliases;
+        m_submissionUsage = usage;
         saveNoLock(true);
         message = "Cannot persist system identity migration";
         return false;

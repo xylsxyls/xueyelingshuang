@@ -79,6 +79,45 @@ function fixture(options = {}) {
   return { cache, files, storage, blocked, moves, downloads, add, manager, setDirectoryMissing() { directoryExists = false }, get moving() { return moving } }
 }
 
+test('同视频定位变化保留已在下载的分段，新读者共享，命中后不再下载', async () => {
+  const env = fixture({ deferDownload: true })
+  let wanted = true
+  const first = env.cache.getAt('v', sourceUrl, 15, true, () => wanted, 0, () => true)
+  const stale = assert.rejects(first, error => error.code === 'VIDEO_REQUEST_CANCELED')
+  while (!env.downloads.length) await new Promise(resolve => setImmediate(resolve))
+  wanted = false
+  env.cache.cancelUnused()
+  const latest = env.cache.getAt('v', sourceUrl, 15, true)
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(env.downloads.length, 1, '定位变化不能重新发起同片段下载')
+  env.downloads[0].finish()
+  const entry = await latest
+  await stale
+  assert.equal(env.cache.pinnedPaths[entry.path], 1, '过期读者不能固定文件')
+  env.cache.unpin(entry)
+  await env.cache.getAt('v', sourceUrl, 16)
+  assert.equal(env.downloads.length, 1, '已缓存位置必须不再请求媒体')
+})
+
+test('保留中的下载仍在切页时取消，未开始的旧请求不会因保留策略下载', async () => {
+  const env = fixture({ deferDownload: true })
+  let wanted = true, active = true, queuedWanted = true
+  const running = env.cache.getAt('v', sourceUrl, 0, true, () => wanted, 0, () => active)
+  const canceledRunning = assert.rejects(running, error => error.code === 'VIDEO_REQUEST_CANCELED')
+  while (!env.downloads.length) await new Promise(resolve => setImmediate(resolve))
+  const queued = env.cache.getAt('v', sourceUrl, 8, true, () => queuedWanted, 0, () => active)
+  const canceledQueued = assert.rejects(queued, error => error.code === 'VIDEO_REQUEST_CANCELED')
+  queuedWanted = false; wanted = false
+  env.cache.cancelUnused()
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(env.downloads.length, 1, '尚未开始的旧片段不能偷偷下载')
+  active = false; env.cache.cancelUnused()
+  await canceledRunning; await canceledQueued
+  while (env.cache.downloads.running.size) await new Promise(resolve => setImmediate(resolve))
+  assert.equal(env.files.size, 0)
+  assert.equal(Object.keys(env.cache.reservations).length, 0)
+})
+
 test('下载必须指定可回收文件路径，不能复制只读临时文件造成双份占用', async () => {
   const env = fixture()
   const unlink = env.manager.unlink.bind(env.manager)

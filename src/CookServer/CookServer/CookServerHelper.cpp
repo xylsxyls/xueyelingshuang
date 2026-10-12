@@ -35,6 +35,12 @@ static const char* kCookServerRoutes[] =
 	"/api/recipes/join",
 	"/api/recipes/purchase",
 	"/api/recipes/custom/save",
+    "/api/recipes/creation/detail",
+    "/api/recipes/creation/save",
+    "/api/recipes/reviews/list",
+    "/api/recipes/reviews/detail",
+    "/api/recipes/reviews/history",
+    "/api/recipes/reviews/decide",
 	"/api/recipes/custom/publish",
 	"/api/recipes/personalization/save",
 	"/api/recipes/personalization/detail",
@@ -313,15 +319,27 @@ RapidJsonValue CookServerHelper::accountToJson(const UserAccount& account)
 	return object;
 }
 
-RapidJsonValue CookServerHelper::recipeToJson(const Recipe& recipe, const UserAccount* account)
+RapidJsonValue CookServerHelper::recipeToJson(const Recipe& recipe, const UserAccount* account, bool includeReviewDetails)
 {
 	RapidJsonValue object;
 	object.setObject();
 	bool owned = account == nullptr ? recipe.m_defaultOwned : AccountStore::isRecipeOwned(recipe, *account);
 	bool accessible = owned || recipe.m_priceType == "free" || (recipe.m_priceAmount <= 0 && recipe.m_priceCoins <= 0);
+    accessible = accessible || includeReviewDetails;
 	bool favorite = account != nullptr && account->m_favoriteRecipeIds.find(recipe.m_id) != account->m_favoriteRecipeIds.end();
 
 	CookServerHelper::addString(object, "id", recipe.m_id);
+    object.addString("creationId", recipe.m_creationId);
+    object.addStringArray("mediaIds", recipe.m_mediaIds);
+    object.addString("reviewState", recipe.m_reviewState);
+    object.addString("reviewId", recipe.m_reviewId);
+    object.addInt("reviewNumber", recipe.m_reviewNumber);
+    object.addString("reviewReason", recipe.m_reviewReason);
+    object.addInt("submittedAtSeconds", recipe.m_submittedAtSeconds);
+    object.addInt("reviewedAtSeconds", recipe.m_reviewedAtSeconds);
+    object.addInt("changesRemaining", recipe.m_changesRemaining);
+    object.addInt("dailyRecipesRemaining", recipe.m_dailyRecipesRemaining);
+    object.addBool("submissionLimited", recipe.m_submissionLimited);
 	CookServerHelper::addString(object, "title", recipe.m_title);
 	CookServerHelper::addString(object, "category", recipe.m_category);
 	CookServerHelper::addString(object, "subtitle", recipe.m_subtitle);
@@ -330,7 +348,7 @@ RapidJsonValue CookServerHelper::recipeToJson(const Recipe& recipe, const UserAc
     CookServerHelper::addString(object, "coverImageUrl", recipe.m_coverImageId.empty() ? "" : "/api/videos/file?videoId=" + recipe.m_coverImageId);
     CookServerHelper::addString(object, "videoId", recipe.m_videoId);
     CookServerHelper::addString(object, "videoUrl", recipe.m_videoId.empty() ? "" : "/api/videos/file?videoId=" + recipe.m_videoId);
-    CookServerHelper::addString(object, "posterUrl", recipe.m_videoId.empty() ? "" : "/api/videos/poster?videoId=" + recipe.m_videoId);
+    CookServerHelper::addString(object, "posterUrl", (recipe.m_videoId.empty() && recipe.m_mediaIds.empty()) ? "" : "/api/videos/poster?videoId=" + (recipe.m_videoId.empty() ? recipe.m_mediaIds[0] : recipe.m_videoId));
     CookServerHelper::addBool(object, "inMenu", account != nullptr && AccountStore::isRecipeInMenu(recipe, *account));
     CookServerHelper::addBool(object, "purchased", account != nullptr && account->m_purchasedRecipeIds.count(recipe.m_id) != 0);
     int32_t menuPosition = -1;
@@ -421,6 +439,17 @@ RapidJsonValue CookServerHelper::recipeSummaryToJson(const Recipe& recipe, const
 	bool favorite = account != nullptr && account->m_favoriteRecipeIds.find(recipe.m_id) != account->m_favoriteRecipeIds.end();
 
 	CookServerHelper::addString(object, "id", recipe.m_id);
+    object.addString("creationId", recipe.m_creationId);
+    object.addStringArray("mediaIds", recipe.m_mediaIds);
+    object.addString("reviewState", recipe.m_reviewState);
+    object.addString("reviewId", recipe.m_reviewId);
+    object.addInt("reviewNumber", recipe.m_reviewNumber);
+    object.addString("reviewReason", recipe.m_reviewReason);
+    object.addInt("submittedAtSeconds", recipe.m_submittedAtSeconds);
+    object.addInt("reviewedAtSeconds", recipe.m_reviewedAtSeconds);
+    object.addInt("changesRemaining", recipe.m_changesRemaining);
+    object.addInt("dailyRecipesRemaining", recipe.m_dailyRecipesRemaining);
+    object.addBool("submissionLimited", recipe.m_submissionLimited);
 	CookServerHelper::addString(object, "title", recipe.m_title);
 	CookServerHelper::addString(object, "category", recipe.m_category);
 	CookServerHelper::addString(object, "subtitle", recipe.m_subtitle);
@@ -429,7 +458,7 @@ RapidJsonValue CookServerHelper::recipeSummaryToJson(const Recipe& recipe, const
     CookServerHelper::addString(object, "coverImageUrl", recipe.m_coverImageId.empty() ? "" : "/api/videos/file?videoId=" + recipe.m_coverImageId);
     CookServerHelper::addString(object, "videoId", recipe.m_videoId);
     CookServerHelper::addString(object, "videoUrl", recipe.m_videoId.empty() ? "" : "/api/videos/file?videoId=" + recipe.m_videoId);
-    CookServerHelper::addString(object, "posterUrl", recipe.m_videoId.empty() ? "" : "/api/videos/poster?videoId=" + recipe.m_videoId);
+    CookServerHelper::addString(object, "posterUrl", (recipe.m_videoId.empty() && recipe.m_mediaIds.empty()) ? "" : "/api/videos/poster?videoId=" + (recipe.m_videoId.empty() ? recipe.m_mediaIds[0] : recipe.m_videoId));
     CookServerHelper::addBool(object, "inMenu", account != nullptr && AccountStore::isRecipeInMenu(recipe, *account));
     CookServerHelper::addBool(object, "purchased", account != nullptr && account->m_purchasedRecipeIds.count(recipe.m_id) != 0);
     int32_t menuPosition = -1;

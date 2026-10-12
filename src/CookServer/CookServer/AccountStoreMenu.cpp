@@ -33,7 +33,8 @@ void AccountStore::refreshMenuNoLock(UserAccount& account) const
     const std::vector<Recipe>& defaults = CookCatalog::recipeCatalog();
     for (size_t i = 0; i < defaults.size(); ++i)
     {
-        if (defaults[i].m_systemRecipe && isRecipeFree(defaults[i]) &&
+        const Recipe* current = findBaseRecipeNoLock(defaults[i].m_id);
+        if (current != nullptr && current->m_systemRecipe && current->m_status == "published" && isRecipeFree(*current) &&
             account.m_removedMenuRecipeIds.count(defaults[i].m_id) == 0 && !isRecipeInMenu(defaults[i], account))
         {
             account.m_menuRecipeOrder.push_back(defaults[i].m_id);
@@ -126,6 +127,20 @@ void AccountStore::touchMenuRecipe(const std::string& userId, const std::string&
 void AccountStore::decorateRecipeMediaNoLock(Recipe& recipe)
 {
     syncResourceVideosNoLock(false);
+    if (!recipe.m_mediaIds.empty())
+    {
+        recipe.m_videoId.clear();
+        for (size_t i = 0; i < recipe.m_mediaIds.size(); ++i)
+        {
+            const std::map<std::string, VideoInfo>::const_iterator media = m_videos.find(recipe.m_mediaIds[i]);
+            if (media != m_videos.end() && media->second.m_mediaType == "video")
+            {
+                recipe.m_videoId = media->first;
+                break;
+            }
+        }
+        return;
+    }
     const VideoInfo* chosen = nullptr;
     for (std::map<std::string, VideoInfo>::const_iterator it = m_videos.begin(); it != m_videos.end(); ++it)
     {

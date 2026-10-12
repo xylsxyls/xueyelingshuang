@@ -1,4 +1,5 @@
 ﻿#include "CookVideoUploadService.h"
+#include "CookResourcePaths.h"
 #include "Config.h"
 #include "CookHelper.h"
 #include "CSystem/CSystemAPI.h"
@@ -60,7 +61,7 @@ std::string safeExtension(const std::string& fileName)
 
 std::string uploadRoot()
 {
-	return CookHelper::appendPathSeparator(CSystem::GetCurrentExePath()) + g_config.m_videoStorageDirectoryName;
+	return CookResourcePaths::path(g_config.m_videoStorageDirectoryName);
 }
 }
 
@@ -124,15 +125,15 @@ bool CookVideoUploadService::start(const std::string& userId,
                                    VideoUploadInfo& upload,
                                    std::string& message)
 {
-	if (userId.empty() || (mediaType != "video" && mediaType != "image") || expectedBytes <= 0 || maxBytes <= 0 ||
+	if (userId.empty() || (mediaType != "video" && mediaType != "image" && mediaType != "photo") || expectedBytes <= 0 || maxBytes <= 0 ||
 	    expectedBytes > maxBytes || expectedBytes > INT32_MAX)
 	{
 		message = "视频上传参数无效或文件超过限制";
 		return false;
 	}
-    if (mediaType == "image" && expectedBytes > 4LL * 1024LL * 1024LL) { message = "Cover image exceeds 4 MiB"; return false; }
+    if (mediaType != "video" && expectedBytes > 4LL * 1024LL * 1024LL) { message = "Cover image exceeds 4 MiB"; return false; }
 	const std::string extension = safeExtension(fileName);
-	if (extension.empty() || (mediaType == "image" && extension != ".png" && extension != ".jpg" && extension != ".jpeg") || (mediaType == "video" && !CookHelper::isSupportedVideoFile("upload" + extension)))
+	if (extension.empty() || (mediaType != "video" && extension != ".png" && extension != ".jpg" && extension != ".jpeg") || (mediaType == "video" && !CookHelper::isSupportedVideoFile("upload" + extension)))
 	{
 		message = "不支持的视频格式";
 		return false;
@@ -296,7 +297,7 @@ bool CookVideoUploadService::finish(const std::string& userId,
 		return false;
 	}
 	input.close();
-	const std::string finalPath = CookHelper::appendPathSeparator(CSystem::GetCurrentExePath()) + session.m_relativeFilePath;
+	const std::string finalPath = CookResourcePaths::path(session.m_relativeFilePath);
 	if (std::rename(session.m_tempPath.c_str(), finalPath.c_str()) != 0)
 	{
 		message = "保存已上传视频失败";
@@ -313,7 +314,7 @@ bool CookVideoUploadService::finish(const std::string& userId,
 void CookVideoUploadService::removeFile(const std::string& relativeFilePath)
 {
 	if (relativeFilePath.empty()) return;
-	const std::string path = CookHelper::appendPathSeparator(CSystem::GetCurrentExePath()) + relativeFilePath;
+	const std::string path = CookResourcePaths::path(relativeFilePath);
 	std::remove(path.c_str());
 }
 

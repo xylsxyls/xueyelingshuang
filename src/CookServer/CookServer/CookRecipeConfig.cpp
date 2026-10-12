@@ -212,6 +212,8 @@ bool CookRecipeConfig::parseRecipe(const RapidJsonValue& value, Recipe& recipe, 
 	recipe.m_subtitle = value.getStringOrDefault("subtitle", "");
 	recipe.m_difficulty = value.getStringOrDefault("difficulty", "");
 	recipe.m_coverImageId = value.getStringOrDefault("coverImageId", "");
+    recipe.m_creationId = value.getStringOrDefault("creationId", "");
+    recipe.m_mediaIds = value.getStringArrayOrEmpty("mediaIds");
 	recipe.m_author = value.getStringOrDefault("author", "");
 	recipe.m_authorUserId = value.getStringOrDefault("authorUserId", value.getStringOrDefault("authorId", ""));
 	recipe.m_tags = value.getStringArrayOrEmpty("tags");
@@ -297,6 +299,8 @@ bool CookRecipeConfig::parseRecipe(const RapidJsonDocument& document, Recipe& re
 	recipe.m_subtitle = document.getStringOrDefault("subtitle", "");
 	recipe.m_difficulty = document.getStringOrDefault("difficulty", "");
 	recipe.m_coverImageId = document.getStringOrDefault("coverImageId", "");
+    recipe.m_creationId = document.getStringOrDefault("creationId", "");
+    recipe.m_mediaIds = document.getStringArrayOrEmpty("mediaIds");
 	recipe.m_author = document.getStringOrDefault("author", "");
 	recipe.m_authorUserId = document.getStringOrDefault("authorUserId", document.getStringOrDefault("authorId", ""));
 	recipe.m_tags = document.getStringArrayOrEmpty("tags");

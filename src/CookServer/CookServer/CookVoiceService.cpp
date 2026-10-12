@@ -1,4 +1,5 @@
 ﻿#include "CookVoiceService.h"
+#include "CookResourcePaths.h"
 #include "CookWindowsVoiceSelector.h"
 #include "Config.h"
 #include "CookHelper.h"
@@ -822,7 +823,7 @@ bool CookVoiceService::resolveAudioFile(const std::string& audioKey, std::string
 
 std::string CookVoiceService::cacheDirectoryPath() const
 {
-	return CookHelper::appendPathSeparator(CSystem::GetCurrentExePath() + g_config.m_voiceCacheDirectoryName);
+	return CookHelper::appendPathSeparator(CookResourcePaths::path(g_config.m_voiceCacheDirectoryName));
 }
 
 std::string CookVoiceService::audioFilePath(const std::string& audioKey) const

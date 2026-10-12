@@ -30,3 +30,8 @@
   color: #7b746a;
   font-size: 24rpx;
 }
+.review-switch-icon { width: 18rpx; margin-left: 4rpx; }
+.review-switch-icon view { width: 16rpx; height: 6rpx; border-top: 2rpx solid currentColor; }
+.review-switch-icon view:first-child { border-right: 2rpx solid currentColor; transform: skewX(35deg); }
+.review-switch-icon view:last-child { border-left: 2rpx solid currentColor; transform: skewX(35deg); margin-top: 2rpx; }
+.review-reason { color: #a33f33; font-size: 24rpx; word-break: break-all; }

@@ -65,6 +65,8 @@ public:
 	std::string m_userIdPrefix;
 	// 测试报告输出文件名
 	std::string m_reportFileName;
+	// 只读测试素材根目录；可用--resourceRoot指定隔离资源，空时兼容旧相邻程序目录
+	std::string m_resourceRootPath;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

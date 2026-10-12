@@ -49,9 +49,12 @@ const definitions = [
   [48, '菜谱详情加入本次做菜与价格同排', ['RECIPE', 'PLAN'], '菜单详情加入与＋同步，减去后可再次加入，价格位于菜名右侧'],
   [49, '统一作者头像和资料布局', 'SOCIAL', '作者头像与视频同源同首字，资料布局与本人页一致且保留隐私'],
   [50, '独立头像裁剪与真实上传', ['AUTH', 'UPLOAD', 'SOCIAL'], '相册/拍照选择边界、正方形框移动和缩放、实际Canvas导出与服务器头像一致'],
-  [51, '旧系统ID迁移与头像冷启动', ['AUTH', 'SERVER', 'SOCIAL'], 'system整体迁移qmzdc，三角色、作品、私信、关注、头像和个性化从空Redis及MySQL恢复，冲突拒绝覆盖']
+  [51, '旧系统ID迁移与头像冷启动', ['AUTH', 'SERVER', 'SOCIAL'], 'system整体迁移qmzdc，三角色、作品、私信、关注、头像和个性化从空Redis及MySQL恢复，冲突拒绝覆盖'],
+  [52, '作者结构编辑与定价冷恢复', ['RECIPE', 'SERVER', 'PERSONAL'], '真实MySQL及空Redis重启恢复新增删除顺序、性质、步骤与定价，原始与个性化分离，收费不自动授予新用户，旧版本仍拒绝'],
+  [53, '外部资源及程序目录替换冷恢复', ['SERVER', 'UPLOAD'], '迁移素材离开程序目录；独立MySQL冷启动后替换EXE目录仍能读媒体'],
+  [54, '付费审核共享队列额度并发冷恢复', ['SERVER', 'RECIPE'], '两个管理员24次相反决定仅一次成功；差异历史、拒绝原因及5菜3改额度从MySQL恢复']
 ]
-const catalog = Object.freeze(definitions.map(([id, name, requirement, expected, type = 'instant']) => Object.freeze({ id, name, requirements: Array.isArray(requirement) ? requirement : [requirement], expected, type, version: id === 24 ? 3 : [5, 6, 7, 8, 9, 23].includes(id) ? 2 : 1 })))
+const catalog = Object.freeze(definitions.map(([id, name, requirement, expected, type = 'instant']) => Object.freeze({ id, name, requirements: Array.isArray(requirement) ? requirement : [requirement], expected, type, version: id === 24 ? 3 : [5, 6, 7, 8, 9, 23, 52].includes(id) ? 2 : 1 })))
 const requirements = Object.freeze([
   ['AUTH', '需求二.1 账号与登录'], ['RECIPE', '需求二.2 菜谱菜单购买'], ['PLAN', '需求二.3 完整排程'],
   ['COOK', '需求二.3 做菜指导'], ['PERSONAL', '需求二.4 个性化'], ['WALLET', '需求二.5 钱包签到广告'],

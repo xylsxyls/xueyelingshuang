@@ -1,5 +1,7 @@
 // 指定 filePath 避免产生不可 unlink 的微信临时文件；原始错误交给缓存层处理。
 function downloadToPath(api, url, filePath, job, maxBytes, timeout) {
+  const storedToken = typeof api.getStorageSync === 'function' ? api.getStorageSync(require('./api').TOKEN_KEY) : ''
+  const headersToSend = typeof storedToken === 'string' && storedToken ? { Authorization: 'Bearer ' + storedToken } : {}
   return new Promise((resolve, reject) => {
     let headers = {}
     let oversize = false
@@ -7,6 +9,7 @@ function downloadToPath(api, url, filePath, job, maxBytes, timeout) {
     const stop = () => { if (task && typeof task.abort === 'function') task.abort() }
     task = api.downloadFile({
       url, filePath, timeout,
+      header: headersToSend,
       success(response) {
         if (oversize) { reject(new Error('视频片段过大，已停止缓存')); return }
         if (!response || response.statusCode !== 200 || response.filePath !== filePath) {

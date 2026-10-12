@@ -10,5 +10,7 @@ module.exports = Object.freeze({
   ...require('./persistence'),
   ...require('./uiRefine'),
   ...require('./avatar'),
-  ...require('./identity')
+  ...require('./identity'),
+  ...require('./creationPersistence'),
+  ...require('./moderation')
 })

@@ -15,7 +15,7 @@ async function executeCase(test, action, context, reporter, batchSignal) {
   batchSignal.addEventListener('abort', cancel, { once: true })
   if (batchSignal.aborted) controller.abort()
   let timedOut = false
-  const limit = [34, 36, 51].includes(test.id) ? 240000 : test.id === 35 ? context.config.caseTimeoutMs * context.config.stressLoops : context.config.caseTimeoutMs
+  const limit = [34, 36, 51, 52, 53, 54].includes(test.id) ? 240000 : test.id === 35 ? context.config.caseTimeoutMs * context.config.stressLoops : context.config.caseTimeoutMs
   const timer = setTimeout(() => { timedOut = true; controller.abort() }, limit)
   reporter.result(test.id, { state: 'running', reason: '', startedAt: new Date().toISOString() })
   reporter.event(`执行 ${test.id} ${test.name} (${test.type})`)
@@ -49,8 +49,8 @@ async function main(args) {
     return 0
   }
   if (args.includes('--backend-only')) {
-    selected = selected.filter(item => [34, 36, 44, 51].includes(item.id))
-    if (!selected.length) throw new Error('backend-only 筛选为空；指定34、36、44或51')
+    selected = selected.filter(item => [34, 36, 44, 51, 52, 53, 54].includes(item.id))
+    if (!selected.length) throw new Error('backend-only 筛选为空；指定34、36、44、51至54')
   }
   const config = loadConfig()
   const reporter = new Reporter(config, catalog, requirements, selected)
@@ -70,7 +70,7 @@ async function main(args) {
       return 0
     }
     await environment.startBackend()
-    if (selected.some(item => ![34, 36, 44, 51].includes(item.id))) {
+    if (selected.some(item => ![34, 36, 44, 51, 52, 53, 54].includes(item.id))) {
       const { Simulator } = require('./simulator')
       simulator = new Simulator(config, reporter, controller.signal)
       try { await simulator.connect(environment.projectPath) } catch (error) {
@@ -84,7 +84,7 @@ async function main(args) {
     const actions = require('../suites')
     for (const item of catalog) if (typeof actions[item.id] !== 'function') throw new Error(`登记与实现不一致：${item.id}`)
     for (const item of selected) {
-      if (!simulator && ![34, 36, 44, 51].includes(item.id)) {
+      if (!simulator && ![34, 36, 44, 51, 52, 53, 54].includes(item.id)) {
         reporter.result(item.id, { reason: '模拟器连接未就绪：' + simulatorError })
         continue
       }

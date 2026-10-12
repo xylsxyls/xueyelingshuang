@@ -15,11 +15,11 @@ function playerFixture(settings = {}) {
   native.remove = () => undefined
   const events = []
   const requests = []
-  const cache = { cancelUnused() {}, pin: entry => { if (entry) entry.pins = (entry.pins || 0) + 1 }, unpin: entry => { if (entry) entry.pins -= 1 }, getSegment: (...args) => { requests.push(args); return Promise.resolve() } }
+  const cache = { findAt() { return null }, cancelUnused() {}, pin: entry => { if (entry) entry.pins = (entry.pins || 0) + 1 }, unpin: entry => { if (entry) entry.pins -= 1 }, getSegment: (...args) => { requests.push(args); return Promise.resolve() } }
   const playerDirectory = path.resolve(__dirname, '../../CookWx/components/cachedVideoPlayer')
   const sandbox = {
     Component: value => { definition = value }, wx: { createVideoDecoder: () => native },
-    require: name => name.includes('videoSegmentCache') ? cache : name.includes('config') ? settings : name.includes('videoLocalPreview') ? { isDeveloperTools: () => false } : name.includes('Lifecycle') ? require(path.resolve(playerDirectory, name)) : function Renderer() {},
+    require: name => name.includes('videoSegmentCache') ? cache : name.includes('config') ? { VIDEO_PLAYER_BACKEND: 'frame', ...settings } : name.includes('videoLocalPreview') ? { isDeveloperTools: () => false } : /Lifecycle|PlaybackTiming/.test(name) ? require(path.resolve(playerDirectory, name)) : function Renderer() {},
     setTimeout, clearTimeout, Date, Number, Promise, console
   }
   vm.runInNewContext(fs.readFileSync(path.join(playerDirectory, 'cachedVideoPlayer.js'), 'utf8'), sandbox)
@@ -66,6 +66,26 @@ test('解码事件缺失或取消时清理监听，不留下无界等待', async
   canceled.cancel()
   await assert.rejects(canceled.promise, /取消/)
   assert.equal(native.listenerCount('seek'), 0)
+})
+
+test('支持Promise的基础库不能等待缺失事件直至超时', async () => {
+  const { decoderOperation } = require('../../CookWx/utils/videoDecoderLifecycle')
+  const native = new EventEmitter()
+  const operation = decoderOperation(native, 'seek', () => Promise.resolve({ position: 3000 }), 60)
+  assert.equal((await operation.promise).position, 3000)
+  assert.equal(native.listenerCount('seek'), 0)
+})
+
+test('Promise与事件同时完成只应用一次，晚到失败不覆盖成功', async () => {
+  const { decoderOperation } = require('../../CookWx/utils/videoDecoderLifecycle')
+  const native = new EventEmitter()
+  let rejectNative
+  const operation = decoderOperation(native, 'start', () => new Promise((resolve, reject) => { rejectNative = reject }), 100)
+  native.emit('start', { width: 640, height: 360 })
+  assert.equal((await operation.promise).width, 640)
+  rejectNative(new Error('late native failure'))
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(native.listenerCount('start'), 0)
 })
 
 test('首段触发点和后续提前量都由配置控制，触发前不下载、结尾不预取', () => {

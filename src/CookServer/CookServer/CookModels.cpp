@@ -13,6 +13,12 @@ m_canLeaveKitchen(false)
 }
 
 Recipe::Recipe() :
+m_reviewNumber(0),
+m_submittedAtSeconds(0),
+m_reviewedAtSeconds(0),
+m_changesRemaining(0),
+m_dailyRecipesRemaining(0),
+m_submissionLimited(false),
 m_priceCoins(0),
 m_priceAmount(0),
 m_defaultOwned(false),

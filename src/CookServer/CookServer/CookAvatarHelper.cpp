@@ -1,4 +1,5 @@
 ﻿#include "CookAvatarHelper.h"
+#include "CookResourcePaths.h"
 #include "Config.h"
 #include "CookHelper.h"
 #include "CookRecipePresentation.h"
@@ -8,7 +9,7 @@
 
 std::string CookAvatarHelper::root()
 {
-    return CookHelper::appendPathSeparator(CSystem::GetCurrentExePath()) + g_config.m_avatarDirectoryName;
+    return CookResourcePaths::path(g_config.m_avatarDirectoryName);
 }
 
 bool CookAvatarHelper::isKey(const std::string& key)

@@ -1,16 +1,96 @@
 ﻿#pragma once
 #include "CookModels.h"
+#include "CookReviewRevision.h"
 #include <map>
 #include <mutex>
 #include <set>
 #include <string>
 #include <vector>
 
+class RapidJsonDocument;
+
 /** 账号和业务状态仓库，第一期由CookStorageService承接Redis+MySQL快照存储
 */
 class AccountStore
 {
 public:
+    /** 读取管理员共用审核列表
+    @param [in] userId 已认证调用者
+    @param [in] state pending或processed
+    @param [in] cursor 上一页末项版本ID，空为首页
+    @param [in] count 请求条数，服务端限幅
+    @param [out] result 列表与下一页游标
+    @param [out] message 结果原因
+    @return 有审核角色且参数有效返回true
+    */
+    bool listRecipeReviews(const std::string& userId, const std::string& state, const std::string& cursor, int32_t count,
+        RapidJsonDocument& result, std::string& message);
+
+    /** 读取作者或审核员可见的某一版及历史、上次通过内容
+    @param [in] userId 已认证调用者
+    @param [in] recipeId 菜谱ID，版本ID为空时选择最新投稿
+    @param [in] reviewId 特定版本ID，可空
+    @param [out] result 当前内容、历史与差异参考
+    @param [out] message 结果原因
+    @return 调用者为作者或审核员且目标有效返回true
+    */
+    bool getRecipeReview(const std::string& userId, const std::string& recipeId, const std::string& reviewId,
+        RapidJsonDocument& result, std::string& message);
+
+    /** 分页获取历史摘要，避免加载全部旧内容
+    @param [in] userId 已认证的作者或审核员
+    @param [in] recipeId 稳定菜谱ID
+    @param [in] cursor 上一页末项版本ID，可空
+    @param [in] count 请求条数
+    @param [out] result 历史摘要及后续游标
+    @param [out] message 失败原因
+    @return 权限、游标和历史有效返回true
+    */
+    bool listRecipeReviewHistory(const std::string& userId, const std::string& recipeId, const std::string& cursor,
+        int32_t count, RapidJsonDocument& result, std::string& message);
+
+    /** 原子提交一个待审版本的通过或不通过决定，同步确认数据库
+    @param [in] userId 已认证审核员
+    @param [in] reviewId 本次决定针对的不可变投稿版本
+    @param [in] decision approved或rejected
+    @param [in] reason 可空UTF-8说明
+    @param [out] result 实际版本状态与成功/冲突信息
+    @param [out] message 结果原因
+    @return 本次实际持久完成决定才返回true
+    */
+    bool decideRecipeReview(const std::string& userId, const std::string& reviewId, const std::string& decision,
+        const std::string& reason, RapidJsonDocument& result, std::string& message);
+
+    /** 读取本人创作的原始菜谱，不应用个人时长覆盖
+    @param [in] userId 已认证的作者ID
+    @param [in] recipeId 菜谱ID
+    @param [out] recipe 原始菜谱及媒体引用
+    @param [out] message 结果说明
+    @return 本人作品存在时返回true
+    */
+    bool getCreationRecipe(const std::string& userId, const std::string& recipeId, Recipe& recipe, std::string& message);
+
+    /** 按原始步骤ID更新标题、说明、用时及定价，保留其余菜谱字段
+    @param [in] userId 已认证的作者ID
+    @param [in] recipeId 菜谱ID
+    @param [in] revision 客户端读取的版本，过期时拒绝
+    @param [in] steps 原步骤的完整编辑列表
+    @param [in] priceType free、coin或yuanbao，空字符串保留原定价
+    @param [in] priceAmount 免费为0，收费为正整数
+    @param [in] editorVersion 1仅原内容，2可完整编辑步骤身份、顺序和性质
+    @param [in] mediaIds 本次新的原始媒体引用
+    @param [in] mediaSpecified 是否实际提交媒体字段，false保留原值
+    @param [in] coverImageId 本次正方形封面引用，可空
+    @param [in] coverSpecified 是否实际提交封面字段
+    @param [out] recipe 持久化成功后的菜谱
+    @param [out] message 结果说明
+    @return 校验及同步持久化成功时返回true
+    */
+    bool saveCreationSteps(const std::string& userId, const std::string& recipeId, const std::string& revision,
+        const std::vector<CookTask>& steps, const std::string& priceType, int32_t priceAmount, int32_t editorVersion,
+        Recipe& recipe, std::string& message, const std::vector<std::string>& mediaIds = std::vector<std::string>(), bool mediaSpecified = false,
+        const std::string& coverImageId = "", bool coverSpecified = false);
+
 	/** 加载状态并升级系统账号，在HTTP服务开放前调用
 	@param [out] message 升级失败原因
 	@return 成功返回true；身份冲突或持久化失败返回false
@@ -360,9 +440,10 @@ public:
 
 	/** 查询用户可见菜谱列表，已拥有菜谱会应用个性化配置
 	@param [in] userId 用户ID
+    @param [in] includeCreationDrafts 是否以作者最新私有投稿替换其公开版
 	@return 返回菜谱快照列表
 	*/
-	std::vector<Recipe> listRecipesForUser(const std::string& userId);
+	std::vector<Recipe> listRecipesForUser(const std::string& userId, bool includeCreationDrafts = false);
 
 	/** 查询单个菜谱，已拥有菜谱会应用个性化配置
 	@param [in] userId 用户ID
@@ -437,9 +518,11 @@ public:
 	@param [out] video 视频元数据
 	@param [out] filePath 本机文件路径
 	@param [out] contentType HTTP内容类型
+    @param [in] viewerUserId 可选已认证调用者，空值只能读取公开媒体
 	@return 返回是否找到且文件存在
 	*/
-	bool getVideoFile(const std::string& videoId, VideoInfo& video, std::string& filePath, std::string& contentType);
+    bool getVideoFile(const std::string& videoId, VideoInfo& video, std::string& filePath, std::string& contentType,
+        const std::string& viewerUserId = "");
 
 	/** 统计目标点赞数
 	@param [in] targetType 目标类型
@@ -478,6 +561,78 @@ public:
     void readConversation(const std::string& userId, const std::string& peerId);
 
 private:
+    /** 取得作者最新内容，其他查询仍使用公开通过版本
+    @param [in] userId 作者身份
+    @param [in] recipeId 菜谱ID
+    @return 借用内容指针，锁释放前有效，目标不属于作者则为空
+    */
+    const Recipe* findCreationRecipeNoLock(const std::string& userId, const std::string& recipeId) const;
+
+    /** 补充作者实际审核状态及每日剩余额度
+    @param [in] userId 查看身份
+    @param [in,out] recipe 待装饰的作者内容
+    */
+    void decorateCreationNoLock(const std::string& userId, Recipe& recipe);
+
+    /** 准备并原子持久保存作者内容或投稿
+    @param [in] userId 作者身份
+    @param [in,out] recipe 已规范身份的完整内容，成功带新版本
+    @param [in] alias 首次创建的客户端请求标识，用于幂等映射，可空
+    @param [in] publish 是否正式投稿，false仅存草稿
+    @param [out] message 结果原因
+    @return 角色、额度、媒体、差异及实际持久保存成功返回true
+    */
+    bool submitCreationNoLock(const std::string& userId, Recipe& recipe, const std::string& alias, bool publish, std::string& message);
+
+    /** 重建不可变投稿版本，拒绝缺失父链和损坏差异
+    @param [in] reviewId 版本ID
+    @param [out] recipe 重建的完整版本
+    @param [out] message 结果原因
+    @return 完整合法版本存在返回true
+    */
+    bool restoreReviewNoLock(const std::string& reviewId, Recipe& recipe, std::string& message) const;
+
+    /** 读取时重建每菜历史索引并核对连续提交序号
+    @return 所有持久历史均有效返回true
+    */
+    bool rebuildReviewIndexesNoLock();
+
+    /** 计算当前用户北京时间自然日的额度行键
+    @param [in] userId 用户身份
+    @return 由服务端时钟、配置时区及用户生成的键
+    */
+    std::string submissionDayKeyNoLock(const std::string& userId) const;
+
+    /** 校验新的公开版本能保留有效个性化；只准备不修改
+    @param [in] recipe 将公开的原始版本
+    @param [out] personal 个人配置更新
+    @param [out] shared 分享快照更新
+    @param [out] message 冲突原因
+    @return 合并合法返回true
+    */
+    bool preparePublicationNoLock(const Recipe& recipe, std::map<std::string, PersonalizationConfig>& personal,
+        std::map<std::string, PersonalizationConfig>& shared, std::string& message) const;
+
+    /** 将已准备的配置更新或回滚原值，调用方持锁
+    @param [in] personal 个人配置
+    @param [in] shared 分享配置
+    */
+    void writePersonalizationsNoLock(const std::map<std::string, PersonalizationConfig>& personal,
+        const std::map<std::string, PersonalizationConfig>& shared);
+
+    /** 查询审核角色，不根据客户端身份字段判断
+    @param [in] userId 已认证身份
+    @return admin或super_admin返回true
+    */
+    bool reviewerNoLock(const std::string& userId) const;
+
+    /** 验证一个媒体文件的读取权限
+    @param [in] userId 可空，空仅能读公开媒体
+    @param [in] video 媒体记录
+    @return 公开、本人或审核相关内容的审核员返回true
+    */
+    bool readableMediaNoLock(const std::string& userId, const VideoInfo& video) const;
+
     /** 兼容旧菜单并补齐系统免费菜。@param [in,out] account 账号；调用方持锁 */
     void refreshMenuNoLock(UserAccount& account) const;
     /** 解析原视频。@param [in,out] recipe 菜谱；调用方持锁 */
@@ -670,6 +825,12 @@ private:
 	@return 返回是否没有身份或个性化键冲突
 	*/
 	bool migrateSystemIdNoLock(bool& changed, std::string& message);
+    /** 迁移审核历史和额度中的旧系统用户引用，冲突拒绝覆盖。
+    @param [out] changed 是否替换了身份引用
+    @param [out] message 冲突原因
+    @return 身份引用验证及迁移成功返回true
+    */
+    bool migrateReviewIdentityNoLock(bool& changed, std::string& message);
 
 	// 保护仓库内存表和加载状态
 	std::mutex m_mutex;
@@ -683,6 +844,18 @@ private:
 	std::map<std::string, AdRewardInfo> m_adRewards;
 	// 用户自定义菜谱
 	std::map<std::string, Recipe> m_customRecipes;
+    // 作者最新草稿/待审/驳回内容，公开查询不使用此表
+    std::map<std::string, Recipe> m_creationDrafts;
+    // 每道有历史的菜仅保留一份初始基线
+    std::map<std::string, std::string> m_reviewBases;
+    // 唯一投稿版本及其差异、唯一审核决定
+    std::map<std::string, CookReviewRevision> m_recipeReviews;
+    // 每菜按提交序号的版本索引，加载时由持久记录恢复
+    std::map<std::string, std::vector<std::string>> m_recipeReviewOrder;
+    // 用户与客户端首次请求标识到服务端菜谱ID，避免丢响应后重复新建
+    std::map<std::string, std::string> m_creationAliases;
+    // 用户/自然日行到当日涉及的菜及修改次数；新菜首发次数为0
+    std::map<std::string, std::map<std::string, int32_t>> m_submissionUsage;
 	// 评论列表
 	std::vector<CommentInfo> m_comments;
 	// 站内消息列表

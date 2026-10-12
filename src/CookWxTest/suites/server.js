@@ -9,7 +9,7 @@ module.exports = {
     const passedCases = (text.match(/\[PASS\]/g) || []).length
     const notRunCases = (text.match(/\[NOT-RUN\]/g) || []).length
     const voiceEnabled = context.config.voiceProvider === 'windows_sapi'
-    assert.equal(passedCases, voiceEnabled ? 69 : 68, '真实语音开启时必须全部通过')
+    assert.equal(passedCases, voiceEnabled ? 86 : 85, '真实语音开启时必须全部通过')
     assert.equal(notRunCases, voiceEnabled ? 0 : 1)
     return { ...result, passedCases, notRunCases, incomplete: voiceEnabled ? '' : '实际语音合成未执行' }
   },

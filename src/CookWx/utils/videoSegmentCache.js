@@ -109,10 +109,10 @@ class VideoSegmentCache {
     Object.keys(index).forEach((key) => {
       const entry = index[key]
       if (!entry || entry.videoKey !== videoKey || entry.videoId !== String(videoId || '') ||
-          entry.sourceUrl !== String(sourceUrl || '') || !this.fileExists(entry.path)) return
+          entry.sourceUrl !== String(sourceUrl || '')) return
       const start = safeNumber(entry.startSeconds, -1)
       const end = start + safeNumber(entry.durationSeconds, 0)
-      if (start >= 0 && position >= start && position < end && (!selected || start > selected.startSeconds)) selected = entry
+      if (start >= 0 && position >= start && position < end && (!selected || start > selected.startSeconds) && this.fileExists(entry.path)) selected = entry
     })
     if (selected) {
       selected.lastAccess = Date.now()
@@ -134,7 +134,14 @@ class VideoSegmentCache {
     return Math.max(1, Math.floor(safeNumber(config.VIDEO_CACHE_NEXT_SECONDS, 5)))
   }
 
-  getAt(videoId, sourceUrl, positionSeconds, pinOnRead = false, wanted = () => true) {
+  isDownloading(videoId, sourceUrl, positionSeconds) {
+    const start = this.segmentStartFor(positionSeconds)
+    const key = this.segmentKey(this.videoKey(videoId, sourceUrl), start, this.segmentDurationFor(start))
+    const job = this.downloads.jobs[key]
+    return !!job && this.downloads.running.has(job)
+  }
+
+  getAt(videoId, sourceUrl, positionSeconds, pinOnRead = false, wanted = () => true, priority = 100, canRetain = null) {
     if (!wanted()) return Promise.reject(canceled())
     const cached = this.findAt(videoId, sourceUrl, positionSeconds)
     if (cached) {
@@ -145,7 +152,8 @@ class VideoSegmentCache {
       return Promise.resolve(cached)
     }
     const start = this.segmentStartFor(positionSeconds)
-    return this.getSegment(videoId, sourceUrl, start, this.segmentDurationFor(start), wanted, 100).then(entry => {
+    const downloadWanted = () => wanted() || (canRetain && canRetain() && this.isDownloading(videoId, sourceUrl, positionSeconds))
+    return this.getSegment(videoId, sourceUrl, start, this.segmentDurationFor(start), downloadWanted, priority).then(entry => {
       if (!wanted()) throw canceled()
       if (pinOnRead) this.pin(entry)
       return entry
@@ -210,8 +218,11 @@ class VideoSegmentCache {
         fileStore.record(staging, reserveBytes)
         let headers
         try {
+          const downloadStartedAt = Date.now()
           headers = await downloadToPath(wx, url, staging, job, maxBytes,
             Math.max(1000, safeNumber(config.VIDEO_CACHE_DOWNLOAD_TIMEOUT_MS, 30000)))
+          const elapsed = (Date.now() - downloadStartedAt) / 1000
+          this.lastDownloadSeconds = this.lastDownloadSeconds ? this.lastDownloadSeconds * 0.5 + elapsed * 0.5 : elapsed
         } catch (error) {
           await this.removePartial(staging, fileStore, stat)
           if (!job.isWanted()) throw canceled()

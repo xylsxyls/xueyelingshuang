@@ -68,8 +68,8 @@ void CookServerTestMenuSocialCases::Run(CookServerTestHttpClient& client, const 
         try
         {
             const std::string token = NewUser(client, "order").getStringOrDefault("token", "");
-            const std::string id = g_cookServerTestConfig.m_userIdPrefix + "_free";
-            Recipe(client, token, id);
+            const std::string nonce = g_cookServerTestConfig.m_userIdPrefix + "_free";
+            const std::string id = Recipe(client, token, nonce).getValue("recipe").getStringOrDefault("id", "");
             Request(client, token, "/api/recipes/join", "{\"recipeId\":\"" + id + "\"}");
             Request(client, token, "/api/recipes/join", "{\"recipeId\":\"cook_000006\"}");
             Request(client, token, "/api/recipes/detail?recipeId=" + id);
@@ -202,8 +202,8 @@ void CookServerTestMenuSocialCases::Run(CookServerTestHttpClient& client, const 
         try
         {
             const std::string token = NewUser(client, "input").getStringOrDefault("token", "");
-            const std::string id = g_cookServerTestConfig.m_userIdPrefix + "_input";
-            Recipe(client, token, id, "12345678");
+            const std::string nonce = g_cookServerTestConfig.m_userIdPrefix + "_input";
+            const std::string id = Recipe(client, token, nonce, "12345678").getValue("recipe").getStringOrDefault("id", "");
             Recipe(client, token, id, "123456789", "100\\u514b", false);
             Recipe(client, token, id, "Cut", "1 spoon", false);
             Recipe(client, token, id, "Cut", "0\\u514b", false);

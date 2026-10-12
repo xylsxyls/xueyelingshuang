@@ -158,9 +158,10 @@ void CookServerTestIdentityCases::run(CookServerTestHttpClient& client, const Co
             for (int32_t paid = 0; paid < 2; ++paid)
             {
                 const std::string recipeId = prefix + (paid != 0 ? "paid" : "free");
-                const std::string body = "{\"recipe\":{\"schemaVersion\":\"1.0\",\"id\":\"" + recipeId + "\",\"title\":\"System test\",\"category\":\"\\u852c\\u83dc\",\"priceType\":\"" + (paid != 0 ? "coin" : "free") + "\",\"priceAmount\":1,\"tasks\":[{\"id\":\"cut\",\"title\":\"Cut\",\"durationSeconds\":10,\"active\":true}]}}";
-                request(client, token, "/api/recipes/custom/publish", body);
-                const RapidJsonValue recipe = request(client, ot, "/api/recipes/detail?recipeId=" + recipeId).getValue("recipe");
+                const std::string body = "{\"recipe\":{\"schemaVersion\":\"1.0\",\"id\":\"" + recipeId + "\",\"title\":\"System test\",\"category\":\"\\u852c\\u83dc\",\"priceType\":\"" + (paid != 0 ? "coin" : "free") + "\",\"priceAmount\":" + (paid != 0 ? "1" : "0") + ",\"tasks\":[{\"id\":\"cut\",\"title\":\"Cut\",\"durationSeconds\":10,\"active\":true}]}}";
+                const RapidJsonValue submitted = request(client, token, "/api/recipes/custom/publish", body).getValue("recipe");
+                if (paid != 0) request(client, token, "/api/recipes/reviews/decide", "{\"reviewId\":\"" + submitted.getStringOrDefault("reviewId", "") + "\",\"decision\":\"approved\"}");
+                const RapidJsonValue recipe = request(client, ot, "/api/recipes/detail?recipeId=" + submitted.getStringOrDefault("id", "")).getValue("recipe");
                 require(recipe.getStringOrDefault("authorUserId", "") == "qmzdc" && recipe.getBoolOrDefault("systemRecipe", false), "Published system author differs");
                 require(recipe.getBoolOrDefault("inMenu", false) == (paid == 0), "System paid/free default menu differs");
                 require(recipe.getBoolOrDefault("owned", false) == (paid == 0), "System paid/free access differs");

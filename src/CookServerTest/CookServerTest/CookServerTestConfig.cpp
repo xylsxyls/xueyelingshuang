@@ -38,6 +38,7 @@ bool CookServerTestConfig::init(int32_t argc, char* argv[])
 	m_enableStress = true;
 	m_allowDisabledVoice = false;
 	m_reportFileName = "CookServerTestReport.txt";
+	m_resourceRootPath.clear();
 	m_userIdPrefix = "cook_test_" +
 		CStringManager::toStringInt32(static_cast<int32_t>(CSystem::currentProcessPid())) +
 		"_" +
@@ -60,6 +61,7 @@ void CookServerTestConfig::uninit()
 	m_host.clear();
 	m_userIdPrefix.clear();
 	m_reportFileName.clear();
+	m_resourceRootPath.clear();
 	m_port = 0;
 	m_timeoutMs = 0;
 	m_maxResponseBytes = 0;
@@ -77,6 +79,11 @@ std::string CookServerTestConfig::reportPath() const
 
 bool CookServerTestConfig::parseArgument(const std::string& argument)
 {
+	if (argument.find("--resourceRoot=") == 0)
+	{
+		m_resourceRootPath = argument.substr(15);
+		return true;
+	}
 	if (argument == "--allowDisabledVoice")
 	{
 		m_allowDisabledVoice = true;

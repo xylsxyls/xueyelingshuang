@@ -129,7 +129,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;WIN32_LEAN_AND_MEAN;NOMINMAX;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;STATIC_LIB;WIN32_LEAN_AND_MEAN;NOMINMAX;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -151,7 +151,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;WIN32_LEAN_AND_MEAN;NOMINMAX;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;STATIC_LIB;WIN32_LEAN_AND_MEAN;NOMINMAX;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -166,6 +166,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CookServerTestReviewCases.h" />
     <ClInclude Include="CookServerTest.h" />
     <ClInclude Include="CookServerTestConfig.h" />
     <ClInclude Include="CookServerTestHelper.h" />
@@ -177,11 +178,13 @@
     <ClInclude Include="CookServerTestFeedCases.h" />
     <ClInclude Include="CookServerTestCoverCases.h" />
     <ClInclude Include="CookServerTestIdentityCases.h" />
+    <ClInclude Include="CookServerTestRecipeEditingCases.h" />
     <ClInclude Include="CookServerTestUiRefineCases.h" />
     <ClInclude Include="CookServerTestMenuSocialCases.h" />
     <ClInclude Include="CookServerTestStressTask.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CookServerTestReviewCases.cpp" />
     <ClCompile Include="CookServerTest.cpp" />
     <ClCompile Include="CookServerTestConfig.cpp" />
     <ClCompile Include="CookServerTestHelper.cpp" />
@@ -193,6 +196,9 @@
     <ClCompile Include="CookServerTestFeedCases.cpp" />
     <ClCompile Include="CookServerTestCoverCases.cpp" />
     <ClCompile Include="CookServerTestIdentityCases.cpp" />
+    <ClCompile Include="CookServerTestRecipeEditingCases.cpp" />
+    <ClCompile Include="CookServerTestRecipePricingCases.cpp" />
+    <ClCompile Include="CookServerTestRecipeStructureCases.cpp" />
     <ClCompile Include="CookServerTestUiRefineCases.cpp" />
     <ClCompile Include="CookServerTestMenuSocialCases.cpp" />
     <ClCompile Include="CookServerTestStressTask.cpp" />

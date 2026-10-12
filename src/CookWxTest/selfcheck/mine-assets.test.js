@@ -22,8 +22,11 @@ function fixture(overrides = {}, pageSize = 3) {
     Page: definition => { page = definition },
     require: name => ({
       '../../utils/api': api,
+      '../../utils/mineRecipeReviews': require('../../CookWx/utils/mineRecipeReviews'),
+      '../../utils/privateMediaCache': require('../../CookWx/utils/privateMediaCache'),
       '../../utils/config': { MINE_MEDIA_PAGE_SIZE: pageSize },
       '../../utils/mineMediaAssets': media,
+      '../../utils/creationAssets': require('../../CookWx/utils/creationAssets'),
       '../../utils/recipeAssets': require('../../CookWx/utils/recipeAssets'),
       '../../utils/userPresentation': require('../../CookWx/utils/userPresentation'),
       '../../utils/menuActions': require('../../CookWx/utils/menuActions'),

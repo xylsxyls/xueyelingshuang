@@ -61,6 +61,11 @@ bool CookRecipePresentation::IsImagePath(const std::string& path)
 
 bool CookRecipePresentation::IsSquareImage(const std::string& path, uint32_t maxSide)
 {
+    return validateImage(path, maxSide, true);
+}
+
+bool CookRecipePresentation::validateImage(const std::string& path, uint32_t maxSide, bool square)
+{
 #ifdef _WIN32
     // Windows 自带 PNG/JPEG 解码器，封面解码不占用账户数据锁。
     static std::mutex imageMutex;
@@ -76,7 +81,8 @@ bool CookRecipePresentation::IsSquareImage(const std::string& path, uint32_t max
         Gdiplus::Color pixel;
         valid = image.GetLastStatus() == Gdiplus::Ok && image.GetRawFormat(&format) == Gdiplus::Ok &&
                 (IsEqualGUID(format, Gdiplus::ImageFormatPNG) || IsEqualGUID(format, Gdiplus::ImageFormatJPEG)) &&
-                image.GetWidth() > 0 && image.GetWidth() <= maxSide && image.GetWidth() == image.GetHeight() &&
+                image.GetWidth() > 0 && image.GetWidth() <= maxSide && image.GetHeight() > 0 && image.GetHeight() <= maxSide &&
+                (!square || image.GetWidth() == image.GetHeight()) &&
                 image.GetPixel(0, 0, &pixel) == Gdiplus::Ok;
     }
     Gdiplus::GdiplusShutdown(token);
@@ -84,6 +90,7 @@ bool CookRecipePresentation::IsSquareImage(const std::string& path, uint32_t max
 #else
     FFmpegCpp reader;
     FFmpegCppStreamInfo stream;
-    return reader.open(path) && reader.getMainVideoStreamInfo(&stream) && stream.width > 0 && static_cast<uint32_t>(stream.width) <= maxSide && stream.width == stream.height;
+    return reader.open(path) && reader.getMainVideoStreamInfo(&stream) && stream.width > 0 && static_cast<uint32_t>(stream.width) <= maxSide &&
+        stream.height > 0 && static_cast<uint32_t>(stream.height) <= maxSide && (!square || stream.width == stream.height);
 #endif
 }

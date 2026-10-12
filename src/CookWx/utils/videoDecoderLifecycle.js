@@ -1,4 +1,4 @@
-// VideoDecoder 的 start/seek 返回 void。完成条件来自原生事件，不能 await 返回值。
+// 新基础库返回Promise，旧基础库返回void；两种完成通路都接受，但只结算一次。
 function decoderOperation(decoder, eventName, invoke, timeoutMs) {
   let finished = false
   let timer
@@ -26,7 +26,7 @@ function decoderOperation(decoder, eventName, invoke, timeoutMs) {
     timer = setTimeout(() => reject(new Error('视频解码操作超时：' + eventName)), timeoutMs)
     try {
       const result = invoke()
-      if (result && typeof result.catch === 'function') result.catch(reject)
+      if (result && typeof result.then === 'function') result.then(ready, reject)
     } catch (error) { reject(error) }
   })
   return { promise, cancel: () => reject(new Error('视频解码操作已取消')) }

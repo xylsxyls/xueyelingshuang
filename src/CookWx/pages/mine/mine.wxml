@@ -27,10 +27,11 @@
         data-key="{{item.key}}"
         bindtap="switchAssetTab" hover-class="asset-tab-pressed" hover-stay-time="80"
       >
-        <text>{{item.title}}</text>
+        <text>{{item.title}}</text><view wx:if="{{item.key === 'review'}}" class="review-switch-icon"><view/><view/></view>
       </view>
     </view>
 
+    <button wx:if="{{activeAssetTab === 'created'}}" class="primary-btn" bindtap="newCreation">发布新菜谱</button>
     <view class="card empty" wx:if="{{!assetItems.length && !loading && !assetErrors[activeAssetTab]}}">
       当前分区还没有内容。
     </view>
@@ -50,7 +51,7 @@
             <view class="recipe-title">{{item.title}}</view>
             <view class="asset-badge" wx:if="{{item.badge}}">{{item.badge}}</view><button wx:if="{{activeAssetTab === 'menu' && item.canBuy}}" class="buy-button menu-buy-button" data-index="{{index}}" catchtap="buyAsset" disabled="{{menuActionId}}">买</button>
           </view>
-          <view class="muted">{{item.subtitle}}</view>
+          <view class="muted">{{item.subtitle}}</view><view wx:if="{{item.reviewReason}}" class="review-reason">不通过原因：{{item.reviewReason}}</view>
           <view class="menu-row-actions" wx:if="{{activeAssetTab === 'menu'}}">
             <button wx:if="{{item.canRemove}}" class="remove-menu" data-index="{{index}}" catchtap="removeMenuAsset" disabled="{{menuActionId}}">移出菜单</button>
           </view>
@@ -59,8 +60,8 @@
       </view>
     </block>
     <view class="asset-load-error" wx:if="{{assetErrors[activeAssetTab]}}" bindtap="retryAssetTab">此分区加载失败，点击重试</view>
-    <view class="asset-load-more" wx:elif="{{mediaGrid && loadingMore}}">正在加载更多...</view>
-    <view class="asset-load-more" wx:elif="{{mediaGrid && assetHasMore[activeAssetTab]}}" bindtap="onReachBottom">继续向下查看</view>
+    <view class="asset-load-more" wx:elif="{{loadingMore}}">正在加载更多...</view>
+    <view class="asset-load-more" wx:elif="{{assetHasMore[activeAssetTab]}}" bindtap="onReachBottom">继续向下查看</view>
   </view>
 
 </view>

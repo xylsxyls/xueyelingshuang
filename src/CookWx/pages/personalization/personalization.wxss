@@ -133,6 +133,36 @@
   text-align: right;
 }
 
+.personal-time-summary {
+  height: 66rpx;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.personal-time-current,
+.personal-time-change {
+  max-width: 100%;
+  line-height: 28rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.personal-time-change {
+  color: #9a3d26;
+  font-size: 22rpx;
+  font-weight: 800;
+}
+
+.personal-time-original-changed {
+  color: #9a3d26;
+  font-weight: 700;
+}
+
 .added-section { margin-top: 28rpx; }
 .section-title { margin: 0 0 14rpx; font-size: 30rpx; font-weight: 600; }
 .added-task { margin-bottom: 14rpx; }

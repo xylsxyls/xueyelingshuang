@@ -133,6 +133,7 @@ function resetUserScopedState(state) {
 }
 
 function clearSession() {
+  require('./privateMediaCache').clear()
   const state = appState()
   resetUserScopedState(state)
   state.token = ''
@@ -336,7 +337,9 @@ function request(options) {
         }
         const message = res.data && res.data.message ? res.data.message : `HTTP ${res.statusCode}`
         debugLog.warn('API', 'HTTP_ERROR', { runId: REQUEST_RUN_ID, requestId, attempt, traceId, purpose, url: safeOptions.url, statusCode: res.statusCode, message })
-        reject(new Error(message))
+        const error = new Error(message)
+        error.statusCode = res.statusCode
+        reject(error)
       },
       fail(err) {
         const durationMilliseconds = Date.now() - sendTime
@@ -480,7 +483,7 @@ function markVideoWatched(videoId) {
 }
 
 function getRecipes(options) {
-  return request(Object.assign({ url: options && options.catalog ? '/api/recipes?scope=catalog' : '/api/recipes', maxAttempts: 3, retryDelayMs: 300 }, options || {}))
+  return request(Object.assign({ url: options && options.publicCatalog ? '/api/recipes?scope=public_catalog' : options && options.catalog ? '/api/recipes?scope=catalog' : '/api/recipes', maxAttempts: 3, retryDelayMs: 300 }, options || {}))
 }
 
 function getRecipeDetail(recipeId, options) {
@@ -607,8 +610,29 @@ function startPlan(recipeIds, options) {
   }, requestOptions))
 }
 
-function publishCustomRecipe(recipeJson) {
-  return request({ url: '/api/recipes/custom/publish', method: 'POST', data: { recipeJson } })
+function publishCustomRecipe(recipeJson, options = {}) {
+  return request({ url: '/api/recipes/custom/publish', method: 'POST', data: { recipeJson }, maxAttempts: 1, isStale: options.isStale })
+}
+
+function getCreationRecipe(recipeId, options = {}) {
+  return request({ url: '/api/recipes/creation/detail?recipeId=' + encodeURIComponent(recipeId), isStale: options.isStale })
+}
+
+function saveCreationSteps(data, options = {}) {
+  return request({ url: '/api/recipes/creation/save', method: 'POST', data, maxAttempts: 1, isStale: options.isStale })
+}
+
+function getRecipeReviews(state, cursor = '', options = {}) {
+  return request({ url: '/api/recipes/reviews/list?state=' + encodeURIComponent(state) + '&cursor=' + encodeURIComponent(cursor) + '&count=18', isStale: options.isStale })
+}
+function getRecipeReview(recipeId, reviewId = '', options = {}) {
+  return request({ url: '/api/recipes/reviews/detail?recipeId=' + encodeURIComponent(recipeId || '') + '&reviewId=' + encodeURIComponent(reviewId), isStale: options.isStale })
+}
+function getRecipeReviewHistory(recipeId, cursor = '', options = {}) {
+  return request({ url: '/api/recipes/reviews/history?recipeId=' + encodeURIComponent(recipeId) + '&cursor=' + encodeURIComponent(cursor), isStale: options.isStale })
+}
+function decideRecipeReview(reviewId, decision, reason) {
+  return request({ url: '/api/recipes/reviews/decide', method: 'POST', data: { reviewId, decision, reason }, maxAttempts: 1 })
 }
 
 function savePersonalization(data) {
@@ -721,6 +745,7 @@ function voiceFetch(voiceId, options) {
 }
 
 module.exports = {
+  getRecipeReviews, getRecipeReview, getRecipeReviewHistory, decideRecipeReview,
   uploadAvatar,
   updateIntroduction, removeMenuRecipe, getUserProfile, getUserFeed, getFans, getVideoDetail, getConversation, readConversation,
   TOKEN_KEY,
@@ -754,6 +779,8 @@ module.exports = {
   previewPlan,
   startPlan,
   publishCustomRecipe,
+  getCreationRecipe,
+  saveCreationSteps,
   savePersonalization,
   getPersonalizationDetail,
   resetPersonalization,

@@ -1,0 +1,40 @@
+<view class="page personalization-page creation-editor" wx:if="{{recipe}}">
+  <view class="recipe-hero" bindtap="openVideo"><image wx:if="{{recipe.thumbnailUrl}}" class="recipe-hero-image" src="{{recipe.thumbnailUrl}}" mode="aspectFill" data-url="{{recipe.thumbnailUrl}}" binderror="onCoverError" /><view class="recipe-hero-empty" wx:else>暂无视频封面</view><view class="recipe-hero-gradient" /><view class="recipe-hero-play" wx:if="{{recipe.videoId || recipe.mediaIds.length || mediaIdsDraft.length}}"><view class="recipe-hero-triangle" /></view></view>
+  <view class="header"><view class="title">{{recipe.title}}</view><view class="subtitle">{{recipe.subtitle}}</view></view>
+  <view wx:if="{{newMode}}" class="card"><view class="step-title">新菜谱</view><input placeholder="菜名（最多40字）" value="{{titleDraft}}" maxlength="80" data-field="titleDraft" bindinput="onNewInput" disabled="{{saving || uploading}}"/><input placeholder="介绍（最多200字）" value="{{subtitleDraft}}" maxlength="400" data-field="subtitleDraft" bindinput="onNewInput" disabled="{{saving || uploading}}"/><picker range="{{categories}}" value="{{categoryIndex}}" bindchange="onCategory" disabled="{{saving || uploading}}"><view>分类：{{categories[categoryIndex]}} ⌄</view></picker><textarea class="step-detail-editor" value="{{ingredientsDraft}}" placeholder="每行一项食材，如：土豆 150克" data-field="ingredientsDraft" bindinput="onNewInput" disabled="{{saving || uploading}}"/><view class="muted">普通账户每天最多发布或修改5道菜，同一道菜每天最多修改3次；服务器会核验实际额度。</view></view>
+  <view class="card creation-review-note"><view>{{reviewStatus}}{{recipe.reviewNumber ? ' · 第' + recipe.reviewNumber + '次审核' : ''}}</view><view wx:if="{{recipe.reviewReason}}">不通过原因：{{recipe.reviewReason}}</view><view wx:if="{{recipe.submissionLimited}}">今天还可提交或修改{{recipe.dailyRecipesRemaining}}道菜，本菜还可修改{{recipe.changesRemaining}}次。免费发布无需审核；金币或元宝作品需审核。</view><view wx:else>免费发布无需审核，金币或元宝作品提交后显示审核中。</view><button wx:if="{{recipe.reviewId}}" class="ghost-btn" bindtap="openHistory">查看提交与审核历史</button></view>
+  <view class="toolbar">
+    <button class="ghost-btn" bindtap="addStep" disabled="{{saving || uploading || dragging}}">新增</button>
+    <button class="ghost-btn danger" bindtap="resetDraft" disabled="{{saving || uploading || dragging || !dirty}}">重置</button>
+    <button class="primary-btn" bindtap="save" loading="{{saving}}" disabled="{{saving || uploading || dragging || !dirty}}">保存</button>
+  </view>
+  <view class="pricing-card card">
+    <view class="step-title">菜谱定价</view>
+    <radio-group class="price-options" bindchange="onPriceTypeChange">
+      <label><radio value="free" checked="{{priceType === 'free'}}" disabled="{{saving || uploading || dragging}}" color="#18231f" />免费</label>
+      <label><radio value="coin" checked="{{priceType === 'coin'}}" disabled="{{saving || uploading || dragging}}" color="#18231f" />金币</label>
+      <label><radio value="yuanbao" checked="{{priceType === 'yuanbao'}}" disabled="{{saving || uploading || dragging}}" color="#18231f" />元宝</label>
+    </radio-group>
+    <view class="price-input-row" wx:if="{{priceType !== 'free'}}"><input type="number" maxlength="10" value="{{priceAmount}}" placeholder="请输入价格" bindinput="onPriceInput" disabled="{{saving || uploading || dragging}}" /><text>{{priceType === 'coin' ? '金币' : '元宝'}}</text></view>
+    <view class="muted pricing-hint">{{priceType === 'free' ? '其他用户可免费使用这道菜谱' : '价格须填写正整数，已购买用户仍保留使用权'}}</view>
+  </view>
+  <view class="card"><view class="step-title">原始媒体</view><view class="toolbar"><button class="ghost-btn" bindtap="replaceVideo" disabled="{{saving || uploading || dragging}}">更换视频</button><button class="ghost-btn" bindtap="replaceImages" disabled="{{saving || uploading || dragging}}">更换图片组</button></view><view class="muted" wx:if="{{uploading}}">上传中 {{uploadProgress}}%</view><view class="muted" wx:elif="{{mediaChanged}}">已上传{{mediaIdsDraft.length}}项新媒体，点击保存提交。上次通过的媒体仍保留。</view></view>
+  <view class="hint card">按住步骤右上角的三个点可拖动排序；步骤名最多8个字。修改后点击保存。</view>
+  <view class="hint card" wx:if="{{error}}">{{error}}</view>
+  <view class="step-card card creation-step-card {{dragId === item.id ? 'step-drag-source' : ''}} {{dropBeforeId === item.id ? 'step-drop-before' : ''}} {{dropAfterId === item.id ? 'step-drop-after' : ''}}" wx:for="{{steps}}" wx:key="id">
+    <view class="step-head">
+      <view class="creation-step-title"><text>第{{item.index}}步</text><input value="{{item.title}}" maxlength="16" placeholder="步骤名" data-index="{{index}}" data-field="title" bindinput="onStepInput" disabled="{{saving || uploading || dragging}}" /></view>
+      <picker class="step-mode" range="{{taskModes}}" value="{{item.active ? 0 : 1}}" data-index="{{index}}" bindchange="onModeChange" disabled="{{saving || uploading || dragging}}"><view>{{item.active ? '前台' : '后台'}}<text class="mode-arrow">⌄</text></view></picker>
+      <view class="step-drag-handle" data-id="{{item.id}}" bindtouchstart="onDragTouchStart" bindlongpress="onDragStart" catchtouchmove="onDragMove" bindtouchend="onDragEnd" bindtouchcancel="onDragCancel"><view /><view /><view /></view>
+    </view>
+    <textarea class="step-detail-editor" value="{{item.detail}}" maxlength="2000" placeholder="写清楚这一步的操作说明" auto-height="{{true}}" data-index="{{index}}" data-field="detail" bindinput="onStepInput" disabled="{{saving || uploading || dragging}}" />
+    <view class="duration-row">
+      <view class="time-field"><input type="number" value="{{item.hours}}" data-index="{{index}}" data-field="hours" bindinput="onStepInput" disabled="{{saving || uploading || dragging}}" /><text>时</text></view>
+      <view class="time-field"><input type="number" value="{{item.minutes}}" data-index="{{index}}" data-field="minutes" bindinput="onStepInput" disabled="{{saving || uploading || dragging}}" /><text>分</text></view>
+      <view class="time-field"><input type="number" value="{{item.seconds}}" data-index="{{index}}" data-field="seconds" bindinput="onStepInput" disabled="{{saving || uploading || dragging}}" /><text>秒</text></view>
+      <button class="toggle-btn danger step-delete" data-id="{{item.id}}" bindtap="deleteStep" disabled="{{saving || uploading || dragging}}">删除</button>
+    </view>
+  </view>
+  <view class="step-drag-preview" wx:if="{{dragging}}" style="top: {{dragY}}px">{{dragLabel}}</view>
+</view>
+<view class="page" wx:else><view class="card creation-load-state"><view>{{error || (loading ? '正在加载创作…' : '创作尚未加载')}}</view><button class="primary-btn" bindtap="load" disabled="{{loading}}">{{loading ? '正在加载' : '重新加载'}}</button></view></view>

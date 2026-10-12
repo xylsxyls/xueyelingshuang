@@ -1,9 +1,11 @@
 ﻿#include "CookApiService.h"
+#include "CookResourcePaths.h"
 #include "Config.h"
 #include "CookHelper.h"
 #include "CookRecipeConfig.h"
 #include "CookSchedule.h"
 #include "CookServerHelper.h"
+#include "CookRecipePresentation.h"
 #include "CookStorageService.h"
 #include "CookVideoSegmentService.h"
 #include "CookVoiceService.h"
@@ -34,9 +36,10 @@ static std::string videoContentVersion(const VideoInfo& video)
 {
 	std::ostringstream version;
 	version << video.m_createdAtSeconds;
+    const std::string path = CookResourcePaths::mediaPath(video.m_filePath);
 #ifdef _WIN32
 	WIN32_FILE_ATTRIBUTE_DATA attributes = {};
-	if (GetFileAttributesExA(video.m_filePath.c_str(), GetFileExInfoStandard, &attributes))
+	if (GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &attributes))
 	{
 		ULARGE_INTEGER stamp;
 		stamp.LowPart = attributes.ftLastWriteTime.dwLowDateTime;
@@ -48,7 +51,7 @@ static std::string videoContentVersion(const VideoInfo& video)
 	}
 #else
 	struct stat attributes;
-	if (stat(video.m_filePath.c_str(), &attributes) == 0)
+	if (stat(path.c_str(), &attributes) == 0)
 	{
 		version << '_' << static_cast<unsigned long long>(attributes.st_size)
 		        << '_' << static_cast<long long>(attributes.st_mtime);
@@ -260,19 +263,23 @@ bool CookApiService::recipeMatchesMenuCategory(const Recipe& recipe, const UserA
 	return recipe.m_category == categoryName;
 }
 
-std::string CookApiService::buildRecipesJson(const std::string& userId, bool catalog)
+std::string CookApiService::buildRecipesJson(const std::string& userId, bool catalog, bool includeCreationDrafts)
 {
 	RapidJsonDocument document;
 	document.setObject();
 	document.addBool("ok", true);
 
 	UserAccount account = m_accountStore.getAccount(userId);
-	std::vector<Recipe> recipes = m_accountStore.listRecipesForUser(userId);
+	std::vector<Recipe> recipes = m_accountStore.listRecipesForUser(userId, catalog && includeCreationDrafts);
 	std::vector<Recipe> visibleRecipes;
 	visibleRecipes.reserve(recipes.size());
 	std::set<std::string> categorySet;
 	for (size_t i = 0; i < recipes.size(); ++i)
 	{
+        if (catalog && !includeCreationDrafts && recipes[i].m_status != "published")
+        {
+            continue;
+        }
 		if ((catalog || AccountStore::isRecipeInMenu(recipes[i], account)) && (recipes[i].m_status == "published" || AccountStore::isRecipeOwned(recipes[i], account)))
 		{
 			visibleRecipes.push_back(recipes[i]);
@@ -985,7 +992,7 @@ HttpResponse CookApiService::buildVideoFileResponse(const HttpRequest& request)
 	std::string filePath;
 	std::string contentType;
 	std::string videoId = CookHelper::queryValue(request, "videoId");
-	if (!m_accountStore.getVideoFile(videoId, video, filePath, contentType))
+	if (!m_accountStore.getVideoFile(videoId, video, filePath, contentType, mediaViewer(request)))
 	{
 		LOGWARNING("CookApiService video file not found videoId=%s", videoId.c_str());
 		return errorResponse("video file not found", kHttpStatusNotFound, "VIDEO_NOT_FOUND");
@@ -1017,7 +1024,7 @@ HttpResponse CookApiService::buildVideoFileResponse(const HttpRequest& request)
 			response.m_contentType = contentType;
 			response.setHeader("Accept-Ranges", "bytes");
 			response.setHeader("Content-Range", "bytes */" + CStringManager::toStringInt64(fileSize));
-			response.setHeader("Cache-Control", "public, max-age=3600");
+			response.setHeader("Cache-Control", video.m_status == "published" ? "public, max-age=3600" : "private, no-store");
 			LOGWARNING("CookApiService video range invalid videoId=%s range=%s fileSize=%s",
 			           videoId.c_str(),
 			           rangeHeader.c_str(),
@@ -1066,7 +1073,7 @@ HttpResponse CookApiService::buildVideoFileResponse(const HttpRequest& request)
 	response.m_contentType = contentType;
 	response.m_body = body;
 	response.setHeader("Accept-Ranges", "bytes");
-	response.setHeader("Cache-Control", "public, max-age=3600");
+	response.setHeader("Cache-Control", video.m_status == "published" ? "public, max-age=3600" : "private, no-store");
 	response.setHeader("Content-Disposition", "inline; filename=\"" + video.m_id + "." + CSystem::GetName(filePath, 2) + "\"");
 	if (partial)
 	{
@@ -1092,7 +1099,7 @@ HttpResponse CookApiService::buildVideoSegmentResponse(const HttpRequest& reques
 	std::string sourcePath;
 	std::string sourceContentType;
 	std::string videoId = CookHelper::queryValue(request, "videoId");
-	if (!m_accountStore.getVideoFile(videoId, video, sourcePath, sourceContentType) || video.m_mediaType != "video")
+	if (!m_accountStore.getVideoFile(videoId, video, sourcePath, sourceContentType, mediaViewer(request)) || video.m_mediaType != "video")
 	{
 		return errorResponse("video file not found", kHttpStatusNotFound, "VIDEO_NOT_FOUND");
 	}
@@ -1111,7 +1118,7 @@ HttpResponse CookApiService::buildVideoSegmentResponse(const HttpRequest& reques
 		return errorResponse("invalid video segment range", kHttpStatusBadRequest, "VIDEO_SEGMENT_RANGE_INVALID");
 	}
 
-	const std::string cacheDirectory = CookHelper::appendPathSeparator(CSystem::GetCurrentExePath()) + g_config.m_videoSegmentCacheDirectoryName;
+	const std::string cacheDirectory = CookResourcePaths::path(g_config.m_videoSegmentCacheDirectoryName);
 	std::string segmentPath;
 	std::string errorMessage;
 	int32_t actualStartMilliseconds = 0;
@@ -1143,7 +1150,7 @@ HttpResponse CookApiService::buildVideoSegmentResponse(const HttpRequest& reques
 	HttpResponse response(kHttpStatusOk);
 	response.m_contentType = "video/mp4";
 	response.m_body.swap(body);
-	response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+	response.setHeader("Cache-Control", video.m_status == "published" ? "public, max-age=31536000, immutable" : "private, no-store");
 	response.setHeader("Content-Disposition", "inline; filename=\"" + video.m_id + "_" + CStringManager::toStringInt32(startSeconds) + ".mp4\"");
 	response.setHeader("X-Video-Segment-Start-Ms", CStringManager::toStringInt32(actualStartMilliseconds));
 	response.setHeader("X-Video-Segment-Request-Start-Ms", CStringManager::toStringInt32(startMilliseconds));
@@ -1217,13 +1224,19 @@ HttpResponse CookApiService::buildVideoPosterResponse(const HttpRequest& request
 	std::string videoContentType;
 	std::string videoId = CookHelper::queryValue(request, "videoId");
 	LOGINFO("CookApiService video poster request begin videoId=%s", videoId.c_str());
+	if (!m_accountStore.getVideoFile(videoId, video, videoFilePath, videoContentType, mediaViewer(request)))
+	{
+		LOGWARNING("CookApiService video poster source not found videoId=%s", videoId.c_str());
+		return errorResponse("video file not found", kHttpStatusNotFound, "VIDEO_NOT_FOUND");
+	}
+
 	std::string cachedBody;
 	std::string cachedContentType;
 	if (readVideoPosterCache(videoId, cachedBody, cachedContentType))
 	{
 		HttpResponse response = HttpResponse::text(cachedBody);
 		response.m_contentType = cachedContentType;
-		response.setHeader("Cache-Control", "public, max-age=86400");
+		response.setHeader("Cache-Control", video.m_status == "published" ? "public, max-age=86400" : "private, no-store");
 		response.setHeader("Content-Disposition", "inline; filename=\"" + CookHelper::normalizeVideoId(videoId) + ".jpg\"");
 		LOGINFO("CookApiService video poster cache hit videoId=%s bytes=%d costMs=%d",
 		        CookHelper::normalizeVideoId(videoId).c_str(),
@@ -1232,11 +1245,6 @@ HttpResponse CookApiService::buildVideoPosterResponse(const HttpRequest& request
 		return response;
 	}
 
-	if (!m_accountStore.getVideoFile(videoId, video, videoFilePath, videoContentType) || video.m_mediaType != "video")
-	{
-		LOGWARNING("CookApiService video poster source not found videoId=%s", videoId.c_str());
-		return errorResponse("video file not found", kHttpStatusNotFound, "VIDEO_NOT_FOUND");
-	}
 
 	FFmpegCppFrameExtractOption extractOption;
 	extractOption.maxWidth = g_config.m_videoPosterMaxWidth;
@@ -1249,7 +1257,11 @@ HttpResponse CookApiService::buildVideoPosterResponse(const HttpRequest& request
 
 	FFmpegCppImageData imageData;
 	std::string errorText;
-	if (!FFmpegCppHelper::extractFirstFrameToMemory(videoFilePath, &imageData, extractOption, &errorText) || imageData.empty())
+    std::string output;
+    const bool generated = video.m_mediaType == "image" ?
+        CookRecipePresentation::imagePoster(videoFilePath, extractOption.maxWidth, extractOption.maxHeight, extractOption.jpegQuality, output) :
+        FFmpegCppHelper::extractFirstFrameToMemory(videoFilePath, &imageData, extractOption, &errorText);
+	if (!generated || (video.m_mediaType == "video" && imageData.empty()))
 	{
 		LOGWARNING("CookApiService video poster generate failed videoId=%s file=%s error=%s costMs=%d",
 		           video.m_id.c_str(),
@@ -1259,8 +1271,10 @@ HttpResponse CookApiService::buildVideoPosterResponse(const HttpRequest& request
 		return errorResponse("video poster generate failed", kHttpStatusNotFound, "VIDEO_POSTER_GENERATE_FAILED");
 	}
 
-	std::string output;
-	output.assign(reinterpret_cast<const char*>(&imageData.data[0]), imageData.data.size());
+    if (video.m_mediaType == "video")
+    {
+        output.assign(reinterpret_cast<const char*>(&imageData.data[0]), imageData.data.size());
+    }
 	if (!CookHelper::isJpegImageData(output))
 	{
 		LOGWARNING("CookApiService video poster invalid jpeg videoId=%s bytes=%d mime=%s",
@@ -1272,7 +1286,7 @@ HttpResponse CookApiService::buildVideoPosterResponse(const HttpRequest& request
 
 	HttpResponse response = HttpResponse::text(output);
 	response.m_contentType = imageData.mimeType.empty() ? "image/jpeg" : imageData.mimeType;
-	response.setHeader("Cache-Control", "public, max-age=86400");
+	response.setHeader("Cache-Control", video.m_status == "published" ? "public, max-age=86400" : "private, no-store");
 	response.setHeader("Content-Disposition", "inline; filename=\"" + video.m_id + ".jpg\"");
 	writeVideoPosterCache(video.m_id, output, response.m_contentType);
 	LOGINFO("CookApiService video poster response videoId=%s bytes=%d width=%d height=%d costMs=%d",
@@ -1708,7 +1722,8 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 		}
 		else if (request.m_method == "GET" && request.m_uri == "/api/recipes")
 		{
-			response = CookServerHelper::jsonResponse(buildRecipesJson(userId, CookHelper::queryValue(request, "scope") == "catalog"));
+            const std::string scope = CookHelper::queryValue(request, "scope");
+			response = CookServerHelper::jsonResponse(buildRecipesJson(userId, scope == "catalog" || scope == "public_catalog", scope != "public_catalog"));
 		}
 		else if (request.m_method == "GET" && request.m_uri == "/api/recipes/detail")
 		{
@@ -1989,6 +2004,16 @@ HttpResponse CookApiService::handle(const HttpRequest& request)
 			CookServerHelper::addString(document, "message", cancelled ? "上传已取消" : "上传任务不存在");
 			response = CookServerHelper::jsonResponse(document.toString());
 		}
+        else if ((request.m_method == "GET" && (request.m_uri == "/api/recipes/reviews/list" || request.m_uri == "/api/recipes/reviews/detail" || request.m_uri == "/api/recipes/reviews/history")) ||
+            (request.m_method == "POST" && request.m_uri == "/api/recipes/reviews/decide"))
+        {
+            response = CookServerHelper::jsonResponse(buildReviewJson(request, userId));
+        }
+        else if ((request.m_method == "GET" && request.m_uri == "/api/recipes/creation/detail") ||
+            (request.m_method == "POST" && request.m_uri == "/api/recipes/creation/save"))
+        {
+            response = CookServerHelper::jsonResponse(buildCreationJson(request, userId));
+        }
 		else if (request.m_method == "POST" && (request.m_uri == "/api/videos/publish" || request.m_uri == "/api/videos/attach"))
 		{
 			VideoInfo video;

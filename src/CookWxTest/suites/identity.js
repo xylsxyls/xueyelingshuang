@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict')
+const { once } = require('node:events')
 const { until } = require('../lib/wait')
 const storage = require('../lib/isolatedStorage')
 
@@ -7,8 +8,7 @@ module.exports = {
     const { http } = context
     const system = await http.json('/api/auth/login', { body: { account: 'qmzdc', password: 'yangnan' } })
     const user = await http.json('/api/auth/register', { body: { account: 'identity_' + Date.now().toString(36), password: 'IdentityTest2026!', nickname: '迁移测试' } })
-    const existing = await http.request('/api/auth/register', { body: { account: 'xylsxyls', password: 'IdentityAdmin2026!', nickname: '雪夜' } })
-    assert.equal(existing.json.ok, true, '角色迁移必须从新建隔离库开始')
+    const existing = { json: await require('../lib/administratorFixture').ensure(context) }
     const image = Buffer.from([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,1,0,0,0,1,8,2,0,0,0,144,119,83,222,0,0,0,12,73,68,65,84,120,156,99,104,104,104,0,0,3,4,1,129,75,211,210,16,0,0,0,0,73,69,78,68,174,66,96,130])
     const avatar = await http.json('/api/users/avatar/upload', { token: system.token, body: image, headers: { 'Content-Type': 'application/octet-stream' } })
     const avatarUrl = avatar.profile.avatarUrl
@@ -22,11 +22,12 @@ module.exports = {
     await http.json('/api/favorites/toggle', { token: system.token, body: { targetType: 'video', targetId: 'cook_000001' } })
     const comment = await http.json('/api/comments/create', { token: system.token, body: { targetType: 'video', targetId: 'cook_000001', content: '迁移前评论' } })
     const ad = await http.json('/api/wallet/ad/start', { token: system.token, body: {} })
-    const recipeId = 'identity_recipe_' + Date.now().toString(36)
-    await http.json('/api/recipes/custom/publish', { token: system.token, body: { recipe: {
-      schemaVersion: '1.0', id: recipeId, title: '迁移测试菜', category: '蔬菜', priceType: 'free',
+    const recipeNonce = 'identity_recipe_' + Date.now().toString(36)
+    const submitted = await http.json('/api/recipes/custom/publish', { token: system.token, body: { recipe: {
+      schemaVersion: '1.0', id: recipeNonce, title: '迁移测试菜', category: '蔬菜', priceType: 'free',
       tasks: [{ id: 'cut', title: '切菜', durationSeconds: 10, active: true }]
     } } })
+    const recipeId = submitted.recipe.id
     const before = (await http.json('/api/account', { token: system.token })).account
     let stable
     await until(async () => {
@@ -96,6 +97,11 @@ module.exports = {
     await storage.replaceSnapshot(context, conflict)
     await storage.startOwnedBackend(context, true)
     assert.equal(await storage.snapshot(context), conflict, '冲突启动不能重写数据库')
+    const redis = [...context.environment.children].reverse().find(item => item.name.startsWith('redis') && item.child.exitCode == null && item.child.signalCode == null)
+    assert.ok(redis && redis.child.pid)
+    const exited = once(redis.child, 'exit'); redis.child.kill(); await exited
+    await storage.replaceSnapshot(context, safe)
+    await storage.startOwnedBackend(context)
     return { migratedId: 'qmzdc', administratorIdPreserved: true, oldSessionPreserved: true,
       avatarBytesRestored: image.length, privateMessagesAndFollowRestored: true, personalizationRestored: true,
       idempotencyMigrated: true, repeatedColdStartPassed: true, conflictRefusedWithoutOverwrite: true, commentFixtureCreated: !!comment.ok }

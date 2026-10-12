@@ -3,7 +3,7 @@
     <image wx:if="{{recipe.thumbnailUrl}}" class="recipe-hero-image" src="{{recipe.thumbnailUrl}}" mode="aspectFill" data-url="{{recipe.thumbnailUrl}}" binderror="onCoverError"></image>
     <view class="recipe-hero-empty" wx:else>暂无视频封面</view>
     <view class="recipe-hero-gradient"></view>
-    <view class="recipe-hero-play" wx:if="{{recipe.videoId}}"><view class="recipe-hero-triangle"></view></view>
+    <view class="recipe-hero-play" wx:if="{{recipe.videoId || recipe.mediaIds.length}}"><view class="recipe-hero-triangle"></view></view>
   </view>
   <view class="recipe-heading">
     <view class="hero-title">{{recipe.title}}</view>

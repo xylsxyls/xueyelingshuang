@@ -1,5 +1,6 @@
 ﻿#include "CookApiService.h"
 #include "CookCatalog.h"
+#include "CookResourcePaths.h"
 #include "CookDependencyService.h"
 #include "CookHttpServer.h"
 #include "CookStorageService.h"
@@ -108,6 +109,15 @@ int32_t main()
 	        g_config.m_videoPosterTimeoutMilliseconds,
 	        g_config.m_videoPosterApplyRotation ? 1 : 0);
 
+    std::string resourceMessage;
+    if (!CookResourcePaths::prepare(resourceMessage))
+    {
+        LOGERROR("CookServer resource initialization failed reason=%s", resourceMessage.c_str());
+        LogManager::instance().uninitAll();
+        Config::instance().uninit();
+        return 1;
+    }
+    LOGINFO("CookServer external resource root=%s", g_config.m_resourceRootPath.c_str());
 	if (!CookDependencyService::ensureStartupDependencies())
 	{
 		LOGFATAL("CookServer dependency startup failed.");

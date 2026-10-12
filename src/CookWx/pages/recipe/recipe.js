@@ -69,7 +69,7 @@ Page({
   },
   openVideo() {
     const recipe = this.data.recipe
-    if (recipe && recipe.videoId) wx.navigateTo({ url: assets.videoPage(recipe) })
+    if (recipe && (recipe.videoId || (recipe.mediaIds || []).length)) wx.navigateTo({ url: assets.videoPage(recipe) })
     else wx.showToast({ title: '暂未发布原视频', icon: 'none' })
   },
   onCoverError(event) {

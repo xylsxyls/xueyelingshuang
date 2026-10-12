@@ -100,10 +100,44 @@
     <ClInclude Include="CookStorageSyncTask.h">
       <Filter>存储层</Filter>
     </ClInclude>
+
+    <ClInclude Include="CookCreationFlow.h"><Filter>头文件</Filter></ClInclude>
+      <ClInclude Include="CookResourcePaths.h"><Filter>头文件</Filter></ClInclude>
+      <ClInclude Include="CookReviewRevision.h"><Filter>头文件</Filter></ClInclude>
+      <ClInclude Include="CookRecipeDelta.h"><Filter>头文件</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CookRecipeImagePoster.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="AccountStoreReviewIdentity.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="AccountStoreVideoPublication.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="AccountStoreCreationState.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="AccountStoreCreationSubmission.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="AccountStoreCustomSubmission.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="AccountStoreRecipeReviews.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="AccountStoreReviewHistory.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CookApiServiceReviews.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="CookApiServiceAvatar.cpp"><Filter>API服务</Filter></ClCompile>
     <ClCompile Include="AccountStoreAvatar.cpp"><Filter>账号状态</Filter></ClCompile>
+    <ClCompile Include="CookApiServiceRecipeEditing.cpp"><Filter>API服务</Filter></ClCompile>
+    <ClCompile Include="AccountStoreRecipeEditing.cpp"><Filter>账号状态</Filter></ClCompile>
     <ClCompile Include="AccountStoreIdentity.cpp"><Filter>账号状态</Filter></ClCompile>
     <ClCompile Include="CookAvatarHelper.cpp"><Filter>源文件</Filter></ClCompile>
     <ClCompile Include="AccountStoreMenu.cpp"><Filter>源文件</Filter></ClCompile>
@@ -166,5 +200,12 @@
     <ClCompile Include="CookStorageSyncTask.cpp">
       <Filter>存储层</Filter>
     </ClCompile>
+
+    <ClCompile Include="CookCreationFlow.cpp"><Filter>源文件</Filter></ClCompile>
+
+    <ClCompile Include="CookCreationPersonalization.cpp"><Filter>源文件</Filter></ClCompile>
+      <ClCompile Include="CookResourcePaths.cpp"><Filter>源文件</Filter></ClCompile>
+      <ClCompile Include="CookReviewRevision.cpp"><Filter>源文件</Filter></ClCompile>
+      <ClCompile Include="CookRecipeDelta.cpp"><Filter>源文件</Filter></ClCompile>
   </ItemGroup>
 </Project>

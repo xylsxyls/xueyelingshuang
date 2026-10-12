@@ -1,0 +1,4 @@
+.review-player { height: 74vh; position: relative; }
+.review-player cached-video-player { display: block; height: 58vh; width: 100%; }
+.review-image { height: 70vh; width: 100%; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; }

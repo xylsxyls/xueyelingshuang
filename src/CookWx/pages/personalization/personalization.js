@@ -87,6 +87,6 @@ Page({
     if (!this.data.steps[index] || !this.data.steps[index].added) return
     this.setData({ steps: flow.renumber(this.data.steps.filter((_, current) => current !== index)) })
   },
-  openVideo() { const recipe = this.data.recipe; if (recipe && recipe.videoId) wx.navigateTo({ url: assets.videoPage(recipe) }); else wx.showToast({ title: '暂未发布原视频', icon: 'none' }) },
+  openVideo() { const recipe = this.data.recipe; if (recipe && (recipe.videoId || (recipe.mediaIds || []).length)) wx.navigateTo({ url: assets.videoPage(recipe) }); else wx.showToast({ title: '暂未发布原视频', icon: 'none' }) },
   onCoverError(event) { if (this.data.recipe) this.setData({ recipe: assets.thumbnailFallback(this.data.recipe, event.currentTarget.dataset.url) }) }
 })

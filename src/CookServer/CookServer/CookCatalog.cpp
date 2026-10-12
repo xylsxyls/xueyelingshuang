@@ -1,4 +1,5 @@
 ﻿#include "CookCatalog.h"
+#include "CookResourcePaths.h"
 #include "Config.h"
 #include "CookRecipeConfig.h"
 #include "CSystem/CSystemAPI.h"
@@ -32,7 +33,7 @@ void CookCatalog::uninit()
 
 std::string CookCatalog::recipeResourceDirectoryPath()
 {
-	std::string path = CSystem::GetCurrentExePath() + g_config.m_recipeResourceDirectoryName;
+	std::string path = CookResourcePaths::path(g_config.m_recipeResourceDirectoryName);
 #ifdef _WIN32
 	const char separator = '\\';
 #else

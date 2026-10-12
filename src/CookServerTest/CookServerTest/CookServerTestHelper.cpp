@@ -1,9 +1,19 @@
 ﻿#include "CookServerTestHelper.h"
 #include <stdint.h>
+#include "CookServerTestConfig.h"
+#include "CSystem/CSystemAPI.h"
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
+
+std::string CookServerTestHelper::videoFixturePath()
+{
+	const std::string root = g_cookServerTestConfig.m_resourceRootPath.empty()
+		? CSystem::GetCurrentExePath() + "../CookServer" : g_cookServerTestConfig.m_resourceRootPath;
+	const std::string path = CSystem::joinPath(root, "video/cook_000001.mp4");
+	return CSystem::DirOrFileExist(path) ? path : CSystem::joinPath(root, "res/video/cook_000001.mp4");
+}
 
 std::string CookServerTestHelper::localTextToUtf8(const std::string& text)
 {

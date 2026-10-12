@@ -78,7 +78,7 @@ std::string CookApiService::buildSocialJson(const HttpRequest& request, const st
     {
         VideoInfo video;
         std::string path, contentType;
-        const bool ok = m_accountStore.getVideoFile(CookHelper::queryValue(request, "videoId"), video, path, contentType) && video.m_mediaType == "video";
+        const bool ok = m_accountStore.getVideoFile(CookHelper::queryValue(request, "videoId"), video, path, contentType, userId) && (video.m_mediaType == "video" || video.m_mediaType == "image");
         document.addBool("ok", ok);
         if (ok)
         {

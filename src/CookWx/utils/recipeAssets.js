@@ -35,6 +35,7 @@ function thumbnailFallback(item, failedUrl) {
 }
 
 function videoPage(item) {
+  if (!item.videoId && item.mediaIds && item.mediaIds.length) return '/pages/reviewMedia/reviewMedia?public=1&recipeId=' + encodeURIComponent(item.id || item.recipeId || '')
   return `/pages/videoPlayer/videoPlayer?videoId=${encodeURIComponent(item.videoId || item.id || '')}&src=${encodeURIComponent(url(item.videoUrl))}&poster=${encodeURIComponent(url(item.posterUrl))}&title=${encodeURIComponent(item.title || '')}`
 }
 

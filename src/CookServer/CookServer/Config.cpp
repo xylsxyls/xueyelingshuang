@@ -11,6 +11,11 @@ Config& Config::instance()
 }
 
 Config::Config() :
+m_recipeDailyDistinctLimit(5),
+m_recipeDailyChangesLimit(3),
+m_reviewReasonMaxBytes(2000),
+m_reviewPageMaxItems(60),
+m_submissionTimezoneMinutes(480),
 m_httpPort(0),
 m_httpBacklog(0),
 m_httpWorkerThreads(0),
@@ -45,6 +50,8 @@ m_systemPasswordSalt("eee1865e-5f05-45e3-a985-5cf44e840cdd"),
 m_avatarDirectoryName("data/avatars"),
 m_avatarMaxBytes(512 * 1024),
 m_avatarMaxSide(1024),
+m_creationStepMaxDetailBytes(8192),
+m_creationStepMaxSeconds(86400),
 m_checkinRewardCoins(0),
 m_adRewardCoins(0),
 m_adRequiredSeconds(0),
@@ -113,6 +120,16 @@ void Config::setDefaults()
 	m_enableCors = true;
 	m_corsAllowOrigin = "*";
 	m_storageBackend = "redis_mysql";
+#ifdef _WIN32
+    m_resourceRootPath = "C:/CookServerRes";
+#else
+    m_resourceRootPath = "../CookServerRes";
+#endif
+    m_recipeDailyDistinctLimit = 5;
+    m_recipeDailyChangesLimit = 3;
+    m_reviewReasonMaxBytes = 2000;
+    m_reviewPageMaxItems = 60;
+    m_submissionTimezoneMinutes = 480;
 	m_mysqlHost = "127.0.0.1";
 	m_mysqlPort = 3306;
 	m_mysqlUser = "root";
@@ -149,7 +166,7 @@ void Config::setDefaults()
 	m_redisWorkingDirectory = "{home}";
 	m_storageSyncThreadCount = 1;
 	m_storageSyncTaskPriority = 1;
-	m_recipeResourceDirectoryName = "res/recipes";
+	m_recipeResourceDirectoryName = "recipes";
 	m_accountDefaultCoins = 0;
 	m_accountDefaultYuanbao = 100;
 	m_authTokenExpireSeconds = 7 * 24 * 60 * 60;
@@ -158,7 +175,7 @@ void Config::setDefaults()
 	m_adRequiredSeconds = 30;
 	m_maxVideoBytes = 100LL * 1024LL * 1024LL;
 	m_videoStorageDirectoryName = "data/videos/files";
-	m_videoResourceDirectoryName = "res/video";
+	m_videoResourceDirectoryName = "video";
 	m_videoResourceScanIntervalSeconds = 30;
 	m_videoFeedDefaultCount = 2;
 	m_videoSeenExpireDays = 1;
@@ -226,6 +243,17 @@ void Config::loadIniOverrides()
 
 	m_storageBackend = readIniString(ini, "Storage", "Backend", m_storageBackend);
 	m_recipeResourceDirectoryName = readIniString(ini, "Storage", "RecipeResourceDirectoryName", m_recipeResourceDirectoryName);
+    m_resourceRootPath = readIniString(ini, "Storage", "ResourceRoot", m_resourceRootPath);
+    m_recipeDailyDistinctLimit = readIniInt32(ini, "Review", "DailyDistinctLimit", m_recipeDailyDistinctLimit);
+    m_recipeDailyChangesLimit = readIniInt32(ini, "Review", "DailyChangesLimit", m_recipeDailyChangesLimit);
+    m_submissionTimezoneMinutes = readIniInt32(ini, "Review", "TimezoneMinutes", m_submissionTimezoneMinutes);
+    if (m_recipeDailyDistinctLimit < 1 || m_recipeDailyDistinctLimit > 100 || m_recipeDailyChangesLimit < 1 || m_recipeDailyChangesLimit > 100 ||
+        m_submissionTimezoneMinutes < -720 || m_submissionTimezoneMinutes > 840)
+    {
+        m_recipeDailyDistinctLimit = 5;
+        m_recipeDailyChangesLimit = 3;
+        m_submissionTimezoneMinutes = 480;
+    }
 	m_videoStorageDirectoryName = readIniString(ini, "Storage", "VideoStorageDirectoryName", m_videoStorageDirectoryName);
 	m_videoResourceDirectoryName = readIniString(ini, "Storage", "VideoResourceDirectoryName", m_videoResourceDirectoryName);
 	m_videoResourceScanIntervalSeconds = readIniInt32(ini, "Storage", "VideoResourceScanIntervalSeconds", m_videoResourceScanIntervalSeconds);
@@ -559,6 +587,12 @@ void Config::uninit()
 	m_enableCors = false;
 	m_corsAllowOrigin.clear();
 	m_storageBackend.clear();
+    m_resourceRootPath.clear();
+    m_recipeDailyDistinctLimit = 0;
+    m_recipeDailyChangesLimit = 0;
+    m_reviewReasonMaxBytes = 0;
+    m_reviewPageMaxItems = 0;
+    m_submissionTimezoneMinutes = 0;
 	m_mysqlHost.clear();
 	m_mysqlPort = 0;
 	m_mysqlUser.clear();
