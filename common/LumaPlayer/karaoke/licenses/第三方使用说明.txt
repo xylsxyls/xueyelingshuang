@@ -5,13 +5,14 @@
 1. FFmpeg 6.1.6：本软件使用FFmpeg项目的共享库，许可为LGPL 2.1或更新版本。完整条款见FFmpeg-COPYING.LGPLv2.1.txt及FFmpeg-LICENSE.md，各源文件版权保留在对应源码中。
 This software is based in part on the work of the Independent JPEG Group.
 2. SoundTouch 2.4.0：Copyright (c) Olli Parviainen，采用独立SoundTouchDLL共享库，许可为LGPL 2.1或更新版本，见SoundTouch-LICENSE.txt。
-3. Qt 5.5.1：Copyright (C) 2015 The Qt Company Ltd.，使用动态QtCore/QtGui/QtWidgets/QtXml；Qt官方库及插件由运行环境另行提供。许可正文及例外见Qt-LICENSE.LGPLv21.txt、Qt-LICENSE.LGPLv3.txt、Qt-LGPL_EXCEPTION.txt；具体适用条款取决于实际Qt模块和许可选择，不能据此宣称Qt安装包已完成分发审核。
+3. Qt 5.5.1：Copyright (C) 2015 The Qt Company Ltd.，使用动态QtCore/QtGui/QtWidgets/QtXml等；开发机common目录依赖已安装Qt，安装包携带所需Qt官方库及插件。许可正文及例外见Qt-LICENSE.LGPLv21.txt、Qt-LICENSE.LGPLv3.txt、Qt-LGPL_EXCEPTION.txt；具体适用条款取决于实际Qt模块和许可选择，不能据此宣称Qt安装包已完成分发审核。
 4. KissFFT 131.1.0：Copyright (c) 2003-2010, Mark Borgerding. All rights reserved.，BSD-3-Clause全文及免责见kissfft-BSD-3-Clause.txt。原COPYING只是许可索引，不再重复随包携带。
 5. miniaudio 0.11.23：选择MIT No Attribution许可，不要求随二进制提供署名或许可文本；上游原件仍保留于开发仓库tools/LumaPlayerKaraoke/miniaudio/，不要求公开播放器源码。
 6. ONNX Runtime 1.24.4：MIT正文及包内第三方条款见onnxruntime-LICENSE.txt、onnxruntime-ThirdPartyNotices.txt。
 7. DirectML 1.15.4：Windows运行库采用微软二进制分发许可，见DirectML-LICENSE.txt、DirectML-ThirdPartyNotices.txt；官方包附带的源码许可保留为DirectML-LICENSE-CODE.txt，不以它代替二进制条款。DirectML不用于其他平台安装包。
 8. 模型UVR-MDX-NET-Inst_HQ_5.onnx：Copyright (c) 2022 Ultimate Vocal Remover，MIT正文见UVR-MIT.txt。署名Ultimate Vocal Remover (UVR)、Anjok07、aufr33；MDX-Net架构署名Kuielab及Woosung Choi。
 模型及项目来源：https://github.com/TRvlvr/model_repo/releases/tag/all_public_uvr_models ，https://github.com/Anjok07/ultimatevocalremovergui 。当前权重SHA-256为811cb24095d865763752310848b7ec86aeede0626cb05749ab35350e46897000；上游一般模型使用声明不等于完整权利来源已经核实。
+9. Microsoft Visual C++ v14 Runtime 14.51.36247.0：Copyright Microsoft Corporation；安装包以原字节携带x64 MSVCP140、MSVCP140_1、VCRUNTIME140及VCRUNTIME140_1，放在播放器目录，不运行系统再发行安装程序。该组件采用微软商业软件许可，并非本目录其他组件的开源许可；再发行须遵守相应Visual Studio许可与Redist清单：https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files?view=msvc-170 。
 
 二、源码获取和用户权利
 LGPL库的替换方法及修改、调试逆向等权利见LGPL库替换及权利说明.txt。独立业务实现FFmpegCpp不因动态调用这些库而自动公开源码。
