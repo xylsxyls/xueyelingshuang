@@ -10,6 +10,8 @@
 #include "FFmpegCpp/FFmpegCppAPI.h"
 #include "KissFFTCpp/KissFFTCppAPI.h"
 #include <QFile>
+#include <QCoreApplication>
+#include <QDir>
 #include <QDataStream>
 #include <cmath>
 #include <algorithm>
@@ -589,14 +591,24 @@ void RunKaraokeBackendCase(int id, TestResults& report, const QString& directory
         return;
     }
 #ifdef _WIN32
-    wchar_t selectedRuntime[32768] = {};
     wchar_t systemDirectory[32768] = {};
-    const HMODULE runtimeModule = GetModuleHandleW(L"msvcp140.dll");
-    const bool systemRuntime = runtimeModule != nullptr &&
-        GetModuleFileNameW(runtimeModule, selectedRuntime, 32768) != 0 &&
-        GetSystemDirectoryW(systemDirectory, 32768) != 0 &&
-        QString::fromWCharArray(selectedRuntime).compare(QString::fromWCharArray(systemDirectory) + "\\msvcp140.dll", Qt::CaseInsensitive) == 0;
-    report.check(id, systemRuntime, "ONNX dependencies select system CRT even after optional shell-extension fixture: " + QString::fromWCharArray(selectedRuntime));
+    const QString applicationDirectory = QCoreApplication::applicationDirPath();
+    const bool localRuntime = QFile::exists(applicationDirectory + "/msvcp140.dll");
+    const wchar_t* runtimeNames[] = { L"msvcp140.dll", L"msvcp140_1.dll", L"vcruntime140.dll", L"vcruntime140_1.dll" };
+    const bool systemDirectoryRead = GetSystemDirectoryW(systemDirectory, 32768) != 0;
+    const QString expectedDirectory = QDir::cleanPath(QDir::fromNativeSeparators(
+        localRuntime ? applicationDirectory : QString::fromWCharArray(systemDirectory)));
+    const int count = localRuntime ? 4 : 1;
+    for (int index = 0; index < count; ++index)
+    {
+        wchar_t selectedRuntime[32768] = {};
+        const HMODULE runtimeModule = GetModuleHandleW(runtimeNames[index]);
+        const bool selected = (localRuntime || systemDirectoryRead) && runtimeModule != nullptr &&
+            GetModuleFileNameW(runtimeModule, selectedRuntime, 32768) != 0 &&
+            QDir::cleanPath(QDir::fromNativeSeparators(QString::fromWCharArray(selectedRuntime))).compare(
+                expectedDirectory + "/" + QString::fromWCharArray(runtimeNames[index]), Qt::CaseInsensitive) == 0;
+        report.check(id, selected, "ONNX dependencies pin the expected CRT before optional shell-extension fixture: " + QString::fromWCharArray(selectedRuntime));
+    }
 #endif
     const QByteArray runtime = qgetenv("LUMAPLAYER_ORT_RUNTIME"), model = qgetenv("LUMAPLAYER_VOCAL_MODEL");
     char error[2048] = {};

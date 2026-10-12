@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
     LogManager::instance().init(log);
     DialogManager::setLogCallback(ForwardDialogLog);
     LOGINFO("LumaPlayerTest1.0 startup mode=%s dump=%d", mode.toUtf8().constData(), dump ? 1 : 0);
-    LOGINFO("Karaoke system CRT bootstrap Win32=%u shellFixture=%s", karaokeRuntimeError, shellRuntimePath.constData());
+    LOGINFO("Karaoke CRT bootstrap Win32=%u shellFixture=%s", karaokeRuntimeError, shellRuntimePath.constData());
     int result = 1;
     uint32_t threadId = 0;
     try
