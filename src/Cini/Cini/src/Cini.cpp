@@ -15,7 +15,7 @@ m_loadSuccess(false)
 	m_iniPath = iniPath;
 #ifdef _MSC_VER
 	m_useSimpleIni = useSimpleIni;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	m_useSimpleIni = true;
 #endif
 	if (m_useSimpleIni)
@@ -34,6 +34,15 @@ Cini::~Cini()
 	{
 		delete ((CSimpleIniA*)m_simpleIni);
 	}
+}
+
+bool Cini::loadData(const std::string& data)
+{
+    if (!m_useSimpleIni || m_simpleIni == nullptr) return false;
+    CSimpleIniA* ini = static_cast<CSimpleIniA*>(m_simpleIni);
+    ini->Reset();
+    m_loadSuccess = ini->LoadData(data.data(), data.size()) == SI_OK;
+    return m_loadSuccess;
 }
 
 void Cini::setMaxLength(int32_t length)
@@ -63,7 +72,7 @@ std::string Cini::readIni(const std::string& key, const std::string& section) co
 	GetPrivateProfileStringA(section.c_str(), key.c_str(), "", &value[0], m_length, m_iniPath.c_str());
 	value.resize(strlen(&value[0]));
 	return value;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	return "";
 #endif
 }
@@ -131,7 +140,7 @@ std::vector<std::string> Cini::getAllSection() const
 	delete[] chSectionNames;
 	delete[] chSection;
 	return vecSection;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	return std::vector<std::string>();
 #endif
 }
@@ -171,7 +180,7 @@ std::string Cini::getFirstKey(const std::string& section) const
 	GetPrivateProfileStringA(section.c_str(), nullptr, "", &result[0], m_length, m_iniPath.c_str());
 	result.resize(strlen(&result[0]));
 	return result;
-#elif __unix__
+#elif defined(__unix__) || defined(__APPLE__)
 	return "";
 #endif
 }

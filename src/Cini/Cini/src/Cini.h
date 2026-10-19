@@ -20,6 +20,12 @@ public:
 	~Cini();
 
 public:
+    /** 从内存载入UTF8配置，避免文件系统ANSI路径限制；不写回源文件
+    @param [in] data 完整INI字节，调用方控制大小及读取权限
+    @return 仅SimpleIni模式可用，解析成功返回true
+    */
+    bool loadData(const std::string& data);
+
 	/** 设置Windows系统API读取时缓冲区最大程度，默认是1024
 	@param [in] length 最大长度
 	*/
