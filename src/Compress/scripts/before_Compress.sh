@@ -12,31 +12,40 @@ DllRelyTest_allSame=$4
 SHELL_FOLDER=$(cd $(dirname $0); pwd)
 xueyelingshuang=$SHELL_FOLDER/../../..
 
-#该写法支持目录下含有子目录和空格
-httpserviceincludepath="$xueyelingshuang/tools/zlibrelease/include/"
-for file in $(ls "$httpserviceincludepath")
-do
-    cp -rf "$httpserviceincludepath$file" "$xueyelingshuang/include/"
-done
+#璇ュ啓娉曟敮鎸佺洰褰曚笅鍚湁瀛愮洰褰曞拰绌烘牸
+thirdpartylib="zlib"
+thirdpartywasmlibname="libz"
+thirdpartypath="$xueyelingshuang/tools/$thirdpartylib"
+sdkpath="${CLOUD_REBUILD_SDK_ROOT:-$xueyelingshuang}"
+thirdpartybit=$1
 
-zliblib32="zlibstat_32.lib"
-zliblib64="zlibstat_64.lib"
-
-if [[ "$OSTYPE" =~ ^linux ]]; then
-    zliblib32="libzstatic32.a"
-    zliblib64="libzstatic64.a"
+if [[ $1 == 'wasm32' ]] || [[ $1 == 'wasm64' ]]; then
+    thirdpartybit=${1#wasm}
+    thirdpartyincludepath="$thirdpartypath/include/${thirdpartylib}wasm"
+    # The prepared Wasm zlib has one archive per ABI, shared by Debug and Release.
+    thirdpartylibpath="$thirdpartypath/lib/wasm/${thirdpartywasmlibname}${thirdpartybit}.a"
+elif [[ "$OSTYPE" =~ ^linux ]]; then
+    if [[ $1 == 'arm64' ]]; then
+        thirdpartyincludepath="$thirdpartypath/include/${thirdpartylib}arm64"
+    else
+        thirdpartyincludepath="$thirdpartypath/include/${thirdpartylib}linux"
+    fi
+    # This zlib SDK provides static archives for both Compress dll and lib builds.
+    thirdpartylibpath="$thirdpartypath/lib/libzstatic${thirdpartybit}.a"
+else
+    thirdpartyincludepath="$thirdpartypath/include/${thirdpartylib}windows"
+    if [[ $3 == 'debug' ]]; then
+        thirdpartylibpath="$thirdpartypath/lib/MD/${thirdpartylib}static${thirdpartybit}d.lib"
+    else
+        thirdpartylibpath="$thirdpartypath/lib/${thirdpartylib}static${thirdpartybit}.lib"
+    fi
 fi
 
-if [[ $1 == '32' ]] && [[ $3 == 'debug' ]]
-then
-    cp -rf "$xueyelingshuang/tools/zlibrelease/lib/$zliblib32" "$xueyelingshuang/lib/"
-elif [[ $1 == '32' ]] && [[ $3 == 'release' ]]
-then
-    cp -rf "$xueyelingshuang/tools/zlibrelease/lib/$zliblib32" "$xueyelingshuang/lib/"
-elif [[ $1 == '64' ]] && [[ $3 == 'debug' ]]
-then
-    cp -rf "$xueyelingshuang/tools/zlibrelease/lib/$zliblib64" "$xueyelingshuang/lib/"
-elif [[ $1 == '64' ]] && [[ $3 == 'release' ]]
-then
-    cp -rf "$xueyelingshuang/tools/zlibrelease/lib/$zliblib64" "$xueyelingshuang/lib/"
+mkdir -p "$sdkpath/include/$thirdpartylib" "$sdkpath/lib"
+cp -Rf "$thirdpartyincludepath/." "$sdkpath/include/$thirdpartylib/"
+cp -f "$thirdpartylibpath" "$sdkpath/lib/"
+if [[ $1 == 'wasm32' ]] || [[ $1 == 'wasm64' ]]; then
+    if [[ -n "${CLOUD_REBUILD_INPUTS:-}" ]]; then
+        printf 'vendor\t%s\n' "tools/$thirdpartylib/lib/wasm/${thirdpartywasmlibname}${thirdpartybit}.a" >> "$CLOUD_REBUILD_INPUTS"
+    fi
 fi
