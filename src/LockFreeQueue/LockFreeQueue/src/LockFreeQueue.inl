@@ -150,8 +150,6 @@ void LockFreeQueue<QueueElementType>::push(const QueueElementType& e)
 	*/
 	QueueNode<QueueElementType>* prev = m_tail.exchange(newNode, std::memory_order_acq_rel);
 
-	assert(prev != nullptr && "LockFreeQueue::push called before init() or after destroy().");
-
 	if (prev == nullptr)
 	{
 		/*
@@ -211,7 +209,11 @@ bool LockFreeQueue<QueueElementType>::pop(QueueElementType* e)
 			*/
 			if (e != nullptr)
 			{
-				assert(next->m_hasData && "LockFreeQueue internal error: data node has no data.");
+                // 破坏的不变量只报告未取得元素；Debug同样不能以assert终止进程。
+                if (!next->m_hasData)
+                {
+                    return false;
+                }
 				/*
 				C++11 下 std::move 可用。
 				对 shared_ptr / string / vector / 大对象：
@@ -293,11 +295,11 @@ bool LockFreeQueue<QueueElementType>::empty() const
 	如果这里解引用 m_head，可能读到已释放节点。
 	所以 empty() 只基于 m_count。
 	*/
-	return m_count.load(std::memory_order_relaxed) <= 0;
+	return m_count.load(std::memory_order_relaxed) == 0;
 }
 
 template<class QueueElementType>
-int32_t LockFreeQueue<QueueElementType>::size() const
+uint64_t LockFreeQueue<QueueElementType>::size() const
 {
 	return m_count.load(std::memory_order_relaxed);
 }

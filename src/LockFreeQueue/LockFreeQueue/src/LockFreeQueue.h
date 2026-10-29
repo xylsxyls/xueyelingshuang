@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <cstdint>
-#include <cassert>
 #include <thread>
 #include <type_traits>
 #include <new>
@@ -85,8 +84,8 @@ public:
 	bool empty() const;
 
 	// 并发下是近似值；
-	// 无并发或者所有 push/pop/clear 结束后准确。
-	int32_t size() const;
+	// 无并发或者所有 push/pop/clear 结束后准确，返回64位元素数。
+	uint64_t size() const;
 
 private:
 	// 当前消费者侧 head，指向哨兵节点。
@@ -97,8 +96,9 @@ private:
 	// 多生产者通过 exchange 原子推进它。
 	std::atomic<QueueNode<QueueElementType>*> m_tail;
 
-	// 近似元素个数。
-	std::atomic<int32_t> m_count;
+	// 近似元素个数；使用64位避免大积压回绕后被empty误判为空。
+	// 每次递增前已分配真实节点，可寻址内存不能容纳UINT64_MAX个节点。
+	std::atomic<uint64_t> m_count;
 };
 
 #include "LockFreeQueue.inl"
