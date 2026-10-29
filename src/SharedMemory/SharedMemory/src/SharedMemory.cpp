@@ -1,346 +1,483 @@
-﻿#include "SharedMemory.h"
-#ifdef __unix__
-#include <string.h>
-#include <sys/shm.h>
-#else
-#include <Windows.h>
-#include <psapi.h>
-#include <TCHAR.H>
-#include <strsafe.h>
+﻿#ifndef _WIN32
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 64
 #endif
+#endif
+#include "SharedMemory.h"
+#include <cstring>
+#include <atomic>
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <cerrno>
+#endif
+
+#ifndef _WIN32
+/** 保存由宿主在启动期配置的共享目录；配置后不再修改。
+@return 进程内唯一配置存储
+*/
+static std::string& SharedDirectory()
+{
+    static std::string s_directory;
+    return s_directory;
+}
+
+/** 首次使用命名映射后封存配置，生命周期owner不得并发配置。
+@return 封存标志
+*/
+static std::atomic<bool>& SharedDirectorySealed()
+{
+    static std::atomic<bool> s_sealed(false);
+    return s_sealed;
+}
+#endif
+
+bool SharedMemory::setProcessDirectory(const std::string& directory)
+{
+#ifdef _WIN32
+    return directory.empty();
+#else
+    if (SharedDirectorySealed().load())
+    {
+        return directory == SharedDirectory();
+    }
+    if (directory.empty())
+    {
+#ifdef SHARED_MEMORY_MOBILE
+        return false;
+#else
+        SharedDirectory().clear();
+        return true;
+#endif
+    }
+    if (directory[0] != '/' || directory.find('\0') != std::string::npos)
+    {
+        return false;
+    }
+    const int descriptor = ::open(directory.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+    if (descriptor < 0)
+    {
+        return false;
+    }
+    struct stat info = {};
+    const bool valid = ::fstat(descriptor, &info) == 0 && S_ISDIR(info.st_mode) && info.st_uid == ::geteuid();
+    ::close(descriptor);
+    if (valid)
+    {
+        SharedDirectory() = directory;
+    }
+    return valid;
+#endif
+}
 
 SharedMemory::SharedMemory(const std::string& name, uint32_t size, bool isAllowExist):
-#ifdef _MSC_VER
-m_memoryHandle(nullptr),
-m_readMemoryPtr(nullptr),
-m_writeMemoryPtr(nullptr),
-#elif __unix__
-m_shmid(-1),
+    m_memoryName(name), m_size(size), m_memoryPtr(nullptr),
+#ifdef _WIN32
+    m_memoryHandle(nullptr), m_readMemoryPtr(nullptr), m_writeMemoryPtr(nullptr)
+#else
+    m_descriptor(-1), m_capacity(0), m_created(false), m_directoryDescriptor(-1)
 #endif
-m_memoryPtr(nullptr),
-m_memoryName(name),
-m_size(0)
 {
-	if (size != 0)
-	{
-#ifdef _MSC_VER
-		m_memoryHandle = ::CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, size, name.empty() ? nullptr : name.c_str());
-#elif __unix__
-		std::string fileName = "/dev/shm/SharedMemory." + name;
-		system(("touch \"" + fileName + "\"").c_str());
-		m_shmid = shmget(ftok(fileName.c_str(), 0), size, (isAllowExist ? (0666 | IPC_CREAT) : (0666 | IPC_EXCL | IPC_CREAT)));
+    if (name.find('\0') != std::string::npos || (size == 0 && name.empty()))
+    {
+        return;
+    }
+#ifdef _WIN32
+    if (size != 0)
+    {
+        m_memoryHandle = ::CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, size,
+            name.empty() ? nullptr : name.c_str());
+        if (m_memoryHandle != nullptr && !isAllowExist && ::GetLastError() == ERROR_ALREADY_EXISTS)
+        {
+            ::CloseHandle(m_memoryHandle);
+            m_memoryHandle = nullptr;
+        }
+    }
+#else
+    if (name.find('/') != std::string::npos || name == "." || name == "..")
+    {
+        return;
+    }
+    if (!name.empty())
+    {
+        if (name.size() > (SharedDirectory().empty() ? 30 : 128))
+        {
+            return;
+        }
+#ifdef SHARED_MEMORY_MOBILE
+        if (SharedDirectory().empty())
+        {
+            return;
+        }
 #endif
-		m_size = size;
-	}
-}
-
-SharedMemory::SharedMemory(const SharedMemory& other)
-{
-
-}
-
-SharedMemory SharedMemory::operator=(const SharedMemory& other)
-{
-	return *this;
+        SharedDirectorySealed().store(true);
+        if (!SharedDirectory().empty())
+        {
+            // 所有可能分配字符串的操作放在取得描述符之前，构造抛出时不能泄漏目录引用。
+            m_nativeName = "m_" + name;
+            m_directoryDescriptor = ::open(SharedDirectory().c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+            if (m_directoryDescriptor < 0)
+            {
+                m_nativeName.clear();
+                return;
+            }
+        }
+        else
+        {
+#ifdef SHARED_MEMORY_MOBILE
+            return;
+#else
+            m_nativeName = "/" + name;
+#endif
+        }
+    }
+    if (size != 0 && name.empty())
+    {
+        m_capacity = size;
+        return;
+    }
+#if !defined(__EMSCRIPTEN__)
+    if (size != 0)
+    {
+        if (m_directoryDescriptor >= 0)
+        {
+            m_descriptor = ::openat(m_directoryDescriptor, m_nativeName.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0600);
+        }
+#ifndef SHARED_MEMORY_MOBILE
+        else
+        {
+            m_descriptor = ::shm_open(m_nativeName.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+        }
+#endif
+        m_created = m_descriptor >= 0;
+        if (m_created)
+        {
+            bool allocated = true;
+#ifdef __linux__
+            // Linux的shm_open同样由tmpfs承载，不能只为普通文件预留空间。
+            const bool reserveStorage = true;
+#else
+            const bool reserveStorage = m_directoryDescriptor >= 0;
+#endif
+            if (reserveStorage)
+            {
+                // 先预留空间，避免ftruncate只扩逻辑长度后，首次写页因ENOSPC触发SIGBUS。
+#ifdef __APPLE__
+                fstore_t allocation = {};
+                allocation.fst_flags = F_ALLOCATEALL;
+                allocation.fst_posmode = F_PEOFPOSMODE;
+                allocation.fst_length = static_cast<off_t>(size);
+                allocated = ::fcntl(m_descriptor, F_PREALLOCATE, &allocation) == 0;
+#else
+                allocated = ::posix_fallocate(m_descriptor, 0, static_cast<off_t>(size)) == 0;
+#endif
+            }
+            if (!allocated || ::ftruncate(m_descriptor, size) != 0)
+            {
+                ::close(m_descriptor);
+                m_descriptor = -1;
+                unlinkName();
+                m_created = false;
+            }
+        }
+        else if (isAllowExist && errno == EEXIST)
+        {
+            if (m_directoryDescriptor >= 0)
+            {
+                m_descriptor = ::openat(m_directoryDescriptor, m_nativeName.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
+            }
+#ifndef SHARED_MEMORY_MOBILE
+            else
+            {
+                m_descriptor = ::shm_open(m_nativeName.c_str(), O_RDWR, 0600);
+            }
+#endif
+        }
+        if (m_descriptor >= 0)
+        {
+            struct stat info = {};
+            // POSIX共享对象的文件类型位未定义；仅普通目录后备要求S_ISREG。
+            if (::fstat(m_descriptor, &info) == 0 && (m_directoryDescriptor < 0 || S_ISREG(info.st_mode)) && info.st_size >= size &&
+                static_cast<uint64_t>(info.st_size) <= UINT32_MAX)
+            {
+                m_capacity = static_cast<uint32_t>(info.st_size);
+            }
+            else
+            {
+                ::close(m_descriptor);
+                m_descriptor = -1;
+                if (m_created)
+                {
+                    unlinkName();
+                    m_created = false;
+                }
+            }
+        }
+    }
+#endif
+#endif
 }
 
 SharedMemory::~SharedMemory()
 {
-	close();
-#ifdef _MSC_VER
-	if (m_memoryHandle != nullptr)
-	{
-		::CloseHandle(m_memoryHandle);
-		m_memoryHandle = nullptr;
-	}
-#elif __unix__
-	if(m_size != 0 && m_shmid != -1)
-	{
-		if(shmctl(m_shmid, IPC_RMID, 0) == -1)
-		{
-			printf("shmctl(IPC_RMID) failed, mapName = %s\n", m_memoryName.c_str());
-		}
-		system(("rm \"/dev/shm/SharedMemory." + m_memoryName + "\"").c_str());
-	}
+    close();
+#ifdef _WIN32
+    if (m_memoryHandle != nullptr)
+    {
+        ::CloseHandle(m_memoryHandle);
+    }
+#else
+    if (m_descriptor >= 0)
+    {
+        ::close(m_descriptor);
+    }
+    if (m_created)
+    {
+        unlinkName();
+    }
+    if (m_directoryDescriptor >= 0)
+    {
+        ::close(m_directoryDescriptor);
+    }
+#endif
+}
+
+void SharedMemory::open(bool readOnly)
+{
+    if (m_size != 0 || m_memoryName.empty())
+    {
+        return;
+    }
+#ifdef _WIN32
+    if (m_memoryHandle == nullptr)
+    {
+        m_memoryHandle = ::OpenFileMappingA(readOnly ? FILE_MAP_READ : FILE_MAP_ALL_ACCESS, FALSE, m_memoryName.c_str());
+    }
+#elif !defined(__EMSCRIPTEN__)
+    if (m_descriptor < 0 && !m_nativeName.empty())
+    {
+        if (m_directoryDescriptor >= 0)
+        {
+            m_descriptor = ::openat(m_directoryDescriptor, m_nativeName.c_str(), (readOnly ? O_RDONLY : O_RDWR) | O_CLOEXEC | O_NOFOLLOW);
+        }
+#ifndef SHARED_MEMORY_MOBILE
+        else
+        {
+            m_descriptor = ::shm_open(m_nativeName.c_str(), readOnly ? O_RDONLY : O_RDWR, 0600);
+        }
+#endif
+        struct stat info = {};
+        if (m_descriptor >= 0 && ::fstat(m_descriptor, &info) == 0 && (m_directoryDescriptor < 0 || S_ISREG(info.st_mode)) && info.st_size > 0 &&
+            static_cast<uint64_t>(info.st_size) <= UINT32_MAX)
+        {
+            m_capacity = static_cast<uint32_t>(info.st_size);
+        }
+        else if (m_descriptor >= 0)
+        {
+            ::close(m_descriptor);
+            m_descriptor = -1;
+        }
+    }
 #endif
 }
 
 bool SharedMemory::isFailed()
 {
-#ifdef _MSC_VER
-	return (m_memoryHandle == nullptr);
-#elif __unix__
-	return (m_shmid == -1);
+#ifdef _WIN32
+    return m_memoryHandle == nullptr;
+#else
+    return m_descriptor < 0 && !(m_memoryName.empty() && m_capacity != 0);
 #endif
 }
 
 uint32_t SharedMemory::size()
 {
-	return m_size;
+    return m_size;
+}
+std::string SharedMemory::mapName()
+{
+    return m_memoryName;
+}
+void* SharedMemory::memory()
+{
+    return m_memoryPtr;
 }
 
 uint32_t SharedMemory::realSize()
 {
-#ifdef _MSC_VER
-	if (m_memoryHandle == nullptr)
-	{
-		open(true);
-	}
-	if (m_memoryHandle == nullptr)
-	{
-		return 0;
-	}
-	MEMORY_BASIC_INFORMATION mem_info;
-	::VirtualQuery(::MapViewOfFile(m_memoryHandle, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0), &mem_info, sizeof(mem_info));
-	return mem_info.RegionSize;
-#elif __unix__
-	if(m_shmid == -1)
-	{
-		open(true);
-	}
-	if(m_shmid == -1)
-	{
-		return 0;
-	}
-	struct shmid_ds shmbuffer;
-	//读共享内存结构struct shmid_ds
-	shmctl(m_shmid, IPC_STAT, &shmbuffer);
-	return shmbuffer.shm_segsz;
+#ifdef _WIN32
+    open(true);
+    if (m_memoryHandle == nullptr)
+    {
+        return 0;
+    }
+    void* view = m_writeMemoryPtr != nullptr ? m_writeMemoryPtr : m_readMemoryPtr;
+    const bool temporary = view == nullptr;
+    if (temporary)
+    {
+        view = ::MapViewOfFile(m_memoryHandle, FILE_MAP_READ, 0, 0, 0);
+    }
+    if (view == nullptr)
+    {
+        return 0;
+    }
+    MEMORY_BASIC_INFORMATION info = {};
+    const SIZE_T queried = ::VirtualQuery(view, &info, sizeof(info));
+    if (temporary)
+    {
+        ::UnmapViewOfFile(view);
+    }
+    return queried == sizeof(info) && info.RegionSize <= UINT32_MAX ? static_cast<uint32_t>(info.RegionSize) : 0;
+#else
+    // 查询使用读写打开，之后writeWithoutLock不会被一个只读描述符阻止。
+    open(false);
+    return m_capacity;
 #endif
-}
-
-std::string SharedMemory::mapName()
-{
-	return m_memoryName;
-}
-
-void* SharedMemory::memory()
-{
-	return m_memoryPtr;
 }
 
 void* SharedMemory::readWithoutLock()
 {
-#ifdef _MSC_VER
-	if (m_readMemoryPtr != nullptr)
-	{
-		return m_memoryPtr = m_readMemoryPtr;
-	}
-	if (m_memoryHandle == nullptr)
-	{
-		open(true);
-	}
-	if (m_memoryHandle == nullptr)
-	{
-		return nullptr;
-	}
-	m_readMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_READ, 0, 0, 0);
-	m_memoryPtr = m_readMemoryPtr;
-	return m_memoryPtr;
-#elif __unix__
-	return writeWithoutLock();
+#ifdef _WIN32
+    if (m_readMemoryPtr == nullptr)
+    {
+        open(true);
+        if (m_memoryHandle == nullptr)
+        {
+            return nullptr;
+        }
+        m_readMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_READ, 0, 0, 0);
+    }
+    return m_memoryPtr = m_readMemoryPtr;
+#else
+    return writeWithoutLock();
 #endif
 }
 
 void* SharedMemory::writeWithoutLock()
 {
-#ifdef _MSC_VER
-	if (m_writeMemoryPtr != nullptr)
-	{
-		return m_memoryPtr = m_writeMemoryPtr;
-	}
-	if (m_memoryHandle == nullptr)
-	{
-		open(false);
-	}
-	if (m_memoryHandle == nullptr)
-	{
-		return nullptr;
-	}
-	m_writeMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-	m_memoryPtr = m_writeMemoryPtr;
-#elif __unix__
-	if (m_memoryPtr != nullptr)
-	{
-		return m_memoryPtr;
-	}
-	if (m_shmid == -1)
-	{
-		open(false);
-	}
-	if (m_shmid == -1)
-	{
-		return nullptr;
-	}
-	m_memoryPtr = shmat(m_shmid, (void*)0, 0);
-	if ((size_t)m_memoryPtr == -1)
-	{
-		m_memoryPtr = nullptr;
-		return nullptr;
-	}
+#ifdef _WIN32
+    if (m_writeMemoryPtr == nullptr)
+    {
+        open(false);
+        if (m_memoryHandle == nullptr)
+        {
+            return nullptr;
+        }
+        m_writeMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+        if (m_writeMemoryPtr == nullptr && m_size == 0)
+        {
+            // 先取得替代引用，成功映射后才关闭旧句柄，避免关闭最后引用导致对象消失。
+            HANDLE upgraded = ::OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, m_memoryName.c_str());
+            if (upgraded != nullptr)
+            {
+                void* view = ::MapViewOfFile(upgraded, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+                if (view != nullptr)
+                {
+                    ::CloseHandle(m_memoryHandle);
+                    m_memoryHandle = upgraded;
+                    m_writeMemoryPtr = view;
+                }
+                else
+                {
+                    ::CloseHandle(upgraded);
+                }
+            }
+        }
+    }
+    return m_memoryPtr = m_writeMemoryPtr;
+#else
+    if (m_memoryPtr != nullptr)
+    {
+        return m_memoryPtr;
+    }
+    open(false);
+    if (isFailed() || m_capacity == 0)
+    {
+        return nullptr;
+    }
+    const int flags = MAP_SHARED | (m_memoryName.empty() ? MAP_ANON : 0);
+    void* view = ::mmap(nullptr, m_capacity, PROT_READ | PROT_WRITE, flags, m_descriptor, 0);
+    if (view == MAP_FAILED)
+    {
+        return nullptr;
+    }
+    return m_memoryPtr = view;
 #endif
-	return m_memoryPtr;
 }
-
-//bool SharedMemory::trywrite()
-//{
-//	if (!m_processReadWriteMutex.trywrite())
-//	{
-//		return false;
-//	}
-//	open(false);
-//	if (m_memoryHandle == nullptr)
-//	{
-//		m_processReadWriteMutex.unwrite();
-//		return false;
-//	}
-//	m_memoryPtr = m_writeMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-//	return true;
-//}
 
 void SharedMemory::close()
 {
-#ifdef _MSC_VER
-	if (m_readMemoryPtr != nullptr)
-	{
-		::UnmapViewOfFile(m_readMemoryPtr);
-		m_readMemoryPtr = nullptr;
-	}
-
-	if (m_writeMemoryPtr != nullptr)
-	{
-		::UnmapViewOfFile(m_writeMemoryPtr);
-		m_writeMemoryPtr = nullptr;
-	}
-#elif __unix__
-	if(m_memoryPtr != nullptr)
-	{
-		if (shmdt(m_memoryPtr) == -1)
-		{
-			printf("shmdt failed\n");
-		}
-	}
+#ifdef _WIN32
+    if (m_readMemoryPtr != nullptr)
+    {
+        ::UnmapViewOfFile(m_readMemoryPtr);
+        m_readMemoryPtr = nullptr;
+    }
+    if (m_writeMemoryPtr != nullptr)
+    {
+        ::UnmapViewOfFile(m_writeMemoryPtr);
+        m_writeMemoryPtr = nullptr;
+    }
+#else
+    if (m_memoryPtr != nullptr)
+    {
+        ::munmap(m_memoryPtr, m_capacity);
+    }
 #endif
-	m_memoryPtr = nullptr;
+    m_memoryPtr = nullptr;
 }
 
 void SharedMemory::clear()
 {
-	::memset(writeWithoutLock(), 0, size());
+    void* view = writeWithoutLock();
+    if (view != nullptr && m_size != 0 && realSize() >= m_size)
+    {
+        std::memset(view, 0, m_size);
+    }
 }
 
-#ifdef _MSC_VER
-std::string SharedMemory::mapName(HANDLE memoryHandle, int32_t bufferSize)
+void SharedMemory::preserveName()
 {
-	//BOOL bSuccess = FALSE;
-	TCHAR pszFilename[MAX_PATH + 1];
-	HANDLE hFileMap;
-
-	// Get the file size.
-	DWORD dwFileSizeHi = 0;
-	DWORD dwFileSizeLo = GetFileSize(memoryHandle, &dwFileSizeHi);
-
-	if (dwFileSizeLo == 0 && dwFileSizeHi == 0)
-	{
-		//_tprintf(TEXT("Cannot map a file with a length of zero.\n"));
-		return "";
-	}
-
-	// Create a file mapping object.
-	hFileMap = CreateFileMapping(memoryHandle,
-		NULL,
-		PAGE_READONLY,
-		0,
-		1,
-		NULL);
-
-	if (hFileMap)
-	{
-		// Create a file mapping to get the file name.
-		void* pMem = MapViewOfFile(hFileMap, FILE_MAP_READ, 0, 0, 1);
-
-		if (pMem)
-		{
-			if (GetMappedFileName(GetCurrentProcess(),
-				pMem,
-				pszFilename,
-				MAX_PATH))
-			{
-
-				// Translate path with device name to drive letters.
-				TCHAR* szTemp = new TCHAR[bufferSize];
-				szTemp[0] = '\0';
-
-				if (GetLogicalDriveStrings(bufferSize - 1, szTemp))
-				{
-					TCHAR szName[MAX_PATH];
-					TCHAR szDrive[3] = TEXT(" :");
-					BOOL bFound = FALSE;
-					TCHAR* p = szTemp;
-
-					do
-					{
-						// Copy the drive letter to the template string
-						*szDrive = *p;
-
-						// Look up each device name
-						if (QueryDosDevice(szDrive, szName, MAX_PATH))
-						{
-							size_t uNameLen = _tcslen(szName);
-
-							if (uNameLen < MAX_PATH)
-							{
-								bFound = _tcsnicmp(pszFilename, szName, uNameLen) == 0
-									&& *(pszFilename + uNameLen) == _T('\\');
-
-								if (bFound)
-								{
-									// Reconstruct pszFilename using szTempFile
-									// Replace device path with DOS path
-									TCHAR szTempFile[MAX_PATH];
-									StringCchPrintf(szTempFile,
-										MAX_PATH,
-										TEXT("%s%s"),
-										szDrive,
-										pszFilename + uNameLen);
-									StringCchCopyN(pszFilename, MAX_PATH + 1, szTempFile, _tcslen(szTempFile));
-								}
-							}
-						}
-
-						// Go to the next NULL character.
-						while (*p++);
-					} while (!bFound && *p); // end of string
-				}
-
-				delete[] szTemp;
-			}
-			//bSuccess = TRUE;
-			UnmapViewOfFile(pMem);
-		}
-
-		CloseHandle(hFileMap);
-	}
-	//_tprintf(TEXT("File name is %s\n"), pszFilename);
-	return pszFilename;
-}
-#endif
-
-void SharedMemory::open(bool bReadOnly)
-{
-#ifdef _MSC_VER
-	m_memoryHandle = ::OpenFileMapping(bReadOnly ? FILE_MAP_READ : FILE_MAP_ALL_ACCESS, FALSE, m_memoryName.empty() ? NULL : m_memoryName.c_str());
-#elif __unix__
-	key_t key = ftok(("/dev/shm/SharedMemory." + m_memoryName).c_str(), 0);
-	if (key == -1)
-	{
-		return;
-	}
-	m_shmid = shmget(key, 0, 0666 | IPC_CREAT);
+#ifndef _WIN32
+    m_created = false;
 #endif
 }
 
-////写
+bool SharedMemory::unlinkName()
+{
+#if defined(_WIN32) || defined(__EMSCRIPTEN__)
+    return false;
+#else
+    if (m_nativeName.empty())
+    {
+        return false;
+    }
+    int result = -1;
+    if (m_directoryDescriptor >= 0)
+    {
+        result = ::unlinkat(m_directoryDescriptor, m_nativeName.c_str(), 0);
+    }
+#ifndef SHARED_MEMORY_MOBILE
+    else
+    {
+        result = ::shm_unlink(m_nativeName.c_str());
+    }
+#endif
+    if (result == 0 || errno == ENOENT)
+    {
+        // 显式撤名后不再由析构重复删除，避免删除后来新建的同名对象。
+        m_created = false;
+        return true;
+    }
+    return false;
+#endif
+}
+
+// 以下为保留的历史手工测试，当前验证见ProcessWork.cpp中的关闭测试入口。
 //int32_t main()
 //{
 //	SharedMemory mem("mmsa", 4095);
