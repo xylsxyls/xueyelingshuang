@@ -78,7 +78,7 @@ private:
     void AddListDataLock(const char* szData);
     void UpdateBufferSize();
     void UpdateScreenSize();
-    int32_t GetListSizeLock();
+    uint64_t GetListSizeLock();
     bool IsListEmptyLock();
     bool GetPopFrontLock(std::string* popStr);
 	void ShowStringInsertLock(const std::string& insertData);

@@ -369,7 +369,7 @@ void CMessageTestDlg::AddListDataLock(const char* szData)
 void CMessageTestDlg::UpdateBufferSize()
 {
     CString strSend;
-    strSend.Format(_T("当前缓冲区剩余展示量：%d"), GetListSizeLock());
+    strSend.Format(_T("当前缓冲区剩余展示量：%llu"), static_cast<unsigned long long>(GetListSizeLock()));
     ::SendMessage(GetDlgItem(IDC_STATIC_LIST)->m_hWnd, WM_SETTEXT, 0, (LPARAM)strSend.GetBuffer());
     strSend.ReleaseBuffer();
 }
@@ -382,7 +382,7 @@ void CMessageTestDlg::UpdateScreenSize()
     strSend.ReleaseBuffer();
 }
 
-int32_t CMessageTestDlg::GetListSizeLock()
+uint64_t CMessageTestDlg::GetListSizeLock()
 {
 	return listCopyData.size();
 }
