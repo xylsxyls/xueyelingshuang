@@ -100,7 +100,6 @@ def managed_home(root):
     parent = Path(root.anchor) if os.name == 'nt' else Path.home()
     return parent / 'BuildTools' / 'WebAssembly'
 
-
 def locate_sdk(root):
     explicit = os.environ.get('EMSDK')
     if explicit:
@@ -117,14 +116,12 @@ def locate_sdk(root):
     raise ValueError('Set EMSDK to an activated Emscripten 3.1.74 SDK, or prepare it under ' +
                      str(candidates[0]) + '. Install and activate the SDK before compiling.')
 
-
 def command_path(value):
     if not value: return None
     found = shutil.which(str(value))
     if found: return str(Path(found).resolve())
     candidate = Path(value).expanduser()
     return str(candidate.resolve()) if candidate.is_file() else None
-
 
 def locate_make():
     if os.environ.get('WASM_MAKE_PROGRAM'):
@@ -138,7 +135,6 @@ def locate_make():
     if os.environ.get('ProgramFiles(x86)'):
         candidates.append(Path(os.environ['ProgramFiles(x86)']) / 'Microsoft Visual Studio 12.0/VC/bin/nmake.exe')
     return next((str(path) for path in candidates if path.is_file()), None)
-
 
 def resolve(root, report=True):
     home = managed_home(root)
@@ -178,7 +174,6 @@ def resolve(root, report=True):
             sys.stdout.write('[wasm] ' + name + ': ' + str(value) + '\n')
     return dict(sdk=sdk, toolchain=sdk / 'upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake',
                 compiler=compiler, env=env, cmake=cmake, make=make)
-
 
 def signatures(root, library, exports=None):
     markers = sdk_setting(library, 'WASM_BUILD_EXPORT_MARKERS') or []
@@ -273,7 +268,6 @@ def signatures(root, library, exports=None):
         if 'p' in value: result.append(name + ':' + value)
     return result
 
-
 ROOT = Path(os.environ.get('CMAKE_WASM_REPOSITORY_ROOT', str(Path(__file__).resolve().parents[3]))).resolve()
 SDK_ROOT = ROOT
 BUILD_LINKAGES = {}
@@ -339,7 +333,6 @@ def archive_bits(payload):
     if len(targets) != 1: raise ValueError('Empty or mixed-ABI Wasm archive')
     return targets.pop()
 
-
 def sdk_kind(library, linkage=None):
     linkage = linkage or BUILD_LINKAGES.get(library)
     if linkage is not None:
@@ -349,10 +342,8 @@ def sdk_kind(library, linkage=None):
     if kind not in (['module'], ['static']): raise ValueError('Invalid WASM_SDK_KIND for ' + library)
     return kind[0]
 
-
 def artifact_digest(data):
     return data['archiveSha256'] if data.get('kind') == 'static' else data['wasmSha256']
-
 
 def validate_vendor_identity(data):
     for relative, expected in data.get('vendorSha256', {}).items():
@@ -363,7 +354,6 @@ def validate_vendor_identity(data):
         if (hashlib.sha256(source.read_bytes()).hexdigest() != expected or
                 hashlib.sha256(prepared.read_bytes()).hexdigest() != expected):
             raise ValueError('Rebuild SDK: vendor identity changed: ' + relative)
-
 
 def wasm_bits(payload):
     if payload[:8] != b'\x00asm\x01\x00\x00\x00':
@@ -397,7 +387,6 @@ def wasm_bits(payload):
     if len(memories) != 1: raise ValueError('SDK must define its own linear memory')
     return memories[0]
 
-
 def identity(js):
     text = js.read_text(encoding='utf-8')
     if MARKER not in text:
@@ -408,7 +397,6 @@ def identity(js):
     if not isinstance(data, dict) or not {'library', 'bits', 'configuration', 'wasm', 'wasmSha256', 'dependencies'}.issubset(data):
         raise ValueError('Invalid SDK identity: ' + str(js))
     return data
-
 
 def validate(library, bit, mode, active=None, linkage=None):
     if not library.isidentifier(): raise ValueError('Invalid SDK library name')
@@ -466,7 +454,6 @@ def validate(library, bit, mode, active=None, linkage=None):
     active.remove(library)
     return data
 
-
 def sdk_setting(library, name):
     """Read literal SDK declarations; other CMake logic remains CMake's responsibility."""
     entry = ROOT / 'src' / library / 'scripts/CMakeLists.txt'
@@ -482,7 +469,6 @@ def sdk_setting(library, name):
     if not all(re.fullmatch(r'[A-Za-z0-9_./@=*-]+', value) for value in values):
         raise ValueError('Expected literal SDK values for ' + name)
     return values
-
 
 def protocol_constants(library):
     output = sdk_setting(library, 'WASM_SDK_PROTOCOL_OUTPUT')
@@ -512,7 +498,6 @@ def protocol_constants(library):
     body += ',\n'.join('    ' + name + ': ' + str(value) for name, value in values.items()) + '\n});'
     return {ROOT / 'include' / library / output[0]: body.encode('utf-8')}
 
-
 def prepared_inputs(library):
     """Read actual before-script results, or the last published SDK receipt for only."""
     session = os.environ.get('CLOUD_WASM_SESSION')
@@ -534,14 +519,11 @@ def prepared_inputs(library):
         raise ValueError('Old dependency receipt for ' + library + '; run same or librely once to migrate')
     return data['preparedInputs']
 
-
 def dependencies(library):
     return list(prepared_inputs(library)['dependencies'])
 
-
 def runtime_dependencies(library):
     return [name for name, kind in prepared_inputs(library)['dependencies'].items() if kind == 'dll']
-
 
 def vendor_libraries(library, bit, mode='release'):
     result = {}
@@ -555,10 +537,8 @@ def vendor_libraries(library, bit, mode='release'):
         result[name] = hashlib.sha256(payload).hexdigest()
     return result
 
-
 def dependency_linkages(library, linkage=None, scope=None):
     return dict(prepared_inputs(library)['dependencies'])
-
 
 def plan(library, linkage, scope, active=None):
     """Follow recorded before calls. Never infer dependencies from CMake or shell text."""
@@ -578,7 +558,6 @@ def plan(library, linkage, scope, active=None):
     for dep, kind in children.items(): plan(dep, kind, scope, active)
     active.remove(library)
     BUILD_LINKAGES[library] = linkage
-
 
 def session_node(session, library, linkage, bit, mode, scope, parent=None):
     """Register one actual before invocation; return True for an already completed node."""
@@ -603,7 +582,6 @@ def session_node(session, library, linkage, bit, mode, scope, parent=None):
     session.write_text(json.dumps(state), encoding='utf-8')
     return False
 
-
 def before_receipt(session, library, file):
     state = json.loads(session.read_text(encoding='utf-8'))
     inputs = state['nodes'][library]['inputs']
@@ -615,14 +593,12 @@ def before_receipt(session, library, file):
         if value not in inputs[key]: inputs[key].append(value)
     session.write_text(json.dumps(state), encoding='utf-8')
 
-
 def complete_node(session, library):
     state = json.loads(session.read_text(encoding='utf-8'))
     if state['nodes'][library]['done'] and not state['active']: return
     if not state['active'] or state['active'].pop() != library: raise ValueError('Invalid before completion order')
     state['nodes'][library]['done'] = True
     session.write_text(json.dumps(state), encoding='utf-8')
-
 
 def publish(library, build, bit, mode, compiler, sdk, vendors):
     if sdk_kind(library) == 'static':
@@ -666,7 +642,6 @@ def publish(library, build, bit, mode, compiler, sdk, vendors):
     commit_sdk(library, updates, bit, mode)
     print('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': ' + str(wasm.stat().st_size) + ' bytes', flush=True)
 
-
 def commit_sdk(library, updates, bit, mode):
     previous = {path: path.read_bytes() if path.exists() else None for path in updates}
     try:
@@ -691,7 +666,6 @@ def commit_sdk(library, updates, bit, mode):
             staged = path.with_name(path.name + '.wasm-publishing')
             if staged.exists(): staged.unlink()
 
-
 def publish_static(library, build, bit, mode, compiler, sdk, vendors):
     archive = build / (library + ('d' if mode == 'debug' else '') + '.a')
     payload = archive.read_bytes()
@@ -706,7 +680,6 @@ def publish_static(library, build, bit, mode, compiler, sdk, vendors):
     updates[target / (library + 'WasmLICENSE.txt')] = None
     commit_sdk(library, updates, bit, mode)
     print('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': C++ static archive ' + str(len(payload)) + ' bytes', flush=True)
-
 
 def build_inputs(library, bit, mode, linkage, scope, private):
     """Describe declared source/header/link inputs; never invoke a compiler."""
@@ -778,7 +751,6 @@ def build_inputs(library, bit, mode, linkage, scope, private):
                 vendors=vendors, vendor_paths=vendor_paths, conversions=conversions,
                 runtime=[name for name in dependencies(library) if BUILD_LINKAGES[name] == 'dll'])
 
-
 def stage_sdk(destination, libraries=None):
     """Snapshot existing Wasm receipts/inputs; link selection comes from actual before results."""
     import shutil
@@ -823,7 +795,6 @@ def stage_sdk(destination, libraries=None):
     destination.mkdir(parents=True, exist_ok=True)
     (destination / '.wasm-baseline.json').write_text(json.dumps(baseline), encoding='utf-8')
 
-
 def validate_staged_origin(destination):
     baseline = json.loads((SDK_ROOT / '.wasm-baseline.json').read_text(encoding='utf-8'))
     for relative, expected in baseline.items():
@@ -831,7 +802,6 @@ def validate_staged_origin(destination):
         actual = hashlib.sha256(current.read_bytes()).hexdigest() if current.is_file() else None
         if actual != expected:
             raise ValueError('Prepared SDK changed during CMake only build: ' + relative)
-
 
 def publish_tree(destination, libraries, bit, mode):
     """Commit one complete SDK batch, restoring every replaced file on failure."""
@@ -1117,7 +1087,6 @@ SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 SET(CMAKE_CXX_EXTENSIONS OFF)
 SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-
 #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -finput-charset='gb2312'")
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -finput-charset='gb2312'")
 
@@ -1139,6 +1108,8 @@ if(NOT BIT MATCHES "^(32|64|arm32|arm64)$")
 endif()
 if(CMAKE_TOOLCHAIN_FILE)
     # Loaded by project() below.
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    # CMake/NDK owns the compiler, sysroot and ABI.
 elseif(CMAKE_HOST_APPLE OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
     if(NOT CMAKE_OSX_ARCHITECTURES)
         if(BIT STREQUAL "arm64")
@@ -1167,6 +1138,9 @@ elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 #建立项目
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT DEFINED CMAKE_TRY_COMPILE_TARGET_TYPE)
+    SET(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+endif()
 PROJECT(${PROJECT_NAME} LANGUAGES C CXX)
 
 if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android|Darwin|iOS)$")
@@ -1207,8 +1181,12 @@ if(ANDROID)
     else()
         SET(EXPECTED_ANDROID_ABI "arm64-v8a")
     endif()
-    if(NOT ANDROID_ABI STREQUAL EXPECTED_ANDROID_ABI)
-        MESSAGE(FATAL_ERROR "BIT=${BIT} disagrees with ANDROID_ABI=${ANDROID_ABI}")
+    set(RESOLVED_ANDROID_ABI "${ANDROID_ABI}")
+    if(NOT RESOLVED_ANDROID_ABI)
+        set(RESOLVED_ANDROID_ABI "${CMAKE_ANDROID_ARCH_ABI}")
+    endif()
+    if(NOT RESOLVED_ANDROID_ABI STREQUAL EXPECTED_ANDROID_ABI)
+        MESSAGE(FATAL_ERROR "BIT=${BIT} disagrees with Android ABI ${RESOLVED_ANDROID_ABI}")
     endif()
 endif()
 GET_FILENAME_COMPONENT(DEFAULT_SDK_ROOT "${PROJECT_SOURCE_DIR}/../../.." ABSOLUTE)
@@ -1219,7 +1197,6 @@ foreach(CONFIG DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
     SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${CONFIG} "${SDK_ROOT}/lib")
     SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CONFIG} "${SDK_ROOT}/lib")
 endforeach()
-
 
 #MESSAGE("PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
 #${PROJECT_SOURCE_DIR}="xueyelingshuang/src/CStringManager/scripts"

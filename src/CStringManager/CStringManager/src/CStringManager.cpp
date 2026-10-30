@@ -470,100 +470,6 @@ size_t CStringManager::Replace(std::string& str, char ch1, char ch2)
 	return count;
 }
 
-/** 使用独立输出完成窄格式化，调用者负责保留原参数至本函数结束
-@param [out] output 临时结果，不能与fmt或可变参数指针重叠
-@param [in] format 有效且可信的printf格式；参数类型须与格式匹配
-@param [in] arguments 未消费的参数表；每次CRT调用都复制并配对结束
-*/
-static void FormatNarrowArguments(std::string& output, const char* format, va_list arguments)
-{
-    va_list copy;
-#ifdef _WIN32
-    copy = arguments;
-    const int32_t required = _vscprintf(format, copy);
-#else
-    va_copy(copy, arguments);
-    const int32_t required = vsnprintf(nullptr, 0, format, copy);
-#endif
-    va_end(copy);
-    if (required < 0)
-    {
-        output.clear();
-        return;
-    }
-    output.resize(static_cast<size_t>(required) + 1);
-#ifdef _WIN32
-    copy = arguments;
-    const int32_t written = vsprintf_s(&output[0], output.size(), format, copy);
-#else
-    va_copy(copy, arguments);
-    const int32_t written = vsnprintf(&output[0], output.size(), format, copy);
-#endif
-    va_end(copy);
-    if (written < 0 || static_cast<size_t>(written) >= output.size())
-    {
-        output.clear();
-        return;
-    }
-    output.resize(static_cast<size_t>(written));
-}
-
-/** 保持原生宽格式语义，不将宽文本或格式转成系统ANSI
-@param [out] output 独立临时结果，不能与输入参数重叠
-@param [in] format 有效且可信的宽printf格式；跨平台宽文本使用%ls
-@param [in] arguments 未消费的参数表；所有复制均配对va_end
-*/
-static void FormatWideArguments(std::wstring& output, const wchar_t* format, va_list arguments)
-{
-    va_list copy;
-#ifdef _WIN32
-    copy = arguments;
-    const int32_t required = _vscwprintf(format, copy);
-    va_end(copy);
-    if (required < 0)
-    {
-        output.clear();
-        return;
-    }
-    output.resize(static_cast<size_t>(required) + 1);
-    copy = arguments;
-    const int32_t written = vswprintf_s(&output[0], output.size(), format, copy);
-    va_end(copy);
-    if (written < 0 || static_cast<size_t>(written) >= output.size())
-    {
-        output.clear();
-        return;
-    }
-    output.resize(static_cast<size_t>(written));
-#else
-    // POSIX不要求vswprintf(nullptr, 0, ...)返回所需长度；保留原参数表，按需扩容。
-    size_t capacity = 256;
-    const size_t maximum = (std::min)(output.max_size(), static_cast<size_t>(INT32_MAX));
-    while (capacity <= maximum)
-    {
-        output.resize(capacity);
-        va_copy(copy, arguments);
-        errno = 0;
-        const int32_t written = vswprintf(&output[0], output.size(), format, copy);
-        const int error = errno;
-        va_end(copy);
-        if (written >= 0 && static_cast<size_t>(written) < capacity)
-        {
-            output.resize(static_cast<size_t>(written));
-            return;
-        }
-        if ((written < 0 && error != 0) || capacity == maximum)
-        {
-            break;
-        }
-        // 截断可能仅报告负值且不设errno；编码或格式错误则不反复扩容。
-        capacity = written >= 0 ? static_cast<size_t>(written) + 1 :
-            (capacity > maximum / 2 ? maximum : capacity * 2);
-    }
-    output.clear();
-#endif
-}
-
 void CStringManager::Format(std::string& str, const char* fmt, ...)
 {
     if (fmt == nullptr)
@@ -577,7 +483,7 @@ void CStringManager::Format(std::string& str, const char* fmt, ...)
     {
         // fmt及%s参数可能借用str，格式化完成前不得resize或清空原输出。
         std::string output;
-        FormatNarrowArguments(output, fmt, args);
+        formatNarrowArguments(output, fmt, args);
         str.swap(output);
     }
     catch (...)
@@ -598,7 +504,7 @@ std::string CStringManager::Format(const char* fmt, ...)
     va_start(args, fmt);
     try
     {
-        FormatNarrowArguments(result, fmt, args);
+        formatNarrowArguments(result, fmt, args);
     }
     catch (...)
     {
@@ -620,7 +526,7 @@ void CStringManager::Format(std::wstring& str, const wchar_t* fmt, ...)
     try
     {
         std::wstring output;
-        FormatWideArguments(output, fmt, args);
+        formatWideArguments(output, fmt, args);
         str.swap(output);
     }
     catch (...)
@@ -641,7 +547,7 @@ std::wstring CStringManager::Format(const wchar_t* fmt, ...)
     va_start(args, fmt);
     try
     {
-        FormatWideArguments(result, fmt, args);
+        formatWideArguments(result, fmt, args);
     }
     catch (...)
     {
@@ -749,82 +655,11 @@ std::string CStringManager::toStringInt64(int64_t value)
 	return oss.str();
 }
 
-#ifdef _WIN32
-/** 先向Windows查询精确字节数，再直接写入拥有结果的字符串
-@param [in] source 调用期间借用的宽字符串，允许内嵌零字符
-@param [in] codePage CP_UTF8或CP_ACP，保留系统原有替代字符规则
-@return 完整转换结果；输入无效或转换失败返回空；无法构造返回字符串时仍可抛出分配异常
-*/
-static std::string ConvertWindowsWide(const std::wstring& source, uint32_t codePage)
-{
-    if (source.empty() || source.size() > static_cast<size_t>((std::numeric_limits<int32_t>::max)()))
-    {
-        return "";
-    }
-    const int32_t length = static_cast<int32_t>(source.size());
-    const int32_t required = WideCharToMultiByte(codePage, 0, source.data(), length, nullptr, 0, nullptr, nullptr);
-    if (required <= 0)
-    {
-        return "";
-    }
-    try
-    {
-        std::string result(static_cast<size_t>(required), '\0');
-        if (WideCharToMultiByte(codePage, 0, source.data(), length, &result[0], required, nullptr, nullptr) != required)
-        {
-            return "";
-        }
-        return result;
-    }
-    catch (...)
-    {
-        return "";
-    }
-}
-
-/** 直接将Windows转换结果写入唯一拥有缓冲的宽字符串
-@param [in] source 调用期间借用的字节串，允许内嵌零字符
-@param [in] codePage CP_UTF8或CP_ACP，沿用flags=0的系统行为
-@return 完整转换结果；输入无效或转换失败返回空；无法构造返回字符串时仍可抛出分配异常
-*/
-static std::wstring ConvertWindowsBytes(const std::string& source, uint32_t codePage)
-{
-    if (source.empty() || source.size() > static_cast<size_t>((std::numeric_limits<int32_t>::max)()))
-    {
-        return L"";
-    }
-    const int32_t length = static_cast<int32_t>(source.size());
-    const int32_t required = MultiByteToWideChar(codePage, 0, source.data(), length, nullptr, 0);
-    if (required <= 0)
-    {
-        return L"";
-    }
-    try
-    {
-        std::wstring result(static_cast<size_t>(required), L'\0');
-        if (MultiByteToWideChar(codePage, 0, source.data(), length, &result[0], required) != required)
-        {
-            return L"";
-        }
-        return result;
-    }
-    catch (...)
-    {
-        return L"";
-    }
-}
-#elif defined(__unix__) || defined(__APPLE__)
-std::locale CStringManager::createAnsiLocale()
-{
-    // locale拥有facet，通过标准库释放；不再为公开析构权限单独派生辅助类。
-    return std::locale(std::locale::classic(), new std::codecvt_byname<wchar_t, char, std::mbstate_t>("zh_CN.GBK"));
-}
-#endif
-
+#if CSTRING_MANAGER_HAS_ANSI
 std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
 {
 #ifdef _WIN32
-    return ConvertWindowsWide(wstrSrc, CP_ACP);
+    return convertWindowsWide(wstrSrc, CP_ACP);
 #elif defined(__unix__) || defined(__APPLE__)
     try
     {
@@ -862,7 +697,7 @@ std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
 std::wstring CStringManager::AnsiToUnicode(const std::string& strSrc)
 {
 #ifdef _WIN32
-    return ConvertWindowsBytes(strSrc, CP_ACP);
+    return convertWindowsBytes(strSrc, CP_ACP);
 #elif defined(__unix__) || defined(__APPLE__)
     try
     {
@@ -899,11 +734,12 @@ std::string CStringManager::Utf8ToAnsi(const std::string& strSrc)
 {
     return UnicodeToAnsi(Utf8ToUnicode(strSrc));
 }
+#endif
 
 std::string CStringManager::UnicodeToUtf8(const std::wstring& wstrSrc)
 {
 #ifdef _WIN32
-    return ConvertWindowsWide(wstrSrc, CP_UTF8);
+    return convertWindowsWide(wstrSrc, CP_UTF8);
 #elif defined(__unix__) || defined(__APPLE__)
     try
     {
@@ -922,7 +758,7 @@ std::string CStringManager::UnicodeToUtf8(const std::wstring& wstrSrc)
 std::wstring CStringManager::Utf8ToUnicode(const std::string& strSrc)
 {
 #ifdef _WIN32
-    return ConvertWindowsBytes(strSrc, CP_UTF8);
+    return convertWindowsBytes(strSrc, CP_UTF8);
 #elif defined(__unix__) || defined(__APPLE__)
     try
     {
@@ -936,30 +772,6 @@ std::wstring CStringManager::Utf8ToUnicode(const std::string& strSrc)
 #else
     return L"";
 #endif
-}
-
-// 将0到15转换为URL编码使用的大写十六进制字符。
-static unsigned char toHex(const unsigned char& x)
-{
-	return x > 9 ? x - 10 + 'A' : x + '0';
-}
-
-// 将URL编码里的十六进制字符转换为数值，非法字符返回0。
-static unsigned char fromHex(const unsigned char& x)
-{
-	if (std::isdigit(x))
-	{
-		return x - '0';
-	}
-	if (x >= 'a' && x <= 'f')
-	{
-		return x - 'a' + 10;
-	}
-	if (x >= 'A' && x <= 'F')
-	{
-		return x - 'A' + 10;
-	}
-	return 0;
 }
 
 std::string CStringManager::UrlEncode(const std::string& sIn)
@@ -1013,6 +825,228 @@ std::string CStringManager::UrlDecode(const std::string& sIn)
 		sOut += (char)ch;
 	}
 	return sOut;
+}
+
+void CStringManager::formatV(std::string& output, const char* format, va_list arguments)
+{
+    if (format == nullptr)
+    {
+        output.clear();
+        return;
+    }
+    try
+    {
+        std::string result;
+        formatNarrowArguments(result, format, arguments);
+        output.swap(result);
+    }
+    catch (...)
+    {
+        output.clear();
+    }
+}
+
+void CStringManager::formatV(std::wstring& output, const wchar_t* format, va_list arguments)
+{
+    if (format == nullptr)
+    {
+        output.clear();
+        return;
+    }
+    try
+    {
+        std::wstring result;
+        formatWideArguments(result, format, arguments);
+        output.swap(result);
+    }
+    catch (...)
+    {
+        output.clear();
+    }
+}
+
+#ifdef _WIN32
+std::string CStringManager::convertWindowsWide(const std::wstring& source, uint32_t codePage)
+{
+    if (source.empty() || source.size() > static_cast<size_t>((std::numeric_limits<int32_t>::max)()))
+    {
+        return "";
+    }
+    const int32_t length = static_cast<int32_t>(source.size());
+    const int32_t required = WideCharToMultiByte(codePage, 0, source.data(), length, nullptr, 0, nullptr, nullptr);
+    if (required <= 0)
+    {
+        return "";
+    }
+    try
+    {
+        std::string result(static_cast<size_t>(required), '\0');
+        if (WideCharToMultiByte(codePage, 0, source.data(), length, &result[0], required, nullptr, nullptr) != required)
+        {
+            return "";
+        }
+        return result;
+    }
+    catch (...)
+    {
+        return "";
+    }
+}
+#endif
+
+#ifdef _WIN32
+std::wstring CStringManager::convertWindowsBytes(const std::string& source, uint32_t codePage)
+{
+    if (source.empty() || source.size() > static_cast<size_t>((std::numeric_limits<int32_t>::max)()))
+    {
+        return L"";
+    }
+    const int32_t length = static_cast<int32_t>(source.size());
+    const int32_t required = MultiByteToWideChar(codePage, 0, source.data(), length, nullptr, 0);
+    if (required <= 0)
+    {
+        return L"";
+    }
+    try
+    {
+        std::wstring result(static_cast<size_t>(required), L'\0');
+        if (MultiByteToWideChar(codePage, 0, source.data(), length, &result[0], required) != required)
+        {
+            return L"";
+        }
+        return result;
+    }
+    catch (...)
+    {
+        return L"";
+    }
+}
+#endif
+
+#if CSTRING_MANAGER_HAS_ANSI && !defined(_WIN32)
+std::locale CStringManager::createAnsiLocale()
+{
+    // locale拥有facet，通过标准库释放；不再为公开析构权限单独派生辅助类。
+    return std::locale(std::locale::classic(), new std::codecvt_byname<wchar_t, char, std::mbstate_t>("zh_CN.GBK"));
+}
+#endif
+
+unsigned char CStringManager::toHex(const unsigned char& x)
+{
+	return x > 9 ? x - 10 + 'A' : x + '0';
+}
+
+unsigned char CStringManager::fromHex(const unsigned char& x)
+{
+	if (std::isdigit(x))
+	{
+		return x - '0';
+	}
+	if (x >= 'a' && x <= 'f')
+	{
+		return x - 'a' + 10;
+	}
+	if (x >= 'A' && x <= 'F')
+	{
+		return x - 'A' + 10;
+	}
+	return 0;
+}
+
+void CStringManager::formatNarrowArguments(std::string& output, const char* format, va_list arguments)
+{
+    if (format == nullptr)
+    {
+        output.clear();
+        return;
+    }
+
+    va_list copy;
+#ifdef _WIN32
+    copy = arguments;
+    const int32_t required = _vscprintf(format, copy);
+#else
+    va_copy(copy, arguments);
+    const int32_t required = vsnprintf(nullptr, 0, format, copy);
+#endif
+    va_end(copy);
+    if (required < 0)
+    {
+        output.clear();
+        return;
+    }
+    output.resize(static_cast<size_t>(required) + 1);
+#ifdef _WIN32
+    copy = arguments;
+    const int32_t written = vsprintf_s(&output[0], output.size(), format, copy);
+#else
+    va_copy(copy, arguments);
+    const int32_t written = vsnprintf(&output[0], output.size(), format, copy);
+#endif
+    va_end(copy);
+    if (written < 0 || static_cast<size_t>(written) >= output.size())
+    {
+        output.clear();
+        return;
+    }
+    output.resize(static_cast<size_t>(written));
+}
+
+void CStringManager::formatWideArguments(std::wstring& output, const wchar_t* format, va_list arguments)
+{
+    if (format == nullptr)
+    {
+        output.clear();
+        return;
+    }
+
+    va_list copy;
+#ifdef _WIN32
+    copy = arguments;
+    const int32_t required = _vscwprintf(format, copy);
+    va_end(copy);
+    if (required < 0)
+    {
+        output.clear();
+        return;
+    }
+    output.resize(static_cast<size_t>(required) + 1);
+    copy = arguments;
+    const int32_t written = vswprintf_s(&output[0], output.size(), format, copy);
+    va_end(copy);
+    if (written < 0 || static_cast<size_t>(written) >= output.size())
+    {
+        output.clear();
+        return;
+    }
+    output.resize(static_cast<size_t>(written));
+#else
+    // POSIX不要求vswprintf(nullptr, 0, ...)返回所需长度；保留原参数表，按需扩容。
+    size_t capacity = 256;
+    const size_t maximum = (std::min)(output.max_size(), static_cast<size_t>(INT32_MAX));
+    while (capacity <= maximum)
+    {
+        output.resize(capacity);
+        va_copy(copy, arguments);
+        errno = 0;
+        const int32_t written = vswprintf(&output[0], output.size(), format, copy);
+        const int error = errno;
+        va_end(copy);
+        if (written >= 0 && static_cast<size_t>(written) < capacity)
+        {
+            output.resize(static_cast<size_t>(written));
+            return;
+        }
+        if ((written < 0 && error != 0 && error != EOVERFLOW && error != E2BIG) || capacity == maximum)
+        {
+            break;
+        }
+        // 截断可只返回负值，也可报告EOVERFLOW/E2BIG；容量不足继续扩容，编码或格式错误不重试。
+        capacity = written >= 0 ? static_cast<size_t>(written) + 1 :
+            (capacity > maximum / 2 ? maximum : capacity * 2);
+    }
+    output.clear();
+#endif
 }
 
 //#include <atomic>

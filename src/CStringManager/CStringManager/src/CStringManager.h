@@ -2,14 +2,26 @@
 #include <vector>
 #include <string>
 #include <stdint.h>
+#include <cstdarg>
 #include "CStringManagerMacro.h"
 
-#if !defined(_WIN32) && (defined(__unix__) || defined(__APPLE__))
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
+// ANSI依赖Windows ACP或桌面GBK区域设置，Android、iOS和Wasm不公开这组接口
+#if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && (!defined(__APPLE__) || !TARGET_OS_IPHONE)
+#define CSTRING_MANAGER_HAS_ANSI 1
+#else
+#define CSTRING_MANAGER_HAS_ANSI 0
+#endif
+
+#if CSTRING_MANAGER_HAS_ANSI && !defined(_WIN32)
 #include <locale>
 #endif
 
-
 /** 字符串工具集合，提供切分、查找、替换、格式化、大小写、编码转换和URL编解码等通用能力
+Android、iOS和Wasm使用UTF8接口，ANSI转换仅在CSTRING_MANAGER_HAS_ANSI为1时公开
 */
 class CStringManagerAPI CStringManager
 {
@@ -258,6 +270,7 @@ public:
 	*/
 	static std::string toStringInt64(int64_t value);
 
+#if CSTRING_MANAGER_HAS_ANSI
     /** Ansi字符串转Unicode宽字符串
     @param [in] strSrc Ansi字符串；Windows使用系统ACP，POSIX使用zh_CN.GBK
     @return 返回Unicode宽字符串，空输入或转换失败返回空字符串；保留内嵌零字符
@@ -285,6 +298,7 @@ public:
     @note 结果字符串仍需分配，极低内存时可能抛出分配异常；调用边界必须捕获，失败不泄漏缓冲
     */
     static std::string Utf8ToAnsi(const std::string& strSrc);
+#endif
 
     /** Unicode宽字符串转UTF-8字符串
     @param [in] wstrSrc Unicode宽字符串
@@ -348,8 +362,69 @@ public:
 	*/
 	static std::string UrlDecode(const std::string& sIn);
 
+    /** 使用已有可变参数表格式化窄字符串，供日志等封装转发参数
+    @param [in,out] output 成功替换内容，允许格式及字符串实参借用原内容；失败清空
+    @param [in] format 目标CRT支持的可信printf格式，实参类型须匹配；为空时清空output
+    @param [in] arguments 已初始化且未消费的参数表，本函数不消费原表；调用方仍负责va_end
+    遵循目标CRT的格式与区域设置规则，不修改全局locale；分配异常在函数内捕获
+    格式非法或实参类型不匹配属于调用错误，不在可恢复失败保证内
+    */
+    static void formatV(std::string& output, const char* format, std::va_list arguments);
+
+    /** 使用已有可变参数表格式化宽字符串，不经系统ANSI转换
+    @param [in,out] output 成功替换内容，允许格式及字符串实参借用原内容；失败清空
+    @param [in] format 目标CRT支持的可信宽printf格式，跨平台宽文本使用%ls；为空时清空output
+    @param [in] arguments 已初始化且未消费的参数表，本函数不消费原表；调用方仍负责va_end
+    非ASCII转换须由宿主提供相应LC_CTYPE；不修改全局locale，分配异常在函数内捕获
+    字符与格式遵循目标CRT，跨端使用%ls传入宽文本；非法格式或类型不匹配属于调用错误
+    */
+    static void formatV(std::wstring& output, const wchar_t* format, std::va_list arguments);
+
 private:
-#if !defined(_WIN32) && (defined(__unix__) || defined(__APPLE__))
+    /** 将窄格式结果写入独立临时存储，由公开入口处理异常和别名
+    @param [out] output 不与格式或实参重叠的临时结果
+    @param [in] format 目标CRT支持的可信格式，允许空指针
+    @param [in] arguments 借用的参数表，各次CRT调用均复制并配对va_end
+    */
+    static void formatNarrowArguments(std::string& output, const char* format, std::va_list arguments);
+
+    /** 将宽格式结果写入独立临时存储，按需扩容并保留原参数表
+    @param [out] output 不与格式或实参重叠的临时结果
+    @param [in] format 目标CRT支持的可信宽格式，允许空指针
+    @param [in] arguments 借用的参数表，各次CRT调用均复制并配对va_end
+    */
+    static void formatWideArguments(std::wstring& output, const wchar_t* format, std::va_list arguments);
+
+    /** 将半字节数值转换为URL编码使用的大写十六进制字符
+    @param [in] x 0至15的数值
+    @return 对应的ASCII十六进制字符
+    */
+    static unsigned char toHex(const unsigned char& x);
+
+    /** 将URL编码中的十六进制字符转换为数值
+    @param [in] x ASCII十六进制字符，大小写均可，调用方先验证是否合法
+    @return 对应的0至15数值，非法字符返回0
+    */
+    static unsigned char fromHex(const unsigned char& x);
+
+#ifdef _WIN32
+    /** 查询Windows转换长度并将宽字符串写入独立字节串
+    @param [in] source 借用至返回的宽字符串，允许内嵌NUL
+    @param [in] codePage CP_UTF8或CP_ACP，沿用系统flags=0的替代字符规则
+    @return 完整转换结果，空输入、长度非法、系统或分配失败返回空串
+    */
+    static std::string convertWindowsWide(const std::wstring& source, uint32_t codePage);
+
+    /** 查询Windows转换长度并将字节串写入独立宽字符串
+    @param [in] source 借用至返回的字节串，允许内嵌NUL
+    @param [in] codePage CP_UTF8或CP_ACP，沿用系统flags=0的替代字符规则
+    @return 完整转换结果，空输入、长度非法、系统或分配失败返回空串
+    */
+    static std::wstring convertWindowsBytes(const std::string& source, uint32_t codePage);
+
+#endif
+
+#if CSTRING_MANAGER_HAS_ANSI && !defined(_WIN32)
     /** 为POSIX的ANSI转换创建GBK区域设置，由locale管理转换facet的生命周期
     @return 拥有zh_CN.GBK转换facet的locale；环境不支持时抛出，由公开转换函数捕获
     */
