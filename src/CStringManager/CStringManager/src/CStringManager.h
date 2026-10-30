@@ -4,6 +4,11 @@
 #include <stdint.h>
 #include "CStringManagerMacro.h"
 
+#if !defined(_WIN32) && (defined(__unix__) || defined(__APPLE__))
+#include <locale>
+#endif
+
+
 /** 字符串工具集合，提供切分、查找、替换、格式化、大小写、编码转换和URL编解码等通用能力
 */
 class CStringManagerAPI CStringManager
@@ -168,29 +173,29 @@ public:
 	*/
 	static size_t Replace(std::string& str, char ch1, char ch2);
 
-	/** 格式化字符串并写入输出参数
-	@param [in,out] str 输出字符串
-	@param [in] fmt printf风格格式字符串
-	*/
-	static void Format(std::string& str, const char* fmt, ...);
+    /** 格式化窄字符串；格式和参数允许借用原输出，完成后才替换
+    @param [in,out] str 输出；空格式指针、格式化或分配失败清空
+    @param [in] fmt 有效可信的printf格式，参数类型/地址必须与格式匹配
+    */
+    static void Format(std::string& str, const char* fmt, ...);
 
-	/** 格式化字符串
-	@param [in] fmt printf风格格式字符串
-	@return 返回格式化结果
-	*/
-	static std::string Format(const char* fmt, ...);
+    /** 格式化窄字符串
+    @param [in] fmt 有效可信的printf格式；空指针返回空
+    @return 完整结果或空；返回值对象本身分配失败仍可能抛异常，边界需捕获
+    */
+    static std::string Format(const char* fmt, ...);
 
-	/** 格式化宽字符串并写入输出参数，Linux下会先按Ansi格式化再转宽字符串
-	@param [in,out] str 输出宽字符串
-	@param [in] fmt printf风格宽格式字符串
-	*/
-	static void Format(std::wstring& str, const wchar_t* fmt, ...);
+    /** 格式化宽字符串，不经ANSI转换；格式和参数允许借用原输出
+    @param [in,out] str 输出；空格式指针、格式化或分配失败清空
+    @param [in] fmt 有效可信的宽printf格式；跨平台宽字符串用%ls，宽字符用%lc
+    */
+    static void Format(std::wstring& str, const wchar_t* fmt, ...);
 
-	/** 格式化宽字符串，Linux下会先按Ansi格式化再转宽字符串
-	@param [in] fmt printf风格宽格式字符串
-	@return 返回格式化结果
-	*/
-	static std::wstring Format(const wchar_t* fmt, ...);
+    /** 格式化宽字符串，不依赖zh_CN.GBK等额外locale安装
+    @param [in] fmt 有效可信的宽printf格式；窄字符转换仍遵循系统当前locale
+    @return 完整结果或空；返回值对象本身分配失败仍可能抛异常，边界需捕获
+    */
+    static std::wstring Format(const wchar_t* fmt, ...);
 
 	/** 原地反转字符串
 	@param [in,out] str 被修改的字符串
@@ -253,41 +258,47 @@ public:
 	*/
 	static std::string toStringInt64(int64_t value);
 
-	/** Ansi字符串转Unicode宽字符串
-	@param [in] strSrc Ansi字符串
-	@return 返回Unicode宽字符串，转换失败返回空字符串
-	*/
-	static std::wstring AnsiToUnicode(const std::string& strSrc);
+    /** Ansi字符串转Unicode宽字符串
+    @param [in] strSrc Ansi字符串；Windows使用系统ACP，POSIX使用zh_CN.GBK
+    @return 返回Unicode宽字符串，空输入或转换失败返回空字符串；保留内嵌零字符
+    @note 结果字符串仍需分配，极低内存时可能抛出分配异常；调用边界必须捕获，失败不泄漏缓冲
+    */
+    static std::wstring AnsiToUnicode(const std::string& strSrc);
 
-	/** Unicode宽字符串转Ansi字符串
-	@param [in] wstrSrc Unicode宽字符串
-	@return 返回Ansi字符串，转换失败返回空字符串
-	*/
-	static std::string UnicodeToAnsi(const std::wstring& wstrSrc);
+    /** Unicode宽字符串转Ansi字符串
+    @param [in] wstrSrc Unicode宽字符串
+    @return 返回Ansi字符串，空输入或转换失败返回空字符串；保留内嵌零字符
+    @note 结果字符串仍需分配，极低内存时可能抛出分配异常；调用边界必须捕获，失败不泄漏缓冲
+    */
+    static std::string UnicodeToAnsi(const std::wstring& wstrSrc);
 
-	/** Ansi字符串转UTF-8字符串
-	@param [in] strSrc Ansi字符串
-	@return 返回UTF-8字符串，转换失败返回空字符串
-	*/
-	static std::string AnsiToUtf8(const std::string& strSrc);
+    /** Ansi字符串转UTF-8字符串
+    @param [in] strSrc Ansi字符串；Windows使用系统ACP，POSIX使用zh_CN.GBK
+    @return 返回UTF-8字符串，空输入或转换失败返回空字符串；保留内嵌零字符
+    @note 结果字符串仍需分配，极低内存时可能抛出分配异常；调用边界必须捕获，失败不泄漏缓冲
+    */
+    static std::string AnsiToUtf8(const std::string& strSrc);
 
-	/** UTF-8字符串转Ansi字符串
-	@param [in] strSrc UTF-8字符串
-	@return 返回Ansi字符串，转换失败返回空字符串
-	*/
-	static std::string Utf8ToAnsi(const std::string& strSrc);
+    /** UTF-8字符串转Ansi字符串
+    @param [in] strSrc UTF-8字符串
+    @return 返回Ansi字符串，空输入或转换失败返回空字符串；保留内嵌零字符
+    @note 结果字符串仍需分配，极低内存时可能抛出分配异常；调用边界必须捕获，失败不泄漏缓冲
+    */
+    static std::string Utf8ToAnsi(const std::string& strSrc);
 
-	/** Unicode宽字符串转UTF-8字符串
-	@param [in] wstrSrc Unicode宽字符串
-	@return 返回UTF-8字符串，转换失败返回空字符串
-	*/
-	static std::string UnicodeToUtf8(const std::wstring& wstrSrc);
+    /** Unicode宽字符串转UTF-8字符串
+    @param [in] wstrSrc Unicode宽字符串
+    @return 返回UTF-8字符串，空输入或转换失败返回空字符串；保留内嵌零字符
+    @note 结果字符串仍需分配，极低内存时可能抛出分配异常；调用边界必须捕获，失败不泄漏缓冲
+    */
+    static std::string UnicodeToUtf8(const std::wstring& wstrSrc);
 
-	/** UTF-8字符串转Unicode宽字符串
-	@param [in] strSrc UTF-8字符串
-	@return 返回Unicode宽字符串，转换失败返回空字符串
-	*/
-	static std::wstring Utf8ToUnicode(const std::string& strSrc);
+    /** UTF-8字符串转Unicode宽字符串
+    @param [in] strSrc UTF-8字符串
+    @return 返回Unicode宽字符串，空输入或转换失败返回空字符串；保留内嵌零字符
+    @note 结果字符串仍需分配，极低内存时可能抛出分配异常；调用边界必须捕获，失败不泄漏缓冲
+    */
+    static std::wstring Utf8ToUnicode(const std::string& strSrc);
 
     /** 严格解析十进制32位整数，允许首尾空白，不接受尾随垃圾或溢出
     @param [in] text 待解析宽字符串
@@ -336,4 +347,12 @@ public:
 	@return 返回URL解码后的字符串，残缺的百分号编码会按原字符保留
 	*/
 	static std::string UrlDecode(const std::string& sIn);
+
+private:
+#if !defined(_WIN32) && (defined(__unix__) || defined(__APPLE__))
+    /** 为POSIX的ANSI转换创建GBK区域设置，由locale管理转换facet的生命周期
+    @return 拥有zh_CN.GBK转换facet的locale；环境不支持时抛出，由公开转换函数捕获
+    */
+    static std::locale createAnsiLocale();
+#endif
 };
