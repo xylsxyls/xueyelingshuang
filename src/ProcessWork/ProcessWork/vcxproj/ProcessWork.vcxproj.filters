@@ -24,9 +24,6 @@
     <ClInclude Include="..\src\ProcessWorkMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\CopyTask.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\ProcessReceiveCallback.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -39,18 +36,9 @@
     <ClInclude Include="..\src\SendTask.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\SendNameTask.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ScanTask.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\ProcessWork.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\CopyTask.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ReadTask.cpp">
@@ -62,11 +50,9 @@
     <ClCompile Include="..\src\SendTask.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\SendNameTask.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ScanTask.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\ProcessWorkChannel.cpp" />
+    <ClInclude Include="..\src\ProcessWorkChannel.h" />
   </ItemGroup>
 </Project>

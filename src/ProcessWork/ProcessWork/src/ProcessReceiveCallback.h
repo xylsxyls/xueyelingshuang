@@ -7,11 +7,20 @@
 class ProcessWorkAPI ProcessReceiveCallback
 {
 public:
-	/** 接收虚函数
-	@param [in] sendPid 发送进程ID
-	@param [in] buffer 数据内存，空包为nullptr
-	@param [in] length 数据长度
-	@param [in] type 数据类型
-	*/
-	virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type) = 0;
+    /** 接收虚函数
+    @param [in] sendPid 发送进程ID
+    @param [in] buffer 数据内存，空包为nullptr
+    @param [in] length 数据长度
+    @param [in] type 数据类型
+    */
+    virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type) = 0;
+
+    /** 缓冲区满事件，来自独立接收回调任务；同一轮满载合并通知。
+    @param [in] count 观察满载时当前活动块数快照，不是永久容量或实时承诺
+    回调不可等待自身销毁；允许提交普通消息，不抛异常。默认不处理。
+    */
+    virtual void bufferFull(int32_t count)
+    {
+        (void)count;
+    }
 };

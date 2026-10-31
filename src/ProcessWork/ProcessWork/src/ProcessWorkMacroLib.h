@@ -1,3 +1,3 @@
 ﻿#pragma once
 
-#define ProcessWorkAPI 
+#define ProcessWorkAPI

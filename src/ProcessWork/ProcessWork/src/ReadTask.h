@@ -2,45 +2,33 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 
+class ProcessWorkChannel;
 class Semaphore;
-class SharedMemory;
 
-/** 接收任务
-*/
+/** 唯一共享收件执行者，按提交票号复制正文并维护缓冲区生命周期。 */
 class ReadTask : public CTask
 {
 public:
-	/** 构造函数
-	*/
-	ReadTask();
-
-public:
-	/** 执行任务
-	*/
-	void DoTask();
-
-	/** 停止任务
-	*/
-	void StopTask();
-
-	/** 设置参数
-	@param [in] readSemaphore 读取信号
-	@param [in] areaCount 缓存区个数
-	@param [in] areaRead 缓存区号读取缓存队列
-	@param [in] assignQueue 分配号队列
-	@param [in] assignSemaphore 分配号信号量
-	*/
-	void setParam(Semaphore* readSemaphore,
-		int32_t areaCount,
-		SharedMemory* areaRead,
-		LockFreeQueue<int32_t>* assignQueue,
-		Semaphore* assignSemaphore);
-
+    /** 初始化空借用指针。 */
+    ReadTask();
+    /** 运行收件与维护；失败保留头槽，有限等待后重试。 */
+    void DoTask();
+    /** 只设置停止标记并唤醒，不在这里等待线程。 */
+    void StopTask();
+    /** 绑定借用资源；这些资源必须活到任务加入完成。
+    @param [in] channel 接收通道
+    @param [in] queue 本地正文队列
+    @param [in] notification 本地回调通知
+    @param [in] fullCount 满载快照
+    */
+    void setParam(ProcessWorkChannel* channel, LockFreeQueue<char*>* queue,
+        Semaphore* notification, std::atomic<int32_t>* fullCount);
 private:
-	Semaphore* m_readSemaphore;
-	int32_t m_areaCount;
-	SharedMemory* m_areaRead;
-	LockFreeQueue<int32_t>* m_assignQueue;
-	Semaphore* m_assignSemaphore;
-	std::atomic<bool> m_exit;
+    // 生命周期owner拥有，任务仅借用
+    ProcessWorkChannel* m_channel;
+    LockFreeQueue<char*>* m_queue;
+    Semaphore* m_notification;
+    std::atomic<int32_t>* m_fullCount;
+    // StopTask与DoTask共享的协作停止标记
+    std::atomic<bool> m_exit;
 };

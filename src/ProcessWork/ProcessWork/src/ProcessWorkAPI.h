@@ -3,6 +3,7 @@
 #define _ProcessWorkAPI
 #endif
 #include "ProcessWork.h"
+#include "ProcessWorkChannel.h"
 #include "ProcessReceiveCallback.h"
 
 #ifdef _WIN32

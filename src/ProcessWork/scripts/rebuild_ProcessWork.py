@@ -2,6 +2,11 @@
 # -*- coding:utf-8 -*-
 import os
 import sys
+
+if os.name != 'nt':
+    sys.stderr.write('This rebuild entry is Windows-only; use scripts/CMakeLists.txt on other platforms.\n')
+    sys.exit(2)
+
 import time
 import ctypes
 import shutil
@@ -23,6 +28,7 @@ BuildTimeout = 30*60
 Bit = 'Win32'
 Dlllib = 'dll'
 MSBuild = None
+MSBuildExtraArgs = []
 IncrediBuild = None
 UseMSBuild = True #默认用MSBuild编译，如果为False则用IncrediBuild编译
 
@@ -190,7 +196,7 @@ def UpdateCode():
     # put git to path first
     if not shutil.which('git.exe'):
         Logger.Log('找不到git.exe. 请确认安装git时将git\bin目录路径加入到环境变量path中!!!\n, 跳过更新代码!!!', ConsoleColor.Yellow)
-        return false
+        return False
     oldDir = os.getcwd()
     for dir in UpdateDir:
         os.chdir(dir)
@@ -198,12 +204,12 @@ def UpdateCode():
         os.chdir(oldDir)
         if ret != 0:
             Logger.Log('update {0} failed'.format(dir), ConsoleColor.Yellow)
-            return false
+            return False
     return True
 
 def BuildProject(cmd):
-    for i in range(6):
-        Logger.WriteLine(cmd, ConsoleColor.Cyan)
+    for i in range(1):
+        Logger.WriteLine(subprocess.list2cmdline(cmd) if isinstance(cmd, list) else cmd, ConsoleColor.Cyan)
         buildFailed = True
         startTime = time.time()
         p = subprocess.Popen(cmd) #IncrediBuild不能使用stdout=subprocess.PIPE，否则会导致p.wait()不返回，可能是IncrediBuild的bug
@@ -213,6 +219,7 @@ def BuildProject(cmd):
             except subprocess.TimeoutExpired as e:
                 Logger.Log('{0}'.format(e), ConsoleColor.Yellow)
                 p.kill()
+                p.wait()
         else:
             buildFailed = p.wait()
         if not UseMSBuild:
@@ -249,15 +256,13 @@ def BuildAllProjects():
     buildSuccess = False
     cmds = []
     if UseMSBuild:
-        if IsRebuild:
-            if CleanAll:
-                cmds.append('{0} {1} /t:Clean /p:Configuration={2} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, 'Debug'))
-                cmds.append('{0} {1} /t:Clean /p:Configuration={2} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, 'Release'))
-            else:
-                cmds.append('{0} {1} /t:Clean /p:Configuration={2} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, BuildType))
-        for project in MSBuildFirstProjects:
-            cmds.append('{0} {1} /t:{2} /p:Configuration={3};platform={4} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile,  project, BuildType, Bit))
-        cmds.append('{0} {1} /p:Configuration={2};platform={3} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, BuildType, Bit))
+        common = ['/nologo', '/m', '/v:minimal', '/p:Platform=' + Bit] + MSBuildExtraArgs
+        if IsRebuild and CleanAll:
+            for configuration in ['Debug', 'Release']:
+                cmds.append([MSBuild, SlnFile, '/t:Clean', '/p:Configuration=' + configuration] + common)
+        # A single solution target preserves VS dependency ordering and reports the first failure.
+        cmds.append([MSBuild, SlnFile, '/t:' + ('Rebuild' if IsRebuild else 'Build'),
+                     '/p:Configuration=' + BuildType] + common)
     else: #IncrediBuild
         if IsRebuild:
             if CleanAll:
@@ -298,9 +303,9 @@ def main():
             batName = os.path.basename(bat)
             if batDir:
                 os.chdir(batDir)
-            start = time.clock()
+            start = time.perf_counter()
             os.system(batName)
-            Logger.Log('run "{}" cost {:.1f} seconds'.format(batName, time.clock() - start), ConsoleColor.Green)
+            Logger.Log('run "{}" cost {:.1f} seconds'.format(batName, time.perf_counter() - start), ConsoleColor.Green)
             if batDir:
                 os.chdir(oldBatDir)
     buildSuccess = BuildAllProjects()
@@ -314,7 +319,21 @@ def main():
 
 if __name__ == '__main__':
     Logger.Log('run with argv ' + str(sys.argv), ConsoleColor.Green)
-    sys.argv = [x.lower() for x in sys.argv]
+    # Preserve the selected MSBuild executable's case and spaces.
+    remaining = [sys.argv[0]]
+    index = 1
+    while index < len(sys.argv):
+        argument = sys.argv[index]
+        if argument == '--msbuild':
+            if index + 1 >= len(sys.argv):
+                raise SystemExit('Missing value for ' + argument)
+            value = os.path.abspath(sys.argv[index + 1])
+            MSBuild = value
+            index += 2
+        else:
+            remaining.append(argument.lower())
+            index += 1
+    sys.argv = remaining
     start_time = time.time()
     if 'debug' in sys.argv:
         BuildType = 'Debug'
@@ -337,7 +356,7 @@ if __name__ == '__main__':
     if 'incredibuild' in sys.argv:
         UseMSBuild = False
     if UseMSBuild:
-        MSBuild = GetMSBuildPath()
+        MSBuild = MSBuild or GetMSBuildPath()
         if not MSBuild:
             Logger.Log('can not find MSBuild.exe', ConsoleColor.Red)
             exit(1)

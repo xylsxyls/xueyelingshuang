@@ -16,5 +16,5 @@
 
 #if defined(STATIC_LIB)
     #undef ProcessWorkAPI
-    #define ProcessWorkAPI 
+    #define ProcessWorkAPI
 #endif
