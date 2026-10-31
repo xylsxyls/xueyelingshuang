@@ -747,7 +747,7 @@ def prepare_before(session, library, target, linkage, mode, scope, environment):
     collect(library)
 
 
-def check_librariesrely(value, inputs):
+def check_librariesrely(value, inputs, origin=None):
     """An optional caller-supplied prepared closure must match the actual before declarations."""
     if value is None: return
     expected = [Path(path).resolve() for path in inputs['archives'] + inputs['vendor_paths']]
@@ -757,6 +757,15 @@ def check_librariesrely(value, inputs):
             raise ValueError('Invalid --librariesrely item')
         path = Path(item)
         path = path.resolve() if path.is_absolute() else (SDK_ROOT / 'lib' / path).resolve()
+        # Public SDK paths identify the same declared inputs after transactional staging.
+        # Rebase only that SDK's lib subtree; other paths still require an exact match.
+        if origin is not None and Path(item).is_absolute():
+            try:
+                relative = path.relative_to(Path(origin).resolve() / 'lib')
+            except ValueError:
+                pass
+            else:
+                path = (SDK_ROOT / 'lib' / relative).resolve()
         if not path.is_file(): raise ValueError('Missing --librariesrely input: ' + item)
         if path not in supplied: supplied.append(path)
     if set(supplied) != set(expected):
@@ -1106,7 +1115,8 @@ if __name__ == '__main__':
         directory.mkdir(parents=True, exist_ok=True)
         if inherited:
             session = Path(inherited).resolve()
-            SDK_ROOT = Path(json.loads(session.read_text(encoding='utf-8'))['sdk']).resolve()
+            state = json.loads(session.read_text(encoding='utf-8'))
+            SDK_ROOT = Path(state['sdk']).resolve()
         else:
             lockfile = destination / 'lib/WasmBuild.lock'
             lockfile.parent.mkdir(parents=True, exist_ok=True)
@@ -1122,7 +1132,7 @@ if __name__ == '__main__':
                 marker = directory / 'batch.lock'
                 marker.write_text(library, encoding='utf-8')
             session = directory / 'session.json'
-            state = dict(sdk=str(SDK_ROOT), bits=bits, mode=options.mode, nodes={}, active=[], lock=str(marker))
+            state = dict(sdk=str(SDK_ROOT), origin=str(destination.resolve()), bits=bits, mode=options.mode, nodes={}, active=[], lock=str(marker))
             session.write_text(json.dumps(state), encoding='utf-8')
         os.environ['CLOUD_WASM_SESSION'] = str(session)
         environment.update(CLOUD_WASM_SESSION=str(session), CLOUD_WASM_PARENT=library,
@@ -1138,7 +1148,7 @@ if __name__ == '__main__':
             prepare_before(session, library, options.target, options.linkage, options.mode, options.scope, environment)
         inputs = build_inputs(library, bits, options.mode, options.linkage, options.scope, directory)
         check_librariesrely(prepared_inputs(library)['librariesrely'], inputs)
-        check_librariesrely(options.librariesrely, inputs)
+        check_librariesrely(options.librariesrely, inputs, state.get('origin', str(SDK_ROOT)))
         planned = dict(BUILD_LINKAGES)
         conversions = directory / (library + '-conversions.json')
         conversions.write_text(json.dumps(inputs['conversions']), encoding='utf-8')
