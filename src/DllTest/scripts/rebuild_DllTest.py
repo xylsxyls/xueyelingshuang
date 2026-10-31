@@ -3,12 +3,38 @@
 import os
 import sys
 import ast
+import subprocess
+
+if sys.version_info < (3, 8):
+    sys.stderr.write('Build scripts require Python >= 3.8\n')
+    sys.exit(2)
 
 if os.name != 'nt':
     sys.stderr.write('This rebuild entry is Windows-only; use scripts/CMakeLists.txt on other platforms.\n')
     sys.exit(2)
 
 CLOUD_REBUILD_WASM_ENTRY = True
+
+def StopBuildProcess(process):
+    """Reap this build and its descendants; POSIX callers start a private process group."""
+    if process.poll() is not None:
+        return
+    try:
+        if os.name == 'nt':
+            command = os.path.join(os.environ.get('SystemRoot', r'C:\Windows'), 'System32', 'taskkill.exe')
+            subprocess.run([command, '/PID', str(process.pid), '/T', '/F'], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.STDOUT, timeout=15, check=False)
+        else:
+            import signal
+            os.killpg(process.pid, signal.SIGKILL)
+    except (OSError, subprocess.TimeoutExpired):
+        process.kill()
+    finally:
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=10)
 
 # Windows Wasm settings; other platforms declare their own CMake target.
 WASM_SDK_SETTINGS = {
@@ -547,7 +573,7 @@ if __name__ != '__main__' or wasm_arguments:
         inputs = dict(dependencies={}, vendors=[], headers=[])
         for line in records.splitlines():
             fields = line.split('\t')
-            if fields[0] != 'CLOUD_REBUILD_LIBRARIESRELY': raise ValueError('Unexpected CloudRebuild stdout')
+            if len(fields) < 2 or fields[0] != 'CLOUD_REBUILD_LIBRARIESRELY': raise ValueError('Unexpected CloudRebuild stdout')
             kind = fields[1]
             if kind == 'begin':
                 if fields[2:] != [library]: raise ValueError('Invalid before owner')
@@ -604,7 +630,8 @@ if __name__ != '__main__' or wasm_arguments:
         with tempfile.TemporaryFile(dir=Path(environment['CLOUD_REBUILD_PRIVATE_INCLUDE']).parent) as records:
             tail = ''
             with subprocess.Popen(command, env=environment, stdout=records, stderr=subprocess.PIPE,
-                                  text=True, encoding='utf-8', errors='replace', bufsize=1) as process:
+                                  text=True, encoding='utf-8', errors='replace', bufsize=1,
+                                  start_new_session=os.name != 'nt') as process:
                 try:
                     for line in process.stderr:
                         sys.stderr.write(line)
@@ -612,8 +639,7 @@ if __name__ != '__main__' or wasm_arguments:
                         tail = (tail + line)[-8192:]
                     status = process.wait()
                 except BaseException:
-                    process.kill()
-                    process.wait()
+                    StopBuildProcess(process)
                     raise
             if status:
                 raise ValueError('before ' + command[2] + ' failed (' + str(status) + '):\n' + tail.strip())
@@ -979,7 +1005,14 @@ if __name__ == '__main__' and wasm_arguments:
     def Run(command, environment):
         command = [str(part) for part in command]
         wasm_message(subprocess.list2cmdline(command))
-        subprocess.check_call(command, env=environment)
+        with subprocess.Popen(command, env=environment, start_new_session=os.name != 'nt') as process:
+            try:
+                status = process.wait()
+                if status:
+                    raise subprocess.CalledProcessError(status, command)
+            except BaseException:
+                StopBuildProcess(process)
+                raise
 
     def Compiler():
         installation = options.emscripten_root.resolve().parents[1] if options.emscripten_root else locate_sdk(root)
@@ -1124,6 +1157,10 @@ import time
 import ctypes
 import shutil
 import subprocess
+import argparse
+import tempfile
+import re
+from pathlib import Path
 IsPy3 = sys.version_info[0] >= 3
 if IsPy3:
     import winreg
@@ -1142,16 +1179,12 @@ Bit = 'Win32'
 Dlllib = 'dll'
 MSBuild = None
 IncrediBuild = None
-UseMSBuild = True #默认用MSBuild编译，如果为False则用IncrediBuild编译
+UseMSBuild = True # 由入口参数选择，默认MSBuild；incredibuild选择可选工具
 
-#不同项目只需修改下面5个变量
+# 模板生成器负责替换工程名；依赖仍由before/version准备
 SlnFile = '../DllTest.sln' #相对于本py脚本路径的相对路径
 UpdateDir = [] #相对于本py脚本路径的相对路径，填空不更新
 ExecBatList = [] #相对于本py脚本路径的相对路径，编译前调用的脚本，可填空，执行bat会先cd到bat目录再执行
-MSBuildFirstProjects = [r'DllTest'] #使用MSBuild需要工程文件在解决方案sln中的路径
-     # MSBuild首先编译的项目，填空不指定顺序
-IncrediBuildFirstProjects = ['DllTest'] #使用IncrediBuild只需工程名字
-     #IncrediBuild首先编译的项目，填空不指定顺序
 
 class ConsoleColor():
     '''This class defines the values of color for printing on console window'''
@@ -1270,198 +1303,173 @@ class Logger():
 
 
 def GetMSBuildPath():
-    if Bit == 'Win32':
-        cmd = 'call "%VS120COMNTOOLS%..\\..\\VC\\vcvarsall.bat" x86\nwhere msbuild'
-    elif Bit == 'x64':
-        cmd = 'call "%VS120COMNTOOLS%..\\..\\VC\\vcvarsall.bat" amd64\nwhere msbuild'
-    ftemp = open('GetMSBuildPath.bat', 'wt')
-    ftemp.write(cmd)
-    ftemp.close()
-    p = subprocess.Popen('GetMSBuildPath.bat', stdout = subprocess.PIPE)
-    p.wait()
-    lines = p.stdout.read().decode().splitlines()
-    os.remove('GetMSBuildPath.bat')
-    for line in lines:
-        if 'MSBuild.exe' in line:
-            return line
+    """Locate VS2013 MSBuild without creating a shared batch file or changing the caller environment."""
+    explicit = os.environ.get('MSBUILD_EXE_PATH')
+    if explicit:
+        return os.path.abspath(explicit) if os.path.isfile(explicit) else None
+    roots = [os.environ.get('ProgramFiles(x86)'), os.environ.get('ProgramFiles')]
+    for root in roots:
+        if not root:
+            continue
+        folder = os.path.join(root, 'MSBuild', '12.0', 'Bin')
+        candidate = os.path.join(folder, 'amd64', 'MSBuild.exe') if Bit == 'x64' else os.path.join(folder, 'MSBuild.exe')
+        if os.path.isfile(candidate):
+            return candidate
+    for view in (winreg.KEY_WOW64_32KEY, winreg.KEY_WOW64_64KEY):
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Microsoft\MSBuild\ToolsVersions\12.0', 0, winreg.KEY_READ | view) as key:
+                folder = winreg.QueryValueEx(key, 'MSBuildToolsPath')[0]
+            candidate = os.path.join(folder, 'amd64', 'MSBuild.exe') if Bit == 'x64' else os.path.join(folder, 'MSBuild.exe')
+            if os.path.isfile(candidate):
+                return candidate
+        except OSError:
+            continue
+    return None
 
 def GetIncrediBuildPath():
+    """Read the optional IncrediBuild installation and always release the registry handle."""
     try:
-        key=winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Classes\IncrediBuild.MonitorFile\shell\open\command')
-        value, typeId = winreg.QueryValueEx(key, '')
-        if value:
-            start = value.find('"')
-            end = value.find('"', start + 1)
-            path = value[start+1:end]
-            buildConsole = os.path.join(os.path.dirname(path), 'BuildConsole.exe')
-            return buildConsole
-    except FileNotFoundError as e:
-        Logger.WriteLine('can not find IncrediBuild', ConsoleColor.Red)
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Classes\IncrediBuild.MonitorFile\shell\open\command') as key:
+            value = winreg.QueryValueEx(key, '')[0]
+        if value and value.startswith('"') and '"' in value[1:]:
+            path = value.split('"', 2)[1]
+            candidate = os.path.join(os.path.dirname(path), 'BuildConsole.exe')
+            return candidate if os.path.isfile(candidate) else None
+    except OSError:
+        pass
+    return None
+
+def RunNativeCommand(command, cwd=None, environment=None):
+    """Run a selected command with a bounded wait; timeout and interruption cannot leave this build running."""
+    process = subprocess.Popen(command, cwd=cwd, env=environment)
+    try:
+        return process.wait(timeout=BuildTimeout)
+    except subprocess.TimeoutExpired:
+        StopBuildProcess(process)
+        Logger.Log('build timed out after {0}s'.format(BuildTimeout), ConsoleColor.Red)
+        return 1
+    except BaseException:
+        StopBuildProcess(process)
+        raise
 
 def UpdateCode():
-    # put git to path first
-    if not shutil.which('git.exe'):
-        Logger.Log('找不到git.exe. 请确认安装git时将git\bin目录路径加入到环境变量path中!!!\n, 跳过更新代码!!!', ConsoleColor.Yellow)
-        return false
-    oldDir = os.getcwd()
-    for dir in UpdateDir:
-        os.chdir(dir)
-        ret = os.system('git pull')
-        os.chdir(oldDir)
-        if ret != 0:
-            Logger.Log('update {0} failed'.format(dir), ConsoleColor.Yellow)
-            return false
+    git = shutil.which('git.exe')
+    if not git:
+        Logger.Log('git.exe is missing; update failed', ConsoleColor.Red)
+        return False
+    for directory in UpdateDir:
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__), directory))
+        if RunNativeCommand([git, 'pull'], cwd=path) != 0:
+            return False
     return True
 
-def BuildProject(cmd):
-    for i in range(6):
-        Logger.WriteLine(cmd, ConsoleColor.Cyan)
-        buildFailed = True
-        startTime = time.time()
-        p = subprocess.Popen(cmd) #IncrediBuild不能使用stdout=subprocess.PIPE，否则会导致p.wait()不返回，可能是IncrediBuild的bug
-        if IsPy3:
+def BuildProject(command):
+    """Build once; deterministic compiler errors are not retried six times or masked by stale logs."""
+    Logger.WriteLine(subprocess.list2cmdline(command), ConsoleColor.Cyan)
+    if not UseMSBuild and os.path.isfile('IncrediBuild.log'):
+        os.remove('IncrediBuild.log')
+    start = time.monotonic()
+    code = RunNativeCommand(command)
+    success = code == 0
+    if not UseMSBuild and '/clean' not in command:
+        success = False
+        if code == 0 and os.path.isfile('IncrediBuild.log'):
+            raw = Path('IncrediBuild.log').read_bytes()
             try:
-                buildFailed = p.wait(BuildTimeout)
-            except subprocess.TimeoutExpired as e:
-                Logger.Log('{0}'.format(e), ConsoleColor.Yellow)
-                p.kill()
-        else:
-            buildFailed = p.wait()
-        if not UseMSBuild:
-            #IncrediBuild的返回值不能说明编译是否成功，需要提取输出判断
-            fin = open('IncrediBuild.log')
-            for line in fin:
-                if line.startswith('=========='):
-                    Logger.Write(line, ConsoleColor.Cyan, writeToFile = True if IsPy3 else False)
-                    if IsPy3:
-                        start = line.find('失败') + 3  #========== 生成: 成功 1 个，失败 0 个，最新 0 个，跳过 0 个 ==========
-                    else:#为了兼容py2做的特殊处理，很恶心
-                        start = 0
-                        n2 = 0
-                        while 1:
-                            if line[start].isdigit():
-                                n2 += 1
-                                if n2 == 2:
-                                    break
-                                start = line.find(' ', start)
-                            start += 1
-                    end = line.find(' ', start)
-                    failCount = int(line[start:end])
-                    buildFailed = failCount > 0
-                else:
-                    Logger.Write(line, ConsoleColor.Red, writeToFile = True if IsPy3 else False, printToStdout = True if ' error ' in line else False)
-            fin.close()
-        costTime = time.time() - startTime
-        Logger.WriteLine('build cost time: {0:.1f}s\n'.format(costTime), ConsoleColor.Green)
-        if not buildFailed:
-            return True
-    return False
+                text = raw.decode('utf-8-sig')
+            except UnicodeDecodeError:
+                text = raw.decode('mbcs', errors='replace')
+            # A successful summary is required; absent/malformed summaries must not report success.
+            matches = re.findall(r'(?:失败|failed)\s*[:：]?\s*(\d+)|(\d+)\s*failed', text, re.I)
+            success = bool(matches) and all(int(left or right) == 0 for left, right in matches)
+            if not success:
+                Logger.WriteLine(text[-8192:], ConsoleColor.Red)
+    Logger.WriteLine('build cost time: {0:.1f}s\n'.format(time.monotonic() - start), ConsoleColor.Green if success else ConsoleColor.Red)
+    return success
 
 def BuildAllProjects():
-    buildSuccess = False
-    cmds = []
+    commands = []
     if UseMSBuild:
+        configurations = ['Debug', 'Release'] if CleanAll else [BuildType]
         if IsRebuild:
-            if CleanAll:
-                cmds.append('{0} {1} /t:Clean /p:Configuration={2};platform={3} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, 'Debug', Bit))
-                cmds.append('{0} {1} /t:Clean /p:Configuration={2};platform={3} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, 'Release', Bit))
-            else:
-                cmds.append('{0} {1} /t:Clean /p:Configuration={2};platform={3} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, BuildType, Bit))
-        for project in MSBuildFirstProjects:
-            cmds.append('{0} {1} /t:{2} /p:Configuration={3};platform={4} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile,  project, BuildType, Bit))
-        cmds.append('{0} {1} /p:Configuration={2};platform={3} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, BuildType, Bit))
-    else: #IncrediBuild
+            for configuration in configurations:
+                commands.append([MSBuild, SlnFile, '/t:Clean', '/p:Configuration=' + configuration + ';Platform=' + Bit,
+                                 '/nologo', '/maxcpucount', '/nr:false', '/filelogger', '/consoleloggerparameters:ErrorsOnly'])
+        # One solution build honors its normal project graph; a separate target build is redundant.
+        commands.append([MSBuild, SlnFile, '/p:Configuration=' + BuildType + ';Platform=' + Bit,
+                         '/nologo', '/maxcpucount', '/nr:false', '/filelogger', '/consoleloggerparameters:ErrorsOnly'])
+    else:
         if IsRebuild:
-            if CleanAll:
-                cmds.append('"{0}" {1} /clean /cfg="{2}|{3}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, 'Debug', Bit))
-                cmds.append('"{0}" {1} /clean /cfg="{2}|{3}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, 'Release', Bit))
-            else:
-                cmds.append('"{0}" {1} /clean /cfg="{2}|{3}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, BuildType, Bit))
-        for project in IncrediBuildFirstProjects:
-            cmds.append('"{0}" {1} /build /prj={2} /cfg="{3}|{4}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, project, BuildType, Bit))
-        cmds.append('"{0}" {1} /build /cfg="{2}|{3}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, BuildType, Bit))
-    for cmd in cmds:
-        buildSuccess = BuildProject(cmd)
-        if not buildSuccess:
-            break
-    return buildSuccess
+            for configuration in (['Debug', 'Release'] if CleanAll else [BuildType]):
+                commands.append([IncrediBuild, SlnFile, '/clean', '/cfg=' + configuration + '|' + Bit,
+                                 '/nologo', '/out=IncrediBuild.log'])
+        commands.append([IncrediBuild, SlnFile, '/build', '/cfg=' + BuildType + '|' + Bit,
+                         '/nologo', '/out=IncrediBuild.log'])
+    return all(BuildProject(command) for command in commands)
 
-def main():
-    if UseMSBuild:
-        if not os.path.exists(MSBuild):
-            Logger.Log('can not find msbuild.exe', ConsoleColor.Red)
+def main(arguments=None):
+    global Bit, Dlllib, BuildType, IsRebuild, Build, Update, Copy, CleanAll, UseMSBuild, SlnFile, MSBuild, IncrediBuild
+    parser = argparse.ArgumentParser(description='Build DllTest with VS2013; dependencies are prepared by before/version')
+    parser.add_argument('bit', nargs='?', default='32', choices=['32', '64'])
+    parser.add_argument('linkage', nargs='?', default='dll', type=str.lower, choices=['dll', 'lib'])
+    parser.add_argument('mode', nargs='?', default='release', type=str.lower, choices=['debug', 'release'])
+    parser.add_argument('actions', nargs='*', type=str.lower)
+    options = parser.parse_args(arguments)
+    allowed = {'build', 'update', 'copy', 'clean', 'incredibuild'}
+    if set(options.actions) - allowed:
+        parser.error('Unknown native action: ' + ', '.join(sorted(set(options.actions) - allowed)))
+    if len(options.actions) != len(set(options.actions)) or 'build' in options.actions and 'clean' in options.actions:
+        parser.error('Duplicate or conflicting native actions')
+    Bit = 'Win32' if options.bit == '32' else 'x64'
+    Dlllib = options.linkage
+    BuildType = options.mode.title()
+    IsRebuild = 'build' not in options.actions
+    Build = 'Rebuild' if IsRebuild else 'Build'
+    Update, Copy, CleanAll = (name in options.actions for name in ('update', 'copy', 'clean'))
+    UseMSBuild = 'incredibuild' not in options.actions
+    script = Path(__file__).resolve()
+    SlnFile = str(script.parent.parent / ('DllTest_lib.sln' if Dlllib == 'lib' else 'DllTest.sln'))
+    MSBuild = GetMSBuildPath() if UseMSBuild else None
+    IncrediBuild = None if UseMSBuild else GetIncrediBuildPath()
+    if not (MSBuild if UseMSBuild else IncrediBuild):
+        sys.stderr.write('Cannot find the selected VS2013 MSBuild or IncrediBuild executable\n')
+        return 1
+    if not os.path.isfile(SlnFile):
+        sys.stderr.write('Missing solution: ' + SlnFile + '\n')
+        return 1
+    # All temporary logs are per-invocation, including calls launched from a different project directory.
+    root = script.parents[3] / 'src/temp/DllTest/native' / options.bit / Dlllib / options.mode
+    root.mkdir(parents=True, exist_ok=True)
+    directory = Path(tempfile.mkdtemp(prefix='build-', dir=str(root)))
+    Logger.LogFile = str(directory / '@AutomationLog.txt')
+    previous = os.getcwd()
+    start = time.monotonic()
+    try:
+        os.chdir(directory)
+        Logger.Log('run with argv ' + str(sys.argv), ConsoleColor.Green)
+        Logger.WriteLine('build dir is: {0}, {1}: {2}'.format(directory, Build, BuildType))
+        if Update and not UpdateCode():
             return 1
-    else:
-        if not os.path.exists(IncrediBuild):
-            Logger.Log('can not find msbuild.exe', ConsoleColor.Red)
-            return 1
-    dir = os.path.dirname(__file__)
-    if dir:
-        oldDir = os.getcwd()
-        os.chdir(dir)
-    if Update:
-        if not UpdateCode():
-            return 1
-        Logger.Log('git update succeed', ConsoleColor.Green)
-    if Copy:
-        for bat in ExecBatList:
-            oldBatDir = os.getcwd()
-            batDir = os.path.dirname(bat)
-            batName = os.path.basename(bat)
-            if batDir:
-                os.chdir(batDir)
-            start = time.clock()
-            os.system(batName)
-            Logger.Log('run "{}" cost {:.1f} seconds'.format(batName, time.clock() - start), ConsoleColor.Green)
-            if batDir:
-                os.chdir(oldBatDir)
-    buildSuccess = BuildAllProjects()
-    if buildSuccess:
-        Logger.Log('build succeed', ConsoleColor.Green)
-    else:
-        Logger.Log('build failed', ConsoleColor.Red)
-    if dir:
-        os.chdir(oldDir)
-    return 0 if buildSuccess else 1
+        if Copy:
+            for value in ExecBatList:
+                path = (script.parent / value).resolve()
+                if not path.is_file():
+                    raise OSError('Missing prebuild script: ' + str(path))
+                environment = dict(os.environ, CLOUD_REBUILD_PREBUILD_SCRIPT=str(path))
+                command = subprocess.list2cmdline([os.environ.get('COMSPEC', 'cmd.exe')]) + ' /d /s /c ""%CLOUD_REBUILD_PREBUILD_SCRIPT%""'
+                code = RunNativeCommand(command, cwd=str(path.parent), environment=environment)
+                if code != 0:
+                    Logger.Log('prebuild script failed: ' + str(path), ConsoleColor.Red)
+                    return 1
+        success = BuildAllProjects()
+        Logger.Log('build succeed' if success else 'build failed', ConsoleColor.Green if success else ConsoleColor.Red)
+        return 0 if success else 1
+    except (OSError, subprocess.SubprocessError) as error:
+        sys.stderr.write('Native build failed: ' + str(error) + '\n')
+        return 1
+    finally:
+        os.chdir(previous)
+        Logger.WriteLine('all build cost time: {0:.2f} seconds'.format(time.monotonic() - start), ConsoleColor.Green)
 
 if __name__ == '__main__':
-    Logger.Log('run with argv ' + str(sys.argv), ConsoleColor.Green)
-    sys.argv = [x.lower() for x in sys.argv]
-    start_time = time.time()
-    if 'debug' in sys.argv:
-        BuildType = 'Debug'
-    if 'lib' in sys.argv:
-        Dlllib = 'lib'
-        SlnFile = '../DllTest_lib.sln'
-        MSBuildFirstProjects = [r'DllTest_lib']
-        IncrediBuildFirstProjects = ['DllTest_lib']
-    if '64' in sys.argv:
-        Bit = 'x64'
-    if 'build' in sys.argv:
-        IsRebuild = False
-        Build = 'Build'
-    if 'update' in sys.argv:
-        Update = True
-    if 'copy' in sys.argv:
-        Copy = True
-    if 'clean' in sys.argv:
-        CleanAll = True
-    if 'incredibuild' in sys.argv:
-        UseMSBuild = False
-    if UseMSBuild:
-        MSBuild = GetMSBuildPath()
-        if not MSBuild:
-            Logger.Log('can not find MSBuild.exe', ConsoleColor.Red)
-            exit(1)
-    else:
-        IncrediBuild = GetIncrediBuildPath()
-        if not IncrediBuild:
-            Logger.Log('can not find BuildConsole.exe', ConsoleColor.Red)
-            exit(1)
-    cwd = os.getcwd()
-    Logger.WriteLine('current dir is: {0}, {1}: {2}'.format(cwd, Build, BuildType))
-    ret = main()
-    end_time = time.time()
-    cost_time = end_time-start_time
-    Logger.WriteLine('all build cost time: {0:.2f} seconds'.format(cost_time), ConsoleColor.Green)
-    exit(ret)
+    sys.exit(main())

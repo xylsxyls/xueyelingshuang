@@ -30,9 +30,22 @@ if(BIT MATCHES "^wasm" OR DLLLIB STREQUAL "wasm" OR EMSCRIPTEN OR CMAKE_TOOLCHAI
             set(ALLSAME "${WASM_BUILD_SCOPE}")
         else()
             # Standalone target builds consume dependencies prepared by version.
-        set(ALLSAME only)
+            set(ALLSAME only)
         endif()
     endif()
+    if(NOT DLLLIB MATCHES "^(dll|lib)$" OR NOT DEBUGRELEASE MATCHES "^(debug|release)$" OR NOT ALLSAME MATCHES "^(same|only|librely)$")
+        message(FATAL_ERROR "Use DLLLIB=dll/lib, DEBUGRELEASE=debug/release and ALLSAME=same/only/librely")
+    endif()
+    if(DEBUGRELEASE STREQUAL "debug")
+        set(wasm_configuration Debug)
+    else()
+        set(wasm_configuration Release)
+    endif()
+    if(CMAKE_BUILD_TYPE AND NOT CMAKE_BUILD_TYPE STREQUAL wasm_configuration)
+        message(FATAL_ERROR "CMAKE_BUILD_TYPE disagrees with DEBUGRELEASE; use a separate build directory")
+    endif()
+    set(CMAKE_BUILD_TYPE "${wasm_configuration}" CACHE STRING "Prepared Wasm SDK configuration" FORCE)
+    set(CMAKE_CONFIGURATION_TYPES "${wasm_configuration}" CACHE STRING "Prepared Wasm SDK configuration" FORCE)
     if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
         if(NOT DEFINED ENV{EMSDK})
             message(FATAL_ERROR "Set EMSDK or pass the Emscripten CMAKE_TOOLCHAIN_FILE")
@@ -93,6 +106,28 @@ import shutil
 import subprocess
 import tempfile
 sys.dont_write_bytecode = True
+
+def StopBuildProcess(process):
+    """Reap this build and its descendants; POSIX callers start a private process group."""
+    if process.poll() is not None:
+        return
+    try:
+        if os.name == 'nt':
+            command = os.path.join(os.environ.get('SystemRoot', r'C:\Windows'), 'System32', 'taskkill.exe')
+            subprocess.run([command, '/PID', str(process.pid), '/T', '/F'], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.STDOUT, timeout=15, check=False)
+        else:
+            import signal
+            os.killpg(process.pid, signal.SIGKILL)
+    except (OSError, subprocess.TimeoutExpired):
+        process.kill()
+    finally:
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=10)
+
 
 def managed_home(root):
     configured = os.environ.get('CLOUD_WASM_HOME')
@@ -606,7 +641,7 @@ def before_receipt(session, library, records):
     inputs = dict(dependencies={}, vendors=[], headers=[])
     for line in records.splitlines():
         fields = line.split('\t')
-        if fields[0] != 'CLOUD_REBUILD_LIBRARIESRELY': raise ValueError('Unexpected CloudRebuild stdout')
+        if len(fields) < 2 or fields[0] != 'CLOUD_REBUILD_LIBRARIESRELY': raise ValueError('Unexpected CloudRebuild stdout')
         kind = fields[1]
         if kind == 'begin':
             if fields[2:] != [library]: raise ValueError('Invalid before owner')
@@ -663,7 +698,8 @@ def before_output(command, environment):
     with tempfile.TemporaryFile(dir=Path(environment['CLOUD_REBUILD_PRIVATE_INCLUDE']).parent) as records:
         tail = ''
         with subprocess.Popen(command, env=environment, stdout=records, stderr=subprocess.PIPE,
-                              text=True, encoding='utf-8', errors='replace', bufsize=1) as process:
+                              text=True, encoding='utf-8', errors='replace', bufsize=1,
+                              start_new_session=os.name != 'nt') as process:
             try:
                 for line in process.stderr:
                     sys.stderr.write(line)
@@ -671,8 +707,7 @@ def before_output(command, environment):
                     tail = (tail + line)[-8192:]
                 status = process.wait()
             except BaseException:
-                process.kill()
-                process.wait()
+                StopBuildProcess(process)
                 raise
         if status:
             raise ValueError('before ' + command[2] + ' failed (' + str(status) + '):\n' + tail.strip())
@@ -1162,6 +1197,11 @@ if __name__ == '__main__':
     endif()
     set_target_properties(DllTest PROPERTIES DEBUG_POSTFIX "" ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+    foreach(wasm_config DEBUG RELEASE)
+        set_target_properties(DllTest PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY_${wasm_config} "${CMAKE_CURRENT_BINARY_DIR}"
+            RUNTIME_OUTPUT_DIRECTORY_${wasm_config} "${CMAKE_CURRENT_BINARY_DIR}")
+    endforeach()
     if(DEBUGRELEASE STREQUAL "debug")
         set_target_properties(DllTest PROPERTIES OUTPUT_NAME DllTestd)
         set(wasm_optimization -O0 -g1)
@@ -1368,7 +1408,7 @@ endif()
 set(SDK_ROOT "${native_default_sdk}" CACHE PATH "Target SDK prepared by before/version")
 get_filename_component(SDK_ROOT "${SDK_ROOT}" ABSOLUTE)
 set(native_source "${CMAKE_CURRENT_SOURCE_DIR}/../DllTest/src")
-file(GLOB native_sources CONFIGURE_DEPENDS "${native_source}/*.c" "${native_source}/*.cpp")
+file(GLOB native_sources CONFIGURE_DEPENDS "${native_source}/*.c" "${native_source}/*.cpp" "${native_source}/*.cc" "${native_source}/*.cxx")
 if(NOT native_sources)
     message(FATAL_ERROR "No implementation sources found")
 endif()
@@ -1421,7 +1461,7 @@ if(native_prepared_libraries)
 endif()
 
 # Publish this library's headers only; before/CloudRebuild remains responsible for dependencies.
-file(GLOB native_headers "${native_source}/*.h" "${native_source}/*.inl")
+file(GLOB native_headers CONFIGURE_DEPENDS "${native_source}/*.h" "${native_source}/*.hpp" "${native_source}/*.inl")
 if(DLLLIB STREQUAL "lib")
     set(native_macro "${native_source}/DllTestMacroLib.h")
 else()
