@@ -513,9 +513,6 @@ if __name__ != '__main__' or wasm_arguments:
         if linkage not in supported: raise ValueError('No Wasm ' + linkage + ' entry for ' + library)
         active.add(library)
         children = dependency_linkages(library)
-        if any(kind == 'dll' for kind in children.values()) and not (
-                sdk_setting(library, 'WASM_BUILD_RUNTIME_JS_LIBRARY') or sdk_setting(library, 'WASM_BUILD_RUNTIME_DEFINITIONS')):
-            raise ValueError(library + ' consumes C++ archives; use lib or dll ... librely')
         for dep, kind in children.items(): plan(dep, kind, scope, active)
         active.remove(library)
         BUILD_LINKAGES[library] = linkage
@@ -529,7 +526,6 @@ if __name__ != '__main__' or wasm_arguments:
         if not Path(state['lock']).is_file(): raise ValueError('Expired Wasm SDK session')
         if parent:
             if not state['active'] or state['active'][-1] != parent: raise ValueError('Invalid before parent: ' + parent)
-            state['nodes'][parent]['inputs']['dependencies'][library] = linkage
         if library in state['active']: raise ValueError('Circular before dependency: ' + ' -> '.join(state['active'] + [library]))
         node = state['nodes'].get(library)
         if node is not None:
@@ -538,23 +534,139 @@ if __name__ != '__main__' or wasm_arguments:
                 session.write_text(json.dumps(state), encoding='utf-8')
                 validate(library, bit, mode, linkage=linkage)
                 return True
-        inputs = prepared_inputs(library) if scope == 'only' else dict(dependencies={}, vendors=[], headers=[])
+        inputs = dict(dependencies={}, vendors=[], headers=[])
         state['nodes'][library] = dict(linkage=linkage, inputs=inputs, done=False)
         state['active'].append(library)
         session.write_text(json.dumps(state), encoding='utf-8')
         return False
 
 
-    def before_receipt(session, library, file):
+    def before_receipt(session, library, records):
+        """Use only explicit records returned by CloudRebuild's stdout pipe."""
         state = json.loads(session.read_text(encoding='utf-8'))
-        inputs = state['nodes'][library]['inputs']
-        for line in file.read_text(encoding='utf-8').splitlines():
-            kind, value = line.split('\t', 1)
-            key = {'vendor': 'vendors', 'header': 'headers'}.get(kind)
-            if key is None: raise ValueError('Invalid before input: ' + kind)
-            if key == 'headers' and not value.isidentifier(): raise ValueError('Invalid header project')
-            if value not in inputs[key]: inputs[key].append(value)
+        inputs = dict(dependencies={}, vendors=[], headers=[])
+        for line in records.splitlines():
+            fields = line.split('\t')
+            if fields[0] != 'CLOUD_REBUILD_LIBRARIESRELY': raise ValueError('Unexpected CloudRebuild stdout')
+            kind = fields[1]
+            if kind == 'begin':
+                if fields[2:] != [library]: raise ValueError('Invalid before owner')
+            elif kind == 'project':
+                if len(fields) != 4 or not fields[2].isidentifier() or fields[3] not in ('lib', 'dll'):
+                    raise ValueError('Invalid before project declaration')
+                previous = inputs['dependencies'].get(fields[2])
+                if previous is not None and previous != fields[3]: raise ValueError('Conflicting dependency declaration')
+                inputs['dependencies'][fields[2]] = fields[3]
+            elif kind == 'librariesrely':
+                if len(fields) != 3: raise ValueError('Invalid CloudRebuild link list')
+                inputs['librariesrely'] = fields[2]
+            elif kind in ('vendor', 'header'):
+                if len(fields) != 3: raise ValueError('Invalid before input')
+                key = 'vendors' if kind == 'vendor' else 'headers'
+                if fields[2] not in inputs[key]: inputs[key].append(fields[2])
+            else:
+                raise ValueError('Unsupported Wasm before record: ' + kind)
+        state['nodes'][library]['inputs'] = inputs
         session.write_text(json.dumps(state), encoding='utf-8')
+
+
+    def wasm_color_enabled():
+        """Detect terminal color once per caller; inherited choice keeps nested pipe output consistent."""
+        if 'NO_COLOR' in os.environ: return False
+        configured = os.environ.get('CLOUD_WASM_COLOR')
+        if configured is not None: return configured == '1'
+        if os.environ.get('TERM') == 'dumb': return False
+        if not sys.stderr.isatty():
+            # Git Bash mintty exposes a pipe to native Python; file redirection must remain plain.
+            import stat
+            return bool(os.name == 'nt' and os.environ.get('MSYSTEM') and os.environ.get('TERM') and
+                        stat.S_ISFIFO(os.fstat(sys.stderr.fileno()).st_mode))
+        if os.name == 'nt':
+            import ctypes
+            import msvcrt
+            console = ctypes.windll.kernel32
+            handle = ctypes.c_void_p(msvcrt.get_osfhandle(sys.stderr.fileno()))
+            mode = ctypes.c_ulong()
+            if not console.GetConsoleMode(handle, ctypes.byref(mode)): return False
+            if not console.SetConsoleMode(handle, mode.value | 4): return False
+        return True
+
+
+    def wasm_message(message, color='32'):
+        """Write one flushed status line; reset color before the compiler can emit diagnostics."""
+        if wasm_color_enabled(): message = '\x1b[' + color + 'm' + message + '\x1b[0m'
+        sys.stderr.write(message + '\n')
+        sys.stderr.flush()
+
+
+    def before_output(command, environment):
+        """Forward dependency diagnostics live; keep stdout protocol separate and retain a bounded error tail."""
+        with tempfile.TemporaryFile(dir=Path(environment['CLOUD_REBUILD_PRIVATE_INCLUDE']).parent) as records:
+            tail = ''
+            with subprocess.Popen(command, env=environment, stdout=records, stderr=subprocess.PIPE,
+                                  text=True, encoding='utf-8', errors='replace', bufsize=1) as process:
+                try:
+                    for line in process.stderr:
+                        sys.stderr.write(line)
+                        sys.stderr.flush()
+                        tail = (tail + line)[-8192:]
+                    status = process.wait()
+                except BaseException:
+                    process.kill()
+                    process.wait()
+                    raise
+            if status:
+                raise ValueError('before ' + command[2] + ' failed (' + str(status) + '):\n' + tail.strip())
+            records.seek(0)
+            return records.read().decode('utf-8')
+
+
+    def prepare_before(session, library, target, linkage, mode, scope, environment):
+        """CloudRebuild runs the shell and brokers explicit inputs; only still prepares vendors."""
+        cloud = environment.get('CLOUD_REBUILD') or str(ROOT / 'lib' / ('CloudRebuild1.2.exe' if os.name == 'nt' else 'CloudRebuild1.2'))
+        environment = dict(environment, CLOUD_REBUILD=cloud, CLOUD_WASM_COLOR='1' if wasm_color_enabled() else '0')
+        command = [cloud, '--before', library, target, 'lib' if scope == 'librely' else linkage,
+                   mode, 'only' if scope == 'only' else 'same']
+        records = before_output(command, environment)
+        before_receipt(session, library, records)
+        active = set()
+        visited = set()
+        def collect(name):
+            if name in active or len(active) >= 128 or len(visited) >= 1024:
+                raise ValueError('Circular or excessive dependency graph: ' + name)
+            if name in visited: return
+            active.add(name)
+            state = json.loads(session.read_text(encoding='utf-8'))
+            for child, kind in state['nodes'][name]['inputs']['dependencies'].items():
+                # Completed nested builds already carry their own explicit before reports.
+                current = json.loads(session.read_text(encoding='utf-8'))
+                node = current['nodes'].get(child)
+                if node is not None and node['linkage'] != kind: raise ValueError('Conflicting dependency: ' + child)
+                if node is None:
+                    current['nodes'][child] = dict(linkage=kind, done=True, inputs={})
+                    session.write_text(json.dumps(current), encoding='utf-8')
+                    report = before_output([cloud, '--before', child, target, kind, mode, 'only'], environment)
+                    before_receipt(session, child, report)
+                collect(child)
+            active.remove(name)
+            visited.add(name)
+        collect(library)
+
+
+    def check_librariesrely(value, inputs):
+        """An optional caller-supplied prepared closure must match the actual before declarations."""
+        if value is None: return
+        expected = [Path(path).resolve() for path in inputs['archives'] + inputs['vendor_paths']]
+        supplied = []
+        for item in value.split(';') if value else []:
+            if not item or any(char in item for char in '\r\n\t'):
+                raise ValueError('Invalid --librariesrely item')
+            path = Path(item)
+            path = path.resolve() if path.is_absolute() else (SDK_ROOT / 'lib' / path).resolve()
+            if not path.is_file(): raise ValueError('Missing --librariesrely input: ' + item)
+            if path not in supplied: supplied.append(path)
+        if set(supplied) != set(expected):
+            raise ValueError('--librariesrely must match the prepared static dependency closure from before')
 
 
     def complete_node(session, library):
@@ -605,7 +717,7 @@ if __name__ != '__main__' or wasm_arguments:
         updates[target / (library + 'WasmLICENSE.txt')] = None
         updates.update({target / path.name: content for path, content in protocol_constants(library).items()})
         commit_sdk(library, updates, bit, mode)
-        print('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': ' + str(wasm.stat().st_size) + ' bytes', flush=True)
+        wasm_message('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': ' + str(wasm.stat().st_size) + ' bytes')
 
 
     def commit_sdk(library, updates, bit, mode):
@@ -646,7 +758,7 @@ if __name__ != '__main__' or wasm_arguments:
                    target / (library + 'WasmSDK.json'): json.dumps(data, indent=2, sort_keys=True).encode('utf-8')}
         updates[target / (library + 'WasmLICENSE.txt')] = None
         commit_sdk(library, updates, bit, mode)
-        print('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': C++ static archive ' + str(len(payload)) + ' bytes', flush=True)
+        wasm_message('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': C++ static archive ' + str(len(payload)) + ' bytes')
 
 
     def build_inputs(library, bit, mode, linkage, scope, private):
@@ -850,6 +962,7 @@ if __name__ == '__main__' and wasm_arguments:
     parser.add_argument('mode', type=str.lower, choices=['debug', 'release'])
     parser.add_argument('scope', type=str.lower, choices=['same', 'only', 'librely'], nargs='?', default='only')
     parser.add_argument('--output-root', type=Path)
+    parser.add_argument('--librariesrely', help='Semicolon-separated prepared static link inputs')
     # CMake compiles through its own entry and uses these data/publication steps only.
     phase = parser.add_mutually_exclusive_group()
     phase.add_argument('--prepare-only', type=Path, help=argparse.SUPPRESS)
@@ -865,7 +978,7 @@ if __name__ == '__main__' and wasm_arguments:
 
     def Run(command, environment):
         command = [str(part) for part in command]
-        print(subprocess.list2cmdline(command))
+        wasm_message(subprocess.list2cmdline(command))
         subprocess.check_call(command, env=environment)
 
     def Compiler():
@@ -880,7 +993,7 @@ if __name__ == '__main__' and wasm_arguments:
         output = subprocess.check_output([sys.executable, str(compiler / 'emcc.py'), '--version'], env=environment, stderr=subprocess.STDOUT).decode('utf-8', errors='replace')
         version = next((line for line in output.splitlines() if line.startswith('emcc ')), '')
         if not re.search(r'\b3\.1\.74(?:-git)?(?:\s|$)', version): raise ValueError('Prepared vendors require Emscripten 3.1.74: ' + version)
-        print('[wasm] Python ' + sys.executable + '\n[wasm] Emscripten ' + str(compiler) + '\n[wasm] ' + version)
+        print('[wasm] Python ' + sys.executable + '\n[wasm] Emscripten ' + str(compiler) + '\n[wasm] ' + version, flush=True)
         return compiler, environment, version
 
     try:
@@ -928,18 +1041,11 @@ if __name__ == '__main__' and wasm_arguments:
             if session_node(session, library, options.linkage, bits, options.mode, options.scope,
                                 os.environ.get('CLOUD_WASM_PARENT')):
                 sys.exit(0)
-            if options.scope != 'only':
-                environment.setdefault('CLOUD_REBUILD', (root / 'lib' / ('CloudRebuild1.2.exe' if os.name == 'nt' else 'CloudRebuild1.2')).as_posix())
-                receipt = directory / 'before-inputs.txt'
-                receipt.write_text('', encoding='utf-8')
-                environment['CLOUD_REBUILD_INPUTS'] = receipt.as_posix()
-                environment['CLOUD_REBUILD_PRIVATE_INCLUDE'] = (directory / 'include').as_posix()
-                before = root / 'src' / library / 'scripts' / ('before_' + library + '.sh')
-                bash = shutil.which('bash') or str(Path(os.environ.get('ProgramFiles', 'C:/Program Files')) / 'Git/bin/bash.exe')
-                Run([bash, '-e', before.as_posix(), options.target, 'lib' if options.scope == 'librely' else options.linkage,
-                     options.mode, 'same'], environment)
-                before_receipt(session, library, receipt)
+            environment['CLOUD_REBUILD_PRIVATE_INCLUDE'] = (directory / 'include').as_posix()
+            prepare_before(session, library, options.target, options.linkage, options.mode, options.scope, environment)
         inputs = build_inputs(library, bits, options.mode, options.linkage, options.scope, directory)
+        check_librariesrely(prepared_inputs(library)['librariesrely'], inputs)
+        check_librariesrely(options.librariesrely, inputs)
         planned = dict(BUILD_LINKAGES)
         conversions = directory / (library + '-conversions.json')
         conversions.write_text(json.dumps(inputs['conversions']), encoding='utf-8')
@@ -963,9 +1069,12 @@ if __name__ == '__main__' and wasm_arguments:
             for index, source in enumerate(inputs['sources']):
                 obj = directory / (str(index) + '-' + source.name + '.o')
                 c = source.suffix == '.c'
+                wasm_message('[wasm] [' + str(index + 1) + '/' + str(len(inputs['sources']) + 1) + '] Compiling ' + source.name)
                 Run([sys.executable, compiler / ('emcc.py' if c else 'em++.py'), '-std=c11' if c else '-std=c++11',
                      '-c', source, '-o', obj] + flags, environment)
                 objects.append(obj)
+            wasm_message('[wasm] [' + str(len(objects) + 1) + '/' + str(len(objects) + 1) + '] ' +
+                         ('Archiving ' if options.linkage == 'lib' else 'Linking ') + library)
             stem = library + ('d' if options.mode == 'debug' else '')
             if options.linkage == 'lib':
                 Run([sys.executable, compiler / 'emar.py', 'rcs', directory / (stem + '.a')] + objects, environment)
@@ -1004,7 +1113,7 @@ if __name__ == '__main__' and wasm_arguments:
             publish_tree(destination, planned, bits, options.mode)
         sys.exit(0)
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
-        sys.stderr.write('[wasm] ' + library + ' FAILED: ' + str(error) + '\n')
+        wasm_message('[wasm] ' + library + ' FAILED: ' + str(error), '31')
         sys.exit(1)
     finally:
         if lock is not None:
@@ -1063,49 +1172,40 @@ class ConsoleColor():
     Yellow = 14
     White = 15
 
-class Coord(ctypes.Structure):
-    _fields_ = [('X', ctypes.c_short), ('Y', ctypes.c_short)]
-
-class SmallRect(ctypes.Structure):
-    _fields_ = [('Left', ctypes.c_short),
-               ('Top', ctypes.c_short),
-               ('Right', ctypes.c_short),
-               ('Bottom', ctypes.c_short),
-              ]
-
-class ConsoleScreenBufferInfo(ctypes.Structure):
-    _fields_ = [('dwSize', Coord),
-               ('dwCursorPosition', Coord),
-               ('wAttributes', ctypes.c_uint),
-               ('srWindow', SmallRect),
-               ('dwMaximumWindowSize', Coord),
-              ]
-
 class Win32API():
-    '''Some native methods for python calling'''
-    StdOutputHandle = -11
-    ConsoleOutputHandle = None
-    DefaultColor = None
+    """Emit color as part of the log stream; nested builds never share console cursor state."""
+    ColorEnabled = None
+    Colors = [30, 34, 32, 36, 31, 35, 33, 37, 90, 94, 92, 96, 91, 95, 93, 97]
+
+    @staticmethod
+    def SupportsColor():
+        if Win32API.ColorEnabled is not None:
+            return Win32API.ColorEnabled
+        enabled = False
+        configured = os.environ.get('CLOUD_REBUILD_COLOR')
+        if 'NO_COLOR' not in os.environ and os.environ.get('TERM') != 'dumb':
+            if configured is not None:
+                enabled = configured == '1'
+            elif sys.stdout.isatty():
+                import msvcrt
+                mode = ctypes.c_ulong()
+                handle = ctypes.c_void_p(msvcrt.get_osfhandle(sys.stdout.fileno()))
+                kernel = ctypes.windll.kernel32
+                enabled = bool(kernel.GetConsoleMode(handle, ctypes.byref(mode)) and
+                               kernel.SetConsoleMode(handle, mode.value | 4))
+        Win32API.ColorEnabled = enabled
+        return enabled
 
     @staticmethod
     def SetConsoleColor(color):
-        '''Change the text color on console window'''
-        if not Win32API.DefaultColor:
-            if not Win32API.ConsoleOutputHandle:
-                Win32API.ConsoleOutputHandle = ctypes.windll.kernel32.GetStdHandle(Win32API.StdOutputHandle)
-            bufferInfo = ConsoleScreenBufferInfo()
-            ctypes.windll.kernel32.GetConsoleScreenBufferInfo(Win32API.ConsoleOutputHandle, ctypes.byref(bufferInfo))
-            Win32API.DefaultColor = int(bufferInfo.wAttributes & 0xFF)
-        if IsPy3:
-            sys.stdout.flush() # need flush stdout in python 3
-        ctypes.windll.kernel32.SetConsoleTextAttribute(Win32API.ConsoleOutputHandle, color)
+        if Win32API.SupportsColor() and 0 <= color < len(Win32API.Colors):
+            sys.stdout.write('\x1b[' + str(Win32API.Colors[color]) + 'm')
 
     @staticmethod
     def ResetConsoleColor():
-        '''Reset the default text color on console window'''
-        if IsPy3:
-            sys.stdout.flush() # need flush stdout in python 3
-        ctypes.windll.kernel32.SetConsoleTextAttribute(Win32API.ConsoleOutputHandle, Win32API.DefaultColor)
+        if Win32API.SupportsColor():
+            sys.stdout.write('\x1b[0m')
+        sys.stdout.flush()
 
 class Logger():
     LogFile = '@AutomationLog.txt'
@@ -1128,6 +1228,8 @@ class Logger():
                 sys.stdout.write(str(type(e)) + ' can\'t print the log!\n')
             if isValidColor:
                 Win32API.ResetConsoleColor()
+            else:
+                sys.stdout.flush()
         if not writeToFile:
             return
         if IsPy3:
@@ -1138,8 +1240,9 @@ class Logger():
             logFile.write(log)
             # logFile.flush() # need flush in python 3, otherwise log won't be saved
         except Exception as ex:
-            logFile.close()
             sys.stdout.write('can not write log with exception: {0} {1}'.format(type(ex), ex))
+        finally:
+            logFile.close()
 
     @staticmethod
     def WriteLine(log, consoleColor = -1, writeToFile = True, printToStdout = True):
@@ -1260,10 +1363,10 @@ def BuildAllProjects():
     if UseMSBuild:
         if IsRebuild:
             if CleanAll:
-                cmds.append('{0} {1} /t:Clean /p:Configuration={2} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, 'Debug'))
-                cmds.append('{0} {1} /t:Clean /p:Configuration={2} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, 'Release'))
+                cmds.append('{0} {1} /t:Clean /p:Configuration={2};platform={3} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, 'Debug', Bit))
+                cmds.append('{0} {1} /t:Clean /p:Configuration={2};platform={3} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, 'Release', Bit))
             else:
-                cmds.append('{0} {1} /t:Clean /p:Configuration={2} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, BuildType))
+                cmds.append('{0} {1} /t:Clean /p:Configuration={2};platform={3} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, BuildType, Bit))
         for project in MSBuildFirstProjects:
             cmds.append('{0} {1} /t:{2} /p:Configuration={3};platform={4} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile,  project, BuildType, Bit))
         cmds.append('{0} {1} /p:Configuration={2};platform={3} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, BuildType, Bit))
