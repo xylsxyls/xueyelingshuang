@@ -153,68 +153,6 @@ def locate_sdk(root):
                      str(candidates[0]) + '. Install and activate the SDK before compiling.')
 
 
-def command_path(value):
-    if not value: return None
-    found = shutil.which(str(value))
-    if found: return str(Path(found).resolve())
-    candidate = Path(value).expanduser()
-    return str(candidate.resolve()) if candidate.is_file() else None
-
-
-def locate_make():
-    if os.environ.get('WASM_MAKE_PROGRAM'):
-        return command_path(os.environ['WASM_MAKE_PROGRAM'])
-    if os.name != 'nt': return command_path('make')
-    found = command_path('nmake')
-    if found: return found
-    candidates = []
-    if os.environ.get('VS120COMNTOOLS'):
-        candidates.append(Path(os.environ['VS120COMNTOOLS']).resolve().parents[1] / 'VC/bin/nmake.exe')
-    if os.environ.get('ProgramFiles(x86)'):
-        candidates.append(Path(os.environ['ProgramFiles(x86)']) / 'Microsoft Visual Studio 12.0/VC/bin/nmake.exe')
-    return next((str(path) for path in candidates if path.is_file()), None)
-
-
-def resolve(root, report=True):
-    home = managed_home(root)
-    problems = []
-    try:
-        sdk = locate_sdk(root)
-    except ValueError as error:
-        problems.append(str(error))
-        sdk = None
-    if os.environ.get('CMAKE_COMMAND'):
-        cmake = command_path(os.environ['CMAKE_COMMAND'])
-    else:
-        cmake = command_path('cmake') or command_path(home / 'cmake/bin' / ('cmake.exe' if os.name == 'nt' else 'cmake'))
-    if not cmake: problems.append('CMake >= 3.13 is missing; set CMAKE_COMMAND or prepare ' + str(home / 'cmake'))
-    make = locate_make()
-    if not make: problems.append(('NMake' if os.name == 'nt' else 'make') + ' is missing; set WASM_MAKE_PROGRAM')
-    config = None
-    if sdk:
-        config = Path(os.environ.get('EM_CONFIG', str(sdk / '.emscripten'))).expanduser().resolve()
-        if not config.is_file(): problems.append('SDK is not activated: missing ' + str(config))
-    if problems: raise ValueError('Wasm build environment is incomplete:\n  ' + '\n  '.join(problems))
-    env = dict(os.environ, EMSDK=str(sdk), EM_CONFIG=str(config), EMSDK_PYTHON=sys.executable, PYTHONUTF8='1')
-    env['PATH'] = os.pathsep.join([str(Path(sys.executable).parent), str(sdk / 'upstream/emscripten'),
-                                 str(Path(cmake).parent), env.get('PATH', '')])
-    version_output = subprocess.check_output([sys.executable, str(sdk / 'upstream/emscripten/emcc.py'), '--version'],
-                                            env=env, stderr=subprocess.STDOUT).decode('utf-8', errors='replace')
-    # A relocated SDK can log its old sanity stamp before printing the version.
-    # Only the actual emcc header identifies the selected compiler.
-    compiler = next((line for line in version_output.splitlines() if line.startswith('emcc ')), '')
-    if not re.search(r'\b3\.1\.74(?:-git)?(?:\s|$)', compiler):
-        raise ValueError('Prepared vendor SDK requires Emscripten 3.1.74: ' + (compiler or version_output.strip()))
-    version = subprocess.check_output([cmake, '--version'], env=env).decode('utf-8').splitlines()[0]
-    match = re.search(r'(\d+)\.(\d+)', version)
-    if not match or tuple(map(int, match.groups())) < (3, 13): raise ValueError('CMake >= 3.13 required: ' + version)
-    if report:
-        for name, value in [('EMSDK', sdk), ('EM_CONFIG', config), ('CMake', cmake), ('Make', make)]:
-            sys.stdout.write('[wasm] ' + name + ': ' + str(value) + '\n')
-    return dict(sdk=sdk, toolchain=sdk / 'upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake',
-                compiler=compiler, env=env, cmake=cmake, make=make)
-
-
 def signatures(root, library, exports=None):
     markers = sdk_setting(library, 'WASM_BUILD_EXPORT_MARKERS') or []
     if exports is None and not markers: return []
@@ -1078,11 +1016,6 @@ if __name__ == '__main__':
     lock = None
     lockfile = None
 
-    def Run(command, environment):
-        command = [str(part) for part in command]
-        print(subprocess.list2cmdline(command))
-        subprocess.check_call(command, env=environment)
-
     def Compiler():
         installation = options.emscripten_root.resolve().parents[1] if options.emscripten_root else locate_sdk(root)
         compiler = installation / 'upstream/emscripten'
@@ -1105,12 +1038,6 @@ if __name__ == '__main__':
         if options.publish_only and not inherited:
             raise ValueError('Missing prepared Wasm build session')
         directory = options.prepare_only or options.publish_only
-        if directory is None:
-            scratch = Path(os.environ.get('WASM_BUILD_ROOT') or str(root / 'src/temp' / library)).resolve()
-            scratch.relative_to((root / 'src/temp' / library).resolve())
-            scratch = scratch / options.target / options.linkage / options.mode
-            scratch.mkdir(parents=True, exist_ok=True)
-            directory = Path(tempfile.mkdtemp(dir=str(scratch)))
         directory = directory.resolve()
         directory.mkdir(parents=True, exist_ok=True)
         if inherited:
