@@ -3,11 +3,14 @@
 #include <map>
 #include <string>
 #include <limits>
+#include <algorithm>
 
 /** 调试值存储器
+@note 模板定义随头文件发布，由调用方实例化，不使用DLL导入或导出声明。
+@note Windows调用方若保留min/max宏，可用(object.min)(key)形式调用；本库不修改调用方宏。
 */
 template <typename TraceDataType>
-class TraceDataMapAPI TraceDataMap
+class TraceDataMap
 {
 public:
 	/** 添加一个值
@@ -26,13 +29,13 @@ public:
 	@param [in] key 值的含义
 	@param [in] value 值
 	*/
-	TraceDataType min(const std::string& key) const;
+	TraceDataType (min)(const std::string& key) const;
 
 	/** 获取值的最大值
 	@param [in] key 值的含义
 	@param [in] value 值
 	*/
-	TraceDataType max(const std::string& key) const;
+	TraceDataType (max)(const std::string& key) const;
 
 private:
 	struct Stats {
