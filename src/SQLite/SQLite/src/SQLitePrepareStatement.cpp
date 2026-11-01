@@ -1,4 +1,4 @@
-#include "SQLitePrepareStatement.h"
+﻿#include "SQLitePrepareStatement.h"
 #include "sqlite3.h"
 #include "SqliteDatabase.h"
 

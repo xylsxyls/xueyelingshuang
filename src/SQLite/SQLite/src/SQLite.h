@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "SQLiteMacro.h"
 #include <string>
 #include <memory>
@@ -12,64 +12,64 @@ class SQLiteAPI SQLite
 public:
 	enum PragmaFlag
 	{
-		/** ×î°²È«µÄ·½Ê½µ«ÊÇ×îÂı
+		/** æœ€å®‰å…¨çš„æ–¹å¼ä½†æ˜¯æœ€æ…¢
 		*/
 		PRAGMA_FULL = 2,
 
-		/** Ó²ÅÌ²»¿ÉÓÃÊ±Êı¾İ¿âÎÄ¼şÒ²»áËğ»µ
+		/** ç¡¬ç›˜ä¸å¯ç”¨æ—¶æ•°æ®åº“æ–‡ä»¶ä¹Ÿä¼šæŸå
 		*/
 		PRAGMA_NORMAL = 1,
 
-		/** Ã»ÓĞ±£»¤»úÖÆ£¬µ«ÊÇ³ÌĞò±ÀÀ£²»»áÓ°ÏìÎÄ¼ş
+		/** æ²¡æœ‰ä¿æŠ¤æœºåˆ¶ï¼Œä½†æ˜¯ç¨‹åºå´©æºƒä¸ä¼šå½±å“æ–‡ä»¶
 		*/
 		PRAGMA_OFF = 0
 	};
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] dbName Êı¾İ¿âÎÄ¼şÂ·¾¶
+	/** æ„é€ å‡½æ•°
+	@param [in] dbName æ•°æ®åº“æ–‡ä»¶è·¯å¾„
 	*/
 	SQLite(const std::string& dbFilePath);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	~SQLite();
 
 public:
-	/** ´ò¿ªÊı¾İ¿â
-	@param [in] pragmaFlag Êı¾İ¿â´æ´¢·½Ê½
+	/** æ‰“å¼€æ•°æ®åº“
+	@param [in] pragmaFlag æ•°æ®åº“å­˜å‚¨æ–¹å¼
 	*/
 	void open(PragmaFlag pragmaFlag = PRAGMA_OFF);
 
-	/** ¹Ø±ÕÊı¾İ¿â
+	/** å…³é—­æ•°æ®åº“
 	*/
 	void close();
 
-	/** Êı¾İ¿âÊÇ·ñÒÑ¾­´ò¿ª
-	@return ·µ»ØÊÇ·ñÒÑ¾­´ò¿ª
+	/** æ•°æ®åº“æ˜¯å¦å·²ç»æ‰“å¼€
+	@return è¿”å›æ˜¯å¦å·²ç»æ‰“å¼€
 	*/
 	bool isOpen();
 
-	/** ´´½¨Ò»¸öÓÃÓÚÔöÉ¾¸Ä²éµÄÀà
-	@param [in] sqlString sql×Ö·û´®£¬×Ö¶Î³¤¶È²»Æğ×÷ÓÃ
-	@return ·µ»Ø²Ù×÷Ìõ¼şÓï¾äµÄÀà
+	/** åˆ›å»ºä¸€ä¸ªç”¨äºå¢åˆ æ”¹æŸ¥çš„ç±»
+	@param [in] sqlString sqlå­—ç¬¦ä¸²ï¼Œå­—æ®µé•¿åº¦ä¸èµ·ä½œç”¨
+	@return è¿”å›æ“ä½œæ¡ä»¶è¯­å¥çš„ç±»
 	*/
 	SQLitePrepareStatement preparedCreator(const std::string& sqlString);
 
-	/** Ö´ĞĞÓï¾ä
-	@param [in] spPrepareQuery creator´´½¨µÄÀà
-	@return ·µ»ØÖ´ĞĞ½á¹û	
+	/** æ‰§è¡Œè¯­å¥
+	@param [in] spPrepareQuery creatoråˆ›å»ºçš„ç±»
+	@return è¿”å›æ‰§è¡Œç»“æœ	
 	*/
 	SQLiteResultSet execute(SQLitePrepareStatement& spPrepareQuery);
 
-	/** ¿ªÆôÊÂÎñ
+	/** å¼€å¯äº‹åŠ¡
 	*/
 	void transaction();
 
-	/** Ìá½»
+	/** æäº¤
 	*/
 	void commit();
 
-	/** »Ø¹ö£¬»á½áÊøµôÉÏÒ»´ÎµÄtransaction£¬ĞèÒªÖØĞÂ¿ªÆôÊÂÎñ
+	/** å›æ»šï¼Œä¼šç»“æŸæ‰ä¸Šä¸€æ¬¡çš„transactionï¼Œéœ€è¦é‡æ–°å¼€å¯äº‹åŠ¡
 	*/
 	void rollback();
 

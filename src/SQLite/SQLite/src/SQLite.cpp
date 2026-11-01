@@ -1,4 +1,4 @@
-#include "SQLite.h"
+ï»¿#include "SQLite.h"
 #include "SQLitePrepareStatement.h"
 #include "SQLiteResultSet.h"
 #include "CStringManager/CStringManagerAPI.h"
@@ -222,7 +222,7 @@ void SQLite::rollback()
 
 //void SQLite::run()
 //{
-	//Êı¾İ¿âÃû
+	//æ•°æ®åº“å
 	//QSqlDatabase* m_db = new QSqlDatabase(QSqlDatabase::addDatabase("QSQLITE2"));
 	//m_db->setDatabaseName("../info2.db");
 	//m_db->open();
@@ -247,7 +247,7 @@ void SQLite::rollback()
 	
 	
 	//query.prepare("insert into student(id,name, age, score) values(:id,:name, :age, :score)");
-	////¸ø×Ö¶ÎÉèÖÃÄÚÈİ list
+	////ç»™å­—æ®µè®¾ç½®å†…å®¹ list
 	//QVariantList idList;
 	//idList << 1 << 2 << 3;
 	//QVariantList nameList;
@@ -256,19 +256,19 @@ void SQLite::rollback()
 	//ageList << 11 << 22 << 33;
 	//QVariantList scoreList;
 	//scoreList << 59 << 69 << 70;
-	////¸ø×Ö¶Î°ó¶¨ÏàÓ¦µÄÖµ °´Ë³Ğò°ó¶¨
+	////ç»™å­—æ®µç»‘å®šç›¸åº”çš„å€¼ æŒ‰é¡ºåºç»‘å®š
 	//query.addBindValue(idList);
 	//query.addBindValue(nameList);
 	//query.addBindValue(ageList);
 	//query.addBindValue(scoreList);
-	////Ö´ĞĞÔ¤´¦ÀíÃüÁî
+	////æ‰§è¡Œé¢„å¤„ç†å‘½ä»¤
 	
 	
 
 	//query->exec("select * from tablests");
 	//while (query->next())
 	//{
-	//	//È¡³öµ±Ç°ĞĞµÄÄÚÈİ
+	//	//å–å‡ºå½“å‰è¡Œçš„å†…å®¹
 	//	qDebug() << query->value(0).toInt()
 	//		<< query->value(1).toString()
 	//		<< query->value("age").toInt()

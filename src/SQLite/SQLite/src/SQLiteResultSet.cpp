@@ -1,4 +1,4 @@
-#include "SQLiteResultSet.h"
+ï»¿#include "SQLiteResultSet.h"
 #include "SQLitePrepareStatement.h"
 #include "sqlite3.h"
 #include "SqliteDatabase.h"
@@ -18,7 +18,7 @@ SQLiteResultSet::SQLiteResultSet(SQLitePrepareStatement& prepareStatement)
 		m_vecTableNameBase.clear();
 		m_vecTableName.clear();
 		m_spDb = prepareStatement.m_spDb;
-		//ÔÚ¾­¹ıÔ¤±àÒëÖ®ºó¾ÍÄÜ²éµ½±íÍ·£¬²»ĞèÒªsqlite3_step
+		//åœ¨ç»è¿‡é¢„ç¼–è¯‘ä¹‹åå°±èƒ½æŸ¥åˆ°è¡¨å¤´ï¼Œä¸éœ€è¦sqlite3_step
 		int32_t count = sqlite3_column_count(m_spDb->m_stmt);
 		int32_t index = -1;
 		while (index++ != count - 1)

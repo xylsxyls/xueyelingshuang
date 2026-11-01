@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "SQLiteMacro.h"
 #include <stdint.h>
 #include <memory>
@@ -11,12 +11,12 @@ struct SqliteDatabase;
 class SQLiteAPI SQLiteResultSet
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	SQLiteResultSet();
 
-	/** ¹¹Ôìº¯Êı
-	@param [in] prepareStatement sqlÓï¾ä¹ÜÀíÀà
+	/** æ„é€ å‡½æ•°
+	@param [in] prepareStatement sqlè¯­å¥ç®¡ç†ç±»
 	*/
 	SQLiteResultSet(SQLitePrepareStatement& prepareStatement);
 
@@ -26,7 +26,7 @@ public:
 public:
 	bool empty();
 
-	//×Ö¶ÎÃûÈ¡³öÊ±»á°´ÕÕ´´½¨µÄ´óĞ¡Ğ´ÌîĞ´£¬µ«ÊÇ¶ÁÈ¡Ê±²»Çø·Ö´óĞ¡Ğ´
+	//å­—æ®µåå–å‡ºæ—¶ä¼šæŒ‰ç…§åˆ›å»ºçš„å¤§å°å†™å¡«å†™ï¼Œä½†æ˜¯è¯»å–æ—¶ä¸åŒºåˆ†å¤§å°å†™
 	std::string getBlob(uint32_t columnIndex) const;
 	std::string getBlob(const std::string& columnLabel) const;
 
@@ -48,13 +48,13 @@ public:
 	uint64_t getUInt64(uint32_t columnIndex) const;
 	uint64_t getUInt64(const std::string& columnLabel) const;
 
-	//ÎŞÂÛ´ø²»´ø\0»áÈ«²¿È¡³öÀ´
+	//æ— è®ºå¸¦ä¸å¸¦\0ä¼šå…¨éƒ¨å–å‡ºæ¥
 	std::string getString(uint32_t columnIndex) const;
 	std::string getString(const std::string& columnLabel) const;
 
 	bool next();
 
-	//ËÑË÷½á¹ûµÄËùÓĞ×Ö¶ÎÃû£¬»á°´´æ´¢Ê±µÄ´óĞ¡Ğ´¸ø³ö£¬ËÑË÷Ê±²»Çø·Ö´óĞ¡Ğ´
+	//æœç´¢ç»“æœçš„æ‰€æœ‰å­—æ®µåï¼Œä¼šæŒ‰å­˜å‚¨æ—¶çš„å¤§å°å†™ç»™å‡ºï¼Œæœç´¢æ—¶ä¸åŒºåˆ†å¤§å°å†™
 	std::vector<std::string> tableName();
 
 	int32_t rowsAffected();

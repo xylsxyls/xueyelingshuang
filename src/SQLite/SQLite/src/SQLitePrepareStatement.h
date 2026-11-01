@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "SQLiteMacro.h"
 #include <stdint.h>
 #include <string>
@@ -6,14 +6,14 @@
 
 struct SqliteDatabase;
 
-/** sqlÓï¾ä¹ÜÀíÀà
+/** sqlè¯­å¥ç®¡ç†ç±»
 */
 class SQLiteAPI SQLitePrepareStatement
 {
 	friend class SQLiteResultSet;
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] db Óï¾äÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] db è¯­å¥æŒ‡é’ˆ
 	*/
 	SQLitePrepareStatement(const std::shared_ptr<SqliteDatabase>& spDb);
 
@@ -30,7 +30,7 @@ public:
 
 	void setDouble(uint32_t index, double value);
 
-	//Óöµ½\0¾ÍÍ£Ö¹´æ´¢ÁË£¬´æ´¢ÄÚÈİ²»´ø\0
+	//é‡åˆ°\0å°±åœæ­¢å­˜å‚¨äº†ï¼Œå­˜å‚¨å†…å®¹ä¸å¸¦\0
 	void setString(uint32_t index, const std::string& value);
 
 	void setUnsignedInt(uint32_t index, uint32_t value);
@@ -41,7 +41,7 @@ public:
 
 	bool exec();
 
-	//µ±ĞèÒªÖØĞÂÉèÖÃÌæ»»×Ö·ûÄÚÈİÊ±ĞèÒªÏÈÖ´ĞĞreset£¬reset»á°ÑÖ´ĞĞ½á¹ûÇå¿Õ£¬µ«²»»áÇå¿ÕprepareµÄ×Ö·û´®
+	//å½“éœ€è¦é‡æ–°è®¾ç½®æ›¿æ¢å­—ç¬¦å†…å®¹æ—¶éœ€è¦å…ˆæ‰§è¡Œresetï¼Œresetä¼šæŠŠæ‰§è¡Œç»“æœæ¸…ç©ºï¼Œä½†ä¸ä¼šæ¸…ç©ºprepareçš„å­—ç¬¦ä¸²
 	void reset();
 
 private:
