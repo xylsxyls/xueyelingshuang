@@ -1,4 +1,4 @@
-#ifndef MANAGER_BASE_H__
+﻿#ifndef MANAGER_BASE_H__
 #define MANAGER_BASE_H__
 
 #include "ManagerBase.h"

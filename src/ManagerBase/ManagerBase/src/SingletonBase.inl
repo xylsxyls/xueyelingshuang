@@ -1,4 +1,4 @@
-#ifndef SINGLETON_BASE_H__
+﻿#ifndef SINGLETON_BASE_H__
 #define SINGLETON_BASE_H__
 
 #include "SingletonBase.h"

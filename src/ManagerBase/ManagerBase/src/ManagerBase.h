@@ -1,16 +1,16 @@
-#pragma once
+ï»¿#pragma once
 #include "SingletonBase.h"
 
 template<typename Manager>
 class ManagerBase : public SingletonBase < Manager >
 {
 public:
-    /** µ¥Ò»ÊµÀı
-    @return ·µ»Øµ¥Ò»ÊµÀı
+    /** å•ä¸€å®ä¾‹
+    @return è¿”å›å•ä¸€å®ä¾‹
     */
     static Manager& instance();
 
-    /** ÊÍ·Åµ±Ç°ÊµÀı£»ºóĞøÔÙ´Îµ÷ÓÃinstance»áÖØĞÂ´´½¨
+    /** é‡Šæ”¾å½“å‰å®ä¾‹ï¼›åç»­å†æ¬¡è°ƒç”¨instanceä¼šé‡æ–°åˆ›å»º
     */
     static void releaseInstance();
 

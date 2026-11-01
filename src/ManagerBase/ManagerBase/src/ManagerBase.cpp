@@ -1,1 +1,1 @@
-#include "ManagerBase.h"
+﻿#include "ManagerBase.h"
