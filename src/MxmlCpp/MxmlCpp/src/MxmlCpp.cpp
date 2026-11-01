@@ -1,4 +1,4 @@
-#include "MxmlCpp.h"
+ï»¿#include "MxmlCpp.h"
 #include "mxml.h"
 #include <stdint.h>
 #ifdef _MSC_VER
@@ -202,7 +202,7 @@ std::string MxmlCpp::text()
 std::string MxmlCpp::toString()
 {
 	std::string result;
-	//ÕâÀï³¤¶È±ØĞë´«1£¬´«0·µ»ØµÄÊ±ºò»ØÓĞÅ¼·¢±ÀÀ£
+	//è¿™é‡Œé•¿åº¦å¿…é¡»ä¼ 1ï¼Œä¼ 0è¿”å›çš„æ—¶å€™å›æœ‰å¶å‘å´©æºƒ
 	int32_t size = mxmlSaveString(m_xml, &(result[0]), 1, MXML_NO_CALLBACK);
 	result.resize(size - 1);
 	mxmlSaveString(m_xml, &(result[0]), size, MXML_NO_CALLBACK);

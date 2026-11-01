@@ -1,96 +1,96 @@
-#pragma once
+ï»¿#pragma once
 #include "MxmlCppMacro.h"
 #include <string>
 
 struct _mxml_node_s;
 typedef struct _mxml_node_s mxml_node_t;
 
-/** xml½âÎöÀà
+/** xmlè§£æç±»
 */
 class MxmlCppAPI MxmlCpp
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	MxmlCpp();
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	~MxmlCpp();
 
 public:
-	/** ¼ÓÔØxml×Ö·û´®
-	@param [in] xml xml×Ö·û´®
-	@return ·µ»ØÊÇ·ñ¼ÓÔØ³É¹¦£¬¼ÓÔØ³É¹¦²»Ò»¶¨ÄÜ¶ÁÈ¡Ã¿¸ö×Ö¶ÎµÄÖµ£¬²»±ê×¼µÄxmlÎŞ·¨¶ÁÈ¡ÄÚ²¿µÄÖµ
+	/** åŠ è½½xmlå­—ç¬¦ä¸²
+	@param [in] xml xmlå­—ç¬¦ä¸²
+	@return è¿”å›æ˜¯å¦åŠ è½½æˆåŠŸï¼ŒåŠ è½½æˆåŠŸä¸ä¸€å®šèƒ½è¯»å–æ¯ä¸ªå­—æ®µçš„å€¼ï¼Œä¸æ ‡å‡†çš„xmlæ— æ³•è¯»å–å†…éƒ¨çš„å€¼
 	*/
 	bool load(const std::string& xml);
 
-	/** ´´½¨Ò»¸öxml×Ö·û´®£¬»áÏú»Ù¶ÁÈ¡µÄ×Ö·û´®»òÉÏ´Î´´½¨µÄ×Ö·û´®
-	@return ·µ»ØÊÇ·ñ´´½¨³É¹¦
+	/** åˆ›å»ºä¸€ä¸ªxmlå­—ç¬¦ä¸²ï¼Œä¼šé”€æ¯è¯»å–çš„å­—ç¬¦ä¸²æˆ–ä¸Šæ¬¡åˆ›å»ºçš„å­—ç¬¦ä¸²
+	@return è¿”å›æ˜¯å¦åˆ›å»ºæˆåŠŸ
 	*/
 	bool create();
 
-	/** Ìí¼Ó×Ó½Úµã
-	@param [in] name ×Ó½ÚµãÃû
-	@return ·µ»ØÊÇ·ñ´´½¨³É¹¦
+	/** æ·»åŠ å­èŠ‚ç‚¹
+	@param [in] name å­èŠ‚ç‚¹å
+	@return è¿”å›æ˜¯å¦åˆ›å»ºæˆåŠŸ
 	*/
 	bool addChild(const std::string& name);
 
-	/** Ìí¼ÓÓĞÎÄ×ÖµÄ½Úµã
-	@param [in] name ×Ó½ÚµãÃû
-	@param [in] text ×Ó½ÚµãÄÚÈİ
-	@return ·µ»ØÊÇ·ñ´´½¨³É¹¦
+	/** æ·»åŠ æœ‰æ–‡å­—çš„èŠ‚ç‚¹
+	@param [in] name å­èŠ‚ç‚¹å
+	@param [in] text å­èŠ‚ç‚¹å†…å®¹
+	@return è¿”å›æ˜¯å¦åˆ›å»ºæˆåŠŸ
 	*/
 	bool addChild(const std::string& name, const std::string& text);
 
-	/** Ìí¼Ó½ÚµãÊôĞÔ
-	@param [in] name ½ÚµãÊôĞÔÃû
-	@param [in] attr ÊôĞÔÄÚÈİ
-	@return ·µ»ØÊÇ·ñÌí¼Ó³É¹¦
+	/** æ·»åŠ èŠ‚ç‚¹å±æ€§
+	@param [in] name èŠ‚ç‚¹å±æ€§å
+	@param [in] attr å±æ€§å†…å®¹
+	@return è¿”å›æ˜¯å¦æ·»åŠ æˆåŠŸ
 	*/
 	bool addAttr(const std::string& name, const std::string& attr);
 
-	/** ½øÈë×Ó½Úµã
-	@param [in] element ×Ó½ÚµãÃû³Æ£¬×Ó½ÚµãÃû³ÆÈç¹ûÎª¿ÕÔò½øÈëµÚÒ»¸ö×Ó½Úµã
-	@param [in] attr ÊôĞÔÃû³Æ£¬ÓĞÔò½øÈëµ½º¬ÓĞ¸ÃÊôĞÔµÄµÚÒ»¸ö½Úµã
-	@param [in] value ÊôĞÔÖµ£¬ÓĞÔò½øÈëµ½Æ¥ÅäÊôĞÔÖµµÄµÚÒ»¸ö½Úµã£¬¸ÃÏîÒªÇóattr±ØĞëÓĞÖµ
-	@return ·µ»ØÊÇ·ñ½øÈë³É¹¦
+	/** è¿›å…¥å­èŠ‚ç‚¹
+	@param [in] element å­èŠ‚ç‚¹åç§°ï¼Œå­èŠ‚ç‚¹åç§°å¦‚æœä¸ºç©ºåˆ™è¿›å…¥ç¬¬ä¸€ä¸ªå­èŠ‚ç‚¹
+	@param [in] attr å±æ€§åç§°ï¼Œæœ‰åˆ™è¿›å…¥åˆ°å«æœ‰è¯¥å±æ€§çš„ç¬¬ä¸€ä¸ªèŠ‚ç‚¹
+	@param [in] value å±æ€§å€¼ï¼Œæœ‰åˆ™è¿›å…¥åˆ°åŒ¹é…å±æ€§å€¼çš„ç¬¬ä¸€ä¸ªèŠ‚ç‚¹ï¼Œè¯¥é¡¹è¦æ±‚attrå¿…é¡»æœ‰å€¼
+	@return è¿”å›æ˜¯å¦è¿›å…¥æˆåŠŸ
 	*/
 	bool firstChild(const std::string& element = "", const std::string& attr = "", const std::string& value = "");
 
-	/** ½øÈëµ½ÉÏÒ»¸ö½Úµã
-	@return ·µ»ØÊÇ·ñ½øÈë³É¹¦
+	/** è¿›å…¥åˆ°ä¸Šä¸€ä¸ªèŠ‚ç‚¹
+	@return è¿”å›æ˜¯å¦è¿›å…¥æˆåŠŸ
 	*/
 	bool pre();
 
-	/** ½øÈëµ½ÏÂÒ»¸ö½Úµã
-	@return ·µ»ØÊÇ·ñ½øÈë³É¹¦
+	/** è¿›å…¥åˆ°ä¸‹ä¸€ä¸ªèŠ‚ç‚¹
+	@return è¿”å›æ˜¯å¦è¿›å…¥æˆåŠŸ
 	*/
 	bool next();
 
-	/** ½øÈëµ½¸¸½Úµã
-	@return ·µ»ØÊÇ·ñ½øÈë³É¹¦
+	/** è¿›å…¥åˆ°çˆ¶èŠ‚ç‚¹
+	@return è¿”å›æ˜¯å¦è¿›å…¥æˆåŠŸ
 	*/
 	bool parent();
 
-	/** »ñÈ¡½ÚµãÃû³Æ
-	@return ·µ»Ø½ÚµãÃû³Æ
+	/** è·å–èŠ‚ç‚¹åç§°
+	@return è¿”å›èŠ‚ç‚¹åç§°
 	*/
 	std::string element();
 
-	/** »ñÈ¡ÊôĞÔÖµ
-	@param [in] name ÊôĞÔÃû
-	@return ·µ»ØÊôĞÔÖµ
+	/** è·å–å±æ€§å€¼
+	@param [in] name å±æ€§å
+	@return è¿”å›å±æ€§å€¼
 	*/
 	std::string attr(const std::string& name);
 
-	/** »ñÈ¡½ÚµãÄÚÈİ
-	@return ·µ»Ø½ÚµãÄÚÈİ
+	/** è·å–èŠ‚ç‚¹å†…å®¹
+	@return è¿”å›èŠ‚ç‚¹å†…å®¹
 	*/
 	std::string text();
 
-	/** Éú³Éxml×Ö·û´®
-	@return ·µ»Øxml×Ö·û´®
+	/** ç”Ÿæˆxmlå­—ç¬¦ä¸²
+	@return è¿”å›xmlå­—ç¬¦ä¸²
 	*/
 	std::string toString();
 
