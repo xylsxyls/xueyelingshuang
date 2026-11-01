@@ -13,3 +13,8 @@
         #define ProtoMessageAPI
     #endif
 #endif
+
+#if defined(STATIC_LIB)
+    #undef ProtoMessageAPI
+    #define ProtoMessageAPI
+#endif
