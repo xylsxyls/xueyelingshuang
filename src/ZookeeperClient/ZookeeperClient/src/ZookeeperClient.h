@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <vector>
 #include <atomic>
@@ -11,21 +11,21 @@
 enum ZookeeperResult
 {
 	E_ZM_FAIL = -1,
-	E_ZM_OK = 0,  //²Ù×÷³É¹¦
-	E_ZM_NO_NODE = 1,  //½Úµã²»´æÔÚ
-	E_ZM_NODE_EXISTS = 2,  //½ÚµãÒÑ¾­´æÔÚ
-	E_ZM_NO_AUTH = 3,  //¿Í»§¶Ë£¨client£©ÎŞÈ¨ÏŞ
-	E_ZM_NO_CHILDREN_FOR_EPHEMERALS = 4,  //²»ÄÜ¹»´´½¨ÁÙÊ±£¨ephemeral£©½ÚµãµÄ×Ó½Úµã£¨children£©
-	E_ZM_BADARGUMENTS = 5,  //´æÔÚ·Ç·¨µÄ²ÎÊı
-	E_ZM_INVALIDSTATE = 6,  // Óëzookeeper·şÎñÆ÷sessionÁ¬½Ó×´Ì¬ÓĞÎÊÌâ
+	E_ZM_OK = 0,  //æ“ä½œæˆåŠŸ
+	E_ZM_NO_NODE = 1,  //èŠ‚ç‚¹ä¸å­˜åœ¨
+	E_ZM_NODE_EXISTS = 2,  //èŠ‚ç‚¹å·²ç»å­˜åœ¨
+	E_ZM_NO_AUTH = 3,  //å®¢æˆ·ç«¯ï¼ˆclientï¼‰æ— æƒé™
+	E_ZM_NO_CHILDREN_FOR_EPHEMERALS = 4,  //ä¸èƒ½å¤Ÿåˆ›å»ºä¸´æ—¶ï¼ˆephemeralï¼‰èŠ‚ç‚¹çš„å­èŠ‚ç‚¹ï¼ˆchildrenï¼‰
+	E_ZM_BADARGUMENTS = 5,  //å­˜åœ¨éæ³•çš„å‚æ•°
+	E_ZM_INVALIDSTATE = 6,  // ä¸zookeeperæœåŠ¡å™¨sessionè¿æ¥çŠ¶æ€æœ‰é—®é¢˜
 };
 
 enum ZookeeperNodeType
 {
-	E_PERSISTENT_NODE = 0,  //³Ö¾Ã½Úµã
-	E_PERSISTENT_SEQUENTIAL_NODE = 1,  //³Ö¾ÃË³Ğò½Úµã
-	E_EPHEMERAL_NODE = 2,  //ÁÙÊ±½Úµã
-	E_EPHEMERAL_SEQUENTIAL_NODE = 3,  //ÁÙÊ±Ë³Ğò½Úµã
+	E_PERSISTENT_NODE = 0,  //æŒä¹…èŠ‚ç‚¹
+	E_PERSISTENT_SEQUENTIAL_NODE = 1,  //æŒä¹…é¡ºåºèŠ‚ç‚¹
+	E_EPHEMERAL_NODE = 2,  //ä¸´æ—¶èŠ‚ç‚¹
+	E_EPHEMERAL_SEQUENTIAL_NODE = 3,  //ä¸´æ—¶é¡ºåºèŠ‚ç‚¹
 };
 
 struct _zhandle;
@@ -43,11 +43,11 @@ typedef struct ZookeeperList
 class ZookeeperClientAPI ZookeeperClient
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	ZookeeperClient();
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ZookeeperClient();
 
@@ -67,9 +67,9 @@ public:
 	*   state will indicate the reason for failure (typically
 	*   ZOO_EXPIRED_SESSION_STATE).
 	* \param flags reserved for future use. Should be set to zero.
-	* \return ·µ»ØÖµÎªÒÔÏÂ¼¸ÖÖÖ®Ò»
-	* E_ZM_OK ³õÊ¼»¯Á¬½Ó³É¹¦
-	* E_ZM_FAIL ³õÊ¼»¯Á¬½ÓÊ§°Ü.
+	* \return è¿”å›å€¼ä¸ºä»¥ä¸‹å‡ ç§ä¹‹ä¸€
+	* E_ZM_OK åˆå§‹åŒ–è¿æ¥æˆåŠŸ
+	* E_ZM_FAIL åˆå§‹åŒ–è¿æ¥å¤±è´¥.
 	*/
 	int32_t Connect(const std::string& host, int32_t time_out_ms = 10000);
 
@@ -91,10 +91,10 @@ public:
 	int32_t Close();
 	
 	/**
-	* \brief ËÑË÷¸ø¶¨Â·¾¶ÏÂµÄ·şÎñ,²¢·µ»Øµ½ÓÃ»§´«ÈëµÄvectorÖĞ
+	* \brief æœç´¢ç»™å®šè·¯å¾„ä¸‹çš„æœåŠ¡,å¹¶è¿”å›åˆ°ç”¨æˆ·ä¼ å…¥çš„vectorä¸­
 	*
-	* \param path: ÓÃ»§¸ø¶¨µÄËÑË÷Â·¾¶
-	* \param source: ÓÃ»§´«ÈëµÄ²ÎÊı, Èç¹û¸ø¶¨Â·¾¶ÏÂ´æÔÚ·şÎñ, ¾Í´æÈëµ½sourceÖĞ
+	* \param path: ç”¨æˆ·ç»™å®šçš„æœç´¢è·¯å¾„
+	* \param source: ç”¨æˆ·ä¼ å…¥çš„å‚æ•°, å¦‚æœç»™å®šè·¯å¾„ä¸‹å­˜åœ¨æœåŠ¡, å°±å­˜å…¥åˆ°sourceä¸­
 	* \return the return code of the function.
 	* E_ZM_OK operation completed successfully
 	* E_ZM_NO_NODE the node does not exist.
@@ -107,22 +107,22 @@ public:
 
 	int32_t SearchValue(const std::string& path, std::string& value, watcher_fn watcher = nullptr, void* watcherCtx = nullptr);
 
-	/** ¼àÌı×Ó½ÚµãµÄ´´½¨ºÍÉ¾³ı£¬ÒÔ¼°×Ó½ÚµãÄÚÈİµÄ¸Ä±ä
+	/** ç›‘å¬å­èŠ‚ç‚¹çš„åˆ›å»ºå’Œåˆ é™¤ï¼Œä»¥åŠå­èŠ‚ç‚¹å†…å®¹çš„æ”¹å˜
 	*/
 	int32_t ListenChildrenNode(const std::string& path, bool isListenChildrenNodeChange = true);
 
-	/** ¼àÌıµ±Ç°½ÚµãµÄĞŞ¸ÄºÍÉ¾³ı
+	/** ç›‘å¬å½“å‰èŠ‚ç‚¹çš„ä¿®æ”¹å’Œåˆ é™¤
 	*/
 	int32_t ListenNode(const std::string& path);
 
 	//int32_t SearchBrokersIds(std::string& brokers);
 	/**
-	* \brief ÔÚÓÃ»§¸ø¶¨µÄÂ·¾¶ÏÂ×¢²á·şÎñ
+	* \brief åœ¨ç”¨æˆ·ç»™å®šçš„è·¯å¾„ä¸‹æ³¨å†ŒæœåŠ¡
 	*
-	* \param path:ÓÃ»§¸ø¶¨µÄÂ·¾¶, °üÀ¨½ÚµãÃû
-	* \param value: ½ÚµãÖĞµÄÄÚÈİ
-	* \param node_type: Ã¶¾ÙÖµ, ´´½¨µÄ½ÚµãÀàĞÍ,
-	* \param node_name Êµ¼Ê´´½¨µÄ½ÚµãÃû
+	* \param path:ç”¨æˆ·ç»™å®šçš„è·¯å¾„, åŒ…æ‹¬èŠ‚ç‚¹å
+	* \param value: èŠ‚ç‚¹ä¸­çš„å†…å®¹
+	* \param node_type: æšä¸¾å€¼, åˆ›å»ºçš„èŠ‚ç‚¹ç±»å‹,
+	* \param node_name å®é™…åˆ›å»ºçš„èŠ‚ç‚¹å
 	* \return  one of the following codes are returned:
 	* E_ZM_OK operation completed successfully
 	* E_ZM_NO_NODE the parent node does not exist.
@@ -140,20 +140,20 @@ public:
 	int32_t DeleteNode(const std::string& path);
 
 	/**
-	* \brief ·µ»ØÓë·şÎñÆ÷Á¬½ÓµÄ×´Ì¬
+	* \brief è¿”å›ä¸æœåŠ¡å™¨è¿æ¥çš„çŠ¶æ€
 	**/
 	int32_t connectState() const;
 
-	//¼àÌı½Úµã±»É¾³ı
+	//ç›‘å¬èŠ‚ç‚¹è¢«åˆ é™¤
 	virtual void ListenNodeDeleted(const std::string& path, const std::string& node);
 
-	//¼àÌı½ÚµãµÄÖµ·¢Éú¸Ä±ä
+	//ç›‘å¬èŠ‚ç‚¹çš„å€¼å‘ç”Ÿæ”¹å˜
 	virtual void ListenNodeValueChanged(const std::string& path, const std::string& node, const std::string& value);
 
-	//¼àÌıµÄ×Ó½Úµã·¢Éú¸Ä±ä£¬Èç¹ûÍ¬Ê±ĞèÒª¼àÌı×Ó½ÚµãÄÚÈİ±ä»¯£¬ĞèÒªÔÚÃ¿´Î·¢Éú¸Ä±äÊ±ÖØĞÂ¼àÌıÃ¿¸ö½Úµã£¬ÒòÎªÃ¿¸ö½Úµã¶¼¿ÉÄÜÊÇ±»É¾³ıºóÁ¢¿ÌÌí¼ÓµÄ
+	//ç›‘å¬çš„å­èŠ‚ç‚¹å‘ç”Ÿæ”¹å˜ï¼Œå¦‚æœåŒæ—¶éœ€è¦ç›‘å¬å­èŠ‚ç‚¹å†…å®¹å˜åŒ–ï¼Œéœ€è¦åœ¨æ¯æ¬¡å‘ç”Ÿæ”¹å˜æ—¶é‡æ–°ç›‘å¬æ¯ä¸ªèŠ‚ç‚¹ï¼Œå› ä¸ºæ¯ä¸ªèŠ‚ç‚¹éƒ½å¯èƒ½æ˜¯è¢«åˆ é™¤åç«‹åˆ»æ·»åŠ çš„
 	virtual void ListenChildrenNodeChanged(const std::string& path, const std::string& node, const ZookeeperList& zookeeperList);
 
-	//¼àÌı×Ó½ÚµãµÄ¸¸½Úµã±»É¾³ı£¬Õı³£²»»á´¥·¢£¬Èç¹û´¥·¢ÁË¿ÉÄÜ»á½øÀ´¶à´Î£¬Ğ¡ÓÚµÈÓÚ×Ó½ÚµãµÄ¸öÊı
+	//ç›‘å¬å­èŠ‚ç‚¹çš„çˆ¶èŠ‚ç‚¹è¢«åˆ é™¤ï¼Œæ­£å¸¸ä¸ä¼šè§¦å‘ï¼Œå¦‚æœè§¦å‘äº†å¯èƒ½ä¼šè¿›æ¥å¤šæ¬¡ï¼Œå°äºç­‰äºå­èŠ‚ç‚¹çš„ä¸ªæ•°
 	virtual void ListenChildrenFatherNodeDeleted(const std::string& path, const std::string& node);
 	
 	virtual void ConnectEvent(bool isConnect);
