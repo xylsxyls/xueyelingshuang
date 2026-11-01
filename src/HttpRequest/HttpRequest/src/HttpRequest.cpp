@@ -1,4 +1,4 @@
-#include "HttpRequest.h"
+ï»¿#include "HttpRequest.h"
 #include <QNetworkReply>
 
 HttpRequest::HttpRequest():
@@ -91,18 +91,18 @@ void HttpRequest::clearRp(QNetworkReply* rp)
 
 		if (postMD5.isEmpty())
 		{
-			//ÇåÀí¶ÔÓ¦»º´æ
+			//æ¸…ç†å¯¹åº”ç¼“å­˜
 			mDownloadDataCache.remove(url);
 
-			//½â³ıÕıÔÚ´¦Àí×´Ì¬
+			//è§£é™¤æ­£åœ¨å¤„ç†çŠ¶æ€
 			mProcessingRq.remove(url);
 		}
 		else
 		{
-			//ÇåÀí¶ÔÓ¦»º´æ
+			//æ¸…ç†å¯¹åº”ç¼“å­˜
 			mDownloadDataCache.remove(postMD5);
 
-			//½â³ıÕıÔÚ´¦Àí×´Ì¬
+			//è§£é™¤æ­£åœ¨å¤„ç†çŠ¶æ€
 			mProcessingRq.remove(postMD5);
 		}
 

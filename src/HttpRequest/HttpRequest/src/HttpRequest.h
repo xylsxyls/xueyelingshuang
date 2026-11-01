@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QWidget>
 #include <QMap>
 #include "HttpRequestMacro.h"
@@ -6,47 +6,47 @@
 class QNetworkReply;
 class QNetworkAccessManager;
 
-//* httpÇëÇóÀà£¬°üº¬post£¬get
+//* httpè¯·æ±‚ç±»ï¼ŒåŒ…å«postï¼Œget
 class HttpRequestAPI HttpRequest : public QObject
 {
 	Q_OBJECT
 protected:
-	//* ¹¹Ôìº¯Êı
+	//* æ„é€ å‡½æ•°
 	HttpRequest();
 
 public:
-	//* µ¥Ò»ÊµÀı
+	//* å•ä¸€å®ä¾‹
 	static HttpRequest& instance();
 
 public:
-	//* ·¢ÆğÒ»¸öhttp get ÇëÇó,urlÊÇÇëÇóµÄÁ´½Ó
+	//* å‘èµ·ä¸€ä¸ªhttp get è¯·æ±‚,urlæ˜¯è¯·æ±‚çš„é“¾æ¥
 	void httpGet(const QString& url);
 
-	//* ·¢ÆğÒ»¸öhttp post ÇëÇó,urlÊÇÇëÇóµÄÁ´½Ó
-	//* index: url+data µÄmd5
-	//* ·µ»ØÖµÎªÇëÇóµÄmd5(url+data) ÓÃÀ´±íÊ¾ÕâÒ»¸öÎ¨Ò»µÄÇëÇó
+	//* å‘èµ·ä¸€ä¸ªhttp post è¯·æ±‚,urlæ˜¯è¯·æ±‚çš„é“¾æ¥
+	//* index: url+data çš„md5
+	//* è¿”å›å€¼ä¸ºè¯·æ±‚çš„md5(url+data) ç”¨æ¥è¡¨ç¤ºè¿™ä¸€ä¸ªå”¯ä¸€çš„è¯·æ±‚
 	QString httpPost(const QString& url, const QByteArray &data);
 
 Q_SIGNALS:
-	//* http get ÇëÇóµÃµ½»Ø¸´urlÊÇÇëÇóµÄµØÖ·£¬dataÊÇ»Ø¸´µÄÊı¾İ£¨Èç¹ûisEmptyÔò±íÊ¾ÇëÇó³ö´íÁË£©
+	//* http get è¯·æ±‚å¾—åˆ°å›å¤urlæ˜¯è¯·æ±‚çš„åœ°å€ï¼Œdataæ˜¯å›å¤çš„æ•°æ®ï¼ˆå¦‚æœisEmptyåˆ™è¡¨ç¤ºè¯·æ±‚å‡ºé”™äº†ï¼‰
 	void httpGetRspReady(QString url, QByteArray data);
 
-	//* http post ÇëÇóµÃµ½»Ø¸´postMD5ÊÇpostµÄÊ±ºòurl+Êı¾İµÄmd5£¬dataÊÇ»Ø¸´µÄÊı¾İ£¨Èç¹ûisEmptyÔò±íÊ¾ÇëÇó³ö´íÁË£©
+	//* http post è¯·æ±‚å¾—åˆ°å›å¤postMD5æ˜¯postçš„æ—¶å€™url+æ•°æ®çš„md5ï¼Œdataæ˜¯å›å¤çš„æ•°æ®ï¼ˆå¦‚æœisEmptyåˆ™è¡¨ç¤ºè¯·æ±‚å‡ºé”™äº†ï¼‰
 	void httpPostRspReady(QString url, QString postMD5, QByteArray data);
 
 protected:
-	void onHttpGetRspProgress(qint64 bytesReceived, qint64 bytesTotal); //* http get »Ø¸´½ø¶È
-	void onHttpGetRspFinished(); //* http get ´¦ÀíÍê±Ï
+	void onHttpGetRspProgress(qint64 bytesReceived, qint64 bytesTotal); //* http get å›å¤è¿›åº¦
+	void onHttpGetRspFinished(); //* http get å¤„ç†å®Œæ¯•
 
-	void onHttpPostRspProgress(qint64 bytesReceived, qint64 bytesTotal); //* http post »Ø¸´½ø¶È
-	void onHttpPostRspFinished(); //* http post ´¦ÀíÍê±Ï
+	void onHttpPostRspProgress(qint64 bytesReceived, qint64 bytesTotal); //* http post å›å¤è¿›åº¦
+	void onHttpPostRspFinished(); //* http post å¤„ç†å®Œæ¯•
 
 private:
 	void clearRp(QNetworkReply* rp);
 
 private:
 	QNetworkAccessManager*    mNetAccessManager;
-	QMap<QString, bool>       mProcessingRq;                 //* µ±Ç°ÕıÔÚ´¦ÀíµÄÇëÇóurl ºÍÊÇ·ñÕıÔÚ´¦Àí
-	QMap<QString, QByteArray> mDownloadDataCache;            //* Êı¾İ»º´æurl -> data
-	QMap<QString, QString>    mRedirectMap;                  //* ÖØ¶¨ÏòµÄ¹ØÏµ
+	QMap<QString, bool>       mProcessingRq;                 //* å½“å‰æ­£åœ¨å¤„ç†çš„è¯·æ±‚url å’Œæ˜¯å¦æ­£åœ¨å¤„ç†
+	QMap<QString, QByteArray> mDownloadDataCache;            //* æ•°æ®ç¼“å­˜url -> data
+	QMap<QString, QString>    mRedirectMap;                  //* é‡å®šå‘çš„å…³ç³»
 };
