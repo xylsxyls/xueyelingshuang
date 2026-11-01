@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <map>
 #include <mutex>
@@ -9,83 +9,83 @@ namespace leveldb
 	class DB;
 }
 
-/** LevelDB¹ÜÀíÀà
+/** LevelDBç®¡ç†ç±»
 */
 class LevelDBManager
 {
 protected:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	LevelDBManager();
 
 public:
-	/** µ¥Ò»ÊµÀı
-	@return ·µ»Øµ¥Ò»ÊµÀı
+	/** å•ä¸€å®ä¾‹
+	@return è¿”å›å•ä¸€å®ä¾‹
 	*/
 	static LevelDBManager& instance();
 
-	/** ¿½±´¹¹Ôìº¯Êı
-	@param [in] other ¿½±´Àà
+	/** æ‹·è´æ„é€ å‡½æ•°
+	@param [in] other æ‹·è´ç±»
 	*/
 	LevelDBManager(const LevelDBManager& other) = delete;
 
-	/** ¸³Öµ¹¹Ôìº¯Êı
-	@param [in] other ¸³ÖµÀà
+	/** èµ‹å€¼æ„é€ å‡½æ•°
+	@param [in] other èµ‹å€¼ç±»
 	*/
     LevelDBManager& operator=(const LevelDBManager& other) = delete;
 
 public:
-	/** ´ò¿ªDBÎÄ¼ş£¬Ïß³Ì°²È«
-	@param [in] path ÎÄ¼şÂ·¾¶£¬ÎÄ¼ş²»´æÔÚ»á×Ô¶¯´´½¨£¬ÎÄ¼şËùÔÚÂ·¾¶±ØĞë´æÔÚ·ñÔò´´½¨Ê§°Ü
-	@param [in] fileId ÎÄ¼şID£¬»á¸ù¾İÎÄ¼şID¾ö¶¨´ò¿ªÄÄ¸öÎÄ¼ş£¬µ±ÎÄ¼şIDÎª0Ê±£¬²»»á²éÕÒmap
+	/** æ‰“å¼€DBæ–‡ä»¶ï¼Œçº¿ç¨‹å®‰å…¨
+	@param [in] path æ–‡ä»¶è·¯å¾„ï¼Œæ–‡ä»¶ä¸å­˜åœ¨ä¼šè‡ªåŠ¨åˆ›å»ºï¼Œæ–‡ä»¶æ‰€åœ¨è·¯å¾„å¿…é¡»å­˜åœ¨å¦åˆ™åˆ›å»ºå¤±è´¥
+	@param [in] fileId æ–‡ä»¶IDï¼Œä¼šæ ¹æ®æ–‡ä»¶IDå†³å®šæ‰“å¼€å“ªä¸ªæ–‡ä»¶ï¼Œå½“æ–‡ä»¶IDä¸º0æ—¶ï¼Œä¸ä¼šæŸ¥æ‰¾map
 	*/
 	void openDBFile(const std::string& path, int32_t fileId = 0);
 
-	/** ÉèÖÃÅäÖÃ£¬Ïß³Ì°²È«
-	@param [in] key ÅäÖÃ¹Ø¼ü×Ö
-	@param [in] value ÅäÖÃÖµ
-	@param [in] fileId ÎÄ¼şID
+	/** è®¾ç½®é…ç½®ï¼Œçº¿ç¨‹å®‰å…¨
+	@param [in] key é…ç½®å…³é”®å­—
+	@param [in] value é…ç½®å€¼
+	@param [in] fileId æ–‡ä»¶ID
 	*/
 	void setConfig(const std::string& key, const std::string& value, int32_t fileId = 0);
 
-	/** ¶ÁÈ¡ÅäÖÃ£¬Ïß³Ì°²È«
-	@param [in] key ÅäÖÃ¹Ø¼ü×Ö
-	@param [out] value ÅäÖÃÖµ
-	@param [in] fileId ÎÄ¼şID
-	@return ·µ»ØÊÇ·ñÕÒµ½¸ÃÅäÖÃÏî
+	/** è¯»å–é…ç½®ï¼Œçº¿ç¨‹å®‰å…¨
+	@param [in] key é…ç½®å…³é”®å­—
+	@param [out] value é…ç½®å€¼
+	@param [in] fileId æ–‡ä»¶ID
+	@return è¿”å›æ˜¯å¦æ‰¾åˆ°è¯¥é…ç½®é¡¹
 	*/
 	bool getConfig(const std::string& key, std::string& value, int32_t fileId = 0);
 
-	/** ²éÕÒÆ¥ÅäÅäÖÃ¼¯£¬ºÍ¶ÁÈ¡ÅäÖÃ²»Í¬µÄÊÇ£¬ÕâÀïµÄkey²¿·ÖÆ¥Åä£¬²éÕÒµ½Æ¥ÅäµÄ¾Í»áÑ­»·½øÈë»Øµ÷º¯Êı£¬µ±Ñ­»·½áÊøÊ±findConfigº¯ÊıÍË³ö£¬Ïß³Ì°²È«
-	@param [in] key ÅäÖÃ¹Ø¼ü×Ö£¬²¿·ÖÆ¥Åä
-	@param [in] findConfigFun ×ó²àÎªkey£¬ÓÒ²àÎªvalue
-	@param [in] fileId ÎÄ¼şID
+	/** æŸ¥æ‰¾åŒ¹é…é…ç½®é›†ï¼Œå’Œè¯»å–é…ç½®ä¸åŒçš„æ˜¯ï¼Œè¿™é‡Œçš„keyéƒ¨åˆ†åŒ¹é…ï¼ŒæŸ¥æ‰¾åˆ°åŒ¹é…çš„å°±ä¼šå¾ªç¯è¿›å…¥å›è°ƒå‡½æ•°ï¼Œå½“å¾ªç¯ç»“æŸæ—¶findConfigå‡½æ•°é€€å‡ºï¼Œçº¿ç¨‹å®‰å…¨
+	@param [in] key é…ç½®å…³é”®å­—ï¼Œéƒ¨åˆ†åŒ¹é…
+	@param [in] findConfigFun å·¦ä¾§ä¸ºkeyï¼Œå³ä¾§ä¸ºvalue
+	@param [in] fileId æ–‡ä»¶ID
 	*/
 	void findConfig(const std::string& key, const std::function<void(const std::string&, const std::string&)>& findConfigFun, int32_t fileId = 0);
 
-	/** É¾³ıÅäÖÃ£¬Ïß³Ì°²È«
-	@param [in] key ÅäÖÃ¹Ø¼ü×Ö
-	@param [in] fileId ÎÄ¼şID
+	/** åˆ é™¤é…ç½®ï¼Œçº¿ç¨‹å®‰å…¨
+	@param [in] key é…ç½®å…³é”®å­—
+	@param [in] fileId æ–‡ä»¶ID
 	*/
 	void deleteConfig(const std::string& key, int32_t fileId = 0);
 
-	/** ¹Ø±ÕDBÎÄ¼ş£¬Ïß³Ì°²È«
-	@param [in] fileId ÎÄ¼şID
+	/** å…³é—­DBæ–‡ä»¶ï¼Œçº¿ç¨‹å®‰å…¨
+	@param [in] fileId æ–‡ä»¶ID
 	*/
 	void closeDBFile(int32_t fileId = 0);
 
 protected:
-	/** ²éÕÒÎÄ¼şÖ¸Õë
-	@param [in] fileId ÎÄ¼şID
-	@return ·µ»ØÎÄ¼şÖ¸Õë
+	/** æŸ¥æ‰¾æ–‡ä»¶æŒ‡é’ˆ
+	@param [in] fileId æ–‡ä»¶ID
+	@return è¿”å›æ–‡ä»¶æŒ‡é’ˆ
 	*/
 	leveldb::DB* findDBFile(int32_t fileId);
 
 private:
-	//Ä¬ÈÏÎÄ¼şÖ¸Õë£¬ÎÄ¼şIDÎª0
+	//é»˜è®¤æ–‡ä»¶æŒ‡é’ˆï¼Œæ–‡ä»¶IDä¸º0
 	leveldb::DB* m_defaultDBFile;
-	//³ıÎÄ¼şIDÎª0Ö®ÍâµÄÎÄ¼şÖ¸Õë
+	//é™¤æ–‡ä»¶IDä¸º0ä¹‹å¤–çš„æ–‡ä»¶æŒ‡é’ˆ
 	std::map<int32_t, leveldb::DB*> m_dbFile;
-	//ÓÃÓÚ´ò¿ª¹Ø±ÕÎÄ¼şµÄ¶àÏß³ÌÍ¬²½Ëø
+	//ç”¨äºæ‰“å¼€å…³é—­æ–‡ä»¶çš„å¤šçº¿ç¨‹åŒæ­¥é”
 	std::mutex m_mutex;
 };

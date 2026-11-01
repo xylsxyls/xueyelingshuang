@@ -1,4 +1,4 @@
-#include "LevelDBManager.h"
+﻿#include "LevelDBManager.h"
 #include "leveldb/db.h"
 #include <mutex>
 
