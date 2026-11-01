@@ -1,4 +1,4 @@
-#ifndef JSON_AUTOLINK_H_INCLUDED
+﻿#ifndef JSON_AUTOLINK_H_INCLUDED
 # define JSON_AUTOLINK_H_INCLUDED
 
 # include "config.h"

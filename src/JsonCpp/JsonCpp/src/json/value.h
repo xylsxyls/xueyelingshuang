@@ -1,4 +1,4 @@
-#ifndef CPPTL_JSON_H_INCLUDED
+﻿#ifndef CPPTL_JSON_H_INCLUDED
 # define CPPTL_JSON_H_INCLUDED
 
 # include "forwards.h"

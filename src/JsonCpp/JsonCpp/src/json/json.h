@@ -1,4 +1,4 @@
-#ifndef JSON_JSON_H_INCLUDED
+﻿#ifndef JSON_JSON_H_INCLUDED
 # define JSON_JSON_H_INCLUDED
 
 # include "../JsonCppMacro.h"

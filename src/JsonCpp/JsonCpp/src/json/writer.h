@@ -1,4 +1,4 @@
-#ifndef JSON_WRITER_H_INCLUDED
+﻿#ifndef JSON_WRITER_H_INCLUDED
 # define JSON_WRITER_H_INCLUDED
 
 # include "value.h"
