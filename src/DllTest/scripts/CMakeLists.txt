@@ -674,6 +674,18 @@ def prepare_before(session, library, target, linkage, mode, scope, environment):
             current = json.loads(session.read_text(encoding='utf-8'))
             node = current['nodes'].get(child)
             if node is not None and node['linkage'] != kind: raise ValueError('Conflicting dependency: ' + child)
+            if kind == 'dll':
+                # An existing runtime module keeps its own sealed build receipt.
+                # The caller's dll choice must not reinterpret its embedded static inputs.
+                if node is not None and not node['done']:
+                    raise ValueError('Circular or unfinished Wasm module dependency: ' + child)
+                if node is None:
+                    data = validate(child, int(target[4:]), mode, linkage='dll')
+                    if 'preparedInputs' not in data:
+                        raise ValueError('Old dependency receipt for ' + child + '; rebuild the module first')
+                    current['nodes'][child] = dict(linkage=kind, done=True, inputs=data['preparedInputs'])
+                    session.write_text(json.dumps(current), encoding='utf-8')
+                continue
             if node is None:
                 current['nodes'][child] = dict(linkage=kind, done=True, inputs={})
                 session.write_text(json.dumps(current), encoding='utf-8')
@@ -802,6 +814,18 @@ def publish_static(library, build, bit, mode, compiler, sdk, vendors):
     wasm_message('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': C++ static archive ' + str(len(payload)) + ' bytes')
 
 
+def vendor_headers(vendor):
+    """Select Wasm-specific headers, or headers shared by all targets."""
+    root = ROOT / 'tools' / vendor / 'include'
+    specific = root / (vendor + 'wasm')
+    if specific.is_dir():
+        return specific
+    if root.is_dir() and any(path.is_file() and path.suffix.lower() in ('.h', '.hpp')
+                             for path in root.iterdir()):
+        return root
+    raise ValueError('Missing Wasm or platform-independent vendor headers: ' + str(root))
+
+
 def build_inputs(library, bit, mode, linkage, scope, private):
     """Describe declared source/header/link inputs; never invoke a compiler."""
     import shutil
@@ -828,7 +852,7 @@ def build_inputs(library, bit, mode, linkage, scope, private):
             raise ValueError('Missing or mismatched prepared Wasm vendor: ' + str(prepared))
         vendor_paths.append(prepared)
         vendor = source.relative_to(ROOT / 'tools').parts[0]
-        headers = ROOT / 'tools' / vendor / 'include' / (vendor + 'wasm')
+        headers = vendor_headers(vendor)
         for header in headers.rglob('*'):
             if header.is_file():
                 target = SDK_ROOT / 'include' / vendor / header.relative_to(headers)
@@ -911,7 +935,7 @@ def stage_sdk(destination, libraries=None):
         source = ROOT / relative
         copy(SDK_ROOT / 'lib' / source.name)
         vendor = source.relative_to(ROOT / 'tools').parts[0]
-        headers = ROOT / 'tools' / vendor / 'include' / (vendor + 'wasm')
+        headers = vendor_headers(vendor)
         for header in headers.rglob('*'):
             if header.is_file(): copy(SDK_ROOT / 'include' / vendor / header.relative_to(headers))
     destination.mkdir(parents=True, exist_ok=True)
@@ -949,7 +973,7 @@ def publish_tree(destination, libraries, bit, mode):
             source = ROOT / relative
             files.add(SDK_ROOT / 'lib' / source.name)
             vendor = source.relative_to(ROOT / 'tools').parts[0]
-            headers = ROOT / 'tools' / vendor / 'include' / (vendor + 'wasm')
+            headers = vendor_headers(vendor)
             files.update(SDK_ROOT / 'include' / vendor / header.relative_to(headers)
                          for header in headers.rglob('*') if header.is_file())
     for file in files:
@@ -1148,7 +1172,11 @@ if __name__ == '__main__':
     endif()
     target_compile_features(DllTest PUBLIC cxx_std_11)
     target_compile_definitions(DllTest PUBLIC STATIC_LIB PRIVATE ${wasm_definitions})
+    # Keep local quoted headers separate from system <...> lookup on Windows hosts.
+    set(wasm_local_source "${wasm_root}/src/DllTest/DllTest/src")
+    list(REMOVE_ITEM wasm_includes "${wasm_local_source}")
     target_include_directories(DllTest PUBLIC ${wasm_includes})
+    target_compile_options(DllTest PRIVATE "-iquote${wasm_local_source}")
     target_compile_options(DllTest PRIVATE -fexceptions -fPIC "-sMEMORY64=${wasm_memory64}" ${wasm_optimization})
     if(DLLLIB STREQUAL "dll")
         set(wasm_initial_memory 16777216)

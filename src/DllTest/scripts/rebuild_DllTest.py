@@ -603,6 +603,18 @@ if __name__ != '__main__' or wasm_arguments:
                 current = json.loads(session.read_text(encoding='utf-8'))
                 node = current['nodes'].get(child)
                 if node is not None and node['linkage'] != kind: raise ValueError('Conflicting dependency: ' + child)
+                if kind == 'dll':
+                    # An existing runtime module keeps its own sealed build receipt.
+                    # The caller's dll choice must not reinterpret its embedded static inputs.
+                    if node is not None and not node['done']:
+                        raise ValueError('Circular or unfinished Wasm module dependency: ' + child)
+                    if node is None:
+                        data = validate(child, int(target[4:]), mode, linkage='dll')
+                        if 'preparedInputs' not in data:
+                            raise ValueError('Old dependency receipt for ' + child + '; rebuild the module first')
+                        current['nodes'][child] = dict(linkage=kind, done=True, inputs=data['preparedInputs'])
+                        session.write_text(json.dumps(current), encoding='utf-8')
+                    continue
                 if node is None:
                     current['nodes'][child] = dict(linkage=kind, done=True, inputs={})
                     session.write_text(json.dumps(current), encoding='utf-8')
@@ -731,6 +743,18 @@ if __name__ != '__main__' or wasm_arguments:
         wasm_message('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': C++ static archive ' + str(len(payload)) + ' bytes')
 
 
+    def vendor_headers(vendor):
+        """Select Wasm-specific headers, or headers shared by all targets."""
+        root = ROOT / 'tools' / vendor / 'include'
+        specific = root / (vendor + 'wasm')
+        if specific.is_dir():
+            return specific
+        if root.is_dir() and any(path.is_file() and path.suffix.lower() in ('.h', '.hpp')
+                                 for path in root.iterdir()):
+            return root
+        raise ValueError('Missing Wasm or platform-independent vendor headers: ' + str(root))
+
+
     def build_inputs(library, bit, mode, linkage, scope, private):
         """Describe declared source/header/link inputs; never invoke a compiler."""
         import shutil
@@ -757,7 +781,7 @@ if __name__ != '__main__' or wasm_arguments:
                 raise ValueError('Missing or mismatched prepared Wasm vendor: ' + str(prepared))
             vendor_paths.append(prepared)
             vendor = source.relative_to(ROOT / 'tools').parts[0]
-            headers = ROOT / 'tools' / vendor / 'include' / (vendor + 'wasm')
+            headers = vendor_headers(vendor)
             for header in headers.rglob('*'):
                 if header.is_file():
                     target = SDK_ROOT / 'include' / vendor / header.relative_to(headers)
@@ -840,7 +864,7 @@ if __name__ != '__main__' or wasm_arguments:
             source = ROOT / relative
             copy(SDK_ROOT / 'lib' / source.name)
             vendor = source.relative_to(ROOT / 'tools').parts[0]
-            headers = ROOT / 'tools' / vendor / 'include' / (vendor + 'wasm')
+            headers = vendor_headers(vendor)
             for header in headers.rglob('*'):
                 if header.is_file(): copy(SDK_ROOT / 'include' / vendor / header.relative_to(headers))
         destination.mkdir(parents=True, exist_ok=True)
@@ -878,7 +902,7 @@ if __name__ != '__main__' or wasm_arguments:
                 source = ROOT / relative
                 files.add(SDK_ROOT / 'lib' / source.name)
                 vendor = source.relative_to(ROOT / 'tools').parts[0]
-                headers = ROOT / 'tools' / vendor / 'include' / (vendor + 'wasm')
+                headers = vendor_headers(vendor)
                 files.update(SDK_ROOT / 'include' / vendor / header.relative_to(headers)
                              for header in headers.rglob('*') if header.is_file())
         for file in files:
@@ -1042,7 +1066,10 @@ if __name__ == '__main__' and wasm_arguments:
             common += ['-O0', '-g1'] if options.mode == 'debug' else ['-O2']
             flags = common + ['-fPIC']
             flags += ['-D' + value for value in inputs['definitions']]
-            for include in inputs['includes']: flags += ['-I', include]
+            # Local quoted headers must not shadow platform headers such as <semaphore.h>.
+            local_source = ROOT / 'src' / library / library / 'src'
+            for include in inputs['includes']:
+                flags += ['-iquote' if include == local_source else '-I', include]
             objects = []
             for index, source in enumerate(inputs['sources']):
                 obj = directory / (str(index) + '-' + source.name + '.o')
