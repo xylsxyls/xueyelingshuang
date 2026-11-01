@@ -17,9 +17,10 @@
 @note clear是逻辑清空，会切换generation并保留旧节点，旧节点会在析构或clearAndFreeMemory中释放。
 @note clearAndFreeMemory只能在外部保证没有其它线程访问本对象时调用，否则读线程可能访问到被释放节点。
 @note count/遍历类接口在并发写入时返回弱一致结果：不会崩溃，不保证包含调用期间发生的所有新写入。
+@note 模板定义随头文件发布，由调用方实例化，不使用DLL导入或导出声明。
 */
 template <typename KeyType, typename ValueType, typename HashType = std::hash<KeyType>, typename EqualType = std::equal_to<KeyType>>
-class LockFreeHashMapAPI LockFreeHashMap
+class LockFreeHashMap
 {
 public:
     /** 构造函数

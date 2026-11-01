@@ -2,7 +2,7 @@
 #include "LockFreeHashMapMacro.h"
 
 template <typename KeyType, typename ValueType, typename HashType, typename EqualType>
-class LockFreeHashMapAPI LockFreeHashMap;
+class LockFreeHashMap;
 
 /** LockFreeHashMap下标访问代理
 @note 用于支持map[key] = value写法。赋值内部调用set；需要判断写入是否成功时请直接调用set。
