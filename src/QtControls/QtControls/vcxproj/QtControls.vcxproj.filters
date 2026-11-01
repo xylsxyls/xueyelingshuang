@@ -681,4 +681,12 @@
     <ClCompile Include="..\src\PlainTextEdit.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClInclude Include="..\src\PlainTextEdit.h"><Filter>Header Files</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\WindowTitleBarConfig.h" />
+    <ClCompile Include="..\src\WindowTitleBarConfig.cpp" />
+    <ClInclude Include="..\src\FramelessMainWindow.h" />
+    <ClCompile Include="..\src\FramelessMainWindow.cpp" />
+    <ClInclude Include="..\src\WindowTitleBar.h" />
+    <ClCompile Include="..\src\WindowTitleBar.cpp" />
+  </ItemGroup>
 </Project>
