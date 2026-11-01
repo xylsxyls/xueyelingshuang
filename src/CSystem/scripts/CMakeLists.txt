@@ -1,12 +1,12 @@
 #设置CMAKE最低版本
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1.1)
+cmake_minimum_required(VERSION 3.15)
 SET(CMAKE_CXX_STANDARD 11)
 
 # Wasm: prepare dependencies, compile, then publish. Native CMake follows below.
 if(BIT MATCHES "^wasm" OR DLLLIB STREQUAL "wasm" OR EMSCRIPTEN OR CMAKE_TOOLCHAIN_FILE MATCHES "Emscripten")
     cmake_minimum_required(VERSION 3.15)
     set(WASM_SDK_KIND static)
-    set(WASM_SDK_LINKAGES lib)
+    set(WASM_SDK_LINKAGES lib dll)
     if(NOT DEFINED BIT)
         set(BIT wasm32)
     endif()
@@ -30,9 +30,22 @@ if(BIT MATCHES "^wasm" OR DLLLIB STREQUAL "wasm" OR EMSCRIPTEN OR CMAKE_TOOLCHAI
             set(ALLSAME "${WASM_BUILD_SCOPE}")
         else()
             # Standalone target builds consume dependencies prepared by version.
-        set(ALLSAME only)
+            set(ALLSAME only)
         endif()
     endif()
+    if(NOT DLLLIB MATCHES "^(dll|lib)$" OR NOT DEBUGRELEASE MATCHES "^(debug|release)$" OR NOT ALLSAME MATCHES "^(same|only|librely)$")
+        message(FATAL_ERROR "Use DLLLIB=dll/lib, DEBUGRELEASE=debug/release and ALLSAME=same/only/librely")
+    endif()
+    if(DEBUGRELEASE STREQUAL "debug")
+        set(wasm_configuration Debug)
+    else()
+        set(wasm_configuration Release)
+    endif()
+    if(CMAKE_BUILD_TYPE AND NOT CMAKE_BUILD_TYPE STREQUAL wasm_configuration)
+        message(FATAL_ERROR "CMAKE_BUILD_TYPE disagrees with DEBUGRELEASE; use a separate build directory")
+    endif()
+    set(CMAKE_BUILD_TYPE "${wasm_configuration}" CACHE STRING "Prepared Wasm SDK configuration" FORCE)
+    set(CMAKE_CONFIGURATION_TYPES "${wasm_configuration}" CACHE STRING "Prepared Wasm SDK configuration" FORCE)
     if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
         if(NOT DEFINED ENV{EMSDK})
             message(FATAL_ERROR "Set EMSDK or pass the Emscripten CMAKE_TOOLCHAIN_FILE")
@@ -94,11 +107,34 @@ import subprocess
 import tempfile
 sys.dont_write_bytecode = True
 
+def StopBuildProcess(process):
+    """Reap this build and its descendants; POSIX callers start a private process group."""
+    if process.poll() is not None:
+        return
+    try:
+        if os.name == 'nt':
+            command = os.path.join(os.environ.get('SystemRoot', r'C:\Windows'), 'System32', 'taskkill.exe')
+            subprocess.run([command, '/PID', str(process.pid), '/T', '/F'], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.STDOUT, timeout=15, check=False)
+        else:
+            import signal
+            os.killpg(process.pid, signal.SIGKILL)
+    except (OSError, subprocess.TimeoutExpired):
+        process.kill()
+    finally:
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=10)
+
+
 def managed_home(root):
     configured = os.environ.get('CLOUD_WASM_HOME')
     if configured: return Path(configured).expanduser().resolve()
     parent = Path(root.anchor) if os.name == 'nt' else Path.home()
     return parent / 'BuildTools' / 'WebAssembly'
+
 
 def locate_sdk(root):
     explicit = os.environ.get('EMSDK')
@@ -116,64 +152,6 @@ def locate_sdk(root):
     raise ValueError('Set EMSDK to an activated Emscripten 3.1.74 SDK, or prepare it under ' +
                      str(candidates[0]) + '. Install and activate the SDK before compiling.')
 
-def command_path(value):
-    if not value: return None
-    found = shutil.which(str(value))
-    if found: return str(Path(found).resolve())
-    candidate = Path(value).expanduser()
-    return str(candidate.resolve()) if candidate.is_file() else None
-
-def locate_make():
-    if os.environ.get('WASM_MAKE_PROGRAM'):
-        return command_path(os.environ['WASM_MAKE_PROGRAM'])
-    if os.name != 'nt': return command_path('make')
-    found = command_path('nmake')
-    if found: return found
-    candidates = []
-    if os.environ.get('VS120COMNTOOLS'):
-        candidates.append(Path(os.environ['VS120COMNTOOLS']).resolve().parents[1] / 'VC/bin/nmake.exe')
-    if os.environ.get('ProgramFiles(x86)'):
-        candidates.append(Path(os.environ['ProgramFiles(x86)']) / 'Microsoft Visual Studio 12.0/VC/bin/nmake.exe')
-    return next((str(path) for path in candidates if path.is_file()), None)
-
-def resolve(root, report=True):
-    home = managed_home(root)
-    problems = []
-    try:
-        sdk = locate_sdk(root)
-    except ValueError as error:
-        problems.append(str(error))
-        sdk = None
-    if os.environ.get('CMAKE_COMMAND'):
-        cmake = command_path(os.environ['CMAKE_COMMAND'])
-    else:
-        cmake = command_path('cmake') or command_path(home / 'cmake/bin' / ('cmake.exe' if os.name == 'nt' else 'cmake'))
-    if not cmake: problems.append('CMake >= 3.13 is missing; set CMAKE_COMMAND or prepare ' + str(home / 'cmake'))
-    make = locate_make()
-    if not make: problems.append(('NMake' if os.name == 'nt' else 'make') + ' is missing; set WASM_MAKE_PROGRAM')
-    config = None
-    if sdk:
-        config = Path(os.environ.get('EM_CONFIG', str(sdk / '.emscripten'))).expanduser().resolve()
-        if not config.is_file(): problems.append('SDK is not activated: missing ' + str(config))
-    if problems: raise ValueError('Wasm build environment is incomplete:\n  ' + '\n  '.join(problems))
-    env = dict(os.environ, EMSDK=str(sdk), EM_CONFIG=str(config), EMSDK_PYTHON=sys.executable, PYTHONUTF8='1')
-    env['PATH'] = os.pathsep.join([str(Path(sys.executable).parent), str(sdk / 'upstream/emscripten'),
-                                 str(Path(cmake).parent), env.get('PATH', '')])
-    version_output = subprocess.check_output([sys.executable, str(sdk / 'upstream/emscripten/emcc.py'), '--version'],
-                                            env=env, stderr=subprocess.STDOUT).decode('utf-8', errors='replace')
-    # A relocated SDK can log its old sanity stamp before printing the version.
-    # Only the actual emcc header identifies the selected compiler.
-    compiler = next((line for line in version_output.splitlines() if line.startswith('emcc ')), '')
-    if not re.search(r'\b3\.1\.74(?:-git)?(?:\s|$)', compiler):
-        raise ValueError('Prepared vendor SDK requires Emscripten 3.1.74: ' + (compiler or version_output.strip()))
-    version = subprocess.check_output([cmake, '--version'], env=env).decode('utf-8').splitlines()[0]
-    match = re.search(r'(\d+)\.(\d+)', version)
-    if not match or tuple(map(int, match.groups())) < (3, 13): raise ValueError('CMake >= 3.13 required: ' + version)
-    if report:
-        for name, value in [('EMSDK', sdk), ('EM_CONFIG', config), ('CMake', cmake), ('Make', make)]:
-            sys.stdout.write('[wasm] ' + name + ': ' + str(value) + '\n')
-    return dict(sdk=sdk, toolchain=sdk / 'upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake',
-                compiler=compiler, env=env, cmake=cmake, make=make)
 
 def signatures(root, library, exports=None):
     markers = sdk_setting(library, 'WASM_BUILD_EXPORT_MARKERS') or []
@@ -268,6 +246,7 @@ def signatures(root, library, exports=None):
         if 'p' in value: result.append(name + ':' + value)
     return result
 
+
 ROOT = Path(os.environ.get('CMAKE_WASM_REPOSITORY_ROOT', str(Path(__file__).resolve().parents[3]))).resolve()
 SDK_ROOT = ROOT
 BUILD_LINKAGES = {}
@@ -333,6 +312,7 @@ def archive_bits(payload):
     if len(targets) != 1: raise ValueError('Empty or mixed-ABI Wasm archive')
     return targets.pop()
 
+
 def sdk_kind(library, linkage=None):
     linkage = linkage or BUILD_LINKAGES.get(library)
     if linkage is not None:
@@ -342,8 +322,10 @@ def sdk_kind(library, linkage=None):
     if kind not in (['module'], ['static']): raise ValueError('Invalid WASM_SDK_KIND for ' + library)
     return kind[0]
 
+
 def artifact_digest(data):
     return data['archiveSha256'] if data.get('kind') == 'static' else data['wasmSha256']
+
 
 def validate_vendor_identity(data):
     for relative, expected in data.get('vendorSha256', {}).items():
@@ -354,6 +336,7 @@ def validate_vendor_identity(data):
         if (hashlib.sha256(source.read_bytes()).hexdigest() != expected or
                 hashlib.sha256(prepared.read_bytes()).hexdigest() != expected):
             raise ValueError('Rebuild SDK: vendor identity changed: ' + relative)
+
 
 def wasm_bits(payload):
     if payload[:8] != b'\x00asm\x01\x00\x00\x00':
@@ -387,6 +370,7 @@ def wasm_bits(payload):
     if len(memories) != 1: raise ValueError('SDK must define its own linear memory')
     return memories[0]
 
+
 def identity(js):
     text = js.read_text(encoding='utf-8')
     if MARKER not in text:
@@ -397,6 +381,7 @@ def identity(js):
     if not isinstance(data, dict) or not {'library', 'bits', 'configuration', 'wasm', 'wasmSha256', 'dependencies'}.issubset(data):
         raise ValueError('Invalid SDK identity: ' + str(js))
     return data
+
 
 def validate(library, bit, mode, active=None, linkage=None):
     if not library.isidentifier(): raise ValueError('Invalid SDK library name')
@@ -454,6 +439,7 @@ def validate(library, bit, mode, active=None, linkage=None):
     active.remove(library)
     return data
 
+
 def sdk_setting(library, name):
     """Read literal SDK declarations; other CMake logic remains CMake's responsibility."""
     entry = ROOT / 'src' / library / 'scripts/CMakeLists.txt'
@@ -469,6 +455,7 @@ def sdk_setting(library, name):
     if not all(re.fullmatch(r'[A-Za-z0-9_./@=*-]+', value) for value in values):
         raise ValueError('Expected literal SDK values for ' + name)
     return values
+
 
 def protocol_constants(library):
     output = sdk_setting(library, 'WASM_SDK_PROTOCOL_OUTPUT')
@@ -498,6 +485,7 @@ def protocol_constants(library):
     body += ',\n'.join('    ' + name + ': ' + str(value) for name, value in values.items()) + '\n});'
     return {ROOT / 'include' / library / output[0]: body.encode('utf-8')}
 
+
 def prepared_inputs(library):
     """Read actual before-script results, or the last published SDK receipt for only."""
     session = os.environ.get('CLOUD_WASM_SESSION')
@@ -519,11 +507,14 @@ def prepared_inputs(library):
         raise ValueError('Old dependency receipt for ' + library + '; run same or librely once to migrate')
     return data['preparedInputs']
 
+
 def dependencies(library):
     return list(prepared_inputs(library)['dependencies'])
 
+
 def runtime_dependencies(library):
     return [name for name, kind in prepared_inputs(library)['dependencies'].items() if kind == 'dll']
+
 
 def vendor_libraries(library, bit, mode='release'):
     result = {}
@@ -537,8 +528,10 @@ def vendor_libraries(library, bit, mode='release'):
         result[name] = hashlib.sha256(payload).hexdigest()
     return result
 
+
 def dependency_linkages(library, linkage=None, scope=None):
     return dict(prepared_inputs(library)['dependencies'])
+
 
 def plan(library, linkage, scope, active=None):
     """Follow recorded before calls. Never infer dependencies from CMake or shell text."""
@@ -552,12 +545,10 @@ def plan(library, linkage, scope, active=None):
     if linkage not in supported: raise ValueError('No Wasm ' + linkage + ' entry for ' + library)
     active.add(library)
     children = dependency_linkages(library)
-    if any(kind == 'dll' for kind in children.values()) and not (
-            sdk_setting(library, 'WASM_BUILD_RUNTIME_JS_LIBRARY') or sdk_setting(library, 'WASM_BUILD_RUNTIME_DEFINITIONS')):
-        raise ValueError(library + ' consumes C++ archives; use lib or dll ... librely')
     for dep, kind in children.items(): plan(dep, kind, scope, active)
     active.remove(library)
     BUILD_LINKAGES[library] = linkage
+
 
 def session_node(session, library, linkage, bit, mode, scope, parent=None):
     """Register one actual before invocation; return True for an already completed node."""
@@ -567,7 +558,6 @@ def session_node(session, library, linkage, bit, mode, scope, parent=None):
     if not Path(state['lock']).is_file(): raise ValueError('Expired Wasm SDK session')
     if parent:
         if not state['active'] or state['active'][-1] != parent: raise ValueError('Invalid before parent: ' + parent)
-        state['nodes'][parent]['inputs']['dependencies'][library] = linkage
     if library in state['active']: raise ValueError('Circular before dependency: ' + ' -> '.join(state['active'] + [library]))
     node = state['nodes'].get(library)
     if node is not None:
@@ -576,22 +566,161 @@ def session_node(session, library, linkage, bit, mode, scope, parent=None):
             session.write_text(json.dumps(state), encoding='utf-8')
             validate(library, bit, mode, linkage=linkage)
             return True
-    inputs = prepared_inputs(library) if scope == 'only' else dict(dependencies={}, vendors=[], headers=[])
+    inputs = dict(dependencies={}, vendors=[], headers=[])
     state['nodes'][library] = dict(linkage=linkage, inputs=inputs, done=False)
     state['active'].append(library)
     session.write_text(json.dumps(state), encoding='utf-8')
     return False
 
-def before_receipt(session, library, file):
+
+def before_receipt(session, library, records):
+    """Use only explicit records returned by CloudRebuild's stdout pipe."""
     state = json.loads(session.read_text(encoding='utf-8'))
-    inputs = state['nodes'][library]['inputs']
-    for line in file.read_text(encoding='utf-8').splitlines():
-        kind, value = line.split('\t', 1)
-        key = {'vendor': 'vendors', 'header': 'headers'}.get(kind)
-        if key is None: raise ValueError('Invalid before input: ' + kind)
-        if key == 'headers' and not value.isidentifier(): raise ValueError('Invalid header project')
-        if value not in inputs[key]: inputs[key].append(value)
+    inputs = dict(dependencies={}, vendors=[], headers=[])
+    for line in records.splitlines():
+        fields = line.split('\t')
+        if len(fields) < 2 or fields[0] != 'CLOUD_REBUILD_LIBRARIESRELY': raise ValueError('Unexpected CloudRebuild stdout')
+        kind = fields[1]
+        if kind == 'begin':
+            if fields[2:] != [library]: raise ValueError('Invalid before owner')
+        elif kind == 'project':
+            if len(fields) != 4 or not fields[2].isidentifier() or fields[3] not in ('lib', 'dll'):
+                raise ValueError('Invalid before project declaration')
+            previous = inputs['dependencies'].get(fields[2])
+            if previous is not None and previous != fields[3]: raise ValueError('Conflicting dependency declaration')
+            inputs['dependencies'][fields[2]] = fields[3]
+        elif kind == 'librariesrely':
+            if len(fields) != 3: raise ValueError('Invalid CloudRebuild link list')
+            inputs['librariesrely'] = fields[2]
+        elif kind in ('vendor', 'header'):
+            if len(fields) != 3: raise ValueError('Invalid before input')
+            key = 'vendors' if kind == 'vendor' else 'headers'
+            if fields[2] not in inputs[key]: inputs[key].append(fields[2])
+        else:
+            raise ValueError('Unsupported Wasm before record: ' + kind)
+    state['nodes'][library]['inputs'] = inputs
     session.write_text(json.dumps(state), encoding='utf-8')
+
+
+def wasm_color_enabled():
+    """Detect terminal color once per caller; inherited choice keeps nested pipe output consistent."""
+    if 'NO_COLOR' in os.environ: return False
+    configured = os.environ.get('CLOUD_WASM_COLOR')
+    if configured is not None: return configured == '1'
+    if os.environ.get('TERM') == 'dumb': return False
+    if not sys.stderr.isatty():
+        # Git Bash mintty exposes a pipe to native Python; file redirection must remain plain.
+        import stat
+        return bool(os.name == 'nt' and os.environ.get('MSYSTEM') and os.environ.get('TERM') and
+                    stat.S_ISFIFO(os.fstat(sys.stderr.fileno()).st_mode))
+    if os.name == 'nt':
+        import ctypes
+        import msvcrt
+        console = ctypes.windll.kernel32
+        handle = ctypes.c_void_p(msvcrt.get_osfhandle(sys.stderr.fileno()))
+        mode = ctypes.c_ulong()
+        if not console.GetConsoleMode(handle, ctypes.byref(mode)): return False
+        if not console.SetConsoleMode(handle, mode.value | 4): return False
+    return True
+
+
+def wasm_message(message, color='32'):
+    """Write one flushed status line; reset color before the compiler can emit diagnostics."""
+    if wasm_color_enabled(): message = '\x1b[' + color + 'm' + message + '\x1b[0m'
+    sys.stderr.write(message + '\n')
+    sys.stderr.flush()
+
+
+def before_output(command, environment):
+    """Forward dependency diagnostics live; keep stdout protocol separate and retain a bounded error tail."""
+    with tempfile.TemporaryFile(dir=Path(environment['CLOUD_REBUILD_PRIVATE_INCLUDE']).parent) as records:
+        tail = ''
+        with subprocess.Popen(command, env=environment, stdout=records, stderr=subprocess.PIPE,
+                              text=True, encoding='utf-8', errors='replace', bufsize=1,
+                              start_new_session=os.name != 'nt') as process:
+            try:
+                for line in process.stderr:
+                    sys.stderr.write(line)
+                    sys.stderr.flush()
+                    tail = (tail + line)[-8192:]
+                status = process.wait()
+            except BaseException:
+                StopBuildProcess(process)
+                raise
+        if status:
+            raise ValueError('before ' + command[2] + ' failed (' + str(status) + '):\n' + tail.strip())
+        records.seek(0)
+        return records.read().decode('utf-8')
+
+
+def prepare_before(session, library, target, linkage, mode, scope, environment):
+    """CloudRebuild runs the shell and brokers explicit inputs; only still prepares vendors."""
+    cloud = environment.get('CLOUD_REBUILD') or str(ROOT / 'lib' / ('CloudRebuild1.2.exe' if os.name == 'nt' else 'CloudRebuild1.2'))
+    environment = dict(environment, CLOUD_REBUILD=cloud, CLOUD_WASM_COLOR='1' if wasm_color_enabled() else '0')
+    command = [cloud, '--before', library, target, 'lib' if scope == 'librely' else linkage,
+               mode, 'only' if scope == 'only' else 'same']
+    records = before_output(command, environment)
+    before_receipt(session, library, records)
+    active = set()
+    visited = set()
+    def collect(name):
+        if name in active or len(active) >= 128 or len(visited) >= 1024:
+            raise ValueError('Circular or excessive dependency graph: ' + name)
+        if name in visited: return
+        active.add(name)
+        state = json.loads(session.read_text(encoding='utf-8'))
+        for child, kind in state['nodes'][name]['inputs']['dependencies'].items():
+            # Completed nested builds already carry their own explicit before reports.
+            current = json.loads(session.read_text(encoding='utf-8'))
+            node = current['nodes'].get(child)
+            if node is not None and node['linkage'] != kind: raise ValueError('Conflicting dependency: ' + child)
+            if kind == 'dll':
+                # An existing runtime module keeps its own sealed build receipt.
+                # The caller's dll choice must not reinterpret its embedded static inputs.
+                if node is not None and not node['done']:
+                    raise ValueError('Circular or unfinished Wasm module dependency: ' + child)
+                if node is None:
+                    data = validate(child, int(target[4:]), mode, linkage='dll')
+                    if 'preparedInputs' not in data:
+                        raise ValueError('Old dependency receipt for ' + child + '; rebuild the module first')
+                    current['nodes'][child] = dict(linkage=kind, done=True, inputs=data['preparedInputs'])
+                    session.write_text(json.dumps(current), encoding='utf-8')
+                continue
+            if node is None:
+                current['nodes'][child] = dict(linkage=kind, done=True, inputs={})
+                session.write_text(json.dumps(current), encoding='utf-8')
+                report = before_output([cloud, '--before', child, target, kind, mode, 'only'], environment)
+                before_receipt(session, child, report)
+            collect(child)
+        active.remove(name)
+        visited.add(name)
+    collect(library)
+
+
+def check_librariesrely(value, inputs, origin=None):
+    """An optional caller-supplied prepared closure must match the actual before declarations."""
+    if value is None: return
+    expected = [Path(path).resolve() for path in inputs['archives'] + inputs['vendor_paths']]
+    supplied = []
+    for item in value.split(';') if value else []:
+        if not item or any(char in item for char in '\r\n\t'):
+            raise ValueError('Invalid --librariesrely item')
+        path = Path(item)
+        path = path.resolve() if path.is_absolute() else (SDK_ROOT / 'lib' / path).resolve()
+        # Public SDK paths identify the same declared inputs after transactional staging.
+        # Rebase only that SDK's lib subtree; other paths still require an exact match.
+        if origin is not None and Path(item).is_absolute():
+            try:
+                relative = path.relative_to(Path(origin).resolve() / 'lib')
+            except ValueError:
+                pass
+            else:
+                path = (SDK_ROOT / 'lib' / relative).resolve()
+        if not path.is_file(): raise ValueError('Missing --librariesrely input: ' + item)
+        if path not in supplied: supplied.append(path)
+    if set(supplied) != set(expected):
+        raise ValueError('--librariesrely must match the prepared static dependency closure from before')
+
 
 def complete_node(session, library):
     state = json.loads(session.read_text(encoding='utf-8'))
@@ -599,6 +728,7 @@ def complete_node(session, library):
     if not state['active'] or state['active'].pop() != library: raise ValueError('Invalid before completion order')
     state['nodes'][library]['done'] = True
     session.write_text(json.dumps(state), encoding='utf-8')
+
 
 def publish(library, build, bit, mode, compiler, sdk, vendors):
     if sdk_kind(library) == 'static':
@@ -640,7 +770,8 @@ def publish(library, build, bit, mode, compiler, sdk, vendors):
     updates[target / (library + 'WasmLICENSE.txt')] = None
     updates.update({target / path.name: content for path, content in protocol_constants(library).items()})
     commit_sdk(library, updates, bit, mode)
-    print('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': ' + str(wasm.stat().st_size) + ' bytes', flush=True)
+    wasm_message('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': ' + str(wasm.stat().st_size) + ' bytes')
+
 
 def commit_sdk(library, updates, bit, mode):
     previous = {path: path.read_bytes() if path.exists() else None for path in updates}
@@ -666,6 +797,7 @@ def commit_sdk(library, updates, bit, mode):
             staged = path.with_name(path.name + '.wasm-publishing')
             if staged.exists(): staged.unlink()
 
+
 def publish_static(library, build, bit, mode, compiler, sdk, vendors):
     archive = build / (library + ('d' if mode == 'debug' else '') + '.a')
     payload = archive.read_bytes()
@@ -679,7 +811,20 @@ def publish_static(library, build, bit, mode, compiler, sdk, vendors):
                target / (library + 'WasmSDK.json'): json.dumps(data, indent=2, sort_keys=True).encode('utf-8')}
     updates[target / (library + 'WasmLICENSE.txt')] = None
     commit_sdk(library, updates, bit, mode)
-    print('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': C++ static archive ' + str(len(payload)) + ' bytes', flush=True)
+    wasm_message('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': C++ static archive ' + str(len(payload)) + ' bytes')
+
+
+def vendor_headers(vendor):
+    """Select Wasm-specific headers, or headers shared by all targets."""
+    root = ROOT / 'tools' / vendor / 'include'
+    specific = root / (vendor + 'wasm')
+    if specific.is_dir():
+        return specific
+    if root.is_dir() and any(path.is_file() and path.suffix.lower() in ('.h', '.hpp')
+                             for path in root.iterdir()):
+        return root
+    raise ValueError('Missing Wasm or platform-independent vendor headers: ' + str(root))
+
 
 def build_inputs(library, bit, mode, linkage, scope, private):
     """Describe declared source/header/link inputs; never invoke a compiler."""
@@ -707,7 +852,7 @@ def build_inputs(library, bit, mode, linkage, scope, private):
             raise ValueError('Missing or mismatched prepared Wasm vendor: ' + str(prepared))
         vendor_paths.append(prepared)
         vendor = source.relative_to(ROOT / 'tools').parts[0]
-        headers = ROOT / 'tools' / vendor / 'include' / (vendor + 'wasm')
+        headers = vendor_headers(vendor)
         for header in headers.rglob('*'):
             if header.is_file():
                 target = SDK_ROOT / 'include' / vendor / header.relative_to(headers)
@@ -751,6 +896,7 @@ def build_inputs(library, bit, mode, linkage, scope, private):
                 vendors=vendors, vendor_paths=vendor_paths, conversions=conversions,
                 runtime=[name for name in dependencies(library) if BUILD_LINKAGES[name] == 'dll'])
 
+
 def stage_sdk(destination, libraries=None):
     """Snapshot existing Wasm receipts/inputs; link selection comes from actual before results."""
     import shutil
@@ -789,11 +935,12 @@ def stage_sdk(destination, libraries=None):
         source = ROOT / relative
         copy(SDK_ROOT / 'lib' / source.name)
         vendor = source.relative_to(ROOT / 'tools').parts[0]
-        headers = ROOT / 'tools' / vendor / 'include' / (vendor + 'wasm')
+        headers = vendor_headers(vendor)
         for header in headers.rglob('*'):
             if header.is_file(): copy(SDK_ROOT / 'include' / vendor / header.relative_to(headers))
     destination.mkdir(parents=True, exist_ok=True)
     (destination / '.wasm-baseline.json').write_text(json.dumps(baseline), encoding='utf-8')
+
 
 def validate_staged_origin(destination):
     baseline = json.loads((SDK_ROOT / '.wasm-baseline.json').read_text(encoding='utf-8'))
@@ -802,6 +949,7 @@ def validate_staged_origin(destination):
         actual = hashlib.sha256(current.read_bytes()).hexdigest() if current.is_file() else None
         if actual != expected:
             raise ValueError('Prepared SDK changed during CMake only build: ' + relative)
+
 
 def publish_tree(destination, libraries, bit, mode):
     """Commit one complete SDK batch, restoring every replaced file on failure."""
@@ -825,7 +973,7 @@ def publish_tree(destination, libraries, bit, mode):
             source = ROOT / relative
             files.add(SDK_ROOT / 'lib' / source.name)
             vendor = source.relative_to(ROOT / 'tools').parts[0]
-            headers = ROOT / 'tools' / vendor / 'include' / (vendor + 'wasm')
+            headers = vendor_headers(vendor)
             files.update(SDK_ROOT / 'include' / vendor / header.relative_to(headers)
                          for header in headers.rglob('*') if header.is_file())
     for file in files:
@@ -878,6 +1026,7 @@ if __name__ == '__main__':
     parser.add_argument('mode', type=str.lower, choices=['debug', 'release'])
     parser.add_argument('scope', type=str.lower, choices=['same', 'only', 'librely'], nargs='?', default='only')
     parser.add_argument('--output-root', type=Path)
+    parser.add_argument('--librariesrely', help='Semicolon-separated prepared static link inputs')
     # CMake compiles through its own entry and uses these data/publication steps only.
     phase = parser.add_mutually_exclusive_group(required=True)
     phase.add_argument('--prepare-only', type=Path, help=argparse.SUPPRESS)
@@ -890,11 +1039,6 @@ if __name__ == '__main__':
     SDK_ROOT = (options.output_root or Path(os.environ.get('CLOUD_REBUILD_SDK_ROOT') or str(root))).resolve()
     lock = None
     lockfile = None
-
-    def Run(command, environment):
-        command = [str(part) for part in command]
-        print(subprocess.list2cmdline(command))
-        subprocess.check_call(command, env=environment)
 
     def Compiler():
         installation = options.emscripten_root.resolve().parents[1] if options.emscripten_root else locate_sdk(root)
@@ -918,17 +1062,12 @@ if __name__ == '__main__':
         if options.publish_only and not inherited:
             raise ValueError('Missing prepared Wasm build session')
         directory = options.prepare_only or options.publish_only
-        if directory is None:
-            scratch = Path(os.environ.get('WASM_BUILD_ROOT') or str(root / 'src/temp' / library)).resolve()
-            scratch.relative_to((root / 'src/temp' / library).resolve())
-            scratch = scratch / options.target / options.linkage / options.mode
-            scratch.mkdir(parents=True, exist_ok=True)
-            directory = Path(tempfile.mkdtemp(dir=str(scratch)))
         directory = directory.resolve()
         directory.mkdir(parents=True, exist_ok=True)
         if inherited:
             session = Path(inherited).resolve()
-            SDK_ROOT = Path(json.loads(session.read_text(encoding='utf-8'))['sdk']).resolve()
+            state = json.loads(session.read_text(encoding='utf-8'))
+            SDK_ROOT = Path(state['sdk']).resolve()
         else:
             lockfile = destination / 'lib/WasmBuild.lock'
             lockfile.parent.mkdir(parents=True, exist_ok=True)
@@ -944,7 +1083,7 @@ if __name__ == '__main__':
                 marker = directory / 'batch.lock'
                 marker.write_text(library, encoding='utf-8')
             session = directory / 'session.json'
-            state = dict(sdk=str(SDK_ROOT), bits=bits, mode=options.mode, nodes={}, active=[], lock=str(marker))
+            state = dict(sdk=str(SDK_ROOT), origin=str(destination.resolve()), bits=bits, mode=options.mode, nodes={}, active=[], lock=str(marker))
             session.write_text(json.dumps(state), encoding='utf-8')
         os.environ['CLOUD_WASM_SESSION'] = str(session)
         environment.update(CLOUD_WASM_SESSION=str(session), CLOUD_WASM_PARENT=library,
@@ -956,18 +1095,11 @@ if __name__ == '__main__':
             if session_node(session, library, options.linkage, bits, options.mode, options.scope,
                                 os.environ.get('CLOUD_WASM_PARENT')):
                 sys.exit(0)
-            if options.scope != 'only':
-                environment.setdefault('CLOUD_REBUILD', (root / 'lib' / ('CloudRebuild1.2.exe' if os.name == 'nt' else 'CloudRebuild1.2')).as_posix())
-                receipt = directory / 'before-inputs.txt'
-                receipt.write_text('', encoding='utf-8')
-                environment['CLOUD_REBUILD_INPUTS'] = receipt.as_posix()
-                environment['CLOUD_REBUILD_PRIVATE_INCLUDE'] = (directory / 'include').as_posix()
-                before = root / 'src' / library / 'scripts' / ('before_' + library + '.sh')
-                bash = shutil.which('bash') or str(Path(os.environ.get('ProgramFiles', 'C:/Program Files')) / 'Git/bin/bash.exe')
-                Run([bash, '-e', before.as_posix(), options.target, 'lib' if options.scope == 'librely' else options.linkage,
-                     options.mode, 'same'], environment)
-                before_receipt(session, library, receipt)
+            environment['CLOUD_REBUILD_PRIVATE_INCLUDE'] = (directory / 'include').as_posix()
+            prepare_before(session, library, options.target, options.linkage, options.mode, options.scope, environment)
         inputs = build_inputs(library, bits, options.mode, options.linkage, options.scope, directory)
+        check_librariesrely(prepared_inputs(library)['librariesrely'], inputs)
+        check_librariesrely(options.librariesrely, inputs, state.get('origin', str(SDK_ROOT)))
         planned = dict(BUILD_LINKAGES)
         conversions = directory / (library + '-conversions.json')
         conversions.write_text(json.dumps(inputs['conversions']), encoding='utf-8')
@@ -993,7 +1125,7 @@ if __name__ == '__main__':
             publish_tree(destination, planned, bits, options.mode)
         sys.exit(0)
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
-        sys.stderr.write('[wasm] ' + library + ' FAILED: ' + str(error) + '\n')
+        wasm_message('[wasm] ' + library + ' FAILED: ' + str(error), '31')
         sys.exit(1)
     finally:
         if lock is not None:
@@ -1006,6 +1138,10 @@ if __name__ == '__main__':
     set(wasm_prepare "${CMAKE_COMMAND}" -E env "CMAKE_WASM_REPOSITORY_ROOT=${wasm_root}"
         "${wasm_python}" "${wasm_driver}"
         "${BIT}" "${DLLLIB}" "${DEBUGRELEASE}" "${ALLSAME}" --emscripten-root "${EMSCRIPTEN_ROOT_PATH}")
+    if(DEFINED LIBRARIESRELY)
+        string(REPLACE ";" "\\;" wasm_librariesrely "${LIBRARIESRELY}")
+        list(APPEND wasm_prepare "--librariesrely=${wasm_librariesrely}")
+    endif()
     execute_process(COMMAND ${wasm_prepare} --output-root "${WASM_SDK_ROOT}"
         --prepare-only "${CMAKE_CURRENT_BINARY_DIR}" RESULT_VARIABLE wasm_status)
     if(NOT wasm_status EQUAL 0)
@@ -1022,6 +1158,11 @@ if __name__ == '__main__':
     endif()
     set_target_properties(CSystem PROPERTIES DEBUG_POSTFIX "" ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+    foreach(wasm_config DEBUG RELEASE)
+        set_target_properties(CSystem PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY_${wasm_config} "${CMAKE_CURRENT_BINARY_DIR}"
+            RUNTIME_OUTPUT_DIRECTORY_${wasm_config} "${CMAKE_CURRENT_BINARY_DIR}")
+    endforeach()
     if(DEBUGRELEASE STREQUAL "debug")
         set_target_properties(CSystem PROPERTIES OUTPUT_NAME CSystemd)
         set(wasm_optimization -O0 -g1)
@@ -1031,7 +1172,11 @@ if __name__ == '__main__':
     endif()
     target_compile_features(CSystem PUBLIC cxx_std_11)
     target_compile_definitions(CSystem PUBLIC STATIC_LIB PRIVATE ${wasm_definitions})
+    # Keep local quoted headers separate from system <...> lookup on Windows hosts.
+    set(wasm_local_source "${wasm_root}/src/CSystem/CSystem/src")
+    list(REMOVE_ITEM wasm_includes "${wasm_local_source}")
     target_include_directories(CSystem PUBLIC ${wasm_includes})
+    target_compile_options(CSystem PRIVATE "-iquote${wasm_local_source}")
     target_compile_options(CSystem PRIVATE -fexceptions -fPIC "-sMEMORY64=${wasm_memory64}" ${wasm_optimization})
     if(DLLLIB STREQUAL "dll")
         set(wasm_initial_memory 16777216)
@@ -1080,150 +1225,221 @@ if __name__ == '__main__':
     return()
 endif()
 
-#设置CMAKE最低版本
-CMAKE_MINIMUM_REQUIRED(VERSION 3.15)
-SET(CMAKE_CXX_STANDARD 11)
-SET(CMAKE_CXX_STANDARD_REQUIRED ON)
-SET(CMAKE_CXX_EXTENSIONS OFF)
-SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-#SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -finput-charset='gb2312'")
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -finput-charset='gb2312'")
-
-if("${DEBUGRELEASE}" STREQUAL "debug")
-#设置项目名称
-SET(PROJECT_NAME CSystemd)
-SET(CMAKE_BUILD_TYPE "Debug")
-elseif("${DEBUGRELEASE}" STREQUAL "release")
-#设置项目名称
-SET(PROJECT_NAME CSystem)
-SET(CMAKE_BUILD_TYPE "Release")
-else()
-    MESSAGE(FATAL_ERROR "DEBUGRELEASE must be debug or release")
-endif()
-
-# Toolchains own the compiler/ABI; do not override Android NDK or Apple SDK flags.
+# Native SDK entry: before/version prepares dependencies; CMake builds this library only.
+cmake_minimum_required(VERSION 3.15)
 if(NOT BIT MATCHES "^(32|64|arm32|arm64)$")
-    MESSAGE(FATAL_ERROR "BIT must be 32, 64, arm32 or arm64")
+    message(FATAL_ERROR "Set BIT to 32, 64, arm32 or arm64")
 endif()
-if(CMAKE_TOOLCHAIN_FILE)
-    # Loaded by project() below.
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    # CMake/NDK owns the compiler, sysroot and ABI.
-elseif(CMAKE_HOST_APPLE OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+if(NOT DLLLIB MATCHES "^(dll|lib)$")
+    message(FATAL_ERROR "Set DLLLIB to dll or lib")
+endif()
+if(DEBUGRELEASE STREQUAL "debug")
+    set(native_configuration Debug)
+elseif(DEBUGRELEASE STREQUAL "release")
+    set(native_configuration Release)
+else()
+    message(FATAL_ERROR "Set DEBUGRELEASE to debug or release")
+endif()
+if(CMAKE_BUILD_TYPE AND NOT CMAKE_BUILD_TYPE STREQUAL native_configuration)
+    message(FATAL_ERROR "CMAKE_BUILD_TYPE disagrees with DEBUGRELEASE; use a separate build directory")
+endif()
+set(CMAKE_BUILD_TYPE "${native_configuration}" CACHE STRING "Prepared SDK configuration" FORCE)
+# Xcode also uses the one configuration of the separately prepared dependency SDK.
+set(CMAKE_CONFIGURATION_TYPES "${native_configuration}" CACHE STRING "Prepared SDK configuration" FORCE)
+
+# Explicit NDK/Apple/Linux toolchains own their compiler, sysroot and target flags.
+if(CMAKE_TOOLCHAIN_FILE OR CMAKE_SYSTEM_NAME STREQUAL "Android")
+elseif(CMAKE_HOST_APPLE OR CMAKE_SYSTEM_NAME MATCHES "^(Darwin|iOS)$")
+    if(BIT STREQUAL "64")
+        set(native_apple_arch x86_64)
+    elseif(BIT STREQUAL "arm64")
+        set(native_apple_arch arm64)
+    else()
+        message(FATAL_ERROR "Apple targets require BIT=64 or arm64")
+    endif()
     if(NOT CMAKE_OSX_ARCHITECTURES)
-        if(BIT STREQUAL "arm64")
-            SET(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Apple architectures")
-        elseif(BIT STREQUAL "64")
-            SET(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "Apple architectures")
-        else()
-            MESSAGE(FATAL_ERROR "Apple builds require 64 or arm64")
-        endif()
+        set(CMAKE_OSX_ARCHITECTURES "${native_apple_arch}" CACHE STRING "Apple target architecture")
     endif()
 elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+    string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}" native_host_arch)
     if(BIT STREQUAL "32" OR BIT STREQUAL "64")
-        SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m${BIT}")
-        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m${BIT}")
-    elseif(BIT STREQUAL "arm32")
-        SET(CMAKE_SYSTEM_NAME Linux)
-        SET(CMAKE_SYSTEM_PROCESSOR arm)
-        SET(CMAKE_C_COMPILER "arm-linux-gnueabihf-gcc")
-        SET(CMAKE_CXX_COMPILER "arm-linux-gnueabihf-g++")
-    elseif(BIT STREQUAL "arm64")
-        SET(CMAKE_SYSTEM_NAME Linux)
-        SET(CMAKE_SYSTEM_PROCESSOR aarch64)
-        SET(CMAKE_C_COMPILER "aarch64-linux-gnu-gcc")
-        SET(CMAKE_CXX_COMPILER "aarch64-linux-gnu-g++")
+        if(NOT native_host_arch MATCHES "^(x86_64|amd64|i[3-6]86|x86)$")
+            message(FATAL_ERROR "An x86 cross toolchain is required on this host")
+        endif()
+        string(APPEND CMAKE_C_FLAGS " -m${BIT}")
+        string(APPEND CMAKE_CXX_FLAGS " -m${BIT}")
+    elseif(BIT STREQUAL "arm32" AND NOT native_host_arch MATCHES "^arm(v[5-8].*)?$")
+        set(CMAKE_SYSTEM_NAME Linux)
+        set(CMAKE_SYSTEM_PROCESSOR arm)
+        if(NOT CMAKE_C_COMPILER)
+            set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
+        endif()
+        if(NOT CMAKE_CXX_COMPILER)
+            set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
+        endif()
+    elseif(BIT STREQUAL "arm64" AND NOT native_host_arch MATCHES "^(aarch64|arm64)$")
+        set(CMAKE_SYSTEM_NAME Linux)
+        set(CMAKE_SYSTEM_PROCESSOR aarch64)
+        if(NOT CMAKE_C_COMPILER)
+            set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
+        endif()
+        if(NOT CMAKE_CXX_COMPILER)
+            set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+        endif()
     endif()
+elseif(CMAKE_HOST_WIN32)
+    message(FATAL_ERROR "Windows uses before + rebuild or Visual Studio; native CMake is for other target platforms")
 endif()
-
-#建立项目
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT DEFINED CMAKE_TRY_COMPILE_TARGET_TYPE)
-    SET(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+    set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 endif()
-PROJECT(${PROJECT_NAME} LANGUAGES C CXX)
-
+project(CSystem LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android|Darwin|iOS)$")
-    MESSAGE(FATAL_ERROR "Windows targets use version/rebuild or Visual Studio, not CMake")
+    message(FATAL_ERROR "Unsupported native CMake target; Windows uses rebuild or Visual Studio")
 endif()
 if(DEFINED EXPECTED_TARGET_SYSTEM AND NOT CMAKE_SYSTEM_NAME STREQUAL EXPECTED_TARGET_SYSTEM)
-    MESSAGE(FATAL_ERROR "The toolchain/cache target disagrees with the requested target")
+    message(FATAL_ERROR "The toolchain target disagrees with EXPECTED_TARGET_SYSTEM")
 endif()
-if((BIT STREQUAL "32" OR BIT STREQUAL "arm32") AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
-    MESSAGE(FATAL_ERROR "BIT requests 32-bit but the toolchain is not 32-bit")
-elseif((BIT STREQUAL "64" OR BIT STREQUAL "arm64") AND NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    MESSAGE(FATAL_ERROR "BIT requests 64-bit but the toolchain is not 64-bit")
+if(BIT STREQUAL "32" OR BIT STREQUAL "arm32")
+    set(native_pointer_bytes 4)
+else()
+    set(native_pointer_bytes 8)
+endif()
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL native_pointer_bytes)
+    message(FATAL_ERROR "BIT disagrees with the actual compiler pointer size")
 endif()
 if(APPLE)
     if(BIT STREQUAL "arm64")
-        SET(EXPECTED_APPLE_ARCH "arm64")
+        set(native_apple_arch arm64)
     elseif(BIT STREQUAL "64")
-        SET(EXPECTED_APPLE_ARCH "x86_64")
+        set(native_apple_arch x86_64)
     else()
-        MESSAGE(FATAL_ERROR "Apple builds require 64 or arm64")
+        message(FATAL_ERROR "Apple targets require BIT=64 or arm64")
     endif()
-    if(NOT CMAKE_OSX_ARCHITECTURES STREQUAL EXPECTED_APPLE_ARCH)
-        MESSAGE(FATAL_ERROR "BIT disagrees with CMAKE_OSX_ARCHITECTURES")
+    if(NOT CMAKE_OSX_ARCHITECTURES STREQUAL native_apple_arch)
+        message(FATAL_ERROR "BIT disagrees with CMAKE_OSX_ARCHITECTURES; prepare each ABI separately")
     endif()
-endif()
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    # Preserve the existing Linux optimization/debug settings.
-    SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -Wl,-rpath=. -O0 -g -ggdb ")
-    SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
 endif()
 if(ANDROID)
     if(BIT STREQUAL "32")
-        SET(EXPECTED_ANDROID_ABI "x86")
+        set(native_android_abi x86)
     elseif(BIT STREQUAL "64")
-        SET(EXPECTED_ANDROID_ABI "x86_64")
+        set(native_android_abi x86_64)
     elseif(BIT STREQUAL "arm32")
-        SET(EXPECTED_ANDROID_ABI "armeabi-v7a")
+        set(native_android_abi armeabi-v7a)
     else()
-        SET(EXPECTED_ANDROID_ABI "arm64-v8a")
+        set(native_android_abi arm64-v8a)
     endif()
-    set(RESOLVED_ANDROID_ABI "${ANDROID_ABI}")
-    if(NOT RESOLVED_ANDROID_ABI)
-        set(RESOLVED_ANDROID_ABI "${CMAKE_ANDROID_ARCH_ABI}")
+    set(native_resolved_abi "${CMAKE_ANDROID_ARCH_ABI}")
+    if(NOT native_resolved_abi)
+        set(native_resolved_abi "${ANDROID_ABI}")
     endif()
-    if(NOT RESOLVED_ANDROID_ABI STREQUAL EXPECTED_ANDROID_ABI)
-        MESSAGE(FATAL_ERROR "BIT=${BIT} disagrees with Android ABI ${RESOLVED_ANDROID_ABI}")
+    if(NOT native_resolved_abi STREQUAL native_android_abi)
+        message(FATAL_ERROR "BIT disagrees with the selected Android NDK ABI")
     endif()
 endif()
-GET_FILENAME_COMPONENT(DEFAULT_SDK_ROOT "${PROJECT_SOURCE_DIR}/../../.." ABSOLUTE)
-SET(SDK_ROOT "${DEFAULT_SDK_ROOT}" CACHE PATH "Prepared include/lib SDK; dependencies are built separately")
-SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${SDK_ROOT}/lib")
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${SDK_ROOT}/lib")
-foreach(CONFIG DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
-    SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${CONFIG} "${SDK_ROOT}/lib")
-    SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CONFIG} "${SDK_ROOT}/lib")
-endforeach()
-
-#MESSAGE("PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
-#${PROJECT_SOURCE_DIR}="xueyelingshuang/src/CSystem/scripts"
-#SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin/)
-SET(LIBRARY_OUTPUT_PATH "${SDK_ROOT}/lib")
-
-#添加包含目录
-INCLUDE_DIRECTORIES("${SDK_ROOT}/include")
-
-#添加库目录
-LINK_DIRECTORIES("${SDK_ROOT}/lib")
-
-#获取代码，在项目中，将所有代码都放在src文件夹中
-AUX_SOURCE_DIRECTORY("${PROJECT_SOURCE_DIR}/../CSystem/src/" DIR_SRCS)
-#编译可执行程序
-#ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS})
-
-if("${DLLLIB}" STREQUAL "dll")
-#如果要生成动态链接库
-ADD_LIBRARY(${PROJECT_NAME} SHARED ${DIR_SRCS})
-elseif("${DLLLIB}" STREQUAL "lib")
-#如果要生成静态链接库
-ADD_LIBRARY(${PROJECT_NAME} STATIC ${DIR_SRCS})
-TARGET_COMPILE_DEFINITIONS(${PROJECT_NAME} PUBLIC STATIC_LIB)
+# Equal pointer widths do not distinguish x86_64 from arm64: compile an ABI assertion.
+if(BIT STREQUAL "32")
+    set(native_arch_condition "defined(__i386__) || defined(_M_IX86)")
+elseif(BIT STREQUAL "64")
+    set(native_arch_condition "defined(__x86_64__) || defined(_M_X64)")
+elseif(BIT STREQUAL "arm32")
+    set(native_arch_condition "defined(__arm__) || defined(_M_ARM)")
 else()
-    MESSAGE(FATAL_ERROR "DLLLIB must be dll or lib")
+    set(native_arch_condition "defined(__aarch64__) || defined(_M_ARM64)")
 endif()
+include(CheckCXXSourceCompiles)
+set(native_saved_try_compile "${CMAKE_TRY_COMPILE_TARGET_TYPE}")
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+unset(NATIVE_REQUESTED_ABI_MATCHES CACHE)
+check_cxx_source_compiles("#if !(${native_arch_condition})\n#error Wrong architecture\n#endif\nstatic_assert(sizeof(void*) == ${native_pointer_bytes}, \"Wrong pointer size\");\nint nativeAbiCheck() { return 0; }" NATIVE_REQUESTED_ABI_MATCHES)
+if(native_saved_try_compile)
+    set(CMAKE_TRY_COMPILE_TARGET_TYPE "${native_saved_try_compile}")
+else()
+    unset(CMAKE_TRY_COMPILE_TARGET_TYPE)
+endif()
+if(NOT NATIVE_REQUESTED_ABI_MATCHES)
+    message(FATAL_ERROR "BIT disagrees with the actual compiler architecture")
+endif()
+
+get_filename_component(native_repository "${CMAKE_CURRENT_SOURCE_DIR}/../../.." ABSOLUTE)
+set(native_default_sdk "${native_repository}")
+if(DEFINED ENV{CLOUD_REBUILD_SDK_ROOT} AND NOT "$ENV{CLOUD_REBUILD_SDK_ROOT}" STREQUAL "")
+    set(native_default_sdk "$ENV{CLOUD_REBUILD_SDK_ROOT}")
+endif()
+set(SDK_ROOT "${native_default_sdk}" CACHE PATH "Target SDK prepared by before/version")
+get_filename_component(SDK_ROOT "${SDK_ROOT}" ABSOLUTE)
+set(native_source "${CMAKE_CURRENT_SOURCE_DIR}/../CSystem/src")
+file(GLOB native_sources CONFIGURE_DEPENDS "${native_source}/*.c" "${native_source}/*.cpp" "${native_source}/*.cc" "${native_source}/*.cxx")
+if(NOT native_sources)
+    message(FATAL_ERROR "No implementation sources found")
+endif()
+if(DLLLIB STREQUAL "lib")
+    add_library(CSystem STATIC ${native_sources})
+    target_compile_definitions(CSystem PUBLIC STATIC_LIB)
+else()
+    add_library(CSystem SHARED ${native_sources})
+endif()
+if(DLLLIB STREQUAL "dll" AND CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android)$")
+    target_link_options(CSystem PRIVATE "-Wl,--no-undefined")
+endif()
+set_target_properties(CSystem PROPERTIES POSITION_INDEPENDENT_CODE ON DEBUG_POSTFIX d
+    ARCHIVE_OUTPUT_DIRECTORY "${SDK_ROOT}/lib" LIBRARY_OUTPUT_DIRECTORY "${SDK_ROOT}/lib")
+foreach(native_config DEBUG RELEASE)
+    set_target_properties(CSystem PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY_${native_config} "${SDK_ROOT}/lib"
+        LIBRARY_OUTPUT_DIRECTORY_${native_config} "${SDK_ROOT}/lib")
+endforeach()
+target_include_directories(CSystem PUBLIC "${SDK_ROOT}/include")
+target_compile_options(CSystem PRIVATE "$<$<CONFIG:Release>:-O2>" "$<$<CONFIG:Release>:-g>")
+if(APPLE)
+    set_target_properties(CSystem PROPERTIES MACOSX_RPATH ON INSTALL_NAME_DIR "@rpath")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set_target_properties(CSystem PROPERTIES BUILD_RPATH "$ORIGIN" INSTALL_RPATH "$ORIGIN")
+endif()
+
+# CloudRebuild or the IDE supplies the existing dependency list; never build dependencies here.
+set(native_prepared_libraries)
+foreach(native_dependency IN LISTS LIBRARIESRELY)
+    if(NOT native_dependency)
+        continue()
+    endif()
+    if(IS_ABSOLUTE "${native_dependency}")
+        set(native_dependency_path "${native_dependency}")
+    else()
+        set(native_dependency_path "${SDK_ROOT}/lib/${native_dependency}")
+    endif()
+    if(NOT EXISTS "${native_dependency_path}" OR IS_DIRECTORY "${native_dependency_path}")
+        message(FATAL_ERROR "Missing prepared dependency: ${native_dependency_path}; run before/version for this target first")
+    endif()
+    list(APPEND native_prepared_libraries "${native_dependency_path}")
+endforeach()
+if(native_prepared_libraries)
+    if(CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android)$")
+        target_link_libraries(CSystem PUBLIC "-Wl,--start-group" ${native_prepared_libraries} "-Wl,--end-group")
+    else()
+        target_link_libraries(CSystem PUBLIC ${native_prepared_libraries})
+    endif()
+endif()
+
+# Publish this library's headers only; before/CloudRebuild remains responsible for dependencies.
+file(GLOB native_headers CONFIGURE_DEPENDS "${native_source}/*.h" "${native_source}/*.hpp" "${native_source}/*.inl")
+if(DLLLIB STREQUAL "lib")
+    set(native_macro "${native_source}/CSystemMacroLib.h")
+else()
+    set(native_macro "${native_source}/CSystemMacroDll.h")
+endif()
+if(NOT EXISTS "${native_macro}")
+    set(native_macro "${native_source}/CSystemMacro.h")
+endif()
+add_custom_command(TARGET CSystem POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${SDK_ROOT}/include/CSystem"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${native_headers} "${SDK_ROOT}/include/CSystem"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${native_macro}" "${SDK_ROOT}/include/CSystem/CSystemMacro.h"
+    VERBATIM)
 
 # CSystem is a foundation library; only platform runtimes are linked below.
 if(LIBRARIESRELY)
@@ -1235,25 +1451,25 @@ if(APPLE)
     if(NOT CSYSTEM_SECURITY_FRAMEWORK)
         message(FATAL_ERROR "Security framework is required for system CSPRNG")
     endif()
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${CSYSTEM_SECURITY_FRAMEWORK})
+    TARGET_LINK_LIBRARIES(CSystem ${CSYSTEM_SECURITY_FRAMEWORK})
     if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
     find_library(CSYSTEM_PROC_LIBRARY proc)
     if(NOT CSYSTEM_PROC_LIBRARY)
         message(FATAL_ERROR "macOS libproc is required")
     endif()
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${CSYSTEM_PROC_LIBRARY})
+    TARGET_LINK_LIBRARIES(CSystem ${CSYSTEM_PROC_LIBRARY})
     endif()
 elseif(UNIX)
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} dl)
+    TARGET_LINK_LIBRARIES(CSystem dl)
 endif()
 FIND_PACKAGE(Threads REQUIRED)
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} Threads::Threads)
+TARGET_LINK_LIBRARIES(CSystem Threads::Threads)
 
 OPTION(PROCESS_WORK_PORTABLE_IDENTITY "Exercise the mobile algorithm on desktop; tests only" OFF)
 if(PROCESS_WORK_PORTABLE_IDENTITY)
-    TARGET_COMPILE_DEFINITIONS(${PROJECT_NAME} PUBLIC PROCESS_WORK_PORTABLE_IDENTITY)
+    TARGET_COMPILE_DEFINITIONS(CSystem PUBLIC PROCESS_WORK_PORTABLE_IDENTITY)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} rt)
+    TARGET_LINK_LIBRARIES(CSystem rt)
 endif()
