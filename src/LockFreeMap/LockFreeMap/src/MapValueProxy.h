@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 template <typename KeyType, typename ValueType, typename LessType, size_t MaxLevel>
-class LockFreeMapAPI LockFreeMap;
+class LockFreeMap;
 
 /** LockFreeMap下标访问代理
 @note 用于支持map[key] = value写法。赋值内部调用set；需要判断写入是否成功时请直接调用set。

@@ -18,9 +18,10 @@
 @note erase是逻辑删除，不会在并发接口中物理移除节点；clear通过切换generation隐藏旧值，复杂度为O(1)。
 @note clearAndFreeMemory只能在外部保证没有其它线程访问本对象时调用，否则读线程可能访问到被释放节点。
 @note count和遍历类接口在并发写入时返回弱一致结果：不会崩溃，不保证包含调用期间发生的所有新写入。
+@note 模板定义随头文件发布，由调用方实例化，不使用DLL导入或导出声明。
 */
 template <typename KeyType, typename ValueType, typename LessType = std::less<KeyType>, size_t MaxLevel = 16>
-class LockFreeMapAPI LockFreeMap
+class LockFreeMap
 {
 public:
     /** 构造函数
