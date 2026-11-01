@@ -13,3 +13,6 @@
         #define JsonCppAPI
     #endif
 #endif
+
+// 上游公开类型使用JSON_API，保持与源码和发布头的导入导出定义一致
+#define JSON_API JsonCppAPI
