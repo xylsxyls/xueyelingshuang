@@ -327,6 +327,9 @@ int32_t Semaphore::tryProcessSignal()
         return 0;
     }
     return ::GetLastError() == ERROR_TOO_MANY_POSTS ? 1 : -1;
+#elif defined(__EMSCRIPTEN__)
+    // Wasm不提供跨进程命名信号量，不引入仅原生平台存在的符号。
+    return -1;
 #else
     if (::sem_post(static_cast<sem_t*>(m_processSemaphore)) == 0)
     {
@@ -351,7 +354,7 @@ void Semaphore::closeProcessSemaphore()
     m_processMemory.reset();
 #elif defined(_WIN32)
     ::CloseHandle(m_processSemaphore);
-#else
+#elif !defined(__EMSCRIPTEN__)
     ::sem_close(static_cast<sem_t*>(m_processSemaphore));
 #if !defined(__ANDROID__) && !defined(__EMSCRIPTEN__)
     if (m_processCreated)
@@ -426,6 +429,8 @@ bool Semaphore::processWait(int32_t timeout)
     }
 #elif defined(_WIN32)
     return ::WaitForSingleObject(m_processSemaphore, timeout < 0 ? INFINITE : static_cast<DWORD>(timeout)) == WAIT_OBJECT_0;
+#elif defined(__EMSCRIPTEN__)
+    return false;
 #else
     sem_t* value = static_cast<sem_t*>(m_processSemaphore);
     if (timeout < 0)
