@@ -3,12 +3,38 @@
 import os
 import sys
 import ast
+import subprocess
+
+if sys.version_info < (3, 8):
+    sys.stderr.write('Build scripts require Python >= 3.8\n')
+    sys.exit(2)
 
 if os.name != 'nt':
     sys.stderr.write('This rebuild entry is Windows-only; use scripts/CMakeLists.txt on other platforms.\n')
     sys.exit(2)
 
 CLOUD_REBUILD_WASM_ENTRY = True
+
+def StopBuildProcess(process):
+    """Reap this build and its descendants; POSIX callers start a private process group."""
+    if process.poll() is not None:
+        return
+    try:
+        if os.name == 'nt':
+            command = os.path.join(os.environ.get('SystemRoot', r'C:\Windows'), 'System32', 'taskkill.exe')
+            subprocess.run([command, '/PID', str(process.pid), '/T', '/F'], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.STDOUT, timeout=15, check=False)
+        else:
+            import signal
+            os.killpg(process.pid, signal.SIGKILL)
+    except (OSError, subprocess.TimeoutExpired):
+        process.kill()
+    finally:
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=10)
 
 # Windows Wasm settings; other platforms declare their own CMake target.
 WASM_SDK_SETTINGS = {
@@ -27,9 +53,6 @@ WASM_SDK_SETTINGS = {
 # Wasm tool/SDK helpers. Importing this script only exposes checks, never a build.
 wasm_arguments = len(sys.argv) > 1 and (sys.argv[1].lower().startswith('wasm') or (len(sys.argv) > 2 and sys.argv[2].lower() == 'wasm'))
 if __name__ != '__main__' or wasm_arguments:
-    if sys.version_info < (3, 8):
-        sys.stderr.write('Wasm builds require Python >= 3.8\n')
-        sys.exit(1)
     import argparse
     import hashlib
     import json
@@ -62,68 +85,6 @@ if __name__ != '__main__' or wasm_arguments:
             if (candidate / 'upstream/emscripten/emcc.py').is_file(): return candidate
         raise ValueError('Set EMSDK to an activated Emscripten 3.1.74 SDK, or prepare it under ' +
                          str(candidates[0]) + '. Install and activate the SDK before compiling.')
-
-
-    def command_path(value):
-        if not value: return None
-        found = shutil.which(str(value))
-        if found: return str(Path(found).resolve())
-        candidate = Path(value).expanduser()
-        return str(candidate.resolve()) if candidate.is_file() else None
-
-
-    def locate_make():
-        if os.environ.get('WASM_MAKE_PROGRAM'):
-            return command_path(os.environ['WASM_MAKE_PROGRAM'])
-        if os.name != 'nt': return command_path('make')
-        found = command_path('nmake')
-        if found: return found
-        candidates = []
-        if os.environ.get('VS120COMNTOOLS'):
-            candidates.append(Path(os.environ['VS120COMNTOOLS']).resolve().parents[1] / 'VC/bin/nmake.exe')
-        if os.environ.get('ProgramFiles(x86)'):
-            candidates.append(Path(os.environ['ProgramFiles(x86)']) / 'Microsoft Visual Studio 12.0/VC/bin/nmake.exe')
-        return next((str(path) for path in candidates if path.is_file()), None)
-
-
-    def resolve(root, report=True):
-        home = managed_home(root)
-        problems = []
-        try:
-            sdk = locate_sdk(root)
-        except ValueError as error:
-            problems.append(str(error))
-            sdk = None
-        if os.environ.get('CMAKE_COMMAND'):
-            cmake = command_path(os.environ['CMAKE_COMMAND'])
-        else:
-            cmake = command_path('cmake') or command_path(home / 'cmake/bin' / ('cmake.exe' if os.name == 'nt' else 'cmake'))
-        if not cmake: problems.append('CMake >= 3.13 is missing; set CMAKE_COMMAND or prepare ' + str(home / 'cmake'))
-        make = locate_make()
-        if not make: problems.append(('NMake' if os.name == 'nt' else 'make') + ' is missing; set WASM_MAKE_PROGRAM')
-        config = None
-        if sdk:
-            config = Path(os.environ.get('EM_CONFIG', str(sdk / '.emscripten'))).expanduser().resolve()
-            if not config.is_file(): problems.append('SDK is not activated: missing ' + str(config))
-        if problems: raise ValueError('Wasm build environment is incomplete:\n  ' + '\n  '.join(problems))
-        env = dict(os.environ, EMSDK=str(sdk), EM_CONFIG=str(config), EMSDK_PYTHON=sys.executable, PYTHONUTF8='1')
-        env['PATH'] = os.pathsep.join([str(Path(sys.executable).parent), str(sdk / 'upstream/emscripten'),
-                                     str(Path(cmake).parent), env.get('PATH', '')])
-        version_output = subprocess.check_output([sys.executable, str(sdk / 'upstream/emscripten/emcc.py'), '--version'],
-                                                env=env, stderr=subprocess.STDOUT).decode('utf-8', errors='replace')
-        # A relocated SDK can log its old sanity stamp before printing the version.
-        # Only the actual emcc header identifies the selected compiler.
-        compiler = next((line for line in version_output.splitlines() if line.startswith('emcc ')), '')
-        if not re.search(r'\b3\.1\.74(?:-git)?(?:\s|$)', compiler):
-            raise ValueError('Prepared vendor SDK requires Emscripten 3.1.74: ' + (compiler or version_output.strip()))
-        version = subprocess.check_output([cmake, '--version'], env=env).decode('utf-8').splitlines()[0]
-        match = re.search(r'(\d+)\.(\d+)', version)
-        if not match or tuple(map(int, match.groups())) < (3, 13): raise ValueError('CMake >= 3.13 required: ' + version)
-        if report:
-            for name, value in [('EMSDK', sdk), ('EM_CONFIG', config), ('CMake', cmake), ('Make', make)]:
-                sys.stdout.write('[wasm] ' + name + ': ' + str(value) + '\n')
-        return dict(sdk=sdk, toolchain=sdk / 'upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake',
-                    compiler=compiler, env=env, cmake=cmake, make=make)
 
 
     def signatures(root, library, exports=None):
@@ -393,6 +354,14 @@ if __name__ != '__main__' or wasm_arguments:
         if wasm_bits(payload) != bit or hashlib.sha256(payload).hexdigest() != data['wasmSha256']:
             raise ValueError('JS/Wasm identity mismatch: ' + str(wasm))
         validate_vendor_identity(data)
+        alias = data.get('entryAlias')
+        if alias is not None:
+            expected_alias = sdk_setting(library, 'WASM_SDK_ENTRY_ALIAS') or []
+            if expected_alias != [alias] or not alias.isidentifier() or alias == library:
+                raise ValueError('Invalid public SDK entry alias: ' + str(alias))
+            entry = SDK_ROOT / 'include' / alias / (alias + 'API.js')
+            if not entry.is_file() or hashlib.sha256(entry.read_bytes()).hexdigest() != data.get('entryAliasSha256'):
+                raise ValueError('SDK entry alias identity mismatch: ' + str(entry))
         for name, digest in data.get('adapters', {}).items():
             if Path(name).name != name or not name.endswith('.js') or hashlib.sha256(
                     (js.parent / name).read_bytes()).hexdigest() != digest:
@@ -471,28 +440,6 @@ if __name__ != '__main__' or wasm_arguments:
         return data['preparedInputs']
 
 
-    def prepared_inputs(library):
-        """Read actual before-script results, or the last published SDK receipt for only."""
-        session = os.environ.get('CLOUD_WASM_SESSION')
-        if session:
-            state = json.loads(Path(session).read_text(encoding='utf-8'))
-            node = state['nodes'].get(library)
-            if node is not None: return node['inputs']
-        public = SDK_ROOT / 'include' / library
-        metadata = public / (library + 'WasmSDK.json')
-        js = public / (library + 'API.js')
-        linkage = BUILD_LINKAGES.get(library)
-        if linkage == 'lib' or linkage is None and metadata.is_file():
-            data = json.loads(metadata.read_text(encoding='utf-8'))
-        elif js.is_file():
-            data = identity(js)
-        else:
-            raise ValueError('No prepared dependency receipt for ' + library + '; run same or librely first')
-        if 'preparedInputs' not in data:
-            raise ValueError('Old dependency receipt for ' + library + '; run same or librely once to migrate')
-        return data['preparedInputs']
-
-
     def dependencies(library):
         return list(prepared_inputs(library)['dependencies'])
 
@@ -530,9 +477,6 @@ if __name__ != '__main__' or wasm_arguments:
         if linkage not in supported: raise ValueError('No Wasm ' + linkage + ' entry for ' + library)
         active.add(library)
         children = dependency_linkages(library)
-        if any(kind == 'dll' for kind in children.values()) and not (
-                sdk_setting(library, 'WASM_BUILD_RUNTIME_JS_LIBRARY') or sdk_setting(library, 'WASM_BUILD_RUNTIME_DEFINITIONS')):
-            raise ValueError(library + ' consumes C++ archives; use lib or dll ... librely')
         for dep, kind in children.items(): plan(dep, kind, scope, active)
         active.remove(library)
         BUILD_LINKAGES[library] = linkage
@@ -546,7 +490,6 @@ if __name__ != '__main__' or wasm_arguments:
         if not Path(state['lock']).is_file(): raise ValueError('Expired Wasm SDK session')
         if parent:
             if not state['active'] or state['active'][-1] != parent: raise ValueError('Invalid before parent: ' + parent)
-            state['nodes'][parent]['inputs']['dependencies'][library] = linkage
         if library in state['active']: raise ValueError('Circular before dependency: ' + ' -> '.join(state['active'] + [library]))
         node = state['nodes'].get(library)
         if node is not None:
@@ -555,23 +498,160 @@ if __name__ != '__main__' or wasm_arguments:
                 session.write_text(json.dumps(state), encoding='utf-8')
                 validate(library, bit, mode, linkage=linkage)
                 return True
-        inputs = prepared_inputs(library) if scope == 'only' else dict(dependencies={}, vendors=[], headers=[])
+        inputs = dict(dependencies={}, vendors=[], headers=[])
         state['nodes'][library] = dict(linkage=linkage, inputs=inputs, done=False)
         state['active'].append(library)
         session.write_text(json.dumps(state), encoding='utf-8')
         return False
 
 
-    def before_receipt(session, library, file):
+    def before_receipt(session, library, records):
+        """Use only explicit records returned by CloudRebuild's stdout pipe."""
         state = json.loads(session.read_text(encoding='utf-8'))
-        inputs = state['nodes'][library]['inputs']
-        for line in file.read_text(encoding='utf-8').splitlines():
-            kind, value = line.split('\t', 1)
-            key = {'vendor': 'vendors', 'header': 'headers'}.get(kind)
-            if key is None: raise ValueError('Invalid before input: ' + kind)
-            if key == 'headers' and not value.isidentifier(): raise ValueError('Invalid header project')
-            if value not in inputs[key]: inputs[key].append(value)
+        inputs = dict(dependencies={}, vendors=[], headers=[])
+        for line in records.splitlines():
+            fields = line.split('\t')
+            if len(fields) < 2 or fields[0] != 'CLOUD_REBUILD_LIBRARIESRELY': raise ValueError('Unexpected CloudRebuild stdout')
+            kind = fields[1]
+            if kind == 'begin':
+                if fields[2:] != [library]: raise ValueError('Invalid before owner')
+            elif kind == 'project':
+                if len(fields) != 4 or not fields[2].isidentifier() or fields[3] not in ('lib', 'dll'):
+                    raise ValueError('Invalid before project declaration')
+                previous = inputs['dependencies'].get(fields[2])
+                if previous is not None and previous != fields[3]: raise ValueError('Conflicting dependency declaration')
+                inputs['dependencies'][fields[2]] = fields[3]
+            elif kind == 'librariesrely':
+                if len(fields) != 3: raise ValueError('Invalid CloudRebuild link list')
+                inputs['librariesrely'] = fields[2]
+            elif kind in ('vendor', 'header'):
+                if len(fields) != 3: raise ValueError('Invalid before input')
+                key = 'vendors' if kind == 'vendor' else 'headers'
+                if fields[2] not in inputs[key]: inputs[key].append(fields[2])
+            else:
+                raise ValueError('Unsupported Wasm before record: ' + kind)
+        state['nodes'][library]['inputs'] = inputs
         session.write_text(json.dumps(state), encoding='utf-8')
+
+
+    def wasm_color_enabled():
+        """Detect terminal color once per caller; inherited choice keeps nested pipe output consistent."""
+        if 'NO_COLOR' in os.environ: return False
+        configured = os.environ.get('CLOUD_WASM_COLOR')
+        if configured is not None: return configured == '1'
+        if os.environ.get('TERM') == 'dumb': return False
+        if not sys.stderr.isatty():
+            # Git Bash mintty exposes a pipe to native Python; file redirection must remain plain.
+            import stat
+            return bool(os.name == 'nt' and os.environ.get('MSYSTEM') and os.environ.get('TERM') and
+                        stat.S_ISFIFO(os.fstat(sys.stderr.fileno()).st_mode))
+        if os.name == 'nt':
+            import ctypes
+            import msvcrt
+            console = ctypes.windll.kernel32
+            handle = ctypes.c_void_p(msvcrt.get_osfhandle(sys.stderr.fileno()))
+            mode = ctypes.c_ulong()
+            if not console.GetConsoleMode(handle, ctypes.byref(mode)): return False
+            if not console.SetConsoleMode(handle, mode.value | 4): return False
+        return True
+
+
+    def wasm_message(message, color='32'):
+        """Write one flushed status line; reset color before the compiler can emit diagnostics."""
+        if wasm_color_enabled(): message = '\x1b[' + color + 'm' + message + '\x1b[0m'
+        sys.stderr.write(message + '\n')
+        sys.stderr.flush()
+
+
+    def before_output(command, environment):
+        """Forward dependency diagnostics live; keep stdout protocol separate and retain a bounded error tail."""
+        with tempfile.TemporaryFile(dir=Path(environment['CLOUD_REBUILD_PRIVATE_INCLUDE']).parent) as records:
+            tail = ''
+            with subprocess.Popen(command, env=environment, stdout=records, stderr=subprocess.PIPE,
+                                  text=True, encoding='utf-8', errors='replace', bufsize=1,
+                                  start_new_session=os.name != 'nt') as process:
+                try:
+                    for line in process.stderr:
+                        sys.stderr.write(line)
+                        sys.stderr.flush()
+                        tail = (tail + line)[-8192:]
+                    status = process.wait()
+                except BaseException:
+                    StopBuildProcess(process)
+                    raise
+            if status:
+                raise ValueError('before ' + command[2] + ' failed (' + str(status) + '):\n' + tail.strip())
+            records.seek(0)
+            return records.read().decode('utf-8')
+
+
+    def prepare_before(session, library, target, linkage, mode, scope, environment):
+        """CloudRebuild runs the shell and brokers explicit inputs; only still prepares vendors."""
+        cloud = environment.get('CLOUD_REBUILD') or str(ROOT / 'lib' / ('CloudRebuild1.2.exe' if os.name == 'nt' else 'CloudRebuild1.2'))
+        environment = dict(environment, CLOUD_REBUILD=cloud, CLOUD_WASM_COLOR='1' if wasm_color_enabled() else '0')
+        command = [cloud, '--before', library, target, 'lib' if scope == 'librely' else linkage,
+                   mode, 'only' if scope == 'only' else 'same']
+        records = before_output(command, environment)
+        before_receipt(session, library, records)
+        active = set()
+        visited = set()
+        def collect(name):
+            if name in active or len(active) >= 128 or len(visited) >= 1024:
+                raise ValueError('Circular or excessive dependency graph: ' + name)
+            if name in visited: return
+            active.add(name)
+            state = json.loads(session.read_text(encoding='utf-8'))
+            for child, kind in state['nodes'][name]['inputs']['dependencies'].items():
+                # Completed nested builds already carry their own explicit before reports.
+                current = json.loads(session.read_text(encoding='utf-8'))
+                node = current['nodes'].get(child)
+                if node is not None and node['linkage'] != kind: raise ValueError('Conflicting dependency: ' + child)
+                if kind == 'dll':
+                    # An existing runtime module keeps its own sealed build receipt.
+                    # The caller's dll choice must not reinterpret its embedded static inputs.
+                    if node is not None and not node['done']:
+                        raise ValueError('Circular or unfinished Wasm module dependency: ' + child)
+                    if node is None:
+                        data = validate(child, int(target[4:]), mode, linkage='dll')
+                        if 'preparedInputs' not in data:
+                            raise ValueError('Old dependency receipt for ' + child + '; rebuild the module first')
+                        current['nodes'][child] = dict(linkage=kind, done=True, inputs=data['preparedInputs'])
+                        session.write_text(json.dumps(current), encoding='utf-8')
+                    continue
+                if node is None:
+                    current['nodes'][child] = dict(linkage=kind, done=True, inputs={})
+                    session.write_text(json.dumps(current), encoding='utf-8')
+                    report = before_output([cloud, '--before', child, target, kind, mode, 'only'], environment)
+                    before_receipt(session, child, report)
+                collect(child)
+            active.remove(name)
+            visited.add(name)
+        collect(library)
+
+
+    def check_librariesrely(value, inputs, origin=None):
+        """An optional caller-supplied prepared closure must match the actual before declarations."""
+        if value is None: return
+        expected = [Path(path).resolve() for path in inputs['archives'] + inputs['vendor_paths']]
+        supplied = []
+        for item in value.split(';') if value else []:
+            if not item or any(char in item for char in '\r\n\t'):
+                raise ValueError('Invalid --librariesrely item')
+            path = Path(item)
+            path = path.resolve() if path.is_absolute() else (SDK_ROOT / 'lib' / path).resolve()
+            # Public SDK paths identify the same declared inputs after transactional staging.
+            # Rebase only that SDK's lib subtree; other paths still require an exact match.
+            if origin is not None and Path(item).is_absolute():
+                try:
+                    relative = path.relative_to(Path(origin).resolve() / 'lib')
+                except ValueError:
+                    pass
+                else:
+                    path = (SDK_ROOT / 'lib' / relative).resolve()
+            if not path.is_file(): raise ValueError('Missing --librariesrely input: ' + item)
+            if path not in supplied: supplied.append(path)
+        if set(supplied) != set(expected):
+            raise ValueError('--librariesrely must match the prepared static dependency closure from before')
 
 
     def complete_node(session, library):
@@ -597,6 +677,13 @@ if __name__ != '__main__' or wasm_arguments:
                                   for dep in dependencies(library) if BUILD_LINKAGES[dep] == 'dll'},
                     buildDependencies={dep: artifact_digest(validate(dep, bit, mode)) for dep in dependencies(library)},
                     buildDependencyLinkages={dep: BUILD_LINKAGES[dep] for dep in dependencies(library)})
+        alias = sdk_setting(library, 'WASM_SDK_ENTRY_ALIAS') or []
+        alias_content = None
+        if alias:
+            if len(alias) != 1 or not alias[0].isidentifier() or alias[0] == library:
+                raise ValueError('Expected one distinct public SDK entry alias')
+            alias_content = ("'use strict';\nmodule.exports = require('../" + library + '/' + library + "API.js');").encode('utf-8')
+            data.update(entryAlias=alias[0], entryAliasSha256=hashlib.sha256(alias_content).hexdigest())
         body = js.read_text(encoding='utf-8').rstrip()
         body += MARKER + json.dumps(data, sort_keys=True, separators=(',', ':'))
         body += '\nmodule.exports.sdk = Object.freeze(' + json.dumps(data, sort_keys=True) + ');'
@@ -604,6 +691,8 @@ if __name__ != '__main__' or wasm_arguments:
         target.mkdir(parents=True, exist_ok=True)
         # Validate first, then publish with rollback. Identity checks reject an interrupted pair.
         updates = {SDK_ROOT / 'lib' / wasm.name: wasm.read_bytes(), target / (library + 'API.js'): body.encode('utf-8')}
+        if alias_content is not None:
+            updates[SDK_ROOT / 'include' / alias[0] / (alias[0] + 'API.js')] = alias_content
         previous_js = target / (library + 'API.js')
         if previous_js.is_file():
             for name in identity(previous_js).get('adapters', {}):
@@ -613,7 +702,7 @@ if __name__ != '__main__' or wasm_arguments:
         updates[target / (library + 'WasmLICENSE.txt')] = None
         updates.update({target / path.name: content for path, content in protocol_constants(library).items()})
         commit_sdk(library, updates, bit, mode)
-        print('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': ' + str(wasm.stat().st_size) + ' bytes', flush=True)
+        wasm_message('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': ' + str(wasm.stat().st_size) + ' bytes')
 
 
     def commit_sdk(library, updates, bit, mode):
@@ -654,7 +743,19 @@ if __name__ != '__main__' or wasm_arguments:
                    target / (library + 'WasmSDK.json'): json.dumps(data, indent=2, sort_keys=True).encode('utf-8')}
         updates[target / (library + 'WasmLICENSE.txt')] = None
         commit_sdk(library, updates, bit, mode)
-        print('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': C++ static archive ' + str(len(payload)) + ' bytes', flush=True)
+        wasm_message('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': C++ static archive ' + str(len(payload)) + ' bytes')
+
+
+    def vendor_headers(vendor):
+        """Select Wasm-specific headers, or headers shared by all targets."""
+        root = ROOT / 'tools' / vendor / 'include'
+        specific = root / (vendor + 'wasm')
+        if specific.is_dir():
+            return specific
+        if root.is_dir() and any(path.is_file() and path.suffix.lower() in ('.h', '.hpp')
+                                 for path in root.iterdir()):
+            return root
+        raise ValueError('Missing Wasm or platform-independent vendor headers: ' + str(root))
 
 
     def build_inputs(library, bit, mode, linkage, scope, private):
@@ -683,7 +784,7 @@ if __name__ != '__main__' or wasm_arguments:
                 raise ValueError('Missing or mismatched prepared Wasm vendor: ' + str(prepared))
             vendor_paths.append(prepared)
             vendor = source.relative_to(ROOT / 'tools').parts[0]
-            headers = ROOT / 'tools' / vendor / 'include' / (vendor + 'wasm')
+            headers = vendor_headers(vendor)
             for header in headers.rglob('*'):
                 if header.is_file():
                     target = SDK_ROOT / 'include' / vendor / header.relative_to(headers)
@@ -754,6 +855,10 @@ if __name__ != '__main__' or wasm_arguments:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, target)
         for name in selected:
+            # The alias is part of this provider's transaction, not a second Wasm module.
+            for alias in sdk_setting(name, 'WASM_SDK_ENTRY_ALIAS') or []:
+                if not alias.isidentifier() or alias == name: raise ValueError('Invalid SDK entry alias')
+                copy(SDK_ROOT / 'include' / alias / (alias + 'API.js'))
             source = SDK_ROOT / 'include' / name
             for file in source.rglob('*'):
                 if file.is_file() and (file.suffix == '.js' or file.name.endswith('WasmSDK.json')): copy(file)
@@ -762,7 +867,7 @@ if __name__ != '__main__' or wasm_arguments:
             source = ROOT / relative
             copy(SDK_ROOT / 'lib' / source.name)
             vendor = source.relative_to(ROOT / 'tools').parts[0]
-            headers = ROOT / 'tools' / vendor / 'include' / (vendor + 'wasm')
+            headers = vendor_headers(vendor)
             for header in headers.rglob('*'):
                 if header.is_file(): copy(SDK_ROOT / 'include' / vendor / header.relative_to(headers))
         destination.mkdir(parents=True, exist_ok=True)
@@ -787,6 +892,9 @@ if __name__ != '__main__' or wasm_arguments:
             data = validate(name, bit, mode)
             files.add(SDK_ROOT / 'lib' / data.get('archive', data.get('wasm')))
             public = SDK_ROOT / 'include' / name
+            if data.get('entryAlias'):
+                alias = data['entryAlias']
+                files.add(SDK_ROOT / 'include' / alias / (alias + 'API.js'))
             if data.get('kind') == 'static':
                 files.add(public / (name + 'WasmSDK.json'))
             else:
@@ -797,7 +905,7 @@ if __name__ != '__main__' or wasm_arguments:
                 source = ROOT / relative
                 files.add(SDK_ROOT / 'lib' / source.name)
                 vendor = source.relative_to(ROOT / 'tools').parts[0]
-                headers = ROOT / 'tools' / vendor / 'include' / (vendor + 'wasm')
+                headers = vendor_headers(vendor)
                 files.update(SDK_ROOT / 'include' / vendor / header.relative_to(headers)
                              for header in headers.rglob('*') if header.is_file())
         for file in files:
@@ -851,6 +959,7 @@ if __name__ == '__main__' and wasm_arguments:
     parser.add_argument('mode', type=str.lower, choices=['debug', 'release'])
     parser.add_argument('scope', type=str.lower, choices=['same', 'only', 'librely'], nargs='?', default='only')
     parser.add_argument('--output-root', type=Path)
+    parser.add_argument('--librariesrely', help='Semicolon-separated prepared static link inputs')
     # CMake compiles through its own entry and uses these data/publication steps only.
     phase = parser.add_mutually_exclusive_group()
     phase.add_argument('--prepare-only', type=Path, help=argparse.SUPPRESS)
@@ -866,8 +975,15 @@ if __name__ == '__main__' and wasm_arguments:
 
     def Run(command, environment):
         command = [str(part) for part in command]
-        print(subprocess.list2cmdline(command))
-        subprocess.check_call(command, env=environment)
+        wasm_message(subprocess.list2cmdline(command))
+        with subprocess.Popen(command, env=environment, start_new_session=os.name != 'nt') as process:
+            try:
+                status = process.wait()
+                if status:
+                    raise subprocess.CalledProcessError(status, command)
+            except BaseException:
+                StopBuildProcess(process)
+                raise
 
     def Compiler():
         installation = options.emscripten_root.resolve().parents[1] if options.emscripten_root else locate_sdk(root)
@@ -881,7 +997,7 @@ if __name__ == '__main__' and wasm_arguments:
         output = subprocess.check_output([sys.executable, str(compiler / 'emcc.py'), '--version'], env=environment, stderr=subprocess.STDOUT).decode('utf-8', errors='replace')
         version = next((line for line in output.splitlines() if line.startswith('emcc ')), '')
         if not re.search(r'\b3\.1\.74(?:-git)?(?:\s|$)', version): raise ValueError('Prepared vendors require Emscripten 3.1.74: ' + version)
-        print('[wasm] Python ' + sys.executable + '\n[wasm] Emscripten ' + str(compiler) + '\n[wasm] ' + version)
+        print('[wasm] Python ' + sys.executable + '\n[wasm] Emscripten ' + str(compiler) + '\n[wasm] ' + version, flush=True)
         return compiler, environment, version
 
     try:
@@ -901,7 +1017,8 @@ if __name__ == '__main__' and wasm_arguments:
         directory.mkdir(parents=True, exist_ok=True)
         if inherited:
             session = Path(inherited).resolve()
-            SDK_ROOT = Path(json.loads(session.read_text(encoding='utf-8'))['sdk']).resolve()
+            state = json.loads(session.read_text(encoding='utf-8'))
+            SDK_ROOT = Path(state['sdk']).resolve()
         else:
             lockfile = destination / 'lib/WasmBuild.lock'
             lockfile.parent.mkdir(parents=True, exist_ok=True)
@@ -917,7 +1034,7 @@ if __name__ == '__main__' and wasm_arguments:
                 marker = directory / 'batch.lock'
                 marker.write_text(library, encoding='utf-8')
             session = directory / 'session.json'
-            state = dict(sdk=str(SDK_ROOT), bits=bits, mode=options.mode, nodes={}, active=[], lock=str(marker))
+            state = dict(sdk=str(SDK_ROOT), origin=str(destination.resolve()), bits=bits, mode=options.mode, nodes={}, active=[], lock=str(marker))
             session.write_text(json.dumps(state), encoding='utf-8')
         os.environ['CLOUD_WASM_SESSION'] = str(session)
         environment.update(CLOUD_WASM_SESSION=str(session), CLOUD_WASM_PARENT=library,
@@ -929,18 +1046,11 @@ if __name__ == '__main__' and wasm_arguments:
             if session_node(session, library, options.linkage, bits, options.mode, options.scope,
                                 os.environ.get('CLOUD_WASM_PARENT')):
                 sys.exit(0)
-            if options.scope != 'only':
-                environment.setdefault('CLOUD_REBUILD', (root / 'lib' / ('CloudRebuild1.2.exe' if os.name == 'nt' else 'CloudRebuild1.2')).as_posix())
-                receipt = directory / 'before-inputs.txt'
-                receipt.write_text('', encoding='utf-8')
-                environment['CLOUD_REBUILD_INPUTS'] = receipt.as_posix()
-                environment['CLOUD_REBUILD_PRIVATE_INCLUDE'] = (directory / 'include').as_posix()
-                before = root / 'src' / library / 'scripts' / ('before_' + library + '.sh')
-                bash = shutil.which('bash') or str(Path(os.environ.get('ProgramFiles', 'C:/Program Files')) / 'Git/bin/bash.exe')
-                Run([bash, '-e', before.as_posix(), options.target, 'lib' if options.scope == 'librely' else options.linkage,
-                     options.mode, 'same'], environment)
-                before_receipt(session, library, receipt)
+            environment['CLOUD_REBUILD_PRIVATE_INCLUDE'] = (directory / 'include').as_posix()
+            prepare_before(session, library, options.target, options.linkage, options.mode, options.scope, environment)
         inputs = build_inputs(library, bits, options.mode, options.linkage, options.scope, directory)
+        check_librariesrely(prepared_inputs(library)['librariesrely'], inputs)
+        check_librariesrely(options.librariesrely, inputs, state.get('origin', str(SDK_ROOT)))
         planned = dict(BUILD_LINKAGES)
         conversions = directory / (library + '-conversions.json')
         conversions.write_text(json.dumps(inputs['conversions']), encoding='utf-8')
@@ -959,14 +1069,20 @@ if __name__ == '__main__' and wasm_arguments:
             common += ['-O0', '-g1'] if options.mode == 'debug' else ['-O2']
             flags = common + ['-fPIC']
             flags += ['-D' + value for value in inputs['definitions']]
-            for include in inputs['includes']: flags += ['-I', include]
+            # Local quoted headers must not shadow platform headers such as <semaphore.h>.
+            local_source = ROOT / 'src' / library / library / 'src'
+            for include in inputs['includes']:
+                flags += ['-iquote' if include == local_source else '-I', include]
             objects = []
             for index, source in enumerate(inputs['sources']):
                 obj = directory / (str(index) + '-' + source.name + '.o')
                 c = source.suffix == '.c'
+                wasm_message('[wasm] [' + str(index + 1) + '/' + str(len(inputs['sources']) + 1) + '] Compiling ' + source.name)
                 Run([sys.executable, compiler / ('emcc.py' if c else 'em++.py'), '-std=c11' if c else '-std=c++11',
                      '-c', source, '-o', obj] + flags, environment)
                 objects.append(obj)
+            wasm_message('[wasm] [' + str(len(objects) + 1) + '/' + str(len(objects) + 1) + '] ' +
+                         ('Archiving ' if options.linkage == 'lib' else 'Linking ') + library)
             stem = library + ('d' if options.mode == 'debug' else '')
             if options.linkage == 'lib':
                 Run([sys.executable, compiler / 'emar.py', 'rcs', directory / (stem + '.a')] + objects, environment)
@@ -1005,26 +1121,22 @@ if __name__ == '__main__' and wasm_arguments:
             publish_tree(destination, planned, bits, options.mode)
         sys.exit(0)
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
-        sys.stderr.write('[wasm] ' + library + ' FAILED: ' + str(error) + '\n')
+        wasm_message('[wasm] ' + library + ' FAILED: ' + str(error), '31')
         sys.exit(1)
     finally:
         if lock is not None:
             os.close(lock)
             lockfile.unlink()
 
-# Native Windows build.
-
-import sys
 import time
 import ctypes
 import shutil
 import subprocess
-IsPy3 = sys.version_info[0] >= 3
-if IsPy3:
-    import winreg
-else:
-    import codecs
-    import _winreg as winreg
+import argparse
+import tempfile
+import re
+from pathlib import Path
+import winreg
 
 BuildType = 'Release'
 IsRebuild = True
@@ -1037,16 +1149,12 @@ Bit = 'Win32'
 Dlllib = 'dll'
 MSBuild = None
 IncrediBuild = None
-UseMSBuild = True #默认用MSBuild编译，如果为False则用IncrediBuild编译
+UseMSBuild = True # 由入口参数选择，默认MSBuild；incredibuild选择可选工具
 
-#不同项目只需修改下面5个变量
+# 模板生成器负责替换工程名；依赖仍由before/version准备
 SlnFile = '../Compress.sln' #相对于本py脚本路径的相对路径
 UpdateDir = [] #相对于本py脚本路径的相对路径，填空不更新
 ExecBatList = [] #相对于本py脚本路径的相对路径，编译前调用的脚本，可填空，执行bat会先cd到bat目录再执行
-MSBuildFirstProjects = [r'Compress'] #使用MSBuild需要工程文件在解决方案sln中的路径
-     # MSBuild首先编译的项目，填空不指定顺序
-IncrediBuildFirstProjects = ['Compress'] #使用IncrediBuild只需工程名字
-     #IncrediBuild首先编译的项目，填空不指定顺序
 
 class ConsoleColor():
     '''This class defines the values of color for printing on console window'''
@@ -1067,49 +1175,40 @@ class ConsoleColor():
     Yellow = 14
     White = 15
 
-class Coord(ctypes.Structure):
-    _fields_ = [('X', ctypes.c_short), ('Y', ctypes.c_short)]
-
-class SmallRect(ctypes.Structure):
-    _fields_ = [('Left', ctypes.c_short),
-               ('Top', ctypes.c_short),
-               ('Right', ctypes.c_short),
-               ('Bottom', ctypes.c_short),
-              ]
-
-class ConsoleScreenBufferInfo(ctypes.Structure):
-    _fields_ = [('dwSize', Coord),
-               ('dwCursorPosition', Coord),
-               ('wAttributes', ctypes.c_uint),
-               ('srWindow', SmallRect),
-               ('dwMaximumWindowSize', Coord),
-              ]
-
 class Win32API():
-    '''Some native methods for python calling'''
-    StdOutputHandle = -11
-    ConsoleOutputHandle = None
-    DefaultColor = None
+    """Emit color as part of the log stream; nested builds never share console cursor state."""
+    ColorEnabled = None
+    Colors = [30, 34, 32, 36, 31, 35, 33, 37, 90, 94, 92, 96, 91, 95, 93, 97]
+
+    @staticmethod
+    def SupportsColor():
+        if Win32API.ColorEnabled is not None:
+            return Win32API.ColorEnabled
+        enabled = False
+        configured = os.environ.get('CLOUD_REBUILD_COLOR')
+        if 'NO_COLOR' not in os.environ and os.environ.get('TERM') != 'dumb':
+            if configured is not None:
+                enabled = configured == '1'
+            elif sys.stdout.isatty():
+                import msvcrt
+                mode = ctypes.c_ulong()
+                handle = ctypes.c_void_p(msvcrt.get_osfhandle(sys.stdout.fileno()))
+                kernel = ctypes.windll.kernel32
+                enabled = bool(kernel.GetConsoleMode(handle, ctypes.byref(mode)) and
+                               kernel.SetConsoleMode(handle, mode.value | 4))
+        Win32API.ColorEnabled = enabled
+        return enabled
 
     @staticmethod
     def SetConsoleColor(color):
-        '''Change the text color on console window'''
-        if not Win32API.DefaultColor:
-            if not Win32API.ConsoleOutputHandle:
-                Win32API.ConsoleOutputHandle = ctypes.windll.kernel32.GetStdHandle(Win32API.StdOutputHandle)
-            bufferInfo = ConsoleScreenBufferInfo()
-            ctypes.windll.kernel32.GetConsoleScreenBufferInfo(Win32API.ConsoleOutputHandle, ctypes.byref(bufferInfo))
-            Win32API.DefaultColor = int(bufferInfo.wAttributes & 0xFF)
-        if IsPy3:
-            sys.stdout.flush() # need flush stdout in python 3
-        ctypes.windll.kernel32.SetConsoleTextAttribute(Win32API.ConsoleOutputHandle, color)
+        if Win32API.SupportsColor() and 0 <= color < len(Win32API.Colors):
+            sys.stdout.write('\x1b[' + str(Win32API.Colors[color]) + 'm')
 
     @staticmethod
     def ResetConsoleColor():
-        '''Reset the default text color on console window'''
-        if IsPy3:
-            sys.stdout.flush() # need flush stdout in python 3
-        ctypes.windll.kernel32.SetConsoleTextAttribute(Win32API.ConsoleOutputHandle, Win32API.DefaultColor)
+        if Win32API.SupportsColor():
+            sys.stdout.write('\x1b[0m')
+        sys.stdout.flush()
 
 class Logger():
     LogFile = '@AutomationLog.txt'
@@ -1132,18 +1231,17 @@ class Logger():
                 sys.stdout.write(str(type(e)) + ' can\'t print the log!\n')
             if isValidColor:
                 Win32API.ResetConsoleColor()
+            else:
+                sys.stdout.flush()
         if not writeToFile:
             return
-        if IsPy3:
-            logFile = open(Logger.LogFile, 'a+', encoding = 'utf-8')
-        else:
-            logFile = codecs.open(Logger.LogFile, 'a+', 'utf-8')
+        logFile = open(Logger.LogFile, 'a+', encoding = 'utf-8')
         try:
             logFile.write(log)
-            # logFile.flush() # need flush in python 3, otherwise log won't be saved
         except Exception as ex:
-            logFile.close()
             sys.stdout.write('can not write log with exception: {0} {1}'.format(type(ex), ex))
+        finally:
+            logFile.close()
 
     @staticmethod
     def WriteLine(log, consoleColor = -1, writeToFile = True, printToStdout = True):
@@ -1164,205 +1262,174 @@ class Logger():
             t.tm_hour, t.tm_min, t.tm_sec, log, Logger.LineSep)
         Logger.Write(log, consoleColor, writeToFile, printToStdout)
 
-    @staticmethod
-    def DeleteLog():
-        if os.path.exists(Logger.LogFile):
-            os.remove(Logger.LogFile)
-
-
 def GetMSBuildPath():
-    if Bit == 'Win32':
-        cmd = 'call "%VS120COMNTOOLS%..\\..\\VC\\vcvarsall.bat" x86\nwhere msbuild'
-    elif Bit == 'x64':
-        cmd = 'call "%VS120COMNTOOLS%..\\..\\VC\\vcvarsall.bat" amd64\nwhere msbuild'
-    ftemp = open('GetMSBuildPath.bat', 'wt')
-    ftemp.write(cmd)
-    ftemp.close()
-    p = subprocess.Popen('GetMSBuildPath.bat', stdout = subprocess.PIPE)
-    p.wait()
-    lines = p.stdout.read().decode().splitlines()
-    os.remove('GetMSBuildPath.bat')
-    for line in lines:
-        if 'MSBuild.exe' in line:
-            return line
+    """Locate VS2013 MSBuild without creating a shared batch file or changing the caller environment."""
+    explicit = os.environ.get('MSBUILD_EXE_PATH')
+    if explicit:
+        return os.path.abspath(explicit) if os.path.isfile(explicit) else None
+    roots = [os.environ.get('ProgramFiles(x86)'), os.environ.get('ProgramFiles')]
+    for root in roots:
+        if not root:
+            continue
+        folder = os.path.join(root, 'MSBuild', '12.0', 'Bin')
+        candidate = os.path.join(folder, 'amd64', 'MSBuild.exe') if Bit == 'x64' else os.path.join(folder, 'MSBuild.exe')
+        if os.path.isfile(candidate):
+            return candidate
+    for view in (winreg.KEY_WOW64_32KEY, winreg.KEY_WOW64_64KEY):
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Microsoft\MSBuild\ToolsVersions\12.0', 0, winreg.KEY_READ | view) as key:
+                folder = winreg.QueryValueEx(key, 'MSBuildToolsPath')[0]
+            candidate = os.path.join(folder, 'amd64', 'MSBuild.exe') if Bit == 'x64' else os.path.join(folder, 'MSBuild.exe')
+            if os.path.isfile(candidate):
+                return candidate
+        except OSError:
+            continue
+    return None
 
 def GetIncrediBuildPath():
+    """Read the optional IncrediBuild installation and always release the registry handle."""
     try:
-        key=winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Classes\IncrediBuild.MonitorFile\shell\open\command')
-        value, typeId = winreg.QueryValueEx(key, '')
-        if value:
-            start = value.find('"')
-            end = value.find('"', start + 1)
-            path = value[start+1:end]
-            buildConsole = os.path.join(os.path.dirname(path), 'BuildConsole.exe')
-            return buildConsole
-    except FileNotFoundError as e:
-        Logger.WriteLine('can not find IncrediBuild', ConsoleColor.Red)
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Classes\IncrediBuild.MonitorFile\shell\open\command') as key:
+            value = winreg.QueryValueEx(key, '')[0]
+        if value and value.startswith('"') and '"' in value[1:]:
+            path = value.split('"', 2)[1]
+            candidate = os.path.join(os.path.dirname(path), 'BuildConsole.exe')
+            return candidate if os.path.isfile(candidate) else None
+    except OSError:
+        pass
+    return None
+
+def RunNativeCommand(command, cwd=None, environment=None):
+    """Run a selected command with a bounded wait; timeout and interruption cannot leave this build running."""
+    process = subprocess.Popen(command, cwd=cwd, env=environment)
+    try:
+        return process.wait(timeout=BuildTimeout)
+    except subprocess.TimeoutExpired:
+        StopBuildProcess(process)
+        Logger.Log('build timed out after {0}s'.format(BuildTimeout), ConsoleColor.Red)
+        return 1
+    except BaseException:
+        StopBuildProcess(process)
+        raise
 
 def UpdateCode():
-    # put git to path first
-    if not shutil.which('git.exe'):
-        Logger.Log('找不到git.exe. 请确认安装git时将git\bin目录路径加入到环境变量path中!!!\n, 跳过更新代码!!!', ConsoleColor.Yellow)
-        return false
-    oldDir = os.getcwd()
-    for dir in UpdateDir:
-        os.chdir(dir)
-        ret = os.system('git pull')
-        os.chdir(oldDir)
-        if ret != 0:
-            Logger.Log('update {0} failed'.format(dir), ConsoleColor.Yellow)
-            return false
+    git = shutil.which('git.exe')
+    if not git:
+        Logger.Log('git.exe is missing; update failed', ConsoleColor.Red)
+        return False
+    for directory in UpdateDir:
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__), directory))
+        if RunNativeCommand([git, 'pull'], cwd=path) != 0:
+            return False
     return True
 
-def BuildProject(cmd):
-    for i in range(6):
-        Logger.WriteLine(cmd, ConsoleColor.Cyan)
-        buildFailed = True
-        startTime = time.time()
-        p = subprocess.Popen(cmd) #IncrediBuild不能使用stdout=subprocess.PIPE，否则会导致p.wait()不返回，可能是IncrediBuild的bug
-        if IsPy3:
+def BuildProject(command):
+    """Build once; deterministic compiler errors are not retried six times or masked by stale logs."""
+    Logger.WriteLine(subprocess.list2cmdline(command), ConsoleColor.Cyan)
+    if not UseMSBuild and os.path.isfile('IncrediBuild.log'):
+        os.remove('IncrediBuild.log')
+    start = time.monotonic()
+    code = RunNativeCommand(command)
+    success = code == 0
+    if not UseMSBuild and '/clean' not in command:
+        success = False
+        if code == 0 and os.path.isfile('IncrediBuild.log'):
+            raw = Path('IncrediBuild.log').read_bytes()
             try:
-                buildFailed = p.wait(BuildTimeout)
-            except subprocess.TimeoutExpired as e:
-                Logger.Log('{0}'.format(e), ConsoleColor.Yellow)
-                p.kill()
-        else:
-            buildFailed = p.wait()
-        if not UseMSBuild:
-            #IncrediBuild的返回值不能说明编译是否成功，需要提取输出判断
-            fin = open('IncrediBuild.log')
-            for line in fin:
-                if line.startswith('=========='):
-                    Logger.Write(line, ConsoleColor.Cyan, writeToFile = True if IsPy3 else False)
-                    if IsPy3:
-                        start = line.find('失败') + 3  #========== 生成: 成功 1 个，失败 0 个，最新 0 个，跳过 0 个 ==========
-                    else:#为了兼容py2做的特殊处理，很恶心
-                        start = 0
-                        n2 = 0
-                        while 1:
-                            if line[start].isdigit():
-                                n2 += 1
-                                if n2 == 2:
-                                    break
-                                start = line.find(' ', start)
-                            start += 1
-                    end = line.find(' ', start)
-                    failCount = int(line[start:end])
-                    buildFailed = failCount > 0
-                else:
-                    Logger.Write(line, ConsoleColor.Red, writeToFile = True if IsPy3 else False, printToStdout = True if ' error ' in line else False)
-            fin.close()
-        costTime = time.time() - startTime
-        Logger.WriteLine('build cost time: {0:.1f}s\n'.format(costTime), ConsoleColor.Green)
-        if not buildFailed:
-            return True
-    return False
+                text = raw.decode('utf-8-sig')
+            except UnicodeDecodeError:
+                text = raw.decode('mbcs', errors='replace')
+            # A successful summary is required; absent/malformed summaries must not report success.
+            matches = re.findall(r'(?:失败|failed)\s*[:：]?\s*(\d+)|(\d+)\s*failed', text, re.I)
+            success = bool(matches) and all(int(left or right) == 0 for left, right in matches)
+            if not success:
+                Logger.WriteLine(text[-8192:], ConsoleColor.Red)
+    Logger.WriteLine('build cost time: {0:.1f}s\n'.format(time.monotonic() - start), ConsoleColor.Green if success else ConsoleColor.Red)
+    return success
 
 def BuildAllProjects():
-    buildSuccess = False
-    cmds = []
+    commands = []
     if UseMSBuild:
+        configurations = ['Debug', 'Release'] if CleanAll else [BuildType]
         if IsRebuild:
-            if CleanAll:
-                cmds.append('{0} {1} /t:Clean /p:Configuration={2} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, 'Debug'))
-                cmds.append('{0} {1} /t:Clean /p:Configuration={2} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, 'Release'))
-            else:
-                cmds.append('{0} {1} /t:Clean /p:Configuration={2} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, BuildType))
-        for project in MSBuildFirstProjects:
-            cmds.append('{0} {1} /t:{2} /p:Configuration={3};platform={4} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile,  project, BuildType, Bit))
-        cmds.append('{0} {1} /p:Configuration={2};platform={3} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, BuildType, Bit))
-    else: #IncrediBuild
+            for configuration in configurations:
+                commands.append([MSBuild, SlnFile, '/t:Clean', '/p:Configuration=' + configuration + ';Platform=' + Bit,
+                                 '/nologo', '/maxcpucount', '/nr:false', '/filelogger', '/consoleloggerparameters:ErrorsOnly'])
+        # One solution build honors its normal project graph; a separate target build is redundant.
+        commands.append([MSBuild, SlnFile, '/p:Configuration=' + BuildType + ';Platform=' + Bit,
+                         '/nologo', '/maxcpucount', '/nr:false', '/filelogger', '/consoleloggerparameters:ErrorsOnly'])
+    else:
         if IsRebuild:
-            if CleanAll:
-                cmds.append('"{0}" {1} /clean /cfg="{2}|{3}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, 'Debug', Bit))
-                cmds.append('"{0}" {1} /clean /cfg="{2}|{3}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, 'Release', Bit))
-            else:
-                cmds.append('"{0}" {1} /clean /cfg="{2}|{3}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, BuildType, Bit))
-        for project in IncrediBuildFirstProjects:
-            cmds.append('"{0}" {1} /build /prj={2} /cfg="{3}|{4}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, project, BuildType, Bit))
-        cmds.append('"{0}" {1} /build /cfg="{2}|{3}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, BuildType, Bit))
-    for cmd in cmds:
-        buildSuccess = BuildProject(cmd)
-        if not buildSuccess:
-            break
-    return buildSuccess
+            for configuration in (['Debug', 'Release'] if CleanAll else [BuildType]):
+                commands.append([IncrediBuild, SlnFile, '/clean', '/cfg=' + configuration + '|' + Bit,
+                                 '/nologo', '/out=IncrediBuild.log'])
+        commands.append([IncrediBuild, SlnFile, '/build', '/cfg=' + BuildType + '|' + Bit,
+                         '/nologo', '/out=IncrediBuild.log'])
+    return all(BuildProject(command) for command in commands)
 
-def main():
-    if UseMSBuild:
-        if not os.path.exists(MSBuild):
-            Logger.Log('can not find msbuild.exe', ConsoleColor.Red)
+def main(arguments=None):
+    global Bit, Dlllib, BuildType, IsRebuild, Build, Update, Copy, CleanAll, UseMSBuild, SlnFile, MSBuild, IncrediBuild
+    parser = argparse.ArgumentParser(description='Build Compress with VS2013; dependencies are prepared by before/version')
+    parser.add_argument('bit', nargs='?', default='32', choices=['32', '64'])
+    parser.add_argument('linkage', nargs='?', default='dll', type=str.lower, choices=['dll', 'lib'])
+    parser.add_argument('mode', nargs='?', default='release', type=str.lower, choices=['debug', 'release'])
+    parser.add_argument('actions', nargs='*', type=str.lower)
+    options = parser.parse_args(arguments)
+    allowed = {'build', 'update', 'copy', 'clean', 'incredibuild'}
+    if set(options.actions) - allowed:
+        parser.error('Unknown native action: ' + ', '.join(sorted(set(options.actions) - allowed)))
+    if len(options.actions) != len(set(options.actions)) or 'build' in options.actions and 'clean' in options.actions:
+        parser.error('Duplicate or conflicting native actions')
+    Bit = 'Win32' if options.bit == '32' else 'x64'
+    Dlllib = options.linkage
+    BuildType = options.mode.title()
+    IsRebuild = 'build' not in options.actions
+    Build = 'Rebuild' if IsRebuild else 'Build'
+    Update, Copy, CleanAll = (name in options.actions for name in ('update', 'copy', 'clean'))
+    UseMSBuild = 'incredibuild' not in options.actions
+    script = Path(__file__).resolve()
+    SlnFile = str(script.parent.parent / ('Compress_lib.sln' if Dlllib == 'lib' else 'Compress.sln'))
+    MSBuild = GetMSBuildPath() if UseMSBuild else None
+    IncrediBuild = None if UseMSBuild else GetIncrediBuildPath()
+    if not (MSBuild if UseMSBuild else IncrediBuild):
+        sys.stderr.write('Cannot find the selected VS2013 MSBuild or IncrediBuild executable\n')
+        return 1
+    if not os.path.isfile(SlnFile):
+        sys.stderr.write('Missing solution: ' + SlnFile + '\n')
+        return 1
+    # All temporary logs are per-invocation, including calls launched from a different project directory.
+    root = script.parents[3] / 'src/temp/Compress/native' / options.bit / Dlllib / options.mode
+    root.mkdir(parents=True, exist_ok=True)
+    directory = Path(tempfile.mkdtemp(prefix='build-', dir=str(root)))
+    Logger.LogFile = str(directory / '@AutomationLog.txt')
+    previous = os.getcwd()
+    start = time.monotonic()
+    try:
+        os.chdir(directory)
+        Logger.Log('run with argv ' + str(sys.argv), ConsoleColor.Green)
+        Logger.WriteLine('build dir is: {0}, {1}: {2}'.format(directory, Build, BuildType))
+        if Update and not UpdateCode():
             return 1
-    else:
-        if not os.path.exists(IncrediBuild):
-            Logger.Log('can not find msbuild.exe', ConsoleColor.Red)
-            return 1
-    dir = os.path.dirname(__file__)
-    if dir:
-        oldDir = os.getcwd()
-        os.chdir(dir)
-    if Update:
-        if not UpdateCode():
-            return 1
-        Logger.Log('git update succeed', ConsoleColor.Green)
-    if Copy:
-        for bat in ExecBatList:
-            oldBatDir = os.getcwd()
-            batDir = os.path.dirname(bat)
-            batName = os.path.basename(bat)
-            if batDir:
-                os.chdir(batDir)
-            start = time.clock()
-            os.system(batName)
-            Logger.Log('run "{}" cost {:.1f} seconds'.format(batName, time.clock() - start), ConsoleColor.Green)
-            if batDir:
-                os.chdir(oldBatDir)
-    buildSuccess = BuildAllProjects()
-    if buildSuccess:
-        Logger.Log('build succeed', ConsoleColor.Green)
-    else:
-        Logger.Log('build failed', ConsoleColor.Red)
-    if dir:
-        os.chdir(oldDir)
-    return 0 if buildSuccess else 1
+        if Copy:
+            for value in ExecBatList:
+                path = (script.parent / value).resolve()
+                if not path.is_file():
+                    raise OSError('Missing prebuild script: ' + str(path))
+                environment = dict(os.environ, CLOUD_REBUILD_PREBUILD_SCRIPT=str(path))
+                command = subprocess.list2cmdline([os.environ.get('COMSPEC', 'cmd.exe')]) + ' /d /s /c ""%CLOUD_REBUILD_PREBUILD_SCRIPT%""'
+                code = RunNativeCommand(command, cwd=str(path.parent), environment=environment)
+                if code != 0:
+                    Logger.Log('prebuild script failed: ' + str(path), ConsoleColor.Red)
+                    return 1
+        success = BuildAllProjects()
+        Logger.Log('build succeed' if success else 'build failed', ConsoleColor.Green if success else ConsoleColor.Red)
+        return 0 if success else 1
+    except (OSError, subprocess.SubprocessError) as error:
+        sys.stderr.write('Native build failed: ' + str(error) + '\n')
+        return 1
+    finally:
+        os.chdir(previous)
+        Logger.WriteLine('all build cost time: {0:.2f} seconds'.format(time.monotonic() - start), ConsoleColor.Green)
 
 if __name__ == '__main__':
-    Logger.Log('run with argv ' + str(sys.argv), ConsoleColor.Green)
-    sys.argv = [x.lower() for x in sys.argv]
-    start_time = time.time()
-    if 'debug' in sys.argv:
-        BuildType = 'Debug'
-    if 'lib' in sys.argv:
-        Dlllib = 'lib'
-        SlnFile = '../Compress_lib.sln'
-        MSBuildFirstProjects = [r'Compress_lib']
-        IncrediBuildFirstProjects = ['Compress_lib']
-    if '64' in sys.argv:
-        Bit = 'x64'
-    if 'build' in sys.argv:
-        IsRebuild = False
-        Build = 'Build'
-    if 'update' in sys.argv:
-        Update = True
-    if 'copy' in sys.argv:
-        Copy = True
-    if 'clean' in sys.argv:
-        CleanAll = True
-    if 'incredibuild' in sys.argv:
-        UseMSBuild = False
-    if UseMSBuild:
-        MSBuild = GetMSBuildPath()
-        if not MSBuild:
-            Logger.Log('can not find MSBuild.exe', ConsoleColor.Red)
-            exit(1)
-    else:
-        IncrediBuild = GetIncrediBuildPath()
-        if not IncrediBuild:
-            Logger.Log('can not find BuildConsole.exe', ConsoleColor.Red)
-            exit(1)
-    cwd = os.getcwd()
-    Logger.WriteLine('current dir is: {0}, {1}: {2}'.format(cwd, Build, BuildType))
-    ret = main()
-    end_time = time.time()
-    cost_time = end_time-start_time
-    Logger.WriteLine('all build cost time: {0:.2f} seconds'.format(cost_time), ConsoleColor.Green)
-    exit(ret)
+    sys.exit(main())
