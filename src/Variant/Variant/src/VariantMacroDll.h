@@ -13,3 +13,8 @@
         #define VariantAPI
     #endif
 #endif
+
+#if defined(STATIC_LIB)
+    #undef VariantAPI
+    #define VariantAPI
+#endif
