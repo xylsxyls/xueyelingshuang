@@ -3,8 +3,8 @@
 #include "NetClientGatewayLifetime.h"
 #include "NetClientGatewayWatchdog.h"
 // 原生文件后端由NetWork正式宿主入口配置
-#include "NetWork/NetWorkHostAPI.h"
-#include "LibuvTcp/LibuvHostAPI.h"
+#include "NetWork/NetWorkAPI.h"
+#include "LibuvTcp/LibuvTcpAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include <csignal>
