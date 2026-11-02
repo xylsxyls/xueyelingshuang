@@ -96,6 +96,8 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -111,6 +113,8 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -128,11 +132,12 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions>/NODEFAULTLIB:msvcrt.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -148,24 +153,45 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions>/NODEFAULTLIB:msvcrt.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="Client.h" />
-    <ClInclude Include="NetClientManager.h" />
-    <ClInclude Include="ProcessReceive.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="Client.cpp" />
-    <ClCompile Include="NetClientManager.cpp" />
-    <ClCompile Include="ProcessReceive.cpp" />
-  </ItemGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>STATIC_LIB;MBEDTLS_CONFIG_FILE="mbedtls/mbedtls_sdk_config.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(NetGatewayTestInstance)'=='true'">NET_GATEWAY_TEST_INSTANCE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\protobuf;$(ProjectDir)..\..\..\include\mbedtls;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>ws2_32.lib;userenv.lib;iphlpapi.lib;psapi.lib;advapi32.lib;bcrypt.lib;dbghelp.lib;crypt32.lib;user32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <Target Name="CheckPreparedGatewaySdk" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(ProjectDir)..\..\..\include\NetSender\NetSenderAPI.h') or !Exists('$(ProjectDir)..\..\..\include\NetWork\NetWorkAPI.h')" Text="请先运行version脚本准备对应位数和配置的SDK，再构建当前工程。" />
+  </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="NetClientManager.h" />
+    <ClCompile Include="NetClientManager.cpp" />
+    <ClInclude Include="NetClientGateway.h" />
+    <ClCompile Include="NetClientGateway.cpp" />
+    <ClInclude Include="NetClientGatewayTask.h" />
+    <ClCompile Include="NetClientGatewayTask.cpp" />
+    <ClCompile Include="NetClientOpaqueGateway.cpp" />
+    <ClInclude Include="NetClientOpaqueGateway.h" />
+    <ClInclude Include="NetClientOpaqueGatewayPeer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetClientGatewayLifetime.h" />
+    <ClCompile Include="NetClientGatewayLifetime.cpp" />
+    <ClInclude Include="NetClientGatewayWatchdog.h" />
+    <ClCompile Include="NetClientGatewayWatchdog.cpp" />
+  </ItemGroup>
 </Project>

@@ -15,25 +15,28 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="NetClientManager.h">
+    <ClInclude Include="NetClientManager.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="NetClientManager.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="NetClientGateway.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="NetClientGateway.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="NetClientGatewayTask.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="NetClientGatewayTask.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetClientOpaqueGateway.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="NetClientOpaqueGateway.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ProcessReceive.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Client.h">
+    <ClInclude Include="NetClientOpaqueGatewayPeer.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="NetClientManager.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="ProcessReceive.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Client.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
+    <ClInclude Include="NetClientGatewayLifetime.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="NetClientGatewayLifetime.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="NetClientGatewayWatchdog.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="NetClientGatewayWatchdog.cpp"><Filter>源文件</Filter></ClCompile>
   </ItemGroup>
 </Project>

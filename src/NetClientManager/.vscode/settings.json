@@ -1,7 +1,7 @@
 {
     "cmake.sourceDirectory": "${workspaceFolder}/NetClientManager/",
     "cmake.configureArgs": [
-        "-DLIBRARIESRELY=libCDump.a;libCompress.a;libCorrespondParam.a;libLockFreeQueue.a;libNetSender.a;libNetWork.a;libLibuvTcp.a;libProcessWork.a;libProtoMessage.a;libprotobuf-litestatic64.a;libReadWriteMutex.a;libCTaskThreadManager.a;libSemaphore.a;libSharedMemory.a;libCSystem.a;libCStringManager.a;libuvstatic64.a;libVariant.a;libzstatic64.a;libAtomicMath.a",
+        "-DLIBRARIESRELY=libCDump.a;libCompress.a;libCorrespondParam.a;libLockFreeQueue.a;libNetSender.a;libNetWork.a;libLibuvTcp.a;libProcessWork.a;libProtoMessage.a;libprotobuf-litestatic64.a;libReadWriteMutex.a;libCTaskThreadManager.a;libSemaphore.a;libSharedMemory.a;libCSystem.a;libCStringManager.a;libuvstatic64.a;libVariant.a;libzstatic64.a;libAtomicMath.a;libCRandom.a;libNetChannel.a;libNetInterface.a;libNetPeer.a",
         "-DBIT=64",
         "-DDEBUGRELEASE=release"
     ]
