@@ -44,9 +44,6 @@ WASM_SDK_SETTINGS = {
     "WASM_SDK_LINKAGES": [
         "lib",
         "dll"
-    ],
-    "WASM_BUILD_DEFINITIONS": [
-        "NET_CHANNEL_BUILD=1"
     ]
 }
 

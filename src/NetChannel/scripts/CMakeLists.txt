@@ -7,7 +7,6 @@ if(BIT MATCHES "^wasm" OR DLLLIB STREQUAL "wasm" OR EMSCRIPTEN OR CMAKE_TOOLCHAI
     cmake_minimum_required(VERSION 3.15)
     set(WASM_SDK_KIND static)
     set(WASM_SDK_LINKAGES lib dll)
-    set(WASM_BUILD_DEFINITIONS NET_CHANNEL_BUILD=1)
     if(NOT DEFINED BIT)
         set(BIT wasm32)
     endif()

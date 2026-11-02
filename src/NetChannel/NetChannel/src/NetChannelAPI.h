@@ -1,11 +1,11 @@
 ﻿#pragma once
-#if defined(_WIN32) && !defined(NET_CHANNEL_BUILD)
+#ifdef _WIN32
 #define _NetChannelAPI
 #endif
 #include "NetChannel.h"
 #include "NetChannelCredit.h"
 
-#if defined(_WIN32) && !defined(NET_CHANNEL_NO_AUTOLINK)
+#ifdef _WIN32
 #if defined _DEBUG
 #pragma comment(lib,"NetChanneld.lib")
 #else

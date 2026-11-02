@@ -1,10 +1,10 @@
 ﻿#pragma once
 
 #ifdef _MSC_VER
-    #ifdef NET_CHANNEL_BUILD
-        #define NetChannelAPI _declspec(dllexport)
-    #else
+    #ifdef _NetChannelAPI
         #define NetChannelAPI _declspec(dllimport)
+    #else
+        #define NetChannelAPI _declspec(dllexport)
     #endif
 #else
     #if defined(__GNUC__) && __GNUC__ >= 4
@@ -16,5 +16,5 @@
 
 #if defined(STATIC_LIB)
     #undef NetChannelAPI
-    #define NetChannelAPI
+    #define NetChannelAPI 
 #endif
