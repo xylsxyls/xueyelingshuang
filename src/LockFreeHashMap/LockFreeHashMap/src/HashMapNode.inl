@@ -1,5 +1,5 @@
-﻿#ifndef __MAP_NODE_INL__
-#define __MAP_NODE_INL__
+﻿#ifndef __HASH_MAP_NODE_INL__
+#define __HASH_MAP_NODE_INL__
 
 template <typename KeyType, typename ValueType>
 HashMapNode<KeyType, ValueType>::HashMapNode(const KeyType& key, const ValueType& value, uint64_t generation) :
@@ -37,4 +37,4 @@ bool HashMapNode<KeyType, ValueType>::hasValue() const
     return m_value != nullptr;
 }
 
-#endif // __MAP_NODE_INL__
+#endif // __HASH_MAP_NODE_INL__

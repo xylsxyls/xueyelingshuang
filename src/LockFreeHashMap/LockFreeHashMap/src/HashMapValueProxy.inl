@@ -1,5 +1,5 @@
-﻿#ifndef __MAP_VALUE_PROXY_INL__
-#define __MAP_VALUE_PROXY_INL__
+﻿#ifndef __HASH_MAP_VALUE_PROXY_INL__
+#define __HASH_MAP_VALUE_PROXY_INL__
 
 template <typename KeyType, typename ValueType, typename HashType, typename EqualType>
 HashMapValueProxy<KeyType, ValueType, HashType, EqualType>::HashMapValueProxy(LockFreeHashMap<KeyType, ValueType, HashType, EqualType>* map, const KeyType& key) :
@@ -75,4 +75,4 @@ ValueType HashMapValueProxy<KeyType, ValueType, HashType, EqualType>::value(cons
     return result;
 }
 
-#endif // __MAP_VALUE_PROXY_INL__
+#endif // __HASH_MAP_VALUE_PROXY_INL__

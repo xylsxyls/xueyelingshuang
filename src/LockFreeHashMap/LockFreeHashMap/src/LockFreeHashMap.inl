@@ -1,5 +1,5 @@
-﻿#ifndef __LOCK_FREE_MAP_INL__
-#define __LOCK_FREE_MAP_INL__
+﻿#ifndef __LOCK_FREE_HASH_MAP_INL__
+#define __LOCK_FREE_HASH_MAP_INL__
 
 template <typename KeyType, typename ValueType, typename HashType, typename EqualType>
 LockFreeHashMap<KeyType, ValueType, HashType, EqualType>::LockFreeHashMap(size_t bucketCount) :
@@ -589,4 +589,4 @@ void LockFreeHashMap<KeyType, ValueType, HashType, EqualType>::releaseAllNodes()
     }
 }
 
-#endif // __LOCK_FREE_MAP_INL__
+#endif // __LOCK_FREE_HASH_MAP_INL__
