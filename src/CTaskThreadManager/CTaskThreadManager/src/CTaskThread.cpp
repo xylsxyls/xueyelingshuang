@@ -77,8 +77,9 @@ bool CTaskThread::TryPostTask(const std::shared_ptr<CTask>& spTask, int32_t task
 	{
 		return false;
 	}
+    // 接管已取得的原有锁，投递分配抛异常时也必须释放。
+    std::unique_lock<std::mutex> lock(m_mutex, std::adopt_lock);
 	HandlePostTask(spTask, taskLevel);
-	m_mutex.unlock();
 	return true;
 }
 
@@ -173,21 +174,63 @@ void CTaskThread::StopAllTaskUnlock()
 
 void CTaskThread::HandlePostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
 {
-	m_taskMap[taskLevel].push_back(spTask);
-	//如果添加任务的优先级高于当前任务则当前任务停止
-	std::shared_ptr<CTask> spCurTask = std::atomic_load(&m_spCurTask);
-	if (spCurTask != nullptr && taskLevel > m_curTaskLevel)
-	{
-		//如果该任务的属性是被顶掉后重做，则先添加此任务，判空是防止当前任务还没来得及退出就添加了多个优先级更高的任务
-		if (m_spCurTaskBk != nullptr && spCurTask->ReExecute())
-		{
-			m_taskMap[m_curTaskLevel].push_front(m_spCurTaskBk);
-			m_spCurTaskBk = nullptr;
-			m_semaphore->signal();
-		}
-		spCurTask->StopTask();
-	}
-	m_semaphore->signal();
+    std::shared_ptr<CTask> spCurTask;
+    int32_t curTaskLevel = 0;
+    bool taskAdded = false;
+    bool backupAdded = false;
+    bool stopCurrent = false;
+    try
+    {
+        m_taskMap[taskLevel].push_back(spTask);
+        taskAdded = true;
+
+        spCurTask = std::atomic_load(&m_spCurTask);
+        curTaskLevel = m_curTaskLevel.load();
+        stopCurrent = spCurTask != nullptr && taskLevel > curTaskLevel;
+        if (stopCurrent && m_spCurTaskBk != nullptr && spCurTask->ReExecute())
+        {
+            m_taskMap[curTaskLevel].push_front(m_spCurTaskBk);
+            backupAdded = true;
+        }
+    }
+    catch (...)
+    {
+        // 两次入队都成功前不停止当前任务、不消费备份，也不发布通知。
+        // 重做队列可能已建立但节点分配失败；它与新任务队列属于不同优先级。
+        if (stopCurrent)
+        {
+            auto backup = m_taskMap.find(curTaskLevel);
+            if (backup != m_taskMap.end() && backup->second.empty())
+            {
+                m_taskMap.erase(backup);
+            }
+        }
+        auto found = m_taskMap.find(taskLevel);
+        if (found != m_taskMap.end())
+        {
+            // 调用方持有m_mutex，本次成功追加的节点仍是队尾；保留原有排队任务。
+            if (taskAdded)
+            {
+                found->second.pop_back();
+            }
+            if (found->second.empty())
+            {
+                m_taskMap.erase(found);
+            }
+        }
+        throw;
+    }
+    if (stopCurrent)
+    {
+        if (backupAdded)
+        {
+            // 提交后只转移一次备份，后续更高优先级任务不会重复安排重做。
+            m_spCurTaskBk = nullptr;
+            m_semaphore->signal();
+        }
+        spCurTask->StopTask();
+    }
+    m_semaphore->signal();
 }
 
 bool CTaskThread::HasTask()

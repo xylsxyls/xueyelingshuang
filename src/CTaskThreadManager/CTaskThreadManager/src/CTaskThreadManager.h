@@ -24,7 +24,7 @@ public:
 	*/
 	static CTaskThreadManager& Instance();
 
-	//返回线程ID
+	//返回非零线程ID；编号耗尽时返回0，不创建线程，也不回绕复用旧编号。
 	//windows下不要在动态库的全局变量包含全局变量的构造函数中执行，会在std::thread创建处卡死，在linux下，换成CreateThread，exe中创建，编译成静态库，都不会有问题
 	uint32_t Init();
 
@@ -54,6 +54,9 @@ public:
 	int32_t Count();
 
 private:
+	/** 原子分配不复用的线程编号。
+	@return 非零编号；UINT32_MAX已经分配后返回0
+	*/
 	uint32_t GetThreadId();
 
 private:

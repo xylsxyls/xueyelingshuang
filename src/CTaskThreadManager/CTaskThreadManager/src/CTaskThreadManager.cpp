@@ -21,6 +21,10 @@ CTaskThreadManager& CTaskThreadManager::Instance()
 uint32_t CTaskThreadManager::Init()
 {
 	uint32_t threadId = GetThreadId();
+	if (threadId == 0)
+	{
+		return 0;
+	}
 	CTaskThread* pTaskThread = new CTaskThread(threadId);
 	if (pTaskThread == nullptr)
 	{
@@ -30,8 +34,17 @@ uint32_t CTaskThreadManager::Init()
 	spTaskThread.reset(pTaskThread);
 	if (pTaskThread->CreateThread())
 	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-		m_spThreadMap[threadId] = spTaskThread;
+        try
+        {
+            std::unique_lock<std::mutex> lock(m_mutex);
+            m_spThreadMap[threadId] = spTaskThread;
+        }
+        catch (...)
+        {
+            // 线程已启动但登记分配失败；先在管理器锁之外停止并加入，再释放线程对象。
+            spTaskThread->DestroyThread();
+            throw;
+        }
 		return threadId;
 	}
 	return 0;
@@ -132,7 +145,15 @@ int32_t CTaskThreadManager::Count()
 
 uint32_t CTaskThreadManager::GetThreadId()
 {
-	return ++m_threadId;
+	uint32_t current = m_threadId.load(std::memory_order_relaxed);
+	while (current != UINT32_MAX)
+	{
+		if (m_threadId.compare_exchange_weak(current, current + 1, std::memory_order_relaxed))
+		{
+			return current + 1;
+		}
+	}
+	return 0;
 }
 
 //class CPrintTask : public CTask
