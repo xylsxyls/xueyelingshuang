@@ -1,102 +1,54 @@
-
-// CTaskThreadManagerTest.cpp : ¶¨ÒåÓ¦ÓÃ³ÌĞòµÄÀàĞĞÎª¡£
-//
-
-#include "stdafx.h"
-#include "CTaskThreadManagerTest.h"
-#include "CTaskThreadManagerTestDlg.h"
-
-#ifdef _DEBUG
-#define new DEBUG_NEW
+ï»¿#include "CTaskThreadManagerTest.h"
+#include <stdint.h>
+#include <stdio.h>
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
 #endif
 
-
-// CCTaskThreadManagerTestApp
-
-BEGIN_MESSAGE_MAP(CCTaskThreadManagerTestApp, CWinApp)
-	ON_COMMAND(ID_HELP, &CWinApp::OnHelp)
-END_MESSAGE_MAP()
-
-
-// CCTaskThreadManagerTestApp ¹¹Ôì
-
-CCTaskThreadManagerTestApp::CCTaskThreadManagerTestApp()
+#ifdef _MSC_VER
+BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
-	// Ö§³ÖÖØĞÂÆô¶¯¹ÜÀíÆ÷
-	m_dwRestartManagerSupportFlags = AFX_RESTART_MANAGER_SUPPORT_RESTART;
-
-	// TODO: ÔÚ´Ë´¦Ìí¼Ó¹¹Ôì´úÂë£¬
-	// ½«ËùÓĞÖØÒªµÄ³õÊ¼»¯·ÅÖÃÔÚ InitInstance ÖĞ
-}
-
-
-// Î¨Ò»µÄÒ»¸ö CCTaskThreadManagerTestApp ¶ÔÏó
-
-CCTaskThreadManagerTestApp theApp;
-
-
-// CCTaskThreadManagerTestApp ³õÊ¼»¯
-
-BOOL CCTaskThreadManagerTestApp::InitInstance()
-{
-	// Èç¹ûÒ»¸öÔËĞĞÔÚ Windows XP ÉÏµÄÓ¦ÓÃ³ÌĞòÇåµ¥Ö¸¶¨Òª
-	// Ê¹ÓÃ ComCtl32.dll °æ±¾ 6 »ò¸ü¸ß°æ±¾À´ÆôÓÃ¿ÉÊÓ»¯·½Ê½£¬
-	//ÔòĞèÒª InitCommonControlsEx()¡£·ñÔò£¬½«ÎŞ·¨´´½¨´°¿Ú¡£
-	INITCOMMONCONTROLSEX InitCtrls;
-	InitCtrls.dwSize = sizeof(InitCtrls);
-	// ½«ËüÉèÖÃÎª°üÀ¨ËùÓĞÒªÔÚÓ¦ÓÃ³ÌĞòÖĞÊ¹ÓÃµÄ
-	// ¹«¹²¿Ø¼şÀà¡£
-	InitCtrls.dwICC = ICC_WIN95_CLASSES;
-	InitCommonControlsEx(&InitCtrls);
-
-	CWinApp::InitInstance();
-
-
-	AfxEnableControlContainer();
-
-	// ´´½¨ shell ¹ÜÀíÆ÷£¬ÒÔ·À¶Ô»°¿ò°üº¬
-	// ÈÎºÎ shell Ê÷ÊÓÍ¼¿Ø¼ş»ò shell ÁĞ±íÊÓÍ¼¿Ø¼ş¡£
-	CShellManager *pShellManager = new CShellManager;
-
-	// ¼¤»î¡°Windows Native¡±ÊÓ¾õ¹ÜÀíÆ÷£¬ÒÔ±ãÔÚ MFC ¿Ø¼şÖĞÆôÓÃÖ÷Ìâ
-	CMFCVisualManager::SetDefaultManager(RUNTIME_CLASS(CMFCVisualManagerWindows));
-
-	// ±ê×¼³õÊ¼»¯
-	// Èç¹ûÎ´Ê¹ÓÃÕâĞ©¹¦ÄÜ²¢Ï£Íû¼õĞ¡
-	// ×îÖÕ¿ÉÖ´ĞĞÎÄ¼şµÄ´óĞ¡£¬ÔòÓ¦ÒÆ³ıÏÂÁĞ
-	// ²»ĞèÒªµÄÌØ¶¨³õÊ¼»¯Àı³Ì
-	// ¸ü¸ÄÓÃÓÚ´æ´¢ÉèÖÃµÄ×¢²á±íÏî
-	// TODO: Ó¦ÊÊµ±ĞŞ¸Ä¸Ã×Ö·û´®£¬
-	// ÀıÈçĞŞ¸ÄÎª¹«Ë¾»ò×éÖ¯Ãû
-	SetRegistryKey(_T("Ó¦ÓÃ³ÌĞòÏòµ¼Éú³ÉµÄ±¾µØÓ¦ÓÃ³ÌĞò"));
-
-	CCTaskThreadManagerTestDlg dlg;
-	m_pMainWnd = &dlg;
-	INT_PTR nResponse = dlg.DoModal();
-	if (nResponse == IDOK)
+	if (eve == CTRL_CLOSE_EVENT)
 	{
-		// TODO: ÔÚ´Ë·ÅÖÃ´¦ÀíºÎÊ±ÓÃ
-		//  ¡°È·¶¨¡±À´¹Ø±Õ¶Ô»°¿òµÄ´úÂë
+		//å…³é—­é€€å‡ºäº‹ä»¶
+		//RCSend("close CTaskThreadManagerTest");
 	}
-	else if (nResponse == IDCANCEL)
-	{
-		// TODO: ÔÚ´Ë·ÅÖÃ´¦ÀíºÎÊ±ÓÃ
-		//  ¡°È¡Ïû¡±À´¹Ø±Õ¶Ô»°¿òµÄ´úÂë
-	}
-	else if (nResponse == -1)
-	{
-		TRACE(traceAppMsg, 0, "¾¯¸æ: ¶Ô»°¿ò´´½¨Ê§°Ü£¬Ó¦ÓÃ³ÌĞò½«ÒâÍâÖÕÖ¹¡£\n");
-		TRACE(traceAppMsg, 0, "¾¯¸æ: Èç¹ûÄúÔÚ¶Ô»°¿òÉÏÊ¹ÓÃ MFC ¿Ø¼ş£¬ÔòÎŞ·¨ #define _AFX_NO_MFC_CONTROLS_IN_DIALOGS¡£\n");
-	}
-
-	// É¾³ıÉÏÃæ´´½¨µÄ shell ¹ÜÀíÆ÷¡£
-	if (pShellManager != NULL)
-	{
-		delete pShellManager;
-	}
-
-	// ÓÉÓÚ¶Ô»°¿òÒÑ¹Ø±Õ£¬ËùÒÔ½«·µ»Ø FALSE ÒÔ±ãÍË³öÓ¦ÓÃ³ÌĞò£¬
-	//  ¶ø²»ÊÇÆô¶¯Ó¦ÓÃ³ÌĞòµÄÏûÏ¢±Ã¡£
 	return FALSE;
 }
 
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+#elif __unix__
+//ctrl+cæ¶ˆæ¯æ•è·å‡½æ•°
+void CtrlCMessage(int eve)
+{
+	if (eve == 2)
+	{
+		//å…³é—­é€€å‡ºäº‹ä»¶
+		//RCSend("close CTaskThreadManagerTest");
+		exit(0);
+	}	
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
+
+CtrlC g_ctrlc;
+#endif
+
+int32_t main()
+{
+	
+	getchar();
+	return 0;
+}
