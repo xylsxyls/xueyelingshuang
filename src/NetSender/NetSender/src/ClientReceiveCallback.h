@@ -1,8 +1,9 @@
 ﻿#pragma once
-#include "ProcessWork/ProcessWorkAPI.h"
+#include "NetSenderReceiveBase.h"
 #include "NetSenderMacro.h"
 
-class NetSenderAPI ClientReceiveCallback : public ProcessReceiveCallback
+// 桌面兼容接口的客户端ProcessWork回调适配，不拥有调用方业务对象
+class NetSenderAPI ClientReceiveCallback : public NetSenderReceiveBase
 {
 public:
 	/** 初始化响应函数

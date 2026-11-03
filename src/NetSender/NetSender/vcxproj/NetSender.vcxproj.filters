@@ -21,6 +21,9 @@
     <ClInclude Include="..\src\NetSender.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\NetSenderIpc.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\NetSenderAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -38,11 +41,133 @@
     <ClCompile Include="..\src\NetSender.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\NetSenderIpc.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\ClientReceiveCallback.cpp">
       <Filter>callback</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ServerReceiveCallback.cpp">
       <Filter>callback</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetSenderIpcChannel.h" />
+    <ClInclude Include="..\src\NetSenderIpcState.h" />
+    <ClCompile Include="..\src\NetSenderIpcChannel.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetSenderLocalPacket.h" />
+    <ClCompile Include="..\src\NetSenderLocalPacket.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetSenderLocal.h" />
+    <ClInclude Include="..\src\NetSenderLocalState.h" />
+    <ClCompile Include="..\src\NetSenderLocal.cpp" />
+    <ClCompile Include="..\src\NetSenderLocalInbox.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetSenderService.h" />
+    <ClInclude Include="..\src\NetSenderServiceState.h" />
+    <ClCompile Include="..\src\NetSenderService.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetSenderClientChannel.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="..\src\NetSenderClientChannel.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetSenderPlatform.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="..\src\NetSenderGatewayTypes.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="..\src\NetSenderReceiveBase.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="..\src\NetSenderGatewayState.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="..\src\NetSenderMobile.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetSenderLink.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetSenderServiceGateway.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetSenderGatewayTransport.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetSenderServiceOutgoingTransport.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetSenderServiceManaged.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\NetSenderLocalRawListener.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetSenderLink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetSenderLinkState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetSenderServiceGateway.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetSenderServiceGatewayState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetSenderGatewayTransport.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetSenderServiceOutgoingTransport.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetSenderServiceManaged.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetSenderServiceProxy.cpp" />
+    <ClInclude Include="..\src\NetSenderServiceProxy.h" />
+    <ClInclude Include="..\src\NetSenderServiceProxyState.h" />
+    <ClInclude Include="..\src\NetSenderLegacyState.h" />
+    <ClInclude Include="..\src\NetSenderLegacyTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="../src/NetSenderGatewayLaunch.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="../src/NetSenderGatewayLaunch.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetSenderDesktopBackend.cpp" />
+    <ClInclude Include="..\src\NetSenderDesktopBackend.h" />
+    <ClInclude Include="..\src\NetSenderLegacy.h" />
+    <ClCompile Include="..\src\NetSenderLocalHub.cpp" />
+    <ClInclude Include="..\src\NetSenderLocalHub.h" />
+    <ClInclude Include="..\src\NetSenderMacroDll.h" />
+    <ClInclude Include="..\src\NetSenderMacroLib.h" />
+  </ItemGroup>
+<ItemGroup><ClInclude Include="..\src\NetSenderLocalHubTest.h" /></ItemGroup>  <ItemGroup>
+    <ClInclude Include="..\src\NetSenderLinkAuditTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetSenderServiceQueue.cpp" />
+    <ClInclude Include="..\src\NetSenderServiceQueue.h" />
+    <ClInclude Include="..\src\NetSenderServiceQueueTest.h" />
+    <ClInclude Include="..\src\NetSenderServiceGatewayTest.h" />
+    <ClInclude Include="..\src\NetSenderServiceOutgoingTest.h" />
+    <ClInclude Include="..\src\NetSenderServiceProxyTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetSenderGatewayState.cpp" />
+    <ClCompile Include="..\src\NetSenderIpcState.cpp" />
+    <ClCompile Include="..\src\NetSenderLegacy.cpp" />
+    <ClCompile Include="..\src\NetSenderLegacyState.cpp" />
+    <ClCompile Include="..\src\NetSenderLinkState.cpp" />
+    <ClCompile Include="..\src\NetSenderLocalRawListener.cpp" />
+    <ClCompile Include="..\src\NetSenderLocalState.cpp" />
+    <ClCompile Include="..\src\NetSenderServiceGatewayHelper.cpp" />
+    <ClInclude Include="..\src\NetSenderServiceGatewayHelper.h" />
+    <ClCompile Include="..\src\NetSenderServiceGatewayState.cpp" />
+    <ClCompile Include="..\src\NetSenderServiceProxyState.cpp" />
+    <ClCompile Include="..\src\NetSenderServiceState.cpp" />
   </ItemGroup>
 </Project>

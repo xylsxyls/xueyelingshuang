@@ -1,8 +1,9 @@
 ﻿#pragma once
-#include "ProcessWork/ProcessWorkAPI.h"
+#include "NetSenderReceiveBase.h"
 #include "NetSenderMacro.h"
 
-class NetSenderAPI ServerReceiveCallback : public ProcessReceiveCallback
+// 桌面兼容接口的服务端ProcessWork回调适配，不承担账号或服务授权
+class NetSenderAPI ServerReceiveCallback : public NetSenderReceiveBase
 {
 public:
 	/** 客户端初始化函数
@@ -22,6 +23,7 @@ public:
 	/** 客户端网络管理进程消息
 	@param [in] buffer 数据内存
 	@param [in] length 数据长度
+	@param [in] connectId 本轮连接ID，不能当作PID
 	*/
 	virtual void NetClientMessage(int32_t connectId, const char* buffer, int32_t length);
 
