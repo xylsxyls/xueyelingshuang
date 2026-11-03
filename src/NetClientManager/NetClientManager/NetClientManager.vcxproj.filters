@@ -39,4 +39,7 @@
     <ClInclude Include="NetClientGatewayWatchdog.h"><Filter>头文件</Filter></ClInclude>
     <ClCompile Include="NetClientGatewayWatchdog.cpp"><Filter>源文件</Filter></ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetClientOpaqueGatewayPeer.cpp" />
+  </ItemGroup>
 </Project>

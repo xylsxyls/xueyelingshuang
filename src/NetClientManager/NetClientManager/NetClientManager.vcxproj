@@ -194,4 +194,7 @@
     <ClInclude Include="NetClientGatewayWatchdog.h" />
     <ClCompile Include="NetClientGatewayWatchdog.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetClientOpaqueGatewayPeer.cpp" />
+  </ItemGroup>
 </Project>

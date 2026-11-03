@@ -157,6 +157,7 @@ add_executable(NetClientManager
     "NetClientGateway.cpp"
     "NetClientGatewayTask.cpp"
     "NetClientOpaqueGateway.cpp"
+    "NetClientOpaqueGatewayPeer.cpp"
     "NetClientGatewayLifetime.cpp"
     "NetClientGatewayWatchdog.cpp"
 )
