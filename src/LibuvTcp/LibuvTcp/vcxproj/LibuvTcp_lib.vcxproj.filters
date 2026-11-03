@@ -30,4 +30,27 @@
     <ClCompile Include="..\src\LibuvClient.cpp" />
     <ClCompile Include="..\src\LibuvServer.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LibuvChannel.h" />
+    <ClInclude Include="..\src\LibuvChannelModels.h" />
+    <ClInclude Include="..\src\LibuvChannelState.h" />
+    <ClCompile Include="..\src\LibuvChannel.cpp" />
+    <ClCompile Include="..\src\LibuvChannelModels.cpp" />
+    <ClCompile Include="..\src\LibuvChannelState.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LibuvHostTypes.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\LibuvHostState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\LibuvHostState.cpp" />
+    <ClInclude Include="..\src\LibuvTcpMacroDll.h" />
+    <ClInclude Include="..\src\LibuvTcpMacroLib.h" />
+  </ItemGroup>
 </Project>

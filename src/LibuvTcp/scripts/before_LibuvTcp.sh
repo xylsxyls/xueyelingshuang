@@ -1,3 +1,4 @@
+librariesrely=()
 
 :<<!EOF!
 #--------------------------------------------------------------------
@@ -5,7 +6,10 @@ DllRelyTest_bit=$1
 DllRelyTest_dlllib=$2
 DllRelyTest_debugRelease=$3
 DllRelyTest_allSame=$4
-"$CLOUD_REBUILD" DllRelyTest $DllRelyTest_bit $DllRelyTest_dlllib $DllRelyTest_debugRelease $DllRelyTest_allSame
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" DllRelyTest "$DllRelyTest_bit" "$DllRelyTest_dlllib" "$DllRelyTest_debugRelease" "$DllRelyTest_allSame"
+fi
+librariesrely+=($'project\tDllRelyTest\t'"$DllRelyTest_dlllib")
 !EOF!
 
 #--------------------------------------------------------------------
@@ -13,66 +17,72 @@ LockFreeQueue_bit=$1
 LockFreeQueue_dlllib=$2
 LockFreeQueue_debugRelease=$3
 LockFreeQueue_allSame=$4
-"$CLOUD_REBUILD" LockFreeQueue $LockFreeQueue_bit $LockFreeQueue_dlllib $LockFreeQueue_debugRelease $LockFreeQueue_allSame
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" LockFreeQueue "$LockFreeQueue_bit" "$LockFreeQueue_dlllib" "$LockFreeQueue_debugRelease" "$LockFreeQueue_allSame"
+fi
+librariesrely+=($'project\tLockFreeQueue\t'"$LockFreeQueue_dlllib")
 
 #--------------------------------------------------------------------
 Semaphore_bit=$1
 Semaphore_dlllib=$2
 Semaphore_debugRelease=$3
 Semaphore_allSame=$4
-"$CLOUD_REBUILD" Semaphore $Semaphore_bit $Semaphore_dlllib $Semaphore_debugRelease $Semaphore_allSame
-
-#--------------------------------------------------------------------
-SHELL_FOLDER=$(cd $(dirname $0); pwd)
-xueyelingshuang=$SHELL_FOLDER/../../..
-
-libname="libuv"
-windowslibname="uv"
-linuxlibname="libuv"
-includecreatedir=0
-
-#该写法支持目录下含有子目录和空格
-includepath=$xueyelingshuang"/tools/"$libname"/include/"
-copyincludepath=$xueyelingshuang"/include/"
-if [[ $includecreatedir == 1 ]]; then
-    copyincludepath=$xueyelingshuang"/include/"$libname"/"
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" Semaphore "$Semaphore_bit" "$Semaphore_dlllib" "$Semaphore_debugRelease" "$Semaphore_allSame"
 fi
-if [ ! -d $copyincludepath ]
-then
-    mkdir -p $copyincludepath
-fi
-for file in $(ls $includepath)
-do
-    cp -rf $includepath$file $copyincludepath
-done
+librariesrely+=($'project\tSemaphore\t'"$Semaphore_dlllib")
 
-lib32=$windowslibname"static32"
-lib64=$windowslibname"static64"
-libsuffix=".lib"
+SHELL_FOLDER=$(cd "$(dirname "$0")" && pwd)
+xueyelingshuang="$SHELL_FOLDER/../../.."
+sdkpath="${CLOUD_REBUILD_SDK_ROOT:-$xueyelingshuang}"
 
-if [[ $3 == 'debug' ]]; then
-    libdebugrelease="d"
-else
-    libdebugrelease=""
+# Select the target SDK; a cross build must never copy the host's binary archive.
+if [[ $1 != wasm32 && $1 != wasm64 ]]; then
+    native_target="${CMAKE_SYSTEM_NAME:-}"
+    if [[ -z "$native_target" && ${CMAKE_TOOLCHAIN_FILE:-} == *android.toolchain.cmake ]]; then
+        native_target=Android
+    fi
+    if [[ -z "$native_target" && ${CMAKE_OSX_SYSROOT:-} == *iphone* ]]; then
+        native_target=iOS
+    fi
+    if [[ -z "$native_target" ]]; then
+        case "$OSTYPE" in
+            linux*) native_target=Linux ;;
+            darwin*) native_target=Darwin ;;
+            msys*|cygwin*|win32*) native_target=Windows ;;
+        esac
+    fi
+    case "$native_target" in
+        Windows)
+            archive="uvstatic${1}.lib"
+            source="$xueyelingshuang/tools/libuv/lib/$archive"
+            if [[ $3 == debug ]]; then
+                archive="uvstatic${1}d.lib"
+                source="$xueyelingshuang/tools/libuv/lib/MD/$archive"
+            fi
+            ;;
+        Linux)
+            archive="libuvstatic${1}.a"
+            source="$xueyelingshuang/tools/libuv/lib/$archive"
+            ;;
+        Darwin|iOS|Android)
+            archive="libuvstatic${1}.a"
+            source=""
+            ;;
+        *) false ;;
+    esac
+    if [[ -n "$source" ]]; then
+        if [[ -f "$source" && -f "$xueyelingshuang/tools/libuv/include/uv.h" ]]; then
+            mkdir -p "$sdkpath/include" "$sdkpath/lib"
+            cp -Rf "$xueyelingshuang/tools/libuv/include/." "$sdkpath/include/"
+            cp -f "$source" "$sdkpath/lib/$archive"
+        else
+            false
+        fi
+    elif [[ ! -f "$sdkpath/include/uv.h" || ! -f "$sdkpath/lib/$archive" ]]; then
+        false
+    fi
+    librariesrely+=($'link\t'"$archive")
 fi
 
-if [[ "$OSTYPE" =~ ^linux ]]; then
-    lib32=$linuxlibname"static32"
-    lib64=$linuxlibname"static64"
-    libsuffix=".a"
-    libdebugrelease=""
-fi
-
-if [[ $1 == '32' ]] && [[ $3 == 'debug' ]]
-then
-    cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
-elif [[ $1 == '32' ]] && [[ $3 == 'release' ]]
-then
-    cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
-elif [[ $1 == '64' ]] && [[ $3 == 'debug' ]]
-then
-    cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
-elif [[ $1 == '64' ]] && [[ $3 == 'release' ]]
-then
-    cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
-fi
+printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return
