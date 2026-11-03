@@ -1,5 +1,6 @@
 ﻿#include "FFmpegCpp.h"
 #include "FFmpegCppHelper.h"
+#include "FFmpegCppAudioTranscoder.h"
 #include <algorithm>
 #include <chrono>
 #include <cstring>
@@ -8,6 +9,9 @@
 #include <iostream>
 #include <sstream>
 #include <stdio.h>
+#if defined(_WIN32) && defined(FFMPEGCPP_WINDOWS_ANSI_PATH)
+#include "CStringManager/CStringManagerAPI.h"
+#endif
 
 #ifdef _MSC_VER
 #pragma warning(disable:4819)
@@ -48,6 +52,23 @@ extern "C"
 #include <ffmpeg/libswscale/swscale.h>
 }
 
+/** 将服务端传统磁盘路径转换成FFmpeg要求的UTF8，普通SDK保持原路径契约
+@param [in] filePath 调用方磁盘路径，服务端私有Windows构建为系统编码
+@return FFmpeg接口使用的路径副本
+*/
+static std::string ffmpegCppAvFilePath(const std::string& filePath)
+{
+#if defined(_WIN32) && defined(FFMPEGCPP_WINDOWS_ANSI_PATH)
+    return CStringManager::AnsiToUtf8(filePath);
+#else
+    return filePath;
+#endif
+}
+
+/** 把FFmpeg错误码转换为可读文本
+@param [in] errorCode FFmpeg错误码
+@return 错误说明；库未提供说明时包含原错误码
+*/
 static std::string ffmpegCppErrorText(int errorCode)
 {
     char buffer[AV_ERROR_MAX_STRING_SIZE] = {};
@@ -61,6 +82,11 @@ static std::string ffmpegCppErrorText(int errorCode)
     return stream.str();
 }
 
+/** 组合操作阶段与FFmpeg错误说明
+@param [in] prefix 错误阶段或上下文文本
+@param [in] errorCode FFmpeg错误码
+@return 带阶段前缀的错误文本
+*/
 static std::string ffmpegCppAppendError(const std::string& prefix, int errorCode)
 {
     std::ostringstream stream;
@@ -68,6 +94,11 @@ static std::string ffmpegCppAppendError(const std::string& prefix, int errorCode
     return stream.str();
 }
 
+/** 把源时间基的有效时间戳转换为毫秒
+@param [in] timestamp 源时间基下的时间戳，AV_NOPTS_VALUE表示未知
+@param [in] timeBase 时间戳使用的FFmpeg时间基
+@return 毫秒数，未知时间戳返回0；调用方须提供有效时间基
+*/
 static int64_t ffmpegCppToMilliseconds(int64_t timestamp, AVRational timeBase)
 {
     if (timestamp == AV_NOPTS_VALUE)
@@ -81,6 +112,11 @@ static int64_t ffmpegCppToMilliseconds(int64_t timestamp, AVRational timeBase)
     return av_rescale_q(timestamp, timeBase, millisecondBase);
 }
 
+/** 把毫秒位置转换为流时间基下的时间戳
+@param [in] timestampMilliseconds 时间位置，单位毫秒
+@param [in] timeBase 时间戳使用的FFmpeg时间基
+@return 目标时间基下的时间戳
+*/
 static int64_t ffmpegCppFromMilliseconds(int64_t timestampMilliseconds, AVRational timeBase)
 {
     AVRational millisecondBase;
@@ -89,12 +125,20 @@ static int64_t ffmpegCppFromMilliseconds(int64_t timestampMilliseconds, AVRation
     return av_rescale_q(timestampMilliseconds, millisecondBase, timeBase);
 }
 
+/** 检查文件是否能按二进制方式打开读取
+@param [in] filePath 文件路径，调用期间借用
+@return true表示输入流打开成功
+*/
 static bool ffmpegCppFileExists(const std::string& filePath)
 {
     std::ifstream stream(filePath.c_str(), std::ios::binary);
     return stream.good();
 }
 
+/** 读取文件字节长度
+@param [in] filePath 文件路径，调用期间借用
+@return 文件长度，打开失败返回0
+*/
 static int64_t ffmpegCppFileSize(const std::string& filePath)
 {
     std::ifstream stream(filePath.c_str(), std::ios::binary | std::ios::ate);
@@ -105,6 +149,10 @@ static int64_t ffmpegCppFileSize(const std::string& filePath)
     return static_cast<int64_t>(stream.tellg());
 }
 
+/** 移除路径最后一个文件名的扩展名
+@param [in] filePath 文件路径，调用期间借用
+@return 不含末尾扩展名的路径，父目录中的点不受影响
+*/
 static std::string ffmpegCppRemoveExtension(const std::string& filePath)
 {
     size_t slashPos = filePath.find_last_of("/\\");
@@ -120,9 +168,15 @@ static std::string ffmpegCppRemoveExtension(const std::string& filePath)
     return filePath.substr(0, dotPos);
 }
 
+/** 根据源文件名、截图时间和图片格式生成默认截图路径
+@param [in] sourceFilePath 原媒体文件路径，调用期间借用
+@param [in] timestampMilliseconds 时间位置，单位毫秒
+@param [in] imageFormat 目标图片编码格式
+@return 默认截图文件路径
+*/
 static std::string ffmpegCppMakeFrameFilePath(const std::string& sourceFilePath,
-                                       int64_t timestampMilliseconds,
-                                       FFmpegCppImageFormat imageFormat)
+    int64_t timestampMilliseconds,
+    FFmpegCppImageFormat imageFormat)
 {
     std::ostringstream stream;
     stream << ffmpegCppRemoveExtension(sourceFilePath)
@@ -133,8 +187,13 @@ static std::string ffmpegCppMakeFrameFilePath(const std::string& sourceFilePath,
     return stream.str();
 }
 
+/** 按单调时钟检查操作是否超过配置时限
+@param [in] startTime 本次操作开始时的单调时钟时间
+@param [in] timeoutMilliseconds 超时上限，单位毫秒，非正数表示不限制
+@return true表示已达到超时上限，未启用超时返回false
+*/
 static bool ffmpegCppTimeoutReached(const std::chrono::steady_clock::time_point& startTime,
-                             int32_t timeoutMilliseconds)
+    int32_t timeoutMilliseconds)
 {
     if (timeoutMilliseconds <= 0)
     {
@@ -146,6 +205,10 @@ static bool ffmpegCppTimeoutReached(const std::chrono::steady_clock::time_point&
     return usedMilliseconds >= timeoutMilliseconds;
 }
 
+/** 把FFmpeg流类型映射为公共媒体类型
+@param [in] mediaType FFmpeg媒体类型
+@return 视频、音频或字幕类型，其他类型返回Unknown
+*/
 static FFmpegCppMediaType ffmpegCppConvertMediaType(AVMediaType mediaType)
 {
     if (mediaType == AVMEDIA_TYPE_VIDEO)
@@ -163,11 +226,19 @@ static FFmpegCppMediaType ffmpegCppConvertMediaType(AVMediaType mediaType)
     return FFmpegCppMediaTypeUnknown;
 }
 
+/** 复制FFmpeg有理数到公共值对象
+@param [in] rational FFmpeg分子和分母
+@return 保留原分子和分母的有理数
+*/
 static FFmpegCppRational ffmpegCppConvertRational(AVRational rational)
 {
     return FFmpegCppRational(rational.num, rational.den);
 }
 
+/** 优先读取rotate元数据，再读取显示矩阵中的旋转角
+@param [in] stream 调用期间借用的媒体流
+@return 旋转角度，单位度；无有效信息返回0
+*/
 static int32_t ffmpegCppStreamRotationDegree(const AVStream* stream)
 {
     if (stream == nullptr)
@@ -200,6 +271,11 @@ static int32_t ffmpegCppStreamRotationDegree(const AVStream* stream)
     return static_cast<int32_t>(rotation);
 }
 
+/** 读取FFmpeg字典中指定键的文本副本
+@param [in] dictionary 调用期间借用的元数据字典，可为空
+@param [in] key 字典键，零结尾字符串，可为空
+@return 对应文本，无字典、键或值时返回空字符串
+*/
 static std::string ffmpegCppDictionaryValue(AVDictionary* dictionary, const char* key)
 {
     if (dictionary == nullptr || key == nullptr)
@@ -215,10 +291,17 @@ static std::string ffmpegCppDictionaryValue(AVDictionary* dictionary, const char
     return entry->value;
 }
 
+/** 从容器和流参数构造公共媒体流信息
+@param [in] formatContext 调用期间借用的输入容器
+@param [in] stream 调用期间借用的媒体流
+@param [in] mainVideoStreamIndex 主视频流下标，无主视频时为负数
+@param [in] mainAudioStreamIndex 主音频流下标，无主音频时为负数
+@return 流信息副本，输入无效时返回默认空信息
+*/
 static FFmpegCppStreamInfo ffmpegCppMakeStreamInfo(const AVFormatContext* formatContext,
-                                            const AVStream* stream,
-                                            int32_t mainVideoStreamIndex,
-                                            int32_t mainAudioStreamIndex)
+    const AVStream* stream,
+    int32_t mainVideoStreamIndex,
+    int32_t mainAudioStreamIndex)
 {
     FFmpegCppStreamInfo streamInfo;
     if (formatContext == nullptr || stream == nullptr || stream->codecpar == nullptr)
@@ -267,11 +350,18 @@ static FFmpegCppStreamInfo ffmpegCppMakeStreamInfo(const AVFormatContext* format
     return streamInfo;
 }
 
+/** 按截图选项计算受限尺寸，并按选项保持源宽高比
+@param [in] sourceWidth 源图像宽度，单位像素
+@param [in] sourceHeight 源图像高度，单位像素
+@param [in] option 目标尺寸、编码及处理选项，调用期间借用
+@param [out] targetWidth 计算后的宽度，单位像素
+@param [out] targetHeight 计算后的高度，单位像素
+*/
 static void ffmpegCppCalculateTargetSize(int32_t sourceWidth,
-                                  int32_t sourceHeight,
-                                  const FFmpegCppFrameExtractOption& option,
-                                  int32_t& targetWidth,
-                                  int32_t& targetHeight)
+    int32_t sourceHeight,
+    const FFmpegCppFrameExtractOption& option,
+    int32_t& targetWidth,
+    int32_t& targetHeight)
 {
     targetWidth = sourceWidth;
     targetHeight = sourceHeight;
@@ -305,6 +395,10 @@ static void ffmpegCppCalculateTargetSize(int32_t sourceWidth,
     targetHeight = std::max<int32_t>(1, targetHeight);
 }
 
+/** 选择图片编码器使用的像素格式
+@param [in] imageFormat 目标图片编码格式
+@return BMP使用BGR24，PNG使用RGB24，其余使用YUVJ420P
+*/
 static AVPixelFormat ffmpegCppImagePixelFormat(FFmpegCppImageFormat imageFormat)
 {
     if (imageFormat == FFmpegCppImageFormatBmp)
@@ -318,6 +412,10 @@ static AVPixelFormat ffmpegCppImagePixelFormat(FFmpegCppImageFormat imageFormat)
     return AV_PIX_FMT_YUVJ420P;
 }
 
+/** 选择目标图片格式对应的FFmpeg编码ID
+@param [in] imageFormat 目标图片编码格式
+@return BMP、PNG或默认的MJPEG编码ID
+*/
 static AVCodecID ffmpegCppImageCodecId(FFmpegCppImageFormat imageFormat)
 {
     if (imageFormat == FFmpegCppImageFormatBmp)
@@ -331,6 +429,10 @@ static AVCodecID ffmpegCppImageCodecId(FFmpegCppImageFormat imageFormat)
     return AV_CODEC_ID_MJPEG;
 }
 
+/** 把任意旋转角归一到最近的直角方向
+@param [in] rotationDegree 源旋转角度，单位度
+@return 0、90、180或270度
+*/
 static int32_t ffmpegCppNormalizeRotationDegree(int32_t rotationDegree)
 {
     int32_t normalizedRotationDegree = rotationDegree % 360;
@@ -354,16 +456,27 @@ static int32_t ffmpegCppNormalizeRotationDegree(int32_t rotationDegree)
     return 270;
 }
 
+/** 判断归一化旋转是否会交换宽高
+@param [in] rotationDegree 源旋转角度，单位度
+@return true表示90度或270度旋转
+*/
 static bool ffmpegCppIsQuarterRotation(int32_t rotationDegree)
 {
     int32_t normalizedRotationDegree = ffmpegCppNormalizeRotationDegree(rotationDegree);
     return normalizedRotationDegree == 90 || normalizedRotationDegree == 270;
 }
 
+/** 分配指定像素格式的图像帧及其缓冲
+@param [in] pixelFormat 新帧的FFmpeg像素格式
+@param [in] width 新帧宽度，单位像素
+@param [in] height 新帧高度，单位像素
+@param [out] errorText 失败说明，成功时不保证清空
+@return 由调用方使用av_frame_free释放的帧，失败返回nullptr
+*/
 static AVFrame* ffmpegCppAllocFrame(AVPixelFormat pixelFormat,
-                             int32_t width,
-                             int32_t height,
-                             std::string& errorText)
+    int32_t width,
+    int32_t height,
+    std::string& errorText)
 {
     if (width <= 0 || height <= 0)
     {
@@ -391,11 +504,19 @@ static AVFrame* ffmpegCppAllocFrame(AVPixelFormat pixelFormat,
     return frame;
 }
 
+/** 使用临时SwsContext缩放并转换图像像素格式
+@param [in] sourceFrame 原始图像帧，不转移所有权，调用期间借用
+@param [in] sourcePixelFormat 输入帧的实际像素格式
+@param [in,out] targetFrame 由调用方预先分配的目标帧，写入像素，不转移所有权
+@param [in] targetPixelFormat 目标帧的像素格式
+@param [out] errorText 失败说明，成功时不保证清空
+@return true表示转换成功
+*/
 static bool ffmpegCppScaleFrame(const AVFrame* sourceFrame,
-                         AVPixelFormat sourcePixelFormat,
-                         AVFrame* targetFrame,
-                         AVPixelFormat targetPixelFormat,
-                         std::string& errorText)
+    AVPixelFormat sourcePixelFormat,
+    AVFrame* targetFrame,
+    AVPixelFormat targetPixelFormat,
+    std::string& errorText)
 {
     if (sourceFrame == nullptr || targetFrame == nullptr)
     {
@@ -443,10 +564,17 @@ static bool ffmpegCppScaleFrame(const AVFrame* sourceFrame,
     return true;
 }
 
+/** 按直角方向旋转RGB24像素到已分配的目标帧
+@param [in] sourceFrame 原始图像帧，不转移所有权，调用期间借用
+@param [in,out] targetFrame 由调用方预先分配的目标帧，写入像素，不转移所有权
+@param [in] rotationDegree 源旋转角度，单位度
+@param [out] errorText 失败说明，成功时不保证清空
+@return true表示旋转完成；输入输出须为可容纳旋转结果的RGB24帧
+*/
 static bool ffmpegCppRotateRgb24Frame(const AVFrame* sourceFrame,
-                               AVFrame* targetFrame,
-                               int32_t rotationDegree,
-                               std::string& errorText)
+    AVFrame* targetFrame,
+    int32_t rotationDegree,
+    std::string& errorText)
 {
     if (sourceFrame == nullptr || targetFrame == nullptr)
     {
@@ -522,13 +650,23 @@ static bool ffmpegCppRotateRgb24Frame(const AVFrame* sourceFrame,
     return true;
 }
 
+/** 按需旋转并缩放源图像到目标帧，不转移输入输出所有权
+@param [in] sourceFrame 原始图像帧，不转移所有权，调用期间借用
+@param [in] sourcePixelFormat 输入帧的实际像素格式
+@param [in] rotationDegree 源旋转角度，单位度
+@param [in] applyRotation 是否根据源旋转角度修正方向
+@param [in,out] targetFrame 由调用方预先分配的目标帧，写入像素，不转移所有权
+@param [in] targetPixelFormat 目标帧的像素格式
+@param [out] errorText 失败说明，成功时不保证清空
+@return true表示目标像素已生成
+*/
 static bool ffmpegCppConvertFrameToTarget(const AVFrame* sourceFrame,
-                                   AVPixelFormat sourcePixelFormat,
-                                   int32_t rotationDegree,
-                                   bool applyRotation,
-                                   AVFrame* targetFrame,
-                                   AVPixelFormat targetPixelFormat,
-                                   std::string& errorText)
+    AVPixelFormat sourcePixelFormat,
+    int32_t rotationDegree,
+    bool applyRotation,
+    AVFrame* targetFrame,
+    AVPixelFormat targetPixelFormat,
+    std::string& errorText)
 {
     if (sourceFrame == nullptr || targetFrame == nullptr)
     {
@@ -574,12 +712,20 @@ static bool ffmpegCppConvertFrameToTarget(const AVFrame* sourceFrame,
     return result;
 }
 
+/** 按旋转后的方向和尺寸限制计算转码尺寸，尽可能向下对齐偶数
+@param [in] sourceWidth 源图像宽度，单位像素
+@param [in] sourceHeight 源图像高度，单位像素
+@param [in] rotationDegree 源旋转角度，单位度
+@param [in] option 目标尺寸、编码及处理选项，调用期间借用
+@param [out] targetWidth 计算后的宽度，单位像素
+@param [out] targetHeight 计算后的高度，单位像素
+*/
 static void ffmpegCppCalculateTranscodeTargetSize(int32_t sourceWidth,
-                                           int32_t sourceHeight,
-                                           int32_t rotationDegree,
-                                           const FFmpegCppTranscodeOption& option,
-                                           int32_t& targetWidth,
-                                           int32_t& targetHeight)
+    int32_t sourceHeight,
+    int32_t rotationDegree,
+    const FFmpegCppTranscodeOption& option,
+    int32_t& targetWidth,
+    int32_t& targetHeight)
 {
     int32_t normalizedRotationDegree = option.applyRotation ? ffmpegCppNormalizeRotationDegree(rotationDegree) : 0;
     int32_t orientedWidth = ffmpegCppIsQuarterRotation(normalizedRotationDegree) ? sourceHeight : sourceWidth;
@@ -601,6 +747,10 @@ static void ffmpegCppCalculateTranscodeTargetSize(int32_t sourceWidth,
     targetHeight = std::max<int32_t>(1, targetHeight);
 }
 
+/** 映射目标视频编码为FFmpeg编码ID
+@param [in] videoCodec 请求的视频编码类型
+@return 对应编码ID，Copy或未识别值返回NONE
+*/
 static AVCodecID ffmpegCppVideoCodecId(FFmpegCppVideoCodec videoCodec)
 {
     if (videoCodec == FFmpegCppVideoCodecH264)
@@ -622,6 +772,10 @@ static AVCodecID ffmpegCppVideoCodecId(FFmpegCppVideoCodec videoCodec)
     return AV_CODEC_ID_NONE;
 }
 
+/** 映射目标音频编码为FFmpeg编码ID
+@param [in] audioCodec 请求的音频编码类型
+@return 对应编码ID，Copy、None或未识别值返回NONE
+*/
 static AVCodecID ffmpegCppAudioCodecId(FFmpegCppAudioCodec audioCodec)
 {
     if (audioCodec == FFmpegCppAudioCodecAac)
@@ -639,6 +793,10 @@ static AVCodecID ffmpegCppAudioCodecId(FFmpegCppAudioCodec audioCodec)
     return AV_CODEC_ID_NONE;
 }
 
+/** 优先按建议名称查找视频编码器，再按编码ID回退
+@param [in] videoCodec 请求的视频编码类型
+@return 借用的编码器描述，未找到返回nullptr，不由调用方释放
+*/
 static const AVCodec* ffmpegCppFindVideoEncoder(FFmpegCppVideoCodec videoCodec)
 {
     std::string encoderName = FFmpegCppHelper::videoCodecToEncoderName(videoCodec);
@@ -655,8 +813,13 @@ static const AVCodec* ffmpegCppFindVideoEncoder(FFmpegCppVideoCodec videoCodec)
     return avcodec_find_encoder(codecId);
 }
 
+/** 判断源音频编码是否可按本次编码选项直接复制
+@param [in] codecParameters 源音频编码参数，调用期间借用
+@param [in] requestedAudioCodec 请求的目标音频编码类型
+@return 请求Copy或源编码与目标一致时返回true，不保证容器兼容
+*/
 static bool ffmpegCppCanCopyAudioStream(const AVCodecParameters* codecParameters,
-                                 FFmpegCppAudioCodec requestedAudioCodec)
+    FFmpegCppAudioCodec requestedAudioCodec)
 {
     if (codecParameters == nullptr)
     {
@@ -669,13 +832,23 @@ static bool ffmpegCppCanCopyAudioStream(const AVCodecParameters* codecParameters
     return codecParameters->codec_id == ffmpegCppAudioCodecId(requestedAudioCodec);
 }
 
+/** 缩放和旋转解码图像并编码为内存中的图片
+@param [in] sourceFrame 原始图像帧，不转移所有权，调用期间借用
+@param [in] decodeContext 已打开的解码器，调用期间借用
+@param [in] rotationDegree 源旋转角度，单位度
+@param [in] timestampMilliseconds 时间位置，单位毫秒
+@param [in] option 目标尺寸、编码及处理选项，调用期间借用
+@param [out] imageData 编码图片及元信息，不可为空
+@param [out] errorText 失败说明，成功时不保证清空
+@return true表示图片编码和元信息写入成功
+*/
 static bool ffmpegCppEncodeFrameToImage(const AVFrame* sourceFrame,
-                                 AVCodecContext* decodeContext,
-                                 int32_t rotationDegree,
-                                 int64_t timestampMilliseconds,
-                                 const FFmpegCppFrameExtractOption& option,
-                                 FFmpegCppImageData* imageData,
-                                 std::string& errorText)
+    AVCodecContext* decodeContext,
+    int32_t rotationDegree,
+    int64_t timestampMilliseconds,
+    const FFmpegCppFrameExtractOption& option,
+    FFmpegCppImageData* imageData,
+    std::string& errorText)
 {
     if (sourceFrame == nullptr || decodeContext == nullptr || imageData == nullptr)
     {
@@ -804,6 +977,10 @@ static bool ffmpegCppEncodeFrameToImage(const AVFrame* sourceFrame,
     return true;
 }
 
+/** 判断输出是否属于需要faststart处理的MP4或MOV类容器
+@param [in] outputFormat 输出容器格式，可为空
+@return true表示容器名称包含mp4、mov、ipod或3gp
+*/
 static bool ffmpegCppIsMovLikeOutput(const AVOutputFormat* outputFormat)
 {
     if (outputFormat == nullptr || outputFormat->name == nullptr)
@@ -818,10 +995,17 @@ static bool ffmpegCppIsMovLikeOutput(const AVOutputFormat* outputFormat)
         || outputName.find("3gp") != std::string::npos;
 }
 
+/** 取出编码器当前可用包，转换时间基并交错写入容器
+@param [in] encodeContext 已打开的编码器，调用期间借用
+@param [in] outputContext 已创建的输出容器，调用期间借用
+@param [in] outputStream 输出流，由输出容器持有
+@param [out] errorText 失败说明，成功时不保证清空
+@return true表示写入成功，暂时无包和正常排空结束也返回true
+*/
 static bool ffmpegCppWriteEncoderPackets(AVCodecContext* encodeContext,
-                                  AVFormatContext* outputContext,
-                                  AVStream* outputStream,
-                                  std::string& errorText)
+    AVFormatContext* outputContext,
+    AVStream* outputStream,
+    std::string& errorText)
 {
     AVPacket* packet = av_packet_alloc();
     if (packet == nullptr)
@@ -861,11 +1045,19 @@ static bool ffmpegCppWriteEncoderPackets(AVCodecContext* encodeContext,
     return success;
 }
 
+/** 发送视频帧并写出编码器当前可用包
+@param [in] encodeContext 已打开的编码器，调用期间借用
+@param [in] frame 待编码帧，不转移所有权；nullptr表示排空编码器
+@param [in] outputContext 已创建的输出容器，调用期间借用
+@param [in] outputStream 输出流，由输出容器持有
+@param [out] errorText 失败说明，成功时不保证清空
+@return true表示发送和写包成功
+*/
 static bool ffmpegCppEncodeAndWriteVideoFrame(AVCodecContext* encodeContext,
-                                      AVFrame* frame,
-                                      AVFormatContext* outputContext,
-                                      AVStream* outputStream,
-                                      std::string& errorText)
+    AVFrame* frame,
+    AVFormatContext* outputContext,
+    AVStream* outputStream,
+    std::string& errorText)
 {
     int result = avcodec_send_frame(encodeContext, frame);
     if (result < 0)
@@ -876,11 +1068,19 @@ static bool ffmpegCppEncodeAndWriteVideoFrame(AVCodecContext* encodeContext,
     return ffmpegCppWriteEncoderPackets(encodeContext, outputContext, outputStream, errorText);
 }
 
+/** 调整压缩包的流号及时间基并写入输出容器
+@param [in,out] packet 待复制压缩包，改写时间戳和流号后交给复用器，不释放AVPacket对象
+@param [in] inputStream 压缩包所属输入流，调用期间借用
+@param [in] outputStream 输出流，由输出容器持有
+@param [in] outputContext 已创建的输出容器，调用期间借用
+@param [out] errorText 失败说明，成功时不保证清空
+@return true表示复用器接受该包
+*/
 static bool ffmpegCppCopyInputPacketToOutput(AVPacket* packet,
-                                      AVStream* inputStream,
-                                      AVStream* outputStream,
-                                      AVFormatContext* outputContext,
-                                      std::string& errorText)
+    AVStream* inputStream,
+    AVStream* outputStream,
+    AVFormatContext* outputContext,
+    std::string& errorText)
 {
     if (packet == nullptr || inputStream == nullptr || outputStream == nullptr || outputContext == nullptr)
     {
@@ -900,12 +1100,21 @@ static bool ffmpegCppCopyInputPacketToOutput(AVPacket* packet,
     return true;
 }
 
+/** 汇总已处理时间和输出字节数并同步通知进度
+@param [in] processedMilliseconds 当前已处理时长，单位毫秒
+@param [in] totalMilliseconds 媒体总时长，单位毫秒，非正数表示未知
+@param [in] outputContext 已创建的输出容器，调用期间借用
+@param [in] message 本次进度的阶段文本
+@param [in] progressCallback 同步进度回调，可为空；返回false请求取消
+@param [in,out] userData 回调上下文，库不读取也不释放，须在整个调用期间有效
+@return 回调返回值，无回调返回true；false表示调用方请求取消
+*/
 static bool ffmpegCppNotifyTranscodeProgress(int64_t processedMilliseconds,
-                                      int64_t totalMilliseconds,
-                                      AVFormatContext* outputContext,
-                                      const std::string& message,
-                                      FFmpegCppProgressCallback progressCallback,
-                                      void* userData)
+    int64_t totalMilliseconds,
+    AVFormatContext* outputContext,
+    const std::string& message,
+    FFmpegCppProgressCallback progressCallback,
+    void* userData)
 {
     if (progressCallback == nullptr)
     {
@@ -921,9 +1130,16 @@ static bool ffmpegCppNotifyTranscodeProgress(int64_t processedMilliseconds,
     return progressCallback(progress, userData);
 }
 
+/** 创建视频解码上下文并按线程预算打开解码器
+@param [in] videoStream 待打开的视频流，调用期间借用
+@param [out] decodeContext 解码器输出地址，不可为空；成功后由调用方释放
+@param [out] errorText 失败说明，成功时不保证清空
+@param [in] codecThreads 解码器线程预算，0由解码器决定
+@return true表示解码器已打开
+*/
 static bool ffmpegCppOpenVideoDecoder(AVStream* videoStream,
-                               AVCodecContext** decodeContext,
-                               std::string& errorText)
+    AVCodecContext** decodeContext,
+    std::string& errorText, int32_t codecThreads)
 {
     if (videoStream == nullptr || videoStream->codecpar == nullptr || decodeContext == nullptr)
     {
@@ -953,6 +1169,7 @@ static bool ffmpegCppOpenVideoDecoder(AVStream* videoStream,
         return false;
     }
 
+    localDecodeContext->thread_count = codecThreads;
     result = avcodec_open2(localDecodeContext, decoder, nullptr);
     if (result < 0)
     {
@@ -965,14 +1182,25 @@ static bool ffmpegCppOpenVideoDecoder(AVStream* videoStream,
     return true;
 }
 
+/** 根据转码选项创建输出视频流并打开编码器
+@param [in] outputContext 已创建的输出容器，调用期间借用
+@param [in] decodeContext 已打开的解码器，调用期间借用
+@param [in] inputVideoStream 源视频流，调用期间借用
+@param [in] rotationDegree 源旋转角度，单位度
+@param [in] option 目标尺寸、编码及处理选项，调用期间借用
+@param [out] encodeContext 编码器输出地址，不可为空；成功后由调用方释放
+@param [out] outputVideoStream 新建视频流指针的输出地址，由输出容器持有
+@param [out] errorText 失败说明，成功时不保证清空
+@return true表示编码器和流已就绪，失败原因写入errorText
+*/
 static bool ffmpegCppOpenVideoEncoder(AVFormatContext* outputContext,
-                               AVCodecContext* decodeContext,
-                               AVStream* inputVideoStream,
-                               int32_t rotationDegree,
-                               const FFmpegCppTranscodeOption& option,
-                               AVCodecContext** encodeContext,
-                               AVStream** outputVideoStream,
-                               std::string& errorText)
+    AVCodecContext* decodeContext,
+    AVStream* inputVideoStream,
+    int32_t rotationDegree,
+    const FFmpegCppTranscodeOption& option,
+    AVCodecContext** encodeContext,
+    AVStream** outputVideoStream,
+    std::string& errorText)
 {
     if (outputContext == nullptr || decodeContext == nullptr || inputVideoStream == nullptr || encodeContext == nullptr || outputVideoStream == nullptr)
     {
@@ -997,11 +1225,11 @@ static bool ffmpegCppOpenVideoEncoder(AVFormatContext* outputContext,
     int32_t targetWidth = 0;
     int32_t targetHeight = 0;
     ffmpegCppCalculateTranscodeTargetSize(decodeContext->width,
-                                          decodeContext->height,
-                                          rotationDegree,
-                                          option,
-                                          targetWidth,
-                                          targetHeight);
+        decodeContext->height,
+        rotationDegree,
+        option,
+        targetWidth,
+        targetHeight);
     localEncodeContext->codec_id = encoder->id;
     localEncodeContext->codec_type = AVMEDIA_TYPE_VIDEO;
     localEncodeContext->width = targetWidth;
@@ -1009,8 +1237,25 @@ static bool ffmpegCppOpenVideoEncoder(AVFormatContext* outputContext,
     localEncodeContext->pix_fmt = AV_PIX_FMT_YUV420P;
     localEncodeContext->sample_aspect_ratio = decodeContext->sample_aspect_ratio;
     localEncodeContext->bit_rate = option.videoBitRateKbps > 0 ? static_cast<int64_t>(option.videoBitRateKbps) * 1000 : 0;
+    localEncodeContext->rc_max_rate = static_cast<int64_t>(option.maxVideoBitRateKbps) * 1000;
+    localEncodeContext->thread_count = option.codecThreads;
 
     AVRational frameRate = inputVideoStream->avg_frame_rate.num != 0 && inputVideoStream->avg_frame_rate.den != 0 ? inputVideoStream->avg_frame_rate : inputVideoStream->r_frame_rate;
+    if (option.maxFrameRate > 0 && (frameRate.num <= 0 || frameRate.den <= 0 || av_q2d(frameRate) > option.maxFrameRate))
+    {
+        frameRate = AVRational{option.maxFrameRate, 1};
+    }
+    if (option.keyFrameSeconds > 0)
+    {
+        localEncodeContext->gop_size = option.keyFrameSeconds * (frameRate.num > 0 && frameRate.den > 0 ?
+            static_cast<int32_t>(av_q2d(frameRate) + 0.5) : 30);
+        localEncodeContext->max_b_frames = 0;
+    }
+    if (std::string(encoder->name) == "libopenh264")
+    {
+        av_opt_set(localEncodeContext->priv_data, "rc_mode", "bitrate", 0);
+        av_opt_set(localEncodeContext->priv_data, "profile", "main", 0);
+    }
     if (frameRate.num > 0 && frameRate.den > 0)
     {
         localEncodeContext->framerate = frameRate;
@@ -1073,14 +1318,25 @@ static bool ffmpegCppOpenVideoEncoder(AVFormatContext* outputContext,
     return true;
 }
 
+/** 同步执行视频重编码并按选项复制或转码音频，结束前释放临时资源
+@param [in] inputContext 已打开的输入容器，不转移所有权
+@param [in] totalMilliseconds 媒体总时长，单位毫秒，非正数表示未知
+@param [in] outputFilePath 目标输出文件路径，不可为空
+@param [in] option 目标尺寸、编码及处理选项，调用期间借用
+@param [in] cancelRequested 可选取消标记的借用地址；只读取，不提供跨线程同步
+@param [in] progressCallback 同步进度回调，可为空；返回false请求取消
+@param [in,out] userData 回调上下文，库不读取也不释放，须在整个调用期间有效
+@param [out] errorText 失败说明，成功时不保证清空
+@return true表示转码完成，失败或取消返回false并写入errorText
+*/
 static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
-                                       int64_t totalMilliseconds,
-                                       const std::string& outputFilePath,
-                                       const FFmpegCppTranscodeOption& option,
-                                       bool* cancelRequested,
-                                       FFmpegCppProgressCallback progressCallback,
-                                       void* userData,
-                                       std::string& errorText)
+    int64_t totalMilliseconds,
+    const std::string& outputFilePath,
+    const FFmpegCppTranscodeOption& option,
+    bool* cancelRequested,
+    FFmpegCppProgressCallback progressCallback,
+    void* userData,
+    std::string& errorText)
 {
     if (inputContext == nullptr)
     {
@@ -1105,20 +1361,23 @@ static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
     AVPacket* inputPacket = nullptr;
     bool success = false;
     bool cancelled = false;
+    FFmpegCppAudioTranscoder audioTranscoder;
+    const bool encodeAudio = !option.removeAudio && option.audioCodec == FFmpegCppAudioCodecAac;
+    int64_t lastVideoPts = AV_NOPTS_VALUE;
     int64_t frameIndex = 0;
     int64_t lastProgressMilliseconds = -1;
     std::vector<int> streamMapping;
     std::chrono::steady_clock::time_point startTime;
 
     const char* formatName = option.outputContainer.empty() ? nullptr : option.outputContainer.c_str();
-    int result = avformat_alloc_output_context2(&outputContext, nullptr, formatName, outputFilePath.c_str());
+    int result = avformat_alloc_output_context2(&outputContext, nullptr, formatName, ffmpegCppAvFilePath(outputFilePath).c_str());
     if (result < 0 || outputContext == nullptr)
     {
         errorText = result < 0 ? ffmpegCppAppendError("alloc output context failed", result) : "alloc output context failed";
         goto cleanup;
     }
 
-    if (!ffmpegCppOpenVideoDecoder(inputVideoStream, &decodeContext, errorText))
+    if (!ffmpegCppOpenVideoDecoder(inputVideoStream, &decodeContext, errorText, option.codecThreads))
     {
         goto cleanup;
     }
@@ -1138,6 +1397,10 @@ static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
 
     streamMapping.assign(inputContext->nb_streams, -1);
     streamMapping[videoStreamIndex] = outputVideoStream->index;
+    if (encodeAudio && !audioTranscoder.open(inputContext, outputContext, option.audioBitRateKbps, errorText))
+    {
+        goto cleanup;
+    }
     for (unsigned int i = 0; i < inputContext->nb_streams; ++i)
     {
         if (static_cast<int>(i) == videoStreamIndex)
@@ -1156,6 +1419,10 @@ static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
             continue;
         }
         if (option.removeAudio || option.audioCodec == FFmpegCppAudioCodecNone)
+        {
+            continue;
+        }
+        if (encodeAudio)
         {
             continue;
         }
@@ -1185,7 +1452,7 @@ static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
 
     if ((outputContext->oformat->flags & AVFMT_NOFILE) == 0)
     {
-        result = avio_open(&outputContext->pb, outputFilePath.c_str(), AVIO_FLAG_WRITE);
+        result = avio_open(&outputContext->pb, ffmpegCppAvFilePath(outputFilePath).c_str(), AVIO_FLAG_WRITE);
         if (result < 0)
         {
             errorText = ffmpegCppAppendError("open output file failed", result);
@@ -1264,6 +1531,11 @@ static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
         }
         else
         {
+            if (encodeAudio && !audioTranscoder.process(inputPacket, errorText))
+            {
+                av_packet_unref(inputPacket);
+                break;
+            }
             int inputStreamIndex = inputPacket->stream_index;
             if (inputStreamIndex >= 0
                 && inputStreamIndex < static_cast<int>(streamMapping.size())
@@ -1308,6 +1580,13 @@ static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
             {
                 sourcePixelFormat = decodeContext->pix_fmt;
             }
+            int64_t frameTimestamp = decodeFrame->best_effort_timestamp != AV_NOPTS_VALUE ? decodeFrame->best_effort_timestamp : decodeFrame->pts;
+            const int64_t outputPts = frameTimestamp == AV_NOPTS_VALUE ? frameIndex :
+                av_rescale_q(frameTimestamp, inputVideoStream->time_base, encodeContext->time_base);
+            if (option.maxFrameRate > 0 && lastVideoPts != AV_NOPTS_VALUE && outputPts <= lastVideoPts)
+            {
+                continue;
+            }
             if (!ffmpegCppConvertFrameToTarget(decodeFrame,
                                                sourcePixelFormat,
                                                rotationDegree,
@@ -1319,7 +1598,6 @@ static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
                 goto cleanup;
             }
 
-            int64_t frameTimestamp = decodeFrame->best_effort_timestamp != AV_NOPTS_VALUE ? decodeFrame->best_effort_timestamp : decodeFrame->pts;
             if (frameTimestamp != AV_NOPTS_VALUE)
             {
                 encodeFrame->pts = av_rescale_q(frameTimestamp, inputVideoStream->time_base, encodeContext->time_base);
@@ -1329,6 +1607,7 @@ static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
                 encodeFrame->pts = frameIndex;
             }
             ++frameIndex;
+            lastVideoPts = encodeFrame->pts;
 
             int64_t frameMilliseconds = frameTimestamp != AV_NOPTS_VALUE ? ffmpegCppToMilliseconds(frameTimestamp, inputVideoStream->time_base) : 0;
             if (!ffmpegCppEncodeAndWriteVideoFrame(encodeContext, encodeFrame, outputContext, outputVideoStream, errorText))
@@ -1354,6 +1633,10 @@ static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
     }
 
 cleanup:
+    if (success && encodeAudio && !audioTranscoder.finish(errorText))
+    {
+        success = false;
+    }
     if (success)
     {
         result = av_write_trailer(outputContext);
@@ -1393,16 +1676,16 @@ cleanup:
     return success;
 }
 
-FFmpegCpp::FFmpegCpp()
-    : m_filePath()
-    , m_lastError()
-    , m_mediaInfo()
-    , m_isOpen(false)
-    , m_cancelRequested(false)
-    , m_formatContext(nullptr)
-    , m_videoCodecContext(nullptr)
-    , m_audioCodecContext(nullptr)
-    , m_scaleContext(nullptr)
+FFmpegCpp::FFmpegCpp() :
+m_filePath(),
+m_lastError(),
+m_mediaInfo(),
+m_isOpen(false),
+m_cancelRequested(false),
+m_formatContext(nullptr),
+m_videoCodecContext(nullptr),
+m_audioCodecContext(nullptr),
+m_scaleContext(nullptr)
 {
     av_log_set_level(AV_LOG_ERROR);
 }
@@ -1423,7 +1706,7 @@ bool FFmpegCpp::open(const std::string& filePath)
     }
 
     AVFormatContext* formatContext = nullptr;
-    int result = avformat_open_input(&formatContext, filePath.c_str(), nullptr, nullptr);
+    int result = avformat_open_input(&formatContext, ffmpegCppAvFilePath(filePath).c_str(), nullptr, nullptr);
     if (result < 0)
     {
         m_lastError = ffmpegCppAppendError("open input failed", result);
@@ -1589,14 +1872,14 @@ int64_t FFmpegCpp::durationMilliseconds() const
 }
 
 bool FFmpegCpp::extractFirstFrameToMemory(FFmpegCppImageData* imageData,
-                                          const FFmpegCppFrameExtractOption& option)
+    const FFmpegCppFrameExtractOption& option)
 {
     return extractFrameToMemory(0, imageData, option);
 }
 
 bool FFmpegCpp::extractFrameToMemory(int64_t timestampMilliseconds,
-                                     FFmpegCppImageData* imageData,
-                                     const FFmpegCppFrameExtractOption& option)
+    FFmpegCppImageData* imageData,
+    const FFmpegCppFrameExtractOption& option)
 {
     if (imageData == nullptr)
     {
@@ -1777,16 +2060,16 @@ bool FFmpegCpp::extractFrameToMemory(int64_t timestampMilliseconds,
 }
 
 bool FFmpegCpp::extractFirstFrameToFile(const std::string& outputFilePath,
-                                        const FFmpegCppFrameExtractOption& option,
-                                        std::string* savedFilePath)
+    const FFmpegCppFrameExtractOption& option,
+    std::string* savedFilePath)
 {
     return extractFrameToFile(0, outputFilePath, option, savedFilePath);
 }
 
 bool FFmpegCpp::extractFrameToFile(int64_t timestampMilliseconds,
-                                   const std::string& outputFilePath,
-                                   const FFmpegCppFrameExtractOption& option,
-                                   std::string* savedFilePath)
+    const std::string& outputFilePath,
+    const FFmpegCppFrameExtractOption& option,
+    std::string* savedFilePath)
 {
     FFmpegCppImageData imageData;
     if (!extractFrameToMemory(timestampMilliseconds, &imageData, option))
@@ -1824,9 +2107,9 @@ bool FFmpegCpp::extractFrameToFile(int64_t timestampMilliseconds,
 }
 
 bool FFmpegCpp::transcode(const std::string& outputFilePath,
-                          const FFmpegCppTranscodeOption& option,
-                          FFmpegCppProgressCallback progressCallback,
-                          void* userData)
+    const FFmpegCppTranscodeOption& option,
+    FFmpegCppProgressCallback progressCallback,
+    void* userData)
 {
     if (!isOpen())
     {
@@ -1836,6 +2119,13 @@ bool FFmpegCpp::transcode(const std::string& outputFilePath,
     if (outputFilePath.empty())
     {
         m_lastError = "outputFilePath is empty";
+        return false;
+    }
+    if (option.maxFrameRate < 0 || option.maxFrameRate > 240 || option.maxVideoBitRateKbps < 0 ||
+        option.maxVideoBitRateKbps > 1000000 || option.keyFrameSeconds < 0 || option.keyFrameSeconds > 60 ||
+        option.codecThreads < 0 || option.codecThreads > 64)
+    {
+        m_lastError = "invalid frame rate, bitrate, keyframe interval or codec thread limit";
         return false;
     }
     if (!option.overwriteOutput && ffmpegCppFileExists(outputFilePath))
@@ -1865,7 +2155,7 @@ bool FFmpegCpp::transcode(const std::string& outputFilePath,
 
     AVFormatContext* outputContext = nullptr;
     const char* formatName = option.outputContainer.empty() ? nullptr : option.outputContainer.c_str();
-    int result = avformat_alloc_output_context2(&outputContext, nullptr, formatName, outputFilePath.c_str());
+    int result = avformat_alloc_output_context2(&outputContext, nullptr, formatName, ffmpegCppAvFilePath(outputFilePath).c_str());
     if (result < 0 || outputContext == nullptr)
     {
         m_lastError = result < 0 ? ffmpegCppAppendError("alloc output context failed", result) : "alloc output context failed";
@@ -1922,7 +2212,7 @@ bool FFmpegCpp::transcode(const std::string& outputFilePath,
 
     if ((outputContext->oformat->flags & AVFMT_NOFILE) == 0)
     {
-        result = avio_open(&outputContext->pb, outputFilePath.c_str(), AVIO_FLAG_WRITE);
+        result = avio_open(&outputContext->pb, ffmpegCppAvFilePath(outputFilePath).c_str(), AVIO_FLAG_WRITE);
         if (result < 0)
         {
             avformat_free_context(outputContext);
@@ -2077,6 +2367,10 @@ bool FFmpegCpp::cancelCurrentTask()
 }
 
 #ifdef FFMPEGCPP_TEST_MAIN
+/** 为宏开关控制的测试入口创建一级输出目录
+@param [in] directoryPath 测试输出目录路径，不可为空
+@return true表示创建成功或目录已经存在
+*/
 static bool ffmpegCppTestCreateDirectory(const std::string& directoryPath)
 {
     if (directoryPath.empty())
@@ -2092,6 +2386,10 @@ static bool ffmpegCppTestCreateDirectory(const std::string& directoryPath)
     return result == 0 || errno == EEXIST;
 }
 
+/** 检查测试输出能否打开且包含数据
+@param [in] filePath 文件路径，调用期间借用
+@return true表示文件长度大于0
+*/
 static bool ffmpegCppTestFileExistsAndNotEmpty(const std::string& filePath)
 {
     std::ifstream stream(filePath.c_str(), std::ios::binary | std::ios::ate);
@@ -2102,6 +2400,10 @@ static bool ffmpegCppTestFileExistsAndNotEmpty(const std::string& filePath)
     return stream.tellg() > 0;
 }
 
+/** 检查测试图片是否具有JPEG起止标记
+@param [in] imageData 待检查的编码图片数据
+@return true表示首尾标记匹配，不表示完成了图片解码校验
+*/
 static bool ffmpegCppTestIsJpeg(const FFmpegCppImageData& imageData)
 {
     if (imageData.data.size() < 4)
@@ -2114,6 +2416,11 @@ static bool ffmpegCppTestIsJpeg(const FFmpegCppImageData& imageData)
         && imageData.data[imageData.data.size() - 1] == 0xD9;
 }
 
+/** 运行受FFMPEGCPP_TEST_MAIN控制的本库测试入口
+@param [in] argc 命令行参数数量
+@param [in] argv 命令行参数数组，可通过参数指定测试媒体
+@return 全部检查通过返回0，否则返回非0
+*/
 int main(int argc, char* argv[])
 {
     ffmpegCppTestCreateDirectory("src/temp");
@@ -2121,6 +2428,11 @@ int main(int argc, char* argv[])
 
     int32_t totalCount = 0;
     int32_t failCount = 0;
+
+    /** 记录一个测试断言并累计失败数
+    @param [in] ok 是否满足该检查的独立预期
+    @param [in] name 检查名称，写入控制台
+    */
     std::function<void(bool, const std::string&)> check = [&totalCount, &failCount](bool ok, const std::string& name) -> void
     {
         ++totalCount;

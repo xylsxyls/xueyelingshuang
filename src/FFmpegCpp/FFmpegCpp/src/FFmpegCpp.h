@@ -3,6 +3,7 @@
 #include "FFmpegCppModels.h"
 
 /** FFmpeg视频文件对象封装，一个对象代表一个已打开或准备打开的视频文件
+本实例拥有媒体和编解码上下文，调用方负责串行访问，不在库内启动后台任务
 */
 class FFmpegCppAPI FFmpegCpp
 {
@@ -23,7 +24,7 @@ private:
 
     /** 禁止赋值，避免ffmpeg上下文生命周期被复制
     @param [in] other 另一个FFmpegCpp对象
-    @return 返回当前对象引用
+    @return 禁用操作，不提供实现
     */
     FFmpegCpp& operator=(const FFmpegCpp& other);
 
@@ -102,7 +103,7 @@ public:
     @return 返回true表示首帧截图成功
     */
     bool extractFirstFrameToMemory(FFmpegCppImageData* imageData,
-                                   const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption());
+        const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption());
 
     /** 从当前视频指定时间位置截取一帧图片并写入内存
     @param [in] timestampMilliseconds 截图时间点，单位毫秒；小于0时按0处理，大于总时长时由实现层裁剪到可用范围
@@ -111,8 +112,8 @@ public:
     @return 返回true表示截图成功
     */
     bool extractFrameToMemory(int64_t timestampMilliseconds,
-                              FFmpegCppImageData* imageData,
-                              const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption());
+        FFmpegCppImageData* imageData,
+        const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption());
 
     /** 从当前视频中截取首帧图片并保存到文件
     @param [in] outputFilePath 输出图片完整路径；为空时实现层可按filePath和图片格式自动生成路径
@@ -121,8 +122,8 @@ public:
     @return 返回true表示首帧保存成功
     */
     bool extractFirstFrameToFile(const std::string& outputFilePath,
-                                 const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption(),
-                                 std::string* savedFilePath = nullptr);
+        const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption(),
+        std::string* savedFilePath = nullptr);
 
     /** 从当前视频指定时间位置截取一帧图片并保存到文件
     @param [in] timestampMilliseconds 截图时间点，单位毫秒
@@ -132,9 +133,9 @@ public:
     @return 返回true表示截图保存成功
     */
     bool extractFrameToFile(int64_t timestampMilliseconds,
-                            const std::string& outputFilePath,
-                            const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption(),
-                            std::string* savedFilePath = nullptr);
+        const std::string& outputFilePath,
+        const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption(),
+        std::string* savedFilePath = nullptr);
 
     /** 转码当前视频到目标文件
     @param [in] outputFilePath 输出视频完整路径，不能为空
@@ -144,9 +145,9 @@ public:
     @return 返回true表示转码成功；失败或被取消时可通过lastError获取原因
     */
     bool transcode(const std::string& outputFilePath,
-                   const FFmpegCppTranscodeOption& option,
-                   FFmpegCppProgressCallback progressCallback = nullptr,
-                   void* userData = nullptr);
+        const FFmpegCppTranscodeOption& option,
+        FFmpegCppProgressCallback progressCallback = nullptr,
+        void* userData = nullptr);
 
     /** 请求取消当前正在执行的截图或转码任务
     @return 返回true表示取消请求已经记录；如果当前没有任务，也返回true

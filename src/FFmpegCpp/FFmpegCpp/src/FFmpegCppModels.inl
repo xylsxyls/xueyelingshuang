@@ -1,13 +1,15 @@
-﻿inline FFmpegCppRational::FFmpegCppRational()
-    : numerator(0)
-    , denominator(1)
+﻿inline FFmpegCppRational::FFmpegCppRational() :
+numerator(0),
+denominator(1)
 {
+
 }
 
-inline FFmpegCppRational::FFmpegCppRational(int32_t numeratorValue, int32_t denominatorValue)
-    : numerator(numeratorValue)
-    , denominator(denominatorValue)
+inline FFmpegCppRational::FFmpegCppRational(int32_t numeratorValue, int32_t denominatorValue) :
+numerator(numeratorValue),
+denominator(denominatorValue)
 {
+
 }
 
 inline double FFmpegCppRational::toDouble(double defaultValue) const
@@ -19,23 +21,24 @@ inline double FFmpegCppRational::toDouble(double defaultValue) const
     return static_cast<double>(numerator) / static_cast<double>(denominator);
 }
 
-inline FFmpegCppStreamInfo::FFmpegCppStreamInfo()
-    : streamIndex(-1)
-    , mediaType(FFmpegCppMediaTypeUnknown)
-    , codecName()
-    , codecLongName()
-    , profile()
-    , width(0)
-    , height(0)
-    , rotationDegree(0)
-    , durationMilliseconds(0)
-    , bitRate(0)
-    , frameRate()
-    , timeBase()
-    , sampleRate(0)
-    , channels(0)
-    , language()
+inline FFmpegCppStreamInfo::FFmpegCppStreamInfo() :
+streamIndex(-1),
+mediaType(FFmpegCppMediaTypeUnknown),
+codecName(),
+codecLongName(),
+profile(),
+width(0),
+height(0),
+rotationDegree(0),
+durationMilliseconds(0),
+bitRate(0),
+frameRate(),
+timeBase(),
+sampleRate(0),
+channels(0),
+language()
 {
+
 }
 
 inline bool FFmpegCppStreamInfo::isVideo() const
@@ -48,19 +51,20 @@ inline bool FFmpegCppStreamInfo::isAudio() const
     return mediaType == FFmpegCppMediaTypeAudio;
 }
 
-inline FFmpegCppMediaInfo::FFmpegCppMediaInfo()
-    : filePath()
-    , formatName()
-    , formatLongName()
-    , fileSizeBytes(0)
-    , durationMilliseconds(0)
-    , bitRate(0)
-    , hasVideo(false)
-    , hasAudio(false)
-    , mainVideoStreamIndex(-1)
-    , mainAudioStreamIndex(-1)
-    , streams()
+inline FFmpegCppMediaInfo::FFmpegCppMediaInfo() :
+filePath(),
+formatName(),
+formatLongName(),
+fileSizeBytes(0),
+durationMilliseconds(0),
+bitRate(0),
+hasVideo(false),
+hasAudio(false),
+mainVideoStreamIndex(-1),
+mainAudioStreamIndex(-1),
+streams()
 {
+
 }
 
 inline void FFmpegCppMediaInfo::reset()
@@ -114,14 +118,15 @@ inline bool FFmpegCppMediaInfo::getMainAudioStreamInfo(FFmpegCppStreamInfo* stre
     return false;
 }
 
-inline FFmpegCppImageData::FFmpegCppImageData()
-    : imageFormat(FFmpegCppImageFormatJpeg)
-    , mimeType("image/jpeg")
-    , width(0)
-    , height(0)
-    , timestampMilliseconds(0)
-    , data()
+inline FFmpegCppImageData::FFmpegCppImageData() :
+imageFormat(FFmpegCppImageFormatJpeg),
+mimeType("image/jpeg"),
+width(0),
+height(0),
+timestampMilliseconds(0),
+data()
 {
+
 }
 
 inline void FFmpegCppImageData::reset()
@@ -139,46 +144,53 @@ inline bool FFmpegCppImageData::empty() const
     return data.empty();
 }
 
-inline FFmpegCppFrameExtractOption::FFmpegCppFrameExtractOption()
-    : timestampMilliseconds(0)
-    , maxWidth(0)
-    , maxHeight(0)
-    , keepAspectRatio(true)
-    , applyRotation(true)
-    , imageFormat(FFmpegCppImageFormatJpeg)
-    , jpegQuality(85)
-    , timeoutMilliseconds(10000)
-    , allowHardwareDecode(false)
+inline FFmpegCppFrameExtractOption::FFmpegCppFrameExtractOption() :
+timestampMilliseconds(0),
+maxWidth(0),
+maxHeight(0),
+keepAspectRatio(true),
+applyRotation(true),
+imageFormat(FFmpegCppImageFormatJpeg),
+jpegQuality(85),
+timeoutMilliseconds(10000),
+allowHardwareDecode(false)
 {
+
 }
 
-inline FFmpegCppTranscodeOption::FFmpegCppTranscodeOption()
-    : outputContainer("mp4")
-    , videoCodec(FFmpegCppVideoCodecH264)
-    , audioCodec(FFmpegCppAudioCodecCopy)
-    , maxWidth(0)
-    , maxHeight(0)
-    , keepAspectRatio(true)
-    , applyRotation(true)
-    , videoBitRateKbps(0)
-    , audioBitRateKbps(128)
-    , crf(23)
-    , preset("medium")
-    , fastStart(true)
-    , overwriteOutput(false)
-    , removeAudio(false)
-    , allowHardwareEncode(false)
-    , timeoutMilliseconds(0)
+inline FFmpegCppTranscodeOption::FFmpegCppTranscodeOption() :
+outputContainer("mp4"),
+videoCodec(FFmpegCppVideoCodecH264),
+audioCodec(FFmpegCppAudioCodecCopy),
+maxWidth(0),
+maxHeight(0),
+keepAspectRatio(true),
+applyRotation(true),
+videoBitRateKbps(0),
+audioBitRateKbps(128),
+crf(23),
+preset("medium"),
+fastStart(true),
+overwriteOutput(false),
+removeAudio(false),
+allowHardwareEncode(false),
+timeoutMilliseconds(0),
+maxFrameRate(0),
+maxVideoBitRateKbps(0),
+keyFrameSeconds(0),
+codecThreads(0)
 {
+
 }
 
-inline FFmpegCppProgress::FFmpegCppProgress()
-    : processedMilliseconds(0)
-    , totalMilliseconds(0)
-    , outputBytes(0)
-    , percent(0.0)
-    , finished(false)
-    , cancelled(false)
-    , message()
+inline FFmpegCppProgress::FFmpegCppProgress() :
+processedMilliseconds(0),
+totalMilliseconds(0),
+outputBytes(0),
+percent(0.0),
+finished(false),
+cancelled(false),
+message()
 {
+
 }

@@ -11,10 +11,28 @@ extern "C"
 #include "ffmpeg/libswscale/swscale.h"
 }
 
-FFmpegCppMediaWriter::FFmpegCppMediaWriter() : m_format(nullptr), m_audio(nullptr),
-    m_video(nullptr), m_audioStream(nullptr), m_videoStream(nullptr), m_resampler(nullptr),
-    m_scaler(nullptr), m_audioFrames(0), m_started(false), m_native(nullptr), m_width(0), m_height(0) {}
-FFmpegCppMediaWriter::~FFmpegCppMediaWriter() { close(); }
+FFmpegCppMediaWriter::FFmpegCppMediaWriter() :
+m_format(nullptr),
+m_audio(nullptr),
+m_video(nullptr),
+m_audioStream(nullptr),
+m_videoStream(nullptr),
+m_resampler(nullptr),
+m_scaler(nullptr),
+m_audioFrames(0),
+m_started(false),
+m_native(nullptr),
+m_width(0),
+m_height(0)
+{
+
+}
+
+FFmpegCppMediaWriter::~FFmpegCppMediaWriter()
+{
+    close();
+}
+
 void FFmpegCppMediaWriter::close()
 {
 #ifdef _WIN32
@@ -34,6 +52,7 @@ void FFmpegCppMediaWriter::close()
     }
     m_started = false;
 }
+
 bool FFmpegCppMediaWriter::fail(int code, const char* stage)
 {
     char text[AV_ERROR_MAX_STRING_SIZE] = {};
@@ -41,7 +60,12 @@ bool FFmpegCppMediaWriter::fail(int code, const char* stage)
     m_error = std::string(stage) + ": " + text;
     return false;
 }
-std::string FFmpegCppMediaWriter::error() const { return m_error; }
+
+std::string FFmpegCppMediaWriter::error() const
+{
+    return m_error;
+}
+
 bool FFmpegCppMediaWriter::open(const std::string& path, bool withVideo, int width, int height)
 {
     if (m_format || m_native || path.empty() || (withVideo && (width < 2 || height < 2 || width > 16384 ||
@@ -111,6 +135,7 @@ bool FFmpegCppMediaWriter::open(const std::string& path, bool withVideo, int wid
     m_started = true;
     return true;
 }
+
 bool FFmpegCppMediaWriter::encode(AVCodecContext* codec, AVStream* stream, AVFrame* frame)
 {
     int result = avcodec_send_frame(codec, frame);
@@ -131,6 +156,7 @@ bool FFmpegCppMediaWriter::encode(AVCodecContext* codec, AVStream* stream, AVFra
     av_packet_free(&packet);
     return result >= 0 || fail(result, "write encoded packet");
 }
+
 bool FFmpegCppMediaWriter::audioBlock(size_t count)
 {
     AVFrame* frame = av_frame_alloc();
@@ -151,6 +177,7 @@ bool FFmpegCppMediaWriter::audioBlock(size_t count)
     m_pending.erase(m_pending.begin(), m_pending.begin() + count * 2);
     return true;
 }
+
 bool FFmpegCppMediaWriter::audio(const int16_t* samples, size_t frames)
 {
     if (!m_started || !samples || frames == 0 || frames > 48000) return fail(AVERROR(EINVAL), "invalid audio block");
@@ -168,6 +195,7 @@ bool FFmpegCppMediaWriter::audio(const int16_t* samples, size_t frames)
     while (m_pending.size() / 2 >= block) if (!audioBlock(block)) return false;
     return true;
 }
+
 bool FFmpegCppMediaWriter::video(const unsigned char* pixels, size_t bytes, int64_t time100ns)
 {
     if (!m_started || m_width == 0 || !pixels || time100ns < 0 ||
@@ -204,6 +232,7 @@ bool FFmpegCppMediaWriter::video(const unsigned char* pixels, size_t bytes, int6
     av_frame_free(&frame);
     return success;
 }
+
 bool FFmpegCppMediaWriter::finish()
 {
     if (!m_started) return fail(AVERROR(EINVAL), "writer not started");

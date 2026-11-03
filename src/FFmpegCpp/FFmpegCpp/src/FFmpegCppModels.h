@@ -8,9 +8,13 @@
 */
 enum FFmpegCppMediaType
 {
+    // 未识别或不属于当前支持的音视频及字幕类型
     FFmpegCppMediaTypeUnknown = 0,
+    // 视频图像流
     FFmpegCppMediaTypeVideo = 1,
+    // 音频采样流
     FFmpegCppMediaTypeAudio = 2,
+    // 字幕流，不表示支持字幕渲染
     FFmpegCppMediaTypeSubtitle = 3
 };
 
@@ -18,8 +22,11 @@ enum FFmpegCppMediaType
 */
 enum FFmpegCppImageFormat
 {
+    // JPEG编码，支持配置有损压缩质量
     FFmpegCppImageFormatJpeg = 0,
+    // PNG无损图片编码
     FFmpegCppImageFormatPng = 1,
+    // BMP位图编码
     FFmpegCppImageFormatBmp = 2
 };
 
@@ -27,10 +34,15 @@ enum FFmpegCppImageFormat
 */
 enum FFmpegCppVideoCodec
 {
+    // 不重新编码视频，按输出容器要求复制压缩包
     FFmpegCppVideoCodecCopy = 0,
+    // 将视频重新编码为H.264
     FFmpegCppVideoCodecH264 = 1,
+    // 将视频重新编码为H.265或HEVC
     FFmpegCppVideoCodecH265 = 2,
+    // 将视频重新编码为VP9
     FFmpegCppVideoCodecVp9 = 3,
+    // 将视频重新编码为AV1
     FFmpegCppVideoCodecAv1 = 4
 };
 
@@ -38,10 +50,15 @@ enum FFmpegCppVideoCodec
 */
 enum FFmpegCppAudioCodec
 {
+    // 保留源音频编码并复制压缩包
     FFmpegCppAudioCodecCopy = 0,
+    // 请求AAC音频编码，是否支持由实际转码路径和编码器决定
     FFmpegCppAudioCodecAac = 1,
+    // 请求MP3音频编码，是否支持由实际转码路径和编码器决定
     FFmpegCppAudioCodecMp3 = 2,
+    // 请求Opus音频编码，是否支持由实际转码路径和编码器决定
     FFmpegCppAudioCodecOpus = 3,
+    // 输出不包含音频流
     FFmpegCppAudioCodecNone = 4
 };
 
@@ -336,6 +353,16 @@ public:
     /** 构造函数，默认输出mp4/h264并复制原音频；需要无声视频时设置removeAudio=true
     */
     FFmpegCppTranscodeOption();
+
+public:
+    // 最大输出帧率，0保留源帧率；降帧保留原时间轴，不改变播放速度
+    int32_t maxFrameRate;
+    // 视频最大码率，单位Kbps，0使用编码器默认控制
+    int32_t maxVideoBitRateKbps;
+    // 最大关键帧间隔，单位秒，0使用编码器默认值
+    int32_t keyFrameSeconds;
+    // 每个编解码器的线程预算，0由编解码器选择
+    int32_t codecThreads;
 };
 
 /** 长任务进度信息

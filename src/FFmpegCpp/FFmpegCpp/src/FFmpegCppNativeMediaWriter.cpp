@@ -6,8 +6,16 @@
 #pragma comment(lib, "mfuuid.lib")
 #pragma comment(lib, "ole32.lib")
 
-FFmpegCppNativeMediaWriter::FFmpegCppNativeMediaWriter() : m_impl(new FFmpegCppNativeMediaWriterState) {}
-FFmpegCppNativeMediaWriter::~FFmpegCppNativeMediaWriter() { delete m_impl; }
+FFmpegCppNativeMediaWriter::FFmpegCppNativeMediaWriter() :
+m_impl(new FFmpegCppNativeMediaWriterState)
+{
+
+}
+
+FFmpegCppNativeMediaWriter::~FFmpegCppNativeMediaWriter()
+{
+    delete m_impl;
+}
 
 bool FFmpegCppNativeMediaWriter::open(const std::string& path, bool hasVideo, int width, int height)
 {
@@ -95,16 +103,19 @@ bool FFmpegCppNativeMediaWriter::audio(const int16_t* data, size_t frames, int64
 {
     return frames <= MAXDWORD / 4 && m_impl->write(m_impl->m_audio, data, frames * 4, time, frames * 10000000LL / 48000);
 }
+
 bool FFmpegCppNativeMediaWriter::video(const unsigned char* data, size_t bytes, int64_t time, int64_t duration)
 {
     return m_impl->write(m_impl->m_video, data, bytes, time, duration);
 }
+
 bool FFmpegCppNativeMediaWriter::finish()
 {
     if (!m_impl->m_writer) return false;
     m_impl->m_status = m_impl->m_writer->Finalize();
     return SUCCEEDED(m_impl->m_status);
 }
+
 std::string FFmpegCppNativeMediaWriter::error() const
 {
     std::ostringstream text;

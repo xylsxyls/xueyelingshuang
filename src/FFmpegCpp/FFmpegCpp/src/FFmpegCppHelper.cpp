@@ -61,9 +61,18 @@ bool FFmpegCppHelper::fitBgraFrame(const std::vector<unsigned char>& pixels, int
     }
 }
 
+/** 把文本中的字符按当前C字符分类规则转换为小写
+@param [in] value 输入文本，调用期间借用
+@return 小写文本副本
+*/
 static std::string ffmpegCppLowerString(const std::string& value)
 {
     std::string result = value;
+
+    /** 将单个无符号字符转换为小写，避免负char传入tolower
+    @param [in] item 输入字符的无符号值
+    @return 小写字符
+    */
     std::transform(result.begin(), result.end(), result.begin(), [](unsigned char item) -> char
     {
         return static_cast<char>(std::tolower(item));
@@ -71,6 +80,10 @@ static std::string ffmpegCppLowerString(const std::string& value)
     return result;
 }
 
+/** 取出文件名最后一个点之后的扩展名并转为小写
+@param [in] filePath 文件路径，调用期间借用
+@return 不含点的扩展名，无有效扩展名返回空字符串
+*/
 static std::string ffmpegCppFileExtension(const std::string& filePath)
 {
     size_t slashPos = filePath.find_last_of("/\\");
@@ -86,6 +99,10 @@ static std::string ffmpegCppFileExtension(const std::string& filePath)
     return ffmpegCppLowerString(filePath.substr(dotPos + 1));
 }
 
+/** 在调用方提供输出地址时复制错误文本
+@param [out] errorText 可选的错误文本输出地址，为空时不写入
+@param [in] value 输入文本，调用期间借用
+*/
 static void ffmpegCppSetErrorText(std::string* errorText, const std::string& value)
 {
     if (errorText != nullptr)
@@ -94,6 +111,10 @@ static void ffmpegCppSetErrorText(std::string* errorText, const std::string& val
     }
 }
 
+/** 把公共视频编码枚举转换为FFmpeg编码ID
+@param [in] videoCodec 请求的视频编码类型
+@return 对应编码ID，Copy及未识别值返回NONE
+*/
 static AVCodecID ffmpegCppVideoCodecIdFromPublicEnum(FFmpegCppVideoCodec videoCodec)
 {
     if (videoCodec == FFmpegCppVideoCodecH264)
@@ -115,6 +136,10 @@ static AVCodecID ffmpegCppVideoCodecIdFromPublicEnum(FFmpegCppVideoCodec videoCo
     return AV_CODEC_ID_NONE;
 }
 
+/** 把公共音频编码枚举转换为FFmpeg编码ID
+@param [in] audioCodec 请求的音频编码类型
+@return 对应编码ID，Copy、None及未识别值返回NONE
+*/
 static AVCodecID ffmpegCppAudioCodecIdFromPublicEnum(FFmpegCppAudioCodec audioCodec)
 {
     if (audioCodec == FFmpegCppAudioCodecAac)
@@ -132,6 +157,11 @@ static AVCodecID ffmpegCppAudioCodecIdFromPublicEnum(FFmpegCppAudioCodec audioCo
     return AV_CODEC_ID_NONE;
 }
 
+/** 依次按名称及编码ID检查当前运行库是否提供编码器
+@param [in] encoderName 候选编码器名称，copy或空文本不按名称查找
+@param [in] codecId 名称查找失败后使用的编码ID，NONE表示不再查找
+@return true表示至少一种查找方式找到编码器
+*/
 static bool ffmpegCppIsEncoderAvailable(const std::string& encoderName, AVCodecID codecId)
 {
     if (!encoderName.empty() && encoderName != "copy" && avcodec_find_encoder_by_name(encoderName.c_str()) != nullptr)
@@ -142,8 +172,8 @@ static bool ffmpegCppIsEncoderAvailable(const std::string& encoderName, AVCodecI
 }
 
 bool FFmpegCppHelper::probeMediaInfo(const std::string& filePath,
-                                     FFmpegCppMediaInfo* mediaInfo,
-                                     std::string* errorText)
+    FFmpegCppMediaInfo* mediaInfo,
+    std::string* errorText)
 {
     if (mediaInfo == nullptr)
     {
@@ -167,18 +197,18 @@ bool FFmpegCppHelper::probeMediaInfo(const std::string& filePath,
 }
 
 bool FFmpegCppHelper::extractFirstFrameToMemory(const std::string& filePath,
-                                                FFmpegCppImageData* imageData,
-                                                const FFmpegCppFrameExtractOption& option,
-                                                std::string* errorText)
+    FFmpegCppImageData* imageData,
+    const FFmpegCppFrameExtractOption& option,
+    std::string* errorText)
 {
     return extractFrameToMemory(filePath, 0, imageData, option, errorText);
 }
 
 bool FFmpegCppHelper::extractFrameToMemory(const std::string& filePath,
-                                           int64_t timestampMilliseconds,
-                                           FFmpegCppImageData* imageData,
-                                           const FFmpegCppFrameExtractOption& option,
-                                           std::string* errorText)
+    int64_t timestampMilliseconds,
+    FFmpegCppImageData* imageData,
+    const FFmpegCppFrameExtractOption& option,
+    std::string* errorText)
 {
     FFmpegCpp ffmpegCpp;
     if (!ffmpegCpp.open(filePath))
@@ -196,20 +226,20 @@ bool FFmpegCppHelper::extractFrameToMemory(const std::string& filePath,
 }
 
 bool FFmpegCppHelper::extractFirstFrameToFile(const std::string& filePath,
-                                              const std::string& outputFilePath,
-                                              const FFmpegCppFrameExtractOption& option,
-                                              std::string* savedFilePath,
-                                              std::string* errorText)
+    const std::string& outputFilePath,
+    const FFmpegCppFrameExtractOption& option,
+    std::string* savedFilePath,
+    std::string* errorText)
 {
     return extractFrameToFile(filePath, 0, outputFilePath, option, savedFilePath, errorText);
 }
 
 bool FFmpegCppHelper::extractFrameToFile(const std::string& filePath,
-                                         int64_t timestampMilliseconds,
-                                         const std::string& outputFilePath,
-                                         const FFmpegCppFrameExtractOption& option,
-                                         std::string* savedFilePath,
-                                         std::string* errorText)
+    int64_t timestampMilliseconds,
+    const std::string& outputFilePath,
+    const FFmpegCppFrameExtractOption& option,
+    std::string* savedFilePath,
+    std::string* errorText)
 {
     FFmpegCpp ffmpegCpp;
     if (!ffmpegCpp.open(filePath))
@@ -227,11 +257,11 @@ bool FFmpegCppHelper::extractFrameToFile(const std::string& filePath,
 }
 
 bool FFmpegCppHelper::transcodeVideo(const std::string& inputFilePath,
-                                     const std::string& outputFilePath,
-                                     const FFmpegCppTranscodeOption& option,
-                                     FFmpegCppProgressCallback progressCallback,
-                                     void* userData,
-                                     std::string* errorText)
+    const std::string& outputFilePath,
+    const FFmpegCppTranscodeOption& option,
+    FFmpegCppProgressCallback progressCallback,
+    void* userData,
+    std::string* errorText)
 {
     FFmpegCpp ffmpegCpp;
     if (!ffmpegCpp.open(inputFilePath))

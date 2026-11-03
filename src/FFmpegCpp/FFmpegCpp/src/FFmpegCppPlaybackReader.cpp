@@ -47,6 +47,7 @@ extern "C"
 static const int64_t kPlaybackDefaultFrameDuration100ns = FFMPEG_PLAYBACK_TICKS_PER_SECOND / 30;
 // 默认允许较长GOP，调用方仍可用maxReadFrameCount设置更小预算
 static const size_t kPlaybackDefaultPreviewFrameCount = 8192;
+
 /** 释放独占的临时预览帧，异常退出时也归还FFmpeg引用
 @param [in] frame 待释放的帧，允许为空
 */
@@ -279,9 +280,9 @@ static int64_t playbackGuessFrameDuration100ns(AVFormatContext* formatContext, A
 @return 返回公开流信息
 */
 static FFmpegCppStreamInfo playbackMakeStreamInfo(const AVFormatContext* formatContext,
-                                           const AVStream* stream,
-                                           int32_t mainVideoStreamIndex,
-                                           int32_t mainAudioStreamIndex)
+    const AVStream* stream,
+    int32_t mainVideoStreamIndex,
+    int32_t mainAudioStreamIndex)
 {
     FFmpegCppStreamInfo streamInfo;
     if (formatContext == nullptr || stream == nullptr || stream->codecpar == nullptr)
@@ -372,34 +373,34 @@ static void playbackInitInputChannelLayout(const AVCodecContext* codecContext, A
     av_channel_layout_default(layout, channels);
 }
 
-FFmpegCppPlaybackReaderImpl::FFmpegCppPlaybackReaderImpl()
-        : m_formatContext(nullptr),
-          m_videoCodecContext(nullptr),
-          m_audioCodecContext(nullptr),
-          m_scaleContext(nullptr),
-          m_resampleContext(nullptr),
-          m_packet(nullptr),
-          m_frame(nullptr),
-          m_videoStreamIndex(-1),
-          m_audioStreamIndex(-1),
-          m_videoStartTime100ns(0),
-          m_audioStartTime100ns(0),
-          m_duration100ns(0),
-          m_videoFrameDuration100ns(kPlaybackDefaultFrameDuration100ns),
-          m_nextVideoTimestamp100ns(0),
-          m_nextAudioTimestamp100ns(0),
-          m_videoWidth(0),
-          m_videoHeight(0),
-          m_audioSampleRate(0),
-          m_audioChannels(0),
-          m_audioBitsPerSample(16),
-          m_isOpen(false),
-          m_drainStarted(false),
-          m_videoDrained(false),
-          m_audioDrained(false),
-          m_readPacketCount(0),
-          m_videoFrameCount(0),
-          m_audioFrameCount(0)
+FFmpegCppPlaybackReaderImpl::FFmpegCppPlaybackReaderImpl() :
+m_formatContext(nullptr),
+m_videoCodecContext(nullptr),
+m_audioCodecContext(nullptr),
+m_scaleContext(nullptr),
+m_resampleContext(nullptr),
+m_packet(nullptr),
+m_frame(nullptr),
+m_videoStreamIndex(-1),
+m_audioStreamIndex(-1),
+m_videoStartTime100ns(0),
+m_audioStartTime100ns(0),
+m_duration100ns(0),
+m_videoFrameDuration100ns(kPlaybackDefaultFrameDuration100ns),
+m_nextVideoTimestamp100ns(0),
+m_nextAudioTimestamp100ns(0),
+m_videoWidth(0),
+m_videoHeight(0),
+m_audioSampleRate(0),
+m_audioChannels(0),
+m_audioBitsPerSample(16),
+m_isOpen(false),
+m_drainStarted(false),
+m_videoDrained(false),
+m_audioDrained(false),
+m_readPacketCount(0),
+m_videoFrameCount(0),
+m_audioFrameCount(0)
 {
     m_videoTimeBase.num = 1;
     m_videoTimeBase.den = static_cast<int>(FFMPEG_PLAYBACK_TICKS_PER_SECOND);
@@ -725,8 +726,8 @@ bool FFmpegCppPlaybackReaderImpl::readVideoFrameAt(int64_t position100ns, size_t
 }
 
 bool FFmpegCppPlaybackReaderImpl::readAdjacentVideoFrameEx(int64_t origin100ns, int32_t direction,
-        const FFmpegCppPlaybackPreviewOption& option, FFmpegCppPlaybackVideoFrame* frame,
-        FFmpegCppPlaybackPreviewProfile* profile)
+    const FFmpegCppPlaybackPreviewOption& option, FFmpegCppPlaybackVideoFrame* frame,
+    FFmpegCppPlaybackPreviewProfile* profile)
 {
     const AVFrame* raw = m_adjacent.read(m_formatContext, m_videoCodecContext, m_videoStreamIndex,
         m_videoStartTime100ns, m_duration100ns, origin100ns, direction, option, frame, profile);
@@ -742,9 +743,9 @@ bool FFmpegCppPlaybackReaderImpl::readAdjacentVideoFrameEx(int64_t origin100ns, 
 }
 
 bool FFmpegCppPlaybackReaderImpl::readVideoFrameAtEx(int64_t position100ns,
-                            const FFmpegCppPlaybackPreviewOption& option,
-                            FFmpegCppPlaybackVideoFrame* frame,
-                            FFmpegCppPlaybackPreviewProfile* profile, bool keepFollowingFrame, bool metadataOnly)
+    const FFmpegCppPlaybackPreviewOption& option,
+    FFmpegCppPlaybackVideoFrame* frame,
+    FFmpegCppPlaybackPreviewProfile* profile, bool keepFollowingFrame, bool metadataOnly)
 {
     int64_t totalBeginUs = playbackNowMicroseconds();
     if (profile != nullptr)
@@ -1010,16 +1011,16 @@ bool FFmpegCppPlaybackReaderImpl::fillPreviewVideoFrameInfo(const AVFrame* frame
 }
 
 bool FFmpegCppPlaybackReaderImpl::receivePreviewFrames(int64_t position100ns,
-                              int64_t tolerance100ns,
-                              size_t maxReadFrameCount,
-                              size_t* readVideoCount,
-                              int64_t* nextVideoTimestamp100ns,
-                              bool* haveFrame,
-                              bool* shouldStop,
-                              AVFrame* bestRawFrame,
-                              FFmpegCppPlaybackVideoFrame* bestFrameInfo,
-                              const FFmpegCppPlaybackPreviewOption& option,
-                              FFmpegCppPlaybackPreviewProfile* profile, bool keepFollowingFrame)
+    int64_t tolerance100ns,
+    size_t maxReadFrameCount,
+    size_t* readVideoCount,
+    int64_t* nextVideoTimestamp100ns,
+    bool* haveFrame,
+    bool* shouldStop,
+    AVFrame* bestRawFrame,
+    FFmpegCppPlaybackVideoFrame* bestFrameInfo,
+    const FFmpegCppPlaybackPreviewOption& option,
+    FFmpegCppPlaybackPreviewProfile* profile, bool keepFollowingFrame)
 {
     if (readVideoCount == nullptr || nextVideoTimestamp100ns == nullptr || haveFrame == nullptr || shouldStop == nullptr || bestRawFrame == nullptr || bestFrameInfo == nullptr)
     {
@@ -1692,21 +1693,23 @@ bool FFmpegCppPlaybackReaderImpl::queueAudioFrame(const AVFrame* frame)
     return true;
 }
 
-FFmpegCppPlaybackOpenOption::FFmpegCppPlaybackOpenOption()
-    : decodeVideo(true),
-      decodeAudio(true),
-      outputSampleRate(0),
-      outputChannels(2),
-      outputBitsPerSample(16),
-      fallbackVideoFrameDuration100ns(kPlaybackDefaultFrameDuration100ns)
+FFmpegCppPlaybackOpenOption::FFmpegCppPlaybackOpenOption() :
+decodeVideo(true),
+decodeAudio(true),
+outputSampleRate(0),
+outputChannels(2),
+outputBitsPerSample(16),
+fallbackVideoFrameDuration100ns(kPlaybackDefaultFrameDuration100ns)
 {
+
 }
 
-FFmpegCppPlaybackPreviewOption::FFmpegCppPlaybackPreviewOption()
-    : maxReadFrameCount(0),
-      cancelCallback(nullptr),
-      cancelUserData(nullptr)
+FFmpegCppPlaybackPreviewOption::FFmpegCppPlaybackPreviewOption() :
+maxReadFrameCount(0),
+cancelCallback(nullptr),
+cancelUserData(nullptr)
 {
+
 }
 
 bool FFmpegCppPlaybackPreviewOption::isCanceled() const
@@ -1731,14 +1734,15 @@ void FFmpegCppPlaybackPreviewProfile::reset()
     canceled = false;
 }
 
-FFmpegCppPlaybackVideoFrame::FFmpegCppPlaybackVideoFrame()
-    : width(0),
-      height(0),
-      stride(0),
-      timestamp100ns(0),
-      duration100ns(kPlaybackDefaultFrameDuration100ns),
-      keyFrame(false)
+FFmpegCppPlaybackVideoFrame::FFmpegCppPlaybackVideoFrame() :
+width(0),
+height(0),
+stride(0),
+timestamp100ns(0),
+duration100ns(kPlaybackDefaultFrameDuration100ns),
+keyFrame(false)
 {
+
 }
 
 void FFmpegCppPlaybackVideoFrame::reset()
@@ -1757,13 +1761,14 @@ bool FFmpegCppPlaybackVideoFrame::empty() const
     return bgraPixels.empty() || width <= 0 || height <= 0 || stride <= 0;
 }
 
-FFmpegCppPlaybackAudioFrame::FFmpegCppPlaybackAudioFrame()
-    : sampleRate(0),
-      channels(0),
-      bitsPerSample(16),
-      timestamp100ns(0),
-      duration100ns(0)
+FFmpegCppPlaybackAudioFrame::FFmpegCppPlaybackAudioFrame() :
+sampleRate(0),
+channels(0),
+bitsPerSample(16),
+timestamp100ns(0),
+duration100ns(0)
 {
+
 }
 
 void FFmpegCppPlaybackAudioFrame::reset()
@@ -1781,9 +1786,10 @@ bool FFmpegCppPlaybackAudioFrame::empty() const
     return pcmData.empty() || sampleRate <= 0 || channels <= 0 || bitsPerSample <= 0;
 }
 
-FFmpegCppPlaybackFrame::FFmpegCppPlaybackFrame()
-    : type(FFmpegCppPlaybackFrameTypeNone)
+FFmpegCppPlaybackFrame::FFmpegCppPlaybackFrame() :
+type(FFmpegCppPlaybackFrameTypeNone)
 {
+
 }
 
 void FFmpegCppPlaybackFrame::reset()
@@ -1793,9 +1799,10 @@ void FFmpegCppPlaybackFrame::reset()
     audioFrame.reset();
 }
 
-FFmpegCppPlaybackReader::FFmpegCppPlaybackReader()
-    : m_impl(new(std::nothrow) FFmpegCppPlaybackReaderImpl())
+FFmpegCppPlaybackReader::FFmpegCppPlaybackReader() :
+m_impl(new(std::nothrow) FFmpegCppPlaybackReaderImpl())
 {
+
 }
 
 FFmpegCppPlaybackReader::~FFmpegCppPlaybackReader()
@@ -2011,9 +2018,9 @@ bool FFmpegCppPlaybackReader::readVideoFrameInfoAt(int64_t position100ns,
 }
 
 bool FFmpegCppPlaybackReader::readVideoFrameAtEx(int64_t position100ns,
-                                                 const FFmpegCppPlaybackPreviewOption& option,
-                                                 FFmpegCppPlaybackVideoFrame* frame,
-                                                 FFmpegCppPlaybackPreviewProfile* profile)
+    const FFmpegCppPlaybackPreviewOption& option,
+    FFmpegCppPlaybackVideoFrame* frame,
+    FFmpegCppPlaybackPreviewProfile* profile)
 {
     FFmpegCppPlaybackReaderImpl* impl = static_cast<FFmpegCppPlaybackReaderImpl*>(m_impl);
     if (impl == nullptr)

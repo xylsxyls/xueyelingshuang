@@ -63,4 +63,8 @@
     <ClCompile Include="..\src\FFmpegCppNativeMediaWriter.cpp" />
     <ClCompile Include="..\src\FFmpegCppAudioTempo.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\FFmpegCppAudioTranscoder.cpp" />
+    <ClInclude Include="..\src\FFmpegCppAudioTranscoder.h" />
+  </ItemGroup>
 </Project>

@@ -14,8 +14,8 @@ public:
     @return 返回true表示读取成功
     */
     static bool probeMediaInfo(const std::string& filePath,
-                               FFmpegCppMediaInfo* mediaInfo,
-                               std::string* errorText = nullptr);
+        FFmpegCppMediaInfo* mediaInfo,
+        std::string* errorText = nullptr);
 
     /** 截取媒体文件首帧图片到内存
     @param [in] filePath 视频文件完整路径
@@ -25,9 +25,9 @@ public:
     @return 返回true表示截图成功
     */
     static bool extractFirstFrameToMemory(const std::string& filePath,
-                                          FFmpegCppImageData* imageData,
-                                          const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption(),
-                                          std::string* errorText = nullptr);
+        FFmpegCppImageData* imageData,
+        const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption(),
+        std::string* errorText = nullptr);
 
     /** 截取媒体文件指定时间点的一帧图片到内存
     @param [in] filePath 视频文件完整路径
@@ -38,10 +38,10 @@ public:
     @return 返回true表示截图成功
     */
     static bool extractFrameToMemory(const std::string& filePath,
-                                     int64_t timestampMilliseconds,
-                                     FFmpegCppImageData* imageData,
-                                     const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption(),
-                                     std::string* errorText = nullptr);
+        int64_t timestampMilliseconds,
+        FFmpegCppImageData* imageData,
+        const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption(),
+        std::string* errorText = nullptr);
 
     /** 截取媒体文件首帧图片到本地文件
     @param [in] filePath 视频文件完整路径
@@ -52,10 +52,10 @@ public:
     @return 返回true表示截图保存成功
     */
     static bool extractFirstFrameToFile(const std::string& filePath,
-                                        const std::string& outputFilePath,
-                                        const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption(),
-                                        std::string* savedFilePath = nullptr,
-                                        std::string* errorText = nullptr);
+        const std::string& outputFilePath,
+        const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption(),
+        std::string* savedFilePath = nullptr,
+        std::string* errorText = nullptr);
 
     /** 截取媒体文件指定时间点的一帧图片到本地文件
     @param [in] filePath 视频文件完整路径
@@ -67,11 +67,11 @@ public:
     @return 返回true表示截图保存成功
     */
     static bool extractFrameToFile(const std::string& filePath,
-                                   int64_t timestampMilliseconds,
-                                   const std::string& outputFilePath,
-                                   const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption(),
-                                   std::string* savedFilePath = nullptr,
-                                   std::string* errorText = nullptr);
+        int64_t timestampMilliseconds,
+        const std::string& outputFilePath,
+        const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption(),
+        std::string* savedFilePath = nullptr,
+        std::string* errorText = nullptr);
 
     /** 转码视频文件
     @param [in] inputFilePath 输入视频完整路径
@@ -83,11 +83,11 @@ public:
     @return 返回true表示转码成功
     */
     static bool transcodeVideo(const std::string& inputFilePath,
-                               const std::string& outputFilePath,
-                               const FFmpegCppTranscodeOption& option,
-                               FFmpegCppProgressCallback progressCallback = nullptr,
-                               void* userData = nullptr,
-                               std::string* errorText = nullptr);
+        const std::string& outputFilePath,
+        const FFmpegCppTranscodeOption& option,
+        FFmpegCppProgressCallback progressCallback = nullptr,
+        void* userData = nullptr,
+        std::string* errorText = nullptr);
 
     /** 判断文件扩展名是否属于常见视频格式
     @param [in] filePath 文件路径或文件名

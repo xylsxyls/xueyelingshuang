@@ -1,14 +1,22 @@
+librariesrely=()
+
 :<<!EOF!
 #--------------------------------------------------------------------
 DllRelyTest_bit=$1
 DllRelyTest_dlllib=$2
 DllRelyTest_debugRelease=$3
 DllRelyTest_allSame=$4
-"$CLOUD_REBUILD" DllRelyTest $DllRelyTest_bit $DllRelyTest_dlllib $DllRelyTest_debugRelease $DllRelyTest_allSame
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" DllRelyTest "$DllRelyTest_bit" "$DllRelyTest_dlllib" "$DllRelyTest_debugRelease" "$DllRelyTest_allSame"
+fi
+librariesrely+=($'project\tDllRelyTest\t'"$DllRelyTest_dlllib")
 !EOF!
 
+if [[ $1 != wasm32 && $1 != wasm64 ]]; then
 SHELL_FOLDER=$(cd "$(dirname "$0")"; pwd)
 xueyelingshuang=$SHELL_FOLDER/../../..
+sdkpath="${CLOUD_REBUILD_SDK_ROOT:-$xueyelingshuang}"
+mkdir -p "$sdkpath/lib"
 
 libname="ffmpeg"
 ffmpegpath=$xueyelingshuang"/tools/"$libname
@@ -17,7 +25,10 @@ includecreatedir=0
 # Cross builds use the SDK branch in LumaPlayerCore/scripts/CMakeLists.txt.
 # Never treat macOS/Android/iOS as Windows and copy incompatible vendor headers.
 if [[ "${LUMAPLAYER_TARGET_PLATFORM:-}" == android || "${LUMAPLAYER_TARGET_PLATFORM:-}" == ios ||
-      "${LUMAPLAYER_TARGET_PLATFORM:-}" == macos || "$OSTYPE" == darwin* ]]; then
+      "${LUMAPLAYER_TARGET_PLATFORM:-}" == macos || "$OSTYPE" == darwin* ||
+      "${CMAKE_SYSTEM_NAME:-}" == Android || "${CMAKE_SYSTEM_NAME:-}" == iOS ||
+      "${CMAKE_SYSTEM_NAME:-}" == Darwin || "${CMAKE_TOOLCHAIN_FILE:-}" == *android.toolchain.cmake ||
+      "${CMAKE_OSX_SYSROOT:-}" == *iphone* ]]; then
     echo 'Use -DLUMAPLAYER_DEPS_ROOT=<target SDK> for Core cross builds; shared Windows include/lib are not a target SDK.' >&2
     exit 1
 fi
@@ -28,18 +39,15 @@ else
     includepath=$ffmpegpath"/include/ffmpegwindows/"
 fi
 
-copyincludepath=$xueyelingshuang"/include/"
+copyincludepath=$sdkpath"/include/"
 if [[ $includecreatedir == 1 ]]; then
-    copyincludepath=$xueyelingshuang"/include/"$libname"include/"
+    copyincludepath=$sdkpath"/include/"$libname"include/"
 fi
 if [ ! -d "$copyincludepath" ]
 then
     mkdir -p "$copyincludepath"
 fi
-for file in $(ls "$includepath")
-do
-    cp -rf "$includepath$file" "$copyincludepath"
-done
+cp -Rf "$includepath/." "$copyincludepath/"
 
 if [[ $1 == '32' ]]; then
     bitfolder="x86"
@@ -60,7 +68,7 @@ if [[ "$OSTYPE" =~ ^linux ]]; then
             echo "Missing shared FFmpeg library: $ffmpeglibpath$libfile; rebuild the target SDK with --enable-shared --disable-static." >&2
             exit 1
         fi
-        cp -Pf "$ffmpeglibpath$libfile"* "$xueyelingshuang/lib/" || exit 1
+        cp -Pf "$ffmpeglibpath$libfile"* "$sdkpath/lib/" || exit 1
     done
 else
     if [[ $3 == 'debug' ]]; then
@@ -70,11 +78,11 @@ else
     fi
     for libfile in avformat avcodec swscale swresample avutil
     do
-        cp -f "$ffmpeglibpath$libfile.lib" "$xueyelingshuang/lib/" || exit 1
+        cp -f "$ffmpeglibpath$libfile.lib" "$sdkpath/lib/" || exit 1
     done
     for dllfile in avformat-60.dll avcodec-60.dll swscale-7.dll swresample-4.dll avutil-58.dll
     do
-        cp -f "$ffmpeglibpath$dllfile" "$xueyelingshuang/lib/" || exit 1
+        cp -f "$ffmpeglibpath$dllfile" "$sdkpath/lib/" || exit 1
     done
 fi
 
@@ -98,9 +106,22 @@ if [[ ! -f "$soundtouchlib/$soundtouchname" || ! -f "$soundtouchlib/$soundtouchr
     echo "Missing SoundTouch headers or matching library: $soundtouchlib/$soundtouchname" >&2
     exit 1
 fi
-mkdir -p "$xueyelingshuang/include/soundtouchinclude"
-cp -f "$soundtouchinclude/"*.h "$xueyelingshuang/include/soundtouchinclude/" || exit 1
-cp -f "$soundtouchlib/$soundtouchname" "$xueyelingshuang/lib/" || exit 1
+mkdir -p "$sdkpath/include/soundtouchinclude"
+cp -f "$soundtouchinclude/"*.h "$sdkpath/include/soundtouchinclude/" || exit 1
+cp -f "$soundtouchlib/$soundtouchname" "$sdkpath/lib/" || exit 1
 if [[ "$soundtouchname" != "$soundtouchruntime" ]]; then
-    cp -f "$soundtouchlib/$soundtouchruntime" "$xueyelingshuang/lib/" || exit 1
+    cp -f "$soundtouchlib/$soundtouchruntime" "$sdkpath/lib/" || exit 1
 fi
+
+if [[ "$OSTYPE" =~ ^linux ]]; then
+    for ffmpeg_lib in libavformat.so libavcodec.so libswscale.so libswresample.so libavutil.so libSoundTouchDLL.so; do
+        librariesrely+=($'link\t'"$ffmpeg_lib")
+    done
+else
+    for ffmpeg_lib in avformat.lib avcodec.lib swscale.lib swresample.lib avutil.lib "$soundtouchname"; do
+        librariesrely+=($'link\t'"$ffmpeg_lib")
+    done
+fi
+fi
+
+printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return
