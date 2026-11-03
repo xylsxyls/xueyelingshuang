@@ -1,27 +1,110 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClInclude Include="..\src\NetPeer.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\NetPeerAPI.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\NetPeerMacro.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
+    <ClCompile Include="..\src\NetDirectorySnapshot.cpp" />
+    <ClCompile Include="..\src\NetSender.cpp" />
+    <ClCompile Include="..\src\NetFileIo.cpp" />
+    <ClCompile Include="..\src\NetFileTransfer.cpp" />
+    <ClCompile Include="..\src\NetGatewayDirectoryStore.cpp" />
+    <ClCompile Include="..\src\NetGatewayDiscovery.cpp" />
+    <ClCompile Include="..\src\NetGatewayHostTransportFactory.cpp" />
+    <ClCompile Include="..\src\NetGatewayTransport.cpp" />
+    <ClCompile Include="..\src\NetHostSocket.cpp" />
+    <ClCompile Include="..\src\NetLinkTransport.cpp" />
+    <ClCompile Include="..\src\NetPeer.cpp" />
+    <ClCompile Include="..\src\NetPeerBackend.cpp" />
+    <ClInclude Include="..\src\NetPeerTypes.h" />
+    <ClCompile Include="..\src\NetPeerClientSession.cpp" />
+    <ClCompile Include="..\src\NetPeerEndpointRouter.cpp" />
+    <ClCompile Include="..\src\NetPeerSenderState.cpp" />
+    <ClCompile Include="..\src\NetSenderC.cpp" />
+    <ClCompile Include="..\src\NetRelayTransport.cpp" />
+    <ClCompile Include="..\src\NetTransport.cpp" />
+    <ClCompile Include="..\src\NetTransportEntropy.cpp" />
+    <ClCompile Include="..\src\NetTransportState.cpp" />
+    <ClInclude Include="..\src\NetClientSession.h" />
+    <ClInclude Include="..\src\NetSenderCState.h" />
+    <ClInclude Include="..\src\NetDirectorySnapshot.h" />
+    <ClInclude Include="..\src\NetEndpointFileStream.h" />
+    <ClInclude Include="..\src\NetEndpointRouter.h" />
+    <ClInclude Include="..\src\NetEndpointRouterState.h" />
+    <ClInclude Include="..\src\NetFileIo.h" />
+    <ClInclude Include="..\src\NetFileIoBackend.h" />
+    <ClInclude Include="..\src\NetFileIoTest.h" />
+    <ClInclude Include="..\src\NetFileIoTypes.h" />
+    <ClInclude Include="..\src\NetFileTransfer.h" />
+    <ClInclude Include="..\src\NetFileTransferState.h" />
+    <ClInclude Include="..\src\NetGatewayClientChannel.h" />
+    <ClInclude Include="..\src\NetGatewayClientChannelState.h" />
+    <ClInclude Include="..\src\NetGatewayDirectoryStore.h" />
+    <ClInclude Include="..\src\NetGatewayDirectoryStoreState.h" />
+    <ClInclude Include="..\src\NetGatewayDirectoryStoreTest.h" />
+    <ClInclude Include="..\src\NetGatewayDiscovery.h" />
+    <ClInclude Include="..\src\NetGatewayDiscoveryState.h" />
+    <ClInclude Include="..\src\NetGatewayHostTransportFactory.h" />
+    <ClInclude Include="..\src\NetGatewayTransport.h" />
+    <ClInclude Include="..\src\NetHostSocket.h" />
+    <ClInclude Include="..\src\NetHostSocketState.h" />
+    <ClInclude Include="..\src\NetHostSocketTest.h" />
+    <ClInclude Include="..\src\NetHostTypes.h" />
+    <ClInclude Include="..\src\NetLinkTransport.h" />
+    <ClInclude Include="..\src\NetLinkTransportState.h" />
+    <ClInclude Include="..\src\NetPeer.h" />
+    <ClInclude Include="..\src\NetPeerBackend.h" />
+    <ClInclude Include="..\src\NetPeerAPI.h" />
+    <ClInclude Include="..\src\NetSenderHostC.h" />
+    <ClInclude Include="..\src\NetPeerClientState.h" />
+    <ClInclude Include="..\src\NetPeerClientSession.h" />
+    <ClInclude Include="..\src\NetPeerEndpointRouter.h" />
+    <ClInclude Include="..\src\NetPeerMacro.h" />
+    <ClInclude Include="..\src\NetPeerMacroDll.h" />
+    <ClInclude Include="..\src\NetPeerMacroLib.h" />
+    <ClInclude Include="..\src\NetPeerPlatform.h" />
+    <ClInclude Include="..\src\NetPeerSenderState.h" />
+    <ClInclude Include="..\src\NetRelayTransport.h" />
+    <ClInclude Include="..\src\NetRelayTransportState.h" />
+    <ClInclude Include="..\src\NetSender.h" />
+    <ClInclude Include="..\src\NetSenderAPI.h" />
+    <ClInclude Include="..\src\NetSenderC.h" />
+    <ClInclude Include="..\src\NetSession.h" />
+    <ClInclude Include="..\src\NetSessionState.h" />
+    <ClInclude Include="..\src\NetTransport.h" />
+    <ClInclude Include="..\src\NetTransportEntropy.h" />
+    <ClInclude Include="..\src\NetTransportState.h" />
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="源文件">
-      <UniqueIdentifier>{c99e1316-4fc2-499d-9bce-3ab83335428b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="头文件">
-      <UniqueIdentifier>{c322e52b-93ce-49a0-bbf8-6da63c529c35}</UniqueIdentifier>
-    </Filter>
+    <ClInclude Include="..\src\NetPeerTest.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\NetPeer.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
+    <ClCompile Include="..\src\NetPeerClientBackend.cpp" />
+    <ClInclude Include="..\src\NetPeerClientBackend.h" />
+  </ItemGroup>
+<ItemGroup><ClCompile Include="..\src\NetPeerBindings.cpp" /></ItemGroup>  <ItemGroup>
+    <ClInclude Include="..\src\NetFileTransferTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetRelayTransportTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetLinkTransportAuditTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetSenderFileC.h" />
+    <ClCompile Include="..\src\NetSenderFileC.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetPeerBindings.h" />
+    <ClCompile Include="..\src\NetPeerClientState.cpp" />
+    <ClCompile Include="..\src\NetSenderCState.cpp" />
+    <ClCompile Include="..\src\NetSenderHostC.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetFileIoBackend.cpp" />
+    <ClCompile Include="..\src\NetFileTransferState.cpp" />
+    <ClCompile Include="..\src\NetGatewayDirectoryStoreState.cpp" />
+    <ClCompile Include="..\src\NetGatewayDiscoveryState.cpp" />
+    <ClCompile Include="..\src\NetHostSocketState.cpp" />
+    <ClCompile Include="..\src\NetLinkTransportState.cpp" />
+    <ClCompile Include="..\src\NetRelayTransportState.cpp" />
   </ItemGroup>
 </Project>
