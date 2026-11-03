@@ -155,23 +155,71 @@
       <AdditionalOptions>/NODEFAULTLIB:msvcrt.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="ClientLineManager.h" />
-    <ClInclude Include="NetLineManager.h" />
-    <ClInclude Include="NetServerManager.h" />
-    <ClInclude Include="ServerLineManager.h" />
-    <ClInclude Include="ServerProcessReceive.h" />
-    <ClInclude Include="Server.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="ClientLineManager.cpp" />
-    <ClCompile Include="NetLineManager.cpp" />
-    <ClCompile Include="NetServerManager.cpp" />
-    <ClCompile Include="ServerLineManager.cpp" />
-    <ClCompile Include="ServerProcessReceive.cpp" />
-    <ClCompile Include="Server.cpp" />
-  </ItemGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>STATIC_LIB;MBEDTLS_CONFIG_FILE="mbedtls/mbedtls_sdk_config.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(NetGatewayTestInstance)'=='true'">NET_GATEWAY_TEST_INSTANCE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\protobuf;$(ProjectDir)..\..\..\include\mbedtls;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary Condition="'$(Configuration)'=='Debug'">MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ws2_32.lib;userenv.lib;iphlpapi.lib;psapi.lib;advapi32.lib;bcrypt.lib;dbghelp.lib;crypt32.lib;user32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <Target Name="CheckPreparedGatewaySdk" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(ProjectDir)..\..\..\include\NetSender\NetSenderAPI.h') or !Exists('$(ProjectDir)..\..\..\include\NetWork\NetWorkAPI.h')" Text="请先运行version脚本准备对应位数和配置的SDK，再构建当前工程。" />
+  </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="NetGatewayServer.h" />
+    <ClInclude Include="NetGatewayServerState.h" />
+    <ClInclude Include="NetGatewayTask.h" />
+    <ClCompile Include="NetGatewayServer.cpp" />
+    <ClCompile Include="NetGatewayTask.cpp" />
+    <ClInclude Include="NetServerManager.h" />
+    <ClCompile Include="NetServerManager.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetGatewayLocalServer.h" />
+    <ClCompile Include="NetGatewayLocalServer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetGatewayFileStream.h" />
+    <ClCompile Include="NetGatewayFiles.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetGatewayAuthority.cpp" />
+    <ClInclude Include="NetGatewayAuthority.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetGatewayIdentity.cpp" />
+    <ClInclude Include="NetGatewayIdentity.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetGatewayNode.cpp" />
+    <ClCompile Include="NetGatewayPeerHistory.cpp" />
+    <ClInclude Include="NetGatewayPeerHistory.h" />
+    <ClInclude Include="NetGatewayNode.h" />
+    <ClInclude Include="NetGatewayNodeState.h" />
+    <ClInclude Include="NetGatewayNodeLoadTest.h" />
+    <ClInclude Include="NetGatewayServiceProbe.h" />
+    <ClCompile Include="NetGatewayServiceProbe.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetServerEnrollment.cpp" />
+    <ClInclude Include="NetServerEnrollment.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetGatewayManagedProbe.cpp" />
+    <ClInclude Include="NetGatewayManagedProbe.h" />
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetGatewayNodeState.cpp" />
+  </ItemGroup>
 </Project>

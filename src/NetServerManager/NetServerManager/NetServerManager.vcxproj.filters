@@ -13,48 +13,70 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Line">
-      <UniqueIdentifier>{05546ba6-6d25-4d4f-a758-2856d7b4e878}</UniqueIdentifier>
-    </Filter>
+
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="NetServerManager.h">
+    <ClInclude Include="NetGatewayServer.h" />
+    <ClInclude Include="NetGatewayServerState.h" />
+    <ClInclude Include="NetGatewayTask.h" />
+    <ClCompile Include="NetGatewayServer.cpp" />
+    <ClCompile Include="NetGatewayTask.cpp" />
+    <ClInclude Include="NetServerManager.h" />
+    <ClCompile Include="NetServerManager.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetGatewayLocalServer.h" />
+    <ClCompile Include="NetGatewayLocalServer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetGatewayFileStream.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="NetGatewayFiles.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetGatewayAuthority.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="NetGatewayIdentity.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="NetGatewayNode.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="NetGatewayServiceProbe.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="NetGatewayManagedProbe.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="NetGatewayAuthority.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Server.h">
+    <ClInclude Include="NetGatewayIdentity.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ServerProcessReceive.h">
+    <ClInclude Include="NetGatewayNode.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ClientLineManager.h">
-      <Filter>Line</Filter>
+    <ClInclude Include="NetGatewayNodeState.h">
+      <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="NetLineManager.h">
-      <Filter>Line</Filter>
+    <ClInclude Include="NetGatewayNodeLoadTest.h">
+      <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ServerLineManager.h">
-      <Filter>Line</Filter>
+    <ClInclude Include="NetGatewayServiceProbe.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="NetGatewayManagedProbe.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="NetServerManager.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Server.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="ServerProcessReceive.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="ClientLineManager.cpp">
-      <Filter>Line</Filter>
-    </ClCompile>
-    <ClCompile Include="NetLineManager.cpp">
-      <Filter>Line</Filter>
-    </ClCompile>
-    <ClCompile Include="ServerLineManager.cpp">
-      <Filter>Line</Filter>
-    </ClCompile>
+    <ClCompile Include="NetGatewayPeerHistory.cpp" />
+    <ClInclude Include="NetGatewayPeerHistory.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetGatewayNodeState.cpp" />
+    <ClCompile Include="NetServerEnrollment.cpp" />
+    <ClInclude Include="NetServerEnrollment.h" />
   </ItemGroup>
 </Project>
