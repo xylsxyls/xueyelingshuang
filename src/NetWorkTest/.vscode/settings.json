@@ -1,0 +1,8 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/NetWorkTest/",
+    "cmake.configureArgs": [
+        "-DLIBRARIESRELY=libAccountd.a;libAtomicMathd.a;libCDumpd.a;libCRandomd.a;libCStringManagerd.a;libCSystemd.a;libCTaskThreadManagerd.a;libCompressd.a;libCorrespondParamd.a;libLibuvTcpd.a;libLockFreeQueued.a;libNetChanneld.a;libNetInterfaced.a;libNetPeerd.a;libNetSenderd.a;libNetWorkd.a;libProcessWorkd.a;libProtoMessaged.a;libReadWriteMutexd.a;libSemaphored.a;libSharedMemoryd.a;libVariantd.a;libprotobuf-litestatic32.a;libuvstatic32.a;libzstatic32.a",
+        "-DBIT=32",
+        "-DDEBUGRELEASE=debug"
+    ]
+}

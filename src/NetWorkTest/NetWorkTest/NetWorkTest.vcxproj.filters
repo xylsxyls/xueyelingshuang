@@ -1,0 +1,141 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="NetWorkTestCases.h" />
+    <ClInclude Include="NetSenderTestClient.inl" />
+    <ClInclude Include="NetSenderTestClient.h" />
+    <ClInclude Include="NetWorkTestRunner.h" />
+    <ClInclude Include="NetInterfaceTlsTestCases.h" />
+    <ClCompile Include="NetWorkTest.cpp" />
+    <ClCompile Include="NetSenderFacadeNetWorkCTest.cpp" />
+    <ClCompile Include="NetSenderFacadeNetWorkCppTest.cpp" />
+    <ClCompile Include="NetSenderFacadeNetPeerCTest.cpp" />
+    <ClCompile Include="NetSenderFacadeNetPeerCppTest.cpp" />
+    <ClCompile Include="NetCppBoundaryProbe.cpp" />
+    <ClCompile Include="NetSenderFacadeNetSenderCppTest.cpp" />
+    <ClCompile Include="NetWorkTestCases.cpp" />
+    <ClCompile Include="NetInterfaceTlsTestCases.cpp" />
+    <ClCompile Include="$(ProjectDir)..\testdata\tls\certs.c" />
+    <ClCompile Include="NetSenderProviderCProbe.c" />
+    <ClCompile Include="NetInterfaceCppProbe.cpp" />
+    <ClCompile Include="NetSenderFacadeConcurrency.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="NetSenderFacadeConcurrency.h"><Filter>头文件</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetInterfaceProtoTestCases.h" />
+    <ClCompile Include="NetInterfaceProtoTestCases.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetInterfaceNativeTestCases.h" />
+    <ClInclude Include="NetInterfaceTcpProbe.h" />
+    <ClCompile Include="NetInterfaceNativeTestCases.cpp" />
+    <ClCompile Include="NetInterfaceTcpProbe.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetInterfaceConnectionTestCases.h" />
+    <ClCompile Include="NetInterfaceConnectionTestCases.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetInterfaceTransportProbe.h" />
+    <ClCompile Include="NetInterfaceTransportProbe.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetInterfaceIpcTestCases.cpp" />
+    <ClInclude Include="NetInterfaceIpcTestCases.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetInterfaceHandshakeTestCases.h" />
+    <ClCompile Include="NetInterfaceHandshakeTestCases.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetInterfaceRequestsTestCases.h" />
+    <ClCompile Include="NetInterfaceRequestsTestCases.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetInterfaceRpcTestCases.h" />
+    <ClCompile Include="NetInterfaceRpcTestCases.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetGatewayTestCases.h" />
+    <ClInclude Include="NetServerManagerTestIncludes.h" />
+    <ClCompile Include="NetGatewayTestCases.cpp" />
+    <ClCompile Include="..\..\NetServerManager\NetServerManager\NetGatewayServer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetServiceTestCases.h" />
+    <ClCompile Include="NetServiceTestCases.cpp" />
+    <ClCompile Include="..\..\NetServerManager\NetServerManager\NetGatewayLocalServer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\NetServerManager\NetServerManager\NetGatewayFiles.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetAccountGatewayProbe.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="NetAccountGatewayProbe.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetFileGatewayProbe.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="NetFileGatewayProbe.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetLocalTestCases.cpp" />
+    <ClCompile Include="NetIdentityTestCases.cpp" />
+    <ClCompile Include="NetTunnelTestCases.cpp" />
+    <ClCompile Include="NetRelayTransportProbe.cpp" />
+    <ClCompile Include="NetLinkTestCases.cpp" />
+    <ClCompile Include="NetRawLocalTestCases.cpp" />
+    <ClCompile Include="NetLinkLocalTestCases.cpp" />
+    <ClCompile Include="NetGatewayClientTestProbe.cpp" />
+    <ClCompile Include="NetEndpointRouterTestCases.cpp" />
+    <ClInclude Include="NetLocalTestCases.h" />
+    <ClInclude Include="NetIdentityTestCases.h" />
+    <ClInclude Include="NetTunnelTestCases.h" />
+    <ClInclude Include="NetRelayTransportProbe.h" />
+    <ClInclude Include="NetLinkTestCases.h" />
+    <ClInclude Include="NetRawLocalTestCases.h" />
+    <ClInclude Include="NetLinkLocalTestCases.h" />
+    <ClInclude Include="NetGatewayClientTestProbe.h" />
+    <ClInclude Include="NetEndpointRouterTestCases.h" />
+  </ItemGroup>
+<ItemGroup><ClInclude Include="NetWorkInProcessTestCases.h"><Filter>头文件</Filter></ClInclude>
+<ClCompile Include="NetWorkInProcessTestCases.cpp"><Filter>源文件</Filter></ClCompile></ItemGroup>  <ItemGroup>
+    </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetWorkConcurrencyTestCases.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="NetWorkConcurrencyTestCases.h"><Filter>头文件</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\NetServerManager\NetServerManager\NetServerEnrollment.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="LibuvHostTest.cpp" />
+    <ClCompile Include="NetClientSessionTest.cpp" />
+    <ClInclude Include="NetCppBoundaryProbe.h" />
+    <ClCompile Include="NetEndpointRouterTest.cpp" />
+    <ClCompile Include="NetHostSocketTest.cpp" />
+    <ClCompile Include="NetInterfaceConnectionTestCasesHelper.cpp" />
+    <ClInclude Include="NetInterfaceConnectionTestCasesHelper.h" />
+    <ClCompile Include="NetInterfaceFileAuditTest.cpp" />
+    <ClCompile Include="NetInterfaceLinkAuditTest.cpp" />
+    <ClCompile Include="NetInterfaceLinkAuthTest.cpp" />
+    <ClCompile Include="NetPeerTest.cpp" />
+    <ClCompile Include="NetSenderDispatchAuditTest.cpp" />
+    <ClCompile Include="NetSenderDispatchTest.cpp" />
+    <ClInclude Include="NetSenderFacadeNetPeerCppTest.h" />
+    <ClInclude Include="NetSenderFacadeNetPeerCTest.h" />
+    <ClInclude Include="NetSenderFacadeNetSenderCppTest.h" />
+    <ClInclude Include="NetSenderFacadeNetWorkCppTest.h" />
+    <ClInclude Include="NetSenderFacadeNetWorkCTest.h" />
+    <ClCompile Include="NetSenderLinkAuditTest.cpp" />
+    <ClCompile Include="NetSenderLocalHubTest.cpp" />
+    <ClCompile Include="NetSenderServiceGatewayTest.cpp" />
+    <ClCompile Include="NetSenderServiceOutgoingTest.cpp" />
+    <ClCompile Include="NetSenderServiceProxyTest.cpp" />
+    <ClCompile Include="NetSenderServiceQueueTest.cpp" />
+    <ClCompile Include="NetWorkHostBridgeTest.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetInterfaceCppProbe.h" />
+    <ClInclude Include="NetSenderProviderCProbe.h" />
+  </ItemGroup>
+</Project>

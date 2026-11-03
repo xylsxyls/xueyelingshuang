@@ -1,0 +1,1 @@
+<view class="report"><text selectable>{{report}}</text></view>
