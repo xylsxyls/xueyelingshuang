@@ -7,6 +7,7 @@
 #include <vector>
 #include <sstream>
 #include <map>
+#include <cerrno>
 #ifdef _WIN32
 #include <process.h>
 #define NOMINMAX
@@ -16,7 +17,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <cerrno>
 #endif
 #if defined(__unix__) || defined(__APPLE__)
 #include <dirent.h>
@@ -651,60 +651,6 @@ static bool PreparedDependencies(const std::string& root, const std::vector<std:
 }
 
 
-/** 发布当前成功构建的原生客户端入口；原库目录和真实链接名称保持不变。
-@param [in] root 仓库根目录
-@param [in] sdkRoot Prepared SDK destination with a trailing separator
-@param [in] library 已成功构建的库
-@param [in] bit 目标位数
-@param [in] linkage 库类型
-@param [in] mode 配置
-@return 0成功，其他值不允许上层继续使用本次入口
-*/
-static int PublishNetSenderEntry(const std::string& root, const std::string& sdkRoot, const std::string& library,
-    const std::string& bit, const std::string& linkage, const std::string& mode)
-{
-    if (library != "NetSender" && library != "NetWork" && library != "NetPeer") return 0;
-    const std::string directory = sdkRoot + "include/NetSender";
-#ifdef _WIN32
-    if (!CreateDirectoryA(directory.c_str(), NULL) && GetLastError() != ERROR_ALREADY_EXISTS) return 1;
-#else
-    if (mkdir(directory.c_str(), 0755) != 0 && errno != EEXIST) return 1;
-#endif
-    std::string content;
-    if (library == "NetSender")
-    {
-        std::ifstream source((root + "src/NetSender/NetSender/src/NetSenderAPI.h").c_str(), std::ios::binary);
-        if (!source) return 1;
-        content.assign(std::istreambuf_iterator<char>(source), std::istreambuf_iterator<char>());
-    }
-    else
-    {
-        std::ifstream source((sdkRoot + "include/" + library + "/NetSenderAPI.h").c_str(), std::ios::binary);
-        if (!source) return 1;
-        content = "\xEF\xBB\xBF#pragma once\r\n// NetSender provider: " + library + "; target: " + bit +
-            "; linkage: " + linkage + "; configuration: " + mode + "\r\n#include \"../" + library + "/NetSenderAPI.h\"";
-    }
-    const std::string target = directory + "/NetSenderAPI.h";
-#ifdef _WIN32
-    const std::string staged = target + "." + std::to_string(GetCurrentProcessId()) + ".publishing";
-#else
-    const std::string staged = target + "." + std::to_string(getpid()) + ".publishing";
-#endif
-    {
-        std::ofstream output(staged.c_str(), std::ios::binary | std::ios::trunc);
-        output.write(content.data(), static_cast<std::streamsize>(content.size()));
-        output.close();
-        if (!output) { std::remove(staged.c_str()); return 1; }
-    }
-#ifdef _WIN32
-    const bool replaced = MoveFileExA(staged.c_str(), target.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
-#else
-    const bool replaced = std::rename(staged.c_str(), target.c_str()) == 0;
-#endif
-    if (!replaced) std::remove(staged.c_str());
-    return replaced ? 0 : 1;
-}
-
 /** 清理失败的Wasm子构建登记，使before后续依赖仍能独立执行；不改变原失败码
 @param [in] library 本次失败的项目名称
 @return 无；无继承会话时不处理，清理失败只输出诊断
@@ -1036,13 +982,6 @@ static int RunMain(int argc, char** argv)
 		d = "d";
 	}
 
-	std::string deleteFileCommand;
-#ifdef _WIN32
-	deleteFileCommand = "del";
-#elif defined(__unix__) || defined(__APPLE__)
-	deleteFileCommand = "rm";
-#endif
-
     std::vector<std::string> beforeRecords;
     const int beforeStatus = CollectBefore(xueyePath, projectName, bit,
         allSame == "librely" ? "lib" : dlllib, debugRelease, allSame == "only" ? "only" : "same", beforeRecords);
@@ -1053,7 +992,24 @@ static int RunMain(int argc, char** argv)
 
 	//编译工程
 #ifdef _WIN32
-    if (system((MARK(pyPath) + SPACE + bit + SPACE + dlllib + SPACE + debugRelease).c_str()) != 0) return 1;
+    // 显式选择Python，与Wasm路径一致；不依赖.py文件关联或交互式打开方式窗口。
+    const char* python = std::getenv("CLOUD_REBUILD_PYTHON");
+    if (python == nullptr || python[0] == '\0')
+    {
+        python = "python";
+    }
+    const std::string quotedPython = MARK(std::string(python));
+    const std::string quotedScript = MARK(pyPath);
+    const char* arguments[] = { quotedPython.c_str(), quotedScript.c_str(), bit.c_str(), dlllib.c_str(), debugRelease.c_str(), nullptr };
+    const intptr_t buildStatus = _spawnvp(_P_WAIT, python, arguments);
+    if (buildStatus != 0)
+    {
+        if (buildStatus == -1)
+        {
+            std::perror("Could not launch the library's native rebuild script");
+        }
+        return 1;
+    }
 #elif defined(__unix__) || defined(__APPLE__)
     std::vector<std::string> preparedClosure;
     std::vector<std::string> active = { projectName };
@@ -1081,7 +1037,7 @@ static int RunMain(int argc, char** argv)
     const std::string cmake(configuredCmake != nullptr && configuredCmake[0] != '\0' ? configuredCmake : "cmake");
     std::vector<std::string> command = { cmake, "-S", cmakelistsPath, "-B", buildPath,
         "-DBIT=" + bit, "-DDLLLIB=" + dlllib, "-DDEBUGRELEASE=" + debugRelease,
-        "-DLIBRARIESRELY=" + librariesRely, "-DSDK_ROOT:PATH=" + sdkRoot };
+        "-DLIBRARIESRELY=" + librariesRely, "-DSDK_ROOT:PATH=" + sdkRoot, "-DCLOUD_REBUILD_DEFER_AFTER=ON" };
     const char* settings[] = { "CMAKE_TOOLCHAIN_FILE", "CMAKE_SYSTEM_NAME", "CMAKE_SYSTEM_PROCESSOR", "CMAKE_OSX_ARCHITECTURES",
         "CMAKE_OSX_SYSROOT", "CMAKE_OSX_DEPLOYMENT_TARGET", "CMAKE_ANDROID_NDK", "CMAKE_ANDROID_ARCH_ABI",
         "ANDROID_ABI", "ANDROID_PLATFORM", "CMAKE_C_COMPILER", "CMAKE_CXX_COMPILER", "CMAKE_SYSROOT" };
@@ -1107,15 +1063,21 @@ static int RunMain(int argc, char** argv)
 
 #ifdef _WIN32
 	//向公共部分提供文件，有的时候可能没有inl文件
-	system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(srcPath + "*.h") + SPACE + MARK(includePath)).c_str());
-	system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(srcPath + "*.inl") + SPACE + MARK(includePath)).c_str());
+    if (system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(srcPath + "*.h") + SPACE + MARK(includePath)).c_str()) != 0)
+    {
+        return 1;
+    }
+    // .inl可不存在；存在时复制失败必须阻止after读取不完整SDK。
+    if (system(("if exist " + MARK(srcPath + "*.inl") + " xcopy /y /i /r /s " + MARK(srcPath + "*.inl") + SPACE + MARK(includePath)).c_str()) != 0)
+    {
+        return 1;
+    }
 #elif defined(__unix__) || defined(__APPLE__)
-	if (projectName != "DllRelyTest")
-	{
-		system(("mkdir" + SPACE + "-p" + SPACE + MARK(includePath)).c_str());
-	}
-	//linux下无法拷贝自定义目录下的文件
-	system(("cp" + SPACE + "-f" + SPACE + MARK(srcPath) + "*.h" + SPACE + MARK(includePath)).c_str());
+    if (system(("mkdir" + SPACE + "-p" + SPACE + MARK(includePath)).c_str()) != 0 ||
+        system(("cp" + SPACE + "-f" + SPACE + MARK(srcPath) + "*.h" + SPACE + MARK(includePath)).c_str()) != 0)
+    {
+        return 1;
+    }
 	std::vector<std::string> vecFile;
 	FindDirFile(srcPath.c_str(), vecFile);
 	bool hasInl = false;
@@ -1135,23 +1097,24 @@ static int RunMain(int argc, char** argv)
 	}
 	if (hasInl)
 	{
-		system(("cp" + SPACE + "-f" + SPACE + MARK(srcPath) + "*.inl" + SPACE + MARK(includePath)).c_str());
+        if (system(("cp" + SPACE + "-f" + SPACE + MARK(srcPath) + "*.inl" + SPACE + MARK(includePath)).c_str()) != 0)
+        {
+            return 1;
+        }
 	}
 #endif
 
-	//删除宏文件，并且替换特定的宏文件
-	if (dlllib == "lib")
-	{
-		system((deleteFileCommand + SPACE + MARK(includePath + projectName + "Macro.h")).c_str());
-		system((deleteFileCommand + SPACE + MARK(includePath + projectName + "MacroDll.h")).c_str());
-		rename((includePath + projectName + "MacroLib.h").c_str(), (includePath + projectName + "Macro.h").c_str());
-	}
-	else if (dlllib == "dll")
-	{
-		system((deleteFileCommand + SPACE + MARK(includePath + projectName + "Macro.h")).c_str());
-		system((deleteFileCommand + SPACE + MARK(includePath + projectName + "MacroLib.h")).c_str());
-		rename((includePath + projectName + "MacroDll.h").c_str(), (includePath + projectName + "Macro.h").c_str());
-	}
+    // 选定消费宏全部准备完成后才执行after；不能把复制或重命名失败当成构建成功。
+    const std::string selectedMacro = includePath + projectName + (dlllib == "lib" ? "MacroLib.h" : "MacroDll.h");
+    const std::string unusedMacro = includePath + projectName + (dlllib == "lib" ? "MacroDll.h" : "MacroLib.h");
+    const std::string consumerMacro = includePath + projectName + "Macro.h";
+    if ((std::remove(consumerMacro.c_str()) != 0 && errno != ENOENT) ||
+        (std::remove(unusedMacro.c_str()) != 0 && errno != ENOENT) ||
+        std::rename(selectedMacro.c_str(), consumerMacro.c_str()) != 0)
+    {
+        std::fprintf(stderr, "Could not publish the selected consumer macro for %s.\n", projectName.c_str());
+        return 1;
+    }
 
 #ifdef _WIN32
 	//删除临时文件
@@ -1166,10 +1129,12 @@ static int RunMain(int argc, char** argv)
     // 保留隔离构建目录用于定位失败，不删除其他目标的CMake缓存
 #endif
 
-	//执行后期脚本
-	if (system(("bash" + SPACE + MARK(afterBatPath)).c_str()) != 0) return 1;
-    const int published = PublishNetSenderEntry(xueyePath, sdkRoot, projectName, bit, dlllib, debugRelease);
-    return published;
+    // after只接收通用发布目录；项目专属入口和额外文件由项目自己的脚本处理。
+    if (!BuildEnvironment("CLOUD_REBUILD_SDK_ROOT", sdkRoot))
+    {
+        return 1;
+    }
+    return system(("bash" + SPACE + MARK(afterBatPath)).c_str()) == 0 ? 0 : 1;
 }
 /** 构建工具入口，捕获标准库异常并返回可观察的构建失败
 @param [in] argc 参数数量
