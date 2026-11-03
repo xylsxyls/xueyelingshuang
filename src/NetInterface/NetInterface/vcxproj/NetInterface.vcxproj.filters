@@ -15,6 +15,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceClientTypes.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\NetInterface.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -29,5 +32,224 @@
     <ClCompile Include="..\src\NetInterface.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup><ClInclude Include="..\src\NetInterfaceTypes.h" /><ClCompile Include="..\src\NetInterfaceCodec.cpp" /></ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceTlsTypes.h" />
+    <ClInclude Include="..\src\NetInterfaceTls.h" />
+    <ClInclude Include="..\src\NetInterfaceTlsState.h" />
+    <ClInclude Include="..\src\NetInterfaceMbedConfig.h" />
+    <ClCompile Include="..\src\NetInterfaceTls.cpp" />
+    <ClCompile Include="..\src\NetInterfaceTlsState.cpp" />
+    <ClCompile Include="..\src\NetInterfaceTlsOperations.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceMessage.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="..\src\NetInterfaceMessage.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="..\src\NetInterfaceMessageOperations.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceConnection.h" />
+    <ClCompile Include="..\src\NetInterfaceConnection.cpp" />
+    <ClCompile Include="..\src\NetInterfaceConnectionOperations.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceHandshake.h" />
+    <ClCompile Include="..\src\NetInterfaceHandshake.cpp" />
+    <ClCompile Include="..\src\NetInterfaceHandshakeOperations.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceRequests.h" />
+    <ClInclude Include="..\src\NetInterfaceRequestsState.h" />
+    <ClCompile Include="..\src\NetInterfaceRequests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceRequestsOperations.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceRpc.h" />
+    <ClCompile Include="..\src\NetInterfaceRpc.cpp" />
+    <ClCompile Include="..\src\NetInterfaceRpcOperations.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceService.h" />
+    <ClCompile Include="..\src\NetInterfaceService.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceCrypto.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceCryptoState.h"><Filter>头文件</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceFileTypes.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="..\src\NetInterfaceFile.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="..\src\NetInterfaceFile.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="..\src\NetInterfaceFileFlow.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="..\src\NetInterfaceFileFlowState.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="..\src\NetInterfaceFileFlow.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="..\src\NetInterfaceFileOperations.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceEvent.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="..\src\NetInterfaceEvent.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceFileControl.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceTrust.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetInterfaceCertificate.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetInterfaceTunnel.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetInterfaceTunnelOperations.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetInterfaceLink.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetInterfaceLinkState.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetInterfaceLinkOperations.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetInterfaceCredit.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\NetInterfaceCertificate.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetInterfaceCertificateEntropy.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetInterfaceTunnel.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetInterfaceTunnelTypes.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetInterfaceLink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetInterfaceLinkState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetInterfaceLinkTypes.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetInterfaceCredit.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceDirectory.cpp" />
+    <ClInclude Include="..\src\NetInterfaceDirectory.h" />
+    <ClCompile Include="..\src\NetInterfaceCompression.cpp" />
+    <ClInclude Include="..\src\NetInterfaceCompression.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceTransport.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\NetInterfaceTransport.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetSession.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetSessionState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\NetSession.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\NetInterfaceTransportTest.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetGatewayClientChannel.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetGatewayClientChannelState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\NetGatewayClientChannel.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetEndpointRouter.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetEndpointRouterState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetEndpointFileStream.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\NetEndpointRouter.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetEndpointRouterFiles.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetClientDiscovery.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\NetClientDiscovery.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\NetClientSession.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetClientSessionState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\NetClientSession.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+<ItemGroup><ClInclude Include="..\src\NetClientSessionTest.h" /></ItemGroup>
+<ItemGroup>
+    <ClInclude Include="..\src\NetSenderClientTypes.h" />
+</ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceGatewayTypes.h" />
+    <ClInclude Include="..\src\NetInterfaceMacroDll.h" />
+    <ClInclude Include="..\src\NetInterfaceMacroLib.h" />
+    <ClCompile Include="..\src\NetSenderDispatch.cpp" />
+    <ClInclude Include="..\src\NetSenderDispatch.h" />
+    <ClInclude Include="..\src\NetSenderDispatchMap.h" />
+    <ClInclude Include="..\src\NetSenderDispatchAuditTest.h" />
+    <ClCompile Include="..\src\NetSenderSubmission.cpp" />
+    <ClInclude Include="..\src\NetSenderSubmission.h" />
+    <ClInclude Include="..\src\NetSenderSubmissionState.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetSenderDispatchTest.h" />
+  </ItemGroup>
+<ItemGroup></ItemGroup>  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceFileGuard.h" />
+    <ClInclude Include="..\src\NetInterfaceFileAuditTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceLinkAuditTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceLinkAuthTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceHandles.h" />
   </ItemGroup>
 </Project>

@@ -19,12 +19,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceClientTypes.h" />
     <ClInclude Include="..\src\NetInterfaceAPI.h" />
     <ClInclude Include="..\src\NetInterfaceMacro.h" />
     <ClInclude Include="..\src\NetInterface.h" />
+    <ClInclude Include="..\src\NetInterfaceTypes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\NetInterface.cpp" />
+    <ClCompile Include="..\src\NetInterfaceCodec.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{687B15B7-A6CF-4E4C-9B33-946E184EDC4E}</ProjectGuid>
@@ -109,6 +112,7 @@
       <MinimalRebuild>false</MinimalRebuild>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -128,6 +132,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -149,6 +154,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -172,6 +178,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -182,7 +189,192 @@
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceTlsTypes.h" />
+    <ClInclude Include="..\src\NetInterfaceTls.h" />
+    <ClInclude Include="..\src\NetInterfaceTlsState.h" />
+    <ClInclude Include="..\src\NetInterfaceMbedConfig.h" />
+    <ClCompile Include="..\src\NetInterfaceTls.cpp" />
+    <ClCompile Include="..\src\NetInterfaceTlsState.cpp" />
+    <ClCompile Include="..\src\NetInterfaceTlsOperations.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceMessage.h" />
+    <ClCompile Include="..\src\NetInterfaceMessage.cpp" />
+    <ClCompile Include="..\src\NetInterfaceMessageOperations.cpp" />
+  </ItemGroup>
+  <PropertyGroup>
+    <NetInterfaceHeaderDir Condition="'$(NetInterfaceHeaderDir)'==''">$(ProjectDir)..\..\..\..\include\</NetInterfaceHeaderDir>
+    <NetInterfaceBits Condition="'$(Platform)'=='x64'">64</NetInterfaceBits>
+    <NetInterfaceBits Condition="'$(Platform)'=='Win32'">32</NetInterfaceBits>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(NetInterfaceHeaderDir)protobuf;$(NetInterfaceHeaderDir)mbedtls;$(NetInterfaceHeaderDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>MBEDTLS_CONFIG_FILE="mbedtls/mbedtls_sdk_config.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <PropertyGroup>
+    <NetInterfaceLibraryDir Condition="'$(NetInterfaceLibraryDir)'==''">$(ProjectDir)..\..\..\..\lib\</NetInterfaceLibraryDir>
+    <NetInterfaceDependencySuffix Condition="'$(Configuration)'=='Debug'">d</NetInterfaceDependencySuffix>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalLibraryDirectories>$(NetInterfaceLibraryDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(NetInterfaceLibraryDir)mbedtlsstatic$(NetInterfaceBits)$(NetInterfaceDependencySuffix).lib;$(NetInterfaceLibraryDir)libprotobuf-litestatic$(NetInterfaceBits)$(NetInterfaceDependencySuffix).lib;$(NetInterfaceLibraryDir)ProtoMessage$(NetInterfaceDependencySuffix).lib;$(NetInterfaceLibraryDir)Variant$(NetInterfaceDependencySuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Lib>
+      <AdditionalLibraryDirectories>$(NetInterfaceLibraryDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(NetInterfaceLibraryDir)mbedtlsstatic$(NetInterfaceBits)$(NetInterfaceDependencySuffix).lib;$(NetInterfaceLibraryDir)libprotobuf-litestatic$(NetInterfaceBits)$(NetInterfaceDependencySuffix).lib;$(NetInterfaceLibraryDir)ProtoMessage$(NetInterfaceDependencySuffix).lib;$(NetInterfaceLibraryDir)Variant$(NetInterfaceDependencySuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceConnection.h" />
+    <ClCompile Include="..\src\NetInterfaceConnection.cpp" />
+    <ClCompile Include="..\src\NetInterfaceConnectionOperations.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceHandshake.h" />
+    <ClCompile Include="..\src\NetInterfaceHandshake.cpp" />
+    <ClCompile Include="..\src\NetInterfaceHandshakeOperations.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceRequests.h" />
+    <ClInclude Include="..\src\NetInterfaceRequestsState.h" />
+    <ClCompile Include="..\src\NetInterfaceRequests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceRequestsOperations.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceRpc.h" />
+    <ClCompile Include="..\src\NetInterfaceRpc.cpp" />
+    <ClCompile Include="..\src\NetInterfaceRpcOperations.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceService.h" />
+    <ClCompile Include="..\src\NetInterfaceService.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceCrypto.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceCryptoState.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceFileTypes.h" />
+    <ClInclude Include="..\src\NetInterfaceFile.h" />
+    <ClCompile Include="..\src\NetInterfaceFile.cpp" />
+    <ClInclude Include="..\src\NetInterfaceFileFlow.h" />
+    <ClInclude Include="..\src\NetInterfaceFileFlowState.h" />
+    <ClCompile Include="..\src\NetInterfaceFileFlow.cpp" />
+    <ClCompile Include="..\src\NetInterfaceFileOperations.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceEvent.h" />
+    <ClCompile Include="..\src\NetInterfaceEvent.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceFileControl.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceTrust.cpp" />
+    <ClCompile Include="..\src\NetInterfaceCertificate.cpp" />
+    <ClInclude Include="..\src\NetInterfaceCertificate.h" />
+    <ClInclude Include="..\src\NetInterfaceCertificateEntropy.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceTunnel.cpp" />
+    <ClCompile Include="..\src\NetInterfaceTunnelOperations.cpp" />
+    <ClInclude Include="..\src\NetInterfaceTunnel.h" />
+    <ClInclude Include="..\src\NetInterfaceTunnelTypes.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceLink.cpp" />
+    <ClCompile Include="..\src\NetInterfaceLinkState.cpp" />
+    <ClInclude Include="..\src\NetInterfaceLink.h" />
+    <ClInclude Include="..\src\NetInterfaceLinkState.h" />
+    <ClInclude Include="..\src\NetInterfaceLinkTypes.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceLinkOperations.cpp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceCredit.cpp" />
+    <ClInclude Include="..\src\NetInterfaceCredit.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetInterfaceDirectory.cpp" />
+    <ClInclude Include="..\src\NetInterfaceDirectory.h" />
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup><ClCompile Include="..\src\NetInterfaceCompression.cpp" /><ClInclude Include="..\src\NetInterfaceCompression.h" /></ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceTransport.h" />
+    <ClCompile Include="..\src\NetInterfaceTransport.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetSession.h" />
+    <ClInclude Include="..\src\NetSessionState.h" />
+    <ClCompile Include="..\src\NetSession.cpp" />
+    <ClInclude Include="..\src\NetInterfaceTransportTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetGatewayClientChannel.h" />
+    <ClInclude Include="..\src\NetGatewayClientChannelState.h" />
+    <ClCompile Include="..\src\NetGatewayClientChannel.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetEndpointRouter.h" />
+    <ClInclude Include="..\src\NetEndpointRouterState.h" />
+    <ClInclude Include="..\src\NetEndpointFileStream.h" />
+    <ClCompile Include="..\src\NetEndpointRouter.cpp" />
+    <ClCompile Include="..\src\NetEndpointRouterFiles.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetClientDiscovery.h" />
+    <ClCompile Include="..\src\NetClientDiscovery.cpp" />
+    <ClInclude Include="..\src\NetClientSession.h" />
+    <ClInclude Include="..\src\NetClientSessionState.h" />
+    <ClCompile Include="..\src\NetClientSession.cpp" />
+  </ItemGroup>
+<ItemGroup><ClInclude Include="..\src\NetClientSessionTest.h" /></ItemGroup>
+<ItemGroup>
+    <ClInclude Include="..\src\NetSenderClientTypes.h" />
+</ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceGatewayTypes.h" />
+    <ClInclude Include="..\src\NetInterfaceMacroDll.h" />
+    <ClInclude Include="..\src\NetInterfaceMacroLib.h" />
+    <ClCompile Include="..\src\NetSenderDispatch.cpp" />
+    <ClInclude Include="..\src\NetSenderDispatch.h" />
+    <ClInclude Include="..\src\NetSenderDispatchMap.h" />
+    <ClInclude Include="..\src\NetSenderDispatchAuditTest.h" />
+    <ClCompile Include="..\src\NetSenderSubmission.cpp" />
+    <ClInclude Include="..\src\NetSenderSubmission.h" />
+    <ClInclude Include="..\src\NetSenderSubmissionState.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetSenderDispatchTest.h" />
+  </ItemGroup>
+<ItemGroup></ItemGroup>  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceFileGuard.h" />
+    <ClInclude Include="..\src\NetInterfaceFileAuditTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceLinkAuditTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceLinkAuthTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetInterfaceHandles.h" />
+  </ItemGroup>
 </Project>
