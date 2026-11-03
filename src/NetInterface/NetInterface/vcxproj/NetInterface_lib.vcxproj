@@ -27,7 +27,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\NetInterface.cpp" />
-    <ClCompile Include="..\src\NetInterfaceCodec.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{687B15B7-A6CF-4E4C-9B33-946E184EDC4E}</ProjectGuid>
@@ -196,12 +195,10 @@
     <ClInclude Include="..\src\NetInterfaceMbedConfig.h" />
     <ClCompile Include="..\src\NetInterfaceTls.cpp" />
     <ClCompile Include="..\src\NetInterfaceTlsState.cpp" />
-    <ClCompile Include="..\src\NetInterfaceTlsOperations.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\NetInterfaceMessage.h" />
     <ClCompile Include="..\src\NetInterfaceMessage.cpp" />
-    <ClCompile Include="..\src\NetInterfaceMessageOperations.cpp" />
   </ItemGroup>
   <PropertyGroup>
     <NetInterfaceHeaderDir Condition="'$(NetInterfaceHeaderDir)'==''">$(ProjectDir)..\..\..\..\include\</NetInterfaceHeaderDir>
@@ -235,12 +232,10 @@
   <ItemGroup>
     <ClInclude Include="..\src\NetInterfaceConnection.h" />
     <ClCompile Include="..\src\NetInterfaceConnection.cpp" />
-    <ClCompile Include="..\src\NetInterfaceConnectionOperations.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\NetInterfaceHandshake.h" />
     <ClCompile Include="..\src\NetInterfaceHandshake.cpp" />
-    <ClCompile Include="..\src\NetInterfaceHandshakeOperations.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\NetInterfaceRequests.h" />
@@ -248,19 +243,16 @@
     <ClCompile Include="..\src\NetInterfaceRequests.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\NetInterfaceRequestsOperations.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\NetInterfaceRpc.h" />
     <ClCompile Include="..\src\NetInterfaceRpc.cpp" />
-    <ClCompile Include="..\src\NetInterfaceRpcOperations.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\NetInterfaceService.h" />
     <ClCompile Include="..\src\NetInterfaceService.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\NetInterfaceCrypto.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\NetInterfaceCryptoState.h" />
@@ -272,24 +264,20 @@
     <ClInclude Include="..\src\NetInterfaceFileFlow.h" />
     <ClInclude Include="..\src\NetInterfaceFileFlowState.h" />
     <ClCompile Include="..\src\NetInterfaceFileFlow.cpp" />
-    <ClCompile Include="..\src\NetInterfaceFileOperations.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\NetInterfaceEvent.h" />
     <ClCompile Include="..\src\NetInterfaceEvent.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\NetInterfaceFileControl.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\NetInterfaceTrust.cpp" />
     <ClCompile Include="..\src\NetInterfaceCertificate.cpp" />
     <ClInclude Include="..\src\NetInterfaceCertificate.h" />
     <ClInclude Include="..\src\NetInterfaceCertificateEntropy.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\NetInterfaceTunnel.cpp" />
-    <ClCompile Include="..\src\NetInterfaceTunnelOperations.cpp" />
     <ClInclude Include="..\src\NetInterfaceTunnel.h" />
     <ClInclude Include="..\src\NetInterfaceTunnelTypes.h" />
   </ItemGroup>
@@ -301,7 +289,6 @@
     <ClInclude Include="..\src\NetInterfaceLinkTypes.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\NetInterfaceLinkOperations.cpp" />
   </ItemGroup>
 
   <ItemGroup>
@@ -336,7 +323,6 @@
     <ClInclude Include="..\src\NetEndpointRouterState.h" />
     <ClInclude Include="..\src\NetEndpointFileStream.h" />
     <ClCompile Include="..\src\NetEndpointRouter.cpp" />
-    <ClCompile Include="..\src\NetEndpointRouterFiles.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\NetClientDiscovery.h" />
@@ -376,5 +362,28 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\NetInterfaceHandles.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetClientSessionState.cpp" />
+    <ClCompile Include="..\src\NetEndpointFileStream.cpp" />
+    <ClCompile Include="..\src\NetEndpointRouterState.cpp" />
+    <ClInclude Include="..\src\NetEndpointRouterTest.h" />
+    <ClCompile Include="..\src\NetGatewayClientChannelState.cpp" />
+    <ClCompile Include="..\src\NetInterfaceCertificateHelper.cpp" />
+    <ClInclude Include="..\src\NetInterfaceCertificateHelper.h" />
+    <ClCompile Include="..\src\NetInterfaceCryptoState.cpp" />
+    <ClCompile Include="..\src\NetInterfaceDirectoryHelper.cpp" />
+    <ClInclude Include="..\src\NetInterfaceDirectoryHelper.h" />
+    <ClCompile Include="..\src\NetInterfaceFileFlowState.cpp" />
+    <ClCompile Include="..\src\NetInterfaceFileGuard.cpp" />
+    <ClCompile Include="..\src\NetInterfaceRequestsState.cpp" />
+    <ClCompile Include="..\src\NetSenderDispatchMap.cpp" />
+    <ClCompile Include="..\src\NetSenderSubmissionState.cpp" />
+    <ClCompile Include="..\src\NetSessionState.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetFileProtocol.h" />
+    <ClCompile Include="..\src\NetFileProtocol.cpp" />
+    <ClInclude Include="..\src\NetHostTypes.h" />
   </ItemGroup>
 </Project>

@@ -1,7 +1,7 @@
-﻿#include "NetInterfaceMacro.h"
-#include "NetInterfaceCertificate.h"
+﻿#include "NetInterfaceCertificate.h"
+#include "NetInterfaceCertificateHelper.h"
+#include "NetInterfaceMacro.h"
 #include "NetInterfaceCertificateEntropy.h"
-#include "NetInterface.h"
 #include "NetInterface.h"
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/ecp.h>
@@ -12,18 +12,6 @@
 #include <mbedtls/x509_crt.h>
 #include <mbedtls/x509_csr.h>
 #include <cstring>
-
-/** 适配Mbed的size_t熵请求，禁止溢出或伪随机回退
-@param [in] context 本次借用的随机配置
-@param [out] output 密码学随机输出
-@param [in] size 字节数
-@return 0成功，否则失败
-*/
-static int CertificateEntropyBytes(void* context, unsigned char* output, size_t size)
-{
-    NetInterfaceCertificateEntropy* source = static_cast<NetInterfaceCertificateEntropy*>(context);
-    return size > UINT32_MAX ? -1 : NetInterface::entropyBytes(source->m_function, source->m_context, output, static_cast<uint32_t>(size));
-}
 
 /** 固定域分隔防止身份挑战签名被当作其他协议签名使用
 @param [in] data 挑战及声明
@@ -76,118 +64,6 @@ bool NetInterfaceCertificate::validName(const std::string& name)
         }
     }
     return true;
-}
-
-/** 比较有界借用区间，不做可能溢出的指针加法
-@param [in] first 首地址，可空
-@param [in] firstSize 首区间字节数
-@param [in] second 次地址，可空
-@param [in] secondSize 次区间字节数
-@return 是否重叠
-*/
-static bool CertificateRangesOverlap(const void* first, uint32_t firstSize, const void* second, uint32_t secondSize)
-{
-    if (first == nullptr || second == nullptr || firstSize == 0 || secondSize == 0)
-    {
-        return false;
-    }
-    const uintptr_t firstAddress = reinterpret_cast<uintptr_t>(first);
-    const uintptr_t secondAddress = reinterpret_cast<uintptr_t>(second);
-    return firstAddress <= secondAddress ? secondAddress - firstAddress < firstSize : firstAddress - secondAddress < secondSize;
-}
-
-int32_t NetInterface::certificateCreateRequest(const uint8_t* name, uint32_t nameSize,
-    NetInterfaceEntropyFunction entropy, void* context, uint8_t* privateKey, uint32_t keyCapacity,
-    uint32_t* keySize, uint8_t* request, uint32_t requestCapacity, uint32_t* requestSize)
-{
-    if (CertificateRangesOverlap(keySize, sizeof(uint32_t), requestSize, sizeof(uint32_t)) ||
-        CertificateRangesOverlap(keySize, sizeof(uint32_t), privateKey, keyCapacity) ||
-        CertificateRangesOverlap(keySize, sizeof(uint32_t), request, requestCapacity) ||
-        CertificateRangesOverlap(keySize, sizeof(uint32_t), name, nameSize) ||
-        CertificateRangesOverlap(requestSize, sizeof(uint32_t), privateKey, keyCapacity) ||
-        CertificateRangesOverlap(requestSize, sizeof(uint32_t), request, requestCapacity) ||
-        CertificateRangesOverlap(requestSize, sizeof(uint32_t), name, nameSize))
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    if (keySize != nullptr)
-    {
-        *keySize = 0;
-    }
-    if (requestSize != nullptr)
-    {
-        *requestSize = 0;
-    }
-    if (keySize == nullptr || requestSize == nullptr || privateKey == nullptr || request == nullptr ||
-        keyCapacity == 0 || keyCapacity > NET_INTERFACE_IDENTITY_PEM_BYTES || requestCapacity == 0 ||
-        requestCapacity > NET_INTERFACE_IDENTITY_PEM_BYTES || name == nullptr || nameSize == 0 || nameSize > 96 || entropy == nullptr ||
-        CertificateRangesOverlap(privateKey, keyCapacity, request, requestCapacity) ||
-        CertificateRangesOverlap(privateKey, keyCapacity, name, nameSize) ||
-        CertificateRangesOverlap(request, requestCapacity, name, nameSize))
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    try
-    {
-        if (!NetInterfaceCertificate::validName(std::string(reinterpret_cast<const char*>(name), nameSize)))
-        {
-            return NI_INVALID_ARGUMENT;
-        }
-    }
-    catch (...)
-    {
-        return NI_NO_MEMORY;
-    }
-    char subject[100] = {'C', 'N', '=', 0};
-    std::memcpy(subject + 3, name, nameSize);
-    mbedtls_ctr_drbg_context random;
-    mbedtls_pk_context key;
-    mbedtls_x509write_csr writer;
-    mbedtls_ctr_drbg_init(&random);
-    mbedtls_pk_init(&key);
-    mbedtls_x509write_csr_init(&writer);
-    NetInterfaceCertificateEntropy source = {entropy, context};
-    const unsigned char personalization[] = "NetInterface identity v2";
-    unsigned char keyBytes[4096] = {};
-    unsigned char requestBytes[4096] = {};
-    int result = mbedtls_ctr_drbg_seed(&random, CertificateEntropyBytes, &source, personalization, sizeof(personalization) - 1);
-    if (result == 0)
-    {
-        result = mbedtls_pk_setup(&key, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY));
-    }
-    if (result == 0)
-    {
-        result = mbedtls_ecp_gen_key(MBEDTLS_ECP_DP_SECP256R1, mbedtls_pk_ec(key), mbedtls_ctr_drbg_random, &random);
-    }
-    if (result == 0)
-    {
-        result = mbedtls_pk_write_key_pem(&key, keyBytes, sizeof(keyBytes));
-    }
-    mbedtls_x509write_csr_set_key(&writer, &key);
-    mbedtls_x509write_csr_set_md_alg(&writer, MBEDTLS_MD_SHA256);
-    if (result == 0)
-    {
-        result = mbedtls_x509write_csr_set_subject_name(&writer, subject);
-    }
-    if (result == 0)
-    {
-        result = mbedtls_x509write_csr_pem(&writer, requestBytes, sizeof(requestBytes), mbedtls_ctr_drbg_random, &random);
-    }
-    if (result == 0)
-    {
-        *keySize = static_cast<uint32_t>(std::strlen(reinterpret_cast<const char*>(keyBytes))) + 1;
-        *requestSize = static_cast<uint32_t>(std::strlen(reinterpret_cast<const char*>(requestBytes))) + 1;
-        if (keyCapacity >= *keySize && requestCapacity >= *requestSize)
-        {
-            std::memcpy(privateKey, keyBytes, *keySize);
-            std::memcpy(request, requestBytes, *requestSize);
-        }
-    }
-    mbedtls_platform_zeroize(keyBytes, sizeof(keyBytes));
-    mbedtls_x509write_csr_free(&writer);
-    mbedtls_pk_free(&key);
-    mbedtls_ctr_drbg_free(&random);
-    return result != 0 ? NI_PROTOCOL_ERROR : keyCapacity < *keySize || requestCapacity < *requestSize ? NI_BUFFER_TOO_SMALL : NI_OK;
 }
 
 int32_t NetInterfaceCertificate::createRequest(const std::string& name, NetInterfaceEntropyFunction entropy, void* context,
@@ -254,7 +130,7 @@ int32_t NetInterfaceCertificate::signProof(const std::string& privateKey, const 
     unsigned char digest[32] = {};
     unsigned char bytes[80] = {};
     size_t length = 0;
-    int result = mbedtls_ctr_drbg_seed(&random, CertificateEntropyBytes, &source, personalization, sizeof(personalization) - 1);
+    int result = mbedtls_ctr_drbg_seed(&random, NetInterfaceCertificateHelper::certificateEntropyBytes, &source, personalization, sizeof(personalization) - 1);
     if (result == 0)
     {
         result = mbedtls_pk_parse_key(&key, reinterpret_cast<const uint8_t*>(privateKey.c_str()), privateKey.size() + 1,
@@ -481,7 +357,7 @@ int32_t NetInterfaceCertificate::verifyPair(const std::string& certificate, cons
     mbedtls_ctr_drbg_init(&random);
     NetInterfaceCertificateEntropy source = {entropy, context};
     const unsigned char personalization[] = "NetInterface identity check v2";
-    int result = mbedtls_ctr_drbg_seed(&random, CertificateEntropyBytes, &source, personalization, sizeof(personalization) - 1);
+    int result = mbedtls_ctr_drbg_seed(&random, NetInterfaceCertificateHelper::certificateEntropyBytes, &source, personalization, sizeof(personalization) - 1);
     if (result == 0)
     {
         result = mbedtls_x509_crt_parse(&leaf, reinterpret_cast<const uint8_t*>(certificate.c_str()), certificate.size() + 1);

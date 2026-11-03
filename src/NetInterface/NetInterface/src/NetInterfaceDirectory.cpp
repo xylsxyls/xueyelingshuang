@@ -1,11 +1,36 @@
-﻿#include "NetInterfaceMacro.h"
-#include "NetInterfaceDirectory.h"
+﻿#include "NetInterfaceDirectory.h"
+#include "NetInterfaceMacro.h"
 #include "NetInterfaceGatewayTypes.h"
 #include "NetInterface.h"
 #include "NetInterfaceCredit.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include <cstring>
 #include <utility>
+
+/** 验证当前条目与之前已验证条目的唯一性，地址按数值而非拼写比较
+@param [in] points 原完整表，至少index+1项
+@param [in] index 当前条目号，小于64
+@param [in,out] keys 64个16字节去重键，前index项已生成
+@return 当前项合法且名称/地址端口未重复
+*/
+static bool DirectoryUnique(const std::vector<NetInterfaceDirectoryPoint>& points, uint32_t index, uint8_t keys[64][16])
+{
+    const NetInterfaceDirectoryPoint& point = points[index];
+    if (!NetInterfaceDirectory::valid(point) || !NetInterfaceDirectoryAddress::parse(point.m_address.data(),
+        static_cast<uint32_t>(point.m_address.size()), keys[index]))
+    {
+        return false;
+    }
+    for (uint32_t prior = 0; prior < index; ++prior)
+    {
+        if (point.m_name == points[prior].m_name || (point.m_port == points[prior].m_port &&
+            std::memcmp(keys[index], keys[prior], 16) == 0))
+        {
+            return false;
+        }
+    }
+    return true;
+}
 
 bool NetInterfaceDirectoryAddress::parse(const char* value, uint32_t size, uint8_t* bytes)
 {
@@ -210,31 +235,6 @@ bool NetInterfaceDirectory::text(const ProtoMessage& message, int32_t field, std
     }
 }
 
-/** 验证当前条目与之前已验证条目的唯一性，地址按数值而非拼写比较
-@param [in] points 原完整表，至少index+1项
-@param [in] index 当前条目号，小于64
-@param [in,out] keys 64个16字节去重键，前index项已生成
-@return 当前项合法且名称/地址端口未重复
-*/
-static bool DirectoryUnique(const std::vector<NetInterfaceDirectoryPoint>& points, uint32_t index, uint8_t keys[64][16])
-{
-    const NetInterfaceDirectoryPoint& point = points[index];
-    if (!NetInterfaceDirectory::valid(point) || !NetInterfaceDirectoryAddress::parse(point.m_address.data(),
-        static_cast<uint32_t>(point.m_address.size()), keys[index]))
-    {
-        return false;
-    }
-    for (uint32_t prior = 0; prior < index; ++prior)
-    {
-        if (point.m_name == points[prior].m_name || (point.m_port == points[prior].m_port &&
-            std::memcmp(keys[index], keys[prior], 16) == 0))
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
 int32_t NetInterfaceDirectory::encode(const std::vector<NetInterfaceDirectoryPoint>& points, std::string& output)
 {
     if (points.empty() || points.size() > NET_INTERFACE_DIRECTORY_NODES)
@@ -426,232 +426,6 @@ int32_t NetInterfaceDirectory::parseCache(const uint8_t* data, uint32_t size, ui
     }
     points.clear();
     return error;
-}
-
-/** 检查调用者缓冲别名，减法比较避免地址加长度溢出。
-@param [in] first 第一段起点
-@param [in] firstSize 第一段长度
-@param [in] second 第二段起点
-@param [in] secondSize 第二段长度
-@return 两段非空且相交
-*/
-static bool DirectoryRangesOverlap(const void* first, uint32_t firstSize, const void* second, uint32_t secondSize)
-{
-    if (first == nullptr || second == nullptr || firstSize == 0 || secondSize == 0)
-    {
-        return false;
-    }
-    const uintptr_t left = reinterpret_cast<uintptr_t>(first);
-    const uintptr_t right = reinterpret_cast<uintptr_t>(second);
-    return left <= right ? right - left < firstSize : left - right < secondSize;
-}
-
-/** 通过同一解析器创建不透明候选，不从缓存或地址授予身份
-@param [in] data 输入
-@param [in] size 有界字节数
-@param [in] utcMs 0为发现表，否则为缓存当前UTC
-@param [out] handle 失败清空
-@return NI_OK或错误
-*/
-static int32_t DirectoryCreate(const uint8_t* data, uint32_t size, uint64_t utcMs, NetInterfaceDirectoryHandle* handle)
-{
-    if (handle == nullptr || DirectoryRangesOverlap(data, size, handle, sizeof(*handle)))
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    *handle = nullptr;
-    try
-    {
-        std::vector<NetInterfaceDirectoryPoint> points;
-        const int32_t result = utcMs == 0 ? NetInterfaceDirectory::parse(data, size, points) :
-            NetInterfaceDirectory::parseCache(data, size, utcMs, points);
-        if (result != NI_OK) { return result; }
-        *handle = reinterpret_cast<NetInterfaceDirectoryHandle>(new std::vector<NetInterfaceDirectoryPoint>(std::move(points)));
-        return NI_OK;
-    }
-    catch (...) { return NI_NO_MEMORY; }
-}
-
-int32_t NetInterface::directoryCreateNodes(const NetInterfaceDirectoryNodeData* nodes, uint32_t count,
-    NetInterfaceDirectoryHandle* handle)
-{
-    if (handle == nullptr)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    if (count <= NET_INTERFACE_DIRECTORY_NODES && DirectoryRangesOverlap(nodes,
-        count * static_cast<uint32_t>(sizeof(NetInterfaceDirectoryNodeData)), handle, sizeof(*handle)))
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    *handle = nullptr;
-    if (nodes == nullptr || count == 0 || count > NET_INTERFACE_DIRECTORY_NODES)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    try
-    {
-        std::vector<NetInterfaceDirectoryPoint> points;
-        points.reserve(count);
-        for (uint32_t index = 0; index < count; ++index)
-        {
-            const NetInterfaceDirectoryNodeData& input = nodes[index];
-            if (input.m_structSize != sizeof(NetInterfaceDirectoryNodeData) || input.m_version != 1 ||
-                std::memchr(input.m_name, 0, sizeof(input.m_name)) == nullptr ||
-                std::memchr(input.m_address, 0, sizeof(input.m_address)) == nullptr)
-            {
-                return NI_INVALID_ARGUMENT;
-            }
-            NetInterfaceDirectoryPoint point;
-            point.m_name = input.m_name;
-            point.m_address = input.m_address;
-            point.m_port = input.m_port;
-            point.m_capacity = input.m_capacity;
-            point.m_boot = input.m_boot;
-            points.push_back(point);
-        }
-        std::string encoded;
-        const int32_t result = NetInterfaceDirectory::encode(points, encoded);
-        if (result != NI_OK)
-        {
-            return result;
-        }
-        *handle = reinterpret_cast<NetInterfaceDirectoryHandle>(new std::vector<NetInterfaceDirectoryPoint>(std::move(points)));
-        return NI_OK;
-    }
-    catch (...)
-    {
-        return NI_NO_MEMORY;
-    }
-}
-
-int32_t NetInterface::directoryCreate(const uint8_t* data, uint32_t size, NetInterfaceDirectoryHandle* handle)
-{
-    return DirectoryCreate(data, size, 0, handle);
-}
-
-int32_t NetInterface::directoryCreateCache(const uint8_t* data, uint32_t size, uint32_t utcLow, uint32_t utcHigh,
-    NetInterfaceDirectoryHandle* handle)
-{
-    if (handle == nullptr || DirectoryRangesOverlap(data, size, handle, sizeof(*handle)))
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    *handle = nullptr;
-    const uint64_t utc = (static_cast<uint64_t>(utcHigh) << 32) | utcLow;
-    return utc == 0 ? NI_INVALID_ARGUMENT : DirectoryCreate(data, size, utc, handle);
-}
-
-void NetInterface::directoryDestroy(NetInterfaceDirectoryHandle handle)
-{
-    delete reinterpret_cast<std::vector<NetInterfaceDirectoryPoint>*>(handle);
-}
-
-int32_t NetInterface::directoryCount(NetInterfaceDirectoryHandle handle, uint32_t* count)
-{
-    if (count == nullptr) { return NI_INVALID_ARGUMENT; }
-    *count = 0;
-    if (handle == nullptr) { return NI_INVALID_ARGUMENT; }
-    *count = static_cast<uint32_t>(reinterpret_cast<std::vector<NetInterfaceDirectoryPoint>*>(handle)->size());
-    return NI_OK;
-}
-
-int32_t NetInterface::directoryCopyNodes(NetInterfaceDirectoryHandle handle,
-    NetInterfaceDirectoryNodeData* nodes, uint32_t capacity, uint32_t* count)
-{
-    if (count == nullptr)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    if (capacity <= NET_INTERFACE_DIRECTORY_NODES && DirectoryRangesOverlap(nodes,
-        capacity * static_cast<uint32_t>(sizeof(NetInterfaceDirectoryNodeData)), count, sizeof(*count)))
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    *count = 0;
-    if (handle == nullptr || (nodes == nullptr && capacity != 0) || capacity > NET_INTERFACE_DIRECTORY_NODES)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    const std::vector<NetInterfaceDirectoryPoint>& points = *reinterpret_cast<std::vector<NetInterfaceDirectoryPoint>*>(handle);
-    if (capacity < points.size())
-    {
-        *count = static_cast<uint32_t>(points.size());
-        return NI_BUFFER_TOO_SMALL;
-    }
-    for (uint32_t index = 0; index < points.size(); ++index)
-    {
-        if (nodes[index].m_structSize != sizeof(NetInterfaceDirectoryNodeData) || nodes[index].m_version != 1)
-        {
-            return NI_INVALID_ARGUMENT;
-        }
-    }
-    for (uint32_t index = 0; index < points.size(); ++index)
-    {
-        const NetInterfaceDirectoryPoint& point = points[index];
-        NetInterfaceDirectoryNodeData output;
-        std::memset(&output, 0, sizeof(output));
-        output.m_structSize = sizeof(output);
-        output.m_version = 1;
-        std::memcpy(output.m_name, point.m_name.c_str(), point.m_name.size() + 1);
-        std::memcpy(output.m_address, point.m_address.c_str(), point.m_address.size() + 1);
-        output.m_port = point.m_port;
-        output.m_capacity = point.m_capacity;
-        output.m_boot = point.m_boot;
-        nodes[index] = output;
-    }
-    *count = static_cast<uint32_t>(points.size());
-    return NI_OK;
-}
-
-int32_t NetInterface::directoryNode(NetInterfaceDirectoryHandle handle, uint32_t index, char* name, uint32_t nameCapacity,
-    char* address, uint32_t addressCapacity, uint32_t* fields)
-{
-    if (fields == nullptr || DirectoryRangesOverlap(name, nameCapacity, address, addressCapacity) ||
-        DirectoryRangesOverlap(name, nameCapacity, fields, 4 * sizeof(uint32_t)) ||
-        DirectoryRangesOverlap(address, addressCapacity, fields, 4 * sizeof(uint32_t)))
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    std::memset(fields, 0, 4 * sizeof(uint32_t));
-    if (handle == nullptr) { return NI_INVALID_ARGUMENT; }
-    const std::vector<NetInterfaceDirectoryPoint>& points = *reinterpret_cast<std::vector<NetInterfaceDirectoryPoint>*>(handle);
-    if (index >= points.size()) { return NI_NOT_FOUND; }
-    const NetInterfaceDirectoryPoint& point = points[index];
-    if (name == nullptr || address == nullptr || nameCapacity <= point.m_name.size() || addressCapacity <= point.m_address.size())
-    {
-        return NI_BUFFER_TOO_SMALL;
-    }
-    std::memcpy(name, point.m_name.c_str(), point.m_name.size() + 1);
-    std::memcpy(address, point.m_address.c_str(), point.m_address.size() + 1);
-    fields[0] = point.m_port;
-    fields[1] = point.m_capacity;
-    fields[2] = static_cast<uint32_t>(point.m_boot);
-    fields[3] = static_cast<uint32_t>(point.m_boot >> 32);
-    return NI_OK;
-}
-
-int32_t NetInterface::directoryCache(NetInterfaceDirectoryHandle handle, uint32_t utcLow, uint32_t utcHigh,
-    uint8_t* output, uint32_t capacity, uint32_t* required)
-{
-    if (required == nullptr || DirectoryRangesOverlap(output, capacity, required, sizeof(*required)))
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    *required = 0;
-    if (handle == nullptr) { return NI_INVALID_ARGUMENT; }
-    try
-    {
-        std::string bytes;
-        const int32_t result = NetInterfaceDirectory::encodeCache(*reinterpret_cast<std::vector<NetInterfaceDirectoryPoint>*>(handle),
-            (static_cast<uint64_t>(utcHigh) << 32) | utcLow, bytes);
-        if (result != NI_OK) { return result; }
-        *required = static_cast<uint32_t>(bytes.size());
-        if (output == nullptr || capacity < bytes.size()) { return NI_BUFFER_TOO_SMALL; }
-        std::memcpy(output, bytes.data(), bytes.size());
-        return NI_OK;
-    }
-    catch (...) { return NI_NO_MEMORY; }
 }
 
 #if 0 // DIRECTORY_VALUES_UNIT_TEST_BEGIN

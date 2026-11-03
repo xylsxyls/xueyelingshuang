@@ -3,7 +3,9 @@
 #ifdef _WIN32
 #define _NetInterfaceAPI
 #endif
+#include "NetHostTypes.h"
 #ifdef __cplusplus
+#include "NetFileProtocol.h"
 #include "NetInterface.h"
 #include "NetInterfaceHandshake.h"
 #include "NetInterfaceTunnel.h"
