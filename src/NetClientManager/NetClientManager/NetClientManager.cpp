@@ -90,7 +90,7 @@ static bool ReadClientGatewayFile(const std::string& path, uint32_t maximum, std
         return false;
     }
     output.assign(reinterpret_cast<const char*>(bytes.data()), bytes.size());
-    netInterfaceWipe(bytes.data(), static_cast<uint32_t>(bytes.size()));
+    NetInterface::wipe(bytes.data(), static_cast<uint32_t>(bytes.size()));
     return true;
 }
 
@@ -214,19 +214,19 @@ static int32_t ConfigureGatewayHost()
     NetHostFunctions functions = {};
     functions.structSize = sizeof(functions);
     functions.version = 1;
-    functions.create = libuvHostCreate;
-    functions.listen = libuvHostListen;
-    functions.connect = libuvHostConnect;
-    functions.poll = libuvHostPoll;
-    functions.write = libuvHostWrite;
-    functions.pauseRead = libuvHostPauseRead;
-    functions.close = libuvHostClose;
-    functions.shutdown = libuvHostShutdown;
-    functions.destroy = libuvHostDestroy;
-    functions.localPort = libuvHostLocalPort;
-    functions.peerCount = libuvHostPeerCount;
+    functions.create = LibuvTcp::hostCreate;
+    functions.listen = LibuvTcp::hostListen;
+    functions.connect = LibuvTcp::hostConnect;
+    functions.poll = LibuvTcp::hostPoll;
+    functions.write = LibuvTcp::hostWrite;
+    functions.pauseRead = LibuvTcp::hostPauseRead;
+    functions.close = LibuvTcp::hostClose;
+    functions.shutdown = LibuvTcp::hostShutdown;
+    functions.destroy = LibuvTcp::hostDestroy;
+    functions.localPort = LibuvTcp::hostLocalPort;
+    functions.peerCount = LibuvTcp::hostPeerCount;
     functions.entropy = CSystem::secureRandomBytesCallback;
-    return netWorkConfigureHost(&functions);
+    return NetWork::configureHost(functions);
 }
 
 NetClientManager::NetClientManager() :
@@ -401,7 +401,7 @@ int NetClientManager::prepare(const std::vector<std::string>& input)
 
 #endif
     m_task.reset(new NetClientGatewayTask(configuration));
-    netInterfaceWipe(configuration.m_privateKey.empty() ? nullptr : reinterpret_cast<uint8_t*>(&configuration.m_privateKey[0]),
+    NetInterface::wipe(configuration.m_privateKey.empty() ? nullptr : reinterpret_cast<uint8_t*>(&configuration.m_privateKey[0]),
                      static_cast<uint32_t>(configuration.m_privateKey.size()));
     if (!installSignals())
     {

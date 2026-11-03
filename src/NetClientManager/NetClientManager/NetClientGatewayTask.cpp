@@ -16,7 +16,7 @@ m_error(NI_OK)
 
 NetClientGatewayTask::~NetClientGatewayTask()
 {
-    netInterfaceWipe(m_configuration.m_privateKey.empty() ? nullptr : reinterpret_cast<uint8_t*>(&m_configuration.m_privateKey[0]),
+    NetInterface::wipe(m_configuration.m_privateKey.empty() ? nullptr : reinterpret_cast<uint8_t*>(&m_configuration.m_privateKey[0]),
                      static_cast<uint32_t>(m_configuration.m_privateKey.size()));
 }
 

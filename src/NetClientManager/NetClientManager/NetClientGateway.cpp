@@ -24,7 +24,7 @@ m_info(info)
 
 NetClientGatewayFile::~NetClientGatewayFile()
 {
-    netInterfaceWipe(reinterpret_cast<uint8_t*>(&m_info), sizeof(m_info));
+    NetInterface::wipe(reinterpret_cast<uint8_t*>(&m_info), sizeof(m_info));
 }
 
 NetClientGateway::NetClientGateway() :
@@ -200,7 +200,7 @@ bool NetClientGateway::poll()
         {
             current->second.m_sent = true;
             m_queuedBytes -= static_cast<uint32_t>(body.size());
-            netInterfaceWipe(current->second.m_body.empty() ? nullptr : current->second.m_body.data(),
+            NetInterface::wipe(current->second.m_body.empty() ? nullptr : current->second.m_body.data(),
                              static_cast<uint32_t>(current->second.m_body.size()));
             current->second.m_body.clear();
         }
@@ -475,7 +475,7 @@ void NetClientGateway::respond(uint64_t peer, const NetInterfaceFrame& original,
         frame.m_payload = payload.data();
         frame.m_payloadSize = required;
         const int32_t sent = result == NI_OK ? m_local.send(peer, frame) : result;
-        netInterfaceWipe(payload.data(), static_cast<uint32_t>(payload.size()));
+        NetInterface::wipe(payload.data(), static_cast<uint32_t>(payload.size()));
         if (sent != NI_OK)
         {
             m_local.close(peer, sent);
@@ -525,7 +525,7 @@ void NetClientGateway::onLocalClosed(uint64_t peer, int32_t reason)
         }
         const uint64_t id = entry->first;
         m_queuedBytes -= static_cast<uint32_t>(entry->second.m_body.size());
-        netInterfaceWipe(entry->second.m_body.empty() ? nullptr : entry->second.m_body.data(),
+        NetInterface::wipe(entry->second.m_body.empty() ? nullptr : entry->second.m_body.data(),
                          static_cast<uint32_t>(entry->second.m_body.size()));
         entry = m_requests.erase(entry);
         m_remote.cancel(id);
@@ -560,7 +560,7 @@ void NetClientGateway::onSessionResult(uint64_t generation, uint64_t requestId, 
     const auto request = found->second.m_local;
     const uint64_t peer = found->second.m_peer;
     m_queuedBytes -= static_cast<uint32_t>(found->second.m_body.size());
-    netInterfaceWipe(found->second.m_body.empty() ? nullptr : found->second.m_body.data(),
+    NetInterface::wipe(found->second.m_body.empty() ? nullptr : found->second.m_body.data(),
                      static_cast<uint32_t>(found->second.m_body.size()));
     m_requests.erase(found);
     const auto client = m_peers.find(peer);
