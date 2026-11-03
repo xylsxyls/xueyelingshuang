@@ -18,32 +18,6 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\src\Area.h" />
-    <ClInclude Include="..\src\ClientTask.h" />
-    <ClInclude Include="..\src\HeadTask.h" />
-    <ClInclude Include="..\src\HeartTask.h" />
-    <ClInclude Include="..\src\NetClient.h" />
-    <ClInclude Include="..\src\NetServer.h" />
-    <ClInclude Include="..\src\NetWorkAPI.h" />
-    <ClInclude Include="..\src\NetWorkHelper.h" />
-    <ClInclude Include="..\src\NetWorkMacro.h" />
-    <ClInclude Include="..\src\ReceiveNetTask.h" />
-    <ClInclude Include="..\src\RunLoopTask.h" />
-    <ClInclude Include="..\src\ServerTask.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\src\Area.cpp" />
-    <ClCompile Include="..\src\ClientTask.cpp" />
-    <ClCompile Include="..\src\HeadTask.cpp" />
-    <ClCompile Include="..\src\HeartTask.cpp" />
-    <ClCompile Include="..\src\NetClient.cpp" />
-    <ClCompile Include="..\src\NetServer.cpp" />
-    <ClCompile Include="..\src\NetWorkHelper.cpp" />
-    <ClCompile Include="..\src\ReceiveNetTask.cpp" />
-    <ClCompile Include="..\src\RunLoopTask.cpp" />
-    <ClCompile Include="..\src\ServerTask.cpp" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
     <RootNamespace>NetWork</RootNamespace>
@@ -189,7 +163,88 @@
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <ClCompile Include="..\src\NetNativeFileIo.cpp" />
+    <ClCompile Include="..\src\NetSender.cpp" />
+    <ClCompile Include="..\src\NetWork.cpp" />
+    <ClCompile Include="..\src\NetWorkBackend.cpp" />
+    <ClCompile Include="..\src\NetWorkSenderState.cpp" />
+    <ClCompile Include="..\src\NetSenderC.cpp" />
+    <ClInclude Include="..\src\NetClientSession.h" />
+    <ClInclude Include="..\src\NetSenderCState.h" />
+    <ClInclude Include="..\src\NetDirectorySnapshot.h" />
+    <ClInclude Include="..\src\NetEndpointFileStream.h" />
+    <ClInclude Include="..\src\NetEndpointRouter.h" />
+    <ClInclude Include="..\src\NetEndpointRouterState.h" />
+    <ClInclude Include="..\src\NetFileIo.h" />
+    <ClInclude Include="..\src\NetFileIoBackend.h" />
+    <ClInclude Include="..\src\NetFileIoTest.h" />
+    <ClInclude Include="..\src\NetFileIoTypes.h" />
+    <ClInclude Include="..\src\NetFileTransfer.h" />
+    <ClInclude Include="..\src\NetFileTransferState.h" />
+    <ClInclude Include="..\src\NetGatewayClientChannel.h" />
+    <ClInclude Include="..\src\NetGatewayClientChannelState.h" />
+    <ClInclude Include="..\src\NetGatewayDirectoryStore.h" />
+    <ClInclude Include="..\src\NetGatewayDirectoryStoreState.h" />
+    <ClInclude Include="..\src\NetGatewayDirectoryStoreTest.h" />
+    <ClInclude Include="..\src\NetGatewayDiscovery.h" />
+    <ClInclude Include="..\src\NetGatewayDiscoveryState.h" />
+    <ClInclude Include="..\src\NetGatewayHostTransportFactory.h" />
+    <ClInclude Include="..\src\NetGatewayTransport.h" />
+    <ClInclude Include="..\src\NetHostSocket.h" />
+    <ClInclude Include="..\src\NetHostSocketState.h" />
+    <ClInclude Include="..\src\NetHostSocketTest.h" />
+    <ClInclude Include="..\src\NetHostTypes.h" />
+    <ClInclude Include="..\src\NetLinkTransport.h" />
+    <ClInclude Include="..\src\NetLinkTransportState.h" />
+    <ClInclude Include="..\src\NetNativeFileIo.h" />
+    <ClInclude Include="..\src\NetNativeFileIoState.h" />
+    <ClInclude Include="..\src\NetRelayTransport.h" />
+    <ClInclude Include="..\src\NetRelayTransportState.h" />
+    <ClInclude Include="..\src\NetSender.h" />
+    <ClInclude Include="..\src\NetSenderAPI.h" />
+    <ClInclude Include="..\src\NetSenderC.h" />
+    <ClInclude Include="..\src\NetSession.h" />
+    <ClInclude Include="..\src\NetSessionState.h" />
+    <ClInclude Include="..\src\NetTransport.h" />
+    <ClInclude Include="..\src\NetTransportEntropy.h" />
+    <ClInclude Include="..\src\NetTransportState.h" />
+    <ClInclude Include="..\src\NetWorkAPI.h" />
+    <ClInclude Include="..\src\NetWork.h" />
+    <ClInclude Include="..\src\NetWorkBackend.h" />
+    <ClInclude Include="..\src\NetSenderHostC.h" />
+    <ClInclude Include="..\src\NetWorkTypes.h" />
+    <ClInclude Include="..\src\NetWorkClientState.h" />
+    <ClInclude Include="..\src\NetWorkClientSession.h" />
+    <ClInclude Include="..\src\NetWorkEndpointRouter.h" />
+    <ClInclude Include="..\src\NetWorkMacro.h" />
+    <ClInclude Include="..\src\NetWorkMacroDll.h" />
+    <ClInclude Include="..\src\NetWorkMacroLib.h" />
+    <ClInclude Include="..\src\NetWorkPlatform.h" />
+    <ClInclude Include="..\src\NetWorkSenderState.h" />
+  </ItemGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetWorkHostBridge.cpp" />
+    <ClInclude Include="..\src\NetWorkHostBridge.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetWorkHostBridgeTest.h" />
+    <ClInclude Include="..\src\NetWorkThreadTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetSenderCState.cpp" />
+    <ClCompile Include="..\src\NetSenderHostC.cpp" />
+    <ClCompile Include="..\src\NetWorkClientState.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\NetNativeFileIoState.cpp" />
+    <ClCompile Include="..\src\NetWorkPlatform.cpp" />
+  </ItemGroup>
 </Project>
