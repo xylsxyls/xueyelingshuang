@@ -3,8 +3,8 @@
 #include <new>
 #include <stdint.h>
 
-/** LockFreeHashMap内部链表节点
-@note 模板节点类型单独放文件，避免在LockFreeHashMap类内部嵌套struct。
+/** 历史节点兼容类型，拥有键和值副本；当前 LockFreeHashMap 使用池槽位，不再使用此类型
+构造时的键值复制异常由调用方处理，键值析构不得抛异常
 */
 template <typename KeyType, typename ValueType>
 struct HashMapNode
