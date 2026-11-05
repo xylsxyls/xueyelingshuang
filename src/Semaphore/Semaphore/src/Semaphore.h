@@ -9,6 +9,7 @@
 #include <memory>
 
 class SemaphoreProcessMemory;
+class SemaphoreDeadline;
 
 /** 本进程通知与原生跨进程计数通知。生命周期操作不与等待/通知并发。
     Windows使用内核信号量，Linux/macOS使用sem_open；移动端使用共享原子计数及有界睡眠，无文件锁。
@@ -62,11 +63,11 @@ public:
     */
     void reset();
 
-    /** 事件通知，多个事件同时等待只会通知一个，必须进入了eventWait，通知才有效果，一对一，允许一对多
+    /** 提示一位已登记的事件等待者；没有等待者时不积存通知
     */
     void event();
 
-    /** 事件通知，同时通知多个事件，必须进入了eventWait，通知才有效果，一对多
+    /** 提示扫描开始时已登记的全部事件等待者，后来登记者不取得这次旧广播
     */
     void eventAll();
 
@@ -174,7 +175,7 @@ public:
     */
     bool unlinkProcessName();
 
-    /** 进程信号，通知仅作提示；POSIX创建者关闭移除名称，已打开对端仍可使用该对象
+    /** 对命名对象积存一个许可；POSIX创建者关闭移除名称，已打开对端仍可使用旧对象
     */
     void processSignal();
 
@@ -252,19 +253,45 @@ public:
     SemaphoreSignalWaitResult processSignalAndWaitResult(Semaphore& waitOn, int32_t timeout = -1);
 
 private:
+    /** 取得命名资源，只有成功的独占创建取得撤名权；失败由局部候选回收
+    @param [in] name 已有命名规则中的逻辑名称
+    @param [in] signalCount 正数创建，0仅打开
+    @return 已有残留资源时拒绝覆盖，其他失败保留原生错误
+    */
+    SemaphoreResult connectProcess(const std::string& name, int32_t signalCount);
+
+    /** 按原调用的预算等待共享计数或POSIX信号量，不在组合发送后重启计时
+    @param [in] deadline 原调用总预算
+    @param [in] infinite 是否允许使用POSIX无限系统等待
+    @return 本次许可消费状态和原生错误
+    */
+    SemaphoreResult waitProcess(const SemaphoreDeadline& deadline, bool infinite);
+
     /** 按需取得默认事件池；并发首次申请以CAS发布完整候选，不等待初始化持有者
     @param [out] pool 本实例的稳定池引用，外部静止才允许更换/销毁
     @return OK或未发布失败
     */
     SemaphoreResult prepareEventPool(SemaphoreEventPool*& pool);
 
-    /** 计数/事件等待共用的单调总预算循环
-    @param [in] isEvent 是否仅等事件提示
+    /** 计数等待入口，已有许可直接消费，不分配记录或读取时钟
     @param [in] infinite 是否无限等待
     @param [in] timeout 有限等待毫秒
     @return 真实谓词结果或系统错误
     */
-    SemaphoreResult waitLocal(bool isEvent, bool infinite, uint32_t timeout);
+    SemaphoreResult waitCount(bool infinite, uint32_t timeout);
+
+    /** 登记计数等待者，再次核对许可后进入系统等待
+    @param [in] deadline 原调用的总预算，组合调用也不重建预算
+    @return 是否消费许可；退出前撤销系统等待登记
+    */
+    SemaphoreResult waitCountRegistered(const SemaphoreDeadline& deadline);
+
+    /** 登记一次非积存事件等待，退出时与通知竞争最终结果
+    @param [in] infinite 是否无限等待
+    @param [in] timeout 有限等待毫秒
+    @return 事件结果或资源错误
+    */
+    SemaphoreResult waitEvent(bool infinite, uint32_t timeout);
 
     /** 实现本地组合调用，已知的许可CAS提交状态不依赖系统提示是否成功
     @param [in,out] waitOn 消费目标，两对象生命周期外部保持
@@ -278,11 +305,6 @@ private:
     @return true取得一个许可
     */
     bool consumeCount();
-
-    /** 获取原生单调毫秒时钟，Windows不依赖VS2013的chrono实现
-    @return 单调毫秒值
-    */
-    static uint64_t monotonicMilliseconds();
 
     /** 兼容接口将错误明确传播，超时正常返回
     @param [in] result 本次操作结果

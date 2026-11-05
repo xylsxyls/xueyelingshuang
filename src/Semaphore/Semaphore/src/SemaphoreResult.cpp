@@ -1,19 +1,3 @@
 ﻿#include "SemaphoreResult.h"
 
-SemaphoreResult::SemaphoreResult(SemaphoreStatus value, bool published, int32_t error) :
-status(value),
-committed(published),
-nativeError(error)
-{
-
-}
-
-SemaphoreSignalWaitResult::SemaphoreSignalWaitResult(
-    SemaphoreStatus value, SemaphoreCommitState signal, SemaphoreCommitState wait, int32_t error) :
-status(value),
-signalState(signal),
-waitState(wait),
-nativeError(error)
-{
-
-}
+// 保留独立翻译单元，使动态库继续导出结果构造函数；调用方可直接内联标量赋值。

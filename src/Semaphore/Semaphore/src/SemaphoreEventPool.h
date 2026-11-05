@@ -104,20 +104,16 @@ struct SemaphoreEventRecord
 public:
     // 登记链，低位为删除标记
     std::atomic<uintptr_t> m_next;
-    // 0等待，1已提示，2超时/取消
+    // 0等待，1已提示，2取消，3等待者已结束访问，4已预留物理释放
     std::atomic<uint32_t> m_state;
-    // 等待者和登记链各持有一次引用
-    std::atomic<uint32_t> m_references;
+    // 退役栈引用；最高位为重新入栈责任，低位为栈及临时借用引用
+    std::atomic<uint32_t> m_retiredReferences;
     // 空闲/退役链只在相应独占阶段修改
     SemaphoreEventRecord* m_freeNext;
     // 与freeNext分开，旧空闲链读者可能仍借用freeNext
     SemaphoreEventRecord* m_retiredNext;
     // 连续安全空闲的起点
     uint64_t m_idleSince;
-    // 缩容已预留此记录，在安全回收点删除
-    bool m_destroy;
-    // 退役栈借用引用；最高位表示等待重新入栈，利用原记录尾部对齐空间
-    std::atomic<uint32_t> m_retiredReferences;
 
 public:
     /** 初始化尚未发布记录
@@ -146,7 +142,7 @@ public:
     */
     SemaphoreResult begin(SemaphoreEventRecord*& record);
 
-    /** 超时与通知竞争后摘除并归还记录
+    /** 超时与通知竞争后标记退出，状态3发布之前等待者仍拥有记录访问权
     @param [in] record 本次等待独占记录
     @return true通知先获胜，false超时先获胜
     */
@@ -192,8 +188,8 @@ private:
     */
     void putFree(SemaphoreEventRecord* first, SemaphoreEventRecord* last);
 
-    /** 追加新退役记录，调用者持有其唯一回收权，发布之后不能再访问
-    @param [in] record 已无拥有者的记录
+    /** 追加新退役记录，调用者持有其唯一摘链权，发布之后不再以摘链者身份访问
+    @param [in] record 已摘除记录；状态小于3时等待者仍可能持有访问权
     */
     void retire(SemaphoreEventRecord* record);
 
@@ -212,11 +208,6 @@ private:
     @return 独占记录或空；其他线程仍可能持有只读借用，尚不能直接释放
     */
     SemaphoreEventRecord* takeRetired(size_t& budget);
-
-    /** 释放等待者或链的一份引用
-    @param [in] record 借用记录
-    */
-    void release(SemaphoreEventRecord* record);
 
     /** 帮助摘除已标记记录，调用者已enter
     */
@@ -241,11 +232,6 @@ private:
     */
     SemaphoreResult grow();
 
-    /** 当前单调毫秒
-    @return 空闲计时基准
-    */
-    static uint64_t now();
-
 private:
     // 策略在对象活动期只读
     SemaphorePoolConfig m_config;
@@ -255,7 +241,7 @@ private:
     std::atomic<SemaphoreEventRecord*> m_free;
     // 已摘除、尚不安全的链
     std::atomic<SemaphoreEventRecord*> m_retired;
-    // 每个遍历/发布/摘除都先增加读者数，再读链，全部seq_cst
+    // 共享链遍历前增加读者数，全部seq_cst；finish对自身记录另有状态3发布前的访问权
 #ifdef _MSC_VER
     // 池也允许直接栈构造，显式对齐64位原子并使MSVC x86重对齐包含它的栈帧
     __declspec(align(8))
@@ -269,8 +255,6 @@ private:
     std::atomic<size_t> m_freeCount;
     // 等待回收数量
     std::atomic<size_t> m_retiredCount;
-    // 已提出缩容的数量，仍计入总预算
-    std::atomic<size_t> m_shrinkReserved;
     // 已发布容量减已预留缩容；独立原子预算防止并发释放使初始下限失守
     std::atomic<size_t> m_unreservedCapacity;
     // 提前增长失败也可通过统计观察

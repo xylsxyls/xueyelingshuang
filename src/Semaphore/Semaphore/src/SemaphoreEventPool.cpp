@@ -1,14 +1,11 @@
 ﻿#include "SemaphoreEventPool.h"
 #include "SemaphoreWake.h"
+#include "SemaphoreDeadline.h"
 #include <algorithm>
-#include <chrono>
 #include <limits>
 #include <new>
 #include <stdexcept>
 #include <system_error>
-#ifdef _WIN32
-#include <Windows.h>
-#endif
 
 // 退役栈引用的最高位只记录重新入栈责任，不是互斥标记；任何操作都不等待其清零
 static const uint32_t kSemaphoreRetiredPending = uint32_t(1) << 31;
@@ -24,13 +21,11 @@ maxCapacity(-1)
 
 SemaphoreEventRecord::SemaphoreEventRecord() :
 m_next(0),
-m_state(2),
-m_references(0),
+m_state(3),
+m_retiredReferences(0),
 m_freeNext(nullptr),
 m_retiredNext(nullptr),
-m_idleSince(0),
-m_destroy(false),
-m_retiredReferences(0)
+m_idleSince(0)
 {
 
 }
@@ -45,7 +40,6 @@ m_allocated(0),
 m_capacity(0),
 m_freeCount(0),
 m_retiredCount(0),
-m_shrinkReserved(0),
 m_unreservedCapacity(0),
 m_lastGrowStatus(SEMAPHORE_OK),
 m_grows(0),
@@ -86,23 +80,6 @@ SemaphoreEventPool::~SemaphoreEventPool()
         delete node;
         node = next;
     }
-}
-
-uint64_t SemaphoreEventPool::now()
-{
-#ifdef _WIN32
-    LARGE_INTEGER ticks;
-    LARGE_INTEGER frequency;
-    if (::QueryPerformanceCounter(&ticks) && ::QueryPerformanceFrequency(&frequency) && frequency.QuadPart > 0)
-    {
-        return static_cast<uint64_t>(static_cast<double>(ticks.QuadPart) * 1000.0 / frequency.QuadPart);
-    }
-    return ::GetTickCount64();
-#else
-    return static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
-            .count());
-#endif
 }
 
 bool SemaphoreEventPool::enter()
@@ -220,14 +197,6 @@ SemaphoreEventRecord* SemaphoreEventPool::takeRetired(size_t& budget)
     return nullptr;
 }
 
-void SemaphoreEventPool::release(SemaphoreEventRecord* record)
-{
-    if (record->m_references.fetch_sub(1) == 1)
-    {
-        retire(record);
-    }
-}
-
 void SemaphoreEventPool::sweep()
 {
     for (;;)
@@ -246,7 +215,7 @@ void SemaphoreEventPool::sweep()
                     restart = true;
                     break;
                 }
-                release(node);
+                retire(node);
                 current = next & ~uintptr_t(1);
             }
             else
@@ -300,15 +269,20 @@ size_t SemaphoreEventPool::reclaim(size_t& budget, bool entered)
     size_t released = 0;
     SemaphoreEventRecord* firstFree = nullptr;
     SemaphoreEventRecord* lastFree = nullptr;
-    const uint64_t timestamp = m_config.shrink ? now() : 0;
-    if (count != 0)
-    {
-        m_retiredCount.fetch_sub(count);
-    }
+    const uint64_t timestamp = m_config.shrink ? SemaphoreDeadline::now() : 0;
+    size_t reclaimed = 0;
     for (size_t index = 0; index < count; ++index)
     {
         SemaphoreEventRecord* record = batch[index];
-        if (record->m_destroy)
+        const uint32_t state = record->m_state.load(std::memory_order_acquire);
+        if (state < 3)
+        {
+            // 帮助摘除不代表等待者已经结束访问；它发布状态3前只能重新退役。
+            queueRetired(record);
+            continue;
+        }
+        ++reclaimed;
+        if (state == 4)
         {
             delete record;
             ++released;
@@ -327,16 +301,19 @@ size_t SemaphoreEventPool::reclaim(size_t& budget, bool entered)
             }
         }
     }
+    if (reclaimed != 0)
+    {
+        m_retiredCount.fetch_sub(reclaimed);
+    }
     if (released != 0)
     {
         m_capacity.fetch_sub(released);
         m_allocated.fetch_sub(released);
-        m_shrinkReserved.fetch_sub(released);
     }
     if (firstFree != nullptr)
     {
         // 安全批次统一入账并发布，其他线程不能读到尚在重连的freeNext。
-        m_freeCount.fetch_add(count - released);
+        m_freeCount.fetch_add(reclaimed - released);
         putFree(firstFree, lastFree);
     }
     return released;
@@ -365,7 +342,7 @@ SemaphoreResult SemaphoreEventPool::allocate(size_t count, bool initial)
     } while (!m_allocated.compare_exchange_weak(allocated, allocated + reserved));
     SemaphoreEventRecord* first = nullptr;
     SemaphoreEventRecord* last = nullptr;
-    const uint64_t timestamp = m_config.shrink ? now() : 0;
+    const uint64_t timestamp = m_config.shrink ? SemaphoreDeadline::now() : 0;
     for (size_t index = 0; index < reserved; ++index)
     {
         SemaphoreEventRecord* node = nullptr;
@@ -400,7 +377,7 @@ SemaphoreResult SemaphoreEventPool::allocate(size_t count, bool initial)
     m_unreservedCapacity.fetch_add(reserved);
     if (!initial)
     {
-        const uint64_t timestamp = now();
+        const uint64_t timestamp = SemaphoreDeadline::now();
         uint64_t previous = m_lastGrow.load();
         while (previous < timestamp && !m_lastGrow.compare_exchange_weak(previous, timestamp))
         {
@@ -461,11 +438,9 @@ SemaphoreResult SemaphoreEventPool::begin(SemaphoreEventRecord*& record)
         // 提前增长失败不撤销已经取得的记录；回调每次需求最多执行一次。
         grow();
     }
-    record->m_destroy = false;
     record->m_idleSince = 0;
-    // 记录尚未登记；后面的head发布CAS向读者发布这三个初值。
+    // 记录尚未登记；后面的head发布CAS向读者发布这两个初值。
     record->m_state.store(0, std::memory_order_relaxed);
-    record->m_references.store(2, std::memory_order_relaxed);
     uintptr_t head = m_head.load();
     do
     {
@@ -477,43 +452,36 @@ SemaphoreResult SemaphoreEventPool::begin(SemaphoreEventRecord*& record)
 
 bool SemaphoreEventPool::finish(SemaphoreEventRecord* record)
 {
-    // 一个等待者独占这一份引用，读者保护只覆盖链访问，不覆盖系统睡眠。
+    // 只有本等待者能发布状态3；帮手可以先摘链，但在此之前不能回收记录。
     uint32_t waiting = 0;
     record->m_state.compare_exchange_strong(waiting, 2);
-    const bool notified = record->m_state.load() == 1;
-    record->m_next.fetch_or(uintptr_t(1));
-    if (!enter())
-    {
-        // 链引用仍存活；后续申请或静止析构帮助摘除，不泄漏等待者引用。
-        release(record);
-        return notified;
-    }
+    const bool notified = waiting == 1;
+    const uintptr_t next = record->m_next.fetch_or(uintptr_t(1)) & ~uintptr_t(1);
     uintptr_t expected = reinterpret_cast<uintptr_t>(record);
-    const uintptr_t next = record->m_next.load() & ~uintptr_t(1);
     if (m_head.compare_exchange_strong(expected, next))
     {
-        // 删除标记阻止扫描者再改此next，成功摘下链头即同时取得等待者和链两份引用。
-        // 其他扫描者只能借用该记录，不能再次摘除；读者保护仍覆盖安全回收。
-        record->m_references.store(0, std::memory_order_relaxed);
-        leave();
+        // 标记后的next不能再被其他帮助者改写；只有摘除成功者拥有回收权。
+        record->m_state.store(3, std::memory_order_release);
         if (m_readers.load() == 0)
         {
-            // 摘除后出现静止点，后来读者无法再取得旧地址，可直接归还而不绕退役栈。
-            record->m_idleSince = m_config.shrink ? now() : 0;
+            record->m_idleSince = m_config.shrink ? SemaphoreDeadline::now() : 0;
             m_freeCount.fetch_add(1);
             putFree(record, record);
         }
         else
         {
-            // 尚有借用者时保留记录所有权，交给有预算的退役回收，不等待其退出。
             retire(record);
         }
         return notified;
     }
-    sweep();
-    release(record);
-    size_t budget = 64;
-    reclaim(budget, true);
+    // 这是本次等待者对record的最后一次访问；随后仅在读者区内帮助处理当前登记链。
+    record->m_state.store(3, std::memory_order_release);
+    if (enter())
+    {
+        sweep();
+        size_t budget = 64;
+        reclaim(budget, true);
+    }
     return notified;
 }
 
@@ -568,7 +536,7 @@ SemaphoreResult SemaphoreEventPool::maintain(size_t& released)
         return SemaphoreResult(SEMAPHORE_CAPACITY);
     }
     const uint64_t grows = m_grows.load();
-    const uint64_t timestamp = now();
+    const uint64_t timestamp = SemaphoreDeadline::now();
     const uint64_t last = m_lastGrow.load();
     const SemaphoreShrinkContext context = {m_config.initialCapacity, grows, m_capacity.load(), m_freeCount.load(),
         timestamp >= last ? timestamp - last : 0, grows != 0};
@@ -607,11 +575,10 @@ SemaphoreResult SemaphoreEventPool::maintain(size_t& released)
             }
             if (m_unreservedCapacity.compare_exchange_weak(available, available - 1))
             {
-                m_shrinkReserved.fetch_add(1);
                 break;
             }
         }
-        node->m_destroy = shrink;
+        node->m_state.store(shrink ? 4 : 3, std::memory_order_relaxed);
         retire(node);
     }
     released += reclaim(reclaimBudget, true);

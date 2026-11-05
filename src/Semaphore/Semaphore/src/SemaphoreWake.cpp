@@ -38,8 +38,7 @@ m_sleepers(0)
         throw std::system_error(std::make_error_code(std::errc::not_supported));
     }
 #ifdef _WIN32
-    // Win8+公开地址等待API由KernelBase导出；Kernel32并不保证转发这些名称。
-    // 仅借用进程已加载的系统模块，旧系统/缺失导出仍走事件后备。
+    // 已发布的函数对直接用于构造，模块查询辅助函数只走首次解析的慢路径。
     m_waitAddress = s_cachedWaitAddress.load(std::memory_order_acquire);
     if (m_waitAddress != nullptr)
     {
@@ -47,26 +46,10 @@ m_sleepers(0)
     }
     else
     {
-        HMODULE kernel = ::GetModuleHandleW(L"kernelbase.dll");
-        if (kernel == nullptr)
-        {
-            kernel = ::GetModuleHandleW(L"kernel32.dll");
-        }
-        if (kernel != nullptr)
-        {
-            m_waitAddress = reinterpret_cast<void*>(::GetProcAddress(kernel, "WaitOnAddress"));
-            m_wakeAddress = reinterpret_cast<void*>(::GetProcAddress(kernel, "WakeByAddressAll"));
-        }
-        if (m_waitAddress != nullptr && m_wakeAddress != nullptr)
-        {
-            s_cachedWakeAddress.store(m_wakeAddress, std::memory_order_relaxed);
-            s_cachedWaitAddress.store(m_waitAddress, std::memory_order_release);
-        }
+        loadAddressFunctions();
     }
-    if (m_waitAddress == nullptr || m_wakeAddress == nullptr)
+    if (!canWaitAddress())
     {
-        m_waitAddress = nullptr;
-        m_wakeAddress = nullptr;
         m_handle = ::CreateEventW(nullptr, TRUE, FALSE, nullptr);
         if (m_handle == nullptr)
         {
@@ -108,17 +91,12 @@ SemaphoreResult SemaphoreWake::notify(std::atomic<uint32_t>* address)
     {
         return notifyAddress(*address);
     }
-    // 业务发布在前，登记读在后；等待方登记在前、谓词重查在后，全部seq_cst。
-    // 因而两者不可能同时漏看对方：无人登记时无需更新提示字。
+    // 无等待者是通知热路径，直接返回，避免进入提示字更新函数。
     if (m_sleepers.load() == 0)
     {
         return SemaphoreResult();
     }
-    uint32_t current = m_word.load();
-    while (current != UINT32_MAX && !m_word.compare_exchange_weak(current, current + 1))
-    {
-
-    }
+    publishHint();
     if (canWaitAddress())
     {
         return notifyAddress(m_word);
@@ -189,7 +167,7 @@ bool SemaphoreWake::canSignalAndWait(const SemaphoreWake& waitOn) const
 SemaphoreResult SemaphoreWake::signalAndSleep(SemaphoreWake& waitOn, uint32_t expected, uint32_t milliseconds)
 {
 #ifdef _WIN32
-    // 与兼容sleepNative相同：先复位后检查提示字，期间发布不能落入睡眠缝隙。
+    // 先复位目标事件，再检查提示字；期间的新发布不能落入睡眠缝隙。
     if (!::ResetEvent(waitOn.m_handle))
     {
         return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, static_cast<int32_t>(::GetLastError()));
@@ -200,11 +178,7 @@ SemaphoreResult SemaphoreWake::signalAndSleep(SemaphoreWake& waitOn, uint32_t ex
     }
     if (m_sleepers.load() != 0)
     {
-        uint32_t current = m_word.load();
-        while (current != UINT32_MAX && !m_word.compare_exchange_weak(current, current + 1))
-        {
-
-        }
+        publishHint();
     }
     const DWORD waited = ::SignalObjectAndWait(m_handle, waitOn.m_handle, milliseconds, FALSE);
     if (waited == WAIT_OBJECT_0)
@@ -244,7 +218,42 @@ void SemaphoreWake::leaveWait()
 SemaphoreResult SemaphoreWake::sleep(
     uint32_t expected, uint32_t milliseconds, std::atomic<uint32_t>* address)
 {
-    return address != nullptr ? sleepAddress(*address, expected, milliseconds) : sleepNative(expected, milliseconds);
+    if (address != nullptr || canWaitAddress())
+    {
+        return sleepAddress(address != nullptr ? *address : m_word, expected, milliseconds);
+    }
+#ifdef _WIN32
+    // 兼容后端先复位再比较。另一等待者可消除提示，固定32ms补查保证无永久睡眠。
+    if (!::ResetEvent(m_handle))
+    {
+        return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, static_cast<int32_t>(::GetLastError()));
+    }
+    if (m_word.load() != expected)
+    {
+        return SemaphoreResult();
+    }
+    const DWORD result = ::WaitForSingleObject(m_handle, milliseconds);
+    if (result == WAIT_OBJECT_0)
+    {
+        return SemaphoreResult();
+    }
+    return SemaphoreResult(result == WAIT_TIMEOUT ? SEMAPHORE_TIMEOUT : SEMAPHORE_SYSTEM_ERROR, false,
+        result == WAIT_TIMEOUT ? 0 : static_cast<int32_t>(::GetLastError()));
+#elif defined(__APPLE__)
+    if (m_word.load() != expected)
+    {
+        return SemaphoreResult();
+    }
+    const long result = dispatch_semaphore_wait(static_cast<dispatch_semaphore_t>(m_handle),
+        dispatch_time(DISPATCH_TIME_NOW, static_cast<int64_t>(milliseconds) * 1000000));
+    if (result == 0)
+    {
+        m_hint.store(0);
+    }
+    return SemaphoreResult(result == 0 ? SEMAPHORE_OK : SEMAPHORE_TIMEOUT);
+#else
+    return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
+#endif
 }
 
 bool SemaphoreWake::canBlock()
@@ -272,8 +281,47 @@ void SemaphoreWake::recordCleanupFailure()
     }
 }
 
+void SemaphoreWake::loadAddressFunctions()
+{
+#ifdef _WIN32
+    // Win8+公开地址等待API由KernelBase导出；Kernel32并不保证转发这些名称。
+    // 仅借用进程已加载的系统模块，旧系统/缺失导出仍走事件后备。
+    HMODULE kernel = ::GetModuleHandleW(L"kernelbase.dll");
+    if (kernel == nullptr)
+    {
+        kernel = ::GetModuleHandleW(L"kernel32.dll");
+    }
+    if (kernel != nullptr)
+    {
+        m_waitAddress = reinterpret_cast<void*>(::GetProcAddress(kernel, "WaitOnAddress"));
+        m_wakeAddress = reinterpret_cast<void*>(::GetProcAddress(kernel, "WakeByAddressSingle"));
+    }
+    if (m_waitAddress != nullptr && m_wakeAddress != nullptr)
+    {
+        s_cachedWakeAddress.store(m_wakeAddress, std::memory_order_relaxed);
+        s_cachedWaitAddress.store(m_waitAddress, std::memory_order_release);
+        return;
+    }
+    m_waitAddress = nullptr;
+    m_wakeAddress = nullptr;
+#endif
+}
+
+void SemaphoreWake::publishHint()
+{
+    // 业务发布在前，登记读在后；等待方登记在前、谓词重查在后，全部seq_cst。
+    // 因而两者不可能同时漏看对方：无人登记时无需更新提示字。
+    uint32_t current = m_word.load();
+    while (current != UINT32_MAX && !m_word.compare_exchange_weak(current, current + 1))
+    {
+
+    }
+}
+
 SemaphoreResult SemaphoreWake::notifyAddress(std::atomic<uint32_t>& word)
 {
+    // 一个计数发布只增加一个许可；事件记录也只有一位等待者，eventAll由池逐条提示。
+    // 每次只唤醒一人，避免无许可的线程一起恢复并重新争用计数。
 #ifdef _WIN32
     if (m_wakeAddress == nullptr)
     {
@@ -283,7 +331,7 @@ SemaphoreResult SemaphoreWake::notifyAddress(std::atomic<uint32_t>& word)
     reinterpret_cast<SemaphoreWakeAddressFunction>(m_wakeAddress)(&word);
 #elif defined(__EMSCRIPTEN__)
 #ifdef __EMSCRIPTEN_PTHREADS__
-    const int32_t result = emscripten_futex_wake(&word, INT_MAX);
+    const int32_t result = emscripten_futex_wake(&word, 1);
     if (result < 0)
     {
         return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, -result);
@@ -292,7 +340,7 @@ SemaphoreResult SemaphoreWake::notifyAddress(std::atomic<uint32_t>& word)
     return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
 #endif
 #elif defined(__linux__) || defined(__ANDROID__)
-    if (::syscall(SYS_futex, &word, FUTEX_WAKE_PRIVATE, INT_MAX, nullptr, nullptr, 0) < 0)
+    if (::syscall(SYS_futex, &word, FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0) < 0)
     {
         return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, errno);
     }
@@ -345,46 +393,6 @@ SemaphoreResult SemaphoreWake::sleepAddress(
     }
     return SemaphoreResult(
         error == ETIMEDOUT ? SEMAPHORE_TIMEOUT : SEMAPHORE_SYSTEM_ERROR, false, error == ETIMEDOUT ? 0 : error);
-#else
-    return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
-#endif
-}
-
-SemaphoreResult SemaphoreWake::sleepNative(uint32_t expected, uint32_t milliseconds)
-{
-    if (canWaitAddress())
-    {
-        return sleepAddress(m_word, expected, milliseconds);
-    }
-#ifdef _WIN32
-    // 兼容后端先复位再比较。另一等待者可消除提示，固定32ms补查保证无永久睡眠。
-    if (!::ResetEvent(m_handle))
-    {
-        return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, static_cast<int32_t>(::GetLastError()));
-    }
-    if (m_word.load() != expected)
-    {
-        return SemaphoreResult();
-    }
-    const DWORD result = ::WaitForSingleObject(m_handle, milliseconds);
-    if (result == WAIT_OBJECT_0)
-    {
-        return SemaphoreResult();
-    }
-    return SemaphoreResult(result == WAIT_TIMEOUT ? SEMAPHORE_TIMEOUT : SEMAPHORE_SYSTEM_ERROR, false,
-        result == WAIT_TIMEOUT ? 0 : static_cast<int32_t>(::GetLastError()));
-#elif defined(__APPLE__)
-    if (m_word.load() != expected)
-    {
-        return SemaphoreResult();
-    }
-    const long result = dispatch_semaphore_wait(static_cast<dispatch_semaphore_t>(m_handle),
-        dispatch_time(DISPATCH_TIME_NOW, static_cast<int64_t>(milliseconds) * 1000000));
-    if (result == 0)
-    {
-        m_hint.store(0);
-    }
-    return SemaphoreResult(result == 0 ? SEMAPHORE_OK : SEMAPHORE_TIMEOUT);
 #else
     return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
 #endif

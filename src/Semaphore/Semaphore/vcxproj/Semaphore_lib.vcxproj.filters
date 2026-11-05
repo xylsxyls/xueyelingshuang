@@ -4,7 +4,13 @@
     <ClInclude Include="..\src\Semaphore.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\SemaphoreDeadline.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\SemaphoreResult.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SemaphoreResult.inl">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\SemaphoreWake.h">
@@ -33,6 +39,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Semaphore.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SemaphoreDeadline.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\SemaphoreResult.cpp">

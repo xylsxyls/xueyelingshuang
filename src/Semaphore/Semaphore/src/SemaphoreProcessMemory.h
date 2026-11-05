@@ -5,7 +5,7 @@
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 #endif
-#if defined(__ANDROID__) || (defined(__APPLE__) && TARGET_OS_IPHONE) || defined(PROCESS_WORK_PORTABLE_NOTIFY)
+#if defined(__ANDROID__) || (defined(__APPLE__) && TARGET_OS_IPHONE)
 #define SEMAPHORE_SHARED_COUNTER 1
 #endif
 
@@ -74,8 +74,18 @@ public:
     SemaphoreResult close();
 
 private:
-    // Windows桌面算法验证用映射句柄
-    void* m_handle;
+    /** 禁止复制映射、描述符和撤名责任
+    @param [in] other 不使用
+    */
+    SemaphoreProcessMemory(const SemaphoreProcessMemory& other);
+
+    /** 禁止覆盖另一实例仍持有的资源
+    @param [in] other 不使用
+    @return 不提供实现
+    */
+    SemaphoreProcessMemory& operator=(const SemaphoreProcessMemory& other);
+
+private:
     // POSIX目录描述符
     int32_t m_directoryDescriptor;
     // POSIX映射文件描述符

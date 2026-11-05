@@ -12,7 +12,6 @@
 
 SemaphoreProcessMemory::SemaphoreProcessMemory() :
 m_words(nullptr),
-m_handle(nullptr),
 m_directoryDescriptor(-1),
 m_descriptor(-1),
 m_created(false)
@@ -102,34 +101,15 @@ bool SemaphoreProcessMemory::compareExchange(int32_t* value, int32_t expected, i
 
 SemaphoreResult SemaphoreProcessMemory::open(const std::string& logicalName, int32_t limit)
 {
-#ifndef SEMAPHORE_SHARED_COUNTER
+#if !defined(SEMAPHORE_SHARED_COUNTER) || defined(_WIN32)
     (void)logicalName;
     (void)limit;
     return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
-#elif defined(_WIN32)
-    // 仅桌面算法测试，不代表手机文件权限和生命周期已验证。
-    const std::string nativeName = logicalName + ".s";
-    m_handle = limit > 0 ? ::CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, 2 * sizeof(int32_t),
-                               nativeName.c_str())
-                         : ::OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, nativeName.c_str());
-    if (m_handle == nullptr)
-    {
-        return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, static_cast<int32_t>(::GetLastError()));
-    }
-    const bool created = limit > 0 && ::GetLastError() != ERROR_ALREADY_EXISTS;
-    m_words = static_cast<int32_t*>(::MapViewOfFile(m_handle, FILE_MAP_ALL_ACCESS, 0, 0, 2 * sizeof(int32_t)));
-    if (m_words == nullptr)
-    {
-        return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, static_cast<int32_t>(::GetLastError()));
-    }
-    if (created)
-    {
-        compareExchange(m_words + 1, 0, limit);
-    }
-    const int32_t maximum = load(m_words + 1);
-    const int32_t count = load(m_words);
-    return SemaphoreResult(maximum > 0 && count >= 0 && count <= maximum ? SEMAPHORE_OK : SEMAPHORE_INVALID);
 #else
+    if (m_words != nullptr || m_descriptor >= 0 || m_directoryDescriptor >= 0 || m_created || limit < 0)
+    {
+        return SemaphoreResult(SEMAPHORE_INVALID);
+    }
     m_name = "m_" + logicalName + ".s";
     directorySealed().store(true);
     m_directoryDescriptor = openDirectory(directory());
@@ -144,12 +124,13 @@ SemaphoreResult SemaphoreProcessMemory::open(const std::string& logicalName, int
         m_created = m_descriptor >= 0;
         if (m_descriptor < 0 && errno == EEXIST)
         {
-            m_descriptor = ::openat(m_directoryDescriptor, m_name.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
+            // 先非阻塞打开再检查类型，错误的FIFO名称不能把调用者挂在openat内。
+            m_descriptor = ::openat(m_directoryDescriptor, m_name.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
         }
     }
     else
     {
-        m_descriptor = ::openat(m_directoryDescriptor, m_name.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
+        m_descriptor = ::openat(m_directoryDescriptor, m_name.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
     }
     if (m_descriptor < 0)
     {
@@ -249,33 +230,7 @@ SemaphoreResult SemaphoreProcessMemory::unlinkName()
 SemaphoreResult SemaphoreProcessMemory::close()
 {
     SemaphoreResult result;
-#ifdef _WIN32
-    if (m_words != nullptr)
-    {
-        if (!::UnmapViewOfFile(m_words))
-        {
-            result = SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, static_cast<int32_t>(::GetLastError()));
-        }
-        else
-        {
-            m_words = nullptr;
-        }
-    }
-    if (m_handle != nullptr)
-    {
-        if (!::CloseHandle(m_handle))
-        {
-            if (result.status == SEMAPHORE_OK)
-            {
-                result = SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, static_cast<int32_t>(::GetLastError()));
-            }
-        }
-        else
-        {
-            m_handle = nullptr;
-        }
-    }
-#elif defined(SEMAPHORE_SHARED_COUNTER)
+#if defined(SEMAPHORE_SHARED_COUNTER) && !defined(_WIN32)
     if (m_created)
     {
         result = unlinkName();

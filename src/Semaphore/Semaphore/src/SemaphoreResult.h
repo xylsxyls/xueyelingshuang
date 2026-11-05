@@ -87,3 +87,5 @@ public:
     SemaphoreSignalWaitResult(SemaphoreStatus value = SEMAPHORE_OK, SemaphoreCommitState signal = SEMAPHORE_COMMIT_NONE,
         SemaphoreCommitState wait = SEMAPHORE_COMMIT_NONE, int32_t error = 0);
 };
+
+#include "SemaphoreResult.inl"

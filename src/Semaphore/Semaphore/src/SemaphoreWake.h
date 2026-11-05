@@ -21,7 +21,7 @@ public:
     */
     uint32_t snapshot() const;
 
-    /** 更新比较字并提示所有系统等待者
+    /** 更新比较字并提示系统等待者；地址后端至多唤醒一人，兼容后端可能广播
     @param [in] address 非空时直接提示该稳定事件记录地址，不修改公共比较字；借用期由事件池保护
     @return 提示结果；调用方保留自己的提交状态
     */
@@ -83,7 +83,15 @@ public:
     static void recordCleanupFailure();
 
 private:
-    /** 提示等待指定地址的线程，不积存系统许可
+    /** 冷路径解析并发布完整地址等待函数对，缺少任一导出则清空；首次竞争者各自查询，不相互等待
+    */
+    void loadAddressFunctions();
+
+    /** 调用者已观察到登记等待者，递增提示字，饱和后不回绕
+    */
+    void publishHint();
+
+    /** 提示等待指定地址的一位线程，不积存系统许可；事件广播由池逐条提示
     @param [in,out] word 生命周期已受调用者保护的32位原子字
     @return 系统提示结果，不改变业务状态
     */
@@ -96,13 +104,6 @@ private:
     @return 系统提示、超时或错误
     */
     SemaphoreResult sleepAddress(std::atomic<uint32_t>& word, uint32_t expected, uint32_t milliseconds);
-
-    /** 执行一次原生比较等待，调用方已登记系统睡眠参与者
-    @param [in] expected 比较字快照
-    @param [in] milliseconds 本次相对预算
-    @return 原生提示/超时/失败
-    */
-    SemaphoreResult sleepNative(uint32_t expected, uint32_t milliseconds);
 
     /** 禁止复制系统资源
     @param [in] other 不使用
@@ -122,7 +123,7 @@ private:
     void* m_handle;
     // 动态解析的Windows地址等待函数
     void* m_waitAddress;
-    // 动态解析的Windows广播函数
+    // 动态解析的Windows单个地址等待者提示函数
     void* m_wakeAddress;
     // Apple未消费提示至多一个；不是互斥门
     std::atomic<uint32_t> m_hint;
