@@ -26,9 +26,19 @@ MapValueProxy<KeyType, ValueType, LessType, MaxLevel>::~MapValueProxy()
 template <typename KeyType, typename ValueType, typename LessType, size_t MaxLevel>
 MapValueProxy<KeyType, ValueType, LessType, MaxLevel>& MapValueProxy<KeyType, ValueType, LessType, MaxLevel>::operator=(const ValueType& value)
 {
-    if (m_map != nullptr)
+    if (m_map == nullptr)
     {
-        m_map->set(m_key, value);
+        throw LockFreeMapError(LOCK_FREE_MAP_INVALID);
+    }
+    LockFreeMapStatus status;
+    do
+    {
+        status = m_map->lockFreeMapSet(m_key, value);
+    }
+    while (status == LOCK_FREE_MAP_CONFLICT);
+    if (status != LOCK_FREE_MAP_COMMITTED)
+    {
+        throw LockFreeMapError(status);
     }
     return *this;
 }
@@ -40,12 +50,18 @@ MapValueProxy<KeyType, ValueType, LessType, MaxLevel>& MapValueProxy<KeyType, Va
     {
         return *this;
     }
-    ValueType otherValue = other.value(ValueType());
-    if (m_map != nullptr)
+    if (other.m_map == nullptr)
     {
-        m_map->set(m_key, otherValue);
+        throw LockFreeMapError(LOCK_FREE_MAP_INVALID);
     }
-    return *this;
+    ValueType otherValue = ValueType();
+    LockFreeMapToken token;
+    const LockFreeMapStatus status = other.m_map->lockFreeMapGet(other.m_key, otherValue, token);
+    if (status != LOCK_FREE_MAP_OK && status != LOCK_FREE_MAP_NOT_FOUND)
+    {
+        throw LockFreeMapError(status);
+    }
+    return operator=(otherValue);
 }
 
 template <typename KeyType, typename ValueType, typename LessType, size_t MaxLevel>

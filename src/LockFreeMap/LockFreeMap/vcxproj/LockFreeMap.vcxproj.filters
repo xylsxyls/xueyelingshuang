@@ -53,4 +53,22 @@
       <Filter>头文件</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LockFreeMapContract.h" />
+    <None Include="..\src\LockFreeMapContract.inl" />
+    <ClInclude Include="..\src\LockFreeMapIndex.h" />
+    <None Include="..\src\LockFreeMapIndex.inl" />
+    <ClInclude Include="..\src\LockFreeMapPool.h" />
+    <None Include="..\src\LockFreeMapPool.inl" />
+    <ClInclude Include="..\src\LockFreeMapReclamation.h" />
+    <None Include="..\src\LockFreeMapReclamation.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LockFreeMapClock.h" />
+    <None Include="..\src\LockFreeMapClock.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LockFreeMapMacroDll.h" />
+    <ClInclude Include="..\src\LockFreeMapMacroLib.h" />
+  </ItemGroup>
 </Project>

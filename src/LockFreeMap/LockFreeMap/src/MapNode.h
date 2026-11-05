@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/** LockFreeMap内部跳表节点
-@note 节点一旦插入跳表，不会在并发接口中物理删除，避免无锁遍历过程中访问到已释放节点。
+/** 旧跳表实现的源码兼容类型
+@note 当前 LockFreeMap 使用有序索引和可回收双池，不再实例化此类型
 */
 template <typename KeyType, typename ValueType, size_t MaxLevel>
 struct MapNode
@@ -36,7 +36,7 @@ public:
     /** 追加一个保留值版本
     @param [in] valueHolder 值版本节点，不能为空
     @return 追加成功返回true，valueHolder为空时返回false
-    @note 可和同一个MapNode上的其它appendRetainedValue并发调用。
+    @note 可和同一个MapNode上的其它appendRetainedValue并发调用
     */
     bool appendRetainedValue(MapValueHolder<ValueType>* valueHolder);
 

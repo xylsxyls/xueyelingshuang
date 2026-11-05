@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "LockFreeMapMacro.h"
-#include "MapNode.h"
-#include "MapValueHolder.h"
+#include "LockFreeMapContract.h"
+#include "LockFreeMapIndex.h"
 #include "MapValueProxy.h"
 #include <atomic>
 #include <functional>
@@ -11,32 +11,116 @@
 #include <utility>
 #include <vector>
 
-/** 无锁有序Map
-@note 本类使用无锁skip list保存键，默认按std::less<KeyType>升序排列。
-@note 本类只依赖C++11标准库，不使用第三方库，不使用mutex/critical section等锁。
-@note set/insert/erase/get/contains/count/clear/forEach/keys/values/toVector/first/last/lowerBound/upperBound均可和其它读写接口并发调用。
-@note erase是逻辑删除，不会在并发接口中物理移除节点；clear通过切换generation隐藏旧值，复杂度为O(1)。
-@note clearAndFreeMemory只能在外部保证没有其它线程访问本对象时调用，否则读线程可能访问到被释放节点。
-@note count和遍历类接口在并发写入时返回弱一致结果：不会崩溃，不保证包含调用期间发生的所有新写入。
-@note 模板定义随头文件发布，由调用方实例化，不使用DLL导入或导出声明。
+/** 遵循 BASE-LF-1.0 的无锁有序容器
+@note 有序键索引的查询与覆盖为 O(log n)，结构变更为 O(n)，逻辑清空为 O(1)
+@note 键和值使用独立池回收旧对象；元数据有界，不使用线程局部登记或后台线程
+@note 析构、配置及 clearAndFreeMemory 必须由调用方保证外部静止
+@note 比较器和策略必须线程安全、短小；用户类型的析构函数不得抛异常
+@note MaxLevel 仅为旧源码兼容保留，当前实现不使用跳表层数
 */
 template <typename KeyType, typename ValueType, typename LessType = std::less<KeyType>, size_t MaxLevel = 16>
 class LockFreeMap
 {
 public:
+    /** 在首次使用前或显式释放后配置双池，调用期间要求外部静止
+    @param [in] config 独立池预算及有界保护记录配置
+    @return 成功返回 OK；失败不提交配置，保留原配置及数据
+    */
+    LockFreeMapStatus lockFreeMapConfigure(const LockFreeMapConfig& config);
+
+    /** 在保护范围内复制当前不可变值版本及其凭据
+    @param [in] key 按比较器查询的键
+    @param [out] value 值副本；用户赋值抛异常时可能已部分修改输出
+    @param [out] token 仅在成功返回 OK 时写入凭据
+    @return 返回 OK、NOT_FOUND 或未提交的错误状态
+    */
+    LockFreeMapStatus lockFreeMapGet(const KeyType& key, ValueType& value, LockFreeMapToken& token) const;
+
+    /** 发布完整候选，键已存在时复制实际胜出的条目
+    @param [in] key 按比较器查询的键
+    @param [in] candidate 已构造候选；调用方在所有结果下均保留原对象的所有权
+    @param [out] value 返回 COMMITTED 或 EXISTS 时的实际值副本
+    @param [out] token 返回 COMMITTED 或 EXISTS 时的实际条目凭据
+    @return 返回 COMMITTED、EXISTS、CONFLICT 或未提交错误；内部不调用工厂
+    */
+    LockFreeMapStatus lockFreeMapGetOrInsert(const KeyType& key, const ValueType& candidate, ValueType& value, LockFreeMapToken& token);
+
+    /** 仅替换凭据仍匹配的条目版本
+    @param [in] key 按比较器查询的键
+    @param [in] token 原实例及条目版本凭据
+    @param [in] value 已完整构造的候选值
+    @return 返回 COMMITTED、CONFLICT 或未提交的错误状态
+    */
+    LockFreeMapStatus lockFreeMapUpdate(const KeyType& key, const LockFreeMapToken& token, const ValueType& value);
+
+    /** 仅删除凭据仍匹配的条目版本
+    @param [in] key 按比较器查询的键
+    @param [in] token 原条目凭据
+    @return 返回 COMMITTED、CONFLICT 或未提交错误；不申请键槽或值槽
+    */
+    LockFreeMapStatus lockFreeMapErase(const KeyType& key, const LockFreeMapToken& token);
+
+    /** 先复制输出再原子删除；复制失败不会删除条目
+    @param [in] key 按比较器查询的键
+    @param [out] value 返回 COMMITTED 时由调用方拥有的值副本
+    @return 返回 COMMITTED、NOT_FOUND、CONFLICT 或未提交错误
+    */
+    LockFreeMapStatus lockFreeMapExtract(const KeyType& key, ValueType& value);
+
+    /** 在受保护根验证时刻选择 LessType 排序的最后一个键
+    @param [out] key 选中的键副本
+    @param [out] value 由调用方拥有的值副本
+    @param [out] token 选中条目的版本凭据
+    @return 返回 OK、NOT_FOUND 或未提交的错误状态
+    */
+    LockFreeMapStatus lockFreeMapLast(KeyType& key, ValueType& value, LockFreeMapToken& token) const;
+
+    /** 仅在本次根 CAS 时凭据仍对应最大条目时提取
+    @param [in] token 此前受保护查询得到的凭据
+    @param [out] key 返回 COMMITTED 时实际提取的键
+    @param [out] value 返回 COMMITTED 时由调用方拥有的值副本
+    @return 返回 COMMITTED、CONFLICT 或未提交的错误状态
+    @note 根 CAS 前插入更高键会导致 CONFLICT；选桶本身不预留桶内任务
+    */
+    LockFreeMapStatus lockFreeMapExtractLast(const LockFreeMapToken& token, KeyType& key, ValueType& value);
+
+    /** 不附带版本条件地发布键值版本
+    @param [in] key 按比较器查询的键
+    @param [in] value 待复制的候选值
+    @return 返回 COMMITTED、CONFLICT 或未提交的错误状态
+    */
+    LockFreeMapStatus lockFreeMapSet(const KeyType& key, const ValueType& value);
+
+    /** 并发执行有预算的回收，不等待暂停读者退出
+    @param [in] budget 本次最多释放的退役索引条目数
+    @param [out] releasedCapacity 本次实际释放整块内存所归还的槽位数
+    @return 返回 OK 或策略、保护记录不足错误
+    */
+    LockFreeMapStatus lockFreeMapMaintain(size_t budget, size_t& releasedCapacity);
+
+    /** 观察本库管理的存储，不包含键值内部的堆申请
+    @return 各项独立观察结果，不是事务快照或容量预留
+    */
+    LockFreeMapStats lockFreeMapStats() const;
+
+    /** 检查本实现使用的全部原子宽度是否无锁
+    @return 指针、size_t、uint64_t 和 uint32_t 原子均无锁时返回 true
+    */
+    bool lockFreeMapAtomicsSupported() const;
+
     /** 构造函数
     */
     LockFreeMap();
 
     /** 析构函数，释放所有保留节点和值版本
-    @note 析构时外部必须保证没有其它线程继续访问本对象。
+    @note 析构时外部必须保证没有其它线程继续访问本对象
     */
     ~LockFreeMap();
 
     /** 返回下标访问代理
     @param [in] key 键
     @return 返回代理对象，支持map[key] = value写法
-    @note 赋值内部调用set。运算符本身不返回写入状态；需要判断失败时请直接调用set/get。
+    @note 未提交时抛LockFreeMapError；使用lockFreeMapSet可取得详细结果
     */
     MapValueProxy<KeyType, ValueType, LessType, MaxLevel> operator[](const KeyType& key);
 
@@ -44,7 +128,7 @@ public:
     @param [in] key 键
     @param [in] value 值
     @return 返回是否写入成功，内存分配失败或比较函数抛异常时返回false
-    @note 可并发调用。覆盖不会释放旧值，旧值会保留到析构或clearAndFreeMemory。
+    @note 可并发调用。旧值在最后一个受保护索引释放后析构，后续写入或维护分批回收
     */
     bool set(const KeyType& key, const ValueType& value);
 
@@ -52,14 +136,14 @@ public:
     @param [in] key 键
     @param [in] value 值
     @return 插入成功返回true，键已存在、内存分配失败或比较函数抛异常时返回false
-    @note 可并发调用。键存在但属于旧generation或已删除时，允许重新插入。
+    @note 可并发调用。删除或clear后允许重新插入，旧凭据不会重新有效
     */
     bool insert(const KeyType& key, const ValueType& value);
 
     /** 删除键
     @param [in] key 键
     @return 删除成功返回true，键不存在返回false
-    @note 可并发调用。删除只清空当前可见值，不物理移除跳表节点。
+    @note 可并发调用。CAS移除当前索引项，旧索引由安全回收释放；分配失败也返回false
     */
     bool erase(const KeyType& key);
 
@@ -73,7 +157,7 @@ public:
     @param [in] key 键
     @param [out] value 查询成功时写入值副本
     @return 找到返回true，否则返回false
-    @note 可并发调用。
+    @note 可并发调用
     */
     bool get(const KeyType& key, ValueType& value) const;
 
@@ -81,27 +165,27 @@ public:
     @param [in] key 键
     @param [in] defaultValue 默认值
     @return 返回查到的值或默认值
-    @note 可并发调用。
+    @note 可并发调用
     */
     ValueType value(const KeyType& key, const ValueType& defaultValue = ValueType()) const;
 
     /** 判断键是否存在
     @param [in] key 键
     @return 存在返回true
-    @note 可并发调用。
+    @note 可并发调用
     */
     bool contains(const KeyType& key) const;
 
     /** 返回键是否存在，语义对齐std::map::count(key)
     @param [in] key 键
     @return 存在返回1，不存在返回0
-    @note 可并发调用。
+    @note 可并发调用
     */
     size_t count(const KeyType& key) const;
 
     /** 返回当前键数量
     @return 返回当前可见键数量
-    @note 可并发调用；无并发写入时精确，有并发写入时返回弱一致结果。
+    @note 可并发调用；无并发写入时精确，有并发写入时返回弱一致结果
     */
     size_t count() const;
 
@@ -112,43 +196,43 @@ public:
 
     /** 判断是否为空
     @return 为空返回true
-    @note 可并发调用；有并发写入时结果只代表调用瞬间附近状态。
+    @note 可并发调用；有并发写入时结果只代表调用瞬间附近状态
     */
     bool empty() const;
 
     /** 逻辑清空Map
-    @note 可并发调用。该函数不会释放旧节点和值版本，只让旧generation值不可见。
+    @note 可并发调用。O(1)交换空根；旧快照由后续写入/维护回收，不删除clear之后提交的项
     */
     void clear();
 
     /** 清空并释放已保留节点和值版本
-    @note 该函数不是并发安全接口，调用方必须保证没有其它线程访问本对象。
+    @note 要求外部静止；释放包括初始容量在内的全部有效载荷块，保留固定元数据。下次申请按扩容策略增长
     */
     void clearAndFreeMemory();
 
     /** 按key升序遍历当前可见键值
     @param [in] function 回调函数，形如function(const KeyType&, const ValueType&)
     @return 返回回调次数
-    @note 可并发调用；遍历期间新增、覆盖、删除的节点不保证被本轮遍历看到。
+    @note 回调引用仅本次受保护调用内有效。允许重入但占用额外保护记录；异常返回已完成回调次数
     */
     template <typename FunctionType>
     size_t forEach(FunctionType function) const;
 
     /** 读取所有当前可见键
     @return 返回按key升序排列的键列表
-    @note 可并发调用；并发写入时返回弱一致快照。
+    @note 可并发调用；并发写入时返回弱一致快照
     */
     std::vector<KeyType> keys() const;
 
     /** 读取所有当前可见值
     @return 返回按key升序排列的值列表
-    @note 可并发调用；并发写入时返回弱一致快照。
+    @note 可并发调用；并发写入时返回弱一致快照
     */
     std::vector<ValueType> values() const;
 
     /** 读取所有当前可见键值对
     @return 返回按key升序排列的键值对列表
-    @note 可并发调用；并发写入时返回弱一致快照。
+    @note 可并发调用；并发写入时返回弱一致快照
     */
     std::vector<std::pair<KeyType, ValueType>> toVector() const;
 
@@ -156,7 +240,7 @@ public:
     @param [out] key 查询成功时写入最小键
     @param [out] value 查询成功时写入最小键对应的值
     @return 找到返回true，否则返回false
-    @note 可并发调用；并发写入时返回弱一致结果。
+    @note 可并发调用；并发写入时返回弱一致结果
     */
     bool first(KeyType& key, ValueType& value) const;
 
@@ -164,7 +248,7 @@ public:
     @param [out] key 查询成功时写入最大键
     @param [out] value 查询成功时写入最大键对应的值
     @return 找到返回true，否则返回false
-    @note 可并发调用；并发写入时返回弱一致结果。
+    @note 可并发调用；并发写入时返回弱一致结果
     */
     bool last(KeyType& key, ValueType& value) const;
 
@@ -173,7 +257,7 @@ public:
     @param [out] foundKey 查询成功时写入找到的键
     @param [out] value 查询成功时写入找到的值
     @return 找到返回true，否则返回false
-    @note 可并发调用；并发写入时返回弱一致结果。
+    @note 可并发调用；并发写入时返回弱一致结果
     */
     bool lowerBound(const KeyType& key, KeyType& foundKey, ValueType& value) const;
 
@@ -182,151 +266,77 @@ public:
     @param [out] foundKey 查询成功时写入找到的键
     @param [out] value 查询成功时写入找到的值
     @return 找到返回true，否则返回false
-    @note 可并发调用；并发写入时返回弱一致结果。
+    @note 可并发调用；并发写入时返回弱一致结果
     */
     bool upperBound(const KeyType& key, KeyType& foundKey, ValueType& value) const;
 
-    /** 返回跳表最大层数
+    /** 返回为源兼容保留的层数参数（当前内部使用有序索引）
     @return 返回模板参数MaxLevel
     */
     size_t maxLevel() const;
 
-    /** 返回已分配但尚未释放的跳表节点数量
-    @return 返回保留跳表节点数量
-    @note erase/clear后的节点仍计入，析构或clearAndFreeMemory后释放。
+    /** 返回实际尚未析构的键对象数量
+    @return 存活及待安全回收的键数，不是池容量
+    @note 可随并发回收下降；不包含未构造空闲槽位
     */
     size_t retainedNodeCount() const;
 
     /** 返回已分配但尚未释放的值版本数量
     @return 返回保留值版本数量
-    @note set覆盖、erase和clear后的旧值版本仍计入，析构或clearAndFreeMemory后释放。
+    @note 覆盖、erase和clear后的旧版本在安全回收前计入，可随回收下降
     */
     size_t retainedValueCount() const;
 
 private:
-    /** 禁止拷贝构造，避免多个Map对象同时管理同一个跳表节点集合
-    @param [in] other 另一个Map对象
+    /** 执行一次写入尝试，所有可能抛异常的输出复制先于提交
+    @param [in] key 待查键，仅最大项提取时允许 nullptr
+    @param [in] value 候选值，删除时为 nullptr
+    @param [in] token 可选条件凭据，无条件操作时为 nullptr
+    @param [out] outputKey 可选提取键输出，不需要时为 nullptr
+    @param [out] outputValue 可选实际值或提取值输出，不需要时为 nullptr
+    @param [out] outputToken 可选实际条目凭据，不需要时为 nullptr
+    @tparam Mode 0 覆盖，1 插入，2 删除，3 条件更新，4 条件删除，5 最大项提取
+    @return 提交成功或明确的未提交状态
+    */
+    template <uint32_t Mode>
+    LockFreeMapStatus write(const KeyType* key, const ValueType* value, const LockFreeMapToken* token,
+        KeyType* outputKey, ValueType* outputValue, LockFreeMapToken* outputToken)
+#ifdef __EMSCRIPTEN__
+        noexcept
+#endif
+        ;
+
+    /** 复制一个受保护条目
+    @param [in] key 可选查询键，首尾查询时为 nullptr
+    @param [out] outputKey 可选键输出，不需要时为 nullptr
+    @param [out] outputValue 可选值输出，不需要时为 nullptr
+    @param [out] outputToken 可选版本凭据输出，不需要时为 nullptr
+    @param [in] mode 0 查询，1 首项，2 尾项，3 下界，4 上界
+    @return 返回 OK、NOT_FOUND 或明确错误
+    */
+    LockFreeMapStatus read(const KeyType* key, KeyType* outputKey, ValueType* outputValue,
+        LockFreeMapToken* outputToken, uint32_t mode) const
+#ifdef __EMSCRIPTEN__
+        noexcept
+#endif
+        ;
+
+    /** 禁止复制拥有独立回收域的容器
+    @param [in] other 源对象
     */
     LockFreeMap(const LockFreeMap& other);
 
-    /** 禁止赋值，避免多个Map对象同时管理同一个跳表节点集合
-    @param [in] other 另一个Map对象
-    @return 返回当前对象引用
+    /** 禁止复制拥有独立回收域的容器
+    @param [in] other 源对象
+    @return 当前容器引用，函数禁用
     */
     LockFreeMap& operator=(const LockFreeMap& other);
 
-    /** 比较左键是否小于右键
-    @param [in] left 左键
-    @param [in] right 右键
-    @param [out] result 成功时写入比较结果
-    @return 成功返回true，比较函数抛异常时返回false
-    */
-    bool keyLess(const KeyType& left, const KeyType& right, bool& result) const;
-
-    /** 比较两个键是否等价
-    @param [in] left 左键
-    @param [in] right 右键
-    @param [out] result 成功时写入比较结果
-    @return 成功返回true，比较函数抛异常时返回false
-    */
-    bool keyEqual(const KeyType& left, const KeyType& right, bool& result) const;
-
-    /** 生成新节点层数
-    @return 返回1到MaxLevel之间的层数
-    */
-    size_t randomLevel();
-
-    /** 查找键所在位置
-    @param [in] key 键
-    @param [out] predecessors 每一层的前驱节点数组，可为nullptr
-    @param [out] successors 每一层的后继节点数组，可为nullptr
-    @param [out] foundNode 找到等价键时写入节点指针，可为nullptr
-    @return 成功返回true，比较函数抛异常时返回false
-    */
-    bool findPosition(const KeyType& key,
-                      MapNode<KeyType, ValueType, MaxLevel>** predecessors,
-                      MapNode<KeyType, ValueType, MaxLevel>** successors,
-                      MapNode<KeyType, ValueType, MaxLevel>** foundNode) const;
-
-    /** 查找键对应的跳表节点
-    @param [in] key 键
-    @param [out] node 找到时写入节点指针，未找到写入nullptr
-    @return 成功返回true，比较函数抛异常时返回false
-    */
-    bool findNode(const KeyType& key, MapNode<KeyType, ValueType, MaxLevel>** node) const;
-
-    /** 查找或创建键对应的跳表节点
-    @param [in] key 键
-    @param [out] node 成功时写入节点指针
-    @return 成功返回true，内存分配失败或比较函数抛异常时返回false
-    */
-    bool findOrCreateNode(const KeyType& key, MapNode<KeyType, ValueType, MaxLevel>** node);
-
-    /** 创建跳表节点
-    @param [in] key 节点键
-    @param [in] level 节点层数
-    @return 成功返回节点指针，失败返回nullptr
-    */
-    MapNode<KeyType, ValueType, MaxLevel>* createNode(const KeyType& key, size_t level);
-
-    /** 创建值版本节点
-    @param [in] value 值
-    @param [in] generation 逻辑版本
-    @return 成功返回值版本节点指针，失败返回nullptr
-    */
-    MapValueHolder<ValueType>* createValueHolder(const ValueType& value, uint64_t generation);
-
-    /** 释放尚未发布到MapNode的值版本节点
-    @param [in] valueHolder 值版本节点
-    */
-    void releaseUnusedValueHolder(MapValueHolder<ValueType>* valueHolder);
-
-    /** 比较并交换指定层的后继节点
-    @param [in] predecessor 前驱节点，nullptr表示当前层头指针
-    @param [in] level 层下标
-    @param [in,out] expected 期望后继节点，失败时写入实际后继节点
-    @param [in] desired 新后继节点
-    @return 交换成功返回true
-    */
-    bool compareAndSwapNext(MapNode<KeyType, ValueType, MaxLevel>* predecessor,
-                            size_t level,
-                            MapNode<KeyType, ValueType, MaxLevel>*& expected,
-                            MapNode<KeyType, ValueType, MaxLevel>* desired);
-
-    /** 补齐新节点在高层上的链接
-    @param [in] node 已经插入第0层的节点
-    */
-    void linkUpperLevels(MapNode<KeyType, ValueType, MaxLevel>* node);
-
-    /** 释放第0层链表中的所有节点
-    @param [in] node 待释放链表头节点
-    */
-    void releaseNodeList(MapNode<KeyType, ValueType, MaxLevel>* node);
-
-    /** 释放所有保留节点和值版本
-    */
-    void releaseAllNodes();
-
 private:
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-    // 跳表每一层的头指针
-    std::atomic<MapNode<KeyType, ValueType, MaxLevel>*> m_heads[MaxLevel];
-    // 键排序比较函数对象
-    LessType m_less;
-    // 当前逻辑版本，clear通过递增版本隐藏旧值
-    std::atomic<uint64_t> m_generation;
-    // 已分配但尚未释放的跳表节点数量
-    std::atomic<size_t> m_retainedNodeCount;
-    // 已分配但尚未释放的值版本数量
-    std::atomic<size_t> m_retainedValueCount;
-    // 随机层数种子
-    std::atomic<uint32_t> m_randomSeed;
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+    // 独占存储；只读接口通过保护记录访问，不需要 mutable 修饰
+    LockFreeMapIndexStore<KeyType, ValueType, LessType>* m_store;
+    // 构造失败状态保留至配置成功，供业务查询具体原因
+    LockFreeMapStatus m_initialStatus;
 };
 
 #include "LockFreeMap.inl"

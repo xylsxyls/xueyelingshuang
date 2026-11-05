@@ -16,5 +16,5 @@
 
 #if defined(STATIC_LIB)
     #undef LockFreeMapAPI
-    #define LockFreeMapAPI 
+    #define LockFreeMapAPI
 #endif

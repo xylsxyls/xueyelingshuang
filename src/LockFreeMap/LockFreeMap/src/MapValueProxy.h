@@ -1,12 +1,13 @@
 ﻿#pragma once
 #include "LockFreeMapMacro.h"
+#include "LockFreeMapContract.h"
 #include <stddef.h>
 
 template <typename KeyType, typename ValueType, typename LessType, size_t MaxLevel>
 class LockFreeMap;
 
 /** LockFreeMap下标访问代理
-@note 用于支持map[key] = value写法。赋值内部调用set；需要判断写入是否成功时请直接调用set。
+@note 支持map[key] = value。写入失败抛LockFreeMapError；需要返回码时使用lockFreeMapSet
 */
 template <typename KeyType, typename ValueType, typename LessType, size_t MaxLevel>
 class MapValueProxy
@@ -30,14 +31,14 @@ public:
     /** 通过下标代理写入值
     @param [in] value 要写入的值
     @return 返回当前代理对象
-    @note 内部调用LockFreeMap::set。需要判断写入是否成功时，请直接调用set。
+    @note 未提交时抛LockFreeMapError，不再忽略失败
     */
     MapValueProxy& operator=(const ValueType& value);
 
     /** 通过另一个下标代理的当前值写入
     @param [in] other 另一个下标代理
     @return 返回当前代理对象
-    @note other不存在对应值时写入ValueType默认值。
+    @note other不存在对应值时写入ValueType默认值
     */
     MapValueProxy& operator=(const MapValueProxy& other);
 

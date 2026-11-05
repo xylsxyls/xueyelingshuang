@@ -1,3 +1,3 @@
 ﻿#pragma once
 
-#define LockFreeMapAPI 
+#define LockFreeMapAPI

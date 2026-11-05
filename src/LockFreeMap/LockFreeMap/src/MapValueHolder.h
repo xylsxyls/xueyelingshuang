@@ -2,8 +2,8 @@
 #include <atomic>
 #include <stdint.h>
 
-/** LockFreeMap内部值版本节点
-@note 每次set或insert成功都会创建新的值版本，旧版本会保留到clearAndFreeMemory或析构时释放，避免并发读线程访问已释放内存。
+/** 旧跳表实现的值节点兼容类型
+@note 当前 LockFreeMap 的不可变值版本由独立池安全回收，不使用此保留链表
 */
 template <typename ValueType>
 struct MapValueHolder

@@ -1177,7 +1177,15 @@ if __name__ == '__main__':
     list(REMOVE_ITEM wasm_includes "${wasm_local_source}")
     target_include_directories(LockFreeMap PUBLIC ${wasm_includes})
     target_compile_options(LockFreeMap PRIVATE "-iquote${wasm_local_source}")
-    target_compile_options(LockFreeMap PRIVATE -fexceptions -fPIC "-sMEMORY64=${wasm_memory64}" ${wasm_optimization})
+    # The implementation is in headers: exception support belongs to consumers too.
+    target_compile_options(LockFreeMap PUBLIC -fexceptions)
+    target_link_options(LockFreeMap INTERFACE -fexceptions -sABORTING_MALLOC=0)
+    target_compile_options(LockFreeMap PRIVATE -fPIC "-sMEMORY64=${wasm_memory64}" ${wasm_optimization})
+    option(LOCK_FREE_MAP_WASM_PTHREADS "Build and consume with Wasm shared-memory atomics" OFF)
+    if(LOCK_FREE_MAP_WASM_PTHREADS)
+        target_compile_options(LockFreeMap PUBLIC -pthread)
+        target_link_options(LockFreeMap INTERFACE -pthread)
+    endif()
     if(DLLLIB STREQUAL "dll")
         set(wasm_initial_memory 16777216)
         set(wasm_maximum_memory 134217728)
@@ -1441,7 +1449,18 @@ add_custom_command(TARGET LockFreeMap POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${native_macro}" "${SDK_ROOT}/include/LockFreeMap/LockFreeMapMacro.h"
     VERBATIM)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -Wl,-rpath=. -O0 -g -ggdb ")
-    set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
+# 保留工具链的优化参数，只向消费者传递异常及线程依赖
+target_compile_options(LockFreeMap PUBLIC -fexceptions)
+find_package(Threads REQUIRED)
+target_link_libraries(LockFreeMap PUBLIC Threads::Threads)
+# 正式库只声明依赖，不内嵌原子检查程序
+# Linux/Android 的部分原子操作或无锁查询需要 libatomic
+# 自带原子实现的工具链可显式设为空或指定替代库；Apple 使用系统实现
+set(lock_free_map_default_atomic_libraries "")
+if(CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android)$")
+    set(lock_free_map_default_atomic_libraries atomic)
+endif()
+set(LOCK_FREE_MAP_ATOMIC_LIBRARIES "${lock_free_map_default_atomic_libraries}" CACHE STRING "目标原子运行库，可由工具链覆盖或设为空")
+if(LOCK_FREE_MAP_ATOMIC_LIBRARIES)
+    target_link_libraries(LockFreeMap PUBLIC ${LOCK_FREE_MAP_ATOMIC_LIBRARIES})
 endif()
