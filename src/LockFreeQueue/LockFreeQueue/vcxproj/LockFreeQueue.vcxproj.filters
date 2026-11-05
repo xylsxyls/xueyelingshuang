@@ -35,4 +35,81 @@
       <Filter>头文件</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LockFreeQueuePolicy.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <None Include="..\src\LockFreeQueuePolicy.inl">
+      <Filter>头文件</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LockFreeQueueProducer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <None Include="..\src\LockFreeQueueProducer.inl">
+      <Filter>头文件</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LockFreeQueueAtomic.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <None Include="..\src\LockFreeQueueAtomic.inl">
+      <Filter>头文件</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LockFreeQueueArena.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <None Include="..\src\LockFreeQueueArena.inl">
+      <Filter>头文件</Filter>
+    </None>
+    <None Include="..\src\LockFreeQueueArenaAllocation.inl">
+      <Filter>头文件</Filter>
+    </None>
+    <None Include="..\src\LockFreeQueueArenaAuxiliary.inl">
+      <Filter>头文件</Filter>
+    </None>
+    <None Include="..\src\LockFreeQueueArenaMaintenance.inl">
+      <Filter>头文件</Filter>
+    </None>
+    <ClInclude Include="..\src\LockFreeQueueArenaModels.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <None Include="..\src\LockFreeQueueArenaModels.inl">
+      <Filter>头文件</Filter>
+    </None>
+    <ClInclude Include="..\src\LockFreeQueueChannel.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <None Include="..\src\LockFreeQueueChannel.inl">
+      <Filter>头文件</Filter>
+    </None>
+    <ClInclude Include="..\src\LockFreeQueueChannelModels.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <None Include="..\src\LockFreeQueueChannelModels.inl">
+      <Filter>头文件</Filter>
+    </None>
+    <ClInclude Include="..\src\LockFreeQueueModels.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <None Include="..\src\LockFreeQueueModels.inl">
+      <Filter>头文件</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LockFreeQueueMacroDll.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\LockFreeQueueMacroLib.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

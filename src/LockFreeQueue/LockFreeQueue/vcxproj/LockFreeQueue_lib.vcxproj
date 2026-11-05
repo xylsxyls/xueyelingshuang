@@ -104,7 +104,6 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STATIC_LIB;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -125,7 +124,6 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STATIC_LIB;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -147,7 +145,6 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STATIC_LIB;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -171,7 +168,6 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STATIC_LIB;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -189,4 +185,40 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LockFreeQueuePolicy.h" />
+    <None Include="..\src\LockFreeQueue.inl" />
+    <None Include="..\src\LockFreeQueuePolicy.inl" />
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LockFreeQueueProducer.h" />
+    <None Include="..\src\LockFreeQueueProducer.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LockFreeQueueAtomic.h" />
+    <None Include="..\src\LockFreeQueueAtomic.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LockFreeQueueArena.h" />
+    <None Include="..\src\LockFreeQueueArena.inl" />
+    <None Include="..\src\LockFreeQueueArenaAllocation.inl" />
+    <None Include="..\src\LockFreeQueueArenaAuxiliary.inl" />
+    <None Include="..\src\LockFreeQueueArenaMaintenance.inl" />
+    <ClInclude Include="..\src\LockFreeQueueArenaModels.h" />
+    <None Include="..\src\LockFreeQueueArenaModels.inl" />
+    <ClInclude Include="..\src\LockFreeQueueChannel.h" />
+    <None Include="..\src\LockFreeQueueChannel.inl" />
+    <ClInclude Include="..\src\LockFreeQueueChannelModels.h" />
+    <None Include="..\src\LockFreeQueueChannelModels.inl" />
+    <ClInclude Include="..\src\LockFreeQueueModels.h" />
+    <None Include="..\src\LockFreeQueueModels.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\LockFreeQueueMacroDll.h" />
+    <ClInclude Include="..\src\LockFreeQueueMacroLib.h" />
+  </ItemGroup>
 </Project>
