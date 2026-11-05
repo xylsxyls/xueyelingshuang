@@ -28,7 +28,7 @@ maximumCapacity(-1),
 directoryCapacity(1024),
 protectionRecordCount(128),
 inlineScalarValues(true),
-lookupCacheCapacity(256)
+lookupCacheCapacity(4096)
 {
 
 }

@@ -1,40 +1,13 @@
-﻿#ifndef __HASH_MAP_NODE_INL__
-#define __HASH_MAP_NODE_INL__
+﻿#pragma once
 
-template <typename KeyType, typename ValueType>
-HashMapNode<KeyType, ValueType>::HashMapNode(const KeyType& key, const ValueType& value, uint64_t generation) :
+template <typename K, typename V>
+LockFreeHashMapNode<K, V>::LockFreeHashMapNode(const K& key, const V& value, size_t hash, uint64_t generation, uint64_t version) :
+m_next(0),
+m_hash(hash),
+m_generation(generation),
+m_version(version),
 m_key(key),
-m_value(new (std::nothrow) ValueType(value)),
-m_next(nullptr),
-m_generation(generation)
+m_value(value)
 {
 
 }
-
-template <typename KeyType, typename ValueType>
-HashMapNode<KeyType, ValueType>::HashMapNode(const KeyType& key, uint64_t generation) :
-m_key(key),
-m_value(nullptr),
-m_next(nullptr),
-m_generation(generation)
-{
-
-}
-
-template <typename KeyType, typename ValueType>
-HashMapNode<KeyType, ValueType>::~HashMapNode()
-{
-    if (m_value != nullptr)
-    {
-        delete m_value;
-        m_value = nullptr;
-    }
-}
-
-template <typename KeyType, typename ValueType>
-bool HashMapNode<KeyType, ValueType>::hasValue() const
-{
-    return m_value != nullptr;
-}
-
-#endif // __HASH_MAP_NODE_INL__

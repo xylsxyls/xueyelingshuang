@@ -163,7 +163,7 @@ public:
     size_t directoryCapacity;
     // 同时操作和回调重入可借用的记录数，固定分配且无 TLS 登记
     size_t protectionRecordCount;
-    // 类型和原子后端允许时使用槽内标量值与版本编码
+    // 类型和原子后端允许时启用不超过八字节的整数键值副本缓存
     bool inlineScalarValues;
     // 固定缓存格数量，必须是 2 的幂，0 关闭缓存
     size_t lookupCacheCapacity;
@@ -172,7 +172,7 @@ public:
     // 缩容策略所有权句柄，空表示关闭自动缩容
     LockFreeHashMapShrinkPolicy shrinkPolicy;
 public:
-    /** 默认 64 槽、阈值 0、上限 -1、1024 块目录、128 保护记录和 256 缓存格
+    /** 默认 64 槽、阈值 0、上限 -1、1024 块目录、128 保护记录，整数副本缓存 4096 格
     */
     LockFreeHashMapPoolConfig();
 };
@@ -189,12 +189,14 @@ struct LockFreeHashMapPoolStats
     size_t budget;
     // 合并预算的历史高水位
     size_t peakBudget;
-    // 块空闲栈和固定记录缓存中的可复用槽位数
+    // 位图及固定记录缓存中的可复用槽数；活动记录缓存由当前操作暂占
     size_t reusableFree;
-    // 包含在 reusableFree 内，尚未归回块空闲栈的可转移槽位数
+    // 包含在 reusableFree 内，空闲记录中的槽可由其他操作转移，活动记录最多暂占四槽
     size_t cachedFree;
     // 候选、使用中和待回收占用槽位数
     size_t occupied;
+    // 已关闭且等待读者退出后释放的空闲块容量，不计为可复用或占用槽位
+    size_t closedCapacity;
     // 已退役或正在回收的槽位数
     size_t retired;
     // 使用中或已退役但尚未析构的键槽数
@@ -209,17 +211,17 @@ struct LockFreeHashMapPoolStats
     size_t activeProtectionRecords;
     // 结构性保留字节估算，含对象和元数据，不含键值内部另行申请及分配器额外开销
     size_t retainedBytes;
-    // 当前是否使用槽内标量后端
+    // 当前是否实际分配了整数键值副本缓存
     bool inlineScalarValues;
     // 固定查找缓存格数量
     size_t lookupCacheEntries;
-    // 缓存格及其手动对齐余量的字节数
+    // 固定副本数组的元素字节数，不含系统分配器开销
     size_t lookupCacheBytes;
     // 非初始批次成功发布次数，饱和后不回绕
     uint64_t successfulGrowCount;
     // 块及槽数组的系统申请尝试次数，不含固定元数据和键值内部申请
     uint64_t systemAllocationCount;
-    // 结构及池 CAS 重试诊断计数，饱和后不回绕
+    // 保留诊断字段；当前未采样内部 CAS 重试，零不表示没有竞争
     uint64_t casRetries;
 };
 

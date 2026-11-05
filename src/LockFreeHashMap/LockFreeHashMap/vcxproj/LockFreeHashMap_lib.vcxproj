@@ -21,11 +21,11 @@
   <ItemGroup>
     <ClInclude Include="..\src\LockFreeHashMapAPI.h" />
     <ClInclude Include="..\src\LockFreeHashMapMacro.h" />
-    <ClInclude Include="..\src\LockFreeHashMapAtomic.h" />
+    <ClInclude Include="..\src\LockFreeHashMapEpoch.h" />
     <ClInclude Include="..\src\LockFreeHashMapPolicy.h" />
     <ClInclude Include="..\src\LockFreeHashMapTypes.h" />
-    <ClInclude Include="..\src\LockFreeHashMapStorage.h" />
-    <ClInclude Include="..\src\LockFreeHashMapDirectGuard.h" />
+    <ClInclude Include="..\src\LockFreeHashMapValueCache.h" />
+    <ClInclude Include="..\src\LockFreeHashMapPool.h" />
     <ClInclude Include="..\src\LockFreeHashMap.h" />
     <ClInclude Include="..\src\HashMapNode.h" />
     <ClInclude Include="..\src\HashMapValueProxy.h" />
@@ -34,11 +34,11 @@
     <ClCompile Include="..\src\LockFreeHashMap.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\src\LockFreeHashMapAtomic.inl" />
+    <None Include="..\src\LockFreeHashMapEpoch.inl" />
     <None Include="..\src\LockFreeHashMapPolicy.inl" />
     <None Include="..\src\LockFreeHashMapTypes.inl" />
-    <None Include="..\src\LockFreeHashMapStorage.inl" />
-    <None Include="..\src\LockFreeHashMapDirectGuard.inl" />
+    <None Include="..\src\LockFreeHashMapValueCache.inl" />
+    <None Include="..\src\LockFreeHashMapPool.inl" />
     <None Include="..\src\LockFreeHashMap.inl" />
     <None Include="..\src\HashMapNode.inl" />
     <None Include="..\src\HashMapValueProxy.inl" />
@@ -121,7 +121,6 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STATIC_LIB;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -142,7 +141,6 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STATIC_LIB;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -164,7 +162,6 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STATIC_LIB;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -188,7 +185,6 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STATIC_LIB;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>

@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\LockFreeHashMapAtomic.h">
+    <ClInclude Include="..\src\LockFreeHashMapEpoch.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\LockFreeHashMapPolicy.h">
@@ -24,7 +24,8 @@
     <ClInclude Include="..\src\LockFreeHashMapTypes.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\LockFreeHashMapStorage.h">
+    <ClInclude Include="..\src\LockFreeHashMapValueCache.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="..\src\LockFreeHashMapPool.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\LockFreeHashMap.h">
@@ -49,7 +50,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\src\LockFreeHashMapAtomic.inl">
+    <None Include="..\src\LockFreeHashMapEpoch.inl">
       <Filter>头文件</Filter>
     </None>
     <None Include="..\src\LockFreeHashMapPolicy.inl">
@@ -58,7 +59,8 @@
     <None Include="..\src\LockFreeHashMapTypes.inl">
       <Filter>头文件</Filter>
     </None>
-    <None Include="..\src\LockFreeHashMapStorage.inl">
+    <None Include="..\src\LockFreeHashMapValueCache.inl"><Filter>头文件</Filter></None>
+    <None Include="..\src\LockFreeHashMapPool.inl">
       <Filter>头文件</Filter>
     </None>
     <None Include="..\src\LockFreeHashMap.inl">
@@ -72,11 +74,5 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\LockFreeHashMapDirectGuard.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <None Include="..\src\LockFreeHashMapDirectGuard.inl">
-      <Filter>源文件</Filter>
-    </None>
   </ItemGroup>
 </Project>

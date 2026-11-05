@@ -1,46 +1,36 @@
 ﻿#pragma once
 #include <atomic>
-#include <new>
 #include <stdint.h>
+#include <stddef.h>
 
-/** 历史节点兼容类型，拥有键和值副本；当前 LockFreeHashMap 使用池槽位，不再使用此类型
-构造时的键值复制异常由调用方处理，键值析构不得抛异常
+/** 单槽拥有不可变键值，链接低位一表示删除，低位二表示同键替换
+候选构造完成后才发布，逻辑终态不可撤销，物理摘除后由池负责安全回收
 */
 template <typename KeyType, typename ValueType>
-struct HashMapNode
+struct LockFreeHashMapNode
 {
 public:
-    // 节点键
-    KeyType m_key;
-    // 节点值副本，nullptr表示删除标记
-    ValueType* m_value;
-    // 桶内链表的下一个节点
-    std::atomic<HashMapNode<KeyType, ValueType>*> m_next;
-    // 节点所属逻辑版本
+    // 后继槽地址，最低两位只用于不可逆终态
+    std::atomic<uintptr_t> m_next;
+    // 构造时计算的哈希
+    size_t m_hash;
+    // 不可变逻辑代次
     uint64_t m_generation;
-
+    // 实例内永不复用的完整值版本
+    uint64_t m_version;
+    // 发布后不可修改的键副本
+    KeyType m_key;
+    // 发布后不可修改的值副本，与键合并在同一个受控池槽中
+    ValueType m_value;
 public:
-    /** 构造值节点
-    @param [in] key 节点键
-    @param [in] value 节点值
-    @param [in] generation 节点所属版本
+    /** 完整构造候选，复制异常交由尚未提交的修改边界捕获
+    @param [in] key 键来源
+    @param [in] value 值来源
+    @param [in] hash 与等价关系一致的哈希
+    @param [in] generation 本次可见代次
+    @param [in] version 已预留的非零值版本
     */
-    HashMapNode(const KeyType& key, const ValueType& value, uint64_t generation);
-
-    /** 构造删除标记节点
-    @param [in] key 节点键
-    @param [in] generation 节点所属版本
-    */
-    HashMapNode(const KeyType& key, uint64_t generation);
-
-    /** 析构函数，释放节点持有的值副本
-    */
-    ~HashMapNode();
-
-    /** 判断节点是否持有有效值
-    @return 持有值返回true，删除标记节点返回false
-    */
-    bool hasValue() const;
+    LockFreeHashMapNode(const KeyType& key, const ValueType& value, size_t hash, uint64_t generation, uint64_t version);
 };
 
 #include "HashMapNode.inl"
