@@ -1,42 +1,41 @@
 ﻿#pragma once
-#include <condition_variable>
-#include <mutex>
+#include "SemaphoreResult.h"
+#include "SemaphoreWake.h"
+#include "SemaphoreEventPool.h"
+#include "SemaphoreMacro.h"
+#include <atomic>
 #include <string>
 #include <stdint.h>
-#include "SemaphoreMacro.h"
 #include <memory>
+
+class SemaphoreProcessMemory;
 
 /** 本进程通知与原生跨进程计数通知。生命周期操作不与等待/通知并发。
     Windows使用内核信号量，Linux/macOS使用sem_open；移动端使用共享原子计数及有界睡眠，无文件锁。
-    可移植逻辑名称限30字节，不含斜杠/NUL；手机沙箱是否允许须由宿主验证。
+    移动共享计数协议名称限30字节，不含斜杠/NUL；桌面长度由系统报告，手机沙箱须由宿主验证
     Wasm不支持跨进程命名通知，创建无资源、打开和等待返回失败；本地计数操作仍可用。
 */
 class SemaphoreAPI Semaphore
 {
+// 普通分开调用的接口，以及可选的事件池管理和资源诊断
 public:
-    /** 构造函数
+    /** 初始化本地原子状态与系统等待后端，系统资源失败或原子类型不支持无锁时抛system_error
     */
     Semaphore();
 
-    /** 析构函数
+    /** 外部静止期释放事件池和系统资源，清理失败计入cleanupFailures
     */
     ~Semaphore();
-
-public:
-    /** 移动端宿主在首次跨进程通知前配置共享目录，各参与进程须传入同一路径。
-    Android使用应用内部专用目录，iOS使用App Group容器中的专用目录；必须已存在且属于当前UID。
-    配置期间不能并发创建/打开通知；首次使用后仅接受原路径。桌面原生后端只接受空路径。
-    @return 配置成功返回true；移动端空路径、非法目录或使用后改路径返回false
-    */
-    static bool setProcessDirectory(const std::string& directory);
 
     /** 信号量的通知，通知几次wait允许通过几次，wait之前通知一次则wait执行时允许通过，一对一，不允许一对多
     本地积压计数为64位；达到UINT64_MAX时抛出overflow_error，本次不增加计数
     */
     void signal();
 
-    /** 生命周期owner在生产者及消费者全部停止后清除本地积存通知。 */
-    void reset();
+    /** 发布一个64位许可，不分配内存
+    @return committed=true表示许可已增加；即使提示失败也不可再次发布
+    */
+    SemaphoreResult trySignal();
 
     /** 信号量的等待
     */
@@ -48,11 +47,99 @@ public:
     */
     bool wait(uint32_t timeout);
 
+    /** 有结果的无限计数等待
+    @return 成功消费许可或返回系统错误/宿主不支持
+    */
+    SemaphoreResult waitResult();
+
+    /** 有结果的有限计数等待，发布/获取可见性由许可CAS建立
+    @param [in] timeout 总预算毫秒，0仅探测
+    @return OK且committed=true为取得许可；TIMEOUT未取得；其余为错误
+    */
+    SemaphoreResult waitResult(uint32_t timeout);
+
+    /** 生命周期owner在生产者及消费者全部停止后清除本地积存通知。
+    */
+    void reset();
+
+    /** 事件通知，多个事件同时等待只会通知一个，必须进入了eventWait，通知才有效果，一对一，允许一对多
+    */
+    void event();
+
+    /** 事件通知，同时通知多个事件，必须进入了eventWait，通知才有效果，一对多
+    */
+    void eventAll();
+
+    /** 发布非积存事件，不改变计数许可，不分配内存
+    @param [in] all false提示一个合格登记者，true提示本次发布前登记者
+    @return 提交后提示失败保留committed；无合格登记者时committed=false
+    */
+    SemaphoreResult tryEvent(bool all = false);
+
+    /** 事件的等待
+    */
+    void eventWait();
+
+    /** 事件的等待
+    @param [in] timeout 超时时间，单位毫秒，非正值只探测，不代表无限
+    @return 是否得到提示，调用方仍须检查实际条件或代次
+    */
+    bool eventWait(int32_t timeout);
+
+    /** 有结果的无限事件等待；登记点为等待记录插入登记链的CAS
+    @return OK只表示提示，业务方仍须检查条件/代次
+    */
+    SemaphoreResult eventWaitResult();
+
+    /** 有结果的有限事件等待
+    @param [in] timeout 总预算毫秒，非正值立即返回TIMEOUT，不表示无限
+    @return OK提示、TIMEOUT或系统错误/宿主不支持
+    */
+    SemaphoreResult eventWaitResult(int32_t timeout);
+
+    /** 可选地配置eventWait/eventWaitResult使用的事件等待记录池，失败保留原池
+    不调用时按默认策略按需建立池；仅需限制容量或自定义扩缩容策略时配置
+    与组合计数接口无依赖，也不影响普通signal/wait及跨进程通知；只允许外部静止期调用
+    @param [in] config 初始/阈值/最大容量及策略，不影响计数wait
+    @return 配置结果；不能与任何等待/通知并发
+    */
+    SemaphoreResult configureEventPool(const SemaphorePoolConfig& config);
+
+    /** 可选地维护事件等待记录池，在工作预算内尝试安全回收
+    普通事件等待可直接使用，无需配套调用；本函数不是组合接口的准备步骤
+    默认不自动缩容；配置缩容策略后，owner可主动调用以在空闲期触发维护，无后台线程
+    @param [out] released 本次实际释放记录数
+    @return OK或策略/容量错误
+    */
+    SemaphoreResult maintainEventPool(size_t& released);
+
+    /** 可选地查询事件等待记录池容量，包含不可复用退役记录及扩容预留
+    只用于观测，不配置或创建池，不是普通接口或组合接口的调用前提
+    未显式配置时，首次事件等待建立默认池之前各项记录统计为0
+    @return 观测快照
+    */
+    SemaphorePoolStats eventPoolStatistics() const;
+
+    /** 移动端宿主在首次跨进程通知前配置共享目录，各参与进程须传入同一路径。
+    Android使用应用内部专用目录，iOS使用App Group容器中的专用目录；必须已存在且属于当前UID。
+    配置期间不能并发创建/打开通知；首次使用后仅接受原路径。桌面原生后端只接受空路径。
+    @param [in] directory 各参与进程约定的共享目录
+    @return 配置成功返回true；移动端空路径、非法目录或使用后改路径返回false
+    */
+    static bool setProcessDirectory(const std::string& directory);
+
     /** 进程信号量的创建
     @param [in] name 名字
     @param [in] signalCount 最大通知计数，Windows及移动共享计数后端使用；不是初始计数
     */
     void createProcessSemaphore(const std::string& name, int32_t signalCount = 800000000);
+
+    /** 有结果的创建/加入；初始化异常转为NO_MEMORY，局部资源完整清理
+    @param [in] name 名称，沿平台命名限制，禁止NUL和/；桌面原生命名空间沿旧接口处理
+    @param [in] signalCount 最大计数，非初始许可；POSIX仍使用系统上限
+    @return OK已打开；失败未取得对象，允许重试
+    */
+    SemaphoreResult createProcessResult(const std::string& name, int32_t signalCount = 800000000);
 
     /** 打开信号量
     @param [in] name 名字
@@ -65,16 +152,24 @@ public:
     */
     bool tryOpenProcessSemaphore(const std::string& name);
 
-    /** 以明确结果发布一次通知，不等待其他进程释放锁
-    @return 0已发布，1计数满，-1未打开或其他错误
+    /** 有结果的打开既有对象，不创建名称
+    @param [in] name 逻辑名称
+    @return OK已打开；失败未取得对象
     */
-    int32_t tryProcessSignal();
+    SemaphoreResult openProcessResult(const std::string& name);
 
     /** 关闭信号量，在析构中也会执行，重复执行不会崩溃
     */
     void closeProcessSemaphore();
 
-    /** POSIX名称owner撤销本代名称，已打开的等待者仍可使用；不关闭本实例。
+    /** 静止期关闭本实例，检查撤名和系统关闭结果
+    @return OK释放完成；系统失败仍清理其他资源，未释放映射/引用保留供重试
+    */
+    SemaphoreResult closeProcessResult();
+
+    /** POSIX/移动后端仅独占创建者可撤销本代名称，打开者及同名加入者拒绝撤名
+    成功撤名即消耗本实例的撤名权，已有引用继续使用；同名重建由新创建者负责。
+    各参与方须遵守唯一owner协议，不可绕过本库直接撤名/重建正在使用的名称。
     @return true已撤销/不存在；Windows由内核引用管理名称，返回false
     */
     bool unlinkProcessName();
@@ -82,6 +177,16 @@ public:
     /** 进程信号，通知仅作提示；POSIX创建者关闭移除名称，已打开对端仍可使用该对象
     */
     void processSignal();
+
+    /** 以明确结果发布一次通知，不等待其他进程释放锁
+    @return 0已发布，1计数满，-1未打开或其他错误
+    */
+    int32_t tryProcessSignal();
+
+    /** 有结果的命名发布
+    @return OK已提交、OVERFLOW未提交、NOT_OPEN或系统错误
+    */
+    SemaphoreResult processSignalResult();
 
     /** 进程等待
     */
@@ -93,35 +198,135 @@ public:
     */
     bool processWait(int32_t timeout);
 
-    /** 事件通知，多个事件同时等待只会通知一个，必须进入了eventWait，通知才有效果，一对一，允许一对多
+    /** 有结果的命名等待
+    @param [in] timeout -1无限，0探测，正数总预算毫秒，低于-1非法
+    @return OK消费、TIMEOUT或具体失败
     */
-    void event();
+    SemaphoreResult processWaitResult(int32_t timeout);
 
-    /** 事件通知，同时通知多个事件，必须进入了eventWait，通知才有效果，一对多
+    /** 可选的资源清理诊断，查询当前模块累计失败数，饱和不回绕
+    普通接口和组合接口均可查询，无需配套调用，也不是每个Semaphore实例的错误状态
+    本函数只读统计，不执行清理；需要逐次关闭错误时优先用closeProcessResult
+    @return 当前模块累计清理失败数，不是逐调用错误码
     */
-    void eventAll();
+    static uint32_t cleanupFailures();
 
-    /** 事件的等待
+// 通知后立即等待回执时使用的性能组合接口
+public:
+    /** 外部静止期为频繁请求/回执准备组合等待，两个参与对象分别调用；失败保留原后端
+    冷唤醒的请求/回执往返优先准备后使用signalAndWaitResult，减少系统调用及调度开销
+    Windows准备成功会切换该对象以后所有等待的后端；普通计数热路径可能变慢，应单独建对象
+    Windows准备一个系统事件并使用组合系统调用，其余平台保留原等待机制；不启动线程。
+    计数仍为64位，事件仍非积存；既有signal/wait/event接口继续可用。
+    @return OK或系统错误/宿主不能阻塞；与等待/通知并发调用属于生命周期错误
     */
-    void eventWait();
+    SemaphoreResult prepareSignalAndWait();
 
-    /** 事件的等待
-    @param [in] timeout 超时时间，单位毫秒
+    /** 本地发布一个64位许可后无限等待另一对象的计数许可，不承诺两阶段原子完成
+    通知后立即等待回执的冷唤醒场景优先使用本组合接口，以降低往返延迟
+    两端prepareSignalAndWait成功时可采用组合系统调用；未准备仍按先发布后等待执行。
+    只适用于发送后紧接等待回执的调用链；回执与请求的代次由上层关联。
+    @param [in,out] waitOn 目标本地对象，两端须活到调用结束，可为当前对象
+    @return 分别报告发布和消费；发送已提交后等待失败/超时不可重新发送
     */
-    bool eventWait(int32_t timeout);
+    SemaphoreSignalWaitResult signalAndWaitResult(Semaphore& waitOn);
+
+    /** 本地发布后有限等待，沿用一个单调总预算
+    通知后立即等待回执时优先使用本接口；准备方法及热路径代价见prepareSignalAndWait
+    @param [in,out] waitOn 目标本地对象，生命周期与无限版本相同
+    @param [in] timeout 总预算毫秒，0只在发布后探测目标许可
+    @return 发布/消费状态及错误，不能根据等待失败重发已经发布的许可
+    */
+    SemaphoreSignalWaitResult signalAndWaitResult(Semaphore& waitOn, uint32_t timeout);
+
+    /** 对当前命名对象发布一个许可，然后等待目标对象；两个对象均须已打开并保持存活
+    跨进程通知后立即等待回复时优先使用本组合接口，Windows可减少系统调用及往返延迟
+    Windows原生后端合并系统调用，其余原生后端按同一总预算顺序执行；不承诺两个阶段原子完成。
+    无锁语义与processWait一致；不会改变名称或共享协议，不用于本地signal/wait。
+    TIMEOUT且signalState=DONE时只可继续等待，不能再次发布；UNKNOWN须用业务代次恢复。
+    close/configure/destruct不与本次调用并发；双方不能把对方回复当作本次请求自动关联。
+    @param [in,out] waitOn 等待对象，允许与当前对象相同；发送失败时不开始等待
+    @param [in] timeout 总预算毫秒，-1无限，0发送后立即探测，小于-1拒绝且不发送
+    @return 分别报告发送/消费状态；原生组合调用的未知失败保守报告UNKNOWN，Wasm为UNSUPPORTED
+    */
+    SemaphoreSignalWaitResult processSignalAndWaitResult(Semaphore& waitOn, int32_t timeout = -1);
 
 private:
-    // 本进程条件变量的短锁；原生命名通知的发送和等待不取得此锁
-    std::mutex m_mtx;
-    std::condition_variable m_cv;
-    // 只由原有本进程短锁保护，避免大量积压通知跨过32位有符号上限
-    uint64_t m_count;
+    /** 按需取得默认事件池；并发首次申请以CAS发布完整候选，不等待初始化持有者
+    @param [out] pool 本实例的稳定池引用，外部静止才允许更换/销毁
+    @return OK或未发布失败
+    */
+    SemaphoreResult prepareEventPool(SemaphoreEventPool*& pool);
+
+    /** 计数/事件等待共用的单调总预算循环
+    @param [in] isEvent 是否仅等事件提示
+    @param [in] infinite 是否无限等待
+    @param [in] timeout 有限等待毫秒
+    @return 真实谓词结果或系统错误
+    */
+    SemaphoreResult waitLocal(bool isEvent, bool infinite, uint32_t timeout);
+
+    /** 实现本地组合调用，已知的许可CAS提交状态不依赖系统提示是否成功
+    @param [in,out] waitOn 消费目标，两对象生命周期外部保持
+    @param [in] infinite 是否无限等待
+    @param [in] timeout 有限总预算毫秒
+    @return 发布/消费的独立结果
+    */
+    SemaphoreSignalWaitResult signalAndWaitLocal(Semaphore& waitOn, bool infinite, uint32_t timeout);
+
+    /** 尝试消费一次许可
+    @return true取得一个许可
+    */
+    bool consumeCount();
+
+    /** 获取原生单调毫秒时钟，Windows不依赖VS2013的chrono实现
+    @return 单调毫秒值
+    */
+    static uint64_t monotonicMilliseconds();
+
+    /** 兼容接口将错误明确传播，超时正常返回
+    @param [in] result 本次操作结果
+    */
+    static void checkLocalResult(const SemaphoreResult& result);
+
+    /** 核对各端共同名称约束
+    @param [in] name 逻辑名称
+    @return 是否可传给系统后端；移动协议限30字节，桌面额外限制由系统报告
+    */
+    static bool validProcessName(const std::string& name);
+
+private:
+#if defined(_MSC_VER) && !defined(STATIC_LIB)
+    // 这些私有成员由DLL内方法构造、访问和销毁，调用方仍须使用匹配的头和CRT
+#pragma warning(push)
+#pragma warning(disable : 4251)
+#endif
+    // 许可增加与消费的CAS是计数线性化点；对象析构/reset须外部静止
+    // MSVC x86不会为自然8字节成员自动重对齐栈，必须显式要求，避免跨缓存行原子访问
+#ifdef _MSC_VER
+    __declspec(align(8))
+#endif
+    std::atomic<uint64_t> m_count;
+    // 系统睡眠提示，独立于业务许可/事件，不维护自有锁
+    SemaphoreWake m_wake;
+    // 默认按首次事件等待创建；configure静止期显式预建；计数/通知不分配池
+    std::atomic<SemaphoreEventPool*> m_eventPool;
     // 移动端后备由本库直接通过系统映射管理，不依赖其他工程；桌面原生路径保持为空。
-    struct ProcessSemaphoreMemory;
-    std::unique_ptr<ProcessSemaphoreMemory> m_processMemory;
+    std::unique_ptr<SemaphoreProcessMemory> m_processMemory;
+#if defined(_MSC_VER) && !defined(STATIC_LIB)
+#pragma warning(pop)
+#endif
     // 原生HANDLE或sem_t*，仅实现文件解释；所有平台公共接口相同
     void* m_processSemaphore;
     // POSIX仅新建者拥有名称移除权；打开者只释放自己的引用
     bool m_processCreated;
+#if defined(_MSC_VER) && !defined(STATIC_LIB)
+#pragma warning(push)
+#pragma warning(disable : 4251)
+#endif
+    // POSIX名称撤销责任，成功撤名后清空，禁止旧代重复删除
     std::string m_processName;
+#if defined(_MSC_VER) && !defined(STATIC_LIB)
+#pragma warning(pop)
+#endif
 };

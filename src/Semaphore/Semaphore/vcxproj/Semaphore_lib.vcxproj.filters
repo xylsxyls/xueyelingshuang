@@ -4,6 +4,18 @@
     <ClInclude Include="..\src\Semaphore.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\SemaphoreResult.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SemaphoreWake.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SemaphoreEventPool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SemaphoreProcessMemory.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\SemaphoreAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -21,6 +33,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Semaphore.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SemaphoreResult.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SemaphoreWake.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SemaphoreEventPool.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SemaphoreProcessMemory.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -42,8 +42,7 @@ WASM_SDK_SETTINGS = {
         "static"
     ],
     "WASM_SDK_LINKAGES": [
-        "lib",
-        "dll"
+        "lib"
     ]
 }
 
@@ -952,10 +951,12 @@ if __name__ == '__main__' and wasm_arguments:
 
     parser = argparse.ArgumentParser(description='Compile ' + library + ' directly with Emscripten')
     parser.add_argument('target', type=str.lower, choices=['wasm32', 'wasm64'])
-    parser.add_argument('linkage', type=str.lower, choices=['lib', 'dll'])
+    parser.add_argument('linkage', type=str.lower, choices=['lib'])
     parser.add_argument('mode', type=str.lower, choices=['debug', 'release'])
     parser.add_argument('scope', type=str.lower, choices=['same', 'only', 'librely'], nargs='?', default='only')
     parser.add_argument('--output-root', type=Path)
+    # 线程版与普通版必须使用独立输出SDK，测试同样通过本构建入口
+    parser.add_argument('--pthread', action='store_true', help='Build the C++ archive for a pthread host')
     parser.add_argument('--librariesrely', help='Semicolon-separated prepared static link inputs')
     # CMake compiles through its own entry and uses these data/publication steps only.
     phase = parser.add_mutually_exclusive_group()
@@ -1065,6 +1066,8 @@ if __name__ == '__main__' and wasm_arguments:
             common = ['-fexceptions', '-sMEMORY64=' + str(int(bits == 64))]
             common += ['-O0', '-g1'] if options.mode == 'debug' else ['-O2']
             flags = common + ['-fPIC']
+            if options.pthread:
+                flags += ['-pthread']
             flags += ['-D' + value for value in inputs['definitions']]
             # Local quoted headers must not shadow platform headers such as <semaphore.h>.
             local_source = ROOT / 'src' / library / library / 'src'

@@ -22,9 +22,17 @@
     <ClInclude Include="..\src\SemaphoreAPI.h" />
     <ClInclude Include="..\src\SemaphoreMacro.h" />
     <ClInclude Include="..\src\Semaphore.h" />
+    <ClInclude Include="..\src\SemaphoreResult.h" />
+    <ClInclude Include="..\src\SemaphoreWake.h" />
+    <ClInclude Include="..\src\SemaphoreEventPool.h" />
+    <ClInclude Include="..\src\SemaphoreProcessMemory.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Semaphore.cpp" />
+    <ClCompile Include="..\src\SemaphoreResult.cpp" />
+    <ClCompile Include="..\src\SemaphoreWake.cpp" />
+    <ClCompile Include="..\src\SemaphoreEventPool.cpp" />
+    <ClCompile Include="..\src\SemaphoreProcessMemory.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>

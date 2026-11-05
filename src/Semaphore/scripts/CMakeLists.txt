@@ -6,7 +6,11 @@ SET(CMAKE_CXX_STANDARD 11)
 if(BIT MATCHES "^wasm" OR DLLLIB STREQUAL "wasm" OR EMSCRIPTEN OR CMAKE_TOOLCHAIN_FILE MATCHES "Emscripten")
     cmake_minimum_required(VERSION 3.15)
     set(WASM_SDK_KIND static)
-    set(WASM_SDK_LINKAGES lib dll)
+    # 六端共用同一套C++接口，不提供Wasm专用C或JS包装
+    set(WASM_SDK_LINKAGES lib)
+    if(DLLLIB STREQUAL "dll")
+        message(FATAL_ERROR "Semaphore Wasm is a C++ static library; use DLLLIB=lib")
+    endif()
     if(NOT DEFINED BIT)
         set(BIT wasm32)
     endif()
@@ -1148,14 +1152,9 @@ if __name__ == '__main__':
         message(FATAL_ERROR "Wasm parameter, toolchain or dependency preparation failed")
     endif()
     include("${CMAKE_CURRENT_BINARY_DIR}/Semaphore-inputs.cmake")
-    if(DLLLIB STREQUAL "lib")
-        add_library(Semaphore STATIC ${wasm_sources})
-        add_library(SemaphoreWasmCore ALIAS Semaphore)
-        set_target_properties(Semaphore PROPERTIES PREFIX "" SUFFIX ".a")
-    else()
-        add_executable(Semaphore ${wasm_sources})
-        set_target_properties(Semaphore PROPERTIES SUFFIX ".js")
-    endif()
+    add_library(Semaphore STATIC ${wasm_sources})
+    add_library(SemaphoreWasmCore ALIAS Semaphore)
+    set_target_properties(Semaphore PROPERTIES PREFIX "" SUFFIX ".a")
     set_target_properties(Semaphore PROPERTIES DEBUG_POSTFIX "" ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
     foreach(wasm_config DEBUG RELEASE)
@@ -1178,41 +1177,7 @@ if __name__ == '__main__':
     target_include_directories(Semaphore PUBLIC ${wasm_includes})
     target_compile_options(Semaphore PRIVATE "-iquote${wasm_local_source}")
     target_compile_options(Semaphore PRIVATE -fexceptions -fPIC "-sMEMORY64=${wasm_memory64}" ${wasm_optimization})
-    if(DLLLIB STREQUAL "dll")
-        set(wasm_initial_memory 16777216)
-        set(wasm_maximum_memory 134217728)
-        if(DEFINED WASM_BUILD_INITIAL_MEMORY)
-            set(wasm_initial_memory "${WASM_BUILD_INITIAL_MEMORY}")
-        endif()
-        if(DEFINED WASM_BUILD_MAXIMUM_MEMORY)
-            set(wasm_maximum_memory "${WASM_BUILD_MAXIMUM_MEMORY}")
-        endif()
-        file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/Semaphore-environment.js"
-            "var WebAssembly = Module['wasmApi'] || globalThis.WebAssembly;\n"
-            "var performance = Module['performance'] || globalThis.performance;\n")
-        target_link_options(Semaphore PRIVATE --no-entry -fexceptions "-sMEMORY64=${wasm_memory64}" ${wasm_optimization}
-            -sEXPORT_KEEPALIVE=1 "-sEXPORTED_FUNCTIONS=[\"_malloc\",\"_free\"]"
-            --pre-js "${CMAKE_CURRENT_BINARY_DIR}/Semaphore-environment.js"
-            -sASSERTIONS=0 -sMODULARIZE=1 -sEXPORT_NAME=createSemaphore -sENVIRONMENT=web -sFILESYSTEM=0
-            -sALLOW_MEMORY_GROWTH=1 "-sINITIAL_MEMORY=${wasm_initial_memory}" "-sMAXIMUM_MEMORY=${wasm_maximum_memory}"
-            -sSTACK_SIZE=1048576 -sDISABLE_EXCEPTION_CATCHING=0 -sALLOW_TABLE_GROWTH=1
-            "-sEXPORTED_RUNTIME_METHODS=[\"addFunction\",\"removeFunction\"]")
-        if(wasm_bits STREQUAL "64")
-            target_link_options(Semaphore PRIVATE "-sSIGNATURE_CONVERSIONS=@${wasm_conversions}")
-        endif()
-        if(WASM_BUILD_BIGINT)
-            target_link_options(Semaphore PRIVATE -sWASM_BIGINT=1)
-        endif()
-        if(wasm_runtime)
-            foreach(wasm_bridge IN LISTS WASM_BUILD_RUNTIME_JS_LIBRARY)
-                target_link_options(Semaphore PRIVATE --js-library "${wasm_root}/src/Semaphore/${wasm_bridge}")
-            endforeach()
-        endif()
-        target_link_libraries(Semaphore PRIVATE -Wl,--whole-archive ${wasm_archives} -Wl,--no-whole-archive
-            -Wl,--start-group ${wasm_vendors} -Wl,--end-group)
-    else()
-        target_link_libraries(Semaphore INTERFACE ${wasm_archives} ${wasm_vendors})
-    endif()
+    target_link_libraries(Semaphore INTERFACE ${wasm_archives} ${wasm_vendors})
     if(WASM_SDK_PUBLISH)
         set(wasm_commit_arguments)
         if(NOT DEFINED ENV{CLOUD_WASM_SESSION})
@@ -1221,6 +1186,11 @@ if __name__ == '__main__':
         add_custom_command(TARGET Semaphore POST_BUILD COMMAND ${wasm_prepare}
             --session "${wasm_session}" --publish-only "${CMAKE_CURRENT_BINARY_DIR}"
             ${wasm_commit_arguments} VERBATIM)
+    endif()
+    # 测试实现和运行入口统一归SemaphoreTest工程
+    option(SEMAPHORE_BUILD_TESTS "Build SemaphoreTest" OFF)
+    if(SEMAPHORE_BUILD_TESTS)
+        add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/../../SemaphoreTest/SemaphoreTest" "${CMAKE_CURRENT_BINARY_DIR}/SemaphoreTest")
     endif()
     return()
 endif()
@@ -1443,15 +1413,59 @@ add_custom_command(TARGET Semaphore POST_BUILD
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -Wl,-rpath=. -O0 -g -ggdb ")
-    set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
+    # Release保留正常优化；后续Linux原始版对照也须显式使用相同的-O2，不能混比优化级别
+    set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O2")
 endif()
 
 find_package(Threads REQUIRED)
 target_link_libraries(Semaphore PUBLIC Threads::Threads)
+if(CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android)$")
+    # 交叉编译器可能产生原子操作和无锁查询的运行库引用，驱动未自动链接时显式补齐
+    # 这里只探测构建链接能力；目标运行时仍拒绝非无锁原子类型
+    include(CMakePushCheckState)
+    cmake_push_check_state(RESET)
+    set(semaphore_saved_try_compile "${CMAKE_TRY_COMPILE_TARGET_TYPE}")
+    set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
+    set(semaphore_atomic_probe [=[
+#include <atomic>
+#include <stdint.h>
+int main()
+{
+    std::atomic<uint64_t> counter(0);
+    std::atomic<uintptr_t> pointer(0);
+    std::atomic<uint32_t> word(0);
+    uint64_t expected = counter.load();
+    counter.compare_exchange_strong(expected, 1);
+    return counter.is_lock_free() && pointer.is_lock_free() && word.is_lock_free() ? 0 : 1;
+}
+]=])
+    unset(SEMAPHORE_ATOMIC_LINKS CACHE)
+    check_cxx_source_compiles("${semaphore_atomic_probe}" SEMAPHORE_ATOMIC_LINKS)
+    if(NOT SEMAPHORE_ATOMIC_LINKS)
+        set(CMAKE_REQUIRED_LIBRARIES atomic)
+        unset(SEMAPHORE_ATOMIC_LIBRARY_LINKS CACHE)
+        check_cxx_source_compiles("${semaphore_atomic_probe}" SEMAPHORE_ATOMIC_LIBRARY_LINKS)
+        if(NOT SEMAPHORE_ATOMIC_LIBRARY_LINKS)
+            message(FATAL_ERROR "Semaphore requires the target compiler's atomic runtime")
+        endif()
+        target_link_libraries(Semaphore PUBLIC atomic)
+    endif()
+    if(semaphore_saved_try_compile)
+        set(CMAKE_TRY_COMPILE_TARGET_TYPE "${semaphore_saved_try_compile}")
+    else()
+        unset(CMAKE_TRY_COMPILE_TARGET_TYPE)
+    endif()
+    cmake_pop_check_state()
+endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(Semaphore PUBLIC rt)
 endif()
 option(PROCESS_WORK_PORTABLE_NOTIFY "Exercise the mobile algorithm on desktop; tests only" OFF)
 if(PROCESS_WORK_PORTABLE_NOTIFY)
     target_compile_definitions(Semaphore PRIVATE PROCESS_WORK_PORTABLE_NOTIFY)
+endif()
+# 原生测试同样由SemaphoreTest工程持有，不在库目录保留测试入口
+option(SEMAPHORE_BUILD_TESTS "Build SemaphoreTest" OFF)
+if(SEMAPHORE_BUILD_TESTS)
+    add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/../../SemaphoreTest/SemaphoreTest" "${CMAKE_CURRENT_BINARY_DIR}/SemaphoreTest")
 endif()

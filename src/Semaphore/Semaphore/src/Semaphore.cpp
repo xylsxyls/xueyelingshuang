@@ -1,10 +1,6 @@
 ﻿#include "Semaphore.h"
-#ifdef __APPLE__
-#include <TargetConditionals.h>
-#endif
-#if defined(__ANDROID__) || (defined(__APPLE__) && TARGET_OS_IPHONE) || defined(PROCESS_WORK_PORTABLE_NOTIFY)
-#define SEMAPHORE_SHARED_COUNTER 1
-#endif
+#include "SemaphoreProcessMemory.h"
+#include <system_error>
 #include <chrono>
 #include <algorithm>
 #include <limits.h>
@@ -24,1275 +20,1163 @@
 #endif
 #endif
 
-// 私有后备仅使用系统接口。移动端共享文件为两个对齐32位字段：计数、上限。
-struct Semaphore::ProcessSemaphoreMemory
+Semaphore::Semaphore() :
+m_count(0),
+m_eventPool(nullptr),
+m_processSemaphore(nullptr),
+m_processCreated(false)
 {
-#ifdef SEMAPHORE_SHARED_COUNTER
-    int32_t* words;
-#ifdef _WIN32
-    HANDLE handle;
-    ProcessSemaphoreMemory(): words(nullptr), handle(nullptr) {}
-    ~ProcessSemaphoreMemory()
+    if (!m_count.is_lock_free() || !m_eventPool.is_lock_free())
     {
-        if (words != nullptr) ::UnmapViewOfFile(words);
-        if (handle != nullptr) ::CloseHandle(handle);
+        throw std::system_error(std::make_error_code(std::errc::not_supported));
     }
-#else
-    int directoryDescriptor;
-    int descriptor;
-    bool created;
-    std::string name;
-    ProcessSemaphoreMemory(): words(nullptr), directoryDescriptor(-1), descriptor(-1), created(false) {}
-    ~ProcessSemaphoreMemory()
-    {
-        if (created) unlinkName();
-        if (words != nullptr) ::munmap(words, 2 * sizeof(int32_t));
-        if (descriptor >= 0) ::close(descriptor);
-        if (directoryDescriptor >= 0) ::close(directoryDescriptor);
-    }
+}
 
-    static std::string& directory()
+Semaphore::~Semaphore()
+{
+    delete m_eventPool.load();
+    if ((m_processSemaphore != nullptr || m_processMemory || m_processCreated) &&
+        closeProcessResult().status != SEMAPHORE_OK)
     {
-        static std::string value;
-        return value;
+        SemaphoreWake::recordCleanupFailure();
     }
+}
 
-    static std::atomic<bool>& directorySealed()
-    {
-        static std::atomic<bool> value(false);
-        return value;
-    }
+void Semaphore::signal()
+{
+    checkLocalResult(trySignal());
+}
 
-    static int openDirectory(const std::string& path)
+SemaphoreResult Semaphore::trySignal()
+{
+    uint64_t count = m_count.load();
+    do
     {
-        if (path.empty() || path[0] != '/' || path.find('\0') != std::string::npos) return -1;
-        const int value = ::open(path.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-        if (value < 0) return -1;
-        struct stat info = {};
-        if (::fstat(value, &info) != 0 || !S_ISDIR(info.st_mode) || info.st_uid != ::geteuid())
+        if (count == UINT64_MAX)
         {
-            ::close(value);
-            return -1;
+            return SemaphoreResult(SEMAPHORE_OVERFLOW);
         }
-        return value;
-    }
-#endif
+    } while (!m_count.compare_exchange_weak(count, count + 1));
+    SemaphoreResult result = m_wake.notify();
+    result.committed = true;
+    return result;
+}
 
-    static int32_t load(int32_t* value)
+void Semaphore::wait()
+{
+    if (consumeCount())
     {
-#ifdef _WIN32
-        return static_cast<int32_t>(::InterlockedCompareExchange(reinterpret_cast<volatile LONG*>(value), 0, 0));
-#else
-        // 必须使用真正无锁的32位指令，不能回退到仅进程内有效的libatomic锁。
-        static_assert(__atomic_always_lock_free(sizeof(int32_t), 0), "Semaphore requires lock-free 32-bit atomics");
-        return __atomic_load_n(value, __ATOMIC_SEQ_CST);
-#endif
+        return;
     }
+    checkLocalResult(waitResult());
+}
 
-    static bool compareExchange(int32_t* value, int32_t expected, int32_t desired)
+bool Semaphore::wait(uint32_t timeout)
+{
+    if (consumeCount())
     {
-#ifdef _WIN32
-        return ::InterlockedCompareExchange(reinterpret_cast<volatile LONG*>(value), desired, expected) == expected;
-#else
-        return __atomic_compare_exchange_n(value, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
-#endif
+        return true;
     }
+    const SemaphoreResult result = waitResult(timeout);
+    checkLocalResult(result);
+    return result.status == SEMAPHORE_OK;
+}
 
-    bool open(const std::string& logicalName, int32_t limit)
-    {
-        if (logicalName.size() > 30) return false;
-#ifdef _WIN32
-        // 桌面测试开关仅用系统匿名页映射验证移动端计数算法；不代替移动端文件/沙箱验收。
-        const std::string nativeName = logicalName + ".s";
-        handle = limit > 0 ? ::CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0,
-            2 * sizeof(int32_t), nativeName.c_str()) : ::OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, nativeName.c_str());
-        if (handle == nullptr) return false;
-        words = static_cast<int32_t*>(::MapViewOfFile(handle, FILE_MAP_ALL_ACCESS, 0, 0, 2 * sizeof(int32_t)));
-#else
-        if (directory().empty()) return false;
-        // 保留原有通知文件名及两个int32_t布局，后备的管理不再经由其他库。
-        name = "m_" + logicalName + ".s";
-        directorySealed().store(true);
-        directoryDescriptor = openDirectory(directory());
-        if (directoryDescriptor < 0) return false;
-        if (limit > 0)
-        {
-            descriptor = ::openat(directoryDescriptor, name.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0600);
-            created = descriptor >= 0;
-            if (descriptor < 0 && errno == EEXIST)
-                descriptor = ::openat(directoryDescriptor, name.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
-        }
-        else
-        {
-            descriptor = ::openat(directoryDescriptor, name.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
-        }
-        if (descriptor < 0) return false;
-        const size_t bytes = 2 * sizeof(int32_t);
-        if (created)
-        {
-            // 发布前预留实际存储，分配失败不留下可打开的半成品。
-#ifdef __APPLE__
-            fstore_t allocation = {};
-            allocation.fst_flags = F_ALLOCATEALL;
-            allocation.fst_posmode = F_PEOFPOSMODE;
-            allocation.fst_length = static_cast<off_t>(bytes);
-            if (::fcntl(descriptor, F_PREALLOCATE, &allocation) != 0) return false;
-#else
-            if (::posix_fallocate(descriptor, 0, static_cast<off_t>(bytes)) != 0) return false;
-#endif
-            if (::ftruncate(descriptor, static_cast<off_t>(bytes)) != 0) return false;
-        }
-        struct stat info = {};
-        if (::fstat(descriptor, &info) != 0 || !S_ISREG(info.st_mode) || info.st_uid != ::geteuid() ||
-            info.st_size != static_cast<off_t>(bytes)) return false;
-        void* address = ::mmap(nullptr, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, descriptor, 0);
-        if (address == MAP_FAILED) return false;
-        words = static_cast<int32_t*>(address);
-#endif
-        if (words == nullptr) return false;
-        // CAS发布上限，重复create不清空计数，也不覆盖已有对象的上限。
-        if (limit > 0) compareExchange(words + 1, 0, limit);
-        const int32_t currentLimit = load(words + 1);
-        const int32_t count = load(words);
-        return currentLimit > 0 && count >= 0 && count <= currentLimit;
-    }
+SemaphoreResult Semaphore::waitResult()
+{
+    return waitLocal(false, true, 0);
+}
 
-    bool unlinkName()
+SemaphoreResult Semaphore::waitResult(uint32_t timeout)
+{
+    return waitLocal(false, false, timeout);
+}
+
+void Semaphore::reset()
+{
+    // 外部静止；系统中即使有旧提示，也不再代表许可或事件。
+    m_count.store(0);
+}
+
+void Semaphore::event()
+{
+    checkLocalResult(tryEvent(false));
+}
+
+void Semaphore::eventAll()
+{
+    checkLocalResult(tryEvent(true));
+}
+
+SemaphoreResult Semaphore::tryEvent(bool all)
+{
+    SemaphoreEventPool* pool = m_eventPool.load();
+    if (pool == nullptr)
     {
-#ifdef _WIN32
-        return false;
-#else
-        if (directoryDescriptor < 0 || name.empty()) return false;
-        if (::unlinkat(directoryDescriptor, name.c_str(), 0) == 0 || errno == ENOENT)
-        {
-            created = false;
-            return true;
-        }
-        return false;
-#endif
+        return SemaphoreResult();
     }
-#endif
-};
+    const bool direct = m_wake.canWaitAddress();
+    SemaphoreResult result = pool->notify(all, direct ? &m_wake : nullptr);
+    // 没有合格事件登记者时，不触发无业务作用的系统广播
+    if (direct || result.status != SEMAPHORE_OK || !result.committed)
+    {
+        return result;
+    }
+    const SemaphoreResult wake = m_wake.notify();
+    result.status = wake.status;
+    result.nativeError = wake.nativeError;
+    return result;
+}
+
+void Semaphore::eventWait()
+{
+    checkLocalResult(eventWaitResult());
+}
+
+bool Semaphore::eventWait(int32_t timeout)
+{
+    const SemaphoreResult result = eventWaitResult(timeout);
+    checkLocalResult(result);
+    return result.status == SEMAPHORE_OK;
+}
+
+SemaphoreResult Semaphore::eventWaitResult()
+{
+    return waitLocal(true, true, 0);
+}
+
+SemaphoreResult Semaphore::eventWaitResult(int32_t timeout)
+{
+    if (timeout <= 0)
+    {
+        return SemaphoreResult(SEMAPHORE_TIMEOUT);
+    }
+    return waitLocal(true, false, static_cast<uint32_t>(timeout));
+}
+
+SemaphoreResult Semaphore::configureEventPool(const SemaphorePoolConfig& config)
+{
+    try
+    {
+        std::unique_ptr<SemaphoreEventPool> candidate(new SemaphoreEventPool(config));
+        delete m_eventPool.exchange(candidate.release());
+        return SemaphoreResult();
+    }
+    catch (const std::invalid_argument&)
+    {
+        return SemaphoreResult(SEMAPHORE_INVALID);
+    }
+    catch (const std::bad_alloc&)
+    {
+        return SemaphoreResult(SEMAPHORE_NO_MEMORY);
+    }
+    catch (const std::system_error& error)
+    {
+        return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, error.code().value());
+    }
+    catch (...)
+    {
+        return SemaphoreResult(SEMAPHORE_POLICY);
+    }
+}
+
+SemaphoreResult Semaphore::maintainEventPool(size_t& released)
+{
+    SemaphoreEventPool* pool = m_eventPool.load();
+    released = 0;
+    return pool != nullptr ? pool->maintain(released) : SemaphoreResult();
+}
+
+SemaphorePoolStats Semaphore::eventPoolStatistics() const
+{
+    SemaphoreEventPool* pool = m_eventPool.load();
+    if (pool != nullptr)
+    {
+        return pool->statistics();
+    }
+    const SemaphorePoolStats empty = {};
+    return empty;
+}
 
 bool Semaphore::setProcessDirectory(const std::string& directory)
 {
 #if defined(SEMAPHORE_SHARED_COUNTER) && !defined(_WIN32)
-    if (ProcessSemaphoreMemory::directorySealed().load())
-        return directory == ProcessSemaphoreMemory::directory();
-    const int descriptor = ProcessSemaphoreMemory::openDirectory(directory);
-    if (descriptor < 0) return false;
-    ::close(descriptor);
-    ProcessSemaphoreMemory::directory() = directory;
+    if (SemaphoreProcessMemory::directorySealed().load())
+    {
+        return directory == SemaphoreProcessMemory::directory();
+    }
+    const int32_t descriptor = SemaphoreProcessMemory::openDirectory(directory);
+    if (descriptor < 0)
+    {
+        return false;
+    }
+    if (::close(descriptor) != 0)
+    {
+        SemaphoreWake::recordCleanupFailure();
+        return false;
+    }
+    try
+    {
+        SemaphoreProcessMemory::directory() = directory;
+    }
+    catch (const std::bad_alloc&)
+    {
+        return false;
+    }
     return true;
 #else
     return directory.empty();
 #endif
 }
 
-Semaphore::Semaphore(): m_count(0), m_processSemaphore(nullptr), m_processCreated(false)
-{
-}
-
-Semaphore::~Semaphore()
-{
-    closeProcessSemaphore();
-}
-
-void Semaphore::reset()
-{
-    std::unique_lock<std::mutex> lock(m_mtx);
-    m_count = 0;
-}
-
-void Semaphore::signal()
-{
-    std::unique_lock<std::mutex> lock(m_mtx);
-    if (m_count == UINT64_MAX)
-    {
-        // 拒绝溢出，不回绕或悄悄吞掉一次通知；异常退出仍由原有RAII释放锁。
-        throw std::overflow_error("Semaphore local notification count exhausted");
-    }
-    ++m_count;
-    m_cv.notify_one();
-}
-
-void Semaphore::wait()
-{
-    std::unique_lock<std::mutex> lock(m_mtx);
-    while (m_count == 0)
-    {
-        m_cv.wait(lock);
-    }
-    --m_count;
-}
-
-bool Semaphore::wait(uint32_t timeout)
-{
-    std::unique_lock<std::mutex> lock(m_mtx);
-    // 固定截止时间；虚假唤醒不能让总等待时间不断延长。
-    const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout);
-    while (m_count == 0)
-    {
-        if (m_cv.wait_until(lock, deadline) == std::cv_status::timeout && m_count == 0)
-        {
-            return false;
-        }
-    }
-    --m_count;
-    return true;
-}
-
 void Semaphore::createProcessSemaphore(const std::string& name, int32_t signalCount)
 {
-    if (m_processSemaphore != nullptr || name.empty() || name.find('\0') != std::string::npos ||
-        name.find('/') != std::string::npos || signalCount <= 0)
+    // 保留旧void接口的探测式用途；新接入用逐调用结果，不据void返回判断成功。
+    createProcessResult(name, signalCount);
+}
+
+SemaphoreResult Semaphore::createProcessResult(const std::string& name, int32_t signalCount)
+{
+    if (m_processSemaphore != nullptr || m_processMemory || m_processCreated || !validProcessName(name) ||
+        signalCount <= 0)
     {
-        return;
+        return SemaphoreResult(SEMAPHORE_INVALID);
     }
+    try
+    {
 #ifdef SEMAPHORE_SHARED_COUNTER
-    m_processMemory.reset(new ProcessSemaphoreMemory);
-    if (m_processMemory->open(name, signalCount)) m_processSemaphore = m_processMemory->words;
-    else m_processMemory.reset();
+        std::unique_ptr<SemaphoreProcessMemory> candidate(new SemaphoreProcessMemory);
+        const SemaphoreResult result = candidate->open(name, signalCount);
+        if (result.status != SEMAPHORE_OK)
+        {
+            return result;
+        }
+        m_processSemaphore = candidate->m_words;
+        m_processMemory.swap(candidate);
 #elif defined(_WIN32)
-    m_processSemaphore = ::CreateSemaphoreA(nullptr, 0, signalCount, name.c_str());
-#elif !defined(__ANDROID__) && !defined(__EMSCRIPTEN__)
-    m_processName = "/" + name;
-    sem_t* value = ::sem_open(m_processName.c_str(), O_CREAT | O_EXCL, 0600, 0);
-    m_processCreated = value != SEM_FAILED;
-    if (value == SEM_FAILED && errno == EEXIST)
-    {
-        value = ::sem_open(m_processName.c_str(), 0);
-    }
-    if (value != SEM_FAILED)
-    {
+        m_processSemaphore = ::CreateSemaphoreA(nullptr, 0, signalCount, name.c_str());
+        if (m_processSemaphore == nullptr)
+        {
+            return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, static_cast<int32_t>(::GetLastError()));
+        }
+#elif defined(__EMSCRIPTEN__)
+        return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
+#else
+        // 所有可能抛异常的字符串工作先于取得原生引用。
+        m_processName = "/" + name;
+        sem_t* value = ::sem_open(m_processName.c_str(), O_CREAT | O_EXCL, 0600, 0);
+        m_processCreated = value != SEM_FAILED;
+        if (value == SEM_FAILED && errno == EEXIST)
+        {
+            value = ::sem_open(m_processName.c_str(), 0);
+        }
+        if (value == SEM_FAILED)
+        {
+            const int32_t error = errno;
+            m_processName.clear();
+            return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, error);
+        }
         m_processSemaphore = value;
-    }
 #endif
+    }
+    catch (const std::bad_alloc&)
+    {
+        return SemaphoreResult(SEMAPHORE_NO_MEMORY);
+    }
+    catch (const std::length_error&)
+    {
+        return SemaphoreResult(SEMAPHORE_INVALID);
+    }
+    return SemaphoreResult();
 }
 
 void Semaphore::openProcessSemaphore(const std::string& name)
 {
-    tryOpenProcessSemaphore(name);
+    openProcessResult(name);
 }
 
 bool Semaphore::tryOpenProcessSemaphore(const std::string& name)
 {
+    return openProcessResult(name).status == SEMAPHORE_OK;
+}
+
+SemaphoreResult Semaphore::openProcessResult(const std::string& name)
+{
     if (m_processSemaphore != nullptr)
     {
-        return true;
+        return SemaphoreResult();
     }
-    if (name.empty() || name.find('\0') != std::string::npos || name.find('/') != std::string::npos)
+    if (m_processMemory || m_processCreated)
     {
-        return false;
+        // 上一次部分关闭仍有句柄/撤名责任，不能覆盖其所有权。
+        return SemaphoreResult(SEMAPHORE_INVALID);
     }
+    if (!validProcessName(name))
+    {
+        return SemaphoreResult(SEMAPHORE_INVALID);
+    }
+    try
+    {
 #ifdef SEMAPHORE_SHARED_COUNTER
-    m_processMemory.reset(new ProcessSemaphoreMemory);
-    if (m_processMemory->open(name, 0)) m_processSemaphore = m_processMemory->words;
-    else m_processMemory.reset();
-#elif defined(_WIN32)
-    m_processSemaphore = ::OpenSemaphoreA(SEMAPHORE_MODIFY_STATE | SYNCHRONIZE, FALSE, name.c_str());
-#elif !defined(__ANDROID__) && !defined(__EMSCRIPTEN__)
-    m_processName = "/" + name;
-    sem_t* value = ::sem_open(m_processName.c_str(), 0);
-    if (value != SEM_FAILED)
-    {
-        m_processSemaphore = value;
-    }
-#endif
-    return m_processSemaphore != nullptr;
-}
-
-int32_t Semaphore::tryProcessSignal()
-{
-    if (m_processSemaphore == nullptr)
-    {
-        return -1;
-    }
-#ifdef SEMAPHORE_SHARED_COUNTER
-    int32_t* words = static_cast<int32_t*>(m_processSemaphore);
-    const int32_t limit = ProcessSemaphoreMemory::load(words + 1);
-    int32_t count = ProcessSemaphoreMemory::load(words);
-    while (count >= 0 && count < limit)
-    {
-        if (ProcessSemaphoreMemory::compareExchange(words, count, count + 1))
+        std::unique_ptr<SemaphoreProcessMemory> candidate(new SemaphoreProcessMemory);
+        const SemaphoreResult result = candidate->open(name, 0);
+        if (result.status != SEMAPHORE_OK)
         {
-            return 0;
+            return result;
         }
-        count = ProcessSemaphoreMemory::load(words);
-    }
-    return count == limit ? 1 : -1;
+        m_processSemaphore = candidate->m_words;
+        m_processMemory.swap(candidate);
 #elif defined(_WIN32)
-    if (::ReleaseSemaphore(m_processSemaphore, 1, nullptr))
-    {
-        return 0;
-    }
-    return ::GetLastError() == ERROR_TOO_MANY_POSTS ? 1 : -1;
+        m_processSemaphore = ::OpenSemaphoreA(SEMAPHORE_MODIFY_STATE | SYNCHRONIZE, FALSE, name.c_str());
+        if (m_processSemaphore == nullptr)
+        {
+            return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, static_cast<int32_t>(::GetLastError()));
+        }
 #elif defined(__EMSCRIPTEN__)
-    // Wasm不提供跨进程命名信号量，不引入仅原生平台存在的符号。
-    return -1;
+        return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
 #else
-    if (::sem_post(static_cast<sem_t*>(m_processSemaphore)) == 0)
-    {
-        return 0;
-    }
-    return errno == EOVERFLOW ? 1 : -1;
+        m_processName = "/" + name;
+        sem_t* value = ::sem_open(m_processName.c_str(), 0);
+        if (value == SEM_FAILED)
+        {
+            const int32_t error = errno;
+            m_processName.clear();
+            return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, error);
+        }
+        m_processSemaphore = value;
 #endif
-}
-
-void Semaphore::processSignal()
-{
-    tryProcessSignal();
+    }
+    catch (const std::bad_alloc&)
+    {
+        return SemaphoreResult(SEMAPHORE_NO_MEMORY);
+    }
+    catch (const std::length_error&)
+    {
+        return SemaphoreResult(SEMAPHORE_INVALID);
+    }
+    return SemaphoreResult();
 }
 
 void Semaphore::closeProcessSemaphore()
 {
-    if (m_processSemaphore == nullptr)
+    if (closeProcessResult().status != SEMAPHORE_OK)
     {
-        return;
+        SemaphoreWake::recordCleanupFailure();
     }
-#ifdef SEMAPHORE_SHARED_COUNTER
-    m_processMemory.reset();
-#elif defined(_WIN32)
-    ::CloseHandle(m_processSemaphore);
-#elif !defined(__EMSCRIPTEN__)
-    ::sem_close(static_cast<sem_t*>(m_processSemaphore));
-#if !defined(__ANDROID__) && !defined(__EMSCRIPTEN__)
-    if (m_processCreated)
-    {
-        ::sem_unlink(m_processName.c_str());
-    }
-#endif
-#endif
-    m_processSemaphore = nullptr;
-    m_processCreated = false;
-    m_processName.clear();
 }
 
-void Semaphore::processWait()
+SemaphoreResult Semaphore::closeProcessResult()
 {
-    processWait(-1);
+    SemaphoreResult closed;
+#ifdef SEMAPHORE_SHARED_COUNTER
+    if (m_processMemory)
+    {
+        const SemaphoreResult result = m_processMemory->close();
+        m_processSemaphore = m_processMemory->m_words;
+        if (result.status != SEMAPHORE_OK)
+        {
+            return result;
+        }
+        m_processMemory.reset();
+    }
+#elif defined(_WIN32)
+    if (m_processSemaphore != nullptr && !::CloseHandle(m_processSemaphore))
+    {
+        return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, static_cast<int32_t>(::GetLastError()));
+    }
+#elif !defined(__EMSCRIPTEN__)
+    if (m_processCreated && !m_processName.empty())
+    {
+        if (::sem_unlink(m_processName.c_str()) != 0 && errno != ENOENT)
+        {
+            closed = SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, errno);
+        }
+        else
+        {
+            m_processCreated = false;
+            m_processName.clear();
+        }
+    }
+    if (m_processSemaphore != nullptr && ::sem_close(static_cast<sem_t*>(m_processSemaphore)) != 0)
+    {
+        return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, errno);
+    }
+#endif
+    m_processSemaphore = nullptr;
+    if (closed.status != SEMAPHORE_OK)
+    {
+        // 本地引用已释放，仍保留撤名责任供显式重试，不能漏掉sem_close。
+        return closed;
+    }
+    m_processCreated = false;
+    m_processName.clear();
+    return SemaphoreResult();
 }
 
 bool Semaphore::unlinkProcessName()
 {
 #ifdef SEMAPHORE_SHARED_COUNTER
-    return m_processMemory && m_processMemory->unlinkName();
-#elif defined(_WIN32) || defined(__ANDROID__) || defined(__EMSCRIPTEN__)
+    return m_processMemory && m_processMemory->unlinkName().status == SEMAPHORE_OK;
+#elif defined(_WIN32) || defined(__EMSCRIPTEN__)
     return false;
 #else
-    if (m_processName.empty())
+    if (!m_processCreated || m_processName.empty())
     {
         return false;
     }
-    if (::sem_unlink(m_processName.c_str()) == 0 || errno == ENOENT)
+    // 只有独占创建者可撤名；打开者和同名加入者不能删除本代或后来重建的名称。
+    if (::sem_unlink(m_processName.c_str()) != 0 && errno != ENOENT)
     {
-        m_processCreated = false;
-        return true;
+        return false;
     }
-    return false;
+    // 一次撤名权已消耗；旧引用不能随后再删除同名新代。
+    m_processCreated = false;
+    m_processName.clear();
+    return true;
 #endif
+}
+
+void Semaphore::processSignal()
+{
+    processSignalResult();
+}
+
+int32_t Semaphore::tryProcessSignal()
+{
+    const SemaphoreResult result = processSignalResult();
+    return result.status == SEMAPHORE_OK ? 0 : (result.status == SEMAPHORE_OVERFLOW ? 1 : -1);
+}
+
+SemaphoreResult Semaphore::processSignalResult()
+{
+    if (m_processSemaphore == nullptr)
+    {
+        return SemaphoreResult(SEMAPHORE_NOT_OPEN);
+    }
+#ifdef SEMAPHORE_SHARED_COUNTER
+    int32_t* words = static_cast<int32_t*>(m_processSemaphore);
+    const int32_t limit = SemaphoreProcessMemory::load(words + 1);
+    int32_t count = SemaphoreProcessMemory::load(words);
+    while (limit > 0 && count >= 0 && count < limit)
+    {
+        if (SemaphoreProcessMemory::compareExchange(words, count, count + 1))
+        {
+            return SemaphoreResult(SEMAPHORE_OK, true);
+        }
+        count = SemaphoreProcessMemory::load(words);
+    }
+    return SemaphoreResult(limit > 0 && count == limit ? SEMAPHORE_OVERFLOW : SEMAPHORE_INVALID);
+#elif defined(_WIN32)
+    if (::ReleaseSemaphore(m_processSemaphore, 1, nullptr))
+    {
+        return SemaphoreResult(SEMAPHORE_OK, true);
+    }
+    const DWORD error = ::GetLastError();
+    return SemaphoreResult(error == ERROR_TOO_MANY_POSTS ? SEMAPHORE_OVERFLOW : SEMAPHORE_SYSTEM_ERROR, false,
+        error == ERROR_TOO_MANY_POSTS ? 0 : static_cast<int32_t>(error));
+#elif defined(__EMSCRIPTEN__)
+    return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
+#else
+    if (::sem_post(static_cast<sem_t*>(m_processSemaphore)) == 0)
+    {
+        return SemaphoreResult(SEMAPHORE_OK, true);
+    }
+    const int32_t error = errno;
+    return SemaphoreResult(
+        error == EOVERFLOW ? SEMAPHORE_OVERFLOW : SEMAPHORE_SYSTEM_ERROR, false, error == EOVERFLOW ? 0 : error);
+#endif
+}
+
+void Semaphore::processWait()
+{
+    processWaitResult(-1);
 }
 
 bool Semaphore::processWait(int32_t timeout)
 {
-    if (m_processSemaphore == nullptr || timeout < -1)
+    return processWaitResult(timeout).status == SEMAPHORE_OK;
+}
+
+SemaphoreResult Semaphore::processWaitResult(int32_t timeout)
+{
+    if (timeout < -1)
+    {
+        return SemaphoreResult(SEMAPHORE_INVALID);
+    }
+#ifdef __EMSCRIPTEN__
+    return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
+#else
+    if (m_processSemaphore == nullptr)
+    {
+        return SemaphoreResult(SEMAPHORE_NOT_OPEN);
+    }
+#if defined(_WIN32) && !defined(SEMAPHORE_SHARED_COUNTER)
+    const DWORD waited =
+        ::WaitForSingleObject(m_processSemaphore, timeout == -1 ? INFINITE : static_cast<DWORD>(timeout));
+    if (waited == WAIT_OBJECT_0)
+    {
+        return SemaphoreResult(SEMAPHORE_OK, true);
+    }
+    return SemaphoreResult(waited == WAIT_TIMEOUT ? SEMAPHORE_TIMEOUT : SEMAPHORE_SYSTEM_ERROR, false,
+        waited == WAIT_TIMEOUT ? 0 : static_cast<int32_t>(::GetLastError()));
+#else
+    const uint64_t started = monotonicMilliseconds();
+    for (;;)
+    {
+#ifdef SEMAPHORE_SHARED_COUNTER
+        int32_t* words = static_cast<int32_t*>(m_processSemaphore);
+        const int32_t maximum = SemaphoreProcessMemory::load(words + 1);
+        int32_t count = SemaphoreProcessMemory::load(words);
+        if (maximum <= 0 || count < 0 || count > maximum)
+        {
+            return SemaphoreResult(SEMAPHORE_INVALID);
+        }
+        while (count > 0)
+        {
+            if (SemaphoreProcessMemory::compareExchange(words, count, count - 1))
+            {
+                return SemaphoreResult(SEMAPHORE_OK, true);
+            }
+            count = SemaphoreProcessMemory::load(words);
+        }
+#else
+        const int32_t result = timeout < 0 ? ::sem_wait(static_cast<sem_t*>(m_processSemaphore))
+                                           : ::sem_trywait(static_cast<sem_t*>(m_processSemaphore));
+        if (result == 0)
+        {
+            return SemaphoreResult(SEMAPHORE_OK, true);
+        }
+        const int32_t error = errno;
+        if (error != EINTR && error != EAGAIN)
+        {
+            return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, error);
+        }
+        if (timeout < 0)
+        {
+            continue;
+        }
+#endif
+        const uint64_t elapsed = monotonicMilliseconds() - started;
+        if (timeout >= 0 && elapsed >= static_cast<uint32_t>(timeout))
+        {
+            return SemaphoreResult(SEMAPHORE_TIMEOUT);
+        }
+        // 沿用移动端1ms/桌面POSIX有限等待2ms补查，EINTR也不重置总预算。
+#ifdef SEMAPHORE_SHARED_COUNTER
+        const uint32_t maximumSlice = 1;
+#else
+        const uint32_t maximumSlice = 2;
+#endif
+        const uint32_t slice = timeout < 0
+            ? maximumSlice
+            : static_cast<uint32_t>((std::min)(uint64_t(maximumSlice), static_cast<uint32_t>(timeout) - elapsed));
+#ifdef _WIN32
+        ::Sleep(slice);
+#else
+        struct timespec pause = {};
+        pause.tv_nsec = static_cast<long>(slice) * 1000000;
+        if (::nanosleep(&pause, nullptr) != 0 && errno != EINTR)
+        {
+            return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, errno);
+        }
+#endif
+    }
+#endif
+#endif
+}
+
+uint32_t Semaphore::cleanupFailures()
+{
+    return SemaphoreWake::cleanupFailures();
+}
+
+SemaphoreResult Semaphore::prepareSignalAndWait()
+{
+    return m_wake.prepareSignalAndWait();
+}
+
+SemaphoreSignalWaitResult Semaphore::signalAndWaitResult(Semaphore& waitOn)
+{
+    return signalAndWaitLocal(waitOn, true, 0);
+}
+
+SemaphoreSignalWaitResult Semaphore::signalAndWaitResult(Semaphore& waitOn, uint32_t timeout)
+{
+    return signalAndWaitLocal(waitOn, false, timeout);
+}
+
+SemaphoreSignalWaitResult Semaphore::processSignalAndWaitResult(Semaphore& waitOn, int32_t timeout)
+{
+    if (timeout < -1)
+    {
+        return SemaphoreSignalWaitResult(SEMAPHORE_INVALID);
+    }
+#ifdef __EMSCRIPTEN__
+    return SemaphoreSignalWaitResult(SEMAPHORE_UNSUPPORTED);
+#else
+    // 两端同时预检，目标未打开时不能先把请求发出去。
+    if (m_processSemaphore == nullptr || waitOn.m_processSemaphore == nullptr)
+    {
+        return SemaphoreSignalWaitResult(SEMAPHORE_NOT_OPEN);
+    }
+#if defined(_WIN32) && !defined(SEMAPHORE_SHARED_COUNTER)
+    DWORD waited = ::SignalObjectAndWait(
+        m_processSemaphore, waitOn.m_processSemaphore, timeout < 0 ? INFINITE : static_cast<DWORD>(timeout), FALSE);
+    DWORD error = waited == WAIT_FAILED ? ::GetLastError() : 0;
+    if (waited == WAIT_OBJECT_0)
+    {
+        return SemaphoreSignalWaitResult(SEMAPHORE_OK, SEMAPHORE_COMMIT_DONE, SEMAPHORE_COMMIT_DONE);
+    }
+    if (waited == WAIT_TIMEOUT)
+    {
+        return SemaphoreSignalWaitResult(SEMAPHORE_TIMEOUT, SEMAPHORE_COMMIT_DONE, SEMAPHORE_COMMIT_NONE);
+    }
+    if (waited == WAIT_FAILED && error == ERROR_TOO_MANY_POSTS)
+    {
+        return SemaphoreSignalWaitResult(SEMAPHORE_OVERFLOW);
+    }
+    // 文档没有给其他失败的阶段承诺；不得伪造“未发出，可重试”，也不自动重复调用。
+    return SemaphoreSignalWaitResult(SEMAPHORE_SYSTEM_ERROR, SEMAPHORE_COMMIT_UNKNOWN, SEMAPHORE_COMMIT_UNKNOWN,
+        static_cast<int32_t>(error != 0 ? error : ERROR_GEN_FAILURE));
+#else
+    const uint64_t started = timeout < 0 ? 0 : monotonicMilliseconds();
+    const SemaphoreResult sent = processSignalResult();
+    if (sent.status != SEMAPHORE_OK)
+    {
+        return SemaphoreSignalWaitResult(sent.status, sent.committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE,
+            SEMAPHORE_COMMIT_NONE, sent.nativeError);
+    }
+    int32_t remaining = timeout;
+    if (timeout >= 0)
+    {
+        const uint64_t elapsed = monotonicMilliseconds() - started;
+        remaining = elapsed >= static_cast<uint32_t>(timeout) ? 0 : timeout - static_cast<int32_t>(elapsed);
+    }
+    const SemaphoreResult received = waitOn.processWaitResult(remaining);
+    return SemaphoreSignalWaitResult(received.status, SEMAPHORE_COMMIT_DONE,
+        received.committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE, received.nativeError);
+#endif
+#endif
+}
+
+SemaphoreResult Semaphore::prepareEventPool(SemaphoreEventPool*& pool)
+{
+    pool = m_eventPool.load();
+    if (pool != nullptr)
+    {
+        return SemaphoreResult();
+    }
+    try
+    {
+        std::unique_ptr<SemaphoreEventPool> candidate(new SemaphoreEventPool(SemaphorePoolConfig()));
+        if (m_eventPool.compare_exchange_strong(pool, candidate.get()))
+        {
+            pool = candidate.release();
+        }
+        return SemaphoreResult();
+    }
+    catch (const std::bad_alloc&)
+    {
+        return SemaphoreResult(SEMAPHORE_NO_MEMORY);
+    }
+    catch (const std::system_error& error)
+    {
+        return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, error.code().value());
+    }
+}
+
+SemaphoreResult Semaphore::waitLocal(bool isEvent, bool infinite, uint32_t timeout)
+{
+    if (!isEvent)
+    {
+        if (consumeCount())
+        {
+            return SemaphoreResult(SEMAPHORE_OK, true);
+        }
+        if (!infinite && timeout == 0)
+        {
+            return consumeCount() ? SemaphoreResult(SEMAPHORE_OK, true) : SemaphoreResult(SEMAPHORE_TIMEOUT);
+        }
+    }
+    const uint64_t started = infinite ? 0 : monotonicMilliseconds();
+    SemaphoreEventPool* pool = nullptr;
+    SemaphoreEventRecord* record = nullptr;
+    if (isEvent)
+    {
+        if (!SemaphoreWake::canBlock())
+        {
+            return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
+        }
+        const SemaphoreResult prepared = prepareEventPool(pool);
+        if (prepared.status != SEMAPHORE_OK)
+        {
+            return prepared;
+        }
+        const SemaphoreResult registered = pool->begin(record);
+        if (registered.status != SEMAPHORE_OK)
+        {
+            return registered;
+        }
+    }
+    // 独立记录已有登记和引用，无需再争用公共睡眠计数或唤醒无关计数等待者
+    const bool direct = isEvent && m_wake.canWaitAddress();
+    SemaphoreResult result = direct ? SemaphoreResult() : m_wake.enterWait();
+    if (result.status != SEMAPHORE_OK)
+    {
+        if (record != nullptr)
+        {
+            result.committed = pool->finish(record);
+        }
+        return result;
+    }
+    for (;;)
+    {
+        const uint32_t expected = direct ? 0 : m_wake.snapshot();
+        if (isEvent ? record->m_state.load() == 1 : consumeCount())
+        {
+            result = SemaphoreResult(SEMAPHORE_OK, true);
+            break;
+        }
+        const uint64_t elapsed = infinite ? 0 : monotonicMilliseconds() - started;
+        if (!infinite && elapsed >= timeout)
+        {
+            // 事件结束CAS与通知CAS竞争；计数最终探测不抹掉迟到许可。
+            const bool received = !isEvent && consumeCount();
+            result = received ? SemaphoreResult(SEMAPHORE_OK, true) : SemaphoreResult(SEMAPHORE_TIMEOUT);
+            break;
+        }
+        const uint32_t slice = infinite ? 32 : static_cast<uint32_t>((std::min)(uint64_t(32), timeout - elapsed));
+        SemaphoreResult slept = m_wake.sleep(expected, slice, direct ? &record->m_state : nullptr);
+        if (slept.status != SEMAPHORE_OK && slept.status != SEMAPHORE_TIMEOUT)
+        {
+            result = slept;
+            break;
+        }
+    }
+    if (record != nullptr)
+    {
+        result.committed = pool->finish(record);
+        if (result.committed && result.status == SEMAPHORE_TIMEOUT)
+        {
+            result.status = SEMAPHORE_OK;
+        }
+    }
+    if (!direct)
+    {
+        m_wake.leaveWait();
+    }
+    return result;
+}
+
+SemaphoreSignalWaitResult Semaphore::signalAndWaitLocal(Semaphore& waitOn, bool infinite, uint32_t timeout)
+{
+    const uint64_t started = infinite ? 0 : monotonicMilliseconds();
+    if (!m_wake.canSignalAndWait(waitOn.m_wake))
+    {
+        const SemaphoreResult sent = trySignal();
+        if (sent.status != SEMAPHORE_OK)
+        {
+            return SemaphoreSignalWaitResult(sent.status,
+                sent.committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE, SEMAPHORE_COMMIT_NONE,
+                sent.nativeError);
+        }
+    }
+    else
+    {
+        // 目标先登记、快照，发布后再查真实许可；双方发布/重查均保持seq_cst。
+        const SemaphoreResult entered = waitOn.m_wake.enterWait();
+        if (entered.status != SEMAPHORE_OK)
+        {
+            return SemaphoreSignalWaitResult(
+                entered.status, SEMAPHORE_COMMIT_NONE, SEMAPHORE_COMMIT_NONE, entered.nativeError);
+        }
+        const uint32_t expected = waitOn.m_wake.snapshot();
+        uint64_t count = m_count.load();
+        do
+        {
+            if (count == UINT64_MAX)
+            {
+                waitOn.m_wake.leaveWait();
+                return SemaphoreSignalWaitResult(SEMAPHORE_OVERFLOW);
+            }
+        } while (!m_count.compare_exchange_weak(count, count + 1));
+        bool received = waitOn.consumeCount();
+        const uint64_t elapsed = infinite ? 0 : monotonicMilliseconds() - started;
+        if (received || (!infinite && elapsed >= timeout))
+        {
+            const SemaphoreResult woke = m_wake.notify();
+            if (!received)
+            {
+                received = waitOn.consumeCount();
+            }
+            waitOn.m_wake.leaveWait();
+            return SemaphoreSignalWaitResult(
+                woke.status != SEMAPHORE_OK ? woke.status : (received ? SEMAPHORE_OK : SEMAPHORE_TIMEOUT),
+                SEMAPHORE_COMMIT_DONE, received ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE, woke.nativeError);
+        }
+        const uint32_t slice = infinite ? 32 : static_cast<uint32_t>((std::min)(uint64_t(32), timeout - elapsed));
+        const SemaphoreResult slept = m_wake.signalAndSleep(waitOn.m_wake, expected, slice);
+        waitOn.m_wake.leaveWait();
+        if (slept.status != SEMAPHORE_OK && slept.status != SEMAPHORE_TIMEOUT)
+        {
+            return SemaphoreSignalWaitResult(
+                slept.status, SEMAPHORE_COMMIT_DONE, SEMAPHORE_COMMIT_NONE, slept.nativeError);
+        }
+    }
+    // 原生返回只是提示，仍由目标64位计数CAS决定是否取得许可；后续等待不重复发送。
+    uint32_t remaining = timeout;
+    if (!infinite)
+    {
+        const uint64_t elapsed = monotonicMilliseconds() - started;
+        remaining = elapsed >= timeout ? 0 : timeout - static_cast<uint32_t>(elapsed);
+    }
+    const SemaphoreResult received = infinite ? waitOn.waitResult() : waitOn.waitResult(remaining);
+    return SemaphoreSignalWaitResult(received.status, SEMAPHORE_COMMIT_DONE,
+        received.committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE, received.nativeError);
+}
+
+bool Semaphore::consumeCount()
+{
+    uint64_t count = m_count.load();
+    while (count != 0)
+    {
+        if (m_count.compare_exchange_weak(count, count - 1))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+uint64_t Semaphore::monotonicMilliseconds()
+{
+#ifdef _WIN32
+    LARGE_INTEGER ticks;
+    LARGE_INTEGER frequency;
+    if (::QueryPerformanceCounter(&ticks) && ::QueryPerformanceFrequency(&frequency) && frequency.QuadPart > 0)
+    {
+        return static_cast<uint64_t>(static_cast<double>(ticks.QuadPart) * 1000.0 / frequency.QuadPart);
+    }
+    return ::GetTickCount64();
+#else
+    return static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
+            .count());
+#endif
+}
+
+void Semaphore::checkLocalResult(const SemaphoreResult& result)
+{
+    if (result.status == SEMAPHORE_OVERFLOW)
+    {
+        throw std::overflow_error("Semaphore notification counter exhausted; not committed");
+    }
+    if (result.status != SEMAPHORE_OK && result.status != SEMAPHORE_TIMEOUT)
+    {
+        if (result.status == SEMAPHORE_UNSUPPORTED)
+        {
+            throw std::system_error(std::make_error_code(std::errc::not_supported));
+        }
+        if (result.status == SEMAPHORE_NO_MEMORY)
+        {
+            throw std::bad_alloc();
+        }
+        if (result.nativeError == 0)
+        {
+            throw std::system_error(
+                std::make_error_code(result.status == SEMAPHORE_CAPACITY ? std::errc::resource_unavailable_try_again
+                                                                         : std::errc::invalid_argument),
+                "Semaphore operation rejected");
+        }
+        throw std::system_error(result.nativeError, std::system_category(),
+            result.committed ? "Semaphore notification committed; wake failed; do not publish again"
+                             : "Semaphore operation failed");
+    }
+}
+
+bool Semaphore::validProcessName(const std::string& name)
+{
+    if (name.empty() || name.find('\0') != std::string::npos || name.find('/') != std::string::npos)
     {
         return false;
     }
 #ifdef SEMAPHORE_SHARED_COUNTER
-    int32_t* count = static_cast<int32_t*>(m_processSemaphore);
-    const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() +
-        std::chrono::milliseconds(timeout < 0 ? 0 : timeout);
-    for (;;)
-    {
-        int32_t current = ProcessSemaphoreMemory::load(count);
-        while (current > 0)
-        {
-            if (ProcessSemaphoreMemory::compareExchange(count, current, current - 1))
-            {
-                return true;
-            }
-            current = ProcessSemaphoreMemory::load(count);
-        }
-        if (current < 0 || (timeout >= 0 && std::chrono::steady_clock::now() >= deadline))
-        {
-            return false;
-        }
-        // 通知只作提示；相对睡眠兼容Android/iOS，不依赖跨进程pthread锁或墙上时钟。
-#ifdef _WIN32
-        ::Sleep(1);
-#else
-        struct timespec pause = {};
-        pause.tv_nsec = 1000000;
-        ::nanosleep(&pause, nullptr);
-#endif
-    }
-#elif defined(_WIN32)
-    return ::WaitForSingleObject(m_processSemaphore, timeout < 0 ? INFINITE : static_cast<DWORD>(timeout)) == WAIT_OBJECT_0;
-#elif defined(__EMSCRIPTEN__)
-    return false;
-#else
-    sem_t* value = static_cast<sem_t*>(m_processSemaphore);
-    if (timeout < 0)
-    {
-        int result;
-        do { result = ::sem_wait(value); } while (result != 0 && errno == EINTR);
-        return result == 0;
-    }
-    if (::sem_trywait(value) == 0)
-    {
-        return true;
-    }
-    if (timeout == 0 || (errno != EAGAIN && errno != EINTR))
+    // 保留原移动协议的30字节约束；桌面原生名称交由系统核对真实长度/命名空间。
+    if (name.size() > 30)
     {
         return false;
     }
-    const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout);
-    while (std::chrono::steady_clock::now() < deadline)
-    {
-        // 有限等待使用相对睡眠，避免sem_timedwait的墙上时钟回拨延长退出时间。
-        // Darwin同样支持此路径；无限等待仍使用原生sem_wait。
-        const int64_t remaining = std::chrono::duration_cast<std::chrono::nanoseconds>(deadline - std::chrono::steady_clock::now()).count();
-        if (remaining <= 0)
-        {
-            break;
-        }
-        struct timespec pause = {};
-        pause.tv_nsec = static_cast<long>((std::min)(remaining, static_cast<int64_t>(2000000)));
-        ::nanosleep(&pause, nullptr);
-        if (::sem_trywait(value) == 0)
-        {
-            return true;
-        }
-        if (errno != EAGAIN && errno != EINTR)
-        {
-            return false;
-        }
-    }
-    return false;
 #endif
-}
-
-void Semaphore::event()
-{
-    std::unique_lock<std::mutex> lock(m_mtx);
-    m_cv.notify_one();
-}
-
-void Semaphore::eventAll()
-{
-    std::unique_lock<std::mutex> lock(m_mtx);
-    m_cv.notify_all();
-}
-
-void Semaphore::eventWait()
-{
-    std::unique_lock<std::mutex> lock(m_mtx);
-    m_cv.wait(lock);
-}
-
-bool Semaphore::eventWait(int32_t timeout)
-{
-    std::unique_lock<std::mutex> lock(m_mtx);
-    if (m_cv.wait_for(lock, std::chrono::milliseconds(timeout)) == std::cv_status::timeout)
-    {
-        return false;
-    }
     return true;
 }
 
-// 以下历史文件后端测试保留为注释；新原生后端测试随ProcessWork.cpp主入口统一执行。
-//#include <chrono>
-//#include <cstdio>
-//#include <cstdlib>
-//#include <fstream>
-//#include <iterator>
-//#include <limits.h>
-//#include <stdexcept>
-//#include <string>
-//#ifdef _MSC_VER
-//#include <windows.h>
-//#else
-//#include <cerrno>
-//#include <csignal>
-//#include <sys/wait.h>
-//#include <unistd.h>
-//#if defined(__ANDROID__) || defined(__APPLE__)
-//#include <sys/stat.h>
-//#endif
-//#ifdef __APPLE__
-//#include <TargetConditionals.h>
-//#endif
-//#endif
+// 调用示例：已在Windows x64/VS2013运行通过，以下全部注释，不参与正式库编译
+// 学习时可复制此main和所需include到独立调用工程；正式测试仍位于SemaphoreTest工程
+// #include "Semaphore.h"
+// #include <cstdio>
+// #include <cstdlib>
+// #include <stdexcept>
+// #include <thread>
+// #ifdef _WIN32
+// #include <Windows.h>
+// #else
+// #include <unistd.h>
+// #include <time.h>
+// #include <cerrno>
+// #endif
 //
-//int main(int argc, char* argv[])
-//{
-//    /** 判定一条独立预期并累计实际检查数
-//    @param [in] condition 实际条件
-//    @param [in] message 检查说明
-//    @param [in,out] checks 本项已执行的检查数
-//    */
-//    auto check = [](bool condition, const char* message, int32_t& checks) -> void
-//    {
-//        ++checks;
-//        if (!condition)
-//        {
-//            throw std::runtime_error(message);
-//        }
-//    };
+// /** Semaphore公开接口的调用演示，不采样、不计时、不测吞吐
+//     同线程按步骤展示生产/消费两端；真实业务可把相应步骤放到不同线程或进程
+//     事件部分由独立线程周期发布状态，结束前先停止并join，再销毁Semaphore
+//     Android/iOS须先由宿主设置SEMAPHORE_DEMO_DIRECTORY为已存在的私有共享目录
+//     Wasm主线程不能运行以下阻塞/命名IPC流程；其能力示例见SemaphoreTest工程
+// @return 0演示完成，1操作失败，77当前宿主不适用
+// */
+// int32_t main()
+// {
+// #ifdef __EMSCRIPTEN__
+//     std::printf("This native blocking demo is not applicable to a Wasm main thread.\n");
+//     return 77;
+// #else
+//     const uint32_t cleanupBefore = Semaphore::cleanupFailures();
+//     try
+//     {
+//         /** 记录预期未满足的步骤，由main统一报告并正常退出
+//         @param [in] condition 当前步骤是否成立
+//         @param [in] step 步骤名称
+//         */
+//         const auto expect = [](bool condition, const char* step)
+//         {
+//             if (!condition)
+//             {
+//                 throw std::runtime_error(step);
+//             }
+//         };
+//         /** 展示普通Result；失败只退出示例，不重发可能已提交的通知
+//         @param [in] step 步骤名称
+//         @param [in] result 当前操作的状态和提交信息
+//         */
+//         const auto showResult = [](const char* step, const SemaphoreResult& result)
+//         {
+//             std::printf("%s: status=%d committed=%d native=%d\n", step,
+//                 static_cast<int32_t>(result.status), result.committed ? 1 : 0, result.nativeError);
+//             if (result.status != SEMAPHORE_OK)
+//             {
+//                 throw std::runtime_error(step);
+//             }
+//         };
+//         /** 分别展示组合操作的发送和消费阶段，不能因等待失败重发整个操作
+//         @param [in] step 步骤名称
+//         @param [in] result 本次组合结果；UNKNOWN须由业务代次恢复
+//         */
+//         const auto showCombined = [](const char* step, const SemaphoreSignalWaitResult& result)
+//         {
+//             std::printf("%s: status=%d signal=%d wait=%d native=%d\n", step,
+//                 static_cast<int32_t>(result.status), static_cast<int32_t>(result.signalState),
+//                 static_cast<int32_t>(result.waitState), result.nativeError);
+//             if (result.status != SEMAPHORE_OK || result.signalState != SEMAPHORE_COMMIT_DONE ||
+//                 result.waitState != SEMAPHORE_COMMIT_DONE)
+//             {
+//                 throw std::runtime_error(step);
+//             }
+//         };
 //
-//    /** 在独立单线程测试进程中设置启动配置，产品运行时不得这样动态变更环境
-//    @param [in] scope Android/Apple共享目录，Windows/Linux库应忽略此环境变量
-//    */
-//    auto configureScope = [](const std::string& scope) -> void
-//    {
-//    #ifdef _MSC_VER
-//        const int32_t result = ::_putenv_s("SEMAPHORE_PROCESS_SCOPE", scope.c_str());
-//    #else
-//        const int32_t result = ::setenv("SEMAPHORE_PROCESS_SCOPE", scope.c_str(), 1);
-//    #endif
-//        if (result != 0)
-//        {
-//            throw std::runtime_error("Failed to set owned test process environment");
-//        }
-//    };
+//         // 一、本地任务计数：通知可提前到达，每次成功等待恰好消费一个许可
+//         {
+//             Semaphore tasks;
+//             tasks.signal();
+//             tasks.wait();
+//             tasks.signal();
+//             expect(tasks.wait(1000), "count timed wait");
+//             showResult("count publish", tasks.trySignal());
+//             showResult("count infinite wait", tasks.waitResult());
+//             showResult("count publish again", tasks.trySignal());
+//             showResult("count timed result", tasks.waitResult(1000));
 //
-//    /** 生成测试专属的短名称，避免不同进程和用例共享状态
-//    @param [in] id 稳定用例ID
-//    @return 含当前PID的ASCII逻辑名称
-//    */
-//    auto testName = [](int32_t id) -> std::string
-//    {
-//        char name[64];
-//    #ifdef _MSC_VER
-//        const uint32_t pid = ::GetCurrentProcessId();
-//        ::sprintf_s(name, sizeof(name), "SP%u_%d", pid, id);
-//    #else
-//        const uint32_t pid = static_cast<uint32_t>(::getpid());
-//        std::snprintf(name, sizeof(name), "SP%u_%d", pid, id);
-//    #endif
-//        return name;
-//    };
+//             // reset只用于生产者、消费者均已停止的静止阶段，不作为并发取消接口
+//             tasks.signal();
+//             tasks.reset();
+//             expect(tasks.waitResult(0).status == SEMAPHORE_TIMEOUT, "reset clears pending count");
+//         }
 //
-//    /** 在独立对端进程打开两个方向的对象并完成一次握手
-//    @param [in] name 父进程创建的对象前缀
-//    @param [in] scope 通信范围
-//    @param [in] infinite true检查无参数无限等待，false检查有限等待
-//    @return 成功0，异常或超时1
-//    */
-//    auto runPeer = [&configureScope](const std::string& name, const std::string& scope, bool infinite) -> int32_t
-//    {
-//        try
-//        {
-//            Semaphore inbound;
-//            Semaphore outbound;
-//            configureScope(scope);
-//            inbound.openProcessSemaphore(name + "a");
-//            outbound.openProcessSemaphore(name + "b");
-//            outbound.processSignal();
-//            if (infinite)
-//            {
-//                inbound.processWait();
-//            }
-//            else if (!inbound.processWait(2000))
-//            {
-//                return 1;
-//            }
-//            outbound.processSignal();
-//            return 0;
-//        }
-//        catch (const std::exception& error)
-//        {
-//            std::fprintf(stderr, "Peer failed: %s\n", error.what());
-//            return 1;
-//        }
-//    };
+//         // 二、周期状态事件：事件不积存，唤醒后读取业务版本，不能把提示当成任务数量
+//         {
+//             Semaphore changed;
+//             SemaphorePoolConfig config;
+//             config.initialCapacity = 2;
+//             config.maxCapacity = 8;
+//             /** 提供可选缩容策略；维护仍遵守初始容量下限与安全回收条件
+//             @param [in] context 本次维护的容量快照
+//             @return 最多回收4条、连续空闲至少1000毫秒的记录
+//             */
+//             config.shrink = [](const SemaphoreShrinkContext& context)
+//             {
+//                 SemaphoreShrinkDecision decision = {};
+//                 decision.shrinkCount = context.currentCapacity > context.initialCapacity ? 4 : 0;
+//                 decision.idleMilliseconds = 1000;
+//                 return decision;
+//             };
+//             showResult("configure optional event pool", changed.configureEventPool(config));
+//             std::atomic<bool> stop(false);
+//             std::atomic<bool> publishFailed(false);
+//             std::atomic<uint32_t> version(0);
+//             /** 周期发布新的业务版本；轮流展示单个提示、广播及Result版本
+//                 周期更新允许错过中间版本；休眠让出CPU，不用持续轮询等待登记
+//             */
+//             std::thread publisher([&]()
+//             {
+//                 while (!stop.load())
+//                 {
+//                     const uint32_t current = version.fetch_add(1) + 1;
+//                     try
+//                     {
+//                         if (current % 3 == 1)
+//                         {
+//                             changed.event();
+//                         }
+//                         else if (current % 3 == 2)
+//                         {
+//                             // 有多个订阅者时，eventAll提示本次已登记的全部等待者
+//                             changed.eventAll();
+//                         }
+//                         else
+//                         {
+//                             const SemaphoreResult result = changed.tryEvent();
+//                             if (result.status != SEMAPHORE_OK)
+//                             {
+//                                 publishFailed.store(true);
+//                             }
+//                             // committed=false表示此刻没有合格等待者，不是积存了一次事件
+//                         }
+//                     }
+//                     catch (...)
+//                     {
+//                         publishFailed.store(true);
+//                     }
+// #ifdef _WIN32
+//                     ::Sleep(20);
+// #else
+//                     struct timespec delay = {0, 20000000};
+//                     if (::nanosleep(&delay, nullptr) != 0 && errno != EINTR)
+//                     {
+//                         publishFailed.store(true);
+//                     }
+// #endif
+//                 }
+//             });
+//             try
+//             {
+//                 // 无参数版本无限等待，要求发布者仍存活；有限版本便于检查退出/业务条件
+//                 changed.eventWait();
+//                 std::printf("event observed version=%u\n", static_cast<unsigned>(version.load()));
+//                 showResult("event infinite result", changed.eventWaitResult());
+//                 expect(changed.eventWait(1000), "event timed wait");
+//                 showResult("event timed result", changed.eventWaitResult(1000));
+//             }
+//             catch (...)
+//             {
+//                 stop.store(true);
+//                 publisher.join();
+//                 throw;
+//             }
+//             stop.store(true);
+//             publisher.join();
+//             expect(!publishFailed.load(), "event publisher");
+//             const SemaphorePoolStats stats = changed.eventPoolStatistics();
+//             std::printf("event pool: capacity=%u free=%u\n",
+//                 static_cast<unsigned>(stats.capacity), static_cast<unsigned>(stats.freeCapacity));
+//             size_t released = 0;
+//             showResult("optional event pool maintenance", changed.maintainEventPool(released));
+//             // 本例没有超过初始容量，released为0也正常；普通事件使用不必配置或维护池
+//             std::printf("event pool released=%u\n", static_cast<unsigned>(released));
+//         }
 //
-//    /** 启动真实对端，检查双向通知及有限时间内的进程退出
-//    @param [in] name 本项唯一名称前缀
-//    @param [in] scope 通信范围
-//    @param [in] infinite 是否检查无限等待；父进程看门狗仍有上限
-//    @param [in,out] checks 实际检查数
-//    @return 可在当前宿主执行时true，iOS CLI不能启动任意对端时false
-//    */
-//    auto testTwoProcesses = [&check, &configureScope, &runPeer](const std::string& name, const std::string& scope, int32_t& checks, bool infinite) -> bool
-//    {
-//    #if defined(__APPLE__) && TARGET_OS_IPHONE
-//        (void)name;
-//        (void)scope;
-//        (void)checks;
-//        (void)infinite;
-//        return false;
-//    #else
-//        Semaphore outbound;
-//        Semaphore inbound;
-//        configureScope(scope);
-//        outbound.createProcessSemaphore(name + "a");
-//        inbound.createProcessSemaphore(name + "b");
-//    #ifdef _MSC_VER
-//        wchar_t executable[32768];
-//        const DWORD length = ::GetModuleFileNameW(nullptr, executable, 32768);
-//        check(length != 0 && length < 32768, "Resolve test executable", checks);
-//        std::wstring command = L"\"" + std::wstring(executable, length) +
-//            (infinite ? L"\" --peer-infinite " : L"\" --peer ");
-//        command.append(name.begin(), name.end());
-//        STARTUPINFOW startup = {};
-//        startup.cb = sizeof(startup);
-//        PROCESS_INFORMATION process = {};
-//        check(::CreateProcessW(nullptr, &command[0], nullptr, nullptr, FALSE, CREATE_NO_WINDOW,
-//            nullptr, nullptr, &startup, &process) != FALSE, "Create peer process", checks);
-//        ::CloseHandle(process.hThread);
-//        bool response = false;
-//        try
-//        {
-//            check(inbound.processWait(2500), "Peer reports ready before notification", checks);
-//            check(!inbound.processWait(20), "Peer cannot acknowledge before receiving notification", checks);
-//            outbound.processSignal();
-//            response = inbound.processWait(2500);
-//        }
-//        catch (...)
-//        {
-//            ::TerminateProcess(process.hProcess, 1);
-//            ::WaitForSingleObject(process.hProcess, 3000);
-//            ::CloseHandle(process.hProcess);
-//            throw;
-//        }
-//        const DWORD exited = ::WaitForSingleObject(process.hProcess, 3000);
-//        DWORD exitCode = 1;
-//        if (exited == WAIT_OBJECT_0)
-//        {
-//            ::GetExitCodeProcess(process.hProcess, &exitCode);
-//        }
-//        else
-//        {
-//            ::TerminateProcess(process.hProcess, 1);
-//            ::WaitForSingleObject(process.hProcess, 3000);
-//        }
-//        ::CloseHandle(process.hProcess);
-//        check(response, "Peer must acknowledge a different-direction semaphore", checks);
-//        check(exited == WAIT_OBJECT_0 && exitCode == 0, "Peer must exit successfully", checks);
-//    #else
-//        const pid_t child = ::fork();
-//        check(child >= 0, "Fork peer process", checks);
-//        if (child == 0)
-//        {
-//            ::_exit(runPeer(name, scope, infinite));
-//        }
-//        bool response = false;
-//        try
-//        {
-//            check(inbound.processWait(2500), "Peer reports ready before notification", checks);
-//            check(!inbound.processWait(20), "Peer cannot acknowledge before receiving notification", checks);
-//            outbound.processSignal();
-//            response = inbound.processWait(2500);
-//        }
-//        catch (...)
-//        {
-//            ::kill(child, SIGKILL);
-//            while (::waitpid(child, nullptr, 0) < 0 && errno == EINTR)
-//            {
+//         // 三、本地生产/消费组合：发布已完成工作，然后取得下一空槽
+//         // 假设当前生产者已持有一个槽位，另有一个空槽；这里只演示通知，不承载真实队列数据
+//         {
+//             Semaphore jobs;
+//             Semaphore freeSlots;
+//             showResult("prepare jobs", jobs.prepareSignalAndWait());
+//             showResult("prepare free slots", freeSlots.prepareSignalAndWait());
+//             freeSlots.signal();
+//             showCombined("publish job and acquire next slot", jobs.signalAndWaitResult(freeSlots));
+//             jobs.wait();
+//             freeSlots.signal(); // 消费者处理上一工作后归还槽位
+//             showCombined("publish job and acquire slot with budget", jobs.signalAndWaitResult(freeSlots, 1000));
+//             jobs.wait();
+//             // 真实冷通知后立即等待可优先使用组合接口；持续热往返不宜机械切换准备模式
+//         }
 //
-//            }
-//            throw;
-//        }
-//        int32_t status = 0;
-//        pid_t result = 0;
-//        const std::chrono::steady_clock::time_point deadline =
-//            std::chrono::steady_clock::now() + std::chrono::seconds(3);
-//        do
-//        {
-//            result = ::waitpid(child, &status, WNOHANG);
-//            if (result == 0)
-//            {
-//                ::usleep(1000);
-//            }
-//        }
-//        while ((result == 0 || (result < 0 && errno == EINTR)) &&
-//            std::chrono::steady_clock::now() < deadline);
-//        if (result != child && !(result < 0 && errno == ECHILD))
-//        {
-//            ::kill(child, SIGKILL);
-//            while (::waitpid(child, nullptr, 0) < 0 && errno == EINTR)
-//            {
+//         // 四、命名通知：同一程序按顺序模拟两个进程端，真实两端必须约定相同目录和名称
+// #if defined(SEMAPHORE_SHARED_COUNTER) && !defined(_WIN32)
+//         const char* directory = std::getenv("SEMAPHORE_DEMO_DIRECTORY");
+//         expect(directory != nullptr, "set an existing owned SEMAPHORE_DEMO_DIRECTORY");
+//         expect(Semaphore::setProcessDirectory(directory), "configure mobile shared directory");
+// #else
+//         expect(Semaphore::setProcessDirectory(""), "desktop native notification directory");
+// #endif
+//         {
+//             char name[32];
+// #ifdef _WIN32
+//             std::sprintf(name, "SemDemo%lu", static_cast<unsigned long>(::GetCurrentProcessId()));
+// #else
+//             std::sprintf(name, "SemDemo%lu", static_cast<unsigned long>(::getpid()));
+// #endif
+//             const std::string jobsName = std::string(name) + "j";
+//             const std::string slotsName = std::string(name) + "s";
+//             Semaphore jobsOwner, slotsOwner, jobsReader, slotsReader, probe;
 //
-//            }
-//        }
-//        check(response, "Peer must acknowledge a different-direction semaphore", checks);
-//        check(result == child && WIFEXITED(status) && WEXITSTATUS(status) == 0,
-//            "Peer must exit successfully", checks);
-//    #endif
-//        return true;
-//    #endif
-//    };
+//             // 旧void包装便于兼容；新调用方优先Result接口，以便观察失败原因
+//             jobsOwner.createProcessSemaphore(jobsName, 4);
+//             showResult("create named slots", slotsOwner.createProcessResult(slotsName, 4));
+//             expect(probe.tryOpenProcessSemaphore(jobsName), "probe existing named jobs");
+//             jobsReader.openProcessSemaphore(jobsName);
+//             showResult("open named slots", slotsReader.openProcessResult(slotsName));
 //
-//    /** 创建一个通知后直接退出，不执行Semaphore析构
-//    @param [in] name 本测试拥有的逻辑名称
-//    @param [in] scope 启动配置
-//    @return 不返回；成功退出0，创建未生效退出1
-//    */
-//    auto runAbandonedPeer = [&configureScope](const std::string& name, const std::string& scope) -> void
-//    {
-//        configureScope(scope);
-//        Semaphore owner;
-//        owner.createProcessSemaphore(name);
-//        owner.processSignal();
-//        const bool ready = owner.processWait(0);
-//        owner.processSignal();
-//    #ifdef _MSC_VER
-//        ::ExitProcess(ready ? 0 : 1);
-//    #else
-//        ::_exit(ready ? 0 : 1);
-//    #endif
-//    };
+//             jobsOwner.processSignal();
+//             jobsReader.processWait();
+//             expect(jobsOwner.tryProcessSignal() == 0, "publish named job");
+//             expect(jobsReader.processWait(1000), "consume named job with budget");
+//             showResult("publish named job result", jobsOwner.processSignalResult());
+//             showResult("consume named job result", jobsReader.processWaitResult(1000));
 //
-//    /** 验证进程退出释放存活租约，残留通知不能污染重新创建的对象
-//    @param [in] name 本测试专属名称
-//    @param [in] scope 同一共享目录
-//    @param [in,out] checks 实际检查数
-//    @return true执行，false为旧Linux语义或iOS CLI不适用
-//    */
-//    auto testAbandonedProcess = [&check, &runAbandonedPeer](const std::string& name, const std::string& scope, int32_t& checks) -> bool
-//    {
-//    #if (defined(__APPLE__) && TARGET_OS_IPHONE) || (defined(__linux__) && !defined(__ANDROID__))
-//        (void)name;
-//        (void)scope;
-//        (void)checks;
-//        return false;
-//    #else
-//    #ifdef _MSC_VER
-//        (void)scope;
-//        wchar_t executable[32768];
-//        const DWORD length = ::GetModuleFileNameW(nullptr, executable, 32768);
-//        check(length != 0 && length < 32768, "Resolve abandonment test executable", checks);
-//        std::wstring command = L"\"" + std::wstring(executable, length) + L"\" --abandon ";
-//        command.append(name.begin(), name.end());
-//        STARTUPINFOW startup = {};
-//        startup.cb = sizeof(startup);
-//        PROCESS_INFORMATION process = {};
-//        check(::CreateProcessW(nullptr, &command[0], nullptr, nullptr, FALSE, CREATE_NO_WINDOW,
-//            nullptr, nullptr, &startup, &process) != FALSE, "Start owned abandoning process", checks);
-//        ::CloseHandle(process.hThread);
-//        const DWORD result = ::WaitForSingleObject(process.hProcess, 3000);
-//        DWORD exitCode = 1;
-//        if (result == WAIT_OBJECT_0)
-//        {
-//            ::GetExitCodeProcess(process.hProcess, &exitCode);
-//        }
-//        else
-//        {
-//            ::TerminateProcess(process.hProcess, 1);
-//            ::WaitForSingleObject(process.hProcess, 3000);
-//        }
-//        ::CloseHandle(process.hProcess);
-//        check(result == WAIT_OBJECT_0 && exitCode == 0, "Peer exited without library destruction", checks);
-//    #else
-//        const pid_t child = ::fork();
-//        check(child >= 0, "Fork abandoning process", checks);
-//        if (child == 0)
-//        {
-//            runAbandonedPeer(name, scope);
-//        }
-//        int32_t status = 0;
-//        pid_t result = 0;
-//        const std::chrono::steady_clock::time_point deadline =
-//            std::chrono::steady_clock::now() + std::chrono::seconds(3);
-//        do
-//        {
-//            result = ::waitpid(child, &status, WNOHANG);
-//            if (result == 0)
-//            {
-//                ::usleep(1000);
-//            }
-//        }
-//        while ((result == 0 || (result < 0 && errno == EINTR)) &&
-//            std::chrono::steady_clock::now() < deadline);
-//        if (result != child && !(result < 0 && errno == ECHILD))
-//        {
-//            ::kill(child, SIGKILL);
-//            while (::waitpid(child, nullptr, 0) < 0 && errno == EINTR)
-//            {
+//             // 空槽通知可以先到达；此组合只合并发布工作和等待空槽，不是两阶段原子事务
+//             showResult("return named free slot", slotsOwner.processSignalResult());
+//             showCombined("named publish and acquire slot", jobsOwner.processSignalAndWaitResult(slotsReader, 1000));
+//             showResult("consume combined named job", jobsReader.processWaitResult(1000));
 //
-//            }
-//        }
-//        check(result == child && WIFEXITED(status) && WEXITSTATUS(status) == 0,
-//            "Peer exited without library destruction", checks);
-//    #endif
-//        Semaphore owner;
-//        owner.openProcessSemaphore(name);
-//        owner.processSignal();
-//        check(!owner.processWait(0), "Opening abandoned object must not resurrect old notification", checks);
-//        owner.createProcessSemaphore(name);
-//        check(!owner.processWait(0), "Recreated object must start empty", checks);
-//        owner.processSignal();
-//        check(owner.processWait(0), "Recreated object accepts new notifications", checks);
-//        return true;
-//    #endif
-//    };
+//             const bool unlinked = jobsOwner.unlinkProcessName();
+// #ifdef _WIN32
+//             expect(!unlinked, "Windows names are released with kernel references");
+// #else
+//             expect(unlinked, "owner unlinks its POSIX name");
+// #endif
+//             probe.closeProcessSemaphore();
+//             jobsReader.closeProcessSemaphore();
+//             showResult("close named reader", slotsReader.closeProcessResult());
+//             showResult("close named owner", jobsOwner.closeProcessResult());
+//             slotsOwner.closeProcessSemaphore();
+//             // 所有调用结束后离开作用域，由析构兜底释放；不手动调用析构函数
+//         }
 //
-//    /** 执行一个稳定ID的瞬时用例，不支持的目标明确跳过
-//    @param [in] id 稳定ID
-//    @param [in] scope 显式测试范围
-//    @param [in,out] checks 实际检查数
-//    @return 执行时true，不适用时false
-//    */
-//    auto runCase = [&check, &configureScope, &testName, &testTwoProcesses, &testAbandonedProcess](int32_t id, const std::string& scope, int32_t& checks) -> bool
-//    {
-//        Semaphore owner;
-//        if (id == 14 || id == 15 || id == 17)
-//        {
-//            return false;
-//        }
-//        if (id <= 3)
-//        {
-//            if (id == 1)
-//            {
-//                owner.signal();
-//                owner.signal();
-//                check(owner.wait(0), "Consume first notification", checks);
-//                check(owner.wait(0), "Consume second notification", checks);
-//                check(!owner.wait(0), "No extra notification", checks);
-//            }
-//            else if (id == 2)
-//            {
-//                const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-//                check(!owner.wait(20), "Unsignaled thread wait times out", checks);
-//                const int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-//                    std::chrono::steady_clock::now() - start).count();
-//                check(elapsed >= 10 && elapsed < 1000, "Thread timeout duration", checks);
-//                owner.signal();
-//                check(owner.wait(0), "Thread wait remains reusable", checks);
-//            }
-//            else
-//            {
-//                owner.event();
-//                owner.eventAll();
-//                check(!owner.eventWait(0), "Events do not accumulate without a waiter", checks);
-//            }
-//            return true;
-//        }
-//        if (id == 4)
-//        {
-//            owner.processSignal();
-//            owner.processWait();
-//            check(!owner.processWait(0), "Uninitialized process wait fails", checks);
-//            owner.closeProcessSemaphore();
-//            owner.closeProcessSemaphore();
-//            check(!owner.processWait(0), "Repeated close is harmless", checks);
-//            return true;
-//        }
-//    #if !defined(__ANDROID__) && !defined(__APPLE__)
-//        if ((id >= 7 && id <= 9) || id == 12 || id == 13 || id >= 22)
-//        {
-//            return false;
-//        }
-//    #endif
-//    #if defined(__linux__) && !defined(__ANDROID__)
-//        if (id == 11 || id == 18)
-//        {
-//            return false;
-//        }
-//    #endif
-//    #if defined(__ANDROID__) || defined(__APPLE__)
-//        if ((id == 12 || id == 13 || id == 22) && scope.empty())
-//        {
-//            return false;
-//        }
-//    #endif
-//        configureScope(scope);
-//        const std::string name = testName(id);
-//        if (id == 10 || id == 21)
-//        {
-//            return testTwoProcesses(name, scope, checks, id == 21);
-//        }
-//        if (id == 20)
-//        {
-//            return testAbandonedProcess(name, scope, checks);
-//        }
-//        if (id == 5)
-//        {
-//            owner.createProcessSemaphore(name);
-//            Semaphore peer;
-//            peer.openProcessSemaphore(name);
-//            owner.processSignal();
-//            owner.processSignal();
-//            owner.processSignal();
-//            check(peer.processWait(0) && peer.processWait(0) && peer.processWait(0),
-//                "Peer consumes three notifications", checks);
-//            check(!peer.processWait(0), "Peer cannot consume a fourth", checks);
-//            peer.closeProcessSemaphore();
-//            Semaphore next;
-//            next.openProcessSemaphore(name);
-//            owner.processSignal();
-//            check(next.processWait(0), "Closing peer does not delete owner resource", checks);
-//        }
-//        else if (id == 6)
-//        {
-//            owner.createProcessSemaphore(name);
-//            owner.processSignal();
-//            owner.createProcessSemaphore(name);
-//            owner.openProcessSemaphore(name);
-//            check(owner.processWait(0), "Repeated create/open preserves count", checks);
-//            check(!owner.processWait(0), "Repeated calls do not add notifications", checks);
-//            owner.closeProcessSemaphore();
-//            owner.closeProcessSemaphore();
-//            owner.createProcessSemaphore(name);
-//            check(!owner.processWait(0), "Recreated object starts empty", checks);
-//        }
-//    #if defined(__ANDROID__) || defined(__APPLE__)
-//        else if (id == 7)
-//        {
-//            owner.openProcessSemaphore(name);
-//            owner.processSignal();
-//            check(!owner.processWait(0), "Opening missing object stays closed, without exception", checks);
-//            owner.createProcessSemaphore(name);
-//            owner.processSignal();
-//            check(owner.processWait(0), "Retry after failed open", checks);
-//        }
-//        else if (id == 8)
-//        {
-//            const std::string invalid[] = { "", ".", "..", "../outside", "a/b", "a\\b", std::string("a\0b", 3) };
-//            for (size_t index = 0; index < sizeof(invalid) / sizeof(invalid[0]); ++index)
-//            {
-//                owner.createProcessSemaphore(invalid[index]);
-//                owner.processSignal();
-//                check(!owner.processWait(0), "Reject invalid logical name without exception", checks);
-//            }
-//            configureScope("relative");
-//            owner.createProcessSemaphore(name);
-//            check(!owner.processWait(0), "Reject relative directory", checks);
-//            configureScope(scope);
-//            owner.createProcessSemaphore(name);
-//            configureScope("invalid/group");
-//            owner.createProcessSemaphore(name);
-//            owner.openProcessSemaphore(name);
-//            owner.processSignal();
-//            check(owner.processWait(0), "Live resource uses captured scope instead of environment", checks);
-//            configureScope(scope);
-//        }
-//        else if (id == 9)
-//        {
-//            owner.createProcessSemaphore(name);
-//            check(!owner.processWait(0), "Zero timeout never blocks", checks);
-//            const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-//            check(!owner.processWait(20), "Process timeout reports false", checks);
-//            const int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-//                std::chrono::steady_clock::now() - start).count();
-//            check(elapsed >= 10 && elapsed < 1000, "Process timeout duration", checks);
-//            owner.processSignal();
-//            check(!owner.processWait(-2), "Unsupported negative timeout fails without consuming", checks);
-//            check(owner.processWait(-1), "Negative-one wait consumes preserved notification", checks);
-//        }
-//    #endif
-//        else if (id == 11)
-//        {
-//            owner.createProcessSemaphore(name);
-//            Semaphore peer;
-//            peer.openProcessSemaphore(name);
-//            owner.closeProcessSemaphore();
-//            peer.processSignal();
-//            check(peer.processWait(0), "Opened peer survives creator close", checks);
-//            check(!peer.processWait(0), "Peer count remains correct", checks);
-//        }
-//    #if defined(__ANDROID__) || defined(__APPLE__)
-//        else if (id == 12 || id == 13)
-//        {
-//            const std::string file = scope + "/Semaphore." + name;
-//            const std::string target = scope + "/" + name + "_target";
-//            const std::string fixture = id == 12 ? file : target;
-//            {
-//                std::ofstream output(fixture.c_str(), std::ios::binary | std::ios::trunc);
-//                output << "broken";
-//                output.close();
-//                check(!output.fail(), "Write owned fault fixture", checks);
-//                check(::chmod(fixture.c_str(), 0600) == 0, "Restrict owned fault fixture permissions", checks);
-//            }
-//            if (id == 13)
-//            {
-//                check(::symlink(target.c_str(), file.c_str()) == 0, "Create owned symlink", checks);
-//            }
-//            try
-//            {
-//                owner.createProcessSemaphore(name);
-//                owner.processSignal();
-//                check(!owner.processWait(0), "Create rejects incompatible file or symlink", checks);
-//                owner.openProcessSemaphore(name);
-//                check(!owner.processWait(0), "Open rejects incompatible file or symlink", checks);
-//                std::ifstream input(fixture.c_str(), std::ios::binary);
-//                std::string actual;
-//                std::getline(input, actual);
-//                input.close();
-//                check(actual == "broken", "Failures must not overwrite fixture or link target", checks);
-//            }
-//            catch (...)
-//            {
-//                owner.closeProcessSemaphore();
-//                ::unlink(file.c_str());
-//                if (id == 13)
-//                {
-//                    ::unlink(target.c_str());
-//                }
-//                throw;
-//            }
-//            ::unlink(file.c_str());
-//            if (id == 13)
-//            {
-//                ::unlink(target.c_str());
-//            }
-//            owner.createProcessSemaphore(name);
-//            owner.processSignal();
-//            check(owner.processWait(0), "Retry after removing owned fault fixture", checks);
-//        }
-//    #endif
-//        else if (id == 16)
-//        {
-//    #if defined(__ANDROID__) || defined(__APPLE__)
-//            configureScope("invalid/group");
-//            owner.createProcessSemaphore(name);
-//            check(!owner.processWait(0), "Private initialization rejects invalid scope without exception", checks);
-//            configureScope(scope);
-//    #else
-//            configureScope("ignored-on-desktop");
-//    #endif
-//            owner.createProcessSemaphore(name);
-//            owner.processSignal();
-//            check(owner.processWait(0), "Original public API works without any setter", checks);
-//            owner.closeProcessSemaphore();
-//            configureScope(scope);
-//            owner.createProcessSemaphore(name);
-//            check(!owner.processWait(0), "Private initialization remains reusable after close", checks);
-//        }
-//        else if (id == 18)
-//        {
-//            owner.createProcessSemaphore(name);
-//            owner.processSignal();
-//            Semaphore peer;
-//            peer.createProcessSemaphore(name);
-//            check(peer.processWait(0), "Another creator joins without resetting existing count", checks);
-//            owner.closeProcessSemaphore();
-//            Semaphore later;
-//            later.openProcessSemaphore(name);
-//            peer.processSignal();
-//            check(later.processWait(0), "New opener still sees name after initial creator closes", checks);
-//            later.processSignal();
-//            check(peer.processWait(0), "Both remaining peers share exactly the same object", checks);
-//            peer.closeProcessSemaphore();
-//            later.processSignal();
-//            check(later.processWait(0), "Last peer remains usable", checks);
-//            later.closeProcessSemaphore();
-//            owner.openProcessSemaphore(name);
-//            owner.processSignal();
-//            check(!owner.processWait(0), "Last close removes the live name", checks);
-//            owner.createProcessSemaphore(name);
-//            check(!owner.processWait(0), "New generation has no old notifications", checks);
-//        }
-//        else if (id == 19)
-//        {
-//            owner.createProcessSemaphore(name + "a");
-//            Semaphore other;
-//            other.createProcessSemaphore(name + "b");
-//            Semaphore peer;
-//            peer.openProcessSemaphore(name + "a");
-//            owner.processSignal();
-//            check(!other.processWait(0), "Different names do not share a notification", checks);
-//            check(peer.processWait(0), "Exact same name shares a notification", checks);
-//            other.processSignal();
-//            check(!owner.processWait(0), "Isolation holds in the other direction", checks);
-//            check(other.processWait(0), "Other object retains its own notification", checks);
-//        }
-//    #if defined(__ANDROID__) || defined(__APPLE__)
-//        else if (id == 22)
-//        {
-//            const uint32_t headers[][5] =
-//            {
-//                { 0x53454D31, 2, 20, 0, ~uint32_t(0) },
-//                { 0x53454D32, 1, 20, 0, ~uint32_t(0) },
-//                { 0x53454D32, 2, 24, 0, ~uint32_t(0) },
-//                { 0x53454D32, 2, 20, 1, 0 },
-//                { 0x53454D32, 2, 20, 0x80000000, 0x7FFFFFFF },
-//                { 0, 2, 20, 0, ~uint32_t(0) },
-//                { 0x53454D32, 2, 20, 3, ~uint32_t(3) }
-//            };
-//            const std::string file = scope + "/Semaphore." + name;
-//            for (size_t index = 0; index < sizeof(headers) / sizeof(headers[0]); ++index)
-//            {
-//                const std::string fixture(reinterpret_cast<const char*>(headers[index]), sizeof(headers[index]));
-//                std::ofstream output(file.c_str(), std::ios::binary | std::ios::trunc);
-//                output.write(fixture.data(), static_cast<std::streamsize>(fixture.size()));
-//                output.close();
-//                check(!output.fail(), "Write owned v2 record fixture", checks);
-//                check(::chmod(file.c_str(), 0600) == 0, "Restrict owned record fixture permissions", checks);
-//                try
-//                {
-//                    if (index < 5)
-//                    {
-//                        owner.openProcessSemaphore(name);
-//                        owner.createProcessSemaphore(name);
-//                        owner.processSignal();
-//                        check(!owner.processWait(0), "Incompatible or torn state must not become usable", checks);
-//                        std::ifstream input(file.c_str(), std::ios::binary);
-//                        const std::string actual((std::istreambuf_iterator<char>(input)),
-//                            std::istreambuf_iterator<char>());
-//                        check(!input.bad() && actual == fixture, "Rejected record is byte-for-byte unchanged", checks);
-//                    }
-//                    else
-//                    {
-//                        owner.createProcessSemaphore(name);
-//                        check(!owner.processWait(0), "Inactive valid or unpublished generation is reset to empty", checks);
-//                        owner.processSignal();
-//                        Semaphore peer;
-//                        peer.createProcessSemaphore(name);
-//                        check(peer.processWait(0), "Live v2 generation is not reset", checks);
-//                        check(!peer.processWait(0), "No duplicate notification in v2 generation", checks);
-//                        owner.closeProcessSemaphore();
-//                        peer.processSignal();
-//                        check(peer.processWait(0), "Remaining peer keeps the generation alive", checks);
-//                    }
-//                    owner.closeProcessSemaphore();
-//                    ::unlink(file.c_str());
-//                }
-//                catch (...)
-//                {
-//                    owner.closeProcessSemaphore();
-//                    ::unlink(file.c_str());
-//                    throw;
-//                }
-//            }
-//            owner.createProcessSemaphore(name);
-//            owner.processSignal();
-//            check(owner.processWait(0), "Same instance retries after invalid fixture removal", checks);
-//        }
-//        else if (id == 23)
-//        {
-//            owner.createProcessSemaphore(std::string(4096, 'x'));
-//            owner.processSignal();
-//            check(!owner.processWait(0), "Oversized name is rejected, never truncated", checks);
-//            owner.createProcessSemaphore(name);
-//            owner.processSignal();
-//            check(owner.processWait(0), "Short-name retry works", checks);
-//        }
-//        else if (id == 24)
-//        {
-//            if (scope.empty())
-//            {
-//                return false;
-//            }
-//            const char* previous = std::getenv("TMPDIR");
-//            const bool hadPrevious = previous != nullptr;
-//            const std::string saved = hadPrevious ? previous : "";
-//            check(::setenv("TMPDIR", scope.c_str(), 1) == 0, "Set owned temporary-directory configuration", checks);
-//            configureScope("");
-//            try
-//            {
-//                owner.createProcessSemaphore(name);
-//                Semaphore peer;
-//                peer.openProcessSemaphore(name);
-//                owner.processSignal();
-//                check(peer.processWait(0), "Optional scope uses the same default directory for original API", checks);
-//                owner.closeProcessSemaphore();
-//                peer.closeProcessSemaphore();
-//            }
-//            catch (...)
-//            {
-//                owner.closeProcessSemaphore();
-//                if (hadPrevious)
-//                {
-//                    ::setenv("TMPDIR", saved.c_str(), 1);
-//                }
-//                else
-//                {
-//                    ::unsetenv("TMPDIR");
-//                }
-//                configureScope(scope);
-//                throw;
-//            }
-//            check((hadPrevious ? ::setenv("TMPDIR", saved.c_str(), 1) : ::unsetenv("TMPDIR")) == 0,
-//                "Restore only the owned test process environment", checks);
-//            configureScope(scope);
-//        }
-//    #endif
-//        return true;
-//    };
-//
-//    int32_t selected = 0;
-//    std::string scope;
-//    std::string peer;
-//    bool infinitePeer = false;
-//    std::string abandoningPeer;
-//    for (int32_t index = 1; index < argc; ++index)
-//    {
-//        const std::string argument = argv[index];
-//        if (index + 1 >= argc)
-//        {
-//            return 2;
-//        }
-//        if (argument == "--case")
-//        {
-//            char* end = nullptr;
-//            const long value = std::strtol(argv[++index], &end, 10);
-//            if (end == argv[index] || *end != '\0' || value < 1 || value > 24)
-//            {
-//                return 2;
-//            }
-//            selected = static_cast<int32_t>(value);
-//        }
-//        else if (argument == "--scope")
-//        {
-//            scope = argv[++index];
-//        }
-//        else if (argument == "--peer" || argument == "--peer-infinite")
-//        {
-//            infinitePeer = argument == "--peer-infinite";
-//            peer = argv[++index];
-//        }
-//        else if (argument == "--abandon")
-//        {
-//            abandoningPeer = argv[++index];
-//        }
-//        else
-//        {
-//            return 2;
-//        }
-//    }
-//    if (!peer.empty())
-//    {
-//        return runPeer(peer, scope, infinitePeer);
-//    }
-//    if (!abandoningPeer.empty())
-//    {
-//        runAbandonedPeer(abandoningPeer, scope);
-//    }
-//    int32_t failed = 0;
-//    int32_t passed = 0;
-//    int32_t skipped = 0;
-//    int32_t totalChecks = 0;
-//    for (int32_t id = 1; id <= 24; ++id)
-//    {
-//        if (selected != 0 && selected != id)
-//        {
-//            continue;
-//        }
-//        int32_t checks = 0;
-//        try
-//        {
-//            if (runCase(id, scope, checks))
-//            {
-//                ++passed;
-//                std::printf("PASS id=%d checks=%d\n", id, checks);
-//            }
-//            else
-//            {
-//                ++skipped;
-//                std::printf("SKIP id=%d %s\n", id,
-//                    (id == 14 || id == 15 || id == 17) ? "retired test" : "platform/host not applicable");
-//            }
-//        }
-//        catch (const std::exception& error)
-//        {
-//            ++failed;
-//            std::fprintf(stderr, "FAIL id=%d checks=%d: %s\n", id, checks, error.what());
-//        }
-//        totalChecks += checks;
-//    }
-//    std::printf("RESULT pass=%d fail=%d skip=%d checks=%d\n", passed, failed, skipped, totalChecks);
-//    return failed == 0 ? 0 : 1;
-//}
+//         // 可选诊断适用于两组接口；读取计数不执行资源清理，也不是其他接口的调用前提
+//         const uint32_t cleanupAfter = Semaphore::cleanupFailures();
+//         std::printf("cleanup failures: before=%u after=%u\n",
+//             static_cast<unsigned>(cleanupBefore), static_cast<unsigned>(cleanupAfter));
+//         expect(cleanupAfter == cleanupBefore, "resource cleanup");
+//         std::printf("Semaphore public API demo completed.\n");
+//         return 0;
+//     }
+//     catch (const std::exception& error)
+//     {
+//         std::fprintf(stderr, "Semaphore demo failed: %s; cleanup failures=%u\n", error.what(),
+//             static_cast<unsigned>(Semaphore::cleanupFailures()));
+//     }
+//     catch (...)
+//     {
+//         std::fprintf(stderr, "Semaphore demo failed with an unknown exception; cleanup failures=%u\n",
+//             static_cast<unsigned>(Semaphore::cleanupFailures()));
+//     }
+//     return 1;
+// #endif
+// }
