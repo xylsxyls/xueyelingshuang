@@ -1,231 +1,102 @@
 ﻿#include "CTaskThreadManager.h"
-#include <assert.h>
+#include "CTaskManagerState.h"
 
-CTaskThreadManager::CTaskThreadManager():
-m_threadId(0)
+CTaskThreadManager::CTaskThreadManager() :
+m_state(nullptr)
 {
 
 }
 
 CTaskThreadManager::~CTaskThreadManager()
 {
-
+    delete m_state.load(std::memory_order_relaxed);
 }
 
 CTaskThreadManager& CTaskThreadManager::Instance()
 {
-	static CTaskThreadManager taskManager;
-	return taskManager;
+    static CTaskThreadManager s_instance;
+    return s_instance;
+}
+
+CTaskManagerState* CTaskThreadManager::state()
+{
+    CTaskManagerState* current = m_state.load(std::memory_order_acquire);
+    if (current == nullptr && m_state.is_lock_free())
+    {
+        try
+        {
+            std::unique_ptr<CTaskManagerState> candidate(new CTaskManagerState);
+            if (m_state.compare_exchange_strong(current, candidate.get(), std::memory_order_acq_rel, std::memory_order_acquire))
+            {
+                current = candidate.release();
+            }
+        }
+        catch (...)
+        {
+            return nullptr;
+        }
+    }
+    return current;
+}
+
+CTaskThreadResult CTaskThreadManager::configure(const CTaskThreadManagerConfig& config)
+{
+    CTaskManagerState* current = state();
+    return current ? current->configure(config) : CTaskThreadResult(m_state.is_lock_free() ? CTaskThreadNoMemory : CTaskThreadUnsupported);
 }
 
 uint32_t CTaskThreadManager::Init()
 {
-	uint32_t threadId = GetThreadId();
-	if (threadId == 0)
-	{
-		return 0;
-	}
-	CTaskThread* pTaskThread = new CTaskThread(threadId);
-	if (pTaskThread == nullptr)
-	{
-		return 0;
-	}
-	std::shared_ptr<CTaskThread> spTaskThread;
-	spTaskThread.reset(pTaskThread);
-	if (pTaskThread->CreateThread())
-	{
-        try
-        {
-            std::unique_lock<std::mutex> lock(m_mutex);
-            m_spThreadMap[threadId] = spTaskThread;
-        }
-        catch (...)
-        {
-            // 线程已启动但登记分配失败；先在管理器锁之外停止并加入，再释放线程对象。
-            spTaskThread->DestroyThread();
-            throw;
-        }
-		return threadId;
-	}
-	return 0;
+    try
+    {
+        return Init(CTaskThreadConfig());
+    }
+    catch (...)
+    {
+        return 0;
+    }
 }
 
-void CTaskThreadManager::WaitForEnd(uint32_t threadId)
+uint32_t CTaskThreadManager::Init(const CTaskThreadConfig& config)
 {
-	if (threadId == 0)
-	{
-		return;
-	}
-	m_mutex.lock();
-	auto itThread = m_spThreadMap.find(threadId);
-	if (itThread != m_spThreadMap.end())
-	{
-		std::shared_ptr<CTaskThread>& spTaskThread = itThread->second;
-		if (spTaskThread != nullptr)
-		{
-			m_mutex.unlock();
-			spTaskThread->WaitForEnd();
-			m_mutex.lock();
-		}
-		m_spThreadMap.erase(m_spThreadMap.find(threadId));
-	}
-	m_mutex.unlock();
+    uint32_t id = 0;
+    initialize(config, id);
+    return id;
 }
 
-void CTaskThreadManager::Uninit(uint32_t threadId)
+CTaskThreadResult CTaskThreadManager::initialize(const CTaskThreadConfig& config, uint32_t& threadId)
 {
-	if (threadId == 0)
-	{
-		return;
-	}
-	m_mutex.lock();
-	auto itThread = m_spThreadMap.find(threadId);
-	if (itThread != m_spThreadMap.end())
-	{
-		std::shared_ptr<CTaskThread>& spTaskThread = itThread->second;
-		if (spTaskThread != nullptr)
-		{
-			m_mutex.unlock();
-			spTaskThread->DestroyThread();
-			m_mutex.lock();
-		}
-		m_spThreadMap.erase(m_spThreadMap.find(threadId));
-	}
-	m_mutex.unlock();
+    threadId = 0;
+    CTaskManagerState* current = state();
+    return current ? current->initialize(config, threadId) : CTaskThreadResult(m_state.is_lock_free() ? CTaskThreadNoMemory : CTaskThreadUnsupported);
 }
 
-void CTaskThreadManager::UninitAll()
+CTaskThreadResult CTaskThreadManager::WaitForEnd(uint32_t threadId)
 {
-	//该map循环两次，第一次停掉所有任务，第二次等待线程结束
-	m_mutex.lock();
-	for (auto itThread = m_spThreadMap.begin(); itThread != m_spThreadMap.end(); ++itThread)
-	{
-		std::shared_ptr<CTaskThread>& spTaskThread = itThread->second;
-		if (spTaskThread != nullptr)
-		{
-			m_mutex.unlock();
-			spTaskThread->SetExitSignal();
-			m_mutex.lock();
-		}
-	}
-	for (auto itThread = m_spThreadMap.begin(); itThread != m_spThreadMap.end(); ++itThread)
-	{
-		std::shared_ptr<CTaskThread>& spTaskThread = itThread->second;
-		if (spTaskThread != nullptr)
-		{
-			m_mutex.unlock();
-			spTaskThread->WaitForExit();
-			m_mutex.lock();
-		}
-	}
-	m_spThreadMap.clear();
-	m_mutex.unlock();
+    CTaskManagerState* current = m_state.load(std::memory_order_acquire);
+    return current ? current->finish(threadId, true) : CTaskThreadResult(CTaskThreadNotFound);
+}
+
+CTaskThreadResult CTaskThreadManager::Uninit(uint32_t threadId)
+{
+    CTaskManagerState* current = m_state.load(std::memory_order_acquire);
+    return current ? current->finish(threadId, false) : CTaskThreadResult(CTaskThreadNotFound);
+}
+
+CTaskThreadResult CTaskThreadManager::UninitAll()
+{
+    CTaskManagerState* current = m_state.load(std::memory_order_acquire);
+    return current ? current->shutdown() : CTaskThreadResult(CTaskThreadOk, true);
 }
 
 std::shared_ptr<CTaskThread> CTaskThreadManager::GetThreadInterface(uint32_t threadId)
 {
-	if (threadId == 0)
-	{
-		return std::shared_ptr<CTaskThread>();
-	}
-	std::unique_lock<std::mutex> lock(m_mutex);
-	auto itThread = m_spThreadMap.find(threadId);
-	if (itThread == m_spThreadMap.end())
-	{
-		return std::shared_ptr<CTaskThread>();
-	}
-	return itThread->second;
+    CTaskManagerState* current = m_state.load(std::memory_order_acquire);
+    return current ? current->get(threadId) : std::shared_ptr<CTaskThread>();
 }
 
 int32_t CTaskThreadManager::Count()
 {
-	std::unique_lock<std::mutex> lock(m_mutex);
-	return (int32_t)m_spThreadMap.size();
+    CTaskManagerState* current = m_state.load(std::memory_order_acquire);
+    return current ? current->count() : 0;
 }
-
-uint32_t CTaskThreadManager::GetThreadId()
-{
-	uint32_t current = m_threadId.load(std::memory_order_relaxed);
-	while (current != UINT32_MAX)
-	{
-		if (m_threadId.compare_exchange_weak(current, current + 1, std::memory_order_relaxed))
-		{
-			return current + 1;
-		}
-	}
-	return 0;
-}
-
-//class CPrintTask : public CTask
-//{
-//public:
-//	CPrintTask(int32_t taskId) :
-//		CTask(taskId)
-//	{
-//
-//	}
-//	virtual void DoTask()
-//	{
-//		printf("DoTaskBegin\n");
-//		std::chrono::milliseconds dura(5000);
-//		std::this_thread::sleep_for(dura);
-//		printf("DoTaskEnd\n");
-//	}
-//	virtual void StopTask(bool ifChoke)
-//	{
-//		ifChoke = ifChoke;
-//		printf("StopTask\n");
-//		return;
-//	}
-//	virtual bool ReExecute()
-//	{
-//		printf("ReExecute\n");
-//		return true;
-//	}
-//};
-//
-//class CPrintTask2 : public CTask
-//{
-//public:
-//	CPrintTask2(int32_t taskId) :
-//		CTask(taskId)
-//	{
-//
-//	}
-//	virtual void DoTask()
-//	{
-//		printf("DoTaskBegin2\n");
-//		std::chrono::milliseconds dura(5000);
-//		std::this_thread::sleep_for(dura);
-//		printf("DoTaskEnd2\n");
-//	}
-//	virtual void StopTask(bool ifChoke)
-//	{
-//		ifChoke = ifChoke;
-//		printf("StopTask2\n");
-//		return;
-//	}
-//	virtual bool ReExecute()
-//	{
-//		printf("ReExecute2\n");
-//		return true;
-//	}
-//};
-//
-//int main(){
-//	CTaskThreadManager::Instance().Init(1);
-//	CTaskThreadManager::Instance().Init(2);
-//	std::shared_ptr<CPrintTask> printTask;
-//	CPrintTask* pPrintTask = new CPrintTask(100);
-//	std::shared_ptr<CPrintTask2> printTask2;
-//	CPrintTask2* pPrintTask2 = new CPrintTask2(100);
-//	if (pPrintTask != nullptr)
-//	{
-//		printTask.reset(pPrintTask);
-//		printTask2.reset(pPrintTask2);
-//		std::chrono::milliseconds dura(2000);
-//		std::this_thread::sleep_for(dura);
-//	}
-//	getchar();
-//	return 0;
-//}

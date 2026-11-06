@@ -1,364 +1,106 @@
 ﻿#include "CTaskThread.h"
-#include <functional>
-#include "Semaphore/SemaphoreAPI.h"
+#include "CTaskThreadState.h"
+#include <algorithm>
+#include <climits>
 
-CTaskThread::CTaskThread(int32_t threadId) :
+CTaskThread::CTaskThread(uint32_t threadId, const CTaskThreadConfig& config) :
 m_threadId(threadId),
-m_semaphore(nullptr),
-m_hasExitSignal(false),
-m_waitForEndSignal(false),
-m_curTaskLevel(0)
+m_state(new CTaskThreadState(config))
 {
-	m_semaphore = new Semaphore;
+
 }
 
 CTaskThread::~CTaskThread()
 {
-	delete m_semaphore;
-	m_semaphore = nullptr;
+
 }
 
-bool CTaskThread::CreateThread()
+CTaskThreadResult CTaskThread::createThread()
 {
-	//必须先将m_hasExitSignal设为false，否则一进入线程函数就退出了
-	std::thread* pThread = new std::thread(std::bind(&CTaskThread::WorkThread, this));
-	if (pThread == nullptr)
-	{
-		m_hasExitSignal = true;
-		return false;
-	}
-	m_spWorkThread.reset(pThread);
-	
-	return true;
+    return m_state->start();
 }
 
-void CTaskThread::DestroyThread()
+CTaskThreadResult CTaskThread::PostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel)
 {
-	SetExitSignal();
-	WaitForExit();
+    return m_state->post(task, taskLevel);
 }
 
-void CTaskThread::SetExitSignal()
+bool CTaskThread::TryPostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel)
 {
-	m_hasExitSignal = true;
-	//设置了退出信号就立即把当前任务停止
-	StopCurTask();
-	m_semaphore->signal();
-}
-
-void CTaskThread::WaitForExit()
-{
-	//如果线程正常启动
-	if (m_spWorkThread != nullptr)
-	{
-		m_spWorkThread->join();
-		m_spWorkThread.reset(nullptr);
-		//::CloseHandle(m_semaphore);
-	}
-}
-
-void CTaskThread::PostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
-{
-	if (spTask == nullptr || taskLevel < 1 || m_hasExitSignal)
-	{
-		return;
-	}
-	std::unique_lock<std::mutex> lock(m_mutex);
-	HandlePostTask(spTask, taskLevel);
-}
-
-bool CTaskThread::TryPostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
-{
-	if (spTask == nullptr || taskLevel < 1 || m_hasExitSignal)
-	{
-		return false;
-	}
-	if (!m_mutex.try_lock())
-	{
-		return false;
-	}
-    // 接管已取得的原有锁，投递分配抛异常时也必须释放。
-    std::unique_lock<std::mutex> lock(m_mutex, std::adopt_lock);
-	HandlePostTask(spTask, taskLevel);
-	return true;
-}
-
-void CTaskThread::SendTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
-{
-	if (spTask == nullptr || taskLevel < 1 || m_hasExitSignal)
-	{
-		return;
-	}
-
-	Semaphore wairForSendSemaphore;
-	spTask->SetWaitForSendHandle(&wairForSendSemaphore);
-	PostTask(spTask, taskLevel);
-	
-	bool inWhile = true;
-	while (inWhile)
-	{
-		if (spTask.use_count() == 1)
-		{
-			break;
-		}
-		wairForSendSemaphore.eventWait(50);
-	}
-	//::CloseHandle(waitForSend);
-	spTask->SetWaitForSendHandle(nullptr);
-}
-
-void CTaskThread::WorkThread()
-{
-	//有退出信号，但是队列中有等待任务时仍然进入循环，在循环内处理多余任务
-	while (true)
-	{
-		if (m_hasExitSignal)
-		{
-			std::unique_lock<std::mutex> lock(m_mutex);
-			m_taskMap.clear();
-			break;
-		}
-
-		//取任务，有任务执行，没有任务阻塞
-		PopToCurTask();
-
-		//如果当前有退出信号，则清空等待队列同时把当前任务停止
-		if (m_hasExitSignal)
-		{
-			std::unique_lock<std::mutex> lock(m_mutex);
-			m_taskMap.clear();
-			break;
-		}
-
-		std::shared_ptr<CTask> spCurTask = std::atomic_load(&m_spCurTask);
-		if (spCurTask != nullptr)
-		{
-			spCurTask->DoTask();
-			Semaphore* waitForSend = spCurTask->GetWaitForSendHandle();
-			if (waitForSend != nullptr)
-			{
-				waitForSend->event();
-			}
-		}
-		else if (m_waitForEndSignal)
-		{
-			break;
-		}
-		
-		// 先释放本地引用，再按原顺序清理当前任务和备份，因为取任务只有PopToCurTask在做而且还是同一条线程，所以放在前面没问题
-		spCurTask.reset();
-		//任务执行完之后清空指针执行task析构
-		{
-			std::unique_lock<std::mutex> lock(m_mutex);
-			std::atomic_store(&m_spCurTask, std::shared_ptr<CTask>());
-			m_spCurTaskBk = nullptr;
-			m_curTaskLevel = 0;
-		}
-		m_semaphore->wait();
-	}
-}
-
-void CTaskThread::StopAllTaskUnlock()
-{
-	for (auto itListTask = m_taskMap.begin(); itListTask != m_taskMap.end(); ++itListTask)
-	{
-		auto listTask = itListTask->second;
-		for (auto itTask = listTask.begin(); itTask != listTask.end(); ++itTask)
-		{
-			(*itTask)->StopTask();
-		}
-	}
-	//如果有还未执行完毕的任务
-	StopCurTask();
-}
-
-void CTaskThread::HandlePostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
-{
-    std::shared_ptr<CTask> spCurTask;
-    int32_t curTaskLevel = 0;
-    bool taskAdded = false;
-    bool backupAdded = false;
-    bool stopCurrent = false;
-    try
-    {
-        m_taskMap[taskLevel].push_back(spTask);
-        taskAdded = true;
-
-        spCurTask = std::atomic_load(&m_spCurTask);
-        curTaskLevel = m_curTaskLevel.load();
-        stopCurrent = spCurTask != nullptr && taskLevel > curTaskLevel;
-        if (stopCurrent && m_spCurTaskBk != nullptr && spCurTask->ReExecute())
-        {
-            m_taskMap[curTaskLevel].push_front(m_spCurTaskBk);
-            backupAdded = true;
-        }
-    }
-    catch (...)
-    {
-        // 两次入队都成功前不停止当前任务、不消费备份，也不发布通知。
-        // 重做队列可能已建立但节点分配失败；它与新任务队列属于不同优先级。
-        if (stopCurrent)
-        {
-            auto backup = m_taskMap.find(curTaskLevel);
-            if (backup != m_taskMap.end() && backup->second.empty())
-            {
-                m_taskMap.erase(backup);
-            }
-        }
-        auto found = m_taskMap.find(taskLevel);
-        if (found != m_taskMap.end())
-        {
-            // 调用方持有m_mutex，本次成功追加的节点仍是队尾；保留原有排队任务。
-            if (taskAdded)
-            {
-                found->second.pop_back();
-            }
-            if (found->second.empty())
-            {
-                m_taskMap.erase(found);
-            }
-        }
-        throw;
-    }
-    if (stopCurrent)
-    {
-        if (backupAdded)
-        {
-            // 提交后只转移一次备份，后续更高优先级任务不会重复安排重做。
-            m_spCurTaskBk = nullptr;
-            m_semaphore->signal();
-        }
-        spCurTask->StopTask();
-    }
-    m_semaphore->signal();
+    return PostTask(task, taskLevel).m_committed;
 }
 
 bool CTaskThread::HasTask()
 {
-	std::unique_lock<std::mutex> lock(m_mutex);
-	return !m_taskMap.empty();
+    return statistics().m_queued != 0;
 }
 
-void CTaskThread::StopCurTask()
+CTaskThreadResult CTaskThread::StopCurTask()
 {
-	// 原子取得局部强引用；成员被替换或清空后，本次调用仍持有任务。
-	std::shared_ptr<CTask> spCurTask = std::atomic_load(&m_spCurTask);
-	if (spCurTask != nullptr)
-	{
-		spCurTask->StopTask();
-	}
+    return m_state->stop(0, 0, true, true);
 }
 
-void CTaskThread::PopToCurTask()
+CTaskThreadResult CTaskThread::StopTask(int32_t propertyId, int32_t taskLevel)
 {
-	if (!HasTask())
-	{
-		std::atomic_store(&m_spCurTask, std::shared_ptr<CTask>());
-		m_spCurTaskBk = nullptr;
-		m_curTaskLevel = 0;
-		//::ResetEvent(m_semaphore);
-		return;
-	}
-	//如果有任务，取出最后一个优先级的队列任务集合
-	std::unique_lock<std::mutex> lock(m_mutex);
-	auto itTaskList = --(m_taskMap.end());
-	std::list<std::shared_ptr<CTask>>& listTask = itTaskList->second;
-	//将最后一个优先级队列的首个任务取出，只要有集合就必须有任务
-	std::shared_ptr<CTask> spCurTask = listTask.front();
-	std::atomic_store(&m_spCurTask, spCurTask);
-	m_spCurTaskBk.reset(spCurTask->Clone());
-	m_curTaskLevel = itTaskList->first;
-	listTask.pop_front();
-	//如果该级别队列中没有任务则删除该级别在map中的节点
-	if (listTask.empty())
-	{
-		m_taskMap.erase(itTaskList);
-	}
+    return m_state->stop(propertyId, taskLevel, false, false);
 }
 
-void CTaskThread::StopTask(int32_t taskId, int32_t taskLevel)
+CTaskThreadResult CTaskThread::StopAllTask()
 {
-	std::set<std::shared_ptr<CTask>> stopTaskSet;
-	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-		if (taskLevel != 0)
-		{
-			auto itListTask = m_taskMap.find(taskLevel);
-			if (itListTask != m_taskMap.end())
-			{
-				CollectStopTaskToSet(itListTask->second, taskId, stopTaskSet);
-			}
-		}
-		else
-		{
-			for (auto itListTask = m_taskMap.begin(); itListTask != m_taskMap.end(); ++itListTask)
-			{
-				CollectStopTaskToSet(itListTask->second, taskId, stopTaskSet);
-			}
-		}
-	}
-	// 先收集队列，再检查当前任务，覆盖收集期间由排队转为执行的任务。
-	std::shared_ptr<CTask> spCurTask = std::atomic_load(&m_spCurTask);
-	if (spCurTask != nullptr && spCurTask->GetTaskId() == taskId)
-	{
-		stopTaskSet.insert(spCurTask);
-	}
-	// 强引用保证通知期间对象存活，同一个任务本次只通知一次，且不持有m_mutex。
-	for (auto itTask = stopTaskSet.begin(); itTask != stopTaskSet.end(); ++itTask)
-	{
-		(*itTask)->StopTask();
-	}
+    return m_state->stop(0, 0, true, false);
 }
 
-void CTaskThread::CollectStopTaskToSet(const std::list<std::shared_ptr<CTask>>& taskList, int32_t taskId,
-	std::set<std::shared_ptr<CTask>>& stopTaskSet)
+CTaskThreadResult CTaskThread::GetWaitTaskInfo(std::map<int32_t, int32_t>& counts)
 {
-	for (auto itTask = taskList.begin(); itTask != taskList.end(); ++itTask)
-	{
-		if ((*itTask)->GetTaskId() == taskId)
-		{
-			stopTaskSet.insert(*itTask);
-		}
-	}
-}
-
-void CTaskThread::StopAllTask()
-{
-	std::unique_lock<std::mutex> lock(m_mutex);
-	StopAllTaskUnlock();
-}
-
-void CTaskThread::GetWaitTaskInfo(std::map<int32_t, int32_t>& taskCountMap)
-{
-	taskCountMap.clear();
-	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-		for (auto itTaskList = m_taskMap.begin(); itTaskList != m_taskMap.end(); ++itTaskList)
-		{
-			taskCountMap[itTaskList->first] = (int32_t)itTaskList->second.size();
-		}
-	}
+    return m_state->waitInfo(counts);
 }
 
 int32_t CTaskThread::GetWaitTaskCount()
 {
-	int32_t count = 0;
-	std::unique_lock<std::mutex> lock(m_mutex);
-	for (auto itTaskList = m_taskMap.begin(); itTaskList != m_taskMap.end(); ++itTaskList)
-	{
-		count += (int32_t)itTaskList->second.size();
-	}
-	return count;
+    return static_cast<int32_t>((std::min)(statistics().m_queued, static_cast<uint64_t>(INT_MAX)));
 }
 
 int32_t CTaskThread::GetCurTaskLevel()
 {
-	return m_curTaskLevel;
+    return statistics().m_currentLevel;
 }
 
-void CTaskThread::WaitForEnd()
+CTaskThreadResult CTaskThread::WaitForEnd()
 {
-	m_waitForEndSignal = true;
-	m_semaphore->signal();
-	WaitForExit();
+    return finish(true);
+}
+
+CTaskThreadResult CTaskThread::finish(bool drain)
+{
+    return m_state->finish(drain);
+}
+
+CTaskThreadResult CTaskThread::requestShutdown(bool drain)
+{
+    return m_state->requestFinish(drain);
+}
+
+void CTaskThread::requestStop()
+{
+    m_state->requestFinish(false);
+}
+
+bool CTaskThread::selfWait() const
+{
+    return m_state->selfWait();
+}
+
+CTaskThreadResult CTaskThread::setSystemPriority(CTaskSystemPriority priority)
+{
+    return m_state->setPriority(priority);
+}
+
+CTaskThreadStatistics CTaskThread::statistics() const
+{
+    return m_state->statistics();
+}
+
+uint32_t CTaskThread::threadId() const
+{
+    return m_threadId;
 }

@@ -1,15 +1,13 @@
 ﻿#include "CTask.h"
 
 CTask::CTask() :
-m_taskId(1),
-m_waitForSend(nullptr)
+m_propertyId(1)
 {
 
 }
 
-CTask::CTask(int32_t taskId) :
-m_taskId(taskId),
-m_waitForSend(nullptr)
+CTask::CTask(int32_t propertyId) :
+m_propertyId(propertyId)
 {
 
 }
@@ -21,30 +19,20 @@ CTask::~CTask()
 
 void CTask::StopTask()
 {
-	return;
+
 }
 
 bool CTask::ReExecute()
 {
-	return false;
+    return false;
 }
 
 CTask* CTask::Clone()
 {
-	return nullptr;
+    return nullptr;
 }
 
-int32_t CTask::GetTaskId()
+int32_t CTask::GetPropertyId()
 {
-	return m_taskId;
-}
-
-void CTask::SetWaitForSendHandle(Semaphore* waitForSend)
-{
-	m_waitForSend = waitForSend;
-}
-
-Semaphore* CTask::GetWaitForSendHandle()
-{
-	return m_waitForSend;
+    return m_propertyId;
 }

@@ -1,74 +1,92 @@
 ﻿#pragma once
-#include "CTask.h"
 #include "CTaskThread.h"
-#include <map>
-#include <memory>
 #include <atomic>
+#include <memory>
 
-/* 线程管理类
+class CTaskManagerState;
+
+/** 无锁线程注册与生命周期门面，保留 Init / ID / GetThreadInterface 使用方式
 */
 class CTaskThreadManagerAPI CTaskThreadManager
 {
+    friend class CTaskThreadTestAccess;
 private:
-	/* 构造函数
-	*/
-	CTaskThreadManager();
-	
-	/* 析构函数
-	*/
-	~CTaskThreadManager();
-	
+    /** 创建默认空注册表
+    */
+    CTaskThreadManager();
+
+    /** 静止析构并停止仍注册的线程
+    */
+    ~CTaskThreadManager();
 public:
-	/* 单一实例
-	@return 返回单一实例
-	*/
-	static CTaskThreadManager& Instance();
+    /** 首次调用时创建管理器；启动阶段由主线程串行预热，再启动并发调用方
+    @return 当前链接模块内的唯一实例
+    */
+    static CTaskThreadManager& Instance();
 
-	//返回非零线程ID；编号耗尽时返回0，不创建线程，也不回绕复用旧编号。
-	//windows下不要在动态库的全局变量包含全局变量的构造函数中执行，会在std::thread创建处卡死，在linux下，换成CreateThread，exe中创建，编译成静态库，都不会有问题
-	uint32_t Init();
+    /** 静止且没有线程时配置注册表
+    @param [in] config Map 初始化参数
+    @return 配置结果；调用者保证没有并发公开调用
+    */
+    CTaskThreadResult configure(const CTaskThreadManagerConfig& config);
 
-	/* 阻塞等待线程结束，放入的线程在执行完任务后会自动销毁
-	@param [in] threadId 线程ID
-	*/
-	void WaitForEnd(uint32_t threadId);
+    /** 使用默认配置创建线程
+    @return 非零不复用 ID，失败为 0；不得在 Windows DLL loader lock 下调用
+    */
+    uint32_t Init();
 
-	/* 反初始化
-	@param [in] threadId 线程ID
-	*/
-	void Uninit(uint32_t threadId);
+    /** 使用指定参数创建线程
+    @param [in] config 线程的 Map、Queue 及系统优先级配置
+    @return 非零编号，失败为 0
+    */
+    uint32_t Init(const CTaskThreadConfig& config);
 
-	/* 反初始化所有线程
-	*/
-	void UninitAll();
+    /** 有详细结果的初始化接口
+    @param [in] config 线程配置，调用期间借用并复制
+    @param [out] threadId 失败清零，成功为不复用编号
+    @return 线程已经启动并登记时 committed 为 true
+    */
+    CTaskThreadResult initialize(const CTaskThreadConfig& config, uint32_t& threadId);
 
-	/* 在这里取出线程操作指针，不要长久保存该指针，否则即便线程停止也不会释放资源
-	@param [in] threadId 线程ID
-	@return 返回线程操作指针
-	*/
-	std::shared_ptr<CTaskThread> GetThreadInterface(uint32_t threadId);
+    /** 关闭接纳、排空并注销线程
+    @param [in] threadId 线程编号
+    @return 关闭结果
+    */
+    CTaskThreadResult WaitForEnd(uint32_t threadId);
 
-	/* 线程数量
-	@return 返回线程数量
-	*/
-	int32_t Count();
+    /** 关闭接纳、停止当前任务、丢弃排队任务并注销
+    @param [in] threadId 线程编号
+    @return 关闭结果
+    */
+    CTaskThreadResult Uninit(uint32_t threadId);
 
+    /** 先通知全部线程停止，再等待退出；期间新 Init 被拒绝
+    @return 部分收尾失败时保留可重试的注册引用
+    */
+    CTaskThreadResult UninitAll();
+
+    /** 安全取得线程强引用，停止后旧引用仍可查询但不能投递
+    @param [in] threadId 线程编号
+    @return 未找到或资源暂不可用时为空
+    */
+    std::shared_ptr<CTaskThread> GetThreadInterface(uint32_t threadId);
+
+    /** 查询注册线程数
+    @return 弱一致数量，超过 INT_MAX 饱和
+    */
+    int32_t Count();
 private:
-	/** 原子分配不复用的线程编号。
-	@return 非零编号；UINT32_MAX已经分配后返回0
-	*/
-	uint32_t GetThreadId();
-
+    /** 并发创建完整私有状态后 CAS 发布；失败返回空，不发布半成品
+    @return 运行期间地址不变的私有状态
+    */
+    CTaskManagerState* state();
 private:
+    // 稳定私有状态，析构时要求外部静止
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable:4251)
+#pragma warning(disable: 4251)
 #endif
-	std::map<uint32_t, std::shared_ptr<CTaskThread>> m_spThreadMap;
-	/* 线程池锁
-	*/
-	std::mutex m_mutex;
-	std::atomic<uint32_t> m_threadId;
+    std::atomic<CTaskManagerState*> m_state;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

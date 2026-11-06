@@ -1,174 +1,138 @@
 ﻿#pragma once
 #include "CTask.h"
-#include <list>
-#include <set>
+#include "CTaskThreadModels.h"
 #include <map>
-#include <thread>
 #include <memory>
-#include <mutex>
-#include <atomic>
 
-class Semaphore;
+class CTaskThreadState;
 
-/* 线程操作指针
+/** 单条工作线程门面；强引用可跨停止存活，停止后的投递明确拒绝
 */
 class CTaskThreadManagerAPI CTaskThread
 {
-	friend class CTaskThreadManager;
+    friend class CTaskThreadManager;
+    friend class CTaskManagerState;
+    friend class CTaskPoolState;
+    friend class CTaskThreadTestAccess;
 private:
-	/* 构造函数
-	@param [in] threadId 线程ID
-	*/
-	CTaskThread(int32_t threadId);
-	
+    /** 由管理器构造线程
+    @param [in] threadId 不复用编号
+    @param [in] config 初始化配置
+    */
+    CTaskThread(uint32_t threadId, const CTaskThreadConfig& config);
 public:
-	/* 析构函数
-	*/
-	~CTaskThread();
-	
-public:
-	/* 添加任务，任务优先级必须从1开始
-	@param [in] spTask 任务
-	@param [in] taskLevel 任务优先级
-	*/
-	void PostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel = 1);
+    /** 在管理器已经等待退出后释放资源
+    */
+    ~CTaskThread();
 
-	/* 尝试添加任务，任务优先级必须从1开始，和try_lock相似
-	@param [in] spTask 任务
-	@param [in] taskLevel 任务优先级
-	@return 返回是否添加成功
-	*/
-	bool TryPostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel = 1);
+    /** 接纳任务；原来忽略返回值的调用仍可编译，新代码检查 committed
+    @param [in] task 非空任务强引用
+    @param [in] taskLevel 从 1 到 INT_MAX，大值先执行，同级 FIFO
+    @return 以 committed 判断是否接纳，后续抢占通知失败可与 committed=true 同时返回
+    */
+    CTaskThreadResult PostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1);
 
-	/* 同步执行任务，当任务没结束是发送线程卡住，但是任务仍然是在线程中执行
-	@param [in] spTask 任务
-	@param [in] taskLevel 任务优先级
-	*/
-	void SendTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel = 1);
+    /** 尝试投递
+    @param [in] task 任务强引用
+    @param [in] taskLevel 正数优先级
+    @return 是否已接纳，详细结果使用 PostTask
+    */
+    bool TryPostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1);
 
-	/* 判断任务队列里是否有任务
-	@return 返回任务队列里是否有任务
-	*/
-	bool HasTask();
+    /** 观察是否有排队任务
+    @return 不包含当前执行任务
+    */
+    bool HasTask();
 
-	/* 停止执行当前任务
-	*/
-	void StopCurTask();
+    /** 通知当前任务合作停止
+    @return 通知结果
+    */
+    CTaskThreadResult StopCurTask();
 
-	/* 停止执行该任务ID的任务集
-	@param [in] taskId 任务ID
-	@param [in] taskLevel 任务优先级，0表示所有任务范围
-	*/
-	void StopTask(int32_t taskId, int32_t taskLevel = 0);
+    /** 通知属性 ID 匹配的任务；保留历史规则，当前任务不受 taskLevel 过滤
+    @param [in] propertyId 属性 ID，不要求唯一，通知所有匹配任务
+    @param [in] taskLevel 排队优先级过滤，0 为全部
+    @return 通知结果，不删除任务
+    */
+    CTaskThreadResult StopTask(int32_t propertyId, int32_t taskLevel = 0);
 
-	/* 停止所有任务
-	*/
-	void StopAllTask();
+    /** 通知所有任务合作停止，回调允许查询和投递
+    @return 通知结果
+    */
+    CTaskThreadResult StopAllTask();
 
-	/* 获取当前map中任务个数，该函数会清空传入的map
-	@param [out] taskCountMap 左边是任务优先级，右边是当前优先级的任务个数
-	*/
-	void GetWaitTaskInfo(std::map<int32_t, int32_t>& taskCountMap);
+    /** 获取排队数量，先清空输出
+    @param [out] counts 优先级到等待数量
+    @return 查询结果，运行中为弱一致观察
+    */
+    CTaskThreadResult GetWaitTaskInfo(std::map<int32_t, int32_t>& counts);
 
-	/** 获取当前任务个数
-	@return 返回等待任务个数
-	*/
-	int32_t GetWaitTaskCount();
+    /** 查询等待任务数量
+    @return 大于 INT_MAX 时饱和
+    */
+    int32_t GetWaitTaskCount();
 
-	/** 获取正在执行的任务优先级
-	@return 返回正在执行的任务优先级
-	*/
-	int32_t GetCurTaskLevel();
+    /** 查询当前任务优先级
+    @return 空闲为 0
+    */
+    int32_t GetCurTaskLevel();
 
-	/** 等待所有任务执行完成后退出线程
-	*/
-	void WaitForEnd();
+    /** 关闭接纳并等待全部任务完成；管理器同名接口还移除注册
+    @return 自等待或同时 join 返回明确失败
+    */
+    CTaskThreadResult WaitForEnd();
 
+    /** 仅关闭接纳并请求退出，可从任务回调调用，不等待
+    @param [in] drain true 排空，false 丢弃等待任务
+    @return 意图已经发布
+    */
+    CTaskThreadResult requestShutdown(bool drain = true);
+
+    /** 设置系统线程优先级，与任务优先级无关
+    @param [in] priority 系统等级
+    @return 实际系统结果及原生错误码
+    */
+    CTaskThreadResult setSystemPriority(CTaskSystemPriority priority);
+
+    /** 查询负载和错误计数
+    @return 弱一致统计
+    */
+    CTaskThreadStatistics statistics() const;
+
+    /** 取得管理器线程编号
+    @return 不复用的编号
+    */
+    uint32_t threadId() const;
 private:
-	/** 创建线程
-	@return 返回是否创建成功
-	*/
-	bool CreateThread();
+    /** 创建线程
+    @return 初始化结果
+    */
+    CTaskThreadResult createThread();
 
-	/** 销毁线程
-	*/
-	void DestroyThread();
+    /** 请求停止并等待
+    @param [in] drain 是否排空
+    @return 关闭结果
+    */
+    CTaskThreadResult finish(bool drain);
 
-	/** 设置退出信号
-	*/
-	void SetExitSignal();
+    /** 发布退出意图，不等待
+    */
+    void requestStop();
 
-	/** 销毁线程的时候等待线程退出
-	*/
-	void WaitForExit();
-
-	/** 获取最高优先级任务
-	* 如果任务队列里有任务则提出最高优先级任务，同时检查提过任务之后是否需要删除该级别队列
-	*/
-	void PopToCurTask();
-
-	/** 收集列表中匹配的任务引用，不删除任务或执行停止通知；调用方持有m_mutex
-	@param [in] taskList 待检查的队列
-	@param [in] taskId 需要停止的任务类别
-	@param [in,out] stopTaskSet 追加匹配引用并去重，不清空已有内容
-	*/
-	void CollectStopTaskToSet(const std::list<std::shared_ptr<CTask>>& taskList, int32_t taskId,
-		std::set<std::shared_ptr<CTask>>& stopTaskSet);
-
-	//工作线程做三件事，执行当前任务，执行完后看任务队列里是否有任务，如果有则提出放到当前任务中，如果当前任务没有则跳过
-	void WorkThread();
-
-	void StopAllTaskUnlock();
-
-	void HandlePostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel);
-
+    /** 检查是否会同步等待自身
+    @return 是否处于本线程的业务回调
+    */
+    bool selfWait() const;
 private:
-
+    // 不变编号
+    const uint32_t m_threadId;
+    // 独占状态；公开调用由门面的 shared_ptr 保证存活
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable:4251)
+#pragma warning(disable: 4251)
 #endif
-	/*
-	int32_t 任务优先级
-	*/
-	std::map<int32_t, std::list<std::shared_ptr<CTask>>> m_taskMap;
-
-	/* 正在执行的任务，运行期间统一通过std::atomic_load/std::atomic_store访问
-	*/
-	std::shared_ptr<CTask> m_spCurTask;
-
-	/* 正在执行任务的备份，用于被顶掉后重做时调用
-	*/
-	std::shared_ptr<CTask> m_spCurTaskBk;
-
-	/* 工作线程指针
-	*/
-	std::unique_ptr<std::thread> m_spWorkThread;
-
-	/* 线程锁
-	*/
-	std::mutex m_mutex;
-
-	/* 线程是否有退出信号
-	*/
-	std::atomic<bool> m_hasExitSignal;
-
-	/** 等待所有任务执行完的退出信号
-	*/
-	std::atomic<bool> m_waitForEndSignal;
-
-	/* 正在执行任务的优先级
-	*/
-	std::atomic<int32_t> m_curTaskLevel;
+    std::unique_ptr<CTaskThreadState> m_state;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-
-	/* 线程ID
-	*/
-	int32_t m_threadId;
-
-	/* 等待事件
-	*/
-	Semaphore* m_semaphore;
 };

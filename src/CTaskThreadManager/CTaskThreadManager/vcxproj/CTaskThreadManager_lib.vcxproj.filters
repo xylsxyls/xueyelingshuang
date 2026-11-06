@@ -28,4 +28,118 @@
     <ClCompile Include="..\src\CTask.cpp" />
     <ClCompile Include="..\src\CTaskThread.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\CTaskAdmission.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskAdmission.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\CTaskManagerState.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskManagerState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\CTaskPoolControlTask.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskPoolControlTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\CTaskPoolModels.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskPoolModels.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\CTaskPoolPolicy.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskPoolPolicy.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\CTaskPoolState.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskPoolState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\CTaskPriorityBucket.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CTaskBucketCache.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskPriorityBucket.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CTaskBucketCache.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\CTaskRecord.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskRecord.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\CTaskResultAdapter.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskResultAdapter.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\CTaskThreadAllocator.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskThreadAllocator.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CTaskThreadManagerMacroDll.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CTaskThreadManagerMacroLib.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\CTaskThreadModels.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskThreadModels.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\CTaskThreadPool.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskThreadPool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\CTaskThreadPriority.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskThreadPriority.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\CTaskThreadState.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskThreadState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\CTaskCallbackScope.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\CTaskCallbackScope.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\CTaskSequenceHash.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <None Include="..\src\CTaskSequenceHash.inl">
+      <Filter>头文件</Filter>
+    </None>
+  </ItemGroup>
 </Project>

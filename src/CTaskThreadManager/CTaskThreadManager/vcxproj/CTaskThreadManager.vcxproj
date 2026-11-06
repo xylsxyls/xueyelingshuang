@@ -180,4 +180,46 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\CTaskAdmission.cpp" />
+    <ClInclude Include="..\src\CTaskAdmission.h" />
+    <ClCompile Include="..\src\CTaskManagerState.cpp" />
+    <ClInclude Include="..\src\CTaskManagerState.h" />
+    <ClCompile Include="..\src\CTaskPoolControlTask.cpp" />
+    <ClInclude Include="..\src\CTaskPoolControlTask.h" />
+    <ClCompile Include="..\src\CTaskPoolModels.cpp" />
+    <ClInclude Include="..\src\CTaskPoolModels.h" />
+    <ClCompile Include="..\src\CTaskPoolPolicy.cpp" />
+    <ClInclude Include="..\src\CTaskPoolPolicy.h" />
+    <ClCompile Include="..\src\CTaskPoolState.cpp" />
+    <ClInclude Include="..\src\CTaskPoolState.h" />
+    <ClCompile Include="..\src\CTaskPriorityBucket.cpp" />
+    <ClCompile Include="..\src\CTaskBucketCache.cpp" />
+    <ClInclude Include="..\src\CTaskPriorityBucket.h" />
+    <ClInclude Include="..\src\CTaskBucketCache.h" />
+    <ClCompile Include="..\src\CTaskRecord.cpp" />
+    <ClInclude Include="..\src\CTaskRecord.h" />
+    <ClCompile Include="..\src\CTaskResultAdapter.cpp" />
+    <ClInclude Include="..\src\CTaskResultAdapter.h" />
+    <ClCompile Include="..\src\CTaskThreadAllocator.cpp" />
+    <ClInclude Include="..\src\CTaskThreadAllocator.h" />
+    <ClInclude Include="..\src\CTaskThreadManagerMacroDll.h" />
+    <ClInclude Include="..\src\CTaskThreadManagerMacroLib.h" />
+    <ClCompile Include="..\src\CTaskThreadModels.cpp" />
+    <ClInclude Include="..\src\CTaskThreadModels.h" />
+    <ClCompile Include="..\src\CTaskThreadPool.cpp" />
+    <ClInclude Include="..\src\CTaskThreadPool.h" />
+    <ClCompile Include="..\src\CTaskThreadPriority.cpp" />
+    <ClInclude Include="..\src\CTaskThreadPriority.h" />
+    <ClCompile Include="..\src\CTaskThreadState.cpp" />
+    <ClInclude Include="..\src\CTaskThreadState.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\CTaskCallbackScope.cpp" />
+    <ClInclude Include="..\src\CTaskCallbackScope.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\CTaskSequenceHash.h" />
+    <None Include="..\src\CTaskSequenceHash.inl" />
+  </ItemGroup>
 </Project>
