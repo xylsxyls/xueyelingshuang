@@ -6,7 +6,6 @@
 */
 class CTaskManagerState
 {
-    friend class CTaskThreadTestAccess;
 public:
     /** 创建空注册表
     */

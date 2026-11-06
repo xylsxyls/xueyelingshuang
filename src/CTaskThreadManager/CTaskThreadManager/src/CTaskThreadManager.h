@@ -9,7 +9,6 @@ class CTaskManagerState;
 */
 class CTaskThreadManagerAPI CTaskThreadManager
 {
-    friend class CTaskThreadTestAccess;
 private:
     /** 创建默认空注册表
     */

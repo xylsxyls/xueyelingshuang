@@ -77,12 +77,6 @@
     <ClInclude Include="..\src\CTaskBucketCache.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClCompile Include="..\src\CTaskRecord.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClInclude Include="..\src\CTaskRecord.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClCompile Include="..\src\CTaskResultAdapter.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -135,11 +129,24 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\CTaskSequenceHash.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <None Include="..\src\CTaskSequenceHash.inl">
-      <Filter>头文件</Filter>
-    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\CTaskReadDomain.cpp" />
+    <ClInclude Include="..\src\CTaskReadDomain.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\CTaskStorageModels.cpp" />
+    <ClInclude Include="..\src\CTaskStorageModels.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\CTaskStorage.cpp" />
+    <ClInclude Include="..\src\CTaskStorage.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\CTaskReadyIndex.cpp" />
+    <ClInclude Include="..\src\CTaskReadyIndex.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\CTaskReadyIndex.inl" />
   </ItemGroup>
 </Project>

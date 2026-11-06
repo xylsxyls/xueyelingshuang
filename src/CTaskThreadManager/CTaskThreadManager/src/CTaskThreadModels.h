@@ -90,7 +90,7 @@ public:
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-    // 安全任务引用目录；含排队、执行和预先准备的重做引用
+    // 稳定任务记录池配置；V3 一条记录占一槽，含排队、执行、重做和延迟回收
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4251)
@@ -126,7 +126,7 @@ public:
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-    // 任务目录桶数，不是容量上限
+    // 兼容保留的非零参数；V3 稳定槽位池不分配哈希桶
     size_t m_taskBuckets;
     // 已接纳任务加在途预留上限，包含正在执行任务；-1 不设业务上限
     int64_t m_maximumTasks;

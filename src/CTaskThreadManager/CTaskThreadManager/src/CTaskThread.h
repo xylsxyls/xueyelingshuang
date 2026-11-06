@@ -13,7 +13,6 @@ class CTaskThreadManagerAPI CTaskThread
     friend class CTaskThreadManager;
     friend class CTaskManagerState;
     friend class CTaskPoolState;
-    friend class CTaskThreadTestAccess;
 private:
     /** 由管理器构造线程
     @param [in] threadId 不复用编号

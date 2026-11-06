@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include "CTaskPriorityBucket.h"
 #include "CTaskBucketCache.h"
-#include "CTaskSequenceHash.h"
+#include "CTaskStorage.h"
+#include "CTaskReadyIndex.h"
 #include "Semaphore/SemaphoreAPI.h"
 #include <thread>
 #include <map>
@@ -10,7 +11,6 @@
 */
 class CTaskThreadState
 {
-    friend class CTaskThreadTestAccess;
 public:
     /** 构造尚未启动的状态
     @param [in] config 冻结的配置副本
@@ -76,14 +76,16 @@ public:
     CTaskThreadResult waitInfo(std::map<int32_t, int32_t>& counts);
 private:
     /** 分配不回绕序号
+    @param [in,out] cache 本调用独占的位置及预留序号段
     @return 非零序号，耗尽返回零
     */
-    uint64_t nextSequence();
+    uint64_t nextSequence(CTaskStorageCache& cache);
 
     /** 预留业务任务额度
+    @param [in,out] cache 本调用独占的计数位置
     @return 是否取得额度
     */
-    bool reserveTask();
+    bool reserveTask(CTaskStorageCache& cache);
 
     /** 观察尚未归还的任务额度，先读取消费者归还量再读取生产者预留量
     @return 弱一致数量；静止时精确，累计值按 uint64_t 模运算相减
@@ -95,6 +97,19 @@ private:
     */
     uint64_t queuedCount() const;
 
+    /** 在冷路径汇总某优先级的排队数，有限优先级池保持可退役桶协议
+    @param [in] bucket 在保护范围内或由消费者持有的桶
+    @return 包含发布前预留的弱一致数量
+    */
+    uint64_t bucketQueuedCount(const CTaskPriorityBucket& bucket) const;
+
+    /** 登记或回滚本次发布预留；常用无上限桶采用分位置计数
+    @param [in,out] cache 本调用独占的位置
+    @param [in,out] bucket 目标优先级桶
+    @param [in] add true 登记，false 回滚
+    */
+    void countPublication(CTaskStorageCache& cache, CTaskPriorityBucket& bucket, bool add);
+
     /** 取得允许发布的优先级桶，同时登记一个生产者
     @param [in] level 优先级
     @param [out] bucket 成功后调用者负责归还 writers
@@ -102,13 +117,21 @@ private:
     */
     CTaskThreadResult acquireBucket(int32_t level, std::shared_ptr<CTaskPriorityBucket>& bucket);
 
+    /** 向稳定桶发布记录，复用本读侧位置独占的生产者上下文
+    @param [in,out] cache 本调用持有读侧租约的缓存
+    @param [in,out] bucket 本次有效的优先级桶
+    @param [in] record 完全构造但尚未发布的记录
+    @return 只有成功时发布，容量压力下仅重试尚未发布的记录
+    */
+    LockFreeQueueResult publish(CTaskStorageCache& cache, CTaskPriorityBucket& bucket, CTaskStorageSlot* record);
+
     /** 安全通知当前高优先级抢占
     @param [in] level 已经成功接纳的新任务优先级
     @param [in] posted 可空，生产者传入自己的记录，防止延迟通知抢占后来的无关任务
     */
-    CTaskThreadResult preempt(int32_t level, const std::shared_ptr<CTaskRecord>& posted = std::shared_ptr<CTaskRecord>());
+    CTaskThreadResult preempt(int32_t level, CTaskStorageSlot* posted = nullptr);
 
-    /** 唯一消费者预读至多一个已发布队首，不等待正在准备的生产者
+    /** 唯一消费者取得本级队首，FIFO 节点每次至多合并 16 项，不等待发布者
     @param [in,out] bucket 优先级桶
     */
     void prepareFront(CTaskPriorityBucket& bucket);
@@ -119,8 +142,9 @@ private:
     CTaskThreadStatus notifyStop(const std::shared_ptr<CTask>& task);
 
     /** 唤醒工作线程，失败记诊断；工作线程另有有限补查
+    @param [in] fenced 本次队列发布后是否已经执行 SC 屏障
     */
-    void wake();
+    void wake(bool fenced = false);
 
     /** 唯一消费者的主循环；异常不会越过线程入口
     */
@@ -131,13 +155,13 @@ private:
     @param [out] record 取出的记录
     @return 是否取到任务
     */
-    bool take(std::shared_ptr<CTaskPriorityBucket>& bucket, std::shared_ptr<CTaskRecord>& record);
+    bool take(CTaskPriorityBucket*& bucket, CTaskStorageSlot*& record);
 
     /** 执行任务并提交一次重做决定
     @param [in] bucket 原始优先级桶
     @param [in] record 当前记录
     */
-    void execute(const std::shared_ptr<CTaskPriorityBucket>& bucket, const std::shared_ptr<CTaskRecord>& record);
+    void execute(CTaskPriorityBucket& bucket, CTaskStorageSlot& record);
 
     /** 仅消费者维护基础容器及退役空桶
     */
@@ -147,17 +171,11 @@ private:
     */
     void discard();
 
-    /** 完成记录删除，保护记录暂不可用时交给消费者后续维护
-    @param [in] sequence 要移除的唯一编号
-    */
-    void eraseRecord(uint64_t sequence);
 private:
     // 冻结配置
     const CTaskThreadConfig m_config;
-    // 只关闭接纳，不互斥并发投递
-    CTaskAdmission m_posts;
-    // 避免高频投递借用与外部观察共用缓存行
-    char m_postPadding[64];
+    // 只单向关闭接纳；在途投递由读侧位置保护，不竞争统一接纳计数
+    std::atomic<bool> m_accepting;
     // 停止通知及容器快照的借用；工作线程退出前关闭并等待现有借用归还
     CTaskAdmission m_observers;
     // 原生句柄借用计数，join 前关闭并等待借用归还
@@ -166,10 +184,16 @@ private:
     LockFreeMap<int32_t, std::shared_ptr<CTaskPriorityBucket>> m_buckets;
     // 常用级别只发布一次的缓存，桶退役或遇到未缓存级别时回退通用路径
     CTaskBucketCache m_cachedBuckets[16];
+    // 仅无优先级池上限时长期保留常用桶，避免逐任务强引用和写者共享计数
+    const bool m_pinCommon;
+    // 常用最高待检查级别；发布者提高，消费者逐级降低并复查
+    CTaskReadyIndex m_readyIndex;
     // 只会由 false 变为 true，必须在任何未缓存桶发布任务前设置
     std::atomic<bool> m_scanBuckets;
-    // 每条记录安全引用目录，仅消费者调用 maintain
-    LockFreeHashMap<uint64_t, std::shared_ptr<CTaskRecord>, CTaskSequenceHash> m_records;
+    // 投递和冷路径观察共享的读侧保护；暂停读者仅阻止旧记录复用
+    CTaskReadDomain m_readDomain;
+    // 一条任务只占一个执行记录，不重复插入 HashMap 控制块
+    CTaskStorage m_storage;
     // 系统线程，由取得生命周期操作权的一方 join
     std::thread m_thread;
     // 任务和状态改变通知
@@ -186,13 +210,17 @@ private:
     std::atomic<bool> m_exited;
     // join 已经完成
     std::atomic<bool> m_joined;
+    // 只读启动/关闭状态不与生产者序号批量申请共用缓存行
+    char m_lifecyclePadding[64];
     // 不复用的记录序号
     std::atomic<uint64_t> m_sequence;
     // 多生产者编号与单消费者当前状态隔离
     char m_sequencePadding[64];
-    // 当前任务目录编号，0 表示空闲
-    std::atomic<uint64_t> m_current;
-    // 当前执行优先级
+    // 当前任务稳定槽地址；观察方持有读侧保护，空闲为 nullptr
+    std::atomic<CTaskStorageSlot*> m_current;
+    // 高频当前地址写入不使生产者读取的稳定优先级缓存行失效
+    char m_levelPadding[64];
+    // 最近执行优先级；观察空闲时必须结合当前指针
     std::atomic<int32_t> m_currentLevel;
     // 当前任务发布与业务额度计数隔离
     char m_currentPadding[64];
@@ -214,10 +242,10 @@ private:
     std::atomic<uint64_t> m_rejected;
     // 可观察异常/系统失败次数
     std::atomic<uint64_t> m_errors;
+    // 生产者每次只读通知位，不与消费者逐任务统计写入共用缓存行
+    char m_wakePadding[64];
     // 合并通知，避免每个任务留下一个无效的空队列唤醒许可
     std::atomic<bool> m_wakePending;
-    // 只有删除实际失败后才扫描完成记录
-    std::atomic<bool> m_cleanupNeeded;
     // 新优先级遇到池上限时请求消费者退役空桶，之后可重试未接纳投递
     std::atomic<bool> m_trimBuckets;
 };
