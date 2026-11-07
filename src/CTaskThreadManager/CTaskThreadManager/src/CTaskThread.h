@@ -132,7 +132,7 @@ private:
     // 独占状态；公开调用由门面的 shared_ptr 保证存活
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 4251)
+#pragma warning(disable: 4251)
 #endif
     std::unique_ptr<CTaskThreadState> m_state;
 #ifdef _MSC_VER

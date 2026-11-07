@@ -59,7 +59,7 @@ private:
     // 非空时只在确认重做后调用；返回任务未配置工厂时继承本工厂，支持再次重做
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 4251)
+#pragma warning(disable: 4251)
 #endif
     std::shared_ptr<const std::function<CTask*()>> m_cloneFactory;
 #ifdef _MSC_VER

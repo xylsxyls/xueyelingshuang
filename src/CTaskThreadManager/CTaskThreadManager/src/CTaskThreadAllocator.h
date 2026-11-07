@@ -34,7 +34,7 @@ private:
     // 相同负载的轮转提示，回绕不涉及资源身份
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 4251)
+#pragma warning(disable: 4251)
 #endif
     std::atomic<uint64_t> m_turn;
 #ifdef _MSC_VER

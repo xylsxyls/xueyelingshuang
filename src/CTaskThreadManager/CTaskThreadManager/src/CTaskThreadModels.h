@@ -152,7 +152,7 @@ public:
     // 线程注册表节点池
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 4251)
+#pragma warning(disable: 4251)
 #endif
     LockFreeMapConfig m_threadMap;
 #ifdef _MSC_VER

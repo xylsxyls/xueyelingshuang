@@ -67,7 +67,7 @@ public:
     // 线程池成员索引的节点池
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 4251)
+#pragma warning(disable: 4251)
 #endif
     LockFreeMapConfig m_members;
 #ifdef _MSC_VER
@@ -76,7 +76,7 @@ public:
     // 可继承的扩缩容算法，空指针使用默认策略；保存强引用
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 4251)
+#pragma warning(disable: 4251)
 #endif
     std::shared_ptr<CTaskPoolPolicy> m_policy;
 #ifdef _MSC_VER
