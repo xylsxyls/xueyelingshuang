@@ -18,6 +18,8 @@ public:
     @return 初始化结果
     */
     CTaskThreadResult initialize(const CTaskThreadConfig& config);
+
+public:
     // 不变优先级
     const int32_t m_level;
     // 队列生产者的接纳计数；关闭空桶后拒绝旧引用发布
@@ -30,10 +32,11 @@ public:
     CTaskStorageSlot* m_redo;
     // 仅消费者访问的一个已发布队首；执行之前仍重新选择最高优先级
     CTaskStorageSlot* m_front;
-    // 最多预读 16 项，合并归还 FIFO 节点；记录仍计入原优先级的排队数
-    CTaskStorageSlot* m_readyTasks[16];
-    // 消费者本地前缀的下一个位置及有效项数
+    // 最多预读 64 项，合并归还 FIFO 节点；记录仍计入原优先级的排队数
+    CTaskStorageSlot* m_readyTasks[64];
+    // 消费者本地前缀的下一个位置
     size_t m_readyHead;
+    // 消费者本地前缀尚未取出的有效项数
     size_t m_readyCount;
     // 消费者独占引用与生产者可写计数隔离
     char m_frontPadding[64];

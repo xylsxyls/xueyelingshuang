@@ -12,6 +12,7 @@ class CTaskThreadAllocator;
 class CTaskThreadManagerAPI CTaskThreadPool
 {
     friend class CTaskThreadAllocator;
+
 public:
     /** 创建未初始化的线程池
     */
@@ -43,6 +44,7 @@ public:
     @return 复制结果
     */
     CTaskThreadResult threadIds(std::vector<uint32_t>& ids) const;
+
 private:
     /** 选择一个可接纳的最小负载线程，缩容竞争由最终 PostTask 结果处理
     @param [in] turn 相同负载的轮转位置
@@ -51,6 +53,7 @@ private:
     @return 选择结果
     */
     CTaskThreadResult choose(uint64_t turn, uint32_t& id, std::shared_ptr<CTaskThread>& thread);
+
 private:
     // 初始化后保持地址不变，重新初始化要求外部静止
 #ifdef _MSC_VER

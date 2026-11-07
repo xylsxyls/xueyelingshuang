@@ -17,6 +17,7 @@ private:
     /** 静止析构并停止仍注册的线程
     */
     ~CTaskThreadManager();
+
 public:
     /** 首次调用时创建管理器；启动阶段由主线程串行预热，再启动并发调用方
     @return 当前链接模块内的唯一实例
@@ -74,11 +75,13 @@ public:
     @return 弱一致数量，超过 INT_MAX 饱和
     */
     int32_t Count();
+
 private:
     /** 并发创建完整私有状态后 CAS 发布；失败返回空，不发布半成品
     @return 运行期间地址不变的私有状态
     */
     CTaskManagerState* state();
+
 private:
     // 稳定私有状态，析构时要求外部静止
 #ifdef _MSC_VER

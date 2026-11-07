@@ -47,7 +47,10 @@ public:
     @return 后端是否满足无锁要求
     */
     bool supported() const;
+
 private:
     // 最高位为关闭状态，其余位是并发登记数
     std::atomic<uint64_t> m_state;
 };
+
+#include "CTaskAdmission.inl"

@@ -23,4 +23,5 @@ public:
     @return 管理器状态
     */
     static CTaskThreadResult hash(const LockFreeHashMapResult& result);
+
 };

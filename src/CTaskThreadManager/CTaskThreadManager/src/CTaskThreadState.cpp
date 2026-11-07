@@ -8,17 +8,54 @@
 #include <limits>
 #include <system_error>
 
-/** 预取仍由任务池持有的稳定地址，不执行任务、不改变队列状态
-@param [in] address 在当前消费者访问期间有效的地址
+/** 查询写预取指令是否可用；不支持时仍使用原有读预取
+@return 本编译目标和当前处理器是否支持写预取提示
 */
-static inline void PrefetchTaskAddress(const void* address)
+static bool TaskWritePrefetchAvailable()
 {
 #if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
-    _mm_prefetch(static_cast<const char*>(address), _MM_HINT_T0);
+    int registers[4] = {};
+    __cpuid(registers, static_cast<int>(0x80000000u));
+    if (static_cast<uint32_t>(registers[0]) < 0x80000001u)
+    {
+        return false;
+    }
+    __cpuid(registers, static_cast<int>(0x80000001u));
+    return (registers[2] & (1 << 8)) != 0;
 #elif defined(__GNUC__) || defined(__clang__)
-    __builtin_prefetch(address, 0, 3);
+    return true;
+#else
+    return false;
+#endif
+}
+
+/** 预取仍由任务池持有的稳定地址，不执行任务、不改变队列状态
+@param [in] address 在当前消费者访问期间有效的地址
+@param [in] writeAccess 是否预备写入，Windows 调用方必须先检查写预取能力
+*/
+static inline void PrefetchTaskAddress(const void* address, bool writeAccess = false)
+{
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+    if (writeAccess)
+    {
+        _m_prefetchw(address);
+    }
+    else
+    {
+        _mm_prefetch(static_cast<const char*>(address), _MM_HINT_T0);
+    }
+#elif defined(__GNUC__) || defined(__clang__)
+    if (writeAccess)
+    {
+        __builtin_prefetch(address, 1, 3);
+    }
+    else
+    {
+        __builtin_prefetch(address, 0, 3);
+    }
 #else
     (void)address;
+    (void)writeAccess;
 #endif
 }
 
@@ -27,6 +64,7 @@ m_config(config),
 m_accepting(true),
 m_buckets(false),
 m_pinCommon(config.m_priorityMap.nodes.maximumCapacity == -1 && config.m_priorityMap.values.maximumCapacity == -1),
+m_writePrefetch(TaskWritePrefetchAvailable()),
 m_scanBuckets(false),
 m_storage(m_readDomain),
 m_started(0),
@@ -302,7 +340,7 @@ LockFreeQueueResult CTaskThreadState::publish(CTaskStorageCache& cache, CTaskPri
 {
     if (!m_pinCommon || bucket.m_level > 16 || m_cachedBuckets[bucket.m_level - 1].peek() != &bucket)
     {
-        return bucket.m_queue.tryPush(record);
+        return bucket.m_queue.tryPushEntryAndFence(record->m_entry);
     }
     LockFreeQueueProducer<CTaskStorageSlot*>& producer = cache.m_producers[bucket.m_level - 1];
     if (!producer.attached())
@@ -318,10 +356,10 @@ LockFreeQueueResult CTaskThreadState::publish(CTaskStorageCache& cache, CTaskPri
         }
         cache.m_producerCount.store(cache.m_producerCount.load(std::memory_order_relaxed) + 1, std::memory_order_release);
     }
-    LockFreeQueueResult result = producer.tryPush(record);
+    LockFreeQueueResult result = producer.tryPushEntryAndFence(record->m_entry);
     if ((result == LockFreeQueueCapacityLimit || result == LockFreeQueueTemporaryUnavailable) && m_storage.releaseIdleProducers() != 0)
     {
-        result = producer.tryPush(record);
+        result = producer.tryPushEntryAndFence(record->m_entry);
     }
     return result;
 }
@@ -382,6 +420,11 @@ CTaskThreadResult CTaskThreadState::post(const std::shared_ptr<CTask>& task, int
         }
         if (bucket != nullptr)
         {
+            // 发布任务前扩展扫描上界；上界只增不减，不让每次消费和投递争写同一提示。
+            if (level <= 16 && m_readyIndex.highest() < level)
+            {
+                m_readyIndex.publish(level);
+            }
             const uint64_t sequence = nextSequence(cache);
             if (sequence == 0)
             {
@@ -389,24 +432,21 @@ CTaskThreadResult CTaskThreadState::post(const std::shared_ptr<CTask>& task, int
             }
             else
             {
-                record = m_storage.acquire(cache, result);
+                record = m_storage.acquire(cache, result, level);
                 if (record != nullptr)
                 {
                     record->m_task = task;
-                    record->m_sequence = sequence;
                     record->m_level = level;
+                    record->m_entry.m_value = record;
+                    // 准备身份尚不能被停止遍历观察；独立发布位只在 FIFO 提交后打开。
+                    std::atomic<bool>& publication = record->m_page->m_publications[record->m_index];
                     countPublication(cache, *bucket, true);
-                    result = CTaskResultAdapter::queue(publish(cache, *bucket, record));
+                    const LockFreeQueueResult published = publish(cache, *bucket, record);
+                    result = published == LockFreeQueueSuccess ? CTaskThreadResult(CTaskThreadOk, true) : CTaskResultAdapter::queue(published);
                     if (result.m_committed)
                     {
-                        if (level > 1 && level <= 16)
-                        {
-                            bucket->m_ready.store(true, std::memory_order_release);
-                            m_readyIndex.publish(level);
-                        }
-                        int32_t expected = 0;
-                        // 只有发布完成后才能被停止遍历看到；消费者可能已经把它推进到执行或完成。
-                        record->m_phase.compare_exchange_strong(expected, 1, std::memory_order_release, std::memory_order_relaxed);
+                        // 消费者可能已经执行完毕；只开放可见性，不把执行阶段写回排队。
+                        publication.store(true, std::memory_order_release);
                     }
                     else
                     {
@@ -447,12 +487,23 @@ CTaskThreadResult CTaskThreadState::post(const std::shared_ptr<CTask>& task, int
     }
     else
     {
-        wake(level > 1 && level <= 16);
-        const CTaskThreadResult notice = preempt(level, record);
-        if (notice.m_status != CTaskThreadOk)
+        // 有序发布接口已经完成队列提交到后续读取之间的完整屏障。
+        // 独立发布位仅用于停止遍历，不参与队列非空或唤醒判定。
+        if (level > 1 && level <= 16 && !bucket->m_ready.load(std::memory_order_acquire))
         {
-            result = notice;
-            result.m_committed = true;
+            bucket->m_ready.store(true, std::memory_order_release);
+            // 唤醒复查也读取此位；新置位必须早于 wake 对等待标记的读取。
+            CTaskReadyIndex::fence();
+        }
+        wake(true);
+        if (level > 1)
+        {
+            const CTaskThreadResult notice = preempt(level, record);
+            if (notice.m_status != CTaskThreadOk)
+            {
+                result = notice;
+                result.m_committed = true;
+            }
         }
     }
     m_readDomain.leave(*reader);
@@ -490,6 +541,10 @@ CTaskThreadResult CTaskThreadState::preempt(int32_t level, CTaskStorageSlot* pos
     {
         return CTaskThreadResult();
     }
+    if (posted && posted->m_state->m_phase.load(std::memory_order_acquire) >= 2)
+    {
+        return CTaskThreadResult();
+    }
     // 调用者持有读侧保护；唯一消费者自身调用时不并发执行回收。
     CTaskStorageSlot* current = m_current.load(std::memory_order_acquire);
     if (current == nullptr)
@@ -501,11 +556,15 @@ CTaskThreadResult CTaskThreadState::preempt(int32_t level, CTaskStorageSlot* pos
         return CTaskThreadResult();
     }
     // 读取当前执行记录之后再检查投递记录；后来的当前记录发布会带来此前执行完成的可见性。
-    if (posted && posted->m_phase.load(std::memory_order_acquire) >= 2)
+    if (posted && posted->m_state->m_phase.load(std::memory_order_acquire) >= 2)
     {
         return CTaskThreadResult();
     }
-    CTaskCallbackScope scope(this);
+    // 已完成重做决策的记录不再调用业务回调；读侧保护保证此处没有槽位复用。
+    if ((current->m_state->m_flags.load(std::memory_order_acquire) & 2) != 0)
+    {
+        return CTaskThreadResult();
+    }
     bool redo = false;
     CTaskThreadStatus status = CTaskThreadOk;
     try
@@ -517,7 +576,7 @@ CTaskThreadResult CTaskThreadState::preempt(int32_t level, CTaskStorageSlot* pos
         m_errors.fetch_add(1, std::memory_order_relaxed);
         status = CTaskThreadCallbackFailure;
     }
-    uint32_t flags = current->m_flags.load(std::memory_order_acquire);
+    uint32_t flags = current->m_state->m_flags.load(std::memory_order_acquire);
     for (;;)
     {
         if ((flags & 2) != 0)
@@ -525,8 +584,7 @@ CTaskThreadResult CTaskThreadState::preempt(int32_t level, CTaskStorageSlot* pos
             return CTaskThreadResult(status);
         }
         // 不重做时没有需要提交的状态；一次观察已经决定是否发送合作通知。
-        if (!redo || current->m_flags.compare_exchange_weak(flags, flags | 1,
-            std::memory_order_acq_rel, std::memory_order_acquire))
+        if (!redo || current->m_state->m_flags.compare_exchange_weak(flags, flags | 1, std::memory_order_acq_rel, std::memory_order_acquire))
         {
             break;
         }
@@ -565,7 +623,7 @@ CTaskThreadResult CTaskThreadState::stop(int32_t propertyId, int32_t level, bool
         // 在保护内收集强引用，回调时不继续占用池读侧位置；相同任务对象只通知一次。
         m_storage.forEach([&selected, propertyId, level, all](CTaskStorageSlot& record)
         {
-            const int32_t phase = record.m_phase.load(std::memory_order_acquire);
+            const int32_t phase = record.m_state->m_phase.load(std::memory_order_acquire);
             if ((phase == 1 || phase == 2) && (all || record.m_task->GetPropertyId() == propertyId) &&
                 (phase == 2 || level == 0 || record.m_level == level))
             {
@@ -736,23 +794,11 @@ bool CTaskThreadState::take(CTaskPriorityBucket*& bucket, CTaskStorageSlot*& rec
         for (int32_t i = m_readyIndex.highest() - 1; i >= 0; --i)
         {
             CTaskPriorityBucket* item = m_cachedBuckets[i].peek();
-            if (item != nullptr && !item->m_writers.closed() && (i == 0 || item->m_ready.load(std::memory_order_acquire)))
+            if (item != nullptr && (i == 0 || item->m_ready.load(std::memory_order_acquire)))
             {
                 prepareFront(*item);
                 if (item->m_redo || item->m_front)
                 {
-                    bucket = item;
-                    break;
-                }
-            }
-            if (i > 0 && m_readyIndex.lower(i + 1) && item != nullptr && !item->m_writers.closed())
-            {
-                // 发布者可能看到下调前的较高提示；成功下调后必须复查，不能直接跳过。
-                prepareFront(*item);
-                if (item->m_redo || item->m_front)
-                {
-                    m_readyIndex.publish(i + 1);
-                    item->m_ready.store(true, std::memory_order_release);
                     bucket = item;
                     break;
                 }
@@ -780,7 +826,16 @@ bool CTaskThreadState::take(CTaskPriorityBucket*& bucket, CTaskStorageSlot*& rec
     CTaskStorageSlot*& selected = bucket->m_redo != nullptr ? bucket->m_redo : bucket->m_front;
     record = selected;
     selected = nullptr;
-    record->m_phase.store(2, std::memory_order_release);
+    if (m_currentLevel.load(std::memory_order_relaxed) != record->m_level)
+    {
+        m_currentLevel.store(record->m_level, std::memory_order_relaxed);
+    }
+    m_current.store(record, std::memory_order_release);
+    // 计数归唯一消费者写；合并记账和发布屏障，不对生产者读取的当前指针做 RMW。
+    m_dequeuedTasks.fetch_add(1, std::memory_order_acq_rel);
+    CTaskReadyIndex::fenceAfterRmw();
+    // 当前任务身份先发布；执行阶段及消费计数仍在调用业务之前提交。
+    record->m_state->m_phase.store(2, std::memory_order_release);
     if (m_pinCommon && bucket->m_level <= 16)
     {
         bucket->m_taken.store(bucket->m_taken.load(std::memory_order_relaxed) + 1, std::memory_order_release);
@@ -789,7 +844,6 @@ bool CTaskThreadState::take(CTaskPriorityBucket*& bucket, CTaskStorageSlot*& rec
     {
         bucket->m_queued.fetch_sub(1, std::memory_order_relaxed);
     }
-    m_dequeuedTasks.store(m_dequeuedTasks.load(std::memory_order_relaxed) + 1, std::memory_order_release);
     return true;
 }
 
@@ -805,20 +859,12 @@ void CTaskThreadState::prepareFront(CTaskPriorityBucket& bucket)
         return;
     }
     bucket.m_readyHead = 0;
-    // 单个最低优先级通常紧随生产者；逐项读取避免建立很短本地前缀的开销。
-    // 这里只选择等价的消费方式，弱一致桶数量不参与优先级正确性判定。
-    if (bucket.m_level == 1 && m_buckets.size() == 1)
-    {
-        bucket.m_readyCount = 0;
-        bucket.m_queue.popReady(&bucket.m_front);
-        return;
-    }
-    bool found = bucket.m_queue.popReadyBatch(bucket.m_readyTasks, 16, bucket.m_readyCount);
+    bool found = bucket.m_queue.popReadyPrefix(bucket.m_readyTasks, 64, bucket.m_readyCount);
     if (!found && bucket.m_level > 1 && bucket.m_level <= 16)
     {
-        bucket.m_ready.exchange(false, std::memory_order_acq_rel);
-        // 清位前完成的发布由 RMW 建立可见性；清位后的发布会重新置位。
-        found = bucket.m_queue.popReadyBatch(bucket.m_readyTasks, 16, bucket.m_readyCount);
+        bucket.m_ready.store(false, std::memory_order_release);
+        CTaskReadyIndex::fence();
+        found = bucket.m_queue.popReadyPrefix(bucket.m_readyTasks, 64, bucket.m_readyCount);
         if (found)
         {
             bucket.m_ready.store(true, std::memory_order_release);
@@ -826,6 +872,27 @@ void CTaskThreadState::prepareFront(CTaskPriorityBucket& bucket)
     }
     if (found)
     {
+        // 仅在已取得任务时做至多八轮短预读，合并接近队首的并发发布。
+        // 轮数和总项数都有上限，不依赖任何指定生产者恢复执行。
+        for (size_t pass = 0; pass < 8 && bucket.m_readyCount < 64 &&
+            m_readyIndex.highest() == 1 && !m_scanBuckets.load(std::memory_order_acquire);
+            ++pass)
+        {
+            for (size_t pause = 0; pause < 32; ++pause)
+            {
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+                _mm_pause();
+#elif defined(__i386__) || defined(__x86_64__)
+                __asm__ __volatile__("pause");
+#else
+                std::atomic_signal_fence(std::memory_order_seq_cst);
+#endif
+            }
+            size_t received = 0;
+            bucket.m_queue.popReadyPrefix(bucket.m_readyTasks + bucket.m_readyCount, 64 - bucket.m_readyCount, received);
+            bucket.m_readyCount += received;
+        }
+        // 每轮仍只执行一个任务并重新选择最高优先级。
         // 本地前缀不改变排队身份；先并行请求记录缓存行，再提示后续任务载荷。
         for (size_t i = 0; i < bucket.m_readyCount; ++i)
         {
@@ -833,47 +900,46 @@ void CTaskThreadState::prepareFront(CTaskPriorityBucket& bucket)
         }
         for (size_t i = 0; i < bucket.m_readyCount; ++i)
         {
-            PrefetchTaskAddress(bucket.m_readyTasks[i]->m_task.get());
+            PrefetchTaskAddress(bucket.m_readyTasks[i]->m_state, m_writePrefetch);
+            PrefetchTaskAddress(bucket.m_readyTasks[i]->m_task.get(), m_writePrefetch);
         }
         bucket.m_front = bucket.m_readyTasks[bucket.m_readyHead++];
     }
     // 排队状态由投递者发布；消费者真正取走时直接发布 Executing。
-    // 仍在提交中的投递即使先被消费，也不会被投递者的 0->1 CAS 改回排队。
+    // 投递者仅更新独立发布位，不会把已执行或完成的阶段改回排队。
 }
 
-void CTaskThreadState::execute(CTaskPriorityBucket& bucket, CTaskStorageSlot& record)
+CTaskStorageSlot* CTaskThreadState::prepareRedo(const CTaskStorageSlot& record, CTask* rawClone)
 {
-    if (m_currentLevel.load(std::memory_order_relaxed) != record.m_level)
-    {
-        m_currentLevel.store(record.m_level, std::memory_order_relaxed);
-    }
-    m_current.store(&record, std::memory_order_release);
     CTaskStorageSlot* backup = nullptr;
     try
     {
-        CTask* rawClone = record.m_task->Clone();
         if (rawClone == record.m_task.get())
         {
-            // 防止错误实现返回 this 后形成第二个控制块并双重释放。
-            rawClone = nullptr;
+            // 工厂禁止返回已执行的自身；在建立控制块前拒绝，避免重复释放。
             m_errors.fetch_add(1, std::memory_order_relaxed);
+            return nullptr;
         }
-        std::shared_ptr<CTask> clone;
         if (rawClone != nullptr)
         {
-            clone.reset(rawClone);
-        }
-        if (clone)
-        {
+            std::shared_ptr<CTask> clone(rawClone);
+            if (!clone->cloneFactory())
+            {
+                if (!clone->Clone(*record.m_task->cloneFactory()))
+                {
+                    // 复制失败时临时强引用释放刚生成的任务，不提交半成品。
+                    m_errors.fetch_add(1, std::memory_order_relaxed);
+                    return nullptr;
+                }
+            }
             const uint64_t sequence = nextSequence(m_storage.cache(m_readDomain.capacity()));
             if (sequence != 0)
             {
                 CTaskThreadResult allocated;
-                backup = m_storage.acquire(m_storage.cache(m_readDomain.capacity()), allocated);
+                backup = m_storage.acquire(m_storage.cache(m_readDomain.capacity()), allocated, record.m_level);
                 if (backup != nullptr)
                 {
                     backup->m_task = clone;
-                    backup->m_sequence = sequence;
                     backup->m_level = record.m_level;
                 }
                 else
@@ -891,6 +957,14 @@ void CTaskThreadState::execute(CTaskPriorityBucket& bucket, CTaskStorageSlot& re
     {
         m_errors.fetch_add(1, std::memory_order_relaxed);
     }
+    return backup;
+}
+
+void CTaskThreadState::execute(CTaskPriorityBucket& bucket, CTaskStorageSlot& record)
+{
+    // take 已发布当前任务并完成屏障，再复查高优先级队列不会双方同时漏看。
+    const bool hasFactory = record.m_task->cloneFactory() != nullptr;
+    CTaskStorageSlot* backup = nullptr;
     // 发布当前引用前到达的高优先级投递也必须触发抢占。
     int32_t higher = 0;
     if (!m_scanBuckets.load(std::memory_order_acquire))
@@ -898,7 +972,7 @@ void CTaskThreadState::execute(CTaskPriorityBucket& bucket, CTaskStorageSlot& re
         for (int32_t i = m_readyIndex.highest() - 1; i >= record.m_level; --i)
         {
             CTaskPriorityBucket* item = m_cachedBuckets[i].peek();
-            if (item != nullptr && !item->m_writers.closed() && item->m_ready.load(std::memory_order_acquire))
+            if (item != nullptr && item->m_ready.load(std::memory_order_acquire))
             {
                 prepareFront(*item);
                 if (item->m_redo || item->m_front)
@@ -941,27 +1015,41 @@ void CTaskThreadState::execute(CTaskPriorityBucket& bucket, CTaskStorageSlot& re
         m_executed.store(m_executed.load(std::memory_order_relaxed) + 1, std::memory_order_relaxed);
     }
     uint32_t flags = 0;
-    if (backup != nullptr)
+    if (hasFactory)
     {
-        flags = record.m_flags.exchange(2, std::memory_order_acq_rel);
+        flags = record.m_state->m_flags.exchange(2, std::memory_order_acq_rel);
     }
     else
     {
-        // 没有可用克隆时不存在可提交的重做，只需关闭后续通知决策，无需读取并交换旧位。
-        record.m_flags.store(2, std::memory_order_release);
+        // 未配置工厂时不存在可提交的重做，只需关闭后续通知决策，无需读取并交换旧位。
+        record.m_state->m_flags.store(2, std::memory_order_release);
     }
     m_current.store(nullptr, std::memory_order_release);
+    // 业务执行及本次重做决定已结束；工厂内的属性停止不能重新选中原任务。
+    record.m_state->m_phase.store(3, std::memory_order_release);
+    if (hasFactory && (flags & 1) != 0 && m_stopMode.load(std::memory_order_acquire) != 2)
+    {
+        // 每次执行只有消费者提交一次决定；多个生产者的请求合并成同一位。
+        try
+        {
+            CTask* rawClone = (*record.m_task->cloneFactory())();
+            if (rawClone != nullptr)
+            {
+                backup = prepareRedo(record, rawClone);
+            }
+        }
+        catch (...)
+        {
+            m_errors.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
     if ((flags & 1) != 0 && backup && m_stopMode.load(std::memory_order_acquire) != 2)
     {
         // 替换原任务的额度；不申请 FIFO 节点，不改变原优先级。
         bucket.m_redo = backup;
-        backup->m_phase.store(1, std::memory_order_release);
+        backup->m_page->m_publications[backup->m_index].store(true, std::memory_order_release);
         countPublication(m_storage.cache(m_readDomain.capacity()), bucket, true);
-        if (bucket.m_level > 1 && bucket.m_level <= 16)
-        {
-            bucket.m_ready.store(true, std::memory_order_release);
-            m_readyIndex.publish(bucket.m_level);
-        }
+        bucket.m_ready.store(true, std::memory_order_release);
     }
     else
     {
@@ -971,14 +1059,18 @@ void CTaskThreadState::execute(CTaskPriorityBucket& bucket, CTaskStorageSlot& re
         }
         m_releasedTasks.store(m_releasedTasks.load(std::memory_order_relaxed) + 1, std::memory_order_release);
     }
-    record.m_phase.store(3, std::memory_order_release);
     m_storage.retire(record);
 }
 
 void CTaskThreadState::maintain()
 {
-    m_storage.releaseIdleProducers();
     const bool pressure = m_trimBuckets.exchange(false, std::memory_order_acq_rel);
+    if (pressure || m_config.m_queueShrink)
+    {
+        // 缩容需要解除旧段保护；常规消费不反复拆除仍可复用的生产者上下文。
+        // 登记槽不足或节点池满时，publish 仍立即回收空闲上下文并重试。
+        m_storage.releaseIdleProducers();
+    }
     const bool retire = pressure || m_buckets.size() > m_config.m_priorityMap.nodes.initialCapacity;
     m_buckets.forEach([this, retire](const int32_t& level, const std::shared_ptr<CTaskPriorityBucket>& bucket)
     {

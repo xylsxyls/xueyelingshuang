@@ -12,9 +12,12 @@ public:
     std::atomic<uint64_t> m_epoch;
     // 避免不同生产者在同一缓存行反复写入
     unsigned char m_padding[56];
+
+public:
     /** 建立未借用状态
     */
     CTaskReadPosition();
+
 };
 
 /** 稳定地址记录的读侧保护；借用期间允许回调，暂停借用者只延迟回收
@@ -96,6 +99,7 @@ public:
     @return initialize 成功时的 count
     */
     size_t capacity() const;
+
 private:
     /** 禁止复制仍在使用的保护域
     @param [in] other 源对象
@@ -107,6 +111,7 @@ private:
     @return 本对象
     */
     CTaskReadDomain& operator=(const CTaskReadDomain& other) = delete;
+
 private:
     // 64 字节对齐位置表拥有的原始存储
     unsigned char* m_storage;

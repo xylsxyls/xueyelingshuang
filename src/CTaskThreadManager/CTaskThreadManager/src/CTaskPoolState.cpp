@@ -37,8 +37,7 @@ CTaskPoolState::~CTaskPoolState()
 CTaskThreadResult CTaskPoolState::start()
 {
     if (m_config.m_initialThreads == 0 || m_config.m_initialThreads > UINT32_MAX ||
-        m_config.m_maximumThreads < -1 || (m_config.m_maximumThreads != -1 &&
-        static_cast<uint64_t>(m_config.m_maximumThreads) < m_config.m_initialThreads) ||
+        m_config.m_maximumThreads < -1 || (m_config.m_maximumThreads != -1 && static_cast<uint64_t>(m_config.m_maximumThreads) < m_config.m_initialThreads) ||
         m_config.m_checkMilliseconds == 0 || m_config.m_checkMilliseconds > 60000 ||
         m_config.m_members.operationRecordLimit < 4)
     {
@@ -143,7 +142,8 @@ CTaskThreadResult CTaskPoolState::addWorker(bool initial)
 uint64_t CTaskPoolState::nowMilliseconds()
 {
     return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count());
+        std::chrono::steady_clock::now().time_since_epoch())
+            .count());
 }
 
 void CTaskPoolState::requestStop()
@@ -215,8 +215,7 @@ void CTaskPoolState::rebalance(uint64_t now)
     }
     load.m_sinceResizeMilliseconds = now - m_lastResize;
     const CTaskPoolDecision decision = m_policy->evaluate(load);
-    const uint64_t maximum = m_config.m_maximumThreads == -1 ? UINT32_MAX :
-        (std::min)(static_cast<uint64_t>(m_config.m_maximumThreads), static_cast<uint64_t>(UINT32_MAX));
+    const uint64_t maximum = m_config.m_maximumThreads == -1 ? UINT32_MAX : (std::min)(static_cast<uint64_t>(m_config.m_maximumThreads), static_cast<uint64_t>(UINT32_MAX));
     const size_t target = (std::max)(m_config.m_initialThreads,
         static_cast<size_t>((std::min)(static_cast<uint64_t>(decision.m_targetThreads), maximum)));
     size_t current = load.m_currentThreads;
@@ -369,8 +368,7 @@ CTaskThreadResult CTaskPoolState::threadIds(std::vector<uint32_t>& ids) const
     {
         ids.clear();
     }
-    return CTaskThreadResult(failed ? CTaskThreadNoMemory :
-        ((visited == 0 && !m_workers.empty()) ? CTaskThreadRetry : CTaskThreadOk));
+    return CTaskThreadResult(failed ? CTaskThreadNoMemory : ((visited == 0 && !m_workers.empty()) ? CTaskThreadRetry : CTaskThreadOk));
 }
 
 CTaskThreadResult CTaskPoolState::choose(uint64_t turn, uint32_t& id, std::shared_ptr<CTaskThread>& thread)
@@ -388,8 +386,7 @@ CTaskThreadResult CTaskPoolState::choose(uint64_t turn, uint32_t& id, std::share
     {
         const CTaskThreadStatistics state = candidate->statistics();
         const size_t candidateRank = (position++ + offset) % count;
-        if (state.m_accepting && (m_config.m_worker.m_maximumTasks == -1 ||
-            state.m_outstanding < static_cast<uint64_t>(m_config.m_worker.m_maximumTasks)) &&
+        if (state.m_accepting && (m_config.m_worker.m_maximumTasks == -1 || state.m_outstanding < static_cast<uint64_t>(m_config.m_worker.m_maximumTasks)) &&
             (state.m_outstanding < lowest || (state.m_outstanding == lowest && candidateRank < rank)))
         {
             lowest = state.m_outstanding;

@@ -56,6 +56,7 @@ public:
     @return 选择结果，不预留投递容量
     */
     CTaskThreadResult choose(uint64_t turn, uint32_t& id, std::shared_ptr<CTaskThread>& thread);
+
 private:
     /** 新增一个工作线程
     @param [in] initial 是否属于初始化
@@ -72,6 +73,7 @@ private:
     @return 毫秒值，时钟异常由调用边界捕获
     */
     static uint64_t nowMilliseconds();
+
 private:
     // 冻结配置
     const CTaskThreadPoolConfig m_config;

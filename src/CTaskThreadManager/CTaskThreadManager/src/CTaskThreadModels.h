@@ -68,12 +68,14 @@ public:
     // 原生系统错误码
     int32_t m_nativeError;
 
+public:
     /** 构造结果
     @param [in] status 状态
     @param [in] committed 是否提交
     @param [in] nativeError 原生错误码
     */
     CTaskThreadResult(CTaskThreadStatus status = CTaskThreadOk, bool committed = false, int32_t nativeError = 0);
+
 };
 
 /** 每条工作线程的初始化参数；初始化复制，此后不允许并发修改策略捕获对象
@@ -135,9 +137,11 @@ public:
     // 初始系统优先级；设置失败使初始化失败
     CTaskSystemPriority m_systemPriority;
 
+public:
     /** 使用兼容默认值
     */
     CTaskThreadConfig();
+
 };
 
 /** 管理器配置只在没有线程及没有并发调用的静止阶段设置
@@ -148,16 +152,18 @@ public:
     // 线程注册表节点池
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable: 4251)
+#pragma warning(disable : 4251)
 #endif
     LockFreeMapConfig m_threadMap;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 
+public:
     /** 使用默认容量和扩缩策略
     */
     CTaskThreadManagerConfig();
+
 };
 
 /** 弱一致负载观察，不能用来预留容量或授权销毁
@@ -182,9 +188,11 @@ public:
     // 工作线程是否已经完成退出
     bool m_exited;
 
+public:
     /** 清零观察结果
     */
     CTaskThreadStatistics();
+
 };
 
 /** 取得不会分配内存的中文状态说明

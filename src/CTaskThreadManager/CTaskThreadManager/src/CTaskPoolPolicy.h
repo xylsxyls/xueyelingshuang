@@ -15,4 +15,5 @@ public:
     @return 默认全忙且积压时增长约 50%，全池空闲 1 秒后每轮缩一个
     */
     virtual CTaskPoolDecision evaluate(const CTaskPoolLoad& load);
+
 };

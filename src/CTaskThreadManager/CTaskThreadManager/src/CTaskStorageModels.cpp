@@ -2,15 +2,18 @@
 
 #include <new>
 
+CTaskStorageState::CTaskStorageState() :
+m_phase(1),
+m_flags(0)
+{
+
+}
+
 CTaskStorageSlot::CTaskStorageSlot() :
-m_phase(4),
-m_flags(0),
-m_sequence(0),
+m_state(nullptr),
 m_level(0),
 m_index(0),
-m_page(nullptr),
-m_retiredNext(nullptr),
-m_retiredEpoch(0)
+m_page(nullptr)
 {
 
 }
@@ -22,7 +25,10 @@ m_pending(0),
 m_dirty(false),
 m_dirtyNext(nullptr)
 {
-
+    for (size_t i = 0; i < 64; ++i)
+    {
+        m_publications[i].store(false, std::memory_order_relaxed);
+    }
 }
 
 CTaskStorageBlock::CTaskStorageBlock() :
@@ -67,6 +73,7 @@ bool CTaskStorageBlock::initialize(size_t capacity)
             for (size_t j = 0; j < 64; ++j)
             {
                 page.m_slots[j].m_page = &page;
+                page.m_slots[j].m_state = &page.m_states[j];
                 page.m_slots[j].m_index = static_cast<uint32_t>(j);
             }
             page.m_free.store(valid == 64 ? UINT64_MAX : (UINT64_C(1) << valid) - 1, std::memory_order_relaxed);
@@ -83,12 +90,17 @@ bool CTaskStorageBlock::initialize(size_t capacity)
     }
 }
 
-CTaskStorageCache::CTaskStorageCache() :
+CTaskStorageAllocation::CTaskStorageAllocation() :
 m_page(nullptr),
 m_mask(0),
-m_cachedCount(0),
 m_blockHint(0),
-m_pageHint(0),
+m_pageHint(0)
+{
+
+}
+
+CTaskStorageCache::CTaskStorageCache() :
+m_cachedCount(0),
 m_reserved(0),
 m_published(0),
 m_nextSequence(0),

@@ -74,6 +74,7 @@ public:
     @return 分配或访问结果
     */
     CTaskThreadResult waitInfo(std::map<int32_t, int32_t>& counts);
+
 private:
     /** 分配不回绕序号
     @param [in,out] cache 本调用独占的位置及预留序号段
@@ -131,7 +132,7 @@ private:
     */
     CTaskThreadResult preempt(int32_t level, CTaskStorageSlot* posted = nullptr);
 
-    /** 唯一消费者取得本级队首，FIFO 节点每次至多合并 16 项，不等待发布者
+    /** 唯一消费者取得本级队首，一次建立至多 64 项预取前缀，不等待发布者
     @param [in,out] bucket 优先级桶
     */
     void prepareFront(CTaskPriorityBucket& bucket);
@@ -163,6 +164,13 @@ private:
     */
     void execute(CTaskPriorityBucket& bucket, CTaskStorageSlot& record);
 
+    /** 唯一消费者生成独立重做记录，异常统一计入错误统计，不越过工作线程
+    @param [in] record 原任务，调用期间仍持有原任务强引用
+    @param [in] rawClone 工厂返回的非空独立对象，所有权转交本函数
+    @return 已构造但未发布的备份记录；空表示取消重做或已记录失败
+    */
+    CTaskStorageSlot* prepareRedo(const CTaskStorageSlot& record, CTask* rawClone);
+
     /** 仅消费者维护基础容器及退役空桶
     */
     void maintain();
@@ -186,6 +194,8 @@ private:
     CTaskBucketCache m_cachedBuckets[16];
     // 仅无优先级池上限时长期保留常用桶，避免逐任务强引用和写者共享计数
     const bool m_pinCommon;
+    // 构造时查询写预取能力，不在运行期修改，也不引入全局初始化锁
+    const bool m_writePrefetch;
     // 常用最高待检查级别；发布者提高，消费者逐级降低并复查
     CTaskReadyIndex m_readyIndex;
     // 只会由 false 变为 true，必须在任何未缓存桶发布任务前设置

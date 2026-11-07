@@ -20,6 +20,7 @@ public:
     /** 发布停止意图并唤醒，不等待自身
     */
     virtual void StopTask();
+
 private:
     // 生命周期由池门面保证
     CTaskPoolState* m_state;

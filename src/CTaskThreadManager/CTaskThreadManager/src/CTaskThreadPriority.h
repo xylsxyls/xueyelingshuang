@@ -13,4 +13,5 @@ public:
     @return 原生失败时返回系统错误码；不支持不冒充成功
     */
     static CTaskThreadResult apply(std::thread& thread, CTaskSystemPriority priority);
+
 };

@@ -50,11 +50,13 @@ public:
     @return 弱一致数量
     */
     int32_t count();
+
 private:
     /** 分配单调编号
     @return 耗尽返回 0
     */
     uint32_t nextThreadId();
+
 private:
     // 有序注册表，允许并发维护
     LockFreeMap<uint32_t, std::shared_ptr<CTaskThread>> m_threads;

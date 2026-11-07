@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CTask.h" />
+    <ClInclude Include="..\src\CTask.inl" />
     <ClInclude Include="..\src\CTaskThread.h" />
     <ClInclude Include="..\src\CTaskThreadManagerAPI.h" />
     <ClInclude Include="..\src\CTaskThreadManagerMacro.h" />
@@ -183,6 +184,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\CTaskAdmission.cpp" />
     <ClInclude Include="..\src\CTaskAdmission.h" />
+    <ClInclude Include="..\src\CTaskAdmission.inl" />
     <ClCompile Include="..\src\CTaskManagerState.cpp" />
     <ClInclude Include="..\src\CTaskManagerState.h" />
     <ClCompile Include="..\src\CTaskPoolControlTask.cpp" />
@@ -197,6 +199,7 @@
     <ClCompile Include="..\src\CTaskBucketCache.cpp" />
     <ClInclude Include="..\src\CTaskPriorityBucket.h" />
     <ClInclude Include="..\src\CTaskBucketCache.h" />
+    <ClInclude Include="..\src\CTaskBucketCache.inl" />
     <ClCompile Include="..\src\CTaskResultAdapter.cpp" />
     <ClInclude Include="..\src\CTaskResultAdapter.h" />
     <ClCompile Include="..\src\CTaskThreadAllocator.cpp" />

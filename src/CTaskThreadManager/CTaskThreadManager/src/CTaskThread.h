@@ -13,12 +13,14 @@ class CTaskThreadManagerAPI CTaskThread
     friend class CTaskThreadManager;
     friend class CTaskManagerState;
     friend class CTaskPoolState;
+
 private:
     /** 由管理器构造线程
     @param [in] threadId 不复用编号
     @param [in] config 初始化配置
     */
     CTaskThread(uint32_t threadId, const CTaskThreadConfig& config);
+
 public:
     /** 在管理器已经等待退出后释放资源
     */
@@ -102,6 +104,7 @@ public:
     @return 不复用的编号
     */
     uint32_t threadId() const;
+
 private:
     /** 创建线程
     @return 初始化结果
@@ -122,13 +125,14 @@ private:
     @return 是否处于本线程的业务回调
     */
     bool selfWait() const;
+
 private:
     // 不变编号
     const uint32_t m_threadId;
     // 独占状态；公开调用由门面的 shared_ptr 保证存活
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable: 4251)
+#pragma warning(disable : 4251)
 #endif
     std::unique_ptr<CTaskThreadState> m_state;
 #ifdef _MSC_VER

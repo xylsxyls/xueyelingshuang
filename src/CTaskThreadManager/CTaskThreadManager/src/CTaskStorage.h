@@ -44,9 +44,10 @@ public:
     /** 在独占缓存和读侧保护下取得一个未发布槽；唯一消费者也可调用
     @param [in,out] cache 本次独占的缓存
     @param [out] result 失败原因，成功为 Ok
+    @param [in] level 分配局部性提示，不参与调度或容量判定
     @return 独占槽位或 nullptr
     */
-    CTaskStorageSlot* acquire(CTaskStorageCache& cache, CTaskThreadResult& result);
+    CTaskStorageSlot* acquire(CTaskStorageCache& cache, CTaskThreadResult& result, int32_t level = 1);
 
     /** 归还从未发布的槽位，不执行退休等待
     @param [in,out] slot 独占槽位
@@ -92,12 +93,14 @@ public:
     @return 当前物理槽预算
     */
     size_t capacity() const;
+
 private:
     /** 尝试从当前开放批次领取小批次可复用位
     @param [in,out] cache 本次独占缓存
+    @param [in,out] allocation 本位置独占的分级游标
     @return 是否取得非零缓存位
     */
-    bool scan(CTaskStorageCache& cache);
+    bool scan(CTaskStorageCache& cache, CTaskStorageAllocation& allocation);
 
     /** 并发预留预算并私有构造批次，再一次发布
     @param [in] requested 期望新增数量，内部截断上限和单块大小
@@ -147,6 +150,7 @@ private:
     @return 非零毫秒，失败返回 0
     */
     static uint64_t now();
+
 private:
     // 借用保护域，生命周期长于本池
     CTaskReadDomain* m_domain;
@@ -168,10 +172,22 @@ private:
     std::atomic<uint64_t> m_grows;
     // 最近一次成功扩容的单调毫秒
     std::atomic<uint64_t> m_lastGrow;
-    // 唯一消费者退休链首
+    // 生产者读取的目录及缓存地址与消费者逐任务更新的退休链隔离
+    unsigned char m_retirementPadding[64];
+    // 本地退休窗口溢出后的链首，窗口中的记录先于此链回收
     CTaskStorageSlot* m_retiredHead;
     // 唯一消费者退休链尾
     CTaskStorageSlot* m_retiredTail;
+    // 唯一消费者的有界退休窗口，常见路径不逐任务改写槽位的链字段
+    CTaskStorageSlot* m_retiredWindow[1024];
+    // 与窗口地址对应的退休 epoch，不从仍被生产者观察的槽位读取
+    uint64_t m_retiredEpochs[1024];
+    // 唯一消费者退休窗口的下一个读取位置
+    size_t m_retiredRead;
+    // 唯一消费者退休窗口内尚待回收的记录数
+    size_t m_retiredCount;
+    // 溢出链存在时继续追加链；窗口和链全部排空后恢复本地入窗
+    bool m_retiredOverflow;
     // 唯一消费者待归还页链
     CTaskStoragePage* m_dirtyPages;
 };

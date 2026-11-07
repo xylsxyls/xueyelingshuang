@@ -27,6 +27,9 @@
     <ClInclude Include="..\src\CTask.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\CTask.inl">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\CTaskThread.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -47,6 +50,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClInclude Include="..\src\CTaskAdmission.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CTaskAdmission.inl">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClCompile Include="..\src\CTaskManagerState.cpp">
@@ -89,6 +95,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\CTaskBucketCache.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CTaskBucketCache.inl">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClCompile Include="..\src\CTaskResultAdapter.cpp">

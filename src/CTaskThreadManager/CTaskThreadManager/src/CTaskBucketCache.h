@@ -30,9 +30,14 @@ public:
     /** 工作线程退出且投递、观察借用全部归还后释放引用
     */
     void reset();
+
 private:
+    // 所有权完整建立后一次发布，热路径只读取这个地址
+    std::atomic<CTaskPriorityBucket*> m_raw;
     // 0 未发布，1 首个调用正在初始化，2 完整发布；运行期间不反向变化
     std::atomic<int32_t> m_state;
     // 只在首次发布和静止销毁时写入，其他线程只读
     std::shared_ptr<CTaskPriorityBucket> m_bucket;
 };
+
+#include "CTaskBucketCache.inl"

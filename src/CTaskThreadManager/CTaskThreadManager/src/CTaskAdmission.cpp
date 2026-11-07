@@ -47,11 +47,6 @@ uint64_t CTaskAdmission::active() const
     return m_state.load(std::memory_order_acquire) & (kTaskAdmissionClosed - 1);
 }
 
-bool CTaskAdmission::closed() const
-{
-    return (m_state.load(std::memory_order_acquire) & kTaskAdmissionClosed) != 0;
-}
-
 bool CTaskAdmission::supported() const
 {
     return m_state.is_lock_free();

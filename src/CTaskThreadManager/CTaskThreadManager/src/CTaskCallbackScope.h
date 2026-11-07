@@ -43,6 +43,8 @@ private:
     @return 当前节点
     */
     CTaskCallbackScope& operator=(const CTaskCallbackScope& other) = delete;
+
+private:
     // 借用状态
     const void* m_owner;
     // 接受停止通知的任务

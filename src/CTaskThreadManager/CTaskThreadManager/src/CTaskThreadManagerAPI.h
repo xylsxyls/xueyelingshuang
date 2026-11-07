@@ -10,8 +10,8 @@
 
 #ifdef _WIN32
 #if defined _DEBUG
-#pragma comment(lib,"CTaskThreadManagerd.lib")
+#pragma comment(lib, "CTaskThreadManagerd.lib")
 #else
-#pragma comment(lib,"CTaskThreadManager.lib")
+#pragma comment(lib, "CTaskThreadManager.lib")
 #endif
 #endif

@@ -30,10 +30,16 @@ public:
     @return 是否下调成功；失败不等待并发发布者
     */
     bool lower(int32_t level);
+
     /** 发布与下调复查间的 SC 屏障；v120 x86/x64 不借用标准库的全局 Guard 缓存行
     唤醒协议也使用此屏障连接队列发布、通知清除与二次检查。
     */
     static void fence();
+
+    /** 已完成原子 RMW 后保证之前写入先于后续读取；仅已验证的完整屏障后端省略硬件指令
+    */
+    static void fenceAfterRmw();
+
 private:
     // 生产者只提高，消费者逐级降低；两侧用 SC fence 连接队列发布与复查
     std::atomic<int32_t> m_highest;

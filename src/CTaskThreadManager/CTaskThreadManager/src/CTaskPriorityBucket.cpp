@@ -21,6 +21,10 @@ CTaskThreadResult CTaskPriorityBucket::initialize(const CTaskThreadConfig& confi
     LockFreeQueueResult result = m_queue.configurePool(config.m_queue);
     if (result == LockFreeQueueSuccess)
     {
+        result = m_queue.configureEntryOnly(true);
+    }
+    if (result == LockFreeQueueSuccess)
+    {
         result = m_queue.configureProducerCounters(true);
     }
     if (result == LockFreeQueueSuccess)

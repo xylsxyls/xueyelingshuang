@@ -27,13 +27,14 @@ public:
     @return 选择结果
     */
     CTaskThreadResult select(uint32_t& threadId, std::shared_ptr<CTaskThread>& thread);
+
 private:
     // 借用线程池
     CTaskThreadPool* m_pool;
     // 相同负载的轮转提示，回绕不涉及资源身份
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable: 4251)
+#pragma warning(disable : 4251)
 #endif
     std::atomic<uint64_t> m_turn;
 #ifdef _MSC_VER

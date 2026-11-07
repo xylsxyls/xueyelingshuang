@@ -25,9 +25,11 @@ public:
     // 距最近一次成功调整的毫秒数
     uint64_t m_sinceResizeMilliseconds;
 
+public:
     /** 构造零负载
     */
     CTaskPoolLoad();
+
 };
 
 /** 扩缩容算法的请求；线程池负责上限、下限和在途任务保护
@@ -40,11 +42,13 @@ public:
     // 缩容所需连续空闲时间，0 表示本次不缩容
     uint64_t m_shrinkIdleMilliseconds;
 
+public:
     /** 构造决策
     @param [in] target 期望总数
     @param [in] idleMilliseconds 缩容空闲要求
     */
     CTaskPoolDecision(size_t target = 0, uint64_t idleMilliseconds = 0);
+
 };
 
 /** 初始化时冻结的线程池配置，动态判断放在独立策略对象
@@ -63,7 +67,7 @@ public:
     // 线程池成员索引的节点池
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable: 4251)
+#pragma warning(disable : 4251)
 #endif
     LockFreeMapConfig m_members;
 #ifdef _MSC_VER
@@ -72,16 +76,18 @@ public:
     // 可继承的扩缩容算法，空指针使用默认策略；保存强引用
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable: 4251)
+#pragma warning(disable : 4251)
 #endif
     std::shared_ptr<CTaskPoolPolicy> m_policy;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 
+public:
     /** 默认 2 个线程，最多 64，每 100 毫秒评估
     */
     CTaskThreadPoolConfig();
+
 };
 
 /** 线程池的弱一致统计
@@ -100,7 +106,9 @@ public:
     // 是否允许选择新目标
     bool m_accepting;
 
+public:
     /** 初始化空统计
     */
     CTaskPoolStatistics();
+
 };
