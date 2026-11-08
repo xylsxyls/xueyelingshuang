@@ -21,7 +21,7 @@ m_retiredTail(nullptr),
 m_retiredRead(0),
 m_retiredCount(0),
 m_retiredOverflow(false),
-m_dirtyPages(nullptr)
+m_pendingReclaims(nullptr)
 {
 
 }
@@ -36,7 +36,7 @@ CTaskStorage::~CTaskStorage()
 
 CTaskThreadResult CTaskStorage::initialize(const LockFreeHashMapPoolConfig& config)
 {
-    if (m_directory != nullptr || m_domain->capacity() == 0 || config.directoryCapacity == 0 ||
+    if (m_directory != nullptr || m_domain->capacity() == 0 || m_domain->capacity() >= UINT32_MAX || config.directoryCapacity == 0 ||
         config.directoryCapacity > (std::numeric_limits<size_t>::max)() / sizeof(std::atomic<uintptr_t>) ||
         config.maximumCapacity < -1 || (config.maximumCapacity >= 0 && config.initialCapacity > static_cast<uint64_t>(config.maximumCapacity)) ||
         config.initialCapacity / 65535 + (config.initialCapacity % 65535 != 0 ? 1 : 0) > config.directoryCapacity)
@@ -47,6 +47,10 @@ CTaskThreadResult CTaskStorage::initialize(const LockFreeHashMapPoolConfig& conf
     {
         m_config = config;
         m_caches = new CTaskStorageCache[m_domain->capacity() + 1];
+        for (size_t i = 0; i <= m_domain->capacity(); ++i)
+        {
+            m_caches[i].m_ownerIndex = static_cast<uint32_t>(i);
+        }
         m_directory = new std::atomic<uintptr_t>[config.directoryCapacity];
         m_directoryCount = config.directoryCapacity;
         for (size_t i = 0; i < m_directoryCount; ++i)
@@ -163,8 +167,8 @@ bool CTaskStorage::scan(CTaskStorageCache& cache, CTaskStorageAllocation& alloca
             continue;
         }
         CTaskStorageBlock* block = reinterpret_cast<CTaskStorageBlock*>(address);
-        // 每次最多预留 32 槽；小池只预留一个，避免缓存吞掉有限预算。
-        const size_t maximumBatch = block->m_capacity < 256 ? 1 : 32;
+        // 每次最多预留一整页 64 槽；小池只预留一个，避免缓存吞掉有限预算。
+        const size_t maximumBatch = block->m_capacity < 256 ? 1 : 64;
         uint64_t leases = block->m_leases.load(std::memory_order_relaxed);
         for (;;)
         {
@@ -183,16 +187,9 @@ bool CTaskStorage::scan(CTaskStorageCache& cache, CTaskStorageAllocation& alloca
                     uint64_t available = page.m_free.load(std::memory_order_relaxed);
                     while (available != 0)
                     {
-                        uint64_t mask = 0;
-                        uint64_t remaining = available;
-                        size_t count = 0;
-                        while (remaining != 0 && count < maximumBatch)
-                        {
-                            const uint64_t bit = remaining & (~remaining + 1);
-                            mask |= bit;
-                            remaining &= ~bit;
-                            ++count;
-                        }
+                        // 一页至多 64 位：整页批次直接领取全部可用位，小池只领取最低位。
+                        const uint64_t mask = maximumBatch == 64 ? available : available & (~available + 1);
+                        const size_t count = maximumBatch == 64 ? bitCount(available) : 1;
                         if (page.m_free.compare_exchange_weak(available, available & ~mask, std::memory_order_acq_rel, std::memory_order_relaxed))
                         {
                             if (count < maximumBatch)
@@ -203,7 +200,7 @@ bool CTaskStorage::scan(CTaskStorageCache& cache, CTaskStorageAllocation& alloca
                             allocation.m_mask = mask;
                             cache.m_cachedCount.store(cache.m_cachedCount.load(std::memory_order_relaxed) + count, std::memory_order_relaxed);
                             allocation.m_blockHint = index;
-                            allocation.m_pageHint = pageIndex + 1 < block->m_pageCount ? pageIndex + 1 : 0;
+                            allocation.m_pageHint = pageIndex;
                             return true;
                         }
                     }
@@ -225,6 +222,10 @@ CTaskStorageSlot* CTaskStorage::acquire(CTaskStorageCache& cache, CTaskThreadRes
         return nullptr;
     }
     CTaskStorageAllocation& allocation = cache.m_allocations[level > 1 && level <= 16 ? level - 1 : 0];
+    if (allocation.m_mask == 0)
+    {
+        helpReclaim(cache);
+    }
     if (allocation.m_mask == 0 && !scan(cache, allocation))
     {
         // 归还本调用的其他级别缓存，不让分级缓存造成虚假容量失败。
@@ -248,6 +249,7 @@ CTaskStorageSlot* CTaskStorage::acquire(CTaskStorageCache& cache, CTaskThreadRes
     allocation.m_mask &= ~(UINT64_C(1) << index);
     cache.m_cachedCount.store(cache.m_cachedCount.load(std::memory_order_relaxed) - 1, std::memory_order_relaxed);
     CTaskStorageSlot* slot = &allocation.m_page->m_slots[index];
+    slot->m_ownerIndex = cache.m_ownerIndex;
     // 发布者在入队前完整填写 entry；重做只使用独立槽，退休链也先写后用。
     // 此处不重复清零随后必被覆盖的借用字段。
     if (m_config.growFreeThreshold != 0)
@@ -266,42 +268,30 @@ CTaskStorageSlot* CTaskStorage::acquire(CTaskStorageCache& cache, CTaskThreadRes
 void CTaskStorage::abandon(CTaskStorageSlot& slot)
 {
     slot.m_task.reset();
-    slot.m_page->m_publications[slot.m_index].store(false, std::memory_order_relaxed);
-    slot.m_state->m_flags.store(0, std::memory_order_relaxed);
-    slot.m_state->m_phase.store(1, std::memory_order_release);
-    slot.m_page->m_free.fetch_or(UINT64_C(1) << slot.m_index, std::memory_order_release);
+    slot.m_page->m_publications[slot.index()].store(false, std::memory_order_relaxed);
+    slot.m_state->m_bits.store(0, std::memory_order_release);
+    slot.m_page->m_free.fetch_or(UINT64_C(1) << slot.index(), std::memory_order_release);
     slot.m_page->m_block->m_leases.fetch_sub(1, std::memory_order_release);
 }
 
-void CTaskStorage::retire(CTaskStorageSlot& slot)
+size_t CTaskStorage::collect(size_t budget, bool delegate)
 {
-    if (!m_retiredOverflow && m_retiredCount < 1024)
+    size_t helped = 0;
+    if (!delegate && m_caches != nullptr)
     {
-        const size_t position = (m_retiredRead + m_retiredCount) & 1023;
-        m_retiredWindow[position] = &slot;
-        m_retiredEpochs[position] = m_domain->current();
-        ++m_retiredCount;
-        return;
+        for (size_t i = 0; i <= m_domain->capacity() && helped < budget; ++i)
+        {
+            CTaskStorageCache& cache = m_caches[i];
+            helped += helpReclaim(cache, budget - helped);
+            const size_t staged = (std::min)(cache.m_stagedCount, budget - helped);
+            releaseSlots(cache.m_stagedSlots + cache.m_stagedCount - staged, staged);
+            cache.m_stagedCount -= staged;
+            helped += staged;
+        }
     }
-    m_retiredOverflow = true;
-    slot.m_entry.m_cookie = m_domain->current();
-    slot.m_entry.m_value = nullptr;
-    if (m_retiredTail != nullptr)
-    {
-        m_retiredTail->m_entry.m_value = &slot;
-    }
-    else
-    {
-        m_retiredHead = &slot;
-    }
-    m_retiredTail = &slot;
-}
-
-size_t CTaskStorage::collect(size_t budget)
-{
     const uint64_t cutoff = m_domain->advance();
     const uint64_t oldest = m_domain->oldest();
-    size_t count = 0;
+    size_t count = helped;
     while (count < budget)
     {
         CTaskStorageSlot* ready[16];
@@ -313,12 +303,12 @@ size_t CTaskStorage::collect(size_t budget)
             for (; readyCount < windowCount; ++readyCount)
             {
                 const size_t position = (m_retiredRead + readyCount) & 1023;
-                const uint64_t epoch = m_retiredEpochs[position];
+                const uint64_t epoch = m_retiredWindow[position].m_epoch;
                 if (epoch > cutoff || epoch >= oldest)
                 {
                     break;
                 }
-                ready[readyCount] = m_retiredWindow[position];
+                ready[readyCount] = m_retiredWindow[position].m_slot;
 #if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
                 _mm_prefetch(reinterpret_cast<const char*>(ready[readyCount]), _MM_HINT_T0);
 #elif defined(__GNUC__) || defined(__clang__)
@@ -332,10 +322,10 @@ size_t CTaskStorage::collect(size_t budget)
         {
             CTaskStorageSlot* next = m_retiredHead;
             while (next != nullptr && readyCount < limit &&
-                next->m_entry.m_cookie <= cutoff && next->m_entry.m_cookie < oldest)
+                next->m_cookie <= cutoff && next->m_cookie < oldest)
             {
                 ready[readyCount++] = next;
-                next = next->m_entry.m_value;
+                next = next->m_value;
             }
             m_retiredHead = next;
             if (next == nullptr)
@@ -348,40 +338,142 @@ size_t CTaskStorage::collect(size_t budget)
         {
             break;
         }
-        for (size_t i = 0; i < readyCount; ++i)
+        if (!delegate)
         {
-            CTaskStorageSlot* slot = ready[i];
-            slot->m_task.reset();
-            slot->m_page->m_publications[slot->m_index].store(false, std::memory_order_relaxed);
-            slot->m_state->m_flags.store(0, std::memory_order_relaxed);
-            slot->m_state->m_phase.store(1, std::memory_order_release);
-            CTaskStoragePage* page = slot->m_page;
-            page->m_pending |= UINT64_C(1) << slot->m_index;
-            if (!page->m_dirty)
+            releaseSlots(ready, readyCount);
+        }
+        else
+        {
+            for (size_t i = 0; i < readyCount; ++i)
             {
-                page->m_dirty = true;
-                page->m_dirtyNext = m_dirtyPages;
-                m_dirtyPages = page;
+                CTaskStorageCache& owner = m_caches[ready[i]->m_ownerIndex];
+                if (!owner.m_stagedListed)
+                {
+                    owner.m_stagedListed = true;
+                    owner.m_stagedNext = m_pendingReclaims;
+                    m_pendingReclaims = &owner;
+                }
+                owner.m_stagedSlots[owner.m_stagedCount++] = ready[i];
+                if (owner.m_stagedCount == 64)
+                {
+                    publishReclaims(owner);
+                }
             }
         }
         count += readyCount;
     }
-    flushReturns();
+    CTaskStorageCache** pending = &m_pendingReclaims;
+    while (*pending != nullptr)
+    {
+        CTaskStorageCache& cache = **pending;
+        if (delegate && cache.m_stagedCount >= 16)
+        {
+            publishReclaims(cache);
+        }
+        if (cache.m_stagedCount == 0)
+        {
+            *pending = cache.m_stagedNext;
+            cache.m_stagedNext = nullptr;
+            cache.m_stagedListed = false;
+        }
+        else
+        {
+            pending = &cache.m_stagedNext;
+        }
+    }
     return count;
 }
 
-void CTaskStorage::flushReturns()
+size_t CTaskStorage::helpReclaim(CTaskStorageCache& cache, size_t budget)
 {
-    while (m_dirtyPages != nullptr)
+    size_t released = 0;
+    for (size_t i = 0; i < 4 && released < budget; ++i)
     {
-        CTaskStoragePage* page = m_dirtyPages;
-        m_dirtyPages = page->m_dirtyNext;
-        const uint64_t bits = page->m_pending;
-        page->m_pending = 0;
-        page->m_dirty = false;
-        page->m_dirtyNext = nullptr;
-        page->m_free.fetch_or(bits, std::memory_order_release);
-        page->m_block->m_leases.fetch_sub(bitCount(bits), std::memory_order_release);
+        CTaskStorageReclaimBatch& batch = cache.m_reclaims[i];
+        int32_t count = batch.m_count.load(std::memory_order_acquire);
+        if (count <= 0 || !batch.m_count.compare_exchange_strong(count, -1,
+            std::memory_order_acq_rel, std::memory_order_acquire))
+        {
+            continue;
+        }
+        const size_t ready = (std::min)(budget - released, static_cast<size_t>(count));
+        releaseSlots(batch.m_slots + batch.m_begin, ready);
+        batch.m_begin += ready;
+        batch.m_count.store(count - static_cast<int32_t>(ready), std::memory_order_release);
+        released += ready;
+    }
+    return released;
+}
+
+void CTaskStorage::publishReclaims(CTaskStorageCache& cache)
+{
+    const size_t count = cache.m_stagedCount;
+    if (count == 0)
+    {
+        return;
+    }
+    for (size_t i = 0; i < 4; ++i)
+    {
+        CTaskStorageReclaimBatch& batch = cache.m_reclaims[i];
+        int32_t expected = 0;
+        if (batch.m_count.load(std::memory_order_relaxed) != 0 ||
+            !batch.m_count.compare_exchange_strong(expected, -1, std::memory_order_acq_rel, std::memory_order_relaxed))
+        {
+            continue;
+        }
+        for (size_t j = 0; j < count; ++j)
+        {
+            batch.m_slots[j] = cache.m_stagedSlots[j];
+        }
+        batch.m_begin = 0;
+        batch.m_count.store(static_cast<int32_t>(count), std::memory_order_release);
+        cache.m_stagedCount = 0;
+        return;
+    }
+    // 四批都在途时直接处理新批次；不等待指定生产者或帮助者。
+    releaseSlots(cache.m_stagedSlots, count);
+    cache.m_stagedCount = 0;
+}
+
+void CTaskStorage::releaseSlots(CTaskStorageSlot* const* slots, size_t count)
+{
+    CTaskStoragePage* pages[64];
+    uint64_t masks[64];
+    uint8_t positions[128] = {};
+    size_t groups = 0;
+    for (size_t i = 0; i < count; ++i)
+    {
+        CTaskStorageSlot* slot = slots[i];
+        CTaskStoragePage* page = slot->m_page;
+        const size_t index = slot->index();
+        slot->m_task.reset();
+        page->m_publications[index].store(false, std::memory_order_relaxed);
+        slot->m_state->m_bits.store(0, std::memory_order_release);
+        size_t position = (reinterpret_cast<uintptr_t>(page) >> 6) & 127;
+        size_t group = 0;
+        while (positions[position] != 0)
+        {
+            group = positions[position] - 1;
+            if (pages[group] == page)
+            {
+                break;
+            }
+            position = (position + 1) & 127;
+        }
+        if (positions[position] == 0)
+        {
+            group = groups++;
+            positions[position] = static_cast<uint8_t>(group + 1);
+            pages[group] = page;
+            masks[group] = 0;
+        }
+        masks[group] |= UINT64_C(1) << index;
+    }
+    // 输入至多 64 项，128 个本地索引始终有空位；不申请内存或修改共享临时链。
+    for (size_t i = 0; i < groups; ++i)
+    {
+        pages[i]->m_free.fetch_or(masks[i], std::memory_order_release);
+        pages[i]->m_block->m_leases.fetch_sub(bitCount(masks[i]), std::memory_order_release);
     }
 }
 
@@ -468,8 +560,8 @@ void CTaskStorage::forEach(const std::function<void(CTaskStorageSlot&)>& visit)
         for (size_t j = 0; j < block->m_capacity; ++j)
         {
             CTaskStorageSlot& slot = block->m_pages[j / 64].m_slots[j & 63];
-            const int32_t phase = slot.m_state->m_phase.load(std::memory_order_acquire);
-            if ((phase == 1 || phase == 2) && slot.m_page->m_publications[slot.m_index].load(std::memory_order_acquire))
+            const int32_t phase = slot.m_state->m_bits.load(std::memory_order_acquire) & 3;
+            if (phase != 3 && slot.m_page->m_publications[slot.index()].load(std::memory_order_acquire))
             {
                 visit(slot);
             }
@@ -613,7 +705,6 @@ CTaskThreadResult CTaskStorage::maintain()
     {
         return CTaskThreadResult();
     }
-    flushReturns();
     const uint64_t cutoff = m_domain->advance();
     const uint64_t oldest = m_domain->oldest();
     LockFreeHashMapShrinkDecision decision;
@@ -699,11 +790,19 @@ void CTaskStorage::clear()
     m_retiredRead = 0;
     m_retiredCount = 0;
     m_retiredOverflow = false;
-    m_dirtyPages = nullptr;
+    m_pendingReclaims = nullptr;
     if (m_caches != nullptr)
     {
         for (size_t i = 0; i <= m_domain->capacity(); ++i)
         {
+            for (size_t batch = 0; batch < 4; ++batch)
+            {
+                m_caches[i].m_reclaims[batch].m_count.store(0, std::memory_order_relaxed);
+                m_caches[i].m_reclaims[batch].m_begin = 0;
+            }
+            m_caches[i].m_stagedCount = 0;
+            m_caches[i].m_stagedListed = false;
+            m_caches[i].m_stagedNext = nullptr;
             releaseProducers(m_caches[i]);
             for (size_t level = 0; level < 16; ++level)
             {

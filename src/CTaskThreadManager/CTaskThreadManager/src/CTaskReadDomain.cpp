@@ -166,11 +166,6 @@ uint64_t CTaskReadDomain::oldest() const
     return oldest;
 }
 
-uint64_t CTaskReadDomain::current() const
-{
-    return m_epoch.load(std::memory_order_acquire);
-}
-
 size_t CTaskReadDomain::capacity() const
 {
     return m_count;

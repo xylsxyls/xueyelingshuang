@@ -32,22 +32,21 @@ public:
     CTaskStorageSlot* m_redo;
     // 仅消费者访问的一个已发布队首；执行之前仍重新选择最高优先级
     CTaskStorageSlot* m_front;
-    // 最多预读 64 项，合并归还 FIFO 节点；记录仍计入原优先级的排队数
-    CTaskStorageSlot* m_readyTasks[64];
-    // 消费者本地前缀的下一个位置
+    // 消费者本地前缀的下一个位置；与队首指针相邻，空桶探测不跨越载荷数组
     size_t m_readyHead;
-    // 消费者本地前缀尚未取出的有效项数
+    // 消费者本地前缀的有效项数，尚未取出的范围为 [m_readyHead, m_readyCount)
     size_t m_readyCount;
+    // 最多预读 64 个记录基类地址，合并归还 FIFO 额度；记录仍计入原优先级排队数
+    LockFreeQueueEntry<CTaskStorageSlot*>* m_readyEntries[64];
     // 消费者独占引用与生产者可写计数隔离
     char m_frontPadding[64];
     // 排队数量，包含正在发布的预留和重做槽
     std::atomic<uint64_t> m_queued;
+    // 生产者累计量不与消费者取出量争用缓存行
+    char m_countPadding[64];
     // 常用桶只由消费者写，和各生产者的分级累计量作模差
     std::atomic<uint64_t> m_taken;
     // 隔离消费者写入的取出计数
     char m_readyPadding[64];
-    // 高于最低级别的已发布提示；清除后必须复查队列
-    std::atomic<bool> m_ready;
-    // 不与下一个分配对象共享提示缓存行
-    char m_readyEndPadding[64];
+
 };

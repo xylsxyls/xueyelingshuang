@@ -45,6 +45,12 @@ private:
     CTaskCallbackScope& operator=(const CTaskCallbackScope& other) = delete;
 
 private:
+    // 每个系统线程独立的借用栈顶，所有翻译单元共享同一 TLS 符号
+#ifdef _MSC_VER
+    static __declspec(thread) CTaskCallbackScope* m_current;
+#else
+    static thread_local CTaskCallbackScope* m_current;
+#endif
     // 借用状态
     const void* m_owner;
     // 接受停止通知的任务
@@ -52,3 +58,5 @@ private:
     // 上一层调用栈节点
     CTaskCallbackScope* m_previous;
 };
+
+#include "CTaskCallbackScope.inl"

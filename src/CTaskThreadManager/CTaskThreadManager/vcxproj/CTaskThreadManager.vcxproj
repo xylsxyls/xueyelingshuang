@@ -217,13 +217,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CTaskCallbackScope.cpp" />
+    <ClCompile Include="..\src\CTaskRunningIndex.cpp" />
     <ClInclude Include="..\src\CTaskCallbackScope.h" />
+    <ClInclude Include="..\src\CTaskCallbackScope.inl" />
+    <ClInclude Include="..\src\CTaskRunningIndex.inl" />
+    <ClInclude Include="..\src\CTaskRunningIndex.h" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CTaskReadDomain.cpp" />
     <ClInclude Include="..\src\CTaskReadDomain.h" />
+    <ClInclude Include="..\src\CTaskReadDomain.inl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CTaskStorageModels.cpp" />
@@ -232,6 +237,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\CTaskStorage.cpp" />
     <ClInclude Include="..\src\CTaskStorage.h" />
+    <ClInclude Include="..\src\CTaskStorage.inl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CTaskReadyIndex.cpp" />
@@ -239,5 +245,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CTaskReadyIndex.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\CTaskStorageModels.inl" />
   </ItemGroup>
 </Project>

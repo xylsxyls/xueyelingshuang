@@ -31,7 +31,7 @@ public:
     /** 关闭并注销指定线程
     @param [in] threadId 编号
     @param [in] drain 是否排空
-    @return 关闭结果
+    @return Ok 表示线程已经 join 且原登记已经移除；已 join 后的登记清理失败仍返回具体状态
     */
     CTaskThreadResult finish(uint32_t threadId, bool drain);
 

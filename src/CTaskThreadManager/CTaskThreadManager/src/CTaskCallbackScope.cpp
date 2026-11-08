@@ -1,27 +1,14 @@
 ﻿#include "CTaskCallbackScope.h"
 
 #ifdef _MSC_VER
-__declspec(thread) static CTaskCallbackScope* s_taskCallbackScope = nullptr;
+__declspec(thread) CTaskCallbackScope* CTaskCallbackScope::m_current = nullptr;
 #else
-static thread_local CTaskCallbackScope* s_taskCallbackScope = nullptr;
+thread_local CTaskCallbackScope* CTaskCallbackScope::m_current = nullptr;
 #endif
-
-CTaskCallbackScope::CTaskCallbackScope(const void* owner, const void* stopped) :
-m_owner(owner),
-m_stopped(stopped),
-m_previous(s_taskCallbackScope)
-{
-    s_taskCallbackScope = this;
-}
-
-CTaskCallbackScope::~CTaskCallbackScope()
-{
-    s_taskCallbackScope = m_previous;
-}
 
 bool CTaskCallbackScope::contains(const void* owner)
 {
-    for (CTaskCallbackScope* scope = s_taskCallbackScope; scope != nullptr; scope = scope->m_previous)
+    for (CTaskCallbackScope* scope = m_current; scope != nullptr; scope = scope->m_previous)
     {
         if (scope->m_owner == owner)
         {
@@ -33,7 +20,7 @@ bool CTaskCallbackScope::contains(const void* owner)
 
 bool CTaskCallbackScope::stopping(const void* task)
 {
-    for (CTaskCallbackScope* scope = s_taskCallbackScope; scope != nullptr; scope = scope->m_previous)
+    for (CTaskCallbackScope* scope = m_current; scope != nullptr; scope = scope->m_previous)
     {
         if (scope->m_stopped == task)
         {
@@ -45,5 +32,5 @@ bool CTaskCallbackScope::stopping(const void* task)
 
 bool CTaskCallbackScope::active()
 {
-    return s_taskCallbackScope != nullptr;
+    return m_current != nullptr;
 }

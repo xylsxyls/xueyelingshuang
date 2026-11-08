@@ -3,8 +3,7 @@
 #include <new>
 
 CTaskStorageState::CTaskStorageState() :
-m_phase(1),
-m_flags(0)
+m_bits(0)
 {
 
 }
@@ -12,21 +11,26 @@ m_flags(0)
 CTaskStorageSlot::CTaskStorageSlot() :
 m_state(nullptr),
 m_level(0),
-m_index(0),
+m_ownerIndex(0),
 m_page(nullptr)
+{
+
+}
+
+CTaskRetiredRecord::CTaskRetiredRecord() :
+m_slot(nullptr),
+m_epoch(0)
 {
 
 }
 
 CTaskStoragePage::CTaskStoragePage() :
 m_free(0),
-m_block(nullptr),
-m_pending(0),
-m_dirty(false),
-m_dirtyNext(nullptr)
+m_block(nullptr)
 {
     for (size_t i = 0; i < 64; ++i)
     {
+        m_slots[i].m_state = &m_states[i];
         m_publications[i].store(false, std::memory_order_relaxed);
     }
 }
@@ -73,8 +77,6 @@ bool CTaskStorageBlock::initialize(size_t capacity)
             for (size_t j = 0; j < 64; ++j)
             {
                 page.m_slots[j].m_page = &page;
-                page.m_slots[j].m_state = &page.m_states[j];
-                page.m_slots[j].m_index = static_cast<uint32_t>(j);
             }
             page.m_free.store(valid == 64 ? UINT64_MAX : (UINT64_C(1) << valid) - 1, std::memory_order_relaxed);
         }
@@ -99,7 +101,18 @@ m_pageHint(0)
 
 }
 
+CTaskStorageReclaimBatch::CTaskStorageReclaimBatch() :
+m_count(0),
+m_begin(0)
+{
+
+}
+
 CTaskStorageCache::CTaskStorageCache() :
+m_stagedCount(0),
+m_stagedNext(nullptr),
+m_stagedListed(false),
+m_ownerIndex(0),
 m_cachedCount(0),
 m_reserved(0),
 m_published(0),

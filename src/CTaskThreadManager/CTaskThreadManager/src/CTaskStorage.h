@@ -61,9 +61,17 @@ public:
 
     /** 唯一消费者有界回收，暂停读者只阻止对应记录的复用
     @param [in] budget 本次最多释放的槽位数量
-    @return 实际释放数量
+    @param [in] delegate 是否将本轮安全退休记录交回原分配位置；空闲及显式维护使用 false
+    @return 本次处理的安全退休条数；delegate 为 true 时其中一部分等待批次帮助
     */
-    size_t collect(size_t budget);
+    size_t collect(size_t budget, bool delegate = false);
+
+    /** 帮助处理已发布的安全回收批次，不等待其他处理者
+    @param [in,out] cache 批次所在的稳定缓存，批次所有权由 CAS 获取
+    @param [in] budget 本次最多处理条数，默认整个小批次
+    @return 已归还记录数量
+    */
+    size_t helpReclaim(CTaskStorageCache& cache, size_t budget = 64);
 
     /** 归还独占缓存尚未使用的位，不访问已发出的任务
     @param [in,out] cache 持有其对应读侧位置或已经外部静止
@@ -95,6 +103,17 @@ public:
     size_t capacity() const;
 
 private:
+    /** 发布本位置暂存批次；有帮助者在途时由消费者直接处理新批次
+    @param [in,out] cache 唯一消费者拥有暂存区的缓存
+    */
+    void publishReclaims(CTaskStorageCache& cache);
+
+    /** 释放已经通过 epoch 检查且由本调用独占的记录
+    @param [in] slots 非空记录地址数组
+    @param [in] count 数组长度，不超过 64
+    */
+    void releaseSlots(CTaskStorageSlot* const* slots, size_t count);
+
     /** 尝试从当前开放批次领取小批次可复用位
     @param [in,out] cache 本次独占缓存
     @param [in,out] allocation 本位置独占的分级游标
@@ -123,10 +142,6 @@ private:
     @param [out] available 已发布可复用槽，含空闲缓存
     */
     void observe(size_t& retained, size_t& available) const;
-
-    /** 唯一消费者合并发布本轮归还位及预算
-    */
-    void flushReturns();
 
     /** 在位置独占或外部静止时归还全部队列上下文
     @param [in,out] cache 本次独占的位置
@@ -179,15 +194,15 @@ private:
     // 唯一消费者退休链尾
     CTaskStorageSlot* m_retiredTail;
     // 唯一消费者的有界退休窗口，常见路径不逐任务改写槽位的链字段
-    CTaskStorageSlot* m_retiredWindow[1024];
-    // 与窗口地址对应的退休 epoch，不从仍被生产者观察的槽位读取
-    uint64_t m_retiredEpochs[1024];
+    CTaskRetiredRecord m_retiredWindow[1024];
     // 唯一消费者退休窗口的下一个读取位置
     size_t m_retiredRead;
     // 唯一消费者退休窗口内尚待回收的记录数
     size_t m_retiredCount;
     // 溢出链存在时继续追加链；窗口和链全部排空后恢复本地入窗
     bool m_retiredOverflow;
-    // 唯一消费者待归还页链
-    CTaskStoragePage* m_dirtyPages;
+    // 唯一消费者仍有暂存记录的位置链，不反复扫描未使用的所有位置
+    CTaskStorageCache* m_pendingReclaims;
 };
+
+#include "CTaskStorage.inl"

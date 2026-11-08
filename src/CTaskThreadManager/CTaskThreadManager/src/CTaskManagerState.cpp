@@ -112,11 +112,35 @@ CTaskThreadResult CTaskManagerState::finish(uint32_t threadId, bool drain)
     {
         return result;
     }
-    const LockFreeMapStatus removed = m_threads.lockFreeMapErase(threadId, token);
-    if (removed != LOCK_FREE_MAP_COMMITTED && removed != LOCK_FREE_MAP_CONFLICT)
+    for (;;)
     {
+        LockFreeMapStatus removed = m_threads.lockFreeMapErase(threadId, token);
+        if (removed == LOCK_FREE_MAP_COMMITTED)
+        {
+            break;
+        }
+        if (removed == LOCK_FREE_MAP_CONFLICT)
+        {
+            // 冲突也可能来自其他 ID 的结构变更，不能当作本登记已经删除。
+            // ID 永不复用；只有查不到原登记，或成功删除同一对象，才能报告关闭成功。
+            std::shared_ptr<CTaskThread> remaining;
+            removed = m_threads.lockFreeMapGet(threadId, remaining, token);
+            if (removed == LOCK_FREE_MAP_NOT_FOUND)
+            {
+                break;
+            }
+            if (removed == LOCK_FREE_MAP_OK)
+            {
+                if (remaining == thread)
+                {
+                    continue;
+                }
+                removed = LOCK_FREE_MAP_CONFLICT;
+            }
+        }
         result = CTaskResultAdapter::map(removed);
         result.m_committed = true;
+        break;
     }
     size_t released = 0;
     m_threads.lockFreeMapMaintain((std::numeric_limits<size_t>::max)(), released);

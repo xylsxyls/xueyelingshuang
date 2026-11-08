@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "CTaskRunningIndex.h"
 #include "CTaskPriorityBucket.h"
 #include "CTaskBucketCache.h"
 #include "CTaskStorage.h"
@@ -137,6 +138,16 @@ private:
     */
     void prepareFront(CTaskPriorityBucket& bucket);
 
+    /** 重新取得本级的就绪前缀；与逐任务选择分开，避免主循环展开完整队列消费路径
+    @param [in,out] bucket 本地前缀已经耗尽且队列可能就绪的优先级桶
+    */
+    void refillFront(CTaskPriorityBucket& bucket);
+
+    /** 取得非空前缀后合并有限探测并预取载荷，空队列检查不进入此路径
+    @param [in,out] bucket 已经取得非空本地前缀的优先级桶
+    */
+    void prefetchFront(CTaskPriorityBucket& bucket);
+
     /** 调用业务停止回调并隔离异常
     @param [in] task 安全任务强引用
     */
@@ -158,11 +169,34 @@ private:
     */
     bool take(CTaskPriorityBucket*& bucket, CTaskStorageSlot*& record);
 
-    /** 执行任务并提交一次重做决定
-    @param [in] bucket 原始优先级桶
-    @param [in] record 当前记录
+    /** 唤醒复查的独立冷路径，避免主循环重复内联整段调度代码
+    @param [out] bucket 任务所属桶
+    @param [out] record 取出的记录
+    @return 与 take 相同；只有空闲握手之后使用
     */
-    void execute(CTaskPriorityBucket& bucket, CTaskStorageSlot& record);
+    bool takeAfterWake(CTaskPriorityBucket*& bucket, CTaskStorageSlot*& record);
+
+    /** 唯一消费者准备通用 Map 中的队首并选择最高就绪级别，不消费记录
+    @return 观察到的最高就绪桶，空观察返回 nullptr
+    */
+    CTaskPriorityBucket* chooseGeneral();
+
+    /** 已发布当前身份后，补查更高优先级并发送合作通知
+    @param [in,out] record 本次即将执行的记录
+    */
+    void preemptPending(CTaskStorageSlot& record);
+
+    /** 对已经选定的当前记录发起合作抢占，保留并发关闭重做决定的核对
+    @param [in,out] record 由读域或唯一消费者保护的当前记录
+    @return 回调结果；重做只记录意图，不在通知线程构造任务
+    */
+    CTaskThreadResult requestPreemption(CTaskStorageSlot& record);
+
+    /** 仅配置了工厂的任务进入此路径，关闭重做请求并按需调用工厂
+    @param [in,out] bucket 原优先级的重做槽
+    @param [in,out] record 已经执行返回的记录
+    */
+    void completeRedo(CTaskPriorityBucket& bucket, CTaskStorageSlot& record);
 
     /** 唯一消费者生成独立重做记录，异常统一计入错误统计，不越过工作线程
     @param [in] record 原任务，调用期间仍持有原任务强引用
@@ -222,18 +256,28 @@ private:
     std::atomic<bool> m_joined;
     // 只读启动/关闭状态不与生产者序号批量申请共用缓存行
     char m_lifecyclePadding[64];
+    // 常用级别分开发布执行观察位置，生产者不读取无关级别的当前记录
+    CTaskRunningIndex m_runningIndex;
     // 不复用的记录序号
     std::atomic<uint64_t> m_sequence;
     // 多生产者编号与单消费者当前状态隔离
     char m_sequencePadding[64];
-    // 当前任务稳定槽地址；观察方持有读侧保护，空闲为 nullptr
+    // 最近选择的稳定槽地址；完成后以 flags 关闭通知，回收及等待前清空
     std::atomic<CTaskStorageSlot*> m_current;
     // 高频当前地址写入不使生产者读取的稳定优先级缓存行失效
     char m_levelPadding[64];
-    // 最近执行优先级；观察空闲时必须结合当前指针
+    // 当前执行优先级，0 表示空闲；同时承担发布当前记录后的握手屏障
     std::atomic<int32_t> m_currentLevel;
-    // 当前任务发布与业务额度计数隔离
+    // 唯一消费者提高抢占下界的周期
+    uint32_t m_floorUses;
+    // 当前观察窗口的最低已选级别，避免周期结束时偶然选中高级任务就反复抬高下界
+    int32_t m_floorMinimum;
+    // 执行标记与生产者观察的下界分离
     char m_currentPadding[64];
+    // 不大于真实当前级别的保守下界；跳过不可能抢占的投递观察
+    std::atomic<int32_t> m_preemptionFloor;
+    // 下界观察不与额度修改共用缓存行
+    char m_floorPadding[64];
     // 生产者累计预留额度，失败回滚；消费者不修改此计数
     std::atomic<uint64_t> m_outstanding;
     // 接纳额度与队列计数分离，避免无关原子写互相失效

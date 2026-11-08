@@ -9,15 +9,14 @@ struct CTaskStoragePage;
 struct CTaskStorageBlock;
 class CTaskPriorityBucket;
 
-/** 与发布载荷分离的紧凑执行状态；正常入队不写入，消费者回收时复位
+/** 独立执行状态；与生产者填写的载荷分离，回收前不得复用
 */
 struct CTaskStorageState
 {
 public:
-    // 1 待提交或排队，2 执行，3 完成；还须结合所在页的独立发布位
-    std::atomic<int32_t> m_phase;
-    // 位 0 请求重做；位 1 已完成本次重做决策
-    std::atomic<uint32_t> m_flags;
+    // 低两位：0 尚未完成、3 已完成；位 2 请求重做。
+    // 执行身份由当前指针发布，不重复写入本状态；完成与重做请求原子合并。
+    std::atomic<uint32_t> m_bits;
 
 public:
     /** 建立未提交状态，所在页的发布位初始为 false
@@ -26,29 +25,50 @@ public:
 
 };
 
-/** 地址在池批次存活期间不变的执行记录；只有安全回收后才能重写载荷
+/** 地址在池批次存活期间不变的执行记录，同时作为 Queue 外部 Entry
+基类地址可安全向下转型恢复记录，不依赖 offsetof 或读取尚未预取的载荷
+出队后基类的 value/cookie 复用为退休链后继和 epoch；只有安全回收后才能重写载荷
 */
-struct CTaskStorageSlot
+struct CTaskStorageSlot : public LockFreeQueueEntry<CTaskStorageSlot*>
 {
 public:
     // 发布后不可改写的任务引用，安全回收时释放
     std::shared_ptr<CTask> m_task;
-    // 所在页中的执行状态，地址在本页生命周期内不变
+    // 借用本页紧凑状态数组，消费者写状态不使任务载荷缓存行失效
     CTaskStorageState* m_state;
     // 原始任务优先级
     int32_t m_level;
-    // 页内索引，0 至 63
-    uint32_t m_index;
+    // 原始分配位置，用于将安全退休引用交回对应生产者缓存
+    uint32_t m_ownerIndex;
     // 本槽所在页，池销毁前有效
     CTaskStoragePage* m_page;
-    // 排队时借给 Queue；pop 返回后 value/cookie 复用为退休链后继和 epoch
-    // 生产者发布后不再访问此对象，槽本身仍由读域保护；x64 槽大小保持 64 字节
-    LockFreeQueueEntry<CTaskStorageSlot*> m_entry;
 
 public:
     /** 构造空闲槽位，不申请任务载荷
     */
     CTaskStorageSlot();
+
+    /** 根据稳定页地址计算页内位置，不另存冗余索引
+    @return 0 至 63；要求本槽已经属于有效页
+    */
+    size_t index() const;
+
+};
+
+/** 唯一消费者记录的退休地址与精确 epoch；相邻存放以减少双数组访问
+*/
+struct CTaskRetiredRecord
+{
+public:
+    // 已完成但尚不能重新分配的执行记录
+    CTaskStorageSlot* m_slot;
+    // 退休时的精确 epoch，不近似合并不同保护区间
+    uint64_t m_epoch;
+
+public:
+    /** 构造尚未加入退休窗口的空记录
+    */
+    CTaskRetiredRecord();
 
 };
 
@@ -59,22 +79,16 @@ struct CTaskStoragePage
 public:
     // 槽排列在对齐页首；所有槽生命周期覆盖整个批次，不并发 placement-new 任务字段
     CTaskStorageSlot m_slots[64];
+    // 每状态 4 字节，页内统一存放，生命周期覆盖所有槽借用
+    CTaskStorageState m_states[64];
     // 1 表示可领取；末页越界位保持 0
     std::atomic<uint64_t> m_free;
     // 本页所属批次
     CTaskStorageBlock* m_block;
-    // 唯一消费者尚未发布的归还位
-    uint64_t m_pending;
-    // 是否已经加入消费者的待归还页链
-    bool m_dirty;
-    // 唯一消费者维护的待归还页链
-    CTaskStoragePage* m_dirtyNext;
-    // 补齐页尾元数据，64 位平台下一页仍按缓存行对齐
-    unsigned char m_padding[24];
+    // 页尾元数据占一个完整缓存行，保持后续页内载荷和状态的对齐
+    unsigned char m_padding[64 - sizeof(std::atomic<uint64_t>) - sizeof(CTaskStorageBlock*)];
     // 生产者的提交可见位，独立于消费者更新的任务记录
     std::atomic<bool> m_publications[64];
-    // 消费者集中写入状态，避免逐任务改写刚从生产者接收的载荷缓存行
-    CTaskStorageState m_states[64];
 
 public:
     /** 构造空页，发布前补齐所属批次及有效位
@@ -143,11 +157,45 @@ public:
 
 };
 
+/** 可独立帮助的回收批次；暂停的帮助者只占用本批次
+*/
+struct CTaskStorageReclaimBatch
+{
+public:
+    // 0 空，-1 已被一个处理者取得，正数为剩余记录数
+    std::atomic<int32_t> m_count;
+    // 处理者独占期间使用的下一个记录下标
+    size_t m_begin;
+    // 发布后只能由成功取得本批次的处理者访问
+    CTaskStorageSlot* m_slots[64];
+    // 相邻批次的竞争互不共享缓存行
+    unsigned char m_padding[64];
+
+public:
+    /** 建立空批次
+    */
+    CTaskStorageReclaimBatch();
+
+};
+
 /** 每个读侧位置对应的独占分配缓存；租约外保留缓存位，但不保留借用
 */
 struct CTaskStorageCache
 {
 public:
+    // 四个独立批次吸收生产者领取不同优先级页时的归还间隙
+    CTaskStorageReclaimBatch m_reclaims[4];
+    // 唯一消费者暂存同一分配位置的安全退休记录
+    CTaskStorageSlot* m_stagedSlots[64];
+    // 唯一消费者暂存数量
+    size_t m_stagedCount;
+    // 以下链字段只有消费者访问；每个缓存至多出现一次
+    CTaskStorageCache* m_stagedNext;
+    bool m_stagedListed;
+    // 消费者暂存写入不使生产者的分配游标和固定编号所在缓存行失效
+    unsigned char m_stagedPadding[64];
+    // 固定缓存编号，初始化后不变；与生产者独占分配字段放在一起
+    uint32_t m_ownerIndex;
     // 常用优先级各自连续分配，其他级别使用位置 0
     CTaskStorageAllocation m_allocations[16];
     // 所有分配游标中的未使用槽位合计，供维护者弱一致观察
@@ -175,3 +223,5 @@ public:
     CTaskStorageCache();
 
 };
+
+#include "CTaskStorageModels.inl"

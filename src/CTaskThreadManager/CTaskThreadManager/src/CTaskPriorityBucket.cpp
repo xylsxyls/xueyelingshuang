@@ -9,8 +9,7 @@ m_front(nullptr),
 m_readyHead(0),
 m_readyCount(0),
 m_queued(0),
-m_taken(0),
-m_ready(false)
+m_taken(0)
 {
 
 }
@@ -26,6 +25,10 @@ CTaskThreadResult CTaskPriorityBucket::initialize(const CTaskThreadConfig& confi
     if (result == LockFreeQueueSuccess)
     {
         result = m_queue.configureProducerCounters(true);
+    }
+    if (result == LockFreeQueueSuccess)
+    {
+        result = m_queue.configureCancelableReservations(true);
     }
     if (result == LockFreeQueueSuccess)
     {

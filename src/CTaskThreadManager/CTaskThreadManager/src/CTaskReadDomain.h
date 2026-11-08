@@ -124,3 +124,5 @@ private:
     // 只从开放变为关闭；关闭不释放借用位置表
     std::atomic<bool> m_closed;
 };
+
+#include "CTaskReadDomain.inl"
