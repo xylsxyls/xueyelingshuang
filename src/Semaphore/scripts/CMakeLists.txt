@@ -1187,11 +1187,6 @@ if __name__ == '__main__':
             --session "${wasm_session}" --publish-only "${CMAKE_CURRENT_BINARY_DIR}"
             ${wasm_commit_arguments} VERBATIM)
     endif()
-    # 测试实现和运行入口统一归SemaphoreTest工程
-    option(SEMAPHORE_BUILD_TESTS "Build SemaphoreTest" OFF)
-    if(SEMAPHORE_BUILD_TESTS)
-        add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/../../SemaphoreTest/SemaphoreTest" "${CMAKE_CURRENT_BINARY_DIR}/SemaphoreTest")
-    endif()
     return()
 endif()
 
@@ -1459,9 +1454,4 @@ int main()
 endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(Semaphore PUBLIC rt)
-endif()
-# 原生测试同样由SemaphoreTest工程持有，不在库目录保留测试入口
-option(SEMAPHORE_BUILD_TESTS "Build SemaphoreTest" OFF)
-if(SEMAPHORE_BUILD_TESTS)
-    add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/../../SemaphoreTest/SemaphoreTest" "${CMAKE_CURRENT_BINARY_DIR}/SemaphoreTest")
 endif()

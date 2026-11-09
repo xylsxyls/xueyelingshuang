@@ -10,6 +10,7 @@
 
 class SemaphoreProcessMemory;
 class SemaphoreDeadline;
+class SemaphoreCount;
 
 /** 本进程通知与原生跨进程计数通知。生命周期操作不与等待/通知并发。
     Windows使用内核信号量，Linux/macOS使用sem_open；移动端使用共享原子计数及有界睡眠，无文件锁。
@@ -18,13 +19,13 @@ class SemaphoreDeadline;
 */
 class SemaphoreAPI Semaphore
 {
-// 普通分开调用的接口，以及可选的事件池管理和资源诊断
+// 普通分开调用的接口，以及可选的等待记录池管理和资源诊断
 public:
     /** 初始化本地原子状态与系统等待后端，系统资源失败或原子类型不支持无锁时抛system_error
     */
     Semaphore();
 
-    /** 外部静止期释放事件池和系统资源，清理失败计入cleanupFailures
+    /** 外部静止期释放计数/事件等待池和系统资源，清理失败计入cleanupFailures
     */
     ~Semaphore();
 
@@ -33,8 +34,9 @@ public:
     */
     void signal();
 
-    /** 发布一个64位许可，不分配内存
-    @return committed=true表示许可已增加；即使提示失败也不可再次发布
+    /** 发布一个64位许可，优先交付已登记等待者；普通积存和直接交付不分配记录
+    超过2^63-1的极大积存使用池中不可变记录，可能报告分配/容量错误，64位上限不变。
+    @return committed=true表示许可已积存或交付；即使提示失败也不可再次发布
     */
     SemaphoreResult trySignal();
 
@@ -53,7 +55,8 @@ public:
     */
     SemaphoreResult waitResult();
 
-    /** 有结果的有限计数等待，发布/获取可见性由许可CAS建立
+    /** 有结果的有限计数等待，发布/获取可见性由计数消费或直接交付CAS建立
+    普通阻塞先复用系统提示；持续未取得许可时进入内部优先交付链，已交付许可不被后来者抢走。
     @param [in] timeout 总预算毫秒，0仅探测
     @return OK且committed=true为取得许可；TIMEOUT未取得；其余为错误
     */
@@ -63,7 +66,7 @@ public:
     */
     void reset();
 
-    /** 提示一位已登记的事件等待者；没有等待者时不积存通知
+    /** 优先提示最早登记的合格事件等待者；没有等待者时不积存通知
     */
     void event();
 
@@ -120,6 +123,24 @@ public:
     @return 观测快照
     */
     SemaphorePoolStats eventPoolStatistics() const;
+
+    /** 可选配置计数等待的内部记录池，首次需要优先交付登记时默认创建；与事件池配置独立
+    仅在外部静止且积存数为0时调用；不影响原有signal/wait的正常调用流程。
+    @param [in] config 计数等待记录的容量及扩缩容策略
+    @return OK或配置/资源错误，失败保留原池
+    */
+    SemaphoreResult configureCountPool(const SemaphorePoolConfig& config);
+
+    /** 按工作预算维护计数等待池，无需在每次等待前后调用
+    @param [out] released 物理释放记录数
+    @return 维护结果；对象生命周期由调用方保持
+    */
+    SemaphoreResult maintainCountPool(size_t& released);
+
+    /** 单独观测计数等待池，包含退役和预留记录；未创建时均为0
+    @return 计数池观测值，不含事件池，不是登记完成屏障
+    */
+    SemaphorePoolStats countPoolStatistics() const;
 
     /** 移动端宿主在首次跨进程通知前配置共享目录，各参与进程须传入同一路径。
     Android使用应用内部专用目录，iOS使用App Group容器中的专用目录；必须已存在且属于当前UID。
@@ -253,6 +274,31 @@ public:
     SemaphoreSignalWaitResult processSignalAndWaitResult(Semaphore& waitOn, int32_t timeout = -1);
 
 private:
+    /** 发布计数并可选延迟系统提示，延迟仅供本地组合系统调用使用
+    @param [in] notify 是否立即发出系统提示
+    @return 许可提交及提示结果
+    */
+    SemaphoreResult publishCount(bool notify);
+
+    /** 仅尝试普通积存计数加一，已登记等待者或大计数必须由调用方进入慢路径
+    @return true表示已增加许可且尚未系统提示，false表示没有修改状态
+    */
+    bool incrementCount();
+
+    /** 按需发布独立计数记录池，失败不改变许可
+    @param [out] pool 当前实例的计数池
+    @return 初始化结果
+    */
+    SemaphoreResult prepareCountPool(SemaphoreCount*& pool);
+
+    /** 等待已登记记录，退出时与交付竞争取消并归还记录
+    @param [in] record 本次登记记录
+    @param [in] deadline 整次调用共用的截止预算
+    @param [in] entered 是否已登记公共系统等待，函数负责撤销
+    @return 交付状态及系统错误
+    */
+    SemaphoreResult waitCountRecord(SemaphoreEventRecord* record, const SemaphoreDeadline& deadline, bool entered = false);
+
     /** 取得命名资源，只有成功的独占创建取得撤名权；失败由局部候选回收
     @param [in] name 已有命名规则中的逻辑名称
     @param [in] signalCount 正数创建，0仅打开
@@ -273,7 +319,7 @@ private:
     */
     SemaphoreResult prepareEventPool(SemaphoreEventPool*& pool);
 
-    /** 计数等待入口，已有许可直接消费，不分配记录或读取时钟
+    /** 计数等待入口，普通积存许可直接消费，不分配记录或读取时钟
     @param [in] infinite 是否无限等待
     @param [in] timeout 有限等待毫秒
     @return 真实谓词结果或系统错误
@@ -285,6 +331,13 @@ private:
     @return 是否消费许可；退出前撤销系统等待登记
     */
     SemaphoreResult waitCountRegistered(const SemaphoreDeadline& deadline);
+
+    /** 短时竞争沿用系统阻塞，持续32ms未取得许可则请求转入优先交付登记
+    @param [in] deadline 原调用总预算，阶段切换不重新开始计时
+    @param [out] priority true表示仍未消费，应进入计数池；false表示返回最终结果
+    @return 本阶段消费、超时或系统错误，退出前归还公共系统等待登记
+    */
+    SemaphoreResult waitCountCompetitive(const SemaphoreDeadline& deadline, bool& priority);
 
     /** 登记一次非积存事件等待，退出时与通知竞争最终结果
     @param [in] infinite 是否无限等待
@@ -323,7 +376,7 @@ private:
 #pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
-    // 许可增加与消费的CAS是计数线性化点；对象析构/reset须外部静止
+    // 直接积存数或带标记的登记链/大计数记录；CAS提交许可，对象析构/reset须外部静止
     // MSVC x86不会为自然8字节成员自动重对齐栈，必须显式要求，避免跨缓存行原子访问
 #ifdef _MSC_VER
     __declspec(align(8))
@@ -333,6 +386,8 @@ private:
     SemaphoreWake m_wake;
     // 默认按首次事件等待创建；configure静止期显式预建；计数/通知不分配池
     std::atomic<SemaphoreEventPool*> m_eventPool;
+    // 计数等待单独登记并直接接收许可；普通积存热路径不创建此池。
+    std::atomic<SemaphoreCount*> m_countPool;
     // 移动端后备由本库直接通过系统映射管理，不依赖其他工程；桌面原生路径保持为空。
     std::unique_ptr<SemaphoreProcessMemory> m_processMemory;
 #if defined(_MSC_VER) && !defined(STATIC_LIB)

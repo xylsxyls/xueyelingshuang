@@ -46,13 +46,13 @@ struct SemaphoreShrinkDecision
     uint64_t idleMilliseconds;
 };
 
-/** 事件等待记录配置；只在构造或外部静止期更换，回调可并发/重复评估
+/** 等待记录配置；事件池与计数池分别设置，只在构造或外部静止期更换，回调可并发/重复评估
     回调必须短小、线程安全、不递归调用同一Semaphore；回调内部锁不属于库保证
 */
 struct SemaphoreAPI SemaphorePoolConfig
 {
 public:
-    // 默认16个记录；计数等待不使用记录
+    // 默认16个记录，按对应计数池或事件池分别计量
     size_t initialCapacity;
     // 默认0：取走最后记录不扩容，下一次确实无记录时评估
     size_t freeThreshold;
@@ -104,7 +104,7 @@ struct SemaphoreEventRecord
 public:
     // 登记链，低位为删除标记
     std::atomic<uintptr_t> m_next;
-    // 0等待，1已提示，2取消，3等待者已结束访问，4已预留物理释放
+    // 0等待，1已提示，2取消，3等待者已结束访问，4已预留物理释放，5退役大计数正文
     std::atomic<uint32_t> m_state;
     // 退役栈引用；最高位为重新入栈责任，低位为栈及临时借用引用
     std::atomic<uint32_t> m_retiredReferences;
@@ -167,7 +167,14 @@ public:
     */
     SemaphorePoolStats statistics() const;
 
-private:
+protected:
+    // 内部计数等待复用以下分配与回收能力，不向业务对象开放。
+    /** 在受保护的快照链中选择最早仍在等待的记录，不让新登记者越过旧等待者
+    @param [in] head 本次通知开始时的链头
+    @return 最早合格记录或空；调用者须保持读者保护
+    */
+    SemaphoreEventRecord* oldest(uintptr_t head) const;
+
     /** 保护链读取，计数上限时拒绝
     @return 是否成功进入
     */
@@ -232,7 +239,7 @@ private:
     */
     SemaphoreResult grow();
 
-private:
+protected:
     // 策略在对象活动期只读
     SemaphorePoolConfig m_config;
     // 登记链入口，低位始终为0

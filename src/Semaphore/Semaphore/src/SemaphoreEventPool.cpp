@@ -289,7 +289,7 @@ size_t SemaphoreEventPool::reclaim(size_t& budget, bool entered)
         }
         else
         {
-            if (record->m_idleSince == 0)
+            if (state == 5 || record->m_idleSince == 0)
             {
                 record->m_idleSince = timestamp;
             }
@@ -485,6 +485,21 @@ bool SemaphoreEventPool::finish(SemaphoreEventRecord* record)
     return notified;
 }
 
+SemaphoreEventRecord* SemaphoreEventPool::oldest(uintptr_t head) const
+{
+    SemaphoreEventRecord* selected = nullptr;
+    while (head != 0)
+    {
+        SemaphoreEventRecord* node = reinterpret_cast<SemaphoreEventRecord*>(head);
+        if (node->m_state.load() == 0)
+        {
+            selected = node;
+        }
+        head = node->m_next.load() & ~uintptr_t(1);
+    }
+    return selected;
+}
+
 SemaphoreResult SemaphoreEventPool::notify(bool all, SemaphoreWake* wake)
 {
     if (!enter())
@@ -497,7 +512,11 @@ SemaphoreResult SemaphoreEventPool::notify(bool all, SemaphoreWake* wake)
     SemaphoreResult result;
     while (current != 0)
     {
-        SemaphoreEventRecord* node = reinterpret_cast<SemaphoreEventRecord*>(current);
+        SemaphoreEventRecord* node = all ? reinterpret_cast<SemaphoreEventRecord*>(current) : oldest(current);
+        if (node == nullptr)
+        {
+            break;
+        }
         uint32_t waiting = 0;
         if (node->m_state.compare_exchange_strong(waiting, 1))
         {
@@ -516,7 +535,10 @@ SemaphoreResult SemaphoreEventPool::notify(bool all, SemaphoreWake* wake)
                 break;
             }
         }
-        current = node->m_next.load() & ~uintptr_t(1);
+        if (all)
+        {
+            current = node->m_next.load() & ~uintptr_t(1);
+        }
     }
     leave();
     result.committed = delivered;

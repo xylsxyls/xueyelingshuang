@@ -1,6 +1,7 @@
 ﻿#include "Semaphore.h"
 #include "SemaphoreProcessMemory.h"
 #include "SemaphoreDeadline.h"
+#include "SemaphoreCount.h"
 #include <system_error>
 #include <new>
 #include <algorithm>
@@ -21,13 +22,18 @@
 #endif
 #endif
 
+// 编译期核实当前工具链的位保持整数转换；不生成运行期断言或终止路径。
+static_assert(static_cast<int64_t>(UINT64_MAX) == -1 &&
+    static_cast<int64_t>(uint64_t(1) << 63) == (-INT64_MAX - 1), "Semaphore requires bit-preserving integer conversion");
+
 Semaphore::Semaphore() :
 m_count(0),
 m_eventPool(nullptr),
+m_countPool(nullptr),
 m_processSemaphore(nullptr),
 m_processCreated(false)
 {
-    if (!m_count.is_lock_free() || !m_eventPool.is_lock_free())
+    if (!m_count.is_lock_free() || !m_eventPool.is_lock_free() || !m_countPool.is_lock_free())
     {
         throw std::system_error(std::make_error_code(std::errc::not_supported));
     }
@@ -36,6 +42,12 @@ m_processCreated(false)
 Semaphore::~Semaphore()
 {
     delete m_eventPool.load();
+    SemaphoreCount* countPool = m_countPool.load();
+    if (countPool != nullptr)
+    {
+        countPool->clear(m_count);
+        delete countPool;
+    }
     if ((m_processSemaphore != nullptr || m_processMemory || m_processCreated) &&
         closeProcessResult().status != SEMAPHORE_OK)
     {
@@ -45,26 +57,60 @@ Semaphore::~Semaphore()
 
 void Semaphore::signal()
 {
-    const SemaphoreResult result = trySignal();
+    if (!incrementCount())
+    {
+        checkLocalResult(publishCount(true));
+        return;
+    }
+    SemaphoreResult result = m_wake.notify();
     if (result.status != SEMAPHORE_OK)
     {
+        // 只在错误分支补上已提交状态，兼容入口的异常不能误导调用方重复发布。
+        result.committed = true;
         checkLocalResult(result);
     }
 }
 
 SemaphoreResult Semaphore::trySignal()
 {
-    uint64_t count = m_count.load();
-    do
+    if (incrementCount())
     {
-        if (count == UINT64_MAX)
+        SemaphoreResult result = m_wake.notify();
+        result.committed = true;
+        return result;
+    }
+    return publishCount(true);
+}
+
+SemaphoreResult Semaphore::publishCount(bool notify)
+{
+    if (incrementCount())
+    {
+        SemaphoreResult result = notify ? m_wake.notify() : SemaphoreResult();
+        result.committed = true;
+        return result;
+    }
+    SemaphoreCount* pool = nullptr;
+    const SemaphoreResult prepared = prepareCountPool(pool);
+    return prepared.status == SEMAPHORE_OK ? pool->signal(m_count, m_wake, notify) : prepared;
+}
+
+bool Semaphore::incrementCount()
+{
+    uint64_t count = m_count.load();
+    for (;;)
+    {
+        const uint64_t next = count + 1;
+        // 记录地址非空且至少4字节对齐，不会编码为UINT64_MAX；这里只修改普通积存数。
+        if (static_cast<int64_t>(next) < 0)
         {
-            return SemaphoreResult(SEMAPHORE_OVERFLOW);
+            return false;
         }
-    } while (!m_count.compare_exchange_weak(count, count + 1));
-    SemaphoreResult result = m_wake.notify();
-    result.committed = true;
-    return result;
+        if (m_count.compare_exchange_weak(count, next))
+        {
+            return true;
+        }
+    }
 }
 
 void Semaphore::wait()
@@ -100,6 +146,11 @@ SemaphoreResult Semaphore::waitResult(uint32_t timeout)
 void Semaphore::reset()
 {
     // 外部静止；系统中即使有旧提示，也不再代表许可或事件。
+    SemaphoreCount* pool = m_countPool.load();
+    if (pool != nullptr)
+    {
+        pool->clear(m_count);
+    }
     m_count.store(0);
 }
 
@@ -195,6 +246,54 @@ SemaphoreResult Semaphore::maintainEventPool(size_t& released)
 SemaphorePoolStats Semaphore::eventPoolStatistics() const
 {
     SemaphoreEventPool* pool = m_eventPool.load();
+    if (pool != nullptr)
+    {
+        return pool->statistics();
+    }
+    const SemaphorePoolStats empty = {};
+    return empty;
+}
+
+SemaphoreResult Semaphore::configureCountPool(const SemaphorePoolConfig& config)
+{
+    if (m_count.load() != 0)
+    {
+        return SemaphoreResult(SEMAPHORE_INVALID);
+    }
+    try
+    {
+        std::unique_ptr<SemaphoreCount> candidate(new SemaphoreCount(config));
+        delete m_countPool.exchange(candidate.release());
+        return SemaphoreResult();
+    }
+    catch (const std::invalid_argument&)
+    {
+        return SemaphoreResult(SEMAPHORE_INVALID);
+    }
+    catch (const std::bad_alloc&)
+    {
+        return SemaphoreResult(SEMAPHORE_NO_MEMORY);
+    }
+    catch (const std::system_error& error)
+    {
+        return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, error.code().value());
+    }
+    catch (...)
+    {
+        return SemaphoreResult(SEMAPHORE_POLICY);
+    }
+}
+
+SemaphoreResult Semaphore::maintainCountPool(size_t& released)
+{
+    SemaphoreCount* pool = m_countPool.load();
+    released = 0;
+    return pool != nullptr ? pool->maintain(released) : SemaphoreResult();
+}
+
+SemaphorePoolStats Semaphore::countPoolStatistics() const
+{
+    SemaphoreCount* pool = m_countPool.load();
     if (pool != nullptr)
     {
         return pool->statistics();
@@ -622,6 +721,32 @@ SemaphoreResult Semaphore::waitProcess(const SemaphoreDeadline& deadline, bool i
 #endif
 }
 
+SemaphoreResult Semaphore::prepareCountPool(SemaphoreCount*& pool)
+{
+    pool = m_countPool.load();
+    if (pool != nullptr)
+    {
+        return SemaphoreResult();
+    }
+    try
+    {
+        std::unique_ptr<SemaphoreCount> candidate(new SemaphoreCount);
+        if (m_countPool.compare_exchange_strong(pool, candidate.get()))
+        {
+            pool = candidate.release();
+        }
+        return SemaphoreResult();
+    }
+    catch (const std::bad_alloc&)
+    {
+        return SemaphoreResult(SEMAPHORE_NO_MEMORY);
+    }
+    catch (const std::system_error& error)
+    {
+        return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, error.code().value());
+    }
+}
+
 SemaphoreResult Semaphore::prepareEventPool(SemaphoreEventPool*& pool)
 {
     pool = m_eventPool.load();
@@ -656,8 +781,13 @@ SemaphoreResult Semaphore::waitCount(bool infinite, uint32_t timeout)
     }
     if (!infinite && timeout == 0)
     {
-        // 最终探测与发布竞争，既不清空计数，也不把迟到的许可丢弃。
-        return consumeCount() ? SemaphoreResult(SEMAPHORE_OK, true) : SemaphoreResult(SEMAPHORE_TIMEOUT);
+        const uint64_t state = m_count.load();
+        if (state <= (UINT64_MAX >> 1) || (state & 1) == 0)
+        {
+            return consumeCount() ? SemaphoreResult(SEMAPHORE_OK, true) : SemaphoreResult(SEMAPHORE_TIMEOUT);
+        }
+        SemaphoreEventRecord* unused = nullptr;
+        return m_countPool.load()->begin(m_count, unused, true);
     }
     const SemaphoreDeadline deadline(infinite, timeout);
     return waitCountRegistered(deadline);
@@ -665,11 +795,64 @@ SemaphoreResult Semaphore::waitCount(bool infinite, uint32_t timeout)
 
 SemaphoreResult Semaphore::waitCountRegistered(const SemaphoreDeadline& deadline)
 {
+    if (consumeCount())
+    {
+        return SemaphoreResult(SEMAPHORE_OK, true);
+    }
+    const uint64_t observed = m_count.load();
+    if (observed > (UINT64_MAX >> 1) && (observed & 1) != 0)
+    {
+        SemaphoreEventRecord* unused = nullptr;
+        const SemaphoreResult result = m_countPool.load()->begin(m_count, unused, true);
+        if (result.status != SEMAPHORE_TIMEOUT)
+        {
+            return result;
+        }
+    }
+    if (deadline.remaining() == 0)
+    {
+        return consumeCount() ? SemaphoreResult(SEMAPHORE_OK, true) : SemaphoreResult(SEMAPHORE_TIMEOUT);
+    }
+    if (!SemaphoreWake::canBlock())
+    {
+        return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
+    }
+    bool priority = false;
+    const SemaphoreResult competitive = waitCountCompetitive(deadline, priority);
+    if (!priority)
+    {
+        return competitive;
+    }
+    if (deadline.remaining() == 0)
+    {
+        return consumeCount() ? SemaphoreResult(SEMAPHORE_OK, true) : SemaphoreResult(SEMAPHORE_TIMEOUT);
+    }
+    SemaphoreCount* pool = nullptr;
+    SemaphoreResult result = prepareCountPool(pool);
+    if (result.status != SEMAPHORE_OK)
+    {
+        return result;
+    }
+    SemaphoreEventRecord* record = nullptr;
+    result = pool->begin(m_count, record, deadline.remaining() == 0);
+    if (result.status != SEMAPHORE_OK || record == nullptr)
+    {
+        return result;
+    }
+    return waitCountRecord(record, deadline);
+}
+
+SemaphoreResult Semaphore::waitCountCompetitive(const SemaphoreDeadline& deadline, bool& priority)
+{
+    priority = false;
     SemaphoreResult result = m_wake.enterWait();
     if (result.status != SEMAPHORE_OK)
     {
         return result;
     }
+    // 普通等待先复用共享系统提示；单次等待持续32ms未取得许可后再进入优先交付链。
+    // 这是防止长期抢不到许可的升级时间，不是每个线程必须等待的时间或调度上限。
+    const SemaphoreDeadline promotion(false, 32);
     for (;;)
     {
         const uint32_t expected = m_wake.snapshot();
@@ -678,10 +861,19 @@ SemaphoreResult Semaphore::waitCountRegistered(const SemaphoreDeadline& deadline
             result = SemaphoreResult(SEMAPHORE_OK, true);
             break;
         }
-        const uint32_t slice = deadline.remaining(32);
+        const uint64_t state = m_count.load();
+        const uint32_t allowance = promotion.remaining(32);
+        if (allowance == 0 || (state > (UINT64_MAX >> 1) && (state & 1) != 0))
+        {
+            // 大计数也交给受读者保护的路径处理，不能在这里解引用记录地址。
+            priority = true;
+            result = SemaphoreResult();
+            break;
+        }
+        const uint32_t slice = deadline.remaining(allowance);
         if (slice == 0)
         {
-            result = consumeCount() ? SemaphoreResult(SEMAPHORE_OK, true) : SemaphoreResult(SEMAPHORE_TIMEOUT);
+            result = SemaphoreResult(SEMAPHORE_TIMEOUT);
             break;
         }
         result = m_wake.sleep(expected, slice);
@@ -691,6 +883,54 @@ SemaphoreResult Semaphore::waitCountRegistered(const SemaphoreDeadline& deadline
         }
     }
     m_wake.leaveWait();
+    return result;
+}
+
+SemaphoreResult Semaphore::waitCountRecord(
+    SemaphoreEventRecord* record, const SemaphoreDeadline& deadline, bool entered)
+{
+    SemaphoreCount* pool = m_countPool.load();
+    SemaphoreResult result;
+    const bool direct = m_wake.canWaitAddress();
+    if (!direct && !entered)
+    {
+        result = m_wake.enterWait();
+        if (result.status != SEMAPHORE_OK)
+        {
+            result.committed = pool->finish(m_count, record);
+            return result;
+        }
+        entered = true;
+    }
+    for (;;)
+    {
+        const uint32_t expected = direct ? 0 : m_wake.snapshot();
+        if (record->m_state.load() == 1)
+        {
+            result = SemaphoreResult(SEMAPHORE_OK, true);
+            break;
+        }
+        const uint32_t slice = deadline.remaining(32);
+        if (slice == 0)
+        {
+            result = SemaphoreResult(SEMAPHORE_TIMEOUT);
+            break;
+        }
+        result = m_wake.sleep(expected, slice, direct ? &record->m_state : nullptr);
+        if (result.status != SEMAPHORE_OK && result.status != SEMAPHORE_TIMEOUT)
+        {
+            break;
+        }
+    }
+    result.committed = pool->finish(m_count, record);
+    if (result.committed && result.status == SEMAPHORE_TIMEOUT)
+    {
+        result.status = SEMAPHORE_OK;
+    }
+    if (entered)
+    {
+        m_wake.leaveWait();
+    }
     return result;
 }
 
@@ -769,53 +1009,52 @@ SemaphoreSignalWaitResult Semaphore::signalAndWaitLocal(Semaphore& waitOn, bool 
                 sent.committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE, SEMAPHORE_COMMIT_NONE,
                 sent.nativeError);
         }
+        const SemaphoreResult received = waitOn.waitCountRegistered(deadline);
+        return SemaphoreSignalWaitResult(received.status, SEMAPHORE_COMMIT_DONE,
+            received.committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE, received.nativeError);
     }
-    else
+    // 系统等待先登记；业务许可仍在源发布之后才从目标消费。
+    const SemaphoreResult entered = waitOn.m_wake.enterWait();
+    if (entered.status != SEMAPHORE_OK)
     {
-        // 目标先登记、快照，发布后再查真实许可；双方发布/重查均保持seq_cst。
-        const SemaphoreResult entered = waitOn.m_wake.enterWait();
-        if (entered.status != SEMAPHORE_OK)
-        {
-            return SemaphoreSignalWaitResult(
-                entered.status, SEMAPHORE_COMMIT_NONE, SEMAPHORE_COMMIT_NONE, entered.nativeError);
-        }
-        const uint32_t expected = waitOn.m_wake.snapshot();
-        uint64_t count = m_count.load();
-        do
-        {
-            if (count == UINT64_MAX)
-            {
-                waitOn.m_wake.leaveWait();
-                return SemaphoreSignalWaitResult(SEMAPHORE_OVERFLOW);
-            }
-        } while (!m_count.compare_exchange_weak(count, count + 1));
-        bool received = waitOn.consumeCount();
-        const uint32_t slice = deadline.remaining(32);
-        if (received || slice == 0)
-        {
-            const SemaphoreResult woke = m_wake.notify();
-            if (!received)
-            {
-                received = waitOn.consumeCount();
-            }
-            waitOn.m_wake.leaveWait();
-            return SemaphoreSignalWaitResult(
-                woke.status != SEMAPHORE_OK ? woke.status : (received ? SEMAPHORE_OK : SEMAPHORE_TIMEOUT),
-                SEMAPHORE_COMMIT_DONE, received ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE, woke.nativeError);
-        }
-        const SemaphoreResult slept = m_wake.signalAndSleep(waitOn.m_wake, expected, slice);
-        waitOn.m_wake.leaveWait();
-        if (slept.status != SEMAPHORE_OK && slept.status != SEMAPHORE_TIMEOUT)
-        {
-            return SemaphoreSignalWaitResult(
-                slept.status, SEMAPHORE_COMMIT_DONE, SEMAPHORE_COMMIT_NONE, slept.nativeError);
-        }
+        return SemaphoreSignalWaitResult(
+            entered.status, SEMAPHORE_COMMIT_NONE, SEMAPHORE_COMMIT_NONE, entered.nativeError);
     }
-    // 原生返回只是提示，仍由目标64位计数CAS决定是否取得许可；后续等待不重复发送。
-    const SemaphoreResult received = waitOn.consumeCount()
-        ? SemaphoreResult(SEMAPHORE_OK, true)
-        : (!infinite && deadline.remaining() == 0 ? SemaphoreResult(SEMAPHORE_TIMEOUT)
-                                                : waitOn.waitCountRegistered(deadline));
+    const uint32_t expected = waitOn.m_wake.snapshot();
+    const SemaphoreResult sent = publishCount(false);
+    if (sent.status != SEMAPHORE_OK)
+    {
+        waitOn.m_wake.leaveWait();
+        return SemaphoreSignalWaitResult(sent.status,
+            sent.committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE, SEMAPHORE_COMMIT_NONE, sent.nativeError);
+    }
+    SemaphoreCount* pool = nullptr;
+    SemaphoreEventRecord* record = nullptr;
+    SemaphoreResult received = waitOn.consumeCount() ? SemaphoreResult(SEMAPHORE_OK, true) : waitOn.prepareCountPool(pool);
+    if (received.status == SEMAPHORE_OK && !received.committed)
+    {
+        received = pool->begin(waitOn.m_count, record, deadline.remaining() == 0);
+    }
+    if (record == nullptr)
+    {
+        // 已经发布的源许可必须提示，即使目标登记/分配失败也不能漏掉这一阶段。
+        const SemaphoreResult woke = m_wake.notify();
+        waitOn.m_wake.leaveWait();
+        return SemaphoreSignalWaitResult(woke.status != SEMAPHORE_OK ? woke.status : received.status,
+            SEMAPHORE_COMMIT_DONE, received.committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE,
+            woke.status != SEMAPHORE_OK ? woke.nativeError : received.nativeError);
+    }
+    const uint32_t slice = deadline.remaining(32);
+    const SemaphoreResult slept = record->m_state.load() == 1 || slice == 0
+        ? m_wake.notify() : m_wake.signalAndSleep(waitOn.m_wake, expected, slice);
+    if (slept.status != SEMAPHORE_OK && slept.status != SEMAPHORE_TIMEOUT)
+    {
+        const bool committed = pool->finish(waitOn.m_count, record);
+        waitOn.m_wake.leaveWait();
+        return SemaphoreSignalWaitResult(slept.status, SEMAPHORE_COMMIT_DONE,
+            committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE, slept.nativeError);
+    }
+    received = waitOn.waitCountRecord(record, deadline, true);
     return SemaphoreSignalWaitResult(received.status, SEMAPHORE_COMMIT_DONE,
         received.committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE, received.nativeError);
 }
@@ -823,14 +1062,19 @@ SemaphoreSignalWaitResult Semaphore::signalAndWaitLocal(Semaphore& waitOn, bool 
 bool Semaphore::consumeCount()
 {
     uint64_t count = m_count.load();
-    while (count != 0)
+    for (;;)
     {
-        if (m_count.compare_exchange_weak(count, count - 1))
+        const uint64_t next = count - 1;
+        // 0减一的最高位为1；非空记录编码严格大于2^63，减一后仍为指针状态。
+        if (static_cast<int64_t>(next) < 0)
+        {
+            return false;
+        }
+        if (m_count.compare_exchange_weak(count, next))
         {
             return true;
         }
     }
-    return false;
 }
 
 void Semaphore::checkLocalResult(const SemaphoreResult& result)

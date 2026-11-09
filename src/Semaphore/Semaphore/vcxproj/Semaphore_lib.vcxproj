@@ -25,6 +25,7 @@
     <ClInclude Include="..\src\SemaphoreResult.h" />
     <ClInclude Include="..\src\SemaphoreResult.inl" />
     <ClInclude Include="..\src\SemaphoreDeadline.h" />
+    <ClInclude Include="..\src\SemaphoreCount.h" />
     <ClInclude Include="..\src\SemaphoreWake.h" />
     <ClInclude Include="..\src\SemaphoreEventPool.h" />
     <ClInclude Include="..\src\SemaphoreProcessMemory.h" />
@@ -33,6 +34,7 @@
     <ClCompile Include="..\src\Semaphore.cpp" />
     <ClCompile Include="..\src\SemaphoreResult.cpp" />
     <ClCompile Include="..\src\SemaphoreDeadline.cpp" />
+    <ClCompile Include="..\src\SemaphoreCount.cpp" />
     <ClCompile Include="..\src\SemaphoreWake.cpp" />
     <ClCompile Include="..\src\SemaphoreEventPool.cpp" />
     <ClCompile Include="..\src\SemaphoreProcessMemory.cpp" />
