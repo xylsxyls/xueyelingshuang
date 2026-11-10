@@ -24,4 +24,30 @@
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="SemaphoreNativeIpc.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="SemaphorePerformance.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="SemaphoreTestHooks.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="SemaphoreTestInstrument.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="SemaphoreTestInstrument.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="SemaphoreTestInstrumentRules.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="SemaphoreTestProcess.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="SemaphoreTestPosixName.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="SemaphoreTestPosixName.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="SemaphoreTests.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="SemaphoreWasmTests.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="SemaphoreBench.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="SemaphoreNativeIpc.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="SemaphorePerformance.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="SemaphorePolicyTests.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="SemaphoreQueueTests.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="SemaphoreTestProcess.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="SemaphoreTests.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="SemaphoreFairness.cpp"><Filter>源文件</Filter></ClCompile>
+    <None Include="SemaphoreWasmTests.cpp"><Filter>源文件</Filter></None>
+    <None Include="run_wasm.js"><Filter>源文件</Filter></None>
+    <None Include="SemaphoreDemo.cpp"><Filter>源文件</Filter></None>
+    <ClCompile Include="SemaphoreTestProcessMemory.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="SemaphoreTestProcessMemory.h"><Filter>头文件</Filter></ClInclude>
+  </ItemGroup>
 </Project>

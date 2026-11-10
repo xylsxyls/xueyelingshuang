@@ -1,67 +1,98 @@
-﻿#设置CMAKE最低版本
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1.1)
-SET(CMAKE_CXX_STANDARD 11)
+cmake_minimum_required(VERSION 3.15)
+project(SemaphoreTest LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-#SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -finput-charset='gb2312'")
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -finput-charset='gb2312'")
-
-if(${DEBUGRELEASE} STREQUAL "debug")
-#设置项目名称
-SET(PROJECT_NAME SemaphoreTestd)
-SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -Wl,-rpath=. -O0 -g -ggdb ")
-SET(CMAKE_BUILD_TYPE "Debug")
-elseif(${DEBUGRELEASE} STREQUAL "release")
-#设置项目名称
-SET(PROJECT_NAME SemaphoreTest)
-SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
-SET(CMAKE_BUILD_TYPE "Release")
+# Windows原生测试使用已有vcxproj，其他目标由调用方传入相应工具链
+if(WIN32 AND NOT EMSCRIPTEN)
+    message(FATAL_ERROR "Use SemaphoreTest.vcxproj for native Windows")
 endif()
+set(semaphore_source "${CMAKE_CURRENT_LIST_DIR}/../../Semaphore/Semaphore/src")
+set(SEMAPHORE_TEST_INCLUDE "${semaphore_source}" CACHE PATH "Matching Semaphore headers")
+set(SEMAPHORE_TEST_LIBRARY "" CACHE FILEPATH "Matching prepared Semaphore archive/shared library")
+option(SEMAPHORE_TEST_INSTRUMENTATION "Enable isolated fault and interleaving hooks" OFF)
+option(SEMAPHORE_TEST_PTHREADS "Enable Wasm worker tests" OFF)
+option(SEMAPHORE_TEST_QUEUE "Enable read-only integration with current Queue headers" OFF)
+set(SEMAPHORE_TEST_BORROWED_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/../../../include" CACHE PATH "Read-only borrowed library headers")
 
-if(${BIT} STREQUAL "32")
-    MESSAGE(STATUS "using 32bits (x86)")
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
-elseif(${BIT} STREQUAL "64")
-    MESSAGE(STATUS "using 64bits (x86_64)")
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64")
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
-elseif(${BIT} STREQUAL "arm32")
-    MESSAGE(STATUS "using arm32 (armhf)")
-    SET(CMAKE_C_COMPILER "arm-linux-gnueabihf-gcc")
-    SET(CMAKE_CXX_COMPILER "arm-linux-gnueabihf-g++")
-elseif(${BIT} STREQUAL "arm64")
-    MESSAGE(STATUS "using arm64 (aarch64)")
-    SET(CMAKE_C_COMPILER "aarch64-linux-gnu-gcc")
-    SET(CMAKE_CXX_COMPILER "aarch64-linux-gnu-g++")
+if(EMSCRIPTEN)
+    add_executable(SemaphoreTest SemaphoreWasmTests.cpp)
+    target_compile_options(SemaphoreTest PRIVATE -fexceptions)
+    target_link_options(SemaphoreTest PRIVATE -fexceptions -sDISABLE_EXCEPTION_CATCHING=0 -sEXIT_RUNTIME=1)
+    if(SEMAPHORE_TEST_PTHREADS)
+        target_compile_options(SemaphoreTest PRIVATE -pthread)
+        target_link_options(SemaphoreTest PRIVATE -pthread -sPTHREAD_POOL_SIZE=2)
+        if(TARGET Semaphore)
+            target_compile_options(Semaphore PRIVATE -pthread)
+        endif()
+    endif()
 else()
-    MESSAGE(FATAL_ERROR "Unknown BIT value: ${BIT}. Please set BIT to '32', '64', 'arm32', or 'arm64'")
+    add_executable(SemaphoreTest SemaphoreTest.cpp SemaphoreTestProcess.cpp SemaphoreTests.cpp SemaphorePolicyTests.cpp SemaphoreFairness.cpp)
+    find_package(Threads REQUIRED)
+    target_link_libraries(SemaphoreTest PRIVATE Threads::Threads)
+    if(SEMAPHORE_TEST_QUEUE)
+        target_sources(SemaphoreTest PRIVATE SemaphoreQueueTests.cpp)
+        target_compile_definitions(SemaphoreTest PRIVATE SEMAPHORE_TEST_QUEUE)
+        target_include_directories(SemaphoreTest BEFORE PRIVATE "${SEMAPHORE_TEST_BORROWED_INCLUDE}")
+    endif()
 endif()
+target_include_directories(SemaphoreTest PRIVATE "${SEMAPHORE_TEST_INCLUDE}")
 
-#建立项目
-PROJECT(${PROJECT_NAME})
-
-#MESSAGE("PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
-#${PROJECT_SOURCE_DIR}="xueyelingshuang/src/SemaphoreTest/SemaphoreTest"
-SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../../../lib/)
-#SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../../../lib/)
-
-#添加包含目录
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../include/)
-
-#添加库目录
-LINK_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../lib/)
-
-#获取代码，在项目中，将所有代码都放在src文件夹中
-AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/ DIR_SRCS)
-#编译可执行程序
-ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS})
-#如果要生成静态链接库
-#ADD_LIBRARY(${PROJECT_NAME} STATIC ${DIR_SRCS})
-#如果要生成动态链接库
-#ADD_LIBRARY(${PROJECT_NAME} SHARED ${DIR_SRCS})
-
-#添加库
-list(APPEND LIBRARYLIST ${LIBRARIESRELY})
-foreach (EVERYLIBRARY ${LIBRARYLIST})
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/${EVERYLIBRARY})
-endforeach ()
+# 白盒副本仅在测试构建目录生成，生产源码不包含测试宏或钩子
+if(SEMAPHORE_TEST_INSTRUMENTATION)
+    set(SEMAPHORE_TEST_INSTRUMENTER "" CACHE FILEPATH "Host SemaphoreTestInstrument executable for cross compilation")
+    if(CMAKE_CROSSCOMPILING)
+        if(NOT EXISTS "${SEMAPHORE_TEST_INSTRUMENTER}")
+            message(FATAL_ERROR "White-box cross builds require a host SEMAPHORE_TEST_INSTRUMENTER")
+        endif()
+        set(semaphore_instrument_command "${SEMAPHORE_TEST_INSTRUMENTER}")
+    else()
+        add_executable(SemaphoreTestInstrument EXCLUDE_FROM_ALL
+            SemaphoreTestInstrument.cpp SemaphoreTestInstrumentRules.cpp)
+        set(semaphore_instrument_command "$<TARGET_FILE:SemaphoreTestInstrument>")
+    endif()
+    set(semaphore_generated "${CMAKE_CURRENT_BINARY_DIR}/SemaphoreInstrumented")
+    set(semaphore_instrumented_sources
+        "${semaphore_generated}/Semaphore.cpp" "${semaphore_generated}/SemaphoreWake.cpp"
+        "${semaphore_generated}/SemaphoreEventPool.cpp" "${semaphore_generated}/SemaphoreCount.cpp")
+    add_custom_target(SemaphoreTestGenerateSources
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${semaphore_generated}"
+        COMMAND "${semaphore_instrument_command}" "${semaphore_source}" "${semaphore_generated}"
+        BYPRODUCTS ${semaphore_instrumented_sources}
+        VERBATIM)
+    if(TARGET SemaphoreTestInstrument)
+        add_dependencies(SemaphoreTestGenerateSources SemaphoreTestInstrument)
+    endif()
+    add_dependencies(SemaphoreTest SemaphoreTestGenerateSources)
+    set_source_files_properties(${semaphore_instrumented_sources} PROPERTIES GENERATED TRUE)
+    target_sources(SemaphoreTest PRIVATE ${semaphore_instrumented_sources}
+        "${semaphore_source}/SemaphoreResult.cpp" "${semaphore_source}/SemaphoreDeadline.cpp"
+        "${semaphore_source}/SemaphoreProcessMemory.cpp")
+    target_include_directories(SemaphoreTest BEFORE PRIVATE "${semaphore_source}" "${CMAKE_CURRENT_LIST_DIR}")
+    target_compile_definitions(SemaphoreTest PRIVATE STATIC_LIB SEMAPHORE_TEST_INSTRUMENTATION)
+    if(CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android)$")
+        target_link_libraries(SemaphoreTest PRIVATE atomic)
+    endif()
+elseif(TARGET Semaphore)
+    target_link_libraries(SemaphoreTest PRIVATE Semaphore)
+elseif(EXISTS "${SEMAPHORE_TEST_LIBRARY}")
+    target_link_libraries(SemaphoreTest PRIVATE "${SEMAPHORE_TEST_LIBRARY}")
+else()
+    message(FATAL_ERROR "Set SEMAPHORE_TEST_LIBRARY to a matching prepared library")
+endif()
+option(PROCESS_WORK_PORTABLE_NOTIFY "Exercise the mobile backend in a private test build" OFF)
+if(PROCESS_WORK_PORTABLE_NOTIFY)
+    if(NOT SEMAPHORE_TEST_INSTRUMENTATION)
+        message(FATAL_ERROR "Portable backend testing needs private sources; enable SEMAPHORE_TEST_INSTRUMENTATION")
+    endif()
+    target_compile_definitions(SemaphoreTest PRIVATE SEMAPHORE_SHARED_COUNTER=1)
+endif()
+enable_testing()
+if(EMSCRIPTEN)
+    add_test(NAME SemaphoreWasm COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} "$<TARGET_FILE:SemaphoreTest>")
+    set_tests_properties(SemaphoreWasm PROPERTIES TIMEOUT 180)
+else()
+    add_test(NAME SemaphoreTest COMMAND SemaphoreTest --mode instant --output "${CMAKE_CURRENT_BINARY_DIR}/reports")
+    set_tests_properties(SemaphoreTest PROPERTIES TIMEOUT 180)
+endif()

@@ -39,14 +39,14 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -88,9 +88,9 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(SemaphoreTestBorrowedInclude);$(SemaphoreTestInclude);$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>$(SemaphoreTestDefinitions);_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -105,9 +105,9 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(SemaphoreTestBorrowedInclude);$(SemaphoreTestInclude);$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>$(SemaphoreTestDefinitions);_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -124,11 +124,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(SemaphoreTestBorrowedInclude);$(SemaphoreTestInclude);$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>$(SemaphoreTestDefinitions);NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -145,11 +145,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(SemaphoreTestBorrowedInclude);$(SemaphoreTestInclude);$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>$(SemaphoreTestDefinitions);NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -163,8 +163,83 @@
     <ClInclude Include="SemaphoreTest.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="SemaphoreTest.cpp" />
+    <ClCompile Include="SemaphoreTest.cpp" Condition="'$(SemaphoreTestKind)'!='instrumenter'" />
   </ItemGroup>
+  <PropertyGroup>
+    <SemaphoreTestKind Condition="'$(SemaphoreTestKind)'==''">consumer</SemaphoreTestKind>
+    <SemaphoreTestLinkage Condition="'$(SemaphoreTestLinkage)'==''">lib</SemaphoreTestLinkage>
+    <SemaphoreTestInclude Condition="'$(SemaphoreTestInclude)'==''">$(ProjectDir)..\..\..\include\Semaphore</SemaphoreTestInclude>
+    <SemaphoreTestSource>$(ProjectDir)..\..\Semaphore\Semaphore\src</SemaphoreTestSource>
+    <SemaphoreTestGenerated>$(IntDir)SemaphoreInstrumented</SemaphoreTestGenerated>
+    <SemaphoreTestTool>$(IntDir)SemaphoreInstrumentTool</SemaphoreTestTool>
+    <SemaphoreTestDefinitions>_CRT_SECURE_NO_WARNINGS</SemaphoreTestDefinitions>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestLinkage)'=='lib'">$(SemaphoreTestDefinitions);STATIC_LIB</SemaphoreTestDefinitions>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestLinkage)'=='dll'">$(SemaphoreTestDefinitions);_SemaphoreAPI</SemaphoreTestDefinitions>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestKind)'=='unit'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_INSTRUMENTATION</SemaphoreTestDefinitions>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestKind)'=='baseline'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_BASELINE</SemaphoreTestDefinitions>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestAllocation)'=='true'">$(SemaphoreTestDefinitions);SEMAPHORE_PERF_ALLOCATION</SemaphoreTestDefinitions>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestPoolPerformance)'=='true' and '$(SemaphoreTestKind)'=='consumer' and '$(SemaphoreTestLinkage)'=='lib'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_POOL_PERFORMANCE</SemaphoreTestDefinitions>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestBackend)'=='legacy'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_LEGACY_WAKE</SemaphoreTestDefinitions>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestBackend)'=='portable'">$(SemaphoreTestDefinitions);PROCESS_WORK_PORTABLE_NOTIFY</SemaphoreTestDefinitions>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestBackend)'=='posixname'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_POSIX_NAME</SemaphoreTestDefinitions>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestQueue)'=='true'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_QUEUE</SemaphoreTestDefinitions>
+    <SemaphoreTestLibrary Condition="'$(SemaphoreTestLibrary)'=='' and '$(Configuration)'=='Debug'">Semaphored.lib</SemaphoreTestLibrary>
+    <SemaphoreTestLibrary Condition="'$(SemaphoreTestLibrary)'=='' and '$(Configuration)'=='Release'">Semaphore.lib</SemaphoreTestLibrary>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestNativeControl)'=='true'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_NATIVE_CONTROL</SemaphoreTestDefinitions>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestNativeNt)'=='true'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_NATIVE_NT</SemaphoreTestDefinitions>
+    <TargetName>$(ProjectName)1.0</TargetName>
+    <TargetName Condition="'$(Configuration)'=='Debug'">$(ProjectName)1.0d</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile Condition="'$(SemaphoreTestKind)'=='unit'">
+      <AdditionalIncludeDirectories>$(SemaphoreTestSource);$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(SemaphoreTestKind)'!='unit' and '$(SemaphoreTestKind)'!='instrumenter'">$(SemaphoreTestLibrary);advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="SemaphoreTestProcess.h" />
+    <ClInclude Include="SemaphoreTestHooks.h" />
+    <ClInclude Include="SemaphoreTestPosixName.h" />
+    <ClCompile Include="SemaphoreTestPosixName.cpp" Condition="'$(SemaphoreTestKind)'=='unit' and '$(SemaphoreTestBackend)'=='posixname'" />
+    <ClInclude Include="SemaphoreTestInstrument.h" />
+    <ClCompile Include="SemaphoreTestInstrument.cpp" Condition="'$(SemaphoreTestKind)'=='instrumenter'" />
+    <ClCompile Include="SemaphoreTestInstrumentRules.cpp" Condition="'$(SemaphoreTestKind)'=='instrumenter'" />
+    <ClInclude Include="SemaphoreWasmTests.h" />
+    <ClInclude Include="SemaphoreTests.h" />
+    <ClInclude Include="SemaphorePerformance.h" />
+    <ClInclude Include="SemaphoreNativeIpc.h" />
+    <ClCompile Include="SemaphoreTestProcess.cpp" Condition="'$(SemaphoreTestKind)'!='instrumenter'" />
+    <ClCompile Include="SemaphoreTests.cpp" Condition="'$(SemaphoreTestKind)'!='baseline' and '$(SemaphoreTestKind)'!='instrumenter'" />
+    <ClCompile Include="SemaphoreFairness.cpp" Condition="'$(SemaphoreTestKind)'!='baseline' and '$(SemaphoreTestKind)'!='instrumenter'" />
+    <ClCompile Include="SemaphorePolicyTests.cpp" Condition="'$(SemaphoreTestKind)'!='baseline' and '$(SemaphoreTestKind)'!='instrumenter'" />
+    <ClCompile Include="SemaphoreQueueTests.cpp" Condition="'$(SemaphoreTestQueue)'=='true' and '$(SemaphoreTestKind)'!='baseline' and '$(SemaphoreTestKind)'!='instrumenter'" />
+    <ClCompile Include="SemaphoreBench.cpp" Condition="'$(SemaphoreTestKind)'!='baseline' and '$(SemaphoreTestKind)'!='instrumenter'" />
+    <ClCompile Include="SemaphorePerformance.cpp" Condition="'$(SemaphoreTestKind)'!='instrumenter'" />
+    <ClCompile Include="SemaphoreNativeIpc.cpp" Condition="'$(SemaphoreTestKind)'!='baseline' and '$(SemaphoreTestKind)'!='instrumenter'" />
+    <ClCompile Include="$(SemaphoreTestGenerated)\Semaphore.cpp" Condition="'$(SemaphoreTestKind)'=='unit'" />
+    <ClCompile Include="$(SemaphoreTestSource)\SemaphoreResult.cpp" Condition="'$(SemaphoreTestKind)'=='unit'" />
+    <ClCompile Include="$(SemaphoreTestSource)\SemaphoreDeadline.cpp" Condition="'$(SemaphoreTestKind)'=='unit'" />
+    <ClCompile Include="$(SemaphoreTestGenerated)\SemaphoreWake.cpp" Condition="'$(SemaphoreTestKind)'=='unit'" />
+    <ClCompile Include="$(SemaphoreTestGenerated)\SemaphoreEventPool.cpp" Condition="'$(SemaphoreTestKind)'=='unit'" />
+    <ClCompile Include="$(SemaphoreTestGenerated)\SemaphoreCount.cpp" Condition="'$(SemaphoreTestKind)'=='unit'" />
+    <ClCompile Include="$(SemaphoreTestSource)\SemaphoreProcessMemory.cpp" Condition="'$(SemaphoreTestKind)'=='unit' and '$(SemaphoreTestBackend)'!='portable'" />
+    <ClCompile Include="SemaphoreTestProcessMemory.cpp" Condition="'$(SemaphoreTestKind)'=='unit' and '$(SemaphoreTestBackend)'=='portable'" />
+    <ClInclude Include="SemaphoreTestProcessMemory.h" />
+    <None Include="SemaphoreDemo.cpp" />
+    <None Include="SemaphoreWasmTests.cpp" />
+    <None Include="run_wasm.js" />
+  </ItemGroup>
+  <!-- 每次白盒构建先校验当前源码并生成私有副本；任何规则失配都会停止构建 -->
+  <Target Name="PrepareSemaphoreInstrumentedSources" BeforeTargets="ClCompile" Condition="'$(SemaphoreTestKind)'=='unit'">
+    <MakeDir Directories="$(SemaphoreTestTool);$(SemaphoreTestGenerated)" />
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Build"
+      Properties="SemaphoreTestKind=instrumenter;SemaphoreTestQueue=false;SemaphoreTestNativeControl=false;SemaphoreTestLinkage=lib;OutDir=$(SemaphoreTestTool)\;IntDir=$(SemaphoreTestTool)\obj\;TargetName=SemaphoreTestInstrument" />
+    <Exec WorkingDirectory="$(ProjectDir)"
+      Command="&quot;$(SemaphoreTestTool)\SemaphoreTestInstrument.exe&quot; &quot;$(SemaphoreTestSource)&quot; &quot;$(SemaphoreTestGenerated)&quot;" />
+  </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
