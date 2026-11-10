@@ -9,7 +9,31 @@ typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::takeCached(Record& 
     {
         return nullptr;
     }
-    const uint32_t bit = cached & (uint32_t(0) - cached);
+    if (m_entryOnly)
+    {
+        record.m_cachedMask.store(cached - 1, std::memory_order_relaxed);
+        return reinterpret_cast<Node*>(record.m_cachedBlock);
+    }
+    // Separate successive payloads in one private batch across cache lines.
+    // The bitmap and physical node identities are unchanged.
+    uint32_t selected = cached;
+    if (sizeof(Node) < 64)
+    {
+        selected = cached & UINT32_C(0x88888888);
+        if (selected == 0)
+        {
+            selected = cached & UINT32_C(0x44444444);
+        }
+        if (selected == 0)
+        {
+            selected = cached & UINT32_C(0x22222222);
+        }
+        if (selected == 0)
+        {
+            selected = cached & UINT32_C(0x11111111);
+        }
+    }
+    const uint32_t bit = selected & (uint32_t(0) - selected);
     Node* node = &record.m_cachedBlock->m_nodes[(record.m_wordHint - 1) * 32 + lowBit(bit)];
     record.m_cachedMask.store(cached ^ bit, std::memory_order_relaxed);
     return node;
@@ -22,15 +46,11 @@ typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::takeBlock(Block* bl
     {
         return nullptr;
     }
-    // At most sixteen records retain batches, with at most 31 unused nodes each.
-    // Scale small-pool batches by observed participants instead of always dividing
-    // by 64: one producer otherwise pays the complete shared claim path per item.
-    const size_t index = static_cast<size_t>(&record - m_records);
-    const size_t participants = (std::max)(size_t(1), (std::min)(size_t(16), m_high.load(std::memory_order_relaxed)));
-    size_t batch = index >= 16
-                       ? 1
-                       : (std::max)(size_t(1),
-                             (std::min)(size_t(32), m_capacity.load(std::memory_order_relaxed) / (participants * 4)));
+    // 所有生产者都可批量领取；小池按实际登记规模限制缓存总量。
+    // 连续相除避免参与者数乘四溢出；外部额度无需节点位图，可领取至多 128 个。
+    const size_t participants = (std::max)(size_t(1), m_high.load(std::memory_order_relaxed));
+    size_t batch = (std::max)(size_t(1),
+        (std::min)(m_entryOnly ? size_t(128) : size_t(32), m_capacity.load(std::memory_order_relaxed) / participants / 4));
     if (batch > 1 && m_config.growThreshold != 0)
     {
         // Do not preclaim across the positive threshold. Leave threshold+1
@@ -39,6 +59,58 @@ typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::takeBlock(Block* bl
         const size_t free = available();
         const size_t margin = free > m_config.growThreshold ? free - m_config.growThreshold : 0;
         batch = margin > 1 ? (std::min)(batch, margin - 1) : 1;
+    }
+    if (m_entryOnly)
+    {
+        const uint64_t capacity = block->m_capacity - (block->m_initial ? 1 : 0);
+        uint64_t claimed = block->m_externalClaims.load(std::memory_order_acquire);
+        for (;;)
+        {
+            // 两种归还只增加且合计不超过累计领取；先读领取，再读归还。
+            // 领取 CAS 验证本次快照；失败只因其他生产者已推进，不等待归还者。
+            const uint64_t returned = block->m_externalReturns.load(std::memory_order_acquire) +
+                block->m_externalRefunds.load(std::memory_order_acquire);
+            if (returned > claimed)
+            {
+                if (!record.m_progress.retry())
+                {
+                    return nullptr;
+                }
+                claimed = block->m_externalClaims.load(std::memory_order_acquire);
+                continue;
+            }
+            const uint64_t used = claimed - returned;
+            if (used >= capacity)
+            {
+                return nullptr;
+            }
+            const size_t count = static_cast<size_t>((std::min)(static_cast<uint64_t>(batch), capacity - used));
+            if (claimed > UINT64_MAX - count)
+            {
+                record.m_creditExhausted = true;
+                return nullptr;
+            }
+            if (block->m_externalClaims.compare_exchange_weak(claimed, claimed + count,
+                std::memory_order_acquire, std::memory_order_relaxed))
+            {
+                m_availableBase.fetch_sub(count, std::memory_order_relaxed);
+                block->m_freeNodes.fetch_sub(count, std::memory_order_relaxed);
+                if (block->m_state.load() != 1)
+                {
+                    m_availableBase.fetch_add(count, std::memory_order_relaxed);
+                    block->m_freeNodes.fetch_add(count, std::memory_order_release);
+                    block->m_externalRefunds.fetch_add(count, std::memory_order_release);
+                    return nullptr;
+                }
+                record.m_cachedBlock = block;
+                record.m_cachedMask.store(static_cast<uint32_t>(count), std::memory_order_relaxed);
+                return takeCached(record);
+            }
+            if (!record.m_progress.retry())
+            {
+                return nullptr;
+            }
+        }
     }
     size_t word = record.m_wordHint % block->m_nodeWords;
     for (size_t visited = 0; visited < block->m_nodeWords; ++visited)
@@ -79,6 +151,10 @@ typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::takeBlock(Block* bl
                 record.m_wordHint = word + 1;
                 return takeCached(record);
             }
+            if (!record.m_progress.retry())
+            {
+                return nullptr;
+            }
         }
         word = word + 1 == block->m_nodeWords ? 0 : word + 1;
     }
@@ -97,6 +173,7 @@ typename LockFreeQueueArena<T>::Block* LockFreeQueueArena<T>::protectedFirst(Rec
             if (block != nullptr && block->m_state.load() == 3)
             {
                 interrupted = true;
+                record.m_progress.interrupt();
                 return nullptr;
             }
             if (block != nullptr && !block->m_initial)
@@ -106,6 +183,11 @@ typename LockFreeQueueArena<T>::Block* LockFreeQueueArena<T>::protectedFirst(Rec
             return block;
         }
         // A changed head proves another operation progressed; no owner is awaited.
+        if (!record.m_progress.retry())
+        {
+            interrupted = true;
+            return nullptr;
+        }
     }
 }
 
@@ -121,6 +203,7 @@ typename LockFreeQueueArena<T>::Block* LockFreeQueueArena<T>::protectedNext(
     {
         traversal.store(nullptr, std::memory_order_release);
         interrupted = true;
+        record.m_progress.interrupt();
         return nullptr;
     }
     record.m_block.store(next);
@@ -143,26 +226,39 @@ typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::findNode(Record& re
         {
             return node;
         }
+        if (record.m_progress.interrupted())
+        {
+            interrupted = true;
+            return nullptr;
+        }
         block = protectedNext(block, record, interrupted);
     }
     return nullptr;
 }
 
 template <class T>
-void LockFreeQueueArena<T>::releaseNode(Node* node, Record* producer)
+void LockFreeQueueArena<T>::releaseNode(Node* node, Record* producer, Block* externalOwner)
 {
-    Block* block = node->block();
+    Block* block = externalOwner != nullptr ? externalOwner : creditOwner(node);
     if (producer != nullptr)
     {
         producer->m_block.store(block);
     }
-    const size_t index = static_cast<size_t>(node - block->m_nodes);
-    node->reset();
+    if (!m_entryOnly && externalOwner == nullptr)
+    {
+        node->reset();
+    }
     if (producer == nullptr)
     {
-        m_returned.store(m_returned.load(std::memory_order_relaxed) + 1, std::memory_order_release);
-        block->m_returnedNodes.store(
-            block->m_returnedNodes.load(std::memory_order_relaxed) + 1, std::memory_order_release);
+        if (m_fixedEntryBlock == nullptr)
+        {
+            m_returned.store(m_returned.load(std::memory_order_relaxed) + 1, std::memory_order_release);
+        }
+        if (!m_entryOnly)
+        {
+            block->m_returnedNodes.store(
+                block->m_returnedNodes.load(std::memory_order_relaxed) + 1, std::memory_order_release);
+        }
     }
     else
     {
@@ -170,7 +266,110 @@ void LockFreeQueueArena<T>::releaseNode(Node* node, Record* producer)
         block->m_freeNodes.fetch_add(1, std::memory_order_release);
     }
     // Return LP. No payload or block access follows publication of the last bit.
-    block->m_nodeBits[index / 32].fetch_or(uint32_t(1) << (index % 32), std::memory_order_release);
+    if (m_entryOnly)
+    {
+        if (producer == nullptr)
+        {
+            block->m_externalReturns.store(block->m_externalReturns.load(std::memory_order_relaxed) + 1,
+                std::memory_order_release);
+        }
+        else
+        {
+            block->m_externalRefunds.fetch_add(1, std::memory_order_release);
+        }
+    }
+    else
+    {
+        const size_t index = static_cast<size_t>(node - block->m_nodes);
+        block->m_nodeBits[index / 32].fetch_or(uint32_t(1) << (index % 32), std::memory_order_release);
+    }
+}
+
+template <class T>
+void LockFreeQueueArena<T>::releaseNodes(Node* const* nodes, size_t count, Block* const* externalOwners)
+{
+    if (m_entryOnly)
+    {
+        if (m_fixedEntryBlock == nullptr)
+        {
+            m_returned.store(m_returned.load(std::memory_order_relaxed) + count, std::memory_order_release);
+        }
+        for (size_t i = 0; i < count;)
+        {
+            Block* block = reinterpret_cast<Block*>(nodes[i]);
+            const size_t begin = i++;
+            while (i < count && nodes[i] == nodes[begin])
+            {
+                ++i;
+            }
+            const size_t returned = i - begin;
+            block->m_externalReturns.store(block->m_externalReturns.load(std::memory_order_relaxed) + returned,
+                std::memory_order_release);
+        }
+        return;
+    }
+    if (count == 1)
+    {
+        releaseNode(nodes[0], nullptr, externalOwners != nullptr ? externalOwners[0] : nullptr);
+        return;
+    }
+    Block* blocks[64];
+    size_t words[64];
+    uint32_t masks[64];
+    // 本次至多 64 个节点，128 槽本地索引总有空位；不访问共享表、不申请内存。
+    uint8_t positions[128] = {};
+    size_t groups = 0;
+    for (size_t i = 0; i < count; ++i)
+    {
+        Node* node = nodes[i];
+        Block* externalOwner = externalOwners != nullptr ? externalOwners[i] : nullptr;
+        Block* block = externalOwner != nullptr ? externalOwner : node->block();
+        const size_t index = static_cast<size_t>(node - block->m_nodes);
+        const size_t word = index / 32;
+        size_t position = ((reinterpret_cast<uintptr_t>(block) >> 6) ^ word) & 127;
+        size_t group = 0;
+        while (positions[position] != 0)
+        {
+            group = positions[position] - 1;
+            if (blocks[group] == block && words[group] == word)
+            {
+                break;
+            }
+            position = (position + 1) & 127;
+        }
+        if (positions[position] == 0)
+        {
+            group = groups++;
+            positions[position] = static_cast<uint8_t>(group + 1);
+            blocks[group] = block;
+            words[group] = word;
+            masks[group] = 0;
+        }
+        masks[group] |= uint32_t(1) << (index % 32);
+        if (externalOwner == nullptr)
+        {
+            node->reset();
+        }
+    }
+    m_returned.store(m_returned.load(std::memory_order_relaxed) + count, std::memory_order_release);
+    for (size_t group = 0; group < groups; ++group)
+    {
+        Block* block = blocks[group];
+        block->m_returnedNodes.store(block->m_returnedNodes.load(std::memory_order_relaxed) + bitCount(masks[group]), std::memory_order_release);
+        block->m_nodeBits[words[group]].fetch_or(masks[group], std::memory_order_release);
+    }
+}
+
+template <class T>
+void LockFreeQueueArena<T>::releaseEntryCredits(Block& block, size_t count)
+{
+    // 固定 Entry 池只有一个不可退役块；其外部归还量同时就是全池消费量。
+    // 可扩容池仍保留跨块累计量，块内空闲量直接使用外部归还计数。
+    if (m_fixedEntryBlock == nullptr)
+    {
+        m_returned.store(m_returned.load(std::memory_order_relaxed) + count, std::memory_order_release);
+    }
+    block.m_externalReturns.store(block.m_externalReturns.load(std::memory_order_relaxed) + count, std::memory_order_release);
 }
 
 template <class T>
@@ -183,13 +382,20 @@ void LockFreeQueueArena<T>::releaseCache(Record& record)
     }
     Block* block = record.m_cachedBlock;
     const size_t word = record.m_wordHint - 1;
-    const size_t count = bitCount(bits);
+    const size_t count = m_entryOnly ? static_cast<size_t>(bits) : bitCount(bits);
     record.m_block.store(block);
     record.m_cachedMask.store(0, std::memory_order_relaxed);
     record.m_cachedBlock = nullptr;
     m_availableBase.fetch_add(count, std::memory_order_relaxed);
     block->m_freeNodes.fetch_add(count, std::memory_order_release);
-    block->m_nodeBits[word].fetch_or(bits, std::memory_order_release);
+    if (m_entryOnly)
+    {
+        block->m_externalRefunds.fetch_add(count, std::memory_order_release);
+    }
+    else
+    {
+        block->m_nodeBits[word].fetch_or(bits, std::memory_order_release);
+    }
 }
 
 template <class T>
@@ -216,30 +422,21 @@ bool LockFreeQueueArena<T>::reclaimCaches(Record& caller)
 }
 
 template <class T>
-bool LockFreeQueueArena<T>::hasCachedClaims() const
+LockFreeQueueResult LockFreeQueueArena<T>::unavailableResult() const
 {
-    const size_t count = (std::min)(size_t(16), m_high.load());
-    for (size_t i = 0; i < count; ++i)
-    {
-        if (m_records[i].m_cachedMask.load(std::memory_order_relaxed) != 0)
-        {
-            return true;
-        }
-    }
-    return false;
+    // 已申请但尚未发布、私有缓存和待回收块都计入预算，不能当作 CAS 竞争。
+    return m_budget.load() >= m_limit ? LockFreeQueueCapacityLimit : LockFreeQueueResourceUnavailable;
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueueArena<T>::grow()
+LockFreeQueueResult LockFreeQueueArena<T>::grow(Record* record)
 {
+    LockFreeQueueProgress committedProgress;
     const size_t before = m_budget.load();
-    // Preserve the public custom-policy outcome: declined/failed calculation
-    // precedes budget truncation. The default has no callback to evaluate.
-    if (before >= m_limit && !m_growPolicy)
+    // Exhausted budget takes precedence; do not invoke a growth policy without room.
+    if (before >= m_limit)
     {
-        return before > m_capacity.load() || m_retiringCapacity.load() != 0 || hasCachedClaims()
-                   ? LockFreeQueueTemporaryUnavailable
-                   : LockFreeQueueCapacityLimit;
+        return LockFreeQueueCapacityLimit;
     }
     LockFreeQueueGrowContext context;
     context.initialCapacity = m_config.initialCapacity;
@@ -266,9 +463,7 @@ LockFreeQueueResult LockFreeQueueArena<T>::grow()
     {
         if (budget >= m_limit)
         {
-            return budget > m_capacity.load() || m_retiringCapacity.load() != 0 || hasCachedClaims()
-                       ? LockFreeQueueTemporaryUnavailable
-                       : LockFreeQueueCapacityLimit;
+            return LockFreeQueueCapacityLimit;
         }
         if (!m_growPolicy)
         {
@@ -286,12 +481,20 @@ LockFreeQueueResult LockFreeQueueArena<T>::grow()
             amount = granted;
             break;
         }
+        if (record != nullptr && !record->m_progress.retry())
+        {
+            return LockFreeQueueBusy;
+        }
+        if (record == nullptr)
+        {
+            committedProgress.retry();
+        }
     }
     size_t peak = m_peak.load(std::memory_order_relaxed);
     const size_t reserved = budget + amount;
     while (peak < reserved && !m_peak.compare_exchange_weak(peak, reserved, std::memory_order_relaxed))
     {
-
+        committedProgress.retry();
     }
     // Recheck reusable resources after the reservation. Concurrent publishers
     // often satisfy this demand; avoid allocating redundant candidate blocks.
@@ -313,10 +516,24 @@ LockFreeQueueResult LockFreeQueueArena<T>::grow()
         return LockFreeQueueSuccess;
     }
     Block* head = m_blocks.load();
-    do
+    for (;;)
     {
         block->m_next.store(head, std::memory_order_relaxed);
-    } while (!m_blocks.compare_exchange_weak(head, block));
+        if (m_blocks.compare_exchange_weak(head, block))
+        {
+            break;
+        }
+        if (record != nullptr && !record->m_progress.retry())
+        {
+            deleteBlock(block, true);
+            m_budget.fetch_sub(amount);
+            return LockFreeQueueBusy;
+        }
+        if (record == nullptr)
+        {
+            committedProgress.retry();
+        }
+    }
     // A published-but-not-open block remains charged and cannot be allocated or
     // shrunk. Other growers can reserve their own budget without waiting for it.
     m_capacity.fetch_add(amount);
@@ -328,7 +545,7 @@ LockFreeQueueResult LockFreeQueueArena<T>::grow()
     uint64_t last = m_lastGrow.load(std::memory_order_relaxed);
     while (time > last && !m_lastGrow.compare_exchange_weak(last, time, std::memory_order_relaxed))
     {
-
+        committedProgress.retry();
     }
     block->m_state.store(1);
     return LockFreeQueueSuccess;
@@ -347,6 +564,7 @@ typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::acquireNode(Record&
         return node;
     }
     bool interrupted = false;
+    record.m_creditExhausted = false;
     node = findNode(record, interrupted);
     if (node == nullptr && !interrupted && reclaimCaches(record))
     {
@@ -354,17 +572,27 @@ typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::acquireNode(Record&
     }
     if (node == nullptr)
     {
+        if (record.m_creditExhausted)
+        {
+            result = LockFreeQueueSequenceExhausted;
+            return nullptr;
+        }
         if (interrupted)
         {
-            result = LockFreeQueueTemporaryUnavailable;
+            record.m_progress.interrupt();
+            result = LockFreeQueueBusy;
             return nullptr;
         }
         if (available() != 0)
         {
-            result = LockFreeQueueTemporaryUnavailable;
+            result = unavailableResult();
             return nullptr;
         }
-        result = grow();
+        result = grow(&record);
+        if (record.m_progress.interrupted())
+        {
+            return nullptr;
+        }
         // The traversal may have preceded another grower's publication. Recheck
         // before reporting a limit: reserved budget becoming published capacity
         // is not evidence that the newly published block is already full.
@@ -373,13 +601,17 @@ typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::acquireNode(Record&
         {
             if (result == LockFreeQueueSuccess || interrupted || available() != 0)
             {
-                result = LockFreeQueueTemporaryUnavailable;
+                result = interrupted ? LockFreeQueueBusy : unavailableResult();
+            }
+            if (interrupted)
+            {
+                record.m_progress.interrupt();
             }
             return nullptr;
         }
     }
     result = LockFreeQueueSuccess;
-    if (m_config.growThreshold != 0 && node->block()->freeNodes() <= m_config.growThreshold)
+    if (m_config.growThreshold != 0 && creditOwner(node)->freeNodes() <= m_config.growThreshold)
     {
         const size_t current = m_capacity.load();
         const size_t reserved = m_budget.load();
@@ -387,7 +619,9 @@ typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::acquireNode(Record&
         if (available() <= m_config.growThreshold && pending <= m_config.growThreshold)
         {
             // Proactive failure never revokes the acquired node.
-            grow();
+            grow(&record);
+            // 提前扩容竞争失败不能撤销本次已经取得的节点。
+            record.m_progress.resume();
         }
     }
     return node;

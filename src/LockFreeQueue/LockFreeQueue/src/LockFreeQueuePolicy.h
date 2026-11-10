@@ -10,7 +10,7 @@ enum LockFreeQueueResult
 {
     // The item (or requested configuration) was committed.
     LockFreeQueueSuccess = 0,
-    // No reusable node and no remaining physical node budget.
+    // Node, producer-record or publication-metadata capacity is exhausted (including reservations).
     LockFreeQueueCapacityLimit,
     // System allocation failed; reservations were returned.
     LockFreeQueueAllocationFailure,
@@ -18,8 +18,10 @@ enum LockFreeQueueResult
     LockFreeQueueConstructionFailure,
     // destroy was called and initialization has not succeeded.
     LockFreeQueueNotInitialized,
-    // Hazard records, pending growth or protected retired nodes occupy resources.
-    LockFreeQueueTemporaryUnavailable,
+    // Only try APIs: a concurrent claim/publication invalidated this attempt.
+    LockFreeQueueBusy,
+    // Source/numeric compatibility alias; no longer denotes resource exhaustion.
+    LockFreeQueueTemporaryUnavailable = LockFreeQueueBusy,
     // The growth policy returned zero.
     LockFreeQueueGrowthDeclined,
     // A policy threw an exception.
@@ -31,7 +33,11 @@ enum LockFreeQueueResult
     // Maintenance could not read its monotonic clock; no shrinking was attempted.
     LockFreeQueueClockUnavailable,
     // Publication segment generation exhausted before wrap; drain and externally quiescent init.
-    LockFreeQueueSequenceExhausted
+    LockFreeQueueSequenceExhausted,
+    // Capacity is below its limit, but observed storage is not safely reusable yet.
+    LockFreeQueueResourceUnavailable,
+    // Configuration after initialization, or a producer context already attached.
+    LockFreeQueueInvalidState
 };
 
 // Physical nodes include the sentinel and nodes awaiting safe reuse.

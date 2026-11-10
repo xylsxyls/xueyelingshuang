@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "LockFreeQueueChannelModels.h"
+#include "LockFreeQueueProgress.h"
 #include <type_traits>
 
 template <class T>
@@ -23,6 +24,7 @@ public:
     /** 建立本对象确定的初始状态；所属类型约定其所有权与生命周期
     */
     LockFreeQueueArenaAuxiliary();
+
 };
 
 // 池内载荷存储；低位合并有效标记，T 原地构造，必须具有不抛异常的析构函数
@@ -66,6 +68,7 @@ public:
     /** 重置独占或外部静止状态；不得与仍借用该对象的线程并发
     */
     void reset();
+
 };
 
 // 一次系统申请的节点与发布段集合；唯一消费者负责关闭、摘除及最终释放
@@ -85,6 +88,12 @@ public:
     std::atomic<size_t> m_freeSegments;
     // 块使用代次，饱和时保守禁止自动摘除
     std::atomic<uint64_t> m_activity;
+    // 外部载荷累计领取额度；达到 uint64_t 上限后明确拒绝，禁止回绕 ABA
+    std::atomic<uint64_t> m_externalClaims;
+    // 生产者回滚及私有缓存归还总量；不减小累计领取数
+    std::atomic<uint64_t> m_externalRefunds;
+    // 常量地址元数据与生产者更新的领取计数隔离，消费者归还节点只读以下地址
+    char m_layoutPadding[64];
     // 块内节点存储，位图领取后才开始对象生命周期
     Node* m_nodes;
     // 块内发布段存储，位图领取后才初始化
@@ -118,8 +127,10 @@ public:
     // 缓存行隔离填充，不承载业务状态
     char m_returnPadding[64];
     // Sole-consumer returns do not contend on the producers' batch counter.
-    // 唯一消费者归还计数，和生产者基数分离以减少缓存行争用
+    // 普通节点的唯一消费者归还计数；Entry 专用块复用 m_externalReturns
     LockFreeQueueAtomic<size_t> m_returnedNodes;
+    // 唯一消费者累计归还外部额度；与生产者领取及退款组成非回绕预算
+    LockFreeQueueAtomic<uint64_t> m_externalReturns;
     // 缓存行隔离填充，不承载业务状态
     char m_returnEndPadding[64];
 
@@ -134,9 +145,10 @@ public:
     @return 上述操作对应的数值、状态或弱一致快照
     */
     size_t freeNodes() const;
+
 };
 
-// 对齐的独占生产者登记槽；缓存最多 31 个未用节点并保护当前发布段
+// 对齐的独占生产者登记槽；缓存最多 31 个普通节点或 127 个外部额度并保护发布段
 template <class T>
 struct LockFreeQueueArenaRecord
 {
@@ -145,13 +157,15 @@ public:
     LockFreeQueueAtomic<LockFreeQueueChannelSegment<LockFreeQueueArenaNode<T>>*> m_hazard;
     // 本生产者在当前段中已验证的发布前缀位置
     size_t m_hint;
-    // 本记录的发布 CAS 竞争和保护验证重试计数，饱和不回绕
-    LockFreeQueueAtomic<uint64_t> m_retries;
+    // 本执行流的高频调度状态复用原诊断计数位置，普通成功提交只访问首个缓存行。
+    LockFreeQueueProgress m_progress;
+    // 本次慢速额度领取是否观察到累计序号耗尽；成功领取时不影响结果。
+    bool m_creditExhausted;
     // 非回绕发布段代次，用于使旧位置提示失效
     uint64_t m_generation;
-    // 登记槽租约：0 空闲，1 独占；不能等待另一持有者
+    // 登记槽租约：0 空闲，1 独占；不能等待另一持有者。
     LockFreeQueueAtomic<uint32_t> m_active;
-    // 当前私有批次未用节点位图，已计入物理占用
+    // 普通模式为未用节点位图，外部额度模式为未用数量；均已计入物理占用
     LockFreeQueueAtomic<uint32_t> m_cachedMask;
     // 分配遍历主保护；跨段时与次保护共同验证
     LockFreeQueueAtomic<LockFreeQueueArenaBlock<T>*> m_block;
@@ -159,15 +173,23 @@ public:
     LockFreeQueueArenaBlock<T>* m_cachedBlock;
     // 私有批次位图字下标加一，同时用作下次查找提示
     size_t m_wordHint;
+    // 分散计数模式下由当前租约持有者更新的累计发布预留
+    std::atomic<size_t> m_published;
+    // 仅竞争失败时更新的诊断计数，饱和不回绕；排在高频操作状态之后。
+    LockFreeQueueAtomic<uint64_t> m_retries;
 #if UINTPTR_MAX == UINT32_MAX
     // 缓存行隔离填充，不承载业务状态
-    char m_arenaPadding[20];
+    char m_arenaPadding[7];
+#else
+    // 保持完整缓存行步长，避免相邻生产者相互失效
+    char m_arenaPadding[47];
 #endif
 
 public:
     /** 建立本对象确定的初始状态；所属类型约定其所有权与生命周期
     */
     LockFreeQueueArenaRecord();
+
 };
 
 #include "LockFreeQueueArenaModels.inl"

@@ -26,15 +26,19 @@ inline const char* LockFreeQueueError::what() const throw()
     switch (m_result)
     {
     case LockFreeQueueCapacityLimit:
-        return "LockFreeQueue: physical capacity exhausted";
+        return "LockFreeQueue: node or metadata capacity exhausted";
     case LockFreeQueueAllocationFailure:
         return "LockFreeQueue: allocation failed";
     case LockFreeQueueConstructionFailure:
         return "LockFreeQueue: payload construction failed";
     case LockFreeQueueNotInitialized:
         return "LockFreeQueue: not initialized";
-    case LockFreeQueueTemporaryUnavailable:
-        return "LockFreeQueue: resources temporarily unavailable";
+    case LockFreeQueueBusy:
+        return "LockFreeQueue: try operation lost contention";
+    case LockFreeQueueResourceUnavailable:
+        return "LockFreeQueue: storage is not safely reusable yet";
+    case LockFreeQueueInvalidState:
+        return "LockFreeQueue: operation is invalid in the current state";
     case LockFreeQueueGrowthDeclined:
         return "LockFreeQueue: growth declined";
     case LockFreeQueuePolicyFailure:

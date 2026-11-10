@@ -7,7 +7,7 @@ typename LockFreeQueueArena<T>::Segment* LockFreeQueueArena<T>::acquireSegment(
 {
     if (result != nullptr)
     {
-        *result = LockFreeQueueTemporaryUnavailable;
+        *result = LockFreeQueueCapacityLimit;
     }
     bool interrupted = false;
     Block* block = initialOnly ? m_initial : protectedFirst(record, interrupted);
@@ -29,18 +29,26 @@ typename LockFreeQueueArena<T>::Segment* LockFreeQueueArena<T>::acquireSegment(
                         {
                             block->m_freeSegments.fetch_add(1, std::memory_order_release);
                             block->m_segmentBits[word].fetch_or(bit, std::memory_order_release);
+                            if (result != nullptr)
+                            {
+                                *result = unavailableResult();
+                            }
                             return nullptr;
                         }
                         const size_t index = word * 32 + lowBit(bit);
                         Segment* segment = new (&block->m_segments[index]) Segment();
                         segment->m_poolIndex = index;
                         segment->m_owner = block;
-                        if (!assignGeneration(segment, result))
+                        if (!assignGeneration(segment, result, &record))
                         {
                             releaseSegment(segment, initialOnly ? nullptr : &record);
                             return nullptr;
                         }
                         return segment;
+                    }
+                    if (!record.m_progress.retry())
+                    {
+                        return nullptr;
                     }
                 }
             }
@@ -51,7 +59,7 @@ typename LockFreeQueueArena<T>::Segment* LockFreeQueueArena<T>::acquireSegment(
         }
         block = protectedNext(block, record, interrupted);
     }
-    return initialOnly ? nullptr : acquireAuxiliary(record, result);
+    return initialOnly || interrupted || record.m_progress.interrupted() ? nullptr : acquireAuxiliary(record, result);
 }
 
 template <class T>
@@ -257,7 +265,8 @@ LockFreeQueueMaintenanceResult LockFreeQueueArena<T>::maintain(size_t budget)
                 if (record.m_active.compare_exchange_strong(
                         expected, 1, std::memory_order_acquire, std::memory_order_relaxed))
                 {
-                    result.reclaimedNodes += bitCount(record.m_cachedMask.load(std::memory_order_relaxed));
+                    const uint32_t cached = record.m_cachedMask.load(std::memory_order_relaxed);
+                    result.reclaimedNodes += m_entryOnly ? static_cast<size_t>(cached) : bitCount(cached);
                     releaseCache(record);
                     leave(record, true);
                 }
@@ -423,7 +432,7 @@ LockFreeQueueMaintenanceResult LockFreeQueueArena<T>::maintain(size_t budget)
 template <class T>
 size_t LockFreeQueueArena<T>::available() const
 {
-    const size_t returned = m_returned.load(std::memory_order_acquire);
+    const size_t returned = consumed();
     const size_t count = m_availableBase.load(std::memory_order_acquire) + returned;
     const size_t capacity = m_capacity.load();
     // A concurrent mixed snapshot is never an admission gate. Clamp modular
@@ -467,14 +476,25 @@ LockFreeQueuePoolStatistics LockFreeQueueArena<T>::statistics() const
 }
 
 template <class T>
-size_t LockFreeQueueArena<T>::consumed() const
+size_t LockFreeQueueArena<T>::published() const
 {
-    return m_returned.load(std::memory_order_acquire);
+    size_t count = 0;
+    const size_t high = m_high.load(std::memory_order_acquire);
+    for (size_t i = 0; i < high; ++i)
+    {
+        count += m_records[i].m_published.load(std::memory_order_acquire);
+    }
+    return count;
 }
 
-
-
-
-
+template <class T>
+size_t LockFreeQueueArena<T>::consumed() const
+{
+    if (m_fixedEntryBlock != nullptr)
+    {
+        return static_cast<size_t>(m_fixedEntryBlock->m_externalReturns.load(std::memory_order_acquire));
+    }
+    return m_returned.load(std::memory_order_acquire);
+}
 
 #endif

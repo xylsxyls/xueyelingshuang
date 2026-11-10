@@ -32,20 +32,43 @@ void LockFreeQueueProducer<T>::release()
 }
 
 template <class T>
-void LockFreeQueueProducer<T>::push(const T& value)
+LockFreeQueueResult LockFreeQueueProducer<T>::push(const T& value)
 {
-    const LockFreeQueueResult result =
-        m_owner == nullptr ? LockFreeQueueNotInitialized : m_owner->pushImpl(value, true, m_record);
-    if (result != LockFreeQueueSuccess)
-    {
-        throw LockFreeQueueError(result);
-    }
+    return m_owner == nullptr ? LockFreeQueueNotInitialized : m_owner->pushImpl(value, true, m_record);
 }
 
 template <class T>
 LockFreeQueueResult LockFreeQueueProducer<T>::tryPush(const T& value)
 {
     return m_owner == nullptr ? LockFreeQueueNotInitialized : m_owner->pushImpl(value, false, m_record);
+}
+
+template <class T>
+LockFreeQueueResult LockFreeQueueProducer<T>::tryPushAndFence(const T& value)
+{
+    const LockFreeQueueResult result = tryPush(value);
+    if (result == LockFreeQueueSuccess)
+    {
+        m_owner->publicationFence();
+    }
+    return result;
+}
+
+template <class T>
+LockFreeQueueResult LockFreeQueueProducer<T>::tryPushEntry(LockFreeQueueEntry<T>& entry)
+{
+    return m_owner == nullptr ? LockFreeQueueNotInitialized : m_owner->pushEntryImpl(entry, m_record);
+}
+
+template <class T>
+LockFreeQueueResult LockFreeQueueProducer<T>::tryPushEntryAndFence(LockFreeQueueEntry<T>& entry)
+{
+    const LockFreeQueueResult result = tryPushEntry(entry);
+    if (result == LockFreeQueueSuccess)
+    {
+        m_owner->publicationFence();
+    }
+    return result;
 }
 
 #endif

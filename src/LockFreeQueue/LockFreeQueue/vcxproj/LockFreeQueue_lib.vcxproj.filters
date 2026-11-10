@@ -40,9 +40,15 @@
   <ItemGroup>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\LockFreeQueueEntry.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\LockFreeQueueProducer.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <None Include="..\src\LockFreeQueueEntry.inl">
+      <Filter>头文件</Filter>
+    </None>
     <None Include="..\src\LockFreeQueueProducer.inl">
       <Filter>头文件</Filter>
     </None>
@@ -51,7 +57,13 @@
     <ClInclude Include="..\src\LockFreeQueueAtomic.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\LockFreeQueueProgress.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <None Include="..\src\LockFreeQueueAtomic.inl">
+      <Filter>头文件</Filter>
+    </None>
+    <None Include="..\src\LockFreeQueueProgress.inl">
       <Filter>头文件</Filter>
     </None>
   </ItemGroup>

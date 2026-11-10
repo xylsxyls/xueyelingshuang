@@ -2,13 +2,25 @@
 #define LOCK_FREE_QUEUE_ARENA_AUXILIARY_INL
 
 template <class T>
-bool LockFreeQueueArena<T>::assignGeneration(Segment* segment, LockFreeQueueResult* result)
+bool LockFreeQueueArena<T>::assignGeneration(Segment* segment, LockFreeQueueResult* result, Record* record)
 {
+    LockFreeQueueProgress progress;
     uint64_t generation = m_segmentSequence.load(std::memory_order_relaxed);
     while (generation != UINT64_MAX &&
            !m_segmentSequence.compare_exchange_weak(generation, generation + 1, std::memory_order_relaxed))
     {
-
+        if (record != nullptr && !record->m_progress.retry())
+        {
+            if (result != nullptr)
+            {
+                *result = LockFreeQueueBusy;
+            }
+            return false;
+        }
+        if (record == nullptr)
+        {
+            progress.retry();
+        }
     }
     if (generation == UINT64_MAX)
     {
@@ -31,6 +43,7 @@ typename LockFreeQueueArena<T>::Segment* LockFreeQueueArena<T>::acquireAuxiliary
     Record& record, LockFreeQueueResult* result)
 {
     const size_t start = static_cast<size_t>(&record - m_records) * 4;
+    bool competing = false;
     // Exhaust reusable cached descriptors before allocating any new storage.
     for (size_t pass = 0; pass < 2; ++pass)
     {
@@ -46,6 +59,7 @@ typename LockFreeQueueArena<T>::Segment* LockFreeQueueArena<T>::acquireAuxiliary
             if (!slot.m_bits.compare_exchange_strong(
                     bits, bits | 1, std::memory_order_acquire, std::memory_order_relaxed))
             {
+                competing = true;
                 continue;
             }
             Segment* segment = reinterpret_cast<Segment*>(bits);
@@ -73,7 +87,7 @@ typename LockFreeQueueArena<T>::Segment* LockFreeQueueArena<T>::acquireAuxiliary
             }
             segment->m_idleSince = 0;
             segment->reset();
-            if (!assignGeneration(segment, result))
+            if (!assignGeneration(segment, result, &record))
             {
                 slot.m_bits.store(reinterpret_cast<uintptr_t>(segment), std::memory_order_release);
                 return nullptr;
@@ -84,9 +98,14 @@ typename LockFreeQueueArena<T>::Segment* LockFreeQueueArena<T>::acquireAuxiliary
             return segment;
         }
     }
+    // 扫描中输掉领取竞争不等同于所有登记槽真实占满；push 必须由本线程重新尝试。
+    if (competing)
+    {
+        record.m_progress.interrupt();
+    }
     if (result != nullptr)
     {
-        *result = LockFreeQueueTemporaryUnavailable;
+        *result = competing ? LockFreeQueueBusy : LockFreeQueueCapacityLimit;
     }
     return nullptr;
 }

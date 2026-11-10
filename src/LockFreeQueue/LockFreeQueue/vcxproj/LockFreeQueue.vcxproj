@@ -182,12 +182,16 @@
   <ItemGroup>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\LockFreeQueueEntry.h" />
     <ClInclude Include="..\src\LockFreeQueueProducer.h" />
+    <None Include="..\src\LockFreeQueueEntry.inl" />
     <None Include="..\src\LockFreeQueueProducer.inl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\LockFreeQueueAtomic.h" />
+    <ClInclude Include="..\src\LockFreeQueueProgress.h" />
     <None Include="..\src\LockFreeQueueAtomic.inl" />
+    <None Include="..\src\LockFreeQueueProgress.inl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\LockFreeQueueArena.h" />

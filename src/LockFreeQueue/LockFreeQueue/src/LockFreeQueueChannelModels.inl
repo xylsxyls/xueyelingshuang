@@ -23,8 +23,9 @@ void LockFreeQueueChannelSegment<Node>::reset()
 template <class Node>
 size_t LockFreeQueueChannelSegment<Node>::mapped(size_t position)
 {
-    // Adjacent publication positions use different cache lines.
-    return (position & 7) * (kCellCount / 8) + (position >> 3);
+    // Spread adjacent logical slots across cache lines so a near-tail consumer
+    // does not repeatedly invalidate the producer next-slot cache line.
+    return ((position & 15) << 4) | (position >> 4);
 }
 
 #endif

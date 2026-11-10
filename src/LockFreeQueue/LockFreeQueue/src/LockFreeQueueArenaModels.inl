@@ -49,7 +49,9 @@ void LockFreeQueueArenaNode<T>::construct(const T& value)
 template <class T>
 void LockFreeQueueArenaNode<T>::reset()
 {
-    if ((m_owner & 1) != 0)
+    // 平凡析构载荷没有资源释放动作；归还由位图记录，不必写邻近生产者仍在构造的节点缓存行。
+    // 下一次 placement-new 或整个节点存储结束会结束其旧生命周期。
+    if (!std::is_trivially_destructible<T>::value && (m_owner & 1) != 0)
     {
         data()->~T();
         m_owner &= ~uintptr_t(1);
@@ -59,11 +61,13 @@ void LockFreeQueueArenaNode<T>::reset()
 template <class T>
 LockFreeQueueArenaBlock<T>::LockFreeQueueArenaBlock(size_t capacity, bool initial) :
 m_next(nullptr), m_state(0), m_freeNodes(capacity - (initial ? 1 : 0)),
-m_freeSegments((capacity + Segment::kCellCount - 1) / Segment::kCellCount + 2), m_activity(0), m_nodes(nullptr),
+m_freeSegments((capacity + Segment::kCellCount - 1) / Segment::kCellCount + 2), m_activity(0),
+m_externalClaims(0), m_externalRefunds(0), m_nodes(nullptr),
 m_segments(nullptr), m_nodeBits(nullptr), m_segmentBits(nullptr), m_capacity(capacity),
 m_nodeWords((capacity + 31) / 32), m_segmentCount((capacity + Segment::kCellCount - 1) / Segment::kCellCount + 2),
 m_segmentWords((m_segmentCount + 31) / 32), m_bytes(0), m_storage(nullptr), m_initial(initial), m_seenActivity(0),
-m_idleSince(0), m_idleObserved(false), m_retiredNext(nullptr), m_returnedNodes(0)
+m_idleSince(0), m_idleObserved(false), m_retiredNext(nullptr), m_returnedNodes(0),
+m_externalReturns(0)
 {
 
 }
@@ -71,15 +75,17 @@ m_idleSince(0), m_idleObserved(false), m_retiredNext(nullptr), m_returnedNodes(0
 template <class T>
 size_t LockFreeQueueArenaBlock<T>::freeNodes() const
 {
-    const size_t returned = m_returnedNodes.load(std::memory_order_acquire);
+    // 发布后的 m_nodes 为空即为 Entry 专用块；消费归还不再重复记录两份计数。
+    const size_t returned = m_nodes == nullptr ? static_cast<size_t>(m_externalReturns.load(std::memory_order_acquire)) :
+        m_returnedNodes.load(std::memory_order_acquire);
     const size_t free = m_freeNodes.load(std::memory_order_acquire) + returned;
     return free <= m_capacity ? free : 0;
 }
 
 template <class T>
 LockFreeQueueArenaRecord<T>::LockFreeQueueArenaRecord() :
-m_hazard(nullptr), m_hint(0), m_retries(0), m_generation(0), m_active(0), m_cachedMask(0), m_block(nullptr),
-m_cachedBlock(nullptr), m_wordHint(0)
+m_hazard(nullptr), m_hint(0), m_creditExhausted(false), m_generation(0), m_active(0), m_cachedMask(0), m_block(nullptr),
+m_cachedBlock(nullptr), m_wordHint(0), m_published(0), m_retries(0)
 {
 
 }

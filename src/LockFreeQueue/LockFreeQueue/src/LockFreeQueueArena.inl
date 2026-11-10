@@ -3,14 +3,14 @@
 
 template <class T>
 LockFreeQueueArena<T>::LockFreeQueueArena() :
-m_records(nullptr), m_traversal(nullptr), m_recordStorage(nullptr), m_recordBytes(0), m_auxiliary(nullptr),
-m_auxiliaryCount(0), m_auxiliaryBytes(0), m_auxiliaryScan(0), m_high(0), m_blocks(nullptr), m_initial(nullptr),
+m_entryOnly(false), m_records(nullptr), m_traversal(nullptr), m_recordStorage(nullptr), m_recordBytes(0), m_auxiliary(nullptr),
+m_auxiliaryCount(0), m_auxiliaryBytes(0), m_auxiliaryScan(0), m_high(0), m_blocks(nullptr), m_initial(nullptr), m_fixedEntryBlock(nullptr),
 m_capacity(0), m_availableBase(0), m_returned(0), m_budget(0), m_peak(0), m_retiringCapacity(0), m_bytes(0),
 m_blockCount(0), m_grows(0), m_allocations(0), m_lastGrow(0), m_segmentSequence(0), m_limit(0),
 m_retiredSegments(nullptr), m_retiredSegmentTail(nullptr), m_retiredBlocks(nullptr), m_retiredBlockTail(nullptr),
 m_scan(nullptr), m_previous(nullptr), m_recordScan(0), m_maintenanceTurn(0)
 {
-    static_assert(sizeof(Record) == 64, "Record stride must isolate producer cache lines");
+    static_assert(sizeof(Record) % 64 == 0, "Record stride must isolate producer cache lines");
     static_assert(std::alignment_of<Segment>::value >= 2, "Auxiliary owner bit requires aligned segments");
 }
 
@@ -50,7 +50,7 @@ LockFreeQueueResult LockFreeQueueArena<T>::configure(const LockFreeQueuePoolConf
 {
     if (initialized())
     {
-        return LockFreeQueueTemporaryUnavailable;
+        return LockFreeQueueInvalidState;
     }
     size_t limit = 0;
     if (!validate(config, limit))
@@ -60,6 +60,30 @@ LockFreeQueueResult LockFreeQueueArena<T>::configure(const LockFreeQueuePoolConf
     m_config = config;
     m_limit = limit;
     return LockFreeQueueSuccess;
+}
+
+template <class T>
+LockFreeQueueResult LockFreeQueueArena<T>::configureEntryOnly(bool enabled)
+{
+    if (initialized())
+    {
+        return LockFreeQueueInvalidState;
+    }
+    m_entryOnly = enabled;
+    return LockFreeQueueSuccess;
+}
+
+template <class T>
+bool LockFreeQueueArena<T>::entryOnly() const
+{
+    return m_entryOnly;
+}
+
+template <class T>
+typename LockFreeQueueArena<T>::Block* LockFreeQueueArena<T>::creditOwner(Node* credit) const
+{
+    // 外部专用模式的 Node* 只是传递额度的标识，禁止按 Node 解引用。
+    return m_entryOnly ? reinterpret_cast<Block*>(credit) : credit->block();
 }
 
 template <class T>
@@ -96,11 +120,12 @@ template <class T>
 typename LockFreeQueueArena<T>::Block* LockFreeQueueArena<T>::createBlock(size_t amount, bool initial)
 {
     const size_t maximum = (std::numeric_limits<size_t>::max)();
-    const size_t nodeWords = (amount + 31) / 32;
+    const size_t nodeCount = m_entryOnly ? 0 : amount;
+    const size_t nodeWords = (nodeCount + 31) / 32;
     const size_t segments = (amount + Segment::kCellCount - 1) / Segment::kCellCount + 2;
     const size_t segmentWords = (segments + 31) / 32;
     size_t bytes = sizeof(Block) + 4 * 63;
-    const size_t counts[] = {amount, segments, nodeWords, segmentWords};
+    const size_t counts[] = {nodeCount, segments, nodeWords, segmentWords};
     const size_t widths[] = {
         sizeof(Node), sizeof(Segment), sizeof(std::atomic<uint32_t>), sizeof(std::atomic<uint32_t>)};
     for (size_t i = 0; i < 4; ++i)
@@ -125,15 +150,16 @@ typename LockFreeQueueArena<T>::Block* LockFreeQueueArena<T>::createBlock(size_t
     Block* block = new (reinterpret_cast<void*>(cursor)) Block(amount, initial);
     block->m_storage = storage;
     block->m_bytes = bytes;
+    block->m_nodeWords = nodeWords;
     cursor = (cursor + sizeof(Block) + 63) & ~uintptr_t(63);
-    block->m_nodes = reinterpret_cast<Node*>(cursor);
-    cursor = (cursor + amount * sizeof(Node) + 63) & ~uintptr_t(63);
+    block->m_nodes = m_entryOnly ? nullptr : reinterpret_cast<Node*>(cursor);
+    cursor = (cursor + nodeCount * sizeof(Node) + 63) & ~uintptr_t(63);
     block->m_segments = reinterpret_cast<Segment*>(cursor);
     // Reserve storage and initialize allocation maps only. Each exclusive claim
     // starts its objects' lifetimes before publication. A grower need not touch
     // every payload/segment page while other producers wait for usable capacity.
     cursor = (cursor + segments * sizeof(Segment) + 63) & ~uintptr_t(63);
-    block->m_nodeBits = reinterpret_cast<std::atomic<uint32_t>*>(cursor);
+    block->m_nodeBits = m_entryOnly ? nullptr : reinterpret_cast<std::atomic<uint32_t>*>(cursor);
     for (size_t i = 0; i < nodeWords; ++i)
     {
         const size_t left = amount - i * 32;
@@ -245,6 +271,8 @@ LockFreeQueueResult LockFreeQueueArena<T>::initialize()
         destroy();
         return LockFreeQueueAtomicUnavailable;
     }
+    m_fixedEntryBlock = m_entryOnly && m_config.maximumCapacity != -1 &&
+        static_cast<uint64_t>(m_config.maximumCapacity) == m_config.initialCapacity ? m_initial : nullptr;
     return LockFreeQueueSuccess;
 }
 
@@ -292,6 +320,7 @@ void LockFreeQueueArena<T>::destroy()
     m_auxiliaryScan = 0;
     m_blocks.store(nullptr);
     m_initial = nullptr;
+    m_fixedEntryBlock = nullptr;
     m_retiredSegments = nullptr;
     m_retiredSegmentTail = nullptr;
     m_retiredBlocks = nullptr;
@@ -316,36 +345,65 @@ void LockFreeQueueArena<T>::destroy()
 }
 
 template <class T>
-typename LockFreeQueueArena<T>::Record* LockFreeQueueArena<T>::enter()
+typename LockFreeQueueArena<T>::Record* LockFreeQueueArena<T>::enter(bool wait, LockFreeQueueResult* result)
 {
     if (!initialized())
     {
+        if (result != nullptr)
+        {
+            *result = LockFreeQueueNotInitialized;
+        }
         return nullptr;
     }
 #if defined(_MSC_VER) && _MSC_VER == 1800
     static __declspec(thread) size_t s_hint = 0;
+    static __declspec(thread) uint32_t s_rejections = 0;
 #else
     static thread_local size_t s_hint = 0;
+    static thread_local uint32_t s_rejections = 0;
 #endif
-    const size_t preferred = s_hint < m_high.load(std::memory_order_relaxed) ? s_hint : 0;
-    for (size_t step = 0; step < m_config.maximumProducers; ++step)
+    LockFreeQueueProgress progress;
+    for (;;)
     {
-        const size_t i = step == 0 ? preferred : (step <= preferred ? step - 1 : step);
-        uint32_t expected = 0;
-        if (m_records[i].m_active.load(std::memory_order_relaxed) == 0 &&
-            m_records[i].m_active.compare_exchange_strong(
-                expected, 1, std::memory_order_acquire, std::memory_order_relaxed))
+        bool competing = false;
+        const size_t preferred = s_hint < m_high.load(std::memory_order_relaxed) ? s_hint : 0;
+        for (size_t step = 0; step < m_config.maximumProducers; ++step)
         {
-            size_t high = m_high.load();
-            while (high < i + 1 && !m_high.compare_exchange_weak(high, i + 1))
+            const size_t i = step == 0 ? preferred : (step <= preferred ? step - 1 : step);
+            uint32_t expected = m_records[i].m_active.load(std::memory_order_relaxed);
+            const bool available = expected == 0;
+            if (available && m_records[i].m_active.compare_exchange_strong(
+                expected, 1, std::memory_order_acquire, std::memory_order_relaxed))
             {
-
+                size_t high = m_high.load();
+                while (high < i + 1 && !m_high.compare_exchange_strong(high, i + 1))
+                {
+                    progress.retry();
+                }
+                s_hint = i;
+                if (result != nullptr)
+                {
+                    *result = LockFreeQueueSuccess;
+                }
+                return &m_records[i];
             }
-            s_hint = i;
-            return &m_records[i];
+            competing = competing || available;
         }
+        if (!wait || !competing)
+        {
+            if (result != nullptr)
+            {
+                *result = competing ? LockFreeQueueBusy : LockFreeQueueCapacityLimit;
+            }
+            if ((++s_rejections & 1023) == 0)
+            {
+                std::this_thread::yield();
+            }
+            return nullptr;
+        }
+        // 仅已观察空闲登记的 CAS 竞争重试；所有登记已占用则明确报告资源不足。
+        progress.retry();
     }
-    return nullptr;
 }
 
 template <class T>
@@ -375,7 +433,9 @@ bool LockFreeQueueArena<T>::atomicsLockFree() const
     return publicationBits.is_lock_free() && m_blocks.is_lock_free() && m_returned.is_lock_free() &&
            m_capacity.is_lock_free() && m_grows.is_lock_free() &&
            (m_records == nullptr || (m_records[0].m_active.is_lock_free() && m_records[0].m_hazard.is_lock_free())) &&
-           (m_initial == nullptr || (m_initial->m_nodeBits[0].is_lock_free() && m_initial->m_activity.is_lock_free()));
+           (m_initial == nullptr || ((m_initial->m_nodeWords == 0 || m_initial->m_nodeBits[0].is_lock_free()) && m_initial->m_activity.is_lock_free() &&
+               m_initial->m_externalClaims.is_lock_free() && m_initial->m_externalRefunds.is_lock_free() &&
+               m_initial->m_externalReturns.is_lock_free()));
 }
 
 template <class T>
@@ -393,6 +453,12 @@ bool LockFreeQueueArena<T>::automaticMaintenanceNeeded() const
 }
 
 template <class T>
+typename LockFreeQueueArena<T>::Block* LockFreeQueueArena<T>::fixedEntryBlock() const
+{
+    return m_fixedEntryBlock;
+}
+
+template <class T>
 typename LockFreeQueueArena<T>::Block* LockFreeQueueArena<T>::initialBlock() const
 {
     return m_initial;
@@ -401,13 +467,10 @@ typename LockFreeQueueArena<T>::Block* LockFreeQueueArena<T>::initialBlock() con
 template <class T>
 size_t LockFreeQueueArena<T>::bitCount(uint32_t bits)
 {
-    size_t count = 0;
-    while (bits != 0)
-    {
-        bits &= bits - 1;
-        ++count;
-    }
-    return count;
+    bits -= (bits >> 1) & UINT32_C(0x55555555);
+    bits = (bits & UINT32_C(0x33333333)) + ((bits >> 2) & UINT32_C(0x33333333));
+    bits = (bits + (bits >> 4)) & UINT32_C(0x0f0f0f0f);
+    return static_cast<size_t>((bits * UINT32_C(0x01010101)) >> 24);
 }
 
 template <class T>
@@ -433,10 +496,11 @@ size_t LockFreeQueueArena<T>::lowBit(uint32_t bit)
 template <class T>
 void LockFreeQueueArena<T>::increment(std::atomic<uint64_t>& value)
 {
+    LockFreeQueueProgress progress;
     uint64_t old = value.load(std::memory_order_relaxed);
     while (old != UINT64_MAX && !value.compare_exchange_weak(old, old + 1, std::memory_order_relaxed))
     {
-
+        progress.retry();
     }
 }
 

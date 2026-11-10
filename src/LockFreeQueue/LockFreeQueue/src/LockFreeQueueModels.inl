@@ -3,7 +3,7 @@
 
 template <class T>
 LockFreeQueueChannelPool<T>::LockFreeQueueChannelPool(LockFreeQueueArena<T>& arena, Record* record) :
-m_arena(&arena), m_record(record), m_result(LockFreeQueueTemporaryUnavailable)
+m_arena(&arena), m_record(record), m_result(LockFreeQueueResourceUnavailable)
 {
 
 }
@@ -20,6 +20,7 @@ typename LockFreeQueueChannelPool<T>::Segment* LockFreeQueueChannelPool<T>::acqu
     // The initial block is never detached, so this consumer-only claim needs no
     // registered producer hazard and creates no persistent registration.
     Record initialClaim;
+    initialClaim.m_progress.begin(false);
     return m_arena->acquireSegment(initialClaim, true);
 }
 
