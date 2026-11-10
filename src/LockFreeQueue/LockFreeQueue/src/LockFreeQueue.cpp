@@ -9,6 +9,7 @@
 // 单独复制时还需 #include "LockFreeQueueAPI.h"，并配置本库头文件包含目录。
 // 已验证：VS2013 Win32/x64 的 Debug/Release，四次编译运行通过；不是并发或性能测试。
 // BEGIN LOCKFREEQUEUE USAGE DEMO
+
 // #include <iostream>
 // #include <memory>
 //
@@ -310,4 +311,5 @@
 //         return 4;
 //     }
 // }
+
 // END LOCKFREEQUEUE USAGE DEMO
