@@ -1,0 +1,135 @@
+syntax = "proto2";
+package pt;
+option optimize_for = LITE_RUNTIME;
+
+/** 消息返回码
+*/
+message RspCode
+{
+    optional int32 code = 1;
+    optional string errorMessage = 2;
+}
+
+/** 变种类型
+*/
+message VariantData
+{
+    optional bytes data = 1;
+    optional int32 type = 2;
+}
+
+/** std::map的一个节点
+*/
+message MapKeyValue
+{
+    optional int32 key = 1;
+    optional VariantData value = 2;
+}
+
+/** 转化为std::map<int32_t, Variant>
+*/
+message MapData
+{
+    repeated MapKeyValue mapKeyValue = 1;
+}
+
+/** 转化为std::list<Variant>
+*/
+message ListData
+{
+    repeated VariantData value = 1;
+}
+
+/** 转化为std::vector<std::vector<Variant>>
+*/
+message TableData
+{
+    repeated ListData listData = 1;
+}
+
+/** 转化为std::map<int32_t, std::map<int32_t, Variant>>的一个节点
+*/
+message KeyMapData
+{
+    optional int32 key = 1;
+    optional MapData mapData = 2;
+}
+
+/** 转化为std::map<int32_t, std::list<Variant>>的一个节点
+*/
+message KeyListData
+{
+    optional int32 key = 1;
+    optional ListData listData = 2;
+}
+
+/** 转化为std::map<int32_t, std::vector<std::vector<Variant>>>的一个节点
+*/
+message KeyTableData
+{
+    optional int32 key = 1;
+    optional TableData tableData = 2;
+}
+
+message ProtoMessage
+{
+    optional RspCode rspCode = 1;
+    repeated KeyMapData keyMapData = 2;
+    repeated KeyListData keyListData = 3;
+    repeated KeyTableData keyTableData = 4;
+}
+
+// 通用消息的默认标量由适配层省略，保持原proto3线格式
+// protobuf 3.3的oneof子消息在分配失败后可能析构未初始化指针
+// 使用带presence的普通optional字段；适配层验证至多/恰好一个字段
+
+// 专用结构的值；未选择字段表示INIT，bytes保留STRING/BLOB的完整原始字节
+message ProtoValue
+{
+    optional sint32 signedValue = 1;
+    optional uint64 unsignedValue = 2;
+    optional fixed64 doubleBits = 3;
+    optional bytes stringValue = 4;
+    optional bytes blobValue = 5;
+}
+
+// 单组动态字段，业务字段编号属于数据，不要求修改proto
+message ProtoField
+{
+    optional sint32 key = 1;
+    optional ProtoValue value = 2;
+}
+
+// 混合类型按元素保留类型，同类型数字使用protobuf packed数组
+message ProtoMixedValues { repeated ProtoValue values = 1; }
+message ProtoSignedValues { repeated sint32 values = 1 [packed = true]; }
+message ProtoUnsignedValues { repeated uint64 values = 1 [packed = true]; }
+message ProtoDoubleValues { repeated fixed64 values = 1 [packed = true]; }
+message ProtoEmptyValues { optional uint32 count = 1; }
+
+message ProtoValues
+{
+    optional ProtoMixedValues mixed = 1;
+    optional ProtoSignedValues signedValues = 2;
+    optional ProtoUnsignedValues unsignedValues = 3;
+    optional ProtoDoubleValues doubleValues = 4;
+    optional ProtoEmptyValues emptyValues = 5;
+}
+
+message ProtoMessageRecord { repeated ProtoField fields = 1; }
+message ProtoMessageArray { optional ProtoValues values = 1; }
+message ProtoMessageTable
+{
+    optional uint32 columns = 1;
+    optional uint32 rows = 2;
+    optional ProtoValues values = 3;
+}
+
+// 专用消息携带结构选择，由protobuf处理可选字段，不添加手写帧头
+// 通用ProtoMessage保留原有裸消息格式；本消息不能交给通用旧解析器代替结构校验
+message ProtoSpecializedMessage
+{
+    optional ProtoMessageRecord record = 1;
+    optional ProtoMessageArray array = 2;
+    optional ProtoMessageTable table = 3;
+}
