@@ -26,6 +26,9 @@
     <ClInclude Include="..\src\HashMapNode.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\LockFreeHashMapLink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\HashMapValueProxy.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -63,10 +66,14 @@
     <None Include="..\src\HashMapNode.inl">
       <Filter>头文件</Filter>
     </None>
+    <None Include="..\src\LockFreeHashMapLink.inl">
+      <Filter>头文件</Filter>
+    </None>
     <None Include="..\src\HashMapValueProxy.inl">
       <Filter>头文件</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
+  <ItemGroup><ClInclude Include="..\src\LockFreeHashMapContention.h"><Filter>头文件</Filter></ClInclude><None Include="..\src\LockFreeHashMapContention.inl"><Filter>头文件</Filter></None></ItemGroup>
 </Project>

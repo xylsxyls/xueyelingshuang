@@ -1,11 +1,12 @@
 ﻿#pragma once
 #include "LockFreeHashMapMacro.h"
+#include "LockFreeHashMapTypes.h"
 
 template <typename KeyType, typename ValueType, typename HashType, typename EqualType>
 class LockFreeHashMap;
 
 /** LockFreeHashMap下标访问代理
-@note 用于支持map[key] = value写法。赋值内部调用set；需要判断写入是否成功时请直接调用set。
+@note 支持 map[key] = value；未提交时抛出 LockFreeHashMapAssignmentError。需要错误码时调用 trySet。
 */
 template <typename KeyType, typename ValueType, typename HashType, typename EqualType>
 class HashMapValueProxy
@@ -29,7 +30,7 @@ public:
     /** 通过下标代理写入值
     @param [in] value 要写入的值
     @return 返回当前代理对象
-    @note 内部调用LockFreeHashMap::set。需要判断写入是否成功时，请直接调用set。
+    @note 内部调用 trySet，未提交时抛出 LockFreeHashMapAssignmentError；需要错误码时直接调用 trySet。
     */
     HashMapValueProxy& operator=(const ValueType& value);
 

@@ -96,11 +96,11 @@ bool LockFreeHashMapPoolBlock<T>::initialize(size_t count)
         }
         for (size_t i = 0; i < m_words * 2; ++i)
         {
-            m_bits[i].store(0);
+            m_bits[i].store(0, std::memory_order_relaxed);
         }
         if ((count & 63) != 0)
         {
-            m_bits[m_words - 1].store(~((uint64_t(1) << (count & 63)) - 1));
+            m_bits[m_words - 1].store(~((uint64_t(1) << (count & 63)) - 1), std::memory_order_relaxed);
         }
         for (size_t i = 0; i < count; ++i)
         {
@@ -201,7 +201,8 @@ LockFreeHashMapPoolSlot<T>* LockFreeHashMapPool<T>::take(LockFreeHashMapPoolBloc
     const uint64_t versionMask = UINT64_C(0x7fffffff00000000);
     uint64_t leases = block->m_leases.load(std::memory_order_relaxed);
     uint64_t next = 0;
-    do
+    LockFreeHashMapContention contention;
+    for (;;)
     {
         if ((leases & closed) != 0 || (leases & UINT64_C(0xffffffff)) > UINT64_C(0xfffffffb))
         {
@@ -209,7 +210,12 @@ LockFreeHashMapPoolSlot<T>* LockFreeHashMapPool<T>::take(LockFreeHashMapPoolBloc
         }
         // 活动序号耗尽后仍可分配，但禁用该块自动缩容；绝不回绕伪造连续空闲
         next = leases + 4 + ((leases & versionMask) == versionMask ? 0 : (uint64_t(1) << 32));
-    } while (!block->m_leases.compare_exchange_weak(leases, next));
+        if (block->m_leases.compare_exchange_weak(leases, next))
+        {
+            break;
+        }
+        contention.pause();
+    }
     size_t word = record.m_wordHint % block->m_words;
     for (size_t checked = 0; checked < block->m_words; ++checked)
     {
@@ -246,6 +252,7 @@ LockFreeHashMapPoolSlot<T>* LockFreeHashMapPool<T>::take(LockFreeHashMapPoolBloc
                 record.m_wordHint = word;
                 return block->m_slots + word * 64 + first;
             }
+            contention.pause();
         }
         if (++word == block->m_words)
         {
@@ -334,7 +341,8 @@ LockFreeHashMapPoolSlot<T>* LockFreeHashMapPool<T>::acquire(LockFreeHashMapEpoch
     {
         result = transfer(record);
     }
-    if (result == nullptr)
+    LockFreeHashMapContention contention;
+    while (result == nullptr)
     {
         reclaim();
         result = scan(record);
@@ -352,7 +360,13 @@ LockFreeHashMapPoolSlot<T>* LockFreeHashMapPool<T>::acquire(LockFreeHashMapEpoch
             }
             else if (status == LockFreeHashMapOk)
             {
-                status = LockFreeHashMapReservationBusy;
+                // 新发布的可用槽被别人先取走属于竞争，保留申请并重新评估资源
+                contention.pause();
+                continue;
+            }
+            else
+            {
+                break;
             }
         }
     }
@@ -550,20 +564,46 @@ LockFreeHashMapStatus LockFreeHashMapPool<T>::grow(size_t requested, bool initia
     }
     size_t budget = m_budget.load();
     size_t count = 0;
-    do
+    LockFreeHashMapContention contention;
+    for (;;)
     {
         if (budget >= maximum)
         {
-            size_t capacity = 0, available = 0;
-            observe(capacity, available);
-            return capacity < budget || available != 0 ? LockFreeHashMapReservationBusy : LockFreeHashMapCapacityLimit;
+            // 公共位图还有空闲时必须重新争取，不能把扫描期间的竞争作为失败返回
+            for (size_t i = 0; i < m_high.load(); ++i)
+            {
+                uintptr_t address = m_directory[i].m_address.load();
+                if (address > 1 && (address & 1) == 0)
+                {
+                    LockFreeHashMapPoolBlock<T>* block = reinterpret_cast<LockFreeHashMapPoolBlock<T>*>(address);
+                    uint64_t leases = block->m_leases.load();
+                    // 位图空闲不代表借用计数还有预算；耗尽时不能等待暂停的借用者
+                    if ((leases >> 63) == 0 && (leases & UINT64_C(0xffffffff)) <= UINT64_C(0xfffffffb))
+                    {
+                        for (size_t word = 0; word < block->m_words; ++word)
+                        {
+                            if (~block->m_bits[word].load() != 0)
+                            {
+                                return LockFreeHashMapOk;
+                            }
+                        }
+                    }
+                }
+            }
+            // 在用、待发布预留、活动记录缓存等均占用硬预算，无法再分配统一报告容量不足
+            return LockFreeHashMapCapacityLimit;
         }
         count = (std::min)(requested, maximum - budget);
-    } while (!m_budget.compare_exchange_weak(budget, budget + count));
+        if (m_budget.compare_exchange_weak(budget, budget + count))
+        {
+            break;
+        }
+        contention.pause();
+    }
     size_t peak = m_peak.load(std::memory_order_relaxed);
     while (peak < budget + count && !m_peak.compare_exchange_weak(peak, budget + count))
     {
-
+        contention.pause();
     }
     size_t index = 0;
     for (; index < m_config.directoryCapacity; ++index)
@@ -582,7 +622,7 @@ LockFreeHashMapStatus LockFreeHashMapPool<T>::grow(size_t requested, bool initia
     size_t high = m_high.load();
     while (high < index + 1 && !m_high.compare_exchange_weak(high, index + 1))
     {
-
+        contention.pause();
     }
     LockFreeHashMapPoolBlock<T>* block = nullptr;
     try
@@ -621,7 +661,7 @@ LockFreeHashMapStatus LockFreeHashMapPool<T>::grow(size_t requested, bool initia
         uint64_t last = m_lastGrow.load();
         while (last < time && !m_lastGrow.compare_exchange_weak(last, time))
         {
-
+            contention.pause();
         }
     }
     return LockFreeHashMapOk;
@@ -965,9 +1005,11 @@ template <typename T>
 void LockFreeHashMapPool<T>::increment(std::atomic<uint64_t>& counter)
 {
     uint64_t value = counter.load(std::memory_order_relaxed);
+    LockFreeHashMapContention contention;
     while (value != (std::numeric_limits<uint64_t>::max)() && !counter.compare_exchange_weak(value, value + 1))
     {
-
+        // 统计计数同样不能在持续竞争下不间断空转
+        contention.pause();
     }
 }
 

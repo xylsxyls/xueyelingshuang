@@ -20,6 +20,13 @@ size_t LockFreeHashMap<K, V, H, E>::hashKey(const K& key, std::false_type integr
 
 template <typename K, typename V, typename H, typename E>
 LockFreeHashMap<K, V, H, E>::LockFreeHashMap(size_t bucketCount) :
+LockFreeHashMap(bucketCount, LockFreeHashMapPoolConfig())
+{
+
+}
+
+template <typename K, typename V, typename H, typename E>
+LockFreeHashMap<K, V, H, E>::LockFreeHashMap(size_t bucketCount, const LockFreeHashMapPoolConfig& config) :
 m_buckets(nullptr),
 m_bucketCount(normalizeBucketCount(bucketCount)),
 m_storage(nullptr),
@@ -34,30 +41,27 @@ m_cleanupBucket(0)
     {
         return;
     }
-    std::atomic<uintptr_t> pointer(0);
-    if (!pointer.is_lock_free() || !m_generation.is_lock_free() || !m_countValid.is_lock_free())
+    LockFreeHashMapLink pointer(0);
+    if (!pointer.isLockFree() || !m_generation.is_lock_free() || !m_countValid.is_lock_free())
     {
         m_status = LockFreeHashMapUnsupported;
         return;
     }
     try
     {
-        m_buckets = new (std::nothrow) std::atomic<uintptr_t>[m_bucketCount];
+        m_buckets = new (std::nothrow) LockFreeHashMapLink[m_bucketCount];
         if (m_buckets == nullptr)
         {
             m_status = LockFreeHashMapNoMemory;
             return;
         }
-        for (size_t i = 0; i < m_bucketCount; ++i)
-        {
-            m_buckets[i].store(0);
-        }
+        // 链接构造已经初始化为零；整个数组仍私有，不重复执行原子存储。
         m_identity = std::make_shared<LockFreeHashMapIdentity>();
         m_storage = new (std::nothrow) Storage();
-        m_status = m_storage == nullptr ? LockFreeHashMapNoMemory : m_storage->initialize(LockFreeHashMapPoolConfig());
+        m_status = m_storage == nullptr ? LockFreeHashMapNoMemory : m_storage->initialize(config);
         if (m_status == LockFreeHashMapOk)
         {
-            m_status = m_cache.initialize(LockFreeHashMapPoolConfig().lookupCacheCapacity);
+            m_status = m_cache.initialize(config.inlineScalarValues ? config.lookupCacheCapacity : 0);
         }
     }
     catch (const std::bad_alloc&)
@@ -147,6 +151,12 @@ typename LockFreeHashMap<K, V, H, E>::Node* LockFreeHashMap<K, V, H, E>::read(co
     {
         Node* node = reinterpret_cast<Slot*>(address)->payload();
         uintptr_t next = node->m_next.load();
+        // 标准整数比较不执行用户代码；先排除异键，减少碰撞链上的代次和哈希检查。
+        if (std::is_integral<K>::value && std::is_same<E, std::equal_to<K>>::value && !m_equal(node->m_key, key))
+        {
+            address = next & ~uintptr_t(3);
+            continue;
+        }
         if ((next & 3) == 0 && node->m_generation == generation && node->m_hash == hash && m_equal(node->m_key, key))
         {
             return node;
@@ -157,7 +167,7 @@ typename LockFreeHashMap<K, V, H, E>::Node* LockFreeHashMap<K, V, H, E>::read(co
 }
 
 template <typename K, typename V, typename H, typename E>
-int32_t LockFreeHashMap<K, V, H, E>::unlink(Slot* slot, std::atomic<uintptr_t>* link, uintptr_t& successor, bool bucketLink) const
+int32_t LockFreeHashMap<K, V, H, E>::unlink(Slot* slot, LockFreeHashMapLink* link, uintptr_t& successor, bool bucketLink) const
 {
     if (link == nullptr)
     {
@@ -195,7 +205,7 @@ int32_t LockFreeHashMap<K, V, H, E>::unlink(Slot* slot, std::atomic<uintptr_t>* 
         }
     }
     uintptr_t expected = reinterpret_cast<uintptr_t>(slot);
-    if (!link->compare_exchange_strong(expected, successor))
+    if (!link->compareExchangeStrong(expected, successor))
     {
         return 0;
     }
@@ -212,9 +222,11 @@ int32_t LockFreeHashMap<K, V, H, E>::unlink(Slot* slot, std::atomic<uintptr_t>* 
 
 template <typename K, typename V, typename H, typename E>
 LockFreeHashMapStatus LockFreeHashMap<K, V, H, E>::locate(const K* key, size_t hash, uint64_t generation,
-    Slot*& found, std::atomic<uintptr_t>*& link, uintptr_t& head) const
+    Slot*& found, LockFreeHashMapLink*& link, uintptr_t& head, size_t retryLimit) const
 {
     size_t bucket = hash & (m_bucketCount - 1);
+    size_t retries = 0;
+    LockFreeHashMapContention contention;
     for (;;)
     {
         found = nullptr;
@@ -231,7 +243,7 @@ LockFreeHashMapStatus LockFreeHashMap<K, V, H, E>::locate(const K* key, size_t h
             {
                 // 旧代关闭与普通删除使用相同不可逆标记，不复活被遮蔽的旧值
                 uintptr_t desired = next | 1;
-                if (!node->m_next.compare_exchange_strong(next, desired))
+                if (!node->m_next.compareExchangeStrong(next, desired))
                 {
                     retry = true;
                     break;
@@ -282,7 +294,21 @@ LockFreeHashMapStatus LockFreeHashMap<K, V, H, E>::locate(const K* key, size_t h
         {
             return LockFreeHashMapNotFound;
         }
+        if (retryLimit != 0 && ++retries >= retryLimit)
+        {
+            // 仅结束本轮附带维护，不能作为用户数据操作的失败结果
+            return LockFreeHashMapReservationBusy;
+        }
+        contention.pause();
     }
+}
+
+template <typename K, typename V, typename H, typename E>
+void LockFreeHashMap<K, V, H, E>::swapSnapshot(Snapshot& left, Snapshot& right) throw()
+{
+    left.m_value.swap(right.m_value);
+    left.m_version.m_instance.swap(right.m_version.m_instance);
+    std::swap(left.m_version.m_sequence, right.m_version.m_sequence);
 }
 
 template <typename K, typename V, typename H, typename E>
@@ -294,7 +320,8 @@ LockFreeHashMapStatus LockFreeHashMap<K, V, H, E>::snapshot(const Node& node, Sn
         prepared.m_value = std::make_shared<V>(node.m_value);
         prepared.m_version.m_instance = m_identity;
         prepared.m_version.m_sequence = node.m_version;
-        output = prepared;
+        // 临时快照交付后即销毁，交换所有权避免 shared_ptr 的额外增减计数。
+        swapSnapshot(output, prepared);
         return LockFreeHashMapOk;
     }
     catch (const std::bad_alloc&)
@@ -314,20 +341,24 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::find(const K& key, Snapshot& 
     {
         return LockFreeHashMapResult(m_status);
     }
-    LockFreeHashMapEpochGuard guard(m_storage->epoch());
-    if (guard.record() == nullptr)
+    LockFreeHashMapResult result;
     {
-        return LockFreeHashMapResult(LockFreeHashMapProtectionUnavailable);
+        LockFreeHashMapEpochGuard guard(m_storage->epoch());
+        if (guard.record() == nullptr)
+        {
+            return LockFreeHashMapResult(LockFreeHashMapProtectionUnavailable);
+        }
+        try
+        {
+            Node* node = read(key, hashKey(key, IntegralHash()), m_generation.load());
+            result = LockFreeHashMapResult(node == nullptr ? LockFreeHashMapNotFound : snapshot(*node, output));
+        }
+        catch (...)
+        {
+            return LockFreeHashMapResult(LockFreeHashMapUserException);
+        }
     }
-    try
-    {
-        Node* node = read(key, hashKey(key, IntegralHash()), m_generation.load());
-        return LockFreeHashMapResult(node == nullptr ? LockFreeHashMapNotFound : snapshot(*node, output));
-    }
-    catch (...)
-    {
-        return LockFreeHashMapResult(LockFreeHashMapUserException);
-    }
+    return result;
 }
 
 template <typename K, typename V, typename H, typename E>
@@ -339,6 +370,7 @@ uint64_t LockFreeHashMap<K, V, H, E>::nextVersion(LockFreeHashMapEpochRecord& re
     }
     uint64_t current = m_sequence.load(std::memory_order_relaxed);
     const uint64_t maximum = (std::numeric_limits<uint64_t>::max)();
+    LockFreeHashMapContention contention;
     while (current != maximum)
     {
         uint64_t count = (std::min)(uint64_t(256), maximum - current);
@@ -348,6 +380,7 @@ uint64_t LockFreeHashMap<K, V, H, E>::nextVersion(LockFreeHashMapEpochRecord& re
             record.m_versionNext = current + 1;
             return record.m_versionNext;
         }
+        contention.pause();
     }
     return 0;
 }
@@ -385,10 +418,11 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::modifyProtected(const K& key,
     }
     std::unique_ptr<Slot, LockFreeHashMapPoolReturn<Node>> candidate(nullptr, LockFreeHashMapPoolReturn<Node>(m_storage));
     Snapshot prepared;
+    LockFreeHashMapContention contention;
     for (;;)
     {
         Slot* found = nullptr;
-        std::atomic<uintptr_t>* link = nullptr;
+        LockFreeHashMapLink* link = nullptr;
         uintptr_t head = 0;
         LockFreeHashMapStatus located = locate(&key, hash, generation, found, link, head);
         if (located == LockFreeHashMapCleared || m_generation.load() != generation)
@@ -400,7 +434,7 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::modifyProtected(const K& key,
             LockFreeHashMapStatus copied = output == nullptr ? LockFreeHashMapOk : snapshot(*found->payload(), prepared);
             if (copied == LockFreeHashMapOk && output != nullptr)
             {
-                *output = prepared;
+                swapSnapshot(*output, prepared);
             }
             return LockFreeHashMapResult(copied == LockFreeHashMapOk ? LockFreeHashMapExists : copied);
         }
@@ -418,6 +452,7 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::modifyProtected(const K& key,
             uintptr_t next = node->m_next.load();
             if ((next & 3) != 0)
             {
+                contention.pause();
                 continue;
             }
             if (output != nullptr)
@@ -429,15 +464,16 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::modifyProtected(const K& key,
                 }
             }
             m_cache.invalidate(key, 0);
-            if (!node->m_next.compare_exchange_strong(next, next | 1))
+            if (!node->m_next.compareExchangeStrong(next, next | 1))
             {
+                contention.pause();
                 continue;
             }
             account(record, generation, -1);
             unlink(found, link, next, link == m_buckets + (hash & (m_bucketCount - 1)));
             if (output != nullptr)
             {
-                *output = prepared;
+                swapSnapshot(*output, prepared);
             }
             return LockFreeHashMapResult(LockFreeHashMapOk, true);
         }
@@ -481,8 +517,9 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::modifyProtected(const K& key,
             }
             candidate->payload()->m_next.store(successor, std::memory_order_relaxed);
             m_cache.invalidate(key, published->m_version);
-            if (!m_buckets[hash & (m_bucketCount - 1)].compare_exchange_strong(head, address))
+            if (!m_buckets[hash & (m_bucketCount - 1)].compareExchangeStrong(head, address))
             {
+                contention.pause();
                 continue;
             }
             candidate.release();
@@ -500,13 +537,15 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::modifyProtected(const K& key,
             uintptr_t next = node->m_next.load();
             if ((next & 3) != 0)
             {
+                contention.pause();
                 continue;
             }
             candidate->payload()->m_next.store(next, std::memory_order_relaxed);
             // 同一个 CAS 冻结旧后继并发布替换，不覆盖并发物理摘除所改变的后继
             m_cache.invalidate(key, published->m_version);
-            if (!node->m_next.compare_exchange_strong(next, address | 2))
+            if (!node->m_next.compareExchangeStrong(next, address | 2))
             {
+                contention.pause();
                 continue;
             }
             candidate.release();
@@ -515,7 +554,7 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::modifyProtected(const K& key,
         m_cache.publish(published->m_key, published->m_value, generation, published->m_version);
         if (output != nullptr)
         {
-            *output = prepared;
+            swapSnapshot(*output, prepared);
         }
         return LockFreeHashMapResult(LockFreeHashMapOk, true);
     }
@@ -546,7 +585,7 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::modify(const K& key, const V*
                 result = modifyProtected(key, value, hash, mode, version, output, *guard.record());
                 // 常规写入合并维护成本；容量拒绝仍立即清理全部桶并保留完整回收预算
                 maintenance = (++guard.record()->m_operations & 63) == 0;
-                pressure = result.m_status == LockFreeHashMapCapacityLimit || result.m_status == LockFreeHashMapReservationBusy;
+                pressure = result.m_status == LockFreeHashMapCapacityLimit;
                 if (maintenance || pressure)
                 {
                     // 容量压力下不能只检查当前热桶，空闲的冷桶末尾标记也必须有机会归还预算
@@ -556,9 +595,9 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::modify(const K& key, const V*
                     {
                         size_t bucket = (start + i) & (m_bucketCount - 1);
                         Slot* ignored = nullptr;
-                        std::atomic<uintptr_t>* link = nullptr;
+                        LockFreeHashMapLink* link = nullptr;
                         uintptr_t head = 0;
-                        locate(nullptr, bucket, m_generation.load(), ignored, link, head);
+                        locate(nullptr, bucket, m_generation.load(), ignored, link, head, 2);
                     }
                 }
             }
@@ -581,7 +620,7 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::modify(const K& key, const V*
     {
         return LockFreeHashMapResult(LockFreeHashMapUserException);
     }
-    return LockFreeHashMapResult(LockFreeHashMapReservationBusy);
+    return LockFreeHashMapResult(LockFreeHashMapCapacityLimit);
 }
 
 template <typename K, typename V, typename H, typename E>
@@ -701,7 +740,7 @@ LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMap<K, V, H, E>::contains(const K&
 template <typename K, typename V, typename H, typename E>
 LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMap<K, V, H, E>::lookupValue(const K& key, V* value, std::true_type integral) const
 {
-    if (m_cache.lookup(key, m_generation.load(), value))
+    if (m_cache.lookup(key, m_generation, value))
     {
         return true;
     }
@@ -716,7 +755,8 @@ bool LockFreeHashMap<K, V, H, E>::lookupValue(const K& key, V* value, std::false
     try
     {
         size_t hash = hashKey(key, integral);
-        return m_cache.lookup(key, m_generation.load(), value) ||
+        // 未启用整数副本时不读取无用途的代次，真正节点读取仍在保护内核对代次。
+        return m_cache.lookup(key, m_generation, value) ||
             (m_buckets[hash & (m_bucketCount - 1)].load() != 0 && lookupProtected(key, hash, value));
     }
     catch (...)
@@ -778,8 +818,13 @@ size_t LockFreeHashMap<K, V, H, E>::count() const
     {
         LockFreeHashMapEpochRecord* record = m_storage->epoch()->record(i);
         uint64_t before = record->m_countGeneration.load();
+        // 未参与本代的记录不贡献计数，无需额外执行差量的原子读取。
+        if (before != generation)
+        {
+            continue;
+        }
         int64_t delta = record->m_countDelta.load();
-        if (before != generation || record->m_countGeneration.load() != generation)
+        if (record->m_countGeneration.load() != generation)
         {
             continue;
         }
@@ -811,13 +856,15 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::tryClear()
         return LockFreeHashMapResult(m_status);
     }
     uint64_t current = m_generation.load();
-    while (current != 0)
+    if (current != 0)
     {
         uint64_t next = current == (std::numeric_limits<uint64_t>::max)() ? 0 : current + 1;
-        if (m_generation.compare_exchange_weak(current, next))
+        if (m_generation.compare_exchange_strong(current, next))
         {
             return LockFreeHashMapResult(next == 0 ? LockFreeHashMapVersionExhausted : LockFreeHashMapOk, true);
         }
+        // 重叠调用共用期间已发生的 clear 作为线性化点，无需争抢另一个代次
+        return LockFreeHashMapResult(current == 0 ? LockFreeHashMapVersionExhausted : LockFreeHashMapOk, true);
     }
     return LockFreeHashMapResult(LockFreeHashMapVersionExhausted);
 }
@@ -830,7 +877,8 @@ void LockFreeHashMap<K, V, H, E>::clearAndFreeMemory()
     {
         for (size_t i = 0; i < m_bucketCount; ++i)
         {
-            m_buckets[i].store(0);
+            // 本接口要求外部静止，独立快照不借用桶指针。
+            m_buckets[i].store(0, std::memory_order_relaxed);
         }
     }
     if (m_storage != nullptr)
@@ -861,9 +909,9 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::maintain(size_t workBudget)
         {
             size_t bucket = m_maintenanceBucket++ & (m_bucketCount - 1);
             Slot* ignored = nullptr;
-            std::atomic<uintptr_t>* link = nullptr;
+            LockFreeHashMapLink* link = nullptr;
             uintptr_t head = 0;
-            locate(nullptr, bucket, m_generation.load(), ignored, link, head);
+            locate(nullptr, bucket, m_generation.load(), ignored, link, head, 2);
         }
     }
     m_storage->reclaim(workBudget);
@@ -882,7 +930,7 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::poolStats(LockFreeHashMapPool
     {
         return LockFreeHashMapResult(LockFreeHashMapProtectionUnavailable);
     }
-    result.retainedBytes += sizeof(*this) + sizeof(LockFreeHashMapIdentity) + m_bucketCount * sizeof(std::atomic<uintptr_t>);
+    result.retainedBytes += sizeof(*this) + sizeof(LockFreeHashMapIdentity) + m_bucketCount * sizeof(LockFreeHashMapLink);
     result.lookupCacheEntries = m_cache.count();
     result.lookupCacheBytes = m_cache.count() * sizeof(LockFreeHashMapValueCacheEntry);
     result.retainedBytes += result.lookupCacheBytes;
@@ -905,7 +953,7 @@ size_t LockFreeHashMap<K, V, H, E>::normalizeBucketCount(size_t count)
     {
         count = 1024;
     }
-    size_t maximum = (std::numeric_limits<size_t>::max)() / sizeof(std::atomic<uintptr_t>);
+    size_t maximum = (std::numeric_limits<size_t>::max)() / sizeof(LockFreeHashMapLink);
     size_t normalized = 1;
     while (normalized < count && normalized <= maximum / 2)
     {
@@ -936,9 +984,12 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::forEachProtected(F&& function
         {
             return LockFreeHashMapResult();
         }
-        for (size_t bucket = 0; bucket < m_bucketCount; ++bucket)
+        // 并发数据操作不改变桶目录及桶数；回调允许修改条目，但配置和析构仍要求外部静止。
+        // 提前保存固定目录，避免每遍历一个空桶都因回调别名重新读取容器字段。
+        LockFreeHashMapLink* const end = m_buckets + m_bucketCount;
+        for (LockFreeHashMapLink* bucket = m_buckets; bucket != end; ++bucket)
         {
-            uintptr_t address = m_buckets[bucket].load();
+            uintptr_t address = bucket->load();
             while (address != 0)
             {
                 Node* node = reinterpret_cast<Slot*>(address)->payload();
@@ -946,6 +997,7 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::forEachProtected(F&& function
                 if ((next & 3) == 0 && node->m_generation == generation)
                 {
                     callback(node->m_key, node->m_value);
+                    // 完成回调后再计数，异常时只报告已成功交付的条目。
                     ++count;
                 }
                 // 使用回调前的后继，不因回调替换当前条目而重复访问同键的新版本
@@ -989,6 +1041,20 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::forEachResult(F&& function) c
 }
 
 template <typename K, typename V, typename H, typename E>
+template <typename T>
+void LockFreeHashMap<K, V, H, E>::appendExport(std::vector<T>& output, const T& value)
+{
+    // 节点载荷和结果向量不重叠，省去 v120 push_back 为自引用执行的地址范围判断。
+    output.emplace_back(value);
+}
+
+template <typename K, typename V, typename H, typename E>
+void LockFreeHashMap<K, V, H, E>::appendExport(std::vector<bool>& output, const bool& value)
+{
+    output.push_back(value);
+}
+
+template <typename K, typename V, typename H, typename E>
 std::vector<K> LockFreeHashMap<K, V, H, E>::keys() const
 {
     std::vector<K> output;
@@ -1001,10 +1067,10 @@ std::vector<K> LockFreeHashMap<K, V, H, E>::keys() const
         return output;
     }
     // 回调复制到独立结果向量，分配或复制异常由遍历边界捕获
-    LockFreeHashMapResult result = forEachResult([&](const K& key, const V& value)
+    LockFreeHashMapResult result = forEachProtected([&](const K& key, const V& value)
     {
         (void)value;
-        output.push_back(key);
+        appendExport(output, key);
     });
     if (result.m_status != LockFreeHashMapOk)
     {
@@ -1026,10 +1092,10 @@ std::vector<V> LockFreeHashMap<K, V, H, E>::values() const
         return output;
     }
     // 回调复制到独立结果向量，分配或复制异常由遍历边界捕获
-    LockFreeHashMapResult result = forEachResult([&](const K& key, const V& value)
+    LockFreeHashMapResult result = forEachProtected([&](const K& key, const V& value)
     {
         (void)key;
-        output.push_back(value);
+        appendExport(output, value);
     });
     if (result.m_status != LockFreeHashMapOk)
     {
@@ -1051,7 +1117,7 @@ std::vector<std::pair<K, V>> LockFreeHashMap<K, V, H, E>::toVector() const
         return output;
     }
     // 回调复制到独立结果向量，分配或复制异常由遍历边界捕获
-    LockFreeHashMapResult result = forEachResult([&](const K& key, const V& value)
+    LockFreeHashMapResult result = forEachProtected([&](const K& key, const V& value)
     {
         output.emplace_back(key, value);
     });

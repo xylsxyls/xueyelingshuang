@@ -27,6 +27,15 @@ bool LockFreeHashMapValueCache<K, V, E, Enabled>::lookup(const K& key, uint64_t 
 }
 
 template <typename K, typename V, typename E, bool Enabled>
+bool LockFreeHashMapValueCache<K, V, E, Enabled>::lookup(const K& key, const std::atomic<uint64_t>& generation, V* value) const
+{
+    (void)key;
+    (void)generation;
+    (void)value;
+    return false;
+}
+
+template <typename K, typename V, typename E, bool Enabled>
 void LockFreeHashMapValueCache<K, V, E, Enabled>::invalidate(const K& key, uint64_t version)
 {
     (void)key;
@@ -104,11 +113,22 @@ LockFreeHashMapStatus LockFreeHashMapValueCache<K, V, E, true>::initialize(size_
 template <typename K, typename V, typename E>
 LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMapValueCache<K, V, E, true>::lookup(const K& key, uint64_t generation, V* value) const
 {
-    if (m_count == 0 || generation == 0)
-    {
-        return false;
-    }
-    LockFreeHashMapValueCacheEntry& entry = m_entries[static_cast<size_t>(static_cast<uint64_t>(key) ^ (static_cast<uint64_t>(key) >> 32)) & (m_count - 1)];
+    size_t count = m_count;
+    return count != 0 && lookupAtGeneration(key, generation, value, count);
+}
+
+template <typename K, typename V, typename E>
+LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMapValueCache<K, V, E, true>::lookup(const K& key, const std::atomic<uint64_t>& generation, V* value) const
+{
+    size_t count = m_count;
+    return count != 0 && lookupAtGeneration(key, generation, value, count);
+}
+
+template <typename K, typename V, typename E>
+template <typename GenerationType>
+LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMapValueCache<K, V, E, true>::lookupAtGeneration(const K& key, const GenerationType& generation, V* value, size_t count) const
+{
+    LockFreeHashMapValueCacheEntry& entry = m_entries[static_cast<size_t>(static_cast<uint64_t>(key) ^ (static_cast<uint64_t>(key) >> 32)) & (count - 1)];
     uint64_t before = entry.m_stamp.load();
     if ((before & 1) == 0)
     {
@@ -116,9 +136,16 @@ LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMapValueCache<K, V, E, true>::look
     }
     uint64_t expectedKey = static_cast<uint64_t>(key);
     uint64_t observedKey = entry.m_key.load(std::memory_order_acquire);
+    if (observedKey != expectedKey)
+    {
+        return false;
+    }
+    // 缓存碰撞时只检查完整键，不为不相干的值加载载荷；成功路径仍验证代次与末次身份。
     uint64_t observedGeneration = entry.m_generation.load(std::memory_order_acquire);
     uint64_t observedValue = entry.m_value.load(std::memory_order_acquire);
-    if (observedKey != expectedKey || observedGeneration != generation || entry.m_stamp.load() != before)
+    // 原子整数的标准转换等价于顺序一致的load；缓存未命中时省去这次全局代次读取。
+    uint64_t currentGeneration = static_cast<uint64_t>(generation);
+    if (currentGeneration == 0 || observedGeneration != currentGeneration || entry.m_stamp.load() != before)
     {
         return false;
     }

@@ -30,7 +30,7 @@ public:
     // 所属块存活到所有槽位和保护读者都退出
     LockFreeHashMapPoolBlock<PayloadType>* m_block;
     // 零为无记录；非零为待摘除或退役代际，位图交换领取退休责任；最大值耗尽后只能静止释放
-    std::atomic<uint64_t> m_retired;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_retired;
     // 所属块内的固定下标，单块不超过 65535 槽，无截断
     uint32_t m_index;
     // 零为尚未构造；一为键节点，二为外置值，用于资源观测
@@ -66,9 +66,9 @@ public:
     // 每个位图的原子字数量
     size_t m_words;
     // 低三十二位为占用和预留，高三十一位为不回绕活动序号，最高位永久关闭
-    std::atomic<uint64_t> m_leases;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_leases;
     // 整块关闭代际，零为尚未关闭，最大值为释放者独占
-    std::atomic<uint64_t> m_retired;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_retired;
     // 唯一维护者保存的连续空闲起点，零为尚未观察到空闲
     uint64_t m_idle;
     // 对应空闲起点的完整活动序号，重用后重新计时
@@ -274,11 +274,11 @@ private:
     // 统一预算高水位
     std::atomic<size_t> m_peak;
     // 非初始批次成功发布次数
-    std::atomic<uint64_t> m_grows;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_grows;
     // 块、槽和位图的系统申请次数
-    std::atomic<uint64_t> m_allocations;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_allocations;
     // 最近一次成功增长的单调时间
-    std::atomic<uint64_t> m_lastGrow;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_lastGrow;
     // 有界回收的目录轮转位置
     std::atomic<size_t> m_cursor;
 };

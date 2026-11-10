@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include "LockFreeHashMapContention.h"
+#include "LockFreeHashMapMacro.h"
 #include <atomic>
 #include <stdint.h>
 #include <stddef.h>
@@ -10,7 +12,7 @@ struct LockFreeHashMapEpochRecord
 {
 public:
     // 活动操作的保护代际；接纳 CAS 同时完成独占和保护发布
-    std::atomic<uint64_t> m_epoch;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_epoch;
     // 上次成功申请的批次下标，不截断 size_t
     size_t m_blockHint;
     // 上次成功申请的位图字下标
@@ -22,9 +24,9 @@ public:
     // 当前记录累计写操作数，仅决定分摊回收时机，不作身份
     uint64_t m_operations;
     // 分片条目计数所属的逻辑代次，零为尚未使用
-    std::atomic<uint64_t> m_countGeneration;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_countGeneration;
     // 当前代次内由本记录提交的插入减删除，可为负数
-    std::atomic<int64_t> m_countDelta;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<int64_t> m_countDelta;
     // 固定四槽申请缓存，只有当前记录所有者可以读写地址；槽位始终占用所属块
     uintptr_t m_cachedSlots[4];
     // 已构造载荷为零的缓存槽数，统计只读取这个原子数，不读取地址数组
@@ -104,7 +106,7 @@ private:
     LockFreeHashMapEpoch& operator=(const LockFreeHashMapEpoch& other);
 private:
     // 非零且不回绕的实例内退休时钟
-    std::atomic<uint64_t> m_clock;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_clock;
     // 原始申请地址，用于正确匹配 delete[]
     unsigned char* m_allocation;
     // 手动对齐至缓存行的记录起点

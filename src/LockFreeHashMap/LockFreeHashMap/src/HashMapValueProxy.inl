@@ -26,9 +26,12 @@ HashMapValueProxy<KeyType, ValueType, HashType, EqualType>::~HashMapValueProxy()
 template <typename KeyType, typename ValueType, typename HashType, typename EqualType>
 HashMapValueProxy<KeyType, ValueType, HashType, EqualType>& HashMapValueProxy<KeyType, ValueType, HashType, EqualType>::operator=(const ValueType& value)
 {
-    if (m_map != nullptr)
+    LockFreeHashMapResult result = m_map == nullptr ? LockFreeHashMapResult(LockFreeHashMapInvalidArgument) :
+        m_map->trySet(m_key, value);
+    if (!result.m_committed)
     {
-        m_map->set(m_key, value);
+        // 下标语法没有返回错误码的位置，失败必须显式交给调用方
+        throw LockFreeHashMapAssignmentError(result.m_status);
     }
     return *this;
 }
@@ -40,12 +43,22 @@ HashMapValueProxy<KeyType, ValueType, HashType, EqualType>& HashMapValueProxy<Ke
     {
         return *this;
     }
-    ValueType otherValue = other.value(ValueType());
-    if (m_map != nullptr)
+    if (other.m_map == nullptr)
     {
-        m_map->set(m_key, otherValue);
+        throw LockFreeHashMapAssignmentError(LockFreeHashMapInvalidArgument);
     }
-    return *this;
+    LockFreeHashMapSnapshot<ValueType> snapshot;
+    LockFreeHashMapResult result = other.m_map->find(other.m_key, snapshot);
+    if (result.m_status == LockFreeHashMapNotFound)
+    {
+        // 保留旧接口对不存在的来源键使用默认值的约定
+        return operator=(ValueType());
+    }
+    if (result.m_status != LockFreeHashMapOk)
+    {
+        throw LockFreeHashMapAssignmentError(result.m_status);
+    }
+    return operator=(*snapshot.m_value);
 }
 
 template <typename KeyType, typename ValueType, typename HashType, typename EqualType>

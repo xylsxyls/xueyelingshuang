@@ -28,6 +28,7 @@
     <ClInclude Include="..\src\LockFreeHashMapPool.h" />
     <ClInclude Include="..\src\LockFreeHashMap.h" />
     <ClInclude Include="..\src\HashMapNode.h" />
+    <ClInclude Include="..\src\LockFreeHashMapLink.h" />
     <ClInclude Include="..\src\HashMapValueProxy.h" />
   </ItemGroup>
   <ItemGroup>
@@ -41,6 +42,7 @@
     <None Include="..\src\LockFreeHashMapPool.inl" />
     <None Include="..\src\LockFreeHashMap.inl" />
     <None Include="..\src\HashMapNode.inl" />
+    <None Include="..\src\LockFreeHashMapLink.inl" />
     <None Include="..\src\HashMapValueProxy.inl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -202,4 +204,5 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup><ClInclude Include="..\src\LockFreeHashMapContention.h" /><None Include="..\src\LockFreeHashMapContention.inl" /></ItemGroup>
 </Project>

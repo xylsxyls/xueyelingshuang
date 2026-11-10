@@ -25,6 +25,12 @@ public:
     */
     explicit LockFreeHashMap(size_t bucketCount = 1024);
 
+    /** 直接按指定参数建立节点池，避免先构造默认池再替换；失败由 status 查询
+    @param [in] bucketCount 桶数量，0 使用 1024，其余向上取整为 2 的幂
+    @param [in] config 池容量和策略，构造期间复制，规则与 configurePool 一致
+    */
+    LockFreeHashMap(size_t bucketCount, const LockFreeHashMapPoolConfig& config);
+
     /** 外部停止所有操作和回调后销毁资源，独立快照可以继续存活
     */
     ~LockFreeHashMap();
@@ -120,7 +126,7 @@ public:
 
     /** 创建借用本表的下标代理，表须存活到代理最后使用；键复制异常由调用方处理
     @param [in] key 调用期间借用的键
-    @return 借用本表的代理，赋值不提供失败状态
+    @return 借用本表的代理，赋值未提交时通过 LockFreeHashMapAssignmentError 提供失败状态
     */
     HashMapValueProxy<KeyType, ValueType, HashType, EqualType> operator[](const KeyType& key);
 
@@ -251,6 +257,7 @@ public:
     @return 占用槽位数，查询失败为 0
     */
     size_t retainedNodeCount() const;
+
 private:
     /** 仅内置整数及默认比较器使用整数混合，避免旧标准库逐字节散列
     @param [in] key 完整整数键，高低位都参与混合
@@ -326,10 +333,11 @@ private:
     @param [out] found 匹配的受保护槽，未找到为空
     @param [out] link 指向 found 的桶头或前驱链接
     @param [out] head 不存在时发布校验所用的桶头
+    @param [in] retryLimit 非零时只供维护限制重启次数；数据操作为零并保留请求
     @return 找到、未找到或 clear 冲突，比较异常向操作边界传播
     */
     LockFreeHashMapStatus locate(const KeyType* key, size_t hash, uint64_t generation,
-        Slot*& found, std::atomic<uintptr_t>*& link, uintptr_t& head) const;
+        Slot*& found, LockFreeHashMapLink*& link, uintptr_t& head, size_t retryLimit = 0) const;
 
     /** 摘除标记节点，删除桶头前等待旧观察者退出，不能恢复零或旧前缀地址制造 ABA
     @param [in] slot 受保护的已标记节点
@@ -338,7 +346,7 @@ private:
     @param [in] bucketLink 当前链接是否为桶头
     @return 零为竞争失败或没有可写前驱，一为摘除成功，二为保留头部删除标记等待代际推进
     */
-    int32_t unlink(Slot* slot, std::atomic<uintptr_t>* link, uintptr_t& successor, bool bucketLink) const;
+    int32_t unlink(Slot* slot, LockFreeHashMapLink* link, uintptr_t& successor, bool bucketLink) const;
 
     /** 在已登记保护中只读查找，不复制值或执行结构写入
     @param [in] key 查询键
@@ -355,6 +363,25 @@ private:
     */
     LockFreeHashMapStatus snapshot(const Node& node, Snapshot& output) const;
 
+    /** 交换完整快照所有权，避免临时结果交付时增加引用计数；不执行值复制
+    @param [in,out] left 交换一方，旧引用由交换后的持有者正常释放
+    @param [in,out] right 交换另一方，版本和值始终一同交换
+    */
+    static void swapSnapshot(Snapshot& left, Snapshot& right) throw();
+
+    /** 将与结果向量不重叠的节点副本直接构造到末尾，异常由遍历边界捕获
+    @param [in,out] output 本次导出的独立向量
+    @param [in] value 受保护节点中的键或值，调用期间不属于 output
+    */
+    template <typename ExportType>
+    static void appendExport(std::vector<ExportType>& output, const ExportType& value);
+
+    /** 兼容 C++11 及 v120 的 vector<bool> 特化，其不提供 emplace_back
+    @param [in,out] output 本次导出的布尔向量
+    @param [in] value 受保护节点中的布尔副本
+    */
+    static void appendExport(std::vector<bool>& output, const bool& value);
+
     /** 分片预留不重复的版本，耗尽不回绕
     @param [in,out] record 独占记录
     @return 非零版本，耗尽为零
@@ -370,7 +397,7 @@ private:
 
     /** 准备回调副本并执行向前遍历，异常不重放回调
     @param [in,out] function 被复制或移动的回调，键值只在回调期间借用
-    @return 状态及完成数量
+    @return 状态及已成功完成回调的条目数量
     */
     template <typename FunctionType>
     LockFreeHashMapResult forEachProtected(FunctionType&& function) const;
@@ -391,9 +418,10 @@ private:
     @return 无实现
     */
     LockFreeHashMap& operator=(const LockFreeHashMap& other);
+
 private:
     // 固定桶数组，只保存槽地址，桶头不使用逻辑标记
-    std::atomic<uintptr_t>* m_buckets;
+    LockFreeHashMapLink* m_buckets;
     // 桶数与节点池预算无关
     size_t m_bucketCount;
     // 并发安全的用户哈希器
@@ -407,9 +435,9 @@ private:
     // 快照持有实例身份，地址复用不会使旧凭据生效
     std::shared_ptr<const LockFreeHashMapIdentity> m_identity;
     // 逻辑代次，零为耗尽后永久关闭
-    std::atomic<uint64_t> m_generation;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_generation;
     // 已分配版本区间上界
-    std::atomic<uint64_t> m_sequence;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_sequence;
     // 分片计数耗尽后回退遍历
     std::atomic<bool> m_countValid;
     // 构造时的初始化结果

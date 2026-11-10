@@ -1,5 +1,21 @@
 ﻿#pragma once
 
+inline LockFreeHashMapAssignmentError::LockFreeHashMapAssignmentError(LockFreeHashMapStatus status) throw() :
+m_status(status)
+{
+
+}
+
+inline LockFreeHashMapStatus LockFreeHashMapAssignmentError::status() const throw()
+{
+    return m_status;
+}
+
+inline const char* LockFreeHashMapAssignmentError::what() const throw()
+{
+    return "LockFreeHashMap subscript assignment failed";
+}
+
 inline LockFreeHashMapResult::LockFreeHashMapResult(LockFreeHashMapStatus status, bool committed, size_t count) :
 m_status(status),
 m_committed(committed),

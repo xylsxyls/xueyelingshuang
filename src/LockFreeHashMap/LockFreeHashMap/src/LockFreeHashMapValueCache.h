@@ -13,13 +13,13 @@ struct LockFreeHashMapValueCacheEntry
 {
 public:
     // 零表示无效；非零偶数为写入前失效身份，奇数为该身份的已发布副本
-    std::atomic<uint64_t> m_stamp;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_stamp;
     // 完整清空代次，不与键值打包截断
-    std::atomic<uint64_t> m_generation;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_generation;
     // 完整整数键的无符号数值转换，不截断宽整数或有符号键
-    std::atomic<uint64_t> m_key;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_key;
     // 完整整数值的对象表示，未使用高字节为零
-    std::atomic<uint64_t> m_value;
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_value;
     // 单次尝试的发布权，持有者暂停时其他操作跳过副本发布
     std::atomic<bool> m_publishing;
 public:
@@ -45,11 +45,19 @@ public:
 
     /** 非整数类型从不命中
     @param [in] key 查询键
-    @param [in] generation 观察代次
+    @param [in] generation 固定代次或原子代次源，只有缓存键匹配时读取
     @param [out] value 可空的输出，不修改
     @return false
     */
     bool lookup(const KeyType& key, uint64_t generation, ValueType* value) const;
+
+    /** 非整数类型直接返回，不读取容器代次
+    @param [in] key 查询键
+    @param [in] generation 容器代次原子变量，不读取
+    @param [out] value 可空的输出，不修改
+    @return false
+    */
+    bool lookup(const KeyType& key, const std::atomic<uint64_t>& generation, ValueType* value) const;
 
     /** 无缓存时不执行失效操作
     @param [in] key 查询键，不调用用户哈希或比较器
@@ -98,11 +106,19 @@ public:
 
     /** 纯原子读取独立副本，不访问池和用户对象，无重试循环
     @param [in] key 完整查询键
-    @param [in] generation 观察代次
+    @param [in] generation 固定代次或原子代次源，只有缓存键匹配时读取
     @param [out] value 非空时写入整数副本，未命中不修改
     @return 同身份、同代次且完整键相同时为 true
     */
     bool lookup(const KeyType& key, uint64_t generation, ValueType* value) const;
+
+    /** 只检查一次缓存容量；关闭缓存时不读取容器代次
+    @param [in] key 完整查询键
+    @param [in] generation 容器代次原子变量，缓存启用时读取
+    @param [out] value 非空时写入整数副本，未命中不修改
+    @return 同身份、同代次且完整键相同时为 true
+    */
+    bool lookup(const KeyType& key, const std::atomic<uint64_t>& generation, ValueType* value) const;
 
     /** 每次结构提交尝试前先使对应副本格失效
     @param [in] key 完整键，缓存位置独立于结构桶位置
@@ -128,6 +144,16 @@ public:
     */
     size_t count() const;
 private:
+    /** 使用已经检查过的固定容量读取副本，避免原子读取后重复获取容量
+    @param [in] key 完整查询键
+    @param [in] generation 固定代次或原子代次源，只有缓存键匹配时读取
+    @param [out] value 非空时写入整数副本，未命中不修改
+    @param [in] count 本实例非零的固定容量
+    @return 同身份、同代次且完整键相同时为 true
+    */
+    template <typename GenerationType>
+    bool lookupAtGeneration(const KeyType& key, const GenerationType& generation, ValueType* value, size_t count) const;
+
     /** 禁止复制独占副本数组
     @param [in] other 不可复制对象
     */

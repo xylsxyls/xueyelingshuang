@@ -97,15 +97,14 @@ inline uint64_t LockFreeHashMapEpoch::current() const
 
 inline uint64_t LockFreeHashMapEpoch::advance()
 {
-    uint64_t observed = m_clock.load();
-    while (observed != (std::numeric_limits<uint64_t>::max)())
+    uint64_t cutoff = m_clock.load();
+    if (cutoff != (std::numeric_limits<uint64_t>::max)())
     {
-        if (m_clock.compare_exchange_weak(observed, observed + 1))
-        {
-            return observed;
-        }
+        // 其他线程已经推进时共用该次推进；原先观察的截止点只会更保守
+        uint64_t observed = cutoff;
+        m_clock.compare_exchange_strong(observed, cutoff + 1);
     }
-    return observed;
+    return cutoff;
 }
 
 inline uint64_t LockFreeHashMapEpoch::minimum() const

@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <atomic>
+#include "LockFreeHashMapLink.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -11,7 +11,7 @@ struct LockFreeHashMapNode
 {
 public:
     // 后继槽地址，最低两位只用于不可逆终态
-    std::atomic<uintptr_t> m_next;
+    LockFreeHashMapLink m_next;
     // 构造时计算的哈希
     size_t m_hash;
     // 不可变逻辑代次
@@ -22,6 +22,7 @@ public:
     KeyType m_key;
     // 发布后不可修改的值副本，与键合并在同一个受控池槽中
     ValueType m_value;
+
 public:
     /** 完整构造候选，复制异常交由尚未提交的修改边界捕获
     @param [in] key 键来源
@@ -31,6 +32,7 @@ public:
     @param [in] version 已预留的非零值版本
     */
     LockFreeHashMapNode(const KeyType& key, const ValueType& value, size_t hash, uint64_t generation, uint64_t version);
+
 };
 
 #include "HashMapNode.inl"

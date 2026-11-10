@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "LockFreeHashMapPolicy.h"
 #include <memory>
+#include <exception>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -16,9 +17,9 @@ enum LockFreeHashMapStatus
     LockFreeHashMapNotFound,
     // 实例身份或条目版本与期望不同
     LockFreeHashMapVersionMismatch,
-    // 已保留槽位占满配置的硬上限
+    // 已保留与正在预留容量达到硬上限，当前没有可安全借用的槽位
     LockFreeHashMapCapacityLimit,
-    // 预留、发布或回收竞争使本次暂时无法取得槽位
+    // 竞争重试未完成；不表示容量、预留或系统内存不足
     LockFreeHashMapReservationBusy,
     // 扩容策略返回 0，拒绝本次增长
     LockFreeHashMapGrowthDeclined,
@@ -40,6 +41,30 @@ enum LockFreeHashMapStatus
     LockFreeHashMapDirectoryFull,
     // 配置池时表逻辑非空，调用方还必须保证外部静止
     LockFreeHashMapNotEmpty
+};
+
+/** 下标赋值失败的专用异常，不为保存错误码再次分配内存
+*/
+class LockFreeHashMapAssignmentError : public std::exception
+{
+public:
+    /** 保存未提交赋值的错误码
+    @param [in] status 未提交的具体原因
+    */
+    explicit LockFreeHashMapAssignmentError(LockFreeHashMapStatus status) throw();
+
+    /** 返回失败原因
+    @return 未提交的错误码
+    */
+    LockFreeHashMapStatus status() const throw();
+
+    /** 返回固定消息，不执行内存申请
+    @return 具有静态生命周期的错误消息
+    */
+    virtual const char* what() const throw();
+private:
+    // 本次下标赋值的失败原因
+    LockFreeHashMapStatus m_status;
 };
 
 /** 单次调用结果，不使用跨线程共享的最后错误状态
