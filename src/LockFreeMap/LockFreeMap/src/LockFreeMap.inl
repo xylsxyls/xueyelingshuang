@@ -3,13 +3,23 @@
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMap<K, V, Less, Levels>::LockFreeMap() :
+LockFreeMap(true)
+{
+
+}
+
+template <typename K, typename V, typename Less, size_t Levels>
+LockFreeMap<K, V, Less, Levels>::LockFreeMap(bool initializeImmediately) :
 m_store(nullptr),
 m_initialStatus(LOCK_FREE_MAP_INVALID)
 {
     static_assert(Levels > 0, "LockFreeMap MaxLevel must be positive");
     try
     {
-        m_initialStatus = lockFreeMapConfigure(LockFreeMapConfig());
+        if (initializeImmediately)
+        {
+            m_initialStatus = lockFreeMapConfigure(LockFreeMapConfig());
+        }
     }
     catch (const std::bad_alloc&)
     {
@@ -89,8 +99,9 @@ LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapConfigure(const Lo
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
+template <uint32_t Mode>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::read(const K* key, K* outputKey, V* outputValue,
-    LockFreeMapToken* outputToken, uint32_t mode) const
+    LockFreeMapToken* outputToken) const
 #ifdef __EMSCRIPTEN__
 noexcept try
 #endif
@@ -99,8 +110,8 @@ noexcept try
     {
         return m_initialStatus;
     }
-#ifdef __EMSCRIPTEN__
     // 领取与首次源发布合并，protect 仍完成登记后的根验证
+#ifdef __EMSCRIPTEN__
     LockFreeMapGuard guard(m_store->m_domain, m_store->m_root.load());
 #else
     LockFreeMapGuard guard(m_store->m_domain);
@@ -114,53 +125,46 @@ noexcept try
         for (;;)
         {
             LockFreeMapIndex<K, V>* root = m_store->protect(guard);
-#ifdef __EMSCRIPTEN__
             // 根保护及已完成的删除决策使本次视图计数不变，只读取一次原子元数据
             const size_t visibleCount = root == nullptr ? 0 : root->count();
             if (visibleCount == 0)
-#else
-            if (root == nullptr || root->count() == 0)
-#endif
             {
                 return LOCK_FREE_MAP_NOT_FOUND;
             }
             size_t position = 0;
             bool found = false;
-            if (mode == 2)
+            if (Mode == 2)
             {
-#ifdef __EMSCRIPTEN__
                 position = visibleCount - 1;
-#else
-                position = root->count() - 1;
-#endif
             }
-            else if (mode != 1)
+            else if (Mode != 1)
             {
                 position = m_store->find(root, *key, found, guard.m_record);
-                if (mode == 0 && !found)
+                if (Mode == 0 && !found)
                 {
                     return LOCK_FREE_MAP_NOT_FOUND;
                 }
-                if (mode == 4 && found)
+                if (Mode == 4 && found)
                 {
                     ++position;
                 }
             }
-#ifdef __EMSCRIPTEN__
             if (position >= visibleCount)
-#else
-            if (position >= root->count())
-#endif
             {
                 return LOCK_FREE_MAP_NOT_FOUND;
             }
             LockFreeMapPoolSlot<LockFreeMapKey<K, V>>* node = root->entry(position).m_key;
             LockFreeMapPoolSlot<V>* current = outputValue != nullptr || outputToken != nullptr ?
                 m_store->protectValue(node, guard) : node->value().m_value.load();
-            // 取得值快照后重新验证键集合，保证边界查询
-            // 返回的版本曾存在于该次验证的有序键集合中
-            if (current == nullptr || root != m_store->m_root.load())
+            // 指定键查询持有该键的旧索引及值保护，可在与删除重叠的区间内完成观察
+            // 不相关键改变集合不应迫使它重来；边界查询仍须验证整个集合
+            if (Mode == 0 && current == nullptr)
             {
+                return LOCK_FREE_MAP_NOT_FOUND;
+            }
+            if (Mode != 0 && (current == nullptr || root != m_store->m_root.load()))
+            {
+                guard.conflict();
                 continue;
             }
             if (outputKey != nullptr)
@@ -184,17 +188,65 @@ noexcept try
         return LOCK_FREE_MAP_USER_EXCEPTION;
     }
 }
+
 #ifdef __EMSCRIPTEN__
 catch (...)
 {
     return LOCK_FREE_MAP_USER_EXCEPTION;
 }
+
 #endif
+
+template <typename K, typename V, typename Less, size_t Levels>
+template <typename FunctionType>
+LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapVisit(const K& key, const FunctionType& function) const
+{
+    if (m_store == nullptr)
+    {
+        return m_initialStatus;
+    }
+#ifdef __EMSCRIPTEN__
+    LockFreeMapGuard guard(m_store->m_domain, m_store->m_root.load());
+#else
+    LockFreeMapGuard guard(m_store->m_domain);
+#endif
+    if (guard.m_record == nullptr)
+    {
+        return LOCK_FREE_MAP_RECORD_LIMIT;
+    }
+    try
+    {
+        LockFreeMapIndex<K, V>* root = m_store->protect(guard);
+        if (root == nullptr || root->count() == 0)
+        {
+            return LOCK_FREE_MAP_NOT_FOUND;
+        }
+        bool found = false;
+        const size_t position = m_store->find(root, key, found, guard.m_record);
+        if (!found || position >= root->count())
+        {
+            return LOCK_FREE_MAP_NOT_FOUND;
+        }
+        LockFreeMapPoolSlot<LockFreeMapKey<K, V>>* node = root->entry(position).m_key;
+        LockFreeMapPoolSlot<V>* current = m_store->protectValue(node, guard);
+        if (current == nullptr)
+        {
+            return LOCK_FREE_MAP_NOT_FOUND;
+        }
+        // 所有重试发生在回调之前；回调一旦开始就不能因并发更新再次执行
+        function(static_cast<const V&>(current->value()));
+        return LOCK_FREE_MAP_OK;
+    }
+    catch (...)
+    {
+        return LOCK_FREE_MAP_USER_EXCEPTION;
+    }
+}
 
 template <typename K, typename V, typename Less, size_t Levels>
 template <uint32_t Mode>
 #if defined(__EMSCRIPTEN__) && defined(__clang__) && defined(__OPTIMIZE__)
-// 仅合并 Wasm 热点调用边界，保留异常捕获和资源归还路径
+// 内部重试仍复用原有异常捕获，避免增加热路径的异常调用边界
 __attribute__((always_inline)) inline
 #endif
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::write(const K* key, const V* value,
@@ -212,240 +264,335 @@ noexcept try
         return LOCK_FREE_MAP_CONFLICT;
     }
     LockFreeMapIndexStore<K, V, Less>* const store = m_store;
-#ifdef __EMSCRIPTEN__
-    // 领取与首次源发布合并，protect 仍完成登记后的根验证
-    LockFreeMapGuard guard(store->m_domain, store->m_root.load());
-#else
-    LockFreeMapGuard guard(store->m_domain);
-#endif
-    if (guard.m_record == nullptr)
+    // 维护期间根已变化时，下一次重新保护后跳过一次重复维护
+    bool maintainedBeforeRetry = false;
+    // 每轮持有独立守卫；内部竞争直接重试，候选及保护记录先在本轮归还
+    // 条件操作始终使用原凭据，不将版本失效转成无条件写入
+    for (;;)
     {
-        return LOCK_FREE_MAP_RECORD_LIMIT;
-    }
-    LockFreeMapIndex<K, V>* root = store->protect(guard);
-    const size_t count = root == nullptr ? 0 : root->count();
-    guard.m_record->m_maintenanceTick = (guard.m_record->m_maintenanceTick + 1) & 63;
-    LockFreeMapPoolSlot<LockFreeMapKey<K, V>>* ownedKey = nullptr;
-    LockFreeMapPoolSlot<V>* ownedValue = nullptr;
-    LockFreeMapStatus status = LOCK_FREE_MAP_OK;
-    uint64_t version = 0;
-    try
-    {
-        bool found = false;
-        size_t position = 0;
-        if (Mode == 5)
-        {
-            found = count != 0;
-            position = found ? count - 1 : 0;
-        }
-        else
-        {
-            position = store->find(root, *key, found, guard.m_record);
-        }
-        const bool deleting = Mode == 2 || Mode == 4 || Mode == 5;
-        const bool logicalOnly = Mode == 2 && outputValue == nullptr && store->m_config.values.maximumCapacity < 0;
-        // 无输出的逻辑删除只提交键集合；根 CAS 会验证存在性，不需要读取目标值缓存行
-        LockFreeMapPoolSlot<LockFreeMapKey<K, V>>* node = found && !logicalOnly ? root->entry(position).m_key : nullptr;
-        LockFreeMapPoolSlot<V>* previous = nullptr;
-        if (found && !logicalOnly)
-        {
-            // 无条件覆盖不解引用旧版本，只以地址进行 CAS
-            // 条件操作及输出复制必须保护旧版本，防止并发回收
-            previous = Mode >= 3 || (deleting && !logicalOnly) || Mode == 1 ?
-                store->protectValue(node, guard) : node->value().m_value.load();
-            if (previous == nullptr)
-            {
-                return LOCK_FREE_MAP_CONFLICT;
-            }
-        }
-        if (Mode >= 3 && token != nullptr && (!found || previous->m_version != token->m_version))
-        {
-            return LOCK_FREE_MAP_CONFLICT;
-        }
-        if (Mode >= 2 && !found)
-        {
-            return LOCK_FREE_MAP_NOT_FOUND;
-        }
-        if (Mode == 1 && found)
-        {
-            if (root != store->m_root.load())
-            {
-                return LOCK_FREE_MAP_CONFLICT;
-            }
-            if ((Mode == 1 || Mode == 2 || Mode == 5) && outputValue != nullptr)
-            {
-                *outputValue = previous->value();
-            }
-            if (Mode == 1 && outputToken != nullptr)
-            {
-                outputToken->m_identity = store->m_identity;
-                outputToken->m_version = previous->m_version;
-            }
-            return LOCK_FREE_MAP_EXISTS;
-        }
-        // 结构写入先回收旧索引，再判断满池是否需要扩容
-        // 已有键覆盖只按固定操作次数分摊策略维护
-        if (guard.m_record->m_maintenanceTick == 0 || ((!found || deleting) && store->m_domain.multipleRecords()) ||
-            (!found && (root == nullptr || store->m_config.nodes.maximumCapacity >= 0 || store->m_config.values.maximumCapacity >= 0)))
-        {
-            const size_t extra = store->m_config.maintenanceBudget;
-            const size_t maximum = (std::numeric_limits<size_t>::max)();
-            store->collect(count > maximum - extra ? maximum : count + extra, guard.m_record);
-            size_t released = 0;
-            store->m_nodes.maintain(extra, released);
-            store->m_values.maintain(extra, released);
-        }
-        if (Mode == 5 && outputKey != nullptr)
-        {
-            *outputKey = node->value().m_key;
-        }
-        if ((Mode == 1 || Mode == 2 || Mode == 5) && outputValue != nullptr)
-        {
-            *outputValue = deleting ? previous->value() : *value;
-        }
-        if (!deleting)
-        {
-            if (!store->nextVersion(version, guard))
-            {
-                return LOCK_FREE_MAP_VERSION_EXHAUSTED;
-            }
-            ownedValue = store->m_values.create(*value, version, guard, status);
-            if (ownedValue == nullptr)
-            {
-                return status;
-            }
-            if (!found)
-            {
+        // 领取与首次源发布合并，protect 仍完成登记后的根验证
 #ifdef __EMSCRIPTEN__
-                // 候选仍是私有对象，直接构造最终指针，根 CAS 才负责发布
-                ownedKey = store->m_nodes.emplace(0, guard, status, *key, store->m_values, ownedValue);
+        LockFreeMapGuard guard(store->m_domain, store->m_root.load());
 #else
-                ownedKey = store->m_nodes.emplace(0, guard, status, *key, store->m_values);
+        LockFreeMapGuard guard(store->m_domain);
 #endif
-                if (ownedKey == nullptr)
-                {
-                    store->m_values.release(ownedValue);
-                    return status;
-                }
-                // 新键尚未发布，根 CAS 负责向读者发布完整键和值
-#ifndef __EMSCRIPTEN__
-                ownedKey->mutableValue().m_value.store(ownedValue, std::memory_order_relaxed);
-#endif
-                ownedValue = nullptr;
-            }
-        }
-        if (found && !deleting)
+        if (guard.m_record == nullptr)
         {
-            if (Mode == 0)
+            return LOCK_FREE_MAP_RECORD_LIMIT;
+        }
+        LockFreeMapIndex<K, V>* root = store->protect(guard);
+        const size_t count = root == nullptr ? 0 : root->count();
+        guard.m_record->m_maintenanceTick = (guard.m_record->m_maintenanceTick + 1) & 63;
+        LockFreeMapPoolSlot<LockFreeMapKey<K, V>>* ownedKey = nullptr;
+        LockFreeMapPoolSlot<V>* ownedValue = nullptr;
+        LockFreeMapStatus status = LOCK_FREE_MAP_OK;
+        uint64_t version = 0;
+        try
+        {
+            bool found = false;
+            size_t position = 0;
+            if (Mode == 5)
             {
-                previous = node->value().m_value.load();
-            }
-            bool committed = false;
-            // 无条件覆盖复用完整候选，仅在值竞争时重试；根变化或键关闭立即返回冲突
-            while (previous != nullptr && root == store->m_root.load())
-            {
-                if (node->mutableValue().m_value.compare_exchange_strong(previous, ownedValue))
-                {
-                    committed = true;
-                    break;
-                }
-                if (Mode != 0)
-                {
-                    break;
-                }
-                const uint64_t retries = guard.m_record->m_valueRetries.load(std::memory_order_relaxed);
-                if (retries != (std::numeric_limits<uint64_t>::max)())
-                {
-                    guard.m_record->m_valueRetries.store(retries + 1, std::memory_order_relaxed);
-                }
-            }
-            if (committed)
-            {
-                ownedValue = nullptr;
-                if (Mode >= 3 && token != nullptr)
-                {
-                    guard.m_record->m_pointer[1].store(nullptr);
-                }
-                store->m_values.release(previous, guard.m_record);
-                status = LOCK_FREE_MAP_COMMITTED;
+                found = count != 0;
+                position = found ? count - 1 : 0;
             }
             else
             {
-                status = LOCK_FREE_MAP_CONFLICT;
+                position = store->find(root, *key, found, guard.m_record);
             }
-        }
-        else
-        {
-            LockFreeMapIndex<K, V>* candidate = store->build(root, position, found,
-                ownedKey, deleting ? previous : nullptr, guard, status, logicalOnly);
-            if (status == LOCK_FREE_MAP_RECORD_LIMIT)
+            const bool deleting = Mode == 2 || Mode == 4 || Mode == 5;
+            const bool logicalOnly = Mode == 2 && outputValue == nullptr && store->m_config.values.maximumCapacity < 0;
+            // 无输出的逻辑删除只提交键集合；根 CAS 会验证存在性，不需要读取目标值缓存行
+            LockFreeMapPoolSlot<LockFreeMapKey<K, V>>* node = found && !logicalOnly ? root->entry(position).m_key : nullptr;
+            LockFreeMapPoolSlot<V>* previous = nullptr;
+            if (found && !logicalOnly && Mode != 0)
+            {
+                // 条件及输出路径需要借用旧版本；无条件覆盖在提交前才读取一次旧地址
+                // 条件操作及输出复制必须保护旧版本，防止并发回收
+                previous = store->protectValue(node, guard);
+                if (previous == nullptr)
+                {
+                    guard.conflict(true);
+                    continue;
+                }
+            }
+            if (Mode >= 3 && token != nullptr && (!found || previous->m_version != token->m_version))
+            {
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+                if (guard.m_record->m_writeFailures == 31)
+                {
+                    store->m_domain.requestConditional();
+                }
+#endif
+                guard.conflict(true);
+                return LOCK_FREE_MAP_CONFLICT;
+            }
+            if (Mode >= 2 && !found)
+            {
+                return LOCK_FREE_MAP_NOT_FOUND;
+            }
+            if (Mode == 1 && found)
+            {
+                if (root != store->m_root.load())
+                {
+                    guard.conflict(true);
+                    continue;
+                }
+                if ((Mode == 1 || Mode == 2 || Mode == 5) && outputValue != nullptr)
+                {
+                    *outputValue = previous->value();
+                }
+                if (Mode == 1 && outputToken != nullptr)
+                {
+                    outputToken->m_identity = store->m_identity;
+                    outputToken->m_version = previous->m_version;
+                }
+                return LOCK_FREE_MAP_EXISTS;
+            }
+            // 结构写入先回收旧索引，再判断满池是否需要扩容
+            // 已有键覆盖只按固定操作次数分摊策略维护
+            const bool maintenanceNeeded = guard.m_record->m_maintenanceTick == 0 || ((!found || deleting) && store->m_domain.multipleRecords()) ||
+                (!found && (root == nullptr || store->m_config.nodes.maximumCapacity >= 0 || store->m_config.values.maximumCapacity >= 0));
+            const bool skippedMaintenance = maintainedBeforeRetry;
+            const bool performMaintenance = maintenanceNeeded && !skippedMaintenance;
+            maintainedBeforeRetry = false;
+            if (performMaintenance)
             {
                 const size_t extra = store->m_config.maintenanceBudget;
                 const size_t maximum = (std::numeric_limits<size_t>::max)();
                 store->collect(count > maximum - extra ? maximum : count + extra, guard.m_record);
-                candidate = store->build(root, position, found, ownedKey, deleting ? previous : nullptr, guard, status, logicalOnly);
-            }
-            if (status == LOCK_FREE_MAP_OK)
-            {
-                // build 成功后新键属于候选，即使发布失败也由 discard 归还
-                ownedKey = nullptr;
-                LockFreeMapIndex<K, V>* source = root;
-                if (store->m_root.compare_exchange_strong(root, candidate))
+                size_t released = 0;
+                store->m_nodes.maintain(extra, released);
+                store->m_values.maintain(extra, released);
+                if (root != store->m_root.load())
                 {
-                    status = !deleting || store->help(candidate) == 2 ? LOCK_FREE_MAP_COMMITTED : LOCK_FREE_MAP_CONFLICT;
-                    store->complete(candidate, source, guard);
+                    // 回收可能较慢，不能让旧快照继续构造必败候选；守卫先清理旧借用
+                    // 仅紧接的一次尝试跳过重复维护，之后的竞争仍保留原回收频率
+                    maintainedBeforeRetry = true;
+                    guard.conflict(true);
+                    continue;
+                }
+            }
+            if (Mode == 5 && outputKey != nullptr)
+            {
+                *outputKey = node->value().m_key;
+            }
+            if ((Mode == 1 || Mode == 2 || Mode == 5) && outputValue != nullptr)
+            {
+                *outputValue = deleting ? previous->value() : *value;
+            }
+            if (!deleting)
+            {
+                if (!store->nextVersion(version, guard))
+                {
+                    return LOCK_FREE_MAP_VERSION_EXHAUSTED;
+                }
+                ownedValue = store->m_values.create(*value, version, guard, status);
+                if (ownedValue == nullptr && skippedMaintenance &&
+                    (status == LOCK_FREE_MAP_CAPACITY || status == LOCK_FREE_MAP_RESERVED ||
+                    status == LOCK_FREE_MAP_RECORD_LIMIT || status == LOCK_FREE_MAP_GROW_DENIED))
+                {
+                    // 旧根在上轮维护后才解除保护；报告资源不足前补回这次索引回收
+                    const size_t extra = store->m_config.maintenanceBudget;
+                    const size_t maximum = (std::numeric_limits<size_t>::max)();
+                    store->collect(count > maximum - extra ? maximum : count + extra, guard.m_record);
+                    ownedValue = store->m_values.create(*value, version, guard, status);
+                }
+                if (ownedValue == nullptr)
+                {
+                    guard.conflict(true);
+                    if (status == LOCK_FREE_MAP_CONFLICT)
+                    {
+                        continue;
+                    }
+                    return status;
+                }
+                if (!found)
+                {
+                    // 候选仍是私有对象，直接构造最终指针，根 CAS 才负责发布
+                    ownedKey = store->m_nodes.emplace(0, guard, status, *key, store->m_values, ownedValue);
+                    if (ownedKey == nullptr && skippedMaintenance &&
+                        (status == LOCK_FREE_MAP_CAPACITY || status == LOCK_FREE_MAP_RESERVED ||
+                        status == LOCK_FREE_MAP_RECORD_LIMIT || status == LOCK_FREE_MAP_GROW_DENIED))
+                    {
+                        const size_t extra = store->m_config.maintenanceBudget;
+                        const size_t maximum = (std::numeric_limits<size_t>::max)();
+                        store->collect(count > maximum - extra ? maximum : count + extra, guard.m_record);
+                        ownedKey = store->m_nodes.emplace(0, guard, status, *key, store->m_values, ownedValue);
+                    }
+                    if (ownedKey == nullptr)
+                    {
+                        store->m_values.release(ownedValue);
+                        guard.conflict(true);
+                        if (status == LOCK_FREE_MAP_CONFLICT)
+                        {
+                            continue;
+                        }
+                        return status;
+                    }
+                    ownedValue = nullptr;
+                }
+            }
+            if (found && !deleting)
+            {
+                if (Mode == 0)
+                {
+                    previous = node->value().m_value.load();
+                }
+                bool committed = false;
+#if defined(_MSC_VER) && defined(_M_IX86)
+                // MSVC 三十二位的六十四位统计读写会执行原子读改写；按有界批次公布失败数
+                uint32_t pendingRetries = 0;
+#endif
+                // 无条件覆盖在值竞争时复用候选；根变化或键关闭后由外层释放候选并重新查找
+                while (previous != nullptr && root == store->m_root.load())
+                {
+                    if (node->mutableValue().m_value.compare_exchange_strong(previous, ownedValue))
+                    {
+                        committed = true;
+                        break;
+                    }
+                    if (Mode != 0)
+                    {
+                        break;
+                    }
+                    guard.conflict(true);
+#if defined(_MSC_VER) && defined(_M_IX86)
+                    if (++pendingRetries == 32)
+                    {
+                        guard.m_record->addValueRetries(pendingRetries);
+                        pendingRetries = 0;
+                    }
+#else
+                    const uint64_t retries = guard.m_record->m_valueRetries.load(std::memory_order_relaxed);
+                    if (retries != (std::numeric_limits<uint64_t>::max)())
+                    {
+                        guard.m_record->m_valueRetries.store(retries + 1, std::memory_order_relaxed);
+                    }
+#endif
+                }
+#if defined(_MSC_VER) && defined(_M_IX86)
+                // 无论提交成功还是因根变化退出，都在结束本次循环前公布余数
+                if (pendingRetries != 0)
+                {
+                    guard.m_record->addValueRetries(pendingRetries);
+                }
+#endif
+                if (committed)
+                {
+                    ownedValue = nullptr;
+                    if (Mode >= 3)
+                    {
+                        // 成功 CAS 已接管旧值的一份拥有引用；借用结束使用 release 发布此前读取完成
+                        guard.m_record->m_pointer[1].store(nullptr, std::memory_order_release);
+                    }
+                    store->m_values.release(previous, guard.m_record);
+                    status = LOCK_FREE_MAP_COMMITTED;
                 }
                 else
                 {
                     status = LOCK_FREE_MAP_CONFLICT;
-                    store->discard(candidate);
                 }
             }
+            else
+            {
+                LockFreeMapIndex<K, V>* candidate = store->build(root, position, found,
+                    ownedKey, deleting ? previous : nullptr, guard, status, logicalOnly);
+                if (status == LOCK_FREE_MAP_RECORD_LIMIT)
+                {
+                    const size_t extra = store->m_config.maintenanceBudget;
+                    const size_t maximum = (std::numeric_limits<size_t>::max)();
+                    store->collect(count > maximum - extra ? maximum : count + extra, guard.m_record);
+                    candidate = store->build(root, position, found, ownedKey, deleting ? previous : nullptr, guard, status, logicalOnly);
+                }
+                if (status == LOCK_FREE_MAP_OK)
+                {
+                    // build 成功后新键属于候选，即使发布失败也由 discard 归还
+                    ownedKey = nullptr;
+                    LockFreeMapIndex<K, V>* source = root;
+                    if (store->m_root.compare_exchange_strong(root, candidate))
+                    {
+                        status = !deleting || store->help(candidate) == 2 ? LOCK_FREE_MAP_COMMITTED : LOCK_FREE_MAP_CONFLICT;
+                        store->complete(candidate, source, guard);
+                    }
+                    else
+                    {
+                        status = LOCK_FREE_MAP_CONFLICT;
+                        store->discard(candidate);
+                        guard.structuralConflict();
+                    }
+                }
+            }
+            if (Mode == 1 && status == LOCK_FREE_MAP_COMMITTED && outputToken != nullptr)
+            {
+                outputToken->m_identity = store->m_identity;
+                outputToken->m_version = version;
+            }
+            if (status == LOCK_FREE_MAP_COMMITTED)
+            {
+                // 提交分支已经转交全部候选所有权，成功返回前结束剩余根保护
+                // 候选已转交，辅助保护已在提交分支解除；结束根保护后不再访问记录
+                guard.finishWrite();
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+                if (Mode >= 3)
+                {
+                    // 只响应同类条件操作的竞争提示，普通覆盖及查询没有提交后退避
+                    store->m_domain.finishConditional();
+                }
+#endif
+                return LOCK_FREE_MAP_COMMITTED;
+            }
+            if (status == LOCK_FREE_MAP_CONFLICT)
+            {
+                guard.conflict(true);
+                LockFreeMapPool<V>::increment(store->m_retries);
+            }
+            else if (status == LOCK_FREE_MAP_RECORD_LIMIT || status == LOCK_FREE_MAP_RESERVED || status == LOCK_FREE_MAP_CAPACITY)
+            {
+                guard.conflict(true);
+            }
         }
-        if (Mode == 1 && status == LOCK_FREE_MAP_COMMITTED && outputToken != nullptr)
+        catch (const std::bad_alloc&)
         {
-            outputToken->m_identity = store->m_identity;
-            outputToken->m_version = version;
+            status = LOCK_FREE_MAP_ALLOCATION_FAILURE;
         }
-        if (status == LOCK_FREE_MAP_CONFLICT)
+        catch (...)
         {
-            LockFreeMapPool<V>::increment(store->m_retries);
+            status = LOCK_FREE_MAP_USER_EXCEPTION;
+        }
+        if (ownedKey != nullptr)
+        {
+            store->m_nodes.release(ownedKey);
+        }
+        if (ownedValue != nullptr)
+        {
+            store->m_values.release(ownedValue);
+        }
+        if (status != LOCK_FREE_MAP_CONFLICT)
+        {
+            return status;
         }
     }
-    catch (const std::bad_alloc&)
-    {
-        status = LOCK_FREE_MAP_ALLOCATION_FAILURE;
-    }
-    catch (...)
-    {
-        status = LOCK_FREE_MAP_USER_EXCEPTION;
-    }
-    if (ownedKey != nullptr)
-    {
-        store->m_nodes.release(ownedKey);
-    }
-    if (ownedValue != nullptr)
-    {
-        store->m_values.release(ownedValue);
-    }
-    return status;
 }
+
 #ifdef __EMSCRIPTEN__
 // 完整包住保护记录取得、提交及清理，私有入口才可声明不向调用者抛出
 catch (const std::bad_alloc&)
 {
     return LOCK_FREE_MAP_ALLOCATION_FAILURE;
 }
+
 catch (...)
 {
     return LOCK_FREE_MAP_USER_EXCEPTION;
 }
+
 #endif
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapGet(const K& key, V& value, LockFreeMapToken& token) const
 {
-    return read(&key, nullptr, &value, &token, 0);
+    return read<0>(&key, nullptr, &value, &token);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
@@ -475,7 +622,7 @@ LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapExtract(const K& k
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapLast(K& key, V& value, LockFreeMapToken& token) const
 {
-    return read(nullptr, &key, &value, &token, 2);
+    return read<2>(nullptr, &key, &value, &token);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
@@ -493,37 +640,19 @@ LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapSet(const K& key, 
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::set(const K& key, const V& value)
 {
-    LockFreeMapStatus status;
-    do
-    {
-        status = lockFreeMapSet(key, value);
-    }
-    while (status == LOCK_FREE_MAP_CONFLICT);
-    return status == LOCK_FREE_MAP_COMMITTED;
+    return lockFreeMapSet(key, value) == LOCK_FREE_MAP_COMMITTED;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::insert(const K& key, const V& value)
 {
-    LockFreeMapStatus status;
-    do
-    {
-        status = write<1>(&key, &value, nullptr, nullptr, nullptr, nullptr);
-    }
-    while (status == LOCK_FREE_MAP_CONFLICT);
-    return status == LOCK_FREE_MAP_COMMITTED;
+    return write<1>(&key, &value, nullptr, nullptr, nullptr, nullptr) == LOCK_FREE_MAP_COMMITTED;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::erase(const K& key)
 {
-    LockFreeMapStatus status;
-    do
-    {
-        status = write<2>(&key, nullptr, nullptr, nullptr, nullptr, nullptr);
-    }
-    while (status == LOCK_FREE_MAP_CONFLICT);
-    return status == LOCK_FREE_MAP_COMMITTED;
+    return write<2>(&key, nullptr, nullptr, nullptr, nullptr, nullptr) == LOCK_FREE_MAP_COMMITTED;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
@@ -535,7 +664,7 @@ bool LockFreeMap<K, V, Less, Levels>::remove(const K& key)
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::get(const K& key, V& value) const
 {
-    return read(&key, nullptr, &value, nullptr, 0) == LOCK_FREE_MAP_OK;
+    return read<0>(&key, nullptr, &value, nullptr) == LOCK_FREE_MAP_OK;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
@@ -549,7 +678,7 @@ V LockFreeMap<K, V, Less, Levels>::value(const K& key, const V& defaultValue) co
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::contains(const K& key) const
 {
-    return read(&key, nullptr, nullptr, nullptr, 0) == LOCK_FREE_MAP_OK;
+    return read<0>(&key, nullptr, nullptr, nullptr) == LOCK_FREE_MAP_OK;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
@@ -588,6 +717,13 @@ void LockFreeMap<K, V, Less, Levels>::clear()
 {
     if (m_store != nullptr)
     {
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+        // 观察到空根即可在本次读取处完成清空；后来的写入可在线性化点之后提交
+        if (m_store->m_root.load() == nullptr)
+        {
+            return;
+        }
+#endif
         m_store->m_root.exchange(nullptr);
     }
 }
@@ -609,7 +745,11 @@ size_t LockFreeMap<K, V, Less, Levels>::forEach(Function function) const
     {
         return 0;
     }
+#ifdef __EMSCRIPTEN__
+    LockFreeMapGuard guard(m_store->m_domain, m_store->m_root.load());
+#else
     LockFreeMapGuard guard(m_store->m_domain);
+#endif
     if (guard.m_record == nullptr)
     {
         return 0;
@@ -714,25 +854,25 @@ std::vector<std::pair<K, V>> LockFreeMap<K, V, Less, Levels>::toVector() const
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::first(K& key, V& value) const
 {
-    return read(nullptr, &key, &value, nullptr, 1) == LOCK_FREE_MAP_OK;
+    return read<1>(nullptr, &key, &value, nullptr) == LOCK_FREE_MAP_OK;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::last(K& key, V& value) const
 {
-    return read(nullptr, &key, &value, nullptr, 2) == LOCK_FREE_MAP_OK;
+    return read<2>(nullptr, &key, &value, nullptr) == LOCK_FREE_MAP_OK;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::lowerBound(const K& key, K& foundKey, V& value) const
 {
-    return read(&key, &foundKey, &value, nullptr, 3) == LOCK_FREE_MAP_OK;
+    return read<3>(&key, &foundKey, &value, nullptr) == LOCK_FREE_MAP_OK;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::upperBound(const K& key, K& foundKey, V& value) const
 {
-    return read(&key, &foundKey, &value, nullptr, 4) == LOCK_FREE_MAP_OK;
+    return read<4>(&key, &foundKey, &value, nullptr) == LOCK_FREE_MAP_OK;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>

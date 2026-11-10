@@ -17,6 +17,7 @@
 @note 析构、配置及 clearAndFreeMemory 必须由调用方保证外部静止
 @note 比较器和策略必须线程安全、短小；用户类型的析构函数不得抛异常
 @note MaxLevel 仅为旧源码兼容保留，当前实现不使用跳表层数
+@note 普通接口内部重试 CAS 竞争，没有重试次数上限；CONFLICT 只用于条件凭据失效
 */
 template <typename KeyType, typename ValueType, typename LessType = std::less<KeyType>, size_t MaxLevel = 16>
 class LockFreeMap
@@ -36,12 +37,21 @@ public:
     */
     LockFreeMapStatus lockFreeMapGet(const KeyType& key, ValueType& value, LockFreeMapToken& token) const;
 
+    /** 在读保护范围内访问一个值，省去值副本及shared_ptr引用计数竞争
+    @param [in] key 查询键
+    @param [in] function 接受const ValueType&的回调，每次成功最多调用一次；引用不能逃逸
+    @return OK已调用；NOT_FOUND未找到；其他状态均不表示调用成功，回调异常返回USER_EXCEPTION
+    @note 回调可重入数据操作，但不得析构或重新配置本表；暂停只保留该次受保护版本
+    */
+    template <typename FunctionType>
+    LockFreeMapStatus lockFreeMapVisit(const KeyType& key, const FunctionType& function) const;
+
     /** 发布完整候选，键已存在时复制实际胜出的条目
     @param [in] key 按比较器查询的键
     @param [in] candidate 已构造候选；调用方在所有结果下均保留原对象的所有权
     @param [out] value 返回 COMMITTED 或 EXISTS 时的实际值副本
     @param [out] token 返回 COMMITTED 或 EXISTS 时的实际条目凭据
-    @return 返回 COMMITTED、EXISTS、CONFLICT 或未提交错误；内部不调用工厂
+    @return 返回 COMMITTED、EXISTS 或未提交错误；内部不调用工厂
     */
     LockFreeMapStatus lockFreeMapGetOrInsert(const KeyType& key, const ValueType& candidate, ValueType& value, LockFreeMapToken& token);
 
@@ -63,7 +73,7 @@ public:
     /** 先复制输出再原子删除；复制失败不会删除条目
     @param [in] key 按比较器查询的键
     @param [out] value 返回 COMMITTED 时由调用方拥有的值副本
-    @return 返回 COMMITTED、NOT_FOUND、CONFLICT 或未提交错误
+    @return 返回 COMMITTED、NOT_FOUND 或未提交错误
     */
     LockFreeMapStatus lockFreeMapExtract(const KeyType& key, ValueType& value);
 
@@ -87,7 +97,7 @@ public:
     /** 不附带版本条件地发布键值版本
     @param [in] key 按比较器查询的键
     @param [in] value 待复制的候选值
-    @return 返回 COMMITTED、CONFLICT 或未提交的错误状态
+    @return 返回 COMMITTED 或未提交的资源、配置、用户异常等错误；竞争在内部重试
     */
     LockFreeMapStatus lockFreeMapSet(const KeyType& key, const ValueType& value);
 
@@ -111,6 +121,12 @@ public:
     /** 构造函数
     */
     LockFreeMap();
+
+    /** 选择是否立即建立默认池，延迟模式由 lockFreeMapConfigure 完成初始化
+    @param [in] initializeImmediately true 保持默认构造行为；false 不申请池及保护记录
+    @note 延迟模式在成功配置前，数据操作返回 INVALID 或旧接口的失败值
+    */
+    explicit LockFreeMap(bool initializeImmediately);
 
     /** 析构函数，释放所有保留节点和值版本
     @note 析构时外部必须保证没有其它线程继续访问本对象
@@ -288,7 +304,7 @@ public:
     size_t retainedValueCount() const;
 
 private:
-    /** 执行一次写入尝试，所有可能抛异常的输出复制先于提交
+    /** 执行写入，内部竞争持续重试，条件凭据始终使用调用方传入的版本
     @param [in] key 待查键，仅最大项提取时允许 nullptr
     @param [in] value 候选值，删除时为 nullptr
     @param [in] token 可选条件凭据，无条件操作时为 nullptr
@@ -311,11 +327,12 @@ private:
     @param [out] outputKey 可选键输出，不需要时为 nullptr
     @param [out] outputValue 可选值输出，不需要时为 nullptr
     @param [out] outputToken 可选版本凭据输出，不需要时为 nullptr
-    @param [in] mode 0 查询，1 首项，2 尾项，3 下界，4 上界
+    @tparam Mode 0 查询，1 首项，2 尾项，3 下界，4 上界，调用点在编译期固定
     @return 返回 OK、NOT_FOUND 或明确错误
     */
+    template <uint32_t Mode>
     LockFreeMapStatus read(const KeyType* key, KeyType* outputKey, ValueType* outputValue,
-        LockFreeMapToken* outputToken, uint32_t mode) const
+        LockFreeMapToken* outputToken) const
 #ifdef __EMSCRIPTEN__
         noexcept
 #endif

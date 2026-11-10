@@ -31,13 +31,11 @@ m_pool(other.m_pool)
 template <typename K, typename V>
 LockFreeMapKey<K, V>::~LockFreeMapKey()
 {
-#ifdef __EMSCRIPTEN__
     // 末个拥有者已显式归还值时，只需继续执行键成员的正常析构
     if (m_pool == nullptr)
     {
         return;
     }
-#endif
     LockFreeMapPoolSlot<V>* value = m_value.load();
     if (value != nullptr)
     {
@@ -54,12 +52,8 @@ void LockFreeMapPoolDestroy<LockFreeMapKey<K, V>>::destroy(LockFreeMapKey<K, V>&
     {
         value.m_pool->releaseDetached(current, record);
     }
-#ifdef __EMSCRIPTEN__
     // 此键已无其他拥有者和新引用入口，私有析构标记替代重复的原子清空与读取
     value.m_pool = nullptr;
-#else
-    value.m_value.store(nullptr, std::memory_order_relaxed);
-#endif
     value.~LockFreeMapKey<K, V>();
 }
 
@@ -118,7 +112,8 @@ m_config(config),
 m_domain(config.operationRecordLimit),
 m_nodes(config.nodes, m_domain),
 m_values(config.values, m_domain, true),
-m_identity(new (std::nothrow) LockFreeMapIdentity),
+// 身份与控制块只分配一次；申请异常仍由配置入口捕获并转换状态
+m_identity(std::make_shared<LockFreeMapIdentity>()),
 m_root(nullptr),
 m_version(0),
 m_retries(0),
@@ -127,7 +122,8 @@ m_indices(new (std::nothrow) LockFreeMapIndex<K, V>[config.operationRecordLimit 
 m_buffers(new (std::nothrow) LockFreeMapIndexBuffer<K, V>[config.operationRecordLimit * 4 + 4]),
 m_indexCount(m_indices == nullptr || m_buffers == nullptr ? 0 : config.operationRecordLimit * 4 + 4),
 m_cursor(0),
-m_span(0)
+m_span(0),
+m_bufferSpan(0)
 {
 
 }
@@ -154,6 +150,7 @@ LockFreeMapIndex<K, V>* LockFreeMapIndexStore<K, V, Less>::protect(LockFreeMapGu
             guard.m_record->m_pointer[0].store(root);
             if (root != m_root.load())
             {
+                guard.conflict();
                 continue;
             }
         }
@@ -161,6 +158,7 @@ LockFreeMapIndex<K, V>* LockFreeMapIndexStore<K, V, Less>::protect(LockFreeMapGu
         guard.m_record->m_pointer[0].store(root);
         if (root != m_root.load())
         {
+            guard.conflict();
             continue;
         }
 #endif
@@ -176,14 +174,16 @@ template <typename K, typename V, typename Less>
 LockFreeMapPoolSlot<V>* LockFreeMapIndexStore<K, V, Less>::protectValue(
     LockFreeMapPoolSlot<LockFreeMapKey<K, V>>* key, LockFreeMapGuard& guard)
 {
-    LockFreeMapPoolSlot<V>* value = nullptr;
-    do
+    for (;;)
     {
-        value = key->value().m_value.load();
+        LockFreeMapPoolSlot<V>* value = key->value().m_value.load();
         guard.m_record->m_pointer[1].store(value);
+        if (value == key->value().m_value.load())
+        {
+            return value;
+        }
+        guard.conflict();
     }
-    while (value != key->value().m_value.load());
-    return value;
 }
 
 template <typename K, typename V, typename Less>
@@ -335,6 +335,7 @@ bool LockFreeMapIndexStore<K, V, Less>::nextVersion(uint64_t& version, LockFreeM
                 record.m_versionLast = previous + amount;
                 break;
             }
+            guard.conflict();
         }
     }
     version = record.m_versionNext;
@@ -396,6 +397,12 @@ LockFreeMapIndexBuffer<K, V>* LockFreeMapIndexStore<K, V, Less>::buffer(size_t c
             delete[] record.m_entries;
             record.m_entries = entries;
             record.m_capacity = capacity;
+        }
+        size_t span = m_bufferSpan.load(std::memory_order_relaxed);
+        while (span <= slot && !m_bufferSpan.compare_exchange_weak(span, slot + 1,
+            std::memory_order_release, std::memory_order_relaxed))
+        {
+
         }
         return &record;
     }
@@ -754,7 +761,8 @@ size_t LockFreeMapIndexStore<K, V, Less>::collect(size_t budget, LockFreeMapHaza
     }
     if (releaseBuffers && budget != 0)
     {
-        for (size_t slot = 0; slot < m_indexCount; ++slot)
+        const size_t bufferSpan = m_bufferSpan.load(std::memory_order_acquire);
+        for (size_t slot = 0; slot < bufferSpan; ++slot)
         {
             LockFreeMapIndexBuffer<K, V>& record = m_buffers[slot];
             size_t expected = 0;
@@ -815,6 +823,7 @@ void LockFreeMapIndexStore<K, V, Less>::freeMemory()
     }
     m_indexBytes.store(0);
     m_span.store(0);
+    m_bufferSpan.store(0);
     m_nodes.freeMemory();
     m_values.freeMemory();
 }

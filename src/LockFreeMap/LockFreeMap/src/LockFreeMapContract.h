@@ -17,11 +17,11 @@ enum LockFreeMapStatus
     LOCK_FREE_MAP_EXISTS = 2,
     // 不存在匹配条目
     LOCK_FREE_MAP_NOT_FOUND = 3,
-    // 版本不匹配或并发根变更使本次尝试失效
+    // 条件凭据的实例、条目版本或最大项条件已失效；普通接口内部重试 CAS 竞争
     LOCK_FREE_MAP_CONFLICT = 4,
-    // 保留槽位已达到容量上限
+    // 已无可复用槽位，且保留容量已达到上限
     LOCK_FREE_MAP_CAPACITY = 5,
-    // 剩余容量额度已由其他并发申请预留
+    // 已无可复用槽位，且剩余容量额度已由其他并发申请预留
     LOCK_FREE_MAP_RESERVED = 6,
     // 扩容策略返回零，拒绝本次增长
     LOCK_FREE_MAP_GROW_DENIED = 7,
@@ -65,6 +65,9 @@ public:
 */
 struct LockFreeMapIdentity
 {
+    // 与共享控制块合并分配时，冷数据隔开引用计数和后续分配的索引头
+    // 只影响存储开销，不依赖缓存行大小保证并发正确性
+    unsigned char m_padding[64];
 };
 
 /** 回收后仍可比较的凭据，仅对原实例及版本有效

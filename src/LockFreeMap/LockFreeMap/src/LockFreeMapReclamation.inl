@@ -33,8 +33,13 @@ inline void* LockFreeMapHazardPointer::load(std::memory_order order) const
 }
 
 inline LockFreeMapHazardRecord::LockFreeMapHazardRecord() :
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+m_threadHint(0),
+m_claimed(0),
+#else
 m_claimed(0),
 m_threadHint(0),
+#endif
 m_searchHint(0),
 m_searchLocality(false),
 m_versionNext(0),
@@ -42,7 +47,9 @@ m_versionLast(0),
 m_maintenanceTick(0),
 m_valueRetries(0),
 m_indexCache(nullptr),
-m_poolHome(0)
+m_poolHome(0),
+m_contentionFailures(0),
+m_writeFailures(0)
 {
 #ifdef __EMSCRIPTEN__
     m_pointer[0].m_claimRoot = true;
@@ -88,15 +95,70 @@ inline void LockFreeMapHazardRecord::release()
 #endif
 }
 
+inline void LockFreeMapHazardRecord::addValueRetries(uint32_t amount)
+{
+    const uint64_t maximum = (std::numeric_limits<uint64_t>::max)();
+    const uint64_t current = m_valueRetries.load(std::memory_order_relaxed);
+    m_valueRetries.store(amount > maximum - current ? maximum : current + amount, std::memory_order_relaxed);
+}
+
 inline LockFreeMapReclamation::LockFreeMapReclamation(size_t count) :
 m_records(new (std::nothrow) LockFreeMapHazardRecord[count]),
 m_count(m_records == nullptr ? 0 : count),
 m_span(0)
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+, m_conditionalPressure(0)
+#endif
 {
     for (size_t index = 0; index < m_count; ++index)
     {
         m_records[index].m_poolHome = index * 4;
     }
+}
+
+inline void LockFreeMapReclamation::requestConditional()
+{
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // 覆盖为固定预算，不随竞争次数累加；请求者暂停后预算仍能自行耗尽
+    m_conditionalPressure.store(16, std::memory_order_relaxed);
+#endif
+}
+
+inline void LockFreeMapReclamation::finishConditional()
+{
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    const uint32_t pending = m_conditionalPressure.load(std::memory_order_relaxed);
+    if (pending != 0)
+    {
+        pauseConditional(pending);
+    }
+#endif
+}
+
+inline void LockFreeMapReclamation::pauseConditional(uint32_t pending)
+{
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // 只尝试一次减额，竞争失败也不等待；并发提示不参与对象发布或回收协议
+    const uint32_t observed = pending;
+    m_conditionalPressure.compare_exchange_strong(pending, observed - 1, std::memory_order_relaxed);
+    // 给较慢的观察及条件提交者留下机会；volatile 只保留有限的本地迭代
+#ifdef __EMSCRIPTEN__
+    // 线性内存中的易失计数循环采用较小预算，仍给同类条件调用留下有限提交间隔
+    volatile uint32_t remaining = 1024 + (observed & 15) * 32;
+#else
+    volatile uint32_t remaining = 4096 + (observed & 15) * 128;
+#endif
+    while (remaining != 0)
+    {
+        --remaining;
+    }
+#ifndef __EMSCRIPTEN__
+    // Wasm 的调度提示不让出宿主线程；有限本地退避已完成，不再重复进入运行库
+    std::this_thread::yield();
+#endif
+#else
+    (void)pending;
+#endif
 }
 
 inline LockFreeMapReclamation::~LockFreeMapReclamation()
@@ -226,7 +288,7 @@ inline bool LockFreeMapReclamation::protects(void* pointer, const LockFreeMapHaz
         {
             continue;
         }
-        for (size_t slot = 0; slot < 4; ++slot)
+        for (size_t slot = 0; slot < 3; ++slot)
         {
             if (m_records[index].m_pointer[slot].load() == pointer)
             {
@@ -372,15 +434,63 @@ m_record(domain.acquire(source))
 
 }
 
+inline void LockFreeMapGuard::conflict(bool writing)
+{
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // 失败次数跨调用累计，每三十二次失败让步一次；成功路径不读写退避状态
+    uint32_t& count = writing ? m_record->m_writeFailures : m_record->m_contentionFailures;
+    const uint32_t failures = ++count;
+    if (failures == 32)
+    {
+        count = 0;
+        std::this_thread::yield();
+    }
+#else
+    (void)writing;
+#endif
+}
+
+inline void LockFreeMapGuard::structuralConflict()
+{
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // 失败清理已完成；每八次累计写竞争作一次有界本地退避，随后仍由 conflict 维护让步计数
+    const uint32_t failures = m_record->m_writeFailures;
+    if ((failures & 7) == 7)
+    {
+        const uintptr_t seed = (reinterpret_cast<uintptr_t>(m_record) >> 4) ^ failures;
+        // volatile 仅保留当前线程的固定迭代，不作跨线程同步
+        volatile uint32_t remaining = 16 + static_cast<uint32_t>(seed & 31);
+        while (remaining != 0)
+        {
+            --remaining;
+        }
+    }
+#endif
+}
+
+inline void LockFreeMapGuard::finishWrite()
+{
+    // 值更新分支或索引 complete 已结束值借用；池 take 成功返回前也已解除块保护
+    // 只在这些前提均满足的提交分支使用，避免重复读取两个已为空的保护槽
+#ifdef __EMSCRIPTEN__
+    m_record->release();
+#else
+    m_record->m_pointer[0].store(nullptr, std::memory_order_release);
+    m_record->m_claimed.store(0, std::memory_order_release);
+#endif
+    // 从此不再访问记录，防止析构重复清理已经被下一调用领取的记录
+    m_record = nullptr;
+}
+
 inline LockFreeMapGuard::~LockFreeMapGuard()
 {
     if (m_record != nullptr)
     {
 #ifdef __EMSCRIPTEN__
         // 源保护同时承载记录所有权，必须在其他保护清空之后一并释放
-        for (size_t index = 1; index < 4; ++index)
+        for (size_t index = 1; index < 3; ++index)
 #else
-        for (size_t index = 0; index < 4; ++index)
+        for (size_t index = 0; index < 3; ++index)
 #endif
         {
             if (m_record->m_pointer[index].load(std::memory_order_relaxed) != nullptr)

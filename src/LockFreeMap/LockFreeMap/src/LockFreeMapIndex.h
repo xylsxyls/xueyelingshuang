@@ -37,6 +37,7 @@ public:
     /** 最后一个索引拥有者退出后释放当前值
     */
     ~LockFreeMapKey();
+
 };
 
 /** 键载荷的析构入口，把已析构值槽归还给同一次操作的值缓存
@@ -50,6 +51,7 @@ public:
     @param [in] record 当前独占操作记录，允许 nullptr
     */
     static void destroy(LockFreeMapKey<K, V>& value, LockFreeMapHazardRecord* record);
+
 };
 
 /** 不可变有序索引中的一个拥有引用
@@ -78,6 +80,7 @@ public:
     /** 初始化没有分配数组的空记录
     */
     LockFreeMapIndexBuffer();
+
 };
 
 /** 稳定索引记录：0 空闲、1 私有、2 发布完成、3 部分回收、4 扫描占用
@@ -138,6 +141,7 @@ public:
     /** 构造可复用的空索引记录
     */
     LockFreeMapIndex();
+
 };
 
 /** 容器内部存储；键集合变更发布索引，值更新仅发布一个槽
@@ -176,6 +180,8 @@ public:
     std::atomic<size_t> m_cursor;
     // 曾经占用的最高描述符位置加一
     std::atomic<size_t> m_span;
+    // 曾成功领取的缓冲区上界；维护不扫描从未使用的预留记录
+    std::atomic<size_t> m_bufferSpan;
 
 public:
     /** 申请有界元数据
@@ -288,6 +294,7 @@ public:
     /** 静止期清空并释放内存，保留版本计数
     */
     void freeMemory();
+
 };
 
 #include "LockFreeMapIndex.inl"

@@ -48,12 +48,21 @@ public:
 struct LockFreeMapHazardRecord
 {
 public:
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // 查找亲和记录时由其他线程读取，领取后通常不再修改
+    std::atomic<size_t> m_threadHint;
+    // 隔开只读提示与拥有者每次调用写入的领取、根保护字段，减少扫描引起的缓存行争用
+    unsigned char m_hintPadding[64];
+    // 只有成功领取才授予记录所有权，提示碰撞不改变此约束
+    std::atomic<uint32_t> m_claimed;
+#else
     // 原生后端的领取状态；Wasm 使用源保护位合并记录所有权
     std::atomic<uint32_t> m_claimed;
     // 线程亲和提示，碰撞或线程 ID 复用都不授予所有权
     std::atomic<size_t> m_threadHint;
-    // 顺序一致保护：源根、值版本、分配块及保留位；私有候选由状态和源保护覆盖
-    LockFreeMapHazardPointer m_pointer[4];
+#endif
+    // 顺序一致保护：源根、值版本、分配块；私有候选由状态和源保护覆盖
+    LockFreeMapHazardPointer m_pointer[3];
     // 本调用独占的键池和值池目录提示
     size_t m_directoryHint[2];
     // 本调用独占的槽位置，每次使用重新检查块边界
@@ -78,8 +87,12 @@ public:
     void* m_poolCache[2];
     // 空槽所属池，防止同一个保护域内的不同池混用地址
     void* m_poolOwner[2];
-    // 隔开相邻调用记录的频繁写字段，避免共享同一缓存行
-    unsigned char m_padding[64];
+    // 读取竞争失败累计次数，仅记录独占者访问，每次让步后归零
+    uint32_t m_contentionFailures;
+    // 写入及条件提取竞争的累计失败次数，查询或提交成功均不重置
+    uint32_t m_writeFailures;
+    // 利用原有六十四字节隔离空间，保持池缓存和下一条记录的原有位置
+    unsigned char m_padding[64 - 2 * sizeof(uint32_t)];
 
 public:
     /** 初始化可取得的空操作记录
@@ -104,6 +117,11 @@ public:
     /** 清空源保护并归还记录；调用者须已清空其他保护且结束私有访问
     */
     void release();
+
+    /** 当前独占调用合并值竞争统计，达到上限后保持饱和
+    @param [in] amount 尚未公布的失败次数；调用者须独占本记录
+    */
+    void addValueRetries(uint32_t amount);
 };
 
 /** 有界保护域，析构要求外部静止
@@ -164,6 +182,15 @@ public:
     */
     bool multipleRecords() const;
 
+    /** 多次凭据失效时请求有限次提交后退避，不保留请求者身份或资源所有权
+    */
+    void requestConditional();
+
+    /** 条件提交且守卫已释放后响应竞争提示；没有请求时直接返回
+    @note 不等候请求者或计数归零，单次响应的本地工作量有固定上限
+    */
+    void finishConditional();
+
     /** 外部静止期清空无资源的索引提示，禁止跨索引记录重置继续使用
     */
     void clearIndexCaches();
@@ -186,6 +213,16 @@ private:
     */
     static size_t threadHint();
 
+    /** 尝试消耗一次退避提示并作有界让步，调用方已结束容器借用
+    @param [in] pending 先前读到的非零提示计数；只影响调度，不授予访问权限
+    */
+#if defined(_MSC_VER)
+    __declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+    __attribute__((noinline))
+#endif
+    void pauseConditional(uint32_t pending);
+
     /** 禁止复制保护域
     @param [in] other 源对象
     */
@@ -204,6 +241,10 @@ private:
     size_t m_count;
     // 曾登记的最高记录位置加一，在读取源指针前发布
     std::atomic<size_t> m_span;
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // 有限的条件提交退避提示；没有线程拥有它，暂停请求者不会阻挡其他调用
+    std::atomic<uint32_t> m_conditionalPressure;
+#endif
 };
 
 /** 操作登记守卫，保护根、值版本和池块，并持有私有候选的源保护
@@ -230,6 +271,30 @@ public:
     */
     ~LockFreeMapGuard();
 
+    /** 累计竞争失败后分摊运行库调度提示，不影响无竞争的成功路径
+    @param [in] writing 是否为写入或提取的提交竞争，源保护重试使用默认读取计数
+    */
+#if defined(_MSC_VER)
+    __declspec(noinline)
+#elif !defined(__EMSCRIPTEN__) && (defined(__GNUC__) || defined(__clang__))
+    __attribute__((noinline))
+#endif
+    void conflict(bool writing = false);
+
+    /** 根索引发布竞争时分散重试节奏，不等待其他调用；须持有有效记录
+    */
+#if defined(_MSC_VER)
+    __declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+    __attribute__((noinline))
+#endif
+    void structuralConflict();
+
+    /** 写入已成功且值、块保护均已清空时，释放根保护和记录
+    @note 仅供 write 的提交完成分支使用；异常、冲突和提前返回仍由析构完整清理
+    */
+    void finishWrite();
+
 private:
     /** 禁止复制操作守卫
     @param [in] other 源对象
@@ -241,6 +306,7 @@ private:
     @return 当前守卫引用，函数禁用
     */
     LockFreeMapGuard& operator=(const LockFreeMapGuard& other);
+
 };
 
 #include "LockFreeMapReclamation.inl"

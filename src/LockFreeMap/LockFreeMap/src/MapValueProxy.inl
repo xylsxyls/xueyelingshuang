@@ -30,12 +30,7 @@ MapValueProxy<KeyType, ValueType, LessType, MaxLevel>& MapValueProxy<KeyType, Va
     {
         throw LockFreeMapError(LOCK_FREE_MAP_INVALID);
     }
-    LockFreeMapStatus status;
-    do
-    {
-        status = m_map->lockFreeMapSet(m_key, value);
-    }
-    while (status == LOCK_FREE_MAP_CONFLICT);
+    const LockFreeMapStatus status = m_map->lockFreeMapSet(m_key, value);
     if (status != LOCK_FREE_MAP_COMMITTED)
     {
         throw LockFreeMapError(status);
