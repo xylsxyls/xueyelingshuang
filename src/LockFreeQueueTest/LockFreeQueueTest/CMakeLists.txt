@@ -1,67 +1,120 @@
-﻿#设置CMAKE最低版本
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1.1)
-SET(CMAKE_CXX_STANDARD 11)
+cmake_minimum_required(VERSION 3.15)
+project(LockFreeQueueTest LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-#SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -finput-charset='gb2312'")
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -finput-charset='gb2312'")
-
-if(${DEBUGRELEASE} STREQUAL "debug")
-#设置项目名称
-SET(PROJECT_NAME LockFreeQueueTestd)
-SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -Wl,-rpath=. -O0 -g -ggdb ")
-SET(CMAKE_BUILD_TYPE "Debug")
-elseif(${DEBUGRELEASE} STREQUAL "release")
-#设置项目名称
-SET(PROJECT_NAME LockFreeQueueTest)
-SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
-SET(CMAKE_BUILD_TYPE "Release")
-endif()
-
-if(${BIT} STREQUAL "32")
-    MESSAGE(STATUS "using 32bits (x86)")
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
-elseif(${BIT} STREQUAL "64")
-    MESSAGE(STATUS "using 64bits (x86_64)")
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64")
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
-elseif(${BIT} STREQUAL "arm32")
-    MESSAGE(STATUS "using arm32 (armhf)")
-    SET(CMAKE_C_COMPILER "arm-linux-gnueabihf-gcc")
-    SET(CMAKE_CXX_COMPILER "arm-linux-gnueabihf-g++")
-elseif(${BIT} STREQUAL "arm64")
-    MESSAGE(STATUS "using arm64 (aarch64)")
-    SET(CMAKE_C_COMPILER "aarch64-linux-gnu-gcc")
-    SET(CMAKE_CXX_COMPILER "aarch64-linux-gnu-g++")
+# Tests own instrumentation; the library headers are never modified by this build.
+set(queue_source "${CMAKE_CURRENT_SOURCE_DIR}/../../LockFreeQueue/LockFreeQueue/src")
+set(queue_tests "${CMAKE_CURRENT_SOURCE_DIR}")
+set(LOCK_FREE_QUEUE_WHITEBOX_DIR "${CMAKE_BINARY_DIR}/whitebox" CACHE PATH
+    "Generated test headers; must be below src/temp/LockFreeQueueTest")
+set(queue_root "${queue_tests}/../../..")
+set(LOCK_FREE_QUEUE_HOST_TOOL "" CACHE FILEPATH "Native C++ host tool when cross-compiling")
+if(NOT CMAKE_CROSSCOMPILING)
+    add_executable(LockFreeQueueTestTool
+        LockFreeQueueTestTool.cpp LockFreeQueueTestWhitebox.cpp
+        LockFreeQueueTestRunner.cpp LockFreeQueueTestResults.cpp
+        "${queue_root}/src/CSystem/CSystem/src/CSystem.cpp"
+        "${queue_root}/src/JsonCpp/JsonCpp/src/json_reader.cpp"
+        "${queue_root}/src/JsonCpp/JsonCpp/src/json_value.cpp"
+        "${queue_root}/src/JsonCpp/JsonCpp/src/json_writer.cpp")
+    target_compile_definitions(LockFreeQueueTestTool PRIVATE STATIC_LIB NOMINMAX _CRT_SECURE_NO_WARNINGS)
+    if(WIN32)
+        target_link_libraries(LockFreeQueueTestTool PRIVATE bcrypt Psapi Ole32 OleAut32 User32 Advapi32 Uuid)
+    elseif(APPLE)
+        target_link_libraries(LockFreeQueueTestTool PRIVATE "-framework Security")
+    else()
+        find_package(OpenSSL REQUIRED)
+        target_link_libraries(LockFreeQueueTestTool PRIVATE OpenSSL::Crypto ${CMAKE_DL_LIBS})
+    endif()
+    if(MSVC)
+        target_compile_options(LockFreeQueueTestTool PRIVATE /EHsc)
+    endif()
+    set(queue_host_tool "$<TARGET_FILE:LockFreeQueueTestTool>")
+    set(queue_host_dependency LockFreeQueueTestTool)
 else()
-    MESSAGE(FATAL_ERROR "Unknown BIT value: ${BIT}. Please set BIT to '32', '64', 'arm32', or 'arm64'")
+    if(NOT EXISTS "${LOCK_FREE_QUEUE_HOST_TOOL}")
+        message(FATAL_ERROR "First build native LockFreeQueueTestTool, then pass -DLOCK_FREE_QUEUE_HOST_TOOL=/path/to/tool")
+    endif()
+    set(queue_host_tool "${LOCK_FREE_QUEUE_HOST_TOOL}")
 endif()
+add_custom_target(LockFreeQueueWhitebox
+    COMMAND "${queue_host_tool}" whitebox --root "${queue_root}"
+        --source "${queue_source}" --output "${LOCK_FREE_QUEUE_WHITEBOX_DIR}"
+    DEPENDS ${queue_host_dependency}
+    VERBATIM)
+add_executable(LockFreeQueueTest LockFreeQueueTest.cpp)
+add_dependencies(LockFreeQueueTest LockFreeQueueWhitebox)
+target_include_directories(LockFreeQueueTest PRIVATE "${LOCK_FREE_QUEUE_WHITEBOX_DIR}" "${queue_tests}")
+target_compile_definitions(LockFreeQueueTest PRIVATE LOCK_FREE_QUEUE_TESTING)
 
-#建立项目
-PROJECT(${PROJECT_NAME})
-
-#MESSAGE("PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
-#${PROJECT_SOURCE_DIR}="xueyelingshuang/src/LockFreeQueueTest/LockFreeQueueTest"
-SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../../../lib/)
-#SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../../../lib/)
-
-#添加包含目录
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../include/)
-
-#添加库目录
-LINK_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../lib/)
-
-#获取代码，在项目中，将所有代码都放在src文件夹中
-AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/ DIR_SRCS)
-#编译可执行程序
-ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS})
-#如果要生成静态链接库
-#ADD_LIBRARY(${PROJECT_NAME} STATIC ${DIR_SRCS})
-#如果要生成动态链接库
-#ADD_LIBRARY(${PROJECT_NAME} SHARED ${DIR_SRCS})
-
-#添加库
-list(APPEND LIBRARYLIST ${LIBRARIESRELY})
-foreach (EVERYLIBRARY ${LIBRARYLIST})
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/${EVERYLIBRARY})
-endforeach ()
+# Performance and public consumers compile the uninstrumented production headers.
+add_executable(LockFreeQueueMeasurements "${queue_tests}/LockFreeQueueMeasurements.cpp")
+add_executable(LockFreeQueuePerformance "${queue_tests}/LockFreeQueuePerformance.cpp")
+target_include_directories(LockFreeQueueMeasurements PRIVATE "${queue_source}")
+target_include_directories(LockFreeQueuePerformance PRIVATE "${queue_source}")
+target_compile_definitions(LockFreeQueuePerformance PRIVATE LOCK_FREE_QUEUE_BENCH_VARIANT=1)
+set(queue_targets LockFreeQueueTest LockFreeQueueMeasurements LockFreeQueuePerformance)
+if(WIN32)
+    add_executable(LockFreeQueueScheduling "${queue_tests}/LockFreeQueueScheduling.cpp")
+    target_include_directories(LockFreeQueueScheduling PRIVATE "${queue_source}")
+    list(APPEND queue_targets LockFreeQueueScheduling)
+    add_executable(LockFreeQueueSharedPtrBenchmark "${queue_tests}/LockFreeQueueSharedPtrBenchmark.cpp")
+    target_include_directories(LockFreeQueueSharedPtrBenchmark PRIVATE "${queue_source}")
+    target_compile_definitions(LockFreeQueueSharedPtrBenchmark PRIVATE LOCK_FREE_QUEUE_SHARED_EXTRA)
+    list(APPEND queue_targets LockFreeQueueSharedPtrBenchmark)
+endif()
+set(queue_core_cases all)
+if(EMSCRIPTEN)
+    option(LOCK_FREE_QUEUE_TESTS_WASM_THREADS "Exercise actual Wasm pthread workers" ON)
+    foreach(target IN LISTS queue_targets)
+        target_compile_options(${target} PRIVATE -fexceptions)
+        target_link_options(${target} PRIVATE -fexceptions
+            -sENVIRONMENT=node -sWASM_ASYNC_COMPILATION=0 -sEXIT_RUNTIME=1
+            -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=268435456)
+        if(LOCK_FREE_QUEUE_TESTS_WASM_THREADS)
+            target_compile_options(${target} PRIVATE -pthread)
+            target_link_options(${target} PRIVATE -pthread
+                -sPTHREAD_POOL_SIZE=24 -sINITIAL_MEMORY=67108864)
+        endif()
+    endforeach()
+    if(NOT LOCK_FREE_QUEUE_TESTS_WASM_THREADS)
+        set(queue_core_cases "1,3,6,8,10,11,12,13,14,15,20,32,34,39,41,44,45")
+    endif()
+else()
+    find_package(Threads REQUIRED)
+    if(TARGET LockFreeQueueTestTool)
+        target_link_libraries(LockFreeQueueTestTool PRIVATE Threads::Threads)
+    endif()
+    foreach(target IN LISTS queue_targets)
+        target_link_libraries(${target} PRIVATE Threads::Threads)
+    endforeach()
+endif()
+if(WIN32)
+    foreach(target IN LISTS queue_targets)
+        target_link_libraries(${target} PRIVATE Psapi)
+    endforeach()
+endif()
+if(MSVC)
+    foreach(target IN LISTS queue_targets)
+        target_compile_options(${target} PRIVATE /EHsc)
+    endforeach()
+endif()
+enable_testing()
+if(NOT CMAKE_CROSSCOMPILING)
+    get_filename_component(queue_temp "${queue_root}/src/temp/LockFreeQueueTest" ABSOLUTE)
+    file(RELATIVE_PATH queue_harness_batch "${queue_temp}" "${LOCK_FREE_QUEUE_WHITEBOX_DIR}/harness-self-test")
+    add_test(NAME LockFreeQueueHarness COMMAND LockFreeQueueTestTool self-test
+        --root "${queue_root}" --batch "${queue_harness_batch}")
+    set_tests_properties(LockFreeQueueHarness PROPERTIES TIMEOUT 30)
+endif()
+add_test(NAME LockFreeQueueCore COMMAND LockFreeQueueTest ${queue_core_cases})
+add_test(NAME LockFreeQueueBacklog COMMAND LockFreeQueueMeasurements 22)
+set_tests_properties(LockFreeQueueCore LockFreeQueueBacklog PROPERTIES TIMEOUT 180)
+if(NOT EMSCRIPTEN OR LOCK_FREE_QUEUE_TESTS_WASM_THREADS)
+    add_test(NAME LockFreeQueuePoolPerformance COMMAND LockFreeQueuePerformance 38 --no-allocation-count)
+    add_test(NAME LockFreeQueueWavePerformance COMMAND LockFreeQueuePerformance 40 --no-allocation-count)
+    set_tests_properties(LockFreeQueuePoolPerformance PROPERTIES TIMEOUT 180)
+    set_tests_properties(LockFreeQueueWavePerformance PROPERTIES TIMEOUT 240)
+endif()

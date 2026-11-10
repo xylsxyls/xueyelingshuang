@@ -1,27 +1,49 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="源文件">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="头文件">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
-    </Filter>
-    <Filter Include="资源文件">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
+    <Filter Include="Tests" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="LockFreeQueueTest.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="LockFreeQueueTest.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
+    <ClCompile Include="LockFreeQueueTest.cpp"><Filter>Tests</Filter></ClCompile>
+    <ClInclude Include="LockFreeQueueTest.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueueArenaTests.inl"><Filter>Tests</Filter></ClInclude>
+    <None Include="LockFreeQueueBaseline.cpp"><Filter>Tests</Filter></None>
+    <None Include="LockFreeQueueConsumer.cpp"><Filter>Tests</Filter></None>
+    <ClInclude Include="LockFreeQueueConsumer.h"><Filter>Tests</Filter></ClInclude>
+    <None Include="LockFreeQueueIntegration.cpp"><Filter>Tests</Filter></None>
+    <ClInclude Include="LockFreeQueueIntegration.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueueInterfaceContract.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueueListMutex.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueueListMutex.inl"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueueBenchmarkPush.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueueBenchmarkPush.inl"><Filter>Tests</Filter></ClInclude>
+    <None Include="LockFreeQueueScheduling.cpp"><Filter>Tests</Filter></None>
+    <ClInclude Include="LockFreeQueueScheduling.h"><Filter>Tests</Filter></ClInclude>
+    <None Include="LockFreeQueueSharedPtrBenchmark.cpp"><Filter>Tests</Filter></None>
+    <ClInclude Include="LockFreeQueueSharedPtrBenchmark.h"><Filter>Tests</Filter></ClInclude>
+    <None Include="LockFreeQueueMeasurements.cpp"><Filter>Tests</Filter></None>
+    <ClInclude Include="LockFreeQueueMeasurements.h"><Filter>Tests</Filter></ClInclude>
+    <None Include="LockFreeQueuePerformance.cpp"><Filter>Tests</Filter></None>
+    <ClInclude Include="LockFreeQueuePerformanceExtra.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueuePerformanceExtra.inl"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueuePerformancePools.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueuePerformancePools.inl"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueuePerformanceWave.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueuePerformanceWave.inl"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueueTests.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueueThreadGroup.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueueThreadGroup.inl"><Filter>Tests</Filter></ClInclude>
+    <None Include="LockFreeQueueTestTool.cpp"><Filter>Tests</Filter></None>
+    <ClInclude Include="LockFreeQueueTestTool.h"><Filter>Tests</Filter></ClInclude>
+    <None Include="LockFreeQueueTestWhitebox.cpp"><Filter>Tests</Filter></None>
+    <ClInclude Include="LockFreeQueueTestWhitebox.h"><Filter>Tests</Filter></ClInclude>
+    <None Include="LockFreeQueueTestResults.cpp"><Filter>Tests</Filter></None>
+    <ClInclude Include="LockFreeQueueTestResults.h"><Filter>Tests</Filter></ClInclude>
+    <None Include="LockFreeQueueTestRunner.cpp"><Filter>Tests</Filter></None>
+    <ClInclude Include="LockFreeQueueTestRunner.h"><Filter>Tests</Filter></ClInclude>
+    <None Include="LockFreeQueueTestTool.vcxproj"><Filter>Tests</Filter></None>
+    <None Include="run_wasm.js"><Filter>Tests</Filter></None>
+    <None Include="CMakeLists.txt"><Filter>Tests</Filter></None>
+    <None Include="whitebox-patches.json"><Filter>Tests</Filter></None>
   </ItemGroup>
 </Project>

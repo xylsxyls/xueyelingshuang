@@ -1,0 +1,147 @@
+{
+  "format": 1,
+  "files": {
+    "LockFreeQueue.h": [
+      {
+        "before": "    @return 是否满足上述条件或完成上述操作\n    */\n    bool atomicsLockFree() const;\n\nprivate:\n    typedef LockFreeQueueArena<T> Arena;\n    typedef typename Arena::Node Node;\n",
+        "after": "    @return 是否满足上述条件或完成上述操作\n    */\n    bool atomicsLockFree() const;\n#ifdef LOCK_FREE_QUEUE_TESTING\n\n    /** 测试专用：静止时平移队列计数并保持元素数量\n    @param [in] base 仅测试使用的静止期计数起点\n    */\n    void testSeedCounters(uint64_t base);\n\n    /** 测试专用：静止时设置发布段代次边界\n    @param [in] base 仅测试使用的静止期计数起点\n    */\n    void testSeedGeneration(uint64_t base);\n#endif\n\nprivate:\n    typedef LockFreeQueueArena<T> Arena;\n    typedef typename Arena::Node Node;\n"
+      }
+    ],
+    "LockFreeQueue.inl": [
+      {
+        "before": "\n    try\n    {\n        node->construct(value);\n",
+        "after": "\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestHook(13, this);\n#endif\n    try\n    {\n        node->construct(value);\n"
+      },
+      {
+        "before": "template <class T>\nbool LockFreeQueue<T>::consumeNode(Node* node, T* output, size_t* consumed)\n{\n",
+        "after": "template <class T>\nbool LockFreeQueue<T>::consumeNode(Node* node, T* output, size_t* consumed)\n{\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestHook(4, this);\n#endif\n"
+      },
+      {
+        "before": "    return m_arena.atomicsLockFree() && m_prepared.is_lock_free();\n}\n\n#endif",
+        "after": "    return m_arena.atomicsLockFree() && m_prepared.is_lock_free();\n}\n\n#ifdef LOCK_FREE_QUEUE_TESTING\ntemplate <class T>\nvoid LockFreeQueue<T>::testSeedCounters(uint64_t base)\n{\n    m_prepared.store(static_cast<size_t>(base));\n    m_arena.testSeedConsumed(static_cast<size_t>(base));\n}\n#endif\n#ifdef LOCK_FREE_QUEUE_TESTING\ntemplate <class T>\nvoid LockFreeQueue<T>::testSeedGeneration(uint64_t base)\n{\n    m_arena.testSeedGeneration(base);\n}\n#endif\n#endif"
+      },
+      {
+        "before": "    record->m_progress.begin(wait);\n    record->m_progress.advance();\n",
+        "after": "    record->m_progress.begin(wait);\n    record->m_progress.advance();\n#ifdef LOCK_FREE_QUEUE_TESTING\n    while (LockFreeQueueTestCas(0))\n    {\n        if (!record->m_progress.retry())\n        {\n            return LockFreeQueueTemporaryUnavailable;\n        }\n    }\n#endif\n"
+      }
+    ],
+    "LockFreeQueueArena.h": [
+      {
+        "before": "    @return 上述操作对应的数值、状态或弱一致快照\n    */\n    size_t consumed() const;\n\n    /** 冷路径汇总各生产者的累计发布预留；调用者不得并发销毁队列\n    @return size_t 模计数，仅在分散计数模式下使用\n    */\n    size_t published() const;\n\n    /** 观察初始化状态；不能与 init 或 destroy 并发\n    @return 是否满足上述条件或完成上述操作\n",
+        "after": "    @return 上述操作对应的数值、状态或弱一致快照\n    */\n    size_t consumed() const;\n#ifdef LOCK_FREE_QUEUE_TESTING\n\n    /** 测试专用：静止时平移消费模计数并保持空闲数量\n    @param [in] base 仅测试使用的静止期计数起点\n    */\n    void testSeedConsumed(size_t base);\n\n    /** 测试专用：静止时注入接近回绕的初始块计数\n    @param [in] base 仅测试使用的静止期计数起点\n    */\n    void testSeedInitialAccounting(size_t base);\n\n    /** 测试专用：控制次保护到主保护的转交交错\n    @param [in,out] record 本次操作独占的登记槽；借用至返回\n    @param [in,out] block 受保护或调用者独占的块；借用至返回\n    */\n    void testProtectTraversal(Record& record, Block* block);\n\n    /** 测试专用：执行实际保护扫描\n    @param [in,out] block 受保护或调用者独占的块；借用至返回\n    @return 是否满足上述条件或完成上述操作\n    */\n    bool testProtectedBlock(Block* block) const;\n\n    /** 测试专用：调用实际饱和计数逻辑\n    @param [in] value 待复制的载荷或待更新的原子计数；借用至本次调用返回\n    */\n    static void testIncrement(std::atomic<uint64_t>& value);\n\n    /** 测试专用：静止时设置发布段代次边界\n    @param [in] base 仅测试使用的静止期计数起点\n    */\n    void testSeedGeneration(uint64_t base);\n#endif\n\n    /** 冷路径汇总各生产者的累计发布预留；调用者不得并发销毁队列\n    @return size_t 模计数，仅在分散计数模式下使用\n    */\n    size_t published() const;\n\n    /** 观察初始化状态；不能与 init 或 destroy 并发\n    @return 是否满足上述条件或完成上述操作\n"
+      }
+    ],
+    "LockFreeQueueArena.inl": [
+      {
+        "before": "    unsigned char* storage = nullptr;\n    try\n    {\n        storage = new unsigned char[bytes];\n    }\n    catch (...)\n",
+        "after": "    unsigned char* storage = nullptr;\n    try\n    {\n#ifdef LOCK_FREE_QUEUE_TESTING\n        LockFreeQueueTestHook(11, this);\n#endif\n        storage = new unsigned char[bytes];\n    }\n    catch (...)\n"
+      },
+      {
+        "before": "    increment(m_allocations);\n    try\n    {\n        m_recordStorage = new unsigned char[m_recordBytes + m_auxiliaryBytes];\n    }\n    catch (...)\n",
+        "after": "    increment(m_allocations);\n    try\n    {\n#ifdef LOCK_FREE_QUEUE_TESTING\n        LockFreeQueueTestHook(10, this);\n#endif\n        m_recordStorage = new unsigned char[m_recordBytes + m_auxiliaryBytes];\n    }\n    catch (...)\n"
+      },
+      {
+        "before": "            const bool available = expected == 0;\n            if (available && m_records[i].m_active.compare_exchange_strong(",
+        "after": "            const bool available = expected == 0;\n#ifdef LOCK_FREE_QUEUE_TESTING\n            if (available && LockFreeQueueTestCas(31))\n            {\n                expected = 1;\n            }\n#endif\n            if (available && m_records[i].m_active.compare_exchange_strong("
+      }
+    ],
+    "LockFreeQueueArenaAllocation.inl": [
+      {
+        "before": "                record.m_cachedBlock = block;\n                record.m_cachedMask.store(taken, std::memory_order_relaxed);\n                record.m_wordHint = word + 1;\n                return takeCached(record);\n",
+        "after": "                record.m_cachedBlock = block;\n                record.m_cachedMask.store(taken, std::memory_order_relaxed);\n                record.m_wordHint = word + 1;\n#ifdef LOCK_FREE_QUEUE_TESTING\n                if (count > 1)\n                {\n                    LockFreeQueueTestHook(17, this);\n                }\n                LockFreeQueueTestHook(15, this);\n#endif\n                return takeCached(record);\n"
+      },
+      {
+        "before": "            {\n                increment(block->m_activity);\n            }\n            return block;\n        }\n        // A changed head proves another operation progressed; no owner is awaited.\n",
+        "after": "            {\n                increment(block->m_activity);\n            }\n#ifdef LOCK_FREE_QUEUE_TESTING\n            LockFreeQueueTestHook(6, this);\n#endif\n            return block;\n        }\n        // A changed head proves another operation progressed; no owner is awaited.\n"
+      },
+      {
+        "before": "    if (!m_entryOnly && externalOwner == nullptr)\n    {\n        node->reset();\n    }\n",
+        "after": "    if (!m_entryOnly && externalOwner == nullptr)\n    {\n        node->reset();\n    }\n#ifdef LOCK_FREE_QUEUE_TESTING\n    if (producer == nullptr)\n    {\n        LockFreeQueueTestHook(23, this);\n    }\n#endif\n"
+      },
+      {
+        "before": "template <class T>\nLockFreeQueueResult LockFreeQueueArena<T>::grow(Record* record)\n{\n    LockFreeQueueProgress committedProgress;\n",
+        "after": "template <class T>\nLockFreeQueueResult LockFreeQueueArena<T>::grow(Record* record)\n{\n    LockFreeQueueProgress committedProgress;\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestHook(18, this);\n#endif\n"
+      },
+      {
+        "before": "    }\n    // Recheck reusable resources after the reservation. Concurrent publishers\n    // often satisfy this demand; avoid allocating redundant candidate blocks.\n    if (available() > m_config.growThreshold)\n    {\n        m_budget.fetch_sub(amount);\n",
+        "after": "    }\n    // Recheck reusable resources after the reservation. Concurrent publishers\n    // often satisfy this demand; avoid allocating redundant candidate blocks.\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestHook(8, this);\n#endif\n    if (available() > m_config.growThreshold)\n    {\n        m_budget.fetch_sub(amount);\n"
+      },
+      {
+        "before": "\n    }\n    block->m_state.store(1);\n    return LockFreeQueueSuccess;\n}\n\n",
+        "after": "\n    }\n    block->m_state.store(1);\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestHook(19, this);\n#endif\n    return LockFreeQueueSuccess;\n}\n\n"
+      },
+      {
+        "before": "            .count();\n    const uint64_t actual = elapsed > 0 ? static_cast<uint64_t>(elapsed) : 0;\n#endif\n    return actual;\n}\n\n#endif",
+        "after": "            .count();\n    const uint64_t actual = elapsed > 0 ? static_cast<uint64_t>(elapsed) : 0;\n#endif\n#ifdef LOCK_FREE_QUEUE_TESTING\n    return LockFreeQueueTestNow(actual);\n#else\n    return actual;\n#endif\n}\n\n#endif"
+      },
+      {
+        "before": "            const uint32_t taken = bits & window;\n            if (block->m_nodeBits[word].compare_exchange_weak(",
+        "after": "            const uint32_t taken = bits & window;\n#ifdef LOCK_FREE_QUEUE_TESTING\n            if (LockFreeQueueTestCas(32))\n            {\n                bits ^= low;\n            }\n#endif\n            if (block->m_nodeBits[word].compare_exchange_weak("
+      }
+    ],
+    "LockFreeQueueArenaAuxiliary.inl": [
+      {
+        "before": "                increment(m_allocations);\n                try\n                {\n                    segment = new Segment();\n                }\n                catch (...)\n",
+        "after": "                increment(m_allocations);\n                try\n                {\n#ifdef LOCK_FREE_QUEUE_TESTING\n                    LockFreeQueueTestHook(12, this);\n#endif\n                    segment = new Segment();\n                }\n                catch (...)\n"
+      },
+      {
+        "before": "            if (!slot.m_bits.compare_exchange_strong(\n",
+        "after": "#ifdef LOCK_FREE_QUEUE_TESTING\n            if (LockFreeQueueTestCas(0))\n            {\n                bits ^= 1;\n            }\n#endif\n            if (!slot.m_bits.compare_exchange_strong(\n"
+      }
+    ],
+    "LockFreeQueueArenaMaintenance.inl": [
+      {
+        "before": "        // that same order: if the secondary was already cleared, the SC primary\n        // store precedes our primary load. Reversing these loads can miss both.\n        const bool secondary = m_traversal[i].load() == block;\n        if (secondary || m_records[i].m_block.load() == block)\n        {\n            return true;\n",
+        "after": "        // that same order: if the secondary was already cleared, the SC primary\n        // store precedes our primary load. Reversing these loads can miss both.\n        const bool secondary = m_traversal[i].load() == block;\n#ifdef LOCK_FREE_QUEUE_TESTING\n        LockFreeQueueTestHook(22, this);\n#endif\n        if (secondary || m_records[i].m_block.load() == block)\n        {\n            return true;\n"
+      },
+      {
+        "before": "        // Round-robin categories persist across calls: even budget=1 eventually\n        // reaches cache, segment and block work. No full pool scan is performed.\n        const size_t phase = m_maintenanceTurn++ % 5;\n        if (remaining[phase] == 0)\n        {\n            continue;\n",
+        "after": "        // Round-robin categories persist across calls: even budget=1 eventually\n        // reaches cache, segment and block work. No full pool scan is performed.\n        const size_t phase = m_maintenanceTurn++ % 5;\n#ifdef LOCK_FREE_QUEUE_TESTING\n        LockFreeQueueTestHook(24, this);\n#endif\n        if (remaining[phase] == 0)\n        {\n            continue;\n"
+      },
+      {
+        "before": "                uint32_t open = 1;\n                if (block->m_state.compare_exchange_strong(open, 2))\n                {\n                    if (!protectedBlock(block) && completelyFree(block) && block->m_activity.load() == activity)\n                    {\n                        Block* expected = block;\n",
+        "after": "                uint32_t open = 1;\n                if (block->m_state.compare_exchange_strong(open, 2))\n                {\n#ifdef LOCK_FREE_QUEUE_TESTING\n                    LockFreeQueueTestHook(7, this);\n#endif\n                    if (!protectedBlock(block) && completelyFree(block) && block->m_activity.load() == activity)\n                    {\n                        Block* expected = block;\n"
+      },
+      {
+        "before": "    return m_returned.load(std::memory_order_acquire);\n}\n\n#endif",
+        "after": "    return m_returned.load(std::memory_order_acquire);\n}\n\n#ifdef LOCK_FREE_QUEUE_TESTING\ntemplate <class T>\nvoid LockFreeQueueArena<T>::testSeedInitialAccounting(size_t base)\n{\n    testSeedConsumed(base);\n    m_initial->m_freeNodes.store(m_initial->m_capacity - 1 - base, std::memory_order_relaxed);\n    m_initial->m_returnedNodes.store(base, std::memory_order_relaxed);\n}\n\ntemplate <class T>\nvoid LockFreeQueueArena<T>::testSeedConsumed(size_t base)\n{\n    // Quiescent empty queue: offset the producer base so free capacity is stable.\n    m_availableBase.fetch_sub(base - m_returned.load(std::memory_order_relaxed), std::memory_order_relaxed);\n    m_returned.store(base, std::memory_order_relaxed);\n}\n\ntemplate <class T>\nvoid LockFreeQueueArena<T>::testProtectTraversal(Record& record, Block* block)\n{\n    m_traversal[&record - m_records].store(block);\n}\n\ntemplate <class T>\nbool LockFreeQueueArena<T>::testProtectedBlock(Block* block) const\n{\n    return protectedBlock(block);\n}\n\ntemplate <class T>\nvoid LockFreeQueueArena<T>::testIncrement(std::atomic<uint64_t>& value)\n{\n    increment(value);\n}\n\ntemplate <class T>\nvoid LockFreeQueueArena<T>::testSeedGeneration(uint64_t base)\n{\n    m_segmentSequence.store(base);\n}\n#endif\n#endif"
+      }
+    ],
+    "LockFreeQueueChannel.h": [
+      {
+        "before": "#include <stddef.h>\n#include <stdint.h>\n#include <algorithm>\n#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))\n#include <intrin.h>\n#endif\n",
+        "after": "#include <stddef.h>\n#include <stdint.h>\n#include <algorithm>\n#ifdef LOCK_FREE_QUEUE_TESTING\n\n/** 测试构建专用故障及交错注入入口\n@param [in] point 测试注入点编号\n@param [in] owner 用于识别注入对象的借用地址\n*/\nvoid LockFreeQueueTestHook(int32_t point, const void* owner);\n\n/** 隔离测试副本注入未提交竞争\n@return true返回暂时不可用，false执行真实代码\n*/\nbool LockFreeQueueTestTransient();\n\n/** 指定测试点的真实 CAS 失配注入 */\nbool LockFreeQueueTestCas(int32_t point);\n\n/** 测试构建专用单调时钟替换入口\n@param [in] actual 真实单调毫秒值\n@return 上述操作对应的数值、状态或弱一致快照\n*/\nuint64_t LockFreeQueueTestNow(uint64_t actual);\n#endif\n#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))\n#include <intrin.h>\n#endif\n"
+      }
+    ],
+    "LockFreeQueueChannel.inl": [
+      {
+        "before": "        // A recycled address is safe too: no old hint survives a cleared hazard.\n        if (m_tail.load() == segment)\n        {\n            if (record.m_generation != segment->m_generation)\n            {\n                record.m_hint = segment->m_tail.load(std::memory_order_acquire);\n",
+        "after": "        // A recycled address is safe too: no old hint survives a cleared hazard.\n        if (m_tail.load() == segment)\n        {\n#ifdef LOCK_FREE_QUEUE_TESTING\n            LockFreeQueueTestHook(1, this);\n#endif\n            if (record.m_generation != segment->m_generation)\n            {\n                record.m_hint = segment->m_tail.load(std::memory_order_acquire);\n"
+      },
+      {
+        "before": "            }\n            if (expected == 0)\n            {\n                if (cell.compare_exchange_strong(expected, reinterpret_cast<uintptr_t>(node), std::memory_order_acq_rel,\n                        std::memory_order_acquire))\n                {\n                    // Enqueue LP. All earlier positions are published; no private\n                    // reserved index precedes this CAS. The consumer may now free\n                    // the payload; nothing below dereferences node.\n                    record.m_hint = position + 1;\n",
+        "after": "            }\n            if (expected == 0)\n            {\n#ifdef LOCK_FREE_QUEUE_TESTING\n                LockFreeQueueTestHook(2, this);\n#endif\n                if (cell.compare_exchange_strong(expected, reinterpret_cast<uintptr_t>(node), std::memory_order_acq_rel,\n                        std::memory_order_acquire))\n                {\n                    // Enqueue LP. All earlier positions are published; no private\n                    // reserved index precedes this CAS. The consumer may now free\n                    // the payload; nothing below dereferences node.\n#ifdef LOCK_FREE_QUEUE_TESTING\n                    LockFreeQueueTestHook(3, this);\n#endif\n                    record.m_hint = position + 1;\n"
+      }
+    ],
+    "LockFreeQueueProgress.h": [
+      {
+        "before": "class LockFreeQueueProgress\n",
+        "after": "#ifdef LOCK_FREE_QUEUE_TESTING\nvoid LockFreeQueueTestSchedule(bool sleeping);\n#endif\nclass LockFreeQueueProgress\n"
+      }
+    ],
+    "LockFreeQueueProgress.inl": [
+      {
+        "before": "\n            std::this_thread::sleep_for(std::chrono::microseconds(1));\n",
+        "after": "\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestSchedule(true);\n#endif\n            std::this_thread::sleep_for(std::chrono::microseconds(1));\n"
+      },
+      {
+        "before": "\n            std::this_thread::yield();\n",
+        "after": "\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestSchedule(false);\n#endif\n            std::this_thread::yield();\n"
+      },
+      {
+        "before": "\n        std::this_thread::yield();\n",
+        "after": "\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestSchedule(false);\n#endif\n        std::this_thread::yield();\n"
+      }
+    ]
+  }
+}
