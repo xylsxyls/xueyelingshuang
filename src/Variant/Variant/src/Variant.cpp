@@ -4,20 +4,28 @@
 #include <iomanip>
 #include <locale>
 #include <sstream>
+#include <utility>
 
 Variant::Variant() :
 m_type(INIT),
 m_length(0),
-m_data(nullptr),
-m_scalar(0)
+m_storage()
 {
 
 }
 
 Variant::Variant(const Variant& value) :
-Variant()
+m_type(value.m_type),
+m_length(value.m_length),
+m_storage(value.m_storage)
 {
-    setVariant(value);
+    // 新对象没有旧资源；内联值直接复制，长字节才建立独占副本
+    // new失败时构造未完成，借用的旧指针不会被析构或释放
+    if ((m_type == STRING || m_type == BLOB) && m_length > sizeof(m_storage.m_small))
+    {
+        m_storage.m_heap = new char[m_length];
+        std::memcpy(m_storage.m_heap, value.m_storage.m_heap, m_length);
+    }
 }
 
 Variant::Variant(const std::string& data, VariantType type, bool isBlob) :
@@ -85,16 +93,21 @@ Variant()
 
 bool Variant::isValidBlob(const std::string& data, int32_t type)
 {
+    return isValidBlob(data.size(), type);
+}
+
+bool Variant::isValidBlob(size_t size, int32_t type)
+{
     switch (type)
     {
     case INIT:
-        return data.empty();
+        return size == 0;
     case INT32:
-        return data.size() == sizeof(int32_t);
+        return size == sizeof(int32_t);
     case UINT64:
-        return data.size() == sizeof(uint64_t);
+        return size == sizeof(uint64_t);
     case DOUBLE:
-        return data.size() == sizeof(double);
+        return size == sizeof(double);
     case STRING:
     case BLOB:
         return true;
@@ -109,21 +122,27 @@ Variant::~Variant()
 }
 
 Variant::Variant(const int32_t& value) :
-Variant()
+m_type(INT32),
+m_length(sizeof(value)),
+m_storage()
 {
-    setInt32(value);
+    std::memcpy(&m_storage.m_scalar, &value, sizeof(value));
 }
 
 Variant::Variant(const uint64_t& value) :
-Variant()
+m_type(UINT64),
+m_length(sizeof(value)),
+m_storage()
 {
-    setUint64(value);
+    m_storage.m_scalar = value;
 }
 
 Variant::Variant(const double& value) :
-Variant()
+m_type(DOUBLE),
+m_length(sizeof(value)),
+m_storage()
 {
-    setDouble(value);
+    std::memcpy(&m_storage.m_scalar, &value, sizeof(value));
 }
 
 Variant::Variant(const char* value) :
@@ -138,37 +157,37 @@ Variant()
     setBlob(value);
 }
 
-Variant Variant::operator=(const Variant& value)
+Variant& Variant::operator=(const Variant& value)
 {
     setVariant(value);
     return *this;
 }
 
-Variant Variant::operator=(const int32_t& value)
+Variant& Variant::operator=(const int32_t& value)
 {
     setInt32(value);
     return *this;
 }
 
-Variant Variant::operator=(const uint64_t& value)
+Variant& Variant::operator=(const uint64_t& value)
 {
     setUint64(value);
     return *this;
 }
 
-Variant Variant::operator=(const double& value)
+Variant& Variant::operator=(const double& value)
 {
     setDouble(value);
     return *this;
 }
 
-Variant Variant::operator=(const char* value)
+Variant& Variant::operator=(const char* value)
 {
     setString(value);
     return *this;
 }
 
-Variant Variant::operator=(const std::string& value)
+Variant& Variant::operator=(const std::string& value)
 {
     setBlob(value);
     return *this;
@@ -176,47 +195,55 @@ Variant Variant::operator=(const std::string& value)
 
 const char* Variant::bytes() const
 {
-    return m_length == 0 ? nullptr : (m_type == STRING || m_type == BLOB ? m_data : reinterpret_cast<const char*>(&m_scalar));
+    if (m_length == 0)
+    {
+        return nullptr;
+    }
+    if (m_type == STRING || m_type == BLOB)
+    {
+        return m_length <= sizeof(m_storage.m_small) ? m_storage.m_small : m_storage.m_heap;
+    }
+    return reinterpret_cast<const char*>(&m_storage.m_scalar);
 }
 
-bool Variant::operator==(const Variant& value)
+bool Variant::operator==(const Variant& value) const
 {
     return m_length == value.m_length && (m_length == 0 || std::memcmp(bytes(), value.bytes(), m_length) == 0);
 }
 
-bool Variant::operator!=(const Variant& value)
+bool Variant::operator!=(const Variant& value) const
 {
     return !(*this == value);
 }
 
-Variant::operator int32_t()
+Variant::operator int32_t() const
 {
     int32_t value = 0;
     if (m_type == INT32 && m_length == sizeof(value))
     {
-        std::memcpy(&value, &m_scalar, sizeof(value));
+        std::memcpy(&value, &m_storage.m_scalar, sizeof(value));
     }
     return value;
 }
 
-Variant::operator uint64_t()
+Variant::operator uint64_t() const
 {
-    return m_type == UINT64 && m_length == sizeof(m_scalar) ? m_scalar : 0;
+    return m_type == UINT64 && m_length == sizeof(m_storage.m_scalar) ? m_storage.m_scalar : 0;
 }
 
-Variant::operator double()
+Variant::operator double() const
 {
     double value = 0;
     if (m_type == DOUBLE && m_length == sizeof(value))
     {
-        std::memcpy(&value, &m_scalar, sizeof(value));
+        std::memcpy(&value, &m_storage.m_scalar, sizeof(value));
     }
     return value;
 }
 
-Variant::operator std::string()
+Variant::operator std::string() const
 {
-    return (m_type == STRING || m_type == BLOB) && m_length != 0 ? std::string(m_data, m_length) : std::string();
+    return (m_type == STRING || m_type == BLOB) && m_length != 0 ? std::string(bytes(), m_length) : std::string();
 }
 
 Variant::VariantType Variant::type() const
@@ -226,18 +253,21 @@ Variant::VariantType Variant::type() const
 
 void Variant::clearMemory()
 {
-    if (m_data != nullptr)
+    if (m_type == STRING || m_type == BLOB)
     {
-        volatile char* output = m_data;
+        char* buffer = m_length <= sizeof(m_storage.m_small) ? m_storage.m_small : m_storage.m_heap;
+        volatile char* output = buffer;
         for (size_t index = 0; index < m_length; ++index)
         {
             output[index] = 0;
         }
-        delete[] m_data;
+        if (m_length > sizeof(m_storage.m_small))
+        {
+            delete[] buffer;
+        }
     }
-    m_data = nullptr;
     m_length = 0;
-    m_scalar = 0;
+    m_storage.m_scalar = 0;
 }
 
 void Variant::clear()
@@ -267,35 +297,38 @@ void Variant::toString(std::string& result) const
         toBlob(result);
         return;
     }
+    if (m_type == INT32 || m_type == UINT64)
+    {
+        bool negative = false;
+        uint64_t number = m_storage.m_scalar;
+        if (m_type == INT32)
+        {
+            int32_t value = 0;
+            std::memcpy(&value, &m_storage.m_scalar, sizeof(value));
+            negative = value < 0;
+            number = negative ? static_cast<uint64_t>(-static_cast<int64_t>(value)) : static_cast<uint64_t>(value);
+        }
+        char buffer[32];
+        char* end = buffer + sizeof(buffer);
+        char* current = end;
+        do
+        {
+            *--current = static_cast<char>('0' + number % 10);
+            number /= 10;
+        } while (number != 0);
+        if (negative)
+        {
+            *--current = '-';
+        }
+        result.assign(current, static_cast<size_t>(end - current));
+        return;
+    }
     // 只有显式转换才构造格式化器，构造Variant不再建立可能抛异常的Debug文本缓存。
     std::ostringstream output;
     output.imbue(std::locale::classic());
-    switch (m_type)
-    {
-    case INT32:
-        {
-            int32_t value = 0;
-            std::memcpy(&value, &m_scalar, sizeof(value));
-            output << value;
-            break;
-        }
-    case UINT64:
-        {
-            output << m_scalar;
-            break;
-        }
-    case DOUBLE:
-        {
-            double value = 0;
-            std::memcpy(&value, &m_scalar, sizeof(value));
-            output << std::setprecision(17) << value;
-            break;
-        }
-    default:
-        {
-            break;
-        }
-    }
+    double value = 0;
+    std::memcpy(&value, &m_storage.m_scalar, sizeof(value));
+    output << std::setprecision(17) << value;
     std::string text = output.str();
     result.swap(text);
 }
@@ -316,7 +349,7 @@ void Variant::setInt32(const int32_t& value)
 {
     const int32_t snapshot = value;
     clearMemory();
-    std::memcpy(&m_scalar, &snapshot, sizeof(snapshot));
+    std::memcpy(&m_storage.m_scalar, &snapshot, sizeof(snapshot));
     m_length = sizeof(snapshot);
     m_type = INT32;
 }
@@ -325,7 +358,7 @@ void Variant::setUint64(const uint64_t& value)
 {
     const uint64_t snapshot = value;
     clearMemory();
-    m_scalar = snapshot;
+    m_storage.m_scalar = snapshot;
     m_length = sizeof(snapshot);
     m_type = UINT64;
 }
@@ -334,56 +367,113 @@ void Variant::setDouble(const double& value)
 {
     const double snapshot = value;
     clearMemory();
-    std::memcpy(&m_scalar, &snapshot, sizeof(snapshot));
+    std::memcpy(&m_storage.m_scalar, &snapshot, sizeof(snapshot));
     m_length = sizeof(snapshot);
     m_type = DOUBLE;
 }
 
 void Variant::setString(const char* value)
 {
-    const size_t length = value == nullptr ? 0 : std::strlen(value);
-    char* data = length == 0 ? nullptr : new char[length];
-    if (length != 0)
-    {
-        std::memcpy(data, value, length);
-    }
-    clearMemory();
-    m_data = data;
-    m_length = length;
-    m_type = STRING;
+    setBytes(value, value == nullptr ? 0 : std::strlen(value), STRING);
 }
 
 void Variant::setBlob(const std::string& value)
 {
-    const size_t length = value.size();
-    char* data = length == 0 ? nullptr : new char[length];
-    if (length != 0)
-    {
-        std::memcpy(data, value.data(), length);
-    }
-    clearMemory();
-    m_data = data;
-    m_length = length;
-    m_type = BLOB;
+    setBytes(value.data(), value.size(), BLOB);
 }
 
 void Variant::setVariant(const Variant& value)
 {
-    if (this == &value)
+    if (this != &value)
     {
-        return;
+        setBytes(value.bytes(), value.m_length, value.m_type);
     }
-    char* data = nullptr;
-    if ((value.m_type == STRING || value.m_type == BLOB) && value.m_length != 0)
+}
+
+void Variant::setBytes(const char* data, size_t size, VariantType type)
+{
+    if ((type == STRING || type == BLOB) && size > sizeof(m_storage.m_small))
     {
-        data = new char[value.m_length];
-        std::memcpy(data, value.m_data, value.m_length);
+        char* replacement = new char[size];
+        std::memcpy(replacement, data, size);
+        clearMemory();
+        m_storage.m_heap = replacement;
     }
-    clearMemory();
-    m_data = data;
-    m_scalar = value.m_scalar;
-    m_length = value.m_length;
-    m_type = value.m_type;
+    else
+    {
+        char replacement[sizeof(m_storage.m_small)];
+        if (size != 0)
+        {
+            // 先复制到局部存储，允许data借用当前值，包括子区间。
+            std::memcpy(replacement, data, size);
+        }
+        clearMemory();
+        if (size != 0)
+        {
+            std::memcpy(&m_storage, replacement, size);
+        }
+    }
+    m_length = size;
+    m_type = type;
+}
+
+Variant::Variant(Variant&& value) :
+m_type(value.m_type),
+m_length(value.m_length),
+m_storage(value.m_storage)
+{
+    value.m_type = INIT;
+    value.m_length = 0;
+    value.m_storage = VariantStorage();
+}
+
+Variant& Variant::operator=(Variant&& value)
+{
+    if (this != &value)
+    {
+        clearMemory();
+        m_type = value.m_type;
+        m_length = value.m_length;
+        m_storage = value.m_storage;
+        value.m_type = INIT;
+        value.m_length = 0;
+        value.m_storage = VariantStorage();
+    }
+    return *this;
+}
+
+void Variant::swap(Variant& value)
+{
+    std::swap(m_type, value.m_type);
+    std::swap(m_length, value.m_length);
+    std::swap(m_storage, value.m_storage);
+}
+
+bool Variant::assignBytes(const void* data, size_t size, VariantType type)
+{
+    if ((data == nullptr && size != 0) || !isValidBlob(size, static_cast<int32_t>(type)))
+    {
+        return false;
+    }
+    try
+    {
+        setBytes(static_cast<const char*>(data), size, type);
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+const char* Variant::data() const
+{
+    return bytes();
+}
+
+size_t Variant::size() const
+{
+    return m_length;
 }
 
 // VARIANT_OWNERSHIP_UNIT_BEGIN
@@ -576,3 +666,279 @@ void Variant::setVariant(const Variant& value)
 //    }
 //}
 // VARIANT_OWNERSHIP_UNIT_END
+
+// VARIANT_PERF_UNIT_BEGIN
+//#include <cstdlib>
+//#include <algorithm>
+//#include <chrono>
+//#include <cstdio>
+//#include <cstring>
+//#include <locale>
+//#include <sstream>
+//#include <utility>
+//#include <vector>
+//#if defined(_MSC_VER) && defined(_DEBUG)
+//#include <crtdbg.h>
+//#endif
+//
+///** 独立正确性／性能入口；正式库保持注释，测试副本单独启用
+//@param [in] argc 参数数量
+//@param [in] argv bench表示同机基准，其他情况执行边界用例；NEW_VARIANT_TEST仅供旧版对比裁剪新接口
+//@return 0通过，1失败；性能输出为每次操作纳秒，不代表网络吞吐
+//*/
+//int main(int argc, char** argv)
+//{
+//    uint32_t checks = 0;
+//    uint32_t failures = 0;
+//    // condition为独立预期，reason为静态说明；仅记录，不终止产品进程。
+//    const auto Check = [&checks, &failures](bool condition, const char* reason)
+//    {
+//        ++checks;
+//        if (!condition)
+//        {
+//            ++failures;
+//            std::printf("FAIL %s\n", reason);
+//        }
+//    };
+//    try
+//    {
+//        if (argc > 1 && std::strcmp(argv[1], "bench") == 0)
+//        {
+//            const char* names[] = {"scalar_construct", "scalar_assign", "blob16_assign", "blob64_assign", "blob4096_assign",
+//                "blob16_copy", "blob64_copy", "integer_text", "blob4096_copy_read", "blob4096_move_chain", "raw64_ingest", "blob4096_borrow"};
+//            std::string payloads[] = {std::string(16, 'x'), std::string(64, 'y'), std::string(4096, 'z')};
+//            Variant source16(payloads[0]);
+//            Variant source64(payloads[1]);
+//            Variant source4096(payloads[2]);
+//            Variant target;
+//            volatile uint64_t checksum = 0;
+//            for (uint32_t scenario = 0; scenario < 12; ++scenario)
+//            {
+//                if (argc > 2 && scenario != static_cast<uint32_t>(std::strtoul(argv[2], nullptr, 10)))
+//                {
+//                    continue;
+//                }
+//                size_t iterations = 2048;
+//                double seconds = 0;
+//                do
+//                {
+//                    const auto started = std::chrono::steady_clock::now();
+//                    for (size_t i = 0; i < iterations; ++i)
+//                    {
+//                        switch (scenario)
+//                        {
+//                        case 0:
+//                            {
+//                                Variant value(static_cast<int32_t>(i));
+//                                checksum += static_cast<int32_t>(value);
+//                                break;
+//                            }
+//                        case 1:
+//                            target = static_cast<int32_t>(i);
+//                            checksum += static_cast<int32_t>(target);
+//                            break;
+//                        case 2:
+//                        case 3:
+//                        case 4:
+//                            target = payloads[scenario - 2];
+//                            checksum += target.type();
+//                            break;
+//                        case 5:
+//                            {
+//                                Variant value(source16);
+//                                checksum += value.type();
+//                                break;
+//                            }
+//                        case 6:
+//                            {
+//                                Variant value(source64);
+//                                checksum += value.type();
+//                                break;
+//                            }
+//                        case 7:
+//                            {
+//                                Variant value(static_cast<int32_t>(-1234567));
+//                                checksum += value.toString().size();
+//                                break;
+//                            }
+//                        case 8:
+//                            checksum += source4096.toBlob().size();
+//                            break;
+//                        case 9:
+//                            {
+//                                Variant first(payloads[2]);
+//                                Variant second(std::move(first));
+//                                Variant third(std::move(second));
+//                                checksum += third.type();
+//                                break;
+//                            }
+//                        case 10:
+//                            {
+//#if NEW_VARIANT_TEST
+//                                if (!target.assignBytes(payloads[1].data(), payloads[1].size()))
+//                                {
+//                                    return 2;
+//                                }
+//#else
+//                                target = std::string(payloads[1].data(), payloads[1].size());
+//#endif
+//                                checksum += target.type();
+//                                break;
+//                            }
+//                        case 11:
+//                            {
+//#if NEW_VARIANT_TEST
+//                                const char* bytes = source4096.data();
+//                                checksum += source4096.size() + static_cast<unsigned char>(bytes[0]);
+//#else
+//                                const std::string bytes = source4096.toBlob();
+//                                checksum += bytes.size() + static_cast<unsigned char>(bytes[0]);
+//#endif
+//                                break;
+//                            }
+//                        }
+//                    }
+//                    seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+//                    if (seconds >= 0.04 || iterations >= 134217728)
+//                    {
+//                        break;
+//                    }
+//                    else
+//                    {
+//                        iterations *= 2;
+//                    }
+//                } while (true);
+//                std::printf("BENCH,%s,%llu,%.4f\n", names[scenario], static_cast<unsigned long long>(iterations), seconds * 1000000000.0 / iterations);
+//            }
+//            std::printf("SINK,%llu\n", static_cast<unsigned long long>(checksum));
+//            return 0;
+//        }
+//#if NEW_VARIANT_TEST
+//        const size_t sizes[] = {0, 1, 7, 8, 15, 16, 17, 31, 64, 4096, 65536};
+//        for (size_t index = 0; index < sizeof(sizes) / sizeof(sizes[0]); ++index)
+//        {
+//            std::string expected(sizes[index], 'x');
+//            for (size_t i = 0; i < expected.size(); ++i)
+//            {
+//                expected[i] = static_cast<char>(i * 37);
+//            }
+//            for (uint32_t kind = 0; kind < 2; ++kind)
+//            {
+//                const Variant::VariantType type = kind == 0 ? Variant::STRING : Variant::BLOB;
+//                Variant first;
+//                Check(first.assignBytes(expected.data(), expected.size(), type), "length ingestion");
+//                Check(first.type() == type && first.size() == expected.size() && first.toBlob() == expected, "exact bytes");
+//                Check(first.size() == 0 ? first.data() == nullptr : std::memcmp(first.data(), expected.data(), first.size()) == 0, "borrow view");
+//                Variant copied(first);
+//                Variant moved(std::move(first));
+//                Check(first.type() == Variant::INIT && first.size() == 0 && moved == copied, "move source reset");
+//                copied = copied;
+//                moved = std::move(moved);
+//                Check(moved.toBlob() == expected && copied == moved, "self assignment");
+//                Variant assigned;
+//                Check(&(assigned = moved) == &assigned && assigned == moved, "reference assignment");
+//                assigned = std::move(moved);
+//                Check(moved.type() == Variant::INIT && assigned.toBlob() == expected, "move assignment");
+//                const Variant& readOnly = assigned;
+//                Check(static_cast<std::string>(readOnly) == expected, "const text read");
+//                if (expected.size() > 1)
+//                {
+//                    const std::string suffix = expected.substr(1);
+//                    Check(assigned.assignBytes(assigned.data() + 1, assigned.size() - 1, type) && assigned.toBlob() == suffix, "self slice");
+//                }
+//                Check(!assigned.assignBytes(nullptr, 1) && assigned.type() == type, "invalid pointer rollback");
+//                Variant empty;
+//                assigned.swap(empty);
+//                Check(assigned.type() == Variant::INIT, "swap empty");
+//            }
+//        }
+//        for (int32_t type = -1; type <= 7; ++type)
+//        {
+//            for (size_t size = 0; size <= 33; ++size)
+//            {
+//                const bool valid = (type == 0 && size == 0) || (type == 1 && size == 4) ||
+//                    ((type == 2 || type == 3) && size == 8) || type == 4 || type == 5;
+//                char bytes[33] = {};
+//                Variant value(int32_t(42));
+//                Check(Variant::isValidBlob(size, type) == valid, "length validation");
+//                Check(value.assignBytes(bytes, size, static_cast<Variant::VariantType>(type)) == valid, "ingestion validation");
+//                if (!valid)
+//                {
+//                    Check(value.type() == Variant::INT32 && static_cast<int32_t>(value) == 42, "failure strong state");
+//                }
+//            }
+//        }
+//        uint32_t random = 0x12345678;
+//        for (uint32_t iteration = 0; iteration < 20000; ++iteration)
+//        {
+//            random = random * 1664525U + 1013904223U;
+//            int32_t number = 0;
+//            std::memcpy(&number, &random, sizeof(number));
+//            Variant value(number);
+//            std::ostringstream reference;
+//            reference.imbue(std::locale::classic());
+//            reference << number;
+//            Check(value.toString() == reference.str(), "integer decimal reference");
+//            const uint64_t large = (static_cast<uint64_t>(random) << 32) | (random ^ 0xFEDCBA98U);
+//            Variant wide(large);
+//            std::ostringstream wideReference;
+//            wideReference.imbue(std::locale::classic());
+//            wideReference << large;
+//            Check(wide.toString() == wideReference.str(), "uint64 decimal reference");
+//        }
+//        Check(Variant(int32_t(INT32_MIN)).toString() == "-2147483648" && Variant(uint64_t(UINT64_MAX)).toString() == "18446744073709551615", "decimal limits");
+//#if defined(_MSC_VER) && defined(_DEBUG)
+//        static uint32_t s_seen = 0;
+//        static uint32_t s_failAt = 0;
+//        // 按CRT约定返回1允许分配、0拒绝；只在测试范围记录普通堆块。
+//        const auto Hook = [](int operation, void*, size_t, int block, long, const unsigned char*, int) -> int
+//        {
+//            return operation == _HOOK_ALLOC && block == _NORMAL_BLOCK && ++s_seen == s_failAt ? 0 : 1;
+//        };
+//        const char shortText[] = "1234567890123456";
+//        s_seen = 0;
+//        _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(Hook);
+//        for (uint32_t i = 0; i < 1000; ++i)
+//        {
+//            Variant first(shortText);
+//            Variant second(first);
+//            second = first;
+//            Variant third(std::move(second));
+//        }
+//        _CrtSetAllocHook(previous);
+//        Check(s_seen == 0, "small bytes must not allocate");
+//        const std::string large(4096, 'x');
+//        Variant original(large);
+//        s_seen = 0;
+//        previous = _CrtSetAllocHook(Hook);
+//        Variant moved(std::move(original));
+//        original = std::move(moved);
+//        _CrtSetAllocHook(previous);
+//        Check(s_seen == 0, "heap move must not allocate");
+//        _CrtMemState before;
+//        _CrtMemState after;
+//        _CrtMemCheckpoint(&before);
+//        for (s_failAt = 1; s_failAt <= 8; ++s_failAt)
+//        {
+//            Variant value(int32_t(73));
+//            s_seen = 0;
+//            previous = _CrtSetAllocHook(Hook);
+//            const bool accepted = value.assignBytes(large.data(), large.size());
+//            _CrtSetAllocHook(previous);
+//            Check(accepted ? value.toBlob() == large : static_cast<int32_t>(value) == 73, "allocation rollback");
+//        }
+//        s_failAt = 0;
+//        _CrtMemCheckpoint(&after);
+//        Check(before.lCounts[_NORMAL_BLOCK] == after.lCounts[_NORMAL_BLOCK] && before.lSizes[_NORMAL_BLOCK] == after.lSizes[_NORMAL_BLOCK], "allocation failure leak");
+//#endif
+//#endif
+//        std::printf("Variant performance API checks=%u failures=%u sizeof=%llu\n", checks, failures, static_cast<unsigned long long>(sizeof(Variant)));
+//        return failures == 0 ? 0 : 1;
+//    }
+//    catch (...)
+//    {
+//        std::printf("FAIL unexpected exception checks=%u\n", checks);
+//        return 1;
+//    }
+//}
+// VARIANT_PERF_UNIT_END

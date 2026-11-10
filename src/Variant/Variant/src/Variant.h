@@ -3,13 +3,25 @@
 #include <stdint.h>
 #include <string>
 
-// 拥有一个标量或字节值；固定宽度数字内存内联，字符串/二进制独占分配。
+/** Variant的独占存储；长度不超过16的字节内联，长字节才使用堆指针
+*/
+union VariantStorage
+{
+    // 数字的原生位模式；对应INT32、UINT64和DOUBLE
+    uint64_t m_scalar;
+    // STRING/BLOB长度超过16时拥有的数组，仅所属Variant释放
+    char* m_heap;
+    // STRING/BLOB长度不超过16时的完整字节，不补NUL结束符
+    char m_small[16];
+};
+
+// 拥有一个标量或字节值；数字和不超过16字节的字符串/二进制不分配。
 // 同一实例须由调用者串行访问；保留既有类型号和宿主原生字节序序列化。
 class VariantAPI Variant
 {
 public:
     // 沿用原公开Variant::VariantType名称及数值，避免调用方更改既有类型引用。
-    enum VariantType
+    enum VariantType : int32_t
     {
         // 未赋值或非法类型/宽度输入。
         INIT,
@@ -40,11 +52,52 @@ public:
     */
     Variant(const Variant& value);
 
-    /** 先复制后替换；保留历史按值返回契约
-    @param [in] value 本次借用，允许自赋值
-    @return 已赋值内容的独立副本；返回副本分配失败时当前值已经提交
+    /** 先复制后替换，返回当前对象引用，不为被忽略的返回值再深拷贝
+    @param [in] value 本次借用，允许自赋值；分配失败保持当前值
+    @return 当前实例；需要独立快照时显式构造Variant副本
     */
-    Variant operator=(const Variant& value);
+    Variant& operator=(const Variant& value);
+
+    /** 转移独占内容，无堆分配；源恢复INIT
+    @param [in,out] value 本次独占借用，之后只可作为INIT重新使用
+    */
+    Variant(Variant&& value);
+
+    /** 转移内容并释放当前旧值，无堆分配；自移动不变
+    @param [in,out] value 本次独占借用，非自身时源恢复INIT
+    @return 当前实例
+    */
+    Variant& operator=(Variant&& value);
+
+    /** 交换独占存储，不分配；交换后旧借用指针失效
+    @param [in,out] value 本次独占借用，可为自身
+    */
+    void swap(Variant& value);
+
+    /** 直接复制带长度的原始值，避免先构造std::string；捕获分配异常
+    @param [in] data 借用至返回，可指向当前值；size为0时可空
+    @param [in] size 字节数；数字必须为4/8字节，INIT必须为0
+    @param [in] type 结果类型；STRING同BLOB按长度保留内部NUL，不做文本转换
+    @return 成功替换；参数错误或分配失败保持当前值
+    */
+    bool assignBytes(const void* data, size_t size, VariantType type = BLOB);
+
+    /** 零复制借用原始字节，不包含结束符；不能跨对象修改、移动或释放保存
+    @return 长度为0时nullptr；其余只读字节由本实例拥有，禁止释放或写入
+    */
+    const char* data() const;
+
+    /** 查询原始字节长度，不分配
+    @return data对应的字节数；数字是原生表示，非文本长度
+    */
+    size_t size() const;
+
+    /** 仅按长度校验线格式，不读取输入内存
+    @param [in] size 原始字节数
+    @param [in] type 整数类型号，不得先把未经校验的数转为枚举
+    @return 类型有效且数字宽度完整；STRING/BLOB允许任意长度
+    */
+    static bool isValidBlob(size_t size, int32_t type);
 
     /** 创建四字节整数，不分配
     @param [in] value 完整int32值
@@ -88,65 +141,65 @@ public:
 
     /** 替换为整数，不分配
     @param [in] value int32值
-    @return 历史按值返回的独立副本
+    @return 当前实例引用，不产生额外副本
     */
-    Variant operator=(const int32_t& value);
+    Variant& operator=(const int32_t& value);
 
     /** 替换为整数，不分配
     @param [in] value uint64值
-    @return 历史按值返回的独立副本
+    @return 当前实例引用，不产生额外副本
     */
-    Variant operator=(const uint64_t& value);
+    Variant& operator=(const uint64_t& value);
 
     /** 替换为浮点数，不分配
     @param [in] value double位模式
-    @return 历史按值返回的独立副本
+    @return 当前实例引用，不产生额外副本
     */
-    Variant operator=(const double& value);
+    Variant& operator=(const double& value);
 
     /** 先复制再替换为STRING，只保留首个\0之前的文本，不保存结束符
     @param [in] value 本次借用的NUL终止文本；nullptr生成空STRING
-    @return 独立副本；返回副本失败不撤销已提交的替换
+    @return 当前实例引用；分配失败保持原值
     */
-    Variant operator=(const char* value);
+    Variant& operator=(const char* value);
 
     /** 先复制再替换为BLOB，内容没有\0时也不改为STRING
     @param [in] value 本次借用，按size()保留全部字节，包括内部\0
-    @return 独立副本；返回副本失败不撤销已提交的替换
+    @return 当前实例引用；分配失败保持原值
     */
-    Variant operator=(const std::string& value);
+    Variant& operator=(const std::string& value);
 
     /** 沿用历史仅比较长度和原始字节的规则，不额外比较类型号
     @param [in] value 比较对象，仅本次借用
     @return 字节一致
     */
-    bool operator==(const Variant& value);
+    bool operator==(const Variant& value) const;
 
     /** 比较原始字节差异
     @param [in] value 比较对象，仅本次借用
     @return 字节不同
     */
-    bool operator!=(const Variant& value);
+    bool operator!=(const Variant& value) const;
 
     /** 读取对应类型的整数，不做隐式字符串转换
     @return INT32完整值，其他类型或空值为0
     */
-    operator int32_t();
+    operator int32_t() const;
 
     /** 读取对应类型的整数
     @return UINT64完整值，其他类型或空值为0
     */
-    operator uint64_t();
+    operator uint64_t() const;
 
     /** 读取对应类型的浮点数
     @return DOUBLE值，其他类型或空值为0
     */
-    operator double();
+    operator double() const;
 
     /** 拷贝文本或二进制字节
     @return STRING/BLOB的完整字节，内部\0保留；其他类型为空，长度须使用std::string::size()
     */
-    operator std::string();
+    operator std::string() const;
 
     /** 查询原始类型号
     @return 当前VariantType
@@ -209,6 +262,13 @@ protected:
     void setVariant(const Variant& value);
 
 private:
+    /** 复制原始字节并提交；调用者已验证类型/宽度，分配失败保持旧值
+    @param [in] data 本次借用，可来自当前值；size非0时必须有效
+    @param [in] size 完整字节数
+    @param [in] type 目标类型
+    */
+    void setBytes(const char* data, size_t size, VariantType type);
+
     /** 擦除并释放字节，清空标量和长度；调用者负责设置类型
     */
     void clearMemory();
@@ -223,8 +283,6 @@ private:
     VariantType m_type;
     // 实际原始字节数；历史空文本数字的长度为0。
     size_t m_length;
-    // 仅STRING/BLOB拥有的字节，标量和空值为nullptr。
-    char* m_data;
-    // 标量原生字节，未使用部分为零，不动态分配。
-    uint64_t m_scalar;
+    // 类型和长度决定有效成员；只有长STRING/BLOB持有独占堆指针
+    VariantStorage m_storage;
 };
