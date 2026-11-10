@@ -65,6 +65,7 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup><LockFreeMapTestSource Condition="'$(LockFreeMapTestSource)'==''">$(ProjectDir)..\..\LockFreeMap\LockFreeMap\src</LockFreeMapTestSource></PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
@@ -88,14 +89,16 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(IntDir)include;$(LockFreeMapTestSDK);$(LockFreeMapTestSource);$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;STATIC_LIB;$(LockFreeMapTestDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
+      <AdditionalDependencies>psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>Semaphore.lib;Semaphored.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -105,14 +108,16 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(IntDir)include;$(LockFreeMapTestSDK);$(LockFreeMapTestSource);$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;STATIC_LIB;$(LockFreeMapTestDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
+      <AdditionalDependencies>psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>Semaphore.lib;Semaphored.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -124,14 +129,16 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(IntDir)include;$(LockFreeMapTestSDK);$(LockFreeMapTestSource);$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;STATIC_LIB;$(LockFreeMapTestDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
+      <AdditionalDependencies>psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>Semaphore.lib;Semaphored.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
@@ -145,14 +152,16 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(IntDir)include;$(LockFreeMapTestSDK);$(LockFreeMapTestSource);$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;STATIC_LIB;$(LockFreeMapTestDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
+      <AdditionalDependencies>psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>Semaphore.lib;Semaphored.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
@@ -160,12 +169,77 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="LockFreeMapBenchmark.h" />
+    <ClInclude Include="LockFreeMapSingleBenchmark.h" />
+    <ClInclude Include="LockFreeMapSingleBenchmark.inl" />
+    <ClInclude Include="LockFreeMapProgressTest.h" />
+    <ClInclude Include="LockFreeMapStatusTest.h" />
+    <ClInclude Include="LockFreeMapArrivalTest.h" />
+    <ClInclude Include="LockFreeMapBenchmarkMutex.h" />
+    <ClInclude Include="LockFreeMapBenchmarkMutex.inl" />
+    <ClInclude Include="LockFreeMapBenchmarkAllocator.h" />
+    <ClInclude Include="LockFreeMapBenchmarkClock.h" />
+    <ClInclude Include="LockFreeMapBenchmarkClock.inl" />
+    <ClInclude Include="LockFreeMapHeadersTest.h" />
+    <ClInclude Include="LockFreeMapHistorical.h" />
     <ClInclude Include="LockFreeMapTest.h" />
+    <ClInclude Include="LockFreeMapTestCopyKey.h" />
+    <ClInclude Include="LockFreeMapTestRunner.h" />
+    <ClInclude Include="LockFreeMapTests.h" />
+    <ClInclude Include="LockFreeMapTestThread.h" />
+    <ClInclude Include="LockFreeMapTestThread.inl" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LockFreeMapTest.cpp" />
+    <ClCompile Include="LockFreeMapBasicTest.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapBenchmark.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'!='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapBenchmarkAllocator.cpp"><WholeProgramOptimization>false</WholeProgramOptimization><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'!='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapExamples.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapHeadersTest.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapHistorical.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapPlatformTest.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapPoolTest.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapTest.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapTestCopyKey.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapTestRunner.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapTests.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapTestThread.cpp" />
+    <ClCompile Include="LockFreeMapContentionTest.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapStatusTest.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapArrivalTest.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapProgressTest.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true' and '$(LockFreeMapTestProgress)'!='true'">true</ExcludedFromBuild></ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <LockFreeMapTestHeader Include="$(LockFreeMapTestSource)\*.h;$(LockFreeMapTestSource)\*.inl" />
+  </ItemGroup>
+  <Target Name="PrepareLockFreeMapTestHeaders" BeforeTargets="ClCompile">
+    <MakeDir Directories="$(IntDir)include\LockFreeMap" />
+    <Copy SourceFiles="@(LockFreeMapTestHeader)" DestinationFolder="$(IntDir)include\LockFreeMap" SkipUnchangedFiles="true" />
+  </Target>
+  <ItemDefinitionGroup Condition="'$(LockFreeMapTestLegacy)'=='true'">
+    <ClCompile>
+      <PreprocessorDefinitions>LOCK_FREE_MAP_BASELINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(LockFreeMapTestStdMutex)'=='true'">
+    <ClCompile>
+      <PreprocessorDefinitions>LOCK_FREE_MAP_BENCHMARK_STD_MUTEX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <None Include="LockFreeMapAtomicProbe.cpp" />
+    <None Include="LockFreeMapSingleBenchmark.cpp" />
+    <None Include="LockFreeMapLayoutProbe.cpp" />
+    <None Include="LockFreeMapWasmInvokes.js" />
+    <None Include="LockFreeMapWasmRuntime.cpp" />
+    <None Include="LockFreeMapWasmHeapViews.js" />
+  </ItemGroup>
+  <ItemDefinitionGroup Condition="'$(LockFreeMapTestBenchmark)'=='true' and '$(LockFreeMapTestProgress)'=='true'">
+    <ClCompile><PreprocessorDefinitions>LOCK_FREE_MAP_BENCHMARK_PROGRESS;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(LockFreeMapProgressCommon)'=='true'">
+    <ClCompile><PreprocessorDefinitions>LOCK_FREE_MAP_PROGRESS_COMMON;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
 </Project>

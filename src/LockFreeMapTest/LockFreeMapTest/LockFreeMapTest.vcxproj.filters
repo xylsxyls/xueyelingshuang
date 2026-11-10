@@ -1,27 +1,51 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="源文件">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="头文件">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
-    </Filter>
-    <Filter Include="资源文件">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
+    <ClInclude Include="LockFreeMapBenchmark.h" />
+    <ClInclude Include="LockFreeMapSingleBenchmark.h" />
+    <ClInclude Include="LockFreeMapSingleBenchmark.inl" />
+    <ClInclude Include="LockFreeMapProgressTest.h" />
+    <ClInclude Include="LockFreeMapStatusTest.h" />
+    <ClInclude Include="LockFreeMapArrivalTest.h" />
+    <ClInclude Include="LockFreeMapBenchmarkMutex.h" />
+    <ClInclude Include="LockFreeMapBenchmarkMutex.inl" />
+    <ClInclude Include="LockFreeMapBenchmarkAllocator.h" />
+    <ClInclude Include="LockFreeMapBenchmarkClock.h" />
+    <ClInclude Include="LockFreeMapBenchmarkClock.inl" />
+    <ClInclude Include="LockFreeMapHeadersTest.h" />
+    <ClInclude Include="LockFreeMapHistorical.h" />
+    <ClInclude Include="LockFreeMapTest.h" />
+    <ClInclude Include="LockFreeMapTestCopyKey.h" />
+    <ClInclude Include="LockFreeMapTestRunner.h" />
+    <ClInclude Include="LockFreeMapTests.h" />
+    <ClInclude Include="LockFreeMapTestThread.h" />
+    <ClInclude Include="LockFreeMapTestThread.inl" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="LockFreeMapTest.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
+    <ClCompile Include="LockFreeMapBasicTest.cpp" />
+    <ClCompile Include="LockFreeMapBenchmark.cpp" />
+    <ClCompile Include="LockFreeMapBenchmarkAllocator.cpp" />
+    <ClCompile Include="LockFreeMapExamples.cpp" />
+    <ClCompile Include="LockFreeMapHeadersTest.cpp" />
+    <ClCompile Include="LockFreeMapHistorical.cpp" />
+    <ClCompile Include="LockFreeMapPlatformTest.cpp" />
+    <ClCompile Include="LockFreeMapPoolTest.cpp" />
+    <ClCompile Include="LockFreeMapTest.cpp" />
+    <ClCompile Include="LockFreeMapTestCopyKey.cpp" />
+    <ClCompile Include="LockFreeMapTestRunner.cpp" />
+    <ClCompile Include="LockFreeMapTests.cpp" />
+    <ClCompile Include="LockFreeMapTestThread.cpp" />
+    <ClCompile Include="LockFreeMapContentionTest.cpp" />
+    <ClCompile Include="LockFreeMapStatusTest.cpp" />
+    <ClCompile Include="LockFreeMapArrivalTest.cpp" />
+    <ClCompile Include="LockFreeMapProgressTest.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LockFreeMapTest.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
+    <None Include="LockFreeMapAtomicProbe.cpp" />
+    <None Include="LockFreeMapSingleBenchmark.cpp" />
+    <None Include="LockFreeMapLayoutProbe.cpp" />
+    <None Include="LockFreeMapWasmInvokes.js" />
+    <None Include="LockFreeMapWasmRuntime.cpp" />
+    <None Include="LockFreeMapWasmHeapViews.js" />
   </ItemGroup>
 </Project>
