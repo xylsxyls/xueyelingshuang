@@ -1,54 +1,11 @@
 ﻿#include "LockFreeHashMapTest.h"
-#include <stdint.h>
-#include <stdio.h>
-#ifdef __unix__
-#include <signal.h>
-#include <stdlib.h>
-#endif
 
-#ifdef _MSC_VER
-BOOL CALLBACK ConsoleHandler(DWORD eve)
+/** 统一原生及 Wasm 测试入口，错误由测试模块记录并返回非零
+@param [in] argc 命令行参数数量
+@param [in] argv 命令行参数，省略编号运行全部用例
+@return 0 通过，非零表示输入、用例或未预期异常失败
+*/
+int main(int argc, char** argv)
 {
-	if (eve == CTRL_CLOSE_EVENT)
-	{
-		//关闭退出事件
-		//RCSend("close LockFreeHashMapTest");
-	}
-	return FALSE;
-}
-
-int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
-
-#elif __unix__
-//ctrl+c消息捕获函数
-void CtrlCMessage(int eve)
-{
-	if (eve == 2)
-	{
-		//关闭退出事件
-		//RCSend("close LockFreeHashMapTest");
-		exit(0);
-	}	
-}
-
-struct CtrlC
-{
-	CtrlC()
-	{
-		struct sigaction sigIntHandler;
-		sigIntHandler.sa_handler = CtrlCMessage;
-		sigemptyset(&sigIntHandler.sa_mask);
-		sigIntHandler.sa_flags = 0;
-		sigaction(SIGINT, &sigIntHandler, nullptr);
-	}
-};
-
-CtrlC g_ctrlc;
-#endif
-
-int32_t main()
-{
-	
-	getchar();
-	return 0;
+    return LockFreeHashMapRunTests(argc, argv);
 }

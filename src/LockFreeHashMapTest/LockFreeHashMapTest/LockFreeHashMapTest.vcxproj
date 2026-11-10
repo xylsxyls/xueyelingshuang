@@ -65,39 +65,43 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <LockFreeHashMapTestMode Condition="'$(LockFreeHashMapTestMode)'==''">cases</LockFreeHashMapTestMode>
+    <LockFreeHashMapPerfCurrent Condition="'$(LockFreeHashMapPerfCurrent)'==''">false</LockFreeHashMapPerfCurrent>
+    <LockFreeHashMapPerfStdMutex Condition="'$(LockFreeHashMapPerfStdMutex)'==''">false</LockFreeHashMapPerfStdMutex>
+    <LockFreeHashMapSource Condition="'$(LockFreeHashMapSource)'==''">$(ProjectDir)..\..\LockFreeHashMap\LockFreeHashMap\src</LockFreeHashMapSource>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
-    <IntDir>$(ProjectDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)..\..\temp\LockFreeHashMapTest\$(Platform)\$(Configuration)\$(LockFreeHashMapTestMode)\</OutDir>
+    <IntDir>$(OutDir)obj\</IntDir>
     <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
-    <IntDir>$(ProjectDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)..\..\temp\LockFreeHashMapTest\$(Platform)\$(Configuration)\$(LockFreeHashMapTestMode)\</OutDir>
+    <IntDir>$(OutDir)obj\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
-    <IntDir>$(ProjectDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)..\..\temp\LockFreeHashMapTest\$(Platform)\$(Configuration)\$(LockFreeHashMapTestMode)\</OutDir>
+    <IntDir>$(OutDir)obj\</IntDir>
     <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
-    <IntDir>$(ProjectDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)..\..\temp\LockFreeHashMapTest\$(Platform)\$(Configuration)\$(LockFreeHashMapTestMode)\</OutDir>
+    <IntDir>$(OutDir)obj\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(LockFreeHashMapSource);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>STATIC_LIB;_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -105,16 +109,14 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(LockFreeHashMapSource);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>STATIC_LIB;_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -124,9 +126,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(LockFreeHashMapSource);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>STATIC_LIB;NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -135,7 +136,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -145,9 +145,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\tools\DebugTest\SendToMessageTest.h;$(ProjectDir)..\..\..\common\LogSender\LogSenderAPI.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(LockFreeHashMapSource);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>STATIC_LIB;NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -156,16 +155,146 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(LockFreeHashMapTestMode)'=='perf-runner'">
+    <ClCompile><PreprocessorDefinitions>LOCKFREEHASHMAP_RUNNER_NO_MAIN;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(LockFreeHashMapTestMode)'=='perf-memory'">
+    <ClCompile><PreprocessorDefinitions>LOCKFREEHASHMAP_PERF_MEMORY;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="('$(LockFreeHashMapTestMode)'=='performance' Or '$(LockFreeHashMapTestMode)'=='perf-memory') And '$(LockFreeHashMapPerfCurrent)'!='false'">
+    <ClCompile><PreprocessorDefinitions>LOCKFREEHASHMAP_PERF_CURRENT;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(LockFreeHashMapTestMode)'=='rewrite'">
+    <ClCompile><PreprocessorDefinitions>LOCKFREEHASHMAP_POOL_NO_MAIN;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(LockFreeHashMapPerfStdMutex)'=='true'">
+    <ClCompile><PreprocessorDefinitions>LOCKFREEHASHMAP_PERF_STD_MUTEX;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(LockFreeHashMapTestModule)'=='dll' And '$(LockFreeHashMapTestMode)'=='cases'">
+    <ClCompile><PreprocessorDefinitions>LOCKFREEHASHMAP_TEST_DLL;LOCKFREEHASHMAP_TEST_EXPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(LockFreeHashMapTestModule)'=='dll' And '$(LockFreeHashMapTestMode)'=='module-host'">
+    <ClCompile><PreprocessorDefinitions>LOCKFREEHASHMAP_TEST_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(LockFreeHashMapTestMode)'=='module-host'">
+    <Link><AdditionalDependencies>$(LockFreeHashMapTestModuleLibrary);%(AdditionalDependencies)</AdditionalDependencies></Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="LockFreeHashMapSingleThread.h" />
+    <ClInclude Include="LockFreeHashMapSingleThread.inl" />
+    <ClInclude Include="LockFreeHashMapCrashRunner.h" />
+    <ClInclude Include="LockFreeHashMapStdMutex.h" />
+    <ClInclude Include="LockFreeHashMapTestState.h" />
+    <ClInclude Include="LockFreeHashMapTestBinding.h" />
+    <ClInclude Include="LockFreeHashMapTestBinding.inl" />
+    <ClInclude Include="LockFreeHashMapStdMutex.inl" />
+    <ClInclude Include="LockFreeHashMapStdMutexTests.h" />
+    <ClInclude Include="LockFreeHashMapRewriteTests.h" />
+    <ClInclude Include="LockFreeHashMapPoolTests.h" /><ClInclude Include="LockFreeHashMapEpochTests.h" />
+    <ClInclude Include="LockFreeHashMapPerfModels.h" />
+    <ClInclude Include="LockFreeHashMapPerfMemory.h" />
+    <ClInclude Include="LockFreeHashMapPerformance.h" />
+    <ClInclude Include="LockFreeHashMapPerformance.inl" />
+    <ClInclude Include="LockFreeHashMapPerfRunner.h" />
+    <ClInclude Include="LockFreeHashMapBenchmark.h" />
+    <ClInclude Include="LockFreeHashMapMigration.h" />
+    <ClInclude Include="LockFreeHashMapTestThread.h" />
+    <ClInclude Include="LockFreeHashMapTestThread.inl" />
+    <ClInclude Include="LockFreeHashMapRunner.h" />
     <ClInclude Include="LockFreeHashMapTest.h" />
+    <ClInclude Include="LockFreeHashMapTestEntry.h" />
+    <ClInclude Include="LockFreeHashMapTests.h" />
+    <ClInclude Include="LockFreeHashMapThreadControl.h" />
+    <ClInclude Include="LockFreeHashMapWorkloads.h" />
+    <ClInclude Include="LockFreeHashMapWorkloads.inl" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LockFreeHashMapTest.cpp" />
+    <ClCompile Include="LockFreeHashMapSingleThread.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='single-thread'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapSingleObservation.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='single-thread'">true</ExcludedFromBuild>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapCrashRunner.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='crash-runner'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapProgressTests.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='progress'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapStdMutexTests.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='std-checks'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapTestState.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='cases' And '$(LockFreeHashMapTestMode)'!='epoch' And '$(LockFreeHashMapTestMode)'!='rewrite'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapRewriteTests.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='rewrite'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapReadCosts.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='read-costs'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapPoolTests.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='pool' And '$(LockFreeHashMapTestMode)'!='rewrite'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapEpochTests.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='epoch'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapPerfModels.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='performance' And '$(LockFreeHashMapTestMode)'!='perf-memory' And '$(LockFreeHashMapTestMode)'!='perf-runner'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapPerformance.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='performance' And '$(LockFreeHashMapTestMode)'!='perf-memory'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapPerfMemory.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='perf-memory'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapPerfRunner.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='perf-runner'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapBenchmark.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='benchmark'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapBoundaries.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='cases'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapComposition.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='composition'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapMigration.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='cases'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapOptimizations.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='cases'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapRunner.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='runner' And '$(LockFreeHashMapTestMode)'!='perf-runner'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapTestThread.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='cases' And '$(LockFreeHashMapTestMode)'!='control' And '$(LockFreeHashMapTestMode)'!='workloads' And '$(LockFreeHashMapTestMode)'!='runner' And '$(LockFreeHashMapTestMode)'!='performance' And '$(LockFreeHashMapTestMode)'!='epoch' And '$(LockFreeHashMapTestMode)'!='pool' And '$(LockFreeHashMapTestMode)'!='rewrite' And '$(LockFreeHashMapTestMode)'!='read-costs' And '$(LockFreeHashMapTestMode)'!='std-checks' And '$(LockFreeHashMapTestMode)'!='progress'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapTest.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='cases' And '$(LockFreeHashMapTestMode)'!='module-host'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapTests.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='cases'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapThreadControl.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='control'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapWorkloads.cpp">
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='workloads'">true</ExcludedFromBuild>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="run_wasm.js" />
+    <None Include="run_performance_wasm.js" />
+    <None Include="CMakeLists.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup><ClInclude Include="LockFreeHashMapProgressTests.h" /></ItemGroup>
 </Project>

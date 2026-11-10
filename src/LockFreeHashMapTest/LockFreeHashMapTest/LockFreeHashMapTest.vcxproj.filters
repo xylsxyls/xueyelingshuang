@@ -15,13 +15,112 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="LockFreeHashMapRewriteTests.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapTestState.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapTestBinding.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapTestBinding.inl"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapStdMutex.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapStdMutex.inl"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapStdMutexTests.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapBenchmark.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeHashMapMigration.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeHashMapTestThread.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeHashMapTestThread.inl">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeHashMapRunner.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="LockFreeHashMapTest.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeHashMapTestEntry.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeHashMapTests.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeHashMapThreadControl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeHashMapWorkloads.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeHashMapWorkloads.inl">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="LockFreeHashMapRewriteTests.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="LockFreeHashMapTestState.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="LockFreeHashMapStdMutexTests.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="LockFreeHashMapReadCosts.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="LockFreeHashMapBenchmark.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapBoundaries.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapComposition.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapMigration.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapOptimizations.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapRunner.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapTestThread.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="LockFreeHashMapTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="LockFreeHashMapTests.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapThreadControl.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LockFreeHashMapWorkloads.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="run_wasm.js"><Filter>资源文件</Filter></None>
+    <None Include="run_performance_wasm.js"><Filter>资源文件</Filter></None>
+    <None Include="CMakeLists.txt"><Filter>资源文件</Filter></None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LockFreeHashMapPerfModels.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapPoolTests.h" /><ClInclude Include="LockFreeHashMapEpochTests.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="LockFreeHashMapPoolTests.cpp" /><ClCompile Include="LockFreeHashMapEpochTests.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="LockFreeHashMapPerfMemory.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapPerformance.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapPerformance.inl"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapPerfRunner.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="LockFreeHashMapPerfModels.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="LockFreeHashMapPerformance.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="LockFreeHashMapPerfMemory.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="LockFreeHashMapPerfRunner.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup><ClCompile Include="LockFreeHashMapProgressTests.cpp"><Filter>源文件</Filter></ClCompile></ItemGroup>
+  <ItemGroup><ClInclude Include="LockFreeHashMapProgressTests.h"><Filter>头文件</Filter></ClInclude></ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LockFreeHashMapCrashRunner.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapSingleThread.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapSingleThread.inl"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="LockFreeHashMapSingleThread.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="LockFreeHashMapSingleObservation.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="LockFreeHashMapCrashRunner.cpp"><Filter>源文件</Filter></ClCompile>
   </ItemGroup>
 </Project>
