@@ -78,12 +78,14 @@ m_currentLevel(0),
 m_floorUses(0),
 m_floorMinimum(INT_MAX),
 m_preemptionFloor(1),
+m_taskClaims(0),
 m_outstanding(0),
 m_queued(0),
 m_releasedTasks(0),
 m_dequeuedTasks(0),
 m_executed(0),
 m_rejected(0),
+m_pressureYields(0),
 m_errors(0),
 m_wakePending(false),
 m_trimBuckets(false)
@@ -109,7 +111,7 @@ CTaskThreadResult CTaskThreadState::start()
     {
         return CTaskThreadResult(CTaskThreadInvalid);
     }
-    if (!m_accepting.is_lock_free() || !m_current.is_lock_free() || !m_started.is_lock_free() || !m_joined.is_lock_free() || !m_readDomain.atomicsLockFree())
+    if (!m_accepting.is_lock_free() || !m_current.is_lock_free() || !m_started.is_lock_free() || !m_joined.is_lock_free() || !m_readDomain.atomicsLockFree() || !m_taskClaims.is_lock_free() || !m_pressureYields.is_lock_free())
     {
         return CTaskThreadResult(CTaskThreadUnsupported);
     }
@@ -180,18 +182,22 @@ uint64_t CTaskThreadState::nextSequence(CTaskStorageCache& cache)
     {
         return ++cache.m_nextSequence;
     }
-    uint64_t value = m_sequence.load(std::memory_order_relaxed);
-    while (value != UINT64_MAX)
+    const uint64_t blocks = UINT64_MAX / 512 + 1;
+    if (m_sequence.load(std::memory_order_relaxed) >= blocks)
     {
-        const uint64_t count = (std::min)(UINT64_MAX - value, UINT64_C(64));
-        if (m_sequence.compare_exchange_weak(value, value + count, std::memory_order_relaxed, std::memory_order_relaxed))
-        {
-            cache.m_nextSequence = value + 1;
-            cache.m_lastSequence = value + count;
-            return value + 1;
-        }
+        return 0;
     }
-    return 0;
+    // 计数的是512条一段的段号。超过最后段就拒绝，不把UINT64_MAX上的加法用于分配。
+    // 保护位置少于UINT32_MAX；即使所有读到旧值的调用都晚到，也不足以使段计数回绕。
+    const uint64_t block = m_sequence.fetch_add(1, std::memory_order_relaxed);
+    if (block >= blocks)
+    {
+        return 0;
+    }
+    const uint64_t base = block * 512;
+    cache.m_nextSequence = base + 1;
+    cache.m_lastSequence = base + (std::min)(UINT64_MAX - base, UINT64_C(512));
+    return base + 1;
 }
 
 bool CTaskThreadState::reserveTask(CTaskStorageCache& cache)
@@ -201,48 +207,42 @@ bool CTaskThreadState::reserveTask(CTaskStorageCache& cache)
         cache.m_reserved.store(cache.m_reserved.load(std::memory_order_relaxed) + 1, std::memory_order_release);
         return true;
     }
-    const uint64_t limit = m_config.m_maximumTasks == -1 ? UINT64_MAX - 1 : static_cast<uint64_t>(m_config.m_maximumTasks);
-    for (;;)
+    const uint64_t limit = static_cast<uint64_t>(m_config.m_maximumTasks);
+    // 有限容量按原子加法的先后领取，不在累计领取/归还两个计数之间反复 CAS。
+    // 超限的临时登记立即撤销；其间其他调用可以观察到容量正在被申请。
+    const uint64_t previous = m_taskClaims.fetch_add(1, std::memory_order_acq_rel);
+    if (previous >= limit)
     {
-        // 归还发布包含此前的预留；按此顺序读取，不会把较新的归还减去较旧的预留。
-        const uint64_t released = m_releasedTasks.load(std::memory_order_acquire);
-        uint64_t count = m_outstanding.load(std::memory_order_relaxed);
-        if (count - released >= limit)
-        {
-            return false;
-        }
-        if (m_outstanding.compare_exchange_weak(count, count + 1, std::memory_order_acq_rel, std::memory_order_relaxed))
-        {
-            return true;
-        }
+        m_taskClaims.fetch_sub(1, std::memory_order_release);
+        return false;
     }
+    m_outstanding.fetch_add(1, std::memory_order_release);
+    return true;
 }
 
 uint64_t CTaskThreadState::outstandingCount() const
 {
-    for (;;)
+    if (m_config.m_maximumTasks != -1)
     {
-        const uint64_t released = m_releasedTasks.load(std::memory_order_acquire);
-        const uint64_t reserved = m_config.m_maximumTasks == -1 ? m_storage.reservedCount() : m_outstanding.load(std::memory_order_acquire);
-        if (released == m_releasedTasks.load(std::memory_order_acquire))
-        {
-            return reserved - released;
-        }
-        // 只因消费者已经推进而重读，不等待任何特定线程归还私有状态。
+        // 单字读取接纳额度；撤销中的超额登记不属于实际任务，最多报告业务上限。
+        return (std::min)(m_taskClaims.load(std::memory_order_acquire), static_cast<uint64_t>(m_config.m_maximumTasks));
     }
+    // 查询是弱一致观察，不要求持续生产消费时得到一个全局静止快照。
+    // 先读归还，再读预留；归还的 acquire 传播了对应预留，避免负数伪装成巨量积压。
+    const uint64_t released = m_releasedTasks.load(std::memory_order_acquire);
+    const uint64_t reserved = m_config.m_maximumTasks == -1 ? m_storage.reservedCount() : m_outstanding.load(std::memory_order_acquire);
+    return reserved - released;
 }
 
 uint64_t CTaskThreadState::queuedCount() const
 {
-    for (;;)
-    {
-        const uint64_t dequeued = m_dequeuedTasks.load(std::memory_order_acquire);
-        const uint64_t queued = m_config.m_maximumTasks == -1 ? m_storage.publishedCount() : m_queued.load(std::memory_order_acquire);
-        if (dequeued == m_dequeuedTasks.load(std::memory_order_acquire))
-        {
-            return queued - dequeued;
-        }
-    }
+    // 查询是弱一致观察，不要求持续生产消费时得到一个全局静止快照。
+    // 先读归还，再读预留；归还的 acquire 传播了对应预留，避免负数伪装成巨量积压。
+    const uint64_t dequeued = m_dequeuedTasks.load(std::memory_order_acquire);
+    const uint64_t queued = m_config.m_maximumTasks == -1 ? m_storage.publishedCount() : m_queued.load(std::memory_order_acquire);
+    const uint64_t count = queued - dequeued;
+    // 两次读取之间可能完成并补入多轮任务；弱快照仍不得突破配置的硬上限。
+    return m_config.m_maximumTasks == -1 ? count : (std::min)(count, static_cast<uint64_t>(m_config.m_maximumTasks));
 }
 
 uint64_t CTaskThreadState::bucketQueuedCount(const CTaskPriorityBucket& bucket) const
@@ -251,15 +251,9 @@ uint64_t CTaskThreadState::bucketQueuedCount(const CTaskPriorityBucket& bucket) 
     {
         return bucket.m_queued.load(std::memory_order_acquire);
     }
-    for (;;)
-    {
-        const uint64_t taken = bucket.m_taken.load(std::memory_order_acquire);
-        const uint64_t published = m_storage.publishedCount(bucket.m_level);
-        if (taken == bucket.m_taken.load(std::memory_order_acquire))
-        {
-            return published - taken;
-        }
-    }
+    const uint64_t taken = bucket.m_taken.load(std::memory_order_acquire);
+    const uint64_t published = m_storage.publishedCount(bucket.m_level);
+    return published - taken;
 }
 
 void CTaskThreadState::countPublication(CTaskStorageCache& cache, CTaskPriorityBucket& bucket, bool add)
@@ -291,7 +285,9 @@ CTaskThreadResult CTaskThreadState::acquireBucket(int32_t level, std::shared_ptr
         return CTaskThreadResult();
     }
     std::shared_ptr<CTaskPriorityBucket> candidate;
-    for (;;)
+    // 单次尝试至多经历一次旧桶摘除和一次新桶取得；普通 postTask 在外层继续。
+    // 返回内部 Retry 前释放读侧保护与预留，避免等待时阻碍其他投递和回收。
+    for (size_t pass = 0; pass < 2; ++pass)
     {
         LockFreeMapToken token;
         LockFreeMapStatus status = m_buckets.lockFreeMapGet(level, bucket, token);
@@ -307,10 +303,6 @@ CTaskThreadResult CTaskThreadState::acquireBucket(int32_t level, std::shared_ptr
                 }
             }
             status = m_buckets.lockFreeMapGetOrInsert(level, candidate, bucket, token);
-        }
-        if (status == LOCK_FREE_MAP_CONFLICT)
-        {
-            continue;
         }
         if (status != LOCK_FREE_MAP_OK && status != LOCK_FREE_MAP_COMMITTED && status != LOCK_FREE_MAP_EXISTS)
         {
@@ -330,16 +322,23 @@ CTaskThreadResult CTaskThreadState::acquireBucket(int32_t level, std::shared_ptr
             }
             return CTaskThreadResult();
         }
+        // 已经关闭的本次候选不能再次插入；下一轮必须建立一个开放的新桶。
+        if (candidate == bucket)
+        {
+            candidate.reset();
+        }
         // 旧桶已关闭，任何生产者都可帮助摘除，不等待消费者补完删除。
         status = m_buckets.lockFreeMapErase(level, token);
-        if (status != LOCK_FREE_MAP_COMMITTED && status != LOCK_FREE_MAP_CONFLICT)
+        if (status != LOCK_FREE_MAP_COMMITTED && status != LOCK_FREE_MAP_CONFLICT && status != LOCK_FREE_MAP_NOT_FOUND)
         {
             return CTaskResultAdapter::map(status);
         }
     }
+    return CTaskThreadResult(CTaskThreadRetry);
 }
 
-LockFreeQueueResult CTaskThreadState::publish(CTaskStorageCache& cache, CTaskPriorityBucket& bucket, CTaskStorageSlot* record)
+LockFreeQueueResult CTaskThreadState::publish(CTaskStorageCache& cache, CTaskPriorityBucket& bucket, CTaskStorageSlot* record,
+    bool retryTransient)
 {
     if (!m_pinCommon || bucket.m_level > 16 || m_cachedBuckets[bucket.m_level - 1].peek() != &bucket)
     {
@@ -349,164 +348,253 @@ LockFreeQueueResult CTaskThreadState::publish(CTaskStorageCache& cache, CTaskPri
     if (!producer.attached())
     {
         LockFreeQueueResult acquired = bucket.m_queue.tryAcquireProducer(producer);
-        if (acquired == LockFreeQueueTemporaryUnavailable && m_storage.releaseIdleProducers() != 0)
+        if ((acquired == LockFreeQueueCapacityLimit || acquired == LockFreeQueueResourceUnavailable) &&
+            m_storage.releaseIdleProducers() != 0)
         {
             acquired = bucket.m_queue.tryAcquireProducer(producer);
         }
         if (acquired != LockFreeQueueSuccess)
         {
+            // 登记位置也属于配置的资源预算；用满按容量失败返回，不能冒充 CAS 竞争。
             return acquired;
         }
         cache.m_producerCount.store(cache.m_producerCount.load(std::memory_order_relaxed) + 1, std::memory_order_release);
     }
     LockFreeQueueResult result = producer.tryPushEntryAndFence(*record);
-    if ((result == LockFreeQueueCapacityLimit || result == LockFreeQueueTemporaryUnavailable) && m_storage.releaseIdleProducers() != 0)
+    // Busy 保证 Entry 尚未发布，短竞争中保留本次任务引用与稳定槽，省去撤销再分配。
+    // 此处只做固定少量非等待尝试；持续失败后退出读保护，由 post 无限次继续重试。
+    for (size_t attempt = 1; retryTransient && result == LockFreeQueueBusy && attempt < 4; ++attempt)
+    {
+        result = producer.tryPushEntryAndFence(*record);
+    }
+    // Busy 只表示 CAS 竞争，回收其他位置的上下文不能消除竞争，反而导致它们重新登记。
+    // 仅真实资源不足时帮助释放空闲上下文；普通 post 在解除本次保护后重试 Busy。
+    if ((result == LockFreeQueueCapacityLimit || result == LockFreeQueueResourceUnavailable) &&
+        m_storage.releaseIdleProducers() != 0)
     {
         result = producer.tryPushEntryAndFence(*record);
     }
     return result;
 }
 
-CTaskThreadResult CTaskThreadState::post(const std::shared_ptr<CTask>& task, int32_t level)
+CTaskThreadResult CTaskThreadState::post(const std::shared_ptr<CTask>& task, int32_t level, bool retryTransient)
 {
-    if (!task || level < 1)
-    {
-        m_rejected.fetch_add(1, std::memory_order_relaxed);
-        return CTaskThreadResult(CTaskThreadInvalid);
-    }
-    if (!m_accepting.load(std::memory_order_seq_cst))
-    {
-        m_rejected.fetch_add(1, std::memory_order_relaxed);
-        return CTaskThreadResult(CTaskThreadClosed);
-    }
-    CTaskReadPosition* reader = m_readDomain.enter();
-    if (reader == nullptr)
-    {
-        m_rejected.fetch_add(1, std::memory_order_relaxed);
-        return CTaskThreadResult(CTaskThreadRetry);
-    }
-    // 关闭与登记使用 SC 顺序；关闭方观察不到本登记时，本次必能观察到关闭并拒绝访问池。
-    if (!m_accepting.load(std::memory_order_seq_cst))
-    {
-        m_readDomain.leave(*reader);
-        m_rejected.fetch_add(1, std::memory_order_relaxed);
-        return CTaskThreadResult(CTaskThreadClosed);
-    }
-    CTaskStorageCache& cache = m_storage.cache(m_readDomain.indexOf(*reader));
-    CTaskCallbackScope scope(this);
-    if (!reserveTask(cache))
-    {
-        m_readDomain.leave(*reader);
-        m_rejected.fetch_add(1, std::memory_order_relaxed);
-        return CTaskThreadResult(CTaskThreadCapacity);
-    }
-    std::shared_ptr<CTaskPriorityBucket> owner;
-    CTaskPriorityBucket* bucket = nullptr;
-    CTaskStorageSlot* record = nullptr;
-    bool writer = false;
+    uint32_t attempts = 0;
     CTaskThreadResult result;
-    try
+    for (;;)
     {
-        if (m_pinCommon && level <= 16)
+        // 首次由构造函数给出空结果；后继轮次由成功的 pause 返回同样的空结果。
+        // 单次尝试在同一函数内结束；不额外调用包含异常处理、无法内联的包装层。
+        // 此局部作用域结束时，读保护、未发布额度及回调作用域均已退出。
+        do
         {
-            bucket = m_cachedBuckets[level - 1].peek();
-            if (bucket != nullptr && bucket->m_writers.closed())
+            if (!task || level < 1)
             {
-                bucket = nullptr;
+                result = CTaskThreadResult(CTaskThreadInvalid);
+                break;
             }
-        }
-        if (bucket == nullptr)
-        {
-            result = acquireBucket(level, owner);
-            writer = result.m_status == CTaskThreadOk;
-            bucket = writer ? owner.get() : nullptr;
-        }
-        if (bucket != nullptr)
-        {
-            // 发布任务前扩展扫描上界；上界只增不减，不让每次消费和投递争写同一提示。
-            if (level <= 16 && m_readyIndex.highest() < level)
+            if (!m_accepting.load(std::memory_order_seq_cst))
             {
-                m_readyIndex.publish(level);
+                result = CTaskThreadResult(CTaskThreadClosed);
+                break;
             }
-            const uint64_t sequence = nextSequence(cache);
-            if (sequence == 0)
+            bool contended = false;
+            CTaskReadPosition* reader = m_readDomain.enter(&contended);
+            if (reader == nullptr)
             {
-                result = CTaskThreadResult(CTaskThreadSequenceExhausted);
-            }
-            else
-            {
-                record = m_storage.acquire(cache, result, level);
-                if (record != nullptr)
+                m_pressureYields.store(64, std::memory_order_relaxed);
+                // 外层投递回调仍持有保护时，重入不能等待自己归还最后一条记录。
+                if (!m_accepting.load(std::memory_order_seq_cst))
                 {
-                    record->m_task = task;
-                    record->m_level = level;
-                    record->m_value = record;
-                    // 准备身份尚不能被停止遍历观察；独立发布位只在 FIFO 提交后打开。
-                    std::atomic<bool>& publication = record->m_page->m_publications[record->index()];
-                    countPublication(cache, *bucket, true);
-                    const LockFreeQueueResult published = publish(cache, *bucket, record);
-                    result = published == LockFreeQueueSuccess ? CTaskThreadResult(CTaskThreadOk, true) : CTaskResultAdapter::queue(published);
-                    if (result.m_committed)
+                    result = CTaskThreadResult(CTaskThreadClosed);
+                    break;
+                }
+                const CTaskThreadStatus status = contended && m_readDomain.active() < m_readDomain.capacity() ? CTaskThreadRetry : CTaskThreadCapacity;
+                result = CTaskThreadResult(CTaskCallbackScope::reading(this) ? CTaskThreadSelfWait : status);
+                break;
+            }
+            // 关闭与登记使用 SC 顺序；关闭方观察不到本登记时，本次必能观察到关闭并拒绝访问池。
+            if (!m_accepting.load(std::memory_order_seq_cst))
+            {
+                m_readDomain.leave(*reader);
+                result = CTaskThreadResult(CTaskThreadClosed);
+                break;
+            }
+            CTaskStorageCache& cache = m_storage.cache(m_readDomain.indexOf(*reader));
+            CTaskCallbackScope scope(this, nullptr, true);
+            if (!reserveTask(cache))
+            {
+                m_storage.flushRequested(cache);
+                m_readDomain.leave(*reader);
+                result = CTaskThreadResult(CTaskThreadCapacity);
+                break;
+            }
+            std::shared_ptr<CTaskPriorityBucket> owner;
+            CTaskPriorityBucket* bucket = nullptr;
+            CTaskStorageSlot* record = nullptr;
+            bool writer = false;
+            try
+            {
+                if (m_pinCommon && level <= 16)
+                {
+                    bucket = m_cachedBuckets[level - 1].peek();
+                    if (bucket != nullptr && bucket->m_writers.closed())
                     {
-                        // 消费者可能已经执行完毕；只开放可见性，不把执行阶段写回排队。
-                        publication.store(true, std::memory_order_release);
+                        bucket = nullptr;
+                    }
+                }
+                if (bucket == nullptr)
+                {
+                    result = acquireBucket(level, owner);
+                    writer = result.m_status == CTaskThreadOk;
+                    bucket = writer ? owner.get() : nullptr;
+                }
+                if (bucket != nullptr)
+                {
+                    // 发布任务前扩展扫描上界；上界只增不减，不让每次消费和投递争写同一提示。
+                    if (level <= 16 && m_readyIndex.highest() < level)
+                    {
+                        m_readyIndex.publish(level);
+                    }
+                    const uint64_t sequence = nextSequence(cache);
+                    if (sequence == 0)
+                    {
+                        result = CTaskThreadResult(CTaskThreadSequenceExhausted);
                     }
                     else
                     {
-                        countPublication(cache, *bucket, false);
+                        record = m_storage.acquire(cache, result, level);
+                        if (record != nullptr)
+                        {
+                            record->m_task = task;
+                            record->m_level = level;
+                            record->m_value = record;
+                            // 准备身份尚不能被停止遍历观察；独立发布位只在 FIFO 提交后打开。
+                            std::atomic<bool>& publication = record->m_page->m_publications[record->index()];
+                            countPublication(cache, *bucket, true);
+                            const LockFreeQueueResult published = publish(cache, *bucket, record, retryTransient);
+                            if (published == LockFreeQueueSuccess)
+                            {
+                                // acquire 成功已经将错误字段清零，只补充发布事实，避免重复构造结果。
+                                result.m_committed = true;
+                            }
+                            else
+                            {
+                                result = CTaskResultAdapter::queue(published);
+                            }
+                            if (result.m_committed)
+                            {
+                                // 消费者可能已经执行完毕；只开放可见性，不把执行阶段写回排队。
+                                publication.store(true, std::memory_order_release);
+                            }
+                            else
+                            {
+                                countPublication(cache, *bucket, false);
+                            }
+                        }
                     }
                 }
             }
+            catch (const std::bad_alloc&)
+            {
+                result = CTaskThreadResult(CTaskThreadNoMemory);
+            }
+            catch (...)
+            {
+                result = CTaskThreadResult(CTaskThreadCallbackFailure);
+            }
+            if (writer)
+            {
+                bucket->m_writers.leave();
+            }
+            if (!result.m_committed)
+            {
+                if (record != nullptr)
+                {
+                    // 未发布的记录没有任何外部观察者，可以直接归还，不进入退休链。
+                    m_storage.abandon(*record);
+                }
+                if (m_config.m_maximumTasks == -1)
+                {
+                    cache.m_reserved.store(cache.m_reserved.load(std::memory_order_relaxed) - 1, std::memory_order_release);
+                }
+                else
+                {
+                    m_outstanding.fetch_sub(1, std::memory_order_release);
+                    m_taskClaims.fetch_sub(1, std::memory_order_release);
+                }
+            }
+            else
+            {
+                // 有序发布接口已经完成队列提交到后续读取之间的完整屏障。
+                // 独立发布位仅用于停止遍历，不参与队列非空或唤醒判定。
+                wake(true);
+                if (level > 1)
+                {
+                    const CTaskThreadResult notice = preempt(level, record);
+                    if (notice.m_status != CTaskThreadOk)
+                    {
+                        result = notice;
+                        result.m_committed = true;
+                    }
+                }
+            }
+            m_storage.flushRequested(cache);
+            m_readDomain.leave(*reader);
+            if (!m_accepting.load(std::memory_order_seq_cst))
+            {
+                wake();
+            }
+        } while (false);
+        // 只重试未提交的竞争；资源错误、try 请求和已提交结果都直接进入最终返回。
+        if (result.m_committed || result.m_status != CTaskThreadRetry || !retryTransient)
+        {
+            break;
         }
-    }
-    catch (const std::bad_alloc&)
-    {
-        result = CTaskThreadResult(CTaskThreadNoMemory);
-    }
-    catch (...)
-    {
-        result = CTaskThreadResult(CTaskThreadCallbackFailure);
-    }
-    if (writer)
-    {
-        bucket->m_writers.leave();
+        result = CTaskResultAdapter::pause(attempts);
+        if (result.m_status != CTaskThreadOk)
+        {
+            break;
+        }
     }
     if (!result.m_committed)
     {
-        if (record != nullptr)
-        {
-            // 未发布的记录没有任何外部观察者，可以直接归还，不进入退休链。
-            m_storage.abandon(*record);
-        }
-        if (m_config.m_maximumTasks == -1)
-        {
-            cache.m_reserved.store(cache.m_reserved.load(std::memory_order_relaxed) - 1, std::memory_order_release);
-        }
-        else
-        {
-            m_outstanding.fetch_sub(1, std::memory_order_release);
-        }
+        // 统计的是最终未接纳的公开调用，不把内部重试累加成业务拒绝。
         m_rejected.fetch_add(1, std::memory_order_relaxed);
-    }
-    else
-    {
-        // 有序发布接口已经完成队列提交到后续读取之间的完整屏障。
-        // 独立发布位仅用于停止遍历，不参与队列非空或唤醒判定。
-        wake(true);
-        if (level > 1)
+        if (result.m_status == CTaskThreadCapacity || result.m_status == CTaskThreadResourceUnavailable)
         {
-            const CTaskThreadResult notice = preempt(level, record);
-            if (notice.m_status != CTaskThreadOk)
+            m_pressureYields.store(64, std::memory_order_relaxed);
+        }
+    }
+    // 按实际调用线程跨桶累计，防止持续成功者通过切换优先级或缓存位置绕过让步。
+    // 此处本次借用、候选及额度都已归还，不带着操作保护等待别的线程。
+#if defined(_MSC_VER) && _MSC_VER == 1800
+    static __declspec(thread) uint32_t s_postCalls = 0;
+#else
+    static thread_local uint32_t s_postCalls = 0;
+#endif
+    if ((++s_postCalls & 4095) == 0)
+    {
+        try
+        {
+            uint32_t pressure = m_pressureYields.load(std::memory_order_relaxed);
+            if (retryTransient && pressure != 0 && !CTaskCallbackScope::reading(this))
             {
-                result = notice;
-                result.m_committed = true;
+                // 仅 yield 在 Windows 受限 CPU 上仍可能长期让同一批线程相互运行。
+                // 出现资源压力后，连续成功者也短暂离开可运行队列；提示自然耗尽。
+                // CAS 只做一次，失败也让步，不把调度提示变成新的竞争等待点。
+                m_pressureYields.compare_exchange_strong(pressure, pressure - 1, std::memory_order_relaxed);
+                std::this_thread::sleep_for(std::chrono::microseconds(1));
+            }
+            else if ((s_postCalls & 16383) == 0)
+            {
+                std::this_thread::yield();
             }
         }
-    }
-    m_readDomain.leave(*reader);
-    if (!m_accepting.load(std::memory_order_seq_cst))
-    {
-        wake();
+        catch (...)
+        {
+            m_errors.fetch_add(1, std::memory_order_relaxed);
+        }
     }
     return result;
 }
@@ -515,13 +603,13 @@ CTaskThreadStatus CTaskThreadState::notifyStop(const std::shared_ptr<CTask>& tas
 {
     if (CTaskCallbackScope::stopping(task.get()))
     {
-        return CTaskThreadBusy;
+        return CTaskThreadSelfWait;
     }
     CTaskCallbackScope scope(this, task.get());
     CTaskThreadStatus status = CTaskThreadOk;
     try
     {
-        task->StopTask();
+        task->stopTask();
     }
     catch (...)
     {
@@ -573,25 +661,20 @@ CTaskThreadResult CTaskThreadState::requestPreemption(CTaskStorageSlot& record)
     CTaskThreadStatus status = CTaskThreadOk;
     try
     {
-        redo = record.m_task->ReExecute();
+        redo = record.m_task->reExecute();
     }
     catch (...)
     {
         m_errors.fetch_add(1, std::memory_order_relaxed);
         status = CTaskThreadCallbackFailure;
     }
-    uint32_t flags = record.m_state->m_bits.load(std::memory_order_acquire);
-    for (;;)
+    // 与消费者的完成交换形成原子先后关系：先提交才计入本次重做，
+    // 后提交会读到完成位并直接返回，不反复争抢同一个状态字。
+    const uint32_t flags = redo ? record.m_state->m_bits.fetch_or(4, std::memory_order_acq_rel) :
+        record.m_state->m_bits.load(std::memory_order_acquire);
+    if ((flags & 3) == 3)
     {
-        if ((flags & 3) == 3)
-        {
-            return CTaskThreadResult(status);
-        }
-        // 不重做时没有需要提交的状态；一次观察已经决定是否发送合作通知。
-        if (!redo || record.m_state->m_bits.compare_exchange_weak(flags, flags | 4, std::memory_order_acq_rel, std::memory_order_acquire))
-        {
-            break;
-        }
+        return CTaskThreadResult(status);
     }
     const CTaskThreadStatus stopped = notifyStop(record.m_task);
     return CTaskThreadResult(stopped == CTaskThreadOk ? status : stopped);
@@ -599,15 +682,35 @@ CTaskThreadResult CTaskThreadState::requestPreemption(CTaskStorageSlot& record)
 
 CTaskThreadResult CTaskThreadState::stop(int32_t propertyId, int32_t level, bool all, bool currentOnly)
 {
+    uint32_t attempts = 0;
+    for (;;)
+    {
+        CTaskThreadResult result = stopOnce(propertyId, level, all, currentOnly);
+        if (result.m_committed || result.m_status != CTaskThreadRetry)
+        {
+            return result;
+        }
+        result = CTaskResultAdapter::pause(attempts);
+        if (result.m_status != CTaskThreadOk)
+        {
+            return result;
+        }
+    }
+}
+
+CTaskThreadResult CTaskThreadState::stopOnce(int32_t propertyId, int32_t level, bool all, bool currentOnly)
+{
     if (!m_observers.enter())
     {
         return CTaskThreadResult(CTaskThreadClosed);
     }
-    CTaskReadPosition* reader = m_readDomain.enter();
+    bool contended = false;
+    CTaskReadPosition* reader = m_readDomain.enter(&contended);
     if (reader == nullptr)
     {
         m_observers.leave();
-        return CTaskThreadResult(CTaskThreadRetry);
+        const CTaskThreadStatus status = contended && m_readDomain.active() < m_readDomain.capacity() ? CTaskThreadRetry : CTaskThreadCapacity;
+        return CTaskThreadResult(CTaskCallbackScope::reading(this) ? CTaskThreadSelfWait : status);
     }
     CTaskCallbackScope scope(this);
     try
@@ -628,7 +731,7 @@ CTaskThreadResult CTaskThreadState::stop(int32_t propertyId, int32_t level, bool
         m_storage.forEach([&selected, propertyId, level, all](CTaskStorageSlot& record)
         {
             const int32_t phase = record.m_state->m_bits.load(std::memory_order_acquire) & 3;
-            if (phase != 3 && (all || record.m_task->GetPropertyId() == propertyId) &&
+            if (phase != 3 && (all || record.m_task->getPropertyId() == propertyId) &&
                 (level == 0 || record.m_level == level))
             {
                 selected.insert(record.m_task);
@@ -636,7 +739,7 @@ CTaskThreadResult CTaskThreadState::stop(int32_t propertyId, int32_t level, bool
         });
         CTaskStorageSlot* current = m_current.load(std::memory_order_acquire);
         if (current != nullptr && (current->m_state->m_bits.load(std::memory_order_acquire) & 3) != 3 &&
-            (all || current->m_task->GetPropertyId() == propertyId))
+            (all || current->m_task->getPropertyId() == propertyId))
         {
             selected.insert(current->m_task);
         }
@@ -716,6 +819,7 @@ CTaskThreadResult CTaskThreadState::requestFinish(bool drain)
     {
         m_stopMode.store(2, std::memory_order_release);
     }
+    wake();
     CTaskThreadResult result(CTaskThreadOk, true);
     if (m_stopMode.load(std::memory_order_acquire) == 2 && !m_exited.load(std::memory_order_acquire))
     {
@@ -745,10 +849,24 @@ CTaskThreadResult CTaskThreadState::finish(bool drain)
     {
         return requested;
     }
-    bool expected = false;
-    if (!m_joining.compare_exchange_strong(expected, true, std::memory_order_acq_rel, std::memory_order_acquire))
+    uint32_t attempts = 0;
+    for (;;)
     {
-        return CTaskThreadResult(CTaskThreadBusy);
+        if (m_joined.load(std::memory_order_acquire))
+        {
+            return CTaskThreadResult(CTaskThreadOk, true);
+        }
+        bool expected = false;
+        if (m_joining.compare_exchange_strong(expected, true, std::memory_order_acq_rel, std::memory_order_acquire))
+        {
+            break;
+        }
+        CTaskThreadResult paused = CTaskResultAdapter::pause(attempts);
+        if (paused.m_status != CTaskThreadOk)
+        {
+            paused.m_committed = true;
+            return paused;
+        }
     }
     // 以下等待属于明确的关闭/join 操作，不在投递或查询的进展路径上。
     m_nativeUsers.close();
@@ -769,13 +887,13 @@ CTaskThreadResult CTaskThreadState::finish(bool drain)
     {
         m_joining.store(false, std::memory_order_release);
         m_errors.fetch_add(1, std::memory_order_relaxed);
-        return CTaskThreadResult(CTaskThreadSystemFailure, false, error.code().value());
+        return CTaskThreadResult(CTaskThreadSystemFailure, true, error.code().value());
     }
     catch (...)
     {
         m_joining.store(false, std::memory_order_release);
         m_errors.fetch_add(1, std::memory_order_relaxed);
-        return CTaskThreadResult(CTaskThreadSystemFailure);
+        return CTaskThreadResult(CTaskThreadSystemFailure, true);
     }
 }
 
@@ -832,20 +950,29 @@ bool CTaskThreadState::take(CTaskPriorityBucket*& bucket, CTaskStorageSlot*& rec
     {
         m_preemptionFloor.store(bucket->m_level, std::memory_order_release);
     }
-    if (bucket->m_level < m_floorMinimum)
+    // 最低级别已经使下界保持为 1，无需每条任务继续维护提高下界的窗口。
+    // 后续选中高级任务时再统计；每次下降仍在上面立即公布，不能漏掉抢占。
+    if (bucket->m_level == 1)
     {
-        m_floorMinimum = bucket->m_level;
+        m_floorMinimum = 1;
     }
-    if (m_floorUses == 0)
+    else
     {
-        const int32_t replacement = m_floorMinimum;
-        if (replacement != floor)
+        if (bucket->m_level < m_floorMinimum)
         {
-            m_preemptionFloor.store(replacement, std::memory_order_release);
+            m_floorMinimum = bucket->m_level;
         }
-        m_floorMinimum = INT_MAX;
+        if (m_floorUses == 0)
+        {
+            const int32_t replacement = m_floorMinimum;
+            if (replacement != floor)
+            {
+                m_preemptionFloor.store(replacement, std::memory_order_release);
+            }
+            m_floorMinimum = INT_MAX;
+        }
+        m_floorUses = (m_floorUses + 1) & 63;
     }
-    m_floorUses = (m_floorUses + 1) & 63;
     // 当前指针就是执行身份；不再写第二份执行标志，也不覆盖并发重做请求。
     m_current.store(record, std::memory_order_release);
     m_runningIndex.publish(*record, bucket->m_level);
@@ -956,7 +1083,8 @@ void CTaskThreadState::prefetchFront(CTaskPriorityBucket& bucket)
 #endif
         }
         size_t received = 0;
-        bucket.m_queue.popReadyEntryPrefix(bucket.m_readyEntries + bucket.m_readyCount, 64 - bucket.m_readyCount, received);
+        // 补取显式扫描就绪前缀，不沿用刚才短前缀留下的单项消费提示。
+        bucket.m_queue.probeReadyEntryPrefix(bucket.m_readyEntries + bucket.m_readyCount, 64 - bucket.m_readyCount, received);
         bucket.m_readyCount += received;
     }
     // 预读不执行后继任务；下一次选择仍重新检查更高优先级。
@@ -993,7 +1121,7 @@ CTaskStorageSlot* CTaskThreadState::prepareRedo(const CTaskStorageSlot& record, 
             std::shared_ptr<CTask> clone(rawClone);
             if (!clone->cloneFactory())
             {
-                if (!clone->Clone(*record.m_task->cloneFactory()))
+                if (!clone->clone(*record.m_task->cloneFactory()))
                 {
                     // 复制失败时临时强引用释放刚生成的任务，不提交半成品。
                     m_errors.fetch_add(1, std::memory_order_relaxed);
@@ -1101,6 +1229,10 @@ void CTaskThreadState::completeRedo(CTaskPriorityBucket& bucket, CTaskStorageSlo
             m_storage.abandon(*backup);
         }
         m_releasedTasks.store(m_releasedTasks.load(std::memory_order_relaxed) + 1, std::memory_order_release);
+        if (m_config.m_maximumTasks != -1)
+        {
+            m_taskClaims.fetch_sub(1, std::memory_order_release);
+        }
     }
     m_storage.retire(record);
 }
@@ -1156,6 +1288,7 @@ void CTaskThreadState::discard()
     m_dequeuedTasks.store(m_config.m_maximumTasks == -1 ? m_storage.publishedCount() : m_queued.load(std::memory_order_relaxed), std::memory_order_release);
     m_releasedTasks.store(m_config.m_maximumTasks == -1 ? m_storage.reservedCount() : m_outstanding.load(std::memory_order_relaxed), std::memory_order_release);
     // 已关闭投递和观察接纳，全部在途借用归还；这里满足基础容器的静止释放契约。
+    m_taskClaims.store(0, std::memory_order_release);
     m_storage.clear();
     m_buckets.clearAndFreeMemory();
     for (size_t i = 0; i < 16; ++i)
@@ -1229,7 +1362,7 @@ void CTaskThreadState::run()
         {
             try
             {
-                record->m_task->DoTask();
+                record->m_task->doTask();
             }
             catch (...)
             {
@@ -1246,18 +1379,35 @@ void CTaskThreadState::run()
             record->m_state->m_bits.store(3, std::memory_order_release);
             m_currentLevel.store(0, std::memory_order_release);
             m_releasedTasks.store(m_releasedTasks.load(std::memory_order_relaxed) + 1, std::memory_order_release);
+            if (m_config.m_maximumTasks != -1)
+            {
+                m_taskClaims.fetch_sub(1, std::memory_order_release);
+            }
             m_storage.retire(*record);
         }
         // 完成位关闭通知；索引可暂存已完成记录，由 below 过滤。
         // 回收前统一 clear，避免逐任务清空同一生产者观察缓存行。
-        if (++maintenance % 512 == 0)
+        if (++maintenance % 2048 == 0)
         {
             m_runningIndex.clear();
             m_current.store(nullptr, std::memory_order_release);
-            m_storage.collect(1024, true);
+            m_storage.collect(4096, true);
             if ((maintenance & 4095) == 0 || m_trimBuckets.load(std::memory_order_acquire))
             {
                 maintain();
+            }
+            // 消费按实际任务数累计，覆盖跨优先级前缀及不经过 FIFO 的重做槽。
+            // 生产者已有短竞争退避和压力让步，消费者不用按每个小回收批次切换调度。
+            if ((maintenance & 65535) == 0)
+            {
+                try
+                {
+                    std::this_thread::yield();
+                }
+                catch (...)
+                {
+                    m_errors.fetch_add(1, std::memory_order_relaxed);
+                }
             }
         }
     }
@@ -1288,6 +1438,24 @@ CTaskThreadStatistics CTaskThreadState::statistics() const
 
 CTaskThreadResult CTaskThreadState::waitInfo(std::map<int32_t, int32_t>& counts)
 {
+    uint32_t attempts = 0;
+    for (;;)
+    {
+        CTaskThreadResult result = waitInfoOnce(counts);
+        if (result.m_status != CTaskThreadRetry)
+        {
+            return result;
+        }
+        result = CTaskResultAdapter::pause(attempts);
+        if (result.m_status != CTaskThreadOk)
+        {
+            return result;
+        }
+    }
+}
+
+CTaskThreadResult CTaskThreadState::waitInfoOnce(std::map<int32_t, int32_t>& counts)
+{
     counts.clear();
     if (!m_observers.enter())
     {
@@ -1315,5 +1483,5 @@ CTaskThreadResult CTaskThreadState::waitInfo(std::map<int32_t, int32_t>& counts)
     {
         counts.clear();
     }
-    return CTaskThreadResult(failed ? CTaskThreadNoMemory : (unavailable ? CTaskThreadRetry : CTaskThreadOk));
+    return CTaskThreadResult(failed ? CTaskThreadNoMemory : (unavailable ? CTaskThreadResourceUnavailable : CTaskThreadOk));
 }

@@ -12,7 +12,7 @@ public:
     CTaskAdmission();
 
     /** 尝试登记并发调用
-    @return 已关闭或计数耗尽时返回 false
+    @return 已关闭时返回 false；竞争不导致 CAS 重试
     */
     bool enter();
 
@@ -24,7 +24,7 @@ public:
     */
     void close();
 
-    /** 仅在静止状态重开接纳
+    /** 由生命周期 owner 重开接纳，保留尚未归还的在途登记
     */
     void reopen();
 

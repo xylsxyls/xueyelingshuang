@@ -20,52 +20,62 @@ CTaskThreadResult CTaskThread::createThread()
     return m_state->start();
 }
 
-CTaskThreadResult CTaskThread::PostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel)
+CTaskThreadResult CTaskThread::postTask(const std::shared_ptr<CTask>& task, int32_t taskLevel)
 {
     return m_state->post(task, taskLevel);
 }
 
-bool CTaskThread::TryPostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel)
+bool CTaskThread::tryPostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel)
 {
-    return PostTask(task, taskLevel).m_committed;
+    return tryPostTaskResult(task, taskLevel).m_committed;
 }
 
-bool CTaskThread::HasTask()
+CTaskThreadResult CTaskThread::tryPostTaskResult(const std::shared_ptr<CTask>& task, int32_t taskLevel)
+{
+    CTaskThreadResult result = m_state->post(task, taskLevel, false);
+    if (!result.m_committed && result.m_status == CTaskThreadRetry)
+    {
+        result.m_status = CTaskThreadBusy;
+    }
+    return result;
+}
+
+bool CTaskThread::hasTask()
 {
     return statistics().m_queued != 0;
 }
 
-CTaskThreadResult CTaskThread::StopCurTask()
+CTaskThreadResult CTaskThread::stopCurTask()
 {
     return m_state->stop(0, 0, true, true);
 }
 
-CTaskThreadResult CTaskThread::StopTask(int32_t propertyId, int32_t taskLevel)
+CTaskThreadResult CTaskThread::stopTask(int32_t propertyId, int32_t taskLevel)
 {
     return m_state->stop(propertyId, taskLevel, false, false);
 }
 
-CTaskThreadResult CTaskThread::StopAllTask()
+CTaskThreadResult CTaskThread::stopAllTask()
 {
     return m_state->stop(0, 0, true, false);
 }
 
-CTaskThreadResult CTaskThread::GetWaitTaskInfo(std::map<int32_t, int32_t>& counts)
+CTaskThreadResult CTaskThread::getWaitTaskInfo(std::map<int32_t, int32_t>& counts)
 {
     return m_state->waitInfo(counts);
 }
 
-int32_t CTaskThread::GetWaitTaskCount()
+int32_t CTaskThread::getWaitTaskCount()
 {
     return static_cast<int32_t>((std::min)(statistics().m_queued, static_cast<uint64_t>(INT_MAX)));
 }
 
-int32_t CTaskThread::GetCurTaskLevel()
+int32_t CTaskThread::getCurTaskLevel()
 {
     return statistics().m_currentLevel;
 }
 
-CTaskThreadResult CTaskThread::WaitForEnd()
+CTaskThreadResult CTaskThread::waitForEnd()
 {
     return finish(true);
 }

@@ -59,76 +59,34 @@ bool CTaskReadDomain::initialize(size_t count)
     }
 }
 
-CTaskReadPosition* CTaskReadDomain::enter()
+#ifdef _MSC_VER
+__declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
+CTaskReadPosition* CTaskReadDomain::enterFallback(size_t preferred, size_t& hint, bool* contended)
 {
     if (m_closed.load(std::memory_order_seq_cst))
     {
         return nullptr;
     }
-#if defined(_MSC_VER) && _MSC_VER == 1800
-    static __declspec(thread) size_t s_hint = 0;
-#else
-    static thread_local size_t s_hint = 0;
-#endif
-    const size_t preferred = s_hint < m_count ? s_hint : 0;
-    for (size_t step = 0; step < m_count; ++step)
+    for (size_t step = 1; step < m_count; ++step)
     {
-        const size_t index = step == 0 ? preferred : (step <= preferred ? step - 1 : step);
-        CTaskReadPosition* position = tryEnter(index);
+        const size_t index = step < m_count - preferred ? preferred + step : step - (m_count - preferred);
+        CTaskReadPosition* position = tryEnter(index, contended);
         if (position != nullptr)
         {
-            s_hint = index;
+            hint = index;
             return position;
         }
     }
+    hint = preferred + 1 == m_count ? 0 : preferred + 1;
     return nullptr;
-}
-
-CTaskReadPosition* CTaskReadDomain::tryEnter(size_t index)
-{
-    if (index >= m_count || m_closed.load(std::memory_order_seq_cst))
-    {
-        return nullptr;
-    }
-    CTaskReadPosition& position = m_positions[index];
-    uint64_t expected = 0;
-    uint64_t epoch = m_epoch.load(std::memory_order_seq_cst);
-    if (!position.m_epoch.compare_exchange_strong(expected, epoch, std::memory_order_seq_cst, std::memory_order_relaxed))
-    {
-        return nullptr;
-    }
-    // 公布与验证都早于受保护地址的首次解引用；暂停借用者只延迟回收。
-    while (epoch != m_epoch.load(std::memory_order_seq_cst))
-    {
-        epoch = m_epoch.load(std::memory_order_seq_cst);
-        position.m_epoch.store(epoch, std::memory_order_seq_cst);
-    }
-    if (m_closed.load(std::memory_order_seq_cst))
-    {
-        position.m_epoch.store(0, std::memory_order_release);
-        return nullptr;
-    }
-    return &position;
-}
-
-size_t CTaskReadDomain::indexOf(const CTaskReadPosition& position) const
-{
-    return static_cast<size_t>(&position - m_positions);
-}
-
-void CTaskReadDomain::leave(CTaskReadPosition& position)
-{
-    position.m_epoch.store(0, std::memory_order_release);
 }
 
 void CTaskReadDomain::close()
 {
     m_closed.store(true, std::memory_order_seq_cst);
-}
-
-bool CTaskReadDomain::closed() const
-{
-    return m_closed.load(std::memory_order_acquire);
 }
 
 size_t CTaskReadDomain::active() const
@@ -164,9 +122,4 @@ uint64_t CTaskReadDomain::oldest() const
         }
     }
     return oldest;
-}
-
-size_t CTaskReadDomain::capacity() const
-{
-    return m_count;
 }

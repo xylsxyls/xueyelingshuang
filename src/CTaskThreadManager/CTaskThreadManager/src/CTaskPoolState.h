@@ -87,9 +87,11 @@ private:
     Semaphore m_changed;
     // 是否要求控制任务停止
     std::atomic<bool> m_stop;
+    // 任一关闭调用要求丢弃后不可回退；并发排空关闭也必须遵守该意图
+    std::atomic<bool> m_discardRequested;
     // 分配器是否允许选择
     std::atomic<bool> m_accepting;
-    // 关闭操作权，竞争者直接返回 Busy
+    // 关闭操作权，并发关闭在内部退避等待收尾
     std::atomic<bool> m_closing;
     // 所有线程已经完成注销
     std::atomic<bool> m_closed;

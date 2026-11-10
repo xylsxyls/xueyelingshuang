@@ -7,12 +7,12 @@ m_state(&state)
 
 }
 
-void CTaskPoolControlTask::DoTask()
+void CTaskPoolControlTask::doTask()
 {
     m_state->run();
 }
 
-void CTaskPoolControlTask::StopTask()
+void CTaskPoolControlTask::stopTask()
 {
     m_state->requestStop();
 }

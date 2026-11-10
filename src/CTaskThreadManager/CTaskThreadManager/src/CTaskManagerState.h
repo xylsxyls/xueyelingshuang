@@ -31,7 +31,7 @@ public:
     /** 关闭并注销指定线程
     @param [in] threadId 编号
     @param [in] drain 是否排空
-    @return Ok 表示线程已经 join 且原登记已经移除；已 join 后的登记清理失败仍返回具体状态
+    @return Ok 表示线程已经 join 且原登记已经移除；登记冲突内部重试，实际系统或资源错误返回具体状态
     */
     CTaskThreadResult finish(uint32_t threadId, bool drain);
 
@@ -42,7 +42,7 @@ public:
 
     /** 查询强引用
     @param [in] threadId 编号
-    @return 未找到或暂不可用时为空
+    @return 未找到或发生实际错误时为空，保护记录竞争内部重试
     */
     std::shared_ptr<CTaskThread> get(uint32_t threadId);
 
@@ -64,6 +64,6 @@ private:
     CTaskAdmission m_creators;
     // 一次性批量关闭操作权
     std::atomic<bool> m_bulk;
-    // 永不回绕的编号
-    std::atomic<uint32_t> m_threadId;
+    // 64位内部分配计数；外部32位ID到上限即拒绝，不截断或复用
+    std::atomic<uint64_t> m_threadId;
 };

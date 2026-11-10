@@ -15,11 +15,11 @@ public:
 
     /** 周期执行策略直到请求退出
     */
-    virtual void DoTask();
+    virtual void doTask();
 
     /** 发布停止意图并唤醒，不等待自身
     */
-    virtual void StopTask();
+    virtual void stopTask();
 
 private:
     // 生命周期由池门面保证

@@ -17,6 +17,7 @@ m_config(config),
 m_policy(config.m_policy),
 m_controller(0),
 m_stop(false),
+m_discardRequested(false),
 m_accepting(false),
 m_closing(false),
 m_closed(false),
@@ -70,21 +71,21 @@ CTaskThreadResult CTaskPoolState::start()
         m_lastResize = nowMilliseconds();
         CTaskThreadConfig control;
         control.m_queue.maximumProducers = 4;
-        result = CTaskThreadManager::Instance().initialize(control, m_controller);
+        result = CTaskThreadManager::instance().initialize(control, m_controller);
         if (result.m_status != CTaskThreadOk)
         {
             shutdown(false);
             return result;
         }
-        std::shared_ptr<CTaskThread> controller = CTaskThreadManager::Instance().GetThreadInterface(m_controller);
+        std::shared_ptr<CTaskThread> controller = CTaskThreadManager::instance().getThreadInterface(m_controller);
         if (!controller)
         {
             shutdown(false);
-            return CTaskThreadResult(CTaskThreadRetry);
+            return CTaskThreadResult(CTaskThreadClosed);
         }
         std::shared_ptr<CTask> task(new CTaskPoolControlTask(*this));
         m_accepting.store(true, std::memory_order_release);
-        result = controller->PostTask(task);
+        result = controller->postTask(task);
         if (!result.m_committed)
         {
             shutdown(false);
@@ -106,16 +107,16 @@ CTaskThreadResult CTaskPoolState::start()
 CTaskThreadResult CTaskPoolState::addWorker(bool initial)
 {
     uint32_t id = 0;
-    CTaskThreadResult result = CTaskThreadManager::Instance().initialize(m_config.m_worker, id);
+    CTaskThreadResult result = CTaskThreadManager::instance().initialize(m_config.m_worker, id);
     if (result.m_status != CTaskThreadOk)
     {
         return result;
     }
-    std::shared_ptr<CTaskThread> thread = CTaskThreadManager::Instance().GetThreadInterface(id);
+    std::shared_ptr<CTaskThread> thread = CTaskThreadManager::instance().getThreadInterface(id);
     if (!thread)
     {
-        CTaskThreadManager::Instance().Uninit(id);
-        return CTaskThreadResult(CTaskThreadRetry);
+        CTaskThreadManager::instance().uninit(id);
+        return CTaskThreadResult(CTaskThreadClosed);
     }
     try
     {
@@ -123,14 +124,27 @@ CTaskThreadResult CTaskPoolState::addWorker(bool initial)
     }
     catch (...)
     {
-        CTaskThreadManager::Instance().Uninit(id);
+        CTaskThreadManager::instance().uninit(id);
         return CTaskThreadResult(CTaskThreadNoMemory);
     }
-    result = CTaskResultAdapter::map(m_workers.lockFreeMapSet(id, thread));
+    uint32_t attempts = 0;
+    for (;;)
+    {
+        result = CTaskResultAdapter::map(m_workers.lockFreeMapSet(id, thread));
+        if (result.m_committed || result.m_status != CTaskThreadRetry)
+        {
+            break;
+        }
+        result = CTaskResultAdapter::pause(attempts);
+        if (result.m_status != CTaskThreadOk)
+        {
+            break;
+        }
+    }
     if (!result.m_committed)
     {
         m_idleStarts.erase(id);
-        CTaskThreadManager::Instance().Uninit(id);
+        CTaskThreadManager::instance().uninit(id);
     }
     else if (!initial)
     {
@@ -232,35 +246,63 @@ void CTaskPoolState::rebalance(uint64_t now)
     }
     if (current > target && decision.m_shrinkIdleMilliseconds != 0)
     {
-        m_workers.forEach([this, target, &current, now, decision](const uint32_t& id, const std::shared_ptr<CTaskThread>& thread)
+        std::vector<std::shared_ptr<CTaskThread>> threads;
+        if (CTaskResultAdapter::snapshot(m_workers, threads).m_status != CTaskThreadOk)
         {
-            if (current <= target || m_stop.load(std::memory_order_acquire) || thread->statistics().m_outstanding != 0)
+            m_errors.fetch_add(1, std::memory_order_relaxed);
+            return;
+        }
+        for (size_t i = 0; i < threads.size() && current > target && !m_stop.load(std::memory_order_acquire); ++i)
+        {
+            const std::shared_ptr<CTaskThread>& thread = threads[i];
+            const uint32_t id = thread->threadId();
+            if (thread->statistics().m_outstanding != 0)
             {
-                return;
+                continue;
             }
             std::map<uint32_t, uint64_t>::iterator idle = m_idleStarts.find(id);
             if (idle == m_idleStarts.end() || idle->second == 0 || now - idle->second < decision.m_shrinkIdleMilliseconds)
             {
-                return;
+                continue;
             }
-            // 最终接纳门在 WaitForEnd 中关闭；之前成功投递的任务仍被排空。
-            const CTaskThreadResult result = CTaskThreadManager::Instance().WaitForEnd(id);
+            // 最终接纳门在 waitForEnd 中关闭；之前成功投递的任务仍被排空。
+            CTaskThreadResult result = CTaskThreadManager::instance().waitForEnd(id);
             if (result.m_status != CTaskThreadOk && result.m_status != CTaskThreadNotFound)
             {
                 m_errors.fetch_add(1, std::memory_order_relaxed);
-                return;
+                continue;
             }
-            std::shared_ptr<CTaskThread> found;
-            LockFreeMapToken token;
-            if (m_workers.lockFreeMapGet(id, found, token) == LOCK_FREE_MAP_OK && found == thread &&
-                m_workers.lockFreeMapErase(id, token) == LOCK_FREE_MAP_COMMITTED)
+            uint32_t attempts = 0;
+            for (;;)
             {
-                --current;
-                m_shrinks.fetch_add(1, std::memory_order_relaxed);
-                m_lastResize = now;
-                m_idleStarts.erase(id);
+                std::shared_ptr<CTaskThread> found;
+                LockFreeMapToken token;
+                LockFreeMapStatus status = m_workers.lockFreeMapGet(id, found, token);
+                if (status == LOCK_FREE_MAP_NOT_FOUND)
+                {
+                    break;
+                }
+                if (status == LOCK_FREE_MAP_OK && found == thread)
+                {
+                    status = m_workers.lockFreeMapErase(id, token);
+                }
+                result = CTaskResultAdapter::map(status);
+                if (result.m_committed)
+                {
+                    --current;
+                    m_shrinks.fetch_add(1, std::memory_order_relaxed);
+                    m_lastResize = now;
+                    m_idleStarts.erase(id);
+                    break;
+                }
+                if (result.m_status != CTaskThreadRetry || m_stop.load(std::memory_order_acquire) ||
+                    CTaskResultAdapter::pause(attempts).m_status != CTaskThreadOk)
+                {
+                    m_errors.fetch_add(1, std::memory_order_relaxed);
+                    break;
+                }
             }
-        });
+        }
     }
     size_t released = 0;
     m_workers.lockFreeMapMaintain(64, released);
@@ -268,74 +310,135 @@ void CTaskPoolState::rebalance(uint64_t now)
 
 CTaskThreadResult CTaskPoolState::shutdown(bool drain)
 {
-    if (s_currentTaskPool == this)
+    bool ownsClosing = false;
+    bool committed = false;
+    try
     {
-        return CTaskThreadResult(CTaskThreadSelfWait);
-    }
-    if (m_closed.load(std::memory_order_acquire))
-    {
-        return CTaskThreadResult(CTaskThreadOk, true);
-    }
-    // 从本池业务任务中同步销毁整个池同样可能等待自身。
-    bool self = false;
-    const size_t visited = m_workers.forEach([&self](const uint32_t&, const std::shared_ptr<CTaskThread>& thread)
-    {
-        self = self || thread->selfWait();
-    });
-    if (self)
-    {
-        return CTaskThreadResult(CTaskThreadSelfWait);
-    }
-    if (visited == 0 && !m_workers.empty())
-    {
-        return CTaskThreadResult(CTaskThreadRetry);
-    }
-    bool expected = false;
-    if (!m_closing.compare_exchange_strong(expected, true, std::memory_order_acq_rel, std::memory_order_acquire))
-    {
-        return CTaskThreadResult(CTaskThreadBusy);
-    }
-    m_accepting.store(false, std::memory_order_release);
-    requestStop();
-    CTaskThreadResult result(CTaskThreadOk, true);
-    if (m_controller != 0)
-    {
-        result = CTaskThreadManager::Instance().WaitForEnd(m_controller);
-        if (result.m_status != CTaskThreadOk && result.m_status != CTaskThreadNotFound)
+        if (s_currentTaskPool == this)
         {
-            m_closing.store(false, std::memory_order_release);
+            return CTaskThreadResult(CTaskThreadSelfWait);
+        }
+        if (m_closed.load(std::memory_order_acquire))
+        {
+            return CTaskThreadResult(CTaskThreadOk, true);
+        }
+        // 必须在等另一个关闭者之前检查自等待，否则自己的业务任务会与 join 互等。
+        std::vector<std::shared_ptr<CTaskThread>> threads;
+        CTaskThreadResult result = CTaskResultAdapter::snapshot(m_workers, threads);
+        if (result.m_status != CTaskThreadOk)
+        {
             return result;
         }
-        m_controller = 0;
-    }
-    const size_t notified = m_workers.forEach([drain](const uint32_t&, const std::shared_ptr<CTaskThread>& thread)
-    {
-        thread->requestShutdown(drain);
-    });
-    bool complete = notified == m_workers.size();
-    const size_t joined = m_workers.forEach([&complete, &result](const uint32_t& id, const std::shared_ptr<CTaskThread>&)
-    {
-        const CTaskThreadResult item = CTaskThreadManager::Instance().WaitForEnd(id);
-        if (item.m_status != CTaskThreadOk && item.m_status != CTaskThreadNotFound)
+        for (size_t i = 0; i < threads.size(); ++i)
         {
-            complete = false;
-            result = item;
+            if (threads[i]->selfWait())
+            {
+                return CTaskThreadResult(CTaskThreadSelfWait);
+            }
         }
-    });
-    if (complete && joined == m_workers.size())
-    {
-        m_workers.clear();
-        size_t released = 0;
-        m_workers.lockFreeMapMaintain((std::numeric_limits<size_t>::max)(), released);
-        m_closed.store(true, std::memory_order_release);
-        result = CTaskThreadResult(CTaskThreadOk, true);
+        m_accepting.store(false, std::memory_order_release);
+        committed = true;
+        requestStop();
+        if (!drain)
+        {
+            m_discardRequested.store(true, std::memory_order_release);
+            // 另一个关闭者可能已经在排空 join 中等待；先传达停止意图，不能等它退出才通知。
+            // 快照已释放 Map 读保护，停止回调不会阻塞成员目录的保护记录复用。
+            for (size_t i = 0; i < threads.size(); ++i)
+            {
+                const CTaskThreadResult item = threads[i]->requestShutdown(false);
+                if (item.m_status != CTaskThreadOk)
+                {
+                    result = item;
+                }
+            }
+            if (result.m_status != CTaskThreadOk)
+            {
+                result.m_committed = true;
+                return result;
+            }
+        }
+        uint32_t attempts = 0;
+        for (;;)
+        {
+            if (m_closed.load(std::memory_order_acquire))
+            {
+                return CTaskThreadResult(CTaskThreadOk, true);
+            }
+            bool expected = false;
+            if (m_closing.compare_exchange_strong(expected, true, std::memory_order_acq_rel, std::memory_order_acquire))
+            {
+                ownsClosing = true;
+                break;
+            }
+            result = CTaskResultAdapter::pause(attempts);
+            if (result.m_status != CTaskThreadOk)
+            {
+                result.m_committed = true;
+                return result;
+            }
+        }
+        if (m_controller != 0)
+        {
+            result = CTaskThreadManager::instance().waitForEnd(m_controller);
+            if (result.m_status != CTaskThreadOk && result.m_status != CTaskThreadNotFound)
+            {
+                m_closing.store(false, std::memory_order_release);
+                result.m_committed = true;
+                return result;
+            }
+            m_controller = 0;
+        }
+        // 控制线程退出后成员不再增减；快照取得失败只可能是实际分配/系统错误。
+        result = CTaskResultAdapter::snapshot(m_workers, threads);
+        if (result.m_status == CTaskThreadOk)
+        {
+            for (size_t i = 0; i < threads.size(); ++i)
+            {
+                const CTaskThreadResult item = threads[i]->requestShutdown(!m_discardRequested.load(std::memory_order_acquire));
+                if (item.m_status != CTaskThreadOk)
+                {
+                    result = item;
+                }
+            }
+            for (size_t i = 0; i < threads.size(); ++i)
+            {
+                const CTaskThreadResult item = CTaskThreadManager::instance().waitForEnd(threads[i]->threadId());
+                if (item.m_status != CTaskThreadOk && item.m_status != CTaskThreadNotFound)
+                {
+                    result = item;
+                }
+            }
+            if (result.m_status == CTaskThreadOk)
+            {
+                m_workers.clear();
+                size_t released = 0;
+                m_workers.lockFreeMapMaintain((std::numeric_limits<size_t>::max)(), released);
+                m_closed.store(true, std::memory_order_release);
+                result.m_committed = true;
+            }
+        }
+        m_closing.store(false, std::memory_order_release);
+        // 停止意图已经发布；真实收尾错误也不能被解释为本调用完全未改变池状态。
+        result.m_committed = true;
+        return result;
     }
-    if (!m_closed.load(std::memory_order_acquire) && result.m_status == CTaskThreadOk)
+    catch (const std::bad_alloc&)
     {
-        result = CTaskThreadResult(CTaskThreadRetry);
+        if (ownsClosing)
+        {
+            m_closing.store(false, std::memory_order_release);
+        }
+        return CTaskThreadResult(CTaskThreadNoMemory, committed);
     }
-    m_closing.store(false, std::memory_order_release);
-    return result;
+    catch (...)
+    {
+        if (ownsClosing)
+        {
+            m_closing.store(false, std::memory_order_release);
+        }
+        return CTaskThreadResult(CTaskThreadSystemFailure, committed);
+    }
 }
 
 CTaskPoolStatistics CTaskPoolState::statistics() const
@@ -351,49 +454,83 @@ CTaskPoolStatistics CTaskPoolState::statistics() const
 
 CTaskThreadResult CTaskPoolState::threadIds(std::vector<uint32_t>& ids) const
 {
-    ids.clear();
-    bool failed = false;
-    const size_t visited = m_workers.forEach([&ids, &failed](const uint32_t& id, const std::shared_ptr<CTaskThread>&)
-    {
-        try
-        {
-            ids.push_back(id);
-        }
-        catch (...)
-        {
-            failed = true;
-        }
-    });
-    if (failed)
+    uint32_t attempts = 0;
+    for (;;)
     {
         ids.clear();
+        bool failed = false;
+        const size_t visited = m_workers.forEach([&ids, &failed](const uint32_t& id, const std::shared_ptr<CTaskThread>&)
+        {
+            try
+            {
+                ids.push_back(id);
+            }
+            catch (...)
+            {
+                failed = true;
+            }
+        });
+        if (failed)
+        {
+            ids.clear();
+            return CTaskThreadResult(CTaskThreadNoMemory);
+        }
+        if (visited != 0 || m_workers.empty())
+        {
+            return CTaskThreadResult();
+        }
+        const CTaskThreadResult result = CTaskResultAdapter::pause(attempts);
+        if (result.m_status != CTaskThreadOk)
+        {
+            return result;
+        }
     }
-    return CTaskThreadResult(failed ? CTaskThreadNoMemory : ((visited == 0 && !m_workers.empty()) ? CTaskThreadRetry : CTaskThreadOk));
 }
 
 CTaskThreadResult CTaskPoolState::choose(uint64_t turn, uint32_t& id, std::shared_ptr<CTaskThread>& thread)
 {
-    if (!m_accepting.load(std::memory_order_acquire))
+    uint32_t attempts = 0;
+    for (;;)
     {
-        return CTaskThreadResult(CTaskThreadClosed);
-    }
-    uint64_t lowest = UINT64_MAX;
-    size_t rank = (std::numeric_limits<size_t>::max)();
-    size_t position = 0;
-    const size_t count = (std::max)(size_t(1), m_workers.size());
-    const size_t offset = static_cast<size_t>(turn % count);
-    m_workers.forEach([&](const uint32_t& key, const std::shared_ptr<CTaskThread>& candidate)
-    {
-        const CTaskThreadStatistics state = candidate->statistics();
-        const size_t candidateRank = (position++ + offset) % count;
-        if (state.m_accepting && (m_config.m_worker.m_maximumTasks == -1 || state.m_outstanding < static_cast<uint64_t>(m_config.m_worker.m_maximumTasks)) &&
-            (state.m_outstanding < lowest || (state.m_outstanding == lowest && candidateRank < rank)))
+        id = 0;
+        thread.reset();
+        if (!m_accepting.load(std::memory_order_acquire))
         {
-            lowest = state.m_outstanding;
-            rank = candidateRank;
-            id = key;
-            thread = candidate;
+            return CTaskThreadResult(CTaskThreadClosed);
         }
-    });
-    return CTaskThreadResult(thread ? CTaskThreadOk : CTaskThreadRetry, thread != nullptr);
+        uint64_t lowest = UINT64_MAX;
+        size_t rank = (std::numeric_limits<size_t>::max)();
+        size_t position = 0;
+        bool accepting = false;
+        const size_t count = (std::max)(size_t(1), m_workers.size());
+        const size_t offset = static_cast<size_t>(turn % count);
+        const size_t visited = m_workers.forEach([&](const uint32_t& key, const std::shared_ptr<CTaskThread>& candidate)
+        {
+            const CTaskThreadStatistics state = candidate->statistics();
+            const size_t candidateRank = (position++ + offset) % count;
+            accepting = accepting || state.m_accepting;
+            if (state.m_accepting && (m_config.m_worker.m_maximumTasks == -1 || state.m_outstanding < static_cast<uint64_t>(m_config.m_worker.m_maximumTasks)) &&
+                (state.m_outstanding < lowest || (state.m_outstanding == lowest && candidateRank < rank)))
+            {
+                lowest = state.m_outstanding;
+                rank = candidateRank;
+                id = key;
+                thread = candidate;
+            }
+        });
+        if (thread)
+        {
+            return CTaskThreadResult(CTaskThreadOk, true);
+        }
+        if (visited != 0 || m_workers.empty())
+        {
+            // 已遍历到的开放成员都达到业务上限，属于真实容量失败，不是竞争失败。
+            return CTaskThreadResult(accepting ? CTaskThreadCapacity : CTaskThreadClosed);
+        }
+        const CTaskThreadResult result = CTaskResultAdapter::pause(attempts);
+        if (result.m_status != CTaskThreadOk)
+        {
+            return result;
+        }
+    }
 }

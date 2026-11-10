@@ -1,4 +1,87 @@
 ﻿#include "CTaskResultAdapter.h"
+#include <chrono>
+#include <thread>
+#include <system_error>
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+#include <intrin.h>
+#endif
+
+CTaskThreadResult CTaskResultAdapter::pause(uint32_t& attempts)
+{
+    try
+    {
+        if (++attempts < 16)
+        {
+            // 短竞争先用处理器提示，不为一次 CAS 失败立即切换线程。
+            // 连续失败仍进入调度让步；这里没有限制普通接口的总重试次数。
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+            _mm_pause();
+#elif defined(__i386__) || defined(__x86_64__)
+            __asm__ __volatile__("pause");
+#else
+            std::this_thread::yield();
+#endif
+        }
+        else if (attempts < 64)
+        {
+            std::this_thread::yield();
+        }
+        else
+        {
+            attempts = 0;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        return CTaskThreadResult();
+    }
+    catch (const std::system_error& error)
+    {
+        return CTaskThreadResult(CTaskThreadSystemFailure, false, error.code().value());
+    }
+    catch (...)
+    {
+        return CTaskThreadResult(CTaskThreadSystemFailure);
+    }
+}
+
+CTaskThreadResult CTaskResultAdapter::snapshot(const LockFreeMap<uint32_t, std::shared_ptr<CTaskThread>>& threads,
+    std::vector<std::shared_ptr<CTaskThread>>& snapshot)
+{
+    uint32_t attempts = 0;
+    for (;;)
+    {
+        snapshot.clear();
+        bool failed = false;
+        const size_t visited = threads.forEach([&snapshot, &failed](const uint32_t&, const std::shared_ptr<CTaskThread>& thread)
+        {
+            if (failed)
+            {
+                return;
+            }
+            try
+            {
+                snapshot.push_back(thread);
+            }
+            catch (...)
+            {
+                failed = true;
+            }
+        });
+        if (failed)
+        {
+            snapshot.clear();
+            return CTaskThreadResult(CTaskThreadNoMemory);
+        }
+        if (visited != 0 || threads.empty())
+        {
+            return CTaskThreadResult();
+        }
+        const CTaskThreadResult result = pause(attempts);
+        if (result.m_status != CTaskThreadOk)
+        {
+            return result;
+        }
+    }
+}
 
 CTaskThreadResult CTaskResultAdapter::queue(LockFreeQueueResult status)
 {
@@ -15,6 +98,10 @@ CTaskThreadResult CTaskResultAdapter::queue(LockFreeQueueResult status)
     case LockFreeQueueTemporaryUnavailable:
     {
         return CTaskThreadResult(CTaskThreadRetry);
+    }
+    case LockFreeQueueResourceUnavailable:
+    {
+        return CTaskThreadResult(CTaskThreadResourceUnavailable);
     }
     case LockFreeQueueAllocationFailure:
     {
@@ -62,12 +149,12 @@ CTaskThreadResult CTaskResultAdapter::map(LockFreeMapStatus status)
         return CTaskThreadResult(CTaskThreadNotFound);
     }
     case LOCK_FREE_MAP_CONFLICT:
-    case LOCK_FREE_MAP_RESERVED:
-    case LOCK_FREE_MAP_RECORD_LIMIT:
     {
         return CTaskThreadResult(CTaskThreadRetry);
     }
     case LOCK_FREE_MAP_CAPACITY:
+    case LOCK_FREE_MAP_RESERVED:
+    case LOCK_FREE_MAP_RECORD_LIMIT:
     {
         return CTaskThreadResult(CTaskThreadCapacity);
     }
@@ -116,7 +203,6 @@ CTaskThreadResult CTaskResultAdapter::hash(const LockFreeHashMapResult& result)
         break;
     }
     case LockFreeHashMapReservationBusy:
-    case LockFreeHashMapProtectionUnavailable:
     case LockFreeHashMapVersionMismatch:
     case LockFreeHashMapCleared:
     {
@@ -125,6 +211,7 @@ CTaskThreadResult CTaskResultAdapter::hash(const LockFreeHashMapResult& result)
     }
     case LockFreeHashMapCapacityLimit:
     case LockFreeHashMapDirectoryFull:
+    case LockFreeHashMapProtectionUnavailable:
     {
         status = CTaskThreadCapacity;
         break;

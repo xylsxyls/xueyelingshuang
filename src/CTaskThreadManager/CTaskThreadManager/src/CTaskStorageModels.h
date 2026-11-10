@@ -110,12 +110,12 @@ public:
     size_t m_capacity;
     // 页数量
     size_t m_pageCount;
-    // 低 32 位为占用和私有缓存预留，中间 31 位为活动代次，最高位永久关闭
+    // 低 63 位为占用和私有缓存预留，最高位为关闭；保护域限制同时申请数
     std::atomic<uint64_t> m_leases;
+    // 成功进入开放块即置位；消费者交换清除并在关闭后复核，避免空闲时间跨重用累计
+    std::atomic<bool> m_touched;
     // 关闭后用于最终释放的 epoch
     uint64_t m_retiredEpoch;
-    // 观察空闲时的完整活动字，避免把重用前后的空闲时间拼接
-    uint64_t m_idleLease;
     // 单调毫秒空闲起点
     uint64_t m_idleSince;
 
@@ -200,6 +200,8 @@ public:
     CTaskStorageAllocation m_allocations[16];
     // 所有分配游标中的未使用槽位合计，供维护者弱一致观察
     std::atomic<size_t> m_cachedCount;
+    // 其他调用遇到容量压力时请求归还私有空闲位；持有者在下一次分配或本次调用退出时响应
+    std::atomic<bool> m_flushRequested;
     // 本位置累计业务额度；仅租约持有者写，观察者只读
     std::atomic<uint64_t> m_reserved;
     // 本位置累计入队预留，未发布失败时回滚

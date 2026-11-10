@@ -5,7 +5,7 @@
 class CTaskThreadPool;
 class CTaskThread;
 
-/** 独立分配器；只选择目标 ID，由上层调用该线程的 PostTask
+/** 独立分配器；只选择目标 ID，由上层调用该线程的 postTask
 */
 class CTaskThreadManagerAPI CTaskThreadAllocator
 {
@@ -17,7 +17,7 @@ public:
 
     /** 按当前未完成任务数选择目标，同负载轮转
     @param [out] threadId 成功为目标编号，失败为 0
-    @return 选择结果；PostTask 未接纳时可重新选取，不重发已接纳任务
+    @return 选择结果；postTask 未接纳时可重新选取，不重发已接纳任务
     */
     CTaskThreadResult select(uint32_t& threadId);
 

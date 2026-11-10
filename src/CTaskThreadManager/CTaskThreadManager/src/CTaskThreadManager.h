@@ -5,7 +5,7 @@
 
 class CTaskManagerState;
 
-/** 无锁线程注册与生命周期门面，保留 Init / ID / GetThreadInterface 使用方式
+/** 原子线程注册与生命周期门面；批量注销包含串行收尾协调
 */
 class CTaskThreadManagerAPI CTaskThreadManager
 {
@@ -22,7 +22,7 @@ public:
     /** 首次调用时创建管理器；启动阶段由主线程串行预热，再启动并发调用方
     @return 当前链接模块内的唯一实例
     */
-    static CTaskThreadManager& Instance();
+    static CTaskThreadManager& instance();
 
     /** 静止且没有线程时配置注册表
     @param [in] config Map 初始化参数
@@ -33,13 +33,13 @@ public:
     /** 使用默认配置创建线程
     @return 非零不复用 ID，失败为 0；不得在 Windows DLL loader lock 下调用
     */
-    uint32_t Init();
+    uint32_t init();
 
     /** 使用指定参数创建线程
     @param [in] config 线程的 Map、Queue 及系统优先级配置
     @return 非零编号，失败为 0
     */
-    uint32_t Init(const CTaskThreadConfig& config);
+    uint32_t init(const CTaskThreadConfig& config);
 
     /** 有详细结果的初始化接口
     @param [in] config 线程配置，调用期间借用并复制
@@ -50,31 +50,31 @@ public:
 
     /** 关闭接纳、排空并注销线程
     @param [in] threadId 线程编号
-    @return 关闭结果
+    @return Ok 表示退出及注销都完成，竞争内部重试
     */
-    CTaskThreadResult WaitForEnd(uint32_t threadId);
+    CTaskThreadResult waitForEnd(uint32_t threadId);
 
     /** 关闭接纳、停止当前任务、丢弃排队任务并注销
     @param [in] threadId 线程编号
-    @return 关闭结果
+    @return Ok 表示退出及注销都完成，竞争内部重试
     */
-    CTaskThreadResult Uninit(uint32_t threadId);
+    CTaskThreadResult uninit(uint32_t threadId);
 
-    /** 先通知全部线程停止，再等待退出；期间新 Init 被拒绝
-    @return 部分收尾失败时保留可重试的注册引用
+    /** 先通知全部线程停止，再等待退出；期间新 init 被拒绝
+    @return 竞争内部重试；实际错误保留尚未清理的注册引用
     */
-    CTaskThreadResult UninitAll();
+    CTaskThreadResult uninitAll();
 
     /** 安全取得线程强引用，停止后旧引用仍可查询但不能投递
     @param [in] threadId 线程编号
-    @return 未找到或资源暂不可用时为空
+    @return 未找到或发生实际错误时为空，内部竞争不会直接返回空
     */
-    std::shared_ptr<CTaskThread> GetThreadInterface(uint32_t threadId);
+    std::shared_ptr<CTaskThread> getThreadInterface(uint32_t threadId);
 
     /** 查询注册线程数
     @return 弱一致数量，超过 INT_MAX 饱和
     */
-    int32_t Count();
+    int32_t count();
 
 private:
     /** 并发创建完整私有状态后 CAS 发布；失败返回空，不发布半成品

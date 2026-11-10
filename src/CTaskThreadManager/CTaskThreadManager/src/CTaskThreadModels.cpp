@@ -59,7 +59,7 @@ const char* taskThreadStatusText(CTaskThreadStatus status)
     }
     case CTaskThreadRetry:
     {
-        return "资源暂不可用，可重试未接纳操作";
+        return "内部资源暂不可用";
     }
     case CTaskThreadNoMemory:
     {
@@ -91,11 +91,15 @@ const char* taskThreadStatusText(CTaskThreadStatus status)
     }
     case CTaskThreadBusy:
     {
-        return "生命周期操作正在进行";
+        return "尝试操作发生竞争，本次未提交";
     }
     case CTaskThreadSequenceExhausted:
     {
         return "编号已耗尽";
+    }
+    case CTaskThreadResourceUnavailable:
+    {
+        return "资源暂时不能安全复用";
     }
     default:
     {

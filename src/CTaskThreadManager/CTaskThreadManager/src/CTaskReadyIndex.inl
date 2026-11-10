@@ -29,7 +29,7 @@ inline void CTaskReadyIndex::publish(int32_t level)
     // 排在消费者成功下调后的复查之前；不能仅用一个普通 acquire load。
     fence();
     int32_t highest = m_highest.load(std::memory_order_seq_cst);
-    while (highest < level && !m_highest.compare_exchange_weak(highest, level, std::memory_order_seq_cst, std::memory_order_relaxed))
+    while (highest < level && !m_highest.compare_exchange_strong(highest, level, std::memory_order_seq_cst, std::memory_order_relaxed))
     {
 
     }

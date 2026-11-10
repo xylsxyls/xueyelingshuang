@@ -12,7 +12,7 @@ CTaskThreadManager::~CTaskThreadManager()
     delete m_state.load(std::memory_order_relaxed);
 }
 
-CTaskThreadManager& CTaskThreadManager::Instance()
+CTaskThreadManager& CTaskThreadManager::instance()
 {
     static CTaskThreadManager s_instance;
     return s_instance;
@@ -45,11 +45,11 @@ CTaskThreadResult CTaskThreadManager::configure(const CTaskThreadManagerConfig& 
     return current ? current->configure(config) : CTaskThreadResult(m_state.is_lock_free() ? CTaskThreadNoMemory : CTaskThreadUnsupported);
 }
 
-uint32_t CTaskThreadManager::Init()
+uint32_t CTaskThreadManager::init()
 {
     try
     {
-        return Init(CTaskThreadConfig());
+        return init(CTaskThreadConfig());
     }
     catch (...)
     {
@@ -57,7 +57,7 @@ uint32_t CTaskThreadManager::Init()
     }
 }
 
-uint32_t CTaskThreadManager::Init(const CTaskThreadConfig& config)
+uint32_t CTaskThreadManager::init(const CTaskThreadConfig& config)
 {
     uint32_t id = 0;
     initialize(config, id);
@@ -71,31 +71,31 @@ CTaskThreadResult CTaskThreadManager::initialize(const CTaskThreadConfig& config
     return current ? current->initialize(config, threadId) : CTaskThreadResult(m_state.is_lock_free() ? CTaskThreadNoMemory : CTaskThreadUnsupported);
 }
 
-CTaskThreadResult CTaskThreadManager::WaitForEnd(uint32_t threadId)
+CTaskThreadResult CTaskThreadManager::waitForEnd(uint32_t threadId)
 {
     CTaskManagerState* current = m_state.load(std::memory_order_acquire);
     return current ? current->finish(threadId, true) : CTaskThreadResult(CTaskThreadNotFound);
 }
 
-CTaskThreadResult CTaskThreadManager::Uninit(uint32_t threadId)
+CTaskThreadResult CTaskThreadManager::uninit(uint32_t threadId)
 {
     CTaskManagerState* current = m_state.load(std::memory_order_acquire);
     return current ? current->finish(threadId, false) : CTaskThreadResult(CTaskThreadNotFound);
 }
 
-CTaskThreadResult CTaskThreadManager::UninitAll()
+CTaskThreadResult CTaskThreadManager::uninitAll()
 {
     CTaskManagerState* current = m_state.load(std::memory_order_acquire);
     return current ? current->shutdown() : CTaskThreadResult(CTaskThreadOk, true);
 }
 
-std::shared_ptr<CTaskThread> CTaskThreadManager::GetThreadInterface(uint32_t threadId)
+std::shared_ptr<CTaskThread> CTaskThreadManager::getThreadInterface(uint32_t threadId)
 {
     CTaskManagerState* current = m_state.load(std::memory_order_acquire);
     return current ? current->get(threadId) : std::shared_ptr<CTaskThread>();
 }
 
-int32_t CTaskThreadManager::Count()
+int32_t CTaskThreadManager::count()
 {
     CTaskManagerState* current = m_state.load(std::memory_order_acquire);
     return current ? current->count() : 0;
@@ -131,16 +131,16 @@ int32_t CTaskThreadManager::Count()
 //
 //     /** 调用业务执行体，异常交由库记录
 //     */
-//     virtual void DoTask();
+//     virtual void doTask();
 //
-//     /** 合作停止，只发布状态，不等待 DoTask
+//     /** 合作停止，只发布状态，不等待 doTask
 //     */
-//     virtual void StopTask();
+//     virtual void stopTask();
 //
 //     /** 返回构造时固定的重做意愿
-//     @return 是否请求重做，还须配置 Clone 工厂
+//     @return 是否请求重做，还须配置 clone 工厂
 //     */
-//     virtual bool ReExecute();
+//     virtual bool reExecute();
 //
 //     /** 观察合作停止状态
 //     @return 是否曾收到停止通知
@@ -162,7 +162,7 @@ int32_t CTaskThreadManager::Count()
 //     std::function<void(UsageTask&)> m_body;
 //     // 构造后冻结的重做决定
 //     bool m_redo;
-//     // 不在 DoTask 入口清零，避免覆盖提前收到的通知
+//     // 不在 doTask 入口清零，避免覆盖提前收到的通知
 //     std::atomic<bool> m_stopped;
 //     // 示例结果观察计数
 //     std::atomic<uint32_t> m_runs;
@@ -216,19 +216,19 @@ int32_t CTaskThreadManager::Count()
 //
 // }
 //
-// void UsageTask::DoTask()
+// void UsageTask::doTask()
 // {
 //     m_runs.fetch_add(1);
 //     m_body(*this);
 // }
 //
-// void UsageTask::StopTask()
+// void UsageTask::stopTask()
 // {
 //     m_stops.fetch_add(1);
 //     m_stopped.store(true);
 // }
 //
-// bool UsageTask::ReExecute()
+// bool UsageTask::reExecute()
 // {
 //     return m_redo;
 // }
@@ -302,25 +302,17 @@ int32_t CTaskThreadManager::Count()
 //     return true;
 // }
 //
-// /** 只重试未接纳的临时竞争；其它失败明确报告
+// /** 普通投递内部处理竞争；此处只检查最终接纳及真实错误
 // @param [in] target 已取得的线程强引用
 // @param [in] task 已构造并配置完成的业务对象
 // @param [in] level 调度优先级，大值优先
 // */
 // static void Post(const std::shared_ptr<CTaskThread>& target, const std::shared_ptr<CTask>& task, int32_t level = 1)
 // {
-//     Check(WaitUntil([target, task, level]() -> bool
-//     {
-//         const CTaskThreadResult result = target->PostTask(task, level);
-//         if (result.m_committed)
-//         {
-//             // 已接纳后即使附带错误也绝不重发；示例要求回调没有错误。
-//             Check(result.m_status == CTaskThreadOk, "accepted task has notification error");
-//             return true;
-//         }
-//         Check(result.m_status == CTaskThreadRetry, taskThreadStatusText(result.m_status));
-//         return false;
-//     }), "post retry timed out");
+//     const CTaskThreadResult result = target->postTask(task, level);
+//     Check(result.m_committed, taskThreadStatusText(result.m_status));
+//     // 已接纳后即使附带错误也绝不重发；示例要求回调没有错误。
+//     Check(result.m_status == CTaskThreadOk, "accepted task has notification error");
 // }
 //
 // /** 创建线程并缓存接口，所有权仍由管理器登记
@@ -330,9 +322,9 @@ int32_t CTaskThreadManager::Count()
 // static std::shared_ptr<CTaskThread> Open(const CTaskThreadConfig& config)
 // {
 //     uint32_t id = 0;
-//     CTaskThreadResult result = CTaskThreadManager::Instance().initialize(config, id);
+//     CTaskThreadResult result = CTaskThreadManager::instance().initialize(config, id);
 //     Check(result.m_status == CTaskThreadOk && result.m_committed && id != 0, "initialize failed");
-//     std::shared_ptr<CTaskThread> target = CTaskThreadManager::Instance().GetThreadInterface(id);
+//     std::shared_ptr<CTaskThread> target = CTaskThreadManager::instance().getThreadInterface(id);
 //     Check(target != nullptr, "thread lookup failed; main will reclaim registered id");
 //     return target;
 // }
@@ -340,7 +332,7 @@ int32_t CTaskThreadManager::Count()
 // /** 创建有界合作等待任务，用于确定其它任务排队的时机
 // @param [in] propertyId 属性 ID
 // @param [in] release 外部正常放行标志
-// @return 收到 StopTask 也会提前返回的任务
+// @return 收到 stopTask 也会提前返回的任务
 // */
 // static std::shared_ptr<UsageTask> Gate(int32_t propertyId, const std::shared_ptr<std::atomic<bool>>& release)
 // {
@@ -372,9 +364,9 @@ int32_t CTaskThreadManager::Count()
 // */
 // static void ExamplePriority(const CTaskThreadConfig& config)
 // {
-//     CTaskThreadManager& manager = CTaskThreadManager::Instance();
+//     CTaskThreadManager& manager = CTaskThreadManager::instance();
 //     std::shared_ptr<CTaskThread> target = Open(config);
-//     Check(manager.Count() == 1, "manager count");
+//     Check(manager.count() == 1, "manager count");
 //     Check(target->setSystemPriority(CTaskPriorityNormal).m_status == CTaskThreadOk, "system priority");
 //     std::shared_ptr<std::atomic<bool>> release = std::make_shared<std::atomic<bool>>(false);
 //     std::shared_ptr<UsageTask> gate = Gate(900, release);
@@ -385,27 +377,27 @@ int32_t CTaskThreadManager::Count()
 //     }), "gate not started");
 //     std::shared_ptr<std::vector<int32_t>> order = std::make_shared<std::vector<int32_t>>();
 //     std::shared_ptr<UsageTask> first = Append(42, 1, order);
-//     Check(first->GetPropertyId() == 42, "property id");
-//     Check(first->Clone(std::function<CTask*()>()) && first->cloneFactory() == nullptr, "clear factory");
+//     Check(first->getPropertyId() == 42, "property id");
+//     Check(first->clone(std::function<CTask*()>()) && first->cloneFactory() == nullptr, "clear factory");
 //     Post(target, first, 1);
 //     Post(target, Append(42, 2, order), 1);
 //     Post(target, Append(7, 5, order), 5);
-//     Check(target->TryPostTask(Append(8, 3, order), 3), "TryPostTask refused");
-//     Check(!target->PostTask(first, 0).m_committed, "invalid level accepted");
-//     Check(!target->PostTask(std::shared_ptr<CTask>()).m_committed, "null task accepted");
+//     Check(target->tryPostTask(Append(8, 3, order), 3), "tryPostTask refused");
+//     Check(!target->postTask(first, 0).m_committed, "invalid level accepted");
+//     Check(!target->postTask(std::shared_ptr<CTask>()).m_committed, "null task accepted");
 //     std::map<int32_t, int32_t> waiting;
-//     Check(target->GetWaitTaskInfo(waiting).m_status == CTaskThreadOk, "wait info");
-//     Check(target->HasTask() && target->GetWaitTaskCount() == 4 && waiting[1] == 2, "queued counts");
-//     Check(target->GetCurTaskLevel() == 16 && target->statistics().m_outstanding == 5, "running counts");
+//     Check(target->getWaitTaskInfo(waiting).m_status == CTaskThreadOk, "wait info");
+//     Check(target->hasTask() && target->getWaitTaskCount() == 4 && waiting[1] == 2, "queued counts");
+//     Check(target->getCurTaskLevel() == 16 && target->statistics().m_outstanding == 5, "running counts");
 //     release->store(true);
-//     Check(target->WaitForEnd().m_status == CTaskThreadOk, "direct drain");
+//     Check(target->waitForEnd().m_status == CTaskThreadOk, "direct drain");
 //     const int32_t expected[] = {5, 3, 1, 2};
 //     Check(order->size() == 4 && std::equal(order->begin(), order->end(), expected), "priority/FIFO");
 //     Check(target->statistics().m_errors == 0 && target->statistics().m_executed == 5, "execution statistics");
-//     Check(manager.Count() == 1, "direct WaitForEnd must retain registration");
-//     Check(manager.WaitForEnd(target->threadId()).m_status == CTaskThreadOk, "manager unregister");
-//     const CTaskThreadResult closed = target->PostTask(first);
-//     Check(!closed.m_committed && closed.m_status == CTaskThreadClosed && manager.Count() == 0, "old handle");
+//     Check(manager.count() == 1, "direct waitForEnd must retain registration");
+//     Check(manager.waitForEnd(target->threadId()).m_status == CTaskThreadOk, "manager unregister");
+//     const CTaskThreadResult closed = target->postTask(first);
+//     Check(!closed.m_committed && closed.m_status == CTaskThreadClosed && manager.count() == 0, "old handle");
 //     std::cout << "PASS priority, FIFO, property, queries, system priority, drain" << std::endl;
 // }
 //
@@ -434,7 +426,7 @@ int32_t CTaskThreadManager::Count()
 //         }), "high task not stopped");
 //     }, true);
 //     // lambda 只在实际重做时调用；返回独立裸指针，所有权交给库。
-//     Check(low->Clone([order, factories]() -> CTask*
+//     Check(low->clone([order, factories]() -> CTask*
 //     {
 //         factories->fetch_add(1);
 //         return new UsageTask(10, [order](UsageTask&)
@@ -442,7 +434,7 @@ int32_t CTaskThreadManager::Count()
 //             order->push_back(11);
 //         });
 //     }), "low factory configuration");
-//     Check(high->Clone([order, factories]() -> CTask*
+//     Check(high->clone([order, factories]() -> CTask*
 //     {
 //         factories->fetch_add(1);
 //         return new UsageTask(20, [order](UsageTask&)
@@ -463,7 +455,7 @@ int32_t CTaskThreadManager::Count()
 //         return high->runs() == 1;
 //     }), "high not running");
 //     Post(target, Append(30, 10, order), 10);
-//     Check(CTaskThreadManager::Instance().WaitForEnd(target->threadId()).m_status == CTaskThreadOk, "redo drain");
+//     Check(CTaskThreadManager::instance().waitForEnd(target->threadId()).m_status == CTaskThreadOk, "redo drain");
 //     const int32_t expected[] = {1, 5, 10, 55, 11, 2};
 //     Check(order->size() == 6 && std::equal(order->begin(), order->end(), expected), "nested redo order");
 //     Check(factories->load() == 2 && target->statistics().m_errors == 0, "redo factory count/errors");
@@ -490,10 +482,10 @@ int32_t CTaskThreadManager::Count()
 //     Post(target, a, 1);
 //     Post(target, b, 2);
 //     Post(target, c, 2);
-//     Check(target->StopTask(7, 1).m_status == CTaskThreadOk, "property stop");
+//     Check(target->stopTask(7, 1).m_status == CTaskThreadOk, "property stop");
 //     Check(a->stops() == 1 && b->stops() == 0 && c->stops() == 0, "property/level filtering");
-//     Check(target->StopAllTask().m_status == CTaskThreadOk, "stop all");
-//     Check(CTaskThreadManager::Instance().WaitForEnd(target->threadId()).m_status == CTaskThreadOk, "stop drain");
+//     Check(target->stopAllTask().m_status == CTaskThreadOk, "stop all");
+//     Check(CTaskThreadManager::instance().waitForEnd(target->threadId()).m_status == CTaskThreadOk, "stop drain");
 //     Check(a->runs() == 1 && b->runs() == 1 && c->runs() == 1 && order->size() == 3, "stop must not erase queued tasks");
 //     Check(b->stops() >= 1 && c->stops() >= 1 && gate->stopped(), "stop all coverage");
 //     target = Open(config);
@@ -503,9 +495,9 @@ int32_t CTaskThreadManager::Count()
 //     {
 //         return gate->runs() == 1;
 //     }), "current gate not started");
-//     Check(target->StopCurTask().m_status == CTaskThreadOk, "stop current");
-//     Check(CTaskThreadManager::Instance().WaitForEnd(target->threadId()).m_status == CTaskThreadOk && gate->stopped(), "current stop completion");
-//     std::cout << "PASS property stop, StopAllTask, StopCurTask; stop does not erase" << std::endl;
+//     Check(target->stopCurTask().m_status == CTaskThreadOk, "stop current");
+//     Check(CTaskThreadManager::instance().waitForEnd(target->threadId()).m_status == CTaskThreadOk && gate->stopped(), "current stop completion");
+//     std::cout << "PASS property stop, stopAllTask, stopCurTask; stop does not erase" << std::endl;
 // }
 //
 // /** 展示物理池增长/缩容回调和逻辑容量拒绝，观察不是额度预留
@@ -581,7 +573,7 @@ int32_t CTaskThreadManager::Count()
 //     {
 //         return work->runs() == 200 && shrinks->load() != 0;
 //     }), "growth/shrink callbacks");
-//     Check(CTaskThreadManager::Instance().WaitForEnd(target->threadId()).m_status == CTaskThreadOk, "growth drain");
+//     Check(CTaskThreadManager::instance().waitForEnd(target->threadId()).m_status == CTaskThreadOk, "growth drain");
 //     Check(mapGrows->load() != 0 && taskGrows->load() != 0 && queueGrows->load() != 0 && target->statistics().m_errors == 0, "physical pool growth");
 //     // 上面只通过公开行为核对缩容策略被调用，不把它说成实际释放了精确数量。
 //     config = source;
@@ -595,10 +587,10 @@ int32_t CTaskThreadManager::Count()
 //         return gate->runs() == 1;
 //     }), "capacity gate not started");
 //     Post(target, work);
-//     const CTaskThreadResult full = target->PostTask(work);
+//     const CTaskThreadResult full = target->postTask(work);
 //     Check(!full.m_committed && full.m_status == CTaskThreadCapacity, "logical capacity rejection");
 //     release->store(true);
-//     Check(CTaskThreadManager::Instance().WaitForEnd(target->threadId()).m_status == CTaskThreadOk, "capacity drain");
+//     Check(CTaskThreadManager::instance().waitForEnd(target->threadId()).m_status == CTaskThreadOk, "capacity drain");
 //     std::cout << "PASS memory policy callbacks, growth, logical capacity rejection" << std::endl;
 // }
 //
@@ -607,7 +599,7 @@ int32_t CTaskThreadManager::Count()
 // */
 // static void ExampleLifecycle(const CTaskThreadConfig& config)
 // {
-//     CTaskThreadManager& manager = CTaskThreadManager::Instance();
+//     CTaskThreadManager& manager = CTaskThreadManager::instance();
 //     std::shared_ptr<CTaskThread> target = Open(config);
 //     std::weak_ptr<CTaskThread> weak = target;
 //     std::shared_ptr<std::atomic<bool>> release = std::make_shared<std::atomic<bool>>(false);
@@ -620,7 +612,7 @@ int32_t CTaskThreadManager::Count()
 //     std::shared_ptr<UsageTask> closing = std::make_shared<UsageTask>(1, [weak](UsageTask&)
 //     {
 //         std::shared_ptr<CTaskThread> self = weak.lock();
-//         Check(self && self->WaitForEnd().m_status == CTaskThreadSelfWait, "self wait must be refused");
+//         Check(self && self->waitForEnd().m_status == CTaskThreadSelfWait, "self wait must be refused");
 //         Check(self->requestShutdown(true).m_committed, "request drain from task");
 //     });
 //     Post(target, closing, 5);
@@ -635,9 +627,9 @@ int32_t CTaskThreadManager::Count()
 //     Post(target, bad);
 //     Post(target, after);
 //     release->store(true);
-//     Check(manager.WaitForEnd(target->threadId()).m_status == CTaskThreadOk, "requested drain");
+//     Check(manager.waitForEnd(target->threadId()).m_status == CTaskThreadOk, "requested drain");
 //     Check(closing->runs() == 1 && after->runs() == 1 && target->statistics().m_errors == 1, "exception isolation");
-//     // Uninit 关闭接纳并丢弃排队项；当前执行仍靠 StopTask 合作返回。
+//     // uninit 关闭接纳并丢弃排队项；当前执行仍靠 stopTask 合作返回。
 //     target = Open(config);
 //     release->store(false);
 //     gate = Gate(900, release);
@@ -652,13 +644,13 @@ int32_t CTaskThreadManager::Count()
 //     });
 //     Post(target, discarded);
 //     Check(target->requestShutdown(false).m_committed, "request discard");
-//     Check(manager.Uninit(target->threadId()).m_status == CTaskThreadOk, "discard close");
+//     Check(manager.uninit(target->threadId()).m_status == CTaskThreadOk, "discard close");
 //     Check(gate->stopped() && discarded->runs() == 0, "queued task must be discarded");
-//     const uint32_t firstId = manager.Init();
-//     const uint32_t secondId = manager.Init(config);
-//     Check(firstId != 0 && secondId != 0 && firstId != secondId, "Init overloads");
-//     Check(manager.UninitAll().m_status == CTaskThreadOk && manager.Count() == 0, "UninitAll");
-//     std::cout << "PASS self wait, requestShutdown, exception isolation, Uninit, UninitAll" << std::endl;
+//     const uint32_t firstId = manager.init();
+//     const uint32_t secondId = manager.init(config);
+//     Check(firstId != 0 && secondId != 0 && firstId != secondId, "init overloads");
+//     Check(manager.uninitAll().m_status == CTaskThreadOk && manager.count() == 0, "uninitAll");
+//     std::cout << "PASS self wait, requestShutdown, exception isolation, uninit, uninitAll" << std::endl;
 // }
 //
 // /** 用两条管理器工作线程充当生产者，并发向同一目标投递
@@ -703,10 +695,10 @@ int32_t CTaskThreadManager::Count()
 //     // 必须先等生产结束，再关闭消费者，不能反过来。
 //     for (size_t i = 0; i < producers.size(); ++i)
 //     {
-//         Check(CTaskThreadManager::Instance().WaitForEnd(producers[i]->threadId()).m_status == CTaskThreadOk, "producer drain");
+//         Check(CTaskThreadManager::instance().waitForEnd(producers[i]->threadId()).m_status == CTaskThreadOk, "producer drain");
 //         Check(producers[i]->statistics().m_errors == 0, "producer error");
 //     }
-//     Check(CTaskThreadManager::Instance().WaitForEnd(target->threadId()).m_status == CTaskThreadOk, "consumer drain");
+//     Check(CTaskThreadManager::instance().waitForEnd(target->threadId()).m_status == CTaskThreadOk, "consumer drain");
 //     Check(work->runs() == 200 && target->statistics().m_errors == 0, "concurrent exact count");
 //     std::cout << "PASS two concurrent producers: accepted/executed 200" << std::endl;
 // }
@@ -728,7 +720,7 @@ int32_t CTaskThreadManager::Count()
 //     CTaskThreadAllocator defaultAllocator(defaultPool);
 //     uint32_t id = 0;
 //     Check(defaultAllocator.select(id).m_status == CTaskThreadOk, "select id");
-//     std::shared_ptr<CTaskThread> target = CTaskThreadManager::Instance().GetThreadInterface(id);
+//     std::shared_ptr<CTaskThread> target = CTaskThreadManager::instance().getThreadInterface(id);
 //     Check(target != nullptr, "pool target lookup");
 //     std::shared_ptr<UsageTask> work = std::make_shared<UsageTask>(1, [](UsageTask&)
 //     {
@@ -749,7 +741,7 @@ int32_t CTaskThreadManager::Count()
 //     }), "pool growth/clamp");
 //     std::vector<uint32_t> ids;
 //     Check(pool.threadIds(ids).m_status == CTaskThreadOk && ids.size() == 4, "pool threadIds");
-//     Check(CTaskThreadManager::Instance().Count() == 5, "pool controller not counted in worker limit");
+//     Check(CTaskThreadManager::instance().count() == 5, "pool controller not counted in worker limit");
 //     for (int32_t i = 0; i < 40; ++i)
 //     {
 //         // 选择不预留接纳；缩容竞争时只有未接纳项可以重新选取。
@@ -760,16 +752,16 @@ int32_t CTaskThreadManager::Count()
 //             CTaskThreadResult choice = allocator.select(selectedId, selected);
 //             if (choice.m_status != CTaskThreadOk)
 //             {
-//                 Check(choice.m_status == CTaskThreadRetry, "allocator closed/error");
+//                 Check(choice.m_status == CTaskThreadCapacity || choice.m_status == CTaskThreadClosed, "allocator closed/error");
 //                 return false;
 //             }
-//             const CTaskThreadResult posted = selected->PostTask(work);
+//             const CTaskThreadResult posted = selected->postTask(work);
 //             if (posted.m_committed)
 //             {
 //                 Check(posted.m_status == CTaskThreadOk, "pool accepted with error");
 //                 return true;
 //             }
-//             Check(posted.m_status == CTaskThreadClosed || posted.m_status == CTaskThreadCapacity || posted.m_status == CTaskThreadRetry, "pool post failure");
+//             Check(posted.m_status == CTaskThreadClosed || posted.m_status == CTaskThreadCapacity, "pool post failure");
 //             return false;
 //         }), "allocator retry timed out");
 //     }
@@ -786,7 +778,7 @@ int32_t CTaskThreadManager::Count()
 //     const CTaskPoolStatistics state = pool.statistics();
 //     Check(state.m_grows == 2 && state.m_shrinks == 2 && state.m_errors == 0, "pool resize statistics");
 //     Check(pool.shutdown(false).m_status == CTaskThreadOk, "pool discard shutdown");
-//     Check(!pool.statistics().m_accepting && CTaskThreadManager::Instance().Count() == 0, "pool final cleanup");
+//     Check(!pool.statistics().m_accepting && CTaskThreadManager::instance().count() == 0, "pool final cleanup");
 //     std::cout << "PASS default/custom pool, allocator, 2->4->2 workers, upper/lower bounds" << std::endl;
 // }
 //
@@ -796,7 +788,7 @@ int32_t CTaskThreadManager::Count()
 // int main()
 // {
 //     // 唯一实例串行预热；所有构造、策略复制和调用前表达式也在 try 范围内。
-//     CTaskThreadManager& manager = CTaskThreadManager::Instance();
+//     CTaskThreadManager& manager = CTaskThreadManager::instance();
 //     try
 //     {
 //         CTaskThreadManagerConfig managerConfig;
@@ -824,7 +816,7 @@ int32_t CTaskThreadManager::Count()
 //         ExampleLifecycle(config);
 //         ExampleConcurrent(config);
 //         ExamplePool(config);
-//         Check(manager.Count() == 0, "registered threads leaked");
+//         Check(manager.count() == 0, "registered threads leaked");
 //         std::cout << "PASS ALL 7 usage scenarios" << std::endl;
 //         return 0;
 //     }
@@ -837,7 +829,7 @@ int32_t CTaskThreadManager::Count()
 //         std::cerr << "FAIL: unexpected exception" << std::endl;
 //     }
 //     // 示例拥有本进程创建的所有线程；任务捕获共享对象，不借用已退栈的局部资源。
-//     const CTaskThreadResult cleanup = manager.UninitAll();
+//     const CTaskThreadResult cleanup = manager.uninitAll();
 //     if (cleanup.m_status != CTaskThreadOk)
 //     {
 //         std::cerr << "cleanup failed: " << taskThreadStatusText(cleanup.m_status) << std::endl;

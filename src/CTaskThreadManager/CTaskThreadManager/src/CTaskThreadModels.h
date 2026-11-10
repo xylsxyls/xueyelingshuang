@@ -16,7 +16,7 @@ enum CTaskThreadStatus
     CTaskThreadClosed,
     // 达到配置的容量上限
     CTaskThreadCapacity,
-    // 暂时没有保护记录或可复用资源，可以重试未接纳操作
+    // 内部单次尝试暂不可用；普通公开接口自行重试，不向调用方暴露竞争
     CTaskThreadRetry,
     // 内存申请失败
     CTaskThreadNoMemory,
@@ -32,10 +32,12 @@ enum CTaskThreadStatus
     CTaskThreadNotFound,
     // 当前线程不能等待自身或自己的回调退出
     CTaskThreadSelfWait,
-    // 另一个生命周期操作正在进行，本次没有取得操作权
+    // 仅 try 接口报告尚未提交的竞争失败，不表示容量不足
     CTaskThreadBusy,
     // 单调编号已耗尽
-    CTaskThreadSequenceExhausted
+    CTaskThreadSequenceExhausted,
+    // 容量尚未用满，但资源暂时不能安全复用；不是 CAS 竞争
+    CTaskThreadResourceUnavailable
 };
 
 /** 系统线程优先级，与 Task 的整数优先级独立

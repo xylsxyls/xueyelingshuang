@@ -1,8 +1,9 @@
 ﻿#pragma once
 
-inline CTaskCallbackScope::CTaskCallbackScope(const void* owner, const void* stopped) :
+inline CTaskCallbackScope::CTaskCallbackScope(const void* owner, const void* stopped, bool reader) :
 m_owner(owner),
 m_stopped(stopped),
+m_reader(reader),
 m_previous(m_current)
 {
     m_current = this;

@@ -41,8 +41,8 @@ m_pages(nullptr),
 m_capacity(0),
 m_pageCount(0),
 m_leases(0),
+m_touched(false),
 m_retiredEpoch(0),
-m_idleLease(0),
 m_idleSince(0)
 {
 
@@ -114,6 +114,7 @@ m_stagedNext(nullptr),
 m_stagedListed(false),
 m_ownerIndex(0),
 m_cachedCount(0),
+m_flushRequested(false),
 m_reserved(0),
 m_published(0),
 m_nextSequence(0),

@@ -26,66 +26,73 @@ public:
     */
     ~CTaskThread();
 
-    /** 接纳任务；原来忽略返回值的调用仍可编译，新代码检查 committed
+    /** 接纳任务；内部竞争退避重试，达到配置上限或实际错误才失败
     @param [in] task 非空任务强引用
     @param [in] taskLevel 从 1 到 INT_MAX，大值先执行，同级 FIFO
     @return 以 committed 判断是否接纳，后续抢占通知失败可与 committed=true 同时返回
     */
-    CTaskThreadResult PostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1);
+    CTaskThreadResult postTask(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1);
 
-    /** 尝试投递
+    /** 单次有界尝试投递；不等待暂时占用的保护记录或发布机会
     @param [in] task 任务强引用
     @param [in] taskLevel 正数优先级
-    @return 是否已接纳，详细结果使用 PostTask
+    @return 是否已接纳；具体错误使用 tryPostTaskResult，普通投递使用 postTask
     */
-    bool TryPostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1);
+    bool tryPostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1);
+
+    /** 尝试投递并返回具体失败原因，不等待竞争者或资源持有者
+    @param [in] task 非空任务强引用
+    @param [in] taskLevel 正数优先级
+    @return Busy 仅表示未提交的竞争失败；Capacity 表示额度用满，ResourceUnavailable 表示暂不可复用
+    */
+    CTaskThreadResult tryPostTaskResult(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1);
 
     /** 观察是否有排队任务
     @return 不包含当前执行任务
     */
-    bool HasTask();
+    bool hasTask();
 
     /** 通知当前任务合作停止
     @return 通知结果
     */
-    CTaskThreadResult StopCurTask();
+    CTaskThreadResult stopCurTask();
 
     /** 通知属性 ID 匹配的任务；保留历史规则，当前任务不受 taskLevel 过滤
     @param [in] propertyId 属性 ID，不要求唯一，通知所有匹配任务
     @param [in] taskLevel 排队优先级过滤，0 为全部
     @return 通知结果，不删除任务
     */
-    CTaskThreadResult StopTask(int32_t propertyId, int32_t taskLevel = 0);
+    CTaskThreadResult stopTask(int32_t propertyId, int32_t taskLevel = 0);
 
     /** 通知所有任务合作停止，回调允许查询和投递
     @return 通知结果
     */
-    CTaskThreadResult StopAllTask();
+    CTaskThreadResult stopAllTask();
 
     /** 获取排队数量，先清空输出
     @param [out] counts 优先级到等待数量
     @return 查询结果，运行中为弱一致观察
     */
-    CTaskThreadResult GetWaitTaskInfo(std::map<int32_t, int32_t>& counts);
+    CTaskThreadResult getWaitTaskInfo(std::map<int32_t, int32_t>& counts);
 
     /** 查询等待任务数量
     @return 大于 INT_MAX 时饱和
     */
-    int32_t GetWaitTaskCount();
+    int32_t getWaitTaskCount();
 
     /** 查询当前任务优先级
     @return 空闲为 0
     */
-    int32_t GetCurTaskLevel();
+    int32_t getCurTaskLevel();
 
     /** 关闭接纳并等待全部任务完成；管理器同名接口还移除注册
-    @return 自等待或同时 join 返回明确失败
+    @return 自等待明确拒绝；并发 join 在内部等待，成功表示线程已经退出
     */
-    CTaskThreadResult WaitForEnd();
+    CTaskThreadResult waitForEnd();
 
-    /** 仅关闭接纳并请求退出，可从任务回调调用，不等待
+    /** 仅关闭接纳并请求退出，可从任务回调调用，不等待线程退出
     @param [in] drain true 排空，false 丢弃等待任务
-    @return 意图已经发布
+    @return 意图已经发布；停止观察的临时竞争内部重试
     */
     CTaskThreadResult requestShutdown(bool drain = true);
 

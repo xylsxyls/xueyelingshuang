@@ -15,7 +15,7 @@ CTaskThreadResult CTaskThreadPool::initialize(const CTaskThreadPoolConfig& confi
 {
     if (m_state && m_state->statistics().m_accepting)
     {
-        return CTaskThreadResult(CTaskThreadBusy);
+        return CTaskThreadResult(CTaskThreadInvalid);
     }
     if (m_state)
     {

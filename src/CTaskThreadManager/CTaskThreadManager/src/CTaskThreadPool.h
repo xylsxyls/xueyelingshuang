@@ -24,13 +24,13 @@ public:
 
     /** 创建初始工作线程及一个管理控制线程
     @param [in] config 冻结的线程池配置
-    @return 部分初始化失败会回滚已经创建的线程
+    @return 活跃池重复初始化返回 Invalid；部分初始化失败回滚已经创建的线程
     */
     CTaskThreadResult initialize(const CTaskThreadPoolConfig& config);
 
     /** 停止自动扩缩容，关闭所有成员接纳并等待
-    @param [in] drain true 排空，false 通知停止并丢弃排队任务
-    @return 自等待拒绝，失败保留资源供重试
+    @param [in] drain true 排空，false 通知停止并丢弃排队任务；并发调用时 false 优先且不等待收尾权才通知
+    @return 自等待拒绝，竞争内部等待；实际错误保留资源
     */
     CTaskThreadResult shutdown(bool drain = true);
 
@@ -46,7 +46,7 @@ public:
     CTaskThreadResult threadIds(std::vector<uint32_t>& ids) const;
 
 private:
-    /** 选择一个可接纳的最小负载线程，缩容竞争由最终 PostTask 结果处理
+    /** 选择一个可接纳的最小负载线程，缩容竞争由最终 postTask 结果处理
     @param [in] turn 相同负载的轮转位置
     @param [out] id 失败为 0
     @param [out] thread 成功时安全强引用，但不预留任务额度

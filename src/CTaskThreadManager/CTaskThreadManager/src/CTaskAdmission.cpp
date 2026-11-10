@@ -10,15 +10,20 @@ m_state(0)
 
 bool CTaskAdmission::enter()
 {
-    uint64_t state = m_state.load(std::memory_order_acquire);
-    while (state < kTaskAdmissionClosed - 1)
+    if (closed())
     {
-        if (m_state.compare_exchange_weak(state, state + 1, std::memory_order_acq_rel, std::memory_order_acquire))
-        {
-            return true;
-        }
+        return false;
     }
-    return false;
+    // 关闭位与登记数仍在同一个原子字中。原子加法不会因其他调用更新计数而重试。
+    // 登记晚于 close 时立即归还；关闭前暂停的调用也不能越过关闭位进入。
+    // 低 63 位只计算同时在途调用，远大于本进程能建立的线程及调用栈数量。
+    const uint64_t previous = m_state.fetch_add(1, std::memory_order_acq_rel);
+    if ((previous & kTaskAdmissionClosed) != 0)
+    {
+        m_state.fetch_sub(1, std::memory_order_release);
+        return false;
+    }
+    return true;
 }
 
 void CTaskAdmission::leave()
@@ -33,7 +38,8 @@ void CTaskAdmission::close()
 
 void CTaskAdmission::reopen()
 {
-    m_state.store(0, std::memory_order_release);
+    // 只重开接纳位。关闭前暂停的 enter 仍可能正在撤销登记，不能覆盖其计数。
+    m_state.fetch_and(~kTaskAdmissionClosed, std::memory_order_release);
 }
 
 bool CTaskAdmission::closeIfEmpty()

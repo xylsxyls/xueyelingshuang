@@ -17,22 +17,22 @@ CTask::~CTask()
 
 }
 
-void CTask::StopTask()
+void CTask::stopTask()
 {
 
 }
 
-bool CTask::ReExecute()
+bool CTask::reExecute()
 {
     return false;
 }
 
-int32_t CTask::GetPropertyId()
+int32_t CTask::getPropertyId()
 {
     return m_propertyId;
 }
 
-bool CTask::Clone(const std::function<CTask*()>& factory)
+bool CTask::clone(const std::function<CTask*()>& factory)
 {
     if (!factory)
     {

@@ -22,7 +22,7 @@ CTaskThreadResult CTaskManagerState::configure(const CTaskThreadManagerConfig& c
 {
     if (!m_threads.empty() || m_creators.active() != 0 || m_bulk.load(std::memory_order_acquire))
     {
-        return CTaskThreadResult(CTaskThreadBusy);
+        return CTaskThreadResult(CTaskThreadInvalid);
     }
     if (config.m_threadMap.operationRecordLimit < 4)
     {
@@ -57,12 +57,21 @@ CTaskThreadResult CTaskManagerState::initialize(const CTaskThreadConfig& config,
         result = thread->createThread();
         if (result.m_status == CTaskThreadOk)
         {
-            LockFreeMapStatus status;
-            do
+            // 已建立的系统线程只登记一次；结构竞争重试登记，不反复建线程。
+            uint32_t attempts = 0;
+            for (;;)
             {
-                status = m_threads.lockFreeMapSet(id, thread);
-            } while (status == LOCK_FREE_MAP_CONFLICT);
-            result = CTaskResultAdapter::map(status);
+                result = CTaskResultAdapter::map(m_threads.lockFreeMapSet(id, thread));
+                if (result.m_committed || result.m_status != CTaskThreadRetry)
+                {
+                    break;
+                }
+                result = CTaskResultAdapter::pause(attempts);
+                if (result.m_status != CTaskThreadOk)
+                {
+                    break;
+                }
+            }
             if (result.m_committed)
             {
                 threadId = id;
@@ -87,60 +96,81 @@ CTaskThreadResult CTaskManagerState::initialize(const CTaskThreadConfig& config,
 
 uint32_t CTaskManagerState::nextThreadId()
 {
-    uint32_t id = m_threadId.load(std::memory_order_relaxed);
-    while (id != UINT32_MAX)
+    if (m_threadId.load(std::memory_order_relaxed) >= UINT32_MAX)
     {
-        if (m_threadId.compare_exchange_weak(id, id + 1, std::memory_order_relaxed, std::memory_order_relaxed))
-        {
-            return id + 1;
-        }
+        return 0;
     }
-    return 0;
+    // 64位内部计数为32位外部ID留出边界并发余量，不靠CAS重试取得编号。
+    const uint64_t previous = m_threadId.fetch_add(1, std::memory_order_relaxed);
+    return previous < UINT32_MAX ? static_cast<uint32_t>(previous + 1) : 0;
 }
 
 CTaskThreadResult CTaskManagerState::finish(uint32_t threadId, bool drain)
 {
     std::shared_ptr<CTaskThread> thread;
     LockFreeMapToken token;
-    const LockFreeMapStatus status = m_threads.lockFreeMapGet(threadId, thread, token);
-    if (status != LOCK_FREE_MAP_OK)
+    uint32_t attempts = 0;
+    for (;;)
     {
-        return CTaskResultAdapter::map(status);
+        const LockFreeMapStatus status = m_threads.lockFreeMapGet(threadId, thread, token);
+        if (status == LOCK_FREE_MAP_OK)
+        {
+            break;
+        }
+        CTaskThreadResult result = CTaskResultAdapter::map(status);
+        if (result.m_status != CTaskThreadRetry)
+        {
+            return result;
+        }
+        result = CTaskResultAdapter::pause(attempts);
+        if (result.m_status != CTaskThreadOk)
+        {
+            return result;
+        }
     }
     CTaskThreadResult result = thread->finish(drain);
     if (result.m_status != CTaskThreadOk)
     {
         return result;
     }
+    // join 完成后继续清理登记。删除凭据冲突时重新查询，不要求外部再次注销。
     for (;;)
     {
-        LockFreeMapStatus removed = m_threads.lockFreeMapErase(threadId, token);
-        if (removed == LOCK_FREE_MAP_COMMITTED)
+        std::shared_ptr<CTaskThread> remaining;
+        LockFreeMapStatus status = m_threads.lockFreeMapGet(threadId, remaining, token);
+        if (status == LOCK_FREE_MAP_NOT_FOUND)
         {
+            result = CTaskThreadResult(CTaskThreadOk, true);
             break;
         }
-        if (removed == LOCK_FREE_MAP_CONFLICT)
+        if (status == LOCK_FREE_MAP_OK)
         {
-            // 冲突也可能来自其他 ID 的结构变更，不能当作本登记已经删除。
-            // ID 永不复用；只有查不到原登记，或成功删除同一对象，才能报告关闭成功。
-            std::shared_ptr<CTaskThread> remaining;
-            removed = m_threads.lockFreeMapGet(threadId, remaining, token);
-            if (removed == LOCK_FREE_MAP_NOT_FOUND)
+            if (remaining != thread)
             {
+                // 编号不复用；不同对象说明注册状态损坏，不能删除其他对象。
+                result = CTaskThreadResult(CTaskThreadInvalid, true);
                 break;
             }
-            if (removed == LOCK_FREE_MAP_OK)
-            {
-                if (remaining == thread)
-                {
-                    continue;
-                }
-                removed = LOCK_FREE_MAP_CONFLICT;
-            }
+            status = m_threads.lockFreeMapErase(threadId, token);
         }
-        result = CTaskResultAdapter::map(removed);
-        result.m_committed = true;
-        break;
+        if (status == LOCK_FREE_MAP_NOT_FOUND)
+        {
+            // 同一线程已经 join；另一注销者先完成删除也属于清理成功。
+            result = CTaskThreadResult(CTaskThreadOk, true);
+            break;
+        }
+        result = CTaskResultAdapter::map(status);
+        if (result.m_committed || result.m_status != CTaskThreadRetry)
+        {
+            result.m_committed = true;
+            break;
+        }
+        result = CTaskResultAdapter::pause(attempts);
+        if (result.m_status != CTaskThreadOk)
+        {
+            result.m_committed = true;
+            break;
+        }
     }
     size_t released = 0;
     m_threads.lockFreeMapMaintain((std::numeric_limits<size_t>::max)(), released);
@@ -153,48 +183,57 @@ CTaskThreadResult CTaskManagerState::shutdown()
     {
         return CTaskThreadResult(CTaskThreadSelfWait);
     }
-    bool self = false;
-    const size_t visited = m_threads.forEach([&self](const uint32_t&, const std::shared_ptr<CTaskThread>& thread)
+    uint32_t attempts = 0;
+    for (;;)
     {
-        self = self || thread->selfWait();
-    });
-    if (self)
-    {
-        return CTaskThreadResult(CTaskThreadSelfWait);
-    }
-    if (visited == 0 && !m_threads.empty())
-    {
-        return CTaskThreadResult(CTaskThreadRetry);
-    }
-    bool expected = false;
-    if (!m_bulk.compare_exchange_strong(expected, true, std::memory_order_acq_rel, std::memory_order_acquire))
-    {
-        return CTaskThreadResult(CTaskThreadBusy);
+        bool expected = false;
+        if (m_bulk.compare_exchange_strong(expected, true, std::memory_order_acq_rel, std::memory_order_acquire))
+        {
+            break;
+        }
+        const CTaskThreadResult paused = CTaskResultAdapter::pause(attempts);
+        if (paused.m_status != CTaskThreadOk)
+        {
+            return paused;
+        }
     }
     CTaskThreadResult result(CTaskThreadOk, true);
     m_creators.close();
     try
     {
-        Semaphore pause;
         while (m_creators.active() != 0)
         {
-            pause.waitResult(10);
-        }
-        m_threads.forEach([](const uint32_t&, const std::shared_ptr<CTaskThread>& thread)
-        {
-            thread->requestStop();
-        });
-        m_threads.forEach([this, &result](const uint32_t& id, const std::shared_ptr<CTaskThread>&)
-        {
-            const CTaskThreadResult item = finish(id, false);
-            if (item.m_status != CTaskThreadOk && item.m_status != CTaskThreadNotFound)
+            result = CTaskResultAdapter::pause(attempts);
+            if (result.m_status != CTaskThreadOk)
             {
-                result = item;
+                break;
             }
-        });
-        if (!m_threads.empty() && result.m_status == CTaskThreadOk)
+        }
+        while (result.m_status == CTaskThreadOk && !m_threads.empty())
         {
-            result = CTaskThreadResult(CTaskThreadRetry);
+            std::vector<std::shared_ptr<CTaskThread>> threads;
+            result = CTaskResultAdapter::snapshot(m_threads, threads);
+            if (result.m_status != CTaskThreadOk)
+            {
+                break;
+            }
+            // 快照只保留 shared_ptr，不把 Map 读保护带进停止回调、join 或删除重试。
+            for (size_t i = 0; i < threads.size(); ++i)
+            {
+                const CTaskThreadResult item = threads[i]->requestShutdown(false);
+                if (item.m_status != CTaskThreadOk)
+                {
+                    result = item;
+                }
+            }
+            for (size_t i = 0; i < threads.size(); ++i)
+            {
+                const CTaskThreadResult item = finish(threads[i]->threadId(), false);
+                if (item.m_status != CTaskThreadOk && item.m_status != CTaskThreadNotFound)
+                {
+                    result = item;
+                }
+            }
         }
         size_t released = 0;
         m_threads.lockFreeMapMaintain((std::numeric_limits<size_t>::max)(), released);
@@ -209,6 +248,10 @@ CTaskThreadResult CTaskManagerState::shutdown()
     }
     m_creators.reopen();
     m_bulk.store(false, std::memory_order_release);
+    if (result.m_status == CTaskThreadOk)
+    {
+        result.m_committed = true;
+    }
     return result;
 }
 
@@ -216,9 +259,20 @@ std::shared_ptr<CTaskThread> CTaskManagerState::get(uint32_t threadId)
 {
     std::shared_ptr<CTaskThread> thread;
     LockFreeMapToken token;
-    if (threadId != 0)
+    uint32_t attempts = 0;
+    while (threadId != 0)
     {
-        m_threads.lockFreeMapGet(threadId, thread, token);
+        const LockFreeMapStatus status = m_threads.lockFreeMapGet(threadId, thread, token);
+        if (status == LOCK_FREE_MAP_OK)
+        {
+            break;
+        }
+        thread.reset();
+        if (CTaskResultAdapter::map(status).m_status != CTaskThreadRetry ||
+            CTaskResultAdapter::pause(attempts).m_status != CTaskThreadOk)
+        {
+            break;
+        }
     }
     return thread;
 }

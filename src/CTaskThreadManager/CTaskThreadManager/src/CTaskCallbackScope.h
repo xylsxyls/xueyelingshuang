@@ -7,9 +7,10 @@ class CTaskCallbackScope
 public:
     /** 在调用栈上登记一次借用，不分配内存
     @param [in] owner 借用状态的地址
-    @param [in] stopped 正在执行 StopTask 的任务地址，可为空
+    @param [in] stopped 正在执行 stopTask 的任务地址，可为空
+    @param [in] reader 当前层是否持有任务记录保护位置
     */
-    explicit CTaskCallbackScope(const void* owner, const void* stopped = nullptr);
+    explicit CTaskCallbackScope(const void* owner, const void* stopped = nullptr, bool reader = false);
 
     /** 恢复上一层借用
     */
@@ -20,6 +21,12 @@ public:
     @return 是否持有
     */
     static bool contains(const void* owner);
+
+    /** 查询当前调用栈是否持有指定状态的任务记录保护位置
+    @param [in] owner 状态地址
+    @return 是否存在不能由当前重入调用释放的外层保护
+    */
+    static bool reading(const void* owner);
 
     /** 查询任务是否正在当前调用栈中接受停止通知
     @param [in] task 任务地址
@@ -55,6 +62,8 @@ private:
     const void* m_owner;
     // 接受停止通知的任务
     const void* m_stopped;
+    // 当前栈层持有任务记录保护，用于识别耗尽后的递归自等待
+    bool m_reader;
     // 上一层调用栈节点
     CTaskCallbackScope* m_previous;
 };

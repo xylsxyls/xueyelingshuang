@@ -3,6 +3,9 @@
 #include "CTaskReadDomain.h"
 #include "CTaskThreadModels.h"
 #include <functional>
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 
 /** 任务记录的位图内存池；同一记录不再另建 HashMap 键和值控制块
 */
@@ -78,6 +81,11 @@ public:
     */
     void flush(CTaskStorageCache& cache);
 
+    /** 响应其他分配者的归还请求，不触碰已经发布的任务
+    @param [in,out] cache 当前调用独占的缓存
+    */
+    void flushRequested(CTaskStorageCache& cache);
+
     /** 有界借用空闲读侧位置，释放队列生产者上下文，不等待在途投递
     @return 实际释放的上下文数量；调用方自身持有的位置自动跳过
     */
@@ -120,6 +128,18 @@ private:
     @return 是否取得非零缓存位
     */
     bool scan(CTaskStorageCache& cache, CTaskStorageAllocation& allocation);
+
+    /** 本地缓存耗尽后回收、扫描或扩容；不改变已有槽位所有权
+    @param [in,out] cache 本次独占缓存
+    @param [in,out] allocation 当前优先级的分配游标
+    @param [out] result 失败原因，成功为 Ok
+    @return 是否取得可用缓存位
+    */
+    bool refill(CTaskStorageCache& cache, CTaskStorageAllocation& allocation, CTaskThreadResult& result);
+
+    /** 取得槽位后评估预扩容；失败不撤销已取得的槽位
+    */
+    void preGrow();
 
     /** 并发预留预算并私有构造批次，再一次发布
     @param [in] requested 期望新增数量，内部截断上限和单块大小
@@ -177,12 +197,16 @@ private:
     std::atomic<size_t>* m_counts;
     // 固定目录长度
     size_t m_directoryCount;
+    // 缓存数组对齐前的原始字节存储，避免旧x86数组cookie破坏64位原子对齐
+    unsigned char* m_cacheStorage;
     // 保护位置数量加一个消费者专用缓存
     CTaskStorageCache* m_caches;
     // 曾使用目录上界
     std::atomic<size_t> m_high;
     // 已发布和在途申请统一预算
-    std::atomic<size_t> m_budget;
+    std::atomic<uint64_t> m_budget;
+    // 低频扩容的目录起点轮转，不让调用总从第一个目录槽竞争
+    std::atomic<size_t> m_directoryTurn;
     // 成功扩容次数
     std::atomic<uint64_t> m_grows;
     // 最近一次成功扩容的单调毫秒
@@ -194,7 +218,7 @@ private:
     // 唯一消费者退休链尾
     CTaskStorageSlot* m_retiredTail;
     // 唯一消费者的有界退休窗口，常见路径不逐任务改写槽位的链字段
-    CTaskRetiredRecord m_retiredWindow[1024];
+    CTaskRetiredRecord m_retiredWindow[4096];
     // 唯一消费者退休窗口的下一个读取位置
     size_t m_retiredRead;
     // 唯一消费者退休窗口内尚待回收的记录数

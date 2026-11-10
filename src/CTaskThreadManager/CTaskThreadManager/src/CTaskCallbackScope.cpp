@@ -18,6 +18,18 @@ bool CTaskCallbackScope::contains(const void* owner)
     return false;
 }
 
+bool CTaskCallbackScope::reading(const void* owner)
+{
+    for (CTaskCallbackScope* scope = m_current; scope != nullptr; scope = scope->m_previous)
+    {
+        if (scope->m_owner == owner && scope->m_reader)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool CTaskCallbackScope::stopping(const void* task)
 {
     for (CTaskCallbackScope* scope = m_current; scope != nullptr; scope = scope->m_previous)

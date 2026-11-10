@@ -27,20 +27,21 @@ public:
     */
     CTaskThreadResult start();
 
-    /** 投递一次任务
+    /** 投递任务，普通调用内部处理未提交竞争
     @param [in] task 任务强引用
     @param [in] level 大于零的任务优先级
+    @param [in] retryTransient false 仅用于 tryPostTask，允许未提交竞争立即返回
     @return committed 为 true 时禁止重投
     */
-    CTaskThreadResult post(const std::shared_ptr<CTask>& task, int32_t level);
+    CTaskThreadResult post(const std::shared_ptr<CTask>& task, int32_t level, bool retryTransient = true);
 
     /** 关闭接纳并等待退出
     @param [in] drain true 排空，false 丢弃排队任务并停止当前任务
-    @return 自等待和并发生命周期操作明确拒绝
+    @return 自等待明确拒绝；并发关闭在内部等待同一次 join 完成
     */
     CTaskThreadResult finish(bool drain);
 
-    /** 仅发布停止意图，不等待
+    /** 发布停止意图，不等待线程退出；停止观察的竞争内部重试
     @param [in] drain 是否排空
     */
     CTaskThreadResult requestFinish(bool drain);
@@ -77,6 +78,21 @@ public:
     CTaskThreadResult waitInfo(std::map<int32_t, int32_t>& counts);
 
 private:
+    /** 执行一次停止通知尝试；取得保护前不会调用业务回调
+    @param [in] propertyId 属性 ID
+    @param [in] level 优先级过滤
+    @param [in] all 是否通知全部属性
+    @param [in] currentOnly 是否只通知当前任务
+    @return Retry 表示尚未执行任何停止回调
+    */
+    CTaskThreadResult stopOnce(int32_t propertyId, int32_t level, bool all, bool currentOnly);
+
+    /** 执行一次分级计数查询，失败不保留部分输出
+    @param [out] counts 排队计数
+    @return 查询结果，普通查询在外层处理竞争
+    */
+    CTaskThreadResult waitInfoOnce(std::map<int32_t, int32_t>& counts);
+
     /** 分配不回绕序号
     @param [in,out] cache 本调用独占的位置及预留序号段
     @return 非零序号，耗尽返回零
@@ -123,9 +139,10 @@ private:
     @param [in,out] cache 本调用持有读侧租约的缓存
     @param [in,out] bucket 本次有效的优先级桶
     @param [in] record 完全构造但尚未发布的记录
+    @param [in] retryTransient 普通投递可保留本次记录做少量竞争重试，try 投递不使用此优化
     @return 只有成功时发布，容量压力下仅重试尚未发布的记录
     */
-    LockFreeQueueResult publish(CTaskStorageCache& cache, CTaskPriorityBucket& bucket, CTaskStorageSlot* record);
+    LockFreeQueueResult publish(CTaskStorageCache& cache, CTaskPriorityBucket& bucket, CTaskStorageSlot* record, bool retryTransient);
 
     /** 安全通知当前高优先级抢占
     @param [in] level 已经成功接纳的新任务优先级
@@ -230,7 +247,7 @@ private:
     const bool m_pinCommon;
     // 构造时查询写预取能力，不在运行期修改，也不引入全局初始化锁
     const bool m_writePrefetch;
-    // 常用最高待检查级别；发布者提高，消费者逐级降低并复查
+    // 常用级别的扫描上界只增不减，也用于识别单级队列
     CTaskReadyIndex m_readyIndex;
     // 只会由 false 变为 true，必须在任何未缓存桶发布任务前设置
     std::atomic<bool> m_scanBuckets;
@@ -248,7 +265,7 @@ private:
     std::atomic<int32_t> m_started;
     // 0 运行，1 排空，2 丢弃
     std::atomic<int32_t> m_stopMode;
-    // 生命周期操作权，竞争者直接返回 Busy，不循环等待占有者
+    // 系统 join 操作权，并发关闭者退避等待完成，投递不使用此状态
     std::atomic<bool> m_joining;
     // 线程主函数已完成业务访问
     std::atomic<bool> m_exited;
@@ -258,7 +275,7 @@ private:
     char m_lifecyclePadding[64];
     // 常用级别分开发布执行观察位置，生产者不读取无关级别的当前记录
     CTaskRunningIndex m_runningIndex;
-    // 不复用的记录序号
+    // 已领取的512序号段数量；段号留有足够余量容纳边界并发，业务序号不回绕
     std::atomic<uint64_t> m_sequence;
     // 多生产者编号与单消费者当前状态隔离
     char m_sequencePadding[64];
@@ -278,6 +295,10 @@ private:
     std::atomic<int32_t> m_preemptionFloor;
     // 下界观察不与额度修改共用缓存行
     char m_floorPadding[64];
+    // 有限容量的当前占用及短暂申请数；完成或失败归还，重做沿用原额度
+    std::atomic<uint64_t> m_taskClaims;
+    // 限额原子与累计统计分开，避免消费者归还污染生产者累计缓存行
+    char m_taskClaimsPadding[64];
     // 生产者累计预留额度，失败回滚；消费者不修改此计数
     std::atomic<uint64_t> m_outstanding;
     // 接纳额度与队列计数分离，避免无关原子写互相失效
@@ -294,6 +315,8 @@ private:
     std::atomic<uint64_t> m_executed;
     // 接纳失败次数
     std::atomic<uint64_t> m_rejected;
+    // 有限资源压力的调度提示；只影响退避，不参与任务接纳或发布判定
+    std::atomic<uint32_t> m_pressureYields;
     // 可观察异常/系统失败次数
     std::atomic<uint64_t> m_errors;
     // 生产者每次只读通知位，不与消费者逐任务统计写入共用缓存行

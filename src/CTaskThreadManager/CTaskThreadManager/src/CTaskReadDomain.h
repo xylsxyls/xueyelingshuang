@@ -45,15 +45,17 @@ public:
     bool atomicsLockFree() const;
 
     /** 取得一个借用位置并验证 epoch；拒绝关闭域或已用尽的保护预算
+    @param [out] contended 可空；扫描失败时是否曾观察到空位但 CAS 领取失败
     @return 有效位置或 nullptr；返回前不得解引用受保护对象
     */
-    CTaskReadPosition* enter();
+    CTaskReadPosition* enter(bool* contended = nullptr);
 
     /** 尝试借用指定位置，供唯一维护者清理空闲位置的私有缓存
     @param [in] index 小于 capacity 的位置索引
+    @param [out] contended 可空；空位被并发领取时置 true，调用方先清零
     @return 成功取得的位置或 nullptr，不等待已有借用者
     */
-    CTaskReadPosition* tryEnter(size_t index);
+    CTaskReadPosition* tryEnter(size_t index, bool* contended = nullptr);
 
     /** 将本域返回的位置映射到并行缓存下标
     @param [in] position 本域 enter 或 tryEnter 返回的位置
@@ -101,6 +103,14 @@ public:
     size_t capacity() const;
 
 private:
+    /** 首选位置冲突后有界扫描其余位置，冷路径不展开到每次投递
+    @param [in] preferred 本次已经尝试的位置
+    @param [in,out] hint 当前线程的下次尝试位置，关闭时保留原值
+    @param [in,out] contended 可空；继续累积本次是否出现 CAS 竞争
+    @return 成功借用的位置或 nullptr，不等待某个持有者
+    */
+    CTaskReadPosition* enterFallback(size_t preferred, size_t& hint, bool* contended);
+
     /** 禁止复制仍在使用的保护域
     @param [in] other 源对象
     */
