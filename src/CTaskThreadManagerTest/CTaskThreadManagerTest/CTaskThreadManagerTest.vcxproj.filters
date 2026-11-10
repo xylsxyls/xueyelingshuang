@@ -24,4 +24,66 @@
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BlackBoxTestSupport.cpp" />
+    <ClInclude Include="BlackBoxTestSupport.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CTaskFaultAllocation.cpp" />
+    <ClInclude Include="CTaskFaultAllocation.h" />
+    <ClCompile Include="CTaskThreadModuleTests.cpp" />
+    <ClInclude Include="CTaskThreadModuleTests.h" />
+    <ClCompile Include="CTaskThreadStressTests.cpp" />
+    <ClInclude Include="CTaskThreadStressTests.h" />
+    <ClCompile Include="CTaskThreadWhiteBoxTests.cpp" />
+    <ClInclude Include="CTaskThreadWhiteBoxTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CTaskThreadBenchmark.cpp" />
+    <ClInclude Include="CTaskThreadBenchmark.h" />
+    <ClCompile Include="CTaskThreadRegressionTests.cpp" />
+    <ClInclude Include="CTaskThreadRegressionTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CTaskThreadTestAccess.h" />
+    <ClInclude Include="CTaskThreadTestConfig.h" />
+    <ClCompile Include="CTaskThreadTestAccess.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CTaskPreparedProfiler.cpp" />
+    <ClCompile Include="CTaskPreparedBenchmark.cpp" />
+    <ClInclude Include="CTaskPreparedProfiler.h" />
+    <ClInclude Include="CTaskPreparedBenchmark.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CTaskV3ModuleTests.cpp" />
+    <ClInclude Include="CTaskV3ModuleTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CTaskPrivateTestAccess.h" />
+    <ClInclude Include="CTaskPrivateTestAccess.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CTaskV5Tests.h" />
+    <ClCompile Include="CTaskV5Tests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CTaskIntrusivePrototype.h" />
+    <ClCompile Include="CTaskIntrusivePrototype.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CTaskFairnessTests.h" />
+    <ClCompile Include="CTaskFairnessTests.cpp" />
+    <ClInclude Include="CTaskQueueResourceRace.h" />
+    <ClCompile Include="CTaskQueueResourceRace.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CTaskHangSampler.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CTaskTestAutomation.h" />
+    <ClCompile Include="CTaskTestAutomation.cpp" />
+    <ClInclude Include="CTaskUsageTests.h" />
+    <ClCompile Include="CTaskUsageTests.cpp" />
+  </ItemGroup>
 </Project>
