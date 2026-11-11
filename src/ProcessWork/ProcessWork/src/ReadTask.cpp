@@ -1,13 +1,15 @@
 ﻿#include "ReadTask.h"
 #include "ProcessWorkChannel.h"
 
-ReadTask::ReadTask(): m_channel(nullptr), m_queue(nullptr), m_notification(nullptr), m_fullCount(nullptr), m_exit(false)
+ReadTask::ReadTask() :
+m_channel(nullptr), m_queue(nullptr), m_fullCount(nullptr), m_exit(false)
 {
+
 }
 
-void ReadTask::DoTask()
+void ReadTask::doTask()
 {
-    if (m_channel == nullptr || m_queue == nullptr || m_notification == nullptr || m_fullCount == nullptr)
+    if (m_channel == nullptr || m_queue == nullptr || m_fullCount == nullptr)
     {
         return;
     }
@@ -16,7 +18,7 @@ void ReadTask::DoTask()
         int32_t copied = 0;
         try
         {
-            copied = m_channel->pump(*m_queue, *m_notification, *m_fullCount);
+            copied = m_channel->pump(*m_queue, *m_fullCount);
         }
         catch (...)
         {
@@ -29,7 +31,7 @@ void ReadTask::DoTask()
     }
 }
 
-void ReadTask::StopTask()
+void ReadTask::stopTask()
 {
     m_exit = true;
     if (m_channel != nullptr)
@@ -38,11 +40,10 @@ void ReadTask::StopTask()
     }
 }
 
-void ReadTask::setParam(ProcessWorkChannel* channel, LockFreeQueue<char*>* queue,
-    Semaphore* notification, std::atomic<int32_t>* fullCount)
+void ReadTask::setParam(ProcessWorkChannel* channel, ProcessWorkReceiveQueue* queue,
+    std::atomic<int32_t>* fullCount)
 {
     m_channel = channel;
     m_queue = queue;
-    m_notification = notification;
     m_fullCount = fullCount;
 }

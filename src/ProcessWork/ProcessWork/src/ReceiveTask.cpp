@@ -1,36 +1,31 @@
 ﻿#include "ReceiveTask.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "ProcessReceiveCallback.h"
-#include "Semaphore/SemaphoreAPI.h"
 #include <memory>
 #include <cstdio>
 #include <cstring>
 
-ReceiveTask::ReceiveTask():
+ReceiveTask::ReceiveTask() :
 m_fullCount(nullptr),
 m_callback(nullptr),
 m_receiveQueue(nullptr),
-m_receiveSemaphore(nullptr),
 m_exit(false)
 {
 
 }
 
-void ReceiveTask::DoTask()
+void ReceiveTask::doTask()
 {
-    if (m_callback == nullptr || m_receiveQueue == nullptr || m_receiveSemaphore == nullptr)
+    if (m_callback == nullptr || m_receiveQueue == nullptr)
     {
         return;
     }
     bool reported = false;
     while (!m_exit)
     {
-        m_receiveSemaphore->wait(20);
-        if (m_exit)
-        {
-            break;
-        }
-        const int32_t full = m_fullCount == nullptr ? 0 : m_fullCount->exchange(0);
+        // 空闲标志只读；确有满载通知时才执行写入缓存行的原子交换。
+        const int32_t full = m_fullCount == nullptr || m_fullCount->load(std::memory_order_acquire) == 0 ?
+            0 : m_fullCount->exchange(0, std::memory_order_acq_rel);
         if (full > 0)
         {
             for (size_t i = 0; i < m_callback->size(); ++i)
@@ -49,12 +44,21 @@ void ReceiveTask::DoTask()
             }
         }
         char* receive = nullptr;
-        if (!m_receiveQueue->pop(&receive) || receive == nullptr)
+        if (!m_receiveQueue->take(&receive, 20) || receive == nullptr)
         {
             continue;
         }
 
-        std::unique_ptr<char[]> owned(receive);
+        // 参数为本次尚未交付的资源；按对应所有者规则释放，不传播异常。
+        auto release = [this](char* packet)
+        {
+            m_receiveQueue->release(packet);
+        };
+        std::unique_ptr<char, decltype(release)> owned(receive, release);
+        if (m_exit)
+        {
+            break;
+        }
         int32_t header[3] = {};
         std::memcpy(header, receive, sizeof(header));
         const int32_t sendPid = header[0];
@@ -83,18 +87,20 @@ void ReceiveTask::DoTask()
     }
 }
 
-void ReceiveTask::StopTask()
+void ReceiveTask::stopTask()
 {
     m_exit = true;
-    m_receiveSemaphore->signal();
+    if (m_receiveQueue != nullptr)
+    {
+        m_receiveQueue->wake();
+    }
 }
 
 void ReceiveTask::setParam(std::vector<ProcessReceiveCallback*>* callback,
-    LockFreeQueue<char*>* receiveQueue,
-    Semaphore* receiveSemaphore, std::atomic<int32_t>* fullCount)
+    ProcessWorkReceiveQueue* receiveQueue,
+    std::atomic<int32_t>* fullCount)
 {
     m_fullCount = fullCount;
     m_callback = callback;
     m_receiveQueue = receiveQueue;
-    m_receiveSemaphore = receiveSemaphore;
 }

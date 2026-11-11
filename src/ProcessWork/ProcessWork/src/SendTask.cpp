@@ -1,5 +1,4 @@
 ﻿#include "SendTask.h"
-#include "Semaphore/SemaphoreAPI.h"
 #include "ProcessWork.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "CSystem/CSystemAPI.h"
@@ -13,19 +12,23 @@ static __declspec(thread) const std::atomic<bool>* s_currentStopFlag = nullptr;
 static thread_local const std::atomic<bool>* s_currentStopFlag = nullptr;
 #endif
 
-SendTask::SendTask():
+SendTask::SendTask() :
 m_owner(nullptr),
+m_cache(nullptr),
 m_waitEndPost(nullptr),
 m_postQueue(nullptr),
-m_postSemaphore(nullptr),
 m_exit(false),
 m_ready(true)
 {
 
 }
 
-void SendTask::DoTask()
+void SendTask::doTask()
 {
+    if (m_postQueue == nullptr || m_waitEndPost == nullptr)
+    {
+        return;
+    }
     const std::atomic<bool>* previous = setCurrentStopFlag(&m_exit);
     // 借用标记，退出作用域时恢复嵌套调用前的线程状态；不释放任务成员。
     auto restore = [previous](const std::atomic<bool>*)
@@ -38,20 +41,46 @@ void SendTask::DoTask()
         CSystem::Sleep(1);
     }
     bool reported = false;
+    uint32_t processed = 0;
+    char* pending[64] = {};
+    size_t next = 0, count = 0;
+    // 指针数组在栈上，统一归还已处理和未处理正文，不释放数组本身。
+    auto releasePending = [this](char** packets)
+    {
+        m_postQueue->releasePrefix(packets, 64);
+    };
+    std::unique_ptr<char*, decltype(releasePending)> pendingScope(pending, releasePending);
+    ProcessWorkSendCacheLease channelLease;
+    ProcessWorkChannel* channel = nullptr;
+    int32_t channelPid = 0;
+    uint64_t channelEpoch = 0;
     while (!m_exit)
     {
-        m_postSemaphore->wait(20);
-        if (m_exit || (*m_waitEndPost && m_postQueue->empty()))
+        if ((processed++ & 255) == 0)
+        {
+            m_postQueue->refreshMemory();
+        }
+        if (m_exit || (*m_waitEndPost && next == count && m_postQueue->empty()))
         {
             break;
         }
 
-        char* postBuffer = nullptr;
-        if (!m_postQueue->pop(&postBuffer) || postBuffer == nullptr)
+        if (next == count)
+        {
+            channelLease.reset();
+            channel = nullptr;
+            m_postQueue->releasePrefix(pending, count);
+            next = 0;
+            if (!m_postQueue->takePrefix(pending, 64, count, 20))
+            {
+                continue;
+            }
+        }
+        char* postBuffer = pending[next++];
+        if (postBuffer == nullptr)
         {
             continue;
         }
-        std::unique_ptr<char[]> owned(postBuffer);
         while (!m_exit)
         {
             try
@@ -60,15 +89,39 @@ void SendTask::DoTask()
                 std::memcpy(header, postBuffer, sizeof(header));
                 ProcessWork& owner = m_owner == nullptr ? ProcessWork::instance() : *m_owner;
                 const char* data = header[2] == 0 ? nullptr : postBuffer + 16 + header[3];
+                int32_t result = PROCESS_WORK_UNAVAILABLE;
                 if (header[3] == 0)
                 {
-                    owner.send(header[0], data, header[2], static_cast<MessageType>(header[1]));
+                    const uint64_t epoch = m_cache == nullptr ? 0 : m_cache->epoch();
+                    if (channel == nullptr || channelPid != header[0] || channelEpoch != epoch)
+                    {
+                        channelLease.reset();
+                        channelPid = header[0];
+                        channelEpoch = epoch;
+                        channel = m_cache == nullptr ? nullptr : m_cache->find(channelPid, channelLease);
+                    }
+                    if (channel != nullptr)
+                    {
+                        result = channel->trySend(data, header[2], header[1], true, true, &m_exit);
+                    }
+                    if (channel == nullptr || (result == PROCESS_WORK_UNAVAILABLE && !channel->ready()))
+                    {
+                        channelLease.reset();
+                        channel = nullptr;
+                        result = owner.sendResult(header[0], data, header[2], static_cast<MessageType>(header[1]));
+                    }
                 }
                 else
                 {
-                    owner.send(std::string(postBuffer + 16, header[3]), data, header[2], static_cast<MessageType>(header[1]));
+                    channelLease.reset();
+                    channel = nullptr;
+                    result = owner.sendResult(std::string(postBuffer + 16, header[3]), data, header[2], static_cast<MessageType>(header[1]));
                 }
-                break;
+                if (result != PROCESS_WORK_NO_MEMORY && result != PROCESS_WORK_CAPACITY && result != PROCESS_WORK_RESOURCE)
+                {
+                    // 已提交不重放；目标关闭或无效消息沿既有取消语义结束本项。
+                    break;
+                }
             }
             catch (...)
             {
@@ -84,10 +137,13 @@ void SendTask::DoTask()
     }
 }
 
-void SendTask::StopTask()
+void SendTask::stopTask()
 {
     m_exit = true;
-    m_postSemaphore->signal();
+    if (m_postQueue != nullptr)
+    {
+        m_postQueue->wake();
+    }
 }
 
 const std::atomic<bool>* SendTask::currentStopFlag()
@@ -107,11 +163,12 @@ void SendTask::start()
     m_ready = true;
 }
 
-void SendTask::setParam(std::atomic<bool>* waitEndPost, LockFreeQueue<char*>* postQueue, Semaphore* postSemaphore, bool ready, ProcessWork* owner)
+void SendTask::setParam(std::atomic<bool>* waitEndPost, ProcessWorkLocalQueue* postQueue, bool ready,
+    ProcessWork* owner, ProcessWorkSendCache* cache)
 {
     m_waitEndPost = waitEndPost;
     m_postQueue = postQueue;
-    m_postSemaphore = postSemaphore;
     m_ready = ready;
     m_owner = owner;
+    m_cache = cache;
 }

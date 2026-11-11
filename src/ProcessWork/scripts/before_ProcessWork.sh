@@ -63,14 +63,14 @@ fi
 librariesrely+=($'project\tCSystem\t'"$CSystem_dlllib")
 
 #--------------------------------------------------------------------
-ReadWriteMutex_bit=$1
-ReadWriteMutex_dlllib=$2
-ReadWriteMutex_debugRelease=$3
-ReadWriteMutex_allSame=$4
+LockFreeMap_bit=$1
+LockFreeMap_dlllib=$2
+LockFreeMap_debugRelease=$3
+LockFreeMap_allSame=$4
 if [[ $4 != only ]]; then
-    "$CLOUD_REBUILD" ReadWriteMutex "$ReadWriteMutex_bit" "$ReadWriteMutex_dlllib" "$ReadWriteMutex_debugRelease" "$ReadWriteMutex_allSame"
+    "$CLOUD_REBUILD" LockFreeMap "$LockFreeMap_bit" "$LockFreeMap_dlllib" "$LockFreeMap_debugRelease" "$LockFreeMap_allSame"
 fi
-librariesrely+=($'project\tReadWriteMutex\t'"$ReadWriteMutex_dlllib")
+librariesrely+=($'project\tLockFreeMap\t'"$LockFreeMap_dlllib")
 
 #--------------------------------------------------------------------
 LockFreeQueue_bit=$1

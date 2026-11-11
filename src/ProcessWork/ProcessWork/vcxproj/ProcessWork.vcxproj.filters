@@ -55,4 +55,40 @@
     <ClCompile Include="..\src\ProcessWorkChannel.cpp" />
     <ClInclude Include="..\src\ProcessWorkChannel.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\ProcessWorkAtomic.h" />
+    <ClInclude Include="..\src\ProcessWorkAtomic.inl" />
+    <ClInclude Include="..\src\ProcessWorkMacroDll.h" />
+    <ClInclude Include="..\src\ProcessWorkMacroLib.h" />
+    <ClCompile Include="..\src\ProcessWorkMemory.cpp" />
+    <ClCompile Include="..\src\ProcessWorkConfig.cpp" />
+    <ClCompile Include="..\src\ProcessWorkMemoryPolicy.cpp" />
+    <ClInclude Include="..\src\ProcessWorkMemory.h" />
+    <ClInclude Include="..\src\ProcessWorkConfig.h" />
+    <ClInclude Include="..\src\ProcessWorkMemoryPolicy.h" />
+    <ClInclude Include="..\src\ProcessWorkProtocol.h" />
+    <ClCompile Include="..\src\ProcessWorkSharedQueue.cpp" />
+    <ClInclude Include="..\src\ProcessWorkSharedQueue.h" />
+    <ClInclude Include="..\src\ProcessWorkSharedQueue.inl" />
+    <ClCompile Include="..\src\ProcessWorkStorage.cpp" />
+    <ClInclude Include="..\src\ProcessWorkStorage.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\ProcessWorkLocalQueue.cpp" />
+    <ClInclude Include="..\src\ProcessWorkLocalQueue.h" />
+    <ClCompile Include="..\src\ProcessWorkTime.cpp" />
+    <ClCompile Include="..\src\ProcessWorkSendCache.cpp" />
+    <ClCompile Include="..\src\ProcessWorkPacketPool.cpp" />
+    <ClInclude Include="..\src\ProcessWorkSendCache.h" />
+    <ClInclude Include="..\src\ProcessWorkPacketPool.h" />
+    <ClInclude Include="..\src\ProcessWorkTime.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\ProcessWorkReceiveQueue.cpp" />
+    <ClInclude Include="..\src\ProcessWorkReceiveQueue.h" />
+    <ClInclude Include="..\src\ProcessWorkReceiveQueue.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\ProcessWorkStorage.inl" />
+  </ItemGroup>
 </Project>

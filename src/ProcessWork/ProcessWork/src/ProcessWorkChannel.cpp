@@ -1,24 +1,88 @@
 ﻿#include "ProcessWorkChannel.h"
 #include "AtomicMath/AtomicMathAPI.h"
+#include "ProcessWorkAtomic.h"
+#include "ProcessWorkStorage.h"
+#include "ProcessWorkSharedQueue.h"
+#include "ProcessWorkReceiveQueue.h"
+#include "ProcessWorkTime.h"
+#include <algorithm>
 #include "CSystem/CSystemAPI.h"
-#include <chrono>
 #include <cstring>
 #include <limits.h>
 #include <cstddef>
 #include <utility>
+#include <thread>
+#include <new>
 
-static_assert(sizeof(ProcessWorkDirectory) == 24, "v2 directory layout");
-static_assert(sizeof(ProcessWorkPeer) == 24, "v2 peer layout");
-static_assert(sizeof(ProcessWorkControl) == 30800, "v2 control layout");
-static_assert(offsetof(ProcessWorkControl, m_ring) % 8 == 0, "v2 ring alignment");
+static_assert(sizeof(ProcessWorkSharedDirectory) == 24, "v5 directory layout");
+static_assert(sizeof(ProcessWorkSharedPeer) == 24, "v5 peer layout");
+static_assert(sizeof(ProcessWorkSharedControl) == 6528, "v5 control layout");
+static_assert(sizeof(ProcessWorkSharedBlock) == 64 && sizeof(ProcessWorkSharedNode) == 256, "v5 independent owner cache lines");
+static_assert(sizeof(ProcessWorkSharedStream) == 384, "v5 stream layout");
+static_assert(sizeof(ProcessWorkSharedMetadata) == 180288, "v5 metadata layout");
+static_assert(offsetof(ProcessWorkSharedControl, m_nextStream) == 64 && offsetof(ProcessWorkSharedControl, m_streamEpoch) == 128, "v5 producer registry isolation");
+
+#ifdef _MSC_VER
+static __declspec(thread) uint32_t s_reservationCursor = 0;
+static __declspec(thread) uint32_t s_nodeReservationCursor = 0;
+static __declspec(thread) uint32_t s_sendBurst = 0;
+#else
+static thread_local uint32_t s_reservationCursor = 0;
+static thread_local uint32_t s_nodeReservationCursor = 0;
+static thread_local uint32_t s_sendBurst = 0;
+#endif
+
+/** 产生线程私有扫描起点；它只是提示，不承担容量预留或消息排序
+@param [in] pid 本进程PID，用于分散不同进程的初始位置
+@return 可回绕的无符号提示值，实际所有权仍由共享CAS决定
+*/
+static uint32_t ChannelReservationStart(int32_t pid)
+{
+    if (s_reservationCursor == 0)
+    {
+        s_reservationCursor = (CSystem::SystemThreadId() ^ static_cast<uint32_t>(pid)) * 2654435761U + 1;
+    }
+    return s_reservationCursor++;
+}
 
 /** 取得本进程单调毫秒。
 @return 不受墙上时钟调整影响的时间
 */
 static uint64_t ChannelNow()
 {
-    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count());
+    return ProcessWorkTime::milliseconds();
+}
+
+/** 复制内联小正文，固定宽度memcpy避免旧编译器为每条短消息调用通用复制例程
+@param [out] target 至少length个可写字节，与source不重叠
+@param [in] source 至少length个可读字节；length为0时可以为nullptr
+@param [in] length 0..36字节；只读取声明范围，不对齐访问交给memcpy处理
+*/
+static void ChannelCopyInline(char* target, const char* source, uint32_t length)
+{
+    while (length >= 8)
+    {
+        std::memcpy(target, source, 8);
+        target += 8;
+        source += 8;
+        length -= 8;
+    }
+    if ((length & 4) != 0)
+    {
+        std::memcpy(target, source, 4);
+        target += 4;
+        source += 4;
+    }
+    if ((length & 2) != 0)
+    {
+        std::memcpy(target, source, 2);
+        target += 2;
+        source += 2;
+    }
+    if ((length & 1) != 0)
+    {
+        *target = *source;
+    }
 }
 
 /** 通过已验证跨进程原语读取64位值。
@@ -27,7 +91,7 @@ static uint64_t ChannelNow()
 */
 static int64_t ChannelLoad64(int64_t* value)
 {
-    return AtomicMath::selfAdd(value, static_cast<int64_t>(0));
+    return ProcessWorkAtomic::load(value);
 }
 
 /** 通过跨进程原语读取32位值。
@@ -36,14 +100,31 @@ static int64_t ChannelLoad64(int64_t* value)
 */
 static int32_t ChannelLoad32(int32_t* value)
 {
-    return AtomicMath::selfAdd(value, 0);
+    return ProcessWorkAtomic::load(value);
 }
 
-ProcessWorkChannel::ProcessWorkChannel():
-    m_receiver(false), m_stopped(false), m_pid(0), m_identity(0), m_selfIdentity(0), m_session(0),
-    m_selfPid(0), m_peerIndex(-1), m_directory(nullptr), m_control(nullptr),
-    m_nextMaintenance(0), m_peerCursor(0), m_cursor(0), m_retryDelay(false)
+/** 确认当前平台提供共享控制字段需要的原生原子宽度
+@return false 时拒绝建立通道，避免回退到只在本进程有效的隐藏锁
+*/
+static bool ChannelAtomicsSupported()
 {
+    std::atomic<int32_t> probe32(0);
+    std::atomic<int64_t> probe64(0);
+    return probe32.is_lock_free() && probe64.is_lock_free();
+}
+
+ProcessWorkChannel::ProcessWorkChannel() :
+m_receiver(false), m_stopped(false), m_pid(0), m_identity(0), m_selfIdentity(0), m_session(0),
+m_selfPid(0), m_peerIndex(-1), m_yieldThreshold(16), m_directory(nullptr), m_control(nullptr),
+m_nextGrowth(0), m_growthRemaining(0), m_successfulGrowth(0), m_nextMaintenance(0), m_peerCursor(0),
+m_readPage(nullptr), m_readPageIndex(UINT32_MAX),
+m_nextLivenessCheck(0), m_retryDelay(false)
+{
+    const uint32_t processors = std::thread::hardware_concurrency();
+    if (processors != 0)
+    {
+        m_yieldThreshold = (std::max)(uint32_t(2), processors / 2);
+    }
 }
 
 ProcessWorkChannel::~ProcessWorkChannel()
@@ -54,68 +135,39 @@ ProcessWorkChannel::~ProcessWorkChannel()
 std::string ProcessWorkChannel::objectName(char kind, uint32_t pid, uint64_t identity,
     uint32_t session, uint32_t index, uint32_t generation)
 {
-    // 20字节固定线格式，base64url无填充为27字符，加P2及种类恰好30。
-    unsigned char bytes[20] = {};
-    for (int32_t i = 0; i < 4; ++i)
-    {
-        bytes[i] = static_cast<unsigned char>(pid >> (i * 8));
-    }
-    for (int32_t i = 0; i < 8; ++i)
-    {
-        bytes[4 + i] = static_cast<unsigned char>(identity >> (i * 8));
-    }
-    for (int32_t i = 0; i < 3; ++i)
-    {
-        bytes[12 + i] = static_cast<unsigned char>(session >> (i * 8));
-    }
-    bytes[15] = static_cast<unsigned char>(index);
-    bytes[16] = static_cast<unsigned char>(index >> 8);
-    for (int32_t i = 0; i < 3; ++i)
-    {
-        bytes[17 + i] = static_cast<unsigned char>(generation >> (i * 8));
-    }
-    const char* alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
-    // Darwin sem_open把末尾NUL计入31字节限制；Semaphore还会添加一个前导斜杠。
-    // 通知名因此只用2字节前缀，保留完整27字节编码；共享内存名保持原协议。
-#if defined(__APPLE__) && !TARGET_OS_IPHONE
-    std::string result(kind == 'R' || kind == 'W' ? "P" : "P2");
-#else
-    std::string result("P2");
-#endif
-    result += kind;
-    uint32_t pending = 0;
-    int32_t bits = 0;
-    for (int32_t i = 0; i < 20; ++i)
-    {
-        pending = (pending << 8) | bytes[i];
-        bits += 8;
-        while (bits >= 6)
-        {
-            bits -= 6;
-            result += alphabet[(pending >> bits) & 63];
-        }
-    }
-    if (bits != 0)
-    {
-        result += alphabet[(pending << (6 - bits)) & 63];
-    }
-    return result;
+    return ProcessWorkStorage::objectName(kind, pid, identity, session, index, generation);
 }
 
 bool ProcessWorkChannel::openReceiver(int32_t bytes, int32_t initial, int32_t threshold,
     int32_t increment, int32_t idleSeconds, int32_t rounds)
 {
-    if (m_control != nullptr || bytes < 12 || bytes == INT32_MAX || initial < 1 || initial > 1024 ||
-        threshold < 0 || increment < 0 || idleSeconds < 0 || rounds < 0 ||
-        static_cast<int64_t>(initial) + static_cast<int64_t>(increment) * rounds > 1024 ||
-        ((increment == 0) != (rounds == 0)))
+    return openReceiver(bytes, initial, threshold, increment, idleSeconds, rounds, ProcessWorkMemoryConfig());
+}
+
+bool ProcessWorkChannel::openReceiver(int32_t bytes, int32_t initial, int32_t threshold,
+    int32_t increment, int32_t idleSeconds, int32_t rounds, const ProcessWorkMemoryConfig& memory)
+{
+    const int64_t limit = rounds == -1 ? -1 : static_cast<int64_t>(initial) + static_cast<int64_t>(increment) * rounds;
+    if (m_control != nullptr || bytes < 12 || bytes == INT32_MAX || initial < 1 || initial > 0xffffff ||
+        threshold < 0 || increment < 0 || idleSeconds < 0 || rounds < -1 || limit > 0xffffff ||
+        ((increment == 0) != (rounds == 0)) || !ProcessWorkMemory::valid(memory))
     {
         return false;
     }
+    // 同时估算地址空间占用，不能先申请海量初始块再发现系统已承受不了。
+    // 完全内联的小包不创建逐正文映射；仅计元数据及管理余量，不能按不存在的映射重复预扣。
+    const uint64_t bodyBytes = static_cast<size_t>(bytes) <= sizeof(static_cast<ProcessWorkSharedBlock*>(nullptr)->m_inlineData) ?
+        0 : (static_cast<uint64_t>(bytes) + 65536) * initial;
+    const uint64_t initialBytes = bodyBytes + 2 * 65536 +
+        (static_cast<uint64_t>(initial) / 256 + 1) * (sizeof(ProcessWorkSharedMetadata) + 65536);
+    if (!ProcessWorkMemory::allows(memory, initialBytes))
+    {
+        return false;
+    }
+    m_memoryConfig = memory;
     try
     {
-        std::atomic<int64_t> atomicProbe(0);
-        if (!atomicProbe.is_lock_free())
+        if (!ChannelAtomicsSupported())
         {
             return false;
         }
@@ -124,10 +176,10 @@ bool ProcessWorkChannel::openReceiver(int32_t bytes, int32_t initial, int32_t th
         {
             return false;
         }
-        m_directoryMemory.reset(new SharedMemory("P2D" + std::to_string(m_pid), sizeof(ProcessWorkDirectory), true));
+        m_directoryMemory.reset(new SharedMemory("P3D" + std::to_string(m_pid), sizeof(ProcessWorkSharedDirectory), true));
         m_directoryMemory->preserveName();
-        m_directory = static_cast<ProcessWorkDirectory*>(m_directoryMemory->writeWithoutLock());
-        if (m_directory == nullptr || m_directoryMemory->realSize() < sizeof(ProcessWorkDirectory))
+        m_directory = static_cast<ProcessWorkSharedDirectory*>(m_directoryMemory->writeWithoutLock());
+        if (m_directory == nullptr || m_directoryMemory->realSize() < sizeof(ProcessWorkSharedDirectory))
         {
             close();
             return false;
@@ -166,38 +218,40 @@ bool ProcessWorkChannel::openReceiver(int32_t bytes, int32_t initial, int32_t th
             return false;
         }
         m_controlMemory.reset(new SharedMemory(objectName('C', m_pid, m_identity, static_cast<uint32_t>(m_session)),
-            sizeof(ProcessWorkControl), false));
-        m_control = static_cast<ProcessWorkControl*>(m_controlMemory->writeWithoutLock());
-        if (m_control == nullptr || m_controlMemory->isFailed() || m_controlMemory->realSize() < sizeof(ProcessWorkControl))
+            sizeof(ProcessWorkSharedControl), false));
+        m_control = static_cast<ProcessWorkSharedControl*>(m_controlMemory->writeWithoutLock());
+        if (m_control == nullptr || m_controlMemory->isFailed() || m_controlMemory->realSize() < sizeof(ProcessWorkSharedControl))
         {
             close();
             return false;
         }
-        std::memset(m_control, 0, sizeof(ProcessWorkControl));
-        m_control->m_version = 2;
-        m_control->m_bytes = sizeof(ProcessWorkControl);
+        std::memset(m_control, 0, sizeof(ProcessWorkSharedControl));
+        m_control->m_version = 6;
+        m_control->m_bytes = sizeof(ProcessWorkSharedControl);
         m_control->m_blockBytes = bytes;
+        // 积压额度小于最大包长仍允许初始化，单条永远放不下的消息在发送端接纳前拒绝。
+        m_control->m_maxPayloadBytes = memory.m_localQueueBytes == -1 ? bytes - 12 :
+            static_cast<int32_t>((std::min)(static_cast<int64_t>(bytes - 12),
+                (std::max)(int64_t(-1), memory.m_localQueueBytes - 277)));
         m_control->m_initial = initial;
-        m_control->m_limit = initial + increment * rounds;
+        m_control->m_limit = static_cast<int32_t>(limit);
         m_control->m_threshold = threshold;
         m_control->m_increment = increment;
         m_control->m_idleSeconds = idleSeconds;
-        m_memories.resize(m_control->m_limit);
-        m_idleSince.resize(m_control->m_limit, ChannelNow());
-        for (int32_t i = 0; i < m_control->m_limit; ++i)
-        {
-            m_control->m_blocks[i].m_owner = -1;
-            m_control->m_ring[i] = static_cast<int64_t>(i) << 11;
-        }
-        m_dataReady.createProcessSemaphore(objectName('R', m_pid, m_identity, static_cast<uint32_t>(m_session)));
-        m_spaceReady.createProcessSemaphore(objectName('W', m_pid, m_identity, static_cast<uint32_t>(m_session)));
-        if (m_dataReady.tryProcessSignal() != 0 || !m_dataReady.processWait(0) ||
-            m_spaceReady.tryProcessSignal() != 0 || !m_spaceReady.processWait(0))
+        m_storage.reset(new ProcessWorkStorage(m_pid, m_identity, static_cast<uint32_t>(m_session), bytes, initial, true, memory));
+        m_sharedQueue.reset(new ProcessWorkSharedQueue(*m_storage, *m_control));
+        if (!m_sharedQueue->configureProducers(m_producerConfig) || !m_sharedQueue->initialize())
         {
             close();
             return false;
         }
-        for (int32_t i = 0; i < initial; ++i)
+        if (m_dataReady.createProcessResult(objectName('R', m_pid, m_identity, static_cast<uint32_t>(m_session))).status != SEMAPHORE_OK ||
+            m_spaceReady.createProcessResult(objectName('W', m_pid, m_identity, static_cast<uint32_t>(m_session))).status != SEMAPHORE_OK)
+        {
+            close();
+            return false;
+        }
+        for (int32_t i = 1; i <= initial; ++i)
         {
             if (!createBlock(i))
             {
@@ -216,24 +270,16 @@ bool ProcessWorkChannel::openReceiver(int32_t bytes, int32_t initial, int32_t th
 
 bool ProcessWorkChannel::createBlock(int32_t index)
 {
-    ProcessWorkBlock& block = m_control->m_blocks[index];
-    if (ChannelLoad64(&block.m_owner) != -1 || block.m_generation >= 0xffffff)
+    if (!m_storage->create(index, ChannelNow()) || !m_sharedQueue->activate(index))
     {
         return false;
     }
-    const int64_t generation = block.m_generation + 1;
-    std::unique_ptr<SharedMemory> memory(new SharedMemory(objectName('B', m_pid, m_identity,
-        static_cast<uint32_t>(m_session), index, static_cast<uint32_t>(generation)), m_control->m_blockBytes, false));
-    if (memory->isFailed() || memory->writeWithoutLock() == nullptr ||
-        memory->realSize() < static_cast<uint32_t>(m_control->m_blockBytes))
-        {
-            return false;
-        }
-    m_memories[index] = std::move(memory);
-    block.m_generation = generation;
-    m_idleSince[index] = ChannelNow();
     AtomicMath::selfAddOne(&m_control->m_active);
-    AtomicMath::compareAndSwap(&block.m_owner, static_cast<int64_t>(-1), static_cast<int64_t>(0));
+    const int32_t extent = ChannelLoad32(&m_control->m_extent);
+    if (index > extent)
+    {
+        ProcessWorkAtomic::replace(&m_control->m_extent, extent, index);
+    }
     signalSpace();
     return true;
 }
@@ -265,8 +311,14 @@ void ProcessWorkChannel::stop()
 void ProcessWorkChannel::close()
 {
     stop();
-    m_memories.clear();
-    m_idleSince.clear();
+    m_sharedQueue.reset();
+    m_readPage = nullptr;
+    m_readPageIndex = UINT32_MAX;
+    m_storage.reset();
+    m_growthRemaining = 0;
+    m_successfulGrowth = 0;
+    m_nextGrowth = 0;
+    m_nextMaintenance = 0;
     m_control = nullptr;
     m_controlMemory.reset();
     m_dataReady.closeProcessSemaphore();
@@ -293,9 +345,26 @@ void ProcessWorkChannel::close()
     m_peerIndex = -1;
 }
 
+bool ProcessWorkChannel::configureProducers(const LockFreeMapConfig& config)
+{
+    if (m_control != nullptr || m_storage || m_sharedQueue)
+    {
+        return false;
+    }
+    try
+    {
+        m_producerConfig = config;
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
 bool ProcessWorkChannel::openSender(int32_t pid)
 {
-    if (pid <= 0 || m_control != nullptr)
+    if (pid <= 0 || m_control != nullptr || !ChannelAtomicsSupported())
     {
         return false;
     }
@@ -307,48 +376,52 @@ bool ProcessWorkChannel::openSender(int32_t pid)
         {
             return false;
         }
-        m_directoryMemory.reset(new SharedMemory("P2D" + std::to_string(pid)));
-        m_directory = static_cast<ProcessWorkDirectory*>(m_directoryMemory->writeWithoutLock());
-        if (m_directory == nullptr || m_directoryMemory->realSize() < sizeof(ProcessWorkDirectory))
+        m_directoryMemory.reset(new SharedMemory("P3D" + std::to_string(pid)));
+        m_directory = static_cast<ProcessWorkSharedDirectory*>(m_directoryMemory->writeWithoutLock());
+        if (m_directory == nullptr || m_directoryMemory->realSize() < sizeof(ProcessWorkSharedDirectory))
         {
-            close(); return false;
+            close();
+            return false;
         }
         m_session = ChannelLoad64(&m_directory->m_session);
         if (m_session <= 0 || m_session > 0xffffff || static_cast<uint64_t>(ChannelLoad64(reinterpret_cast<int64_t*>(&m_directory->m_identity))) != m_identity)
         {
-            close(); return false;
+            close();
+            return false;
         }
         m_controlMemory.reset(new SharedMemory(objectName('C', pid, m_identity, static_cast<uint32_t>(m_session))));
-        m_control = static_cast<ProcessWorkControl*>(m_controlMemory->writeWithoutLock());
-        if (m_control == nullptr || m_controlMemory->realSize() < sizeof(ProcessWorkControl) || !ready() ||
-            m_control->m_version != 2 || m_control->m_bytes != sizeof(ProcessWorkControl) ||
-            m_control->m_initial < 1 || m_control->m_limit < m_control->m_initial || m_control->m_limit > 1024 ||
-            m_control->m_blockBytes < 12 || m_control->m_blockBytes == INT32_MAX)
+        m_control = static_cast<ProcessWorkSharedControl*>(m_controlMemory->writeWithoutLock());
+        if (m_control == nullptr || m_controlMemory->realSize() < sizeof(ProcessWorkSharedControl) || !ready() ||
+            m_control->m_version != 6 || m_control->m_bytes != sizeof(ProcessWorkSharedControl) ||
+            m_control->m_initial < 1 || m_control->m_initial > 0xffffff ||
+            (m_control->m_limit != -1 && (m_control->m_limit < m_control->m_initial || m_control->m_limit > 0xffffff)) ||
+            ChannelLoad32(&m_control->m_extent) < m_control->m_initial || ChannelLoad32(&m_control->m_extent) > 0xffffff ||
+            m_control->m_blockBytes < 12 || m_control->m_blockBytes == INT32_MAX ||
+            m_control->m_maxPayloadBytes < -1 || m_control->m_maxPayloadBytes > m_control->m_blockBytes - 12)
         {
-            close(); return false;
+            close();
+            return false;
         }
-        if (!m_dataReady.tryOpenProcessSemaphore(objectName('R', pid, m_identity, static_cast<uint32_t>(m_session))) ||
-            !m_spaceReady.tryOpenProcessSemaphore(objectName('W', pid, m_identity, static_cast<uint32_t>(m_session))))
+        if (m_dataReady.openProcessResult(objectName('R', pid, m_identity, static_cast<uint32_t>(m_session))).status != SEMAPHORE_OK ||
+            m_spaceReady.openProcessResult(objectName('W', pid, m_identity, static_cast<uint32_t>(m_session))).status != SEMAPHORE_OK)
         {
-            close(); return false;
+            close();
+            return false;
         }
-        m_memories.resize(m_control->m_initial);
-        for (int32_t i = 0; i < m_control->m_initial; ++i)
+        m_storage.reset(new ProcessWorkStorage(pid, m_identity, static_cast<uint32_t>(m_session),
+            m_control->m_blockBytes, m_control->m_initial, false, ProcessWorkMemoryConfig()));
+        m_sharedQueue.reset(new ProcessWorkSharedQueue(*m_storage, *m_control));
+        if (!m_sharedQueue->configureProducers(m_producerConfig) || m_storage->page(0) == nullptr)
         {
-            std::unique_ptr<SharedMemory> memory(new SharedMemory(objectName('B', pid, m_identity,
-                static_cast<uint32_t>(m_session), i, 1)));
-            if (memory->writeWithoutLock() == nullptr || memory->realSize() < static_cast<uint32_t>(m_control->m_blockBytes))
-            {
-                close(); return false;
-            }
-            m_memories[i] = std::move(memory);
+            close();
+            return false;
         }
         // 登记只在open阶段选择下标，发送热路径不修改本地共享指针或容器。
         for (int32_t pass = 0; pass < 2 && m_peerIndex < 0; ++pass)
         {
             for (int32_t i = 0; i < 256; ++i)
             {
-                ProcessWorkPeer& peer = m_control->m_peers[i];
+                ProcessWorkSharedPeer& peer = m_control->m_peers[i];
                 // 申请轮也复查同PID：另一个本进程通道可能刚在此处赢得CAS。
                 if (pass == 1)
                 {
@@ -407,13 +480,121 @@ int64_t ProcessWorkChannel::senderToken()
     {
         return 0;
     }
-    ProcessWorkPeer& peer = m_control->m_peers[m_peerIndex];
+    ProcessWorkSharedPeer& peer = m_control->m_peers[m_peerIndex];
     const int64_t token = ChannelLoad64(&peer.m_token);
     return token > 0 && static_cast<uint64_t>(ChannelLoad64(reinterpret_cast<int64_t*>(&peer.m_identity))) == m_selfIdentity &&
         ChannelLoad32(&peer.m_pid) == m_selfPid ? token : 0;
 }
 
-int32_t ProcessWorkChannel::trySend(const char* data, int32_t length, int32_t type)
+int32_t ProcessWorkChannel::trySend(const char* data, int32_t length, int32_t type,
+    bool retryContention, bool retryCapacity, const std::atomic<bool>* stop)
+{
+    uint32_t contention = 0;
+    uint32_t capacity = 0;
+    while (stop == nullptr || !stop->load(std::memory_order_acquire))
+    {
+        const int32_t result = transmit(data, length, type, retryContention, retryCapacity, capacity, stop);
+        if (result == PROCESS_WORK_BUSY && retryContention)
+        {
+            if (++contention == 64)
+            {
+                CSystem::Sleep(1);
+                contention = 0;
+            }
+            else
+            {
+                std::this_thread::yield();
+            }
+            continue;
+        }
+        if (retryCapacity && (result == PROCESS_WORK_CAPACITY || result == PROCESS_WORK_RESOURCE))
+        {
+            if (!ProcessWorkTime::waitCapacity(capacity) ||
+                (capacity == 4096 && !waitForSpaceImpl(0, false)))
+            {
+                return PROCESS_WORK_UNAVAILABLE;
+            }
+            continue;
+        }
+        return result;
+    }
+    return PROCESS_WORK_UNAVAILABLE;
+}
+
+int32_t ProcessWorkChannel::send(const char* data, int32_t length, int32_t type, const std::atomic<bool>* stop)
+{
+    return trySend(data, length, type, true, true, stop);
+}
+
+bool ProcessWorkChannel::waitForGrant(ProcessWorkProducerState& producer, bool node, uint32_t& index, uint32_t& attempts, const std::atomic<bool>* stop)
+{
+    // 只有发布过授予请求的慢路径才需要取消守卫；借用登记不在此销毁。
+    auto cancelRequest = [this](ProcessWorkProducerState* value)
+    {
+        if (ProcessWorkAtomic::load(&value->m_shared->m_request) != 0)
+        {
+            m_sharedQueue->cancelRequest(*value);
+            signalData();
+        }
+    };
+    std::unique_ptr<ProcessWorkProducerState, decltype(cancelRequest)> requestScope(&producer, cancelRequest);
+    m_sharedQueue->request(producer, node);
+    signalData();
+    while (ready() && (stop == nullptr || !stop->load(std::memory_order_acquire)))
+    {
+        if (m_sharedQueue->takeGrant(producer, node, index))
+        {
+            return true;
+        }
+        if (!ProcessWorkTime::waitCapacity(attempts))
+        {
+            break;
+        }
+        if (attempts == 4096)
+        {
+            // 休眠后仍检查进程身份；对端崩溃不能留下永远等待的请求。
+            if (!waitForSpaceImpl(0, false))
+            {
+                break;
+            }
+            signalData();
+        }
+    }
+    return false;
+}
+
+int32_t ProcessWorkChannel::unavailableResource(bool node, uint32_t extent, bool contended)
+{
+    bool mappingUnavailable = false;
+    const uint32_t count = node ? m_sharedQueue->nodeCount(extent) : extent;
+    for (uint32_t position = 0; position < count; ++position)
+    {
+        const uint32_t index = node ? m_sharedQueue->nodeAt(position, extent) : position + 1;
+        const int64_t* owner = nullptr;
+        if (node)
+        {
+            ProcessWorkSharedNode* value = m_sharedQueue->node(index);
+            owner = value == nullptr ? nullptr : &value->m_owner;
+        }
+        else
+        {
+            ProcessWorkSharedBlock* value = m_storage->block(index);
+            owner = value == nullptr ? nullptr : &value->m_owner;
+        }
+        if (owner == nullptr)
+        {
+            mappingUnavailable = true;
+        }
+        else if (ProcessWorkAtomic::load(owner) == 0)
+        {
+            return contended ? PROCESS_WORK_BUSY : PROCESS_WORK_RESOURCE;
+        }
+    }
+    return mappingUnavailable ? PROCESS_WORK_RESOURCE : PROCESS_WORK_CAPACITY;
+}
+
+int32_t ProcessWorkChannel::transmit(const char* data, int32_t length, int32_t type,
+    bool retryContention, bool retryCapacity, uint32_t& capacityAttempts, const std::atomic<bool>* stop)
 {
     if (length < 0 || (length != 0 && data == nullptr) || type < 0)
     {
@@ -423,146 +604,193 @@ int32_t ProcessWorkChannel::trySend(const char* data, int32_t length, int32_t ty
     {
         return PROCESS_WORK_UNAVAILABLE;
     }
-    if (length > m_control->m_blockBytes - 12)
+    if (length > m_control->m_maxPayloadBytes)
     {
         return PROCESS_WORK_TOO_LARGE;
     }
-    int64_t token = senderToken();
+    const int64_t token = senderToken();
     if (token == 0)
     {
-        if (ChannelLoad64(&m_control->m_nextToken) == INT64_MAX)
-        {
-            // 最后一个token先发布再标记耗尽，复查避免错拒刚获准的最后一名发送者。
-            token = senderToken();
-            if (token == 0)
-            {
-                return PROCESS_WORK_UNAVAILABLE;
-            }
-        }
-        else
-        {
-            signalData();
-            return PROCESS_WORK_BUSY;
-        }
-    }
-    const int32_t limit = m_control->m_limit;
-    const uint32_t start = m_cursor.fetch_add(1, std::memory_order_relaxed);
-    int32_t index = -1;
-    for (int32_t step = 0; step < limit; ++step)
-    {
-        const int32_t candidate = static_cast<int32_t>((start % limit + static_cast<uint32_t>(step)) % limit);
-        if (AtomicMath::compareAndSwap(&m_control->m_blocks[candidate].m_owner, static_cast<int64_t>(0), token))
-        {
-            index = candidate;
-            break;
-        }
-    }
-    if (index < 0)
-    {
-        AtomicMath::compareAndSwap(&m_control->m_full, 0, 1);
-        AtomicMath::compareAndSwap(&m_control->m_demand, 0, 1);
         signalData();
-        return PROCESS_WORK_BUSY;
+        return ChannelLoad64(&m_control->m_nextToken) == INT64_MAX ? PROCESS_WORK_UNAVAILABLE : PROCESS_WORK_RESOURCE;
     }
-    // 只撤销本次未提交占位；提交成功后release禁止析构回收已交付数据。
-    auto releaseBlock = [this, token](int32_t* reserved)
+    int32_t preparation = PROCESS_WORK_RESOURCE;
+    ProcessWorkProducerState* producer = m_sharedQueue->producer(token, &preparation, retryContention);
+    if (producer == nullptr)
     {
-        AtomicMath::compareAndSwap(&m_control->m_blocks[*reserved].m_owner, token, static_cast<int64_t>(0));
-        signalSpace();
-    };
-    std::unique_ptr<int32_t, decltype(releaseBlock)> reservation(&index, releaseBlock);
-    try
+        signalData();
+        m_retryDelay.store(true, std::memory_order_relaxed);
+        return preparation;
+    }
+    // 取消与授予可能交错；旧取消由接收器确认之前，不重新使用同一请求记录。
+    if (ProcessWorkAtomic::load(&producer->m_shared->m_request) != 0)
     {
-        // 通道持有固定块；调用方持有通道，借用期间映射不会销毁。
-        // 扩容块只在本次占位期间独占映射，不增加共享引用计数。
-        std::unique_ptr<SharedMemory> expanded;
-        SharedMemory* memory = nullptr;
-        if (index < m_control->m_initial)
+        signalData();
+        return PROCESS_WORK_RESOURCE;
+    }
+    const uint32_t extent = static_cast<uint32_t>(ChannelLoad32(&m_control->m_extent));
+    const uint32_t start = ChannelReservationStart(m_selfPid);
+    if (extent == 0)
+    {
+        return PROCESS_WORK_UNAVAILABLE;
+    }
+    uint32_t index = start < extent ? start + 1 : start % extent + 1;
+    ProcessWorkSharedBlock* block = nullptr;
+    bool contended = false;
+    for (uint32_t step = 0; step < extent; ++step)
+    {
+        if (producer->m_bodyPage == nullptr || producer->m_bodyPageIndex != (index >> 8))
         {
-            memory = m_memories[index].get();
+            producer->m_bodyPage = m_storage->page(index);
+            producer->m_bodyPageIndex = index >> 8;
         }
-        else
+        ProcessWorkSharedBlock* candidate = producer->m_bodyPage == nullptr ? nullptr :
+            &producer->m_bodyPage->m_metadata->m_blocks[index & 255];
+        if (candidate != nullptr && ProcessWorkAtomic::load(&candidate->m_owner) == 0)
         {
-            // 扩容映射不进入发送缓存，缩容后即使发送进程长期空闲也不会保留旧映射。
-            expanded.reset(new SharedMemory(objectName('B', m_pid, m_identity, static_cast<uint32_t>(m_session),
-                index, static_cast<uint32_t>(m_control->m_blocks[index].m_generation))));
-            memory = expanded.get();
-            if (memory->writeWithoutLock() == nullptr || memory->realSize() < static_cast<uint32_t>(m_control->m_blockBytes))
+            if (ProcessWorkAtomic::replace(&candidate->m_owner, int64_t(0), token))
             {
-                return PROCESS_WORK_UNAVAILABLE;
+                block = candidate;
+                break;
             }
+            contended = true;
         }
-        char* target = static_cast<char*>(memory->memory());
-        if (target == nullptr || !ready())
+        index = index == extent ? 1 : index + 1;
+    }
+    if (block == nullptr)
+    {
+        ProcessWorkAtomic::replace(&m_control->m_demand, 0, 1);
+        signalData();
+        const int32_t failure = unavailableResource(false, extent, contended);
+        if (failure == PROCESS_WORK_CAPACITY)
+        {
+            ProcessWorkAtomic::replace(&m_control->m_full, 0, 1);
+        }
+        if (!retryCapacity || (failure == PROCESS_WORK_BUSY && !retryContention))
+        {
+            return failure;
+        }
+        if (!waitForGrant(*producer, false, index, capacityAttempts, stop))
         {
             return PROCESS_WORK_UNAVAILABLE;
         }
-        const int32_t header[3] = { m_selfPid, type, length };
-        std::memcpy(target, header, sizeof(header));
-        if (length != 0)
+        block = m_storage->block(index);
+        if (block == nullptr || ProcessWorkAtomic::load(&block->m_owner) != token)
         {
-            std::memcpy(target + 12, data, length);
+            return PROCESS_WORK_UNAVAILABLE;
         }
-        // 唯一提交点是包含票号与块号的64位CAS。之前被kill没有环洞，之后被kill正文已完整。
-        for (int32_t attempt = 0; attempt <= limit; ++attempt)
-        {
-            if (!ready())
-            {
-                return PROCESS_WORK_UNAVAILABLE;
-            }
-            const int64_t ticket = ChannelLoad64(&m_control->m_tail);
-            if (ticket < 0 || ticket > (INT64_MAX >> 11) - limit)
-            {
-                return PROCESS_WORK_UNAVAILABLE;
-            }
-            int64_t* cell = &m_control->m_ring[ticket % limit];
-            const int64_t empty = ticket << 11;
-            const int64_t current = ChannelLoad64(cell);
-            if (current == empty && AtomicMath::compareAndSwap(cell, empty, empty | (index + 1)))
-            {
-                reservation.release();
-                AtomicMath::compareAndSwap(&m_control->m_tail, ticket, ticket + 1);
-                AtomicMath::compareAndSwap(&m_control->m_demand, 0, 1);
-                signalData();
-                return PROCESS_WORK_SENT;
-            }
-            if ((current >> 11) == ticket && (current & 2047) != 0)
-            {
-                AtomicMath::compareAndSwap(&m_control->m_tail, ticket, ticket + 1);
-                continue;
-            }
-            if (current != empty)
-            {
-                break;
-            }
-        }
-        return PROCESS_WORK_BUSY;
     }
-    catch (...)
+    const bool inlined = static_cast<size_t>(length) + 12 <= sizeof(block->m_inlineData);
+    // 内联正文优先复用最近256槽；独立正文映射保留分散步长，避免过早追上正在读取的槽。
+    // 两者只改变下次扫描提示，忙时仍检查整个共享池，不私占容量或跳过已排队授予。
+    if (inlined)
     {
-        m_retryDelay = true;
-        return PROCESS_WORK_BUSY;
+        s_reservationCursor = (index & 255U) != 0 ? index : index - 256;
     }
+    else
+    {
+        s_reservationCursor = index + ((producer->m_index - 1) & 3U) * 2;
+    }
+    // 参数为本次尚未交付的资源；按对应所有者规则释放，不传播异常。
+    auto releaseBlock = [this, token](ProcessWorkSharedBlock* value)
+    {
+        ProcessWorkAtomic::replace(&value->m_owner, token, int64_t(0));
+        signalSpace();
+    };
+    std::unique_ptr<ProcessWorkSharedBlock, decltype(releaseBlock)> bodyReservation(block, releaseBlock);
+    std::unique_ptr<SharedMemory> temporary;
+    char* target = inlined ? block->m_inlineData :
+        m_storage->data(index, static_cast<uint32_t>(ChannelLoad64(&block->m_generation)), temporary);
+    if (target == nullptr)
+    {
+        // 已取得独占正文槽，映射失败不是CAS竞争；RAII归还槽后让调用者处理资源失败。
+        return PROCESS_WORK_NO_MEMORY;
+    }
+    const int32_t header[3] = { m_selfPid, type, length };
+    std::memcpy(target, header, sizeof(header));
+    if (inlined)
+    {
+        ChannelCopyInline(target + 12, data, static_cast<uint32_t>(length));
+    }
+    else if (length != 0)
+    {
+        std::memcpy(target + 12, data, length);
+    }
+    if (s_nodeReservationCursor == 0)
+    {
+        s_nodeReservationCursor = start;
+    }
+    if (!ready())
+    {
+        return PROCESS_WORK_UNAVAILABLE;
+    }
+    bool nodeContended = false;
+    if (!m_sharedQueue->enqueue(*producer, index, inlined, extent, s_nodeReservationCursor, UINT32_MAX, &nodeContended))
+    {
+        const int32_t failure = unavailableResource(true, extent, nodeContended);
+        if (!retryCapacity || (failure == PROCESS_WORK_BUSY && !retryContention))
+        {
+            return failure;
+        }
+        uint32_t granted = 0;
+        if (!waitForGrant(*producer, true, granted, capacityAttempts, stop))
+        {
+            return PROCESS_WORK_UNAVAILABLE;
+        }
+        // 参数仅用于RAII持有候选；尚未链接时由原token归还段。
+        auto cancelNode = [this, token, granted](ProcessWorkSharedNode*)
+        {
+            m_sharedQueue->cancel(granted, token);
+        };
+        std::unique_ptr<ProcessWorkSharedNode, decltype(cancelNode)> reservedNode(m_sharedQueue->node(granted), cancelNode);
+        if (!ready() || (stop != nullptr && stop->load()) ||
+            !m_sharedQueue->enqueue(*producer, index, inlined, extent, s_nodeReservationCursor, granted))
+        {
+            return PROCESS_WORK_UNAVAILABLE;
+        }
+        reservedNode.release();
+    }
+    bodyReservation.release();
+    // 阈值为0时只有下一次申请失败才请求扩容，最后一个成功发送不提前扩容。
+    if (m_control->m_threshold > 0)
+    {
+        ProcessWorkAtomic::replace(&m_control->m_demand, 0, 1);
+    }
+    signalData();
+    if ((++s_sendBurst & 255U) == 0 && ChannelLoad64(&m_control->m_nextStream) > m_yieldThreshold)
+    {
+        // 已发布成功；让出当前调度机会，不等待持有者，也不增加定时休眠。
+        std::this_thread::yield();
+    }
+    return PROCESS_WORK_SENT;
 }
 
 bool ProcessWorkChannel::waitForSpace()
+{
+    return waitForSpaceImpl(20);
+}
+
+bool ProcessWorkChannel::waitForSpaceImpl(int32_t timeout, bool probeSpace)
 {
     if (!ready())
     {
         return false;
     }
-    if (m_retryDelay.exchange(false))
+    if (m_retryDelay.exchange(false, std::memory_order_relaxed))
     {
-        // 有空槽但本地分配持续失败时，不能跳过等待而成为忙循环。
         CSystem::Sleep(1);
     }
-    AtomicMath::compareAndSwap(&m_control->m_spaceSignal, 0, 1);
+    ProcessWorkAtomic::replace(&m_control->m_spaceSignal, 0, 1);
     bool available = false;
-    if (senderToken() > 0)
+    // 公平请求只能由接收器授予。别人的空正文不是本请求已获准，
+    // 尤其等待队列段时不能因此跳过休眠，反复占用接收器需要的CPU。
+    if (probeSpace && senderToken() > 0)
     {
-        for (int32_t i = 0; i < m_control->m_limit; ++i)
+        const int32_t extent = ChannelLoad32(&m_control->m_extent);
+        for (int32_t i = 1; i <= extent; ++i)
         {
-            if (ChannelLoad64(&m_control->m_blocks[i].m_owner) == 0)
+            ProcessWorkSharedBlock* block = m_storage->block(i);
+            if (block != nullptr && ChannelLoad64(&block->m_owner) == 0)
             {
                 available = true;
                 break;
@@ -571,22 +799,27 @@ bool ProcessWorkChannel::waitForSpace()
     }
     if (!available)
     {
-        m_spaceReady.processWait(20);
+        m_spaceReady.processWaitResult(timeout);
     }
-    uint64_t current = 0;
-    const bool known = CSystem::processIdentity(m_pid, current);
-    if ((known && current != m_identity) || CSystem::processDefinitelyExited(m_pid))
+    const uint64_t now = ChannelNow();
+    uint64_t previous = m_nextLivenessCheck.load(std::memory_order_relaxed);
+    if (m_pid != m_selfPid && now >= previous && m_nextLivenessCheck.compare_exchange_strong(previous, now + 20, std::memory_order_relaxed))
     {
-        AtomicMath::compareAndSwap(&m_control->m_ready, 1, 0);
-        try
+        uint64_t current = 0;
+        const bool known = CSystem::processIdentity(m_pid, current);
+        if ((known && current != m_identity) || CSystem::processDefinitelyExited(m_pid))
         {
-            cleanupExitedReceiver();
+            ProcessWorkAtomic::replace(&m_control->m_ready, 1, 0);
+            try
+            {
+                cleanupExitedReceiver();
+            }
+            catch (...)
+            {
+                /* 已确认死亡，撤名失败不影响结束等待。 */
+            }
+            return false;
         }
-        catch (...)
-        {
-            /* 撤名失败不影响退出等待。 */
-        }
-        return false;
     }
     return ready();
 }
@@ -595,20 +828,26 @@ void ProcessWorkChannel::cleanupExitedReceiver()
 {
 #ifndef _WIN32
     // 只含创建标识和实例号的名称不会属于PID复用后的新接收器。
-    // 不解除任何缓存映射，也不撤销可被新进程重新发布的P2D/P2N固定入口。
+    // 不解除任何缓存映射，也不撤销可被新进程重新发布的P3D/P3N固定入口。
     if (m_control == nullptr || m_receiver)
     {
         return;
     }
-    for (int32_t i = 0; i < m_control->m_limit; ++i)
+    const int32_t extent = ChannelLoad32(&m_control->m_extent);
+    for (int32_t i = 1; i <= extent; ++i)
     {
-        const int64_t generation = ChannelLoad64(&m_control->m_blocks[i].m_generation);
-        if (generation <= 0 || generation > 0xffffff)
+        ProcessWorkSharedBlock* block = m_storage->block(i);
+        const int64_t generation = block == nullptr ? 0 : ChannelLoad64(&block->m_generation);
+        if (generation > 0 && generation <= 0xffffff && static_cast<size_t>(m_control->m_blockBytes) > sizeof(block->m_inlineData))
         {
-            continue;
+            SharedMemory memory(objectName('B', m_pid, m_identity, static_cast<uint32_t>(m_session), i, static_cast<uint32_t>(generation)));
+            memory.unlinkName();
         }
-        SharedMemory memory(objectName('B', m_pid, m_identity, static_cast<uint32_t>(m_session),
-            i, static_cast<uint32_t>(generation)));
+    }
+    const int32_t metadataExtent = (std::max)(extent, static_cast<int32_t>((std::min)(ChannelLoad64(&m_control->m_nextStream), int64_t(0xffffff))));
+    for (int32_t page = 0; page <= metadataExtent / 256; ++page)
+    {
+        SharedMemory memory(objectName('M', m_pid, m_identity, static_cast<uint32_t>(m_session), page));
         memory.unlinkName();
     }
     // 多个发送线程可能同时到达；仅以独立临时句柄撤名，不修改共享缓存对象成员。
@@ -629,32 +868,48 @@ void ProcessWorkChannel::cleanupExitedReceiver()
 
 void ProcessWorkChannel::signalData()
 {
-    if (m_control != nullptr && AtomicMath::compareAndSwap(&m_control->m_dataSignal, 0, 1))
+    if (m_control != nullptr && ChannelLoad32(&m_control->m_dataSignal) == 0 && ProcessWorkAtomic::replace(&m_control->m_dataSignal, 0, 1))
     {
-        m_dataReady.tryProcessSignal();
+        m_dataReady.tryProcessSignal(true, false);
     }
 }
 
 void ProcessWorkChannel::signalSpace()
 {
-    if (m_control != nullptr && AtomicMath::compareAndSwap(&m_control->m_spaceSignal, 1, 0))
+    if (m_control != nullptr && ChannelLoad32(&m_control->m_spaceSignal) == 1 && ProcessWorkAtomic::replace(&m_control->m_spaceSignal, 1, 0))
     {
-        m_spaceReady.tryProcessSignal();
+        m_spaceReady.tryProcessSignal(true, false);
     }
 }
 
 void ProcessWorkChannel::wake()
 {
-    m_dataReady.tryProcessSignal();
+    m_dataReady.tryProcessSignal(true, false);
 }
 
 void ProcessWorkChannel::waitForData()
 {
-    if (m_control != nullptr)
+    if (m_control == nullptr)
     {
-        AtomicMath::compareAndSwap(&m_control->m_dataSignal, 1, 0);
+        return;
     }
-    m_dataReady.processWait(20);
+    ProcessWorkAtomic::replace(&m_control->m_dataSignal, 1, 0);
+    if (m_stopped.load(std::memory_order_acquire))
+    {
+        m_dataReady.processWaitResult(20);
+        return;
+    }
+    if (m_retryDelay.exchange(false, std::memory_order_relaxed))
+    {
+        m_dataReady.processWaitResult(1);
+        return;
+    }
+    uint32_t node = 0;
+    int32_t buffer = 0;
+    if (!m_sharedQueue->front(node, buffer))
+    {
+        m_dataReady.processWaitResult(20);
+    }
 }
 
 int32_t ProcessWorkChannel::bufferCount() const
@@ -664,82 +919,148 @@ int32_t ProcessWorkChannel::bufferCount() const
 
 int32_t ProcessWorkChannel::pump(LockFreeQueue<char*>& queue, Semaphore& notification, std::atomic<int32_t>& fullCount)
 {
-    if (!m_receiver || m_control == nullptr)
+    return pumpImpl(&queue, notification, fullCount, nullptr);
+}
+
+int32_t ProcessWorkChannel::pump(ProcessWorkReceiveQueue& queue, std::atomic<int32_t>& fullCount)
+{
+    return pumpImpl(nullptr, queue.notification(), fullCount, &queue);
+}
+
+int32_t ProcessWorkChannel::pumpImpl(LockFreeQueue<char*>* queue, Semaphore& notification, std::atomic<int32_t>& fullCount,
+    ProcessWorkReceiveQueue* batches)
+{
+    if (!m_receiver || m_control == nullptr || m_stopped.load(std::memory_order_acquire))
     {
         return 0;
     }
     const uint64_t now = ChannelNow();
     if (now >= m_nextMaintenance)
     {
-        maintain(notification, fullCount);
+        try
+        {
+            maintain(notification, fullCount);
+        }
+        catch (...)
+        {
+            // 死亡快照等临时资源不足不阻止接收已经提交的正文。
+            m_retryDelay.store(true, std::memory_order_relaxed);
+        }
         m_nextMaintenance = now + 20;
     }
-    int32_t copied = 0;
-    for (int32_t step = 0; step < m_control->m_limit; ++step)
+    m_sharedQueue->service(static_cast<uint32_t>(ChannelLoad32(&m_control->m_extent)));
+    signalSpace();
+    if (batches != nullptr && !batches->flush())
     {
-        const int64_t ticket = m_control->m_head;
-        int64_t* cell = &m_control->m_ring[ticket % m_control->m_limit];
-        const int64_t entry = ChannelLoad64(cell);
-        if ((entry >> 11) != ticket || (entry & 2047) == 0)
+        m_retryDelay.store(true, std::memory_order_relaxed);
+        return 0;
+    }
+    int32_t copied = 0;
+    // 单次搬运有工作预算，避免持续高负载推迟停止请求和维护。
+    for (int32_t step = 0; step < 256; ++step)
+    {
+        uint32_t nodeIndex = 0;
+        int32_t index = 0;
+        bool inlined = false;
+        if (!m_sharedQueue->front(nodeIndex, index, inlined))
         {
             break;
         }
-        const int32_t index = static_cast<int32_t>(entry & 2047) - 1;
-        if (index < 0 || index >= m_control->m_limit || !m_memories[index])
+        if (index <= 0 || index > ChannelLoad32(&m_control->m_extent))
         {
+            stop();
             break;
         }
-        ProcessWorkBlock& block = m_control->m_blocks[index];
-        const int64_t owner = ChannelLoad64(&block.m_owner);
-        if (owner > 0)
+        if (m_readPage == nullptr || m_readPageIndex != (static_cast<uint32_t>(index) >> 8))
         {
-            AtomicMath::compareAndSwap(&block.m_owner, owner, static_cast<int64_t>(-2));
+            m_readPage = m_storage->page(static_cast<uint32_t>(index));
+            m_readPageIndex = static_cast<uint32_t>(index) >> 8;
         }
-        if (ChannelLoad64(&block.m_owner) != -2)
+        ProcessWorkSharedBlock* block = m_readPage == nullptr ? nullptr :
+            &m_readPage->m_metadata->m_blocks[static_cast<uint32_t>(index) & 255];
+        if (block == nullptr)
         {
+            stop();
             break;
         }
-        char* source = static_cast<char*>(m_memories[index]->memory());
+        const int64_t owner = ChannelLoad64(&block->m_owner);
+        // 唯一消费者直接借用已提交正文；维护按未消费单元判断存活，不需再写一次所有者。
+        // 本地预算不足时保留提交单元及原token，死进程回收也不能释放该正文。
+        if (owner <= 0)
+        {
+            stop();
+            break;
+        }
+        std::unique_ptr<SharedMemory> temporary;
+        char* source = inlined ? block->m_inlineData :
+            m_storage->data(index, static_cast<uint32_t>(ChannelLoad64(&block->m_generation)), temporary);
+        if (source == nullptr)
+        {
+            m_retryDelay.store(true, std::memory_order_relaxed);
+            break;
+        }
         int32_t header[3] = {};
         std::memcpy(header, source, sizeof(header));
-        // 正常发送者已校验；损坏头不会导致越界分配或复制，也不影响后续合法槽。
-        if (header[0] > 0 && header[1] >= 0 && header[2] >= 0 && header[2] <= m_control->m_blockBytes - 12)
+        const int32_t capacity = inlined ? (std::min)(m_control->m_blockBytes, static_cast<int32_t>(sizeof(block->m_inlineData))) : m_control->m_blockBytes;
+        if (header[0] > 0 && header[1] >= 0 && header[2] >= 0 && header[2] <= capacity - 12)
         {
             try
             {
-                std::unique_ptr<char[]> packet(new char[static_cast<size_t>(header[2]) + 13]);
-                std::memcpy(packet.get(), header, sizeof(header));
-                if (header[2] != 0)
+                if (batches != nullptr)
                 {
-                    std::memcpy(packet.get() + 12, source + 12, header[2]);
+                    if (!batches->append(source, static_cast<size_t>(header[2]) + 12))
+                    {
+                        m_retryDelay.store(true, std::memory_order_relaxed);
+                        break;
+                    }
                 }
-                packet[static_cast<size_t>(header[2]) + 12] = '\0';
-                queue.push(packet.get());
-                packet.release();
-                try
+                else
                 {
-                    notification.signal();
-                }
-                catch (...)
-                {
-                    /* 接收任务有限等待补查队列。 */
+                    const size_t bytes = static_cast<size_t>(header[2]) + 13;
+                    std::unique_ptr<char[]> packet(new (std::nothrow) char[bytes]);
+                    if (!packet)
+                    {
+                        m_retryDelay.store(true, std::memory_order_relaxed);
+                        break;
+                    }
+                    std::memcpy(packet.get(), source, static_cast<size_t>(header[2]) + 12);
+                    packet.get()[static_cast<size_t>(header[2]) + 12] = '\0';
+                    const LockFreeQueueResult result = queue->tryPush(packet.get());
+                    if (result != LockFreeQueueSuccess)
+                    {
+                        m_retryDelay.store(true, std::memory_order_relaxed);
+                        break;
+                    }
+                    packet.release();
+                    notification.trySignal(true, false);
                 }
             }
             catch (...)
             {
-                // 内存或本地队列暂时失败：保留当前头槽和正文，后续包不得越过。
+                // 尚未交付本地队列，保留共享正文和顺序供下次重试。
+                m_retryDelay.store(true, std::memory_order_relaxed);
                 break;
             }
         }
-        // 帮助完成生产游标后才回收环槽，否则提交后退出的发送者会留下旧尾。
-        AtomicMath::compareAndSwap(&m_control->m_tail, ticket, ticket + 1);
-        AtomicMath::compareAndSwap(cell, entry, (ticket + m_control->m_limit) << 11);
-        m_control->m_head = ticket + 1;
-        // 刚归还尚未开始空闲计时；由下轮维护取完成之后的时间，不把复制耗时计入空闲。
-        m_idleSince[index] = 0;
-        AtomicMath::compareAndSwap(&block.m_owner, static_cast<int64_t>(-2), static_cast<int64_t>(0));
+        if (!m_sharedQueue->consume(nodeIndex, header[2] >= 0 ? static_cast<uint32_t>(header[2]) + 12 : 0))
+        {
+            // 本地队列已经接收所有权，不能再次复制同一共享正文。
+            // 单消费者下不应失败；协议损坏时撤销入口，等待owner关闭重建。
+            stop();
+            break;
+        }
+        if (index > m_control->m_initial)
+        {
+            // 仅扩容槽参与闲置回收；初始槽无需逐包写入从不使用的缩容时间。
+            m_readPage->m_idleSince[static_cast<uint32_t>(index) & 255] = 0;
+        }
+        m_sharedQueue->releaseBody(static_cast<uint32_t>(index), *block);
         signalSpace();
         ++copied;
+    }
+    if (batches != nullptr && !batches->flush())
+    {
+        m_retryDelay.store(true, std::memory_order_relaxed);
     }
     return copied;
 }
@@ -755,7 +1076,7 @@ void ProcessWorkChannel::approveSenders()
 {
     for (int32_t i = 0; i < 256; ++i)
     {
-        ProcessWorkPeer& peer = m_control->m_peers[i];
+        ProcessWorkSharedPeer& peer = m_control->m_peers[i];
         const int32_t pid = ChannelLoad32(&peer.m_pid);
         if (pid <= 0 || ChannelLoad64(&peer.m_token) != 0)
         {
@@ -763,7 +1084,7 @@ void ProcessWorkChannel::approveSenders()
         }
         uint64_t identity = 0;
         const int64_t previousToken = ChannelLoad64(&m_control->m_nextToken);
-        if (CSystem::processIdentity(pid, identity) && previousToken < INT64_MAX)
+        if (((pid == m_pid && (identity = m_identity) != 0) || CSystem::processIdentity(pid, identity)) && previousToken < INT64_MAX)
         {
             int64_t* publishedIdentity = reinterpret_cast<int64_t*>(&peer.m_identity);
             AtomicMath::compareAndSwap(publishedIdentity, ChannelLoad64(publishedIdentity), static_cast<int64_t>(identity));
@@ -781,129 +1102,215 @@ void ProcessWorkChannel::approveSenders()
 
 void ProcessWorkChannel::recoverExitedSenders()
 {
-    // 系统存活查询分摊到每轮，避免一次扫描256个进程阻塞收件。
     for (int32_t step = 0; step < 16; ++step)
     {
-        ProcessWorkPeer& peer = m_control->m_peers[m_peerCursor];
+        ProcessWorkSharedPeer& peer = m_control->m_peers[m_peerCursor];
         m_peerCursor = (m_peerCursor + 1) % 256;
         const int32_t pid = ChannelLoad32(&peer.m_pid);
         const int64_t token = ChannelLoad64(&peer.m_token);
-        if (pid <= 0 || token <= 0)
+        if (pid <= 0 || token <= 0 || pid == m_pid)
         {
             continue;
         }
         uint64_t identity = 0;
         const bool known = CSystem::processIdentity(pid, identity);
-        const bool exited = CSystem::processDefinitelyExited(pid);
-        if (!exited && (!known || identity == static_cast<uint64_t>(ChannelLoad64(reinterpret_cast<int64_t*>(&peer.m_identity)))))
+        if (!CSystem::processDefinitelyExited(pid) && (!known || identity == static_cast<uint64_t>(ChannelLoad64(reinterpret_cast<int64_t*>(&peer.m_identity)))))
         {
             continue;
         }
-        // 确认此进程已死亡之后才能取快照；活进程暂停不能成为回收理由。
-        // 单一接收任务尚未消费这些槽，死进程也不会再发布新槽。
-        bool committed[1024] = {};
-        for (int32_t i = 0; i < m_control->m_limit; ++i)
+        const uint32_t extent = static_cast<uint32_t>(ChannelLoad32(&m_control->m_extent));
+        // 只在确认死亡之后检查已提交链；接收器此时不消费，死进程不会新增提交。
+        // 任意查询或临时分配失败都保留资源，不以超时或暂停作为死亡证据。
+        m_sharedQueue->recoverToken(token);
+        std::vector<unsigned char> committedNodes;
+        std::vector<unsigned char> committedBodies;
+        if (!m_sharedQueue->markCommitted(extent, committedNodes, committedBodies))
         {
-            const int32_t block = static_cast<int32_t>(ChannelLoad64(&m_control->m_ring[i]) & 2047) - 1;
-            if (block >= 0 && block < m_control->m_limit)
-            {
-                committed[block] = true;
-            }
+            return;
         }
         bool referenced = false;
-        for (int32_t i = 0; i < m_control->m_limit; ++i)
+        const uint32_t streams = static_cast<uint32_t>((std::min)(ChannelLoad64(&m_control->m_nextStream), int64_t(0xffffff)));
+        for (uint32_t streamIndex = 1; streamIndex <= streams; ++streamIndex)
         {
-            if (ChannelLoad64(&m_control->m_blocks[i].m_owner) != token)
+            ProcessWorkSharedStream* stream = m_storage->stream(streamIndex);
+            referenced = referenced || (stream != nullptr && ChannelLoad64(&stream->m_owner) == token);
+        }
+        for (uint32_t ordinal = 0; ordinal < committedNodes.size(); ++ordinal)
+        {
+            ProcessWorkSharedNode* node = m_sharedQueue->node(m_sharedQueue->nodeAt(ordinal, extent));
+            if (node != nullptr && ChannelLoad64(&node->m_owner) == token)
             {
-                continue;
+                if (committedNodes[ordinal] != 0)
+                {
+                    referenced = true;
+                }
+                else
+                {
+                    ProcessWorkAtomic::replace(&node->m_owner, token, int64_t(0));
+                }
             }
-            if (committed[i])
+        }
+        for (uint32_t i = 1; i <= extent; ++i)
+        {
+            ProcessWorkSharedBlock* block = i == 0 ? nullptr : m_storage->block(i);
+            if (block != nullptr && ChannelLoad64(&block->m_owner) == token)
             {
-                referenced = true;
-                continue;
-            }
-            if (AtomicMath::compareAndSwap(&m_control->m_blocks[i].m_owner, token, static_cast<int64_t>(0)))
-            {
-                m_idleSince[i] = 0;
-                signalSpace();
+                if (committedBodies[i] != 0)
+                {
+                    referenced = true;
+                }
+                else
+                {
+                    ProcessWorkAtomic::replace(&block->m_owner, token, int64_t(0));
+                    *m_storage->idleSince(i) = 0;
+                    signalSpace();
+                }
             }
         }
         if (!referenced)
         {
-            // 先隐藏旧登记，防止PID复用的新发送者绑定正在撤销的表项。
-            AtomicMath::compareAndSwap(&peer.m_pid, pid, -pid);
-            AtomicMath::compareAndSwap(&peer.m_token, token, static_cast<int64_t>(0));
-            AtomicMath::compareAndSwap(&peer.m_pid, -pid, 0);
+            ProcessWorkAtomic::replace(&peer.m_pid, pid, -pid);
+            ProcessWorkAtomic::replace(&peer.m_token, token, int64_t(0));
+            ProcessWorkAtomic::replace(&peer.m_pid, -pid, 0);
         }
     }
 }
 
 void ProcessWorkChannel::resizeBuffers(uint64_t now, Semaphore& notification, std::atomic<int32_t>& fullCount)
 {
-    // 先取走本轮请求再扫描空闲：扫描期间的新请求保留给下一轮，不能用旧快照消费它。
-    const bool demand = AtomicMath::compareAndSwap(&m_control->m_demand, 1, 0);
-    int32_t free = 0;
-    for (int32_t i = 0; i < m_control->m_limit; ++i)
+    const bool demand = ChannelLoad32(&m_control->m_demand) == 1 && ProcessWorkAtomic::replace(&m_control->m_demand, 1, 0);
+    const int32_t extent = ChannelLoad32(&m_control->m_extent);
+    if (m_control->m_increment == 0 && m_growthRemaining == 0 &&
+        (m_control->m_idleSeconds == 0 || extent == m_control->m_initial) && ChannelLoad32(&m_control->m_full) == 0)
     {
-        if (ChannelLoad64(&m_control->m_blocks[i].m_owner) == 0)
+        // 固定容量且没有满载通知时，无需周期性遍历所有正文槽或写入闲置时间。
+        // 之后才到达的满载请求保留在m_full，由下一次维护正常报告。
+        return;
+    }
+    int32_t free = 0;
+    int32_t firstInactive = 0;
+    for (int32_t i = 1; i <= extent; ++i)
+    {
+        ProcessWorkSharedBlock* block = m_storage->block(i);
+        if (block == nullptr)
+        {
+            continue;
+        }
+        const int64_t owner = ChannelLoad64(&block->m_owner);
+        uint64_t* idle = m_storage->idleSince(i);
+        if (owner == 0)
         {
             ++free;
-            if (m_idleSince[i] == 0)
+            if (*idle == 0)
             {
-                m_idleSince[i] = now;
+                *idle = now;
             }
         }
         else
         {
-            m_idleSince[i] = now;
+            *idle = now;
+            if (owner == -1 && firstInactive == 0 && ChannelLoad64(&block->m_generation) < 0xffffff)
+            {
+                firstInactive = i;
+            }
         }
     }
-    if (AtomicMath::compareAndSwap(&m_control->m_full, 1, 2))
+    if (ProcessWorkAtomic::replace(&m_control->m_full, 1, 2))
     {
         if (fullCount.exchange(bufferCount()) == 0)
         {
-            notification.signal();
+            notification.trySignal(true, false);
         }
     }
-    if (demand && free <= m_control->m_threshold && m_control->m_increment > 0)
+    if (demand && free <= m_control->m_threshold && m_control->m_increment > 0 && m_growthRemaining == 0)
     {
-        int32_t added = 0;
-        for (int32_t i = m_control->m_initial; i < m_control->m_limit && added < m_control->m_increment; ++i)
+        uint64_t amount = static_cast<uint64_t>(m_control->m_increment);
+        if (m_memoryConfig.m_policy)
         {
-            if (ChannelLoad64(&m_control->m_blocks[i].m_owner) == -1)
+            ProcessWorkMemoryGrowContext context;
+            context.m_kind = ProcessWorkSharedBuffers;
+            context.m_initialCapacity = m_control->m_initial;
+            context.m_currentCapacity = bufferCount();
+            context.m_successfulGrowCount = m_successfulGrowth;
+            context.m_requiredGrowth = 1;
+            try
             {
+                amount = m_memoryConfig.m_policy->grow(context);
+            }
+            catch (...)
+            {
+                m_nextGrowth = now + m_memoryConfig.m_retryMilliseconds;
+                amount = 0;
+            }
+        }
+        const uint64_t maximum = m_control->m_limit == -1 ? 0xffffff : static_cast<uint64_t>(m_control->m_limit);
+        const uint64_t current = bufferCount();
+        m_growthRemaining = current >= maximum ? 0 : static_cast<int32_t>((std::min)(amount, maximum - current));
+    }
+    const int32_t limit = m_control->m_limit == -1 ? 0xffffff : m_control->m_limit;
+    if (m_growthRemaining > 0 && now >= m_nextGrowth)
+    {
+        const uint64_t previous = bufferCount();
+        uint64_t added = 0;
+        const uint64_t perBlock = static_cast<uint64_t>(m_control->m_blockBytes) + 65536;
+        const uint64_t budget = (std::max)(uint64_t(1), m_memoryConfig.m_growthBytes / perBlock);
+        int32_t index = firstInactive == 0 ? extent + 1 : firstInactive;
+        for (uint64_t work = 0; work < budget && m_growthRemaining > 0 && index <= limit; ++index)
+        {
+            ProcessWorkSharedBlock* block = index <= extent ? m_storage->block(index) : nullptr;
+            if (block != nullptr && (ChannelLoad64(&block->m_owner) != -1 || ChannelLoad64(&block->m_generation) >= 0xffffff))
+            {
+                continue;
+            }
+            if (!createBlock(index))
+            {
+                m_nextGrowth = now + m_memoryConfig.m_retryMilliseconds;
+                break;
+            }
+            --m_growthRemaining;
+            ++added;
+            ++work;
+            ++free;
+        }
+        if (index > limit)
+        {
+            m_growthRemaining = 0;
+        }
+        if (added != 0)
+        {
+            ++m_successfulGrowth;
+            if (m_memoryConfig.m_policy)
+            {
+                ProcessWorkMemoryGrowth growth;
+                growth.m_kind = ProcessWorkSharedBuffers;
+                growth.m_previousCapacity = previous;
+                growth.m_addedCapacity = added;
+                growth.m_currentCapacity = previous + added;
+                growth.m_successfulGrowCount = m_successfulGrowth;
                 try
                 {
-                    if (createBlock(i))
-                    {
-                        ++added;
-                        ++free;
-                    }
+                    m_memoryConfig.m_policy->grown(growth);
                 }
                 catch (...)
                 {
-                    break;
+                    // 已提交的共享块仍保留，通知异常不能使发送方重放已提交消息。
                 }
             }
         }
     }
     if (free > 0)
     {
-        AtomicMath::compareAndSwap(&m_control->m_full, 2, 0);
+        ProcessWorkAtomic::replace(&m_control->m_full, 2, 0);
     }
-    if (m_control->m_idleSeconds == 0)
+    if (m_control->m_idleSeconds == 0 || m_growthRemaining > 0)
     {
         return;
     }
-    for (int32_t i = m_control->m_initial; i < m_control->m_limit; ++i)
+    for (int32_t i = m_control->m_initial + 1; i <= extent; ++i)
     {
-        if (now < m_idleSince[i] || now - m_idleSince[i] < static_cast<uint64_t>(m_control->m_idleSeconds) * 1000)
+        uint64_t* idle = m_storage->idleSince(i);
+        if (idle != nullptr && now >= *idle && now - *idle >= static_cast<uint64_t>(m_control->m_idleSeconds) * 1000 && m_storage->retire(i))
         {
-            continue;
-        }
-        if (AtomicMath::compareAndSwap(&m_control->m_blocks[i].m_owner, static_cast<int64_t>(0), static_cast<int64_t>(-1)))
-        {
-            m_memories[i].reset();
             AtomicMath::selfSubOne(&m_control->m_active);
         }
     }
