@@ -893,3 +893,353 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
     LibuvHostState* state = static_cast<LibuvHostState*>(instance);
     return state == nullptr ? 0 : state->m_channel.peerCount();
 }
+
+// LIBUV_TCP_USAGE_DEMO
+// // 使用示例：取消本段逐行注释后编译此源文件为演示进程；正式库保持注释
+// // 外部应用只包含 LibuvTcp/LibuvTcpAPI.h，本文件已有内部主头文件声明
+// // 默认执行原始字节自连接；另开两个进程运行：--server 28745、--client 28745
+// // 本示例局部类型只为把完整用法保留在一个main中，实际项目按.h/.cpp拆分类
+// #include <string>
+// #include <cstdlib>
+// #include <cerrno>
+//
+// int main(int argc, char** argv)
+// {
+//     try
+//     {
+//         if (argc == 1)
+//         {
+//             // 两个宿主完全由当前执行者驱动，回调上下文存活到destroy成功。
+//             struct Host
+//             {
+//                 // 原始运输句柄，销毁成功后失效
+//                 void* instance;
+//                 // 当前有效的本实例连接号
+//                 uint64_t peer;
+//                 // 已收到的正文字节数
+//                 uint32_t received;
+//                 // 已确认连接建立
+//                 bool connected;
+//                 // 已收到终态通知
+//                 bool closed;
+//                 // 首个应用或运输错误
+//                 int32_t error;
+//             };
+//             Host server = {}, client = {};
+//             const LibuvHostConnected connected = [](void* context, uint64_t peer)
+//             {
+//                 Host* host = static_cast<Host*>(context);
+//                 host->peer = peer;
+//                 host->connected = true;
+//             };
+//             const LibuvHostData data = [](void* context, uint64_t peer, const uint8_t* bytes, uint32_t size)
+//             {
+//                 (void)peer;
+//                 Host* host = static_cast<Host*>(context);
+//                 // 此协议是一条6字节正文；真实协议必须自行重组完整帧。
+//                 const char* text = "123456";
+//                 for (uint32_t index = 0; index < size; ++index)
+//                 {
+//                     if (host->received >= 6 || bytes[index] != static_cast<uint8_t>(text[host->received]))
+//                     {
+//                         host->error = UV_EPROTO;
+//                         return;
+//                     }
+//                     ++host->received;
+//                 }
+//             };
+//             const LibuvHostWritable writable = [](void* context, uint64_t peer)
+//             {
+//                 (void)context;
+//                 (void)peer;
+//                 // 可在所属执行者重新尝试被背压拒绝的请求；这不是对端ACK。
+//             };
+//             const LibuvHostClosed closed = [](void* context, uint64_t peer, int32_t reason)
+//             {
+//                 (void)peer;
+//                 Host* host = static_cast<Host*>(context);
+//                 host->connected = false;
+//                 host->closed = true;
+//                 if (reason != 0)
+//                 {
+//                     host->error = reason;
+//                 }
+//             };
+//             int32_t result = LibuvTcp::hostCreate(nullptr, &server, connected, data, writable, closed, &server.instance);
+//             if (result == 0)
+//             {
+//                 result = LibuvTcp::hostCreate(nullptr, &client, connected, data, writable, closed, &client.instance);
+//             }
+//             LibuvChannelWritePoolConfig writes;
+//             writes.m_maximumWriteBytes = 4096;
+//             writes.m_maximumPendingBytesPerPeer = 16384;
+//             for (uint32_t index = 0; index < 2 && result == 0; ++index)
+//             {
+//                 Host& host = index == 0 ? server : client;
+//                 result = LibuvTcp::hostConfigureWritePool(host.instance, writes);
+//                 if (result == 0)
+//                 {
+//                     result = LibuvTcp::hostConfigureReadBuffer(host.instance, 4096);
+//                 }
+//             }
+//             if (result == 0)
+//             {
+//                 result = LibuvTcp::hostListen(server.instance, "127.0.0.1", 0, 1);
+//             }
+//             if (result == 0)
+//             {
+//                 result = LibuvTcp::hostConnect(client.instance, "127.0.0.1", LibuvTcp::hostLocalPort(server.instance), &client.peer);
+//             }
+//             bool sent = false;
+//             const uint64_t deadline = uv_hrtime() + 5000000000ULL;
+//             while (result == 0 && server.received != 6 && uv_hrtime() < deadline)
+//             {
+//                 const int32_t left = LibuvTcp::hostPoll(server.instance);
+//                 const int32_t right = LibuvTcp::hostPoll(client.instance);
+//                 if (left < 0 || right < 0 || server.error != 0 || client.error != 0 || server.closed || client.closed)
+//                 {
+//                     result = UV_ECONNRESET;
+//                     break;
+//                 }
+//                 if (server.connected && client.connected && !sent)
+//                 {
+//                     result = LibuvTcp::hostPauseRead(server.instance, server.peer, 1);
+//                     if (result == 0)
+//                     {
+//                         result = LibuvTcp::hostPauseRead(server.instance, server.peer, 0);
+//                     }
+//                     if (result == 0)
+//                     {
+//                         const int32_t accepted = LibuvTcp::hostWrite(client.instance, client.peer,
+//                             reinterpret_cast<const uint8_t*>("123456"), 6);
+//                         sent = accepted == 0;
+//                         result = accepted == 1 ? 0 : accepted;
+//                     }
+//                 }
+//                 uv_sleep(1);
+//             }
+//             if (result == 0 && server.received != 6)
+//             {
+//                 result = UV_ETIMEDOUT;
+//             }
+//             std::printf("host received=%u peers=%u result=%d\n", server.received,
+//                 LibuvTcp::hostPeerCount(server.instance), result);
+//             if (client.connected)
+//             {
+//                 LibuvTcp::hostClose(client.instance, client.peer, 0);
+//             }
+//             for (uint32_t index = 0; index < 2; ++index)
+//             {
+//                 Host& host = index == 0 ? client : server;
+//                 if (host.instance != nullptr)
+//                 {
+//                     LibuvTcp::hostShutdown(host.instance);
+//                     // destroy在回调外同步收敛自有句柄，失败时不能释放回调上下文。
+//                     const int32_t released = LibuvTcp::hostDestroy(host.instance);
+//                     if (released != 0)
+//                     {
+//                         return 1;
+//                     }
+//                     host.instance = nullptr;
+//                 }
+//             }
+//             return result == 0 ? 0 : 1;
+//         }
+//         if (argc != 3 || (std::strcmp(argv[1], "--server") != 0 && std::strcmp(argv[1], "--client") != 0))
+//         {
+//             std::fputs("usage: demo | demo --server PORT | demo --client PORT\n", stderr);
+//             return 2;
+//         }
+//         char* end = nullptr;
+//         errno = 0;
+//         const long port = std::strtol(argv[2], &end, 10);
+//         if (errno != 0 || end == argv[2] || *end != 0 || port < 1 || port > 65535)
+//         {
+//             return 2;
+//         }
+//         // 单连接回显应用；回调在loop执行者运行。跨线程业务应由CTaskThreadManager托管loop。
+//         class Demo : public LibuvTcp
+//         {
+//         public:
+//             // 应用自建截止定时器，stop前自行关闭
+//             uv_timer_t timer;
+//             // 当前连接未组装完的TCP字节
+//             std::string input;
+//             // 完整回显帧计数
+//             uint32_t received;
+//             // 本次演示退出状态
+//             int32_t result;
+//             // 只有uv_timer_init成功后才允许关闭句柄
+//             bool timerReady;
+//
+//             // 构造空的业务状态
+//             Demo() : timer(), received(0), result(1), timerReady(false) {}
+//
+//             // 先关闭业务句柄，再请求库停止
+//             void finish(int32_t status)
+//             {
+//                 result = status;
+//                 if (timerReady && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&timer)))
+//                 {
+//                     uv_timer_stop(&timer);
+//                     uv_close(reinterpret_cast<uv_handle_t*>(&timer), nullptr);
+//                 }
+//                 stop();
+//             }
+//
+//             // 分配并填好一条数组形式的长度帧，交由同一库释放
+//             char* packet(uv_tcp_t* peer)
+//             {
+//                 const int32_t length = 6;
+//                 char* bytes = memoryForSend(static_cast<int32_t>(sizeof(peer)) + 4 + length);
+//                 std::memcpy(bytes, &peer, sizeof(peer));
+//                 std::memcpy(bytes + sizeof(peer), &length, 4);
+//                 std::memcpy(bytes + sizeof(peer) + 4, "123456", 6);
+//                 return bytes;
+//             }
+//
+//             // 客户端已连通，演示全部十二种提交入口
+//             void uvServerConnected(uv_tcp_t* peer) override
+//             {
+//                 try
+//                 {
+//                     // 本例只提交16个小帧且已配置足够容量；一般回调必须用不等空间的try接口。
+//                     bool ok = send(peer, "123456", 6) && post(peer, "123456", 6) &&
+//                         trySend(peer, "123456", 6, true, false) == 0 && tryPost(peer, "123456", 6, true, false) == 0;
+//                     const LibuvSendBuffer messages[] = { { "123456", 6 }, { "123456", 6 } };
+//                     ok = sendBatch(peer, messages, 2) && ok;
+//                     ok = postBatch(peer, messages, 2) && ok;
+//                     ok = trySendBatch(peer, messages, 2, true, false) == 0 && ok;
+//                     ok = tryPostBatch(peer, messages, 2, true, false) == 0 && ok;
+//                     ok = send(packet(peer)) && ok;
+//                     ok = post(packet(peer)) && ok;
+//                     char* bytes = packet(peer);
+//                     if (trySend(bytes, true, false) != 0)
+//                     {
+//                         releaseSendMemory(bytes);
+//                         ok = false;
+//                     }
+//                     bytes = packet(peer);
+//                     if (tryPost(bytes, true, false) != 0)
+//                     {
+//                         releaseSendMemory(bytes);
+//                         ok = false;
+//                     }
+//                     // 数组普通send/post即使失败也接管；try只有成功接管，不能重复释放。
+//                     if (!ok)
+//                     {
+//                         finish(1);
+//                     }
+//                 }
+//                 catch (...)
+//                 {
+//                     finish(1);
+//                 }
+//             }
+//
+//             // 将TCP片段重组为受限长度帧，再处理业务
+//             void receive(uv_tcp_t* peer, const char* bytes, int32_t size) override
+//             {
+//                 try
+//                 {
+//                     input.append(bytes, static_cast<size_t>(size));
+//                     while (input.size() >= 4)
+//                     {
+//                         int32_t length = 0;
+//                         std::memcpy(&length, input.data(), 4);
+//                         if (length < 0 || length > 4096)
+//                         {
+//                             finish(1);
+//                             return;
+//                         }
+//                         if (input.size() < static_cast<size_t>(length) + 4)
+//                         {
+//                             break;
+//                         }
+//                         ++received;
+//                         if (!isClient() && trySend(peer, input.data() + 4, static_cast<uint32_t>(length), true, false) != 0)
+//                         {
+//                             finish(1);
+//                             return;
+//                         }
+//                         input.erase(0, static_cast<size_t>(length) + 4);
+//                         if (isClient() && received == 16)
+//                         {
+//                             // 已收到应用回显后才取消连接；close本身不是flush或送达确认。
+//                             close(peer);
+//                             finish(0);
+//                             return;
+//                         }
+//                     }
+//                 }
+//                 catch (...)
+//                 {
+//                     finish(1);
+//                 }
+//             }
+//
+//             // 服务端连接建立，本例只等待客户端消息
+//             void uvClientConnected(uv_tcp_t* peer) override { (void)peer; }
+//
+//             // 服务端观察本次客户端结束
+//             void uvClientDisconnected(uv_tcp_t* peer) override { (void)peer; finish(received == 16 ? 0 : 1); }
+//
+//             // 客户端观察服务端结束
+//             void uvServerDisconnected(uv_tcp_t* peer) override { (void)peer; finish(received == 16 ? 0 : 1); }
+//
+//             // 连接失败时收敛演示，避免永久等候
+//             void uvServerNotFind() override { finish(1); }
+//
+//             // 连接失败后无其他业务资源需要清理
+//             void uvServerNotFindClear() override {}
+//
+//             // 本例没有每连接的额外清理对象
+//             void uvDisconnectedClear(uv_tcp_t* peer) override { (void)peer; }
+//         } tcp;
+//         LibuvQueuePoolConfig sendQueue;
+//         LibuvQueuePoolConfig closeQueue;
+//         closeQueue.m_initialCapacity = 32;
+//         closeQueue.m_maximumCapacity = 256;
+//         LibuvConnectionPoolConfig connections;
+//         LibuvSendPoolConfig sendPool;
+//         LibuvReadPoolConfig reads;
+//         if (tcp.configureSendQueue(sendQueue) != 0 || tcp.configureCloseQueue(closeQueue) != 0 ||
+//             tcp.configureConnectionPool(connections) != 0 || tcp.configureSendPool(sendPool) != 0 ||
+//             tcp.configureReadPool(reads) != 0)
+//         {
+//             return 1;
+//         }
+//         const bool server = std::strcmp(argv[1], "--server") == 0;
+//         const bool initialized = server ? tcp.initServer("127.0.0.1", static_cast<int32_t>(port), 16) :
+//             tcp.initClient("127.0.0.1", static_cast<int32_t>(port));
+//         // initServer(port)也可使用，但默认监听所有网卡；对外监听需由业务明确选择。
+//         if (!initialized)
+//         {
+//             return 1;
+//         }
+//         if (uv_timer_init(tcp.loopPtr(), &tcp.timer) != 0)
+//         {
+//             tcp.stop();
+//             tcp.loop();
+//             return 1;
+//         }
+//         tcp.timerReady = true;
+//         tcp.timer.data = &tcp;
+//         if (uv_timer_start(&tcp.timer, [](uv_timer_t* timer)
+//             { static_cast<Demo*>(timer->data)->finish(1); }, 15000, 0) != 0)
+//         {
+//             tcp.finish(1);
+//         }
+//         std::printf("%s ready\n", server ? "server" : "client");
+//         std::fflush(stdout);
+//         tcp.loop();
+//         // loop返回后已无本实例回调，随后才销毁派生状态和对象。
+//         std::printf("frames=%u result=%d\n", tcp.received, tcp.result);
+//         return tcp.result;
+//     }
+//     catch (...)
+//     {
+//         std::fputs("demo resource failure\n", stderr);
+//         return 1;
+//     }
+// }
