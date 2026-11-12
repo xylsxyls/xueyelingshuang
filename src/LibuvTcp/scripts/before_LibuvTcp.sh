@@ -32,6 +32,16 @@ if [[ $4 != only ]]; then
 fi
 librariesrely+=($'project\tSemaphore\t'"$Semaphore_dlllib")
 
+#--------------------------------------------------------------------
+LockFreeHashMap_bit=$1
+LockFreeHashMap_dlllib=$2
+LockFreeHashMap_debugRelease=$3
+LockFreeHashMap_allSame=$4
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" LockFreeHashMap "$LockFreeHashMap_bit" "$LockFreeHashMap_dlllib" "$LockFreeHashMap_debugRelease" "$LockFreeHashMap_allSame"
+fi
+librariesrely+=($'project\tLockFreeHashMap\t'"$LockFreeHashMap_dlllib")
+
 SHELL_FOLDER=$(cd "$(dirname "$0")" && pwd)
 xueyelingshuang="$SHELL_FOLDER/../../.."
 sdkpath="${CLOUD_REBUILD_SDK_ROOT:-$xueyelingshuang}"

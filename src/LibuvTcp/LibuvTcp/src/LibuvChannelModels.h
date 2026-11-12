@@ -18,9 +18,9 @@ public:
     LibuvChannelState* m_owner;
     // 实例内永不复用的连接号，0表示拒绝槽位
     uint64_t m_id;
-    // 已交给uv_write而尚未完成的字节数，上限64KiB
+    // 已交给uv_write而尚未完成的字节数，上限来自所属实例配置
     uint32_t m_queuedBytes;
-    // 在途写请求数，上限64，完成回调逐一归还
+    // 在途写请求数，完成回调逐一归还，上限来自所属实例配置
     uint32_t m_queuedWrites;
     // 首次关闭原因，后续重复关闭不能覆盖
     int32_t m_reason;
@@ -32,8 +32,8 @@ public:
     bool m_paused;
     // 连接号已返回调用方或已经发布连接事件，需要配对关闭回调
     bool m_reportClose;
-    // One read callback at a time per loop; no suggested-size allocation.
-    uint8_t m_input[16384];
+    // 本连接按配置拥有的读缓冲，不按libuv建议尺寸临时分配
+    uint8_t* m_input;
 
 public:
     /** 初始化纯状态，uv_tcp_t随后由uv_tcp_init初始化
@@ -41,9 +41,13 @@ public:
     @param [in] id 不复用的连接号；0为超限后仅用于拒绝的连接
     */
     LibuvChannelPeer(LibuvChannelState* owner, uint64_t id);
+
+    /** 所有网络回调结束后释放本连接的独占读缓冲
+    */
+    ~LibuvChannelPeer();
 };
 
-/** 单次uv_write请求及其字节副本，完成回调释放
+/** 单次uv_write请求及其字节副本；完成后由唯一循环执行者回收或有界缓存
 */
 struct LibuvChannelWrite
 {
@@ -54,12 +58,11 @@ public:
     LibuvChannelPeer* m_peer;
     // 拥有的待写字节副本，保留至写完成或取消回调
     std::vector<uint8_t> m_bytes;
+    // 仅空闲缓存期间有效；在途请求不挂入链表，不与其他执行者共享
+    LibuvChannelWrite* m_next;
 
 public:
-    /** 复制待写字节并持有到完成回调
-    @param [in] peer 回调前保持存活的连接
-    @param [in] data 非空字节
-    @param [in] size 非0且最多32KiB
+    /** 创建空闲写请求；prepareWrite复制正文后才能交给libuv
     */
-    LibuvChannelWrite(LibuvChannelPeer* peer, const uint8_t* data, uint32_t size);
+    LibuvChannelWrite();
 };

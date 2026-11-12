@@ -18,13 +18,37 @@ LibuvChannel::~LibuvChannel()
     delete m_state;
 }
 
+int32_t LibuvChannel::configureWritePool(const LibuvChannelWritePoolConfig& config)
+{
+    if (m_state->m_started || m_state->m_stopping)
+    {
+        return UV_EBUSY;
+    }
+    if (!config.valid())
+    {
+        return UV_EINVAL;
+    }
+    m_state->m_writeConfig = config;
+    return 0;
+}
+
+int32_t LibuvChannel::configureReadBuffer(uint32_t bufferBytes)
+{
+    if (m_state->m_started || m_state->m_stopping)
+    {
+        return UV_EBUSY;
+    }
+    if (bufferBytes == 0 || bufferBytes > 16777216U)
+    {
+        return UV_EINVAL;
+    }
+    m_state->m_readBufferBytes = bufferBytes;
+    return 0;
+}
+
 int32_t LibuvChannel::listen(const char* address, uint32_t port,
     LibuvChannelListener* listener, uint32_t maxPeers)
 {
-    if (m_state->m_loopStatus != 0)
-    {
-        return m_state->m_loopStatus;
-    }
     if (m_state->m_started || m_state->m_stopping || listener == nullptr || maxPeers == 0 || maxPeers > 256)
     {
         return UV_EINVAL;
@@ -34,6 +58,20 @@ int32_t LibuvChannel::listen(const char* address, uint32_t port,
     if (result != 0)
     {
         return result;
+    }
+    result = m_state->initialize();
+    if (result != 0)
+    {
+        return result;
+    }
+    try
+    {
+        // 在监听前准备桶表，连接接纳期间不因桶扩容产生额外抖动。
+        m_state->m_peers.reserve(maxPeers);
+    }
+    catch (...)
+    {
+        return UV_ENOMEM;
     }
     m_state->m_callback = listener;
     m_state->m_started = true;
@@ -72,10 +110,6 @@ int32_t LibuvChannel::connect(const char* address, uint32_t port,
     LibuvChannelListener* listener, uint64_t& id)
 {
     id = 0;
-    if (m_state->m_loopStatus != 0)
-    {
-        return m_state->m_loopStatus;
-    }
     if (m_state->m_started || m_state->m_stopping || listener == nullptr || port == 0)
     {
         return UV_EINVAL;
@@ -85,6 +119,19 @@ int32_t LibuvChannel::connect(const char* address, uint32_t port,
     if (result != 0)
     {
         return result;
+    }
+    result = m_state->initialize();
+    if (result != 0)
+    {
+        return result;
+    }
+    try
+    {
+        m_state->m_peers.reserve(1);
+    }
+    catch (...)
+    {
+        return UV_ENOMEM;
     }
     m_state->m_started = true;
     m_state->m_callback = listener;
@@ -108,7 +155,7 @@ int32_t LibuvChannel::connect(const char* address, uint32_t port,
 
 bool LibuvChannel::poll()
 {
-    if (m_state->m_loopStatus != 0)
+    if (!m_state->m_loopInitialized)
     {
         return false;
     }
@@ -131,7 +178,7 @@ bool LibuvChannel::poll()
 
 int32_t LibuvChannel::write(uint64_t id, const uint8_t* data, uint32_t size)
 {
-    if ((data == nullptr && size != 0) || size > 32768)
+    if ((data == nullptr && size != 0) || size > m_state->m_writeConfig.m_maximumWriteBytes)
     {
         return UV_EINVAL;
     }
@@ -145,16 +192,13 @@ int32_t LibuvChannel::write(uint64_t id, const uint8_t* data, uint32_t size)
         return 0;
     }
     LibuvChannelPeer* peer = entry->second;
-    if (peer->m_queuedBytes > 65536 - size || peer->m_queuedWrites >= 64)
+    if (peer->m_queuedBytes > m_state->m_writeConfig.m_maximumPendingBytesPerPeer - size ||
+        peer->m_queuedWrites >= m_state->m_writeConfig.m_maximumWritesPerPeer)
     {
         return UV_ENOBUFS;
     }
-    LibuvChannelWrite* request = nullptr;
-    try
-    {
-        request = new LibuvChannelWrite(peer, data, size);
-    }
-    catch (...)
+    LibuvChannelWrite* request = m_state->prepareWrite(peer, data, size);
+    if (request == nullptr)
     {
         return UV_ENOMEM;
     }
@@ -163,7 +207,7 @@ int32_t LibuvChannel::write(uint64_t id, const uint8_t* data, uint32_t size)
         &buffer, 1, &LibuvChannelState::written);
     if (result != 0)
     {
-        delete request;
+        m_state->releaseWrite(request);
         return result;
     }
     peer->m_queuedBytes += size;
@@ -204,7 +248,7 @@ void LibuvChannel::close(uint64_t peer, int32_t reason)
 void LibuvChannel::shutdown()
 {
     m_state->shutdown();
-    if (m_state->m_loopStatus == 0 && !m_state->m_polling)
+    if (m_state->m_loopInitialized && !m_state->m_polling)
     {
         m_state->m_polling = true;
         uv_run(&m_state->m_loop, UV_RUN_DEFAULT);

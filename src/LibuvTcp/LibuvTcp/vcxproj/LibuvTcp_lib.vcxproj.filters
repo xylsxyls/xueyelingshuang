@@ -1,6 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClInclude Include="..\src\LibuvTcpPoolConfig.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\LibuvPoolSettings.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\LibuvTcp.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -11,6 +17,7 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\LibuvBase.h" />
+    <ClInclude Include="..\src\LibuvBase.inl" />
     <ClInclude Include="..\src\LibuvClient.h" />
     <ClInclude Include="..\src\LibuvServer.h" />
   </ItemGroup>
@@ -23,6 +30,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\LibuvTcpPoolConfig.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\LibuvPoolSettings.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\LibuvTcp.cpp">
       <Filter>源文件</Filter>
     </ClCompile>

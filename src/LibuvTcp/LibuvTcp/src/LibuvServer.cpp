@@ -1,7 +1,8 @@
 ﻿#include "LibuvServer.h"
 #include "uv.h"
 
-LibuvServer::LibuvServer() :
+LibuvServer::LibuvServer(const LibuvPoolSettings& settings) :
+LibuvBase(settings),
 m_server(nullptr)
 {
     m_isClient = false;

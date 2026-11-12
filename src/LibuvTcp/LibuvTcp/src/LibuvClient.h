@@ -13,8 +13,9 @@ public:
 
 public:
     /** 分配尚未uv初始化的客户端句柄存储，不启动网络
+    @param [in] settings 已检查的初始化配置，构造时复制
     */
-    LibuvClient();
+    explicit LibuvClient(const LibuvPoolSettings& settings = LibuvPoolSettings());
 
     /** 所有uv回调结束后释放主TCP及连接请求
      */

@@ -3,8 +3,13 @@
 #include <new>
 
 LibuvChannelState::LibuvChannelState() :
+m_loopInitialized(false),
+m_readBufferBytes(16384),
 m_loopStatus(0),
 m_callback(nullptr),
+m_freeWrites(nullptr),
+m_cachedWrites(0),
+m_cachedWriteBytes(0),
 m_nextPeer(1),
 m_maxPeers(64),
 m_port(0),
@@ -15,12 +20,12 @@ m_polling(false),
 m_rejectPending(false),
 m_acceptPending(false)
 {
-    m_loopStatus = uv_loop_init(&m_loop);
+
 }
 
 LibuvChannelState::~LibuvChannelState()
 {
-    if (m_loopStatus != 0)
+    if (!m_loopInitialized)
     {
         return;
     }
@@ -32,6 +37,16 @@ LibuvChannelState::~LibuvChannelState()
     uv_run(&m_loop, UV_RUN_DEFAULT);
     m_polling = false;
     uv_loop_close(&m_loop);
+}
+
+int32_t LibuvChannelState::initialize()
+{
+    if (!m_loopInitialized)
+    {
+        m_loopStatus = uv_loop_init(&m_loop);
+        m_loopInitialized = m_loopStatus == 0;
+    }
+    return m_loopStatus;
 }
 
 int32_t LibuvChannelState::parseAddress(const char* address, uint32_t port, sockaddr_storage& result)
@@ -51,13 +66,14 @@ int32_t LibuvChannelState::parseAddress(const char* address, uint32_t port, sock
 
 LibuvChannelPeer* LibuvChannelState::createPeer(bool rejectOnly)
 {
-    if (m_loopStatus != 0 || m_nextPeer == 0 || (!rejectOnly && m_peers.size() >= m_maxPeers))
+    if (!m_loopInitialized || m_loopStatus != 0 || m_nextPeer == 0 || (!rejectOnly && m_peers.size() >= m_maxPeers))
     {
         return nullptr;
     }
     LibuvChannelPeer* peer = new (std::nothrow) LibuvChannelPeer(this, rejectOnly ? 0 : m_nextPeer++);
-    if (peer == nullptr)
+    if (peer == nullptr || peer->m_input == nullptr)
     {
+        delete peer;
         return nullptr;
     }
     if (uv_tcp_init(&m_loop, &peer->m_tcp) != 0)
@@ -89,6 +105,56 @@ LibuvChannelPeer* LibuvChannelState::createPeer(bool rejectOnly)
     return peer;
 }
 
+LibuvChannelWrite* LibuvChannelState::prepareWrite(LibuvChannelPeer* peer, const uint8_t* data, uint32_t size)
+{
+    LibuvChannelWrite* request = m_freeWrites;
+    if (request != nullptr)
+    {
+        m_freeWrites = request->m_next;
+        --m_cachedWrites;
+        m_cachedWriteBytes -= request->m_bytes.capacity();
+        request->m_next = nullptr;
+    }
+    try
+    {
+        if (request == nullptr)
+        {
+            request = new LibuvChannelWrite();
+        }
+        // capacity足够时复用原缓冲；始终复制本次有效字节，不借用调用方内存。
+        request->m_bytes.assign(data, data + size);
+        request->m_peer = peer;
+        request->m_request.data = request;
+        return request;
+    }
+    catch (...)
+    {
+        releaseWrite(request);
+        return nullptr;
+    }
+}
+
+void LibuvChannelState::releaseWrite(LibuvChannelWrite* request)
+{
+    if (request == nullptr)
+    {
+        return;
+    }
+    const size_t capacity = request->m_bytes.capacity();
+    if (m_stopping || m_cachedWrites >= m_writeConfig.m_maximumCachedWrites ||
+        capacity > m_writeConfig.m_maximumCachedBytes - m_cachedWriteBytes)
+    {
+        delete request;
+        return;
+    }
+    request->m_peer = nullptr;
+    request->m_bytes.clear();
+    request->m_next = m_freeWrites;
+    m_freeWrites = request;
+    ++m_cachedWrites;
+    m_cachedWriteBytes += capacity;
+}
+
 int32_t LibuvChannelState::startRead(LibuvChannelPeer* peer)
 {
     return uv_read_start(reinterpret_cast<uv_stream_t*>(&peer->m_tcp), &allocateRead, &read);
@@ -113,6 +179,14 @@ void LibuvChannelState::shutdown()
         return;
     }
     m_stopping = true;
+    while (m_freeWrites != nullptr)
+    {
+        LibuvChannelWrite* request = m_freeWrites;
+        m_freeWrites = request->m_next;
+        delete request;
+    }
+    m_cachedWrites = 0;
+    m_cachedWriteBytes = 0;
     if (m_listenerInitialized && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_listener)))
     {
         uv_close(reinterpret_cast<uv_handle_t*>(&m_listener), nullptr);
@@ -207,7 +281,7 @@ void LibuvChannelState::allocateRead(uv_handle_t* handle, size_t suggestedSize, 
 {
     (void)suggestedSize;
     LibuvChannelPeer* peer = static_cast<LibuvChannelPeer*>(handle->data);
-    *buffer = uv_buf_init(reinterpret_cast<char*>(peer->m_input), sizeof(peer->m_input));
+    *buffer = uv_buf_init(reinterpret_cast<char*>(peer->m_input), peer->m_owner->m_readBufferBytes);
 }
 
 void LibuvChannelState::read(uv_stream_t* stream, ssize_t size, const uv_buf_t* buffer)
@@ -241,7 +315,7 @@ void LibuvChannelState::written(uv_write_t* request, int status)
     LibuvChannelState* owner = peer->m_owner;
     peer->m_queuedBytes -= static_cast<uint32_t>(write->m_bytes.size());
     --peer->m_queuedWrites;
-    delete write;
+    owner->releaseWrite(write);
     if (peer->m_closing)
     {
         return;

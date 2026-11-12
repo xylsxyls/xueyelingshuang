@@ -2,7 +2,8 @@
 #include "uv.h"
 #include <memory>
 
-LibuvClient::LibuvClient() :
+LibuvClient::LibuvClient(const LibuvPoolSettings& settings) :
+LibuvBase(settings),
 m_dest(nullptr),
 m_connect(nullptr)
 {

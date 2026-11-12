@@ -20,16 +20,21 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\LibuvBase.h" />
+    <ClInclude Include="..\src\LibuvBase.inl" />
     <ClInclude Include="..\src\LibuvClient.h" />
     <ClInclude Include="..\src\LibuvServer.h" />
     <ClInclude Include="..\src\LibuvTcpAPI.h" />
     <ClInclude Include="..\src\LibuvTcpMacro.h" />
+    <ClInclude Include="..\src\LibuvTcpPoolConfig.h" />
+    <ClInclude Include="..\src\LibuvPoolSettings.h" />
     <ClInclude Include="..\src\LibuvTcp.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\LibuvBase.cpp" />
     <ClCompile Include="..\src\LibuvClient.cpp" />
     <ClCompile Include="..\src\LibuvServer.cpp" />
+    <ClCompile Include="..\src\LibuvTcpPoolConfig.cpp" />
+    <ClCompile Include="..\src\LibuvPoolSettings.cpp" />
     <ClCompile Include="..\src\LibuvTcp.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

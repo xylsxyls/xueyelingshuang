@@ -11,8 +11,9 @@ public:
 
 public:
     /** 分配尚未uv初始化的监听存储，不开始监听
+    @param [in] settings 已检查的初始化配置，构造时复制
     */
-    LibuvServer();
+    explicit LibuvServer(const LibuvPoolSettings& settings = LibuvPoolSettings());
 
     /** 所有uv回调结束后释放监听句柄
      */

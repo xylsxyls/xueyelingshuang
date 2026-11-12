@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "LibuvTcpMacro.h"
+#include "LibuvTcpPoolConfig.h"
 #include <stdint.h>
 
 class LibuvChannelState;
@@ -20,7 +21,7 @@ public:
     /** 原始字节借用至回调返回，宿主须完整消费或复制
     @param [in] peer 连接号
     @param [in] data 非空的借用字节
-    @param [in] size 1至16384字节
+    @param [in] size 本次字节数，不超过配置读缓冲大小，默认16384
     */
     virtual void onData(uint64_t peer, const uint8_t* data, uint32_t size) = 0;
 
@@ -41,13 +42,25 @@ public:
 class LibuvTcpAPI LibuvChannel
 {
 public:
-    /** 创建独占事件循环；普通初始化失败由listen/connect返回libuv错误
+    /** 创建待配置实例；listen/connect才建立事件循环及网络资源
     */
     LibuvChannel();
 
     /** 在所属执行者结束所有回调并释放句柄；禁止在回调中销毁自身
     */
     ~LibuvChannel();
+
+    /** listen/connect前设置写窗口和空闲缓存，只复制配置；所有操作由同一执行者调用
+    @param [in] config 有效配置，借用到返回；失败不改变已有配置
+    @return 0成功，UV_EINVAL非法参数，UV_EBUSY已启动或已停止
+    */
+    int32_t configureWritePool(const LibuvChannelWritePoolConfig& config);
+
+    /** listen/connect前设置每连接独占读缓冲大小，连接建立时才分配
+    @param [in] bufferBytes 1至16777216字节，默认16384，不改变TCP流语义
+    @return 0成功，UV_EINVAL非法参数，UV_EBUSY已启动或已停止
+    */
+    int32_t configureReadBuffer(uint32_t bufferBytes);
 
     /** 监听数值IPv4/IPv6地址，不执行阻塞域名解析
     @param [in] address 非空数值地址，显式0.0.0.0/::才监听所有网卡
@@ -72,7 +85,7 @@ public:
     */
     bool poll();
 
-    /** 复制密文字节并异步发送，每次最大32KiB、每连接在途最多64KiB和64次写
+    /** 复制字节并异步发送，写入上限使用初始化前配置；默认32KiB、每连接64KiB/64次
     @param [in] peer 有效已连接且未关闭的连接号
     @param [in] data size不为0时不可空
     @param [in] size 字节数，0为无操作
