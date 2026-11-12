@@ -1,35 +1,41 @@
-﻿#设置CMAKE最低版本
+#设置CMAKE最低版本
 CMAKE_MINIMUM_REQUIRED(VERSION 3.1.1)
 SET(CMAKE_CXX_STANDARD 11)
+if(NOT DEFINED DEBUGRELEASE)
+    SET(DEBUGRELEASE release)
+endif()
+if(NOT DEFINED BIT)
+    SET(BIT 64)
+endif()
 
 #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -finput-charset='gb2312'")
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -finput-charset='gb2312'")
 
-if(${DEBUGRELEASE} STREQUAL "debug")
+if("${DEBUGRELEASE}" STREQUAL "debug")
 #设置项目名称
 SET(PROJECT_NAME ProcessWorkTestd)
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -Wl,-rpath=. -O0 -g -ggdb ")
 SET(CMAKE_BUILD_TYPE "Debug")
-elseif(${DEBUGRELEASE} STREQUAL "release")
+elseif("${DEBUGRELEASE}" STREQUAL "release")
 #设置项目名称
 SET(PROJECT_NAME ProcessWorkTest)
-SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
+SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O2 -DNDEBUG")
 SET(CMAKE_BUILD_TYPE "Release")
 endif()
 
-if(${BIT} STREQUAL "32")
+if("${BIT}" STREQUAL "32")
     MESSAGE(STATUS "using 32bits (x86)")
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
-elseif(${BIT} STREQUAL "64")
+elseif("${BIT}" STREQUAL "64")
     MESSAGE(STATUS "using 64bits (x86_64)")
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64")
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
-elseif(${BIT} STREQUAL "arm32")
+elseif("${BIT}" STREQUAL "arm32")
     MESSAGE(STATUS "using arm32 (armhf)")
     SET(CMAKE_C_COMPILER "arm-linux-gnueabihf-gcc")
     SET(CMAKE_CXX_COMPILER "arm-linux-gnueabihf-g++")
-elseif(${BIT} STREQUAL "arm64")
+elseif("${BIT}" STREQUAL "arm64")
     MESSAGE(STATUS "using arm64 (aarch64)")
     SET(CMAKE_C_COMPILER "aarch64-linux-gnu-gcc")
     SET(CMAKE_CXX_COMPILER "aarch64-linux-gnu-g++")
@@ -53,8 +59,11 @@ LINK_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../lib/)
 
 #获取代码，在项目中，将所有代码都放在src文件夹中
 AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/ DIR_SRCS)
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../CTaskThreadManagerTest/CTaskThreadManagerTest/)
+LIST(APPEND DIR_SRCS ${PROJECT_SOURCE_DIR}/../../CTaskThreadManagerTest/CTaskThreadManagerTest/BlackBoxTestSupport.cpp)
 #编译可执行程序
 ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS})
+TARGET_COMPILE_DEFINITIONS(${PROJECT_NAME} PRIVATE PROCESS_WORK_BENCH_IN_SUITE PROCESS_WORK_BENCH_RESULT_API PROCESS_WORK_BENCH_STORAGE_GROWTH)
 #如果要生成静态链接库
 #ADD_LIBRARY(${PROJECT_NAME} STATIC ${DIR_SRCS})
 #如果要生成动态链接库
@@ -65,3 +74,15 @@ list(APPEND LIBRARYLIST ${LIBRARIESRELY})
 foreach (EVERYLIBRARY ${LIBRARYLIST})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/${EVERYLIBRARY})
 endforeach ()
+FIND_PACKAGE(Threads REQUIRED)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
+
+# 独立性能入口复用同一组库，不把基准代码链接进生产库。
+ADD_EXECUTABLE(ProcessWorkBenchmark
+    ${PROJECT_SOURCE_DIR}/ProcessWorkBenchmark.cpp
+    ${PROJECT_SOURCE_DIR}/../../CTaskThreadManagerTest/CTaskThreadManagerTest/BlackBoxTestSupport.cpp)
+TARGET_COMPILE_DEFINITIONS(ProcessWorkBenchmark PRIVATE PROCESS_WORK_BENCH_RESULT_API PROCESS_WORK_BENCH_STORAGE_GROWTH)
+foreach (EVERYLIBRARY ${LIBRARYLIST})
+TARGET_LINK_LIBRARIES(ProcessWorkBenchmark ${PROJECT_SOURCE_DIR}/../../../lib/${EVERYLIBRARY})
+endforeach ()
+TARGET_LINK_LIBRARIES(ProcessWorkBenchmark ${CMAKE_THREAD_LIBS_INIT})

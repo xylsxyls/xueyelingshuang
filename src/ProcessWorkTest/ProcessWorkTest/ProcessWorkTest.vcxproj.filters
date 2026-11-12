@@ -24,4 +24,53 @@
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ProcessWorkFixtures.cpp" />
+    <ClCompile Include="..\..\CTaskThreadManagerTest\CTaskThreadManagerTest\BlackBoxTestSupport.cpp" />
+    <ClInclude Include="..\..\CTaskThreadManagerTest\CTaskThreadManagerTest\BlackBoxTestSupport.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ProcessWorkCoreTests.cpp" />
+    <ClInclude Include="ProcessWorkCoreTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ProcessWorkFaultTests.cpp" />
+    <ClCompile Include="ProcessWorkLocalQueueTests.cpp" />
+    <ClCompile Include="ProcessWorkResourceTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ProcessWorkBatchTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ProcessWorkCrashStreamTests.cpp" />
+    <ClInclude Include="ProcessWorkCrashStreamTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ProcessWorkFairnessTests.cpp" />
+    <ClInclude Include="ProcessWorkFairnessTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ProcessWorkRetryTests.h" />
+    <ClCompile Include="ProcessWorkRetryTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ProcessWorkMemoryTests.h" />
+    <ClCompile Include="ProcessWorkMemoryTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ProcessWorkTestAutomation.cpp" />
+    <ClCompile Include="ProcessWorkTestBuild.cpp" />
+    <ClCompile Include="ProcessWorkTestInstrumentation.cpp" />
+    <ClInclude Include="ProcessWorkTestAutomation.h" />
+    <ClCompile Include="ProcessWorkBenchmark.cpp" />
+    <ClCompile Include="ProcessWorkBenchmarkAudit.cpp" />
+    <ClInclude Include="ProcessWorkBenchmark.h" />
+    <ClInclude Include="ProcessWorkBenchmarkAudit.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ProcessWorkCompatibilityTests.cpp" />
+    <ClInclude Include="ProcessWorkCompatibilityTests.h" />
+    <ClCompile Include="ProcessWorkReferenceCases.cpp" />
+    <ClInclude Include="ProcessWorkReferenceCases.h" />
+  </ItemGroup>
 </Project>
