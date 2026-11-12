@@ -1,1 +1,2 @@
-"$CLOUD_REBUILD" LibuvTcp 32 dll release same
+"$CLOUD_REBUILD" LibuvTcp 64 lib release same
+"$CLOUD_REBUILD" CTaskThreadManager 64 lib release same

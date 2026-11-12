@@ -15,12 +15,42 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="LibuvTcpPerformance.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LibuvTcpPublicTest.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="LibuvTcpTest.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LibuvTcpTestDiagnostics.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LibuvTcpBenchmark.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LibuvTcpTestModels.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="LibuvTcpPerformance.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LibuvTcpPublicTest.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="LibuvTcpTest.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LibuvTcpTestDiagnostics.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LibuvTcpBenchmark.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LibuvTcpTestModels.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
