@@ -818,3 +818,160 @@ int32_t ProcessWork::receivePayloadCapacity() const
 {
     return m_channel ? m_channel->payloadCapacity() : 0;
 }
+
+/* PROCESS_WORK_USAGE_DEMO_BEGIN
+// 将本块复制到应用的独立main源文件编译；库本身保持本块注释。
+// 自发自收便于直接运行。跨进程时接收端保留初始化/回调，发送端使用对方PID或逻辑名称。
+#include "ProcessWork/ProcessWorkAPI.h"
+#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "CSystem/CSystemAPI.h"
+#include <atomic>
+#include <chrono>
+#include <cstdio>
+#include <cstring>
+#include <exception>
+#include <string>
+#include <thread>
+
+// 示例回调对象由main拥有；析构先关闭工作线程，再销毁回调中的状态。
+class ProcessWorkDemoCallback : public ProcessReceiveCallback
+{
+public:
+    ProcessWorkDemoCallback() : m_received(0), m_bad(false)
+    {
+
+    }
+
+    ~ProcessWorkDemoCallback()
+    {
+        ProcessWork::instance().uninitReceive();
+    }
+
+    void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type)
+    {
+        // buffer只借用到本次回调返回；异步使用时必须复制。
+        if (sendPid != CSystem::currentProcessPid() || length != 6 || buffer == nullptr ||
+            std::memcmp(buffer, "123456", 6) != 0 || type != MessageType::MESSAGE)
+        {
+            m_bad.store(true);
+        }
+        m_received.fetch_add(1);
+    }
+
+    void bufferFull(int32_t count)
+    {
+        // 合并的满载通知，仅供监控；不要在此等待本接收线程排空。
+        std::printf("shared buffers busy, count=%d\n", count);
+    }
+
+public:
+    // 演示跨线程观察完成数量；业务应使用自己的请求/应答协议确认远端处理。
+    std::atomic<int32_t> m_received;
+    // 演示对正文与消息类型的检查。
+    std::atomic<bool> m_bad;
+};
+
+int main()
+{
+    try
+    {
+        // 在程序串行启动阶段主动创建单例，管理器应比IPC先初始化。
+        CTaskThreadManager::instance();
+        ProcessWork& ipc = ProcessWork::instance();
+        ProcessWorkDemoCallback callback;
+        ProcessWorkConfig config;
+        if (!config.m_receiveMemory.setLocalQueueLimitMB(128) || !config.m_postMemory.setLocalQueueLimitMB(-1))
+        {
+            return 1;
+        }
+        // 队列节点、正文备用槽和积压额度是三个不同概念。
+        config.m_receiveMemory.m_receiveBatchReserve = 4;
+        config.m_receiveMemory.m_queuePool.initialCapacity = 64;
+        config.m_receiveMemory.m_freeQueuePool.initialCapacity = 64;
+        config.m_postMemory.m_postBufferReserve = 64;
+        config.m_postMemory.m_queuePool.initialCapacity = 64;
+        // 其他池、Map和三条任务线程的参数可通过config相应字段逐项设置。
+        // 不设置m_configureManager，避免覆盖同进程其他库的线程管理器配置。
+        if (!ipc.configure(config))
+        {
+            return 2;
+        }
+        // 单独调整Post参数的入口；与完整configure择一即可，这里仅演示调用顺序。
+        if (!ipc.configurePostMemory(config.m_postMemory))
+        {
+            return 3;
+        }
+        const int32_t pid = CSystem::currentProcessPid();
+        const std::string name = "process_work_demo_" + std::to_string(pid);
+        if (!ipc.setReceiveName(name) || !ipc.addProcessReceiveCallback(&callback))
+        {
+            return 4;
+        }
+        // 65548含12字节头，正文最大65536；初始128块，遇满后扩64块，空闲60秒缩容。
+        // 最后-1是共享扩容份数不设业务上限，不是预先申请无限内存。
+        if (!ipc.initReceive(65548, 128, 0, 64, 60, -1, config.m_receiveMemory) || !ipc.initPostThread())
+        {
+            return 5;
+        }
+        std::printf("blocks=%d, max payload=%d\n", ipc.receiveBufferCount(), ipc.receivePayloadCapacity());
+        const std::string message("123456");
+        // send成功：完整正文已经共享提交，但不表示对方业务处理完成。
+        if (!ipc.send(pid, message.data(), 6) || !ipc.send(pid, message) ||
+            !ipc.send(name, message.data(), 6) || !ipc.send(name, message))
+        {
+            return 6;
+        }
+        // post成功：本地副本被接纳，原message可立即修改/释放；后台才执行真实发送。
+        if (!ipc.post(pid, message.data(), 6) || !ipc.post(pid, message) ||
+            !ipc.post(name, message.data(), 6) || !ipc.post(name, message))
+        {
+            return 7;
+        }
+        // 需要具体错误原因时使用Result接口；成功枚举为0，不能当bool判断。
+        if (ipc.sendResult(pid, message.data(), 6) != PROCESS_WORK_SENT ||
+            ipc.sendResult(name, message.data(), 6) != PROCESS_WORK_SENT ||
+            ipc.postResult(pid, message.data(), 6) != PROCESS_WORK_POSTED ||
+            ipc.postResult(name, message.data(), 6) != PROCESS_WORK_POSTED)
+        {
+            return 8;
+        }
+        // 两个开关分别表示内部重试竞争和容量；默认false,false。
+        // 示例选择true,true。业务若选择默认值，失败未提交，可保留该消息稍后重试。
+        if (ipc.trySend(pid, message.data(), 6, MessageType::MESSAGE, true, true) != PROCESS_WORK_SENT ||
+            ipc.tryPost(name, message.data(), 6, MessageType::MESSAGE, true, true) != PROCESS_WORK_POSTED)
+        {
+            return 9;
+        }
+        // 先停止新的post，再排空。这里只完成发送工作，并不等待远端业务回调。
+        ipc.waitForPostEnd();
+        const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (callback.m_received.load() < 14 && std::chrono::steady_clock::now() < deadline)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        std::printf("post charged bytes=%llu, receive charged bytes=%llu\n",
+            static_cast<unsigned long long>(ipc.postPendingBytes()), static_cast<unsigned long long>(ipc.receivePendingBytes()));
+        // -1时postPendingBytes返回0表示未计费，不能用它判断排空。
+        // 缓存清理可与发送并发，但不是逐包必做的操作。
+        ipc.clearDestPid(pid);
+        ipc.clearUseless();
+        ipc.clear();
+        ipc.uninitPostThread();
+        ipc.uninitReceive();
+        // uninitReceive也清除回调登记；重新启动需要重新登记回调。
+        const int32_t received = callback.m_received.load();
+        std::printf("received=%d\n", received);
+        return received == 14 && !callback.m_bad.load() ? 0 : 10;
+    }
+    catch (const std::exception& error)
+    {
+        std::fprintf(stderr, "demo setup failed: %s\n", error.what());
+        return 11;
+    }
+    catch (...)
+    {
+        std::fprintf(stderr, "demo setup failed\n");
+        return 12;
+    }
+}
+PROCESS_WORK_USAGE_DEMO_END */
