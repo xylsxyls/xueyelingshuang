@@ -102,7 +102,7 @@ int LibuvTcpPublicTest::run(uint32_t payload, uint32_t count, double& millisecon
             {
                 bytes[index] = static_cast<uint8_t>(offset + index);
             }
-            const int32_t result = LibuvTcp::hostWrite(client.m_instance, peer, &bytes[0], payload);
+            const int32_t result = LibuvTcp::post(client.m_instance, peer, &bytes[0], payload);
             if (result == 1)
             {
                 break;
@@ -241,10 +241,7 @@ bool LibuvTcpDllSender::run()
                 uv_tcp_t* target = client.m_target.load(std::memory_order_acquire);
                 if (target != nullptr && submitted < 10000)
                 {
-                    const uint32_t mode = submitted % 4;
-                    const bool accepted = mode == 0 ? client.send(target, "123456", 6) :
-                        mode == 1 ? client.post(target, "123456", 6) :
-                        mode == 2 ? client.trySend(target, "123456", 6, true, true) == 0 :
+                    const bool accepted = submitted % 2 == 0 ? client.post(target, "123456", 6) :
                         client.tryPost(target, "123456", 6, true, true) == 0;
                     if (!accepted)
                     {
@@ -298,7 +295,7 @@ int main()
         const int32_t size = static_cast<int32_t>(sizeof(void*) + 4);
         char* bytes = allocation.memoryForSend(size);
         std::memset(bytes, 0, size);
-        const int32_t submitted = allocation.trySend(bytes);
+        const int32_t submitted = allocation.tryPost(bytes);
         if (submitted != 0)
         {
             allocation.releaseSendMemory(bytes);
@@ -318,9 +315,7 @@ int main()
             return 9;
         }
         LibuvSendBuffer body = { "123456", 6 };
-        if (allocation.trySendBatch(nullptr, &body, 1) >= 0 || allocation.sendBatch(nullptr, &body, 1) ||
-            allocation.trySend(nullptr, "123456", 6) >= 0 || allocation.send(nullptr, "123456", 6) ||
-            allocation.tryPostBatch(nullptr, &body, 1) >= 0 || allocation.postBatch(nullptr, &body, 1) ||
+        if (allocation.tryPostBatch(nullptr, &body, 1) >= 0 || allocation.postBatch(nullptr, &body, 1) ||
             allocation.tryPost(nullptr, "123456", 6) >= 0 || allocation.post(nullptr, "123456", 6) ||
             allocation.initServer(static_cast<const char*>(nullptr), 0))
         {
@@ -334,7 +329,7 @@ int main()
         const int result = LibuvTcpPublicTest::run(1024, 10000, milliseconds);
         std::printf("public DLL transfer: result=%d ms=%.3f\n", result, milliseconds);
         const bool sender = LibuvTcpDllSender::run();
-        std::printf("public DLL send/post: %s frames=10000\n", sender ? "PASS" : "FAIL");
+        std::printf("public DLL post: %s frames=10000\n", sender ? "PASS" : "FAIL");
         return result == 0 && sender ? 0 : 10;
     }
     catch (...)

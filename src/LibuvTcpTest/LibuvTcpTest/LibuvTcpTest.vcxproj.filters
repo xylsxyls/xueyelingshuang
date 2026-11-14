@@ -18,6 +18,9 @@
     <ClInclude Include="LibuvTcpPerformance.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="LibuvRawPostBenchmark.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="LibuvTcpPublicTest.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -36,6 +39,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LibuvTcpPerformance.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LibuvRawPostBenchmark.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="LibuvTcpPublicTest.cpp">

@@ -12,7 +12,7 @@ public:
     */
     LibuvTcpPerformance();
 
-    /** 执行28个稳定场景，每版一次预热，交替运行并输出原始样本及中位数CSV
+    /** 执行46个稳定场景，每版一次预热，交替运行并输出原始样本及中位数CSV
     @param [in] argc 参数数量
     @param [in] argv --suite 正式轮数 基准EXE或- 可选场景编号；编号0表示全部
     @return 0所选样本全部有效，非零参数、子进程、超时或数据错误
@@ -54,6 +54,18 @@ private:
     @return 输出完整、数值有效且交付数正确
     */
     static bool parse(const std::string& output, int kind, uint64_t expected, double* metrics);
+
+    /** 核对逐条host样本的输入身份、实际接收量及计时口径
+    @param [in] output 子进程的完整输出
+    @param [in] producers 预期生产者数量
+    @param [in] payload 预期单条正文字节数
+    @param [in] count 预期正式消息总数，不包含预热
+    @param [in] mode raw、framed、framedpool或ordered
+    @param [out] metrics 与parse相同的八项指标，未测值为-1
+    @return 样本全部完成且与指定场景一致
+    */
+    static bool parseHost(const std::string& output, uint32_t producers, uint32_t payload,
+        uint32_t count, const char* mode, double* metrics);
 
     /** 读取缓冲借用本上下文固定存储，不在回调中分配读缓冲
     @param [in] handle 当前管道

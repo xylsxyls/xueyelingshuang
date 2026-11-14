@@ -3,6 +3,7 @@
 #include "LibuvTcpBenchmark.h"
 #include "LibuvTcpPerformance.h"
 #include "LibuvTcpPublicTest.h"
+#include "LibuvRawPostBenchmark.h"
 // 白盒布局只由测试包含，正式 API 不需要暴露这些文件。
 #include "LibuvTcp/LibuvBase.h"
 #include "LibuvTcp/LibuvChannelModels.h"
@@ -146,7 +147,7 @@ static bool FillQueue(LibuvTcp& tcp, bool closes = false)
     return false;
 }
 
-/** 满队列且没有循环执行者时拒绝非法等待，普通 send 仍恰好释放数组
+/** 满队列且没有循环执行者时拒绝非法等待，普通 post 仍恰好释放数组
 @return 是否满足完整失败后置条件
 */
 static bool TestRejectedSend()
@@ -164,7 +165,7 @@ static bool TestRejectedSend()
     buffer[sizeof(target) + sizeof(length)] = 'x';
     LibuvTcpTest::m_arrayDeletes.store(0);
     LibuvTcpTest::m_watchedArray.store(buffer);
-    tcp.send(buffer);
+    tcp.post(buffer);
     const size_t deleted = LibuvTcpTest::m_arrayDeletes.load();
     const bool passed = deleted == 1 && !tcp.m_libuv->m_stopping.load();
     LibuvTcpTest::m_watchedArray.store(nullptr);
@@ -274,7 +275,7 @@ static void SubmitByte(LibuvTcp& tcp)
     std::memcpy(buffer, &target, sizeof(target));
     std::memcpy(buffer + sizeof(target), &length, 4);
     buffer[sizeof(target) + 4] = 'x';
-    tcp.send(buffer);
+    tcp.post(buffer);
 }
 
 /** 批量消费受到每轮1024项限制，停止后仍完整回收已经取出的前缀
@@ -390,8 +391,8 @@ static bool TestHostContracts()
         return false;
     }
     bool passed = LibuvTcp::hostPauseRead(client.m_instance, client.m_peer, 2) < 0 &&
-        LibuvTcp::hostWrite(client.m_instance, client.m_peer, nullptr, 1) < 0 &&
-        LibuvTcp::hostWrite(client.m_instance, client.m_peer, nullptr, 0) == 0;
+        LibuvTcp::post(client.m_instance, client.m_peer, nullptr, 1) < 0 &&
+        LibuvTcp::post(client.m_instance, client.m_peer, nullptr, 0) == 0;
     passed = LibuvTcp::hostClose(client.m_instance, client.m_peer, 0) == 0 && passed;
     passed = LibuvTcp::hostClose(client.m_instance, client.m_peer, 0) == 0 && passed;
     passed = PollHosts(server, client, [&]() { return server.m_closed == 1 && client.m_closed == 1; }) && passed;
@@ -408,32 +409,591 @@ static bool TestHostBackpressure()
 {
     LibuvTestHost server;
     LibuvTestHost client;
-    if (!ConnectHosts(server, client))
+    LibuvChannelWritePoolConfig pool;
+    pool.m_records.initialCapacity = 2;
+    pool.m_records.maximumCapacity = 128;
+    uint64_t peer = 0;
+    if (!server.initialize() || !client.initialize() ||
+        LibuvTcp::hostConfigureWritePool(client.m_instance, pool) != 0 ||
+        LibuvTcp::hostListen(server.m_instance, "127.0.0.1", 0, 1) != 0 ||
+        LibuvTcp::hostConnect(client.m_instance, "127.0.0.1", LibuvTcp::hostLocalPort(server.m_instance), &peer) != 0 ||
+        !PollHosts(server, client, [&]() { return server.m_connected == 1 && client.m_connected == 1; }))
     {
         return false;
     }
     const uint8_t byte = 0x5A;
     bool passed = true;
-    for (uint32_t index = 0; index < 64; ++index)
+    for (uint32_t index = 0; index < 128; ++index)
     {
-        passed = LibuvTcp::hostWrite(client.m_instance, client.m_peer, &byte, 1) == 0 && passed;
+        passed = LibuvTcp::post(client.m_instance, client.m_peer, &byte, 1) == 0 && passed;
     }
-    passed = LibuvTcp::hostWrite(client.m_instance, client.m_peer, &byte, 1) == 1 && passed;
-    passed = PollHosts(server, client, [&]() { return server.m_received == 64 && client.m_written == 64; }) && passed;
+    passed = LibuvTcp::post(client.m_instance, client.m_peer, &byte, 1) == 1 && passed;
+    passed = PollHosts(server, client, [&]() { return server.m_received == 128 && client.m_written == 2; }) && passed;
     passed = LibuvTcp::hostPauseRead(server.m_instance, server.m_peer, 1) == 0 && passed;
-    passed = LibuvTcp::hostWrite(client.m_instance, client.m_peer, &byte, 1) == 0 && passed;
-    passed = PollHosts(server, client, [&]() { return client.m_written == 65; }) && passed;
+    passed = LibuvTcp::post(client.m_instance, client.m_peer, &byte, 1) == 0 && passed;
+    passed = PollHosts(server, client, [&]() { return client.m_written == 3; }) && passed;
     for (uint32_t tick = 0; tick < 100; ++tick)
     {
         LibuvTcp::hostPoll(server.m_instance);
         LibuvTcp::hostPoll(client.m_instance);
-        passed = server.m_received == 64 && passed;
+        passed = server.m_received == 128 && passed;
     }
     passed = LibuvTcp::hostPauseRead(server.m_instance, server.m_peer, 0) == 0 && passed;
-    passed = PollHosts(server, client, [&]() { return server.m_received == 65; }) && passed;
+    passed = PollHosts(server, client, [&]() { return server.m_received == 129; }) && passed;
     passed = client.finish() && passed;
     passed = server.finish() && passed;
     return passed && client.m_closed == 1 && server.m_closed == 1 && !server.m_failed && !client.m_failed;
+}
+
+/** 原始post只拷贝接纳；接收端单独推进仍收不到，发送loop推进后合并交付
+@return 无额外长度头、输入立即复用、512项增长和批次完成均符合契约
+*/
+static bool TestRawPostAdmission()
+{
+    LibuvTestHost server;
+    LibuvTestHost client;
+    LibuvChannelWritePoolConfig pool;
+    pool.m_maximumWriteBytes = 6;
+    pool.m_records.initialCapacity = 2;
+    pool.m_records.maximumCapacity = 512;
+    uint64_t peer = 0;
+    if (!server.initialize() || !client.initialize() ||
+        LibuvTcp::hostConfigureWritePool(client.m_instance, pool) != 0 ||
+        LibuvTcp::hostListen(server.m_instance, "127.0.0.1", 0, 1) != 0 ||
+        LibuvTcp::hostConnect(client.m_instance, "127.0.0.1", LibuvTcp::hostLocalPort(server.m_instance), &peer) != 0 ||
+        !PollHosts(server, client, [&]() { return server.m_connected == 1 && client.m_connected == 1; }))
+    {
+        return false;
+    }
+    uint8_t bytes[6];
+    for (uint32_t index = 0; index < 512; ++index)
+    {
+        std::memset(bytes, 0x5a, sizeof(bytes));
+        if (LibuvTcp::post(client.m_instance, peer, bytes, sizeof(bytes)) != 0) { return false; }
+        std::memset(bytes, 0xee, sizeof(bytes));
+    }
+    bool passed = LibuvTcp::post(client.m_instance, peer, bytes, sizeof(bytes)) == 1;
+    for (uint32_t index = 0; index < 32; ++index) { LibuvTcp::hostPoll(server.m_instance); }
+    passed = server.m_received == 0 && client.m_written == 0 && passed;
+    passed = PollHosts(server, client, [&]() { return server.m_received == 3072 && client.m_written == 8; }) && passed;
+    passed = client.finish() && server.finish() && passed;
+    return passed && !server.m_failed && !client.m_failed && server.m_closed == 1 && client.m_closed == 1;
+}
+
+/** post后立即关闭或停止，未交给网络的副本应取消并完整归还
+@return 取消不伪装送达，只有一次终态，所属loop及实例均可销毁
+*/
+static bool TestRawPostCancel()
+{
+    for (uint32_t mode = 0; mode < 2; ++mode)
+    {
+        LibuvTestHost server;
+        LibuvTestHost client;
+        if (!ConnectHosts(server, client)) { return false; }
+        const uint8_t byte = 0x5a;
+        for (uint32_t index = 0; index < 128; ++index)
+        {
+            if (LibuvTcp::post(client.m_instance, client.m_peer, &byte, 1) != 0) { return false; }
+        }
+        if (mode == 0) { LibuvTcp::hostClose(client.m_instance, client.m_peer, 42); }
+        else { LibuvTcp::hostShutdown(client.m_instance); }
+        if (!PollHosts(server, client, [&]() { return server.m_closed == 1 && client.m_closed == 1; }) ||
+            server.m_received != 0 || client.m_written != 0 ||
+            LibuvTcp::post(client.m_instance, client.m_peer, &byte, 1) >= 0 ||
+            LibuvTcp::hostPeerCount(client.m_instance) != 0 || !client.finish() || !server.finish())
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+/** 四参数原始post与loop并发，核对每个生产者独立FIFO及实际池满重试
+@param [in] stopDuringSubmit true在生产者持续提交时关闭；false完整消费所有消息
+@param [in] ownerProducer true让第四个生产者在loop线程走本地路径
+@param [in] lanes true预配置4096槽并验证快速通道
+@param [in] mixed true交替提交12字节及大于64KiB的组合正文
+@return 无额外帧头、错序、重复、丢失或停止后接纳
+*/
+static bool RawConcurrent(bool stopDuringSubmit, bool ownerProducer = false, bool lanes = false, bool mixed = false)
+{
+    LibuvTestReceiver server(8, 4);
+    LibuvTestHost client;
+    LibuvChannelWritePoolConfig pools;
+    pools.m_maximumWriteBytes = mixed ? 73728 : 12;
+    pools.m_records.initialCapacity = lanes ? 4096 : 16;
+    pools.m_records.maximumCapacity = lanes ? 4096 : 16;
+    uint64_t peer = 0;
+    if (!client.initialize() || LibuvTcp::hostConfigureWritePool(client.m_instance, pools) != 0 ||
+        server.m_channel.listen("127.0.0.1", 0, &server, 1) != 0 ||
+        LibuvTcp::hostConnect(client.m_instance, "127.0.0.1", server.m_channel.localPort(), &peer) != 0)
+    {
+        return false;
+    }
+    const uint64_t deadline = uv_hrtime() + 10000000000ULL;
+    while ((server.m_peer == 0 || client.m_connected == 0) && uv_hrtime() < deadline)
+    {
+        server.m_channel.poll();
+        LibuvTcp::hostPoll(client.m_instance);
+    }
+    if (server.m_peer == 0 || client.m_connected == 0) { return false; }
+    std::atomic<bool> stop(false), failed(false);
+    std::atomic<uint32_t> done(0), accepted(0), rejected(0);
+    LibuvTestThread threads[4];
+    for (uint32_t producer = 0; producer < (ownerProducer ? 3U : 4U); ++producer)
+    {
+        if (!threads[producer].start([&, producer]() {
+            for (uint32_t sequence = 0; sequence < 8192 && !stop.load();)
+            {
+                const uint32_t batch = mixed ? (sequence == 0 ? 6144 : (sequence == 6144 ? 128 : 1)) : 1;
+                std::vector<uint32_t> frame(batch * 3);
+                for (uint32_t item = 0; item < batch; ++item)
+                {
+                    frame[item * 3] = 8;
+                    frame[item * 3 + 1] = producer;
+                    frame[item * 3 + 2] = sequence + item;
+                }
+                const int32_t result = LibuvTcp::post(client.m_instance, peer,
+                    reinterpret_cast<const uint8_t*>(frame.data()), static_cast<uint32_t>(frame.size() * sizeof(uint32_t)));
+                if (result == 0) { sequence += batch; accepted.fetch_add(batch); }
+                else if (result == 1) { uv_sleep(0); }
+                else
+                {
+                    if (!stopDuringSubmit) { failed.store(true); }
+                    rejected.fetch_add(1);
+                    break;
+                }
+                std::memset(frame.data(), 0xee, frame.size() * sizeof(uint32_t));
+            }
+            done.fetch_add(1);
+        }, [&]() { stop.store(true); })) { stop.store(true); failed.store(true); break; }
+    }
+    bool closed = false;
+    uint32_t ownerSequence = 0;
+    while (uv_hrtime() < deadline && !failed.load() && !server.m_failed.load())
+    {
+        if (ownerProducer && ownerSequence < 8192)
+        {
+            uint32_t frame[3] = { 8, 3, ownerSequence };
+            const int32_t result = LibuvTcp::post(client.m_instance, peer,
+                reinterpret_cast<const uint8_t*>(frame), sizeof(frame));
+            if (result == 0)
+            {
+                ++ownerSequence;
+                if (ownerSequence == 8192) { done.fetch_add(1); }
+            }
+            else if (result != 1) { failed.store(true); }
+            std::memset(frame, 0xee, sizeof(frame));
+        }
+        server.m_channel.poll();
+        LibuvTcp::hostPoll(client.m_instance);
+        if (stopDuringSubmit && !closed && accepted.load() >= 256)
+        {
+            LibuvTcp::hostShutdown(client.m_instance);
+            closed = true;
+        }
+        if (done.load() == 4 && (stopDuringSubmit ||
+            (server.m_counts[0] == 8192 && server.m_counts[1] == 8192 &&
+                server.m_counts[2] == 8192 && server.m_counts[3] == 8192))) { break; }
+    }
+    stop.store(true);
+    for (uint32_t index = 0; index < 4; ++index) { threads[index].join(); }
+    const bool passed = !failed.load() && !server.m_failed.load() && done.load() == 4 &&
+        (stopDuringSubmit ? (closed && rejected.load() == 4) :
+            (server.m_counts[0] == 8192 && server.m_counts[1] == 8192 &&
+                server.m_counts[2] == 8192 && server.m_counts[3] == 8192));
+    client.finish();
+    server.m_channel.shutdown();
+    return passed;
+}
+
+/** 同一发送者交替两个目标，关闭旧目标后缓存失效，新连接编号不能复用
+@return 正文不串流，旧连接拒绝，新连接与健康连接继续可用
+*/
+static bool TestRawLanePeers()
+{
+    LibuvLaneProbe server;
+    LibuvLaneProbe first(0x11), second(0x22), replacement(0x33);
+    LibuvChannelWritePoolConfig pool;
+    pool.m_records.initialCapacity = 4096;
+    pool.m_records.maximumCapacity = 4096;
+    if (server.initialize() != 0 || first.initialize() != 0 || second.initialize() != 0 || replacement.initialize() != 0 ||
+        LibuvTcp::hostConfigureWritePool(server.m_instance, pool) != 0 ||
+        LibuvTcp::hostListen(server.m_instance, "127.0.0.1", 0, 3) != 0)
+    {
+        return false;
+    }
+    const uint32_t port = LibuvTcp::hostLocalPort(server.m_instance);
+    const uint64_t deadline = uv_hrtime() + 10000000000ULL;
+    // 所有回调在当前执行者运行；多个端点各自维护连接表。
+    const auto poll = [&]()
+    {
+        LibuvTcp::hostPoll(server.m_instance);
+        LibuvTcp::hostPoll(first.m_instance);
+        LibuvTcp::hostPoll(second.m_instance);
+        LibuvTcp::hostPoll(replacement.m_instance);
+    };
+    uint64_t peer = 0;
+    if (LibuvTcp::hostConnect(first.m_instance, "127.0.0.1", port, &peer) != 0)
+    {
+        return false;
+    }
+    while ((server.m_peers.size() != 1 || first.m_peers.empty()) && uv_hrtime() < deadline)
+    {
+        poll();
+    }
+    if (server.m_peers.size() != 1 || first.m_peers.empty())
+    {
+        return false;
+    }
+    if (LibuvTcp::hostConnect(second.m_instance, "127.0.0.1", port, &peer) != 0)
+    {
+        return false;
+    }
+    while ((server.m_peers.size() != 2 || second.m_peers.empty()) && uv_hrtime() < deadline)
+    {
+        poll();
+    }
+    if (server.m_peers.size() != 2 || second.m_peers.empty())
+    {
+        return false;
+    }
+    uint32_t posted = 0;
+    while ((posted != 4000 || first.m_received != 2000 || second.m_received != 2000) && uv_hrtime() < deadline)
+    {
+        if (posted < 4000)
+        {
+            const uint32_t destination = posted & 1;
+            const uint8_t byte = destination == 0 ? 0x11 : 0x22;
+            const int32_t result = LibuvTcp::post(server.m_instance, server.m_peers[destination], &byte, 1);
+            if (result == 0)
+            {
+                ++posted;
+            }
+            else if (result != 1)
+            {
+                return false;
+            }
+        }
+        poll();
+    }
+    if (first.m_received != 2000 || second.m_received != 2000 || first.m_failed || second.m_failed)
+    {
+        return false;
+    }
+    const uint8_t byte = 0x11;
+    // 零正文也验证并缓存目标；紧接着关闭该目标，下一次调用必须重新查验。
+    if (LibuvTcp::post(server.m_instance, server.m_peers[0], nullptr, 0) != 0 ||
+        LibuvTcp::hostClose(server.m_instance, server.m_peers[0], 42) != 0 ||
+        LibuvTcp::post(server.m_instance, server.m_peers[0], &byte, 1) >= 0 ||
+        LibuvTcp::post(server.m_instance, server.m_peers[0], nullptr, 0) >= 0)
+    {
+        return false;
+    }
+    if (LibuvTcp::hostConnect(replacement.m_instance, "127.0.0.1", port, &peer) != 0)
+    {
+        return false;
+    }
+    while ((server.m_peers.size() != 3 || replacement.m_peers.empty()) && uv_hrtime() < deadline)
+    {
+        poll();
+    }
+    if (server.m_peers.size() != 3 || server.m_peers[2] <= server.m_peers[1])
+    {
+        return false;
+    }
+    const uint8_t live[] = { 0x22, 0x33 };
+    if (LibuvTcp::post(server.m_instance, server.m_peers[1], live, 1) != 0 ||
+        LibuvTcp::post(server.m_instance, server.m_peers[2], live + 1, 1) != 0) { return false; }
+    while ((second.m_received != 2001 || replacement.m_received != 1 || first.m_closed != 1) && uv_hrtime() < deadline)
+    {
+        poll();
+    }
+    return second.m_received == 2001 && replacement.m_received == 1 && first.m_received == 2000 &&
+        first.m_closed == 1 && !second.m_failed && !replacement.m_failed;
+}
+
+/** 真实启动时分别拒绝通道数组和主/附通道指针数组，随后重新配置并成功交付
+@return 部分预留记录完整归还，无失败配置残留
+*/
+static bool TestRawLaneAllocationRollback()
+{
+    for (uint32_t phase = 0; phase < 3; ++phase)
+    {
+        LibuvTestHost server, client;
+        LibuvChannelWritePoolConfig pool;
+        pool.m_records.initialCapacity = 4096;
+        pool.m_records.maximumCapacity = 4096;
+        if (!server.initialize() || !client.initialize() || LibuvTcp::hostConfigureWritePool(server.m_instance, pool) != 0)
+        {
+            return false;
+        }
+        const size_t rejected = phase == 0 ? sizeof(LibuvChannelLane) * 16 + sizeof(size_t) : sizeof(LibuvChannelWrite*) * (phase == 1 ? 1024 : 64);
+        LibuvTcpTest::m_failAllocationSize.store(rejected);
+        LibuvTcpTest::m_failAllocationCount.store(1);
+        const int32_t started = LibuvTcp::hostListen(server.m_instance, "127.0.0.1", 0, 1);
+        const bool injected = LibuvTcpTest::m_failAllocationCount.load() == 0;
+        LibuvTcpTest::m_failAllocationCount.store(0);
+        LibuvTcpTest::m_failAllocationSize.store(0);
+        std::printf("lane rollback phase=%u bytes=%llu started=%d injected=%d\n", phase, static_cast<unsigned long long>(rejected), started, injected ? 1 : 0);
+        if (started >= 0 || !injected || LibuvTcp::hostConfigureWritePool(server.m_instance, pool) != 0 ||
+            LibuvTcp::hostListen(server.m_instance, "127.0.0.1", 0, 1) != 0)
+        {
+            return false;
+        }
+        uint64_t peer = 0;
+        if (LibuvTcp::hostConnect(client.m_instance, "127.0.0.1", LibuvTcp::hostLocalPort(server.m_instance), &peer) != 0 ||
+            !PollHosts(server, client, [&]() { return server.m_connected == 1 && client.m_connected == 1; })) { return false; }
+        const uint8_t byte = 0x5a;
+        if (LibuvTcp::post(server.m_instance, server.m_peer, &byte, 1) != 0 ||
+            !PollHosts(server, client, [&]() { return client.m_received == 1; }) || !server.finish() || !client.finish()) { return false; }
+    }
+    return true;
+}
+
+/** 多于专用通道的32个并发生产者，碰撞者必须走后备队列且均能完成
+@return 所有线程完成自己的1000条消息且接收总量精确
+*/
+static bool TestRawLaneFallbackFairness()
+{
+    LibuvLaneProbe server, client;
+    LibuvChannelWritePoolConfig pool;
+    pool.m_records.initialCapacity = 4096;
+    pool.m_records.maximumCapacity = 4096;
+    uint64_t peer = 0;
+    if (server.initialize() != 0 || client.initialize() != 0 ||
+        LibuvTcp::hostConfigureWritePool(client.m_instance, pool) != 0 ||
+        LibuvTcp::hostListen(server.m_instance, "127.0.0.1", 0, 1) != 0 ||
+        LibuvTcp::hostConnect(client.m_instance, "127.0.0.1", LibuvTcp::hostLocalPort(server.m_instance), &peer) != 0) { return false; }
+    const uint64_t deadline = uv_hrtime() + 10000000000ULL;
+    const auto poll = [&]() { LibuvTcp::hostPoll(server.m_instance); LibuvTcp::hostPoll(client.m_instance); };
+    while ((server.m_peers.empty() || client.m_peers.empty()) && uv_hrtime() < deadline)
+    {
+        poll();
+    }
+    if (server.m_peers.empty() || client.m_peers.empty())
+    {
+        return false;
+    }
+    LibuvTestThread threads[32];
+    std::atomic<bool> stopped(false), failed(false);
+    std::atomic<uint32_t> done(0);
+    for (uint32_t index = 0; index < 32; ++index)
+    {
+        if (!threads[index].start([&]()
+        {
+            const uint8_t byte = 0x5a;
+            uint32_t sent = 0;
+            while (sent < 1000 && !stopped.load())
+            {
+                const int32_t result = LibuvTcp::post(client.m_instance, peer, &byte, 1);
+                if (result == 0)
+                {
+                    ++sent;
+                }
+                else if (result == 1)
+                {
+                    uv_sleep(0);
+                }
+                else
+                {
+                    failed.store(true); break;
+                }
+            }
+            if (sent == 1000)
+            {
+                done.fetch_add(1);
+            }
+        }, [&]() { stopped.store(true); })) { failed.store(true); break; }
+    }
+    while ((done.load() != 32 || server.m_received != 32000) && !failed.load() && uv_hrtime() < deadline)
+    {
+        poll();
+    }
+    stopped.store(true);
+    for (uint32_t index = 0; index < 32; ++index)
+    {
+        threads[index].join();
+    }
+    return done.load() == 32 && server.m_received == 32000 && !server.m_failed && !failed.load();
+}
+
+/** 填满真实写池后通道不自唤醒空转，释放一个槽后恢复且取消完整回收
+@return 满池不消费、不请求自重试，容量归还后消费成功
+*/
+static bool TestRawLanePoolWait()
+{
+    LibuvChannelState state;
+    state.m_writeConfig->m_records.initialCapacity = 64;
+    state.m_writeConfig->m_records.maximumCapacity = 64;
+    state.m_writePool.reset(new LockFreeHashMapPool<LibuvChannelWrite>);
+    if (state.m_writePool->initialize(state.m_writeConfig->m_records) != LockFreeHashMapOk || state.initialize() != 0)
+    {
+        return false;
+    }
+    LibuvChannelPeer* peer = state.createPeer(false);
+    if (peer == nullptr)
+    {
+        return false;
+    }
+    peer->m_reportClose = false;
+    peer->m_connected = true;
+    if (!state.m_connectedPeers->tryInsert(peer->m_id, 1U, true, false).m_committed)
+    {
+        return false;
+    }
+    LibuvChannelLane* lane = state.producerLane();
+    const uint8_t byte = 0x5a;
+    if (lane == nullptr || state.postLane(*lane, peer->m_id, &byte, 1) != 0)
+    {
+        return false;
+    }
+    LibuvChannelWrite* held[64] = {};
+    uint32_t count = 0;
+    int32_t result = 0;
+    while (count < 64)
+    {
+        held[count] = state.prepareWrite(peer->m_id, &byte, 1, result);
+        if (held[count] == nullptr)
+        {
+            break;
+        }
+        ++count;
+    }
+    bool passed = count != 0 && result == UV_ENOBUFS && !state.drainLanes() && lane->m_read == 0;
+    for (uint32_t attempt = 0; attempt < 16; ++attempt)
+    {
+        passed = !state.drainLanes() && lane->m_read == 0 && passed;
+    }
+    if (count != 0)
+    {
+        state.releaseWrite(held[--count]);
+        passed = !state.drainLanes() && lane->m_read == 1 && peer->m_queuedBytes == 1 && passed;
+    }
+    while (count != 0)
+    {
+        state.releaseWrite(held[--count]);
+    }
+    state.shutdown();
+    state.drain();
+    state.releaseLanes();
+    const LockFreeHashMapPoolStats pool = state.m_writePool->stats();
+    return passed && state.m_peers.empty() && pool.capacity == 64 && pool.occupied == 0 && pool.reusableFree == 64;
+}
+
+/** 不靠轮询发送队列，反复从空闲唤醒loop，逐轮核对1/2/4/8生产者的真实交付
+@return 4000轮均由事件推进且准确交付，单轮500毫秒未完成判失败
+*/
+static bool TestRawLaneWakeEdges()
+{
+    void* loop = nullptr;
+    if (LibuvTcp::hostLoopCreate(&loop) != 0)
+    {
+        return false;
+    }
+    void* previous = LibuvTcp::hostLoopExchange(loop);
+    bool passed = true;
+    {
+        LibuvLaneProbe server, client;
+        LibuvChannelWritePoolConfig pool;
+        pool.m_records.initialCapacity = 4096;
+        pool.m_records.maximumCapacity = 4096;
+        uint64_t peer = 0;
+        passed = server.initialize() == 0 && client.initialize() == 0 &&
+            LibuvTcp::hostConfigureWritePool(client.m_instance, pool) == 0 &&
+            LibuvTcp::hostListen(server.m_instance, "127.0.0.1", 0, 1) == 0 &&
+            LibuvTcp::hostConnect(client.m_instance, "127.0.0.1", LibuvTcp::hostLocalPort(server.m_instance), &peer) == 0;
+        const uint64_t deadline = uv_hrtime() + 30000000000ULL;
+        // 只等待网络事件；1000毫秒定时器仅作失败保护，不能用它兜底漏掉的通知。
+        const auto wait = [&]()
+        {
+            const uint64_t observed = LibuvTcp::hostLoopBegin(loop);
+            return LibuvTcp::hostLoopWait(loop, observed, 1000) >= 0;
+        };
+        while (passed && (server.m_peers.empty() || client.m_peers.empty()) && uv_hrtime() < deadline)
+        {
+            passed = wait();
+        }
+        passed = passed && !server.m_peers.empty() && !client.m_peers.empty();
+        LibuvTestThread threads[8];
+        std::atomic<uint32_t> phase(0), done(0);
+        std::atomic<bool> stopped(false), failed(false);
+        for (uint32_t index = 0; passed && index < 8; ++index)
+        {
+            // 每个线程每轮最多提交一条，下一轮必须等待上一轮全部交付，反复覆盖队列变空边界。
+            passed = threads[index].start([&, index]()
+            {
+                const uint8_t byte = 0x5a;
+                uint32_t observed = 0;
+                while (!stopped.load())
+                {
+                    const uint32_t current = phase.load(std::memory_order_acquire);
+                    if (current == observed)
+                    {
+                        std::this_thread::yield();
+                        continue;
+                    }
+                    observed = current;
+                    if (index < (1U << ((current - 1) & 3)))
+                    {
+                        if (LibuvTcp::post(client.m_instance, peer, &byte, 1) != 0)
+                        {
+                            failed.store(true);
+                        }
+                    }
+                    done.fetch_add(1, std::memory_order_release);
+                }
+            }, [&]() { stopped.store(true); });
+        }
+        uint64_t expected = 0;
+        for (uint32_t round = 1; passed && round <= 4000; ++round)
+        {
+            const uint64_t roundDeadline = uv_hrtime() + 500000000ULL;
+            expected += 1U << ((round - 1) & 3);
+            phase.store(round, std::memory_order_release);
+            while (passed && server.m_received < expected && !failed.load() && uv_hrtime() < roundDeadline)
+            {
+                passed = wait();
+            }
+            while (done.load(std::memory_order_acquire) < round * 8 && !failed.load() && uv_hrtime() < roundDeadline)
+            {
+                std::this_thread::yield();
+            }
+            passed = passed && !failed.load() && !server.m_failed && server.m_received == expected &&
+                done.load(std::memory_order_acquire) == round * 8 && uv_hrtime() < roundDeadline && uv_hrtime() < deadline;
+        }
+        stopped.store(true);
+        for (uint32_t index = 0; index < 8; ++index)
+        {
+            threads[index].join();
+        }
+    }
+    LibuvTcp::hostLoopExchange(previous);
+    return LibuvTcp::hostLoopDestroy(loop) == 0 && passed;
+}
+
+/** 小池四线程并发原始字节提交，实际服务端逐帧验证
+@return 四个生产者各8192帧有序收到
+*/
+static bool TestRawConcurrent()
+{
+    return RawConcurrent(false);
+}
+
+/** 所属loop和三个外部线程并发提交，分别验证独立FIFO
+@return 四个生产者各8192帧完整且有序
+*/
+static bool TestRawOwnerConcurrent()
+{
+    return RawConcurrent(false, true);
+}
+
+/** 四个生产者持续提交时停止loop，关闭不等待未来业务调用
+@return 所有生产者观察终态且无已释放连接访问
+*/
+static bool TestRawConcurrentShutdown()
+{
+    return RawConcurrent(true);
 }
 
 /** 分别在四种业务回调注入异常，异常不得穿出 libuv 或破坏配对终态
@@ -451,11 +1011,11 @@ static bool TestHostExceptions()
             return false;
         }
         const uint8_t byte = 0x5A;
-        if (stage == 2 && LibuvTcp::hostWrite(server.m_instance, server.m_peer, &byte, 1) != 0)
+        if (stage == 2 && LibuvTcp::post(server.m_instance, server.m_peer, &byte, 1) != 0)
         {
             return false;
         }
-        if (stage == 3 && LibuvTcp::hostWrite(client.m_instance, client.m_peer, &byte, 1) != 0)
+        if (stage == 3 && LibuvTcp::post(client.m_instance, client.m_peer, &byte, 1) != 0)
         {
             return false;
         }
@@ -558,33 +1118,45 @@ static bool TestBorrowClose()
     return rejected && waited && joined && closed.load() && !gate.acquire();
 }
 
-/** 连续拒绝 accept 的对象分配，恢复后同一已就绪连接仍能被接纳
-@return 故障确实触发、每轮 poll 有界且恢复后可用
+/** 连续拒绝实际连接读缓冲分配，拒绝的连接明确关闭，恢复后新连接可接纳
+@return 故障确实触发、每轮poll有界、未发布连接不制造业务终态且池槽可复用
 */
 static bool TestAcceptAllocationRecovery()
 {
     LibuvTestHost server;
-    LibuvTestHost client;
-    uint64_t peer = 0;
-    if (!server.initialize() || !client.initialize() ||
-        LibuvTcp::hostListen(server.m_instance, "127.0.0.1", 0, 1) != 0 ||
-        LibuvTcp::hostConnect(client.m_instance, "127.0.0.1", LibuvTcp::hostLocalPort(server.m_instance), &peer) != 0)
+    if (!server.initialize() || LibuvTcp::hostConfigureReadBuffer(server.m_instance, 1237) != 0 ||
+        LibuvTcp::hostListen(server.m_instance, "127.0.0.1", 0, 1) != 0)
     {
         return false;
     }
-    LibuvTcpTest::m_failAllocationSize.store(sizeof(LibuvChannelPeer));
-    LibuvTcpTest::m_failAllocationCount.store(64);
-    const uint64_t deadline = uv_hrtime() + 5000000000ULL;
-    while (LibuvTcpTest::m_failAllocationCount.load() != 0 && uv_hrtime() < deadline)
+    for (uint32_t round = 0; round < 64; ++round)
     {
-        LibuvTcp::hostPoll(server.m_instance);
-        LibuvTcp::hostPoll(client.m_instance);
-        uv_sleep(0);
+        LibuvTestHost rejected;
+        uint64_t peer = 0;
+        if (!rejected.initialize() || LibuvTcp::hostConnect(rejected.m_instance, "127.0.0.1",
+            LibuvTcp::hostLocalPort(server.m_instance), &peer) != 0)
+        {
+            return false;
+        }
+        LibuvTcpTest::m_failAllocationSize.store(1237);
+        LibuvTcpTest::m_failAllocationCount.store(1);
+        const bool closed = PollHosts(server, rejected, [&]() { return rejected.m_closed == 1; });
+        const bool injected = LibuvTcpTest::m_failAllocationCount.exchange(0) == 0;
+        LibuvTcpTest::m_failAllocationSize.store(0);
+        if (!closed || !injected || server.m_connected != 0 || server.m_closed != 0 ||
+            LibuvTcp::hostPeerCount(server.m_instance) != 0 || !rejected.finish())
+        {
+            return false;
+        }
     }
-    const bool injected = LibuvTcpTest::m_failAllocationCount.load() == 0;
-    LibuvTcpTest::m_failAllocationSize.store(0);
-    LibuvTcpTest::m_failAllocationCount.store(0);
-    bool passed = injected && PollHosts(server, client, [&]() { return server.m_connected == 1 && client.m_connected == 1; });
+    LibuvTestHost client;
+    uint64_t peer = 0;
+    if (!client.initialize() || LibuvTcp::hostConnect(client.m_instance, "127.0.0.1",
+        LibuvTcp::hostLocalPort(server.m_instance), &peer) != 0)
+    {
+        return false;
+    }
+    bool passed = PollHosts(server, client, [&]() { return server.m_connected == 1 && client.m_connected == 1; });
     passed = client.finish() && passed;
     passed = server.finish() && passed;
     return passed && client.m_closed == 1 && server.m_closed == 1;
@@ -619,7 +1191,7 @@ static bool TestWriteAllocationFailure()
 @param [in] payload 每帧正文大小，至少 8 字节
 @param [in] stopEarly true 在真实收发中途停止，同时让生产者继续调用关闭入口
 @param [in] copy 是否使用逐条借用正文重载
-@param [in] mixedPost 是否循环混用send/post的数组、正文、批量及try入口
+@param [in] mixedPost 是否循环混用post的数组、正文、批量及try入口
 @param [in] pools 可选的初始化前配置，空使用库默认值，只借用至本函数返回
 @return 是否完整接收且线程正常结束
 */
@@ -658,7 +1230,7 @@ static bool TestTraffic(uint32_t producers, uint32_t count, uint32_t payload, bo
             receiver.m_channel.poll();
             if (receiver.m_peer != 0 && !replied)
             {
-                replied = receiver.m_channel.write(receiver.m_peer, &reply[0], 32768) == 0;
+                replied = receiver.m_channel.post(receiver.m_peer, &reply[0], 32768) == 0;
             }
             uv_sleep(0);
         }
@@ -696,9 +1268,9 @@ static bool TestTraffic(uint32_t producers, uint32_t count, uint32_t payload, bo
                 }
                 uv_tcp_t* target = client.m_target.load(std::memory_order_acquire);
                 char* buffer = nullptr;
-                const uint32_t entry = mixedPost ? sequence % 12 : (copy ? 4 : 0);
-                char* body = entry >= 4 ? &copyBody[0] : nullptr;
-                if (entry < 4)
+                const uint32_t entry = mixedPost ? sequence % 6 : (copy ? 2 : 0);
+                char* body = entry >= 2 ? &copyBody[0] : nullptr;
+                if (entry < 2)
                 {
                     buffer = client.memoryForSend(static_cast<int32_t>(sizeof(target) + 4 + payload));
                     std::memcpy(buffer, &target, sizeof(target));
@@ -718,55 +1290,25 @@ static bool TestTraffic(uint32_t producers, uint32_t count, uint32_t payload, bo
                 {
                 case 0:
                 {
-                    accepted = client.send(buffer);
+                    accepted = client.post(buffer);
                     break;
                 }
                 case 1:
                 {
-                    accepted = client.trySend(buffer, true, true) == 0;
+                    accepted = client.tryPost(buffer, true, true) == 0;
                     break;
                 }
                 case 2:
                 {
-                    accepted = client.post(buffer);
+                    accepted = client.post(target, body, payload);
                     break;
                 }
                 case 3:
                 {
-                    accepted = client.tryPost(buffer, true, true) == 0;
-                    break;
-                }
-                case 4:
-                {
-                    accepted = client.send(target, body, payload);
-                    break;
-                }
-                case 5:
-                {
-                    accepted = client.trySend(target, body, payload, true, true) == 0;
-                    break;
-                }
-                case 6:
-                {
-                    accepted = client.post(target, body, payload);
-                    break;
-                }
-                case 7:
-                {
                     accepted = client.tryPost(target, body, payload, true, true) == 0;
                     break;
                 }
-                case 8:
-                {
-                    accepted = client.sendBatch(target, &item, 1);
-                    break;
-                }
-                case 9:
-                {
-                    accepted = client.trySendBatch(target, &item, 1, true, true) == 0;
-                    break;
-                }
-                case 10:
+                case 4:
                 {
                     accepted = client.postBatch(target, &item, 1);
                     break;
@@ -777,16 +1319,16 @@ static bool TestTraffic(uint32_t producers, uint32_t count, uint32_t payload, bo
                     break;
                 }
                 }
-                if (!accepted && (entry == 1 || entry == 3))
+                if (!accepted && entry == 1)
                 {
                     client.releaseSendMemory(buffer);
                 }
-                if (entry >= 4)
+                if (entry >= 2)
                 {
                     std::fill(copyBody.begin(), copyBody.end(), 'x');
                 }
 #else
-                accepted = client.send(buffer);
+                accepted = client.post(buffer);
 #endif
                 if (!accepted && !stopEarly)
                 {
@@ -840,7 +1382,7 @@ static bool TestInitializationBoundaries()
     LibuvTcp tcp;
     tcp.stop();
     tcp.close(nullptr);
-    tcp.send(nullptr);
+    tcp.post(nullptr);
     if (tcp.initClient(nullptr, 1) || tcp.initClient("not-an-ip", 1) ||
         tcp.initClient("127.0.0.1", 0) || tcp.initClient("127.0.0.1", 65536) ||
         tcp.initServer(-1) || tcp.initServer(65536) || tcp.initServer(0, 0) || tcp.loopPtr() != nullptr)
@@ -936,7 +1478,7 @@ static bool TestContentionDoesNotReject()
     return launched && !failed.load() && tcp.m_libuv->m_pendingBytes.load() == 0;
 }
 
-/** 真实 trySend 达到预算时明确拒绝且保留调用方数组，已接纳预算在排空时归还
+/** 真实 tryPost 达到预算时明确拒绝且保留调用方数组，已接纳预算在排空时归还
 @return 容量拒绝与预算归还是否符合契约
 */
 static bool TestActualSendCapacity()
@@ -953,7 +1495,7 @@ static bool TestActualSendCapacity()
         char* buffer = tcp.memoryForSend(static_cast<int32_t>(sizeof(target) + 4 + size));
         std::memcpy(buffer, &target, sizeof(target));
         std::memcpy(buffer + sizeof(target), &size, sizeof(size));
-        const int32_t result = tcp.trySend(buffer, true, false);
+        const int32_t result = tcp.tryPost(buffer, true, false);
         if (result != 0)
         {
             delete[] buffer;
@@ -1013,7 +1555,7 @@ static bool TestWriteWindow(bool cancel)
         {
             body[offset] = static_cast<char>(sequence + offset);
         }
-        client.send(bytes);
+        client.post(bytes);
     }
     while (passed && !probe.m_full.load() && uv_hrtime() < deadline)
     {
@@ -1107,7 +1649,7 @@ static bool TestUnpublishedAccept()
         {
             body[index] = static_cast<char>(index);
         }
-        client.send(buffer);
+        client.post(buffer);
         while (receiver.m_counts[0].load() != 1 && uv_hrtime() < deadline)
         {
             uv_run(&state.m_loop, UV_RUN_NOWAIT);
@@ -1124,7 +1666,7 @@ static bool TestUnpublishedAccept()
 }
 
 #ifndef LIBUV_TEST_BASELINE
-/** 填满真实发送预算，验证普通 send 等待容量以及停止时释放借用
+/** 填满真实发送预算，验证普通 post 等待容量以及停止时释放借用
 @param [in] cancel true 在等待时停止；false 恢复读端并完整接收
 @param [in] postMode 0为send数组，1为post数组，2为post正文，3为postBatch
 @return 是否实际发生容量等待，并符合恢复或取消的后置条件
@@ -1193,7 +1735,7 @@ static bool TestSpaceWait(bool cancel, uint32_t postMode = 0)
             else
 #endif
             {
-                accepted = client.send(buffer);
+                accepted = client.post(buffer);
             }
             if (!accepted)
             {
@@ -1350,7 +1892,7 @@ static bool TestTryOptions()
     {
         return false;
     }
-    bool passed = tcp.trySend(nullptr) == UV_EINVAL;
+    bool passed = tcp.tryPost(nullptr) == UV_EINVAL;
     const int32_t length = 1;
     uv_tcp_t* target = state->mainTcp();
     for (uint32_t flags = 0; flags < 4; ++flags)
@@ -1361,7 +1903,7 @@ static bool TestTryOptions()
         buffer[sizeof(target) + 4] = 'x';
         LibuvTcpTest::m_arrayDeletes.store(0);
         LibuvTcpTest::m_watchedArray.store(buffer);
-        const int32_t result = tcp.trySend(buffer, (flags & 1) != 0, (flags & 2) != 0);
+        const int32_t result = tcp.tryPost(buffer, (flags & 1) != 0, (flags & 2) != 0);
         // 此处尚未运行 loop，等待它释放空间属于非法上下文，不能无限等待。
         passed = result == ((flags & 2) != 0 ? UV_EPERM : UV_ENOBUFS) &&
             LibuvTcpTest::m_arrayDeletes.load() == 0 && state->m_pendingBytes.load() == limit && passed;
@@ -1421,14 +1963,14 @@ static bool TestBatchContract()
     uv_tcp_t* target = tcp.m_libuv->mainTcp();
     char data[] = "123456";
     LibuvSendBuffer buffers[] = { { data, 6 }, { nullptr, 0 }, { data, 2 } };
-    bool passed = tcp.trySendBatch(nullptr, buffers, 1) == UV_EINVAL &&
-        tcp.trySendBatch(target, nullptr, 1) == UV_EINVAL && tcp.trySendBatch(target, buffers, 0) == UV_EINVAL &&
-        tcp.trySendBatch(target, buffers, 4097) == UV_EINVAL;
+    bool passed = tcp.tryPostBatch(nullptr, buffers, 1) == UV_EINVAL &&
+        tcp.tryPostBatch(target, nullptr, 1) == UV_EINVAL && tcp.tryPostBatch(target, buffers, 0) == UV_EINVAL &&
+        tcp.tryPostBatch(target, buffers, 4097) == UV_EINVAL;
     LibuvSendBuffer invalid = { nullptr, 1 };
-    passed = tcp.trySendBatch(target, &invalid, 1) == UV_EINVAL && passed;
+    passed = tcp.tryPostBatch(target, &invalid, 1) == UV_EINVAL && passed;
     invalid.m_data = data;
     invalid.m_size = 0xffffffffU;
-    passed = tcp.trySendBatch(target, &invalid, 1) == UV_EINVAL && passed;
+    passed = tcp.tryPostBatch(target, &invalid, 1) == UV_EINVAL && passed;
     std::vector<char> expected(20, 0);
     const uint32_t six = 6;
     const uint32_t two = 2;
@@ -1436,22 +1978,22 @@ static bool TestBatchContract()
     std::memcpy(&expected[4], data, 6);
     std::memcpy(&expected[14], &two, 4);
     std::memcpy(&expected[18], data, 2);
-    passed = tcp.sendBatch(target, buffers, 3) && passed;
+    passed = tcp.postBatch(target, buffers, 3) && passed;
     std::memset(data, 'z', 6);
     passed = InspectBatch(tcp, expected) && passed;
     LibuvSendBuffer empty = { nullptr, 0 };
     std::vector<LibuvSendBuffer> maximum(4096, empty);
-    passed = tcp.sendBatch(target, &maximum[0], 4096) && passed;
+    passed = tcp.postBatch(target, &maximum[0], 4096) && passed;
     passed = InspectBatch(tcp, std::vector<char>(16384, 0)) && passed;
     std::vector<char> large(1048572, 'x');
     LibuvSendBuffer limit = { &large[0], static_cast<uint32_t>(large.size()) };
-    passed = tcp.sendBatch(target, &limit, 1) && passed;
+    passed = tcp.postBatch(target, &limit, 1) && passed;
     expected.resize(1048576);
     std::memcpy(&expected[0], &limit.m_size, 4);
     std::memcpy(&expected[4], &large[0], large.size());
     passed = InspectBatch(tcp, expected) && passed;
     ++limit.m_size;
-    passed = tcp.trySendBatch(target, &limit, 1) == UV_EINVAL && passed;
+    passed = tcp.tryPostBatch(target, &limit, 1) == UV_EINVAL && passed;
     return passed && !tcp.m_libuv->sendsReady();
 }
 
@@ -1469,20 +2011,20 @@ static bool TestBatchFailures()
     LibuvSendBuffer body = { "123456", 6 };
     LibuvTcpTest::m_failAllocationSize.store(sizeof(target) + 10);
     LibuvTcpTest::m_failAllocationCount.store(1);
-    bool passed = tcp.trySendBatch(target, &body, 1) == UV_ENOMEM &&
+    bool passed = tcp.tryPostBatch(target, &body, 1) == UV_ENOMEM &&
         LibuvTcpTest::m_failAllocationCount.load() == 0;
     LibuvTcpTest::m_failAllocationSize.store(0);
     const uint32_t limit = 64U * 1024U * 1024U;
     passed = tcp.m_libuv->tryReserveSend(limit, true) == 0 && passed;
     for (uint32_t flags = 0; flags < 4; ++flags)
     {
-        const int32_t result = tcp.trySendBatch(target, &body, 1, (flags & 1) != 0, (flags & 2) != 0);
+        const int32_t result = tcp.tryPostBatch(target, &body, 1, (flags & 1) != 0, (flags & 2) != 0);
         passed = result == ((flags & 2) != 0 ? UV_EPERM : UV_ENOBUFS) && passed;
         passed = tcp.m_libuv->m_pendingBytes.load() == limit && !tcp.m_libuv->sendsReady() && passed;
     }
     tcp.m_libuv->releaseSend(limit);
     tcp.stop();
-    return tcp.trySendBatch(target, &body, 1) == UV_ECANCELED && passed;
+    return tcp.tryPostBatch(target, &body, 1) == UV_ECANCELED && passed;
 }
 
 /** 辅助合批分配失败时回退逐帧，旧代数据仍必须恰好释放并归还所有预算
@@ -1525,7 +2067,7 @@ static bool TestBatchStopped()
     }
     LibuvSendBuffer body = { "123456", 6 };
     std::vector<LibuvSendBuffer> buffers(4096, body);
-    if (!tcp.sendBatch(tcp.m_libuv->mainTcp(), &buffers[0], 4096))
+    if (!tcp.postBatch(tcp.m_libuv->mainTcp(), &buffers[0], 4096))
     {
         return false;
     }
@@ -1564,9 +2106,9 @@ static bool TestCopyContract()
         return false;
     }
     uv_tcp_t* target = tcp.m_libuv->mainTcp();
-    bool passed = tcp.trySend(nullptr, "x", 1) == UV_EINVAL &&
-        tcp.trySend(target, nullptr, 1) == UV_EINVAL &&
-        tcp.trySend(target, "x", 0xffffffffU) == UV_EINVAL;
+    bool passed = tcp.tryPost(nullptr, "x", 1) == UV_EINVAL &&
+        tcp.tryPost(target, nullptr, 1) == UV_EINVAL &&
+        tcp.tryPost(target, "x", 0xffffffffU) == UV_EINVAL;
     const uint32_t sizes[] = {0, 1, 6, 12, 13, 1024, 1048576};
     for (size_t index = 0; index < sizeof(sizes) / sizeof(sizes[0]); ++index)
     {
@@ -1574,7 +2116,7 @@ static bool TestCopyContract()
         std::vector<char> source(size, 'v');
         std::vector<char> expected(size + 4, 'v');
         std::memcpy(&expected[0], &size, 4);
-        if (tcp.trySend(target, size ? &source[0] : nullptr, size, true, false) != 0)
+        if (tcp.tryPost(target, size ? &source[0] : nullptr, size, true, false) != 0)
         {
             return false;
         }
@@ -1582,7 +2124,7 @@ static bool TestCopyContract()
         passed = InspectBatch(tcp, expected) && passed;
     }
     tcp.stop();
-    return passed && tcp.trySend(target, "x", 1) == UV_ECANCELED && !tcp.m_libuv->sendsReady();
+    return passed && tcp.tryPost(target, "x", 1) == UV_ECANCELED && !tcp.m_libuv->sendsReady();
 }
 
 /** 故障注入只存在测试工程，内联正文不申请独立数组，失败仍无发布
@@ -1599,7 +2141,7 @@ static bool TestCopyFailures()
     uv_tcp_t* target = state->mainTcp();
     LibuvTcpTest::m_failAllocationSize.store(sizeof(target) + 10);
     LibuvTcpTest::m_failAllocationCount.store(1);
-    bool passed = tcp.send(target, "123456", 6) && LibuvTcpTest::m_failAllocationCount.load() == 1;
+    bool passed = tcp.post(target, "123456", 6) && LibuvTcpTest::m_failAllocationCount.load() == 1;
     LibuvTcpTest::m_failAllocationCount.store(0);
     std::vector<char> expected(10);
     uint32_t length = 6;
@@ -1608,7 +2150,7 @@ static bool TestCopyFailures()
     passed = InspectBatch(tcp, expected) && passed;
     LibuvTcpTest::m_failAllocationSize.store(sizeof(target) + 17);
     LibuvTcpTest::m_failAllocationCount.store(1);
-    passed = tcp.trySend(target, "1234567890123", 13) == UV_ENOMEM && passed;
+    passed = tcp.tryPost(target, "1234567890123", 13) == UV_ENOMEM && passed;
     LibuvTcpTest::m_failAllocationCount.store(0);
     const uint32_t limit = 64U * 1024U * 1024U;
     if (state->tryReserveSend(limit, true) != 0)
@@ -1618,7 +2160,7 @@ static bool TestCopyFailures()
     for (uint32_t flags = 0; flags < 4; ++flags)
     {
         const bool wait = (flags & 2U) != 0;
-        passed = tcp.trySend(target, "x", 1, (flags & 1U) != 0, wait) ==
+        passed = tcp.tryPost(target, "x", 1, (flags & 1U) != 0, wait) ==
             (wait ? UV_EPERM : UV_ENOBUFS) && passed;
     }
     state->releaseSend(limit);
@@ -1837,7 +2379,7 @@ static bool TestProducerFallback()
     const uint32_t size = 6;
     std::memcpy(&expected[0], &size, 4);
     std::memcpy(&expected[4], "123456", 6);
-    bool passed = tcp.send(tcp.m_libuv->mainTcp(), "123456", 6) &&
+    bool passed = tcp.post(tcp.m_libuv->mainTcp(), "123456", 6) &&
         slot.m_token.load() == token && slot.m_producer.attached();
     passed = InspectBatch(tcp, expected) && passed;
     slot.m_busy = true;
@@ -1849,7 +2391,7 @@ static bool TestProducerFallback()
     // 白盒占据一个槽，但不构造其他线程的上下文；本线程必须只用普通入口。
     LibuvSendProducer& occupied = collision.m_libuv->m_sendProducers[token % 16];
     occupied.m_token.store(UINT32_MAX);
-    passed = collision.send(collision.m_libuv->mainTcp(), "123456", 6) && passed;
+    passed = collision.post(collision.m_libuv->mainTcp(), "123456", 6) && passed;
     return InspectBatch(collision, expected) && !occupied.m_producer.attached() && passed;
 }
 
@@ -1875,7 +2417,7 @@ static bool TestProducerConcurrent()
     LibuvTestThread threads[40];
     const uint64_t deadline = uv_hrtime() + 10000000000ULL;
     // 白盒消费者在本线程接管队列排空与预算归还，必须与生产并行，不能假设物理池只计消息数。
-    // 这里不运行真实网络回调；仅替代loop的消费者职责，使跨线程普通send/post可以等待容量。
+    // 这里不运行真实网络回调；仅替代loop的消费者职责，使跨线程普通post可以等待容量。
     tcp.m_libuv->m_ownerThread = uv_thread_self();
     tcp.m_libuv->m_ownerReady.store(true, std::memory_order_release);
     bool passed = true;
@@ -1901,7 +2443,7 @@ static bool TestProducerConcurrent()
                 char body[8];
                 std::memcpy(body, &producer, 4);
                 std::memcpy(body + 4, &sequence, 4);
-                if (!(sequence & 1 ? tcp.send(target, body, 8) : tcp.post(target, body, 8)))
+                if (!(sequence & 1 ? tcp.post(target, body, 8) : tcp.tryPost(target, body, 8, true, true) == 0))
                 {
                     failed.store(true);
                     break;
@@ -2043,13 +2585,13 @@ static bool TestCapacityConcurrent(bool stop)
                 switch (producer & 3U)
                 {
                 case 0:
-                    result = tcp.send(target, body, 8) ? 0 : UV_ECANCELED;
+                    result = tcp.post(target, body, 8) ? 0 : UV_ECANCELED;
                     break;
                 case 1:
                     result = tcp.post(target, body, 8) ? 0 : UV_ECANCELED;
                     break;
                 case 2:
-                    result = tcp.trySend(target, body, 8, true, true);
+                    result = tcp.tryPost(target, body, 8, true, true);
                     break;
                 default:
                     result = tcp.tryPost(target, body, 8, true, true);
@@ -2174,7 +2716,7 @@ static bool TestInlineWriteFailure()
 {
     LibuvTcp tcp;
     if (!tcp.initClient("127.0.0.1", 1) || !tcp.m_libuv->registerTcp(tcp.m_libuv->mainTcp()) ||
-        !tcp.send(tcp.m_libuv->mainTcp(), "123456", 6))
+        !tcp.post(tcp.m_libuv->mainTcp(), "123456", 6))
     {
         return false;
     }
@@ -2676,7 +3218,7 @@ static bool TestPoolLimits()
     int32_t result = 0;
     for (; accepted < 32; ++accepted)
     {
-        result = tcp.trySend(target, "123456", 6, true, false);
+        result = tcp.tryPost(target, "123456", 6, true, false);
         if (result != 0)
         {
             break;
@@ -2737,7 +3279,7 @@ static bool TestPoolLimits()
     return passed;
 }
 
-/** 关闭或缩小高速缓存仍能在四发送线程下保持十二种入口的顺序
+/** 关闭或缩小高速缓存仍能在四发送线程下保持六种入口的顺序
 @return 真实接收是否完整且默认协议不变
 */
 static bool TestConfiguredTraffic()
@@ -2764,7 +3306,7 @@ static bool TestConfiguredTraffic()
 }
 
 /** 原始字节路径的配置必须在启动前生效，背压按配置精确计算且能恢复
-@return 两次写的自定义窗口、读缓冲与缓存禁用是否符合约定
+@return 两个实际池槽、读缓冲与空闲槽复用是否符合约定
 */
 static bool TestHostPoolConfiguration()
 {
@@ -2772,10 +3314,8 @@ static bool TestHostPoolConfiguration()
     LibuvTestHost client;
     LibuvChannelWritePoolConfig write;
     write.m_maximumWriteBytes = 8;
-    write.m_maximumPendingBytesPerPeer = 16;
-    write.m_maximumWritesPerPeer = 2;
-    write.m_maximumCachedWrites = 0;
-    write.m_maximumCachedBytes = 0;
+    write.m_records.initialCapacity = 2;
+    write.m_records.maximumCapacity = 2;
     if (!server.initialize() || !client.initialize() ||
         LibuvTcp::hostConfigureReadBuffer(server.m_instance, 3) != 0 ||
         LibuvTcp::hostConfigureReadBuffer(server.m_instance, 0) != UV_EINVAL ||
@@ -2793,23 +3333,27 @@ static bool TestHostPoolConfiguration()
     const uint8_t bytes[9] = { 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A };
     bool passed = LibuvTcp::hostConfigureWritePool(client.m_instance, write) == UV_EBUSY &&
         LibuvTcp::hostConfigureReadBuffer(server.m_instance, 7) == UV_EBUSY &&
-        LibuvTcp::hostWrite(client.m_instance, peer, bytes, 9) < 0 &&
-        LibuvTcp::hostWrite(client.m_instance, peer, bytes, 8) == 0 &&
-        LibuvTcp::hostWrite(client.m_instance, peer, bytes, 8) == 0 &&
-        LibuvTcp::hostWrite(client.m_instance, peer, bytes, 1) == 1;
-    passed = PollHosts(server, client, [&]() { return server.m_received == 16 && client.m_written == 2; }) && passed;
-    passed = LibuvTcp::hostWrite(client.m_instance, peer, bytes, 8) == 0 && passed;
-    passed = PollHosts(server, client, [&]() { return server.m_received == 24 && client.m_written == 3; }) && passed;
+        LibuvTcp::post(client.m_instance, peer, bytes, 9) < 0 &&
+        LibuvTcp::post(client.m_instance, peer, bytes, 8) == 0 &&
+        LibuvTcp::post(client.m_instance, peer, bytes, 8) == 0 &&
+        LibuvTcp::post(client.m_instance, peer, bytes, 1) == 1;
+    passed = PollHosts(server, client, [&]() { return server.m_received == 16 && client.m_written == 1; }) && passed;
+    passed = LibuvTcp::post(client.m_instance, peer, bytes, 8) == 0 && passed;
+    passed = PollHosts(server, client, [&]() { return server.m_received == 24 && client.m_written == 2; }) && passed;
     passed = client.finish() && server.finish() && !server.m_failed && !client.m_failed && passed;
     LibuvChannelState state;
-    state.m_writeConfig = write;
-    LibuvChannelWrite* request = state.prepareWrite(nullptr, bytes, 8);
+    *state.m_writeConfig = write;
+    int32_t allocated = 0;
+    LibuvChannelWrite* request = state.prepareWrite(0, bytes, 8, allocated);
     if (request == nullptr)
     {
         return false;
     }
     state.releaseWrite(request);
-    return passed && !state.m_loopInitialized && state.m_cachedWrites == 0 && state.m_cachedWriteBytes == 0;
+    request = state.prepareWrite(0, bytes, 8, allocated);
+    passed = passed && request != nullptr && allocated == 0;
+    state.releaseWrite(request);
+    return passed && !state.m_loopInitialized;
 }
 
 /** 指定池分配失败后必须完整回滚且允许再次初始化
@@ -2847,9 +3391,9 @@ static bool TestConfiguredByteBudget()
     }
     uv_tcp_t* target = tcp.m_libuv->mainTcp();
     LibuvSendBuffer item = { "123456", 6 };
-    return tcp.trySend(target, item.m_data, 6, true, true) == UV_EINVAL &&
+    return tcp.tryPost(target, item.m_data, 6, true, true) == UV_EINVAL &&
         tcp.tryPostBatch(target, &item, 1, true, true) == UV_EINVAL &&
-        !tcp.send(target, item.m_data, 6) && !tcp.postBatch(target, &item, 1) &&
+        !tcp.post(target, item.m_data, 6) && !tcp.postBatch(target, &item, 1) &&
         tcp.m_libuv->m_pendingBytes.load() == 0;
 }
 
@@ -2893,7 +3437,7 @@ static bool TestDirectPrefixAllocation()
     }
     for (uint32_t index = 0; index < 100; ++index)
     {
-        if (client.trySend(client.m_target.load(), "123456", 6, true, false) != 0)
+        if (client.tryPost(client.m_target.load(), "123456", 6, true, false) != 0)
         {
             return false;
         }
@@ -3108,11 +3652,25 @@ int LibuvTcpTest::run(int argc, char** argv)
     static const std::map<int32_t, LibuvTestCase> s_cases =
     {
         { LibuvTestPerformanceParser, { "性能样本完整性与异常数值拒绝", false, &LibuvTcpPerformance::checkParser } },
+        { LibuvTestRawLanePeers, { "原始通道多目标隔离与关闭缓存失效", false, &TestRawLanePeers } },
+        { LibuvTestRawLaneRollback, { "原始通道启动分配失败和重配置回滚", false, &TestRawLaneAllocationRollback } },
+        { LibuvTestRawLaneFallback, { "32生产者专用与后备通道公平完成", true, &TestRawLaneFallbackFairness } },
+        { LibuvTestRawLanePoolWait, { "通道满写池停止自唤醒并恢复回收", false, &TestRawLanePoolWait } },
+        { LibuvTestRawLaneWakeEdges, { "1至8生产者反复空闲唤醒完整交付", true, &TestRawLaneWakeEdges } },
+        { LibuvTestRawLaneOrder, { "原始通道四线程满槽恢复保序", true, []() { return RawConcurrent(false, false, true); } } },
+        { LibuvTestRawLaneStop, { "原始通道并发停止回收", true, []() { return RawConcurrent(true, false, true); } } },
+        { LibuvTestRawLaneOwner, { "原始通道owner及外部线程公平推进", true, []() { return RawConcurrent(false, true, true); } } },
+        { LibuvTestRawLaneMixed, { "原始通道小包大包及超64KiB组合保序", true, []() { return RawConcurrent(false, false, true, true); } } },
+        { LibuvTestRawConcurrent, { "原始post四生产者小池有序交付", true, &TestRawConcurrent } },
+        { LibuvTestRawOwnerConcurrent, { "原始post所属线程及外部线程并发保序", true, &TestRawOwnerConcurrent } },
+        { LibuvTestRawConcurrentShutdown, { "原始post四生产者并发停止", true, &TestRawConcurrentShutdown } },
+        { LibuvTestRawPostAdmission, { "原始post接纳、复制、合并及满池", false, &TestRawPostAdmission } },
+        { LibuvTestRawPostCancel, { "原始post未发送取消及停止回收", false, &TestRawPostCancel } },
         { LibuvTestPerformanceRunner, { "批次子进程异常超时与输出上限", false, &LibuvTcpPerformance::checkRunner } },
 #ifndef LIBUV_TEST_BASELINE
         { LibuvTestPoolConfiguration, { "池配置校验、组合约束和初始化冻结", false, &TestPoolConfiguration } },
         { LibuvTestPoolLimits, { "实际节点上限和读写缓存封顶", false, &TestPoolLimits } },
-        { LibuvTestConfiguredTraffic, { "小容量四线程十二入口保序", true, &TestConfiguredTraffic } },
+        { LibuvTestConfiguredTraffic, { "小容量四线程六入口保序", true, &TestConfiguredTraffic } },
         { LibuvTestHostPoolConfiguration, { "host自定义写窗口、读块和缓存禁用", false, &TestHostPoolConfiguration } },
         { LibuvTestPoolAllocationFailure, { "池分配失败回滚后重试初始化", false, &TestPoolAllocationFailure } },
         { LibuvTestConfiguredByteBudget, { "不足一条消息的预算不永久等待", false, &TestConfiguredByteBudget } },
@@ -3198,7 +3756,7 @@ int LibuvTcpTest::run(int argc, char** argv)
         { LibuvTestCopySizes, { "逐条正文六种大小及并发停止", true, &TestCopySizes } },
         { LibuvTestPostContract, { "post正文批量边界与副本", false, &TestPostContract } },
         { LibuvTestPostFailures, { "post所有权和三入口重试四组合", false, &TestPostFailures } },
-        { LibuvTestPostMixed, { "十二种send/post入口并发保序", true, []() { return TestTraffic(4, 10003, 64, false, false, true); } } },
+        { LibuvTestPostMixed, { "六种post及重试组合入口并发保序", true, []() { return TestTraffic(4, 10003, 64, false, false, true); } } },
         { LibuvTestPostSizes, { "混合post内联大帧与并发停止", true, &TestPostSizes } },
         { LibuvTestPostWait, { "三种post满预算恢复128MiB", true, []() { return TestPostWait(false); } } },
         { LibuvTestPostCancel, { "三种post满预算停止解阻", true, []() { return TestPostWait(true); } } },
@@ -3213,7 +3771,7 @@ int LibuvTcpTest::run(int argc, char** argv)
         { LibuvTestCopySizes, { "逐条正文六种大小及并发停止", true, nullptr } },
         { LibuvTestPostContract, { "post正文批量边界与副本", false, nullptr } },
         { LibuvTestPostFailures, { "post所有权和三入口重试四组合", false, nullptr } },
-        { LibuvTestPostMixed, { "十二种send/post入口并发保序", true, nullptr } },
+        { LibuvTestPostMixed, { "六种post及重试组合入口并发保序", true, nullptr } },
         { LibuvTestPostSizes, { "混合post内联大帧与并发停止", true, nullptr } },
         { LibuvTestPostWait, { "三种post满预算恢复128MiB", true, nullptr } },
         { LibuvTestPostCancel, { "三种post满预算停止解阻", true, nullptr } },
@@ -3320,6 +3878,10 @@ int main(int argc, char** argv)
             return LibuvTcpPerformance::runnerProbe(argv[2]);
         }
 #ifdef LIBUV_TEST_BENCHMARK
+        if (argc >= 2 && std::strcmp(argv[1], "--hostbenchmark") == 0)
+        {
+            return LibuvRawPostBenchmark::run(argc, argv);
+        }
         if (argc >= 2 && std::strcmp(argv[1], "--suite") == 0)
         {
             return LibuvTcpPerformance::run(argc, argv);

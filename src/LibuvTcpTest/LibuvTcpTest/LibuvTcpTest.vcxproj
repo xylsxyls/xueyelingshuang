@@ -165,6 +165,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="LibuvTcpPerformance.h" />
+    <ClInclude Include="LibuvRawPostBenchmark.h" />
     <ClInclude Include="LibuvTcpPublicTest.h" />
     <ClInclude Include="LibuvTcpTest.h" />
     <ClInclude Include="LibuvTcpTestDiagnostics.h" />
@@ -173,6 +174,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LibuvTcpPerformance.cpp" />
+    <ClCompile Include="LibuvRawPostBenchmark.cpp" />
     <ClCompile Include="LibuvTcpPublicTest.cpp" />
     <ClCompile Include="LibuvTcpTest.cpp" />
     <ClCompile Include="LibuvTcpTestDiagnostics.cpp" />

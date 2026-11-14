@@ -34,7 +34,7 @@ public:
     */
     LibuvTcpDllSender();
 
-    /** 通过DLL真实提交10000个独立小帧，交替普通与try的send/post
+    /** 通过DLL真实提交10000个独立小帧，交替普通与try的post
     @return 完整交付且线程和宿主均收敛为true
     */
     static bool run();

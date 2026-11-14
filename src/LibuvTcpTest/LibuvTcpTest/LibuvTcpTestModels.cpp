@@ -359,7 +359,7 @@ void LibuvTestWindowProbe::tick(uv_timer_t* timer)
             char* buffer = probe->m_client->memoryForSend(static_cast<int32_t>(sizeof(target) + 4 + length));
             std::memcpy(buffer, &target, sizeof(target));
             std::memcpy(buffer + sizeof(target), &length, 4);
-            const int32_t result = probe->m_client->trySend(buffer, true, true);
+            const int32_t result = probe->m_client->tryPost(buffer, true, true);
             if (result != 0)
             {
                 delete[] buffer;
@@ -386,4 +386,52 @@ void LibuvTestWindowProbe::tick(uv_timer_t* timer)
     {
         uv_close(reinterpret_cast<uv_handle_t*>(timer), nullptr);
     }
+}
+
+LibuvLaneProbe::LibuvLaneProbe(uint8_t expected) :
+m_instance(nullptr), m_received(0), m_closed(0), m_failed(false), m_expected(expected)
+{
+
+}
+
+LibuvLaneProbe::~LibuvLaneProbe()
+{
+    LibuvTcp::hostDestroy(m_instance);
+}
+
+int32_t LibuvLaneProbe::initialize()
+{
+    return LibuvTcp::hostCreate(nullptr, this, connected, data, writable, closed, &m_instance);
+}
+
+void LibuvLaneProbe::connected(void* context, uint64_t peer)
+{
+    static_cast<LibuvLaneProbe*>(context)->m_peers.push_back(peer);
+}
+
+void LibuvLaneProbe::data(void* context, uint64_t peer, const uint8_t* bytes, uint32_t size)
+{
+    (void)peer;
+    LibuvLaneProbe& test = *static_cast<LibuvLaneProbe*>(context);
+    for (uint32_t index = 0; index < size; ++index)
+    {
+        if (bytes[index] != test.m_expected)
+        {
+            test.m_failed = true;
+        }
+    }
+    test.m_received += size;
+}
+
+void LibuvLaneProbe::writable(void* context, uint64_t peer)
+{
+    (void)context;
+    (void)peer;
+}
+
+void LibuvLaneProbe::closed(void* context, uint64_t peer, int32_t reason)
+{
+    (void)peer;
+    (void)reason;
+    ++static_cast<LibuvLaneProbe*>(context)->m_closed;
 }

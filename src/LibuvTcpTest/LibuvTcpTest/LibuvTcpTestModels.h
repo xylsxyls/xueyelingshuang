@@ -261,7 +261,7 @@ public:
     bool m_checkOwnerWait;
     // 实际执行过循环内调用，不以没有卡死替代入口验证
     std::atomic<bool> m_ownerWaitChecked;
-    // 满预算时循环内 trySend(true,true) 返回非法上下文
+    // 满预算时循环内 tryPost(true,true) 返回非法上下文
     std::atomic<bool> m_ownerWaitRejected;
     // 只用于固定交错：暂时不让 owner 消费取消队列，停止时必须退出等待
     std::atomic<bool> m_pauseLoop;
@@ -274,4 +274,65 @@ private:
     uv_timer_t m_timer;
     // 借用至 loop 完全结束
     LibuvTcp* m_client;
+};
+
+/** 多连接原始通道测试观察者；宿主自有，回调由唯一测试loop驱动
+*/
+class LibuvLaneProbe
+{
+public:
+    /** 创建固定字节校验的空端点
+    @param [in] expected 每个接收字节的预期值
+    */
+    explicit LibuvLaneProbe(uint8_t expected = 0x5a);
+
+    /** 外部生产者结束后回收所有句柄
+    */
+    ~LibuvLaneProbe();
+
+    /** 创建公开宿主
+    @return 0成功，负数失败
+    */
+    int32_t initialize();
+
+    /** 保存新连接号
+    @param [in] context 观察者
+    @param [in] peer 新连接号
+    */
+    static void connected(void* context, uint64_t peer);
+
+    /** 按字节校验，不依赖TCP分片边界
+    @param [in] context 观察者
+    @param [in] peer 当前连接
+    @param [in] bytes 借用正文
+    @param [in] size 字节数
+    */
+    static void data(void* context, uint64_t peer, const uint8_t* bytes, uint32_t size);
+
+    /** 写完成不替代远端接收证据
+    @param [in] context 观察者
+    @param [in] peer 当前连接
+    */
+    static void writable(void* context, uint64_t peer);
+
+    /** 记录终态次数
+    @param [in] context 观察者
+    @param [in] peer 关闭连接
+    @param [in] reason 关闭原因
+    */
+    static void closed(void* context, uint64_t peer, int32_t reason);
+
+public:
+    // 自有宿主
+    void* m_instance;
+    // 实例内不复用的连接号，按接入顺序保存
+    std::vector<uint64_t> m_peers;
+    // 已验证字节数
+    uint64_t m_received;
+    // 终态次数
+    uint32_t m_closed;
+    // 校验错误只置位
+    bool m_failed;
+    // 本端期望的正文值
+    uint8_t m_expected;
 };

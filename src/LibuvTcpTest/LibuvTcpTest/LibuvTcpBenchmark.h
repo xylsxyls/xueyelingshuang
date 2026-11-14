@@ -50,7 +50,7 @@ public:
     @param [in] producers 生产者数，1至16
     @param [in] ordered 0逐帧核对123456，1核对生产者和序号，2另混用单帧与批量入口
     @param [in] count 每生产者帧数，1至200000000
-    @param [in] batch 每次提交帧数，1使用原单帧入口，2至4096使用sendBatch
+    @param [in] batch 每次提交帧数，1使用原单帧入口，2至4096使用postBatch
     @param [in] congested 是否限制系统发送缓冲并延迟启动接收，覆盖部分写和背压
     @param [in] copy 是否逐条调用借用正文重载，独立报告而不混充原数组入口
     @param [in] post 是否使用配对post入口；单条比较仍要求batch为1

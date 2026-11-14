@@ -300,7 +300,7 @@ int LibuvTcpBenchmark::run(uint32_t producers, uint32_t payload, uint32_t count,
                 }
                 const uint64_t sent = uv_hrtime();
                 std::memcpy(body + 8, &sent, 8);
-                client.send(buffer);
+                client.post(buffer);
             }
         }, [&]() { cancel.store(true); });
     }
@@ -551,7 +551,7 @@ int LibuvTcpBenchmark::tiny(uint32_t producers, uint32_t ordered, uint32_t count
                             body[5] = static_cast<char>(number + producer);
                         }
                     }
-                    if (!client.sendBatch(target, &descriptions[0], take))
+                    if (!client.postBatch(target, &descriptions[0], take))
                     {
                         cancel.store(true);
                     }
@@ -590,12 +590,12 @@ int LibuvTcpBenchmark::tiny(uint32_t producers, uint32_t ordered, uint32_t count
 #ifndef LIBUV_TEST_BEFORE_COPY
                 if (copyOne)
                 {
-                    sent = post ? client.post(target, body, payload) : client.send(target, body, payload);
+                    sent = client.post(target, body, payload);
                 }
                 else
 #endif
                 {
-                    sent = post ? client.post(buffer) : client.send(buffer);
+                    sent = client.post(buffer);
                 }
                 if (!sent)
                 {

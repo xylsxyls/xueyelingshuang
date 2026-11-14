@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cmath>
+#include <sstream>
 #include <signal.h>
 
 LibuvTcpPerformance::LibuvTcpPerformance() :
@@ -218,9 +220,103 @@ bool LibuvTcpPerformance::parse(const std::string& output, int kind, uint64_t ex
     return metrics[0] > 0 && metrics[1] > 0;
 }
 
+bool LibuvTcpPerformance::parseHost(const std::string& output, uint32_t producers, uint32_t payload,
+    uint32_t count, const char* mode, double* metrics)
+{
+    if (producers == 0 || payload == 0 || count == 0 || mode == nullptr)
+    {
+        return false;
+    }
+    const bool framed = std::strcmp(mode, "framed") == 0 || std::strcmp(mode, "framedpool") == 0;
+    if (!framed && std::strcmp(mode, "raw") != 0 && std::strcmp(mode, "ordered") != 0)
+    {
+        return false;
+    }
+    const size_t end = output.find_last_not_of("\r\n");
+    if (end == std::string::npos)
+    {
+        return false;
+    }
+    const size_t start = output.rfind('\n', end);
+    std::istringstream line(output.substr(start == std::string::npos ? 0 : start + 1,
+        end + 1 - (start == std::string::npos ? 0 : start + 1)));
+    std::string word;
+    if (!(line >> word) || word != "HOST_POST" || !(line >> word) || word != std::string("mode=") + mode)
+    {
+        return false;
+    }
+    const char* keys[] = { "producers=", "payload=", "count=", "warmup=", "received=", "bytes=",
+        "seconds=", "mps=", "submitSeconds=", "retries=" };
+    double values[10] = {};
+    for (size_t index = 0; index < 10; ++index)
+    {
+        if (!(line >> word) || word.compare(0, std::strlen(keys[index]), keys[index]) != 0)
+        {
+            return false;
+        }
+        const char* text = word.c_str() + std::strlen(keys[index]);
+        char* tail = nullptr;
+        errno = 0;
+        values[index] = std::strtod(text, &tail);
+        if (errno != 0 || tail == text || *tail != 0 || !(values[index] >= 0 && values[index] <= DBL_MAX) ||
+            ((index < 6 || index == 9) && std::floor(values[index]) != values[index]))
+        {
+            return false;
+        }
+    }
+    if (!(line >> word) || word != "status=PASS" || (line >> word))
+    {
+        return false;
+    }
+    const uint32_t warmup = (std::min)(100000U, 8388608U / payload) / producers * producers;
+    const uint64_t bytes = static_cast<uint64_t>(count) * (static_cast<uint64_t>(payload) + (framed ? 4 : 0));
+    if (values[0] != producers || values[1] != payload || values[2] != count || values[3] != warmup ||
+        values[4] != static_cast<uint64_t>(warmup) + count || values[5] != static_cast<double>(bytes) ||
+        values[6] <= 0 || values[7] <= 0 || values[8] <= 0)
+    {
+        return false;
+    }
+    // 输出耗时保留纳秒、速率保留小数后三位，只容忍这两个字段的舍入误差。
+    const double rate = static_cast<double>(count) / values[6];
+    if (std::fabs(values[7] - rate) > 0.001 + rate * 1e-9 / values[6])
+    {
+        return false;
+    }
+    std::fill(metrics, metrics + 8, -1.0);
+    metrics[0] = values[7];
+    metrics[1] = values[6] * 1000;
+    metrics[4] = bytes / values[6] / 1048576.0;
+    return true;
+}
+
 bool LibuvTcpPerformance::checkParser()
 {
     double metrics[8];
+    const std::string host = "HOST_POST mode=raw producers=2 payload=6 count=8 warmup=100000 received=100008 bytes=48 seconds=0.002000000 mps=4000.000 submitSeconds=0.001900000 retries=3 status=PASS\n";
+    if (!parseHost(host, 2, 6, 8, "raw", metrics) || metrics[0] != 4000 || metrics[2] != -1 ||
+        parseHost(host, 1, 6, 8, "raw", metrics) || parseHost(host, 2, 7, 8, "raw", metrics) ||
+        parseHost(host, 2, 6, 9, "raw", metrics) || parseHost(host, 2, 6, 8, "framed", metrics))
+    {
+        return false;
+    }
+    const char* valid[] = { "received=100008", "bytes=48", "seconds=0.002000000", "mps=4000.000",
+        "retries=3", "status=PASS", "payload=6" };
+    const char* invalid[] = { "received=100007", "bytes=47", "seconds=nan", "mps=3990.000",
+        "retries=1.5", "status=FAIL", "payload=6junk" };
+    for (size_t index = 0; index < 7; ++index)
+    {
+        std::string changed = host;
+        changed.replace(changed.find(valid[index]), std::strlen(valid[index]), invalid[index]);
+        if (parseHost(changed, 2, 6, 8, "raw", metrics))
+        {
+            return false;
+        }
+    }
+    if (parseHost(host.substr(0, host.find(" status=")), 2, 6, 8, "raw", metrics) ||
+        parseHost(host + "extra", 2, 6, 8, "raw", metrics) || parseHost("", 2, 6, 8, "raw", metrics))
+    {
+        return false;
+    }
     return parse("TINY,1,0,8,1,2,4000,1,100,8,1\n", 0, 8, metrics) && metrics[0] == 4000 &&
         !parse("TINY,1,0,8,1,2,4000,1,100,7,1\n", 0, 8, metrics) &&
         !parse("TINY,1,0,8,1,2,4000,1,100,8,0\n", 0, 8, metrics) &&
@@ -295,7 +391,7 @@ int LibuvTcpPerformance::run(int argc, char** argv)
 {
     if (argc != 4 && argc != 5)
     {
-        std::fputs("usage: --suite rounds baseline-exe-or-dash [case:0-28]\n", stderr);
+        std::fputs("usage: --suite rounds baseline-exe-or-dash [case:0-46]\n", stderr);
         return 2;
     }
     uint32_t parsed[2] = {};
@@ -306,7 +402,7 @@ int LibuvTcpPerformance::run(int argc, char** argv)
         errno = 0;
         const unsigned long value = std::strtoul(input, &tail, 10);
         if (*input < '0' || *input > '9' || tail == input || *tail != 0 || errno != 0 ||
-            value > (index == 0 ? 100U : 28U) || (index == 0 && value == 0))
+            value > (index == 0 ? 100U : 46U) || (index == 0 && value == 0))
         {
             return 2;
         }
@@ -327,19 +423,28 @@ int LibuvTcpPerformance::run(int argc, char** argv)
         {16,16,50000,128}, {1,64,100000,128}, {16,64,50000,128}, {1,1024,50000,128},
         {16,1024,10000,128}, {1,65536,4000,32}, {16,65536,1000,32} };
     const uint32_t raw[4][4] = { {1,6,100000,32}, {1,64,100000,32}, {1,1024,50000,32}, {1,32768,4000,32} };
-    for (uint32_t test = 1; test <= 28; ++test)
+    for (uint32_t test = 1; test <= 46; ++test)
     {
         if (parsed[1] != 0 && parsed[1] != test)
         {
             continue;
         }
         const uint32_t index = test - 1;
+        const bool host = test >= 29;
+        const char* hostMode = test <= 32 ? "raw" : test <= 36 ? "framed" :
+            test <= 40 ? "framedpool" : test <= 44 ? "ordered" : "raw";
         const bool fixed = index < 12 && index % 3 == 0;
         const int kind = index < 12 || index >= 26 ? 0 : index < 22 ? 1 : 2;
-        const char* mode = index < 12 ? modes[index / 3] : index < 22 ? "--benchmark" :
+        const char* mode = host ? "--hostbenchmark" : index < 12 ? modes[index / 3] : index < 22 ? "--benchmark" :
             index < 26 ? "--rawbenchmark" : "--tinybenchmark";
         uint32_t values[4] = { index % 3 == 2 ? 16U : 1U, 0, index % 3 == 2 ? 500000U : 8000000U, 1 };
-        if (index >= 12 && index < 26)
+        if (host)
+        {
+            values[0] = test <= 44 ? 1U << ((test - 29) % 4) : test == 45 ? 1 : 4;
+            values[1] = test <= 44 ? 6 : 16384;
+            values[2] = test <= 40 ? 10000000 : test <= 44 ? 1000000 : 65536;
+        }
+        else if (index >= 12 && index < 26)
         {
             std::copy(index < 22 ? latency[index - 12] : raw[index - 22],
                 (index < 22 ? latency[index - 12] : raw[index - 22]) + 4, values);
@@ -352,8 +457,15 @@ int LibuvTcpPerformance::run(int argc, char** argv)
         char number[32];
         for (size_t arg = 0; arg < 4; ++arg)
         {
-            std::sprintf(number, "%u", values[arg]);
-            arguments.push_back(number);
+            if (host && arg == 3)
+            {
+                arguments.push_back(hostMode);
+            }
+            else
+            {
+                std::sprintf(number, "%u", values[arg]);
+                arguments.push_back(number);
+            }
         }
         // 此专用命令的环境仅由本线程修改；子进程继承测试器亲和性。
         const char* previous = std::getenv("LIBUV_TEST_FIXED_CPUS");
@@ -376,7 +488,8 @@ int LibuvTcpPerformance::run(int argc, char** argv)
                     std::string output;
                     double metrics[8];
                     good = child.execute(executables[version], arguments, output) &&
-                        parse(output, kind, 8000000, metrics);
+                        (host ? parseHost(output, values[0], values[1], values[2], hostMode, metrics) :
+                            parse(output, kind, 8000000, metrics));
                     std::printf("SAMPLE,%u,%s,%u,%s,%s\n%s", test, version == 0 ? "before" : "after",
                         round, round == 0 ? "warmup" : "formal", good ? "PASS" : "FAIL", output.c_str());
                     std::fflush(stdout);
