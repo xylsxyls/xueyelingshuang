@@ -50,11 +50,17 @@ public:
     */
     ~LibuvChannel();
 
-    /** listen/connect前设置写窗口和空闲缓存，只复制配置；所有操作由同一执行者调用
+    /** listen/connect前设置实际写请求池，验证并准备存储；配置和生命周期由唯一执行者调用，post可跨线程
     @param [in] config 有效配置，借用到返回；失败不改变已有配置
     @return 0成功，UV_EINVAL非法参数，UV_EBUSY已启动或已停止
     */
     int32_t configureWritePool(const LibuvChannelWritePoolConfig& config);
+
+    /** 启动前配置实际连接记录池；关闭中的句柄持续占槽，单执行者调用
+    @param [in] config 真实槽数及增长策略，失败保持原配置
+    @return 0或UV_EINVAL、UV_ENOMEM、UV_EBUSY
+    */
+    int32_t configurePeerPool(const LockFreeHashMapPoolConfig& config);
 
     /** listen/connect前设置每连接独占读缓冲大小，连接建立时才分配
     @param [in] bufferBytes 1至16777216字节，默认16384，不改变TCP流语义
@@ -66,7 +72,7 @@ public:
     @param [in] address 非空数值地址，显式0.0.0.0/::才监听所有网卡
     @param [in] port 0至65535，0供隔离测试分配临时端口
     @param [in] listener 借用到shutdown完成，不可空
-    @param [in] maxPeers 1至256，包含正在关闭的连接
+    @param [in] maxPeers 非零兼容启动提示，实际连接容量由configurePeerPool决定
     @return 0成功，否则libuv错误；实例仅能启动一次
     */
     int32_t listen(const char* address, uint32_t port, LibuvChannelListener* listener, uint32_t maxPeers = 64);
@@ -80,18 +86,18 @@ public:
     */
     int32_t connect(const char* address, uint32_t port, LibuvChannelListener* listener, uint64_t& peer);
 
-    /** 单次非阻塞事件处理，所有操作和回调必须在同一所属执行者；重入不执行循环
+    /** 单次非阻塞事件处理，除post外的操作和回调必须在同一所属执行者；重入不执行循环
     @return 仍有活动句柄为true
     */
     bool poll();
 
-    /** 复制字节并异步发送，写入上限使用初始化前配置；默认32KiB、每连接64KiB/64次
+    /** 多生产者并发复制字节并投递，uv_async唤醒loop后合并调用uv_write；不加长度头，写入上限使用初始化前配置；默认单条32KiB，接纳仅由实际共享写请求池决定
     @param [in] peer 有效已连接且未关闭的连接号
-    @param [in] data size不为0时不可空
+    @param [in] data size不为0时不可空，返回后可立即复用
     @param [in] size 字节数，0为无操作
-    @return 0已接纳，UV_ENOBUFS为背压，其他libuv错误表示未接纳
+    @return 0仅表示本库拥有副本，不保证送达；UV_ENOBUFS为非阻塞背压，其他libuv错误未接纳
     */
-    int32_t write(uint64_t peer, const uint8_t* data, uint32_t size);
+    int32_t post(uint64_t peer, const uint8_t* data, uint32_t size);
 
     /** 暂停/恢复读取，以连接窗口限制下游积压
     @param [in] peer 有效连接号
@@ -111,6 +117,11 @@ public:
     */
     void shutdown();
 
+    /** 查询当前是否允许析构；共同循环任意回调内均不允许销毁通道
+    @return 本通道及所属循环均未驱动时为true
+    */
+    bool canDestroy() const;
+
     /** 查询服务器实际监听端口
     @return 监听成功后的端口，其他状态为0
     */
@@ -122,7 +133,7 @@ public:
     uint32_t peerCount() const;
 
     /** 判断写入返回值是否为可重试的有界队列背压
-    @param [in] result write返回值
+    @param [in] result post返回值
     @return true应等待poll释放额度，其他错误不应原地重试
     */
     static bool isBackpressure(int32_t result);

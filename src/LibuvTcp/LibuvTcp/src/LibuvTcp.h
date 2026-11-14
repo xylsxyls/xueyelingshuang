@@ -28,6 +28,43 @@ struct LibuvSendBuffer
 class LibuvTcpAPI LibuvTcp
 {
   public:
+    /** 创建共同事件循环；不启动线程，先创建再串行移交唯一执行者
+    @param [out] instance 不可空，失败清空；成功由hostLoopDestroy回收
+    @return 0成功，负数失败
+    */
+    static int32_t hostLoopCreate(void** instance);
+
+    /** 设置当前执行者中新建原始通道的循环归属，离开作用域须恢复
+    @param [in] instance 共同循环或空；不得由两个执行者并行操作同一循环
+    @return 之前的借用循环
+    */
+    static void* hostLoopExchange(void* instance);
+
+    /** 在检查本地工作之前取得通知代次，随后传给wait
+    @param [in] instance 有效共同循环
+    @return 当前通知代次，不承载消息数据
+    */
+    static uint64_t hostLoopBegin(void* instance);
+
+    /** 等待网络、跨线程唤醒或维护期限，已发生进展则立即返回
+    @param [in] instance 共同循环，唯一执行者调用，回调内禁止
+    @param [in] observed 本轮检查工作之前取得的通知代次
+    @param [in] timeoutMs 最多等待毫秒，0为非阻塞推进
+    @return 0正常，负数失败；返回不表示业务完成
+    */
+    static int32_t hostLoopWait(void* instance, uint64_t observed, uint32_t timeoutMs);
+
+    /** 数据发布后跨线程唤醒；发布者必须由外层保留循环至返回
+    @param [in] instance 有效循环，可空无操作；不得与destroy并发
+    */
+    static void hostLoopWake(void* instance);
+
+    /** 无通道、无运行、无外部唤醒者时释放；失败仍归调用方拥有
+    @param [in] instance 共同循环或空；须先恢复exchange并释放所有借用通道
+    @return 0释放成功，负数状态错误
+    */
+    static int32_t hostLoopDestroy(void* instance);
+
     /** 创建原始字节运输，不含协议、加密、压缩或后台线程
     @param [in] providerContext 保留的宿主上下文，本实现忽略
     @param [in] observerContext 四个回调借用的上下文，存活至destroy成功
@@ -47,6 +84,13 @@ class LibuvTcpAPI LibuvTcp
     @return 0成功，负数参数或状态错误，不分配内存池
     */
     static int32_t hostConfigureWritePool(void* instance, const LibuvChannelWritePoolConfig& config);
+
+    /** hostCreate后、启动前设置实际连接记录池，同一执行者调用
+    @param [in] instance 本库原始宿主实例
+    @param [in] config 实际存储池配置，失败保持原配置
+    @return 0或libuv配置、内存、生命周期错误
+    */
+    static int32_t hostConfigurePeerPool(void* instance, const LockFreeHashMapPoolConfig& config);
 
     /** hostCreate后、hostListen/hostConnect前设置原始字节运输资源参数，同一执行者调用
     @param [in] instance 有效且未启动、未停止的实例
@@ -79,14 +123,14 @@ class LibuvTcpAPI LibuvTcp
     */
     static int32_t hostPoll(void* instance);
 
-    /** 复制完整字节后异步写，默认每次至多32KiB、每连接在途64KiB/64次，可在启动前配置
+    /** 多生产者并发复制原始字节并入队，不加长度头；loop合批uv_write，容量由实际池配置决定
     @param [in] instance 有效实例
     @param [in] peer 已连接且未关闭的连接号
     @param [in] data size非零时不可空，只借用到返回
     @param [in] size 字节数，0无操作
     @return 0完整接纳，1背压未接纳且无副作用，负数未接纳失败
     */
-    static int32_t hostWrite(void* instance, uint64_t peer, const uint8_t* data, uint32_t size);
+    static int32_t post(void* instance, uint64_t peer, const uint8_t* data, uint32_t size);
 
     /** 暂停或恢复输入，回调中可调用
     @param [in] instance 有效实例
@@ -199,7 +243,7 @@ class LibuvTcpAPI LibuvTcp
      */
     void stop();
 
-    /** 申请发送数组，必须与send在本库配对转移所有权
+    /** 申请发送数组，必须与post在本库配对转移所有权
     @param [in] length 完整数组字节数，包括TCP指针、4字节长度及正文，须为正
     @return 独占数组，非正数为空，分配失败可抛bad_alloc
     */
@@ -211,69 +255,11 @@ class LibuvTcpAPI LibuvTcp
     */
     void releaseSendMemory(const char* buffer);
 
-    /** 线程安全普通提交，始终接管数组；等同 trySend 的两个重试选项为 true
-    @param [in] buffer 本库分配的完整数组，可空；依次为uv_tcp_t*、int32正文长度和正文
-    调用方保证容量覆盖头及非负正文，提交后不得再修改/释放；线数据仍为长度加正文
-    本库队列及libuv在途共享配置预算，默认64MiB；空间不足持续重试，前4096次后每次请求休眠1毫秒
-    不能从本实例循环回调等待空间；停止、连接失效、非法调用或内存失败会结束等待
-    @return true 已接纳，false 其他错误且数组已回收；不以临时空间不足返回false，不是对端确认
-    */
-    bool send(const char *buffer);
-
-    /** 尝试转移完整数组，失败时可重试或用releaseSendMemory释放，成功后不得再访问数组
-    @param [in] buffer memoryForSend 分配的完整指针、长度和正文，容量由调用方保证
-    @param [in] retryContention CAS竞争时是否持续重试，默认false
-    @param [in] waitForSpace 空间不足时是否持续等待，默认false；前4096次后每次休眠1毫秒
-    @return 0 已接纳；UV_EAGAIN 竞争；UV_ENOBUFS 空间不足且未选择等待；其他负数未接纳
-    等待可因停止、连接失效或系统错误结束；本实例loop回调或未运行循环不得等待容量
-    请求本身超过实例总预算为UV_EINVAL，不能等待永远无法满足的容量
-    */
-    int32_t trySend(const char* buffer, bool retryContention = false, bool waitForSpace = false);
-
-    /** 线程安全地复制并提交一条正文，内部填写长度头；不需要调用方另分配发送数组
-    @param [in] target 本实例有效连接借用
-    @param [in] data 正文，仅借用到返回；size为零时允许空
-    @param [in] size 正文字节数，请求及写请求开销不能超过64MiB总预算
-    @return true单条已接纳，false参数、连接、停止或资源错误；不是对端确认
-    竞争与容量等待规则和数组版send一致，返回后可修改或释放原正文
-    */
-    bool send(uv_tcp_t* target, const char* data, uint32_t size);
-
-    /** 尝试复制提交一条正文，失败不发布数据且不改变调用方所有权
-    @param [in] target 本实例有效连接借用
-    @param [in] data 借用正文，非零长度时不可空
-    @param [in] size 正文字节数，超过实例预算为UV_EINVAL
-    @param [in] retryContention 是否持续重试CAS竞争
-    @param [in] waitForSpace 是否等待容量，4096次后每次请求休眠1毫秒
-    @return 0已接纳；其他错误及循环内等待限制和数组版trySend相同
-    */
-    int32_t trySend(uv_tcp_t* target, const char* data, uint32_t size,
-        bool retryContention = false, bool waitForSpace = false);
-
-    /** 线程安全地复制并接纳一批长度帧；顺序和线格式与依次send相同，不接管输入
-    @param [in] target 本实例仍有效的连接借用
-    @param [in] buffers 非空正文描述数组，数组和正文借用到返回
-    @param [in] count 1至4096条；所有正文及每条4字节长度头合计至多1MiB
-    @return true整批接纳；false停止、失效、参数或资源错误，不存在部分接纳
-    */
-    bool sendBatch(uv_tcp_t* target, const LibuvSendBuffer* buffers, uint32_t count);
-
-    /** 线程安全批量复制提交；可选择竞争和容量等待，不改变输入所有权
-    @param [in] target 本实例仍有效的连接借用
-    @param [in] buffers 借用正文数组，返回后可修改或释放
-    @param [in] count 1至4096条，总线上长度至多1MiB
-    @param [in] retryContention 是否持续重试CAS竞争
-    @param [in] waitForSpace 是否等待实际容量，4096次后每次请求休眠1毫秒
-    @return 0整批接纳；错误码与trySend一致，失败无部分接纳，输入始终由调用方拥有
-    */
-    int32_t trySendBatch(uv_tcp_t* target, const LibuvSendBuffer* buffers, uint32_t count,
-        bool retryContention = false, bool waitForSpace = false);
-
     /** 线程安全地投递完整数组，由唯一loop执行者处理；成功仅承诺本地队列接纳
     @param [in] buffer 本库分配的TCP指针、int32长度和正文数组，可空；无论结果始终接管
     @return true已投递，false参数、停止、失效或资源错误且数组已释放，不是网络完成确认
-    与send共用有界队列并主动唤醒loop，不新增线程；竞争持续重试，容量等待4096次后每次休眠1毫秒
-    本实例loop回调或尚未运行的loop不得等待自身容量；与send混用仍保持每个生产者的提交顺序
+    使用有界队列并主动唤醒loop，不新增线程；竞争持续重试，容量等待4096次后每次休眠1毫秒
+    本实例loop回调或尚未运行的loop不得等待自身容量；仍保持每个生产者的提交顺序
     */
     bool post(const char* buffer);
 
@@ -281,7 +267,7 @@ class LibuvTcpAPI LibuvTcp
     @param [in] buffer memoryForSend分配的完整数组，容量由调用方保证
     @param [in] retryContention 是否持续重试CAS竞争，默认false
     @param [in] waitForSpace 是否等待容量，默认false；4096次后每次休眠1毫秒
-    @return 0本地接纳，UV_EAGAIN竞争，UV_ENOBUFS容量不足，其他负数未接纳；错误码与trySend一致
+    @return 0本地接纳，UV_EAGAIN竞争，UV_ENOBUFS容量不足，其他负数未接纳
     可多线程调用不同数组；等待可因停止、失效或错误结束，禁止等待自身loop释放容量
     */
     int32_t tryPost(const char* buffer, bool retryContention = false, bool waitForSpace = false);
@@ -291,7 +277,7 @@ class LibuvTcpAPI LibuvTcp
     @param [in] data 借用到返回，成功或失败都归调用方；size为零时可空
     @param [in] size 正文字节数，请求及写请求开销不得超过配置总预算，默认64MiB
     @return true本地接纳，false参数、停止、失效或资源错误；不保证对端接收或网络写完成
-    竞争、容量等待、owner限制与数组版post相同；与send共用顺序和预算
+    竞争、容量等待、owner限制与数组版post相同；各post重载共用顺序和预算
     */
     bool post(uv_tcp_t* target, const char* data, uint32_t size);
 
@@ -390,19 +376,19 @@ class LibuvTcpAPI LibuvTcp
     // 内部循环在关闭uv句柄前封闭提交入口，不对外暴露回收协议
     friend struct LibuvBase;
 
-    /** 循环owner拒绝新借用并等待原提交调用结束，不从持有借用的send/stop中调用
+    /** 循环owner拒绝新借用并等待原提交调用结束，不从持有借用的post/stop中调用
     */
     void closeSubmissions();
 
-    /** send/post共用的数组提交实现，避免两套校验及所有权逻辑产生分歧
+    /** post各重载共用的数组提交实现，避免两套校验及所有权逻辑产生分歧
     @param [in] buffer 本库完整发送数组，成功接管，失败不接管
     @param [in] retryContention 是否持续重试竞争
     @param [in] waitForSpace 是否等待容量
-    @return 0接纳，负数未接纳；同trySend错误码
+    @return 0接纳，负数未接纳；同公开tryPost错误码
     */
     int32_t trySubmitBuffer(const char* buffer, bool retryContention, bool waitForSpace);
 
-    /** send/post共用的正文复制实现，输入只借用到返回
+    /** post各重载共用的正文复制实现，输入只借用到返回
     @param [in] target 当前连接借用
     @param [in] data 正文，size为零时可空
     @param [in] size 正文字节数
@@ -413,7 +399,7 @@ class LibuvTcpAPI LibuvTcp
     int32_t trySubmitData(uv_tcp_t* target, const char* data, uint32_t size,
         bool retryContention, bool waitForSpace);
 
-    /** send/post共用的批量复制实现，保持整批原子接纳与生产者顺序
+    /** post各重载共用的批量复制实现，保持整批原子接纳与生产者顺序
     @param [in] target 当前连接借用
     @param [in] buffers 借用正文描述数组
     @param [in] count 消息数，1至4096

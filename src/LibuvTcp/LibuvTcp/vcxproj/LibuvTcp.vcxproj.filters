@@ -86,4 +86,8 @@
     <ClInclude Include="..\src\LibuvTcpMacroDll.h" />
     <ClInclude Include="..\src\LibuvTcpMacroLib.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\LibuvHostLoop.cpp" />
+    <ClInclude Include="..\src\LibuvHostLoop.h" />
+  </ItemGroup>
 </Project>

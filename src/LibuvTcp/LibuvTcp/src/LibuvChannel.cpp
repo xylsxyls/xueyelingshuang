@@ -1,5 +1,5 @@
-﻿#include "LibuvChannel.h"
-#include "LibuvChannelState.h"
+﻿#include "LibuvChannelState.h"
+#include "LibuvChannel.h"
 #include <memory>
 
 LibuvChannelListener::~LibuvChannelListener()
@@ -28,8 +28,59 @@ int32_t LibuvChannel::configureWritePool(const LibuvChannelWritePoolConfig& conf
     {
         return UV_EINVAL;
     }
-    m_state->m_writeConfig = config;
-    return 0;
+    try
+    {
+        std::unique_ptr<LibuvChannelWritePoolConfig> copy(new LibuvChannelWritePoolConfig(config));
+        std::unique_ptr<LockFreeHashMapPool<LibuvChannelWrite>> pool(new LockFreeHashMapPool<LibuvChannelWrite>);
+        const LockFreeHashMapStatus result = pool->initialize(config.m_records);
+        if (result != LockFreeHashMapOk)
+        {
+            return result == LockFreeHashMapNoMemory ? UV_ENOMEM : UV_EINVAL;
+        }
+        std::unique_ptr<LockFreeQueue<LibuvChannelWrite*>> incoming(new LockFreeQueue<LibuvChannelWrite*>(false));
+        std::unique_ptr<LockFreeHashMap<uint64_t, uint32_t>> connections(
+            new LockFreeHashMap<uint64_t, uint32_t>(256, config.m_connections));
+        if (incoming->configurePool(config.m_submission) != LockFreeQueueSuccess ||
+            incoming->tryInit() != LockFreeQueueSuccess || connections->status() != LockFreeHashMapOk)
+        {
+            return UV_ENOMEM;
+        }
+        m_state->releaseLanes();
+        m_state->m_incoming.swap(incoming);
+        m_state->m_connectedPeers.swap(connections);
+        m_state->m_writeConfig.swap(copy);
+        m_state->m_writePool.swap(pool);
+        m_state->m_writePoolStatus = 0;
+        return 0;
+    }
+    catch (...)
+    {
+        return UV_ENOMEM;
+    }
+}
+
+int32_t LibuvChannel::configurePeerPool(const LockFreeHashMapPoolConfig& config)
+{
+    if (m_state->m_started || m_state->m_stopping)
+    {
+        return UV_EBUSY;
+    }
+    try
+    {
+        std::unique_ptr<LockFreeHashMapPool<LibuvChannelPeer>> pool(new LockFreeHashMapPool<LibuvChannelPeer>);
+        const LockFreeHashMapStatus result = pool->initialize(config);
+        if (result != LockFreeHashMapOk)
+        {
+            return result == LockFreeHashMapNoMemory ? UV_ENOMEM : UV_EINVAL;
+        }
+        m_state->m_peerPool.swap(pool);
+        m_state->m_peerPoolStatus = 0;
+        return 0;
+    }
+    catch (...)
+    {
+        return UV_ENOMEM;
+    }
 }
 
 int32_t LibuvChannel::configureReadBuffer(uint32_t bufferBytes)
@@ -49,7 +100,7 @@ int32_t LibuvChannel::configureReadBuffer(uint32_t bufferBytes)
 int32_t LibuvChannel::listen(const char* address, uint32_t port,
     LibuvChannelListener* listener, uint32_t maxPeers)
 {
-    if (m_state->m_started || m_state->m_stopping || listener == nullptr || maxPeers == 0 || maxPeers > 256)
+    if (m_state->m_started || m_state->m_stopping || listener == nullptr || maxPeers == 0)
     {
         return UV_EINVAL;
     }
@@ -75,8 +126,8 @@ int32_t LibuvChannel::listen(const char* address, uint32_t port,
     }
     m_state->m_callback = listener;
     m_state->m_started = true;
-    m_state->m_maxPeers = maxPeers;
-    result = uv_tcp_init(&m_state->m_loop, &m_state->m_listener);
+    (void)maxPeers;
+    result = uv_tcp_init(m_state->loop(), &m_state->m_listener);
     if (result != 0)
     {
         return result;
@@ -135,7 +186,6 @@ int32_t LibuvChannel::connect(const char* address, uint32_t port,
     }
     m_state->m_started = true;
     m_state->m_callback = listener;
-    m_state->m_maxPeers = 1;
     LibuvChannelPeer* peer = m_state->createPeer(false);
     if (peer == nullptr)
     {
@@ -161,57 +211,115 @@ bool LibuvChannel::poll()
     }
     if (m_state->m_polling)
     {
-        return uv_loop_alive(&m_state->m_loop) != 0;
+        return m_state->m_listenerInitialized || m_state->m_rejectPending || m_state->m_overflowClosing || !m_state->m_peers.empty();
     }
     m_state->m_polling = true;
+    if (m_state->m_submissionError.load(std::memory_order_acquire) != 0)
+    {
+        m_state->shutdown();
+    }
     // 接受回调中一次分配失败不能吞掉libuv已就绪的连接。每轮最多主动重试一次，
     // 持续低内存不在本轮自旋；关闭中的拒绝句柄由closed回调继续原有收敛。
-    if (m_state->m_acceptPending && !m_state->m_rejectPending &&
+    if (m_state->m_acceptPending && !m_state->m_rejectPending && !m_state->m_overflowClosing &&
         !m_state->m_stopping && m_state->m_listenerInitialized)
     {
         LibuvChannelState::acceptPeer(reinterpret_cast<uv_stream_t*>(&m_state->m_listener), 0);
     }
-    const bool alive = uv_run(&m_state->m_loop, UV_RUN_NOWAIT) != 0;
+    const bool alive = m_state->m_group == nullptr ? uv_run(m_state->loop(), UV_RUN_NOWAIT) != 0 :
+        (m_state->m_group->run(UV_RUN_NOWAIT), m_state->m_listenerInitialized ||
+            m_state->m_rejectPending || m_state->m_overflowClosing || !m_state->m_peers.empty());
     m_state->m_polling = false;
     return alive;
 }
 
-int32_t LibuvChannel::write(uint64_t id, const uint8_t* data, uint32_t size)
+int32_t LibuvChannel::post(uint64_t id, const uint8_t* data, uint32_t size)
 {
-    if ((data == nullptr && size != 0) || size > m_state->m_writeConfig.m_maximumWriteBytes)
+    LibuvCall call(m_state->m_submissionGate);
+    if (!call.accepted())
+    {
+        return call.status();
+    }
+    if ((data == nullptr && size != 0) || size > m_state->m_writeConfig->m_maximumWriteBytes)
     {
         return UV_EINVAL;
     }
-    auto entry = m_state->m_peers.find(id);
-    if (entry == m_state->m_peers.end() || !entry->second->m_connected || entry->second->m_closing)
+    const int32_t failed = m_state->m_submissionError.load(std::memory_order_acquire);
+    if (failed != 0) { return failed; }
+    LibuvChannelLane* lane = m_state->producerLane();
+    if (lane != nullptr)
     {
-        return UV_ENOTCONN;
+        const int32_t result = m_state->postLane(*lane, id, data, size);
+        if (result == UV_ENOBUFS)
+        {
+            m_state->m_notifyCapacity.store(true, std::memory_order_release);
+        }
+        if (result == 0 && size != 0 && !lane->m_notified.load(std::memory_order_acquire) &&
+            !lane->m_notified.exchange(true, std::memory_order_acq_rel))
+        {
+            const int32_t notified = uv_async_send(&m_state->m_postAsync);
+            if (notified != 0)
+            {
+                m_state->m_submissionError.store(notified, std::memory_order_release);
+            }
+        }
+        return result;
+    }
+    const std::thread::id current = std::this_thread::get_id();
+    LibuvChannelPeer* local = nullptr;
+    if (current == m_state->m_ownerThread)
+    {
+        // 所属线程独占std索引，无需再穿过并发索引和MPSC队列。
+        const auto found = m_state->m_peers.find(id);
+        if (found == m_state->m_peers.end() || !found->second->m_connected || found->second->m_closing)
+        {
+            return UV_ENOTCONN;
+        }
+        local = found->second;
+    }
+    else
+    {
+        LockFreeHashMap<uint64_t, uint32_t>::Snapshot connected;
+        const LockFreeHashMapResult found = m_state->m_connectedPeers->find(id, connected);
+        if (found.m_status != LockFreeHashMapOk)
+        {
+            return found.m_status == LockFreeHashMapNotFound ? UV_ENOTCONN : UV_ENOMEM;
+        }
     }
     if (size == 0)
     {
         return 0;
     }
-    LibuvChannelPeer* peer = entry->second;
-    if (peer->m_queuedBytes > m_state->m_writeConfig.m_maximumPendingBytesPerPeer - size ||
-        peer->m_queuedWrites >= m_state->m_writeConfig.m_maximumWritesPerPeer)
-    {
-        return UV_ENOBUFS;
-    }
-    LibuvChannelWrite* request = m_state->prepareWrite(peer, data, size);
+    int32_t result = 0;
+    LibuvChannelWrite* request = m_state->prepareWrite(id, data, size, result);
     if (request == nullptr)
     {
-        return UV_ENOMEM;
-    }
-    uv_buf_t buffer = uv_buf_init(reinterpret_cast<char*>(&request->m_bytes[0]), size);
-    const int result = uv_write(&request->m_request, reinterpret_cast<uv_stream_t*>(&peer->m_tcp),
-        &buffer, 1, &LibuvChannelState::written);
-    if (result != 0)
-    {
-        m_state->releaseWrite(request);
+        if (result == UV_ENOBUFS) { m_state->m_notifyCapacity.store(true, std::memory_order_release); }
+        // 分配正文失败会归还刚取得的共享槽，也可能解除其他生产者的满池等待。
+        uv_async_send(&m_state->m_postAsync);
         return result;
     }
-    peer->m_queuedBytes += size;
-    ++peer->m_queuedWrites;
+    if (local != nullptr)
+    {
+        m_state->appendWrite(local, request);
+    }
+    else
+    {
+        const LockFreeQueueResult queued = m_state->m_incoming->tryPushAndFence(request, true, false);
+        if (queued != LockFreeQueueSuccess)
+        {
+            m_state->releaseWrite(request);
+            m_state->m_notifyCapacity.store(true, std::memory_order_release);
+            // 提交失败也归还了共享写槽，唤醒因满池暂停消费的专用通道。
+            uv_async_send(&m_state->m_postAsync);
+            return queued == LockFreeQueueAllocationFailure ? UV_ENOMEM : UV_ENOBUFS;
+        }
+    }
+    // 先发布完整描述符再唤醒；成功后不能再读request，消费者可能已经回收。
+    const int32_t notified = uv_async_send(&m_state->m_postAsync);
+    if (notified != 0)
+    {
+        m_state->m_submissionError.store(notified, std::memory_order_release);
+    }
     return 0;
 }
 
@@ -248,12 +356,12 @@ void LibuvChannel::close(uint64_t peer, int32_t reason)
 void LibuvChannel::shutdown()
 {
     m_state->shutdown();
-    if (m_state->m_loopInitialized && !m_state->m_polling)
-    {
-        m_state->m_polling = true;
-        uv_run(&m_state->m_loop, UV_RUN_DEFAULT);
-        m_state->m_polling = false;
-    }
+    m_state->drain();
+}
+
+bool LibuvChannel::canDestroy() const
+{
+    return !m_state->m_polling && (m_state->m_group == nullptr || !m_state->m_group->m_running);
 }
 
 uint32_t LibuvChannel::localPort() const

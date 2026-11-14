@@ -208,6 +208,8 @@
     <ClCompile Include="..\src\LibuvChannel.cpp" />
     <ClCompile Include="..\src\LibuvChannelModels.cpp" />
     <ClCompile Include="..\src\LibuvChannelState.cpp" />
+    <ClCompile Include="..\src\LibuvHostLoop.cpp" />
+    <ClInclude Include="..\src\LibuvHostLoop.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

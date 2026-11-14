@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "LibuvTcpMacro.h"
+#include "LockFreeHashMap/LockFreeHashMapAPI.h"
 #include <stdint.h>
+#include "LockFreeQueue/LockFreeQueueAPI.h"
 
 /** 并发队列的物理节点池与生产者登记上限，不等于可排队消息数量
 */
@@ -106,29 +108,27 @@ public:
     bool valid() const;
 };
 
-/** 原始字节运输的每连接写窗口与实例空闲缓存，全部由同一执行者使用
+/** 原始字节运输的实际写请求池；所有连接共享存储，不另设每连接条数或在途字节门槛
 */
 struct LibuvTcpAPI LibuvChannelWritePoolConfig
 {
 public:
-    // 单次写入上限，1至INT32_MAX字节且不超过每连接预算
+    // 单次提交的最大正文长度，1至INT32_MAX；大正文按实际长度分配，不预建最大正文
     uint32_t m_maximumWriteBytes;
-    // 每连接在途字节上限，1至INT32_MAX
-    uint32_t m_maximumPendingBytesPerPeer;
-    // 每连接在途请求上限，1至65536
-    uint32_t m_maximumWritesPerPeer;
-    // 实例空闲写请求上限，0不缓存，不超过65536
-    uint32_t m_maximumCachedWrites;
-    // 实例空闲正文capacity合计上限，0不缓存，不超过INT32_MAX
-    uint32_t m_maximumCachedBytes;
+    // 实际写请求槽池；初始至少64槽时最多一半预留生产者通道，其余供合批及在途写入
+    LockFreeHashMapPoolConfig m_records;
+    // 跨线程提交描述符的实际队列池，包含生产者登记和回收余量
+    LockFreeQueuePoolConfig m_submission;
+    // 已连接编号的并发只读快照池；TCP对象仍只由loop访问
+    LockFreeHashMapPoolConfig m_connections;
 
 public:
-    /** 填写默认配置，不分配内存池或创建网络资源
+    /** 默认单条32KiB，初始2槽、最大256槽；调用方可直接配置基础池增长及上限
     */
     LibuvChannelWritePoolConfig();
 
-    /** 检查数值范围，不分配资源或改变配置
-    @return true参数有效，跨配置约束在初始化时另行检查
+    /** 检查单条正文范围；实际池配置在configureWritePool中由基础组件验证
+    @return 正文范围是否有效
     */
     bool valid() const;
 };

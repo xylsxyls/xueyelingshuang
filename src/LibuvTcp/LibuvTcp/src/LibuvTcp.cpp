@@ -1,7 +1,8 @@
-﻿#include "LibuvHostState.h"
+﻿#include "LibuvBase.h"
+#include "LibuvHostState.h"
 #include "LibuvTcp.h"
+#include "LibuvHostLoop.h"
 #include "LibuvPoolSettings.h"
-#include "LibuvBase.h"
 #include "LibuvClient.h"
 #include "LibuvServer.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
@@ -289,22 +290,6 @@ void LibuvTcp::releaseSendMemory(const char* buffer)
     delete[] buffer;
 }
 
-bool LibuvTcp::send(const char *buffer)
-{
-    std::unique_ptr<char[]> bytes(const_cast<char *>(buffer));
-    if (trySend(buffer, true, true) != 0)
-    {
-        return false;
-    }
-    bytes.release();
-    return true;
-}
-
-int32_t LibuvTcp::trySend(const char* buffer, bool retryContention, bool waitForSpace)
-{
-    return trySubmitBuffer(buffer, retryContention, waitForSpace);
-}
-
 int32_t LibuvTcp::trySubmitBuffer(const char* buffer, bool retryContention, bool waitForSpace)
 {
     if (buffer == nullptr || !m_lifecycle->valid())
@@ -334,17 +319,6 @@ int32_t LibuvTcp::trySubmitBuffer(const char* buffer, bool retryContention, bool
         delete[] buffer;
     }
     return result;
-}
-
-bool LibuvTcp::send(uv_tcp_t* target, const char* data, uint32_t size)
-{
-    return trySend(target, data, size, true, true) == 0;
-}
-
-int32_t LibuvTcp::trySend(uv_tcp_t* target, const char* data, uint32_t size,
-    bool retryContention, bool waitForSpace)
-{
-    return trySubmitData(target, data, size, retryContention, waitForSpace);
 }
 
 int32_t LibuvTcp::trySubmitData(uv_tcp_t* target, const char* data, uint32_t size,
@@ -387,17 +361,6 @@ int32_t LibuvTcp::trySubmitData(uv_tcp_t* target, const char* data, uint32_t siz
         bytes.release();
     }
     return result;
-}
-
-bool LibuvTcp::sendBatch(uv_tcp_t* target, const LibuvSendBuffer* buffers, uint32_t count)
-{
-    return trySendBatch(target, buffers, count, true, true) == 0;
-}
-
-int32_t LibuvTcp::trySendBatch(uv_tcp_t* target, const LibuvSendBuffer* buffers, uint32_t count,
-    bool retryContention, bool waitForSpace)
-{
-    return trySubmitBatch(target, buffers, count, retryContention, waitForSpace);
 }
 
 int32_t LibuvTcp::trySubmitBatch(uv_tcp_t* target, const LibuvSendBuffer* buffers, uint32_t count,
@@ -713,6 +676,16 @@ int32_t LibuvTcp::hostConfigureWritePool(void* instance, const LibuvChannelWrite
     return state->m_channel.configureWritePool(config);
 }
 
+int32_t LibuvTcp::hostConfigurePeerPool(void* instance, const LockFreeHashMapPoolConfig& config)
+{
+    LibuvHostState* state = static_cast<LibuvHostState*>(instance);
+    if (state == nullptr || state->m_stopping || state->m_depth != 0 || state->m_polling)
+    {
+        return UV_EINVAL;
+    }
+    return state->m_channel.configurePeerPool(config);
+}
+
 int32_t LibuvTcp::hostConfigureReadBuffer(void* instance, uint32_t bufferBytes)
 {
     LibuvHostState* state = static_cast<LibuvHostState*>(instance);
@@ -787,16 +760,16 @@ int32_t LibuvTcp::hostPoll(void* instance)
     return result;
 }
 
-int32_t LibuvTcp::hostWrite(void* instance, uint64_t peer, const uint8_t* data, uint32_t size)
+int32_t LibuvTcp::post(void* instance, uint64_t peer, const uint8_t* data, uint32_t size)
 {
     LibuvHostState* state = static_cast<LibuvHostState*>(instance);
-    if (state == nullptr || state->m_stopping)
+    if (state == nullptr)
     {
         return -1;
     }
     try
     {
-        const int32_t result = state->m_channel.write(peer, data, size);
+        const int32_t result = state->m_channel.post(peer, data, size);
         return LibuvChannel::isBackpressure(result) ? 1 : result;
     }
     catch (...)
@@ -866,7 +839,7 @@ int32_t LibuvTcp::hostDestroy(void* instance)
     {
         return 0;
     }
-    if (state->m_depth != 0 || state->m_polling)
+    if (state->m_depth != 0 || state->m_polling || !state->m_channel.canDestroy())
     {
         return -1;
     }
@@ -972,7 +945,8 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
 //             }
 //             LibuvChannelWritePoolConfig writes;
 //             writes.m_maximumWriteBytes = 4096;
-//             writes.m_maximumPendingBytesPerPeer = 16384;
+//             writes.m_records.initialCapacity = 2;
+//             writes.m_records.maximumCapacity = 256;
 //             for (uint32_t index = 0; index < 2 && result == 0; ++index)
 //             {
 //                 Host& host = index == 0 ? server : client;
@@ -1010,7 +984,7 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
 //                     }
 //                     if (result == 0)
 //                     {
-//                         const int32_t accepted = LibuvTcp::hostWrite(client.instance, client.peer,
+//                         const int32_t accepted = LibuvTcp::post(client.instance, client.peer,
 //                             reinterpret_cast<const uint8_t*>("123456"), 6);
 //                         sent = accepted == 0;
 //                         result = accepted == 1 ? 0 : accepted;
@@ -1098,34 +1072,24 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
 //                 return bytes;
 //             }
 //
-//             // 客户端已连通，演示全部十二种提交入口
+//             // 客户端已连通，演示全部六种提交入口
 //             void uvServerConnected(uv_tcp_t* peer) override
 //             {
 //                 try
 //                 {
-//                     // 本例只提交16个小帧且已配置足够容量；一般回调必须用不等空间的try接口。
-//                     bool ok = send(peer, "123456", 6) && post(peer, "123456", 6) &&
-//                         trySend(peer, "123456", 6, true, false) == 0 && tryPost(peer, "123456", 6, true, false) == 0;
+//                     // 本例只提交8个小帧且已配置足够容量；一般回调必须用不等空间的try接口。
+//                     bool ok = post(peer, "123456", 6) && tryPost(peer, "123456", 6, true, false) == 0;
 //                     const LibuvSendBuffer messages[] = { { "123456", 6 }, { "123456", 6 } };
-//                     ok = sendBatch(peer, messages, 2) && ok;
 //                     ok = postBatch(peer, messages, 2) && ok;
-//                     ok = trySendBatch(peer, messages, 2, true, false) == 0 && ok;
 //                     ok = tryPostBatch(peer, messages, 2, true, false) == 0 && ok;
-//                     ok = send(packet(peer)) && ok;
 //                     ok = post(packet(peer)) && ok;
 //                     char* bytes = packet(peer);
-//                     if (trySend(bytes, true, false) != 0)
-//                     {
-//                         releaseSendMemory(bytes);
-//                         ok = false;
-//                     }
-//                     bytes = packet(peer);
 //                     if (tryPost(bytes, true, false) != 0)
 //                     {
 //                         releaseSendMemory(bytes);
 //                         ok = false;
 //                     }
-//                     // 数组普通send/post即使失败也接管；try只有成功接管，不能重复释放。
+//                     // 数组普通post即使失败也接管；try只有成功接管，不能重复释放。
 //                     if (!ok)
 //                     {
 //                         finish(1);
@@ -1157,13 +1121,13 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
 //                             break;
 //                         }
 //                         ++received;
-//                         if (!isClient() && trySend(peer, input.data() + 4, static_cast<uint32_t>(length), true, false) != 0)
+//                         if (!isClient() && tryPost(peer, input.data() + 4, static_cast<uint32_t>(length), true, false) != 0)
 //                         {
 //                             finish(1);
 //                             return;
 //                         }
 //                         input.erase(0, static_cast<size_t>(length) + 4);
-//                         if (isClient() && received == 16)
+//                         if (isClient() && received == 8)
 //                         {
 //                             // 已收到应用回显后才取消连接；close本身不是flush或送达确认。
 //                             close(peer);
@@ -1182,10 +1146,10 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
 //             void uvClientConnected(uv_tcp_t* peer) override { (void)peer; }
 //
 //             // 服务端观察本次客户端结束
-//             void uvClientDisconnected(uv_tcp_t* peer) override { (void)peer; finish(received == 16 ? 0 : 1); }
+//             void uvClientDisconnected(uv_tcp_t* peer) override { (void)peer; finish(received == 8 ? 0 : 1); }
 //
 //             // 客户端观察服务端结束
-//             void uvServerDisconnected(uv_tcp_t* peer) override { (void)peer; finish(received == 16 ? 0 : 1); }
+//             void uvServerDisconnected(uv_tcp_t* peer) override { (void)peer; finish(received == 8 ? 0 : 1); }
 //
 //             // 连接失败时收敛演示，避免永久等候
 //             void uvServerNotFind() override { finish(1); }
@@ -1243,3 +1207,44 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
 //         return 1;
 //     }
 // }
+
+int32_t LibuvTcp::hostLoopCreate(void** instance)
+{
+    if (instance == nullptr) { return UV_EINVAL; }
+    *instance = nullptr;
+    LibuvHostLoop* loop = new (std::nothrow) LibuvHostLoop();
+    if (loop == nullptr) { return UV_ENOMEM; }
+    const int32_t result = loop->init();
+    if (result != 0) { delete loop; return result; }
+    *instance = loop;
+    return 0;
+}
+
+void* LibuvTcp::hostLoopExchange(void* instance)
+{
+    return LibuvHostLoop::exchange(static_cast<LibuvHostLoop*>(instance));
+}
+
+uint64_t LibuvTcp::hostLoopBegin(void* instance)
+{
+    return instance == nullptr ? 0 : static_cast<LibuvHostLoop*>(instance)->m_generation.load(std::memory_order_acquire);
+}
+
+int32_t LibuvTcp::hostLoopWait(void* instance, uint64_t observed, uint32_t timeoutMs)
+{
+    return instance == nullptr ? UV_EINVAL : static_cast<LibuvHostLoop*>(instance)->wait(observed, timeoutMs);
+}
+
+void LibuvTcp::hostLoopWake(void* instance)
+{
+    if (instance != nullptr) { static_cast<LibuvHostLoop*>(instance)->wake(); }
+}
+
+int32_t LibuvTcp::hostLoopDestroy(void* instance)
+{
+    LibuvHostLoop* loop = static_cast<LibuvHostLoop*>(instance);
+    if (loop == nullptr) { return 0; }
+    if (loop->m_running || loop->m_channels != 0 || LibuvHostLoop::current() == loop) { return UV_EBUSY; }
+    delete loop;
+    return 0;
+}

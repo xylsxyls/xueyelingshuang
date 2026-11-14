@@ -2,14 +2,29 @@
 #include "uv.h"
 #include <stdint.h>
 #include <vector>
+#include <atomic>
+#include <memory>
 
 class LibuvChannelState;
+struct LibuvChannelWrite;
 
 /** 由循环拥有的单条连接，最终关闭回调统一回收
 */
 struct LibuvChannelPeer
 {
 public:
+    // 实际连接池槽，全部libuv回调完成后才归还
+    void* m_storage;
+    // 本连接已接纳但尚未交给uv_write的FIFO，正文由实际写池拥有
+    LibuvChannelWrite* m_postFirst;
+    // 待提交FIFO尾，唯一loop执行者维护
+    LibuvChannelWrite* m_postLast;
+    // 就绪连接双向链前项，支持关闭时常数时间摘除
+    LibuvChannelPeer* m_readyPrevious;
+    // 就绪连接双向链后项，各连接轮流提交一个批次
+    LibuvChannelPeer* m_readyNext;
+    // 是否已在所属通道的就绪链中
+    bool m_readyQueued;
     // 拥有的TCP句柄，close回调结束前不可释放所在对象
     uv_tcp_t m_tcp;
     // 连接请求存储，与TCP句柄共享对象生命周期
@@ -18,10 +33,10 @@ public:
     LibuvChannelState* m_owner;
     // 实例内永不复用的连接号，0表示拒绝槽位
     uint64_t m_id;
-    // 已交给uv_write而尚未完成的字节数，上限来自所属实例配置
-    uint32_t m_queuedBytes;
-    // 在途写请求数，完成回调逐一归还，上限来自所属实例配置
-    uint32_t m_queuedWrites;
+    // 已接纳且尚未完成或取消的字节数，包括待提交和libuv在途
+    uint64_t m_queuedBytes;
+    // 已接纳的逻辑写请求数，实际池槽在完成或取消时逐一归还
+    uint64_t m_queuedWrites;
     // 首次关闭原因，后续重复关闭不能覆盖
     int32_t m_reason;
     // TCP连接已成功建立，尚不代表上层完成认证
@@ -52,17 +67,70 @@ public:
 struct LibuvChannelWrite
 {
 public:
-    // 写请求存储，data回指拥有它的LibuvChannelWrite
-    uv_write_t m_request;
+    // 提交时仅携带不复用编号，loop验证后才填充m_peer
+    uint64_t m_peerId;
+    // 本次有效字节数，与连接号和正文开头相邻，减少逐条消费的缓存访问
+    uint32_t m_size;
+    // 小正文直接保存在请求槽，避免每包额外堆分配
+    uint8_t m_inline[256];
+    // 实际写请求池槽，缓存期间同样占有该槽
+    void* m_storage;
     // 借用的连接对象，libuv保证全部写回调先于连接关闭回调
     LibuvChannelPeer* m_peer;
     // 拥有的待写字节副本，保留至写完成或取消回调
     std::vector<uint8_t> m_bytes;
-    // 仅空闲缓存期间有效；在途请求不挂入链表，不与其他执行者共享
+    // 写请求存储，data回指拥有它的LibuvChannelWrite
+    uv_write_t m_request;
+
+    /** 取得本次独占正文，存活到写完成或取消
+    @return 有效字节首地址，长度为m_size
+    */
+    uint8_t* data();
+    // 互斥用于空闲链、待提交FIFO或同一uv_write批次链；仅唯一owner访问
     LibuvChannelWrite* m_next;
 
 public:
     /** 创建空闲写请求；prepareWrite复制正文后才能交给libuv
     */
     LibuvChannelWrite();
+};
+
+/** 固定生产者和唯一loop之间的有序通道；记录来自实际写池，不额外扩大接纳预算
+*/
+struct LibuvChannelLane
+{
+public:
+    // 不复用的生产者令牌，0允许首次领取；独立于频繁更新的发布位置
+    std::atomic<uint32_t> m_token;
+    // 启动时固定的槽数，0禁用，否则为2次幂
+    uint32_t m_capacity;
+    // 每条记录持续占有写池槽，关闭后统一归还；启动后数组地址不变
+    std::unique_ptr<LibuvChannelWrite*[]> m_items;
+    // 只读身份和配置不与发布位置共用缓存行，避免其他生产者读主通道身份时争用
+    char m_identityPadding[128];
+    // 已发布记录尾，消费者只读取
+    std::atomic<uint64_t> m_published;
+    // 写入侧位置，仅令牌拥有者访问
+    uint64_t m_write;
+    // 最近观察到的消费位置
+    uint64_t m_seenRead;
+    // 最近验证通过的连接编号，不存跨线程TCP指针
+    uint64_t m_peer;
+    // 连接快照代次，连接集合改变后必须重新验证
+    uint64_t m_version;
+    // 隔离写入和消费热点
+    char m_padding[128];
+    // 该通道已经安排唤醒；loop先撤销通知再观察已发布记录，防止遗漏空转非空的边界
+    std::atomic<bool> m_notified;
+    // 正文已复制或转移给loop的记录尾，生产者据此复用槽
+    std::atomic<uint64_t> m_consumed;
+    // 唯一loop的消费位置
+    uint64_t m_read;
+    // 消费者更新不与下一个通道的只读身份共用缓存行
+    char m_consumerPadding[128];
+
+public:
+    /** 创建未分配通道
+    */
+    LibuvChannelLane();
 };

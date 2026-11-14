@@ -87,22 +87,15 @@ bool LibuvReadPoolConfig::valid() const
 }
 
 LibuvChannelWritePoolConfig::LibuvChannelWritePoolConfig() :
-m_maximumWriteBytes(32768U),
-m_maximumPendingBytesPerPeer(65536U),
-m_maximumWritesPerPeer(64U),
-m_maximumCachedWrites(32U),
-m_maximumCachedBytes(262144U)
+m_maximumWriteBytes(32768U)
 {
-
+    m_records.initialCapacity = 2;
+    m_records.maximumCapacity = 256;
+    m_records.directoryCapacity = 128;
+    m_records.lookupCacheCapacity = 0;
 }
 
 bool LibuvChannelWritePoolConfig::valid() const
 {
-    return m_maximumWriteBytes != 0 &&
-        m_maximumWriteBytes <= m_maximumPendingBytesPerPeer &&
-        m_maximumPendingBytesPerPeer <= 0x7fffffffU &&
-        m_maximumWritesPerPeer != 0 &&
-        m_maximumWritesPerPeer <= 65536U &&
-        m_maximumCachedWrites <= 65536U &&
-        m_maximumCachedBytes <= 0x7fffffffU;
+    return m_maximumWriteBytes != 0 && m_maximumWriteBytes <= 0x7fffffffU;
 }

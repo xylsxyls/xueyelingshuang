@@ -667,14 +667,14 @@ void LibuvBase::SendPending(uv_async_t *handle)
             {
                 break;
             }
-            bool small = true;
+            bool smallFrames = true;
             for (size_t index = consumed; index < consumed + taken; ++index)
             {
-                small = pending[index].m_charge <= 1028 + sizeof(uv_tcp_t*) + sizeof(LibuvPendingWrite) && small;
+                smallFrames = pending[index].m_charge <= 1028 + sizeof(uv_tcp_t*) + sizeof(LibuvPendingWrite) && smallFrames;
             }
             consumed += taken;
             // 队列一次仅保证有限前缀；小帧可继续拼接已有前缀，大帧立即处理以限制单轮字节开销。
-            if (!small)
+            if (!smallFrames)
             {
                 break;
             }
