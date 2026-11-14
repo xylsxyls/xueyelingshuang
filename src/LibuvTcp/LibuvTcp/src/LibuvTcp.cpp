@@ -867,6 +867,47 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
     return state == nullptr ? 0 : state->m_channel.peerCount();
 }
 
+int32_t LibuvTcp::hostLoopCreate(void** instance)
+{
+    if (instance == nullptr) { return UV_EINVAL; }
+    *instance = nullptr;
+    LibuvHostLoop* loop = new (std::nothrow) LibuvHostLoop();
+    if (loop == nullptr) { return UV_ENOMEM; }
+    const int32_t result = loop->init();
+    if (result != 0) { delete loop; return result; }
+    *instance = loop;
+    return 0;
+}
+
+void* LibuvTcp::hostLoopExchange(void* instance)
+{
+    return LibuvHostLoop::exchange(static_cast<LibuvHostLoop*>(instance));
+}
+
+uint64_t LibuvTcp::hostLoopBegin(void* instance)
+{
+    return instance == nullptr ? 0 : static_cast<LibuvHostLoop*>(instance)->m_generation.load(std::memory_order_acquire);
+}
+
+int32_t LibuvTcp::hostLoopWait(void* instance, uint64_t observed, uint32_t timeoutMs)
+{
+    return instance == nullptr ? UV_EINVAL : static_cast<LibuvHostLoop*>(instance)->wait(observed, timeoutMs);
+}
+
+void LibuvTcp::hostLoopWake(void* instance)
+{
+    if (instance != nullptr) { static_cast<LibuvHostLoop*>(instance)->wake(); }
+}
+
+int32_t LibuvTcp::hostLoopDestroy(void* instance)
+{
+    LibuvHostLoop* loop = static_cast<LibuvHostLoop*>(instance);
+    if (loop == nullptr) { return 0; }
+    if (loop->m_running || loop->m_channels != 0 || LibuvHostLoop::current() == loop) { return UV_EBUSY; }
+    delete loop;
+    return 0;
+}
+
 // LIBUV_TCP_USAGE_DEMO
 // // 使用示例：取消本段逐行注释后编译此源文件为演示进程；正式库保持注释
 // // 外部应用只包含 LibuvTcp/LibuvTcpAPI.h，本文件已有内部主头文件声明
@@ -876,6 +917,11 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
 // #include <cstdlib>
 // #include <cerrno>
 //
+// /** 演示两种运输模式及其配置、投递、事件推进和资源收尾
+// @param [in] argc 无参数为原始字节示例，三个参数为长度帧服务端或客户端
+// @param [in] argv --server PORT或--client PORT
+// @return 0业务收发完成，1运行错误，2参数错误
+// */
 // int main(int argc, char** argv)
 // {
 //     try
@@ -938,19 +984,34 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
 //                     host->error = reason;
 //                 }
 //             };
-//             int32_t result = LibuvTcp::hostCreate(nullptr, &server, connected, data, writable, closed, &server.instance);
+//             void* loop = nullptr;
+//             int32_t result = LibuvTcp::hostLoopCreate(&loop);
+//             if (result != 0)
+//             {
+//                 return 1;
+//             }
+//             // exchange只影响当前线程之后创建的host；两个host共用一个事件循环。
+//             void* previous = LibuvTcp::hostLoopExchange(loop);
+//             result = LibuvTcp::hostCreate(nullptr, &server, connected, data, writable, closed, &server.instance);
 //             if (result == 0)
 //             {
 //                 result = LibuvTcp::hostCreate(nullptr, &client, connected, data, writable, closed, &client.instance);
 //             }
 //             LibuvChannelWritePoolConfig writes;
 //             writes.m_maximumWriteBytes = 4096;
-//             writes.m_records.initialCapacity = 2;
-//             writes.m_records.maximumCapacity = 256;
+//             writes.m_records.initialCapacity = 256;
+//             writes.m_records.maximumCapacity = 4096;
+//             writes.m_submission.initialCapacity = 256;
+//             writes.m_submission.maximumCapacity = 4096;
+//             LockFreeHashMapPoolConfig peers;
 //             for (uint32_t index = 0; index < 2 && result == 0; ++index)
 //             {
 //                 Host& host = index == 0 ? server : client;
 //                 result = LibuvTcp::hostConfigureWritePool(host.instance, writes);
+//                 if (result == 0)
+//                 {
+//                     result = LibuvTcp::hostConfigurePeerPool(host.instance, peers);
+//                 }
 //                 if (result == 0)
 //                 {
 //                     result = LibuvTcp::hostConfigureReadBuffer(host.instance, 4096);
@@ -965,9 +1026,12 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
 //                 result = LibuvTcp::hostConnect(client.instance, "127.0.0.1", LibuvTcp::hostLocalPort(server.instance), &client.peer);
 //             }
 //             bool sent = false;
+//             // 若宿主另有工作队列，先发布任务再wake；post自身已经负责网络唤醒。
+//             LibuvTcp::hostLoopWake(loop);
 //             const uint64_t deadline = uv_hrtime() + 5000000000ULL;
 //             while (result == 0 && server.received != 6 && uv_hrtime() < deadline)
 //             {
+//                 const uint64_t observed = LibuvTcp::hostLoopBegin(loop);
 //                 const int32_t left = LibuvTcp::hostPoll(server.instance);
 //                 const int32_t right = LibuvTcp::hostPoll(client.instance);
 //                 if (left < 0 || right < 0 || server.error != 0 || client.error != 0 || server.closed || client.closed)
@@ -990,7 +1054,15 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
 //                         result = accepted == 1 ? 0 : accepted;
 //                     }
 //                 }
-//                 uv_sleep(1);
+//                 if (result == 0 && server.received != 6)
+//                 {
+//                     // 等真实网络或任务通知；1000毫秒只是退出检查期限，不是发送轮询间隔。
+//                     const int32_t waited = LibuvTcp::hostLoopWait(loop, observed, 1000);
+//                     if (waited < 0)
+//                     {
+//                         result = waited;
+//                     }
+//                 }
 //             }
 //             if (result == 0 && server.received != 6)
 //             {
@@ -1016,6 +1088,11 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
 //                     }
 //                     host.instance = nullptr;
 //                 }
+//             }
+//             LibuvTcp::hostLoopExchange(previous);
+//             if (LibuvTcp::hostLoopDestroy(loop) != 0)
+//             {
+//                 return 1;
 //             }
 //             return result == 0 ? 0 : 1;
 //         }
@@ -1207,44 +1284,3 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
 //         return 1;
 //     }
 // }
-
-int32_t LibuvTcp::hostLoopCreate(void** instance)
-{
-    if (instance == nullptr) { return UV_EINVAL; }
-    *instance = nullptr;
-    LibuvHostLoop* loop = new (std::nothrow) LibuvHostLoop();
-    if (loop == nullptr) { return UV_ENOMEM; }
-    const int32_t result = loop->init();
-    if (result != 0) { delete loop; return result; }
-    *instance = loop;
-    return 0;
-}
-
-void* LibuvTcp::hostLoopExchange(void* instance)
-{
-    return LibuvHostLoop::exchange(static_cast<LibuvHostLoop*>(instance));
-}
-
-uint64_t LibuvTcp::hostLoopBegin(void* instance)
-{
-    return instance == nullptr ? 0 : static_cast<LibuvHostLoop*>(instance)->m_generation.load(std::memory_order_acquire);
-}
-
-int32_t LibuvTcp::hostLoopWait(void* instance, uint64_t observed, uint32_t timeoutMs)
-{
-    return instance == nullptr ? UV_EINVAL : static_cast<LibuvHostLoop*>(instance)->wait(observed, timeoutMs);
-}
-
-void LibuvTcp::hostLoopWake(void* instance)
-{
-    if (instance != nullptr) { static_cast<LibuvHostLoop*>(instance)->wake(); }
-}
-
-int32_t LibuvTcp::hostLoopDestroy(void* instance)
-{
-    LibuvHostLoop* loop = static_cast<LibuvHostLoop*>(instance);
-    if (loop == nullptr) { return 0; }
-    if (loop->m_running || loop->m_channels != 0 || LibuvHostLoop::current() == loop) { return UV_EBUSY; }
-    delete loop;
-    return 0;
-}
