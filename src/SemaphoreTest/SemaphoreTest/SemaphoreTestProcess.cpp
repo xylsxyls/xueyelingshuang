@@ -20,6 +20,27 @@
 extern char** environ;
 #endif
 
+std::string SemaphoreTestProcess::library()
+{
+#if defined(_WIN32) && !defined(STATIC_LIB)
+    // 直接询问加载器，不能用输出目录里碰巧存在的同名文件代替实际模块。
+#ifdef _DEBUG
+    HMODULE module = ::GetModuleHandleA("Semaphored.dll");
+#else
+    HMODULE module = ::GetModuleHandleA("Semaphore.dll");
+#endif
+    char path[32768] = {};
+    const DWORD length = module == nullptr ? 0 : ::GetModuleFileNameA(module, path, sizeof(path));
+    if (length == 0 || length >= sizeof(path))
+    {
+        throw std::runtime_error("Cannot identify loaded Semaphore DLL");
+    }
+    return std::string(path, length);
+#else
+    return executable();
+#endif
+}
+
 /** 为Windows命令行保留参数中的反斜杠和引号
 @param [in] argument 单个参数
 @return 带引号的参数文本

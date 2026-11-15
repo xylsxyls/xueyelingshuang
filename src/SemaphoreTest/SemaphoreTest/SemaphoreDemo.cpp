@@ -76,6 +76,7 @@
 //         // 一、本地任务计数：通知可提前到达，每次成功等待恰好消费一个许可
 //         {
 //             Semaphore tasks;
+//             showResult("initialize count", tasks.initializationResult());
 //             // 可选：并发启动前、计数为空时预分配计数等待记录；不调用也会按需建立默认池
 //             SemaphorePoolConfig countConfig;
 //             countConfig.initialCapacity = 16;
@@ -83,11 +84,11 @@
 //             showResult("configure optional count pool", tasks.configureCountPool(countConfig));
 //             const SemaphorePoolStats countStats = tasks.countPoolStatistics();
 //             expect(countStats.capacity == 16, "count pool prepared");
-//             tasks.signal();
-//             tasks.wait();
-//             tasks.signal();
+//             expect(tasks.signal(), "tasks signal");
+//             expect(tasks.wait(), "tasks wait");
+//             expect(tasks.signal(), "tasks signal");
 //             expect(tasks.wait(1000), "count timed wait");
-//             showResult("count publish", tasks.trySignal());
+//             showResult("count publish", tasks.trySignal(true, false));
 //             showResult("count infinite wait", tasks.waitResult());
 //             showResult("count publish again", tasks.trySignal());
 //             showResult("count timed result", tasks.waitResult(1000));
@@ -95,7 +96,7 @@
 //             // wait(0)只探测，不适合循环抢占；停止时先提交退出状态，再发退出许可并join
 //
 //             // reset只用于生产者、消费者均已停止的静止阶段，不作为并发取消接口
-//             tasks.signal();
+//             expect(tasks.signal(), "tasks signal");
 //             tasks.reset();
 //             expect(tasks.waitResult(0).status == SEMAPHORE_TIMEOUT, "reset clears pending count");
 //             // 维护不是每次等待的前置步骤；没有缩容策略时只尝试安全回收退役记录
@@ -106,6 +107,7 @@
 //         // 二、周期状态事件：事件不积存，唤醒后读取业务版本，不能把提示当成任务数量
 //         {
 //             Semaphore changed;
+//             showResult("initialize event", changed.initializationResult());
 //             SemaphorePoolConfig config;
 //             config.initialCapacity = 2;
 //             config.maxCapacity = 8;
@@ -136,16 +138,16 @@
 //                     {
 //                         if (current % 3 == 1)
 //                         {
-//                             changed.event();
+//                             if (!changed.event()) publishFailed.store(true);
 //                         }
 //                         else if (current % 3 == 2)
 //                         {
 //                             // 有多个订阅者时，eventAll提示本次已登记的全部等待者
-//                             changed.eventAll();
+//                             if (!changed.eventAll()) publishFailed.store(true);
 //                         }
 //                         else
 //                         {
-//                             const SemaphoreResult result = changed.tryEvent();
+//                             const SemaphoreResult result = changed.tryEvent(false, true, false);
 //                             if (result.status != SEMAPHORE_OK)
 //                             {
 //                                 publishFailed.store(true);
@@ -172,7 +174,7 @@
 //             try
 //             {
 //                 // 无参数版本无限等待，要求发布者仍存活；有限版本便于检查退出/业务条件
-//                 changed.eventWait();
+//                 expect(changed.eventWait(), "event infinite wait");
 //                 std::printf("event observed version=%u\n", static_cast<unsigned>(version.load()));
 //                 showResult("event infinite result", changed.eventWaitResult());
 //                 expect(changed.eventWait(1000), "event timed wait");
@@ -201,14 +203,16 @@
 //         {
 //             Semaphore jobs;
 //             Semaphore freeSlots;
+//             showResult("initialize jobs", jobs.initializationResult());
+//             showResult("initialize free slots", freeSlots.initializationResult());
 //             showResult("prepare jobs", jobs.prepareSignalAndWait());
 //             showResult("prepare free slots", freeSlots.prepareSignalAndWait());
-//             freeSlots.signal();
+//             expect(freeSlots.signal(), "freeSlots signal");
 //             showCombined("publish job and acquire next slot", jobs.signalAndWaitResult(freeSlots));
-//             jobs.wait();
-//             freeSlots.signal(); // 消费者处理上一工作后归还槽位
+//             expect(jobs.wait(), "jobs wait");
+//             expect(freeSlots.signal(), "freeSlots signal"); // 消费者处理上一工作后归还槽位
 //             showCombined("publish job and acquire slot with budget", jobs.signalAndWaitResult(freeSlots, 1000));
-//             jobs.wait();
+//             expect(jobs.wait(), "jobs wait");
 //             // 真实冷通知后立即等待可优先使用组合接口；持续热往返不宜机械切换准备模式
 //         }
 //
@@ -230,6 +234,11 @@
 //             const std::string jobsName = std::string(name) + "j";
 //             const std::string slotsName = std::string(name) + "s";
 //             Semaphore jobsOwner, slotsOwner, jobsReader, slotsReader, probe;
+//             showResult("initialize jobs owner", jobsOwner.initializationResult());
+//             showResult("initialize slots owner", slotsOwner.initializationResult());
+//             showResult("initialize jobs reader", jobsReader.initializationResult());
+//             showResult("initialize slots reader", slotsReader.initializationResult());
+//             showResult("initialize probe", probe.initializationResult());
 //
 //             // 旧void包装便于兼容；新调用方优先Result接口，以便观察失败原因
 //             jobsOwner.createProcessSemaphore(jobsName, 4);
@@ -238,11 +247,14 @@
 //             jobsReader.openProcessSemaphore(jobsName);
 //             showResult("open named slots", slotsReader.openProcessResult(slotsName));
 //
-//             // 旧void发送不报告失败，所以用有限等待展示；业务应优先使用Result发送
-//             jobsOwner.processSignal();
+//             // 普通发送以bool报告是否提交；竞争及满载会内部重试，需要期限时优先try接口。
+//             expect(jobsOwner.processSignal(), "publish named job bool");
 //             expect(jobsReader.processWait(1000), "consume legacy named job with budget");
 //             // 此处没有其他消费者，确认发布成功后才演示旧的无限等待
 //             expect(jobsOwner.tryProcessSignal() == 0, "publish named job");
+//             expect(jobsReader.processWait(1000), "consume named try job");
+//             // 允许重试竞争，但满载立即交还调用方，避免无限等自己应释放的容量。
+//             showResult("named try result", jobsOwner.tryProcessSignalResult(true, false));
 //             jobsReader.processWait();
 //             showResult("publish named job result", jobsOwner.processSignalResult());
 //             showResult("consume named job result", jobsReader.processWaitResult(1000));

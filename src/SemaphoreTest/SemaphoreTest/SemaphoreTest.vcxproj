@@ -177,8 +177,9 @@
     <SemaphoreTestDefinitions Condition="'$(SemaphoreTestLinkage)'=='dll'">$(SemaphoreTestDefinitions);_SemaphoreAPI</SemaphoreTestDefinitions>
     <SemaphoreTestDefinitions Condition="'$(SemaphoreTestKind)'=='unit'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_INSTRUMENTATION</SemaphoreTestDefinitions>
     <SemaphoreTestDefinitions Condition="'$(SemaphoreTestKind)'=='baseline'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_BASELINE</SemaphoreTestDefinitions>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestRecentBaseline)'=='true'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_RECENT_BASELINE</SemaphoreTestDefinitions>
     <SemaphoreTestDefinitions Condition="'$(SemaphoreTestAllocation)'=='true'">$(SemaphoreTestDefinitions);SEMAPHORE_PERF_ALLOCATION</SemaphoreTestDefinitions>
-    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestPoolPerformance)'=='true' and '$(SemaphoreTestKind)'=='consumer' and '$(SemaphoreTestLinkage)'=='lib'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_POOL_PERFORMANCE</SemaphoreTestDefinitions>
+    <SemaphoreTestDefinitions Condition="'$(SemaphoreTestPoolPerformance)'=='true' and ('$(SemaphoreTestKind)'=='consumer' or ('$(SemaphoreTestKind)'=='baseline' and '$(SemaphoreTestRecentBaseline)'=='true')) and '$(SemaphoreTestLinkage)'=='lib'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_POOL_PERFORMANCE</SemaphoreTestDefinitions>
     <SemaphoreTestDefinitions Condition="'$(SemaphoreTestBackend)'=='legacy'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_LEGACY_WAKE</SemaphoreTestDefinitions>
     <SemaphoreTestDefinitions Condition="'$(SemaphoreTestBackend)'=='portable'">$(SemaphoreTestDefinitions);PROCESS_WORK_PORTABLE_NOTIFY</SemaphoreTestDefinitions>
     <SemaphoreTestDefinitions Condition="'$(SemaphoreTestBackend)'=='posixname'">$(SemaphoreTestDefinitions);SEMAPHORE_TEST_POSIX_NAME</SemaphoreTestDefinitions>
@@ -243,4 +244,8 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
-</Project>
+  <ItemGroup>
+    <ClInclude Include="SemaphoreRetryTests.h" />
+    <ClCompile Include="SemaphoreRetryTests.cpp" Condition="'$(SemaphoreTestKind)'!='baseline' and '$(SemaphoreTestKind)'!='instrumenter'" />
+    <ClCompile Include="$(SemaphoreTestSource)\SemaphoreRetry.cpp" Condition="'$(SemaphoreTestKind)'=='unit'" />
+  </ItemGroup></Project>

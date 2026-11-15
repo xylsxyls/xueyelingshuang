@@ -25,7 +25,7 @@
 // 编号、场景、预期和分类只在此表维护，所有运行模式共用
 static const SemaphoreTestCase kCases[] = {{SemaphoreTestCount, L"积存计数与重置", L"发布和消费数量完全一致", false},
     {SemaphoreTestDeadline, L"固定超时预算", L"无关提示不能重置总预算", false},
-    {SemaphoreTestOverflow, L"64位计数上限", L"溢出不提交且兼容异常可观察", false},
+    {SemaphoreTestOverflow, L"64位计数上限", L"满载探测不提交，普通发布等空位", false},
     {SemaphoreTestContention, L"多生产多消费", L"无丢失重复且正常退出", true},
     {SemaphoreTestVisibility, L"发布获取可见性", L"普通数据在成功等待后可见", false},
     {SemaphoreTestEvent, L"非积存事件", L"事件不留给未来等待者", false},
@@ -85,7 +85,8 @@ static const SemaphoreTestCase kCases[] = {{SemaphoreTestCount, L"积存计数�
     {SemaphoreTestFairnessStress, L"持续竞争逐线程进展", L"记录每线程完成量和最长无进展时间且许可守恒", true},
     {SemaphoreTestLargeCount, L"大计数表示与资源边界", L"64位计数完整且失败不提交", false},
     {SemaphoreTestFairnessBoundary, L"公平等待取消及故障", L"超时竞争无丢失、错误可见、记录回落", false},
-    {SemaphoreTestWasmAdmission, L"Wasm内部登记及计数表示", L"Wasm32/64等待顺序与大计数切换正确", false}};
+    {SemaphoreTestWasmAdmission, L"Wasm内部登记及计数表示", L"Wasm32/64等待顺序与大计数切换正确", false},
+    {SemaphoreTestRetryOptions, L"重试开关及容量退避", L"满载只在允许时等待，4096次后每轮休眠且不重复提交", false}};
 
 /** 将中文元数据转换为UTF8，不依赖进程区域设置
 @param [in] source 宽字符文本
@@ -172,7 +173,7 @@ bool SemaphoreTest::select(const std::string& text, std::vector<int32_t>& select
         while (offset < text.size() && text[offset] >= '0' && text[offset] <= '9')
         {
             first = first * 10 + text[offset++] - '0';
-            if (first > SemaphoreTestWasmAdmission)
+            if (first > SemaphoreTestRetryOptions)
             {
                 return false;
             }
@@ -189,7 +190,7 @@ bool SemaphoreTest::select(const std::string& text, std::vector<int32_t>& select
             while (offset < text.size() && text[offset] >= '0' && text[offset] <= '9')
             {
                 last = last * 10 + text[offset++] - '0';
-                if (last > SemaphoreTestWasmAdmission)
+                if (last > SemaphoreTestRetryOptions)
                 {
                     return false;
                 }
@@ -251,7 +252,7 @@ int32_t SemaphoreTest::execute(int32_t id, bool combined)
         id == SemaphoreTestEventPerformance || id == SemaphoreTestCountPerformance || id == SemaphoreTestIpcPerformance ||
         id == SemaphoreTestPoolPerformance)
     {
-#ifdef SEMAPHORE_TEST_BASELINE
+#if defined(SEMAPHORE_TEST_BASELINE) && !defined(SEMAPHORE_TEST_RECENT_BASELINE)
         if (combined || id == SemaphoreTestAlignment)
         {
             return 77;
@@ -281,7 +282,8 @@ int32_t SemaphoreTest::execute(int32_t id, bool combined)
 #endif
     if ((id >= 25 && id <= 65 && id != 47 && id != 48 && id != 49 && id != 52 && id != 55 && id != 57 && id != 58) ||
         id == SemaphoreTestPublicationReservation || id == SemaphoreTestMarkedFinish ||
-        id == SemaphoreTestMobileFileType || (id >= SemaphoreTestEventFairness && id <= SemaphoreTestFairnessBoundary) ||
+        id == SemaphoreTestMobileFileType || id == SemaphoreTestRetryOptions ||
+        (id >= SemaphoreTestEventFairness && id <= SemaphoreTestFairnessBoundary) ||
         (id >= SemaphoreTestEventAddressLifetime && id <= SemaphoreTestNameOwner))
     {
         return SemaphoreTests::runCase(id) ? 0 : 77;
@@ -329,6 +331,30 @@ int32_t SemaphoreTest::batch(const std::vector<int32_t>& selected, const std::st
             {
                 code = 125;
             }
+#ifdef _WIN32
+            for (int32_t count = 1; count <= 8; count += 7)
+            {
+                arguments[0] = count == 1 ? "--self-drop-event" : "--self-drop-broadcast";
+                const std::string negativeLog = output + "/harness-dropped-" + Number(count) + ".log";
+                if (SemaphoreTestProcess::run(executable, arguments, negativeLog, 15000) != 1)
+                {
+                    code = 125;
+                }
+                std::ifstream negative(negativeLog.c_str());
+                bool missingNotification = false, samples = false;
+                const std::string expected = "FAIL id=" + Number(count == 1 ? -72 : -73) + " event reply";
+                std::string line;
+                while (std::getline(negative, line))
+                {
+                    missingNotification = missingNotification || line == expected;
+                    samples = samples || line.compare(0, 8, "SAMPLES ") == 0;
+                }
+                if (!missingNotification || samples || negative.bad())
+                {
+                    code = 125; // 其他失败不能冒充漏通知检测成功，也不能保留失效样本。
+                }
+            }
+#endif
         }
         const char* result = code == 0 ? "PASS" : (code == 77 ? "NOT_RUN" : "FAIL");
         passed += code == 0 ? 1 : 0;
@@ -515,6 +541,7 @@ int32_t SemaphoreTest::compare(const std::string& baseline, const std::string& o
     const char* scalarFields[] = {"wall_ms", "cpu_ms", "cycle_us", "object_bytes", "rescue_timeouts",
         "rescue_timeouts", "cpu_ms", "cpu_ms", "cpu_ms", "cpu_ms", "cpu_ms", "handles_before", "handles_after"};
     std::vector<double> additional[4][scalarCount];
+    std::string libraryIdentities[4];
     // 独立性能入口复用55号的同一工作负载及完整判定，只选择本次实际执行的指标
     const bool latencyActive[] = {id == 55 || id == 66, id == 55 || id == 66 || id == 74,
         id == 55 || id == 66, id == 55 || id == 72, id == 55 || id == 72, id == 79, id == 79, id == 79};
@@ -541,6 +568,7 @@ int32_t SemaphoreTest::compare(const std::string& baseline, const std::string& o
             int32_t code = SemaphoreTestProcess::run(variant < firstCurrent ? baseline : current,
                 arguments, log, 120000);
             std::ifstream input(log.c_str());
+            std::string libraryBegin, libraryEnd;
             bool seen[latencyCount] = {};
             bool rateSeen[rateCount] = {};
             bool scalarSeen[scalarCount] = {};
@@ -560,6 +588,22 @@ int32_t SemaphoreTest::compare(const std::string& baseline, const std::string& o
             std::string line;
             while (std::getline(input, line))
             {
+                if (line.compare(0, 15, "IDENTITY_BEGIN ") == 0)
+                {
+                    if (!libraryBegin.empty())
+                    {
+                        code = 125;
+                    }
+                    libraryBegin = line.substr(15);
+                }
+                if (line.compare(0, 13, "IDENTITY_END ") == 0)
+                {
+                    if (!libraryEnd.empty())
+                    {
+                        code = 125;
+                    }
+                    libraryEnd = line.substr(13);
+                }
                 for (int32_t metric = 0; metric < latencyCount; ++metric)
                 {
                     ReadSamples(line, names[metric], raw[metric]);
@@ -567,12 +611,16 @@ int32_t SemaphoreTest::compare(const std::string& baseline, const std::string& o
                 char name[128] = {};
                 if (std::sscanf(line.c_str(), "METRIC {\"name\":\"%127[^\"]\"", name) == 1)
                 {
+                    if (std::strcmp(name, "lifecycle") == 0 && ReadMetricNumber(line, "iterations") != 10000000)
+                    {
+                        code = 125;
+                    }
                     for (int32_t metric = 0; metric < scalarCount; ++metric)
                     {
                         if (std::strcmp(name, scalarMetrics[metric]) == 0)
                         {
                             const double value = ReadMetricNumber(line, scalarFields[metric]);
-                            if (scalarSeen[metric])
+                            if (scalarSeen[metric] || ((metric == 4 || metric == 5) && value != 0))
                             {
                                 code = 125;
                             }
@@ -593,7 +641,7 @@ int32_t SemaphoreTest::compare(const std::string& baseline, const std::string& o
                     {
                         if (std::strcmp(name, rates[metric]) == 0)
                         {
-                            if (rateSeen[metric] || permits != (metric == 0 ? 1000000 : 400000) ||
+                            if (rateSeen[metric] || permits != (metric == 0 ? 20000000 : 4000000) ||
                                 !std::isfinite(rate) || rate <= 0)
                             {
                                 code = 125;
@@ -650,7 +698,16 @@ int32_t SemaphoreTest::compare(const std::string& baseline, const std::string& o
             const bool missingLatency = std::find(seen, seen + latencyCount, false) != seen + latencyCount;
             const bool missingRate = std::find(rateSeen, rateSeen + rateCount, false) != rateSeen + rateCount;
             const bool missingScalar = std::find(scalarSeen, scalarSeen + scalarCount, false) != scalarSeen + scalarCount;
-            if (missingLatency || missingRate || missingScalar || input.bad())
+            if (missingLatency || missingRate || missingScalar || input.bad() ||
+                libraryBegin.empty() || libraryBegin != libraryEnd ||
+                (!libraryIdentities[variant].empty() && libraryIdentities[variant] != libraryBegin))
+            {
+                code = 125;
+            }
+            libraryIdentities[variant] = libraryBegin;
+            // 同一程序的分步与组合模式必须消费同一模块，不能只分别检查每种模式内部稳定。
+            const int32_t paired = baselineCurrent ? (variant ^ 1) : (variant == 1 ? 2 : (variant == 2 ? 1 : 0));
+            if (!libraryIdentities[paired].empty() && libraryIdentities[paired] != libraryBegin)
             {
                 code = 125;
             }
@@ -665,6 +722,40 @@ int32_t SemaphoreTest::compare(const std::string& baseline, const std::string& o
         }
     }
     report.close();
+    std::ofstream qualification;
+    OpenReport(qualification, output + "/qualification.csv");
+    qualification << "metric,statistic,variant,baseline,current,speed_ratio,target_ratio,result\n";
+    uint32_t qualified = 0, unqualified = 0;
+    /** 独立判定性能目标；固定等待预算及资源计数不当作速度指标
+    @param [in] metric 指标名称
+    @param [in] statistic 统计口径
+    @param [in] variant 接口模式
+    @param [in] before 基线统计值
+    @param [in] after 当前统计值
+    @param [in] lowerBetter true表示耗时越低越好，false表示吞吐越高越好
+    */
+    const auto qualify = [&](const char* metric, const char* statistic, const char* variant,
+        double before, double after, bool lowerBetter)
+    {
+        qualification << metric << ',' << statistic << ',' << variant << ',' << before << ',' << after << ',';
+        if (before <= 0 || after <= 0)
+        {
+            qualification << "NA,1.1,UNRESOLVED\n";
+            ++unqualified;
+            return;
+        }
+        const double ratio = lowerBetter ? before / after : after / before;
+        const bool passed = ratio >= 1.1;
+        qualification << ratio << ",1.1," << (passed ? "PASS" : "BELOW_TARGET") << "\n";
+        if (passed)
+        {
+            ++qualified;
+        }
+        else
+        {
+            ++unqualified;
+        }
+    };
     std::ofstream summary;
     OpenReport(summary, output + "/comparison.csv");
     summary << "metric,percentile,variant,original_us,current_us,reduction_percent,min_us,max_us\n";
@@ -684,9 +775,18 @@ int32_t SemaphoreTest::compare(const std::string& baseline, const std::string& o
                 const std::vector<double>& values = observations[variant][metric][p];
                 const double after = Median(values);
                 summary << names[metric] << ',' << percentiles[p] << ',' << variants[variant] << ',' << before << ','
-                        << after << ',' << (1 - after / before) * 100 << ','
-                        << *std::min_element(values.begin(), values.end()) << ','
+                        << after << ',';
+                if (before == 0)
+                {
+                    summary << "NA";
+                }
+                else
+                {
+                    summary << (1 - after / before) * 100;
+                }
+                summary << ',' << *std::min_element(values.begin(), values.end()) << ','
                         << *std::max_element(values.begin(), values.end()) << "\n";
+                qualify(names[metric], percentiles[p], variants[variant], before, after, true);
             }
         }
     }
@@ -713,11 +813,14 @@ int32_t SemaphoreTest::compare(const std::string& baseline, const std::string& o
                 beforeMilliseconds += elapsedMilliseconds[reference][metric][round];
                 afterMilliseconds += elapsedMilliseconds[variant][metric][round];
             }
-            const double permits = (metric == 0 ? 1000000.0 : 400000.0) * rounds;
+            const double permits = (metric == 0 ? 20000000.0 : 4000000.0) * rounds;
             speeds << rates[metric] << ',' << variants[variant] << ',' << before << ',' << after << ','
                    << after / before << ',' << *std::min_element(values.begin(), values.end()) << ','
                    << *std::max_element(values.begin(), values.end()) << ',' << permits * 1000 / beforeMilliseconds
                    << ',' << permits * 1000 / afterMilliseconds << ',' << beforeMilliseconds / afterMilliseconds << "\n";
+            qualify(rates[metric], "median_per_second", variants[variant], before, after, false);
+            qualify(rates[metric], "total_per_second", variants[variant],
+                permits * 1000 / beforeMilliseconds, permits * 1000 / afterMilliseconds, false);
         }
     }
     speeds.close();
@@ -748,23 +851,42 @@ int32_t SemaphoreTest::compare(const std::string& baseline, const std::string& o
             }
             extras << ',' << *std::min_element(values.begin(), values.end()) << ','
                    << *std::max_element(values.begin(), values.end()) << "\n";
+            if (metric == 2)
+            {
+                qualify(scalarMetrics[metric], scalarFields[metric], variants[variant], before, after, true);
+            }
         }
     }
     extras.close();
+    qualification.close();
+    std::printf("PERFORMANCE_TARGET ratio=1.1 passed=%u unmet=%u\n", qualified, unqualified);
     std::ofstream identity;
     OpenReport(identity, output + "/identity.txt");
     identity << "original=" << baseline << "\noriginal_sha256=" << baselineHash << "\ncurrent=" << current
              << "\ncurrent_sha256=" << currentHash << "\nrounds=" << rounds << "\ncase=" << id
              << "\nbaseline_current=" << (baselineCurrent ? 1 : 0)
-             << "\ncontrols=default affinity/priority/power; no sample removal\n";
+             << "\ncontrols=actual affinity/priority in child ENV; power unmanaged; no sample removal\n";
+    for (int32_t variant = 0; variant < variantCount; ++variant)
+    {
+        identity << variants[variant] << "_loaded_module=" << libraryIdentities[variant] << "\n";
+    }
     identity.close();
-    return baselineHash == SemaphoreTestProcess::hash(baseline) && currentHash == SemaphoreTestProcess::hash(current)
-        ? 0
-        : 1;
+    if (baselineHash != SemaphoreTestProcess::hash(baseline) || currentHash != SemaphoreTestProcess::hash(current))
+    {
+        return 1;
+    }
+    return unqualified == 0 ? 0 : 3;
 }
 
 int32_t SemaphoreTest::run(int32_t argc, char** argv)
 {
+#ifdef _WIN32
+    if (argc == 2 && (std::strcmp(argv[1], "--self-drop-event") == 0 ||
+        std::strcmp(argv[1], "--self-drop-broadcast") == 0))
+    {
+        return SemaphorePerformance::run(std::strcmp(argv[1], "--self-drop-event") == 0 ? -72 : -73, false);
+    }
+#endif
     if (argc == 2 && std::strcmp(argv[1], "--self-sleep") == 0)
     {
         std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -920,7 +1042,13 @@ int32_t main(int32_t argc, char** argv)
 {
     try
     {
-        return SemaphoreTest::run(argc, argv);
+        const std::string library = SemaphoreTestProcess::library();
+        const std::string identity = SemaphoreTestProcess::hash(library);
+        std::printf("IDENTITY_BEGIN %s %s\n", identity.c_str(), library.c_str());
+        const int32_t result = SemaphoreTest::run(argc, argv);
+        const std::string after = SemaphoreTestProcess::hash(library);
+        std::printf("IDENTITY_END %s %s\n", after.c_str(), library.c_str());
+        return after == identity ? result : 125;
     }
     catch (const std::exception& error)
     {

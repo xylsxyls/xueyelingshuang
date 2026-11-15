@@ -59,7 +59,8 @@ static std::atomic<int32_t> s_cleanupFailures(0);
 SemaphorePerformanceThreads::SemaphorePerformanceThreads() :
 m_gate(::CreateEventW(nullptr, TRUE, FALSE, nullptr)),
 m_cancelled(false),
-m_errors(0)
+m_errors(0),
+m_ready(0)
 {
     SemaphorePerformance::require(m_gate != nullptr, "create start gate");
     try
@@ -105,6 +106,7 @@ void SemaphorePerformanceThreads::add(const std::function<void()>& task)
         {
             try
             {
+                m_ready.fetch_add(1);
                 SemaphorePerformance::require(
                     ::WaitForSingleObject(m_gate, 10000) == WAIT_OBJECT_0, "start gate timeout");
                 if (!m_cancelled.load())
@@ -118,6 +120,16 @@ void SemaphorePerformanceThreads::add(const std::function<void()>& task)
                 m_cancelled.store(true);
             }
         });
+}
+
+void SemaphorePerformanceThreads::prepare()
+{
+    const ULONGLONG deadline = ::GetTickCount64() + 5000;
+    while (m_ready.load() != m_threads.size())
+    {
+        SemaphorePerformance::require(::GetTickCount64() < deadline && !m_cancelled.load(), "worker readiness");
+        ::Sleep(1);
+    }
 }
 
 void SemaphorePerformanceThreads::start()
@@ -245,7 +257,7 @@ void SemaphorePerformance::bulk()
     std::printf("LAYOUT bulk address=%p mod8=%u mod64=%u\n", &sem,
         static_cast<unsigned>(reinterpret_cast<uintptr_t>(&sem) % 8),
         static_cast<unsigned>(reinterpret_cast<uintptr_t>(&sem) % 64));
-    const int32_t count = 1000000;
+    const int32_t count = 20000000;
     for (int32_t i = 0; i < 10000; ++i)
     {
         sem.signal();
@@ -274,7 +286,7 @@ void SemaphorePerformance::contention(const char* name, int32_t producers, int32
         static_cast<unsigned>(reinterpret_cast<uintptr_t>(&sem) % 64));
     std::atomic<int32_t> consumed(0);
     SemaphorePerformanceThreads threads;
-    const int32_t count = 400000;
+    const int32_t count = 4000000;
     require(producers > 0 && consumers > 0 && count % producers == 0 && count % consumers == 0,
         "contention workload division");
     for (int32_t p = 0; p < producers; ++p)
@@ -305,6 +317,7 @@ void SemaphorePerformance::contention(const char* name, int32_t producers, int32
                 consumed.fetch_add(local);
             });
     }
+    threads.prepare();
     const double cpuBefore = cpu();
     const double started = now();
     threads.start();
@@ -320,7 +333,7 @@ void SemaphorePerformance::contention(const char* name, int32_t producers, int32
 void SemaphorePerformance::handoff(bool cold)
 {
     Semaphore request, reply, ready;
-#ifndef SEMAPHORE_TEST_BASELINE
+#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
     if (s_combined)
     {
         require(request.prepareSignalAndWait().status == SEMAPHORE_OK &&
@@ -361,7 +374,7 @@ void SemaphorePerformance::handoff(bool cold)
             ::Sleep(5);
         }
         const double started = now();
-#ifndef SEMAPHORE_TEST_BASELINE
+#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
         if (s_combined)
         {
             const SemaphoreSignalWaitResult result = request.signalAndWaitResult(reply, 5000);
@@ -385,10 +398,10 @@ void SemaphorePerformance::handoff(bool cold)
     latency(cold ? "cold_publish_to_observe" : "warm_roundtrip", samples);
 }
 
-void SemaphorePerformance::events(int32_t count, bool prepared)
+void SemaphorePerformance::events(int32_t count, bool prepared, bool dropNotification)
 {
     Semaphore event, ready, reply;
-#ifndef SEMAPHORE_TEST_BASELINE
+#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
     if (prepared)
     {
         require(event.prepareSignalAndWait().status == SEMAPHORE_OK, "event backend preparation");
@@ -410,14 +423,14 @@ void SemaphorePerformance::events(int32_t count, bool prepared)
                 {
                     ready.signal();
                     const double limit = now() + 5000000;
-                    while (generation.load() < round && !threads.cancelled())
+                    // 每轮必须实际消费事件；代次标记仅校验归属，不能替代通知。
+                    const bool received = event.eventWait(1000);
+                    if (!received)
                     {
-                        if (!event.eventWait(100))
-                        {
-                            rescueTimeouts.fetch_add(1);
-                        }
-                        require(now() < limit, "event generation deadline");
+                        rescueTimeouts.fetch_add(1);
                     }
+                    require(received && generation.load() == round && now() < limit,
+                        "event notification missing or belongs to another round");
                     observations[w] = now();
                     reply.signal();
                 }
@@ -433,7 +446,11 @@ void SemaphorePerformance::events(int32_t count, bool prepared)
         ::Sleep(5);
         const double started = now();
         generation.store(round);
-        if (count == 1)
+        if (dropNotification)
+        {
+            // 仅用于测试器负向自检：漏发必须导致失败，不能输出有效性能样本。
+        }
+        else if (count == 1)
         {
             event.event();
         }
@@ -470,7 +487,7 @@ void SemaphorePerformance::idle()
 
 void SemaphorePerformance::lifecycle()
 {
-    const int32_t count = 100000;
+    const int32_t count = 10000000;
     for (int32_t i = 0; i < 1000; ++i)
     {
         Semaphore sem;
@@ -489,6 +506,7 @@ void SemaphorePerformance::lifecycle()
     const double elapsed = now() - started;
     DWORD handlesAfter = 0;
     require(::GetProcessHandleCount(::GetCurrentProcess(), &handlesAfter) != FALSE, "lifecycle handles after");
+    std::printf("RESOURCE_CHECK lifecycle handles_before=%lu handles_after=%lu\n", handlesBefore, handlesAfter);
     require(handlesAfter == handlesBefore, "lifecycle handles returned");
     std::printf("METRIC {\"name\":\"lifecycle\",\"iterations\":%d,\"cycle_us\":%.3f,\"object_bytes\":%u}\n", count,
         elapsed / count, static_cast<unsigned>(sizeof(Semaphore)));
@@ -525,15 +543,18 @@ void SemaphorePerformance::allocations()
             }
             else
             {
-                // 事件允许虚假唤醒；这里只统计申请，不把返回false作为测试成功条件
-                (void)sem.eventWait(1);
+                // 没有发布者时不能消费事件；失败的计时轮次不输出有效申请统计。
+                require(!sem.eventWait(1), "allocation event has no notification");
             }
             s_trackAllocations.store(false);
             std::printf("METRIC {\"name\":\"%s\",\"calls\":%u,\"bytes\":%u}\n", phases[phase],
                 static_cast<unsigned>(s_allocationCalls.load()), static_cast<unsigned>(s_allocationBytes.load()));
         }
-#ifndef SEMAPHORE_TEST_BASELINE
+#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
         const SemaphorePoolStats stats = sem.eventPoolStatistics();
+        require(stats.capacity == 16 && stats.freeCapacity == 16 && stats.retiredCapacity == 0 &&
+                stats.reservedCapacity == 0 && stats.successfulGrowCount == 0,
+            "allocation event pool initialized and fully returned");
         std::printf("METRIC {\"name\":\"event_pool_retained\",\"capacity\":%u,\"free\":%u,\"retired\":%u,\"bytes\":%u}\n",
             static_cast<unsigned>(stats.capacity), static_cast<unsigned>(stats.freeCapacity),
             static_cast<unsigned>(stats.retiredCapacity), static_cast<unsigned>(stats.retainedBytes));
@@ -597,31 +618,40 @@ int32_t SemaphorePerformance::peer(const char* name, bool combined)
 {
     try
     {
-        Semaphore request, reply;
-        require(request.tryOpenProcessSemaphore(name), "peer open request");
-        require(reply.tryOpenProcessSemaphore(std::string(name) + "r"), "peer open reply");
-        require(reply.tryProcessSignal() == 0, "peer ready");
-        require(request.processWait(5000), "peer first request");
-        for (int32_t i = 0; i < 2100; ++i)
         {
-#ifndef SEMAPHORE_TEST_BASELINE
-            if (combined && i != 2099)
+            Semaphore request, reply;
+            require(request.tryOpenProcessSemaphore(name), "peer open request");
+            require(reply.tryOpenProcessSemaphore(std::string(name) + "r"), "peer open reply");
+            require(reply.tryProcessSignal() == 0, "peer ready");
+            require(request.processWait(5000), "peer first request");
+            for (int32_t i = 0; i < 2100; ++i)
             {
-                const SemaphoreSignalWaitResult result = reply.processSignalAndWaitResult(request, 5000);
-                require(result.status == SEMAPHORE_OK && result.signalState == SEMAPHORE_COMMIT_DONE &&
-                        result.waitState == SEMAPHORE_COMMIT_DONE,
-                    "peer reply and next request");
-            }
-            else
-#endif
-            {
-                require(reply.tryProcessSignal() == 0, "peer reply");
-                if (i != 2099)
+#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
+                if (combined && i != 2099)
                 {
-                    require(request.processWait(5000), "peer request");
+                    const SemaphoreSignalWaitResult result = reply.processSignalAndWaitResult(request, 5000);
+                    require(result.status == SEMAPHORE_OK && result.signalState == SEMAPHORE_COMMIT_DONE &&
+                            result.waitState == SEMAPHORE_COMMIT_DONE,
+                        "peer reply and next request");
+                }
+                else
+#endif
+                {
+                    require(reply.tryProcessSignal() == 0, "peer reply");
+                    if (i != 2099)
+                    {
+                        require(request.processWait(5000), "peer request");
+                    }
                 }
             }
         }
+        // 对端对象析构后再判定清理结果，不能在return表达式求值时提前宣布成功。
+#ifdef SEMAPHORE_TEST_NATIVE_CONTROL
+        require(SemaphoreNativeIpc::nativeCleanupFailures() == 0, "peer native cleanup errors");
+#endif
+#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
+        require(Semaphore::cleanupFailures() == 0, "peer Semaphore cleanup errors");
+#endif
         return 0;
     }
     catch (...)
@@ -656,7 +686,7 @@ void SemaphorePerformance::ipc()
         for (int32_t i = 0; i < 2100; ++i)
         {
             const double started = now();
-#ifndef SEMAPHORE_TEST_BASELINE
+#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
             if (s_combined)
             {
                 const SemaphoreSignalWaitResult result = request.processSignalAndWaitResult(reply, 5000);
@@ -710,12 +740,21 @@ int32_t SemaphorePerformance::run(int32_t id, bool combined)
         require(::QueryPerformanceFrequency(&frequency) != FALSE && frequency.QuadPart > 0, "QPC frequency");
         s_microsecondsPerTick = 1000000.0 / frequency.QuadPart;
         s_combined = combined;
-        std::printf("ENV pid=%lu logical_processors=%u sizeof_semaphore=%u\n", ::GetCurrentProcessId(),
-            std::thread::hardware_concurrency(), static_cast<unsigned>(sizeof(Semaphore)));
+        DWORD_PTR affinity = 0, systemAffinity = 0;
+        const DWORD priority = ::GetPriorityClass(::GetCurrentProcess());
+        require(priority != 0 && ::GetProcessAffinityMask(::GetCurrentProcess(), &affinity, &systemAffinity),
+            "read actual benchmark scheduling configuration");
+        std::printf("ENV pid=%lu logical_processors=%u sizeof_semaphore=%u affinity=%I64x priority=%lu\n",
+            ::GetCurrentProcessId(), std::thread::hardware_concurrency(), static_cast<unsigned>(sizeof(Semaphore)),
+            static_cast<unsigned long long>(affinity), priority);
 #ifdef SEMAPHORE_PERF_ALLOCATION
         allocations();
 #else
-        if (id == 79)
+        if (id == -72 || id == -73)
+        {
+            events(id == -72 ? 1 : 8, false, true);
+        }
+        else if (id == 79)
         {
 #ifdef SEMAPHORE_TEST_POOL_PERFORMANCE
             poolCycles(1);
@@ -736,6 +775,8 @@ int32_t SemaphorePerformance::run(int32_t id, bool combined)
         }
         else if (id == 55 || id == 73)
         {
+            // 先测无工作线程的生命周期，避免前一组CRT线程延迟清理污染全进程句柄基线。
+            lifecycle();
             bulk();
             contention("spsc_1p1c", 1, 1);
             contention("mpsc_4p1c", 4, 1);
@@ -746,12 +787,11 @@ int32_t SemaphorePerformance::run(int32_t id, bool combined)
             {
                 handoff(false);
                 handoff(true);
-                events(1);
-                events(8);
+                events(1, s_combined);
+                events(8, s_combined);
                 ipc();
                 idle();
             }
-            lifecycle();
         }
         else if (id == 57 || id == 58 || id == 74)
         {
@@ -769,6 +809,9 @@ int32_t SemaphorePerformance::run(int32_t id, bool combined)
         require(SemaphoreNativeIpc::nativeCleanupFailures() == 0, "native cleanup errors");
 #endif
         require(s_cleanupFailures.load() == 0, "benchmark cleanup errors");
+#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
+        require(Semaphore::cleanupFailures() == 0, "Semaphore cleanup errors");
+#endif
         std::printf("PASS id=%d all performance workload invariants\n", id);
         return 0;
     }

@@ -1,5 +1,6 @@
 ﻿#include "SemaphoreTests.h"
 #include "SemaphoreTestHooks.h"
+#include "SemaphoreRetryTests.h"
 #include "SemaphoreTestProcess.h"
 #ifdef SEMAPHORE_TEST_INSTRUMENTATION
 #include "SemaphoreCount.h"
@@ -35,6 +36,25 @@ static std::atomic<int32_t> s_faultCountdown(0);
 static std::atomic<int32_t> s_registrations(0);
 static Semaphore* s_seedObject = nullptr;
 static uint64_t s_seedValue = 0;
+static std::atomic<int32_t> s_spuriousWakes(0);
+static double s_spuriousUntil = 0;
+static std::atomic<uint32_t> s_publishAttempts(0);
+
+uint32_t SemaphoreTestPublishAttempts(bool reset)
+{
+    return reset ? s_publishAttempts.exchange(0) : s_publishAttempts.load();
+}
+
+bool SemaphoreTestSpuriousWake()
+{
+    if (s_spuriousUntil == 0 || SemaphoreTests::now() >= s_spuriousUntil)
+    {
+        return false;
+    }
+    SemaphoreTests::pause(1);
+    s_spuriousWakes.fetch_add(1);
+    return true;
+}
 
 void SemaphoreTestBackend(bool addressWait)
 {
@@ -98,6 +118,10 @@ int32_t SemaphoreTestFault(int32_t point)
 
 void SemaphoreTestHook(int32_t point, Semaphore* object)
 {
+    if (point == 10)
+    {
+        s_publishAttempts.fetch_add(1);
+    }
     if (point == 1)
     {
         s_registrations.fetch_add(1);
@@ -312,6 +336,11 @@ int32_t SemaphoreTests::peer(const std::string& logicalName, bool exchange)
 
 bool SemaphoreTests::runCase(int32_t id)
 {
+    if (id == 88)
+    {
+        check(SemaphoreRetryTests::run(), "retry options, capacity release and saturated backoff");
+        return true;
+    }
     if (id >= 82 && id <= 86 && id != 85)
     {
         return fairness(id);
@@ -405,24 +434,20 @@ bool SemaphoreTests::runCase(int32_t id)
     else if (id == 26)
     {
         Semaphore sem;
-        SemaphoreTestThreads threads;
-        threads.start(
-            /** 执行固定超时预算的线程步骤，捕获状态必须活到线程回收
-            */
-            [&]()
-            {
-                for (int32_t i = 0; i < 250; ++i)
-                {
-                    sem.eventAll();
-                    pause(1);
-                }
-            });
         const double started = now();
-        check(!sem.wait(120), "irrelevant events cannot consume count");
+#ifdef SEMAPHORE_TEST_INSTRUMENTATION
+        s_spuriousWakes.store(0);
+        s_spuriousUntil = started + 400;
+#endif
+        const bool consumed = sem.wait(120);
         const double elapsed = now() - started;
-        threads.join();
+        s_spuriousUntil = 0;
+        check(!consumed, "spurious wake cannot consume count");
+#ifdef SEMAPHORE_TEST_INSTRUMENTATION
+        check(s_spuriousWakes.load() >= 3, "multiple native spurious returns exercised");
+#endif
         std::printf("METRIC budget_ms=%.3f\n", elapsed);
-        check(elapsed >= 100 && elapsed < 600, "fixed timeout budget");
+        check(elapsed >= 100 && elapsed < 300, "fixed timeout budget");
     }
     else if (id == 27)
     {
@@ -432,16 +457,14 @@ bool SemaphoreTests::runCase(int32_t id)
         s_seedValue = UINT64_MAX;
         sem.reset();
         check(sem.trySignal().status == SEMAPHORE_OVERFLOW, "64-bit overflow result");
-        bool threw = false;
-        try
-        {
-            sem.signal();
-        }
-        catch (const std::overflow_error&)
-        {
-            threw = true;
-        }
-        check(threw, "legacy overflow exception");
+        std::atomic<bool> published(false);
+        SemaphoreTestThreads publisher;
+        publisher.start([&]() { published.store(sem.signal()); });
+        pause(20);
+        const bool early = published.load();
+        const bool consumed = sem.wait(0);
+        publisher.join();
+        check(!early && consumed && published.load(), "full count ordinary publish waits for consumption");
         check(sem.wait(0) && sem.trySignal().committed, "overflow unchanged count");
         s_seedValue = uint64_t(1) << 32;
         sem.reset();
@@ -559,6 +582,7 @@ bool SemaphoreTests::runCase(int32_t id)
         sem.eventAll();
         check(!sem.eventWait(15), "early events never accumulate");
         std::atomic<int32_t> done(0);
+        s_registrations.store(0);
         SemaphoreTestThreads threads;
         for (int32_t i = 0; i < 4; ++i)
         {
@@ -573,11 +597,39 @@ bool SemaphoreTests::runCase(int32_t id)
                     }
                 });
         }
-        pause(100);
-        sem.event();
-        pause(80);
+        const double deadline = now() + 1500;
+#ifdef SEMAPHORE_TEST_INSTRUMENTATION
+        // 钩子位于记录发布之后；不以固定睡眠推测登记已完成。
+        while (s_registrations.load() < 4 && now() < deadline)
+        {
+            pause(1);
+        }
+        check(s_registrations.load() == 4, "all event records published");
+#endif
+        SemaphoreResult notified;
+        do
+        {
+            notified = sem.tryEvent(false, true, false);
+            if (!notified.committed)
+            {
+                pause(1);
+            }
+        } while (!notified.committed && now() < deadline);
+        while (done.load() == 0 && now() < deadline)
+        {
+            pause(1);
+        }
         const int32_t single = done.load();
+#ifdef SEMAPHORE_TEST_INSTRUMENTATION
         sem.eventAll();
+#else
+        // DLL黑盒没有登记观测入口；重试广播只验证交付与退出，快照集合由白盒33验证。
+        while (done.load() < 4 && now() < deadline)
+        {
+            sem.eventAll();
+            pause(1);
+        }
+#endif
         threads.join();
         check(single == 1 && done.load() == 4, "event one and eventAll remaining");
         check(!sem.eventWait(15) && !sem.wait(0), "events leave no late permit");
@@ -914,19 +966,57 @@ bool SemaphoreTests::runCase(int32_t id)
     else if (id == 39)
     {
 #ifdef SEMAPHORE_TEST_INSTRUMENTATION
+        // 暂停在已登记记录的睡眠边界，制造交付成功与系统返回错误的真实交错。
+        for (int32_t event = 0; event < 2; ++event)
+        {
+            for (int32_t detailed = 0; detailed < 2; ++detailed)
+            {
+                Semaphore target;
+                SemaphoreTestGate boundary(event ? 3 : 9);
+                SemaphoreResult result;
+                bool consumed = false;
+                SemaphoreTestThreads workers;
+                workers.start([&]()
+                {
+                    if (detailed)
+                    {
+                        result = event ? target.eventWaitResult(1000) : target.waitResult(1000);
+                    }
+                    else
+                    {
+                        consumed = event ? target.eventWait(1000) : target.wait(1000);
+                    }
+                });
+                const bool arrived = boundary.reached();
+                const SemaphoreResult sent = event ? target.tryEvent() : target.trySignal(true, false);
+                s_faultCountdown.store(1);
+                s_faultPoint.store(3);
+                boundary.release();
+                workers.join();
+                s_faultPoint.store(0);
+                check(arrived && sent.committed, "publish at registered sleep boundary");
+                check(detailed ? result.status == SEMAPHORE_SYSTEM_ERROR && result.committed &&
+                    result.nativeError == 123 : consumed,
+                    "committed consumption survives native error in both wait interfaces");
+                check(!target.wait(0) && !target.eventWait(0), "consumption cannot be repeated");
+            }
+        }
         s_faultCountdown.store(1);
         s_faultPoint.store(1);
-        bool threw = false;
-        try
-        {
-            Semaphore sem;
-        }
-        catch (const std::system_error&)
-        {
-            threw = true;
-        }
+        Semaphore failed;
         s_faultPoint.store(0);
-        check(threw, "system construction failure observable");
+        check(failed.initializationResult().status == SEMAPHORE_SYSTEM_ERROR &&
+            !failed.signal() && failed.waitResult(0).status == SEMAPHORE_SYSTEM_ERROR,
+            "construction failure uses result codes and failed object publishes nothing");
+        failed.reset();
+        check(!failed.signal() && !failed.wait() && !failed.wait(0) && !failed.wait(1) &&
+            failed.waitResult().status == SEMAPHORE_SYSTEM_ERROR &&
+            failed.trySignal(true, true).status == SEMAPHORE_SYSTEM_ERROR,
+            "reset cannot enable failed initialization or make failed count operations block");
+        Semaphore healthy;
+        check(failed.signalAndWaitResult(healthy, 0).signalState == SEMAPHORE_COMMIT_NONE &&
+            healthy.signalAndWaitResult(failed, 0).signalState == SEMAPHORE_COMMIT_NONE && !healthy.wait(0),
+            "either failed endpoint prevents combined publication");
         Semaphore sem;
         {
             // 无等待者的计数发布不调用系统提示；在真实登记后验证交付成功但提示失败。
@@ -945,7 +1035,7 @@ bool SemaphoreTests::runCase(int32_t id)
                     published.nativeError == 123, "postcommit wake failure");
             check(consumed.status == SEMAPHORE_OK && consumed.committed && !sem.wait(0), "postcommit must not retry");
         }
-        // 兼容void入口也必须说明许可已经提交；分别覆盖普通竞争与优先登记两条路径。
+        // 普通bool入口以已提交为成功；分别覆盖普通竞争与优先登记两条路径。
         for (int32_t point = 7; point <= 8; ++point)
         {
             SemaphoreTestGate countGate(point);
@@ -955,26 +1045,11 @@ bool SemaphoreTests::runCase(int32_t id)
             const bool registered = countGate.reached();
             s_faultCountdown.store(1);
             s_faultPoint.store(2);
-            bool reported = false;
-            try
-            {
-                sem.signal();
-            }
-            catch (const std::system_error& error)
-            {
-                reported = error.code().value() == 123 && std::strstr(error.what(), "notification committed") != nullptr;
-            }
-            catch (...)
-            {
-                s_faultPoint.store(0);
-                countGate.release();
-                countThreads.join();
-                throw;
-            }
+            const bool reported = sem.signal();
             s_faultPoint.store(0);
             countGate.release();
             countThreads.join();
-            check(registered && reported, "legacy signal exception retains committed notification");
+            check(registered && reported, "ordinary signal reports committed notification despite hint failure");
             check(consumed.status == SEMAPHORE_OK && consumed.committed && !sem.wait(0),
                 "legacy signal wake failure retains exactly one permit");
         }
@@ -1027,7 +1102,7 @@ bool SemaphoreTests::runCase(int32_t id)
         check(opener.openProcessResult(name(id)).status == SEMAPHORE_OK, "open IPC");
         check(owner.processSignalResult().committed && owner.processSignalResult().committed, "IPC two permits");
 #if (defined(_WIN32) && !defined(SEMAPHORE_TEST_POSIX_NAME)) || defined(SEMAPHORE_SHARED_COUNTER)
-        check(owner.processSignalResult().status == SEMAPHORE_OVERFLOW, "IPC full");
+        check(owner.tryProcessSignalResult().status == SEMAPHORE_OVERFLOW, "IPC full");
 #endif
         check(opener.processWait(0) && joiner.processWait(0) && !owner.processWait(0), "shared counter exact");
         const double started = now();
@@ -1042,7 +1117,9 @@ bool SemaphoreTests::runCase(int32_t id)
     }
     else if (id == 41 || id == 60)
     {
-#if defined(__APPLE__) && TARGET_OS_IPHONE
+#if defined(SEMAPHORE_TEST_POSIX_NAME)
+        return false; // 进程内名称替身不能验证独立进程共享。
+#elif defined(__APPLE__) && TARGET_OS_IPHONE
         std::printf(
             "NOT_RUN_DETAIL id=%d iOS requires two host applications sharing an App Group; fork is unavailable\n", id);
         return false;
@@ -1313,7 +1390,7 @@ bool SemaphoreTests::runCase(int32_t id)
     }
     else if (id == 46)
     {
-#if defined(_WIN32) && !defined(PROCESS_WORK_PORTABLE_NOTIFY)
+#if defined(_WIN32) && !defined(PROCESS_WORK_PORTABLE_NOTIFY) && !defined(SEMAPHORE_TEST_POSIX_NAME)
         const std::string logicalName = name(id);
         HANDLE incompatible = ::CreateEventA(nullptr, TRUE, FALSE, logicalName.c_str());
         check(incompatible != nullptr, "create incompatible named object");
@@ -1393,7 +1470,7 @@ bool SemaphoreTests::runCase(int32_t id)
         check(owner.createProcessResult(compatible).status == SEMAPHORE_OK, "preserve space/non-ASCII byte names");
         check(peer.openProcessResult(compatible).status == SEMAPHORE_OK, "open compatible name");
         check(owner.processSignalResult().committed && peer.processWait(0), "compatible name communicates");
-#if defined(_WIN32) && !defined(SEMAPHORE_SHARED_COUNTER)
+#if defined(_WIN32) && !defined(SEMAPHORE_SHARED_COUNTER) && !defined(SEMAPHORE_TEST_POSIX_NAME)
         Semaphore local;
         Semaphore localPeer;
         const std::string nativeName = "Local\\" + name(id) + std::string(40, 'x');
@@ -1489,7 +1566,7 @@ bool SemaphoreTests::runCase(int32_t id)
         check(result.status == SEMAPHORE_OK && result.signalState == SEMAPHORE_COMMIT_DONE &&
                 result.waitState == SEMAPHORE_COMMIT_DONE && request.processWait(0) && !reply.processWait(0),
             "exchange zero probe consumes prepared reply exactly once");
-#if defined(_WIN32) || defined(SEMAPHORE_SHARED_COUNTER)
+#if (defined(_WIN32) && !defined(SEMAPHORE_TEST_POSIX_NAME)) || defined(SEMAPHORE_SHARED_COUNTER)
         check(request.tryProcessSignal() == 0 && reply.tryProcessSignal() == 0, "fill named limits");
         result = request.processSignalAndWaitResult(reply, 0);
         check(result.status == SEMAPHORE_OVERFLOW && result.signalState == SEMAPHORE_COMMIT_NONE &&
@@ -1522,6 +1599,7 @@ bool SemaphoreTests::runCase(int32_t id)
         check(request.createProcessResult(name(id), 2).status == SEMAPHORE_OK &&
                 reply.createProcessResult(name(id) + "r", 2).status == SEMAPHORE_OK,
             "exchange fault resources");
+#if !defined(_WIN32) || defined(SEMAPHORE_SHARED_COUNTER) || defined(SEMAPHORE_TEST_POSIX_NAME)
         for (int32_t point = 11; point <= 12; ++point)
         {
             s_faultCountdown.store(1);
@@ -1535,7 +1613,7 @@ bool SemaphoreTests::runCase(int32_t id)
             check(request.processWait(0) == (point == 12) && !request.processWait(0) && !reply.processWait(0),
                 "fault side effects agree with result");
         }
-#if defined(_WIN32) && !defined(SEMAPHORE_SHARED_COUNTER)
+#else
         check(reply.tryProcessSignal() == 0, "ambiguous phase prepared reply");
         s_faultCountdown.store(1);
         s_faultPoint.store(13);
@@ -2039,43 +2117,47 @@ bool SemaphoreTests::runCase(int32_t id)
     }
     else if (id == 65)
     {
-        Semaphore request, reply;
-        check(request.prepareSignalAndWait().status == SEMAPHORE_OK &&
-                reply.prepareSignalAndWait().status == SEMAPHORE_OK,
-            "contended combined preparation");
-        std::atomic<int32_t> accepted(0), replied(0);
-        SemaphoreTestThreads threads;
-        for (int32_t i = 0; i < 4; ++i)
+        for (int32_t prepared = 0; prepared < 4; ++prepared)
         {
-            threads.start(
-                /** 执行并发组合计数的线程步骤，捕获状态必须活到线程回收
-                */
-                [&]()
-                {
-                    for (int32_t n = 0; n < 500; ++n)
+            Semaphore request, reply;
+            check(((prepared & 1) == 0 || request.prepareSignalAndWait().status == SEMAPHORE_OK) &&
+                    ((prepared & 2) == 0 || reply.prepareSignalAndWait().status == SEMAPHORE_OK),
+                "contended combined preparation");
+            std::atomic<int32_t> accepted(0), replied(0);
+            SemaphoreTestThreads threads;
+            for (int32_t i = 0; i < 4; ++i)
+            {
+                threads.start(
+                    /** 执行并发组合计数的线程步骤，捕获状态必须活到线程回收
+                    */
+                    [&]()
                     {
-                        check(request.wait(5000), "contended request");
-                        accepted.fetch_add(1);
-                        reply.signal();
-                    }
-                });
-            threads.start(
-                /** 执行并发组合计数的线程步骤，捕获状态必须活到线程回收
-                */
-                [&]()
-                {
-                    for (int32_t n = 0; n < 500; ++n)
+                        for (int32_t n = 0; n < 500; ++n)
+                        {
+                            check(request.wait(5000), "contended request");
+                            accepted.fetch_add(1);
+                            check(reply.signal(), "contended reply publication");
+                        }
+                    });
+                threads.start(
+                    /** 执行并发组合计数的线程步骤，捕获状态必须活到线程回收
+                    */
+                    [&]()
                     {
-                        const SemaphoreSignalWaitResult result = request.signalAndWaitResult(reply, 5000);
-                        check(result.status == SEMAPHORE_OK && result.waitState == SEMAPHORE_COMMIT_DONE,
-                            "contended combined reply");
-                        replied.fetch_add(1);
-                    }
-                });
+                        for (int32_t n = 0; n < 500; ++n)
+                        {
+                            const SemaphoreSignalWaitResult result = request.signalAndWaitResult(reply, 5000);
+                            check(result.status == SEMAPHORE_OK && result.signalState == SEMAPHORE_COMMIT_DONE &&
+                                    result.waitState == SEMAPHORE_COMMIT_DONE,
+                                "contended combined reply");
+                            replied.fetch_add(1);
+                        }
+                    });
+            }
+            threads.join();
+            check(accepted.load() == 2000 && replied.load() == 2000 && !request.wait(0) && !reply.wait(0),
+                "combined concurrency neither loses nor duplicates permits");
         }
-        threads.join();
-        check(accepted.load() == 2000 && replied.load() == 2000 && !request.wait(0) && !reply.wait(0),
-            "combined concurrency neither loses nor duplicates permits");
     }
     return true;
 }

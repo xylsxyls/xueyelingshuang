@@ -25,8 +25,9 @@ int32_t SemaphoreTestInstrument::run(const std::string& sourceDirectory, const s
         return 1;
     }
     const char* files[] = {"Semaphore.cpp", "SemaphoreWake.cpp", "SemaphoreEventPool.cpp", "SemaphoreCount.cpp"};
-    std::string generated[4];
-    for (size_t i = 0; i < 4; ++i)
+    const size_t fileCount = sizeof(files) / sizeof(files[0]);
+    std::string generated[fileCount];
+    for (size_t i = 0; i < fileCount; ++i)
     {
         std::string source;
         if (!read(sourceDirectory + "/" + files[i], source) || !instrument(files[i], source, generated[i], true))
@@ -37,7 +38,7 @@ int32_t SemaphoreTestInstrument::run(const std::string& sourceDirectory, const s
         generated[i].insert(0, "#include \"SemaphoreTestHooks.h\"\n");
     }
     // 所有输入先验证；构建目标每次执行本工具，失败不会继续编译上次副本
-    for (size_t i = 0; i < 4; ++i)
+    for (size_t i = 0; i < fileCount; ++i)
     {
         if (!write(outputDirectory + "/" + files[i], generated[i]))
         {

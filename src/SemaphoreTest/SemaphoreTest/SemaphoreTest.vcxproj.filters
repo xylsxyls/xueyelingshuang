@@ -50,4 +50,8 @@
     <ClCompile Include="SemaphoreTestProcessMemory.cpp"><Filter>源文件</Filter></ClCompile>
     <ClInclude Include="SemaphoreTestProcessMemory.h"><Filter>头文件</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="SemaphoreRetryTests.h" />
+    <ClCompile Include="SemaphoreRetryTests.cpp" />
+  </ItemGroup>
 </Project>

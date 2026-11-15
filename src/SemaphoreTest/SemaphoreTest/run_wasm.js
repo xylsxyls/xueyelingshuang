@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 // Wasm测试允许使用宿主语言；本脚本只编译并运行SemaphoreTest的C++能力用例
 const fs = require('fs');
 const path = require('path');
@@ -68,6 +68,10 @@ async function main()
     {
         throw new Error('Provide a new output directory under src/temp/Semaphore');
     }
+    if (fs.existsSync(output))
+    {
+        throw new Error('Output directory must be new; existing evidence is not overwritten');
+    }
     fs.mkdirSync(output, {recursive: true});
     const source = path.join(root, 'src/Semaphore/Semaphore/src');
     const compiler = path.join(tools, 'emsdk-3.1.74/upstream/emscripten');
@@ -128,7 +132,17 @@ async function main()
             }
             const built = library === 0 ? await run(python, args, path.join(folder, 'test-build.log'), environment, 180000) : -1;
             const log = path.join(folder, 'run.log');
+            // 在运行前记录实际执行产物，运行结束及全矩阵结束后都核对，避免只哈希运行后的文件。
+            const artifacts = built === 0 ? [archive, executable, executable.replace(/\.js$/, '.wasm')] : [];
+            for (const file of artifacts)
+            {
+                identity[file] = hash(file);
+            }
             let tested = built === 0 ? await run(path.join(tools, 'node/node.exe'), [executable], log, environment, 30000) : -1;
+            if (artifacts.some(file => identity[file] !== hash(file)))
+            {
+                tested = 125;
+            }
             if (tested === 0)
             {
                 const text = fs.readFileSync(log, 'utf8');
@@ -137,9 +151,6 @@ async function main()
                 {
                     tested = 125;
                 }
-                identity[archive] = hash(archive);
-                identity[executable] = hash(executable);
-                identity[executable.replace(/\.js$/, '.wasm')] = hash(executable.replace(/\.js$/, '.wasm'));
             }
             const row = {bits: bits, pthread: threaded, library: library, build: built, run: tested};
             rows.push(row);

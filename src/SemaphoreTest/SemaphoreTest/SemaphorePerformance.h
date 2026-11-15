@@ -23,6 +23,10 @@ public:
     */
     void add(const std::function<void()>& task);
 
+    /** 在计时开始前确认所有线程已到起跑门；不要求操作系统已经将它们挂起
+    */
+    void prepare();
+
     /** 释放全部已经就绪的工作线程
     */
     void start();
@@ -45,6 +49,8 @@ private:
     std::atomic<bool> m_cancelled;
     // 在线程入口捕获的异常数
     std::atomic<int32_t> m_errors;
+    // 工作线程到达起跑门的数量，独立于被测Semaphore
+    std::atomic<size_t> m_ready;
 };
 
 /** 稳定性能用例，原版和当前版共用工作量、计时边界及断言
@@ -118,8 +124,9 @@ private:
     /** 使用外部代次谓词测量非积存事件
     @param [in] count 等待者数，1或8
     @param [in] prepared 是否在启动线程前准备系统事件后端，仅用于72号诊断
+    @param [in] dropNotification 负向自检是否故意漏发，正式测量始终为false
     */
-    static void events(int32_t count, bool prepared = false);
+    static void events(int32_t count, bool prepared = false, bool dropNotification = false);
 
     /** 测量两秒空等待及进程CPU消耗
     */

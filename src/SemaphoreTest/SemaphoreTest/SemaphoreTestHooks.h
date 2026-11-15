@@ -15,6 +15,17 @@ int32_t SemaphoreTestFault(int32_t point);
 */
 void SemaphoreTestWakeHook();
 
+/** 测试虚假系统唤醒：只在受控预算用例启用，真实等待路径仍使用原有截止时间
+@return 是否模拟一次未消费许可的系统返回
+*/
+bool SemaphoreTestSpuriousWake();
+
+/** 观察命名发布入口的真实调用次数，用于确认容量等待已发生重试
+@param [in] reset 是否在无发布者时清零
+@return 清零前或当前的调用次数
+*/
+uint32_t SemaphoreTestPublishAttempts(bool reset = false);
+
 /** 报告实际选用的Windows睡眠后端
 @param [in] addressWait 是否使用地址等待
 */

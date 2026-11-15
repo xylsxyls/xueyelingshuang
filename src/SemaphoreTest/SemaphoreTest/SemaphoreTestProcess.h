@@ -13,6 +13,11 @@ public:
     */
     static std::string executable();
 
+    /** Windows DLL取得加载器路径；静态链接返回本程序，非Windows仅返回程序路径且哈希未实现
+    @return 模块完整路径；无法确认时抛异常，不能默认为已验证
+    */
+    static std::string library();
+
     /** 执行子进程并将标准输出及错误写入独立文件
     @param [in] executable 程序绝对路径
     @param [in] arguments 各个参数，不能含NUL
