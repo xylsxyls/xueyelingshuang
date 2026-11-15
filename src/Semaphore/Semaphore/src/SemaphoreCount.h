@@ -16,6 +16,11 @@ public:
     */
     explicit SemaphoreCount(const SemaphorePoolConfig& config = SemaphorePoolConfig());
 
+    /** 查询构造时的初始化结果，不抛出异常
+    @return OK可使用；失败时保留具体原因
+    */
+    SemaphoreResult initializationResult() const;
+
     /** 取得许可或登记等待；probe不登记，已有等待者时不能插队
     @param [in,out] state Semaphore持有的原子状态
     @param [out] record 非空表示已登记，调用者必须finish
@@ -28,9 +33,10 @@ public:
     @param [in,out] state Semaphore持有的原子状态
     @param [in,out] wake 本地系统等待后端
     @param [in] notify 是否立即提示，false仅供组合系统调用随后统一提示
+    @param [in] retryContention 发布CAS竞争失败是否内部重试
     @return committed表示许可已交付或积存，提示失败不能重复发布
     */
-    SemaphoreResult signal(std::atomic<uint64_t>& state, SemaphoreWake& wake, bool notify = true);
+    SemaphoreResult signal(std::atomic<uint64_t>& state, SemaphoreWake& wake, bool notify = true, bool retryContention = true);
 
     /** 与直接交付竞争取消，已交付许可不被后来线程夺走
     @param [in,out] state Semaphore持有的原子状态
@@ -85,11 +91,12 @@ private:
     @param [in,out] state 计数或等待链
     @param [in,out] wake 提示后端
     @param [in] notify 是否立即系统提示
+    @param [in] retryContention 发布CAS竞争失败是否内部重试
     @return 本次提交及提示结果
     */
-    SemaphoreResult signalProtected(std::atomic<uint64_t>& state, SemaphoreWake& wake, bool notify);
+    SemaphoreResult signalProtected(std::atomic<uint64_t>& state, SemaphoreWake& wake, bool notify, bool retryContention);
 
-    /** 替换不可变大计数记录，CAS失败时回收候选并返回RETRY
+    /** 替换不可变大计数记录，CAS失败时回收候选并返回BUSY
     @param [in,out] state 共享状态
     @param [in] expected 受保护的旧状态
     @param [in] value 期望积存数

@@ -7,6 +7,11 @@ SemaphoreEventPool(config)
 
 }
 
+SemaphoreResult SemaphoreCount::initializationResult() const
+{
+    return SemaphoreEventPool::initializationResult();
+}
+
 SemaphoreResult SemaphoreCount::begin(std::atomic<uint64_t>& state, SemaphoreEventRecord*& record, bool probe)
 {
     record = nullptr;
@@ -21,7 +26,7 @@ SemaphoreResult SemaphoreCount::begin(std::atomic<uint64_t>& state, SemaphoreEve
     return result;
 }
 
-SemaphoreResult SemaphoreCount::signal(std::atomic<uint64_t>& state, SemaphoreWake& wake, bool notify)
+SemaphoreResult SemaphoreCount::signal(std::atomic<uint64_t>& state, SemaphoreWake& wake, bool notify, bool retryContention)
 {
     size_t budget = 64;
     SemaphoreEventPool::reclaim(budget);
@@ -29,17 +34,21 @@ SemaphoreResult SemaphoreCount::signal(std::atomic<uint64_t>& state, SemaphoreWa
     {
         return SemaphoreResult(SEMAPHORE_CAPACITY);
     }
-    const SemaphoreResult result = signalProtected(state, wake, notify);
+    const SemaphoreResult result = signalProtected(state, wake, notify, retryContention);
     SemaphoreEventPool::leave();
     return result;
 }
 
 bool SemaphoreCount::finish(std::atomic<uint64_t>& state, SemaphoreEventRecord* record)
 {
-    uint32_t waiting = 0;
-    record->m_state.compare_exchange_strong(waiting, 2);
+    uint32_t waiting = record->m_state.load();
+    if (waiting == 0)
+    {
+        record->m_state.compare_exchange_strong(waiting, 2);
+    }
+    // 状态1的交付不可撤销，唯一等待者用原子读取即可确认，避免额外写争用。
     const bool notified = waiting == 1;
-    record->m_next.fetch_or(uintptr_t(1));
+    record->markRemoved();
     if (SemaphoreEventPool::enter())
     {
         sweep(state);
@@ -151,7 +160,7 @@ SemaphoreResult SemaphoreCount::beginProtected(
         if (current > directLimit() && (current & 1) != 0)
         {
             const SemaphoreResult result = replaceLarge(state, current, node(current)->m_idleSince - 1);
-            if (result.status == SEMAPHORE_RETRY)
+            if (result.status == SEMAPHORE_BUSY)
             {
                 continue;
             }
@@ -182,7 +191,7 @@ SemaphoreResult SemaphoreCount::beginProtected(
     }
 }
 
-SemaphoreResult SemaphoreCount::signalProtected(std::atomic<uint64_t>& state, SemaphoreWake& wake, bool notify)
+SemaphoreResult SemaphoreCount::signalProtected(std::atomic<uint64_t>& state, SemaphoreWake& wake, bool notify, bool retryContention)
 {
     for (;;)
     {
@@ -196,6 +205,10 @@ SemaphoreResult SemaphoreCount::signalProtected(std::atomic<uint64_t>& state, Se
                 result.committed = true;
                 return result;
             }
+            if (!retryContention)
+            {
+                return SemaphoreResult(SEMAPHORE_BUSY);
+            }
             continue;
         }
         if (current == directLimit() || (current & 1) != 0)
@@ -206,7 +219,7 @@ SemaphoreResult SemaphoreCount::signalProtected(std::atomic<uint64_t>& state, Se
                 return SemaphoreResult(SEMAPHORE_OVERFLOW);
             }
             const SemaphoreResult result = replaceLarge(state, current, count + 1);
-            if (result.status != SEMAPHORE_RETRY)
+            if (result.status != SEMAPHORE_BUSY)
             {
                 if (result.committed && notify)
                 {
@@ -215,6 +228,10 @@ SemaphoreResult SemaphoreCount::signalProtected(std::atomic<uint64_t>& state, Se
                     return woke;
                 }
                 return result;
+            }
+            if (!retryContention)
+            {
+                return SemaphoreResult(SEMAPHORE_BUSY);
             }
             continue;
         }
@@ -227,6 +244,10 @@ SemaphoreResult SemaphoreCount::signalProtected(std::atomic<uint64_t>& state, Se
         uint32_t waiting = 0;
         if (!selected->m_state.compare_exchange_strong(waiting, 1))
         {
+            if (!retryContention)
+            {
+                return SemaphoreResult(SEMAPHORE_BUSY);
+            }
             continue;
         }
         // 此CAS已经交付本次许可。即使接收者暂停或系统提示失败，后来者也不能夺走。
@@ -259,7 +280,7 @@ SemaphoreResult SemaphoreCount::replaceLarge(std::atomic<uint64_t>& state, uint6
         {
             discard(replacement, true);
         }
-        return SemaphoreResult(SEMAPHORE_RETRY);
+        return SemaphoreResult(SEMAPHORE_BUSY);
     }
     if (previous > directLimit())
     {
@@ -286,7 +307,7 @@ void SemaphoreCount::sweep(std::atomic<uint64_t>& state)
             uintptr_t next = item->m_next.load();
             if (item->m_state.load() != 0)
             {
-                next = item->m_next.fetch_or(uintptr_t(1)) | uintptr_t(1);
+                next = item->markRemoved() | uintptr_t(1);
             }
             if ((next & 1) != 0)
             {

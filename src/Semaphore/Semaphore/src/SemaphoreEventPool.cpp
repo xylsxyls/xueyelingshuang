@@ -30,6 +30,18 @@ m_idleSince(0)
 
 }
 
+uintptr_t SemaphoreEventRecord::markRemoved()
+{
+    if (m_next.load() == 0)
+    {
+        // 活跃代次的空尾不会再增长；其他帮手至多也把0改为1，不会丢失后继更新。
+        // 后续摘链CAS及读者静止检查不变；非空后继仍须原子读改写以协调帮手摘链。
+        m_next.store(uintptr_t(1), std::memory_order_release);
+        return 0;
+    }
+    return m_next.fetch_or(uintptr_t(1)) & ~uintptr_t(1);
+}
+
 SemaphoreEventPool::SemaphoreEventPool(const SemaphorePoolConfig& config) :
 m_config(config),
 m_head(0),
@@ -49,23 +61,34 @@ m_lastGrow(0)
     if (config.maxCapacity < -1 || config.initialCapacity > addressLimit ||
         (config.maxCapacity != -1 && static_cast<uint64_t>(config.maxCapacity) < config.initialCapacity))
     {
-        throw std::invalid_argument("Semaphore event pool capacity");
+        m_initialization = SemaphoreResult(SEMAPHORE_INVALID);
+        return;
     }
     SemaphoreEventRecord probe;
     if (!m_head.is_lock_free() || !m_free.is_lock_free() || !m_readers.is_lock_free() || !m_capacity.is_lock_free() ||
         !probe.m_state.is_lock_free())
     {
-        throw std::system_error(std::make_error_code(std::errc::not_supported));
+        m_initialization = SemaphoreResult(SEMAPHORE_UNSUPPORTED);
+        return;
     }
     const SemaphoreResult result = allocate(config.initialCapacity, true);
     if (result.status != SEMAPHORE_OK)
     {
-        throw std::bad_alloc();
+        m_initialization = result;
     }
+}
+
+SemaphoreResult SemaphoreEventPool::initializationResult() const
+{
+    return m_initialization;
 }
 
 SemaphoreEventPool::~SemaphoreEventPool()
 {
+    if (m_initialization.status != SEMAPHORE_OK)
+    {
+        return;
+    }
     // 外部静止且没有未结束等待；已结束记录都已从登记链摘除。
     sweep();
     while (m_retired.load() != nullptr)
@@ -323,7 +346,8 @@ SemaphoreResult SemaphoreEventPool::allocate(size_t count, bool initial)
 {
     if (count == 0)
     {
-        return SemaphoreResult(initial ? SEMAPHORE_OK : SEMAPHORE_POLICY);
+        // 策略拒绝新增记录时仍可等待旧记录归还，不等同于策略抛出异常。
+        return SemaphoreResult(initial ? SEMAPHORE_OK : SEMAPHORE_CAPACITY);
     }
     size_t limit = ((std::numeric_limits<size_t>::max)() - sizeof(*this)) / sizeof(SemaphoreEventRecord);
     if (m_config.maxCapacity != -1)
@@ -419,8 +443,19 @@ SemaphoreResult SemaphoreEventPool::begin(SemaphoreEventRecord*& record)
     {
         return SemaphoreResult(SEMAPHORE_CAPACITY);
     }
-    sweep();
     record = takeFree();
+    if (record == nullptr)
+    {
+        // 仍有安全空闲记录时无需扫描活动登记链；不足时继续帮助摘除已结束记录。
+        sweep();
+        // 回收先交还本次读者保护，再重新登记；不能为了少扫描而使已结束记录拖延扩容。
+        reclaim(budget, true);
+        if (!enter())
+        {
+            return SemaphoreResult(SEMAPHORE_CAPACITY);
+        }
+        record = takeFree();
+    }
     bool evaluated = false;
     if (record == nullptr)
     {
@@ -453,10 +488,14 @@ SemaphoreResult SemaphoreEventPool::begin(SemaphoreEventRecord*& record)
 bool SemaphoreEventPool::finish(SemaphoreEventRecord* record)
 {
     // 只有本等待者能发布状态3；帮手可以先摘链，但在此之前不能回收记录。
-    uint32_t waiting = 0;
-    record->m_state.compare_exchange_strong(waiting, 2);
+    uint32_t waiting = record->m_state.load();
+    if (waiting == 0)
+    {
+        record->m_state.compare_exchange_strong(waiting, 2);
+    }
+    // 已提交的状态1只由本等待者结束；读取同样取得发布可见性，不必再做失败的取消CAS。
     const bool notified = waiting == 1;
-    const uintptr_t next = record->m_next.fetch_or(uintptr_t(1)) & ~uintptr_t(1);
+    const uintptr_t next = record->markRemoved();
     uintptr_t expected = reinterpret_cast<uintptr_t>(record);
     if (m_head.compare_exchange_strong(expected, next))
     {
@@ -500,7 +539,7 @@ SemaphoreEventRecord* SemaphoreEventPool::oldest(uintptr_t head) const
     return selected;
 }
 
-SemaphoreResult SemaphoreEventPool::notify(bool all, SemaphoreWake* wake)
+SemaphoreResult SemaphoreEventPool::notify(bool all, SemaphoreWake* wake, bool retryContention)
 {
     if (!enter())
     {
@@ -534,6 +573,11 @@ SemaphoreResult SemaphoreEventPool::notify(bool all, SemaphoreWake* wake)
             {
                 break;
             }
+        }
+        if (!all && !delivered && !retryContention)
+        {
+            result.status = oldest(current) == nullptr ? SEMAPHORE_OK : SEMAPHORE_BUSY;
+            break;
         }
         if (all)
         {

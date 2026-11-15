@@ -61,4 +61,11 @@
     <ClInclude Include="..\src\SemaphoreCount.h"><Filter>头文件</Filter></ClInclude>
     <ClCompile Include="..\src\SemaphoreCount.cpp"><Filter>源文件</Filter></ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\SemaphoreRetry.h" />
+    <ClCompile Include="..\src\SemaphoreRetry.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\SemaphoreWake.inl" />
+  </ItemGroup>
 </Project>

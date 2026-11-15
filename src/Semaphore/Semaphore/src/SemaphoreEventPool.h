@@ -119,6 +119,12 @@ public:
     /** 初始化尚未发布记录
     */
     SemaphoreEventRecord();
+
+    /** 标记删除；调用者须拥有等待者访问权或持有池读者保护
+    链只在头部插入，同一登记代次的尾节点不再增加后继，故空尾只需发布删除标记
+    @return 标记之后的后继地址，不含删除位
+    */
+    uintptr_t markRemoved();
 };
 
 /** 事件登记表和有预算的记录池，Harris删除标记与读者静止回收
@@ -127,7 +133,7 @@ public:
 class SemaphoreEventPool
 {
 public:
-    /** 准备初始容量，非法配置/资源失败抛异常并回滚
+    /** 准备初始容量，非法配置/资源失败保存在initializationResult并回滚
     @param [in] config 静止期配置副本
     */
     explicit SemaphoreEventPool(const SemaphorePoolConfig& config);
@@ -135,6 +141,11 @@ public:
     /** 仅在所有等待者/通知者退出后销毁
     */
     ~SemaphoreEventPool();
+
+    /** 查询构造时的初始化结果，不抛出异常
+    @return OK可使用；失败时保留具体原因
+    */
+    SemaphoreResult initializationResult() const;
 
     /** 分配并登记等待者，成功CAS到head是登记线性化点
     @param [out] record 成功后的独占等待记录
@@ -151,9 +162,10 @@ public:
     /** 发布事件；广播固定扫描开始时的登记链，新登记只加在head之前
     @param [in] all 是否提示全部快照登记者
     @param [in] wake 非空时直接唤醒每个已提交记录；调用者已确认地址后端可用，指针仅本次借用
+    @param [in] retryContention 单发事件被其他通知者抢先时是否重新选择
     @return 是否至少提示一位；不分配内存、不运行策略
     */
-    SemaphoreResult notify(bool all, SemaphoreWake* wake = nullptr);
+    SemaphoreResult notify(bool all, SemaphoreWake* wake = nullptr, bool retryContention = true);
 
     /** 有界维护，最多检查64个缩容候选，两次回收合计最多尝试摘取64条退役记录
     CAS竞争重试和用户策略执行不承诺硬实时上限；没有其他读者时才实际复用或释放
@@ -240,6 +252,8 @@ protected:
     SemaphoreResult grow();
 
 protected:
+    // 构造结束后只读；失败对象不发布到共享状态
+    SemaphoreResult m_initialization;
     // 策略在对象活动期只读
     SemaphorePoolConfig m_config;
     // 登记链入口，低位始终为0

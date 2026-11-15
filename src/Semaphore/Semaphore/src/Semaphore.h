@@ -21,7 +21,7 @@ class SemaphoreAPI Semaphore
 {
 // 普通分开调用的接口，以及可选的等待记录池管理和资源诊断
 public:
-    /** 初始化本地原子状态与系统等待后端，系统资源失败或原子类型不支持无锁时抛system_error
+    /** 初始化本地原子状态与系统等待后端，资源或原子能力错误由initializationResult报告
     */
     Semaphore();
 
@@ -29,24 +29,32 @@ public:
     */
     ~Semaphore();
 
-    /** 信号量的通知，通知几次wait允许通过几次，wait之前通知一次则wait执行时允许通过，一对一，不允许一对多
-    本地积压计数为64位；达到UINT64_MAX时抛出overflow_error，本次不增加计数
+    /** 查询构造时的初始化结果，不抛出异常
+    @return OK可使用；失败时保留具体原因
     */
-    void signal();
+    SemaphoreResult initializationResult() const;
+
+    /** 信号量的通知，通知几次wait允许通过几次，wait之前通知一次则wait执行时允许通过，一对一，不允许一对多
+    本地积压计数为64位；竞争和满载内部重试，其他错误返回false
+    @return true已提交，系统提示失败但许可已提交时也返回true
+    */
+    bool signal();
 
     /** 发布一个64位许可，优先交付已登记等待者；普通积存和直接交付不分配记录
     超过2^63-1的极大积存使用池中不可变记录，可能报告分配/容量错误，64位上限不变。
+    @param [in] retryContention 竞争失败是否内部无限重试
+    @param [in] retryCapacity 容量不足是否内部无限重试；4096次之后每次等1毫秒
     @return committed=true表示许可已积存或交付；即使提示失败也不可再次发布
     */
-    SemaphoreResult trySignal();
+    SemaphoreResult trySignal(bool retryContention = false, bool retryCapacity = false);
 
     /** 信号量的等待
     */
-    void wait();
+    bool wait();
 
     /** 信号量的等待
     @param [in] timeout 总等待时间，单位毫秒，0仅检查现有计数
-    @return 取得信号返回true，超时返回false；无限等待使用无参数wait()
+    @return 已消费许可返回true，包括系统错误与交付同时发生；未消费返回false，详情用waitResult
     */
     bool wait(uint32_t timeout);
 
@@ -58,7 +66,7 @@ public:
     /** 有结果的有限计数等待，发布/获取可见性由计数消费或直接交付CAS建立
     普通阻塞先复用系统提示；持续未取得许可时进入内部优先交付链，已交付许可不被后来者抢走。
     @param [in] timeout 总预算毫秒，0仅探测
-    @return OK且committed=true为取得许可；TIMEOUT未取得；其余为错误
+    @return committed=true表示已消费，即使同时报告SYSTEM_ERROR也不可重复消费；TIMEOUT未取得
     */
     SemaphoreResult waitResult(uint32_t timeout);
 
@@ -68,25 +76,27 @@ public:
 
     /** 优先提示最早登记的合格事件等待者；没有等待者时不积存通知
     */
-    void event();
+    bool event();
 
     /** 提示扫描开始时已登记的全部事件等待者，后来登记者不取得这次旧广播
     */
-    void eventAll();
+    bool eventAll();
 
     /** 发布非积存事件，不改变计数许可，不分配内存
     @param [in] all false提示一个合格登记者，true提示本次发布前登记者
+    @param [in] retryContention 单发事件CAS竞争失败是否无限重试；广播不重复已提示记录
+    @param [in] retryCapacity 保护记录不足是否无限重试；4096次之后每次等1毫秒
     @return 提交后提示失败保留committed；无合格登记者时committed=false
     */
-    SemaphoreResult tryEvent(bool all = false);
+    SemaphoreResult tryEvent(bool all = false, bool retryContention = false, bool retryCapacity = false);
 
     /** 事件的等待
     */
-    void eventWait();
+    bool eventWait();
 
     /** 事件的等待
     @param [in] timeout 超时时间，单位毫秒，非正值只探测，不代表无限
-    @return 是否得到提示，调用方仍须检查实际条件或代次
+    @return 已消费提示返回true，包括系统错误与交付同时发生；调用方仍须检查条件，详情用eventWaitResult
     */
     bool eventWait(int32_t timeout);
 
@@ -97,7 +107,7 @@ public:
 
     /** 有结果的有限事件等待
     @param [in] timeout 总预算毫秒，非正值立即返回TIMEOUT，不表示无限
-    @return OK提示、TIMEOUT或系统错误/宿主不支持
+    @return committed表示是否已消费提示，系统错误可与committed=true同时存在；TIMEOUT未消费
     */
     SemaphoreResult eventWaitResult(int32_t timeout);
 
@@ -198,15 +208,25 @@ public:
 
     /** 对命名对象积存一个许可；POSIX创建者关闭移除名称，已打开对端仍可使用旧对象
     */
-    void processSignal();
+    bool processSignal();
 
     /** 以明确结果发布一次通知，不等待其他进程释放锁
-    @return 0已发布，1计数满，-1未打开或其他错误
+    @param [in] retryContention 共享计数CAS竞争失败是否无限重试
+    @param [in] retryCapacity 计数满是否无限重试；4096次之后每次等1毫秒
+    @return 0已发布，1计数满，2纯竞争，-1未打开或其他错误
     */
-    int32_t tryProcessSignal();
+    int32_t tryProcessSignal(bool retryContention = false, bool retryCapacity = false);
 
-    /** 有结果的命名发布
-    @return OK已提交、OVERFLOW未提交、NOT_OPEN或系统错误
+    /** 发布一次命名许可，分别控制竞争和容量等待
+    @param [in] retryContention 竞争失败是否内部无限重试
+    @param [in] retryCapacity 容量不足是否内部无限重试；4096次之后每次等1毫秒
+    @return 已提交不可重试；无空间返回OVERFLOW，纯竞争返回BUSY
+    */
+    SemaphoreResult tryProcessSignalResult(bool retryContention = false, bool retryCapacity = false);
+
+    /** 有结果的命名发布，竞争和容量不足内部无限重试
+    需要立即探测满载或自行控制期限时使用tryProcessSignalResult(false, false)。
+    @return OK已提交、NOT_OPEN或其他具体错误；不要等待同线程本应自行释放的容量
     */
     SemaphoreResult processSignalResult();
 
@@ -276,14 +296,30 @@ public:
 private:
     /** 发布计数并可选延迟系统提示，延迟仅供本地组合系统调用使用
     @param [in] notify 是否立即发出系统提示
+    @param [in] retryContention true持续重试CAS竞争，false允许返回未提交竞争状态
     @return 许可提交及提示结果
     */
-    SemaphoreResult publishCount(bool notify);
+    SemaphoreResult publishCount(bool notify, bool retryContention = true);
 
     /** 仅尝试普通积存计数加一，已登记等待者或大计数必须由调用方进入慢路径
+    @param [in] retryContention true持续重试CAS竞争，false允许返回未提交竞争状态
+    @param [out] contended 是否因CAS竞争而未增加许可
     @return true表示已增加许可且尚未系统提示，false表示没有修改状态
     */
-    bool incrementCount();
+    bool incrementCount(bool retryContention, bool& contended);
+
+    /** 普通发布的慢路径，已提交时仅提示，未提交时按普通策略重试
+    @param [in] committed true表示调用方已经完成许可CAS，不得重复发布
+    @return 是否已发布许可；提示失败不会撤销提交
+    */
+    bool signalSlow(bool committed);
+
+    /** bool等待的慢路径；单独承载完整结果，避免影响已有许可的直接消费
+    @param [in] infinite 是否无限等待
+    @param [in] timeout 有限等待毫秒，沿用waitCount的总预算
+    @return 是否真实消费许可，包括提交后出现提示错误的情况
+    */
+    bool waitCountCommitted(bool infinite, uint32_t timeout);
 
     /** 按需发布独立计数记录池，失败不改变许可
     @param [out] pool 当前实例的计数池
@@ -354,15 +390,34 @@ private:
     */
     SemaphoreSignalWaitResult signalAndWaitLocal(Semaphore& waitOn, bool infinite, uint32_t timeout);
 
+    /** 普通bool等待先尝试单次消费，竞争和空许可分别转入对应慢路径
+    @param [in] infinite 是否无限等待
+    @param [in] timeout 有限等待的总预算毫秒，0仅探测
+    @return 是否已消费许可
+    */
+    bool waitCountQuick(bool infinite, uint32_t timeout);
+
+    /** 快速消费CAS竞争失败后先退避，仍未取得许可时继续完整等待协议
+    @param [in] infinite 是否无限等待
+    @param [in] timeout 有限等待的总预算毫秒，0仅探测
+    @return 是否已消费许可
+    */
+    bool waitCountContended(bool infinite, uint32_t timeout);
+
     /** 尝试消费一次许可
     @return true取得一个许可
     */
     bool consumeCount();
 
-    /** 兼容接口将错误明确传播，超时正常返回
-    @param [in] result 本次操作结果
+    /** 普通计数消费遇到竞争后有界退避并重试；无许可或切入记录状态时退出
+    @return true消费一个许可；false由调用方继续原有等待/记录协议
     */
-    static void checkLocalResult(const SemaphoreResult& result);
+    bool consumeCountContended();
+
+    /** 一次命名发布；不在原生失败或CAS竞争时重试
+    @return 已提交、满载、竞争或系统错误
+    */
+    SemaphoreResult publishProcess();
 
     /** 核对各端共同名称约束
     @param [in] name 逻辑名称

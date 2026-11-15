@@ -8,13 +8,29 @@
 class SemaphoreWake
 {
 public:
-    /** 创建系统后端，失败抛system_error；不启动线程
+    /** 创建系统后端，失败由initializationResult返回；不启动线程
     */
     SemaphoreWake();
 
     /** 静止期回收系统资源，清理失败计入cleanupFailures
     */
     ~SemaphoreWake();
+
+    /** 查询构造时的初始化结果，不抛出异常
+    @return OK可使用；失败时保留具体原因
+    */
+    SemaphoreResult initializationResult() const;
+
+    /** 快速检查构造状态；热路径不复制完整错误结果
+    @return 构造状态；需要原生错误时再查询initializationResult
+    */
+    SemaphoreStatus initializationStatus() const;
+
+    /** 构造期间合并外层原子状态的初始化失败；对象发布后禁止调用
+    @param [in] status 构造期间的失败状态
+    @param [in] nativeError 系统错误原码；不适用时为0
+    */
+    void failInitialization(SemaphoreStatus status, int32_t nativeError = 0);
 
     /** 读取睡眠比较字；先取此值，再检查业务谓词
     @return 当前比较字，不是事件代次
@@ -26,6 +42,12 @@ public:
     @return 提示结果；调用方保留自己的提交状态
     */
     SemaphoreResult notify(std::atomic<uint32_t>* address = nullptr);
+
+    /** 已发布普通积存许可后检查是否需要系统提示；仅供未进入专用记录链的快速路径
+    登记方必须先增加sleepers再重查许可；与许可发布一起使用seq_cst，不能放到发布之前。
+    @return 当前存在共享提示等待者；不用于判断独立记录地址是否需要唤醒
+    */
+    bool hasWaiters() const;
 
     /** 当前稳定后端是否支持对独立事件记录直接比较睡眠
     @return Windows地址后端、Linux/Android及Wasm线程后端为true
@@ -119,16 +141,22 @@ private:
 private:
     // 只增不回绕的提示比较字，饱和后仍有有界系统等待补查
     std::atomic<uint32_t> m_word;
+    // 慢速等待参与数；登记后重查谓词，发布后无人等待可省略整个提示更新
+    std::atomic<uint32_t> m_sleepers;
     // Windows兼容事件或Apple dispatch信号量
     void* m_handle;
     // 动态解析的Windows地址等待函数
     void* m_waitAddress;
     // 动态解析的Windows单个地址等待者提示函数
     void* m_wakeAddress;
-    // Apple未消费提示至多一个；不是互斥门
+#ifdef __APPLE__
+    // Apple未消费提示至多一个；不是互斥门，其余后端无需保留本字段。
     std::atomic<uint32_t> m_hint;
-    // 慢速等待参与数；登记后重查谓词，发布后无人等待可省略整个提示更新
-    std::atomic<uint32_t> m_sleepers;
+#endif
+    // 构造后只读；初始化不提交许可，无需存储恒为false的committed。
+    SemaphoreStatus m_initializationStatus;
+    // 构造失败的系统原码；与状态一起只在发布前设置。
+    int32_t m_initializationError;
     // 析构失败的无分配诊断
     static std::atomic<uint32_t> s_cleanupFailures;
     // 已成功解析的Windows系统函数缓存；并发首次解析互不等待，只发布同一系统地址
@@ -136,3 +164,5 @@ private:
     // 先发布wake地址，再以release发布wait地址，读取者用acquire取得完整函数对
     static std::atomic<void*> s_cachedWakeAddress;
 };
+
+#include "SemaphoreWake.inl"

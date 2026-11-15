@@ -27,7 +27,9 @@ enum SemaphoreStatus
     // 扩容策略拒绝增长或抛异常
     SEMAPHORE_POLICY = 9,
     // 扩容额度尚被其他申请预留，或新批次被其他申请先取得；本次未登记
-    SEMAPHORE_RETRY = 10
+    SEMAPHORE_RETRY = 10,
+    // 仍有可用机会，但本次发布CAS竞争失败；只有try入口允许对外返回
+    SEMAPHORE_BUSY = 11
 };
 
 /** 无分配的逐调用结果，不使用跨线程共享lastError推断本次提交

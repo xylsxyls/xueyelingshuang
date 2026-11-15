@@ -2,6 +2,7 @@
 #include "SemaphoreProcessMemory.h"
 #include "SemaphoreDeadline.h"
 #include "SemaphoreCount.h"
+#include "SemaphoreRetry.h"
 #include <system_error>
 #include <new>
 #include <algorithm>
@@ -35,8 +36,13 @@ m_processCreated(false)
 {
     if (!m_count.is_lock_free() || !m_eventPool.is_lock_free() || !m_countPool.is_lock_free())
     {
-        throw std::system_error(std::make_error_code(std::errc::not_supported));
+        m_wake.failInitialization(SEMAPHORE_UNSUPPORTED);
     }
+}
+
+SemaphoreResult Semaphore::initializationResult() const
+{
+    return m_wake.initializationResult();
 }
 
 Semaphore::~Semaphore()
@@ -55,48 +61,84 @@ Semaphore::~Semaphore()
     }
 }
 
-void Semaphore::signal()
+bool Semaphore::signal()
 {
-    if (!incrementCount())
+    if (m_wake.initializationStatus() != SEMAPHORE_OK)
     {
-        checkLocalResult(publishCount(true));
-        return;
+        return false;
     }
-    SemaphoreResult result = m_wake.notify();
-    if (result.status != SEMAPHORE_OK)
+    uint64_t count = m_count.load();
+    const uint64_t next = count + 1;
+    // 只尝试普通积存；竞争、大计数和等待链交给通用重试路径。
+    if (static_cast<int64_t>(next) < 0 || !m_count.compare_exchange_strong(count, next))
     {
-        // 只在错误分支补上已提交状态，兼容入口的异常不能误导调用方重复发布。
-        result.committed = true;
-        checkLocalResult(result);
+        return signalSlow(false);
     }
+    // 发布后再读登记数，与等待方先登记再检查许可组成顺序一致的握手。
+    if (m_wake.hasWaiters())
+    {
+        return signalSlow(true);
+    }
+    return true;
 }
 
-SemaphoreResult Semaphore::trySignal()
+SemaphoreResult Semaphore::trySignal(bool retryContention, bool retryCapacity)
 {
-    if (incrementCount())
+    uint32_t contention = 0;
+    uint32_t capacity = 0;
+    for (;;)
     {
-        SemaphoreResult result = m_wake.notify();
-        result.committed = true;
+        // 每轮先离开计数池读者保护，再重试或休眠，允许退役记录回收。
+        const SemaphoreResult result = publishCount(true, false);
+        if (result.committed)
+        {
+            return result;
+        }
+        if (result.status == SEMAPHORE_BUSY && retryContention)
+        {
+            SemaphoreRetry::contention(contention);
+            continue;
+        }
+        if (retryCapacity && (result.status == SEMAPHORE_OVERFLOW ||
+            result.status == SEMAPHORE_CAPACITY || result.status == SEMAPHORE_RETRY))
+        {
+            const SemaphoreResult waited = SemaphoreRetry::capacity(capacity);
+            if (waited.status != SEMAPHORE_OK)
+            {
+                return waited;
+            }
+            continue;
+        }
         return result;
     }
-    return publishCount(true);
 }
 
-SemaphoreResult Semaphore::publishCount(bool notify)
+SemaphoreResult Semaphore::publishCount(bool notify, bool retryContention)
 {
-    if (incrementCount())
+    if (m_wake.initializationStatus() != SEMAPHORE_OK)
+    {
+        return m_wake.initializationResult();
+    }
+    bool contended = false;
+    if (incrementCount(retryContention, contended))
     {
         SemaphoreResult result = notify ? m_wake.notify() : SemaphoreResult();
         result.committed = true;
         return result;
     }
+    if (contended)
+    {
+        return SemaphoreResult(SEMAPHORE_BUSY);
+    }
     SemaphoreCount* pool = nullptr;
     const SemaphoreResult prepared = prepareCountPool(pool);
-    return prepared.status == SEMAPHORE_OK ? pool->signal(m_count, m_wake, notify) : prepared;
+    return prepared.status == SEMAPHORE_OK ? pool->signal(m_count, m_wake, notify, retryContention) : prepared;
 }
 
-bool Semaphore::incrementCount()
+bool Semaphore::incrementCount(bool retryContention, bool& contended)
 {
+    contended = false;
+    uint32_t contention = 0;
     uint64_t count = m_count.load();
     for (;;)
     {
@@ -106,31 +148,60 @@ bool Semaphore::incrementCount()
         {
             return false;
         }
-        if (m_count.compare_exchange_weak(count, next))
+        if (m_count.compare_exchange_strong(count, next))
         {
             return true;
         }
+        if (!retryContention)
+        {
+            // 失败后若已切入大计数/等待链，重新判定真实资源状态。
+            if (count < SemaphoreCount::directLimit())
+            {
+                contended = true;
+            }
+            return false;
+        }
+        SemaphoreRetry::contention(contention);
+        // 退避期间其他线程可能继续提交，重新读取，避免拿过时比较值再争抢。
+        count = m_count.load();
     }
 }
 
-void Semaphore::wait()
+// 将结果构造和重试循环留在慢路径，避免普通发布为了冷分支建立较大的栈帧。
+#ifdef _MSC_VER
+__declspec(noinline)
+#elif defined(__GNUC__)
+__attribute__((noinline))
+#endif
+bool Semaphore::signalSlow(bool committed)
 {
-    if (consumeCount())
+    if (committed)
     {
-        return;
+        m_wake.notify();
+        return true; // 提示失败不能撤销已发布许可，也不能使调用方误判为可重发。
     }
-    checkLocalResult(waitResult());
+    return trySignal(true, true).committed;
+}
+
+// 普通bool等待只需要提交位，完整Result及慢等待调用所需空间不占用热路径栈帧。
+#ifdef _MSC_VER
+__declspec(noinline)
+#elif defined(__GNUC__)
+__attribute__((noinline))
+#endif
+bool Semaphore::waitCountCommitted(bool infinite, uint32_t timeout)
+{
+    return waitCount(infinite, timeout).committed;
+}
+
+bool Semaphore::wait()
+{
+    return waitCountQuick(true, 0);
 }
 
 bool Semaphore::wait(uint32_t timeout)
 {
-    if (consumeCount())
-    {
-        return true;
-    }
-    const SemaphoreResult result = waitResult(timeout);
-    checkLocalResult(result);
-    return result.status == SEMAPHORE_OK;
+    return waitCountQuick(false, timeout);
 }
 
 SemaphoreResult Semaphore::waitResult()
@@ -154,46 +225,72 @@ void Semaphore::reset()
     m_count.store(0);
 }
 
-void Semaphore::event()
+bool Semaphore::event()
 {
-    checkLocalResult(tryEvent(false));
+    const SemaphoreResult result = tryEvent(false, true, true);
+    return result.committed || result.status == SEMAPHORE_OK;
 }
 
-void Semaphore::eventAll()
+bool Semaphore::eventAll()
 {
-    checkLocalResult(tryEvent(true));
+    const SemaphoreResult result = tryEvent(true, true, true);
+    return result.committed || result.status == SEMAPHORE_OK;
 }
 
-SemaphoreResult Semaphore::tryEvent(bool all)
+SemaphoreResult Semaphore::tryEvent(bool all, bool retryContention, bool retryCapacity)
 {
-    SemaphoreEventPool* pool = m_eventPool.load();
-    if (pool == nullptr)
+    if (m_wake.initializationStatus() != SEMAPHORE_OK)
     {
-        return SemaphoreResult();
+        return m_wake.initializationResult();
     }
-    const bool direct = m_wake.canWaitAddress();
-    SemaphoreResult result = pool->notify(all, direct ? &m_wake : nullptr);
-    // 没有合格事件登记者时，不触发无业务作用的系统广播
-    if (direct || result.status != SEMAPHORE_OK || !result.committed)
+    uint32_t contention = 0;
+    uint32_t capacity = 0;
+    for (;;)
     {
+        SemaphoreEventPool* pool = m_eventPool.load();
+        if (pool == nullptr)
+        {
+            return SemaphoreResult();
+        }
+        const bool direct = m_wake.canWaitAddress();
+        SemaphoreResult result = pool->notify(all, direct ? &m_wake : nullptr, false);
+        if (result.committed)
+        {
+            if (!direct && result.status == SEMAPHORE_OK)
+            {
+                const SemaphoreResult woke = m_wake.notify();
+                result.status = woke.status;
+                result.nativeError = woke.nativeError;
+            }
+            return result;
+        }
+        if (result.status == SEMAPHORE_BUSY && retryContention)
+        {
+            SemaphoreRetry::contention(contention);
+            continue;
+        }
+        if (result.status == SEMAPHORE_CAPACITY && retryCapacity)
+        {
+            const SemaphoreResult waited = SemaphoreRetry::capacity(capacity);
+            if (waited.status != SEMAPHORE_OK)
+            {
+                return waited;
+            }
+            continue;
+        }
         return result;
     }
-    const SemaphoreResult wake = m_wake.notify();
-    result.status = wake.status;
-    result.nativeError = wake.nativeError;
-    return result;
 }
 
-void Semaphore::eventWait()
+bool Semaphore::eventWait()
 {
-    checkLocalResult(eventWaitResult());
+    return eventWaitResult().committed;
 }
 
 bool Semaphore::eventWait(int32_t timeout)
 {
     const SemaphoreResult result = eventWaitResult(timeout);
-    checkLocalResult(result);
-    return result.status == SEMAPHORE_OK;
+    return result.committed;
 }
 
 SemaphoreResult Semaphore::eventWaitResult()
@@ -215,6 +312,11 @@ SemaphoreResult Semaphore::configureEventPool(const SemaphorePoolConfig& config)
     try
     {
         std::unique_ptr<SemaphoreEventPool> candidate(new SemaphoreEventPool(config));
+        const SemaphoreResult prepared = candidate->initializationResult();
+        if (prepared.status != SEMAPHORE_OK)
+        {
+            return prepared;
+        }
         delete m_eventPool.exchange(candidate.release());
         return SemaphoreResult();
     }
@@ -263,6 +365,11 @@ SemaphoreResult Semaphore::configureCountPool(const SemaphorePoolConfig& config)
     try
     {
         std::unique_ptr<SemaphoreCount> candidate(new SemaphoreCount(config));
+        const SemaphoreResult prepared = candidate->initializationResult();
+        if (prepared.status != SEMAPHORE_OK)
+        {
+            return prepared;
+        }
         delete m_countPool.exchange(candidate.release());
         return SemaphoreResult();
     }
@@ -439,18 +546,53 @@ bool Semaphore::unlinkProcessName()
 #endif
 }
 
-void Semaphore::processSignal()
+bool Semaphore::processSignal()
 {
-    processSignalResult();
+    return tryProcessSignalResult(true, true).committed;
 }
 
-int32_t Semaphore::tryProcessSignal()
+int32_t Semaphore::tryProcessSignal(bool retryContention, bool retryCapacity)
 {
-    const SemaphoreResult result = processSignalResult();
-    return result.status == SEMAPHORE_OK ? 0 : (result.status == SEMAPHORE_OVERFLOW ? 1 : -1);
+    const SemaphoreResult result = tryProcessSignalResult(retryContention, retryCapacity);
+    return result.committed ? 0 : (result.status == SEMAPHORE_OVERFLOW ? 1 :
+        (result.status == SEMAPHORE_BUSY ? 2 : -1));
 }
 
 SemaphoreResult Semaphore::processSignalResult()
+{
+    return tryProcessSignalResult(true, true);
+}
+
+SemaphoreResult Semaphore::tryProcessSignalResult(bool retryContention, bool retryCapacity)
+{
+    uint32_t contention = 0;
+    uint32_t capacity = 0;
+    for (;;)
+    {
+        const SemaphoreResult result = publishProcess();
+        if (result.committed)
+        {
+            return result;
+        }
+        if (result.status == SEMAPHORE_BUSY && retryContention)
+        {
+            SemaphoreRetry::contention(contention);
+            continue;
+        }
+        if (result.status == SEMAPHORE_OVERFLOW && retryCapacity)
+        {
+            const SemaphoreResult waited = SemaphoreRetry::capacity(capacity);
+            if (waited.status != SEMAPHORE_OK)
+            {
+                return waited;
+            }
+            continue;
+        }
+        return result;
+    }
+}
+
+SemaphoreResult Semaphore::publishProcess()
 {
     if (m_processSemaphore == nullptr)
     {
@@ -460,13 +602,17 @@ SemaphoreResult Semaphore::processSignalResult()
     int32_t* words = static_cast<int32_t*>(m_processSemaphore);
     const int32_t limit = SemaphoreProcessMemory::load(words + 1);
     int32_t count = SemaphoreProcessMemory::load(words);
-    while (limit > 0 && count >= 0 && count < limit)
+    if (limit > 0 && count >= 0 && count < limit)
     {
         if (SemaphoreProcessMemory::compareExchange(words, count, count + 1))
         {
             return SemaphoreResult(SEMAPHORE_OK, true);
         }
         count = SemaphoreProcessMemory::load(words);
+        if (count >= 0 && count < limit)
+        {
+            return SemaphoreResult(SEMAPHORE_BUSY);
+        }
     }
     return SemaphoreResult(limit > 0 && count == limit ? SEMAPHORE_OVERFLOW : SEMAPHORE_INVALID);
 #elif defined(_WIN32)
@@ -584,7 +730,7 @@ SemaphoreSignalWaitResult Semaphore::processSignalAndWaitResult(Semaphore& waitO
         static_cast<int32_t>(error != 0 ? error : ERROR_GEN_FAILURE));
 #else
     const SemaphoreDeadline deadline(timeout < 0, timeout < 0 ? 0 : static_cast<uint32_t>(timeout));
-    const SemaphoreResult sent = processSignalResult();
+    const SemaphoreResult sent = tryProcessSignalResult(true, false);
     if (sent.status != SEMAPHORE_OK)
     {
         return SemaphoreSignalWaitResult(sent.status, sent.committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE,
@@ -731,6 +877,11 @@ SemaphoreResult Semaphore::prepareCountPool(SemaphoreCount*& pool)
     try
     {
         std::unique_ptr<SemaphoreCount> candidate(new SemaphoreCount);
+        const SemaphoreResult prepared = candidate->initializationResult();
+        if (prepared.status != SEMAPHORE_OK)
+        {
+            return prepared;
+        }
         if (m_countPool.compare_exchange_strong(pool, candidate.get()))
         {
             pool = candidate.release();
@@ -757,6 +908,11 @@ SemaphoreResult Semaphore::prepareEventPool(SemaphoreEventPool*& pool)
     try
     {
         std::unique_ptr<SemaphoreEventPool> candidate(new SemaphoreEventPool(SemaphorePoolConfig()));
+        const SemaphoreResult prepared = candidate->initializationResult();
+        if (prepared.status != SEMAPHORE_OK)
+        {
+            return prepared;
+        }
         if (m_eventPool.compare_exchange_strong(pool, candidate.get()))
         {
             pool = candidate.release();
@@ -775,6 +931,10 @@ SemaphoreResult Semaphore::prepareEventPool(SemaphoreEventPool*& pool)
 
 SemaphoreResult Semaphore::waitCount(bool infinite, uint32_t timeout)
 {
+    if (m_wake.initializationStatus() != SEMAPHORE_OK)
+    {
+        return m_wake.initializationResult();
+    }
     if (consumeCount())
     {
         return SemaphoreResult(SEMAPHORE_OK, true);
@@ -936,6 +1096,10 @@ SemaphoreResult Semaphore::waitCountRecord(
 
 SemaphoreResult Semaphore::waitEvent(bool infinite, uint32_t timeout)
 {
+    if (m_wake.initializationStatus() != SEMAPHORE_OK)
+    {
+        return m_wake.initializationResult();
+    }
     const SemaphoreDeadline deadline(infinite, timeout);
     if (!SemaphoreWake::canBlock())
     {
@@ -999,10 +1163,17 @@ SemaphoreResult Semaphore::waitEvent(bool infinite, uint32_t timeout)
 
 SemaphoreSignalWaitResult Semaphore::signalAndWaitLocal(Semaphore& waitOn, bool infinite, uint32_t timeout)
 {
+    if (m_wake.initializationStatus() != SEMAPHORE_OK || waitOn.m_wake.initializationStatus() != SEMAPHORE_OK)
+    {
+        const SemaphoreResult failed = m_wake.initializationStatus() != SEMAPHORE_OK
+            ? m_wake.initializationResult() : waitOn.m_wake.initializationResult();
+        return SemaphoreSignalWaitResult(failed.status, SEMAPHORE_COMMIT_NONE, SEMAPHORE_COMMIT_NONE, failed.nativeError);
+    }
     const SemaphoreDeadline deadline(infinite, timeout);
     if (!m_wake.canSignalAndWait(waitOn.m_wake))
     {
-        const SemaphoreResult sent = trySignal();
+        // 普通组合操作重试竞争；容量错误立即报告，不能因发布端满载无限延长有限等待。
+        const SemaphoreResult sent = trySignal(true, false);
         if (sent.status != SEMAPHORE_OK)
         {
             return SemaphoreSignalWaitResult(sent.status,
@@ -1059,50 +1230,69 @@ SemaphoreSignalWaitResult Semaphore::signalAndWaitLocal(Semaphore& waitOn, bool 
         received.committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE, received.nativeError);
 }
 
+bool Semaphore::waitCountQuick(bool infinite, uint32_t timeout)
+{
+    if (m_wake.initializationStatus() == SEMAPHORE_OK)
+    {
+        uint64_t count = m_count.load();
+        const uint64_t next = count - 1;
+        if (static_cast<int64_t>(next) >= 0)
+        {
+            if (m_count.compare_exchange_strong(count, next))
+            {
+                return true;
+            }
+            // CAS竞争才退避；没有许可时直接进入原有系统等待协议。
+            return waitCountContended(infinite, timeout);
+        }
+    }
+    return waitCountCommitted(infinite, timeout);
+}
+
+// 快速消费失败后先退避，避免立即重试加剧缓存行争抢；热路径仅需尾调用。
+#ifdef _MSC_VER
+__declspec(noinline)
+#elif defined(__GNUC__)
+__attribute__((noinline))
+#endif
+bool Semaphore::waitCountContended(bool infinite, uint32_t timeout)
+{
+    return consumeCountContended() || waitCountCommitted(infinite, timeout);
+}
+
 bool Semaphore::consumeCount()
 {
+    if (m_wake.initializationStatus() != SEMAPHORE_OK)
+    {
+        return false;
+    }
     uint64_t count = m_count.load();
+    const uint64_t next = count - 1;
+    // 0减一和记录地址仍是负数；这两种状态必须进入原有系统等待/记录路径。
+    if (static_cast<int64_t>(next) < 0)
+    {
+        return false;
+    }
+    return m_count.compare_exchange_strong(count, next) || consumeCountContended();
+}
+
+bool Semaphore::consumeCountContended()
+{
+    uint32_t contention = 0;
     for (;;)
     {
+        SemaphoreRetry::contention(contention);
+        // 退避后读取最新状态，避免使用失败CAS带回的过时比较值。
+        uint64_t count = m_count.load();
         const uint64_t next = count - 1;
-        // 0减一的最高位为1；非空记录编码严格大于2^63，减一后仍为指针状态。
         if (static_cast<int64_t>(next) < 0)
         {
             return false;
         }
-        if (m_count.compare_exchange_weak(count, next))
+        if (m_count.compare_exchange_strong(count, next))
         {
             return true;
         }
-    }
-}
-
-void Semaphore::checkLocalResult(const SemaphoreResult& result)
-{
-    if (result.status == SEMAPHORE_OVERFLOW)
-    {
-        throw std::overflow_error("Semaphore notification counter exhausted; not committed");
-    }
-    if (result.status != SEMAPHORE_OK && result.status != SEMAPHORE_TIMEOUT)
-    {
-        if (result.status == SEMAPHORE_UNSUPPORTED)
-        {
-            throw std::system_error(std::make_error_code(std::errc::not_supported));
-        }
-        if (result.status == SEMAPHORE_NO_MEMORY)
-        {
-            throw std::bad_alloc();
-        }
-        if (result.nativeError == 0)
-        {
-            throw std::system_error(
-                std::make_error_code(result.status == SEMAPHORE_CAPACITY ? std::errc::resource_unavailable_try_again
-                                                                         : std::errc::invalid_argument),
-                "Semaphore operation rejected");
-        }
-        throw std::system_error(result.nativeError, std::system_category(),
-            result.committed ? "Semaphore notification committed; wake failed; do not publish again"
-                             : "Semaphore operation failed");
     }
 }
 

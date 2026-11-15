@@ -25,17 +25,22 @@ std::atomic<void*> SemaphoreWake::s_cachedWakeAddress(nullptr);
 
 SemaphoreWake::SemaphoreWake() :
 m_word(0),
+m_sleepers(0),
 m_handle(nullptr),
 m_waitAddress(nullptr),
 m_wakeAddress(nullptr),
+#ifdef __APPLE__
 m_hint(0),
-m_sleepers(0)
+#endif
+m_initializationStatus(SEMAPHORE_OK),
+m_initializationError(0)
 {
     static_assert(sizeof(std::atomic<uint32_t>) == sizeof(uint32_t), "Native wait word must be 32 bits");
-    if (!m_word.is_lock_free() || !m_hint.is_lock_free() || !s_cleanupFailures.is_lock_free() ||
+    if (!m_word.is_lock_free() || !m_sleepers.is_lock_free() || !s_cleanupFailures.is_lock_free() ||
         !s_cachedWaitAddress.is_lock_free())
     {
-        throw std::system_error(std::make_error_code(std::errc::not_supported));
+        failInitialization(SEMAPHORE_UNSUPPORTED);
+        return;
     }
 #ifdef _WIN32
     // 已发布的函数对直接用于构造，模块查询辅助函数只走首次解析的慢路径。
@@ -53,14 +58,14 @@ m_sleepers(0)
         m_handle = ::CreateEventW(nullptr, TRUE, FALSE, nullptr);
         if (m_handle == nullptr)
         {
-            throw std::system_error(static_cast<int32_t>(::GetLastError()), std::system_category());
+            failInitialization(SEMAPHORE_SYSTEM_ERROR, static_cast<int32_t>(::GetLastError()));
         }
     }
 #elif defined(__APPLE__)
     m_handle = dispatch_semaphore_create(0);
     if (m_handle == nullptr)
     {
-        throw std::system_error(std::make_error_code(std::errc::not_enough_memory));
+        failInitialization(SEMAPHORE_NO_MEMORY);
     }
 #endif
 }
@@ -80,6 +85,12 @@ SemaphoreWake::~SemaphoreWake()
 #endif
 }
 
+void SemaphoreWake::failInitialization(SemaphoreStatus status, int32_t nativeError)
+{
+    m_initializationStatus = status;
+    m_initializationError = nativeError;
+}
+
 uint32_t SemaphoreWake::snapshot() const
 {
     return m_word.load();
@@ -87,6 +98,10 @@ uint32_t SemaphoreWake::snapshot() const
 
 SemaphoreResult SemaphoreWake::notify(std::atomic<uint32_t>* address)
 {
+    if (m_initializationStatus != SEMAPHORE_OK)
+    {
+        return initializationResult();
+    }
     if (address != nullptr)
     {
         return notifyAddress(*address);
@@ -134,6 +149,10 @@ bool SemaphoreWake::canWaitAddress() const
 
 SemaphoreResult SemaphoreWake::prepareSignalAndWait()
 {
+    if (m_initializationStatus != SEMAPHORE_OK)
+    {
+        return initializationResult();
+    }
     if (!canBlock())
     {
         return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
@@ -195,6 +214,10 @@ SemaphoreResult SemaphoreWake::signalAndSleep(SemaphoreWake& waitOn, uint32_t ex
 
 SemaphoreResult SemaphoreWake::enterWait()
 {
+    if (m_initializationStatus != SEMAPHORE_OK)
+    {
+        return initializationResult();
+    }
     if (!canBlock())
     {
         return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
@@ -218,6 +241,10 @@ void SemaphoreWake::leaveWait()
 SemaphoreResult SemaphoreWake::sleep(
     uint32_t expected, uint32_t milliseconds, std::atomic<uint32_t>* address)
 {
+    if (m_initializationStatus != SEMAPHORE_OK)
+    {
+        return initializationResult();
+    }
     if (address != nullptr || canWaitAddress())
     {
         return sleepAddress(address != nullptr ? *address : m_word, expected, milliseconds);

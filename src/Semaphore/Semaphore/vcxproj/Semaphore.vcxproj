@@ -187,4 +187,11 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\SemaphoreRetry.h" />
+    <ClCompile Include="..\src\SemaphoreRetry.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\SemaphoreWake.inl" />
+  </ItemGroup>
 </Project>
