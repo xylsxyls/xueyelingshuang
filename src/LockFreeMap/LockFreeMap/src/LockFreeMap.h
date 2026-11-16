@@ -23,6 +23,81 @@ template <typename KeyType, typename ValueType, typename LessType = std::less<Ke
 class LockFreeMap
 {
 public:
+    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
+    @param [in] key 与对应普通接口的同名参数契约一致
+    @param [in] value 与对应普通接口的同名参数契约一致
+    @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
+    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
+    @return COMMITTED表示已提交；失败保留输入所有权
+    */
+    LockFreeMapStatus trySet(const KeyType& key, const ValueType& value, bool retryContention = false, bool retryCapacity = false);
+
+    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
+    @param [in] key 与对应普通接口的同名参数契约一致
+    @param [in] value 与对应普通接口的同名参数契约一致
+    @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
+    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
+    @return COMMITTED表示已提交；失败保留输入所有权
+    */
+    LockFreeMapStatus tryInsert(const KeyType& key, const ValueType& value, bool retryContention = false, bool retryCapacity = false);
+
+    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
+    @param [in] key 与对应普通接口的同名参数契约一致
+    @param [in] candidate 与对应普通接口的同名参数契约一致
+    @param [out] value 与对应普通接口的同名参数契约一致
+    @param [out] token 与对应普通接口的同名参数契约一致
+    @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
+    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
+    @return COMMITTED表示已提交；失败保留输入所有权
+    */
+    LockFreeMapStatus tryGetOrInsert(const KeyType& key, const ValueType& candidate, ValueType& value, LockFreeMapToken& token, bool retryContention = false, bool retryCapacity = false);
+
+    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
+    @param [in] key 与对应普通接口的同名参数契约一致
+    @param [in] token 与对应普通接口的同名参数契约一致
+    @param [in] value 与对应普通接口的同名参数契约一致
+    @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
+    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
+    @return COMMITTED表示已提交；失败保留输入所有权
+    */
+    LockFreeMapStatus tryUpdate(const KeyType& key, const LockFreeMapToken& token, const ValueType& value, bool retryContention = false, bool retryCapacity = false);
+
+    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
+    @param [in] key 与对应普通接口的同名参数契约一致
+    @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
+    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
+    @return COMMITTED表示已提交；失败保留输入所有权
+    */
+    LockFreeMapStatus tryErase(const KeyType& key, bool retryContention = false, bool retryCapacity = false);
+
+    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
+    @param [in] key 与对应普通接口的同名参数契约一致
+    @param [in] token 与对应普通接口的同名参数契约一致
+    @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
+    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
+    @return COMMITTED表示已提交；失败保留输入所有权
+    */
+    LockFreeMapStatus tryEraseIf(const KeyType& key, const LockFreeMapToken& token, bool retryContention = false, bool retryCapacity = false);
+
+    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
+    @param [in] key 与对应普通接口的同名参数契约一致
+    @param [out] value 与对应普通接口的同名参数契约一致
+    @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
+    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
+    @return COMMITTED表示已提交；失败保留输入所有权
+    */
+    LockFreeMapStatus tryExtract(const KeyType& key, ValueType& value, bool retryContention = false, bool retryCapacity = false);
+
+    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
+    @param [in] token 与对应普通接口的同名参数契约一致
+    @param [out] key 与对应普通接口的同名参数契约一致
+    @param [out] value 与对应普通接口的同名参数契约一致
+    @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
+    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
+    @return COMMITTED表示已提交；失败保留输入所有权
+    */
+    LockFreeMapStatus tryExtractLast(const LockFreeMapToken& token, KeyType& key, ValueType& value, bool retryContention = false, bool retryCapacity = false);
+
     /** 在首次使用前或显式释放后配置双池，调用期间要求外部静止
     @param [in] config 独立池预算及有界保护记录配置
     @return 成功返回 OK；失败不提交配置，保留原配置及数据
@@ -312,9 +387,11 @@ private:
     @param [out] outputValue 可选实际值或提取值输出，不需要时为 nullptr
     @param [out] outputToken 可选实际条目凭据，不需要时为 nullptr
     @tparam Mode 0 覆盖，1 插入，2 删除，3 条件更新，4 条件删除，5 最大项提取
+    @tparam RetryContention true持续重试CAS竞争，false允许返回未提交竞争状态
+    @tparam Outputs 输出位掩码，1为键、2为值、4为版本；置位输出必须非空
     @return 提交成功或明确的未提交状态
     */
-    template <uint32_t Mode>
+    template <uint32_t Mode, bool RetryContention, uint32_t Outputs = 0>
     LockFreeMapStatus write(const KeyType* key, const ValueType* value, const LockFreeMapToken* token,
         KeyType* outputKey, ValueType* outputValue, LockFreeMapToken* outputToken)
 #ifdef __EMSCRIPTEN__
@@ -322,21 +399,50 @@ private:
 #endif
         ;
 
+    /** 在单次写入释放候选和保护后处理容量重试
+    @param [in] key 可空查询键
+    @param [in] value 可空候选值
+    @param [in] token 可空条件凭据，重试不改变凭据
+    @param [out] outputKey 可空输出键
+    @param [out] outputValue 可空输出值
+    @param [out] outputToken 可空输出凭据
+    @param [in] retryContention 是否持续重试发布冲突
+    @param [in] retryCapacity 是否持续等待容量，4096次后每次等待1毫秒
+    @tparam Mode 与write的修改模式一致
+    @tparam Outputs 与write的输出位掩码一致
+    @return 已提交或明确的未提交状态
+    */
+    template <uint32_t Mode, uint32_t Outputs = 0>
+    LockFreeMapStatus writeRetry(const KeyType* key, const ValueType* value, const LockFreeMapToken* token,
+        KeyType* outputKey, ValueType* outputValue, LockFreeMapToken* outputToken, bool retryContention, bool retryCapacity);
+
     /** 复制一个受保护条目
     @param [in] key 可选查询键，首尾查询时为 nullptr
     @param [out] outputKey 可选键输出，不需要时为 nullptr
     @param [out] outputValue 可选值输出，不需要时为 nullptr
     @param [out] outputToken 可选版本凭据输出，不需要时为 nullptr
     @tparam Mode 0 查询，1 首项，2 尾项，3 下界，4 上界，调用点在编译期固定
+    @tparam Outputs 输出位掩码，1为键、2为值、4为版本；置位输出必须非空
     @return 返回 OK、NOT_FOUND 或明确错误
     */
-    template <uint32_t Mode>
+    template <uint32_t Mode, uint32_t Outputs>
     LockFreeMapStatus read(const KeyType* key, KeyType* outputKey, ValueType* outputValue,
         LockFreeMapToken* outputToken) const
 #ifdef __EMSCRIPTEN__
         noexcept
 #endif
         ;
+
+    /** 在受保护的固定键视图中遍历；Plain仅用于没有省略项和覆盖项的视图
+    @param [in] store 当前实例的稳定存储
+    @param [in] root 已完成决策且受guard保护的索引
+    @param [in,out] guard 逐项保护值版本的操作记录
+    @param [in] function 接受本项键和值的同步回调，引用不能在回调后保留
+    @param [in,out] completed 已正常返回的回调数，异常时保留此前进度
+    */
+    template <bool Plain, typename Function>
+    static void visitView(LockFreeMapIndexStore<KeyType, ValueType, LessType>* store,
+        LockFreeMapIndex<KeyType, ValueType>* root, LockFreeMapGuard& guard, Function& function, size_t& completed);
 
     /** 禁止复制拥有独立回收域的容器
     @param [in] other 源对象

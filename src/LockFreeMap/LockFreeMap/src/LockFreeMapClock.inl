@@ -1,6 +1,30 @@
 ﻿#ifndef LOCK_FREE_MAP_CLOCK_INL
 #define LOCK_FREE_MAP_CLOCK_INL
 
+#include <thread>
+
+inline bool LockFreeMapClock::waitCapacity(uint32_t& retries)
+{
+    if (retries < 4096)
+    {
+        ++retries;
+        return true;
+    }
+#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+    return false;
+#else
+    try
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+#endif
+}
+
 inline uint64_t LockFreeMapClock::sample(uint64_t units)
 {
 #ifdef _WIN32

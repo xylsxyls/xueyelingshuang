@@ -15,15 +15,10 @@ struct LockFreeMapHazardPointer
 public:
     // 受保护地址，参与安全协议的发布均使用顺序一致内存序
     std::atomic<void*> m_value;
-#ifdef __EMSCRIPTEN__
     // 发布前固定：是否兼作领取状态；原始零地址表示空闲，标记一表示已领取但无源
     bool m_claimRoot;
     // 与原布局保留相同的隔离空间
     unsigned char m_padding[63];
-#else
-    // 避免相邻保护指针被不同扫描路径共同写入缓存行
-    unsigned char m_padding[64];
-#endif
 
 public:
     /** 初始化空保护指针
@@ -43,7 +38,7 @@ public:
     void* load(std::memory_order order = std::memory_order_seq_cst) const;
 };
 
-/** 每实例固定保护记录，不依赖线程局部变量或线程退出登记
+/** 每实例固定保护记录；亲和提示辅助查找，活动拥有者用于保守识别重入
 */
 struct LockFreeMapHazardRecord
 {
@@ -53,11 +48,11 @@ public:
     std::atomic<size_t> m_threadHint;
     // 隔开只读提示与拥有者每次调用写入的领取、根保护字段，减少扫描引起的缓存行争用
     unsigned char m_hintPadding[64];
-    // 只有成功领取才授予记录所有权，提示碰撞不改变此约束
-    std::atomic<uint32_t> m_claimed;
+    // 当前调用的线程标识，领取后发布、开放复用前清零；与可能过期的亲和提示分离
+    std::atomic<size_t> m_activeOwner;
 #else
-    // 原生后端的领取状态；Wasm 使用源保护位合并记录所有权
-    std::atomic<uint32_t> m_claimed;
+    // 保留原有隔离布局，不再维护独立领取状态
+    unsigned char m_claimPadding[sizeof(std::atomic<uint32_t>)];
     // 线程亲和提示，碰撞或线程 ID 复用都不授予所有权
     std::atomic<size_t> m_threadHint;
 #endif
@@ -91,8 +86,23 @@ public:
     uint32_t m_contentionFailures;
     // 写入及条件提取竞争的累计失败次数，查询或提交成功均不重置
     uint32_t m_writeFailures;
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // 整数顺序提示的逻辑数，零表示尚未建立
+    size_t m_rankCount;
+    // 视图首键的无符号表示，仅用于生成待验证坐标
+    uint64_t m_rankOrigin;
+    // 等距键步长，零表示该规模下已停用预测
+    uint64_t m_rankStep;
+    // 最近已命中的无条件覆盖位置，只保存坐标，每次使用重新验证键
+    size_t m_writeHint;
+    // 预测步长范围为负十六至十六；零表示尚未建立提示
+    int32_t m_writeStep;
+    // 完整保留末尾隔离，避免位置提示的频繁写入与下一记录的只读亲和提示争用缓存行。
+    unsigned char m_padding[64];
+#else
     // 利用原有六十四字节隔离空间，保持池缓存和下一条记录的原有位置
     unsigned char m_padding[64 - 2 * sizeof(uint32_t)];
+#endif
 
 public:
     /** 初始化可取得的空操作记录
@@ -108,7 +118,7 @@ public:
     /** 仅尝试取得空闲记录，不等待当前持有者
     @param [in] success 成功取得独占权的内存序
     @param [in] failure 失败观察的内存序
-    @param [in] source Wasm 同步发布的初始源提示，取得记录后必须验证实际源
+    @param [in] source 同步发布的初始源提示，取得记录后必须验证实际源
     @return 是否取得独占权
     */
     bool claim(std::memory_order success = std::memory_order_seq_cst,
@@ -143,11 +153,18 @@ public:
     */
     LockFreeMapHazardRecord* acquire();
 
-    /** 取得记录时同时发布初始源提示，原生后端仍单独发布保护
+    /** 取得记录时同时发布初始源提示，所有后端均在登记后验证该源
     @param [in] source 初始源提示，只可在完成登记和源验证后解引用
     @return 取得的记录，全部占用时返回 nullptr
     */
     LockFreeMapHazardRecord* acquire(void* source);
+
+    /** 选定可用记录后读取当前源，并在领取CAS中发布
+    @param [in] source 调用期间有效的原子来源，返回后仍须重新验证
+    @return 取得的记录，全部占用时返回nullptr
+    */
+    template <typename T>
+    LockFreeMapHazardRecord* acquire(std::atomic<T*>& source);
 
     /** 扫描全部已登记保护指针
     @param [in] pointer 已摘除对象的地址
@@ -155,6 +172,19 @@ public:
     @return 仍有调用可能借用该地址时返回 true
     */
     bool protects(void* pointer, const LockFreeMapHazardRecord* ignored = nullptr) const;
+
+    /** 扫描索引根保护；索引地址只发布在根槽，不需要访问值和块的缓存行
+    @param [in] pointer 已摘除的非空索引地址，不接受领取标记
+    @param [in] ignored 已确认结束源借用的记录，无则为 nullptr
+    @return 仍有调用发布该根地址时返回 true
+    */
+    bool protectsRoot(void* pointer, const LockFreeMapHazardRecord* ignored = nullptr) const;
+
+    /** 扫描已关闭分配块的保护；分配块只发布在块槽
+    @param [in] pointer 已从目录摘除的非空分配块地址
+    @return 仍有调用发布该块地址时返回 true
+    */
+    bool protectsBlock(void* pointer) const;
 
     /** 扫描值版本借用，仅检查专用保护指针 1
     @param [in] pointer 已从当前值位置摘除的槽地址
@@ -182,6 +212,12 @@ public:
     */
     bool multipleRecords() const;
 
+    /** 从实例共享记录的活动拥有者识别当前线程外层借用，兼容跨模块重入
+    @return 活动拥有者标识相同则返回true；线程标识哈希碰撞也只会拒绝容量等待
+    @note 活动拥有者不授予记录所有权，不访问其他线程的非原子字段
+    */
+    bool mayBeHeldByCurrentThread() const;
+
     /** 多次凭据失效时请求有限次提交后退避，不保留请求者身份或资源所有权
     */
     void requestConditional();
@@ -208,6 +244,14 @@ public:
     void clearPoolCaches(void* pool);
 
 private:
+    /** 共享记录选择流程，按实例化参数决定领取前是否重新加载源
+    @param [in] source 固定源提示，仅ReadSource为false时使用
+    @param [in] address 原子来源，仅ReadSource为true时必须非空且有效
+    @return 已取得的独占记录，资源不足时返回nullptr
+    */
+    template <typename T, bool ReadSource>
+    LockFreeMapHazardRecord* acquireSource(void* source, std::atomic<T*>* address);
+
     /** 取得不授予所有权的线程亲和提示，无需线程局部登记
     @return 提示允许复用或碰撞，只有记录 CAS 才授予独占权
     */
@@ -267,6 +311,13 @@ public:
     */
     LockFreeMapGuard(LockFreeMapReclamation& domain, void* source);
 
+    /** 读取原子来源并领取记录，返回后由调用方完成来源验证
+    @param [in,out] domain 所属保护域
+    @param [in] source 调用期间有效的原子来源
+    */
+    template <typename T>
+    LockFreeMapGuard(LockFreeMapReclamation& domain, std::atomic<T*>& source);
+
     /** 先清空全部保护，再归还记录
     */
     ~LockFreeMapGuard();
@@ -289,6 +340,11 @@ public:
     __attribute__((noinline))
 #endif
     void structuralConflict();
+
+    /** 查询成功且全部借用访问已结束时，归还保护记录
+    @note 仅供未使用块保护的读取完成分支调用；返回后不得再访问借用对象或记录
+    */
+    void finishRead();
 
     /** 写入已成功且值、块保护均已清空时，释放根保护和记录
     @note 仅供 write 的提交完成分支使用；异常、冲突和提前返回仍由析构完整清理

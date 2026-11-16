@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "LockFreeMapPool.h"
 #include <cstring>
+#include <functional>
+#include <type_traits>
 
 /** 稳定键身份，当前不可变值版本通过独立原子指针发布
 */
@@ -46,11 +48,20 @@ template <typename K, typename V>
 struct LockFreeMapPoolDestroy<LockFreeMapKey<K, V>>
 {
 public:
+    // 整库释放时值池单独清理，键为平凡析构类型便没有剩余的逐项析构工作。
+    static const bool kTrivialWholeStore = std::is_trivially_destructible<K>::value;
+
+public:
     /** 在键槽最后一个引用释放后析构其值和键
     @param [in,out] value 没有读者可以借用的键对象
     @param [in] record 当前独占操作记录，允许 nullptr
     */
     static void destroy(LockFreeMapKey<K, V>& value, LockFreeMapHazardRecord* record);
+
+    /** 整库静止期只析构键，当前及历史值统一由伴随值池逐槽析构
+    @param [in,out] value 即将销毁的键对象，必须随后释放完整值池
+    */
+    static void destroyWholeStore(LockFreeMapKey<K, V>& value);
 
 };
 
@@ -162,8 +173,16 @@ public:
     LockFreeMapPool<V> m_values;
     // 仅与外部凭据共享的小型实例身份
     std::shared_ptr<const LockFreeMapIdentity> m_identity;
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // 隔离值池的维护计数与所有调用都会读取的结构根，不要求分配器提供额外对齐。
+    unsigned char m_rootLeadingPadding[64];
+#endif
     // 结构发布位置，nullptr 表示空容器
     std::atomic<LockFreeMapIndex<K, V>*> m_root;
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // 值覆盖仅间歇更新版本高水位，不应使根所在缓存行随之失效。
+    unsigned char m_rootTrailingPadding[64];
+#endif
     // 不回绕的版本预留高水位，显式释放内存不重置
     std::atomic<uint64_t> m_version;
     // 写入 CAS 冲突次数，达到上限后饱和
@@ -212,7 +231,7 @@ public:
     */
     uint32_t help(LockFreeMapIndex<K, V>* index);
 
-    /** 按用户严格弱序及局部位置提示执行二分查找
+    /** 按用户严格弱序及局部位置提示查找下界
     @param [in] index 受保护索引
     @param [in] record 调用方独占的可选位置提示
     @param [in] key 按比较器查询的键
@@ -220,6 +239,24 @@ public:
     @return 下界位置；比较异常由上层公开接口边界转换
     */
     size_t find(LockFreeMapIndex<K, V>* index, const K& key, bool& found, LockFreeMapHazardRecord* record = nullptr) const;
+
+    /** 精确查询受保护键，原生默认整数的单项视图及无预测小表可提前命中
+    @param [in] index 已由调用者保护且决策完成的索引，允许nullptr
+    @param [in] key 要查询的比较键
+    @param [in,out] record 当前独占操作记录，允许nullptr
+    @return 借用的键槽；不存在时nullptr，返回地址不能超出根保护期限
+    */
+    LockFreeMapPoolSlot<LockFreeMapKey<K, V>>* findKey(LockFreeMapIndex<K, V>* index,
+        const K& key, LockFreeMapHazardRecord* record) const;
+
+    /** 无条件覆盖优先验证最近步长预测的位置，失败则完整查找
+    @param [in] index 受保护索引
+    @param [in] key 按比较器查询的键
+    @param [out] found 是否存在比较器等价的键
+    @param [in,out] record 当前调用独占的位置提示，不保存借用地址
+    @return 已验证的命中位置或完整查找得到的下界
+    */
+    size_t findForWrite(LockFreeMapIndex<K, V>* index, const K& key, bool& found, LockFreeMapHazardRecord* record) const;
 
     /** 取得不回绕的条目版本
     @param [out] version 非零版本号
@@ -264,9 +301,10 @@ public:
     /** 清理已提交省略项及无帮助者使用的额外计划引用，调用方须独占状态1或4
     @param [in] index 独占维护的索引
     @param [in] completed 已完成计划访问的本次记录，允许 nullptr
+    @param [in] detached 调用方已摘除索引并确认其他根保护为空；后来的旧地址提示不能再通过源验证
     @return 本次释放的省略条目引用数，只可能为零或一
     */
-    size_t clean(LockFreeMapIndex<K, V>* index, LockFreeMapHazardRecord* completed);
+    size_t clean(LockFreeMapIndex<K, V>* index, LockFreeMapHazardRecord* completed, bool detached = false);
 
     /** 领取可复用数组容量，失败不改变其他索引
     @param [in] count 最低条目容量
@@ -294,6 +332,57 @@ public:
     /** 静止期清空并释放内存，保留版本计数
     */
     void freeMemory();
+
+private:
+    /** 验证默认整数位置提示及右邻区间，失配后退回完整查找
+    @param [in] index 受保护且决策完成的索引
+    @param [in] key 查询键
+    @param [in] count 当前逻辑数，必须大于三
+    @param [in] omitted 已省略的原始位置，无省略时等于count
+    @param [in,out] record 本调用独占的数值提示，不保存对象地址
+    @param [out] found 有可靠提示时输出是否精确命中，否则不修改
+    @param [in] integralDefault 默认整数比较器标记
+    @return 验证过的下界位置，允许等于count；没有可靠提示时返回SIZE_MAX
+    */
+    size_t rankHint(LockFreeMapIndex<K, V>* index, const K& key, size_t count, size_t omitted,
+        LockFreeMapHazardRecord* record, bool& found, std::true_type integralDefault) const;
+
+    /** 自定义顺序不使用数值预测，保持用户比较器的既有调用语义
+    @param [in] index 受保护索引
+    @param [in] key 查询键
+    @param [in] count 当前逻辑数
+    @param [in] omitted 已省略的原始位置
+    @param [in] record 当前独占记录
+    @param [out] found 不修改，交给完整查找填写
+    @param [in] integralDefault 非默认整数比较器标记
+    @return 总是返回SIZE_MAX，要求完整查找
+    */
+    size_t rankHint(LockFreeMapIndex<K, V>* index, const K& key, size_t count, size_t omitted,
+        LockFreeMapHazardRecord* record, bool& found, std::false_type integralDefault) const;
+
+    /** 默认整数顺序同时比较三个分界，减少串行指针追踪
+    @param [in] index 受保护且决策完成的索引
+    @param [in] key 查询键
+    @param [in] begin 逻辑区间起点
+    @param [in] end 逻辑区间终点，不包含该位置
+    @param [in] omitted 已删除的原始位置，无删除时为逻辑条目数
+    @param [in] integralDefault 默认整数比较器的编译期标记
+    @return 区间中第一个不小于查询键的位置，允许等于end
+    */
+    size_t findRange(LockFreeMapIndex<K, V>* index, const K& key, size_t begin, size_t end,
+        size_t omitted, std::true_type integralDefault) const;
+
+    /** 自定义键和比较器保留原二分的比较次数及顺序
+    @param [in] index 受保护且决策完成的索引
+    @param [in] key 查询键
+    @param [in] begin 逻辑区间起点
+    @param [in] end 逻辑区间终点，不包含该位置
+    @param [in] omitted 已删除的原始位置，无删除时为逻辑条目数
+    @param [in] integralDefault 非默认整数比较器的编译期标记
+    @return 区间中第一个不小于查询键的位置，允许等于end
+    */
+    size_t findRange(LockFreeMapIndex<K, V>* index, const K& key, size_t begin, size_t end,
+        size_t omitted, std::false_type integralDefault) const;
 
 };
 

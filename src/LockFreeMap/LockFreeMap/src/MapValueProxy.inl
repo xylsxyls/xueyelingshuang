@@ -24,6 +24,11 @@ MapValueProxy<KeyType, ValueType, LessType, MaxLevel>::~MapValueProxy()
 }
 
 template <typename KeyType, typename ValueType, typename LessType, size_t MaxLevel>
+#ifdef _MSC_VER
+__forceinline
+#else
+inline
+#endif
 MapValueProxy<KeyType, ValueType, LessType, MaxLevel>& MapValueProxy<KeyType, ValueType, LessType, MaxLevel>::operator=(const ValueType& value)
 {
     if (m_map == nullptr)

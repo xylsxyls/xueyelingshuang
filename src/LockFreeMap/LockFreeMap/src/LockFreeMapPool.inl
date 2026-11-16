@@ -9,6 +9,12 @@ void LockFreeMapPoolDestroy<T>::destroy(T& value, LockFreeMapHazardRecord* recor
 }
 
 template <typename T>
+void LockFreeMapPoolDestroy<T>::destroyWholeStore(T& value)
+{
+    value.~T();
+}
+
+template <typename T>
 LockFreeMapPoolSlot<T>::LockFreeMapPoolSlot() :
 m_references(0),
 m_block(nullptr),
@@ -33,13 +39,57 @@ template <typename T>
 LockFreeMapPoolBlock<T>::LockFreeMapPoolBlock(size_t count) :
 m_occupancy(0),
 m_activity(1),
-m_slots(new (std::nothrow) LockFreeMapPoolSlot<T>[count]),
-m_count(m_slots == nullptr ? 0 : count),
+m_slots(nullptr),
+m_count(0),
 m_hint(0),
 m_directory(0),
 m_idleActivity(0),
 m_idleStart(0)
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+, m_allocation(nullptr)
+#endif
 {
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    if (kAlignmentPadding != 0)
+    {
+        // 只调整内部槽数组，用户载荷仍须满足既有基本对齐约束。
+        const size_t maximum = (std::numeric_limits<size_t>::max)();
+        if (count > (maximum - kAlignmentPadding) / sizeof(LockFreeMapPoolSlot<T>))
+        {
+            return;
+        }
+        m_allocation = new (std::nothrow) unsigned char[count * sizeof(LockFreeMapPoolSlot<T>) + kAlignmentPadding];
+        if (m_allocation == nullptr)
+        {
+            return;
+        }
+        const size_t offset = (64 - (reinterpret_cast<uintptr_t>(m_allocation) & 63)) & 63;
+        m_slots = reinterpret_cast<LockFreeMapPoolSlot<T>*>(m_allocation + offset);
+        try
+        {
+            for (; m_count < count; ++m_count)
+            {
+                new (&m_slots[m_count]) LockFreeMapPoolSlot<T>();
+                m_slots[m_count].m_block = this;
+            }
+        }
+        catch (...)
+        {
+            // 当前槽构造只初始化基础字段；保留完整退款，防止后续构造逻辑改变时泄漏。
+            for (size_t index = 0; index < m_count; ++index)
+            {
+                m_slots[index].~LockFreeMapPoolSlot<T>();
+            }
+            delete[] m_allocation;
+            m_allocation = nullptr;
+            m_slots = nullptr;
+            m_count = 0;
+        }
+        return;
+    }
+#endif
+    m_slots = new (std::nothrow) LockFreeMapPoolSlot<T>[count];
+    m_count = m_slots == nullptr ? 0 : count;
     for (size_t index = 0; index < m_count; ++index)
     {
         m_slots[index].m_block = this;
@@ -49,6 +99,17 @@ m_idleStart(0)
 template <typename T>
 LockFreeMapPoolBlock<T>::~LockFreeMapPoolBlock()
 {
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    if (m_allocation != nullptr)
+    {
+        for (size_t index = 0; index < m_count; ++index)
+        {
+            m_slots[index].~LockFreeMapPoolSlot<T>();
+        }
+        delete[] m_allocation;
+        return;
+    }
+#endif
     delete[] m_slots;
 }
 
@@ -101,7 +162,7 @@ template <typename T>
 bool LockFreeMapPool<T>::valid(const LockFreeMapPoolConfig& config)
 {
     const size_t limit = (std::numeric_limits<size_t>::max)();
-    const size_t countLimit = limit / (sizeof(LockFreeMapPoolBlock<T>) + sizeof(LockFreeMapPoolSlot<T>));
+    const size_t countLimit = limit / (sizeof(LockFreeMapPoolBlock<T>) + LockFreeMapPoolBlock<T>::kAlignmentPadding + sizeof(LockFreeMapPoolSlot<T>));
     if (config.maximumCapacity < -1 || config.blockRecordLimit == 0 ||
         config.blockRecordLimit > limit / sizeof(LockFreeMapPoolRecord<T>) ||
         config.initialCapacity > countLimit || config.initialCapacity >= limit / 2)
@@ -147,7 +208,7 @@ LockFreeMapStatus LockFreeMapPool<T>::initialize()
 }
 
 template <typename T>
-LockFreeMapStatus LockFreeMapPool<T>::grow(bool initial)
+LockFreeMapStatus LockFreeMapPool<T>::grow(bool initial, LockFreeMapHazardRecord* hint)
 {
     if (m_records == nullptr)
     {
@@ -175,7 +236,7 @@ LockFreeMapStatus LockFreeMapPool<T>::grow(bool initial)
     }
     const size_t limit = (std::numeric_limits<size_t>::max)();
     // 总字节上限包含每槽独占一块时的最坏块头开销
-    size_t maximum = limit / (sizeof(LockFreeMapPoolSlot<T>) + sizeof(LockFreeMapPoolBlock<T>));
+    size_t maximum = limit / (sizeof(LockFreeMapPoolSlot<T>) + sizeof(LockFreeMapPoolBlock<T>) + LockFreeMapPoolBlock<T>::kAlignmentPadding);
     if (m_config.maximumCapacity >= 0 && static_cast<uint64_t>(m_config.maximumCapacity) < maximum)
     {
         maximum = static_cast<size_t>(m_config.maximumCapacity);
@@ -229,7 +290,7 @@ LockFreeMapStatus LockFreeMapPool<T>::grow(bool initial)
     }
     increment(m_allocations);
     increment(m_allocations);
-    m_bytes.fetch_add(sizeof(*block) + count * sizeof(LockFreeMapPoolSlot<T>));
+    m_bytes.fetch_add(sizeof(*block) + count * sizeof(LockFreeMapPoolSlot<T>) + LockFreeMapPoolBlock<T>::kAlignmentPadding);
     size_t span = m_span.load();
     const size_t position = static_cast<size_t>(record - m_records);
     while (span <= position && !m_span.compare_exchange_weak(span, position + 1))
@@ -255,6 +316,25 @@ LockFreeMapStatus LockFreeMapPool<T>::grow(bool initial)
         }
     }
     record->m_state.store(2);
+    if (hint != nullptr && !m_canShrink)
+    {
+        // 新块发布后优先从其空槽开始，避免再扫描刚确认占满的旧块。
+        // 仅保存坐标，take仍校验目录并通过槽CAS取得独占权。
+        const size_t channel = m_deferred ? 1 : 0;
+        hint->m_directoryHint[channel] = position;
+        hint->m_slotHint[channel] = 0;
+    }
+    if (!initial && m_config.m_onGrowth)
+    {
+        try
+        {
+            m_config.m_onGrowth(count, m_grows.load());
+        }
+        catch (...)
+        {
+            // 成功容量已发布；失败的观察回调不改变数据操作的提交语义。
+        }
+    }
     return LOCK_FREE_MAP_OK;
 }
 
@@ -289,7 +369,7 @@ LockFreeMapPoolSlot<T>* LockFreeMapPool<T>::take(LockFreeMapGuard& guard)
         bool pinned = false;
         if (m_canShrink)
         {
-            guard.m_record->m_pointer[2].store(block);
+            guard.m_record->m_pointer[2].m_value.store(block);
             if (record.m_block.load() != block)
             {
                 continue;
@@ -304,7 +384,7 @@ LockFreeMapPoolSlot<T>* LockFreeMapPool<T>::take(LockFreeMapGuard& guard)
                     break;
                 }
             }
-            guard.m_record->m_pointer[2].store(nullptr);
+            guard.m_record->m_pointer[2].m_value.store(nullptr);
             if (!pinned)
             {
                 continue;
@@ -356,7 +436,7 @@ LockFreeMapPoolSlot<T>* LockFreeMapPool<T>::take(LockFreeMapGuard& guard)
     }
     if (m_canShrink)
     {
-        guard.m_record->m_pointer[2].store(nullptr);
+        guard.m_record->m_pointer[2].m_value.store(nullptr);
     }
     else
     {
@@ -398,7 +478,7 @@ LockFreeMapPoolSlot<T>* LockFreeMapPool<T>::emplace(uint64_t version,
         slot = take(guard);
         if (slot == nullptr)
         {
-            status = grow(false);
+            status = grow(false, guard.m_record);
             slot = take(guard);
             if (slot == nullptr)
             {
@@ -451,7 +531,7 @@ LockFreeMapPoolSlot<T>* LockFreeMapPool<T>::emplace(uint64_t version,
             // 预扩容失败不得撤销已经构造成功的候选
             if (capacity <= occupied || capacity - occupied <= m_config.growFreeThreshold)
             {
-                grow(false);
+                grow(false, guard.m_record);
             }
         }
     }
@@ -600,7 +680,7 @@ void LockFreeMapPool<T>::collect(LockFreeMapPoolBlock<T>* block)
 }
 
 template <typename T>
-LockFreeMapStatus LockFreeMapPool<T>::maintain(size_t budget, size_t& released)
+LockFreeMapStatus LockFreeMapPool<T>::maintain(size_t budget, size_t& released, bool releaseIdleCaches)
 {
     released = 0;
     if (m_records == nullptr)
@@ -609,16 +689,19 @@ LockFreeMapStatus LockFreeMapPool<T>::maintain(size_t budget, size_t& released)
     }
     if (!m_canShrink)
     {
-        // 增长判定前归还空闲记录占用的原始槽；活动记录的私人步骤不等待也不夺取
-        const size_t channel = m_deferred ? 1 : 0;
-        for (size_t visit = 0; visit < budget; ++visit)
+        // 容量压力和显式维护归还空闲原始槽；普通覆盖保留有界空槽缓存，缺槽时take仍能借用。
+        if (releaseIdleCaches)
         {
-            LockFreeMapPoolSlot<T>* cached = static_cast<LockFreeMapPoolSlot<T>*>(m_domain->takeIdleCache(this, channel));
-            if (cached == nullptr)
+            const size_t channel = m_deferred ? 1 : 0;
+            for (size_t visit = 0; visit < budget; ++visit)
             {
-                break;
+                LockFreeMapPoolSlot<T>* cached = static_cast<LockFreeMapPoolSlot<T>*>(m_domain->takeIdleCache(this, channel));
+                if (cached == nullptr)
+                {
+                    break;
+                }
+                cached->m_references.store(0, std::memory_order_release);
             }
-            cached->m_references.store(0, std::memory_order_release);
         }
         if (m_pending.load() != 0)
         {
@@ -673,12 +756,12 @@ LockFreeMapStatus LockFreeMapPool<T>::maintain(size_t budget, size_t& released)
         if (record.m_state.compare_exchange_strong(expected, 1))
         {
             LockFreeMapPoolBlock<T>* retired = record.m_retired;
-            if (!m_domain->protects(retired))
+            if (!m_domain->protectsBlock(retired))
             {
                 const size_t count = retired->m_count;
                 delete retired;
                 record.m_retired = nullptr;
-                m_bytes.fetch_sub(sizeof(LockFreeMapPoolBlock<T>) + count * sizeof(LockFreeMapPoolSlot<T>));
+                m_bytes.fetch_sub(sizeof(LockFreeMapPoolBlock<T>) + count * sizeof(LockFreeMapPoolSlot<T>) + LockFreeMapPoolBlock<T>::kAlignmentPadding);
                 m_capacity.fetch_sub(count);
                 m_budget.fetch_sub(count);
                 released += count;
@@ -825,42 +908,55 @@ size_t LockFreeMapPool<T>::metadataBytes() const
 }
 
 template <typename T>
-void LockFreeMapPool<T>::freeMemory()
+void LockFreeMapPool<T>::freeMemory(bool wholeStore)
 {
+    // 本入口要求外部静止并完成跨线程交接；资源销毁与元数据复位不承担并发发布。
     m_domain->clearPoolCaches(this);
     if (m_records == nullptr)
     {
         return;
     }
-    for (size_t index = 0; index < m_config.blockRecordLimit; ++index)
+    // 外部静止期释放；高水位在块发布之前登记，未登记目录从未拥有块。
+    const size_t span = m_span.load(std::memory_order_relaxed);
+    for (size_t index = 0; index < span; ++index)
     {
         LockFreeMapPoolRecord<T>& record = m_records[index];
-        LockFreeMapPoolBlock<T>* block = record.m_block.exchange(nullptr);
-        if (block != nullptr)
+        LockFreeMapPoolBlock<T>* block = record.m_block.load(std::memory_order_relaxed);
+        record.m_block.store(nullptr, std::memory_order_relaxed);
+        // 外部静止后整块即将释放；仅跳过可证明没有副作用的载荷析构。
+        const bool trivial = wholeStore ? LockFreeMapPoolDestroy<T>::kTrivialWholeStore : std::is_trivially_destructible<T>::value;
+        if (block != nullptr && !trivial)
         {
             for (size_t slot = 0; slot < block->m_count; ++slot)
             {
-                const size_t references = block->m_slots[slot].m_references.load();
+                const size_t references = block->m_slots[slot].m_references.load(std::memory_order_relaxed);
                 if (references != 0 && references != (std::numeric_limits<size_t>::max)() - 3)
                 {
-                    block->m_slots[slot].mutableValue().~T();
+                    if (wholeStore)
+                    {
+                        LockFreeMapPoolDestroy<T>::destroyWholeStore(block->m_slots[slot].mutableValue());
+                    }
+                    else
+                    {
+                        block->m_slots[slot].mutableValue().~T();
+                    }
                 }
             }
         }
         delete block;
         delete record.m_retired;
         record.m_retired = nullptr;
-        record.m_state.store(0);
+        record.m_state.store(0, std::memory_order_relaxed);
     }
-    m_budget.store(0);
-    m_capacity.store(0);
-    m_openCapacity.store(0);
-    m_retained.store(0);
-    m_inUse.store(0);
-    m_bytes.store(0);
-    m_pending.store(0);
-    m_span.store(0);
-    m_hint.store(0);
+    m_budget.store(0, std::memory_order_relaxed);
+    m_capacity.store(0, std::memory_order_relaxed);
+    m_openCapacity.store(0, std::memory_order_relaxed);
+    m_retained.store(0, std::memory_order_relaxed);
+    m_inUse.store(0, std::memory_order_relaxed);
+    m_bytes.store(0, std::memory_order_relaxed);
+    m_pending.store(0, std::memory_order_relaxed);
+    m_span.store(0, std::memory_order_relaxed);
+    m_hint.store(0, std::memory_order_relaxed);
 }
 
 #endif

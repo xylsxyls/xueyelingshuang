@@ -38,7 +38,11 @@ enum LockFreeMapStatus
     // 当前目标不支持所需原子类型的无锁实现
     LOCK_FREE_MAP_UNSUPPORTED = 13,
     // 版本计数达到不允许回绕的上限
-    LOCK_FREE_MAP_VERSION_EXHAUSTED = 14
+    LOCK_FREE_MAP_VERSION_EXHAUSTED = 14,
+    // 仅try接口：未提交尝试被并发发布冲突打断，不表示空间不足
+    LOCK_FREE_MAP_BUSY = 15,
+    // 容量等待的系统休眠失败
+    LOCK_FREE_MAP_SYSTEM_ERROR = 16
 };
 
 /** 旧赋值运算符无法返回状态，以异常报告未提交；新代码优先使用有结果接口
@@ -151,6 +155,8 @@ public:
     std::function<size_t(const LockFreeMapGrowContext&)> grow;
     // 返回期望释放容量与空闲时间的线程安全策略
     std::function<LockFreeMapShrinkDecision(const LockFreeMapShrinkContext&)> shrink;
+    // 实际发布新增槽数及成功计数快照；不含初始化，可并发，不可重入所属Map，异常忽略
+    std::function<void(size_t, uint64_t)> m_onGrowth;
 
 public:
     /** 默认初始 16、阈值 0、上限 -1、块记录 256，按当前容量倍增

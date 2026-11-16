@@ -18,11 +18,20 @@ template <typename T>
 struct LockFreeMapPoolDestroy
 {
 public:
+    // 整池释放时平凡载荷没有析构副作用，无需逐槽读取引用计数。
+    static const bool kTrivialWholeStore = std::is_trivially_destructible<T>::value;
+
+public:
     /** 析构独占载荷；用户析构须遵守不抛出约定
     @param [in,out] value 待析构的已构造对象
     @param [in] record 本次独占操作记录，允许 nullptr
     */
     static void destroy(T& value, LockFreeMapHazardRecord* record);
+
+    /** 整个存储已静止并即将销毁时析构载荷，默认仍执行完整用户析构
+    @param [in,out] value 待析构对象；内部键特化可省略伴随值池的逐项引用归还
+    */
+    static void destroyWholeStore(T& value);
 };
 
 /** 可复用有效载荷槽，生命期由拥有引用和值保护共同决定
@@ -31,6 +40,17 @@ template <typename T>
 struct LockFreeMapPoolSlot
 {
 public:
+    // 小型平凡载荷槽至少占六十四字节；键身份及非平凡对象保持紧凑布局，减少索引操作的缓存占用。
+    // 扩大的是原始存储，不改变T的对齐需求；单线程Wasm维持原来的紧凑布局。
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // 基本字段字节数，不含工具链可能增加的对齐填充
+    static const size_t kHeaderBytes = sizeof(std::atomic<size_t>) + sizeof(void*) + sizeof(uint64_t);
+    // 原始存储至少补足到六十四字节，保持载荷的原有对齐
+    static const size_t kMinimumPayload = std::is_trivially_copyable<T>::value && kHeaderBytes < 64 ? 64 - kHeaderBytes : 0;
+#else
+    // 单线程Wasm不为缓存行增加原始存储
+    static const size_t kMinimumPayload = 0;
+#endif
     // 拥有引用数；0 空闲，最大值析构中，减一退役，减二构造中，减三为原始槽缓存或复用构造
     std::atomic<size_t> m_references;
     // 所属内存块，在占用数归零前保持有效
@@ -38,7 +58,8 @@ public:
     // 不回绕的条目版本，键槽固定为零
     uint64_t m_version;
     // 满足类型对齐的原始存储，仅在槽被占用时构造对象
-    typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type m_storage;
+    typename std::aligned_storage<(sizeof(T) < kMinimumPayload ? kMinimumPayload : sizeof(T)),
+        std::alignment_of<T>::value>::type m_storage;
 
 public:
     /** 构造未含有效载荷的空槽
@@ -62,6 +83,13 @@ template <typename T>
 struct LockFreeMapPoolBlock
 {
 public:
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // 六十四字节槽同时对齐数组起点，避免相邻槽的载荷和引用计数仍落在同一缓存行。
+    static const size_t kAlignmentPadding = sizeof(LockFreeMapPoolSlot<T>) == 64 ? 63 : 0;
+#else
+    // 单线程Wasm保持原有数组分配路径。
+    static const size_t kAlignmentPadding = 0;
+#endif
     // 在途申请及有效槽位占用数，最高位关闭整块
     std::atomic<size_t> m_occupancy;
     // 验证连续空闲的饱和复用序号
@@ -78,6 +106,10 @@ public:
     uint64_t m_idleActivity;
     // 单调毫秒加一，零表示尚未观察到空闲起点
     uint64_t m_idleStart;
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // 手动对齐时拥有的原始字节数组；常规new[]路径为空，释放时必须使用原地址。
+    unsigned char* m_allocation;
+#endif
 
 public:
     /** 分配尚未构造有效载荷的槽数组
@@ -183,9 +215,10 @@ public:
     /** 评估策略，并按预算访问块记录
     @param [in] budget 最多检查的目录记录数
     @param [out] released 实际释放整块内存的槽位数
+    @param [in] releaseIdleCaches 是否主动归还其他空闲记录的原始槽；不影响退役对象回收
     @return 返回 OK 或策略异常状态
     */
-    LockFreeMapStatus maintain(size_t budget, size_t& released);
+    LockFreeMapStatus maintain(size_t budget, size_t& released, bool releaseIdleCaches = true);
 
     /** 观察池字节及各类槽位数量
     @return 各字段独立原子观察，不保证整组事务一致
@@ -193,8 +226,9 @@ public:
     LockFreeMapPoolStats stats() const;
 
     /** 外部静止期显式释放，包括初始容量
+    @param [in] wholeStore 仅整个Map存储及所有伴随池同时销毁时为true，独立池使用默认false
     */
-    void freeMemory();
+    void freeMemory(bool wholeStore = false);
 
     /** 取得固定目录元数据字节
     @return 有效载荷申请之外的目录字节数
@@ -209,9 +243,10 @@ public:
 private:
     /** 原子预留额度后申请并发布一个批次
     @param [in] initial 仅初始容量申请时为 true
+    @param [in,out] hint 当前独占记录，成功后更新分配起点；初始化时允许nullptr
     @return 区分容量预留、策略和系统申请失败的状态
     */
-    LockFreeMapStatus grow(bool initial);
+    LockFreeMapStatus grow(bool initial, LockFreeMapHazardRecord* hint = nullptr);
 
     /** 扫描已有槽并取得原始存储的独占权
     @param [in] guard 本次操作保护守卫
