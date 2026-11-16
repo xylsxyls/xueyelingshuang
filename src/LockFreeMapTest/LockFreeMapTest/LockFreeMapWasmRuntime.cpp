@@ -4,6 +4,10 @@
 #include <cstdio>
 #include <stdint.h>
 #include <string>
+#include <thread>
+#ifdef __EMSCRIPTEN__
+#include <emscripten/heap.h>
+#endif
 
 /** 不链接被测容器的运行时对照，覆盖线程、堆增长、计时和异常边界
 @param [in] argc 参数数量
@@ -28,17 +32,31 @@ int main(int argc, char** argv)
     {
         for (unsigned round = 0; round < 10; ++round)
         {
+            std::atomic<unsigned> held(0);
+            std::atomic<bool> start(false), cancel(false);
+#ifdef __EMSCRIPTEN__
+            const size_t heapBefore = emscripten_get_heap_size();
+#endif
             std::vector<LockFreeMapTestThread> threads;
-            LockFreeMapTestThreadGroup cleanup(threads);
+            LockFreeMapTestThreadGroup cleanup(threads, &cancel);
             threads.reserve(16);
             for (unsigned worker = 0; worker < 16; ++worker)
             {
-                threads.push_back(LockFreeMapTestThread([&failures, &allocationFailures, &workerExceptions, report, worker]()
+                threads.push_back(LockFreeMapTestThread([&failures, &allocationFailures, &workerExceptions, &held, &start, &cancel, report, worker]()
                 {
                     try
                     {
-                        // 同时持有的缓冲区超过默认初始堆，触发真实共享内存增长
+                        // 全部缓冲区到齐前保持持有；不能依赖线程启动速度推断同时占用。
                         std::vector<unsigned> storage(512 * 1024, worker);
+                        held.fetch_add(1);
+                        while (!start.load() && !cancel.load())
+                        {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                        }
+                        if (cancel.load())
+                        {
+                            return;
+                        }
                         std::function<unsigned(unsigned)> transform = [](unsigned value) -> unsigned
                         {
                             return (value * 7 + 3) % 1009;
@@ -101,6 +119,27 @@ int main(int argc, char** argv)
                     }
                 }));
             }
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+            while (held.load() != 16 && allocationFailures.load() == 0 && workerExceptions.load() == 0 &&
+                std::chrono::steady_clock::now() < deadline)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            const unsigned ready = held.load();
+            written = std::fprintf(report, "held_buffers,%u,%u,16\n", round + 1, ready) > 0 && written;
+#ifdef __EMSCRIPTEN__
+            // 记录实际堆变化；初始堆足够大时不冒称已触发增长。
+            const size_t heapHeld = emscripten_get_heap_size();
+            written = std::fprintf(report, "heap_bytes,%u,%llu,%llu,grown=%u\n", round + 1,
+                static_cast<unsigned long long>(heapBefore), static_cast<unsigned long long>(heapHeld),
+                heapHeld > heapBefore ? 1U : 0U) > 0 && written;
+#endif
+            if (ready != 16)
+            {
+                failures.fetch_add(1);
+                cancel.store(true);
+            }
+            start.store(true);
             for (size_t index = 0; index < threads.size(); ++index)
             {
                 if (!threads[index].join())

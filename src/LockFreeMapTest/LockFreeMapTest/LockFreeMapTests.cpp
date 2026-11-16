@@ -820,19 +820,59 @@ bool LockFreeMapTests::allocations()
             return false;
         }
     }
+    // 在相同初始状态下测量申请数；扫描全部实际位置及一个不注入的尾项。
+    uint64_t constructorPoints = 0, growPoints = 0;
+    {
+        const uint64_t before = LockFreeMapTestFaults::m_allocations.load();
+        LockFreeMap<int, int> probe;
+        constructorPoints = LockFreeMapTestFaults::m_allocations.load() - before;
+        int value = 0;
+        LockFreeMapToken token;
+        if (probe.lockFreeMapGet(0, value, token) != LOCK_FREE_MAP_NOT_FOUND)
+        {
+            return false;
+        }
+        LockFreeMapConfig config;
+        config.nodes.initialCapacity = config.values.initialCapacity = 0;
+        if (probe.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK)
+        {
+            return false;
+        }
+        const uint64_t beforeGrow = LockFreeMapTestFaults::m_allocations.load();
+        if (probe.lockFreeMapSet(1, 2) != LOCK_FREE_MAP_COMMITTED)
+        {
+            return false;
+        }
+        growPoints = LockFreeMapTestFaults::m_allocations.load() - beforeGrow;
+    }
+    // 异常庞大的计数视为测试环境或测量错误，明确失败，不能截断后声称覆盖完整。
+    if (constructorPoints == 0 || growPoints == 0 || constructorPoints > 1024 || growPoints > 1024 ||
+        LockFreeMapTestFaults::m_outstanding.load() != baseline)
+    {
+        return false;
+    }
     int constructorFaults = 0, growFaults = 0, allocationFreeUpdates = 0, indexFaults = 0;
-    for (int fail = 0; fail < 40; ++fail)
+    for (int64_t fail = 0; fail <= static_cast<int64_t>(constructorPoints); ++fail)
     {
         LockFreeMapTestFaults::m_failAfter.store(fail);
         try
         {
             LockFreeMap<int, int> map;
+            const bool injected = LockFreeMapTestFaults::m_failAfter.load() == -1;
             LockFreeMapTestFaults::m_failAfter.store(-1);
+            if (injected != (fail < static_cast<int64_t>(constructorPoints)))
+            {
+                return false;
+            }
             int value = 0;
             LockFreeMapToken token;
             const LockFreeMapStatus status = map.lockFreeMapGet(0, value, token);
             if (status == LOCK_FREE_MAP_ALLOCATION_FAILURE)
             {
+                if (!injected)
+                {
+                    return false;
+                }
                 ++constructorFaults;
             }
             else if (status != LOCK_FREE_MAP_NOT_FOUND)
@@ -842,7 +882,9 @@ bool LockFreeMapTests::allocations()
         }
         catch (const std::bad_alloc&)
         {
-            ++constructorFaults;
+            // 无参构造没有调用方参数申请；库应保存申请失败状态，不能把异常逃逸当作通过。
+            LockFreeMapTestFaults::m_failAfter.store(-1);
+            return false;
         }
         LockFreeMapTestFaults::m_failAfter.store(-1);
         if (LockFreeMapTestFaults::m_outstanding.load() != baseline)
@@ -850,7 +892,7 @@ bool LockFreeMapTests::allocations()
             return false;
         }
     }
-    for (int fail = 0; fail < 20; ++fail)
+    for (int64_t fail = 0; fail <= static_cast<int64_t>(growPoints); ++fail)
     {
         LockFreeMap<int, int> map;
         LockFreeMapConfig config;
@@ -861,9 +903,18 @@ bool LockFreeMapTests::allocations()
         }
         LockFreeMapTestFaults::m_failAfter.store(fail);
         LockFreeMapStatus status = map.lockFreeMapSet(1, 2);
+        const bool injected = LockFreeMapTestFaults::m_failAfter.load() == -1;
         LockFreeMapTestFaults::m_failAfter.store(-1);
+        if (injected != (fail < static_cast<int64_t>(growPoints)))
+        {
+            return false;
+        }
         if (status == LOCK_FREE_MAP_ALLOCATION_FAILURE)
         {
+            if (!injected)
+            {
+                return false;
+            }
             ++growFaults;
         }
         else if (status != LOCK_FREE_MAP_COMMITTED)
@@ -893,11 +944,13 @@ bool LockFreeMapTests::allocations()
     }
     const int64_t remaining = LockFreeMapTestFaults::m_outstanding.load();
     std::fprintf(LockFreeMapTestReport::m_file,
-        "allocation_sweep,constructor=%d,grow=%d,allocation_free_updates=%d,index_failures=%d,before=%lld,after=%lld\n",
+        "allocation_sweep,constructor=%d,grow=%d,allocation_free_updates=%d,index_failures=%d,before=%lld,after=%lld,constructor_points=%llu,grow_points=%llu\n",
         constructorFaults, growFaults, allocationFreeUpdates, indexFaults,
-        static_cast<long long>(baseline), static_cast<long long>(remaining));
+        static_cast<long long>(baseline), static_cast<long long>(remaining),
+        static_cast<unsigned long long>(constructorPoints), static_cast<unsigned long long>(growPoints));
 
-    return constructorFaults >= 10 && growFaults >= 5 && allocationFreeUpdates == 20 && indexFaults == 20 && remaining == baseline;
+    return constructorFaults > 0 && growFaults > 0 && allocationFreeUpdates == static_cast<int>(growPoints + 1) &&
+        indexFaults == static_cast<int>(growPoints + 1) && remaining == baseline;
 }
 
 bool LockFreeMapTests::limits()

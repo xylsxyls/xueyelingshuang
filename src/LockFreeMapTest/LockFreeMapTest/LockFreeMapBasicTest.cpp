@@ -1,8 +1,14 @@
 ﻿#include "LockFreeMapTest.h"
 #include "LockFreeMap/LockFreeMapAPI.h"
+#include "LockFreeMap/MapNode.h"
+#ifndef LOCK_FREE_MAP_TEST_SINGLE
+#include "LockFreeMapTestThread.h"
+#endif
 #include <map>
 #include <memory>
 #include <string>
+#include <thread>
+#include <vector>
 
 int LockFreeMapCompileExamples();
 
@@ -125,6 +131,107 @@ static bool CheckWholeStoreOwnership()
     return true;
 }
 
+/** 检查兼容节点的并发追加、版本观察及静止期所有权释放
+@return 所有条目恰好出现一次、版本匹配且释放后无载荷遗留时true
+*/
+static bool CheckLegacyNode()
+{
+    const size_t kWorkers = 8;
+    const size_t kPerWorker = 128;
+    const size_t kCount = kWorkers * kPerWorker;
+    typedef MapValueHolder<std::shared_ptr<uint32_t>> Holder;
+    MapNode<int, std::shared_ptr<uint32_t>, 4> node(7, 0);
+    if (node.m_level != 1 || node.appendRetainedValue(nullptr) || node.hasVisibleValue(1))
+    {
+        return false;
+    }
+    std::vector<std::weak_ptr<uint32_t>> observed(kCount);
+    std::atomic<size_t> errors(0);
+    // 每个工作者只写自己的弱引用区间，追加成功后把新值节点的唯一所有权交给兼容节点。
+    const auto append = [&](size_t worker)
+    {
+        for (size_t offset = 0; offset < kPerWorker; ++offset)
+        {
+            const size_t id = worker * kPerWorker + offset;
+            const std::shared_ptr<uint32_t> value = std::make_shared<uint32_t>(static_cast<uint32_t>(id));
+            observed[id] = value;
+            std::unique_ptr<Holder> holder(new Holder(value, static_cast<uint64_t>(id + 1)));
+            if (node.appendRetainedValue(holder.get()))
+            {
+                holder.release();
+            }
+            else
+            {
+                errors.fetch_add(1);
+            }
+        }
+    };
+#ifndef LOCK_FREE_MAP_TEST_SINGLE
+    std::vector<LockFreeMapTestThread> workers;
+    std::atomic<bool> started(false);
+    LockFreeMapTestThreadGroup group(workers, &started);
+    workers.reserve(kWorkers);
+    for (size_t worker = 0; worker < kWorkers; ++worker)
+    {
+        // 等主线程统一放行；启动失败时线程组析构也会开放入口并回收已启动线程。
+        workers.emplace_back([&, worker]()
+        {
+            while (!started.load())
+            {
+                std::this_thread::yield();
+            }
+            append(worker);
+        });
+    }
+    started.store(true);
+    for (size_t worker = 0; worker < workers.size(); ++worker)
+    {
+        if (!workers[worker].join())
+        {
+            errors.fetch_add(1);
+        }
+    }
+#else
+    for (size_t worker = 0; worker < kWorkers; ++worker)
+    {
+        append(worker);
+    }
+#endif
+    std::vector<unsigned char> seen(kCount, 0);
+    Holder* current = node.m_retainedValues.load(std::memory_order_acquire);
+    size_t count = 0;
+    bool valid = errors.load() == 0;
+    while (current != nullptr && count < kCount)
+    {
+        const uint64_t generation = current->m_generation;
+        if (!current->m_value || generation == 0 || generation > kCount ||
+            *current->m_value != generation - 1 || seen[static_cast<size_t>(generation - 1)] != 0)
+        {
+            valid = false;
+            break;
+        }
+        seen[static_cast<size_t>(generation - 1)] = 1;
+        node.m_value.store(current, std::memory_order_release);
+        std::shared_ptr<uint32_t> copied;
+        valid = node.visibleValue(generation, copied) && copied == current->m_value &&
+            !node.hasVisibleValue(generation + kCount) && valid;
+        current = current->m_nextRetained.load(std::memory_order_relaxed);
+        ++count;
+    }
+    valid = valid && current == nullptr && count == kCount;
+    for (size_t id = 0; id < kCount; ++id)
+    {
+        valid = !observed[id].expired() && valid;
+    }
+    node.releaseValueHolders();
+    valid = node.m_value.load() == nullptr && node.m_retainedValues.load() == nullptr && valid;
+    for (size_t id = 0; id < kCount; ++id)
+    {
+        valid = observed[id].expired() && valid;
+    }
+    return valid;
+}
+
 /** 以独立有序容器对照公开操作
 @return 失败时返回非零
 */
@@ -133,6 +240,11 @@ int LockFreeMapBasic()
     int failed = 0;
     try
     {
+        if (!CheckLegacyNode())
+        {
+            std::fprintf(LockFreeMapTestReport::m_file, "basic_failure,stage=legacy_node\n");
+            return 1;
+        }
         const bool traversal = CheckTraversalReentry();
         const bool ownership = CheckWholeStoreOwnership();
         const bool appended = CheckTraversalAppend();

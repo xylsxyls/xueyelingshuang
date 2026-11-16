@@ -62,7 +62,9 @@ int main(int argc, char** argv)
                 << reinterpret_cast<uintptr_t>(&index.m_overrideEntry) << ',' << (words[1] + sizeof(void*)) / 64 << ','
                 << count / 64 << ',' << decision / 64 << '\n';
         }
-        return report.good() ? 0 : 1;
+        // 关闭时仍可能发生缓冲写入失败，必须在返回成功前检查。
+        report.close();
+        return report.fail() ? 1 : 0;
     }
     catch (...)
     {

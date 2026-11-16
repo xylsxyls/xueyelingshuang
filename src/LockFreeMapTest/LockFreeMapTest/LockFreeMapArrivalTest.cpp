@@ -117,7 +117,7 @@ bool LockFreeMapArrivalTest::scenario(unsigned mode, unsigned incumbents)
             return false;
         }
     }
-    // 浠呭湪鐙珛鐜璇婃柇鏄惧紡鍚敤鏃跺浐瀹氬伐浣滅嚎绋嬶紱榛樿鍔熻兘楠岃瘉淇濇寔绯荤粺璋冨害
+    // 仅在独立环境诊断显式启用时固定工作线程；默认功能验证保持系统调度。
     std::vector<uintptr_t> processorMasks;
 #ifdef _WIN32
     char fixedWorkers[2] = { 0, 0 };

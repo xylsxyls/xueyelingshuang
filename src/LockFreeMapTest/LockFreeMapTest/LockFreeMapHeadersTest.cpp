@@ -16,7 +16,10 @@ bool LockFreeMapTestBucket::post(int value)
     }
     try
     {
-        m_tasks.push(value);
+        if (!m_tasks.push(value))
+        {
+            return false;
+        }
     }
     catch (...)
     {
@@ -33,6 +36,13 @@ int LockFreeMapHeaders()
 {
     try
     {
+        // 准入仍开放但底层发布失败时，适配器不能伪造接纳或增加通知许可。
+        LockFreeMapTestBucket unavailable;
+        unavailable.m_tasks.destroy();
+        if (unavailable.post(7) || unavailable.m_permits.load() != 0)
+        {
+            return 9;
+        }
         LockFreeMap<int, std::shared_ptr<std::string>> ordered;
         LockFreeHashMap<int, std::shared_ptr<std::string>> hashed;
         std::shared_ptr<std::string> value(new std::string("owned"));

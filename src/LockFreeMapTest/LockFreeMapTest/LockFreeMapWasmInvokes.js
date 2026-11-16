@@ -13,8 +13,8 @@ function InstrumentInvokes() {
     }
     const source = path.resolve(process.argv[2]);
     const destination = path.resolve(process.argv[3]);
-    if (source === destination) {
-        throw new Error('诊断产物不能覆盖原始JS');
+    if (source === destination || fs.existsSync(destination) || fs.existsSync(destination + '.instrumentation.json')) {
+        throw new Error('诊断输出必须使用新路径，不能覆盖原始JS或已有产物');
     }
     const original = fs.readFileSync(source, 'utf8');
     let wrappers = 0;
@@ -30,14 +30,17 @@ function InstrumentInvokes() {
     if (wrappers === 0) {
         throw new Error('没有匹配invoke包装，不能把零计数当作测量结果');
     }
-    fs.writeFileSync(destination, result, 'utf8');
-    fs.writeFileSync(destination + '.instrumentation.json', JSON.stringify({source, destination, wrappers}, null, 2), 'utf8');
+    fs.writeFileSync(destination, result, {encoding: 'utf8', flag: 'wx'});
+    fs.writeFileSync(destination + '.instrumentation.json', JSON.stringify({source, destination, wrappers}, null, 2), {encoding: 'utf8', flag: 'wx'});
 }
 
 /** 读取Wasm名称段中的函数索引，给运行期invoke计数匹配真实函数名
  * 输入为带profiling名称段的Wasm文件；输出为函数索引到名称的JSON映射
  */
 function ReadFunctionNames(source, destination) {
+    if (path.resolve(source) === path.resolve(destination) || fs.existsSync(destination)) {
+        throw new Error('名称映射必须输出到新文件，不能覆盖输入Wasm或已有产物');
+    }
     const bytes = fs.readFileSync(source);
     if (bytes.length < 8 || bytes.readUInt32LE(0) !== 0x6d736100) {
         throw new Error('输入不是Wasm模块');
@@ -107,7 +110,7 @@ function ReadFunctionNames(source, destination) {
     if (Object.keys(result).length === 0) {
         throw new Error('模块没有函数名称段');
     }
-    fs.writeFileSync(destination, JSON.stringify(result, null, 2), 'utf8');
+    fs.writeFileSync(destination, JSON.stringify(result, null, 2), {encoding: 'utf8', flag: 'wx'});
 }
 try {
     if (process.argv[2] === '--names' && process.argv.length === 5) {

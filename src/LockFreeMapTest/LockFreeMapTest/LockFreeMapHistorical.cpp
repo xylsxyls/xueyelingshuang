@@ -302,6 +302,11 @@ int LockFreeMapHistorical()
             {
                 std::this_thread::yield();
             }
+            if (!startStress.load(std::memory_order_acquire))
+            {
+                ++stressFailures;
+                return;
+            }
             for (int32_t j = 0; j < stressLoopCount; ++j)
             {
                 int32_t key = (i * 997 + j) % 512;
