@@ -27,7 +27,7 @@ template <typename KeyType, typename ValueType, typename HashType, typename Equa
 HashMapValueProxy<KeyType, ValueType, HashType, EqualType>& HashMapValueProxy<KeyType, ValueType, HashType, EqualType>::operator=(const ValueType& value)
 {
     LockFreeHashMapResult result = m_map == nullptr ? LockFreeHashMapResult(LockFreeHashMapInvalidArgument) :
-        m_map->trySet(m_key, value);
+        m_map->trySet(m_key, value, nullptr, true, false);
     if (!result.m_committed)
     {
         // 下标语法没有返回错误码的位置，失败必须显式交给调用方

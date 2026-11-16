@@ -13,7 +13,8 @@ m_versionEnd(0),
 m_operations(0),
 m_countGeneration(0),
 m_countDelta(0),
-m_cachedCount(0)
+m_cachedCount(0),
+m_snapshotBytes(0)
 {
     for (size_t i = 0; i < 4; ++i)
     {
@@ -25,7 +26,6 @@ inline LockFreeHashMapEpoch::LockFreeHashMapEpoch() :
 m_clock(1),
 m_allocation(nullptr),
 m_records(nullptr),
-m_stride(0),
 m_count(0)
 {
 
@@ -49,7 +49,7 @@ inline bool LockFreeHashMapEpoch::initialize(size_t count)
     {
         return false;
     }
-    size_t stride = (sizeof(LockFreeHashMapEpochRecord) + alignment - 1) & ~(alignment - 1);
+    const size_t stride = kRecordStride;
     if (count > (maximum - alignment + 1) / stride)
     {
         return false;
@@ -71,9 +71,9 @@ inline bool LockFreeHashMapEpoch::initialize(size_t count)
     size_t adjustment = static_cast<size_t>((alignment - (address & (alignment - 1))) & (alignment - 1));
     m_allocation = allocation;
     m_records = allocation + adjustment;
-    m_stride = stride;
     for (size_t i = 0; i < count; ++i)
     {
+        // 首次从零号位图字扫描，保留连续分配的局部性；后续记住实际成功位置。
         new (m_records + i * stride) LockFreeHashMapEpochRecord();
         ++m_count;
     }
@@ -123,75 +123,247 @@ inline uint64_t LockFreeHashMapEpoch::minimum() const
 
 inline LockFreeHashMapEpochRecord* LockFreeHashMapEpoch::record(size_t index) const
 {
-    return index < m_count ? reinterpret_cast<LockFreeHashMapEpochRecord*>(m_records + index * m_stride) : nullptr;
+    return index < m_count ? reinterpret_cast<LockFreeHashMapEpochRecord*>(m_records + index * kRecordStride) : nullptr;
 }
 
-inline size_t LockFreeHashMapEpoch::hint()
+LOCKFREEHASHMAP_FORCE_INLINE size_t& LockFreeHashMapEpoch::hintSlot()
 {
-    // 提示不拥有任何记录；真正所有权始终来自每次接纳 CAS，重入和线程编号复用都不影响安全性
 #if defined(_MSC_VER)
     static __declspec(thread) size_t s_hint = static_cast<size_t>(-1);
 #elif defined(__GNUC__) || defined(__clang__)
     static __thread size_t s_hint = static_cast<size_t>(-1);
 #else
-    return 0;
+    static thread_local size_t s_hint = static_cast<size_t>(-1);
 #endif
-#if defined(_MSC_VER) || defined(__GNUC__) || defined(__clang__)
-    if (s_hint == (std::numeric_limits<size_t>::max)())
-    {
-        try
-        {
-            // 不使用函数局部的动态初始化全局计数器，避免 v120 首次并发调用的初始化竞争
-            s_hint = std::hash<std::thread::id>()(std::this_thread::get_id());
-        }
-        catch (...)
-        {
-            s_hint = 0;
-        }
-    }
     return s_hint;
-#endif
 }
 
-inline LockFreeHashMapEpochGuard::LockFreeHashMapEpochGuard(LockFreeHashMapEpoch* domain) :
-m_record(nullptr)
+inline size_t LockFreeHashMapEpoch::initializeHint() throw()
 {
-    if (domain == nullptr || domain->count() == 0)
+    size_t& hint = hintSlot();
+    try
     {
-        return;
+        // 不使用函数局部的动态初始化全局计数器，避免 v120 首次并发调用的初始化竞争。
+        hint = std::hash<std::thread::id>()(std::this_thread::get_id());
     }
-    uint64_t epoch = domain->current();
-    size_t count = domain->count();
+    catch (...)
+    {
+        hint = 0;
+    }
+    return hint;
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE size_t LockFreeHashMapEpoch::hint()
+{
+    // 热路径只读当前线程的数值；初始化内部捕获异常，每次接纳仍通过记录 CAS。
+    const size_t hint = hintSlot();
+    return hint == (std::numeric_limits<size_t>::max)() ? initializeHint() : hint;
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE void LockFreeHashMapEpoch::remember(size_t index)
+{
+    hintSlot() = index;
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE LockFreeHashMapEpochRecord* LockFreeHashMapEpoch::acquire(bool rememberHint) throw()
+{
+    if (m_count == 0)
+    {
+        return nullptr;
+    }
+    uint64_t epoch = current();
+    size_t count = m_count;
     size_t hint = LockFreeHashMapEpoch::hint();
     // 默认固定数量为二次幂，接纳热路径不执行整数除法
     size_t index = (count & (count - 1)) == 0 ? hint & (count - 1) : hint % count;
-    for (size_t i = 0; i < domain->count(); ++i)
+    // 提示通常指向本线程上次归还的记录，直接尝试接纳，免去一次重复的原子预读。
+    // index 已经取模且记录数组在外部静止时才销毁，内部无需重复执行公开 record 的边界判断。
+    LockFreeHashMapEpochRecord* candidate = reinterpret_cast<LockFreeHashMapEpochRecord*>(m_records + index * kRecordStride);
+    uint64_t empty = 0;
+    if (candidate->m_epoch.compare_exchange_strong(empty, epoch))
     {
-        LockFreeHashMapEpochRecord* candidate = domain->record(index);
-        uint64_t empty = 0;
-        if (candidate->m_epoch.load(std::memory_order_relaxed) == 0 &&
-            candidate->m_epoch.compare_exchange_strong(empty, epoch))
+        if (rememberHint && index != hint)
         {
-            m_record = candidate;
-            return;
+            LockFreeHashMapEpoch::remember(index);
         }
-        if (++index == domain->count())
+        return candidate;
+    }
+    return acquireRemaining(index, epoch, rememberHint);
+}
+
+// 保持头文件的单一定义规则，将首选槽冲突后的扫描留在独立函数内。
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
+inline LockFreeHashMapEpochRecord* LockFreeHashMapEpoch::acquireRemaining(size_t index, uint64_t epoch, bool rememberHint) throw()
+{
+    const size_t count = m_count;
+    for (size_t i = 1; i < count; ++i)
+    {
+        if (++index == count)
         {
             index = 0;
         }
+        LockFreeHashMapEpochRecord* candidate = reinterpret_cast<LockFreeHashMapEpochRecord*>(m_records + index * kRecordStride);
+        uint64_t empty = 0;
+        // 冷扫描仍先检查占用标志，不对每个正在使用的记录执行写入式 CAS。
+        if (candidate->m_epoch.load(std::memory_order_relaxed) == 0 &&
+            candidate->m_epoch.compare_exchange_strong(empty, epoch))
+        {
+            if (rememberHint)
+            {
+                LockFreeHashMapEpoch::remember(index);
+            }
+            return candidate;
+        }
+    }
+    return nullptr;
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE LockFreeHashMapEpochGuard::LockFreeHashMapEpochGuard(LockFreeHashMapEpoch* domain, bool trackThread, bool rememberHint) throw() :
+m_record(domain != nullptr ? domain->acquire(rememberHint) : nullptr),
+m_previous(nullptr),
+m_threadHead(nullptr)
+{
+    if (trackThread)
+    {
+        track();
     }
 }
 
-inline LockFreeHashMapEpochGuard::~LockFreeHashMapEpochGuard()
+LOCKFREEHASHMAP_FORCE_INLINE LockFreeHashMapEpochGuard::~LockFreeHashMapEpochGuard() throw()
+{
+    release();
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE LockFreeHashMapEpochGuard::LockFreeHashMapEpochGuard(LockFreeHashMapReadGuard& source) throw() :
+m_record(source.transfer()),
+m_previous(nullptr),
+m_threadHead(nullptr)
+{
+    track();
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE void LockFreeHashMapEpochGuard::release() throw()
 {
     if (m_record != nullptr)
     {
+        if (m_threadHead != nullptr)
+        {
+            *m_threadHead = m_previous;
+            m_threadHead = nullptr;
+        }
         // 解引用结束后只需发布退出；进入 CAS、结构摘除和回收扫描保持顺序一致
         m_record->m_epoch.store(0, std::memory_order_release);
+        m_record = nullptr;
     }
 }
 
 inline LockFreeHashMapEpochRecord* LockFreeHashMapEpochGuard::record() const
 {
     return m_record;
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE void LockFreeHashMapEpochGuard::track() throw()
+{
+    if (m_record != nullptr && m_threadHead == nullptr)
+    {
+        m_threadHead = &current();
+        m_previous = *m_threadHead;
+        *m_threadHead = this;
+    }
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE LockFreeHashMapEpochGuard*& LockFreeHashMapEpochGuard::current()
+{
+#ifdef _MSC_VER
+    static __declspec(thread) LockFreeHashMapEpochGuard* s_current = nullptr;
+#else
+    static thread_local LockFreeHashMapEpochGuard* s_current = nullptr;
+#endif
+    return s_current;
+}
+
+inline bool LockFreeHashMapEpochGuard::heldByCurrentThread(const LockFreeHashMapEpoch* domain)
+{
+    if (domain == nullptr)
+    {
+        return false;
+    }
+    for (LockFreeHashMapEpochGuard* guard = current(); guard != nullptr; guard = guard->m_previous)
+    {
+        if (domain->owns(guard->m_record))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool LockFreeHashMapEpoch::owns(const LockFreeHashMapEpochRecord* candidate) const
+{
+    if (candidate == nullptr || m_count == 0)
+    {
+        return false;
+    }
+    // 用整数地址判定，避免对不同数组的指针作关系比较；不计算可能溢出的末端地址。
+    uintptr_t begin = reinterpret_cast<uintptr_t>(m_records);
+    uintptr_t address = reinterpret_cast<uintptr_t>(candidate);
+    if (address < begin)
+    {
+        return false;
+    }
+    uintptr_t offset = address - begin;
+    return offset % kRecordStride == 0 && offset / kRecordStride < m_count;
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE LockFreeHashMapReadGuard::LockFreeHashMapReadGuard(LockFreeHashMapEpoch* domain) throw() :
+m_record(acquireRecord(domain))
+{
+
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE LockFreeHashMapReadGuard::LockFreeHashMapReadGuard(LockFreeHashMapEpoch* domain, std::true_type inlineAdmission) throw() :
+m_record(domain != nullptr ? domain->acquire() : nullptr)
+{
+    (void)inlineAdmission;
+}
+
+// 将接纳临时状态限制在独立调用内；只返回记录指针，避免把保护对象地址传出读取函数。
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
+inline LockFreeHashMapEpochRecord* LockFreeHashMapReadGuard::acquireRecord(LockFreeHashMapEpoch* domain) throw()
+{
+    return domain != nullptr ? domain->acquire() : nullptr;
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE LockFreeHashMapReadGuard::~LockFreeHashMapReadGuard() throw()
+{
+    release();
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE LockFreeHashMapEpochRecord* LockFreeHashMapReadGuard::record() const
+{
+    return m_record;
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE void LockFreeHashMapReadGuard::release() throw()
+{
+    if (m_record != nullptr)
+    {
+        m_record->m_epoch.store(0, std::memory_order_release);
+        m_record = nullptr;
+    }
+}
+
+LOCKFREEHASHMAP_FORCE_INLINE LockFreeHashMapEpochRecord* LockFreeHashMapReadGuard::transfer() throw()
+{
+    LockFreeHashMapEpochRecord* record = m_record;
+    m_record = nullptr;
+    return record;
 }

@@ -1,9 +1,27 @@
 ﻿#pragma once
 #include "LockFreeHashMapPolicy.h"
+#include <functional>
 #include <memory>
+#include <type_traits>
 #include <exception>
 #include <stdint.h>
 #include <stddef.h>
+
+/** 只有标准共享指针复制不执行用户值复制或分配，释放旧对象仍须移到保护外
+*/
+template <typename ValueType>
+struct LockFreeHashMapSharedRead : std::false_type
+{
+
+};
+
+/** 标准共享指针可在保护内取得独立所有权，业务删除器在保护外执行
+*/
+template <typename ValueType>
+struct LockFreeHashMapSharedRead<std::shared_ptr<ValueType>> : std::true_type
+{
+
+};
 
 /** BASE-LF-1.0 操作结果，只有 m_committed 表示本次数据修改已经提交
 */
@@ -95,6 +113,23 @@ struct LockFreeHashMapIdentity
     unsigned char m_identity;
 };
 
+/** 一条保护记录缓存的身份拥有者，将快照计数分散到固定数量的控制块
+别名仍指向原实例身份，拥有者保证原身份在所有别名退出前不会释放或复用
+*/
+struct LockFreeHashMapIdentityReference
+{
+public:
+    // 强拥有原实例身份，不持有表、保护记录或池节点
+    std::shared_ptr<const LockFreeHashMapIdentity> m_identity;
+    // 拉开相邻同类控制块计数的距离，覆盖常见64/128字节缓存行，不要求超对齐分配
+    unsigned char m_padding[128];
+public:
+    /** 保存原身份所有权，不执行用户代码
+    @param [in] identity 表的非空身份，复制共享所有权，不复制身份对象
+    */
+    explicit LockFreeHashMapIdentityReference(const std::shared_ptr<const LockFreeHashMapIdentity>& identity) throw();
+};
+
 /** 与值同次观察取得的可复制版本，不允许调用方伪造有效令牌
 */
 struct LockFreeHashMapVersion
@@ -173,6 +208,10 @@ public:
 typedef LockFreeHashMapPolicy<size_t, LockFreeHashMapGrowContext> LockFreeHashMapGrowPolicy;
 typedef LockFreeHashMapPolicy<LockFreeHashMapShrinkDecision, LockFreeHashMapShrinkContext> LockFreeHashMapShrinkPolicy;
 
+/** 实际增长通知的共享所有权句柄，复制配置不复制用户目标
+*/
+typedef LockFreeHashMapPolicy<void, size_t, uint64_t> LockFreeHashMapGrowthObserver;
+
 /** 仅外部静止时复制配置，回调可以并发执行，保留共同契约字段名
 */
 struct LockFreeHashMapPoolConfig
@@ -186,7 +225,7 @@ public:
     int64_t maximumCapacity;
     // 固定块目录数量，不是桶数，每块最多 65535 个槽位
     size_t directoryCapacity;
-    // 同时操作和回调重入可借用的记录数，固定分配且无 TLS 登记
+    // 同时操作和回调重入可借用的固定记录数，线程局部链仅跟踪当前有效保护
     size_t protectionRecordCount;
     // 类型和原子后端允许时启用不超过八字节的整数键值副本缓存
     bool inlineScalarValues;
@@ -196,6 +235,8 @@ public:
     LockFreeHashMapGrowPolicy growPolicy;
     // 缩容策略所有权句柄，空表示关闭自动缩容
     LockFreeHashMapShrinkPolicy shrinkPolicy;
+    // 实际新增槽数及成功计数快照；不含初始化，可并发，不可重入同一池，异常忽略
+    LockFreeHashMapGrowthObserver m_onGrowth;
 public:
     /** 默认 64 槽、阈值 0、上限 -1、1024 块目录、128 保护记录，整数副本缓存 4096 格
     */

@@ -40,6 +40,7 @@ m_slots(nullptr),
 m_bits(nullptr),
 m_count(0),
 m_words(0),
+m_metadataPadding(),
 m_leases(0),
 m_retired(0),
 m_idle(0),
@@ -451,7 +452,9 @@ template <typename T>
 size_t LockFreeHashMapPool<T>::reclaim(size_t wordLimit)
 {
     uint64_t cutoff = m_epoch.advance();
-    LockFreeHashMapEpochGuard guard(&m_epoch);
+    // 辅助回收可嵌套在节点申请中；它的借用不应把下一次业务操作的提示迁移到另一条记录。
+    // 保留重入链和完整保护，仅避免内部维护逐步分散计数与槽缓存。
+    LockFreeHashMapEpochGuard guard(&m_epoch, true, false);
     if (guard.record() == nullptr)
     {
         return 0;
@@ -664,6 +667,17 @@ LockFreeHashMapStatus LockFreeHashMapPool<T>::grow(size_t requested, bool initia
             contention.pause();
         }
     }
+    if (!initial && m_config.m_onGrowth)
+    {
+        try
+        {
+            m_config.m_onGrowth(count, m_grows.load());
+        }
+        catch (...)
+        {
+            // 新块已可使用；观察异常不伪装成申请失败。
+        }
+    }
     return LockFreeHashMapOk;
 }
 
@@ -866,6 +880,7 @@ LockFreeHashMapPoolStats LockFreeHashMapPool<T>::stats()
     {
         result.activeProtectionRecords += m_epoch.record(i)->m_epoch.load() != 0 ? 1 : 0;
         result.cachedFree += m_epoch.record(i)->m_cachedCount.load(std::memory_order_relaxed);
+        result.retainedBytes += m_epoch.record(i)->m_snapshotBytes.load(std::memory_order_relaxed);
     }
     size_t high = m_high.load();
     for (size_t i = 0; i < high; ++i)

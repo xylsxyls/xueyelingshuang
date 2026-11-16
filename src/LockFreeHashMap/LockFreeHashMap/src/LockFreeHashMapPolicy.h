@@ -2,10 +2,11 @@
 #include <memory>
 #include <functional>
 #include <type_traits>
+#include <cstddef>
 
 /** 策略调用接口，由共享句柄拥有，避免 v120 的 std::function::_Copy 异常泄漏
 */
-template <typename ResultType, typename ContextType>
+template <typename ResultType, typename... ContextTypes>
 class LockFreeHashMapPolicyFunction
 {
 public:
@@ -17,13 +18,13 @@ public:
     @param [in] context 调用期间借用的弱一致容量观测
     @return 用户策略请求，由池进一步检查容量和安全性
     */
-    virtual ResultType invoke(const ContextType& context) = 0;
+    virtual ResultType invoke(const ContextTypes&... context) = 0;
 };
 
 /** 一次异常安全的申请拥有完整回调，构造失败自动释放申请
 */
-template <typename ResultType, typename ContextType, typename FunctionType>
-class LockFreeHashMapPolicyHolder : public LockFreeHashMapPolicyFunction<ResultType, ContextType>
+template <typename ResultType, typename FunctionType, typename... ContextTypes>
+class LockFreeHashMapPolicyHolder : public LockFreeHashMapPolicyFunction<ResultType, ContextTypes...>
 {
 public:
     /** 在 make_shared 构造中复制回调，异常时释放整个申请
@@ -35,7 +36,7 @@ public:
     @param [in] context 调用期间借用的容量观测
     @return 用户策略请求，异常向池评估边界传播
     */
-    virtual ResultType invoke(const ContextType& context);
+    virtual ResultType invoke(const ContextTypes&... context);
 private:
     // 独占回调对象，配置池时只共享外层句柄，不复制此对象
     FunctionType m_function;
@@ -44,13 +45,18 @@ private:
 /** 可复制的策略所有权句柄，回调自身可能被并发调用
 准备回调的分配和复制异常由调用方处理，池评估捕获回调执行异常
 */
-template <typename ResultType, typename ContextType>
+template <typename ResultType, typename... ContextTypes>
 class LockFreeHashMapPolicy
 {
 public:
     /** 构造空句柄，表示使用库的默认策略
     */
     LockFreeHashMapPolicy();
+
+    /** 构造空句柄，也允许以 nullptr 清除尚未安装的回调
+    @param [in] function 空指针标记
+    */
+    LockFreeHashMapPolicy(std::nullptr_t function);
 
     /** 共享所有权，不申请内存或复制用户回调
     @param [in] other 同步借用的源句柄，不得同时修改它
@@ -72,7 +78,12 @@ public:
     /** 持有普通函数指针，分配异常由调用方处理
     @param [in] function 策略函数，接收调用期观测并返回请求；空指针构造空策略
     */
-    LockFreeHashMapPolicy(ResultType (*function)(const ContextType& context));
+    LockFreeHashMapPolicy(ResultType (*function)(const ContextTypes&... context));
+
+    /** 持有按值接收通知参数的普通函数指针
+    @param [in] function 空指针构造空句柄，非空时分配异常由调用方处理
+    */
+    LockFreeHashMapPolicy(ResultType (*function)(ContextTypes... context));
 
     /** 禁止调用 v120 不安全的类型擦除回调复制，改用 fromShared
     @param [in] function 不可直接复制的 std::function 对象
@@ -96,7 +107,7 @@ public:
     @param [in] context 调用期间借用的弱一致观测
     @return 策略请求，空句柄抛 bad_function_call，直接调用者负责捕获
     */
-    ResultType operator()(const ContextType& context) const;
+    ResultType operator()(const ContextTypes&... context) const;
 
     /** 外部静止时交换策略所有权句柄
     @param [in,out] other 参与交换的句柄，不执行或复制回调
@@ -104,7 +115,7 @@ public:
     void swap(LockFreeHashMapPolicy& other);
 private:
     // 固定所有权，复制配置时共享，不在运行中更换
-    std::shared_ptr<LockFreeHashMapPolicyFunction<ResultType, ContextType>> m_function;
+    std::shared_ptr<LockFreeHashMapPolicyFunction<ResultType, ContextTypes...>> m_function;
 };
 
 #include "LockFreeHashMapPolicy.inl"

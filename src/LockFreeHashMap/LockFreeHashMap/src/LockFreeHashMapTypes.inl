@@ -24,6 +24,13 @@ m_count(count)
 
 }
 
+inline LockFreeHashMapIdentityReference::LockFreeHashMapIdentityReference(const std::shared_ptr<const LockFreeHashMapIdentity>& identity) throw() :
+m_identity(identity),
+m_padding()
+{
+
+}
+
 inline LockFreeHashMapVersion::LockFreeHashMapVersion() :
 m_sequence(0)
 {

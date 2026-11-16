@@ -65,6 +65,8 @@ public:
     size_t m_count;
     // 每个位图的原子字数量
     size_t m_words;
+    // 将只读目录信息与频繁更新的借用计数隔开，不依赖跨端的超对齐new支持
+    unsigned char m_metadataPadding[64];
     // 低三十二位为占用和预留，高三十一位为不回绕活动序号，最高位永久关闭
     LOCKFREEHASHMAP_ALIGN_64 std::atomic<uint64_t> m_leases;
     // 整块关闭代际，零为尚未关闭，最大值为释放者独占

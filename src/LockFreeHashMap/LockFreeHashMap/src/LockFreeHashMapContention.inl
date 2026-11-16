@@ -1,5 +1,46 @@
 ﻿#pragma once
 #include <thread>
+#include <chrono>
+#if defined(_WIN32) && defined(_MSC_VER) && _MSC_VER < 1900
+#include <Windows.h>
+#endif
+
+inline bool LockFreeHashMapContention::waitCapacity(uint32_t& retries)
+{
+    if (retries < 4096)
+    {
+        ++retries;
+        return true;
+    }
+    try
+    {
+#if defined(_WIN32) && defined(_MSC_VER) && _MSC_VER < 1900
+        // 旧工具链把相对休眠换算成系统日历时钟截止点；用独立单调计数器复核，避免跨时钟刻度提前结束。
+        LARGE_INTEGER begin = {}, frequency = {}, current = {};
+        if (!QueryPerformanceFrequency(&frequency) || frequency.QuadPart <= 0 ||
+            !QueryPerformanceCounter(&begin) || begin.QuadPart < 0)
+        {
+            return false;
+        }
+        const LONGLONG interval = frequency.QuadPart / 1000 + (frequency.QuadPart % 1000 != 0);
+        do
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            if (!QueryPerformanceCounter(&current) || current.QuadPart < begin.QuadPart)
+            {
+                return false;
+            }
+        } while (current.QuadPart - begin.QuadPart < interval);
+#else
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+#endif
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
 
 inline LockFreeHashMapContention::LockFreeHashMapContention() :
 m_attempts(0),

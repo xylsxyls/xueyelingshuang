@@ -18,6 +18,12 @@ public:
     */
     static void yieldExecution() throw();
 
+    /** 容量不足先重试4096次，之后每次等待1毫秒
+    @param [in,out] retries 操作局部计数，饱和于4096
+    @return true继续；休眠异常或所需计时器失败时false，由调用方保留实际资源失败状态
+    */
+    static bool waitCapacity(uint32_t& retries);
+
 private:
     /** 把调度及抖动隔离到冷路径，避免扩大普通查找和 CAS 热路径的内联代码
     */

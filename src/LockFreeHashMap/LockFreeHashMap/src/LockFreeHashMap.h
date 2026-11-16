@@ -4,12 +4,15 @@
 #include "HashMapNode.h"
 #include "LockFreeHashMapPool.h"
 #include "LockFreeHashMapValueCache.h"
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <string>
 
 /** 固定桶并发哈希表，拥有节点池，不保证键排序；数据操作可与 clear 并发，析构和配置须外部静止，键值析构不得抛异常
 哈希器与比较器必须支持并发 const 调用，等价键必须得到相同哈希值，已发布键的身份不得改变
+普通写入重试竞争但不等待资源；只有 try 接口显式开启 retryCapacity 才等待容量，调用方负责保证恢复条件
 */
 template <typename KeyType, typename ValueType, typename HashType = std::hash<KeyType>, typename EqualType = std::equal_to<KeyType>>
 class LockFreeHashMap
@@ -19,6 +22,54 @@ public:
     typedef LockFreeHashMapNode<KeyType, ValueType> Node;
     typedef LockFreeHashMapPoolSlot<Node> Slot;
     typedef LockFreeHashMapPool<Node> Storage;
+
+    /** 按对应普通接口尝试修改，不改变条件凭据或输入所有权
+    @param [in] key 与对应普通接口同名参数含义一致
+    @param [in] value 与对应普通接口同名参数含义一致
+    @param [in] retryContention true持续重试竞争，false允许返回ReservationBusy
+    @param [in] retryCapacity true等待容量；4096次后每次等待1毫秒
+    @return m_committed为true时已提交，不得重试
+    */
+    LockFreeHashMapResult tryInsert(const KeyType& key, const ValueType& value, bool retryContention = false, bool retryCapacity = false);
+
+    /** 按对应普通接口尝试修改，不改变条件凭据或输入所有权
+    @param [in] key 与对应普通接口同名参数含义一致
+    @param [in] value 与对应普通接口同名参数含义一致
+    @param [out] output 与对应普通接口同名参数含义一致
+    @param [in] retryContention true持续重试竞争，false允许返回ReservationBusy
+    @param [in] retryCapacity true等待容量；4096次后每次等待1毫秒
+    @return m_committed为true时已提交，不得重试
+    */
+    LockFreeHashMapResult tryInsertIfAbsent(const KeyType& key, const ValueType& value, Snapshot& output, bool retryContention = false, bool retryCapacity = false);
+
+    /** 按对应普通接口尝试修改，不改变条件凭据或输入所有权
+    @param [in] key 与对应普通接口同名参数含义一致
+    @param [in] version 与对应普通接口同名参数含义一致
+    @param [in] value 与对应普通接口同名参数含义一致
+    @param [out] output 与对应普通接口同名参数含义一致
+    @param [in] retryContention true持续重试竞争，false允许返回ReservationBusy
+    @param [in] retryCapacity true等待容量；4096次后每次等待1毫秒
+    @return m_committed为true时已提交，不得重试
+    */
+    LockFreeHashMapResult tryCompareExchange(const KeyType& key, const LockFreeHashMapVersion& version, const ValueType& value, Snapshot* output, bool retryContention = false, bool retryCapacity = false);
+
+    /** 按对应普通接口尝试修改，不改变条件凭据或输入所有权
+    @param [in] key 与对应普通接口同名参数含义一致
+    @param [in] version 与对应普通接口同名参数含义一致
+    @param [in] retryContention true持续重试竞争，false允许返回ReservationBusy
+    @param [in] retryCapacity true等待容量；4096次后每次等待1毫秒
+    @return m_committed为true时已提交，不得重试
+    */
+    LockFreeHashMapResult tryEraseIf(const KeyType& key, const LockFreeHashMapVersion& version, bool retryContention = false, bool retryCapacity = false);
+
+    /** 按对应普通接口尝试修改，不改变条件凭据或输入所有权
+    @param [in] key 与对应普通接口同名参数含义一致
+    @param [out] output 与对应普通接口同名参数含义一致
+    @param [in] retryContention true持续重试竞争，false允许返回ReservationBusy
+    @param [in] retryCapacity true等待容量；4096次后每次等待1毫秒
+    @return m_committed为true时已提交，不得重试
+    */
+    LockFreeHashMapResult tryTake(const KeyType& key, Snapshot& output, bool retryContention = false, bool retryCapacity = false);
 
     /** 创建桶表和默认池，内部失败由 status 查询；用户哈希器及比较器构造异常由调用方处理
     @param [in] bucketCount 桶数量，0 使用 1024，其余向上取整为 2 的幂
@@ -97,20 +148,27 @@ public:
     @param [in] key 调用期间借用的键
     @param [in] value 待复制的值，调用期间借用
     @param [out] output 可为空以跳过快照，提交前准备，失败保持原值
+    模板参数 RetryContention 固定竞争策略，内层循环不反复分派运行期开关
+    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
     @return m_committed 表示本次写入，失败不消费输入所有权
     */
-    LockFreeHashMapResult trySet(const KeyType& key, const ValueType& value, Snapshot* output = nullptr);
+    LockFreeHashMapResult trySet(const KeyType& key, const ValueType& value, Snapshot* output = nullptr,
+        bool retryContention = false, bool retryCapacity = false);
 
     /** 删除当前条目，不申请池槽位，不存在时返回 NotFound
     @param [in] key 调用期间借用的键
+    模板参数 RetryContention 固定竞争策略，内层循环不反复分派运行期开关
+    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
     @return 删除成功时 m_committed 为 true，不存在为 NotFound
     */
-    LockFreeHashMapResult tryErase(const KeyType& key);
+    LockFreeHashMapResult tryErase(const KeyType& key, bool retryContention = false, bool retryCapacity = false);
 
     /** 原子切换可见代次；耗尽时仍清空并永久拒绝后续写入
+    模板参数 RetryContention 固定竞争策略，内层循环不反复分派运行期开关
+    @param [in] retryCapacity 保留统一调用签名；清空不申请容量，因此不触发容量等待
     @return m_committed 表示清空已生效，代次耗尽同时返回 VersionExhausted
     */
-    LockFreeHashMapResult tryClear();
+    LockFreeHashMapResult tryClear(bool retryContention = false, bool retryCapacity = false);
 
     /** 由唯一外部维护者分摊回收，可与数据操作并发，摘除旧桶时处理整个旧链
     @param [in] workBudget 清理桶数和回收位图字数的预算，零不维护；整条标记前缀不按节点分割，缩容另扫描固定目录与记录
@@ -266,20 +324,34 @@ private:
     */
     size_t hashKey(const KeyType& key, std::true_type integral) const;
 
-    /** 保留用户哈希器和比较器的调用语义
+    /** 默认字符串使用分块混合，其他情况保留用户哈希器和比较器的调用语义
     @param [in] key 查询键
     @param [in] integral 编译期选择标记
-    @return 用户哈希值，异常由公共操作捕获
+    @return 内部桶哈希或用户哈希值，异常由公共操作捕获
     */
     size_t hashKey(const KeyType& key, std::false_type integral) const;
 
-    /** 默认整数哈希无用户调用，命中独立副本时不构造保护对象
+    /** 计算标准字符串的完整分块哈希，不申请内存或越界读取
+    @param [in] key 标准字符串，内容在调用期间不变
+    @param [in] builtin 只在标准哈希及标准比较器组合时选择此重载
+    @return 内部桶哈希，不承诺与 std::hash 的数值或桶位置一致
+    */
+    size_t hashString(const KeyType& key, std::true_type builtin) const;
+
+    /** 不符合标准字符串优化条件时原样调用哈希器
+    @param [in] key 原查询键，不额外复制
+    @param [in] builtin 编译期回退标记
+    @return 用户哈希值，保留其异常及调用次数
+    */
+    size_t hashString(const KeyType& key, std::false_type builtin) const;
+
+    /** 标准整数或字符串哈希无用户调用，命中独立副本时不构造保护对象
     @param [in] key 查询键
     @param [out] value 可空，空表示仅查询存在性
-    @param [in] integral 编译期默认整数标记
+    @param [in] builtin 编译期标准哈希标记；比较器及值复制仍各自使用异常边界
     @return 查询成功为 true
     */
-    bool lookupValue(const KeyType& key, ValueType* value, std::true_type integral) const;
+    bool lookupValue(const KeyType& key, ValueType* value, std::true_type builtin) const;
 
     /** 用户哈希在统一异常边界内执行，再查询副本或受保护节点
     @param [in] key 查询键
@@ -289,6 +361,14 @@ private:
     */
     bool lookupValue(const KeyType& key, ValueType* value, std::false_type integral) const;
 
+    /** 用户哈希路径的缓存未命中查询，隔离保护对象的栈开销
+    @param [in] key 查询键，仍使用调用方原对象
+    @param [in] hash 已成功计算的用户哈希，不重复调用哈希器
+    @param [out] value 可空，复制和异常语义与受保护查询一致
+    @return 查询成功为true；异常仍交由外层查询边界捕获
+    */
+    bool lookupUncached(const KeyType& key, size_t hash, ValueType* value) const;
+
     /** 通用查询的唯一保护及异常边界，复制期间持有回收保护
     @param [in] key 查询键
     @param [in] hash 已计算哈希
@@ -297,34 +377,115 @@ private:
     */
     bool lookupProtected(const KeyType& key, size_t hash, ValueType* value) const;
 
+    /** 标准键的存在性查询或普通字节赋值，不执行用户回调，保留完整代际保护
+    @param [in] key 整数或标准字符串键，等价器必须为默认类型
+    @param [in] hash 已计算哈希
+    @param [out] value 可空；非空时赋值类型必须可平凡复制赋值
+    @return 未找到或保护资源不足为 false，失败保留输出
+    */
+    bool lookupLeaf(const KeyType& key, size_t hash, ValueType* value) const;
+
+    /** 通用赋值路径保留用户代码的重入跟踪和异常边界
+    @param [in] key 查询键
+    @param [in] hash 已计算哈希
+    @param [out] value 可空，非空时在保护内调用用户赋值
+    @param [in] shared 编译期通用路径标记
+    @return 查询或赋值失败为 false
+    */
+    bool lookupProtected(const KeyType& key, size_t hash, ValueType* value, std::false_type shared) const;
+
+    /** 标准键比较和共享指针复制不执行用户代码，旧输出在保护外释放
+    @param [in] key 整数或标准字符串键
+    @param [in] hash 已计算哈希
+    @param [out] value 非空，独立共享所有权在退出保护后交付；空输出由分派层交给存在性路径
+    @param [in] shared 编译期共享值路径标记
+    @return 查询失败为 false，失败保留输出
+    */
+    bool lookupProtected(const KeyType& key, size_t hash, ValueType* value, std::true_type shared) const;
+
+    /** 通用类型不能跳过用户赋值，交回完整跟踪路径
+    @param [out] output 调用方输出，此重载不修改
+    @param [in] source 受保护的源值，此重载不复制
+    @param [in] stringValue 非标准字符串的编译期标志
+    @return false，由调用方执行正常赋值
+    */
+    static bool copyReadCharacters(ValueType& output, const ValueType& source, std::false_type stringValue);
+
+    /** 等长标准字符串直接覆盖已有字符，不调整长度、容量或执行分配
+    @param [out] output 调用方独占的标准字符串
+    @param [in] source 仍处于保护期内的完整标准字符串
+    @param [in] stringValue 精确std::string类型的编译期标志
+    @return 等长且字符复制完成为true；不等长不修改，交回正常赋值
+    */
+    static bool copyReadCharacters(ValueType& output, const ValueType& source, std::true_type stringValue);
+
+    /** 标准键通用值先使用只读保护，需要执行用户赋值时再原位转交普通保护
+    @param [in] key 不执行用户比较的标准键
+    @param [in] hash 已计算的完整哈希
+    @param [out] value 非空调用方输出
+    @return 找到并复制成功为true，保护接纳、查找或赋值失败为false
+    */
+    bool lookupDeferred(const KeyType& key, size_t hash, ValueType* value) const;
+
+    /** 字符串长度变化时转交保护并执行普通赋值，把异常清理留在独立调用点
+    @param [in,out] guard 同线程完整只读保护，函数接管其归还责任
+    @param [out] output 调用方独占输出
+    @param [in] source 仍受同一条保护记录保护的值
+    @return 赋值成功为true，异常被捕获并返回false
+    */
+    static bool assignDeferred(LockFreeHashMapReadGuard& guard, ValueType& output, const ValueType& source);
+
     // 仅默认整数键身份可以使用内建混合，不绕过任何用户哈希或等价回调
     typedef std::integral_constant<bool, std::is_integral<KeyType>::value &&
         std::is_same<HashType, std::hash<KeyType>>::value &&
         std::is_same<EqualType, std::equal_to<KeyType>>::value> IntegralHash;
 
-    /** 执行条件写入，候选和输出在提交之前准备
+    // 标准整数和标准字符串哈希不执行业务代码；自定义比较器仍在节点读取边界捕获异常。
+    typedef std::integral_constant<bool, std::is_same<HashType, std::hash<KeyType>>::value &&
+        (std::is_integral<KeyType>::value || std::is_same<KeyType, std::string>::value)> BuiltinHash;
+
+    /** 执行条件写入和竞争恢复，候选和输出在提交之前准备
     @param [in] key 借用键
     @param [in] value 写入值，删除为空
-    @param [in] mode 零为覆盖，一为插入，二为条件替换，三为删除，四为条件删除
+    模板参数 Mode：零为覆盖，一为插入，二为条件替换，三为删除，四为条件删除
     @param [in] version 可选条件凭据
     @param [out] output 可选快照，失败保持不变
+    模板参数 RetryContention 固定竞争策略，内层循环不反复分派运行期开关
     @return 操作状态及提交标志
     */
-    LockFreeHashMapResult modify(const KeyType& key, const ValueType* value, int32_t mode,
+    template <bool RetryContention, int32_t Mode>
+    LockFreeHashMapResult modify(const KeyType& key, const ValueType* value,
         const LockFreeHashMapVersion* version, Snapshot* output);
+
+    /** 分派竞争策略，并在退出保护后按开关等待真实资源，不重发已提交结果
+    @param [in] key 调用期间借用的键
+    @param [in] value 可空候选值
+    模板参数 Mode 固定修改种类，含义与modify相同
+    @param [in] version 可空条件凭据，重试不更新凭据
+    @param [out] output 可空快照输出
+    @param [in] retryContention 是否持续重试竞争及并发清空
+    @param [in] retryCapacity 是否等待容量，4096次后每次等待1毫秒
+    @return 逐次状态及提交标志
+    */
+    template <int32_t Mode>
+    LockFreeHashMapResult modifyRetry(const KeyType& key, const ValueType* value,
+        const LockFreeHashMapVersion* version, Snapshot* output, bool retryContention, bool retryCapacity);
 
     /** 在保护内执行一次修改，调用者捕获异常并分摊回收
     @param [in] key 借用键
     @param [in] value 可选写入值
     @param [in] hash 已计算哈希
-    @param [in] mode 修改模式
+    模板参数 Mode 固定修改种类，含义与modify相同
     @param [in] version 可选条件凭据
-    @param [out] output 可选快照
-    @param [in,out] record 独占登记记录
+    @param [out] output HasOutput为true时必须非空；否则为空且不准备快照
+    @param [in,out] guard 已接纳保护；执行复制、分配或用户回调之前登记重入链
+    模板参数 RetryContention 固定竞争策略，内层循环不反复分派运行期开关
+    模板参数 HasOutput 固定是否交付快照，不改变失败时保留输出的约定
     @return 状态，提交后不调用用户代码
     */
-    LockFreeHashMapResult modifyProtected(const KeyType& key, const ValueType* value, size_t hash, int32_t mode,
-        const LockFreeHashMapVersion* version, Snapshot* output, LockFreeHashMapEpochRecord& record);
+    template <bool RetryContention, int32_t Mode, bool HasOutput>
+    LockFreeHashMapResult modifyProtected(const KeyType& key, const ValueType* value, size_t hash,
+        const LockFreeHashMapVersion* version, Snapshot* output, LockFreeHashMapEpochGuard& guard);
 
     /** 查找并摘除替换、删除和旧代节点，不分配
     @param [in] key 键，空表示只清理整桶
@@ -359,9 +520,16 @@ private:
     /** 将受保护节点复制为独立快照
     @param [in] node 完整节点
     @param [out] output 成功时替换，失败保持不变
+    @param [in,out] record 当前独占且已登记重入链的保护记录
     @return 快照准备状态
     */
-    LockFreeHashMapStatus snapshot(const Node& node, Snapshot& output) const;
+    LockFreeHashMapStatus snapshot(const Node& node, Snapshot& output, LockFreeHashMapEpochRecord& record) const;
+
+    /** 取得本记录缓存的身份别名，减少不同线程快照对同一共享计数的争用
+    @param [in,out] record 当前独占且已登记重入链的保护记录，最多缓存一个拥有者
+    @return 指向相同实例身份的拥有句柄；可选缓存分配失败时返回原身份，不影响业务结果
+    */
+    const std::shared_ptr<const LockFreeHashMapIdentity>& snapshotIdentity(LockFreeHashMapEpochRecord& record) const throw();
 
     /** 交换完整快照所有权，避免临时结果交付时增加引用计数；不执行值复制
     @param [in,out] left 交换一方，旧引用由交换后的持有者正常释放
@@ -396,10 +564,11 @@ private:
     void account(LockFreeHashMapEpochRecord& record, uint64_t generation, int64_t difference);
 
     /** 准备回调副本并执行向前遍历，异常不重放回调
+    @tparam Count 对外遍历必须计数；内部向量导出只需状态，可关闭重复计数
     @param [in,out] function 被复制或移动的回调，键值只在回调期间借用
     @return 状态及已成功完成回调的条目数量
     */
-    template <typename FunctionType>
+    template <bool Count = true, typename FunctionType>
     LockFreeHashMapResult forEachProtected(FunctionType&& function) const;
 
     /** 检查数组字节溢出后向上取整桶数
