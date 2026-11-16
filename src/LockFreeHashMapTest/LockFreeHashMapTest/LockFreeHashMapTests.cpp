@@ -169,7 +169,7 @@ m_value(other.m_value)
         throw std::runtime_error("injected value copy");
     }
     int expected = other.m_value;
-    if (s_pauseValue.compare_exchange_strong(expected, -1))
+    if (expected != -1 && s_pauseValue.compare_exchange_strong(expected, -1))
     {
         s_entered.store(true);
         if (!LockFreeHashMapTests::wait(s_resume, 10000))
@@ -183,11 +183,19 @@ m_value(other.m_value)
 LockFreeHashMapTestValue::~LockFreeHashMapTestValue()
 {
     int expected = m_value;
-    if (s_pauseDestructor.compare_exchange_strong(expected, -1))
+    if (expected != -1 && s_pauseDestructor.compare_exchange_strong(expected, -1))
     {
         s_entered.store(true);
-        if (!LockFreeHashMapTests::wait(s_resume, 10000))
+        try
         {
+            if (!LockFreeHashMapTests::wait(s_resume, 10000))
+            {
+                s_destructorTimedOut.store(true);
+            }
+        }
+        catch (...)
+        {
+            // 计时设施失败也必须记为测试失败，不能让异常逃出析构函数。
             s_destructorTimedOut.store(true);
         }
     }
@@ -611,6 +619,20 @@ void LockFreeHashMapTests::versions()
 
 void LockFreeHashMapTests::exceptions()
 {
+    // -1 是关闭暂停的控制值，合法的负载荷不能把关闭状态当作命中的暂停点。
+    const int beforeFixture = LockFreeHashMapTestValue::s_live.load();
+    LockFreeHashMapTestValue::s_pauseValue.store(-1);
+    LockFreeHashMapTestValue::s_pauseDestructor.store(-1);
+    LockFreeHashMapTestValue::s_entered.store(false);
+    LockFreeHashMapTestValue::s_resume.store(true);
+    {
+        LockFreeHashMapTestValue negative(-1);
+        LockFreeHashMapTestValue copied(negative);
+        check(copied.m_value == -1, "negative fixture payload copied intact");
+    }
+    LockFreeHashMapTestValue::s_resume.store(false);
+    check(!LockFreeHashMapTestValue::s_entered.load() && LockFreeHashMapTestValue::s_live.load() == beforeFixture,
+        "disabled fixture pause never triggers for negative payload");
     typedef LockFreeHashMap<int, LockFreeHashMapTestValue, LockFreeHashMapTestHash, LockFreeHashMapTestEqual> Map;
     {
         Map map;

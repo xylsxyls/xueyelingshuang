@@ -115,6 +115,62 @@ public:
     size_t operator()(const LockFreeHashMapAddressValue& key) const;
 };
 
+/** 允许复制构造但禁止赋值的载荷，用于核对存在性查询的类型要求
+*/
+struct LockFreeHashMapImmutableValue
+{
+public:
+    // 不可赋值载荷，模拟含只读成员的业务对象
+    const int m_value;
+public:
+    /** 构造业务标记，不要求默认构造
+    @param [in] value 独立业务标记
+    */
+    explicit LockFreeHashMapImmutableValue(int value);
+
+    /** 允许复制构造，使写入与拥有快照可正常使用
+    @param [in] other 完整来源对象
+    */
+    LockFreeHashMapImmutableValue(const LockFreeHashMapImmutableValue& other) = default;
+
+    /** 禁止值赋值，存在性查询不应要求本操作
+    @param [in] other 不可用于赋值的来源
+    @return 不可调用
+    */
+    LockFreeHashMapImmutableValue& operator=(const LockFreeHashMapImmutableValue& other) = delete;
+};
+
+/** 超出基础分配器对齐保证的键值夹具，只用于初始化拒绝检查
+*/
+struct LockFreeHashMapOverAlignedValue
+{
+public:
+    // 扩展对齐超出当前六端C++11标准分配器的基础保证，不构造实际错位对象
+#if defined(_MSC_VER)
+    __declspec(align(64)) int m_value;
+#else
+    alignas(64) int m_value;
+#endif
+public:
+    /** 按业务标记比较，供超对齐键类型实例化
+    @param [in] other 完整键
+    @return 业务标记相同为true
+    */
+    bool operator==(const LockFreeHashMapOverAlignedValue& other) const;
+};
+
+/** 超对齐键的无状态哈希夹具，初始化拒绝时不会调用
+*/
+struct LockFreeHashMapOverAlignedHash
+{
+public:
+    /** 按业务标记计算哈希
+    @param [in] key 完整键
+    @return 标记的无符号值
+    */
+    size_t operator()(const LockFreeHashMapOverAlignedValue& key) const;
+};
+
 /** 新算法的独立模型与并发测试，所有退出都正常返回结果
 */
 class LockFreeHashMapRewriteTests
@@ -149,6 +205,10 @@ private:
     /** 合法键值重载operator&时，普通、try、条件和代理接口仍使用真实对象地址
     */
     static void addressableValues();
+
+    /** 不可赋值的合法值支持存在性查询、版本操作及导出，哈希和比较失败不冒充命中
+    */
+    static void nonAssignableValues();
 
     /** 导出共享指针时区分空对象、空别名和同一拥有者的不同子对象，检查表销毁后的所有权
     */

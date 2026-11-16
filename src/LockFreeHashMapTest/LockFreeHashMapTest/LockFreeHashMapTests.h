@@ -78,7 +78,7 @@ public:
     static std::atomic<bool> s_resume;
     // 需要暂停析构的载荷内容，-1 关闭注入
     static std::atomic<int> s_pauseDestructor;
-    // 析构等待超过测试期限的累计失败标志
+    // 析构等待超时或计时设施异常的累计失败标志
     static std::atomic<bool> s_destructorTimedOut;
 public:
     /** 显式构造值，故意不提供默认构造

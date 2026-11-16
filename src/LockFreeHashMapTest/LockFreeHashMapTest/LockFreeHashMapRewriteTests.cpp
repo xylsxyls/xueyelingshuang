@@ -50,7 +50,7 @@ LockFreeHashMapRewriteValue::LockFreeHashMapRewriteValue(const LockFreeHashMapRe
 m_value(other.m_value)
 {
     int expected = other.m_value;
-    if (s_pause.compare_exchange_strong(expected, -1))
+    if (expected != -1 && s_pause.compare_exchange_strong(expected, -1))
     {
         s_entered.store(true);
         while (!s_resume.load())
@@ -308,6 +308,59 @@ void LockFreeHashMapRewriteTests::sharedExports()
         "long string failure leaves both fixed slots reusable");
     strings.clearAndFreeMemory();
     check(retained.use_count() == 1, "string shared nodes release their references");
+}
+
+LockFreeHashMapImmutableValue::LockFreeHashMapImmutableValue(int value) :
+m_value(value)
+{
+
+}
+
+void LockFreeHashMapRewriteTests::nonAssignableValues()
+{
+    typedef LockFreeHashMapImmutableValue Value;
+    typedef LockFreeHashMap<int, Value> Map;
+    static_assert(std::is_copy_constructible<Value>::value, "fixture must copy construct");
+#if !defined(_MSC_VER) || _MSC_VER >= 1900
+    // v120的表达式SFINAE会误判已删除的赋值；夹具本身仍在所有端显式删除该运算符。
+    static_assert(!std::is_copy_assignable<Value>::value, "fixture must never copy assign");
+#endif
+    LockFreeHashMapPoolConfig config;
+    config.protectionRecordCount = 1;
+    Map map(4, config);
+    const Value first(17), second(23);
+    check(map.set(1, first) && map.contains(1) && !map.contains(2) && map.count(1) == 1 && map.count(2) == 0,
+        "nonassignable value supports existence queries");
+    Map::Snapshot snapshot;
+    check(map.find(1, snapshot).m_status == LockFreeHashMapOk && snapshot.m_value && snapshot.m_value->m_value == 17 &&
+        map.compareExchange(1, snapshot.m_version, second).m_committed,
+        "nonassignable value supports owned copies and conditional replacement");
+    std::vector<Value> values = map.values();
+    check(values.size() == 1 && values[0].m_value == 23, "nonassignable value export constructs independent values");
+    LockFreeHashMapResult walked = map.forEachResult([&](const int& key, const Value& value)
+    {
+        check(key == 1 && value.m_value == 23 && !map.contains(key),
+            "nonassignable existence query refuses exhausted protection budget");
+    });
+    check(walked.m_status == LockFreeHashMapOk && walked.m_count == 1 && map.contains(1),
+        "nonassignable existence query releases its protection");
+    map.clear();
+    check(!map.contains(1) && map.count(1) == 0 && map.set(1, first) && map.erase(1) && !map.contains(1),
+        "nonassignable existence query respects clear, reinsert and deletion");
+    LockFreeHashMap<std::string, Value> strings(4, config);
+    check(strings.set("key", first) && strings.contains("key") && !strings.contains("missing"),
+        "nonassignable value supports standard string keys");
+    LockFreeHashMap<int, Value, LockFreeHashMapRewriteHash, LockFreeHashMapRewriteEqual> custom(1, config);
+    check(custom.set(1, first) && custom.set(2, second) && custom.contains(1) && custom.contains(2) && !custom.contains(3),
+        "nonassignable value supports full collisions and custom key callbacks");
+    LockFreeHashMapRewriteHash::s_throw.store(true);
+    bool hashFound = custom.contains(1);
+    LockFreeHashMapRewriteHash::s_throw.store(false);
+    LockFreeHashMapRewriteEqual::s_throw.store(true);
+    bool equalFound = custom.contains(1);
+    LockFreeHashMapRewriteEqual::s_throw.store(false);
+    check(!hashFound && !equalFound && custom.contains(1),
+        "nonassignable existence query captures user exceptions and recovers");
 }
 
 void LockFreeHashMapRewriteTests::model()
@@ -597,6 +650,20 @@ void LockFreeHashMapRewriteTests::stringValues()
 
 void LockFreeHashMapRewriteTests::exceptions()
 {
+    // 关闭暂停时，负一也是合法载荷；开放恢复门，使旧夹具误触发时立即失败而非卡住。
+    const int64_t beforeFixture = LockFreeHashMapRewriteValue::s_live.load();
+    LockFreeHashMapRewriteValue::s_pause.store(-1);
+    LockFreeHashMapRewriteValue::s_entered.store(false);
+    LockFreeHashMapRewriteValue::s_resume.store(true);
+    {
+        LockFreeHashMapRewriteValue negative(-1);
+        LockFreeHashMapRewriteValue copied(negative);
+        check(copied.m_value == -1, "negative rewrite fixture payload copied intact");
+    }
+    LockFreeHashMapRewriteValue::s_resume.store(false);
+    check(!LockFreeHashMapRewriteValue::s_entered.load() &&
+        LockFreeHashMapRewriteValue::s_live.load() == beforeFixture,
+        "disabled rewrite fixture pause never triggers for negative payload");
     typedef LockFreeHashMap<int, LockFreeHashMapRewriteValue, LockFreeHashMapRewriteHash, LockFreeHashMapRewriteEqual> Map;
     Map map(1);
     LockFreeHashMapRewriteValue one(1), two(2);
@@ -1236,6 +1303,16 @@ m_prefix(0)
 
 }
 
+bool LockFreeHashMapOverAlignedValue::operator==(const LockFreeHashMapOverAlignedValue& other) const
+{
+    return m_value == other.m_value;
+}
+
+size_t LockFreeHashMapOverAlignedHash::operator()(const LockFreeHashMapOverAlignedValue& key) const
+{
+    return static_cast<size_t>(key.m_value);
+}
+
 void LockFreeHashMapRewriteTests::aligned(const void* field, const char* name)
 {
     bool valid = (reinterpret_cast<uintptr_t>(field) & 7) == 0;
@@ -1248,6 +1325,19 @@ void LockFreeHashMapRewriteTests::aligned(const void* field, const char* name)
 
 void LockFreeHashMapRewriteTests::alignment()
 {
+    static_assert(std::alignment_of<LockFreeHashMapOverAlignedValue>::value > std::alignment_of<std::max_align_t>::value,
+        "fixture must require extended alignment");
+    const int64_t allocations = LockFreeHashMapPoolTestAllocation::s_live.load();
+    {
+        // 只构造容器并查询状态，不能为了复现故障主动创建错位载荷或执行错位读写。
+        LockFreeHashMap<int, LockFreeHashMapOverAlignedValue> unsupportedValue;
+        LockFreeHashMap<LockFreeHashMapOverAlignedValue, int, LockFreeHashMapOverAlignedHash> unsupportedKey;
+        check(unsupportedValue.status() == LockFreeHashMapUnsupported && unsupportedKey.status() == LockFreeHashMapUnsupported &&
+            LockFreeHashMapPoolTestAllocation::s_live.load() == allocations,
+            "extended alignment is rejected before any container allocation");
+    }
+    check(LockFreeHashMapPoolTestAllocation::s_live.load() == allocations,
+        "unsupported alignment leaves no allocation responsibility");
     typedef LockFreeHashMapTestState::IntMap Map;
     typedef LockFreeHashMapPoolBlock<int> Block;
     std::cout << "ALIGNMENT_TYPES map=" << std::alignment_of<Map>::value <<
@@ -1370,6 +1460,7 @@ int LockFreeHashMapRewriteTests::run(bool alignmentOnly)
         int64_t allocations = LockFreeHashMapPoolTestAllocation::s_live.load();
         alignment();
         addressableValues();
+        nonAssignableValues();
         sharedExports();
         model();
         versions();
