@@ -220,6 +220,7 @@ bool SemaphoreTest::select(const std::string& text, std::vector<int32_t>& select
     {
         return false;
     }
+    std::sort(result.begin(), result.end());
     selected.swap(result);
     return true;
 }
@@ -237,7 +238,19 @@ int32_t SemaphoreTest::execute(int32_t id, bool combined)
                 return 1;
             }
         }
-        return select("25,28,30-33,25", selected) && selected.size() == 6 && checkSamples() ? 0 : 1;
+        bool nulRejected = false;
+        try
+        {
+            const std::vector<std::string> arguments(1, std::string("x\0y", 3));
+            SemaphoreTestProcess::run(SemaphoreTestProcess::executable(), arguments, "", 1);
+        }
+        catch (const std::invalid_argument&)
+        {
+            nulRejected = true;
+        }
+        return select("33,25,28,30-33,25", selected) && selected.size() == 6 &&
+            selected.front() == 25 && selected.back() == 33 && std::is_sorted(selected.begin(), selected.end()) &&
+            nulRejected && checkSamples() ? 0 : 1;
     }
 #ifdef _WIN32
     if (id == SemaphoreTestNativeIpc || id == SemaphoreTestNativeCombined)
@@ -292,14 +305,20 @@ int32_t SemaphoreTest::execute(int32_t id, bool combined)
     return 77;
 }
 
-int32_t SemaphoreTest::batch(const std::vector<int32_t>& selected, const std::string& output, bool combined)
+int32_t SemaphoreTest::batch(
+    const std::vector<int32_t>& selected, const std::string& output, bool combined, bool invalidIdentity)
 {
     if (!SemaphoreTestProcess::makeDirectory(output))
     {
         throw std::runtime_error("Cannot create output directory; create its parent first");
     }
     const std::string executable = SemaphoreTestProcess::executable();
-    const std::string identity = SemaphoreTestProcess::hash(executable);
+    std::string identity = SemaphoreTestProcess::hash(executable);
+    if (invalidIdentity)
+    {
+        // 只用于执行器反向自检：改变预期身份，不改写正在运行的程序文件。
+        identity += "-intentional-mismatch";
+    }
     std::ofstream report;
     OpenReport(report, output + "/cases.csv");
     report << "id,name,expected,type,result,exit,elapsed_ms,log\n";
@@ -331,6 +350,44 @@ int32_t SemaphoreTest::batch(const std::vector<int32_t>& selected, const std::st
             {
                 code = 125;
             }
+            arguments[0] = "--self-identity-mismatch";
+            arguments.push_back(output + "/harness-identity-results");
+            if (SemaphoreTestProcess::run(executable, arguments, output + "/harness-identity.log", 15000) != 1)
+            {
+                code = 125;
+            }
+            std::ifstream identityReport((output + "/harness-identity-results/summary.txt").c_str());
+            bool batchError = false, batchFailed = false;
+            std::string identityLine;
+            while (std::getline(identityReport, identityLine))
+            {
+                batchError = batchError || identityLine == "batch_errors=1";
+                batchFailed = batchFailed || identityLine == "result=FAIL";
+            }
+            if (!batchError || !batchFailed || identityReport.bad())
+            {
+                code = 125;
+            }
+            arguments.resize(1);
+#ifndef SEMAPHORE_TEST_BASELINE
+            arguments[0] = "--self-expire-gate";
+            const std::string gateLog = output + "/harness-gate-expired.log";
+            if (SemaphoreTestProcess::run(executable, arguments, gateLog, 15000) != 1)
+            {
+                code = 125;
+            }
+            std::ifstream gateReport(gateLog.c_str());
+            bool expired = false;
+            std::string gateLine;
+            while (std::getline(gateReport, gateLine))
+            {
+                expired = expired || gateLine == "WORKER: pause gate expired before release";
+            }
+            if (!expired || gateReport.bad())
+            {
+                code = 125;
+            }
+#endif
 #ifdef _WIN32
             for (int32_t count = 1; count <= 8; count += 7)
             {
@@ -368,19 +425,23 @@ int32_t SemaphoreTest::batch(const std::vector<int32_t>& selected, const std::st
         std::fflush(stdout);
     }
     report.close();
+    // 批次身份错误独立于用例失败计数；必须在写最终状态前完成核对。
+    const bool identityChanged = SemaphoreTestProcess::hash(executable) != identity;
+    const int32_t result = failed != 0 || identityChanged ? 1 : (passed == 0 ? 77 : 0);
     std::ofstream summary;
     OpenReport(summary, output + "/summary.txt");
     summary << "executable=" << executable << "\nsha256=" << identity << "\n";
     summary << "unique_ids=" << selected.size() << "\nconfiguration_runs=" << selected.size() << "\npassed=" << passed
             << "\nfailed=" << failed << "\nnot_run=" << skipped
-            << "\ncancelled=0\nelapsed_ms=" << SemaphoreTestProcess::now() - started << "\n";
-    if (SemaphoreTestProcess::hash(executable) != identity)
+            << "\ncancelled=0\nbatch_errors=" << (identityChanged ? 1 : 0)
+            << "\nresult=" << (result == 0 ? "PASS" : (result == 77 ? "NOT_RUN" : "FAIL"))
+            << "\nelapsed_ms=" << SemaphoreTestProcess::now() - started << "\n";
+    if (identityChanged)
     {
-        ++failed;
         summary << "FAIL executable changed during batch\n";
     }
     summary.close();
-    return failed != 0 ? 1 : (passed == 0 ? 77 : 0);
+    return result;
 }
 
 /** 计算全部轮次的中位数，不剔除慢轮次
@@ -880,6 +941,23 @@ int32_t SemaphoreTest::compare(const std::string& baseline, const std::string& o
 
 int32_t SemaphoreTest::run(int32_t argc, char** argv)
 {
+    if (argc == 3 && std::strcmp(argv[1], "--self-identity-mismatch") == 0)
+    {
+        const std::vector<int32_t> selected(1, SemaphoreTestCount);
+        return batch(selected, argv[2], false, true);
+    }
+#ifndef SEMAPHORE_TEST_BASELINE
+    if (argc == 2 && std::strcmp(argv[1], "--self-expire-gate") == 0)
+    {
+        // 故意不放行，超时必须被工作线程异常边界及主入口识别为失败。
+        SemaphoreTestGate gate(0);
+        SemaphoreTestThreads threads;
+        threads.start([&]() { gate.hit(0); });
+        SemaphoreTests::check(gate.reached(), "expiry self-check reached the gate");
+        threads.join();
+        return 0;
+    }
+#endif
 #ifdef _WIN32
     if (argc == 2 && (std::strcmp(argv[1], "--self-drop-event") == 0 ||
         std::strcmp(argv[1], "--self-drop-broadcast") == 0))

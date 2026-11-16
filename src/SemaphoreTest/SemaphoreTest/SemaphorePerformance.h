@@ -105,7 +105,7 @@ private:
     */
     static void latency(const char* name, std::vector<double>& samples);
 
-    /** 测量一百万个先发布后消费的积存许可
+    /** 测量两千万个先发布后消费的积存许可
     */
     static void bulk();
 

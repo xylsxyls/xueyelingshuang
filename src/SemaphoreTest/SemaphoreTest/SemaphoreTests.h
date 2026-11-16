@@ -50,7 +50,7 @@ public:
     */
     ~SemaphoreTestGate();
 
-    /** 仅暂停第一个命中指定位置的线程
+    /** 仅暂停第一个命中指定位置的线程，五秒内未放行则抛出测试失败
     @param [in] point 实际到达的钩子编号
     */
     void hit(int32_t point);

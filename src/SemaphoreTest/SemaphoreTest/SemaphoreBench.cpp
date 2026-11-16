@@ -4,6 +4,7 @@
 #include <atomic>
 #include <algorithm>
 #include <cstdio>
+#include <stdexcept>
 #include <thread>
 
 /** 仅使用公共接口的历史性能烟测，保留原工作量
@@ -16,8 +17,10 @@ int32_t SemaphoreBench()
     auto now = []() -> double
     {
         LARGE_INTEGER ticks, frequency;
-        ::QueryPerformanceCounter(&ticks);
-        ::QueryPerformanceFrequency(&frequency);
+        if (!::QueryPerformanceCounter(&ticks) || !::QueryPerformanceFrequency(&frequency) || frequency.QuadPart <= 0)
+        {
+            throw std::runtime_error("QPC unavailable");
+        }
         return static_cast<double>(ticks.QuadPart) * 1000000.0 / frequency.QuadPart;
     };
     try
@@ -67,7 +70,7 @@ int32_t SemaphoreBench()
             failed.store(true);
         }
         worker.join();
-        if (failed.load())
+        if (failed.load() || request.wait(0) || reply.wait(0))
         {
             return 1;
         }
@@ -86,7 +89,7 @@ int32_t SemaphoreBench()
         }
         const double elapsed = now() - started;
         std::printf("METRIC bulk_permits_per_second=%.0f roundtrip_us p50=%.3f p95=%.3f p99=%.3f\n",
-            50000000000.0 / elapsed, latency[500], latency[950], latency[990]);
+            50000000000.0 / elapsed, latency[499], latency[949], latency[989]);
         return request.wait(0) ? 3 : 0;
     }
     catch (const std::exception& error)

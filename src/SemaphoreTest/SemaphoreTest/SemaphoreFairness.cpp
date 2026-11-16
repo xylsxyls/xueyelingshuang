@@ -80,8 +80,8 @@ bool SemaphoreTests::fairness(int32_t id)
             check(queue.begin(state, first, false).status == SEMAPHORE_OK &&
                     queue.begin(state, second, false).status == SEMAPHORE_OK, "paused publisher admissions");
             SemaphoreTestGate gate(4);
-            SemaphoreTestThreads publishers;
             SemaphoreResult sent;
+            SemaphoreTestThreads publishers;
             publishers.start([&]() { sent = queue.signal(state, wake); });
             const bool paused = gate.reached();
             const bool firstReceived = queue.finish(state, first);
@@ -111,8 +111,8 @@ bool SemaphoreTests::fairness(int32_t id)
                 check(sem.prepareSignalAndWait().status == SEMAPHORE_OK, "prepared handoff backend");
             }
             SemaphoreTestGate gate(8);
-            SemaphoreTestThreads threads;
             SemaphoreResult received;
+            SemaphoreTestThreads threads;
             threads.start([&]() { received = sem.waitResult(2000); });
             const bool registered = gate.reached();
             const SemaphoreResult first = sem.trySignal();
@@ -267,8 +267,8 @@ bool SemaphoreTests::fairness(int32_t id)
         }
         {
             SemaphoreTestGate gate(5);
-            SemaphoreTestThreads threads;
             SemaphoreResult result;
+            SemaphoreTestThreads threads;
             threads.start([&]() { result = sem.waitResult(100); });
             const bool boundary = gate.reached();
             const SemaphoreResult sent = sem.trySignal();

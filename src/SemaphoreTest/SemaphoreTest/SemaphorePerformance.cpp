@@ -1,5 +1,6 @@
 ﻿#include "SemaphorePerformance.h"
 #include "Semaphore.h"
+#include "SemaphoreTestProcess.h"
 #ifdef SEMAPHORE_TEST_NATIVE_CONTROL
 #include "SemaphoreNativeIpc.h"
 // 只在原生诊断配置中替换测量对象，正式库及其他测试不受影响
@@ -285,8 +286,8 @@ void SemaphorePerformance::contention(const char* name, int32_t producers, int32
         static_cast<unsigned>(reinterpret_cast<uintptr_t>(&sem) % 8),
         static_cast<unsigned>(reinterpret_cast<uintptr_t>(&sem) % 64));
     std::atomic<int32_t> consumed(0);
-    SemaphorePerformanceThreads threads;
     const int32_t count = 4000000;
+    SemaphorePerformanceThreads threads;
     require(producers > 0 && consumers > 0 && count % producers == 0 && count % consumers == 0,
         "contention workload division");
     for (int32_t p = 0; p < producers; ++p)
@@ -395,6 +396,7 @@ void SemaphorePerformance::handoff(bool cold)
         }
     }
     threads.join();
+    require(!request.wait(0) && !reply.wait(0) && !ready.wait(0), "handoff leaves no surplus permits");
     latency(cold ? "cold_publish_to_observe" : "warm_roundtrip", samples);
 }
 
@@ -469,6 +471,7 @@ void SemaphorePerformance::events(int32_t count, bool prepared, bool dropNotific
         }
     }
     threads.join();
+    require(!ready.wait(0) && !reply.wait(0) && !event.wait(0), "event workload leaves no count permits");
     latency(count == 1 ? "event_one_observed" : "event_all_8_observed", samples);
     std::printf("METRIC {\"name\":\"%s\",\"rescue_timeouts\":%d}\n",
         count == 1 ? "event_one_boundary" : "event_all_boundary", rescueTimeouts.load());
@@ -667,8 +670,7 @@ void SemaphorePerformance::ipc()
     std::sprintf(name, "SPPerf%lu", ::GetCurrentProcessId());
     request.createProcessSemaphore(name, 2);
     reply.createProcessSemaphore(std::string(name) + "r", 2);
-    char executable[32768];
-    require(::GetModuleFileNameA(nullptr, executable, sizeof(executable)) != 0, "self path");
+    const std::string executable = SemaphoreTestProcess::executable();
     const std::string command = std::string("\"") + executable +
         (s_combined ? "\" --performance-peer-combined " : "\" --performance-peer ") + name;
     std::vector<char> mutableCommand(command.begin(), command.end());
@@ -729,6 +731,7 @@ void SemaphorePerformance::ipc()
     const bool threadClosed = ::CloseHandle(process.hThread) != FALSE;
     const bool processClosed = ::CloseHandle(process.hProcess) != FALSE;
     require(threadClosed && processClosed, "IPC process handles closed");
+    require(!request.processWait(0) && !reply.processWait(0), "IPC workload leaves no surplus permits");
     latency("ipc_roundtrip", samples);
 }
 

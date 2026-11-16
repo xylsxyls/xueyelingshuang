@@ -74,7 +74,7 @@ double SemaphoreTestProcess::now()
 {
 #ifdef _WIN32
     LARGE_INTEGER value, frequency;
-    if (!::QueryPerformanceCounter(&value) || !::QueryPerformanceFrequency(&frequency))
+    if (!::QueryPerformanceCounter(&value) || !::QueryPerformanceFrequency(&frequency) || frequency.QuadPart <= 0)
     {
         throw std::runtime_error("QPC unavailable");
     }
@@ -131,6 +131,18 @@ bool SemaphoreTestProcess::makeDirectory(const std::string& path)
 int32_t SemaphoreTestProcess::run(
     const std::string& executable, const std::vector<std::string>& arguments, const std::string& log, uint32_t timeout)
 {
+    // 两端都拒绝嵌入NUL，避免原生API悄悄截断实际执行的路径或参数。
+    if (executable.find('\0') != std::string::npos || log.find('\0') != std::string::npos)
+    {
+        throw std::invalid_argument("NUL in process path");
+    }
+    for (size_t i = 0; i < arguments.size(); ++i)
+    {
+        if (arguments[i].find('\0') != std::string::npos)
+        {
+            throw std::invalid_argument("NUL in process argument");
+        }
+    }
 #ifdef _WIN32
     std::string command = QuoteArgument(executable);
     for (size_t i = 0; i < arguments.size(); ++i)
@@ -275,6 +287,12 @@ int32_t SemaphoreTestProcess::run(
         if (ended || now() - started >= timeout)
         {
             const bool stopped = ::kill(-child, SIGKILL) == 0 || errno == ESRCH;
+            if (!stopped && !ended)
+            {
+                // 终止失败时不能再无期限阻塞回收；明确报告未完成清理。
+                std::fprintf(stderr, "Cannot terminate owned test process group errno=%d\n", errno);
+                return 125;
+            }
             int32_t status = 0;
             pid_t reaped;
             do

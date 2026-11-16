@@ -12,6 +12,7 @@
 #endif
 #include <algorithm>
 #include <chrono>
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -232,7 +233,7 @@ void SemaphoreTestGate::hit(int32_t point)
     }
     m_arrived = true;
     m_changed.notify_all();
-    m_changed.wait_for(lock, std::chrono::seconds(5),
+    const bool released = m_changed.wait_for(lock, std::chrono::seconds(5),
         /** 检查暂停门的受保护状态
                        @return 本轮等待条件是否满足
                        */
@@ -240,6 +241,8 @@ void SemaphoreTestGate::hit(int32_t point)
         {
             return m_released;
         });
+    // 暂停期限耗尽说明预设交错已经失效，不能悄悄继续后再宣布用例通过。
+    SemaphoreTests::check(released, "pause gate expired before release");
 }
 
 bool SemaphoreTestGate::reached()
@@ -275,7 +278,7 @@ double SemaphoreTests::now()
 #ifdef _WIN32
     LARGE_INTEGER ticks;
     LARGE_INTEGER frequency;
-    if (!::QueryPerformanceCounter(&ticks) || !::QueryPerformanceFrequency(&frequency))
+    if (!::QueryPerformanceCounter(&ticks) || !::QueryPerformanceFrequency(&frequency) || frequency.QuadPart <= 0)
     {
         throw std::runtime_error("QPC unavailable");
     }
@@ -569,7 +572,7 @@ bool SemaphoreTests::runCase(int32_t id)
         }
         threads.join();
         std::sort(latencies.begin(), latencies.end());
-        std::printf("METRIC roundtrip_us p50=%.3f p95=%.3f p99=%.3f\n", latencies[500], latencies[950], latencies[990]);
+        std::printf("METRIC roundtrip_us p50=%.3f p95=%.3f p99=%.3f\n", latencies[499], latencies[949], latencies[989]);
     }
     else if (id == 30 || id == 63)
     {
@@ -1021,8 +1024,8 @@ bool SemaphoreTests::runCase(int32_t id)
         {
             // 无等待者的计数发布不调用系统提示；在真实登记后验证交付成功但提示失败。
             SemaphoreTestGate countGate(8);
-            SemaphoreTestThreads countThreads;
             SemaphoreResult consumed;
+            SemaphoreTestThreads countThreads;
             countThreads.start([&]() { consumed = sem.waitResult(1000); });
             const bool registered = countGate.reached();
             s_faultCountdown.store(1);
@@ -1039,8 +1042,8 @@ bool SemaphoreTests::runCase(int32_t id)
         for (int32_t point = 7; point <= 8; ++point)
         {
             SemaphoreTestGate countGate(point);
-            SemaphoreTestThreads countThreads;
             SemaphoreResult consumed;
+            SemaphoreTestThreads countThreads;
             countThreads.start([&]() { consumed = sem.waitResult(1000); });
             const bool registered = countGate.reached();
             s_faultCountdown.store(1);
@@ -1130,8 +1133,7 @@ bool SemaphoreTests::runCase(int32_t id)
         check(request.createProcessResult(logicalName).status == SEMAPHORE_OK, "parent create request");
         check(response.createProcessResult(logicalName + "r").status == SEMAPHORE_OK, "parent create response");
 #ifdef _WIN32
-        char executable[32768];
-        check(::GetModuleFileNameA(nullptr, executable, sizeof(executable)) != 0, "self path");
+        const std::string executable = SemaphoreTestProcess::executable();
         std::string command =
             std::string("\"") + executable + (id == 60 ? "\" --exchange-peer " : "\" --peer ") + logicalName;
         std::vector<char> mutableCommand(command.begin(), command.end());
@@ -1169,10 +1171,11 @@ bool SemaphoreTests::runCase(int32_t id)
             ::TerminateProcess(process.hProcess, 90);
             ::WaitForSingleObject(process.hProcess, 5000);
         }
-        ::GetExitCodeProcess(process.hProcess, &code);
-        ::CloseHandle(process.hThread);
-        ::CloseHandle(process.hProcess);
-        check(ready && sent && replied && waited == WAIT_OBJECT_0 && code == 0, "true IPC handshake and child exit");
+        const bool statusRead = ::GetExitCodeProcess(process.hProcess, &code) != FALSE;
+        const bool threadClosed = ::CloseHandle(process.hThread) != FALSE;
+        const bool processClosed = ::CloseHandle(process.hProcess) != FALSE;
+        check(ready && sent && replied && waited == WAIT_OBJECT_0 && statusRead && code == 0 &&
+                threadClosed && processClosed, "true IPC handshake, child exit and resource cleanup");
 #else
         // 子程序从全新地址空间打开对象，不能在fork后调用继承的库实例
         const std::string executable = SemaphoreTestProcess::executable();
@@ -1207,7 +1210,10 @@ bool SemaphoreTests::runCase(int32_t id)
         const double deadline = now() + 5000;
         while (joined == 0 && now() < deadline)
         {
-            joined = ::waitpid(child, &status, WNOHANG);
+            do
+            {
+                joined = ::waitpid(child, &status, WNOHANG);
+            } while (joined < 0 && errno == EINTR);
             if (joined == 0)
             {
                 pause(1);
@@ -1215,12 +1221,21 @@ bool SemaphoreTests::runCase(int32_t id)
         }
         if (joined == 0)
         {
-            ::kill(child, SIGKILL);
-            ::waitpid(child, &status, 0);
+            const bool stopped = ::kill(child, SIGKILL) == 0 || errno == ESRCH;
+            pid_t reaped = -1;
+            if (stopped)
+            {
+                do
+                {
+                    reaped = ::waitpid(child, &status, 0);
+                } while (reaped < 0 && errno == EINTR);
+            }
+            check(stopped && reaped == child, "timed out IPC peer is terminated and reaped");
         }
         check(ready && sent && replied && joined == child && WIFEXITED(status) && WEXITSTATUS(status) == 0,
             "true IPC handshake");
 #endif
+        check(!request.processWait(0) && !response.processWait(0), "IPC handshake leaves no surplus permits");
 #endif
     }
     else if (id == 42)
@@ -1238,7 +1253,7 @@ bool SemaphoreTests::runCase(int32_t id)
                     */
                     [&]()
                     {
-                        sem.wait();
+                        check(sem.wait(), "infinite exit wait consumed a permit");
                         check(stopping.load(), "exit predicate");
                         ++exited;
                     });
@@ -1260,7 +1275,7 @@ bool SemaphoreTests::runCase(int32_t id)
             sem.signal();
         }
         threads.join();
-        check(exited.load() == 8, "all infinite count waiters exit before destructor");
+        check(exited.load() == 8 && !sem.wait(0), "all infinite count waiters consume exactly one exit permit");
     }
     else if (id == 43)
     {
@@ -1295,6 +1310,7 @@ bool SemaphoreTests::runCase(int32_t id)
         check(!sem.wait(1200), "idle blocks");
         const double elapsed = now() - started;
         check(::GetProcessTimes(::GetCurrentProcess(), &create, &exit, &kernel1, &user1) != FALSE, "read final CPU");
+        check(elapsed >= 1100 && elapsed < 4000, "idle wait keeps its finite budget");
         const uint64_t k0 = (uint64_t(kernel0.dwHighDateTime) << 32) | kernel0.dwLowDateTime;
         const uint64_t k1 = (uint64_t(kernel1.dwHighDateTime) << 32) | kernel1.dwLowDateTime;
         const uint64_t u0 = (uint64_t(user0.dwHighDateTime) << 32) | user0.dwLowDateTime;
