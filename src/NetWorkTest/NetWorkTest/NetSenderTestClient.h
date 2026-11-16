@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 
 // 既有场景用例的生命周期适配器；所有操作调用真实单例门面，不实现协议或判定预期
 template<class Entry, class Client>

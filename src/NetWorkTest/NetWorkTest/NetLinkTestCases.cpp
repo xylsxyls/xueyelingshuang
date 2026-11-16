@@ -1,6 +1,6 @@
 ﻿#include "NetLinkTestCases.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
-#include "NetInterface/NetInterfaceAPI.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include "NetInterfaceTlsTestCases.h"
 
 void NetLinkTestCases::creditWindow()
@@ -391,7 +391,7 @@ int NetLinkTestCases::inputDrainAudit(int argc, char** argv)
 
 #undef LINK_CHECK
 #ifndef __EMSCRIPTEN__
-#include "NetSender/NetSenderAPI.h"
+#include "NetSenderTestAccess.h"
 
 #define SENDER_LINK_CHECK(condition) do { ++checks; if (!(condition)) { std::printf("Sender link failed line=%d checks=%u\n", __LINE__, checks); return 1; } } while (0)
 
@@ -563,7 +563,17 @@ int NetLinkTestCases::outputQueueAudit(int argc, char** argv)
 #endif
         {
             NetInterfaceLinkTestPair pair(identity);
+            NetBufferPoolConfig bodies;
+            bodies.m_classes[2].maximumCapacity = 4;
+            LockFreeHashMapPoolConfig records;
+            records.initialCapacity = 32;
+            records.maximumCapacity = 32;
+            LINK_QUEUE_CHECK(pair.m_client.configureOutputPools(bodies, records) == NI_OK);
+            NetBufferPoolConfig invalid = bodies;
+            invalid.m_classes[2].initialCapacity = 5;
+            LINK_QUEUE_CHECK(pair.m_client.configureOutputPools(invalid, records) == NI_INVALID_ARGUMENT);
             LINK_QUEUE_CHECK(pair.handshake());
+            LINK_QUEUE_CHECK(pair.m_client.configureOutputPools(bodies, records) == NI_INVALID_STATE);
             uint8_t payload[16384];
             for (uint32_t index = 0; index < sizeof(payload); ++index)
             {
@@ -578,6 +588,7 @@ int NetLinkTestCases::outputQueueAudit(int argc, char** argv)
             NetInterfaceTunnelRecord output = {};
             if (!benchmark)
             {
+                // 明确配置四个中等正文槽，验证真实池耗尽及失败回滚；不是默认条数门槛。
                 for (uint32_t round = 0; round < 17; ++round)
                 {
                     for (uint32_t index = 0; index < 4; ++index)
@@ -684,13 +695,44 @@ int NetLinkTestCases::outputQueueAudit(int argc, char** argv)
                 LINK_QUEUE_CHECK(valid && pair.m_client.outputState() == NI_OK);
                 std::printf("Link queue bytes=%u records=100000 microseconds=%lld\n", record.m_size, static_cast<long long>(elapsed));
             }
-            // 非空析构：剩余大正文、关闭原因及单份复用缓冲均归本实例释放。
+            // 非空析构：剩余密文和关闭原因均在物理池析构前释放。
             record.m_size = 16384;
             LINK_QUEUE_CHECK(pair.m_client.sendRecord(record) == NI_OK && pair.m_client.sendRecord(record) == NI_OK);
             record.m_kind = NI_TUNNEL_CLOSE;
             record.m_data = payload;
             record.m_size = 4;
             LINK_QUEUE_CHECK(pair.m_client.sendRecord(record) == NI_OK);
+        }
+        if (!benchmark)
+        {
+            NetInterfaceLinkTestPair unboundedByCount(identity);
+            LINK_QUEUE_CHECK(unboundedByCount.handshake());
+            const uint8_t shortPayload[] = {'1', '2', '3', '4', '5', '6'};
+            std::vector<uint8_t> large(16384, 0x51);
+            NetInterfaceTunnelRecord record = {};
+            record.m_product = 7;
+            for (uint32_t round = 0; round < 2; ++round)
+            {
+                for (uint32_t index = 0; index < 2056; ++index)
+                {
+                    record.m_kind = index < 2048 ? NI_TUNNEL_BYTES : NI_TUNNEL_CLOSE;
+                    record.m_channel = round * 2056 + index + 1;
+                    record.m_data = index % 8 == 0 ? large.data() : shortPayload;
+                    record.m_size = record.m_kind == NI_TUNNEL_CLOSE ? 4 : index % 8 == 0 ? 16384 : 6;
+                    LINK_QUEUE_CHECK(unboundedByCount.m_client.sendRecord(record) == NI_OK);
+                }
+                for (uint32_t index = 0; index < 2056; ++index)
+                {
+                    NetInterfaceTunnelRecord output = {};
+                    LINK_QUEUE_CHECK(unboundedByCount.m_client.peekOutput(output) == NI_READY &&
+                        output.m_channel == round * 2056 + index + 1);
+                    const uint32_t size = index >= 2048 ? 4 : index % 8 == 0 ? 16384 : 6;
+                    LINK_QUEUE_CHECK(output.m_kind == (index < 2048 ? NI_TUNNEL_BYTES : NI_TUNNEL_CLOSE) &&
+                        output.m_size == size && std::memcmp(output.m_data, index % 8 == 0 ? large.data() : shortPayload, size) == 0);
+                    LINK_QUEUE_CHECK(unboundedByCount.m_client.consumeOutput() == NI_OK);
+                }
+                LINK_QUEUE_CHECK(unboundedByCount.m_client.outputState() == NI_OK);
+            }
         }
 #if defined(_WIN32) && defined(_DEBUG)
         _CrtMemState after;

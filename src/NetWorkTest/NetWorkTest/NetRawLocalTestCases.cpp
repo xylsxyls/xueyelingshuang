@@ -125,6 +125,10 @@ NetRawLocalTestHost::~NetRawLocalTestHost()
 int NetRawLocalTestCases::childMain(int32_t parent)
 {
     NetRawLocalTestHost host(false);
+    NetBufferPoolConfig output;
+    output.m_classes[2].initialCapacity = 0;
+    output.m_classes[2].maximumCapacity = 2;
+    NetInterfaceTlsTestPair::require(host.m_local.configureOutputPool(output) == NI_OK, "raw explicit pool configuration");
     uint64_t peer = 0;
     NetInterfaceTlsTestPair::require(host.m_local.connectRaw(parent, NetInterfaceTlsTestPair::strongRandom,
         nullptr, &host.m_probe, peer) == NI_OK, "raw IPC child connect failed");

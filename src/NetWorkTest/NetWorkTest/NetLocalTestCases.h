@@ -1,6 +1,6 @@
 ﻿#pragma once
 #ifndef __EMSCRIPTEN__
-#include "NetSender/NetSenderAPI.h"
+#include "NetSenderTestAccess.h"
 #include <vector>
 
 // 真实本机TLS端点观察者，受控暂停输入验证窗口和顺序

@@ -1,7 +1,7 @@
 ﻿#include "NetInterfaceRpcTestCases.h"
 #include "NetWorkTestCases.h"
 #include "NetInterfaceTlsTestCases.h"
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include <cstring>
 #include <stdexcept>
 #include <vector>
@@ -52,7 +52,9 @@ void NetInterfaceRpcTestCases::serviceWire()
     CheckRpc(NetInterfaceService::authenticate(hello, secret, limit) == NI_PROTOCOL_ERROR, "service HELLO with request");
     hello.m_requestId = 0;
     expected[7] = 129;
-    CheckRpc(NetInterfaceService::authenticate(hello, secret, limit) == NI_PROTOCOL_ERROR, "service excessive limit");
+    CheckRpc(NetInterfaceService::authenticate(hello, secret, limit) == NI_OK && limit == 129, "service pool metadata above old 128 gate");
+    expected[7] = 0;
+    CheckRpc(NetInterfaceService::authenticate(hello, secret, limit) == NI_PROTOCOL_ERROR, "service zero metadata");
     uint8_t zero[32] = {};
     CheckRpc(NetInterfaceService::hello(zero, 1, output, 48) == NI_INVALID_ARGUMENT, "empty service secret");
 

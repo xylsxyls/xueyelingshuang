@@ -1,9 +1,9 @@
 ﻿#include "LibuvTcp/LibuvTcpAPI.h"
 #include <LibuvTcp/LibuvTcpAPI.h>
 #include "NetWorkConcurrencyTestCases.h"
-#include <NetWork/NetWorkAPI.h>
-#include <NetSender/NetSenderAPI.h>
-#include <test/certs.h>
+#include "NetWorkTestAccess.h"
+#include "NetSenderTestAccess.h"
+#include "NetTestTlsCertificates.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "NetWorkTestCases.h"

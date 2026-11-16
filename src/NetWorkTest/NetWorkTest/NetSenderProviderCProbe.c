@@ -1,5 +1,9 @@
 ﻿#include "NetSenderProviderCProbe.h"
+#ifdef __EMSCRIPTEN__
+#include "NetPeer/NetSenderAPI.h"
+#else
 #include "NetWork/NetSenderAPI.h"
+#endif
 
 /** 验证纯C消费NetWork时不会同时选择依赖NetPeer的NetSender别名
 @return 0通过；非零表示公共入口参数或释放契约不符

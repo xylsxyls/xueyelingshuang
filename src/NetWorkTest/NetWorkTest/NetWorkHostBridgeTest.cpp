@@ -1,12 +1,6 @@
-﻿#define NET_WORK_HOST_NO_HEAP
-#include <LibuvTcp/LibuvTcpAPI.h>
-#include "NetWorkConcurrencyTestCases.h"
-#include <NetWork/NetWorkAPI.h>
-#include <NetSender/NetSenderAPI.h>
-#include <test/certs.h>
+﻿#include "NetWorkHostBridgeTest.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
-#include "NetWorkTestCases.h"
 #include <stdexcept>
 #include <cstdio>
 #include <cstring>
@@ -50,17 +44,37 @@ static int __cdecl BridgeMemoryHook(int operation, void* pointer, size_t size, i
 }
 #endif
 
-#include "NetWork/NetWorkAPI.h"
-#ifdef _WIN32
-#include <windows.h>
-#include <psapi.h>
-#endif
-
 NetWorkHostBridgeTest::NetWorkHostBridgeTest() :
 m_bridge(nullptr), m_target(nullptr), m_connected(nullptr), m_data(nullptr), m_writable(nullptr), m_closed(nullptr),
-m_owner(CSystem::SystemThreadId()), m_connections(0), m_lastConnected(0), m_checkConnectionOrder(false), m_inputs(0), m_writes(0), m_closes(0), m_stops(0), m_allocated(0), m_peerInputs(), m_peerCloses(), m_reason(0), m_pause(true), m_checkPayload(true), m_sequence(false), m_expected(), m_producersDone(0), m_stopped(false), m_throwPoll(false), m_bad(false), m_done(false)
+m_owner(CSystem::SystemThreadId()), m_connections(0), m_lastConnected(0), m_checkConnectionOrder(false), m_inputs(0), m_writes(0), m_closes(0), m_stops(0), m_allocated(0), m_peerInputs(), m_peerCloses(), m_reason(0), m_pause(true), m_checkPayload(true), m_sequence(false), m_expected(), m_producersDone(0), m_stopped(false), m_throwPoll(false), m_bad(false), m_done(false), m_threads()
 {
 
+}
+
+NetWorkHostBridgeTest::~NetWorkHostBridgeTest()
+{
+    for (uint32_t index = 0; index < 4; ++index)
+    {
+        if (m_threads[index] != 0)
+        {
+            CTaskThreadManager::instance().uninit(m_threads[index]);
+        }
+    }
+    if (m_bridge != nullptr)
+    {
+        NetWorkHostBridge::shutdown(m_bridge);
+        destroy();
+    }
+}
+
+int32_t NetWorkHostBridgeTest::destroy()
+{
+    const int32_t result = NetWorkHostBridge::destroy(m_bridge);
+    if (result == 0)
+    {
+        m_bridge = nullptr;
+    }
+    return result;
 }
 
 NetHostFunctions NetWorkHostBridgeTest::functions()
@@ -130,7 +144,7 @@ void NetWorkHostBridgeTest::connected(void* context, uint64_t peer)
         test->m_bad = true;
     }
     test->m_lastConnected = peer;
-    test->m_bad = test->m_bad || CSystem::SystemThreadId() != test->m_owner || NetWorkHostBridge::destroy(test->m_bridge) != -1;
+    test->m_bad = test->m_bad || CSystem::SystemThreadId() != test->m_owner || test->destroy() != -1;
 }
 
 void NetWorkHostBridgeTest::data(void* context, uint64_t peer, const uint8_t* bytes, uint32_t size)
@@ -171,7 +185,7 @@ NetWorkHostBridgeTestTask::NetWorkHostBridgeTestTask(NetWorkHostBridgeTest* test
 
 }
 
-void NetWorkHostBridgeTestTask::DoTask()
+void NetWorkHostBridgeTestTask::doTask()
 {
     m_test->m_connected(m_test->m_target, 1); m_test->m_connected(m_test->m_target, 2);
     uint8_t bytes = 7;
@@ -187,7 +201,7 @@ m_test(test), m_producer(producer)
 
 }
 
-void NetWorkHostBridgeSequenceTask::DoTask()
+void NetWorkHostBridgeSequenceTask::doTask()
 {
     for (uint32_t i = 0; i < 400; ++i)
     {
@@ -221,16 +235,19 @@ int32_t NetWorkHostBridgeTest::audit()
     connectionOrder.m_closed(connectionOrder.m_target, 3, NI_OK);
     HOST_CHECK(NetWorkHostBridge::poll(connectionOrder.m_bridge) == 1 && connectionOrder.m_closes == 3);
     HOST_CHECK(NetWorkHostBridge::shutdown(connectionOrder.m_bridge) == 0 &&
-        NetWorkHostBridge::destroy(connectionOrder.m_bridge) == 0);
+        connectionOrder.destroy() == 0);
     NetWorkHostBridgeTest test;
     host = test.functions();
     HOST_CHECK(NetWorkHostBridge::create(&host, &test, test.connected, test.data, test.writable, test.closed, &test.m_bridge) == 0);
-    const uint32_t thread = CTaskThreadManager::Instance().Init();
-    CTaskThreadManager::Instance().GetThreadInterface(thread)->PostTask(std::shared_ptr<CTask>(new NetWorkHostBridgeTestTask(&test)));
-    const uint64_t deadline = GetTickCount64() + 5000;
-    while (!test.m_done.load() && GetTickCount64() < deadline) { CSystem::sleepPrecise(1); }
+    const uint32_t thread = test.m_threads[0] = CTaskThreadManager::instance().init();
+    std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(thread);
+    HOST_CHECK(worker && worker->postTask(std::shared_ptr<CTask>(new NetWorkHostBridgeTestTask(&test))));
+    const uint64_t deadline = NetSenderSubmission::now() + 5000;
+    while (!test.m_done.load() && NetSenderSubmission::now() < deadline) { CSystem::sleepPrecise(1); }
     HOST_CHECK(test.m_done.load());
-    CTaskThreadManager::Instance().Uninit(thread);
+    HOST_CHECK(CTaskThreadManager::instance().uninit(thread).m_status == CTaskThreadOk);
+    test.m_threads[0] = 0;
+    worker.reset();
     HOST_CHECK(test.m_connections == 0 && test.m_inputs == 0 && test.m_closes == 0);
     HOST_CHECK(NetWorkHostBridge::poll(test.m_bridge) == 1);
     HOST_CHECK(test.m_connections == 2 && test.m_inputs == 2 && test.m_writes == 1 && test.m_closes == 1 && !test.m_bad);
@@ -238,8 +255,8 @@ int32_t NetWorkHostBridgeTest::audit()
     HOST_CHECK(NetWorkHostBridge::pauseRead(test.m_bridge, 1, 0) == 0);
     HOST_CHECK(NetWorkHostBridge::poll(test.m_bridge) == 1 && test.m_inputs == 3 && test.m_closes == 2 && !test.m_bad);
     HOST_CHECK(NetWorkHostBridge::shutdown(test.m_bridge) == 0 && test.m_stops == 1);
-    HOST_CHECK(NetWorkHostBridge::destroy(test.m_bridge) == 0);
-    // 满4MiB数据之后终态仍有独立事件位置，不会被丢掉。
+    HOST_CHECK(test.destroy() == 0);
+    // 正文排队后EOF不占正文或记录池，不能被迟到输入覆盖。
     NetWorkHostBridgeTest full; full.m_pause = false; full.m_checkPayload = false; host = full.functions();
     HOST_CHECK(NetWorkHostBridge::create(&host, &full, full.connected, full.data, full.writable, full.closed, &full.m_bridge) == 0);
     full.m_connected(full.m_target, 1);
@@ -251,34 +268,34 @@ int32_t NetWorkHostBridgeTest::audit()
     for (uint32_t i = 0; i < 3; ++i) { NetWorkHostBridge::poll(full.m_bridge); }
     HOST_CHECK(full.m_inputs == 256 && full.m_closes == 1 && full.m_stops == 0 && !full.m_bad);
     HOST_CHECK(NetWorkHostBridge::shutdown(full.m_bridge) == 0);
-    HOST_CHECK(NetWorkHostBridge::destroy(full.m_bridge) == 0);
+    HOST_CHECK(full.destroy() == 0);
     // shutdown锁外转交事件时也处于受保护回调段，不能在其中释放bridge。
     NetWorkHostBridgeTest stopping; host = stopping.functions();
     HOST_CHECK(NetWorkHostBridge::create(&host, &stopping, stopping.connected, stopping.data, stopping.writable, stopping.closed, &stopping.m_bridge) == 0);
     stopping.m_connected(stopping.m_target, 1);
     stopping.m_closed(stopping.m_target, 1, 0);
     HOST_CHECK(NetWorkHostBridge::shutdown(stopping.m_bridge) == 0 && stopping.m_connections == 1 && stopping.m_closes == 1 && !stopping.m_bad);
-    HOST_CHECK(NetWorkHostBridge::destroy(stopping.m_bridge) == 0);
+    HOST_CHECK(stopping.destroy() == 0);
     // 宿主C++错误不能永久遗留polling，外层捕获后仍可收敛和销毁。
     NetWorkHostBridgeTest throwing; host = throwing.functions();
     HOST_CHECK(NetWorkHostBridge::create(&host, &throwing, throwing.connected, throwing.data, throwing.writable, throwing.closed, &throwing.m_bridge) == 0);
     throwing.m_throwPoll = true;
     HOST_CHECK(NetWorkHostBridge::poll(throwing.m_bridge) == -1);
     HOST_CHECK(NetWorkHostBridge::shutdown(throwing.m_bridge) == 0);
-    HOST_CHECK(NetWorkHostBridge::destroy(throwing.m_bridge) == 0);
-    // 所有2048个槽都被暂停连接占用，两个连接的EOF仍可接纳。
+    HOST_CHECK(throwing.destroy() == 0);
+    // 默认池突破旧2048/4096条阈值；暂停连接不阻塞另一个连接的终态。
     NetWorkHostBridgeTest slots; slots.m_pause = false; host = slots.functions();
     HOST_CHECK(NetWorkHostBridge::create(&host, &slots, slots.connected, slots.data, slots.writable, slots.closed, &slots.m_bridge) == 0);
     slots.m_connected(slots.m_target, 1); slots.m_connected(slots.m_target, 2);
     NetWorkHostBridge::poll(slots.m_bridge);
     NetWorkHostBridge::pauseRead(slots.m_bridge, 1, 1);
     uint8_t seven = 7;
-    for (uint32_t i = 0; i < 2048; ++i) { slots.m_data(slots.m_target, 1, &seven, 1); }
+    for (uint32_t i = 0; i < 8192; ++i) { slots.m_data(slots.m_target, 1, &seven, 1); }
     slots.m_closed(slots.m_target, 1, NI_OK); slots.m_closed(slots.m_target, 2, NI_OK);
     HOST_CHECK(NetWorkHostBridge::poll(slots.m_bridge) >= 0 && slots.m_peerCloses[1] == 1 && slots.m_peerCloses[0] == 0 && slots.m_stops == 0);
     HOST_CHECK(NetWorkHostBridge::pauseRead(slots.m_bridge, 1, 0) == 0);
-    for (uint32_t i = 0; i < 9; ++i) { NetWorkHostBridge::poll(slots.m_bridge); }
-    HOST_CHECK(slots.m_peerInputs[0] == 2048 && slots.m_peerCloses[0] == 1 && !slots.m_bad);
+    for (uint32_t i = 0; i < 34; ++i) { NetWorkHostBridge::poll(slots.m_bridge); }
+    HOST_CHECK(slots.m_peerInputs[0] == 8192 && slots.m_peerCloses[0] == 1 && !slots.m_bad);
     for (uint32_t i = 0; i < 4096; ++i)
     {
         slots.m_data(slots.m_target, 1, &seven, 1);
@@ -287,94 +304,182 @@ int32_t NetWorkHostBridgeTest::audit()
     }
     HOST_CHECK(NetWorkHostBridge::poll(slots.m_bridge) >= 0 && slots.m_closes == 2 && slots.m_stops == 0);
     NetWorkHostBridge::shutdown(slots.m_bridge);
-    HOST_CHECK(NetWorkHostBridge::destroy(slots.m_bridge) == 0);
-    // 两种容量上限分别覆盖通告前后过载；关闭不能先于新连接通告。
+    HOST_CHECK(slots.destroy() == 0);
+    // 显式缩小真实记录池或正文池，以验证资源失败与回滚；默认路径不再有这些条数限制。
     for (uint32_t mode = 0; mode < 4; ++mode)
     {
-        NetWorkHostBridgeTest overflow; overflow.m_pause = false; overflow.m_checkConnectionOrder = true; host = overflow.functions();
+        NetWorkHostPools pools;
+        if (mode % 2 == 0)
+        {
+            pools.m_records.initialCapacity = pools.m_records.maximumCapacity = 2;
+        }
+        else
+        {
+            pools.m_bodies.m_classes[2].initialCapacity = pools.m_bodies.m_classes[2].maximumCapacity = 2;
+        }
+        HOST_CHECK(NetWorkHostBridge::configurePools(pools) == NI_OK);
+        NetWorkHostBridgeTest overflow;
+        overflow.m_pause = false;
+        overflow.m_checkConnectionOrder = true;
+        host = overflow.functions();
         HOST_CHECK(NetWorkHostBridge::create(&host, &overflow, overflow.connected, overflow.data, overflow.writable, overflow.closed, &overflow.m_bridge) == 0);
-        overflow.m_connected(overflow.m_target, 1); overflow.m_connected(overflow.m_target, 2);
+        HOST_CHECK(NetWorkHostBridge::configurePools(pools) == NI_INVALID_STATE);
+        overflow.m_connected(overflow.m_target, 1);
+        overflow.m_connected(overflow.m_target, 2);
         if (mode < 2) { NetWorkHostBridge::poll(overflow.m_bridge); }
-        for (uint32_t i = 0; i < (mode % 2 == 0 ? 2048U : 256U); ++i)
+        for (uint32_t i = 0; i < 3; ++i)
         {
             overflow.m_data(overflow.m_target, 1, mode % 2 == 0 ? &seven : bytes, mode % 2 == 0 ? 1 : sizeof(bytes));
         }
-        overflow.m_data(overflow.m_target, 1, &seven, 1);
-        overflow.m_data(overflow.m_target, 2, &seven, 1);
-        HOST_CHECK(NetWorkHostBridge::poll(overflow.m_bridge) >= 0 && overflow.m_peerCloses[0] == 1 && overflow.m_peerCloses[1] == 0 && overflow.m_peerInputs[1] == 1 && overflow.m_reason == NI_LIMIT_EXCEEDED && overflow.m_connections == 2 && overflow.m_stops == 0 && !overflow.m_bad);
-        overflow.m_data(overflow.m_target, 2, &seven, 1);
-        NetWorkHostBridge::poll(overflow.m_bridge);
+        // owner归还失败连接实际占用的槽之后，健康连接可立即复用，不进行人工计数解封。
+        HOST_CHECK(NetWorkHostBridge::poll(overflow.m_bridge) >= 0 && overflow.m_peerCloses[0] == 1 &&
+            overflow.m_peerCloses[1] == 0 && overflow.m_reason == NI_LIMIT_EXCEEDED &&
+            overflow.m_connections == 2 && overflow.m_stops == 0 && !overflow.m_bad);
+        for (uint32_t i = 0; i < 2; ++i)
+        {
+            overflow.m_data(overflow.m_target, 2, &seven, 1);
+            NetWorkHostBridge::poll(overflow.m_bridge);
+        }
         HOST_CHECK(overflow.m_peerInputs[1] == 2 && overflow.m_closes == 1 && !overflow.m_bad);
         NetWorkHostBridge::shutdown(overflow.m_bridge);
-        HOST_CHECK(NetWorkHostBridge::destroy(overflow.m_bridge) == 0);
+        HOST_CHECK(overflow.destroy() == 0);
     }
-    // 主动connect与事件入口共享256个连接槽，满时不调用原始宿主。
-    NetWorkHostBridgeTest limit; limit.m_pause = false; host = limit.functions();
+    HOST_CHECK(NetWorkHostBridge::configurePools(NetWorkHostPools()) == NI_OK);
+    NetWorkHostPools invalid;
+    invalid.m_records.initialCapacity = invalid.m_records.maximumCapacity + 1;
+    HOST_CHECK(NetWorkHostBridge::configurePools(invalid) != NI_OK);
+    // 主动连接和跨线程连接通知均突破旧256槽，保留轮询工作量和公平性。
+    NetWorkHostBridgeTest limit;
+    limit.m_pause = false;
+    host = limit.functions();
     HOST_CHECK(NetWorkHostBridge::create(&host, &limit, limit.connected, limit.data, limit.writable, limit.closed, &limit.m_bridge) == 0);
     uint64_t peer = 0;
-    for (uint32_t i = 0; i < 256; ++i)
+    for (uint32_t i = 0; i < 1024; ++i)
     {
         HOST_CHECK(NetWorkHostBridge::connect(limit.m_bridge, "127.0.0.1", 1, &peer) == 0 && peer == i + 1);
+        limit.m_connected(limit.m_target, peer);
+        limit.m_closed(limit.m_target, peer, NI_OK);
     }
-    HOST_CHECK(NetWorkHostBridge::connect(limit.m_bridge, "127.0.0.1", 1, &peer) < 0 && peer == 0 && limit.m_allocated == 256);
-    for (uint32_t i = 0; i < 256; ++i) { limit.m_closed(limit.m_target, i + 1, NI_OK); }
-    NetWorkHostBridge::poll(limit.m_bridge);
-    HOST_CHECK(limit.m_closes == 256 && limit.m_stops == 0);
-    HOST_CHECK(NetWorkHostBridge::connect(limit.m_bridge, "127.0.0.1", 1, &peer) == 0 && peer == 257);
+    for (uint32_t i = 0; i < 9; ++i) { NetWorkHostBridge::poll(limit.m_bridge); }
+    HOST_CHECK(limit.m_connections == 1024 && limit.m_closes == 1024 && limit.m_stops == 0);
+    HOST_CHECK(NetWorkHostBridge::connect(limit.m_bridge, "127.0.0.1", 1, &peer) == 0 && peer == 1025);
     NetWorkHostBridge::shutdown(limit.m_bridge);
-    HOST_CHECK(NetWorkHostBridge::destroy(limit.m_bridge) == 0);
+    HOST_CHECK(limit.destroy() == 0);
+    // 扩大实际中正文池，预先排队16MiB并完整交付，突破旧4MiB/8MiB字节阈值。
+    NetWorkHostPools largePools;
+    largePools.m_bodies.m_classes[2].maximumCapacity = 2048;
+    HOST_CHECK(NetWorkHostBridge::configurePools(largePools) == NI_OK);
+    NetWorkHostBridgeTest large;
+    large.m_pause = false;
+    large.m_checkPayload = false;
+    host = large.functions();
+    HOST_CHECK(NetWorkHostBridge::create(&host, &large, large.connected, large.data, large.writable, large.closed, &large.m_bridge) == 0);
+    large.m_connected(large.m_target, 1);
+    for (uint32_t i = 0; i < 1024; ++i) { large.m_data(large.m_target, 1, bytes, sizeof(bytes)); }
+    large.m_closed(large.m_target, 1, NI_OK);
+    for (uint32_t i = 0; i < 6; ++i) { NetWorkHostBridge::poll(large.m_bridge); }
+    HOST_CHECK(large.m_inputs == 1024 && large.m_closes == 1 && large.m_stops == 0 && !large.m_bad);
+    NetWorkHostBridge::shutdown(large.m_bridge);
+    HOST_CHECK(large.destroy() == 0);
+    HOST_CHECK(NetWorkHostBridge::configurePools(NetWorkHostPools()) == NI_OK);
+    // 持续连接通告不能饿死已接纳的数据；通告配额只是每轮工作量。
+    NetWorkHostBridgeTest fair;
+    fair.m_pause = false;
+    host = fair.functions();
+    HOST_CHECK(NetWorkHostBridge::create(&host, &fair, fair.connected, fair.data, fair.writable, fair.closed, &fair.m_bridge) == 0);
+    fair.m_connected(fair.m_target, 1);
+    NetWorkHostBridge::poll(fair.m_bridge);
+    fair.m_data(fair.m_target, 1, &seven, 1);
+    for (uint64_t id = 2; id <= 1025; ++id) { fair.m_connected(fair.m_target, id); }
+    HOST_CHECK(NetWorkHostBridge::poll(fair.m_bridge) >= 0 && fair.m_inputs == 1 && fair.m_stops == 0 && !fair.m_bad);
+    NetWorkHostBridge::shutdown(fair.m_bridge);
+    HOST_CHECK(fair.destroy() == 0);
     NetWorkHostBridgeTest ordered; ordered.m_pause = false; ordered.m_checkPayload = false; ordered.m_sequence = true;
     host = ordered.functions();
     HOST_CHECK(NetWorkHostBridge::create(&host, &ordered, ordered.connected, ordered.data, ordered.writable, ordered.closed, &ordered.m_bridge) == 0);
     ordered.m_connected(ordered.m_target, 1);
-    uint32_t producers[4] = {};
+    uint32_t* producers = ordered.m_threads;
     for (uint32_t i = 0; i < 4; ++i)
     {
-        producers[i] = CTaskThreadManager::Instance().Init();
-        CTaskThreadManager::Instance().GetThreadInterface(producers[i])->PostTask(std::shared_ptr<CTask>(new NetWorkHostBridgeSequenceTask(&ordered, i)));
+        producers[i] = CTaskThreadManager::instance().init();
+        std::shared_ptr<CTaskThread> producer = CTaskThreadManager::instance().getThreadInterface(producers[i]);
+        HOST_CHECK(producer && producer->postTask(std::shared_ptr<CTask>(new NetWorkHostBridgeSequenceTask(&ordered, i))));
     }
-    const uint64_t orderedDeadline = GetTickCount64() + 5000;
-    while (ordered.m_producersDone.load() != 4 && GetTickCount64() < orderedDeadline) { CSystem::sleepPrecise(1); }
-    for (uint32_t i = 0; i < 4; ++i) { CTaskThreadManager::Instance().Uninit(producers[i]); }
+    const uint64_t orderedDeadline = NetSenderSubmission::now() + 5000;
+    while (ordered.m_producersDone.load() != 4 && NetSenderSubmission::now() < orderedDeadline) { CSystem::sleepPrecise(1); }
+    for (uint32_t i = 0; i < 4; ++i)
+    {
+        HOST_CHECK(CTaskThreadManager::instance().uninit(producers[i]).m_status == CTaskThreadOk);
+        producers[i] = 0;
+    }
     HOST_CHECK(ordered.m_producersDone.load() == 4 && ordered.m_inputs == 0);
     ordered.m_closed(ordered.m_target, 1, NI_OK);
     for (uint32_t i = 0; i < 8; ++i) { NetWorkHostBridge::poll(ordered.m_bridge); }
     HOST_CHECK(ordered.m_inputs == 1600 && ordered.m_closes == 1 && ordered.m_stops == 0 && !ordered.m_bad);
     for (uint32_t i = 0; i < 4; ++i) { HOST_CHECK(ordered.m_expected[i] == 400); }
     NetWorkHostBridge::shutdown(ordered.m_bridge);
-    HOST_CHECK(NetWorkHostBridge::destroy(ordered.m_bridge) == 0);
+    HOST_CHECK(ordered.destroy() == 0);
 #if defined(_WIN32) && defined(_DEBUG) && !defined(NET_WORK_HOST_NO_HEAP)
     _CrtMemState before, after;
     _CrtMemCheckpoint(&before);
-    for (int32_t position = 0; position < 4; ++position)
+    uint32_t createAllocations = 0;
+    {
+        NetWorkHostBridgeTest allocation; host = allocation.functions();
+        s_bridgeRejectAfter = -1;
+        s_bridgeAllocations = 0;
+        const _CRT_ALLOC_HOOK oldHook = _CrtSetAllocHook(BridgeMemoryHook);
+        const int32_t result = NetWorkHostBridge::create(&host, &allocation, allocation.connected, allocation.data,
+            allocation.writable, allocation.closed, &allocation.m_bridge);
+        _CrtSetAllocHook(oldHook);
+        createAllocations = s_bridgeAllocations;
+        HOST_CHECK(result == 0 && allocation.m_bridge != nullptr && createAllocations > 0 && createAllocations <= 512);
+        NetWorkHostBridge::shutdown(allocation.m_bridge);
+        HOST_CHECK(allocation.destroy() == 0);
+    }
+    uint32_t createRejected = 0;
+    uint32_t createAccepted = 0;
+    // 根据本次真实创建的分配次数逐个拒绝，覆盖节点池初始化而非假定只分配一次。
+    for (int32_t position = 0; position <= static_cast<int32_t>(createAllocations); ++position)
     {
         NetWorkHostBridgeTest allocation; allocation.m_pause = false; host = allocation.functions();
         s_bridgeRejectAfter = position;
         _CRT_ALLOC_HOOK oldHook = _CrtSetAllocHook(BridgeMemoryHook);
         const int32_t result = NetWorkHostBridge::create(&host, &allocation, allocation.connected, allocation.data, allocation.writable, allocation.closed, &allocation.m_bridge);
         _CrtSetAllocHook(oldHook); s_bridgeRejectAfter = -1;
-        HOST_CHECK(position == 0 ? result < 0 && allocation.m_bridge == nullptr : result == 0 && allocation.m_bridge != nullptr);
+        HOST_CHECK(result < 0 ? allocation.m_bridge == nullptr : result == 0 && allocation.m_bridge != nullptr);
+        if (result < 0) { ++createRejected; } else { ++createAccepted; }
         if (allocation.m_bridge != nullptr)
         {
             NetWorkHostBridge::shutdown(allocation.m_bridge);
-            HOST_CHECK(NetWorkHostBridge::destroy(allocation.m_bridge) == 0);
+            HOST_CHECK(allocation.destroy() == 0);
         }
     }
-    for (int32_t position = 0; position < 3; ++position)
+    HOST_CHECK(createRejected != 0 && createAccepted != 0);
+    uint32_t inputRejected = 0;
+    uint32_t inputAccepted = 0;
+    for (int32_t position = 0; position < 32; ++position)
     {
         NetWorkHostBridgeTest allocation; allocation.m_pause = false; host = allocation.functions();
         HOST_CHECK(NetWorkHostBridge::create(&host, &allocation, allocation.connected, allocation.data, allocation.writable, allocation.closed, &allocation.m_bridge) == 0);
         allocation.m_checkConnectionOrder = true;
         allocation.m_connected(allocation.m_target, 1); allocation.m_connected(allocation.m_target, 2);
         // 未向owner通告时注入输入分配失败，仍须先连接后关闭。
-        s_bridgeRejectAfter = position;
+        const uint32_t prefilled = position < 16 ? 0 : 128;
+        for (uint32_t index = 0; index < prefilled; ++index)
+        {
+            allocation.m_data(allocation.m_target, 1, &seven, 1);
+        }
+        s_bridgeRejectAfter = position % 16;
         _CRT_ALLOC_HOOK oldHook = _CrtSetAllocHook(BridgeMemoryHook);
         allocation.m_data(allocation.m_target, 1, &seven, 1);
         _CrtSetAllocHook(oldHook); s_bridgeRejectAfter = -1;
         allocation.m_data(allocation.m_target, 2, &seven, 1);
         NetWorkHostBridge::poll(allocation.m_bridge);
         HOST_CHECK(allocation.m_connections == 2 && allocation.m_peerInputs[1] == 1 && allocation.m_peerCloses[1] == 0 && allocation.m_stops == 0 && !allocation.m_bad);
-        HOST_CHECK(position == 0 ? allocation.m_reason == NI_NO_MEMORY && allocation.m_peerCloses[0] == 1 && allocation.m_peerInputs[0] == 0 : allocation.m_peerCloses[0] == 0 && allocation.m_peerInputs[0] == 1);
+        // 任意实际分配位置失败均须明确关闭本连接；成功则交付一次，不依赖实现的分配次数。
+        HOST_CHECK(allocation.m_peerCloses[0] == 1 ? allocation.m_reason == NI_NO_MEMORY && allocation.m_peerInputs[0] == 0 :
+            allocation.m_peerCloses[0] == 0 && allocation.m_peerInputs[0] == prefilled + 1);
+        if (allocation.m_peerCloses[0] == 1) { ++inputRejected; } else { ++inputAccepted; }
         s_bridgeRejectAfter = 0; s_bridgeAllocations = 0;
         oldHook = _CrtSetAllocHook(BridgeMemoryHook);
         for (uint32_t i = 0; i < 10000; ++i) { allocation.m_writable(allocation.m_target, 2); }
@@ -383,12 +488,22 @@ int32_t NetWorkHostBridgeTest::audit()
         _CrtSetAllocHook(oldHook); s_bridgeRejectAfter = -1;
         HOST_CHECK(s_bridgeAllocations == 0 && allocation.m_peerCloses[1] == 1 && allocation.m_writes == 1 && !allocation.m_bad);
         NetWorkHostBridge::shutdown(allocation.m_bridge);
-        HOST_CHECK(NetWorkHostBridge::destroy(allocation.m_bridge) == 0);
+        HOST_CHECK(allocation.destroy() == 0);
     }
+    HOST_CHECK(inputRejected != 0 && inputAccepted != 0);
     _CrtMemCheckpoint(&after);
     HOST_CHECK(before.lCounts[_NORMAL_BLOCK] == after.lCounts[_NORMAL_BLOCK] && before.lSizes[_NORMAL_BLOCK] == after.lSizes[_NORMAL_BLOCK]);
-    std::printf("HOST_BRIDGE allocation_faults=7 control_allocations=0 heap_delta=0\n");
+    std::printf("HOST_BRIDGE create_positions=%u create_rejected=%u create_accepted=%u input_positions=32 input_rejected=%u input_accepted=%u control_allocations=0 heap_delta=0\n",
+        createAllocations + 1, createRejected, createAccepted, inputRejected, inputAccepted);
 #endif
     std::printf("PASS NetWork native foreign-event/pause/fault checks=%u\n", checks);
     return 0;
+}
+
+void NetWorkHostBridgeTest::run()
+{
+    if (audit() != 0)
+    {
+        throw std::runtime_error("host bridge regression failure");
+    }
 }

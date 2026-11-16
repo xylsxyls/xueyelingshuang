@@ -1,9 +1,10 @@
 ﻿#define NET_SERVICE_GATEWAY_NO_HEAP
 #include <LibuvTcp/LibuvTcpAPI.h>
 #include "NetWorkConcurrencyTestCases.h"
-#include <NetWork/NetWorkAPI.h>
-#include <NetSender/NetSenderAPI.h>
-#include <test/certs.h>
+#include "NetWorkTestAccess.h"
+#include "NetServiceTestAccess.h"
+#include "NetSenderTestAccess.h"
+#include "NetTestTlsCertificates.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "NetWorkTestCases.h"
@@ -33,7 +34,8 @@ static bool ServiceGatewayCreateClients(NetSenderServiceGatewayState& state, uin
         tls.authority = reinterpret_cast<const uint8_t*>(mbedtls_test_ca_crt_rsa_sha256_pem);
         tls.authoritySize = static_cast<uint32_t>(mbedtls_test_ca_crt_rsa_sha256_pem_len);
         tls.hostname = "localhost";
-        std::unique_ptr<NetSenderServiceGatewayClient> client(new NetSenderServiceGatewayClient(tls, NI_LINK_CLIENT));
+        NetObjectReference<NetSenderServiceGatewayClient> client;
+        if (state.m_clientPool->create(client, tls, NI_LINK_CLIENT) != NI_OK) { return false; }
         if (client->m_connection.status() < 0)
         {
             return false;
@@ -86,7 +88,7 @@ static int __cdecl ServiceGatewayMemoryHook(int operation, void* pointer, size_t
 }
 #endif
 
-#include "NetSender/NetSenderAPI.h"
+#include "NetSenderTestAccess.h"
 #ifdef _WIN32
 #include <windows.h>
 #include <psapi.h>
@@ -156,6 +158,24 @@ void NetSenderServiceGatewayTest::onGatewayServiceClosed(int32_t reason)
 
 bool NetSenderServiceGatewayTest::run()
 {
+    {
+        NetSenderLocalInbox inbox;
+        NetSenderServiceGateway service(inbox);
+        NetSenderServiceGatewayState* state = service.*netServiceTestMember(NetServiceTestGatewayState());
+        if (state->m_window != 1048576 || service.configureReceiveWindow(65536) != NI_OK || state->m_window != 65536 ||
+            service.configureReceiveWindow(0) != NI_INVALID_ARGUMENT || service.configureReceiveWindow(65537) != NI_INVALID_ARGUMENT ||
+            service.configureReceiveWindow(1048577) != NI_INVALID_ARGUMENT || state->m_window != 65536 ||
+            service.configureReceiveWindow(1048576) != NI_OK || state->m_window != 1048576)
+        {
+            return false;
+        }
+        state->m_phase = NET_SERVICE_CONNECTING;
+        if (service.configureReceiveWindow(65536) != NI_INVALID_STATE || state->m_window != 1048576)
+        {
+            return false;
+        }
+        state->m_phase = NET_SERVICE_IDLE;
+    }
     const uint64_t now = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count());
     uint32_t cycles = 1;
@@ -317,7 +337,8 @@ bool NetSenderServiceGatewayTest::clockBoundary()
     tls.certificateSize = static_cast<uint32_t>(mbedtls_test_srv_crt_rsa_sha256_pem_len);
     tls.privateKey = reinterpret_cast<const uint8_t*>(mbedtls_test_srv_key_rsa_pem);
     tls.privateKeySize = static_cast<uint32_t>(mbedtls_test_srv_key_rsa_pem_len);
-    std::unique_ptr<NetSenderServiceGatewayClient> entry(new NetSenderServiceGatewayClient(tls, NI_LINK_CLIENT));
+    NetObjectReference<NetSenderServiceGatewayClient> entry;
+    if (state.m_clientPool->create(entry, tls, NI_LINK_CLIENT) != NI_OK) { return false; }
     if (entry->m_connection.status() < 0) { return false; }
     state.m_clients.insert(std::make_pair(UINT64_C(1), std::move(entry)));
     NetSenderServiceGatewayClient& client = *state.m_clients.begin()->second;

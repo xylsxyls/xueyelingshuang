@@ -73,7 +73,30 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="NetTestBatch.h" />
+    <ClCompile Include="NetTestBatch.cpp" />
+    <ClInclude Include="NetTestBuild.h" />
+    <ClCompile Include="NetTestBuild.cpp" />
+    <ClInclude Include="NetProtocolTestBindings.h" />
+    <ClCompile Include="NetProtocolTestBindings.cpp" />
+    <ClInclude Include="NetGatewayWindowsProbe.h" />
+    <ClCompile Include="NetGatewayWindowsProbe.cpp" />
+    <ClInclude Include="NetGatewayProcessSuite.h" />
+    <ClCompile Include="NetGatewayProcessSuite.cpp" />
+    <ClInclude Include="NetTestProcess.h" />
+    <ClCompile Include="NetTestProcess.cpp" />
+    <ClInclude Include="NetRunnerSelfTest.h" />
+    <ClCompile Include="NetRunnerSelfTest.cpp" />
+    <ClInclude Include="NetCompactTest.h" />
+    <ClCompile Include="NetCompactTest.cpp" />
     <ClInclude Include="NetWorkTestCases.h" />
+    <ClInclude Include="NetCryptoTestCases.h" />
+    <ClInclude Include="NetCryptoLegacyTest.h" />
+    <ClInclude Include="NetCryptoCertificateTest.h" />
+    <ClInclude Include="NetSubmissionConcurrentTest.h" />
+    <ClInclude Include="NetSubmissionTestCases.h" />
+    <ClInclude Include="NetNativeFileTestCases.h" />
+    <ClInclude Include="NetWorkHostBridgeTest.h" />
     <ClInclude Include="NetSenderTestClient.inl" />
     <ClInclude Include="NetSenderTestClient.h" />
     <ClInclude Include="NetWorkTestRunner.h" />
@@ -82,6 +105,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NetWorkTest.cpp" />
+    <ClCompile Include="NetCryptoTestCases.cpp" />
+    <ClCompile Include="NetCryptoLegacyTest.cpp" />
+    <ClCompile Include="NetCryptoCertificateTest.cpp" />
+    <ClCompile Include="NetSubmissionConcurrentTest.cpp" />
     <ClCompile Include="NetSenderFacadeNetWorkCTest.cpp" />
     <ClCompile Include="NetSenderFacadeNetWorkCppTest.cpp" />
     <ClCompile Include="NetSenderFacadeNetPeerCTest.cpp" />
@@ -90,16 +117,18 @@
     <ClCompile Include="NetSenderFacadeNetSenderCppTest.cpp" />
     <ClCompile Include="NetWorkTestCases.cpp" />
     <ClCompile Include="NetInterfaceTlsTestCases.cpp" />
-    <ClCompile Include="$(ProjectDir)..\testdata\tls\certs.c" />
+    <ClCompile Include="$(ProjectDir)NetTestTlsCertificates.c" />
     <ClCompile Include="NetSenderProviderCProbe.c" />
     <ClCompile Include="NetInterfaceCppProbe.cpp">
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
+    <ClCompile Include="NetSubmissionTestCases.cpp" />
+    <ClCompile Include="NetNativeFileTestCases.cpp" />
     <ClCompile Include="NetSenderFacadeConcurrency.cpp" />
   </ItemGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\testdata\tls;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -122,7 +151,6 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>STATIC_LIB;MBEDTLS_CONFIG_FILE="mbedtls/mbedtls_sdk_config.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(NetGatewayTestInstance)'=='true'">NET_GATEWAY_TEST_INSTANCE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\protobuf;$(ProjectDir)..\..\..\include\mbedtls;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreaded</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)'=='Debug'">MultiThreadedDebugDLL</RuntimeLibrary>
@@ -189,8 +217,12 @@
   <ItemGroup>
     <ClCompile Include="NetTunnelTestCases.cpp" />
     <ClCompile Include="NetRelayTransportProbe.cpp" />
+    <ClCompile Include="NetRelayBatchTest.cpp" />
+    <ClCompile Include="NetGatewayReceiveTest.cpp" />
     <ClInclude Include="NetTunnelTestCases.h" />
     <ClInclude Include="NetRelayTransportProbe.h" />
+    <ClInclude Include="NetRelayBatchTest.h" />
+    <ClInclude Include="NetGatewayReceiveTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NetLinkTestCases.cpp" />
@@ -206,6 +238,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NetGatewayClientTestProbe.cpp" />
+    <ClCompile Include="NetGatewayPerformanceTest.cpp" />
+    <ClInclude Include="NetGatewayPerformanceTest.h" />
+    <ClCompile Include="NetGatewayOneWayTest.cpp" />
+    <ClInclude Include="NetGatewayOneWayTest.h" />
     <ClInclude Include="NetGatewayClientTestProbe.h" />
   </ItemGroup>
   <ItemGroup>
@@ -253,5 +289,265 @@
   <ItemGroup>
     <ClInclude Include="NetInterfaceCppProbe.h" />
     <ClInclude Include="NetSenderProviderCProbe.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetSenderLocalHubTest.h" />
+    <ClInclude Include="NetInboxTestAccess.h" />
+    <ClInclude Include="NetInboxTestAccess.inl" />
+    <ClInclude Include="NetIpcAdapterTest.h" />
+    <ClCompile Include="NetIpcAdapterTest.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetIpcConcurrentTest.cpp" />
+    <ClInclude Include="NetIpcConcurrentTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetIpcAdapterFixture.cpp" />
+    <ClInclude Include="NetIpcAdapterFixture.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetGatewayAuthorityTest.h" />
+    <ClCompile Include="NetGatewayAuthorityTest.cpp" />
+    <ClCompile Include="..\..\NetServerManager\NetServerManager\NetGatewayAuthority.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetGatewayProcessProbe.h" />
+    <ClCompile Include="NetGatewayProcessProbe.cpp" />
+    <ClInclude Include="NetGatewayServiceProbe.h" />
+    <ClCompile Include="NetGatewayServiceProbe.cpp" />
+    <ClInclude Include="NetGatewayManagedProbe.h" />
+    <ClCompile Include="NetGatewayManagedProbe.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetClientSessionTest.h" />
+    <ClInclude Include="NetEndpointRouterTest.h" />
+    <ClInclude Include="NetFileIoTest.h" />
+    <ClInclude Include="NetFileTransferTest.h" />
+    <ClInclude Include="NetGatewayDirectoryStoreTest.h" />
+    <ClInclude Include="NetHostSocketTest.h" />
+    <ClInclude Include="NetInterfaceFileAuditTest.h" />
+    <ClInclude Include="NetInterfaceLinkAuditTest.h" />
+    <ClInclude Include="NetInterfaceLinkAuthTest.h" />
+    <ClInclude Include="NetInterfaceTransportTest.h" />
+    <ClInclude Include="NetLinkTransportAuditTest.h" />
+    <ClInclude Include="NetPeerTest.h" />
+    <ClInclude Include="NetRelayTransportTest.h" />
+    <ClInclude Include="NetSenderDispatchAuditTest.h" />
+    <ClInclude Include="NetSenderDispatchTest.h" />
+    <ClInclude Include="NetSenderLegacyTest.h" />
+    <ClInclude Include="NetSenderLinkAuditTest.h" />
+    <ClInclude Include="NetSenderServiceGatewayTest.h" />
+    <ClInclude Include="NetSenderServiceOutgoingTest.h" />
+    <ClInclude Include="NetSenderServiceProxyTest.h" />
+    <ClInclude Include="NetSenderServiceQueueTest.h" />
+    <ClInclude Include="NetInterfaceTestAccess.h" />
+    <ClInclude Include="NetPeerTestAccess.h" />
+    <ClInclude Include="NetWorkTestAccess.h" />
+    <ClInclude Include="NetSenderTestAccess.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetServiceTestAccess.h" />
+    <ClInclude Include="NetServiceTestAccess.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetCertificateBufferTest.h" />
+    <ClCompile Include="NetCertificateBufferTest.cpp" />
+    <ClInclude Include="NetDirectoryValueTest.h" />
+    <ClCompile Include="NetDirectoryValueTest.cpp" />
+    <ClInclude Include="NetTransportContractTest.h" />
+    <ClCompile Include="NetTransportContractTest.cpp" />
+    <ClInclude Include="NetGatewayHistoryTest.h" />
+    <ClCompile Include="NetGatewayHistoryTest.cpp" />
+    <ClCompile Include="..\..\NetServerManager\NetServerManager\NetGatewayPeerHistory.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetInterfaceTransportTest.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetConnectionBufferTest.h" />
+    <ClCompile Include="NetConnectionBufferTest.cpp" />
+    <ClCompile Include="NetGatewayDirectoryStoreTest.cpp" />
+    <ClInclude Include="NetDirectoryCacheTest.h" />
+    <ClCompile Include="NetDirectoryCacheTest.cpp" />
+    <ClCompile Include="NetSenderLegacyTest.cpp" />
+    <ClInclude Include="NetLegacyBoundaryTest.h" />
+    <ClCompile Include="NetLegacyBoundaryTest.cpp" />
+    <ClInclude Include="NetGatewayLaunchTest.h" />
+    <ClCompile Include="NetGatewayLaunchTest.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetFileFacadeTest.h" />
+    <ClCompile Include="NetFileFacadeTest.cpp" />
+    <ClCompile Include="NetFileIoTest.cpp" />
+    <ClInclude Include="NetIsolatedTest.h" />
+    <ClCompile Include="NetIsolatedTest.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetGatewayNodeLoadTest.h" />
+    <ClCompile Include="NetGatewayNodeLoadTest.cpp" />
+    <ClInclude Include="NetGatewayNodeTestAccess.h" />
+    <ClInclude Include="NetGatewayNodeTestAccess.inl" />
+    <ClCompile Include="..\..\NetServerManager\NetServerManager\NetGatewayNode.cpp" />
+    <ClCompile Include="..\..\NetServerManager\NetServerManager\NetGatewayNodeState.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetGatewayChannelStateTest.h" />
+    <ClCompile Include="NetGatewayChannelStateTest.cpp" />
+    <ClInclude Include="NetInterfaceCombinedTest.h" />
+    <ClCompile Include="NetInterfaceCombinedTest.cpp" />
+    <ClInclude Include="NetConnectionQueueTest.h" />
+    <ClCompile Include="NetConnectionQueueTest.cpp" />
+    <ClInclude Include="NetDirectoryFormatTest.h" />
+    <ClCompile Include="NetDirectoryFormatTest.cpp" />
+    <ClInclude Include="NetTlsEntropyTest.h" />
+    <ClCompile Include="NetTlsEntropyTest.cpp" />
+    <ClInclude Include="NetDiscoveryTableTest.h" />
+    <ClCompile Include="NetDiscoveryTableTest.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetManagerTestSystem.h" />
+    <ClCompile Include="NetManagerTestSystem.cpp" />
+    <ClInclude Include="NetClientManagerTest.h" />
+    <ClCompile Include="NetClientManagerTest.cpp" />
+    <ClInclude Include="NetServerManagerTest.h" />
+    <ClCompile Include="NetServerManagerTest.cpp" />
+    <ClCompile Include="..\..\NetClientManager\NetClientManager\NetClientGateway.cpp" />
+    <ClCompile Include="..\..\NetClientManager\NetClientManager\NetClientGatewayTask.cpp" />
+    <ClCompile Include="..\..\NetClientManager\NetClientManager\NetClientGatewayLifetime.cpp" />
+    <ClCompile Include="..\..\NetServerManager\NetServerManager\NetGatewayTask.cpp" />
+    <ClCompile Include="..\..\NetServerManager\NetServerManager\NetGatewayIdentity.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\NetClientManager\NetClientManager\NetClientOpaqueGateway.cpp" />
+    <ClCompile Include="..\..\NetClientManager\NetClientManager\NetClientOpaqueGatewayPeer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetGatewayTaskTest.h" />
+    <ClCompile Include="NetGatewayTaskTest.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetTlsAllocationTest.h" />
+    <ClCompile Include="NetTlsAllocationTest.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetClientOpaqueGatewayTestAccess.h" />
+    <ClInclude Include="NetClientOpaqueGatewayTestAccess.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetHostExecutionTest.h" />
+    <ClCompile Include="NetHostExecutionTest.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetSubmissionSignalTest.h" />
+    <ClCompile Include="NetSubmissionSignalTest.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetObjectPoolTest.cpp" />
+    <ClInclude Include="NetObjectPoolTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetSubmissionPoolTest.cpp" />
+    <ClInclude Include="NetSubmissionPoolTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetRequestPoolTest.cpp" />
+    <ClInclude Include="NetRequestPoolTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\NetServerManager\NetServerManager\NetGatewayNodeRecord.cpp" />
+    <ClInclude Include="..\..\NetServerManager\NetServerManager\NetGatewayNodeRecord.h" />
+    <ClCompile Include="..\..\NetServerManager\NetServerManager\NetGatewayNodeRecordPool.cpp" />
+    <ClInclude Include="..\..\NetServerManager\NetServerManager\NetGatewayNodeRecordPool.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CMakeLists.txt" />
+    <None Include="AccountRuntime.js" />
+    <None Include="NetAccountClient.js" />
+    <None Include="NetInterfaceCredit.js" />
+    <None Include="NetInterfaceDirectory.js" />
+    <None Include="NetInterfaceHandshake.js" />
+    <None Include="NetInterfaceLink.js" />
+    <None Include="NetInterfaceMessage.js" />
+    <None Include="NetInterfaceRequests.js" />
+    <None Include="NetInterfaceRuntime.js" />
+    <None Include="NetWxClient.js" />
+    <None Include="NetWxFileFlow.js" />
+    <None Include="NetWxGatewaySocket.js" />
+    <None Include="NetWxServiceClient.js" />
+    <None Include="WasmMemory.js" />
+    <None Include="read_wasm.js" />
+    <None Include="NetGatewayHistoryProcessTests.js" />
+    <None Include="NetPerformanceAssertions.js" />
+    <None Include="NetTestDeadline.js" />
+    <None Include="NetWorkHostTests.js" />
+    <None Include="NetWorkProcessTests.js" />
+    <None Include="NetTestTlsLicense.txt" />
+    <None Include="NetTestTlsServer.crt" />
+    <None Include="NetTestTlsServer.key" />
+    <None Include="NetTestTlsAuthority.crt" />
+    <None Include="NetTestTlsOtherAuthority.crt" />
+    <None Include="NetWxSampleApp.js" />
+    <None Include="NetWxSampleApp.json" />
+    <None Include="NetWxSamplePage.js" />
+    <None Include="NetWxSamplePage.json" />
+    <None Include="NetWxSamplePage.wxml" />
+    <None Include="NetWxSamplePage.wxss" />
+    <None Include="account_recovery_process_test.js" />
+    <None Include="account_service_process_test.js" />
+    <None Include="application_echo.js" />
+    <None Include="balanced_failover_process_test.js" />
+    <None Include="channel_capacity_process_test.js" />
+    <None Include="client_recovery_process_test.js" />
+    <None Include="cluster_stress_test.js" />
+    <None Include="compression_gateway_process_test.js" />
+    <None Include="deadline_test.js" />
+    <None Include="desktop_gateway_process_test.js" />
+    <None Include="directory_cache_wasm_test.js" />
+    <None Include="gateway_identity_process_test.js" />
+    <None Include="gateway_oneway_performance_test.js" />
+    <None Include="gateway_performance_test.js" />
+    <None Include="gateway_process_test.js" />
+    <None Include="internal_service_gateway_process_test.js" />
+    <None Include="link_gateway_process_test.js" />
+    <None Include="local_link_gateway_process_test.js" />
+    <None Include="luma_account_process_test.js" />
+    <None Include="managed_cancel_process_test.js" />
+    <None Include="managed_service_gateway_process_test.js" />
+    <None Include="mesh_gateway_process_test.js" />
+    <None Include="peer_memory_test.js" />
+    <None Include="performance_assertions_test.js" />
+    <None Include="process_host_test.js" />
+    <None Include="recovery_budget_process_test.js" />
+    <None Include="run_wasm_test.js" />
+    <None Include="sender_c_api_process_test.js" />
+    <None Include="service_capacity_process_test.js" />
+    <None Include="service_gateway_process_test.js" />
+    <None Include="slow_channel_process_test.js" />
+    <None Include="tls_interop_test.js" />
+    <None Include="version_dependencies_test.js" />
+    <None Include="wasm_file_flow_host_test.js" />
+    <None Include="window_rtt_process_test.js" />
+    <None Include="wx_recovery_callback_test.js" />
+    <None Include="wx_sample_host_test.js" />
+    <None Include="wx_schedule_test.js" />
+    <None Include="wx_smoke_test.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetWorkTest.h" />
+    <ClInclude Include="NetTestTlsAlignment.h" />
+    <ClInclude Include="NetTestTlsCertificateData.h" />
+    <ClInclude Include="NetTestTlsCertificates.h" />
+    <ClInclude Include="NetTestTlsCommon.h" />
+  </ItemGroup>
+  <!-- Standalone entry points are compiled only by NetWorkTestModules. -->
+  <ItemGroup>
+    <None Include="NetCryptoMain.cpp" />
+    <None Include="NetGatewayProtoMain.cpp" />
+    <None Include="NetGatewaySdkMain.cpp" />
+    <None Include="NetInterfaceModuleMain.cpp" />
+    <None Include="NetTlsConsumerMain.cpp" />
+    <None Include="ProtoMessageManagerTest.cpp" />
+    <None Include="ProtoMessageManagerWireTest.cpp" />
+    <None Include="NetWorkTestModules.vcxproj" />
   </ItemGroup>
 </Project>

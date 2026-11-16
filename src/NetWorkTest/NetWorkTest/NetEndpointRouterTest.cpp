@@ -1,5 +1,5 @@
 ﻿#include <algorithm>
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include "NetEndpointRouterTestCases.h"
 #include "NetInterfaceTlsTestCases.h"
 #include <cstring>

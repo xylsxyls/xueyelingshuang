@@ -70,7 +70,7 @@ void NetEndpointRouterTestCases::attachedEndpoints()
     uint64_t a = 0;
     uint64_t b = 0;
     uint64_t rejected = 99;
-    const uint32_t unknownCapabilities[] = {3, 31, 8, 65536};
+    const uint32_t unknownCapabilities[] = {3, 63, 8, 65536};
     NetInterfaceTlsTestPair::require(router.addClient(first, unknownCapabilities, rejected) == NI_INVALID_ARGUMENT && rejected == 0,
         "attached endpoint accepted an unassigned capability bit");
     NetInterfaceTlsTestPair::require(router.addClient(first, negotiated, a) == NI_OK &&
@@ -176,7 +176,7 @@ void NetEndpointRouterTestCases::attachedEndpoints()
 }
 
 // NET_ENDPOINT_ROUTER_REDRAFT_TESTS
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include <algorithm>
 #include <chrono>
 #ifdef _WIN32
@@ -335,6 +335,30 @@ void NetEndpointRouterTestCases::routerLifecycle()
         router.shutdown();
         R_CHECK(transport.m_stopped == stopped);
     }
+    // 默认端点表可增长超过1023；独立两槽实际池的失败可恢复，不改变其它端点。
+    {
+        NetEndpointProbeSink services;
+        NetEndpointProbeSink clients;
+        NetEndpointRouter router(&services, &clients);
+        uint64_t id = 0;
+        for (uint32_t index = 0; index < 2048; ++index)
+        {
+            R_CHECK(RouterTestClient(router, index + 1, id) == NI_OK);
+        }
+        router.shutdown();
+        R_CHECK(clients.m_closed == 2048);
+        NetEndpointRouter limitedRouter(&services, &clients);
+        NetEndpointPools pools;
+        pools.m_endpoints.initialCapacity = pools.m_endpoints.maximumCapacity = 2;
+        R_CHECK(limitedRouter.configurePools(pools) == NI_OK);
+        uint64_t first = 0;
+        uint64_t second = 0;
+        R_CHECK(RouterTestClient(limitedRouter, 1, first) == NI_OK && RouterTestClient(limitedRouter, 2, second) == NI_OK);
+        R_CHECK(RouterTestClient(limitedRouter, 3, id) == NI_LIMIT_EXCEEDED && id == 0);
+        R_CHECK(limitedRouter.configurePools(pools) == NI_INVALID_STATE);
+        limitedRouter.closeEndpoint(first, NI_CANCELLED);
+        R_CHECK(limitedRouter.poll() && RouterTestClient(limitedRouter, 3, id) == NI_OK && id > second);
+    }
     // 来源输出参数与输入来源号重叠，不得破坏原来源校验；关闭回调异常不丢收尾任务。
     {
         NetEndpointProbeSink services;
@@ -397,11 +421,14 @@ void NetEndpointRouterTestCases::routerLifecycle()
         const NetInterfaceFrame request = RouterTestRpc(NI_REQUEST, 101, 11, 1, 0, nullptr, 0, bytes);
         R_CHECK(router.receiveClient(client, request) == NI_OK && !router.poll() && router.pendingCount() == 0 && services.m_closed == 1);
     }
-    // 文件32条客户端限额；第33条父请求失败也立刻结束已发出的内部查询。
+    // 显式配置实际文件池32槽；第33条父请求失败也立刻结束已发出的内部查询。
     {
         NetEndpointProbeSink services;
         NetEndpointProbeSink clients;
         NetEndpointRouter router(&services, &clients);
+        NetEndpointPools pools;
+        pools.m_files.initialCapacity = pools.m_files.maximumCapacity = 32;
+        R_CHECK(router.configurePools(pools) == NI_OK);
         uint64_t service = 0;
         uint64_t dependency = 0;
         uint64_t client = 0;
@@ -496,7 +523,7 @@ void NetEndpointRouterTestCases::routerLifecycle()
         router.closeEndpoint(client, NI_CANCELLED);
         R_CHECK(router.poll() && services.m_closed == 0);
     }
-    // 同一服务128条与全局1024条额度，跨服务同号隔离，撤销只影响授权服务的分组。
+    // 每个服务129条、全局超过1024条，跨服务同号隔离，撤销只影响授权服务的分组。
     {
         NetEndpointProbeSink services;
         NetEndpointProbeSink clients;
@@ -520,9 +547,9 @@ void NetEndpointRouterTestCases::routerLifecycle()
                     item % 32 + 1, RouterTestInfo(item + 1000), mapped) == NI_OK);
             }
             R_CHECK(RouterTestOpen(router, services, clients, client[33], service[group], 101 + group,
-                group + 1, RouterTestInfo(2000), mapped) == NI_RPC_BUSY);
+                group + 1, RouterTestInfo(2000), mapped) == NI_OK);
         }
-        R_CHECK(RouterTestOpen(router, services, clients, client[32], service[8], 109, 1, RouterTestInfo(3000), mapped) == NI_RPC_BUSY);
+        R_CHECK(RouterTestOpen(router, services, clients, client[32], service[8], 109, 1, RouterTestInfo(3000), mapped) == NI_OK);
         uint8_t eventBytes[40] = {};
         uint8_t scope[16];
         std::memset(scope, 0x51, sizeof(scope));
@@ -536,9 +563,9 @@ void NetEndpointRouterTestCases::routerLifecycle()
         event.m_payload = eventBytes;
         event.m_payloadSize = size;
         const uint32_t notices = clients.m_sent;
-        R_CHECK(router.receiveService(service[0], event) == NI_OK && clients.m_sent == notices + 128);
-        R_CHECK(RouterTestOpen(router, services, clients, client[32], service[8], 109, 2, RouterTestInfo(3000), mapped) == NI_OK && mapped.stream == 1025);
-        R_CHECK(RouterTestOpen(router, services, clients, client[33], service[1], 102, 9, RouterTestInfo(2000), mapped) == NI_RPC_BUSY);
+        R_CHECK(router.receiveService(service[0], event) == NI_OK && clients.m_sent == notices + 129);
+        R_CHECK(RouterTestOpen(router, services, clients, client[32], service[8], 109, 2, RouterTestInfo(3000), mapped) == NI_OK && mapped.stream == 1033);
+        R_CHECK(RouterTestOpen(router, services, clients, client[33], service[1], 102, 9, RouterTestInfo(2000), mapped) == NI_OK && mapped.stream == 258);
         router.shutdown();
         R_CHECK(!router.poll() && router.pendingCount() == 0 && services.m_closed == 9 && clients.m_closed == 34);
     }

@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "NetWork/NetWorkAPI.h"
+#include "NetWorkTestAccess.h"
 #include <map>
 #include <set>
 #include <vector>

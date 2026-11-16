@@ -1,8 +1,8 @@
 ﻿#pragma once
 #include "NetSenderTestClient.h"
 #ifndef __EMSCRIPTEN__
-#include "NetSender/NetSenderAPI.h"
-#include "NetWork/NetWorkAPI.h"
+#include "NetSenderTestAccess.h"
+#include "NetWorkTestAccess.h"
 #include <vector>
 
 // 服务不存在场景的独占监听器，只记录事件，不保留回调数据或触发业务发送

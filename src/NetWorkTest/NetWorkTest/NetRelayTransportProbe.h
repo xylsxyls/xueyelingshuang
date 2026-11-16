@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "NetWork/NetWorkAPI.h"
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetWorkTestAccess.h"
+#include "NetInterfaceTestAccess.h"
 #include <deque>
 #include <memory>
 #include <string>

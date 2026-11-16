@@ -1,7 +1,11 @@
 ﻿#include "NetInterfaceProtoTestCases.h"
 #include "NetWorkTestCases.h"
-#include "NetInterface/NetInterfaceAPI.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
+#ifndef NET_TEST_PROTO_STANDALONE
+#include "NetInterfaceTestAccess.h"
+#endif
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
+#include "../../ProtoMessageManager/ProtoMessageManager/src/ProtoMessage.pb.h"
+#include <google/protobuf/stubs/once.h>
 #include <cstring>
 #include <stdexcept>
 #include <vector>
@@ -160,6 +164,7 @@ void NetInterfaceProtoTestCases::ownership()
     CheckProto(destination.empty(), "empty blob retained old output");
 }
 
+#ifndef NET_TEST_PROTO_STANDALONE
 void NetInterfaceProtoTestCases::cBoundary()
 {
     NetInterfaceMessageHandle handle = nullptr;
@@ -205,6 +210,7 @@ void NetInterfaceProtoTestCases::cBoundary()
     NetInterface::messageDestroy(handle);
     NetInterface::messageDestroy(nullptr);
 }
+#endif
 
 void NetInterfaceProtoTestCases::limits()
 {

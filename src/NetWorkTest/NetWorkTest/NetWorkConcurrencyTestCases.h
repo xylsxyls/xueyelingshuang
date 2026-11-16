@@ -1,10 +1,7 @@
 ﻿#pragma once
-#include "NetSender/NetSenderAPI.h"
-#include "NetWork/NetWorkAPI.h"
-#include <NetWork/NetWorkAPI.h>
-#include <NetPeer/NetPeerAPI.h>
-#include <NetSender/NetSenderAPI.h>
-#include <NetPeer/NetPeerAPI.h>
+#include "NetSenderTestAccess.h"
+#include "NetWorkTestAccess.h"
+#include "NetPeerTestAccess.h"
 #include <CTaskThreadManager/CTaskThreadManagerAPI.h>
 #include <atomic>
 #include <mutex>
@@ -168,7 +165,7 @@ public:
 
     /** 独立提交8次send／post混合请求，每三次取消一次；同步交付不持测试锁
     */
-    virtual void DoTask();
+    virtual void doTask();
 private:
     // main先回收生产者再释放
     NetWorkConcurrencyContext* m_context;
@@ -208,9 +205,18 @@ private:
 class NetWorkConcurrencyTestCases
 {
 public:
+    /** 八个真实TLS会话共用2条send线程或1条post线程，关闭首部或多处会话后逐请求核对成功与隔离
+    */
+    static void sharedWorkers();
+
     /** 三路真实服务队列共享额度，借用、取消和异常必须正确释放且不破坏期限
     */
     static void serviceQueueOwnership();
+
+    /** 独立进程执行服务队列CRT分配失败、预热零分配与泄漏检查
+    @return 0通过，其余为失败
+    */
+    static int serviceQueueMemoryAudit();
 
     /** 服务接入阶段、失败收敛及回调异常不遗留polling或重复终态
     */
@@ -350,6 +356,10 @@ public:
     */
     static void lifecycleResources();
 
+    /** 由隔离测试入口执行同一资源循环，不受其他用例后台IPC句柄增减干扰
+    */
+    static void lifecycleCycles();
+
     /** 用真实libuv分配器故障验证循环初始化错误不抛出，且实例可安全释放
     */
     static void loopInitializationFailure();
@@ -368,7 +378,7 @@ public:
 
     /** 在独占CTask调用实际wake；原子标志仅协调用例中的临界时序。
     */
-    virtual void DoTask();
+    virtual void doTask();
     // main观察到已开始后才放行condition_variable的原子解锁／等待。
     std::atomic<bool> m_started;
     // 回收前观察唤醒已实际返回。
@@ -391,7 +401,7 @@ public:
 
     /** 在独占CTask调用实际StopTask，不模拟文件后端。
     */
-    virtual void DoTask();
+    virtual void doTask();
     // main只读此两项以安排受控竞争；不访问任务内部协议。
     std::atomic<bool> m_started;
     // 本用例工作已完成，拥有者仍须收敛运输或回收任务

@@ -1,14 +1,14 @@
 ﻿#include "NetInterfaceNativeTestCases.h"
 #include "NetWorkTestCases.h"
-#include "NetInterfaceTcpProbe.h"
 #include "uv.h"
+#include "NetInterfaceTcpProbe.h"
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include <stdexcept>
 #include <sstream>
 #include <chrono>
 #include <thread>
-#include "NetWork/NetWorkAPI.h"
+#include "NetWorkTestAccess.h"
 #include <cstring>
 #include "CStringManager/CStringManagerAPI.h"
 #ifdef _WIN32
@@ -58,9 +58,13 @@ void NetInterfaceNativeTestCases::boundedTcp()
     {
         block[index] = static_cast<uint8_t>(index * 31 + 5);
     }
-    CheckTcp(client.write(clientPeer, &block[0], 32768) == 0 &&
-        client.write(clientPeer, &block[0], 32768) == 0, "accept 64KiB");
-    CheckTcp(client.write(clientPeer, &block[0], 1) == UV_ENOBUFS, "byte budget missing");
+    std::vector<uint8_t> expected;
+    // 不运行loop连续提交128个32KiB块，超过旧64KiB和64次写入门槛。
+    for (uint32_t index = 0; index < 128; ++index)
+    {
+        CheckTcp(client.post(clientPeer, block.data(), 32768) == 0, "grow raw write pool beyond old gates");
+        expected.insert(expected.end(), block.begin(), block.end());
+    }
     for (int index = 0; index < 10; ++index)
     {
         server.poll();
@@ -68,28 +72,195 @@ void NetInterfaceNativeTestCases::boundedTcp()
     }
     CheckTcp(serverEvents.m_received.empty(), "paused stream received data");
     CheckTcp(server.pauseRead(serverEvents.m_peer, false) == 0, "resume TCP reads");
-    while (serverEvents.m_received.size() < 65536 || clientEvents.m_writable < 2)
+    while (serverEvents.m_received.size() < expected.size() || clientEvents.m_writable < 2)
     {
         netTestCheckpoint();
         server.poll();
         client.poll();
     }
-    std::vector<uint8_t> expected(block);
-    expected.insert(expected.end(), block.begin(), block.end());
     CheckTcp(serverEvents.m_received == expected, "raw binary altered or implicit length prefix");
-    for (int index = 0; index < 64; ++index)
+    // 默认池256槽；验证实际池耗尽及释放后复用，不添加每连接的第二层计数门槛。
+    for (int round = 0; round < 2; ++round)
     {
-        CheckTcp(client.write(clientPeer, &block[0], 1) == 0, "small writes admission");
+        for (int index = 0; index < 256; ++index)
+        {
+            CheckTcp(client.post(clientPeer, block.data(), 1) == 0, "reuse physical write slots");
+            expected.push_back(block[0]);
+        }
+        CheckTcp(client.post(clientPeer, block.data(), 1) == UV_ENOBUFS, "physical write pool exhausted");
+        while (serverEvents.m_received.size() < expected.size() || clientEvents.m_writable < uint32_t(2 + (round + 1) * 4))
+        {
+            netTestCheckpoint();
+            server.poll();
+            client.poll();
+        }
+        CheckTcp(serverEvents.m_received == expected, "raw reused pool lost or reordered data");
     }
-    CheckTcp(client.write(clientPeer, &block[0], 1) == UV_ENOBUFS, "request count budget missing");
     client.close(clientPeer, 123);
     client.close(clientPeer, 321);
-    CheckTcp(client.write(clientPeer, &block[0], 1) == UV_ENOTCONN, "write after close");
+    CheckTcp(client.post(clientPeer, &block[0], 1) == UV_ENOTCONN, "write after close");
     client.shutdown();
     server.shutdown();
     CheckTcp(clientEvents.m_closed[clientPeer] == 1 && clientEvents.m_reasons[clientPeer] == 123,
         "close result repeated or replaced");
     CheckTcp(client.peerCount() == 0 && server.peerCount() == 0 && !client.poll() && !server.poll(), "shutdown left live handles");
+}
+
+void NetInterfaceNativeTestCases::rawWriteOrdering()
+{
+    runRawWriteOrdering(false);
+    runRawWriteOrdering(true);
+    NetInterfaceTcpProbe serverEvents;
+    NetInterfaceTcpProbe firstEvents;
+    NetInterfaceTcpProbe secondEvents;
+    LibuvChannel server;
+    LibuvChannel first;
+    LibuvChannel second;
+    LibuvChannelWritePoolConfig writes;
+    writes.m_records.initialCapacity = writes.m_records.maximumCapacity = 2;
+    CheckTcp(server.configureWritePool(writes) == 0, "two shared physical write slots");
+    CheckTcp(server.listen("127.0.0.1", 0, &serverEvents, 1) == 0, "peer hint must not cap active clients");
+    uint64_t firstId = 0;
+    uint64_t secondId = 0;
+    CheckTcp(first.connect("127.0.0.1", server.localPort(), &firstEvents, firstId) == 0, "fair first connect");
+    while (serverEvents.m_connections != 1 || firstEvents.m_peer == 0) { netTestCheckpoint(); server.poll(); first.poll(); }
+    const uint64_t firstTarget = serverEvents.m_peer;
+    CheckTcp(second.connect("127.0.0.1", server.localPort(), &secondEvents, secondId) == 0, "fair second connect");
+    while (serverEvents.m_connections != 2 || secondEvents.m_peer == 0) { netTestCheckpoint(); server.poll(); first.poll(); second.poll(); }
+    const uint64_t secondTarget = serverEvents.m_peer;
+    const uint8_t byte = 19;
+    CheckTcp(server.post(firstTarget, &byte, 1) == 0 && server.post(firstTarget, &byte, 1) == 0, "occupy shared pool");
+    CheckTcp(server.post(secondTarget, &byte, 1) == UV_ENOBUFS, "other peer waits for actual pool");
+    while (serverEvents.m_writable != 2) { netTestCheckpoint(); server.poll(); first.poll(); second.poll(); }
+    CheckTcp(server.post(secondTarget, &byte, 1) == 0, "waiter resumed without its own pending write");
+    while (secondEvents.m_received.size() != 1) { netTestCheckpoint(); server.poll(); first.poll(); second.poll(); }
+    CheckTcp(firstEvents.m_received.size() == 2 && secondEvents.m_received[0] == byte, "shared pool ownership intact");
+    server.shutdown(); first.shutdown(); second.shutdown();
+}
+
+void NetInterfaceNativeTestCases::runRawWriteOrdering(bool shared)
+{
+    std::unique_ptr<NetExecution> execution(shared ? new NetExecution() : nullptr);
+    std::unique_ptr<NetExecutionScope> scope(shared ? new NetExecutionScope(*execution) : nullptr);
+    NetInterfaceTcpProbe serverEvents;
+    NetInterfaceTcpProbe firstEvents;
+    NetInterfaceTcpProbe secondEvents;
+    LibuvChannel server;
+    LibuvChannel first;
+    LibuvChannel second;
+    CheckTcp(server.listen("127.0.0.1", 0, &serverEvents) == 0, "raw write listen");
+    uint64_t firstId = 0;
+    uint64_t secondId = 0;
+    CheckTcp(first.connect("127.0.0.1", server.localPort(), &firstEvents, firstId) == 0, "raw write first");
+    while (!serverEvents.m_peer || !firstEvents.m_peer)
+    {
+        netTestCheckpoint();
+        server.poll();
+        first.poll();
+    }
+    const uint64_t serverFirst = serverEvents.m_peer;
+    CheckTcp(second.connect("127.0.0.1", server.localPort(), &secondEvents, secondId) == 0, "raw write second");
+    while (serverEvents.m_connections != 2 || !secondEvents.m_peer)
+    {
+        netTestCheckpoint();
+        server.poll();
+        first.poll();
+        second.poll();
+    }
+    const uint64_t serverSecond = serverEvents.m_peer;
+    std::vector<uint8_t> expected;
+    uint8_t body[6] = {};
+    for (uint32_t index = 0; index < 256; ++index)
+    {
+        for (uint32_t offset = 0; offset < 6; ++offset)
+        {
+            body[offset] = static_cast<uint8_t>(index + offset);
+        }
+        expected.insert(expected.end(), body, body + 6);
+        CheckTcp(first.post(firstId, body, 6) == 0, "raw write admission");
+        std::memset(body, 0xee, sizeof(body));
+    }
+    CheckTcp(firstEvents.m_writable == 0, "write completion became reentrant");
+    CheckTcp(first.post(firstId, body, 6) == UV_ENOBUFS, "direct completion bypassed capacity");
+    while (serverEvents.m_received.size() != expected.size() || firstEvents.m_writable != 4)
+    {
+        netTestCheckpoint();
+        server.poll();
+        first.poll();
+        second.poll();
+    }
+    CheckTcp(serverEvents.m_received == expected, "raw write bytes or order changed");
+    CheckTcp(server.pauseRead(serverFirst, true) == 0, "raw paused receiver");
+    std::vector<uint8_t> block(8192);
+    uint32_t submitted = 0;
+    bool resumed = false;
+    while (submitted < 256)
+    {
+        netTestCheckpoint();
+        for (size_t offset = 0; offset < block.size(); ++offset)
+        {
+            block[offset] = static_cast<uint8_t>(offset * 17 + submitted);
+        }
+        const int32_t result = first.post(firstId, block.data(), static_cast<uint32_t>(block.size()));
+        CheckTcp(result == 0 || result == UV_ENOBUFS, "raw slow receiver unexpected write failure");
+        if (result == 0)
+        {
+            expected.insert(expected.end(), block.begin(), block.end());
+            ++submitted;
+        }
+        if (!resumed && (result == UV_ENOBUFS || submitted == 128))
+        {
+            CheckTcp(server.pauseRead(serverFirst, false) == 0, "raw resume receiver");
+            resumed = true;
+        }
+        first.poll(); server.poll(); second.poll();
+    }
+    while (serverEvents.m_received.size() != expected.size() || firstEvents.m_writable < 5)
+    {
+        netTestCheckpoint();
+        server.poll();
+        first.poll();
+        second.poll();
+    }
+    CheckTcp(serverEvents.m_received == expected, "raw partial/queued stream duplicated or truncated");
+    serverEvents.m_closeChannel = &server;
+    serverEvents.m_closePeer = serverSecond;
+    for (uint32_t index = 0; index < 8; ++index)
+    {
+        CheckTcp(server.post(serverFirst, body, 6) == 0, "raw cross-close first");
+        CheckTcp(server.post(serverSecond, body, 6) == 0, "raw cross-close second");
+    }
+    CheckTcp(serverEvents.m_writable == 0, "server direct callback was synchronous");
+    while (serverEvents.m_closed[serverSecond] == 0 || serverEvents.m_writable < 1)
+    {
+        netTestCheckpoint();
+        server.poll();
+        first.poll();
+        second.poll();
+    }
+    CheckTcp(serverEvents.m_closed[serverSecond] == 1 && serverEvents.m_reasons[serverSecond] == 42,
+        "cross-close lost or duplicated terminal");
+    CheckTcp(serverEvents.m_closed[serverFirst] == 0, "cross-close affected healthy peer");
+    const uint32_t beforeShutdown = firstEvents.m_writable;
+    firstEvents.m_closeChannel = &first;
+    firstEvents.m_closePeer = 0;
+    for (uint32_t index = 0; index < 8; ++index)
+    {
+        CheckTcp(first.post(firstId, body, 6) == 0, "callback shutdown pending completions");
+    }
+    while (firstEvents.m_closed[firstId] == 0)
+    {
+        netTestCheckpoint();
+        first.poll();
+        server.poll();
+        second.poll();
+    }
+    CheckTcp(firstEvents.m_writable == beforeShutdown + 1 && firstEvents.m_closed[firstId] == 1,
+        "shutdown delivered completed callbacks after terminal");
+    first.shutdown();
+    second.shutdown();
+    server.shutdown();
+    CheckTcp(!first.poll() && !second.poll() && !server.poll(), "completion notifier retained active loop");
 }
 
 void NetInterfaceNativeTestCases::tcpLifecycle()
@@ -102,6 +273,10 @@ void NetInterfaceNativeTestCases::tcpLifecycle()
     LibuvChannel first;
     LibuvChannel second;
     LibuvChannel third;
+    LockFreeHashMapPoolConfig peers;
+    peers.initialCapacity = 1;
+    peers.maximumCapacity = 1;
+    CheckTcp(server.configurePeerPool(peers) == 0, "configure one physical peer slot");
     CheckTcp(server.listen("127.0.0.1", 0, &serverEvents, 1) == 0, "listen one-peer server");
     uint64_t firstId = 0;
     CheckTcp(first.connect("not-a-numeric-address", server.localPort(), &firstEvents, firstId) == UV_EINVAL && firstId == 0, "numeric address validation");
@@ -125,7 +300,7 @@ void NetInterfaceNativeTestCases::tcpLifecycle()
     CheckTcp(serverEvents.m_connections == 1 && server.peerCount() == 1, "over-capacity client admitted");
     serverEvents.m_throwOnData = true;
     const uint8_t byte = 42;
-    CheckTcp(first.write(firstId, &byte, 1) == 0, "trigger listener exception");
+    CheckTcp(first.post(firstId, &byte, 1) == 0, "trigger listener exception");
     while (serverEvents.m_closed.empty())
     {
         netTestCheckpoint();
@@ -142,7 +317,7 @@ void NetInterfaceNativeTestCases::tcpLifecycle()
         server.poll();
         third.poll();
     }
-    CheckTcp(serverEvents.m_peer != oldServerId && server.write(oldServerId, &byte, 1) == UV_ENOTCONN, "stale peer ID reused");
+    CheckTcp(serverEvents.m_peer != oldServerId && server.post(oldServerId, &byte, 1) == UV_ENOTCONN, "stale peer ID reused");
     third.shutdown();
     second.shutdown();
     first.shutdown();

@@ -1,6 +1,6 @@
 ﻿#include "NetInterfaceTlsTestCases.h"
 #include "NetWorkTestCases.h"
-#include <test/certs.h>
+#include "NetTestTlsCertificates.h"
 #include <algorithm>
 #include <cstring>
 #include <stdexcept>
@@ -430,4 +430,151 @@ void NetInterfaceTlsTestCases::entropyExceptionBoundary()
         NetInterface::entropyBytes(nullptr, nullptr, nullptr, 1) == NI_INVALID_ARGUMENT &&
         NetInterface::entropyBytes(nullptr, nullptr, bytes, 8193) == NI_INVALID_ARGUMENT,
         "entropy argument boundaries changed");
+}
+
+void NetInterfaceTlsTestCases::appendRecords()
+{
+    const auto Check = &NetInterfaceTlsTestPair::require;
+    NetInterfaceTlsTestPair pair("localhost");
+    Check(pair.handshake(32768), "append handshake failed");
+    uint8_t body[6] = { '1', '2', '3', '4', '5', '6' };
+    uint32_t accepted = 77;
+    Check(pair.m_client->append(nullptr, 1, accepted) == NET_INTERFACE_TLS_ARGUMENT && accepted == 0,
+        "append accepted null nonempty input");
+    Check(pair.m_client->append(nullptr, 0, accepted) == NET_INTERFACE_TLS_OK && accepted == 0,
+        "empty append failed");
+    for (uint32_t index = 0; index < 1024; ++index)
+    {
+        Check(pair.m_client->append(body, sizeof(body), accepted) == NET_INTERFACE_TLS_OK && accepted == sizeof(body),
+            "append failed before record capacity");
+    }
+    Check(pair.m_client->write(body, sizeof(body), accepted) == NET_INTERFACE_TLS_WANT_IO && accepted == 0,
+        "write overwrote unsubmitted append data");
+    Check(pair.m_client->progress(2000) == NET_INTERFACE_TLS_READY, "aggregate progress failed");
+    const uint8_t* wire = nullptr;
+    uint32_t wireSize = 0;
+    pair.m_client->peekOutput(wire, wireSize);
+    Check(wireSize > 6144 && wireSize < 6244, "queued plaintext was not one compact TLS record");
+    std::vector<uint8_t> output(16384);
+    uint32_t total = 0;
+    for (uint32_t step = 0; step < 20000 && total < 6144; ++step)
+    {
+        NetInterfaceTlsTestPair::transfer(*pair.m_client, *pair.m_server, 7);
+        uint32_t received = 0;
+        Check(pair.m_server->read(output.data(), static_cast<uint32_t>(output.size()), received) >= 0,
+            "fragmented aggregate read failed");
+        for (uint32_t index = 0; index < received; ++index)
+        {
+            Check(output[index] == body[(total + index) % 6], "aggregate content or ordering changed");
+        }
+        total += received;
+    }
+    Check(total == 6144, "aggregate plaintext incomplete");
+
+    // 暂不消费密文，令未满的短记录触发WANT_WRITE，重试期间禁止追加明文。
+    std::vector<uint8_t> expected;
+    std::vector<uint8_t> block(16384, 0x5a);
+    bool frozen = false;
+    for (uint32_t step = 0; step < 4096; ++step)
+    {
+        const uint32_t size = step < 1 ? 16384 : 17;
+        const int32_t result = pair.m_client->append(block.data(), size, accepted);
+        Check(result >= 0, "append failed while saturating ciphertext");
+        if (accepted == 0)
+        {
+            frozen = true;
+            Check(pair.m_client->appendExact(body, 1) == NET_INTERFACE_TLS_WANT_IO,
+                "exact append changed a frozen retry record");
+            Check(pair.m_client->append(body, 1, accepted) == NET_INTERFACE_TLS_WANT_IO && accepted == 0,
+                "frozen TLS retry data changed");
+            break;
+        }
+        expected.insert(expected.end(), block.begin(), block.begin() + accepted);
+        Check(pair.m_client->progress(2001) == NET_INTERFACE_TLS_READY, "backpressured progress failed");
+    }
+    Check(frozen, "ciphertext backpressure was not reached");
+    total = 0;
+    for (uint32_t step = 0; step < 100000 && (total < expected.size() || pair.m_client->outputState() != NET_INTERFACE_TLS_OK); ++step)
+    {
+        pair.m_client->progress(2002);
+        NetInterfaceTlsTestPair::transfer(*pair.m_client, *pair.m_server, 127);
+        uint32_t received = 0;
+        Check(pair.m_server->read(output.data(), static_cast<uint32_t>(output.size()), received) >= 0,
+            "frozen retry failed authentication");
+        Check(received <= expected.size() - total && std::memcmp(output.data(), expected.data() + total, received) == 0,
+            "frozen retry lost, duplicated or changed plaintext");
+        total += received;
+    }
+    Check(total == expected.size(), "frozen retry failed to drain");
+    Check(pair.m_client->append(block.data(), 16380, accepted) == NET_INTERFACE_TLS_OK && accepted == 16380,
+        "append did not recover after backpressure");
+    Check(pair.m_client->append(body, 6, accepted) == NET_INTERFACE_TLS_OK && accepted == 4,
+        "append did not return exact record-tail prefix");
+    Check(pair.m_client->append(body, 1, accepted) == NET_INTERFACE_TLS_WANT_IO && accepted == 0,
+        "full plaintext record was overfilled");
+    pair.m_client->progress(2003);
+    NetInterfaceTlsTestPair::transfer(*pair.m_client, *pair.m_server, 32768);
+    uint32_t received = 0;
+    Check(pair.m_server->read(output.data(), static_cast<uint32_t>(output.size()), received) == NET_INTERFACE_TLS_OK &&
+        received == 16384 && std::memcmp(output.data(), block.data(), 16380) == 0 &&
+        std::memcmp(output.data() + 16380, body, 4) == 0, "partial append tail corrupted");
+    Check(pair.m_client->appendExact(nullptr, 1) == NET_INTERFACE_TLS_ARGUMENT &&
+        pair.m_client->appendExact(nullptr, 0) == NET_INTERFACE_TLS_OK &&
+        pair.m_client->appendExact(block.data(), 16385) == NET_INTERFACE_TLS_WANT_IO &&
+        pair.m_client->appendExact(body, 3, nullptr, 1) == NET_INTERFACE_TLS_ARGUMENT &&
+        pair.m_client->appendExact(nullptr, 1, body, 3) == NET_INTERFACE_TLS_ARGUMENT &&
+        pair.m_client->appendExact(block.data(), 16000, block.data(), 1000) == NET_INTERFACE_TLS_WANT_IO,
+        "exact append argument or oversized atomicity");
+    // 每轮及时排空本例32KiB密文池；跨轮复用同时覆盖环形缓冲回绕。
+    uint32_t exactTotal = 0;
+    for (uint32_t round = 0; round < 3; ++round)
+    {
+        Check(pair.m_client->appendExact(block.data(), 16380) == NET_INTERFACE_TLS_OK &&
+            pair.m_client->appendExact(body, round, body + round, 6 - round) == NET_INTERFACE_TLS_OK,
+            "exact append did not roll a full record without a partial new input");
+        const uint32_t expectedTotal = (round + 1) * 16386;
+        for (uint32_t step = 0; step < 10000 && exactTotal < expectedTotal; ++step)
+        {
+            pair.m_client->progress(2003);
+            NetInterfaceTlsTestPair::transfer(*pair.m_client, *pair.m_server, 127);
+            uint32_t exactReceived = 0;
+            Check(pair.m_server->read(output.data(), static_cast<uint32_t>(output.size()), exactReceived) >= 0,
+                "exact append rollover authentication");
+            for (uint32_t index = 0; index < exactReceived; ++index)
+            {
+                const uint32_t offset = (exactTotal + index) % 16386;
+                Check(output[index] == (offset < 16380 ? 0x5a : body[offset - 16380]),
+                    "exact append rollover content/order");
+            }
+            exactTotal += exactReceived;
+        }
+        Check(exactTotal == expectedTotal, "exact append rollover missing bytes");
+    }
+    // 两段短正文覆盖所有0～32字节长度和非对齐地址；比较真实TLS解密结果而非内部存储。
+    std::vector<uint8_t> fragments;
+    uint8_t bytes[34];
+    for (uint32_t index = 0; index < sizeof(bytes); ++index)
+    {
+        bytes[index] = static_cast<uint8_t>(index * 7 + 3);
+    }
+    for (uint32_t size = 0; size <= 32; ++size)
+    {
+        Check(pair.m_client->appendExact(bytes + 1, size, bytes + 2, 32 - size) == NET_INTERFACE_TLS_OK,
+            "exact append short unaligned fragments");
+        fragments.insert(fragments.end(), bytes + 1, bytes + 1 + size);
+        fragments.insert(fragments.end(), bytes + 2, bytes + 34 - size);
+    }
+    pair.m_client->progress(2004);
+    NetInterfaceTlsTestPair::transfer(*pair.m_client, *pair.m_server, 32768);
+    Check(pair.m_server->read(output.data(), static_cast<uint32_t>(output.size()), received) == NET_INTERFACE_TLS_OK &&
+        received == fragments.size() && std::memcmp(output.data(), fragments.data(), fragments.size()) == 0,
+        "exact append small fragment content/size");
+    Check(pair.m_client->write(body, 6, accepted) == NET_INTERFACE_TLS_OK && accepted == 6,
+        "legacy write failed after append");
+    pair.m_client->close();
+    NetInterfaceTlsTestPair::transfer(*pair.m_client, *pair.m_server, 32768);
+    Check(pair.m_server->read(output.data(), static_cast<uint32_t>(output.size()), received) == NET_INTERFACE_TLS_OK &&
+        received == 6 && std::memcmp(output.data(), body, 6) == 0, "close lost pending plaintext");
+    Check(pair.m_client->append(body, 6, accepted) == NET_INTERFACE_TLS_STATE && accepted == 0,
+        "append succeeded after close");
 }

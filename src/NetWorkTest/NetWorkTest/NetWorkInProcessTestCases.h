@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "NetSenderTestClient.h"
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include <atomic>
 
 class NetWork;

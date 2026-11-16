@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "NetSenderTestClient.h"
 #ifdef _WIN32
-#include "NetSender/NetSenderAPI.h"
+#include "NetSenderTestAccess.h"
 #include "Semaphore/SemaphoreAPI.h"
 #include <windows.h>
 

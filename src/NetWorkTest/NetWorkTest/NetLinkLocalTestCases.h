@@ -1,6 +1,6 @@
 ﻿#pragma once
 #ifndef __EMSCRIPTEN__
-#include "NetSender/NetSenderAPI.h"
+#include "NetSenderTestAccess.h"
 
 // 真实ProcessWork管理链路的握手、权限和控制消息观察者
 class NetLinkLocalTestProbe : public NetLinkTransportListener

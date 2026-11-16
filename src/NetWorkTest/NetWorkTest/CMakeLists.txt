@@ -1,6 +1,104 @@
 cmake_minimum_required(VERSION 3.15)
-if(BIT MATCHES "^wasm" OR DLLLIB STREQUAL "wasm" OR EMSCRIPTEN OR CMAKE_TOOLCHAIN_FILE MATCHES "Emscripten")
-    message(FATAL_ERROR "Native desktop executable; build NetPeer for Wasm")
+# Test-only Wasm targets use prepared Release archives and matching private C++ headers.
+if(BIT MATCHES "^wasm" OR EMSCRIPTEN OR CMAKE_TOOLCHAIN_FILE MATCHES "Emscripten")
+    if(NOT BIT MATCHES "^wasm(32|64)$")
+        message(FATAL_ERROR "Set BIT=wasm32 or wasm64 and use the Emscripten toolchain")
+    endif()
+    set(test_bits "${CMAKE_MATCH_1}")
+    if(test_bits STREQUAL "64")
+        set(test_memory64 1)
+    else()
+        set(test_memory64 0)
+    endif()
+    string(APPEND CMAKE_C_FLAGS " -sMEMORY64=${test_memory64}")
+    string(APPEND CMAKE_CXX_FLAGS " -sMEMORY64=${test_memory64}")
+    project(NetWorkWasmTests LANGUAGES C CXX)
+    if(NOT EMSCRIPTEN)
+        message(FATAL_ERROR "A real Emscripten toolchain is required")
+    endif()
+    if(NOT IS_DIRECTORY "${SDK_ROOT}/lib" OR NOT EXISTS "${TEST_HEADERS}/NetInterface/NetInterfaceAPI.h")
+        message(FATAL_ERROR "Set SDK_ROOT to the target Wasm SDK and TEST_HEADERS to matching C++ headers")
+    endif()
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_EXTENSIONS OFF)
+    set(test_libraries)
+    foreach(test_library NetInterface CEncodeDecode ProtoMessageManager Variant Compress NetChannel)
+        list(APPEND test_libraries "${SDK_ROOT}/lib/${test_library}.a")
+    endforeach()
+    foreach(test_vendor z protobuf-lite mbedtls)
+        list(APPEND test_libraries "${SDK_ROOT}/lib/lib${test_vendor}${test_bits}.a")
+    endforeach()
+    foreach(test_library IN LISTS test_libraries)
+        if(NOT EXISTS "${test_library}")
+            message(FATAL_ERROR "Missing prepared Release archive: ${test_library}")
+        endif()
+    endforeach()
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/test-sdk.js" "module.exports.sdk = { bits: ${test_bits} };\n")
+    function(configure_wasm_test target)
+        target_include_directories(${target} PRIVATE "${SDK_ROOT}/include/protobuf" "${SDK_ROOT}/include/mbedtls")
+        target_compile_definitions(${target} PRIVATE STATIC_LIB)
+        target_compile_options(${target} PRIVATE -O2 -g1 -fexceptions
+            "SHELL:-iquote \"${SDK_ROOT}/include\"" "SHELL:-iquote \"${TEST_HEADERS}\""
+            "SHELL:-iquote \"${CMAKE_CURRENT_SOURCE_DIR}\"")
+        target_link_libraries(${target} PRIVATE "-Wl,--start-group" ${test_libraries} "-Wl,--end-group")
+        target_link_options(${target} PRIVATE -O2 -g1 -fexceptions "-sMEMORY64=${test_memory64}" -sMODULARIZE=1 -sENVIRONMENT=node
+            -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=268435456 -sSTACK_SIZE=1048576 -sWASM_BIGINT=1
+            "-sEXPORT_NAME=create${target}" --extern-post-js "${CMAKE_CURRENT_BINARY_DIR}/test-sdk.js")
+        set_target_properties(${target} PROPERTIES SUFFIX ".js")
+    endfunction()
+    add_executable(NetProtocolTest NetProtocolTestBindings.cpp)
+    configure_wasm_test(NetProtocolTest)
+    target_link_options(NetProtocolTest PRIVATE --no-entry -sFILESYSTEM=0 "-sEXPORTED_FUNCTIONS=['_malloc','_free']")
+    if(test_bits STREQUAL "64")
+        file(READ "${CMAKE_CURRENT_SOURCE_DIR}/NetProtocolTestBindings.h" test_declarations)
+        string(REGEX MATCHALL "EMSCRIPTEN_KEEPALIVE[ \r\n]+[A-Za-z0-9_]+[ \r\n]+[A-Za-z0-9_]+\\([^()]*\\)" test_exports "${test_declarations}")
+        set(test_conversions "[")
+        foreach(test_export IN LISTS test_exports)
+            string(REGEX MATCH "EMSCRIPTEN_KEEPALIVE[ \r\n]+[A-Za-z0-9_]+[ \r\n]+([A-Za-z0-9_]+)\\(([^()]*)\\)" test_match "${test_export}")
+            set(test_name "${CMAKE_MATCH_1}")
+            set(test_parameters "${CMAKE_MATCH_2}")
+            string(REPLACE "," ";" test_parameters "${test_parameters}")
+            set(test_signature "_")
+            foreach(test_parameter IN LISTS test_parameters)
+                string(STRIP "${test_parameter}" test_parameter)
+                if(test_parameter STREQUAL "" OR test_parameter STREQUAL "void")
+                    continue()
+                endif()
+                if(test_parameter MATCHES "\\*|Handle")
+                    string(APPEND test_signature "p")
+                else()
+                    string(APPEND test_signature "_")
+                endif()
+            endforeach()
+            if(NOT test_conversions STREQUAL "[")
+                string(APPEND test_conversions ",")
+            endif()
+            string(APPEND test_conversions "\"${test_name}:${test_signature}\"")
+        endforeach()
+        if(test_conversions STREQUAL "[")
+            message(FATAL_ERROR "No test binding declarations found")
+        endif()
+        file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/conversions.json" "${test_conversions}]")
+        target_link_options(NetProtocolTest PRIVATE "-sSIGNATURE_CONVERSIONS=@${CMAKE_CURRENT_BINARY_DIR}/conversions.json")
+    endif()
+    add_executable(NetWorkWasmTest
+        NetWorkTest.cpp NetWorkTestCases.cpp NetInterfaceCppProbe.cpp NetSenderProviderCProbe.c
+        NetInterfaceTlsTestCases.cpp NetCertificateBufferTest.cpp NetDirectoryValueTest.cpp
+        NetTransportContractTest.cpp NetInterfaceTransportTest.cpp NetGatewayHistoryTest.cpp
+        ../../NetServerManager/NetServerManager/NetGatewayPeerHistory.cpp
+        NetInterfaceProtoTestCases.cpp NetInterfaceConnectionTestCases.cpp NetInterfaceConnectionTestCasesHelper.cpp
+        NetInterfaceHandshakeTestCases.cpp NetInterfaceRequestsTestCases.cpp NetInterfaceRpcTestCases.cpp
+        NetIdentityTestCases.cpp NetTunnelTestCases.cpp NetLinkTestCases.cpp NetTestTlsCertificates.c)
+    configure_wasm_test(NetWorkWasmTest)
+    target_link_options(NetWorkWasmTest PRIVATE "-sEXPORTED_RUNTIME_METHODS=['FS','callMain']")
+    foreach(test_library NetPeer CSystem LockFreeHashMap LockFreeQueue)
+        if(NOT EXISTS "${SDK_ROOT}/lib/${test_library}.a")
+            message(FATAL_ERROR "Missing prepared Release archive: ${test_library}.a")
+        endif()
+        target_link_libraries(NetWorkWasmTest PRIVATE "${SDK_ROOT}/lib/${test_library}.a")
+    endforeach()
+    return()
 endif()
 
 # version prepares dependencies; this CMake entry only builds the current executable targets.
@@ -151,54 +249,25 @@ if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
     message(FATAL_ERROR "Desktop gateway processes and IPC NetSender are not mobile targets; use NetWork or NetPeer")
 endif()
 
-add_executable(NetWorkTest
-    "NetWorkTest.cpp"
-    "NetWorkTestCases.cpp"
-    "NetInterfaceTlsTestCases.cpp"
-    "NetInterfaceCppProbe.cpp"
-    "NetSenderProviderCProbe.c"
-    "NetInterfaceProtoTestCases.cpp"
-    "NetInterfaceNativeTestCases.cpp"
-    "NetInterfaceTcpProbe.cpp"
-    "NetInterfaceTransportProbe.cpp"
-    "NetInterfaceConnectionTestCases.cpp"
-    "NetInterfaceIpcTestCases.cpp"
-    "NetInterfaceHandshakeTestCases.cpp"
-    "NetInterfaceRequestsTestCases.cpp"
-    "NetInterfaceRpcTestCases.cpp"
-    "NetServerManagerTestIncludes.h"
-    "NetGatewayTestCases.cpp"
-    "../../NetServerManager/NetServerManager/NetGatewayServer.cpp"
-    "NetLocalTestCases.cpp"
-    "NetServiceTestCases.cpp"
-    "../../NetServerManager/NetServerManager/NetGatewayLocalServer.cpp"
-    "../../NetServerManager/NetServerManager/NetGatewayFiles.cpp"
-    "NetAccountGatewayProbe.cpp"
-    "NetFileGatewayProbe.cpp"
-    "NetIdentityTestCases.cpp"
-    "NetTunnelTestCases.cpp"
-    "NetRelayTransportProbe.cpp"
-    "NetLinkTestCases.cpp"
-    "NetRawLocalTestCases.cpp"
-    "NetLinkLocalTestCases.cpp"
-    "NetGatewayClientTestProbe.cpp"
-    "NetEndpointRouterTestCases.cpp"
-    "NetWorkInProcessTestCases.cpp"
-    "NetSenderFacadeNetSenderCppTest.cpp"
-    "NetCppBoundaryProbe.cpp"
-    "NetSenderFacadeNetPeerCppTest.cpp"
-    "NetSenderFacadeNetPeerCTest.cpp"
-    "NetSenderFacadeNetWorkCppTest.cpp"
-    "NetSenderFacadeNetWorkCTest.cpp"
-    "NetSenderFacadeConcurrency.cpp"
-    "NetWorkConcurrencyTestCases.cpp"
-    "../../NetServerManager/NetServerManager/NetServerEnrollment.cpp"
-)
+# The Visual Studio project remains the single list of native test translation units.
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/NetWorkTest.vcxproj" native_compile_items REGEX "<ClCompile Include=")
+set(native_test_sources)
+foreach(native_item IN LISTS native_compile_items)
+    string(REGEX MATCH "Include=\"([^\"]+)\"" native_match "${native_item}")
+    if(NOT native_match)
+        message(FATAL_ERROR "Invalid native test source registration")
+    endif()
+    string(REPLACE "\\" "/" native_path "${CMAKE_MATCH_1}")
+    list(APPEND native_test_sources "${native_path}")
+endforeach()
+list(REMOVE_DUPLICATES native_test_sources)
+add_executable(NetWorkTest ${native_test_sources})
+
 set_target_properties(NetWorkTest PROPERTIES OUTPUT_NAME NetWorkTest1.0 RUNTIME_OUTPUT_DIRECTORY "${SDK_ROOT}/lib")
 foreach(native_config DEBUG RELEASE)
     set_target_properties(NetWorkTest PROPERTIES RUNTIME_OUTPUT_DIRECTORY_${native_config} "${SDK_ROOT}/lib")
 endforeach()
-target_include_directories(NetWorkTest PRIVATE "${SDK_ROOT}/include" "${SDK_ROOT}/include/protobuf" "${SDK_ROOT}/include/mbedtls")
+target_include_directories(NetWorkTest PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${SDK_ROOT}/include" "${SDK_ROOT}/include/protobuf" "${SDK_ROOT}/include/mbedtls")
 target_compile_options(NetWorkTest PRIVATE "$<$<CONFIG:Release>:-O2>" "$<$<CONFIG:Release>:-g>")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set_target_properties(NetWorkTest PROPERTIES BUILD_RPATH "$ORIGIN" INSTALL_RPATH "$ORIGIN")
@@ -253,9 +322,50 @@ if(NOT EXISTS "${SDK_ROOT}/lib/libmbedtlsstatic${BIT}.a" OR NOT EXISTS "${SDK_RO
     message(FATAL_ERROR "Missing target vendor SDK; run before/version with this platform's prepared SDK")
 endif()
 target_link_libraries(NetWorkTest PUBLIC "${SDK_ROOT}/lib/libmbedtlsstatic${BIT}.a")
-target_include_directories(NetWorkTest PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../testdata/tls" "${CMAKE_CURRENT_SOURCE_DIR}/../../NetServerManager/NetServerManager")
+target_include_directories(NetWorkTest PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/../../NetServerManager/NetServerManager")
 enable_testing()
 add_test(NAME NetWorkInstant COMMAND NetWorkTest --instant "--report=${CMAKE_CURRENT_BINARY_DIR}/NetWorkInstant.csv")
 
-# White-box declarations are exposed only through each dependency API.
+# White-box declarations and implementation access are owned by this test project.
 target_compile_definitions(NetWorkTest PRIVATE NET_GATEWAY_TEST_ACCESS)
+
+# Standalone consumer executables share the same source cases without linking the gateway test runner.
+function(add_native_test_module name)
+    set(target "NetWorkTest-${name}")
+    add_executable(${target} ${ARGN})
+    target_include_directories(${target} PRIVATE "${SDK_ROOT}/include" "${SDK_ROOT}/include/protobuf"
+        "${SDK_ROOT}/include/mbedtls" "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../ProtoMessageManager/ProtoMessageManager/src")
+    target_compile_definitions(${target} PRIVATE MBEDTLS_CONFIG_FILE="mbedtls/mbedtls_sdk_config.h")
+    target_compile_options(${target} PRIVATE "$<$<CONFIG:Release>:-O2>")
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_link_libraries(${target} PRIVATE "-Wl,--start-group" ${native_prepared_libraries}
+            "${SDK_ROOT}/lib/libmbedtlsstatic${BIT}.a" "-Wl,--end-group" Threads::Threads ${CMAKE_DL_LIBS} rt atomic)
+        set_target_properties(${target} PROPERTIES BUILD_RPATH "$ORIGIN")
+    else()
+        target_link_libraries(${target} PRIVATE ${native_prepared_libraries} "${SDK_ROOT}/lib/libmbedtlsstatic${BIT}.a"
+            Threads::Threads ${CMAKE_DL_LIBS} "${native_security}" "${native_proc}")
+    endif()
+    set_target_properties(${target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SDK_ROOT}/lib")
+    foreach(configuration DEBUG RELEASE)
+        set_target_properties(${target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_${configuration} "${SDK_ROOT}/lib")
+    endforeach()
+    if(name STREQUAL "wire")
+        add_test(NAME "Module-${name}" COMMAND ${target} "${CMAKE_CURRENT_BINARY_DIR}/wire-samples.bin" "${WIRE_BASELINE}")
+        if(NOT EXISTS "${WIRE_BASELINE}" OR IS_DIRECTORY "${WIRE_BASELINE}")
+            set_tests_properties("Module-${name}" PROPERTIES DISABLED TRUE)
+            message(STATUS "Wire compatibility test is NOT_RUN until WIRE_BASELINE supplies an independent reference")
+        endif()
+    else()
+        add_test(NAME "Module-${name}" COMMAND ${target})
+    endif()
+endfunction()
+add_native_test_module(crypto NetCryptoMain.cpp NetCryptoTestCases.cpp NetCryptoCertificateTest.cpp NetTestTlsCertificates.c)
+add_native_test_module(proto NetGatewayProtoMain.cpp NetInterfaceProtoTestCases.cpp)
+add_native_test_module(interface NetInterfaceModuleMain.cpp NetCryptoTestCases.cpp NetInterfaceProtoTestCases.cpp
+    NetWorkTestCases.cpp NetInterfaceCppProbe.cpp NetSenderProviderCProbe.c)
+add_native_test_module(sdk NetGatewaySdkMain.cpp NetSenderFacadeNetSenderCppTest.cpp NetSenderFacadeNetPeerCppTest.cpp
+    NetSenderFacadeNetPeerCTest.cpp NetSenderFacadeNetWorkCppTest.cpp NetSenderFacadeNetWorkCTest.cpp)
+add_native_test_module(tls NetTlsConsumerMain.cpp NetInterfaceTlsTestCases.cpp NetCompactTest.cpp NetCryptoTestCases.cpp NetTestTlsCertificates.c)
+add_native_test_module(protobuf ProtoMessageManagerTest.cpp)
+add_native_test_module(wire ProtoMessageManagerWireTest.cpp)

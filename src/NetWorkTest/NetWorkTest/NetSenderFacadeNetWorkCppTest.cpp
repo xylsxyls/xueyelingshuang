@@ -19,6 +19,9 @@ static_assert(std::is_same<decltype(&NetSender::createClient), int32_t (NetSende
 static_assert(std::is_same<decltype(&NetSender::prepareGateway), int32_t (NetSender::*)(NetSenderClient*)>::value, "NetSender prepareGateway contract");
 static_assert(std::is_same<decltype(&NetSender::connectGateway), int32_t (NetSender::*)(NetSenderClient*, const NetSenderGatewayOptions&, NetSessionListener*)>::value, "NetSender connectGateway contract");
 static_assert(std::is_same<decltype(&NetSender::connectServiceGateway), int32_t (NetSender::*)(NetSenderClient*, uint32_t, const NetSenderGatewayOptions&, NetSessionListener*)>::value, "NetSender connectServiceGateway contract");
+static_assert(std::is_same<decltype(&NetSender::configureRequestPool), int32_t (NetSender::*)(NetSenderClient*, const LockFreeHashMapPoolConfig&)>::value, "NetSender configureRequestPool contract");
+static_assert(std::is_same<decltype(&NetSender::configureSubmissionPools), int32_t (NetSender::*)(NetSenderClient*, const NetSenderSubmissionPools&)>::value, "NetSender configureSubmissionPools contract");
+static_assert(std::is_same<decltype(&NetSender::configureConnectionPools), int32_t (NetSender::*)(NetSenderClient*, const NetConnectionPoolConfig&)>::value, "NetSender configureConnectionPools contract");
 static_assert(std::is_same<decltype(&NetSender::configureCompression), int32_t (NetSender::*)(NetSenderClient*, const uint32_t*, uint32_t)>::value, "NetSender configureCompression contract");
 static_assert(std::is_same<decltype(&NetSender::pollGateway), int32_t (NetSender::*)(NetSenderClient*)>::value, "NetSender pollGateway contract");
 static_assert(std::is_same<decltype(&NetSender::beginRequest), int32_t (NetSender::*)(NetSenderClient*, uint32_t, uint32_t, uint32_t, uint64_t&)>::value, "NetSender beginRequest contract");
@@ -68,6 +71,9 @@ void NetSenderFacadeNetWorkCppTest::workCpp()
         SENDER_CHECK(sender.gatewayState(first, generation, ready) == NI_OK && generation == 0 && !ready);
         SENDER_CHECK(sender.pollGateway(first) == NI_OK);
         SENDER_CHECK(sender.configureCompression(first, nullptr, 0) == NI_INVALID_STATE);
+        SENDER_CHECK(sender.configureRequestPool(first, LockFreeHashMapPoolConfig()) == NI_INVALID_STATE);
+        SENDER_CHECK(sender.configureSubmissionPools(first, NetSenderSubmissionPools()) == NI_INVALID_STATE);
+        SENDER_CHECK(sender.configureConnectionPools(first, NetConnectionPoolConfig()) == NI_INVALID_STATE);
         SENDER_CHECK(sender.backend().configureGateways(first, nullptr, nullptr) == NI_INVALID_STATE);
         NetSenderGatewayOptions coldOptions = {};
         SENDER_CHECK(sender.connectGateway(first, coldOptions, nullptr) == NI_INVALID_STATE);
@@ -75,6 +81,14 @@ void NetSenderFacadeNetWorkCppTest::workCpp()
         SENDER_CHECK(sender.createClient(first) == NI_INVALID_ARGUMENT && first == original);
         SENDER_CHECK(sender.createClient(second) == NI_OK && second != nullptr && second != first);
         SENDER_CHECK(sender.prepareGateway(first) == NI_OK && sender.prepareGateway(first) == NI_OK);
+        LockFreeHashMapPoolConfig requestPool;
+        requestPool.initialCapacity = 2;
+        requestPool.maximumCapacity = 4096;
+        SENDER_CHECK(sender.configureRequestPool(first, requestPool) == NI_OK);
+        requestPool.maximumCapacity = 1;
+        SENDER_CHECK(sender.configureRequestPool(first, requestPool) == NI_INVALID_ARGUMENT);
+        SENDER_CHECK(sender.configureSubmissionPools(first, NetSenderSubmissionPools()) == NI_OK);
+        SENDER_CHECK(sender.configureConnectionPools(first, NetConnectionPoolConfig()) == NI_OK);
         SENDER_CHECK(!sender.gatewayReady(first) && !sender.gatewayReady(second));
         SENDER_CHECK(sender.gatewayGeneration(first) == 0 && sender.gatewayGeneration(second) == 0);
         SENDER_CHECK(sender.configureCompression(first, nullptr, 0) == NI_OK);

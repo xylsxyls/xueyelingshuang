@@ -1,7 +1,7 @@
 ﻿#include "NetInterfaceHandshakeTestCases.h"
 #include "NetWorkTestCases.h"
 #include "NetInterfaceTlsTestCases.h"
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include <cstring>
 #include <stdexcept>
 #include <vector>
@@ -223,7 +223,7 @@ void NetInterfaceHandshakeTestCases::rejection()
         }
         case 3:
         {
-            bad.m_maxRequests = 129;
+            bad.m_maxRequests = 0;
             break;
         }
         case 4:

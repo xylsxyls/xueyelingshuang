@@ -43,6 +43,10 @@ public:
     uint32_t m_writable;
     // 只在受控用例中从输入回调抛出异常
     bool m_throwOnData;
+    // 可写回调中借用的关闭目标；默认空，仅本用例显式注入一次关闭
+    LibuvChannel* m_closeChannel;
+    // 0表示关闭目标整个通道，否则只关闭指定连接
+    uint64_t m_closePeer;
     // 本用例已消费的实际输入记录，用于检查内容与顺序
     std::vector<uint8_t> m_received;
     // 本用例观察到的终态记录，用于检查关闭不丢失且不重复

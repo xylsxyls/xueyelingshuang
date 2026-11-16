@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "NetServerManagerTestIncludes.h"
 #include "NetInterfaceTransportProbe.h"
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include <memory>
 #include <vector>
 #include <set>
@@ -278,4 +278,36 @@ public:
     std::set<uint64_t> m_ids;
     // 输入损坏、重复回调或回调内poll未被拒绝。
     bool m_bad;
+};
+
+/** 单执行者用例临时记录原始host投递，不向生产库加入测试钩子
+*/
+class NetGatewayPostTestHost
+{
+public:
+    /** 保存已配置宿主，只替换随后创建的客户端的写函数
+    */
+    NetGatewayPostTestHost();
+
+    /** 恢复默认宿主，测试实例须已销毁
+    */
+    ~NetGatewayPostTestHost();
+
+    /** 经已保存的正式宿主调用原始post，记录成功后的实例和字节数
+    @param [in] instance 有效宿主实例
+    @param [in] peer 当前连接号
+    @param [in] data 借用至返回的完整字节
+    @param [in] size 字节数
+    @return 正式原始post返回码，不模拟成功
+    */
+    static int32_t post(void* instance, uint64_t peer, const uint8_t* data, uint32_t size);
+
+    // 仅所属测试执行者访问；不运行并发测试时替换默认表
+    static NetGatewayPostTestHost* m_active;
+    // 保存的正式函数表，析构无条件恢复
+    NetHostFunctions m_saved;
+    // 最近成功接纳字节的宿主实例，可能是桥实例；借用至客户端销毁
+    void* m_instance;
+    // 正式post成功接纳的字节总数，不以发起调用次数代替
+    uint64_t m_bytes;
 };

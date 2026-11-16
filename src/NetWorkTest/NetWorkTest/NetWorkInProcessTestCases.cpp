@@ -1,6 +1,6 @@
 ﻿#include "NetSenderTestClient.h"
-#include "NetWork/NetWorkAPI.h"
-#include "NetPeer/NetPeerAPI.h"
+#include "NetWorkTestAccess.h"
+#include "NetPeerTestAccess.h"
 #include "NetWorkInProcessTestCases.h"
 #include "NetGatewayTestCases.h"
 #include "NetInterfaceTlsTestCases.h"

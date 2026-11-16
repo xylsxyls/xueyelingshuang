@@ -1,10 +1,11 @@
-﻿#include <ProtoMessage/ProtoMessageAPI.h>
+﻿#include "NetServiceTestAccess.h"
+#include <ProtoMessageManager/ProtoMessageManagerAPI.h>
 #define NET_SERVICE_OUTGOING_NO_HEAP
 #include <LibuvTcp/LibuvTcpAPI.h>
 #include "NetWorkConcurrencyTestCases.h"
-#include <NetWork/NetWorkAPI.h>
-#include <NetSender/NetSenderAPI.h>
-#include <test/certs.h>
+#include "NetWorkTestAccess.h"
+#include "NetSenderTestAccess.h"
+#include "NetTestTlsCertificates.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "NetWorkTestCases.h"
@@ -55,7 +56,7 @@ static int __cdecl OutgoingMemoryHook(int operation, void* pointer, size_t size,
 }
 #endif
 
-#include "NetSender/NetSenderAPI.h"
+#include "NetSenderTestAccess.h"
 #ifdef _WIN32
 #include <windows.h>
 #include <psapi.h>
@@ -75,10 +76,10 @@ m_bad(false)
 
 void NetSenderServiceOutgoingTest::prepare(NetSenderServiceGateway& gateway)
 {
-    gateway.m_state->m_phase = NET_SERVICE_READY;
-    gateway.m_state->m_peer = 7;
-    gateway.m_state->m_highestOutgoing = 5;
-    gateway.m_state->m_nodeName = "test-node";
+    ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_phase = NET_SERVICE_READY;
+    ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_peer = 7;
+    ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_highestOutgoing = 5;
+    ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_nodeName = "test-node";
 }
 
 void NetSenderServiceOutgoingTest::onLinkReady(uint64_t peer, const NetInterfaceLinkPeer& identity)
@@ -139,8 +140,8 @@ bool NetSenderServiceOutgoingTest::onLinkRecord(uint64_t peer, const NetInterfac
 void NetSenderServiceOutgoingTest::onLinkClosed(uint64_t peer, int32_t reason)
 {
     ++m_closed;
-    m_bad = m_bad || peer != 6 || reason >= 0 || m_transport->m_phase != NET_SERVICE_OUTGOING_CLOSED ||
-        m_transport->m_owner->m_outgoing == m_transport || m_transport->poll() || m_transport->outputState(peer) != NI_INVALID_STATE;
+    m_bad = m_bad || peer != 6 || reason >= 0 || ((*m_transport).*netServiceTestMember(NetServiceTestOutgoingPhase())) != NET_SERVICE_OUTGOING_CLOSED ||
+        ((*m_transport).*netServiceTestMember(NetServiceTestOutgoingOwner()))->m_outgoing == m_transport || m_transport->poll() || m_transport->outputState(peer) != NI_INVALID_STATE;
     if (m_mode == 7)
     {
         throw 34;
@@ -173,7 +174,7 @@ bool NetSenderServiceOutgoingTest::run()
         OUTGOING_CHECK(listener.m_closed == (mode == 1 ? 1U : 0U));
         transport.shutdown();
         transport.shutdown();
-        OUTGOING_CHECK(!transport.poll() && gateway.m_state->m_outgoing == nullptr && gateway.m_state->m_outgoingClose == 0);
+        OUTGOING_CHECK(!transport.poll() && ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_outgoing == nullptr && ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_outgoingClose == 0);
         OUTGOING_CHECK(transport.connect("local", 1, options, &listener, peer) == NI_INVALID_ARGUMENT && peer == 0);
     }
     {
@@ -183,12 +184,12 @@ bool NetSenderServiceOutgoingTest::run()
         NetSenderServiceOutgoingTransport transport(gateway);
         NetSenderServiceOutgoingTest listener(transport);
         uint64_t peer = 0;
-        gateway.m_state->m_outgoingClose = 4;
+        ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_outgoingClose = 4;
         OUTGOING_CHECK(transport.connect("local", 1, options, &listener, peer) == NI_INVALID_STATE && peer == 0);
-        gateway.m_state->m_outgoingClose = 0;
-        gateway.m_state->m_highestOutgoing = UINT64_C(0x7ffffffffffffffe);
+        ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_outgoingClose = 0;
+        ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_highestOutgoing = UINT64_C(0x7ffffffffffffffe);
         OUTGOING_CHECK(transport.connect("local", 1, options, &listener, peer) == NI_LIMIT_EXCEEDED && peer == 0);
-        gateway.m_state->m_highestOutgoing = 5;
+        ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_highestOutgoing = 5;
         OUTGOING_CHECK(transport.connect("local", 1, options, &listener, peer) == NI_OK && transport.poll());
         ProtoMessage request;
         request.setKeyValue(NI_GATEWAY_CHANNEL, Variant(UINT64_C(1)));
@@ -210,10 +211,10 @@ bool NetSenderServiceOutgoingTest::run()
             if (invalid == 4) bad.m_requestId = 2;
             if (invalid == 5) bad.m_kind = NI_EVENT;
             if (invalid == 6) bad.m_messageType = NI_GATEWAY_CREDIT;
-            OUTGOING_CHECK(transport.sendControl(peer, bad) == NI_INVALID_ARGUMENT && transport.m_phase == NET_SERVICE_OUTGOING_ANNOUNCED);
+            OUTGOING_CHECK(transport.sendControl(peer, bad) == NI_INVALID_ARGUMENT && ((transport).*netServiceTestMember(NetServiceTestOutgoingPhase())) == NET_SERVICE_OUTGOING_ANNOUNCED);
         }
         OUTGOING_CHECK(transport.sendControl(peer + 1, frame) == NI_INVALID_STATE);
-        OUTGOING_CHECK(transport.sendControl(peer, frame) == NI_INVALID_STATE && transport.m_product == 0);
+        OUTGOING_CHECK(transport.sendControl(peer, frame) == NI_INVALID_STATE && ((transport).*netServiceTestMember(NetServiceTestOutgoingProduct())) == 0);
 #if defined(_WIN32) && defined(_DEBUG) && !defined(NET_SERVICE_OUTGOING_NO_HEAP)
         for (uint32_t step = 0; step < 40; ++step)
         {
@@ -225,12 +226,12 @@ bool NetSenderServiceOutgoingTest::run()
             catch (...) { escaped = true; }
             _CrtSetAllocHook(previous);
             s_outgoingRejectAfter = -1;
-            OUTGOING_CHECK(!escaped && result < 0 && transport.m_phase == NET_SERVICE_OUTGOING_ANNOUNCED && transport.m_product == 0);
+            OUTGOING_CHECK(!escaped && result < 0 && ((transport).*netServiceTestMember(NetServiceTestOutgoingPhase())) == NET_SERVICE_OUTGOING_ANNOUNCED && ((transport).*netServiceTestMember(NetServiceTestOutgoingProduct())) == 0);
             OUTGOING_CHECK(step != 0 || result == NI_NO_MEMORY);
         }
 #endif
         transport.shutdown();
-        OUTGOING_CHECK(gateway.m_state->m_outgoingClose == 0);
+        OUTGOING_CHECK(((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_outgoingClose == 0);
     }
     for (uint32_t mode = 0; mode < 8; ++mode)
     {
@@ -242,8 +243,8 @@ bool NetSenderServiceOutgoingTest::run()
         uint64_t peer = 0;
         OUTGOING_CHECK(transport.connect("local", 1, options, &listener, peer) == NI_OK && transport.poll());
         // 本白盒直接进入OPEN等待，以独立验证响应映射；真实请求提交在进程集成测试验证。
-        transport.m_phase = NET_SERVICE_OUTGOING_OPEN_WAIT;
-        transport.m_product = 9;
+        ((transport).*netServiceTestMember(NetServiceTestOutgoingPhase())) = NET_SERVICE_OUTGOING_OPEN_WAIT;
+        ((transport).*netServiceTestMember(NetServiceTestOutgoingProduct())) = 9;
         listener.m_mode = mode;
         ProtoMessage reply;
         reply.setKeyValue(NI_GATEWAY_CHANNEL, Variant(peer));
@@ -254,24 +255,24 @@ bool NetSenderServiceOutgoingTest::run()
         frame.m_messageType = NI_GATEWAY_OPEN;
         frame.m_payload = reinterpret_cast<const uint8_t*>(bytes.data());
         frame.m_payloadSize = static_cast<uint32_t>(bytes.size());
-        const bool accepted = transport.control(frame);
+        const bool accepted = ((transport).*netServiceTestMember(NetServiceTestOutgoingControl()))(frame);
         OUTGOING_CHECK(accepted == (mode != 3) && !listener.m_bad && listener.m_controls == 1);
         if (mode == 3)
         {
-            OUTGOING_CHECK(transport.m_phase == NET_SERVICE_OUTGOING_OPEN_WAIT);
+            OUTGOING_CHECK(((transport).*netServiceTestMember(NetServiceTestOutgoingPhase())) == NET_SERVICE_OUTGOING_OPEN_WAIT);
             listener.m_mode = 0;
-            OUTGOING_CHECK(transport.control(frame) && transport.m_phase == NET_SERVICE_OUTGOING_OPEN);
+            OUTGOING_CHECK(((transport).*netServiceTestMember(NetServiceTestOutgoingControl()))(frame) && ((transport).*netServiceTestMember(NetServiceTestOutgoingPhase())) == NET_SERVICE_OUTGOING_OPEN);
             listener.m_mode = 3;
         }
         if (mode == 4 || mode == 5)
         {
-            OUTGOING_CHECK(transport.m_phase == NET_SERVICE_OUTGOING_CLOSED && gateway.m_state->m_outgoingClose == peer);
+            OUTGOING_CHECK(((transport).*netServiceTestMember(NetServiceTestOutgoingPhase())) == NET_SERVICE_OUTGOING_CLOSED && ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_outgoingClose == peer);
             OUTGOING_CHECK(listener.m_closed == (mode == 5 ? 1U : 0U));
         }
         else
         {
-            OUTGOING_CHECK(transport.m_phase == NET_SERVICE_OUTGOING_OPEN);
-            OUTGOING_CHECK(transport.outputState(peer) == gateway.m_state->m_link.outputState(7));
+            OUTGOING_CHECK(((transport).*netServiceTestMember(NetServiceTestOutgoingPhase())) == NET_SERVICE_OUTGOING_OPEN);
+            OUTGOING_CHECK(transport.outputState(peer) == ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_link.outputState(7));
             const uint8_t payload[] = {9, 0, 7, 3};
             NetInterfaceTunnelRecord record = {};
             record.m_kind = NI_TUNNEL_BYTES;
@@ -279,23 +280,23 @@ bool NetSenderServiceOutgoingTest::run()
             record.m_product = 9;
             record.m_data = payload;
             record.m_size = sizeof(payload);
-            OUTGOING_CHECK(transport.record(record) == (mode != 3) && listener.m_records == 1 && !listener.m_bad);
+            OUTGOING_CHECK(((transport).*netServiceTestMember(NetServiceTestOutgoingRecord()))(record) == (mode != 3) && listener.m_records == 1 && !listener.m_bad);
             if (mode == 6)
             {
-                OUTGOING_CHECK(transport.m_phase == NET_SERVICE_OUTGOING_CLOSED && listener.m_closed == 1 && gateway.m_state->m_outgoingClose == peer);
+                OUTGOING_CHECK(((transport).*netServiceTestMember(NetServiceTestOutgoingPhase())) == NET_SERVICE_OUTGOING_CLOSED && listener.m_closed == 1 && ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_outgoingClose == peer);
             }
             else
             {
                 record.m_channel = 1;
                 record.m_data = nullptr;
                 OUTGOING_CHECK(transport.sendRecord(peer, record) == NI_INVALID_ARGUMENT);
-                transport.closed(NI_TIMEOUT);
-                transport.closed(NI_TRUNCATED);
-                OUTGOING_CHECK(listener.m_closed == 1 && gateway.m_state->m_outgoingClose == 0 && !listener.m_bad);
+                ((transport).*netServiceTestMember(NetServiceTestOutgoingClosed()))(NI_TIMEOUT, false);
+                ((transport).*netServiceTestMember(NetServiceTestOutgoingClosed()))(NI_TRUNCATED, false);
+                OUTGOING_CHECK(listener.m_closed == 1 && ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_outgoingClose == 0 && !listener.m_bad);
             }
         }
         transport.shutdown();
-        OUTGOING_CHECK(!transport.poll() && gateway.m_state->m_outgoing == nullptr);
+        OUTGOING_CHECK(!transport.poll() && ((gateway).*netServiceTestMember(NetServiceTestGatewayState()))->m_outgoing == nullptr);
     }
     std::printf("Service outgoing checks=%u PASS\n", checks);
 #undef OUTGOING_CHECK

@@ -1,8 +1,14 @@
-﻿#include "NetWorkConcurrencyTestCases.h"
+﻿#include "NetWorkHostBridgeTest.h"
+#include "NetInterfaceTcpProbe.h"
+#include "NetWorkConcurrencyTestCases.h"
+#include "NetIsolatedTest.h"
+#include "NetGatewayWindowsProbe.h"
 #include <LibuvTcp/LibuvTcpAPI.h>
-#include <NetWork/NetWorkAPI.h>
-#include <NetSender/NetSenderAPI.h>
-#include <test/certs.h>
+// LibuvTcp white-box layout belongs to this test target, never the production API.
+#include <LibuvTcp/LibuvChannelModels.h>
+#include "NetWorkTestAccess.h"
+#include "NetSenderTestAccess.h"
+#include "NetTestTlsCertificates.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "NetWorkTestCases.h"
@@ -132,7 +138,7 @@ NetWorkConcurrencyProducer::NetWorkConcurrencyProducer(NetWorkConcurrencyContext
 
 }
 
-void NetWorkConcurrencyProducer::DoTask()
+void NetWorkConcurrencyProducer::doTask()
 {
     for (uint32_t i = 0; i < 8; ++i)
     {
@@ -181,7 +187,7 @@ NetWorkConcurrencyOwner::~NetWorkConcurrencyOwner()
 {
     for (uint32_t index = 0; index < 4; ++index)
     {
-        if (m_producers[index] != 0) { CTaskThreadManager::Instance().Uninit(m_producers[index]); }
+        if (m_producers[index] != 0) { CTaskThreadManager::instance().uninit(m_producers[index]); }
     }
     if (m_context->m_client != nullptr)
     {
@@ -208,7 +214,7 @@ void NetWorkConcurrencyTestCases::runThreadedClients(bool verifyOrder)
 {
     uint32_t checks = 0;
 #define THREAD_CHECK(condition) { netTestCheckpoint(); ++checks; if (!(condition)) { throw std::runtime_error("NetWork concurrent check: " #condition); } }
-    const int32_t baseline = CTaskThreadManager::Instance().Count();
+    const int32_t baseline = CTaskThreadManager::instance().count();
     NetWorkConcurrencyContext test;
     test.m_verifyOrder = verifyOrder;
     NetInterfaceClientCallbacks callbacks = {};
@@ -248,17 +254,20 @@ void NetWorkConcurrencyTestCases::runThreadedClients(bool verifyOrder)
         THREAD_CHECK(generation == round + 1);
         for (uint32_t i = 0; i < 4; ++i)
         {
-            owner.m_producers[i] = CTaskThreadManager::Instance().Init();
-            std::shared_ptr<CTaskThread> thread = CTaskThreadManager::Instance().GetThreadInterface(owner.m_producers[i]);
+            owner.m_producers[i] = CTaskThreadManager::instance().init();
+            std::shared_ptr<CTaskThread> thread = CTaskThreadManager::instance().getThreadInterface(owner.m_producers[i]);
             THREAD_CHECK(thread != nullptr);
-            thread->PostTask(std::shared_ptr<CTask>(new NetWorkConcurrencyProducer(&test, i)));
+            if (!thread->tryPostTaskResult(std::shared_ptr<CTask>(new NetWorkConcurrencyProducer(&test, i)), 1, true, false).m_committed)
+            {
+                throw std::runtime_error("test producer task not accepted");
+            }
         }
         // 此处刻意不调用clientPoll；实际工作必须由CTask独立驱动。
         while ((test.m_done.load() != (round + 1) * 4 || test.m_results.load() < (round + 1) * 38 - 6) && NetSenderSubmission::now() < deadline && !test.m_bad.load())
         {
             gateway.poll(); THREAD_CHECK(sink.respond(gateway)); CSystem::sleepPrecise(1);
         }
-        for (uint32_t i = 0; i < 4; ++i) { CTaskThreadManager::Instance().Uninit(owner.m_producers[i]); owner.m_producers[i] = 0; }
+        for (uint32_t i = 0; i < 4; ++i) { CTaskThreadManager::instance().uninit(owner.m_producers[i]); owner.m_producers[i] = 0; }
         if (test.m_bad.load() || test.m_results.load() != (round + 1) * 38 - 6)
         {
             std::lock_guard<std::mutex> lock(test.m_mutex);
@@ -282,7 +291,7 @@ void NetWorkConcurrencyTestCases::runThreadedClients(bool verifyOrder)
         THREAD_CHECK(test.m_closed.load() == round + 1 && test.m_results.load() == (round + 1) * 38 && !test.m_bad.load());
     }
     THREAD_CHECK(NetWork::instance().clientDestroy(test.m_client) == NI_OK); test.m_client = nullptr;
-    THREAD_CHECK(CTaskThreadManager::Instance().Count() == baseline);
+    THREAD_CHECK(CTaskThreadManager::instance().count() == baseline);
     THREAD_CHECK(test.m_accepted.size() == 76 && test.m_terminal.size() == 76);
     for (size_t i = 0; i < test.m_accepted.size(); ++i) { THREAD_CHECK(test.m_terminal.count(test.m_accepted[i]) == 1); }
     gateway.shutdown();
@@ -552,13 +561,27 @@ void NetWorkConcurrencyTestCases::pausedHostFairness()
 
 void NetWorkConcurrencyTestCases::lifecycleResources()
 {
-    const int32_t threads = CTaskThreadManager::Instance().Count();
+    // IPC用例会保留后台发送器；其句柄开闭不能算作本用例72轮NetWork的泄漏或回收。
+    // 子进程仍执行相同循环和零增长断言，输出由统一隔离运行器纳入本批日志。
+    if (NetIsolatedTest::run("--isolated-resource-cycles", 20000) != 0)
+    {
+        throw std::runtime_error("isolated resource cycles failed; see child evidence");
+    }
+}
+
+void NetWorkConcurrencyTestCases::lifecycleCycles()
+{
+    const int32_t threads = CTaskThreadManager::instance().count();
 #ifdef _WIN32
     DWORD baselineHandles = 0;
     DWORD finalHandles = 0;
     SIZE_T firstMemory = 0;
     SIZE_T lastMemory = 0;
     SIZE_T peakMemory = 0;
+    // 首次快照设施自身的延迟初始化不纳入后面的预热资源对比。
+    NetGatewayWindowsProbe::processHandles();
+    NetGatewayWindowsProbe::warmThreadWait();
+    std::string baselineSnapshot;
 #endif
     uint32_t closed = 0;
     const auto started = std::chrono::steady_clock::now();
@@ -642,7 +665,7 @@ void NetWorkConcurrencyTestCases::lifecycleResources()
             ++closed;
             gateway.shutdown();
         }
-        if (CTaskThreadManager::Instance().Count() != threads)
+        if (CTaskThreadManager::instance().count() != threads)
         {
             throw std::runtime_error("resource cycle left an owned CTask thread");
         }
@@ -655,10 +678,15 @@ void NetWorkConcurrencyTestCases::lifecycleResources()
         {
             throw std::runtime_error("resource counters unavailable");
         }
+        if (round < 8 || round >= 64)
+        {
+            std::printf("RESOURCE_SAMPLE round=%u handles=%u\n", round, static_cast<uint32_t>(handles));
+        }
         if (round == 7)
         {
             baselineHandles = handles;
             firstMemory = memory.PrivateUsage;
+            baselineSnapshot = NetGatewayWindowsProbe::processHandles();
         }
         if (round >= 8)
         {
@@ -671,6 +699,15 @@ void NetWorkConcurrencyTestCases::lifecycleResources()
 #ifdef _WIN32
     if (finalHandles > baselineHandles)
     {
+        for (uint32_t sample = 0; sample < 20; ++sample)
+        {
+            ::Sleep(100);
+            DWORD current = 0;
+            GetProcessHandleCount(GetCurrentProcess(), &current);
+            std::printf("RESOURCE_SETTLE ms=%u handles=%u\n", (sample + 1) * 100, current);
+        }
+        std::printf("RESOURCE_HANDLES_BEFORE\n%sRESOURCE_HANDLES_AFTER\n%s", baselineSnapshot.c_str(),
+            NetGatewayWindowsProbe::processHandles().c_str());
         throw std::runtime_error("resource cycles left more process handles than their warm baseline");
     }
     std::printf("LIFECYCLE_RESOURCES warm=8 cycles=64 closed=%u callbacks_threw=36 handles=%u/%u private_bytes=%llu/%llu peak=%llu\n",
@@ -703,35 +740,39 @@ void* NetWorkAuditAllocation::allocateZero(size_t count, size_t size)
 
 void NetWorkConcurrencyTestCases::loopInitializationFailure()
 {
-    std::unique_ptr<LibuvChannel> channel;
+    NetInterfaceTcpProbe listener;
+    std::unique_ptr<LibuvChannel> channel(new LibuvChannel());
     if (uv_replace_allocator(NetWorkAuditAllocation::allocate, NetWorkAuditAllocation::reallocate,
         NetWorkAuditAllocation::allocateZero, std::free) != 0)
     {
         throw std::runtime_error("install isolated libuv allocation failure");
     }
+    int32_t listenResult = 0;
+    int32_t connectResult = 0;
+    uint64_t peer = 99;
     bool threw = false;
     try
     {
-        channel.reset(new LibuvChannel());
+        listenResult = channel->listen("127.0.0.1", 0, &listener);
+        connectResult = channel->connect("127.0.0.1", 1, &listener, peer);
     }
     catch (...)
     {
         threw = true;
     }
     const int32_t restored = uv_replace_allocator(std::malloc, std::realloc, std::calloc, std::free);
-    if (restored != 0 || threw || !channel || channel->poll() || channel->localPort() != 0 || channel->peerCount() != 0)
+    if (restored != 0 || threw || channel->poll() || channel->localPort() != 0 || channel->peerCount() != 0 ||
+        listenResult != UV_ENOMEM || connectResult != UV_ENOMEM || peer != 0)
     {
-        throw std::runtime_error("libuv loop initialization must report an error without throwing or driving an invalid loop");
+        throw std::runtime_error("failed lazy loop initialization must report ENOMEM without publishing a peer");
     }
-    uint64_t peer = 99;
-    if (channel->listen("127.0.0.1", 0, nullptr) != UV_ENOMEM ||
-        channel->connect("127.0.0.1", 1, nullptr, peer) != UV_ENOMEM || peer != 0)
+    if (channel->listen("127.0.0.1", 0, &listener) != 0 || channel->localPort() == 0)
     {
-        throw std::runtime_error("failed loop must return the original libuv error and clear the peer id");
+        throw std::runtime_error("restored allocation must permit retrying loop initialization");
     }
     channel->shutdown();
     channel.reset();
-    std::printf("LIBUV_INIT_ALLOCATION_FAILURE reported_without_exception=PASS\n");
+    std::printf("LIBUV_INIT_ALLOCATION_FAILURE lazy_init_rejected=1 retry_recovered=1 PASS\n");
 }
 
 void NetWorkConcurrencyTestCases::deferredHostCleanup()
@@ -865,7 +906,8 @@ void NetWorkConcurrencyTestCases::synchronousFrameExpiry()
     NetSenderSubmission* queues[2] = {&beforePoll, &beforeAdvance};
     uint64_t tickets[2][3] = {};
     uint64_t stagedTicket = 0;
-    uint8_t bytes[16] = {7};
+    // 长DATA进入实际帧池，与同步票据共用配置槽；短DATA的入口节点额度另测。
+    uint8_t bytes[65] = {7};
     NetInterfaceFrame frame = {};
     frame.m_productId = 101;
     frame.m_requestId = 900;
@@ -875,6 +917,13 @@ void NetWorkConcurrencyTestCases::synchronousFrameExpiry()
     for (uint32_t mode = 0; mode < 2; ++mode)
     {
         NetSenderSubmission& queue = *queues[mode];
+        // 本例主动缩小真实记录池，以验证过期释放后的全部槽位可复用；不是默认队列上限。
+        NetSenderSubmissionPools pools;
+        pools.m_frames.initialCapacity = 64;
+        pools.m_frames.maximumCapacity = 64;
+        pools.m_controls.initialCapacity = 16;
+        pools.m_controls.maximumCapacity = 16;
+        EXPIRY_CHECK(queue.configurePools(pools) == NI_OK);
         EXPIRY_CHECK(queue.start(1, 101) == NI_OK && queue.ready(1, 8, 65536) == NI_OK);
         frame.m_kind = NI_DATA;
         EXPIRY_CHECK(queue.dataSynchronous(frame, tickets[mode][0]) == NI_OK);
@@ -955,7 +1004,7 @@ NetWorkWakeProducer::NetWorkWakeProducer(NetWorkClientOpaque* client) : m_starte
 
 }
 
-void NetWorkWakeProducer::DoTask()
+void NetWorkWakeProducer::doTask()
 {
     m_started = true;
     NetWorkClientOpaque::wake(m_client);
@@ -983,26 +1032,28 @@ void NetWorkConcurrencyTestCases::ownerWakeup()
 {
     NetWorkClientCallbacks callbacks = {};
     NetWorkClientOpaque client(callbacks);
-    const int32_t before = CTaskThreadManager::Instance().Count();
-    const uint32_t threadId = CTaskThreadManager::Instance().Init();
+    const int32_t before = CTaskThreadManager::instance().count();
+    const uint32_t threadId = CTaskThreadManager::instance().init();
     bool delivered = false;
     bool completed = false;
     try
     {
-        std::shared_ptr<CTaskThread> thread = CTaskThreadManager::Instance().GetThreadInterface(threadId);
+        std::shared_ptr<CTaskThread> thread = CTaskThreadManager::instance().getThreadInterface(threadId);
         if (!thread) { throw std::runtime_error("wake producer creation failed"); }
         std::shared_ptr<NetWorkWakeProducer> producer(new NetWorkWakeProducer(&client));
-        std::unique_lock<NetWorkGate> lock(client.m_wakeGate);
         // 与真实owner相同：先检查并消费通知，再决定进入等待。
         if (client.m_notified.exchange(false)) { throw std::runtime_error("unexpected initial notification"); }
-        thread->PostTask(producer);
+        if (!thread->tryPostTaskResult(producer, 1, true, false).m_committed)
+        {
+            throw std::runtime_error("test producer task not accepted");
+        }
         const uint64_t deadline = NetSenderSubmission::now() + 1000;
         while (!producer->m_started.load() && NetSenderSubmission::now() < deadline)
         {
             CSystem::sleepPrecise(1);
         }
         if (!producer->m_started.load()) { throw std::runtime_error("wake producer did not start"); }
-        // 旧实现会在持锁期间完成通知；正确实现与wait的原子解锁／等待配对。
+        // 通知方不得等待owner进入等待函数；持久谓词覆盖提前完成的提示。
         const uint64_t overlap = NetSenderSubmission::now() + 20;
         while (!producer->m_done.load() && NetSenderSubmission::now() < overlap)
         {
@@ -1011,22 +1062,18 @@ void NetWorkConcurrencyTestCases::ownerWakeup()
         const uint64_t wakeDeadline = NetSenderSubmission::now() + 100;
         while (!client.m_notified.load() && NetSenderSubmission::now() < wakeDeadline)
         {
-            if (!client.m_wakeGate.waitFor(2))
-            {
-                throw std::runtime_error("wake system wait failed");
-            }
+            CSystem::sleepPrecise(2);
         }
         delivered = client.m_notified.load();
-        lock.unlock();
-        CTaskThreadManager::Instance().Uninit(threadId);
+        CTaskThreadManager::instance().uninit(threadId);
         completed = producer->m_done.load();
     }
     catch (...)
     {
-        CTaskThreadManager::Instance().Uninit(threadId);
+        CTaskThreadManager::instance().uninit(threadId);
         throw;
     }
-    if (!delivered || !completed || !client.m_notified.load() || CTaskThreadManager::Instance().Count() != before)
+    if (!delivered || !completed || !client.m_notified.load() || CTaskThreadManager::instance().count() != before)
     {
         throw std::runtime_error("NetWork owner lost notification between predicate and wait");
     }
@@ -1039,29 +1086,31 @@ m_started(false), m_done(false), m_state(state)
 
 }
 
-void NetFileStopProducer::DoTask()
+void NetFileStopProducer::doTask()
 {
     NetFileIoTask task(m_state);
     m_started = true;
-    task.StopTask();
+    task.stopTask();
     m_done = true;
 }
 
 void NetWorkConcurrencyTestCases::fileStopWakeup()
 {
     std::shared_ptr<NetFileIoState> state(new NetFileIoState());
-    const int32_t before = CTaskThreadManager::Instance().Count();
-    const uint32_t id = CTaskThreadManager::Instance().Init();
+    const int32_t before = CTaskThreadManager::instance().count();
+    const uint32_t id = CTaskThreadManager::instance().init();
     bool delivered = false;
     bool completed = false;
     try
     {
-        std::shared_ptr<CTaskThread> thread = CTaskThreadManager::Instance().GetThreadInterface(id);
+        std::shared_ptr<CTaskThread> thread = CTaskThreadManager::instance().getThreadInterface(id);
         if (!thread) { throw std::runtime_error("file stop producer creation failed"); }
         std::shared_ptr<NetFileStopProducer> producer(new NetFileStopProducer(state));
-        std::unique_lock<NetWorkGate> lock(state->m_gate);
         if (state->m_stop.load() || !state->m_queued.empty()) { throw std::runtime_error("file test initial predicate invalid"); }
-        thread->PostTask(producer);
+        if (!thread->tryPostTaskResult(producer, 1, true, false).m_committed)
+        {
+            throw std::runtime_error("test producer task not accepted");
+        }
         const uint64_t deadline = NetSenderSubmission::now() + 1000;
         while (!producer->m_started.load() && NetSenderSubmission::now() < deadline)
         {
@@ -1073,25 +1122,26 @@ void NetWorkConcurrencyTestCases::fileStopWakeup()
         {
             CSystem::sleepPrecise(1);
         }
-        // 使用与生产相同的原子解锁等待；独立测试进程由runner超时兜底。
-        while (!state->m_stop.load())
+        // 关闭谓词不依赖等待者已登记；提前发布的计数通知仍可消费。
+        const uint64_t stopDeadline = NetSenderSubmission::now() + 1000;
+        while (!state->m_stop.load() && NetSenderSubmission::now() < stopDeadline)
         {
-            delivered = state->m_gate.wait();
-            if (!delivered)
+            const SemaphoreResult waited = state->m_wake.waitResult(100);
+            if (waited.status != SEMAPHORE_OK && waited.status != SEMAPHORE_TIMEOUT)
             {
                 break;
             }
         }
-        lock.unlock();
-        CTaskThreadManager::Instance().Uninit(id);
+        delivered = state->m_stop.load() && state->m_admission.load() == 2;
+        CTaskThreadManager::instance().uninit(id);
         completed = producer->m_done.load();
     }
     catch (...)
     {
-        CTaskThreadManager::Instance().Uninit(id);
+        CTaskThreadManager::instance().uninit(id);
         throw;
     }
-    if (!delivered || !completed || !state->m_stop.load() || CTaskThreadManager::Instance().Count() != before)
+    if (!delivered || !completed || !state->m_stop.load() || CTaskThreadManager::instance().count() != before)
     {
         throw std::runtime_error("file Task stop notification was lost before wait");
     }
@@ -1100,7 +1150,7 @@ void NetWorkConcurrencyTestCases::fileStopWakeup()
 
 void NetWorkConcurrencyTestCases::fileStopCycles()
 {
-    const int32_t before = CTaskThreadManager::Instance().Count();
+    const int32_t before = CTaskThreadManager::instance().count();
     for (uint32_t index = 0; index < 200; ++index)
     {
         NetNativeFileIo io;
@@ -1120,7 +1170,7 @@ void NetWorkConcurrencyTestCases::fileStopCycles()
         const bool rejected = io.nextRequestId(requestId) == NI_INVALID_STATE && requestId == 0 &&
             io.submit(request) == NI_INVALID_STATE;
         io.uninit();
-        if (!done || !rejected || CTaskThreadManager::Instance().Count() != before)
+        if (!done || !rejected || CTaskThreadManager::instance().count() != before)
         {
             throw std::runtime_error("file stop did not finish, reject new work, or reclaim its Task");
         }
@@ -1130,9 +1180,14 @@ void NetWorkConcurrencyTestCases::fileStopCycles()
 
 void NetWorkConcurrencyTestCases::ipcInputOwnership()
 {
+    NetBufferPool storage{NetBufferPoolConfig()};
     NetSenderLocalInbox inbox;
     NetSenderLocalState state(inbox);
-    std::unique_ptr<NetSenderLocalPeer> peer(new NetSenderLocalPeer());
+    NetObjectReference<NetSenderLocalPeer> peer;
+    if (state.preparePeers(1) != NI_OK || state.m_peerPool->create(peer) != NI_OK)
+    {
+        throw std::runtime_error("IPC peer pool initialization failed");
+    }
     peer->m_pid = 12345;
     peer->m_local[0] = 1;
     peer->m_remote[0] = 2;
@@ -1161,7 +1216,11 @@ void NetWorkConcurrencyTestCases::ipcInputOwnership()
         {
             NetSenderLocalInput input;
             input.m_pid = 12345;
-            input.m_bytes = encoded;
+            if (input.m_bytes.allocate(storage, static_cast<uint32_t>(encoded.size())) != NI_OK)
+            {
+                throw std::runtime_error("ownership fixture pool allocation failed");
+            }
+            std::memcpy(input.m_bytes.data(), encoded.data(), encoded.size());
             const uint8_t* allocation = input.m_bytes.data();
             state.accept(input);
             if (target->m_input.size() != 1) { throw std::runtime_error("IPC input disappeared or duplicated"); }
@@ -1223,7 +1282,7 @@ void NetWorkConcurrencyTestCases::submissionOrder()
 void NetWorkConcurrencyTestCases::fileCancelledRelease()
 {
     std::shared_ptr<NetFileIoState> state(new NetFileIoState());
-    const int32_t before = CTaskThreadManager::Instance().Count();
+    const int32_t before = CTaskThreadManager::instance().count();
     const std::string root = CStringManager::AnsiToUtf8(CSystem::GetCurrentExePath());
     const std::string closePath = CSystem::joinPath(root, "cancel-close-owned.tmp");
     const std::string publishPath = CSystem::joinPath(root, "cancel-publish-owned.tmp");
@@ -1239,7 +1298,8 @@ void NetWorkConcurrencyTestCases::fileCancelledRelease()
         }
         for (uint32_t index = 0; index < 2; ++index)
         {
-            std::unique_ptr<NetFileIoHandle> file(new NetFileIoHandle());
+            NetObjectReference<NetFileIoHandle> file;
+            if (state->m_filePool.create(file) != NI_OK) { throw std::runtime_error("fixture file pool"); }
             const std::string& path = index == 0 ? closePath : publishPath;
             if (!file->openTemporary(path.c_str())) { throw std::runtime_error("cancelled release temporary creation failed"); }
             state->m_files.insert(std::make_pair(index + UINT64_C(1), std::move(file)));
@@ -1247,29 +1307,33 @@ void NetWorkConcurrencyTestCases::fileCancelledRelease()
             request.id = index + 1; request.file = index + 1;
             request.operation = index == 0 ? NET_FILE_IO_CLOSE : NET_FILE_IO_PUBLISH;
             request.path = path.c_str(); request.destination = finalPath.c_str();
-            std::shared_ptr<NetFileIoEntry> entry(new NetFileIoEntry(request));
+            NetObjectReference<NetFileIoEntry> entry;
+            if (state->m_entryPool.create(entry, request) != NI_OK) { throw std::runtime_error("fixture entry pool"); }
             entry->m_cancelled = true;
             state->m_entries.insert(std::make_pair(request.id, entry));
-            state->m_queued.push_back(entry);
+            state->m_queued.push(entry.get());
         }
         for (uint32_t index = 0; index < 2; ++index)
         {
             NetFileIoRequest request = {};
             request.id = index + 3; request.file = index + 1; request.operation = NET_FILE_IO_SIZE;
-            std::shared_ptr<NetFileIoEntry> entry(new NetFileIoEntry(request));
+            NetObjectReference<NetFileIoEntry> entry;
+            if (state->m_entryPool.create(entry, request) != NI_OK) { throw std::runtime_error("fixture entry pool"); }
             state->m_entries.insert(std::make_pair(request.id, entry));
-            state->m_queued.push_back(entry);
+            state->m_queued.push(entry.get());
         }
-        threadId = CTaskThreadManager::Instance().Init();
-        std::shared_ptr<CTaskThread> thread = CTaskThreadManager::Instance().GetThreadInterface(threadId);
+        threadId = CTaskThreadManager::instance().init();
+        std::shared_ptr<CTaskThread> thread = CTaskThreadManager::instance().getThreadInterface(threadId);
         if (!thread) { throw std::runtime_error("cancelled release Task creation failed"); }
-        thread->PostTask(std::shared_ptr<CTask>(new NetFileIoTask(state)));
+        if (!thread->tryPostTaskResult(std::shared_ptr<CTask>(new NetFileIoTask(state)), 1, true, false).m_committed)
+        {
+            throw std::runtime_error("test producer task not accepted");
+        }
         thread.reset();
         const uint64_t deadline = NetSenderSubmission::now() + 3000;
         while (!completed && NetSenderSubmission::now() < deadline)
         {
             {
-                std::lock_guard<NetWorkGate> lock(state->m_gate);
                 completed = state->m_entries.find(4)->second->m_completed;
                 if (completed)
                 {
@@ -1284,17 +1348,17 @@ void NetWorkConcurrencyTestCases::fileCancelledRelease()
         released = released && !CSystem::fileExists(CStringManager::Utf8ToUnicode(closePath)) &&
             !CSystem::fileExists(CStringManager::Utf8ToUnicode(publishPath)) &&
             !CSystem::fileExists(CStringManager::Utf8ToUnicode(finalPath));
-        NetFileIoTask(state).StopTask();
-        CTaskThreadManager::Instance().Uninit(threadId);
+        NetFileIoTask(state).stopTask();
+        CTaskThreadManager::instance().uninit(threadId);
         threadId = 0;
     }
     catch (...)
     {
-        NetFileIoTask(state).StopTask();
-        if (threadId != 0) { CTaskThreadManager::Instance().Uninit(threadId); }
+        NetFileIoTask(state).stopTask();
+        if (threadId != 0) { CTaskThreadManager::instance().uninit(threadId); }
         throw;
     }
-    if (!completed || !released || CTaskThreadManager::Instance().Count() != before)
+    if (!completed || !released || CTaskThreadManager::instance().count() != before)
     {
         throw std::runtime_error("cancelled CLOSE/PUBLISH retained native handle before backend shutdown");
     }
@@ -1363,7 +1427,7 @@ void NetWorkConcurrencyTestCases::submissionLifetime()
 
 // NET_HOST_REDESIGN_TESTS
 
-#include "NetPeer/NetPeerAPI.h"
+#include "NetPeerTestAccess.h"
 
 void NetWorkConcurrencyTestCases::hostLifecycle()
 {
@@ -1407,12 +1471,16 @@ void NetWorkConcurrencyTestCases::hostLifecycle()
         NetHostSocketTestDriver driver;
         NetHostFunctions functions = driver.functions();
         NetHostSocketTestListener listener;
-        listener.m_bytes.reserve(4194304);
+        listener.m_bytes.reserve(16777216);
         NetHostSocket socket(&functions);
         listener.m_socket = &socket;
-        SOCKET_CHECK(socket.listen("127.0.0.1", 0, &listener, 256) == NI_OK);
+        NetBufferPoolConfig buffers;
+        buffers.m_classes[2].initialCapacity = 2;
+        buffers.m_classes[2].maximumCapacity = 1024;
+        SOCKET_CHECK(socket.configureInputPool(buffers) == NI_OK);
+        SOCKET_CHECK(socket.listen("127.0.0.1", 0, &listener, 1024) == NI_OK);
         uint8_t data[16384];
-        for (uint64_t peer = 1; peer <= 256; ++peer)
+        for (uint64_t peer = 1; peer <= 1024; ++peer)
         {
             driver.m_connected(driver.m_observer, peer);
             SOCKET_CHECK(socket.pauseRead(peer, false) == NI_OK);
@@ -1421,15 +1489,43 @@ void NetWorkConcurrencyTestCases::hostLifecycle()
             driver.m_writable(driver.m_observer, peer);
             driver.m_closed(driver.m_observer, peer, 0);
         }
-        SOCKET_CHECK(listener.m_connected == 0 && listener.m_data == 0 && listener.m_closed == 0 && socket.peerCount() == 256);
+        SOCKET_CHECK(listener.m_connected == 0 && listener.m_data == 0 && listener.m_closed == 0 && socket.peerCount() == 1024);
         socket.poll();
-        SOCKET_CHECK(listener.m_valid && listener.m_connected == 256 && listener.m_data == 256 && listener.m_writable == 256 &&
-            listener.m_closed == 256 && listener.m_bytes.size() == 4194304 && socket.peerCount() == 0);
+        socket.poll();
+        SOCKET_CHECK(listener.m_valid && listener.m_connected == 1024 && listener.m_data == 1024 && listener.m_writable == 1024 &&
+            listener.m_closed == 1024 && listener.m_bytes.size() == 16777216 && socket.peerCount() == 0);
         for (uint32_t index = 0; index < listener.m_bytes.size(); ++index)
         {
             SOCKET_CHECK(listener.m_bytes[index] == static_cast<uint8_t>(index / 16384 + 1));
         }
         SOCKET_CHECK(socket.uninit() == NI_OK);
+    }
+    // 实际连接池满只拒绝新代次；关闭归还后可以继续接入，不关闭其他连接。
+    {
+        NetHostSocketTestDriver driver;
+        NetHostFunctions functions = driver.functions();
+        NetHostSocketTestListener listener;
+        NetHostSocket socket(&functions);
+        listener.m_socket = &socket;
+        LockFreeHashMapPoolConfig pool;
+        pool.initialCapacity = pool.maximumCapacity = 2;
+        SOCKET_CHECK(socket.configurePeerPool(pool) == NI_OK);
+        LockFreeHashMapPoolConfig invalid = pool;
+        invalid.maximumCapacity = 1;
+        SOCKET_CHECK(socket.configurePeerPool(invalid) == NI_INVALID_ARGUMENT);
+        SOCKET_CHECK(socket.listen("127.0.0.1", 0, &listener, 1) == NI_OK);
+        SOCKET_CHECK(socket.configurePeerPool(pool) == NI_INVALID_STATE);
+        driver.m_connected(driver.m_observer, 1);
+        driver.m_connected(driver.m_observer, 2);
+        driver.m_connected(driver.m_observer, 3);
+        socket.poll();
+        SOCKET_CHECK(socket.status() == NI_OK && socket.peerCount() == 2 && listener.m_connected == 2);
+        socket.close(1, NI_CANCELLED);
+        socket.poll();
+        driver.m_connected(driver.m_observer, 4);
+        socket.poll();
+        SOCKET_CHECK(socket.peerCount() == 2 && listener.m_connected == 3 && listener.m_closed == 1);
+        SOCKET_CHECK(socket.uninit() == NI_OK && listener.m_closed == 3);
     }
     // 回调中恢复读取可同步带入下一块，但不得覆盖当前借用；一轮最多交付2048个事件。
     {
@@ -1530,7 +1626,7 @@ void NetWorkConcurrencyTestCases::hostLifecycle()
 
 uint32_t NetPeerTest::m_created = 0;
 
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 
 void NetWorkConcurrencyTestCases::peerFacadeLifecycle()
 {
@@ -1819,9 +1915,8 @@ void NetWorkConcurrencyTestCases::fileProtocolLifecycle()
     netTestCheckpoint();
 }
 
-#define NET_SERVICE_QUEUE_NO_HEAP
-#include "NetSender/NetSenderAPI.h"
-#if defined(_WIN32) && defined(_DEBUG) && !defined(NET_SERVICE_QUEUE_NO_HEAP)
+#include "NetSenderTestAccess.h"
+#if defined(_WIN32) && defined(_DEBUG)
 #include <crtdbg.h>
 #include <malloc.h>
 #endif
@@ -1830,12 +1925,18 @@ void NetWorkConcurrencyTestCases::fileProtocolLifecycle()
 static uint32_t s_serviceQueueChecks = 0;
 #define SERVICE_QUEUE_CHECK(value) { ++s_serviceQueueChecks; if (!(value)) { std::printf("SERVICE_QUEUE_FAIL line=%u %s\n", static_cast<uint32_t>(__LINE__), #value); return false; } }
 
-/** 检查三队列共有额度、拥有期、取消和期限，使用真实队列而非替代实现
+/** 使用显式小存储池检查三队列拥有期、取消和期限；默认池扩容另有测试
 @return 全部边界是否满足
 */
 static bool ServiceQueueBoundaries()
 {
     NetSenderServiceQueue queue;
+    // 仅本用例配置256个实际记录槽和8个大正文槽，验证真实满池回滚。
+    NetBufferPoolConfig bodies;
+    bodies.m_classes[4].maximumCapacity = 8;
+    LockFreeHashMapPoolConfig records = NetSenderServiceQueue::defaultRecords();
+    records.initialCapacity = records.maximumCapacity = 256;
+    SERVICE_QUEUE_CHECK(queue.configurePools(bodies, records) == NI_OK);
     NetInterfaceFrame frame = {};
     NetInterfaceOrigin origin = {};
     origin.m_endpoint = 91;
@@ -1846,16 +1947,16 @@ static bool ServiceQueueBoundaries()
     frame.m_messageType = 700;
     frame.m_payload = bytes;
     frame.m_payloadSize = sizeof(bytes);
-    SERVICE_QUEUE_CHECK(queue.size() == 0 && queue.bytes() == 0 && queue.room(256, 8 * 1048576));
-    SERVICE_QUEUE_CHECK(!queue.room(257, 0) && !queue.room(1, UINT64_MAX));
-    SERVICE_QUEUE_CHECK(queue.first(3) == 256 && queue.last(3) == 256 && queue.size(3) == 0);
-    SERVICE_QUEUE_CHECK(queue.get(256) == nullptr && queue.borrow(256) == nullptr && !queue.restore(256));
+    SERVICE_QUEUE_CHECK(queue.size() == 0 && queue.bytes() == 0 && queue.room(8, 8 * 1048576) == NI_OK && queue.room(256, 0) == NI_OK);
+    SERVICE_QUEUE_CHECK(queue.room(257, 0) == NI_LIMIT_EXCEEDED && queue.room(1, UINT64_MAX) == NI_INVALID_ARGUMENT);
+    SERVICE_QUEUE_CHECK(queue.first(3) == UINT32_MAX && queue.last(3) == UINT32_MAX && queue.size(3) == 0);
+    SERVICE_QUEUE_CHECK(queue.get(UINT32_MAX) == nullptr && queue.borrow(UINT32_MAX) == nullptr && !queue.restore(UINT32_MAX));
     SERVICE_QUEUE_CHECK(queue.push(3, 1, frame, origin, 1000) == NI_INVALID_ARGUMENT);
     frame.m_payload = nullptr;
     SERVICE_QUEUE_CHECK(queue.push(0, 1, frame, origin, 1000) == NI_INVALID_ARGUMENT);
     frame.m_payload = bytes;
     frame.m_payloadSize = UINT32_MAX;
-    SERVICE_QUEUE_CHECK(queue.push(0, 1, frame, origin, 1000) == NI_LIMIT_EXCEEDED);
+    SERVICE_QUEUE_CHECK(queue.push(0, 1, frame, origin, 1000) == NI_INVALID_ARGUMENT);
     frame.m_payloadSize = sizeof(bytes);
     for (uint32_t index = 0; index < 256; ++index)
     {
@@ -1868,11 +1969,11 @@ static bool ServiceQueueBoundaries()
     for (uint32_t lane = 0; lane < 3; ++lane)
     {
         uint64_t expected = lane + 1;
-        while (queue.first(lane) != 256)
+        while (queue.first(lane) != UINT32_MAX)
         {
             const uint32_t index = queue.first(lane);
             NetSenderServiceManagedFrame* item = queue.borrow(index);
-            SERVICE_QUEUE_CHECK(item != nullptr && item->m_frame.m_requestId == expected && item->m_bytes[0] == 0x59);
+            SERVICE_QUEUE_CHECK(item != nullptr && item->m_frame.m_requestId == expected && item->m_bytes.data()[0] == 0x59);
             SERVICE_QUEUE_CHECK(queue.borrow(index) == nullptr);
             const uint32_t owned = queue.size();
             SERVICE_QUEUE_CHECK(queue.restore(index) && queue.size() == owned && queue.first(lane) == index);
@@ -1882,7 +1983,7 @@ static bool ServiceQueueBoundaries()
             SERVICE_QUEUE_CHECK(queue.size() + 1 == owned && queue.get(index) == nullptr);
             expected += 3;
         }
-        SERVICE_QUEUE_CHECK(queue.last(lane) == 256 && queue.size(lane) == 0);
+        SERVICE_QUEUE_CHECK(queue.last(lane) == UINT32_MAX && queue.size(lane) == 0);
     }
     SERVICE_QUEUE_CHECK(queue.size() == 0 && queue.bytes() == 0);
 
@@ -1898,7 +1999,7 @@ static bool ServiceQueueBoundaries()
             SERVICE_QUEUE_CHECK(queue.push(1, 2, frame, origin, 1000) == NI_OK);
             SERVICE_QUEUE_CHECK(queue.push(2, 3, frame, origin, 1000) == NI_OK);
             queue.clear();
-            SERVICE_QUEUE_CHECK(queue.size() == 1 && queue.bytes() == sizeof(bytes) && borrowed->m_bytes[0] == 0xa9);
+            SERVICE_QUEUE_CHECK(queue.size() == 1 && queue.bytes() == sizeof(bytes) && borrowed->m_bytes.data()[0] == 0xa9);
             SERVICE_QUEUE_CHECK(loan.restore() && queue.size(0) == 1 && queue.size() == 1);
         }
         queue.clear();
@@ -2018,7 +2119,7 @@ static bool ServiceQueueBoundaries()
     return true;
 }
 
-#if defined(_WIN32) && defined(_DEBUG) && !defined(NET_SERVICE_QUEUE_NO_HEAP)
+#if defined(_WIN32) && defined(_DEBUG)
 // 隔离main的CRT观察器，不在有其他业务线程的NetWorkTest中启用。
 static int32_t s_serviceQueueRejectAfter = -1;
 static uint32_t s_serviceQueueAllocations = 0;
@@ -2171,17 +2272,13 @@ static bool ServiceQueueAudit()
 {
     s_serviceQueueChecks = 0;
     SERVICE_QUEUE_CHECK(ServiceQueueBoundaries());
-#if defined(_WIN32) && defined(_DEBUG) && !defined(NET_SERVICE_QUEUE_NO_HEAP)
-    SERVICE_QUEUE_CHECK(ServiceQueueMemory());
-#endif
     return true;
 }
 
-#ifndef NET_SERVICE_QUEUE_NO_HEAP
-/** 库内手工测试入口，正式构建保持整段注释
+/** 独立进程模式执行CRT故障注入；不与其它测试工作线程并行
 @return 0通过，其余表示失败
 */
-int main()
+int NetWorkConcurrencyTestCases::serviceQueueMemoryAudit()
 {
     try
     {
@@ -2192,7 +2289,11 @@ int main()
         _CrtMemState difference;
         _CrtMemCheckpoint(&before);
 #endif
-        if (!ServiceQueueAudit())
+        bool passed = ServiceQueueAudit();
+#if defined(_WIN32) && defined(_DEBUG)
+        passed = passed && ServiceQueueMemory();
+#endif
+        if (!passed)
         {
             return 1;
         }
@@ -2214,10 +2315,7 @@ int main()
     }
 }
 
-#endif
 #undef SERVICE_QUEUE_CHECK
-
-#undef NET_SERVICE_QUEUE_NO_HEAP
 
 void NetWorkConcurrencyTestCases::serviceQueueOwnership()
 {
@@ -2284,7 +2382,7 @@ void NetWorkConcurrencyTestCases::serviceGatewayLifecycle()
 }
 
 #define NET_SERVICE_OUTGOING_NO_HEAP
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 
 #ifndef NET_SERVICE_OUTGOING_NO_HEAP
 /** 库内独立测试main，正式构建保持逐行注释
@@ -2491,10 +2589,29 @@ static bool NativeCleanupAudit()
 {
     uint32_t checks = 0;
 #define CLEANUP_CHECK(value) do { ++checks; if (!(value)) { std::printf("Native cleanup line=%d FAIL\n", __LINE__); return false; } } while (0)
+    NetWorkFilePools invalidPools;
+    invalidPools.m_entries.initialCapacity = 2;
+    invalidPools.m_entries.maximumCapacity = 1;
+    CLEANUP_CHECK(NetNativeFileIo::configurePools(invalidPools) == NI_INVALID_ARGUMENT);
+    invalidPools = NetWorkFilePools();
+    invalidPools.m_queue.maximumCapacity = 0;
+    CLEANUP_CHECK(NetNativeFileIo::configurePools(invalidPools) == NI_INVALID_ARGUMENT);
+#if defined(_WIN32) && defined(_DEBUG) && !defined(NATIVE_CLEANUP_NO_HEAP)
+    for (int32_t allocation = 0; allocation < 12; ++allocation)
+    {
+        NetWorkFilePools pools;
+        s_cleanupRejectAfter = allocation;
+        const _CRT_ALLOC_HOOK oldHook = _CrtSetAllocHook(CleanupMemoryHook);
+        const int32_t result = NetNativeFileIo::configurePools(pools);
+        _CrtSetAllocHook(oldHook);
+        s_cleanupRejectAfter = -1;
+        CLEANUP_CHECK(result == NI_NO_MEMORY || result == NI_OK);
+    }
+#endif
 #if defined(_WIN32) && defined(_DEBUG) && !defined(NATIVE_CLEANUP_NO_HEAP)
     {
         NetFileIoState cold;
-        CLEANUP_CHECK(cold.m_gate.valid());
+        CLEANUP_CHECK(cold.m_admission.load() == 0);
         bool escaped = false;
         s_cleanupRejectAfter = 0;
         s_cleanupAllocations = 0;
@@ -2642,9 +2759,22 @@ static bool NativeCleanupAudit()
     // 结果未consume前仍计入容量；执行者再快也不能使未消费结果无限增长。
     for (uint32_t mode = 0; mode < 2; ++mode)
     {
+        NetWorkFilePools pools;
+        const uint32_t capacity = mode == 0 ? 2048U : 128U;
+        if (mode == 0)
+        {
+            pools.m_entries.initialCapacity = 2;
+            pools.m_entries.maximumCapacity = capacity;
+        }
+        else
+        {
+            pools.m_bodies.m_classes[3].initialCapacity = 1;
+            pools.m_bodies.m_classes[3].maximumCapacity = capacity;
+        }
+        CLEANUP_CHECK(NetNativeFileIo::configurePools(pools) == NI_OK);
         NetNativeFileIo bounded;
         CLEANUP_CHECK(bounded.init() == NI_OK);
-        const uint32_t capacity = mode == 0 ? 64U : 32U;
+        CLEANUP_CHECK(NetNativeFileIo::configurePools(pools) == NI_INVALID_STATE);
         std::vector<uint8_t> input(mode == 0 ? 0 : 65536, 0x53);
         for (uint32_t item = 0; item < capacity; ++item)
         {
@@ -2680,6 +2810,7 @@ static bool NativeCleanupAudit()
         CLEANUP_CHECK(bounded.peek(empty) == NI_NEED_MORE);
         CLEANUP_CHECK(bounded.submit(overflow) == NI_INVALID_STATE);
         bounded.uninit();
+        CLEANUP_CHECK(NetNativeFileIo::configurePools(NetWorkFilePools()) == NI_OK);
     }
     std::printf("Native file cleanup checks=%u PASS\n", checks);
     return true;
@@ -2985,7 +3116,7 @@ static int __cdecl AcceptMemoryHook(int operation, void* pointer, size_t size, i
         ++s_acceptRejected;
         return 0;
     }
-    if (size == sizeof(LibuvChannelPeer))
+    if (size == 16384)
     {
         if (s_acceptFaultMode == 1)
         {
@@ -3086,6 +3217,9 @@ static bool LibuvAcceptRound(uint32_t mode)
             }
         }
         ACCEPT_CHECK(valid);
+        LockFreeHashMapPoolConfig peerPool;
+        peerPool.initialCapacity = peerPool.maximumCapacity = 1;
+        ACCEPT_CHECK(LibuvTcp::hostConfigurePeerPool(hosts[0], peerPool) == 0);
         ACCEPT_CHECK(LibuvTcp::hostListen(hosts[0], "127.0.0.1", 0, 1) == 0);
         const uint32_t port = LibuvTcp::hostLocalPort(hosts[0]);
         uint64_t peer = 0;
@@ -3120,7 +3254,7 @@ static bool LibuvAcceptRound(uint32_t mode)
         {
             bytes[index] = static_cast<uint8_t>(index % 251);
         }
-        ACCEPT_CHECK(LibuvTcp::hostWrite(hosts[1], states[1].m_peer, bytes, sizeof(bytes)) == 0);
+        ACCEPT_CHECK(LibuvTcp::post(hosts[1], states[1].m_peer, bytes, sizeof(bytes)) == 0);
         deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
         while (states[0].m_received != sizeof(bytes) && std::chrono::steady_clock::now() < deadline)
         {
@@ -3278,7 +3412,7 @@ static bool LibuvLifecycleAudit()
             {
                 owner->stop();
                 owner->stop();
-                owner->send(nullptr);
+                owner->post(nullptr);
                 owner->close(nullptr);
                 owner->loop();
                 released = owner->loopPtr() == nullptr && !owner->isClient() && owner->m_libuv == nullptr;
@@ -3822,4 +3956,126 @@ void NetWorkConcurrencyTestCases::processLeaseResources()
         throw std::runtime_error("process lease resource audit failed");
     }
     netTestCheckpoint();
+}
+
+void NetWorkConcurrencyTestCases::sharedWorkers()
+{
+#define WORKER_CHECK(value) { netTestCheckpoint(); if (!(value)) { throw std::runtime_error("shared worker: " #value); } }
+    const int32_t baseline = CTaskThreadManager::instance().count();
+    for (uint32_t scenario = 0; scenario < 4; ++scenario)
+    {
+        const uint32_t mode = scenario % 2;
+        const bool churn = scenario >= 2;
+        const bool retired[] = { true, false, false, churn, false, false, churn, churn };
+        const uint32_t expectedTotal = churn ? 64U : 112U;
+        std::vector<uint64_t> expectedRequests[8];
+        WORKER_CHECK(NetWork::configureWorkers(0) == NI_INVALID_ARGUMENT);
+        WORKER_CHECK(NetWork::configureWorkers(2) == NI_OK);
+        NetWorkConcurrencyContext clients[8];
+        std::unique_ptr<NetWorkConcurrencyOwner> owners[8];
+        NetWorkConcurrencySink sink;
+        NetPeerEndpointRouter gateway(&sink);
+        NetInterfaceTlsOptions tls = {};
+        tls.server = 1;
+        tls.certificate = reinterpret_cast<const uint8_t*>(mbedtls_test_srv_crt_rsa_sha256_pem);
+        tls.certificateSize = static_cast<uint32_t>(mbedtls_test_srv_crt_rsa_sha256_pem_len);
+        tls.privateKey = reinterpret_cast<const uint8_t*>(mbedtls_test_srv_key_rsa_pem);
+        tls.privateKeySize = static_cast<uint32_t>(mbedtls_test_srv_key_rsa_pem_len);
+        tls.handshakeTimeoutMs = 5000;
+        WORKER_CHECK(gateway.listen("127.0.0.1", 0, tls) == NI_OK);
+        uint64_t service = 0;
+        WORKER_CHECK(gateway.addService(101, false, 128, service) == NI_OK);
+        NetInterfaceClientOptions options = {};
+        options.structSize = sizeof(options); options.version = 1;
+        options.address = "127.0.0.1"; options.port = gateway.localPort();
+        options.platform = 1; options.capabilities = 7; options.maxRequests = 32;
+        options.maxChunk = 4096; options.handshakeTimeoutMs = 5000;
+        options.tls.handshakeTimeoutMs = 5000; options.tls.hostname = "localhost";
+        options.tls.authority = reinterpret_cast<const uint8_t*>(mbedtls_test_ca_crt_rsa_sha256_pem);
+        options.tls.authoritySize = static_cast<uint32_t>(mbedtls_test_ca_crt_rsa_sha256_pem_len);
+        for (uint32_t index = 0; index < 8; ++index)
+        {
+            owners[index].reset(new NetWorkConcurrencyOwner(clients[index]));
+            NetInterfaceClientCallbacks callbacks = {};
+            callbacks.structSize = sizeof(callbacks); callbacks.version = 1; callbacks.context = &clients[index];
+            callbacks.ready = NetWorkConcurrencyContext::ready; callbacks.result = NetWorkConcurrencyContext::result;
+            callbacks.frame = NetWorkConcurrencyContext::frame; callbacks.closed = NetWorkConcurrencyContext::closed;
+            WORKER_CHECK(NetWork::instance().clientCreate(&callbacks, &clients[index].m_client) == NI_OK);
+            WORKER_CHECK(NetWork::instance().clientConfigureDispatch(clients[index].m_client, mode == 0) == NI_OK);
+            std::memset(options.device, index + 1, 16);
+            WORKER_CHECK(NetWork::instance().clientConnect(clients[index].m_client, &options) == NI_OK);
+            WORKER_CHECK(NetWork::instance().clientConfigureDispatch(clients[index].m_client, false) == NI_INVALID_STATE);
+        }
+        WORKER_CHECK(NetWork::configureWorkers(3) == NI_INVALID_STATE);
+        const uint64_t deadline = NetSenderSubmission::now() + 10000;
+        for (;;)
+        {
+            uint32_t ready = 0;
+            for (uint32_t index = 0; index < 8; ++index)
+            {
+                WORKER_CHECK(!clients[index].m_bad.load());
+                ready += clients[index].m_ready.load();
+            }
+            if (ready == 8) { break; }
+            WORKER_CHECK(NetSenderSubmission::now() < deadline);
+            gateway.poll(); CSystem::Sleep(0);
+        }
+        std::set<uint32_t> workers;
+        for (uint32_t index = 0; index < 8; ++index) { workers.insert(clients[index].m_callbackThread.load()); }
+        WORKER_CHECK(workers.size() == (mode == 0 ? 2U : 1U));
+        WORKER_CHECK(CTaskThreadManager::instance().count() == baseline + (mode == 0 ? 2 : 1));
+        // 同时关闭中间及尾部会话，其他会话仍必须继续，不能因数组移位漏轮询。
+        for (uint32_t index = 0; index < 8; ++index)
+        {
+            if (retired[index])
+            {
+                WORKER_CHECK(NetWork::instance().clientClose(clients[index].m_client, NI_OK) == NI_OK);
+            }
+        }
+        const uint8_t byte = 7;
+        for (uint32_t sequence = 0; sequence < 16; ++sequence)
+        {
+            for (uint32_t index = 0; index < 8; ++index)
+            {
+                if (retired[index]) { continue; }
+                uint64_t request = 0;
+                WORKER_CHECK(NetWork::instance().clientBegin(clients[index].m_client, 101, 700, 5000, &request) == NI_OK);
+                expectedRequests[index].push_back(request);
+                WORKER_CHECK((mode == 0 ? NetWork::instance().clientSend(clients[index].m_client, request, &byte, 1) :
+                    NetWork::instance().clientPost(clients[index].m_client, request, &byte, 1)) == NI_OK);
+            }
+        }
+        for (;;)
+        {
+            uint32_t results = 0;
+            for (uint32_t index = 0; index < 8; ++index)
+            {
+                if (retired[index]) { continue; }
+                WORKER_CHECK(!clients[index].m_bad.load());
+                results += clients[index].m_results.load();
+            }
+            if (results == expectedTotal) { break; }
+            WORKER_CHECK(NetSenderSubmission::now() < deadline);
+            gateway.poll(); WORKER_CHECK(sink.respond(gateway)); CSystem::Sleep(0);
+        }
+        for (uint32_t index = 0; index < 8; ++index)
+        {
+            owners[index].reset();
+            WORKER_CHECK(!clients[index].m_bad.load() && clients[index].m_closed.load() == 1);
+            WORKER_CHECK(clients[index].m_results.load() == expectedRequests[index].size());
+            // 关闭已同步收敛回调，以下读取不与回调竞争；不能只比较各会话结果总和。
+            WORKER_CHECK(clients[index].m_terminal.size() == expectedRequests[index].size());
+            for (size_t request = 0; request < expectedRequests[index].size(); ++request)
+            {
+                const auto found = clients[index].m_terminal.find(expectedRequests[index][request]);
+                WORKER_CHECK(found != clients[index].m_terminal.end() && found->second == NI_RPC_SUCCESS);
+            }
+        }
+        gateway.shutdown();
+        WORKER_CHECK(CTaskThreadManager::instance().count() == baseline);
+        std::printf("SHARED_WORKERS mode=%s clients=8 workers=%u results=%u closed_isolated=%u PASS\n",
+            mode == 0 ? "send" : "post", static_cast<uint32_t>(workers.size()), expectedTotal, churn ? 4U : 1U);
+    }
+    WORKER_CHECK(NetWork::configureWorkers(4) == NI_OK);
+#undef WORKER_CHECK
 }

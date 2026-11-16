@@ -1,6 +1,6 @@
 ﻿#pragma once
 #ifndef __EMSCRIPTEN__
-#include "NetSender/NetSenderAPI.h"
+#include "NetSenderTestAccess.h"
 #include <atomic>
 
 // 只在测试中延迟已提交END的回调交付，制造对端先退出的确定性交错

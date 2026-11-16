@@ -1,7 +1,7 @@
-﻿#include "NetInterface/NetInterfaceAPI.h"
+﻿#include "NetInterfaceTestAccess.h"
 #include "NetLinkTestCases.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
-#include "NetInterface/NetInterfaceAPI.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include "NetInterfaceTlsTestCases.h"
 
 NetInterfaceLinkAuthTestPair::NetInterfaceLinkAuthTestPair(NetInterfaceLinkTestIdentity& identity, bool server) :

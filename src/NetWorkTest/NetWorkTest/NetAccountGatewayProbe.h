@@ -2,7 +2,7 @@
 #include "NetSenderTestClient.h"
 #if defined(_WIN32) && defined(NET_WORK_TEST_ACCOUNT)
 #include "Account/AccountAPI.h"
-#include "NetSender/NetSenderAPI.h"
+#include "NetSenderTestAccess.h"
 
 // 通过实际网关与Account服务核对账号操作的独立测试客户端
 class NetAccountGatewayProbe : public NetSessionListener

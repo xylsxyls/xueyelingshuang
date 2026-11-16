@@ -1,4 +1,4 @@
-﻿#include "NetInterface/NetInterfaceAPI.h"
+﻿#include "NetInterfaceTestAccess.h"
 #define NET_FILE_AUDIT_NO_HEAP 1
 uint32_t NetInterfaceFileAuditTest::m_checks = 0;
 
@@ -13,9 +13,9 @@ uint32_t NetInterfaceFileAuditTest::m_exposed = 0;
 
 #include <LibuvTcp/LibuvTcpAPI.h>
 #include "NetWorkConcurrencyTestCases.h"
-#include <NetWork/NetWorkAPI.h>
-#include <NetSender/NetSenderAPI.h>
-#include <test/certs.h>
+#include "NetWorkTestAccess.h"
+#include "NetSenderTestAccess.h"
+#include "NetTestTlsCertificates.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "NetWorkTestCases.h"

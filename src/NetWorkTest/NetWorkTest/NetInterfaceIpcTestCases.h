@@ -202,11 +202,11 @@ public:
 
     /** Execute finite test work or the retained real task.
     */
-    void DoTask();
+    void doTask();
 
     /** Forward cooperative stop to the real task.
     */
-    void StopTask();
+    void stopTask();
 public:
     // 本包装任务拥有的实际CTask，执行与停止委托给它
     std::shared_ptr<CTask> m_inner;
@@ -239,7 +239,7 @@ public:
 
     /** Execute finite test work or the retained real task.
     */
-    void DoTask();
+    void doTask();
 public:
     // 借用本用例可靠缓存发送器，任务回收前保持有效
     ReliabilityCacheSender* m_sender;

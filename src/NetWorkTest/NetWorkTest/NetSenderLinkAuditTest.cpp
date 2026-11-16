@@ -1,4 +1,4 @@
-﻿#include "NetSender/NetSenderAPI.h"
+﻿#include "NetSenderTestAccess.h"
 #if defined(_WIN32) && defined(_DEBUG)
 std::atomic<uint32_t> NetSenderGrantAudit::m_thread(0);
 int NetSenderGrantAudit::m_failAfter = -1;
@@ -6,8 +6,8 @@ int NetSenderGrantAudit::m_failAfter = -1;
 #endif
 #include "NetLinkLocalTestCases.h"
 #include "NetInterfaceTlsTestCases.h"
-#include "NetInterface/NetInterfaceAPI.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "NetInterfaceTestAccess.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include <chrono>
 #include <cstdio>

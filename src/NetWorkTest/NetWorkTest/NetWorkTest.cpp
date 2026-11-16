@@ -1,9 +1,53 @@
-﻿#include "NetWorkTest.h"
+﻿#include "NetCompactTest.h"
+#include "NetRequestPoolTest.h"
+#include "NetSubmissionPoolTest.h"
+#include "NetObjectPoolTest.h"
+#ifndef __EMSCRIPTEN__
+#include "NetGatewayPerformanceTest.h"
+#include "NetHostExecutionTest.h"
+#include "NetGatewayOneWayTest.h"
+#include "NetRelayBatchTest.h"
+#include "NetGatewayReceiveTest.h"
+#include "NetSubmissionSignalTest.h"
+#include "NetGatewayChannelStateTest.h"
+#include "NetInterfaceCombinedTest.h"
+#include "NetConnectionQueueTest.h"
+#include "NetDirectoryFormatTest.h"
+#include "NetTlsEntropyTest.h"
+#include "NetDiscoveryTableTest.h"
+#include "NetTlsAllocationTest.h"
+#include "NetGatewayTaskTest.h"
+#include "NetClientManagerTest.h"
+#include "NetServerManagerTest.h"
+#include "NetGatewayNodeLoadTest.h"
+#include "NetFileFacadeTest.h"
+#include "NetConnectionBufferTest.h"
+#include "NetDirectoryCacheTest.h"
+#include "NetLegacyBoundaryTest.h"
+#include "NetGatewayLaunchTest.h"
+#endif
+#include "NetCertificateBufferTest.h"
+#include "NetDirectoryValueTest.h"
+#include "NetTransportContractTest.h"
+#include "NetGatewayHistoryTest.h"
+#include "NetIpcAdapterTest.h"
+#include "NetWorkTest.h"
+#include "NetRunnerSelfTest.h"
+#include "NetTestBatch.h"
+#include "NetTestBuild.h"
+#include "NetGatewayProcessSuite.h"
 #include "NetSenderTestClient.h"
+#include "NetCryptoTestCases.h"
+#include "NetCryptoLegacyTest.h"
+#include "NetCryptoCertificateTest.h"
+#include "NetGatewayProcessProbe.h"
+#include "NetSubmissionConcurrentTest.h"
+#include "NetSubmissionTestCases.h"
+#include "NetNativeFileTestCases.h"
 #include "NetWorkTestRunner.h"
 #include "NetWorkTestCases.h"
 #ifndef __EMSCRIPTEN__
-#include "NetWork/NetWorkAPI.h"
+#include "NetWorkTestAccess.h"
 #include "LibuvTcp/LibuvTcpAPI.h"
 #include "CSystem/CSystemAPI.h"
 // 原生文件后端由NetWork正式宿主入口配置。
@@ -40,7 +84,7 @@
 #include "NetServiceTestCases.h"
 #include "NetAccountGatewayProbe.h"
 #include "NetFileGatewayProbe.h"
-#include "NetSender/NetSenderAPI.h"
+#include "NetSenderTestAccess.h"
 #endif
 #include <algorithm>
 #include <chrono>
@@ -61,10 +105,54 @@ static volatile sig_atomic_t g_cancelRequested = 0;
 static std::chrono::steady_clock::time_point g_deadline;
 
 static const NetWorkTestEntry g_tests[] = {
+#ifndef __EMSCRIPTEN__
+    {247, "Compact TLS negotiation, mixed frames and physical pool reuse", false, &NetCompactTest::tls},
+    {248, "Inline DATA ownership, physical queue capacity and concurrent FIFO", false, &NetCompactTest::submission},
+    {246, "Compact frame: golden bytes, splits and invalid input", false, &NetCompactTest::run},
+    {245, "TLS append: aggregation, partial acceptance and frozen retries", false, &NetInterfaceTlsTestCases::appendRecords},
+    {244, "Shared workers: 8 TLS sessions, parallel send and serial post", true, &NetWorkConcurrencyTestCases::sharedWorkers},
+    {243, "\xe5\x8d\x8f\xe8\xae\xae\xe8\xaf\xb7\xe6\xb1\x82\xe6\xb1\xa0\xe3\x80\x81\xe5\x8a\xa8\xe6\x80\x81\xe6\x9c\x9f\xe9\x99\x90\xe5\xa0\x86\xe4\xb8\x8e\xe7\xbc\x96\xe5\x8f\xb7\xe6\x98\xa0\xe5\xb0\x84", false, &NetRequestPoolTest::run},
+    {242, "\xe6\x8f\x90\xe4\xba\xa4\xe5\xb1\x82\xe7\x89\xa9\xe7\x90\x86\xe6\xb1\xa0\xe4\xb8\x8e\xe5\x80\x9f\xe7\x94\xa8\xe5\x9b\x9e\xe6\x94\xb6", false, &NetSubmissionPoolTest::run},
+    {241, "\xe5\xaf\xb9\xe8\xb1\xa1\xe6\xb1\xa0\xe5\xae\xb9\xe9\x87\x8f\xe4\xb8\x8e\xe5\xb9\xb6\xe5\x8f\x91\xe6\x89\x80\xe6\x9c\x89\xe6\x9d\x83", false, &NetObjectPoolTest::run},
+    {240, "\xe5\x8d\x95\xe5\x90\x91\xe8\xa7\xa3\xe5\xaf\x86\xe5\x90\x8e\xe8\xae\xa1\xe6\x95\xb0\xe3\x80\x81\xe7\x94\x9f\xe4\xba\xa7\xe8\x80\x85\xe9\xa1\xba\xe5\xba\x8f\xe5\x8f\x8a\xe9\x94\x99\xe8\xaf\xaf\xe6\xad\xa3\xe6\x96\x87\xe6\x8b\x92\xe7\xbb\x9d", false, &NetGatewayOneWayTest::run},
+    {234, "Synchronous receipt durable notification races and lifetime", false, &NetSubmissionSignalTest::run},
+    {235, "Shared host loop wait, wake, channels and shutdown", false, &NetHostExecutionTest::check},
+    {236, "Raw TCP write ordering, backpressure and completion close", false, &NetInterfaceNativeTestCases::rawWriteOrdering},
+    {237, "\xe9\x80\x8f\xe6\x98\x8e\xe8\xbf\x90\xe8\xbe\x93\xe6\x89\xb9\xe9\x87\x8f\xe5\x86\x99\xe5\x85\xa5\xef\xbc\x9a\xe9\xa1\xba\xe5\xba\x8f\xe3\x80\x81\xe8\x83\x8c\xe5\x8e\x8b\xe3\x80\x81\xe4\xb8\x8a\xe9\x99\x90\xe4\xb8\x8e\xe5\xa4\xb1\xe8\xb4\xa5\xe5\x8e\x9f\xe5\xad\x90\xe6\x80\xa7", false, &NetRelayBatchTest::run},
+    {238, "\xe4\xb8\x9a\xe5\x8a\xa1\xe8\xbf\x9e\xe7\xbb\xad\xe6\x8f\x90\xe4\xba\xa4\xe4\xb8\x8e\xe6\x8e\xa7\xe5\x88\xb6\xe5\xb1\x8f\xe9\x9a\x9c\xe3\x80\x81\xe5\x90\x8c\xe6\xad\xa5\xe4\xba\xa4\xe4\xbb\x98\xe8\xbe\xb9\xe7\x95\x8c", false, &NetSubmissionTestCases::orderedBatch},
+    {239, "\xe4\xb8\x9a\xe5\x8a\xa1TLS\xe6\x89\xb9\xe9\x87\x8f\xe6\x8e\xa5\xe6\x94\xb6\xe3\x80\x81\xe5\x85\xac\xe5\xb9\xb3\xe9\xa2\x84\xe7\xae\x97\xe3\x80\x81\xe8\x83\x8c\xe5\x8e\x8b\xe5\x8f\x8a\xe5\x9b\x9e\xe8\xb0\x83\xe5\x85\xb3\xe9\x97\xad", false, &NetGatewayReceiveTest::run},
+    {222, "Gateway channel OPEN backpressure and callback teardown", false, &NetGatewayChannelStateTest::run},
+    {217, "NIF2 vectors, directory, compression and durable file composition", false, &NetInterfaceCombinedTest::run},
+    {218, "TLS frame queue reuse, failed allocation and cleanup", false, &NetConnectionQueueTest::run},
+    {219, "Directory numeric addresses, aliases and cache boundaries", false, &NetDirectoryFormatTest::run},
+    {220, "TLS entropy failures and failed construction resources", false, &NetTlsEntropyTest::run},
+    {221, "Discovery bounded rotation, canonical failures and restart", false, &NetDiscoveryTableTest::run},
+    {223, "NIF2 module benchmark with validated 1024 byte bodies", true, &NetInterfaceCombinedTest::benchmark, 30},
+    {230, "Crypto legacy hashes, AES, SM4, RSA and concurrent boundaries", false, &NetCryptoLegacyTest::regression, 90},
+    {231, "Crypto legacy versus mbedTLS algorithm benchmark", true, &NetCryptoLegacyTest::benchmark, 90},
+    {232, "Crypto TLS fragmentation, authentication and bounded buffers", false, &NetCryptoLegacyTest::tls},
+    {233, "Crypto file compatibility and block boundaries", false, &NetCryptoLegacyTest::fileBoundary},
+    {229, "P256 fresh issuer, proof, buffers and entropy failures", false, &NetCryptoCertificateTest::run},
+    {228, "Crypto scatter input vectors, aliases and bounded ranges", false, &NetCryptoTestCases::partsBoundary},
+    {227, "TLS allocation failure leaves all queries safe", false, &NetTlsAllocationTest::run},
+    {226, "Gateway task host failures, completion and stop", false, &NetGatewayTaskTest::run, 35},
+    {224, "NetClientManagerTest lifecycle, signal restoration and allocation failures", true, &NetClientManagerTest::run, 65},
+    {225, "NetServerManagerTest lifecycle, signal restoration and allocation failures", true, &NetServerManagerTest::run, 65},
+    {216, "Node load selection, capacity reservations and allocation failures", true, &NetGatewayNodeLoadTest::run, 30},
+    {215, "File backend validation, callback exceptions and reentry", false, &NetFileFacadeTest::run},
+    {211, "Connection TLS buffers, aliasing and malformed frames", false, &NetConnectionBufferTest::run},
+    {212, "Directory cache controlled completion, retries and teardown", false, &NetDirectoryCacheTest::run},
+    {213, "Legacy callbacks reject short, misaligned and wrong-type input", false, &NetLegacyBoundaryTest::run},
+    {214, "Gateway launch reuses ready owner and preserves guard configuration", false, &NetGatewayLaunchTest::run},
+#endif
+    {207, "Certificate fixed buffers and entropy failures", false, &NetCertificateBufferTest::run},
+    {208, "Directory value ABI, validation and ownership", false, &NetDirectoryValueTest::run},
+    {209, "Transport factory, options and same-module ownership", false, &NetTransportContractTest::run},
+    {210, "Gateway channel high water across four domains", false, &NetGatewayHistoryTest::run},
     {110, "File snapshots preserve active stream after progress and resumed hashing", false, &NetWorkTestCases::fileFlowSnapshot},
     {63, "\xe6\x96\x87\xe4\xbb\xb6\xe5\x8d\x8f\xe8\xae\xae\xe6\x8c\x81\xe4\xb9\x85\xe7\xa1\xae\xe8\xae\xa4\xe5\x9f\xba\xe7\xa1\x80\xe9\x97\xad\xe7\x8e\xaf", false, &NetWorkTestCases::fileFlowBasic},
     {62, "\xe5\xa4\xa7\xe6\x96\x87\xe4\xbb\xb6\xe6\xb5\x81\xe5\xbc\x8f\xe6\x91\x98\xe8\xa6\x81\xe5\x9f\xba\xe7\xa1\x80\xe5\x90\x91\xe9\x87\x8f", false, &NetWorkTestCases::streamingHash},
-    {118, "NIF2编码输入输出别名边界", false, &NetWorkTestCases::encodingAliases},
+    {118, "NIF2\xe7\xbc\x96\xe7\xa0\x81\xe8\xbe\x93\xe5\x85\xa5\xe8\xbe\x93\xe5\x87\xba\xe5\x88\xab\xe5\x90\x8d\xe8\xbe\xb9\xe7\x95\x8c", false, &NetWorkTestCases::encodingAliases},
     {1, "\xe5\x9b\xba\xe5\xae\x9a\xe7\xba\xbf\xe6\xa0\xbc\xe5\xbc\x8f", false, &NetWorkTestCases::wireVector},
     {2, "\xe6\x89\x80\xe6\x9c\x89\xe5\x88\x87\xe5\x88\x86", false, &NetWorkTestCases::fragmentation},
     {3, "\xe7\xb2\x98\xe5\x8c\x85\xe4\xb8\x8e\xe8\x83\x8c\xe5\x8e\x8b", false, &NetWorkTestCases::backpressure},
@@ -108,8 +196,8 @@ static const NetWorkTestEntry g_tests[] = {
     {58, "Two service processes complete gateway RPC", false, &NetServiceTestCases::nestedProcesses},
     {59, "Wrong credentials and duplicate service", false, &NetServiceTestCases::rejectedServices},
     {74, "ProcessWork opaque records and window backpressure", false, &NetRawLocalTestCases::transfer},
-    {116, "IPC结束回调晚于对端退出", false, &NetRawLocalTestCases::delayedEnd},
-    {117, "IPC缺失结束包有界收敛", false, &NetRawLocalTestCases::missingEnd},
+    {116, "IPC\xe7\xbb\x93\xe6\x9d\x9f\xe5\x9b\x9e\xe8\xb0\x83\xe6\x99\x9a\xe4\xba\x8e\xe5\xaf\xb9\xe7\xab\xaf\xe9\x80\x80\xe5\x87\xba", false, &NetRawLocalTestCases::delayedEnd},
+    {117, "IPC\xe7\xbc\xba\xe5\xa4\xb1\xe7\xbb\x93\xe6\x9d\x9f\xe5\x8c\x85\xe6\x9c\x89\xe7\x95\x8c\xe6\x94\xb6\xe6\x95\x9b", false, &NetRawLocalTestCases::missingEnd},
     {54, "ProcessWork TLS transfer and backpressure", false, &NetLocalTestCases::transfer},
     {55, "ProcessWork TLS certificate rejection", false, &NetLocalTestCases::certificateRejection},
     {56, "ProcessWork TLS peer exit", false, &NetLocalTestCases::peerExit},
@@ -229,6 +317,18 @@ static const NetWorkTestEntry g_tests[] = {
     {192, "Singleton facade workCpp independent clients and boundaries", false, &NetSenderFacadeNetWorkCppTest::workCpp},
     {193, "Singleton facade workC independent clients and boundaries", false, &NetSenderFacadeNetWorkCTest::workC},
     {194, "Shared C facade multi-producer TCP/TLS and per-thread FIFO", false, &NetSenderFacadeConcurrency::workConcurrency},
+    {195, "Crypto SHA256 fixed vectors, lifetime, alias and overflow", false, &NetCryptoTestCases::hashBoundary},
+    {196, "Crypto HMAC, PBKDF2 and secure erase boundaries", false, &NetCryptoTestCases::derivationBoundary},
+    {197, "Submission contention, producer FIFO and ticket reclamation", true, &NetSubmissionConcurrentTest::run, 65},
+    {198, "Submission limits, cancellation, borrowed lifetime and teardown", false, &NetSubmissionTestCases::boundary, 65},
+    {199, "Submission validated RPC and DATA throughput", true, &NetSubmissionTestCases::benchmark, 65},
+    {200, "Native file temporary ownership and publication", false, &NetNativeFileTestCases::temporary, 65},
+    {201, "Native file cleanup, low memory and bounded capacity", false, &NetNativeFileTestCases::cleanup, 65},
+    {202, "IPC bounded capacity status and recovery", false, &NetIpcAdapterTest::capacity},
+    {203, "IPC publication survives sender close", false, &NetIpcAdapterTest::publication},
+    {204, "IPC local close phase monotonicity", false, &NetIpcAdapterTest::phase},
+    {205, "IPC 16 producer FIFO, progress and callback reclamation", true, &NetIpcAdapterTest::concurrentInbox, 20},
+    {206, "IPC stop while producers are active and empty restart", true, &NetIpcAdapterTest::concurrentStop, 20},
     {79, "In-process C++ NetSender over TCP for desktop/mobile/mini-program platforms", false, &NetWorkInProcessTestCases::clientPlatforms},
     {78, "\xe8\xb6\x85\xe6\x97\xb6\xe5\x9b\x9e\xe8\xb0\x83\xe6\x8f\x90\xe4\xba\xa4\xe6\x96\xb0\xe8\xaf\xb7\xe6\xb1\x82\xe4\xb8\x8e\xe5\x8d\x95\xe8\xb0\x83\xe6\x97\xb6\xe9\x92\x9f", false, &NetGatewayTestCases::sessionCallbackDeadline},
     {71, "Endpoint TLS through two real opaque TCP segments", false, &netRelayTlsTcpTest},
@@ -353,7 +453,7 @@ static int32_t ConfigureGatewayHost()
     functions.listen = LibuvTcp::hostListen;
     functions.connect = LibuvTcp::hostConnect;
     functions.poll = LibuvTcp::hostPoll;
-    functions.write = LibuvTcp::hostWrite;
+    functions.write = LibuvTcp::post;
     functions.pauseRead = LibuvTcp::hostPauseRead;
     functions.close = LibuvTcp::hostClose;
     functions.shutdown = LibuvTcp::hostShutdown;
@@ -361,6 +461,12 @@ static int32_t ConfigureGatewayHost()
     functions.localPort = LibuvTcp::hostLocalPort;
     functions.peerCount = LibuvTcp::hostPeerCount;
     functions.entropy = CSystem::secureRandomBytesCallback;
+    functions.execution.create = LibuvTcp::hostLoopCreate;
+    functions.execution.exchange = LibuvTcp::hostLoopExchange;
+    functions.execution.begin = LibuvTcp::hostLoopBegin;
+    functions.execution.wait = LibuvTcp::hostLoopWait;
+    functions.execution.wake = LibuvTcp::hostLoopWake;
+    functions.execution.destroy = LibuvTcp::hostLoopDestroy;
     return NetWork::configureHost(functions);
 }
 
@@ -374,13 +480,130 @@ static int32_t ConfigureGatewayHost()
 int main(int argc, char** argv)
 {
 #ifndef __EMSCRIPTEN__
+    if (argc > 1 && std::strcmp(argv[1], "--build-tests") == 0)
+    {
+        try { return NetTestBuild::run(argc, argv); }
+        catch (const std::exception& error) { std::fprintf(stderr, "Test build failed: %s\n", error.what()); return 1; }
+        catch (...) { std::fputs("Test build failed with an unexpected exception\n", stderr); return 1; }
+    }
+    if (argc > 1 && std::strcmp(argv[1], "--batch") == 0)
+    {
+        try { return NetTestBatch::run(argc, argv); }
+        catch (const std::exception& error) { std::fprintf(stderr, "Batch failed: %s\n", error.what()); return 1; }
+        catch (...) { std::fputs("Batch failed with an unexpected exception\n", stderr); return 1; }
+    }
+    if (argc > 1 && std::strncmp(argv[1], "--process-fixture=", 18) == 0)
+    {
+        return NetGatewayProcessSuite::run(argc, argv);
+    }
+    if (argc > 1 && std::strcmp(argv[1], "--test-process-probe") == 0)
+    {
+        return NetRunnerSelfTest::processProbe(argc, argv);
+    }
+    if (argc > 1 && std::strcmp(argv[1], "--runner-selfcheck") == 0)
+    {
+        try
+        {
+            return NetRunnerSelfTest::run(argc, argv);
+        }
+        catch (const std::exception& error)
+        {
+            std::fprintf(stderr, "Runner self-check failed: %s\n", error.what());
+            return 1;
+        }
+        catch (...)
+        {
+            std::fputs("Runner self-check failed with an unexpected exception\n", stderr);
+            return 1;
+        }
+    }
+    if (argc == 2 && std::strcmp(argv[1], "--host-execution-test") == 0)
+    {
+        return NetHostExecutionTest::run();
+    }
+    if ((argc == 7 || argc == 8) && std::strcmp(argv[1], "--gateway-performance") == 0)
+    {
+        return NetGatewayPerformanceTest::run(argc - 1, argv + 1);
+    }
+    const std::string executable = CSystem::currentExecutablePathUtf8();
+    if (argc > 1 && std::strcmp(argv[1], "--client-host") == 0)
+    {
+        // 隔离租约和守护仅在测试翻译单元生效，不复用用户正在运行的网关。
+        return NetClientManagerTest::host(argc, argv);
+    }
+    if (argc > 1 && std::strcmp(argv[1], "--node-host") == 0)
+    {
+        return NetServerManagerTest::host(argc, argv);
+    }
+    const std::string name = executable.substr(executable.find_last_of("/\\") + 1);
+    if (name == "NetWorkTestClient.exe" || name == "NetWorkTestClient")
+    {
+        return NetClientManagerTest::host(argc, argv);
+    }
+    if (name == "NetWorkTestNode.exe" || name == "NetWorkTestNode")
+    {
+        return NetServerManagerTest::host(argc, argv);
+    }
+    if (argc == 2 && std::string(argv[1]).compare(0, 19, "--isolated-manager=") == 0)
+    {
+        const std::string kind = std::string(argv[1]).substr(19);
+        const std::string root = CSystem::joinPath(CSystem::GetName(CSystem::currentExecutablePathUtf8(), 4),
+            "manager-test-" + kind + "-" + std::to_string(CSystem::currentProcessPid()));
+        if (kind == "tls-allocation") { return NetTlsAllocationTest::check(); }
+        if (kind == "task") { return NetGatewayTaskTest::check(root); }
+        return kind == "client" ? NetClientManagerTest::check(root) : kind == "server" ? NetServerManagerTest::check(root) : 98;
+    }
+    if (argc == 2 && std::string(argv[1]).compare(0, 21, "--isolated-file-case=") == 0)
+    {
+        try
+        {
+            const std::string kind = std::string(argv[1]).substr(21);
+            return kind == "facade" ? NetFileFacadeTest::check() : kind == "cache" ? NetDirectoryCacheTest::check() : 98;
+        }
+        catch (...)
+        {
+            return 99;
+        }
+    }
     if (ConfigureGatewayHost() != NI_OK || NetWork::configureNativeFileIo() != NI_OK)
     {
         return 4;
     }
+    if (argc == 2 && std::strcmp(argv[1], "--isolated-resource-cycles") == 0)
+    {
+        g_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(18);
+        try
+        {
+            NetWorkConcurrencyTestCases::lifecycleCycles();
+            return 0;
+        }
+        catch (const std::exception& error)
+        {
+            std::fprintf(stderr, "Resource cycles failed: %s\n", error.what());
+            return 1;
+        }
+        catch (...)
+        {
+            std::fputs("Resource cycles failed with an unexpected exception\n", stderr);
+            return 1;
+        }
+    }
+    if (argc == 4 && std::string(argv[1]).compare(0, 12, "--self-test-") == 0)
+    {
+        return NetGatewayProcessProbe::run(argc, argv);
+    }
+
 #endif
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
+    if (argc > 1 && std::string(argv[1]) == "--service-proxy-audit")
+    {
+        return NetSenderServiceProxyTest::audit();
+    }
+    if (argc > 1 && std::string(argv[1]) == "--service-queue-audit")
+    {
+        return NetWorkConcurrencyTestCases::serviceQueueMemoryAudit();
+    }
     if (argc == 3 && (std::string(argv[1]) == "--link-input-audit" || std::string(argv[1]) == "--sender-link-audit" ||
         std::string(argv[1]) == "--link-output-audit" || std::string(argv[1]) == "--link-auth-audit"))
     {

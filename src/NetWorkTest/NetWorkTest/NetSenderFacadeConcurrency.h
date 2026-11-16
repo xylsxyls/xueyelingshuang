@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "NetWork/NetWorkAPI.h"
-#include "NetPeer/NetPeerAPI.h"
+#include "NetWorkTestAccess.h"
+#include "NetPeerTestAccess.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include <atomic>
 #include <mutex>
@@ -145,7 +145,7 @@ public:
 
     /** 独立提交8次send／post混合请求，每三次取消一次；同步交付不持测试锁
     */
-    virtual void DoTask();
+    virtual void doTask();
 private:
     // main先回收生产者再释放
     NetSenderFacadeConcurrencyContext* m_context;

@@ -8,7 +8,34 @@
 #include <stdexcept>
 #include <sstream>
 #include <ctime>
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
+#include "NetPeer/NetHostSocketState.h"
+#include "LibuvTcp/LibuvTcpAPI.h"
+
+NetGatewayPostTestHost* NetGatewayPostTestHost::m_active = nullptr;
+
+NetGatewayPostTestHost::NetGatewayPostTestHost() : m_saved(NetHostSocketState::m_default), m_instance(nullptr), m_bytes(0)
+{
+    m_active = this;
+    NetHostSocketState::m_default.write = &post;
+}
+
+NetGatewayPostTestHost::~NetGatewayPostTestHost()
+{
+    NetHostSocketState::m_default = m_saved;
+    m_active = nullptr;
+}
+
+int32_t NetGatewayPostTestHost::post(void* instance, uint64_t peer, const uint8_t* data, uint32_t size)
+{
+    const int32_t result = m_active->m_saved.write(instance, peer, data, size);
+    if (result == 0 && m_active != nullptr)
+    {
+        m_active->m_instance = instance;
+        m_active->m_bytes += size;
+    }
+    return result;
+}
 
 NetGatewaySessionProbe::NetGatewaySessionProbe() : m_client(nullptr), m_generation(0), m_closes(0),
     m_completions(0), m_lastId(0), m_status(0), m_bad(false), m_reissueOnTimeout(false), m_reissuedId(0), m_reissueResult(NI_INVALID_STATE)
@@ -350,10 +377,10 @@ void NetGatewayTestCases::budgetsAndHandshakeOrder()
     NetInterfaceFrame frame = GatewayRpc(NI_REQUEST, 1, 4, 700, 0, bytes);
     CheckGateway(first.m_network.send(first.m_peer, frame) == NI_OK, "one allowed request");
     frame.m_requestId = 2;
-    CheckGateway(first.m_network.send(first.m_peer, frame) == NI_OK, "one excess request");
-    WaitGateway(gateway, first, [&]() { return !first.m_received.empty(); }, "negotiated limit response");
-    CheckGateway(sink.m_deliveries.size() == 1 && gateway.pendingCount() == 1 &&
-        GatewayResponseStatus(first.m_received[0]) == NI_RPC_BUSY, "negotiated request limit ignored");
+    CheckGateway(first.m_network.send(first.m_peer, frame) == NI_OK, "independent second request");
+    WaitGateway(gateway, first, [&]() { return sink.m_deliveries.size() == 2; }, "independent requests without replies");
+    CheckGateway(gateway.pendingCount() == 2 && first.m_received.empty(),
+        "handshake hint incorrectly throttled independently admitted requests");
     const uint64_t route = sink.m_deliveries[0].m_message.m_frame.m_requestId;
     NetInterfaceFrame cancel = {};
     cancel.m_kind = NI_CANCEL;
@@ -361,15 +388,21 @@ void NetGatewayTestCases::budgetsAndHandshakeOrder()
     cancel.m_productId = 4;
     cancel.m_messageType = 700;
     CheckGateway(first.m_network.send(first.m_peer, cancel) == NI_OK, "cancel root request");
-    WaitGateway(gateway, first, [&]() { return sink.m_deliveries.size() == 2; }, "cancel delivery");
-    CheckGateway(sink.m_deliveries[1].m_message.m_frame.m_kind == NI_CANCEL &&
-        sink.m_deliveries[1].m_message.m_frame.m_requestId == route && gateway.pendingCount() == 0,
+    WaitGateway(gateway, first, [&]() { return sink.m_deliveries.size() == 3; }, "cancel delivery");
+    CheckGateway(sink.m_deliveries[2].m_message.m_frame.m_kind == NI_CANCEL &&
+        sink.m_deliveries[2].m_message.m_frame.m_requestId == route && gateway.pendingCount() == 1,
         "cancel did not translate original to routed ID");
+    cancel.m_requestId = 2;
+    CheckGateway(first.m_network.send(first.m_peer, cancel) == NI_OK, "cancel second independent request");
+    WaitGateway(gateway, first, [&]() { return sink.m_deliveries.size() == 4; }, "second cancel delivery");
+    CheckGateway(gateway.pendingCount() == 0 && sink.m_deliveries[3].m_message.m_frame.m_kind == NI_CANCEL &&
+        sink.m_deliveries[3].m_message.m_frame.m_requestId == sink.m_deliveries[1].m_message.m_frame.m_requestId,
+        "second original to route cancellation");
     sink.m_busy = true;
     frame.m_requestId = 3;
     CheckGateway(first.m_network.send(first.m_peer, frame) == NI_OK, "request against stalled local sink");
-    WaitGateway(gateway, first, [&]() { return first.m_received.size() == 2; }, "local sink backpressure response");
-    CheckGateway(GatewayResponseStatus(first.m_received[1]) == NI_RPC_BUSY && gateway.pendingCount() == 0 &&
+    WaitGateway(gateway, first, [&]() { return first.m_received.size() == 1; }, "local sink backpressure response");
+    CheckGateway(GatewayResponseStatus(first.m_received[0]) == NI_RPC_BUSY && gateway.pendingCount() == 0 &&
         sink.m_closed.empty(), "local backpressure blocked gateway or closed usable service");
     first.m_network.shutdown();
     second.m_network.shutdown();
@@ -725,6 +758,7 @@ void NetGatewayTestCases::runSenderDelivery(bool orderedMix)
         value->m_bad = value->m_bad || (type != 700 && type != NI_FILE_OPEN_UPLOAD);
         NetGatewaySessionProbe::Result(context, generation, id, product, 700, status, bytes, size);
     };
+    NetGatewayPostTestHost postHost;
     CheckGateway(NetPeer::instance().clientCreate(&callbacks, &events.m_client) == NI_OK, "sender delivery create");
     NetPeerClientOptions options = {};
     options.structSize = sizeof(options); options.version = 1;
@@ -747,16 +781,20 @@ void NetGatewayTestCases::runSenderDelivery(bool orderedMix)
         uint64_t id = 0;
         CheckGateway(NetPeer::instance().clientBegin(events.m_client, 4, 700, 5000, &id) == NI_OK, "delivery reserve");
         const size_t before = sink.m_deliveries.size();
+        const uint64_t acceptedBefore = postHost.m_bytes;
         const int32_t sent = mode == 0 ? NetPeer::instance().clientPost(events.m_client, id, body.data(), static_cast<uint32_t>(body.size())) :
             NetPeer::instance().clientSend(events.m_client, id, body.data(), static_cast<uint32_t>(body.size()));
         CheckGateway(sent == NI_OK && events.m_completions == mode, "send must not wait for response");
         std::memset(body.data(), 0xee, body.size());
-        // send的保证是交给底层运输，不是远端在20毫秒内完成调度。
-        // 只推进接收网关，始终不再poll发送Peer；若仍留在Peer队列，5秒后必定失败。
+        CheckGateway(mode == 0 ? postHost.m_bytes == acceptedBefore : postHost.m_bytes > acceptedBefore,
+            "send/post lower post admission boundary");
+        // 不再推进发送Peer，只推进已接纳密文的LibuvTcp loop及接收网关。
+        // 若send遗漏密文在Peer/TLS队列，仍会超时；post不帮助推进下层。
         const uint64_t until = GatewayTestNow() + (mode == 0 ? 20 : 5000);
         while (GatewayTestNow() < until && (mode == 0 || sink.m_deliveries.size() == before))
         {
             netTestCheckpoint();
+            if (mode != 0) { CheckGateway(postHost.m_saved.poll(postHost.m_instance) >= 0, "lower post loop"); }
             gateway.poll();
             CSystem::sleepPrecise(1);
         }
@@ -842,12 +880,13 @@ void NetGatewayTestCases::runSenderDelivery(bool orderedMix)
                 NetPeer::instance().clientPost(events.m_client, mixedIds[1], &markers[1], 1) == NI_OK, "mixed last RPC admission");
         }
         std::memset(bytes.data(), 0xee, bytes.size());
-        // sendData同样只给接收执行者有界调度机会，不帮助发送端排空本地队列。
+        // sendData也只推进LibuvTcp，不调用发送Peer的业务/TLS推进。
         const bool posted = mode == 0 || orderedMix;
         const uint64_t until = GatewayTestNow() + (posted ? 20 : 5000);
         while (GatewayTestNow() < until && (posted || sink.m_deliveries.size() == before))
         {
             netTestCheckpoint();
+            if (!posted) { CheckGateway(postHost.m_saved.poll(postHost.m_instance) >= 0, "lower data post loop"); }
             gateway.poll();
             CSystem::sleepPrecise(1);
         }

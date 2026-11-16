@@ -1,9 +1,9 @@
 ﻿#include "NetInterfaceConnectionTestCasesHelper.h"
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include <memory>
 #include "NetInterfaceConnectionTestCases.h"
-#include "NetInterface/NetInterfaceAPI.h"
-#include "NetPeer/NetPeerAPI.h"
+#include "NetInterfaceTestAccess.h"
+#include "NetPeerTestAccess.h"
 #include "NetInterfaceTlsTestCases.h"
 #include "NetWorkTestCases.h"
 #include "CSystem/CSystemAPI.h"

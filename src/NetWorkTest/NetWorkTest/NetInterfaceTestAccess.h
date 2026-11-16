@@ -1,0 +1,13 @@
+﻿#pragma once
+#include "NetInterface/NetInterfaceAPI.h"
+#include "NetClientSessionTest.h"
+#include "NetInterface/NetEndpointFileStream.h"
+#include "NetInterface/NetEndpointRouterState.h"
+#include "NetEndpointRouterTest.h"
+#include "NetInterface/NetGatewayClientChannelState.h"
+#include "NetInterfaceFileAuditTest.h"
+#include "NetInterfaceLinkAuditTest.h"
+#include "NetInterfaceLinkAuthTest.h"
+#include "NetSenderDispatchAuditTest.h"
+#include "NetSenderDispatchTest.h"
+#include "NetInterface/NetSessionState.h"

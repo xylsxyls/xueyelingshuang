@@ -218,6 +218,11 @@ void netRelayQueueTcpTest()
 {
     NetRelayTransportProbe client;
     NetRelayTransportProbe server;
+    // 显式缩小实际记录池，保留满池后拒绝、消费后复用的真实TCP验证。
+    NetRelayPoolConfig pools;
+    pools.m_dataRecords.initialCapacity = 32;
+    pools.m_dataRecords.maximumCapacity = 32;
+    NetInterfaceTlsTestPair::require(client.m_transport.configurePools(pools) == NI_OK, "relay queue test pool configuration");
     NetInterfaceTlsTestPair::require(server.m_transport.listen("127.0.0.1", 0, &server) == NI_OK, "relay queue listen failed");
     uint64_t id = 0;
     NetInterfaceTlsTestPair::require(client.m_transport.connect("127.0.0.1", server.m_transport.localPort(), &client, id) == NI_OK,

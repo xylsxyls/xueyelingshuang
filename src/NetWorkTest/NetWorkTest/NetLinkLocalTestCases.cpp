@@ -1,7 +1,7 @@
 ﻿#include "NetLinkLocalTestCases.h"
 #include "NetInterfaceTlsTestCases.h"
-#include "NetInterface/NetInterfaceAPI.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "NetInterfaceTestAccess.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include <chrono>
 #include <cstdio>
@@ -131,7 +131,7 @@ int NetLinkLocalTestProbe::childMain(int32_t pid)
 }
 
 #define NET_SERVICE_GRANT_NO_MAIN
-#include "NetSender/NetSenderAPI.h"
+#include "NetSenderTestAccess.h"
 #include <cstdlib>
 #if defined(_WIN32) && defined(_DEBUG)
 #include <windows.h>

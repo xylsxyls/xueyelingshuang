@@ -127,6 +127,10 @@ NetLocalTestHost::~NetLocalTestHost()
 int NetLocalTestCases::childMain(int32_t parent, int32_t mode)
 {
     NetLocalTestHost host(false);
+    NetConnectionPoolConfig pools;
+    pools.m_dataBytes.m_classes[4].initialCapacity = 0;
+    pools.m_dataBytes.m_classes[4].maximumCapacity = 2;
+    CheckLocal(host.m_local.configureConnectionPools(pools) == NI_OK, "local explicit TLS body pool configuration");
     NetInterfaceTlsOptions options = NetInterfaceTlsTestPair::options(false, "localhost", mode == 2);
     uint64_t peer = 0;
     CheckLocal(host.m_local.connect(parent, options, &host.m_probe, peer) == NI_OK, "local client connect");

@@ -1,6 +1,8 @@
-﻿#include "NetInterfaceIpcTestCases.h"
+﻿#include "NetIpcAdapterTest.h"
+#include "NetSenderLocalHubTest.h"
+#include "NetInterfaceIpcTestCases.h"
 #include "NetSenderTestClient.h"
-#include "NetSender/NetSenderAPI.h"
+#include "NetSenderTestAccess.h"
 #include <cstdio>
 #include "NetWorkTestCases.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
@@ -9,8 +11,10 @@
 #include "NetRawLocalTestCases.h"
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "AtomicMath/AtomicMathAPI.h"
+#include "ProcessWork/ProcessWorkStorage.h"
+#include "ProcessWork/ProcessWorkSharedQueue.h"
 #include "CSystem/CSystemAPI.h"
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include <chrono>
 #include <cstring>
 #include <sstream>
@@ -92,15 +96,16 @@ void NetInterfaceIpcTestCases::localPackets()
     CheckIpc(NetSenderLocalPacket::encode(packet, encoded, sizeof(encoded), required) == NI_OK,
         "local transport EOF frame");
     NetSenderLocalWindow window;
-    for (uint64_t number = 1; number <= 4; ++number)
+    for (uint64_t number = 1; number <= 8192; ++number)
     {
-        CheckIpc(window.next() == number && window.published(number) == NI_OK, "local send window admission");
+        CheckIpc(window.next() == number && window.published(number) == NI_OK, "unacknowledged local sequence admission");
     }
-    CheckIpc(window.outstanding() == 4 && window.next() == 0 && window.published(5) == NI_INVALID_STATE &&
-        window.acknowledge(5) == NI_PROTOCOL_ERROR && window.outstanding() == 4, "local window overflow");
-    CheckIpc(window.acknowledge(2) == NI_OK && window.published(5) == NI_OK && window.published(6) == NI_OK &&
-        window.acknowledge(2) == NI_OK && window.outstanding() == 4 && window.acknowledge(6) == NI_OK &&
-        window.outstanding() == 0 && window.next() == 7, "cumulative/duplicate ACK released wrong quota");
+    CheckIpc(window.outstanding() == 8192 && window.next() == 8193 &&
+        window.published(8194) == NI_INVALID_STATE && window.acknowledge(8193) == NI_PROTOCOL_ERROR,
+        "local sequence gap or future acknowledgement");
+    CheckIpc(window.acknowledge(2) == NI_OK && window.published(8193) == NI_OK &&
+        window.acknowledge(2) == NI_OK && window.outstanding() == 8191 && window.acknowledge(8193) == NI_OK &&
+        window.outstanding() == 0 && window.next() == 8194, "cumulative/duplicate ACK changed sequence accounting");
     CheckIpc(window.received(0) == NI_PROTOCOL_ERROR && window.received(1) == NI_OK &&
         window.received(1) == NI_NOT_FOUND && window.received(3) == NI_PROTOCOL_ERROR &&
         window.received(2) == NI_OK && window.receipt() == 2, "local receive sequence replay/gap");
@@ -151,83 +156,12 @@ void NetInterfaceIpcTestCases::notifications()
 
 void NetInterfaceIpcTestCases::stalledReceiver()
 {
-    const int32_t pid = CSystem::currentProcessPid();
-    ProcessWorkChannel receiver;
-    CheckIpc(receiver.openReceiver(4096, 2, 0, 0, 0, 0), "create bounded v2 receiver");
-    receiver.publish();
-    LockFreeQueue<char*> packets;
-    Semaphore delivered;
-    std::atomic<int32_t> full(0);
-    NetSenderIpcChannel sender;
-    CheckIpc(sender.open(pid, pid, 8192) == NET_SENDER_IPC_TOO_LARGE, "open refuses unsupported declared payload");
-    CheckIpc(sender.open(pid, pid, 4084) == NET_SENDER_IPC_ACCEPTED, "open stalled v2 receiver");
-    receiver.pump(packets, delivered, full);
-    CheckIpc(sender.trySend(nullptr, 1, 0) == NET_SENDER_IPC_INVALID &&
-        sender.trySend(nullptr, 0, -1) == NET_SENDER_IPC_INVALID, "IPC input validation");
-    std::vector<uint8_t> tooLarge(8192, 17);
-    CheckIpc(sender.trySend(tooLarge.data(), 8192, 0) == NET_SENDER_IPC_TOO_LARGE,
-        "declared capacity rejection does not reserve a block");
-    CheckIpc(sender.trySend(nullptr, 0, 0) == NET_SENDER_IPC_ACCEPTED &&
-        sender.trySend(nullptr, 0, 0) == NET_SENDER_IPC_ACCEPTED, "both available blocks committed");
-    const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-    for (int32_t index = 0; index < 512; ++index)
-    {
-        CheckIpc(sender.trySend(nullptr, 0, 0) == NET_SENDER_IPC_BUSY, "full receiver remains bounded");
-    }
-    CheckIpc(std::chrono::steady_clock::now() - start < std::chrono::seconds(1), "stalled receiver blocked sender");
-    CheckIpc(receiver.pump(packets, delivered, full) == 2, "drain two committed packets");
-    for (int32_t index = 0; index < 2; ++index)
-    {
-        char* packet = nullptr;
-        CheckIpc(packets.pop(&packet) && packet != nullptr, "copied empty packet exists");
-        std::unique_ptr<char[]> owned(packet);
-        int32_t header[3] = {};
-        std::memcpy(header, packet, sizeof(header));
-        CheckIpc(header[0] == pid && header[1] == 0 && header[2] == 0, "empty packet header exact");
-    }
-    CheckIpc(packets.empty(), "no duplicate from busy attempts");
-    sender.close();
-    receiver.close();
-    // 只有旧协议对象存在时不能假装已打开v2接收器。
-    SharedMemory legacy(TestIpcName("ProcessAreaAssign_", pid), 20, false);
-    CheckIpc(sender.open(pid, pid, 100) == NET_SENDER_IPC_UNAVAILABLE, "legacy protocol rejected explicitly");
+    NetIpcAdapterTest::capacity();
 }
 
 void NetInterfaceIpcTestCases::publication()
 {
-    const int32_t pid = CSystem::currentProcessPid();
-    ProcessWorkChannel receiver;
-    CheckIpc(receiver.openReceiver(4096, 1, 0, 0, 0, 0), "create publication receiver");
-    receiver.publish();
-    LockFreeQueue<char*> packets;
-    Semaphore delivered;
-    std::atomic<int32_t> full(0);
-    NetSenderIpcChannel sender;
-    CheckIpc(sender.open(pid, pid, 4084) == NET_SENDER_IPC_ACCEPTED, "open v2 publication receiver");
-    receiver.pump(packets, delivered, full);
-    const uint8_t payload[] = { 0, 255, 128, 7, 0 };
-    CheckIpc(sender.trySend(payload, sizeof(payload), 42) == NET_SENDER_IPC_ACCEPTED, "publish binary payload");
-    CheckIpc(sender.pendingNotifications() == 0 && sender.flushNotifications() == NET_SENDER_IPC_ACCEPTED,
-        "v2 notification hint has no duplicate payload retry");
-    CheckIpc(sender.trySend(nullptr, 0, 0) == NET_SENDER_IPC_BUSY, "published block cannot be overwritten");
-    sender.close();
-    CheckIpc(receiver.pump(packets, delivered, full) == 1, "sender close preserves committed message");
-    char* packet = nullptr;
-    CheckIpc(packets.pop(&packet) && packet != nullptr, "published packet delivered");
-    std::unique_ptr<char[]> owned(packet);
-    const int32_t expected[] = { pid, 42, sizeof(payload) };
-    CheckIpc(std::memcmp(packet, expected, 12) == 0 && std::memcmp(packet + 12, payload, sizeof(payload)) == 0,
-        "v2 local packet header and binary body exact");
-    CheckIpc(packets.empty(), "one publication delivered exactly once");
-    CheckIpc(sender.open(pid, pid, 4084) == NET_SENDER_IPC_ACCEPTED &&
-        sender.trySend(nullptr, 0, 0) == NET_SENDER_IPC_ACCEPTED, "sender resumes after receiver releases block");
-    CheckIpc(receiver.pump(packets, delivered, full) == 1, "empty body delivered");
-    packet = nullptr;
-    CheckIpc(packets.pop(&packet) && packet != nullptr, "empty body copied");
-    owned.reset(packet);
-    int32_t header[3] = {};
-    std::memcpy(header, packet, sizeof(header));
-    CheckIpc(header[0] == pid && header[1] == 0 && header[2] == 0 && packets.empty(), "empty body exact and no duplicates");
+    NetIpcAdapterTest::publication();
 }
 
 /** 可独立重建的测试长度，覆盖空消息和128KiB跨页消息
@@ -380,12 +314,12 @@ void NetInterfaceIpcTestCases::childTransfer()
                 netTestCheckpoint();
                 result = sender.trySend(payload.empty() ? nullptr : &payload[0],
                     static_cast<uint32_t>(payload.size()), 42);
-                if (result == NET_SENDER_IPC_BUSY)
+                if (NetSenderIpcChannel::retryable(result))
                 {
                     Sleep(1);
                 }
             }
-            while (result == NET_SENDER_IPC_BUSY);
+            while (NetSenderIpcChannel::retryable(result));
             CheckIpc(result == NET_SENDER_IPC_ACCEPTED, "real child send failed");
         }
         while (WaitForSingleObject(child.hProcess, 10) == WAIT_TIMEOUT)
@@ -519,11 +453,11 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
         NetInterfaceIpcAuditReceiver receiver(false);
         work.initPostThread();
         work.addProcessReceiveCallback(&receiver);
-        const int32_t threads = CTaskThreadManager::Instance().Count();
+        const int32_t threads = CTaskThreadManager::instance().count();
         uint64_t identity = 0;
         CheckIpc(CSystem::processIdentity(pid, identity), "managed rollback process identity");
-        SharedMemory directoryMemory("P2D" + std::to_string(pid), sizeof(ProcessWorkDirectory), true);
-        ProcessWorkDirectory* directory = static_cast<ProcessWorkDirectory*>(directoryMemory.writeWithoutLock());
+        SharedMemory directoryMemory("P3D" + std::to_string(pid), sizeof(ProcessWorkSharedDirectory), true);
+        ProcessWorkSharedDirectory* directory = static_cast<ProcessWorkSharedDirectory*>(directoryMemory.writeWithoutLock());
         CheckIpc(directory != nullptr, "managed rollback owns discovery reference");
         const uint32_t next = static_cast<uint32_t>(AtomicMath::selfAdd(&directory->m_nextSession, static_cast<int64_t>(0)) + 1);
         const std::string name = ProcessWorkChannel::objectName('R', pid, identity, next);
@@ -534,7 +468,7 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
             NetSenderTestClient<NetSender, NetSenderClient> sender;
             valid = sender.prepareGateway() == NI_INVALID_STATE;
             CloseHandle(incompatible);
-            valid = work.receiveBufferCount() == 0 && CTaskThreadManager::Instance().Count() == threads && valid;
+            valid = work.receiveBufferCount() == 0 && CTaskThreadManager::instance().count() == threads && valid;
             const int32_t retried = sender.prepareGateway();
             valid = retried == NI_OK && valid;
             if (retried == NI_OK)
@@ -609,14 +543,14 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
         NetInterfaceIpcAuditReceiver receiver(false);
         work.addProcessReceiveCallback(&receiver);
         CheckIpc(work.initReceive(256, 4), "foreign receiver initialized");
-        const int32_t threads = CTaskThreadManager::Instance().Count();
+        const int32_t threads = CTaskThreadManager::instance().count();
         bool valid = true;
         {
             NetSenderTestClient<NetSender, NetSenderClient> sender;
             valid = sender.prepareGateway() == NI_INVALID_STATE;
             sender.releaseGateway();
         }
-        valid = valid && work.receiveBufferCount() == 4 && CTaskThreadManager::Instance().Count() == threads;
+        valid = valid && work.receiveBufferCount() == 4 && CTaskThreadManager::instance().count() == threads;
         const int32_t external = NetSenderDesktopBackend::prepareExternalReceiver();
         valid = external == NI_INVALID_STATE && valid;
         int32_t sent = PROCESS_WORK_UNAVAILABLE;
@@ -626,7 +560,7 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
             do
             {
                 sent = work.trySend(pid, "TEST", 4, static_cast<MessageType>(42));
-                if (sent != PROCESS_WORK_BUSY)
+                if (sent != PROCESS_WORK_BUSY && sent != PROCESS_WORK_CAPACITY && sent != PROCESS_WORK_RESOURCE)
                 {
                     break;
                 }
@@ -649,7 +583,7 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
     if (mode == "gateway-external-capacity")
     {
         ProcessWork& work = ProcessWork::instance();
-        const int32_t threads = CTaskThreadManager::Instance().Count();
+        const int32_t threads = CTaskThreadManager::instance().count();
         bool valid = NetSenderDesktopBackend::prepareExternalReceiver() == NI_OK;
         {
             NetSenderTestClient<NetSender, NetSenderClient> sender;
@@ -681,7 +615,7 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
             valid = work.receiveBufferCount() == 4 && NetSenderDesktopBackend::externalReceiverStopped() == NI_INVALID_STATE && valid;
             work.uninitReceive();
             valid = NetSenderDesktopBackend::externalReceiverStopped() == NI_OK && valid;
-            valid = CTaskThreadManager::Instance().Count() == threads && valid;
+            valid = CTaskThreadManager::instance().count() == threads && valid;
         }
         CheckIpc(valid, "external C++ facade setup rejects small capacity, preserves ownership and supports retry");
         return 0;
@@ -746,12 +680,17 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
             ProcessWorkChannel receiver;
             if (!receiver.openReceiver(64, 3, 0, 0, 0, 0)) { return 34; }
             receiver.publish();
-            SharedMemory directoryMemory("P2D" + std::to_string(pid));
-            ProcessWorkDirectory* directory = static_cast<ProcessWorkDirectory*>(directoryMemory.writeWithoutLock());
+            SharedMemory directoryMemory("P3D" + std::to_string(pid));
+            ProcessWorkSharedDirectory* directory = static_cast<ProcessWorkSharedDirectory*>(directoryMemory.writeWithoutLock());
             if (directory == nullptr) { return 34; }
             SharedMemory controlMemory(ProcessWorkChannel::objectName('C', pid, directory->m_identity, static_cast<uint32_t>(directory->m_session)));
-            ProcessWorkControl* control = static_cast<ProcessWorkControl*>(controlMemory.writeWithoutLock());
+            ProcessWorkSharedControl* control = static_cast<ProcessWorkSharedControl*>(controlMemory.writeWithoutLock());
             if (control == nullptr) { return 34; }
+            ProcessWorkStorage storage(pid, directory->m_identity, static_cast<uint32_t>(directory->m_session),
+                64, 3, false, ProcessWorkMemoryConfig());
+            ProcessWorkSharedBlock* first = storage.block(1);
+            ProcessWorkSharedBlock* second = storage.block(2);
+            if (first == nullptr || second == nullptr) { return 34; }
             LockFreeQueue<char*> packets;
             Semaphore delivered;
             std::atomic<int32_t> full(0);
@@ -761,13 +700,13 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
                 if (sender.open(pid, pid, 52) != NET_SENDER_IPC_ACCEPTED) { return 35; }
                 receiver.pump(packets, delivered, full);
                 const int64_t token = control->m_peers[0].m_token;
-                if (token <= 0 || !AtomicMath::compareAndSwap(&control->m_blocks[0].m_owner, static_cast<int64_t>(0), token))
+                if (token <= 0 || !AtomicMath::compareAndSwap(&first->m_owner, static_cast<int64_t>(0), token))
                 {
                     return 35;
                 }
                 // 未提交写者没有占读取环；其他线程已提交正文可以交付，自己的占用仍须保留。
                 if (sender.trySend(reinterpret_cast<const uint8_t*>("TEST"), 4, 11) != NET_SENDER_IPC_ACCEPTED ||
-                    receiver.pump(packets, delivered, full) != 1 || control->m_blocks[0].m_owner != token) { return 36; }
+                    receiver.pump(packets, delivered, full) != 1 || first->m_owner != token) { return 36; }
                 char* packet = nullptr;
                 if (!packets.pop(&packet) || packet == nullptr) { return 36; }
                 std::unique_ptr<char[]> owned(packet);
@@ -777,7 +716,7 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
                 {
                     return 36;
                 }
-                AtomicMath::compareAndSwap(&control->m_blocks[0].m_owner, token, static_cast<int64_t>(0));
+                AtomicMath::compareAndSwap(&first->m_owner, token, static_cast<int64_t>(0));
                 const int32_t expected[] = { 17, 19 };
                 for (int32_t i = 0; i < 2; ++i)
                 {
@@ -803,14 +742,16 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
                 control->m_peers[0].m_pid = dead;
                 control->m_peers[0].m_identity = childIdentity;
                 control->m_peers[0].m_token = control->m_nextToken = 7;
-                control->m_blocks[0].m_owner = 7;
+                first->m_owner = 7;
                 SharedMemory memory(ProcessWorkChannel::objectName('B', pid, directory->m_identity,
-                    static_cast<uint32_t>(directory->m_session), 0, 1));
+                    static_cast<uint32_t>(directory->m_session), 1, static_cast<uint32_t>(first->m_generation)));
                 char* data = static_cast<char*>(memory.writeWithoutLock());
                 if (data == nullptr) { return 34; }
                 const int32_t header[] = { dead, 42, 4 };
                 if (phase >= 1) { std::memcpy(data, header, 12); std::memcpy(data + 12, "TEST", 4); }
-                if (phase >= 2) { control->m_ring[0] = 1; }
+                ProcessWorkSharedQueue queue(storage, *control);
+                uint32_t hint = 1;
+                if (phase >= 2 && !queue.enqueue(7, 1, false, 3, hint)) { return 35; }
                 if (phase == 3)
                 {
                     uint64_t identity = 0;
@@ -821,11 +762,19 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
                     control->m_peers[1].m_pid = pid;
                     control->m_peers[1].m_identity = identity;
                     control->m_peers[1].m_token = control->m_nextToken = 8;
-                    control->m_blocks[1].m_owner = 8;
+                    second->m_owner = 8;
                 }
-                const int32_t copied = receiver.pump(packets, delivered, full);
-                if (copied != (phase >= 2 ? 1 : 0) || control->m_blocks[0].m_owner != 0 ||
-                    control->m_head != control->m_tail || (phase == 3 && control->m_blocks[1].m_owner != 8)) { return 36; }
+                int32_t copied = 0;
+                const uint64_t reclaimDeadline = NetSenderSubmission::now() + 3000;
+                do
+                {
+                    copied += receiver.pump(packets, delivered, full);
+                    if (first->m_owner == 0) { break; }
+                    CSystem::sleepPrecise(1);
+                }
+                while (NetSenderSubmission::now() < reclaimDeadline);
+                if (copied != (phase >= 2 ? 1 : 0) || first->m_owner != 0 ||
+                    (phase == 3 && second->m_owner != 8)) { return 36; }
                 if (phase >= 2)
                 {
                     char* packet = nullptr;
@@ -846,7 +795,8 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
         SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
         ProcessWork& work = ProcessWork::instance();
         const MessageType type = static_cast<MessageType>(42);
-        const std::string name = CSystem::GetCurrentExeName();
+        const std::string name = TestIpcName("NetWorkTest_send_bounds_", pid);
+        CheckIpc(work.setReceiveName(name), "isolated send-bounds receive name");
         // 原实现在第一个负长度post中发生实际越界复制；父runner有总期限并核对退出码。
         work.post(pid, "TEST", -1, type);
         work.post(name, "TEST", -1, type);
@@ -869,8 +819,8 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
         {
             work.send(pid, oversized.data(), static_cast<int32_t>(oversized.size()), type);
         }
-        work.post(pid, "TEST", 4, type);
-        work.post(name, "TEST", 4, type);
+        CheckIpc(work.post(pid, "TEST", 4, type) && work.post(name, "TEST", 4, type),
+            "valid posts accepted after invalid lengths");
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
         while (receiver.m_count.load() < 2 && std::chrono::steady_clock::now() < deadline)
         {
@@ -883,6 +833,8 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
     if (mode == "semaphore")
     {
         ProcessWork& work = ProcessWork::instance();
+        const std::string receiverName = TestIpcName("NetWorkTest_notification_", pid);
+        CheckIpc(work.setReceiveName(receiverName), "isolated notification receive name");
         NetInterfaceIpcAuditReceiver receiver(false);
         work.initPostThread();
         work.addProcessReceiveCallback(&receiver);
@@ -891,8 +843,8 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
         {
             work.uninitReceive(); return 28;
         }
-        SharedMemory directoryMemory("P2D" + std::to_string(pid), sizeof(ProcessWorkDirectory), true);
-        ProcessWorkDirectory* directory = static_cast<ProcessWorkDirectory*>(directoryMemory.writeWithoutLock());
+        SharedMemory directoryMemory("P3D" + std::to_string(pid), sizeof(ProcessWorkSharedDirectory), true);
+        ProcessWorkSharedDirectory* directory = static_cast<ProcessWorkSharedDirectory*>(directoryMemory.writeWithoutLock());
         if (directory == nullptr) { work.uninitReceive(); return 28; }
         const uint32_t next = static_cast<uint32_t>(AtomicMath::selfAdd(&directory->m_nextSession, static_cast<int64_t>(0)) + 1);
         const std::string name = ProcessWorkChannel::objectName('R', pid, identity, next);
@@ -915,8 +867,8 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
             work.uninitReceive();
             return 30;
         }
-        work.post(pid, "TEST", 4, static_cast<MessageType>(42));
-        work.post(CSystem::GetCurrentExeName(), "TEST", 4, static_cast<MessageType>(42));
+        CheckIpc(work.post(pid, "TEST", 4, static_cast<MessageType>(42)) &&
+            work.post(receiverName, "TEST", 4, static_cast<MessageType>(42)), "posts accepted after notification recovery");
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
         while (receiver.m_count.load() < 2 && std::chrono::steady_clock::now() < deadline)
         {
@@ -960,10 +912,10 @@ int NetInterfaceIpcTestCases::auditChild(const std::string& mode)
     {
         const auto sendDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
         int32_t result = NET_SENDER_IPC_BUSY;
-        while (result == NET_SENDER_IPC_BUSY && std::chrono::steady_clock::now() < sendDeadline)
+        while (NetSenderIpcChannel::retryable(result) && std::chrono::steady_clock::now() < sendDeadline)
         {
             result = sender.trySend(reinterpret_cast<const uint8_t*>("TEST"), 4, 42);
-            if (result == NET_SENDER_IPC_BUSY) { CSystem::sleepPrecise(1); }
+            if (NetSenderIpcChannel::retryable(result)) { CSystem::sleepPrecise(1); }
         }
         passed = result == NET_SENDER_IPC_ACCEPTED;
     }
@@ -1138,9 +1090,9 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //    else { return 2; }
 //    // 模拟上一轮StopTask残留的计数，队列明确为空。
 //    for (uint32_t index = 0; index < 8; ++index) { notification.signal(); }
-//    const uint32_t worker = CTaskThreadManager::Instance().Init();
+//    const uint32_t worker = CTaskThreadManager::instance().init();
 //    if (worker == 0) { return 4; }
-//    CTaskThreadManager::Instance().GetThreadInterface(worker)->PostTask(task);
+//    CTaskThreadManager::instance().getThreadInterface(worker)->PostTask(task);
 //    CSystem::Sleep(50);
 //    bool passed = true;
 //    if (mode == "copy")
@@ -1184,8 +1136,8 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //        }
 //        passed = probe.m_received.wait(2000) && probe.m_received.wait(2000);
 //    }
-//    task->StopTask();
-//    CTaskThreadManager::Instance().Uninit(worker);
+//    task->stopTask();
+//    CTaskThreadManager::instance().uninit(worker);
 //    task.reset();
 //    if (mode == "send" || mode == "name") { ProcessWork::instance().uninitReceive(); }
 //    passed = passed && !probe.m_failed.load() && (mode == "copy" || probe.m_count.load() == 2);
@@ -1203,6 +1155,8 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //#include "CSystem/CSystemAPI.h"
 //#include "SharedMemory/SharedMemoryAPI.h"
 //#include "AtomicMath/AtomicMathAPI.h"
+#include "ProcessWork/ProcessWorkStorage.h"
+#include "ProcessWork/ProcessWorkSharedQueue.h"
 //#include <Windows.h>
 //#include <new>
 //#include <cstdlib>
@@ -1357,18 +1311,18 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //{
 //}
 //
-//void ReliabilityArmedTask::DoTask()
+//void ReliabilityArmedTask::doTask()
 //{
 //    InterlockedExchange(&s_faultThread, static_cast<LONG>(GetCurrentThreadId()));
 //    InterlockedExchange(&s_faultKind, m_kind);
 //    InterlockedExchange(&s_faultEnabled, 1);
-//    m_inner->DoTask();
+//    m_inner->doTask();
 //    InterlockedExchange(&s_faultEnabled, 0);
 //}
 //
-//void ReliabilityArmedTask::StopTask()
+//void ReliabilityArmedTask::stopTask()
 //{
-//    m_inner->StopTask();
+//    m_inner->stopTask();
 //}
 //
 //bool ReliabilityCacheSender::mappingsReady()
@@ -1395,7 +1349,7 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //{
 //}
 //
-//void ReliabilityCacheTask::DoTask()
+//void ReliabilityCacheTask::doTask()
 //{
 //    for (int32_t sequence = 0; sequence < 2; ++sequence)
 //    {
@@ -1467,15 +1421,15 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //        actual = task;
 //    }
 //    std::shared_ptr<ReliabilityArmedTask> armed(new ReliabilityArmedTask(actual, 1));
-//    const uint32_t thread = CTaskThreadManager::Instance().Init();
-//    CTaskThreadManager::Instance().GetThreadInterface(thread)->PostTask(armed);
+//    const uint32_t thread = CTaskThreadManager::instance().init();
+//    CTaskThreadManager::instance().getThreadInterface(thread)->PostTask(armed);
 //    bool passed = WaitFault();
 //    CSystem::sleepPrecise(20);
 //    passed = passed && receiver.m_count.load() == 0 && queue.size() == 1;
 //    if (stop)
 //    {
 //        const DWORD start = GetTickCount();
-//        CTaskThreadManager::Instance().Uninit(thread);
+//        CTaskThreadManager::instance().uninit(thread);
 //        passed = passed && GetTickCount() - start < 500 && receiver.m_count.load() == 0;
 //        InterlockedExchange(&s_faultEnabled, 0);
 //    }
@@ -1483,7 +1437,7 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //    {
 //        InterlockedExchange(&s_faultEnabled, 0);
 //        passed = WaitCount(receiver.m_count, 2) && passed;
-//        CTaskThreadManager::Instance().WaitForEnd(thread);
+//        CTaskThreadManager::instance().waitForEnd(thread);
 //        passed = passed && !receiver.m_failed && receiver.m_seen.load() == 3 && queue.empty();
 //    }
 //    char* remaining = nullptr;
@@ -1521,8 +1475,8 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //    std::shared_ptr<CopyTask> actual(new CopyTask());
 //    actual->setParam(&assignment, &memories, &assigned, &available, &copied, &delivered);
 //    std::shared_ptr<ReliabilityArmedTask> armed(new ReliabilityArmedTask(actual, kind));
-//    const uint32_t thread = CTaskThreadManager::Instance().Init();
-//    CTaskThreadManager::Instance().GetThreadInterface(thread)->PostTask(armed);
+//    const uint32_t thread = CTaskThreadManager::instance().init();
+//    CTaskThreadManager::instance().getThreadInterface(thread)->PostTask(armed);
 //    bool passed = WaitFault();
 //    CSystem::sleepPrecise(20);
 //    passed = passed && words[2] == pid && words[4] == pid && copied.empty() && !delivered.wait(0);
@@ -1541,7 +1495,7 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //        passed = passed && words[2] == 0 && words[4] == 0 && !delivered.wait(20) && copied.empty();
 //    }
 //    const DWORD start = GetTickCount();
-//    CTaskThreadManager::Instance().Uninit(thread);
+//    CTaskThreadManager::instance().uninit(thread);
 //    InterlockedExchange(&s_faultEnabled, 0);
 //    passed = passed && GetTickCount() - start < 500;
 //    char* remaining = nullptr;
@@ -1558,7 +1512,7 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //    ProcessWork& work = ProcessWork::instance();
 //    work.addProcessReceiveCallback(&receiver);
 //    if (!work.initReceive(128, 4)) { return false; }
-//    const int32_t baseline = CTaskThreadManager::Instance().Count();
+//    const int32_t baseline = CTaskThreadManager::instance().count();
 //    const int32_t first = 0, second = 1;
 //    work.post(static_cast<int32_t>(GetCurrentProcessId()), reinterpret_cast<const char*>(&first), 4);
 //    work.post(CSystem::GetCurrentExeName(), reinterpret_cast<const char*>(&second), 4);
@@ -1566,16 +1520,16 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //    try { work.initPostThread(); }
 //    catch (const std::bad_alloc&) { }
 //    InterlockedExchange(&s_initFailure, 0);
-//    const int32_t failed = CTaskThreadManager::Instance().Count();
+//    const int32_t failed = CTaskThreadManager::instance().count();
 //    const bool preserved = failed == baseline && receiver.m_count.load() == 0;
 //    work.initPostThread();
-//    const int32_t retried = CTaskThreadManager::Instance().Count();
+//    const int32_t retried = CTaskThreadManager::instance().count();
 //    bool passed = preserved && retried == baseline + 2;
 //    passed = WaitCount(receiver.m_count, 2) && passed;
 //    passed = passed && !receiver.m_failed && receiver.m_seen.load() == 3;
 //    work.uninitReceive();
 //    std::printf("INIT baseline=%d failed=%d retried=%d\n", baseline, failed, retried);
-//    return passed && CTaskThreadManager::Instance().Count() == 0;
+//    return passed && CTaskThreadManager::instance().count() == 0;
 //}
 //
 ///** Force late callers to arrive while the first real cold mapping has not returned.
@@ -1593,9 +1547,9 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //    for (int32_t index = 0; index < 4; ++index)
 //    {
 //        std::shared_ptr<ReliabilityCacheTask> task(new ReliabilityCacheTask(&sender, GetCurrentProcessId(), index));
-//        const uint32_t thread = CTaskThreadManager::Instance().Init();
+//        const uint32_t thread = CTaskThreadManager::instance().init();
 //        threads.push_back(thread);
-//        CTaskThreadManager::Instance().GetThreadInterface(thread)->PostTask(task);
+//        CTaskThreadManager::instance().getThreadInterface(thread)->PostTask(task);
 //        if (index == 0)
 //        {
 //            const DWORD start = GetTickCount();
@@ -1607,7 +1561,7 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //    InterlockedExchange(&s_holdFirstMapping, 0);
 //    for (size_t index = 0; index < threads.size(); ++index)
 //    {
-//        CTaskThreadManager::Instance().WaitForEnd(threads[index]);
+//        CTaskThreadManager::instance().waitForEnd(threads[index]);
 //    }
 //    InterlockedExchange(&s_trackMappings, 0);
 //    bool passed = WaitCount(receiver.m_count, 8) && !receiver.m_failed && receiver.m_seen.load() == 255 && sender.mappingsReady();
@@ -1633,7 +1587,7 @@ void NetInterfaceIpcTestCases::queueLifecycle()
 //    std::shared_ptr<CopyTask> task(new CopyTask());
 //    task->setParam(m_areaAssign, &m_memoryMap, &m_assignQueue, &m_assignSemaphore, &m_receiveQueue, &m_receiveSemaphore);
 //    std::shared_ptr<ReliabilityArmedTask> armed(new ReliabilityArmedTask(task, kind));
-//    CTaskThreadManager::Instance().GetThreadInterface(m_copyThreadId)->PostTask(armed, 2);
+//    CTaskThreadManager::instance().getThreadInterface(m_copyThreadId)->PostTask(armed, 2);
 //}
 //
 //bool ReliabilityLiveReceiver::sharedBlocksHeld()
@@ -1705,80 +1659,5 @@ void NetInterfaceIpcTestCases::inboxIsolation()
 
 void NetInterfaceIpcTestCases::hubLifecycle()
 {
-    ProcessWork& work = ProcessWork::instance();
-    NetSenderLocalHub& hub = NetSenderLocalHub::instance();
-    NetSenderLocalInbox first;
-    NetSenderLocalInbox second;
-    uint32_t leases = 0;
-    bool external = false;
-    CheckIpc(work.receiveBufferCount() == 0, "hub test requires an idle test receiver");
-    try
-    {
-        // 只attach曾经会偷偷登记Hub回调，detach又忘记登记，后续重试造成重复回调。
-        CheckIpc(hub.attach(&first) == NI_INVALID_STATE && hub.attach(nullptr) == NI_INVALID_ARGUMENT,
-            "unowned attach registered a ProcessWork callback");
-        CheckIpc(hub.prepareExternal() == NI_OK, "hub external preparation");
-        external = true;
-        CheckIpc(hub.prepareExternal() == NI_OK && hub.acquire() == NI_INVALID_STATE && hub.attach(&first) == NI_INVALID_STATE,
-            "hub lease accepted before receiver readiness");
-        CheckIpc(work.initReceive(kNetSenderLocalReceiveBytes, 4), "hub external receiver startup");
-        CheckIpc(hub.acquire() == NI_OK, "hub first external lease");
-        ++leases;
-        CheckIpc(hub.acquire() == NI_OK, "hub second external lease");
-        ++leases;
-        CheckIpc(hub.attach(&first) == NI_OK && hub.attach(&first) == NI_OK && hub.attach(&second) == NI_OK,
-            "hub repeated attach or shared targets");
-        hub.release();
-        --leases;
-        hub.detach(&first);
-        CheckIpc(work.receiveBufferCount() == 4 && hub.externalStopped() == NI_INVALID_STATE,
-            "hub released another external client");
-        hub.release();
-        --leases;
-        hub.detach(&second);
-        CheckIpc(work.receiveBufferCount() == 4 && hub.externalStopped() == NI_INVALID_STATE,
-            "hub stopped a host-owned receiver");
-        work.uninitReceive();
-        CheckIpc(hub.externalStopped() == NI_OK, "hub external registration did not return to idle");
-        external = false;
-        CheckIpc(hub.attach(&first) == NI_INVALID_STATE, "hub retained a stale registration");
-        CheckIpc(hub.acquire() == NI_OK, "hub managed startup after external shutdown");
-        ++leases;
-        CheckIpc(hub.attach(&first) == NI_OK && work.receivePayloadCapacity() == 16440, "hub managed receiver capacity");
-        hub.release();
-        --leases;
-        CheckIpc(work.receiveBufferCount() == 64, "hub stopped while a borrowed inbox was still attached");
-        hub.detach(&first);
-        CheckIpc(work.receiveBufferCount() == 0, "last detach did not stop managed receiver");
-        hub.release();
-        CheckIpc(work.receiveBufferCount() == 0, "extra release restarted receiver");
-        for (uint32_t index = 0; index < 64; ++index)
-        {
-            CheckIpc(hub.acquire() == NI_OK, "hub lease capacity below 64");
-            ++leases;
-        }
-        CheckIpc(hub.acquire() == NI_LIMIT_EXCEEDED, "hub unbounded lease count");
-        while (leases != 0)
-        {
-            hub.release();
-            --leases;
-        }
-        CheckIpc(work.receiveBufferCount() == 0, "hub final lease leaked receiver tasks");
-    }
-    catch (...)
-    {
-        hub.detach(&first);
-        hub.detach(&second);
-        while (leases != 0)
-        {
-            hub.release();
-            --leases;
-        }
-        work.uninitReceive();
-        if (external)
-        {
-            hub.externalStopped();
-        }
-        throw;
-    }
+    NetIpcAdapterTest::lifecycle();
 }

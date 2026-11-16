@@ -5,7 +5,7 @@
 #include "CSystem/CSystemAPI.h"
 #define NET_SENDER_USE_C
 #include "NetWork/NetSenderAPI.h"
-#include <test/certs.h>
+#include "NetTestTlsCertificates.h"
 #include <cstring>
 #include <cstdio>
 #include <stdexcept>
@@ -136,7 +136,7 @@ NetSenderFacadeConcurrencyProducer::NetSenderFacadeConcurrencyProducer(NetSender
 
 }
 
-void NetSenderFacadeConcurrencyProducer::DoTask()
+void NetSenderFacadeConcurrencyProducer::doTask()
 {
     for (uint32_t i = 0; i < 8; ++i)
     {
@@ -185,7 +185,7 @@ NetSenderFacadeConcurrencyOwner::~NetSenderFacadeConcurrencyOwner()
 {
     for (uint32_t index = 0; index < 4; ++index)
     {
-        if (m_producers[index] != 0) { CTaskThreadManager::Instance().Uninit(m_producers[index]); }
+        if (m_producers[index] != 0) { CTaskThreadManager::instance().uninit(m_producers[index]); }
     }
     if (m_context->m_client != nullptr)
     {
@@ -204,7 +204,7 @@ void NetSenderFacadeConcurrency::workConcurrency()
 
     uint32_t checks = 0;
 #define THREAD_CHECK(condition) { netTestCheckpoint(); ++checks; if (!(condition)) { throw std::runtime_error("NetWork concurrent check: " #condition); } }
-    const int32_t baseline = CTaskThreadManager::Instance().Count();
+    const int32_t baseline = CTaskThreadManager::instance().count();
     NetSenderFacadeConcurrencyContext test;
     test.m_verifyOrder = verifyOrder;
     NetInterfaceClientCallbacks callbacks = {};
@@ -244,17 +244,20 @@ void NetSenderFacadeConcurrency::workConcurrency()
         THREAD_CHECK(generation == round + 1);
         for (uint32_t i = 0; i < 4; ++i)
         {
-            owner.m_producers[i] = CTaskThreadManager::Instance().Init();
-            std::shared_ptr<CTaskThread> thread = CTaskThreadManager::Instance().GetThreadInterface(owner.m_producers[i]);
+            owner.m_producers[i] = CTaskThreadManager::instance().init();
+            std::shared_ptr<CTaskThread> thread = CTaskThreadManager::instance().getThreadInterface(owner.m_producers[i]);
             THREAD_CHECK(thread != nullptr);
-            thread->PostTask(std::shared_ptr<CTask>(new NetSenderFacadeConcurrencyProducer(&test, i)));
+            if (!thread->tryPostTaskResult(std::shared_ptr<CTask>(new NetSenderFacadeConcurrencyProducer(&test, i)), 1, true, false).m_committed)
+            {
+                throw std::runtime_error("test producer task not accepted");
+            }
         }
         // 此处刻意不调用clientPoll；实际工作必须由CTask独立驱动。
         while ((test.m_done.load() != (round + 1) * 4 || test.m_results.load() < (round + 1) * 38 - 6) && NetSenderSubmission::now() < deadline && !test.m_bad.load())
         {
             gateway.poll(); THREAD_CHECK(sink.respond(gateway)); CSystem::sleepPrecise(1);
         }
-        for (uint32_t i = 0; i < 4; ++i) { CTaskThreadManager::Instance().Uninit(owner.m_producers[i]); owner.m_producers[i] = 0; }
+        for (uint32_t i = 0; i < 4; ++i) { CTaskThreadManager::instance().uninit(owner.m_producers[i]); owner.m_producers[i] = 0; }
         if (test.m_bad.load() || test.m_results.load() != (round + 1) * 38 - 6)
         {
             std::lock_guard<std::mutex> lock(test.m_mutex);
@@ -278,7 +281,7 @@ void NetSenderFacadeConcurrency::workConcurrency()
         THREAD_CHECK(test.m_closed.load() == round + 1 && test.m_results.load() == (round + 1) * 38 && !test.m_bad.load());
     }
     THREAD_CHECK(netWorkSenderClientDestroy(test.m_client) == NI_OK); test.m_client = nullptr;
-    THREAD_CHECK(CTaskThreadManager::Instance().Count() == baseline);
+    THREAD_CHECK(CTaskThreadManager::instance().count() == baseline);
     THREAD_CHECK(test.m_accepted.size() == 76 && test.m_terminal.size() == 76);
     for (size_t i = 0; i < test.m_accepted.size(); ++i) { THREAD_CHECK(test.m_terminal.count(test.m_accepted[i]) == 1); }
     gateway.shutdown();

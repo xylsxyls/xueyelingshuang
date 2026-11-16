@@ -1,8 +1,8 @@
 ﻿#pragma once
 #include "NetSenderTestClient.h"
 #ifdef _WIN32
-#include "NetSender/NetSenderAPI.h"
-#include "NetWork/NetWorkAPI.h"
+#include "NetSenderTestAccess.h"
+#include "NetWorkTestAccess.h"
 #include <memory>
 
 // 两个小文件方向的实际进程组合验证，不承载生产资源权限或磁盘存储策略。

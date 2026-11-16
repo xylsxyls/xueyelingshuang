@@ -14,6 +14,10 @@ public:
     */
     static void boundedTcp();
 
+    /** 原始TCP写入保持异步完成、容量、字节顺序、回调关闭及共同循环安全
+    */
+    static void rawWriteOrdering();
+
     /** 连接容量拒绝、回调异常关闭、旧连接号不能发送到新连接
     */
     static void tcpLifecycle();
@@ -38,6 +42,11 @@ public:
     */
     static void fileTransferIdentity();
 private:
+    /** 真实TCP验证异步写入使用同一公开契约，不修改被测状态
+    @param [in] shared 是否让三个通道共用一个原生事件循环
+    */
+    static void runRawWriteOrdering(bool shared);
+
     /** 复用实际文件流和持久化后端，不模拟协议或提交结果
     @param [in] createOperation OPEN_NEW、OPEN_TEMPORARY或恢复已有文件的OPEN_WRITE
     @param [in] resumeOffset 恢复前缀长度；0新建，1024验证实际前缀重读／摘要

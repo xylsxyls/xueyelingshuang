@@ -1,8 +1,8 @@
 ﻿#include "NetInterfaceConnectionTestCases.h"
 #include "NetInterfaceConnectionTestCasesHelper.h"
 #include <memory>
-#include "NetInterface/NetInterfaceAPI.h"
-#include "NetPeer/NetPeerAPI.h"
+#include "NetInterfaceTestAccess.h"
+#include "NetPeerTestAccess.h"
 #include "NetInterfaceTlsTestCases.h"
 #include "NetWorkTestCases.h"
 #include "CSystem/CSystemAPI.h"
@@ -79,7 +79,8 @@ void NetInterfaceConnectionTestCases::discoverySelection()
     }
     discovery.shutdown();
     seeds.push_back(seeds[0]);
-    NetInterfaceTlsTestPair::require(discovery.start(seeds, "", tls) == NI_INVALID_ARGUMENT && discovery.stopped(), "65 seeds accepted");
+    NetInterfaceTlsTestPair::require(discovery.start(seeds, "", tls) == NI_OK, "seed storage grows and deduplicates beyond 64");
+    discovery.shutdown();
     point.m_port = 12345;
     const NetClientDiscoveryPoint original = point;
     NetInterfaceTlsTestPair::require(NetClientDiscovery::parseSeeds("127.0.0.2:9", &point, 1, point.m_port) == NI_INVALID_ARGUMENT &&
@@ -165,6 +166,10 @@ void NetInterfaceConnectionTestCases::controlPriority()
 {
     NetInterfaceConnection client(NetInterfaceTlsTestPair::options(false, "localhost"));
     NetInterfaceConnection server(NetInterfaceTlsTestPair::options(true, nullptr));
+    NetConnectionPoolConfig pools;
+    pools.m_dataRecords.initialCapacity = pools.m_dataRecords.maximumCapacity = 64;
+    pools.m_controlRecords.initialCapacity = pools.m_controlRecords.maximumCapacity = 16;
+    NetInterfaceTlsTestPair::require(client.configurePools(pools) == NI_OK, "explicit physical queue pools");
     HandshakeConnection(client, server);
     NetInterfaceFrame frame = {};
     frame.m_kind = NI_REQUEST;
@@ -243,6 +248,10 @@ void NetInterfaceConnectionTestCases::recycledQueues()
 {
     NetInterfaceConnection client(NetInterfaceTlsTestPair::options(false, "localhost"));
     NetInterfaceConnection server(NetInterfaceTlsTestPair::options(true, nullptr));
+    NetConnectionPoolConfig pools;
+    pools.m_dataRecords.initialCapacity = pools.m_dataRecords.maximumCapacity = 64;
+    pools.m_controlRecords.initialCapacity = pools.m_controlRecords.maximumCapacity = 16;
+    NetInterfaceTlsTestPair::require(client.configurePools(pools) == NI_OK, "explicit physical queue pools");
     HandshakeConnection(client, server);
     uint8_t payload[300];
     for (uint32_t round = 0; round < 64; ++round)
@@ -298,8 +307,10 @@ void NetInterfaceConnectionTestCases::recycledQueues()
         NetInterfaceTlsTestPair::require(client.send(invalid) == NI_INVALID_ARGUMENT, "invalid frame changed queue state");
     }
     const uint32_t type = 991;
-    NetInterfaceTlsTestPair::require(client.configureCompression(&type, 1, true) == NI_OK &&
-        server.configureCompression(&type, 1, true) == NI_OK, "compression setup");
+    std::vector<uint32_t> types(1024);
+    for (uint32_t index = 0; index < types.size(); ++index) { types[index] = index + 1; }
+    NetInterfaceTlsTestPair::require(client.configureCompression(types.data(), static_cast<uint32_t>(types.size()), true) == NI_OK &&
+        server.configureCompression(types.data(), static_cast<uint32_t>(types.size()), true) == NI_OK, "compression whitelist beyond 64");
     std::vector<uint8_t> compressible(32768, 0x7b);
     NetInterfaceFrame compressed = {};
     compressed.m_kind = NI_REQUEST;
@@ -437,7 +448,7 @@ void NetInterfaceConnectionTestCases::directoryBoundaries()
     }
     NetInterfaceTlsTestPair::require(NetClientDiscovery::parseSeeds(repeated, seeds) == NI_OK && seeds.size() == 1, "64 seed limit or duplicate handling");
     repeated += ",127.0.0.1:7";
-    NetInterfaceTlsTestPair::require(NetClientDiscovery::parseSeeds(repeated, seeds) == NI_INVALID_ARGUMENT && seeds.empty(), "65 seed inputs accepted after deduplication");
+    NetInterfaceTlsTestPair::require(NetClientDiscovery::parseSeeds(repeated, seeds) == NI_OK && seeds.size() == 1, "duplicate seeds beyond 64 use one candidate");
 
     {
         NetInterfaceDirectoryNodeData node = {};
@@ -625,6 +636,8 @@ void NetInterfaceConnectionTestCases::recoveryLifecycle()
 #undef RECOVERY_CHECK
 }
 
+#ifndef __EMSCRIPTEN__
+// 此阻塞期限用例只登记在原生目录；单线程Wasm的期限推进由JS恢复链路用例验证。
 void NetInterfaceConnectionTestCases::recoveryDeadline()
 {
     NetInterfaceTlsOptions tls = {};
@@ -654,6 +667,8 @@ void NetInterfaceConnectionTestCases::recoveryDeadline()
     session.shutdown();
     NetInterfaceTlsTestPair::require(listener.m_generations.size() == 1, "deadline duplicate close");
 }
+
+#endif
 
 void NetInterfaceConnectionTestCases::protocolSessionLifecycle()
 {
@@ -812,6 +827,11 @@ void NetInterfaceConnectionTestCases::protocolSessionLifecycle()
         NetClientSessionTestChannel channel(server);
         NetClientSessionTestListener listener;
         NetSession session;
+        LockFreeHashMapPoolConfig requests;
+        requests.initialCapacity = 128;
+        requests.maximumCapacity = 128;
+        requests.lookupCacheCapacity = 0;
+        P_CHECK(session.configureRequestPool(requests) == NI_OK);
         P_CHECK(session.bindChannel(&channel) == NI_OK && session.connect("mock", 1, tls, hello, &listener) == NI_OK);
         for (uint32_t index = 0; index < 8 && !session.ready(); ++index)
         {
@@ -917,6 +937,10 @@ void NetInterfaceConnectionTestCases::partialFrameControl()
     {
         NetInterfaceConnection client(NetInterfaceTlsTestPair::options(false, "localhost"));
         NetInterfaceConnection server(NetInterfaceTlsTestPair::options(true, nullptr));
+        NetConnectionPoolConfig pools;
+        pools.m_dataRecords.initialCapacity = pools.m_dataRecords.maximumCapacity = 64;
+        pools.m_controlRecords.initialCapacity = pools.m_controlRecords.maximumCapacity = 16;
+        NetInterfaceTlsTestPair::require(client.configurePools(pools) == NI_OK, "explicit physical queue pools");
         HandshakeConnection(client, server);
         std::vector<uint8_t> payload(1048576);
         for (size_t index = 0; index < payload.size(); ++index)

@@ -1,6 +1,6 @@
 ﻿#include "NetInterfaceRequestsTestCases.h"
 #include "NetWorkTestCases.h"
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include <stdexcept>
 #include <cstring>
 #include <vector>
@@ -75,7 +75,7 @@ void NetInterfaceRequestsTestCases::budgets()
     CheckRequest(requests.complete(2, first.m_route, 5, 700, 1000, result) == NI_PROTOCOL_ERROR &&
         requests.complete(2, first.m_route, 4, 701, 1000, result) == NI_PROTOCOL_ERROR && requests.count() == 2,
         "response changed product or operation");
-    CheckRequest(requests.setEndpointLimit(1, 1) == NI_INVALID_ARGUMENT &&
+    CheckRequest(requests.setEndpointLimit(1, 1) == NI_OK &&
         requests.setEndpointLimit(99, 1) == NI_NOT_FOUND &&
         requests.setEndpointLimit(1, 0) == NI_INVALID_ARGUMENT, "invalid negotiated endpoint limit");
     CheckRequest(requests.complete(2, first.m_route, 4, 700, 1000, result) == NI_READY &&
@@ -87,8 +87,8 @@ void NetInterfaceRequestsTestCases::budgets()
     NetInterfaceRequests targetBound(16);
     RegisterRequestPeers(targetBound, 1);
     CheckRequest(targetBound.begin(1, 1, 2, 4, 700, 0, 1000, 100, first) == NI_OK &&
-        targetBound.begin(4, 1, 2, 4, 700, 0, 1000, 100, second) == NI_LIMIT_EXCEEDED,
-        "target service budget not enforced across clients");
+        targetBound.begin(4, 1, 2, 4, 700, 0, 1000, 100, second) == NI_OK,
+        "handshake hint incorrectly limited independent requests");
 }
 
 void NetInterfaceRequestsTestCases::deadlines()
@@ -169,12 +169,16 @@ void NetInterfaceRequestsTestCases::endpointGeneration()
 
 void NetInterfaceRequestsTestCases::argumentBounds()
 {
-    NetInterfaceRequests invalid(4097);
+    NetInterfaceRequests invalid(0);
     CheckRequest(invalid.addEndpoint(1, false, 0, 32) == NI_INVALID_ARGUMENT, "invalid global capacity");
-    NetInterfaceRequests requests(1);
+    NetRequestTablePools pools;
+    pools.m_requests.initialCapacity = pools.m_requests.maximumCapacity = 1;
+    pools.m_endpoints.initialCapacity = 16;
+    pools.m_endpoints.maximumCapacity = 1024;
+    NetInterfaceRequests requests(pools);
     CheckRequest(requests.addEndpoint(1, false, 1, 32) == NI_INVALID_ARGUMENT &&
         requests.addEndpoint(1, false, 0, 32, true) == NI_INVALID_ARGUMENT &&
-        requests.addEndpoint(1, true, 0, 129) == NI_INVALID_ARGUMENT, "invalid endpoint declaration");
+        requests.addEndpoint(1, true, 0, 0) == NI_INVALID_ARGUMENT, "invalid endpoint declaration");
     for (uint64_t id = 1; id <= 1024; ++id)
     {
         CheckRequest(requests.addEndpoint(id, true, 0, 1) == NI_OK, "endpoint budget below maximum");
@@ -317,4 +321,35 @@ void NetInterfaceRequestsTestCases::indexedLifetime()
             CheckRequest(requests.removeEndpoint(endpoint) == NI_OK, "indexed request endpoint index not empty");
         }
     }
+    NetInterfaceRequests grown;
+    for (uint64_t endpoint = 1; endpoint <= 2048; ++endpoint)
+    {
+        CheckRequest(grown.addEndpoint(endpoint, endpoint == 2, endpoint == 2 ? 4 : 0, 1) == NI_OK,
+            "endpoint pool retained old 1024 ceiling");
+    }
+    std::vector<NetInterfaceRequest> large(8192);
+    for (uint32_t index = 0; index < large.size(); ++index)
+    {
+        CheckRequest(grown.begin(1, index + 1, 2, 4, index, 0, 1000, 1000, large[index]) == NI_OK,
+            "request pool retained global4096 or per-endpoint128 ceiling");
+    }
+    CheckRequest(grown.count() == large.size(), "grown request count");
+    CheckRequest(grown.setEndpointLimit(1, 129) == NI_OK, "handshake metadata above128");
+    for (size_t index = large.size(); index != 0; --index)
+    {
+        CheckRequest(grown.complete(2, large[index - 1].m_route, 4, static_cast<uint32_t>(index - 1), 1001, actual) == NI_READY,
+            "grown request reverse completion or heap removal");
+    }
+    for (uint64_t original = 10000; original < 12048; ++original)
+    {
+        CheckRequest(grown.cancel(1, original, actual) == NI_OK, "future cancel pool retained endpoint limit");
+    }
+    for (uint64_t original = 10000; original < 12048; ++original)
+    {
+        CheckRequest(grown.begin(1, original, 2, 4, 1, 0, 1001, 1000, actual) == NI_CANCELLED,
+            "grown future cancellation lost identity or allowed execution");
+    }
+    CheckRequest(grown.count() == 0 && grown.removeEndpoint(1) == NI_OK && grown.removeEndpoint(2) == NI_OK,
+        "grown route resources did not converge");
+
 }

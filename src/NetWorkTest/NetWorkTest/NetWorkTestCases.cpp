@@ -1,5 +1,5 @@
 ﻿#include "NetWorkTestCases.h"
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include <algorithm>
 #include <cstring>
 #include <sstream>
@@ -283,11 +283,13 @@ static void checkSeries(uint32_t count)
     NET_CHECK(decoder.finish() == NI_OK);
 }
 
+#ifndef NET_TEST_INTERFACE_STANDALONE
 void NetWorkTestCases::cLanguage()
 {
     NET_CHECK(netInterfaceCppProbe() == 0);
     NET_CHECK(netSenderProviderCProbe() == 0);
 }
+#endif
 
 void NetWorkTestCases::deterministic()
 {

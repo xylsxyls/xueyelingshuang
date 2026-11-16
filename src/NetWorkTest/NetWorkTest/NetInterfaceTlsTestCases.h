@@ -101,4 +101,8 @@ public:
     /** 一MiB数据触发环形队列、记录边界及持续背压
     */
     static void boundedTransfer();
+
+    /** 验证已排队记录聚合、部分接纳和背压重试输入不可变化
+    */
+    static void appendRecords();
 };

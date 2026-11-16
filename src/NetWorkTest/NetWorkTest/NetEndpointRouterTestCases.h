@@ -1,6 +1,6 @@
 ﻿#pragma once
 #ifndef __EMSCRIPTEN__
-#include "NetWork/NetWorkAPI.h"
+#include "NetWorkTestAccess.h"
 #include <vector>
 
 // 端点路由实际投递的独占测试快照

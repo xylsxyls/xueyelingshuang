@@ -1,7 +1,7 @@
 ﻿#include "NetSenderTestClient.h"
 #include <stdexcept>
 #include "NetAccountGatewayProbe.h"
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include "CSystem/CSystemAPI.h"
 #if defined(_WIN32) && defined(NET_WORK_TEST_ACCOUNT)
 #include "NetInterfaceTlsTestCases.h"

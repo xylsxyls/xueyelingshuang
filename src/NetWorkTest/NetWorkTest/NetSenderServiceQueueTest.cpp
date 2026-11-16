@@ -1,9 +1,10 @@
-﻿#include "NetSender/NetSenderAPI.h"
+﻿#include "NetServiceTestAccess.h"
+#include "NetSenderTestAccess.h"
 #include <LibuvTcp/LibuvTcpAPI.h>
 #include "NetWorkConcurrencyTestCases.h"
-#include <NetWork/NetWorkAPI.h>
-#include <NetSender/NetSenderAPI.h>
-#include <test/certs.h>
+#include "NetWorkTestAccess.h"
+#include "NetSenderTestAccess.h"
+#include "NetTestTlsCertificates.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "NetWorkTestCases.h"
@@ -59,7 +60,7 @@ bool NetSenderServiceQueueTest::onServiceFrame(const NetInterfaceFrame& frame, c
             const uint32_t count = m_mode == 1 ? 256U : 8U;
             for (uint32_t index = 0; index < count; ++index)
             {
-                const int32_t result = m_service->push(0, 1, frame, origin);
+                const int32_t result = ((*m_service).*netServiceTestMember(NetServiceTestManagedPush()))(0, 1, frame, origin);
                 if (result == NI_OK)
                 {
                     ++m_admitted;
@@ -72,8 +73,8 @@ bool NetSenderServiceQueueTest::onServiceFrame(const NetInterfaceFrame& frame, c
         }
         else if (m_mode == 3)
         {
-            m_service->onGatewayServiceClosed(NI_CANCELLED);
-            m_bad = m_bad || m_service->m_queue.size() != 1 || m_service->m_queue.bytes() != size;
+            ((*m_service).*netServiceTestMember(NetServiceTestManagedServiceClosed()))(NI_CANCELLED);
+            m_bad = m_bad || ((*m_service).*netServiceTestMember(NetServiceTestManagedQueue())).size() != 1 || ((*m_service).*netServiceTestMember(NetServiceTestManagedQueue())).bytes() != size;
         }
         else if (m_mode == 4)
         {
@@ -94,12 +95,103 @@ bool NetSenderServiceQueueTest::onServiceFrame(const NetInterfaceFrame& frame, c
     return true;
 }
 
+/** 验证真实服务队列存储、扩容中借用和显式小池回收，不连接网络
+*/
+static void ServiceQueuePoolCheck()
+{
+    const auto require = [](bool passed, const char* message)
+    {
+        if (!passed) { throw std::runtime_error(message); }
+    };
+    NetSenderServiceQueue queue;
+    NetInterfaceOrigin origin = {};
+    NetInterfaceFrame frame = {};
+    frame.m_kind = NI_EVENT;
+    frame.m_productId = 101;
+    frame.m_messageType = 707;
+    const uint8_t saved[] = {'1', '2', '3', '4', '5', '6'};
+    frame.m_payload = saved;
+    frame.m_payloadSize = sizeof(saved);
+    require(queue.push(0, 1, frame, origin, 1) == NI_OK, "prepare service queue borrowed frame");
+    const uint32_t held = queue.first(0);
+    NetSenderServiceManagedFrame* borrowed = queue.borrow(held);
+    require(borrowed != nullptr && queue.size() == 1 && queue.size(0) == 0, "borrow remains accounted");
+    for (uint32_t round = 0; round < 2; ++round)
+    {
+        uint64_t total = sizeof(saved);
+        for (uint32_t index = 0; index < 4096; ++index)
+        {
+            const uint32_t length = index < 400 ? 16384 : index < 432 ? 131072 : 6;
+            std::vector<uint8_t> body(length, static_cast<uint8_t>(index % 251));
+            frame.m_payload = body.data();
+            frame.m_payloadSize = length;
+            frame.m_requestId = index + 1;
+            require(queue.push(index % 3, 1, frame, origin, 1) == NI_OK, "default service pools accept beyond old fixed gates");
+            total += length;
+        }
+        require(queue.size() == 4097 && queue.bytes() == total && total > 8 * 1048576 &&
+            queue.get(held) == borrowed && std::memcmp(borrowed->m_bytes.data(), saved, sizeof(saved)) == 0,
+            "growing directory preserves borrowed object and exact accounting");
+        for (uint32_t lane = 0; lane < 3; ++lane)
+        {
+            for (uint32_t index = lane; index < 4096; index += 3)
+            {
+                const uint32_t entry = queue.first(lane);
+                const NetSenderServiceManagedFrame* value = queue.get(entry);
+                const uint32_t length = index < 400 ? 16384 : index < 432 ? 131072 : 6;
+                require(value != nullptr && value->m_frame.m_requestId == index + 1 && value->m_frame.m_payloadSize == length &&
+                    value->m_bytes.data()[0] == index % 251 && value->m_bytes.data()[length - 1] == index % 251,
+                    "each service lane remains FIFO with owned bytes");
+                queue.release(entry);
+            }
+        }
+        queue.clear();
+        require(queue.size() == 1 && queue.bytes() == sizeof(saved) && queue.get(held) == borrowed,
+            "queue clear does not release active callback borrow");
+    }
+    require(queue.restore(held) && queue.first(0) == held, "borrow can return without allocation");
+    queue.release(held);
+    require(queue.size() == 0 && queue.bytes() == 0 && queue.get(held) == nullptr && queue.first(0) == UINT32_MAX,
+        "final loan releases its storage");
+    NetBufferPoolConfig bodies;
+    LockFreeHashMapPoolConfig records = NetSenderServiceQueue::defaultRecords();
+    records.initialCapacity = records.maximumCapacity = 2;
+    require(queue.configurePools(bodies, records) == NI_INVALID_STATE, "used queue cannot replace pool");
+    NetSenderServiceQueue bounded;
+    require(bounded.configurePools(bodies, records) == NI_OK, "configure explicit two-slot fixture");
+    records.initialCapacity = 3;
+    require(bounded.configurePools(bodies, records) == NI_INVALID_ARGUMENT, "invalid service queue pool rolls back");
+    frame.m_payload = saved;
+    frame.m_payloadSize = sizeof(saved);
+    for (uint32_t round = 0; round < 4; ++round)
+    {
+        require(bounded.room(2, 12) == NI_OK && bounded.size() == 0 && bounded.bytes() == 0,
+            "broadcast storage probe releases its temporary leases");
+        require(bounded.push(0, 1, frame, origin, 1) == NI_OK && bounded.room(2, 12) == NI_LIMIT_EXCEEDED &&
+            bounded.room(1, 6) == NI_OK && bounded.push(1, 1, frame, origin, 1) == NI_OK &&
+            bounded.push(2, 1, frame, origin, 1) == NI_LIMIT_EXCEEDED && bounded.size() == 2 && bounded.bytes() == 12,
+            "actual full pool has no partial admission or overwritten bytes");
+        bounded.clear();
+    }
+    require(bounded.room(0, 0) == NI_OK && bounded.room(0, 1) == NI_INVALID_ARGUMENT &&
+        bounded.room(2, 3) == NI_INVALID_ARGUMENT && bounded.room(1, 1048705) == NI_INVALID_ARGUMENT,
+        "broadcast storage check validates exact lengths");
+    NetSenderLocalInbox inbox;
+    NetSenderService service(inbox);
+    records.initialCapacity = 2;
+    require(service.configureQueuePools(bodies, records) == NI_OK, "public managed service pool configuration");
+    records.initialCapacity = 3;
+    require(service.configureQueuePools(bodies, records) == NI_INVALID_ARGUMENT, "public invalid pool preserves prior config");
+    std::printf("SERVICE_QUEUE_POOL rounds=2 frames_per_round=4096 borrowed=1 PASS\n");
+}
+
 void NetSenderServiceQueueTest::run()
 {
+    ServiceQueuePoolCheck();
     NetSenderLocalInbox inbox;
     NetSenderServiceManaged service(inbox);
     NetSenderServiceQueueTest observer;
-    service.m_listener = &observer;
+    ((service).*netServiceTestMember(NetServiceTestManagedListener())) = &observer;
     uint8_t payload[17] = {};
     NetInterfaceFrame frame = {};
     frame.m_kind = NI_REQUEST; frame.m_productId = 101; frame.m_messageType = 700;
@@ -116,24 +208,24 @@ void NetSenderServiceQueueTest::run()
         }
         frame.m_requestId = index + 1;
         if (index == 100) { origin.m_endpoint = 42; }
-        if (service.push(0, 1, frame, origin) != NI_OK)
+        if (((service).*netServiceTestMember(NetServiceTestManagedPush()))(0, 1, frame, origin) != NI_OK)
         {
             throw std::runtime_error("service FIFO fixture admission failed");
         }
     }
-    service.pumpQueue(0, NetSenderSubmission::now());
+    ((service).*netServiceTestMember(NetServiceTestManagedPump()))(0, NetSenderSubmission::now());
     const uint32_t healthyDuringPressure = observer.m_healthy;
     observer.m_allow = true;
-    for (uint32_t round = 0; round < 8 && service.m_queue.size(0) != 0; ++round)
+    for (uint32_t round = 0; round < 8 && ((service).*netServiceTestMember(NetServiceTestManagedQueue())).size(0) != 0; ++round)
     {
-        service.pumpQueue(0, NetSenderSubmission::now());
+        ((service).*netServiceTestMember(NetServiceTestManagedPump()))(0, NetSenderSubmission::now());
     }
     bool ordered = observer.m_seen.size() == 100;
     for (uint32_t index = 0; ordered && index < observer.m_seen.size(); ++index) { ordered = observer.m_seen[index] == index; }
     std::printf("SERVICE_QUEUE_FIFO healthy_while_blocked=%u first_after_resume=%u count=%u ordered=%u\n",
         healthyDuringPressure, observer.m_seen.empty() ? 999U : observer.m_seen[0],
         static_cast<uint32_t>(observer.m_seen.size()), ordered ? 1U : 0U);
-    if (healthyDuringPressure != 1 || !ordered || observer.m_bad || service.m_queue.size(0) != 0 || service.m_queue.bytes() != 0)
+    if (healthyDuringPressure != 1 || !ordered || observer.m_bad || ((service).*netServiceTestMember(NetServiceTestManagedQueue())).size(0) != 0 || ((service).*netServiceTestMember(NetServiceTestManagedQueue())).bytes() != 0)
     {
         throw std::runtime_error("service backpressure reordered a source or starved a healthy source");
     }
@@ -145,10 +237,19 @@ void NetSenderServiceQueueTest::reentrant()
     {
         NetSenderLocalInbox inbox;
         NetSenderServiceManaged service(inbox);
+        // 显式配置实际池，验证回调借用仍占槽，不把旧256/8计数门槛带回生产代码。
+        NetBufferPoolConfig bodies;
+        bodies.m_classes[4].maximumCapacity = 8;
+        LockFreeHashMapPoolConfig records = NetSenderServiceQueue::defaultRecords();
+        records.initialCapacity = records.maximumCapacity = 256;
+        if (service.configureQueuePools(bodies, records) != NI_OK)
+        {
+            throw std::runtime_error("service reentrant physical pool fixture");
+        }
         NetSenderServiceQueueTest observer;
         observer.m_mode = mode;
         observer.m_service = &service;
-        service.m_listener = &observer;
+        ((service).*netServiceTestMember(NetServiceTestManagedListener())) = &observer;
         std::vector<uint8_t> payload(mode == 2 ? 1048576U : 1U, 0x59);
         NetInterfaceFrame frame = {};
         frame.m_kind = NI_EVENT;
@@ -161,7 +262,7 @@ void NetSenderServiceQueueTest::reentrant()
         const uint32_t count = mode >= 3 ? 2U : 1U;
         for (uint32_t index = 0; index < count; ++index)
         {
-            if (service.push(0, 1, frame, origin) != NI_OK)
+            if (((service).*netServiceTestMember(NetServiceTestManagedPush()))(0, 1, frame, origin) != NI_OK)
             {
                 throw std::runtime_error("service reentrant fixture admission failed");
             }
@@ -169,15 +270,15 @@ void NetSenderServiceQueueTest::reentrant()
         bool caught = false;
         try
         {
-            service.pumpQueue(0, NetSenderSubmission::now());
+            ((service).*netServiceTestMember(NetServiceTestManagedPump()))(0, NetSenderSubmission::now());
         }
         catch (...)
         {
             caught = true;
         }
         const uint32_t expected = mode == 1 ? 256U : mode == 2 ? 8U : mode == 3 ? 0U : 1U;
-        if (observer.m_bad || caught != (mode == 4) || service.m_queue.size() != expected ||
-            service.m_queue.size(0) != expected || service.m_queue.bytes() != static_cast<uint64_t>(expected) * payload.size() ||
+        if (observer.m_bad || caught != (mode == 4) || ((service).*netServiceTestMember(NetServiceTestManagedQueue())).size() != expected ||
+            ((service).*netServiceTestMember(NetServiceTestManagedQueue())).size(0) != expected || ((service).*netServiceTestMember(NetServiceTestManagedQueue())).bytes() != static_cast<uint64_t>(expected) * payload.size() ||
             (mode <= 2 && observer.m_admitted != expected - 1) || observer.m_closedCount != (mode == 3 ? 1U : 0U))
         {
             throw std::runtime_error("service reentrant capacity, borrowed lifetime or exception cleanup failed");
@@ -195,9 +296,9 @@ void NetSenderServiceQueueTest::registration()
         NetSenderLocalInbox inbox;
         NetSenderServiceManaged service(inbox);
         NetSenderServiceQueueTest observer;
-        service.m_listener = &observer;
-        service.m_product = 101;
-        if (service.m_router.addHandler(101, 128, service.m_handler) != NI_OK)
+        ((service).*netServiceTestMember(NetServiceTestManagedListener())) = &observer;
+        ((service).*netServiceTestMember(NetServiceTestManagedProduct())) = 101;
+        if (((service).*netServiceTestMember(NetServiceTestManagedRouter())).addHandler(101, 128, ((service).*netServiceTestMember(NetServiceTestManagedHandler()))) != NI_OK)
         {
             throw std::runtime_error("service registration handler fixture failed");
         }
@@ -211,7 +312,7 @@ void NetSenderServiceQueueTest::registration()
         s_serviceManagedRejectAfter = static_cast<int32_t>(step);
         _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(ServiceManagedMemoryHook);
 #endif
-        const int32_t result = service.addPeer(11, NI_LINK_CLIENT, origin, fields, endpoint);
+        const int32_t result = ((service).*netServiceTestMember(NetServiceTestManagedAdd()))(11, NI_LINK_CLIENT, origin, fields, endpoint);
 #if defined(_WIN32) && defined(_DEBUG) && defined(NET_SERVICE_MANAGED_HEAP)
         _CrtSetAllocHook(previous);
         s_serviceManagedRejectAfter = -1;
@@ -223,19 +324,19 @@ void NetSenderServiceQueueTest::registration()
         else
         {
             ++rejected;
-            if (result != NI_NO_MEMORY || endpoint != 0 || !service.m_peers.empty() || !service.m_roots.empty())
+            if (result != NI_NO_MEMORY || endpoint != 0 || !((service).*netServiceTestMember(NetServiceTestManagedPeers())).empty() || !((service).*netServiceTestMember(NetServiceTestManagedRoots())).empty())
             {
                 throw std::runtime_error("service registration failed without atomic rollback");
             }
-            service.m_router.poll();
-            if (service.addPeer(11, NI_LINK_CLIENT, origin, fields, endpoint) != NI_OK)
+            ((service).*netServiceTestMember(NetServiceTestManagedRouter())).poll();
+            if (((service).*netServiceTestMember(NetServiceTestManagedAdd()))(11, NI_LINK_CLIENT, origin, fields, endpoint) != NI_OK)
             {
                 throw std::runtime_error("service registration leaked route or blocked retry after rollback");
             }
         }
         const uint64_t registered = endpoint;
-        if (endpoint == 0 || service.m_peers.size() != 1 || service.m_roots.size() != 1 ||
-            service.attach(11, NI_LINK_CLIENT, origin, endpoint) != NI_OK || endpoint != registered)
+        if (endpoint == 0 || ((service).*netServiceTestMember(NetServiceTestManagedPeers())).size() != 1 || ((service).*netServiceTestMember(NetServiceTestManagedRoots())).size() != 1 ||
+            ((service).*netServiceTestMember(NetServiceTestManagedAttach()))(11, NI_LINK_CLIENT, origin, endpoint) != NI_OK || endpoint != registered)
         {
             throw std::runtime_error("service registration did not publish consistent route and indexes");
         }
@@ -250,7 +351,7 @@ void NetSenderServiceQueueTest::registration()
             {
                 ++changed.m_device[0];
             }
-            if (service.attach(mode == 0 ? 12 : 11, mode == 1 ? NI_LINK_SERVICE : NI_LINK_CLIENT,
+            if (((service).*netServiceTestMember(NetServiceTestManagedAttach()))(mode == 0 ? 12 : 11, mode == 1 ? NI_LINK_SERVICE : NI_LINK_CLIENT,
                 changed, endpoint) != NI_PROTOCOL_ERROR || endpoint != 0)
             {
                 throw std::runtime_error("service reused an origin from a different authenticated channel or identity");
@@ -259,7 +360,7 @@ void NetSenderServiceQueueTest::registration()
         for (uint32_t index = 0; index < 16; ++index)
         {
             origin.m_endpoint = 100 + index;
-            if (service.addPeer(index % 2 == 0 ? 11 : 12, NI_LINK_CLIENT, origin, fields, endpoint) != NI_OK)
+            if (((service).*netServiceTestMember(NetServiceTestManagedAdd()))(index % 2 == 0 ? 11 : 12, NI_LINK_CLIENT, origin, fields, endpoint) != NI_OK)
             {
                 throw std::runtime_error("service close fixture failed");
             }
@@ -269,7 +370,7 @@ void NetSenderServiceQueueTest::registration()
         s_serviceManagedAllocations = 0;
         previous = _CrtSetAllocHook(ServiceManagedMemoryHook);
 #endif
-        service.onGatewayClientClosed(11, NI_TRUNCATED);
+        ((service).*netServiceTestMember(NetServiceTestManagedClientClosed()))(11, NI_TRUNCATED);
 #if defined(_WIN32) && defined(_DEBUG) && defined(NET_SERVICE_MANAGED_HEAP)
         _CrtSetAllocHook(previous);
         s_serviceManagedRejectAfter = -1;
@@ -278,13 +379,13 @@ void NetSenderServiceQueueTest::registration()
             throw std::runtime_error("service channel cleanup attempted allocation");
         }
 #endif
-        if (service.m_peers.size() != 8 || service.m_roots.size() != 8)
+        if (((service).*netServiceTestMember(NetServiceTestManagedPeers())).size() != 8 || ((service).*netServiceTestMember(NetServiceTestManagedRoots())).size() != 8)
         {
             throw std::runtime_error("service channel cleanup affected an unrelated channel or retained closed roots");
         }
-        service.onGatewayClientClosed(12, NI_TRUNCATED);
-        service.m_router.poll();
-        if (!service.m_peers.empty() || !service.m_roots.empty() || service.m_router.pendingCount() != 0)
+        ((service).*netServiceTestMember(NetServiceTestManagedClientClosed()))(12, NI_TRUNCATED);
+        ((service).*netServiceTestMember(NetServiceTestManagedRouter())).poll();
+        if (!((service).*netServiceTestMember(NetServiceTestManagedPeers())).empty() || !((service).*netServiceTestMember(NetServiceTestManagedRoots())).empty() || ((service).*netServiceTestMember(NetServiceTestManagedRouter())).pendingCount() != 0)
         {
             throw std::runtime_error("service close failed to release registration");
         }

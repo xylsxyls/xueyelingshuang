@@ -1,7 +1,7 @@
 ﻿#include "NetSenderTestClient.h"
 #include <stdexcept>
 #include "NetFileGatewayProbe.h"
-#include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterfaceTestAccess.h"
 #include "NetInterfaceNativeTestCases.h"
 #ifdef _WIN32
 #include "NetInterfaceTlsTestCases.h"
@@ -509,7 +509,7 @@ int NetFileGatewayProbe::run(bool server, int32_t pid)
 #endif
 
 #if 0 // DIRECTORY_CACHE_UNIT_TEST_BEGIN
-#include "NetWork/NetWorkAPI.h"
+#include "NetWorkTestAccess.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include <chrono>
