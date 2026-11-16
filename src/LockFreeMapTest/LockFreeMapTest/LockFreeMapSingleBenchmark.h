@@ -18,8 +18,8 @@ class LockFreeMapSingleBenchmark
 public:
     /** 校准或执行一组固定次数的基准，异常由 main 统一转换为退出码
     @param [in] argc 参数数量
-    @param [in] argv --calibrate 或逗号分隔的各场景次数
-    @return 全部正确返回零，参数、计时或内容校验失败返回非零
+    @param [in] argv --selftest-output、--idle、--sparse、--calibrate 或逗号分隔的各场景次数，可追加 --case 与1至46的单项编号
+    @return 全部正确返回零，参数、计时、内容校验或报告输出失败返回非零
     */
     static int run(int argc, char** argv);
 
@@ -31,10 +31,22 @@ private:
 
     /** 插入一个确定值，供准备阶段与组合负载共用
     @param [in,out] map 被测容器
-    @param [in] key 不存在的偶数键
+    @param [in] key 不存在的键
     @return 插入成功返回 true
     */
     static bool insert(LockFreeMapSingleContainer& map, uint32_t key);
+
+    /** 使用散布于uint32_t范围的唯一键检查非等距查找性能
+    @param [in] keys 键数，必须为128或4096
+    @return 全部命中值、校验和及计时正确时true，并输出一行CSV
+    */
+    static bool sampleSparse(uint32_t keys);
+
+    /** 不在每次调用前后计时，测量空表清空或空闲维护的稳定吞吐
+    @param [in] maintenance true执行维护，false执行空表清空
+    @return 计时、状态和零保留检查全部通过且CSV输出成功时true
+    */
+    static bool sampleIdle(bool maintenance);
 
     /** 校验整个容器的数量、顺序和实际值；不计入性能时间
     @param [in] map 被测容器

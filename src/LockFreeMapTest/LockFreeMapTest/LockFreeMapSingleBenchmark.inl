@@ -312,13 +312,29 @@ bool LockFreeMapSingleBenchmark::sample(const char* name, uint32_t keys, uint64_
         s_warmupChecksum = checksum;
     }
     (void)s_warmupChecksum;
+    // 写入预热已经改变值；正式测量前恢复独立初始状态，短次数也必须能正确校验。
+    // 仅覆盖已有键，保留预热后的池、索引及运行时编译状态，不计入正式时间。
+    if (Operation <= 2)
+    {
+        for (uint32_t index = 0; index < keys; ++index)
+        {
+#ifdef LOCK_FREE_MAP_SINGLE_STD
+            map[index * 2] = expected[index];
+#else
+            if (!map.set(index * 2, expected[index]))
+            {
+                return false;
+            }
+#endif
+        }
+    }
     const uint64_t start = LockFreeMapBenchmarkClock::nanoseconds();
     if (!exercise<Operation>(map, queries, count, checksum))
     {
         return false;
     }
     const uint64_t end = LockFreeMapBenchmarkClock::nanoseconds();
-    if (start == 0 || end <= start)
+    if (start == 0 || end < start)
     {
         return false;
     }
@@ -364,7 +380,8 @@ bool LockFreeMapSingleBenchmark::sample(const char* name, uint32_t keys, uint64_
         }
     }
     const bool valid = checksum == expectedSum && validate(map, expected);
+    // 极短样本可能低于时钟分辨率，只报告正确性，不伪造耗时或推导吞吐。
     std::cout << name << ',' << keys << ',' << count << ',' << elapsed << ',' << checksum << ',' <<
-        (valid ? "PASS" : "FAIL") << std::endl;
+        (valid ? (elapsed == 0 ? "PASS_UNTIMED" : "PASS") : "FAIL") << std::endl;
     return valid;
 }

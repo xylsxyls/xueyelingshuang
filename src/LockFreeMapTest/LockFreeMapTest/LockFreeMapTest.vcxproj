@@ -230,6 +230,8 @@
   </ImportGroup>
   <ItemGroup>
     <None Include="LockFreeMapAtomicProbe.cpp" />
+    <None Include="LockFreeMapModuleTest.cpp" />
+    <ClInclude Include="LockFreeMapModuleTest.h" />
     <None Include="LockFreeMapSingleBenchmark.cpp" />
     <None Include="LockFreeMapLayoutProbe.cpp" />
     <None Include="LockFreeMapWasmInvokes.js" />
@@ -242,4 +244,10 @@
   <ItemDefinitionGroup Condition="'$(LockFreeMapProgressCommon)'=='true'">
     <ClCompile><PreprocessorDefinitions>LOCK_FREE_MAP_PROGRESS_COMMON;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="LockFreeMapRetryTests.h" />
+    <ClInclude Include="LockFreeMapSearchTest.h" />
+    <ClCompile Include="LockFreeMapSearchTest.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="LockFreeMapRetryTests.cpp"><ExcludedFromBuild Condition="'$(LockFreeMapTestBenchmark)'=='true'">true</ExcludedFromBuild></ClCompile>
+  </ItemGroup>
 </Project>

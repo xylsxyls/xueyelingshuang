@@ -575,6 +575,9 @@ bool LockFreeMapTests::stress()
         return false;
     }
     std::atomic<int> errors(0), start(0);
+    // 工作线程独占一行，回收全部线程后再写诊断，报告不参与竞争。
+    uint64_t statuses[8][LOCK_FREE_MAP_SYSTEM_ERROR + 1] = {};
+    uint64_t details[8][3] = {};
     std::vector<LockFreeMapTestThread> threads;
     threads.reserve(8);
     try
@@ -586,6 +589,7 @@ bool LockFreeMapTests::stress()
                 if (!wait(start))
                 {
                     errors.fetch_add(1);
+                    ++details[id][0];
                     return;
                 }
                 uint32_t random = 314159 + id;
@@ -605,6 +609,7 @@ bool LockFreeMapTests::stress()
                         status = map.lockFreeMapExtract(key, value);
                         if (status == LOCK_FREE_MAP_COMMITTED && value != key * 7)
                         {
+                            ++details[id][1];
                             errors.fetch_add(1);
                         }
                     }
@@ -619,6 +624,7 @@ bool LockFreeMapTests::stress()
                         {
                             if (k <= previous || v != k * 7)
                             {
+                                ++details[id][2];
                                 errors.fetch_add(1);
                             }
                             previous = k;
@@ -628,6 +634,10 @@ bool LockFreeMapTests::stress()
                     {
                         size_t released = 0;
                         status = map.lockFreeMapMaintain(64, released);
+                    }
+                    if (status >= LOCK_FREE_MAP_OK && status <= LOCK_FREE_MAP_SYSTEM_ERROR)
+                    {
+                        ++statuses[id][status];
                     }
                     if (status != LOCK_FREE_MAP_OK && status != LOCK_FREE_MAP_COMMITTED &&
                         status != LOCK_FREE_MAP_NOT_FOUND)
@@ -655,8 +665,65 @@ bool LockFreeMapTests::stress()
     }
     LockFreeMapStats stats = map.lockFreeMapStats();
 
+    for (size_t id = 0; id < threads.size(); ++id)
+    {
+        std::fprintf(LockFreeMapTestReport::m_file, "stress_details,%u,start=%llu,extract=%llu,traversal=%llu\n",
+            static_cast<unsigned>(id), static_cast<unsigned long long>(details[id][0]),
+            static_cast<unsigned long long>(details[id][1]), static_cast<unsigned long long>(details[id][2]));
+        for (int status = LOCK_FREE_MAP_OK; status <= LOCK_FREE_MAP_SYSTEM_ERROR; ++status)
+        {
+            if (statuses[id][status] != 0)
+            {
+                std::fprintf(LockFreeMapTestReport::m_file, "stress_status,%u,%d,%llu\n",
+                    static_cast<unsigned>(id), status, static_cast<unsigned long long>(statuses[id][status]));
+            }
+        }
+    }
+    std::fprintf(LockFreeMapTestReport::m_file, "stress_cleanup,errors=%d,nodes=%llu,values=%llu,index=%llu,active=%llu\n",
+        errors.load(), static_cast<unsigned long long>(stats.nodes.retained), static_cast<unsigned long long>(stats.values.retained),
+        static_cast<unsigned long long>(stats.indexBytes), static_cast<unsigned long long>(stats.activeOperations));
+
     return errors.load() == 0 && stats.nodes.retained == 0 && stats.values.retained == 0 &&
     stats.indexBytes == 0 && stats.activeOperations == 0;
+}
+
+/** 整池释放后复用实例，核对非平凡键值的生命期与容量归还
+@return 每轮释放后载荷计数恢复、全部动态容量归零时true
+*/
+template <typename Key, typename Value, typename Compare = std::less<Key>>
+static bool CheckWholeStoreRelease()
+{
+    const int alive = LockFreeMapTestValue::m_live.load();
+    LockFreeMap<Key, Value, Compare> map;
+    for (int round = 0; round < 3; ++round)
+    {
+        for (int version = 0; version < 4; ++version)
+        {
+            for (int index = 0; index < 17; ++index)
+            {
+                if (!map.set(Key(index * 10), Value(version * 100 + index)))
+                {
+                    return false;
+                }
+            }
+        }
+        for (int index = 1; index < 17; index += 2)
+        {
+            if (!map.erase(Key(index * 10)))
+            {
+                return false;
+            }
+        }
+        map.clearAndFreeMemory();
+        const LockFreeMapStats stats = map.lockFreeMapStats();
+        if (!map.empty() || LockFreeMapTestValue::m_live.load() != alive ||
+            stats.nodes.retained != 0 || stats.values.retained != 0 ||
+            stats.nodes.capacity != 0 || stats.values.capacity != 0 || stats.indexBytes != 0)
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool LockFreeMapTests::ownership()
@@ -712,7 +779,10 @@ bool LockFreeMapTests::ownership()
         }
     }
     // A 是预先准备的重做任务副本，容器自身不执行任务中断
-    return order == "BCAD";
+    return order == "BCAD" &&
+        CheckWholeStoreRelease<int, int>() && CheckWholeStoreRelease<int, LockFreeMapTestValue>() &&
+        CheckWholeStoreRelease<LockFreeMapTestValue, int, LockFreeMapTestLess>() &&
+        CheckWholeStoreRelease<LockFreeMapTestValue, LockFreeMapTestValue, LockFreeMapTestLess>();
 }
 
 bool LockFreeMapTests::allocations()
@@ -1495,8 +1565,79 @@ bool LockFreeMapTests::directKeyConstruction()
     return map.retainedNodeCount() == 0 && map.retainedValueCount() == 0 && map.lockFreeMapStats().indexBytes == 0;
 }
 
+/** 在摘除后的空保护确认与引用清理之间发布旧地址提示，检查计划拥有引用不被遗失
+@return 普通维护保留可疑借用，已确认摘除的转交路径完整归还键和值时true
+*/
+static bool CheckDetachedPlanCleanup()
+{
+    LockFreeMapConfig config;
+    LockFreeMapIndexStore<int, int, std::less<int>> store(config);
+    if (store.m_nodes.initialize() != LOCK_FREE_MAP_OK || store.m_values.initialize() != LOCK_FREE_MAP_OK)
+    {
+        return false;
+    }
+    LockFreeMapGuard owner(store.m_domain), late(store.m_domain);
+    if (owner.m_record == nullptr || late.m_record == nullptr)
+    {
+        return false;
+    }
+    LockFreeMapStatus status = LOCK_FREE_MAP_INVALID;
+    auto* value = store.m_values.create(77, 1, owner, status);
+    if (value == nullptr)
+    {
+        return false;
+    }
+    auto* node = store.m_nodes.emplace(0, owner, status, 7, store.m_values, value);
+    if (node == nullptr)
+    {
+        store.m_values.release(value);
+        return false;
+    }
+    // 重建删除已提交且省略项已归还的状态，只剩计划持有的一份键引用和一份版本引用。
+    store.m_values.retain(value);
+    store.m_values.release(node->mutableValue().m_value.exchange(nullptr));
+    LockFreeMapIndexEntry<int, int> entry = { node };
+    LockFreeMapIndex<int, int> plan;
+    plan.m_state.store(1);
+    plan.m_entries = &entry;
+    plan.m_count.store(1);
+    plan.m_decision.store(2);
+    plan.m_omitted = 0;
+    plan.m_omittedReleased = true;
+    plan.m_overridePosition = 1;
+    plan.m_target = node;
+    plan.m_expected = value;
+    store.m_root.store(&plan);
+    owner.m_record->m_pointer[0].store(&plan);
+    store.m_root.store(nullptr);
+    if (store.m_domain.protectsRoot(&plan, owner.m_record))
+    {
+        return false;
+    }
+    // 完成空保护确认之后才发布旧提示；它不解引用计划，重新验证源必然失败。
+    late.m_record->m_pointer[0].store(&plan);
+    if (store.m_root.load() == &plan || !store.m_domain.protectsRoot(&plan, owner.m_record))
+    {
+        return false;
+    }
+    store.clean(&plan, owner.m_record);
+    if (plan.m_target != node || plan.m_expected != value ||
+        store.m_nodes.stats().retained != 1 || store.m_values.stats().retained != 1)
+    {
+        return false;
+    }
+    // 源转交不能重复采样而遗忘拥有引用；这里只清理计划，不转交无效的晚到借用。
+    store.clean(&plan, owner.m_record, true);
+    return plan.m_target == nullptr && plan.m_expected == nullptr &&
+        store.m_nodes.stats().retained == 0 && store.m_values.stats().retained == 0;
+}
+
 bool LockFreeMapTests::sharedIndex()
 {
+    if (!CheckDetachedPlanCleanup())
+    {
+        return false;
+    }
     for (int bounded = 0; bounded < 2; ++bounded)
     {
         LockFreeMap<int, int> map;

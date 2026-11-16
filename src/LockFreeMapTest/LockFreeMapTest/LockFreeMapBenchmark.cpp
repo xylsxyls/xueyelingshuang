@@ -1084,7 +1084,8 @@ int main(int argc, char** argv)
             report.close();
             return report.fail() ? 3 : changes == 0 ? 1 : 0;
         }
-        const bool progressSteady = argc > 1 && std::string(argv[1]) == "--progress-steady";
+        const bool progressPinned = argc > 1 && std::string(argv[1]) == "--progress-pinned";
+        const bool progressSteady = progressPinned || (argc > 1 && std::string(argv[1]) == "--progress-steady");
         if (progressSteady || (argc > 1 && std::string(argv[1]) == "--progress"))
         {
             if (argc != 3)
@@ -1094,6 +1095,11 @@ int main(int argc, char** argv)
             if (*argv[2] == 0)
             {
                 return 3;
+            }
+            LockFreeMapBenchmark::m_pinWorkers = progressPinned;
+            if (!LockFreeMapBenchmark::initializePlacement())
+            {
+                return 2;
             }
             if (progressSteady)
             {

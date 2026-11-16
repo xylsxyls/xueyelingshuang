@@ -1,6 +1,8 @@
 ﻿#include "LockFreeMapTestRunner.h"
 #include "LockFreeMapTest.h"
 #include "LockFreeMapStatusTest.h"
+#include "LockFreeMapRetryTests.h"
+#include "LockFreeMapSearchTest.h"
 #ifndef LOCK_FREE_MAP_TEST_SINGLE
 #include "LockFreeMapTests.h"
 #include "LockFreeMapArrivalTest.h"
@@ -56,7 +58,7 @@ bool LockFreeMapTestRunner::selection(const char* text, std::set<unsigned>& ids)
                 return false;
             }
         }
-        if (last > LOCK_FREE_MAP_TEST_LATE_ARRIVAL)
+        if (last > LOCK_FREE_MAP_TEST_SEARCH)
         {
             return false;
         }
@@ -78,7 +80,7 @@ bool LockFreeMapTestRunner::selection(const char* text, std::set<unsigned>& ids)
 
 int LockFreeMapTestRunner::run(int argc, char** argv)
 {
-    const std::map<unsigned, LockFreeMapTestEntry> cases = {
+    std::map<unsigned, LockFreeMapTestEntry> cases = {
         { LOCK_FREE_MAP_TEST_BASIC, { "有序参考随机对照", false, []() { return LockFreeMapBasic() == 0; } } },
 #ifndef LOCK_FREE_MAP_TEST_SINGLE
         { LOCK_FREE_MAP_TEST_TOKENS, { "版本凭据和地址复用", false, &LockFreeMapTests::tokens } },
@@ -113,6 +115,9 @@ int LockFreeMapTestRunner::run(int argc, char** argv)
         { LOCK_FREE_MAP_TEST_QUERY_PROGRESS, { "精确查询与结构修改交错", false, []() { return LockFreeMapQueryProgress() == 0; } } },
         { LOCK_FREE_MAP_TEST_LATE_ARRIVAL, { "后来线程逐窗口推进", true, &LockFreeMapArrivalTest::run } },
 #endif
+        { LOCK_FREE_MAP_TEST_RETRY_OPTIONS, { "容量与竞争独立重试", false, &LockFreeMapRetryTest } },
+        { LOCK_FREE_MAP_TEST_GROWTH_NOTIFICATION, { "扩容通知合同", false, &LockFreeMapGrowthTest } },
+        { LOCK_FREE_MAP_TEST_SEARCH, { "查询边界和自定义顺序", false, &LockFreeMapSearchTest } },
         { LOCK_FREE_MAP_TEST_EXAMPLES, { "六端统一接口样例", false, []() { return LockFreeMapCompileExamples() == 0; } } },
         { LOCK_FREE_MAP_TEST_STATUS_CONTRACT, { "普通接口重试与资源错误", false, []()
         {
@@ -122,6 +127,22 @@ int LockFreeMapTestRunner::run(int argc, char** argv)
         { LOCK_FREE_MAP_TEST_PLATFORM, { "原子对齐及低内存", false, []() { return LockFreeMapPlatform() == 0; } } },
         { LOCK_FREE_MAP_TEST_ARGUMENTS, { "参数与报告错误退出码", false, &LockFreeMapTestRunner::arguments } }
     };
+#ifndef LOCK_FREE_MAP_TEST_SINGLE
+    // 独立进程自查使用真实线程异常进入累计计数；第一项失败不应污染下一项。
+    const bool accounting = argc > 1 && std::strcmp(argv[1], "--check-accounting") == 0;
+    if (accounting)
+    {
+        cases.clear();
+        cases.insert(std::make_pair(1U, LockFreeMapTestEntry{ "预期线程异常", false, []() -> bool
+        {
+            LockFreeMapTestThread worker([]() { throw std::runtime_error("controlled worker failure"); });
+            return worker.join();
+        } }));
+        cases.insert(std::make_pair(2U, LockFreeMapTestEntry{ "随后正常用例", false, []() -> bool { return true; } }));
+    }
+#else
+    const bool accounting = false;
+#endif
     std::set<unsigned> selected;
     const char* mode = "--all";
     const char* reportPath = "LockFreeMapTest-result.csv";
@@ -130,6 +151,10 @@ int LockFreeMapTestRunner::run(int argc, char** argv)
     for (int index = 1; index < argc; ++index)
     {
         const char* arg = argv[index];
+        if (index == 1 && accounting)
+        {
+            continue;
+        }
         if (std::strcmp(arg, "--report") == 0 && index + 1 < argc)
         {
             reportPath = argv[++index];
@@ -205,6 +230,10 @@ int LockFreeMapTestRunner::run(int argc, char** argv)
         {
             const LockFreeMapTestEntry& entry = cases.find(*id)->second;
             bool passed = false;
+#ifndef LOCK_FREE_MAP_TEST_SINGLE
+            const size_t errorsBefore = LockFreeMapTestThread::m_errors.load();
+            const size_t timeoutsBefore = LockFreeMapTestValue::m_timeouts.load();
+#endif
             try
             {
                 passed = entry.m_run();
@@ -226,8 +255,9 @@ int LockFreeMapTestRunner::run(int argc, char** argv)
             LockFreeMapTestValue::m_pauseDestructorValue.store(-1);
             LockFreeMapTestLess::m_throw.store(0);
             LockFreeMapTestLess::m_throwConstructor.store(0);
-            passed = passed && LockFreeMapTestValue::m_live.load() == 0 && LockFreeMapTestThread::m_errors.load() == 0 &&
-                LockFreeMapTestValue::m_timeouts.load() == 0;
+            // 批次仍保留累计失败；单项只归属本项新增错误，避免一个故障污染后续结果。
+            passed = passed && LockFreeMapTestValue::m_live.load() == 0 &&
+                LockFreeMapTestThread::m_errors.load() == errorsBefore && LockFreeMapTestValue::m_timeouts.load() == timeoutsBefore;
 #endif
             failures += passed ? 0 : 1;
             written = (std::fprintf(report, "%u,%u,%s,%s\n", repeat + 1, *id, entry.m_name, passed ? "PASS" : "FAIL") > 0) && written;

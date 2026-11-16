@@ -66,14 +66,14 @@ int LockFreeMapHeaders()
         // 拥有者先关闭准入，再移除观察到的空桶
         // 并发关闭和提交需要上层的在途生产者协议
         bucket->m_accepting.store(false);
-        if (buckets.lockFreeMapErase(2, token) != LOCK_FREE_MAP_COMMITTED || producer->post(99) ||
+        if (buckets.tryEraseIf(2, token, true, false) != LOCK_FREE_MAP_COMMITTED || producer->post(99) ||
             producer->m_permits.load() != 0)
         {
             return 7;
         }
         bucket.reset();
         if (!buckets.set(2, std::shared_ptr<LockFreeMapTestBucket>(new LockFreeMapTestBucket)) ||
-            buckets.lockFreeMapErase(2, token) != LOCK_FREE_MAP_CONFLICT)
+            buckets.tryEraseIf(2, token, true, false) != LOCK_FREE_MAP_CONFLICT)
         {
             return 8;
         }

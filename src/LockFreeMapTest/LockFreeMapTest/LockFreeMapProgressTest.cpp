@@ -1,7 +1,11 @@
 ﻿#include "LockFreeMapProgressTest.h"
 #include "LockFreeMapBenchmarkClock.h"
 #include "LockFreeMapTestThread.h"
+#ifdef LOCK_FREE_MAP_BENCHMARK_PROGRESS
+#include "LockFreeMapBenchmark.h"
+#endif
 #include <algorithm>
+#include <chrono>
 #include <atomic>
 #include <thread>
 
@@ -281,13 +285,16 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
     {
         config.operationRecordLimit = 2;
     }
-    if (map.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK)
+    const LockFreeMapStatus configured = map.lockFreeMapConfigure(config);
+    if (configured != LOCK_FREE_MAP_OK)
     {
+        report << "progress_startup," << kNames[mode] << ",configure," << configured << ",FAIL\n";
         return 1;
     }
     const bool pipeline = mode == 4 || mode == 5 || mode == 7;
     if (!pipeline && !map.set(0, 0))
     {
+        report << "progress_startup," << kNames[mode] << ",initial_set,0,FAIL\n";
         return 1;
     }
     if (mode == 8)
@@ -296,6 +303,7 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
         {
             if (!map.set(static_cast<int>(id), static_cast<uint64_t>(id)))
             {
+                report << "progress_startup," << kNames[mode] << ",initial_set," << id << ",FAIL\n";
                 return 1;
             }
         }
@@ -308,7 +316,7 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
             results[id].m_items.reserve(1000000);
         }
     }
-    std::atomic<unsigned> ready(0);
+    std::atomic<unsigned> arrived(0), ready(0);
     std::atomic<bool> start(false);
     uint64_t begin = 0, deadline = 0;
     std::vector<LockFreeMapTestThread> threads;
@@ -317,8 +325,22 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
     for (unsigned id = 0; id < workers; ++id)
     {
         // 共同起跑；不以固定成功次数结束，防止快线程退出后掩盖慢线程长期失败
-        threads.emplace_back([&map, &results, &ready, &start, &begin, &deadline, mode, id]()
+        threads.emplace_back([&map, &results, &arrived, &ready, &start, &begin, &deadline, mode, id, workers]()
         {
+#ifdef LOCK_FREE_MAP_BENCHMARK_PROGRESS
+            // 只在独立性能入口显式选择时固定位置，失败仍打开起跑门并作为测试错误报告。
+            if (!LockFreeMapBenchmark::placeWorker(id))
+            {
+                ++results[id].m_errors;
+            }
+#endif
+            arrived.fetch_add(1);
+            // 起跑前先让已到达线程短暂休眠，避免它们持续占用处理器而妨碍新线程进入。
+            // 全部到达后再进入就绪门；计时从全部线程就绪之后开始，成功条件和时窗不变。
+            while (arrived.load() != workers && !start.load())
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
             ready.fetch_add(1);
             while (!start.load())
             {
@@ -351,6 +373,8 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
     {
         if (LockFreeMapBenchmarkClock::nanoseconds() >= startupLimit)
         {
+            // 起跑前失败也保留具体原因；清理守卫打开起跑门，工作线程看到零截止时间后退出。
+            report << "progress_startup," << kNames[mode] << ",ready_timeout," << ready.load() << ',' << workers << ",arrived=" << arrived.load() << ",FAIL\n";
             return 1;
         }
         std::this_thread::yield();
@@ -361,7 +385,12 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
     int errors = 0;
     for (unsigned id = 0; id < workers; ++id)
     {
-        errors += threads[id].join() ? 0 : 1;
+        const bool joined = threads[id].join();
+        if (!joined)
+        {
+            ++errors;
+            report << "progress_check," << kNames[mode] << ",join," << id << ",FAIL\n";
+        }
     }
     uint64_t finish = deadline;
     for (unsigned id = 0; id < workers; ++id)
@@ -395,7 +424,11 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
                     report << "progress_status," << kNames[mode] << ',' << id << ',' << status << ',' << result.m_statuses[status] << '\n';
                 }
             }
-            errors += counted == result.m_attempts ? 0 : 1;
+            if (counted != result.m_attempts)
+            {
+                ++errors;
+                report << "progress_check," << kNames[mode] << ",status_total," << id << ',' << counted << ',' << result.m_attempts << ",FAIL\n";
+            }
         }
         if (pipeline)
         {
@@ -419,6 +452,8 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
         }
         std::sort(produced.begin(), produced.end());
         std::sort(consumed.begin(), consumed.end());
+        // 以下核对均在所有工作线程退出后进行，诊断输出不进入吞吐计时区。
+        report << "progress_final_items," << kNames[mode] << ',' << produced.size() << ',' << consumed.size() << ',' << remaining.size() << '\n';
         if (mode == 7)
         {
             uint64_t erased = 0;
@@ -427,7 +462,9 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
                 erased += results[id].m_successes;
             }
             // erase 不输出条目编号，独立核对成功接纳数等于成功删除数加最终条目数
-            errors += produced.size() == erased + remaining.size() ? 0 : 1;
+            const bool balanced = produced.size() == erased + remaining.size();
+            errors += balanced ? 0 : 1;
+            report << "progress_balance," << kNames[mode] << ',' << produced.size() << ',' << erased << ',' << remaining.size() << ',' << balanced << '\n';
             errors += std::adjacent_find(produced.begin(), produced.end()) == produced.end() ? 0 : 1;
             for (size_t index = 0; index < consumed.size(); ++index)
             {
@@ -436,7 +473,10 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
         }
         else
         {
-            errors += produced == consumed && std::adjacent_find(produced.begin(), produced.end()) == produced.end() ? 0 : 1;
+            const bool balanced = produced == consumed;
+            const bool unique = std::adjacent_find(produced.begin(), produced.end()) == produced.end();
+            errors += balanced && unique ? 0 : 1;
+            report << "progress_balance," << kNames[mode] << ',' << balanced << ',' << unique << '\n';
         }
     }
     else if (mode == 10)
@@ -446,7 +486,10 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
         {
             expected += results[id].m_successes;
         }
-        errors += map.size() == 1 && map.get(0, value) && value == expected ? 0 : 1;
+        const size_t finalCount = map.size();
+        const bool found = finalCount == 1 && map.get(0, value);
+        errors += found && value == expected ? 0 : 1;
+        report << "progress_final_value," << kNames[mode] << ',' << finalCount << ',' << found << ',' << value << ',' << expected << '\n';
     }
     else if (mode == 8)
     {
@@ -460,11 +503,15 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
     else
     {
         uint64_t value = 99;
-        errors += map.size() == 1 && map.get(0, value) && value < (mode < 2 ? 8U : 4U) ? 0 : 1;
+        const size_t finalCount = map.size();
+        const bool found = finalCount == 1 && map.get(0, value);
+        errors += found && value < (mode < 2 ? 8U : 4U) ? 0 : 1;
+        report << "progress_final_value," << kNames[mode] << ',' << finalCount << ',' << found << ',' << value << '\n';
     }
     map.clearAndFreeMemory();
     const LockFreeMapStats stats = map.lockFreeMapStats();
     errors += stats.nodes.retained == 0 && stats.values.retained == 0 && stats.nodes.capacity == 0 && stats.values.capacity == 0 ? 0 : 1;
+    report << "progress_final_resources," << kNames[mode] << ',' << stats.nodes.retained << ',' << stats.values.retained << ',' << stats.nodes.capacity << ',' << stats.values.capacity << '\n';
     return errors;
 }
 
@@ -477,6 +524,22 @@ int LockFreeMapProgressTest::run(std::ostream& report, unsigned milliseconds)
     int errors = 0;
     const size_t threadErrors = LockFreeMapTestThread::m_errors.load();
     report << "kind,scenario,thread,role,attempts,successes,transient,errors,max_gap_ns,elapsed_ns\n";
+#ifdef LOCK_FREE_MAP_BENCHMARK_PROGRESS
+    report << "progress_placement," << (LockFreeMapBenchmark::m_pinWorkers ? "physical_cores" : "runtime") << '\n';
+    if (LockFreeMapBenchmark::m_pinWorkers)
+    {
+        // 把实际采用的八个掩码一并保存，禁止仅根据命令行声称两版使用同一放置方案。
+        if (LockFreeMapBenchmark::m_workerMasks.empty())
+        {
+            return 1;
+        }
+        for (unsigned id = 0; id < 8; ++id)
+        {
+            report << "progress_worker_cpu," << id << ',' <<
+                LockFreeMapBenchmark::m_workerMasks[id % LockFreeMapBenchmark::m_workerMasks.size()] << '\n';
+        }
+    }
+#endif
     try
     {
         for (unsigned mode = 0; mode < 11; ++mode)
@@ -487,14 +550,19 @@ int LockFreeMapProgressTest::run(std::ostream& report, unsigned milliseconds)
                 continue;
             }
 #endif
-            errors += scenario(report, mode, milliseconds);
+            const int scenarioErrors = scenario(report, mode, milliseconds);
+            report << "progress_scenario_errors," << mode << ',' << scenarioErrors << '\n';
+            errors += scenarioErrors;
         }
     }
     catch (...)
     {
         ++errors;
+        report << "progress_run_exception,1\n";
     }
-    errors += LockFreeMapTestThread::m_errors.load() == threadErrors ? 0 : 1;
+    const size_t finalThreadErrors = LockFreeMapTestThread::m_errors.load();
+    errors += finalThreadErrors == threadErrors ? 0 : 1;
+    report << "progress_thread_errors," << threadErrors << ',' << finalThreadErrors << '\n';
     report << "progress_errors," << errors << '\n';
     return report.good() ? errors : errors + 1;
 }

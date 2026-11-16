@@ -1,9 +1,129 @@
 ﻿#include "LockFreeMapTest.h"
 #include "LockFreeMap/LockFreeMapAPI.h"
 #include <map>
+#include <memory>
 #include <string>
 
 int LockFreeMapCompileExamples();
+
+/** 遍历回调中生成覆盖视图，再清空并维护；两层旧视图仍须完整有序
+@return 回调键值匹配独立固定序列，新根只含后插入项时true
+*/
+static bool CheckTraversalReentry()
+{
+    LockFreeMap<int, int> map;
+    if (!map.set(0, 0) || !map.set(2, 20) || !map.set(4, 40))
+    {
+        return false;
+    }
+    const int outerKeys[] = { 0, 2, 4 };
+    const int innerKeys[] = { 0, 1, 4 };
+    size_t outerSeen = 0, innerSeen = 0, innerCompleted = 0;
+    bool valid = true;
+    // 参数为外层保护视图中的借用，回调重入后仍只核对旧视图的固定序列。
+    const size_t outerCompleted = map.forEach([&](const int& key, const int& value)
+    {
+        valid = outerSeen < 3 && key == outerKeys[outerSeen] && value == key * 10 && valid;
+        if (++outerSeen == 1)
+        {
+            valid = map.erase(2) && map.set(1, 10) && valid;
+            // 参数为内层覆盖视图中的借用；清空、重插和回收不能更改本次键集合。
+            innerCompleted = map.forEach([&](const int& innerKey, const int& innerValue)
+            {
+                valid = innerSeen < 3 && innerKey == innerKeys[innerSeen] && innerValue == innerKey * 10 && valid;
+                if (++innerSeen == 1)
+                {
+                    map.clear();
+                    valid = map.set(9, 90) && valid;
+                    size_t released = 0;
+                    valid = map.lockFreeMapMaintain(4096, released) == LOCK_FREE_MAP_OK && valid;
+                }
+            });
+        }
+    });
+    int value = 0;
+    return valid && outerCompleted == 3 && outerSeen == 3 && innerCompleted == 3 && innerSeen == 3 &&
+        map.size() == 1 && map.get(9, value) && value == 90;
+}
+
+/** 保持旧遍历时向数组尾部追加，再建立新视图并继续追加与清空
+@return 两层遍历仍按各自固定键序列返回，后续新根和回收均正确时true
+*/
+static bool CheckTraversalAppend()
+{
+    LockFreeMap<int, int> map;
+    for (int key = 0; key < 3; ++key)
+    {
+        if (!map.set(key, key + 10))
+        {
+            return false;
+        }
+    }
+    size_t outerSeen = 0, innerSeen = 0, innerCompleted = 0;
+    bool valid = true;
+    // 旧视图不包含之后追加的键；持有它时内层新视图必须能读取新尾项。
+    const size_t outerCompleted = map.forEach([&](const int& key, const int& value)
+    {
+        valid = key == static_cast<int>(outerSeen) && value == key + 10 && valid;
+        if (++outerSeen == 1)
+        {
+            valid = map.set(3, 13) && valid;
+            // 同时保留两层视图后继续追加，检查新索引不依赖旧视图及时释放。
+            innerCompleted = map.forEach([&](const int& innerKey, const int& innerValue)
+            {
+                valid = innerKey == static_cast<int>(innerSeen) && innerValue == innerKey + 10 && valid;
+                if (++innerSeen == 1)
+                {
+                    valid = map.set(4, 14) && valid;
+                    map.clear();
+                    valid = map.set(9, 19) && valid;
+                    size_t released = 0;
+                    valid = map.lockFreeMapMaintain(4096, released) == LOCK_FREE_MAP_OK && valid;
+                }
+            });
+        }
+    });
+    int value = 0;
+    return valid && outerCompleted == 3 && outerSeen == 3 && innerCompleted == 4 && innerSeen == 4 &&
+        map.size() == 1 && map.get(9, value) && value == 19;
+}
+
+/** 整池释放必须销毁非平凡键和值，重复使用同一实例不遗留拥有引用
+@return 取消外部拥有者后资源仍被容器保有，释放后弱引用全部过期时true
+*/
+static bool CheckWholeStoreOwnership()
+{
+    LockFreeMap<std::shared_ptr<int>, int> keys;
+    LockFreeMap<int, std::shared_ptr<int>> values;
+    LockFreeMap<std::shared_ptr<int>, std::shared_ptr<int>> both;
+    for (int round = 0; round < 3; ++round)
+    {
+        std::shared_ptr<int> key(new int(71)), value(new int(93));
+        const std::weak_ptr<int> weakKey(key), weakValue(value);
+        if (!keys.set(key, 17) || !values.set(1, value) || !both.set(key, value))
+        {
+            return false;
+        }
+        key.reset();
+        value.reset();
+        if (weakKey.expired() || weakValue.expired())
+        {
+            return false;
+        }
+        keys.clearAndFreeMemory();
+        values.clearAndFreeMemory();
+        if (weakKey.expired() || weakValue.expired())
+        {
+            return false;
+        }
+        both.clearAndFreeMemory();
+        if (!weakKey.expired() || !weakValue.expired() || !keys.empty() || !values.empty() || !both.empty())
+        {
+            return false;
+        }
+    }
+    return true;
+}
 
 /** 以独立有序容器对照公开操作
 @return 失败时返回非零
@@ -13,6 +133,14 @@ int LockFreeMapBasic()
     int failed = 0;
     try
     {
+        const bool traversal = CheckTraversalReentry();
+        const bool ownership = CheckWholeStoreOwnership();
+        const bool appended = CheckTraversalAppend();
+        if (!traversal || !ownership || !appended)
+        {
+            std::fprintf(LockFreeMapTestReport::m_file, "basic_failure,stage=lifetime,traversal=%d,ownership=%d,append=%d\n", traversal, ownership, appended);
+            return 1;
+        }
         // 延迟构造在配置前不建立池；失败配置不能使实例进入半初始化状态。
         LockFreeMap<int, int> deferred(false);
         LockFreeMapToken unused;

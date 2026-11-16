@@ -48,4 +48,14 @@
     <None Include="LockFreeMapWasmRuntime.cpp" />
     <None Include="LockFreeMapWasmHeapViews.js" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LockFreeMapRetryTests.h" />
+    <ClInclude Include="LockFreeMapSearchTest.h" />
+    <ClCompile Include="LockFreeMapSearchTest.cpp" />
+    <ClCompile Include="LockFreeMapRetryTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="LockFreeMapModuleTest.cpp" />
+    <ClInclude Include="LockFreeMapModuleTest.h" />
+  </ItemGroup>
 </Project>
