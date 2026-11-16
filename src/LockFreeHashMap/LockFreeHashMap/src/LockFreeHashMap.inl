@@ -92,8 +92,11 @@ m_cleanupBucket(0)
         return;
     }
     LockFreeHashMapLink pointer(0);
-    if (!pointer.isLockFree() || !m_generation.is_lock_free() || !m_countValid.is_lock_free())
+    if (std::alignment_of<K>::value > std::alignment_of<std::max_align_t>::value ||
+        std::alignment_of<V>::value > std::alignment_of<std::max_align_t>::value ||
+        !pointer.isLockFree() || !m_generation.is_lock_free() || !m_countValid.is_lock_free())
     {
+        // C++11标准分配器不能保证扩展对齐；池内对齐不能替快照和导出数组提供保证。
         m_status = LockFreeHashMapUnsupported;
         return;
     }
@@ -929,7 +932,45 @@ LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMap<K, V, H, E>::get(const K& key,
 template <typename K, typename V, typename H, typename E>
 LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMap<K, V, H, E>::contains(const K& key) const
 {
-    return m_status == LockFreeHashMapOk && lookupValue(key, nullptr, BuiltinHash());
+    // v120的is_copy_assignable可能误判已删除的赋值；仅对明确可赋值的常用类型复用旧路径。
+    typedef std::integral_constant<bool, (std::is_scalar<V>::value && !std::is_const<V>::value) ||
+        std::is_same<V, std::string>::value || LockFreeHashMapSharedRead<V>::value> CommonValue;
+    return m_status == LockFreeHashMapOk && containsValue(key, CommonValue());
+}
+
+template <typename K, typename V, typename H, typename E>
+LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMap<K, V, H, E>::containsValue(const K& key, std::true_type assignable) const
+{
+    (void)assignable;
+    return lookupValue(key, nullptr, BuiltinHash());
+}
+
+template <typename K, typename V, typename H, typename E>
+bool LockFreeHashMap<K, V, H, E>::containsValue(const K& key, std::false_type assignable) const
+{
+    (void)assignable;
+    try
+    {
+        // 只查询节点而不实例化值赋值；不存在的桶不借用保护记录。
+        size_t hash = hashKey(key, IntegralHash());
+        if (m_buckets[hash & (m_bucketCount - 1)].load() == 0)
+        {
+            return false;
+        }
+        const bool standardKey = std::is_same<E, std::equal_to<K>>::value &&
+            (std::is_integral<K>::value || std::is_same<K, std::string>::value);
+        if (standardKey)
+        {
+            LockFreeHashMapReadGuard guard(m_storage->epoch());
+            return guard.record() != nullptr && read(key, hash, m_generation.load()) != nullptr;
+        }
+        LockFreeHashMapEpochGuard guard(m_storage->epoch());
+        return guard.record() != nullptr && read(key, hash, m_generation.load()) != nullptr;
+    }
+    catch (...)
+    {
+        return false;
+    }
 }
 
 template <typename K, typename V, typename H, typename E>

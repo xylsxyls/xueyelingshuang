@@ -77,6 +77,7 @@ public:
     explicit LockFreeHashMap(size_t bucketCount = 1024);
 
     /** 直接按指定参数建立节点池，避免先构造默认池再替换；失败由 status 查询
+    @note 键和值对齐超出std::max_align_t时返回Unsupported，避免C++11快照和导出分配错位
     @param [in] bucketCount 桶数量，0 使用 1024，其余向上取整为 2 的幂
     @param [in] config 池容量和策略，构造期间复制，规则与 configurePool 一致
     */
@@ -317,6 +318,20 @@ public:
     size_t retainedNodeCount() const;
 
 private:
+    /** 内置标量、标准字符串及共享指针沿用已有存在性查询路径，不增加值复制
+    @param [in] key 调用期间借用的查询键
+    @param [in] assignable 已知常用类型的编译期标记，不依赖旧工具链对删除赋值的探测
+    @return 找到为true，不存在或查询失败为false
+    */
+    bool containsValue(const KeyType& key, std::true_type assignable) const;
+
+    /** 其他类型只查询节点，避免实例化与存在性无关的值赋值表达式
+    @param [in] key 调用期间借用的查询键
+    @param [in] assignable 通用类型的编译期标记，允许复制构造但不可赋值的类型
+    @return 找到为true；保护接纳失败或用户哈希、比较异常为false
+    */
+    bool containsValue(const KeyType& key, std::false_type assignable) const;
+
     /** 仅内置整数及默认比较器使用整数混合，避免旧标准库逐字节散列
     @param [in] key 完整整数键，高低位都参与混合
     @param [in] integral 编译期选择标记
