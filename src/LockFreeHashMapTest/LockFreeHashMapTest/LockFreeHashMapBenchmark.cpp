@@ -6,6 +6,7 @@
 #include <iostream>
 #include <limits>
 #include <new>
+#include <stdexcept>
 #if defined(_WIN32)
 #define NOMINMAX
 #include <Windows.h>
@@ -24,8 +25,10 @@ double LockFreeHashMapBenchmark::timestamp()
     {
         return double(ticks.QuadPart) / double(frequency.QuadPart);
     }
-#endif
+    throw std::runtime_error("基础计量时钟失败");
+#else
     return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+#endif
 }
 
 /** 追踪本测试进程的实际申请，故障注入只属于测试程序
@@ -121,13 +124,19 @@ int main()
                     latencies[i] = (LockFreeHashMapBenchmark::timestamp() - begin) * 1000000;
                 }
                 double elapsed = LockFreeHashMapBenchmark::timestamp() - start;
+                if (elapsed <= 0 || map.size() != (mode == 3 ? size_t(0) : size_t(64)))
+                {
+                    std::cerr << "BENCH invalid timing or final entry count" << std::endl;
+                    return 1;
+                }
                 std::sort(latencies.begin(), latencies.end());
                 size_t occupied = map.retainedNodeCount();
                 size_t bytes = LockFreeHashMapBenchmark::s_bytes - before;
                 size_t peak = LockFreeHashMapBenchmark::s_peakBytes - before;
                 uint64_t allocations = LockFreeHashMapBenchmark::s_allocations - beforeAllocations;
                 map.clear();
-                std::cout << "BENCH mode=" << mode << " buckets=" << buckets << " ops_per_second=" << 10000 / elapsed
+                std::cout << "BENCH mode=" << mode << " buckets=" << buckets << " cycles_per_second=" << 10000 / elapsed
+                    << " calls_per_cycle=" << (mode == 3 ? 3 : 2) << " ops_per_second=" << 10000 * (mode == 3 ? 3 : 2) / elapsed
                     << " p50_us=" << latencies[5000] << " p95_us=" << latencies[9500] << " p99_us=" << latencies[9900]
                     << " retained_units=" << occupied << " retained_bytes=" << bytes << " peak_bytes=" << peak
                     << " allocations=" << allocations << " after_clear_units=" << map.retainedNodeCount()

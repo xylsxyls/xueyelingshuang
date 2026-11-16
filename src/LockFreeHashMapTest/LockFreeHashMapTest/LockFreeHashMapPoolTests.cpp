@@ -2,6 +2,7 @@
 #include "LockFreeHashMapTestThread.h"
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <vector>
 #include <thread>
 #include <chrono>
@@ -14,6 +15,8 @@ std::atomic<bool> LockFreeHashMapPoolTestValue::s_resume(false);
 bool LockFreeHashMapPoolTestAllocation::s_tracking = false;
 LOCKFREEHASHMAP_TEST_ALIGN_64 std::atomic<int64_t> LockFreeHashMapPoolTestAllocation::s_live(0);
 LOCKFREEHASHMAP_TEST_ALIGN_64 std::atomic<int64_t> LockFreeHashMapPoolTestAllocation::s_fail(-1);
+std::atomic<bool> LockFreeHashMapPoolTestAllocation::s_failAll(false);
+std::atomic<size_t> LockFreeHashMapPoolTestAllocation::s_failSize(0);
 size_t LockFreeHashMapPoolTests::s_checks = 0;
 size_t LockFreeHashMapPoolTests::s_failed = 0;
 
@@ -23,7 +26,13 @@ size_t LockFreeHashMapPoolTests::s_failed = 0;
 */
 void* operator new(size_t size)
 {
-    int64_t remaining = LockFreeHashMapPoolTestAllocation::s_tracking ? LockFreeHashMapPoolTestAllocation::s_fail.load() : -1;
+    if (LockFreeHashMapPoolTestAllocation::s_tracking && LockFreeHashMapPoolTestAllocation::s_failAll.load())
+    {
+        throw std::bad_alloc();
+    }
+    size_t selectedSize = LockFreeHashMapPoolTestAllocation::s_failSize.load();
+    int64_t remaining = LockFreeHashMapPoolTestAllocation::s_tracking && (selectedSize == 0 || selectedSize == size) ?
+        LockFreeHashMapPoolTestAllocation::s_fail.load() : -1;
     if (remaining >= 0 && LockFreeHashMapPoolTestAllocation::s_fail.fetch_sub(1) == 0)
     {
         throw std::bad_alloc();
@@ -216,6 +225,31 @@ void LockFreeHashMapPoolTests::boundaries()
 {
     typedef LockFreeHashMapPoolTestValue Value;
     typedef LockFreeHashMapPoolSlot<Value> Slot;
+    {
+        // 用真实的第二次申请触发内部reclaim和增长，核对辅助保护不会污染外层提示。
+        LockFreeHashMapPoolConfig config;
+        config.initialCapacity = 1;
+        config.maximumCapacity = 2;
+        config.protectionRecordCount = 2;
+        LockFreeHashMapPool<Value> pool;
+        check(pool.initialize(config) == LockFreeHashMapOk, "nested reclaim hint fixture initialized");
+        LockFreeHashMapEpoch::remember(0);
+        {
+            LockFreeHashMapEpochGuard guard(pool.epoch());
+            check(guard.record() != nullptr, "nested reclaim hint fixture protected");
+            LockFreeHashMapStatus status;
+            typedef LockFreeHashMapPoolReturn<Value> Return;
+            std::unique_ptr<Slot, Return> first(pool.acquire(*guard.record(), status), Return(&pool));
+            check(first.get() != nullptr && status == LockFreeHashMapOk, "first reserved slot fills initial capacity");
+            std::unique_ptr<Slot, Return> second(pool.acquire(*guard.record(), status), Return(&pool));
+            check(second.get() != nullptr && status == LockFreeHashMapOk && second.get() != first.get() &&
+                LockFreeHashMapEpoch::hint() == 0 && guard.record() == pool.epoch()->record(0),
+                "real nested reclaim and growth retain the outer record hint");
+        }
+        LockFreeHashMapPoolStats stats = pool.stats();
+        check(stats.capacity == 2 && stats.reusableFree == 2 && stats.occupied == 0,
+            "hint fixture returns both unconstructed slots without retaining resources");
+    }
     const size_t capacities[] = { 1, 2, 63, 64, 65, 127, 128, 129, 65535, 65536 };
     for (size_t test = 0; test < sizeof(capacities) / sizeof(capacities[0]); ++test)
     {
@@ -228,6 +262,7 @@ void LockFreeHashMapPoolTests::boundaries()
         slots.reserve(config.initialCapacity);
         {
             LockFreeHashMapEpochGuard guard(pool.epoch());
+            check(guard.record() != nullptr, "池测试操作已取得保护记录");
             LockFreeHashMapStatus status;
             for (size_t i = 0; i < config.initialCapacity; ++i)
             {
@@ -257,6 +292,7 @@ void LockFreeHashMapPoolTests::boundaries()
         check(pool.stats().budget == 0 && pool.stats().blockCount == 0, "explicit release bypasses automatic floor");
         {
             LockFreeHashMapEpochGuard guard(pool.epoch());
+            check(guard.record() != nullptr, "池测试操作已取得保护记录");
             LockFreeHashMapStatus status;
             Slot* slot = pool.acquire(*guard.record(), status);
             check(slot != nullptr && status == LockFreeHashMapOk, "pool reusable after explicit release");
@@ -395,6 +431,7 @@ void LockFreeHashMapPoolTests::boundaries()
         check(pool.initialize(config) == LockFreeHashMapOk, "bounded reclaim pool initialization");
         {
             LockFreeHashMapEpochGuard guard(pool.epoch());
+            check(guard.record() != nullptr, "池测试操作已取得保护记录");
             LockFreeHashMapStatus status;
             for (size_t i = 0; i < 4096; ++i)
             {
@@ -443,6 +480,7 @@ void LockFreeHashMapPoolTests::exceptions()
         check(pool.initialize(config) == LockFreeHashMapOk, "empty pool initialization");
         int64_t before = LockFreeHashMapPoolTestAllocation::s_live.load();
         LockFreeHashMapEpochGuard guard(pool.epoch());
+        check(guard.record() != nullptr, "池测试操作已取得保护记录");
         LockFreeHashMapStatus status;
         LockFreeHashMapPoolTestAllocation::s_fail.store(fail);
         LockFreeHashMapPoolSlot<Value>* slot = pool.acquire(*guard.record(), status);
@@ -491,6 +529,7 @@ void LockFreeHashMapPoolTests::policies()
         LockFreeHashMapPool<Value> pool;
         check(pool.initialize(config) == LockFreeHashMapOk, "policy pool initialization");
         LockFreeHashMapEpochGuard guard(pool.epoch());
+        check(guard.record() != nullptr, "池测试操作已取得保护记录");
         LockFreeHashMapStatus status;
         LockFreeHashMapPoolSlot<Value>* first = pool.acquire(*guard.record(), status);
         check(first != nullptr && calls == threshold && pool.stats().budget == 1 + threshold, "zero and positive threshold trigger differ");
@@ -520,6 +559,7 @@ void LockFreeHashMapPoolTests::policies()
         LockFreeHashMapPool<Value> pool;
         check(pool.initialize(config) == LockFreeHashMapOk, "refusing policy initialization");
         LockFreeHashMapEpochGuard guard(pool.epoch());
+        check(guard.record() != nullptr, "池测试操作已取得保护记录");
         LockFreeHashMapStatus status;
         check(pool.acquire(*guard.record(), status) == nullptr && status == (mode == 0 ? LockFreeHashMapGrowthDeclined : LockFreeHashMapUserException) &&
             pool.stats().budget == 0, "policy refusal and exception remain distinct");
@@ -538,6 +578,7 @@ void LockFreeHashMapPoolTests::paused()
     LockFreeHashMapPoolSlot<Value>* slot = nullptr;
     {
         LockFreeHashMapEpochGuard guard(pool.epoch());
+        check(guard.record() != nullptr, "池测试操作已取得保护记录");
         LockFreeHashMapStatus status;
         slot = pool.acquire(*guard.record(), status);
         if (slot == nullptr)
@@ -567,6 +608,7 @@ void LockFreeHashMapPoolTests::paused()
         }
         {
             LockFreeHashMapEpochGuard guard(pool.epoch());
+            check(guard.record() != nullptr, "暂停读者期间主线程仍取得独立保护记录");
             pool.retire(slot);
             check(pool.reclaim() == 0 && Value::s_live.load() == 1, "paused reader pins old payload");
             LockFreeHashMapStatus status;
@@ -615,6 +657,10 @@ void LockFreeHashMapPoolTests::contention()
                     if (slot == nullptr)
                     {
                         refused.fetch_add(1);
+                        if (status != LockFreeHashMapCapacityLimit)
+                        {
+                            errors.fetch_add(1);
+                        }
                     }
                     else
                     {
@@ -670,6 +716,7 @@ void LockFreeHashMapPoolTests::shrinking()
     slots.reserve(256);
     {
         LockFreeHashMapEpochGuard guard(pool.epoch());
+        check(guard.record() != nullptr, "池测试操作已取得保护记录");
         LockFreeHashMapStatus status;
         for (size_t i = 0; i < 256; ++i)
         {
@@ -686,10 +733,12 @@ void LockFreeHashMapPoolTests::shrinking()
     std::this_thread::sleep_for(std::chrono::milliseconds(4));
     {
         LockFreeHashMapEpochGuard guard(pool.epoch());
+        check(guard.record() != nullptr, "池测试操作已取得保护记录");
         LockFreeHashMapStatus status;
         for (size_t i = 0; i < slots.size(); ++i)
         {
             slots[i] = pool.acquire(*guard.record(), status);
+            check(slots[i] != nullptr && status == LockFreeHashMapOk, "空闲计时重置前每个槽确实重新使用");
         }
         for (size_t i = 0; i < slots.size(); ++i)
         {
@@ -702,7 +751,7 @@ void LockFreeHashMapPoolTests::shrinking()
     pool.shrink();
     pool.shrink();
     check(pool.stats().capacity == 64 && pool.stats().budget == 64 && pool.stats().successfulGrowCount == 3, "three idle blocks freed with floor and history preserved");
-    std::atomic<bool> finish(false);
+    std::atomic<bool> finish(false), active(false);
     LOCKFREEHASHMAP_TEST_ALIGN_64 std::atomic<uint64_t> completed(0), errors(0);
     // 主线程是唯一 shrink 调用者；工作线程并发申请、归还和读取统计
     LockFreeHashMapTestThread worker([&]()
@@ -741,14 +790,29 @@ void LockFreeHashMapPoolTests::shrinking()
             {
                 errors.fetch_add(1);
             }
+            active.store(true);
         }
     });
     try
     {
+        const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (!active.load() && std::chrono::steady_clock::now() < deadline)
+        {
+            std::this_thread::yield();
+        }
+        check(active.load(), "allocation worker has completed its first real cycle before maintenance stress");
+        const uint64_t beforeMaintenance = completed.load();
         for (size_t i = 0; i < 1000; ++i)
         {
             pool.shrink();
         }
+        // 不能只把进入维护阶段以前的成功当作并发期间的进展。
+        while (completed.load() == beforeMaintenance && std::chrono::steady_clock::now() < deadline)
+        {
+            pool.shrink();
+            std::this_thread::yield();
+        }
+        check(completed.load() > beforeMaintenance, "allocation progresses after concurrent maintenance begins");
         finish.store(true);
         worker.join();
     }

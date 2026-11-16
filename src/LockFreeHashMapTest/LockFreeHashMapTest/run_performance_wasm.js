@@ -31,28 +31,67 @@ function run(program, args, directory, log, env, report)
 }
 
 /** 严格读取唯一结果行，校验身份、实际调用数、时长和数据错误数 */
-function read(log, spec, repeats)
+function parse(text, spec, repeats)
 {
-    const lines = fs.readFileSync(log, 'utf8').split(/\r?\n/).filter(line => line.startsWith('PERF '));
-    if (lines.length !== 1) throw new Error('结果行数量错误：' + log);
-    const result = {};
+    const lines = text.split(/\r?\n/).filter(line => line.startsWith('PERF '));
+    if (lines.length !== 1) throw new Error('结果行数量错误');
+    const result = Object.create(null);
     for (const field of lines[0].slice(5).split(' '))
     {
         const parts = field.split('=');
-        if (parts.length !== 2 || Object.prototype.hasOwnProperty.call(result, parts[0])) throw new Error('重复或错误字段');
+        if (parts.length !== 2 || !parts[0] || !parts[1] || Object.prototype.hasOwnProperty.call(result, parts[0])) throw new Error('重复或错误字段');
         result[parts[0]] = parts[0] === 'name' ? parts[1] : Number(parts[1]);
         if (parts[0] !== 'name' && (!Number.isFinite(result[parts[0]]) || result[parts[0]] < 0)) throw new Error('非法数值');
     }
     const calls = spec.iterations * repeats * spec.calls_per_iteration;
-    const required = ['id', 'repeats', 'calls', 'seconds', 'ops', 'p50_us', 'p95_us', 'p99_us', 'samples', 'errors', 'extra_calls', 'attempted_calls'];
+    const iterations = spec.iterations / spec.threads;
+    // 集合导出和clear逐次采样，其余场景在独立延迟批次中按127间隔采样。
+    // operation是C++目录协议：10/11/12为keys/values/pairs，13为clear。
+    const whole = spec.operation >= 10 && spec.operation <= 13;
+    const samples = whole ? spec.iterations : spec.threads * (iterations < 2048 ? iterations : Math.floor((iterations - 1) / 127) + 1);
+    const required = ['id', 'repeats', 'calls', 'seconds', 'ops', 'p50_us', 'p95_us', 'p99_us', 'samples', 'errors', 'extra_calls', 'attempted_calls', 'batch_min_s', 'batch_max_s', 'output_string_capacity', 'state_tail_padding', 'collection_validation', 'conditional_interfaces'];
     if (required.some(name => !Object.prototype.hasOwnProperty.call(result, name)) || result.id !== spec.id ||
-        result.name !== spec.name || result.repeats !== repeats || result.calls !== calls || result.errors !== 0 || result.attempted_calls !== calls + result.extra_calls ||
-        result.seconds <= 0 || result.ops <= 0 || result.samples < 1 || result.p50_us > result.p95_us ||
-        result.p95_us > result.p99_us || Math.abs(result.ops * result.seconds / calls - 1) > 0.000001)
+        result.name !== spec.name || result.repeats !== repeats || result.calls !== calls || result.errors !== 0 || result.attempted_calls !== calls + result.extra_calls || result.output_string_capacity !== 512 || result.state_tail_padding !== 64 || result.collection_validation !== 2 ||
+        ![0, 1].includes(result.conditional_interfaces) || (spec.operation >= 15 && result.conditional_interfaces !== 1) ||
+        !Number.isSafeInteger(calls) || calls <= 0 || !Number.isSafeInteger(iterations) || iterations <= 0 ||
+        !Number.isSafeInteger(result.extra_calls) || !Number.isSafeInteger(result.attempted_calls) ||
+        result.seconds <= 0 || result.ops <= 0 || result.samples !== samples || result.p50_us > result.p95_us ||
+        result.p95_us > result.p99_us || result.batch_min_s <= 0 || result.batch_min_s > result.batch_max_s ||
+        result.seconds < result.batch_min_s * repeats * 0.999999 || result.seconds > result.batch_max_s * repeats * 1.000001 ||
+        Math.abs(result.ops * result.seconds / calls - 1) > 0.000001)
     {
-        throw new Error('结果合同校验失败：' + log);
+        throw new Error('结果合同校验失败');
     }
     return result;
+}
+
+/** 使用独立文本反例验证采样数、调用数和结果唯一性，不启动被测库 */
+function selftest()
+{
+    const spec = { id: 1, name: 'fixture', iterations: 4096, threads: 2, calls_per_iteration: 1, operation: 0 };
+    const valid = 'PERF id=1 name=fixture repeats=1 calls=4096 seconds=1 ops=4096 p50_us=1 p95_us=2 p99_us=3 samples=34 errors=0 extra_calls=0 attempted_calls=4096 batch_min_s=1 batch_max_s=1 output_string_capacity=512 state_tail_padding=64 collection_validation=2 conditional_interfaces=1';
+    parse(valid, spec, 1);
+    parse(valid.replace('conditional_interfaces=1', 'conditional_interfaces=0'), spec, 1);
+    const conditional = { ...spec, operation: 15 };
+    parse(valid, conditional, 1);
+    let rejectedCapability = false;
+    try { parse(valid.replace('conditional_interfaces=1', 'conditional_interfaces=0'), conditional, 1); }
+    catch (error) { rejectedCapability = true; }
+    if (!rejectedCapability) throw new Error('缺少条件接口的程序未被拒绝');
+    for (const invalid of [valid.replace(' output_string_capacity=512', ''), valid.replace('output_string_capacity=512', 'output_string_capacity=0'),
+        valid.replace(' state_tail_padding=64', ''), valid.replace('state_tail_padding=64', 'state_tail_padding=0'),
+        valid.replace(' collection_validation=2', ''), valid.replace('collection_validation=2', 'collection_validation=1'),
+        valid.replace(' conditional_interfaces=1', ''), valid.replace('conditional_interfaces=1', 'conditional_interfaces=2'),
+        valid.replace('samples=34', 'samples=1'), valid.replace('extra_calls=0', 'extra_calls=0.5').replace('attempted_calls=4096', 'attempted_calls=4096.5'),
+        valid + '\n' + valid, valid.replace(' errors=0', ''), valid.replace('seconds=1', 'seconds=0'), valid.replace('errors=0', 'errors=1'),
+        valid.replace('batch_min_s=1 batch_max_s=1', 'batch_min_s=2 batch_max_s=2')])
+    {
+        let rejected = false;
+        try { parse(invalid, spec, 1); } catch (error) { rejected = true; }
+        if (!rejected) throw new Error('结果解析反例未被拒绝');
+    }
+    process.stdout.write('WASM_PERFORMANCE_SELFTEST passed=1\n');
+    return 0;
 }
 
 /** 使用所有轮次的中位数，不剔除异常低值 */
@@ -113,10 +152,12 @@ function main()
             const directory = path.join(output, 'wasm' + bits + '-' + version);
             fs.mkdirSync(directory);
             const program = path.join(directory, 'performance.js');
+            // 大批满表在计时外触发共享内存增长；保留SDK的增长性能提示，其他警告仍按错误处理。
             const args = ['-B', path.join(emscripten, 'em++.py'), '-std=c++11', '-O2', '-DNDEBUG', '-DSTATIC_LIB',
-                '-Wall', '-Wextra', '-Werror', '-fexceptions', '-I' + library, '-pthread', '-sPTHREAD_POOL_SIZE=8',
+                '-Wall', '-Wextra', '-Werror', '-Wno-error=pthreads-mem-growth', '-fexceptions', '-I' + library, '-pthread', '-sPTHREAD_POOL_SIZE=8',
                 '-sPROXY_TO_PTHREAD=1', '-sDISABLE_EXCEPTION_CATCHING=0', '-sENVIRONMENT=node', '-sEXIT_RUNTIME=1',
-                '-sSTACK_SIZE=1048576', '-sINITIAL_MEMORY=134217728', '-sABORTING_MALLOC=0'];
+                '-sSTACK_SIZE=1048576', '-sINITIAL_MEMORY=134217728', '-sALLOW_MEMORY_GROWTH=1',
+                '-sMAXIMUM_MEMORY=2147483648', '-sABORTING_MALLOC=0'];
             if (bits === 64) args.push('-sMEMORY64=1');
             if (version === 'extended') args.push('-DLOCKFREEHASHMAP_PERF_CURRENT');
             args.push(...['LockFreeHashMapPerformance.cpp', 'LockFreeHashMapPerfModels.cpp', 'LockFreeHashMapTestThread.cpp'].map(file => path.join(__dirname, file)), '-o', program);
@@ -133,7 +174,7 @@ function main()
                 const label = version === 0 ? 'original' : 'current';
                 const log = path.join(output, 'wasm' + bits + '-id' + spec.id + '-' + label + '-r' + round + '.log');
                 run(node, [programs[spec.current_only ? 2 : version], String(repeats * 1000 + spec.id)], output, log, env, report);
-                const result = read(log, spec, repeats);
+                const result = parse(fs.readFileSync(log, 'utf8'), spec, repeats);
                 raw.push([bits, spec.id, spec.name, round === 0 ? 'pilot' : 'measured', label, round, repeats,
                     result.ops, result.seconds, result.p50_us, result.p95_us, result.p99_us, result.samples, result.extra_calls, result.attempted_calls, log].join(','));
                 fs.writeFileSync(path.join(output, 'runs.csv'), raw.join('\n') + '\n');
@@ -167,7 +208,7 @@ function main()
 
 try
 {
-    process.exitCode = main();
+    process.exitCode = process.argv.length === 3 && process.argv[2] === '--selftest' ? selftest() : main();
 }
 catch (error)
 {

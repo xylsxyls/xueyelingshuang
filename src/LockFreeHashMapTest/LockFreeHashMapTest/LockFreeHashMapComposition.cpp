@@ -20,7 +20,8 @@ int main()
         bool ok = queue.pop(&value) && value == 7 && first.set(1, value) && ordered.set(2, value) &&
             second.set(3, std::make_shared<int>(value)) && sizeof(Semaphore) > 0;
         LockFreeHashMap<int, std::shared_ptr<int>>::Snapshot owned;
-        ok = ok && second.take(3, owned).m_committed && **owned.m_value == 7 && ordered.value(2) == 7;
+        ok = ok && second.take(3, owned).m_committed && owned.m_value && *owned.m_value &&
+            **owned.m_value == 7 && ordered.value(2) == 7;
         std::cout << "COMPOSITION four_headers=1 queue_map_runtime=" << ok << " semaphore_runtime=NOT_RUN" << std::endl;
         return ok ? 0 : 1;
     }

@@ -13,7 +13,7 @@ public:
     @param [in] programs 先放两版或三版公共性能，再按同一顺序放内存程序，末尾放当前新增接口专项程序
     @param [in] prefix 新输出前缀，父目录须存在
     @param [in] rounds 1 至 9 轮
-    @param [in] affinityMask 0 默认调度，非零为 Windows 共用 CPU 掩码
+    @param [in] affinityMask 0默认调度；非零时单线程取其中最低有效位，多线程使用完整共用掩码
     @param [in] first 第一个配置编号，1 开始
     @param [in] last 最后一个配置编号，0 表示全部；局部运行不重复内存目录
     @param [in] revisions 两个近期修订均支持新接口时，把新增接口也纳入两版比较
@@ -49,6 +49,13 @@ public:
     */
     static bool selftest();
 private:
+    /** 单线程固定同一个可用逻辑核心，避免两版落在不同类型的核心上
+    @param [in] threads 本项实际工作线程数，目录已校验为正数
+    @param [in] allowed 调用方允许的CPU集合，零表示默认调度
+    @return 单线程的最低有效位，或多线程的原始集合；不会增加未允许的核心
+    */
+    static unsigned caseAffinity(int32_t threads, unsigned allowed);
+
     /** 读取本次性能测试显式优先级选项，缺省不提升；非法环境值拒绝执行
     @return LOCKFREEHASHMAP_PERF_ABOVE_NORMAL为1时返回true，为0或未设置时返回false
     */

@@ -31,6 +31,72 @@ function run(program, args, directory, logName, env, timeout, report)
     return result.status === 0 && !result.error && !result.signal;
 }
 
+/** 检查有序且唯一的用例身份、资源行、终态及非零检查数，拒绝相互矛盾的结果 */
+function verifyCase(log, id)
+{
+    let stage = 0;
+    for (const line of log.split(/\r?\n/))
+    {
+        if (line.startsWith('BEGIN '))
+        {
+            if (stage !== 0 || line !== 'BEGIN id=' + id) return false;
+            stage = 1;
+        }
+        else if (line.startsWith('RESOURCES '))
+        {
+            const deltas = line.split(/\s+/).filter(field => field.startsWith('allocation_delta='));
+            if (stage !== 1 || deltas.length !== 1 || deltas[0] !== 'allocation_delta=0') return false;
+            stage = 2;
+        }
+        else if (line.startsWith('END '))
+        {
+            if (stage !== 2 || line !== 'END id=' + id + ' result=PASS') return false;
+            stage = 3;
+        }
+        else if (line.startsWith('RESULT '))
+        {
+            if (stage !== 3 || !/^RESULT checks=[1-9]\d* failed=0$/.test(line)) return false;
+            stage = 4;
+        }
+    }
+    return stage === 4;
+}
+
+/** 组合模块的每条汇总均须通过，指定资源计数只能出现一次并为零 */
+function verifyModule(log, mode)
+{
+    const lines = log.split(/\r?\n/);
+    const summaries = lines.filter(line => line.startsWith('MODULE_RESULT '));
+    if (summaries.length === 0 || summaries.some(line => !/^MODULE_RESULT checks=[1-9]\d* failed=0$/.test(line))) return false;
+    const counters = mode === 'epoch' ? [] : mode === 'pool' ? ['POOL_ALLOCATION_DELTA'] : ['POOL_ALLOCATION_DELTA', 'REWRITE_ALLOCATION_DELTA'];
+    return counters.every(name =>
+    {
+        const values = lines.filter(line => line.startsWith(name + ' '));
+        return values.length === 1 && values[0] === name + ' 0';
+    });
+}
+
+/** 日志判定反例不启动被测库，证明失败、重复终态及缺少资源行不能误报通过 */
+function selftest()
+{
+    const valid = 'BEGIN id=1\nRESOURCES allocation_delta=0 cpu_seconds=0\nEND id=1 result=PASS\nRESULT checks=1 failed=0\n';
+    if (!verifyCase(valid, 1) || verifyCase(valid, 2)) throw new Error('用例身份自检失败');
+    for (const invalid of [valid + 'END id=1 result=FAIL\n', valid + 'RESULT checks=1 failed=0\n',
+        valid.replace('allocation_delta=0', 'allocation_delta=0 allocation_delta=1'), valid.replace('checks=1', 'checks=0'),
+        valid.replace('RESOURCES allocation_delta=0 cpu_seconds=0\n', '')])
+    {
+        if (verifyCase(invalid, 1)) throw new Error('错误用例日志被接受');
+    }
+    const module = 'MODULE_RESULT checks=2 failed=0\nPOOL_ALLOCATION_DELTA 0\nREWRITE_ALLOCATION_DELTA 0\n';
+    if (!verifyModule(module, 'rewrite') || verifyModule('MODULE_RESULT checks=1 failed=1\n' + module, 'rewrite') ||
+        verifyModule(module + 'POOL_ALLOCATION_DELTA 1\n', 'rewrite') || verifyModule('MODULE_RESULT checks=0 failed=0\n', 'epoch'))
+    {
+        throw new Error('模块日志自检失败');
+    }
+    process.stdout.write('WASM_RUNNER_SELFTEST passed=1\n');
+    return 0;
+}
+
 /** 校验限定输出根，隔离缓存，编译八种 Wasm 配置并检查完整用例结束证据 */
 function main()
 {
@@ -74,7 +140,7 @@ function main()
     const env = { ...process.env, EM_CONFIG: config, EM_CACHE: cache, PYTHONDONTWRITEBYTECODE: '1' };
     const library = path.resolve(__dirname, '../../LockFreeHashMap/LockFreeHashMap/src');
     const names = mode === 'cases' ? ['LockFreeHashMapTests', 'LockFreeHashMapMigration', 'LockFreeHashMapBoundaries',
-        'LockFreeHashMapOptimizations', 'LockFreeHashMapTestThread', 'LockFreeHashMapTest'] :
+        'LockFreeHashMapOptimizations', 'LockFreeHashMapRetryTests', 'LockFreeHashMapTestThread', 'LockFreeHashMapTest'] :
         mode === 'rewrite' ? ['LockFreeHashMapRewriteTests', 'LockFreeHashMapPoolTests', 'LockFreeHashMapTestThread'] :
         [mode === 'epoch' ? 'LockFreeHashMapEpochTests' : 'LockFreeHashMapPoolTests', 'LockFreeHashMapTestThread'];
     const inputs = names.map(name => path.join(__dirname, name + '.cpp'));
@@ -92,7 +158,8 @@ function main()
         }
     }
     const report = { output, mode, cacheSeed, cache, reuseCache, compiler: fs.readFileSync(path.join(emscripten, 'emscripten-version.txt'), 'utf8').trim(),
-        node: process.version, hashes, runs: [], passed: true };
+        node: process.version, hashes, runs: [], complete: false, passed: false };
+    let passed = true;
     for (const bits of [32, 64])
     {
         for (const threads of [false, true])
@@ -114,35 +181,32 @@ function main()
                 args.push(...inputs, '-o', path.join(directory, 'tests.js'));
                 if (!run(python, args, directory, 'build.log', env, 300000, report))
                 {
-                    report.passed = false;
+                    passed = false;
                     continue;
                 }
-                for (const id of mode === 'cases' ? (threads ? [1,2,3,4,5,6,7,8,9,10] : [1,2,3,4,9]) : [1])
+                for (const id of mode === 'cases' ? (threads ? [1,2,3,4,5,6,7,8,9,10,11] : [1,2,3,4,9,11]) : [1])
                 {
                     const name = 'test-' + id + '.log';
                     const exited = run(node, [path.join(directory, 'tests.js'), String(id)], directory, name, env, 120000, report);
                     const log = fs.readFileSync(path.join(directory, name), 'utf8');
-                    const summaries = log.match(/^MODULE_RESULT checks=\d+ failed=\d+\r?$/gm) || [];
-                    const verified = mode === 'cases' ? (new RegExp('^END id=' + id + ' result=PASS\\r?$', 'm').test(log) &&
-                        /^RESULT checks=\d+ failed=0\r?$/m.test(log) && / allocation_delta=0 /.test(log)) :
-                        (summaries.length !== 0 && / failed=0\r?$/.test(summaries[summaries.length - 1]) &&
-                        (mode === 'epoch' || /^POOL_ALLOCATION_DELTA 0\r?$/m.test(log)) &&
-                        (mode !== 'rewrite' || /^REWRITE_ALLOCATION_DELTA 0\r?$/m.test(log)));
+                    const verified = mode === 'cases' ? verifyCase(log, id) : verifyModule(log, mode);
                     report.runs[report.runs.length - 1].verified = verified;
-                    report.passed = exited && verified && report.passed;
+                    passed = exited && verified && passed;
+                    fs.writeFileSync(path.join(report.output, 'results.json'), JSON.stringify(report, null, 2));
                 }
             }
         }
     }
     report.changed = Object.keys(hashes).filter(file => hashes[file] !== crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'));
-    report.passed = report.changed.length === 0 && report.passed;
+    report.complete = true;
+    report.passed = report.changed.length === 0 && passed;
     fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(report, null, 2));
     return report.passed ? 0 : 1;
 }
 
 try
 {
-    process.exitCode = main();
+    process.exitCode = process.argv.length === 3 && process.argv[2] === '--selftest' ? selftest() : main();
 }
 catch (error)
 {

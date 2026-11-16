@@ -1,5 +1,11 @@
 ﻿#pragma once
 
+template <typename V>
+void LockFreeHashMapPerformance::prepareOutput(V& output)
+{
+    (void)output;
+}
+
 template <typename T>
 T LockFreeHashMapPerfData<T>::make(size_t marker)
 {
@@ -70,6 +76,11 @@ bool LockFreeHashMapPerformance::measure(const LockFreeHashMapPerfSpec& spec, in
         }
     }
     uint64_t calls = uint64_t(spec.m_iterations) * repeats * LockFreeHashMapPerfModels::callsPerIteration(spec);
+#if defined(LOCKFREEHASHMAP_PERF_CURRENT)
+    const int32_t conditionalInterfaces = 1;
+#else
+    const int32_t conditionalInterfaces = 0;
+#endif
     std::cout << std::setprecision(12) << "PERF id=" << spec.m_id << " name=" << spec.m_name << " repeats=" << repeats
         << " calls=" << calls << " seconds=" << elapsed << " ops=" << double(calls) / elapsed
         << " p50_us=" << LockFreeHashMapPerfModels::percentile(samples, 50) * 1000000
@@ -77,7 +88,8 @@ bool LockFreeHashMapPerformance::measure(const LockFreeHashMapPerfSpec& spec, in
         << " p99_us=" << LockFreeHashMapPerfModels::percentile(samples, 99) * 1000000
         << " samples=" << samples.size() << " batch_min_s=" << minimum << " batch_max_s=" << maximum
         << " extra_calls=" << extraCalls << " attempted_calls=" << calls + extraCalls
-        << " iteration_multiplier=" << spec.m_iterationMultiplier << " errors=0" << std::endl;
+        << " iteration_multiplier=" << spec.m_iterationMultiplier << " output_string_capacity=512 state_tail_padding=64 collection_validation=2 conditional_interfaces="
+        << conditionalInterfaces << " errors=0" << std::endl;
     return true;
 }
 
@@ -98,6 +110,11 @@ bool LockFreeHashMapPerformance::batch(const LockFreeHashMapPerfSpec& spec, cons
     {
         extraCalls = 0;
         return clearBatch<K, V, H>(spec, keys, candidates, sampled, samples, seconds);
+    }
+    if (spec.m_operation >= LockFreeHashMapPerfKeys && spec.m_operation <= LockFreeHashMapPerfPairs)
+    {
+        extraCalls = 0;
+        return collections<K, V, H>(spec, keys, candidates, sampled, samples, seconds);
     }
 #if defined(LOCKFREEHASHMAP_PERF_STD_MUTEX)
     typedef LockFreeHashMapStdMutex<K, V, H> Map;
@@ -123,9 +140,44 @@ bool LockFreeHashMapPerformance::batch(const LockFreeHashMapPerfSpec& spec, cons
         }
     }
     size_t bucketsBefore = map.bucketCount();
+    if (spec.m_operation == LockFreeHashMapPerfVisit)
+    {
+        std::vector<std::pair<K, V>> visited;
+        visited.reserve(spec.m_keys);
+        // 独立预检复制真实遍历内容；计时循环仍使用相同的计数回调。
+        size_t count = map.forEach([&visited](const K& key, const V& value)
+        {
+            visited.push_back(std::make_pair(key, value));
+        });
+        if (count != spec.m_keys || !LockFreeHashMapPerfValidation::pairs(visited, keys, candidates, spec.m_keys))
+        {
+            return false;
+        }
+    }
     size_t owned = spec.m_sharedKeys ? spec.m_keys : spec.m_keys / spec.m_threads;
     size_t iterations = spec.m_iterations / spec.m_threads;
-    std::vector<std::vector<unsigned char>> states(spec.m_threads, std::vector<unsigned char>(owned, 0));
+    if (owned == 0 || owned > (std::numeric_limits<size_t>::max)() - 64)
+    {
+        return false;
+    }
+    // 每个线程只访问前owned字节；尾部留出隔离空间，避免预期值记录本身产生64字节边界争用。
+    // 两版使用相同布局，逻辑键区间、写入状态及校验次数不变，准备成本仍在计时外。
+    std::vector<std::vector<unsigned char>> states(spec.m_threads, std::vector<unsigned char>(owned + 64, 0));
+    for (int32_t thread = 0; thread < spec.m_threads; ++thread)
+    {
+        uintptr_t begin = reinterpret_cast<uintptr_t>(states[thread].data()) >> 6;
+        uintptr_t end = (reinterpret_cast<uintptr_t>(states[thread].data()) + owned - 1) >> 6;
+        for (int32_t previous = 0; previous < thread; ++previous)
+        {
+            uintptr_t otherBegin = reinterpret_cast<uintptr_t>(states[previous].data()) >> 6;
+            uintptr_t otherEnd = (reinterpret_cast<uintptr_t>(states[previous].data()) + owned - 1) >> 6;
+            if (begin <= otherEnd && otherBegin <= end)
+            {
+                std::cerr << "PERF_STATE_LAYOUT invalid isolation" << std::endl;
+                return false;
+            }
+        }
+    }
     std::vector<std::vector<double>> measured(spec.m_threads);
     std::vector<uint64_t> failures(spec.m_threads, 0);
     std::vector<uint64_t> retries(spec.m_threads, 0);
@@ -260,21 +312,6 @@ bool LockFreeHashMapPerformance::batch(const LockFreeHashMapPerfSpec& spec, cons
                 ok = count == spec.m_keys && visited == count;
                 break;
             }
-            case LockFreeHashMapPerfKeys:
-            {
-                ok = map.keys().size() == spec.m_keys;
-                break;
-            }
-            case LockFreeHashMapPerfValues:
-            {
-                ok = map.values().size() == spec.m_keys;
-                break;
-            }
-            case LockFreeHashMapPerfPairs:
-            {
-                ok = map.toVector().size() == spec.m_keys;
-                break;
-            }
             case LockFreeHashMapPerfClear:
             {
                 map.clear();
@@ -381,6 +418,7 @@ bool LockFreeHashMapPerformance::batch(const LockFreeHashMapPerfSpec& spec, cons
         {
             // 输出在计时前构造，避免把测试变量的分配成本计为容器操作。
             V output(candidates[0]);
+            prepareOutput(output);
             start.store(true);
             begin = LockFreeHashMapPerfModels::timestamp();
             work(0, output);
@@ -399,6 +437,7 @@ bool LockFreeHashMapPerformance::batch(const LockFreeHashMapPerfSpec& spec, cons
                         // 各线程使用自己的栈输出，避免相邻输出格的伪共享掩盖容器读取成本。
                         // 构造发生在ready之前，失败也必须完成入场计数，防止控制线程无限等待。
                         V output(candidates[0]);
+                        prepareOutput(output);
                         entered = true;
                         work(thread, output);
                     }
@@ -475,10 +514,18 @@ bool LockFreeHashMapPerformance::batch(const LockFreeHashMapPerfSpec& spec, cons
     for (size_t i = 0; i < spec.m_keys; ++i)
     {
         bool found = map.get(keys[i], output);
-        if (empty ? found : (!found || !(output == candidates[i * 2] || output == candidates[i * 2 + 1])))
+        // 独占键必须等于该线程最后一次成功写入，不能让丢失末次更新通过终态检查。
+        bool valid = empty ? !found : found && (spec.m_sharedKeys ?
+            (output == candidates[i * 2] || output == candidates[i * 2 + 1]) :
+            output == candidates[i * 2 + states[i / owned][i % owned]]);
+        if (!valid)
         {
             ++errors;
         }
+    }
+    if (map.size() != (empty ? 0 : spec.m_keys))
+    {
+        ++errors;
     }
     if (errors != 0 || LockFreeHashMapTestThread::failures() != previousFailures)
     {
@@ -498,6 +545,149 @@ bool LockFreeHashMapPerformance::batch(const LockFreeHashMapPerfSpec& spec, cons
 }
 
 template <typename K, typename V, typename H>
+bool LockFreeHashMapPerformance::collections(const LockFreeHashMapPerfSpec& spec, const std::vector<K>& keys,
+    const std::vector<V>& candidates, bool sampled, std::vector<double>& samples, double& seconds)
+{
+    if (spec.m_threads != 1 || keys.size() < spec.m_keys || candidates.size() / 2 < spec.m_keys)
+    {
+        return false;
+    }
+    // 在建表及任何计时前准备独立全集；每轮只排序借用指针，避免校验临时对象干扰析构计时。
+    std::vector<K> expectedKeys;
+    std::vector<V> expectedValues;
+    std::vector<std::pair<K, V>> expectedPairs;
+    std::vector<const K*> keyScratch;
+    std::vector<const V*> valueScratch;
+    std::vector<const std::pair<K, V>*> pairScratch;
+    if (spec.m_operation == LockFreeHashMapPerfKeys)
+    {
+        expectedKeys.assign(keys.begin(), keys.begin() + spec.m_keys);
+        if (!LockFreeHashMapPerfValidation::prepare(expectedKeys, keyScratch))
+        {
+            return false;
+        }
+        for (size_t i = 1; i < expectedKeys.size(); ++i)
+        {
+            if (expectedKeys[i - 1] == expectedKeys[i])
+            {
+                return false;
+            }
+        }
+    }
+    else if (spec.m_operation == LockFreeHashMapPerfValues)
+    {
+        expectedValues.reserve(spec.m_keys);
+        for (size_t i = 0; i < spec.m_keys; ++i)
+        {
+            expectedValues.push_back(candidates[i * 2]);
+        }
+        if (!LockFreeHashMapPerfValidation::prepare(expectedValues, valueScratch))
+        {
+            return false;
+        }
+    }
+    else if (spec.m_operation == LockFreeHashMapPerfPairs)
+    {
+        expectedPairs.reserve(spec.m_keys);
+        for (size_t i = 0; i < spec.m_keys; ++i)
+        {
+            expectedPairs.emplace_back(keys[i], candidates[i * 2]);
+        }
+        if (!LockFreeHashMapPerfValidation::prepare(expectedPairs, pairScratch))
+        {
+            return false;
+        }
+        for (size_t i = 1; i < expectedPairs.size(); ++i)
+        {
+            if (expectedPairs[i - 1].first == expectedPairs[i].first)
+            {
+                return false;
+            }
+        }
+    }
+    else
+    {
+        return false;
+    }
+#if defined(LOCKFREEHASHMAP_PERF_STD_MUTEX)
+    typedef LockFreeHashMapStdMutex<K, V, H> Map;
+#else
+    typedef LockFreeHashMap<K, V, H> Map;
+#endif
+    Map map(spec.m_buckets);
+    for (size_t i = 0; i < spec.m_keys; ++i)
+    {
+        if (!map.set(keys[i], candidates[i * 2]))
+        {
+            return false;
+        }
+    }
+    const size_t bucketsBefore = map.bucketCount();
+    seconds = 0;
+    for (size_t i = 0; i < spec.m_iterations; ++i)
+    {
+        bool valid = false;
+        double elapsed = 0, cleanup = 0;
+        if (spec.m_operation == LockFreeHashMapPerfKeys)
+        {
+            double begin = LockFreeHashMapPerfModels::timestamp();
+            {
+                std::vector<K> actual = map.keys();
+                elapsed = LockFreeHashMapPerfModels::timestamp() - begin;
+                valid = LockFreeHashMapPerfValidation::prepared(actual, expectedKeys, keyScratch);
+                cleanup = LockFreeHashMapPerfModels::timestamp();
+            }
+            elapsed += LockFreeHashMapPerfModels::timestamp() - cleanup;
+        }
+        else if (spec.m_operation == LockFreeHashMapPerfValues)
+        {
+            double begin = LockFreeHashMapPerfModels::timestamp();
+            {
+                std::vector<V> actual = map.values();
+                elapsed = LockFreeHashMapPerfModels::timestamp() - begin;
+                valid = LockFreeHashMapPerfValidation::prepared(actual, expectedValues, valueScratch);
+                cleanup = LockFreeHashMapPerfModels::timestamp();
+            }
+            elapsed += LockFreeHashMapPerfModels::timestamp() - cleanup;
+        }
+        else if (spec.m_operation == LockFreeHashMapPerfPairs)
+        {
+            double begin = LockFreeHashMapPerfModels::timestamp();
+            {
+                std::vector<std::pair<K, V>> actual = map.toVector();
+                elapsed = LockFreeHashMapPerfModels::timestamp() - begin;
+                valid = LockFreeHashMapPerfValidation::prepared(actual, expectedPairs, pairScratch);
+                cleanup = LockFreeHashMapPerfModels::timestamp();
+            }
+            elapsed += LockFreeHashMapPerfModels::timestamp() - cleanup;
+        }
+        if (!valid || elapsed <= 0)
+        {
+            return false;
+        }
+        seconds += elapsed;
+        if (sampled)
+        {
+            samples.push_back(elapsed);
+        }
+    }
+    V output(candidates[0]);
+    for (size_t i = 0; i < spec.m_keys; ++i)
+    {
+        if (!map.get(keys[i], output) || !(output == candidates[i * 2]))
+        {
+            return false;
+        }
+    }
+    if (sampled)
+    {
+        std::cout << "BUCKETS requested=" << spec.m_buckets << " before=" << bucketsBefore
+            << " after=" << map.bucketCount() << std::endl;
+    }
+    return true;
+}
+
+template <typename K, typename V, typename H>
 bool LockFreeHashMapPerformance::clearBatch(const LockFreeHashMapPerfSpec& spec, const std::vector<K>& keys,
     const std::vector<V>& candidates, bool sampled, std::vector<double>& samples, double& seconds)
 {
@@ -506,7 +696,7 @@ bool LockFreeHashMapPerformance::clearBatch(const LockFreeHashMapPerfSpec& spec,
 #else
     typedef LockFreeHashMap<K, V, H> Map;
 #endif
-    if (spec.m_threads != 1 || spec.m_iterations == 0 || spec.m_iterations > 64)
+    if (spec.m_threads != 1 || spec.m_iterations == 0 || spec.m_iterations > LockFreeHashMapPerfModels::kClearTables)
     {
         return false;
     }
@@ -518,6 +708,18 @@ bool LockFreeHashMapPerformance::clearBatch(const LockFreeHashMapPerfSpec& spec,
         for (size_t key = 0; key < spec.m_keys; ++key)
         {
             if (!map->set(keys[key], candidates[key * 2]))
+            {
+                return false;
+            }
+        }
+        V observed = candidates[0];
+        if (map->size() != spec.m_keys)
+        {
+            return false;
+        }
+        for (size_t key = 0; key < spec.m_keys; ++key)
+        {
+            if (!map->get(keys[key], observed) || !(observed == candidates[key * 2]))
             {
                 return false;
             }
@@ -539,6 +741,10 @@ bool LockFreeHashMapPerformance::clearBatch(const LockFreeHashMapPerfSpec& spec,
     V output = candidates[0];
     for (size_t i = 0; i < maps.size(); ++i)
     {
+        if (maps[i]->size() != 0)
+        {
+            return false;
+        }
         for (size_t key = 0; key < spec.m_keys; ++key)
         {
             if (maps[i]->get(keys[key], output))
@@ -598,42 +804,45 @@ bool LockFreeHashMapPerformance::memory(const LockFreeHashMapPerfSpec& spec)
         keys.push_back(LockFreeHashMapPerfData<K>::make(i));
         values.push_back(LockFreeHashMapPerfData<V>::make(i + 1));
     }
-    V output = values.back();
     size_t retained = 0, afterClear = 0, afterFree = 0;
     uint64_t beforeWork = 0, workAllocations = 0;
     uint64_t beforeMap = LockFreeHashMapPerfMemory::s_allocations;
     bool correct = true;
     LockFreeHashMapPerfMemory::s_peak = baseline;
-    LockFreeHashMapPerfMemory::s_tracking = true;
     {
+        // 输出初值在计量前准备；若某个标准库赋值重新分配，须在核对净差前销毁输出。
+        V output = values.back();
+        LockFreeHashMapPerfMemory::s_tracking = true;
+        {
 #if defined(LOCKFREEHASHMAP_PERF_STD_MUTEX)
-        LockFreeHashMapStdMutex<K, V> map(spec.m_buckets);
+            LockFreeHashMapStdMutex<K, V> map(spec.m_buckets);
 #else
-        LockFreeHashMap<K, V> map(spec.m_buckets);
+            LockFreeHashMap<K, V> map(spec.m_buckets);
 #endif
-        for (size_t i = 0; i < spec.m_keys; ++i)
-        {
-            correct = map.set(keys[i], values[i]) && correct;
-        }
-        beforeWork = LockFreeHashMapPerfMemory::s_allocations;
-        for (size_t i = 0; i < spec.m_iterations; ++i)
-        {
-            size_t index = i % spec.m_keys;
-            if (spec.m_operation == LockFreeHashMapPerfChurn)
+            for (size_t i = 0; i < spec.m_keys; ++i)
             {
-                correct = map.erase(keys[index]) && correct;
+                correct = map.set(keys[i], values[i]) && correct;
             }
-            correct = map.set(keys[index], values[index]) && map.get(keys[index], output) && output == values[index] && correct;
+            beforeWork = LockFreeHashMapPerfMemory::s_allocations;
+            for (size_t i = 0; i < spec.m_iterations; ++i)
+            {
+                size_t index = i % spec.m_keys;
+                if (spec.m_operation == LockFreeHashMapPerfChurn)
+                {
+                    correct = map.erase(keys[index]) && correct;
+                }
+                correct = map.set(keys[index], values[index]) && map.get(keys[index], output) && output == values[index] && correct;
+            }
+            workAllocations = LockFreeHashMapPerfMemory::s_allocations - beforeWork;
+            correct = LockFreeHashMapPerfMemory::s_bytes >= baseline && correct;
+            retained = LockFreeHashMapPerfMemory::s_bytes >= baseline ? LockFreeHashMapPerfMemory::s_bytes - baseline : 0;
+            map.clear();
+            correct = LockFreeHashMapPerfMemory::s_bytes >= baseline && correct;
+            afterClear = LockFreeHashMapPerfMemory::s_bytes >= baseline ? LockFreeHashMapPerfMemory::s_bytes - baseline : 0;
+            map.clearAndFreeMemory();
+            correct = LockFreeHashMapPerfMemory::s_bytes >= baseline && correct;
+            afterFree = LockFreeHashMapPerfMemory::s_bytes >= baseline ? LockFreeHashMapPerfMemory::s_bytes - baseline : 0;
         }
-        workAllocations = LockFreeHashMapPerfMemory::s_allocations - beforeWork;
-        correct = LockFreeHashMapPerfMemory::s_bytes >= baseline && correct;
-        retained = LockFreeHashMapPerfMemory::s_bytes >= baseline ? LockFreeHashMapPerfMemory::s_bytes - baseline : 0;
-        map.clear();
-        correct = LockFreeHashMapPerfMemory::s_bytes >= baseline && correct;
-        afterClear = LockFreeHashMapPerfMemory::s_bytes >= baseline ? LockFreeHashMapPerfMemory::s_bytes - baseline : 0;
-        map.clearAndFreeMemory();
-        correct = LockFreeHashMapPerfMemory::s_bytes >= baseline && correct;
-        afterFree = LockFreeHashMapPerfMemory::s_bytes >= baseline ? LockFreeHashMapPerfMemory::s_bytes - baseline : 0;
     }
     LockFreeHashMapPerfMemory::s_tracking = false;
     correct = correct && LockFreeHashMapPerfMemory::s_bytes == baseline;

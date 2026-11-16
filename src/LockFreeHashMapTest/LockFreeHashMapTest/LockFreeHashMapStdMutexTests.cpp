@@ -143,7 +143,7 @@ void LockFreeHashMapStdMutexTests::exceptionsAndOwnership()
     std::weak_ptr<int32_t> weak = candidate;
     check(owned.set(1, candidate), "owned fixture initialized");
     std::shared_ptr<int32_t> copy;
-    check(owned.get(1, copy), "get creates independent shared owner");
+    check(owned.get(1, copy) && copy, "get creates independent shared owner");
     candidate.reset();
     owned.clearAndFreeMemory();
     check(!weak.expired() && *copy == 19, "read owner survives clear and storage release");

@@ -19,6 +19,7 @@ bool LockFreeHashMapWorkloads::run(const char* name, size_t buckets, int threads
         }
     }
     std::vector<std::vector<double>> samples(threads);
+    std::vector<std::vector<int>> finalValues(threads, std::vector<int>(64));
     std::vector<int> errors(threads, 0);
     std::vector<LockFreeHashMapTestThread> workers;
     workers.reserve(threads);
@@ -79,6 +80,7 @@ bool LockFreeHashMapWorkloads::run(const char* name, size_t buckets, int threads
                         samples[t].push_back((timestamp() - begin) * 1000000);
                     }
                 }
+                std::copy(expected, expected + 64, finalValues[t].begin());
             }));
         }
     }
@@ -103,11 +105,21 @@ bool LockFreeHashMapWorkloads::run(const char* name, size_t buckets, int threads
     }
     double elapsed = timestamp() - begin;
     std::vector<double> combined;
-    int failed = 0;
+    int failed = s_clockValid.load() ? 0 : 1;
     for (int t = 0; t < threads; ++t)
     {
         combined.insert(combined.end(), samples[t].begin(), samples[t].end());
         failed += errors[t];
+        failed += samples[t].size() != static_cast<size_t>((iterations + 66) / 67);
+        for (int index = 0; index < 64; ++index)
+        {
+            int actual = -1;
+            failed += !map.get(t * 64 + index, actual) || actual != finalValues[t][index];
+        }
+    }
+    if (combined.empty() || elapsed <= 0 || LockFreeHashMapTestThread::failures() != 0)
+    {
+        return false;
     }
     std::sort(combined.begin(), combined.end());
     size_t retained = map.retainedNodeCount();
@@ -145,6 +157,7 @@ bool LockFreeHashMapWorkloads::runOwned(const char* name, size_t buckets, int th
         }
     }
     std::vector<std::vector<double>> samples(threads);
+    std::vector<std::vector<std::shared_ptr<const int>>> finalValues(threads, std::vector<std::shared_ptr<const int>>(64));
     std::vector<int> errors(threads, 0);
     std::vector<LockFreeHashMapTestThread> workers;
     workers.reserve(threads);
@@ -205,6 +218,7 @@ bool LockFreeHashMapWorkloads::runOwned(const char* name, size_t buckets, int th
                         samples[t].push_back((timestamp() - begin) * 1000000);
                     }
                 }
+                std::copy(expected, expected + 64, finalValues[t].begin());
             }));
         }
     }
@@ -229,11 +243,21 @@ bool LockFreeHashMapWorkloads::runOwned(const char* name, size_t buckets, int th
     }
     double elapsed = timestamp() - begin;
     std::vector<double> combined;
-    int failed = 0;
+    int failed = s_clockValid.load() ? 0 : 1;
     for (int t = 0; t < threads; ++t)
     {
         combined.insert(combined.end(), samples[t].begin(), samples[t].end());
         failed += errors[t];
+        failed += samples[t].size() != static_cast<size_t>((iterations + 66) / 67);
+        for (int index = 0; index < 64; ++index)
+        {
+            std::shared_ptr<const int> actual;
+            failed += !map.get(t * 64 + index, actual) || actual != finalValues[t][index];
+        }
+    }
+    if (combined.empty() || elapsed <= 0 || LockFreeHashMapTestThread::failures() != 0)
+    {
+        return false;
     }
     std::sort(combined.begin(), combined.end());
     size_t retained = map.retainedNodeCount();

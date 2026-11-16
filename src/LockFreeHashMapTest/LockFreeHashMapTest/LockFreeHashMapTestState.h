@@ -10,13 +10,16 @@ public:
     typedef LockFreeHashMap<int, int> IntMap;
     typedef LockFreeHashMap<int, int, LockFreeHashMapCollisionHash> CollisionMap;
     typedef LockFreeHashMapValueCache<uint64_t, uint64_t, std::equal_to<uint64_t>> ScalarCache;
+    typedef LockFreeHashMapValueCache<int32_t, int32_t, std::equal_to<int32_t>> PackedCache;
     typedef std::atomic<uint64_t> IntMap::* IntCounter;
     typedef std::atomic<uint64_t> CollisionMap::* CollisionCounter;
     typedef IntMap::Storage* IntMap::* StoragePointer;
     typedef std::atomic<bool> IntMap::* ValidPointer;
+    typedef std::shared_ptr<const LockFreeHashMapIdentity> IntMap::* IdentityPointer;
     typedef void (IntMap::* AccountPointer)(LockFreeHashMapEpochRecord& record, uint64_t generation, int64_t difference);
     typedef std::atomic<uint64_t> LockFreeHashMapEpoch::* ClockPointer;
     typedef LockFreeHashMapValueCacheEntry* ScalarCache::* EntriesPointer;
+    typedef LockFreeHashMapPackedValueCacheEntry* PackedCache::* PackedEntriesPointer;
 
     /** 借用表的版本高水位，仅静止期注入
     @param [in,out] map 有效被测表
@@ -48,6 +51,12 @@ public:
     */
     static std::atomic<bool>& countValid(IntMap& map);
 
+    /** 借用原实例身份，仅用于独立验证别名退出后的真实身份寿命
+    @param [in,out] map 有效且外部静止的表
+    @return 原始拥有句柄，不是记录中的计数别名
+    */
+    static const std::shared_ptr<const LockFreeHashMapIdentity>& identity(IntMap& map);
+
     /** 调用真实记账函数，测试极端计数及迟到旧代记账
     @param [in,out] map 有效且外部静止的表
     @param [in,out] record 属于该表的独占记录
@@ -67,6 +76,12 @@ public:
     @return 真实缓存格，不延长其寿命
     */
     static LockFreeHashMapValueCacheEntry& first(ScalarCache& cache);
+
+    /** 借用窄整数缓存的首格，仅检查真实分配布局，不改变生产接口
+    @param [in,out] cache 至少拥有一个缓存格的缓存
+    @return 真实首格，不转移所有权
+    */
+    static LockFreeHashMapPackedValueCacheEntry& first(PackedCache& cache);
 private:
     /** 检查登记和夹具前提，失败抛测试状态交由现有入口记录
     @param [in] condition 前提满足为 true
@@ -83,10 +98,14 @@ private:
     static StoragePointer s_storage;
     // 计数有效标志的成员指针
     static ValidPointer s_countValid;
+    // 原实例身份成员指针，不改变产品可见性
+    static IdentityPointer s_identity;
     // 真实记账函数的成员指针
     static AccountPointer s_account;
     // 保护域时钟的成员指针
     static ClockPointer s_clock;
     // 缓存数组的成员指针
     static EntriesPointer s_entries;
+    // 窄整数缓存数组的成员指针
+    static PackedEntriesPointer s_packedEntries;
 };

@@ -73,6 +73,48 @@ public:
     ~LockFreeHashMapRewriteValue();
 };
 
+/** 合法复制值，取地址运算符故意抛出，用于识别容器误执行业务取地址逻辑
+*/
+struct LockFreeHashMapAddressValue
+{
+public:
+    // 独立可核对的值
+    int m_value;
+public:
+    /** 构造业务标记
+    @param [in] value 独立预期值
+    */
+    explicit LockFreeHashMapAddressValue(int value = 0);
+
+    /** 非常量取地址必须不被容器调用，调用时抛出可捕获故障
+    @return 不返回
+    */
+    LockFreeHashMapAddressValue* operator&();
+
+    /** 常量取地址必须不被容器调用，调用时抛出可捕获故障
+    @return 不返回
+    */
+    const LockFreeHashMapAddressValue* operator&() const;
+
+    /** 按独立整数标记比较
+    @param [in] other 被比较对象
+    @return 标记相同为true
+    */
+    bool operator==(const LockFreeHashMapAddressValue& other) const;
+};
+
+/** 为重载取地址的键提供正常散列
+*/
+struct LockFreeHashMapAddressHash
+{
+public:
+    /** 按整数标记散列，不取得键地址
+    @param [in] key 只读键
+    @return 标准整数散列
+    */
+    size_t operator()(const LockFreeHashMapAddressValue& key) const;
+};
+
 /** 新算法的独立模型与并发测试，所有退出都正常返回结果
 */
 class LockFreeHashMapRewriteTests
@@ -104,9 +146,25 @@ private:
     */
     static void model();
 
+    /** 合法键值重载operator&时，普通、try、条件和代理接口仍使用真实对象地址
+    */
+    static void addressableValues();
+
+    /** 导出共享指针时区分空对象、空别名和同一拥有者的不同子对象，检查表销毁后的所有权
+    */
+    static void sharedExports();
+
     /** 核对版本、独立引用、跨实例、清空和池满删除
     */
     static void versions();
+
+    /** 检查有界身份别名的跨记录一致性、分配回退、重配与表析构后的真实身份寿命
+    */
+    static void identityCaches();
+
+    /** 核对标准字符串输出的完整范围、内嵌零、容量复用和分配失败恢复
+    */
+    static void stringValues();
 
     /** 覆盖内存、哈希、比较、复制及回调故障
     */
@@ -119,6 +177,10 @@ private:
     /** 并发修改及清空时核对整数键值编码，完成后核对最后写入版本
     */
     static void scalarStress();
+
+    /** 单缓存格下并发覆盖、删除与clear，按完整窄键值关系检查串值及收尾状态
+    */
+    static void narrowStress();
 
     /** 重复构造大表、逐条预填充、覆盖、清空和释放，核对全部键及每轮分配责任
     */

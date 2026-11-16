@@ -6,6 +6,37 @@
 #include <string>
 #include <thread>
 
+/** 字符串自定义哈希的调用计数及全碰撞对照，状态只在静止测试阶段重置
+*/
+struct LockFreeHashMapStringTestHash
+{
+public:
+    // 已执行的用户哈希调用数
+    static std::atomic<size_t> s_calls;
+public:
+    /** 强制所有字符串使用同一完整哈希
+    @param [in] key 借用输入，不修改
+    @return 零，供独立碰撞模型使用
+    */
+    size_t operator()(const std::string& key) const;
+};
+
+/** 自定义字符串比较器的异常边界对照，不属于默认优化类型
+*/
+struct LockFreeHashMapStringTestEqual
+{
+public:
+    // 是否注入用户比较异常，测试在检查结果前恢复
+    static std::atomic<bool> s_throw;
+public:
+    /** 比较完整字符串或执行一次测试配置的异常路径
+    @param [in] left 借用已发布键
+    @param [in] right 借用查询键
+    @return 完整字节及长度相等时为 true
+    */
+    bool operator()(const std::string& left, const std::string& right) const;
+};
+
 /** 无需分配内存的用例失败信号，由最外层入口捕获并正常返回
 */
 enum LockFreeHashMapTestFailure
@@ -281,13 +312,10 @@ public:
     */
     static void readOptimizations();
 
-/** 校验弱计数的唯一记账、跨代迟到及紧凑表示耗尽回退 */
+    /** 校验弱计数的唯一记账、跨代迟到及紧凑表示耗尽回退 */
     static void countOptimizations();
 
-/** 校验分配批次提示的更新、越界回退和静止释放后复用 */
-    static void allocationOptimizations();
-
-/** 检查同键全碰撞、clear、条件修改及维护并发时的共享所有权
+    /** 检查同键全碰撞、clear、条件修改及维护并发时的共享所有权
     */
     static void sharedContention();
 
@@ -441,8 +469,12 @@ public:
     */
     static void boundaries();
 
+    /** 编号10的导出交错子场景，暂停真实输出分配后改变表大小，核对完整结果及无填充空值
+    */
+    static void sharedExportCounts();
+
     /** 穷举与真实时间先后关系一致的合法顺序历史，不调用被测表
-    @param [in] history 已完成的操作记录，最多 12 项
+    @param [in] history 已完成的操作记录，最多 14 项，含静止后的终态查询
     @param [in] used 已放入顺序历史的操作位图
     @param [in] state 独立 std::map 顺序状态副本
     @return 存在合法完整顺序为 true；模型分配异常由用例入口捕获

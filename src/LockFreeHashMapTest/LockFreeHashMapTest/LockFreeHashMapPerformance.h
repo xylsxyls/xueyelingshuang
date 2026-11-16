@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "LockFreeHashMapPerfModels.h"
 #include "LockFreeHashMapPerfMemory.h"
+#include "LockFreeHashMapPerfValidation.h"
 #include "LockFreeHashMapTestThread.h"
 #if defined(LOCKFREEHASHMAP_PERF_STD_MUTEX)
 #if defined(LOCKFREEHASHMAP_PERF_CURRENT)
@@ -14,6 +15,7 @@
 #include <atomic>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -96,6 +98,30 @@ public:
     */
     static bool dispatch(const LockFreeHashMapPerfSpec& spec, int32_t repeats);
 private:
+    /** 在计时和 ready 发布前准备线程独占输出；普通值保持原样
+    @param [in,out] output 本线程刚构造的局部值，不与其他线程共享
+    */
+    template <typename ValueType>
+    static void prepareOutput(ValueType& output);
+
+    /** 预留独立字符缓冲区，避免不同线程小块输出共享缓存行主导容器读取计时
+    @param [in,out] output 内容不变，容量至少512字节；异常由启动线程的既有边界捕获
+    */
+    static void prepareOutput(std::string& output);
+
+    /** 单线程导出逐次核对真实结果，调用与析构计时，内容验证计时外完成
+    @param [in] spec keys/values/pairs 配置，必须只有一个工作线程
+    @param [in] keys 预先生成的键
+    @param [in] candidates 预先生成的候选值
+    @param [in] sampled 是否记录逐次操作延迟
+    @param [in,out] samples 接收调用加结果析构的耗时
+    @param [out] seconds 全部有效操作耗时之和
+    @return 所有实际导出结果的全集均正确为 true
+    */
+    template <typename K, typename V, typename H>
+    static bool collections(const LockFreeHashMapPerfSpec& spec, const std::vector<K>& keys,
+        const std::vector<V>& candidates, bool sampled, std::vector<double>& samples, double& seconds);
+
     /** 选择正常哈希或全碰撞实例
     @param [in] spec 配置
     @param [in] repeats 批次数

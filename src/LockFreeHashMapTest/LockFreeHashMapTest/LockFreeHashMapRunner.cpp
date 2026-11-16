@@ -28,7 +28,7 @@ extern char** environ;
 
 bool LockFreeHashMapRunner::number(const char* text, int maximum, int& value)
 {
-    if (text == nullptr || *text == 0)
+    if (text == nullptr || *text == 0 || maximum < 1)
     {
         return false;
     }
@@ -51,6 +51,126 @@ bool LockFreeHashMapRunner::number(const char* text, int maximum, int& value)
     }
     value = parsed;
     return true;
+}
+
+/** 严格校验非零检查数及零失败的汇总，拒绝多余或重复字段
+@param [in] line 完整汇总行
+@param [in] marker RESULT或MODULE_RESULT前缀
+@return 完整且通过为true
+*/
+static bool ValidSummary(const std::string& line, const std::string& marker)
+{
+    std::istringstream fields(line);
+    std::string prefix, checks, failures, tail;
+    int count = 0;
+    return (fields >> prefix >> checks >> failures) && !(fields >> tail) && prefix == marker &&
+        checks.compare(0, 7, "checks=") == 0 &&
+        LockFreeHashMapRunner::number(checks.c_str() + 7, (std::numeric_limits<int>::max)(), count) && failures == "failed=0";
+}
+
+bool LockFreeHashMapRunner::verifyCase(std::istream& input, int id)
+{
+    std::string line;
+    int stage = 0;
+    while (std::getline(input, line))
+    {
+        if (line.compare(0, 6, "BEGIN ") == 0)
+        {
+            if (stage != 0 || line != "BEGIN id=" + std::to_string(id))
+            {
+                return false;
+            }
+            stage = 1;
+        }
+        else if (line.compare(0, 10, "RESOURCES ") == 0)
+        {
+            if (stage != 1)
+            {
+                return false;
+            }
+            std::istringstream fields(line);
+            std::string field;
+            size_t deltas = 0;
+            while (fields >> field)
+            {
+                if (field.compare(0, 17, "allocation_delta=") == 0)
+                {
+                    if (++deltas != 1 || field != "allocation_delta=0")
+                    {
+                        return false;
+                    }
+                }
+            }
+            if (deltas != 1)
+            {
+                return false;
+            }
+            stage = 2;
+        }
+        else if (line.compare(0, 4, "END ") == 0)
+        {
+            if (stage != 2 || line != "END id=" + std::to_string(id) + " result=PASS")
+            {
+                return false;
+            }
+            stage = 3;
+        }
+        else if (line.compare(0, 7, "RESULT ") == 0)
+        {
+            if (stage != 3 || !ValidSummary(line, "RESULT"))
+            {
+                return false;
+            }
+            stage = 4;
+        }
+    }
+    return input.eof() && stage == 4;
+}
+
+bool LockFreeHashMapRunner::verifyModule(std::istream& input)
+{
+    std::string line;
+    size_t summaries = 0;
+    while (std::getline(input, line))
+    {
+        if (line.compare(0, 14, "MODULE_RESULT ") == 0)
+        {
+            if (!ValidSummary(line, "MODULE_RESULT"))
+            {
+                return false;
+            }
+            ++summaries;
+        }
+    }
+    return input.eof() && summaries != 0;
+}
+
+bool LockFreeHashMapRunner::openReport(const std::string& path, std::ofstream& output)
+{
+    if (output.is_open())
+    {
+        return false;
+    }
+#if defined(_WIN32)
+    HANDLE file = CreateFileA(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr,
+        CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file == INVALID_HANDLE_VALUE)
+    {
+        return false;
+    }
+    if (!CloseHandle(file))
+    {
+        return false;
+    }
+#else
+    int file = open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    if (file < 0 || close(file) != 0)
+    {
+        return false;
+    }
+#endif
+    output.open(path.c_str(), std::ios::out);
+    return bool(output);
 }
 
 LockFreeHashMapRunResult LockFreeHashMapRunner::run(const std::string& executable,
@@ -187,9 +307,24 @@ LockFreeHashMapRunResult LockFreeHashMapRunner::run(const std::string& executabl
     {
         return result;
     }
+    // 标准描述符可能已被宿主关闭；先复制到3以上，后续关闭原始输出不能关闭子进程stdout。
+    if (output <= STDERR_FILENO)
+    {
+        int duplicate = fcntl(output, F_DUPFD, STDERR_FILENO + 1);
+        close(output);
+        output = duplicate;
+        if (output < 0)
+        {
+            return result;
+        }
+    }
     posix_spawn_file_actions_t actions;
     int initialized = posix_spawn_file_actions_init(&actions);
     int configured = initialized;
+    if (configured == 0)
+    {
+        configured = posix_spawn_file_actions_addopen(&actions, STDIN_FILENO, "/dev/null", O_RDONLY, 0);
+    }
     if (configured == 0)
     {
         configured = posix_spawn_file_actions_adddup2(&actions, output, STDOUT_FILENO);
@@ -263,13 +398,13 @@ bool LockFreeHashMapRunner::cases(const std::string& executable, const std::stri
     }
     for (size_t i = 0; i < ids.size(); ++i)
     {
-        if (ids[i] < 1 || ids[i] > 10)
+        if (ids[i] < 1 || ids[i] > 11)
         {
             return false;
         }
     }
-    std::ofstream report((prefix + "-cases.csv").c_str(), std::ios::out | std::ios::trunc);
-    if (!report)
+    std::ofstream report;
+    if (!openReport(prefix + "-cases.csv", report))
     {
         return false;
     }
@@ -285,20 +420,7 @@ bool LockFreeHashMapRunner::cases(const std::string& executable, const std::stri
             argument << ids[i];
             LockFreeHashMapRunResult result = run(executable, argument.str(), name.str(), 120);
             std::ifstream log(name.str().c_str());
-            std::string line;
-            std::string expected = "END id=" + argument.str() + " result=PASS";
-            bool ended = false;
-            bool summary = false;
-            bool resources = false;
-            while (std::getline(log, line))
-            {
-                ended = ended || line == expected;
-                summary = summary || (line.compare(0, 14, "RESULT checks=") == 0 &&
-                    line.size() >= 9 && line.substr(line.size() - 9) == " failed=0");
-                resources = resources || (line.compare(0, 10, "RESOURCES ") == 0 &&
-                    line.find(" allocation_delta=0 ") != std::string::npos);
-            }
-            bool verified = log.eof() && ended && summary && resources;
+            bool verified = verifyCase(log, ids[i]);
             report << ids[i] << ',' << repeat << ',' << result.m_code << ',' << verified << ',' << result.m_seconds << ',' << name.str() << '\n';
             report.flush();
             passed = result.m_code == 0 && verified && bool(report) && passed;
@@ -317,8 +439,14 @@ bool LockFreeHashMapRunner::compare(const std::vector<std::string>& executables,
         return false;
     }
     const char* versions[3] = { "original", "previous", "current" };
-    std::ofstream report((prefix + "-runs.csv").c_str(), std::ios::out | std::ios::trunc);
-    if (!report)
+    const char* workloads[10] = { "read", "cold_after_hot_updates", "mixed_95read", "mixed_50read", "collision_95read",
+        "zero_hash_read", "zero_hash_mixed", "owned_95read", "owned_50read", "owned_zero_hash" };
+    const int iterations[10] = { 200000, 20000, 100000, 100000, 20000, 100000, 20000, 100000, 100000, 20000 };
+    const int threads[10] = { 1, 1, 4, 4, 4, 1, 4, 4, 4, 4 };
+    const int buckets[10] = { 1024, 1, 1024, 1024, 1, 1, 1, 1024, 1024, 1 };
+    const int writeEvery[10] = { 0, 0, 20, 2, 20, 0, 20, 20, 2, 20 };
+    std::ofstream report;
+    if (!openReport(prefix + "-runs.csv", report))
     {
         return false;
     }
@@ -357,24 +485,56 @@ bool LockFreeHashMapRunner::compare(const std::vector<std::string>& executables,
                 std::string field;
                 std::string workload;
                 double rate = 0;
-                bool valid = false;
+                bool valid = true;
+                std::map<std::string, double> numbers;
+                fields >> field;
                 while (fields >> field)
                 {
-                    if (field.compare(0, 5, "name=") == 0)
+                    size_t separator = field.find('=');
+                    if (separator == std::string::npos)
                     {
-                        workload = field.substr(5);
+                        valid = false;
+                        break;
                     }
-                    if (field.compare(0, 15, "ops_per_second=") == 0)
+                    const std::string name = field.substr(0, separator);
+                    const std::string value = field.substr(separator + 1);
+                    if (name == "name")
                     {
-                        std::istringstream number(field.substr(15));
-                        number >> rate;
+                        if (!workload.empty() || value.empty())
+                        {
+                            valid = false;
+                            break;
+                        }
+                        workload = value;
+                        continue;
                     }
-                    if (field == "errors=0")
+                    double parsed = 0;
+                    char tail = 0;
+                    std::istringstream number(value);
+                    if (!(number >> parsed) || (number >> tail) || !(parsed >= 0 && parsed < 1e100) || numbers.count(name))
                     {
-                        valid = true;
+                        valid = false;
+                        break;
                     }
+                    numbers[name] = parsed;
                 }
-                if (workload.empty() || rate <= 0 || !valid || seen[workload])
+                size_t index = 0;
+                while (index < 10 && workload != workloads[index])
+                {
+                    ++index;
+                }
+                const char* required[] = { "threads", "buckets", "iterations", "write_every", "hot_history", "ops_per_second",
+                    "p50_us", "p95_us", "p99_us", "retained_units", "after_clear_units", "errors" };
+                for (size_t i = 0; i < sizeof(required) / sizeof(required[0]); ++i)
+                {
+                    valid = numbers.count(required[i]) != 0 && valid;
+                }
+                rate = numbers["ops_per_second"];
+                if (index == 10 || !valid || seen[workload] || rate <= 0 || numbers["errors"] != 0 ||
+                    numbers["threads"] != threads[index] || numbers["buckets"] != buckets[index] ||
+                    numbers["iterations"] != iterations[index] * scale || numbers["write_every"] != writeEvery[index] ||
+                    numbers["hot_history"] != (index == 1 ? 10000 : 0) ||
+                    numbers["p50_us"] > numbers["p95_us"] || numbers["p95_us"] > numbers["p99_us"])
                 {
                     passed = false;
                     continue;
@@ -391,7 +551,11 @@ bool LockFreeHashMapRunner::compare(const std::vector<std::string>& executables,
     {
         return false;
     }
-    std::ofstream summary((prefix + "-comparison.csv").c_str(), std::ios::out | std::ios::trunc);
+    std::ofstream summary;
+    if (!openReport(prefix + "-comparison.csv", summary))
+    {
+        return false;
+    }
     summary << "workload,original_ops_s,previous_ops_s,current_ops_s,current_over_original,current_over_previous\n";
     for (std::map<std::string, std::vector<double>>::const_iterator item = measurements[0].begin(); item != measurements[0].end(); ++item)
     {
@@ -465,6 +629,17 @@ int main(int argc, char** argv)
             LockFreeHashMapRunResult paired = LockFreeHashMapRunner::run(argv[0], "1", prefix + "-paired.log", 5, 0, 256);
             LockFreeHashMapRunResult badSecond = LockFreeHashMapRunner::run(argv[0], "1", prefix + "-bad-second.log", 5, 0, 257);
             LockFreeHashMapRunResult missingFirst = LockFreeHashMapRunner::run(argv[0], "", prefix + "-missing-first.log", 5, 0, 1);
+            std::ofstream evidence;
+            bool evidenceChecked = LockFreeHashMapRunner::openReport(prefix + "-exclusive.txt", evidence);
+            evidence << "preserved";
+            evidence.close();
+            evidenceChecked = evidenceChecked && bool(evidence);
+            std::ofstream duplicateReport;
+            evidenceChecked = !LockFreeHashMapRunner::openReport(prefix + "-exclusive.txt", duplicateReport) && evidenceChecked;
+            std::ifstream savedEvidence((prefix + "-exclusive.txt").c_str());
+            std::string savedText;
+            savedEvidence >> savedText;
+            evidenceChecked = bool(savedEvidence) && savedText == "preserved" && evidenceChecked;
             int parsed = 99;
             int failuresBefore = LockFreeHashMapTestThread::failures();
             {
@@ -490,6 +665,25 @@ int main(int argc, char** argv)
             }
             std::vector<int> fakeIds(1, 1);
             bool rejectedIncomplete = !LockFreeHashMapRunner::cases(argv[0], prefix + "-incomplete", fakeIds, 1);
+            const std::string validCase = "BEGIN id=1\nRESOURCES allocation_delta=0 cpu_seconds=0\nEND id=1 result=PASS\nRESULT checks=1 failed=0\n";
+            std::istringstream completeCase(validCase);
+            bool parserChecked = LockFreeHashMapRunner::verifyCase(completeCase, 1);
+            const std::string invalidCases[] = { validCase + "END id=1 result=FAIL\n", validCase + "RESULT checks=1 failed=1\n",
+                validCase + "RESULT checks=1 failed=0\n", "BEGIN id=1\nEND id=1 result=PASS\nRESULT checks=1 failed=0\n",
+                "BEGIN id=1\nRESOURCES allocation_delta=0 allocation_delta=1\nEND id=1 result=PASS\nRESULT checks=1 failed=0\n",
+                "BEGIN id=1\nRESOURCES allocation_delta=0\nEND id=1 result=PASS\nRESULT checks=0 failed=0\n" };
+            for (size_t i = 0; i < sizeof(invalidCases) / sizeof(invalidCases[0]); ++i)
+            {
+                std::istringstream invalid(invalidCases[i]);
+                parserChecked = !LockFreeHashMapRunner::verifyCase(invalid, 1) && parserChecked;
+            }
+            std::istringstream wrongIdentity(validCase);
+            std::istringstream completeModule("MODULE_RESULT checks=1 failed=0\nMODULE_RESULT checks=2 failed=0\n");
+            std::istringstream contradictedModule("MODULE_RESULT checks=1 failed=1\nMODULE_RESULT checks=2 failed=0\n");
+            std::istringstream emptyModule("MODULE_RESULT checks=0 failed=0\n");
+            parserChecked = !LockFreeHashMapRunner::verifyCase(wrongIdentity, 2) &&
+                LockFreeHashMapRunner::verifyModule(completeModule) && !LockFreeHashMapRunner::verifyModule(contradictedModule) &&
+                !LockFreeHashMapRunner::verifyModule(emptyModule) && parserChecked;
             bool affinityChecked = true;
             bool dumpChecked = true;
             bool priorityChecked = true;
@@ -513,10 +707,14 @@ int main(int argc, char** argv)
 #endif
             bool valid = success.m_code == 0 && failure.m_code == 7 && timeout.m_code == -2 && duplicate.m_code == -1 &&
                 paired.m_code == 0 && badSecond.m_code == -1 && missingFirst.m_code == -1 &&
-                LockFreeHashMapTestThread::failures() == failuresBefore + 1 && completed.load() == 1 && rejectedIncomplete && affinityChecked && dumpChecked && priorityChecked &&
+                LockFreeHashMapTestThread::failures() == failuresBefore + 1 && completed.load() == 1 && rejectedIncomplete && parserChecked && evidenceChecked && affinityChecked && dumpChecked && priorityChecked &&
                 !LockFreeHashMapRunner::number("1x", 10, parsed) && !LockFreeHashMapRunner::number("", 10, parsed) &&
                 !LockFreeHashMapRunner::number("99999999999999999999999", 10, parsed) && parsed == 99;
-            std::ofstream report((prefix + "-selftest.txt").c_str());
+            std::ofstream report;
+            if (!LockFreeHashMapRunner::openReport(prefix + "-selftest.txt", report))
+            {
+                return 1;
+            }
             report << "success=" << success.m_code << " failure=" << failure.m_code << " timeout=" << timeout.m_code
                 << " duplicate_log=" << duplicate.m_code << " parser=" << valid
                 << " incomplete_rejected=" << rejectedIncomplete << " unwind_joined=" << completed.load()
@@ -540,17 +738,8 @@ int main(int argc, char** argv)
                 path << argv[3] << "-module-r" << i << ".log";
                 LockFreeHashMapRunResult result = LockFreeHashMapRunner::run(argv[2], "", path.str(), 120);
                 std::ifstream report(path.str().c_str());
-                std::string line;
-                bool verified = false;
-                while (std::getline(report, line))
-                {
-                    if (line.compare(0, 21, "MODULE_RESULT checks=") == 0)
-                    {
-                        // 组合模块以最后一次总结果为准，不能让前置模块通过覆盖后续失败
-                        verified = line.size() >= 9 && line.substr(line.size() - 9) == " failed=0";
-                    }
-                }
-                passed = passed && result.m_code == 0 && report.eof() && verified;
+                bool verified = LockFreeHashMapRunner::verifyModule(report);
+                passed = passed && result.m_code == 0 && verified;
                 std::cout << "MODULE repeat=" << i << " exit=" << result.m_code << " verified=" << verified << std::endl;
             }
             return passed ? 0 : 1;
@@ -563,12 +752,12 @@ int main(int argc, char** argv)
                 return 2;
             }
             std::vector<int> ids;
-            std::istringstream selection(argc == 6 ? argv[5] : "1,2,3,4,5,6,7,8,9,10");
+            std::istringstream selection(argc == 6 ? argv[5] : "1,2,3,4,5,6,7,8,9,10,11");
             std::string part;
             while (std::getline(selection, part, ','))
             {
                 int id = 0;
-                if (!LockFreeHashMapRunner::number(part.c_str(), 10, id))
+                if (!LockFreeHashMapRunner::number(part.c_str(), 11, id))
                 {
                     return 2;
                 }

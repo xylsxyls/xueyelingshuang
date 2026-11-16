@@ -6,9 +6,11 @@ LockFreeHashMapTestState::IntCounter LockFreeHashMapTestState::s_generation = nu
 LockFreeHashMapTestState::CollisionCounter LockFreeHashMapTestState::s_historySequence = nullptr;
 LockFreeHashMapTestState::StoragePointer LockFreeHashMapTestState::s_storage = nullptr;
 LockFreeHashMapTestState::ValidPointer LockFreeHashMapTestState::s_countValid = nullptr;
+LockFreeHashMapTestState::IdentityPointer LockFreeHashMapTestState::s_identity = nullptr;
 LockFreeHashMapTestState::AccountPointer LockFreeHashMapTestState::s_account = nullptr;
 LockFreeHashMapTestState::ClockPointer LockFreeHashMapTestState::s_clock = nullptr;
 LockFreeHashMapTestState::EntriesPointer LockFreeHashMapTestState::s_entries = nullptr;
+LockFreeHashMapTestState::PackedEntriesPointer LockFreeHashMapTestState::s_packedEntries = nullptr;
 
 // 访问豁免仅用于显式实例化的实参；函数体始终通过正常类型的成员指针操作真实对象
 // 标准依据：https://eel.is/c++draft/temp.spec.general#6
@@ -22,12 +24,17 @@ template class LockFreeHashMapTestBinding<LockFreeHashMapTestState::StoragePoint
     &LockFreeHashMapTestState::IntMap::m_storage, &LockFreeHashMapTestState::s_storage>;
 template class LockFreeHashMapTestBinding<LockFreeHashMapTestState::ValidPointer,
     &LockFreeHashMapTestState::IntMap::m_countValid, &LockFreeHashMapTestState::s_countValid>;
+
+template class LockFreeHashMapTestBinding<LockFreeHashMapTestState::IdentityPointer,
+    &LockFreeHashMapTestState::IntMap::m_identity, &LockFreeHashMapTestState::s_identity>;
 template class LockFreeHashMapTestBinding<LockFreeHashMapTestState::AccountPointer,
     &LockFreeHashMapTestState::IntMap::account, &LockFreeHashMapTestState::s_account>;
 template class LockFreeHashMapTestBinding<LockFreeHashMapTestState::ClockPointer,
     &LockFreeHashMapEpoch::m_clock, &LockFreeHashMapTestState::s_clock>;
 template class LockFreeHashMapTestBinding<LockFreeHashMapTestState::EntriesPointer,
     &LockFreeHashMapTestState::ScalarCache::m_entries, &LockFreeHashMapTestState::s_entries>;
+template class LockFreeHashMapTestBinding<LockFreeHashMapTestState::PackedEntriesPointer,
+    &LockFreeHashMapTestState::PackedCache::m_entries, &LockFreeHashMapTestState::s_packedEntries>;
 
 void LockFreeHashMapTestState::require(bool condition)
 {
@@ -68,6 +75,12 @@ std::atomic<bool>& LockFreeHashMapTestState::countValid(IntMap& map)
     return map.*s_countValid;
 }
 
+const std::shared_ptr<const LockFreeHashMapIdentity>& LockFreeHashMapTestState::identity(IntMap& map)
+{
+    require(s_identity != nullptr);
+    return map.*s_identity;
+}
+
 void LockFreeHashMapTestState::account(IntMap& map, LockFreeHashMapEpochRecord& record,
     uint64_t generation, int64_t difference)
 {
@@ -86,4 +99,11 @@ LockFreeHashMapValueCacheEntry& LockFreeHashMapTestState::first(ScalarCache& cac
     require(s_entries != nullptr);
     require(cache.count() != 0 && cache.*s_entries != nullptr);
     return (cache.*s_entries)[0];
+}
+
+LockFreeHashMapPackedValueCacheEntry& LockFreeHashMapTestState::first(PackedCache& cache)
+{
+    require(s_packedEntries != nullptr);
+    require(cache.count() != 0 && cache.*s_packedEntries != nullptr);
+    return (cache.*s_packedEntries)[0];
 }

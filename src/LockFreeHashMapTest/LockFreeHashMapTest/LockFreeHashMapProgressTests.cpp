@@ -277,11 +277,11 @@ static bool ProgressRun(int32_t operation, bool oneCpu, bool loaded, int32_t del
                         LockFreeHashMapResult result;
                         if (index == workers)
                         {
-                            result = operation == 1 ? map.tryErase(key) : map.trySet(key, value);
+                            result = operation == 1 ? map.tryErase(key, true, false) : map.trySet(key, value, nullptr, true, false);
                         }
                         else if (operation == 0 || operation == 6)
                         {
-                            result = map.trySet(operation == 0 ? 0 : key, value);
+                            result = map.trySet(operation == 0 ? 0 : key, value, nullptr, true, false);
                         }
                         else if (operation == 1)
                         {
@@ -289,7 +289,7 @@ static bool ProgressRun(int32_t operation, bool oneCpu, bool loaded, int32_t del
                         }
                         else if (operation == 2)
                         {
-                            result = map.tryErase(key);
+                            result = map.tryErase(key, true, false);
                         }
                         else if (operation == 3)
                         {
@@ -475,7 +475,8 @@ static bool ProgressRun(int32_t operation, bool oneCpu, bool loaded, int32_t del
     map.clear();
     for (int32_t i = 0; i < 256; ++i)
     {
-        map.maintain(1024);
+        // 线程已经全部退出，维护失败也必须计入本场景结果，不能只凭最终统计掩盖接口错误。
+        passed = map.maintain(1024).m_status == LockFreeHashMapOk && passed;
     }
     LockFreeHashMapPoolStats stats = {};
     passed = passed && map.poolStats(stats).m_status == LockFreeHashMapOk && stats.occupied == 0 && stats.retired == 0;
@@ -516,6 +517,11 @@ int main(int argc, char** argv)
         bool allocatorOnly = argc == 2 && std::string(argv[1]) == "allocator-control";
         bool schedulerOnly = argc == 2 && std::string(argv[1]) == "scheduler-control";
         bool controlOnly = allocatorOnly || schedulerOnly;
+        if (argc > 2 || (argc == 2 && !controlOnly))
+        {
+            std::cerr << "公平性测试仅支持无参数、allocator-control或scheduler-control" << std::endl;
+            return 2;
+        }
         int32_t controlOperation = schedulerOnly ? 9 : 8;
         for (int32_t delayed = 1; !controlOnly && delayed <= 2; ++delayed)
         {

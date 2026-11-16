@@ -160,7 +160,7 @@ void LockFreeHashMapPerfModels::add(std::vector<LockFreeHashMapPerfSpec>& result
     }
     if (operation == LockFreeHashMapPerfClear)
     {
-        spec.m_iterations = 64;
+        spec.m_iterations = kClearTables;
     }
     if (operation == LockFreeHashMapPerfRefill)
     {

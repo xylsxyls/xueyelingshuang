@@ -102,6 +102,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LockFreeHashMapPerfModels.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapPerfValidation.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="LockFreeHashMapPerfValidation.inl"><Filter>头文件</Filter></ClInclude>
     <ClInclude Include="LockFreeHashMapPoolTests.h" /><ClInclude Include="LockFreeHashMapEpochTests.h"><Filter>头文件</Filter></ClInclude>
     <ClCompile Include="LockFreeHashMapPoolTests.cpp" /><ClCompile Include="LockFreeHashMapEpochTests.cpp"><Filter>源文件</Filter></ClCompile>
     <ClInclude Include="LockFreeHashMapPerfMemory.h"><Filter>头文件</Filter></ClInclude>
@@ -122,5 +124,9 @@
     <ClCompile Include="LockFreeHashMapSingleThread.cpp"><Filter>源文件</Filter></ClCompile>
     <ClCompile Include="LockFreeHashMapSingleObservation.cpp"><Filter>源文件</Filter></ClCompile>
     <ClCompile Include="LockFreeHashMapCrashRunner.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LockFreeHashMapRetryTests.h" />
+    <ClCompile Include="LockFreeHashMapRetryTests.cpp" />
   </ItemGroup>
 </Project>

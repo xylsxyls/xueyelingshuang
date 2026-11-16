@@ -105,6 +105,8 @@ public:
 class LockFreeHashMapPerfModels
 {
 public:
+    // 短时清空一次测量的满表数量，扩大整批计时并保持每张表只清空一次。
+    static const size_t kClearTables = 1024;
     // Windows QPC 频率，线程启动前初始化后只读
     static double s_frequency;
 public:

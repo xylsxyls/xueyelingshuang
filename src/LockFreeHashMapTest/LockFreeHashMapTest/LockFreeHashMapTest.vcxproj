@@ -157,7 +157,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(LockFreeHashMapTestMode)'=='perf-runner'">
+  <ItemDefinitionGroup Condition="'$(LockFreeHashMapTestMode)'=='perf-runner' Or '$(LockFreeHashMapTestMode)'=='single-thread'">
     <ClCompile><PreprocessorDefinitions>LOCKFREEHASHMAP_RUNNER_NO_MAIN;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(LockFreeHashMapTestMode)'=='perf-memory'">
@@ -194,6 +194,8 @@
     <ClInclude Include="LockFreeHashMapRewriteTests.h" />
     <ClInclude Include="LockFreeHashMapPoolTests.h" /><ClInclude Include="LockFreeHashMapEpochTests.h" />
     <ClInclude Include="LockFreeHashMapPerfModels.h" />
+    <ClInclude Include="LockFreeHashMapPerfValidation.h" />
+    <ClInclude Include="LockFreeHashMapPerfValidation.inl" />
     <ClInclude Include="LockFreeHashMapPerfMemory.h" />
     <ClInclude Include="LockFreeHashMapPerformance.h" />
     <ClInclude Include="LockFreeHashMapPerformance.inl" />
@@ -243,7 +245,7 @@
       <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='epoch'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="LockFreeHashMapPerfModels.cpp">
-      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='performance' And '$(LockFreeHashMapTestMode)'!='perf-memory' And '$(LockFreeHashMapTestMode)'!='perf-runner'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='performance' And '$(LockFreeHashMapTestMode)'!='perf-memory' And '$(LockFreeHashMapTestMode)'!='perf-runner' And '$(LockFreeHashMapTestMode)'!='read-costs'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="LockFreeHashMapPerformance.cpp">
       <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='performance' And '$(LockFreeHashMapTestMode)'!='perf-memory'">true</ExcludedFromBuild>
@@ -270,7 +272,7 @@
       <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='cases'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="LockFreeHashMapRunner.cpp">
-      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='runner' And '$(LockFreeHashMapTestMode)'!='perf-runner'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='runner' And '$(LockFreeHashMapTestMode)'!='perf-runner' And '$(LockFreeHashMapTestMode)'!='single-thread'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="LockFreeHashMapTestThread.cpp">
       <ExcludedFromBuild Condition="'$(LockFreeHashMapTestMode)'!='cases' And '$(LockFreeHashMapTestMode)'!='control' And '$(LockFreeHashMapTestMode)'!='workloads' And '$(LockFreeHashMapTestMode)'!='runner' And '$(LockFreeHashMapTestMode)'!='performance' And '$(LockFreeHashMapTestMode)'!='epoch' And '$(LockFreeHashMapTestMode)'!='pool' And '$(LockFreeHashMapTestMode)'!='rewrite' And '$(LockFreeHashMapTestMode)'!='read-costs' And '$(LockFreeHashMapTestMode)'!='std-checks' And '$(LockFreeHashMapTestMode)'!='progress'">true</ExcludedFromBuild>
@@ -297,4 +299,8 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ItemGroup><ClInclude Include="LockFreeHashMapProgressTests.h" /></ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LockFreeHashMapRetryTests.h" />
+    <ClCompile Include="LockFreeHashMapRetryTests.cpp" Condition="'$(LockFreeHashMapTestMode)'=='cases'" />
+  </ItemGroup>
 </Project>

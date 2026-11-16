@@ -13,12 +13,17 @@
 #endif
 
 double LockFreeHashMapWorkloads::s_frequency = 1;
+std::atomic<bool> LockFreeHashMapWorkloads::s_clockValid(true);
 
 double LockFreeHashMapWorkloads::timestamp()
 {
 #if defined(_WIN32)
     LARGE_INTEGER ticks = {};
-    QueryPerformanceCounter(&ticks);
+    if (!QueryPerformanceCounter(&ticks))
+    {
+        s_clockValid.store(false);
+        return 0;
+    }
     return double(ticks.QuadPart) / s_frequency;
 #else
     return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();

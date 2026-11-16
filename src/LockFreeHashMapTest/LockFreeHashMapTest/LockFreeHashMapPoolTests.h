@@ -40,6 +40,10 @@ struct LockFreeHashMapPoolTestAllocation
     LOCKFREEHASHMAP_TEST_ALIGN_64 static std::atomic<int64_t> s_live;
     // -1 不注入，零使下次申请失败
     LOCKFREEHASHMAP_TEST_ALIGN_64 static std::atomic<int64_t> s_fail;
+    // 非零时只让指定字节数的申请参与s_fail倒计数，隔离返回向量的调试代理分配
+    static std::atomic<size_t> s_failSize;
+    // 单线程故障夹具持续拒绝申请，覆盖标准库自身的再次申请，退出注入范围后必须清除
+    static std::atomic<bool> s_failAll;
 };
 
 /** 按独立预期验证位图分配、代际回收和有界预算

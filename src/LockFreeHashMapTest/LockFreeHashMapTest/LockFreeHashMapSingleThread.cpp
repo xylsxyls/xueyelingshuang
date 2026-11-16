@@ -1,4 +1,5 @@
 ﻿#include "LockFreeHashMapSingleThread.h"
+#include "LockFreeHashMapRunner.h"
 #include <cerrno>
 #include <chrono>
 #include <cstdlib>
@@ -116,15 +117,9 @@ int LockFreeHashMapSingleThread::run(int argc, char** argv)
 #endif
         const std::string prefix = argv[1];
         // 不覆盖已有原始证据。文件创建失败和磁盘写入失败均使测试失败。
-        std::ifstream existingRaw((prefix + "-runs.csv").c_str());
-        std::ifstream existingSummary((prefix + "-summary.csv").c_str());
-        if (existingRaw.good() || existingSummary.good())
-        {
-            throw std::runtime_error("输出前缀已存在");
-        }
-        std::ofstream raw((prefix + "-runs.csv").c_str());
-        std::ofstream summary((prefix + "-summary.csv").c_str());
-        if (!raw || !summary)
+        std::ofstream raw, summary;
+        if (!LockFreeHashMapRunner::openReport(prefix + "-runs.csv", raw) ||
+            !LockFreeHashMapRunner::openReport(prefix + "-summary.csv", summary))
         {
             throw std::runtime_error("无法创建证据文件");
         }
@@ -143,8 +138,8 @@ int LockFreeHashMapSingleThread::run(int argc, char** argv)
                 return 1;
             }
         }
-        raw.flush();
-        summary.flush();
+        raw.close();
+        summary.close();
         if (!raw.good() || !summary.good())
         {
             throw std::runtime_error("证据写入失败");

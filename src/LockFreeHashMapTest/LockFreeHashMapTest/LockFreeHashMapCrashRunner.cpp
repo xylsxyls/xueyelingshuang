@@ -27,7 +27,16 @@ bool LockFreeHashMapCrashRunner::capture(HANDLE process, DWORD processId, DWORD 
     {
         return false;
     }
-    std::ofstream output((prefix + "-stack.txt").c_str());
+    std::string stackPath = prefix + "-stack.txt";
+    Handle stackFile(CreateFileA(stackPath.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr,
+        CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr), &CloseHandle);
+    if (stackFile.get() == INVALID_HANDLE_VALUE)
+    {
+        stackFile.release();
+        return false;
+    }
+    stackFile.reset();
+    std::ofstream output(stackPath.c_str());
     if (!output)
     {
         return false;
@@ -216,7 +225,7 @@ bool LockFreeHashMapCrashRunner::inspect(const std::string& path, const std::str
     // 转储中的偏移不作为 C++ 对象地址使用，按值复制后再核对长度和索引。
     MINIDUMP_HEADER header = {};
     std::memcpy(&header, bytes.data(), sizeof(header));
-    if (header.Signature != MINIDUMP_SIGNATURE || header.StreamDirectoryRva > bytes.size() ||
+    if (header.Signature != MINIDUMP_SIGNATURE || header.NumberOfStreams == 0 || header.StreamDirectoryRva > bytes.size() ||
         header.NumberOfStreams > (bytes.size() - header.StreamDirectoryRva) / sizeof(MINIDUMP_DIRECTORY))
     {
         return false;
@@ -316,6 +325,7 @@ bool LockFreeHashMapCrashRunner::inspect(const std::string& path, const std::str
     SYMBOL_INFO* symbol = new (storage.data()) SYMBOL_INFO();
     symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
     symbol->MaxNameLen = MAX_SYM_NAME;
+    bool sawThread = false;
     for (ULONG32 stream = 0; stream < header.NumberOfStreams; ++stream)
     {
         MINIDUMP_DIRECTORY directory = {};
@@ -341,6 +351,7 @@ bool LockFreeHashMapCrashRunner::inspect(const std::string& path, const std::str
         }
         for (ULONG32 index = 0; index < threadCount; ++index)
         {
+            sawThread = true;
             MINIDUMP_THREAD thread = {};
             std::memcpy(&thread, bytes.data() + directory.Location.Rva + threadOffset + index * sizeof(thread), sizeof(thread));
             if (thread.Stack.Memory.Rva > bytes.size() || thread.Stack.Memory.DataSize > bytes.size() - thread.Stack.Memory.Rva)
@@ -379,7 +390,7 @@ bool LockFreeHashMapCrashRunner::inspect(const std::string& path, const std::str
             }
         }
     }
-    return bool(std::cout);
+    return sawThread && bool(std::cout);
 #else
     (void)path;
     (void)executable;
@@ -425,6 +436,7 @@ int LockFreeHashMapCrashRunner::run(const std::string& executable, const std::st
     bool sharedProcessHandle = false, sharedThreadHandle = false;
     bool exited = false, timedOut = false, initialBreakpoint = false;
     int result = -1;
+    uint64_t captures = 0;
     ULONGLONG begin = GetTickCount64();
     try
     {
@@ -481,7 +493,8 @@ int LockFreeHashMapCrashRunner::run(const std::string& executable, const std::st
                     if (!event.u.Exception.dwFirstChance || event.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
                     {
                         bool captured = capture(process.get(), child.dwProcessId, event.dwThreadId,
-                            &event.u.Exception, executable, prefix + (event.u.Exception.dwFirstChance ? "-first" : ""));
+                            &event.u.Exception, executable, prefix + "-event" + std::to_string(++captures) +
+                                (event.u.Exception.dwFirstChance ? "-first" : ""));
                         std::cout << "CRASH captured=" << captured << " first=" << event.u.Exception.dwFirstChance
                             << " prefix=" << prefix << std::endl;
                     }

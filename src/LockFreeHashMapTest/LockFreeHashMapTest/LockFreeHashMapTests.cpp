@@ -1,6 +1,7 @@
 ﻿#include "LockFreeHashMapTests.h"
 #include "LockFreeHashMapTestEntry.h"
 #include "LockFreeHashMapMigration.h"
+#include "LockFreeHashMapRetryTests.h"
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
@@ -257,12 +258,15 @@ double LockFreeHashMapTests::timestamp()
 {
 #if defined(_WIN32)
     LARGE_INTEGER ticks = {}, frequency = {};
-    if (QueryPerformanceCounter(&ticks) && QueryPerformanceFrequency(&frequency) && frequency.QuadPart != 0)
+    if (QueryPerformanceCounter(&ticks) && QueryPerformanceFrequency(&frequency) && frequency.QuadPart > 0 && ticks.QuadPart >= 0)
     {
         return double(ticks.QuadPart) / double(frequency.QuadPart);
     }
-#endif
+    // 计时中途失败不能切换到另一个纪元的时钟，否则可能把负耗时或超长耗时当成通过。
+    throw std::runtime_error("performance counter unavailable");
+#else
     return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+#endif
 }
 
 void LockFreeHashMapTests::warmRuntime()
@@ -331,7 +335,7 @@ void LockFreeHashMapTests::pool()
         LockFreeHashMapPoolStats directMetrics = {};
         check(configured.status() == LockFreeHashMapOk && configured.bucketCount() == 8,
             "configured constructor preserves bucket normalization");
-        configured.poolStats(directMetrics);
+        check(configured.poolStats(directMetrics).m_status == LockFreeHashMapOk, "configured pool metrics available");
         check(directMetrics.capacity == 2 && directMetrics.successfulGrowCount == 0,
             "configured constructor does not allocate the default pool first");
         check(configured.set(1, 3) && configured.value(1) == 3, "configured constructor accepts operations");
@@ -418,7 +422,7 @@ void LockFreeHashMapTests::pool()
     config.growFreeThreshold = 1;
     check(positive.configurePool(config).m_status == LockFreeHashMapOk && positive.set(1, 2), "positive threshold admission");
     LockFreeHashMapPoolStats metrics = {};
-    positive.poolStats(metrics);
+    check(positive.poolStats(metrics).m_status == LockFreeHashMapOk, "positive threshold metrics available");
     check(metrics.capacity > 1, "positive threshold pre-growth");
     LockFreeHashMap<int, int> rejected;
     config.maximumCapacity = -2;
@@ -430,11 +434,13 @@ void LockFreeHashMapTests::pool()
     config.growPolicy = [](const LockFreeHashMapGrowContext&) -> size_t { throw std::runtime_error("growth"); };
     check(rejected.configurePool(config).m_status == LockFreeHashMapOk && rejected.set(1, 2), "pre-growth failure preserves granted slot");
     check(rejected.trySet(2, 3).m_status == LockFreeHashMapUserException, "demand growth reports callback failure");
-    rejected.setPoolPolicies([](const LockFreeHashMapGrowContext&) { return size_t(0); }, config.shrinkPolicy);
+    check(rejected.setPoolPolicies([](const LockFreeHashMapGrowContext&) { return size_t(0); }, config.shrinkPolicy).m_status == LockFreeHashMapOk,
+        "成功安装拒绝增长策略");
     check(rejected.trySet(2, 3).m_status == LockFreeHashMapGrowthDeclined, "zero request is an explicit refusal");
-    rejected.setPoolPolicies([](const LockFreeHashMapGrowContext&) { return (std::numeric_limits<size_t>::max)(); }, config.shrinkPolicy);
+    check(rejected.setPoolPolicies([](const LockFreeHashMapGrowContext&) { return (std::numeric_limits<size_t>::max)(); }, config.shrinkPolicy).m_status == LockFreeHashMapOk,
+        "成功安装极大增长策略");
     check(rejected.set(2, 3), "huge request safely clipped");
-    rejected.poolStats(metrics);
+    check(rejected.poolStats(metrics).m_status == LockFreeHashMapOk, "growth reservation metrics available");
     check(metrics.capacity == 8 && metrics.reservedCapacity == 0, "growth and reservations obey maximum");
 }
 
@@ -541,13 +547,13 @@ void LockFreeHashMapTests::versions()
     Map::Snapshot old;
     Map::Snapshot actual;
     check(map.insertIfAbsent(1, 10, old).m_committed, "first publication");
-    check(map.insertIfAbsent(1, 20, actual).m_status == LockFreeHashMapExists && *actual.m_value == 10, "loser sees winner");
+    check(map.insertIfAbsent(1, 20, actual).m_status == LockFreeHashMapExists && actual.m_value && *actual.m_value == 10, "loser sees winner");
     check(other.set(1, 10) && other.eraseIf(1, old.m_version).m_status == LockFreeHashMapVersionMismatch, "cross-instance refusal");
     check(map.compareExchange(1, old.m_version, 10, &actual).m_committed, "same value gets new version");
     check(map.eraseIf(1, old.m_version).m_status == LockFreeHashMapVersionMismatch, "old equal value token refused");
     check(map.eraseIf(1, actual.m_version).m_committed && map.set(1, 10), "delete and reinsert");
     check(!map.compareExchange(1, actual.m_version, 20).m_committed, "reinsertion invalidates old identity");
-    map.find(1, old);
+    check(map.find(1, old).m_status == LockFreeHashMapOk && old.m_value, "clear前成功取得独立快照");
     map.clear();
     check(map.set(1, 20) && !map.eraseIf(1, old.m_version).m_committed, "clear separates identities");
     check(*old.m_value == 10, "snapshot independent after clear");
@@ -558,12 +564,12 @@ void LockFreeHashMapTests::versions()
     check(!map.eraseIf(1, old.m_version).m_committed && map.retainedNodeCount() < 128, "address reuse no old token and bounded history");
     // 非空输出反复接收新快照，旧引用仍独立存活；版本输入允许与输出为同一对象。
     Map::Snapshot reused;
-    check(map.find(1, reused).m_status == LockFreeHashMapOk, "snapshot reuse fixture");
+    check(map.find(1, reused).m_status == LockFreeHashMapOk && reused.m_value, "snapshot reuse fixture");
     Map::Snapshot held = reused;
-    check(map.trySet(1, 6000, &reused).m_committed && *reused.m_value == 6000 && *held.m_value == 4999,
+    check(map.trySet(1, 6000, &reused).m_committed && reused.m_value && *reused.m_value == 6000 && *held.m_value == 4999,
         "snapshot handoff keeps escaped old value");
     check(reused.m_value.use_count() == 1 && held.m_value.use_count() == 1, "snapshot handoff retains no temporary owners");
-    check(map.compareExchange(1, reused.m_version, 6001, &reused).m_committed && *reused.m_value == 6001,
+    check(map.compareExchange(1, reused.m_version, 6001, &reused).m_committed && reused.m_value && *reused.m_value == 6001,
         "snapshot version input aliases output");
     const int* preserved = reused.m_value.get();
     uint64_t preservedVersion = reused.m_version.m_sequence;
@@ -572,7 +578,7 @@ void LockFreeHashMapTests::versions()
     s_failAllocation.store(-1);
     check(failedCopy.m_status == LockFreeHashMapNoMemory && reused.m_value.get() == preserved &&
         reused.m_version.m_sequence == preservedVersion, "snapshot allocation failure preserves both output fields");
-    check(map.take(1, reused).m_committed && *reused.m_value == 6001 && !map.contains(1), "take replaces populated output");
+    check(map.take(1, reused).m_committed && reused.m_value && *reused.m_value == 6001 && !map.contains(1), "take replaces populated output");
     check(map.set(1, 4999), "restore traversal fixture");
     // 布尔向量在 v120 没有 emplace_back，导出仍须保留这类合法模板实例。
     LockFreeHashMap<bool, bool> booleanMap;
@@ -585,19 +591,22 @@ void LockFreeHashMapTests::versions()
     Map::Snapshot escaped;
     {
         Map temporary;
-        temporary.insertIfAbsent(2, 77, escaped);
+        check(temporary.insertIfAbsent(2, 77, escaped).m_committed && escaped.m_value, "临时实例成功发布拥有式快照");
     }
     check(*escaped.m_value == 77 && other.eraseIf(1, escaped.m_version).m_status == LockFreeHashMapVersionMismatch, "snapshot outlives instance");
     int callbacks = 0;
+    bool reentered = true;
     // key、value 只在回调内借用；回调执行本场景校验或异常注入，无返回值
     LockFreeHashMapResult walked = map.forEachResult([&](const int& key, const int& value)
     {
         (void)value;
         ++callbacks;
-        map.erase(key);
-        map.set(key, 44);
+        bool removed = map.erase(key);
+        bool written = map.set(key, 44);
+        reentered = reentered && removed && written;
     });
-    check(walked.m_status == LockFreeHashMapOk && callbacks == 1, "callback reentry no duplicate replay");
+    check(walked.m_status == LockFreeHashMapOk && callbacks == 1 && reentered,
+        "callback reentry commits erase and replacement without duplicate replay");
 }
 
 void LockFreeHashMapTests::exceptions()
@@ -628,7 +637,7 @@ void LockFreeHashMapTests::exceptions()
             throw std::runtime_error("callback");
         }).m_status == LockFreeHashMapUserException, "callback exception reported");
         check(map.eraseIf(1, before.m_version).m_committed, "exception paths release protections");
-        // 导出可跳过内部计数，但第二次复制失败仍须销毁第一份副本，不能留下部分结果。
+        // 第二次复制失败仍须销毁第一份副本，不能留下部分导出结果。
         check(map.set(1, a) && map.set(2, b) && map.set(3, a), "partial export fixture initialized");
         int live = LockFreeHashMapTestValue::s_live.load();
         LockFreeHashMapTestValue::s_failCopy.store(LockFreeHashMapTestValue::s_copies.load() + 1);
@@ -642,7 +651,7 @@ void LockFreeHashMapTests::exceptions()
         check(emptyPairs && LockFreeHashMapTestValue::s_live.load() == live && map.keys().size() == 3,
             "partial pair export failure releases constructed elements and preserves source");
         int calls = 0;
-        // 对外遍历在第二次回调失败时仍精确报告第一次正常完成，不能复用不计数的导出模式。
+        // 对外遍历在第二次回调失败时仍须精确报告第一次正常完成，失败回调不能计入完成数。
         LockFreeHashMapResult partial = map.forEachResult([&calls](const int& key, const LockFreeHashMapTestValue& value)
         {
             (void)key;
@@ -782,7 +791,7 @@ void LockFreeHashMapTests::contention()
         threads[i].join();
     }
     check(wins.load() == 1 && failures.load() == 0 && map.size() == 1, "same-key exactly one publisher");
-    map.set(1, 0);
+    check(map.set(1, 0), "条件累加前成功初始化计数器");
     threads.clear();
     for (int t = 0; t < 8; ++t)
     {
@@ -796,7 +805,7 @@ void LockFreeHashMapTests::contention()
                 {
                     Map::Snapshot current;
                     LockFreeHashMapResult read = map.find(1, current);
-                    if (read.m_status != LockFreeHashMapOk)
+                    if (read.m_status != LockFreeHashMapOk || !current.m_value)
                     {
                         failures.fetch_add(1);
                         break;
@@ -832,7 +841,7 @@ void LockFreeHashMapTests::contention()
             if (map.take(1, result).m_committed)
             {
                 wins.fetch_add(1);
-                if (*result.m_value != 12000)
+                if (!result.m_value || *result.m_value != 12000)
                 {
                     failures.fetch_add(1);
                 }
@@ -857,8 +866,8 @@ void LockFreeHashMapTests::paused()
         config.maximumCapacity = 8;
         config.protectionRecordCount = 4;
         config.directoryCapacity = 4;
-        map.configurePool(config);
-        map.set(1, LockFreeHashMapTestValue(10));
+        check(map.configurePool(config).m_status == LockFreeHashMapOk, "暂停读取夹具采用指定有限池");
+        check(map.set(1, LockFreeHashMapTestValue(10)), "paused reader initial value published");
         LockFreeHashMapTestValue::s_entered.store(false);
         LockFreeHashMapTestValue::s_resume.store(false);
         LockFreeHashMapTestValue::s_pauseValue.store(10);
@@ -879,12 +888,12 @@ void LockFreeHashMapTests::paused()
             map.maintain(64);
         }
         LockFreeHashMapPoolStats observed = {};
-        map.poolStats(observed);
+        check(map.poolStats(observed).m_status == LockFreeHashMapOk, "paused reader metrics available");
         check(observed.retired >= 1 && observed.capacity <= 8, "paused value remains retired within budget");
         check(map.set(2, LockFreeHashMapTestValue(30)), "unrelated entry progresses with paused reader");
         LockFreeHashMapTestValue::s_resume.store(true);
         paused.join();
-        check(reader.m_status == LockFreeHashMapOk && captured.m_value->m_value == 10, "paused copy remains valid after deletion");
+        check(reader.m_status == LockFreeHashMapOk && captured.m_value && captured.m_value->m_value == 10, "paused copy remains valid after deletion");
         map.clear();
         for (int i = 0; i < 100; ++i)
         {
@@ -892,6 +901,7 @@ void LockFreeHashMapTests::paused()
         }
         check(map.retainedNodeCount() == 0, "paused reader release permits full reclamation");
     }
+    for (size_t mode = 0; mode < 3; ++mode)
     {
         Map map(1);
         LockFreeHashMapTestValue::s_entered.store(false);
@@ -901,7 +911,15 @@ void LockFreeHashMapTests::paused()
         // 无参数工作函数借用本用例夹具，结果在连接线程后读取，无返回值
         LockFreeHashMapTestThread creator([&]()
         {
-            delayed = map.trySet(1, LockFreeHashMapTestValue(99));
+            if (mode == 2)
+            {
+                bool committed = map.set(1, LockFreeHashMapTestValue(99));
+                delayed = LockFreeHashMapResult(LockFreeHashMapOk, committed);
+            }
+            else
+            {
+                delayed = map.trySet(1, LockFreeHashMapTestValue(99), nullptr, mode != 0, false);
+            }
         });
         LockFreeHashMapTestResume resumeOnExit(LockFreeHashMapTestValue::s_resume, creator);
         check(wait(LockFreeHashMapTestValue::s_entered), "candidate paused before publication");
@@ -910,13 +928,17 @@ void LockFreeHashMapTests::paused()
         LockFreeHashMapTestValue::s_resume.store(true);
         creator.join();
         Map::Snapshot actual;
-        check(map.find(1, actual).m_status == LockFreeHashMapOk && actual.m_value->m_value == 77, "late old generation cannot overwrite new");
+        check(mode == 0 ? (!delayed.m_committed && delayed.m_status == LockFreeHashMapReservationBusy) : delayed.m_committed,
+            "clear and competing publication obey the requested retry policy");
+        check(map.find(1, actual).m_status == LockFreeHashMapOk && actual.m_value &&
+            actual.m_value->m_value == (mode == 0 ? 77 : 99) && map.size() == 1,
+            "nonretrying old candidate is refused; retrying write publishes once in the current generation");
     }
     {
         LockFreeHashMap<int, int, LockFreeHashMapCollisionHash> map(1);
         for (int i = 1; i <= 6; ++i)
         {
-            map.set(i, i);
+            check(map.set(i, i), "paused traversal initial chain published");
         }
         std::atomic<bool> entered(false);
         std::atomic<bool> resume(false);
@@ -947,8 +969,7 @@ void LockFreeHashMapTests::paused()
         check(map.erase(4) && map.erase(3) && map.erase(2), "unlink predecessor current and successor during callback");
         for (int i = 0; i < 2000; ++i)
         {
-            map.set(8, 8);
-            map.erase(8);
+            check(map.set(8, 8) && map.erase(8), "paused traversal churn commits both operations");
             map.maintain(64);
         }
         resume.store(true);
@@ -961,12 +982,14 @@ void LockFreeHashMapTests::paused()
         map.maintain(64);
         check(map.retainedNodeCount() == 0, "all interior protections leave after traversal");
     }
-    for (int initialKeys = 0; initialKeys < 2; ++initialKeys)
+    for (int scenario = 0; scenario < 4; ++scenario)
     {
+        const int initialKeys = scenario & 1;
+        const bool retryContention = scenario >= 2;
         Map map(1);
         if (initialKeys != 0)
         {
-            map.set(0, LockFreeHashMapTestValue(0));
+            check(map.set(0, LockFreeHashMapTestValue(0)), "paused insert nonempty prefix published");
         }
         LockFreeHashMapTestValue::s_entered.store(false);
         LockFreeHashMapTestValue::s_resume.store(false);
@@ -976,7 +999,8 @@ void LockFreeHashMapTests::paused()
         // 无参数工作函数借用本用例夹具，结果在连接线程后读取，无返回值
         LockFreeHashMapTestThread creator([&]()
         {
-            delayed = map.insertIfAbsent(1, LockFreeHashMapTestValue(99), lateOutput);
+            delayed = retryContention ? map.insertIfAbsent(1, LockFreeHashMapTestValue(99), lateOutput) :
+                map.tryInsertIfAbsent(1, LockFreeHashMapTestValue(99), lateOutput, false, false);
         });
         LockFreeHashMapTestResume resumeOnExit(LockFreeHashMapTestValue::s_resume, creator);
         check(wait(LockFreeHashMapTestValue::s_entered), "candidate paused before a competing absent-insert");
@@ -988,9 +1012,24 @@ void LockFreeHashMapTests::paused()
         map.maintain(1);
         LockFreeHashMapTestValue::s_resume.store(true);
         creator.join();
-        std::cout << "PAUSED_INSERT initial_keys=" << initialKeys << " committed=" << delayed.m_committed << " status=" << delayed.m_status << std::endl;
-        check(!delayed.m_committed && delayed.m_status == LockFreeHashMapCleared && !map.contains(1),
-            "whole old bucket detach prevents two successful absent-inserts before the same clear");
+        std::cout << "PAUSED_INSERT initial_keys=" << initialKeys << " retry=" << retryContention <<
+            " committed=" << delayed.m_committed << " status=" << delayed.m_status << std::endl;
+        if (retryContention)
+        {
+            // 普通接口从未提交的旧代竞争恢复后，必须在 clear 之后的新代中发布一次。
+            Map::Snapshot actual;
+            check(delayed.m_committed && delayed.m_status == LockFreeHashMapOk && lateOutput.m_value &&
+                lateOutput.m_value->m_value == 99 && map.find(1, actual).m_status == LockFreeHashMapOk &&
+                actual.m_value && actual.m_value->m_value == 99 && actual.m_version.m_instance == lateOutput.m_version.m_instance &&
+                actual.m_version.m_sequence == lateOutput.m_version.m_sequence,
+                "ordinary insert retries after clear and reports exactly the new publication");
+        }
+        else
+        {
+            check(!delayed.m_committed && (delayed.m_status == LockFreeHashMapReservationBusy ||
+                delayed.m_status == LockFreeHashMapCleared) && !map.contains(1),
+                "nonretrying old-generation insertion cannot publish past clear");
+        }
     }
     {
         Map map(1);
@@ -998,8 +1037,8 @@ void LockFreeHashMapTests::paused()
         config.initialCapacity = 5;
         config.maximumCapacity = 5;
         config.protectionRecordCount = 4;
-        map.configurePool(config);
-        map.set(1, LockFreeHashMapTestValue(10));
+        check(map.configurePool(config).m_status == LockFreeHashMapOk, "暂停析构夹具采用指定有限池");
+        check(map.set(1, LockFreeHashMapTestValue(10)), "paused destructor initial value published");
         LockFreeHashMapTestValue::s_entered.store(false);
         LockFreeHashMapTestValue::s_resume.store(false);
         LockFreeHashMapTestValue::s_pauseDestructor.store(10);
@@ -1013,7 +1052,7 @@ void LockFreeHashMapTests::paused()
         LockFreeHashMapTestResume resumeOnExit(LockFreeHashMapTestValue::s_resume, reclaimer);
         check(wait(LockFreeHashMapTestValue::s_entered), "writer paused after publication while destroying detached old value");
         Map::Snapshot visible;
-        check(map.find(1, visible).m_status == LockFreeHashMapOk && visible.m_value->m_value == 20,
+        check(map.find(1, visible).m_status == LockFreeHashMapOk && visible.m_value && visible.m_value->m_value == 20,
             "published replacement visible before paused writer returns");
         check(map.erase(1) && map.set(2, LockFreeHashMapTestValue(30)), "other operations pass a paused reclamation owner");
         LockFreeHashMapTestValue::s_resume.store(true);
@@ -1025,6 +1064,10 @@ void LockFreeHashMapTests::paused()
 
 bool LockFreeHashMapTests::linearize(const std::vector<LockFreeHashMapHistory>& history, unsigned used, std::map<int, int> state)
 {
+    if (history.size() > 14 || (used & ~((1U << history.size()) - 1)) != 0)
+    {
+        return false;
+    }
     if (used == (1U << history.size()) - 1)
     {
         return true;
@@ -1059,7 +1102,7 @@ bool LockFreeHashMapTests::linearize(const std::vector<LockFreeHashMapHistory>& 
         else if (operation.m_operation == 1)
         {
             valid = exists ? (!operation.m_committed && operation.m_status == LockFreeHashMapExists && operation.m_output == state[operation.m_key]) :
-                (operation.m_committed && operation.m_status == LockFreeHashMapOk);
+                (operation.m_committed && operation.m_status == LockFreeHashMapOk && operation.m_output == operation.m_input);
             if (!exists)
             {
                 next[operation.m_key] = operation.m_input;
@@ -1092,6 +1135,18 @@ bool LockFreeHashMapTests::linearize(const std::vector<LockFreeHashMapHistory>& 
             valid = !operation.m_committed && operation.m_operation < 3 && overlapsClear;
             next = state;
         }
+        // 默认 try 写入允许在真实重叠的修改竞争后未提交返回 Busy，不改变参考表。
+        if (operation.m_status == LockFreeHashMapReservationBusy)
+        {
+            bool overlapsWriter = false;
+            for (size_t j = 0; j < history.size(); ++j)
+            {
+                overlapsWriter = overlapsWriter || (j != i && history[j].m_operation != 3 &&
+                    history[j].m_begin < operation.m_end && history[j].m_end > operation.m_begin);
+            }
+            valid = !operation.m_committed && (operation.m_operation == 0 || operation.m_operation == 2) && overlapsWriter;
+            next = state;
+        }
         if (valid && linearize(history, used | (1U << i), next))
         {
             return true;
@@ -1102,6 +1157,18 @@ bool LockFreeHashMapTests::linearize(const std::vector<LockFreeHashMapHistory>& 
 
 void LockFreeHashMapTests::histories()
 {
+    // 独立负例先证明模型能拒绝错误的成功输出与最后状态，再校验真实历史。
+    LockFreeHashMapHistory inserted = { 1, 0, 7, 8, 0, 1, LockFreeHashMapOk, true };
+    std::vector<LockFreeHashMapHistory> negative(1, inserted);
+    check(!linearize(negative, 0, std::map<int, int>()), "history rejects a wrong successful insertion snapshot");
+    negative[0].m_output = 7;
+    check(linearize(negative, 0, std::map<int, int>()), "history accepts the corrected insertion snapshot");
+    LockFreeHashMapHistory observed = { 3, 0, 0, -1, 2, 3, LockFreeHashMapNotFound, false };
+    negative.push_back(observed);
+    check(!linearize(negative, 0, std::map<int, int>()), "history rejects a lost final publication");
+    negative.back().m_status = LockFreeHashMapOk;
+    negative.back().m_output = 7;
+    check(linearize(negative, 0, std::map<int, int>()), "history accepts the exact final publication");
     uint32_t random = 0x1234abcd;
     for (int round = 0; round < 600; ++round)
     {
@@ -1115,7 +1182,7 @@ void LockFreeHashMapTests::histories()
             LockFreeHashMapPoolConfig config;
             config.inlineScalarValues = round < 500;
             config.lookupCacheCapacity = round % 2 == 0 ? 1 : 256;
-            map.configurePool(config);
+            check(map.configurePool(config).m_status == LockFreeHashMapOk, "并发历史确实使用指定缓存和标量配置");
         }
         std::vector<LockFreeHashMapHistory> history(12);
         for (size_t i = 0; i < history.size(); ++i)
@@ -1189,7 +1256,21 @@ void LockFreeHashMapTests::histories()
         {
             threads[i].join();
         }
-        bool valid = linearize(history, 0, std::map<int, int>());
+        // 静止后的真实查询属于历史末尾，不能只在模型中假定最后写入已经生效。
+        size_t finalCount = 0;
+        for (int key = 0; key < 2; ++key)
+        {
+            LockFreeHashMapHistory finalRead = { 3, key, 0, -1, clock.fetch_add(1), 0, LockFreeHashMapNotFound, false };
+            LockFreeHashMapSnapshot<int> output;
+            LockFreeHashMapResult result = map.find(key, output);
+            finalRead.m_status = result.m_status;
+            finalRead.m_committed = result.m_committed;
+            finalRead.m_output = output.m_value ? *output.m_value : -1;
+            finalRead.m_end = clock.fetch_add(1);
+            finalCount += result.m_status == LockFreeHashMapOk ? 1 : 0;
+            history.push_back(finalRead);
+        }
+        bool valid = linearize(history, 0, std::map<int, int>()) && map.size() == finalCount;
         if (!valid)
         {
             for (size_t i = 0; i < history.size(); ++i)
@@ -1222,7 +1303,7 @@ void LockFreeHashMapTests::stress()
         (void)context;
         return LockFreeHashMapShrinkDecision(128, 2);
     };
-    map.configurePool(config);
+    check(map.configurePool(config).m_status == LockFreeHashMapOk, "压力夹具成功安装容量上限和增长缩容策略");
     std::atomic<int> failures(0);
     std::atomic<bool> finished(false);
     // 各工作者只在错误路径写自己的诊断格，避免在正常路径增加共享计数而掩盖交错
@@ -1235,10 +1316,9 @@ void LockFreeHashMapTests::stress()
     {
         while (!finished.load())
         {
-            map.maintain(64);
             LockFreeHashMapPoolStats metrics = {};
-            map.poolStats(metrics);
-            if (metrics.budget > 2048 || metrics.peakBudget > 2048)
+            if (map.maintain(64).m_status != LockFreeHashMapOk || map.poolStats(metrics).m_status != LockFreeHashMapOk ||
+                metrics.budget > 2048 || metrics.peakBudget > 2048)
             {
                 ++maintenanceFailed[0];
                 failures.fetch_add(1);
@@ -1362,7 +1442,7 @@ void LockFreeHashMapTests::stress()
     }
     check(map.retainedNodeCount() == 0 && map.empty(), "stress complete resource reclamation");
     LockFreeHashMapPoolStats metrics = {};
-    map.poolStats(metrics);
+    check(map.poolStats(metrics).m_status == LockFreeHashMapOk, "stress final metrics available");
     std::cout << "STRESS operations=60000 threads=6 collision=all capacity=" << metrics.capacity
         << " retained=" << metrics.occupied << " bytes=" << metrics.retainedBytes << " cas_retries=NOT_MEASURED" << std::endl;
 }
@@ -1388,7 +1468,7 @@ void LockFreeHashMapTests::performance()
         double seconds = timestamp() - start;
         std::sort(latency.begin(), latency.end());
         LockFreeHashMapPoolStats metrics = {};
-        map.poolStats(metrics);
+        check(map.poolStats(metrics).m_status == LockFreeHashMapOk, "timing smoke metrics available");
         std::cout << "PERF buckets=" << buckets << " pairs_per_second=" << 10000 / seconds << " p50_us=" << latency[5000]
             << " p95_us=" << latency[9500] << " p99_us=" << latency[9900] << " capacity=" << metrics.capacity
             << " retained=" << metrics.occupied << " bytes=" << metrics.retainedBytes << " system_allocations=" << metrics.systemAllocationCount << std::endl;
@@ -1406,21 +1486,21 @@ int LockFreeHashMapRunTests(int argc, char** argv)
             "runtime warmup worker exceptions are not ignored");
         char* end = nullptr;
         long requested = argc == 2 ? std::strtol(argv[1], &end, 10) : 0;
-        if (argc > 2 || requested < 0 || requested > 10 ||
+        if (argc > 2 || requested < 0 || requested > 11 ||
             (argc == 2 && (requested == 0 || end == argv[1] || *end != 0)))
         {
-            std::cerr << "invalid test ID; choose 1..10 or omit for all" << std::endl;
+            std::cerr << "invalid test ID; choose 1..11 or omit for all" << std::endl;
             return 2;
         }
         int selected = static_cast<int>(requested);
-        for (int id = 1; id <= 10; ++id)
+        for (int id = 1; id <= 11; ++id)
         {
             if (selected != 0 && selected != id)
             {
                 continue;
             }
 #if defined(LOCKFREEHASHMAP_TEST_SINGLE_THREAD)
-            if (id != 1 && id != 2 && id != 3 && id != 4 && id != 9)
+            if (id != 1 && id != 2 && id != 3 && id != 4 && id != 9 && id != 11)
             {
                 std::cout << "NOT_RUN id=" << id << " reason=single_thread_host" << std::endl;
                 continue;
@@ -1472,6 +1552,10 @@ int LockFreeHashMapRunTests(int argc, char** argv)
             {
                 LockFreeHashMapTests::boundaries();
             }
+            if (id == 11)
+            {
+                LockFreeHashMapTests::check(LockFreeHashMapRetryTest(), "retry flags and capacity backoff");
+            }
             LockFreeHashMapTestResources resourcesAfter;
             LockFreeHashMapTests::check(LockFreeHashMapTestThread::failures() == threadFailuresBefore,
                 "all worker functions and thread joins completed without hidden exceptions");
@@ -1494,6 +1578,11 @@ int LockFreeHashMapRunTests(int argc, char** argv)
     catch (LockFreeHashMapTestFailure)
     {
         LockFreeHashMapTests::s_failAllocation.store(-1);
+        // 白盒绑定前提也可直接抛出此状态，不能留下failed=0却退出失败的矛盾汇总。
+        if (LockFreeHashMapTests::s_failures.load() == 0)
+        {
+            LockFreeHashMapTests::s_failures.fetch_add(1);
+        }
         std::cerr << "END id=" << runningId << " result=FAIL" << std::endl;
         std::cerr << "RESULT checks=" << LockFreeHashMapTests::s_checks.load()
             << " failed=" << LockFreeHashMapTests::s_failures.load() << std::endl;

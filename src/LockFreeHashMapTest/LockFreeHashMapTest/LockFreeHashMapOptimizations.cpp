@@ -1,5 +1,6 @@
 ﻿#include "LockFreeHashMapTests.h"
 #include "LockFreeHashMapTestState.h"
+#include <array>
 #include <cstring>
 #include <functional>
 #include <iostream>
@@ -8,6 +9,24 @@
 
 std::atomic<bool> LockFreeHashMapOnceEqual::s_throw(false);
 std::atomic<int> LockFreeHashMapOnceEqual::s_calls(0);
+std::atomic<size_t> LockFreeHashMapStringTestHash::s_calls(0);
+std::atomic<bool> LockFreeHashMapStringTestEqual::s_throw(false);
+
+size_t LockFreeHashMapStringTestHash::operator()(const std::string& key) const
+{
+    (void)key;
+    s_calls.fetch_add(1);
+    return 0;
+}
+
+bool LockFreeHashMapStringTestEqual::operator()(const std::string& left, const std::string& right) const
+{
+    if (s_throw.load())
+    {
+        throw 72;
+    }
+    return left == right;
+}
 
 bool LockFreeHashMapOnceEqual::operator()(int left, int right) const
 {
@@ -73,8 +92,8 @@ void LockFreeHashMapTestAccess::optimizations()
         equivalent.size() == 1 && equivalent.value(21) == 20,
         "custom equivalent keys remain one entry without scalar cache bypass");
     LockFreeHashMap<int, int, LockFreeHashMapCollisionHash, LockFreeHashMapOnceEqual> throwing(1);
-    throwing.set(1, 10);
-    throwing.set(2, 20);
+    bool prepared = throwing.set(1, 10) && throwing.set(2, 20);
+    LockFreeHashMapTests::check(prepared, "one-shot equality fixture contains both colliding keys");
     LockFreeHashMapOnceEqual::s_calls.store(0);
     LockFreeHashMapOnceEqual::s_throw.store(true);
     LockFreeHashMapResult failed = throwing.trySet(1, 99);
@@ -175,7 +194,196 @@ void LockFreeHashMapTestAccess::ignoreReadPayload(const int& key, const LockFree
 
 void LockFreeHashMapTestAccess::readOptimizations()
 {
+    {
+        // 即使整数副本已存在，每次查询仍须执行用户哈希并报告其失败，不能静默绕过用户代码。
+        LockFreeHashMap<int, int, LockFreeHashMapTestHash> cached;
+        int output = -7;
+        LockFreeHashMapTests::check(cached.set(7, 42) && cached.get(7, output) && output == 42,
+            "custom hash cached read fixture");
+        output = -7;
+        bool found = false, present = false;
+        LockFreeHashMapTestHash::s_fail.store(true);
+        try
+        {
+            found = cached.get(7, output);
+            present = cached.contains(7);
+        }
+        catch (...)
+        {
+            LockFreeHashMapTestHash::s_fail.store(false);
+            throw;
+        }
+        LockFreeHashMapTestHash::s_fail.store(false);
+        LockFreeHashMapTests::check(!found && !present && output == -7 &&
+            cached.get(7, output) && output == 42,
+            "cached get and contains retain the custom hash exception boundary");
+    }
     typedef LockFreeHashMap<int, LockFreeHashMapReadPayload> Map;
+    {
+        // 独立字符串模型覆盖每个八字节分块及尾部；相同长度逐字节扰动，包含零和高位字节。
+        std::map<std::string, int> reference;
+        int marker = 1;
+        for (size_t length = 0; length <= 80; ++length)
+        {
+            std::string key(length, '\0');
+            for (size_t index = 0; index < length; ++index)
+            {
+                key[index] = static_cast<char>((length * 13 + index * 29) & 255);
+            }
+            reference.insert(std::make_pair(key, marker++));
+            for (size_t index = 0; index < length; ++index)
+            {
+                std::string changed(key);
+                changed[index] = static_cast<char>(static_cast<unsigned char>(changed[index]) ^ 128);
+                reference.insert(std::make_pair(changed, marker++));
+            }
+        }
+        LockFreeHashMapTests::check(reference.size() == 3321, "binary string generator has no unintended duplicate keys");
+        LockFreeHashMap<std::string, int> strings;
+        for (std::map<std::string, int>::const_iterator item = reference.begin(); item != reference.end(); ++item)
+        {
+            LockFreeHashMapTests::check(strings.set(item->first, item->second), "binary string model insert");
+        }
+        for (std::map<std::string, int>::const_iterator item = reference.begin(); item != reference.end(); ++item)
+        {
+            int output = -1;
+            LockFreeHashMapTests::check(strings.get(item->first, output) && output == item->second,
+                "binary string model preserves each complete key");
+        }
+        LockFreeHashMapTests::check(strings.size() == reference.size(), "binary string model exact size");
+        LockFreeHashMap<std::string, int>::Snapshot original, taken;
+        LockFreeHashMapTests::check(strings.find(std::string(), original).m_status == LockFreeHashMapOk &&
+            original.m_value && *original.m_value == 1 &&
+            strings.compareExchange(std::string(), original.m_version, 99).m_committed &&
+            strings.eraseIf(std::string(), original.m_version).m_status == LockFreeHashMapVersionMismatch &&
+            strings.take(std::string(), taken).m_committed && taken.m_value && *taken.m_value == 99,
+            "empty string key version replacement and owned take");
+        strings.clear();
+        int unchanged = -7;
+        LockFreeHashMapTests::check(strings.empty() && !strings.get(reference.rbegin()->first, unchanged) && unchanged == -7,
+            "binary string clear preserves missed output");
+        LockFreeHashMap<std::string, int, LockFreeHashMapStringTestHash> collisions(1);
+        LockFreeHashMapStringTestHash::s_calls.store(0);
+        for (size_t length = 0; length <= 16; ++length)
+        {
+            std::string key(length, '\0');
+            LockFreeHashMapTests::check(collisions.set(key, static_cast<int>(length)), "custom string collision insertion");
+        }
+        LockFreeHashMapTests::check(collisions.size() == 17, "custom string collisions retain every key");
+        for (size_t length = 0; length <= 16; ++length)
+        {
+            std::string key(length, '\0');
+            int output = -1;
+            size_t before = LockFreeHashMapStringTestHash::s_calls.load();
+            LockFreeHashMapTests::check(collisions.get(key, output) && output == static_cast<int>(length) &&
+                LockFreeHashMapStringTestHash::s_calls.load() == before + 1,
+                "custom string hash is invoked exactly once per read");
+        }
+        LockFreeHashMap<std::string, int, std::hash<std::string>, LockFreeHashMapStringTestEqual> customEqual;
+        const std::string key("a\0b", 3);
+        LockFreeHashMapTests::check(customEqual.set(key, 17), "custom string equality fixture");
+        LockFreeHashMapStringTestEqual::s_throw.store(true);
+        bool found = false;
+        try
+        {
+            found = customEqual.get(key, unchanged);
+        }
+        catch (...)
+        {
+            LockFreeHashMapStringTestEqual::s_throw.store(false);
+            throw;
+        }
+        LockFreeHashMapStringTestEqual::s_throw.store(false);
+        LockFreeHashMapTests::check(!found && unchanged == -7 && customEqual.get(key, unchanged) && unchanged == 17,
+            "custom string equality failure preserves output and later recovers");
+    }
+    {
+        LockFreeHashMap<std::string, std::shared_ptr<int>> strings;
+        const std::string embedded("a\0b", 3);
+        const std::string large(4096, 'x');
+        std::shared_ptr<int> expected(new int(37)), output;
+        LockFreeHashMapTests::check(strings.set(std::string(), expected) && strings.set(embedded, expected) &&
+            strings.set(large, std::shared_ptr<int>()), "standard string hash read fixtures");
+        LockFreeHashMapTests::check(strings.get(std::string(), output) && output == expected &&
+            strings.get(embedded, output) && output == expected && strings.contains(large) &&
+            strings.get(large, output) && !output && !strings.contains("a"),
+            "standard string hash preserves empty, embedded-null and long-key identities");
+        output = expected;
+        strings.clear();
+        LockFreeHashMapTests::check(!strings.get(embedded, output) && output == expected && !strings.contains(large),
+            "standard string read observes clear and preserves missed output");
+    }
+    {
+        typedef std::array<uint64_t, 64> Payload;
+        LockFreeHashMapPoolConfig config;
+        config.protectionRecordCount = 1;
+        config.lookupCacheCapacity = 0;
+        LockFreeHashMap<int, Payload> trivial(8, config);
+        Payload input, output;
+        for (size_t i = 0; i < input.size(); ++i)
+        {
+            input[i] = UINT64_C(0x1020304050607080) + i;
+        }
+        output.fill(17);
+        const Payload untouched = output;
+        LockFreeHashMapTests::check(trivial.set(1, input), "trivial assignment read fixture");
+        bool refused = false;
+        // 遍历占住唯一保护记录；只复制字节的读取也必须真实取得保护，不能访问未保护节点。
+        LockFreeHashMapResult walked = trivial.forEachResult([&](const int&, const Payload&)
+        {
+            refused = !trivial.get(1, output) && output == untouched;
+        });
+        LockFreeHashMapTests::check(walked.m_status == LockFreeHashMapOk && refused,
+            "trivial read refuses exhausted protection and preserves every output byte");
+        LockFreeHashMapTests::check(trivial.get(1, output) && output == input &&
+            !trivial.get(2, output) && output == input,
+            "trivial read copies the complete payload and miss preserves it");
+        trivial.clear();
+        trivial.maintain(64);
+        LockFreeHashMapTests::check(output == input && !trivial.contains(1),
+            "trivial output owns its bytes after clear and reclamation");
+    }
+    {
+        LockFreeHashMapPoolConfig config;
+        config.initialCapacity = 8;
+        config.protectionRecordCount = 1;
+        config.lookupCacheCapacity = 0;
+        LockFreeHashMap<int, std::shared_ptr<int>> shared(8, config);
+        std::shared_ptr<int> published(new int(42));
+        bool deleted = false, reentered = false;
+        LockFreeHashMapTests::check(shared.set(1, published), "shared read reentry fixture");
+        // 旧输出的删除器借用本地状态；get 完成旧值释放后它们仍然存活。
+        std::shared_ptr<int> output(new int(9), [&](int* old)
+        {
+            delete old;
+            deleted = true;
+            reentered = shared.set(2, published) && shared.erase(1);
+        });
+        LockFreeHashMapTests::check(!shared.get(99, output) && !deleted && *output == 9,
+            "missing shared read leaves old ownership untouched");
+        LockFreeHashMapTests::check(shared.get(1, output) && output == published && deleted && reentered &&
+            !shared.contains(1) && shared.value(2) == published,
+            "old shared output releases outside protection and can reenter with one record");
+        LockFreeHashMapTests::check(shared.set(3, std::shared_ptr<int>()) && shared.get(3, output) && !output,
+            "present null shared value is a successful read");
+        LockFreeHashMap<int, std::shared_ptr<int>, std::hash<int>, LockFreeHashMapTestEqual> custom(8, config);
+        LockFreeHashMapTests::check(custom.set(1, published), "custom shared comparator fixture");
+        output = published;
+        bool found = false;
+        LockFreeHashMapTestEqual::s_fail.store(true);
+        try
+        {
+            found = custom.get(1, output);
+        }
+        catch (...)
+        {
+            LockFreeHashMapTestEqual::s_fail.store(false);
+            throw;
+        }
+        LockFreeHashMapTestEqual::s_fail.store(false);
+        LockFreeHashMapTests::check(!found && output == published && custom.contains(1),
+            "shared value with custom comparator keeps the generic exception boundary");
+    }
     {
         Map map(1);
         LockFreeHashMapPoolConfig config;
@@ -263,7 +471,7 @@ void LockFreeHashMapTestAccess::sharedContention()
     }
     for (int i = 0; i < 4; ++i)
     {
-        map.set(i, values[i]);
+        LockFreeHashMapTests::check(map.set(i, values[i]), "shared contention fixture publishes each initial key");
     }
     std::atomic<int> errors(0);
     uint64_t statuses[4][16] = {};
@@ -378,7 +586,7 @@ void LockFreeHashMapTestAccess::sharedContention()
                         {
                             result = map.tryErase(key);
                             if (result.m_status != LockFreeHashMapOk && result.m_status != LockFreeHashMapNotFound &&
-                                result.m_status != LockFreeHashMapCleared)
+                                result.m_status != LockFreeHashMapCleared && result.m_status != LockFreeHashMapReservationBusy)
                             {
                                 errors.fetch_add(1);
                             }

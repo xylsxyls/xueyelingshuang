@@ -3,6 +3,7 @@
 #include <atomic>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -231,8 +232,9 @@ LockFreeHashMapSingleSample LockFreeHashMapSingleThread::batch(const std::vector
     LockFreeHashMapSingleSample result;
     if (Operation == SingleClear || Operation == SingleClearReclaim)
     {
-        // 同时准备六十四张表，时钟只包住整批操作，降低极短 clear 的时钟量化影响。
-        std::vector<std::unique_ptr<Map>> maps(64);
+        // 短时清空采用更大满表批次；大表及包含实际回收的场景保留较小批次，控制内存峰值。
+        const size_t mapCount = Operation == SingleClear && count <= 4096 ? LockFreeHashMapPerfModels::kClearTables : 64;
+        std::vector<std::unique_ptr<Map>> maps(mapCount);
         for (size_t i = 0; i < maps.size(); ++i)
         {
             create(count, maps[i]);
@@ -241,6 +243,18 @@ LockFreeHashMapSingleSample LockFreeHashMapSingleThread::batch(const std::vector
                 if (!maps[i]->insert(order[j], values[order[j]]))
                 {
                     throw std::runtime_error("清空夹具填充失败");
+                }
+            }
+            if (maps[i]->size() != count)
+            {
+                throw std::runtime_error("清空前实际条目数不符");
+            }
+            V observed = V();
+            for (size_t j = 0; j < count; ++j)
+            {
+                if (!maps[i]->get(order[j], observed) || LockFreeHashMapSingleData<V>::marker(observed) != uint64_t(order[j] + 1))
+                {
+                    throw std::runtime_error("清空前实际键值不符");
                 }
             }
         }
@@ -259,6 +273,11 @@ LockFreeHashMapSingleSample LockFreeHashMapSingleThread::batch(const std::vector
         for (size_t i = 0; i < maps.size(); ++i)
         {
             result.m_errors += !maps[i]->empty();
+            V observed = V();
+            for (size_t j = 0; j < count; ++j)
+            {
+                result.m_errors += maps[i]->get(order[j], observed);
+            }
             reclaim(*maps[i]);
         }
         result.m_bucketsAfter = maps[0]->bucketCount();
@@ -266,20 +285,32 @@ LockFreeHashMapSingleSample LockFreeHashMapSingleThread::batch(const std::vector
     }
     if (Operation == SingleLifecycle)
     {
-        double begin = timestamp();
         for (size_t loop = 0; loop < loops; ++loop)
         {
+            double begin = timestamp();
             std::unique_ptr<Map> map;
             create(count, map);
+            result.m_bucketsBefore = map->bucketCount();
             for (size_t i = 0; i < count; ++i)
             {
                 result.m_errors += !map->insert(order[i], values[order[i]]);
             }
+            result.m_seconds += timestamp() - begin;
+            // 生命周期销毁前逐键核对，不能仅凭size正确接受缺值或键值错配；校验时间不计入吞吐。
             result.m_checksum += map->size();
-            result.m_bucketsBefore = count;
+            {
+                V observed = V();
+                for (size_t i = 0; i < count; ++i)
+                {
+                    bool found = map->get(order[i], observed);
+                    result.m_errors += !found || LockFreeHashMapSingleData<V>::marker(observed) != uint64_t(order[i] + 1);
+                }
+            }
             result.m_bucketsAfter = map->bucketCount();
+            begin = timestamp();
+            map.reset();
+            result.m_seconds += timestamp() - begin;
         }
-        result.m_seconds = timestamp() - begin;
         result.m_calls = loops;
         result.m_errors += result.m_checksum != uint64_t(count) * loops;
         return result;
@@ -303,6 +334,10 @@ LockFreeHashMapSingleSample LockFreeHashMapSingleThread::batch(const std::vector
     std::vector<V> exportedValues;
     std::vector<std::pair<int32_t, V>> exportedPairs;
     const bool whole = Operation >= SingleTraverse;
+    if (!whole && count != 0 && loops > (std::numeric_limits<size_t>::max)() / count)
+    {
+        throw std::runtime_error("单线程测量调用数溢出");
+    }
     const size_t calls = whole ? loops : count * loops;
     double begin = timestamp();
     for (size_t i = 0; i < calls; ++i)

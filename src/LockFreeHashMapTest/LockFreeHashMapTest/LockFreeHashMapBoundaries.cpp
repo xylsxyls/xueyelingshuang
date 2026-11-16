@@ -49,8 +49,72 @@ bool LockFreeHashMapTestAccess::exhaustion()
     return generationSafe;
 }
 
+void LockFreeHashMapTests::sharedExportCounts()
+{
+    typedef std::shared_ptr<int> Value;
+    const int targets[] = { 32, 3, 0 };
+    for (size_t scenario = 0; scenario < 3; ++scenario)
+    {
+        LockFreeHashMap<int, Value> map(64);
+        std::vector<Value> expected;
+        for (int key = 0; key < 32; ++key)
+        {
+            expected.push_back(std::make_shared<int>(key + 1));
+            if (key < 8)
+            {
+                check(map.set(key, expected.back()), "export count fixture initialized");
+            }
+        }
+        std::vector<Value> actual;
+        std::atomic<bool> start(false);
+        s_allocationEntered.store(false);
+        s_allocationResume.store(false);
+        // 等待主线程布置真实分配暂停，再调用公开values；结果只在join后观察。
+        LockFreeHashMapTestThread worker([&]()
+        {
+            if (wait(start))
+            {
+                actual = map.values();
+            }
+        });
+        LockFreeHashMapTestResume resumeOnExit(s_allocationResume, worker);
+        try
+        {
+            s_pauseAllocation.store(0);
+            start.store(true);
+            bool entered = wait(s_allocationEntered);
+            s_pauseAllocation.store(-1);
+            check(entered, "export paused at its first allocation with eight initial entries");
+            map.clear();
+            for (int key = 0; key < targets[scenario]; ++key)
+            {
+                check(map.set(key, expected[key]), "publish final entries before export traverses");
+            }
+            s_allocationResume.store(true);
+            worker.join();
+            check(actual.size() == size_t(targets[scenario]), "export follows actual entries after growth shrink or clear");
+            bool seen[32] = {};
+            for (size_t index = 0; index < actual.size(); ++index)
+            {
+                check(actual[index] && *actual[index] >= 1 && *actual[index] <= targets[scenario],
+                    "export contains no default padding or stale value");
+                size_t key = size_t(*actual[index] - 1);
+                check(!seen[key] && actual[index] == expected[key], "export contains each final owned value exactly once");
+                seen[key] = true;
+            }
+        }
+        catch (...)
+        {
+            s_pauseAllocation.store(-1);
+            start.store(true);
+            throw;
+        }
+    }
+}
+
 void LockFreeHashMapTests::boundaries()
 {
+    sharedExportCounts();
     LockFreeHashMapTestAccess::optimizations();
     check(LockFreeHashMapTestAccess::exhaustion(), "map identity exhaustion never wraps");
     LockFreeHashMap<int, int> cold(1024);
@@ -79,12 +143,40 @@ void LockFreeHashMapTests::boundaries()
     LockFreeHashMapTestKey::s_fail = false;
     check(keys.set(second, 20), "key copy failure retry");
 
+    // 键复制失败时，已经准备的拥有型值也必须归还；反复失败不能消耗固定池容量。
+    {
+        typedef LockFreeHashMap<LockFreeHashMapTestKey, std::shared_ptr<int>, LockFreeHashMapKeyHash, LockFreeHashMapKeyEqual> OwnedKeyMap;
+        std::shared_ptr<int> value = std::make_shared<int>(37);
+        OwnedKeyMap owned(2, config);
+        check(owned.status() == LockFreeHashMapOk, "owned value and throwing key fixture");
+        for (size_t attempt = 0; attempt < 4; ++attempt)
+        {
+            LockFreeHashMapResult result;
+            LockFreeHashMapTestKey::s_fail = true;
+            try
+            {
+                result = owned.trySet(first, value);
+            }
+            catch (...)
+            {
+                LockFreeHashMapTestKey::s_fail = false;
+                throw;
+            }
+            LockFreeHashMapTestKey::s_fail = false;
+            check(result.m_status == LockFreeHashMapUserException && !result.m_committed &&
+                owned.empty() && value.use_count() == 1, "key failure releases prepared value and unpublished slot");
+        }
+        check(owned.set(first, value) && owned.set(second, value) && value.use_count() == 3,
+            "both fixed capacity slots remain available after key failures");
+        owned.clearAndFreeMemory();
+        check(value.use_count() == 1, "owned values release after quiescent cleanup");
+    }
+
     LockFreeHashMap<int, int> single;
     config.initialCapacity = 4;
     config.maximumCapacity = 4;
     config.protectionRecordCount = 1;
-    single.configurePool(config);
-    single.set(1, 10);
+    check(single.configurePool(config).m_status == LockFreeHashMapOk && single.set(1, 10), "单保护记录夹具成功配置并填充");
     LockFreeHashMapResult nested;
     // key、value 只在回调内借用；回调执行本场景校验或异常注入，无返回值
     LockFreeHashMapResult outer = single.forEachResult([&](const int& key, const int& value)
@@ -108,7 +200,7 @@ void LockFreeHashMapTests::boundaries()
         (void)context;
         return size_t(2);
     };
-    allocating.configurePool(config);
+    check(allocating.configurePool(config).m_status == LockFreeHashMapOk, "暂停预留夹具采用指定容量");
     std::atomic<bool> start(false);
     LockFreeHashMapResult creator;
     s_allocationEntered.store(false);
@@ -125,7 +217,7 @@ void LockFreeHashMapTests::boundaries()
     bool entered = wait(s_allocationEntered);
     check(entered, "allocator paused after hard budget reservation");
     LockFreeHashMapPoolStats metrics = {};
-    allocating.poolStats(metrics);
+    check(allocating.poolStats(metrics).m_status == LockFreeHashMapOk, "pending allocation metrics available");
     LockFreeHashMapResult competitor = allocating.trySet(2, 20);
     check(metrics.budget == 2 && metrics.peakBudget == 2 && metrics.reservedCapacity == 2 &&
         metrics.capacity == 0 && competitor.m_status == LockFreeHashMapCapacityLimit && !competitor.m_committed,
@@ -133,7 +225,7 @@ void LockFreeHashMapTests::boundaries()
     s_allocationResume.store(true);
     pending.join();
     check(creator.m_committed && allocating.value(1) == 10 && !allocating.contains(2), "reservation owner publishes after resume");
-    allocating.poolStats(metrics);
+    check(allocating.poolStats(metrics).m_status == LockFreeHashMapOk, "completed allocation metrics available");
     check(metrics.peakBudget == 2 && metrics.budget == 2 && metrics.reservedCapacity == 0, "reservation returned on publication");
 
     LockFreeHashMap<int, int> growing;
@@ -147,7 +239,7 @@ void LockFreeHashMapTests::boundaries()
     {
         return (std::max)(size_t(2), context.currentCapacity / 3);
     };
-    growing.configurePool(config);
+    check(growing.configurePool(config).m_status == LockFreeHashMapOk, "并发增长夹具采用指定策略和上限");
     std::atomic<int> growthFailures(0);
     std::vector<LockFreeHashMapTestThread> writers;
     for (int worker = 0; worker < 8; ++worker)
@@ -160,7 +252,8 @@ void LockFreeHashMapTests::boundaries()
                 bool committed = false;
                 for (int retry = 0; retry < 100000 && !committed; ++retry)
                 {
-                    LockFreeHashMapResult result = growing.trySet(worker * 8 + i, i);
+                    // 本场景验证增长预算，显式重试竞争；仅真实容量暂满交给外层有限重试。
+                    LockFreeHashMapResult result = growing.trySet(worker * 8 + i, i, nullptr, true, false);
                     committed = result.m_committed;
                     if (!committed && result.m_status != LockFreeHashMapCapacityLimit)
                     {
@@ -178,7 +271,7 @@ void LockFreeHashMapTests::boundaries()
     {
         writers[i].join();
     }
-    growing.poolStats(metrics);
+    check(growing.poolStats(metrics).m_status == LockFreeHashMapOk, "concurrent growth metrics available");
     check(growthFailures.load() == 0 && growing.size() == 64 && metrics.peakBudget <= 128 && metrics.reservedCapacity == 0,
         "concurrent proportional growth obeys combined budget and preserves all keys");
 }

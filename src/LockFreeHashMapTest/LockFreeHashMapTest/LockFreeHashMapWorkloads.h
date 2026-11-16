@@ -29,6 +29,8 @@ class LockFreeHashMapWorkloads
 public:
     // 线程启动前设置，之后只读的 QPC 每秒计数
     static double s_frequency;
+    // 任一线程时钟读取失败都使本批数据失效，不用另一个时钟补造耗时
+    static std::atomic<bool> s_clockValid;
 public:
     /** 读取单调高精度秒数
     @return 当前单调秒数，用于同进程内时间差

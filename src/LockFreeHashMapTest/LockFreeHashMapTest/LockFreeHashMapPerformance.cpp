@@ -3,6 +3,16 @@
 #include <limits>
 #include <cerrno>
 
+void LockFreeHashMapPerformance::prepareOutput(std::string& output)
+{
+    // 本负载的字符串长度不超过七十字节；扩大申请范围而不改变内容及参与计时的读取次数。
+    // 两版使用相同准备，业务字符串的首次分配仍在计时外；自然小缓冲区另由 read-costs string 诊断。
+    if (output.capacity() < 512)
+    {
+        output.reserve(512);
+    }
+}
+
 std::string LockFreeHashMapPerfData<std::string>::make(size_t marker)
 {
     return std::string(64, 'k') + std::to_string(marker);
@@ -66,6 +76,9 @@ int main(int argc, char** argv)
         {
             return 2;
         }
+#if !defined(LOCKFREEHASHMAP_PERF_MEMORY)
+        std::cout << "PERF_OUTPUT_PREPARATION string_capacity_min=512" << std::endl;
+#endif
         char* end = nullptr;
         errno = 0;
         long encoded = std::strtol(argv[1], &end, 10);

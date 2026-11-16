@@ -21,6 +21,7 @@ endif()
 
 set(check_sources
     LockFreeHashMapTests.cpp
+    LockFreeHashMapRetryTests.cpp
     LockFreeHashMapMigration.cpp
     LockFreeHashMapBoundaries.cpp
     LockFreeHashMapTestState.cpp
@@ -56,14 +57,17 @@ target_link_libraries(LockFreeHashMapTest PRIVATE LockFreeHashMapChecks)
 
 # 控制器和性能程序独立编译，分配故障注入不进入性能计时进程
 if(NOT EMSCRIPTEN)
-    add_executable(LockFreeHashMapSingleThread LockFreeHashMapSingleThread.cpp LockFreeHashMapSingleObservation.cpp)
+    add_executable(LockFreeHashMapSingleThread LockFreeHashMapSingleThread.cpp LockFreeHashMapSingleObservation.cpp LockFreeHashMapRunner.cpp)
     if(MSVC)
         set_property(SOURCE LockFreeHashMapSingleObservation.cpp APPEND PROPERTY COMPILE_OPTIONS /GL-)
     else()
         set_property(SOURCE LockFreeHashMapSingleObservation.cpp APPEND PROPERTY COMPILE_OPTIONS -fno-lto)
     endif()
     target_include_directories(LockFreeHashMapSingleThread PRIVATE "${LOCKFREEHASHMAP_SOURCE}")
-    target_compile_definitions(LockFreeHashMapSingleThread PRIVATE STATIC_LIB)
+    target_compile_definitions(LockFreeHashMapSingleThread PRIVATE STATIC_LIB LOCKFREEHASHMAP_RUNNER_NO_MAIN)
+    if(WIN32)
+        target_link_libraries(LockFreeHashMapSingleThread PRIVATE dbghelp)
+    endif()
     target_link_libraries(LockFreeHashMapSingleThread PRIVATE Threads::Threads)
     add_executable(LockFreeHashMapProgressTests LockFreeHashMapProgressTests.cpp LockFreeHashMapTestThread.cpp)
     target_include_directories(LockFreeHashMapProgressTests PRIVATE "${LOCKFREEHASHMAP_SOURCE}")
@@ -73,7 +77,7 @@ if(NOT EMSCRIPTEN)
     add_executable(LockFreeHashMapWorkloads LockFreeHashMapWorkloads.cpp LockFreeHashMapTestThread.cpp)
     add_executable(LockFreeHashMapBenchmark LockFreeHashMapBenchmark.cpp)
     add_executable(LockFreeHashMapThreadControl LockFreeHashMapThreadControl.cpp LockFreeHashMapTestThread.cpp)
-    add_executable(LockFreeHashMapReadCosts LockFreeHashMapReadCosts.cpp LockFreeHashMapTestThread.cpp)
+    add_executable(LockFreeHashMapReadCosts LockFreeHashMapReadCosts.cpp LockFreeHashMapPerfModels.cpp LockFreeHashMapTestThread.cpp)
     target_include_directories(LockFreeHashMapReadCosts PRIVATE "${LOCKFREEHASHMAP_SOURCE}")
     target_compile_definitions(LockFreeHashMapReadCosts PRIVATE STATIC_LIB)
     target_link_libraries(LockFreeHashMapReadCosts PRIVATE Threads::Threads)
@@ -114,8 +118,8 @@ foreach(module_name Epoch Pool Rewrite)
     add_test(NAME LockFreeHashMap_${module_name} COMMAND LockFreeHashMap${module_name}Tests)
     set_tests_properties(LockFreeHashMap_${module_name} PROPERTIES TIMEOUT 120)
 endforeach()
-foreach(test_id RANGE 1 10)
-    if(LOCKFREEHASHMAP_SINGLE_THREAD_TESTS AND NOT test_id MATCHES "^(1|2|3|4|9)$")
+foreach(test_id RANGE 1 11)
+    if(LOCKFREEHASHMAP_SINGLE_THREAD_TESTS AND NOT test_id MATCHES "^(1|2|3|4|9|11)$")
         continue()
     endif()
     add_test(NAME LockFreeHashMap_${test_id} COMMAND LockFreeHashMapTest ${test_id})

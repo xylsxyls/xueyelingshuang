@@ -40,7 +40,7 @@ bool LockFreeHashMapMigration::run()
     LockFreeHashMap<int, Channel>::Snapshot observed;
     Channel initialized = std::make_shared<LockFreeHashMapMigrationChannel>(42, 100, 1);
     // 真实发送者须先打开、映射并校验长度，再发布；失败候选始终由调用方拥有
-    if (!pidCache.insertIfAbsent(42, initialized, observed).m_committed)
+    if (!pidCache.insertIfAbsent(42, initialized, observed).m_committed || !observed.m_value || !*observed.m_value)
     {
         return false;
     }
@@ -63,13 +63,13 @@ bool LockFreeHashMapMigration::run()
         return false;
     }
     nameCache.clear();
-    if (!mapping.m_value || !(*mapping.m_value)->m_mapped || inFlight->m_receiverGeneration != 1)
+    if (!mapping.m_value || !*mapping.m_value || !(*mapping.m_value)->m_mapped || inFlight->m_receiverGeneration != 1)
     {
         return false;
     }
     LockFreeHashMap<int, Channel>::Snapshot removed;
     // 线程注册表或请求表中，只有成功 take 的调用者取得终态处理权
-    if (!pidCache.take(42, removed).m_committed || pidCache.contains(42))
+    if (!pidCache.take(42, removed).m_committed || !removed.m_value || !*removed.m_value || pidCache.contains(42))
     {
         return false;
     }

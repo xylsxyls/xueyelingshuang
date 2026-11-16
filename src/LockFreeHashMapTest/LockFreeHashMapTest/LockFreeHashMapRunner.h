@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <string>
 #include <vector>
+#include <iosfwd>
 
 /** 子进程的一次执行结果，句柄和日志由执行器在返回前释放
 */
@@ -35,7 +36,7 @@ public:
     /** 逐项运行固定编号，失败仍保留整批证据
     @param [in] executable 用例程序路径
     @param [in] prefix 已存在目录中的新文件前缀
-    @param [in] ids 要执行的非空编号列表，范围 1 至 10
+    @param [in] ids 要执行的非空编号列表，范围 1 至 11
     @param [in] repeats 每项执行次数，范围 1 至 100
     @return 全部通过为 true，启动、超时、报告和用例失败均为 false
     */
@@ -60,4 +61,24 @@ public:
     @return 完整输入处于 1 至 maximum 为 true
     */
     static bool number(const char* text, int maximum, int& value);
+
+    /** 核对单个用例的有序完整结果，拒绝重复终态和失败被后续成功覆盖
+    @param [in,out] input 用例日志流，从当前位置读到结尾
+    @param [in] id 本次选择的用例编号
+    @return 身份、资源及非零检查数全部通过为true
+    */
+    static bool verifyCase(std::istream& input, int id);
+
+    /** 核对模块汇总，组合模块的每一条汇总都必须有效且通过
+    @param [in,out] input 模块日志流，从当前位置读到结尾
+    @return 至少存在一个非零检查数的成功汇总，且没有失败汇总为true
+    */
+    static bool verifyModule(std::istream& input);
+
+    /** 独占创建证据文件后交给标准输出流，重复前缀不能覆盖已有结果
+    @param [in] path 尚不存在的报告路径
+    @param [out] output 未打开的输出流，成功后由调用方负责关闭并检查错误
+    @return 创建及打开均成功为true
+    */
+    static bool openReport(const std::string& path, std::ofstream& output);
 };
