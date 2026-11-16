@@ -40,7 +40,8 @@ bool MapNode<KeyType, ValueType, MaxLevel>::appendRetainedValue(MapValueHolder<V
     for (;;)
     {
         valueHolder->m_nextRetained.store(head, std::memory_order_relaxed);
-        if (m_retainedValues.compare_exchange_strong(head, valueHolder, std::memory_order_release, std::memory_order_acquire))
+        // C++11要求失败内存序不强于成功内存序；成功同时保留发布和获取语义。
+        if (m_retainedValues.compare_exchange_strong(head, valueHolder, std::memory_order_acq_rel, std::memory_order_acquire))
         {
             return true;
         }

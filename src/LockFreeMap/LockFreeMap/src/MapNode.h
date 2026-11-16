@@ -36,7 +36,7 @@ public:
     /** 追加一个保留值版本
     @param [in] valueHolder 值版本节点，不能为空
     @return 追加成功返回true，valueHolder为空时返回false
-    @note 可和同一个MapNode上的其它appendRetainedValue并发调用
+    @note 可和同一个MapNode上的其它appendRetainedValue并发调用；成功后本节点接管值节点，不得重复追加同一节点
     */
     bool appendRetainedValue(MapValueHolder<ValueType>* valueHolder);
 
@@ -66,7 +66,7 @@ public:
     */
     bool isVisibleHolder(MapValueHolder<ValueType>* valueHolder, uint64_t generation) const;
 
-    /** 释放当前节点保留的所有值版本
+    /** 在外部静止期释放当前节点保留的所有值版本；不得与追加或读取并发
     */
     void releaseValueHolders();
 
