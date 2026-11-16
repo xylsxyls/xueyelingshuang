@@ -24,7 +24,7 @@ enum SemaphoreStatus
     SEMAPHORE_NO_MEMORY = 7,
     // 等待记录容量（包括退役记录及扩容预留）已满
     SEMAPHORE_CAPACITY = 8,
-    // 扩容策略拒绝增长或抛异常
+    // 策略回调抛出异常；扩容返回0拒绝增长时为CAPACITY
     SEMAPHORE_POLICY = 9,
     // 扩容额度尚被其他申请预留，或新批次被其他申请先取得；本次未登记
     SEMAPHORE_RETRY = 10,
