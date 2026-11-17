@@ -2,6 +2,7 @@
 #include "LockFreeQueue.h"
 #include "LockFreeQueueBenchmarkPush.h"
 #include "LockFreeQueueThreadGroup.h"
+#include "LockFreeQueueBenchmarkAffinity.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -54,6 +55,10 @@ uint64_t LockFreeQueueSharedPtrBenchmark::cpuTicks()
 
 int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bound, bool prefix, bool distributed, bool reserved)
 {
+    if (!LockFreeQueueBenchmarkAffinity::pin(0, true))
+    {
+        return 5;
+    }
     typedef std::shared_ptr<LockFreeQueueSharedPtrNode> Value;
     typedef LockFreeQueue<Value> Queue;
     const size_t perProducer = items / producers;
@@ -104,6 +109,7 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
     const LockFreeQueuePoolStatistics initial = queue.poolStatistics();
     std::cout << std::setprecision(12) << "SETUP case=46 items=" << items << " producers=" << producers
         << " node_bytes=" << sizeof(LockFreeQueueSharedPtrNode) << " shared_ptr_bytes=" << sizeof(Value)
+        << " queue_object_bytes=" << sizeof(Queue)
         << " capacity=" << initial.currentCapacity << " retained_bytes=" << initial.retainedBytes
         << " initial_allocations=" << initial.allocationCalls << " bound=" << bound << " prefix=" << prefix
         << " distributed=" << distributed << " reserved=" << reserved
@@ -128,12 +134,20 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
         size_t consumed = 0, emptyPolls = 0;
         double consumerFinished = 0, started = 0;
         LockFreeQueueThreadGroup threads(stop, &start);
+        // Allocate slots before any joinable thread exists; partial creation is cancelled by the group.
+        threads.m_threads.reserve(producers + (phase == 1 ? 1 : 0));
         const LockFreeQueuePoolStatistics before = queue.poolStatistics();
-        // Each producer owns its partition, optional context and result slot.
+        const Value* ownerData = owners.data();
+        // Immutable hot inputs are captured by value; only final results cross threads.
         for (size_t lane = 0; lane < producers; ++lane)
         {
-            threads.m_threads.push_back(std::thread([&, lane]()
+            threads.m_threads.emplace_back([&, lane, bound, perProducer, ownerData]()
             {
+                if (!LockFreeQueueBenchmarkAffinity::pin(lane + 1))
+                {
+                    failure.store(-20);
+                    stop.store(true);
+                }
                 LockFreeQueueProducer<Value> producer;
                 if (bound)
                 {
@@ -159,8 +173,8 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
                     {
                         break;
                     }
-                    const int32_t status = bound ? LockFreeQueueBenchmarkPush::submit(producer, owners[offset + sequence]) :
-                        LockFreeQueueBenchmarkPush::submit(queue, owners[offset + sequence]);
+                    const int32_t status = bound ? LockFreeQueueBenchmarkPush::submit(producer, ownerData[offset + sequence]) :
+                        LockFreeQueueBenchmarkPush::submit(queue, ownerData[offset + sequence]);
                     if (status != LockFreeQueueSuccess)
                     {
                         failure.store(status);
@@ -174,16 +188,17 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
                 processorEnd[lane] = processor();
                 sent[lane] = submitted;
                 producer.release();
-            }));
+            });
         }
         // One consumer checks per-producer order and total delivery. Identity
         // checking is inside the measured interval in both compared revisions.
         const auto consume = [&]()
         {
             Value output[64];
+            size_t localConsumed = 0, localEmptyPolls = 0;
             processorBegin[producers] = processor();
             const uint64_t cpuStarted = cpuTicks();
-            while (consumed < items && !stop.load(std::memory_order_relaxed))
+            while (localConsumed < items && !stop.load(std::memory_order_relaxed))
             {
                 size_t count = 0;
 #if defined(LOCK_FREE_QUEUE_SHARED_EXTRA)
@@ -198,7 +213,7 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
                 }
                 if (count == 0)
                 {
-                    ++emptyPolls;
+                    ++localEmptyPolls;
                 }
                 for (size_t index = 0; index < count; ++index)
                 {
@@ -218,7 +233,7 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
                         break;
                     }
                     ++expected[lane];
-                    ++consumed;
+                    ++localConsumed;
                 }
             }
             // Releasing the last output references is also charged to consumption.
@@ -226,21 +241,28 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
             {
                 output[index].reset();
             }
+            consumed = localConsumed;
+            emptyPolls = localEmptyPolls;
             consumerFinished = now();
             cpuUsed[producers] = cpuTicks() - cpuStarted;
             processorEnd[producers] = processor();
         };
         if (phase == 1)
         {
-            threads.m_threads.push_back(std::thread([&]()
+            threads.m_threads.emplace_back([&]()
             {
+                if (!LockFreeQueueBenchmarkAffinity::pin(0))
+                {
+                    failure.store(-21);
+                    stop.store(true);
+                }
                 ready.fetch_add(1);
                 while (!start.load(std::memory_order_acquire))
                 {
                     std::this_thread::yield();
                 }
                 consume();
-            }));
+            });
         }
         while (ready.load() != producers + (phase == 1 ? 1 : 0))
         {

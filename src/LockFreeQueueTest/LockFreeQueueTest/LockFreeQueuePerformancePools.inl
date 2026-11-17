@@ -221,7 +221,7 @@ inline bool LockFreeQueuePerformancePools::pressure(size_t threshold, size_t pro
 #endif
     std::cout << "POLICY case=bounded" << threshold << "_p" << producers << " phase=pressure cycle=0 items=" << count * producers << std::endl;
     std::atomic<bool> start(false), stop(false), failed(false);
-    std::atomic<size_t> ready(0);
+    std::atomic<size_t> ready(0), completed(0);
     std::vector<uint64_t> next(producers, 0), refused(producers, 0);
     std::vector<std::vector<uint64_t>> samples(producers);
     LockFreeQueueThreadGroup group(stop, &start);
@@ -231,6 +231,11 @@ inline bool LockFreeQueuePerformancePools::pressure(size_t threshold, size_t pro
         samples[lane].reserve((count + 63) / 64);
         // Each worker owns its sequence, rejection count and latency vector.
         group.m_threads.emplace_back([&, lane]() {
+            if (!LockFreeQueueBenchmarkAffinity::pin(lane + 1))
+            {
+                failed.store(true);
+                stop.store(true);
+            }
             try
             {
                 LockFreeQueueProducer<uint64_t>* session = nullptr;
@@ -283,6 +288,7 @@ inline bool LockFreeQueuePerformancePools::pressure(size_t threshold, size_t pro
                 failed.store(true);
                 stop.store(true);
             }
+            completed.fetch_add(1);
         });
     }
     const uint64_t readyDeadline = LockFreeQueueMeasurements::ticks() + 5000000000ULL;
@@ -313,6 +319,11 @@ inline bool LockFreeQueuePerformancePools::pressure(size_t threshold, size_t pro
         }
     }
     stop.store(true);
+    if (!valid || failed.load() || received != count * producers)
+    {
+        valid = false;
+        group.cancelAndDrain(queue, completed);
+    }
     group.join();
     const uint64_t elapsed = LockFreeQueueMeasurements::ticks() - began;
     g_lockFreeQueueMeasureAllocations.store(false);

@@ -21,7 +21,7 @@ m_inheritedAffinity(LockFreeQueueTestTool::affinity())
 bool LockFreeQueueTestRunner::core(int32_t id)
 {
     const std::set<int32_t> separate = {5, 9, 22, 23, 24, 33, 35, 38, 40, 46};
-    return id >= 1 && id <= 46 && !separate.count(id);
+    return id >= 1 && id <= 47 && !separate.count(id);
 }
 
 bool LockFreeQueueTestRunner::pressure(int32_t id)
@@ -35,7 +35,7 @@ std::set<int32_t> LockFreeQueueTestRunner::select(const std::string& text)
     std::set<int32_t> result;
     if (text == "all" || text == "instant" || text == "stress")
     {
-        for (int32_t i = 1; i <= 46; ++i)
+        for (int32_t i = 1; i <= 47; ++i)
         {
             if (text == "all" || (text == "stress" ? pressure(i) : !pressure(i)))
             {
@@ -50,7 +50,7 @@ std::set<int32_t> LockFreeQueueTestRunner::select(const std::string& text)
         std::vector<std::string> bounds = LockFreeQueueTestTool::split(tokens[i], '-');
         if (bounds.empty() || bounds.size() > 2)
         {
-            throw std::runtime_error("Expected IDs/ranges within 1..46");
+            throw std::runtime_error("Expected IDs/ranges within 1..47");
         }
         for (size_t j = 0; j < bounds.size(); ++j)
         {
@@ -60,9 +60,9 @@ std::set<int32_t> LockFreeQueueTestRunner::select(const std::string& text)
             }
         }
         int32_t first = std::atoi(bounds[0].c_str()), last = std::atoi(bounds.back().c_str());
-        if (first < 1 || last > 46 || first > last)
+        if (first < 1 || last > 47 || first > last)
         {
-            throw std::runtime_error("Case range outside 1..46 or descending");
+            throw std::runtime_error("Case range outside 1..47 or descending");
         }
         for (int32_t id = first; id <= last; ++id)
         {
@@ -352,7 +352,25 @@ void LockFreeQueueTestRunner::functional()
             }
             if (hasCore)
             {
-                build(arch, config, version, "tests", std::vector<std::vector<std::string>>(1, coreCommand));
+                std::vector<std::string> retryCommand = base;
+                retryCommand.insert(retryCommand.end(), {"/DLOCK_FREE_QUEUE_TESTING", "/I" + whitebox,
+                    "/I" + input("core", ""), "/c", "/Foretry-contract.obj", input("core", "LockFreeQueueRetryContract.cpp")});
+                coreCommand.push_back("retry-contract.obj");
+                std::vector<std::vector<std::string>> commands;
+                commands.push_back(retryCommand);
+                commands.push_back(coreCommand);
+                build(arch, config, version, "tests", commands);
+                if (selected.count(47))
+                {
+                    const std::string demo = input("core", "usage-demo.cpp");
+                    freeze(demo, IO::compiled(IO::usageDemo(IO::read(input("library", "LockFreeQueue.cpp")))));
+                    std::vector<std::string> demoCommand = base;
+                    demoCommand.insert(demoCommand.end(), {"/I" + input("library", ""), "/Feusage-demo.exe", demo});
+                    build(arch, config, version, "usage-demo", std::vector<std::vector<std::string>>(1, demoCommand));
+                    Json::Value demoMeta;
+                    demoMeta["kind"] = "functional";
+                    add(arch + "/" + config + "/usage-demo", {IO::join(folder, "usage-demo.exe")}, folder, demoMeta);
+                }
             }
             for (int32_t stress = 0; stress < 2; ++stress)
             {
@@ -633,6 +651,23 @@ void LockFreeQueueTestRunner::performance(const std::string& mode)
             }
         }
     }
+    if (three && !m_tool->option("versions").empty())
+    {
+        const std::vector<std::string> selected = validatedList("versions", "current,previous",
+            "original,current,std_list_mutex,previous");
+        if (selected.size() < 2 || std::find(selected.begin(), selected.end(), "current") == selected.end())
+        {
+            throw std::runtime_error("Version comparison requires current and at least one reference");
+        }
+        for (size_t i = 0; i < selected.size(); ++i)
+        {
+            if (std::find(versions.begin(), versions.end(), selected[i]) == versions.end())
+            {
+                throw std::runtime_error("Selected reference is unavailable; previous requires --previous-dir");
+            }
+        }
+        versions = selected;
+    }
     std::vector<std::string> platforms = arches();
     for (size_t a = 0; a < platforms.size(); ++a)
     {
@@ -769,6 +804,14 @@ void LockFreeQueueTestRunner::sharedPtr()
     }
     snapshot("online", m_tool->option("before-dir"));
     snapshot("candidate", m_tool->option("after-dir", m_tool->source()));
+    const bool sameBinaryControl = IO::path(m_tool->option("before-dir")) ==
+        IO::path(m_tool->option("after-dir", m_tool->source()));
+    // The supplied online revision can already provide the same optional APIs.
+    // Detect declarations in the frozen input; compilation verifies their signatures.
+    const std::string onlineHeader = IO::read(input("online", "LockFreeQueue.h"));
+    const bool onlineExtra = onlineHeader.find("configureProducerCounters(") != std::string::npos &&
+        onlineHeader.find("configureCancelableReservations(") != std::string::npos &&
+        onlineHeader.find("popReadyPrefix(") != std::string::npos;
     std::vector<std::string> platforms = arches(), producers = validatedList("producers", "1,4,8,16", "1,4,8,16");
     std::vector<std::string> modes = validatedList("modes", "plain,bound", "plain,bound,prefix,distributed,reserved,distributed_pop");
     std::map<std::string, std::vector<std::string>> switches = {{"plain", {"0", "0", "0"}}, {"bound", {"1", "0", "0"}},
@@ -779,7 +822,7 @@ void LockFreeQueueTestRunner::sharedPtr()
         {
             std::string version = candidate ? "candidate" : "online";
             std::vector<std::string> command = flags("Release");
-            if (candidate)
+            if (candidate || onlineExtra)
             {
                 command.push_back("/DLOCK_FREE_QUEUE_SHARED_EXTRA");
             }
@@ -798,12 +841,14 @@ void LockFreeQueueTestRunner::sharedPtr()
                     for (int32_t side = 0; side < 2; ++side)
                     {
                         bool candidate = (turn % 2 ? side : 1 - side) != 0;
-                        if (!candidate && (m_tool->flag("candidate-only") || (modes[m] != "plain" && modes[m] != "bound")))
+                        if (!candidate && (m_tool->flag("candidate-only") ||
+                            (!onlineExtra && modes[m] != "plain" && modes[m] != "bound")))
                         {
                             continue;
                         }
                         std::string version = candidate ? "candidate" : "online", folder = buildDirectory(platforms[a], version);
-                        std::vector<std::string> command = {IO::join(folder, "bench.exe"), "46", producers[p], IO::integer(items)};
+                        const std::string executableFolder = sameBinaryControl ? buildDirectory(platforms[a], "online") : folder;
+                        std::vector<std::string> command = {IO::join(executableFolder, "bench.exe"), "46", producers[p], IO::integer(items)};
                         command.insert(command.end(), switches[modes[m]].begin(), switches[modes[m]].end());
                         Json::Value meta;
                         meta["kind"] = "shared-ptr";
@@ -814,6 +859,7 @@ void LockFreeQueueTestRunner::sharedPtr()
                         meta["items"] = double(items);
                         meta["producers"] = std::strtod(producers[p].c_str(), nullptr);
                         meta["acceptance_workload"] = items == 20000000;
+                        meta["same_binary_control"] = sameBinaryControl;
                         add("runs/" + platforms[a] + "-" + version + "-" + modes[m] + "-p" + producers[p] + "-r" + IO::integer(turn), command, folder, meta, 300);
                     }
                 }
@@ -833,7 +879,8 @@ void LockFreeQueueTestRunner::scheduling()
     snapshot("after", m_tool->option("after-dir", m_tool->source()));
     int32_t duration = m_tool->number("duration-ms", 2000, 100, 60000), rounds = m_tool->number("rounds", 2, 1, 1000);
     std::vector<std::string> platforms = arches(), masks = m_tool->list("masks", "1,3");
-    std::vector<std::string> modes = validatedList("modes", "0,1,2,3,4,5", "0,1,2,3,4,5"), capacities = validatedList("capacities", "65536", "256,65536");
+    std::vector<std::string> modes = validatedList("modes", "0,1,2,3,4,5", "0,1,2,3,4,5");
+    std::vector<std::string> capacities = validatedList("capacities", "65536", "256,65536,1048576,20000000");
     std::vector<std::string> producers = validatedList("producers", "1,4,8,16", "1,4,8,16");
     for (size_t a = 0; a < platforms.size(); ++a)
     {
@@ -843,6 +890,25 @@ void LockFreeQueueTestRunner::scheduling()
             std::vector<std::string> command = flags("Release");
             command.insert(command.end(), {"/Fescheduling.exe", input(version, "LockFreeQueueScheduling.cpp")});
             build(platforms[a], "Release", version, "scheduling", std::vector<std::vector<std::string>>(1, command));
+            if (side == 1)
+            {
+                const char* controls[] = {"stall-producer", "stall-consumer"};
+                for (size_t i = 0; i < 2; ++i)
+                {
+                    Json::Value meta;
+                    meta["kind"] = "scheduling";
+                    meta["version"] = "after";
+                    meta["arch"] = platforms[a];
+                    meta["mask"] = masks[0];
+                    meta["producers"] = 4.0;
+                    meta["negative_control"] = true;
+                    meta["duration_ms"] = 2000;
+                    meta["phase_group"] = "preflight";
+                    const std::string folder = buildDirectory(platforms[a], version);
+                    add("oracle/" + platforms[a] + "-" + controls[i],
+                        {IO::join(folder, "scheduling.exe"), "4", "2000", "0", "0", "65536", controls[i]}, folder, meta, 45);
+                }
+            }
         }
     }
     for (int32_t turn = 1; turn <= rounds; ++turn)
@@ -874,6 +940,7 @@ void LockFreeQueueTestRunner::scheduling()
                                     std::string version = after ? "after" : "before", folder = buildDirectory(platforms[a], version);
                                     Json::Value meta;
                                     meta["kind"] = "scheduling";
+                                    meta["duration_ms"] = duration;
                                     meta["arch"] = platforms[a];
                                     meta["version"] = version;
                                     meta["mask"] = masks[k];
@@ -943,6 +1010,11 @@ void LockFreeQueueTestRunner::execute()
         }
         std::string relative = planned["label"].asString() + ".raw.log", log = IO::join(m_batch, relative);
         IO::inside(log, m_batch);
+        if (IO::exists(log))
+        {
+            throw std::runtime_error("Unrecorded log from an interrupted command is preserved: " + log +
+                "; use a fresh --batch instead of overwriting incomplete evidence");
+        }
         IO::directory(planned["cwd"].asString());
         uint64_t previous = IO::affinity();
         if (kind == "scheduling")
@@ -1086,15 +1158,19 @@ int32_t LockFreeQueueTestRunner::run(const std::string& command)
         environment["affinity"] = affinityText.str();
         environment["independent_exclusive_host"] = false;
         environment["scope"] = "Queue tests only; peer smoke is not four-library or system acceptance";
-        environment["baseline_commit"] = "17652486ea92ed9f6e10b47f25c2d5883f7e3ed8";
+        // This is only the immutable historical reference, not a supplied Git/online directory.
+        environment["original_baseline_commit"] = "17652486ea92ed9f6e10b47f25c2d5883f7e3ed8";
+        environment["reference_identity"] = "Use frozen input directories and frozen-hashes.json; before_dir/previous_dir identify the requested reference";
         environment["compiler"] = "VS2013; workload flags recorded in frozen build scripts";
-        environment["format"] = 2;
+        environment["format"] = 3;
         environment["planned_commands"] = static_cast<int32_t>(m_plan.size());
         environment["profiles_filter"] = m_tool->option("profiles", "all");
         environment["suite_filter"] = m_tool->option("suite", "all");
+        environment["versions_filter"] = m_tool->option("versions", "all");
         const char* processor = std::getenv("PROCESSOR_IDENTIFIER");
         environment["cpu"] = processor ? processor : "not available";
         environment["before_dir"] = m_tool->option("before-dir");
+        environment["previous_dir"] = m_tool->option("previous-dir");
         environment["after_dir"] = m_tool->option("after-dir", m_tool->source());
         environment["host_pointer_bits"] = int32_t(sizeof(void*) * 8);
         std::time_t timestamp = std::time(nullptr);

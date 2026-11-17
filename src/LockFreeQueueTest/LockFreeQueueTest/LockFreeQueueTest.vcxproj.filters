@@ -46,4 +46,14 @@
     <None Include="CMakeLists.txt"><Filter>Tests</Filter></None>
     <None Include="whitebox-patches.json"><Filter>Tests</Filter></None>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LockFreeQueueRetryContract.h" />
+    <ClCompile Include="LockFreeQueueRetryContract.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LockFreeQueueBenchmarkAffinity.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueueBenchmarkAffinity.inl"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueueBenchmarkControl.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="LockFreeQueueBenchmarkControl.inl"><Filter>Tests</Filter></ClInclude>
+  </ItemGroup>
 </Project>

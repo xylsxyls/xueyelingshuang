@@ -28,7 +28,7 @@ private:
     /** Monotonic seconds; the first call warms the platform clock before timing. */
     static double now();
 
-    /** Observe the logical processor at phase boundaries; no thread affinity is set. */
+    /** Observe the logical processor at phase boundaries; optional test placement is checked before timing. */
     static uint32_t processor();
 
     /** Current thread kernel plus user CPU time in 100 ns units; zero if unavailable. */

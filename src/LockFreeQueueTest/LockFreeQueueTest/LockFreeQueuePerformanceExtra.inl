@@ -15,8 +15,12 @@ inline void LockFreeQueuePerformanceExtra::finish(const char* operation, uint64_
     const uint64_t cpuElapsed = LockFreeQueueMeasurements::cpu() - cpuStart;
     std::cout << "EXTRA operation=" << operation << " operations=" << count << " elapsed_ns=" << elapsed <<
         " ns_per_operation=" << double(elapsed) / count << " cpu_ns=" << cpuElapsed <<
-        " allocations=" << g_lockFreeQueueMeasureCalls.load() << " allocated_bytes=" << g_lockFreeQueueMeasureBytes.load() <<
-        " valid=" << valid << std::endl;
+        " allocations=" << g_lockFreeQueueMeasureCalls.load() << " allocated_bytes=" << g_lockFreeQueueMeasureBytes.load();
+    if (std::strcmp(operation, "full_pool_failure") == 0)
+    {
+        std::cout << " actual_call=" << (LOCK_FREE_QUEUE_BENCH_VARIANT >= 3 ? "producer_tryPush" : "tryPush");
+    }
+    std::cout << " valid=" << valid << std::endl;
 }
 
 inline bool LockFreeQueuePerformanceExtra::observe(size_t recordCount)
@@ -41,7 +45,8 @@ inline bool LockFreeQueuePerformanceExtra::observe(size_t recordCount)
     sessions.clear();
 #endif
     std::cout << "OBSERVER record_high_water=" << recordCount << std::endl;
-    const size_t count = 1000000;
+    // 纳秒级观察接口延长测量窗口；不让一两毫秒样本主导百分比。
+    const size_t count = 20000000;
     volatile uint64_t sum = 0;
     uint64_t cpuStart = 0;
     uint64_t began = begin(cpuStart);
@@ -118,6 +123,9 @@ inline bool LockFreeQueuePerformanceExtra::lifecycle()
     {
         std::unique_ptr<LockFreeQueue<uint64_t>> queue(new LockFreeQueue<uint64_t>());
         valid = queue->empty() && valid;
+#ifndef LOCK_FREE_QUEUE_BASELINE
+        valid = queue->poolStatistics().currentCapacity != 0 && valid;
+#endif
     }
     finish("default_construct_destroy", began, cpuStart, repeats, valid);
     std::unique_ptr<LockFreeQueue<uint64_t>> instance(new LockFreeQueue<uint64_t>());
@@ -131,7 +139,11 @@ inline bool LockFreeQueuePerformanceExtra::lifecycle()
     for (size_t i = 0; i < repeats; ++i)
     {
         queue.destroy();
+#ifdef LOCK_FREE_QUEUE_BASELINE
         queue.init();
+#else
+        valid = queue.tryInit() == LockFreeQueueSuccess && valid;
+#endif
         valid = queue.empty() && valid;
     }
     finish("configured_destroy_init", began, cpuStart, repeats, valid);
@@ -158,7 +170,11 @@ inline bool LockFreeQueuePerformanceExtra::lifecycle()
     queue.destroy();
     valid = queue.empty() && valid;
     finish("destroy_65536", began, cpuStart, 65536, valid);
+#ifdef LOCK_FREE_QUEUE_BASELINE
     queue.init();
+#else
+    valid = queue.tryInit() == LockFreeQueueSuccess && valid;
+#endif
     valid = queue.empty() && valid;
     return valid;
 }
@@ -198,14 +214,12 @@ inline bool LockFreeQueuePerformanceExtra::rejection()
     {
         const uint64_t start = LockFreeQueueMeasurements::ticks();
         LockFreeQueueResult result = LockFreeQueueSuccess;
-#if LOCK_FREE_QUEUE_BENCH_VARIANT == 1
-        result = static_cast<LockFreeQueueResult>(LockFreeQueueBenchmarkPush::submit(queue, uint64_t(99)));
-#elif LOCK_FREE_QUEUE_BENCH_VARIANT == 2
+#if LOCK_FREE_QUEUE_BENCH_VARIANT <= 2
+        // A rejection measurement must never wait for this same thread to pop.
+        // Waiting push is covered by the synchronized retry-contract test.
         result = queue.tryPush(99);
-#elif LOCK_FREE_QUEUE_BENCH_VARIANT == 3
-        result = producer.tryPush(99);
 #else
-        result = static_cast<LockFreeQueueResult>(LockFreeQueueBenchmarkPush::submit(producer, uint64_t(99)));
+        result = producer.tryPush(99);
 #endif
         samples.push_back(LockFreeQueueMeasurements::ticks() - start);
         valid = result == LockFreeQueueCapacityLimit && valid;
@@ -235,7 +249,7 @@ inline bool LockFreeQueuePerformanceExtra::registration()
     }
     LockFreeQueueProducer<uint64_t> producer;
     bool valid = true;
-    const size_t count = 1000000;
+    const size_t count = 5000000;
     uint64_t cpuStart = 0;
     const uint64_t began = begin(cpuStart);
     for (size_t i = 0; i < count; ++i)

@@ -6,6 +6,14 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <cstdint>
+
+// Test-only TLS lane: zero bypasses pause hooks; one permits the selected pause.
+#ifdef _MSC_VER
+extern __declspec(thread) int32_t g_lockFreeQueueTestLane;
+#else
+extern thread_local int32_t g_lockFreeQueueTestLane;
+#endif
 
 // Stable registry; external IDs are dispatched by the C++ LockFreeQueueTestTool runner.
 enum LockFreeQueueTestId
@@ -60,6 +68,10 @@ public:
     static std::atomic<bool> m_reached;
     static std::atomic<bool> m_release;
     static std::atomic<bool> m_timedOut;
+    // Independent second publisher gate, only used by the reserved-hole test.
+    static std::atomic<bool> m_secondPause;
+    static std::atomic<bool> m_secondReached;
+    static std::atomic<bool> m_secondRelease;
     static std::atomic<uint64_t> m_clock;
     static std::atomic<size_t> m_reclaimVisits;
     static std::atomic<size_t> m_maintenanceVisits;
@@ -82,6 +94,36 @@ public:
     static uint64_t privateBytes();
     /** Observe the same handle count for 1.5 seconds, deadline 5 seconds */
     static uint32_t settledHandles();
+};
+
+// Restores fault injection after all participating test threads have joined.
+class LockFreeQueueTestFaultScope
+{
+public:
+    /** Save the isolated test's fault controls without modifying them
+    */
+    LockFreeQueueTestFaultScope();
+
+    /** Restore the saved controls, including failure and exception exits
+    */
+    ~LockFreeQueueTestFaultScope();
+
+private:
+    // Fault selector that preceded this scope
+    int32_t m_previousPoint;
+    // Remaining injected failures that preceded this scope
+    int32_t m_previousFailures;
+
+private:
+    /** Do not duplicate restoration responsibility
+    @param [in] other Noncopyable source scope
+    */
+    LockFreeQueueTestFaultScope(const LockFreeQueueTestFaultScope& other) = delete;
+
+    /** Do not transfer restoration responsibility by assignment
+    @param [in] other Noncopyable source scope
+    */
+    LockFreeQueueTestFaultScope& operator=(const LockFreeQueueTestFaultScope& other) = delete;
 };
 
 #ifdef _MSC_VER

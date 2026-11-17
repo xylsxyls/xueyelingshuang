@@ -27,7 +27,7 @@
     const size_t counts[3] = {500, 32768, 262144};
     const size_t stages = cycles * 3;
     std::atomic<bool> start(false), stop(false), failed(false);
-    std::atomic<size_t> ready(0), epoch(0), completed(0), issued(500), committed(500), consumed(0);
+    std::atomic<size_t> ready(0), epoch(0), completed(0), finished(0), issued(500), committed(500), consumed(0);
     std::vector<uint64_t> expected(producers, 0), sent(producers, 0), rejected(producers, 0);
     std::vector<std::vector<uint64_t>> pushSamples(producers);
     std::vector<uint64_t> popSamples;
@@ -39,6 +39,11 @@
     {
         pushSamples[lane].reserve(20000 / producers + 64);
         group.m_threads.emplace_back([&, lane]() {
+            if (!LockFreeQueueBenchmarkAffinity::pin(lane + 1))
+            {
+                failed.store(true);
+                stop.store(true);
+            }
             try
             {
                 uint64_t sequence = lane == 0 ? 500 : 0;
@@ -87,6 +92,7 @@
                             ++rejected[lane];
                             if (stop.load())
                             {
+                                finished.fetch_add(1);
                                 return;
                             }
                             std::this_thread::yield();
@@ -107,6 +113,7 @@
                 failed.store(true);
                 stop.store(true);
             }
+            finished.fetch_add(1);
         });
     }
     const uint64_t readyDeadline = LockFreeQueueMeasurements::ticks() + 5000000000ULL;
@@ -193,6 +200,11 @@
         capacityPeak = (std::max)(capacityPeak, state.peakReservedCapacity);
         valid = state.currentCapacity >= 750 && state.peakReservedCapacity <= 1500 && valid;
 #endif
+    }
+    if (!valid || stop.load() || failed.load())
+    {
+        valid = false;
+        group.cancelAndDrain(queue, finished);
     }
     stop.store(true);
     group.join();

@@ -13,7 +13,7 @@
 #include <vector>
 
 LockFreeQueueScheduling::Lane::Lane() : m_progress(0), m_completed(0), m_count(0), m_attempts(0),
-m_cycles(0), m_cpu100ns(0), m_empty(0), m_capacityFailures(0), m_sampledGapNs(0), m_priority(0)
+m_cycles(0), m_cpu100ns(0), m_empty(0), m_capacityFailures(0), m_sampledGapNs(0), m_sampledCpuGapNs(0), m_priority(0)
 {
 }
 
@@ -47,7 +47,7 @@ uint64_t LockFreeQueueScheduling::cycles()
     return value;
 }
 
-int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mode, bool cancelable, size_t capacity)
+int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mode, bool cancelable, size_t capacity, int32_t stalledLane)
 {
     // Mode 0: ordinary push; 1: bound push; 2: ordinary tryPush;
     // 3: bound tryPush; 4: external Entry with ready-prefix consumer;
@@ -104,6 +104,10 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
                 announced = true;
                 while (!start.load()) { std::this_thread::yield(); }
                 const uint64_t beginCpu = cpu(), beginCycles = cycles();
+                if (stalledLane == static_cast<int32_t>(lane))
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds * 9 / 10));
+                }
                 while (!stop.load(std::memory_order_relaxed))
                 {
                     const uint64_t value = (uint64_t(lane) << 48) | result.m_count;
@@ -172,8 +176,12 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
             announced = true;
             while (!start.load()) { std::this_thread::yield(); }
             const uint64_t beginCpu = cpu(), beginCycles = cycles();
+            if (stalledLane == static_cast<int32_t>(producers))
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds * 9 / 10));
+            }
             uint64_t maintenanceAt = 0;
-            while (!failed.load() && (!stop.load() || done.load() != producers || !queue.empty()))
+            while (!stop.load() || done.load() != producers || !queue.empty())
             {
                 uint64_t values[64];
                 LockFreeQueueEntry<uint64_t>* batch[64];
@@ -197,12 +205,18 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
                     const uint64_t sequence = values[i] & ((uint64_t(1) << 48) - 1);
                     if (lane >= producers || sequence != expected[lane]++)
                     {
-                        throw std::runtime_error("FIFO, duplicate or missing item");
+                        failed.store(true);
+                        stop.store(true);
+                        continue;
                     }
                     if (mode == 4)
                     {
                         Slot& slot = entries[lane][sequence % ringSize];
-                        if (batch[i] != &slot.m_entry) { throw std::runtime_error("Wrong Entry address"); }
+                        if (batch[i] != &slot.m_entry)
+                        {
+                            failed.store(true);
+                            stop.store(true);
+                        }
                         slot.m_free.store(true, std::memory_order_release);
                     }
                 }
@@ -221,11 +235,28 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
             result.m_cpu100ns = cpu() - beginCpu;
             result.m_progress.store(result.m_count);
         }
-        catch (...) { failed.store(true); stop.store(true); if (!announced) { ready.fetch_add(1); } }
+        catch (...)
+        {
+            failed.store(true);
+            stop.store(true);
+            if (!announced)
+            {
+                ready.fetch_add(1);
+            }
+            // Capacity-waiting push calls must still be allowed to finish before join.
+            while (done.load() != producers)
+            {
+                queue.pop(nullptr);
+                std::this_thread::yield();
+            }
+        }
     });
     while (ready.load() != producers + 1) { std::this_thread::yield(); }
     const uint64_t begin = now();
+    // An explicit test acceptance window, not a promise of OS scheduler fairness.
+    const uint64_t gapLimitNs = uint64_t((std::max)(uint32_t(100), (std::min)(uint32_t(1000), milliseconds / 4))) * 1000000;
     std::vector<uint64_t> last(producers + 1, 0), lastChange(producers + 1, begin), activeAttempts(producers + 1, 0);
+    std::vector<uint64_t> lastCycles(producers + 1, 0), lastCpuChange(producers + 1, begin);
     start.store(true);
     while (!failed.load() && now() - begin < uint64_t(milliseconds) * 1000000)
     {
@@ -233,6 +264,18 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
         const uint64_t timestamp = now();
         for (size_t lane = 0; lane <= producers; ++lane)
         {
+            ULONG64 charged = 0;
+            if (!QueryThreadCycleTime(group.m_threads[lane].native_handle(), &charged))
+            {
+                failed.store(true);
+                break;
+            }
+            lanes[lane].m_sampledCpuGapNs = (std::max)(lanes[lane].m_sampledCpuGapNs, timestamp - lastCpuChange[lane]);
+            if (charged != lastCycles[lane])
+            {
+                lastCycles[lane] = charged;
+                lastCpuChange[lane] = timestamp;
+            }
             // A completed capacity-error call proves CPU/call progress, but
             // does not prove admission. Keep both measurements distinct.
             const uint64_t progress = capacity == 256 && lane < producers ?
@@ -260,17 +303,22 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
     {
         const Lane& r = lanes[lane];
         if (lane < producers) { total += r.m_count; }
-        // Only the deliberately capacity-constrained producer case allows
-        // no admission. It must still finish a call before stop is requested.
+        // The deliberately capacity-constrained producer case may have no
+        // admission during observation; nonwaiting calls must still return.
         const bool requireAdmission = capacity != 256 || lane == producers;
-        progressed = progressed && activeAttempts[lane] != 0 && r.m_cycles != 0 &&
+        const bool capacityWait = !requireAdmission && (mode == 0 || mode == 1 || mode == 5);
+        // Blocking push may wait through the observation window in a full pool.
+        // Check its CPU opportunities while waiting and completion during drain.
+        progressed = progressed && (capacityWait ? r.m_count != 0 : activeAttempts[lane] != 0) && r.m_cycles != 0 &&
+            r.m_sampledCpuGapNs <= gapLimitNs &&
             (!requireAdmission || (last[lane] != 0 && r.m_count != 0));
         samePriority = samePriority && r.m_priority == lanes[0].m_priority;
         std::cout << "LANE index=" << lane << " consumer=" << (lane == producers) << " count=" << r.m_count
             << " active_count=" << last[lane] << " active_attempts=" << activeAttempts[lane]
             << " capacity_failures=" << r.m_capacityFailures << " attempts=" << r.m_attempts << " empty=" << r.m_empty << " cycles=" << r.m_cycles
             << " cpu_ms=" << r.m_cpu100ns / 10000.0 << " priority=" << r.m_priority
-            << " sampled_progress_gap_ms=" << r.m_sampledGapNs / 1000000.0 << std::endl;
+            << " sampled_progress_gap_ms=" << r.m_sampledGapNs / 1000000.0
+            << " sampled_cpu_gap_ms=" << r.m_sampledCpuGapNs / 1000000.0 << std::endl;
     }
     valid = valid && total != 0 && total == lanes[producers].m_count && queue.empty();
     if (mode == 4)
@@ -284,6 +332,8 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
         << " items=" << total << " consumed=" << lanes[producers].m_count << " active_ms=" << (stopTime - begin) / 1000000.0
         << " drain_ms=" << (end - stopTime) / 1000000.0 << " items_per_second=" << total * 1000000000.0 / (end - begin)
         << " process_priority=" << GetPriorityClass(GetCurrentProcess()) << " data_valid=" << valid
+        << " max_cpu_gap_ms=" << gapLimitNs / 1000000.0
+        << " negative_control=" << (stalledLane >= 0)
         << " same_priority=" << samePriority << " progress_valid=" << progressed
         << " valid=" << (valid && samePriority && progressed) << std::endl;
     return !valid || !samePriority ? 1 : (progressed ? 0 : 3);
@@ -291,12 +341,22 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
 
 int main(int argc, char** argv)
 {
-    if (argc != 5 && argc != 6) { return 2; }
+    if (argc != 5 && argc != 6 && argc != 7) { return 2; }
     const int producers = std::atoi(argv[1]), duration = std::atoi(argv[2]), mode = std::atoi(argv[3]), cancelable = std::atoi(argv[4]);
     if (producers < 1 || producers > 16 || duration < 100 || duration > 60000 || mode < 0 || mode > 5 || cancelable < 0 || cancelable > 1) { return 2; }
-    const int capacity = argc == 6 ? std::atoi(argv[5]) : 65536;
-    if (capacity != 256 && capacity != 65536) { return 2; }
-    try { return LockFreeQueueScheduling::run(producers, duration, mode, cancelable != 0, capacity); }
+    const int capacity = argc >= 6 ? std::atoi(argv[5]) : 65536;
+    if (capacity != 256 && capacity != 65536 && capacity != 1048576 && capacity != 20000000) { return 2; }
+    int32_t stalledLane = -1;
+    if (argc == 7)
+    {
+        const std::string control(argv[6]);
+        if (control != "stall-producer" && control != "stall-consumer")
+        {
+            return 2;
+        }
+        stalledLane = control == "stall-producer" ? 0 : producers;
+    }
+    try { return LockFreeQueueScheduling::run(producers, duration, mode, cancelable != 0, capacity, stalledLane); }
     catch (const std::exception& error) { std::cout << "FAIL " << error.what() << std::endl; return 1; }
     catch (...) { std::cout << "FAIL unknown exception" << std::endl; return 1; }
 }

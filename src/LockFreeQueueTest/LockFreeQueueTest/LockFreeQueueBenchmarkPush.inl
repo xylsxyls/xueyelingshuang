@@ -28,7 +28,8 @@ int32_t LockFreeQueueBenchmarkPush::execute(Queue& queue, const Value& value, st
 template <class Queue, class Value>
 int32_t LockFreeQueueBenchmarkPush::execute(Queue& queue, const Value& value, std::false_type)
 {
-    return static_cast<int32_t>(queue.push(value));
+    const auto result = queue.push(value);
+    return std::is_same<decltype(queue.push(value)), bool>::value ? (result ? 0 : -1) : static_cast<int32_t>(result);
 }
 
 template <class Queue, class Value>

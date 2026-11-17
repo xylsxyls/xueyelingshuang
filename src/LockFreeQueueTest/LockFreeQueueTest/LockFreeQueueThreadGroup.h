@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <atomic>
+#include <stddef.h>
 #include <thread>
 #include <vector>
 
@@ -14,6 +15,12 @@ public:
     ~LockFreeQueueThreadGroup();
     /** Join without requesting cancellation on a normal completed run */
     void join();
+    /** Cancel producers and keep the sole consumer returning capacity until every worker exits.
+    @param [in,out] queue Queue with a nonthrowing discard path; caller is its only consumer
+    @param [in] completed Each worker increments exactly once after its final queue operation
+    */
+    template <class Queue>
+    void cancelAndDrain(Queue& queue, const std::atomic<size_t>& completed);
 private:
     std::atomic<bool>& m_stop;
     std::atomic<bool>* m_start;

@@ -9,17 +9,22 @@
 typedef LockFreeQueue<int32_t> LockFreeQueueContractType;
 
 static_assert(std::is_same<decltype(&LockFreeQueueContractType::init),
-    void (LockFreeQueueContractType::*)()>::value, "init signature changed");
+    bool (LockFreeQueueContractType::*)()>::value, "init signature changed");
 static_assert(std::is_same<decltype(&LockFreeQueueContractType::destroy),
     void (LockFreeQueueContractType::*)()>::value, "destroy signature changed");
 static_assert(std::is_same<decltype(&LockFreeQueueContractType::clear),
     void (LockFreeQueueContractType::*)()>::value, "clear signature changed");
 static_assert(std::is_same<decltype(&LockFreeQueueContractType::push),
-    LockFreeQueueResult (LockFreeQueueContractType::*)(const int32_t&)>::value, "push must return status on every platform");
+    bool (LockFreeQueueContractType::*)(const int32_t&)>::value, "push must return committed state");
 static_assert(std::is_same<decltype(&LockFreeQueueContractType::tryPush),
-    LockFreeQueueResult (LockFreeQueueContractType::*)(const int32_t&)>::value, "tryPush signature changed");
+    LockFreeQueueResult (LockFreeQueueContractType::*)(const int32_t&, bool, bool)>::value, "tryPush signature changed");
 static_assert(std::is_same<decltype(&LockFreeQueueContractType::pop),
     bool (LockFreeQueueContractType::*)(int32_t*)>::value, "pop signature changed");
+static_assert(std::is_same<decltype(&LockFreeQueueContractType::probeReadyEntryPrefix),
+    bool (LockFreeQueueContractType::*)(LockFreeQueueEntry<int32_t>**, size_t, size_t&)>::value,
+    "Entry prefix probe signature changed");
+static_assert(std::is_same<decltype(LockFreeQueuePoolConfig::m_onGrowth),
+    std::function<void(size_t, uint64_t)>>::value, "Growth notification signature changed");
 static_assert(std::is_same<decltype(&LockFreeQueueContractType::empty),
     bool (LockFreeQueueContractType::*)() const>::value, "empty signature changed");
 static_assert(std::is_same<decltype(&LockFreeQueueContractType::size),
@@ -64,13 +69,13 @@ static_assert(LockFreeQueueClockUnavailable == 10 && LockFreeQueueSequenceExhaus
 
 typedef LockFreeQueueProducer<int32_t> LockFreeQueueProducerContract;
 static_assert(std::is_same<decltype(&LockFreeQueueContractType::tryAcquireProducer),
-    LockFreeQueueResult (LockFreeQueueContractType::*)(LockFreeQueueProducerContract&)>::value,
+    LockFreeQueueResult (LockFreeQueueContractType::*)(LockFreeQueueProducerContract&, bool, bool)>::value,
     "Producer acquisition signature changed");
 static_assert(std::is_same<decltype(&LockFreeQueueProducerContract::tryPush),
-    LockFreeQueueResult (LockFreeQueueProducerContract::*)(const int32_t&)>::value,
+    LockFreeQueueResult (LockFreeQueueProducerContract::*)(const int32_t&, bool, bool)>::value,
     "Producer tryPush signature changed");
 static_assert(std::is_same<decltype(&LockFreeQueueProducerContract::push),
-    LockFreeQueueResult (LockFreeQueueProducerContract::*)(const int32_t&)>::value, "Producer push must return status");
+    bool (LockFreeQueueProducerContract::*)(const int32_t&)>::value, "Producer push must return committed state");
 static_assert(std::is_same<decltype(&LockFreeQueueProducerContract::release),
     void (LockFreeQueueProducerContract::*)()>::value, "Producer release signature changed");
 static_assert(std::is_same<decltype(&LockFreeQueueProducerContract::attached),

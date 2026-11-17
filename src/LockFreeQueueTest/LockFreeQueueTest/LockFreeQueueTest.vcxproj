@@ -69,6 +69,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="LockFreeQueueTest.cpp" />
+    <ClCompile Include="LockFreeQueueRetryContract.cpp" />
+    <ClInclude Include="LockFreeQueueRetryContract.h" />
     <ClInclude Include="LockFreeQueueTest.h" />
     <ClInclude Include="LockFreeQueueArenaTests.inl" />
     <None Include="LockFreeQueueBaseline.cpp" />
@@ -116,4 +118,10 @@
       Properties="Configuration=$(Configuration);Platform=$(Platform);OutDir=$(IntDir)hostbin\;IntDir=$(IntDir)hostobj\" />
     <Exec Command="&quot;$(IntDir)hostbin\LockFreeQueueTestTool.exe&quot; whitebox --root &quot;$(ProjectDir)..\..\..&quot; --source &quot;$(ProjectDir)..\..\LockFreeQueue\LockFreeQueue\src&quot; --output &quot;$(IntDir)whitebox&quot;" />
   </Target>
+  <ItemGroup>
+    <ClInclude Include="LockFreeQueueBenchmarkAffinity.h" />
+    <ClInclude Include="LockFreeQueueBenchmarkAffinity.inl" />
+    <ClInclude Include="LockFreeQueueBenchmarkControl.h" />
+    <ClInclude Include="LockFreeQueueBenchmarkControl.inl" />
+  </ItemGroup>
 </Project>

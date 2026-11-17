@@ -44,7 +44,7 @@ add_custom_target(LockFreeQueueWhitebox
         --source "${queue_source}" --output "${LOCK_FREE_QUEUE_WHITEBOX_DIR}"
     DEPENDS ${queue_host_dependency}
     VERBATIM)
-add_executable(LockFreeQueueTest LockFreeQueueTest.cpp)
+add_executable(LockFreeQueueTest LockFreeQueueTest.cpp LockFreeQueueRetryContract.cpp)
 add_dependencies(LockFreeQueueTest LockFreeQueueWhitebox)
 target_include_directories(LockFreeQueueTest PRIVATE "${LOCK_FREE_QUEUE_WHITEBOX_DIR}" "${queue_tests}")
 target_compile_definitions(LockFreeQueueTest PRIVATE LOCK_FREE_QUEUE_TESTING)
@@ -80,7 +80,7 @@ if(EMSCRIPTEN)
         endif()
     endforeach()
     if(NOT LOCK_FREE_QUEUE_TESTS_WASM_THREADS)
-        set(queue_core_cases "1,3,6,8,10,11,12,13,14,15,20,32,34,39,41,44,45")
+        set(queue_core_cases "1,3,6,8,10,11,12,13,14,15,20,32,34,39,41,44,45,47")
     endif()
 else()
     find_package(Threads REQUIRED)

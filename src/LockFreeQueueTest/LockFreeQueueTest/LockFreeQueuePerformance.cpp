@@ -1,5 +1,7 @@
 ﻿#include "LockFreeQueueMeasurements.h"
 #include "LockFreeQueueThreadGroup.h"
+#include "LockFreeQueueBenchmarkAffinity.h"
+#include "LockFreeQueueBenchmarkControl.h"
 #ifdef LOCK_FREE_QUEUE_BASELINE
 #include "LockFreeQueue.h"
 #else
@@ -350,7 +352,7 @@ bool LockFreeQueueMeasurements::concurrent(size_t producers, size_t count)
     std::vector<uint64_t> popSamples;
     std::vector<std::vector<uint64_t>> pushSamples(producers);
     std::atomic<bool> start(false), stop(false), error(false);
-    std::atomic<size_t> done(0);
+    std::atomic<size_t> ready(0), done(0);
     std::atomic<uint64_t> producersEnded(0);
     std::atomic<uint64_t> refused(0);
     LockFreeQueueThreadGroup group(stop, &start);
@@ -361,8 +363,14 @@ bool LockFreeQueueMeasurements::concurrent(size_t producers, size_t count)
     {
         pushSamples[lane].reserve(count / 64 + 1);
         workers.emplace_back([&, lane]() {
+            if (!LockFreeQueueBenchmarkAffinity::pin(lane + 1))
+            {
+                error.store(true);
+                stop.store(true);
+            }
             try
             {
+            ready.fetch_add(1);
             while (!start.load())
             {
                 std::this_thread::yield();
@@ -406,6 +414,10 @@ bool LockFreeQueueMeasurements::concurrent(size_t producers, size_t count)
                 producersEnded.store(ticks());
             }
         });
+    }
+    while (ready.load() != producers)
+    {
+        std::this_thread::yield();
     }
     g_lockFreeQueueMeasureCalls.store(0);
     g_lockFreeQueueMeasureBytes.store(0);
@@ -483,13 +495,19 @@ bool LockFreeQueueMeasurements::producersOnly(size_t producers, size_t count)
     }
     std::atomic<bool> start(false), stop(false), failed(false);
     std::atomic<uint64_t> last(0), refused(0);
-    std::atomic<size_t> done(0);
+    std::atomic<size_t> ready(0), done(0);
     std::vector<std::vector<uint64_t>> samples(producers);
     LockFreeQueueThreadGroup group(stop, &start);
     for (size_t lane = 0; lane < producers; ++lane)
     {
         samples[lane].reserve(count / 64 + 1);
         group.m_threads.emplace_back([&, lane]() {
+            if (!LockFreeQueueBenchmarkAffinity::pin(lane + 1))
+            {
+                failed.store(true);
+                stop.store(true);
+            }
+            ready.fetch_add(1);
             while (!start.load())
             {
                 std::this_thread::yield();
@@ -536,6 +554,10 @@ bool LockFreeQueueMeasurements::producersOnly(size_t producers, size_t count)
                 last.store(ticks());
             }
         });
+    }
+    while (ready.load() != producers)
+    {
+        std::this_thread::yield();
     }
     g_lockFreeQueueMeasureCalls.store(0);
     g_lockFreeQueueMeasureBytes.store(0);
@@ -593,9 +615,15 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
     {
         return false;
     }
-    std::atomic<bool> start(false), stop(false), failed(false);
-    std::atomic<size_t> ready(0), done(0);
-    std::atomic<uint64_t> ended(0), refused(0), capacityRefused(0);
+    LockFreeQueueBenchmarkControl control;
+    std::atomic<bool>& start = control.m_start;
+    std::atomic<bool>& stop = control.m_stop;
+    std::atomic<bool>& failed = control.m_failed;
+    std::atomic<size_t>& ready = control.m_ready;
+    std::atomic<size_t>& done = control.m_done;
+    std::atomic<uint64_t>& ended = control.m_ended;
+    std::atomic<uint64_t>& refused = control.m_refused;
+    std::atomic<uint64_t>& capacityRefused = control.m_capacityRefused;
     std::vector<std::vector<uint64_t>> samples(producers);
     std::vector<uint64_t> popSamples;
     popSamples.reserve(producers * count / 64 + 1);
@@ -605,7 +633,12 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
     for (size_t lane = 0; lane < producers; ++lane)
     {
         samples[lane].reserve(count / 64 + 1);
-        group.m_threads.emplace_back([&, lane]() {
+        group.m_threads.emplace_back([&, lane, count, producers]() {
+            if (!LockFreeQueueBenchmarkAffinity::pin(lane + 1))
+            {
+                failed.store(true);
+                stop.store(true);
+            }
 #if LOCK_FREE_QUEUE_BENCH_VARIANT >= 3
             LockFreeQueueProducer<uint64_t> producer;
             if (queue.tryAcquireProducer(producer) != LockFreeQueueSuccess)
@@ -723,6 +756,11 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
             }
         }
         stop.store(true);
+    }
+    if (failed.load() || (consume && received != producers * count))
+    {
+        valid = false;
+        group.cancelAndDrain(queue, done);
     }
     group.join();
     g_lockFreeQueueMeasureAllocations.store(false);
@@ -922,7 +960,8 @@ int LockFreeQueueMeasurements::run(int argc, char** argv)
     }
     g_lockFreeQueueMeasurePreallocated = g_lockFreeQueueBenchmarkProfile < 2 || g_lockFreeQueueBenchmarkProfile == 5;
     std::cout << "ENV allocation_tracking=" << (g_lockFreeQueueMeasureSkipAllocations ? "disabled" : "enabled") <<
-        " pointer_bytes=" << sizeof(void*) << " seed=20261104 implementation=";
+        " pointer_bytes=" << sizeof(void*) << " queue_object_bytes=" << sizeof(LockFreeQueue<uint64_t>) <<
+        " seed=20261104 implementation=";
 #if defined(LOCK_FREE_QUEUE_LIST_MUTEX)
     std::cout << "std_list_mutex";
 #elif defined(LOCK_FREE_QUEUE_BASELINE)
@@ -982,6 +1021,10 @@ int LockFreeQueueMeasurements::run(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
+    if (!LockFreeQueueBenchmarkAffinity::pin(0, true))
+    {
+        return 2;
+    }
     const char* profile = std::getenv("LFQ_BENCH_PROFILE");
     if (profile != nullptr)
     {

@@ -24,3 +24,22 @@ inline void LockFreeQueueThreadGroup::join()
         }
     }
 }
+
+template <class Queue>
+void LockFreeQueueThreadGroup::cancelAndDrain(Queue& queue, const std::atomic<size_t>& completed)
+{
+    m_stop.store(true);
+    if (m_start != nullptr)
+    {
+        m_start->store(true);
+    }
+    while (completed.load() != m_threads.size())
+    {
+        if (!queue.pop(nullptr))
+        {
+            std::this_thread::yield();
+        }
+    }
+    join();
+    queue.clear();
+}

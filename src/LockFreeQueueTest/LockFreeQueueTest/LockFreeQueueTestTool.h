@@ -184,6 +184,12 @@ public:
     */
     static std::string integer(int64_t value);
 
+    /** Extract the exact commented public demo for compilation
+    @param [in] source Production LockFreeQueue.cpp text
+    @return Standalone source; missing/ambiguous markers or uncommented code throws
+    */
+    static std::string usageDemo(const std::string& source);
+
     /** Locate this native tool
     @return UTF8 absolute executable path
     */

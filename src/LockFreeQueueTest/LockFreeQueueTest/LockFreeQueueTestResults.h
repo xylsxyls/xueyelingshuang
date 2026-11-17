@@ -42,4 +42,20 @@ public:
     @return Enriched row; embedded maintenance is never added again
     */
     static Json::Value rates(const Json::Value& sample, double extraMaintenanceNs);
+
+private:
+    /** Require a finite number with the declared sign
+    @param [in] values Evidence fields
+    @param [in] key Required field name
+    @param [in] positive Whether zero is forbidden
+    @return Validated number; malformed evidence throws
+    */
+    static double number(const Json::Value& values, const char* key, bool positive);
+
+    /** Independently enumerate the retained performance workload contract
+    @param [in] suite 35, 38, 40 or extra
+    @param [in] reference Original implementation without pool APIs
+    @return Scenario/cycle keys mapped to exact item or operation counts
+    */
+    static std::map<std::string, double> scenarios(const std::string& suite, bool reference);
 };

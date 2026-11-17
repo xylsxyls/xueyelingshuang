@@ -30,7 +30,7 @@ m_command(argc > 1 ? argv[1] : "help")
         "configuration", "repeat", "stress-seconds", "baseline-dir", "peer-snapshot-dir", "vcvars",
         "before-dir", "after-dir", "previous-dir", "calls", "rounds", "supplement-rounds", "git",
         "allocation-rounds", "affinity", "items", "producers", "modes", "duration-ms", "masks",
-        "capacities", "suite", "profiles"};
+        "capacities", "suite", "profiles", "versions"};
     for (int32_t i = 2; i < argc; ++i)
     {
         std::string key(argv[i]);
@@ -83,6 +83,7 @@ m_command(argc > 1 ? argv[1] : "help")
                 {
                     permitted.insert("wave");
                     permitted.insert("previous-dir");
+                    permitted.insert("versions");
                 }
             }
             else
@@ -658,6 +659,7 @@ int32_t LockFreeQueueTestTool::run()
             "tests --cases all|instant|stress|1,3-8 --matrix --consumers --projects\n"
             "whitebox --source DIR --output PRIVATE_TEMP_DIR\n"
             "performance/three-way --baseline-dir DIR; revision/scheduling/shared-ptr --before-dir DIR\n"
+            "three-way --previous-dir DIR --versions current,previous[,std_list_mutex,original]\n"
             "--arch both|x64|Win32 --rounds N --plan (validate/list matrix without measuring)\n"
             "--prepare-only then --measure-only --resume freezes source and binary identities.\n"
             "See LockFreeQueueTest.h for all cases, defaults and interpretation.\n";
@@ -736,6 +738,46 @@ int main(int argc, char** argv)
     }
 }
 
+std::string LockFreeQueueTestTool::usageDemo(const std::string& source)
+{
+    std::vector<std::string> lines = split(plain(source), '\n');
+    bool inside = false, complete = false;
+    std::string result = "#include \"LockFreeQueueAPI.h\"\n";
+    for (size_t i = 0; i < lines.size(); ++i)
+    {
+        if (lines[i] == "// BEGIN LOCKFREEQUEUE USAGE DEMO")
+        {
+            if (inside || complete)
+            {
+                throw std::runtime_error("Duplicate usage demo");
+            }
+            inside = true;
+        }
+        else if (lines[i] == "// END LOCKFREEQUEUE USAGE DEMO")
+        {
+            if (!inside)
+            {
+                throw std::runtime_error("Unexpected demo end");
+            }
+            inside = false;
+            complete = true;
+        }
+        else if (inside && !lines[i].empty())
+        {
+            if (lines[i].compare(0, 2, "//") != 0)
+            {
+                throw std::runtime_error("Uncommented source inside demo");
+            }
+            result += lines[i].substr(2) + '\n';
+        }
+    }
+    if (!complete || inside || result.find("int main(") == std::string::npos)
+    {
+        throw std::runtime_error("Incomplete usage demo");
+    }
+    return result;
+}
+
 void LockFreeQueueTestTool::selfTest() const
 {
     int32_t checks = 0;
@@ -771,11 +813,22 @@ void LockFreeQueueTestTool::selfTest() const
     }
     LockFreeQueueTestTool revisionTool(static_cast<int32_t>(revisionPointers.size()), revisionPointers.data());
     check(revisionTool.option("before-dir") == source() && revisionTool.option("after-dir") == source(), "revision CLI option pair");
-    check(LockFreeQueueTestRunner::select("all").size() == 46, "registry count");
-    check(LockFreeQueueTestRunner::select("instant").size() == 31, "instant registry");
+    std::vector<std::string> comparisonArguments = {executable(), "three-way", "--root", root(),
+        "--previous-dir", source(), "--versions", "current,previous", "--batch", "parser-only"};
+    std::vector<char*> comparisonPointers;
+    for (size_t i = 0; i < comparisonArguments.size(); ++i)
+    {
+        comparisonPointers.push_back(&comparisonArguments[i][0]);
+    }
+    LockFreeQueueTestTool comparisonTool(static_cast<int32_t>(comparisonPointers.size()), comparisonPointers.data());
+    check(comparisonTool.option("versions") == "current,previous" && comparisonTool.option("previous-dir") == source(), "paired Git comparison CLI");
+    check(LockFreeQueueTestRunner::select("all").size() == 47, "registry count");
+    check(LockFreeQueueTestRunner::select("instant").size() == 32, "instant registry");
     check(LockFreeQueueTestRunner::select("stress").size() == 15, "pressure registry");
     check(LockFreeQueueTestRunner::select("1,3-5,5").size() == 4, "range deduplication");
-    const char* invalid[] = {"", "0", "47", "3-1", "1,,2", "1-2-3", "99999999999999", "x", "-1"};
+    check(LockFreeQueueTestRunner::select("47").size() == 1, "retry contract registered");
+    check(usageDemo(read(join(source(), "LockFreeQueue.cpp"))).find("int main(") != std::string::npos, "public demo extracted");
+    const char* invalid[] = {"", "0", "48", "3-1", "1,,2", "1-2-3", "99999999999999", "x", "-1"};
     for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
     {
         bool rejected = false;
@@ -801,7 +854,8 @@ void LockFreeQueueTestTool::selfTest() const
     meta["kind"] = "shared-ptr";
     meta["items"] = 16.0;
     meta["producers"] = 1.0;
-    std::string rows = "RESULT phase=separate items=16 producers=1 pool_allocations=0 pool_grows=0 valid=1\nRESULT phase=concurrent items=16 producers=1 pool_allocations=0 pool_grows=0 valid=1\n";
+    const std::string sharedMetrics = " items=16 producers=1 producer_seconds=2 consumer_seconds=1 producer_items_per_second=8 consumer_items_per_second=16 pool_allocations=0 pool_grows=0 valid=1\n";
+    std::string rows = "RESULT phase=separate" + sharedMetrics + "RESULT phase=concurrent" + sharedMetrics;
     check(LockFreeQueueTestResults::parse(rows, meta, 0)["samples"].size() == 2, "both shared-ptr phases");
     bool rejected = false;
     try
@@ -813,6 +867,33 @@ void LockFreeQueueTestTool::selfTest() const
         rejected = true;
     }
     check(rejected, "missing shared-ptr phase rejected");
+    const char* invalidMetrics[] = {"producer_seconds=0", "producer_seconds=-1", "producer_seconds=bad", "producer_seconds=1"};
+    for (size_t i = 0; i < sizeof(invalidMetrics) / sizeof(invalidMetrics[0]); ++i)
+    {
+        std::string broken = rows;
+        broken.replace(broken.find("producer_seconds=2"), 18, invalidMetrics[i]);
+        rejected = false;
+        try
+        {
+            LockFreeQueueTestResults::parse(broken, meta, 0);
+        }
+        catch (const std::exception&)
+        {
+            rejected = true;
+        }
+        check(rejected, "invalid or inconsistent shared-ptr time rejected");
+    }
+    rejected = false;
+    try
+    {
+        LockFreeQueueTestResults::parse("RESULT phase=separate items=16 producers=1 pool_allocations=0 pool_grows=0 valid=1\n"
+            "RESULT phase=concurrent items=16 producers=1 pool_allocations=0 pool_grows=0 valid=1\n", meta, 0);
+    }
+    catch (const std::exception&)
+    {
+        rejected = true;
+    }
+    check(rejected, "missing shared-ptr metrics rejected");
     rejected = false;
     try
     {
@@ -842,9 +923,10 @@ void LockFreeQueueTestTool::selfTest() const
     perf["reference"] = false;
     perf["counted"] = true;
     std::string sufficient;
-    for (int32_t i = 0; i < 10; ++i)
+    for (int32_t p = 1; p <= 16; p *= 2)
     {
-        sufficient += "SCENARIO phase=mpsc producers=" + integer(i + 1) + "\nREGISTERED_MPSC items=100 elapsed_ns=100 allocations=0 valid=1\nPOOL_VERIFY allocation_delta=0 grow_delta=0\n";
+        sufficient += "SCENARIO phase=producer producers=" + integer(p) + "\nREGISTERED_PRODUCERS items=4000000 elapsed_ns=100 allocations=0 valid=1\nPOOL_VERIFY allocation_delta=0 grow_delta=0\n";
+        sufficient += "SCENARIO phase=mpsc producers=" + integer(p) + "\nREGISTERED_MPSC items=1000000 elapsed_ns=100 allocations=0 valid=1\nPOOL_VERIFY allocation_delta=0 grow_delta=0\n";
     }
     sufficient += "PASS id=35\n";
     check(LockFreeQueueTestResults::parse(sufficient, perf, 0)["samples"].size() == 10, "sufficient pool row/verification contract");
@@ -854,6 +936,14 @@ void LockFreeQueueTestTool::selfTest() const
     std::string allocationFailure = sufficient;
     allocationFailure.replace(allocationFailure.find("allocations=0"), 13, "allocations=1");
     badLogs.push_back(allocationFailure);
+    const char* brokenBefore[] = {"producers=16", "items=4000000", "elapsed_ns=100", "elapsed_ns=100", "id=35", "producers=1\n"};
+    const char* brokenAfter[] = {"producers=1", "items=3999999", "missing=100", "elapsed_ns=0", "id=38", "producers=1.5\n"};
+    for (size_t i = 0; i < 6; ++i)
+    {
+        std::string broken = sufficient;
+        broken.replace(broken.find(brokenBefore[i]), std::string(brokenBefore[i]).size(), brokenAfter[i]);
+        badLogs.push_back(broken);
+    }
     for (size_t i = 0; i < badLogs.size(); ++i)
     {
         rejected = false;
@@ -867,12 +957,57 @@ void LockFreeQueueTestTool::selfTest() const
         }
         check(rejected, "missing PASS/extra pool window/timed allocation rejected");
     }
+    Json::Value extra = perf;
+    extra["suite"] = "extra";
+    std::string extraLog = "BURST width=1 items=2000000 elapsed_ns=100 valid=1\n"
+        "BURST width=4096 items=1048576 elapsed_ns=100 valid=1\n"
+        "BURST width=65536 items=1048576 elapsed_ns=100 valid=1\n";
+    const char* observers[] = {"size_empty", "empty_empty", "pop_empty", "size_one", "push_pop_empty_cycle"};
+    const int32_t highs[] = {1, 16, 128};
+    for (size_t high = 0; high < 3; ++high)
+    {
+        extraLog += "OBSERVER record_high_water=" + integer(highs[high]) + "\n";
+        for (size_t operation = 0; operation < 5; ++operation)
+        {
+            extraLog += std::string("EXTRA operation=") + observers[operation] + " operations=" +
+                (operation == 4 ? "10000" : "20000000") + " elapsed_ns=100 valid=1\n";
+        }
+    }
+    const char* extras[] = {"default_construct_destroy", "configured_destroy_init", "clear_65536", "destroy_65536",
+        "full_pool_failure", "context_acquire_release", "payload_inline256", "payload_string64", "payload_string1024",
+        "payload_string16384", "payload_shared256kb"};
+    const int32_t counts[] = {2000, 2000, 65536, 65536, 10000, 5000000, 262144, 262144, 131072, 8192, 262144};
+    for (size_t operation = 0; operation < 11; ++operation)
+    {
+        extraLog += std::string("EXTRA operation=") + extras[operation] + " operations=" + integer(counts[operation]) +
+            " elapsed_ns=100 valid=1\n";
+    }
+    extraLog += "PASS suite=extra\n";
+    check(LockFreeQueueTestResults::parse(extraLog, extra, 0)["samples"].size() == 29, "extended short-operation windows");
+    const char* oldWindows[] = {"operations=20000000", "operations=5000000"};
+    for (size_t window = 0; window < 2; ++window)
+    {
+        std::string broken = extraLog;
+        broken.replace(broken.find(oldWindows[window]), std::string(oldWindows[window]).size(), "operations=1000000");
+        rejected = false;
+        try
+        {
+            LockFreeQueueTestResults::parse(broken, extra, 0);
+        }
+        catch (const std::exception&)
+        {
+            rejected = true;
+        }
+        check(rejected, "old short-operation window cannot enter new result batch");
+    }
     Json::Value schedule;
     schedule["kind"] = "scheduling";
     schedule["version"] = "before";
     schedule["producers"] = 1.0;
-    const std::string lanes = "LANE index=0 consumer=0 count=0\nLANE index=1 consumer=1 count=0\n";
-    const std::string noProgress = lanes + "SCHEDULE data_valid=1 same_priority=1 progress_valid=0 valid=0\n";
+    schedule["duration_ms"] = 2000;
+    const std::string lanes = "LANE index=0 consumer=0 count=1 active_count=1 active_attempts=1 cycles=1 sampled_cpu_gap_ms=1800\n"
+        "LANE index=1 consumer=1 count=1 active_count=1 active_attempts=1 cycles=1 sampled_cpu_gap_ms=10\n";
+    const std::string noProgress = lanes + "SCHEDULE capacity=65536 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=0 valid=0\n";
     check(LockFreeQueueTestResults::parse(noProgress, schedule, 3)["lanes"].size() == 2, "baseline-only no-progress evidence");
     schedule["version"] = "after";
     rejected = false;
@@ -885,6 +1020,20 @@ void LockFreeQueueTestTool::selfTest() const
         rejected = true;
     }
     check(rejected, "candidate no-progress is failure");
+    rejected = false;
+    try
+    {
+        LockFreeQueueTestResults::parse(lanes + "SCHEDULE capacity=65536 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n", schedule, 0);
+    }
+    catch (const std::exception&)
+    {
+        rejected = true;
+    }
+    check(rejected, "long lane stall cannot claim fairness success");
+    schedule["negative_control"] = true;
+    const std::string controlled = noProgress.substr(0, noProgress.size() - 1) + " negative_control=1\n";
+    check(LockFreeQueueTestResults::parse(controlled, schedule, 3)["samples"].size() == 1, "explicit stall negative control accepted");
+    schedule["negative_control"] = false;
     rejected = false;
     try
     {
