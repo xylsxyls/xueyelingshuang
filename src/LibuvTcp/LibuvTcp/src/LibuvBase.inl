@@ -181,7 +181,7 @@ inline void LibuvBase::releaseSend(uint32_t charge)
     }
 }
 
-inline bool LibuvSendLane::push(const LibuvPendingSend& pending)
+inline bool LibuvSendLane::push(const LibuvPendingSend& pending, bool* notify)
 {
     if (m_write - m_seenRead >= m_capacity)
     {
@@ -196,11 +196,21 @@ inline bool LibuvSendLane::push(const LibuvPendingSend& pending)
     m_published.store(m_write, std::memory_order_release);
     // 独立发布每一条消息；跨平台保证发布先于uv_async_send，不能仅靠编译器屏障。
     std::atomic_thread_fence(std::memory_order_seq_cst);
+    if (notify != nullptr)
+    {
+        *notify = !m_notified.load(std::memory_order_acquire) &&
+            !m_notified.exchange(true, std::memory_order_acq_rel);
+    }
     return true;
 }
 
-inline LockFreeQueueResult LibuvBase::tryQueueSend(const LibuvPendingSend& pending, bool retryContention)
+inline LockFreeQueueResult LibuvBase::tryQueueSend(const LibuvPendingSend& pending, bool retryContention, bool* notify)
 {
+    // 后备MPSC仍逐次通知，不能让某个暂停的生产者承担其他生产者的唯一唤醒。
+    if (notify != nullptr)
+    {
+        *notify = true;
+    }
     const uint32_t token = producerToken();
     if (token != UINT32_MAX && m_sendLane.m_capacity != 0)
     {
@@ -212,7 +222,7 @@ inline LockFreeQueueResult LibuvBase::tryQueueSend(const LibuvPendingSend& pendi
         }
         if (owner == token)
         {
-            return m_sendLane.push(pending) ? LockFreeQueueSuccess : LockFreeQueueCapacityLimit;
+            return m_sendLane.push(pending, notify) ? LockFreeQueueSuccess : LockFreeQueueCapacityLimit;
         }
     }
     if (token != UINT32_MAX && m_settings.m_send.m_producerCacheCapacity != 0)
@@ -229,7 +239,7 @@ inline LockFreeQueueResult LibuvBase::tryQueueSend(const LibuvPendingSend& pendi
         // 令牌不复用、不换主；其他线程绝不访问此槽的非原子上下文，不等待暂停的缓存拥有者。
         if (owner == token && slot.m_lane.m_capacity != 0)
         {
-            return slot.m_lane.push(pending) ? LockFreeQueueSuccess : LockFreeQueueCapacityLimit;
+            return slot.m_lane.push(pending, notify) ? LockFreeQueueSuccess : LockFreeQueueCapacityLimit;
         }
         if (owner == token && !slot.m_busy)
         {

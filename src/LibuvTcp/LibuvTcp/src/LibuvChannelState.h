@@ -53,6 +53,12 @@ public:
     */
     LibuvChannelLane* producerLane();
 
+    /** 查询并发连接索引，正常命中不创建拥有值的Snapshot
+    @param [in] peer 本实例不复用的连接号
+    @return 0仍连接，UV_ENOTCONN不存在，UV_ENOMEM查询保护资源不足
+    */
+    int32_t connectedStatus(uint64_t peer) const;
+
     /** 复制并发布一条消息，成功后不得再访问该槽
     @param [in,out] lane 本线程独占通道
     @param [in] peer 不复用连接号
@@ -204,6 +210,8 @@ public:
     bool m_loopInitialized;
     // 初始化时发布的唯一loop线程身份，生命周期内不迁移
     std::thread::id m_ownerThread;
+    // 初始化执行者的不复用线程令牌；耗尽时才回退系统线程身份查询
+    uint32_t m_ownerToken;
     // 多生产者共享提交借用；shutdown封闭后才关闭uv_async句柄
     LibuvLifecycleGate m_submissionGate;
     // producer只查询编号快照，禁止跨线程读取m_peers或TCP对象

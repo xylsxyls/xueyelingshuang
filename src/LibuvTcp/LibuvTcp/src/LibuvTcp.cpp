@@ -312,7 +312,7 @@ int32_t LibuvTcp::trySubmitBuffer(const char* buffer, bool retryContention, bool
         pending.m_wireSize = static_cast<uint32_t>(length + 4);
         std::memcpy(pending.m_inlineBytes, buffer + sizeof(uv_tcp_t*), length + 4);
     }
-    const int32_t result = trySubmit(pending, retryContention, waitForSpace);
+    const int32_t result = trySubmit(pending, retryContention, waitForSpace, true);
     if (result == 0 && pending.m_buffer == nullptr)
     {
         // 副本已经发布；原数组在分配线程释放，减少跨线程堆同步。
@@ -337,7 +337,7 @@ int32_t LibuvTcp::trySubmitData(uv_tcp_t* target, const char* data, uint32_t siz
     {
         std::memcpy(pending.m_inlineBytes, &size, 4);
         LibuvBase::copySmall(pending.m_inlineBytes + 4, data, size);
-        return trySubmit(pending, retryContention, waitForSpace);
+        return trySubmit(pending, retryContention, waitForSpace, true);
     }
     if (pending.m_charge > m_settings->m_send.m_maximumPendingBytes)
     {
@@ -355,7 +355,7 @@ int32_t LibuvTcp::trySubmitData(uv_tcp_t* target, const char* data, uint32_t siz
     {
         std::memcpy(wire + 4, data, size);
     }
-    const int32_t result = trySubmit(pending, retryContention, waitForSpace);
+    const int32_t result = trySubmit(pending, retryContention, waitForSpace, true);
     if (result == 0)
     {
         bytes.release();
@@ -408,7 +408,7 @@ int32_t LibuvTcp::trySubmitBatch(uv_tcp_t* target, const LibuvSendBuffer* buffer
     pending.m_buffer = bytes.get();
     pending.m_wireSize = wireSize;
     pending.m_charge = wireSize + static_cast<uint32_t>(sizeof(target) + sizeof(LibuvPendingWrite));
-    const int32_t result = trySubmit(pending, retryContention, waitForSpace);
+    const int32_t result = trySubmit(pending, retryContention, waitForSpace, false);
     if (result == 0)
     {
         bytes.release();
@@ -454,7 +454,7 @@ int32_t LibuvTcp::tryPostBatch(uv_tcp_t* target, const LibuvSendBuffer* buffers,
     return trySubmitBatch(target, buffers, count, retryContention, waitForSpace);
 }
 
-int32_t LibuvTcp::trySubmit(LibuvPendingSend& pending, bool retryContention, bool waitForSpace)
+int32_t LibuvTcp::trySubmit(LibuvPendingSend& pending, bool retryContention, bool waitForSpace, bool coalesceNotify)
 {
     LibuvCall call(*m_lifecycle, retryContention);
     if (!call.accepted())
@@ -491,11 +491,14 @@ int32_t LibuvTcp::trySubmit(LibuvPendingSend& pending, bool retryContention, boo
         {
             // 容量等待由本层执行，才能每轮检查停止和连接代次，不能被下层无限等待困住。
             // 发布屏障由队列接口完成；唤醒前不再叠加相同屏障，其他平台仍由该接口提供完整排序。
-            const LockFreeQueueResult queued = state->tryQueueSend(pending, retryContention);
+            bool notify = true;
+            // 单条消息合并通知；显式批量已减少提交次数，直接通知libuv避免重复合并的控制成本。
+            const LockFreeQueueResult queued = state->tryQueueSend(pending, retryContention,
+                coalesceNotify ? &notify : nullptr);
             if (queued == LockFreeQueueSuccess)
             {
                 // 接纳后所有权已转移；即便唤醒系统异常，也不能返回“未接纳”让调用方重复释放。
-                if (uv_async_send(state->m_asyncHandle) != 0)
+                if (notify && uv_async_send(state->m_asyncHandle) != 0)
                 {
                     state->m_stopping.store(true);
                     LibuvBase::Wake(state->m_asyncCloseHandle);

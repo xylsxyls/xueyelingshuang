@@ -264,9 +264,11 @@ int32_t LibuvChannel::post(uint64_t id, const uint8_t* data, uint32_t size)
         }
         return result;
     }
-    const std::thread::id current = std::this_thread::get_id();
+    const bool owner = m_state->m_ownerToken != UINT32_MAX ?
+        LibuvBase::producerToken() == m_state->m_ownerToken :
+        std::this_thread::get_id() == m_state->m_ownerThread;
     LibuvChannelPeer* local = nullptr;
-    if (current == m_state->m_ownerThread)
+    if (owner)
     {
         // 所属线程独占std索引，无需再穿过并发索引和MPSC队列。
         const auto found = m_state->m_peers.find(id);
@@ -278,11 +280,10 @@ int32_t LibuvChannel::post(uint64_t id, const uint8_t* data, uint32_t size)
     }
     else
     {
-        LockFreeHashMap<uint64_t, uint32_t>::Snapshot connected;
-        const LockFreeHashMapResult found = m_state->m_connectedPeers->find(id, connected);
-        if (found.m_status != LockFreeHashMapOk)
+        const int32_t found = m_state->connectedStatus(id);
+        if (found != 0)
         {
-            return found.m_status == LockFreeHashMapNotFound ? UV_ENOTCONN : UV_ENOMEM;
+            return found;
         }
     }
     if (size == 0)

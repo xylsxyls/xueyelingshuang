@@ -151,6 +151,8 @@ public:
     uint32_t m_seenRead;
     // 分隔写者与读者频繁修改的索引
     char m_beforeRead[128];
+    // 通知和消费位置同侧，loop撤销通知不改写生产者发布位置的缓存行
+    std::atomic<bool> m_notified;
     // 读者完成复制后发布，写者才允许覆盖对应槽
     std::atomic<uint32_t> m_consumed;
     // 仅循环owner使用的读取序号
@@ -176,9 +178,10 @@ public:
 
     /** 仅所属发送线程发布一项，不等待容量，不转移失败项的所有权
     @param [in] pending 已预留预算的完整描述符
+    @param [out] notify 非空时成功发布后填写是否需唤醒；空则由调用方自行通知
     @return 是否发布成功
     */
-    bool push(const LibuvPendingSend& pending);
+    bool push(const LibuvPendingSend& pending, bool* notify = nullptr);
 
     /** 仅循环owner复制已发布前缀，再归还可覆盖槽
     @param [out] output 至少maximum项的暂存空间
@@ -356,9 +359,10 @@ public:
     /** 在持有外层生命周期借用时提交一项，复用可用的本线程登记并完成发布屏障
     @param [in] pending 已经预留预算的完整操作，不修改输入
     @param [in] retryContention 是否在队列CAS竞争时持续重试；容量始终由外层可取消等待
+    @param [out] notify 成功时是否需通知loop，空表示调用方总是自行通知
     @return 队列接纳结果，失败不转移数组；缓存不可用不阻止普通队列路径
     */
-    LockFreeQueueResult tryQueueSend(const LibuvPendingSend& pending, bool retryContention);
+    LockFreeQueueResult tryQueueSend(const LibuvPendingSend& pending, bool retryContention, bool* notify = nullptr);
 
     /** owner公平读取一个已发布前缀，跨线程不承诺全局先后，线程内始终固定通道
     @param [out] output 至少maximum项空间

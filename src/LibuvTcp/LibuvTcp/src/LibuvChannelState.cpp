@@ -6,6 +6,7 @@
 LibuvChannelState::LibuvChannelState() :
 m_loopInitialized(false),
 m_ownerThread(),
+m_ownerToken(0),
 m_connectedPeers(new LockFreeHashMap<uint64_t, uint32_t>),
 m_incoming(new LockFreeQueue<LibuvChannelWrite*>(false)),
 m_notifyCapacity(false),
@@ -103,6 +104,7 @@ int32_t LibuvChannelState::initialize()
             m_postAsync.data = this;
             uv_unref(reinterpret_cast<uv_handle_t*>(&m_postAsync));
             m_ownerThread = std::this_thread::get_id();
+            m_ownerToken = LibuvBase::producerToken();
             m_submissionGate.open();
         }
     }
@@ -354,7 +356,8 @@ void LibuvChannelState::releaseBatch(LibuvChannelWrite* first)
 void LibuvChannelState::posted(uv_async_t* handle)
 {
     LibuvChannelState* owner = static_cast<LibuvChannelState*>(handle->data);
-    for (uint32_t turn = 0; turn < 4096; ++turn)
+    uint32_t incomingTaken = 0;
+    for (; incomingTaken < 4096; ++incomingTaken)
     {
         LibuvChannelWrite* request = nullptr;
         if (!owner->m_incoming->popReady(&request))
@@ -404,7 +407,10 @@ void LibuvChannelState::posted(uv_async_t* handle)
             owner->closePeer(peer, result);
         }
     }
-    if (!owner->m_stopping && (lanePending || owner->m_readyFirst != nullptr || owner->m_incoming->possiblyReady()))
+    // 段边界的possiblyReady允许假阳性；实际取空后只能等生产者发布唤醒。
+    // 只有消费预算用尽才根据提示续调度，避免空队列反复uv_async_send。
+    const bool incomingPending = incomingTaken == 4096 && owner->m_incoming->possiblyReady();
+    if (!owner->m_stopping && (lanePending || owner->m_readyFirst != nullptr || incomingPending))
     {
         uv_async_send(&owner->m_postAsync);
     }
@@ -777,16 +783,28 @@ LibuvChannelLane* LibuvChannelState::producerLane()
     return owner == token ? &lane : nullptr;
 }
 
+int32_t LibuvChannelState::connectedStatus(uint64_t peer) const
+{
+    if (m_connectedPeers->contains(peer))
+    {
+        return 0;
+    }
+    // 失败时保留详细状态；不能把保护记录不足误报为连接已关闭。
+    LockFreeHashMap<uint64_t, uint32_t>::Snapshot connected;
+    const LockFreeHashMapResult found = m_connectedPeers->find(peer, connected);
+    return found.m_status == LockFreeHashMapOk ? 0 :
+        found.m_status == LockFreeHashMapNotFound ? UV_ENOTCONN : UV_ENOMEM;
+}
+
 int32_t LibuvChannelState::postLane(LibuvChannelLane& lane, uint64_t peer, const uint8_t* data, uint32_t size)
 {
     const uint64_t version = m_connectionVersion.load(std::memory_order_acquire);
     if (lane.m_peer != peer || lane.m_version != version)
     {
-        LockFreeHashMap<uint64_t, uint32_t>::Snapshot connected;
-        const LockFreeHashMapResult found = m_connectedPeers->find(peer, connected);
-        if (found.m_status != LockFreeHashMapOk)
+        const int32_t found = connectedStatus(peer);
+        if (found != 0)
         {
-            return found.m_status == LockFreeHashMapNotFound ? UV_ENOTCONN : UV_ENOMEM;
+            return found;
         }
         lane.m_peer = peer;
         lane.m_version = version;
@@ -840,13 +858,20 @@ bool LibuvChannelState::drainLanes()
     uint8_t bytes[65536];
     uint32_t budget = 16384;
     const uint32_t maximum = (std::min)(static_cast<uint32_t>(sizeof(bytes)), m_writeConfig->m_maximumWriteBytes);
+    if (m_laneCount != 0)
+    {
+        // 整轮统一撤销通知并执行一次SC屏障；随后才读取任一通道的发布位置。
+        // 未遍历完的积压仍由末尾检查安排下一轮，不把唤醒责任留给暂停的生产者。
+        for (uint32_t index = 0; index < m_laneCount; ++index)
+        {
+            m_lanes[index].m_notified.store(false, std::memory_order_release);
+        }
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+    }
     for (uint32_t visited = 0; visited < m_laneCount && budget != 0; ++visited)
     {
         LibuvChannelLane& lane = m_lanes[m_laneCursor];
         m_laneCursor = (m_laneCursor + 1) % m_laneCount;
-        // 与生产者发布后的SC屏障配对：要么本轮看到正文，要么生产者看到撤销并重新唤醒。
-        lane.m_notified.store(false, std::memory_order_release);
-        std::atomic_thread_fence(std::memory_order_seq_cst);
         const uint64_t published = lane.m_published.load(std::memory_order_acquire);
         if (lane.m_read == published)
         {

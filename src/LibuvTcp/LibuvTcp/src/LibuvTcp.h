@@ -414,9 +414,10 @@ class LibuvTcpAPI LibuvTcp
     @param [in,out] pending 本次独占操作，尚未取得连接代次
     @param [in] retryContention 是否持续重试竞争
     @param [in] waitForSpace 是否等待容量
+    @param [in] coalesceNotify 单条消息合并通道通知，显式批量直接通知libuv
     @return 0完整接纳，其他为错误码
     */
-    int32_t trySubmit(LibuvPendingSend& pending, bool retryContention, bool waitForSpace);
+    int32_t trySubmit(LibuvPendingSend& pending, bool retryContention, bool waitForSpace, bool coalesceNotify);
 
     /** 收敛上下文后按真实类型销毁，不在uv回调内调用
     @param [in] state 独占上下文，可空

@@ -22,6 +22,7 @@ m_token(0),
 m_published(0),
 m_write(0),
 m_seenRead(0),
+m_notified(false),
 m_consumed(0),
 m_read(0),
 m_items(capacity == 0 ? nullptr : new (std::nothrow) LibuvPendingSend[capacity]),
@@ -641,8 +642,16 @@ void LibuvBase::Accepted(uv_stream_t *listener, int status)
 
 void LibuvBase::SendPending(uv_async_t *handle)
 {
-    std::atomic_thread_fence(std::memory_order_seq_cst);
     LibuvBase *state = static_cast<LibuvBase *>(handle->data);
+    // 每轮先撤销各生产者通知，再统一建立发布屏障；不在每次取前缀时重复屏障。
+    // 要么本轮读取到新发布，要么生产者看到撤销并安排下一轮，不会丢掉空闲唤醒。
+    state->m_sendLane.m_notified.store(false, std::memory_order_release);
+    for (uint32_t index = 0; state->m_sendProducers != nullptr &&
+        index < state->m_settings.m_send.m_producerCacheCapacity; ++index)
+    {
+        state->m_sendProducers[index].m_lane.m_notified.store(false, std::memory_order_release);
+    }
+    std::atomic_thread_fence(std::memory_order_seq_cst);
     LibuvPendingSend close;
     size_t closed = 0;
     while (closed < 128 && state->m_closeQueue->popReady(&close))
