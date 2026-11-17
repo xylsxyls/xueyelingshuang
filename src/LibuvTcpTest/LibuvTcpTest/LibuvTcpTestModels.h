@@ -113,6 +113,17 @@ public:
     */
     LibuvTestReceiver(uint32_t payload, uint32_t producers, bool timed = false);
 
+    /** 由服务器执行线程建立监听并发布实际端口，后续poll和shutdown仍由此线程调用
+    @return 是否监听成功，失败同时发布测试错误
+    */
+    bool startListening();
+
+    /** 只读原子端口等待监听结果，不跨线程调用网络控制接口
+    @param [in] deadline uv_hrtime同一时基的纳秒截止时间
+    @return 有效监听端口，失败或超时为0
+    */
+    uint32_t waitForPort(uint64_t deadline) const;
+
     /** 记录接入 ID
     @param [in] peer 已接纳连接号
     */
@@ -144,6 +155,8 @@ public:
     std::atomic<bool> m_failed;
     // 服务器运行操作的合作退出标志
     std::atomic<bool> m_exit;
+    // 0尚未监听，UINT32_MAX监听失败，其余为发布给连接发起者的实际端口
+    std::atomic<uint32_t> m_listeningPort;
     // 只由 owner 维护的连接号
     uint64_t m_peer;
     // 单 owner 实际连接事件数

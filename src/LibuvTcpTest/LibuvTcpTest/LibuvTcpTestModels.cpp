@@ -113,6 +113,7 @@ void LibuvTestClient::uvServerDisconnected(uv_tcp_t* server)
 LibuvTestReceiver::LibuvTestReceiver(uint32_t payload, uint32_t producers, bool timed) :
 m_failed(false),
 m_exit(false),
+m_listeningPort(0),
 m_peer(0),
 m_connectedCount(0),
 m_closedCount(0),
@@ -130,6 +131,29 @@ m_timed(timed)
     {
         m_latencies.reserve(65536);
     }
+}
+
+bool LibuvTestReceiver::startListening()
+{
+    const int32_t result = m_channel.listen("127.0.0.1", 0, this, 1);
+    const uint32_t port = result == 0 ? m_channel.localPort() : 0;
+    if (port == 0)
+    {
+        m_failed.store(true);
+    }
+    m_listeningPort.store(port == 0 ? UINT32_MAX : port, std::memory_order_release);
+    return port != 0;
+}
+
+uint32_t LibuvTestReceiver::waitForPort(uint64_t deadline) const
+{
+    uint32_t port = m_listeningPort.load(std::memory_order_acquire);
+    while (port == 0 && !m_failed.load() && uv_hrtime() < deadline)
+    {
+        uv_sleep(1);
+        port = m_listeningPort.load(std::memory_order_acquire);
+    }
+    return port <= 65535 && !m_failed.load() ? port : 0;
 }
 
 void LibuvTestReceiver::onConnected(uint64_t peer)

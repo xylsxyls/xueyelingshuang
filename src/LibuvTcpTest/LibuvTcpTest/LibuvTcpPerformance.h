@@ -51,9 +51,12 @@ private:
     @param [in] kind 0六字节、1延迟、2原始字节
     @param [in] expected 六字节组预期交付帧数
     @param [out] metrics 吞吐、耗时、CPU、内存、带宽及三项延迟；缺失为-1
+    @param [in] requested 可选的原始四项输入，提供时逐项验证场景身份
+    @param [in] label 可选的精确输出类型
     @return 输出完整、数值有效且交付数正确
     */
-    static bool parse(const std::string& output, int kind, uint64_t expected, double* metrics);
+    static bool parse(const std::string& output, int kind, uint64_t expected, double* metrics,
+        const uint32_t* requested = nullptr, const char* label = nullptr);
 
     /** 核对逐条host样本的输入身份、实际接收量及计时口径
     @param [in] output 子进程的完整输出

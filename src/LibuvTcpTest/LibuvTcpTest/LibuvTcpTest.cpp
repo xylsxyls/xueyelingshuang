@@ -32,7 +32,8 @@ std::atomic<uint32_t> LibuvTcpTest::m_failAllocationCount(0);
 void* operator new(size_t size)
 {
     uint32_t remaining = LibuvTcpTest::m_failAllocationCount.load();
-    if (size == LibuvTcpTest::m_failAllocationSize.load())
+    if (size == LibuvTcpTest::m_failAllocationSize.load() ||
+        LibuvTcpTest::m_failAllocationSize.load() == SIZE_MAX)
     {
         while (remaining != 0)
         {
@@ -1203,6 +1204,9 @@ static bool TestTraffic(uint32_t producers, uint32_t count, uint32_t payload, bo
     std::atomic<bool> cancel(false);
     std::atomic<bool> stopped(false);
     std::atomic<bool> rejected(false);
+    const uint64_t deadline = uv_hrtime() + 20000000000ULL;
+    // 功能用例限定总在途正文为 8 MiB；预算耗尽另由容量用例验证，不能要求无限接纳。
+    const uint32_t window = (std::min)(uint32_t(128), (8U * 1024U * 1024U) / producers / payload);
     LibuvTestThread serverThread;
     LibuvTestThread clientThread;
     LibuvTestThread senders[16];
@@ -1213,16 +1217,12 @@ static bool TestTraffic(uint32_t producers, uint32_t count, uint32_t payload, bo
     {
         return false;
     }
-    if (receiver.m_channel.listen("127.0.0.1", 0, &receiver, 1) != 0 ||
-        !client.initClient("127.0.0.1", receiver.m_channel.localPort()))
-    {
-        return false;
-    }
-    const uint64_t deadline = uv_hrtime() + 20000000000ULL;
-    // 功能用例限定总在途正文为 8 MiB；预算耗尽另由容量用例验证，不能要求无限接纳。
-    const uint32_t window = (std::min)(uint32_t(128), (8U * 1024U * 1024U) / producers / payload);
     if (!serverThread.start([&receiver, deadline]()
     {
+        if (!receiver.startListening())
+        {
+            return;
+        }
         bool replied = false;
         std::vector<uint8_t> reply(32768, 0xA5);
         while (!receiver.m_exit.load() && uv_hrtime() < deadline)
@@ -1235,7 +1235,12 @@ static bool TestTraffic(uint32_t producers, uint32_t count, uint32_t payload, bo
             uv_sleep(0);
         }
         receiver.m_channel.shutdown();
-    }, [&receiver]() { receiver.m_exit.store(true); }) ||
+    }, [&receiver]() { receiver.m_exit.store(true); }))
+    {
+        return false;
+    }
+    const uint32_t port = receiver.waitForPort(deadline);
+    if (port == 0 || !client.initClient("127.0.0.1", port) ||
         !clientThread.start([&client]() { client.loop(); }, [&client]() { client.stop(); }))
     {
         return false;
@@ -1668,7 +1673,7 @@ static bool TestUnpublishedAccept()
 #ifndef LIBUV_TEST_BASELINE
 /** 填满真实发送预算，验证普通 post 等待容量以及停止时释放借用
 @param [in] cancel true 在等待时停止；false 恢复读端并完整接收
-@param [in] postMode 0为send数组，1为post数组，2为post正文，3为postBatch
+@param [in] postMode 0和1均为post数组，2为post正文，3为postBatch
 @return 是否实际发生容量等待，并符合恢复或取消的后置条件
 */
 static bool TestSpaceWait(bool cancel, uint32_t postMode = 0)
@@ -1980,6 +1985,30 @@ static bool TestBatchContract()
     std::memcpy(&expected[18], data, 2);
     passed = tcp.postBatch(target, buffers, 3) && passed;
     std::memset(data, 'z', 6);
+    passed = InspectBatch(tcp, expected) && passed;
+    // 同一批混合0至17字节、未对齐正文和二进制零，逐字节验证各长度的独立副本。
+    char shortData[18][20];
+    LibuvSendBuffer shortBuffers[18];
+    expected.clear();
+    for (uint32_t size = 0; size < 18; ++size)
+    {
+        for (uint32_t index = 0; index < 20; ++index)
+        {
+            shortData[size][index] = static_cast<char>((size * 19 + index * 7) & 255U);
+        }
+        shortData[size][2] = 0;
+        shortBuffers[size].m_data = size == 0 ? nullptr : shortData[size] + 1;
+        shortBuffers[size].m_size = size;
+        const size_t offset = expected.size();
+        expected.resize(offset + 4 + size);
+        std::memcpy(&expected[offset], &size, 4);
+        for (uint32_t index = 0; index < size; ++index)
+        {
+            expected[offset + 4 + index] = shortData[size][index + 1];
+        }
+    }
+    passed = tcp.postBatch(target, shortBuffers, 18) && passed;
+    std::memset(shortData, 'z', sizeof(shortData));
     passed = InspectBatch(tcp, expected) && passed;
     LibuvSendBuffer empty = { nullptr, 0 };
     std::vector<LibuvSendBuffer> maximum(4096, empty);
@@ -2315,7 +2344,7 @@ static bool TestPostFailures()
     return passed && state->m_pendingBytes.load() == 0 && !state->sendsReady();
 }
 
-/** 各种大小混用全部十二个提交入口，接收方逐条校验正文及单生产者序号
+/** 各种大小混用六个提交入口，接收方逐条校验正文及单生产者序号
 @return 内联临界、大帧、双向字节与并发停止全部正确
 */
 static bool TestPostSizes()
@@ -2934,7 +2963,7 @@ static bool TestLaneFairness()
     }
     LibuvPendingSend output[16];
     uint32_t counts[2] = {};
-    for (uint32_t round = 0; round < 128 && state->sendsReady(); ++round)
+    for (uint32_t round = 0; round < 128 && counts[0] + counts[1] < 128; ++round)
     {
         size_t taken = 0;
         if (!state->popSendPrefix(output, 16, taken) || taken == 0 || taken > 16)
@@ -2954,7 +2983,8 @@ static bool TestLaneFairness()
             return false;
         }
     }
-    return counts[0] == 64 && counts[1] == 64 && !state->sendsReady();
+    LibuvPendingSend extra;
+    return counts[0] == 64 && counts[1] == 64 && !PopSubmitted(state, &extra);
 }
 
 /** 工作线程持续进入时反复关闭和开放，关闭返回后不允许任何借用访问待替换资源
@@ -2971,7 +3001,8 @@ static bool TestGateReopenRace()
     std::atomic<uint32_t> inside(0);
     std::atomic<uint32_t> visits(0);
     LibuvTestThread threads[40];
-    const uint64_t deadline = uv_hrtime() + 10000000000ULL;
+    const uint64_t begun = uv_hrtime();
+    const uint64_t deadline = begun + 10000000000ULL;
     uint32_t launched = 0;
     for (; launched < 40; ++launched)
     {
@@ -2993,6 +3024,11 @@ static bool TestGateReopenRace()
                     inside.fetch_sub(1);
                     gate.release();
                 }
+                else
+                {
+                    // 关闭拒绝后合作退避，不让40个无效重试者挤占控制线程的运行机会。
+                    uv_sleep(1);
+                }
                 if ((++loops & 63U) == 0)
                 {
                     uv_sleep(0);
@@ -3003,23 +3039,35 @@ static bool TestGateReopenRace()
             break;
         }
     }
+    const uint64_t launchedAt = uv_hrtime();
     while (ready.load() != launched && uv_hrtime() < deadline)
     {
         uv_sleep(1);
     }
+    const uint64_t readyAt = uv_hrtime();
+    uint32_t closedRounds = 0;
+    uint64_t maximumCloseNs = 0;
     bool passed = launched == 40 && ready.load() == 40;
     for (uint32_t round = 0; passed && round < 128; ++round)
     {
+        const uint64_t closeStarted = uv_hrtime();
         gate.close();
+        maximumCloseNs = (std::max)(maximumCloseNs, uv_hrtime() - closeStarted);
+        ++closedRounds;
         available.store(false);
         if (inside.load() != 0 || uv_hrtime() >= deadline)
         {
             passed = false;
         }
-        uv_sleep(0);
+        const uint32_t previousVisits = visits.load();
         available.store(true);
         gate.open();
-        uv_sleep(0);
+        // 每轮重开必须有新的成功借用，不能依靠固定让出次数或让空轮次通过。
+        while (visits.load() == previousVisits && !failed.load() && uv_hrtime() < deadline)
+        {
+            uv_sleep(0);
+        }
+        passed = visits.load() != previousVisits && !failed.load() && passed;
     }
     stop.store(true);
     for (uint32_t index = 0; index < launched; ++index)
@@ -3031,6 +3079,8 @@ static bool TestGateReopenRace()
     {
         std::printf("reopen passed=%u failed=%u visits=%u inside=%u launched=%u\n",
             passed ? 1U : 0U, failed.load() ? 1U : 0U, visits.load(), inside.load(), launched);
+        std::printf("reopen launchMs=%.3f readyMs=%.3f rounds=%u maxCloseMs=%.3f\n",
+            (launchedAt - begun) / 1000000.0, (readyAt - begun) / 1000000.0, closedRounds, maximumCloseNs / 1000000.0);
     }
     return passed && !failed.load() && visits.load() != 0 && inside.load() == 0;
 }
@@ -3528,7 +3578,6 @@ static bool TestDirectPrefixPartial(bool failWrite)
     return true;
 }
 
-
 /** 附加独占通道与共享队列均有积压时，轮转不得遗漏或跨线程借用未发布数据
 @return 总槽数有界、全部通道推进、局部顺序保持、初始化分配失败可安全回收
 */
@@ -3537,6 +3586,7 @@ static bool TestProducerLanes()
     LibuvTcp tcp;
     if (!tcp.initClient("127.0.0.1", 1))
     {
+        std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
         return false;
     }
     LibuvBase* state = tcp.m_libuv;
@@ -3549,6 +3599,7 @@ static bool TestProducerLanes()
         capacity += lane.m_capacity;
         if (lane.m_capacity != laneSize)
         {
+            std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
             return false;
         }
         for (uint32_t index = 0; index < laneSize; ++index)
@@ -3556,21 +3607,25 @@ static bool TestProducerLanes()
             pending.m_generation = uint64_t(slot) * laneSize + index;
             if (!lane.push(pending))
             {
+                std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
                 return false;
             }
         }
         if (lane.push(pending))
         {
+            std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
             return false;
         }
     }
     if (capacity > state->m_settings.m_sendQueue.m_maximumCapacity)
     {
+        std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
         return false;
     }
     pending.m_generation = 16 * laneSize;
     if (state->m_queue->tryPush(pending, true, false) != LockFreeQueueSuccess)
     {
+        std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
         return false;
     }
     uint32_t counts[17] = {};
@@ -3578,12 +3633,14 @@ static bool TestProducerLanes()
     {
         if (!PopSubmitted(state, &pending))
         {
+            std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
             return false;
         }
         const uint32_t slot = static_cast<uint32_t>(pending.m_generation / laneSize);
         const uint32_t index = static_cast<uint32_t>(pending.m_generation % laneSize);
         if (slot > 16 || index != counts[slot]++)
         {
+            std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
             return false;
         }
         if (round == 16)
@@ -3592,13 +3649,16 @@ static bool TestProducerLanes()
             {
                 if (counts[lane] == 0)
                 {
+                    std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
                     return false;
                 }
             }
         }
     }
-    if (state->sendsReady() || PopSubmitted(state, &pending))
+    // possiblyReady仅为段边界提示；再次实际消费确认空队列，不能把提示当成多余消息。
+    if (PopSubmitted(state, &pending))
     {
+        std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
         return false;
     }
     // 真实拥有数组与预算的附加通道在停止后仍按1024项轮次完整回收。
@@ -3608,11 +3668,13 @@ static bool TestProducerLanes()
         pending.m_buffer = new (std::nothrow) char[sizeof(uv_tcp_t*) + 5];
         if (pending.m_buffer == nullptr)
         {
+            std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
             return false;
         }
         if (state->tryReserveSend(charge, true) != 0)
         {
             delete[] pending.m_buffer;
+            std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
             return false;
         }
         pending.m_charge = charge;
@@ -3622,6 +3684,7 @@ static bool TestProducerLanes()
         {
             delete[] pending.m_buffer;
             state->releaseSend(charge);
+            std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
             return false;
         }
     }
@@ -3629,11 +3692,13 @@ static bool TestProducerLanes()
     LibuvBase::SendPending(state->m_asyncHandle);
     if (state->m_pendingBytes.load() != charge * 4)
     {
+        std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
         return false;
     }
     LibuvBase::SendPending(state->m_asyncHandle);
-    if (state->m_pendingBytes.load() != 0 || state->sendsReady())
+    if (state->m_pendingBytes.load() != 0 || PopSubmitted(state, &pending))
     {
+        std::fprintf(stderr, "producer lane failure line=%d\n", __LINE__);
         return false;
     }
     // 正好命中附加512项描述符数组；失败不能发布半初始化状态。
@@ -3647,10 +3712,217 @@ static bool TestProducerLanes()
     return !initialized && injected && failure.m_libuv == nullptr && failure.initClient("127.0.0.1", 1);
 }
 
+/** 后备路径只查询连接身份时不分配快照，零字节请求也经过真实公共入口
+@return 预热后查询不分配，故障注入有效且线程和连接正常退出
+*/
+static bool TestRawConnectedLookup()
+{
+    LibuvTestHost server, client;
+    if (!ConnectHosts(server, client))
+    {
+        return false;
+    }
+    std::atomic<bool> finished(false), passed(false);
+    LibuvTestThread worker;
+    if (!worker.start([&]()
+    {
+        bool valid = LibuvTcp::post(client.m_instance, client.m_peer, nullptr, 0) == 0;
+        // 默认写池初始2槽，覆盖外部线程的共享后备路径；当前owner不驱动loop。
+        LibuvTcpTest::m_failAllocationSize.store(SIZE_MAX);
+        LibuvTcpTest::m_failAllocationCount.store(1);
+        for (uint32_t index = 0; valid && index < 10000; ++index)
+        {
+            valid = LibuvTcp::post(client.m_instance, client.m_peer, nullptr, 0) == 0;
+        }
+        valid = LibuvTcpTest::m_failAllocationCount.load() == 1 && valid;
+        // 调用测试分配器验证注入有效，不能用失效的探针证明没有分配。
+        void* probe = nullptr;
+        try { probe = ::operator new(17); }
+        catch (const std::bad_alloc&) {}
+        valid = probe == nullptr && LibuvTcpTest::m_failAllocationCount.load() == 0 && valid;
+        LibuvTcpTest::m_failAllocationSize.store(0);
+        LibuvTcpTest::m_failAllocationCount.store(0);
+        ::operator delete(probe);
+        passed.store(valid);
+        finished.store(true);
+    }, []() {}))
+    {
+        return false;
+    }
+    const uint64_t deadline = uv_hrtime() + 5000000000ULL;
+    while (!finished.load() && uv_hrtime() < deadline)
+    {
+        std::this_thread::yield();
+    }
+    const bool complete = finished.load();
+    return worker.join() && complete && passed.load() && client.finish() && server.finish();
+}
+
+/** 实际消费到队列段边界后，空提示不得持续唤醒网络循环；新发布仍能恢复消费
+@return 两轮定时观察内循环不空转，后续请求被取消回收且池无占用
+*/
+static bool TestRawFallbackIdle()
+{
+    LibuvChannelState state;
+    if (state.initialize() != 0)
+    {
+        return false;
+    }
+    const uint8_t byte = 0x5a;
+    for (uint32_t index = 0; index < 256; ++index)
+    {
+        int32_t result = 0;
+        LibuvChannelWrite* request = state.prepareWrite(1, &byte, 1, result);
+        if (request == nullptr)
+        {
+            return false;
+        }
+        if (state.m_incoming->tryPush(request, true, false) != LockFreeQueueSuccess)
+        {
+            state.releaseWrite(request);
+            return false;
+        }
+        // 未建立的连接由正式消费入口取消回收，正好推进一个完整队列段。
+        LibuvChannelState::posted(&state.m_postAsync);
+    }
+    uv_prepare_t prepare;
+    uv_timer_t timer;
+    if (uv_prepare_init(state.loop(), &prepare) != 0)
+    {
+        return false;
+    }
+    if (uv_timer_init(state.loop(), &timer) != 0)
+    {
+        uv_close(reinterpret_cast<uv_handle_t*>(&prepare), nullptr);
+        uv_run(state.loop(), UV_RUN_NOWAIT);
+        return false;
+    }
+    uint32_t iterations = 0;
+    prepare.data = &iterations;
+    // 仅在测试loop计数；不会改变产品回调、队列或唤醒状态。
+    bool passed = uv_prepare_start(&prepare, [](uv_prepare_t* handle)
+    {
+        ++*static_cast<uint32_t*>(handle->data);
+    }) == 0;
+    for (uint32_t round = 0; passed && round < 2; ++round)
+    {
+        if (round != 0)
+        {
+            int32_t result = 0;
+            LibuvChannelWrite* request = state.prepareWrite(1, &byte, 1, result);
+            passed = request != nullptr;
+            if (passed && state.m_incoming->tryPush(request, true, false) != LockFreeQueueSuccess)
+            {
+                state.releaseWrite(request);
+                passed = false;
+            }
+        }
+        iterations = 0;
+        // 定时器结束负向观察，不把轮询等待作为产品的通知补偿。
+        passed = uv_timer_start(&timer, [](uv_timer_t* handle) { uv_stop(handle->loop); }, 20, 0) == 0 && passed;
+        uv_async_send(&state.m_postAsync);
+        if (passed)
+        {
+            uv_run(state.loop(), UV_RUN_DEFAULT);
+            LibuvChannelWrite* pending = nullptr;
+            passed = iterations > 0 && iterations <= 4 && !state.m_incoming->popReady(&pending) &&
+                state.m_writePool->stats().occupied == 0;
+            if (pending != nullptr)
+            {
+                state.releaseWrite(pending);
+            }
+        }
+    }
+    uv_prepare_stop(&prepare);
+    uv_timer_stop(&timer);
+    uv_close(reinterpret_cast<uv_handle_t*>(&prepare), nullptr);
+    uv_close(reinterpret_cast<uv_handle_t*>(&timer), nullptr);
+    uv_run(state.loop(), UV_RUN_NOWAIT);
+    return passed;
+}
+
+/** 八个固定生产者逐轮从空闲发布，通知合并不能丢失后续唤醒
+@return 400轮每轮32帧完整收到，线程退出且未用人工唤醒补偿产品通知
+*/
+static bool TestFramedLaneWakeEdges()
+{
+    LibuvTinyReceiver receiver(12800, false, 8);
+    LibuvTestClient client;
+    if (!ConnectDirectTest(receiver, client))
+    {
+        return false;
+    }
+    LibuvTestThread producers[8];
+    std::atomic<uint32_t> phase(0);
+    std::atomic<bool> failed(false), stop(false);
+    bool passed = true;
+    for (uint32_t index = 0; index < 8 && passed; ++index)
+    {
+        // 每轮在小帧通知合并与两帧数组直接通知之间切换；收齐才开始下一轮。
+        passed = producers[index].start([&]()
+        {
+            for (uint32_t round = 1; round <= 400 && !stop.load(); ++round)
+            {
+                while (phase.load(std::memory_order_acquire) < round && !stop.load())
+                {
+                    std::this_thread::yield();
+                }
+                if (stop.load())
+                {
+                    break;
+                }
+                uv_tcp_t* target = client.m_target.load();
+                if (!client.post(target, "123456", 6))
+                {
+                    failed.store(true);
+                    break;
+                }
+                // 使用批量入口提交两条独立消息，不能把两帧拼进单帧数组接口。
+                LibuvSendBuffer batch[2];
+                for (uint32_t frame = 0; frame < 2; ++frame)
+                {
+                    batch[frame].m_data = "123456";
+                    batch[frame].m_size = 6;
+                }
+                if (!client.postBatch(target, batch, 2) || !client.post(target, "123456", 6))
+                {
+                    failed.store(true);
+                    break;
+                }
+            }
+        }, [&]() { stop.store(true); });
+    }
+    const uint64_t deadline = uv_hrtime() + 10000000000ULL;
+    for (uint32_t round = 1; passed && round <= 400; ++round)
+    {
+        phase.store(round, std::memory_order_release);
+        while (receiver.m_received.load() < round * 32 && !failed.load() &&
+            !receiver.m_failed.load() && uv_hrtime() < deadline)
+        {
+            uv_run(client.loopPtr(), UV_RUN_NOWAIT);
+            uv_run(receiver.loopPtr(), UV_RUN_NOWAIT);
+        }
+        passed = !failed.load() && !receiver.m_failed.load() && receiver.m_received.load() == round * 32;
+    }
+    stop.store(true);
+    for (uint32_t index = 0; index < 8; ++index)
+    {
+        passed = producers[index].join() && passed;
+    }
+    client.stop();
+    client.loop();
+    receiver.stop();
+    receiver.loop();
+    return passed && receiver.m_received.load() == 12800;
+}
+
 int LibuvTcpTest::run(int argc, char** argv)
 {
     static const std::map<int32_t, LibuvTestCase> s_cases =
     {
+        { LibuvTestFramedLaneWakeEdges, { "长度帧八生产者空闲通知交界", true, &TestFramedLaneWakeEdges } },
+        { LibuvTestRawFallbackIdle, { "后备队列段边界空闲与再次唤醒", false, &TestRawFallbackIdle } },
+        { LibuvTestRawConnectedLookup, { "后备连接查询不分配快照", false, &TestRawConnectedLookup } },
         { LibuvTestPerformanceParser, { "性能样本完整性与异常数值拒绝", false, &LibuvTcpPerformance::checkParser } },
         { LibuvTestRawLanePeers, { "原始通道多目标隔离与关闭缓存失效", false, &TestRawLanePeers } },
         { LibuvTestRawLaneRollback, { "原始通道启动分配失败和重配置回滚", false, &TestRawLaneAllocationRollback } },

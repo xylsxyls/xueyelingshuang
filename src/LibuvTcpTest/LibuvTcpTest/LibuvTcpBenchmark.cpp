@@ -104,6 +104,9 @@ int LibuvTcpBenchmark::profile()
     return 0;
 }
 
+// 固定亲和设置失败使本轮无效，不能静默按系统调度运行后标记为固定CPU。
+static std::atomic<bool> s_affinityFailed(false);
+
 /** 可选固定基准执行角色的CPU，减少调度迁移；只用于性能进程且前后版采用相同设置
 @param [in] role 0发送循环，1接收循环，2及以后生产者
 @return 原线程亲和掩码，未指定或非Windows时为0
@@ -116,8 +119,14 @@ static uintptr_t PinBenchmarkRole(uint32_t role)
         const uint32_t cpus[] = {14, 12, 6, 8, 10, 2};
         if (role < sizeof(cpus) / sizeof(cpus[0]))
         {
-            return static_cast<uintptr_t>(SetThreadAffinityMask(GetCurrentThread(), DWORD_PTR(1) << cpus[role]));
+            const uintptr_t previous = static_cast<uintptr_t>(
+                SetThreadAffinityMask(GetCurrentThread(), DWORD_PTR(1) << cpus[role]));
+            if (previous != 0)
+            {
+                return previous;
+            }
         }
+        s_affinityFailed.store(true);
     }
 #endif
     (void)role;
@@ -219,17 +228,34 @@ int LibuvTcpBenchmark::run(uint32_t producers, uint32_t payload, uint32_t count,
         return 2;
     }
     LibuvTestReceiver receiver(payload, producers, true);
+    LibuvTcpBenchmarkProbe observation = {};
     LibuvTestClient client;
     std::atomic<bool> start(false);
     std::atomic<bool> cancel(false);
     std::atomic<uint32_t> ready(0);
     std::atomic<bool> loopDone(false);
-    LibuvTcpBenchmarkProbe observation = {};
+    const uint64_t deadline = uv_hrtime() + 60000000000ULL;
     LibuvTestThread server;
     LibuvTestThread loop;
     LibuvTestThread senders[16];
-    if (receiver.m_channel.listen("127.0.0.1", 0, &receiver, 1) != 0 ||
-        !client.initClient("127.0.0.1", receiver.m_channel.localPort()))
+    if (!server.start([&receiver, deadline]()
+    {
+        if (!receiver.startListening())
+        {
+            return;
+        }
+        while (!receiver.m_exit.load() && uv_hrtime() < deadline)
+        {
+            receiver.m_channel.poll();
+            uv_sleep(0);
+        }
+        receiver.m_channel.shutdown();
+    }, [&receiver]() { receiver.m_exit.store(true); }))
+    {
+        return 3;
+    }
+    const uint32_t port = receiver.waitForPort(deadline);
+    if (port == 0 || !client.initClient("127.0.0.1", port))
     {
         return 3;
     }
@@ -248,17 +274,7 @@ int LibuvTcpBenchmark::run(uint32_t producers, uint32_t payload, uint32_t count,
             return 3;
         }
     }
-    const uint64_t deadline = uv_hrtime() + 60000000000ULL;
-    if (!server.start([&]()
-    {
-        while (!receiver.m_exit.load() && uv_hrtime() < deadline)
-        {
-            receiver.m_channel.poll();
-            uv_sleep(0);
-        }
-        receiver.m_channel.shutdown();
-    }, [&]() { receiver.m_exit.store(true); }) ||
-        !loop.start([&]() { client.loop(); loopDone.store(true); }, [&]() { client.stop(); }))
+    if (!loop.start([&]() { client.loop(); loopDone.store(true); }, [&]() { client.stop(); }))
     {
         return 3;
     }
@@ -300,7 +316,11 @@ int LibuvTcpBenchmark::run(uint32_t producers, uint32_t payload, uint32_t count,
                 }
                 const uint64_t sent = uv_hrtime();
                 std::memcpy(body + 8, &sent, 8);
-                client.post(buffer);
+                if (!client.post(buffer))
+                {
+                    cancel.store(true);
+                    break;
+                }
             }
         }, [&]() { cancel.store(true); });
     }
@@ -312,7 +332,7 @@ int LibuvTcpBenchmark::run(uint32_t producers, uint32_t payload, uint32_t count,
     const uint64_t began = uv_hrtime();
     start.store(true);
     bool complete = false;
-    while (launched && !receiver.m_failed.load() && !client.m_failed.load() && !loopDone.load() && uv_hrtime() < deadline)
+    while (launched && !cancel.load() && !receiver.m_failed.load() && !client.m_failed.load() && !loopDone.load() && uv_hrtime() < deadline)
     {
         complete = true;
         for (uint32_t producer = 0; producer < producers; ++producer)
@@ -457,6 +477,7 @@ void LibuvTinyReceiver::uvClientDisconnected(uv_tcp_t* client)
 
 int LibuvTcpBenchmark::tiny(uint32_t producers, uint32_t ordered, uint32_t count, uint32_t batch, bool congested, bool copy, bool post)
 {
+    s_affinityFailed.store(false);
     if (producers < 1 || producers > 16 || ordered > 2 || count < 1 || count > 200000000 || batch < 1 || batch > 4096 ||
         (post && batch != 1))
     {
@@ -641,7 +662,8 @@ int LibuvTcpBenchmark::tiny(uint32_t producers, uint32_t ordered, uint32_t count
     valid = clientThread.join() && valid;
     receiver.stop();
     valid = receiverThread.join() && valid;
-    valid = valid && !receiver.m_failed.load() && !client.m_failed.load() && ended > began;
+    valid = valid && !s_affinityFailed.load() && !receiver.m_failed.load() &&
+        !client.m_failed.load() && ended > began;
     const double ms = valid ? double(ended - began) / 1000000.0 : 0;
     std::printf("%s,%u,%u,%u,%u,%.6f,%.3f,%.3f,%.0f,%llu,%d\n",
         post ? (copy ? "TINYCOPYPOST" : "TINYPOST") : (copy ? "TINYCOPY" : "TINY"), producers, ordered, count, batch,

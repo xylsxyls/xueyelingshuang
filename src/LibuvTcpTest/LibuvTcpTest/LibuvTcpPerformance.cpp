@@ -157,7 +157,8 @@ bool LibuvTcpPerformance::execute(const char* executable, const std::vector<std:
     return closed && m_exited && m_eof && !m_failed;
 }
 
-bool LibuvTcpPerformance::parse(const std::string& output, int kind, uint64_t expected, double* metrics)
+bool LibuvTcpPerformance::parse(const std::string& output, int kind, uint64_t expected, double* metrics,
+    const uint32_t* requested, const char* label)
 {
     const size_t end = output.find_last_not_of("\r\n");
     if (end == std::string::npos)
@@ -199,6 +200,46 @@ bool LibuvTcpPerformance::parse(const std::string& output, int kind, uint64_t ex
         }
     }
     if (kind == 0 && (values[9] != static_cast<double>(expected) || values[10] != 1))
+    {
+        return false;
+    }
+    // 数量字段必须是实际整数，耗时和速率必须能由同一工作量相互推导。
+    const size_t parameters = kind == 2 ? 2 : 4;
+    for (size_t index = 1; index <= parameters; ++index)
+    {
+        if (std::floor(values[index]) != values[index] || values[index] > UINT32_MAX)
+        {
+            return false;
+        }
+    }
+    if (label != nullptr && fields[0] != label)
+    {
+        return false;
+    }
+    for (size_t index = 0; requested != nullptr && index < parameters; ++index)
+    {
+        if (values[index + 1] != requested[kind == 2 ? index + 1 : index])
+        {
+            return false;
+        }
+    }
+    const double count = kind == 2 ? values[2] : values[1] * values[3];
+    const double milliseconds = values[kind == 2 ? 3 : 5];
+    const double rate = values[kind == 2 ? 4 : 6];
+    if (count <= 0 || milliseconds <= 0 || rate <= 0 ||
+        (kind != 2 && (values[1] < 1 || values[1] > 16 || values[4] < 1)) ||
+        (kind == 0 && (values[2] > 2 || count != values[9])) ||
+        (kind == 1 && (values[2] < 16 || values[8] > values[9] || values[9] > values[10])))
+    {
+        return false;
+    }
+    const double calculated = count * 1000.0 / milliseconds;
+    if (std::fabs(rate - calculated) > 0.001 + calculated * 1e-6 / milliseconds)
+    {
+        return false;
+    }
+    if (kind == 1 && std::fabs(values[7] - calculated * values[2] / 1048576.0) >
+        0.001 + calculated * values[2] / 1048576.0 * 1e-6 / milliseconds)
     {
         return false;
     }
@@ -317,6 +358,13 @@ bool LibuvTcpPerformance::checkParser()
     {
         return false;
     }
+    const uint32_t expectedInput[4] = {1, 0, 8, 1};
+    if (!parse("TINY,1,0,8,1,2,4000,1,100,8,1\n", 0, 8, metrics, expectedInput, "TINY") ||
+        parse("TINY,2,0,4,1,2,4000,1,100,8,1\n", 0, 8, metrics, expectedInput, "TINY") ||
+        parse("TINYPOST,1,0,8,1,2,4000,1,100,8,1\n", 0, 8, metrics, expectedInput, "TINY"))
+    {
+        return false;
+    }
     return parse("TINY,1,0,8,1,2,4000,1,100,8,1\n", 0, 8, metrics) && metrics[0] == 4000 &&
         !parse("TINY,1,0,8,1,2,4000,1,100,7,1\n", 0, 8, metrics) &&
         !parse("TINY,1,0,8,1,2,4000,1,100,8,0\n", 0, 8, metrics) &&
@@ -327,7 +375,13 @@ bool LibuvTcpPerformance::checkParser()
         !parse("RAW,6,10,1\n", 2, 0, metrics) &&
         !parse("", 2, 0, metrics) &&
         parse("RAW,6,10,1,10000\n", 2, 0, metrics) && metrics[2] == -1 &&
-        parse("BENCH,1,16,100,128,2,50000,1,2,3,4,5,6\n", 1, 0, metrics) && metrics[7] == 4;
+        parse("BENCH,1,16,100,128,2,50000,0.763,2,3,4,5,6\n", 1, 0, metrics) && metrics[7] == 4 &&
+        !parse("TINY,1,0,9,1,2,4000,1,100,8,1\n", 0, 8, metrics) &&
+        !parse("TINY,1,0,8,1,2,40000,1,100,8,1\n", 0, 8, metrics) &&
+        !parse("RAW,6,10,1,100000\n", 2, 0, metrics) &&
+        !parse("RAW,6,10.5,1,10500\n", 2, 0, metrics) &&
+        !parse("BENCH,1,16,100,128,2,50000,1,2,3,4,5,6\n", 1, 0, metrics) &&
+        !parse("BENCH,1,16,100,128,2,50000,0.763,4,3,2,5,6\n", 1, 0, metrics);
 }
 
 int LibuvTcpPerformance::runnerProbe(const char* mode)
@@ -433,7 +487,11 @@ int LibuvTcpPerformance::run(int argc, char** argv)
         const bool host = test >= 29;
         const char* hostMode = test <= 32 ? "raw" : test <= 36 ? "framed" :
             test <= 40 ? "framedpool" : test <= 44 ? "ordered" : "raw";
+        #ifdef _WIN32
         const bool fixed = index < 12 && index % 3 == 0;
+#else
+        const bool fixed = false;
+#endif
         const int kind = index < 12 || index >= 26 ? 0 : index < 22 ? 1 : 2;
         const char* mode = host ? "--hostbenchmark" : index < 12 ? modes[index / 3] : index < 22 ? "--benchmark" :
             index < 26 ? "--rawbenchmark" : "--tinybenchmark";
@@ -489,7 +547,10 @@ int LibuvTcpPerformance::run(int argc, char** argv)
                     double metrics[8];
                     good = child.execute(executables[version], arguments, output) &&
                         (host ? parseHost(output, values[0], values[1], values[2], hostMode, metrics) :
-                            parse(output, kind, 8000000, metrics));
+                            parse(output, kind, 8000000, metrics, values,
+                                kind == 2 ? "RAW" : kind == 1 ? "BENCH" : index >= 26 ? "TINY" :
+                                index / 3 == 0 ? "TINYCOPY" : index / 3 == 1 ? "TINYCOPYPOST" :
+                                index / 3 == 2 ? "TINY" : "TINYPOST"));
                     std::printf("SAMPLE,%u,%s,%u,%s,%s\n%s", test, version == 0 ? "before" : "after",
                         round, round == 0 ? "warmup" : "formal", good ? "PASS" : "FAIL", output.c_str());
                     std::fflush(stdout);
