@@ -28,19 +28,29 @@
 //         return true;
 //     };
 //
+//     // bool 接口只报告是否接纳；需要错误码时使用 tryPush(value,true,false)。
+//     const auto accepted = [](const char* operation, bool committed) -> bool
+//     {
+//         if (!committed)
+//         {
+//             std::cerr << operation << ": not accepted" << std::endl;
+//         }
+//         return committed;
+//     };
+//
 //     try
 //     {
-//         // 1. 默认构造即可使用；push 已返回状态，不能把失败当作已经接纳。
+//         // 1. 默认构造尝试初始化；push 返回bool，不能把false当作已经接纳。
 //         {
 //             LockFreeQueue<int32_t> queue;
-//             if (!succeeded("push", queue.push(10)) ||
+//             if (!accepted("push", queue.push(10)) ||
 //                 !succeeded("tryPush", queue.tryPush(20)) ||
 //                 !succeeded("tryPushAndFence", queue.tryPushAndFence(30)))
 //             {
 //                 return 1;
 //             }
 //             // try 接口遇到竞争可以返回 Busy；本例无并发，不应遇到竞争。
-//             // 真实业务由原生产者重试或回压，容量不足等错误不可当作 Busy 无限重试。
+//             // 真实业务由原生产者重试或回压，tryPush默认不等待容量；push会等待，不能在唯一消费者线程向满池push。
 //             // AndFence 不发送通知；如需通知，必须在成功接纳后按上层协议执行。
 //             std::cout << "ordinary size=" << queue.size()
 //                 << ", atomicsLockFree=" << queue.atomicsLockFree() << std::endl;
@@ -54,16 +64,19 @@
 //                 return 1;
 //             }
 //             // possiblyReady 只是消费方提示，size/empty 是弱快照，不可当接纳或销毁门禁。
-//             if (!succeeded("push before clear", queue.push(40)))
+//             if (!accepted("push before clear", queue.push(40)))
 //             {
 //                 return 1;
 //             }
 //             queue.clear(); // 丢弃已排队值；不是停止生产者的接口。
-//             if (!queue.empty() || !succeeded("push before init", queue.push(50)))
+//             if (!queue.empty() || !accepted("push before init", queue.push(50)))
 //             {
 //                 return 1;
 //             }
-//             queue.init(); // 静止下清空并重建；失败抛 LockFreeQueueError。
+//             if (!queue.init()) // 静止下清空并重建；失败返回false。
+//             {
+//                 return 1;
+//             }
 //             if (!queue.empty())
 //             {
 //                 return 1;
@@ -72,7 +85,7 @@
 //             queue.destroy(); // 静止下允许重复销毁。
 //             if (queue.tryPush(60) != LockFreeQueueNotInitialized ||
 //                 !succeeded("tryInit", queue.tryInit()) ||
-//                 !succeeded("push after tryInit", queue.push(60)) ||
+//                 !accepted("push after tryInit", queue.push(60)) ||
 //                 !queue.pop(&value) || value != 60)
 //             {
 //                 return 1;
@@ -127,7 +140,7 @@
 //             LockFreeQueueProducer<int32_t> producer;
 //             if (!succeeded("tryAcquireProducer", queue.tryAcquireProducer(producer)) ||
 //                 !producer.attached() ||
-//                 !succeeded("Producer::push", producer.push(1)) ||
+//                 !accepted("Producer::push", producer.push(1)) ||
 //                 !succeeded("Producer::tryPush", producer.tryPush(2)) ||
 //                 !succeeded("Producer::tryPushAndFence", producer.tryPushAndFence(3)) ||
 //                 !succeeded("tryPushEntry", queue.tryPushEntry(entry4)) ||
@@ -162,7 +175,7 @@
 //             // 外部 Entry 仍归调用方，此时可以复用；默认池仍为它们领取节点额度。
 //             for (int32_t value = 100; value < 180; ++value)
 //             {
-//                 if (!succeeded("Producer::push loop", producer.push(value)))
+//                 if (!accepted("Producer::push loop", producer.push(value)))
 //                 {
 //                     return 1; // 前面成功的项已接纳，禁止把整批重发。
 //                 }
@@ -246,7 +259,7 @@
 //             {
 //                 return 1;
 //             }
-//             if (queue.push(999) != LockFreeQueueInvalidConfiguration)
+//             if (queue.push(999) || queue.tryPush(999) != LockFreeQueueInvalidConfiguration)
 //             {
 //                 std::cerr << "EntryOnly must reject ordinary value push" << std::endl;
 //                 return 1;
@@ -280,7 +293,7 @@
 //         {
 //             const std::shared_ptr<int32_t> task = std::make_shared<int32_t>(300);
 //             LockFreeQueue<std::shared_ptr<int32_t>> queue;
-//             if (!succeeded("shared_ptr push", queue.push(task)))
+//             if (!accepted("shared_ptr push", queue.push(task)))
 //             {
 //                 return 1;
 //             }

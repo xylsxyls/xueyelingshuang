@@ -41,6 +41,16 @@ public:
     */
     LockFreeQueueResult result() const;
 
+    /** Inspect spare capacity before parking a contending publisher
+    @return Whether the arena currently permits the longer contention pause
+    */
+    bool amplePublisherCapacity() const;
+
+    /** Observe in SC order whether only the first producer record has been registered
+    @return True until another record is registered; the bound never decreases before reset
+    */
+    bool singlePublisherRegistered() const;
+
 private:
     // 借用节点池，必须覆盖本适配器生命周期
     LockFreeQueueArena<T>* m_arena;

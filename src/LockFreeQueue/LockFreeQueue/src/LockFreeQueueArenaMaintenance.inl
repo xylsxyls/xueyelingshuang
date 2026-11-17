@@ -109,7 +109,11 @@ bool LockFreeQueueArena<T>::protectedSegment(Segment* segment) const
             // an INACTIVE record before clearing it; active/attached owners are
             // never modified or awaited. This amortizes producer hazard stores.
             uint32_t inactive = 0;
-            if (!m_records[i].m_active.compare_exchange_strong(
+            // An active owner cannot be cleared. A read-only rejection avoids
+            // requesting exclusive access to its hot record on every scan.
+            // A zero observation is only a hint; the CAS still owns the lease.
+            if (m_records[i].m_active.load(std::memory_order_relaxed) != 0 ||
+                !m_records[i].m_active.compare_exchange_strong(
                     inactive, 1, std::memory_order_acquire, std::memory_order_relaxed))
             {
                 return true;
@@ -488,6 +492,11 @@ size_t LockFreeQueueArena<T>::published() const
 }
 
 template <class T>
+#ifdef _MSC_VER
+__forceinline
+#else
+inline
+#endif
 size_t LockFreeQueueArena<T>::consumed() const
 {
     if (m_fixedEntryBlock != nullptr)

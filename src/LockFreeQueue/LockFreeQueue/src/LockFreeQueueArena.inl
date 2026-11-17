@@ -57,9 +57,22 @@ LockFreeQueueResult LockFreeQueueArena<T>::configure(const LockFreeQueuePoolConf
     {
         return LockFreeQueueInvalidConfiguration;
     }
-    m_config = config;
-    m_limit = limit;
-    return LockFreeQueueSuccess;
+    try
+    {
+        // 新增的观察函数可能在复制捕获对象时失败，先准备副本再无异常地提交配置。
+        LockFreeQueuePoolConfig candidate(config);
+        m_config.initialCapacity = candidate.initialCapacity;
+        m_config.growThreshold = candidate.growThreshold;
+        m_config.maximumCapacity = candidate.maximumCapacity;
+        m_config.maximumProducers = candidate.maximumProducers;
+        m_config.m_onGrowth.swap(candidate.m_onGrowth);
+        m_limit = limit;
+        return LockFreeQueueSuccess;
+    }
+    catch (...)
+    {
+        return LockFreeQueueAllocationFailure;
+    }
 }
 
 template <class T>
@@ -345,6 +358,11 @@ void LockFreeQueueArena<T>::destroy()
 }
 
 template <class T>
+#if defined(_MSC_VER)
+__forceinline
+#else
+inline
+#endif
 typename LockFreeQueueArena<T>::Record* LockFreeQueueArena<T>::enter(bool wait, LockFreeQueueResult* result)
 {
     if (!initialized())
@@ -362,12 +380,58 @@ typename LockFreeQueueArena<T>::Record* LockFreeQueueArena<T>::enter(bool wait, 
     static thread_local size_t s_hint = 0;
     static thread_local uint32_t s_rejections = 0;
 #endif
+    // Observe the registered bound in SC order before publishing any hazard.
+    // A TLS index may have come from another queue; it is never a cached pointer.
+    const size_t high = m_high.load();
+    const size_t preferred = s_hint < high ? s_hint : 0;
+    Record& record = m_records[preferred];
+    uint32_t expected = record.m_active.load(std::memory_order_relaxed);
+    const bool available = expected == 0;
+    if (available && record.m_active.compare_exchange_strong(
+        expected, 1, std::memory_order_acquire, std::memory_order_relaxed))
+    {
+        if (high == 0)
+        {
+            LockFreeQueueProgress progress;
+            raiseHigh(preferred, progress);
+        }
+        s_hint = preferred;
+        if (result != nullptr)
+        {
+            *result = LockFreeQueueSuccess;
+        }
+        return &record;
+    }
+    return retryEnter(wait, result, s_hint, s_rejections, preferred, available);
+}
+
+template <class T>
+#if defined(_MSC_VER)
+__declspec(noinline)
+#endif
+void LockFreeQueueArena<T>::raiseHigh(size_t index, LockFreeQueueProgress& progress)
+{
+    size_t high = m_high.load();
+    while (high < index + 1 && !m_high.compare_exchange_strong(high, index + 1))
+    {
+        progress.retry();
+    }
+}
+
+template <class T>
+#if defined(_MSC_VER)
+__declspec(noinline)
+#endif
+typename LockFreeQueueArena<T>::Record* LockFreeQueueArena<T>::retryEnter(bool wait,
+    LockFreeQueueResult* result, size_t& hint, uint32_t& rejections, size_t preferred, bool competing)
+{
     LockFreeQueueProgress progress;
+    size_t firstStep = 1;
     for (;;)
     {
-        bool competing = false;
-        const size_t preferred = s_hint < m_high.load(std::memory_order_relaxed) ? s_hint : 0;
-        for (size_t step = 0; step < m_config.maximumProducers; ++step)
+        // Complete the first scan after the preferred-slot attempt in enter.
+        // Keep its observed competition, including when maximumProducers is one.
+        for (size_t step = firstStep; step < m_config.maximumProducers; ++step)
         {
             const size_t i = step == 0 ? preferred : (step <= preferred ? step - 1 : step);
             uint32_t expected = m_records[i].m_active.load(std::memory_order_relaxed);
@@ -375,12 +439,8 @@ typename LockFreeQueueArena<T>::Record* LockFreeQueueArena<T>::enter(bool wait, 
             if (available && m_records[i].m_active.compare_exchange_strong(
                 expected, 1, std::memory_order_acquire, std::memory_order_relaxed))
             {
-                size_t high = m_high.load();
-                while (high < i + 1 && !m_high.compare_exchange_strong(high, i + 1))
-                {
-                    progress.retry();
-                }
-                s_hint = i;
+                raiseHigh(i, progress);
+                hint = i;
                 if (result != nullptr)
                 {
                     *result = LockFreeQueueSuccess;
@@ -395,15 +455,35 @@ typename LockFreeQueueArena<T>::Record* LockFreeQueueArena<T>::enter(bool wait, 
             {
                 *result = competing ? LockFreeQueueBusy : LockFreeQueueCapacityLimit;
             }
-            if ((++s_rejections & 1023) == 0)
+            if ((++rejections & 1023) == 0)
             {
                 std::this_thread::yield();
             }
             return nullptr;
         }
-        // 仅已观察空闲登记的 CAS 竞争重试；所有登记已占用则明确报告资源不足。
         progress.retry();
+        competing = false;
+        preferred = hint < m_high.load(std::memory_order_relaxed) ? hint : 0;
+        firstStep = 0;
     }
+}
+
+template <class T>
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
+bool LockFreeQueueArena<T>::amplePublisherCapacity() const
+{
+    // A positive sleep can take a whole scheduler quantum. Only a very large
+    // spare pool can amortize that handoff; smaller workloads keep CPU backoff.
+    // Constant division avoids overflow and a variable divide. The frozen
+    // limit also rejects impossible cases without reading consumer counters.
+    const size_t kParkingCapacityPerParticipant = 1048576;
+    const size_t participants = (std::max)(size_t(1), m_high.load(std::memory_order_relaxed));
+    return m_limit / kParkingCapacityPerParticipant >= participants &&
+        available() / kParkingCapacityPerParticipant >= participants;
 }
 
 template <class T>
@@ -418,6 +498,13 @@ void LockFreeQueueArena<T>::leave(Record& record, bool releaseLease, bool retain
     {
         record.m_active.store(0, std::memory_order_release);
     }
+}
+
+template <class T>
+bool LockFreeQueueArena<T>::singlePublisherRegistered() const
+{
+    // A new record raises this bound before it can reserve or publish a slot.
+    return m_high.load() <= 1;
 }
 
 template <class T>

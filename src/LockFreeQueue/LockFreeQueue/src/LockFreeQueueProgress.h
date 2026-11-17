@@ -44,9 +44,24 @@ public:
     */
     void advance(size_t count = 1);
 
+    /** 容量不足先重试4096次且每16次让出执行机会，之后每次等待1毫秒，不累计溢出
+    @param [in,out] retries 本次操作的容量重试次数，开始时为0
+    @return true继续重试；宿主不支持阻塞或休眠失败时false
+    */
+    static bool waitCapacity(uint32_t& retries);
+
+    /** Bounded scheduler backoff after a normal publisher loses a slot CAS.
+    No ownership is retained on behalf of another producer; it retries itself.
+    */
+    static void pausePublisher();
+
 private:
-    // 小于 4096 的连续操作数量。
-    uint16_t m_operations;
+    /** 重置本执行流的4096项预算并让出执行机会；仅由预算耗尽路径调用 */
+    void yieldOperations();
+
+private:
+    // 距离下一次协作让步的剩余操作数，始终为1..4096。
+    uint16_t m_remaining;
     enum
     {
         kFailureMask = 255,

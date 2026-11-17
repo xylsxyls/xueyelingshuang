@@ -216,6 +216,16 @@ public:
     */
     Block* fixedEntryBlock() const;
 
+    /** Observe whether free capacity can absorb a progress quantum per registered producer
+    @return Scheduling hint only; false keeps short CPU contention backoff
+    */
+    bool amplePublisherCapacity() const;
+
+    /** Observe in SC order whether only the first producer record has been registered
+    @return True until another record is registered; the bound never decreases before reset
+    */
+    bool singlePublisherRegistered() const;
+
 private:
     // 静止期设定的容量配置，单位为物理节点
     LockFreeQueuePoolConfig m_config;
@@ -299,11 +309,36 @@ private:
     size_t m_maintenanceTurn;
 
 private:
+    /** Complete a lease scan after the preferred slot was attempted
+    @param [in] wait Retry observed CAS competition, never wait for an occupied lease
+    @param [out] result Optional result destination, borrowed until return
+    @param [in,out] hint Thread-local numeric slot hint, borrowed until return
+    @param [in,out] rejections Thread-local rejection cadence, borrowed until return
+    @param [in] preferred Valid slot already attempted in this scan
+    @param [in] competing Whether that attempt observed a free slot
+    @return Exclusive lease, or nullptr with a resource or try-contention result
+    */
+    Record* retryEnter(bool wait, LockFreeQueueResult* result, size_t& hint,
+        uint32_t& rejections, size_t preferred, bool competing);
+
+    /** Publish a newly used record in the consumer's sequentially consistent scan bound
+    @param [in] index Index of the lease exclusively owned by this caller
+    @param [in,out] progress Current scan's retry cadence, borrowed until return
+    */
+    void raiseHigh(size_t index, LockFreeQueueProgress& progress);
+
     /** 统计位图中置位的数量
     @param [in] bits 待统计位图
     @return 上述操作对应的数值、状态或弱一致快照
     */
     static size_t bitCount(uint32_t bits);
+
+    /** 私有缓存为空时领取节点，保留扩容、资源错误和重试合同
+    @param [in,out] record 当前线程独占的生产者记录
+    @param [out] result 成功或未领取的具体状态
+    @return 独占节点；失败返回nullptr
+    */
+    Node* acquireUncachedNode(Record& record, LockFreeQueueResult& result);
 
     /** 取得非零位图最低置位下标
     @param [in] bit 非零位图
@@ -407,9 +442,10 @@ private:
 
     /** 调用一次策略、原子预留额度并发布增长块；失败退还预留
     @param [in,out] record 可空的本线程登记；指定 push 或 tryPush 的竞争重试方式
+    @param [in] required 已实际领取失败时为 true，不用弱一致空闲统计取消必要扩容
     @return 成功或明确失败状态；失败不接纳当前载荷
     */
-    LockFreeQueueResult grow(Record* record = nullptr);
+    LockFreeQueueResult grow(Record* record = nullptr, bool required = false);
 
     /** 合成可复用空闲快照；混合快照溢出按零处理，不作为位图接纳许可
     @return 上述操作对应的数值、状态或弱一致快照

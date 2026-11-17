@@ -30,34 +30,43 @@ public:
     void release();
 
     /** 由本线程复制并发布一个元素；竞争持续重试并定期让步，不返回 Busy
+    容量等待与Queue::push一致；单线程Wasm无法等待消费者时返回false
     @param [in] value 待复制的载荷或待更新的原子计数；借用至本次调用返回
-    @return Success 已提交，资源、初始化或复制等失败返回明确状态；不传播复制或分配异常
+    @return true已提交；false为初始化、分配或复制等错误，不传播异常
     */
-    LockFreeQueueResult push(const T& value);
+    bool push(const T& value);
 
     /** 尝试复制并发布；竞争失败为 Busy，额度已满为 CapacityLimit；失败未接纳
     @param [in] value 待复制的载荷或待更新的原子计数；借用至本次调用返回
+    @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
+    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
     @return 成功或明确失败状态；失败不接纳当前载荷
     */
-    LockFreeQueueResult tryPush(const T& value);
+    LockFreeQueueResult tryPush(const T& value, bool retryContention = false, bool retryCapacity = false);
 
     /** 复用上下文发布一项，并完成发布到调用者后续原子读取之间的完整屏障
     @param [in] value 借用至返回，复制和失败语义与 tryPush 一致
+    @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
+    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
     @return 成功时可与消费者 SC 屏障和队列复查配对；不排序返回后的新写入
     */
-    LockFreeQueueResult tryPushAndFence(const T& value);
+    LockFreeQueueResult tryPushAndFence(const T& value, bool retryContention = false, bool retryCapacity = false);
 
     /** 发布调用方拥有的外部载荷，仍消耗一个节点池额度；不得重复提交尚未消费的同一对象
     @param [in,out] entry 成功后借用到消费返回或静止 destroy；T 必须可复制赋值
+    @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
+    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
     @return 失败未接纳，既有复制入队接口及其所有权语义不变
     */
-    LockFreeQueueResult tryPushEntry(LockFreeQueueEntry<T>& entry);
+    LockFreeQueueResult tryPushEntry(LockFreeQueueEntry<T>& entry, bool retryContention = false, bool retryCapacity = false);
 
     /** 发布外部载荷，并保证发布先于调用者后续原子读取
     @param [in,out] entry 借用与失败语义同 tryPushEntry
+    @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
+    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
     @return 成功路径具有与 tryPushAndFence 相同的发布屏障保证
     */
-    LockFreeQueueResult tryPushEntryAndFence(LockFreeQueueEntry<T>& entry);
+    LockFreeQueueResult tryPushEntryAndFence(LockFreeQueueEntry<T>& entry, bool retryContention = false, bool retryCapacity = false);
 
 private:
     /** 禁止复制或移动；所有权、登记与原子状态不能按位转移

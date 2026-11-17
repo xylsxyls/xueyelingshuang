@@ -32,21 +32,21 @@ void LockFreeQueueProducer<T>::release()
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueueProducer<T>::push(const T& value)
+bool LockFreeQueueProducer<T>::push(const T& value)
 {
-    return m_owner == nullptr ? LockFreeQueueNotInitialized : m_owner->pushImpl(value, true, m_record);
+    return tryPush(value, true, true) == LockFreeQueueSuccess;
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueueProducer<T>::tryPush(const T& value)
+LockFreeQueueResult LockFreeQueueProducer<T>::tryPush(const T& value, bool retryContention, bool retryCapacity)
 {
-    return m_owner == nullptr ? LockFreeQueueNotInitialized : m_owner->pushImpl(value, false, m_record);
+    return m_owner == nullptr ? LockFreeQueueNotInitialized : m_owner->pushRetry(value, retryContention, retryCapacity, m_record);
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueueProducer<T>::tryPushAndFence(const T& value)
+LockFreeQueueResult LockFreeQueueProducer<T>::tryPushAndFence(const T& value, bool retryContention, bool retryCapacity)
 {
-    const LockFreeQueueResult result = tryPush(value);
+    const LockFreeQueueResult result = tryPush(value, retryContention, retryCapacity);
     if (result == LockFreeQueueSuccess)
     {
         m_owner->publicationFence();
@@ -55,15 +55,15 @@ LockFreeQueueResult LockFreeQueueProducer<T>::tryPushAndFence(const T& value)
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueueProducer<T>::tryPushEntry(LockFreeQueueEntry<T>& entry)
+LockFreeQueueResult LockFreeQueueProducer<T>::tryPushEntry(LockFreeQueueEntry<T>& entry, bool retryContention, bool retryCapacity)
 {
-    return m_owner == nullptr ? LockFreeQueueNotInitialized : m_owner->pushEntryImpl(entry, m_record);
+    return m_owner == nullptr ? LockFreeQueueNotInitialized : m_owner->pushEntryRetry(entry, retryContention, retryCapacity, m_record);
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueueProducer<T>::tryPushEntryAndFence(LockFreeQueueEntry<T>& entry)
+LockFreeQueueResult LockFreeQueueProducer<T>::tryPushEntryAndFence(LockFreeQueueEntry<T>& entry, bool retryContention, bool retryCapacity)
 {
-    const LockFreeQueueResult result = tryPushEntry(entry);
+    const LockFreeQueueResult result = tryPushEntry(entry, retryContention, retryCapacity);
     if (result == LockFreeQueueSuccess)
     {
         m_owner->publicationFence();

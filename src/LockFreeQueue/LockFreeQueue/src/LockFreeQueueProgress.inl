@@ -2,7 +2,7 @@
 #define LOCK_FREE_QUEUE_PROGRESS_INL
 
 inline LockFreeQueueProgress::LockFreeQueueProgress() :
-m_operations(0), m_state(kWaiting)
+m_remaining(4096), m_state(kWaiting)
 {
 
 }
@@ -39,6 +39,55 @@ inline bool LockFreeQueueProgress::retry(uint8_t attemptBudget)
     return true;
 }
 
+inline bool LockFreeQueueProgress::waitCapacity(uint32_t& retries)
+{
+    if (retries < 4096)
+    {
+        ++retries;
+        // 容量只能由消费或回收释放；密集重试也要给这些线程运行机会。
+        if ((retries & 15) == 0)
+        {
+            std::this_thread::yield();
+        }
+        return true;
+    }
+#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+    return false;
+#else
+    try
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+#endif
+}
+
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
+inline void LockFreeQueueProgress::pausePublisher()
+{
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    try
+    {
+        const std::chrono::microseconds quantum(1);
+        std::this_thread::sleep_for(quantum);
+    }
+    catch (...)
+    {
+        std::this_thread::yield();
+    }
+#else
+    std::this_thread::yield();
+#endif
+}
+
 inline void LockFreeQueueProgress::interrupt()
 {
     m_state |= kInterrupted;
@@ -61,15 +110,36 @@ inline bool LockFreeQueueProgress::waiting() const
 
 inline void LockFreeQueueProgress::advance(size_t count)
 {
-    if (count >= 4096 || m_operations >= 4096 - count)
+    if (count == 1)
     {
-        m_operations = 0;
-        std::this_thread::yield();
+        // The common one-operation path is a decrement and zero test.
+        // The constructor and every slow path keep the counter in1..4096.
+        if (--m_remaining == 0)
+        {
+            yieldOperations();
+        }
+    }
+    else if (count >= m_remaining)
+    {
+        // Compare before narrowing: even SIZE_MAX requests exactly one yield,
+        // discarding the excess just as the original accumulated budget did.
+        yieldOperations();
     }
     else
     {
-        m_operations = static_cast<uint16_t>(m_operations + count);
+        m_remaining = static_cast<uint16_t>(m_remaining - count);
     }
+}
+
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
+inline void LockFreeQueueProgress::yieldOperations()
+{
+    m_remaining = 4096;
+    std::this_thread::yield();
 }
 
 #endif

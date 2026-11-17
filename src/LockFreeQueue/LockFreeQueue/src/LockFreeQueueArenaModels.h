@@ -161,6 +161,8 @@ public:
     LockFreeQueueProgress m_progress;
     // 本次慢速额度领取是否观察到累计序号耗尽；成功领取时不影响结果。
     bool m_creditExhausted;
+    // Once another record has registered, this lease only uses general reservations.
+    bool m_reservedConcurrent;
     // 非回绕发布段代次，用于使旧位置提示失效
     uint64_t m_generation;
     // 登记槽租约：0 空闲，1 独占；不能等待另一持有者。

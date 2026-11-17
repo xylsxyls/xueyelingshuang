@@ -64,6 +64,15 @@ public:
     */
     size_t readyPrefix(Node** nodes, size_t maximum) const;
 
+    /** 读取前缀时直接清除地址标记并写入目标指针数组，省去中间数组复制
+    @param [out] nodes 可为空；非空时至少容纳 maximum 个 Output 指针
+    @param [in] maximum 本次最多观察数量
+    @param [in] clearMask 只可包含发布地址携带的标记位，调用方保证清除后为 Output 地址
+    @return 当前段的就绪前缀长度；仅唯一消费者调用，调用前 front 已处理段边界
+    */
+    template <class Output>
+    size_t readyPrefixAs(Output** nodes, size_t maximum, uintptr_t clearMask) const;
+
     /** 输出赋值成功后推进唯一消费者游标；仅消费当前段已经观察到的就绪前缀
     @param [in] count 已经成功赋值的连续项数，不越过当前段边界；零表示未消费
     */
@@ -75,8 +84,10 @@ public:
     Segment* consumerSegment() const;
 
 private:
-    // 初始化后冻结；两种发布算法不在同一生命周期中混用
+    // 初始化后冻结；预约模式允许唯一登记生产者省去预约，新增登记后转入通用预约路径
     bool m_cancelableReservations;
+    // Sole-consumer cache of irreversible registration history; reset only when quiescent.
+    bool m_reservedConsumerConcurrent;
     // 每次投递读取的冻结模式与消费者游标隔离，避免只读配置被游标写入反复失效
     char m_configurationPadding[64];
     // 唯一消费者的当前段
@@ -103,13 +114,22 @@ private:
     */
     Node* advance(SegmentPool& pool);
 
+    /** Publish by slot CAS; Reserved selects the sole-reservation transition checks
+    @param [in,out] node This producer's fully constructed, still-private node
+    @param [in,out] record Exclusively held producer record
+    @param [in,out] pool Segment allocation and registration view
+    @return True after this node's publication; false leaves it with the caller
+    */
+    template <bool Reserved>
+    bool publishSequential(Node* node, Record& record, SegmentPool& pool);
+
     /** 保护并验证尾段；代次改变时重置私有位置提示
     @param [in,out] record 本次操作独占的登记槽；借用至返回
     @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
     */
     Segment* protect(Record& record);
 
-    /** 推进已证明全部发布的前缀提示；不预占未发布位置
+    /** 默认模式推进已发布前缀；预约切换时使完成槽对有界空洞扫描可见
     @param [in,out] segment 受保护或独占的发布段；借用至返回
     @param [in] position 已验证的逻辑槽位下标
     */

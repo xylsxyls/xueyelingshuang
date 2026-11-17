@@ -10,7 +10,9 @@ m_cancelableReservations(false),
 m_prepared(0),
 m_distributedCounters(false),
 m_maintenance(0),
-m_prefixSingleBudget(0)
+m_prefixSingleBudget(0),
+m_emptyReclamation(0),
+m_emptyHintBudget(0)
 {
     init();
 }
@@ -22,7 +24,9 @@ m_cancelableReservations(false),
 m_prepared(0),
 m_distributedCounters(false),
 m_maintenance(0),
-m_prefixSingleBudget(0)
+m_prefixSingleBudget(0),
+m_emptyReclamation(0),
+m_emptyHintBudget(0)
 {
     if (initializeImmediately)
     {
@@ -37,13 +41,9 @@ LockFreeQueue<T>::~LockFreeQueue()
 }
 
 template <class T>
-void LockFreeQueue<T>::init()
+bool LockFreeQueue<T>::init()
 {
-    const LockFreeQueueResult result = tryInit();
-    if (result != LockFreeQueueSuccess)
-    {
-        throw LockFreeQueueError(result);
-    }
+    return tryInit() == LockFreeQueueSuccess;
 }
 
 template <class T>
@@ -81,6 +81,8 @@ void LockFreeQueue<T>::destroy()
     m_prepared.store(0, std::memory_order_relaxed);
     m_maintenance = 0;
     m_prefixSingleBudget = 0;
+    m_emptyReclamation = 0;
+    m_emptyHintBudget = 0;
 }
 
 template <class T>
@@ -130,15 +132,15 @@ LockFreeQueueResult LockFreeQueue<T>::setShrinkPolicy(const LockFreeQueueShrinkP
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueue<T>::push(const T& value)
+bool LockFreeQueue<T>::push(const T& value)
 {
-    return pushImpl(value, true, nullptr);
+    return tryPush(value, true, true) == LockFreeQueueSuccess;
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueue<T>::tryPush(const T& value)
+LockFreeQueueResult LockFreeQueue<T>::tryPush(const T& value, bool retryContention, bool retryCapacity)
 {
-    return pushImpl(value, false, nullptr);
+    return pushRetry(value, retryContention, retryCapacity, nullptr);
 }
 
 template <class T>
@@ -154,9 +156,9 @@ void LockFreeQueue<T>::publicationFence()
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueue<T>::tryPushAndFence(const T& value)
+LockFreeQueueResult LockFreeQueue<T>::tryPushAndFence(const T& value, bool retryContention, bool retryCapacity)
 {
-    const LockFreeQueueResult result = pushImpl(value, false, nullptr);
+    const LockFreeQueueResult result = pushRetry(value, retryContention, retryCapacity, nullptr);
     if (result == LockFreeQueueSuccess)
     {
         publicationFence();
@@ -165,7 +167,13 @@ LockFreeQueueResult LockFreeQueue<T>::tryPushAndFence(const T& value)
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueue<T>::tryAcquireProducer(LockFreeQueueProducer<T>& producer)
+#ifdef _MSC_VER
+__forceinline
+#else
+inline
+#endif
+LockFreeQueueResult LockFreeQueue<T>::tryAcquireProducer(LockFreeQueueProducer<T>& producer,
+    bool retryContention, bool retryCapacity)
 {
     if (producer.attached())
     {
@@ -176,10 +184,14 @@ LockFreeQueueResult LockFreeQueue<T>::tryAcquireProducer(LockFreeQueueProducer<T
         return LockFreeQueueNotInitialized;
     }
     LockFreeQueueResult result = LockFreeQueueSuccess;
-    Record* record = m_arena.enter(false, &result);
+    Record* record = m_arena.enter(retryContention, &result);
     if (record == nullptr)
     {
-        return result;
+        if (result != LockFreeQueueCapacityLimit || !retryCapacity)
+        {
+            return result;
+        }
+        return retryAcquireProducer(producer, retryContention);
     }
     producer.m_owner = this;
     producer.m_record = record;
@@ -187,15 +199,45 @@ LockFreeQueueResult LockFreeQueue<T>::tryAcquireProducer(LockFreeQueueProducer<T
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueue<T>::tryPushEntry(LockFreeQueueEntry<T>& entry)
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
+LockFreeQueueResult LockFreeQueue<T>::retryAcquireProducer(LockFreeQueueProducer<T>& producer, bool retryContention)
 {
-    return pushEntryImpl(entry, nullptr);
+    uint32_t capacityRetries = 0;
+    for (;;)
+    {
+        if (!LockFreeQueueProgress::waitCapacity(capacityRetries))
+        {
+            return LockFreeQueueResourceUnavailable;
+        }
+        LockFreeQueueResult result = LockFreeQueueSuccess;
+        Record* record = m_arena.enter(retryContention, &result);
+        if (record != nullptr)
+        {
+            producer.m_owner = this;
+            producer.m_record = record;
+            return LockFreeQueueSuccess;
+        }
+        if (result != LockFreeQueueCapacityLimit)
+        {
+            return result;
+        }
+    }
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueue<T>::tryPushEntryAndFence(LockFreeQueueEntry<T>& entry)
+LockFreeQueueResult LockFreeQueue<T>::tryPushEntry(LockFreeQueueEntry<T>& entry, bool retryContention, bool retryCapacity)
 {
-    const LockFreeQueueResult result = pushEntryImpl(entry, nullptr);
+    return pushEntryRetry(entry, retryContention, retryCapacity, nullptr);
+}
+
+template <class T>
+LockFreeQueueResult LockFreeQueue<T>::tryPushEntryAndFence(LockFreeQueueEntry<T>& entry, bool retryContention, bool retryCapacity)
+{
+    const LockFreeQueueResult result = pushEntryRetry(entry, retryContention, retryCapacity, nullptr);
     if (result == LockFreeQueueSuccess)
     {
         publicationFence();
@@ -204,20 +246,20 @@ LockFreeQueueResult LockFreeQueue<T>::tryPushEntryAndFence(LockFreeQueueEntry<T>
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueue<T>::pushEntryImpl(LockFreeQueueEntry<T>& entry, Record* retained)
+LockFreeQueueResult LockFreeQueue<T>::pushEntryImpl(LockFreeQueueEntry<T>& entry, Record* retained, bool wait)
 {
     if (!m_arena.initialized())
     {
         return LockFreeQueueNotInitialized;
     }
     LockFreeQueueResult result = LockFreeQueueSuccess;
-    Record* record = retained == nullptr ? m_arena.enter(false, &result) : retained;
+    Record* record = retained == nullptr ? m_arena.enter(wait, &result) : retained;
     LockFreeQueueArenaLease<T> lease(m_arena, record, retained == nullptr);
     if (record == nullptr)
     {
         return result;
     }
-    record->m_progress.begin(false);
+    record->m_progress.begin(static_cast<bool>(wait));
     record->m_progress.advance();
     Node* credit = m_arena.acquireNode(*record, result);
     if (credit == nullptr)
@@ -235,6 +277,113 @@ LockFreeQueueResult LockFreeQueue<T>::pushEntryImpl(LockFreeQueueEntry<T>& entry
     }
     // 成功后消费者可能已经归还外部对象，不再读取或写入 entry。
     return result;
+}
+
+template <class T>
+#ifdef _MSC_VER
+__forceinline
+#else
+inline
+#endif
+LockFreeQueueResult LockFreeQueue<T>::pushRetry(const T& value, bool retryContention, bool retryCapacity, Record* retained)
+{
+    const LockFreeQueueResult result = pushImpl(value, retryContention, retained);
+    if (result == LockFreeQueueSuccess || (!retryContention && !retryCapacity))
+    {
+        return result;
+    }
+    return retryPushFailure(value, retryContention, retryCapacity, retained, result);
+}
+
+template <class T>
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
+LockFreeQueueResult LockFreeQueue<T>::retryPushFailure(const T& value, bool retryContention, bool retryCapacity,
+    Record* retained, LockFreeQueueResult result)
+{
+    uint32_t capacityRetries = 0;
+    LockFreeQueueProgress progress;
+    for (;;)
+    {
+        if (result == LockFreeQueueBusy && retryContention)
+        {
+            progress.retry();
+        }
+        else
+        {
+            if ((result != LockFreeQueueCapacityLimit && result != LockFreeQueueResourceUnavailable &&
+                result != LockFreeQueueGrowthDeclined) || !retryCapacity)
+            {
+                return result;
+            }
+            // 单次尝试已释放保护；等待前归还本线程未发布的缓存额度。
+            if (retained != nullptr)
+            {
+                m_arena.releaseCache(*retained);
+            }
+            if (!LockFreeQueueProgress::waitCapacity(capacityRetries))
+            {
+                return LockFreeQueueResourceUnavailable;
+            }
+        }
+        result = pushImpl(value, retryContention, retained);
+    }
+}
+
+template <class T>
+#ifdef _MSC_VER
+__forceinline
+#else
+inline
+#endif
+LockFreeQueueResult LockFreeQueue<T>::pushEntryRetry(LockFreeQueueEntry<T>& entry, bool retryContention, bool retryCapacity, Record* retained)
+{
+    const LockFreeQueueResult result = pushEntryImpl(entry, retained, retryContention);
+    if (result == LockFreeQueueSuccess || (!retryContention && !retryCapacity))
+    {
+        return result;
+    }
+    return retryEntryFailure(entry, retryContention, retryCapacity, retained, result);
+}
+
+template <class T>
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
+LockFreeQueueResult LockFreeQueue<T>::retryEntryFailure(LockFreeQueueEntry<T>& entry, bool retryContention, bool retryCapacity,
+    Record* retained, LockFreeQueueResult result)
+{
+    uint32_t capacityRetries = 0;
+    LockFreeQueueProgress progress;
+    for (;;)
+    {
+        if (result == LockFreeQueueBusy && retryContention)
+        {
+            progress.retry();
+        }
+        else
+        {
+            if ((result != LockFreeQueueCapacityLimit && result != LockFreeQueueResourceUnavailable &&
+                result != LockFreeQueueGrowthDeclined) || !retryCapacity)
+            {
+                return result;
+            }
+            if (retained != nullptr)
+            {
+                m_arena.releaseCache(*retained);
+            }
+            if (!LockFreeQueueProgress::waitCapacity(capacityRetries))
+            {
+                return LockFreeQueueResourceUnavailable;
+            }
+        }
+        result = pushEntryImpl(entry, retained, retryContention);
+    }
 }
 
 template <class T>
@@ -374,20 +523,55 @@ typename LockFreeQueue<T>::Node* LockFreeQueue<T>::copyFront(Node* address, T* o
 }
 
 template <class T>
+#ifdef _MSC_VER
+__forceinline
+#else
+inline
+#endif
+void LockFreeQueue<T>::relaxEmpty()
+{
+    if (m_emptyHintBudget != 0 && --m_emptyHintBudget == 0 && m_arena.amplePublisherCapacity())
+    {
+        // Drain loops usually stop on their first empty result. Only repeated
+        // polling after a ready item and enough spare publisher capacity reach
+        // this bounded hint. Small pools skip the hint loop.
+        for (size_t pause = 0; pause < 8; ++pause)
+        {
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+            _mm_pause();
+#elif defined(__i386__) || defined(__x86_64__)
+            __asm__ __volatile__("pause");
+#else
+            std::atomic_signal_fence(std::memory_order_seq_cst);
+#endif
+        }
+    }
+}
+
+template <class T>
+#ifdef _MSC_VER
+__forceinline
+#else
+inline
+#endif
 bool LockFreeQueue<T>::pop(T* output)
 {
     SegmentPool pool(m_arena, nullptr);
     Node* node = m_channel.front(pool);
     if (node == nullptr)
     {
+        relaxEmpty();
         // Producers may have released their last hazards after the final item
         // was consumed. Empty polling must also make bounded reclamation progress.
-        if (m_arena.hasRetiredSegments())
+        // Retry reclamation at least once per64 retired-empty observations.
+        // Repeatedly scanning an active publisher cannot clear its hazard.
+        if (m_arena.hasRetiredSegments() && (m_emptyReclamation++ & 63) == 0)
         {
             m_arena.collectSegments(2);
         }
         return false;
     }
+    m_emptyHintBudget = 4;
     return consumeNode(node, output);
 }
 
@@ -429,8 +613,10 @@ bool LockFreeQueue<T>::popReadyPrefix(T* output, size_t maximum, size_t& consume
     Node* node = m_channel.front(pool);
     if (node == nullptr)
     {
+        relaxEmpty();
         return false;
     }
+    m_emptyHintBudget = 4;
     if (maximum == 1 || m_prefixSingleBudget != 0)
     {
         if (m_prefixSingleBudget != 0)
@@ -502,6 +688,23 @@ bool LockFreeQueue<T>::popReadyEntryPrefix(LockFreeQueueEntry<T>** output, size_
 }
 
 template <class T>
+bool LockFreeQueue<T>::probeReadyEntryPrefix(LockFreeQueueEntry<T>** output, size_t maximum, size_t& consumed)
+{
+    consumed = 0;
+    if (maximum == 0)
+    {
+        return false;
+    }
+    SegmentPool pool(m_arena, nullptr);
+    Node* node = m_channel.front(pool);
+    if (node == nullptr || !m_arena.entryOnly())
+    {
+        return false;
+    }
+    return consumeEntryPrefix(node, output, maximum, consumed);
+}
+
+template <class T>
 bool LockFreeQueue<T>::consumeEntryPrefix(Node* node, LockFreeQueueEntry<T>** output, size_t maximum, size_t& consumed)
 {
     // 在额度归还和调度交接前发出读预取；此时 Entry 仍在本次消费借用范围内。
@@ -514,35 +717,47 @@ bool LockFreeQueue<T>::consumeEntryPrefix(Node* node, LockFreeQueueEntry<T>** ou
     (void)address;
 #endif
     Block* fixed = m_arena.fixedEntryBlock();
-    Node* entries[64];
-    Node* credits[64];
-    consumed = m_channel.readyPrefix(entries, (std::min)(maximum, size_t(64)));
-    for (size_t i = 0; i < consumed; ++i)
-    {
-        LockFreeQueueEntry<T>* entry = reinterpret_cast<LockFreeQueueEntry<T>*>(reinterpret_cast<uintptr_t>(entries[i]) & ~uintptr_t(2));
-        if (fixed == nullptr)
-        {
-            credits[i] = reinterpret_cast<Node*>(entry->m_owner);
-        }
-        if (output != nullptr)
-        {
-            output[i] = entry;
-        }
-    }
-    m_channel.consume(consumed);
     if (fixed != nullptr)
     {
+        // 固定外部额度不需要读取每条 Entry 的 owner；直接输出已去标记的稳定地址。
+        // 在全部地址写出后才提交消费和归还额度，保持原有所有权交接点。
+        consumed = m_channel.readyPrefixAs(output, (std::min)(maximum, size_t(64)), uintptr_t(2));
+        m_channel.consume(consumed);
         releaseBatch(*fixed, consumed);
     }
     else
     {
-        releaseBatch(credits, nullptr, consumed);
+        consumeVariableEntryPrefix(output, maximum, consumed);
     }
     if (consumed < 4)
     {
         m_prefixSingleBudget = 7;
     }
     return consumed != 0;
+}
+
+template <class T>
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
+void LockFreeQueue<T>::consumeVariableEntryPrefix(LockFreeQueueEntry<T>** output, size_t maximum, size_t& consumed)
+{
+    Node* entries[64];
+    Node* credits[64];
+    consumed = m_channel.readyPrefix(entries, (std::min)(maximum, size_t(64)));
+    for (size_t i = 0; i < consumed; ++i)
+    {
+        LockFreeQueueEntry<T>* entry = reinterpret_cast<LockFreeQueueEntry<T>*>(reinterpret_cast<uintptr_t>(entries[i]) & ~uintptr_t(2));
+        credits[i] = reinterpret_cast<Node*>(entry->m_owner);
+        if (output != nullptr)
+        {
+            output[i] = entry;
+        }
+    }
+    m_channel.consume(consumed);
+    releaseBatch(credits, nullptr, consumed);
 }
 
 template <class T>
@@ -654,12 +869,22 @@ void LockFreeQueue<T>::clear()
 }
 
 template <class T>
+#ifdef _MSC_VER
+__forceinline
+#else
+inline
+#endif
 bool LockFreeQueue<T>::empty() const
 {
     return size() == 0;
 }
 
 template <class T>
+#ifdef _MSC_VER
+__forceinline
+#else
+inline
+#endif
 uint64_t LockFreeQueue<T>::size() const
 {
     const size_t consumed = m_arena.consumed();

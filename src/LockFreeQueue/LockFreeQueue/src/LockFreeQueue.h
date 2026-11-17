@@ -36,9 +36,10 @@ public:
     */
     LockFreeQueue& operator=(const LockFreeQueue& other) = delete;
 
-    /** 清空旧代并重新初始化；外部静止，失败抛出 LockFreeQueueError
+    /** 清空旧代并重新初始化；外部静止
+    @return true初始化成功，false保持不可接纳状态
     */
-    void init();
+    bool init();
 
     /** 清空旧代并重新初始化；外部静止，失败保持不可接纳状态
     @return 成功或明确失败状态；失败不接纳当前载荷
@@ -72,7 +73,7 @@ public:
     LockFreeQueueResult configureCancelableReservations(bool enabled);
 
     /** 静止且未初始化时选择仅借用外部载荷模式；默认关闭
-    @param [in] enabled true 时只接纳 tryPushEntry 系列，普通 push 返回配置错误
+    @param [in] enabled true 时只接纳 tryPushEntry 系列，普通 push 返回false，普通tryPush返回配置错误
     @return 配置结果；容量和扩缩容规则保持不变，每个外部载荷仍占一个池额度
     */
     LockFreeQueueResult configureEntryOnly(bool enabled);
@@ -90,41 +91,54 @@ public:
     LockFreeQueueResult setShrinkPolicy(const LockFreeQueueShrinkPolicy& policy);
 
     /** 由本线程复制并发布一个元素；竞争持续重试并定期让出执行机会
-    资源不足、未初始化、配置或复制失败返回明确状态；不返回 Busy，不因竞争次数多而失败
+    容量不足持续重试，超过4096次后每次等待1毫秒；不返回竞争或满载失败
+    单线程Wasm不能阻塞等待消费者，容量重试耗尽后返回false；勿在唯一消费者线程向满池push
     @param [in] value 待复制的载荷或待更新的原子计数；借用至本次调用返回
-    @return Success 已提交，其他状态均未提交；本入口不传播分配或载荷复制异常
+    @return true已提交；false为初始化、分配或复制等错误，不传播异常
     */
-    LockFreeQueueResult push(const T& value);
+    bool push(const T& value);
 
     /** 尝试复制并发布；竞争失败为 Busy，额度已满为 CapacityLimit；失败未接纳
+    单线程Wasm无法完成容量等待时返回ResourceUnavailable；需要等待的业务应在宿主异步重试
     @param [in] value 待复制的载荷或待更新的原子计数；借用至本次调用返回
+    @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
+    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
     @return 成功或明确失败状态；失败不接纳当前载荷
     */
-    LockFreeQueueResult tryPush(const T& value);
+    LockFreeQueueResult tryPush(const T& value, bool retryContention = false, bool retryCapacity = false);
 
     /** 复制并发布一项，成功路径保证发布先于调用者后续的原子读取
     @param [in] value 借用至返回，与 tryPush 使用相同的复制及失败语义
+    @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
+    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
     @return 成功时附加完整发布屏障，可与消费者的 SC 屏障及复查配对；不排序返回后的新写入
     */
-    LockFreeQueueResult tryPushAndFence(const T& value);
+    LockFreeQueueResult tryPushAndFence(const T& value, bool retryContention = false, bool retryCapacity = false);
 
     /** 发布调用方拥有的外部载荷；容量、扩缩容、计数、FIFO 与复制入队共用同一队列
     @param [in,out] entry 不得重复提交在队对象；成功后地址和字段保持不变至消费返回或静止 destroy
+    @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
+    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
     @return 失败未接纳；值输出接口复制临时 T 后赋值，Entry 地址接口不复制载荷
     */
-    LockFreeQueueResult tryPushEntry(LockFreeQueueEntry<T>& entry);
+    LockFreeQueueResult tryPushEntry(LockFreeQueueEntry<T>& entry, bool retryContention = false, bool retryCapacity = false);
 
     /** 发布外部载荷，并完成发布到调用者后续原子读取之间的屏障
     @param [in,out] entry 借用与失败语义同 tryPushEntry；队列不析构其中的 T
+    @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
+    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
     @return 成功时具有与 tryPushAndFence 相同的发布屏障保证
     */
-    LockFreeQueueResult tryPushEntryAndFence(LockFreeQueueEntry<T>& entry);
+    LockFreeQueueResult tryPushEntryAndFence(LockFreeQueueEntry<T>& entry, bool retryContention = false, bool retryCapacity = false);
 
     /** 取得可选生产者上下文；成功后必须在队列换代或析构前释放
     @param [in,out] producer 未绑定的上下文；成功后借用本队列，须在换代前 release
+    @param [in] retryContention true持续重试CAS竞争，false允许返回未提交竞争状态
+    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
     @return 成功或明确失败状态；失败不接纳当前载荷
     */
-    LockFreeQueueResult tryAcquireProducer(LockFreeQueueProducer<T>& producer);
+    LockFreeQueueResult tryAcquireProducer(LockFreeQueueProducer<T>& producer,
+        bool retryContention = false, bool retryCapacity = false);
 
     /** 唯一消费者取出一项；nullptr 表示丢弃，输出赋值异常不移除元素
     @param [out] output 接收值，可为 nullptr；赋值抛异常时输出可能部分改变
@@ -161,6 +175,14 @@ public:
     @return 是否取到至少一项；未配置 EntryOnly 时返回 false 且不消费元素；调用方仍须定期维护
     */
     bool popReadyEntryPrefix(LockFreeQueueEntry<T>** output, size_t maximum, size_t& consumed);
+
+    /** 唯一消费者显式扫描已就绪 Entry 前缀，不使用短前缀的单项自适应提示
+    @param [out] output 可空表示丢弃，非空时至少容纳 min(maximum,64) 个地址
+    @param [in] maximum 本轮预算，0 不取出；只扫描当前段中已发布的连续前缀
+    @param [out] consumed 实际取出数量，对应池额度在返回前全部归还
+    @return 是否取到至少一项；所有权、FIFO、维护及 EntryOnly 要求同 popReadyEntryPrefix
+    */
+    bool probeReadyEntryPrefix(LockFreeQueueEntry<T>** output, size_t maximum, size_t& consumed);
 
     /** 唯一消费者只读探测发布首槽，不消费、不维护；不得与其他消费者操作并发
     @return false 为本次空观察；true 也可能是段边界，须调用 pop 系列确认；不能作为销毁许可
@@ -209,6 +231,13 @@ private:
     */
     bool consumeEntryPrefix(Node* node, LockFreeQueueEntry<T>** output, size_t maximum, size_t& consumed);
 
+    /** 消费可能跨多个额度块的外部前缀，临时归还数组只占用本分支的栈
+    @param [out] output 可为空，接收原有顺序的外部 Entry 地址
+    @param [in] maximum 本次最多消费数量，内部截断为 64
+    @param [out] consumed 已提交消费数量
+    */
+    void consumeVariableEntryPrefix(LockFreeQueueEntry<T>** output, size_t maximum, size_t& consumed);
+
     /** 成功发布后补足完整屏障；已由后端发布 CAS 完成时只保留编译器屏障
     */
     static void publicationFence();
@@ -224,9 +253,57 @@ private:
     /** 领取一个物理额度并发布外部载荷地址，不在额度节点中再构造 T
     @param [in,out] entry 调用方独占且尚未入队的载荷
     @param [in,out] retained 可空的已登记生产者位置
+    @param [in] wait 是否内部持续重试CAS竞争
     @return 发布或具体失败状态；成功后不再访问 entry
     */
-    LockFreeQueueResult pushEntryImpl(LockFreeQueueEntry<T>& entry, Record* retained);
+    LockFreeQueueResult pushEntryImpl(LockFreeQueueEntry<T>& entry, Record* retained, bool wait);
+
+    /** 按独立开关重试复制入队；容量等待发生在单次操作已释放保护之后
+    @param [in] value 调用期间借用的载荷
+    @param [in] retryContention 是否持续重试竞争
+    @param [in] retryCapacity 是否持续等待容量
+    @param [in,out] retained 可空的已绑定生产者记录
+    @return 成功或未提交的具体错误
+    */
+    LockFreeQueueResult pushRetry(const T& value, bool retryContention, bool retryCapacity, Record* retained);
+
+    /** 处理首次未提交后的重试，不让等待计数和退避状态进入成功路径
+    @param [in] value 调用期间借用的载荷
+    @param [in] retryContention 是否持续重试竞争
+    @param [in] retryCapacity 是否持续等待容量
+    @param [in,out] retained 可空的已绑定生产者记录
+    @param [in] result 首次操作的未提交结果
+    @return 成功或未提交的具体错误
+    */
+    LockFreeQueueResult retryPushFailure(const T& value, bool retryContention, bool retryCapacity,
+        Record* retained, LockFreeQueueResult result);
+
+    /** 登记槽已满且允许等待时重试，隔离正常绑定路径与容量等待路径
+    @param [in,out] producer 尚未绑定的本线程上下文
+    @param [in] retryContention 是否持续重试登记槽竞争
+    @return 绑定成功或未绑定的具体错误
+    */
+    LockFreeQueueResult retryAcquireProducer(LockFreeQueueProducer<T>& producer, bool retryContention);
+
+    /** 按独立开关重试外部载荷发布，提交成功后不再接触entry
+    @param [in,out] entry 调用者独占且未入队的载荷
+    @param [in] retryContention 是否持续重试竞争
+    @param [in] retryCapacity 是否持续等待容量
+    @param [in,out] retained 可空的已绑定生产者记录
+    @return 成功或未提交的具体错误
+    */
+    LockFreeQueueResult pushEntryRetry(LockFreeQueueEntry<T>& entry, bool retryContention, bool retryCapacity, Record* retained);
+
+    /** 处理外部载荷首次未提交后的重试，成功后不再接触entry
+    @param [in,out] entry 调用者独占且未入队的载荷
+    @param [in] retryContention 是否持续重试竞争
+    @param [in] retryCapacity 是否持续等待容量
+    @param [in,out] retained 可空的已绑定生产者记录
+    @param [in] result 首次操作的未提交结果
+    @return 成功或未提交的具体错误
+    */
+    LockFreeQueueResult retryEntryFailure(LockFreeQueueEntry<T>& entry, bool retryContention, bool retryCapacity,
+        Record* retained, LockFreeQueueResult result);
 
     /** 共同的发布记账与失败回滚，发布地址可为带外部载荷标志的地址
     @param [in] address 发布到通道的地址
@@ -256,6 +333,11 @@ private:
     @return 成功消费一项
     */
     bool consumeNode(Node* node, T* output, size_t* consumed = nullptr);
+
+    /** Issue one bounded CPU hint after four empty observations when publisher parking is eligible
+    Sole-consumer state only; neither a scheduler sleep nor a wait for publication
+    */
+    void relaxEmpty();
 
     /** 消费已确认非空的同段前缀；异常边界不进入空队列热路径
     @param [out] output 可为空，接收成功赋值的前缀
@@ -314,8 +396,12 @@ private:
     size_t m_maintenance;
     // 唯一消费者的短前缀探测间隔；浅队列先逐项读取，定期重新尝试批量
     size_t m_prefixSingleBudget;
-    // 缓存行隔离填充，不承载业务状态
-    char m_consumedPadding[64];
+    // Sole-consumer cadence for retrying retirement scans during empty polling.
+    uint8_t m_emptyReclamation;
+    // One bounded CPU hint after four empty value-consumer observations, if eligible.
+    uint8_t m_emptyHintBudget;
+    // Both counters occupy two bytes of the existing consumer padding.
+    char m_consumedPadding[62];
     // 本队列拥有的统一节点池，destroy 释放其全部存储
     Arena m_arena;
 };

@@ -1,6 +1,10 @@
 ﻿#ifndef LOCK_FREE_QUEUE_CHANNEL_MODELS_INL
 #define LOCK_FREE_QUEUE_CHANNEL_MODELS_INL
 
+// C++11中被std::min等接口按引用使用时仍需实体定义，不能依赖优化器折叠常量。
+template <class Node>
+const size_t LockFreeQueueChannelSegment<Node>::kCellCount;
+
 template <class Node>
 LockFreeQueueChannelSegment<Node>::LockFreeQueueChannelSegment() :
 m_next(nullptr), m_tail(0), m_poolIndex(0), m_generation(0), m_owner(nullptr), m_retiredNext(nullptr), m_idleSince(0)

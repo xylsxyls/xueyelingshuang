@@ -4,6 +4,7 @@
 template <class Node, class SegmentPool, class RecordType>
 LockFreeQueueChannel<Node, SegmentPool, RecordType>::LockFreeQueueChannel(Segment* first) :
 m_cancelableReservations(false),
+m_reservedConsumerConcurrent(false),
 m_head(first),
 m_headIndex(0),
 m_frontCell(first != nullptr ? &first->m_cells[0] : nullptr),
@@ -18,6 +19,7 @@ void LockFreeQueueChannel<Node, SegmentPool, RecordType>::reset(Segment* first, 
 {
     // External quiescence; the owning arena ends the previous generation.
     m_cancelableReservations = cancelableReservations;
+    m_reservedConsumerConcurrent = false;
     m_head = first;
     m_headIndex = 0;
     m_frontCell = first != nullptr ? &first->m_cells[0] : nullptr;
@@ -29,12 +31,61 @@ void LockFreeQueueChannel<Node, SegmentPool, RecordType>::reset(Segment* first, 
 template <class Node, class SegmentPool, class RecordType>
 size_t LockFreeQueueChannel<Node, SegmentPool, RecordType>::readyPrefix(Node** nodes, size_t maximum) const
 {
+    return readyPrefixAs(nodes, maximum, 0);
+}
+
+template <class Node, class SegmentPool, class RecordType>
+template <class Output>
+size_t LockFreeQueueChannel<Node, SegmentPool, RecordType>::readyPrefixAs(Output** nodes, size_t maximum, uintptr_t clearMask) const
+{
     if (m_head == nullptr)
     {
         return 0;
     }
     const size_t count = (std::min)(maximum, Segment::kCellCount - m_headIndex);
     size_t ready = 0;
+    // 四个独立 acquire 读取重叠缓存访问；只输出首个未就绪位置之前的连续前缀。
+    // 预读的是整个段生命周期内稳定的原子单元，不解引用尚未交接的载荷。
+    for (; ready + 4 <= count; ready += 4)
+    {
+        const size_t position = m_headIndex + ready;
+        const uintptr_t first = m_head->m_cells[Segment::mapped(position)].load(std::memory_order_acquire);
+        const uintptr_t second = m_head->m_cells[Segment::mapped(position + 1)].load(std::memory_order_acquire);
+        const uintptr_t third = m_head->m_cells[Segment::mapped(position + 2)].load(std::memory_order_acquire);
+        const uintptr_t fourth = m_head->m_cells[Segment::mapped(position + 3)].load(std::memory_order_acquire);
+        if (first <= 1)
+        {
+            return ready;
+        }
+        if (nodes != nullptr)
+        {
+            nodes[ready] = reinterpret_cast<Output*>(first & ~clearMask);
+        }
+        if (second <= 1)
+        {
+            return ready + 1;
+        }
+        if (nodes != nullptr)
+        {
+            nodes[ready + 1] = reinterpret_cast<Output*>(second & ~clearMask);
+        }
+        if (third <= 1)
+        {
+            return ready + 2;
+        }
+        if (nodes != nullptr)
+        {
+            nodes[ready + 2] = reinterpret_cast<Output*>(third & ~clearMask);
+        }
+        if (fourth <= 1)
+        {
+            return ready + 3;
+        }
+        if (nodes != nullptr)
+        {
+            nodes[ready + 3] = reinterpret_cast<Output*>(fourth & ~clearMask);
+        }
+    }
     for (; ready < count; ++ready)
     {
         const uintptr_t bits = m_head->m_cells[Segment::mapped(m_headIndex + ready)].load(std::memory_order_acquire);
@@ -42,7 +93,10 @@ size_t LockFreeQueueChannel<Node, SegmentPool, RecordType>::readyPrefix(Node** n
         {
             break;
         }
-        nodes[ready] = reinterpret_cast<Node*>(bits);
+        if (nodes != nullptr)
+        {
+            nodes[ready] = reinterpret_cast<Output*>(bits & ~clearMask);
+        }
     }
     return ready;
 }
@@ -85,18 +139,42 @@ void LockFreeQueueChannel<Node, SegmentPool, RecordType>::help(Segment* segment,
     size_t shared = segment->m_tail.load(std::memory_order_relaxed);
     if (shared < position)
     {
-        // Only proved occupied prefixes move this auxiliary hint forward.
+        // Default publication proves an occupied prefix. During a reserved
+        // transition this also exposes the completed slot beyond any reserved
+        // holes; frontReserved cancels such holes without waiting for owners.
         segment->m_tail.compare_exchange_strong(shared, position, std::memory_order_release, std::memory_order_relaxed);
     }
 }
 
 template <class Node, class SegmentPool, class RecordType>
+#ifdef _MSC_VER
+__forceinline
+#else
+inline
+#endif
 bool LockFreeQueueChannel<Node, SegmentPool, RecordType>::publish(Node* node, Record& record, SegmentPool& pool)
 {
     if (m_cancelableReservations)
     {
+        if (!record.m_reservedConcurrent)
+        {
+            if (pool.singlePublisherRegistered())
+            {
+                return publishSequential<true>(node, record, pool);
+            }
+            // Registration history cannot decrease before quiescent reset.
+            // Cache only the irreversible multi-record result under this lease.
+            record.m_reservedConcurrent = true;
+        }
         return publishReserved(node, record, pool);
     }
+    return publishSequential<false>(node, record, pool);
+}
+
+template <class Node, class SegmentPool, class RecordType>
+template <bool Reserved>
+bool LockFreeQueueChannel<Node, SegmentPool, RecordType>::publishSequential(Node* node, Record& record, SegmentPool& pool)
+{
     for (;;)
     {
         Segment* segment = protect(record);
@@ -121,6 +199,11 @@ bool LockFreeQueueChannel<Node, SegmentPool, RecordType>::publish(Node* node, Re
             uintptr_t expected = cell.load(std::memory_order_acquire);
             if (expected == 1)
             {
+                if (Reserved)
+                {
+                    // A reserved tombstone closes one slot, not this segment.
+                    return publishReserved(node, record, pool);
+                }
                 break;
             }
             if (expected == 0)
@@ -128,15 +211,25 @@ bool LockFreeQueueChannel<Node, SegmentPool, RecordType>::publish(Node* node, Re
                 if (cell.compare_exchange_strong(expected, reinterpret_cast<uintptr_t>(node), std::memory_order_acq_rel,
                         std::memory_order_acquire))
                 {
-                    // Enqueue LP. All earlier positions are published; no private
-                    // reserved index precedes this CAS. The consumer may now free
-                    // the payload; nothing below dereferences node.
+                    // Enqueue LP; the consumer may immediately free the payload.
+                    // Default mode publishes a contiguous prefix. A sole reserved
+                    // publisher skips reservation until another record joins;
+                    // its next call then uses publishReserved. No node access follows.
                     record.m_hint = position + 1;
-                    if (((position + 1) & 15) == 0)
+                    if (((position + 1) & 15) == 0 ||
+                        (Reserved && !pool.singlePublisherRegistered()))
                     {
                         help(segment, position + 1);
                     }
                     return true;
+                }
+                if (Reserved)
+                {
+                    // A joining publisher or consumer won this slot. Retry our
+                    // own still-private payload using the general reserved path.
+                    const uint64_t retries = record.m_retries.load(std::memory_order_relaxed);
+                    record.m_retries.store(retries + (retries != UINT64_MAX ? 1 : 0), std::memory_order_relaxed);
+                    return record.m_progress.retry() && publishReserved(node, record, pool);
                 }
                 if (expected == 1)
                 {
@@ -144,21 +237,28 @@ bool LockFreeQueueChannel<Node, SegmentPool, RecordType>::publish(Node* node, Re
                 }
                 const uint64_t retries = record.m_retries.load(std::memory_order_relaxed);
                 record.m_retries.store(retries + (retries != UINT64_MAX ? 1 : 0), std::memory_order_relaxed);
-                // 保留短暂 CPU 退避以降低缓存行反复争抢；周期调度让步仍由 retry 完成。
-#if (defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))) || defined(__i386__) || defined(__x86_64__)
-                const size_t kContentionPauses = 2048;
-#else
-                const size_t kContentionPauses = 64;
-#endif
-                for (size_t pause = 0; pause < kContentionPauses; ++pause)
+                if (record.m_progress.waiting() && pool.amplePublisherCapacity())
                 {
-#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
-                    _mm_pause();
-#elif defined(__i386__) || defined(__x86_64__)
-                    __asm__ __volatile__("pause");
+                    LockFreeQueueProgress::pausePublisher();
+                }
+                else
+                {
+                    // 保留短暂 CPU 退避以降低缓存行反复争抢；周期调度让步仍由 retry 完成。
+#if (defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))) || defined(__i386__) || defined(__x86_64__)
+                    const size_t kContentionPauses = 2048;
 #else
-                    std::atomic_signal_fence(std::memory_order_seq_cst);
+                    const size_t kContentionPauses = 64;
 #endif
+                    for (size_t pause = 0; pause < kContentionPauses; ++pause)
+                    {
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+                        _mm_pause();
+#elif defined(__i386__) || defined(__x86_64__)
+                        __asm__ __volatile__("pause");
+#else
+                        std::atomic_signal_fence(std::memory_order_seq_cst);
+#endif
+                    }
                 }
                 if (!record.m_progress.retry(64))
                 {
@@ -222,9 +322,21 @@ Node* LockFreeQueueChannel<Node, SegmentPool, RecordType>::front(SegmentPool& po
             {
                 return reinterpret_cast<Node*>(bits);
             }
-            if (bits == 0 && m_head->m_tail.load(std::memory_order_acquire) == m_headIndex)
+            if (bits == 0)
             {
-                return nullptr;
+                if (!m_reservedConsumerConcurrent && !pool.singlePublisherRegistered())
+                {
+                    // Registration history only increases within this generation.
+                    // Cache only the multi-record observation, never a sole owner.
+                    m_reservedConsumerConcurrent = true;
+                }
+                if ((m_pendingSeal != m_head && !m_reservedConsumerConcurrent) ||
+                    m_head->m_tail.load(std::memory_order_acquire) == m_headIndex)
+                {
+                    // A pending consumer seal must still inspect the reservation
+                    // counter so a linked successor cannot be hidden by this cache.
+                    return nullptr;
+                }
             }
         }
         return frontReserved(pool);

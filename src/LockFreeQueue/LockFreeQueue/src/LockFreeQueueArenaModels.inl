@@ -84,7 +84,7 @@ size_t LockFreeQueueArenaBlock<T>::freeNodes() const
 
 template <class T>
 LockFreeQueueArenaRecord<T>::LockFreeQueueArenaRecord() :
-m_hazard(nullptr), m_hint(0), m_creditExhausted(false), m_generation(0), m_active(0), m_cachedMask(0), m_block(nullptr),
+m_hazard(nullptr), m_hint(0), m_creditExhausted(false), m_reservedConcurrent(false), m_generation(0), m_active(0), m_cachedMask(0), m_block(nullptr),
 m_cachedBlock(nullptr), m_wordHint(0), m_published(0), m_retries(0)
 {
 

@@ -40,6 +40,18 @@ void LockFreeQueueChannelPool<T>::retire(Segment* segment)
 }
 
 template <class T>
+bool LockFreeQueueChannelPool<T>::amplePublisherCapacity() const
+{
+    return m_arena->amplePublisherCapacity();
+}
+
+template <class T>
+bool LockFreeQueueChannelPool<T>::singlePublisherRegistered() const
+{
+    return m_arena->singlePublisherRegistered();
+}
+
+template <class T>
 LockFreeQueueResult LockFreeQueueChannelPool<T>::result() const
 {
     return m_result;

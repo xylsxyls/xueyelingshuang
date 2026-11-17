@@ -429,9 +429,10 @@ LockFreeQueueResult LockFreeQueueArena<T>::unavailableResult() const
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueueArena<T>::grow(Record* record)
+LockFreeQueueResult LockFreeQueueArena<T>::grow(Record* record, bool required)
 {
     LockFreeQueueProgress committedProgress;
+    const size_t returned = consumed();
     const size_t before = m_budget.load();
     // Exhausted budget takes precedence; do not invoke a growth policy without room.
     if (before >= m_limit)
@@ -496,9 +497,10 @@ LockFreeQueueResult LockFreeQueueArena<T>::grow(Record* record)
     {
         committedProgress.retry();
     }
-    // Recheck reusable resources after the reservation. Concurrent publishers
-    // often satisfy this demand; avoid allocating redundant candidate blocks.
-    if (available() > m_config.growThreshold)
+    // Optional proactive growth can be cancelled by a newer free-count snapshot.
+    // Required growth only retries on newer resource progress, not the same stale snapshot.
+    if (available() > m_config.growThreshold && (!required ||
+        m_capacity.load() != context.currentCapacity || consumed() != returned))
     {
         m_budget.fetch_sub(amount);
         return LockFreeQueueSuccess;
@@ -509,7 +511,8 @@ LockFreeQueueResult LockFreeQueueArena<T>::grow(Record* record)
         m_budget.fetch_sub(amount);
         return LockFreeQueueAllocationFailure;
     }
-    if (available() > m_config.growThreshold)
+    if (available() > m_config.growThreshold && (!required ||
+        m_capacity.load() != context.currentCapacity || consumed() != returned))
     {
         deleteBlock(block, true);
         m_budget.fetch_sub(amount);
@@ -548,10 +551,26 @@ LockFreeQueueResult LockFreeQueueArena<T>::grow(Record* record)
         committedProgress.retry();
     }
     block->m_state.store(1);
+    if (m_config.m_onGrowth)
+    {
+        try
+        {
+            m_config.m_onGrowth(amount, m_grows.load());
+        }
+        catch (...)
+        {
+            // 已发布的增长不能因观察者异常撤销，调用方仍可安全使用新增容量。
+        }
+    }
     return LockFreeQueueSuccess;
 }
 
 template <class T>
+#ifdef _MSC_VER
+__forceinline
+#else
+inline
+#endif
 typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::acquireNode(Record& record, LockFreeQueueResult& result)
 {
     Node* node = takeCached(record);
@@ -563,15 +582,31 @@ typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::acquireNode(Record&
         result = LockFreeQueueSuccess;
         return node;
     }
-    bool interrupted = false;
+    return acquireUncachedNode(record, result);
+}
+
+template <class T>
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
+typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::acquireUncachedNode(Record& record, LockFreeQueueResult& result)
+{
+    Node* node = nullptr;
     record.m_creditExhausted = false;
-    node = findNode(record, interrupted);
-    if (node == nullptr && !interrupted && reclaimCaches(record))
+    for (;;)
     {
+        bool interrupted = false;
         node = findNode(record, interrupted);
-    }
-    if (node == nullptr)
-    {
+        if (node == nullptr && !interrupted && reclaimCaches(record))
+        {
+            node = findNode(record, interrupted);
+        }
+        if (node != nullptr)
+        {
+            break;
+        }
         if (record.m_creditExhausted)
         {
             result = LockFreeQueueSequenceExhausted;
@@ -585,30 +620,62 @@ typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::acquireNode(Record&
         }
         if (available() != 0)
         {
-            result = unavailableResult();
-            return nullptr;
+            // 扫描期间消费者可能刚归还整批额度。正的可用数不能直接解释为
+            // 私有缓存占用；先按新的归还进度复查，避免把正常并发消费误报成资源失败。
+            size_t observed = consumed();
+            for (;;)
+            {
+                node = findNode(record, interrupted);
+                if (node != nullptr)
+                {
+                    break;
+                }
+                if (record.m_creditExhausted)
+                {
+                    result = LockFreeQueueSequenceExhausted;
+                    return nullptr;
+                }
+                if (interrupted)
+                {
+                    record.m_progress.interrupt();
+                    result = LockFreeQueueBusy;
+                    return nullptr;
+                }
+                const size_t completed = consumed();
+                if (completed == observed)
+                {
+                    break;
+                }
+                observed = completed;
+                record.m_progress.advance();
+            }
         }
-        result = grow(&record);
+        if (node != nullptr)
+        {
+            break;
+        }
+        // 空闲统计是弱一致快照，可能先于实际位图或额度的归还发布。
+        // 两次实际领取仍失败时走必要扩容，不以正的统计值拒绝，也不等待某个归还者。
+        result = grow(&record, true);
         if (record.m_progress.interrupted())
         {
             return nullptr;
         }
-        // The traversal may have preceded another grower's publication. Recheck
-        // before reporting a limit: reserved budget becoming published capacity
-        // is not evidence that the newly published block is already full.
-        node = findNode(record, interrupted);
-        if (node == nullptr)
+        if (result != LockFreeQueueSuccess)
         {
-            if (result == LockFreeQueueSuccess || interrupted || available() != 0)
+            // 在容量/内存/策略失败前复查一次；其他生产者可能刚发布可用块。
+            node = findNode(record, interrupted);
+            if (node != nullptr)
             {
-                result = interrupted ? LockFreeQueueBusy : unavailableResult();
+                break;
             }
-            if (interrupted)
-            {
-                record.m_progress.interrupt();
-            }
+            // 资源错误已经确定，清掉复查时的竞争提示，普通 push 不把它误当竞争继续重试。
+            record.m_progress.resume();
             return nullptr;
         }
+        // 新块被其他生产者先领取时继续实际申请；成功扩容证明全局有进展。
+        // 不限制总尝试次数，持续竞争的 CAS 仍按 push/try 的既有契约处理。
+        record.m_progress.advance();
     }
     result = LockFreeQueueSuccess;
     if (m_config.growThreshold != 0 && creditOwner(node)->freeNodes() <= m_config.growThreshold)
