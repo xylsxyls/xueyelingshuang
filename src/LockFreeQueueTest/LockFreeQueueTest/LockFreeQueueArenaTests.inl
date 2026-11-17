@@ -106,6 +106,10 @@ static bool LockFreeQueueArenaCapacities(size_t threshold)
              shrunk.retiringBlockCapacity == 0 && shrunk.reservedCapacity == 0, "no pending reservations") &&
          ok;
     record = pool.enter();
+    if (!LockFreeQueueArenaCheck(record != nullptr, "regrow record"))
+    {
+        return false;
+    }
     for (size_t i = 0; i < 100; ++i)
     {
         LockFreeQueueResult result = LockFreeQueueSuccess;
@@ -143,6 +147,10 @@ static bool LockFreeQueueArenaPolicies()
     bool ok = LockFreeQueueArenaCheck(
         pool.configure(config) == LockFreeQueueSuccess && pool.initialize() == LockFreeQueueSuccess, "policy init");
     auto record = pool.enter();
+    if (!LockFreeQueueArenaCheck(ok && record != nullptr, "policy record"))
+    {
+        return false;
+    }
     LockFreeQueueResult result = LockFreeQueueSuccess;
     auto first = pool.acquireNode(*record, result);
     ok = LockFreeQueueArenaCheck(first != nullptr, "single usable node") && ok;
@@ -265,6 +273,10 @@ static bool LockFreeQueueArenaLazyLifetimes()
     config.maximumProducers = 3;
     bool ok = pool.configure(config) == LockFreeQueueSuccess && pool.initialize() == LockFreeQueueSuccess;
     Arena::Record* record = pool.enter();
+    if (!LockFreeQueueArenaCheck(ok && record != nullptr, "lazy-lifetime record"))
+    {
+        return false;
+    }
     std::shared_ptr<int> payload(new int(42));
     std::weak_ptr<int> weak(payload);
     std::vector<Arena::Node*> nodes;
@@ -308,6 +320,10 @@ static bool LockFreeQueueArenaAuxiliaryBound()
     config.maximumProducers = 3;
     bool ok = pool.configure(config) == LockFreeQueueSuccess && pool.initialize() == LockFreeQueueSuccess;
     Arena::Record* record = pool.enter();
+    if (!LockFreeQueueArenaCheck(ok && record != nullptr, "auxiliary record"))
+    {
+        return false;
+    }
     std::vector<Arena::Segment*> segments;
     const size_t expected = 3 + 4 * config.maximumProducers + 4;
     for (size_t i = 0; ok && i < expected; ++i)

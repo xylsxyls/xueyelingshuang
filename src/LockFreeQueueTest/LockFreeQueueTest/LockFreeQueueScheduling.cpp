@@ -52,6 +52,15 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
     // Mode 0: ordinary push; 1: bound push; 2: ordinary tryPush;
     // 3: bound tryPush; 4: external Entry with ready-prefix consumer;
     // 5: bound push, distributed counters and value-prefix consumer.
+    // Entries must outlive queue cleanup, including a failed consumer.
+    const size_t ringSize = 8192;
+    struct Slot
+    {
+        LockFreeQueueEntry<uint64_t> m_entry;
+        std::atomic<bool> m_free;
+        Slot() : m_free(true) {}
+    };
+    std::vector<std::unique_ptr<Slot[]> > entries(producers);
     LockFreeQueue<uint64_t> queue(false);
     LockFreeQueuePoolConfig config;
     config.initialCapacity = capacity;
@@ -66,14 +75,6 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
     {
         throw std::runtime_error("Queue configuration failed");
     }
-    const size_t ringSize = 8192;
-    struct Slot
-    {
-        LockFreeQueueEntry<uint64_t> m_entry;
-        std::atomic<bool> m_free;
-        Slot() : m_free(true) {}
-    };
-    std::vector<std::unique_ptr<Slot[]> > entries(producers);
     if (mode == 4)
     {
         for (size_t lane = 0; lane < producers; ++lane)

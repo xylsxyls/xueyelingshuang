@@ -90,7 +90,7 @@
                                                           },
                                                           {
                                                               "before":  "            if (!slot.m_bits.compare_exchange_strong(\n",
-                                                              "after":  "#ifdef LOCK_FREE_QUEUE_TESTING\n            if (LockFreeQueueTestCas(0))\n            {\n                bits ^= 1;\n            }\n#endif\n            if (!slot.m_bits.compare_exchange_strong(\n"
+                                                              "after":  "#ifdef LOCK_FREE_QUEUE_TESTING\n            if (LockFreeQueueTestCas(0))\n            {\n                competing = true;\n                continue;\n            }\n#endif\n            if (!slot.m_bits.compare_exchange_strong(\n"
                                                           }
                                                       ],
                   "LockFreeQueueArenaMaintenance.inl":  [

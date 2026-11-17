@@ -1169,6 +1169,8 @@ int32_t LockFreeQueueTestRunner::run(const std::string& command)
         environment["versions_filter"] = m_tool->option("versions", "all");
         const char* processor = std::getenv("PROCESSOR_IDENTIFIER");
         environment["cpu"] = processor ? processor : "not available";
+        const char* cpuPlan = std::getenv("LOCK_FREE_QUEUE_TEST_CPU_PLAN");
+        environment["benchmark_cpu_plan"] = cpuPlan ? cpuPlan : "";
         environment["before_dir"] = m_tool->option("before-dir");
         environment["previous_dir"] = m_tool->option("previous-dir");
         environment["after_dir"] = m_tool->option("after-dir", m_tool->source());
@@ -1185,9 +1187,10 @@ int32_t LockFreeQueueTestRunner::run(const std::string& command)
         if (resume)
         {
             Json::Value previous = IO::load(environmentFile);
-            if (previous["affinity"] != environment["affinity"] || previous["command"] != environment["command"])
+            if (previous["affinity"] != environment["affinity"] || previous["command"] != environment["command"] ||
+                previous["benchmark_cpu_plan"] != environment["benchmark_cpu_plan"])
             {
-                throw std::runtime_error("Execution affinity/command changed during resume");
+                throw std::runtime_error("Execution affinity/CPU plan/command changed during resume");
             }
         }
         else

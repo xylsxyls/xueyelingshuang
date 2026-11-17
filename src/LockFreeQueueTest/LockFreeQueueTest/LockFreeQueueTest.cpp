@@ -160,6 +160,10 @@ void LockFreeQueueTestControl::reset()
     m_transientFailures.store(0);
     m_scheduleYields.store(0);
     m_scheduleSleeps.store(0);
+    LockFreeQueueTestValue::m_throwCopy = false;
+    LockFreeQueueTestValue::m_throwAssign = false;
+    LockFreeQueueTestPolicy::m_throwCopy = false;
+    LockFreeQueueRetryValue::m_failCopy = false;
 }
 
 /** 仅隔离测试副本记录真实调度调用，不替换 yield/sleep
@@ -387,9 +391,9 @@ bool LockFreeQueueTests::initialBatches()
     LFQ_CHECK(queue.poolStatistics().usedNodes == 1);
     LockFreeQueueTestControl::reset();
     LockFreeQueueTestControl::m_pausePoint.store(17);
-    LockFreeQueueTestThreads threads;
     std::atomic<int32_t> first(-1);
     std::atomic<size_t> published(0);
+    LockFreeQueueTestThreads threads;
     threads.m_threads.emplace_back(
         [&]()
         {
@@ -533,8 +537,8 @@ bool LockFreeQueueTests::growthTransitions()
         }
         LFQ_CHECK(queue.poolStatistics().currentCapacity == 4 && queue.poolStatistics().allocationCalls == 2);
         LockFreeQueueTestControl::m_pausePoint.store(points[phase]);
-        LockFreeQueueTestThreads threads;
         std::atomic<int32_t> delayed(-1);
+        LockFreeQueueTestThreads threads;
         threads.m_threads.emplace_back(
             [&]()
             {
@@ -599,8 +603,8 @@ bool LockFreeQueueTests::growthTransitions()
             queue.testSeedGeneration(UINT64_MAX - 15);
         }
         LockFreeQueueTestControl::m_pausePoint.store(nearLimit != 0 ? 2 : 1);
-        LockFreeQueueTestThreads threads;
         std::atomic<int32_t> delayed(-1);
+        LockFreeQueueTestThreads threads;
         threads.m_threads.emplace_back(
             [&]()
             {
@@ -1160,6 +1164,7 @@ bool LockFreeQueueTests::allocations()
         config.maximumProducers = 1;
         LFQ_CHECK(pool.configure(config) == LockFreeQueueSuccess && pool.initialize() == LockFreeQueueSuccess);
         auto record = pool.enter();
+        LFQ_CHECK(record != nullptr);
         std::vector<LockFreeQueueArena<int32_t>::Segment*> segments;
         for (size_t i = 0; i < 3; ++i)
         {
@@ -1316,21 +1321,27 @@ bool LockFreeQueueTests::mpsc(size_t producers, size_t count, bool bounded)
 
 bool LockFreeQueueTests::concurrentClear()
 {
+    for (size_t phase = 0; phase < 2; ++phase)
     {
         LockFreeQueue<LockFreeQueueTestValue> queue;
         std::atomic<size_t> finished(0);
-        std::atomic<bool> stop(false);
+        std::atomic<bool> stop(false), start(false);
         std::atomic<bool> failed(false);
+        size_t submitted[4] = {};
         LockFreeQueueTestThreads threads;
         try
         {
             for (size_t lane = 0; lane < 4; ++lane)
             {
                 threads.m_threads.emplace_back(
-                    [&]()
+                    [&, lane]()
                     {
                         try
                         {
+                            while (!start.load() && !stop.load())
+                            {
+                                std::this_thread::yield();
+                            }
                             LockFreeQueueTestValue value(123);
                             for (size_t i = 0; i < 5000 && !stop.load(); ++i)
                             {
@@ -1339,6 +1350,7 @@ bool LockFreeQueueTests::concurrentClear()
                                     const LockFreeQueueResult result = queue.tryPush(value);
                                     if (result == LockFreeQueueSuccess)
                                     {
+                                        ++submitted[lane];
                                         break;
                                     }
                                     if (!LockFreeQueueBenchmarkPush::transient(result) || stop.load())
@@ -1364,16 +1376,32 @@ bool LockFreeQueueTests::concurrentClear()
             throw;
         }
         // Finite producers guarantee clear eventually sees an empty link.
+        // The second phase proves an intentionally cancelled workload is incomplete.
+        if (phase != 0)
+        {
+            stop.store(true);
+        }
+        start.store(true);
         const uint64_t deadline = LockFreeQueueTestControl::ticks() + 10000000000ULL;
         while (finished.load() != 4 && LockFreeQueueTestControl::ticks() < deadline)
         {
             queue.clear();
             std::this_thread::yield();
         }
+        bool completedInTime = finished.load() == 4;
         stop.store(true);
         threads.join();
         queue.clear();
-        LFQ_CHECK(!failed.load() && queue.empty());
+        size_t total = 0;
+        for (size_t lane = 0; lane < 4; ++lane)
+        {
+            completedInTime = submitted[lane] == 5000 && completedInTime;
+            total += submitted[lane];
+        }
+        LFQ_CHECK(!failed.load() && queue.empty() && (phase == 0 ? completedInTime : !completedInTime));
+        LFQ_CHECK(phase == 0 ? total == 20000 : total == 0);
+        std::cout << "CLEAR_COMPLETION cancelled=" << (phase != 0) << " submitted=" << total
+                  << " workload_complete=" << completedInTime << " valid=1" << std::endl;
     }
     LFQ_CHECK(LockFreeQueueTestValue::m_live.load() == 0);
     return true;
@@ -1598,8 +1626,9 @@ bool LockFreeQueueTests::poolInterleavings()
         });
     queue.maintain(256); // Drain free-node caches before testing block traversal.
     LockFreeQueueTestControl::m_pausePoint.store(6);
-    LockFreeQueueTestThreads threads;
     std::atomic<int32_t> pushed(-1);
+    std::atomic<bool> done(false), failed(false), stop(false);
+    LockFreeQueueTestThreads threads;
     threads.m_threads.emplace_back(
         [&]()
         {
@@ -1622,9 +1651,6 @@ bool LockFreeQueueTests::poolInterleavings()
     LFQ_CHECK(queue.pop(&value) && value == 99);
     LockFreeQueueTestControl::m_clock.store(UINT64_MAX);
     // Sustain consumer-side shrinking concurrently with allocation and safe slot reuse.
-    std::atomic<bool> done(false);
-    std::atomic<bool> failed(false);
-    std::atomic<bool> stop(false);
     threads.m_threads.emplace_back(
         [&]()
         {
@@ -1667,8 +1693,9 @@ bool LockFreeQueueTests::poolInterleavings()
 bool LockFreeQueueTests::alignment()
 {
     LockFreeQueueTestAligned::m_valid = true;
-    LockFreeQueue<LockFreeQueueTestAligned> queue;
     LockFreeQueueTestAligned value(-1);
+    LockFreeQueueEntry<LockFreeQueueTestAligned> entry(value);
+    LockFreeQueue<LockFreeQueueTestAligned> queue;
     for (int32_t i = 0; i < 2000; ++i)
     {
         value.m_value = i;
@@ -1679,7 +1706,6 @@ bool LockFreeQueueTests::alignment()
         LFQ_CHECK(queue.pop(&value) && value.m_value == i);
     }
     LFQ_CHECK(LockFreeQueueTestAligned::m_valid && queue.empty());
-    LockFreeQueueEntry<LockFreeQueueTestAligned> entry(value);
     LFQ_CHECK(reinterpret_cast<uintptr_t>(&entry) % 64 == 0);
     for (size_t mode = 0; mode < 2; ++mode)
     {
@@ -1727,8 +1753,8 @@ bool LockFreeQueueTests::pausedConsumer()
             LockFreeQueueTestControl::m_clock.store(1010);
         }
         LockFreeQueueTestControl::m_pausePoint.store(points[i]);
-        LockFreeQueueTestThreads threads;
         bool consumerOK = false;
+        LockFreeQueueTestThreads threads;
         threads.m_threads.emplace_back(
             [&]()
             {
@@ -2001,8 +2027,8 @@ bool LockFreeQueueTests::cacheInterleavings()
             return decision;
         });
     LockFreeQueueTestControl::m_pausePoint.store(13);
-    LockFreeQueueTestThreads threads;
     std::atomic<int32_t> pushed(-1);
+    LockFreeQueueTestThreads threads;
     threads.m_threads.emplace_back(
         [&]()
         {
@@ -2034,8 +2060,8 @@ bool LockFreeQueueTests::cacheInterleavings()
         });
     duringGrowth.tryPush(7, true, false);
     LockFreeQueueTestControl::m_pausePoint.store(14);
-    LockFreeQueueTestThreads growthThreads;
     std::atomic<int32_t> growthResult(-1);
+    LockFreeQueueTestThreads growthThreads;
     growthThreads.m_threads.emplace_back(
         [&]()
         {
@@ -2145,8 +2171,8 @@ bool LockFreeQueueTests::counters()
     LFQ_CHECK(queue.empty());
     queue.testSeedCounters(UINT64_MAX - 1);
     LockFreeQueueTestControl::m_pausePoint.store(2);
-    LockFreeQueueTestThreads paused;
     std::atomic<int32_t> result(-1);
+    LockFreeQueueTestThreads paused;
     paused.m_threads.emplace_back(
         [&]()
         {
@@ -2171,9 +2197,9 @@ bool LockFreeQueueTests::counters()
     std::atomic<bool> start(false), stop(false), error(false);
     std::atomic<size_t> done(0);
     std::atomic<uint64_t> observations(0);
-    LockFreeQueueThreadGroup group(stop, &start);
     const size_t producers = 4;
     const size_t perProducer = 30000;
+    LockFreeQueueThreadGroup group(stop, &start);
     for (size_t lane = 0; lane < producers; ++lane)
     {
         group.m_threads.emplace_back(
@@ -2263,8 +2289,8 @@ bool LockFreeQueueTests::segmentReuse()
     LockFreeQueue<int32_t> queue;
     LFQ_CHECK(configure(queue, 3, 3, 0, 2));
     LockFreeQueueTestControl::m_pausePoint.store(1);
-    LockFreeQueueTestThreads threads;
     std::atomic<int32_t> result(-1);
+    LockFreeQueueTestThreads threads;
     threads.m_threads.emplace_back(
         [&]()
         {
@@ -2365,8 +2391,8 @@ bool LockFreeQueueTests::cachedBatches()
     LockFreeQueue<int32_t> queue;
     LFQ_CHECK(configure(queue, 2049, 2049, 0, 8));
     LockFreeQueueTestControl::m_pausePoint.store(15);
-    LockFreeQueueTestThreads threads;
     std::atomic<int32_t> first(-1);
+    LockFreeQueueTestThreads threads;
     threads.m_threads.emplace_back(
         [&]()
         {
@@ -2732,8 +2758,8 @@ static bool LockFreeQueueMultiplePausedPublishers()
     config.maximumCapacity = 64;
     config.maximumProducers = 12;
     LFQ_CHECK(queue.configurePool(config) == LockFreeQueueSuccess && queue.tryInit() == LockFreeQueueSuccess);
-    LockFreeQueueTestThreads threads;
     LockFreeQueueResult results[8];
+    LockFreeQueueTestThreads threads;
     bool valid = true;
     uint64_t output = UINT64_MAX;
     for (size_t p = 0; p < 8; ++p)
@@ -2807,6 +2833,7 @@ static bool LockFreeQueueProtectionTransfer()
     LFQ_CHECK(pool.configure(config) == LockFreeQueueSuccess && pool.initialize() == LockFreeQueueSuccess);
     Arena::Record* record = pool.enter();
     Arena::Block* block = pool.initialBlock();
+    LFQ_CHECK(record != nullptr && block != nullptr);
     pool.testProtectTraversal(*record, block);
     LockFreeQueueTestControl::reset();
     LockFreeQueueTestControl::m_pausePoint.store(22);
@@ -3408,10 +3435,15 @@ int LockFreeQueueTests::run(int argc, char** argv)
         {
             return 2;
         }
-        return steady(static_cast<uint32_t>(value), std::string(argv[1]) == "36",
-                   argc == 4 && std::string(argv[3]) == "dynamic", argc == 4 && std::string(argv[3]) == "prefix")
-                   ? 0
-                   : 1;
+        LockFreeQueueTestControl::reset();
+        const uint64_t started = LockFreeQueueTestControl::ticks();
+        std::cout << "BEGIN id=" << argv[1] << " seconds=" << value << std::endl;
+        const bool passed = steady(static_cast<uint32_t>(value), std::string(argv[1]) == "36",
+            argc == 4 && std::string(argv[3]) == "dynamic", argc == 4 && std::string(argv[3]) == "prefix") &&
+            !LockFreeQueueTestControl::m_timedOut.load();
+        std::cout << (passed ? "PASS" : "FAIL") << " id=" << argv[1]
+                  << " elapsed_ns=" << LockFreeQueueTestControl::ticks() - started << std::endl;
+        return passed ? 0 : 1;
     }
     if (argc != 2)
     {

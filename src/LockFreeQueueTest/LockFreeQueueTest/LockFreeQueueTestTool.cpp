@@ -601,7 +601,10 @@ Json::Value LockFreeQueueTestTool::process(const std::vector<std::string>& comma
     result["exit"] = code;
     result["seconds"] = std::chrono::duration<double>(std::chrono::steady_clock::now() - begin).count();
     result["timeout"] = timeout;
+    // CSystem launches in the executable directory. cwd is the workload's
+    // logical directory (build scripts explicitly cd there), not a launch option.
     result["cwd"] = cwd;
+    result["launch_cwd"] = path(parent(command[0]));
     result["log"] = log;
     for (size_t i = 0; i < command.size(); ++i)
     {
@@ -726,6 +729,7 @@ int main(int argc, char** argv)
 #endif
         if (argc == 2 && std::string(argv[1]) == "self-test-child")
         {
+            std::cout << "CHILD_CWD=" << LockFreeQueueTestTool::path(".") << std::endl;
             CSystem::Sleep(5000);
             return 0;
         }
@@ -1064,6 +1068,9 @@ void LockFreeQueueTestTool::selfTest() const
     std::string timeoutLog = "timeout-" + integer(std::chrono::steady_clock::now().time_since_epoch().count()) + ".raw.log";
     Json::Value child = process({CSystem::currentExecutablePathUtf8(), "self-test-child"}, destination, join(destination, timeoutLog), 1);
     check(child["exit"].asInt() == 124 && child["timeout"].asBool(), "child deadline/cleanup");
+    check(child["launch_cwd"].asString() == path(parent(executable())), "actual child launch directory");
+    check(read(join(destination, timeoutLog)).find("CHILD_CWD=" + child["launch_cwd"].asString()) != std::string::npos,
+        "child confirms launch directory independently of requested workload directory");
 #endif
     std::cout << "SELF_TEST PASS checks=" << checks << std::endl;
 }
