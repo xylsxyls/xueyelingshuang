@@ -44,7 +44,7 @@ public:
     SemaphoreResult notify(std::atomic<uint32_t>* address = nullptr);
 
     /** 已发布普通积存许可后检查是否需要系统提示；仅供未进入专用记录链的快速路径
-    登记方必须先增加sleepers再重查许可；与许可发布一起使用seq_cst，不能放到发布之前。
+    登记方必须先增加sleepers再重查许可；与许可发布一起使用seq_cst，不能放到发布之前
     @return 当前存在共享提示等待者；不用于判断独立记录地址是否需要唤醒
     */
     bool hasWaiters() const;

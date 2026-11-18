@@ -12,7 +12,7 @@ public:
     */
     static SemaphoreResult capacity(uint32_t& attempts);
 
-    /** 竞争失败后x86/x64短退避16至256条PAUSE，每16次失败让出时间片；其他架构定期让出时间片。
+    /** 竞争失败后x86/x64短退避16至256条PAUSE，每16次失败让出时间片；其他架构定期让出时间片
     不设置竞争重试总次数上限；该退避不等待许可，无许可时仍由系统阻塞
     @param [in,out] attempts 本次操作的竞争失败计数
     */

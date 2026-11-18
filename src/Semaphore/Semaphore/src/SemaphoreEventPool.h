@@ -59,12 +59,19 @@ public:
     // 默认-1无配置上限；仍受size_t和分配失败限制
     int64_t maxCapacity;
 #if defined(_MSC_VER) && !defined(STATIC_LIB)
-    // 保留已交付的回调配置契约，只豁免这两个载体；跨DLL复制须匹配工具链和CRT
+    // 保留回调配置契约，仅豁免当前载体；跨DLL复制须匹配工具链和CRT
 #pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
     // 空回调使用默认max(16,current/2)增长，返回新增数
     std::function<size_t(const SemaphoreGrowContext&)> grow;
+#if defined(_MSC_VER) && !defined(STATIC_LIB)
+#pragma warning(pop)
+#endif
+#if defined(_MSC_VER) && !defined(STATIC_LIB)
+#pragma warning(push)
+#pragma warning(disable : 4251)
+#endif
     // 空回调关闭自动缩容；实际回收按空闲时间及初始下限
     std::function<SemaphoreShrinkDecision(const SemaphoreShrinkContext&)> shrink;
 #if defined(_MSC_VER) && !defined(STATIC_LIB)
@@ -160,10 +167,11 @@ public:
     bool finish(SemaphoreEventRecord* record);
 
     /** 发布事件；广播固定扫描开始时的登记链，新登记只加在head之前
+    不分配内存、不运行策略；直接提示失败不会撤销已提交记录
     @param [in] all 是否提示全部快照登记者
     @param [in] wake 非空时直接唤醒每个已提交记录；调用者已确认地址后端可用，指针仅本次借用
     @param [in] retryContention 单发事件被其他通知者抢先时是否重新选择
-    @return 是否至少提示一位；不分配内存、不运行策略
+    @return 状态及committed提示提交标记；无目标为OK且未提交，系统提示失败可与已提交并存
     */
     SemaphoreResult notify(bool all, SemaphoreWake* wake = nullptr, bool retryContention = true);
 
