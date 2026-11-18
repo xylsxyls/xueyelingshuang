@@ -18,7 +18,7 @@ public:
     */
     void begin(bool wait);
 
-    /** 处理一次竞争失败；持续竞争时让出时间片，长期竞争时短暂休眠
+    /** 处理一次竞争失败；持续竞争时让步，长期竞争时短暂休眠；休眠失败回退为让步
     @param [in] attemptBudget try 模式允许的有限重试次数；默认立即返回，push 忽略此上限
     @return true 继续由本线程重试，false 本次尝试未提交
     */
@@ -53,7 +53,8 @@ public:
     */
     static bool waitCapacity(uint32_t& retries);
 
-    /** Bounded scheduler backoff after a normal publisher loses a slot CAS
+    /** Short scheduler backoff for sustained contention or a lost publication CAS
+    Sleep failure falls back to yield; actual wake-up latency is host-controlled
     No ownership is retained on behalf of another producer; it retries itself
     */
     static void pausePublisher();

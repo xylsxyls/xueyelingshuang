@@ -25,6 +25,8 @@ inline const char* LockFreeQueueError::what() const throw()
 {
     switch (m_result)
     {
+    case LockFreeQueueSuccess:
+        return "LockFreeQueue: success";
     case LockFreeQueueCapacityLimit:
         return "LockFreeQueue: node or metadata capacity exhausted";
     case LockFreeQueueAllocationFailure:
@@ -52,7 +54,7 @@ inline const char* LockFreeQueueError::what() const throw()
     case LockFreeQueueSequenceExhausted:
         return "LockFreeQueue: structural sequence exhausted; quiescent reset required";
     default:
-        return "LockFreeQueue: success";
+        return "LockFreeQueue: unknown result";
     }
 }
 

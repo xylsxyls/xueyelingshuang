@@ -104,6 +104,7 @@ private:
 
     /** Atomic ownership cannot be assigned
     @param [in] other 禁止复制或赋值的源对象
+    @return 不可调用；此赋值操作已禁用
     */
     LockFreeQueueAtomic& operator=(const LockFreeQueueAtomic& other) = delete;
 };
@@ -190,6 +191,7 @@ private:
 
     /** Ownership cannot be assigned
     @param [in] other 禁止复制或赋值的源对象
+    @return 不可调用；此赋值操作已禁用
     */
     LockFreeQueueAtomic& operator=(const LockFreeQueueAtomic& other) = delete;
 };

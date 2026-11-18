@@ -31,6 +31,7 @@ public:
 
     /** 禁止赋值，载荷修改只允许在未入队或消费已经返回时进行
     @param [in] other 不允许复制的源对象
+    @return 不可调用；此赋值操作已禁用
     */
     LockFreeQueueEntry& operator=(const LockFreeQueueEntry& other) = delete;
 

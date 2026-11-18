@@ -34,7 +34,7 @@ enum LockFreeQueueResult
     LockFreeQueueClockUnavailable,
     // Publication segment generation exhausted before wrap; drain and externally quiescent init.
     LockFreeQueueSequenceExhausted,
-    // Capacity is below its limit, but observed storage is not safely reusable yet.
+    // Storage is not safely reusable, or this host cannot perform the requested capacity wait.
     LockFreeQueueResourceUnavailable,
     // Configuration after initialization, or a producer context already attached.
     LockFreeQueueInvalidState
@@ -123,7 +123,7 @@ struct LockFreeQueuePoolStatistics
     // overhead, T's own allocations and user callable captures. An unpublished
     // allocation is charged to reservedCapacity before its bytes enter this snapshot.
     size_t retainedBytes;
-    // 生产者登记、遍历保护及辅助段登记表的保留字节
+    // 生产者登记及遍历保护的保留字节；辅助段登记表另计入retainedBytes
     size_t protectionBytes;
     // 尚未物理释放的块数量，包含初始块和退役块
     size_t blockCount;

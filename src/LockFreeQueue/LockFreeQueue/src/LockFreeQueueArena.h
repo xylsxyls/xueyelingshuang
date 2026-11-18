@@ -474,6 +474,7 @@ private:
 
     /** 禁止复制或移动；所有权、登记与原子状态不能按位转移
     @param [in] other 禁止复制或移动的源对象
+    @return 不可调用；此赋值操作已禁用
     */
     LockFreeQueueArena& operator=(const LockFreeQueueArena& other) = delete;
 

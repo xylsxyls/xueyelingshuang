@@ -28,7 +28,9 @@ inline bool LockFreeQueueProgress::retry(uint8_t attemptBudget)
         if (failures == 0)
         {
             // yield 是调度提示；正时长休眠使持续竞争者真正暂离就绪队列。
-            std::this_thread::sleep_for(std::chrono::microseconds(1));
+            // Reuse the exception-isolated sleep path: scheduler failure must
+            // not escape an enqueue or leave a partially acquired resource.
+            pausePublisher();
         }
         else
 #endif
