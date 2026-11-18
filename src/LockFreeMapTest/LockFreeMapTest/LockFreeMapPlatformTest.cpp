@@ -23,6 +23,10 @@ int LockFreeMapPlatform()
         {
             failures += !aligned.set(key, static_cast<long double>(key) + 0.25L);
         }
+        /** 检查每个借用值的地址对齐及独立预期内容，累计失败
+        @param [in] key 当前受保护条目的键，仅回调期间借用
+        @param [in] value 本次输入值；引用仅在当前回调期间借用，不向外保存
+        */
         failures += aligned.forEach([&failures](const int& key, const long double& value) -> void
         {
             failures += reinterpret_cast<uintptr_t>(&value) % std::alignment_of<long double>::value != 0;

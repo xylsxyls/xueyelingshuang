@@ -166,8 +166,8 @@ int LockFreeMapHeaders();
 int main(int argc, char** argv);
 
 // LockFreeMapTest 测试文档
-// 版本：2.2
-// 更新日期：2026-11-15
+// 版本：2.3
+// 更新日期：2026-11-18
 // 职责：说明当前测试代码的用例、独立预期、运行入口、观察方法和限制，不保存逐批性能数据或版本备份。
 // 维护约定：按用户 2026-11-10 的要求，以后测试说明固定写在测试工程主文件对应头文件的注释中。本工程维护于 LockFreeMapTest.h，不再另建独立测试文档.txt；用例变更同步更新本注释。
 // 依据：common/AI文档/工程测试规范.txt（2.9）、代码开发规范.txt（2.10）、仓库使用说明文档.txt（2.42）及适用的工程、线程规范。
@@ -178,7 +178,7 @@ int main(int argc, char** argv);
 // 1. 测试当前源码，不依赖历史备份。
 // 确认：本次按用户授权修复审查问题并回归；实际批次数据放隔离构建目录，不写入本用例说明。
 // 规则：被测实现位于 src/LockFreeMap/LockFreeMap/src；测试源码、白盒检查、故障注入和线程适配位于 src/LockFreeMapTest/LockFreeMapTest。现有 VS 工程、CMake、版本脚本和编辑器配置保留。
-// 需求依据：common/Base/LockFreeMap需求文档.txt 的 BASE-LF-1.0；当前 LockFreeMap.h、LockFreeMapContract.h 的公开合同；本会话确认的普通操作内部重试、容量错误分类、下标赋值允许异常及生产/消费线程实际进展要求。
+// 需求依据：历史LockFreeMap需求文档.txt 的 BASE-LF-1.0（原文件当前不在仓库，现行合同见common/Base/LockFreeMap使用说明.txt）；当前 LockFreeMap.h、LockFreeMapContract.h 的公开合同；本会话确认的普通操作内部重试、容量错误分类、下标赋值允许异常及生产/消费线程实际进展要求。
 // 检查：不将历史需求中的旧跳表实现描述当作当前架构；不将被删除的版本备份或历史报告作为测试输入。
 // 详细说明：独立测试工程按用户授权可直接使用标准库、原生线程和计时设施，保持 C++11、VS2013 兼容。Wasm 的宿主诊断可以使用 JS；业务判定及测试素材由 C++ 产生。生产库中不嵌入测试钩子或白盒代码。
 //

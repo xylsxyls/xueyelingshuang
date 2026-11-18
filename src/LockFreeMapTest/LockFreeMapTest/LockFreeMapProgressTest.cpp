@@ -40,6 +40,8 @@ unsigned LockFreeMapProgressTest::queryChurn(std::ostream& report)
     }
     unsigned changes = 0, errors = 0, maximum = 0;
     // 比较器排序仍只由整数决定；每次比较通过另一个独立调用改变无关键
+    /** 至多32次修改无关键，统计精确查询中的结构变化和错误
+    */
     std::function<void()> change = [&map, &changes, &errors]()
     {
         if (changes < 32)
@@ -60,6 +62,9 @@ unsigned LockFreeMapProgressTest::queryChurn(std::ostream& report)
     changes = 0;
     unsigned calls = 0;
     // 回调只读取本次借用值，不执行额外结构修改
+    /** 复制当前借用值到局部输出并统计调用次数
+    @param [in] borrowed 本次输入值；引用仅在当前回调期间借用，不向外保存
+    */
     const LockFreeMapStatus status = map.lockFreeMapVisit(query, [&value, &calls](const int& borrowed)
     {
         value = borrowed;
@@ -228,6 +233,9 @@ bool LockFreeMapProgressTest::attempt(LockFreeMap<int, uint64_t>& map, LockFreeM
 #else
             unsigned callbacks = 0;
             // 参数只在借用期间有效；输出到线程私有变量并核对每次调用至多回调一次
+            /** 复制借用值并累计当前操作的回调次数，供独立判定
+            @param [in] borrowed 本次输入值；引用仅在当前回调期间借用，不向外保存
+            */
             status = map.lockFreeMapVisit(0, [&value, &callbacks](const uint64_t& borrowed)
             {
                 value = borrowed;
@@ -325,6 +333,8 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
     for (unsigned id = 0; id < workers; ++id)
     {
         // 共同起跑；不以固定成功次数结束，防止快线程退出后掩盖慢线程长期失败
+        /** 共同起跑后持续执行本线程负载，记录进展与内容直到截止时间
+        */
         threads.emplace_back([&map, &results, &arrived, &ready, &start, &begin, &deadline, mode, id, workers]()
         {
 #ifdef LOCK_FREE_MAP_BENCHMARK_PROGRESS

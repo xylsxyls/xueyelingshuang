@@ -1,5 +1,8 @@
 ﻿#pragma once
 #include "LockFreeMapBenchmarkClock.h"
+#ifndef LOCK_FREE_MAP_SINGLE_STD
+#include "LockFreeMap.h"
+#endif
 #include <map>
 #include <vector>
 #include <string>
@@ -7,7 +10,6 @@
 #ifdef LOCK_FREE_MAP_SINGLE_STD
 typedef std::map<uint32_t, uint64_t> LockFreeMapSingleContainer;
 #else
-#include "LockFreeMap.h"
 typedef LockFreeMap<uint32_t, uint64_t> LockFreeMapSingleContainer;
 #endif
 

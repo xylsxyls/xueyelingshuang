@@ -37,6 +37,7 @@ public:
     // 每个可用物理核心选一个逻辑处理器，避免两版随机使用不同的超线程组合
     static std::vector<uintptr_t> m_workerMasks;
 
+public:
     /** 从进程许可的处理器中建立固定放置方案，不修改系统或其他进程
     @return 不需要固定放置或成功取得方案时返回 true
     */

@@ -6,7 +6,7 @@
 struct LockFreeMapSearchGroupLess
 {
 public:
-    /** 按七个整数一组比较，不使用原值相等作为等价判断
+    /** 按整数除七且向零截断的商分组，不使用原值相等判定等价
     @param [in] left 左键
     @param [in] right 右键
     @return 左键所在组小于右键所在组时true

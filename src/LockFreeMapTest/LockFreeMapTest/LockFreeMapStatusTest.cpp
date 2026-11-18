@@ -74,6 +74,10 @@ int LockFreeMapStatusContract()
             settings.nodes.growFreeThreshold = settings.values.growFreeThreshold = 1;
             if ((flags & 1) != 0)
             {
+                /** 为节点池启用短空闲缩容，覆盖自动回收路径
+                @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+                @return 请求释放4槽并要求连续空闲1毫秒
+                */
                 settings.nodes.shrink = [](const LockFreeMapShrinkContext&)
                 {
                     return LockFreeMapShrinkDecision(4, 1);
@@ -81,6 +85,10 @@ int LockFreeMapStatusContract()
             }
             if ((flags & 2) != 0)
             {
+                /** 为值池启用短空闲缩容，覆盖自动回收路径
+                @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+                @return 请求释放4槽并要求连续空闲1毫秒
+                */
                 settings.values.shrink = [](const LockFreeMapShrinkContext&)
                 {
                     return LockFreeMapShrinkDecision(4, 1);
@@ -91,6 +99,9 @@ int LockFreeMapStatusContract()
                 return 20;
             }
             // 只观察公开统计，未在生产库插入任何检查或测试分支。
+            /** 在串行用例中观察操作记录是否已归还
+            @return activeOperations观察值为零时返回true，不代替生命周期同步
+            */
             const auto idle = [&trial]() { return trial.lockFreeMapStats().activeOperations == 0; };
             for (unsigned iteration = 0; iteration < 32; ++iteration)
             {
@@ -140,6 +151,8 @@ int LockFreeMapStatusContract()
         const LockFreeMapStatusKey key(5), lower(1), other(100);
         unsigned changes = 0, errors = 0;
         // 只修改较小的无关键；最大项和值版本均不变，每轮重新发布一个根
+        /** 至多256次修改较小无关键，保留最大项及其值版本
+        */
         std::function<void()> churn = [&map, &changes, &errors, &lower]()
         {
             if (changes < 256)
@@ -212,6 +225,8 @@ int LockFreeMapStatusContract()
         {
             return 11;
         }
+        /** 在输出赋值阶段插入更高键，制造末项条件失效
+        */
         std::function<void()> higher = [&map, &other, &errors]()
         {
             errors += map.set(other, LockFreeMapStatusValue(100)) ? 0 : 1;
@@ -224,6 +239,8 @@ int LockFreeMapStatusContract()
         value.m_assign = nullptr;
         // 无条件提取遇到值被替换时重试并提取新值，不向调用方泄露值 CAS 冲突
         unsigned replacements = 0;
+        /** 仅首次输出赋值时覆盖目标值，制造条目版本失效
+        */
         std::function<void()> replace = [&map, &key, &replacements, &errors]()
         {
             if (replacements++ == 0)
@@ -239,6 +256,8 @@ int LockFreeMapStatusContract()
         }
         // 用户复制异常不应重试，也不能删除已经存在的条目
         unsigned exceptions = 0;
+        /** 记录输出赋值次数后抛受控异常，验证未提交回滚
+        */
         std::function<void()> fail = [&exceptions]()
         {
             ++exceptions;
@@ -264,6 +283,9 @@ int LockFreeMapStatusContract()
         }
         bool exhausted = false;
         // 活动借用确实占满保护记录，重入调用必须返回资源错误，不能等待自己归还
+        /** 在唯一操作记录被外层借用占用时重入提取，记录资源拒绝
+        @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+        */
         if (map.lockFreeMapVisit(key, [&map, &key, &exhausted](const LockFreeMapStatusValue&)
         {
             LockFreeMapStatusValue result;
@@ -291,6 +313,10 @@ int LockFreeMapStatusContract()
         boundedConfig.values.maximumCapacity = 2;
         bool replaceDuringMaintenance = false;
         unsigned removedDuringMaintenance = 0;
+        /** 在测试策略中一次性重入删除，制造维护与根变化交错
+        @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+        @return 返回该受控场景的缩容决策；此重入仅用于白盒交错测试
+        */
         boundedConfig.nodes.shrink = [&bounded, &replaceDuringMaintenance, &removedDuringMaintenance](const LockFreeMapShrinkContext&)
         {
             if (replaceDuringMaintenance)

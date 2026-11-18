@@ -42,6 +42,8 @@ int main(int argc, char** argv)
             threads.reserve(16);
             for (unsigned worker = 0; worker < 16; ++worker)
             {
+                /** 共同持有缓冲区后执行运行时负载，分别累计申请、计算及线程异常
+                */
                 threads.push_back(LockFreeMapTestThread([&failures, &allocationFailures, &workerExceptions, &held, &start, &cancel, report, worker]()
                 {
                     try
@@ -57,6 +59,10 @@ int main(int argc, char** argv)
                         {
                             return;
                         }
+                        /** 计算独立可核对的无符号算术变换
+                        @param [in] value 按值传入的无符号整数，计算遵循无符号算术规则
+                        @return 返回乘七加三后对1009取余的结果
+                        */
                         std::function<unsigned(unsigned)> transform = [](unsigned value) -> unsigned
                         {
                             return (value * 7 + 3) % 1009;

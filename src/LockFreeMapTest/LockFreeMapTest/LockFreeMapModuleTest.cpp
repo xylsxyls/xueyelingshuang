@@ -25,6 +25,9 @@ extern "C" __declspec(dllexport) int LockFreeMapNestedWrite(void* instance)
 static bool CheckModule(LockFreeMap<int, int>& map, int (*nested)(void*))
 {
     int result = -1;
+    /** 在外层借用仍有效时调用另一模块，记录嵌套写入状态
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    */
     const LockFreeMapStatus status = map.lockFreeMapVisit(1, [&](const int&)
     {
         result = nested(&map);
@@ -62,6 +65,8 @@ int main(int argc, char** argv)
         {
             const bool local = CheckModule(map, nested);
             bool other = false;
+            /** 换线程执行相同跨模块重入检查，other在join后读取
+            */
             LockFreeMapTestThread worker([&]() { other = CheckModule(map, nested); });
             passed = worker.join() && local && other && LockFreeMapTestThread::m_errors.load() == 0;
         }

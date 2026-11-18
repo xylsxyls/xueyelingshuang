@@ -82,10 +82,18 @@ int LockFreeMapCompileExamples()
     LockFreeMapConfig config;
     config.nodes.maximumCapacity = 1024;
     config.values.maximumCapacity = 2048;
+    /** 演示固定增量的节点池扩容策略
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    @return 返回期望新增32个槽
+    */
     config.nodes.grow = [](const LockFreeMapGrowContext&) -> size_t
     {
         return 32;
     };
+    /** 演示按当前容量计算值池增量
+    @param [in] context 借用的扩缩容观察上下文，不代表容量预留
+    @return 返回当前容量的一半加一，单位为槽
+    */
     config.values.grow = [](const LockFreeMapGrowContext& context) -> size_t
     {
         return context.currentCapacity / 2 + 1;
@@ -106,6 +114,9 @@ int LockFreeMapCompileExamples()
     unsigned visits = 0;
     bool borrowedValid = false;
     // 借用不增加载荷 shared_ptr 的拥有计数，六端均直接使用同一模板接口
+    /** 验证借用对象、载荷及共享引用计数，记录调用次数
+    @param [in] borrowed 本次输入值；引用仅在当前回调期间借用，不向外保存
+    */
     status = cache.lockFreeMapVisit(123, [&candidate, &visits, &borrowedValid, references](const std::shared_ptr<int>& borrowed)
     {
         ++visits;
@@ -124,6 +135,9 @@ int LockFreeMapCompileExamples()
     visits = 0;
     borrowedValid = false;
     // 回调重入清空和重插后，当前借用仍指向原来的不可变版本
+    /** 在借用回调中重入清空及维护，检查原借用值仍存活
+    @param [in] borrowed 本次输入值；引用仅在当前回调期间借用，不向外保存
+    */
     status = borrowedMap.lockFreeMapVisit(5, [&borrowedMap, &visits, &borrowedValid](const int& borrowed)
     {
         ++visits;
@@ -138,6 +152,9 @@ int LockFreeMapCompileExamples()
     }
     // 找不到键不得执行回调；用户回调异常由接口转为状态，保护记录必须归还
     visits = 0;
+    /** 记录一次回调后抛受控异常，验证接口的异常隔离
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    */
     const auto throwing = [&visits](const int&)
     {
         ++visits;

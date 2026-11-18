@@ -17,13 +17,17 @@ public:
     uint64_t m_cpuNanoseconds;
     // 成功调用的最长墙钟耗时，用于定位跨窗口停顿
     uint64_t m_maxCallNanoseconds;
-    // 相对共同起跑的首次调用和末次成功返回时刻
+    // 相对共同起跑的首次调用时刻，无观察时为UINT64_MAX
     uint64_t m_firstCallNanoseconds;
+    // 相对共同起跑的末次成功返回时刻，初始为零
     uint64_t m_lastReturnNanoseconds;
-    // 开始和结束时的线程处理器组、允许集合，用于辨别进程集合之外的线程限制
+    // 开始时线程所属处理器组，用于辨别线程限制，无效时为UINT_MAX
     unsigned m_processorGroup;
+    // 开始时所在处理器组内的允许集合，无效时为UINT64_MAX
     uint64_t m_allowedProcessors;
+    // 结束时处理器组号，无效时为UINT_MAX
     unsigned m_finalProcessorGroup;
+    // 结束时所在处理器组内的允许集合，无效时为UINT64_MAX
     uint64_t m_finalAllowedProcessors;
     // 每个窗口首次发起调用时所在组内的逻辑 CPU；未调用或无法查询时为 UINT_MAX
     unsigned m_firstProcessor[4];
@@ -33,7 +37,7 @@ public:
     unsigned char m_padding[64];
 
 public:
-    /** 将全部观察计数初始化为零
+    /** 计数清零，尚无时间或处理器观察的字段初始化为无效哨兵
     */
     LockFreeMapArrivalWorker();
 };
@@ -44,7 +48,7 @@ class LockFreeMapArrivalTest
 {
 private:
     // 固定二百毫秒窗口；类常量兼容 VS2013 的 lambda 常量访问
-    enum { WINDOW_NANOSECONDS = 200000000 };
+    static const uint64_t kWindowNanoseconds = 200000000;
 
 public:
     /** 运行两种先到线程数和四种竞争负载，核对提交结果与最终资源释放

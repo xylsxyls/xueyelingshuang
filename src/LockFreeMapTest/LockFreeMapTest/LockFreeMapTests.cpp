@@ -16,6 +16,10 @@ std::atomic<int> LockFreeMapTestFaults::m_pauseAllocation(-1);
 std::atomic<uint64_t> LockFreeMapTestFaults::m_allocations(0);
 std::atomic<int64_t> LockFreeMapTestFaults::m_outstanding(0);
 
+/** 申请测试内存并按开关注入暂停或失败
+@param [in] size 申请字节数，零按一字节申请
+@return 成功地址；失败或受控等待超时抛bad_alloc
+*/
 void* operator new(size_t size)
 {
     if (LockFreeMapTestFaults::m_enabled.load() != 0 && LockFreeMapTestFaults::m_pauseAllocation.load() >= 0 &&
@@ -42,6 +46,9 @@ void* operator new(size_t size)
     return memory;
 }
 
+/** 归还测试申请并减少存量计数
+@param [in] memory 本分配器返回的地址，允许nullptr
+*/
 void operator delete(void* memory) throw()
 {
     if (memory != nullptr)
@@ -51,11 +58,18 @@ void operator delete(void* memory) throw()
     }
 }
 
+/** 数组申请复用同一故障注入和计数入口
+@param [in] size 编译器提供的数组申请字节数
+@return 成功地址，失败抛bad_alloc
+*/
 void* operator new[](size_t size)
 {
     return ::operator new(size);
 }
 
+/** 数组释放复用同一存量计数入口
+@param [in] memory 原数组申请地址，允许nullptr
+*/
 void operator delete[](void* memory) throw()
 {
     ::operator delete(memory);
@@ -63,7 +77,8 @@ void operator delete[](void* memory) throw()
 
 /** 显式接管非抛出申请，避免动态运行库绕过本测试的故障注入和计数
 @param [in] size 申请字节数
-@return 申请失败时返回空指针
+@note 第二个未命名参数为标准非抛出标记
+@return 成功地址；申请失败时返回nullptr
 */
 void* operator new(size_t size, const std::nothrow_t&) throw()
 {
@@ -77,16 +92,29 @@ void* operator new(size_t size, const std::nothrow_t&) throw()
     }
 }
 
+/** 数组非抛出申请复用故障注入入口
+@param [in] size 数组申请字节数
+@param [in] tag 标准非抛出标记
+@return 成功地址，任何申请异常转换为nullptr
+*/
 void* operator new[](size_t size, const std::nothrow_t& tag) throw()
 {
     return ::operator new(size, tag);
 }
 
+/** 非抛出申请后构造失败的配对释放
+@param [in] memory 原申请地址，允许nullptr
+@note 第二个参数仅用于匹配标准非抛出分配签名
+*/
 void operator delete(void* memory, const std::nothrow_t&) throw()
 {
     ::operator delete(memory);
 }
 
+/** 非抛出数组申请后构造失败的配对释放
+@param [in] memory 原数组申请地址，允许nullptr
+@note 第二个参数仅用于匹配标准非抛出分配签名
+*/
 void operator delete[](void* memory, const std::nothrow_t&) throw()
 {
     ::operator delete(memory);
@@ -272,6 +300,10 @@ bool LockFreeMapTests::exceptions()
     LockFreeMapTestValue::m_throwAssignment.store(1);
     const LockFreeMapStatus extract = map.lockFreeMapExtract(key, output);
     LockFreeMapTestValue::m_throwAssignment.store(0);
+    /** 抛出受控遍历异常，验证不提交和已完成回调数
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    @note 第2个未命名参数是同步借用输入，本回调不使用其内容
+    */
     const size_t completed = map.forEach([](const LockFreeMapTestValue&, const LockFreeMapTestValue&) -> void
     {
         throw std::runtime_error("injected traversal callback");
@@ -294,6 +326,8 @@ bool LockFreeMapTests::sameKey()
     {
         for (int id = 0; id < 16; ++id)
         {
+            /** 共同起跑后竞争查找或插入同键，核对胜出值及凭据
+            */
             threads.push_back(LockFreeMapTestThread([&map, &start, &published, &failed, id]() -> void
             {
                 if (!wait(start))
@@ -345,6 +379,8 @@ bool LockFreeMapTests::pausedReader()
     LockFreeMapTestValue::m_entered.store(0);
     LockFreeMapTestValue::m_release.store(0);
     bool read = false;
+    /** 在输出赋值处暂停读者，返回后记录read并由外部join
+    */
     LockFreeMapTestThread reader([&map, &output, &read]() -> void
     {
         read = map.get(1, output);
@@ -369,6 +405,8 @@ bool LockFreeMapTests::pausedReader()
     }
     LockFreeMapTestValue::m_entered.store(0);
     LockFreeMapTestValue::m_release.store(0);
+    /** 在有限值池中暂停读取，制造暂不可回收的旧值
+    */
     LockFreeMapTestThread held([&]()
     {
         read = limited.get(1, output);
@@ -392,6 +430,8 @@ bool LockFreeMapTests::maximumRace()
     LockFreeMapTestValue::m_entered.store(0);
     LockFreeMapTestValue::m_release.store(0);
     LockFreeMapStatus result = LOCK_FREE_MAP_INVALID;
+    /** 提取已选末项并在输出处暂停，返回后记录实际状态
+    */
     LockFreeMapTestThread extractor([&]() -> void
     {
         result = map.lockFreeMapExtractLast(selected, key, value);
@@ -419,6 +459,8 @@ bool LockFreeMapTests::clearRace()
         LockFreeMapTestValue::m_release.store(0);
         LockFreeMapTestValue::m_pauseCopyValue.store(99);
         LockFreeMapStatus result = LOCK_FREE_MAP_INVALID;
+        /** 在候选复制处暂停普通写入，检查clear后重试发布
+        */
         LockFreeMapTestThread writer([&]() -> void
         {
             result = map.lockFreeMapSet(1, LockFreeMapTestValue(99));
@@ -505,10 +547,18 @@ bool LockFreeMapTests::shrinking()
     config.nodes.initialCapacity = config.values.initialCapacity = 2;
     config.nodes.maximumCapacity = config.values.maximumCapacity = 10;
     config.nodes.blockRecordLimit = config.values.blockRecordLimit = 16;
+    /** 固定步长增长双池以检查扩缩容上下文
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    @return 返回期望新增2槽
+    */
     config.nodes.grow = config.values.grow = [](const LockFreeMapGrowContext&)
     {
         return size_t(2);
     };
+    /** 核对缩容上下文并由开关控制是否收缩
+    @param [in] c 借用的扩缩容观察上下文，不代表容量预留
+    @return 返回测试开关决定的释放量及连续空闲时间
+    */
     config.nodes.shrink = config.values.shrink = [&](const LockFreeMapShrinkContext& c)
     {
         if (c.initialCapacity != 2 || (c.successfulGrowCount == 0 && c.hasSuccessfulGrow))
@@ -584,6 +634,8 @@ bool LockFreeMapTests::stress()
     {
         for (int id = 0; id < 8; ++id)
         {
+            /** 共同起跑后执行混合并发负载，写入本线程统计及共享错误计数
+            */
             threads.push_back(LockFreeMapTestThread([&, id]()
             {
                 if (!wait(start))
@@ -620,6 +672,10 @@ bool LockFreeMapTests::stress()
                     else if (operation == 4)
                     {
                         int previous = -1;
+                        /** 核对本次遍历键递增及值关系，错误计入本线程明细
+                        @param [in] k 当前受保护条目的键，仅回调期间借用
+                        @param [in] v 本次输入值；引用仅在当前回调期间借用，不向外保存
+                        */
                         map.forEach([&](const int& k, const int& v)
                         {
                             if (k <= previous || v != k * 7)
@@ -976,6 +1032,10 @@ bool LockFreeMapTests::limits()
         return false;
     }
     bool limit = false;
+    /** 在唯一记录被外层遍历占用时嵌套查询，记录资源限制
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    @note 第2个未命名参数是同步借用输入，本回调不使用其内容
+    */
     map.forEach([&](const int&, const int&)
     {
         int value = 0; LockFreeMapToken token;
@@ -1003,6 +1063,10 @@ bool LockFreeMapTests::limits()
     }
     map.clearAndFreeMemory();
     config.nodes.initialCapacity = config.values.initialCapacity = 0;
+    /** 明确拒绝节点增长，验证资源策略状态
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    @return 始终返回零
+    */
     config.nodes.grow = [](const LockFreeMapGrowContext&)
     {
         return size_t(0);
@@ -1011,6 +1075,10 @@ bool LockFreeMapTests::limits()
     {
         return false;
     }
+    /** 抛出受控增长策略异常
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    @return 不正常返回，由容器转为策略异常状态
+    */
     config.nodes.grow = [](const LockFreeMapGrowContext&) -> size_t
     {
         throw std::runtime_error("policy");
@@ -1019,6 +1087,10 @@ bool LockFreeMapTests::limits()
     {
         return false;
     }
+    /** 请求最大可表示增量，验证容量裁剪及溢出保护
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    @return 返回size_t最大值
+    */
     config.nodes.grow = [](const LockFreeMapGrowContext&)
     {
         return (std::numeric_limits<size_t>::max)();
@@ -1037,6 +1109,10 @@ bool LockFreeMapTests::limits()
         return false;
     }
     map.clearAndFreeMemory();
+    /** 抛出受控缩容策略异常
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    @return 不正常返回，由容器转为策略异常状态
+    */
     config.nodes.shrink = [](const LockFreeMapShrinkContext&) -> LockFreeMapShrinkDecision
     {
         throw std::runtime_error("shrink");
@@ -1055,6 +1131,10 @@ bool LockFreeMapTests::poolConcurrency()
     LockFreeMapPoolConfig config;
     config.initialCapacity = 0;
     config.maximumCapacity = 7;
+    /** 提出超过有限上限的增长量，检查并发预留不超额
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    @return 返回期望新增1000槽
+    */
     config.grow = [](const LockFreeMapGrowContext&)
     {
         return size_t(1000);
@@ -1067,6 +1147,8 @@ bool LockFreeMapTests::poolConcurrency()
     {
         for (int id = 0; id < 12; ++id)
         {
+            /** 共同起跑后从同一有限池申请槽，核对容量及记录状态
+            */
             threads.push_back(LockFreeMapTestThread([&, id]()
             {
                 LockFreeMapGuard guard(domain);
@@ -1123,6 +1205,8 @@ bool LockFreeMapTests::pausedReclaimer()
     copied.m_pauseAssignment = true;
     LockFreeMapTestValue::m_entered.store(0);
     LockFreeMapTestValue::m_release.store(0);
+    /** 读取旧值并在输出处暂停，供主线程制造待回收版本
+    */
     LockFreeMapTestThread reader([&]() { map.get(1, copied); });
     bool prepared = wait(LockFreeMapTestValue::m_entered);
     prepared = map.set(1, LockFreeMapTestValue(1)) && prepared;
@@ -1135,6 +1219,8 @@ bool LockFreeMapTests::pausedReclaimer()
     LockFreeMapTestValue::m_entered.store(0);
     LockFreeMapTestValue::m_release.store(0);
     LockFreeMapTestValue::m_pauseDestructorValue.store(199);
+    /** 执行维护并在载荷析构处暂停，供主线程检查无关操作进展
+    */
     LockFreeMapTestThread reclaimer([&]()
     {
         size_t released = 0; map.lockFreeMapMaintain(4096, released);
@@ -1168,6 +1254,10 @@ bool LockFreeMapTests::detachedDestruction()
         {
             config.nodes.initialCapacity = config.values.initialCapacity = 3;
             // 保持无上限删除语义，但策略拒绝增长，独立检验正在析构的槽不可复用
+            /** 拒绝额外增长，检查析构中的独占槽不能被提前复用
+            @param [in] context 借用的扩缩容观察上下文，不代表容量预留
+            @return 始终返回零
+            */
             config.nodes.grow = [](const LockFreeMapGrowContext& context) -> size_t
             {
                 (void)context;
@@ -1182,6 +1272,8 @@ bool LockFreeMapTests::detachedDestruction()
                 LockFreeMapTestValue::m_entered.store(0);
                 LockFreeMapTestValue::m_release.store(0);
                 LockFreeMapTestValue::m_pauseDestructorValue.store(199);
+                /** 删除持有受控载荷的键，记录提交结果并在析构处暂停
+                */
                 remover = LockFreeMapTestThread([&]()
                 {
                     erased.store(map.erase(1));
@@ -1282,6 +1374,8 @@ bool LockFreeMapTests::smallBudget()
     LockFreeMapTestValue::m_release.store(0);
     bool read = false;
     // 读者在复制旧值时持有旧根；清空和维护不能释放它正在借用的对象
+    /** 持有旧根读取并在赋值处暂停，输出仅在join后检查
+    */
     LockFreeMapTestThread reader([&]()
     {
         read = map.get(0, output);
@@ -1327,6 +1421,8 @@ bool LockFreeMapTests::pausedGrowth()
     LockFreeMapTestValue::m_entered.store(0);
     LockFreeMapTestValue::m_release.store(0);
     LockFreeMapStatus status = LOCK_FREE_MAP_INVALID;
+    /** 开启一次分配暂停并写入，检查发布前的额度观察
+    */
     LockFreeMapTestThread allocator([&]()
     {
         LockFreeMapTestFaults::m_pauseAllocation.store(0);
@@ -1396,6 +1492,8 @@ bool LockFreeMapTests::retiredVersionRace()
     LockFreeMapTestValue::m_entered.store(0);
     LockFreeMapTestValue::m_release.store(0);
     LockFreeMapStatus extracted = LOCK_FREE_MAP_INVALID;
+    /** 执行带凭据的末项提取，在输出赋值处等待受控交错
+    */
     LockFreeMapTestThread reader([&]() { extracted = map.lockFreeMapExtractLast(token, key, output); });
     bool ok = wait(LockFreeMapTestValue::m_entered);
     ok = map.set(1, replacement) && ok;
@@ -1463,6 +1561,8 @@ bool LockFreeMapTests::descriptorHelping()
         }
         store.m_root.store(pending);
         bool helped = false;
+        /** 帮助完成仍由发布者持有的计划，检查可见条目数
+        */
         LockFreeMapTestThread helper([&]()
         {
             LockFreeMapGuard observer(store.m_domain);
@@ -1533,6 +1633,8 @@ bool LockFreeMapTests::fastUpdates()
     {
         for (int worker = 0; worker < 4; ++worker)
         {
+            /** 共同起跑后进行条件累加，核对真实提交及错误状态
+            */
             threads.push_back(LockFreeMapTestThread([&]()
             {
                 if (!wait(start))
@@ -1840,6 +1942,8 @@ bool LockFreeMapTests::sharedIndex()
     bool progressed = false;
     // 发布者尚未完成引用转交时暂停；另一个调用者必须可从该视图继续发布
     // 工作结果在 join 后读取，输入对象始终由测试作用域和源保护保持存活
+    /** 在原发布者尚未完成时从已发布视图继续提交，记录独立帮助结果
+    */
     LockFreeMapTestThread helper([&]()
     {
         LockFreeMapGuard guard(store.m_domain);
@@ -1983,6 +2087,8 @@ bool LockFreeMapTests::slotCache()
         }
         bool progressed = false;
         // 主线程停在持有空槽的调用内；其他线程须返回明确容量状态，不能等它退出
+        /** 在另一调用持有空槽时申请，要求明确返回容量状态而非等待
+        */
         LockFreeMapTestThread contender([&]()
         {
             LockFreeMapGuard guard(domain);

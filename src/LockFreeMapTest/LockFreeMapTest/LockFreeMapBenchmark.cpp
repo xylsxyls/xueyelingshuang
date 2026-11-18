@@ -313,6 +313,9 @@ int LockFreeMapBenchmark::changing(std::ostream& report, int keys, int workers)
 #ifdef LOCK_FREE_MAP_BENCHMARK_SINGLE
     (void)ready;
 #endif
+    /** 执行当前工作者的真实值覆盖负载，将失败累计到failures
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    */
     const auto work = [&](int worker)
     {
         for (int iteration = 0; iteration < iterations; ++iteration)
@@ -333,6 +336,8 @@ int LockFreeMapBenchmark::changing(std::ostream& report, int keys, int workers)
         {
             for (int worker = 0; worker < workers; ++worker)
             {
+                /** 完成处理器放置和共同起跑后执行work，结果在join后读取
+                */
                 threads.push_back(LockFreeMapTestThread([&, worker]()
                 {
                     if (!placeWorker(static_cast<unsigned>(worker)))
@@ -1056,6 +1061,11 @@ int LockFreeMapBenchmark::compare(int argc, char** argv)
     return report.fail() ? 3 : 0;
 }
 
+/** 选择基准、进展诊断或报告比较入口，捕获全部异常
+@param [in] argc 参数数量
+@param [in] argv 模式、报告路径及负载参数，具体格式见主测试头文件
+@return 零表示完成，1表示校验或异常失败，2表示参数错误，3表示报告失败
+*/
 int main(int argc, char** argv)
 {
     try

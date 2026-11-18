@@ -86,6 +86,10 @@ int LockFreeMapHistorical()
 {
     int32_t totalCount = 0;
     int32_t failCount = 0;
+    /** 累计历史判定并把名称、结果写入当前报告
+    @param [in] ok 本项独立判定结果
+    @param [in] name 本项报告名称，仅本次调用期间借用
+    */
     std::function<void(bool, const std::string&)> check = [&totalCount, &failCount](bool ok, const std::string& name) -> void
     {
         ++totalCount;
@@ -99,6 +103,10 @@ int LockFreeMapHistorical()
     LockFreeMap<int32_t, int32_t> defaultMap;
     check(defaultMap.empty() && defaultMap.count() == 0 && defaultMap.size() == 0, "LockFreeMap empty default");
     check(defaultMap.maxLevel() == 16, "LockFreeMap default max level");
+    /** 空表遍历的无操作回调，用返回次数确认未调用
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    @note 第2个未命名参数是同步借用输入，本回调不使用其内容
+    */
     check(defaultMap.forEach([](const int32_t&, const int32_t&) -> void {}) == 0, "LockFreeMap empty forEach");
     check(defaultMap.keys().empty() && defaultMap.values().empty() && defaultMap.toVector().empty(), "LockFreeMap empty snapshots");
     defaultMap.clear();
@@ -172,6 +180,10 @@ int LockFreeMapHistorical()
     LockFreeMapHistoricalFaults::m_valueCopy = true;
     check(throwMap.values().empty() && throwMap.toVector().empty(), "LockFreeMap values copy throw handled");
     LockFreeMapHistoricalFaults::m_valueCopy = false;
+    /** 抛出受控遍历异常，检查已完成回调数不计入本次失败调用
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    @note 第2个未命名参数是同步借用输入，本回调不使用其内容
+    */
     size_t throwingCallbackCount = throwMap.forEach([](const LockFreeMapHistoricalKey&, const LockFreeMapHistoricalValue&) -> void
     {
         throw std::runtime_error("LockFreeMap callback failed");
@@ -188,6 +200,8 @@ int LockFreeMapHistorical()
     std::vector<LockFreeMapTestThread> threads;
     for (int32_t i = 0; i < threadCount; ++i)
     {
+        /** 并发写入并读取本线程独立键区间，错误累计到failures
+        */
         threads.push_back(LockFreeMapTestThread([&concurrentMap, &failures, i]() -> void
         {
             int32_t base = i * loopCount;
@@ -216,6 +230,10 @@ int LockFreeMapHistorical()
     check(concurrentMap.count() == static_cast<size_t>(threadCount * loopCount), "LockFreeMap concurrent count");
     bool concurrentOrderOk = true;
     int32_t lastKey = -1;
+    /** 逐项核对键严格递增并更新lastKey，异常顺序记入concurrentOrderOk
+    @param [in] key 当前受保护条目的键，仅回调期间借用
+    @note 第2个未命名参数是同步借用输入，本回调不使用其内容
+    */
     concurrentMap.forEach([&concurrentOrderOk, &lastKey](const int32_t& key, const int32_t&) -> void
     {
         if (key <= lastKey)
@@ -227,6 +245,8 @@ int LockFreeMapHistorical()
     check(concurrentOrderOk, "LockFreeMap concurrent order");
     for (int32_t i = 0; i < threadCount; ++i)
     {
+        /** 删除本线程区间内的偶数位置条目，统计失败
+        */
         threads.push_back(LockFreeMapTestThread([&concurrentMap, &failures, i]() -> void
         {
             int32_t base = i * loopCount;
@@ -254,6 +274,8 @@ int LockFreeMapHistorical()
     LockFreeMapTestThreadGroup sameKeyCleanup(threads);
     for (int32_t i = 0; i < threadCount * 4; ++i)
     {
+        /** 竞争插入同一个键，仅实际插入成功才增加成功数
+        */
         threads.push_back(LockFreeMapTestThread([&sameKeyInsertMap, &sameKeyInsertSuccess, i]() -> void
         {
             if (sameKeyInsertMap.insert(1, i))
@@ -270,6 +292,8 @@ int LockFreeMapHistorical()
     check(sameKeyInsertSuccess.load() == 1 && sameKeyInsertMap.count() == 1, "LockFreeMap concurrent same key insert single success");
     for (int32_t i = 0; i < threadCount * 4; ++i)
     {
+        /** 竞争删除同一个键，仅实际删除成功才增加成功数
+        */
         threads.push_back(LockFreeMapTestThread([&sameKeyInsertMap, &sameKeyEraseSuccess]() -> void
         {
             if (sameKeyInsertMap.erase(1))
@@ -294,6 +318,8 @@ int LockFreeMapHistorical()
     LockFreeMapTestThreadGroup stressCleanup(threads, &startStress);
     for (int32_t i = 0; i < stressThreadCount; ++i)
     {
+        /** 在有截止时间的共同起跑后执行混合压力，记录启动超时和操作失败
+        */
         threads.push_back(LockFreeMapTestThread([&highStressMap, &stressFailures, &readyThreadCount, &startStress, i]() -> void
         {
             ++readyThreadCount;
@@ -326,6 +352,10 @@ int LockFreeMapHistorical()
                 }
                 if (j % 127 == 0)
                 {
+                    /** 执行不消费载荷的遍历，覆盖并发保护和释放路径
+                    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+                    @note 第2个未命名参数是同步借用输入，本回调不使用其内容
+                    */
                     highStressMap.forEach([](const int32_t&, const int32_t&) -> void {});
                     highStressMap.first(key, value);
                     highStressMap.last(key, value);

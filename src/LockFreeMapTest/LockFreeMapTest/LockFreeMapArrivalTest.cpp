@@ -182,6 +182,8 @@ bool LockFreeMapArrivalTest::scenario(unsigned mode, unsigned incumbents)
             }
         }
         // 每个工作线程独占结果；start 的发布将共同开始时间传给全部参与者
+        /** 共同起跑后记录本线程四个窗口的调用和提交，取消时退出并由外部join
+        */
         threads.emplace_back([&map, &results, &ready, &warmed, &start, &cancel, &begin, &processorMasks, mode, id, incumbents]()
         {
             LockFreeMapArrivalWorker& result = results[id];
@@ -218,11 +220,11 @@ bool LockFreeMapArrivalTest::scenario(unsigned mode, unsigned incumbents)
             while (!cancel.load() && result.m_errors == 0)
             {
                 const uint64_t elapsed = LockFreeMapBenchmarkClock::nanoseconds() - begin;
-                if (elapsed >= static_cast<uint64_t>(WINDOW_NANOSECONDS) * 4)
+                if (elapsed >= static_cast<uint64_t>(kWindowNanoseconds) * 4)
                 {
                     break;
                 }
-                const size_t part = static_cast<size_t>(elapsed / WINDOW_NANOSECONDS);
+                const size_t part = static_cast<size_t>(elapsed / kWindowNanoseconds);
                 if (result.m_firstCallNanoseconds == (std::numeric_limits<uint64_t>::max)())
                 {
                     result.m_firstCallNanoseconds = elapsed;
@@ -244,9 +246,9 @@ bool LockFreeMapArrivalTest::scenario(unsigned mode, unsigned incumbents)
                         result.m_maxCallNanoseconds = finished - elapsed;
                     }
                     result.m_lastReturnNanoseconds = finished;
-                    if (finished < static_cast<uint64_t>(WINDOW_NANOSECONDS) * 4)
+                    if (finished < static_cast<uint64_t>(kWindowNanoseconds) * 4)
                     {
-                        ++result.m_successes[static_cast<size_t>(finished / WINDOW_NANOSECONDS)];
+                        ++result.m_successes[static_cast<size_t>(finished / kWindowNanoseconds)];
                     }
                 }
             }

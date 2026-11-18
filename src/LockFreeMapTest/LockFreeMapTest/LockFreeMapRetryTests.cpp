@@ -56,6 +56,8 @@ static bool CapacityCase(unsigned mode)
     if (mode == 2 || mode == 3)
     {
         std::atomic<bool> finished(false);
+        /** 在独立线程显式等待容量，返回状态后发布finished
+        */
         LockFreeMapTestThread worker([&]()
         {
             status = map.trySet(2, candidate, (mode & 1) != 0, true);
@@ -98,6 +100,9 @@ static bool CapacityCase(unsigned mode)
 static bool ReentryCase(LockFreeMap<int, int>& map)
 {
     LockFreeMapStatus nested = LOCK_FREE_MAP_INVALID;
+    /** 借用期间重入等待容量的写入，检查不会等待自身释放记录
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    */
     return map.lockFreeMapVisit(1, [&map, &nested](const int&)
     {
         nested = map.trySet(2, 8, true, true);
@@ -117,6 +122,8 @@ static bool ContentionCase(bool retry, bool capacity)
         return false;
     }
     unsigned changes = 0, errors = 0;
+    /** 首次输出赋值时修改无关键，制造真实发布竞争
+    */
     std::function<void()> change = [&]()
     {
         if (changes++ == 0)
@@ -143,6 +150,8 @@ static bool QueryContentionCase(bool retry)
     {
         return false;
     }
+    /** 至多32次改变较小无关键，检查查询竞争重试选项
+    */
     std::function<void()> change = [&]()
     {
         if (changes < 32)
@@ -177,6 +186,8 @@ static bool OwnerPublicationCase()
     }
     record->release();
     std::atomic<bool> acquired(false), release(false), failed(false);
+    /** 领取记录后暂停拥有者发布，检查提示与真实所有权的区分
+    */
     LockFreeMapTestThread worker([&]()
     {
         // 这是 acquire 内部第一步的真实 CAS；在下一步发布归属之前停住。
@@ -227,6 +238,8 @@ static bool OwnerReuseCase(size_t count)
             return false;
         }
         std::atomic<size_t> unavailable(0), unexpected(0);
+        /** 在全部记录已被占用时反复申请，分别累计资源不足和异常结果
+        */
         LockFreeMapTestThread blocked([&]()
         {
             for (size_t attempt = 0; attempt < 100000; ++attempt)
@@ -261,6 +274,8 @@ static bool OwnerReuseCase(size_t count)
     LockFreeMapTestThreadGroup group(workers, &start);
     for (size_t worker = 0; worker < 8; ++worker)
     {
+        /** 共同起跑后反复领取及归还记录，检查当前线程拥有者识别
+        */
         workers.emplace_back([&, worker]()
         {
             while (!start.load())
@@ -484,6 +499,10 @@ bool LockFreeMapRetryTest()
         LockFreeMapConfig config;
         config.nodes.initialCapacity = config.values.initialCapacity = 0;
         unsigned calls = 0;
+        /** 统计增长策略调用次数并明确拒绝增长
+        @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+        @return 始终返回零，表示拒绝增长
+        */
         config.nodes.grow = [&calls](const LockFreeMapGrowContext&) -> size_t
         {
             ++calls;
@@ -508,6 +527,8 @@ bool LockFreeMapRetryTest()
     }
 #ifndef LOCK_FREE_MAP_TEST_SINGLE
     bool otherThread = false;
+    /** 换线程执行嵌套借用的资源限制检查，结果在join后读取
+    */
     LockFreeMapTestThread worker([&]() { otherThread = ReentryCase(nested); });
     if (!worker.join() || !otherThread || !OwnerReuseCase(2) || !OwnerReuseCase(3) ||
         !OwnerReuseCase(8) || !OwnerReuseCase(64) || !NestedRecordsCase())
@@ -568,12 +589,20 @@ bool LockFreeMapGrowthTest()
     LockFreeMapConfig config;
     config.nodes.initialCapacity = config.values.initialCapacity = 1;
     config.nodes.maximumCapacity = config.values.maximumCapacity = 128;
+    /** 累计节点池实际新增容量及通知次数，检查非零增长信息
+    @param [in] added 本次实际新增槽数
+    @note 第2个未命名参数是同步借用输入，本回调不使用其内容
+    */
     config.nodes.m_onGrowth = [&](size_t added, uint64_t count)
     {
         nodes.fetch_add(added);
         notifications.fetch_add(1);
         errors.fetch_add(added == 0 || count == 0 ? 1 : 0);
     };
+    /** 记录值池增长后抛受控异常，验证通知异常不撤销增长
+    @param [in] added 本次实际新增槽数
+    @note 第2个未命名参数是同步借用输入，本回调不使用其内容
+    */
     config.values.m_onGrowth = [&](size_t added, uint64_t count)
     {
         values.fetch_add(added);
@@ -587,6 +616,8 @@ bool LockFreeMapGrowthTest()
         return false;
     }
 #ifndef LOCK_FREE_MAP_TEST_SINGLE
+    /** 并发插入新键，触发实际增长并累计错误
+    */
     LockFreeMapTestThread worker([&]()
     {
         for (int key = 1; key <= 16; ++key)
@@ -628,6 +659,10 @@ bool LockFreeMapGrowthTest()
     LockFreeMap<int, int> denied(false);
     config.nodes.initialCapacity = 1;
     config.values.initialCapacity = 4;
+    /** 拒绝节点池增长，验证失败增长不产生成功通知
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    @return 始终返回零
+    */
     config.nodes.grow = [](const LockFreeMapGrowContext&) -> size_t { return 0; };
     if (denied.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK || !denied.set(1, 1) ||
         denied.lockFreeMapSet(2, 2) != LOCK_FREE_MAP_GROW_DENIED)

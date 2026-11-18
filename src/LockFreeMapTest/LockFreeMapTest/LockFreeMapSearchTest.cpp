@@ -39,6 +39,9 @@ static bool CheckSearchResults(const LockFreeMap<Key, int, Compare>& map,
         }
         unsigned calls = 0;
         int borrowed = -1;
+        /** 复制借用值并记录调用次数，与独立std容器比较
+        @param [in] current 本次输入值；引用仅在当前回调期间借用，不向外保存
+        */
         const LockFreeMapStatus status = map.lockFreeMapVisit(key, [&](const int& current)
         {
             ++calls;
@@ -183,6 +186,9 @@ static bool CheckSearchLargeRange()
         }
         // 用公开重入读取登记第二条操作记录，随后覆盖写会走与并发调用相同的搜索分支。
         bool nested = false;
+        /** 持有当前借用时重入精确查询，检查嵌套输出值
+        @param [in] value 本次输入值；引用仅在当前回调期间借用，不向外保存
+        */
         if (map.lockFreeMapVisit(0, [&](const int& value)
         {
             int next = -1;

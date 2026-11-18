@@ -10,8 +10,6 @@
 #include <thread>
 #include <vector>
 
-int LockFreeMapCompileExamples();
-
 /** 遍历回调中生成覆盖视图，再清空并维护；两层旧视图仍须完整有序
 @return 回调键值匹配独立固定序列，新根只含后插入项时true
 */
@@ -27,6 +25,10 @@ static bool CheckTraversalReentry()
     size_t outerSeen = 0, innerSeen = 0, innerCompleted = 0;
     bool valid = true;
     // 参数为外层保护视图中的借用，回调重入后仍只核对旧视图的固定序列。
+    /** 核对外层旧视图，并在首次回调中重入修改和遍历
+    @param [in] key 当前受保护条目的键，仅回调期间借用
+    @param [in] value 本次输入值；引用仅在当前回调期间借用，不向外保存
+    */
     const size_t outerCompleted = map.forEach([&](const int& key, const int& value)
     {
         valid = outerSeen < 3 && key == outerKeys[outerSeen] && value == key * 10 && valid;
@@ -34,6 +36,10 @@ static bool CheckTraversalReentry()
         {
             valid = map.erase(2) && map.set(1, 10) && valid;
             // 参数为内层覆盖视图中的借用；清空、重插和回收不能更改本次键集合。
+            /** 核对内层固定键序列，并重入清空、重插和维护
+            @param [in] innerKey 当前受保护条目的键，仅回调期间借用
+            @param [in] innerValue 本次输入值；引用仅在当前回调期间借用，不向外保存
+            */
             innerCompleted = map.forEach([&](const int& innerKey, const int& innerValue)
             {
                 valid = innerSeen < 3 && innerKey == innerKeys[innerSeen] && innerValue == innerKey * 10 && valid;
@@ -68,6 +74,10 @@ static bool CheckTraversalAppend()
     size_t outerSeen = 0, innerSeen = 0, innerCompleted = 0;
     bool valid = true;
     // 旧视图不包含之后追加的键；持有它时内层新视图必须能读取新尾项。
+    /** 检查外层视图不包含后来追加项，并记录outerSeen
+    @param [in] key 当前受保护条目的键，仅回调期间借用
+    @param [in] value 本次输入值；引用仅在当前回调期间借用，不向外保存
+    */
     const size_t outerCompleted = map.forEach([&](const int& key, const int& value)
     {
         valid = key == static_cast<int>(outerSeen) && value == key + 10 && valid;
@@ -75,6 +85,10 @@ static bool CheckTraversalAppend()
         {
             valid = map.set(3, 13) && valid;
             // 同时保留两层视图后继续追加，检查新索引不依赖旧视图及时释放。
+            /** 检查内层视图包含新尾项，继续追加及清空后仍保持原键序列
+            @param [in] innerKey 当前受保护条目的键，仅回调期间借用
+            @param [in] innerValue 本次输入值；引用仅在当前回调期间借用，不向外保存
+            */
             innerCompleted = map.forEach([&](const int& innerKey, const int& innerValue)
             {
                 valid = innerKey == static_cast<int>(innerSeen) && innerValue == innerKey + 10 && valid;
@@ -148,6 +162,9 @@ static bool CheckLegacyNode()
     std::vector<std::weak_ptr<uint32_t>> observed(kCount);
     std::atomic<size_t> errors(0);
     // 每个工作者只写自己的弱引用区间，追加成功后把新值节点的唯一所有权交给兼容节点。
+    /** 在本工作者独占区间创建值节点并转交所有权，错误累计到errors
+    @param [in] worker 从零开始的工作者编号，仅访问其分配区间
+    */
     const auto append = [&](size_t worker)
     {
         for (size_t offset = 0; offset < kPerWorker; ++offset)
@@ -174,6 +191,8 @@ static bool CheckLegacyNode()
     for (size_t worker = 0; worker < kWorkers; ++worker)
     {
         // 等主线程统一放行；启动失败时线程组析构也会开放入口并回收已启动线程。
+        /** 等待共同启动门后追加本线程区间，线程组负责异常放行及join
+        */
         workers.emplace_back([&, worker]()
         {
             while (!started.load())

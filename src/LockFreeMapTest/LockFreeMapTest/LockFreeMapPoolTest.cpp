@@ -17,10 +17,18 @@ int LockFreeMapPoolModule()
         config.initialCapacity = 2;
         config.maximumCapacity = 3;
         config.blockRecordLimit = 4;
+        /** 申请超出池上限的增量，验证内部裁剪
+        @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+        @return 返回期望新增10个槽
+        */
         config.grow = [](const LockFreeMapGrowContext&) -> size_t
         {
             return 10;
         };
+        /** 按当前可复用容量请求整块缩容
+        @param [in] context 借用的扩缩容观察上下文，不代表容量预留
+        @return 返回期望释放槽数及1毫秒连续空闲要求
+        */
         config.shrink = [](const LockFreeMapShrinkContext& context) -> LockFreeMapShrinkDecision
         {
             return LockFreeMapShrinkDecision(context.reusableCapacity, 1);
@@ -104,10 +112,18 @@ int LockFreeMapPoolModule()
         timedConfig.initialCapacity = 0;
         timedConfig.maximumCapacity = 1;
         timedConfig.blockRecordLimit = 4;
+        /** 给受控缩容时序逐次增长一个槽
+        @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+        @return 返回期望新增1个槽
+        */
         timedConfig.grow = [](const LockFreeMapGrowContext&)
         {
             return size_t(1);
         };
+        /** 在缩容策略处受控暂停，供外部制造复用交错
+        @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+        @return 返回本测试配置的缩容决策
+        */
         timedConfig.shrink = [&](const LockFreeMapShrinkContext&)
         {
             if (pausePolicy.exchange(0) != 0)
@@ -135,6 +151,8 @@ int LockFreeMapPoolModule()
         }
         timed.release(timedSlot);
         pausePolicy.store(1);
+        /** 单独执行维护，使策略暂停不阻止控制线程制造交错
+        */
         LockFreeMapTestThread maintenance([&]()
         {
             size_t amount = 0; timed.maintain(4, amount);
@@ -178,6 +196,10 @@ int LockFreeMapPoolModule()
         ratioConfig.initialCapacity = 2;
         ratioConfig.maximumCapacity = 5;
         // 向上取整的新增容量仍必须按实际剩余额度截断
+        /** 按比例申请增量，检查有限上限下的裁剪
+        @param [in] context 借用的扩缩容观察上下文，不代表容量预留
+        @return 返回当前容量的一半加一，单位为槽
+        */
         ratioConfig.grow = [](const LockFreeMapGrowContext& context) -> size_t
         {
             return context.currentCapacity / 2 + 1;
@@ -207,6 +229,10 @@ int LockFreeMapPoolModule()
         LockFreeMapPoolConfig recordsConfig;
         recordsConfig.initialCapacity = 0;
         recordsConfig.blockRecordLimit = 1;
+        /** 每次只请求一个槽，检查块目录耗尽状态
+        @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+        @return 返回期望新增1个槽
+        */
         recordsConfig.grow = [](const LockFreeMapGrowContext&) -> size_t
         {
             return 1;
@@ -244,6 +270,8 @@ int LockFreeMapPoolModule()
             {
                 for (; started < 8; ++started)
                 {
+                    /** 归还一个已取得的拥有引用，最后引用仍需受保护借用解除后回收
+                    */
                     releases[started] = LockFreeMapTestThread([&deferred, borrowed]()
                     {
                         deferred.release(borrowed);

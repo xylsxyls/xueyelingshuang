@@ -29,6 +29,10 @@ bool LockFreeMapSingleBenchmark::validate(const LockFreeMapSingleContainer& map,
     }
 #else
     // 核对每一个键值及顺序；失败只记录，不在回调中抛异常
+    /** 逐项核对键值及顺序，更新index和valid，不计入负载时间
+    @param [in] key 当前受保护条目的键，仅回调期间借用
+    @param [in] value 本次输入值；引用仅在当前回调期间借用，不向外保存
+    */
     map.forEach([&index, &valid, &expected](const uint32_t& key, const uint64_t& value) -> void
     {
         valid = index < expected.size() && key == index * 2 && value == expected[index] && valid;
@@ -289,6 +293,11 @@ int LockFreeMapSingleBenchmark::run(int argc, char** argv)
     return std::cout.good() ? 0 : 3;
 }
 
+/** 执行单线程基准并把逃逸异常转换为进程退出码
+@param [in] argc 参数数量
+@param [in] argv 单项选择、校准、诊断或46项次数列表
+@return 正常返回run的状态；标准异常返回100，其他异常返回101
+*/
 int main(int argc, char** argv)
 {
     try

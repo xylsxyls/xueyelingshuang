@@ -81,6 +81,9 @@ bool LockFreeMapTestRunner::selection(const char* text, std::set<unsigned>& ids)
 int LockFreeMapTestRunner::run(int argc, char** argv)
 {
     std::map<unsigned, LockFreeMapTestEntry> cases = {
+        /** 把有序参考检查的错误数转换为注册表布尔结果
+        @return 错误数为零时true
+        */
         { LOCK_FREE_MAP_TEST_BASIC, { "有序参考随机对照", false, []() { return LockFreeMapBasic() == 0; } } },
 #ifndef LOCK_FREE_MAP_TEST_SINGLE
         { LOCK_FREE_MAP_TEST_TOKENS, { "版本凭据和地址复用", false, &LockFreeMapTests::tokens } },
@@ -98,32 +101,59 @@ int LockFreeMapTestRunner::run(int argc, char** argv)
         { LOCK_FREE_MAP_TEST_POOL_CONCURRENCY, { "并发池额度", true, &LockFreeMapTests::poolConcurrency } },
         { LOCK_FREE_MAP_TEST_PAUSED_RECLAIMER, { "暂停回收时推进", false, &LockFreeMapTests::pausedReclaimer } },
         { LOCK_FREE_MAP_TEST_HISTORY_BOUND, { "历史版本有界", true, &LockFreeMapTests::historyBound } },
+        /** 把池模块检查的错误数转换为注册表布尔结果
+        @return 错误数为零时true
+        */
         { LOCK_FREE_MAP_TEST_POOL, { "池模块独立检查", false, []() { return LockFreeMapPoolModule() == 0; } } },
+        /** 把历史兼容检查的错误数转换为注册表布尔结果
+        @return 错误数为零时true
+        */
         { LOCK_FREE_MAP_TEST_HISTORICAL, { "原五十二项兼容检查", true, []() { return LockFreeMapHistorical() == 0; } } },
         { LOCK_FREE_MAP_TEST_PAUSED_GROWTH, { "暂停申请与预留额度", false, &LockFreeMapTests::pausedGrowth } },
         { LOCK_FREE_MAP_TEST_RETIRED_VERSION, { "旧版本退役竞争", false, &LockFreeMapTests::retiredVersionRace } },
         { LOCK_FREE_MAP_TEST_HELPING, { "描述符帮助和清空", false, &LockFreeMapTests::descriptorHelping } },
         { LOCK_FREE_MAP_TEST_FAST_UPDATES, { "无申请更新和条件累加", true, &LockFreeMapTests::fastUpdates } },
+        /** 把四库共存检查的错误数转换为注册表布尔结果
+        @return 错误数为零时true
+        */
         { LOCK_FREE_MAP_TEST_HEADERS, { "四库公开头共存", false, []() { return LockFreeMapHeaders() == 0; } } },
         { LOCK_FREE_MAP_TEST_DIRECT_KEY, { "直接构造键及回滚", false, &LockFreeMapTests::directKeyConstruction } },
         { LOCK_FREE_MAP_TEST_SMALL_BUDGET, { "小预算回收与暂停读者", false, &LockFreeMapTests::smallBudget } },
         { LOCK_FREE_MAP_TEST_SHARED_INDEX, { "索引引用转交与暂停发布者", false, &LockFreeMapTests::sharedIndex } },
         { LOCK_FREE_MAP_TEST_SLOT_CACHE, { "空槽转交与释放后重建", false, &LockFreeMapTests::slotCache } },
         { LOCK_FREE_MAP_TEST_DETACHED_DESTRUCTION, { "独占析构暂停与槽复用", false, &LockFreeMapTests::detachedDestruction } },
+        /** 把竞争协议检查的错误数转换为注册表布尔结果
+        @return 错误数为零时true
+        */
         { LOCK_FREE_MAP_TEST_CONTENTION, { "竞争让步及暂停请求者", false, []() { return LockFreeMapContentionProtocol() == 0; } } },
+        /** 把逐线程进展检查的错误数转换为注册表布尔结果
+        @return 错误数为零时true
+        */
         { LOCK_FREE_MAP_TEST_PROGRESS, { "生产消费逐线程进展", true, []() { return LockFreeMapConcurrentProgress() == 0; } } },
+        /** 把查询交错检查的错误数转换为注册表布尔结果
+        @return 错误数为零时true
+        */
         { LOCK_FREE_MAP_TEST_QUERY_PROGRESS, { "精确查询与结构修改交错", false, []() { return LockFreeMapQueryProgress() == 0; } } },
         { LOCK_FREE_MAP_TEST_LATE_ARRIVAL, { "后来线程逐窗口推进", true, &LockFreeMapArrivalTest::run } },
 #endif
         { LOCK_FREE_MAP_TEST_RETRY_OPTIONS, { "容量与竞争独立重试", false, &LockFreeMapRetryTest } },
         { LOCK_FREE_MAP_TEST_GROWTH_NOTIFICATION, { "扩容通知合同", false, &LockFreeMapGrowthTest } },
         { LOCK_FREE_MAP_TEST_SEARCH, { "查询边界和自定义顺序", false, &LockFreeMapSearchTest } },
+        /** 把统一接口样例的错误数转换为注册表布尔结果
+        @return 错误数为零时true
+        */
         { LOCK_FREE_MAP_TEST_EXAMPLES, { "六端统一接口样例", false, []() { return LockFreeMapCompileExamples() == 0; } } },
+        /** 执行状态合同检查并记录其结果
+        @return 检查返回零且报告写入成功时true
+        */
         { LOCK_FREE_MAP_TEST_STATUS_CONTRACT, { "普通接口重试与资源错误", false, []()
         {
             const int result = LockFreeMapStatusContract();
             return std::fprintf(LockFreeMapTestReport::m_file, "status_contract,result,%d\n", result) > 0 && result == 0;
         } } },
+        /** 把平台能力检查的错误数转换为注册表布尔结果
+        @return 错误数为零时true
+        */
         { LOCK_FREE_MAP_TEST_PLATFORM, { "原子对齐及低内存", false, []() { return LockFreeMapPlatform() == 0; } } },
         { LOCK_FREE_MAP_TEST_ARGUMENTS, { "参数与报告错误退出码", false, &LockFreeMapTestRunner::arguments } }
     };
@@ -133,11 +163,19 @@ int LockFreeMapTestRunner::run(int argc, char** argv)
     if (accounting)
     {
         cases.clear();
+        /** 启动受控异常线程以检查框架失败计数
+        @return 线程回收成功时true，线程异常由框架独立计为失败
+        */
         cases.insert(std::make_pair(1U, LockFreeMapTestEntry{ "预期线程异常", false, []() -> bool
         {
+            /** 故意抛出线程异常，验证入口捕获并累计失败
+            */
             LockFreeMapTestThread worker([]() { throw std::runtime_error("controlled worker failure"); });
             return worker.join();
         } }));
+        /** 给故障自检提供随后正常用例，确认失败状态被正确隔离
+        @return 始终返回true
+        */
         cases.insert(std::make_pair(2U, LockFreeMapTestEntry{ "随后正常用例", false, []() -> bool { return true; } }));
     }
 #else

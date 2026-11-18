@@ -24,6 +24,8 @@ int LockFreeMapContentionProtocol()
             }
             // 请求者保持暂停，其他线程仍须消耗有限退避提示并持续推进
             domain.requestConditional();
+            /** 在请求者暂停时反复领取记录并响应退避提示，记录实际完成数
+            */
             LockFreeMapTestThread worker([&domain, &completed]()
             {
                 for (unsigned iteration = 0; iteration < 10000; ++iteration)
@@ -143,6 +145,8 @@ int LockFreeMapQueryProgress()
     bool changed = false;
     unsigned errors = 0;
     // 查询已保护旧键后删除并重插，旧值仍可观察，但旧凭据不能修改新条目
+    /** 首次比较时删除并重插原键，记录changed及失败数
+    */
     std::function<void()> replace = [&map, &changed, &errors]()
     {
         if (!changed)
@@ -161,6 +165,8 @@ int LockFreeMapQueryProgress()
     }
     changed = false;
     // clear 后新提交的键属于新索引；重叠查询允许完成旧观察，不能让旧凭据复活
+    /** 首次比较时清空并提交新根，用于检查旧查询与新集合隔离
+    */
     replace = [&map, &changed, &errors]()
     {
         if (!changed)
@@ -177,6 +183,8 @@ int LockFreeMapQueryProgress()
     }
     changed = false;
     // 条件提取会关闭旧值入口；随后重插时，旧视图的借用应返回未找到且不执行回调
+    /** 首次比较时条件提取并重插，关闭旧值入口
+    */
     replace = [&map, &changed, &errors]()
     {
         if (!changed)
@@ -189,6 +197,9 @@ int LockFreeMapQueryProgress()
     };
     unsigned calls = 0;
     // 关闭的旧入口不得执行用户借用回调
+    /** 累计借用回调次数，旧入口关闭时该计数必须保持零
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    */
     const LockFreeMapStatus status = map.lockFreeMapVisit(query, [&calls](const int&)
     {
         ++calls;
@@ -200,6 +211,8 @@ int LockFreeMapQueryProgress()
     }
     unsigned invalidations = 0;
     // 每次比较都使已有根过期，强制生产和消费跨过多轮让步阈值后仍正常完成
+    /** 至多256次改变无关键，使根失效但不更改目标版本
+    */
     replace = [&map, &invalidations, &errors]()
     {
         if (invalidations < 256)
