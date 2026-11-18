@@ -29,13 +29,13 @@ public:
 
     /** 读取任务目录数量
     @param [in,out] thread 线程对象
-    @return 观察到的记录数；已经退出返回 0
+    @return 真实观察到的记录数；退出后检查静止存储，保护不足或清理尚在进行时抛测试异常
     */
     static size_t recordCount(CTaskThread& thread);
 
     /** 读取优先级桶数
     @param [in,out] thread 线程对象
-    @return 观察数量
+    @return 真实观察数量；清理尚在进行且无法安全观察时抛测试异常
     */
     static size_t bucketCount(CTaskThread& thread);
 
@@ -44,6 +44,11 @@ public:
     @return 是否出现资源压力；只供独立新建的容量用例判断触发前提
     */
     static bool capacityPressure(CTaskThread& thread);
+
+    /** 在门控用例开始新一轮投递前清除旧压力提示，不修改接纳额度
+    @param [in,out] thread 消费者已门控且没有其他投递调用的线程
+    */
+    static void resetCapacityPressure(CTaskThread& thread);
 
     /** 关闭允许退役的空桶但不摘除，验证生产者能帮助完成删除
     @param [in,out] thread 工作线程
@@ -67,7 +72,7 @@ public:
 
     /** 占用管理器的真实 Map 保护记录
     @param [in] held 有界回调；管理器必须包含至少一个线程
-    @return 是否进入回调
+    @return 是否取得保护且回调正常完成，未调用或回调抛异常返回 false
     */
     static bool holdManagerRead(const std::function<void()>& held);
 

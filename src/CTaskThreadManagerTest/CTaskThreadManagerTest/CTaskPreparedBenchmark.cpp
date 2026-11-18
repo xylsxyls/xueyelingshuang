@@ -762,7 +762,7 @@ int runPreparedTaskBenchmark(int argc, char** argv)
             }
         }
         const uint64_t finish = state.m_finish.load();
-        if (finish < start || submit < start || drained < finish || drained < submit)
+        if (finish <= start || submit <= start || drained < finish || drained < submit)
         {
             throw std::runtime_error("prepared timing endpoints are inconsistent");
         }
@@ -952,6 +952,11 @@ void CTaskPreparedProducer::produceWindow()
 }
 
 #ifdef CTTM_PREPARED_MAIN
+/** 独立构建时转入预建任务的并发性能测试入口
+@param [in] argc 命令行参数数量
+@param [in] argv 当前入口的命令行参数数组
+@return 0表示所选检查成功，非零表示失败或当前组合不适用
+*/
 int main(int argc, char** argv)
 {
     return runPreparedTaskBenchmark(argc, argv);

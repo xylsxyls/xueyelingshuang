@@ -205,6 +205,7 @@ void CTaskTestAutomation::summarize(const std::string& output, const std::vector
     const std::vector<std::string>& labels)
 {
     bbCheck(reports.size() == labels.size() && !reports.empty(), "missing report labels");
+    const std::set<std::string> expectedLabels(labels.begin(), labels.end());
     std::map<std::string, std::map<std::string, std::vector<double>>> groups;
     for (size_t file = 0; file < reports.size(); ++file)
     {
@@ -263,6 +264,8 @@ void CTaskTestAutomation::summarize(const std::string& output, const std::vector
     for (std::map<std::string, std::map<std::string, std::vector<double>>>::const_iterator group = groups.begin(); group != groups.end(); ++group)
     {
         const std::map<std::string, std::vector<double>>& runs = group->second;
+        // 某版本整项缺失时，不能把只有基线的指标也当成完整比较。
+        bbCheck(runs.size() == expectedLabels.size(), "missing same-scenario comparison version");
         const std::map<std::string, std::vector<double>>::const_iterator base = runs.find(labels[0]);
         bbCheck(base != runs.end(), "missing same-scenario baseline");
         const double baseline = median(base->second);
@@ -416,6 +419,19 @@ void CTaskTestAutomation::selfTest()
         }
         bbCheck(rejected, "failed benchmark was accepted by summary");
     }
+    // 候选报告仍然合法，但缺少基线中的一个场景，必须拒绝不完整比较。
+    bbWrite(base, header + "throughput,4,1,0,10,10,10,20\nthroughput,8,1,0,10,10,10,25\n");
+    bbWrite(candidate, header + "throughput,4,1,0,10,10,10,30\n");
+    bool missingScenarioRejected = false;
+    try
+    {
+        summarize(output, {base, candidate}, {"baseline", "current"});
+    }
+    catch (const std::exception&)
+    {
+        missingScenarioRejected = true;
+    }
+    bbCheck(missingScenarioRejected, "missing candidate scenario was accepted by summary");
     // 空闲所有者不启动监控或创建子进程；随后启动的自有进程才能被处置。
     {
         BlackBoxChild inactive;

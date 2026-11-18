@@ -83,7 +83,7 @@ void CTaskBenchmarkState::submitted(uint64_t timestamp)
 }
 
 CTaskBenchmarkItem::CTaskBenchmarkItem(CTaskBenchmarkState& state, size_t producer, size_t sequence, uint64_t timestamp) :
-m_state(state),
+m_state(&state),
 m_producer(producer),
 m_sequence(sequence),
 m_timestamp(timestamp)
@@ -93,31 +93,31 @@ m_timestamp(timestamp)
 
 void CTaskBenchmarkItem::doTask()
 {
-    const size_t index = m_producer * m_state.m_count + m_sequence;
-    if (m_state.m_seen[index]++ != 0 ||
-        CTaskBenchmarkState::digest(static_cast<uint64_t>(index) + 1, m_state.m_work) != m_state.m_expected[index])
+    const size_t index = m_producer * m_state->m_count + m_sequence;
+    if (m_state->m_seen[index]++ != 0 ||
+        CTaskBenchmarkState::digest(static_cast<uint64_t>(index) + 1, m_state->m_work) != m_state->m_expected[index])
     {
-        ++m_state.m_errors;
+        ++m_state->m_errors;
     }
-    const size_t levels = static_cast<size_t>(m_state.m_levels);
+    const size_t levels = static_cast<size_t>(m_state->m_levels);
     const size_t stream = m_producer * levels + m_sequence % levels;
-    if (m_state.m_next[stream]++ != m_sequence / levels)
+    if (m_state->m_next[stream]++ != m_sequence / levels)
     {
-        ++m_state.m_errors;
+        ++m_state->m_errors;
     }
     if (m_timestamp != 0)
     {
-        m_state.m_latency[index] = CTaskBenchmarkState::now() - m_timestamp;
+        m_state->m_latency[index] = CTaskBenchmarkState::now() - m_timestamp;
     }
-    if (m_state.m_completed.fetch_add(1, std::memory_order_acq_rel) + 1 == m_state.m_expected.size())
+    if (m_state->m_completed.fetch_add(1, std::memory_order_acq_rel) + 1 == m_state->m_expected.size())
     {
-        m_state.m_finishTime.store(CTaskBenchmarkState::now(), std::memory_order_release);
+        m_state->m_finishTime.store(CTaskBenchmarkState::now(), std::memory_order_release);
     }
 }
 
 CTaskBenchmarkProducer::CTaskBenchmarkProducer(CTaskBenchmarkState& state, const std::shared_ptr<CTaskThread>& target,
     size_t producer, bool lookup) :
-m_state(state),
+m_state(&state),
 m_target(target),
 m_producer(producer),
 m_lookup(lookup)
@@ -127,39 +127,39 @@ m_lookup(lookup)
 
 void CTaskBenchmarkProducer::stopTask()
 {
-    m_state.m_stop.store(true, std::memory_order_release);
+    m_state->m_stop.store(true, std::memory_order_release);
 }
 
 void CTaskBenchmarkProducer::doTask()
 {
     try
     {
-        m_state.m_ready.fetch_add(1, std::memory_order_release);
-        while (!m_state.m_start.load(std::memory_order_acquire) && !m_state.m_stop.load(std::memory_order_acquire))
+        m_state->m_ready.fetch_add(1, std::memory_order_release);
+        while (!m_state->m_start.load(std::memory_order_acquire) && !m_state->m_stop.load(std::memory_order_acquire))
         {
             std::this_thread::yield();
         }
         size_t sequence = 0;
-        for (; sequence < m_state.m_count && !m_state.m_stop.load(std::memory_order_acquire); ++sequence)
+        for (; sequence < m_state->m_count && !m_state->m_stop.load(std::memory_order_acquire); ++sequence)
         {
             const uint64_t timestamp = (sequence & 63) == 0 ? CTaskBenchmarkState::now() : 0;
             if (m_lookup)
             {
-                const uint32_t id = m_state.m_targets[(sequence + m_producer) % m_state.m_targets.size()];
+                const uint32_t id = m_state->m_targets[(sequence + m_producer) % m_state->m_targets.size()];
                 const std::shared_ptr<CTaskThread> found = CTaskThreadManager::instance().getThreadInterface(id);
                 if (!found || found->threadId() != id)
                 {
-                    ++m_state.m_errors;
+                    ++m_state->m_errors;
                 }
                 if (timestamp != 0)
                 {
-                    m_state.m_latency[m_producer * m_state.m_count + sequence] = CTaskBenchmarkState::now() - timestamp;
+                    m_state->m_latency[m_producer * m_state->m_count + sequence] = CTaskBenchmarkState::now() - timestamp;
                 }
             }
             else
             {
-                std::shared_ptr<CTask> item(new CTaskBenchmarkItem(m_state, m_producer, sequence, timestamp));
-                const int32_t level = static_cast<int32_t>(sequence % m_state.m_levels) + 1;
+                std::shared_ptr<CTask> item(new CTaskBenchmarkItem(*m_state, m_producer, sequence, timestamp));
+                const int32_t level = static_cast<int32_t>(sequence % m_state->m_levels) + 1;
 #if defined(CTTM_BENCH_NEW) || defined(CTTM_TEST_NO_LEGACY_SEND_TASK)
                 const CTaskThreadResult result = CTaskPostCompatibility::submit(*m_target, item, level, 0);
                 if (!result.m_committed || result.m_status != CTaskThreadOk)
@@ -171,29 +171,29 @@ void CTaskBenchmarkProducer::doTask()
 #endif
             }
         }
-        m_state.m_accepted.fetch_add(sequence, std::memory_order_relaxed);
-        if (sequence != m_state.m_count)
+        m_state->m_accepted.fetch_add(sequence, std::memory_order_relaxed);
+        if (sequence != m_state->m_count)
         {
             // 提前终止不能把计划数量记为实际接纳，也不能让查询模式伪造完整完成数。
-            ++m_state.m_errors;
-            m_state.m_stop.store(true, std::memory_order_release);
+            ++m_state->m_errors;
+            m_state->m_stop.store(true, std::memory_order_release);
             return;
         }
         const uint64_t timestamp = CTaskBenchmarkState::now();
-        m_state.submitted(timestamp);
-        if (m_lookup && m_state.m_completed.fetch_add(m_state.m_count, std::memory_order_acq_rel) + m_state.m_count == m_state.m_expected.size())
+        m_state->submitted(timestamp);
+        if (m_lookup && m_state->m_completed.fetch_add(m_state->m_count, std::memory_order_acq_rel) + m_state->m_count == m_state->m_expected.size())
         {
-            m_state.m_finishTime.store(CTaskBenchmarkState::now(), std::memory_order_release);
+            m_state->m_finishTime.store(CTaskBenchmarkState::now(), std::memory_order_release);
         }
     }
     catch (...)
     {
-        ++m_state.m_errors;
-        m_state.m_stop = true;
+        ++m_state->m_errors;
+        m_state->m_stop = true;
     }
 }
 
-/** 有截止时间地等待基准条件。
+/** 有截止时间地等待基准条件
 @param [in] condition 成功条件
 @param [in,out] state 错误及停止状态
 */
@@ -232,7 +232,7 @@ static void BenchmarkDrain(CTaskThreadManager& manager, uint32_t id)
 #endif
 }
 
-/** 查询进程 CPU 和资源观测。
+/** 查询进程 CPU 和资源观测
 @param [out] cpuNanoseconds CPU 时间
 @param [out] privateBytes 私有字节
 @param [out] peakWorkingBytes 历史峰值工作集
@@ -445,6 +445,10 @@ int runTaskThreadBenchmark(int argc, char** argv)
         {
             throw std::runtime_error("benchmark latency sample count mismatch");
         }
+        if (state.m_finishTime.load() <= startTime || state.m_submitTime.load() <= startTime)
+        {
+            throw std::runtime_error("benchmark duration must be positive");
+        }
         const double completeMs = static_cast<double>(state.m_finishTime.load() - startTime) / 1000000.0;
         const double submitMs = static_cast<double>(state.m_submitTime.load() - startTime) / 1000000.0;
         std::ofstream output(argv[6], std::ios::binary | std::ios::trunc);
@@ -487,6 +491,11 @@ int runTaskThreadBenchmark(int argc, char** argv)
 }
 
 #ifdef CTTM_BENCHMARK_MAIN
+/** 独立构建时转入辅助性能测试入口
+@param [in] argc 命令行参数数量
+@param [in] argv 当前入口的命令行参数数组
+@return 0表示所选检查成功，非零表示失败或当前组合不适用
+*/
 int main(int argc, char** argv)
 {
     return runTaskThreadBenchmark(argc, argv);

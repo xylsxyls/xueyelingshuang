@@ -3,6 +3,48 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CTaskThreadManagerTest.h"
 
+/** 停止通知故意失败，执行体仍由外部门控控制，检验退出必须完成 join
+*/
+class TestStopFailureTask : public CTask
+{
+public:
+    /** 借用完整用例期间存活的同步标记
+    @param [in,out] entered 执行体已经启动
+    @param [in,out] notified 停止回调已被调用
+    @param [in,out] release 外部允许执行体退出
+    */
+    TestStopFailureTask(std::atomic<bool>& entered, std::atomic<bool>& notified,
+        std::atomic<bool>& release);
+
+    /** 等待外部放行；停止回调抛异常不会替执行体结束
+    */
+    virtual void doTask();
+
+    /** 发布通知后抛测试异常，由被测库捕获并记录
+    */
+    virtual void stopTask();
+
+private:
+    // 借用进入标记，工作线程 join 前有效
+    std::atomic<bool>* m_entered;
+    // 借用通知标记，停止调用返回前有效
+    std::atomic<bool>* m_notified;
+    // 借用退出门控，工作线程 join 前有效
+    std::atomic<bool>* m_release;
+};
+
+/** 验证单线程注销和线程池关闭遇到停止回调异常仍等待执行结束，保留错误且后续可注销登记
+*/
+void taskStopFailureJoinTest();
+
+/** 持续分配失败时析构线程池，控制任务和业务线程必须先退出，恢复分配后可清理登记
+*/
+void taskPoolLowMemoryDestructionTest();
+
+/** 关闭期间保护记录耗尽时，线程池析构仍等待借用归还并完成线程退出
+*/
+void taskPoolProtectionDestructionTest();
+
 /** 用屏障强制多个生产者同时进入同一原任务的重做回调
 */
 class TestConcurrentRedoTask : public RedoTask
@@ -23,9 +65,9 @@ public:
 
 private:
     // 本轮创建的生产者全部退出前有效
-    std::atomic<int32_t>& m_entered;
+    std::atomic<int32_t>* m_entered;
     // 本轮创建的生产者全部退出前有效
-    std::atomic<bool>& m_release;
+    std::atomic<bool>* m_release;
 };
 
 /** 验证默认属性 ID、显式属性 ID 和克隆属性的任务

@@ -4,7 +4,8 @@
 #include <vector>
 #include <memory>
 
-/** 单个生产线程的独立进展计数，填充用于避免监测计数彼此共享缓存行 */
+/** 单个生产线程的独立进展计数，填充用于避免监测计数彼此共享缓存行
+*/
 struct CTaskFairnessCounter
 {
 public:
@@ -32,15 +33,18 @@ public:
     uint64_t m_retries;
 
 public:
-    /** 构造清零的监测记录 */
+    /** 构造清零的监测记录
+    */
     CTaskFairnessCounter();
 
-    /** 发布本线程进展并更新事件时间间隔 */
+    /** 发布本线程进展并更新事件时间间隔
+    */
     void publish();
 
 };
 
-/** 公平性用例状态；任务预建完成后冻结布局，生产计数各自独占、消费计数单消费者独占 */
+/** 公平性用例状态；任务预建完成后冻结布局，生产计数各自独占、消费计数单消费者独占
+*/
 class CTaskFairnessState
 {
 public:
@@ -81,7 +85,8 @@ public:
     uint64_t m_begin;
 };
 
-/** 只做公平性计数和顺序核对的预建任务，不用于无仪表吞吐成绩 */
+/** 只做公平性计数和顺序核对的预建任务，不用于无仪表吞吐成绩
+*/
 class CTaskFairnessTask : public CTask
 {
 public:
@@ -92,7 +97,8 @@ public:
     */
     CTaskFairnessTask(CTaskFairnessState& state, size_t producer, size_t ordinal);
 
-    /** 唯一消费者记录进展 */
+    /** 唯一消费者记录进展
+    */
     virtual void doTask();
 
 private:

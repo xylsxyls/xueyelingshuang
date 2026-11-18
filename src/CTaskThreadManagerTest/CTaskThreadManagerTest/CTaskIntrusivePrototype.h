@@ -10,9 +10,13 @@
 struct CTaskPrototypeNode
 {
 public:
+    // 下一节点，仅在发布前初始化，发布后由原子链访问
     std::atomic<CTaskPrototypeNode*> m_next;
+    // 本生产者的独立校验序号
     uint64_t m_sequence;
+    // 节点来源的生产者下标
     size_t m_producer;
+    // 隔开相邻节点的共享写入
     unsigned char m_padding[64 - sizeof(std::atomic<CTaskPrototypeNode*>) - sizeof(uint64_t) - sizeof(size_t)];
 
 public:
@@ -42,10 +46,15 @@ public:
     CTaskPrototypeNode* pop();
 
 private:
+    // 本原型拥有的永久哨兵
     CTaskPrototypeNode m_dummy;
+    // 唯一消费者独占的队头
     CTaskPrototypeNode* m_head;
+    // 隔离消费游标与共享队尾
     unsigned char m_headPadding[64];
+    // 多生产者共同帮助推进的队尾
     std::atomic<CTaskPrototypeNode*> m_tail;
+    // 隔离队尾与相邻对象
     unsigned char m_tailPadding[64];
 };
 
@@ -65,8 +74,11 @@ public:
     LockFreeQueueChannelSegment<CTaskPrototypeNode>* acquire();
 
 private:
+    // 全部生产消费线程退出后统一释放的段数组
     std::unique_ptr<LockFreeQueueChannelSegment<CTaskPrototypeNode>[]> m_segments;
+    // 永久段总数
     const size_t m_count;
+    // 下一个可领取段的索引
     std::atomic<size_t> m_next;
 };
 
@@ -106,7 +118,9 @@ public:
     void retire(LockFreeQueueChannelSegment<CTaskPrototypeNode>* segment);
 
 private:
+    // 借用永久段集合，集合存活时间长于本租约
     CTaskPrototypeSegments* m_segments;
+    // 本发布者尚未提交的候选，所有权仍属于集合
     LockFreeQueueChannelSegment<CTaskPrototypeNode>* m_candidate;
 };
 
@@ -164,6 +178,7 @@ public:
     CTaskPrototypeNode* pop(CTaskPrototypeSegmentLease& lease);
 
 private:
+    // 借用永久段构成的发布通道
     LockFreeQueueChannel<CTaskPrototypeNode, CTaskPrototypeSegmentLease, CTaskPrototypePublisher> m_channel;
 };
 
@@ -172,8 +187,11 @@ private:
 struct CTaskPrototypeProgress
 {
 public:
+    // 最后成功提交时刻，单调纳秒
     uint64_t m_finished;
+    // 本生产者最后提交时观察到的全局已消费项数
     uint64_t m_consumed;
+    // 隔离各来源的结果写入
     unsigned char m_padding[48];
 
 public:

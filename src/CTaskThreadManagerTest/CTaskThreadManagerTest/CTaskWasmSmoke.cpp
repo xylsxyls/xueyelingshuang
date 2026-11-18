@@ -24,6 +24,9 @@ void CTaskWasmSmokeTask::doTask()
     m_ledger->push_back(m_value);
 }
 
+/** 运行独立 Wasm 线程和任务顺序冒烟检查
+@return 全部检查通过返回 0，失败返回 1
+*/
 int main()
 {
     std::vector<int32_t> ledger;

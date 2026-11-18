@@ -1,4 +1,4 @@
 ﻿#pragma once
 
 template <class Tag, typename Tag::Type Member>
-const bool CTaskPrivateBinding<Tag, Member>::s_bound = (Tag::s_member = Member, true);
+const bool CTaskPrivateBinding<Tag, Member>::m_bound = (Tag::m_member = Member, true);

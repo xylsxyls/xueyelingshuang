@@ -6,7 +6,7 @@
 #include <iostream>
 #include <thread>
 
-/** 投递与排空关闭竞争，独立比较成功接纳集合和执行集合。
+/** 投递与排空关闭竞争，独立比较成功接纳集合和执行集合
 */
 static void PostDrainRace()
 {
@@ -31,6 +31,7 @@ static void PostDrainRace()
                     const CTaskThreadResult result = worker->postTaskResult(task);
                     if (result.m_committed)
                     {
+                        bbCheck(result.m_status == CTaskThreadOk, "accepted post/drain task reported an internal error");
                         submitted[p].push_back(value);
                         ++accepted;
                         break;
@@ -48,7 +49,7 @@ static void PostDrainRace()
     {
         return accepted >= 500;
     }, "race established");
-    bbCheck(CTaskThreadManager::instance().waitForEnd(consumers.ids[0]).m_status == CTaskThreadOk, "racing drain failed");
+    bbCheck(CTaskThreadManager::instance().waitForEnd(consumers.m_ids[0]).m_status == CTaskThreadOk, "racing drain failed");
     producers.drain();
     consumers.drain();
     std::vector<int> expected;
@@ -62,7 +63,7 @@ static void PostDrainRace()
     bbCheck(actual == expected && actual.size() == static_cast<size_t>(accepted.load()), "drain lost/duplicated accepted set");
 }
 
-/** 两个调用者同时 join，只有一个拥有系统 join 操作权。
+/** 两个调用者同时 join，只有一个拥有系统 join 操作权
 */
 static void ConcurrentJoin()
 {
@@ -113,7 +114,7 @@ static void ConcurrentJoin()
         "concurrent join exposed Busy/Retry or returned before the worker exited");
 }
 
-/** 排空与丢弃关闭交错时，后来的停止意图不能被等待 join 的关闭者挡住。
+/** 排空与丢弃关闭交错时，后来的停止意图不能被等待 join 的关闭者挡住
 */
 static void ConcurrentPoolShutdown()
 {
@@ -131,7 +132,7 @@ static void ConcurrentPoolShutdown()
     std::shared_ptr<TestTask> task(new TestTask(1, [&](TestTask& self)
     {
         entered = true;
-        while (self.stops.load() == 0 && !rescue.load())
+        while (self.m_stops.load() == 0 && !rescue.load())
         {
             std::this_thread::yield();
         }
@@ -183,13 +184,13 @@ static void ConcurrentPoolShutdown()
     rescue = true;
     first.join();
     second.join();
-    bbCheck(enteredDrain && !neededRescue && task->stops > 0 &&
+    bbCheck(enteredDrain && !neededRescue && task->m_stops > 0 &&
             drained.m_status == CTaskThreadOk && discarded.m_status == CTaskThreadOk &&
             drained.m_committed && discarded.m_committed && pool.statistics().m_threads == 0,
         "concurrent pool shutdown withheld stop notification, exposed contention or retained workers");
 }
 
-/** 在自动扩缩容期间选择目标并核对每项只执行一次。
+/** 在自动扩缩容期间选择目标并核对每项只执行一次
 */
 static void PoolResizeTraffic()
 {
@@ -232,14 +233,13 @@ static void PoolResizeTraffic()
             {
                 uint32_t id = 0;
                 std::shared_ptr<CTaskThread> worker;
-                if (!allocator.select(id, worker).m_committed)
-                {
-                    return false;
-                }
+                const CTaskThreadResult selected = allocator.select(id, worker);
+                bbCheck(selected.m_status == CTaskThreadOk && selected.m_committed && worker,
+                    "resize traffic allocator failed while minimum workers remained available");
                 const CTaskThreadResult result = worker->postTaskResult(task);
-                bbCheck(result.m_committed || result.m_status == CTaskThreadClosed ||
-                        result.m_status == CTaskThreadCapacity,
-                    "resize traffic unexpected rejection");
+                bbCheck(result.m_committed ? result.m_status == CTaskThreadOk :
+                        result.m_status == CTaskThreadClosed,
+                    "resize traffic ordinary post leaked capacity/contention or an internal error");
                 return result.m_committed;
             }, "resize traffic admission");
             const size_t count = pool.statistics().m_threads;
@@ -263,7 +263,7 @@ static void PoolResizeTraffic()
     bbCheck(state.m_grows == 40 && state.m_shrinks == 40 && state.m_errors == 0, "resize accounting or errors wrong");
 }
 
-/** 用长空闲补查间隔验证正常通知没有依赖超时兜底。
+/** 用长空闲补查间隔验证正常通知没有依赖超时兜底
 */
 static void WakeWithoutHeartbeat()
 {
@@ -290,7 +290,7 @@ static void WakeWithoutHeartbeat()
     workers.drain();
 }
 
-/** 持续满载，有限接纳容量、八生产者、独立序号与校验和预期。
+/** 持续满载，有限接纳容量、八生产者、独立序号与校验和预期
 */
 static void SustainedPressure()
 {
@@ -304,7 +304,7 @@ static void SustainedPressure()
     CTaskThreadConfig config;
     config.m_maximumTasks = 4096;
     std::vector<uint64_t> next(8, 0);
-    std::atomic<uint64_t> accepted(0), executed(0), expectedSum(0), actualSum(0), retries(0), resources(0);
+    std::atomic<uint64_t> accepted(0), executed(0), expectedSum(0), actualSum(0);
     std::atomic<bool> start(false);
     uint64_t deadline = 0;
     TestWorkers consumers, producers;
@@ -329,26 +329,10 @@ static void SustainedPressure()
                     actualSum.fetch_add(checksum, std::memory_order_relaxed);
                     executed.fetch_add(1, std::memory_order_relaxed);
                 }));
-                for (;;)
-                {
-                    const CTaskThreadResult result = worker->postTaskResult(task);
-                    if (result.m_committed)
-                    {
-                        ++sequence;
-                        accepted.fetch_add(1, std::memory_order_relaxed);
-                        expectedSum.fetch_add(checksum, std::memory_order_relaxed);
-                        break;
-                    }
-                    bbCheck(result.m_status == CTaskThreadCapacity || result.m_status == CTaskThreadResourceUnavailable,
-                        (std::string("sustained unexpected failure status=") + std::to_string(result.m_status)).c_str());
-                    resources.fetch_add(result.m_status == CTaskThreadResourceUnavailable ? 1 : 0, std::memory_order_relaxed);
-                    ++retries;
-                    if (bbNow() >= deadline)
-                    {
-                        return;
-                    }
-                    std::this_thread::yield();
-                }
+                TestPost(worker, task);
+                ++sequence;
+                accepted.fetch_add(1, std::memory_order_relaxed);
+                expectedSum.fetch_add(checksum, std::memory_order_relaxed);
             }
         }));
     }
@@ -362,20 +346,26 @@ static void SustainedPressure()
     bbCheck(accepted == executed && actualSum == expectedSum && accepted > 10000, "sustained count/checksum mismatch");
     bbCheck(state.m_outstanding == 0 && state.m_queued == 0 && state.m_errors == 0, "sustained resource/error accounting failed");
     std::cout << "duration_ms=" << elapsed << " accepted=" << accepted.load() << " executed=" << executed.load()
-              << " uncommitted_resource_retries=" << retries.load() << " unsafe_reuse=" << resources.load()
+              << " external_retries=0"
               << " checksum=" << actualSum.load() << '\n';
 }
 
 std::vector<BlackBoxCase> taskThreadStressCases(int32_t firstId)
 {
     std::vector<BlackBoxCase> cases;
+    /** 登记压力用例及其超时，执行后检查资源收敛
+    @param [in] name 稳定英文键
+    @param [in] expected 独立预期
+    @param [in] timeout 超时秒数
+    @param [in] run 测试执行体
+    */
     const std::function<void(const char*, const char*, int, const std::function<void()>&)> add =
         [&cases, firstId](const char* name, const char* expected, int timeout, const std::function<void()>& run)
     {
         BlackBoxCase item = {firstId + static_cast<int>(cases.size()), name, expected, true, timeout, [run]()
         {
             run();
-            bbCheck(TestTask::live == 0 && TestTask::errors == 0, "stress task references or fixture errors remain");
+            bbCheck(TestTask::m_live == 0 && TestTask::m_errors == 0, "stress task references or fixture errors remain");
             bbCheck(CTaskThreadManager::instance().count() == 0, "stress left managed workers");
         }};
         cases.push_back(item);

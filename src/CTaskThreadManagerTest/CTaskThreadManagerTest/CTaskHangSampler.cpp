@@ -4,6 +4,7 @@
 #include <DbgHelp.h>
 #include <cstdio>
 #include <cstdlib>
+#include <cerrno>
 #include <type_traits>
 
 /** 采集一个由诊断脚本创建的同位宽测试进程的线程栈，并立即恢复线程
@@ -18,8 +19,15 @@ int main(int argc, char** argv)
         return 2;
     }
     char* end = nullptr;
+    // strtoul 接受负号且溢出时也返回非零，必须单独检查这两类非法 PID。
+    if (argv[1][0] < '0' || argv[1][0] > '9')
+    {
+        return 2;
+    }
+    errno = 0;
     const DWORD processId = std::strtoul(argv[1], &end, 10);
-    if (processId == 0 || end == argv[1] || *end != '\0')
+    if (errno == ERANGE || processId == 0 || end == argv[1] || *end != '\0' ||
+        processId == GetCurrentProcessId())
     {
         return 2;
     }
@@ -38,6 +46,8 @@ int main(int argc, char** argv)
     THREADENTRY32 entry = {};
     entry.dwSize = sizeof(entry);
     BOOL available = snapshot != INVALID_HANDLE_VALUE && Thread32First(snapshot, &entry);
+    int result = available ? 0 : 5;
+    size_t sampled = 0;
     while (available)
     {
         if (entry.th32OwnerProcessID == processId)
@@ -50,6 +60,7 @@ int main(int argc, char** argv)
                 context.ContextFlags = CONTEXT_FULL;
                 if (GetThreadContext(thread, &context))
                 {
+                    ++sampled;
                     STACKFRAME64 frame = {};
 #ifdef _WIN64
                     const DWORD machine = IMAGE_FILE_MACHINE_AMD64;
@@ -94,7 +105,18 @@ int main(int argc, char** argv)
                         }
                     }
                 }
-                ResumeThread(thread);
+                else
+                {
+                    result = 6;
+                }
+                if (ResumeThread(thread) == DWORD(-1))
+                {
+                    result = 7;
+                }
+            }
+            else
+            {
+                result = 6;
             }
             if (thread != nullptr)
             {
@@ -102,6 +124,10 @@ int main(int argc, char** argv)
             }
         }
         available = Thread32Next(snapshot, &entry);
+        if (!available && GetLastError() != ERROR_NO_MORE_FILES)
+        {
+            result = 5;
+        }
     }
     if (snapshot != INVALID_HANDLE_VALUE)
     {
@@ -109,6 +135,6 @@ int main(int argc, char** argv)
     }
     SymCleanup(process);
     CloseHandle(process);
-    return 0;
+    return sampled == 0 && result == 0 ? 6 : result;
 }
 #endif

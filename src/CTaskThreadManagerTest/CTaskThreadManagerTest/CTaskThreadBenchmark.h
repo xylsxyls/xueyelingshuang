@@ -4,12 +4,12 @@
 #include <vector>
 #include <string>
 
-/** 同源基准的独立预期和计数；业务校验不使用互斥量。
+/** 同源基准的独立预期和计数；业务校验不使用互斥量
 */
 class CTaskBenchmarkState
 {
 public:
-    /** 准备固定数据集，计时开始前完成分配。
+    /** 准备固定数据集，计时开始前完成分配
     @param [in] producers 生产者数量
     @param [in] count 每生产者操作数
     @param [in] levels 优先级数量
@@ -17,23 +17,23 @@ public:
     */
     CTaskBenchmarkState(size_t producers, size_t count, int32_t levels, uint32_t work);
 
-    /** 先收敛任务，再释放预期数据。
+    /** 先收敛任务，再释放预期数据
     */
     ~CTaskBenchmarkState();
 
-    /** 生成确定性业务校验值。
+    /** 生成确定性业务校验值
     @param [in] seed 输入值
     @param [in] work 计算轮数
     @return 预期摘要
     */
     static uint64_t digest(uint64_t seed, uint32_t work);
 
-    /** 单调高分辨率纳秒时间。
+    /** 单调高分辨率纳秒时间
     @return 纳秒计数
     */
     static uint64_t now();
 
-    /** 记录最后一个生产者的提交时间。
+    /** 记录最后一个生产者的提交时间
     @param [in] timestamp 单调时间
     */
     void submitted(uint64_t timestamp);
@@ -83,12 +83,12 @@ public:
     unsigned char m_tailPadding[128];
 };
 
-/** 有独立序号、摘要和延迟采样的业务任务。
+/** 有独立序号、摘要和延迟采样的业务任务
 */
 class CTaskBenchmarkItem : public CTask
 {
 public:
-    /** 保存不可变输入。
+    /** 保存不可变输入
     @param [in,out] state 生命周期覆盖任务
     @param [in] producer 生产者索引
     @param [in] sequence 生产者内序号
@@ -96,13 +96,13 @@ public:
     */
     CTaskBenchmarkItem(CTaskBenchmarkState& state, size_t producer, size_t sequence, uint64_t timestamp);
 
-    /** 校验每项只执行一次以及同级 FIFO。
+    /** 校验每项只执行一次以及同级 FIFO
     */
     virtual void doTask();
 
 private:
     // 借用测试状态
-    CTaskBenchmarkState& m_state;
+    CTaskBenchmarkState* m_state;
     // 不变生产者号
     size_t m_producer;
     // 不变序号
@@ -111,12 +111,12 @@ private:
     uint64_t m_timestamp;
 };
 
-/** 独立生产任务，同一代码分别链接原版和新版。
+/** 独立生产任务，同一代码分别链接原版和新版
 */
 class CTaskBenchmarkProducer : public CTask
 {
 public:
-    /** 保存目标和测试模式。
+    /** 保存目标和测试模式
     @param [in,out] state 测试状态
     @param [in] target 投递目标，查询模式允许为空
     @param [in] producer 生产者号
@@ -124,17 +124,17 @@ public:
     */
     CTaskBenchmarkProducer(CTaskBenchmarkState& state, const std::shared_ptr<CTaskThread>& target, size_t producer, bool lookup);
 
-    /** 等待统一屏障后执行固定数量操作。
+    /** 等待统一屏障后执行固定数量操作
     */
     virtual void doTask();
 
-    /** 异常收尾时让生产循环退出。
+    /** 异常收尾时让生产循环退出
     */
     virtual void stopTask();
 
 private:
     // 借用测试状态
-    CTaskBenchmarkState& m_state;
+    CTaskBenchmarkState* m_state;
     // 目标强引用
     std::shared_ptr<CTaskThread> m_target;
     // 生产者号
@@ -143,7 +143,7 @@ private:
     bool m_lookup;
 };
 
-/** 同源基准入口，性能构建不链接故障分配器。
+/** 同源基准入口，性能构建不链接故障分配器
 @param [in] argc 参数数量
 @param [in] argv mode producers count levels work report.csv
 @return 验证或运行失败返回非零

@@ -12,19 +12,19 @@
 struct BlackBoxCase
 {
     // 命令行选择用的稳定用例编号
-    int id;
+    int m_id;
     // 报告中的用例名称，借用静态字符串
-    const char* name;
+    const char* m_name;
     // 预期行为说明，借用静态字符串
-    const char* expectation;
+    const char* m_expectation;
     // 是否为耗时压力测试
-    bool stress;
+    bool m_stress;
     // 子进程允许执行的最长秒数
-    int timeoutSeconds;
+    int m_timeoutSeconds;
     // 在隔离子进程中执行的用例体，异常由测试入口记录
-    std::function<void()> run;
+    std::function<void()> m_run;
     // 不适用组合的原因，空指针表示正常运行
-    const char* unavailableReason;
+    const char* m_unavailableReason;
 };
 
 /** 拥有一个测试子进程及其进程组，析构清理仍在运行的自有进程

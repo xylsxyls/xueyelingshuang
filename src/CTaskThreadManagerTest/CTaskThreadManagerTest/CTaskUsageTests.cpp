@@ -271,7 +271,14 @@ static void ExampleStopping(const CTaskThreadConfig& config)
 {
     std::shared_ptr<CTaskThread> target = Open(config);
     std::shared_ptr<std::atomic<bool>> release = std::make_shared<std::atomic<bool>>(false);
-    std::shared_ptr<UsageTask> gate = Gate(900, release);
+    // 检查排队停止通知期间不能让消费者抢先执行并移除待检查项。
+    std::shared_ptr<UsageTask> gate = std::make_shared<UsageTask>(900, [release](UsageTask&)
+    {
+        Check(WaitUntil([release]() -> bool
+        {
+            return release->load();
+        }), "stop-all gate timed out");
+    });
     Post(target, gate, 16);
     Check(WaitUntil([gate]() -> bool
     {
@@ -287,10 +294,12 @@ static void ExampleStopping(const CTaskThreadConfig& config)
     Check(target->stopTask(7, 1).m_status == CTaskThreadOk, "property stop");
     Check(a->stops() == 1 && b->stops() == 0 && c->stops() == 0, "property/level filtering");
     Check(target->stopAllTask().m_status == CTaskThreadOk, "stop all");
+    release->store(true);
     Check(CTaskThreadManager::instance().waitForEnd(target->threadId()).m_status == CTaskThreadOk, "stop drain");
     Check(a->runs() == 1 && b->runs() == 1 && c->runs() == 1 && order->size() == 3, "stop must not erase queued tasks");
     Check(b->stops() >= 1 && c->stops() >= 1 && gate->stopped(), "stop all coverage");
     target = Open(config);
+    release->store(false);
     gate = Gate(901, release);
     Post(target, gate);
     Check(WaitUntil([gate]() -> bool
@@ -463,10 +472,8 @@ static void ExampleConcurrent(const CTaskThreadConfig& source)
     CTaskThreadConfig config = source;
     config.m_maximumTasks = -1;
     std::shared_ptr<CTaskThread> target = Open(config);
-    std::shared_ptr<UsageTask> work = std::make_shared<UsageTask>(1, [](UsageTask&)
-    {
-
-    });
+    // 只有消费者写入，主线程在排空后读取；每个投递项带独立序号
+    std::shared_ptr<std::vector<int32_t>> next = std::make_shared<std::vector<int32_t>>(2, 0);
     std::shared_ptr<std::atomic<bool>> start = std::make_shared<std::atomic<bool>>(false);
     std::shared_ptr<std::atomic<uint32_t>> ready = std::make_shared<std::atomic<uint32_t>>(0);
     std::vector<std::shared_ptr<CTaskThread>> producers;
@@ -474,7 +481,7 @@ static void ExampleConcurrent(const CTaskThreadConfig& source)
     {
         std::shared_ptr<CTaskThread> producer = Open(config);
         producers.push_back(producer);
-        Post(producer, std::make_shared<UsageTask>(2, [target, work, start, ready](UsageTask& self)
+        Post(producer, std::make_shared<UsageTask>(2, [target, next, start, ready, i](UsageTask& self)
         {
             ready->fetch_add(1);
             Check(WaitUntil([start, &self]() -> bool
@@ -484,7 +491,11 @@ static void ExampleConcurrent(const CTaskThreadConfig& source)
             Check(!self.stopped(), "producer cancelled before start");
             for (int32_t n = 0; n < 100; ++n)
             {
-                Post(target, work);
+                Post(target, std::make_shared<UsageTask>(1, [next, i, n](UsageTask&)
+                {
+                    Check((*next)[i] == n, "concurrent producer FIFO or duplicate");
+                    ++(*next)[i];
+                }));
             }
         }));
     }
@@ -501,7 +512,8 @@ static void ExampleConcurrent(const CTaskThreadConfig& source)
         Check(producers[i]->statistics().m_errors == 0, "producer error");
     }
     Check(CTaskThreadManager::instance().waitForEnd(target->threadId()).m_status == CTaskThreadOk, "consumer drain");
-    Check(work->runs() == 200 && target->statistics().m_errors == 0, "concurrent exact count");
+    Check((*next)[0] == 100 && (*next)[1] == 100 && target->statistics().m_errors == 0,
+        "concurrent exact count and per-producer FIFO");
     std::cout << "PASS two concurrent producers: accepted/executed 200" << std::endl;
 }
 
@@ -552,18 +564,15 @@ static void ExamplePool(const CTaskThreadConfig& config)
             uint32_t selectedId = 0;
             std::shared_ptr<CTaskThread> selected;
             CTaskThreadResult choice = allocator.select(selectedId, selected);
-            if (choice.m_status != CTaskThreadOk)
-            {
-                Check(choice.m_status == CTaskThreadCapacity || choice.m_status == CTaskThreadClosed, "allocator closed/error");
-                return false;
-            }
+            Check(choice.m_status == CTaskThreadOk && choice.m_committed && selected,
+                "allocator failed while the pool remained available");
             const CTaskThreadResult posted = selected->postTaskResult(work);
             if (posted.m_committed)
             {
                 Check(posted.m_status == CTaskThreadOk, "pool accepted with error");
                 return true;
             }
-            Check(posted.m_status == CTaskThreadClosed || posted.m_status == CTaskThreadCapacity, "pool post failure");
+            Check(posted.m_status == CTaskThreadClosed, "ordinary pool post leaked capacity/contention or an internal error");
             return false;
         }), "allocator retry timed out");
     }
@@ -585,6 +594,7 @@ static void ExamplePool(const CTaskThreadConfig& config)
 }
 
 /** 公开接口用法测试入口；全部业务线程由本库创建，未使用白盒或故障注入
+@param [in] scenario 0 执行全部示例，1 至 7 选择对应公开用法
 @return 0 为所有预期成立，非零为失败；外部运行器另设进程超时
 */
 int32_t runTaskUsageTests(size_t scenario)

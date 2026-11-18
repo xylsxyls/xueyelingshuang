@@ -263,6 +263,8 @@ int runTaskFairnessTests(int argc, char** argv)
                 }));
             }
             state.m_begin = FairnessNow();
+            // 生产者放行前消费者尚无任务；记录首次执行等待，后续由消费者独占更新。
+            state.m_consumer.m_eventLast = state.m_begin;
             state.m_start.store(true, std::memory_order_release);
             while (FairnessNow() - state.m_begin < seconds * 1000 && !state.m_stop.load())
             {
@@ -306,6 +308,8 @@ int runTaskFairnessTests(int argc, char** argv)
         const uint64_t submitEnd = FairnessNow();
         const CTaskThreadResult closed = manager.waitForEnd(id);
         const uint64_t ended = FairnessNow();
+        // 监控线程也可能被延迟调度，不能漏掉两次采样之间实际发生的消费停顿。
+        receiveGap = (std::max)(receiveGap, state.m_consumer.m_maxGap);
         std::ofstream out(argv[5], std::ios::binary | std::ios::trunc);
         if (!out)
         {
@@ -348,6 +352,11 @@ int runTaskFairnessTests(int argc, char** argv)
 }
 
 #ifdef CTTM_FAIRNESS_MAIN
+/** 独立执行公平性场景并返回自动判定结果
+@param [in] argc 参数数量
+@param [in] argv 并发数、级别、时长、CPU约束及输出路径
+@return 0表示通过，非零表示参数、执行或判定失败
+*/
 int main(int argc, char** argv)
 {
     return runTaskFairnessTests(argc, argv);

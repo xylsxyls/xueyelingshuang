@@ -6,6 +6,293 @@
 #include <thread>
 #include <stdexcept>
 
+TestStopFailureTask::TestStopFailureTask(std::atomic<bool>& entered, std::atomic<bool>& notified,
+    std::atomic<bool>& release) :
+m_entered(&entered),
+m_notified(&notified),
+m_release(&release)
+{
+
+}
+
+void TestStopFailureTask::doTask()
+{
+    m_entered->store(true, std::memory_order_release);
+    bbWait([this]() { return m_release->load(std::memory_order_acquire); }, "throwing stop task release");
+}
+
+void TestStopFailureTask::stopTask()
+{
+    m_notified->store(true, std::memory_order_release);
+    throw std::runtime_error("intentional stop notification failure");
+}
+
+/** 验证线程池丢弃关闭在停止回调异常后仍等待工作线程退出
+*/
+static void PoolStopFailureJoin()
+{
+    std::atomic<bool> entered(false), notified(false), release(false), returned(false);
+    CTaskThreadResult result;
+    CTaskThreadPool pool;
+    CTaskThreadPoolConfig config;
+    config.m_initialThreads = 1;
+    config.m_maximumThreads = 1;
+    bbCheck(pool.initialize(config).m_status == CTaskThreadOk, "stop failure pool initialize");
+    std::vector<uint32_t> ids;
+    bbCheck(pool.threadIds(ids).m_status == CTaskThreadOk && ids.size() == 1, "stop failure pool worker");
+    const std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(ids[0]);
+    bbCheck(worker != nullptr, "stop failure pool worker reference");
+    std::thread closer;
+    bool returnedEarly = false;
+    bool exited = false;
+    try
+    {
+        TestPost(worker, std::make_shared<TestStopFailureTask>(entered, notified, release));
+        bbWait([&]() { return entered.load(std::memory_order_acquire); }, "pool stop failure task entered");
+        closer = std::thread([&]()
+        {
+            result = pool.shutdown(false);
+            returned.store(true, std::memory_order_release);
+        });
+        bbWait([&]() { return notified.load(std::memory_order_acquire); }, "pool stop failure notification");
+        const uint64_t deadline = bbNow() + 100;
+        while (!returned.load(std::memory_order_acquire) && bbNow() < deadline)
+        {
+            bbSleep(1);
+        }
+        returnedEarly = returned.load(std::memory_order_acquire);
+        release.store(true, std::memory_order_release);
+        closer.join();
+        exited = worker->statistics().m_exited;
+    }
+    catch (...)
+    {
+        release.store(true, std::memory_order_release);
+        if (closer.joinable())
+        {
+            closer.join();
+        }
+        pool.shutdown(true);
+        throw;
+    }
+    const CTaskThreadResult cleanup = pool.shutdown(true);
+    bbCheck(!returnedEarly && exited && result.m_status == CTaskThreadCallbackFailure &&
+        result.m_committed && cleanup.m_status == CTaskThreadOk &&
+        worker->statistics().m_outstanding == 0 && CTaskThreadManager::instance().count() == 0,
+        "pool stop callback failure skipped join, lost diagnosis or leaked registration");
+}
+
+void taskStopFailureJoinTest()
+{
+    std::atomic<bool> entered(false), notified(false), release(false), returned(false);
+    CTaskThreadResult result;
+    TestWorkers workers;
+    const std::shared_ptr<CTaskThread> worker = workers.add();
+    std::thread closer;
+    bool returnedEarly = false;
+    bool exited = false;
+    try
+    {
+        TestPost(worker, std::make_shared<TestStopFailureTask>(entered, notified, release));
+        bbWait([&]() { return entered.load(std::memory_order_acquire); }, "throwing stop task entered");
+        closer = std::thread([&]()
+        {
+            result = CTaskThreadManager::instance().uninit(worker->threadId());
+            returned.store(true, std::memory_order_release);
+        });
+        bbWait([&]() { return notified.load(std::memory_order_acquire); }, "throwing stop notification entered");
+        const uint64_t deadline = bbNow() + 100;
+        while (!returned.load(std::memory_order_acquire) && bbNow() < deadline)
+        {
+            bbSleep(1);
+        }
+        returnedEarly = returned.load(std::memory_order_acquire);
+        release.store(true, std::memory_order_release);
+        closer.join();
+        exited = worker->statistics().m_exited;
+    }
+    catch (...)
+    {
+        release.store(true, std::memory_order_release);
+        if (closer.joinable())
+        {
+            closer.join();
+        }
+        workers.drain();
+        throw;
+    }
+    // 失败通知保留诊断，已 join 的线程随后仍可完成注册表清理。
+    workers.drain();
+    bbCheck(!returnedEarly && exited && result.m_status == CTaskThreadCallbackFailure &&
+        result.m_committed && worker->statistics().m_errors == 1 &&
+        worker->statistics().m_outstanding == 0 && CTaskThreadManager::instance().count() == 0,
+        "stop callback failure skipped join, lost diagnosis or leaked registration");
+    PoolStopFailureJoin();
+}
+
+void taskPoolLowMemoryDestructionTest()
+{
+#ifndef CTTM_TEST_DLL
+    std::atomic<int32_t> entered(0), stopped(0);
+    std::atomic<bool> cancel(false);
+    std::unique_ptr<CTaskThreadPool> pool(new CTaskThreadPool);
+    CTaskThreadPoolConfig config;
+    config.m_initialThreads = 2;
+    config.m_maximumThreads = 2;
+    CTaskThreadManager& manager = CTaskThreadManager::instance();
+    try
+    {
+        bbCheck(manager.count() == 0 && pool->initialize(config).m_status == CTaskThreadOk,
+            "low memory destruction pool initialize");
+        std::vector<uint32_t> ids;
+        bbCheck(pool->threadIds(ids).m_status == CTaskThreadOk && ids.size() == 2,
+            "low memory destruction member IDs");
+        std::vector<std::shared_ptr<CTaskThread>> threads;
+        for (size_t i = 0; i < ids.size(); ++i)
+        {
+            threads.push_back(manager.getThreadInterface(ids[i]));
+            bbCheck(threads.back() != nullptr, "low memory destruction member reference");
+            TestPost(threads.back(), std::make_shared<TestTask>(1, [&entered, &stopped, &cancel](TestTask& task)
+            {
+                ++entered;
+                bbWait([&task, &cancel]() { return cancel.load() || task.m_stopped.load(); }, "low memory destruction stop");
+                ++stopped;
+                bbWait([&stopped, &cancel]() { return cancel.load() || stopped == 2; }, "low memory destruction notify all before join");
+            }));
+        }
+        // 本用例没有其他创建者；白盒核对控制线程在所有成员之后取得的下一个单调编号。
+        const uint32_t controllerId = (std::max)(ids[0], ids[1]) + 1;
+        const std::shared_ptr<CTaskThread> controller = manager.getThreadInterface(controllerId);
+        bbCheck(controller != nullptr && manager.count() == 3, "low memory destruction controller reference");
+        bbWait([&]() { return entered == 2 && controller->getCurTaskLevel() == 1; },
+            "low memory destruction active workers");
+        CTaskFaultAllocation::beginPersistent();
+        pool.reset();
+        const bool triggered = CTaskFaultAllocation::triggered();
+        const uint64_t failedRequests = CTaskFaultAllocation::end();
+        bool exited = controller->statistics().m_exited;
+        for (size_t i = 0; i < threads.size(); ++i)
+        {
+            exited = exited && threads[i]->statistics().m_exited && threads[i]->statistics().m_outstanding == 0 &&
+                threads[i]->statistics().m_errors == 0;
+        }
+        const CTaskThreadResult cleanup = manager.uninitAll();
+        bbCheck(triggered && failedRequests >= 2 && exited && cleanup.m_status == CTaskThreadOk && manager.count() == 0,
+            "persistent low memory destruction released live state or leaked registration");
+    }
+    catch (...)
+    {
+        CTaskFaultAllocation::end();
+        cancel.store(true);
+        if (pool)
+        {
+            pool->shutdown(false);
+        }
+        manager.uninitAll();
+        throw;
+    }
+#endif
+}
+
+void taskPoolProtectionDestructionTest()
+{
+#ifndef CTTM_TEST_DLL
+    std::atomic<bool> entered(false), releaseReaders(false), cancel(false), destroying(false), destroyed(false);
+    std::atomic<int32_t> held(0), readerErrors(0);
+    std::unique_ptr<CTaskThreadPool> pool(new CTaskThreadPool);
+    std::vector<std::thread> readers;
+    readers.reserve(4);
+    std::thread destroyer;
+    CTaskThreadManager& manager = CTaskThreadManager::instance();
+    try
+    {
+        CTaskThreadPoolConfig config;
+        config.m_initialThreads = 1;
+        config.m_maximumThreads = 1;
+        config.m_worker.m_taskMap.protectionRecordCount = 4;
+        bbCheck(pool->initialize(config).m_status == CTaskThreadOk, "protected destruction initialize");
+        std::vector<uint32_t> ids;
+        bbCheck(pool->threadIds(ids).m_status == CTaskThreadOk && ids.size() == 1, "protected destruction member");
+        const std::shared_ptr<CTaskThread> worker = manager.getThreadInterface(ids[0]);
+        bbCheck(worker != nullptr, "protected destruction worker reference");
+        TestPost(worker, std::make_shared<TestTask>(1, [&](TestTask& task)
+        {
+            entered.store(true);
+            bbWait([&]() { return task.m_stopped.load() || cancel.load(); }, "protected destruction stop");
+        }));
+        bbWait([&]() { return entered.load(); }, "protected destruction running task");
+        for (size_t i = 0; i < 4; ++i)
+        {
+            readers.push_back(std::thread([&, worker]()
+            {
+                try
+                {
+                    const CTaskThreadResult result = CTaskThreadTestAccess::holdDirectoryRead(*worker, [&]()
+                    {
+                        ++held;
+                        bbWait([&]() { return releaseReaders.load(); }, "protected destruction release readers");
+                    });
+                    if (result.m_status != CTaskThreadOk)
+                    {
+                        ++readerErrors;
+                    }
+                }
+                catch (...)
+                {
+                    ++readerErrors;
+                }
+            }));
+        }
+        bbWait([&]() { return held == 4; }, "protected destruction occupied all records");
+        const CTaskThreadResult stopped = pool->shutdown(false);
+        bbCheck(stopped.m_status == CTaskThreadCapacity && stopped.m_committed && !worker->statistics().m_exited,
+            "protected destruction did not reach resource failure");
+        destroyer = std::thread([&]()
+        {
+            destroying.store(true);
+            pool.reset();
+            destroyed.store(true);
+        });
+        bbWait([&]() { return destroying.load(); }, "protected destruction caller started");
+        const uint64_t until = bbNow() + 100;
+        bool returnedEarly = false;
+        while (bbNow() < until)
+        {
+            returnedEarly = returnedEarly || destroyed.load();
+            std::this_thread::yield();
+        }
+        releaseReaders.store(true);
+        for (size_t i = 0; i < readers.size(); ++i)
+        {
+            readers[i].join();
+        }
+        destroyer.join();
+        bbCheck(!returnedEarly && destroyed.load() && readerErrors == 0 && worker->statistics().m_exited &&
+            worker->statistics().m_errors == 0 && worker->statistics().m_outstanding == 0 && manager.count() == 0,
+            "pool destructor returned before protected worker stopped or retained resources");
+    }
+    catch (...)
+    {
+        releaseReaders.store(true);
+        cancel.store(true);
+        for (size_t i = 0; i < readers.size(); ++i)
+        {
+            if (readers[i].joinable())
+            {
+                readers[i].join();
+            }
+        }
+        if (destroyer.joinable())
+        {
+            destroyer.join();
+        }
+        pool.reset();
+        manager.uninitAll();
+        throw;
+    }
+#endif
+}
+
 TestFactoryTask::TestFactoryTask(int32_t propertyId, const std::function<void(TestTask&)>& body,
     bool redo) :
 TestTask(propertyId, body),
@@ -55,18 +342,18 @@ CTask* TestFactoryCopyFailure::operator()() const
 TestConcurrentRedoTask::TestConcurrentRedoTask(const std::shared_ptr<RedoState>& state,
     std::atomic<int32_t>& entered, std::atomic<bool>& release) :
 RedoTask(state, 0, true, true),
-m_entered(entered),
-m_release(release)
+m_entered(&entered),
+m_release(&release)
 {
 
 }
 
 bool TestConcurrentRedoTask::reExecute()
 {
-    ++m_entered;
+    ++*m_entered;
     bbWait([this]()
     {
-        return m_release.load();
+        return m_release->load();
     }, "release simultaneous redo callbacks");
     return true;
 }
@@ -108,6 +395,10 @@ static void ManagerTraversalExhaustion()
     {
         readers.push_back(workers.add());
     }
+    bbCheck(!CTaskThreadTestAccess::holdManagerRead([]()
+    {
+        throw std::runtime_error("intentional read fixture failure");
+    }), "manager read fixture hid its callback failure");
     for (size_t i = 0; i < readers.size(); ++i)
     {
         bbCheck(readers[i]->postTaskResult(std::make_shared<TestTask>(1, [&held, &release, &done](TestTask&)
@@ -164,7 +455,10 @@ static void NestedStopCallbacks()
     std::atomic<bool> release(false);
     TestWorkers workers;
     std::shared_ptr<CTaskThread> a = workers.add(), b = workers.add();
-    const uint32_t idA = workers.ids[0];
+    const uint32_t idA = workers.m_ids[0];
+    /** 通知任务已经进入，并等待外部门控释放
+    @param [in,out] task 未使用的测试任务实例
+    */
     const std::function<void(TestTask&)> body = [&entered, &release](TestTask&)
     {
         ++entered;
@@ -174,12 +468,12 @@ static void NestedStopCallbacks()
         }, "nested stop release");
     };
     std::shared_ptr<TestTask> taskA(new TestTask(1, body)), taskB(new TestTask(2, body));
-    taskA->onStop = [b, &stopCallbacks]()
+    taskA->m_onStop = [b, &stopCallbacks]()
     {
         ++stopCallbacks;
         b->stopCurTask();
     };
-    taskB->onStop = [a, idA, &nestedStatus, &joinStatus, &stopCallbacks]()
+    taskB->m_onStop = [a, idA, &nestedStatus, &joinStatus, &stopCallbacks]()
     {
         ++stopCallbacks;
         nestedStatus = a->stopCurTask().m_status;
@@ -194,8 +488,8 @@ static void NestedStopCallbacks()
     a->stopCurTask();
     release = true;
     workers.drain();
-    taskA->onStop = std::function<void()>();
-    taskB->onStop = std::function<void()>();
+    taskA->m_onStop = std::function<void()>();
+    taskB->m_onStop = std::function<void()>();
     bbCheck(nestedStatus == CTaskThreadSelfWait && joinStatus == CTaskThreadSelfWait && stopCallbacks == 2,
         "nested callback recursion or indirect self-wait was not rejected");
 }
@@ -296,10 +590,10 @@ static void PropertyIdentifiers()
     bbCheck(worker->postTaskResult(first, 1).m_committed && worker->postTaskResult(second, 2).m_committed &&
             worker->postTaskResult(negative, 1).m_committed,
         "duplicate/negative property ID was rejected");
-    bbCheck(worker->stopTask(0).m_status == CTaskThreadOk && first->stops == 1 && second->stops == 1 &&
-            negative->stops == 0 && gate->stops == 0,
+    bbCheck(worker->stopTask(0).m_status == CTaskThreadOk && first->m_stops == 1 && second->m_stops == 1 &&
+            negative->m_stops == 0 && gate->m_stops == 0,
         "property ID zero did not select both matching tasks");
-    bbCheck(worker->stopTask(-7).m_status == CTaskThreadOk && negative->stops == 1 &&
+    bbCheck(worker->stopTask(-7).m_status == CTaskThreadOk && negative->m_stops == 1 &&
             first->getPropertyId() == 0 && second->getPropertyId() == 0,
         "negative property selection changed");
     release = true;
@@ -322,13 +616,13 @@ static void ConcurrentRedoOrdering()
             "concurrent redo original rejected");
         bbWait([state]()
         {
-            return state->entered.load();
+            return state->m_entered.load();
         }, "concurrent redo original entered");
         for (int32_t i = 0; i < 2; ++i)
         {
             bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [state, i](TestTask&)
             {
-                state->ledger.add(300 + i);
+                state->m_ledger.add(300 + i);
             }),
                               1)
                         .m_committed,
@@ -340,7 +634,7 @@ static void ConcurrentRedoOrdering()
             {
                 bbCheck(worker->postTaskResult(std::make_shared<TestTask>(2, [state, i](TestTask&)
                 {
-                    state->ledger.add(200 + i);
+                    state->m_ledger.add(200 + i);
                 }),
                                   2)
                             .m_committed,
@@ -354,11 +648,11 @@ static void ConcurrentRedoOrdering()
         }, "all redo callbacks overlap");
         releaseCallbacks = true;
         producers.drain();
-        bbCheck(state->stops == 8 && state->ledger.snapshot() == std::vector<int>(1, 100),
+        bbCheck(state->m_stops == 8 && state->m_ledger.snapshot() == std::vector<int>(1, 100),
             "preemption lost notification or ran a second task before original returned");
-        state->release = true;
+        state->m_release.store(true);
         consumers.drain();
-        const std::vector<int> order = state->ledger.snapshot();
+        const std::vector<int> order = state->m_ledger.snapshot();
         bbCheck(order.size() == 12 && order[0] == 100 && order[9] == 101 && order[10] == 300 && order[11] == 301,
             "concurrent preemption duplicated/lost redo or moved it behind same-level followers");
         std::vector<int> high(order.begin() + 1, order.begin() + 9);
@@ -428,7 +722,7 @@ static void SplitCountersWrap()
         entered = true;
         bbWait([&release, &task]()
         {
-            return release.load() || task.stopped.load();
+            return release.load() || task.m_stopped.load();
         }, "counter wrap gate");
     }),
                       INT_MAX)
@@ -472,29 +766,16 @@ static void ConcurrentBoundedStatistics()
     {
         bbCheck(producers.add()->postTaskResult(std::make_shared<TestTask>(1, [worker, &accepted, &calls](TestTask&)
         {
-            const uint64_t deadline = bbNow() + 20000;
             for (int32_t sequence = 0; sequence < 5000; ++sequence)
             {
                 std::shared_ptr<TestTask> task(new TestTask(1, [&calls](TestTask&)
                 {
                     ++calls;
                 }));
-                for (;;)
-                {
-                    const CTaskThreadResult result = worker->postTaskResult(task);
-                    const CTaskThreadStatistics load = worker->statistics();
-                    bbCheck(load.m_outstanding <= 3 && load.m_queued <= 3, "statistics exceeded actual admission bound");
-                    if (result.m_committed)
-                    {
-                        ++accepted;
-                        break;
-                    }
-                    bbCheck(result.m_status == CTaskThreadCapacity,
-                        "unexpected statistics test post rejection");
-                    bbCheck(bbNow() < deadline, "bounded statistics producer deadline");
-                    // 高竞争回归不逐次 sleep，避免 Windows 定时粒度把测试变成限速器。
-                    std::this_thread::yield();
-                }
+                TestPost(worker, task);
+                ++accepted;
+                const CTaskThreadStatistics load = worker->statistics();
+                bbCheck(load.m_outstanding <= 3 && load.m_queued <= 3, "statistics exceeded actual admission bound");
             }
         })).m_committed,
             "statistics producer rejected");
@@ -509,6 +790,10 @@ static void ConcurrentBoundedStatistics()
 std::vector<BlackBoxCase> taskThreadRegressionCases(int32_t firstId)
 {
     std::vector<BlackBoxCase> cases;
+    /** 登记回归项并统一检查任务及线程无残留
+    @param [in] name 稳定英文键
+    @param [in] run 测试执行体
+    */
     const std::function<void(const char*, const std::function<void()>&)> add =
         [&cases, firstId](const char* name, const std::function<void()>& run)
     {
@@ -516,7 +801,7 @@ std::vector<BlackBoxCase> taskThreadRegressionCases(int32_t firstId)
             "explicit failure; no false success, recursive wait, or retained ownership", false, 30, [run]()
         {
             run();
-            bbCheck(TestTask::errors == 0 && TestTask::live == 0 && CTaskThreadManager::instance().count() == 0,
+            bbCheck(TestTask::m_errors == 0 && TestTask::m_live == 0 && CTaskThreadManager::instance().count() == 0,
                 "regression left task error/ownership/worker");
         }};
         cases.push_back(item);
@@ -525,7 +810,7 @@ std::vector<BlackBoxCase> taskThreadRegressionCases(int32_t firstId)
     add("manager-traversal-exhaustion", ManagerTraversalExhaustion);
 #else
     add("manager-traversal-exhaustion", std::function<void()>());
-    cases.back().unavailableReason = "DLL intentionally exports no white-box access; covered in static build";
+    cases.back().m_unavailableReason = "DLL intentionally exports no white-box access; covered in static build";
 #endif
     add("nested-stop-self-wait", NestedStopCallbacks);
     add("partial-pool-init-rollback", InitializationRollback);
@@ -537,7 +822,7 @@ std::vector<BlackBoxCase> taskThreadRegressionCases(int32_t firstId)
     add("split-counters-wrap", SplitCountersWrap);
 #else
     add("split-counters-wrap", std::function<void()>());
-    cases.back().unavailableReason = "DLL intentionally exports no white-box access; covered in static build";
+    cases.back().m_unavailableReason = "DLL intentionally exports no white-box access; covered in static build";
 #endif
     add("concurrent-bounded-statistics", ConcurrentBoundedStatistics);
     return cases;
@@ -558,7 +843,7 @@ void taskPrefetchedPriorityTest()
             gateEntered = true;
             bbWait([&gateReleased, &task]()
             {
-                return gateReleased.load() || task.stopped.load();
+                return gateReleased.load() || task.m_stopped.load();
             }, "prefetch gate release");
         }),
                           16)
@@ -574,7 +859,7 @@ void taskPrefetchedPriorityTest()
             // 每项独立任务保留属性停止计数，执行时仅追加独立顺序账本。
             std::shared_ptr<TestTask> task = std::make_shared<TestTask>(77, [state, i](TestTask&)
             {
-                state->ledger.add(300 + i);
+                state->m_ledger.add(300 + i);
             });
             followers.push_back(task);
             bbCheck(worker->postTaskResult(task, 2).m_committed, "prefetch follower rejected");
@@ -582,23 +867,23 @@ void taskPrefetchedPriorityTest()
         gateReleased = true;
         bbWait([state]()
         {
-            return state->entered.load();
+            return state->m_entered.load();
         }, "prefetched original entered");
         bbCheck(worker->getWaitTaskCount() == 200, "prefetch removed logical pending tasks");
         bbCheck(worker->stopTask(77, 2).m_status == CTaskThreadOk, "prefetched property stop failed");
         for (size_t i = 0; i < followers.size(); ++i)
         {
-            bbCheck(followers[i]->stops == 1, "property stop missed a prefetched task");
+            bbCheck(followers[i]->m_stops == 1, "property stop missed a prefetched task");
         }
         bbCheck(worker->postTaskResult(std::make_shared<TestTask>(9, [state](TestTask&)
         {
-            state->ledger.add(900);
+            state->m_ledger.add(900);
         }),
                           3)
                     .m_committed,
             "late higher priority rejected");
-        bbCheck(worker->getWaitTaskCount() == 201 && state->stops > 0, "late preemption/count changed");
-        state->release = true;
+        bbCheck(worker->getWaitTaskCount() == 201 && state->m_stops > 0, "late preemption/count changed");
+        state->m_release.store(true);
         workers.drain();
         std::vector<int> expected;
         expected.push_back(100);
@@ -608,12 +893,12 @@ void taskPrefetchedPriorityTest()
         {
             expected.push_back(300 + i);
         }
-        bbCheck(state->ledger.snapshot() == expected, "prefetch bypassed priority/redo/FIFO");
+        bbCheck(state->m_ledger.snapshot() == expected, "prefetch bypassed priority/redo/FIFO");
     }
     catch (...)
     {
         gateReleased = true;
-        state->release = true;
+        state->m_release.store(true);
         throw;
     }
 }
@@ -734,12 +1019,12 @@ void taskRedoFactoryOrderTest()
                           4)
                     .m_committed,
             "factory preemption rejected");
-        bbCheck(factories == 0 && original->stops == 2, "factory was eager or preemption notifications changed");
+        bbCheck(factories == 0 && original->m_stops == 2, "factory was eager or preemption notifications changed");
         release = true;
         workers.drain();
         const int expected[] = {100, 400, 300, 7, 200};
         bbCheck(ledger.snapshot() == std::vector<int>(expected, expected + 5) && factories == 1 &&
-                selfWait == CTaskThreadSelfWait && original->stops == 2 && worker->statistics().m_errors == 0,
+                selfWait == CTaskThreadSelfWait && original->m_stops == 2 && worker->statistics().m_errors == 0,
             "factory snapshot, priority, front position or callback guard changed");
     }
     catch (...)
@@ -763,7 +1048,7 @@ void taskRedoFactoryConcurrentTest()
             ++factories;
             return new TestTask(1, [state](TestTask&)
             {
-                state->ledger.add(999);
+                state->m_ledger.add(999);
             });
         });
         std::vector<std::thread> producers;
@@ -773,7 +1058,7 @@ void taskRedoFactoryConcurrentTest()
             bbCheck(worker->postTaskResult(original).m_committed, "concurrent factory original rejected");
             bbWait([state]()
             {
-                return state->entered.load();
+                return state->m_entered.load();
             }, "concurrent factory original entered");
             for (int32_t i = 0; i < 8; ++i)
             {
@@ -783,7 +1068,7 @@ void taskRedoFactoryConcurrentTest()
                     {
                         if (!worker->postTaskResult(std::make_shared<TestTask>(1, [state, i](TestTask&)
                         {
-                            state->ledger.add(200 + i);
+                            state->m_ledger.add(200 + i);
                         }),
                                        2)
                                 .m_committed)
@@ -807,16 +1092,16 @@ void taskRedoFactoryConcurrentTest()
                 producers[i].join();
             }
             bbCheck(factories == 0 && errors == 0, "factory ran in concurrent preemption callbacks");
-            state->release = true;
+            state->m_release.store(true);
             workers.drain();
-            const std::vector<int> values = state->ledger.snapshot();
+            const std::vector<int> values = state->m_ledger.snapshot();
             bbCheck(factories == 1 && values.size() == 10 && values.front() == 100 && values.back() == 999,
                 "concurrent preemption duplicated factory result or changed redo priority");
         }
         catch (...)
         {
             releaseCallbacks = true;
-            state->release = true;
+            state->m_release.store(true);
             for (size_t i = 0; i < producers.size(); ++i)
             {
                 if (producers[i].joinable())
@@ -831,6 +1116,9 @@ void taskRedoFactoryConcurrentTest()
     TaskLedger ledger;
     TestWorkers workers;
     const std::shared_ptr<CTaskThread> worker = workers.add();
+    /** 记录首代执行并等待外部允许首代退出
+    @param [in,out] task 未使用的测试任务实例
+    */
     const std::function<void(TestTask&)> initialBody = [&ledger, &entered, &released](TestTask&)
     {
         ledger.add(100);
@@ -1091,6 +1379,9 @@ void taskRedoFactoryAllocationTest()
             ++oldCalls;
             return nullptr;
         });
+        /** 提供无捕获替换工厂，供配置分配失败回归使用
+        @return 空指针，不创建重做任务
+        */
         const std::function<CTask*()> replacement = []() -> CTask*
         {
             return nullptr;
@@ -1149,7 +1440,7 @@ void taskRedoFactoryAllocationTest()
         release = true;
         workers.drain();
         bbCheck(injected && factories == 1 && children == 0 && higher == 1 &&
-                worker->statistics().m_errors == 1 && worker->statistics().m_outstanding == 0 && TestTask::live == 1,
+                worker->statistics().m_errors == 1 && worker->statistics().m_outstanding == 0 && TestTask::m_live == 1,
             "raw clone was leaked, executed, or swallowed allocation failure");
     }
     catch (...)
@@ -1246,7 +1537,7 @@ void taskRedoFactoryLifecycleTest()
             workers.drain();
             bbCheck(factories == 1 && childFactories == (discard == 0 ? 1 : 0) &&
                     children == (discard == 0 ? 2 : 0) && higher == (discard == 0 ? 2 : 0) &&
-                    worker->statistics().m_errors == 0 && worker->statistics().m_outstanding == 0 && TestTask::live == 1,
+                    worker->statistics().m_errors == 0 && worker->statistics().m_outstanding == 0 && TestTask::m_live == 1,
                 "child factory was overwritten or shutdown committed/leaked deferred task");
         }
         catch (...)

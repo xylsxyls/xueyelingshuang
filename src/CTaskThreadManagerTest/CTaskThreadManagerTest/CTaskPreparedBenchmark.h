@@ -83,7 +83,7 @@ public:
     @param [in] levels 优先级数量
     @param [in] latency 是否开启每 1009 项的采样
     @param [in] separateAllocation 是否分别分配任务和shared_ptr控制块；对照场景不得混用此配置
-    @param [in] reuseTasks 是否固定预建 2000 个任务循环投递；仅吞吐模式使用
+    @param [in] reuseTasks 是否固定预建 2000 个任务循环投递；用于循环吞吐和循环延迟模式
     @param [in] countOnly 是否只计数消费，逐项顺序校验保留在其他模式及压力测试中
     @param [in] window 0 不限制；1 为每生产者至多一项在途，仅循环延迟探针使用
     */

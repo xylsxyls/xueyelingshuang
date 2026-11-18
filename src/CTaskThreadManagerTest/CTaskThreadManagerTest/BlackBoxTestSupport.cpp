@@ -311,6 +311,20 @@ void BlackBoxChild::startProgram(const std::string& executable, const std::vecto
     close(log);
     bbCheck(child > 0, "fork failed");
     m_pid = static_cast<int>(child);
+    // 父进程也建立组，避免刚启动便 stop 时子进程尚未执行 setpgid。
+    // EACCES 表示子进程已 exec（子分支已先建立组），ESRCH 表示已经退出。
+    if (m_processGroup && setpgid(child, child) != 0 && errno != EACCES && errno != ESRCH)
+    {
+        const int groupError = errno;
+        kill(child, SIGKILL);
+        int status = 0;
+        while (waitpid(child, &status, 0) < 0 && errno == EINTR)
+        {
+
+        }
+        m_result = 126;
+        bbCheck(false, "create child process group failed " + bbNumber(groupError));
+    }
 #endif
 }
 
@@ -362,9 +376,10 @@ int BlackBoxChild::poll()
     }
     bbCheck(result == m_pid, "waitpid failed");
     m_result = WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
-    if (m_processGroup && m_result != 0)
+    if (m_processGroup)
     {
-        kill(-m_pid, SIGKILL);
+        // 用例主进程成功退出也不能遗留后代；只清理本对象创建的独立进程组。
+        bbCheck(kill(-m_pid, SIGKILL) == 0 || errno == ESRCH, "cleanup owned child process group failed");
     }
 #endif
     return m_result;
@@ -448,17 +463,17 @@ int bbRun(int argc, char** argv, const char* suite, const std::vector<BlackBoxCa
         }
         for (size_t i = 0; i < cases.size(); ++i)
         {
-            bbCheck(cases[i].id == static_cast<int>(i + 1), "registry IDs must be contiguous");
+            bbCheck(cases[i].m_id == static_cast<int>(i + 1), "registry IDs must be contiguous");
         }
         if (childCase)
         {
             bbCheck(childCase > 0 && childCase <= static_cast<int>(cases.size()), "unknown case");
-            if (cases[childCase - 1].unavailableReason != nullptr)
+            if (cases[childCase - 1].m_unavailableReason != nullptr)
             {
-                std::cout << "NOT_RUN " << cases[childCase - 1].unavailableReason << "\n";
+                std::cout << "NOT_RUN " << cases[childCase - 1].m_unavailableReason << "\n";
                 return 77;
             }
-            cases[childCase - 1].run();
+            cases[childCase - 1].m_run();
             bbCheckCleanup();
             std::cout << "case completed\n";
             return 0;
@@ -480,7 +495,7 @@ int bbRun(int argc, char** argv, const char* suite, const std::vector<BlackBoxCa
         {
             std::stable_sort(order.begin(), order.end(), [&cases](size_t left, size_t right)
             {
-                return !cases[left].stress && cases[right].stress;
+                return !cases[left].m_stress && cases[right].m_stress;
             });
         }
         for (size_t i = 0; i < cases.size(); ++i)
@@ -488,23 +503,25 @@ int bbRun(int argc, char** argv, const char* suite, const std::vector<BlackBoxCa
             const BlackBoxCase& c = cases[order[i]];
             if (list)
             {
-                std::cout << c.id << "\t" << c.name << "\t" << (c.stress ? "stress" : "instant") << "\t" << c.expectation << "\n";
+                std::cout << c.m_id << "\t" << c.m_name << "\t" << (c.m_stress ? "stress" : "instant") << "\t" << c.m_expectation << "\n";
                 continue;
             }
-            if (!selected.empty() ? !selected.count(c.id) : (!all && c.stress != stress))
+            if (!selected.empty() ? !selected.count(c.m_id) : (!all && c.m_stress != stress))
             {
                 continue;
             }
-            if (c.unavailableReason != nullptr)
+            if (c.m_unavailableReason != nullptr)
             {
                 ++notRun;
-                std::cout << "NOT_RUN " << c.id << " " << c.unavailableReason << "\n";
-                output << suite << '\t' << c.id << '\t' << c.name << '\t' << (c.stress ? "stress" : "instant")
-                       << "\tNOT_RUN\t0\t" << c.expectation << "\t\t" << c.unavailableReason << "\n";
+                std::cout << "NOT_RUN " << c.m_id << " " << c.m_unavailableReason << "\n";
+                output << suite << '\t' << c.m_id << '\t' << c.m_name << '\t' << (c.m_stress ? "stress" : "instant")
+                       << "\tNOT_RUN\t0\t" << c.m_expectation << "\t\t" << c.m_unavailableReason << "\n";
+                output.flush();
+                bbCheck(output.good(), "cannot flush report");
                 continue;
             }
-            const std::string log = bbTempPath("-" + std::string(suite) + "-" + bbNumber(c.id) + ".log");
-            c.stress ? ++stressCount : ++instantCount;
+            const std::string log = bbTempPath("-" + std::string(suite) + "-" + bbNumber(c.m_id) + ".log");
+            c.m_stress ? ++stressCount : ++instantCount;
             const uint64_t start = bbNow();
             bool ok = false;
             std::string detail;
@@ -513,9 +530,9 @@ int bbRun(int argc, char** argv, const char* suite, const std::vector<BlackBoxCa
                 BlackBoxChild child;
                 std::vector<std::string> args;
                 args.push_back("--case");
-                args.push_back(bbNumber(c.id));
+                args.push_back(bbNumber(c.m_id));
                 child.start(args, log);
-                const int result = child.wait(c.timeoutSeconds * 1000);
+                const int result = child.wait(c.m_timeoutSeconds * 1000);
                 ok = result == 0;
                 if (!ok)
                 {
@@ -539,19 +556,21 @@ int bbRun(int argc, char** argv, const char* suite, const std::vector<BlackBoxCa
             {
                 ++failed;
             }
-            std::cout << (ok ? "PASS " : "FAIL ") << c.id << " " << c.name << " " << elapsed << "ms " << detail << "\n";
+            std::cout << (ok ? "PASS " : "FAIL ") << c.m_id << " " << c.m_name << " " << elapsed << "ms " << detail << "\n";
             std::cout.flush();
             if (!ok)
             {
                 std::cout << bbRead(log) << "log=" << log << "\n";
             }
-            output << suite << '\t' << c.id << '\t' << c.name << '\t' << (c.stress ? "stress" : "instant")
-                   << '\t' << (ok ? "PASS" : "FAIL") << '\t' << elapsed << '\t' << c.expectation << '\t' << log << '\t' << detail << '\n';
+            output << suite << '\t' << c.m_id << '\t' << c.m_name << '\t' << (c.m_stress ? "stress" : "instant")
+                   << '\t' << (ok ? "PASS" : "FAIL") << '\t' << elapsed << '\t' << c.m_expectation << '\t' << log << '\t' << detail << '\n';
             output.flush();
             bbCheck(output.good(), "cannot flush report");
         }
         if (!list)
         {
+            output.close();
+            bbCheck(!output.fail(), "cannot close report");
             std::cout << "executed=" << passed + failed << " instant=" << instantCount << " stress=" << stressCount
                       << " passed=" << passed << " failed=" << failed << " not_run=" << notRun << " report=" << report << "\n";
         }

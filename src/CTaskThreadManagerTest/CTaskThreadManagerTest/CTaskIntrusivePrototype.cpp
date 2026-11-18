@@ -222,6 +222,7 @@ int taskRunIntrusivePrototype(int argc, char* argv[])
         std::atomic<uint64_t> consumed(0), completedAt(0), errors(0);
         std::vector<std::thread> threads;
         threads.reserve(producers + 1);
+        uint64_t begun = 0;
         try
         {
             threads.push_back(std::thread([&]()
@@ -313,6 +314,22 @@ int taskRunIntrusivePrototype(int argc, char* argv[])
                     }
                 }));
             }
+            const uint64_t readyDeadline = PrototypeNow() + UINT64_C(30000000000);
+            while (ready.load(std::memory_order_acquire) != producers + 1 && !stop.load(std::memory_order_acquire))
+            {
+                if (PrototypeNow() > readyDeadline)
+                {
+                    errors.fetch_add(1);
+                    stop.store(true, std::memory_order_release);
+                }
+                std::this_thread::yield();
+            }
+            begun = PrototypeNow();
+            start.store(true, std::memory_order_release);
+            for (size_t i = 0; i < threads.size(); ++i)
+            {
+                threads[i].join();
+            }
         }
         catch (...)
         {
@@ -320,25 +337,12 @@ int taskRunIntrusivePrototype(int argc, char* argv[])
             start.store(true, std::memory_order_release);
             for (size_t i = 0; i < threads.size(); ++i)
             {
-                threads[i].join();
+                if (threads[i].joinable())
+                {
+                    threads[i].join();
+                }
             }
             throw;
-        }
-        const uint64_t readyDeadline = PrototypeNow() + UINT64_C(30000000000);
-        while (ready.load(std::memory_order_acquire) != producers + 1 && !stop.load(std::memory_order_acquire))
-        {
-            if (PrototypeNow() > readyDeadline)
-            {
-                errors.fetch_add(1);
-                stop.store(true, std::memory_order_release);
-            }
-            std::this_thread::yield();
-        }
-        const uint64_t begun = PrototypeNow();
-        start.store(true, std::memory_order_release);
-        for (size_t i = 0; i < threads.size(); ++i)
-        {
-            threads[i].join();
         }
         if (errors.load() != 0 || consumed.load() != total)
         {
@@ -360,6 +364,10 @@ int taskRunIntrusivePrototype(int argc, char* argv[])
                     throw std::runtime_error("prototype missing producer/priority suffix");
                 }
             }
+        }
+        if (submittedAt <= begun || completedAt.load() <= begun)
+        {
+            throw std::runtime_error("prototype duration must be positive");
         }
         const double seconds = static_cast<double>(submittedAt - begun) / 1e9;
         std::ofstream output(argv[5], std::ios::binary | std::ios::trunc);
@@ -389,6 +397,11 @@ int taskRunIntrusivePrototype(int argc, char* argv[])
 }
 
 #ifdef CTTM_INTRUSIVE_PROTOTYPE_MAIN
+/** 独立构建时执行测试侧队列原型的比较测量
+@param [in] argc 命令行参数数量
+@param [in] argv 当前入口的命令行参数数组
+@return 0表示所选检查成功，非零表示失败或当前组合不适用
+*/
 int main(int argc, char* argv[])
 {
     return taskRunIntrusivePrototype(argc, argv);

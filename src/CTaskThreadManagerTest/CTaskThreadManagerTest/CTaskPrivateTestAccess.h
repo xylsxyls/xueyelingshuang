@@ -14,7 +14,7 @@ struct CTaskPrivateBinding
 {
 public:
     // 显式实例化时完成绑定，不进入生产库编译或导出表
-    static const bool s_bound;
+    static const bool m_bound;
 };
 
 /** 白盒测试使用的 ThreadState 成员指针，不拥有对应对象
@@ -24,7 +24,7 @@ struct CTaskTestThreadState
 public:
     typedef std::unique_ptr<CTaskThreadState> CTaskThread::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试使用的 ManagerState 成员指针，不拥有对应对象
@@ -34,7 +34,7 @@ struct CTaskTestManagerState
 public:
     typedef std::atomic<CTaskManagerState*> CTaskThreadManager::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试使用的 ManagerId 成员指针，不拥有对应对象
@@ -44,7 +44,7 @@ struct CTaskTestManagerId
 public:
     typedef std::atomic<uint64_t> CTaskManagerState::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试使用的 ManagerThreads 成员指针，不拥有对应对象
@@ -54,7 +54,7 @@ struct CTaskTestManagerThreads
 public:
     typedef LockFreeMap<uint32_t, std::shared_ptr<CTaskThread>> CTaskManagerState::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试使用的 Sequence 成员指针，不拥有对应对象
@@ -64,7 +64,7 @@ struct CTaskTestSequence
 public:
     typedef std::atomic<uint64_t> CTaskThreadState::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试观察最近选择的记录；记录所有权仍由测试夹具维持
@@ -74,7 +74,7 @@ struct CTaskTestCurrent
 public:
     typedef std::atomic<CTaskStorageSlot*> CTaskThreadState::* Type;
     // 仅测试翻译单元显式实例化绑定
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试使用的 Outstanding 成员指针，不拥有对应对象
@@ -84,7 +84,7 @@ struct CTaskTestOutstanding
 public:
     typedef std::atomic<uint64_t> CTaskThreadState::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试使用的 Released 成员指针，不拥有对应对象
@@ -94,7 +94,7 @@ struct CTaskTestReleased
 public:
     typedef std::atomic<uint64_t> CTaskThreadState::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试使用的 Queued 成员指针，不拥有对应对象
@@ -104,7 +104,7 @@ struct CTaskTestQueued
 public:
     typedef std::atomic<uint64_t> CTaskThreadState::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试使用的 Dequeued 成员指针，不拥有对应对象
@@ -114,7 +114,7 @@ struct CTaskTestDequeued
 public:
     typedef std::atomic<uint64_t> CTaskThreadState::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 只读观察真实容量重试留下的压力提示，不伪造库内状态
@@ -124,7 +124,7 @@ struct CTaskTestCapacityPressure
 public:
     typedef std::atomic<uint32_t> CTaskThreadState::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试使用的 Observers 成员指针，不拥有对应对象
@@ -134,7 +134,7 @@ struct CTaskTestObservers
 public:
     typedef CTaskAdmission CTaskThreadState::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试使用的 Buckets 成员指针，不拥有对应对象
@@ -144,7 +144,7 @@ struct CTaskTestBuckets
 public:
     typedef LockFreeMap<int32_t, std::shared_ptr<CTaskPriorityBucket>> CTaskThreadState::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试使用的 Domain 成员指针，不拥有对应对象
@@ -154,7 +154,7 @@ struct CTaskTestDomain
 public:
     typedef CTaskReadDomain CTaskThreadState::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试使用的 Storage 成员指针，不拥有对应对象
@@ -164,7 +164,7 @@ struct CTaskTestStorage
 public:
     typedef CTaskStorage CTaskThreadState::* Type;
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 /** 白盒测试使用的 Preempt 成员指针，不拥有对应对象
@@ -175,7 +175,7 @@ public:
     typedef CTaskThreadStatus (CTaskThreadState::*Type)(int32_t, CTaskStorageSlot*);
 
     // 由测试翻译单元中的显式实例化初始化
-    static Type s_member;
+    static Type m_member;
 };
 
 #include "CTaskPrivateTestAccess.inl"

@@ -117,6 +117,9 @@ void taskThreadModelsTest()
 }
 
 #ifdef CTTM_MODULE_TEST_MAIN
+/** 独立构建时执行线程模型与系统优先级检查
+@return 0表示所选检查成功，非零表示失败或当前组合不适用
+*/
 int main()
 {
     try

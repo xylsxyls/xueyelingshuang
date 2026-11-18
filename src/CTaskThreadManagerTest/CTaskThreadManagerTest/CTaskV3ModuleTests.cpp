@@ -554,7 +554,7 @@ void taskV3QueueReadyTest()
     RunQueueReadyTest(true);
 }
 
-bool CTaskV4MoveAssignmentValue::s_failCopy = false;
+bool CTaskV4MoveAssignmentValue::m_failCopy = false;
 
 CTaskV4MoveAssignmentValue::CTaskV4MoveAssignmentValue(int value) :
 m_value(value)
@@ -565,7 +565,7 @@ m_value(value)
 CTaskV4MoveAssignmentValue::CTaskV4MoveAssignmentValue(const CTaskV4MoveAssignmentValue& source) :
 m_value(source.m_value)
 {
-    if (s_failCopy)
+    if (m_failCopy)
     {
         throw std::runtime_error("V4 copy failure");
     }
@@ -1393,14 +1393,15 @@ static void RunQueueEntryTest(bool entryOnly)
 void taskV4QueueEntryTest()
 {
     RunQueueEntryTest(false);
-    LockFreeQueue<CTaskV4MoveAssignmentValue> queue;
     CTaskV4MoveAssignmentValue output;
     LockFreeQueueEntry<CTaskV4MoveAssignmentValue> entry(CTaskV4MoveAssignmentValue(19));
+    // 断言或赋值抛异常时，队列也必须先于被借用的 Entry 析构。
+    LockFreeQueue<CTaskV4MoveAssignmentValue> queue;
     V3ModuleCheck(queue.tryPush(CTaskV4MoveAssignmentValue(17)) == LockFreeQueueSuccess &&
             queue.tryPushEntry(entry) == LockFreeQueueSuccess && queue.size() == 2 &&
             queue.pop(&output) && output.m_value == 17,
         "move-only assignment setup");
-    CTaskV4MoveAssignmentValue::s_failCopy = true;
+    CTaskV4MoveAssignmentValue::m_failCopy = true;
     bool caught = false;
     size_t copied = 99;
     try
@@ -1413,10 +1414,10 @@ void taskV4QueueEntryTest()
     }
     catch (...)
     {
-        CTaskV4MoveAssignmentValue::s_failCopy = false;
+        CTaskV4MoveAssignmentValue::m_failCopy = false;
         throw;
     }
-    CTaskV4MoveAssignmentValue::s_failCopy = false;
+    CTaskV4MoveAssignmentValue::m_failCopy = false;
     V3ModuleCheck(caught && copied == 0 && output.m_value == 17 && queue.size() == 1 && entry.m_value.m_value == 19,
         "borrowed copy-constructor failure committed or changed the source");
     V3ModuleCheck(queue.pop(&output) && output.m_value == 19 &&
@@ -1740,6 +1741,9 @@ void taskV3ReadDomainTest()
 }
 
 #ifdef CTTM_V3_MODULE_MAIN
+/** 独立构建时执行保护域、记录池及队列模块检查
+@return 0表示所选检查成功，非零表示失败或当前组合不适用
+*/
 int main()
 {
     try

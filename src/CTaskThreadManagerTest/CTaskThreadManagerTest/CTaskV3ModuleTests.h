@@ -88,7 +88,7 @@ class CTaskV4MoveAssignmentValue
 {
 public:
     // 单进程单用例的复制构造故障开关；用例离开故障段前恢复
-    static bool s_failCopy;
+    static bool m_failCopy;
 
 public:
     /** 创建可校验的载荷

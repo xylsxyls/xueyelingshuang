@@ -5,34 +5,35 @@
 #include <algorithm>
 #include <climits>
 #include <iostream>
+#include <stdexcept>
 #include <thread>
 
 TestPreparingTask::TestPreparingTask(std::atomic<bool>& entered, std::atomic<bool>& release,
     std::atomic<int32_t>& calls, std::atomic<int32_t>& stops) :
-m_entered(entered),
-m_release(release),
-m_calls(calls),
-m_stops(stops)
+m_entered(&entered),
+m_release(&release),
+m_calls(&calls),
+m_stops(&stops)
 {
 
 }
 
 void TestPreparingTask::doTask()
 {
-    m_entered = true;
+    m_entered->store(true);
     bbWait([this]()
     {
-        return m_release.load();
+        return m_release->load();
     }, "controlled task release");
-    ++m_calls;
+    ++*m_calls;
 }
 
 void TestPreparingTask::stopTask()
 {
-    ++m_stops;
+    ++*m_stops;
 }
 
-/** 创建一个实际进入 doTask 的受控任务。
+/** 创建一个实际进入 doTask 的受控任务
 @param [in] worker 目标线程
 @param [in,out] entered 开始通知
 @param [in,out] release 结束条件
@@ -58,7 +59,7 @@ static std::shared_ptr<TestTask> WhiteGate(const std::shared_ptr<CTaskThread>& w
 }
 
 #ifndef CTTM_TEST_DLL
-/** 验证任务编号不会回绕，也不消耗失败投递额度。
+/** 验证任务编号不会回绕，也不消耗失败投递额度
 */
 static void TaskSequenceBoundary()
 {
@@ -78,7 +79,7 @@ static void TaskSequenceBoundary()
     bbCheck(CTaskThreadTestAccess::recordCount(*worker) == 0, "shutdown retained directory payloads");
 }
 
-/** 验证线程编号耗尽后不复用。
+/** 验证线程编号耗尽后不复用
 */
 static void ManagerSequenceBoundary()
 {
@@ -91,7 +92,7 @@ static void ManagerSequenceBoundary()
     bbCheck(manager.init() == 0 && manager.count() == 0, "exhausted thread ID reused after erase");
 }
 
-/** 生产者帮助摘除已关闭空桶，不依赖关闭者继续运行。
+/** 生产者帮助摘除已关闭空桶，不依赖关闭者继续运行
 */
 static void HelpClosedBucket()
 {
@@ -128,7 +129,7 @@ static void HelpClosedBucket()
             entered.store(true, std::memory_order_release);
             bbWait([&release, &current]()
             {
-                return release.load(std::memory_order_acquire) || current.stopped.load();
+                return release.load(std::memory_order_acquire) || current.m_stopped.load();
             }, "release closed bucket fixture consumer");
         }), INT_MAX).m_committed, "cannot hold bucket fixture consumer");
         bbWait([&entered]()
@@ -147,7 +148,7 @@ static void HelpClosedBucket()
     }
 }
 
-/** 已完成投递的迟到通知不能停止后来的低优先级任务。
+/** 已完成投递的迟到通知不能停止后来的低优先级任务
 */
 static void LatePreemption()
 {
@@ -168,13 +169,13 @@ static void LatePreemption()
         return entered.load();
     }, "late notice current");
     const CTaskThreadResult result = CTaskThreadTestAccess::latePreempt(*worker);
-    const int stopped = task->stops.load();
+    const int stopped = task->m_stops.load();
     release = true;
     workers.drain();
     bbCheck(result.m_status == CTaskThreadOk && stopped == 0, "completed post preempted unrelated current task");
 }
 
-/** 外层投递持有最后一条保护时，回调重入识别自等待并支持后续恢复。
+/** 外层投递持有最后一条保护时，回调重入识别自等待并支持后续恢复
 */
 void taskReentrantProtectionTest()
 {
@@ -199,7 +200,7 @@ void taskReentrantProtectionTest()
             return releaseTask.load();
         }, "reentrant task release");
     }));
-    low->onStop = [&, worker, nested]()
+    low->m_onStop = [&, worker, nested]()
     {
         ++callbacks;
         nestedPost = worker->postTaskResult(nested);
@@ -225,7 +226,7 @@ void taskReentrantProtectionTest()
             });
             bbCheck(heldResult.m_status == CTaskThreadOk, "reentrant reader acquisition");
         }));
-        readerTask->onStop = [&releaseReaders]()
+        readerTask->m_onStop = [&releaseReaders]()
         {
             releaseReaders = true;
         };
@@ -250,7 +251,8 @@ void taskReentrantProtectionTest()
         recovery.m_committed && calls == 2, "reentrant exhaustion blocked or duplicated work");
 }
 
-/** 固定保护额度用满时返回容量错误，恢复后可再次投递且不重复接纳 */
+/** 固定保护额度用满时try投递和停止返回容量错误，普通投递等待归还后只接纳一次
+*/
 static void ProtectionExhaustion()
 {
     CTaskThreadConfig config;
@@ -262,6 +264,7 @@ static void ProtectionExhaustion()
     bbCheck(id != 0, "small protection config failed");
     std::shared_ptr<CTaskThread> worker = consumers.adopt(id);
     WhiteGate(worker, entered, release);
+    bbCheck(CTaskThreadTestAccess::recordCount(*worker) == 1, "record inspection missed the running gate");
     for (int i = 0; i < 4; ++i)
     {
         TestPost(readers.add(), std::make_shared<TestTask>(i, [worker, &held, &releaseReaders](TestTask&)
@@ -281,6 +284,16 @@ static void ProtectionExhaustion()
     {
         return held == 4;
     }, "all protection records held");
+    bool inspectionRejected = false;
+    try
+    {
+        CTaskThreadTestAccess::recordCount(*worker);
+    }
+    catch (const std::runtime_error&)
+    {
+        inspectionRejected = true;
+    }
+    bbCheck(inspectionRejected, "unprotected record inspection pretended the storage was empty");
     std::shared_ptr<TestTask> task(new TestTask(1, [&calls](TestTask&)
     {
         ++calls;
@@ -289,24 +302,28 @@ static void ProtectionExhaustion()
     const bool tried = worker->tryPostTask(task);
     const CTaskThreadResult triedResult = worker->tryPostTaskResult(task);
     const uint64_t elapsed = bbNow() - started;
+    CTaskThreadTestAccess::resetCapacityPressure(*worker);
     CTaskThreadResult post, stop;
-    std::atomic<int> startedCalls(0), finishedCalls(0);
+    std::atomic<int> startedCalls(0);
+    std::atomic<bool> postFinished(false), stopFinished(false);
     std::thread poster([&]()
     {
         ++startedCalls;
         post = worker->postTaskResult(task);
-        ++finishedCalls;
+        postFinished.store(true, std::memory_order_release);
     });
     std::thread stopper;
     bool bothStarted = false;
     bool returnedEarly = false;
+    bool stopReturned = false;
+    bool waitedForCapacity = false;
     try
     {
         stopper = std::thread([&]()
         {
             ++startedCalls;
             stop = worker->stopCurTask();
-            ++finishedCalls;
+            stopFinished.store(true, std::memory_order_release);
         });
         const uint64_t startDeadline = bbNow() + 5000;
         while (startedCalls != 2 && bbNow() < startDeadline)
@@ -314,12 +331,19 @@ static void ProtectionExhaustion()
             std::this_thread::yield();
         }
         bothStarted = startedCalls == 2;
-        const uint64_t deadline = bbNow() + 1000;
-        while (finishedCalls != 2 && bbNow() < deadline)
+        while (!CTaskThreadTestAccess::capacityPressure(*worker) &&
+            !postFinished.load(std::memory_order_acquire) && bbNow() < startDeadline)
         {
             std::this_thread::yield();
         }
-        returnedEarly = finishedCalls == 2;
+        waitedForCapacity = CTaskThreadTestAccess::capacityPressure(*worker);
+        const uint64_t deadline = bbNow() + 1000;
+        while (!stopFinished.load(std::memory_order_acquire) && bbNow() < deadline)
+        {
+            std::this_thread::yield();
+        }
+        stopReturned = stopFinished.load(std::memory_order_acquire);
+        returnedEarly = postFinished.load(std::memory_order_acquire);
     }
     catch (...)
     {
@@ -340,10 +364,11 @@ static void ProtectionExhaustion()
     release = true;
     consumers.drain();
     bbCheck(!tried && elapsed < 1000, "try post waited for protection or accepted without it");
-    bbCheck(bothStarted && !returnedEarly && post.m_committed &&
+    bbCheck(bothStarted && waitedForCapacity && stopReturned && !returnedEarly &&
+            post.m_committed && post.m_status == CTaskThreadOk &&
             stop.m_status == CTaskThreadCapacity && !stop.m_committed &&
             triedResult.m_status == CTaskThreadCapacity && !triedResult.m_committed &&
-            recovered.m_committed && calls == 2,
+            recovered.m_committed && recovered.m_status == CTaskThreadOk && calls == 2,
         "try capacity classification or normal capacity-wait recovery incorrect");
     bbCheck(worker->statistics().m_rejected == 2, "only the two failed try calls count as rejected");
 }
@@ -456,7 +481,7 @@ void taskPostContentionContractTest()
         "ordinary post exposed contention, threw or lost/duplicated work");
 }
 
-/** 逐个真实初始化分配位置注入一次失败，验证回滚和重试。
+/** 逐个真实初始化分配位置注入一次失败，验证回滚和重试
 */
 static void InitializeAllocationFailures()
 {
@@ -491,7 +516,7 @@ static void InitializeAllocationFailures()
     bbCheck(triggered > 10, "allocation sweep did not exercise actual sites");
 }
 
-/** 在一次投递的真实 new 路径注入错误。
+/** 在一次投递的真实 new 路径注入错误
 @param [in] point 失败位置，UINT64_MAX 只计数
 @param [in] level 使用已有或新建优先级
 @return 实际申请次数
@@ -519,7 +544,7 @@ static uint64_t PostAllocationTrial(uint64_t point, int32_t level)
     return allocations;
 }
 
-/** 扫描热队列或冷优先级创建路径。
+/** 扫描热队列或冷优先级创建路径
 @param [in] level 待测优先级
 */
 static void PostAllocationFailures(int32_t level)
@@ -540,7 +565,7 @@ static void PostAllocationFailures(int32_t level)
     }
 }
 
-/** 暂停高优先级的分配，随后拒绝发布；未接纳预留不能抢占低优先级。
+/** 暂停高优先级的分配，随后拒绝发布；未接纳预留不能抢占低优先级
 */
 static void UnpublishedPriority()
 {
@@ -598,7 +623,7 @@ static void UnpublishedPriority()
         "unpublished or rejected priority preempted current task");
 }
 
-/** 有限优先级池可回收缓存空桶，再接纳新的级别。
+/** 有限优先级池可回收缓存空桶，再接纳新的级别
 */
 static void BoundedPriorityReuse()
 {
@@ -656,13 +681,19 @@ static void BoundedPriorityReuse()
 std::vector<BlackBoxCase> taskThreadWhiteBoxCases(int32_t firstId)
 {
     std::vector<BlackBoxCase> cases;
+    /** 登记白盒用例并检查执行后的资源收敛
+    @param [in] name 稳定英文键
+    @param [in] expectation 独立预期
+    @param [in] stress 是否压力项
+    @param [in] run 测试执行体
+    */
     const std::function<void(const char*, const char*, bool, const std::function<void()>&)> add =
         [&cases, firstId](const char* name, const char* expectation, bool stress, const std::function<void()>& run)
     {
         BlackBoxCase item = {firstId + static_cast<int32_t>(cases.size()), name, expectation, stress, 120, [run]()
         {
             run();
-            bbCheck(TestTask::errors == 0 && TestTask::live == 0, "white-box fixture error or retained task");
+            bbCheck(TestTask::m_errors == 0 && TestTask::m_live == 0, "white-box fixture error or retained task");
             bbCheck(CTaskThreadManager::instance().count() == 0, "white-box case retained managed threads");
         }};
         cases.push_back(item);
@@ -672,14 +703,14 @@ std::vector<BlackBoxCase> taskThreadWhiteBoxCases(int32_t firstId)
     add("white-manager-sequence", "UINT32_MAX ID never reused", false, ManagerSequenceBoundary);
     add("white-help-closed-bucket", "producer helps remove idle closed bucket", false, HelpClosedBucket);
     add("white-late-preemption", "completed post cannot stop later unrelated task", false, LatePreemption);
-    add("white-protection-exhaustion", "fixed protection budget returns capacity; recovery accepts exactly once", false, ProtectionExhaustion);
+    add("white-protection-exhaustion", "try/stop report capacity; ordinary post waits and accepts exactly once", false, ProtectionExhaustion);
 #else
     const char* unavailableNames[] = {"white-task-sequence", "white-manager-sequence",
         "white-help-closed-bucket", "white-late-preemption", "white-protection-exhaustion"};
     for (size_t i = 0; i < sizeof(unavailableNames) / sizeof(unavailableNames[0]); ++i)
     {
         add(unavailableNames[i], "internal-state test runs against the production static library", false, std::function<void()>());
-        cases.back().unavailableReason = "DLL intentionally exports no white-box access; covered in static build";
+        cases.back().m_unavailableReason = "DLL intentionally exports no white-box access; covered in static build";
     }
 #endif
     add("fault-init-allocation-sweep", "every measured init allocation site; rollback and recovery", true, InitializeAllocationFailures);
@@ -692,6 +723,6 @@ std::vector<BlackBoxCase> taskThreadWhiteBoxCases(int32_t firstId)
         PostAllocationFailures(9);
     });
     add("white-unpublished-priority", "pause before publication then reject; no false preemption", false, UnpublishedPriority);
-    add("white-bounded-priority-reuse", "2-key budget reused across 20 priorities", false, BoundedPriorityReuse);
+    add("white-bounded-priority-reuse", "1/2/16/17-key budgets and denied growth reused across 20 priorities", false, BoundedPriorityReuse);
     return cases;
 }

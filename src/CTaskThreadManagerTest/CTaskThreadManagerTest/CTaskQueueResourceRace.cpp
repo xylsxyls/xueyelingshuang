@@ -29,6 +29,8 @@ void CTaskQueueResourceRace::afterEmptyScan()
 
 bool CTaskQueueResourceRace::run(bool entryOnly)
 {
+    // 队列清理借用之前，外部条目必须仍存活，包括断言失败路径。
+    LockFreeQueueEntry<int32_t> entries[64];
     LockFreeQueue<int32_t> queue(false);
     LockFreeQueuePoolConfig config;
     config.initialCapacity = 64;
@@ -40,7 +42,6 @@ bool CTaskQueueResourceRace::run(bool entryOnly)
     {
         return false;
     }
-    LockFreeQueueEntry<int32_t> entries[64];
     for (int32_t i = 0; i < 63; ++i)
     {
         entries[i].m_value = i;
@@ -78,6 +79,7 @@ void CTaskQueueResourceRace::afterReturnPublished()
 
 bool CTaskQueueResourceRace::runPendingReturn()
 {
+    LockFreeQueueEntry<int32_t> entries[64];
     LockFreeQueue<int32_t> queue(false);
     LockFreeQueuePoolConfig config;
     config.initialCapacity = 64;
@@ -89,7 +91,6 @@ bool CTaskQueueResourceRace::runPendingReturn()
     {
         return false;
     }
-    LockFreeQueueEntry<int32_t> entries[64];
     for (int32_t i = 0; i < 64; ++i)
     {
         entries[i].m_value = i;
@@ -120,6 +121,11 @@ bool CTaskQueueResourceRace::runPendingReturn()
 }
 
 #ifdef CTTM_QUEUE_RESOURCE_RACE_MAIN
+/** 执行私有队列夹具中选定的资源归还竞态用例
+@param [in] argc 命令行参数数量
+@param [in] argv 当前入口的命令行参数数组
+@return 0表示所选检查成功，非零表示失败或当前组合不适用
+*/
 int main(int argc, char** argv)
 {
     try
