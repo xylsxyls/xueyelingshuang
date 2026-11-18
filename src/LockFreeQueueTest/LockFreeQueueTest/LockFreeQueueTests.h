@@ -422,12 +422,12 @@ public:
     */
     static bool retryContention();
 
-    /** 登记槽被长期上下文占用时，普通入队必须明确失败而不等待持有者
+    /** 登记槽被长期上下文占用时，关闭容量等待的 try 入队明确失败
     @return Whether every stated invariant passed
     */
     static bool registrationProgress();
 
-    /** 私有缓存占用剩余额度时，绑定生产者明确失败而不等待另一上下文释放
+    /** 私有缓存占用剩余额度时，绑定生产者关闭容量等待后明确失败
     @return Whether every stated invariant passed
     */
     static bool cacheResourceProgress();
@@ -444,7 +444,7 @@ public:
 
     /** Multiple producers: independent sequence/ID/accepted-set oracle
     @param [in] producers Number of producer threads; caller supplies a positive count
-    @param [in] count Number of items in the requested workload
+    @param [in] count Items per producer; total workload is producers multiplied by count
     @param [in] bounded Use a finite small pool to force capacity pressure
     @return Whether every stated invariant passed
     */
@@ -569,8 +569,8 @@ public:
     /** One bounded queue throughout a timed window; exact per-lane accepted sets
     @param [in] seconds Active workload duration in seconds
     @param [in] producerSession Bind one producer context per worker
-    @param [in] dynamicPool Exercise growth while the workers run
-    @param [in] prefixPool Consume ready FIFO prefixes instead of individual values
+    @param [in] dynamicPool Use threshold one on the finite 256-node pool; no growth is permitted
+    @param [in] prefixPool Use an 8192-node initial block with unlimited configured capacity but a policy declining growth; consumption remains single-item pop
     @return Whether every stated invariant passed
     */
     static bool steady(uint32_t seconds, bool producerSession = false, bool dynamicPool = false, bool prefixPool = false);

@@ -213,14 +213,15 @@ bool LockFreeQueueTestControl::waitReached()
     return m_reached.load();
 }
 
-/** Test-only scheduling/allocation boundary; production does not reference this symbol
-@param [in] point Stable point: 1/2/3/4 queue, 5/6/7/8 pool, 10/11/12 allocation
-@param [in] owner Diagnostic owner address, never dereferenced
-*/
 /** 在指定发布完成点暂停单个测试线程，超时记录失败
 @param [in] lane 0 至 7 的测试生产者下标
 */
 static void LockFreeQueuePausePublisher(size_t lane);
+
+/** Test-only scheduling/allocation boundary; production does not reference this symbol
+@param [in] point Stable queue/pool boundary from the test-owned patch registry
+@param [in] owner Diagnostic owner address, never dereferenced
+*/
 void LockFreeQueueTestHook(int32_t point, const void* owner)
 {
     if (point == 3 && g_lockFreeQueueTestLane >= 100)
@@ -1038,6 +1039,18 @@ bool LockFreeQueueTests::boundaries()
     LockFreeQueue<int32_t> deferred(false);
     LFQ_CHECK(deferred.poolStatistics().currentCapacity == 0 && deferred.poolStatistics().allocationCalls == 0);
     LFQ_CHECK(deferred.tryPush(3) == LockFreeQueueNotInitialized && !deferred.pop(nullptr));
+    // Boolean refusal has no library status; never cast the adapter's -1 marker to its enum.
+    LFQ_CHECK(LockFreeQueueBenchmarkPush::submit(deferred, 3) == -1);
+    bool refused = false;
+    try
+    {
+        LockFreeQueueBenchmarkPush::checked(deferred, 3);
+    }
+    catch (const std::runtime_error& error)
+    {
+        refused = std::string(error.what()) == "Queue push returned false";
+    }
+    LFQ_CHECK(refused && deferred.empty() && deferred.poolStatistics().allocationCalls == 0);
     LockFreeQueuePoolConfig directConfig;
     directConfig.initialCapacity = 4;
     directConfig.maximumCapacity = 4;
@@ -1047,6 +1060,8 @@ bool LockFreeQueueTests::boundaries()
     LFQ_CHECK(deferred.tryPush(17) == LockFreeQueueSuccess);
     int32_t directValue = 0;
     LFQ_CHECK(deferred.pop(&directValue) && directValue == 17);
+    LockFreeQueueBenchmarkPush::checked(deferred, 18);
+    LFQ_CHECK(deferred.pop(&directValue) && directValue == 18 && deferred.empty());
     deferred.destroy();
     LFQ_CHECK(deferred.tryInit() == LockFreeQueueSuccess && deferred.tryPush(19) == LockFreeQueueSuccess);
     LFQ_CHECK(deferred.pop(&directValue) && directValue == 19);
@@ -3142,6 +3157,9 @@ bool LockFreeQueueTests::busyContract()
             LFQ_CHECK(queue.tryAcquireProducer(producer) == LockFreeQueueSuccess);
         }
         LockFreeQueueEntry<int32_t> entry(6);
+        /** Submit through the captured try variant while the queue, entry and lease remain live
+        @return Exact library result; unknown mode returns InvalidConfiguration
+        */
         auto submit = [&]() -> LockFreeQueueResult {
             switch (mode)
             {
@@ -3178,6 +3196,9 @@ bool LockFreeQueueTests::busyContract()
         }
         LFQ_CHECK((attached ? producer.tryPush(7, true, false) : queue.tryPush(7, true, false)) == LockFreeQueueSuccess);
         LockFreeQueueEntry<int32_t> entry(8);
+        /** Attempt the captured full-pool variant with capacity waiting disabled
+        @return Exact library result for this attempt; no caller-side retry
+        */
         auto submit = [&]() -> LockFreeQueueResult {
             switch (mode)
             {

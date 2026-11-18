@@ -80,7 +80,9 @@ bool LockFreeQueueRetryContract::capacity(size_t mode, bool retryContention, boo
     }
     std::atomic<bool> entered(false), finished(false), stop(false);
     LockFreeQueueResult result = LockFreeQueueInvalidState;
-    // 同一调用体覆盖全部入口；只有调用线程拥有其Producer。
+    /** 使用捕获的入口和重试开关提交一项，将状态写入 result 并设置 finished
+    调用线程独占局部 Producer；捕获的队列、Entry 和结果存储存活到线程结束
+    */
     const auto submit = [&]()
     {
         LockFreeQueueProducer<int32_t> retained;

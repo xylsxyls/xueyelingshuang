@@ -11,12 +11,12 @@ public:
     /** 执行对应版本的普通 push，并保留其真实失败状态
     @param [in,out] queue 队列或绑定生产者
     @param [in] value 待入队值
-    @return 0 成功；其他数值与该版本 LockFreeQueueResult 一致
+    @return 0 成功；布尔接口失败为 -1（不属于库枚举）；状态接口保留该版错误码
     */
     template <class Queue, class Value>
     static int32_t submit(Queue& queue, const Value& value);
 
-    /** 执行必须成功的基准准备或数据路径；失败交由测试外层记录
+    /** 执行必须成功的基准路径；布尔失败抛 runtime_error，状态错误保留库异常供外层记录
     @param [in,out] queue 队列或绑定生产者
     @param [in] value 待入队值
     */
@@ -56,11 +56,11 @@ private:
     template <class Queue, class Value>
     static int32_t execute(Queue& queue, const Value& value, std::true_type legacy);
 
-    /** 直接返回当前状态接口的结果，不增加异常转换
+    /** 适配布尔或状态接口，不将布尔失败伪装成具体库错误码
     @param [in,out] queue 队列或绑定生产者
     @param [in] value 待入队值
     @param [in] legacy 编译期当前签名标记
-    @return 入队状态
+    @return 布尔成功为 0、失败为 -1；非布尔接口保留原状态码
     */
     template <class Queue, class Value>
     static int32_t execute(Queue& queue, const Value& value, std::false_type legacy);

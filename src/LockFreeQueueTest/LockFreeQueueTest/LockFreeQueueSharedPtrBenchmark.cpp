@@ -190,8 +190,10 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
                 producer.release();
             });
         }
-        // One consumer checks per-producer order and total delivery. Identity
-        // checking is inside the measured interval in both compared revisions.
+        /** Consume and verify per-producer identity/FIFO inside both revisions' timed windows
+        Captured owners and queue outlive this sole-consumer call; writes consumer counts,
+        completion time, CPU observations and failure state for inspection after join
+        */
         const auto consume = [&]()
         {
             Value output[64];

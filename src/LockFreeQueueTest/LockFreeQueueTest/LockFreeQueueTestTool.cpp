@@ -790,7 +790,10 @@ std::string LockFreeQueueTestTool::usageDemo(const std::string& source)
 void LockFreeQueueTestTool::selfTest() const
 {
     int32_t checks = 0;
-    // Each check has an independent expected value; failures return through main.
+    /** Count an independent successful check or report its failure through main
+    @param [in] condition Whether the independently expected condition holds
+    @param [in] description Non-null failure label, borrowed for this call
+    */
     const std::function<void(bool, const char*)> check = [&checks](bool condition, const char* description)
     {
         if (!condition)
@@ -1061,6 +1064,52 @@ void LockFreeQueueTestTool::selfTest() const
             rejected = true;
         }
         check(rejected, "omitted or duplicated maintenance cannot change complete throughput silently");
+    }
+    Json::Value waveMeta = perf;
+    waveMeta["suite"] = "40";
+    std::string waveLog;
+    for (int32_t threshold = 0; threshold <= 8; threshold += 8)
+    {
+        for (int32_t producers = 1; producers <= 16; producers *= 2)
+        {
+            waveLog += "WAVE case=wave750_t" + integer(threshold) + "_p" + integer(producers) + "\n";
+            for (int32_t cycle = 0; cycle < 4; ++cycle)
+            {
+                for (int32_t phase = 0; phase < 3; ++phase)
+                {
+                    waveLog += "WAVE_STAGE cycle=" + integer(cycle) + " phase=" + integer(phase) +
+                        " backlog=" + integer(phase == 0 ? 1000 : 500) + " capacity=1134\n";
+                }
+            }
+            waveLog += "WAVE_RESULT operations=1182148 elapsed_ns=100 valid=1\n";
+        }
+    }
+    waveLog += "PASS id=40\n";
+    const Json::Value wave = LockFreeQueueTestResults::parse(waveLog, waveMeta, 0);
+    check(wave["pools"].size() == 120 && wave["samples"].size() == 10, "all wave stages retained");
+    for (Json::Value::UInt stage = 0; stage < 120; ++stage)
+    {
+        check(!wave["pools"][stage]["cycle"].isNull() &&
+            wave["pools"][stage]["cycle"].asUInt() == stage % 12 / 3 &&
+            wave["pools"][stage]["phase"].asUInt() == stage % 3,
+            "wave export preserves the original cycle and phase");
+    }
+    const char* waveBefore[] = {"backlog=1000", "capacity=1134", "cycle=0 phase=1", "cycle=0 phase=0"};
+    const char* waveAfter[] = {"backlog=1000.5", "capacity=1134.5", "cycle=0 phase=0", "cycle=0.5 phase=0"};
+    for (size_t mutation = 0; mutation < 4; ++mutation)
+    {
+        std::string broken = waveLog;
+        broken.replace(broken.find(waveBefore[mutation]), std::string(waveBefore[mutation]).size(), waveAfter[mutation]);
+        rejected = false;
+        try
+        {
+            LockFreeQueueTestResults::parse(broken, waveMeta, 0);
+        }
+        catch (const std::exception&)
+        {
+            rejected = true;
+        }
+        check(rejected, "fractional wave counts and duplicate stages rejected");
     }
     Json::Value extra = perf;
     extra["suite"] = "extra";

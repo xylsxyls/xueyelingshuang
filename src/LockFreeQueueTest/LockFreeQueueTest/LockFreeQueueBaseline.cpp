@@ -27,6 +27,9 @@ void LockFreeQueueBaselinePause()
 
 #include "LockFreeQueue.h"
 
+/** Reproduce the old link gap, then release the owner and verify both payloads
+@return Zero only when the gap is observed and all threads finish with valid FIFO
+*/
 int LockFreeQueueBaselineRun()
 {
     LockFreeQueue<int32_t> queue;

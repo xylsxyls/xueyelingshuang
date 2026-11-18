@@ -17,7 +17,7 @@ private:
     @param [in,out] queue Live queue, owned by the scenario
     @param [in] value Independent sequence ID
     @param [in] producer Borrowed session for context variants, otherwise null
-    @return Zero on success; current library status on refusal
+    @return Zero on success; -1 for a boolean refusal, otherwise the library status
     */
     static int32_t submit(LockFreeQueue<uint64_t>& queue, uint64_t value,
         LockFreeQueueProducer<uint64_t>* producer);

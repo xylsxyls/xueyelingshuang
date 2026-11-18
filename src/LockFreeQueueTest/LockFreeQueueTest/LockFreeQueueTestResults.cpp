@@ -302,7 +302,10 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
             }
         }
         row["case"] = currentCase;
-        row["cycle"] = cycle;
+        if (!values.isMember("cycle"))
+        {
+            row["cycle"] = cycle;
+        }
         const std::string scenario = currentCase + (cycle.isNull() ? "" : "#" + IO::integer(cycle.asInt()));
         if (tag == "WAVE_STAGE")
         {
@@ -314,8 +317,8 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
                 throw std::runtime_error("Wrong/duplicate wave stage");
             }
             ++waveStages;
-            if (values["backlog"].asInt() != (values["phase"].asInt() == 0 ? 1000 : 500) ||
-                (!reference && (values["capacity"].asInt() < 750 || values["capacity"].asInt() > 1500)))
+            if (whole(values, "backlog", 1000) != (phase == 0 ? 1000 : 500) ||
+                (!reference && whole(values, "capacity", 1500) < 750))
             {
                 throw std::runtime_error("Wrong wave backlog/capacity");
             }

@@ -41,6 +41,10 @@ void LockFreeQueueBenchmarkPush::checked(Queue& queue, const Value& value)
 #ifdef LOCK_FREE_QUEUE_BASELINE
         throw std::runtime_error("Baseline push failed");
 #else
+        if (result < 0)
+        {
+            throw std::runtime_error("Queue push returned false");
+        }
         throw LockFreeQueueError(static_cast<LockFreeQueueResult>(result));
 #endif
     }

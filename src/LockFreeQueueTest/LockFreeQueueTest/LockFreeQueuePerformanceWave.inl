@@ -86,6 +86,10 @@ inline bool LockFreeQueuePerformanceWave::scenario(size_t producers, size_t thre
 #ifndef LOCK_FREE_QUEUE_BASELINE
                             if (!LockFreeQueueBenchmarkPush::transient(result) && result != LockFreeQueueCapacityLimit)
                             {
+                                if (result < 0)
+                                {
+                                    throw std::runtime_error("Queue push returned false");
+                                }
                                 throw LockFreeQueueError(static_cast<LockFreeQueueResult>(result));
                             }
 #else
