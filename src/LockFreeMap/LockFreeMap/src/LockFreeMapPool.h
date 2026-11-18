@@ -150,7 +150,7 @@ class LockFreeMapPool
 public:
     /** 构造池元数据，初始有效载荷容量由 initialize 显式申请
     @param [in] config 外部静止期取得的策略快照
-    @param [in] domain 借用共享保护域，必须活到池析构后
+    @param [in,out] domain 借用共享保护域，必须活到池析构后
     @param [in] deferred 是否将值版本保留到全部借用者离开
     */
     LockFreeMapPool(const LockFreeMapPoolConfig& config, LockFreeMapReclamation& domain, bool deferred = false);
@@ -173,7 +173,7 @@ public:
     /** 取得实际槽位并复制构造对象
     @param [in] value 在复制期间保持有效的源对象
     @param [in] version 唯一条目版本，键对象为零
-    @param [in] guard 当前操作的保护守卫
+    @param [in,out] guard 当前操作的保护守卫
     @param [out] status 明确的分配或构造结果
     @return 拥有引用的槽位，失败返回 nullptr
     */
@@ -181,7 +181,7 @@ public:
 
     /** 在独占槽位中直接构造，避免临时键的额外复制
     @param [in] version 唯一条目版本，键对象为零
-    @param [in] guard 当前操作的保护守卫
+    @param [in,out] guard 当前操作的保护守卫
     @param [out] status 明确的分配或构造结果
     @param [in] arguments 仅在取得槽位后传给对象构造函数的参数
     @return 拥有引用的槽位，失败返回 nullptr
@@ -249,7 +249,7 @@ private:
     LockFreeMapStatus grow(bool initial, LockFreeMapHazardRecord* hint = nullptr);
 
     /** 扫描已有槽并取得原始存储的独占权
-    @param [in] guard 本次操作保护守卫
+    @param [in,out] guard 本次操作保护守卫
     @return 已独占但未构造的槽，失败返回 nullptr
     */
     LockFreeMapPoolSlot<T>* take(LockFreeMapGuard& guard);

@@ -30,6 +30,10 @@ initialCapacity(16),
 growFreeThreshold(0),
 maximumCapacity(-1),
 blockRecordLimit(256),
+/** 计算默认增长增量，由池按剩余额度裁剪
+@param [in] context 借用的扩缩容观察上下文，不代表容量预留
+@return 当前容量非零时返回当前容量，否则返回初始容量或16
+*/
 grow([](const LockFreeMapGrowContext& context) -> size_t
 {
     // 返回新增槽位数，池按剩余额度截断；输入为观察上下文

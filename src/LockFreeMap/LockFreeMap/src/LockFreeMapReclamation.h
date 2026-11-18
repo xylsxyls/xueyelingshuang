@@ -32,7 +32,7 @@ public:
     void store(void* value, std::memory_order order = std::memory_order_seq_cst);
 
     /** 读取保护指针
-    @param [in] order 原子内存序，发布默认顺序一致，清空可用 release
+    @param [in] order 合法的原子加载内存序，默认seq_cst；不可使用release或acq_rel
     @return 已发布的受保护地址
     */
     void* load(std::memory_order order = std::memory_order_seq_cst) const;
@@ -118,7 +118,7 @@ public:
     /** 仅尝试取得空闲记录，不等待当前持有者
     @param [in] success 成功取得独占权的内存序
     @param [in] failure 失败观察的内存序
-    @param [in] source 同步发布的初始源提示，取得记录后必须验证实际源
+    @param [in] source 同步发布的初始源提示，可为nullptr；取得记录后必须验证实际源
     @return 是否取得独占权
     */
     bool claim(std::memory_order success = std::memory_order_seq_cst,
@@ -301,7 +301,7 @@ public:
 
 public:
     /** 取得一个独占操作记录
-    @param [in] domain 所属容器保护域，必须覆盖守卫生命期
+    @param [in,out] domain 借用的所属保护域，必须覆盖守卫生命期
     */
     explicit LockFreeMapGuard(LockFreeMapReclamation& domain);
 

@@ -23,83 +23,91 @@ template <typename KeyType, typename ValueType, typename LessType = std::less<Ke
 class LockFreeMap
 {
 public:
-    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
-    @param [in] key 与对应普通接口的同名参数契约一致
-    @param [in] value 与对应普通接口的同名参数契约一致
+    /** 尝试插入或覆盖键值，按开关决定是否重试竞争及等待容量
+    @param [in] key 按LessType查询的键；输入只在本次同步调用期间借用
+    @param [in] value 待复制的候选值，仅本次同步调用期间借用
     @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
-    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
-    @return COMMITTED表示已提交；失败保留输入所有权
+    @param [in] retryCapacity true重试CAPACITY、RESERVED、RECORD_LIMIT；4096次后每次等待1毫秒，单线程Wasm或重入自等待返回原状态
+    @return COMMITTED已提交；BUSY为未重试的竞争，其他失败返回具体状态
+    @note 调用同步完成；输入不转移所有权，失败输出可能已被复制或部分赋值，不得作为成功结果使用
     */
     LockFreeMapStatus trySet(const KeyType& key, const ValueType& value, bool retryContention = false, bool retryCapacity = false);
 
-    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
-    @param [in] key 与对应普通接口的同名参数契约一致
-    @param [in] value 与对应普通接口的同名参数契约一致
+    /** 尝试插入新键；已有等价键时保留原值
+    @param [in] key 按LessType查询的键；输入只在本次同步调用期间借用
+    @param [in] value 待复制的候选值，仅本次同步调用期间借用
     @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
-    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
-    @return COMMITTED表示已提交；失败保留输入所有权
+    @param [in] retryCapacity true重试CAPACITY、RESERVED、RECORD_LIMIT；4096次后每次等待1毫秒，单线程Wasm或重入自等待返回原状态
+    @return COMMITTED已插入；EXISTS已有条目；其他失败返回具体状态
+    @note 调用同步完成；输入不转移所有权，失败输出可能已被复制或部分赋值，不得作为成功结果使用
     */
     LockFreeMapStatus tryInsert(const KeyType& key, const ValueType& value, bool retryContention = false, bool retryCapacity = false);
 
-    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
-    @param [in] key 与对应普通接口的同名参数契约一致
-    @param [in] candidate 与对应普通接口的同名参数契约一致
-    @param [out] value 与对应普通接口的同名参数契约一致
-    @param [out] token 与对应普通接口的同名参数契约一致
+    /** 尝试查找或插入候选，并复制实际条目及凭据
+    @param [in] key 按LessType查询的键；输入只在本次同步调用期间借用
+    @param [in] candidate 已构造候选，所有返回状态下原对象仍归调用方
+    @param [out] value 相应成功状态下的实际值副本；失败时可能部分赋值
+    @param [out] token 返回COMMITTED或EXISTS时的实际条目凭据
     @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
-    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
-    @return COMMITTED表示已提交；失败保留输入所有权
+    @param [in] retryCapacity true重试CAPACITY、RESERVED、RECORD_LIMIT；4096次后每次等待1毫秒，单线程Wasm或重入自等待返回原状态
+    @return COMMITTED已插入或EXISTS已有条目；仅这两种状态下输出有效
+    @note 调用同步完成；输入不转移所有权，失败输出可能已被复制或部分赋值，不得作为成功结果使用
     */
     LockFreeMapStatus tryGetOrInsert(const KeyType& key, const ValueType& candidate, ValueType& value, LockFreeMapToken& token, bool retryContention = false, bool retryCapacity = false);
 
-    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
-    @param [in] key 与对应普通接口的同名参数契约一致
-    @param [in] token 与对应普通接口的同名参数契约一致
-    @param [in] value 与对应普通接口的同名参数契约一致
+    /** 仅在实例和条目版本匹配时尝试覆盖
+    @param [in] key 按LessType查询的键；输入只在本次同步调用期间借用
+    @param [in] token 原实例及条目版本凭据，失效时返回CONFLICT且不自动刷新
+    @param [in] value 待复制的候选值，仅本次同步调用期间借用
     @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
-    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
-    @return COMMITTED表示已提交；失败保留输入所有权
+    @param [in] retryCapacity true重试CAPACITY、RESERVED、RECORD_LIMIT；4096次后每次等待1毫秒，单线程Wasm或重入自等待返回原状态
+    @return COMMITTED已覆盖；CONFLICT凭据失效；其他失败返回具体状态
+    @note 调用同步完成；输入不转移所有权，失败输出可能已被复制或部分赋值，不得作为成功结果使用
     */
     LockFreeMapStatus tryUpdate(const KeyType& key, const LockFreeMapToken& token, const ValueType& value, bool retryContention = false, bool retryCapacity = false);
 
-    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
-    @param [in] key 与对应普通接口的同名参数契约一致
+    /** 尝试删除比较器等价的键
+    @param [in] key 按LessType查询的键；输入只在本次同步调用期间借用
     @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
-    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
-    @return COMMITTED表示已提交；失败保留输入所有权
+    @param [in] retryCapacity true重试CAPACITY、RESERVED、RECORD_LIMIT；4096次后每次等待1毫秒，单线程Wasm或重入自等待返回原状态
+    @return COMMITTED已删除；NOT_FOUND不存在；其他失败返回具体状态
+    @note 调用同步完成；输入不转移所有权，失败输出可能已被复制或部分赋值，不得作为成功结果使用
     */
     LockFreeMapStatus tryErase(const KeyType& key, bool retryContention = false, bool retryCapacity = false);
 
-    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
-    @param [in] key 与对应普通接口的同名参数契约一致
-    @param [in] token 与对应普通接口的同名参数契约一致
+    /** 仅在实例和条目版本匹配时尝试删除
+    @param [in] key 按LessType查询的键；输入只在本次同步调用期间借用
+    @param [in] token 原实例及条目版本凭据，失效时返回CONFLICT且不自动刷新
     @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
-    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
-    @return COMMITTED表示已提交；失败保留输入所有权
+    @param [in] retryCapacity true重试CAPACITY、RESERVED、RECORD_LIMIT；4096次后每次等待1毫秒，单线程Wasm或重入自等待返回原状态
+    @return COMMITTED已删除；CONFLICT凭据失效；其他失败返回具体状态
+    @note 调用同步完成；输入不转移所有权，失败输出可能已被复制或部分赋值，不得作为成功结果使用
     */
     LockFreeMapStatus tryEraseIf(const KeyType& key, const LockFreeMapToken& token, bool retryContention = false, bool retryCapacity = false);
 
-    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
-    @param [in] key 与对应普通接口的同名参数契约一致
-    @param [out] value 与对应普通接口的同名参数契约一致
+    /** 尝试复制值并删除条目；输出复制失败不提交删除
+    @param [in] key 按LessType查询的键；输入只在本次同步调用期间借用
+    @param [out] value 相应成功状态下的实际值副本；失败时可能部分赋值
     @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
-    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
-    @return COMMITTED表示已提交；失败保留输入所有权
+    @param [in] retryCapacity true重试CAPACITY、RESERVED、RECORD_LIMIT；4096次后每次等待1毫秒，单线程Wasm或重入自等待返回原状态
+    @return COMMITTED已提取；NOT_FOUND不存在；其他失败返回具体状态
+    @note 调用同步完成；输入不转移所有权，失败输出可能已被复制或部分赋值，不得作为成功结果使用
     */
     LockFreeMapStatus tryExtract(const KeyType& key, ValueType& value, bool retryContention = false, bool retryCapacity = false);
 
-    /** 尝试按对应普通接口语义修改；条件凭据失效不重试，不重发已提交操作
-    @param [in] token 与对应普通接口的同名参数契约一致
-    @param [out] key 与对应普通接口的同名参数契约一致
-    @param [out] value 与对应普通接口的同名参数契约一致
+    /** 尝试提取比较器排序的末项，始终使用调用方原凭据
+    @param [in] token 原实例及条目版本凭据，失效时返回CONFLICT且不自动刷新
+    @param [out] key 返回COMMITTED时实际提取的键副本
+    @param [out] value 相应成功状态下的实际值副本；失败时可能部分赋值
     @param [in] retryContention true持续重试发布竞争，false在观察到可重试竞争时返回BUSY
-    @param [in] retryCapacity true允许等待容量；原生4096次后每次等待1毫秒，单线程Wasm仍返回资源状态
-    @return COMMITTED表示已提交；失败保留输入所有权
+    @param [in] retryCapacity true重试CAPACITY、RESERVED、RECORD_LIMIT；4096次后每次等待1毫秒，单线程Wasm或重入自等待返回原状态
+    @return COMMITTED已提取；CONFLICT凭据或末项条件失效；其他失败返回具体状态
+    @note 调用同步完成；输入不转移所有权，失败输出可能已被复制或部分赋值，不得作为成功结果使用
     */
     LockFreeMapStatus tryExtractLast(const LockFreeMapToken& token, KeyType& key, ValueType& value, bool retryContention = false, bool retryCapacity = false);
 
-    /** 在首次使用前或显式释放后配置双池，调用期间要求外部静止
-    @param [in] config 独立池预算及有界保护记录配置
+    /** 在外部静止且容器为空时替换双池配置
+    @param [in] config 独立池预算及有界保护记录配置；已有非空表或活动记录时返回INVALID
     @return 成功返回 OK；失败不提交配置，保留原配置及数据
     */
     LockFreeMapStatus lockFreeMapConfigure(const LockFreeMapConfig& config);
@@ -116,7 +124,7 @@ public:
     @param [in] key 查询键
     @param [in] function 接受const ValueType&的回调，每次成功最多调用一次；引用不能逃逸
     @return OK已调用；NOT_FOUND未找到；其他状态均不表示调用成功，回调异常返回USER_EXCEPTION
-    @note 回调可重入数据操作，但不得析构或重新配置本表；暂停只保留该次受保护版本
+    @note 回调可重入数据操作，但不得析构、重新配置或clearAndFreeMemory；引用保护持续到回调结束
     */
     template <typename FunctionType>
     LockFreeMapStatus lockFreeMapVisit(const KeyType& key, const FunctionType& function) const;
@@ -177,9 +185,9 @@ public:
     LockFreeMapStatus lockFreeMapSet(const KeyType& key, const ValueType& value);
 
     /** 并发执行有预算的回收，不等待暂停读者退出
-    @param [in] budget 本次最多释放的退役索引条目数
+    @param [in] budget 索引引用清理及每个池目录访问分别使用的预算；并非总指令或析构次数上限
     @param [out] releasedCapacity 本次实际释放整块内存所归还的槽位数
-    @return 返回 OK 或策略、保护记录不足错误
+    @return OK或初始化、策略、记录等错误；失败前完成的安全回收不会撤销
     */
     LockFreeMapStatus lockFreeMapMaintain(size_t budget, size_t& releasedCapacity);
 
@@ -193,7 +201,7 @@ public:
     */
     bool lockFreeMapAtomicsSupported() const;
 
-    /** 构造函数
+    /** 尝试建立默认双池；初始化失败保存状态供后续状态接口查询
     */
     LockFreeMap();
 
@@ -211,7 +219,7 @@ public:
     /** 返回下标访问代理
     @param [in] key 键
     @return 返回代理对象，支持map[key] = value写法
-    @note 未提交时抛LockFreeMapError；使用lockFreeMapSet可取得详细结果
+    @note 创建代理会复制键且可能抛用户异常；代理赋值未提交时抛LockFreeMapError，状态接口使用lockFreeMapSet
     */
     MapValueProxy<KeyType, ValueType, LessType, MaxLevel> operator[](const KeyType& key);
 
@@ -219,7 +227,7 @@ public:
     @param [in] key 键
     @param [in] value 值
     @return 返回是否写入成功，内存分配失败或比较函数抛异常时返回false
-    @note 可并发调用。旧值在最后一个受保护索引释放后析构，后续写入或维护分批回收
+    @note 可并发调用。旧值在拥有引用和有效值借用均结束后可析构，后续写入或维护分批回收
     */
     bool set(const KeyType& key, const ValueType& value);
 
@@ -233,29 +241,29 @@ public:
 
     /** 删除键
     @param [in] key 键
-    @return 删除成功返回true，键不存在返回false
+    @return 已提交删除返回true；键不存在、资源不足或用户异常等失败返回false
     @note 可并发调用。CAS移除当前索引项，旧索引由安全回收释放；分配失败也返回false
     */
     bool erase(const KeyType& key);
 
     /** 删除键，erase别名
     @param [in] key 键
-    @return 删除成功返回true，键不存在返回false
+    @return 已提交删除返回true；键不存在、资源不足或用户异常等失败返回false
     */
     bool remove(const KeyType& key);
 
     /** 查询键对应的值
     @param [in] key 键
-    @param [out] value 查询成功时写入值副本
+    @param [out] value 成功时写入值副本；失败时可能已部分赋值
     @return 找到返回true，否则返回false
     @note 可并发调用
     */
     bool get(const KeyType& key, ValueType& value) const;
 
-    /** 查询键对应的值，不存在时返回默认值
+    /** 按值查询，未找到时保留默认副本；需要区分错误时使用状态接口
     @param [in] key 键
-    @param [in] defaultValue 默认值
-    @return 返回查到的值或默认值
+    @param [in] defaultValue 查询前复制的默认值；默认参数构造及按值复制、返回可能抛异常
+    @return 先复制默认值再尝试查询；查询失败但输出曾部分赋值时返回该对象当前内容
     @note 可并发调用
     */
     ValueType value(const KeyType& key, const ValueType& defaultValue = ValueType()) const;
@@ -301,49 +309,49 @@ public:
     */
     void clearAndFreeMemory();
 
-    /** 按key升序遍历当前可见键值
-    @param [in] function 回调函数，形如function(const KeyType&, const ValueType&)
-    @return 返回回调次数
+    /** 按LessType顺序遍历当前可见键值
+    @param [in] function 按值传入的同步回调，形如function(const KeyType&, const ValueType&)；入参复制发生在函数体外
+    @return 正常返回的回调次数；未初始化、记录不足或空表返回零，异常时返回此前完成数
     @note 回调引用仅本次受保护调用内有效。允许重入但占用额外保护记录；异常返回已完成回调次数
     */
     template <typename FunctionType>
     size_t forEach(FunctionType function) const;
 
     /** 读取所有当前可见键
-    @return 返回按key升序排列的键列表
-    @note 可并发调用；并发写入时返回弱一致快照
+    @return 返回按LessType顺序排列的键列表
+    @note 可并发调用；每个值单独观察，结果非事务快照；资源不足或元素复制失败可返回空列表，不能据此判定表为空
     */
     std::vector<KeyType> keys() const;
 
     /** 读取所有当前可见值
-    @return 返回按key升序排列的值列表
-    @note 可并发调用；并发写入时返回弱一致快照
+    @return 返回按LessType顺序排列的值列表
+    @note 可并发调用；每个值单独观察，结果非事务快照；资源不足或元素复制失败可返回空列表，不能据此判定表为空
     */
     std::vector<ValueType> values() const;
 
     /** 读取所有当前可见键值对
-    @return 返回按key升序排列的键值对列表
-    @note 可并发调用；并发写入时返回弱一致快照
+    @return 返回按LessType顺序排列的键值对列表
+    @note 可并发调用；每个值单独观察，结果非事务快照；资源不足或元素复制失败可返回空列表，不能据此判定表为空
     */
     std::vector<std::pair<KeyType, ValueType>> toVector() const;
 
     /** 获取第一个可见键值
-    @param [out] key 查询成功时写入最小键
-    @param [out] value 查询成功时写入最小键对应的值
+    @param [out] key 查询成功时写入LessType排序首键
+    @param [out] value 查询成功时写入LessType排序首键对应的值
     @return 找到返回true，否则返回false
     @note 可并发调用；并发写入时返回弱一致结果
     */
     bool first(KeyType& key, ValueType& value) const;
 
     /** 获取最后一个可见键值
-    @param [out] key 查询成功时写入最大键
-    @param [out] value 查询成功时写入最大键对应的值
+    @param [out] key 查询成功时写入LessType排序末键
+    @param [out] value 查询成功时写入LessType排序末键对应的值
     @return 找到返回true，否则返回false
     @note 可并发调用；并发写入时返回弱一致结果
     */
     bool last(KeyType& key, ValueType& value) const;
 
-    /** 查询第一个不小于指定键的可见键值
+    /** 按LessType查询第一个不小于指定键的可见键值
     @param [in] key 查询键
     @param [out] foundKey 查询成功时写入找到的键
     @param [out] value 查询成功时写入找到的值
@@ -352,7 +360,7 @@ public:
     */
     bool lowerBound(const KeyType& key, KeyType& foundKey, ValueType& value) const;
 
-    /** 查询第一个大于指定键的可见键值
+    /** 按LessType查询第一个严格位于指定键之后的可见键值
     @param [in] key 查询键
     @param [out] foundKey 查询成功时写入找到的键
     @param [out] value 查询成功时写入找到的值
@@ -379,7 +387,7 @@ public:
     size_t retainedValueCount() const;
 
 private:
-    /** 执行写入，内部竞争持续重试，条件凭据始终使用调用方传入的版本
+    /** 执行一次写操作，按RetryContention选择竞争重试；条件凭据不自动刷新
     @param [in] key 待查键，仅最大项提取时允许 nullptr
     @param [in] value 候选值，删除时为 nullptr
     @param [in] token 可选条件凭据，无条件操作时为 nullptr
@@ -407,7 +415,7 @@ private:
     @param [out] outputValue 可空输出值
     @param [out] outputToken 可空输出凭据
     @param [in] retryContention 是否持续重试发布冲突
-    @param [in] retryCapacity 是否持续等待容量，4096次后每次等待1毫秒
+    @param [in] retryCapacity 是否等待容量或记录；单线程Wasm和外层借用重入返回原状态，其他后端4096次后等待1毫秒
     @tparam Mode 与write的修改模式一致
     @tparam Outputs 与write的输出位掩码一致
     @return 已提交或明确的未提交状态

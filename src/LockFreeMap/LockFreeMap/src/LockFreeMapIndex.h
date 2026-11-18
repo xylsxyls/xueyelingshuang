@@ -132,7 +132,7 @@ public:
     std::atomic<uint32_t> m_merged;
 
 public:
-    /** 帮助完成待定删除后读取逻辑条目数
+    /** 读取已观察到的删除决策和逻辑条目数；本函数不执行帮助
     @return 原始数减去已提交删除项，无删除时返回原始数
     */
     size_t count() const;
@@ -213,14 +213,14 @@ public:
     ~LockFreeMapIndexStore();
 
     /** 保护不可变根，仅在根实际变化时重试
-    @param [in] guard 当前操作的保护守卫
+    @param [in,out] guard 当前操作的保护守卫
     @return 受保护索引，空容器可能返回 nullptr
     */
     LockFreeMapIndex<K, V>* protect(LockFreeMapGuard& guard);
 
     /** 借用受保护键的当前不可变值
     @param [in] key 由受保护索引持有的键槽
-    @param [in] guard 使用保护指针 1 发布值借用
+    @param [in,out] guard 使用保护指针 1 发布值借用
     @return 受保护版本，键已关闭时返回 nullptr
     */
     LockFreeMapPoolSlot<V>* protectValue(LockFreeMapPoolSlot<LockFreeMapKey<K, V>>* key, LockFreeMapGuard& guard);
@@ -233,7 +233,7 @@ public:
 
     /** 按用户严格弱序及局部位置提示查找下界
     @param [in] index 受保护索引
-    @param [in] record 调用方独占的可选位置提示
+    @param [in,out] record 调用方独占的可选位置提示，允许nullptr
     @param [in] key 按比较器查询的键
     @param [out] found 是否存在比较器等价的键
     @return 下界位置；比较异常由上层公开接口边界转换
@@ -266,7 +266,7 @@ public:
 
     /** 从每操作记录的有界预留段取得唯一版本
     @param [out] version 不透明非零版本号，不表示时间戳
-    @param [in] guard 独占保护记录的守卫；预留段跨清空和释放保留
+    @param [in,out] guard 独占保护记录的守卫；预留段跨清空和释放保留
     @return 无法在不回绕的前提下取得版本时返回 false
     */
     bool nextVersion(uint64_t& version, LockFreeMapGuard& guard);
@@ -277,7 +277,7 @@ public:
     @param [in] found 源索引在指定位置是否有匹配条目
     @param [in] key 候选键槽，nullptr 表示删除
     @param [in] value 删除计划期待的值版本，插入时为 nullptr
-    @param [in] guard 始终保护源索引，直到 complete 或 discard 完成
+    @param [in,out] guard 始终保护源索引，直到 complete 或 discard 完成
     @param [out] status 失败原因或 OK
     @param [in] logicalOnly 无输出的无条件删除允许在根 CAS 处提交
     @return 私有候选，失败为 nullptr；根 CAS 后必须调用 complete 或 discard
@@ -289,7 +289,7 @@ public:
     /** 将成功发布的私有候选转为独立拥有者，不能分配或等待其他调用
     @param [in] candidate 本调用状态为私有的已发布候选
     @param [in] source 构造期间始终由 guard 保护的源，允许 nullptr
-    @param [in] guard 仍保护源记录的构造者
+    @param [in,out] guard 仍保护源记录的构造者
     */
     void complete(LockFreeMapIndex<K, V>* candidate, LockFreeMapIndex<K, V>* source, LockFreeMapGuard& guard);
 

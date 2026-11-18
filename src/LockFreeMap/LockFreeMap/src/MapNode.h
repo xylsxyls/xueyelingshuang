@@ -25,7 +25,7 @@ public:
 public:
     /** 构造跳表节点
     @param [in] key 节点键
-    @param [in] level 节点层数，外部保证范围为1到MaxLevel
+    @param [in] level 节点层数，内部裁剪到1至MaxLevel；模板MaxLevel必须大于零
     */
     MapNode(const KeyType& key, size_t level);
 
@@ -34,7 +34,7 @@ public:
     ~MapNode();
 
     /** 追加一个保留值版本
-    @param [in] valueHolder 值版本节点，不能为空
+    @param [in] valueHolder 待接管节点；nullptr被拒绝，非空节点不得重复追加
     @return 追加成功返回true，valueHolder为空时返回false
     @note 可和同一个MapNode上的其它appendRetainedValue并发调用；成功后本节点接管值节点，不得重复追加同一节点
     */
@@ -42,7 +42,7 @@ public:
 
     /** 读取当前逻辑版本下的值副本
     @param [in] generation 查询逻辑版本
-    @param [out] value 查询成功时写入值副本
+    @param [out] value 成功时写入值副本；赋值异常返回false，输出可能部分修改
     @return 找到有效值返回true，否则返回false
     */
     bool visibleValue(uint64_t generation, ValueType& value) const;
@@ -55,11 +55,11 @@ public:
 
     /** 获取当前逻辑版本下的可见值版本节点
     @param [in] generation 查询逻辑版本
-    @return 找到返回值版本节点，否则返回nullptr
+    @return 找到返回借用节点，否则返回nullptr；借用期间不得释放保留链
     */
     MapValueHolder<ValueType>* visibleHolder(uint64_t generation) const;
 
-    /** 判断值版本节点是否属于指定逻辑版本且可见
+    /** 检查非空节点的逻辑版本；不检查它是否等于当前m_value
     @param [in] valueHolder 值版本节点
     @param [in] generation 查询逻辑版本
     @return valueHolder非空且逻辑版本一致时返回true

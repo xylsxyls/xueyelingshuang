@@ -981,6 +981,10 @@ std::vector<K> LockFreeMap<K, V, Less, Levels>::keys() const
     }
     bool failed = false;
     // 将回调内借用的键复制到调用方容器；复制失败标记整次输出无效
+    /** 复制借用键到result，复制异常通过failed标记整次输出无效
+    @param [in] key 当前受保护条目的键，仅回调期间借用
+    @note 第2个未命名参数是同步借用输入，本回调不使用其内容
+    */
     forEach([&result, &failed](const K& key, const V&) -> void
     {
         try
@@ -1014,6 +1018,10 @@ std::vector<V> LockFreeMap<K, V, Less, Levels>::values() const
     }
     bool failed = false;
     // 将回调内借用的值复制到调用方容器；复制失败标记整次输出无效
+    /** 复制借用值到result，复制异常通过failed标记整次输出无效
+    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
+    @param [in] value 本次输入值；引用仅在当前回调期间借用，不向外保存
+    */
     forEach([&result, &failed](const K&, const V& value) -> void
     {
         try
@@ -1047,6 +1055,10 @@ std::vector<std::pair<K, V>> LockFreeMap<K, V, Less, Levels>::toVector() const
     }
     bool failed = false;
     // 复制回调借用的键值；任何一次复制异常均使整个结果无效
+    /** 复制借用键值对到result，复制异常通过failed标记整次输出无效
+    @param [in] key 当前受保护条目的键，仅回调期间借用
+    @param [in] value 本次输入值；引用仅在当前回调期间借用，不向外保存
+    */
     forEach([&result, &failed](const K& key, const V& value) -> void
     {
         try

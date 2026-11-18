@@ -14,8 +14,8 @@ class MapValueProxy
 {
 public:
     /** 构造下标代理
-    @param [in] map 被代理的LockFreeMap对象，不接管生命周期
-    @param [in] key 被代理的键
+    @param [in] map 借用的Map，须活到代理最后一次使用；nullptr时get失败，实际写入抛LockFreeMapError(INVALID)
+    @param [in] key 复制保存的键；复制异常可向调用者传播
     */
     MapValueProxy(LockFreeMap<KeyType, ValueType, LessType, MaxLevel>* map, const KeyType& key);
 
@@ -49,20 +49,20 @@ public:
 
     /** 查询当前键对应的值
     @param [out] value 查询成功时写入值副本
-    @return 找到返回true，否则返回false
+    @return 找到且复制成功返回true，资源或用户异常等失败返回false；输出可能部分修改
     */
     bool get(ValueType& value) const;
 
     /** 查询当前键对应的值，不存在时返回默认值
     @param [in] defaultValue 默认值
-    @return 返回查到的值或默认值
+    @return 先复制默认值再调用get；失败可能留下部分赋值，复制或按值返回也可能抛异常
     */
     ValueType value(const ValueType& defaultValue = ValueType()) const;
 
 private:
     // 被代理的Map对象，不拥有生命周期
     LockFreeMap<KeyType, ValueType, LessType, MaxLevel>* m_map;
-    // 被代理的键副本
+    // 代理独立拥有的键副本
     KeyType m_key;
 };
 

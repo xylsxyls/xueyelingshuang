@@ -31,7 +31,7 @@ enum LockFreeMapStatus
     LOCK_FREE_MAP_ALLOCATION_FAILURE = 9,
     // 键值构造、复制、比较或回调抛出异常
     LOCK_FREE_MAP_USER_EXCEPTION = 10,
-    // 配置或输入凭据无效
+    // 配置无效或实例尚未初始化；无效条件凭据由CONFLICT报告
     LOCK_FREE_MAP_INVALID = 11,
     // 有界操作记录、索引记录或块记录全部占用
     LOCK_FREE_MAP_RECORD_LIMIT = 12,
