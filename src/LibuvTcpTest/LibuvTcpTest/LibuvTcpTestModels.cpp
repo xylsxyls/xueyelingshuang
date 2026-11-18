@@ -56,13 +56,15 @@ bool LibuvTestThread::join()
     {
         return true;
     }
+    // 保留线程观测对象至注销完成；等待成功只说明生命周期已收敛。
+    const std::shared_ptr<CTaskThread> thread = CTaskThreadManager::instance().getThreadInterface(m_id);
     const CTaskThreadResult result = CTaskThreadManager::instance().waitForEnd(m_id);
     if (result.m_status != CTaskThreadOk)
     {
         return false;
     }
     m_id = 0;
-    return true;
+    return thread && thread->statistics().m_errors == 0;
 }
 
 LibuvTestClient::LibuvTestClient() :

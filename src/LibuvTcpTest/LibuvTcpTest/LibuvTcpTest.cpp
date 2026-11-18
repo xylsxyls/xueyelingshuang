@@ -598,7 +598,13 @@ static bool RawConcurrent(bool stopDuringSubmit, bool ownerProducer = false, boo
                 server.m_counts[2] == 8192 && server.m_counts[3] == 8192))) { break; }
     }
     stop.store(true);
-    for (uint32_t index = 0; index < 4; ++index) { threads[index].join(); }
+    for (uint32_t index = 0; index < 4; ++index)
+    {
+        if (!threads[index].join())
+        {
+            failed.store(true);
+        }
+    }
     const bool passed = !failed.load() && !server.m_failed.load() && done.load() == 4 &&
         (stopDuringSubmit ? (closed && rejected.load() == 4) :
             (server.m_counts[0] == 8192 && server.m_counts[1] == 8192 &&
@@ -776,9 +782,9 @@ static bool TestRawLaneFallbackFairness()
     {
         return false;
     }
-    LibuvTestThread threads[32];
     std::atomic<bool> stopped(false), failed(false);
     std::atomic<uint32_t> done(0);
+    LibuvTestThread threads[32];
     for (uint32_t index = 0; index < 32; ++index)
     {
         if (!threads[index].start([&]()
@@ -814,7 +820,10 @@ static bool TestRawLaneFallbackFairness()
     stopped.store(true);
     for (uint32_t index = 0; index < 32; ++index)
     {
-        threads[index].join();
+        if (!threads[index].join())
+        {
+            failed.store(true);
+        }
     }
     return done.load() == 32 && server.m_received == 32000 && !server.m_failed && !failed.load();
 }
@@ -894,6 +903,7 @@ static bool TestRawLaneWakeEdges()
     }
     void* previous = LibuvTcp::hostLoopExchange(loop);
     bool passed = true;
+    try
     {
         LibuvLaneProbe server, client;
         LibuvChannelWritePoolConfig pool;
@@ -916,9 +926,9 @@ static bool TestRawLaneWakeEdges()
             passed = wait();
         }
         passed = passed && !server.m_peers.empty() && !client.m_peers.empty();
-        LibuvTestThread threads[8];
         std::atomic<uint32_t> phase(0), done(0);
         std::atomic<bool> stopped(false), failed(false);
+        LibuvTestThread threads[8];
         for (uint32_t index = 0; passed && index < 8; ++index)
         {
             // 每个线程每轮最多提交一条，下一轮必须等待上一轮全部交付，反复覆盖队列变空边界。
@@ -966,8 +976,12 @@ static bool TestRawLaneWakeEdges()
         stopped.store(true);
         for (uint32_t index = 0; index < 8; ++index)
         {
-            threads[index].join();
+            passed = threads[index].join() && passed;
         }
+    }
+    catch (...)
+    {
+        passed = false;
     }
     LibuvTcp::hostLoopExchange(previous);
     return LibuvTcp::hostLoopDestroy(loop) == 0 && passed;
@@ -1140,9 +1154,10 @@ static bool TestAcceptAllocationRecovery()
             return false;
         }
         LibuvTcpTest::m_failAllocationSize.store(1237);
-        LibuvTcpTest::m_failAllocationCount.store(1);
+        // 直到本轮真实连接关闭才解除故障，不能让上一轮剩余取空探测消耗唯一故障。
+        LibuvTcpTest::m_failAllocationCount.store(UINT32_MAX);
         const bool closed = PollHosts(server, rejected, [&]() { return rejected.m_closed == 1; });
-        const bool injected = LibuvTcpTest::m_failAllocationCount.exchange(0) == 0;
+        const bool injected = LibuvTcpTest::m_failAllocationCount.exchange(0) != UINT32_MAX;
         LibuvTcpTest::m_failAllocationSize.store(0);
         if (!closed || !injected || server.m_connected != 0 || server.m_closed != 0 ||
             LibuvTcp::hostPeerCount(server.m_instance) != 0 || !rejected.finish())
@@ -1341,7 +1356,7 @@ static bool TestTraffic(uint32_t producers, uint32_t count, uint32_t payload, bo
                     break;
                 }
             }
-        }, [&cancel]() { cancel.store(true); });
+        }, [&]() { cancel.store(true); client.stop(); });
     }
     start.store(true);
     bool complete = false;
@@ -1367,6 +1382,11 @@ static bool TestTraffic(uint32_t producers, uint32_t count, uint32_t payload, bo
     if (!complete || !stopEarly)
     {
         cancel.store(true);
+    }
+    // 失败时先解除库内容量等待；仅设置测试标志不能唤醒阻塞在post中的发送者。
+    if (!complete)
+    {
+        client.stop();
     }
     for (uint32_t producer = 0; producer < producers; ++producer)
     {
@@ -3852,9 +3872,9 @@ static bool TestFramedLaneWakeEdges()
     {
         return false;
     }
-    LibuvTestThread producers[8];
     std::atomic<uint32_t> phase(0);
     std::atomic<bool> failed(false), stop(false);
+    LibuvTestThread producers[8];
     bool passed = true;
     for (uint32_t index = 0; index < 8 && passed; ++index)
     {
@@ -3916,10 +3936,185 @@ static bool TestFramedLaneWakeEdges()
     return passed && receiver.m_received.load() == 12800;
 }
 
+/** 测试线程收敛成功不能掩盖任务异常，失败后仍可再次启动并正常回收
+@return 正常任务、异常任务及复用的执行结果均准确且无遗留登记
+*/
+static bool TestWorkerFailure()
+{
+    const int32_t before = CTaskThreadManager::instance().count();
+    std::atomic<uint32_t> completed(0);
+    LibuvTestThread worker;
+    if (!worker.start([&]() { completed.fetch_add(1); }, []() {}) || !worker.join() || completed.load() != 1)
+    {
+        return false;
+    }
+    // 故意抛出仅用于验证测试器；生产库没有异常注入。
+    if (!worker.start([]() { throw 90; }, []() {}) || worker.join())
+    {
+        return false;
+    }
+    return worker.start([&]() { completed.fetch_add(1); }, []() {}) && worker.join() &&
+        completed.load() == 2 && CTaskThreadManager::instance().count() == before;
+}
+
+/** 共同事件循环在连接池耗尽后必须继续拒绝排队连接，释放容量后能再次接纳
+@return 不借助hostPoll仍能得到全部拒绝终态、容量回收和新连接
+*/
+static bool TestSharedAcceptRecovery()
+{
+    LibuvHostLoop loop;
+    if (loop.init() != 0)
+    {
+        return false;
+    }
+    LibuvHostLoop* previous = LibuvHostLoop::exchange(&loop);
+    bool passed = true;
+    try
+    {
+        LibuvTestHost server;
+        LibuvTestHost clients[26];
+        LockFreeHashMapPoolConfig pool;
+        pool.initialCapacity = 2;
+        pool.maximumCapacity = 2;
+        passed = server.initialize() && LibuvTcp::hostConfigurePeerPool(server.m_instance, pool) == 0 &&
+            LibuvTcp::hostListen(server.m_instance, "127.0.0.1", 0, 2) == 0;
+        /** 观察在等待前建立，只驱动共同loop
+        @param [in] completed 本轮独立完成条件，返回true表示实际事件已齐全
+        @return 5秒内完成且等待无错误；100毫秒仅用于检查失败截止
+        */
+        const auto waitUntil = [&](const std::function<bool()>& completed)
+        {
+            const uint64_t deadline = uv_hrtime() + 5000000000ULL;
+            while (uv_hrtime() < deadline)
+            {
+                const uint64_t observed = loop.m_generation.load(std::memory_order_acquire);
+                if (completed())
+                {
+                    return true;
+                }
+                if (loop.wait(observed, 100) < 0)
+                {
+                    return false;
+                }
+            }
+            return completed();
+        };
+        uint64_t peer = 0;
+        for (uint32_t index = 0; passed && index < 2; ++index)
+        {
+            passed = clients[index].initialize() && LibuvTcp::hostConnect(clients[index].m_instance,
+                "127.0.0.1", LibuvTcp::hostLocalPort(server.m_instance), &peer) == 0 &&
+                waitUntil([&]() { return server.m_connected == index + 1 && clients[index].m_connected == 1; });
+        }
+        for (uint32_t index = 2; passed && index < 26; ++index)
+        {
+            passed = clients[index].initialize() && LibuvTcp::hostConnect(clients[index].m_instance,
+                "127.0.0.1", LibuvTcp::hostLocalPort(server.m_instance), &peer) == 0;
+        }
+        // 池的两个槽仍被占用，24个额外连接必须全部收到唯一关闭，不得悬挂在接纳队列。
+        passed = passed && waitUntil([&]()
+        {
+            for (uint32_t index = 2; index < 26; ++index)
+            {
+                if (clients[index].m_closed != 1)
+                {
+                    return false;
+                }
+            }
+            return true;
+        });
+        uint32_t rejected = 0;
+        for (uint32_t index = 2; index < 26; ++index)
+        {
+            rejected += clients[index].m_closed;
+        }
+        std::printf("shared accept rejected=%u expected=24 admitted=%u\n", rejected, server.m_connected);
+        passed = server.m_connected == 2 && LibuvTcp::hostPeerCount(server.m_instance) == 2 && passed;
+        // 排空最后的拒绝关闭及一次取空探测，随后整个观察窗口不得再产生接纳活动。
+        for (uint32_t index = 0; index < 4; ++index)
+        {
+            passed = loop.run(UV_RUN_NOWAIT) == 0 && passed;
+        }
+        const uint64_t quiet = loop.m_generation.load(std::memory_order_acquire);
+        const uint64_t quietDeadline = uv_hrtime() + 20000000ULL;
+        while (passed && uv_hrtime() < quietDeadline)
+        {
+            passed = loop.wait(quiet, 20) == 0 && loop.m_generation.load(std::memory_order_acquire) == quiet;
+        }
+        for (uint32_t index = 0; index < 26; ++index)
+        {
+            passed = clients[index].finish() && !clients[index].m_failed && passed;
+        }
+        passed = waitUntil([&]() { return LibuvTcp::hostPeerCount(server.m_instance) == 0; }) && passed;
+        LibuvTestHost recovered;
+        passed = recovered.initialize() && passed;
+        if (passed)
+        {
+            passed = LibuvTcp::hostConnect(recovered.m_instance, "127.0.0.1",
+                LibuvTcp::hostLocalPort(server.m_instance), &peer) == 0 &&
+                waitUntil([&]() { return recovered.m_connected == 1 && server.m_connected == 3; });
+        }
+        passed = recovered.finish() && !recovered.m_failed && passed;
+        passed = server.finish() && !server.m_failed && passed;
+    }
+    catch (...)
+    {
+        passed = false;
+    }
+    LibuvHostLoop::exchange(previous);
+    return passed && loop.m_channels == 0;
+}
+
+/** 大帧基准到达短截止时必须返回失败并回收全部任务，不等待无法完成的容量提交
+@return 真实运行失败且十秒内收敛，线程登记回到进入前数量
+*/
+static bool TestBenchmarkTimeout()
+{
+    const int32_t before = CTaskThreadManager::instance().count();
+    const uint64_t started = uv_hrtime();
+    // 约1TiB的请求量不可能在两秒内交付；16个窗口可实际触及64MiB发送预算。
+    const int result = LibuvTcpBenchmark::run(16, 65536, 1000000, 128, false, 2000);
+    return result == 4 && uv_hrtime() - started < 10000000000ULL &&
+        CTaskThreadManager::instance().count() == before;
+}
+
+/** 初始化诊断定时器后尚未运行loop就退出，回调不能解引用已撤销的内部状态
+@return 定时器随实例排空并关闭，未开始的测试任务不遗留外部句柄
+*/
+static bool TestBenchmarkProbeCleanup()
+{
+    // 定时器存储必须晚于TCP实例释放，覆盖析构中的最终回调。
+    LibuvTcpBenchmarkProbe observation = {};
+    {
+        LibuvTcp client;
+        if (!client.initServer("127.0.0.1", 0))
+        {
+            return false;
+        }
+        observation.m_client = &client;
+        observation.m_started = uv_hrtime();
+        if (uv_timer_init(client.loopPtr(), &observation.m_timer) != 0)
+        {
+            return false;
+        }
+        observation.m_timer.data = &observation;
+        if (uv_timer_start(&observation.m_timer, &LibuvTcpBenchmarkProbe::tick, 0, 1) != 0)
+        {
+            uv_close(reinterpret_cast<uv_handle_t*>(&observation.m_timer), nullptr);
+            return false;
+        }
+    }
+    return uv_is_closing(reinterpret_cast<uv_handle_t*>(&observation.m_timer)) != 0;
+}
+
 int LibuvTcpTest::run(int argc, char** argv)
 {
     static const std::map<int32_t, LibuvTestCase> s_cases =
     {
+        { LibuvTestBenchmarkProbeCleanup, { "未启动loop的诊断定时器安全收尾", false, &TestBenchmarkProbeCleanup } },
+        { LibuvTestBenchmarkTimeout, { "基准超时取消容量等待并回收线程", true, &TestBenchmarkTimeout } },
+        { LibuvTestSharedAcceptRecovery, { "共同循环连接池满拒绝与恢复", false, &TestSharedAcceptRecovery } },
+        { LibuvTestWorkerFailure, { "测试线程异常不得误报通过", false, &TestWorkerFailure } },
         { LibuvTestFramedLaneWakeEdges, { "长度帧八生产者空闲通知交界", true, &TestFramedLaneWakeEdges } },
         { LibuvTestRawFallbackIdle, { "后备队列段边界空闲与再次唤醒", false, &TestRawFallbackIdle } },
         { LibuvTestRawConnectedLookup, { "后备连接查询不分配快照", false, &TestRawConnectedLookup } },

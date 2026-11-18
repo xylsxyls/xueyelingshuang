@@ -53,7 +53,7 @@ public:
     bool start(const std::function<void()>& run, const std::function<void()>& stop);
 
     /** 正常排空并等待已启动任务完成
-    @return 线程是否已结束
+    @return 线程已结束且任务未报告异常时为true；未启动的空对象也返回true
     */
     bool join();
 private:

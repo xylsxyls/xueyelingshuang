@@ -201,11 +201,15 @@ void LibuvTcpBenchmarkProbe::tick(uv_timer_t* timer)
 {
     LibuvTcpBenchmarkProbe* probe = static_cast<LibuvTcpBenchmarkProbe*>(timer->data);
     LibuvBase* state = probe->m_client->m_libuv;
-    if (state->m_stopping.load())
+    // 尚未启动loop就失败时，析构先撤销m_libuv再排空外部定时器。
+    if (state == nullptr || state->m_stopping.load())
     {
-        std::fprintf(stderr, "probe STOP queue=%llu ready=%d uvWriteBytes=%llu\n",
-            static_cast<unsigned long long>(state->m_queue->size()), int(state->m_queue->possiblyReady()),
-            static_cast<unsigned long long>(reinterpret_cast<uv_stream_t*>(state->mainTcp())->write_queue_size));
+        if (state != nullptr)
+        {
+            std::fprintf(stderr, "probe STOP queue=%llu ready=%d uvWriteBytes=%llu\n",
+                static_cast<unsigned long long>(state->m_queue->size()), int(state->m_queue->possiblyReady()),
+                static_cast<unsigned long long>(reinterpret_cast<uv_stream_t*>(state->mainTcp())->write_queue_size));
+        }
         uv_close(reinterpret_cast<uv_handle_t*>(timer), nullptr);
         return;
     }
@@ -220,10 +224,10 @@ void LibuvTcpBenchmarkProbe::tick(uv_timer_t* timer)
     }
 }
 
-int LibuvTcpBenchmark::run(uint32_t producers, uint32_t payload, uint32_t count, uint32_t window, bool probe)
+int LibuvTcpBenchmark::run(uint32_t producers, uint32_t payload, uint32_t count, uint32_t window, bool probe, uint32_t timeoutMs)
 {
     if (producers < 1 || producers > 16 || payload < 16 || payload > 65536 ||
-        count < 1 || count > 1000000 || window < 1 || window > 128)
+        count < 1 || count > 1000000 || window < 1 || window > 128 || timeoutMs == 0)
     {
         return 2;
     }
@@ -234,7 +238,7 @@ int LibuvTcpBenchmark::run(uint32_t producers, uint32_t payload, uint32_t count,
     std::atomic<bool> cancel(false);
     std::atomic<uint32_t> ready(0);
     std::atomic<bool> loopDone(false);
-    const uint64_t deadline = uv_hrtime() + 60000000000ULL;
+    const uint64_t deadline = uv_hrtime() + uint64_t(timeoutMs) * 1000000;
     LibuvTestThread server;
     LibuvTestThread loop;
     LibuvTestThread senders[16];
@@ -322,7 +326,7 @@ int LibuvTcpBenchmark::run(uint32_t producers, uint32_t payload, uint32_t count,
                     break;
                 }
             }
-        }, [&]() { cancel.store(true); });
+        }, [&]() { cancel.store(true); client.stop(); });
     }
     while (launched && ready.load() < producers && uv_hrtime() < deadline)
     {
@@ -359,6 +363,11 @@ int LibuvTcpBenchmark::run(uint32_t producers, uint32_t payload, uint32_t count,
         std::fputc('\n', stderr);
     }
     cancel.store(true);
+    // 失败时先解除库内容量等待；仅设置测试标志不能唤醒阻塞在post中的发送者。
+    if (!complete)
+    {
+        client.stop();
+    }
     for (uint32_t producer = 0; producer < producers; ++producer)
     {
         complete = senders[producer].join() && complete;

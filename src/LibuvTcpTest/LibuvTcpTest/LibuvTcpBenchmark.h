@@ -42,9 +42,10 @@ public:
     @param [in] count 每生产者帧数，1 至 1000000
     @param [in] window 每生产者未接收窗口，1 至 128
     @param [in] probe 是否启用独立诊断；补发过唤醒的运行返回失败，不计正常性能
+    @param [in] timeoutMs 整轮截止毫秒，默认60000；功能回归可缩短以验证超时收尾
     @return 0 完整交付，非零配置或运行失败
     */
-    static int run(uint32_t producers, uint32_t payload, uint32_t count, uint32_t window, bool probe = false);
+    static int run(uint32_t producers, uint32_t payload, uint32_t count, uint32_t window, bool probe = false, uint32_t timeoutMs = 60000);
 
     /** 完整交付六字节正文；独立于带时间戳和小窗口的延迟基准
     @param [in] producers 生产者数，1至16
