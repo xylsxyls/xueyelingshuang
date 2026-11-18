@@ -391,14 +391,14 @@ private:
 
     /** 沿受保护块链查找实际可用位图；不将一次 CAS 失败当作满池
     @param [in,out] record 本次操作独占的登记槽；借用至返回
-    @param [out] interrupted 是否遇到正在摘除的拓扑，需要稍后重试
+    @param [out] interrupted 是否因拓扑验证失效或 try 竞争预算耗尽而中断，调用前置为false
     @return 已领取的节点或额度标识；遍历中断或未发现可领取存储时返回nullptr
     */
     Node* findNode(Record& record, bool& interrupted);
 
     /** 发布保护并验证块链头；重试只依赖竞争进展
     @param [in,out] record 本次操作独占的登记槽；借用至返回
-    @param [out] interrupted 是否遇到正在摘除的拓扑，需要稍后重试
+    @param [out] interrupted 是否因链头验证失效或 try 竞争预算耗尽而中断，调用前置为false
     @return 由record主保护覆盖的链头；无块或验证被竞争中断时返回nullptr
     */
     Block* protectedFirst(Record& record, bool& interrupted);
@@ -406,7 +406,7 @@ private:
     /** 先保护后继，再验证仍连接的前驱；次保护向主保护转交
     @param [in,out] block 受保护或调用者独占的块；借用至返回
     @param [in,out] record 本次操作独占的登记槽；借用至返回
-    @param [out] interrupted 是否遇到正在摘除的拓扑，需要稍后重试
+    @param [out] interrupted 是否因前驱已摘除或后继链接改变而中断，调用前置为false
     @return 由record主保护接手的后继块；链尾或验证被中断时返回nullptr
     */
     Block* protectedNext(Block* block, Record& record, bool& interrupted);
@@ -442,7 +442,7 @@ private:
 
     /** 调用一次策略、原子预留额度并发布增长块；失败退还预留
     @param [in,out] record 可空的本线程登记；指定 push 或 tryPush 的竞争重试方式
-    @param [in] required 已实际领取失败时为 true，不用弱一致空闲统计取消必要扩容
+    @param [in] required 已实际领取失败时为true；只有观察到新的容量或消费进展且空闲量超过阈值，才取消本次必要扩容并重新领取
     @return Success表示本次增长已完成或已无增长需要；失败返回策略、资源、竞争或分配状态
     */
     LockFreeQueueResult grow(Record* record = nullptr, bool required = false);

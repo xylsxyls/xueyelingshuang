@@ -16,7 +16,7 @@ enum LockFreeQueueResult
     LockFreeQueueAllocationFailure,
     // Copy construction failed; the source remains caller-owned.
     LockFreeQueueConstructionFailure,
-    // destroy was called and initialization has not succeeded.
+    // Deferred construction, failed initialization, destroy, or an unattached producer context.
     LockFreeQueueNotInitialized,
     // Only try APIs: a concurrent claim/publication invalidated this attempt.
     LockFreeQueueBusy,
