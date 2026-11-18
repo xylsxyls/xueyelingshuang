@@ -15,7 +15,7 @@ public:
     */
     explicit CTaskPoolState(const CTaskThreadPoolConfig& config);
 
-    /** 清理已经静止的池
+    /** 外部调用静止后关闭池；正常收尾未完成时逐个等待，避免线程借用已销毁状态
     */
     ~CTaskPoolState();
 
@@ -34,7 +34,7 @@ public:
 
     /** 关闭本池线程
     @param [in] drain 是否排空
-    @return 生命周期结果
+    @return 生命周期结果；停止回调异常不跳过线程等待
     */
     CTaskThreadResult shutdown(bool drain);
 
@@ -58,6 +58,17 @@ public:
     CTaskThreadResult choose(uint64_t turn, uint32_t& id, std::shared_ptr<CTaskThread>& thread);
 
 private:
+    /** 析构阶段完成单线程停止或等待；不持有成员表保护，不因临时资源不足放弃存活线程
+    @param [in] thread 本池拥有的非空线程强引用
+    @param [in] wait false只通知，true在通知后等待；调用者不得位于该线程的回调内
+    */
+    static void finishForDestruction(const std::shared_ptr<CTaskThread>& thread, bool wait);
+
+    /** 析构资源不足兜底：通知成员、收敛控制任务后再逐个等待最终成员，不分配快照
+    调用方保证没有并发池接口；登记删除仍失败时由管理器保留已退出线程并在资源恢复后清理
+    */
+    void finishWithoutSnapshot();
+
     /** 新增一个工作线程
     @param [in] initial 是否属于初始化
     @return 创建并登记结果

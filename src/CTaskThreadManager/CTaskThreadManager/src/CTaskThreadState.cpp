@@ -861,16 +861,18 @@ CTaskThreadResult CTaskThreadState::finish(bool drain)
         return CTaskThreadResult(CTaskThreadOk, true);
     }
     const CTaskThreadResult requested = requestFinish(drain);
-    if (requested.m_status != CTaskThreadOk)
+    if (requested.m_status != CTaskThreadOk && requested.m_status != CTaskThreadCallbackFailure)
     {
         return requested;
     }
+    // stopTask 异常不撤销已发布的关闭意图。仍须 join，再报告原异常，
+    // 否则静止析构可能留下 joinable 的 std::thread 并触发 terminate。
     uint32_t attempts = 0;
     for (;;)
     {
         if (m_joined.load(std::memory_order_acquire))
         {
-            return CTaskThreadResult(CTaskThreadOk, true);
+            return requested;
         }
         bool expected = false;
         if (m_joining.compare_exchange_strong(expected, true, std::memory_order_acq_rel, std::memory_order_acquire))
@@ -897,7 +899,7 @@ CTaskThreadResult CTaskThreadState::finish(bool drain)
             m_thread.join();
         }
         m_joined.store(true, std::memory_order_release);
-        return CTaskThreadResult(CTaskThreadOk, true);
+        return requested;
     }
     catch (const std::system_error& error)
     {

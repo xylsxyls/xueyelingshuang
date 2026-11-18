@@ -33,6 +33,87 @@ m_lastResize(0)
 CTaskPoolState::~CTaskPoolState()
 {
     shutdown(false);
+    if (!m_closed.load(std::memory_order_acquire))
+    {
+        // 不仅快照分配，停止通知的保护预算也可能暂时耗尽。
+        // 只要尚未完整关闭，就不能销毁仍被控制任务或业务线程借用的状态。
+        finishWithoutSnapshot();
+    }
+}
+
+void CTaskPoolState::finishForDestruction(const std::shared_ptr<CTaskThread>& thread, bool wait)
+{
+    uint32_t attempts = 0;
+    for (;;)
+    {
+        const CTaskThreadResult result = wait ? thread->finish(false) : thread->requestShutdown(false);
+        if (result.m_status == CTaskThreadOk || result.m_status == CTaskThreadCallbackFailure)
+        {
+            return;
+        }
+        // 析构无法把仍在借用状态的线程交回调用者，资源暂不可用时继续等待安全退出。
+        CTaskResultAdapter::pause(attempts);
+    }
+}
+
+void CTaskPoolState::finishWithoutSnapshot()
+{
+    // 析构要求外部静止。即使快照或停止保护资源不足，也必须收敛全部借用。
+    m_accepting.store(false, std::memory_order_release);
+    m_discardRequested.store(true, std::memory_order_release);
+    requestStop();
+    CTaskThreadManager& manager = CTaskThreadManager::instance();
+    // 先通知已有成员，解除控制线程可能正在缩容排空成员的等待。
+    // 控制线程退出后再通知最终成员集合，最后逐个 join；不分配快照。
+    uint32_t attempts = 0;
+    for (int32_t pass = 0; pass < 3; ++pass)
+    {
+        if (pass == 1)
+        {
+            while (m_controller != 0)
+            {
+                // 查询失败不能当作控制线程不存在；带状态的等待能区分资源不足与已注销。
+                const CTaskThreadResult result = manager.waitForEnd(m_controller);
+                if (result.m_status == CTaskThreadOk || result.m_status == CTaskThreadNotFound ||
+                    result.m_status == CTaskThreadCallbackFailure)
+                {
+                    m_controller = 0;
+                    break;
+                }
+                CTaskResultAdapter::pause(attempts);
+            }
+        }
+        // 每次只复制一个强引用，离开 Map 保护后再通知或等待。
+        uint32_t previous = 0;
+        for (;;)
+        {
+            uint32_t selected = 0;
+            std::shared_ptr<CTaskThread> thread;
+            const size_t visited = m_workers.forEach([&](const uint32_t& id, const std::shared_ptr<CTaskThread>& candidate)
+            {
+                if (id > previous && (selected == 0 || id < selected))
+                {
+                    selected = id;
+                    thread = candidate;
+                }
+            });
+            if (!thread)
+            {
+                if (visited == 0 && !m_workers.empty())
+                {
+                    CTaskResultAdapter::pause(attempts);
+                    continue;
+                }
+                break;
+            }
+            finishForDestruction(thread, pass == 2);
+            if (pass == 2)
+            {
+                manager.waitForEnd(selected);
+            }
+            previous = selected;
+        }
+    }
 }
 
 CTaskThreadResult CTaskPoolState::start()
@@ -337,6 +418,7 @@ CTaskThreadResult CTaskPoolState::shutdown(bool drain)
         m_accepting.store(false, std::memory_order_release);
         committed = true;
         requestStop();
+        CTaskThreadStatus notificationStatus = CTaskThreadOk;
         if (!drain)
         {
             m_discardRequested.store(true, std::memory_order_release);
@@ -345,7 +427,12 @@ CTaskThreadResult CTaskPoolState::shutdown(bool drain)
             for (size_t i = 0; i < threads.size(); ++i)
             {
                 const CTaskThreadResult item = threads[i]->requestShutdown(false);
-                if (item.m_status != CTaskThreadOk)
+                if (item.m_status == CTaskThreadCallbackFailure)
+                {
+                    // 停止意图已经生效，业务通知异常不能跳过控制线程及工作线程的等待。
+                    notificationStatus = item.m_status;
+                }
+                else if (item.m_status != CTaskThreadOk)
                 {
                     result = item;
                 }
@@ -361,7 +448,7 @@ CTaskThreadResult CTaskPoolState::shutdown(bool drain)
         {
             if (m_closed.load(std::memory_order_acquire))
             {
-                return CTaskThreadResult(CTaskThreadOk, true);
+                return CTaskThreadResult(notificationStatus, true);
             }
             bool expected = false;
             if (m_closing.compare_exchange_strong(expected, true, std::memory_order_acq_rel, std::memory_order_acquire))
@@ -417,6 +504,10 @@ CTaskThreadResult CTaskPoolState::shutdown(bool drain)
             }
         }
         m_closing.store(false, std::memory_order_release);
+        if (result.m_status == CTaskThreadOk)
+        {
+            result.m_status = notificationStatus;
+        }
         // 停止意图已经发布；真实收尾错误也不能被解释为本调用完全未改变池状态。
         result.m_committed = true;
         return result;

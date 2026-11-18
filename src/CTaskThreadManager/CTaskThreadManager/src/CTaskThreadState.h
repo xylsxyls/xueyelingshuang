@@ -39,12 +39,13 @@ public:
 
     /** 关闭接纳并等待退出
     @param [in] drain true 排空，false 丢弃排队任务并停止当前任务
-    @return 自等待明确拒绝；并发关闭在内部等待同一次 join 完成
+    @return 自等待明确拒绝；并发关闭等待同一次 join，停止回调异常在 join 后报告
     */
     CTaskThreadResult finish(bool drain);
 
     /** 发布停止意图，不等待线程退出；停止观察的竞争内部重试
     @param [in] drain 是否排空
+    @return 关闭意图已提交；停止回调或保护资源错误仍保留 committed=true
     */
     CTaskThreadResult requestFinish(bool drain);
 
@@ -176,6 +177,7 @@ private:
 
     /** 调用业务停止回调并隔离异常
     @param [in] task 安全任务强引用
+    @return 通知成功、重复回调自等待或业务回调异常
     */
     CTaskThreadStatus notifyStop(const std::shared_ptr<CTask>& task);
 

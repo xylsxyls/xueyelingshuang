@@ -19,6 +19,8 @@ public:
     CTaskThreadPool();
 
     /** 排空并释放本池线程；析构前外部必须停止分配器调用
+    必须由本池业务及策略回调之外的线程析构，不得通过删除本池来等待自身退出
+    快照分配或停止保护资源不足时，改为合作停止并逐个等待；登记删除失败由管理器保留待清理
     */
     ~CTaskThreadPool();
 
@@ -30,7 +32,7 @@ public:
 
     /** 停止自动扩缩容，关闭所有成员接纳并等待
     @param [in] drain true 排空，false 通知停止并丢弃排队任务；并发调用时 false 优先且不等待收尾权才通知
-    @return 自等待拒绝，竞争内部等待；实际错误保留资源
+    @return 自等待拒绝，竞争内部等待；停止回调异常仍等待线程退出并返回 CallbackFailure，其他收尾错误保留资源
     */
     CTaskThreadResult shutdown(bool drain = true);
 

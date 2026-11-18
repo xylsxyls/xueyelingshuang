@@ -130,7 +130,7 @@ public:
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-    // 兼容保留的非零参数；V3 稳定槽位池不分配哈希桶
+    // 必须非零的兼容参数；稳定槽位池不分配哈希桶，此值不影响实际容量
     size_t m_taskBuckets;
     // 已接纳任务加在途预留上限，包含正在执行任务；-1 不设业务上限
     int64_t m_maximumTasks;

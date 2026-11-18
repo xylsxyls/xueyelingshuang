@@ -12,7 +12,7 @@ public:
 
     /** 根据负载决定目标规模；每个池只由控制线程调用
     @param [in] load 初始容量、成功增长次数、当前容量、任务负载及时间
-    @return 默认全忙且积压时增长约 50%，全池空闲 1 秒后每轮缩一个
+    @return 默认全忙且积压时增长约 50%；全池空闲时请求缩一条，成员须连续空闲满 1 秒
     */
     virtual CTaskPoolDecision evaluate(const CTaskPoolLoad& load);
 

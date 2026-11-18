@@ -191,6 +191,7 @@ public:
     size_t m_stagedCount;
     // 以下链字段只有消费者访问；每个缓存至多出现一次
     CTaskStorageCache* m_stagedNext;
+    // 是否已经挂入消费者的待发布回收链，防止重复挂链
     bool m_stagedListed;
     // 消费者暂存写入不使生产者的分配游标和固定编号所在缓存行失效
     unsigned char m_stagedPadding[64];
