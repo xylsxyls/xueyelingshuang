@@ -18,7 +18,7 @@ public:
     uint64_t m_returned;
     // doTask 入口，不包含测试校验
     uint64_t m_entered;
-    // 本次逻辑提交中的未接纳重试数
+    // 测试方的外部重投数；普通投递禁止外部重投，不统计库内CAS重试
     uint64_t m_retries;
     // 业务任务优先级
     int32_t m_level;
@@ -43,7 +43,7 @@ public:
     uint64_t m_end;
     // 本生产者结束时观察到的消费进度
     uint64_t m_consumedAtEnd;
-    // 未接纳重试总数
+    // 测试方的外部重投总数；保留报告字段，不代表库内竞争次数
     uint64_t m_retries;
     // 分隔不同生产者的高频写入
     unsigned char m_padding[128];
@@ -101,6 +101,8 @@ public:
     static uint64_t frequency();
 
 public:
+    // 隔离相邻栈变量与生产者反复读取的固定负载参数。
+    unsigned char m_headPadding[128];
     // 生产者数量
     size_t m_producers;
     // 总任务数量
@@ -138,8 +140,14 @@ public:
     // 消费进度，每 1024 次发布一次，避免每项原子 RMW
     std::atomic<uint64_t> m_observed;
 #ifdef CTTM_BENCH_SAMPLER
-    // 仅诊断构建由第一个任务记录，用于采样既有消费者
-    std::atomic<uint32_t> m_consumerId;
+    // 仅诊断构建记录采样线程；默认消费者，生产者诊断开关选择第0生产者
+    std::atomic<uint32_t> m_sampleThreadId;
+#endif
+#if defined(CTTM_BENCH_FIXED_CPU) && defined(_WIN32)
+    // 仅诊断构建使用；消费者在预热任务设置，正式任务保持0以免把系统调用计入吞吐
+    uintptr_t m_consumerMask;
+    // 生产者开始屏障前使用；排除消费者所在物理核，仍允许生产者由系统调度
+    uintptr_t m_producerMask;
 #endif
     // 最后一次任务执行的结束时刻
     std::atomic<uint64_t> m_finish;
@@ -151,6 +159,8 @@ public:
     // 覆盖最大4000万项，每1024项记录CPU；最终按生产结束下界分开同期消费与排空
     uint8_t m_cpuTrace[40000000 / 1024 + 1];
 #endif
+    // 外部控制循环的栈变量不得与消费者完成计数共用缓存行。
+    unsigned char m_tailPadding[128];
 };
 
 /** 无业务计算的任务；以消费者本地序号查漏、查重及核对 FIFO，不写任务对象

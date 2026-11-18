@@ -117,6 +117,16 @@ public:
     static Type s_member;
 };
 
+/** 只读观察真实容量重试留下的压力提示，不伪造库内状态
+*/
+struct CTaskTestCapacityPressure
+{
+public:
+    typedef std::atomic<uint32_t> CTaskThreadState::* Type;
+    // 由测试翻译单元中的显式实例化初始化
+    static Type s_member;
+};
+
 /** 白盒测试使用的 Observers 成员指针，不拥有对应对象
 */
 struct CTaskTestObservers
@@ -162,7 +172,7 @@ public:
 struct CTaskTestPreempt
 {
 public:
-    typedef CTaskThreadResult (CTaskThreadState::*Type)(int32_t, CTaskStorageSlot*);
+    typedef CTaskThreadStatus (CTaskThreadState::*Type)(int32_t, CTaskStorageSlot*);
 
     // 由测试翻译单元中的显式实例化初始化
     static Type s_member;

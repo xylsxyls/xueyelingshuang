@@ -14,6 +14,7 @@ CTaskTestOutstanding::Type CTaskTestOutstanding::s_member = nullptr;
 CTaskTestReleased::Type CTaskTestReleased::s_member = nullptr;
 CTaskTestQueued::Type CTaskTestQueued::s_member = nullptr;
 CTaskTestDequeued::Type CTaskTestDequeued::s_member = nullptr;
+CTaskTestCapacityPressure::Type CTaskTestCapacityPressure::s_member = nullptr;
 CTaskTestObservers::Type CTaskTestObservers::s_member = nullptr;
 CTaskTestBuckets::Type CTaskTestBuckets::s_member = nullptr;
 CTaskTestDomain::Type CTaskTestDomain::s_member = nullptr;
@@ -31,6 +32,7 @@ template struct CTaskPrivateBinding<CTaskTestOutstanding, &CTaskThreadState::m_o
 template struct CTaskPrivateBinding<CTaskTestReleased, &CTaskThreadState::m_releasedTasks>;
 template struct CTaskPrivateBinding<CTaskTestQueued, &CTaskThreadState::m_queued>;
 template struct CTaskPrivateBinding<CTaskTestDequeued, &CTaskThreadState::m_dequeuedTasks>;
+template struct CTaskPrivateBinding<CTaskTestCapacityPressure, &CTaskThreadState::m_pressureYields>;
 template struct CTaskPrivateBinding<CTaskTestObservers, &CTaskThreadState::m_observers>;
 template struct CTaskPrivateBinding<CTaskTestBuckets, &CTaskThreadState::m_buckets>;
 template struct CTaskPrivateBinding<CTaskTestDomain, &CTaskThreadState::m_readDomain>;
@@ -151,6 +153,11 @@ size_t CTaskThreadTestAccess::bucketCount(CTaskThread& thread)
     return count;
 }
 
+bool CTaskThreadTestAccess::capacityPressure(CTaskThread& thread)
+{
+    return (TestState(thread).*CTaskTestCapacityPressure::s_member).load(std::memory_order_acquire) != 0;
+}
+
 bool CTaskThreadTestAccess::closeIdleBucket(CTaskThread& thread, int32_t level)
 {
     if (!(TestState(thread).*CTaskTestObservers::s_member).enter())
@@ -180,9 +187,9 @@ CTaskThreadResult CTaskThreadTestAccess::latePreempt(CTaskThread& thread)
     CTaskStorageState postedState;
     posted.m_state = &postedState;
     posted.m_state->m_bits.store(3);
-    const CTaskThreadResult result = (TestState(thread).*CTaskTestPreempt::s_member)(INT_MAX, &posted);
+    const CTaskThreadStatus status = (TestState(thread).*CTaskTestPreempt::s_member)(INT_MAX, &posted);
     domain.leave(*reader);
-    return result;
+    return CTaskThreadResult(status);
 }
 
 CTaskThreadResult CTaskThreadTestAccess::holdDirectoryRead(CTaskThread& thread, const std::function<void()>& held)

@@ -24,6 +24,16 @@ public:
     static void fairness(size_t index);
 
 private:
+    /** 只保留同轮同场景全部程序成功的测量组，避免比较不对称样本
+    @param [in] begin 本组开始前已登记的报告数
+    @param [in] expected 本组应成功的程序数
+    @param [in,out] reports 成功报告；不完整时撤回本组，原始文件和失败记录不删除
+    @param [in,out] labels 对应程序标签
+    @return 本组是否完整；false必须使矩阵最终报告失败
+    */
+    static bool retainCompleteGroup(size_t begin, size_t expected, std::vector<std::string>& reports,
+        std::vector<std::string>& labels);
+
     /** 严格读取 CSV，拒绝列数错误、重复列及无数据文件
     @param [in] path 原始结果路径
     @return 表头及所有数据行

@@ -39,9 +39,15 @@ public:
     */
     static size_t bucketCount(CTaskThread& thread);
 
-    /** 关闭一个空桶但不摘除，验证生产者能帮助完成删除
+    /** 观察实际投递是否已经到达容量不足路径
+    @param [in,out] thread 门控消费者、尚未释放容量的线程
+    @return 是否出现资源压力；只供独立新建的容量用例判断触发前提
+    */
+    static bool capacityPressure(CTaskThread& thread);
+
+    /** 关闭允许退役的空桶但不摘除，验证生产者能帮助完成删除
     @param [in,out] thread 工作线程
-    @param [in] level 空桶级别
+    @param [in] level 非固定桶级别；调用方须控制消费者停在其他桶且本桶已排空
     @return 是否关闭成功
     */
     static bool closeIdleBucket(CTaskThread& thread, int32_t level);

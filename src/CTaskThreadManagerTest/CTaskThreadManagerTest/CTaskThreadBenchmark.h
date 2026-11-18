@@ -39,6 +39,8 @@ public:
     void submitted(uint64_t timestamp);
 
 public:
+    // 隔离调用方相邻栈变量，固定参数在工作期间只读。
+    unsigned char m_headPadding[128];
     // 固定负载参数
     size_t m_producers;
     // 每生产者操作数
@@ -51,7 +53,7 @@ public:
     std::vector<uint64_t> m_expected;
     // 单消费者检查的出现次数
     std::vector<unsigned char> m_seen;
-    // 单消费者维护的每生产者下一序号
+    // 单消费者维护的每生产者每优先级下一序号
     std::vector<size_t> m_next;
     // 预先分配的采样延迟位置，每个任务最多写一次
     std::vector<uint64_t> m_latency;
@@ -65,9 +67,11 @@ public:
     std::atomic<size_t> m_ready;
     // 成功提交数
     std::atomic<uint64_t> m_accepted;
+    // 隔离生产者反复读取的开始/停止标记，避免测试状态本身争用消费者计数缓存行。
+    unsigned char m_consumerPadding[128];
     // 实际完成数
     std::atomic<uint64_t> m_completed;
-    // 未接纳重试数
+    // 测试方的外部重投数；普通投递禁止外部重投，不统计库内CAS重试
     std::atomic<uint64_t> m_retries;
     // 校验或提交错误数
     std::atomic<uint64_t> m_errors;
@@ -75,6 +79,8 @@ public:
     std::atomic<uint64_t> m_submitTime;
     // 最后执行完成时刻
     std::atomic<uint64_t> m_finishTime;
+    // 保持消费者写入与调用方相邻栈变量至少相隔一个完整缓存行。
+    unsigned char m_tailPadding[128];
 };
 
 /** 有独立序号、摘要和延迟采样的业务任务。

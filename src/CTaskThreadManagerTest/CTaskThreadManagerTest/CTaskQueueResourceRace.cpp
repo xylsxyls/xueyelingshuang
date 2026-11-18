@@ -44,7 +44,7 @@ bool CTaskQueueResourceRace::run(bool entryOnly)
     for (int32_t i = 0; i < 63; ++i)
     {
         entries[i].m_value = i;
-        const LockFreeQueueResult result = entryOnly ? queue.tryPushEntry(entries[i]) : queue.push(i);
+        const LockFreeQueueResult result = entryOnly ? queue.tryPushEntry(entries[i]) : queue.tryPush(i, true, false);
         if (result != LockFreeQueueSuccess)
         {
             return false;
@@ -54,7 +54,7 @@ bool CTaskQueueResourceRace::run(bool entryOnly)
     m_armed = true;
     m_valid = true;
     entries[63].m_value = 63;
-    const LockFreeQueueResult result = entryOnly ? queue.tryPushEntry(entries[63]) : queue.push(63);
+    const LockFreeQueueResult result = entryOnly ? queue.tryPushEntry(entries[63]) : queue.tryPush(63, true, false);
     const bool triggered = !m_armed;
     m_armed = false;
     m_queue = nullptr;

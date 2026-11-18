@@ -24,7 +24,7 @@ public:
     */
     std::shared_ptr<TestFactoryTask> create(size_t slot, int32_t marker, bool blocked, bool redo);
 
-    /** 投递并检查接纳，只重试尚未提交的 Retry
+    /** 单次普通投递并检查接纳，不在测试侧重试竞争错误
     @param [in] task 冻结配置的非空任务
     @param [in] level 任务优先级
     */
@@ -166,6 +166,8 @@ public:
     uint64_t m_generation;
     // 已证明发布的前缀下标
     size_t m_hint;
+    // 模型包含手动暂停的其他预约者，不能采用单登记快速路径
+    bool m_reservedConcurrent;
     // CAS 冲突统计，不参与顺序判定
     LockFreeQueueAtomic<uint64_t> m_retries;
     // 与正式发布记录一致的调度让步状态。
@@ -183,6 +185,16 @@ public:
 class CTaskV5ChannelPool
 {
 public:
+    /** 模型中可能存在暂停的预约者，保守报告多发布者
+    @return 始终false，不伪造正式队列的单登记条件
+    */
+    bool singlePublisherRegistered() const;
+
+    /** 白盒模型不提供共享容量充裕的调度提示
+    @return 始终false，保留通用竞争路径
+    */
+    bool amplePublisherCapacity() const;
+
     /** 释放本用例保留的全部测试段，要求通道已停止使用
     */
     ~CTaskV5ChannelPool();

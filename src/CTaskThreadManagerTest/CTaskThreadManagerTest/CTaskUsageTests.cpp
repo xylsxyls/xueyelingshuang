@@ -111,7 +111,7 @@ static bool WaitUntil(const std::function<bool()>& ready, uint32_t milliseconds 
 */
 static void Post(const std::shared_ptr<CTaskThread>& target, const std::shared_ptr<CTask>& task, int32_t level = 1)
 {
-    const CTaskThreadResult result = target->postTask(task, level);
+    const CTaskThreadResult result = target->postTaskResult(task, level);
     Check(result.m_committed, taskThreadStatusText(result.m_status));
     // 已接纳后即使附带错误也绝不重发；示例要求回调没有错误。
     Check(result.m_status == CTaskThreadOk, "accepted task has notification error");
@@ -185,8 +185,8 @@ static void ExamplePriority(const CTaskThreadConfig& config)
     Post(target, Append(42, 2, order), 1);
     Post(target, Append(7, 5, order), 5);
     Check(target->tryPostTask(Append(8, 3, order), 3), "tryPostTask refused");
-    Check(!target->postTask(first, 0).m_committed, "invalid level accepted");
-    Check(!target->postTask(std::shared_ptr<CTask>()).m_committed, "null task accepted");
+    Check(!target->postTaskResult(first, 0).m_committed, "invalid level accepted");
+    Check(!target->postTaskResult(std::shared_ptr<CTask>()).m_committed, "null task accepted");
     std::map<int32_t, int32_t> waiting;
     Check(target->getWaitTaskInfo(waiting).m_status == CTaskThreadOk, "wait info");
     Check(target->hasTask() && target->getWaitTaskCount() == 4 && waiting[1] == 2, "queued counts");
@@ -198,7 +198,7 @@ static void ExamplePriority(const CTaskThreadConfig& config)
     Check(target->statistics().m_errors == 0 && target->statistics().m_executed == 5, "execution statistics");
     Check(manager.count() == 1, "direct waitForEnd must retain registration");
     Check(manager.waitForEnd(target->threadId()).m_status == CTaskThreadOk, "manager unregister");
-    const CTaskThreadResult closed = target->postTask(first);
+    const CTaskThreadResult closed = target->postTaskResult(first);
     Check(!closed.m_committed && closed.m_status == CTaskThreadClosed && manager.count() == 0, "old handle");
     std::cout << "PASS priority, FIFO, property, queries, system priority, drain" << std::endl;
 }
@@ -389,7 +389,7 @@ static void ExampleResources(const CTaskThreadConfig& source)
         return gate->runs() == 1;
     }), "capacity gate not started");
     Post(target, work);
-    const CTaskThreadResult full = target->postTask(work);
+    const CTaskThreadResult full = target->tryPostTaskResult(work, 1, true, false);
     Check(!full.m_committed && full.m_status == CTaskThreadCapacity, "logical capacity rejection");
     release->store(true);
     Check(CTaskThreadManager::instance().waitForEnd(target->threadId()).m_status == CTaskThreadOk, "capacity drain");
@@ -557,7 +557,7 @@ static void ExamplePool(const CTaskThreadConfig& config)
                 Check(choice.m_status == CTaskThreadCapacity || choice.m_status == CTaskThreadClosed, "allocator closed/error");
                 return false;
             }
-            const CTaskThreadResult posted = selected->postTask(work);
+            const CTaskThreadResult posted = selected->postTaskResult(work);
             if (posted.m_committed)
             {
                 Check(posted.m_status == CTaskThreadOk, "pool accepted with error");

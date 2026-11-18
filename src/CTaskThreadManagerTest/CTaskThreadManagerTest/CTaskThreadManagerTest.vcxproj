@@ -181,6 +181,10 @@
   <ItemGroup>
     <ClCompile Include="CTaskFaultAllocation.cpp" />
     <ClInclude Include="CTaskFaultAllocation.h" />
+    <ClCompile Include="CTaskRetryContractTests.cpp" />
+    <ClInclude Include="CTaskRetryContractTests.h" />
+    <ClInclude Include="CTaskPostCompatibility.h" />
+    <ClInclude Include="CTaskPostCompatibility.inl" />
     <ClCompile Include="CTaskThreadModuleTests.cpp" />
     <ClInclude Include="CTaskThreadModuleTests.h" />
     <ClCompile Include="CTaskThreadStressTests.cpp" />
@@ -229,6 +233,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="CTaskHangSampler.cpp" />
+    <None Include="CTaskWasmSmoke.cpp" />
+    <ClInclude Include="CTaskWasmSmoke.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CTaskTestAutomation.h" />

@@ -1,4 +1,6 @@
-﻿#include "CTaskThreadBenchmark.h"
+﻿#include "CTaskPostCompatibility.h"
+#include "CTaskThreadBenchmark.h"
+#include "BlackBoxTestSupport.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -20,7 +22,7 @@ m_levels(levels),
 m_work(work),
 m_expected(producers * count),
 m_seen(producers * count, 0),
-m_next(producers, 0),
+m_next(producers * static_cast<size_t>(levels), 0),
 m_latency(producers * count, UINT64_MAX),
 m_start(false),
 m_stop(false),
@@ -97,7 +99,9 @@ void CTaskBenchmarkItem::doTask()
     {
         ++m_state.m_errors;
     }
-    if (m_state.m_levels == 1 && m_state.m_next[m_producer]++ != m_sequence)
+    const size_t levels = static_cast<size_t>(m_state.m_levels);
+    const size_t stream = m_producer * levels + m_sequence % levels;
+    if (m_state.m_next[stream]++ != m_sequence / levels)
     {
         ++m_state.m_errors;
     }
@@ -135,13 +139,15 @@ void CTaskBenchmarkProducer::doTask()
         {
             std::this_thread::yield();
         }
-        for (size_t sequence = 0; sequence < m_state.m_count && !m_state.m_stop.load(std::memory_order_acquire); ++sequence)
+        size_t sequence = 0;
+        for (; sequence < m_state.m_count && !m_state.m_stop.load(std::memory_order_acquire); ++sequence)
         {
             const uint64_t timestamp = (sequence & 63) == 0 ? CTaskBenchmarkState::now() : 0;
             if (m_lookup)
             {
                 const uint32_t id = m_state.m_targets[(sequence + m_producer) % m_state.m_targets.size()];
-                if (!CTaskThreadManager::instance().getThreadInterface(id))
+                const std::shared_ptr<CTaskThread> found = CTaskThreadManager::instance().getThreadInterface(id);
+                if (!found || found->threadId() != id)
                 {
                     ++m_state.m_errors;
                 }
@@ -155,26 +161,24 @@ void CTaskBenchmarkProducer::doTask()
                 std::shared_ptr<CTask> item(new CTaskBenchmarkItem(m_state, m_producer, sequence, timestamp));
                 const int32_t level = static_cast<int32_t>(sequence % m_state.m_levels) + 1;
 #if defined(CTTM_BENCH_NEW) || defined(CTTM_TEST_NO_LEGACY_SEND_TASK)
-                for (;;)
+                const CTaskThreadResult result = CTaskPostCompatibility::submit(*m_target, item, level, 0);
+                if (!result.m_committed || result.m_status != CTaskThreadOk)
                 {
-                    const CTaskThreadResult result = m_target->postTask(item, level);
-                    if (result.m_committed)
-                    {
-                        break;
-                    }
-                    if (result.m_status != CTaskThreadRetry || m_state.m_stop.load())
-                    {
-                        throw std::runtime_error("benchmark post rejected");
-                    }
-                    ++m_state.m_retries;
-                    std::this_thread::yield();
+                    throw std::runtime_error("ordinary benchmark post failed; external retries would hide a contract failure");
                 }
 #else
-                m_target->postTask(item, level);
+                CTaskPostCompatibility::submit(*m_target, item, level, 0);
 #endif
             }
         }
-        m_state.m_accepted.fetch_add(m_state.m_count, std::memory_order_relaxed);
+        m_state.m_accepted.fetch_add(sequence, std::memory_order_relaxed);
+        if (sequence != m_state.m_count)
+        {
+            // 提前终止不能把计划数量记为实际接纳，也不能让查询模式伪造完整完成数。
+            ++m_state.m_errors;
+            m_state.m_stop.store(true, std::memory_order_release);
+            return;
+        }
         const uint64_t timestamp = CTaskBenchmarkState::now();
         m_state.submitted(timestamp);
         if (m_lookup && m_state.m_completed.fetch_add(m_state.m_count, std::memory_order_acq_rel) + m_state.m_count == m_state.m_expected.size())
@@ -205,6 +209,27 @@ static void BenchmarkWait(const std::function<bool()>& condition, CTaskBenchmark
         }
         std::this_thread::yield();
     }
+}
+
+/** 排空并注销被测线程，验证当前接口的完成结果
+@param [in,out] manager 被测管理器
+@param [in] id 本次基准拥有的线程编号
+*/
+static void BenchmarkDrain(CTaskThreadManager& manager, uint32_t id)
+{
+#if defined(CTTM_BENCH_NEW) || defined(CTTM_TEST_NO_LEGACY_SEND_TASK)
+    const std::shared_ptr<CTaskThread> thread = manager.getThreadInterface(id);
+    if (!thread || manager.waitForEnd(id).m_status != CTaskThreadOk)
+    {
+        throw std::runtime_error("benchmark thread drain failed");
+    }
+    if (thread->statistics().m_errors != 0)
+    {
+        throw std::runtime_error("benchmark thread reported internal errors");
+    }
+#else
+    manager.waitForEnd(id);
+#endif
 }
 
 /** 查询进程 CPU 和资源观测。
@@ -245,10 +270,10 @@ int runTaskThreadBenchmark(int argc, char** argv)
             throw std::runtime_error("usage: throughput|lookup|lifecycle|roundtrip producers count levels work report.csv");
         }
         const std::string mode = argv[1];
-        const size_t producers = static_cast<size_t>(std::strtoul(argv[2], nullptr, 10));
-        const size_t count = static_cast<size_t>(std::strtoul(argv[3], nullptr, 10));
-        const int32_t levels = std::atoi(argv[4]);
-        const uint32_t work = static_cast<uint32_t>(std::strtoul(argv[5], nullptr, 10));
+        const size_t producers = static_cast<size_t>(bbUnsigned(argv[2], 64));
+        const size_t count = static_cast<size_t>(bbUnsigned(argv[3], 1000000000));
+        const int32_t levels = static_cast<int32_t>(bbUnsigned(argv[4], 64));
+        const uint32_t work = static_cast<uint32_t>(bbUnsigned(argv[5], UINT32_MAX));
         if (producers == 0 || producers > 32 || count == 0 || count > 10000000 / producers || levels < 1 || levels > 64 ||
             work > 100000 || ((mode == "lifecycle" || mode == "roundtrip") && producers != 1) ||
             (mode != "throughput" && mode != "lookup" && mode != "lifecycle" && mode != "roundtrip"))
@@ -288,12 +313,13 @@ int runTaskThreadBenchmark(int argc, char** argv)
                 }
                 std::shared_ptr<CTask> item(new CTaskBenchmarkItem(state, 0, sequence, 0));
 #if defined(CTTM_BENCH_NEW) || defined(CTTM_TEST_NO_LEGACY_SEND_TASK)
-                if (!target->postTask(item).m_committed)
+                const CTaskThreadResult result = CTaskPostCompatibility::submit(*target, item, 1, 0);
+                if (!result.m_committed || result.m_status != CTaskThreadOk)
                 {
                     throw std::runtime_error("single outstanding post rejected");
                 }
 #else
-                target->postTask(item);
+                CTaskPostCompatibility::submit(*target, item, 1, 0);
 #endif
                 ++state.m_accepted;
                 state.submitted(CTaskBenchmarkState::now());
@@ -303,14 +329,14 @@ int runTaskThreadBenchmark(int argc, char** argv)
                 }, state);
                 if (mode == "lifecycle")
                 {
-                    manager.waitForEnd(id);
+                    BenchmarkDrain(manager, id);
                     target.reset();
                 }
                 state.m_latency[sequence] = CTaskBenchmarkState::now() - began;
             }
             if (mode == "roundtrip")
             {
-                manager.waitForEnd(id);
+                BenchmarkDrain(manager, id);
                 target.reset();
             }
             else
@@ -353,7 +379,16 @@ int runTaskThreadBenchmark(int argc, char** argv)
                     throw std::runtime_error("producer initialization failed");
                 }
                 ids.push_back(id);
-                thread->postTask(std::make_shared<CTaskBenchmarkProducer>(state, target, p, mode == "lookup"));
+                const std::shared_ptr<CTask> producer(new CTaskBenchmarkProducer(state, target, p, mode == "lookup"));
+#if defined(CTTM_BENCH_NEW) || defined(CTTM_TEST_NO_LEGACY_SEND_TASK)
+                const CTaskThreadResult result = CTaskPostCompatibility::submit(*thread, producer, 1, 0);
+                if (!result.m_committed || result.m_status != CTaskThreadOk)
+                {
+                    throw std::runtime_error("benchmark producer start failed");
+                }
+#else
+                CTaskPostCompatibility::submit(*thread, producer, 1, 0);
+#endif
             }
             BenchmarkWait([&state, producers]()
             {
@@ -368,15 +403,15 @@ int runTaskThreadBenchmark(int argc, char** argv)
             }, state);
             for (size_t p = 0; p < ids.size(); ++p)
             {
-                manager.waitForEnd(ids[p]);
+                BenchmarkDrain(manager, ids[p]);
             }
             if (targetId != 0)
             {
-                manager.waitForEnd(targetId);
+                BenchmarkDrain(manager, targetId);
             }
             for (size_t i = 0; i < state.m_targets.size(); ++i)
             {
-                manager.waitForEnd(state.m_targets[i]);
+                BenchmarkDrain(manager, state.m_targets[i]);
             }
             target.reset();
         }
@@ -428,8 +463,8 @@ int runTaskThreadBenchmark(int argc, char** argv)
         output << std::fixed << std::setprecision(6) << variant << ',' << mode << ',' << producers << ',' << count << ',' << levels << ',' << work << ','
                << producers * count << ',' << state.m_accepted.load() << ',' << state.m_completed.load() << ',' << state.m_retries.load() << ','
                << submitMs << ',' << completeMs << ',' << producers * count * 1000.0 / completeMs << ',' << (cpuAfter - cpuBefore) / 1000000.0 << ','
-               << latency[latency.size() / 2] / 1000.0 << ',' << latency[(latency.size() - 1) * 95 / 100] / 1000.0 << ','
-               << latency[(latency.size() - 1) * 99 / 100] / 1000.0 << ',' << peak / 1048576.0 << ',' << privateBefore / 1048576.0 << ','
+               << latency[(latency.size() + 1) / 2 - 1] / 1000.0 << ',' << latency[(latency.size() * 95 + 99) / 100 - 1] / 1000.0 << ','
+               << latency[(latency.size() * 99 + 99) / 100 - 1] / 1000.0 << ',' << peak / 1048576.0 << ',' << privateBefore / 1048576.0 << ','
                << privateAfter / 1048576.0 << ',' << handlesBefore << ',' << handlesAfter << ',' << state.m_errors.load() << '\n';
         output.close();
         if (!output)

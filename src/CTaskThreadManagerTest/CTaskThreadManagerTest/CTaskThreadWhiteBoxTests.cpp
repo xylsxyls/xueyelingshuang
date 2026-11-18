@@ -49,7 +49,7 @@ static std::shared_ptr<TestTask> WhiteGate(const std::shared_ptr<CTaskThread>& w
             return release.load();
         }, "white-box gate release");
     }));
-    bbCheck(worker->postTask(task, INT_MAX).m_committed, "white-box gate not accepted");
+    bbCheck(worker->postTaskResult(task, INT_MAX).m_committed, "white-box gate not accepted");
     bbWait([&entered]()
     {
         return entered.load();
@@ -62,16 +62,16 @@ static std::shared_ptr<TestTask> WhiteGate(const std::shared_ptr<CTaskThread>& w
 */
 static void TaskSequenceBoundary()
 {
+    std::atomic<int> calls(0);
     TestWorkers workers;
     std::shared_ptr<CTaskThread> worker = workers.add();
-    std::atomic<int> calls(0);
     std::shared_ptr<TestTask> task(new TestTask(1, [&calls](TestTask&)
     {
         ++calls;
     }));
     CTaskThreadTestAccess::setTaskSequence(*worker, UINT64_MAX - 1);
-    bbCheck(worker->postTask(task).m_committed, "last nonzero task sequence rejected");
-    const CTaskThreadResult overflow = worker->postTask(task);
+    bbCheck(worker->postTaskResult(task).m_committed, "last nonzero task sequence rejected");
+    const CTaskThreadResult overflow = worker->postTaskResult(task);
     bbCheck(!overflow.m_committed && overflow.m_status == CTaskThreadSequenceExhausted, "task sequence wrapped");
     workers.drain();
     bbCheck(calls == 1 && worker->statistics().m_outstanding == 0, "sequence rejection leaked budget");
@@ -95,26 +95,65 @@ static void ManagerSequenceBoundary()
 */
 static void HelpClosedBucket()
 {
-    TestWorkers workers;
-    std::shared_ptr<CTaskThread> worker = workers.add();
-    bbCheck(CTaskThreadTestAccess::closeIdleBucket(*worker, 1), "cannot close initial empty bucket");
-    std::atomic<int> calls(0);
-    bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&calls](TestTask&)
+    for (size_t mode = 0; mode < 2; ++mode)
     {
-        ++calls;
-    })).m_committed,
-        "producer could not help remove closed bucket");
-    workers.drain();
-    bbCheck(calls == 1, "replacement bucket lost task");
+        std::atomic<int> calls(0);
+        std::atomic<bool> entered(false), release(false);
+        TestWorkers workers;
+        CTaskThreadConfig config;
+        if (mode == 0)
+        {
+            // 有限池的1级桶可退役；默认配置的固定桶不能人工制造运行期关闭。
+            config.m_priorityMap.nodes.initialCapacity = 8;
+            config.m_priorityMap.nodes.maximumCapacity = 8;
+            config.m_priorityMap.values.initialCapacity = 8;
+            config.m_priorityMap.values.maximumCapacity = 8;
+        }
+        const int32_t level = mode == 0 ? 1 : 17;
+        const uint32_t id = CTaskThreadManager::instance().init(config);
+        bbCheck(id != 0, "closed bucket fixture initialization failed");
+        const std::shared_ptr<CTaskThread> worker = workers.adopt(id);
+        bbCheck(worker != nullptr, "closed bucket fixture lookup failed");
+        const std::shared_ptr<CTask> task = std::make_shared<TestTask>(1, [&calls](TestTask&)
+        {
+            ++calls;
+        });
+        bbCheck(worker->postTaskResult(task, level).m_committed, "cannot prepare recyclable bucket");
+        bbWait([&calls]()
+        {
+            return calls.load() == 1;
+        }, "closed bucket fixture warm task completed");
+        bbCheck(worker->postTaskResult(std::make_shared<TestTask>(2, [&entered, &release](TestTask& current)
+        {
+            entered.store(true, std::memory_order_release);
+            bbWait([&release, &current]()
+            {
+                return release.load(std::memory_order_acquire) || current.stopped.load();
+            }, "release closed bucket fixture consumer");
+        }), INT_MAX).m_committed, "cannot hold bucket fixture consumer");
+        bbWait([&entered]()
+        {
+            return entered.load(std::memory_order_acquire);
+        }, "closed bucket fixture consumer entered");
+        bbCheck(calls.load() == 1, "fixture did not prepare exactly one completed task");
+        // 消费者停在业务门控，不能替测试摘桶；必须由真实投递路径帮助替换。
+        bbCheck(CTaskThreadTestAccess::closeIdleBucket(*worker, level), "cannot close recyclable empty queue");
+        const CTaskThreadResult posted = worker->postTaskResult(task, level);
+        bbCheck(posted.m_committed && posted.m_status == CTaskThreadOk,
+            "producer could not help remove closed bucket");
+        release.store(true, std::memory_order_release);
+        workers.drain();
+        bbCheck(calls.load() == 2, "replacement bucket lost or duplicated a task");
+    }
 }
 
 /** 已完成投递的迟到通知不能停止后来的低优先级任务。
 */
 static void LatePreemption()
 {
+    std::atomic<bool> entered(false), release(false);
     TestWorkers workers;
     std::shared_ptr<CTaskThread> worker = workers.add();
-    std::atomic<bool> entered(false), release(false);
     std::shared_ptr<TestTask> task(new TestTask(1, [&entered, &release](TestTask&)
     {
         entered = true;
@@ -123,7 +162,7 @@ static void LatePreemption()
             return release.load();
         }, "late notice gate");
     }));
-    worker->postTask(task, 1);
+    TestPost(worker, task, 1);
     bbWait([&entered]()
     {
         return entered.load();
@@ -147,8 +186,7 @@ void taskReentrantProtectionTest()
     TestWorkers consumers, readers;
     const uint32_t id = CTaskThreadManager::instance().init(config);
     bbCheck(id != 0, "reentrant protection initialization");
-    consumers.ids.push_back(id);
-    const std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
+    const std::shared_ptr<CTaskThread> worker = consumers.adopt(id);
     const std::shared_ptr<TestTask> nested(new TestTask(2, [&calls](TestTask&)
     {
         ++calls;
@@ -164,11 +202,11 @@ void taskReentrantProtectionTest()
     low->onStop = [&, worker, nested]()
     {
         ++callbacks;
-        nestedPost = worker->postTask(nested);
+        nestedPost = worker->postTaskResult(nested);
         nestedStop = worker->stopAllTask();
         releaseTask = true;
     };
-    bbCheck(worker->postTask(low).m_committed, "reentrant low task admission");
+    bbCheck(worker->postTaskResult(low).m_committed, "reentrant low task admission");
     bbWait([&running]()
     {
         return running.load();
@@ -191,19 +229,19 @@ void taskReentrantProtectionTest()
         {
             releaseReaders = true;
         };
-        bbCheck(readers.add()->postTask(readerTask).m_committed, "reentrant reader task admission");
+        bbCheck(readers.add()->postTaskResult(readerTask).m_committed, "reentrant reader task admission");
     }
     bbWait([&held]()
     {
         return held == 3;
     }, "three readers protected");
-    const CTaskThreadResult outer = worker->postTask(std::make_shared<TestTask>(3, [&calls](TestTask&)
+    const CTaskThreadResult outer = worker->postTaskResult(std::make_shared<TestTask>(3, [&calls](TestTask&)
     {
         ++calls;
     }), 2);
     releaseReaders = true;
     readers.drain();
-    const CTaskThreadResult recovery = worker->postTask(nested);
+    const CTaskThreadResult recovery = worker->postTaskResult(nested);
     releaseTask = true;
     consumers.drain();
     bbCheck(outer.m_committed && outer.m_status == CTaskThreadOk && callbacks == 1 &&
@@ -217,17 +255,16 @@ static void ProtectionExhaustion()
 {
     CTaskThreadConfig config;
     config.m_taskMap.protectionRecordCount = 4;
+    std::atomic<bool> entered(false), release(false), releaseReaders(false);
+    std::atomic<int> held(0), calls(0);
     TestWorkers consumers, readers;
     const uint32_t id = CTaskThreadManager::instance().init(config);
     bbCheck(id != 0, "small protection config failed");
-    consumers.ids.push_back(id);
-    std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
-    std::atomic<bool> entered(false), release(false), releaseReaders(false);
-    std::atomic<int> held(0), calls(0);
+    std::shared_ptr<CTaskThread> worker = consumers.adopt(id);
     WhiteGate(worker, entered, release);
     for (int i = 0; i < 4; ++i)
     {
-        readers.add()->postTask(std::make_shared<TestTask>(i, [worker, &held, &releaseReaders](TestTask&)
+        TestPost(readers.add(), std::make_shared<TestTask>(i, [worker, &held, &releaseReaders](TestTask&)
         {
             const CTaskThreadResult result = CTaskThreadTestAccess::holdDirectoryRead(*worker, [&held, &releaseReaders]()
             {
@@ -257,39 +294,58 @@ static void ProtectionExhaustion()
     std::thread poster([&]()
     {
         ++startedCalls;
-        post = worker->postTask(task);
+        post = worker->postTaskResult(task);
         ++finishedCalls;
     });
-    std::thread stopper([&]()
+    std::thread stopper;
+    bool bothStarted = false;
+    bool returnedEarly = false;
+    try
     {
-        ++startedCalls;
-        stop = worker->stopCurTask();
-        ++finishedCalls;
-    });
-    while (startedCalls != 2)
-    {
-        std::this_thread::yield();
+        stopper = std::thread([&]()
+        {
+            ++startedCalls;
+            stop = worker->stopCurTask();
+            ++finishedCalls;
+        });
+        const uint64_t startDeadline = bbNow() + 5000;
+        while (startedCalls != 2 && bbNow() < startDeadline)
+        {
+            std::this_thread::yield();
+        }
+        bothStarted = startedCalls == 2;
+        const uint64_t deadline = bbNow() + 1000;
+        while (finishedCalls != 2 && bbNow() < deadline)
+        {
+            std::this_thread::yield();
+        }
+        returnedEarly = finishedCalls == 2;
     }
-    const uint64_t deadline = bbNow() + 1000;
-    while (finishedCalls != 2 && bbNow() < deadline)
+    catch (...)
     {
-        std::this_thread::yield();
+        releaseReaders = true;
+        release = true;
+        poster.join();
+        if (stopper.joinable())
+        {
+            stopper.join();
+        }
+        throw;
     }
-    const bool returnedEarly = finishedCalls == 2;
     releaseReaders = true;
     poster.join();
     stopper.join();
     readers.drain();
-    const CTaskThreadResult recovered = worker->postTask(task);
+    const CTaskThreadResult recovered = worker->postTaskResult(task);
     release = true;
     consumers.drain();
     bbCheck(!tried && elapsed < 1000, "try post waited for protection or accepted without it");
-    bbCheck(returnedEarly && post.m_status == CTaskThreadCapacity && !post.m_committed &&
+    bbCheck(bothStarted && !returnedEarly && post.m_committed &&
             stop.m_status == CTaskThreadCapacity && !stop.m_committed &&
             triedResult.m_status == CTaskThreadCapacity && !triedResult.m_committed &&
-            recovered.m_committed && calls == 1,
-        "resource exhaustion became busy/retry, blocked or duplicated a recovered task");
-    bbCheck(worker->statistics().m_rejected == 3, "failed public calls counted incorrectly");
+            recovered.m_committed && calls == 2,
+        "try capacity classification or normal capacity-wait recovery incorrect");
+    bbCheck(worker->statistics().m_rejected == 2, "only the two failed try calls count as rejected");
 }
 
 #endif
@@ -312,26 +368,25 @@ void taskPostResultContractTest()
                 throw std::runtime_error("full capacity must precede growth policy");
             };
         }
+        std::atomic<bool> entered(false), release(false);
         TestWorkers workers;
         const uint32_t id = CTaskThreadManager::instance().init(config);
         bbCheck(id != 0, "result contract initialization");
-        workers.ids.push_back(id);
-        const std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
-        std::atomic<bool> entered(false), release(false);
+        const std::shared_ptr<CTaskThread> worker = workers.adopt(id);
         WhiteGate(worker, entered, release);
         const std::shared_ptr<TestTask> task(new TestTask(11, [&calls](TestTask&)
         {
             ++calls;
         }));
-        const CTaskThreadResult accepted = worker->postTask(task);
-        const CTaskThreadResult full = worker->postTask(task);
+        const CTaskThreadResult accepted = worker->postTaskResult(task);
+        const CTaskThreadResult full = worker->tryPostTaskResult(task, 1, true, false);
         const CTaskThreadResult tried = worker->tryPostTaskResult(task);
         const bool triedBool = worker->tryPostTask(task);
-        const CTaskThreadResult invalid = worker->postTask(std::shared_ptr<CTask>());
+        const CTaskThreadResult invalid = worker->postTaskResult(std::shared_ptr<CTask>());
         const CTaskThreadResult invalidTry = worker->tryPostTaskResult(task, 0);
         release = true;
         workers.drain();
-        const CTaskThreadResult closed = worker->postTask(task);
+        const CTaskThreadResult closed = worker->postTaskResult(task);
         const CTaskThreadResult closedTry = worker->tryPostTaskResult(task);
         bbCheck(accepted.m_committed && accepted.m_status == CTaskThreadOk &&
             full.m_status == CTaskThreadCapacity && !full.m_committed &&
@@ -349,13 +404,12 @@ void taskPostContentionContractTest()
     config.m_taskMap.protectionRecordCount = 128;
     config.m_queue.initialCapacity = 8192;
     config.m_queue.maximumProducers = 128;
+    std::atomic<bool> start(false);
+    std::atomic<int32_t> completed(0), failures(0);
     TestWorkers workers;
     const uint32_t id = CTaskThreadManager::instance().init(config);
     bbCheck(id != 0, "contention contract initialization");
-    workers.ids.push_back(id);
-    const std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
-    std::atomic<bool> start(false);
-    std::atomic<int32_t> completed(0), failures(0);
+    const std::shared_ptr<CTaskThread> worker = workers.adopt(id);
     const std::shared_ptr<TestTask> task(new TestTask(12, [&completed](TestTask&)
     {
         ++completed;
@@ -374,7 +428,7 @@ void taskPostContentionContractTest()
                 }
                 for (int32_t j = 0; j < 2000; ++j)
                 {
-                    const CTaskThreadResult result = worker->postTask(task, 1 + (i + j) % 10);
+                    const CTaskThreadResult result = worker->postTaskResult(task, 1 + (i + j) % 10);
                     if (!result.m_committed || result.m_status != CTaskThreadOk)
                     {
                         ++failures;
@@ -444,19 +498,19 @@ static void InitializeAllocationFailures()
 */
 static uint64_t PostAllocationTrial(uint64_t point, int32_t level)
 {
-    TestWorkers workers;
-    std::shared_ptr<CTaskThread> worker = workers.add();
     std::atomic<bool> entered(false), release(false);
     std::atomic<int> calls(0);
+    TestWorkers workers;
+    std::shared_ptr<CTaskThread> worker = workers.add();
     WhiteGate(worker, entered, release);
     std::shared_ptr<TestTask> task(new TestTask(1, [&calls](TestTask&)
     {
         ++calls;
     }));
     CTaskFaultAllocation::begin(point);
-    const CTaskThreadResult result = worker->postTask(task, level);
+    const CTaskThreadResult result = worker->postTaskResult(task, level);
     const uint64_t allocations = CTaskFaultAllocation::end();
-    const CTaskThreadResult recovery = worker->postTask(task, level);
+    const CTaskThreadResult recovery = worker->postTaskResult(task, level);
     release = true;
     workers.drain();
     bbCheck(recovery.m_committed, "post did not recover after one allocation failure");
@@ -510,21 +564,20 @@ static void UnpublishedPriority()
     TestWorkers consumers, producers;
     const uint32_t id = CTaskThreadManager::instance().init(config);
     bbCheck(id != 0, "grow policy config failed");
-    consumers.ids.push_back(id);
-    std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
-    worker->postTask(std::make_shared<TestPreparingTask>(taskEntered, releaseTask, calls, stops), 1);
+    std::shared_ptr<CTaskThread> worker = consumers.adopt(id);
+    TestPost(worker, std::make_shared<TestPreparingTask>(taskEntered, releaseTask, calls, stops), 1);
     bbWait([&taskEntered]()
     {
         return taskEntered.load();
     }, "consumer paused in doTask");
     pauseGrowth = true;
-    producers.add()->postTask(std::make_shared<TestTask>(2, [worker, &highCalls, &highStatus](TestTask&)
+    TestPost(producers.add(), std::make_shared<TestTask>(2, [worker, &highCalls, &highStatus](TestTask&)
     {
-        const CTaskThreadResult result = worker->postTask(std::make_shared<TestTask>(3, [&highCalls](TestTask&)
+        const CTaskThreadResult result = worker->tryPostTaskResult(std::make_shared<TestTask>(3, [&highCalls](TestTask&)
         {
             ++highCalls;
         }),
-            2);
+            2, true, false);
         highStatus = result.m_status;
         bbCheck(!result.m_committed, "denied growth unexpectedly committed");
     }));
@@ -541,7 +594,7 @@ static void UnpublishedPriority()
     releaseGrow = true;
     producers.drain();
     consumers.drain();
-    bbCheck(earlyStops == 0 && stops == 0 && highCalls == 0 && highStatus == CTaskThreadPolicyFailure,
+    bbCheck(earlyStops == 0 && stops == 0 && highCalls == 0 && highStatus == CTaskThreadCapacity,
         "unpublished or rejected priority preempted current task");
 }
 
@@ -549,40 +602,55 @@ static void UnpublishedPriority()
 */
 static void BoundedPriorityReuse()
 {
-    CTaskThreadConfig config;
-    config.m_priorityMap.nodes.initialCapacity = 2;
-    config.m_priorityMap.nodes.maximumCapacity = 2;
-    config.m_priorityMap.values.initialCapacity = 2;
-    config.m_priorityMap.values.maximumCapacity = 2;
-    TestWorkers workers;
-    const uint32_t id = CTaskThreadManager::instance().init(config);
-    bbCheck(id != 0, "bounded priority map initialize failed");
-    workers.ids.push_back(id);
-    std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
-    std::atomic<int> calls(0);
-    for (int32_t level = 1; level <= 20; ++level)
+    for (int32_t scenario = 0; scenario < 16; ++scenario)
     {
-        std::shared_ptr<TestTask> task(new TestTask(1, [&calls](TestTask&)
+        const size_t capacities[] = {1, 2, 16, 17};
+        const size_t capacity = capacities[scenario / 4];
+        const int32_t policy = scenario % 4;
+        CTaskThreadConfig config;
+        config.m_priorityMap.nodes.initialCapacity = capacity;
+        config.m_priorityMap.nodes.maximumCapacity = capacity;
+        config.m_priorityMap.values.initialCapacity = capacity;
+        config.m_priorityMap.values.maximumCapacity = capacity;
+        if (policy == 1 || policy == 3)
         {
-            ++calls;
-        }));
-        bbWait([worker, task, level]()
+            config.m_priorityMap.nodes.maximumCapacity = -1;
+            config.m_priorityMap.nodes.grow = [](const LockFreeMapGrowContext&) { return size_t(0); };
+        }
+        if (policy == 2 || policy == 3)
         {
-            const CTaskThreadResult result = worker->postTask(task, level);
-            bbCheck(result.m_committed || result.m_status == CTaskThreadCapacity,
-                "unexpected bounded-map failure");
-            return result.m_committed;
-        }, "reclaim bounded priority pool");
-        bbWait([&calls, level]()
+            config.m_priorityMap.values.maximumCapacity = -1;
+            config.m_priorityMap.values.grow = [](const LockFreeMapGrowContext&) { return size_t(0); };
+        }
+        std::atomic<int> calls(0);
+        TestWorkers workers;
+        const uint32_t id = CTaskThreadManager::instance().init(config);
+        bbCheck(id != 0, "bounded priority map initialize failed");
+        std::shared_ptr<CTaskThread> worker = workers.adopt(id);
+        for (int32_t level = 1; level <= 20; ++level)
         {
-            return calls == level;
-        }, "bounded priority task executed");
+            std::shared_ptr<TestTask> task(new TestTask(1, [&calls](TestTask&)
+            {
+                ++calls;
+            }));
+            bbWait([worker, task, level]()
+            {
+                const CTaskThreadResult result = worker->tryPostTaskResult(task, level, true, false);
+                bbCheck(result.m_committed || result.m_status == CTaskThreadCapacity,
+                    "unexpected bounded-map failure");
+                return result.m_committed;
+            }, "reclaim bounded priority pool");
+            bbWait([&calls, level]()
+            {
+                return calls == level;
+            }, "bounded priority task executed");
 #ifndef CTTM_TEST_DLL
-        bbCheck(CTaskThreadTestAccess::bucketCount(*worker) <= 2, "bounded priority pool exceeded configured live keys");
+            bbCheck(CTaskThreadTestAccess::bucketCount(*worker) <= capacity, "bounded priority pool exceeded configured live keys");
 #endif
+        }
+        workers.drain();
+        bbCheck(calls == 20, "priority reuse lost tasks");
     }
-    workers.drain();
-    bbCheck(calls == 20, "priority reuse lost tasks");
 }
 
 std::vector<BlackBoxCase> taskThreadWhiteBoxCases(int32_t firstId)

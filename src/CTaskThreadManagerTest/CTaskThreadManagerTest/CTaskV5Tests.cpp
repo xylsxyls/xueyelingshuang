@@ -15,9 +15,15 @@ CTaskV5ChannelRecord::CTaskV5ChannelRecord() :
 m_hazard(nullptr),
 m_generation(0),
 m_hint(0),
+m_reservedConcurrent(false),
 m_retries(0)
 {
 
+}
+
+bool CTaskV5ChannelPool::singlePublisherRegistered() const
+{
+    return false;
 }
 
 CTaskV5ChannelPool::~CTaskV5ChannelPool()
@@ -26,6 +32,11 @@ CTaskV5ChannelPool::~CTaskV5ChannelPool()
     {
         delete m_segments[i];
     }
+}
+
+bool CTaskV5ChannelPool::amplePublisherCapacity() const
+{
+    return false;
 }
 
 LockFreeQueueChannelSegment<int>* CTaskV5ChannelPool::acquire()
@@ -336,8 +347,59 @@ static void RunEntryAddressPrefixTest()
 #endif
 }
 
+/** 同一段地址在静止归还后反复复用，旧生产者提示必须随保护失效而刷新
+*/
+static void RunChannelGenerationTest()
+{
+    for (size_t mode = 0; mode < 2; ++mode)
+    {
+        int values[2] = {41, 42};
+        CTaskV5ChannelPool pool;
+        CTaskV5ChannelRecord record;
+        LockFreeQueueChannelSegment<int>* segment = pool.acquire();
+        LockFreeQueueChannel<int, CTaskV5ChannelPool, CTaskV5ChannelRecord> channel(segment);
+        channel.reset(segment, mode != 0);
+        for (uint64_t generation = 1; generation <= 128; ++generation)
+        {
+            // 无在途操作时模拟回收器先清除保护，再在同一地址建立下一代。
+            // 保留record的旧代次和位置，不能让测试先替实现清理过期提示。
+            channel.reset(nullptr, mode != 0);
+            record.m_hazard.store(nullptr);
+            segment->reset();
+            segment->m_generation = generation;
+            channel.reset(segment, mode != 0);
+            for (size_t i = 0; i < 2; ++i)
+            {
+                bbCheck(channel.publish(&values[i], record, pool), "reused segment publication failed");
+                bbCheck(record.m_hazard.load() == segment && record.m_generation == generation,
+                    "reused address retained an obsolete generation");
+            }
+            for (size_t i = 0; i < 2; ++i)
+            {
+                bbCheck(channel.front(pool) == &values[i], "reused segment changed FIFO or lost data");
+                channel.consume();
+            }
+            bbCheck(channel.front(pool) == nullptr, "reused segment duplicated data");
+        }
+        // 模拟保护已公布但尚未完成验证的状态，过期位置不得被当作已验证提示。
+        channel.reset(nullptr, mode != 0);
+        record.m_hazard.store(nullptr);
+        segment->reset();
+        segment->m_generation = 129;
+        channel.reset(segment, mode != 0);
+        record.m_hazard.store(segment);
+        record.m_generation = 0;
+        record.m_hint = LockFreeQueueChannelSegment<int>::kCellCount;
+        bbCheck(channel.publish(&values[0], record, pool) && record.m_generation == 129 &&
+            channel.front(pool) == &values[0], "unvalidated hazard reused a stale position");
+        channel.consume();
+        bbCheck(channel.front(pool) == nullptr, "unvalidated hazard duplicated data");
+    }
+}
+
 void taskV5ChannelPublicationTest()
 {
+    RunChannelGenerationTest();
     RunEntryAddressPrefixTest();
     RunQueueHistoryTest(false);
     RunQueueHistoryTest(true);
@@ -762,19 +824,9 @@ std::shared_ptr<TestFactoryTask> CTaskV5RedoFixture::create(size_t slot, int32_t
 
 void CTaskV5RedoFixture::post(const std::shared_ptr<CTask>& task, int32_t level)
 {
-    const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-    for (;;)
-    {
-        const CTaskThreadResult result = m_thread->postTask(task, level);
-        if (result.m_committed)
-        {
-            bbCheck(result.m_status == CTaskThreadOk, "V5 committed post reported callback failure");
-            return;
-        }
-        bbCheck(result.m_status == CTaskThreadRetry && std::chrono::steady_clock::now() < deadline,
-            "V5 uncommitted post failed or timed out");
-        std::this_thread::yield();
-    }
+    const CTaskThreadResult result = m_thread->postTaskResult(task, level);
+    bbCheck(result.m_committed && result.m_status == CTaskThreadOk,
+        "V5 ordinary post failed; external retry prohibited");
 }
 
 void CTaskV5RedoFixture::waitEntered(size_t slot)
@@ -1168,8 +1220,8 @@ void taskV5RepeatedRedoTest()
     std::shared_ptr<CTaskThread> worker = workers.add();
     try
     {
-        bbCheck(worker->postTask(original, 1).m_committed, "V5 repeated original rejected");
-        bbCheck(worker->postTask(std::make_shared<TestTask>(91, [&](TestTask&)
+        bbCheck(worker->postTaskResult(original, 1).m_committed, "V5 repeated original rejected");
+        bbCheck(worker->postTaskResult(std::make_shared<TestTask>(91, [&](TestTask&)
         {
             ledger.add(9999);
         }), 1).m_committed, "V5 repeated follower rejected");
@@ -1180,11 +1232,11 @@ void taskV5RepeatedRedoTest()
                 return entered.load() == round + 1;
             }, "V5 repeated generation entered");
             bbCheck(factories.load() == round, "V5 factory ran before this generation returned");
-            bbCheck(worker->postTask(std::make_shared<TestTask>(92, [&, round](TestTask&)
+            bbCheck(worker->postTaskResult(std::make_shared<TestTask>(92, [&, round](TestTask&)
             {
                 ledger.add(2000 + round);
             }), 2).m_committed, "V5 repeated middle rejected");
-            bbCheck(worker->postTask(std::make_shared<TestTask>(93, [&, round](TestTask&)
+            bbCheck(worker->postTaskResult(std::make_shared<TestTask>(93, [&, round](TestTask&)
             {
                 ledger.add(3000 + round);
             }), 3).m_committed, "V5 repeated higher rejected");
@@ -1303,17 +1355,13 @@ static double TaskV5MeasureRedo(bool redo)
     config.m_queue.initialCapacity = perRound * 2;
     const uint32_t id = CTaskThreadManager::instance().init(config);
     bbCheck(id != 0, "V5 redo performance initialization failed");
-    workers.ids.push_back(id);
-    const std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
+    const std::shared_ptr<CTaskThread> worker = workers.adopt(id);
     const std::function<void(const std::shared_ptr<CTask>&, int32_t)> post =
         [&](const std::shared_ptr<CTask>& task, int32_t level)
     {
-        CTaskThreadResult result;
-        do
-        {
-            result = worker->postTask(task, level);
-        } while (!result.m_committed && result.m_status == CTaskThreadRetry);
-        bbCheck(result.m_committed && result.m_status == CTaskThreadOk, "V5 redo performance post failed");
+        const CTaskThreadResult result = worker->postTaskResult(task, level);
+        bbCheck(result.m_committed && result.m_status == CTaskThreadOk,
+            "V5 redo performance ordinary post failed; external retry prohibited");
     };
     const std::chrono::steady_clock::time_point started = std::chrono::steady_clock::now();
     try
@@ -1378,7 +1426,7 @@ void taskV5RedoPerformanceTest()
         << " elapsed_change_percent=" << (redo[1] / baseline[1] - 1.0) * 100.0 << '\n';
 }
 
-/** 只重试明确未提交的临时失败，避免测试在已提交通知失败时重复投递
+/** 检查单次普通投递结果，不由测试重试来掩盖库内竞争处理错误
 @param [in] worker 本轮独立工作线程
 @param [in] task 本轮不可变任务
 @param [in] level 优先级
@@ -1386,13 +1434,9 @@ void taskV5RedoPerformanceTest()
 static void TaskV5PostChecked(const std::shared_ptr<CTaskThread>& worker,
     const std::shared_ptr<CTask>& task, int32_t level)
 {
-    CTaskThreadResult result;
-    TaskV5SpinUntil([&]()
-    {
-        result = worker->postTask(task, level);
-        return result.m_committed || result.m_status != CTaskThreadRetry;
-    }, "V5 race post remained unavailable");
-    bbCheck(result.m_committed && result.m_status == CTaskThreadOk, "V5 race post failed");
+    const CTaskThreadResult result = worker->postTaskResult(task, level);
+    bbCheck(result.m_committed && result.m_status == CTaskThreadOk,
+        "V5 race ordinary post failed; external retry prohibited");
 }
 
 void taskV5FirstPriorityRaceTest()
@@ -1508,16 +1552,19 @@ void taskV5ReclaimBatchesTest()
     bbCheck(domain.initialize(2), "V5 reclaim batches domain initialization failed");
     CTaskStorage storage(domain);
     LockFreeHashMapPoolConfig config;
-    config.initialCapacity = 512;
-    config.maximumCapacity = 512;
+    config.initialCapacity = 1024;
+    config.maximumCapacity = 1024;
     config.growFreeThreshold = 0;
     bbCheck(storage.initialize(config).m_status == CTaskThreadOk, "V5 reclaim batches pool failed");
     const int initialLive = TestTask::live.load();
     CTaskStorageCache& cache = storage.cache(0);
+    // 按声明的批次额度制造满载和额外一批，验证实现没有少用或越过这些位置。
+    const size_t retainedCapacity = sizeof(cache.m_reclaims) / sizeof(cache.m_reclaims[0]) * 64;
+    const size_t total = retainedCapacity + 64;
     for (size_t round = 0; round < 3; ++round)
     {
         std::vector<CTaskStorageSlot*> slots;
-        for (size_t i = 0; i < 320; ++i)
+        for (size_t i = 0; i < total; ++i)
         {
             CTaskThreadResult result;
             CTaskStorageSlot* slot = storage.acquire(cache, result);
@@ -1530,13 +1577,13 @@ void taskV5ReclaimBatchesTest()
         {
             storage.retire(*slots[i]);
         }
-        bbCheck(storage.collect(320, true) == 320 && TestTask::live == initialLive + 256,
+        bbCheck(storage.collect(total, true) == total && TestTask::live == initialLive + retainedCapacity,
             "V5 full reclaim batches failed to release the overflow directly");
         // 只在测试模型中停在帮助者取得批次之后；其余真实帮助入口仍应前进。
         int32_t count = 64;
         bbCheck(cache.m_reclaims[0].m_count.compare_exchange_strong(count, -1),
             "V5 reclaim pause model failed to claim its batch");
-        bbCheck(storage.helpReclaim(cache, 256) == 192 && TestTask::live == initialLive + 64,
+        bbCheck(storage.helpReclaim(cache, retainedCapacity) == retainedCapacity - 64 && TestTask::live == initialLive + 64,
             "V5 paused helper blocked independent batches");
         cache.m_reclaims[0].m_count.store(64, std::memory_order_release);
         for (size_t i = 0; i < 64; ++i)
@@ -1568,6 +1615,78 @@ void taskV5ReclaimBatchesTest()
             "V5 partial tail reclamation exceeded its explicit budget");
         bbCheck(storage.collect(512) == count - 1 && TestTask::live == initialLive,
             "V5 idle reclamation retained the partial tail");
+    }
+    // 清理必须兼顾从未分配、只有一块及跨块目录，并可在退出和析构时重复调用。
+    const size_t clearCapacities[] = {0, 1, 257, 65536};
+    for (size_t i = 0; i < sizeof(clearCapacities) / sizeof(clearCapacities[0]); ++i)
+    {
+        CTaskReadDomain clearDomain;
+        bbCheck(clearDomain.initialize(2), "clear boundary domain failed");
+        CTaskStorage clearStorage(clearDomain);
+        LockFreeHashMapPoolConfig clearConfig;
+        clearConfig.initialCapacity = clearCapacities[i];
+        clearConfig.maximumCapacity = static_cast<int64_t>(clearCapacities[i]);
+        clearConfig.growFreeThreshold = 0;
+        bbCheck(clearStorage.initialize(clearConfig).m_status == CTaskThreadOk, "clear boundary pool failed");
+        std::weak_ptr<CTask> retained;
+        if (clearCapacities[i] != 0)
+        {
+            CTaskThreadResult result;
+            CTaskStorageSlot* slot = clearStorage.acquire(clearStorage.cache(0), result);
+            bbCheck(slot != nullptr && result.m_status == CTaskThreadOk, "clear boundary allocation failed");
+            slot->m_task = std::make_shared<TestTask>(626, [](TestTask&)
+            {
+
+            });
+            retained = slot->m_task;
+            bbCheck(!retained.expired(), "clear boundary task was not retained");
+        }
+        clearStorage.clear();
+        bbCheck(clearStorage.capacity() == 0 && retained.expired() && TestTask::live == initialLive,
+            "clear retained a task or a storage block");
+        clearStorage.clear();
+        bbCheck(clearStorage.capacity() == 0 && TestTask::live == initialLive, "repeated clear changed ownership");
+    }
+    // 四轮交错归还十六个所有者的页，重复访问同一分组也必须精确归还租约。
+    CTaskReadDomain groupedDomain;
+    bbCheck(groupedDomain.initialize(16), "grouped reclamation domain failed");
+    CTaskStorage grouped(groupedDomain);
+    LockFreeHashMapPoolConfig groupedConfig;
+    groupedConfig.initialCapacity = 2048;
+    groupedConfig.maximumCapacity = 2048;
+    groupedConfig.growFreeThreshold = 0;
+    bbCheck(grouped.initialize(groupedConfig).m_status == CTaskThreadOk, "grouped reclamation pool failed");
+    CTaskStorageSlot* interleaved[64];
+    for (size_t round = 0; round < 4; ++round)
+    {
+        for (size_t owner = 0; owner < 16; ++owner)
+        {
+            CTaskThreadResult result;
+            CTaskStorageSlot* slot = grouped.acquire(grouped.cache(owner), result);
+            bbCheck(slot != nullptr && result.m_status == CTaskThreadOk, "grouped reclamation allocation failed");
+            slot->m_task = std::make_shared<TestTask>(627, [](TestTask&)
+            {
+
+            });
+            slot->m_state->m_bits.store(3, std::memory_order_release);
+            interleaved[round * 16 + owner] = slot;
+        }
+    }
+    for (size_t owner = 0; owner < 16; ++owner)
+    {
+        grouped.flush(grouped.cache(owner));
+    }
+    for (size_t i = 0; i < 64; ++i)
+    {
+        grouped.retire(*interleaved[i]);
+    }
+    bbCheck(grouped.collect(64) == 64 && grouped.collect(64) == 0 && TestTask::live == initialLive,
+        "interleaved reclamation lost or repeated an item");
+    for (size_t owner = 0; owner < 16; ++owner)
+    {
+        CTaskStoragePage* page = interleaved[owner]->m_page;
+        bbCheck(page->m_free.load() == UINT64_MAX && page->m_block->m_leases.load() == 0,
+            "interleaved reclamation corrupted a page bitmap or block leases");
     }
 
 #endif

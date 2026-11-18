@@ -130,6 +130,17 @@ void taskV3StorageTest()
     config.initialCapacity = 3;
     config.maximumCapacity = 13;
     std::atomic<size_t> grows(0);
+    std::atomic<size_t> growthEvents(0), growthSlots(0);
+    // 观察实际任务记录池的增长；观察异常不能撤销已发布的记录块。
+    config.m_onGrowth = [&growthEvents, &growthSlots](size_t count, uint64_t sequence)
+    {
+        if (sequence != 0)
+        {
+            growthEvents.fetch_add(1);
+            growthSlots.fetch_add(count);
+        }
+        throw std::runtime_error("storage growth observer");
+    };
     // 验证回调只负责算法；1000 的请求由池截断为剩余预算。
     config.growPolicy = [&grows](const LockFreeHashMapGrowContext& context) -> size_t
     {
@@ -153,6 +164,7 @@ void taskV3StorageTest()
         allocated.push_back(slot);
     }
     V3ModuleCheck(growing.capacity() == 13 && grows.load() == 1, "growth exceeded maximum or wrong count");
+    V3ModuleCheck(growthEvents == 1 && growthSlots == 10, "storage notification missing, speculative or included initial reserve");
     for (size_t i = 0; i < allocated.size(); ++i)
     {
         growing.abandon(*allocated[i]);
@@ -392,7 +404,7 @@ void taskV3StorageFailureTest()
         CTaskReadPosition* reader = domain.enter();
         CTaskThreadResult result;
         V3ModuleCheck(storage.acquire(storage.cache(domain.indexOf(*reader)), result) == nullptr &&
-                result.m_status == CTaskThreadPolicyFailure && storage.capacity() == 0,
+                result.m_status == (throwing != 0 ? CTaskThreadPolicyFailure : CTaskThreadCapacity) && storage.capacity() == 0,
             "policy failure committed resources");
         domain.leave(*reader);
     }
@@ -449,6 +461,11 @@ void taskV3StorageFailureTest()
 static void RunQueueReadyTest(bool reservations)
 {
     LockFreeQueue<int32_t> queue(false);
+    V3ModuleCheck(queue.configureConsumerYieldInterval(0) == LockFreeQueueInvalidConfiguration &&
+        queue.configureConsumerYieldInterval(65537) == LockFreeQueueInvalidConfiguration,
+        "invalid consumer cooperation interval accepted");
+    V3ModuleCheck(queue.configureConsumerYieldInterval(reservations ? 16384 : 1) == LockFreeQueueSuccess,
+        "consumer cooperation interval configuration");
     V3ModuleCheck(queue.configureCancelableReservations(reservations) == LockFreeQueueSuccess, "queue reservation configuration");
     V3ModuleCheck(!queue.possiblyReady(), "uninitialized readiness probe was not empty");
     LockFreeQueuePoolConfig config;
@@ -459,11 +476,13 @@ static void RunQueueReadyTest(bool reservations)
         "ready queue initialization");
     V3ModuleCheck(queue.configureCancelableReservations(!reservations) == LockFreeQueueInvalidState,
         "live publication order was changed");
+    V3ModuleCheck(queue.configureConsumerYieldInterval(65536) == LockFreeQueueInvalidState,
+        "live consumer cooperation interval changed");
     int32_t output = -1;
     V3ModuleCheck(!queue.possiblyReady(), "fresh readiness probe was not empty");
     V3ModuleCheck(queue.configureProducerCounters(false) == LockFreeQueueInvalidState, "live counter mode changed");
     V3ModuleCheck(!queue.popReady(&output) && output == -1, "empty ready pop changed output");
-    for (int32_t round = 0; round < 4; ++round)
+    for (int32_t round = 0; round < 20; ++round)
     {
         for (int32_t i = 0; i < 1024; ++i)
         {
@@ -482,9 +501,22 @@ static void RunQueueReadyTest(bool reservations)
     }
     V3ModuleCheck(queue.tryPush(1) == LockFreeQueueSuccess && queue.popReady(nullptr) && !queue.pop(&output),
         "ready discard or normal pop integration");
-    V3ModuleCheck(!queue.possiblyReady(), "readiness probe missed the empty slot after a partial segment");
+    // possiblyReady允许将待处理段边界报告为true，不能用提示代替真实出队判空。
+    // 两次探测不得消费或制造条目；随后发布的真实数据仍须可见且只交付一次。
+    queue.possiblyReady();
+    queue.possiblyReady();
+    V3ModuleCheck(!queue.popReady(&output) && queue.size() == 0,
+        "readiness hint manufactured an item at an empty boundary");
+    V3ModuleCheck(queue.tryPush(2) == LockFreeQueueSuccess && queue.possiblyReady() &&
+        queue.popReady(&output) && output == 2 && !queue.popReady(&output),
+        "empty-boundary hint lost or duplicated later publication");
     queue.destroy();
     V3ModuleCheck(!queue.possiblyReady(), "destroyed readiness probe retained a segment");
+    V3ModuleCheck(queue.configureConsumerYieldInterval(65536) == LockFreeQueueSuccess &&
+        queue.tryInit() == LockFreeQueueSuccess && queue.tryPush(7) == LockFreeQueueSuccess &&
+        queue.popReady(&output) && output == 7 && !queue.popReady(&output),
+        "consumer cooperation configuration broke reinitialization");
+    queue.destroy();
 
     // 暂停在途投递时维护不得释放其上下文；归还读侧位置后可由其他调用帮助清理。
     LockFreeQueue<CTaskStorageSlot*> retained(false);
@@ -912,14 +944,22 @@ void taskV4MapMaintenanceTest()
 
 /** 验证显式前缀扫描绕过短项提示，仍保留预算、所有权和跨段 FIFO
 @param [in] dynamic 是否使用可扩容额度，另一路验证固定额度的直接输出
+@param [in] span 是否验证最多256项接口；false验证原64项接口的输出边界
 */
-static void RunEntryProbeTest(bool dynamic)
+static void RunEntryProbeTest(bool dynamic, bool span)
 {
     LockFreeQueueEntry<int> entries[600];
-    LockFreeQueueEntry<int>* output[64];
+    LockFreeQueueEntry<int>* output[256];
     LockFreeQueue<int> queue(false);
+    const size_t limit = span ? 256 : 64;
+    // 按待测接口提取前缀；destination可空，budget为调用方预算，received输出实际消费数，返回是否消费。
+    const auto probe = [&](LockFreeQueueEntry<int>** destination, size_t budget, size_t& received) -> bool
+    {
+        return span ? queue.probeReadyEntrySpan(destination, budget, received) :
+            queue.probeReadyEntryPrefix(destination, budget, received);
+    };
     size_t count = 99;
-    V3ModuleCheck(!queue.probeReadyEntryPrefix(output, 64, count) && count == 0,
+    V3ModuleCheck(!probe(output, limit, count) && count == 0,
         "uninitialized explicit prefix changed output count");
     LockFreeQueuePoolConfig config;
     config.initialCapacity = dynamic ? 2 : 1024;
@@ -937,9 +977,9 @@ static void RunEntryProbeTest(bool dynamic)
         entries[i].m_value = i;
         V3ModuleCheck(queue.tryPushEntry(entries[i]) == LockFreeQueueSuccess, "explicit prefix fixture publication");
     }
-    V3ModuleCheck(!queue.probeReadyEntryPrefix(output, 0, count) && count == 0 && queue.size() == 600,
+    V3ModuleCheck(!probe(output, 0, count) && count == 0 && queue.size() == 600,
         "zero explicit prefix budget consumed entries");
-    V3ModuleCheck(queue.probeReadyEntryPrefix(output, 4, count) && count == 4,
+    V3ModuleCheck(probe(output, 4, count) && count == 4,
         "explicit scan retained the single-item hint");
     for (size_t i = 0; i < count; ++i)
     {
@@ -947,26 +987,37 @@ static void RunEntryProbeTest(bool dynamic)
             "explicit prefix changed entry identity");
     }
     size_t consumed = count;
+    size_t largest = count;
     while (consumed < 600)
     {
+        for (size_t i = 0; i < 256; ++i)
+        {
+            output[i] = &entries[599];
+        }
         const size_t maximum = consumed % 2 != 0 ? 1 : (std::numeric_limits<size_t>::max)();
-        V3ModuleCheck(queue.probeReadyEntryPrefix(output, maximum, count) && count != 0 &&
-                count <= (std::min)(maximum, size_t(64)), "explicit prefix budget or segment boundary");
+        V3ModuleCheck(probe(output, maximum, count) && count != 0 &&
+                count <= (std::min)(maximum, limit), "explicit prefix budget or segment boundary");
+        largest = (std::max)(largest, count);
         for (size_t i = 0; i < count; ++i)
         {
             V3ModuleCheck(output[i] == &entries[consumed] && output[i]->m_value == static_cast<int>(consumed),
                 "explicit prefix FIFO or caller-owned value changed");
             ++consumed;
         }
+        for (size_t i = count; i < 256; ++i)
+        {
+            V3ModuleCheck(output[i] == &entries[599], "explicit prefix wrote beyond its returned count");
+        }
     }
-    V3ModuleCheck(!queue.probeReadyEntryPrefix(output, 64, count) && count == 0 && queue.size() == 0 &&
-            queue.tryPushEntry(entries[0]) == LockFreeQueueSuccess && queue.probeReadyEntryPrefix(nullptr, 1, count) &&
+    V3ModuleCheck(!span || dynamic || largest > 64, "fixed span never exercised its extended output range");
+    V3ModuleCheck(!probe(output, limit, count) && count == 0 && queue.size() == 0 &&
+            queue.tryPushEntry(entries[0]) == LockFreeQueueSuccess && probe(nullptr, 1, count) &&
             count == 1 && queue.size() == 0 && entries[0].m_value == 0,
         "explicit prefix empty, discard or credit reuse");
     // 不足消费预算的短尾只能输出实际存在项，其后输出槽必须保持调用方原值。
     for (size_t available = 1; available <= 7; ++available)
     {
-        for (size_t i = 0; i < 64; ++i)
+        for (size_t i = 0; i < 256; ++i)
         {
             output[i] = &entries[599];
         }
@@ -974,13 +1025,82 @@ static void RunEntryProbeTest(bool dynamic)
         {
             V3ModuleCheck(queue.tryPushEntry(entries[i]) == LockFreeQueueSuccess, "short tail fixture");
         }
-        V3ModuleCheck(queue.probeReadyEntryPrefix(output, 64, count) && count == available && queue.size() == 0,
+        V3ModuleCheck(probe(output, limit, count) && count == available && queue.size() == 0,
             "short tail consumed an unpublished position");
-        for (size_t i = 0; i < 64; ++i)
+        for (size_t i = 0; i < 256; ++i)
         {
             V3ModuleCheck(output[i] == (i < available ? &entries[i] : &entries[599]),
                 "short tail changed FIFO or wrote beyond the committed prefix");
         }
+    }
+}
+
+/** 验证各段内起点及读取预算下的外部条目前缀，预期仅来自投递身份序列
+@param [in] dynamic 是否使用动态额度路径，初始容量始终足够
+@param [in] span 是否使用最多256项入口；false验证原64项入口
+*/
+static void RunEntryOffsetTest(bool dynamic, bool span)
+{
+    const size_t kBudgets[] = {0, 1, 2, 3, 4, 5, 15, 16, 17, 63, 64, 65, 255, 256, (std::numeric_limits<size_t>::max)()};
+    for (size_t offset = 0; offset < 256; ++offset)
+    {
+        LockFreeQueueEntry<int> entries[600];
+        LockFreeQueue<int> queue(false);
+        LockFreeQueuePoolConfig config;
+        config.initialCapacity = 1024;
+        config.maximumCapacity = dynamic ? -1 : 1024;
+        config.maximumProducers = 2;
+        V3ModuleCheck(queue.configureEntryOnly(true) == LockFreeQueueSuccess &&
+                queue.configurePool(config) == LockFreeQueueSuccess && queue.tryInit() == LockFreeQueueSuccess,
+            "offset prefix initialization");
+        LockFreeQueueProducer<int> producer;
+        V3ModuleCheck(queue.tryAcquireProducer(producer) == LockFreeQueueSuccess, "offset producer registration");
+        for (size_t i = 0; i < 600; ++i)
+        {
+            entries[i].m_value = static_cast<int>(i);
+            V3ModuleCheck(producer.tryPushEntry(entries[i]) == LockFreeQueueSuccess, "offset fixture publication");
+        }
+        // 单项推进到每个可能的初始偏移，不读取或修改队列私有成功状态。
+        for (size_t i = 0; i < offset; ++i)
+        {
+            int value = -1;
+            V3ModuleCheck(queue.pop(&value) && value == static_cast<int>(i), "offset fixture FIFO");
+        }
+        size_t consumed = offset;
+        size_t attempt = offset;
+        while (consumed < 600)
+        {
+            LockFreeQueueEntry<int>* output[258] = {};
+            const size_t budget = kBudgets[attempt++ % (sizeof(kBudgets) / sizeof(kBudgets[0]))];
+            size_t count = 999;
+            const bool received = span ? queue.probeReadyEntrySpan(output + 1, budget, count) :
+                queue.probeReadyEntryPrefix(output + 1, budget, count);
+            V3ModuleCheck(output[0] == nullptr && output[257] == nullptr,
+                "offset prefix wrote outside output storage");
+            if (budget == 0)
+            {
+                V3ModuleCheck(!received && count == 0 && queue.size() == 600 - consumed,
+                    "offset zero budget changed consumption");
+                continue;
+            }
+            const size_t limit = span && !dynamic ? 256 : 64;
+            V3ModuleCheck(received && count != 0 && count <= (std::min)(budget, limit) && count <= 600 - consumed,
+                "offset prefix lost data or exceeded budget");
+            for (size_t i = 0; i < count; ++i)
+            {
+                V3ModuleCheck(output[i + 1] == &entries[consumed] && entries[consumed].m_value == static_cast<int>(consumed),
+                    "offset prefix lost, duplicated or reordered identity");
+                ++consumed;
+            }
+            for (size_t i = count + 1; i < 258; ++i)
+            {
+                V3ModuleCheck(output[i] == nullptr, "offset prefix wrote beyond returned count");
+            }
+        }
+        size_t count = 999;
+        V3ModuleCheck(queue.empty() && queue.size() == 0 &&
+                !queue.probeReadyEntrySpan(nullptr, 256, count) && count == 0,
+            "offset prefix retained or fabricated entries");
     }
 }
 
@@ -1037,8 +1157,14 @@ static void RunQueueEntryTest(bool entryOnly)
 
     if (entryOnly)
     {
-        RunEntryProbeTest(false);
-        RunEntryProbeTest(true);
+        RunEntryProbeTest(false, false);
+        RunEntryProbeTest(true, false);
+        RunEntryProbeTest(false, true);
+        RunEntryProbeTest(true, true);
+        RunEntryOffsetTest(false, false);
+        RunEntryOffsetTest(true, false);
+        RunEntryOffsetTest(false, true);
+        RunEntryOffsetTest(true, true);
     }
     else
     {
@@ -1046,6 +1172,7 @@ static void RunQueueEntryTest(bool entryOnly)
         size_t count = 99;
         V3ModuleCheck(mixed.tryPush(42) == LockFreeQueueSuccess &&
                 !mixed.probeReadyEntryPrefix(unexpected, 1, count) && count == 0 && mixed.size() == 1 &&
+                !mixed.probeReadyEntrySpan(unexpected, 1, count) && count == 0 && mixed.size() == 1 &&
                 mixed.pop(nullptr), "explicit Entry prefix consumed an owned payload");
     }
 
@@ -1365,7 +1492,16 @@ void taskV3ReadyIndexTest()
                         {
                             std::this_thread::yield();
                         }
-                        index.publish(static_cast<int32_t>(level + 1));
+                        if ((operation & 1) != 0)
+                        {
+                            // 与Queue已完成提交屏障的接入相同，不能无屏障直接传true。
+                            CTaskReadyIndex::fence();
+                            index.publish(static_cast<int32_t>(level + 1), true);
+                        }
+                        else
+                        {
+                            index.publish(static_cast<int32_t>(level + 1));
+                        }
                     }
                 }
                 catch (...)

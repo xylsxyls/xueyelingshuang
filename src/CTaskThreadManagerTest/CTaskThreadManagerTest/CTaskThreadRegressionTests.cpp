@@ -100,17 +100,17 @@ static void ManagerTraversalExhaustion()
     CTaskThreadManagerConfig config;
     config.m_threadMap.operationRecordLimit = 4;
     bbCheck(manager.configure(config).m_status == CTaskThreadOk, "manager protection config failed");
+    std::atomic<int> held(0), done(0);
+    std::atomic<bool> release(false);
     TestWorkers workers;
     std::vector<std::shared_ptr<CTaskThread>> readers;
     for (int i = 0; i < 4; ++i)
     {
         readers.push_back(workers.add());
     }
-    std::atomic<int> held(0), done(0);
-    std::atomic<bool> release(false);
     for (size_t i = 0; i < readers.size(); ++i)
     {
-        bbCheck(readers[i]->postTask(std::make_shared<TestTask>(1, [&held, &release, &done](TestTask&)
+        bbCheck(readers[i]->postTaskResult(std::make_shared<TestTask>(1, [&held, &release, &done](TestTask&)
         {
             bbCheck(CTaskThreadTestAccess::holdManagerRead([&held, &release]()
             {
@@ -160,11 +160,11 @@ static void ManagerTraversalExhaustion()
 */
 static void NestedStopCallbacks()
 {
+    std::atomic<int> entered(0), nestedStatus(-1), joinStatus(-1), stopCallbacks(0);
+    std::atomic<bool> release(false);
     TestWorkers workers;
     std::shared_ptr<CTaskThread> a = workers.add(), b = workers.add();
     const uint32_t idA = workers.ids[0];
-    std::atomic<int> entered(0), nestedStatus(-1), joinStatus(-1), stopCallbacks(0);
-    std::atomic<bool> release(false);
     const std::function<void(TestTask&)> body = [&entered, &release](TestTask&)
     {
         ++entered;
@@ -185,8 +185,8 @@ static void NestedStopCallbacks()
         nestedStatus = a->stopCurTask().m_status;
         joinStatus = CTaskThreadManager::instance().waitForEnd(idA).m_status;
     };
-    a->postTask(taskA);
-    b->postTask(taskB);
+    TestPost(a, taskA);
+    TestPost(b, taskB);
     bbWait([&entered]()
     {
         return entered == 2;
@@ -229,12 +229,12 @@ static void InitializationRollback()
 static void SingletonAfterPrewarm()
 {
     CTaskThreadManager* expected = &CTaskThreadManager::instance();
-    TestWorkers workers;
     std::atomic<int32_t> calls(0);
+    TestWorkers workers;
     for (int32_t i = 0; i < 8; ++i)
     {
         std::shared_ptr<CTaskThread> worker = workers.add();
-        bbCheck(worker->postTask(std::make_shared<TestTask>(1, [expected, &calls](TestTask&)
+        bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [expected, &calls](TestTask&)
         {
             for (int32_t n = 0; n < 10000; ++n)
             {
@@ -264,10 +264,10 @@ static void PropertyIdentifiers()
                 clone->getPropertyId() == properties[i],
             "explicit or cloned property ID changed");
     }
-    TestWorkers workers;
-    std::shared_ptr<CTaskThread> worker = workers.add();
     std::atomic<bool> entered(false), release(false);
     std::atomic<int32_t> completed(0);
+    TestWorkers workers;
+    std::shared_ptr<CTaskThread> worker = workers.add();
     std::shared_ptr<TestTask> gate(new TestTask(77, [&entered, &release](TestTask&)
     {
         entered = true;
@@ -276,7 +276,7 @@ static void PropertyIdentifiers()
             return release.load();
         }, "property gate release");
     }));
-    bbCheck(worker->postTask(gate, INT32_MAX).m_committed, "property gate rejected");
+    bbCheck(worker->postTaskResult(gate, INT32_MAX).m_committed, "property gate rejected");
     bbWait([&entered]()
     {
         return entered.load();
@@ -293,8 +293,8 @@ static void PropertyIdentifiers()
     {
         ++completed;
     }));
-    bbCheck(worker->postTask(first, 1).m_committed && worker->postTask(second, 2).m_committed &&
-            worker->postTask(negative, 1).m_committed,
+    bbCheck(worker->postTaskResult(first, 1).m_committed && worker->postTaskResult(second, 2).m_committed &&
+            worker->postTaskResult(negative, 1).m_committed,
         "duplicate/negative property ID was rejected");
     bbCheck(worker->stopTask(0).m_status == CTaskThreadOk && first->stops == 1 && second->stops == 1 &&
             negative->stops == 0 && gate->stops == 0,
@@ -318,7 +318,7 @@ static void ConcurrentRedoOrdering()
         std::atomic<bool> releaseCallbacks(false);
         TestWorkers consumers, producers;
         std::shared_ptr<CTaskThread> worker = consumers.add();
-        bbCheck(worker->postTask(std::make_shared<TestConcurrentRedoTask>(state, callbacks, releaseCallbacks), 1).m_committed,
+        bbCheck(worker->postTaskResult(std::make_shared<TestConcurrentRedoTask>(state, callbacks, releaseCallbacks), 1).m_committed,
             "concurrent redo original rejected");
         bbWait([state]()
         {
@@ -326,7 +326,7 @@ static void ConcurrentRedoOrdering()
         }, "concurrent redo original entered");
         for (int32_t i = 0; i < 2; ++i)
         {
-            bbCheck(worker->postTask(std::make_shared<TestTask>(1, [state, i](TestTask&)
+            bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [state, i](TestTask&)
             {
                 state->ledger.add(300 + i);
             }),
@@ -336,9 +336,9 @@ static void ConcurrentRedoOrdering()
         }
         for (int32_t i = 0; i < 8; ++i)
         {
-            bbCheck(producers.add()->postTask(std::make_shared<TestTask>(1, [worker, state, i](TestTask&)
+            bbCheck(producers.add()->postTaskResult(std::make_shared<TestTask>(1, [worker, state, i](TestTask&)
             {
-                bbCheck(worker->postTask(std::make_shared<TestTask>(2, [state, i](TestTask&)
+                bbCheck(worker->postTaskResult(std::make_shared<TestTask>(2, [state, i](TestTask&)
                 {
                     state->ledger.add(200 + i);
                 }),
@@ -374,11 +374,11 @@ static void ConcurrentRedoOrdering()
 */
 static void CachedPriorityFallback()
 {
-    TestWorkers workers;
-    std::shared_ptr<CTaskThread> worker = workers.add();
     std::atomic<bool> entered(false), release(false);
     TaskLedger ledger;
-    bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&entered, &release](TestTask&)
+    TestWorkers workers;
+    std::shared_ptr<CTaskThread> worker = workers.add();
+    bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&entered, &release](TestTask&)
     {
         entered = true;
         bbWait([&release]()
@@ -396,7 +396,7 @@ static void CachedPriorityFallback()
     const int32_t levels[] = {1, 16, 1, 17, 16, INT32_MAX, 2};
     for (int32_t i = 0; i < 7; ++i)
     {
-        bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&ledger, i](TestTask&)
+        bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&ledger, i](TestTask&)
         {
             ledger.add(i);
         }),
@@ -422,9 +422,8 @@ static void SplitCountersWrap()
     config.m_maximumTasks = 3;
     const uint32_t id = CTaskThreadManager::instance().init(config);
     bbCheck(id != 0, "counter test initialization failed");
-    workers.ids.push_back(id);
-    std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
-    bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&entered, &release](TestTask& task)
+    std::shared_ptr<CTaskThread> worker = workers.adopt(id);
+    bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&entered, &release](TestTask& task)
     {
         entered = true;
         bbWait([&release, &task]()
@@ -444,8 +443,8 @@ static void SplitCountersWrap()
     {
         ++calls;
     }));
-    bbCheck(worker->postTask(task).m_committed && worker->postTask(task).m_committed, "counter wrap rejected allowed tasks");
-    const CTaskThreadResult full = worker->postTask(task);
+    bbCheck(worker->postTaskResult(task).m_committed && worker->postTaskResult(task).m_committed, "counter wrap rejected allowed tasks");
+    const CTaskThreadResult full = worker->tryPostTaskResult(task, 1, true, false);
     bbCheck(!full.m_committed && full.m_status == CTaskThreadCapacity, "counter wrap lost maximum task limit");
     const CTaskThreadStatistics pending = worker->statistics();
     bbCheck(pending.m_outstanding == 3 && pending.m_queued == 2, "counter wrap changed pending counts");
@@ -468,11 +467,10 @@ static void ConcurrentBoundedStatistics()
     config.m_maximumTasks = 3;
     const uint32_t id = CTaskThreadManager::instance().init(config);
     bbCheck(id != 0, "statistics test initialization failed");
-    consumers.ids.push_back(id);
-    std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
+    std::shared_ptr<CTaskThread> worker = consumers.adopt(id);
     for (int32_t i = 0; i < 4; ++i)
     {
-        bbCheck(producers.add()->postTask(std::make_shared<TestTask>(1, [worker, &accepted, &calls](TestTask&)
+        bbCheck(producers.add()->postTaskResult(std::make_shared<TestTask>(1, [worker, &accepted, &calls](TestTask&)
         {
             const uint64_t deadline = bbNow() + 20000;
             for (int32_t sequence = 0; sequence < 5000; ++sequence)
@@ -483,7 +481,7 @@ static void ConcurrentBoundedStatistics()
                 }));
                 for (;;)
                 {
-                    const CTaskThreadResult result = worker->postTask(task);
+                    const CTaskThreadResult result = worker->postTaskResult(task);
                     const CTaskThreadStatistics load = worker->statistics();
                     bbCheck(load.m_outstanding <= 3 && load.m_queued <= 3, "statistics exceeded actual admission bound");
                     if (result.m_committed)
@@ -555,7 +553,7 @@ void taskPrefetchedPriorityTest()
     try
     {
         // 先固定队列输入；原任务开始时，消费者已有机会预读同级前缀。
-        bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&gateEntered, &gateReleased](TestTask& task)
+        bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&gateEntered, &gateReleased](TestTask& task)
         {
             gateEntered = true;
             bbWait([&gateReleased, &task]()
@@ -570,7 +568,7 @@ void taskPrefetchedPriorityTest()
         {
             return gateEntered.load();
         }, "prefetch gate entered");
-        bbCheck(worker->postTask(std::make_shared<RedoTask>(state, 0, true, true), 2).m_committed, "prefetch original rejected");
+        bbCheck(worker->postTaskResult(std::make_shared<RedoTask>(state, 0, true, true), 2).m_committed, "prefetch original rejected");
         for (int32_t i = 0; i < 200; ++i)
         {
             // 每项独立任务保留属性停止计数，执行时仅追加独立顺序账本。
@@ -579,7 +577,7 @@ void taskPrefetchedPriorityTest()
                 state->ledger.add(300 + i);
             });
             followers.push_back(task);
-            bbCheck(worker->postTask(task, 2).m_committed, "prefetch follower rejected");
+            bbCheck(worker->postTaskResult(task, 2).m_committed, "prefetch follower rejected");
         }
         gateReleased = true;
         bbWait([state]()
@@ -592,7 +590,7 @@ void taskPrefetchedPriorityTest()
         {
             bbCheck(followers[i]->stops == 1, "property stop missed a prefetched task");
         }
-        bbCheck(worker->postTask(std::make_shared<TestTask>(9, [state](TestTask&)
+        bbCheck(worker->postTaskResult(std::make_shared<TestTask>(9, [state](TestTask&)
         {
             state->ledger.add(900);
         }),
@@ -628,8 +626,7 @@ void taskPriorityWakeTest()
     config.m_idleCheckMilliseconds = 60000;
     const uint32_t id = CTaskThreadManager::instance().init(config);
     bbCheck(id != 0, "priority wake initialization failed");
-    workers.ids.push_back(id);
-    std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
+    std::shared_ptr<CTaskThread> worker = workers.adopt(id);
     int32_t expected = 0;
     for (int32_t wave = 0; wave < 200; ++wave)
     {
@@ -638,13 +635,10 @@ void taskPriorityWakeTest()
         for (int32_t i = 0; i < count; ++i)
         {
             const int32_t level = 2 + (wave + i) % 15;
-            bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&done](TestTask&)
+            TestPost(worker, std::make_shared<TestTask>(1, [&done](TestTask&)
             {
                 ++done;
-            }),
-                              level)
-                        .m_committed,
-                "priority wake task rejected");
+            }), level);
         }
         expected += count;
         bbWait([&done, expected]()
@@ -666,26 +660,20 @@ void taskRedoFactoryOrderTest()
         {
             ++runs;
         }));
-        task->clone([&factories]() -> CTask*
+        bbCheck(task->clone([&factories]() -> CTask*
         {
             ++factories;
             return nullptr;
-        });
+        }), "unpreempted factory registration failed");
         for (size_t i = 0; i < 1000; ++i)
         {
-            // 普通投递内部处理默认小池的临时竞争；已接纳调用绝不重复投递。
-            bbWait([worker, task]()
-            {
-                const CTaskThreadResult posted = worker->postTask(task);
-                bbCheck(posted.m_status == CTaskThreadOk && posted.m_committed,
-                    "unpreempted factory task rejected: " + bbNumber(posted.m_status));
-                return posted.m_committed;
-            }, "unpreempted factory admission");
+            // 普通投递内部处理竞争；测试不在外层重发同一项。
+            TestPost(worker, task);
         }
         workers.drain();
         bbCheck(runs == 1000 && factories == 0, "unpreempted execution eagerly created a backup");
-        task->clone(std::function<CTask*()>());
-        bbCheck(workers.add()->postTask(task).m_committed, "factory-free task rejected");
+        bbCheck(task->clone(std::function<CTask*()>()), "clearing factory failed");
+        TestPost(workers.add(), task);
         workers.drain();
         bbCheck(factories == 0 && runs == 1001, "clearing factory retained a callback or lost task");
     }
@@ -722,24 +710,24 @@ void taskRedoFactoryOrderTest()
     });
     try
     {
-        bbCheck(worker->postTask(original).m_committed, "lazy original rejected");
+        bbCheck(worker->postTaskResult(original).m_committed, "lazy original rejected");
         bbWait([&entered]()
         {
             return entered.load();
         }, "lazy original entered");
         bbCheck(factories == 0, "factory ran before preemption");
-        bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&ledger](TestTask&)
+        bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&ledger](TestTask&)
         {
             ledger.add(200);
         })).m_committed,
             "same-level follower rejected");
-        bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&ledger](TestTask&)
+        bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&ledger](TestTask&)
         {
             ledger.add(300);
         }),
                           3)
                     .m_committed &&
-                worker->postTask(std::make_shared<TestTask>(1, [&ledger](TestTask&)
+                worker->postTaskResult(std::make_shared<TestTask>(1, [&ledger](TestTask&)
         {
             ledger.add(400);
         }),
@@ -782,7 +770,7 @@ void taskRedoFactoryConcurrentTest()
         producers.reserve(8);
         try
         {
-            bbCheck(worker->postTask(original).m_committed, "concurrent factory original rejected");
+            bbCheck(worker->postTaskResult(original).m_committed, "concurrent factory original rejected");
             bbWait([state]()
             {
                 return state->entered.load();
@@ -793,7 +781,7 @@ void taskRedoFactoryConcurrentTest()
                 {
                     try
                     {
-                        if (!worker->postTask(std::make_shared<TestTask>(1, [state, i](TestTask&)
+                        if (!worker->postTaskResult(std::make_shared<TestTask>(1, [state, i](TestTask&)
                         {
                             state->ledger.add(200 + i);
                         }),
@@ -871,19 +859,19 @@ void taskRedoFactoryConcurrentTest()
     });
     try
     {
-        bbCheck(worker->postTask(original).m_committed, "repeated factory original rejected");
+        bbCheck(worker->postTaskResult(original).m_committed, "repeated factory original rejected");
         bbWait([&entered]()
         {
             return entered == 0;
         }, "factory generation zero entered");
-        bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&ledger](TestTask&)
+        bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&ledger](TestTask&)
         {
             ledger.add(300);
         })).m_committed,
             "repeated factory follower rejected");
         for (int32_t generation = 0; generation < 2; ++generation)
         {
-            bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&ledger, generation](TestTask&)
+            bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&ledger, generation](TestTask&)
             {
                 ledger.add(201 + generation);
             }),
@@ -955,12 +943,12 @@ void taskRedoFactoryFailureTest()
         });
         try
         {
-            bbCheck(worker->postTask(original).m_committed, "failure factory original rejected");
+            bbCheck(worker->postTaskResult(original).m_committed, "failure factory original rejected");
             bbWait([&entered]()
             {
                 return entered.load();
             }, "failure factory original entered");
-            bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&higher](TestTask&)
+            bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&higher](TestTask&)
             {
                 ++higher;
             }),
@@ -1052,8 +1040,7 @@ void taskRedoFactoryResourceTest()
         }
         const uint32_t id = CTaskThreadManager::instance().init(config);
         bbCheck(id != 0, "factory resource worker initialization failed");
-        workers.ids.push_back(id);
-        const std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
+        const std::shared_ptr<CTaskThread> worker = workers.adopt(id);
         std::shared_ptr<CTask> original(new TestFactoryTask(1, [&entered, &release](TestTask&)
         {
             entered = true;
@@ -1065,12 +1052,12 @@ void taskRedoFactoryResourceTest()
         original->clone(TestFactoryCopyFailure(failCopy, factories, mode == 0));
         try
         {
-            bbCheck(worker->postTask(original).m_committed, "resource original rejected");
+            bbCheck(worker->postTaskResult(original).m_committed, "resource original rejected");
             bbWait([&entered]()
             {
                 return entered.load();
             }, "resource original entered");
-            bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&higher](TestTask&)
+            bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&higher](TestTask&)
             {
                 ++higher;
             }),
@@ -1145,12 +1132,12 @@ void taskRedoFactoryAllocationTest()
     });
     try
     {
-        bbCheck(worker->postTask(original).m_committed, "control block failure original rejected");
+        bbCheck(worker->postTaskResult(original).m_committed, "control block failure original rejected");
         bbWait([&entered]()
         {
             return entered.load();
         }, "control block failure original entered");
-        bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&higher, &injected](TestTask&)
+        bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&higher, &injected](TestTask&)
         {
             injected = CTaskFaultAllocation::triggered();
             CTaskFaultAllocation::end();
@@ -1219,12 +1206,12 @@ void taskRedoFactoryLifecycleTest()
         });
         try
         {
-            bbCheck(worker->postTask(original).m_committed, "lifecycle original rejected");
+            bbCheck(worker->postTaskResult(original).m_committed, "lifecycle original rejected");
             bbWait([&entered]()
             {
                 return entered.load();
             }, "lifecycle original entered");
-            bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&higher](TestTask&)
+            bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&higher](TestTask&)
             {
                 ++higher;
             }),
@@ -1247,7 +1234,7 @@ void taskRedoFactoryLifecycleTest()
                 {
                     return childEntered.load();
                 }, "lifecycle child entered");
-                bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&higher](TestTask&)
+                bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&higher](TestTask&)
                 {
                     ++higher;
                 }),

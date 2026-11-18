@@ -80,6 +80,16 @@ public:
     */
     explicit CTaskPrototypeSegmentLease(CTaskPrototypeSegments& segments);
 
+    /** 原型允许多发布者，不提供单登记优化前提
+    @return 始终false
+    */
+    bool singlePublisherRegistered() const;
+
+    /** 原型没有正式登记预算，不能假定共享池容量充裕
+    @return 始终false
+    */
+    bool amplePublisherCapacity() const;
+
     /** 领取已清零段
     @return 候选段或 nullptr
     */
@@ -111,6 +121,8 @@ public:
     uint64_t m_generation;
     // 本发布者已经观察到的连续发布前缀
     size_t m_hint;
+    // 通道记录缓存的多发布者判定
+    bool m_reservedConcurrent;
     // 原子发布竞争统计
     std::atomic<uint64_t> m_retries;
     // 与新版通道记录保持一致的调度让步状态。

@@ -1,5 +1,6 @@
 ﻿#include "CTaskIntrusivePrototype.h"
 #include <chrono>
+#include "BlackBoxTestSupport.h"
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
@@ -88,6 +89,16 @@ m_candidate(nullptr)
 
 }
 
+bool CTaskPrototypeSegmentLease::singlePublisherRegistered() const
+{
+    return false;
+}
+
+bool CTaskPrototypeSegmentLease::amplePublisherCapacity() const
+{
+    return false;
+}
+
 LockFreeQueueChannelSegment<CTaskPrototypeNode>* CTaskPrototypeSegmentLease::acquire()
 {
     LockFreeQueueChannelSegment<CTaskPrototypeNode>* candidate = m_candidate;
@@ -109,6 +120,7 @@ CTaskPrototypePublisher::CTaskPrototypePublisher() :
 m_hazard(nullptr),
 m_generation(0),
 m_hint(0),
+m_reservedConcurrent(false),
 m_retries(0)
 {
 
@@ -176,9 +188,9 @@ int taskRunIntrusivePrototype(int argc, char* argv[])
             throw std::runtime_error("usage: intrusive|segmented producers total levels report.csv");
         }
         const std::string mode = argv[1];
-        const size_t producers = static_cast<size_t>(std::strtoul(argv[2], nullptr, 10));
-        const size_t total = static_cast<size_t>(std::strtoul(argv[3], nullptr, 10));
-        const size_t levels = static_cast<size_t>(std::strtoul(argv[4], nullptr, 10));
+        const size_t producers = static_cast<size_t>(bbUnsigned(argv[2], 32));
+        const size_t total = static_cast<size_t>(bbUnsigned(argv[3], 10000000));
+        const size_t levels = static_cast<size_t>(bbUnsigned(argv[4], 10));
         if ((mode != "intrusive" && mode != "segmented") || producers == 0 || producers > 32 ||
             total == 0 || total > 10000000 || total % producers != 0 || levels == 0 || levels > 10)
         {

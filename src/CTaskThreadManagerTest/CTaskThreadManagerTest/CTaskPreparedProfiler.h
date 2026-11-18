@@ -8,14 +8,14 @@
 
 class CTaskPreparedState;
 
-/** 测试工程专用的消费线程地址采样；会扰动调度，结果仅用于定位，不能当吞吐验收数据
+/** 测试工程专用的工作线程地址采样；会扰动调度，结果仅用于定位，不能当吞吐验收数据
 */
 class CTaskPreparedProfiler
 {
 public:
-    /** 打开已经预热的消费线程；调用方在业务开始后逐次采样
+    /** 打开已经就绪的工作线程；调用方在业务开始后逐次采样
     @param [in,out] state 基准状态，必须长于本对象
-    @param [in] threadId 预热任务记录的系统线程编号
+    @param [in] threadId 预热消费者或就绪生产者记录的系统线程编号
     */
     CTaskPreparedProfiler(CTaskPreparedState& state, DWORD threadId);
 

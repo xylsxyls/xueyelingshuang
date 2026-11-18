@@ -106,6 +106,13 @@ private:
 */
 void bbCheck(bool condition, const std::string& message);
 
+/** 完整解析非负十进制参数，拒绝符号、尾随字符及溢出
+@param [in] text 非空参数
+@param [in] maximum 允许的最大值
+@return 检查后的数值；非法输入抛测试失败异常
+*/
+uint64_t bbUnsigned(const char* text, uint64_t maximum);
+
 /** 记录析构清理失败，不从析构函数向外抛异常
 @param [in] message 非空失败说明
 */

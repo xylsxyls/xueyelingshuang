@@ -1,4 +1,5 @@
 ﻿#include "CTaskTestAutomation.h"
+#include "CTaskThreadBenchmark.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -40,6 +41,20 @@ static int32_t Positive(const std::string& text, int32_t maximum)
     const double value = Number(text);
     bbCheck(value >= 1 && value <= maximum, "integer outside allowed range");
     return static_cast<int32_t>(value);
+}
+
+/** 在建立批次前校验任务规模，保证延迟矩阵能够覆盖全部级别
+@param [in] phase 已识别的矩阵阶段
+@param [in] tasks 全体生产者任务总数
+*/
+static void ValidateMatrixTasks(const std::string& phase, int32_t tasks)
+{
+    bbCheck(tasks >= 1024 && tasks % 32 == 0, "tasks must be >=1024 and divisible by32");
+    bbCheck(phase != "auxiliary" || tasks <= 10000000, "auxiliary total must be <=10000000");
+    // 最多32个生产者，每1009项采样一次；十级完整轮转需要每人至少10个样本。
+    const int32_t minimumLatencyTasks = (9 * 1009 + 1) * 32;
+    bbCheck((phase != "latency" && phase != "prepared") || tasks >= minimumLatencyTasks,
+        "latency/prepared matrices require >=290624 tasks to sample every priority");
 }
 
 /** 拼接批次目录和本工具生成的文件名
@@ -126,6 +141,20 @@ void CTaskTestAutomation::execute(const std::string& program, const std::vector<
     bbCheck(code == 0, "child failed exit=" + bbNumber(code) + "; log=" + log);
 }
 
+bool CTaskTestAutomation::retainCompleteGroup(size_t begin, size_t expected, std::vector<std::string>& reports,
+    std::vector<std::string>& labels)
+{
+    bbCheck(reports.size() == labels.size() && begin <= reports.size() && expected != 0,
+        "invalid measurement group checkpoint");
+    if (reports.size() - begin == expected)
+    {
+        return true;
+    }
+    reports.resize(begin);
+    labels.resize(begin);
+    return false;
+}
+
 std::vector<std::vector<std::string>> CTaskTestAutomation::readCsv(const std::string& path)
 {
     std::ifstream input(path.c_str(), std::ios::binary);
@@ -198,7 +227,8 @@ void CTaskTestAutomation::summarize(const std::string& output, const std::vector
                 bbCheck(Number(cells["submitted"]) == Number(cells["consumed"]), "fairness lost accepted work");
             }
             const std::string key = cells["mode"] + "," + cells["producers"] + "," + cells["levels"] + "," +
-                cells["cpus"] + "," + cells["queue_producers"];
+                cells["cpus"] + "," + cells["queue_producers"] + "," + cells["total"] + "," +
+                cells["count"] + "," + cells["work"] + "," + cells["task_objects"];
             for (size_t col = 0; col < csv[0].size(); ++col)
             {
                 const std::string& name = csv[0][col];
@@ -228,7 +258,7 @@ void CTaskTestAutomation::summarize(const std::string& output, const std::vector
     }
     bbCheck(!groups.empty(), "no comparable measurements");
     std::ostringstream summary;
-    summary << "mode,producers,levels,cpus,queue_producers,metric,label,samples,median,baseline_median,change_percent\n";
+    summary << "mode,producers,levels,cpus,queue_producers,total,count,work,task_objects,metric,label,samples,median,baseline_median,change_percent\n";
     summary << std::fixed << std::setprecision(6);
     for (std::map<std::string, std::map<std::string, std::vector<double>>>::const_iterator group = groups.begin(); group != groups.end(); ++group)
     {
@@ -274,7 +304,55 @@ void CTaskTestAutomation::fairness(size_t index)
 
 void CTaskTestAutomation::selfTest()
 {
+    {
+        CTaskBenchmarkState state(2, 4, 2, 0);
+        const size_t order[] = {1, 5, 3, 7, 0, 4, 2, 6};
+        for (size_t i = 0; i < sizeof(order) / sizeof(order[0]); ++i)
+        {
+            CTaskBenchmarkItem item(state, order[i] / 4, order[i] % 4, 0);
+            item.doTask();
+        }
+        bbCheck(state.m_errors.load() == 0 && state.m_completed.load() == 8,
+            "benchmark oracle rejected independent priority streams");
+    }
+    {
+        CTaskBenchmarkState state(1, 4, 2, 0);
+        const size_t order[] = {2, 0, 1, 3};
+        for (size_t i = 0; i < sizeof(order) / sizeof(order[0]); ++i)
+        {
+            CTaskBenchmarkItem item(state, 0, order[i], 0);
+            item.doTask();
+        }
+        bbCheck(state.m_errors.load() == 2 && state.m_completed.load() == 4,
+            "benchmark oracle missed same-priority FIFO violations");
+    }
+    {
+        CTaskBenchmarkState state(1, 4, 2, 0);
+        state.m_stop.store(true);
+        CTaskBenchmarkProducer producer(state, std::shared_ptr<CTaskThread>(), 0, true);
+        producer.doTask();
+        bbCheck(state.m_errors.load() == 1 && state.m_accepted.load() == 0 && state.m_completed.load() == 0,
+            "cancelled benchmark producer counted work that never ran");
+    }
     bbCheck(median({3,1,2}) == 2 && median({10,2,4,6}) == 5, "median mismatch");
+    ValidateMatrixTasks("throughput", 1024);
+    ValidateMatrixTasks("auxiliary", 1024);
+    ValidateMatrixTasks("latency", 290624);
+    ValidateMatrixTasks("prepared", 290624);
+    const char* sampledPhases[] = {"latency", "prepared"};
+    for (size_t i = 0; i < 2; ++i)
+    {
+        bool rejected = false;
+        try
+        {
+            ValidateMatrixTasks(sampledPhases[i], 290592);
+        }
+        catch (const std::exception&)
+        {
+            rejected = true;
+        }
+        bbCheck(rejected, "matrix accepted too few samples for all priorities");
+    }
     const std::string csv = bbTempPath("-automation.csv");
     bbWrite(csv, "mode,errors,accepted,completed,total,submit_ops_s\nthroughput,0,10,10,10,20\n");
     bbCheck(readCsv(csv).size() == 2, "valid CSV rejected");
@@ -302,10 +380,28 @@ void CTaskTestAutomation::selfTest()
     bbWrite(candidate, header + "throughput,4,1,0,10,10,10,30\n");
     summarize(output, {base, candidate}, {"baseline", "current"});
     const std::vector<std::vector<std::string>> summary = readCsv(Join(output, "summary.csv"));
-    bbCheck(summary.size() == 3 && summary[2][6] == "current" && Number(summary[2][8]) == 30 &&
-        Number(summary[2][9]) == 20 && Number(summary[2][10]) == 50, "comparison percentage mismatch");
+    bbCheck(summary.size() == 3 && summary[2][10] == "current" && Number(summary[2][12]) == 30 &&
+        Number(summary[2][13]) == 20 && Number(summary[2][14]) == 50, "comparison percentage mismatch");
+    // 一方失败后保留此前完整组，撤回本轮孤立样本；失败轮不能改变配对中位数。
+    for (size_t passed = 0; passed <= 2; ++passed)
+    {
+        std::vector<std::string> reports = {base, candidate};
+        std::vector<std::string> labels = {"baseline", "current"};
+        for (size_t i = 0; i < passed; ++i)
+        {
+            reports.push_back(i == 0 ? candidate : base);
+            labels.push_back(i == 0 ? "current" : "baseline");
+        }
+        bbCheck(retainCompleteGroup(2, 2, reports, labels) == (passed == 2) &&
+            reports.size() == (passed == 2 ? 4 : 2) && labels.size() == reports.size() &&
+            reports[0] == base && reports[1] == candidate, "incomplete pair changed prior valid measurements");
+        summarize(output, reports, labels);
+        const std::vector<std::vector<std::string>> paired = readCsv(Join(output, "summary.csv"));
+        bbCheck(Number(paired[2][11]) == (passed == 2 ? 2 : 1) && Number(paired[2][14]) == 50,
+            "unpaired sample entered the performance comparison");
+    }
     const char* badResults[] = {"throughput,4,1,1,10,10,10,30\n", "throughput,4,1,0,10,9,10,30\n",
-        "throughput,4,1,0,10,10,10,nan\n"};
+        "throughput,4,1,0,10,10,10,nan\n", "throughput,4,1,0,20,20,20,30\n"};
     for (size_t i = 0; i < sizeof(badResults) / sizeof(badResults[0]); ++i)
     {
         bbWrite(candidate, header + badResults[i]);
@@ -349,6 +445,18 @@ void CTaskTestAutomation::selfTest()
         rejected.start({"--tests", selections[i], "--report", csv + ".invalid.tsv"}, csv + ".invalid.log");
         bbCheck(rejected.wait(5000) != 0, "invalid selection accepted");
     }
+    // 规模参数必须完整解析，不能把带后缀或溢出的数字静默变成另一组测试。
+    const char* invalidCounts[] = {"4x", "-1", "18446744073709551616", ""};
+    for (size_t i = 0; i < sizeof(invalidCounts) / sizeof(invalidCounts[0]); ++i)
+    {
+        BlackBoxChild fairness;
+        fairness.start({"--fairness", invalidCounts[i], "1", "3", "0", csv + ".fairness.csv"}, csv + ".fairness.log");
+        bbCheck(fairness.wait(5000) != 0, "invalid fairness count accepted");
+        BlackBoxChild prototype;
+        prototype.start({"--intrusive-prototype", "intrusive", invalidCounts[i], "3200", "1", csv + ".prototype.csv"},
+            csv + ".prototype.log");
+        bbCheck(prototype.wait(5000) != 0, "invalid prototype count accepted");
+    }
 }
 
 void CTaskTestAutomation::queueRace(const std::string& root, const std::string& output, const std::string& compiler)
@@ -363,20 +471,36 @@ void CTaskTestAutomation::queueRace(const std::string& root, const std::string& 
     WIN32_FIND_DATAA entry = {};
     HANDLE find = FindFirstFileA(Join(source, "*").c_str(), &entry);
     bbCheck(find != INVALID_HANDLE_VALUE, "Queue source not found");
-    do
+    try
     {
-        if ((entry.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) == 0)
+        do
         {
-            names.push_back(entry.cFileName);
-        }
-    } while (FindNextFileA(find, &entry));
+            if ((entry.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) == 0)
+            {
+                names.push_back(entry.cFileName);
+            }
+        } while (FindNextFileA(find, &entry));
+    }
+    catch (...)
+    {
+        FindClose(find);
+        throw;
+    }
     FindClose(find);
 #else
     DIR* dir = opendir(source.c_str());
     bbCheck(dir != nullptr, "Queue source not found");
-    for (dirent* entry = readdir(dir); entry != nullptr; entry = readdir(dir))
+    try
     {
-        names.push_back(entry->d_name);
+        for (dirent* entry = readdir(dir); entry != nullptr; entry = readdir(dir))
+        {
+            names.push_back(entry->d_name);
+        }
+    }
+    catch (...)
+    {
+        closedir(dir);
+        throw;
     }
     closedir(dir);
 #endif
@@ -455,17 +579,18 @@ int32_t CTaskTestAutomation::run(int32_t argc, char** argv)
         }
         else if (command == "--matrix")
         {
-            bbCheck(argc == 5 || argc == 6, "usage: --matrix throughput|latency|prepared|auxiliary rounds tasks new-output [baseline-test.exe]");
+            bbCheck(argc >= 5 && argc <= 7, "usage: --matrix throughput|latency|prepared|auxiliary rounds tasks new-output [baseline-test.exe [current-test.exe]]");
             const std::string phase = argv[1];
             bbCheck(phase == "throughput" || phase == "latency" || phase == "prepared" || phase == "auxiliary", "unknown matrix phase");
             const int32_t rounds = Positive(argv[2], 10);
             const int32_t tasks = Positive(argv[3], 40000000);
-            bbCheck(tasks >= 1024 && tasks % 32 == 0, "tasks must be >=1024 and divisible by32");
-            bbCheck(phase != "auxiliary" || tasks <= 10000000, "auxiliary total must be <=10000000");
+            ValidateMatrixTasks(phase, tasks);
             const std::string output = argv[4];
             directory(output);
-            const std::vector<std::string> binaries = argc == 6 ? std::vector<std::string>{argv[5], bbExecutable()} : std::vector<std::string>{bbExecutable()};
-            const std::vector<std::string> kinds = argc == 6 ? std::vector<std::string>{"baseline", "current"} : std::vector<std::string>{"current"};
+            // 可显式指定两个独立基准；调度器本身的分配故障替身不能混入其中一方。
+            const std::string current = argc == 7 ? argv[6] : bbExecutable();
+            const std::vector<std::string> binaries = argc >= 6 ? std::vector<std::string>{argv[5], current} : std::vector<std::string>{current};
+            const std::vector<std::string> kinds = argc >= 6 ? std::vector<std::string>{"baseline", "current"} : std::vector<std::string>{"current"};
             std::ostringstream identity;
             for (size_t i = 0; i < binaries.size(); ++i)
             {
@@ -487,6 +612,9 @@ int32_t CTaskTestAutomation::run(int32_t argc, char** argv)
             }
             std::vector<std::string> reports, labels;
             size_t scenario = 0;
+            size_t failures = 0;
+            std::ostringstream runs;
+            runs << "name\tresult\n";
             for (int32_t round = 1; round <= rounds; ++round)
             {
                 for (size_t mode = 0; mode < modes.size(); ++mode)
@@ -500,6 +628,14 @@ int32_t CTaskTestAutomation::run(int32_t argc, char** argv)
                             {
                                 continue;
                             }
+                            int32_t scenarioCount = phase == "auxiliary" ? tasks / producers : tasks;
+                            if (single)
+                            {
+                                // 千次往返只有几毫秒，容易把一次调度抖动放大为明显退化。
+                                // 小规模入口仍用于设施自检，正式矩阵以百万往返和万次生命周期测量。
+                                scenarioCount = (std::min)(tasks, modes[mode] == "lifecycle" ? 10000 : 1000000);
+                            }
+                            const size_t begin = reports.size();
                             for (size_t order = 0; order < binaries.size(); ++order)
                             {
                                 const size_t version = (order + scenario + round) % binaries.size();
@@ -507,24 +643,37 @@ int32_t CTaskTestAutomation::run(int32_t argc, char** argv)
                                 const std::string report = Join(output, name + ".csv");
                                 std::vector<std::string> args = {phase == "auxiliary" ? "--benchmark" : "--prepared-benchmark",
                                     modes[mode], bbNumber(single ? 1 : producers),
-                                    bbNumber(single ? 1000 : (phase == "auxiliary" ? tasks / producers : tasks)), bbNumber(levels)};
+                                    bbNumber(scenarioCount), bbNumber(levels)};
                                 if (phase == "auxiliary")
                                 {
                                     args.push_back("0");
                                 }
                                 args.push_back(report);
-                                execute(binaries[version], args, Join(output, name + ".log"), 900);
-                                reports.push_back(report);
-                                labels.push_back(kinds[version]);
-                                std::cout << "PASS " << name << std::endl;
+                                try
+                                {
+                                    execute(binaries[version], args, Join(output, name + ".log"), 900);
+                                    reports.push_back(report);
+                                    labels.push_back(kinds[version]);
+                                    runs << name << "\tPASS\n";
+                                    std::cout << "PASS " << name << std::endl;
+                                }
+                                catch (const std::exception& error)
+                                {
+                                    ++failures;
+                                    runs << name << "\tFAIL\n";
+                                    std::cerr << "FAIL " << name << ": " << error.what() << std::endl;
+                                }
                             }
+                            // 两个程序各自仍执行；任何一方失败就不以单边结果形成比较。
+                            retainCompleteGroup(begin, binaries.size(), reports, labels);
+                            bbWrite(Join(output, "runs.tsv"), runs.str());
                             ++scenario;
                         }
                     }
                 }
             }
             // 第一标签决定基线；执行顺序交错但汇总不能随第一条先执行程序而反转。
-            if (argc == 6 && labels[0] != "baseline")
+            if (argc >= 6 && !labels.empty() && labels[0] != "baseline")
             {
                 size_t first = 1;
                 while (first < labels.size() && labels[first] != "baseline")
@@ -535,7 +684,16 @@ int32_t CTaskTestAutomation::run(int32_t argc, char** argv)
                 std::swap(labels[0], labels[first]);
                 std::swap(reports[0], reports[first]);
             }
-            summarize(output, reports, labels);
+            if (!reports.empty())
+            {
+                summarize(output, reports, labels);
+            }
+            if (failures != 0)
+            {
+                std::cerr << "AUTOMATION_FAIL failed_runs=" << failures
+                    << "; summary contains complete successful groups only; see runs.tsv" << std::endl;
+                return 1;
+            }
         }
         else
         {

@@ -73,9 +73,11 @@ void taskThreadModelsTest()
     bbCheck(statistics.m_queued == 0 && !statistics.m_accepting, "statistics not initialized");
     bbCheck(taskThreadStatusText(static_cast<CTaskThreadStatus>(999)) != nullptr, "missing unknown status text");
     Semaphore semaphore;
-    std::thread thread([&semaphore]()
+    bbCheck(semaphore.initializationResult().status == SEMAPHORE_OK, "priority fixture semaphore initialization failed");
+    std::atomic<int32_t> waitStatus(SEMAPHORE_TIMEOUT);
+    std::thread thread([&semaphore, &waitStatus]()
     {
-        semaphore.waitResult();
+        waitStatus.store(semaphore.waitResult(5000).status, std::memory_order_release);
     });
     bool passed = true;
     const CTaskThreadResult invalid = CTaskThreadPriority::apply(thread, static_cast<CTaskSystemPriority>(999));
@@ -90,10 +92,27 @@ void taskThreadModelsTest()
     const CTaskThreadResult low = CTaskThreadPriority::apply(thread, CTaskPriorityLow);
     passed = passed && low.m_status == CTaskThreadUnsupported && !low.m_committed;
 #endif
-    semaphore.trySignal();
+    const SemaphoreResult signaled = semaphore.trySignal(true, false);
     thread.join();
+    passed = passed && signaled.committed && signaled.status == SEMAPHORE_OK && waitStatus.load(std::memory_order_acquire) == SEMAPHORE_OK;
     passed = passed && CTaskThreadPriority::apply(thread, CTaskPriorityNormal).m_status == CTaskThreadClosed;
     bbCheck(passed, "system priority result/native value mismatch");
+    CTaskThreadPoolConfig poolConfig;
+    poolConfig.m_initialThreads = 1;
+    poolConfig.m_maximumThreads = 1;
+    poolConfig.m_control.m_maximumTasks = 0;
+    CTaskThreadPool pool;
+    const size_t before = CTaskThreadManager::instance().count();
+    bbCheck(pool.initialize(poolConfig).m_status == CTaskThreadCapacity, "control admission limit ignored or initialization hung");
+    bbCheck(CTaskThreadManager::instance().count() == before, "failed control initialization retained workers");
+    poolConfig.m_control.m_maximumTasks = -1;
+    poolConfig.m_control.m_queue.initialCapacity = 2;
+    poolConfig.m_control.m_queue.maximumCapacity = 2;
+    poolConfig.m_control.m_taskMap.initialCapacity = 2;
+    poolConfig.m_control.m_taskMap.maximumCapacity = 2;
+    bbCheck(pool.initialize(poolConfig).m_status == CTaskThreadOk && pool.shutdown().m_status == CTaskThreadOk,
+        "independent control pool configuration failed to recover");
+    bbCheck(CTaskThreadManager::instance().count() == before, "configured control pool leaked workers");
 #endif
 }
 

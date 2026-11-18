@@ -11,6 +11,7 @@
 #include "CTaskTestAutomation.h"
 #include "CTaskIntrusivePrototype.h"
 #include "CTaskUsageTests.h"
+#include "CTaskRetryContractTests.h"
 #include <cstdlib>
 #include <algorithm>
 #include <climits>
@@ -26,7 +27,7 @@
 static const std::map<int32_t, CTaskTestCaseDescription> g_taskCaseDescriptions =
 {
     // 1 生命周期
-    {CTaskTestLifecycle, {"lifecycle", "生命周期", "创建、查询及注销线程；ID 不重复，无效 ID 安全，最终注册数为零。"}},
+    {CTaskTestLifecycle, {"lifecycle", "生命周期", "创建、查询及注销线程；八条读线程与128次创建注销重叠，引用匹配请求ID、注销后旧引用安全，最终注册数为零。"}},
     // 2 非法投递边界
     {CTaskTestInvalidPost, {"invalid-post", "非法投递边界", "空任务和非正优先级被拒绝，INT_MAX 优先级可执行，失败不得接纳。"}},
     // 3 优先级与同级先进先出
@@ -64,7 +65,7 @@ static const std::map<int32_t, CTaskTestCaseDescription> g_taskCaseDescriptions 
     // 19 批量注销
     {CTaskTestBulkUninitAll, {"bulk-uninit-all", "批量注销", "20 条运行线程批量停止并 join；管理器最终为空。"}},
     // 20 空闲唤醒
-    {CTaskTestIdleWakeup, {"idle-wakeup", "空闲唤醒", "100 次空闲转工作；每轮都能及时执行，无丢失唤醒。"}},
+    {CTaskTestIdleWakeup, {"idle-wakeup", "空闲唤醒", "100次单级加100次轮换级别空闲转工作；已空高级队列能重新激活，无丢失唤醒。"}},
     // 21 反复生命周期与所有权
     {CTaskTestRepeatedLifecycleOwnership, {"repeated-lifecycle-ownership", "反复生命周期与所有权", "100 次创建、投递和注销；任务存活数及注册数回到零。"}},
     // 22 普通投递压力
@@ -166,7 +167,7 @@ static const std::map<int32_t, CTaskTestCaseDescription> g_taskCaseDescriptions 
     // 70 性能校验器自检
     {CTaskTestPreparedBenchmarkValidator, {"prepared-benchmark-validator", "性能校验器自检", "注入数量相等的重复及缺失、级内乱序；必须拒绝伪正确样本。"}},
     // 71 外部条目额度压力
-    {CTaskTestExternalEntryQuota, {"external-entry-quota", "外部条目额度压力", "额度、扩缩容、失败、寿命和并发 FIFO；前缀预算生效，资源可归还。"}},
+    {CTaskTestExternalEntryQuota, {"external-entry-quota", "外部条目额度压力", "额度、扩缩容、寿命及并发FIFO；固定/动态池前缀的256个起点、多种预算和输出哨兵，无丢失、乱序或越界。"}},
     // 72 延迟重做工厂顺序
     {CTaskTestLazyRedoFactoryOrder, {"lazy-redo-factory-order", "延迟重做工厂顺序", "普通执行不建副本，仅真正重做才取参数创建；原级重做先于同级积压。"}},
     // 73 延迟工厂并发合并
@@ -265,6 +266,7 @@ static const std::map<int32_t, CTaskTestCaseDescription> g_taskCaseDescriptions 
     {CTaskTestQueueEmptyScanReturnEntry, {"queue-empty-scan-return-entry", "条目队列空扫后归还", "外部条目路径在空扫描后归还额度；已可用资源不能误判耗尽。"}},
     // 120 部分归还发布竞争
     {CTaskTestQueuePartialReturnPublication, {"queue-partial-return-publication", "部分归还发布竞争", "归还数量与可见发布交错；必须看到真实归还，最终 FIFO 及空状态正确。"}},
+    {CTaskTestRetryOptions, {"retry-options", "容量与竞争独立重试", "四种开关、普通满载等待、关闭取消及自等待拒绝；所有接纳项精确执行一次。"}},
 };
 
 std::atomic<int> TestTask::live(0);
@@ -317,26 +319,64 @@ void TestTask::stopTask()
     }
 }
 
+void TestPost(const std::shared_ptr<CTaskThread>& worker, const std::shared_ptr<CTask>& task, int32_t level)
+{
+    bbCheck(worker != nullptr, "normal post has no worker");
+    const CTaskThreadResult result = worker->postTaskResult(task, level);
+    bbCheck(result.m_committed && result.m_status == CTaskThreadOk, "normal post failed or reported internal error");
+}
+
 TestWorkers::~TestWorkers()
 {
     for (size_t i = 0; i < ids.size(); ++i)
     {
         try
         {
-            CTaskThreadManager::instance().uninit(ids[i]);
+            const CTaskThreadResult result = CTaskThreadManager::instance().uninit(ids[i]);
+            if (result.m_status != CTaskThreadOk && result.m_status != CTaskThreadNotFound)
+            {
+                ++TestTask::errors;
+                bbCleanupFailure("worker fixture unregister failed");
+            }
         }
         catch (...)
         {
             ++TestTask::errors;
+            bbCleanupFailure("worker fixture unregister threw");
         }
     }
 }
 
 std::shared_ptr<CTaskThread> TestWorkers::add()
 {
-    const uint32_t id = CTaskThreadManager::instance().init();
+    return add(CTaskThreadConfig());
+}
+
+std::shared_ptr<CTaskThread> TestWorkers::add(const CTaskThreadConfig& config)
+{
+    uint32_t id = 0;
+    const CTaskThreadResult result = CTaskThreadManager::instance().initialize(config, id);
+    const std::shared_ptr<CTaskThread> worker = adopt(id);
+    bbCheck(result.m_committed && result.m_status == CTaskThreadOk, "fixture initialization reported an error");
+    return worker;
+}
+
+std::shared_ptr<CTaskThread> TestWorkers::adopt(uint32_t id)
+{
     bbCheck(id != 0, "init returned invalid ID");
-    ids.push_back(id);
+    try
+    {
+        ids.push_back(id);
+    }
+    catch (...)
+    {
+        const CTaskThreadResult result = CTaskThreadManager::instance().uninit(id);
+        if (result.m_status != CTaskThreadOk && result.m_status != CTaskThreadNotFound)
+        {
+            bbCleanupFailure("unregistered fixture allocation cleanup failed");
+        }
+        throw;
+    }
     std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
     bbCheck(worker != nullptr, "init has no interface");
     return worker;
@@ -451,12 +491,64 @@ static std::shared_ptr<TestTask> Block(const std::shared_ptr<CTaskThread>& worke
             return release.load();
         }, "release task gate");
     });
-    worker->postTask(task, level);
+    TestPost(worker, task, level);
     bbWait([&entered]()
     {
         return entered.load();
     }, "task gate entered");
     return task;
+}
+
+/** 查询与注销重叠时，非空强引用必须仍指向请求的线程且可安全观察
+*/
+static void ConcurrentLookupLifetime()
+{
+    CTaskThreadManager& manager = CTaskThreadManager::instance();
+    std::atomic<uint32_t> observed(0);
+    std::atomic<uint64_t> queries(0);
+    std::atomic<int32_t> errors(0);
+    std::atomic<bool> stop(false);
+    TestWorkers readers, targets;
+    for (int32_t i = 0; i < 8; ++i)
+    {
+        TestPost(readers.add(), std::make_shared<TestTask>(i, [&](TestTask& self)
+        {
+            while (!stop.load(std::memory_order_acquire) && !self.stopped.load())
+            {
+                const uint32_t id = observed.load(std::memory_order_acquire);
+                const std::shared_ptr<CTaskThread> found = manager.getThreadInterface(id);
+                if (found)
+                {
+                    if (found->threadId() != id)
+                    {
+                        ++errors;
+                    }
+                    found->statistics();
+                }
+                queries.fetch_add(1, std::memory_order_release);
+            }
+        }));
+    }
+    for (int32_t i = 0; i < 128; ++i)
+    {
+        const std::shared_ptr<CTaskThread> target = targets.add();
+        const uint32_t id = target->threadId();
+        const uint64_t before = queries.load(std::memory_order_acquire);
+        observed.store(id, std::memory_order_release);
+        bbWait([&queries, before]()
+        {
+            return queries.load(std::memory_order_acquire) >= before + 64;
+        }, "concurrent lookup progress");
+        const CTaskThreadResult removed = manager.uninit(id);
+        bbCheck(removed.m_committed && removed.m_status == CTaskThreadOk && target->threadId() == id &&
+            target->statistics().m_exited && !manager.getThreadInterface(id),
+            "lookup reference lost identity or unregister did not remove the requested thread");
+    }
+    stop.store(true, std::memory_order_release);
+    readers.drain();
+    targets.drain();
+    bbCheck(errors.load() == 0 && queries.load() >= 8192 && manager.count() == 0,
+        "concurrent lookup returned another thread or retained registrations");
 }
 
 /** 验证线程创建、查询、注销和重复关闭
@@ -478,6 +570,7 @@ static void Lifecycle()
     bbCheck(!manager.getThreadInterface(workers.ids[0]) && manager.count() == 1, "uninit did not unregister");
     workers.drain();
     bbCheck(manager.count() == 0, "drain did not unregister");
+    ConcurrentLookupLifetime();
 }
 
 /** 验证空任务、非法优先级拒绝与最高合法优先级
@@ -488,11 +581,14 @@ static void InvalidPost()
     TestWorkers workers;
     std::shared_ptr<CTaskThread> w = workers.add();
     std::shared_ptr<TestTask> task = Record(ledger, 1);
-    w->postTask(nullptr);
-    w->postTask(task, 0);
-    w->postTask(task, -1);
+    const CTaskThreadResult empty = w->postTaskResult(nullptr);
+    const CTaskThreadResult zero = w->postTaskResult(task, 0);
+    const CTaskThreadResult negative = w->postTaskResult(task, -1);
+    bbCheck(!empty.m_committed && empty.m_status == CTaskThreadInvalid &&
+        !zero.m_committed && zero.m_status == CTaskThreadInvalid &&
+        !negative.m_committed && negative.m_status == CTaskThreadInvalid, "ordinary invalid post returned wrong status");
     bbCheck(!w->tryPostTask(nullptr) && !w->tryPostTask(task, 0) && !w->tryPostTask(task, INT_MIN), "invalid TryPost accepted");
-    w->postTask(task, INT_MAX);
+    TestPost(w, task, INT_MAX);
     workers.drain();
     bbCheck(ledger.snapshot() == std::vector<int>(1, 1), "invalid tasks executed or maximum priority lost");
 }
@@ -509,7 +605,7 @@ static void PriorityFifo()
     const int levels[] = {1, 3, 2, 3, 1, 2};
     for (int i = 0; i < 6; ++i)
     {
-        w->postTask(Record(ledger, i + 1), levels[i]);
+        TestPost(w, Record(ledger, i + 1), levels[i]);
     }
     std::map<int32_t, int32_t> info;
     info[-10] = 99;
@@ -535,17 +631,17 @@ static void Preempt(bool redo, bool clone, bool repeated)
     std::shared_ptr<RedoState> state = std::make_shared<RedoState>();
     TestWorkers workers;
     std::shared_ptr<CTaskThread> w = workers.add();
-    w->postTask(std::make_shared<RedoTask>(state, 0, redo, clone), 1);
+    TestPost(w, std::make_shared<RedoTask>(state, 0, redo, clone), 1);
     bbWait([state]()
     {
         return state->entered.load();
     }, "original started");
-    w->postTask(Record(state->ledger, 11), 1);
-    w->postTask(Record(state->ledger, 21), 2);
+    TestPost(w, Record(state->ledger, 11), 1);
+    TestPost(w, Record(state->ledger, 21), 2);
     if (repeated)
     {
-        w->postTask(Record(state->ledger, 22), 2);
-        w->postTask(Record(state->ledger, 31), 3);
+        TestPost(w, Record(state->ledger, 22), 2);
+        TestPost(w, Record(state->ledger, 31), 3);
     }
     bbCheck(state->stops > 0, "higher priority did not request stop");
     bbCheck(state->ledger.snapshot().size() == 1, "cooperative preemption ran next before original returned");
@@ -578,8 +674,8 @@ static void EqualDoesNotStop()
     TestWorkers workers;
     std::shared_ptr<CTaskThread> w = workers.add();
     std::shared_ptr<TestTask> current = Block(w, entered, release, 2);
-    w->postTask(Record(ledger, 1), 2);
-    w->postTask(Record(ledger, 2), 1);
+    TestPost(w, Record(ledger, 1), 2);
+    TestPost(w, Record(ledger, 2), 1);
     bbCheck(current->stops == 0, "equal/lower priority preempted current");
     release = true;
     workers.drain();
@@ -598,10 +694,10 @@ static void StopFiltered(bool allLevels)
     std::shared_ptr<CTaskThread> w = workers.add();
     Block(w, entered, release);
     std::shared_ptr<TestTask> a = Record(ledger, 1, 77), b = Record(ledger, 2, 77), c = Record(ledger, 3, 88);
-    w->postTask(a, 1);
-    w->postTask(a, 1);
-    w->postTask(b, 2);
-    w->postTask(c, 1);
+    TestPost(w, a, 1);
+    TestPost(w, a, 1);
+    TestPost(w, b, 2);
+    TestPost(w, c, 1);
     w->stopTask(77, allLevels ? 0 : 1);
     bbCheck(a->stops == 1 && b->stops == (allLevels ? 1 : 0) && c->stops == 0, "stopTask selection/dedup wrong");
     bbCheck(w->getWaitTaskCount() == 4, "stopTask silently removed queued tasks");
@@ -626,7 +722,7 @@ static void StopCurrent()
         }, "current stopTask");
         stopped = true;
     });
-    w->postTask(task);
+    TestPost(w, task);
     bbWait([&entered]()
     {
         return entered.load();
@@ -649,7 +745,7 @@ static void StopAll()
     for (int i = 0; i < 10; ++i)
     {
         tasks.push_back(Record(ledger, i));
-        w->postTask(tasks.back(), i + 1);
+        TestPost(w, tasks.back(), i + 1);
     }
     w->stopAllTask();
     bbCheck(current->stops > 0, "StopAll missed current");
@@ -675,9 +771,9 @@ static void StopReentry()
     task->onStop = [w, &ledger]()
     {
         bbCheck(w->getWaitTaskCount() > 0, "callback query failed");
-        w->postTask(Record(ledger, 2));
+        TestPost(w, Record(ledger, 2));
     };
-    w->postTask(task);
+    TestPost(w, task);
     w->stopTask(77);
     release = true;
     workers.drain();
@@ -692,7 +788,7 @@ static void UninitDiscards()
     std::atomic<bool> entered(false);
     TestWorkers workers;
     std::shared_ptr<CTaskThread> w = workers.add();
-    w->postTask(std::make_shared<TestTask>(1, [&entered](TestTask& task)
+    TestPost(w, std::make_shared<TestTask>(1, [&entered](TestTask& task)
     {
         entered = true;
         bbWait([&task]()
@@ -707,11 +803,12 @@ static void UninitDiscards()
     }, "shutdown gate");
     std::shared_ptr<TestTask> queued = Record(ledger, 1);
     std::weak_ptr<TestTask> weak = queued;
-    w->postTask(queued);
+    TestPost(w, queued);
     queued.reset();
     CTaskThreadManager::instance().uninit(workers.ids[0]);
     bbCheck(ledger.snapshot().empty() && weak.expired(), "uninit executed or retained pending task");
-    w->postTask(Record(ledger, 2));
+    const CTaskThreadResult closed = w->postTaskResult(Record(ledger, 2));
+    bbCheck(!closed.m_committed && closed.m_status == CTaskThreadClosed, "stale ordinary post returned wrong status");
     bbCheck(!w->tryPostTask(Record(ledger, 3)), "stale handle accepted TryPost");
     bbCheck(w->getWaitTaskCount() == 0, "stale handle accepted Post");
 }
@@ -728,7 +825,7 @@ static void ManyProducers(bool tryPost, int count)
     const int producerCount = 8;
     for (int p = 0; p < producerCount; ++p)
     {
-        producers.add()->postTask(std::make_shared<TestTask>(p, [target, &ledger, p, count, tryPost](TestTask&)
+        TestPost(producers.add(), std::make_shared<TestTask>(p, [target, &ledger, p, count, tryPost](TestTask&)
         {
             for (int i = 0; i < count; ++i)
             {
@@ -745,13 +842,13 @@ static void ManyProducers(bool tryPost, int count)
 #ifdef CTTM_TEST_NO_LEGACY_SEND_TASK
                     bbWait([target, task]()
                     {
-                        const CTaskThreadResult result = target->postTask(task);
+                        const CTaskThreadResult result = target->postTaskResult(task);
                         bbCheck(result.m_status == CTaskThreadOk && result.m_committed,
                             "postTask rejected with status=" + bbNumber(result.m_status));
                         return result.m_committed;
                     }, "ordinary postTask handles contention internally");
 #else
-                    target->postTask(task);
+                    TestPost(target, task);
 #endif
                 }
             }
@@ -784,11 +881,11 @@ static void RecursiveDispatch()
     // 旧TestTask1..10行为相同；保留10类并将递归扇出限制为固定200个子任务。
     for (int type = 0; type < 10; ++type)
     {
-        targets[type]->postTask(std::make_shared<TestTask>(type + 1, [targets, type, &ledger, &parentsDone](TestTask&)
+        targets[type]->postTaskResult(std::make_shared<TestTask>(type + 1, [targets, type, &ledger, &parentsDone](TestTask&)
         {
             for (int child = 0; child < 20; ++child)
             {
-                targets[(type + child) % 20]->postTask(Record(ledger, type * 20 + child, type + 1), child % 10 + 1);
+                targets[(type + child) % 20]->postTaskResult(Record(ledger, type * 20 + child, type + 1), child % 10 + 1);
             }
             ++parentsDone;
         }),
@@ -816,7 +913,7 @@ static void BulkExit()
     TestWorkers workers;
     for (int i = 0; i < 20; ++i)
     {
-        workers.add()->postTask(std::make_shared<TestTask>(i, [&entered, &exited](TestTask& task)
+        TestPost(workers.add(), std::make_shared<TestTask>(i, [&entered, &exited](TestTask& task)
         {
             ++entered;
             bbWait([&task]()
@@ -847,7 +944,7 @@ static void RepeatLifecycle()
         bbCheck(seen.insert(workers.ids[0]).second, "thread ID reused");
         for (int j = 0; j < 20; ++j)
         {
-            w->postTask(Record(ledger, j), j % 3 + 1);
+            TestPost(w, Record(ledger, j), j % 3 + 1);
         }
         workers.drain();
         w.reset();
@@ -862,12 +959,15 @@ static void IdleWake()
     std::atomic<int> completed(0);
     TestWorkers workers;
     std::shared_ptr<CTaskThread> w = workers.add();
-    for (int i = 1; i <= 100; ++i)
+    for (int i = 1; i <= 200; ++i)
     {
-        w->postTask(std::make_shared<TestTask>(1, [&completed](TestTask&)
+        // 前100轮保留单级空闲唤醒，后100轮重新激活此前已排空的不同高级队列。
+        const int32_t level = i <= 100 ? 1 : (i % 16) + 1;
+        const CTaskThreadResult posted = w->postTaskResult(std::make_shared<TestTask>(1, [&completed](TestTask&)
         {
             ++completed;
-        }));
+        }), level);
+        bbCheck(posted.m_committed, "idle wake publication rejected");
         bbWait([&completed, i]()
         {
             return completed == i;
@@ -897,7 +997,7 @@ static void SynchronousLegacy()
     std::atomic<int> completed(0);
     TestWorkers workers;
     std::shared_ptr<CTaskThread> worker = workers.add();
-    bbCheck(worker->postTask(std::make_shared<TestTask>(2, [&completed](TestTask&)
+    bbCheck(worker->postTaskResult(std::make_shared<TestTask>(2, [&completed](TestTask&)
     {
         ++completed;
     })).m_committed,
@@ -923,7 +1023,7 @@ static void PriorityModel()
         random = random * 1664525u + 1013904223u;
         int level = static_cast<int>(random % 10) + 1;
         submitted.push_back(std::make_pair(level, i));
-        w->postTask(Record(ledger, i), level);
+        TestPost(w, Record(ledger, i), level);
     }
     std::stable_sort(submitted.begin(), submitted.end(),
         [](const std::pair<int, int>& a, const std::pair<int, int>& b)
@@ -949,8 +1049,8 @@ static void IndependentWorkers()
     TestWorkers workers;
     std::shared_ptr<CTaskThread> a = workers.add(), b = workers.add();
     Block(a, entered, release);
-    a->postTask(Record(ledger, 1));
-    b->postTask(std::make_shared<TestTask>(2, [&otherDone](TestTask&)
+    TestPost(a, Record(ledger, 1));
+    TestPost(b, std::make_shared<TestTask>(2, [&otherDone](TestTask&)
     {
         otherDone = true;
     }));
@@ -974,7 +1074,7 @@ static void StopWhileCompleting()
     std::shared_ptr<CTaskThread> target = consumers.add();
     for (int p = 0; p < 4; ++p)
     {
-        stoppers.add()->postTask(std::make_shared<TestTask>(p, [target, p, &ledger, &notified](TestTask&)
+        TestPost(stoppers.add(), std::make_shared<TestTask>(p, [target, p, &ledger, &notified](TestTask&)
         {
             for (int i = 0; i < 500; ++i)
             {
@@ -983,7 +1083,7 @@ static void StopWhileCompleting()
                 {
                     ++notified;
                 };
-                target->postTask(task);
+                TestPost(target, task);
                 target->stopTask(10);
                 target->stopCurTask();
                 target->getWaitTaskCount();
@@ -1063,19 +1163,18 @@ bool TestFaultTask::reExecute()
 */
 static void BoundedAdmission()
 {
+    TaskLedger ledger;
     CTaskThreadConfig config;
     config.m_maximumTasks = 2;
     CTaskThreadManager& manager = CTaskThreadManager::instance();
     const uint32_t id = manager.init(config);
     bbCheck(id != 0, "bounded initialization failed");
-    TestWorkers cleanup;
-    cleanup.ids.push_back(id);
-    std::shared_ptr<CTaskThread> worker = manager.getThreadInterface(id);
     std::atomic<bool> entered(false), release(false);
+    TestWorkers cleanup;
+    std::shared_ptr<CTaskThread> worker = cleanup.adopt(id);
     std::shared_ptr<TestTask> current = Block(worker, entered, release, 1);
-    TaskLedger ledger;
-    bbCheck(worker->postTask(Record(ledger, 1), 1).m_committed, "second task rejected before limit");
-    const CTaskThreadResult rejected = worker->postTask(Record(ledger, 2), 2);
+    bbCheck(worker->postTaskResult(Record(ledger, 1), 1).m_committed, "second task rejected before limit");
+    const CTaskThreadResult rejected = worker->tryPostTaskResult(Record(ledger, 2), 2, true, false);
     bbCheck(rejected.m_status == CTaskThreadCapacity && !rejected.m_committed, "hard task limit exceeded");
     bbCheck(current->stops == 0, "rejected high-priority task stopped current");
     release = true;
@@ -1096,13 +1195,13 @@ static void CallbackFailures()
         const std::shared_ptr<CTaskThread> worker = workers.add();
         try
         {
-            bbCheck(worker->postTask(std::make_shared<TestFaultTask>(mode, calls, entered, release)).m_committed,
+            bbCheck(worker->postTaskResult(std::make_shared<TestFaultTask>(mode, calls, entered, release)).m_committed,
                 "fault task not accepted");
             bbWait([&entered]()
             {
                 return entered.load();
             }, "fault original entered");
-            bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&calls](TestTask&)
+            bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&calls](TestTask&)
             {
                 ++calls;
             }),
@@ -1127,11 +1226,11 @@ static void CallbackFailures()
 */
 static void CallbackSelfWait()
 {
+    std::atomic<int> tested(0);
     TestWorkers workers;
     std::shared_ptr<CTaskThread> worker = workers.add();
     const uint32_t id = workers.ids[0];
-    std::atomic<int> tested(0);
-    worker->postTask(std::make_shared<TestTask>(1, [worker, id, &tested](TestTask&)
+    TestPost(worker, std::make_shared<TestTask>(1, [worker, id, &tested](TestTask&)
     {
         bbCheck(worker->waitForEnd().m_status == CTaskThreadSelfWait, "direct self join not rejected");
         bbCheck(CTaskThreadManager::instance().uninit(id).m_status == CTaskThreadSelfWait, "manager self join not rejected");
@@ -1151,8 +1250,7 @@ static void NativePriority()
     TestWorkers workers;
     const uint32_t id = CTaskThreadManager::instance().init(config);
     bbCheck(id != 0, "normal priority startup failed");
-    workers.ids.push_back(id);
-    std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
+    std::shared_ptr<CTaskThread> worker = workers.adopt(id);
     bbCheck(worker->setSystemPriority(CTaskPriorityNormal).m_committed, "normal priority runtime update failed");
     bbCheck(worker->setSystemPriority(static_cast<CTaskSystemPriority>(999)).m_status == CTaskThreadInvalid, "invalid priority accepted");
     workers.drain();
@@ -1163,6 +1261,7 @@ static void NativePriority()
 */
 static void DynamicPool()
 {
+    std::atomic<int> completed(0);
     CTaskThreadPool pool;
     CTaskThreadPoolConfig config;
     config.m_initialThreads = 2;
@@ -1201,7 +1300,6 @@ static void DynamicPool()
     {
         return pool.statistics().m_threads == 2;
     }, "policy shrink and initial floor");
-    std::atomic<int> completed(0);
     for (int i = 0; i < 1000; ++i)
     {
         std::shared_ptr<TestTask> task(new TestTask(1, [&completed](TestTask&)
@@ -1212,7 +1310,7 @@ static void DynamicPool()
         {
             uint32_t id = 0;
             std::shared_ptr<CTaskThread> thread;
-            return allocator.select(id, thread).m_committed && thread->postTask(task).m_committed;
+            return allocator.select(id, thread).m_committed && thread->postTaskResult(task).m_committed;
         }, "allocator selection/post");
     }
     bbCheck(pool.shutdown().m_status == CTaskThreadOk && completed == 1000, "pool drain lost accepted tasks");
@@ -1283,7 +1381,7 @@ std::vector<BlackBoxCase> taskCases()
     add("legacy-send-task", "synchronous task completes before return", false, SynchronousLegacy);
 #endif
     add("bulk-uninit-all", "20 running threads stopped and joined", false, BulkExit);
-    add("idle-wakeup", "100 empty transitions have no lost wakeup", false, IdleWake);
+    add("idle-wakeup", "100 single-level plus 100 changing-level empty transitions have no lost wakeup", false, IdleWake);
     add("repeated-lifecycle-ownership", "100 lifecycles; no retained TestTask objects", true, RepeatLifecycle);
     add("producer-stress", "8x5000 tasks; no loss/duplicate/order inversion", true, []()
     {
@@ -1445,6 +1543,10 @@ std::vector<BlackBoxCase> taskCases()
             cases.back().unavailableReason = "prepare private Queue fixture; set CTTM_QUEUE_RACE_PROGRAM to its executable";
         }
     }
+    add("retry-options", "independent retry flags; capacity wait, close and self-wait", false, []()
+    {
+        bbCheck(TaskRetryContractTest(), "retry options contract failed");
+    });
     bbCheck(cases.size() == g_taskCaseDescriptions.size(), "test metadata coverage mismatch");
     for (size_t i = 0; i < cases.size(); ++i)
     {

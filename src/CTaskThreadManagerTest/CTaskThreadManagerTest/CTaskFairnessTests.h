@@ -12,12 +12,16 @@ public:
     std::atomic<uint64_t> m_published;
     // 该执行流已开始参与测量
     std::atomic<bool> m_started;
+    // 执行线程发布的最近进展时间，监测线程只读
+    std::atomic<uint64_t> m_lastProgress;
     // 保持相邻计数的写入位置相隔至少一条缓存行
     unsigned char m_padding[128];
     // 线程结束后的精确计数
     uint64_t m_count;
-    // 最长采样无进展间隔，毫秒，由监测线程写入
+    // 相邻64项实际进展间隔，毫秒，由所属执行线程写入
     uint64_t m_maxGap;
+    // 所属执行线程上次记录进展的时间
+    uint64_t m_eventLast;
     // 线程 CPU 时间，100 纳秒，非 Windows 为零
     uint64_t m_cpu;
     // 资源上限失败次数
@@ -30,6 +34,9 @@ public:
 public:
     /** 构造清零的监测记录 */
     CTaskFairnessCounter();
+
+    /** 发布本线程进展并更新事件时间间隔 */
+    void publish();
 
 };
 
@@ -54,6 +61,8 @@ public:
     const size_t m_producers;
     // 固定任务优先级数
     const size_t m_levels;
+    // 唯一消费者的总进展
+    CTaskFairnessCounter m_consumer;
     // 生产者计数数组
     std::unique_ptr<CTaskFairnessCounter[]> m_sent;
     // 消费者按来源分类的计数数组

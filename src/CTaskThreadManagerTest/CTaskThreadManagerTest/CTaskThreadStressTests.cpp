@@ -10,14 +10,14 @@
 */
 static void PostDrainRace()
 {
-    TestWorkers consumers, producers;
-    std::shared_ptr<CTaskThread> worker = consumers.add();
     std::atomic<int> accepted(0);
     std::vector<std::vector<int>> submitted(8);
     TaskLedger completed;
+    TestWorkers consumers, producers;
+    std::shared_ptr<CTaskThread> worker = consumers.add();
     for (int p = 0; p < 8; ++p)
     {
-        producers.add()->postTask(std::make_shared<TestTask>(p, [&, p, worker](TestTask&)
+        TestPost(producers.add(), std::make_shared<TestTask>(p, [&, p, worker](TestTask&)
         {
             for (int sequence = 0; sequence < 10000; ++sequence)
             {
@@ -28,7 +28,7 @@ static void PostDrainRace()
                 }));
                 for (;;)
                 {
-                    const CTaskThreadResult result = worker->postTask(task);
+                    const CTaskThreadResult result = worker->postTaskResult(task);
                     if (result.m_committed)
                     {
                         submitted[p].push_back(value);
@@ -66,11 +66,11 @@ static void PostDrainRace()
 */
 static void ConcurrentJoin()
 {
-    TestWorkers target, joiners;
-    std::shared_ptr<CTaskThread> worker = target.add();
     std::atomic<bool> running(false), release(false), start(false);
     std::atomic<int> enteredJoin(0), completed(0), failures(0);
-    worker->postTask(std::make_shared<TestTask>(1, [&](TestTask&)
+    TestWorkers target, joiners;
+    std::shared_ptr<CTaskThread> worker = target.add();
+    TestPost(worker, std::make_shared<TestTask>(1, [&](TestTask&)
     {
         running = true;
         bbWait([&release]()
@@ -84,7 +84,7 @@ static void ConcurrentJoin()
     }, "join target running");
     for (int i = 0; i < 2; ++i)
     {
-        joiners.add()->postTask(std::make_shared<TestTask>(i, [&](TestTask&)
+        TestPost(joiners.add(), std::make_shared<TestTask>(i, [worker, &start, &enteredJoin, &completed, &failures](TestTask&)
         {
             bbWait([&start]()
             {
@@ -117,6 +117,8 @@ static void ConcurrentJoin()
 */
 static void ConcurrentPoolShutdown()
 {
+    std::atomic<bool> entered(false), rescue(false);
+    std::atomic<int> completed(0);
     CTaskThreadPoolConfig config;
     config.m_initialThreads = 1;
     config.m_maximumThreads = 1;
@@ -126,8 +128,6 @@ static void ConcurrentPoolShutdown()
     uint32_t id = 0;
     std::shared_ptr<CTaskThread> worker;
     bbCheck(allocator.select(id, worker).m_status == CTaskThreadOk && worker, "no pool worker selected");
-    std::atomic<bool> entered(false), rescue(false);
-    std::atomic<int> completed(0);
     std::shared_ptr<TestTask> task(new TestTask(1, [&](TestTask& self)
     {
         entered = true;
@@ -136,7 +136,7 @@ static void ConcurrentPoolShutdown()
             std::this_thread::yield();
         }
     }));
-    bbCheck(worker->postTask(task).m_committed, "shutdown gate not accepted");
+    bbCheck(worker->postTaskResult(task).m_committed, "shutdown gate not accepted");
     bbWait([&entered]()
     {
         return entered.load();
@@ -147,23 +147,39 @@ static void ConcurrentPoolShutdown()
         drained = pool.shutdown(true);
         ++completed;
     });
-    const uint64_t enteringDeadline = bbNow() + 5000;
-    while (worker->statistics().m_accepting && bbNow() < enteringDeadline)
+    std::thread second;
+    bool enteredDrain = false;
+    bool neededRescue = false;
+    try
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        const uint64_t enteringDeadline = bbNow() + 5000;
+        while (worker->statistics().m_accepting && bbNow() < enteringDeadline)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        enteredDrain = !worker->statistics().m_accepting;
+        second = std::thread([&]()
+        {
+            discarded = pool.shutdown(false);
+            ++completed;
+        });
+        const uint64_t completionDeadline = bbNow() + 5000;
+        while (completed != 2 && bbNow() < completionDeadline)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        neededRescue = completed != 2;
     }
-    const bool enteredDrain = !worker->statistics().m_accepting;
-    std::thread second([&]()
+    catch (...)
     {
-        discarded = pool.shutdown(false);
-        ++completed;
-    });
-    const uint64_t completionDeadline = bbNow() + 5000;
-    while (completed != 2 && bbNow() < completionDeadline)
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        rescue = true;
+        first.join();
+        if (second.joinable())
+        {
+            second.join();
+        }
+        throw;
     }
-    const bool neededRescue = completed != 2;
     rescue = true;
     first.join();
     second.join();
@@ -177,6 +193,13 @@ static void ConcurrentPoolShutdown()
 */
 static void PoolResizeTraffic()
 {
+    const int total = 10000;
+    std::unique_ptr<std::atomic<int>[]> seen(new std::atomic<int>[total]);
+    for (int i = 0; i < total; ++i)
+    {
+        seen[i].store(0);
+    }
+    std::atomic<int> done(0);
     CTaskThreadPool pool;
     CTaskThreadPoolConfig config;
     config.m_initialThreads = 2;
@@ -187,13 +210,6 @@ static void PoolResizeTraffic()
     config.m_policy = policy;
     bbCheck(pool.initialize(config).m_committed, "traffic pool initialize failed");
     CTaskThreadAllocator allocator(pool);
-    const int total = 10000;
-    std::unique_ptr<std::atomic<int>[]> seen(new std::atomic<int>[total]);
-    for (int i = 0; i < total; ++i)
-    {
-        seen[i].store(0);
-    }
-    std::atomic<int> done(0);
     for (int wave = 0; wave < 10; ++wave)
     {
         policy->m_target = 6;
@@ -220,7 +236,7 @@ static void PoolResizeTraffic()
                 {
                     return false;
                 }
-                const CTaskThreadResult result = worker->postTask(task);
+                const CTaskThreadResult result = worker->postTaskResult(task);
                 bbCheck(result.m_committed || result.m_status == CTaskThreadClosed ||
                         result.m_status == CTaskThreadCapacity,
                     "resize traffic unexpected rejection");
@@ -253,16 +269,15 @@ static void WakeWithoutHeartbeat()
 {
     CTaskThreadConfig config;
     config.m_idleCheckMilliseconds = 60000;
+    std::atomic<int> done(0);
     TestWorkers workers;
     const uint32_t id = CTaskThreadManager::instance().init(config);
     bbCheck(id != 0, "long heartbeat initialization failed");
-    workers.ids.push_back(id);
-    std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
-    std::atomic<int> done(0);
+    std::shared_ptr<CTaskThread> worker = workers.adopt(id);
     for (int i = 1; i <= 100; ++i)
     {
         bbSleep(1);
-        bbCheck(worker->postTask(std::make_shared<TestTask>(1, [&done](TestTask&)
+        bbCheck(worker->postTaskResult(std::make_shared<TestTask>(1, [&done](TestTask&)
         {
             ++done;
         })).m_committed,
@@ -283,23 +298,22 @@ static void SustainedPressure()
     const char* configured = std::getenv("CTTM_STRESS_MS");
     if (configured != nullptr)
     {
-        milliseconds = std::strtoul(configured, nullptr, 10);
+        milliseconds = bbUnsigned(configured, 600000);
         bbCheck(milliseconds >= 1000 && milliseconds <= 600000, "CTTM_STRESS_MS out of range");
     }
     CTaskThreadConfig config;
     config.m_maximumTasks = 4096;
-    TestWorkers consumers, producers;
-    const uint32_t id = CTaskThreadManager::instance().init(config);
-    bbCheck(id != 0, "sustained consumer initialize failed");
-    consumers.ids.push_back(id);
-    std::shared_ptr<CTaskThread> worker = CTaskThreadManager::instance().getThreadInterface(id);
     std::vector<uint64_t> next(8, 0);
     std::atomic<uint64_t> accepted(0), executed(0), expectedSum(0), actualSum(0), retries(0), resources(0);
     std::atomic<bool> start(false);
     uint64_t deadline = 0;
+    TestWorkers consumers, producers;
+    const uint32_t id = CTaskThreadManager::instance().init(config);
+    bbCheck(id != 0, "sustained consumer initialize failed");
+    std::shared_ptr<CTaskThread> worker = consumers.adopt(id);
     for (int p = 0; p < 8; ++p)
     {
-        producers.add()->postTask(std::make_shared<TestTask>(p, [&, p, worker](TestTask&)
+        TestPost(producers.add(), std::make_shared<TestTask>(p, [&, p, worker](TestTask&)
         {
             bbWait([&start]()
             {
@@ -317,7 +331,7 @@ static void SustainedPressure()
                 }));
                 for (;;)
                 {
-                    const CTaskThreadResult result = worker->postTask(task);
+                    const CTaskThreadResult result = worker->postTaskResult(task);
                     if (result.m_committed)
                     {
                         ++sequence;

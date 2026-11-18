@@ -44,6 +44,20 @@ void bbCheck(bool condition, const std::string& message)
     }
 }
 
+uint64_t bbUnsigned(const char* text, uint64_t maximum)
+{
+    bbCheck(text != nullptr && *text != '\0', "empty integer argument");
+    uint64_t result = 0;
+    for (const char* cursor = text; *cursor != '\0'; ++cursor)
+    {
+        bbCheck(*cursor >= '0' && *cursor <= '9', "invalid integer argument");
+        const uint64_t digit = static_cast<uint64_t>(*cursor - '0');
+        bbCheck(digit <= maximum && result <= (maximum - digit) / 10, "integer argument out of range");
+        result = result * 10 + digit;
+    }
+    return result;
+}
+
 uint64_t bbNow()
 {
     return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -207,6 +221,9 @@ void BlackBoxChild::startProgram(const std::string& executable, const std::vecto
         command.append(slashes * 2, '\\');
         command += "\" ";
     }
+    // 先完成可抛异常的字符串分配，再申请必须手动归还的系统句柄。
+    std::vector<char> writable(command.begin(), command.end());
+    writable.push_back(0);
     SECURITY_ATTRIBUTES security = {sizeof(security), nullptr, TRUE};
     HANDLE log = CreateFileA(logPath.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
         &security, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -225,8 +242,6 @@ void BlackBoxChild::startProgram(const std::string& executable, const std::vecto
     startup.hStdError = log;
     startup.hStdInput = input;
     PROCESS_INFORMATION process = {};
-    std::vector<char> writable(command.begin(), command.end());
-    writable.push_back(0);
     HANDLE job = CreateJobObjectA(nullptr, nullptr);
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = {};
     limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
@@ -400,8 +415,8 @@ int bbRun(int argc, char** argv, const char* suite, const std::vector<BlackBoxCa
             }
             else if (arg == "--case" && i + 1 < argc)
             {
-                char extra = 0;
-                bbCheck(std::sscanf(argv[++i], "%d%c", &childCase, &extra) == 1 && childCase > 0, "invalid child case ID");
+                childCase = static_cast<int>(bbUnsigned(argv[++i], cases.size()));
+                bbCheck(childCase > 0, "invalid child case ID");
             }
             else if (arg == "--tests" && i + 1 < argc)
             {
@@ -414,17 +429,10 @@ int bbRun(int argc, char** argv, const char* suite, const std::vector<BlackBoxCa
                 std::string part;
                 while (input >> part)
                 {
-                    int first = 0, last = 0;
-                    char extra = 0;
-                    if (std::sscanf(part.c_str(), "%d-%d%c", &first, &last, &extra) == 2)
-                    {
-
-                    }
-                    else
-                    {
-                        bbCheck(std::sscanf(part.c_str(), "%d%c", &first, &extra) == 1, "invalid test selection");
-                        last = first;
-                    }
+                    const size_t dash = part.find('-');
+                    const int first = static_cast<int>(bbUnsigned(part.substr(0, dash).c_str(), cases.size()));
+                    const int last = dash == std::string::npos ? first :
+                        static_cast<int>(bbUnsigned(part.substr(dash + 1).c_str(), cases.size()));
                     bbCheck(first > 0 && last >= first && last <= static_cast<int>(cases.size()), "test ID out of range");
                     for (int id = first; id <= last; ++id)
                     {

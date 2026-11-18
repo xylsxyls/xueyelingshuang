@@ -79,11 +79,19 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="CTaskHangSampler.cpp" />
+    <None Include="CTaskWasmSmoke.cpp" />
+    <ClInclude Include="CTaskWasmSmoke.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CTaskTestAutomation.h" />
     <ClCompile Include="CTaskTestAutomation.cpp" />
     <ClInclude Include="CTaskUsageTests.h" />
     <ClCompile Include="CTaskUsageTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CTaskRetryContractTests.h" />
+    <ClCompile Include="CTaskRetryContractTests.cpp" />
+    <ClInclude Include="CTaskPostCompatibility.h" />
+    <ClInclude Include="CTaskPostCompatibility.inl" />
   </ItemGroup>
 </Project>
