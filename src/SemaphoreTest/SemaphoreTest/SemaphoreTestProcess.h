@@ -19,9 +19,9 @@ public:
     static std::string library();
 
     /** 执行子进程并将标准输出及错误写入独立文件
-    @param [in] executable 程序绝对路径
+    @param [in] executable 程序绝对路径，不含NUL
     @param [in] arguments 各个参数，不能含NUL
-    @param [in] log 本次日志文件，不覆盖已有报告
+    @param [in] log 非空且不含NUL的新日志路径；父目录须存在，不覆盖已有报告
     @param [in] timeout 总预算毫秒
     @return 程序退出码，124超时，125执行器或清理失败
     */

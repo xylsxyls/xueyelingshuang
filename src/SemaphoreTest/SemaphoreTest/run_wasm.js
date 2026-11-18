@@ -5,16 +5,27 @@ const path = require('path');
 const crypto = require('crypto');
 const child = require('child_process');
 
-// 读取完整文件计算SHA256，失败向入口传播
+/** 读取完整文件计算SHA256，失败向入口传播
+@param [in] file 本次源文件或产物的路径
+@return SHA256十六进制字符串
+*/
 function hash(file)
 {
     return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
 
-// 保存独立日志并限制进程总时长，超时先回收本次启动的进程树
+/** 保存独立日志并限制进程总时长，超时请求终止本次启动的进程树
+@param [in] program 要启动的程序路径
+@param [in] args 独立参数数组，不经shell拼接
+@param [in] log 新日志路径，拒绝覆盖已有文件
+@param [in] environment 子进程环境变量
+@param [in] timeout 启动后超时预算，单位毫秒
+@return Promise中的退出码；启动错误或超时标记为125，文件或同步启动异常向调用方传播
+*/
 function run(program, args, log, environment, timeout)
 {
     const descriptor = fs.openSync(log, 'wx');
+    // 执行器持有日志描述符至close事件；同步启动异常先关闭再拒绝Promise
     return new Promise((resolve, reject) =>
     {
         let process;
@@ -31,6 +42,7 @@ function run(program, args, log, environment, timeout)
             return;
         }
         let failed = false;
+        // 只终止仍未报告退出且具有PID的本次进程，不按程序名杀进程
         const timer = setTimeout(() =>
         {
             if (process.exitCode === null && process.pid)
@@ -41,11 +53,13 @@ function run(program, args, log, environment, timeout)
                 });
             }
         }, timeout);
+        // 记录启动错误，最终状态和描述符统一由close事件收尾
         process.on('error', error =>
         {
             failed = true;
             fs.writeSync(descriptor, '\n' + error.message + '\n');
         });
+        // 进程输出关闭后释放日志；超时或错误不能被正常退出码覆盖
         process.on('close', code =>
         {
             clearTimeout(timer);
@@ -55,7 +69,9 @@ function run(program, args, log, environment, timeout)
     });
 }
 
-// 按独立SDK运行四个Wasm配置，并核对执行前后的全部源码和产物身份
+/** 按独立SDK运行四个Wasm配置，并核对执行前后的全部源码和产物身份
+@return Promise中的退出码，0表示全部配置通过，1表示构建、运行或身份检查失败
+*/
 async function main()
 {
     const root = path.resolve(__dirname, '../../..');

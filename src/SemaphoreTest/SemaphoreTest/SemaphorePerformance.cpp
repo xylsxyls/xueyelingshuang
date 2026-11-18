@@ -19,6 +19,10 @@ static std::atomic<bool> s_trackAllocations(false);
 static std::atomic<size_t> s_allocationCalls(0);
 static std::atomic<size_t> s_allocationBytes(0);
 
+/** 仅在独立申请统计配置中替换分配器；正式计时配置不启用
+@param [in] bytes 请求字节数，0按一个字节申请
+@return 分配内存，失败抛bad_alloc由测试边界处理
+*/
 void* operator new(size_t bytes)
 {
     void* value = std::malloc(bytes == 0 ? 1 : bytes);
@@ -34,16 +38,26 @@ void* operator new(size_t bytes)
     return value;
 }
 
+/** 释放申请统计配置中的内存，不改变累计申请指标
+@param [in] value 本分配器产生的内存，允许为空
+*/
 void operator delete(void* value) throw()
 {
     std::free(value);
 }
 
+/** 数组申请共用统计入口
+@param [in] bytes 请求字节数
+@return 分配内存，失败抛bad_alloc
+*/
 void* operator new[](size_t bytes)
 {
     return ::operator new(bytes);
 }
 
+/** 数组释放共用普通释放入口
+@param [in] value 数组申请入口返回的内存，允许为空
+*/
 void operator delete[](void* value) throw()
 {
     ::operator delete(value);

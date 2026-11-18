@@ -72,6 +72,10 @@ static std::atomic<int32_t> s_allocationCalls(0);
 // 真实成功申请减释放次数，用于反复构造、池销毁和映射收尾的回落检查
 static std::atomic<int32_t> s_liveAllocations(0);
 
+/** 测试专用申请入口，注入失败并统计活跃分配，不编入生产库
+@param [in] size 请求字节数，0按一个字节申请
+@return 已申请内存；注入或真实失败抛bad_alloc交给测试边界
+*/
 void* operator new(size_t size)
 {
     s_allocationCalls.fetch_add(1);
@@ -88,6 +92,9 @@ void* operator new(size_t size)
     return result;
 }
 
+/** 释放测试分配并更新活跃计数
+@param [in] value 本分配器产生的内存，允许为空
+*/
 void operator delete(void* value) throw()
 {
     if (value != nullptr)
@@ -97,11 +104,18 @@ void operator delete(void* value) throw()
     std::free(value);
 }
 
+/** 数组申请共用测试分配与失败注入入口
+@param [in] size 请求字节数
+@return 分配内存；失败抛bad_alloc
+*/
 void* operator new[](size_t size)
 {
     return ::operator new(size);
 }
 
+/** 数组释放共用测试活跃计数
+@param [in] value 数组申请入口返回的内存，允许为空
+*/
 void operator delete[](void* value) throw()
 {
     ::operator delete(value);
@@ -235,8 +249,8 @@ void SemaphoreTestGate::hit(int32_t point)
     m_changed.notify_all();
     const bool released = m_changed.wait_for(lock, std::chrono::seconds(5),
         /** 检查暂停门的受保护状态
-                       @return 本轮等待条件是否满足
-                       */
+        @return 本轮是否已经放行
+        */
         [this]()
         {
             return m_released;
@@ -250,8 +264,8 @@ bool SemaphoreTestGate::reached()
     std::unique_lock<std::mutex> lock(m_mutex);
     return m_changed.wait_for(lock, std::chrono::seconds(5),
         /** 检查暂停门的受保护状态
-                              @return 本轮等待条件是否满足
-                              */
+        @return 本轮是否已经有线程到达
+        */
         [this]()
         {
             return m_arrived;
@@ -462,7 +476,12 @@ bool SemaphoreTests::runCase(int32_t id)
         check(sem.trySignal().status == SEMAPHORE_OVERFLOW, "64-bit overflow result");
         std::atomic<bool> published(false);
         SemaphoreTestThreads publisher;
-        publisher.start([&]() { published.store(sem.signal()); });
+        /** 尝试在饱和计数上发布，主线程释放容量后记录是否成功
+        */
+        publisher.start([&]()
+        {
+            published.store(sem.signal());
+        });
         pause(20);
         const bool early = published.load();
         const bool consumed = sem.wait(0);
@@ -754,9 +773,9 @@ bool SemaphoreTests::runCase(int32_t id)
         check(pool.begin(a).status == SEMAPHORE_OK, "full capacity still reusable");
         pool.finish(a);
         config.freeThreshold = 1;
-        /** 计算本用例期望的新增记录数，异常分支用于验证策略错误反馈
-        @param [in] context 容量及增长历史快照
-        @return 期望新增记录数，实际容量由库截断
+        /** 故意抛出增长策略异常，验证提前扩容失败仍保留已取得记录
+        @param [in] context 容量及增长历史快照，本策略不使用
+        @return 无正常返回，异常由池转换为POLICY
         */
         config.grow = [](const SemaphoreGrowContext& context) -> size_t
         {
@@ -822,9 +841,9 @@ bool SemaphoreTests::runCase(int32_t id)
         config.maxCapacity = 40;
         std::atomic<uint64_t> idle(0);
 
-        /** 计算本用例期望的新增记录数，异常分支用于验证策略错误反馈
-        @param [in] context 容量及增长历史快照
-        @return 期望新增记录数，实际容量由库截断
+        /** 追加固定大小批次，供并发缩容核对初始容量下限
+        @param [in] context 容量及增长历史快照，本策略不使用
+        @return 请求新增5条记录，由库裁剪到容量预算
         */
         config.grow = [](const SemaphoreGrowContext& context) -> size_t
         {
@@ -979,6 +998,8 @@ bool SemaphoreTests::runCase(int32_t id)
                 SemaphoreResult result;
                 bool consumed = false;
                 SemaphoreTestThreads workers;
+                /** 按当前接口模式等待，保存错误与真实消费状态供join后核对
+                */
                 workers.start([&]()
                 {
                     if (detailed)
@@ -1026,7 +1047,12 @@ bool SemaphoreTests::runCase(int32_t id)
             SemaphoreTestGate countGate(8);
             SemaphoreResult consumed;
             SemaphoreTestThreads countThreads;
-            countThreads.start([&]() { consumed = sem.waitResult(1000); });
+            /** 保存计数等待结果，以区分系统提示失败与真实许可交付
+            */
+            countThreads.start([&]()
+            {
+                consumed = sem.waitResult(1000);
+            });
             const bool registered = countGate.reached();
             s_faultCountdown.store(1);
             s_faultPoint.store(2);
@@ -1044,7 +1070,12 @@ bool SemaphoreTests::runCase(int32_t id)
             SemaphoreTestGate countGate(point);
             SemaphoreResult consumed;
             SemaphoreTestThreads countThreads;
-            countThreads.start([&]() { consumed = sem.waitResult(1000); });
+            /** 在选定计数边界等待，主线程放行后检查实际消费结果
+            */
+            countThreads.start([&]()
+            {
+                consumed = sem.waitResult(1000);
+            });
             const bool registered = countGate.reached();
             s_faultCountdown.store(1);
             s_faultPoint.store(2);
@@ -1066,7 +1097,12 @@ bool SemaphoreTests::runCase(int32_t id)
         SemaphoreResult received;
         SemaphoreTestGate gate(1);
         SemaphoreTestThreads threads;
-        threads.start([&]() { received = sem.eventWaitResult(1000); });
+        /** 登记事件并保存结果，验证提示失败不能撤销已经提交的事件
+        */
+        threads.start([&]()
+        {
+            received = sem.eventWaitResult(1000);
+        });
         const bool arrived = gate.reached();
         s_faultCountdown.store(1);
         s_faultPoint.store(2);
@@ -1814,7 +1850,12 @@ bool SemaphoreTests::runCase(int32_t id)
         SemaphoreResult notified;
         SemaphoreTestGate gate(106);
         SemaphoreTestThreads threads;
-        threads.start([&]() { notified = pool.notify(true, &wake); });
+        /** 提交广播后在原生提示前暂停，保留记录地址的借用期
+        */
+        threads.start([&]()
+        {
+            notified = pool.notify(true, &wake);
+        });
         const bool arrived = gate.reached();
         // 发布者持有读者保护，等待者可独立完成，但记录不能提前重用给下一代。
         const bool received = pool.finish(old);
@@ -1848,8 +1889,12 @@ bool SemaphoreTests::runCase(int32_t id)
         {
             SemaphoreTestGate gate(101);
             SemaphoreTestThreads threads;
-            // 保留扫描者的读者引用，迫使结束的记录进入退役链，不能被提前复用。
-            threads.start([&]() { pool.notify(true); });
+            /** 保留广播扫描者的读者引用，迫使结束记录留在退役链
+            */
+            threads.start([&]()
+            {
+                pool.notify(true);
+            });
             const bool arrived = gate.reached();
             for (size_t i = 0; i < 256; ++i)
             {
@@ -1880,12 +1925,20 @@ bool SemaphoreTests::runCase(int32_t id)
         uint64_t idleLimit = UINT64_MAX;
         config.initialCapacity = 0;
         // 固定新增256条，容量仍受池自身的最大预算约束。
+        /** 为维护预算用例追加固定批次，不改变初始缩容下限
+        @param [in] context 本次容量快照，本策略不使用
+        @return 固定请求新增256条记录，由池裁剪到容量预算
+        */
         config.grow = [](const SemaphoreGrowContext& context) -> size_t
         {
             (void)context;
             return 256;
         };
         // 捕获值只由已停止并发操作的主测试线程修改，用于切换空闲期和禁用缩容。
+        /** 通过静止期修改的捕获值切换缩容和空闲期限，构造共享回收预算场景
+        @param [in] context 当前容量与空闲快照，本策略不使用
+        @return 最多释放64条；启用时采用idleLimit毫秒，关闭时期限为0
+        */
         config.shrink = [&](const SemaphoreShrinkContext& context) -> SemaphoreShrinkDecision
         {
             (void)context;
@@ -1900,7 +1953,12 @@ bool SemaphoreTests::runCase(int32_t id)
         {
             SemaphoreTestGate gate(101);
             SemaphoreTestThreads threads;
-            threads.start([&]() { sharedBudget.notify(true); });
+            /** 暂停广播读者，使两段回收共享预算面对同一批退役记录
+            */
+            threads.start([&]()
+            {
+                sharedBudget.notify(true);
+            });
             const bool arrived = gate.reached();
             for (size_t i = 0; i < 256; ++i)
             {
@@ -1951,7 +2009,12 @@ bool SemaphoreTests::runCase(int32_t id)
                 {
                     SemaphoreTestGate gate(101);
                     SemaphoreTestThreads threads;
-                    threads.start([&]() { pool.notify(true); });
+                    /** 保持广播读者存活，让两条已结束记录暂不能复用
+                    */
+                    threads.start([&]()
+                    {
+                        pool.notify(true);
+                    });
                     const bool arrived = gate.reached();
                     pool.finish(a);
                     pool.finish(b);
@@ -1962,6 +2025,8 @@ bool SemaphoreTests::runCase(int32_t id)
                 {
                     SemaphoreTestGate gate(point);
                     SemaphoreTestThreads threads;
+                    /** 在指定回收边界暂停，验证旧借用未退出时不会重用地址
+                    */
                     threads.start([&]()
                     {
                         size_t released = 0;
@@ -2046,7 +2111,12 @@ bool SemaphoreTests::runCase(int32_t id)
             {
                 SemaphoreTestGate gate(109);
                 SemaphoreTestThreads threads;
-                threads.start([&]() { notified = pool.finish(a); });
+                /** 在退出标记发布后暂停，保存通知与取消竞争的结果
+                */
+                threads.start([&]()
+                {
+                    notified = pool.finish(a);
+                });
                 const bool arrived = gate.reached();
                 SemaphoreEventRecord* candidate = nullptr;
                 const SemaphoreResult acquired = pool.begin(candidate);

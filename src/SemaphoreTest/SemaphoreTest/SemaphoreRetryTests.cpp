@@ -61,6 +61,8 @@ bool SemaphoreRetryTests::capacity(int32_t mode)
     SemaphoreTestPublishAttempts(true);
 #endif
     SemaphoreResult result(SEMAPHORE_INVALID);
+    /** 在满载时按当前模式发布，记录正常结果或异常并最终发布完成标记
+    */
     std::thread producer([&]()
     {
         started.store(true);
@@ -173,6 +175,8 @@ bool SemaphoreRetryTests::run()
         producers.reserve(4);
         for (int32_t p = 0; p < 4; ++p)
         {
+            /** 发布一万个许可，任何失败都记录到共享标记；捕获对象活到线程回收
+            */
             producers.push_back(std::thread([&]()
             {
                 try
@@ -216,6 +220,9 @@ bool SemaphoreRetryTests::run()
 }
 
 #ifdef SEMAPHORE_RETRY_CONTRACT_MAIN
+/** 独立运行重试契约用例，将异常或预期不满足转换为失败退出码
+@return 0通过，1失败
+*/
 int main()
 {
     bool result = false;

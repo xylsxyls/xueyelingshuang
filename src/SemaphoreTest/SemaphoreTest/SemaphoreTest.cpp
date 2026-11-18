@@ -952,7 +952,12 @@ int32_t SemaphoreTest::run(int32_t argc, char** argv)
         // 故意不放行，超时必须被工作线程异常边界及主入口识别为失败。
         SemaphoreTestGate gate(0);
         SemaphoreTestThreads threads;
-        threads.start([&]() { gate.hit(0); });
+        /** 故意等待未释放的门，验证超时异常由线程边界记录并由join上报
+        */
+        threads.start([&]()
+        {
+            gate.hit(0);
+        });
         SemaphoreTests::check(gate.reached(), "expiry self-check reached the gate");
         threads.join();
         return 0;

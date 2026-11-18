@@ -69,9 +69,9 @@ int32_t SemaphorePolicyTests()
         }
         SemaphorePoolConfig failing;
         failing.initialCapacity = 0;
-        /** 计算本用例期望的新增记录数，异常分支用于验证策略错误反馈
-        @param [in] context 容量及增长历史快照
-        @return 期望新增记录数，实际容量由库截断
+        /** 在调用方抛出策略异常，核对库边界将异常转换为可观察结果
+        @param [in] context 容量及增长历史快照，本策略不使用
+        @return 无正常返回，库应报告POLICY
         */
         failing.grow = [](const SemaphoreGrowContext& context) -> size_t
         {

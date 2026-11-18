@@ -82,7 +82,12 @@ bool SemaphoreTests::fairness(int32_t id)
             SemaphoreTestGate gate(4);
             SemaphoreResult sent;
             SemaphoreTestThreads publishers;
-            publishers.start([&]() { sent = queue.signal(state, wake); });
+            /** 发布并保存结果，暂停点保留发布者的读者保护以检查记录寿命
+            */
+            publishers.start([&]()
+            {
+                sent = queue.signal(state, wake);
+            });
             const bool paused = gate.reached();
             const bool firstReceived = queue.finish(state, first);
             const SemaphoreResult another = queue.signal(state, wake);
@@ -113,7 +118,12 @@ bool SemaphoreTests::fairness(int32_t id)
             SemaphoreTestGate gate(8);
             SemaphoreResult received;
             SemaphoreTestThreads threads;
-            threads.start([&]() { received = sem.waitResult(2000); });
+            /** 等待已登记线程的专属许可，结果在join之后由主线程核对
+            */
+            threads.start([&]()
+            {
+                received = sem.waitResult(2000);
+            });
             const bool registered = gate.reached();
             const SemaphoreResult first = sem.trySignal();
             const bool stolen = sem.wait(0);
@@ -147,6 +157,8 @@ bool SemaphoreTests::fairness(int32_t id)
         {
             for (size_t index = 0; index < count; ++index)
             {
+                /** 持续消费至统一停止点，按独占下标记录次数和最长推进间隔
+                */
                 threads.start([&, index]()
                 {
                     ready.signal();
@@ -227,7 +239,16 @@ bool SemaphoreTests::fairness(int32_t id)
             policy.initialCapacity = 1;
             policy.maxCapacity = 3;
             policy.freeThreshold = threshold;
-            policy.grow = [&](const SemaphoreGrowContext&) { ++evaluations; return size_t(1); };
+            /** 记录策略评估次数，每次只请求新增一条记录
+            @param [in] context 容量快照，本策略不使用
+            @return 期望新增一条记录
+            */
+            policy.grow = [&](const SemaphoreGrowContext& context)
+            {
+                (void)context;
+                ++evaluations;
+                return size_t(1);
+            };
             SemaphoreCount pool(policy);
             std::atomic<uint64_t> state(0);
             SemaphoreEventRecord* first = nullptr;
@@ -242,7 +263,15 @@ bool SemaphoreTests::fairness(int32_t id)
             SemaphorePoolConfig policy;
             policy.initialCapacity = 1;
             policy.freeThreshold = 1;
-            policy.grow = [](const SemaphoreGrowContext&) -> size_t { throw std::runtime_error("count grow policy"); };
+            /** 故意抛出策略异常，验证已取得记录不会因提前增长失败被撤销
+            @param [in] context 容量快照，本策略不使用
+            @return 无正常返回，由池捕获并记录POLICY
+            */
+            policy.grow = [](const SemaphoreGrowContext& context) -> size_t
+            {
+                (void)context;
+                throw std::runtime_error("count grow policy");
+            };
             SemaphoreCount pool(policy);
             std::atomic<uint64_t> state(0);
             SemaphoreEventRecord* record = nullptr;
@@ -269,7 +298,12 @@ bool SemaphoreTests::fairness(int32_t id)
             SemaphoreTestGate gate(5);
             SemaphoreResult result;
             SemaphoreTestThreads threads;
-            threads.start([&]() { result = sem.waitResult(100); });
+            /** 在超时退出边界暂停等待者，保存交付与取消竞争的最终结果
+            */
+            threads.start([&]()
+            {
+                result = sem.waitResult(100);
+            });
             const bool boundary = gate.reached();
             const SemaphoreResult sent = sem.trySignal();
             gate.release();

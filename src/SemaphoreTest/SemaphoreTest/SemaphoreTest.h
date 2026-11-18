@@ -4,8 +4,8 @@
 #include <vector>
 
 /** Semaphore测试文档
-版本：2.6
-更新日期：2026-11-16
+版本：2.7
+更新日期：2026-11-18
 职责：描述SemaphoreTest现有用例、需求对应关系、构建运行方式、自动判定、平台条件和未覆盖范围；不保存历次运行报告、性能数值或版本备份。
 依据：common/Base/Semaphore使用说明.txt及当前接口合同（历史需求文件已迁移，不再引用不存在的路径）；common/AI文档/工程测试规范.txt（2.9）、代码开发规范.txt（2.10）及仓库使用说明文档.txt（2.42）。同目录其他规范版本已核对，沿用既有范围与用户对测试工程的授权。
 阅读顺序：范围与契约 → 构建配置 → 执行与判定 → 逐项用例 → 性能测量 → 平台缺口与清理。
@@ -691,9 +691,9 @@ private:
     */
     static bool checkSamples();
 
-    /** 严格解析编号及区间，去重且拒绝空选择
+    /** 严格解析编号及区间，排序去重且拒绝空选择
     @param [in] text 如25,28,30-33
-    @param [out] selected 成功后的编号集合
+    @param [out] selected 成功后按编号递增；失败保留原值
     @return 是否成功
     */
     static bool select(const std::string& text, std::vector<int32_t>& selected);
@@ -710,7 +710,7 @@ private:
     @param [in] output 本批目录
     @param [in] combined 性能调用方式
     @param [in] invalidIdentity 仅反向自检设true，使初始预期身份与真实文件不同
-    @return 用例或批次身份失败返回1，无批次错误且全部未执行返回77
+    @return 0通过；用例或批次身份失败返回1，无批次错误且全部未执行返回77
     */
     static int32_t batch(const std::vector<int32_t>& selected, const std::string& output, bool combined,
         bool invalidIdentity = false);
