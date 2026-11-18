@@ -1,6 +1,6 @@
 ﻿#include "CTaskFairnessTests.h"
-#include <algorithm>
 #include "BlackBoxTestSupport.h"
+#include <algorithm>
 #include <chrono>
 #include <fstream>
 #include <iostream>
