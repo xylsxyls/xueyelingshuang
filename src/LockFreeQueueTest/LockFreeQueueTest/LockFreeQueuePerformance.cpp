@@ -1019,6 +1019,11 @@ int LockFreeQueueMeasurements::run(int argc, char** argv)
 #include "LockFreeQueuePerformancePools.inl"
 #include "LockFreeQueuePerformanceWave.inl"
 
+/** Execute this isolated test program and report failure through its exit code
+@param [in] argc Number of command-line arguments including the program name
+@param [in] argv Argument array borrowed until main returns
+@return Zero on success; nonzero for invalid arguments or failed verification
+*/
 int main(int argc, char** argv)
 {
     if (!LockFreeQueueBenchmarkAffinity::pin(0, true))

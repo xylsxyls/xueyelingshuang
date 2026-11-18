@@ -2,9 +2,9 @@
 
 /*
 LockFreeQueueTest 测试说明
-版本：3.11
+版本：3.12
 更新日期：2026-11-18
-依据：common/Base/LockFreeQueue需求文档.txt、common/AI文档/工程测试规范.txt、代码开发规范.txt及仓库使用说明文档.txt
+依据：历史需求编号沿用common/Base/LockFreeQueue需求文档.txt（当前工作区未保留该文件）；现行规范为common/AI文档/工程测试规范.txt、代码开发规范.txt及仓库使用说明文档.txt
 范围：当前 LockFreeQueue 的测试设计、运行入口、独立判定和维护方法；本注释不是性能结果报告
 
 一、工程范围与目录
@@ -113,7 +113,7 @@ ID35的并发计时控制使用LockFreeQueueBenchmarkControl：开始/取消/失
 
 12. 空及非法配置【瞬时；需求二.2、五.2.g】
 场景：初始1、-1无配置上限、其他负数、上限小于初始、字节计算溢出、未初始化及错误配置时机。
-判定：明确状态或构造/init异常契约，失败不留下半初始化队列；普通push按当前返回码契约检查。
+判定：核对构造失败保留未初始化状态、init的布尔结果及tryInit的状态码，失败不留下半初始化队列；普通push按当前返回码契约检查。
 
 13. 阈值与上限【瞬时；需求二.3】
 场景：阈值0取完最后节点后再申请；正阈值提前增长；真实满池及提前增长失败。
@@ -144,7 +144,7 @@ ID35的并发计时控制使用LockFreeQueueBenchmarkControl：开始/取消/失
 判定：容量加预留的峰值不超限，新块可见时不误报满池，65项交错按独立FIFO核对。
 
 20. 动态多批缩容【瞬时；需求二.5、六.6】
-场景：动态空闲时长、0禁用、活块保护、完全排空、释放后再增长；阈值0/8三次填满4095项并以预算1维护。
+场景：受控时钟精确验证动态空闲时长、0禁用、活块保护、完全排空、释放后再增长；阈值0/8三次填满4095项并以预算1维护。
 判定：初始下限不破坏，活块不释放，满足时长和保护条件后真实物理释放，再增长及FIFO正确。
 
 21. 池保护及缩容竞争【瞬时登记，含有限压力；需求六.5/6】
@@ -187,11 +187,11 @@ ID35的并发计时控制使用LockFreeQueueBenchmarkControl：开始/取消/失
 判定：提交前暂停时222先于111；提交后暂停时111先于222，依据成功发布点而非调用开始或返回时间。
 
 30. 发布段复用及序号耗尽【瞬时；需求五.3.b/c】
-场景：2500轮复用、旧生产者暂停后恢复、代次接近上界并触发耗尽、静止重新初始化。
+场景：10000轮复用、旧生产者暂停后恢复、代次接近上界并触发耗尽、静止重新初始化。
 判定：代次不回绕；耗尽明确未提交，载荷和计数回退，重新初始化后可以恢复。
 
 31. 批量空闲缓存及接手【瞬时；需求二.2/3】
-场景：暂停持有31项，其他参与者接纳2017项，再复用完整2048容量；小池17轮1000项循环。
+场景：暂停持有31项，其他参与者接纳2017项，再复用完整2048容量；小池1000轮、每轮17项循环。
 判定：活跃缓存不被夺走，空闲缓存可安全接手，归还容量精确，无重复或泄漏。
 
 32. 固定池载荷及策略切换【瞬时；需求二.2/4/5、五.2】
@@ -244,7 +244,7 @@ ID35的并发计时控制使用LockFreeQueueBenchmarkControl：开始/取消/失
 
 44. 生产消费调度让步及错误码【瞬时；用户公平性合同】
 操作预算补充：独立累加模型校验1024次混合advance，输入0/1/2/63/64/255/256/4094/4095/4096/4097/SIZE_MAX；每次核对让步次数，并混用默认一项入口、显式批量入口及begin模式切换。单次超预算仅让步一次并丢弃超出部分，与既有合同一致，不读写内部计数来伪造状态。
-场景：记录成功生产、成功消费、空pop及持续竞争中的真实yield/sleep调用，另触发分配失败。
+场景：记录成功生产、成功消费、空pop及持续竞争中的真实yield/sleep调用，另触发分配失败。原生/pthread补充第256次竞争休眠故障，检查重试不抛异常；容量休眠失败返回false且计数不溢出；未知结果码不得显示success。
 判定：生产/消费均按协作规则让步，次数不充当普通push失败条件，资源失败返回状态；有限测试不承诺操作系统绝对公平。
 
 45. Busy竞争与空间不足分离【瞬时；用户Busy定义】
@@ -332,7 +332,7 @@ shared_ptr基线能力：冻结头同时声明批量消费、独立计数和预�
   TOOL tests --cases 1,11-21,39,41-45 --arch x64 --configuration Release --batch 自定义新批次
   TOOL self-test --batch 新设施自检批次
   TOOL help
-选择：--cases支持指定数字/闭区间、instant、stress、all；去重后升序，非法/倒序/范围外/空集合拒绝。all包含全部47项及20M资源负载，不等于轻量检查。
+选择：--cases支持指定数字/闭区间、instant、stress、all；去重后升序，非法/倒序/范围外/空集合拒绝。all包含全部49项及20M资源负载，不等于轻量检查。
 矩阵：--matrix覆盖Win32/x64×Debug/Release；--repeat选择测量轮次；--stress-seconds对25/36追加显式长窗口。
 附加：--consumers验证DLL/静态调用；--projects构建生产DLL/静态和Test工程，输出均重定向批次；--baseline-dir覆盖明确的原始头目录，--peer-snapshot-dir只供指定伙伴快照。
 规则：多值选项统一使用逗号分隔，例如 --producers 1,4,8,16、--calls push,producer_push。--root 可指定仓库位置；--vcvars 可指定 VS2013 环境脚本；读取 Git 基线时可用 --git 指定 Git 可执行文件。--batch 必须是临时根下的新相对批次名，不接受生产目录或目录逃逸。
@@ -340,9 +340,9 @@ shared_ptr基线能力：冻结头同时声明批量消费、独立计数和预�
 
 3. Visual Studio与核心EXE。
 步骤：打开LockFreeQueueTest.sln → 选择Win32/x64及Debug/Release → 构建并传入all或1,11,16,17,20,21,39等参数。构建会先编译 C++ 宿主工具并生成白盒副本，无需设置 Python 属性。
-规则：输出为src/temp/LockFreeQueueTest/vs/<平台>/<配置>/bin；obj/whitebox由构建前步骤生成，宿主工具在 obj/hostbin。核心EXE的all只执行37个核心，不支持工具入口的instant/stress/区间语法。
+规则：输出为src/temp/LockFreeQueueTest/vs/<平台>/<配置>/bin；obj/whitebox由构建前步骤生成，宿主工具在 obj/hostbin。核心EXE的all只执行39个核心，不支持工具入口的instant/stress/区间语法。
 长压示例：LockFreeQueueTest.exe 25 60；LockFreeQueueTest.exe 36 60 dynamic；LockFreeQueueTest.exe 36 60 prefix。
-检查：C++ tests 子命令负责完整47项。当前工程为CLI，没有GUI四按钮界面，不把缺失界面宣称已实现。
+检查：C++ tests 子命令负责完整49项。当前工程为CLI，没有GUI四按钮界面，不把缺失界面宣称已实现。
 
 4. CMake和Wasm。
 命令：
@@ -367,7 +367,7 @@ CTest宿主：使用emsdk环境让CMake找到Node；未加载该环境时显式�
   TOOL shared-ptr --before-dir 线上源码目录 --items 20000000 --producers 1,4,8,16 --modes plain,bound --batch 新同时吞吐批次
 异常降幅复核：ID38的单个扩缩容周期仅4095项，维护前还有不计时的4ms等待；短窗口的频率、缓存及分配状态影响可能很大。发现异常下降时先冻结当前代码，使用相同参数至少九轮交替比较，并回放原报告EXE核对哈希；同时给出各轮范围、重试、实际增长容量及维护耗时。复测未稳定重现时标为待确认，不把复测的正变化写成代码优化收益，不合并不同批次的快值或改写历史统计。
 默认：performance 测量7轮、补充3轮、分配1轮；three-way 为3/3/1轮；revision 为测量3轮/分配1轮；scheduling 每窗口2000ms、2轮；shared-ptr 为3轮。均默认两位宽，CPU亲和默认继承实际可用掩码，不固定成0xffff。
-选择：--previous-dir 为 three-way 增加改前版；--after-dir 指定配对候选版。three-way可用--versions current,previous选择与指定Git基线成对比较，或追加std_list_mutex、original；必须保留current和至少一个参考，previous必须提供源码目录。shared-ptr的modes支持plain、bound、prefix、distributed、reserved、distributed_pop；基线按冻结头的实际接口能力参与，--candidate-only仅跑候选版。before-dir和after-dir为同一规范路径时，两组都执行同一个EXE，并以same_binary_control标记，只用于测量噪声。scheduling的modes为0～5，--after-only只跑候选版。预约开关0/1始终各跑。
+选择：--previous-dir 为 three-way 增加改前版；--after-dir 指定配对候选版。three-way可用--versions current,previous选择与指定Git基线成对比较，或追加std_list_mutex、original；必须保留current和至少一个参考，previous必须提供源码目录。shared-ptr的modes支持plain、bound、prefix、distributed、reserved、distributed_pop；基线按冻结头的实际接口能力参与，--candidate-only仅跑候选版。before-dir和after-dir为同一规范路径时，两组都执行同一个EXE，并以same_binary_control标记，只用于测量噪声。scheduling的modes为0～7（默认0～5），--after-only只跑候选版。预约开关0/1始终各跑。
 预备：--plan 只冻结并列出矩阵；--build-only 只编译；--prepare-only 还执行 CLI 拒绝检查。之后同参数加 --measure-only 可运行剩余负载；--resume 只接续输入/二进制/参数不变且已有记录全部成功的批次。失败记录不能覆盖或混入成功批次。进程中途被终止而留下尚未登记的raw.log时也拒绝覆盖，应保留中断批次并使用新的批次名重跑。
 筛选：性能子命令可显式 --suite 35,extra,38,40 和 --profiles fixed,dynamic,default,positive,finite_positive,grown_reuse；省略时仍是原完整矩阵。筛选批次只能代表被选部分，不能称完整性能验收。
 汇总：每个完整计划执行后自动汇总；也可 TOOL summarize --batch 批次名，重新校验全部冻结文件、命令集合、原始日志哈希及重新解析结果。CSV输出到批次/reports，comparison.json放在批次根，不写回工程源码。
@@ -377,7 +377,8 @@ CTest宿主：使用emsdk环境让CMake找到Node；未加载该环境时显式�
 七、维护与验收检查
 
 1. 改动后按风险验证设施本身。
-步骤：核对47项登记和37核心集合 → 验证参数拒绝 → 检查项目文件及源码引用 → 白盒还原与失配拒绝 → 构建实际测试入口 → 执行受影响用例 → 核对退出码和原始结果。
+检查：结果解析在整数转换前拒绝小数/越界/重复PASS ID，并拒绝调度配置错配、活跃计数大于最终计数、缺失/重复维护记录及无效维护耗时；对应反例纳入self-test。调度矩阵先验证每端10个非法命令参数（尾随文本、整数溢出、范围和未知控制选项），应返回2且不启动负载。缩容时长边界使用隔离副本可控时钟，性能测量仍使用真实时钟。
+步骤：核对49项登记和39核心集合 → 验证参数拒绝 → 检查项目文件及源码引用 → 白盒还原与失配拒绝 → 构建实际测试入口 → 执行受影响用例 → 核对退出码和原始结果。
 检查：目录移动逐文件核对测试函数/断言/数据量未变；性能入口的编译和小规模自检不能冒充完整性能结果。新增ID追加，删除需保留登记，不能复用旧号。
 收尾：保留测试代码、补丁和本文；需要清理时删除本批临时构建/输入副本/结果，不改公共SDK或其他任务目录。文档引用的是可复现入口，不依赖已清理历史路径。
 详细说明：仅容器通过不能代表Semaphore、双map、CTaskThreadManager、ProcessWork或网关通过；集成由对应阶段单独验收。

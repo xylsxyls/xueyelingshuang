@@ -34,7 +34,8 @@ public:
     char m_endPadding[64];
 
 public:
-    /** Initialize a fresh benchmark control block before creating any worker */
+    /** Initialize a fresh benchmark control block before creating any worker
+    */
     LockFreeQueueBenchmarkControl();
 };
 

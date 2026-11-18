@@ -896,6 +896,28 @@ void LockFreeQueueTestRunner::scheduling()
             build(platforms[a], "Release", version, "scheduling", std::vector<std::vector<std::string>>(1, command));
             if (side == 1)
             {
+                const std::vector<std::vector<std::string>> invalidArguments = {
+                    {"1junk", "100", "0", "0", "256"},
+                    {"99999999999999999999", "100", "0", "0", "256"},
+                    {"1", "100junk", "0", "0", "256"},
+                    {"1", "100", "0junk", "0", "256"},
+                    {"1", "100", "0", "0junk", "256"},
+                    {"1", "100", "0", "0", "256junk"},
+                    {"1", "100", "0", "0", "257"},
+                    {"1", "100", "0", "0", "256", "unknown-control"},
+                    {"0", "100", "0", "0", "256"},
+                    {"1", "99", "0", "0", "256"}
+                };
+                for (size_t i = 0; i < invalidArguments.size(); ++i)
+                {
+                    Json::Value meta;
+                    meta["kind"] = "cli";
+                    meta["expected_exit"] = 2;
+                    const std::string folder = buildDirectory(platforms[a], version);
+                    std::vector<std::string> arguments = invalidArguments[i];
+                    arguments.insert(arguments.begin(), IO::join(folder, "scheduling.exe"));
+                    add("cli/scheduling-" + platforms[a] + "-" + IO::integer(i), arguments, folder, meta, 10);
+                }
                 const char* controls[] = {"stall-producer", "stall-consumer"};
                 for (size_t i = 0; i < 2; ++i)
                 {
@@ -1029,7 +1051,10 @@ void LockFreeQueueTestRunner::execute()
         std::string profile = planned["meta"]["profile"].asString();
         if (kind == "performance")
         {
-            SetEnvironmentVariableA("LFQ_BENCH_PROFILE", profile.c_str());
+            if (!SetEnvironmentVariableA("LFQ_BENCH_PROFILE", profile.c_str()))
+            {
+                throw std::runtime_error("Cannot configure benchmark pool profile");
+            }
         }
 #endif
         Json::Value record;

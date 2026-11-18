@@ -172,6 +172,10 @@ void LockFreeQueueTestControl::reset()
 void LockFreeQueueTestSchedule(bool sleeping)
 {
     (sleeping ? LockFreeQueueTestControl::m_scheduleSleeps : LockFreeQueueTestControl::m_scheduleYields).fetch_add(1);
+    if (sleeping && LockFreeQueueTestControl::m_failPoint.load() == 1001)
+    {
+        throw std::runtime_error("injected scheduler sleep failure");
+    }
 }
 
 /** 隔离测试副本在真正提交之前注入一次暂时失败
@@ -1556,6 +1560,7 @@ bool LockFreeQueueTests::reservations()
 
 bool LockFreeQueueTests::shrink()
 {
+    LockFreeQueueTestControl::m_clock.store(1000);
     LockFreeQueue<int32_t> queue;
     LFQ_CHECK(configure(queue, 2, 16));
     queue.setGrowPolicy([](const LockFreeQueueGrowContext&) { return size_t(2); });
@@ -1572,7 +1577,7 @@ bool LockFreeQueueTests::shrink()
             return decision;
         });
     queue.maintain(256);
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    LockFreeQueueTestControl::m_clock.store(1010);
     queue.maintain(256);
     LFQ_CHECK(queue.poolStatistics().currentCapacity == 8);
     uint64_t idle = 40;
@@ -2381,7 +2386,7 @@ bool LockFreeQueueTests::segmentReuse()
     LFQ_CHECK(valid && result.load() == LockFreeQueueSequenceExhausted && queue.empty() && !queue.pop(&value));
     LFQ_CHECK(queue.poolStatistics().usedNodes == 1 && queue.tryInit() == LockFreeQueueSuccess);
     std::cout << "SEGMENT_LATE_EXHAUSTION accepted=" << accepted << " unpublished_rollback=passed" << std::endl;
-    std::cout << "SEGMENT_REUSE laps=2500 stale_publish=preserved sequence_exhaustion=uncommitted recovery=passed"
+    std::cout << "SEGMENT_REUSE laps=10000 stale_publish=preserved sequence_exhaustion=uncommitted recovery=passed"
               << std::endl;
     return true;
 }
@@ -3250,6 +3255,26 @@ bool LockFreeQueueTests::cooperativeProgress()
     progress.begin(false);
     LFQ_CHECK(progress.retry(2) && progress.retry(2) && !progress.retry(2) && progress.interrupted());
 
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // A failing scheduler must not escape a normal contention retry or corrupt its state.
+    LockFreeQueueTestControl::m_failPoint.store(1001);
+    LockFreeQueueTestControl::m_scheduleSleeps.store(0);
+    progress.begin(true);
+    for (size_t i = 0; i < 256; ++i)
+    {
+        LFQ_CHECK(progress.retry());
+    }
+    LFQ_CHECK(LockFreeQueueTestControl::m_scheduleSleeps.load() == 1 && !progress.interrupted());
+    uint32_t capacityRetries = 4096;
+    LFQ_CHECK(!LockFreeQueueProgress::waitCapacity(capacityRetries) && capacityRetries == 4096);
+    LockFreeQueueTestControl::m_failPoint.store(0);
+    LFQ_CHECK(progress.retry());
+#endif
+    const LockFreeQueueError unknown(static_cast<LockFreeQueueResult>(15));
+    const LockFreeQueueError success(LockFreeQueueSuccess);
+    LFQ_CHECK(std::string(unknown.what()) == "LockFreeQueue: unknown result" &&
+        std::string(success.what()) == "LockFreeQueue: success");
+
     // Independent accumulated-count oracle, including zero and narrowing boundaries.
     LockFreeQueueProgress mixed;
     const size_t counts[] = {0, 1, 2, 63, 64, 255, 256, 4094, 4095, 4096, 4097, SIZE_MAX};
@@ -3525,6 +3550,11 @@ int LockFreeQueueTests::run(int argc, char** argv)
     return failures == 0 ? 0 : 1;
 }
 
+/** Execute this isolated test program and report failure through its exit code
+@param [in] argc Number of command-line arguments including the program name
+@param [in] argv Argument array borrowed until main returns
+@return Zero on success; nonzero for invalid arguments or failed verification
+*/
 int main(int argc, char** argv)
 {
     try

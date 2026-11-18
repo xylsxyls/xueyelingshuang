@@ -1,4 +1,6 @@
-﻿inline bool LockFreeQueuePerformanceWave::scenario(size_t producers, size_t threshold)
+﻿#include <algorithm>
+
+inline bool LockFreeQueuePerformanceWave::scenario(size_t producers, size_t threshold)
 {
     LockFreeQueue<uint64_t> queue;
 #ifndef LOCK_FREE_QUEUE_BASELINE

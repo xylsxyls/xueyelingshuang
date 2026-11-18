@@ -12,9 +12,17 @@
 #include <stdexcept>
 #include <vector>
 
-LockFreeQueueScheduling::Lane::Lane() : m_progress(0), m_completed(0), m_count(0), m_attempts(0),
+LockFreeQueueSchedulingLane::LockFreeQueueSchedulingLane() :
+m_progress(0), m_completed(0), m_count(0), m_attempts(0),
 m_cycles(0), m_cpu100ns(0), m_empty(0), m_capacityFailures(0), m_sampledGapNs(0), m_sampledCpuGapNs(0), m_priority(0)
 {
+
+}
+
+LockFreeQueueSchedulingSlot::LockFreeQueueSchedulingSlot() :
+m_free(true)
+{
+
 }
 
 uint64_t LockFreeQueueScheduling::now()
@@ -49,6 +57,12 @@ uint64_t LockFreeQueueScheduling::cycles()
 
 int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mode, bool cancelable, size_t capacity, int32_t stalledLane)
 {
+    if (producers < 1 || producers > 16 || milliseconds < 100 || milliseconds > 60000 || mode < 0 || mode > 7 ||
+        (capacity != 256 && capacity != 65536 && capacity != 1048576 && capacity != 20000000) ||
+        stalledLane < -1 || stalledLane > static_cast<int32_t>(producers))
+    {
+        return 2;
+    }
     const int reportedMode = mode;
     const bool useSpan = mode == 6;
     const bool extendedYield = mode >= 6;
@@ -64,12 +78,6 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
     // 5: bound push, distributed counters and value-prefix consumer.
     // Entries must outlive queue cleanup, including a failed consumer.
     const size_t ringSize = 8192;
-    struct Slot
-    {
-        LockFreeQueueEntry<uint64_t> m_entry;
-        std::atomic<bool> m_free;
-        Slot() : m_free(true) {}
-    };
     std::vector<std::unique_ptr<Slot[]> > entries(producers);
     LockFreeQueue<uint64_t> queue(false);
     LockFreeQueuePoolConfig config;
@@ -117,6 +125,10 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
                 }
                 Lane& result = lanes[lane];
                 result.m_priority = GetThreadPriority(GetCurrentThread());
+                if (result.m_priority == THREAD_PRIORITY_ERROR_RETURN)
+                {
+                    throw std::runtime_error("GetThreadPriority failed");
+                }
                 ready.fetch_add(1);
                 announced = true;
                 while (!start.load()) { std::this_thread::yield(); }
@@ -189,6 +201,10 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
             Lane& result = lanes[producers];
             std::vector<uint64_t> expected(producers, 0);
             result.m_priority = GetThreadPriority(GetCurrentThread());
+            if (result.m_priority == THREAD_PRIORITY_ERROR_RETURN)
+            {
+                throw std::runtime_error("GetThreadPriority failed");
+            }
             ready.fetch_add(1);
             announced = true;
             while (!start.load()) { std::this_thread::yield(); }
@@ -365,12 +381,40 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
     return !valid || !samePriority ? 1 : (progressed ? 0 : 3);
 }
 
+/** Parse a decimal command argument without overflow or accepting trailing text
+@param [in] text Non-null command argument, borrowed for this call
+@return Integer in 0..20000000, or -1 for invalid input
+*/
+static int32_t ParseSchedulingArgument(const char* text)
+{
+    if (!*text)
+    {
+        return -1;
+    }
+    int32_t value = 0;
+    for (; *text; ++text)
+    {
+        if (*text < '0' || *text > '9' || value > (20000000 - (*text - '0')) / 10)
+        {
+            return -1;
+        }
+        value = value * 10 + (*text - '0');
+    }
+    return value;
+}
+
+/** Execute this isolated test program and report failure through its exit code
+@param [in] argc Number of command-line arguments including the program name
+@param [in] argv Argument array borrowed until main returns
+@return Zero on success; nonzero for invalid arguments or failed verification
+*/
 int main(int argc, char** argv)
 {
     if (argc != 5 && argc != 6 && argc != 7) { return 2; }
-    const int producers = std::atoi(argv[1]), duration = std::atoi(argv[2]), mode = std::atoi(argv[3]), cancelable = std::atoi(argv[4]);
+    const int producers = ParseSchedulingArgument(argv[1]), duration = ParseSchedulingArgument(argv[2]),
+        mode = ParseSchedulingArgument(argv[3]), cancelable = ParseSchedulingArgument(argv[4]);
     if (producers < 1 || producers > 16 || duration < 100 || duration > 60000 || mode < 0 || mode > 7 || cancelable < 0 || cancelable > 1) { return 2; }
-    const int capacity = argc >= 6 ? std::atoi(argv[5]) : 65536;
+    const int capacity = argc >= 6 ? ParseSchedulingArgument(argv[5]) : 65536;
     if (capacity != 256 && capacity != 65536 && capacity != 1048576 && capacity != 20000000) { return 2; }
     int32_t stalledLane = -1;
     if (argc == 7)

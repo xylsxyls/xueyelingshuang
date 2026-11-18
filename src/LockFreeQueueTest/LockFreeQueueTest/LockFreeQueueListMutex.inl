@@ -38,14 +38,16 @@ void LockFreeQueue<T>::push(const T& value)
 }
 
 template<class T>
-void LockFreeQueue<T>::assign(T& output, T& source, std::true_type)
+void LockFreeQueue<T>::assign(T& output, T& source, std::true_type selected)
 {
+    (void)selected;
     output = std::move(source);
 }
 
 template<class T>
-void LockFreeQueue<T>::assign(T& output, T& source, std::false_type)
+void LockFreeQueue<T>::assign(T& output, T& source, std::false_type selected)
 {
+    (void)selected;
     output = static_cast<const T&>(source);
 }
 

@@ -1333,6 +1333,9 @@ bool LockFreeQueueRetryContract::consumerBatchBudget()
 #endif
 
 #ifdef LOCK_FREE_QUEUE_RETRY_MAIN
+/** Run the independently selectable retry-contract checks
+@return Zero if all selected contract checks pass; otherwise one
+*/
 int main()
 {
     try

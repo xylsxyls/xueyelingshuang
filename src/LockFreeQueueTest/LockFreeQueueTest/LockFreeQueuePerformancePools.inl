@@ -1,4 +1,6 @@
-﻿inline int32_t LockFreeQueuePerformancePools::submit(LockFreeQueue<uint64_t>& queue,
+﻿#include <algorithm>
+
+inline int32_t LockFreeQueuePerformancePools::submit(LockFreeQueue<uint64_t>& queue,
     uint64_t value, LockFreeQueueProducer<uint64_t>* producer)
 {
 #ifdef LOCK_FREE_QUEUE_BASELINE

@@ -24,7 +24,7 @@ public:
 
     /** Identify cases executed by the core binary
     @param [in] id Stable case ID
-    @return Whether the ID belongs to the 37-case core
+    @return Whether the ID belongs to the 39-case core
     */
     static bool core(int32_t id);
 

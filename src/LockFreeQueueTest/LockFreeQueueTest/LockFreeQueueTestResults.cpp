@@ -7,6 +7,16 @@
 #include <sstream>
 #include <stdexcept>
 
+double LockFreeQueueTestResults::whole(const Json::Value& values, const char* key, double maximum)
+{
+    const double value = number(values, key, false);
+    if (value != std::floor(value) || value > maximum)
+    {
+        throw std::runtime_error(std::string("Invalid evidence integer: ") + key);
+    }
+    return value;
+}
+
 double LockFreeQueueTestResults::number(const Json::Value& values, const char* key, bool positive)
 {
     if (!values[key].isNumeric() || !std::isfinite(values[key].asDouble()) ||
@@ -157,7 +167,7 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
     bool reference = meta["reference"].asBool();
     std::string suite = meta["suite"].asString(), profile = meta["profile"].asString();
     bool sufficient = profile == "fixed" || profile == "dynamic" || profile == "grown_reuse";
-    std::set<std::string> measured, verified, stages, shrunk;
+    std::set<std::string> measured, verified, stages, shrunk, reclaimed;
     const std::map<std::string, double> expected = kind == "performance" ? scenarios(suite, reference) :
         std::map<std::string, double>();
     for (size_t i = 0; i < lines.size(); ++i)
@@ -172,20 +182,27 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         }
         if (tag == "PASS")
         {
-            if (kind == "performance" && (pass || (suite == "extra" ? values["suite"].asString() != "extra" :
-                values["id"].asInt() != std::atoi(suite.c_str()))))
-            {
-                throw std::runtime_error("Wrong/duplicate benchmark PASS");
-            }
-            pass = true;
+            int32_t id = 0;
             if (values.isMember("id"))
             {
-                int32_t id = values["id"].asInt();
+                // Validate before narrowing so fractional and out-of-range IDs
+                // follow the same evidence contract before JsonCpp conversion.
+                id = static_cast<int32_t>(whole(values, "id", 49));
+                if (id == 0)
+                {
+                    throw std::runtime_error("Zero PASS id");
+                }
                 if (!passed.insert(id).second)
                 {
                     throw std::runtime_error("Duplicate PASS id");
                 }
             }
+            if (kind == "performance" && (pass || (suite == "extra" ? values["suite"].asString() != "extra" :
+                id != std::atoi(suite.c_str()))))
+            {
+                throw std::runtime_error("Wrong/duplicate benchmark PASS");
+            }
+            pass = true;
         }
         if (kind != "scheduling" && (tag == "FAIL" || (values.isMember("valid") && values["valid"].asDouble() != 1)))
         {
@@ -223,6 +240,17 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
             }
             if (tag == "SCHEDULE")
             {
+                // Compare the emitted configuration before merging it with metadata.
+                const char* settings[] = {"producers", "mode", "capacity", "cancelable"};
+                for (size_t setting = 0; setting < 4; ++setting)
+                {
+                    const char* key = settings[setting];
+                    if (meta.isMember(key) && (!values.isMember(key) ||
+                        whole(values, key, 20000000) != number(meta, key, false)))
+                    {
+                        throw std::runtime_error(std::string("Scheduling configuration mismatch: ") + key);
+                    }
+                }
                 output["samples"].append(row);
             }
         }
@@ -245,7 +273,7 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         }
         else if (tag == "OBSERVER")
         {
-            high = values["record_high_water"].asInt();
+            high = static_cast<int32_t>(whole(values, "record_high_water", 128));
         }
         else if (tag == "POLICY")
         {
@@ -263,7 +291,7 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         }
         if (tag == "BURST")
         {
-            currentCase = "burst" + IO::integer(values["width"].asInt());
+            currentCase = "burst" + IO::integer(static_cast<int64_t>(whole(values, "width", 65536)));
         }
         if (tag == "EXTRA")
         {
@@ -364,11 +392,23 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
             number(values, "elapsed_ns", false);
             if (values["phase"].asString() == "shrink")
             {
-                if (!expected.count(scenario) || !shrunk.insert(scenario).second)
+                if (currentCase.compare(0, 14, "shrink_regrow_") != 0 ||
+                    !expected.count(scenario) || !shrunk.insert(scenario).second)
                 {
                     throw std::runtime_error("Wrong/duplicate shrink cycle");
                 }
                 ++shrink;
+            }
+            else if (values["phase"].asString() == "reclaim")
+            {
+                if (!expected.count(scenario) || !reclaimed.insert(scenario).second)
+                {
+                    throw std::runtime_error("Wrong/duplicate reclamation cycle");
+                }
+            }
+            else
+            {
+                throw std::runtime_error("Unknown maintenance phase");
             }
             output["maintenance"].append(row);
         }
@@ -383,9 +423,9 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         {
             throw std::runtime_error("Missing pool verification windows");
         }
-        if (suite == "38" && !reference && shrink != 16)
+        if (suite == "38" && !reference && (shrink != 16 || reclaimed.size() != expected.size()))
         {
-            throw std::runtime_error("Missing shrink/regrow cycles");
+            throw std::runtime_error("Missing shrink/regrow/reclamation cycles");
         }
         if (suite == "40" && waveStages != 120)
         {
@@ -437,12 +477,12 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         for (Json::Value::UInt i = 0; i < output["lanes"].size(); ++i)
         {
             const Json::Value& lane = output["lanes"][i];
-            int32_t index = lane["index"].asInt();
+            const int32_t index = static_cast<int32_t>(whole(lane, "index", 16));
             if (!indices.insert(index).second || index < 0 || index > meta["producers"].asInt())
             {
                 throw std::runtime_error("Duplicate/invalid scheduling lane");
             }
-            if (lane["consumer"].asInt() != (index == meta["producers"].asInt() ? 1 : 0))
+            if (whole(lane, "consumer", 1) != (index == meta["producers"].asInt() ? 1 : 0))
             {
                 throw std::runtime_error("Wrong consumer lane");
             }
@@ -452,6 +492,10 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
             const double gap = number(lane, "sampled_cpu_gap_ms", false);
             const double attempts = number(lane, "active_attempts", false), cycles = number(lane, "cycles", false);
             const double active = number(lane, "active_count", false), count = number(lane, "count", false);
+            if (active > count)
+            {
+                throw std::runtime_error("Scheduling active count exceeds final count");
+            }
             observedProgress = observedProgress && gap <= gapLimit && (capacityWait ? count > 0 : attempts > 0) && cycles > 0 &&
                 (!admission || (active > 0 && count > 0));
         }
@@ -467,7 +511,7 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         {
             expected.insert(meta["ids"][i].asInt());
         }
-        if (code || passed != expected)
+        if (code || expected.empty() || passed != expected)
         {
             throw std::runtime_error("Core selection and PASS IDs disagree");
         }
@@ -504,8 +548,9 @@ Json::Value LockFreeQueueTestResults::rates(const Json::Value& input, double ext
     {
         return row;
     }
-    double count = row.get("items", row["operations"]).asDouble(), elapsed = row["elapsed_ns"].asDouble();
-    if (count <= 0 || elapsed <= 0 || extra < 0)
+    const double count = number(row, row.isMember("items") ? "items" : "operations", true);
+    const double elapsed = number(row, "elapsed_ns", true);
+    if (!std::isfinite(extra) || extra < 0 || !std::isfinite(elapsed + extra))
     {
         throw std::runtime_error("Invalid timed operation count/duration");
     }

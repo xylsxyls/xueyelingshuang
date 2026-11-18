@@ -11,6 +11,9 @@ const core = [1, 2, 3, 4, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 2
     25, 26, 27, 28, 29, 30, 31, 32, 34, 36, 37, 39, 41, 42, 43, 44, 45, 47, 48, 49];
 const single = [1, 3, 6, 8, 10, 11, 12, 13, 14, 15, 20, 32, 34, 39, 41, 44, 45, 47, 48, 49];
 
+/** Run isolated Wasm cases, validate their evidence, and retain logs on failure
+ * @returns {void} Throws when arguments, execution, or result evidence are invalid
+ */
 function main() {
     const options = {};
     const input = process.argv.slice(2);
@@ -71,11 +74,16 @@ function main() {
         const text = raw.toString('utf8');
         let valid = result.status === 0 && !result.error && !/^FAIL\b/m.test(text) && !/\bvalid=0\b/.test(text);
         if (test.ids) {
-            const passed = [...text.matchAll(/^PASS id=(\d+)\b/gm)].map(match => Number(match[1])).sort((a, b) => a - b);
-            valid = valid && JSON.stringify(passed) === JSON.stringify(test.ids);
+            const passed = [...text.matchAll(/^PASS id=(\d+)(?=\s|$)/gm)].map(match => Number(match[1])).sort((a, b) => a - b);
+            valid = valid && (text.match(/^PASS\b/gm) || []).length === test.ids.length &&
+                JSON.stringify(passed) === JSON.stringify(test.ids);
         } else {
-            valid = valid && /^PASS\b/m.test(text);
-            if (test.name === 'pools') valid = valid && (text.match(/^POLICY_RESULT /gm) || []).length === 42;
+            const expectedId = test.name === 'backlog' ? 22 : (test.name === 'pools' ? 38 : 40);
+            valid = valid && (text.match(/^PASS\b/gm) || []).length === 1 &&
+                new RegExp('^PASS id=' + expectedId + '(?=\\s|$)', 'm').test(text);
+            if (test.name === 'pools') valid = valid && (text.match(/^POLICY_RESULT /gm) || []).length === 42 &&
+                (text.match(/^MAINTENANCE phase=reclaim /gm) || []).length === 42 &&
+                (text.match(/^MAINTENANCE phase=shrink /gm) || []).length === 16;
             if (test.name === 'wave') {
                 valid = valid && (text.match(/^WAVE_RESULT /gm) || []).length === 10 && (text.match(/^WAVE_STAGE /gm) || []).length === 120;
             }

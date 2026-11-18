@@ -8,13 +8,23 @@
 class LockFreeQueueThreadGroup
 {
 public:
+    // Threads owned by this group, joined before destruction
     std::vector<std::thread> m_threads;
-    /** Stop/release flags outlive this group */
+
+    /** Stop/release flags outlive this group
+    @param [in,out] stop Borrowed cancellation flag; must outlive this thread group
+    @param [in,out] start Optional borrowed start gate, null if absent; must outlive this group
+    */
     explicit LockFreeQueueThreadGroup(std::atomic<bool>& stop, std::atomic<bool>* start = nullptr);
-    /** Signal cancellation and join every successfully created thread */
+
+    /** Signal cancellation and join every successfully created thread
+    */
     ~LockFreeQueueThreadGroup();
-    /** Join without requesting cancellation on a normal completed run */
+
+    /** Join without requesting cancellation on a normal completed run
+    */
     void join();
+
     /** Cancel producers and keep the sole consumer returning capacity until every worker exits.
     @param [in,out] queue Queue with a nonthrowing discard path; caller is its only consumer
     @param [in] completed Each worker increments exactly once after its final queue operation
@@ -22,11 +32,20 @@ public:
     template <class Queue>
     void cancelAndDrain(Queue& queue, const std::atomic<size_t>& completed);
 private:
-    std::atomic<bool>& m_stop;
+    // Borrowed cancellation flag, valid until this group is destroyed
+    std::atomic<bool>* m_stop;
+    // Optional borrowed start gate, valid until this group is destroyed
     std::atomic<bool>* m_start;
-    /** One owner for joins */
+
+    /** One owner for joins
+    @param [in] other Source object borrowed for this operation
+    */
     LockFreeQueueThreadGroup(const LockFreeQueueThreadGroup& other) = delete;
-    /** One owner for joins */
+
+    /** One owner for joins
+    @param [in] other Source object borrowed for this operation
+    @return Unavailable because assignment is deleted
+    */
     LockFreeQueueThreadGroup& operator=(const LockFreeQueueThreadGroup& other) = delete;
 };
 #include "LockFreeQueueThreadGroup.inl"

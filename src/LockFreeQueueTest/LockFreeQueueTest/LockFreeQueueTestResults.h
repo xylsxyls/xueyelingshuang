@@ -44,6 +44,14 @@ public:
     static Json::Value rates(const Json::Value& sample, double extraMaintenanceNs);
 
 private:
+    /** Require an exact nonnegative integer within an explicit upper bound
+    @param [in] values Parsed evidence object
+    @param [in] key Required numeric field
+    @param [in] maximum Inclusive upper bound, no greater than 2^53-1
+    @return Validated integer; absent, fractional or out-of-range evidence throws
+    */
+    static double whole(const Json::Value& values, const char* key, double maximum);
+
     /** Require a finite number with the declared sign
     @param [in] values Evidence fields
     @param [in] key Required field name

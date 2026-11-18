@@ -682,6 +682,11 @@ int32_t LockFreeQueueTestTool::run()
     return runner.run(m_command);
 }
 
+/** Execute this isolated test program and report failure through its exit code
+@param [in] argc Number of command-line arguments including the program name
+@param [in] argv Argument array borrowed until main returns
+@return Zero on success; nonzero for invalid arguments or failed verification
+*/
 int main(int argc, char** argv)
 {
     try
@@ -855,6 +860,55 @@ void LockFreeQueueTestTool::selfTest() const
     sample["elapsed_ns"] = 100.0;
     Json::Value rates = LockFreeQueueTestResults::rates(sample, 100);
     check(rates["rate_per_second"].asDouble() == 1e9 && rates["complete_rate_per_second"].asDouble() == 5e8, "separate maintenance cost");
+    const double invalidCosts[] = {-1.0, std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN()};
+    for (size_t i = 0; i < 3; ++i)
+    {
+        bool refused = false;
+        try
+        {
+            LockFreeQueueTestResults::rates(sample, invalidCosts[i]);
+        }
+        catch (const std::exception&)
+        {
+            refused = true;
+        }
+        check(refused, "invalid extra maintenance duration rejected");
+    }
+    Json::Value core;
+    core["kind"] = "core";
+    core["ids"].append(1);
+    check(LockFreeQueueTestResults::parse("PASS id=1\n", core, 0)["samples"].empty(), "exact core PASS accepted");
+    const char* badCore[] = {"PASS id=1.5\n", "PASS id=0\n", "PASS id=50\n", "PASS id=2\n", "PASS\n", "PASS id=1\nPASS id=1\n", ""};
+    for (size_t i = 0; i < 7; ++i)
+    {
+        bool refused = false;
+        try
+        {
+            LockFreeQueueTestResults::parse(badCore[i], core, 0);
+        }
+        catch (const std::exception&)
+        {
+            refused = true;
+        }
+        check(refused, "fractional/wrong/missing/duplicate core ID rejected");
+    }
+    Json::Value invalidPassMeta;
+    invalidPassMeta["kind"] = "performance";
+    invalidPassMeta["suite"] = "38";
+    const char* invalidPasses[] = {"PASS id=1e100\n", "PASS id=-1e100\n", "PASS id=38.5\n"};
+    for (size_t i = 0; i < sizeof(invalidPasses) / sizeof(invalidPasses[0]); ++i)
+    {
+        bool refused = false;
+        try
+        {
+            LockFreeQueueTestResults::parse(invalidPasses[i], invalidPassMeta, 0);
+        }
+        catch (const std::exception&)
+        {
+            refused = true;
+        }
+        check(refused, "benchmark PASS integer checked before narrowing");
+    }
     Json::Value meta;
     meta["kind"] = "shared-ptr";
     meta["items"] = 16.0;
@@ -962,6 +1016,52 @@ void LockFreeQueueTestTool::selfTest() const
         }
         check(rejected, "missing PASS/extra pool window/timed allocation rejected");
     }
+    Json::Value poolMeta = perf;
+    poolMeta["suite"] = "38";
+    std::string poolLog;
+    const char* poolCases[] = {"default_zero", "default_positive", "finite_fixed_zero", "finite_fixed_positive",
+        "finite_proportional", "shrink_regrow_zero", "shrink_regrow_positive"};
+    for (size_t kind = 0; kind < 7; ++kind)
+    {
+        for (int32_t cycle = 0; cycle < (kind >= 5 ? 8 : 4); ++cycle)
+        {
+            poolLog += std::string("POLICY case=") + poolCases[kind] + " phase=" +
+                (kind >= 5 || cycle == 0 ? "growth" : "reuse") + " cycle=" + integer(cycle) + "\n";
+            poolLog += std::string("POLICY_RESULT operations=") + (kind < 2 ? "32768" : "4095") + " elapsed_ns=100 valid=1\n";
+            poolLog += "MAINTENANCE phase=reclaim elapsed_ns=10 valid=1\n";
+            if (kind >= 5)
+            {
+                poolLog += "MAINTENANCE phase=shrink elapsed_ns=20 valid=1\n";
+            }
+        }
+    }
+    for (int32_t threshold = 0; threshold < 2; ++threshold)
+    {
+        for (int32_t producers = 1; producers <= 16; producers *= 4)
+        {
+            poolLog += "POLICY case=bounded" + integer(threshold) + "_p" + integer(producers) + " phase=pressure cycle=0\n"
+                "MAINTENANCE phase=reclaim elapsed_ns=10 valid=1\n"
+                "POLICY_RESULT operations=200000 elapsed_ns=100 valid=1\n";
+        }
+    }
+    poolLog += "PASS id=38\n";
+    check(LockFreeQueueTestResults::parse(poolLog, poolMeta, 0)["maintenance"].size() == 58, "every reclaim and shrink cost retained");
+    const std::string reclaimLine = "MAINTENANCE phase=reclaim elapsed_ns=10 valid=1\n";
+    for (size_t mutation = 0; mutation < 2; ++mutation)
+    {
+        std::string broken = poolLog;
+        broken.replace(broken.find(reclaimLine), reclaimLine.size(), mutation ? reclaimLine + reclaimLine : "");
+        rejected = false;
+        try
+        {
+            LockFreeQueueTestResults::parse(broken, poolMeta, 0);
+        }
+        catch (const std::exception&)
+        {
+            rejected = true;
+        }
+        check(rejected, "omitted or duplicated maintenance cannot change complete throughput silently");
+    }
     Json::Value extra = perf;
     extra["suite"] = "extra";
     std::string extraLog = "BURST width=1 items=2000000 elapsed_ns=100 valid=1\n"
@@ -1012,7 +1112,7 @@ void LockFreeQueueTestTool::selfTest() const
     schedule["duration_ms"] = 2000;
     const std::string lanes = "LANE index=0 consumer=0 count=1 active_count=1 active_attempts=1 cycles=1 sampled_cpu_gap_ms=1800\n"
         "LANE index=1 consumer=1 count=1 active_count=1 active_attempts=1 cycles=1 sampled_cpu_gap_ms=10\n";
-    const std::string noProgress = lanes + "SCHEDULE capacity=65536 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=0 valid=0\n";
+    const std::string noProgress = lanes + "SCHEDULE producers=1 capacity=65536 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=0 valid=0\n";
     check(LockFreeQueueTestResults::parse(noProgress, schedule, 3)["lanes"].size() == 2, "baseline-only no-progress evidence");
     schedule["version"] = "after";
     rejected = false;
@@ -1028,7 +1128,7 @@ void LockFreeQueueTestTool::selfTest() const
     rejected = false;
     try
     {
-        LockFreeQueueTestResults::parse(lanes + "SCHEDULE capacity=65536 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n", schedule, 0);
+        LockFreeQueueTestResults::parse(lanes + "SCHEDULE producers=1 capacity=65536 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n", schedule, 0);
     }
     catch (const std::exception&)
     {
@@ -1042,15 +1142,39 @@ void LockFreeQueueTestTool::selfTest() const
     const std::string waitingLanes = "LANE index=0 consumer=0 count=1 active_count=0 active_attempts=0 cycles=1 sampled_cpu_gap_ms=10\n"
         "LANE index=1 consumer=1 count=1 active_count=1 active_attempts=1 cycles=1 sampled_cpu_gap_ms=10\n";
     check(LockFreeQueueTestResults::parse(waitingLanes +
-        "SCHEDULE mode=7 capacity=256 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n",
+        "SCHEDULE producers=1 mode=7 capacity=256 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n",
         schedule, 0)["samples"].size() == 1, "extended ordinary push may finish its capacity wait during drain");
+    Json::Value configured = schedule;
+    configured["mode"] = 7;
+    configured["capacity"] = 256;
+    configured["cancelable"] = 0;
+    const std::string exactSchedule = waitingLanes +
+        "SCHEDULE producers=1 mode=7 capacity=256 cancelable=0 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n";
+    check(LockFreeQueueTestResults::parse(exactSchedule, configured, 0)["samples"].size() == 1, "scheduling actual configuration matches request");
+    const char* beforeFields[] = {"producers=1", "mode=7", "capacity=256", "cancelable=0", "index=0", "consumer=0", "active_count=0"};
+    const char* afterFields[] = {"producers=2", "mode=0", "capacity=65536", "cancelable=1", "index=0.5", "consumer=0.5", "active_count=2"};
+    for (size_t i = 0; i < 7; ++i)
+    {
+        std::string broken = exactSchedule;
+        broken.replace(broken.find(beforeFields[i]), std::string(beforeFields[i]).size(), afterFields[i]);
+        rejected = false;
+        try
+        {
+            LockFreeQueueTestResults::parse(broken, configured, 0);
+        }
+        catch (const std::exception&)
+        {
+            rejected = true;
+        }
+        check(rejected, "mismatched configuration/fractional lane/impossible active count rejected");
+    }
     const char* nonwaitingModes[] = {"2", "6"};
     for (size_t i = 0; i < 2; ++i)
     {
         rejected = false;
         try
         {
-            LockFreeQueueTestResults::parse(waitingLanes + "SCHEDULE mode=" + nonwaitingModes[i] +
+            LockFreeQueueTestResults::parse(waitingLanes + "SCHEDULE producers=1 mode=" + nonwaitingModes[i] +
                 " capacity=256 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n", schedule, 0);
         }
         catch (const std::exception&)

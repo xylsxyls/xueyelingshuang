@@ -64,14 +64,16 @@ private:
     /** 与当前Queue一致：保证不抛异常的移动赋值优先
     @param [out] output 接收载荷
     @param [in,out] source 仍由列表持有的首项
+    @param [in] selected Compile-time assignment selection tag
     */
-    static void assign(T& output, T& source, std::true_type);
+    static void assign(T& output, T& source, std::true_type selected);
 
     /** 移动可能抛异常时采用const复制，异常保留列表项
     @param [out] output 接收载荷
     @param [in,out] source 仍由列表持有的首项
+    @param [in] selected Compile-time assignment selection tag
     */
-    static void assign(T& output, T& source, std::false_type);
+    static void assign(T& output, T& source, std::false_type selected);
 
     /** 禁止复制包含互斥量的队列
     @param [in] other 禁止复制的源对象
@@ -80,6 +82,7 @@ private:
 
     /** 禁止复制包含互斥量的队列
     @param [in] other 禁止复制的源对象
+    @return 不可调用；此赋值操作已禁用
     */
     LockFreeQueue& operator=(const LockFreeQueue& other) = delete;
 };

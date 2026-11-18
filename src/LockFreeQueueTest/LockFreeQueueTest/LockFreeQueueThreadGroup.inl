@@ -1,12 +1,12 @@
 ﻿inline LockFreeQueueThreadGroup::LockFreeQueueThreadGroup(std::atomic<bool>& stop, std::atomic<bool>* start) :
-m_stop(stop), m_start(start)
+m_stop(&stop), m_start(start)
 {
 
 }
 
 inline LockFreeQueueThreadGroup::~LockFreeQueueThreadGroup()
 {
-    m_stop.store(true);
+    m_stop->store(true);
     if (m_start != nullptr)
     {
         m_start->store(true);
@@ -28,7 +28,7 @@ inline void LockFreeQueueThreadGroup::join()
 template <class Queue>
 void LockFreeQueueThreadGroup::cancelAndDrain(Queue& queue, const std::atomic<size_t>& completed)
 {
-    m_stop.store(true);
+    m_stop->store(true);
     if (m_start != nullptr)
     {
         m_start->store(true);

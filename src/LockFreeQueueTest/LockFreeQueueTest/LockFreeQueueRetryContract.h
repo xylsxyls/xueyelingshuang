@@ -9,10 +9,12 @@ public:
     static bool m_failCopy;
     // 独立校验值
     int32_t m_value;
+
     /** 创建载荷
     @param [in] value 校验值
     */
     explicit LockFreeQueueRetryValue(int32_t value);
+
     /** 复制载荷或注入异常
     @param [in] other 原值
     */
@@ -27,21 +29,18 @@ public:
     @param [in] failCopy 复制时检查，寿命覆盖配置调用
     */
     explicit LockFreeQueueRetryObserver(const bool& failCopy);
+
     /** 复制回调或抛出测试异常
     @param [in] other 原回调
     */
     LockFreeQueueRetryObserver(const LockFreeQueueRetryObserver& other);
+
     /** 空观察者
     @param [in] amount 新增槽数
     @param [in] count 累计增长快照
     */
     void operator()(size_t amount, uint64_t count) const;
 private:
-    /** 验证单项阈值下256项整批消费只在两个记账点让步
-    @return true表示消费256项且实际执行两次消费者yield
-    */
-    bool consumerBatchBudget();
-
     // 借用期由测试持有者保证
     const bool* m_failCopy;
 };

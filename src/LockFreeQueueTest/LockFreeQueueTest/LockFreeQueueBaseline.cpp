@@ -87,6 +87,9 @@ int LockFreeQueueBaselineRun()
     return valid ? 0 : 1;
 }
 
+/** Run the isolated original-queue publication-gap negative control
+@return Zero when the old defect is reproduced and both items are recovered; otherwise one
+*/
 int main()
 {
     try

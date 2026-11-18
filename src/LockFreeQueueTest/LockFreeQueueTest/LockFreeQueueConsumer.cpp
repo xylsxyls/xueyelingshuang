@@ -71,6 +71,9 @@ void LockFreeQueueTestDestroyProducer(void* producer)
 #else
 #include <iostream>
 
+/** Verify cross-module queue and Producer calls in both reservation configurations
+@return Zero when all transferred values and released registrations are correct; otherwise one
+*/
 int main()
 {
     bool valid = true;
