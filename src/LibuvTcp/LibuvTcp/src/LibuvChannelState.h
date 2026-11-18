@@ -280,6 +280,6 @@ public:
     bool m_polling;
     // 最多一个未登记的拒绝句柄等待关闭，避免连接洪峰无限创建临时对象
     bool m_rejectPending;
-    // libuv的接纳就绪尚未消费；分配失败后仅由下一轮poll重试，关闭回调不能递归接纳
+    // libuv的接纳就绪尚未消费；关闭后由下一次异步回调或poll重试，不能在关闭栈递归接纳
     bool m_acceptPending;
 };

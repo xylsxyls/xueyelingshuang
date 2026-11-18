@@ -23,7 +23,7 @@ public:
     /** 将自身作为稳定的监听者
     @param [in] address 数值地址
     @param [in] port 监听端口
-    @param [in] maxPeers 最大连接数
+    @param [in] maxPeers 非零索引预分配提示，实际容量由配置的池控制
     @return libuv接纳结果
     */
     int32_t listen(const char* address, uint32_t port, uint32_t maxPeers);

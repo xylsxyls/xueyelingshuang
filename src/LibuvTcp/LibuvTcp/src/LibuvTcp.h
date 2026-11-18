@@ -81,7 +81,7 @@ class LibuvTcpAPI LibuvTcp
     /** hostCreate后、hostListen/hostConnect前设置原始字节运输资源参数，同一执行者调用
     @param [in] instance 有效且未启动、未停止的实例
     @param [in] config 写池配置副本，失败不改变已有设置
-    @return 0成功，负数参数或状态错误，不分配内存池
+    @return 0成功并已准备写池、队列及连接索引，负数为配置、内存或状态错误
     */
     static int32_t hostConfigureWritePool(void* instance, const LibuvChannelWritePoolConfig& config);
 
@@ -100,10 +100,10 @@ class LibuvTcpAPI LibuvTcp
     static int32_t hostConfigureReadBuffer(void* instance, uint32_t bufferBytes);
 
     /** 监听数值IPv4/IPv6；本实例仅能启动一次
-    @param [in] instance 有效未启动实例，同一执行者调用所有操作
+    @param [in] instance 有效未启动实例；生命周期及循环操作由同一执行者调用，post可跨线程
     @param [in] address 非空数值地址，通配监听须明确给出
     @param [in] port 0至65535，0由系统分配
-    @param [in] maxPeers 1至256，包含关闭中的连接
+    @param [in] maxPeers 非零连接索引预分配提示；实际接纳容量由连接对象池及ID索引池决定
     @return 0已监听，负数失败
     */
     static int32_t hostListen(void* instance, const char* address, uint32_t port, uint32_t maxPeers);

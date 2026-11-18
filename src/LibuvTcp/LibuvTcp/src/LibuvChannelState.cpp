@@ -158,6 +158,11 @@ void LibuvChannelState::overflowClosed(uv_handle_t* handle)
     LibuvChannelState* owner = static_cast<LibuvChannelState*>(handle->data);
     owner->m_overflowClosing = false;
     owner->activity();
+    if (owner->m_acceptPending && !owner->m_stopping)
+    {
+        // 交给下一次异步回调重试，不在关闭回调内递归创建拒绝句柄。
+        uv_async_send(&owner->m_postAsync);
+    }
 }
 
 int32_t LibuvChannelState::parseAddress(const char* address, uint32_t port, sockaddr_storage& result)
@@ -356,6 +361,12 @@ void LibuvChannelState::releaseBatch(LibuvChannelWrite* first)
 void LibuvChannelState::posted(uv_async_t* handle)
 {
     LibuvChannelState* owner = static_cast<LibuvChannelState*>(handle->data);
+    // 共同loop只通过事件等待也必须推进延后的接纳；每轮最多一次，不在满池时自旋。
+    if (owner->m_acceptPending && !owner->m_rejectPending && !owner->m_overflowClosing &&
+        !owner->m_stopping && owner->m_listenerInitialized)
+    {
+        acceptPeer(reinterpret_cast<uv_stream_t*>(&owner->m_listener), 0);
+    }
     uint32_t incomingTaken = 0;
     for (; incomingTaken < 4096; ++incomingTaken)
     {
@@ -496,6 +507,8 @@ void LibuvChannelState::acceptPeer(uv_stream_t* server, int status)
         owner->m_acceptPending = true;
         return;
     }
+    // 多次接纳通知可能已经合并，延后处理必须持续到uv_accept实际取空。
+    const bool drainingAccepts = owner->m_acceptPending;
     owner->m_acceptPending = false;
     LibuvChannelPeer* peer = owner->createPeer(false);
     if (peer == nullptr)
@@ -506,7 +519,8 @@ void LibuvChannelState::acceptPeer(uv_stream_t* server, int status)
         {
             owner->m_overflow.data = owner;
             owner->m_overflowClosing = true;
-            uv_accept(server, reinterpret_cast<uv_stream_t*>(&owner->m_overflow));
+            owner->m_acceptPending = uv_accept(server,
+                reinterpret_cast<uv_stream_t*>(&owner->m_overflow)) == 0;
             uv_close(reinterpret_cast<uv_handle_t*>(&owner->m_overflow), &overflowClosed);
         }
         else
@@ -522,6 +536,11 @@ void LibuvChannelState::acceptPeer(uv_stream_t* server, int status)
     {
         owner->closePeer(peer, result);
         return;
+    }
+    if (drainingAccepts)
+    {
+        owner->m_acceptPending = true;
+        uv_async_send(&owner->m_postAsync);
     }
     if (!owner->m_connectedPeers->tryInsert(peer->m_id, 1U, true, false).m_committed)
     {
@@ -666,8 +685,11 @@ void LibuvChannelState::closed(uv_handle_t* handle)
     if (id == 0)
     {
         owner->m_rejectPending = false;
-        // 不在关闭回调里再次接纳。持续分配失败时，立即重试会再次生成关闭句柄，
-        // 使libuv同一轮关闭回调始终排不空；保留m_acceptPending交下一次poll重试。
+        // 延后至异步回调重试；共同loop和独立poll均可推进，关闭栈上不再接纳。
+        if (owner->m_acceptPending && !owner->m_stopping)
+        {
+            uv_async_send(&owner->m_postAsync);
+        }
     }
     owner->notifyCapacity();
     if (report)
