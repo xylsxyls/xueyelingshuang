@@ -119,7 +119,17 @@ CTaskThreadResult CTaskThreadState::start()
     {
         return CTaskThreadResult(CTaskThreadUnsupported);
     }
-    CTaskThreadResult result = CTaskResultAdapter::map(m_buckets.lockFreeMapConfigure(m_config.m_priorityMap));
+    // 通知构造可能以状态码报告原生资源失败，不能带着不可等待的后端启动消费循环。
+    CTaskThreadResult result = CTaskResultAdapter::semaphoreInitialization(m_wakeup);
+    if (result.m_status == CTaskThreadOk)
+    {
+        result = CTaskResultAdapter::semaphoreInitialization(m_completion);
+    }
+    if (result.m_status != CTaskThreadOk)
+    {
+        return result;
+    }
+    result = CTaskResultAdapter::map(m_buckets.lockFreeMapConfigure(m_config.m_priorityMap));
     if (result.m_status != CTaskThreadOk)
     {
         return result;

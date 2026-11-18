@@ -19,8 +19,8 @@ public:
     */
     ~CTaskPoolState();
 
-    /** 创建成员及控制线程
-    @return 完整启动结果
+    /** 检查控制通知资源后创建成员及控制线程
+    @return 完整启动结果；通知初始化失败不创建成员并保留原生错误码
     */
     CTaskThreadResult start();
 

@@ -80,7 +80,7 @@ public:
 
 };
 
-/** 每条工作线程的初始化参数；初始化复制，此后不允许并发修改策略捕获对象
+/** 每条工作线程的初始化参数；初始化复制并冻结配置，策略捕获对象须保持有效并自行同步并发访问
 */
 struct CTaskThreadManagerAPI CTaskThreadConfig
 {

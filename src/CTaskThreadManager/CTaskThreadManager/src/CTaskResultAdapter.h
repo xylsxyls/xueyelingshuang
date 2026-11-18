@@ -4,12 +4,19 @@
 #include <vector>
 
 class CTaskThread;
+class Semaphore;
 
 /** 基础库状态统一为管理器的逐调用结果，不丢弃提交位
 */
 class CTaskResultAdapter
 {
 public:
+    /** 检查已构造的本地通知后端，启动线程前拒绝原生等待资源初始化失败
+    @param [in] semaphore 尚未参与并发调用的通知对象，不在此函数重新初始化
+    @return 成功为Ok且未提交；失败保留内存、平台或系统状态及原生错误码
+    */
+    static CTaskThreadResult semaphoreInitialization(const Semaphore& semaphore);
+
     /** 内部竞争重试时让出执行机会，不持有容器保护或未提交资源
     @param [in,out] attempts 当前退避阶段，周期性归零
     @return Ok 表示可以继续；系统退避异常返回具体错误

@@ -1,10 +1,23 @@
 ﻿#include "CTaskResultAdapter.h"
+#include "Semaphore/SemaphoreAPI.h"
 #include <chrono>
 #include <thread>
 #include <system_error>
 #if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
 #include <intrin.h>
 #endif
+
+CTaskThreadResult CTaskResultAdapter::semaphoreInitialization(const Semaphore& semaphore)
+{
+    const SemaphoreResult result = semaphore.initializationResult();
+    if (result.status == SEMAPHORE_OK)
+    {
+        return CTaskThreadResult();
+    }
+    const CTaskThreadStatus status = result.status == SEMAPHORE_NO_MEMORY ? CTaskThreadNoMemory :
+        (result.status == SEMAPHORE_UNSUPPORTED ? CTaskThreadUnsupported : CTaskThreadSystemFailure);
+    return CTaskThreadResult(status, false, result.nativeError);
+}
 
 CTaskThreadResult CTaskResultAdapter::pause(uint32_t& attempts)
 {

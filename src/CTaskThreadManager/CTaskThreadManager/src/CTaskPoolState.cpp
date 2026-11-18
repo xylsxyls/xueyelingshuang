@@ -129,7 +129,13 @@ CTaskThreadResult CTaskPoolState::start()
     {
         return CTaskThreadResult(CTaskThreadUnsupported);
     }
-    CTaskThreadResult result = CTaskResultAdapter::map(m_workers.lockFreeMapConfigure(m_config.m_members));
+    // 控制通知不可用时先拒绝初始化，避免周期等待持续失败形成忙循环。
+    CTaskThreadResult result = CTaskResultAdapter::semaphoreInitialization(m_changed);
+    if (result.m_status != CTaskThreadOk)
+    {
+        return result;
+    }
+    result = CTaskResultAdapter::map(m_workers.lockFreeMapConfigure(m_config.m_members));
     if (result.m_status != CTaskThreadOk)
     {
         return result;

@@ -22,8 +22,8 @@ public:
     */
     ~CTaskThreadState();
 
-    /** 初始化容器和系统线程
-    @return 完整启动结果，失败回滚
+    /** 先检查原生通知资源，再初始化容器和系统线程
+    @return 完整启动结果，失败回滚；通知初始化失败保留原生错误码且不创建系统线程
     */
     CTaskThreadResult start();
 
