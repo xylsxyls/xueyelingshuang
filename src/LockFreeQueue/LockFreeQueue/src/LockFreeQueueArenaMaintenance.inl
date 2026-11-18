@@ -1,6 +1,8 @@
 ﻿#ifndef LOCK_FREE_QUEUE_ARENA_MAINTENANCE_INL
 #define LOCK_FREE_QUEUE_ARENA_MAINTENANCE_INL
 
+#include <algorithm>
+
 template <class T>
 typename LockFreeQueueArena<T>::Segment* LockFreeQueueArena<T>::acquireSegment(
     Record& record, bool initialOnly, LockFreeQueueResult* result)

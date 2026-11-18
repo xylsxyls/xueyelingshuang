@@ -37,17 +37,17 @@ public:
     typedef LockFreeQueueChannelSegment<Node> Segment;
     typedef LockFreeQueueArenaAuxiliary<T> Auxiliary;
 
-    /** 建立本对象确定的初始状态；所属类型约定其所有权与生命周期
+    /** 建立尚未分配存储的池，保存默认参数并清零保护、容量和回收状态
     */
     LockFreeQueueArena();
 
-    /** 结束本对象拥有或借用的状态；调用前必须满足所属类型的静止条件
+    /** 在外部静止且无登记租约后释放本池全部块、有效载荷及登记存储
     */
     ~LockFreeQueueArena();
 
     /** 校验并保存池参数；仅允许未初始化且外部静止时调用
     @param [in] config 节点数配置，最大容量仅允许 -1 或不小于初始容量；借用至返回
-    @return 成功或明确失败状态；失败不接纳当前载荷
+    @return Success表示配置已保存；InvalidState或InvalidConfiguration保持原配置，回调复制失败返回AllocationFailure
     */
     LockFreeQueueResult configure(const LockFreeQueuePoolConfig& config);
 
@@ -69,7 +69,7 @@ public:
     Block* creditOwner(Node* credit) const;
 
     /** 申请登记区和初始块；外部静止，失败完整回滚
-    @return 成功或明确失败状态；失败不接纳当前载荷
+    @return Success表示初始块和登记区均就绪；分配、原子支持或代次错误时回滚本次初始化
     */
     LockFreeQueueResult initialize();
 
@@ -79,20 +79,20 @@ public:
 
     /** 外部静止下替换扩容算法；空策略恢复默认，复制失败保留原策略
     @param [in] policy 线程安全、短小、不递归调用本池的策略；保存其副本
-    @return 成功或明确失败状态；失败不接纳当前载荷
+    @return Success表示替换完成；复制失败返回AllocationFailure并保留原策略
     */
     LockFreeQueueResult setGrowPolicy(const LockFreeQueueGrowPolicy& policy);
 
     /** 外部静止下替换缩容算法；空策略禁用自动缩容，已退役块继续回收
     @param [in] policy 线程安全、短小、不递归调用本池的策略；保存其副本
-    @return 成功或明确失败状态；失败不接纳当前载荷
+    @return Success表示替换完成；复制失败返回AllocationFailure并保留原策略
     */
     LockFreeQueueResult setShrinkPolicy(const LockFreeQueueShrinkPolicy& policy);
 
     /** 非阻塞申请一个登记槽；TLS 只缓存数字，不保存对象指针
     @param [in] wait 是否重试已观察空槽上的 CAS 竞争；全部槽被占用时仍返回资源不足
     @param [out] result 可空；失败区分 try 竞争 Busy 与登记额度 CapacityLimit
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 独占登记槽，持有到leave或上下文release；未初始化、登记已满或尝试竞争失败时返回nullptr
     */
     Record* enter(bool wait = false, LockFreeQueueResult* result = nullptr);
 
@@ -106,13 +106,13 @@ public:
     /** 先复用安全节点，必要时同步评估增长；失败不接纳载荷
     @param [in,out] record 本次操作独占的登记槽；借用至返回
     @param [out] result 申请结果
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 本调用独占的节点或外部额度标识；失败返回nullptr并填写result
     */
     Node* acquireNode(Record& record, LockFreeQueueResult& result);
 
     /** 归还普通节点或借用项额度；consumer 路径同时提交消费计数
     @param [in,out] node 本次拥有的非空额度；entry-only 模式中为不解引用的块地址编码
-    @param [in,out] producer 空闲上下文或可空生产者保护记录；借用至返回
+    @param [in,out] producer 可空的本线程独占生产者记录；nullptr为唯一消费者归还，借用至返回
     @param [in] externalOwner 非空表示未构造 T 的外部载荷额度，跳过节点读取和析构
     */
     void releaseNode(Node* node, Record* producer = nullptr, Block* externalOwner = nullptr);
@@ -126,7 +126,7 @@ public:
 
     /** 唯一消费者归还同一块中已经取出的外部额度，省去逐项分组
     @param [in,out] block 所有额度共同所属的仍存活块；必须处于 entry-only 模式
-    @param [in] count 尚未归还的额度数，1 至 64
+    @param [in] count 尚未归还的同块额度数，1..256；不得重复归还
     */
     void releaseEntryCredits(Block& block, size_t count);
 
@@ -136,16 +136,16 @@ public:
     void releaseCache(Record& record);
 
     /** 申请独占发布段；初始化或唯一消费者可仅使用初始块
-    @param [in,out] record 本次操作独占的登记槽；借用至返回
+    @param [in,out] record 生产者独占登记，initialOnly时允许唯一消费者使用临时记录；借用至返回
     @param [in] initialOnly 是否只从不可摘除的初始块领取发布段
     @param [out] result 申请结果；指针形式允许 nullptr 表示忽略结果
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 已重置且本调用独占的段；失败返回nullptr并按需填写result
     */
     Segment* acquireSegment(Record& record, bool initialOnly = false, LockFreeQueueResult* result = nullptr);
 
     /** 归还未发布或已证明无保护的发布段；归还后不得再解引用
     @param [in,out] segment 受保护或独占的发布段；借用至返回
-    @param [in,out] producer 空闲上下文或可空生产者保护记录；借用至返回
+    @param [in,out] producer 可空的本线程独占生产者记录；nullptr为唯一消费者归还，借用至返回
     */
     void releaseSegment(Segment* segment, Record* producer = nullptr);
 
@@ -156,7 +156,7 @@ public:
 
     /** 唯一消费者按访问预算扫描退役段；被保护段轮转，不能阻塞其他段
     @param [in] budget 本轮访问类别或退役对象次数上限，零不做工作
-    @return 上述操作对应的数值、状态或弱一致快照
+    @return 本轮实际安全归还的发布段数量，不是载荷节点数量
     */
     size_t collectSegments(size_t budget);
 
@@ -167,17 +167,17 @@ public:
 
     /** 唯一消费者执行有预算回收；不启动后台线程，纯空闲需要 owner 主动调用
     @param [in] budget 本轮访问类别或退役对象次数上限，零不做工作
-    @return 上述操作对应的数值、状态或弱一致快照
+    @return 本轮策略或时钟状态、从空闲登记回收的缓存额度数及物理释放的节点容量
     */
     LockFreeQueueMaintenanceResult maintain(size_t budget);
 
     /** 取得弱一致池资源快照；发布 CAS 重试统计不包含分配器全部竞争
-    @return 上述操作对应的数值、状态或弱一致快照
+    @return 容量、可复用量、已用量、保留字节和诊断计数的弱一致快照
     */
     LockFreeQueuePoolStatistics statistics() const;
 
     /** 观察唯一消费者提交的模计数；与生产者基数配合计算容量和 size
-    @return 上述操作对应的数值、状态或弱一致快照
+    @return 唯一消费者累计归还数量的size_t模计数；固定EntryOnly池从初始块读取
     */
     size_t consumed() const;
 
@@ -187,27 +187,27 @@ public:
     size_t published() const;
 
     /** 观察初始化状态；不能与 init 或 destroy 并发
-    @return 是否满足上述条件或完成上述操作
+    @return true表示初始块存在且本代初始化成功
     */
     bool initialized() const;
 
     /** 核实当前目标使用的原子宽度是否由无锁后端支持
-    @return 是否满足上述条件或完成上述操作
+    @return true表示当前实例使用的发布、计数和保护原子均由无锁后端支持
     */
     bool atomicsLockFree() const;
 
     /** 观察是否配置缩容回调；策略更换必须外部静止
-    @return 是否满足上述条件或完成上述操作
+    @return true表示保存了非空缩容策略
     */
     bool shrinkEnabled() const;
 
     /** 判断唯一消费者是否需摊销策略或待释放块维护
-    @return 是否满足上述条件或完成上述操作
+    @return true表示存在缩容策略或尚待释放的退役块
     */
     bool automaticMaintenanceNeeded() const;
 
     /** 取得生命周期内不可自动摘除的基础块；借用至 destroy
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 借用的初始块；未初始化返回nullptr，非空地址有效至静止destroy
     */
     Block* initialBlock() const;
 
@@ -329,7 +329,7 @@ private:
 
     /** 统计位图中置位的数量
     @param [in] bits 待统计位图
-    @return 上述操作对应的数值、状态或弱一致快照
+    @return bits中置位的数量，范围0..32
     */
     static size_t bitCount(uint32_t bits);
 
@@ -342,31 +342,31 @@ private:
 
     /** 取得非零位图最低置位下标
     @param [in] bit 非零位图
-    @return 上述操作对应的数值、状态或弱一致快照
+    @return 最低置位的零起始下标，范围0..31；调用方保证bit非零
     */
     static size_t lowBit(uint32_t bit);
 
     /** 将诊断计数饱和递增；不得回绕
-    @param [in] value 待复制的载荷或待更新的原子计数；借用至本次调用返回
+    @param [in,out] value 待饱和递增的原子诊断计数；借用至返回
     */
     static void increment(std::atomic<uint64_t>& value);
 
     /** 读取单调毫秒时钟；不可用时返回零
-    @return 上述操作对应的数值、状态或弱一致快照
+    @return 单调时钟毫秒值；时钟失败或无法取得有效值时返回0
     */
     static uint64_t now();
 
     /** 校验节点数、负上限、登记规模与寻址溢出
     @param [in] config 节点数配置，最大容量仅允许 -1 或不小于初始容量；借用至返回
     @param [out] limit 本机寻址与配置共同限制的最大物理节点数
-    @return 是否满足上述条件或完成上述操作
+    @return true表示配置可寻址且limit有效；false表示配置不合法
     */
     static bool validate(const LockFreeQueuePoolConfig& config, size_t& limit);
 
     /** 一次申请块描述、节点和发布段存储；仅初始化分配位图
     @param [in] amount 待申请的物理节点数，已取得相同数量的额度
     @param [in] initial 是否基础块，基础块预留一个哨兵额度
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 本池拥有的新块，失败返回nullptr；发布前由申请者独占，释放须调用deleteBlock
     */
     Block* createBlock(size_t amount, bool initial);
 
@@ -378,28 +378,28 @@ private:
 
     /** 从当前独占登记槽私有批次取出一个未构造载荷的节点
     @param [in,out] record 本次操作独占的登记槽；借用至返回
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 本调用领取的节点或额度标识；私有缓存为空时返回nullptr
     */
     Node* takeCached(Record& record);
 
     /** 从受保护的开放块领取有界节点批次；关闭竞争必须回滚
     @param [in,out] block 受保护或调用者独占的块；借用至返回
     @param [in,out] record 本次操作独占的登记槽；借用至返回
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 从本块领取的节点或额度标识；无可用额度或关闭竞争失败时返回nullptr
     */
     Node* takeBlock(Block* block, Record& record);
 
     /** 沿受保护块链查找实际可用位图；不将一次 CAS 失败当作满池
     @param [in,out] record 本次操作独占的登记槽；借用至返回
     @param [out] interrupted 是否遇到正在摘除的拓扑，需要稍后重试
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 已领取的节点或额度标识；遍历中断或未发现可领取存储时返回nullptr
     */
     Node* findNode(Record& record, bool& interrupted);
 
     /** 发布保护并验证块链头；重试只依赖竞争进展
     @param [in,out] record 本次操作独占的登记槽；借用至返回
     @param [out] interrupted 是否遇到正在摘除的拓扑，需要稍后重试
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 由record主保护覆盖的链头；无块或验证被竞争中断时返回nullptr
     */
     Block* protectedFirst(Record& record, bool& interrupted);
 
@@ -407,31 +407,31 @@ private:
     @param [in,out] block 受保护或调用者独占的块；借用至返回
     @param [in,out] record 本次操作独占的登记槽；借用至返回
     @param [out] interrupted 是否遇到正在摘除的拓扑，需要稍后重试
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 由record主保护接手的后继块；链尾或验证被中断时返回nullptr
     */
     Block* protectedNext(Block* block, Record& record, bool& interrupted);
 
     /** 按次保护、主保护顺序扫描；避免遗漏保护转交窗口
     @param [in,out] block 受保护或调用者独占的块；借用至返回
-    @return 是否满足上述条件或完成上述操作
+    @return true表示至少一条主保护或次保护仍引用该块，不能释放
     */
     bool protectedBlock(Block* block) const;
 
     /** 检查发布段保护；只可取得已空闲登记槽后清除其旧提示保护
     @param [in,out] segment 受保护或独占的发布段；借用至返回
-    @return 是否满足上述条件或完成上述操作
+    @return true表示活跃或绑定登记仍保护该段；false表示本次扫描未发现此类保护
     */
     bool protectedSegment(Segment* segment) const;
 
     /** 检查整块空闲候选；释放还必须关闭、摘除并通过保护扫描
     @param [in,out] block 受保护或调用者独占的块；借用至返回
-    @return 是否满足上述条件或完成上述操作
+    @return true表示节点额度及发布段均已归还；仍须另行验证摘链和保护条件
     */
     bool completelyFree(Block* block) const;
 
     /** 尝试归还不活跃登记槽的私有缓存；不等待暂停生产者
     @param [in,out] caller 当前申请者独占记录，不回收它自身的缓存
-    @return 是否满足上述条件或完成上述操作
+    @return true表示至少归还了一个其他空闲登记的缓存批次；不会等待活跃登记
     */
     bool reclaimCaches(Record& caller);
 
@@ -443,19 +443,19 @@ private:
     /** 调用一次策略、原子预留额度并发布增长块；失败退还预留
     @param [in,out] record 可空的本线程登记；指定 push 或 tryPush 的竞争重试方式
     @param [in] required 已实际领取失败时为 true，不用弱一致空闲统计取消必要扩容
-    @return 成功或明确失败状态；失败不接纳当前载荷
+    @return Success表示本次增长已完成或已无增长需要；失败返回策略、资源、竞争或分配状态
     */
     LockFreeQueueResult grow(Record* record = nullptr, bool required = false);
 
     /** 合成可复用空闲快照；混合快照溢出按零处理，不作为位图接纳许可
-    @return 上述操作对应的数值、状态或弱一致快照
+    @return 当前可复用节点额度的弱一致数量，不作为独占领取凭据
     */
     size_t available() const;
 
     /** 复用或申请有界辅助发布段；不突破登记槽总量限制
     @param [in,out] record 本次操作独占的登记槽；借用至返回
     @param [out] result 申请结果；指针形式允许 nullptr 表示忽略结果
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 本调用独占且已重置的辅助段；失败返回nullptr并按需填写result
     */
     Segment* acquireAuxiliary(Record& record, LockFreeQueueResult* result);
 
@@ -463,7 +463,7 @@ private:
     @param [in,out] segment 受保护或独占的发布段；借用至返回
     @param [out] result 申请结果；指针形式允许 nullptr 表示忽略结果
     @param [in,out] record 可空的本线程登记；指定竞争重试方式
-    @return 是否满足上述条件或完成上述操作
+    @return true表示已写入非零新代次；false表示竞争中断或序号耗尽，并按需填写result
     */
     bool assignGeneration(Segment* segment, LockFreeQueueResult* result, Record* record = nullptr);
 

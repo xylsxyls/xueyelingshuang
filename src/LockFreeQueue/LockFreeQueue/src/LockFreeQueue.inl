@@ -1,6 +1,8 @@
 ﻿#ifndef LOCK_FREE_QUEUE_INL
 #define LOCK_FREE_QUEUE_INL
 
+#include <algorithm>
+
 #include <thread>
 
 template <class T>
@@ -99,6 +101,21 @@ LockFreeQueueResult LockFreeQueue<T>::configureProducerCounters(bool distributed
         return LockFreeQueueInvalidState;
     }
     m_distributedCounters = distributed;
+    return LockFreeQueueSuccess;
+}
+
+template <class T>
+LockFreeQueueResult LockFreeQueue<T>::configureConsumerYieldInterval(uint32_t operations)
+{
+    if (m_arena.initialized())
+    {
+        return LockFreeQueueInvalidState;
+    }
+    if (operations == 0 || operations > 65536)
+    {
+        return LockFreeQueueInvalidConfiguration;
+    }
+    m_channel.configureConsumerYieldInterval(operations);
     return LockFreeQueueSuccess;
 }
 
@@ -684,7 +701,7 @@ bool LockFreeQueue<T>::popReadyEntryPrefix(LockFreeQueueEntry<T>** output, size_
         }
         return true;
     }
-    return consumeEntryPrefix(node, output, maximum, consumed);
+    return consumeEntryPrefix(node, output, (std::min)(maximum, size_t(64)), consumed);
 }
 
 template <class T>
@@ -701,7 +718,24 @@ bool LockFreeQueue<T>::probeReadyEntryPrefix(LockFreeQueueEntry<T>** output, siz
     {
         return false;
     }
-    return consumeEntryPrefix(node, output, maximum, consumed);
+    return consumeEntryPrefix(node, output, (std::min)(maximum, size_t(64)), consumed);
+}
+
+template <class T>
+bool LockFreeQueue<T>::probeReadyEntrySpan(LockFreeQueueEntry<T>** output, size_t maximum, size_t& consumed)
+{
+    consumed = 0;
+    if (maximum == 0)
+    {
+        return false;
+    }
+    SegmentPool pool(m_arena, nullptr);
+    Node* node = m_channel.front(pool);
+    if (node == nullptr || !m_arena.entryOnly())
+    {
+        return false;
+    }
+    return consumeEntryPrefix(node, output, (std::min)(maximum, size_t(256)), consumed);
 }
 
 template <class T>
@@ -721,7 +755,7 @@ bool LockFreeQueue<T>::consumeEntryPrefix(Node* node, LockFreeQueueEntry<T>** ou
     {
         // 固定外部额度不需要读取每条 Entry 的 owner；直接输出已去标记的稳定地址。
         // 在全部地址写出后才提交消费和归还额度，保持原有所有权交接点。
-        consumed = m_channel.readyPrefixAs(output, (std::min)(maximum, size_t(64)), uintptr_t(2));
+        consumed = m_channel.readyPrefixAs(output, maximum, uintptr_t(2));
         m_channel.consume(consumed);
         releaseBatch(*fixed, consumed);
     }

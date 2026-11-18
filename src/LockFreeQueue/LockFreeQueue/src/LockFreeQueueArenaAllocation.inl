@@ -1,6 +1,8 @@
 ﻿#ifndef LOCK_FREE_QUEUE_ARENA_ALLOCATION_INL
 #define LOCK_FREE_QUEUE_ARENA_ALLOCATION_INL
 
+#include <algorithm>
+
 template <class T>
 typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::takeCached(Record& record)
 {

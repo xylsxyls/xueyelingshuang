@@ -10,23 +10,23 @@ public:
     typedef typename LockFreeQueueArena<T>::Segment Segment;
     typedef typename LockFreeQueueArena<T>::Record Record;
 
-    /** 建立本对象确定的初始状态；所属类型约定其所有权与生命周期
+    /** 借用节点池和可空生产者记录，适配单次发布或消费所需的段操作
     @param [in,out] arena 生命周期覆盖适配器的节点池；不转移所有权
-    @param [in,out] record 本次操作独占的登记槽；借用至返回
+    @param [in,out] record 可空的独占登记槽；nullptr表示消费者适配或无须清理，非空借用至适配器析构
     */
     LockFreeQueueChannelPool(LockFreeQueueArena<T>& arena, Record* record);
 
     /** 取得已清空的独占发布段；失败保留原载荷所有权
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 本次独占且已重置的段；无生产者登记或申请失败返回nullptr，状态通过result读取
     */
     Segment* acquire();
 
     /** 唯一消费者从不可摘除的初始块取得发布段
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 初始块中本次独占的段；无可用安全段时返回nullptr，不创建持久登记
     */
     Segment* acquireInitial();
 
-    /** 归还借用资源；生产者上下文须由单一执行流操作
+    /** 归还本调用尚未发布的独占候选段，不进入消费者退役链
     @param [in,out] segment 受保护或独占的发布段；借用至返回
     */
     void release(Segment* segment);
@@ -37,7 +37,7 @@ public:
     void retire(Segment* segment);
 
     /** 取得最近一次发布段申请结果
-    @return 成功或明确失败状态；失败不接纳当前载荷
+    @return 最近acquire的结果；尚未acquire时为ResourceUnavailable，acquireInitial不更新该字段
     */
     LockFreeQueueResult result() const;
 
@@ -77,14 +77,14 @@ class LockFreeQueueArenaLease
 public:
     typedef typename LockFreeQueueArena<T>::Record Record;
 
-    /** 建立本对象确定的初始状态；所属类型约定其所有权与生命周期
+    /** 借用登记记录并建立作用域守卫；不重新申请租约
     @param [in,out] arena 生命周期覆盖适配器的节点池；不转移所有权
-    @param [in,out] record 本次操作独占的登记槽；借用至返回
+    @param [in,out] record 可空的独占登记槽；nullptr表示消费者适配或无须清理，非空借用至适配器析构
     @param [in] releaseLease 是否在离开时归还登记租约
     */
     LockFreeQueueArenaLease(LockFreeQueueArena<T>& arena, Record* record, bool releaseLease);
 
-    /** 结束本对象拥有或借用的状态；调用前必须满足所属类型的静止条件
+    /** 清除分配保护并按配置归还租约，保留可由回收者安全清理的发布提示保护
     */
     ~LockFreeQueueArenaLease();
 

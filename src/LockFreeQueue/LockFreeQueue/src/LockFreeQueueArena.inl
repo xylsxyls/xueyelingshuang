@@ -1,6 +1,8 @@
 ﻿#ifndef LOCK_FREE_QUEUE_ARENA_INL
 #define LOCK_FREE_QUEUE_ARENA_INL
 
+#include <algorithm>
+
 template <class T>
 LockFreeQueueArena<T>::LockFreeQueueArena() :
 m_entryOnly(false), m_records(nullptr), m_traversal(nullptr), m_recordStorage(nullptr), m_recordBytes(0), m_auxiliary(nullptr),

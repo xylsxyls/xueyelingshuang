@@ -1,6 +1,8 @@
 ﻿#ifndef LOCK_FREE_QUEUE_CHANNEL_INL
 #define LOCK_FREE_QUEUE_CHANNEL_INL
 
+#include <algorithm>
+
 template <class Node, class SegmentPool, class RecordType>
 LockFreeQueueChannel<Node, SegmentPool, RecordType>::LockFreeQueueChannel(Segment* first) :
 m_cancelableReservations(false),
@@ -9,6 +11,8 @@ m_head(first),
 m_headIndex(0),
 m_frontCell(first != nullptr ? &first->m_cells[0] : nullptr),
 m_pendingSeal(nullptr),
+m_consumerRemaining(4096),
+m_consumerInterval(4096),
 m_tail(first)
 {
 
@@ -24,8 +28,47 @@ void LockFreeQueueChannel<Node, SegmentPool, RecordType>::reset(Segment* first, 
     m_headIndex = 0;
     m_frontCell = first != nullptr ? &first->m_cells[0] : nullptr;
     m_pendingSeal = nullptr;
-    m_consumerProgress = LockFreeQueueProgress();
+    m_consumerRemaining = m_consumerInterval;
     m_tail.store(first, std::memory_order_relaxed);
+}
+
+template <class Node, class SegmentPool, class RecordType>
+void LockFreeQueueChannel<Node, SegmentPool, RecordType>::configureConsumerYieldInterval(uint32_t operations)
+{
+    m_consumerInterval = operations;
+    m_consumerRemaining = operations;
+}
+
+template <class Node, class SegmentPool, class RecordType>
+void LockFreeQueueChannel<Node, SegmentPool, RecordType>::advanceConsumer(size_t count)
+{
+    if (count == 1)
+    {
+        if (--m_consumerRemaining == 0)
+        {
+            yieldConsumer();
+        }
+    }
+    else if (count >= m_consumerRemaining)
+    {
+        yieldConsumer();
+    }
+    else
+    {
+        m_consumerRemaining -= static_cast<uint32_t>(count);
+    }
+}
+
+template <class Node, class SegmentPool, class RecordType>
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
+void LockFreeQueueChannel<Node, SegmentPool, RecordType>::yieldConsumer()
+{
+    m_consumerRemaining = m_consumerInterval;
+    std::this_thread::yield();
 }
 
 template <class Node, class SegmentPool, class RecordType>
@@ -38,21 +81,39 @@ template <class Node, class SegmentPool, class RecordType>
 template <class Output>
 size_t LockFreeQueueChannel<Node, SegmentPool, RecordType>::readyPrefixAs(Output** nodes, size_t maximum, uintptr_t clearMask) const
 {
-    if (m_head == nullptr)
+    // 本函数不移动唯一消费者的游标；冻结本次段地址和起点，避免每个原子读取后重复加载。
+    Segment* const head = m_head;
+    const size_t begin = m_headIndex;
+    if (head == nullptr)
     {
         return 0;
     }
-    const size_t count = (std::min)(maximum, Segment::kCellCount - m_headIndex);
+    const size_t count = (std::min)(maximum, Segment::kCellCount - begin);
     size_t ready = 0;
+    // 先处理至多三个未对齐位置，使后续四项不会跨越16列转置的列边界。
+    while (ready < count && ((begin + ready) & 3) != 0)
+    {
+        const uintptr_t bits = head->m_cells[Segment::mapped(begin + ready)].load(std::memory_order_acquire);
+        if (bits <= 1)
+        {
+            return ready;
+        }
+        if (nodes != nullptr)
+        {
+            nodes[ready] = reinterpret_cast<Output*>(bits & ~clearMask);
+        }
+        ++ready;
+    }
     // 四个独立 acquire 读取重叠缓存访问；只输出首个未就绪位置之前的连续前缀。
     // 预读的是整个段生命周期内稳定的原子单元，不解引用尚未交接的载荷。
     for (; ready + 4 <= count; ready += 4)
     {
-        const size_t position = m_headIndex + ready;
-        const uintptr_t first = m_head->m_cells[Segment::mapped(position)].load(std::memory_order_acquire);
-        const uintptr_t second = m_head->m_cells[Segment::mapped(position + 1)].load(std::memory_order_acquire);
-        const uintptr_t third = m_head->m_cells[Segment::mapped(position + 2)].load(std::memory_order_acquire);
-        const uintptr_t fourth = m_head->m_cells[Segment::mapped(position + 3)].load(std::memory_order_acquire);
+        // mapped采用16乘16转置；已对齐的四个逻辑位置对应固定16单元间距。
+        const size_t mapped = Segment::mapped(begin + ready);
+        const uintptr_t first = head->m_cells[mapped].load(std::memory_order_acquire);
+        const uintptr_t second = head->m_cells[mapped + 16].load(std::memory_order_acquire);
+        const uintptr_t third = head->m_cells[mapped + 32].load(std::memory_order_acquire);
+        const uintptr_t fourth = head->m_cells[mapped + 48].load(std::memory_order_acquire);
         if (first <= 1)
         {
             return ready;
@@ -88,7 +149,7 @@ size_t LockFreeQueueChannel<Node, SegmentPool, RecordType>::readyPrefixAs(Output
     }
     for (; ready < count; ++ready)
     {
-        const uintptr_t bits = m_head->m_cells[Segment::mapped(m_headIndex + ready)].load(std::memory_order_acquire);
+        const uintptr_t bits = head->m_cells[Segment::mapped(begin + ready)].load(std::memory_order_acquire);
         if (bits <= 1)
         {
             break;
@@ -111,13 +172,17 @@ typename LockFreeQueueChannel<Node, SegmentPool, RecordType>::Segment* LockFreeQ
         const bool changed = record.m_hazard.load(std::memory_order_relaxed) != segment;
         if (changed)
         {
+            // 换保护对象时先使本地提示失效；即使此次验证失败，也不能沿用上一段的提示。
+            record.m_generation = 0;
             record.m_hazard.store(segment);
         }
         // SC publication/validation pairs with detach and the pool's SC scan.
         // A recycled address is safe too: no old hint survives a cleared hazard.
         if (m_tail.load() == segment)
         {
-            if (record.m_generation != segment->m_generation)
+            // 保持同一有效hazard期间段不能被复用；无需逐项读取与预约计数共行的不可变代次。
+            // 空闲保护被清除后changed必为true，0标记要求重新验证和取得当前代次。
+            if (record.m_generation == 0)
             {
                 record.m_hint = segment->m_tail.load(std::memory_order_acquire);
                 record.m_generation = segment->m_generation;
@@ -312,7 +377,7 @@ bool LockFreeQueueChannel<Node, SegmentPool, RecordType>::possiblyReady() const
 template <class Node, class SegmentPool, class RecordType>
 Node* LockFreeQueueChannel<Node, SegmentPool, RecordType>::front(SegmentPool& pool)
 {
-    m_consumerProgress.advance();
+    advanceConsumer();
     if (m_cancelableReservations)
     {
         if (m_frontCell != nullptr)
@@ -459,7 +524,7 @@ void LockFreeQueueChannel<Node, SegmentPool, RecordType>::consume(size_t count)
 {
     if (count > 1)
     {
-        m_consumerProgress.advance(count - 1);
+        advanceConsumer(count - 1);
     }
     // Sole consumer invokes this only after front succeeded and assignment
     // completed. No cell is cleared until the entire detached segment is safe.
@@ -591,7 +656,7 @@ Node* LockFreeQueueChannel<Node, SegmentPool, RecordType>::frontReserved(Segment
             }
         }
         // 未完成的生产者不构成队头阻塞；取消后它必须在新位置重新发布。
-        m_consumerProgress.advance();
+        advanceConsumer();
         ++m_headIndex;
         m_frontCell = m_headIndex < Segment::kCellCount ? &m_head->m_cells[Segment::mapped(m_headIndex)] : nullptr;
     }
@@ -613,7 +678,7 @@ bool LockFreeQueueChannel<Node, SegmentPool, RecordType>::publishedBefore(Segmen
             }
         }
         // 大量已取消预约的有限快照扫描也定期让步，不持续独占消费者时间片。
-        m_consumerProgress.advance(end - begin);
+        advanceConsumer(end - begin);
         if (segment == boundary)
         {
             return false;

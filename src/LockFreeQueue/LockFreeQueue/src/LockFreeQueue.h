@@ -13,7 +13,7 @@ class alignas(8) LockFreeQueue
 #endif
 {
 public:
-    /** 建立本对象确定的初始状态；所属类型约定其所有权与生命周期
+    /** 建立空通道并尝试默认初始化；分配失败时保留未初始化状态，需通过tryInit取得具体错误
     */
     LockFreeQueue();
 
@@ -22,7 +22,7 @@ public:
     */
     explicit LockFreeQueue(bool initializeImmediately);
 
-    /** 结束本对象拥有或借用的状态；调用前必须满足所属类型的静止条件
+    /** 在所有生产者调用、上下文及消费者均结束后释放队列存储；外部Entry本体仍由调用方销毁
     */
     ~LockFreeQueue();
 
@@ -42,7 +42,7 @@ public:
     bool init();
 
     /** 清空旧代并重新初始化；外部静止，失败保持不可接纳状态
-    @return 成功或明确失败状态；失败不接纳当前载荷
+    @return Success表示初始存储和通道均就绪；失败清理部分申请并保持未初始化
     */
     LockFreeQueueResult tryInit();
 
@@ -56,7 +56,7 @@ public:
 
     /** 设置节点池参数；仅允许未初始化且外部静止时调用
     @param [in] config 节点数配置，最大容量仅允许 -1 或不小于初始容量；借用至返回
-    @return 成功或明确失败状态；失败不接纳当前载荷
+    @return Success表示配置已保存；InvalidState或InvalidConfiguration保持原配置，回调复制失败返回AllocationFailure
     */
     LockFreeQueueResult configurePool(const LockFreeQueuePoolConfig& config);
 
@@ -65,6 +65,13 @@ public:
     @return 已初始化则拒绝，成功后仍保持近似 size 和精确静止计数语义
     */
     LockFreeQueueResult configureProducerCounters(bool distributed);
+
+    /** 设置唯一消费者的协作让步间隔；仅限未初始化且外部静止时调用
+    @param [in] operations 协作记账阈值，1..65536，默认4096；按单项或整批结算，批次可越过阈值
+    批次达到剩余额度时只yield一次并重置预算，超额不结转；不承诺每N项或固定时间让步
+    @return Success表示设置完成；已初始化返回InvalidState，越界返回InvalidConfiguration，失败保留原值
+    */
+    LockFreeQueueResult configureConsumerYieldInterval(uint32_t operations);
 
     /** 静止且未初始化时选择可取消预约的 FIFO；默认关闭，旧发布 CAS 排序保持不变
     @param [in] enabled true 时重叠投递按最终有效预约排序，未填充预约可被消费者取消并由投递方重试
@@ -80,27 +87,27 @@ public:
 
     /** 外部静止下替换扩容算法；空策略恢复默认，复制失败保留原策略
     @param [in] policy 线程安全、短小、不递归调用本池的策略；保存其副本
-    @return 成功或明确失败状态；失败不接纳当前载荷
+    @return Success表示替换完成；复制失败返回AllocationFailure并保留原策略
     */
     LockFreeQueueResult setGrowPolicy(const LockFreeQueueGrowPolicy& policy);
 
     /** 外部静止下替换缩容算法；空策略禁用自动缩容，已退役块继续回收
     @param [in] policy 线程安全、短小、不递归调用本池的策略；保存其副本
-    @return 成功或明确失败状态；失败不接纳当前载荷
+    @return Success表示替换完成；复制失败返回AllocationFailure并保留原策略
     */
     LockFreeQueueResult setShrinkPolicy(const LockFreeQueueShrinkPolicy& policy);
 
     /** 由本线程复制并发布一个元素；竞争持续重试并定期让出执行机会
     容量不足持续重试，超过4096次后每次等待1毫秒；不返回竞争或满载失败
     单线程Wasm不能阻塞等待消费者，容量重试耗尽后返回false；勿在唯一消费者线程向满池push
-    @param [in] value 待复制的载荷或待更新的原子计数；借用至本次调用返回
+    @param [in] value 待复制的载荷；借用至本次调用返回
     @return true已提交；false为初始化、分配或复制等错误，不传播异常
     */
     bool push(const T& value);
 
     /** 尝试复制并发布；竞争失败为 Busy，额度已满为 CapacityLimit；失败未接纳
     单线程Wasm无法完成容量等待时返回ResourceUnavailable；需要等待的业务应在宿主异步重试
-    @param [in] value 待复制的载荷或待更新的原子计数；借用至本次调用返回
+    @param [in] value 待复制的载荷；借用至本次调用返回
     @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
     @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
     @return 成功或明确失败状态；失败不接纳当前载荷
@@ -135,7 +142,7 @@ public:
     @param [in,out] producer 未绑定的上下文；成功后借用本队列，须在换代前 release
     @param [in] retryContention true持续重试CAS竞争，false允许返回未提交竞争状态
     @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
-    @return 成功或明确失败状态；失败不接纳当前载荷
+    @return Success表示取得独占登记租约；失败时producer仍未绑定，已绑定时返回InvalidState
     */
     LockFreeQueueResult tryAcquireProducer(LockFreeQueueProducer<T>& producer,
         bool retryContention = false, bool retryCapacity = false);
@@ -184,6 +191,14 @@ public:
     */
     bool probeReadyEntryPrefix(LockFreeQueueEntry<T>** output, size_t maximum, size_t& consumed);
 
+    /** 唯一消费者显式扫描一个段内的就绪Entry前缀，固定外部额度模式至多256项
+    @param [out] output 可空，非空时须容纳min(maximum,256)个地址
+    @param [in] maximum 本次预算；可增长池仍使用至多64项的通用回收路径
+    @param [out] consumed 实际消费并归还额度的数量
+    @return 是否取得前缀；FIFO、所有权及维护契约与probeReadyEntryPrefix相同
+    */
+    bool probeReadyEntrySpan(LockFreeQueueEntry<T>** output, size_t maximum, size_t& consumed);
+
     /** 唯一消费者只读探测发布首槽，不消费、不维护；不得与其他消费者操作并发
     @return false 为本次空观察；true 也可能是段边界，须调用 pop 系列确认；不能作为销毁许可
     */
@@ -211,7 +226,7 @@ public:
     LockFreeQueuePoolStatistics poolStatistics() const;
 
     /** 核实当前目标使用的原子宽度是否由无锁后端支持
-    @return 是否满足上述条件或完成上述操作
+    @return true表示当前实例使用的发布、计数和保护原子均由无锁后端支持
     */
     bool atomicsLockFree() const;
 
@@ -224,8 +239,8 @@ private:
 
     /** 消费已确认的外部 Entry 前缀，空队列探测不进入本路径
     @param [in] node 当前已发布首项的编码地址，要求外部载荷模式
-    @param [out] output 可空，非空时容纳 min(maximum,64) 个 Entry 地址
-    @param [in] maximum 非零本轮预算
+    @param [out] output 可空；固定EntryOnly池非空时容纳maximum个地址，可增长池至多64个
+    @param [in] maximum 已截断的非零预算，范围1..256
     @param [out] consumed 成功消费数量，调用前为零
     @return 是否消费至少一项
     */
@@ -243,7 +258,7 @@ private:
     static void publicationFence();
 
     /** 申请并构造载荷后在槽位 CAS 发布；失败回滚节点及私有缓存
-    @param [in] value 待复制的载荷或待更新的原子计数；借用至本次调用返回
+    @param [in] value 待复制的载荷；借用至本次调用返回
     @param [in] wait true 持续重试纯竞争，false 可在第一次竞争失败时返回
     @param [in,out] retained 可空的已绑定登记槽；非空时调用者保留租约
     @return 成功或明确失败状态；失败不接纳当前载荷
@@ -330,6 +345,7 @@ private:
     /** 完成已取得首项的输出、消费和有界维护；空返回路径不进入此函数
     @param [in,out] node 唯一消费者借用的非空首节点
     @param [out] output 可为空的输出；赋值失败时保留首项
+    @param [out] consumed 可空；成功提交后写1，输出赋值异常时不写入
     @return 成功消费一项
     */
     bool consumeNode(Node* node, T* output, size_t* consumed = nullptr);
@@ -354,9 +370,9 @@ private:
     */
     void releaseBatch(Node* const* nodes, Block* const* externalOwners, size_t count);
 
-    /** 归还已知同一块的外部额度，并保持原有自动维护预算
+    /** 归还已知同一块的外部额度；整批累计至64时执行一次预算8维护并保留余数
     @param [in,out] owner 已取出 Entry 的共同归属块；必须处于 entry-only 模式
-    @param [in] count 有效额度数，0 至 64
+    @param [in] count 有效额度数，0 至 256
     */
     void releaseBatch(Block& owner, size_t count);
 
@@ -366,14 +382,14 @@ private:
     void releaseProducer(Record& record);
 
     /** 按赋值异常保证选择 noexcept 移动或复制；不提交消费
-    @param [out] output 接收值；pop 可为 nullptr，赋值抛异常时可能已被部分修改
+    @param [out] output 已验证存在的输出引用；赋值抛异常时可能已被部分修改
     @param [in,out] source 队列仍拥有的载荷；仅在 noexcept 移动路径改变其内容
     @param [in] moveTag 编译期赋值策略标签
     */
     static void assign(T& output, T& source, std::true_type moveTag);
 
     /** 按赋值异常保证选择 noexcept 移动或复制；不提交消费
-    @param [out] output 接收值；pop 可为 nullptr，赋值抛异常时可能已被部分修改
+    @param [out] output 已验证存在的输出引用；赋值抛异常时可能已被部分修改
     @param [in,out] source 队列仍拥有的载荷；仅在 noexcept 移动路径改变其内容
     @param [in] copyTag 编译期赋值策略标签
     */

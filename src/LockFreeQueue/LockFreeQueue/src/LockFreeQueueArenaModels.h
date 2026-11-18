@@ -21,7 +21,7 @@ public:
     LockFreeQueueAtomic<uintptr_t> m_bits;
 
 public:
-    /** 建立本对象确定的初始状态；所属类型约定其所有权与生命周期
+    /** 建立尚未分配或占用辅助段的空槽
     */
     LockFreeQueueArenaAuxiliary();
 
@@ -34,38 +34,39 @@ struct LockFreeQueueArenaNode
 public:
     // Blocks are aligned to 64 bytes. Bit zero records an engaged payload;
     // the remaining bits preserve the complete owner address on every target.
-    // 借用的所属对象或带有效标志的完整所有者地址，见所属类型契约
+    // 所属块完整地址与最低位载荷有效标志，节点寿命由块存储覆盖
     uintptr_t m_owner;
+    // 延迟构造的T存储，额外字节用于满足过度对齐类型的地址要求
     unsigned char m_storage[sizeof(T) + (std::alignment_of<T>::value > std::alignment_of<uintptr_t>::value
                                                 ? std::alignment_of<T>::value - 1
                                                 : 0)];
 
 public:
-    /** 建立本对象确定的初始状态；所属类型约定其所有权与生命周期
+    /** 记录所属块，不构造T；节点存储仅在construct成功后具有有效载荷
     @param [in,out] block 受保护或调用者独占的块；借用至返回
     */
     explicit LockFreeQueueArenaNode(LockFreeQueueArenaBlock<T>* block);
 
-    /** 结束本对象拥有或借用的状态；调用前必须满足所属类型的静止条件
+    /** 析构仍有效的T，不释放所属块；调用时节点必须独占且T析构不得抛异常
     */
     ~LockFreeQueueArenaNode();
 
     /** 读取节点完整所有者地址；低位只保存载荷有效标志
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 节点所属块的非空借用地址；有效期由节点额度或外部保护覆盖
     */
     LockFreeQueueArenaBlock<T>* block() const;
 
     /** 取得满足 T 对齐的节点内存；有效载荷由 construct 和 reset 管理
-    @return 满足上述保护范围的借用指针；申请失败或空观察返回 nullptr
+    @return 节点内满足T对齐的非空存储地址；仅在有效标志存在时可当作已构造T访问
     */
     T* data();
 
     /** 在独占节点内复制构造 T；异常不设置有效标志
-    @param [in] value 待复制的载荷或待更新的原子计数；借用至本次调用返回
+    @param [in] value 待复制的载荷；借用至本次调用返回
     */
     void construct(const T& value);
 
-    /** 重置独占或外部静止状态；不得与仍借用该对象的线程并发
+    /** 析构有效T并清除有效标志，未构造时无操作；调用时必须独占节点
     */
     void reset();
 
@@ -135,14 +136,14 @@ public:
     char m_returnEndPadding[64];
 
 public:
-    /** 建立本对象确定的初始状态；所属类型约定其所有权与生命周期
+    /** 建立块元数据和空闲基数；存储指针由createBlock安装，初始块扣除一个保留额度
     @param [in] capacity 块内物理节点数
     @param [in] initial 是否基础块，基础块预留一个哨兵额度
     */
     LockFreeQueueArenaBlock(size_t capacity, bool initial);
 
     /** 观察块内可复用空闲数量；与位图及保护协议共同使用
-    @return 上述操作对应的数值、状态或弱一致快照
+    @return 按生产者领取基数和消费者归还数合成的可用量；并发混合快照可能不精确
     */
     size_t freeNodes() const;
 
@@ -188,7 +189,7 @@ public:
 #endif
 
 public:
-    /** 建立本对象确定的初始状态；所属类型约定其所有权与生命周期
+    /** 建立空闲登记槽，清空保护、位置提示和私有缓存，初始化竞争退避
     */
     LockFreeQueueArenaRecord();
 

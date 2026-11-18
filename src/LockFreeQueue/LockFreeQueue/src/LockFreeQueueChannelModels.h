@@ -18,13 +18,13 @@ public:
     LockFreeQueueAtomic<uintptr_t> m_cells[kCellCount];
     // 发布后的后继链接；读取遵守对应保护协议
     LockFreeQueueAtomic<LockFreeQueueChannelSegment*> m_next;
-    // 已证明发布的前缀提示，只减少扫描；载荷发布 CAS 决定实际 FIFO 顺序
+    // 默认模式为已证明发布的前缀提示；预约模式为下次可预约位置，可能领先于载荷发布
     std::atomic<size_t> m_tail;
     // 发布段所属块或辅助登记中的索引
     size_t m_poolIndex;
     // 非回绕发布段代次，用于使旧位置提示失效
     uint64_t m_generation;
-    // 借用的所属对象或带有效标志的完整所有者地址，见所属类型契约
+    // 所属块地址；nullptr表示由辅助登记独立分配，生命周期由池管理
     void* m_owner;
     // 唯一消费者拥有的退役链链接
     LockFreeQueueChannelSegment* m_retiredNext;
@@ -34,7 +34,7 @@ public:
     unsigned char m_segmentPadding[sizeof(void*) == 8 ? 8 : (std::alignment_of<uint64_t>::value == 8 ? 24 : 28)];
 
 public:
-    /** 建立本对象确定的初始状态；所属类型约定其所有权与生命周期
+    /** 建立尚未发布的段元数据；首次使用槽位前必须在独占状态调用reset
     */
     LockFreeQueueChannelSegment();
 
@@ -42,8 +42,8 @@ public:
     */
     void reset();
 
-    /** 交错到十六组物理槽位，隔开相邻发布并保留 64 项前缀的局部性
-    @param [in] position 已验证的逻辑槽位下标
+    /** 交错到十六组物理槽位，隔开相邻发布；64项或256项扫描均按逻辑顺序访问
+    @param [in] position 逻辑槽位下标，范围0..255；不接受段末游标256
     @return 同一发布段内一一对应的物理槽位下标
     */
     static size_t mapped(size_t position);

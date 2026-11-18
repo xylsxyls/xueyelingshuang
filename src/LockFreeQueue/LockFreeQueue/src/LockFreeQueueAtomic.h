@@ -90,6 +90,7 @@ public:
         std::memory_order order = std::memory_order_seq_cst);
 
     /** Query this actual atomic representation, including backend alignment
+    @return 当前实例的底层原子表示是否无锁
     */
     bool is_lock_free() const;
 private:
@@ -97,10 +98,12 @@ private:
     std::atomic<LockFreeQueueAtomicStorage<ValueType>> m_value;
 
     /** Atomic ownership cannot be copied
+    @param [in] other 禁止复制或赋值的源对象
     */
     LockFreeQueueAtomic(const LockFreeQueueAtomic& other) = delete;
 
     /** Atomic ownership cannot be assigned
+    @param [in] other 禁止复制或赋值的源对象
     */
     LockFreeQueueAtomic& operator=(const LockFreeQueueAtomic& other) = delete;
 };
@@ -181,10 +184,12 @@ private:
     __int64 m_value;
 
     /** Ownership cannot be copied
+    @param [in] other 禁止复制或赋值的源对象
     */
     LockFreeQueueAtomic(const LockFreeQueueAtomic& other) = delete;
 
     /** Ownership cannot be assigned
+    @param [in] other 禁止复制或赋值的源对象
     */
     LockFreeQueueAtomic& operator=(const LockFreeQueueAtomic& other) = delete;
 };
