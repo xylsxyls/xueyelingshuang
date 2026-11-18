@@ -448,7 +448,7 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
             }
             const bool admission = summary["capacity"].asInt() != 256 || lane["consumer"].asInt() == 1;
             const int32_t mode = summary["mode"].asInt();
-            const bool capacityWait = !admission && (mode == 0 || mode == 1 || mode == 5);
+            const bool capacityWait = !admission && (mode == 0 || mode == 1 || mode == 5 || mode == 7);
             const double gap = number(lane, "sampled_cpu_gap_ms", false);
             const double attempts = number(lane, "active_attempts", false), cycles = number(lane, "cycles", false);
             const double active = number(lane, "active_count", false), count = number(lane, "count", false);

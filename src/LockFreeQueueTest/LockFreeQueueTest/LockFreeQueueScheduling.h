@@ -11,7 +11,7 @@ public:
     /** Run one producer count and API under the runner's inherited affinity
     @param [in] producers Producer count, 1..16
     @param [in] milliseconds Active observation window
-    @param [in] mode Public API combination, 0..5
+    @param [in] mode Public API combination, 0..7; 6 is EntrySpan and 7 ordinary push, both with interval65536
     @param [in] cancelable Reservation configuration
     @param [in] capacity Pool capacity, 256, 65536, 1048576 or 20000000
     @param [in] stalledLane Test-only negative control; -1 disabled, producers denotes consumer

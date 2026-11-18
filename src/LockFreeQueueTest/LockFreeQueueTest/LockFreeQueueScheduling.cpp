@@ -49,6 +49,16 @@ uint64_t LockFreeQueueScheduling::cycles()
 
 int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mode, bool cancelable, size_t capacity, int32_t stalledLane)
 {
+    const int reportedMode = mode;
+    const bool useSpan = mode == 6;
+    const bool extendedYield = mode >= 6;
+    mode = mode == 6 ? 4 : (mode == 7 ? 0 : mode);
+#ifndef LOCK_FREE_QUEUE_EXTENDED_SCHEDULING
+    if (extendedYield)
+    {
+        return 2;
+    }
+#endif
     // Mode 0: ordinary push; 1: bound push; 2: ordinary tryPush;
     // 3: bound tryPush; 4: external Entry with ready-prefix consumer;
     // 5: bound push, distributed counters and value-prefix consumer.
@@ -67,6 +77,12 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
     config.maximumCapacity = static_cast<int64_t>(capacity);
     config.growThreshold = 0;
     config.maximumProducers = producers + 4;
+#ifdef LOCK_FREE_QUEUE_EXTENDED_SCHEDULING
+    if (extendedYield && queue.configureConsumerYieldInterval(65536) != LockFreeQueueSuccess)
+    {
+        throw std::runtime_error("Consumer interval configuration failed" );
+    }
+#endif
     if (queue.configurePool(config) != LockFreeQueueSuccess ||
         queue.configureCancelableReservations(cancelable) != LockFreeQueueSuccess ||
         queue.configureProducerCounters(mode == 5) != LockFreeQueueSuccess ||
@@ -184,12 +200,21 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
             uint64_t maintenanceAt = 0;
             while (!stop.load() || done.load() != producers || !queue.empty())
             {
-                uint64_t values[64];
-                LockFreeQueueEntry<uint64_t>* batch[64];
+                uint64_t values[256];
+                LockFreeQueueEntry<uint64_t>* batch[256];
                 size_t count = 0;
                 if (mode == 4)
                 {
-                    queue.popReadyEntryPrefix(batch, 64, count);
+#ifdef LOCK_FREE_QUEUE_EXTENDED_SCHEDULING
+                    if (useSpan)
+                    {
+                        queue.probeReadyEntrySpan(batch, 256, count);
+                    }
+                    else
+#endif
+                    {
+                        queue.popReadyEntryPrefix(batch, 64, count);
+                    }
                     for (size_t i = 0; i < count; ++i) { values[i] = batch[i]->m_value; }
                 }
                 else if (mode == 5) { queue.popReadyPrefix(values, 64, count); }
@@ -329,7 +354,7 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
             for (size_t i = 0; i < ringSize; ++i) { valid = valid && entries[lane][i].m_free.load(); }
         }
     }
-    std::cout << "SCHEDULE producers=" << producers << " mode=" << mode << " cancelable=" << cancelable << " capacity=" << capacity
+    std::cout << "SCHEDULE producers=" << producers << " mode=" << reportedMode << " consumer_interval=" << (extendedYield ? 65536 : 4096) << " cancelable=" << cancelable << " capacity=" << capacity
         << " items=" << total << " consumed=" << lanes[producers].m_count << " active_ms=" << (stopTime - begin) / 1000000.0
         << " drain_ms=" << (end - stopTime) / 1000000.0 << " items_per_second=" << total * 1000000000.0 / (end - begin)
         << " process_priority=" << GetPriorityClass(GetCurrentProcess()) << " data_valid=" << valid
@@ -344,7 +369,7 @@ int main(int argc, char** argv)
 {
     if (argc != 5 && argc != 6 && argc != 7) { return 2; }
     const int producers = std::atoi(argv[1]), duration = std::atoi(argv[2]), mode = std::atoi(argv[3]), cancelable = std::atoi(argv[4]);
-    if (producers < 1 || producers > 16 || duration < 100 || duration > 60000 || mode < 0 || mode > 5 || cancelable < 0 || cancelable > 1) { return 2; }
+    if (producers < 1 || producers > 16 || duration < 100 || duration > 60000 || mode < 0 || mode > 7 || cancelable < 0 || cancelable > 1) { return 2; }
     const int capacity = argc >= 6 ? std::atoi(argv[5]) : 65536;
     if (capacity != 256 && capacity != 65536 && capacity != 1048576 && capacity != 20000000) { return 2; }
     int32_t stalledLane = -1;

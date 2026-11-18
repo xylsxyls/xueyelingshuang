@@ -826,13 +826,14 @@ void LockFreeQueueTestTool::selfTest() const
     }
     LockFreeQueueTestTool comparisonTool(static_cast<int32_t>(comparisonPointers.size()), comparisonPointers.data());
     check(comparisonTool.option("versions") == "current,previous" && comparisonTool.option("previous-dir") == source(), "paired Git comparison CLI");
-    check(LockFreeQueueTestRunner::select("all").size() == 47, "registry count");
-    check(LockFreeQueueTestRunner::select("instant").size() == 32, "instant registry");
+    check(LockFreeQueueTestRunner::select("all").size() == 49, "registry count");
+    check(LockFreeQueueTestRunner::select("instant").size() == 34, "instant registry");
     check(LockFreeQueueTestRunner::select("stress").size() == 15, "pressure registry");
     check(LockFreeQueueTestRunner::select("1,3-5,5").size() == 4, "range deduplication");
     check(LockFreeQueueTestRunner::select("47").size() == 1, "retry contract registered");
+    check(LockFreeQueueTestRunner::select("48-49").size() == 2, "new public contracts registered");
     check(usageDemo(read(join(source(), "LockFreeQueue.cpp"))).find("int main(") != std::string::npos, "public demo extracted");
-    const char* invalid[] = {"", "0", "48", "3-1", "1,,2", "1-2-3", "99999999999999", "x", "-1"};
+    const char* invalid[] = {"", "0", "50", "3-1", "1,,2", "1-2-3", "99999999999999", "x", "-1"};
     for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
     {
         bool rejected = false;
@@ -1038,6 +1039,26 @@ void LockFreeQueueTestTool::selfTest() const
     const std::string controlled = noProgress.substr(0, noProgress.size() - 1) + " negative_control=1\n";
     check(LockFreeQueueTestResults::parse(controlled, schedule, 3)["samples"].size() == 1, "explicit stall negative control accepted");
     schedule["negative_control"] = false;
+    const std::string waitingLanes = "LANE index=0 consumer=0 count=1 active_count=0 active_attempts=0 cycles=1 sampled_cpu_gap_ms=10\n"
+        "LANE index=1 consumer=1 count=1 active_count=1 active_attempts=1 cycles=1 sampled_cpu_gap_ms=10\n";
+    check(LockFreeQueueTestResults::parse(waitingLanes +
+        "SCHEDULE mode=7 capacity=256 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n",
+        schedule, 0)["samples"].size() == 1, "extended ordinary push may finish its capacity wait during drain");
+    const char* nonwaitingModes[] = {"2", "6"};
+    for (size_t i = 0; i < 2; ++i)
+    {
+        rejected = false;
+        try
+        {
+            LockFreeQueueTestResults::parse(waitingLanes + "SCHEDULE mode=" + nonwaitingModes[i] +
+                " capacity=256 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n", schedule, 0);
+        }
+        catch (const std::exception&)
+        {
+            rejected = true;
+        }
+        check(rejected, "nonwaiting API still requires an active-window returned call");
+    }
     rejected = false;
     try
     {

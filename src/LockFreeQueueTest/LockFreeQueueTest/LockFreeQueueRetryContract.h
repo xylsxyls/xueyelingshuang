@@ -37,6 +37,11 @@ public:
     */
     void operator()(size_t amount, uint64_t count) const;
 private:
+    /** 验证单项阈值下256项整批消费只在两个记账点让步
+    @return true表示消费256项且实际执行两次消费者yield
+    */
+    bool consumerBatchBudget();
+
     // 借用期由测试持有者保证
     const bool* m_failCopy;
 };
@@ -60,7 +65,22 @@ public:
     */
     bool run();
 
+    /** 验证消费者协作阈值的合法性、失败不改值、重初始化保留及整批结算
+    @return true表示实际yield调用数及队列状态符合公开契约
+    */
+    bool consumerYield();
+
+    /** 验证长Entry前缀的固定及动态池、预约模式、所有段内起点和输出边界
+    @return true表示每个地址、数量、FIFO及额度复用均正确
+    */
+    bool entrySpan();
+
 private:
+    /** 验证单项阈值下256项整批消费只在两个记账点让步
+    @return true表示消费256项且实际执行两次消费者yield
+    */
+    bool consumerBatchBudget();
+
     /** 验证不同提交入口与两项开关的满载行为
     @param [in] mode 0..7为普通/上下文的值、Fence、Entry、EntryFence；8/9为普通push
     @param [in] retryContention 是否持续重试竞争

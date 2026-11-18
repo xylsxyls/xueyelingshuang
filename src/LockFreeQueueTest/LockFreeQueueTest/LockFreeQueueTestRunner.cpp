@@ -21,7 +21,7 @@ m_inheritedAffinity(LockFreeQueueTestTool::affinity())
 bool LockFreeQueueTestRunner::core(int32_t id)
 {
     const std::set<int32_t> separate = {5, 9, 22, 23, 24, 33, 35, 38, 40, 46};
-    return id >= 1 && id <= 47 && !separate.count(id);
+    return id >= 1 && id <= 49 && !separate.count(id);
 }
 
 bool LockFreeQueueTestRunner::pressure(int32_t id)
@@ -35,7 +35,7 @@ std::set<int32_t> LockFreeQueueTestRunner::select(const std::string& text)
     std::set<int32_t> result;
     if (text == "all" || text == "instant" || text == "stress")
     {
-        for (int32_t i = 1; i <= 47; ++i)
+        for (int32_t i = 1; i <= 49; ++i)
         {
             if (text == "all" || (text == "stress" ? pressure(i) : !pressure(i)))
             {
@@ -50,7 +50,7 @@ std::set<int32_t> LockFreeQueueTestRunner::select(const std::string& text)
         std::vector<std::string> bounds = LockFreeQueueTestTool::split(tokens[i], '-');
         if (bounds.empty() || bounds.size() > 2)
         {
-            throw std::runtime_error("Expected IDs/ranges within 1..47");
+            throw std::runtime_error("Expected IDs/ranges within 1..49");
         }
         for (size_t j = 0; j < bounds.size(); ++j)
         {
@@ -60,9 +60,9 @@ std::set<int32_t> LockFreeQueueTestRunner::select(const std::string& text)
             }
         }
         int32_t first = std::atoi(bounds[0].c_str()), last = std::atoi(bounds.back().c_str());
-        if (first < 1 || last > 47 || first > last)
+        if (first < 1 || last > 49 || first > last)
         {
-            throw std::runtime_error("Case range outside 1..47 or descending");
+            throw std::runtime_error("Case range outside 1..49 or descending");
         }
         for (int32_t id = first; id <= last; ++id)
         {
@@ -879,7 +879,7 @@ void LockFreeQueueTestRunner::scheduling()
     snapshot("after", m_tool->option("after-dir", m_tool->source()));
     int32_t duration = m_tool->number("duration-ms", 2000, 100, 60000), rounds = m_tool->number("rounds", 2, 1, 1000);
     std::vector<std::string> platforms = arches(), masks = m_tool->list("masks", "1,3");
-    std::vector<std::string> modes = validatedList("modes", "0,1,2,3,4,5", "0,1,2,3,4,5");
+    std::vector<std::string> modes = validatedList("modes", "0,1,2,3,4,5", "0,1,2,3,4,5,6,7");
     std::vector<std::string> capacities = validatedList("capacities", "65536", "256,65536,1048576,20000000");
     std::vector<std::string> producers = validatedList("producers", "1,4,8,16", "1,4,8,16");
     for (size_t a = 0; a < platforms.size(); ++a)
@@ -888,6 +888,10 @@ void LockFreeQueueTestRunner::scheduling()
         {
             std::string version = side ? "after" : "before";
             std::vector<std::string> command = flags("Release");
+            if (side == 1)
+            {
+                command.push_back("/DLOCK_FREE_QUEUE_EXTENDED_SCHEDULING" );
+            }
             command.insert(command.end(), {"/Fescheduling.exe", input(version, "LockFreeQueueScheduling.cpp")});
             build(platforms[a], "Release", version, "scheduling", std::vector<std::vector<std::string>>(1, command));
             if (side == 1)
@@ -933,7 +937,7 @@ void LockFreeQueueTestRunner::scheduling()
                                         throw std::runtime_error("Unavailable scheduling CPU mask");
                                     }
                                     bool after = (turn % 2 ? side : 1 - side) != 0;
-                                    if (!after && m_tool->flag("after-only"))
+                                    if (!after && (m_tool->flag("after-only") || std::atoi(modes[m].c_str()) >= 6))
                                     {
                                         continue;
                                     }

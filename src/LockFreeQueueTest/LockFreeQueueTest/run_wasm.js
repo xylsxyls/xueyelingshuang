@@ -8,8 +8,8 @@ const childProcess = require('child_process');
 const root = path.resolve(__dirname, '../../..');
 const temporary = path.join(root, 'src/temp/LockFreeQueueTest');
 const core = [1, 2, 3, 4, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-    25, 26, 27, 28, 29, 30, 31, 32, 34, 36, 37, 39, 41, 42, 43, 44, 45, 47];
-const single = [1, 3, 6, 8, 10, 11, 12, 13, 14, 15, 20, 32, 34, 39, 41, 44, 45, 47];
+    25, 26, 27, 28, 29, 30, 31, 32, 34, 36, 37, 39, 41, 42, 43, 44, 45, 47, 48, 49];
+const single = [1, 3, 6, 8, 10, 11, 12, 13, 14, 15, 20, 32, 34, 39, 41, 44, 45, 47, 48, 49];
 
 function main() {
     const options = {};

@@ -3,6 +3,7 @@
 #endif
 #include "LockFreeQueueRetryContract.h"
 #include "LockFreeQueueThreadGroup.h"
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <iostream>
@@ -1196,6 +1197,140 @@ bool LockFreeQueueRetryContract::run()
     }
     return delay() && exceptions() && growth() && prefix() && reservationProgress() && valuePrefix() && solePublisherTransition() && solePublisherHole();
 }
+
+#ifdef LOCK_FREE_QUEUE_TESTING
+#define LFQ_NEW_API_CHECK(expression) \
+    do \
+    { \
+        if (!(expression)) \
+        { \
+            std::cerr << "FAIL new_api line=" << __LINE__ << " condition=" << #expression << std::endl; \
+            return false; \
+        } \
+    } while (0)
+
+bool LockFreeQueueRetryContract::consumerYield()
+{
+    const uint32_t intervals[] = {1, 2, 3, 4096, 65536};
+    for (size_t i = 0; i < sizeof(intervals) / sizeof(intervals[0]); ++i)
+    {
+        LockFreeQueue<int> queue(false);
+        LFQ_NEW_API_CHECK(queue.configureConsumerYieldInterval(intervals[i]) == LockFreeQueueSuccess);
+        LFQ_NEW_API_CHECK(queue.configureConsumerYieldInterval(0) == LockFreeQueueInvalidConfiguration);
+        LFQ_NEW_API_CHECK(queue.configureConsumerYieldInterval(65537) == LockFreeQueueInvalidConfiguration);
+        LFQ_NEW_API_CHECK(queue.configureConsumerYieldInterval(UINT32_MAX) == LockFreeQueueInvalidConfiguration);
+        for (size_t lifecycle = 0; lifecycle < 2; ++lifecycle)
+        {
+            LFQ_NEW_API_CHECK(queue.tryInit() == LockFreeQueueSuccess);
+            LFQ_NEW_API_CHECK(queue.configureConsumerYieldInterval(1) == LockFreeQueueInvalidState);
+            LockFreeQueueTestControl::m_scheduleYields = 0;
+            for (size_t n = 0; n < 2 * size_t(intervals[i]) + 1; ++n)
+            {
+                LFQ_NEW_API_CHECK(!queue.pop(nullptr));
+            }
+            LFQ_NEW_API_CHECK(LockFreeQueueTestControl::m_scheduleYields == (2 * size_t(intervals[i]) + 1) / intervals[i]);
+            queue.destroy();
+        }
+    }
+    return consumerBatchBudget();
+}
+
+bool LockFreeQueueRetryContract::entrySpan()
+{
+    typedef LockFreeQueueEntry<uint64_t> Entry;
+    const size_t budgets[] = {0, 1, 2, 3, 4, 5, 15, 16, 63, 64, 65, 127, 128, 255, 256, 257, SIZE_MAX};
+    size_t scenarios = 0;
+    for (size_t mode = 0; mode < 4; ++mode)
+    {
+        for (size_t offset = 0; offset < 256; ++offset)
+        {
+            for (size_t b = 0; b < sizeof(budgets) / sizeof(budgets[0]); ++b)
+            {
+                std::unique_ptr<Entry[]> entries(new Entry[513]);
+                LockFreeQueue<uint64_t> queue(false);
+                LockFreeQueuePoolConfig config;
+                config.initialCapacity = (mode & 1) ? 65 : 1025;
+                config.maximumCapacity = (mode & 1) ? -1 : 1025;
+                config.maximumProducers = 2;
+                LFQ_NEW_API_CHECK(queue.configurePool(config) == LockFreeQueueSuccess);
+                LFQ_NEW_API_CHECK(queue.configureCancelableReservations((mode & 2) != 0) == LockFreeQueueSuccess);
+                LFQ_NEW_API_CHECK(queue.configureEntryOnly(true) == LockFreeQueueSuccess);
+                LFQ_NEW_API_CHECK(queue.tryInit() == LockFreeQueueSuccess);
+                // Two leases also exercise the reservation implementation rather than its sole-publisher shortcut.
+                LockFreeQueueProducer<uint64_t> first, second;
+                LFQ_NEW_API_CHECK(queue.tryAcquireProducer(first) == LockFreeQueueSuccess);
+                LFQ_NEW_API_CHECK(queue.tryAcquireProducer(second) == LockFreeQueueSuccess);
+                for (size_t n = 0; n < 512; ++n)
+                {
+                    entries[n].m_value = n;
+                    LFQ_NEW_API_CHECK((n & 1 ? first : second).tryPushEntry(entries[n], true, false) == LockFreeQueueSuccess);
+                }
+                for (size_t n = 0; n < offset; ++n)
+                {
+                    uint64_t value = UINT64_MAX;
+                    LFQ_NEW_API_CHECK(queue.pop(&value) && value == n);
+                }
+                Entry* output[258];
+                std::fill(output, output + 258, &entries[512]);
+                size_t consumed = SIZE_MAX;
+                const bool discard = ((offset + b) & 1) != 0;
+                const size_t expected = (std::min)(budgets[b], (std::min)(size_t(256) - offset, size_t((mode & 1) ? 64 : 256)));
+                const bool result = queue.probeReadyEntrySpan(discard ? nullptr : output + 1, budgets[b], consumed);
+                LFQ_NEW_API_CHECK(result == (expected != 0) && consumed == expected);
+                LFQ_NEW_API_CHECK(output[0] == &entries[512] && output[257] == &entries[512]);
+                for (size_t n = 0; n < 256; ++n)
+                {
+                    LFQ_NEW_API_CHECK(output[n + 1] == ((!discard && n < consumed) ? &entries[offset + n] : &entries[512]));
+                }
+                for (size_t n = offset + consumed; n < 512; ++n)
+                {
+                    uint64_t value = UINT64_MAX;
+                    LFQ_NEW_API_CHECK(queue.pop(&value) && value == n);
+                }
+                LFQ_NEW_API_CHECK(queue.empty());
+                LFQ_NEW_API_CHECK(!queue.probeReadyEntrySpan(nullptr, SIZE_MAX, consumed) && consumed == 0);
+                LFQ_NEW_API_CHECK(first.tryPushEntry(entries[0], true, false) == LockFreeQueueSuccess);
+                LFQ_NEW_API_CHECK(queue.probeReadyEntrySpan(output, SIZE_MAX, consumed) && consumed == 1 && output[0] == &entries[0]);
+                ++scenarios;
+            }
+        }
+    }
+    LockFreeQueue<uint64_t> ordinary;
+    LFQ_NEW_API_CHECK(ordinary.push(7));
+    size_t consumed = SIZE_MAX;
+    LFQ_NEW_API_CHECK(!ordinary.probeReadyEntrySpan(nullptr, 256, consumed) && consumed == 0);
+    uint64_t value = 0;
+    LFQ_NEW_API_CHECK(ordinary.pop(&value) && value == 7);
+    std::cout << "SPAN_SCENARIOS=" << scenarios << std::endl;
+    return true;
+}
+
+bool LockFreeQueueRetryContract::consumerBatchBudget()
+{
+    LockFreeQueueEntry<int> entries[256];
+    LockFreeQueue<int> queue(false);
+    LockFreeQueuePoolConfig config;
+    config.initialCapacity = 513;
+    config.maximumCapacity = 513;
+    config.maximumProducers = 1;
+    LFQ_NEW_API_CHECK(queue.configurePool(config) == LockFreeQueueSuccess);
+    LFQ_NEW_API_CHECK(queue.configureEntryOnly(true) == LockFreeQueueSuccess);
+    LFQ_NEW_API_CHECK(queue.configureConsumerYieldInterval(1) == LockFreeQueueSuccess);
+    LFQ_NEW_API_CHECK(queue.tryInit() == LockFreeQueueSuccess);
+    for (size_t n = 0; n < 256; ++n)
+    {
+        LFQ_NEW_API_CHECK(queue.tryPushEntry(entries[n], true, false) == LockFreeQueueSuccess);
+    }
+    LockFreeQueueTestControl::m_scheduleYields = 0;
+    size_t consumed = 0;
+    LFQ_NEW_API_CHECK(queue.probeReadyEntrySpan(nullptr, 256, consumed) && consumed == 256);
+    LFQ_NEW_API_CHECK(LockFreeQueueTestControl::m_scheduleYields.load() == 2);
+    std::cout << "BATCH_YIELD_OBSERVATION interval=1 consumed=" << consumed << " yields=" << LockFreeQueueTestControl::m_scheduleYields << std::endl;
+    return true;
+}
+
+#undef LFQ_NEW_API_CHECK
+#endif
 
 #ifdef LOCK_FREE_QUEUE_RETRY_MAIN
 int main()

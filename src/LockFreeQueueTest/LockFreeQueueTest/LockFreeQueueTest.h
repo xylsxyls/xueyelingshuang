@@ -2,15 +2,15 @@
 
 /*
 LockFreeQueueTest 测试说明
-版本：3.10
-更新日期：2026-11-17
+版本：3.11
+更新日期：2026-11-18
 依据：common/Base/LockFreeQueue需求文档.txt、common/AI文档/工程测试规范.txt、代码开发规范.txt及仓库使用说明文档.txt
 范围：当前 LockFreeQueue 的测试设计、运行入口、独立判定和维护方法；本注释不是性能结果报告
 
 一、工程范围与目录
 
 1. 测试代码与运行产物分开。
-确认：当前保留全部 47 个登记 ID、原断言、负载、超时及补充基准；测试插桩只进入临时副本。
+确认：当前保留全部 49 个登记 ID、原断言、负载、超时及补充基准；测试插桩只进入临时副本。
 规则：
   工程入口：src/LockFreeQueueTest/LockFreeQueueTest.sln。
   测试源码：src/LockFreeQueueTest/LockFreeQueueTest/；核心入口为 LockFreeQueueTest.cpp。
@@ -24,7 +24,7 @@ LockFreeQueueTest 测试说明
 
 2. 核心、集成与基准各有独立入口。
 规则：
-  LockFreeQueueTest.cpp：37 个核心 ID，白盒控制、FIFO、异常、回收、推进和短时压力。
+  LockFreeQueueTest.cpp：39 个核心 ID，白盒控制、FIFO、异常、回收、推进和短时压力。
   LockFreeQueueArenaTests.inl：核心入口调用的节点池子场景，不单独定义 main。
   LockFreeQueueIntegration.cpp：ID9/23，通知适配及四库同编译单元。
   LockFreeQueueBaseline.cpp：ID24，受控复现原始 exchange/补链间隙。
@@ -32,7 +32,7 @@ LockFreeQueueTest 测试说明
   LockFreeQueuePerformance.cpp 与 Extra/Pools/Wave：完整接口/池/载荷补充矩阵，包括 ID35/38/40。
   LockFreeQueueScheduling.cpp：同优先级线程推进、公平性及 CPU 分配观测，补充 ID41～44。
   LockFreeQueueSharedPtrBenchmark.cpp：ID46，预建 shared_ptr 载荷的分阶段及同时吞吐。
-  LockFreeQueueRetryContract.cpp：ID47，独立重试开关、容量等待、扩容通知和Entry前缀；由核心入口调用。
+  LockFreeQueueRetryContract.cpp：ID47～49，独立重试开关、容量等待、扩容通知、消费者协作阈值和Entry前缀；由核心入口调用。
   LockFreeQueueConsumer.cpp：DLL/静态消费方兼容检查，由 --consumers 选择，不另占稳定 ID。
   LockFreeQueueInterfaceContract.h、Tests.h、ThreadGroup、BenchmarkPush：接口契约、登记、线程收尾及基准接纳适配；不得作为多余文件删除。
 检查：不同 main、全局分配计数替换及互斥列表替身在独立可执行程序中编译，不能把所有 cpp 一起链接。
@@ -59,9 +59,9 @@ ID35的并发计时控制使用LockFreeQueueBenchmarkControl：开始/取消/失
 详细说明：以下逐项的“独立队列、单消费者、失败收尾、180秒组超时”均继承本节；有不同窗口或额外前提的逐项说明。代码中的实际参数是执行配置，不能为获得通过私自减少。
 
 3. 身份与类型不随迁移改变。
-规则：统一入口 LockFreeQueueTestTool tests 登记 ID1～47；37 个核心由主 EXE 执行，其余10项由专用进程调度。压力属性沿用现有登记：2、4、5、7、22、25、26、28、33、35、36、37、38、40、46；其余32项为瞬时登记。
+规则：统一入口 LockFreeQueueTestTool tests 登记 ID1～49；39 个核心由主 EXE 执行，其余10项由专用进程调度。压力属性沿用现有登记：2、4、5、7、22、25、26、28、33、35、36、37、38、40、46；其余34项为瞬时登记。
 检查：ID、中文含义、实际实现、所选类型及退出判定一致；迭代、子断言、配置组合不计作新增 ID。
-详细说明：瞬时登记中的18/21等也有有限并发子场景，并不意味着不耗 CPU。目录调整不改分类或跳过这些场景。原迁移文档的31核心/40登记属于历史版本，当前为37核心/47登记。
+详细说明：瞬时登记中的18/21等也有有限并发子场景，并不意味着不耗 CPU。目录调整不改分类或跳过这些场景。原迁移文档的31核心/40登记属于历史版本，当前为39核心/49登记。
 
 三、稳定用例目录
 
@@ -274,6 +274,16 @@ ID35的并发计时控制使用LockFreeQueueBenchmarkControl：开始/取消/失
 收尾：释放满载槽后连接所有线程，核对空队列并销毁。原生tests选中47时还会提取LockFreeQueue.cpp中注释demo，使用干净正式头编译运行；按matrix覆盖Win32/x64的Debug/Release。
 基准失败收尾：满池、峰谷和同时消费基准遇到数据错误或超时后，保持原失败结论，唯一消费者继续丢弃并归还容量，直到各生产线程自行完成已进入的push后退出；不能先停止消费再无限join。成功基准不进入该清理路径。
 
+48. 消费者协作间隔及整批结算【瞬时；新增配置契约】
+场景：阈值1/2/3/4096/65536，0/65537/UINT32_MAX拒绝且不改旧值；已初始化时拒绝修改，destroy/tryInit后保留阈值。空pop按实际调用数核对yield；阈值1时显式消费256项，验证两个记账点总共两次yield。
+判定：配置结果、消费数量及隔离副本记录的真实调度调用均准确；阈值是批次结算触发量，不伪称每N项严格让步。原生和Wasm使用同一ID。
+
+49. 长Entry前缀边界及额度复用【瞬时；新增消费接口契约】
+场景：固定/增长池、预约开关，两条实际绑定记录交替发布；段内起点0..255与17种预算0/1/2/3/4/5/15/16/63/64/65/127/128/255/256/257/SIZE_MAX组合，共17408个边界组合。地址输出与nullptr丢弃交替，逐项核对地址/FIFO、输出前后哨兵及全部未写槽、空返回与消费后再次提交。
+判定：固定EntryOnly至多256项，增长池至多64项，只取当前段连续已发布前缀，不越预算；非EntryOnly拒绝且保留原值。组合数是本ID内部覆盖量，不作为17408个独立ID统计。
+
+公平性补充模式：Scheduling的mode6使用65536协作阈值与probeReadyEntrySpan，mode7使用65536阈值与普通push/pop。只在候选侧启用，旧版不支持新增接口时不伪造对照；默认mode0..5、观察窗口和判定阈值保持原样。沿用同优先级、单/双CPU、1/4/8/16生产者及唯一消费者，256/65536容量；每条线程CPU推进、实际接纳、完整排空和人为停滞负对照分别判定。--modes 6,7 --after-only选择补充场景，不代表任意系统调度下绝对公平。
+
 四、补充矩阵与性能口径
 
 1. 完整覆盖不止核心EXE。
@@ -339,9 +349,10 @@ shared_ptr基线能力：冻结头同时声明批量消费、独立计数和预�
   cmake -S src/LockFreeQueueTest/LockFreeQueueTest -B src/temp/LockFreeQueueTest/cmake-release -DCMAKE_BUILD_TYPE=Release
   cmake --build src/temp/LockFreeQueueTest/cmake-release --config Release
   ctest --test-dir src/temp/LockFreeQueueTest/cmake-release -C Release --output-on-failure
-规则：VS2013命令行可使用NMake Makefiles。生成目录须在QueueTest临时根下，或显式将LOCK_FREE_QUEUE_WHITEBOX_DIR指向该根下唯一目录。原生 CMake 构建 LockFreeQueueTestTool 后自动调用其 whitebox 子命令。
+规则：VS2013命令行可使用NMake Makefiles，先加载vcvarsall；仅缓存生成器名称不代表后续终端能找到nmake。生成目录须在QueueTest临时根下，或显式将LOCK_FREE_QUEUE_WHITEBOX_DIR指向该根下唯一目录。原生 CMake 构建 LockFreeQueueTestTool 后自动调用其 whitebox 子命令。
 登记：Core、Backlog(22)、PoolPerformance(38)、WavePerformance(40)，原生另加 Harness 自检组；Core/Backlog超时180秒，Pool180秒，Wave240秒。组数不等于稳定ID数，也不覆盖全部外部基准。
-Wasm：编译与链接均-fexceptions；LOCK_FREE_QUEUE_TESTS_WASM_THREADS=ON使用pthread和24个预建Worker，OFF仅选18个适用核心ID并不登记并发性能组。线程能力与宿主支持分别核实。
+Wasm：编译与链接均-fexceptions；LOCK_FREE_QUEUE_TESTS_WASM_THREADS=ON使用pthread和24个预建Worker，OFF仅选20个适用核心ID并不登记并发性能组。线程能力与宿主支持分别核实。
+CTest宿主：使用emsdk环境让CMake找到Node；未加载该环境时显式传入-DCMAKE_CROSSCOMPILING_EMULATOR=Node可执行文件绝对路径。检查CTestTestfile.cmake中的Wasm命令确实经过Node，不能把直接执行.js或只构建成功当成CTest通过。
 步骤：先构建原生 LockFreeQueueTestTool → Emscripten CMake 配置传入 -DLOCK_FREE_QUEUE_HOST_TOOL=原生工具绝对路径 → 构建 Wasm → 用 JS 宿主执行：
   node src/LockFreeQueueTest/LockFreeQueueTest/run_wasm.js --build Wasm构建目录 --threads on --batch 新Wasm批次
 检查：--threads 必须对应实际构建选项；JS 验证核心 PASS ID 集合、失败行、退出码及阶段数量，并保留原始日志/模块哈希。Node 不是微信模拟器，不新增 Queue 专用 C 包装，也不逐项跨 JS 调 push/pop。
@@ -354,6 +365,7 @@ Wasm：编译与链接均-fexceptions；LOCK_FREE_QUEUE_TESTS_WASM_THREADS=ON使
   TOOL revision --before-dir 修改前源码目录 --calls push,tryPush,producer_tryPush,producer_push --batch 新配对批次
   TOOL scheduling --before-dir 修改前源码目录 --masks 1,3 --capacities 256,65536 --batch 新调度批次
   TOOL shared-ptr --before-dir 线上源码目录 --items 20000000 --producers 1,4,8,16 --modes plain,bound --batch 新同时吞吐批次
+异常降幅复核：ID38的单个扩缩容周期仅4095项，维护前还有不计时的4ms等待；短窗口的频率、缓存及分配状态影响可能很大。发现异常下降时先冻结当前代码，使用相同参数至少九轮交替比较，并回放原报告EXE核对哈希；同时给出各轮范围、重试、实际增长容量及维护耗时。复测未稳定重现时标为待确认，不把复测的正变化写成代码优化收益，不合并不同批次的快值或改写历史统计。
 默认：performance 测量7轮、补充3轮、分配1轮；three-way 为3/3/1轮；revision 为测量3轮/分配1轮；scheduling 每窗口2000ms、2轮；shared-ptr 为3轮。均默认两位宽，CPU亲和默认继承实际可用掩码，不固定成0xffff。
 选择：--previous-dir 为 three-way 增加改前版；--after-dir 指定配对候选版。three-way可用--versions current,previous选择与指定Git基线成对比较，或追加std_list_mutex、original；必须保留current和至少一个参考，previous必须提供源码目录。shared-ptr的modes支持plain、bound、prefix、distributed、reserved、distributed_pop；基线按冻结头的实际接口能力参与，--candidate-only仅跑候选版。before-dir和after-dir为同一规范路径时，两组都执行同一个EXE，并以same_binary_control标记，只用于测量噪声。scheduling的modes为0～5，--after-only只跑候选版。预约开关0/1始终各跑。
 预备：--plan 只冻结并列出矩阵；--build-only 只编译；--prepare-only 还执行 CLI 拒绝检查。之后同参数加 --measure-only 可运行剩余负载；--resume 只接续输入/二进制/参数不变且已有记录全部成功的批次。失败记录不能覆盖或混入成功批次。进程中途被终止而留下尚未登记的raw.log时也拒绝覆盖，应保留中断批次并使用新的批次名重跑。

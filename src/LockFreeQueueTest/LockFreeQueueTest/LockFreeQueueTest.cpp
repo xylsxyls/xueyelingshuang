@@ -3222,7 +3222,6 @@ bool LockFreeQueueTests::busyContract()
     return true;
 }
 
-
 bool LockFreeQueueTests::cooperativeProgress()
 {
     LockFreeQueueProgress progress;
@@ -3403,6 +3402,12 @@ bool LockFreeQueueTests::dispatch(int32_t id)
         LockFreeQueueRetryContract tests;
         return tests.run();
     }
+    case 48:
+    case 49:
+    {
+        LockFreeQueueRetryContract tests;
+        return id == 48 ? tests.consumerYield() : tests.entrySpan();
+    }
     default:
         return false;
     }
@@ -3418,7 +3423,8 @@ int LockFreeQueueTests::run(int argc, char** argv)
         {28, "模计数及回绕观察"}, {29, "恢复生产者后的发布顺序"}, {30, "发布段复用及序号耗尽"},
         {31, "批量空闲缓存及接手"}, {32, "固定池载荷及策略切换"}, {34, "生产者上下文及租约转交"},
         {36, "上下文持续有界压力"}, {37, "初始块及动态增长"}, {39, "空返回及维护工作上限"}, {41, "普通入队持续重试竞争"},
-        {42, "登记槽占满时明确结束"}, {43, "活跃缓存占额时明确结束"}, {44, "生产消费调度让步及错误码"}, {45, "Busy竞争与空间不足分离"}, {47, "两项重试开关及满载延迟"}};
+        {42, "登记槽占满时明确结束"}, {43, "活跃缓存占额时明确结束"}, {44, "生产消费调度让步及错误码"}, {45, "Busy竞争与空间不足分离"}, {47, "两项重试开关及满载延迟"},
+        {48, "消费者协作间隔及整批结算"}, {49, "长Entry前缀边界及额度复用"}};
     if ((argc == 3 || argc == 4) && (std::string(argv[1]) == "25" || std::string(argv[1]) == "36"))
     {
         const std::string seconds(argv[2]);
