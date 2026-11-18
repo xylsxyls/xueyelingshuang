@@ -1,13 +1,5 @@
 ﻿#include "CTaskThreadModels.h"
 
-CTaskThreadResult::CTaskThreadResult(CTaskThreadStatus status, bool committed, int32_t nativeError) :
-m_status(status),
-m_committed(committed),
-m_nativeError(nativeError)
-{
-
-}
-
 CTaskThreadConfig::CTaskThreadConfig() :
 m_taskBuckets(16384),
 m_maximumTasks(-1),
@@ -67,7 +59,7 @@ const char* taskThreadStatusText(CTaskThreadStatus status)
     }
     case CTaskThreadPolicyFailure:
     {
-        return "扩缩容策略拒绝或异常";
+        return "扩缩容策略异常";
     }
     case CTaskThreadCallbackFailure:
     {

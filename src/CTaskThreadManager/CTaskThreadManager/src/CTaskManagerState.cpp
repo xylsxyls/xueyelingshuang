@@ -61,7 +61,7 @@ CTaskThreadResult CTaskManagerState::initialize(const CTaskThreadConfig& config,
             uint32_t attempts = 0;
             for (;;)
             {
-                result = CTaskResultAdapter::map(m_threads.lockFreeMapSet(id, thread));
+                result = CTaskResultAdapter::map(m_threads.trySet(id, thread, true, false));
                 if (result.m_committed || result.m_status != CTaskThreadRetry)
                 {
                     break;
@@ -151,7 +151,7 @@ CTaskThreadResult CTaskManagerState::finish(uint32_t threadId, bool drain)
                 result = CTaskThreadResult(CTaskThreadInvalid, true);
                 break;
             }
-            status = m_threads.lockFreeMapErase(threadId, token);
+            status = m_threads.tryEraseIf(threadId, token, true, false);
         }
         if (status == LOCK_FREE_MAP_NOT_FOUND)
         {
@@ -258,11 +258,14 @@ CTaskThreadResult CTaskManagerState::shutdown()
 std::shared_ptr<CTaskThread> CTaskManagerState::get(uint32_t threadId)
 {
     std::shared_ptr<CTaskThread> thread;
-    LockFreeMapToken token;
     uint32_t attempts = 0;
     while (threadId != 0)
     {
-        const LockFreeMapStatus status = m_threads.lockFreeMapGet(threadId, thread, token);
+        // found为受保护的线程强引用，复制到thread后才能离开Map；回调无返回值。
+        const LockFreeMapStatus status = m_threads.lockFreeMapVisit(threadId, [&thread](const std::shared_ptr<CTaskThread>& found)
+        {
+            thread = found;
+        });
         if (status == LOCK_FREE_MAP_OK)
         {
             break;

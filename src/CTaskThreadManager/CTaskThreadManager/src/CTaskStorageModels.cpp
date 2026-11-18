@@ -17,13 +17,6 @@ m_page(nullptr)
 
 }
 
-CTaskRetiredRecord::CTaskRetiredRecord() :
-m_slot(nullptr),
-m_epoch(0)
-{
-
-}
-
 CTaskStoragePage::CTaskStoragePage() :
 m_free(0),
 m_block(nullptr)

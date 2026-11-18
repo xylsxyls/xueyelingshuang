@@ -124,6 +124,9 @@
     <ClInclude Include="..\src\CTaskThreadModels.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\CTaskThreadModels.inl">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClCompile Include="..\src\CTaskThreadPool.cpp">
       <Filter>源文件</Filter>
     </ClCompile>

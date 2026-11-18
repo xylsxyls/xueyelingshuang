@@ -26,26 +26,39 @@ public:
     */
     ~CTaskThread();
 
-    /** 接纳任务；内部竞争退避重试，达到配置上限或实际错误才失败
+    /** 接纳任务；竞争与容量不足均内部重试，容量连续重试4096次后每次等待1毫秒
     @param [in] task 非空任务强引用
     @param [in] taskLevel 从 1 到 INT_MAX，大值先执行，同级 FIFO
-    @return 以 committed 判断是否接纳，后续抢占通知失败可与 committed=true 同时返回
+    @return true已经接纳，不应重发；false为关闭、非法参数或实际资源错误
     */
-    CTaskThreadResult postTask(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1);
+    bool postTask(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1);
 
-    /** 单次有界尝试投递；不等待暂时占用的保护记录或发布机会
+    /** 按普通投递规则等待接纳，同时保留提交后通知错误的诊断信息
+    @param [in] task 非空任务强引用
+    @param [in] taskLevel 正数任务优先级
+    @return m_committed为true时不可重复投递；查询具体诊断不能只检查m_status
+    */
+    CTaskThreadResult postTaskResult(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1);
+
+    /** 按开关尝试投递；默认不等待暂时占用的保护记录或发布机会
     @param [in] task 任务强引用
     @param [in] taskLevel 正数优先级
+    @param [in] retryContention true持续重试CAS竞争，false允许返回未提交竞争状态
+    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
     @return 是否已接纳；具体错误使用 tryPostTaskResult，普通投递使用 postTask
     */
-    bool tryPostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1);
+    bool tryPostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1,
+        bool retryContention = false, bool retryCapacity = false);
 
-    /** 尝试投递并返回具体失败原因，不等待竞争者或资源持有者
+    /** 按开关尝试投递并返回具体失败原因；默认不持续重试竞争或容量不足
     @param [in] task 非空任务强引用
     @param [in] taskLevel 正数优先级
+    @param [in] retryContention true持续重试CAS竞争，false允许返回未提交竞争状态
+    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
     @return Busy 仅表示未提交的竞争失败；Capacity 表示额度用满，ResourceUnavailable 表示暂不可复用
     */
-    CTaskThreadResult tryPostTaskResult(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1);
+    CTaskThreadResult tryPostTaskResult(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1,
+        bool retryContention = false, bool retryCapacity = false);
 
     /** 观察是否有排队任务
     @return 不包含当前执行任务

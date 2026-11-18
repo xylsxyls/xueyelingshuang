@@ -43,6 +43,53 @@ CTaskThreadResult CTaskResultAdapter::pause(uint32_t& attempts)
     }
 }
 
+CTaskThreadResult CTaskResultAdapter::pauseCapacity(uint32_t& attempts)
+{
+#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+    if (attempts < 4096)
+    {
+        ++attempts;
+        return CTaskThreadResult();
+    }
+    return CTaskThreadResult(CTaskThreadUnsupported);
+#else
+    try
+    {
+        if (attempts < 4096)
+        {
+            ++attempts;
+            // 快速阶段不做正时长休眠，但也不能让过量生产者连续争写额度、挤占消费者。
+            if ((attempts & 63) == 0)
+            {
+                std::this_thread::yield();
+            }
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+            else
+            {
+                _mm_pause();
+            }
+#elif defined(__i386__) || defined(__x86_64__)
+            else
+            {
+                __asm__ __volatile__("pause");
+            }
+#endif
+            return CTaskThreadResult();
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        return CTaskThreadResult();
+    }
+    catch (const std::system_error& error)
+    {
+        return CTaskThreadResult(CTaskThreadSystemFailure, false, error.code().value());
+    }
+    catch (...)
+    {
+        return CTaskThreadResult(CTaskThreadSystemFailure);
+    }
+#endif
+}
+
 CTaskThreadResult CTaskResultAdapter::snapshot(const LockFreeMap<uint32_t, std::shared_ptr<CTaskThread>>& threads,
     std::vector<std::shared_ptr<CTaskThread>>& snapshot)
 {
@@ -75,7 +122,7 @@ CTaskThreadResult CTaskResultAdapter::snapshot(const LockFreeMap<uint32_t, std::
         {
             return CTaskThreadResult();
         }
-        const CTaskThreadResult result = pause(attempts);
+        const CTaskThreadResult result = pauseCapacity(attempts);
         if (result.m_status != CTaskThreadOk)
         {
             return result;
@@ -92,6 +139,7 @@ CTaskThreadResult CTaskResultAdapter::queue(LockFreeQueueResult status)
         return CTaskThreadResult(CTaskThreadOk, true);
     }
     case LockFreeQueueCapacityLimit:
+    case LockFreeQueueGrowthDeclined:
     {
         return CTaskThreadResult(CTaskThreadCapacity);
     }
@@ -107,7 +155,6 @@ CTaskThreadResult CTaskResultAdapter::queue(LockFreeQueueResult status)
     {
         return CTaskThreadResult(CTaskThreadNoMemory);
     }
-    case LockFreeQueueGrowthDeclined:
     case LockFreeQueuePolicyFailure:
     {
         return CTaskThreadResult(CTaskThreadPolicyFailure);
@@ -149,12 +196,14 @@ CTaskThreadResult CTaskResultAdapter::map(LockFreeMapStatus status)
         return CTaskThreadResult(CTaskThreadNotFound);
     }
     case LOCK_FREE_MAP_CONFLICT:
+    case LOCK_FREE_MAP_BUSY:
     {
         return CTaskThreadResult(CTaskThreadRetry);
     }
     case LOCK_FREE_MAP_CAPACITY:
     case LOCK_FREE_MAP_RESERVED:
     case LOCK_FREE_MAP_RECORD_LIMIT:
+    case LOCK_FREE_MAP_GROW_DENIED:
     {
         return CTaskThreadResult(CTaskThreadCapacity);
     }
@@ -162,7 +211,6 @@ CTaskThreadResult CTaskResultAdapter::map(LockFreeMapStatus status)
     {
         return CTaskThreadResult(CTaskThreadNoMemory);
     }
-    case LOCK_FREE_MAP_GROW_DENIED:
     case LOCK_FREE_MAP_POLICY_EXCEPTION:
     {
         return CTaskThreadResult(CTaskThreadPolicyFailure);
@@ -174,6 +222,10 @@ CTaskThreadResult CTaskResultAdapter::map(LockFreeMapStatus status)
     case LOCK_FREE_MAP_UNSUPPORTED:
     {
         return CTaskThreadResult(CTaskThreadUnsupported);
+    }
+    case LOCK_FREE_MAP_SYSTEM_ERROR:
+    {
+        return CTaskThreadResult(CTaskThreadSystemFailure);
     }
     case LOCK_FREE_MAP_VERSION_EXHAUSTED:
     {
@@ -212,6 +264,7 @@ CTaskThreadResult CTaskResultAdapter::hash(const LockFreeHashMapResult& result)
     case LockFreeHashMapCapacityLimit:
     case LockFreeHashMapDirectoryFull:
     case LockFreeHashMapProtectionUnavailable:
+    case LockFreeHashMapGrowthDeclined:
     {
         status = CTaskThreadCapacity;
         break;
@@ -219,11 +272,6 @@ CTaskThreadResult CTaskResultAdapter::hash(const LockFreeHashMapResult& result)
     case LockFreeHashMapNoMemory:
     {
         status = CTaskThreadNoMemory;
-        break;
-    }
-    case LockFreeHashMapGrowthDeclined:
-    {
-        status = CTaskThreadPolicyFailure;
         break;
     }
     case LockFreeHashMapUserException:

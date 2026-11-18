@@ -20,19 +20,27 @@ CTaskThreadResult CTaskThread::createThread()
     return m_state->start();
 }
 
-CTaskThreadResult CTaskThread::postTask(const std::shared_ptr<CTask>& task, int32_t taskLevel)
+bool CTaskThread::postTask(const std::shared_ptr<CTask>& task, int32_t taskLevel)
 {
-    return m_state->post(task, taskLevel);
+    return m_state->post(task, taskLevel, true, true).m_committed;
 }
 
-bool CTaskThread::tryPostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel)
+CTaskThreadResult CTaskThread::postTaskResult(const std::shared_ptr<CTask>& task, int32_t taskLevel)
 {
-    return tryPostTaskResult(task, taskLevel).m_committed;
+    // 普通投递由状态层消化竞争；无需经过仅为try转换Busy的外层入口。
+    return m_state->post(task, taskLevel, true, true);
 }
 
-CTaskThreadResult CTaskThread::tryPostTaskResult(const std::shared_ptr<CTask>& task, int32_t taskLevel)
+bool CTaskThread::tryPostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel,
+    bool retryContention, bool retryCapacity)
 {
-    CTaskThreadResult result = m_state->post(task, taskLevel, false);
+    return m_state->post(task, taskLevel, retryContention, retryCapacity).m_committed;
+}
+
+CTaskThreadResult CTaskThread::tryPostTaskResult(const std::shared_ptr<CTask>& task, int32_t taskLevel,
+    bool retryContention, bool retryCapacity)
+{
+    CTaskThreadResult result = m_state->post(task, taskLevel, retryContention, retryCapacity);
     if (!result.m_committed && result.m_status == CTaskThreadRetry)
     {
         result.m_status = CTaskThreadBusy;
@@ -42,7 +50,7 @@ CTaskThreadResult CTaskThread::tryPostTaskResult(const std::shared_ptr<CTask>& t
 
 bool CTaskThread::hasTask()
 {
-    return statistics().m_queued != 0;
+    return m_state->queuedCount() != 0;
 }
 
 CTaskThreadResult CTaskThread::stopCurTask()
@@ -67,12 +75,12 @@ CTaskThreadResult CTaskThread::getWaitTaskInfo(std::map<int32_t, int32_t>& count
 
 int32_t CTaskThread::getWaitTaskCount()
 {
-    return static_cast<int32_t>((std::min)(statistics().m_queued, static_cast<uint64_t>(INT_MAX)));
+    return static_cast<int32_t>((std::min)(m_state->queuedCount(), static_cast<uint64_t>(INT_MAX)));
 }
 
 int32_t CTaskThread::getCurTaskLevel()
 {
-    return statistics().m_currentLevel;
+    return m_state->currentLevel();
 }
 
 CTaskThreadResult CTaskThread::waitForEnd()

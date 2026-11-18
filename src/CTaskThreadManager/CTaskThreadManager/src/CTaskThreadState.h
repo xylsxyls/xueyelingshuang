@@ -31,9 +31,11 @@ public:
     @param [in] task 任务强引用
     @param [in] level 大于零的任务优先级
     @param [in] retryTransient false 仅用于 tryPostTask，允许未提交竞争立即返回
+    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
     @return committed 为 true 时禁止重投
     */
-    CTaskThreadResult post(const std::shared_ptr<CTask>& task, int32_t level, bool retryTransient = true);
+    CTaskThreadResult post(const std::shared_ptr<CTask>& task, int32_t level,
+        bool retryTransient = true, bool retryCapacity = true);
 
     /** 关闭接纳并等待退出
     @param [in] drain true 排空，false 丢弃排队任务并停止当前任务
@@ -70,6 +72,16 @@ public:
     @return 负载副本
     */
     CTaskThreadStatistics statistics() const;
+
+    /** 只查询当前执行优先级，不汇总投递位置的计数
+    @return 空闲为0，执行期间为任务级别；不是完成屏障
+    */
+    int32_t currentLevel() const;
+
+    /** 只汇总尚未取出的任务数量，包含发布前的投递预留
+    @return 弱一致数量；静止时精确，累计值按uint64_t模运算相减
+    */
+    uint64_t queuedCount() const;
 
     /** 查询分优先级的排队数
     @param [out] counts 先清空再写入
@@ -110,11 +122,6 @@ private:
     */
     uint64_t outstandingCount() const;
 
-    /** 观察尚未取出的任务数量，包含已发布前的投递预留
-    @return 弱一致数量；静止时精确，重做沿用原队列优先级
-    */
-    uint64_t queuedCount() const;
-
     /** 在冷路径汇总某优先级的排队数，有限优先级池保持可退役桶协议
     @param [in] bucket 在保护范围内或由消费者持有的桶
     @return 包含发布前预留的弱一致数量
@@ -139,21 +146,23 @@ private:
     @param [in,out] cache 本调用持有读侧租约的缓存
     @param [in,out] bucket 本次有效的优先级桶
     @param [in] record 完全构造但尚未发布的记录
-    @param [in] retryTransient 普通投递可保留本次记录做少量竞争重试，try 投递不使用此优化
-    @return 只有成功时发布，容量压力下仅重试尚未发布的记录
+    @param [in] retryTransient 普通投递交由队列内部重试竞争，try投递按其开关决定
+    @return 只有成功时发布；容量不足返回外层，在退出读保护后决定是否等待
     */
     LockFreeQueueResult publish(CTaskStorageCache& cache, CTaskPriorityBucket& bucket, CTaskStorageSlot* record, bool retryTransient);
 
     /** 安全通知当前高优先级抢占
     @param [in] level 已经成功接纳的新任务优先级
     @param [in] posted 可空，生产者传入自己的记录，防止延迟通知抢占后来的无关任务
+    @return 合作通知的状态；本次投递的提交事实由调用方单独保留
     */
-    CTaskThreadResult preempt(int32_t level, CTaskStorageSlot* posted = nullptr);
+    CTaskThreadStatus preempt(int32_t level, CTaskStorageSlot* posted = nullptr);
 
-    /** 唯一消费者取得本级队首，一次建立至多 64 项预取前缀，不等待发布者
+    /** 唯一消费者取得本级队首，单级至多 256 项、多级至多 64 项，不等待发布者
     @param [in,out] bucket 优先级桶
+    @return 重做优先的本级队首；只准备不移除，空表示本次未观察到可执行项
     */
-    void prepareFront(CTaskPriorityBucket& bucket);
+    CTaskStorageSlot* prepareFront(CTaskPriorityBucket& bucket);
 
     /** 重新取得本级的就绪前缀；与逐任务选择分开，避免主循环展开完整队列消费路径
     @param [in,out] bucket 本地前缀已经耗尽且队列可能就绪的优先级桶
@@ -207,7 +216,7 @@ private:
     @param [in,out] record 由读域或唯一消费者保护的当前记录
     @return 回调结果；重做只记录意图，不在通知线程构造任务
     */
-    CTaskThreadResult requestPreemption(CTaskStorageSlot& record);
+    CTaskThreadStatus requestPreemption(CTaskStorageSlot& record);
 
     /** 仅配置了工厂的任务进入此路径，关闭重做请求并按需调用工厂
     @param [in,out] bucket 原优先级的重做槽
@@ -243,11 +252,11 @@ private:
     LockFreeMap<int32_t, std::shared_ptr<CTaskPriorityBucket>> m_buckets;
     // 常用级别只发布一次的缓存，桶退役或遇到未缓存级别时回退通用路径
     CTaskBucketCache m_cachedBuckets[16];
-    // 仅无优先级池上限时长期保留常用桶，避免逐任务强引用和写者共享计数
-    const bool m_pinCommon;
+    // 长期保留的最高常用级别，范围0至16；两个初始池均保留可回收位置
+    const int32_t m_pinnedLevels;
     // 构造时查询写预取能力，不在运行期修改，也不引入全局初始化锁
     const bool m_writePrefetch;
-    // 常用级别的扫描上界只增不减，也用于识别单级队列
+    // 常用级别扫描上界；提交后提高，低频维护逐级下调并复查
     CTaskReadyIndex m_readyIndex;
     // 只会由 false 变为 true，必须在任何未缓存桶发布任务前设置
     std::atomic<bool> m_scanBuckets;
@@ -315,14 +324,14 @@ private:
     std::atomic<uint64_t> m_executed;
     // 接纳失败次数
     std::atomic<uint64_t> m_rejected;
-    // 有限资源压力的调度提示；只影响退避，不参与任务接纳或发布判定
-    std::atomic<uint32_t> m_pressureYields;
     // 可观察异常/系统失败次数
     std::atomic<uint64_t> m_errors;
     // 生产者每次只读通知位，不与消费者逐任务统计写入共用缓存行
     char m_wakePadding[64];
     // 合并通知，避免每个任务留下一个无效的空队列唤醒许可
     std::atomic<bool> m_wakePending;
+    // 生产者读取的压力提示与消费者逐项统计隔离；只影响退避，不参与任务接纳
+    std::atomic<uint32_t> m_pressureYields;
     // 新优先级遇到池上限时请求消费者退役空桶，之后可重试未接纳投递
     std::atomic<bool> m_trimBuckets;
 };

@@ -16,6 +16,12 @@ public:
     */
     static CTaskThreadResult pause(uint32_t& attempts);
 
+    /** 容量等待先连续重试4096次，之后每次休眠1毫秒
+    @param [in,out] attempts 容量等待次数，饱和于4096
+    @return Ok可以重试；宿主不支持或系统失败明确返回错误
+    */
+    static CTaskThreadResult pauseCapacity(uint32_t& attempts);
+
     /** 复制线程强引用后释放 Map 保护，后续等待或回调不占用容器保护记录
     @param [in] threads 线程注册表
     @param [out] snapshot 弱一致的线程强引用集合，分配失败时清空

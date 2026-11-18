@@ -1441,11 +1441,6 @@ add_custom_command(TARGET CTaskThreadManager POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${native_macro}" "${SDK_ROOT}/include/CTaskThreadManager/CTaskThreadManagerMacro.h"
     VERBATIM)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -Wl,-rpath=. -O0 -g -ggdb ")
-    set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
-endif()
-
 find_package(Threads REQUIRED)
 target_link_libraries(CTaskThreadManager PUBLIC Threads::Threads)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

@@ -23,11 +23,14 @@ inline void CTaskReadyIndex::fence()
 #endif
 }
 
-inline void CTaskReadyIndex::publish(int32_t level)
+inline void CTaskReadyIndex::publish(int32_t level, bool fenced)
 {
     // 若观察到足够高的旧提示并省略 CAS，此 fence 仍把之前的队列发布
     // 排在消费者成功下调后的复查之前；不能仅用一个普通 acquire load。
-    fence();
+    if (!fenced)
+    {
+        fence();
+    }
     int32_t highest = m_highest.load(std::memory_order_seq_cst);
     while (highest < level && !m_highest.compare_exchange_strong(highest, level, std::memory_order_seq_cst, std::memory_order_relaxed))
     {
@@ -46,7 +49,9 @@ inline bool CTaskReadyIndex::lower(int32_t level)
     {
         return false;
     }
-    // 与 publish 的 fence 构成顺序，成功后调用方必须再检查一次该队列。
-    fence();
+    // 与 publish 的屏障构成顺序，成功后调用方仍必须再检查队列。
+    // v120 x86/x64 的成功 CAS 已有完整硬件屏障，避免再对栈执行一次 Interlocked。
+    // 其他编译目标继续保留标准 SC 屏障。
+    fenceAfterRmw();
     return true;
 }

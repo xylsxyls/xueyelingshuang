@@ -30,14 +30,12 @@ public:
     LockFreeQueue<CTaskStorageSlot*> m_queue;
     // 仅消费者访问，优先于本级 FIFO；重做不重新分配队列节点
     CTaskStorageSlot* m_redo;
-    // 仅消费者访问的一个已发布队首；执行之前仍重新选择最高优先级
-    CTaskStorageSlot* m_front;
-    // 消费者本地前缀的下一个位置；与队首指针相邻，空桶探测不跨越载荷数组
+    // 消费者本地前缀的下一个位置；仅在选定任务时推进，观察队首不消费
     size_t m_readyHead;
     // 消费者本地前缀的有效项数，尚未取出的范围为 [m_readyHead, m_readyCount)
     size_t m_readyCount;
-    // 最多预读 64 个记录基类地址，合并归还 FIFO 额度；记录仍计入原优先级排队数
-    LockFreeQueueEntry<CTaskStorageSlot*>* m_readyEntries[64];
+    // 最多预读 256 个记录基类地址，合并归还 FIFO 额度；记录仍计入原优先级排队数
+    LockFreeQueueEntry<CTaskStorageSlot*>* m_readyEntries[256];
     // 消费者独占引用与生产者可写计数隔离
     char m_frontPadding[64];
     // 排队数量，包含正在发布的预留和重做槽

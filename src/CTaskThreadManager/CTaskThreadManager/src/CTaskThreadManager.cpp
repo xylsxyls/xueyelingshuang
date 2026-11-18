@@ -101,15 +101,12 @@ int32_t CTaskThreadManager::count()
     return current ? current->count() : 0;
 }
 
-// 调用库的独立 main 示例（2026-11-08）
-// 以下全部是注释，不参与库编译，也不修改上面的实现。
-// 可运行原件：src/CTaskThreadManagerTest/UsageExample/UsageExample.h 和 UsageExample.cpp。
-// 运行方法与验证记录见该目录“使用示例验证.txt”；不要直接在库工程中取消注释引入 main。
-// 分成头文件声明、源文件实现，符合类声明与实现分离的规则。
-// 先看最后的 main，再按需看七个 Example 函数；Check/WaitUntil 只是有界验证辅助。
-// 示例不测性能，不展示私有白盒；真实业务结果、幂等和背压由上层负责。
-// Windows VS2013 x64 / Win32 静态 Release，各连续 5 轮、每轮 7 个场景全部通过。
-// 这里的通过只针对本示例；完整使用限制和历史未解决项见库目录使用说明。
+// 调用库的独立 main 使用示例
+// 以下全部是注释，不参与库编译。复制声明与实现到独立示例工程后运行最后的main。
+// 覆盖优先级/FIFO、延迟重做、停止、资源配置、异常、动态池与系统线程优先级。
+// Check/WaitUntil只用于核对示例结果，实际业务须定义完成、取消及背压处理。
+// 公开用法回归位于CTaskThreadManagerTest中的CTaskUsageTests；使用契约见
+// common/AI文档/线程开发规范.txt。示例不构成性能或全部平台验证结论。
 //
 // ========== UsageExample.h ==========
 // #pragma once
@@ -309,7 +306,7 @@ int32_t CTaskThreadManager::count()
 // */
 // static void Post(const std::shared_ptr<CTaskThread>& target, const std::shared_ptr<CTask>& task, int32_t level = 1)
 // {
-//     const CTaskThreadResult result = target->postTask(task, level);
+//     const CTaskThreadResult result = target->postTaskResult(task, level);
 //     Check(result.m_committed, taskThreadStatusText(result.m_status));
 //     // 已接纳后即使附带错误也绝不重发；示例要求回调没有错误。
 //     Check(result.m_status == CTaskThreadOk, "accepted task has notification error");
@@ -383,8 +380,8 @@ int32_t CTaskThreadManager::count()
 //     Post(target, Append(42, 2, order), 1);
 //     Post(target, Append(7, 5, order), 5);
 //     Check(target->tryPostTask(Append(8, 3, order), 3), "tryPostTask refused");
-//     Check(!target->postTask(first, 0).m_committed, "invalid level accepted");
-//     Check(!target->postTask(std::shared_ptr<CTask>()).m_committed, "null task accepted");
+//     Check(!target->postTaskResult(first, 0).m_committed, "invalid level accepted");
+//     Check(!target->postTaskResult(std::shared_ptr<CTask>()).m_committed, "null task accepted");
 //     std::map<int32_t, int32_t> waiting;
 //     Check(target->getWaitTaskInfo(waiting).m_status == CTaskThreadOk, "wait info");
 //     Check(target->hasTask() && target->getWaitTaskCount() == 4 && waiting[1] == 2, "queued counts");
@@ -396,7 +393,7 @@ int32_t CTaskThreadManager::count()
 //     Check(target->statistics().m_errors == 0 && target->statistics().m_executed == 5, "execution statistics");
 //     Check(manager.count() == 1, "direct waitForEnd must retain registration");
 //     Check(manager.waitForEnd(target->threadId()).m_status == CTaskThreadOk, "manager unregister");
-//     const CTaskThreadResult closed = target->postTask(first);
+//     const CTaskThreadResult closed = target->postTaskResult(first);
 //     Check(!closed.m_committed && closed.m_status == CTaskThreadClosed && manager.count() == 0, "old handle");
 //     std::cout << "PASS priority, FIFO, property, queries, system priority, drain" << std::endl;
 // }
@@ -587,7 +584,7 @@ int32_t CTaskThreadManager::count()
 //         return gate->runs() == 1;
 //     }), "capacity gate not started");
 //     Post(target, work);
-//     const CTaskThreadResult full = target->postTask(work);
+//     const CTaskThreadResult full = target->tryPostTaskResult(work, 1, true, false);
 //     Check(!full.m_committed && full.m_status == CTaskThreadCapacity, "logical capacity rejection");
 //     release->store(true);
 //     Check(CTaskThreadManager::instance().waitForEnd(target->threadId()).m_status == CTaskThreadOk, "capacity drain");
@@ -755,7 +752,7 @@ int32_t CTaskThreadManager::count()
 //                 Check(choice.m_status == CTaskThreadCapacity || choice.m_status == CTaskThreadClosed, "allocator closed/error");
 //                 return false;
 //             }
-//             const CTaskThreadResult posted = selected->postTask(work);
+//             const CTaskThreadResult posted = selected->postTaskResult(work);
 //             if (posted.m_committed)
 //             {
 //                 Check(posted.m_status == CTaskThreadOk, "pool accepted with error");

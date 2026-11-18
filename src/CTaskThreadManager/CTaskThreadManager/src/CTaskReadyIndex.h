@@ -17,8 +17,9 @@ public:
 
     /** 在任务及级别提示发布后提高最高位置
     @param [in] level 正数优先级；本库常用路径使用 1 至 16
+    @param [in] fenced true表示任务发布后已执行完整StoreLoad屏障
     */
-    void publish(int32_t level);
+    void publish(int32_t level, bool fenced = false);
 
     /** 观察当前最高提示，可能暂时包含已经消费完的级别
     @return 至少为 1 的优先级

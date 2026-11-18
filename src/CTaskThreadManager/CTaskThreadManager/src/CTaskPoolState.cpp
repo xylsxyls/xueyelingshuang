@@ -69,9 +69,7 @@ CTaskThreadResult CTaskPoolState::start()
             }
         }
         m_lastResize = nowMilliseconds();
-        CTaskThreadConfig control;
-        control.m_queue.maximumProducers = 4;
-        result = CTaskThreadManager::instance().initialize(control, m_controller);
+        result = CTaskThreadManager::instance().initialize(m_config.m_control, m_controller);
         if (result.m_status != CTaskThreadOk)
         {
             shutdown(false);
@@ -85,7 +83,7 @@ CTaskThreadResult CTaskPoolState::start()
         }
         std::shared_ptr<CTask> task(new CTaskPoolControlTask(*this));
         m_accepting.store(true, std::memory_order_release);
-        result = controller->postTask(task);
+        result = controller->tryPostTaskResult(task, 1, true, false);
         if (!result.m_committed)
         {
             shutdown(false);
@@ -130,7 +128,7 @@ CTaskThreadResult CTaskPoolState::addWorker(bool initial)
     uint32_t attempts = 0;
     for (;;)
     {
-        result = CTaskResultAdapter::map(m_workers.lockFreeMapSet(id, thread));
+        result = CTaskResultAdapter::map(m_workers.trySet(id, thread, true, false));
         if (result.m_committed || result.m_status != CTaskThreadRetry)
         {
             break;
@@ -163,7 +161,7 @@ uint64_t CTaskPoolState::nowMilliseconds()
 void CTaskPoolState::requestStop()
 {
     m_stop.store(true, std::memory_order_release);
-    m_changed.trySignal();
+    m_changed.trySignal(true, false);
 }
 
 void CTaskPoolState::run()
@@ -284,7 +282,7 @@ void CTaskPoolState::rebalance(uint64_t now)
                 }
                 if (status == LOCK_FREE_MAP_OK && found == thread)
                 {
-                    status = m_workers.lockFreeMapErase(id, token);
+                    status = m_workers.tryEraseIf(id, token, true, false);
                 }
                 result = CTaskResultAdapter::map(status);
                 if (result.m_committed)

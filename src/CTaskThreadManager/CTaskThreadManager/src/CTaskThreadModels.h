@@ -20,7 +20,7 @@ enum CTaskThreadStatus
     CTaskThreadRetry,
     // 内存申请失败
     CTaskThreadNoMemory,
-    // 策略拒绝或抛异常
+    // 扩缩容策略抛异常
     CTaskThreadPolicyFailure,
     // 业务回调抛异常
     CTaskThreadCallbackFailure,
@@ -94,7 +94,7 @@ public:
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-    // 稳定任务记录池配置；V3 一条记录占一槽，含排队、执行、重做和延迟回收
+    // 稳定任务记录池配置；一条记录占一槽，含排队、执行、重做和延迟回收
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4251)
@@ -202,3 +202,5 @@ public:
 @return 静态字符串，未知值也有说明
 */
 CTaskThreadManagerAPI const char* taskThreadStatusText(CTaskThreadStatus status);
+
+#include "CTaskThreadModels.inl"

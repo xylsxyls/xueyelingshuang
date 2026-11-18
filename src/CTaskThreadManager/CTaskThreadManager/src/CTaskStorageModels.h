@@ -183,8 +183,8 @@ public:
 struct CTaskStorageCache
 {
 public:
-    // 四个独立批次吸收生产者领取不同优先级页时的归还间隙
-    CTaskStorageReclaimBatch m_reclaims[4];
+    // 八个独立批次吸收消费者集中交接与生产者分批领取之间的归还间隙
+    CTaskStorageReclaimBatch m_reclaims[8];
     // 唯一消费者暂存同一分配位置的安全退休记录
     CTaskStorageSlot* m_stagedSlots[64];
     // 唯一消费者暂存数量

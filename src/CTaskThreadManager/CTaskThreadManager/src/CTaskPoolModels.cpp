@@ -25,7 +25,7 @@ m_initialThreads(2),
 m_maximumThreads(64),
 m_checkMilliseconds(100)
 {
-
+    m_control.m_queue.maximumProducers = 4;
 }
 
 CTaskPoolStatistics::CTaskPoolStatistics() :

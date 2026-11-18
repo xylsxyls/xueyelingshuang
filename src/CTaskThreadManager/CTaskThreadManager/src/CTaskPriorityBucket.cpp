@@ -5,7 +5,6 @@ CTaskPriorityBucket::CTaskPriorityBucket(int32_t level) :
 m_level(level),
 m_queue(false),
 m_redo(nullptr),
-m_front(nullptr),
 m_readyHead(0),
 m_readyCount(0),
 m_queued(0),
@@ -25,6 +24,10 @@ CTaskThreadResult CTaskPriorityBucket::initialize(const CTaskThreadConfig& confi
     if (result == LockFreeQueueSuccess)
     {
         result = m_queue.configureProducerCounters(true);
+    }
+    if (result == LockFreeQueueSuccess)
+    {
+        result = m_queue.configureConsumerYieldInterval(65536);
     }
     if (result == LockFreeQueueSuccess)
     {

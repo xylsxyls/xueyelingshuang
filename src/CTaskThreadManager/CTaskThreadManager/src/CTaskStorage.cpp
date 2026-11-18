@@ -315,9 +315,10 @@ size_t CTaskStorage::collect(size_t budget, bool delegate)
     size_t count = helped;
     while (count < budget)
     {
-        CTaskStorageSlot* ready[16];
+        // 与归还位图的64项上限一致；逐项验证epoch，不扩大调用方给定的回收预算。
+        CTaskStorageSlot* ready[64];
         size_t readyCount = 0;
-        const size_t limit = (std::min)(size_t(16), budget - count);
+        const size_t limit = (std::min)(size_t(64), budget - count);
         const size_t windowCount = (std::min)(limit, m_retiredCount);
         if (windowCount != 0)
         {
@@ -408,7 +409,7 @@ size_t CTaskStorage::collect(size_t budget, bool delegate)
 size_t CTaskStorage::helpReclaim(CTaskStorageCache& cache, size_t budget)
 {
     size_t released = 0;
-    for (size_t i = 0; i < 4 && released < budget; ++i)
+    for (size_t i = 0; i < sizeof(cache.m_reclaims) / sizeof(cache.m_reclaims[0]) && released < budget; ++i)
     {
         CTaskStorageReclaimBatch& batch = cache.m_reclaims[i];
         int32_t count = batch.m_count.load(std::memory_order_acquire);
@@ -433,7 +434,7 @@ void CTaskStorage::publishReclaims(CTaskStorageCache& cache)
     {
         return;
     }
-    for (size_t i = 0; i < 4; ++i)
+    for (size_t i = 0; i < sizeof(cache.m_reclaims) / sizeof(cache.m_reclaims[0]); ++i)
     {
         CTaskStorageReclaimBatch& batch = cache.m_reclaims[i];
         int32_t expected = 0;
@@ -451,13 +452,17 @@ void CTaskStorage::publishReclaims(CTaskStorageCache& cache)
         cache.m_stagedCount = 0;
         return;
     }
-    // 四批都在途时直接处理新批次；不等待指定生产者或帮助者。
+    // 八批都在途时直接处理新批次；不等待指定生产者或帮助者。
     releaseSlots(cache.m_stagedSlots, count);
     cache.m_stagedCount = 0;
 }
 
 void CTaskStorage::releaseSlots(CTaskStorageSlot* const* slots, size_t count)
 {
+    if (count == 0)
+    {
+        return;
+    }
     CTaskStoragePage* pages[64];
     uint64_t masks[64];
     uint8_t positions[128] = {};
@@ -615,7 +620,8 @@ CTaskThreadResult CTaskStorage::grow(size_t requested, bool initial)
     requested = (std::min)(requested, size_t(65535));
     if (requested == 0)
     {
-        return CTaskThreadResult(CTaskThreadPolicyFailure);
+        // 策略拒绝增长仍可等待已有记录释放；策略异常由调用边界单独报告。
+        return CTaskThreadResult(CTaskThreadCapacity);
     }
     const uint64_t reserved = m_budget.fetch_add(requested, std::memory_order_acq_rel);
     if (reserved >= maximum)
@@ -683,6 +689,17 @@ CTaskThreadResult CTaskStorage::grow(size_t requested, bool initial)
         while (previous < time && !m_lastGrow.compare_exchange_strong(previous, time, std::memory_order_relaxed, std::memory_order_relaxed))
         {
 
+        }
+    }
+    if (!initial && m_config.m_onGrowth)
+    {
+        try
+        {
+            m_config.m_onGrowth(count, m_grows.load(std::memory_order_relaxed));
+        }
+        catch (...)
+        {
+            // 任务池已发布新增存储，观察回调不能撤销或重复本次增长。
         }
     }
     return CTaskThreadResult();
@@ -846,6 +863,13 @@ CTaskThreadResult CTaskStorage::maintain()
 
 void CTaskStorage::clear()
 {
+    // 发布任何槽位前都会先推进目录上界；零表示从未建立批次或已完整清理。
+    // 工作线程退出已 clear 时，随后析构无需再次扫描全部缓存和空目录。
+    const size_t high = m_high.load(std::memory_order_relaxed);
+    if (high == 0)
+    {
+        return;
+    }
     m_retiredHead = nullptr;
     m_retiredTail = nullptr;
     m_retiredRead = 0;
@@ -856,7 +880,7 @@ void CTaskStorage::clear()
     {
         for (size_t i = 0; i <= m_domain->capacity(); ++i)
         {
-            for (size_t batch = 0; batch < 4; ++batch)
+            for (size_t batch = 0; batch < sizeof(m_caches[i].m_reclaims) / sizeof(m_caches[i].m_reclaims[0]); ++batch)
             {
                 m_caches[i].m_reclaims[batch].m_count.store(0, std::memory_order_relaxed);
                 m_caches[i].m_reclaims[batch].m_begin = 0;
@@ -873,7 +897,7 @@ void CTaskStorage::clear()
             m_caches[i].m_cachedCount.store(0, std::memory_order_relaxed);
         }
     }
-    for (size_t i = 0; i < m_directoryCount; ++i)
+    for (size_t i = 0; i < high; ++i)
     {
         const uintptr_t address = m_directory[i].load(std::memory_order_relaxed);
         if (address > 1)
