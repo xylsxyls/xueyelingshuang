@@ -952,7 +952,12 @@ static void RunEntryProbeTest(bool dynamic, bool span)
     LockFreeQueueEntry<int>* output[256];
     LockFreeQueue<int> queue(false);
     const size_t limit = span ? 256 : 64;
-    // 按待测接口提取前缀；destination可空，budget为调用方预算，received输出实际消费数，返回是否消费。
+    /** 按待测接口提取已发布前缀，不改变队列的消费预算
+    @param [out] destination 输出条目数组，可空以验证参数拒绝
+    @param [in] budget 调用方允许消费的最多条目数
+    @param [out] received 本次实际消费数
+    @return 是否消费了至少一个条目
+    */
     const auto probe = [&](LockFreeQueueEntry<int>** destination, size_t budget, size_t& received) -> bool
     {
         return span ? queue.probeReadyEntrySpan(destination, budget, received) :

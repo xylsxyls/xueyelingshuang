@@ -12,6 +12,7 @@
 #include "CTaskIntrusivePrototype.h"
 #include "CTaskUsageTests.h"
 #include "CTaskRetryContractTests.h"
+#include "CTaskThreadTestAccess.h"
 #include <cstdlib>
 #include <algorithm>
 #include <climits>
@@ -273,6 +274,8 @@ static const std::map<int32_t, CTaskTestCaseDescription> g_taskCaseDescriptions 
     {CTaskTestPoolLowMemoryDestruction, {"pool-low-memory-destruction", "持续低内存析构线程池", "持续new失败时先等待控制和业务线程退出再释放池，资源恢复后可清理登记。"}},
     // 124 保护耗尽析构线程池
     {CTaskTestPoolProtectionDestruction, {"pool-protection-destruction", "保护耗尽析构线程池", "占满工作线程四条保护记录，关闭返回容量错误后析构仍等待借用释放并完成全部线程退出。"}},
+    // 125 原生通知初始化失败
+    {CTaskTestSemaphoreInitialization, {"semaphore-initialization", "原生通知初始化失败", "工作线程两处及池控制通知各注入三种初始化错误；启动拒绝并保留原码，无登记残留，新实例可恢复。"}},
 };
 
 std::atomic<int> TestTask::m_live(0);
@@ -1573,6 +1576,15 @@ std::vector<BlackBoxCase> taskCases()
     add("pool-protection-destruction", "resource failure cannot destroy live pool state", false, taskPoolProtectionDestructionTest);
 #ifdef CTTM_TEST_DLL
     cases.back().m_unavailableReason = "private read protection belongs to static build";
+#endif
+    add("semaphore-initialization", "native notification failures reject startup and preserve diagnosis", false, []()
+    {
+#ifndef CTTM_TEST_DLL
+        CTaskThreadTestAccess::semaphoreInitializationTest();
+#endif
+    });
+#ifdef CTTM_TEST_DLL
+    cases.back().m_unavailableReason = "native initialization fault injection belongs to static build";
 #endif
     bbCheck(cases.size() == g_taskCaseDescriptions.size(), "test metadata coverage mismatch");
     for (size_t i = 0; i < cases.size(); ++i)

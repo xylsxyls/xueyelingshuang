@@ -217,6 +217,8 @@ CTaskThreadManagerTest 测试文档
 
     124 | 保护耗尽析构线程池 | 瞬时，超时20秒 | 受控占满工作线程四条保护记录，实际关闭返回Capacity；析构不能提前返回，释放保护后合作停止、join并清空登记
 
+    125 | 原生通知初始化失败 | 瞬时，超时20秒 | 在尚未启动的实例内，分别将工作线程唤醒、退出通知及池控制通知标为NoMemory/Unsupported/SystemFailure；九种组合必须在启动时拒绝并保留原生错误，无登记残留。独立新实例可启动、join和注销；只在测试工程绑定私有成员，DLL明确不执行此注入
+
 四、超时、故障与可重复运行
     异步任务借用的计数器、门控变量和账本先构造，线程/线程池清理对象后构造，确保异常退出时先收敛线程
     已创建的测试线程通过TestWorkers接管；登记容器分配失败也负责注销，不能留下引用已销毁栈变量的任务
@@ -560,6 +562,8 @@ enum CTaskTestId
     CTaskTestPoolLowMemoryDestruction = 123,
     // 停止保护记录耗尽时，池析构必须等待借用释放和工作线程退出
     CTaskTestPoolProtectionDestruction = 124,
+    // 原生通知初始化失败须在创建线程前报告，保留错误并允许新实例恢复
+    CTaskTestSemaphoreInitialization = 125,
 };
 
 /** 测试注册表的中文场景与独立预期，字符串为静态寿命

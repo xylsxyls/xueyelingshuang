@@ -1,6 +1,7 @@
 ﻿#include "CTaskThreadTestAccess.h"
 #ifndef CTTM_TEST_DLL
 #include "CTaskPrivateTestAccess.h"
+#include "BlackBoxTestSupport.h"
 #include <climits>
 #include <stdexcept>
 
@@ -20,6 +21,10 @@ CTaskTestBuckets::Type CTaskTestBuckets::m_member = nullptr;
 CTaskTestDomain::Type CTaskTestDomain::m_member = nullptr;
 CTaskTestStorage::Type CTaskTestStorage::m_member = nullptr;
 CTaskTestPreempt::Type CTaskTestPreempt::m_member = nullptr;
+CTaskTestWakeup::Type CTaskTestWakeup::m_member = nullptr;
+CTaskTestCompletion::Type CTaskTestCompletion::m_member = nullptr;
+CTaskTestPoolChanged::Type CTaskTestPoolChanged::m_member = nullptr;
+CTaskTestSemaphoreWake::Type CTaskTestSemaphoreWake::m_member = nullptr;
 
 // C++ 显式模板实例化允许指定私有成员；只保存指针，不依赖对象布局偏移。
 template struct CTaskPrivateBinding<CTaskTestThreadState, &CTaskThread::m_state>;
@@ -38,6 +43,46 @@ template struct CTaskPrivateBinding<CTaskTestBuckets, &CTaskThreadState::m_bucke
 template struct CTaskPrivateBinding<CTaskTestDomain, &CTaskThreadState::m_readDomain>;
 template struct CTaskPrivateBinding<CTaskTestStorage, &CTaskThreadState::m_storage>;
 template struct CTaskPrivateBinding<CTaskTestPreempt, &CTaskThreadState::preempt>;
+template struct CTaskPrivateBinding<CTaskTestWakeup, &CTaskThreadState::m_wakeup>;
+template struct CTaskPrivateBinding<CTaskTestCompletion, &CTaskThreadState::m_completion>;
+template struct CTaskPrivateBinding<CTaskTestPoolChanged, &CTaskPoolState::m_changed>;
+template struct CTaskPrivateBinding<CTaskTestSemaphoreWake, &Semaphore::m_wake>;
+
+void CTaskThreadTestAccess::semaphoreInitializationTest()
+{
+    const SemaphoreStatus failures[] = {SEMAPHORE_NO_MEMORY, SEMAPHORE_UNSUPPORTED, SEMAPHORE_SYSTEM_ERROR};
+    const CTaskThreadStatus expected[] = {CTaskThreadNoMemory, CTaskThreadUnsupported, CTaskThreadSystemFailure};
+    CTaskThreadConfig threadConfig;
+    CTaskThreadPoolConfig poolConfig;
+    poolConfig.m_initialThreads = 1;
+    poolConfig.m_maximumThreads = 1;
+    for (size_t failure = 0; failure < 3; ++failure)
+    {
+        const int32_t nativeError = failures[failure] == SEMAPHORE_SYSTEM_ERROR ? 1234 : 0;
+        for (size_t kind = 0; kind < 3; ++kind)
+        {
+            CTaskThreadState thread(threadConfig);
+            CTaskPoolState pool(poolConfig);
+            Semaphore& notification = kind == 0 ? thread.*CTaskTestWakeup::m_member :
+                (kind == 1 ? thread.*CTaskTestCompletion::m_member : pool.*CTaskTestPoolChanged::m_member);
+            (notification.*CTaskTestSemaphoreWake::m_member).failInitialization(failures[failure], nativeError);
+            bbCheck(notification.initializationResult().status == failures[failure], "semaphore fault fixture not applied");
+            const CTaskThreadResult result = kind == 2 ? pool.start() : thread.start();
+            bbCheck(result.m_status == expected[failure] && !result.m_committed && result.m_nativeError == nativeError,
+                "semaphore initialization failure was accepted or lost its diagnosis");
+            bbCheck(CTaskThreadManager::instance().count() == 0, "failed semaphore startup registered a worker");
+        }
+    }
+    // 注入只作用于被测实例；新实例仍可启动并正常结束，不能用全局失败掩盖回滚问题。
+    CTaskThreadState thread(threadConfig);
+    bbCheck(thread.start().m_status == CTaskThreadOk, "fresh worker failed after semaphore fault");
+    bbCheck(thread.finish(true).m_status == CTaskThreadOk && thread.statistics().m_exited,
+        "fresh worker did not join after semaphore fault");
+    CTaskPoolState pool(poolConfig);
+    bbCheck(pool.start().m_status == CTaskThreadOk, "fresh pool failed after semaphore fault");
+    bbCheck(pool.shutdown(true).m_status == CTaskThreadOk && CTaskThreadManager::instance().count() == 0,
+        "fresh pool did not unregister after semaphore fault");
+}
 
 /** 从生产门面取得状态，只在测试工程使用
 @param [in,out] thread 已成功初始化的线程

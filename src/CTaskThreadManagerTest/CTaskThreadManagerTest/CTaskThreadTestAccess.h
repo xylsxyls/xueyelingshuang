@@ -11,6 +11,11 @@ class CTaskThread;
 class CTaskThreadTestAccess
 {
 public:
+    /** 静止注入三种Semaphore初始化错误，检查工作线程及控制线程在启动前拒绝
+    不占用真实系统资源制造故障；验证状态、原生错误、未提交及正常新实例恢复
+    */
+    static void semaphoreInitializationTest();
+
     /** 静止设置线程记录序号，部分尾段仅供当前测试线程随后投递
     @param [in,out] thread 空闲线程，外部保证没有投递
     @param [in] sequence 已分配的最后序号

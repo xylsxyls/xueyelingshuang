@@ -1576,7 +1576,10 @@ void taskV5ReclaimBatchesTest()
             CTaskThreadResult result;
             CTaskStorageSlot* slot = storage.acquire(cache, result);
             bbCheck(slot != nullptr && result.m_status == CTaskThreadOk, "V5 reclaim batches allocation failed");
-            slot->m_task = std::make_shared<TestTask>(625, [](TestTask&) {});
+            slot->m_task = std::make_shared<TestTask>(625, [](TestTask&)
+            {
+
+            });
             slot->m_state->m_bits.store(3);
             slots.push_back(slot);
         }
@@ -1612,7 +1615,10 @@ void taskV5ReclaimBatchesTest()
             CTaskStorageSlot* slot = storage.acquire(cache, result);
             bbCheck(slot != nullptr && result.m_status == CTaskThreadOk,
                 "V5 partial reclaim batch allocation failed");
-            slot->m_task = std::make_shared<TestTask>(625, [](TestTask&) {});
+            slot->m_task = std::make_shared<TestTask>(625, [](TestTask&)
+            {
+
+            });
             slot->m_state->m_bits.store(3);
             storage.retire(*slot);
         }

@@ -4,6 +4,7 @@
 #include "CTaskThreadManager/CTaskThreadState.h"
 #include "CTaskThreadManager/CTaskThreadManager.h"
 #include "CTaskThreadManager/CTaskManagerState.h"
+#include "CTaskThreadManager/CTaskPoolState.h"
 
 /** 测试专用显式实例化绑定器；生产类不声明测试友元，也不改变访问修饰符
 @param Tag 测试成员指针存放类型
@@ -175,6 +176,46 @@ public:
     typedef CTaskThreadStatus (CTaskThreadState::*Type)(int32_t, CTaskStorageSlot*);
 
     // 由测试翻译单元中的显式实例化初始化
+    static Type m_member;
+};
+
+/** 静止故障注入借用工作线程的启动通知对象，不更改生产类声明
+*/
+struct CTaskTestWakeup
+{
+public:
+    typedef Semaphore CTaskThreadState::* Type;
+    // 测试翻译单元显式绑定的通知成员
+    static Type m_member;
+};
+
+/** 静止故障注入借用工作线程的退出通知对象
+*/
+struct CTaskTestCompletion
+{
+public:
+    typedef Semaphore CTaskThreadState::* Type;
+    // 测试翻译单元显式绑定的通知成员
+    static Type m_member;
+};
+
+/** 静止故障注入借用线程池的控制通知对象
+*/
+struct CTaskTestPoolChanged
+{
+public:
+    typedef Semaphore CTaskPoolState::* Type;
+    // 测试翻译单元显式绑定的通知成员
+    static Type m_member;
+};
+
+/** 仅测试工程设置原生等待后端的初始化失败状态，不修改基础库源码
+*/
+struct CTaskTestSemaphoreWake
+{
+public:
+    typedef SemaphoreWake Semaphore::* Type;
+    // 未启动并发调用前使用的原生后端成员
     static Type m_member;
 };
 
