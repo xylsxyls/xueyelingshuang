@@ -29,7 +29,7 @@ public:
     /** 接纳任务；竞争与容量不足均内部重试，容量连续重试4096次后每次等待1毫秒
     @param [in] task 非空任务强引用
     @param [in] taskLevel 从 1 到 INT_MAX，大值先执行，同级 FIFO
-    @return true已经接纳，不应重发；false为关闭、非法参数或实际资源错误
+    @return true已接纳但不表示执行完成，不能重发；false为未接纳，需要详细结果时改用postTaskResult投递
     */
     bool postTask(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1);
 
@@ -61,7 +61,7 @@ public:
         bool retryContention = false, bool retryCapacity = false);
 
     /** 观察是否有排队任务
-    @return 不包含当前执行任务
+    @return 本次弱一致观察中有排队项为true，不包含当前执行任务，不能作为完成或退出屏障
     */
     bool hasTask();
 
@@ -70,14 +70,14 @@ public:
     */
     CTaskThreadResult stopCurTask();
 
-    /** 通知属性 ID 匹配的任务；保留历史规则，当前任务不受 taskLevel 过滤
+    /** 通知属性 ID 匹配的任务；当前任务不受 taskLevel 过滤
     @param [in] propertyId 属性 ID，不要求唯一，通知所有匹配任务
     @param [in] taskLevel 排队优先级过滤，0 为全部
     @return 通知结果，不删除任务
     */
     CTaskThreadResult stopTask(int32_t propertyId, int32_t taskLevel = 0);
 
-    /** 通知所有任务合作停止，回调允许查询和投递
+    /** 通知本次观察到的任务合作停止，不删除排队项；回调允许查询和投递
     @return 通知结果
     */
     CTaskThreadResult stopAllTask();
@@ -89,7 +89,7 @@ public:
     CTaskThreadResult getWaitTaskInfo(std::map<int32_t, int32_t>& counts);
 
     /** 查询等待任务数量
-    @return 大于 INT_MAX 时饱和
+    @return 弱一致排队数，包含预取未执行项且不含当前执行项；大于INT_MAX时饱和
     */
     int32_t getWaitTaskCount();
 
