@@ -14,9 +14,9 @@ public:
     */
     virtual ~LockFreeHashMapPolicyFunction();
 
-    /** 调用用户提供的线程安全策略，异常交由池评估边界处理
-    @param [in] context 调用期间借用的弱一致容量观测
-    @return 用户策略请求，由池进一步检查容量和安全性
+    /** 调用用户提供的线程安全策略或增长通知，执行异常交由调用边界处理
+    @param [in] context 调用期间借用的策略上下文或增长通知参数
+    @return 非void类型返回策略请求；void通知不返回结果
     */
     virtual ResultType invoke(const ContextTypes&... context) = 0;
 };
@@ -33,8 +33,8 @@ public:
     explicit LockFreeHashMapPolicyHolder(const FunctionType& function);
 
     /** 调用持有的回调，可变状态必须自行保证线程安全
-    @param [in] context 调用期间借用的容量观测
-    @return 用户策略请求，异常向池评估边界传播
+    @param [in] context 调用期间借用的策略上下文或增长通知参数
+    @return 非void类型透传回调结果；void通知不返回结果，异常向调用边界传播
     */
     virtual ResultType invoke(const ContextTypes&... context);
 private:
@@ -49,7 +49,7 @@ template <typename ResultType, typename... ContextTypes>
 class LockFreeHashMapPolicy
 {
 public:
-    /** 构造空句柄，表示使用库的默认策略
+    /** 构造空句柄；增长使用默认算法，缩容及增长通知保持关闭
     */
     LockFreeHashMapPolicy();
 
@@ -104,8 +104,8 @@ public:
     explicit operator bool() const;
 
     /** 执行策略，容器在评估边界捕获异常
-    @param [in] context 调用期间借用的弱一致观测
-    @return 策略请求，空句柄抛 bad_function_call，直接调用者负责捕获
+    @param [in] context 调用期间借用的策略上下文或增长通知参数
+    @return 非void类型透传结果，void通知不返回结果；空句柄抛bad_function_call，直接调用者负责捕获
     */
     ResultType operator()(const ContextTypes&... context) const;
 

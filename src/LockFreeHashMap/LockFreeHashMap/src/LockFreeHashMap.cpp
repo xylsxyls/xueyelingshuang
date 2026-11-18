@@ -13,7 +13,9 @@
 //#include <utility>
 //#include <vector>
 //
-//// 演示配置、结果处理、版本操作和拥有引用；正常结束返回零，失败返回非零。
+///** 演示配置、结果处理、版本操作和拥有引用
+//@return 正常结束为零，操作失败或异常为非零
+//*/
 //int main()
 //{
 //    try
@@ -35,12 +37,18 @@
 //            return 1;
 //        }
 //
-//        // 输入为容量观测，返回新增槽数；无共享可变状态，可以被并发调用。
+//        /** 请求新增槽位，无共享可变状态，可并发调用
+//        @param [in] context 调用期间借用的容量观测
+//        @return 至少64个新增槽位，不是目标总容量
+//        */
 //        LockFreeHashMapGrowPolicy grow = [](const LockFreeHashMapGrowContext& context) -> size_t
 //        {
 //            return (std::max)(size_t(64), context.initialCapacity);
 //        };
-//        // 输入为容量和空闲观测，返回希望释放的槽数及连续空闲毫秒数。
+//        /** 请求释放初始容量以上的空闲槽位
+//        @param [in] context 调用期间借用的容量和空闲观测
+//        @return 希望释放的槽数及连续空闲5000毫秒的要求
+//        */
 //        LockFreeHashMapShrinkPolicy shrink = [](const LockFreeHashMapShrinkContext& context) -> LockFreeHashMapShrinkDecision
 //        {
 //            size_t excess = context.currentCapacity > context.initialCapacity ?
@@ -123,14 +131,20 @@
 //        std::cout << "proxy=" << proxyValue << " proxy_get=" << value
 //            << " proxy_fallback=" << map[99].value(-1) << std::endl;
 //
-//        // 输入为回调期间借用的键和值，只输出信息，不保存引用，也不执行阻塞业务。
+//        /** 输出本次借用的条目，不保存引用；控制台输出仅用于演示
+//        @param [in] key 回调期间借用的键
+//        @param [in] item 回调期间借用的值
+//        */
 //        const auto printEntry = [](const int32_t& key, const int32_t& item)
 //        {
 //            std::cout << "entry " << key << '=' << item << std::endl;
 //        };
 //        size_t visited = map.forEach(printEntry);
 //        int64_t sum = 0;
-//        // 输入只在回调内有效；将整数累加到调用方变量，无返回值。
+//        /** 将值累加到调用方sum，引用不带出回调
+//        @param [in] key 回调期间借用的键，不使用
+//        @param [in] item 回调期间借用的整数值
+//        */
 //        result = map.forEachResult([&sum](const int32_t& key, const int32_t& item)
 //        {
 //            (void)key;

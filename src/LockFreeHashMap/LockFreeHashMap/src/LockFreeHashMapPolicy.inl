@@ -79,7 +79,10 @@ LockFreeHashMapPolicy<R, C...> LockFreeHashMapPolicy<R, C...>::fromShared(const 
     {
         return LockFreeHashMapPolicy();
     }
-    // context 只在调用期间借用；共享句柄保证目标存活，返回目标策略的请求
+    /** 通过捕获的共享句柄保活并调用原回调，不复制回调目标
+    @param [in] context 仅在调用期间借用的策略上下文或通知参数
+    @return 非void类型透传结果；void通知不返回结果，执行异常交由外层处理
+    */
     return LockFreeHashMapPolicy([function](const C&... context) -> R
     {
         return (*function)(context...);

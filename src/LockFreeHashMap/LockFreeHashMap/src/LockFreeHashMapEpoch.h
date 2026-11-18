@@ -121,6 +121,7 @@ public:
     @return 地址正好对应本域某条记录时为true；未初始化的域返回false
     */
     bool owns(const LockFreeHashMapEpochRecord* candidate) const;
+
 private:
     /** 首选记录被占用后扫描其余记录，隔离不常执行的循环，避免扩大每个调用点
     @param [in] index 已经尝试过的合法首选下标
@@ -130,7 +131,7 @@ private:
     */
     LockFreeHashMapEpochRecord* acquireRemaining(size_t index, uint64_t epoch, bool rememberHint) throw();
 
-    /** 当前线程的纯数值扫描提示，未初始化为 size_t 最大值
+    /** 当前线程的纯数值扫描提示，首次初始化前保存size_t最大值
     @return 无所有权的提示存储，不保存实例或记录地址
     */
     static size_t& hintSlot();

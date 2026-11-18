@@ -1233,7 +1233,10 @@ size_t LockFreeHashMap<K, V, H, E>::count() const
     {
         return total > 0 ? static_cast<size_t>(total) : 0;
     }
-    // 表示边界回退到受保护的向前遍历，回调不借出引用
+    /** 计数表示越界时仅由遍历框架累计条目，不保存引用
+    @param [in] key 回调期间借用的键，不使用
+    @param [in] value 回调期间借用的值，不使用
+    */
     return forEach([](const K& key, const V& value)
     {
         (void)key;
@@ -1474,7 +1477,10 @@ std::vector<K> LockFreeHashMap<K, V, H, E>::keys() const
     {
         return output;
     }
-    // 回调复制到独立结果向量，分配或复制异常由遍历边界捕获
+    /** 复制当前键到独立输出，分配或复制异常交由遍历边界捕获
+    @param [in] key 回调期间受保护的键，复制到捕获的output
+    @param [in] value 回调期间受保护的值，不使用
+    */
     LockFreeHashMapResult result = forEachProtected<false>([&](const K& key, const V& value)
     {
         (void)value;
@@ -1499,7 +1505,10 @@ std::vector<V> LockFreeHashMap<K, V, H, E>::values() const
     {
         return output;
     }
-    // 回调复制到独立结果向量，分配或复制异常由遍历边界捕获
+    /** 复制当前值到独立输出，分配或复制异常交由遍历边界捕获
+    @param [in] key 回调期间受保护的键，不使用
+    @param [in] value 回调期间受保护的值，复制到捕获的output
+    */
     LockFreeHashMapResult result = forEachProtected<false>([&](const K& key, const V& value)
     {
         (void)key;
@@ -1524,7 +1533,10 @@ std::vector<std::pair<K, V>> LockFreeHashMap<K, V, H, E>::toVector() const
     {
         return output;
     }
-    // 回调复制到独立结果向量，分配或复制异常由遍历边界捕获
+    /** 将同次观察的键值复制到独立输出，分配或复制异常交由遍历边界捕获
+    @param [in] key 回调期间受保护的键，与值一同构造到捕获的output
+    @param [in] value 回调期间受保护的值，不在回调外保留节点引用
+    */
     LockFreeHashMapResult result = forEachProtected<false>([&](const K& key, const V& value)
     {
         output.emplace_back(key, value);

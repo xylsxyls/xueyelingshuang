@@ -59,21 +59,21 @@ template <typename KeyType, typename ValueType, typename EqualType,
 class LockFreeHashMapValueCache
 {
 public:
-    /** 非整数类型保持关闭，配置检查由池统一执行
+    /** 不满足整数副本条件的类型保持关闭，配置检查由池统一执行
     @param [in] count 请求的固定格数
     @return Ok，不申请内存
     */
     LockFreeHashMapStatus initialize(size_t count);
 
-    /** 非整数类型从不命中
+    /** 未启用类型的固定代次查询从不命中
     @param [in] key 查询键
-    @param [in] generation 固定代次或原子代次源，只有缓存键匹配时读取
+    @param [in] generation 调用方已取得的代次值，此重载不使用
     @param [out] value 可空的输出，不修改
     @return false
     */
     bool lookup(const KeyType& key, uint64_t generation, ValueType* value) const;
 
-    /** 非整数类型直接返回，不读取容器代次
+    /** 未启用类型的原子代次查询直接返回，不读取容器代次
     @param [in] key 查询键
     @param [in] generation 容器代次原子变量，不读取
     @param [out] value 可空的输出，不修改
@@ -132,15 +132,15 @@ public:
     */
     ~LockFreeHashMapValueCache();
 
-    /** 一次初始化固定格，失败保留空配置
+    /** 仅对未分配数组的实例初始化；已有数组时拒绝重复初始化并保持原内容
     @param [in] count 二次幂格数，零表示关闭
-    @return 初始化状态，不向外抛异常
+    @return 初始化状态，不向外抛异常；首次申请失败保留空配置
     */
     LockFreeHashMapStatus initialize(size_t count);
 
     /** 纯原子读取独立副本，不访问池和用户对象，无重试循环
     @param [in] key 完整查询键
-    @param [in] generation 固定代次或原子代次源，只有缓存键匹配时读取
+    @param [in] generation 调用方已取得的固定观察代次；本重载不再读取表的代次原子
     @param [out] value 非空时写入整数副本，未命中不修改
     @return 同身份、同代次且完整键相同时为 true
     */
@@ -148,7 +148,7 @@ public:
 
     /** 只检查一次缓存容量；关闭缓存时不读取容器代次
     @param [in] key 完整查询键
-    @param [in] generation 容器代次原子变量，缓存启用时读取
+    @param [in] generation 容器代次原子变量，仅在副本有效且键匹配后读取
     @param [out] value 非空时写入整数副本，未命中不修改
     @return 同身份、同代次且完整键相同时为 true
     */

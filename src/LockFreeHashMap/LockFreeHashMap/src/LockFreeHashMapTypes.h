@@ -27,7 +27,7 @@ struct LockFreeHashMapSharedRead<std::shared_ptr<ValueType>> : std::true_type
 */
 enum LockFreeHashMapStatus
 {
-    // 查询成功或修改已经提交
+    // 查询、配置或维护正常完成，或数据修改已提交；提交事实另看m_committed
     LockFreeHashMapOk = 0,
     // 条目已存在，insertIfAbsent 的输出为竞争胜者快照
     LockFreeHashMapExists,
@@ -37,7 +37,7 @@ enum LockFreeHashMapStatus
     LockFreeHashMapVersionMismatch,
     // 已保留与正在预留容量达到硬上限，当前没有可安全借用的槽位
     LockFreeHashMapCapacityLimit,
-    // 竞争重试未完成；不表示容量、预留或系统内存不足
+    // try数据接口未开启竞争重试时的未提交竞争；不表示容量、预留或系统内存不足
     LockFreeHashMapReservationBusy,
     // 扩容策略返回 0，拒绝本次增长
     LockFreeHashMapGrowthDeclined,
@@ -47,7 +47,7 @@ enum LockFreeHashMapStatus
     LockFreeHashMapUserException,
     // 池配置或桶数量不合法
     LockFreeHashMapInvalidArgument,
-    // 固定保护记录全部被借用，本次未接纳
+    // 本轮扫描未取得空闲保护记录，本次未接纳；不保证返回时仍全部占用
     LockFreeHashMapProtectionUnavailable,
     // 单调身份空间耗尽，不允许回绕复用
     LockFreeHashMapVersionExhausted,
@@ -263,7 +263,7 @@ struct LockFreeHashMapPoolStats
     size_t occupied;
     // 已关闭且等待读者退出后释放的空闲块容量，不计为可复用或占用槽位
     size_t closedCapacity;
-    // 已退役或正在回收的槽位数
+    // 已登记退役代际的槽位数，含等候安全摘除的头部标记、已退役及正在回收的槽
     size_t retired;
     // 使用中或已退役但尚未析构的键槽数
     size_t keyNodes;
@@ -281,11 +281,11 @@ struct LockFreeHashMapPoolStats
     bool inlineScalarValues;
     // 固定查找缓存格数量
     size_t lookupCacheEntries;
-    // 固定副本数组的元素字节数，不含系统分配器开销
+    // 固定副本数组元素及63字节对齐余量，不含系统分配器额外开销
     size_t lookupCacheBytes;
     // 非初始批次成功发布次数，饱和后不回绕
     uint64_t successfulGrowCount;
-    // 块及槽数组的系统申请尝试次数，不含固定元数据和键值内部申请
+    // 块对象、槽数组及位图数组的系统申请尝试次数，不含固定元数据和键值内部申请
     uint64_t systemAllocationCount;
     // 保留诊断字段；当前未采样内部 CAS 重试，零不表示没有竞争
     uint64_t casRetries;

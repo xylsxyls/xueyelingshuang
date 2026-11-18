@@ -23,51 +23,51 @@ public:
     typedef LockFreeHashMapPoolSlot<Node> Slot;
     typedef LockFreeHashMapPool<Node> Storage;
 
-    /** 按对应普通接口尝试修改，不改变条件凭据或输入所有权
-    @param [in] key 与对应普通接口同名参数含义一致
-    @param [in] value 与对应普通接口同名参数含义一致
+    /** 仅当键不存在时发布候选，不准备输出快照；已存在时不覆盖
+    @param [in] key 调用期间借用的键，发布时复制
+    @param [in] value 调用期间借用的候选值，失败不消费输入所有权
     @param [in] retryContention true持续重试竞争，false允许返回ReservationBusy
     @param [in] retryCapacity true等待容量；4096次后每次等待1毫秒
-    @return m_committed为true时已提交，不得重试
+    @return Ok且m_committed为true表示插入，Exists表示已有条目，其余为未提交原因
     */
     LockFreeHashMapResult tryInsert(const KeyType& key, const ValueType& value, bool retryContention = false, bool retryCapacity = false);
 
-    /** 按对应普通接口尝试修改，不改变条件凭据或输入所有权
-    @param [in] key 与对应普通接口同名参数含义一致
-    @param [in] value 与对应普通接口同名参数含义一致
-    @param [out] output 与对应普通接口同名参数含义一致
+    /** 仅当键不存在时发布候选，存在时返回本次观察到的胜者快照
+    @param [in] key 调用期间借用的键，发布时复制
+    @param [in] value 调用期间借用的候选值，失败不消费输入所有权
+    @param [out] output 插入成功时返回新值，Exists时返回胜者，其余失败保持原值
     @param [in] retryContention true持续重试竞争，false允许返回ReservationBusy
     @param [in] retryCapacity true等待容量；4096次后每次等待1毫秒
-    @return m_committed为true时已提交，不得重试
+    @return Ok且m_committed为true表示插入，Exists表示输出已有条目，其余为失败原因
     */
     LockFreeHashMapResult tryInsertIfAbsent(const KeyType& key, const ValueType& value, Snapshot& output, bool retryContention = false, bool retryCapacity = false);
 
-    /** 按对应普通接口尝试修改，不改变条件凭据或输入所有权
-    @param [in] key 与对应普通接口同名参数含义一致
-    @param [in] version 与对应普通接口同名参数含义一致
-    @param [in] value 与对应普通接口同名参数含义一致
-    @param [out] output 与对应普通接口同名参数含义一致
+    /** 仅替换匹配版本，重试仍使用原凭据，提交前准备可选快照
+    @param [in] key 调用期间借用的键
+    @param [in] version 同一实例中与旧值同次取得的版本，不可伪造
+    @param [in] value 调用期间借用的替换值，失败不消费输入所有权
+    @param [out] output 必须显式传参，可为nullptr；非空时成功写入新快照，失败保持原值
     @param [in] retryContention true持续重试竞争，false允许返回ReservationBusy
     @param [in] retryCapacity true等待容量；4096次后每次等待1毫秒
-    @return m_committed为true时已提交，不得重试
+    @return m_committed表示替换成功；不存在为NotFound，版本不匹配为VersionMismatch
     */
     LockFreeHashMapResult tryCompareExchange(const KeyType& key, const LockFreeHashMapVersion& version, const ValueType& value, Snapshot* output, bool retryContention = false, bool retryCapacity = false);
 
-    /** 按对应普通接口尝试修改，不改变条件凭据或输入所有权
-    @param [in] key 与对应普通接口同名参数含义一致
-    @param [in] version 与对应普通接口同名参数含义一致
+    /** 仅删除匹配版本，不申请候选槽位，重试不刷新条件凭据
+    @param [in] key 调用期间借用的键
+    @param [in] version 同一实例中与旧值同次取得的版本，不可伪造
     @param [in] retryContention true持续重试竞争，false允许返回ReservationBusy
     @param [in] retryCapacity true等待容量；4096次后每次等待1毫秒
-    @return m_committed为true时已提交，不得重试
+    @return m_committed表示删除成功；不存在为NotFound，版本不匹配为VersionMismatch
     */
     LockFreeHashMapResult tryEraseIf(const KeyType& key, const LockFreeHashMapVersion& version, bool retryContention = false, bool retryCapacity = false);
 
-    /** 按对应普通接口尝试修改，不改变条件凭据或输入所有权
-    @param [in] key 与对应普通接口同名参数含义一致
-    @param [out] output 与对应普通接口同名参数含义一致
+    /** 准备独立副本后删除当前条目，同一版本只有一个调用者能取走
+    @param [in] key 调用期间借用的键
+    @param [out] output 提交成功时写入独立快照，未提交时保持原值
     @param [in] retryContention true持续重试竞争，false允许返回ReservationBusy
     @param [in] retryCapacity true等待容量；4096次后每次等待1毫秒
-    @return m_committed为true时已提交，不得重试
+    @return m_committed表示本次取走，未提交时本调用不删除条目
     */
     LockFreeHashMapResult tryTake(const KeyType& key, Snapshot& output, bool retryContention = false, bool retryCapacity = false);
 
@@ -138,10 +138,10 @@ public:
     */
     LockFreeHashMapResult eraseIf(const KeyType& key, const LockFreeHashMapVersion& version);
 
-    /** 删除当前条目并取得独立副本，复制失败时原条目和输出不变
+    /** 删除当前条目并取得独立副本，复制失败时本调用不删除且保持输出不变
     @param [in] key 调用期间借用的键
     @param [out] output 成功时写入独立快照，失败保持原值
-    @return m_committed 表示取走条目，失败保留原条目
+    @return m_committed 表示本次取走条目，失败不阻止其他并发调用修改该键
     */
     LockFreeHashMapResult take(const KeyType& key, Snapshot& output);
 
@@ -149,7 +149,7 @@ public:
     @param [in] key 调用期间借用的键
     @param [in] value 待复制的值，调用期间借用
     @param [out] output 可为空以跳过快照，提交前准备，失败保持原值
-    模板参数 RetryContention 固定竞争策略，内层循环不反复分派运行期开关
+    @param [in] retryContention true持续重试竞争，false允许返回未提交的ReservationBusy
     @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
     @return m_committed 表示本次写入，失败不消费输入所有权
     */
@@ -158,16 +158,16 @@ public:
 
     /** 删除当前条目，不申请池槽位，不存在时返回 NotFound
     @param [in] key 调用期间借用的键
-    模板参数 RetryContention 固定竞争策略，内层循环不反复分派运行期开关
-    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
+    @param [in] retryContention true持续重试竞争，false允许返回未提交的ReservationBusy
+    @param [in] retryCapacity true允许等待保护记录等资源；不为删除申请候选槽位
     @return 删除成功时 m_committed 为 true，不存在为 NotFound
     */
     LockFreeHashMapResult tryErase(const KeyType& key, bool retryContention = false, bool retryCapacity = false);
 
-    /** 原子切换可见代次；耗尽时仍清空并永久拒绝后续写入
-    模板参数 RetryContention 固定竞争策略，内层循环不反复分派运行期开关
+    /** 原子切换可见代次；重叠清空可共用已发生的推进，代次耗尽后拒绝写入
+    @param [in] retryContention 保留统一签名；重叠清空无需重试，因此不使用此开关
     @param [in] retryCapacity 保留统一调用签名；清空不申请容量，因此不触发容量等待
-    @return m_committed 表示清空已生效，代次耗尽同时返回 VersionExhausted
+    @return 发生或共用清空时m_committed为true，耗尽同时报VersionExhausted；调用前已耗尽则报该错误且未提交
     */
     LockFreeHashMapResult tryClear(bool retryContention = false, bool retryCapacity = false);
 
@@ -260,7 +260,8 @@ public:
     */
     void clear();
 
-    /** 外部静止时清空并释放全部批次，保留元数据和配置，之后可重新增长
+    /** 外部静止时清空并释放全部批次，保留元数据和配置；未耗尽身份时可重新增长
+    不重置已经耗尽的代次或版本空间，恢复写入须建立新实例
     */
     void clearAndFreeMemory();
 
@@ -278,7 +279,7 @@ public:
     template <typename FunctionType>
     size_t forEach(FunctionType&& function) const;
 
-    /** 单次向前弱遍历，失效链终止该桶，已完成回调不重放；回调复制和执行异常均在内部捕获
+    /** 单次向前弱遍历，跳过终态和非观察代次节点；沿观察后继推进，不重放已完成回调
     @param [in] function 接收仅在回调期间有效的 const KeyType& 和 const ValueType&
     @return 状态及已正常完成的回调数 m_count，回调异常被捕获
     */
@@ -384,7 +385,7 @@ private:
     */
     bool lookupUncached(const KeyType& key, size_t hash, ValueType* value) const;
 
-    /** 通用查询的唯一保护及异常边界，复制期间持有回收保护
+    /** 按键值类型分派受保护查询，由具体路径接纳保护并处理赋值异常
     @param [in] key 查询键
     @param [in] hash 已计算哈希
     @param [out] value 可空，空表示不复制值
@@ -426,23 +427,23 @@ private:
     */
     static bool copyReadCharacters(ValueType& output, const ValueType& source, std::false_type stringValue);
 
-    /** 等长标准字符串直接覆盖已有字符，不调整长度、容量或执行分配
+    /** 支持独占字符存储的标准库中，等长std::string直接覆盖字符，不调整长度或容量
     @param [out] output 调用方独占的标准字符串
     @param [in] source 仍处于保护期内的完整标准字符串
     @param [in] stringValue 精确std::string类型的编译期标志
-    @return 等长且字符复制完成为true；不等长不修改，交回正常赋值
+    @return 支持的后端等长复制完成为true；长度不同或后端不支持时不修改并返回false
     */
     static bool copyReadCharacters(ValueType& output, const ValueType& source, std::true_type stringValue);
 
-    /** 标准键通用值先使用只读保护，需要执行用户赋值时再原位转交普通保护
+    /** 标准键的std::string值先使用只读保护，需要普通赋值时原位转交回调保护
     @param [in] key 不执行用户比较的标准键
     @param [in] hash 已计算的完整哈希
-    @param [out] value 非空调用方输出
+    @param [out] value 调用方输出，可空以只查询存在性，失败赋值可能部分修改输出
     @return 找到并复制成功为true，保护接纳、查找或赋值失败为false
     */
     bool lookupDeferred(const KeyType& key, size_t hash, ValueType* value) const;
 
-    /** 字符串长度变化时转交保护并执行普通赋值，把异常清理留在独立调用点
+    /** 字符串不能直接复制字符时转交保护并执行普通赋值，异常清理位于独立调用点
     @param [in,out] guard 同线程完整只读保护，函数接管其归还责任
     @param [out] output 调用方独占输出
     @param [in] source 仍受同一条保护记录保护的值
@@ -515,7 +516,7 @@ private:
     LockFreeHashMapStatus locate(const KeyType* key, size_t hash, uint64_t generation,
         Slot*& found, LockFreeHashMapLink*& link, uintptr_t& head, size_t retryLimit = 0) const;
 
-    /** 摘除标记节点，删除桶头前等待旧观察者退出，不能恢复零或旧前缀地址制造 ABA
+    /** 摘除标记节点；桶头尚有旧观察者时保留标记，不等待其退出，也不恢复旧地址制造ABA
     @param [in] slot 受保护的已标记节点
     @param [in,out] link 桶头或受保护前驱链接
     @param [in,out] successor 摘除后的后继地址，安全头前缀可以合并摘除
@@ -581,7 +582,7 @@ private:
     /** 准备回调副本并执行向前遍历，异常不重放回调
     @tparam Count 对外遍历必须计数；内部向量导出只需状态，可关闭重复计数
     @param [in,out] function 被复制或移动的回调，键值只在回调期间借用
-    @return 状态及已成功完成回调的条目数量
+    @return 状态；Count为true时m_count为正常完成回调数，为false时m_count保持零
     */
     template <bool Count = true, typename FunctionType>
     LockFreeHashMapResult forEachProtected(FunctionType&& function) const;

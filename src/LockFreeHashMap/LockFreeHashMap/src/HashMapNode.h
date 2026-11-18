@@ -32,7 +32,6 @@ public:
     @param [in] version 已预留的非零值版本
     */
     LockFreeHashMapNode(const KeyType& key, const ValueType& value, size_t hash, uint64_t generation, uint64_t version);
-
 };
 
 #include "HashMapNode.inl"
