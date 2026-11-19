@@ -106,27 +106,30 @@ void ProcessWorkBenchmarkTask::stopTask()
 }
 
 ProcessWorkBenchmarkReceiver::ProcessWorkBenchmarkReceiver(int32_t streams, int32_t count, int32_t bytes) :
-m_warmup(0), m_finished(0), m_bad(0), m_firstBadValue(0), m_firstBadExpected(-1), m_firstBadPid(0),
+m_warmup(0), m_drained(0), m_finished(0), m_bad(0), m_firstBadValue(0), m_firstBadExpected(-1), m_firstBadPid(0),
 m_firstBadLength(0), m_firstBadReceived(0), m_armed(false), m_threadsPerProcess(0), m_count(count), m_bytes(bytes),
-m_received(0), m_next(streams, 0)
+m_received(0), m_next(streams, 0), m_ended(streams, 0),
+m_body(bytes == 6 ? std::string("123456") : std::string(bytes, 'x'))
 {
 }
 
 void ProcessWorkBenchmarkReceiver::receive(int32_t pid, const char* data, int32_t length, MessageType type)
 {
     const int32_t value = static_cast<int32_t>(type);
-    if (value == INT_MAX)
+    if (value == INT_MAX && !m_armed.load(std::memory_order_acquire))
     {
         ++m_warmup;
         return;
     }
-    const int32_t stream = value / m_count;
+    const bool ending = value >= INT_MAX - static_cast<int32_t>(m_next.size()) && value < INT_MAX;
+    const int32_t stream = ending ? INT_MAX - 1 - value : value / m_count;
     const int32_t sequence = value % m_count;
     if (!m_armed.load(std::memory_order_acquire) || value < 0 || stream >= static_cast<int32_t>(m_next.size()) ||
-        sequence != m_next[stream] || length != m_bytes ||
+        m_threadsPerProcess <= 0 || stream / m_threadsPerProcess >= static_cast<int32_t>(m_pids.size()) ||
+        m_ended[stream] || (ending ? m_next[stream] != m_count : sequence != m_next[stream] || sequence >= m_count) || length != m_bytes ||
         pid != m_pids[stream / m_threadsPerProcess] ||
         (length == 0 ? data != nullptr : data == nullptr ||
-            (length == 6 ? std::memcmp(data, "123456", 6) != 0 : data[0] != 'x' || data[length - 1] != 'x')))
+            std::memcmp(data, m_body.data(), static_cast<size_t>(length)) != 0))
     {
         if (m_bad.load(std::memory_order_relaxed) == 0)
         {
@@ -139,11 +142,61 @@ void ProcessWorkBenchmarkReceiver::receive(int32_t pid, const char* data, int32_
         ++m_bad;
         return;
     }
+    if (ending)
+    {
+        m_ended[stream] = 1;
+        m_drained.fetch_add(1, std::memory_order_release);
+        return;
+    }
     ++m_next[stream];
     ++m_received;
     if (m_received == static_cast<int32_t>(m_next.size()) * m_count)
     {
         m_finished.store(BenchmarkNow(), std::memory_order_release);
+    }
+}
+
+bool ProcessWorkBenchmarkReceiver::verified() const
+{
+    if (m_bad.load() != 0 || m_received != static_cast<int32_t>(m_next.size()) * m_count ||
+        m_drained.load() != static_cast<int32_t>(m_next.size()))
+    {
+        return false;
+    }
+    for (size_t i = 0; i < m_next.size(); ++i)
+    {
+        if (m_next[i] != m_count || !m_ended[i])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+void ProcessWorkBenchmarkReceiver::selfTest()
+{
+    for (int32_t mode = 0; mode < 6; ++mode)
+    {
+        ProcessWorkBenchmarkReceiver ledger(1, 2, 64);
+        ledger.m_pids.push_back(bbPid());
+        ledger.m_threadsPerProcess = 1;
+        ledger.m_armed.store(true);
+        std::string body(64, 'x');
+        ledger.receive(bbPid(), body.data(), 64, static_cast<MessageType>(0));
+        if (mode == 1)
+        {
+            body[32] = 'y';
+        }
+        if (mode != 2)
+        {
+            ledger.receive(bbPid(), body.data(), 64, static_cast<MessageType>(mode == 3 ? 0 : 1));
+        }
+        ledger.receive(bbPid(), body.data(), 64, static_cast<MessageType>(INT_MAX - 1));
+        if (mode == 4 || mode == 5)
+        {
+            ledger.receive(bbPid(), body.data(), 64, static_cast<MessageType>(mode == 4 ? 1 : INT_MAX - 1));
+        }
+        bbCheck(ledger.verified() == (mode == 0), "benchmark ledger accepted damaged, missing or duplicate data");
     }
 }
 
@@ -161,15 +214,17 @@ void ProcessWorkBenchmarkReceiver::bufferFull(int32_t count)
 */
 static int BenchmarkProducer(char** argv)
 {
-    const int32_t target = std::atoi(argv[2]);
+    const int32_t target = static_cast<int32_t>(bbUnsigned(argv[2], INT_MAX));
     const std::string prefix = argv[3];
-    const int32_t process = std::atoi(argv[4]);
-    const int32_t threads = std::atoi(argv[5]);
-    const int32_t count = std::atoi(argv[6]);
-    const int32_t bytes = std::atoi(argv[7]);
-    const int32_t mode = std::atoi(argv[8]);
+    const int32_t process = static_cast<int32_t>(bbUnsigned(argv[4], 7));
+    const int32_t threads = static_cast<int32_t>(bbUnsigned(argv[5], 32));
+    const int32_t count = static_cast<int32_t>(bbUnsigned(argv[6], INT_MAX));
+    const int32_t bytes = static_cast<int32_t>(bbUnsigned(argv[7], 65536));
+    const int32_t mode = static_cast<int32_t>(bbUnsigned(argv[8], 3));
     const std::string name = argv[9];
-    const int32_t warmupBlocks = std::atoi(argv[10]);
+    const int32_t warmupBlocks = static_cast<int32_t>(bbUnsigned(argv[10], 4194304));
+    bbCheck(target > 0 && threads > 0 && count > 0 && warmupBlocks > 0 &&
+        static_cast<int64_t>(process + 1) * threads * count < INT_MAX - 256, "invalid producer parameters");
     const int32_t warmup = (std::max)(16, mode == 2 ? (warmupBlocks + threads - 1) / threads : warmupBlocks);
     ProcessWork& ipc = ProcessWork::instance();
     CTaskThreadManager& manager = CTaskThreadManager::instance();
@@ -180,8 +235,17 @@ static int BenchmarkProducer(char** argv)
     std::vector<uint32_t> workers;
     const std::string body = bytes == 6 ? std::string("123456") : std::string(bytes, 'x');
     ProcessWorkChannel direct;
+    int64_t prepareNanoseconds = 0;
     try
     {
+#ifdef PROCESS_WORK_BENCH_PREPARE_API
+        if (std::getenv("PROCESS_WORK_BENCH_PREPARE_SEND") != nullptr)
+        {
+            const int64_t started = BenchmarkNow();
+            bbCheck(ipc.prepareSend(target, -1, true), "benchmark mapping preparation failed");
+            prepareNanoseconds = BenchmarkNow() - started;
+        }
+#endif
         if (mode == 3)
         {
             bbCheck(direct.openSender(target), "diagnostic direct channel setup failed");
@@ -193,6 +257,16 @@ static int BenchmarkProducer(char** argv)
 #if !defined(PROCESS_WORK_BENCH_LEGACY_POOLS)
             memory.m_localQueueInitialCapacity = 16777216;
             memory.m_postBufferReserve = 16777216;
+#ifdef PROCESS_WORK_BENCH_SLOT_BYTES
+            const char* slotBytes = std::getenv("PROCESS_WORK_BENCH_POST_SLOT_BYTES");
+            if (slotBytes != nullptr)
+            {
+                bbCheck(std::string(slotBytes) == "64" || std::string(slotBytes) == "128", "invalid Post slot bytes");
+                memory.m_postBufferSlotBytes = std::string(slotBytes) == "128" ? 128 : 64;
+            }
+            // 各构建都预留1GiB正文池；变更槽步长不额外增加基准内存预算。
+            memory.m_postBufferReserve = static_cast<uint32_t>((uint64_t(1) << 30) / memory.m_postBufferSlotBytes);
+#endif
 #endif
             memory.m_localQueueBytes = 4ULL * 1024 * 1024 * 1024;
 #ifdef PROCESS_WORK_BENCH_STORAGE_GROWTH
@@ -200,7 +274,7 @@ static int BenchmarkProducer(char** argv)
 #endif
             bbCheck(ipc.configurePostMemory(memory), "post pool preparation failed");
 #endif
-            ipc.initPostThread();
+            bbCheck(ipc.initPostThread(), "benchmark post thread initialization failed");
         }
         for (int32_t thread = 0; thread < threads; ++thread)
         {
@@ -313,6 +387,41 @@ static int BenchmarkProducer(char** argv)
                     }
                 }
                 ends[thread] = BenchmarkNow();
+                // 每个实际发送线程随后发布屏障；不计入吞吐，但必须经过同一发送路径。
+                const MessageType ending = static_cast<MessageType>(INT_MAX - 1 - stream);
+#ifdef PROCESS_WORK_BENCH_RESULT_API
+                int32_t endResult = PROCESS_WORK_INVALID;
+                if (mode == 3)
+                {
+                    do
+                    {
+                        endResult = direct.trySend(body.data(), bytes, static_cast<int32_t>(ending));
+                        if (endResult == PROCESS_WORK_BUSY || endResult == PROCESS_WORK_CAPACITY || endResult == PROCESS_WORK_RESOURCE)
+                        {
+                            bbCheck(direct.waitForSpace(), "diagnostic end barrier channel closed");
+                        }
+                    } while (endResult == PROCESS_WORK_BUSY || endResult == PROCESS_WORK_CAPACITY || endResult == PROCESS_WORK_RESOURCE);
+                }
+                else
+                {
+                    endResult = mode == 2 ? ipc.postResult(target, body.data(), bytes, ending) :
+                        mode == 1 ? ipc.sendResult(name, body.data(), bytes, ending) : ipc.sendResult(target, body.data(), bytes, ending);
+                }
+                bbCheck(endResult == (mode == 2 ? PROCESS_WORK_POSTED : PROCESS_WORK_SENT), "benchmark end barrier failed");
+#else
+                if (mode == 2)
+                {
+                    ipc.post(target, body, ending);
+                }
+                else if (mode == 1)
+                {
+                    ipc.send(name, body, ending);
+                }
+                else
+                {
+                    ipc.send(target, body, ending);
+                }
+#endif
             }, failure));
             const uint32_t id = manager.init();
             bbCheck(id != 0, "benchmark producer initialization failed");
@@ -348,6 +457,7 @@ static int BenchmarkProducer(char** argv)
 #endif
         ipc.uninitPostThread();
         ipc.clear();
+        std::cout << "mapping_prepare_ns=" << prepareNanoseconds << std::endl;
         std::ostringstream report;
         uint64_t retryCount = 0;
         for (size_t i = 0; i < retries.size(); ++i)
@@ -358,6 +468,7 @@ static int BenchmarkProducer(char** argv)
 #ifdef PROCESS_WORK_BENCH_STORAGE_GROWTH
         report << ' ' << s_storageGrowth.load(std::memory_order_relaxed);
 #endif
+        report << ' ' << prepareNanoseconds;
         bbWrite(prefix + ".result" + bbNumber(process), report.str());
         return 0;
     }
@@ -381,21 +492,21 @@ static int BenchmarkProducer(char** argv)
 */
 static int BenchmarkParent(char** argv)
 {
-    const int32_t processes = std::atoi(argv[1]);
-    const int32_t threads = std::atoi(argv[2]);
-    const int32_t count = std::atoi(argv[3]);
-    const int32_t bytes = std::atoi(argv[4]);
-    const int32_t blocks = std::atoi(argv[5]);
-    const int32_t mode = std::atoi(argv[6]);
+    const int32_t processes = static_cast<int32_t>(bbUnsigned(argv[1], 8));
+    const int32_t threads = static_cast<int32_t>(bbUnsigned(argv[2], 32));
+    const int32_t count = static_cast<int32_t>(bbUnsigned(argv[3], INT_MAX));
+    const int32_t bytes = static_cast<int32_t>(bbUnsigned(argv[4], 65536));
+    const int32_t blocks = static_cast<int32_t>(bbUnsigned(argv[5], 4194304));
+    const int32_t mode = static_cast<int32_t>(bbUnsigned(argv[6], 3));
     const int64_t total = static_cast<int64_t>(processes) * threads * count;
     bbCheck(processes >= 1 && processes <= 8 && threads >= 1 && threads <= 32 && count > 0 &&
-        total < INT_MAX && bytes >= 0 && bytes <= 65536 && blocks >= 1 && blocks <= 4194304 && mode >= 0 && mode <= 3, "invalid benchmark parameters");
+        total < INT_MAX - 256 && bytes >= 0 && bytes <= 65536 && blocks >= 1 && blocks <= 4194304 && mode >= 0 && mode <= 3, "invalid benchmark parameters");
     const std::string prefix = bbTempPath("-pw-benchmark");
     const std::string name = "pwbench_" + bbNumber(bbPid());
     ProcessWork& ipc = ProcessWork::instance();
     ProcessWorkBenchmarkReceiver receiver(processes * threads, count, bytes);
     receiver.m_threadsPerProcess = threads;
-    ipc.addProcessReceiveCallback(&receiver);
+    bbCheck(ipc.addProcessReceiveCallback(&receiver), "benchmark receive callback registration failed");
 #if defined(PROCESS_WORK_BENCH_RESULT_API) && !defined(PROCESS_WORK_BENCH_LEGACY_POOLS)
     ProcessWorkMemoryConfig memory;
     // 预留256MiB接收批次，避免消费线程短暂被调度出去时把池增长计入吞吐。
@@ -435,7 +546,26 @@ static int BenchmarkParent(char** argv)
         {
             bbWait([&prefix, &children, process]()
             {
-                bbCheck(children[process]->poll() < 0, "producer exited during preparation");
+                const int32_t status = children[process]->poll();
+                if (status >= 0)
+                {
+                    std::ostringstream error;
+                    error << "producer exited during preparation: status=" << status;
+#ifdef _WIN32
+                    HANDLE native = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, children[process]->pid());
+                    DWORD code = 0;
+                    if (native != nullptr)
+                    {
+                        if (GetExitCodeProcess(native, &code))
+                        {
+                            error << " native=0x" << std::hex << code;
+                        }
+                        CloseHandle(native);
+                    }
+#endif
+                    error << " log=" << prefix << ".log" << process;
+                    bbCheck(false, error.str());
+                }
                 return bbRead(prefix + ".ready" + bbNumber(process)) == "1";
             }, "all benchmark producers ready", static_cast<int32_t>((std::min)(int64_t(600000),
                 int64_t(30000) + static_cast<int64_t>(processes) * threads * blocks / 1000)));
@@ -450,14 +580,15 @@ static int BenchmarkParent(char** argv)
         ProcessWorkBenchmarkAudit::begin();
 #endif
         bbWrite(prefix + ".go", "1");
-        bbWait([&receiver, &children]()
+        bbWait([&receiver, &children, processes, threads]()
         {
             for (size_t i = 0; i < children.size(); ++i)
             {
                 const int code = children[i]->poll();
                 bbCheck(code == -1 || code == 0, "benchmark producer exited with failure");
             }
-            return receiver.m_bad.load() != 0 || receiver.m_finished.load(std::memory_order_acquire) != 0;
+            return receiver.m_bad.load() != 0 || (receiver.m_finished.load(std::memory_order_acquire) != 0 &&
+                receiver.m_drained.load(std::memory_order_acquire) == processes * threads);
         }, "benchmark deliveries", 180000);
         if (receiver.m_bad.load() != 0)
         {
@@ -473,6 +604,7 @@ static int BenchmarkParent(char** argv)
         int64_t firstStart = INT64_MAX, lastEnd = 0;
         uint64_t retries = 0;
         uint64_t producerGrowth = 0;
+        int64_t preparationTotal = 0, preparationMaximum = 0;
         for (int32_t process = 0; process < processes; ++process)
         {
             bbCheck(children[process]->wait(10000) == 0, "benchmark producer failed: " + bbRead(prefix + ".log" + bbNumber(process)));
@@ -489,6 +621,11 @@ static int BenchmarkParent(char** argv)
             bbCheck(!input.fail(), "missing producer growth audit");
             producerGrowth += growth;
 #endif
+            int64_t preparation = 0;
+            input >> preparation;
+            bbCheck(!input.fail() && preparation >= 0, "missing producer preparation duration");
+            preparationTotal += preparation;
+            preparationMaximum = (std::max)(preparationMaximum, preparation);
             retries += retryCount;
             bbCheck(start > 0 && end > start, "invalid producer timestamps");
             firstStart = (std::min)(firstStart, start);
@@ -500,6 +637,7 @@ static int BenchmarkParent(char** argv)
         const int32_t finalBlocks = ipc.receiveBufferCount();
         bbCheck(finalBlocks == blocks, "fixed shared pool grew during measurement");
         ipc.uninitReceive();
+        bbCheck(receiver.verified(), "benchmark final delivery ledger failed");
 #ifdef PROCESS_WORK_BENCH_MEMORY_AUDIT
         std::cout << "AUDIT receiver " << bbRead(prefix + ".audit-receiver") << std::endl;
 #endif
@@ -508,6 +646,15 @@ static int BenchmarkParent(char** argv)
             << ",\"production_seconds\":" << production << ",\"consumption_seconds\":" << consumption
             << ",\"produced_per_second\":" << total / production << ",\"consumed_per_second\":" << total / consumption
             << ",\"uncommitted_retries\":" << retries << ",\"final_blocks\":" << finalBlocks
+            << ",\"mapping_prepare_total_ms\":" << preparationTotal / 1000000.0
+            << ",\"mapping_prepare_max_ms\":" << preparationMaximum / 1000000.0
+#ifdef PROCESS_WORK_BENCH_SLOT_BYTES
+            << ",\"post_slot_bytes\":" << (mode != 2 ? 0 :
+                (std::getenv("PROCESS_WORK_BENCH_POST_SLOT_BYTES") == nullptr ? ProcessWorkMemoryConfig().m_postBufferSlotBytes :
+                    (std::string(std::getenv("PROCESS_WORK_BENCH_POST_SLOT_BYTES")) == "128" ? 128 : 64)))
+#else
+            << ",\"post_slot_bytes\":" << (mode == 2 ? 64 : 0)
+#endif
 #ifdef PROCESS_WORK_BENCH_STORAGE_GROWTH
             << ",\"producer_pool_growth\":" << producerGrowth << ",\"receiver_pool_growth\":" << s_storageGrowth.load(std::memory_order_relaxed)
             << ",\"unlimited_local\":" << (std::getenv("PROCESS_WORK_BENCH_UNLIMITED_LOCAL") != nullptr ? "true" : "false")

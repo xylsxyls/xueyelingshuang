@@ -39,7 +39,7 @@ public:
     @param [in] root 仓库根目录
     @param [in] output 尚不存在、父目录已存在的批次目录
     @param [in] arch x64或x86
-    @param [in] mode tests、dll、benchmark、memory、profile、demo或map
+    @param [in] mode tests、dll、benchmark、memory、profile、demo、map或notification-failure
     */
     static void build(const std::string& root, const std::string& output,
         const std::string& arch, const std::string& mode);
@@ -52,7 +52,7 @@ public:
 
     /** 向刚创建的私有构建副本插入诊断，不修改仓库生产源码
     @param [in] output 私有构建目录
-    @param [in] mode memory或profile
+    @param [in] mode memory、profile或notification-failure，注入只写入output内副本
     @param [in] benchmark 私有基准源码完整路径
     */
     static void instrument(const std::string& output, const std::string& mode, const std::string& benchmark);

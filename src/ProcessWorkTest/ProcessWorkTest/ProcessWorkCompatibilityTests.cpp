@@ -150,7 +150,7 @@ void ProcessWorkCompatibilityTests::guardedInput()
     const std::string name = receiveName("guarded-input");
     scope.start(&log, name, 65548, 2);
     ProcessWork& ipc = ProcessWork::instance();
-    const int32_t sizes[] = { 0, 1, 2, 3, 6, 7, 15, 16, 31, 32, 63, 64, 127, 128, 255, 256, 4095, 4096, 4097, 65535, 65536 };
+    const int32_t sizes[] = { 0, 1, 2, 3, 6, 7, 15, 16, 31, 32, 35, 36, 37, 48, 49, 63, 64, 65, 127, 128, 129, 255, 256, 4095, 4096, 4097, 65535, 65536 };
     size_t count = 0;
     for (int32_t route = 0; route < 5; ++route)
     {
@@ -202,7 +202,7 @@ void ProcessWorkCompatibilityTests::guardedInput()
         }
     }
     scope.close();
-    bbCheck(count == 210 && log.snapshot().size() == count, "guarded input case loss");
+    bbCheck(count == 280 && log.snapshot().size() == count, "guarded input case loss");
 }
 
 void ProcessWorkCompatibilityTests::overloadRejection()

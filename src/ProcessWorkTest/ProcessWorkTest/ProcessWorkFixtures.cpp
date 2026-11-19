@@ -228,7 +228,7 @@ int runIpcNode(int argc, char** argv)
         bbWrite(prefix + ".armed" + bbNumber(node), "1");
         bbWait([&prefix]() { return bbRead(prefix + ".go") == "1"; }, "mesh start barrier", 20000);
         ProcessWork& ipc = ProcessWork::instance();
-        if ((mode >= 2 && mode <= 4) || mode == 6) ipc.initPostThread();
+        if ((mode >= 2 && mode <= 4) || mode == 6) bbCheck(ipc.initPostThread(), "post worker initialization failed");
         IpcJobs producers;
         for (int thread = 0; thread < threads; ++thread)
             producers.add([=]()

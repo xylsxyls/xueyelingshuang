@@ -5,9 +5,12 @@
 #include "ProcessWork/ProcessWorkStorage.h"
 #include "ProcessWork/ProcessWorkSharedQueue.h"
 #include "ProcessWork/ProcessWorkTime.h"
+#include "ProcessWork/ProcessWorkReceiveQueue.h"
+#include "ProcessWorkCrashStreamTests.h"
 #include "CSystem/CSystemAPI.h"
 #include <limits>
 #include <thread>
+#include <cstring>
 
 /** 以维护实际使用的单调时钟等待窗口，不把sleep时长当作维护已经到期
 */
@@ -165,14 +168,243 @@ void testProcessWorkStorage()
     bbCheck(old != nullptr && !receiver.retire(256) && !receiver.retire(1), "owned or initial body retired");
     old[0] = 'B';
     ProcessWorkAtomic::replace(&block->m_owner, int64_t(7), int64_t(0));
-    bbCheck(receiver.retire(256) && receiver.create(256, 2), "regrowth failed");
+    bbCheck(receiver.retire(256), "retirement failed");
+    bbCheck(receiver.page(256)->m_addresses[0].load() == nullptr, "retired body address retained");
+    bbCheck(receiver.create(256, 2), "regrowth failed");
     bbCheck(old[0] == 'B' && ProcessWorkAtomic::load(&block->m_generation) == 2, "old view/generation corrupted");
     std::unique_ptr<SharedMemory> fresh;
     char* newer = sender.data(256, 2, fresh);
     bbCheck(newer != nullptr && newer[0] == 0, "regrowth reused old payload mapping");
+    char* received = receiver.data(*receiver.page(256), 256, 2, fresh);
+    bbCheck(received != nullptr && received[0] == 0, "receiver reused retired cached address");
+    bbCheck(sender.page(256)->m_addresses[0].load() == nullptr, "sender cached shrinkable body address");
     bbCheck(ProcessWorkStorage::objectName('B', bbPid(), identity, 1, 0x1000000, 1).empty(), "name silently truncated index");
     bbCheck(ProcessWorkStorage::objectName('B', bbPid(), identity, 1, 65536, 1) !=
         ProcessWorkStorage::objectName('B', bbPid(), identity, 1, 0, 1), "name index alias");
+}
+
+void testProcessWorkPrepareSend()
+{
+    const int32_t lengths[] = { 6, 64, 65536 };
+    for (size_t i = 0; i < 3; ++i)
+    {
+        PacketLog log;
+        IpcScope scope;
+        ProcessWork& ipc = ProcessWork::instance();
+        bbCheck(ipc.addProcessReceiveCallback(&log) && ipc.initReceive(lengths[i] + 12, 257, 0, 0, 0, 0), "prepare receiver init");
+        bbCheck(!ipc.prepareSend(0) && !ipc.prepareSend(bbPid(), 0) && !ipc.prepareSend(bbPid(), -2) &&
+            !ipc.prepareSend(bbPid(), 258), "prepare accepted invalid target or prefix");
+        bbCheck(ipc.prepareSend(bbPid(), 1, true) && ipc.prepareSend(bbPid(), -1, false) &&
+            ipc.prepareSend(bbPid(), -1, true), "prepare mapping failed");
+        bbCheck(log.snapshot().empty() && ipc.receiveBufferCount() == 257, "prepare submitted a message or grew capacity");
+        std::string body(static_cast<size_t>(lengths[i]), 'w');
+        bbCheck(ipc.initPostThread() && ipc.send(bbPid(), body) && ipc.post(bbPid(), body), "prepared send/post failed");
+        bbWait([&log]() { return log.snapshot().size() == 2; }, "prepared deliveries");
+        ipc.uninitReceive();
+        const std::vector<ReceivedPacket> packets = log.snapshot();
+        bbCheck(packets.size() == 2 && packets[0].body == body && packets[1].body == body &&
+            packets[0].pid == bbPid() && packets[1].pid == bbPid(), "prepared payload changed");
+    }
+}
+
+/** 填满共享池后暂停再恢复接收，逐流检查大包或跨页授予的内容及顺序
+@param [in] blocks 固定共享块数，至少1
+@param [in] bytes 正文长度，单位字节
+*/
+static void TestGrantedBody(int32_t blocks, int32_t bytes)
+{
+    ProcessWorkChannel receiver, sender;
+    ProcessWorkReceiveQueue received;
+    std::atomic<int32_t> full(0), done(0), sent(0);
+    bbCheck(receiver.openReceiver(bytes + 12, blocks, 0, 0, 0, 0), "granted page receiver");
+    receiver.publish();
+    bbCheck(sender.openSender(bbPid()) && sender.prepareSend(-1, true), "granted page sender");
+    int32_t next[8] = {};
+    int32_t count = 0;
+    IpcJobs jobs;
+    // 主线程独占接收和账本；参数为空，返回值为本轮已完整校验的累计包数。
+    const auto pump = [&]() -> int32_t
+    {
+        receiver.pump(received, full);
+        char* packet = nullptr;
+        while (received.take(&packet, 0))
+        {
+            int32_t header[3] = {};
+            std::memcpy(header, packet, sizeof(header));
+            const int32_t stream = header[1] / 2000;
+            const bool valid = stream >= 0 && stream < 8 && header[1] % 2000 == next[stream] &&
+                header[0] == bbPid() && header[2] == bytes &&
+                std::memcmp(packet + 12, packetBody(header[1], bytes).data(), static_cast<size_t>(bytes)) == 0;
+            received.release(packet);
+            bbCheck(valid, "granted page body/FIFO mismatch");
+            ++next[stream];
+            ++count;
+        }
+        return count;
+    };
+    try
+    {
+        for (int32_t stream = 0; stream < 8; ++stream)
+        {
+            // 每条生产流独立构造正文与序号；成功后才推进下一条。
+            jobs.add([&, stream]()
+            {
+                for (int32_t i = 0; i < 2000; ++i)
+                {
+                    const int32_t type = stream * 2000 + i;
+                    const std::string body = packetBody(type, bytes);
+                    bbCheck(sender.send(body.data(), bytes, type) == PROCESS_WORK_SENT, "granted page send failed");
+                    ++sent;
+                }
+                ++done;
+            });
+        }
+        bbWait([&]() { pump(); return sent.load() > 0; }, "grant producers registered");
+        const int32_t copied = count;
+        bbWait([&]() { return sent.load() >= copied + blocks; }, "shared pool filled before resume");
+        bbSleep(30);
+        bbCheck(done.load() == 0, "full pool did not hold producers");
+        bbWait([&]() { pump(); return done.load() == 8 && count == 16000; }, "cross-page granted deliveries");
+        jobs.drain();
+        bbCheck(pump() == 16000, "granted page duplicates");
+    }
+    catch (...)
+    {
+        receiver.stop();
+        jobs.drain();
+        throw;
+    }
+}
+
+void testProcessWorkGrantedPage()
+{
+    TestGrantedBody(513, 64);
+    TestGrantedBody(64, 65536);
+}
+
+void testProcessWorkIdleGrant()
+{
+    ProcessWorkChannel receiver, sender;
+    ProcessWorkReceiveQueue received;
+    std::atomic<int32_t> full(0);
+    bbCheck(receiver.openReceiver(65548, 64, 0, 0, 0, 0), "idle grant receiver");
+    receiver.publish();
+    bbCheck(sender.openSender(bbPid()), "idle grant sender");
+    receiver.pump(received, full);
+    bbCheck(sender.trySend("x", 1, 0) == PROCESS_WORK_SENT, "idle grant prelude");
+    bbCheck(receiver.pump(received, full) == 1, "idle grant prelude drain");
+    char* packet = nullptr;
+    bbCheck(received.take(&packet, 0), "idle grant prelude packet");
+    received.release(packet);
+
+    SharedMemory directoryMemory("P3D" + bbNumber(bbPid()));
+    ProcessWorkSharedDirectory* directory = static_cast<ProcessWorkSharedDirectory*>(directoryMemory.writeWithoutLock());
+    bbCheck(directory != nullptr, "idle grant directory");
+    const uint32_t session = static_cast<uint32_t>(ProcessWorkAtomic::load(&directory->m_session));
+    const uint64_t identity = directory->m_identity;
+    SharedMemory controlMemory(ProcessWorkChannel::objectName('C', bbPid(), identity, session));
+    ProcessWorkSharedControl* control = static_cast<ProcessWorkSharedControl*>(controlMemory.writeWithoutLock());
+    bbCheck(control != nullptr && ProcessWorkAtomic::load(&control->m_dataSignal) == 1, "idle grant merged notification");
+    int64_t token = 0;
+    for (size_t i = 0; i < 256; ++i)
+    {
+        if (ProcessWorkAtomic::load(&control->m_peers[i].m_pid) == bbPid())
+        {
+            token = ProcessWorkAtomic::load(&control->m_peers[i].m_token);
+            break;
+        }
+    }
+    bbCheck(token > 0, "idle grant approved identity");
+    ProcessWorkStorage storage(bbPid(), identity, session, 65548, 64, false, ProcessWorkMemoryConfig());
+    ProcessWorkSharedQueue queue(storage, *control);
+    ProcessWorkProducerState* producer = queue.producer(token);
+    bbCheck(producer != nullptr, "idle grant producer");
+    // 构造真实的迟到请求：发送者此前看到满载，接收器已归还正文，随后才发布请求。
+    // dataSignal仍为1，正常signalData会合并通知；本例不用额外wake掩盖此窗口。
+    queue.request(*producer, false);
+    uint32_t index = 0;
+    bbCheck(!queue.takeGrant(*producer, false, index), "idle grant fixture already served");
+    receiver.waitForData();
+    bbCheck(queue.takeGrant(*producer, false, index) && index >= 1 && index <= 64,
+        "idle receiver did not service request before waiting");
+    uint32_t duplicate = 0;
+    bbCheck(!queue.takeGrant(*producer, false, duplicate), "idle request granted twice");
+
+    std::unique_ptr<SharedMemory> temporary;
+    ProcessWorkSharedBlock* block = storage.block(index);
+    bbCheck(block != nullptr, "idle grant block");
+    char* data = storage.data(index, static_cast<uint32_t>(ProcessWorkAtomic::load(&block->m_generation)), temporary);
+    bbCheck(data != nullptr, "idle grant body mapping");
+    const int32_t header[3] = { bbPid(), 1, 65536 };
+    const std::string body = packetBody(1, 65536);
+    std::memcpy(data, header, sizeof(header));
+    std::memcpy(data + 12, body.data(), body.size());
+    uint32_t hint = 0;
+    bbCheck(queue.enqueue(*producer, static_cast<int32_t>(index), false, 64, hint), "idle grant publish");
+    bbCheck(receiver.pump(received, full) == 1 && received.take(&packet, 0), "idle grant delivery");
+    const bool valid = std::memcmp(packet, header, sizeof(header)) == 0 &&
+        std::memcmp(packet + 12, body.data(), body.size()) == 0;
+    received.release(packet);
+    bbCheck(valid && !received.take(&packet, 0), "idle grant corruption or duplicate");
+}
+
+int runProcessWorkPreparedSender(int32_t pid, const std::string& prefix)
+{
+    ProcessWork& ipc = ProcessWork::instance();
+    bbCheck(ipc.prepareSend(pid, -1, true), "crash sender prepare");
+    bbCheck(ipc.send(pid, "", 0, static_cast<MessageType>(0)), "crash sender registration");
+    bbWrite(prefix + ".ready", "1");
+    bbWait([&]() { return bbRead(prefix + ".go") == "1"; }, "prepared sender start");
+    for (int32_t i = 1; i <= 100; ++i)
+    {
+        const std::string body = packetBody(i, i % 2 == 0 ? 65536 : 64);
+        bbCheck(ipc.send(pid, body, static_cast<MessageType>(i)), "prepared public send failed");
+    }
+    bbWrite(prefix + ".sent", "1");
+    bbWait([]() { return false; }, "parent terminates prepared sender", 60000);
+    return 1;
+}
+
+void testProcessWorkPreparedSenderCrash()
+{
+    ProcessWorkChannel receiver;
+    ProcessWorkReceiveQueue received;
+    std::atomic<int32_t> full(0);
+    bbCheck(receiver.openReceiver(65548, 257, 0, 0, 0, 0), "prepared crash receiver");
+    receiver.publish();
+    const std::string prefix = bbTempPath("-prepared-crash");
+    BlackBoxChild child;
+    child.start(std::vector<std::string>{ "--prepared-sender", bbNumber(bbPid()), prefix }, prefix + ".log");
+    bbWait([&]() { receiver.pump(received, full); bbCheck(child.poll() < 0, "prepared child exited");
+        return bbRead(prefix + ".ready") == "1"; }, "prepared child ready");
+    char* packet = nullptr;
+    bbWait([&]() { receiver.pump(received, full); return received.take(&packet, 0); }, "registration packet");
+    received.release(packet);
+    bbWrite(prefix + ".go", "1");
+    // 此后不pump，确保100条都还在共享缓冲区；只有全部send返回成功才允许强杀。
+    bbWait([&]() { bbCheck(child.poll() < 0, "prepared child failed sending");
+        return bbRead(prefix + ".sent") == "1"; }, "prepared messages committed");
+    CrashOwnedChild(child);
+    bbSleep(30);
+    int32_t count = 0;
+    bbWait([&]()
+    {
+        receiver.pump(received, full);
+        while (received.take(&packet, 0))
+        {
+            int32_t header[3] = {};
+            std::memcpy(header, packet, sizeof(header));
+            const std::string expected = packetBody(count + 1, (count + 1) % 2 == 0 ? 65536 : 64);
+            const bool valid = header[0] == child.pid() && header[1] == count + 1 &&
+                header[2] == static_cast<int32_t>(expected.size()) && std::memcmp(packet + 12, expected.data(), expected.size()) == 0;
+            received.release(packet);
+            bbCheck(valid, "prepared committed message lost/corrupted after sender death");
+            ++count;
+        }
+        return count == 100;
+    }, "prepared dead sender deliveries");
+    receiver.pump(received, full);
+    bbCheck(!received.take(&packet, 0), "prepared sender duplicate");
 }
 
 void testProcessWorkSharedQueue()
@@ -200,7 +432,19 @@ void testProcessWorkSharedQueue()
     for (int32_t i = 1; i < kProcessWorkSegmentCells; ++i)
     {
         bbCheck(queue.enqueue(2, 22 + i, false, 2, hint), "first segment fill failed");
-        bbCheck(queue.front(next, value) && value == 22 + i && queue.consume(next), "first segment FIFO failed");
+        if ((i & 1) == 0)
+        {
+            bool inlined = true;
+            const uint32_t stale = next;
+            bbCheck(queue.front(next, value, inlined) && value == 22 + i && !inlined &&
+                queue.front(next, value, inlined) && value == 22 + i, "body peek advanced or changed payload");
+            bbCheck(!queue.consume(stale) && queue.consume(next, 13) && !queue.consume(next),
+                "consume accepted stale position or duplicate confirmation");
+        }
+        else
+        {
+            bbCheck(queue.front(next, value) && value == 22 + i && queue.consume(next), "first segment FIFO failed");
+        }
     }
     bbCheck(queue.enqueue(2, 11, true, 2, hint), "second segment enqueue failed");
     // 模拟本流链接提交后暂停在写游标更新之前；接收器只读取已提交链接。
@@ -555,4 +799,112 @@ void testProcessWorkGrowthBudget()
     bbCheck(queue.pop(&packet) && packet != nullptr, "staged growth lost packet");
     delete[] packet;
     bbCheck(!queue.pop(&packet), "BUSY committed extra packet");
+}
+
+void testProcessWorkSegmentLocality()
+{
+    for (int32_t mode = 0; mode < 2; ++mode)
+    {
+        const bool inlinedPayload = mode != 0;
+        uint64_t identity = 0;
+        bbCheck(CSystem::processIdentity(bbPid(), identity), "segment locality identity missing");
+        ProcessWorkMemoryConfig config;
+        ProcessWorkStorage receiveStorage(bbPid(), identity, 0xfffffb, 18, 1024, true, config);
+        ProcessWorkSharedControl control = {};
+        ProcessWorkSharedQueue receiveQueue(receiveStorage, control);
+        bbCheck(receiveQueue.initialize(), "segment locality initialize failed");
+        for (uint32_t index = 1; index <= 1024; ++index)
+        {
+            bbCheck(receiveQueue.activate(index), "segment locality activation failed");
+        }
+        ProcessWorkStorage sendStorage(bbPid(), identity, 0xfffffb, 18, 1024, false, config);
+        ProcessWorkSharedQueue sendQueue(sendStorage, control);
+        uint32_t hint = 0;
+        for (int32_t sequence = 1; sequence <= 30000; ++sequence)
+        {
+            bbCheck(sendQueue.enqueue(1, sequence, inlinedPayload, 1024, hint), "segment locality enqueue failed");
+            uint32_t slot = 0;
+            int32_t value = 0;
+            bool inlined = false;
+            bbCheck(receiveQueue.front(slot, value, inlined) && value == sequence && inlined == inlinedPayload,
+                "segment locality reordered or corrupted published value");
+            bbCheck(receiveQueue.consume(slot), "segment locality consume failed");
+        }
+        // 观察冷页节点的真实复用代次，不仅检查游标的计算结果。
+        for (uint32_t index = 256; index <= 1024; ++index)
+        {
+            bbCheck(ProcessWorkAtomic::load(&receiveStorage.node(index)->m_link) == 0,
+                "steady queue needlessly used a cold metadata page");
+        }
+        // 暂停消费令第一页耗尽，仍必须找到后续页，不能把局部性变成容量上限。
+        for (int32_t sequence = 30001; sequence <= 46000; ++sequence)
+        {
+            bbCheck(sendQueue.enqueue(1, sequence, inlinedPayload, 1024, hint), "local page blocked available global capacity");
+        }
+        bbCheck(ProcessWorkAtomic::load(&receiveStorage.node(256)->m_link) != 0 &&
+            ProcessWorkAtomic::load(&receiveStorage.node(512)->m_link) != 0,
+            "backlog did not exercise cross-page fallback");
+        for (int32_t sequence = 30001; sequence <= 46000; ++sequence)
+        {
+            uint32_t slot = 0;
+            int32_t value = 0;
+            bbCheck(receiveQueue.front(slot, value) && value == sequence && receiveQueue.consume(slot),
+                "cross-page segment reuse lost FIFO");
+        }
+        uint32_t slot = 0;
+        int32_t value = 0;
+        bbCheck(!receiveQueue.front(slot, value), "segment reuse delivered extra data");
+    }
+}
+
+void testProcessWorkSenderTokenReuse()
+{
+    ProcessWorkChannel receiver, sender;
+    ProcessWorkReceiveQueue received;
+    std::atomic<int32_t> full(0);
+    for (int32_t cycle = 0; cycle < 3; ++cycle)
+    {
+        bbCheck(receiver.openReceiver(76, 16, 0, 0, 0, 0), "token reuse receiver");
+        receiver.publish();
+        SharedMemory directoryMemory("P3D" + bbNumber(bbPid()));
+        ProcessWorkSharedDirectory* directory = static_cast<ProcessWorkSharedDirectory*>(directoryMemory.writeWithoutLock());
+        bbCheck(directory != nullptr, "token reuse directory");
+        const uint32_t session = static_cast<uint32_t>(ProcessWorkAtomic::load(&directory->m_session));
+        const uint64_t identity = directory->m_identity;
+        SharedMemory controlMemory(ProcessWorkChannel::objectName('C', bbPid(), identity, session));
+        ProcessWorkSharedControl* control = static_cast<ProcessWorkSharedControl*>(controlMemory.writeWithoutLock());
+        bbCheck(control != nullptr, "token reuse control");
+        // 新会话尚无发送者。让批准号与上一会话不同，避免每轮都从1开始掩盖旧缓存。
+        const int64_t expected = (cycle + 1) * 100 + 1;
+        ProcessWorkAtomic::store(&control->m_nextToken, expected - 1);
+        bbCheck(sender.openSender(bbPid()), "token reuse sender");
+        receiver.pump(received, full);
+        ProcessWorkStorage storage(bbPid(), identity, session, 76, 16, false, ProcessWorkMemoryConfig());
+        for (int32_t item = 0; item < 8; ++item)
+        {
+            bbCheck(sender.trySend("token", 5, item) == PROCESS_WORK_SENT, "token reuse send");
+            int32_t owned = 0;
+            for (uint32_t index = 1; index <= 16; ++index)
+            {
+                ProcessWorkSharedBlock* block = storage.block(index);
+                bbCheck(block != nullptr, "token reuse metadata");
+                const int64_t owner = ProcessWorkAtomic::load(&block->m_owner);
+                if (owner > 0)
+                {
+                    bbCheck(owner == expected, "sender reused approval from a closed session");
+                    ++owned;
+                }
+            }
+            bbCheck(owned == 1, "token reuse reserved multiple bodies");
+            bbCheck(receiver.pump(received, full) == 1, "token reuse receive count");
+            char* packet = nullptr;
+            bbCheck(received.take(&packet, 0), "token reuse packet");
+            const int32_t header[3] = { bbPid(), item, 5 };
+            const bool valid = std::memcmp(packet, header, sizeof(header)) == 0 && std::memcmp(packet + 12, "token", 5) == 0;
+            received.release(packet);
+            bbCheck(valid, "token reuse corrupted delivery");
+        }
+        sender.close();
+        receiver.close();
+    }
 }

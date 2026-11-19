@@ -98,7 +98,7 @@ void ProcessWorkTestAutomation::build(const std::string& root, const std::string
 {
     bbCheck(arch == "x64" || arch == "x86", "architecture must be x64 or x86");
     bbCheck(mode == "tests" || mode == "dll" || mode == "benchmark" || mode == "memory" ||
-        mode == "profile" || mode == "demo" || mode == "map", "unknown build mode");
+        mode == "profile" || mode == "demo" || mode == "map" || mode == "notification-failure", "unknown build mode");
     Quote(root); Quote(output);
 #ifndef _WIN32
     bbCheck(false, "private VS build is Windows only; use CMake on native POSIX");
@@ -109,6 +109,8 @@ void ProcessWorkTestAutomation::build(const std::string& root, const std::string
     directory(output + "/test");
     const std::string support = root + "/src/CTaskThreadManagerTest/CTaskThreadManagerTest";
     const std::string suite = root + "/src/ProcessWorkTest/ProcessWorkTest";
+    const bool prepareApi = bbRead(root + "/src/ProcessWork/ProcessWork/src/ProcessWork.h").find("bool prepareSend(") != std::string::npos;
+    const bool slotBytesApi = bbRead(root + "/src/ProcessWork/ProcessWork/src/ProcessWorkMemory.h").find("m_postBufferSlotBytes") != std::string::npos;
     const char* modules[] = { "ProcessWork", "SharedMemory", "CTaskThreadManager", "CorrespondParam", "CStringManager",
         "CSystem", "LockFreeQueue", "AtomicMath", "Semaphore", "LockFreeMap", "LockFreeHashMap" };
     std::map<std::string, std::vector<std::string>> sources;
@@ -173,7 +175,7 @@ void ProcessWorkTestAutomation::build(const std::string& root, const std::string
         }
     }
     bbWrite(output + "/source-inputs.txt", manifest.str());
-    if (mode == "memory" || mode == "profile")
+    if (mode == "memory" || mode == "profile" || mode == "notification-failure")
     {
         bbWrite(output + "/include/ProcessWorkBenchmarkAudit.h", bbRead(suite + "/ProcessWorkBenchmarkAudit.h"));
         instrument(output, mode, output + "/test/ProcessWorkBenchmark.cpp");
@@ -255,6 +257,14 @@ void ProcessWorkTestAutomation::build(const std::string& root, const std::string
     {
         const std::string object = output + "/Test-" + bbNumber(i) + ".obj";
         batch << "cl " << flags << " /DPROCESS_WORK_BENCH_IN_SUITE /DPROCESS_WORK_BENCH_RESULT_API /DPROCESS_WORK_BENCH_STORAGE_GROWTH";
+        if (prepareApi)
+        {
+            batch << " /DPROCESS_WORK_BENCH_PREPARE_API";
+        }
+        if (slotBytesApi)
+        {
+            batch << " /DPROCESS_WORK_BENCH_SLOT_BYTES";
+        }
         if (mode == "memory")
         {
             batch << " /DPROCESS_WORK_BENCH_MEMORY_AUDIT";
@@ -302,6 +312,10 @@ void ProcessWorkTestAutomation::build(const std::string& root, const std::string
     {
         execute(executable, std::vector<std::string>(), output + "/demo.log", 30);
         bbCheck(bbRead(output + "/demo.log").find("received=14") != std::string::npos, "demo completion count missing");
+    }
+    if (mode == "notification-failure")
+    {
+        execute(executable, std::vector<std::string>{ "--notification-failure" }, output + "/notification-failure.log", 30);
     }
     if (mode == "map")
     {

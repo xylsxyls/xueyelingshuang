@@ -13,6 +13,41 @@
 #include <iostream>
 #include <stdexcept>
 
+#ifdef _WIN32
+#include <Windows.h>
+
+/** 输出测试进程未处理的原生异常，不改变生产库的异常处理
+@param [in] exception Windows提供的异常记录和寄存器上下文
+@return EXCEPTION_EXECUTE_HANDLER，保留异常退出状态并终止当前测试子进程
+*/
+static LONG WINAPI ReportNativeTestFailure(EXCEPTION_POINTERS* exception)
+{
+    if (exception != nullptr && exception->ExceptionRecord != nullptr)
+    {
+        char message[256] = {};
+        const int32_t length = wsprintfA(message, "native exception code=0x%08X address=%p image=%p\r\n",
+            exception->ExceptionRecord->ExceptionCode, exception->ExceptionRecord->ExceptionAddress, GetModuleHandleW(nullptr));
+        DWORD written = 0;
+        WriteFile(GetStdHandle(STD_ERROR_HANDLE), message, static_cast<DWORD>(length), &written, nullptr);
+    }
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+#endif
+
+/** 验证原生异常不会被性能子进程包装成成功，并保留异常码诊断
+*/
+static void TestNativeFailureDiagnostic()
+{
+#ifdef _WIN32
+    const std::string log = bbTempPath("-native-diagnostic.log");
+    BlackBoxChild child;
+    child.start(std::vector<std::string>(1, "--native-diagnostic-check"), log);
+    bbCheck(child.wait(10000) == 125 && bbRead(log).find("native exception code=0xE0420001") != std::string::npos,
+        "native crash exit or diagnostic lost");
+
+#endif
+}
+
 static void emptyLifecycle()
 {
     ProcessWork& ipc = ProcessWork::instance();
@@ -35,7 +70,7 @@ static void invalidInit()
         { 64, 1, 0, 1, 0, 0 }, { 64, 1, 0, 0, 0, 1 }, { 64, 1, 0, 1, 0, -2 },
         { 64, 1, 0, INT_MAX, 0, INT_MAX }
     };
-    ipc.initPostThread();
+    bbCheck(ipc.initPostThread(), "post worker initialization failed");
     for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
     {
         const int* p = invalid[i];
@@ -43,7 +78,7 @@ static void invalidInit()
         bbCheck(ipc.receiveBufferCount() == 0 && ipc.receivePayloadCapacity() == 0, "invalid init leaked readiness");
     }
     bbCheck(ipc.setReceiveName(receiveName("retry")) && ipc.initReceive(64, 2), "valid retry failed");
-    ipc.post(bbPid(), std::string("retry"), static_cast<MessageType>(1)); ipc.waitForPostEnd();
+    bbCheck(ipc.post(bbPid(), std::string("retry"), static_cast<MessageType>(1)), "retry post rejected"); ipc.waitForPostEnd();
     waitPackets(log, 1);
     bbCheck(log.snapshot()[0].body == "retry", "failed init lost callback or existing post state");
 }
@@ -78,7 +113,7 @@ static void localTransfer(int mode)
     const std::string name = receiveName("transfer");
     scope.start(&log, name);
     ProcessWork& ipc = ProcessWork::instance();
-    if (mode >= 2 && mode <= 4) ipc.initPostThread();
+    if (mode >= 2 && mode <= 4) bbCheck(ipc.initPostThread(), "post worker initialization failed");
     const int sizes[] = { 0, 1, 6, 64, 4096, 65536, 0, 65536 };
     for (int i = 0; i < 8; ++i)
     {
@@ -119,13 +154,18 @@ static void invalidVoidSend()
     const std::string name = receiveName("invalid_void");
     scope.start(&log, name, 64, 2);
     ProcessWork& ipc = ProcessWork::instance();
-    ipc.initPostThread();
-    ipc.send(bbPid(), nullptr, 1); ipc.send(name, "x", -1); ipc.send(bbPid(), "x", 1, static_cast<MessageType>(-1));
-    ipc.send(0, "x"); ipc.send(std::string(), "x");
-    ipc.post(bbPid(), nullptr, 1); ipc.post(name, "x", -1); ipc.post(bbPid(), "x", 1, static_cast<MessageType>(-1));
-    ipc.post(0, "x"); ipc.post(std::string(), "x");
-    ipc.send(bbPid(), std::string(53, 'x')); ipc.post(name, std::string(53, 'x'));
-    ipc.post(bbPid(), std::string("barrier"), static_cast<MessageType>(77)); ipc.waitForPostEnd();
+    bbCheck(ipc.initPostThread(), "post worker initialization failed");
+    bbCheck(!ipc.send(bbPid(), nullptr, 1) && !ipc.send(name, "x", -1) &&
+        !ipc.send(bbPid(), "x", 1, static_cast<MessageType>(-1)), "invalid send accepted");
+    bbCheck(!ipc.send(0, "x") && !ipc.send(std::string(), "x"), "invalid send destination accepted");
+    bbCheck(!ipc.post(bbPid(), nullptr, 1) && !ipc.post(name, "x", -1) &&
+        !ipc.post(bbPid(), "x", 1, static_cast<MessageType>(-1)), "invalid post accepted");
+    bbCheck(!ipc.post(0, "x") && !ipc.post(std::string(), "x"), "invalid post destination accepted");
+    bbCheck(!ipc.send(bbPid(), std::string(53, 'x')), "remote oversized send accepted");
+    // Post只确认本地接纳；对端包长限制由后台发送检查，不能错误断言本地投递失败。
+    bbCheck(ipc.post(name, std::string(53, 'x')), "locally valid post rejected");
+    bbCheck(ipc.post(bbPid(), std::string("barrier"), static_cast<MessageType>(77)), "barrier rejected");
+    ipc.waitForPostEnd();
     waitPackets(log, 1); bbSleep(30); scope.close();
     bbCheck(log.snapshot().size() == 1 && log.snapshot()[0].body == "barrier", "invalid void call delivered a packet");
 }
@@ -164,7 +204,7 @@ static void callbackReentry()
     };
     IpcScope scope;
     scope.start(&log, receiveName("reentry"), 64, 2);
-    ProcessWork::instance().initPostThread();
+    bbCheck(ProcessWork::instance().initPostThread(), "post worker initialization failed");
     sendPacket(0, bbPid(), "", "request", 1); waitPackets(log, 2);
     ProcessWork::instance().waitForPostEnd();
     bbCheck(log.snapshot()[1].type == 2 && log.snapshot()[1].body == "response", "callback post failed");
@@ -209,13 +249,13 @@ static void postDrainRestart()
     const std::string name = receiveName("post_restart");
     scope.start(&log, name, 128, 4);
     ProcessWork& ipc = ProcessWork::instance();
-    ipc.initPostThread(); ipc.initPostThread();
+    bbCheck(ipc.initPostThread(), "post worker initialization failed"); bbCheck(ipc.initPostThread(), "post worker initialization failed");
     for (int round = 0; round < 3; ++round)
     {
         for (int i = 0; i < 20; ++i) sendPacket(4, bbPid(), name, packetBody(round * 20 + i, 64), round * 20 + i);
         ipc.waitForPostEnd(); waitPackets(log, (round + 1) * 20);
     }
-    ipc.uninitPostThread(); ipc.uninitPostThread(); ipc.initPostThread();
+    ipc.uninitPostThread(); ipc.uninitPostThread(); bbCheck(ipc.initPostThread(), "post worker initialization failed");
     sendPacket(2, bbPid(), name, "new", 60); ipc.waitForPostEnd(); waitPackets(log, 61);
     const std::vector<ReceivedPacket> packets = log.snapshot();
     for (int i = 0; i < 61; ++i) bbCheck(packets[i].type == i, "post drain/restart reordered messages");
@@ -287,7 +327,7 @@ static void lifecycleStress()
         IpcScope scope;
         scope.start(&log, receiveName("life"), 128, 4);
         ProcessWork& ipc = ProcessWork::instance();
-        ipc.initPostThread();
+        bbCheck(ipc.initPostThread(), "post worker initialization failed");
         for (int i = 0; i < 20; ++i) sendPacket(2, bbPid(), "", packetBody(i, 64), i);
         ipc.waitForPostEnd(); waitPackets(log, 20); scope.close();
         bbCheck(CTaskThreadManager::instance().count() == 0 && ipc.receiveBufferCount() == 0, "IPC left managed threads/resources ready");
@@ -302,7 +342,7 @@ static void deadPeer()
     ProcessWork& ipc = ProcessWork::instance();
     IpcScope scope;
     bbCheck(ipc.trySend(child.pid(), "x", 1) == PROCESS_WORK_UNAVAILABLE, "exited peer considered available");
-    ipc.send(child.pid(), "x"); ipc.initPostThread(); ipc.post(child.pid(), "x"); ipc.waitForPostEnd();
+    ipc.send(child.pid(), "x"); bbCheck(ipc.initPostThread(), "post worker initialization failed"); ipc.post(child.pid(), "x"); ipc.waitForPostEnd();
 }
 /** 验证清缓存与同步发送或后台前缀借用并发时的完整交付
 @param [in] post true使用异步PID/名称混合投递，false保留同步发送场景
@@ -317,7 +357,7 @@ static void concurrentClear(bool post)
     scope.start(&ledger, name);
     if (post)
     {
-        ProcessWork::instance().initPostThread();
+        bbCheck(ProcessWork::instance().initPostThread(), "post worker initialization failed");
     }
     IpcJobs jobs;
     for (int thread = 0; thread < threads; ++thread)
@@ -492,7 +532,7 @@ std::vector<BlackBoxCase> processCases()
     add("post-prefix-cache-clear", "4 mixed PID/name post producers plus cache clearer preserve1200 messages and FIFO during prefix borrow", true, []() { concurrentClear(true); });
     add("sender-address-cache", "two channels alternate on one physical sender across pages,segments,reuse and reopen;28000 exact FIFO messages", false, testProcessWorkSenderAddressCache);
     add("receiver-page-reuse", "same receiver object reopens513/257/3 slots;3092 exact FIFO messages cross pages and reused mappings", false, testProcessWorkReceiverPageReuse);
-    add("receive-copy-boundary-guard", "0..96-byte bodies placed at both inaccessible page boundaries;194 exact copies,NUL,ownership and budget", false, testProcessWorkReceiveCopyBoundary);
+    add("receive-copy-boundary-guard", "0..129-byte bodies placed at both inaccessible page boundaries;260 exact copies,NUL,ownership and budget", false, testProcessWorkReceiveCopyBoundary);
     add("dynamic-local-budget", "fixed quota boundaries,unlimited byte-accounting bypass,lifetime checks and impossible-request termination", false, testProcessWorkFixedBudget);
     add("component-pool-configuration", "default unlimited,actual post/receive growth,native configuration rejection and task startup rollback", false, testProcessWorkMemoryConfiguration);
     add("native-growth-notification", "actual Queue/Map/Hash growth,initial exclusion and observer exception isolation", false, testProcessWorkNativeGrowth);
@@ -504,13 +544,36 @@ std::vector<BlackBoxCase> processCases()
     add("message-type-domain", "five routes,55 valid boundary types and15 rejected negative calls,exact bytes", false, ProcessWorkCompatibilityTests::typeDomain);
     add("guarded-source-input", "five routes,21 lengths,two guard boundaries,210 copies survive source revocation", false, ProcessWorkCompatibilityTests::guardedInput);
     add("overload-rejection-fifo", "eight overloads,four capacities,1023-byte name,four producers,16384 valid deliveries amid rejected requests", true, ProcessWorkCompatibilityTests::overloadRejection);
+    add("configuration-copy-failure", "configuration copy exception returns false; same channel retries and delivers exact payload", false, testProcessWorkConfigurationCopyFailure);
+    add("prepare-send-mappings", "metadata/body preparation,invalid prefixes,no implicit messages,send/post payload fidelity", false, testProcessWorkPrepareSend);
+    add("granted-body-page", "513x64B and64x64KiB,eight producers,32000 messages,full-pool resume preserves FIFO/body", true, testProcessWorkGrantedPage);
+    add("prepared-sender-crash", "100 successful public sends remain deliverable after producer is killed before pumping", false, testProcessWorkPreparedSenderCrash);
+    add("segment-locality", "30000 immediate consumes reuse one metadata page;16000 backlog entries cross pages without FIFO loss", false, testProcessWorkSegmentLocality);
+    add("idle-grant-notification", "late capacity request merged with old notification must be granted before receiver waits;exact64KiB delivery", false, testProcessWorkIdleGrant);
+    add("sender-token-reuse", "three sessions with distinct approvals;cached sender must use current token and deliver exactly24 messages", false, testProcessWorkSenderTokenReuse);
+#ifdef _WIN32
+    add("native-failure-diagnostic", "native child exception exits unsuccessfully and records original code", false, TestNativeFailureDiagnostic);
+    add("post-limited-cpu", "single CPU,eight producers,three progress windows,exact FIFO ledger and complete drain", true, testProcessWorkPostLimitedCpu);
+#endif
     return cases;
 }
 
 int main(int argc, char** argv)
 {
+#ifdef _WIN32
+    SetUnhandledExceptionFilter(ReportNativeTestFailure);
+    if (argc == 2 && std::string(argv[1]) == "--native-diagnostic-check")
+    {
+        RaiseException(0xE0420001UL, 0, 0, nullptr);
+        return 1;
+    }
+#endif
     try
     {
+        if (argc == 4 && std::string(argv[1]) == "--prepared-sender")
+        {
+            return runProcessWorkPreparedSender(std::atoi(argv[2]), argv[3]);
+        }
         if (argc > 1 && std::string(argv[1]) == "--tool")
         {
             return ProcessWorkTestAutomation::run(argc - 2, argv + 2);
@@ -527,6 +590,10 @@ int main(int argc, char** argv)
         if (argc == 2 && std::string(argv[1]) == "--automation-fail")
         {
             return 17;
+        }
+        if (argc == 2 && std::string(argv[1]) == "--notification-failure")
+        {
+            return runProcessWorkNotificationFailure();
         }
         if (argc == 3 && std::string(argv[1]) == "--quota-probe")
         {

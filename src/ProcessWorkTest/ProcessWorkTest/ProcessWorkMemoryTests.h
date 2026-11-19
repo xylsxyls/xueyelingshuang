@@ -94,3 +94,12 @@ void testProcessWorkPacketGrowth();
 /** 共享块增长策略裁剪与实际分配通知，通过真实通道发送并核对完整正文
 */
 void testProcessWorkSharedGrowth();
+
+/** 仅在notification-failure私有构建运行，核对依赖初始化失败不会发布后台任务
+@return 成功为0；没有注入或任一入口误报成功均抛出测试错误
+*/
+int32_t runProcessWorkNotificationFailure();
+
+/** 配置内函数对象复制失败必须由Channel返回false，随后同一实例能重试并收发
+*/
+void testProcessWorkConfigurationCopyFailure();

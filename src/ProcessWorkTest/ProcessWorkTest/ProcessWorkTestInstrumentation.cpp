@@ -14,6 +14,14 @@ static void Patch(const std::string& path, const std::string& before, const std:
 
 void ProcessWorkTestAutomation::instrument(const std::string& output, const std::string& mode, const std::string& benchmark)
 {
+    if (mode == "notification-failure")
+    {
+        // 只在私有副本替换依赖的初始化报告，测试调用方拒绝发布失效后端的行为。
+        const std::string path = output + "/source/Semaphore/Semaphore.cpp";
+        Patch(path, "SemaphoreResult Semaphore::initializationResult() const\n{\n    return m_wake.initializationResult();\n}",
+            "SemaphoreResult Semaphore::initializationResult() const\n{\n    return SemaphoreResult(SEMAPHORE_NO_MEMORY);\n}");
+        return;
+    }
     if (mode == "memory")
     {
         const char* patches[][3] = {
@@ -26,7 +34,7 @@ void ProcessWorkTestAutomation::instrument(const std::string& output, const std:
             { "ProcessWork/ProcessWorkLocalQueue.cpp", "            allocation = new (std::nothrow) char[bytes + prefix];", "            ProcessWorkBenchmarkAudit::hit(3);\n            allocation = new (std::nothrow) char[bytes + prefix];" },
             { "ProcessWork/ProcessWork.cpp", "\n        if (!m_postStarted || m_waitEndPost.load() || SendTask::currentStopFlag() != nullptr ||", "\n        ProcessWorkBenchmarkAudit::hit(8);\n        if (!m_postStarted || m_waitEndPost.load() || SendTask::currentStopFlag() != nullptr ||" },
             { "LockFreeQueue/LockFreeQueueArenaAllocation.inl", "LockFreeQueueResult LockFreeQueueArena<T>::grow(Record* record, bool required)\n{", "LockFreeQueueResult LockFreeQueueArena<T>::grow(Record* record, bool required)\n{\n    ProcessWorkBenchmarkAudit::hit(4);" },
-            { "LockFreeMap/LockFreeMapPool.inl", "LockFreeMapStatus LockFreeMapPool<T>::grow(bool initial)\n{", "LockFreeMapStatus LockFreeMapPool<T>::grow(bool initial)\n{\n    if (!initial)\n    {\n        ProcessWorkBenchmarkAudit::hit(5);\n    }" },
+            { "LockFreeMap/LockFreeMapPool.inl", "LockFreeMapStatus LockFreeMapPool<T>::grow(bool initial, LockFreeMapHazardRecord* hint)\n{", "LockFreeMapStatus LockFreeMapPool<T>::grow(bool initial, LockFreeMapHazardRecord* hint)\n{\n    if (!initial)\n    {\n        ProcessWorkBenchmarkAudit::hit(5);\n    }" },
             { "ProcessWork/ProcessWorkStorage.cpp", "        std::unique_ptr<ProcessWorkPage> candidate(new ProcessWorkPage);", "        ProcessWorkBenchmarkAudit::hit(6);\n        std::unique_ptr<ProcessWorkPage> candidate(new ProcessWorkPage);" }
         };
         for (size_t i = 0; i < sizeof(patches) / sizeof(patches[0]); ++i)
@@ -61,7 +69,7 @@ void ProcessWorkTestAutomation::instrument(const std::string& output, const std:
     const std::string queue = output + "/source/ProcessWork/ProcessWorkSharedQueue.cpp";
     Patch(queue, "#include \"ProcessWorkAtomic.h\"", "#include \"ProcessWorkAtomic.h\"" + external);
     Patch(queue, "        ProcessWorkSharedNode* value = node(candidate);", "        ++pw_profile[3];\n        ProcessWorkSharedNode* value = node(candidate);");
-    const std::string anchor = "    if (index == UINT32_MAX && !reserve(ProcessWorkAtomic::load(&stream.m_owner), extent, hint, index, false, contended))\n    {";
+    const std::string anchor = "    if (index == UINT32_MAX && !reserve(ProcessWorkAtomic::load(&stream.m_owner), extent, hint, index, contended))\n    {";
     Patch(queue, anchor, anchor + "\n        ++pw_profile[4];");
     Patch(queue, "    ProcessWorkAtomic::store(&stream.m_writeOffset, int64_t(1));", "    ProcessWorkAtomic::store(&stream.m_writeOffset, int64_t(1));\n    ++pw_profile[6];");
     for (int32_t copy = 0; copy < 2; ++copy)

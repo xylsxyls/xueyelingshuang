@@ -72,7 +72,7 @@ public:
     */
     ProcessWorkBenchmarkReceiver(int32_t streams, int32_t count, int32_t bytes);
 
-    /** 核对消息序号、长度及正文首尾，功能测试另行逐字节验证。
+    /** 核对消息序号、长度及完整正文，结束屏障后不允许同流继续交付。
     @param [in] pid 实际发送进程
     @param [in] data 正文
     @param [in] length 正文长度
@@ -85,9 +85,20 @@ public:
     */
     void bufferFull(int32_t count);
 
+    /** 在所有回调收敛后核对各流的数量及结束屏障
+    @return 每个流完整交付一次且没有检测到错误
+    */
+    bool verified() const;
+
+    /** 验证校验器拒绝内容损坏、缺失、重复及结束屏障后的迟到消息
+    */
+    static void selfTest();
+
 public:
     // 已经接收的预热消息计数
     std::atomic<int32_t> m_warmup;
+    // 每个实际发送线程在计时结束后发布的FIFO结束屏障数
+    std::atomic<int32_t> m_drained;
     // 最后业务回调完成的QPC纳秒，0尚未完成
     std::atomic<int64_t> m_finished;
     // 账本错误计数，不随意忽略异常报文
@@ -118,6 +129,10 @@ private:
     int32_t m_received;
     // 每个流下一条预期序号，预分配后不扩容
     std::vector<int32_t> m_next;
+    // 每条流的结束屏障只能接收一次，唯一消费者访问
+    std::vector<uint8_t> m_ended;
+    // 计时前准备的完整预期正文
+    std::string m_body;
 };
 
 /** 独立或集成的性能入口，子进程共用相同参数协议

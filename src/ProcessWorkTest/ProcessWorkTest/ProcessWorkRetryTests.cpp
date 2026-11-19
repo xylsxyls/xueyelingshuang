@@ -104,8 +104,15 @@ void ProcessWorkRetryTests::postCapacity(int32_t mode)
             done.store(true);
         });
         bbWait([&]() { return started.load(); }, "post producer started");
-        bbSleep(20);
-        bbCheck(waitCapacity ? !done.load() : done.load(), "post capacity switch ignored");
+        if (waitCapacity)
+        {
+            bbSleep(20);
+            bbCheck(!done.load(), "post capacity switch ignored");
+        }
+        else
+        {
+            bbWait([&]() { return done.load(); }, "nonwaiting post returns without releasing capacity");
+        }
         const int32_t expected = waitCapacity ? 2 : 1;
         int32_t count = 0;
         bbWait([&]()

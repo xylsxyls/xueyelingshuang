@@ -1,4 +1,5 @@
 ﻿#include "ProcessWorkTestAutomation.h"
+#include "ProcessWorkBenchmark.h"
 #include <algorithm>
 #include <cmath>
 #include <climits>
@@ -326,7 +327,9 @@ int32_t ProcessWorkTestAutomation::matrix(int32_t argc, char** argv)
         else if (key == "--custom")
         {
             // 自定义五个字段允许值重复，不能使用拒绝重复名称的Split。
-            std::istringstream fields(argv[i + 1]);
+            const std::string custom(argv[i + 1]);
+            bbCheck(!custom.empty() && custom[custom.size() - 1] != ',', "empty custom field");
+            std::istringstream fields(custom);
             std::vector<int32_t> numbers;
             std::string field;
             while (std::getline(fields, field, ','))
@@ -359,6 +362,8 @@ int32_t ProcessWorkTestAutomation::matrix(int32_t argc, char** argv)
         identity << labels[i] << ' ' << programs[i] << ' ' << fingerprint(programs[i]) << '\n';
     }
     identity << "PROCESS_WORK_BENCH_UNLIMITED_LOCAL=" << (std::getenv("PROCESS_WORK_BENCH_UNLIMITED_LOCAL") ? "1" : "0");
+    identity << "\nPROCESS_WORK_BENCH_POST_SLOT_BYTES=" << (std::getenv("PROCESS_WORK_BENCH_POST_SLOT_BYTES") ? std::getenv("PROCESS_WORK_BENCH_POST_SLOT_BYTES") : "library-default; see per-run post_slot_bytes");
+    identity << "\nPROCESS_WORK_BENCH_PREPARE_SEND=" << (std::getenv("PROCESS_WORK_BENCH_PREPARE_SEND") ? "1; actual support and preparation time are reported per sample" : "0");
     bbWrite(output + "/identity.txt", identity.str());
     std::ofstream raw((output + "/samples.csv").c_str());
     std::ofstream summary((output + "/summary.csv").c_str());
@@ -397,6 +402,16 @@ int32_t ProcessWorkTestAutomation::matrix(int32_t argc, char** argv)
                         row.at("messages") == int64_t(value.m_processes) * value.m_threads * value.m_count &&
                         row.at("blocks") == value.m_blocks && row.at("mode") == value.m_mode &&
                         row.at("produced_per_second") > 0 && row.at("consumed_per_second") > 0, "benchmark verification mismatch");
+                    // 日志秒数保留六位小数，只容许其舍入误差，不能用任意正速率冒充有效成绩。
+                    const char* rates[] = { "produced_per_second", "consumed_per_second" };
+                    const char* durations[] = { "production_seconds", "consumption_seconds" };
+                    for (size_t metric = 0; metric < 2; ++metric)
+                    {
+                        const double rate = row.at(rates[metric]);
+                        const double seconds = row.at(durations[metric]);
+                        bbCheck(seconds > 0 && std::fabs(rate * seconds - row.at("messages")) <=
+                            (std::max)(1.0, rate * 0.000001), "benchmark rate disagrees with elapsed time and count");
+                    }
                     production[p].push_back(row.at("produced_per_second"));
                     consumption[p].push_back(row.at("consumed_per_second"));
                     raw << value.m_name << ',' << labels[p] << ',' << round + 1 << ",1," << std::setprecision(12) <<
@@ -444,7 +459,44 @@ int32_t ProcessWorkTestAutomation::matrix(int32_t argc, char** argv)
 
 void ProcessWorkTestAutomation::selfTest()
 {
+    ProcessWorkBenchmarkReceiver::selfTest();
+    bbCheck(bbUnsigned("18446744073709551615", UINT64_MAX) == UINT64_MAX && bbUnsigned("0", 0) == 0,
+        "unsigned argument boundary");
+    const char* invalidNumbers[] = { "", "-1", "+1", "2x", " 2", "18446744073709551616" };
+    for (size_t i = 0; i < sizeof(invalidNumbers) / sizeof(invalidNumbers[0]); ++i)
+    {
+        bool rejected = false;
+        try
+        {
+            bbUnsigned(invalidNumbers[i], UINT64_MAX);
+        }
+        catch (...)
+        {
+            rejected = true;
+        }
+        bbCheck(rejected, "accepted malformed integer argument");
+    }
     bbCheck(workloads().size() == 23, "workload loss");
+    const char* badCustom[] = { "1,4,6,1024,0,", "1,4,,1024,0", "1,4,6,1024", "1,4,6,1024,0,1" };
+    for (size_t i = 0; i < sizeof(badCustom) / sizeof(badCustom[0]); ++i)
+    {
+        std::vector<std::string> arguments = { "matrix", bbTempPath("-invalid-matrix"), "1", "-", bbExecutable(), "--custom", badCustom[i] };
+        std::vector<char*> pointers;
+        for (size_t j = 0; j < arguments.size(); ++j)
+        {
+            pointers.push_back(&arguments[j][0]);
+        }
+        bool rejected = false;
+        try
+        {
+            matrix(static_cast<int32_t>(pointers.size()), &pointers[0]);
+        }
+        catch (...)
+        {
+            rejected = true;
+        }
+        bbCheck(rejected, "accepted malformed custom workload");
+    }
     bbCheck(median(std::vector<double>{ 9, 1, 3 }) == 3 && median(std::vector<double>{ 4, 2 }) == 3, "median");
     bbCheck(parse("noise\n{\"verified\":true,\"x\":1.25}\n").at("x") == 1.25, "valid JSON");
     const char* invalid[] = { "", "{\"x\":NaN}", "{\"x\":1,\"x\":2}", "{\"x\":1", "{\"x\":true wrong}", "{\"x\":1}junk" };
@@ -510,6 +562,6 @@ int32_t ProcessWorkTestAutomation::run(int32_t argc, char** argv)
         }
         return 0;
     }
-    bbCheck(false, "tool commands: workloads | matrix OUTPUT ROUNDS BASELINE_OR_- CURRENT [options] | cross OUTPUT FIRST SECOND | build ROOT OUTPUT x64|x86 tests|dll|benchmark|memory|profile|demo|map");
+    bbCheck(false, "tool commands: workloads | matrix OUTPUT ROUNDS BASELINE_OR_- CURRENT [options] | cross OUTPUT FIRST SECOND | build ROOT OUTPUT x64|x86 tests|dll|benchmark|memory|profile|demo|map|notification-failure");
     return 1;
 }

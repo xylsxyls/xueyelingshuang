@@ -153,10 +153,10 @@ void testProcessWorkResourcePlateau()
         PacketLog log;
         IpcScope scope;
         scope.start(&log, receiveName("resource"), 76, 8);
-        ipc.initPostThread();
+        bbCheck(ipc.initPostThread(), "post worker initialization failed");
         for (int32_t i = 0; i < 16; ++i)
         {
-            ipc.post(receiveName("resource"), std::string("resource"), static_cast<MessageType>(i));
+            bbCheck(ipc.post(receiveName("resource"), std::string("resource"), static_cast<MessageType>(i)), "resource post rejected");
         }
         ipc.waitForPostEnd();
         waitPackets(log, 16);

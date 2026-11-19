@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <stdint.h>
+#include <string>
 
 /** 验证普通/try接纳错误分类、内存保护回滚及成功消息FIFO
 */
@@ -21,6 +22,29 @@ void testProcessWorkMemoryGuard();
 /** 验证分页寻址、并发映射安装及正文缩容后的代次隔离。
 */
 void testProcessWorkStorage();
+
+/** 预备映射不发送消息、不扩容，非法前缀失败且随后send/Post仍能完整交付
+*/
+void testProcessWorkPrepareSend();
+
+/** 验证跨页及大包满载公平授予后正文地址与实际槽一致，八生产者逐流校验
+*/
+void testProcessWorkGrantedPage();
+
+/** 验证接收器清空通知后先处理迟到的容量请求，空闲资源不会等待下一次重试唤醒
+*/
+void testProcessWorkIdleGrant();
+
+/** 验证公开send成功后强杀发送进程，全部已提交正文仍可读取
+*/
+void testProcessWorkPreparedSenderCrash();
+
+/** 预映射后按父进程屏障发送，发送成功后停留供父进程强杀
+@param [in] pid 接收进程号
+@param [in] prefix 本用例独有屏障文件前缀
+@return 正常不会返回；失败由测试异常向上传播
+*/
+int runProcessWorkPreparedSender(int32_t pid, const std::string& prefix);
 
 /** 验证预留不阻挡已提交节点、尾指针帮助以及源节点代次拒绝旧CAS。
 */
@@ -126,6 +150,12 @@ void testProcessWorkLocalBudget();
 */
 void testProcessWorkLocalQueueStress();
 
+#ifdef _WIN32
+/** 单CPU持续满载时八生产者与消费者逐秒前进，停止后按独立账本排空
+*/
+void testProcessWorkPostLimitedCpu();
+#endif
+
 /** 验证tryPost预算失败不会提交，未启动发送线程时也不会无限等待。
 */
 void testProcessWorkPostBudget();
@@ -157,3 +187,11 @@ void testProcessWorkResourcePlateau();
 /** 诊断对照只使用系统运行库，不调用ProcessWork或基础库，输出线程/互斥句柄高水位
 */
 void runProcessWorkRuntimeControl();
+
+/** 验证稳定段复用不打开冷页，积压时仍可使用全池并保持FIFO
+*/
+void testProcessWorkSegmentLocality();
+
+/** 重开同一发送对象并切换批准号，验证缓存不跨会话复用且每次恰好提交一个正文
+*/
+void testProcessWorkSenderTokenReuse();

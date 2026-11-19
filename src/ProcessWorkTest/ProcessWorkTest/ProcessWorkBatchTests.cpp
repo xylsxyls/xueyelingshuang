@@ -108,9 +108,9 @@ void testProcessWorkReceiveCopyBoundary()
     bbCheck(queue.configure(config), "copy boundary queue setup failed");
     for (int32_t edge = 0; edge < 2; ++edge)
     {
-        for (int32_t length = 0; length <= 96; ++length)
+        for (int32_t length = 0; length <= 129; ++length)
         {
-            const int32_t sequence = edge * 97 + length;
+            const int32_t sequence = edge * 130 + length;
             const std::string expected = BatchPacket(sequence, packetBody(sequence, length));
             char* source = static_cast<char*>(pages) + pageBytes;
             if (edge != 0)

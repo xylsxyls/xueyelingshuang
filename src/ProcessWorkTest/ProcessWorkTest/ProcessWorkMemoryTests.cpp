@@ -86,6 +86,61 @@ int32_t runProcessWorkQuotaProbe(int32_t pid)
     return 0;
 }
 
+int32_t runProcessWorkNotificationFailure()
+{
+    Semaphore notification;
+    bbCheck(notification.initializationResult().status == SEMAPHORE_NO_MEMORY, "notification failure injection missing");
+    ProcessWorkMemoryConfig config;
+    ProcessWorkLocalQueue post;
+    ProcessWorkReceiveQueue receive;
+    bbCheck(!post.configure(config) && !receive.configure(config), "failed notification backend accepted configuration");
+    ProcessWork& ipc = ProcessWork::instance();
+    IpcScope scope;
+    bbCheck(!ipc.configurePostMemory(config) && !ipc.initPostThread() && !ipc.initReceive(64, 2),
+        "failed notification backend published worker");
+    bbCheck(CTaskThreadManager::instance().count() == 0 && ipc.receiveBufferCount() == 0,
+        "notification failure retained worker or receiver");
+    return 0;
+}
+
+void testProcessWorkConfigurationCopyFailure()
+{
+    bool copyFails = false;
+    ProcessWorkMemoryConfig config;
+    config.m_queuePool.m_onGrowth = ProcessWorkTestGrowthObserver(copyFails);
+    ProcessWorkChannel receiver;
+    copyFails = true;
+    bbCheck(!receiver.openReceiver(76, 2, 0, 0, 0, 0, config), "failed configuration copy reported success");
+    bbCheck(!receiver.ready() && receiver.bufferCount() == 0, "failed configuration published receiver");
+    copyFails = false;
+    bbCheck(receiver.openReceiver(76, 2, 0, 0, 0, 0, config), "receiver could not retry configuration");
+    receiver.publish();
+    ProcessWorkChannel sender;
+    bbCheck(sender.openSender(bbPid()), "configuration recovery sender failed");
+    std::atomic<int32_t> full(0);
+    ProcessWorkReceiveQueue received;
+    bbCheck(received.configure(config), "configuration recovery queue failed");
+    // 每次先推进真实接收维护；只有一次发送成功时退出，失败请求不能造成额外交付。
+    bbWait([&]()
+    {
+        receiver.pump(received, full);
+        return sender.trySend("123456", 6, 7) == PROCESS_WORK_SENT;
+    }, "configuration recovery send");
+    char* packet = nullptr;
+    // 真实搬运后借用一条记录，成功结束等待；超时由测试框架判失败。
+    bbWait([&]()
+    {
+        receiver.pump(received, full);
+        return received.take(&packet, 0);
+    }, "configuration recovery receive");
+    int32_t header[3] = {};
+    std::memcpy(header, packet, sizeof(header));
+    const bool matches = header[0] == bbPid() && header[1] == 7 && header[2] == 6 &&
+        std::memcmp(packet + 12, "123456", 6) == 0;
+    received.release(packet);
+    bbCheck(matches && !received.hasPending(), "configuration recovery changed payload or ownership");
+}
+
 void testProcessWorkFixedBudget()
 {
     ProcessWorkMemoryConfig config;
@@ -269,7 +324,7 @@ void testProcessWorkNativeGrowth()
         "failed configuration partly replaced original pool");
     std::atomic<uint64_t> calls(0), added(0);
     // 已提交后的观察异常必须被隔离，不能令同一条消息被外部重复发送。
-    const std::function<void(size_t, uint64_t)> observe = [&calls, &added](size_t count, uint64_t sequence)
+    const auto observe = [&calls, &added](size_t count, uint64_t sequence)
     {
         if (count != 0 && sequence != 0)
         {
