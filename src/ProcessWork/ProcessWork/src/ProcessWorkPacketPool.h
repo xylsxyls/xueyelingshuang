@@ -6,16 +6,17 @@
 
 /** 一个固定小包槽；CAS取得后才允许读写正文，不移动正在使用的槽
 */
+template<size_t SlotBytes>
 struct ProcessWorkPacketSlot
 {
 public:
     // 0空闲，1由一个申请者或已提交消息拥有
     std::atomic<uint32_t> m_used;
-    // 包含调用方自己的计费前缀；整槽64字节，避免相邻owner位共享缓存行
-    char m_data[60];
+    // 稳定小包正文；SlotBytes只实例化为64或128
+    char m_data[SlotBytes - 4];
 
 public:
-    /** 初始化空闲槽并触及正文页
+    /** 初始化空闲所有者并一次触及全部正文
     */
     ProcessWorkPacketSlot();
 };
@@ -26,17 +27,20 @@ struct ProcessWorkPacketBlock
 {
 public:
     // 扩容块拥有的独立槽数组
-    ProcessWorkPacketSlot* m_slots;
+    char* m_slots;
     // 实际槽数
     size_t m_count;
+    // 与分配类型一致的槽字节数，用于静止析构
+    uint32_t m_slotBytes;
     // 前一批已发布块，配置/销毁以外不释放
     ProcessWorkPacketBlock* m_next;
 
 public:
     /** 建立槽数组，失败时m_slots为空
     @param [in] count 槽数，调用方已经检查乘法范围
+    @param [in] slotBytes 每槽64或128字节，头部原子之后为原始正文存储
     */
-    explicit ProcessWorkPacketBlock(size_t count);
+    ProcessWorkPacketBlock(size_t count, uint32_t slotBytes);
 
     /** 静止期释放数组，不递归释放next
     */
@@ -58,7 +62,7 @@ public:
     ~ProcessWorkPacketPool();
 
     /** 静止期替换容量，0关闭；分配失败不改变原池
-    @param [in] capacity 槽数，实际内存为每槽64字节
+    @param [in] capacity 槽数，此便捷重载固定采用64字节槽
     @return true已完成，false无法分配
     */
     bool configure(uint32_t capacity);
@@ -70,7 +74,7 @@ public:
     bool configure(const ProcessWorkMemoryConfig& config);
 
     /** 尝试借用一个小包槽，不等待某个持有者
-    @param [in] bytes 包含上层前缀的字节数，至多60
+    @param [in] bytes 包含上层前缀的字节数，至多配置槽字节数减4
     @return 稳定正文地址或nullptr；返回空不表示上层消息容量不足
     */
     char* acquire(size_t bytes);
@@ -104,7 +108,7 @@ private:
     @param [in] count 数组长度
     @return 正文地址或nullptr
     */
-    char* take(ProcessWorkPacketSlot* slots, size_t count);
+    char* take(char* slots, size_t count);
 
     /** 为本次申请增长一批槽，成功后直接保留其中一个给申请者
     @return 新槽正文地址或nullptr，失败不计为成功增长
@@ -117,7 +121,7 @@ private:
     @param [in] allocation 待归还的原始地址
     @return true属于该数组且已归还
     */
-    bool returnSlot(ProcessWorkPacketSlot* slots, size_t count, char* allocation);
+    bool returnSlot(char* slots, size_t count, char* allocation);
 
     /** 外部静止且全部借用已收回后销毁全部存储
     */
@@ -125,9 +129,11 @@ private:
 
 private:
     // 仅静止配置时替换，所有申请、归还期间地址稳定
-    ProcessWorkPacketSlot* m_slots;
+    char* m_slots;
     // 与m_slots同生命周期的固定槽数
     uint32_t m_capacity;
+    // 每槽64或128字节；运行中只读
+    uint32_t m_slotBytes;
     // 运行中只追加的稳定块链
     std::atomic<ProcessWorkPacketBlock*> m_blocks;
     // 已实际发布的槽数

@@ -7,7 +7,7 @@
 #include <new>
 
 ProcessWorkLocalQueue::ProcessWorkLocalQueue() :
-m_notified(false), m_pending(0), m_nextMemoryCheck(0), m_memoryAvailable(true), m_prefixBatches(0)
+m_notified(false), m_pending(0), m_nextMemoryCheck(0), m_memoryAvailable(true)
 {
 
 }
@@ -21,7 +21,7 @@ bool ProcessWorkLocalQueue::configure(const ProcessWorkMemoryConfig& config)
 {
     try
     {
-        if (m_pending.load() != 0 || !ProcessWorkMemory::valid(config))
+        if (!notificationReady() || m_pending.load() != 0 || !ProcessWorkMemory::valid(config))
         {
             return false;
         }
@@ -30,7 +30,7 @@ bool ProcessWorkLocalQueue::configure(const ProcessWorkMemoryConfig& config)
         {
             return false;
         }
-        const uint64_t reserve = static_cast<uint64_t>(config.m_postBufferReserve) * sizeof(ProcessWorkPacketSlot);
+        const uint64_t reserve = static_cast<uint64_t>(config.m_postBufferReserve) * config.m_postBufferSlotBytes;
         // 指针队列还包含节点、发布段和线程记录，不能只检查小包正文池就一次申请巨型队列。
         if (pool.initialCapacity > (UINT64_MAX - 1024 * 1024) / 256)
         {
@@ -47,7 +47,9 @@ bool ProcessWorkLocalQueue::configure(const ProcessWorkMemoryConfig& config)
         m_nextMemoryCheck.store(0);
         m_memoryAvailable.store(true);
         m_values.destroy();
-        if (m_values.configurePool(pool) != LockFreeQueueSuccess ||
+        // 各生产者记录发布数量，避免每条Post更新同一个队列计数；排空仍由Queue汇总。
+        if (m_values.configureProducerCounters(true) != LockFreeQueueSuccess ||
+            m_values.configurePool(pool) != LockFreeQueueSuccess ||
             m_values.setGrowPolicy(config.m_queueGrow) != LockFreeQueueSuccess ||
             m_values.setShrinkPolicy(config.m_queueShrink) != LockFreeQueueSuccess || m_values.tryInit() != LockFreeQueueSuccess)
         {
@@ -61,6 +63,11 @@ bool ProcessWorkLocalQueue::configure(const ProcessWorkMemoryConfig& config)
     {
         return false;
     }
+}
+
+bool ProcessWorkLocalQueue::notificationReady() const
+{
+    return m_notification.initializationResult().status == SEMAPHORE_OK;
 }
 
 char* ProcessWorkLocalQueue::allocate(size_t bytes, LockFreeQueueResult& result)
@@ -242,6 +249,8 @@ bool ProcessWorkLocalQueue::take(char** packet, uint32_t milliseconds)
     {
         return true;
     }
+    // 普通pop已承担活动期回收；仅在准备休眠时补做有限维护，避免重复扫描。
+    m_values.maintain(8);
     m_notification.waitResult(milliseconds);
     return m_values.pop(packet);
 }
@@ -264,10 +273,6 @@ bool ProcessWorkLocalQueue::takePrefix(char** packets, size_t maximum, size_t& c
         size_t additional = 0;
         m_values.popReadyPrefix(packets + 1, maximum - 1, additional);
         consumed += additional;
-    }
-    if ((++m_prefixBatches & 15U) == 0)
-    {
-        m_values.maintain(8);
     }
     return true;
 }
@@ -293,7 +298,6 @@ void ProcessWorkLocalQueue::clear()
         release(packet);
     }
     m_notified.store(false);
-    m_prefixBatches = 0;
     m_notification.reset();
 }
 

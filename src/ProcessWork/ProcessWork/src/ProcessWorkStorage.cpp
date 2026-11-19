@@ -1,6 +1,7 @@
 ﻿#include "ProcessWorkStorage.h"
 #include "ProcessWorkAtomic.h"
 #include <cstring>
+#include <thread>
 
 ProcessWorkPage::ProcessWorkPage() :
 m_metadata(nullptr)
@@ -8,6 +9,7 @@ m_metadata(nullptr)
     for (size_t i = 0; i < 256; ++i)
     {
         m_data[i].store(nullptr, std::memory_order_relaxed);
+        m_addresses[i].store(nullptr, std::memory_order_relaxed);
         m_idleSince[i] = 0;
     }
 }
@@ -53,6 +55,57 @@ ProcessWorkStorage::~ProcessWorkStorage()
     {
         delete m_groups[i].load(std::memory_order_relaxed);
     }
+}
+
+bool ProcessWorkStorage::prepare(uint32_t blocks, bool payloads)
+{
+    if (m_receiver || blocks == 0 || blocks > 0xffffff || blocks > static_cast<uint32_t>(m_initial))
+    {
+        return false;
+    }
+    const uint64_t pages = (blocks >> 8) + 1;
+    const uint64_t body = payloads && static_cast<size_t>(m_bytes) > sizeof(static_cast<ProcessWorkSharedBlock*>(nullptr)->m_inlineData) ?
+        static_cast<uint64_t>(m_bytes) + 65536 : 0;
+    if (!ProcessWorkMemory::allows(m_config, pages * (sizeof(ProcessWorkSharedMetadata) + sizeof(ProcessWorkPage) + 65536) + body * blocks))
+    {
+        return false;
+    }
+    for (uint32_t offset = 0; offset < pages; ++offset)
+    {
+        if ((offset & 63U) == 0)
+        {
+            std::this_thread::yield();
+            if (!ProcessWorkMemory::allows(m_config, sizeof(ProcessWorkSharedMetadata) + sizeof(ProcessWorkPage) + 65536))
+            {
+                return false;
+            }
+        }
+        if (page(offset << 8) == nullptr)
+        {
+            return false;
+        }
+    }
+    if (body != 0)
+    {
+        for (uint32_t index = 1; index <= blocks; ++index)
+        {
+            if ((index & 63U) == 0)
+            {
+                std::this_thread::yield();
+                if (!ProcessWorkMemory::allows(m_config, body))
+                {
+                    return false;
+                }
+            }
+            std::unique_ptr<SharedMemory> temporary;
+            // 初始块不可退役；准备只打开映射，不读取或写入可能正在传输的正文。
+            if (data(index, 1, temporary) == nullptr)
+            {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 std::string ProcessWorkStorage::objectName(char kind, uint32_t pid, uint64_t identity,
@@ -211,6 +264,7 @@ bool ProcessWorkStorage::create(uint32_t index, uint64_t now)
         {
             return false;
         }
+        mapped->m_addresses[index & 255].store(static_cast<char*>(memory->memory()), std::memory_order_release);
         mapped->m_data[index & 255].store(memory.release(), std::memory_order_release);
         mapped->m_idleSince[index & 255] = now;
         ProcessWorkAtomic::replace(&descriptor.m_generation, oldGeneration, oldGeneration + 1);
@@ -225,23 +279,42 @@ bool ProcessWorkStorage::create(uint32_t index, uint64_t now)
 
 char* ProcessWorkStorage::data(uint32_t index, uint32_t generation, std::unique_ptr<SharedMemory>& temporary)
 {
-    ProcessWorkPage* mapped = page(index);
+    ProcessWorkPage* mapped = cachedPage(index);
+    if (mapped == nullptr)
+    {
+        mapped = page(index);
+    }
     if (mapped == nullptr)
     {
         return nullptr;
     }
-    if (static_cast<size_t>(m_bytes) <= sizeof(mapped->m_metadata->m_blocks[0].m_inlineData))
+    return data(*mapped, index, generation, temporary);
+}
+
+char* ProcessWorkStorage::data(ProcessWorkPage& mapped, uint32_t index, uint32_t generation,
+    std::unique_ptr<SharedMemory>& temporary)
+{
+    char* address = mapped.m_addresses[index & 255].load(std::memory_order_acquire);
+    return address != nullptr ? address : mapData(mapped, index, generation, temporary);
+}
+
+char* ProcessWorkStorage::mapData(ProcessWorkPage& mapped, uint32_t index, uint32_t generation,
+    std::unique_ptr<SharedMemory>& temporary)
+{
+    if (static_cast<size_t>(m_bytes) <= sizeof(mapped.m_metadata->m_blocks[0].m_inlineData))
     {
-        if (index == 0 || ProcessWorkAtomic::load(&mapped->m_metadata->m_blocks[index & 255].m_generation) != generation)
+        if (index == 0 || ProcessWorkAtomic::load(&mapped.m_metadata->m_blocks[index & 255].m_generation) != generation)
         {
             return nullptr;
         }
-        return mapped->m_metadata->m_blocks[index & 255].m_inlineData;
+        return mapped.m_metadata->m_blocks[index & 255].m_inlineData;
     }
-    SharedMemory* memory = mapped->m_data[index & 255].load(std::memory_order_acquire);
+    SharedMemory* memory = mapped.m_data[index & 255].load(std::memory_order_acquire);
     if (memory != nullptr)
     {
-        return static_cast<char*>(memory->memory());
+        char* address = static_cast<char*>(memory->memory());
+        mapped.m_addresses[index & 255].store(address, std::memory_order_release);
+        return address;
     }
     if (m_receiver)
     {
@@ -256,11 +329,13 @@ char* ProcessWorkStorage::data(uint32_t index, uint32_t generation, std::unique_
         }
         if (index <= static_cast<uint32_t>(m_initial))
         {
-            if (mapped->m_data[index & 255].compare_exchange_strong(memory, temporary.get(), std::memory_order_acq_rel, std::memory_order_acquire))
+            if (mapped.m_data[index & 255].compare_exchange_strong(memory, temporary.get(), std::memory_order_acq_rel, std::memory_order_acquire))
             {
                 memory = temporary.release();
             }
-            return static_cast<char*>(memory->memory());
+            char* address = static_cast<char*>(memory->memory());
+            mapped.m_addresses[index & 255].store(address, std::memory_order_release);
+            return address;
         }
         return static_cast<char*>(temporary->memory());
     }
@@ -281,6 +356,7 @@ bool ProcessWorkStorage::retire(uint32_t index)
     {
         return false;
     }
+    mapped->m_addresses[index & 255].store(nullptr, std::memory_order_release);
     delete mapped->m_data[index & 255].exchange(nullptr, std::memory_order_acq_rel);
     return true;
 }

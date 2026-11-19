@@ -127,6 +127,10 @@ public:
     ProcessWorkAPI void collect();
 
 private:
+    /** 摘取当前退役链，完成保护发布屏障后只回收未被借用的节点
+    */
+    ProcessWorkAPI void collectRetired();
+
     /** 为当前线程取得稳定记录，耗尽和嵌套借用返回空
     @return 独占使用的记录或nullptr
     */
@@ -160,3 +164,5 @@ private:
     // 已摘除但可能仍在发送的节点
     std::atomic<ProcessWorkSendCacheNode*> m_retired;
 };
+
+#include "ProcessWorkSendCache.inl"

@@ -1,6 +1,40 @@
 ﻿#pragma once
 #include "ProcessWorkAtomic.h"
 
+// MSVC导入端不得内联DLL的局部TLS，须由拥有该TLS的模块执行。
+#if defined(_MSC_VER) && defined(_ProcessWorkAPI)
+__declspec(noinline) inline
+#elif defined(_MSC_VER)
+__forceinline
+#else
+inline
+#endif
+ProcessWorkProducerState* ProcessWorkSharedQueue::producer(int64_t token, int32_t* failure, bool retryContention)
+{
+#ifdef _MSC_VER
+    static __declspec(thread) uint64_t s_queueInstance = 0;
+    static __declspec(thread) int64_t s_queueToken = 0;
+    static __declspec(thread) ProcessWorkProducerState* s_queueProducer = nullptr;
+#else
+    static thread_local uint64_t s_queueInstance = 0;
+    static thread_local int64_t s_queueToken = 0;
+    static thread_local ProcessWorkProducerState* s_queueProducer = nullptr;
+#endif
+    // 缓存只在本线程借用；队列实例代次防止地址复用命中已经销毁的状态。
+    if (s_queueInstance == m_instance && s_queueToken == token)
+    {
+        return s_queueProducer;
+    }
+    ProcessWorkProducerState* producer = registerProducer(token, failure, retryContention);
+    if (producer != nullptr)
+    {
+        s_queueInstance = m_instance;
+        s_queueToken = token;
+        s_queueProducer = producer;
+    }
+    return producer;
+}
+
 inline bool ProcessWorkSharedQueue::enqueue(ProcessWorkProducerState& state, int32_t bufferIndex, bool inlined,
     uint32_t extent, uint32_t& hint, uint32_t granted, bool* contended)
 {
@@ -162,6 +196,7 @@ inline bool ProcessWorkSharedQueue::readFront(ProcessWorkReadState& reader, uint
 
 inline void ProcessWorkSharedQueue::advanceRead()
 {
+    m_frontReader = nullptr;
     ++m_readCursor;
     if (m_readCursor >= m_roundCount)
     {
@@ -181,6 +216,17 @@ inline bool ProcessWorkSharedQueue::front(uint32_t& slot, int32_t& bufferIndex, 
     if (ProcessWorkAtomic::load(&m_control->m_streamEpoch) != m_seenStreamEpoch)
     {
         refreshStreams();
+    }
+    // 同一流尚有配额时直接沿用读取状态；流表仍先刷新，不推迟新流进入下一轮。
+    if (m_frontReader != nullptr)
+    {
+        if (readFront(*m_frontReader, slot, bufferIndex, inlined))
+        {
+            m_frontSlot = slot;
+            m_frontOffset = static_cast<int32_t>(m_frontReader->m_shared->m_headSlot);
+            return true;
+        }
+        advanceRead();
     }
     const size_t count = m_active.size();
     if (m_roundCount == 0)
@@ -219,7 +265,6 @@ inline bool ProcessWorkSharedQueue::consume(uint32_t slot, uint32_t bytes)
     }
     m_frontReader->m_shared->m_headSlot = m_frontOffset + 1;
     m_frontOffset = -1;
-    m_frontReader = nullptr;
     m_readBytes += bytes;
     if (++m_readQuota == 32 || m_readBytes >= 256 * 1024)
     {

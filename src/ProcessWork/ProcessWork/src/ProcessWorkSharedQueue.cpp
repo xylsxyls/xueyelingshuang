@@ -8,15 +8,6 @@
 #endif
 
 static std::atomic<uint64_t> s_queueSerial(0);
-#ifdef _MSC_VER
-static __declspec(thread) uint64_t s_queueInstance = 0;
-static __declspec(thread) int64_t s_queueToken = 0;
-static __declspec(thread) ProcessWorkProducerState* s_queueProducer = nullptr;
-#else
-static thread_local uint64_t s_queueInstance = 0;
-static thread_local int64_t s_queueToken = 0;
-static thread_local ProcessWorkProducerState* s_queueProducer = nullptr;
-#endif
 
 /** 取得不截断的本进程实际线程标识，不能用可能碰撞的哈希标识SPSC发布者
 @return 当前平台的完整原生标识；查询失败或平台不支持时返回0
@@ -85,15 +76,6 @@ bool ProcessWorkSharedQueue::activate(uint32_t index)
     }
     ProcessWorkAtomic::replace(&page->m_metadata->m_nodes[index & 255].m_owner, int64_t(-1), int64_t(0));
     return true;
-}
-
-ProcessWorkProducerState* ProcessWorkSharedQueue::producer(int64_t token, int32_t* failure, bool retryContention)
-{
-    if (s_queueInstance == m_instance && s_queueToken == token)
-    {
-        return s_queueProducer;
-    }
-    return registerProducer(token, failure, retryContention);
 }
 
 ProcessWorkProducerState* ProcessWorkSharedQueue::registerProducer(int64_t token, int32_t* failure, bool retryContention)
@@ -202,9 +184,6 @@ ProcessWorkProducerState* ProcessWorkSharedQueue::registerProducer(int64_t token
                 state->m_shared = shared;
             }
         }
-        s_queueInstance = m_instance;
-        s_queueToken = token;
-        s_queueProducer = state.get();
         return state.get();
     }
     catch (const std::bad_alloc&)
@@ -242,11 +221,9 @@ bool ProcessWorkSharedQueue::resetNode(ProcessWorkSharedNode& value)
     return true;
 }
 
-bool ProcessWorkSharedQueue::reserve(int64_t token, uint32_t extent, uint32_t start, uint32_t& index, bool serving, bool* contended)
+bool ProcessWorkSharedQueue::reserve(int64_t token, uint32_t extent, uint32_t start, uint32_t& index, bool* contended)
 {
     // 两类申请者都只竞争FREE段；releaseNode会直接把归还段交给等待者。
-    // serving保留现有内部调用形式，不把未被授予的空闲段封锁给单一执行流。
-    static_cast<void>(serving);
     if (token <= 0 || extent > 0xffffff)
     {
         return false;
@@ -297,11 +274,16 @@ bool ProcessWorkSharedQueue::enqueueSegment(ProcessWorkProducerState& state, Pro
 {
     ProcessWorkSharedStream& stream = *state.m_shared;
     uint32_t index = granted;
-    if (index == UINT32_MAX && !reserve(ProcessWorkAtomic::load(&stream.m_owner), extent, hint, index, false, contended))
+    if (index == UINT32_MAX && !reserve(ProcessWorkAtomic::load(&stream.m_owner), extent, hint, index, contended))
     {
         return false;
     }
-    hint = index + 1;
+    // 独立正文或单一实际发送流优先复用同页段，避免短包也遍历大量冷元数据页。
+    // 多流内联包继续分散扫描；登记增加后自然退出单流提示，reserve始终遍历全池。
+    const bool local = (payload & 0x1000000) == 0 ||
+        (state.m_index == 1 && ProcessWorkAtomic::load(&m_control->m_nextStream) == 1);
+    hint = local && index <= 0xffffff ?
+        (index & ~255U) | ((index + 1) & 255U) : index + 1;
     ProcessWorkSharedNode* candidate = node(index);
     if (candidate == nullptr)
     {
@@ -520,7 +502,7 @@ void ProcessWorkSharedQueue::service(uint32_t extent)
     {
         uint32_t waiting = 0, index = 0;
         ProcessWorkSharedStream* stream = pending(1, waiting);
-        if (stream == nullptr || !reserve(ProcessWorkAtomic::load(&stream->m_owner), extent, m_nodeCursor, index, true))
+        if (stream == nullptr || !reserve(ProcessWorkAtomic::load(&stream->m_owner), extent, m_nodeCursor, index))
         {
             break;
         }
@@ -646,6 +628,10 @@ void ProcessWorkSharedQueue::compactStreams()
     }
     if (retained == 0 || m_active[m_readCursor] != current)
     {
+        if (m_frontOffset < 0)
+        {
+            m_frontReader = nullptr;
+        }
         m_readQuota = 0;
         m_readBytes = 0;
     }

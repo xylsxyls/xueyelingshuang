@@ -75,6 +75,13 @@ public:
     */
     bool openSender(int32_t pid);
 
+    /** 在发送阶段之前准备本进程映射，减少后续首次映射成本
+    @param [in] blocks 初始块前缀数量；-1准备所有初始块，正数不得超过初始容量
+    @param [in] payloads 是否同时打开非内联正文映射
+    @return true准备完成且通道就绪；false未全部准备，不提交任何消息
+    */
+    bool prepareSend(int32_t blocks = -1, bool payloads = false);
+
     /** 静止且未打开通道时设置生产者登记Map的完整池参数
     @param [in] config 节点、值、增长及保护记录参数
     @return true已保存；false已打开或复制失败
@@ -110,7 +117,7 @@ public:
     int32_t trySend(const char* data, int32_t length, int32_t type, bool retryContention = false,
         bool retryCapacity = false, const std::atomic<bool>* stop = nullptr);
 
-    /** 普通发送在内部不限次数重试竞争及容量不足；4096次容量重试之后每轮休眠1毫秒
+    /** 普通发送内部不限次数重试；等待容量授予时先协作让步，4096次容量重试后每轮休眠1毫秒
     @param [in] data 借用正文
     @param [in] length 正文字节数
     @param [in] type 消息类型
@@ -139,7 +146,7 @@ public:
     */
     int32_t pump(ProcessWorkReceiveQueue& queue, std::atomic<int32_t>& fullCount);
 
-    /** 接收任务空闲时等待通知，有限等待兼顾提交后发送者立即退出。
+    /** 接收任务清除合并通知后复查容量请求和正文，再有限等待；兼顾提交后发送者立即退出
     */
     void waitForData();
 
@@ -165,12 +172,26 @@ public:
         uint32_t index = 0, uint32_t generation = 0);
 
 private:
+    /** 继续尚未提交的首次失败；仅重试启用的竞争或容量状态
+    @param [in] data 调用期间有效的正文，length为0时允许为空
+    @param [in] length 已校验的正文字节数
+    @param [in] type 非负消息类型
+    @param [in] retryContention 是否持续重试未提交竞争
+    @param [in] retryCapacity 是否等待可恢复容量
+    @param [in] capacity 首次发送已累计的容量重试次数，不重新开始快速等待预算
+    @param [in] stop 可选停止标记，借用至返回
+    @param [in] result 首次或后续未提交结果
+    @return 原发送结果；成功项不重放，取消返回UNAVAILABLE
+    */
+    int32_t retrySend(const char* data, int32_t length, int32_t type, bool retryContention,
+        bool retryCapacity, uint32_t capacity, const std::atomic<bool>* stop, int32_t result);
     /** 共用正文复制及提交，普通路径允许等待已登记的资源授予
     @param [in] data 正文
     @param [in] length 字节数
     @param [in] type 消息类型
     @param [in] retryContention 竞争失败是否无限重试
     @param [in] retryCapacity 容量不足是否公平登记并等待
+    @param [in,out] capacityAttempts 一次公开调用内共用的容量重试计数，达到4096后饱和
     @param [in] stop 可选停止标志
     @return ProcessWorkSendResult
     */
@@ -190,10 +211,11 @@ private:
     @param [in] node true段，false正文
     @param [out] index 授予下标
     @param [in,out] attempts 本次调用共用的容量重试次数
+    @param [in] length 本次消息正文字节数，用于选择等待时的调度提示
     @param [in] stop 可选停止标志
     @return true取得资源，false关闭或取消
     */
-    bool waitForGrant(ProcessWorkProducerState& producer, bool node, uint32_t& index, uint32_t& attempts, const std::atomic<bool>* stop);
+    bool waitForGrant(ProcessWorkProducerState& producer, bool node, uint32_t& index, uint32_t& attempts, int32_t length, const std::atomic<bool>* stop);
 
     /** 共用空间通知和接收进程存活核对
     @param [in] timeout 一次通知等待毫秒数
@@ -292,6 +314,15 @@ private:
     int32_t m_selfPid;
     // 本发送进程的登记下标，未登记为-1
     int32_t m_peerIndex;
+    // 本代接收器批准给活发送进程的稳定token；0未批准，静止close时清零
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4251)
+#endif
+    std::atomic<int64_t> m_senderToken;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
     // 登记量超过该提示后，发送小批次主动让出调度机会；不决定容量或成功状态
     uint32_t m_yieldThreshold;
     // 本实例拥有的共享入口与控制区映射，指针仅借用这些映射
@@ -396,3 +427,5 @@ private:
 #pragma warning(pop)
 #endif
 };
+
+#include "ProcessWorkChannel.inl"

@@ -57,7 +57,7 @@ public:
 
     /** 静止且无在途正文时设置预算。
     @param [in] config 系统内存保护和正文预算
-    @return true设置成功，false参数无效或存在正文
+    @return true设置成功；false参数无效、存在正文、通知不可用或资源准备失败，修正后可静止重试
     */
     bool configure(const ProcessWorkMemoryConfig& config);
 

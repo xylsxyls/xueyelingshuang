@@ -65,7 +65,7 @@ bool ProcessWorkReceiveQueue::configure(const ProcessWorkMemoryConfig& config)
 {
     try
     {
-        if (hasPending() || !ProcessWorkMemory::valid(config))
+        if (m_notification.initializationResult().status != SEMAPHORE_OK || hasPending() || !ProcessWorkMemory::valid(config))
         {
             return false;
         }

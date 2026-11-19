@@ -13,7 +13,7 @@
 ProcessWorkMemoryConfig::ProcessWorkMemoryConfig() :
 m_reserveBytes(256ULL * 1024 * 1024), m_reservePercent(10),
 m_growthBytes(4ULL * 1024 * 1024), m_retryMilliseconds(100), m_localQueueBytes(-1),
-m_localQueueInitialCapacity(64), m_receiveBatchReserve(0), m_postBufferReserve(0), m_postBufferMaximum(-1)
+m_localQueueInitialCapacity(64), m_receiveBatchReserve(0), m_postBufferReserve(0), m_postBufferSlotBytes(128), m_postBufferMaximum(-1)
 {
 
 }
@@ -35,6 +35,7 @@ bool ProcessWorkMemory::valid(const ProcessWorkMemoryConfig& config)
         config.m_localQueueBytes >= -1 && config.m_localQueueBytes != 0 &&
         config.m_localQueueInitialCapacity != 0 &&
         config.m_receiveBatchReserve <= (std::numeric_limits<uint32_t>::max)() - 32 && config.m_postBufferMaximum >= -1 &&
+        (config.m_postBufferSlotBytes == 64 || config.m_postBufferSlotBytes == 128) &&
         (config.m_postBufferMaximum == -1 || config.m_postBufferReserve <= static_cast<uint64_t>(config.m_postBufferMaximum));
 }
 

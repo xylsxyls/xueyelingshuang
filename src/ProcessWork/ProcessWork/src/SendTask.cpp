@@ -50,6 +50,8 @@ void SendTask::doTask()
         m_postQueue->releasePrefix(packets, 64);
     };
     std::unique_ptr<char*, decltype(releasePending)> pendingScope(pending, releasePending);
+    // setParam在启动前固定拥有者；运行中不重复选择同一ProcessWork实例。
+    ProcessWork& owner = m_owner == nullptr ? ProcessWork::instance() : *m_owner;
     ProcessWorkSendCacheLease channelLease;
     ProcessWorkChannel* channel = nullptr;
     int32_t channelPid = 0;
@@ -87,7 +89,6 @@ void SendTask::doTask()
             {
                 int32_t header[4] = {};
                 std::memcpy(header, postBuffer, sizeof(header));
-                ProcessWork& owner = m_owner == nullptr ? ProcessWork::instance() : *m_owner;
                 const char* data = header[2] == 0 ? nullptr : postBuffer + 16 + header[3];
                 int32_t result = PROCESS_WORK_UNAVAILABLE;
                 if (header[3] == 0)

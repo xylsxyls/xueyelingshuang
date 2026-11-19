@@ -34,6 +34,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\ProcessWorkChannel.cpp" />
     <ClInclude Include="..\src\ProcessWorkChannel.h" />
+    <ClInclude Include="..\src\ProcessWorkChannel.inl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ProcessWorkAtomic.h" />
@@ -60,6 +61,7 @@
     <ClCompile Include="..\src\ProcessWorkSendCache.cpp" />
     <ClCompile Include="..\src\ProcessWorkPacketPool.cpp" />
     <ClInclude Include="..\src\ProcessWorkSendCache.h" />
+    <ClInclude Include="..\src\ProcessWorkSendCache.inl" />
     <ClInclude Include="..\src\ProcessWorkPacketPool.h" />
     <ClInclude Include="..\src\ProcessWorkTime.h" />
   </ItemGroup>

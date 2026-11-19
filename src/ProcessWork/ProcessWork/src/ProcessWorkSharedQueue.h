@@ -97,11 +97,10 @@ public:
     @param [in] extent 正文最大下标
     @param [in] start 扫描提示
     @param [out] index 取得的段下标
-    @param [in] serving true仅供唯一接收器兑现排队请求
     @param [out] contended 可空，置true表示确实发生过空段CAS竞争失败
     @return true成功
     */
-    bool reserve(int64_t token, uint32_t extent, uint32_t start, uint32_t& index, bool serving = false, bool* contended = nullptr);
+    bool reserve(int64_t token, uint32_t extent, uint32_t start, uint32_t& index, bool* contended = nullptr);
 
     /** 归还尚未提交的候选段
     @param [in] index 段下标
@@ -299,7 +298,7 @@ private:
 
     /** 读取指定流的当前单元并跨越已耗尽段
     @param [in,out] reader 唯一接收器的读取缓存
-    @param [out] slot 位置标识
+    @param [out] slot 本次单元的位置标识
     @param [out] bufferIndex 正文下标
     @param [out] inlined 正文位置
     @return true有消息
@@ -375,7 +374,7 @@ private:
     uint64_t m_readBytes;
     // 有死亡流排空后才压缩活动列表，不逐包移动指针
     bool m_compactStreams;
-    // 最近成功窥视的流，consume之前保持固定
+    // 当前读取流；窥视未消费时固定，消费后保留至本流配额结束或观察为空
     ProcessWorkReadState* m_frontReader;
     // 最近窥视的位置标识
     uint32_t m_frontSlot;

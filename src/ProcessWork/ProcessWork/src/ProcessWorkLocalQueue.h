@@ -21,9 +21,14 @@ public:
 
     /** 静止且无在途正文时配置计费预算与初始队列；参数失败不改变配置，池准备失败须重试初始化
     @param [in] config 系统余量及本地正文预算
-    @return true成功，false参数无效、仍有在途正文或池准备失败
+    @return true成功；false参数无效、仍有在途正文、通知不可用或池准备失败
     */
     bool configure(const ProcessWorkMemoryConfig& config);
+
+    /** 查询本地等待后端是否创建成功，启动唯一消费者前检查
+    @return true后端可用；false必须停止初始化，不能发布消费者任务
+    */
+    bool notificationReady() const;
 
     /** 预留计费并申请正文，失败不会占用预算。
     @param [in] bytes 正文字节数，不包含内部计费前缀
@@ -188,6 +193,4 @@ private:
 #endif
     // 静止配置后在运行期间只读的内存策略
     ProcessWorkMemoryConfig m_config;
-    // 唯一消费者维护前缀取件次数，安排有限预算维护，不与其他消费者并发
-    uint32_t m_prefixBatches;
 };

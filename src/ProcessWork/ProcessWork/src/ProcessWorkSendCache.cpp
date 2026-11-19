@@ -49,28 +49,6 @@ m_thread(0), m_pointer(nullptr)
 
 }
 
-ProcessWorkSendCacheLease::ProcessWorkSendCacheLease() :
-m_cache(nullptr), m_record(nullptr)
-{
-
-}
-
-ProcessWorkSendCacheLease::~ProcessWorkSendCacheLease()
-{
-    reset();
-}
-
-void ProcessWorkSendCacheLease::reset()
-{
-    if (m_record != nullptr)
-    {
-        m_record->m_pointer.store(nullptr, std::memory_order_release);
-        m_cache->collect();
-        m_record = nullptr;
-        m_cache = nullptr;
-    }
-}
-
 ProcessWorkSendCache::ProcessWorkSendCache() :
 m_identity(SendCacheIdentity(s_cacheIdentity)), m_epoch(1), m_retired(nullptr)
 {
@@ -84,11 +62,6 @@ ProcessWorkSendCache::~ProcessWorkSendCache()
 {
     clear();
     collect();
-}
-
-uint64_t ProcessWorkSendCache::epoch() const
-{
-    return m_identity == 0 ? 0 : m_epoch.load(std::memory_order_acquire);
 }
 
 ProcessWorkSendCacheRecord* ProcessWorkSendCache::record()
@@ -232,12 +205,8 @@ void ProcessWorkSendCache::clear()
     collect();
 }
 
-void ProcessWorkSendCache::collect()
+void ProcessWorkSendCache::collectRetired()
 {
-    if (m_retired.load(std::memory_order_acquire) == nullptr)
-    {
-        return;
-    }
     ProcessWorkSendCacheNode* node = m_retired.exchange(nullptr, std::memory_order_seq_cst);
 #if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))
     // 节点已经从来源槽摘除。让每个处理器完成写屏障后才扫描保护：

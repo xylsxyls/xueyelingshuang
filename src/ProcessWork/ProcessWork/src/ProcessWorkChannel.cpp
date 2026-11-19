@@ -115,7 +115,7 @@ static bool ChannelAtomicsSupported()
 
 ProcessWorkChannel::ProcessWorkChannel() :
 m_receiver(false), m_stopped(false), m_pid(0), m_identity(0), m_selfIdentity(0), m_session(0),
-m_selfPid(0), m_peerIndex(-1), m_yieldThreshold(16), m_directory(nullptr), m_control(nullptr),
+m_selfPid(0), m_peerIndex(-1), m_senderToken(0), m_yieldThreshold(16), m_directory(nullptr), m_control(nullptr),
 m_nextGrowth(0), m_growthRemaining(0), m_successfulGrowth(0), m_nextMaintenance(0), m_peerCursor(0),
 m_readPage(nullptr), m_readPageIndex(UINT32_MAX),
 m_nextLivenessCheck(0), m_retryDelay(false)
@@ -164,9 +164,9 @@ bool ProcessWorkChannel::openReceiver(int32_t bytes, int32_t initial, int32_t th
     {
         return false;
     }
-    m_memoryConfig = memory;
     try
     {
+        m_memoryConfig = memory;
         if (!ChannelAtomicsSupported())
         {
             return false;
@@ -343,6 +343,7 @@ void ProcessWorkChannel::close()
     m_stopped = false;
     m_session = 0;
     m_peerIndex = -1;
+    m_senderToken.store(0, std::memory_order_relaxed);
 }
 
 bool ProcessWorkChannel::configureProducers(const LockFreeMapConfig& config)
@@ -360,6 +361,16 @@ bool ProcessWorkChannel::configureProducers(const LockFreeMapConfig& config)
     {
         return false;
     }
+}
+
+bool ProcessWorkChannel::prepareSend(int32_t blocks, bool payloads)
+{
+    if (m_receiver || !ready() || m_storage == nullptr || blocks == 0 || blocks < -1)
+    {
+        return false;
+    }
+    const uint32_t count = static_cast<uint32_t>(blocks == -1 ? m_control->m_initial : blocks);
+    return m_storage->prepare(count, payloads) && ready();
 }
 
 bool ProcessWorkChannel::openSender(int32_t pid)
@@ -457,12 +468,6 @@ bool ProcessWorkChannel::openSender(int32_t pid)
     }
 }
 
-bool ProcessWorkChannel::ready() const
-{
-    return m_directory != nullptr && m_control != nullptr && ChannelLoad32(&m_control->m_ready) == 1 &&
-        ChannelLoad64(&m_directory->m_session) == m_session && static_cast<uint64_t>(ChannelLoad64(reinterpret_cast<int64_t*>(&m_directory->m_identity))) == m_identity;
-}
-
 int32_t ProcessWorkChannel::payloadCapacity() const
 {
     const int32_t bytes = ready() ? m_control->m_blockBytes : 0;
@@ -476,24 +481,34 @@ bool ProcessWorkChannel::matchesIdentity(uint64_t identity) const
 
 int64_t ProcessWorkChannel::senderToken()
 {
+    const int64_t cached = m_senderToken.load(std::memory_order_relaxed);
+    if (cached > 0)
+    {
+        return cached;
+    }
     if (m_peerIndex < 0)
     {
         return 0;
     }
     ProcessWorkSharedPeer& peer = m_control->m_peers[m_peerIndex];
     const int64_t token = ChannelLoad64(&peer.m_token);
-    return token > 0 && static_cast<uint64_t>(ChannelLoad64(reinterpret_cast<int64_t*>(&peer.m_identity))) == m_selfIdentity &&
-        ChannelLoad32(&peer.m_pid) == m_selfPid ? token : 0;
+    if (token <= 0 || static_cast<uint64_t>(ChannelLoad64(reinterpret_cast<int64_t*>(&peer.m_identity))) != m_selfIdentity ||
+        ChannelLoad32(&peer.m_pid) != m_selfPid)
+    {
+        return 0;
+    }
+    // 接收器只在确认本进程死亡后撤销此token；活进程的本代通道可以缓存批准结果。
+    // close静止清零；每次发送仍核验接收器会话，不跨重启复用批准结果。
+    m_senderToken.store(token, std::memory_order_relaxed);
+    return token;
 }
 
-int32_t ProcessWorkChannel::trySend(const char* data, int32_t length, int32_t type,
-    bool retryContention, bool retryCapacity, const std::atomic<bool>* stop)
+int32_t ProcessWorkChannel::retrySend(const char* data, int32_t length, int32_t type,
+    bool retryContention, bool retryCapacity, uint32_t capacity, const std::atomic<bool>* stop, int32_t result)
 {
     uint32_t contention = 0;
-    uint32_t capacity = 0;
-    while (stop == nullptr || !stop->load(std::memory_order_acquire))
+    for (;;)
     {
-        const int32_t result = transmit(data, length, type, retryContention, retryCapacity, capacity, stop);
         if (result == PROCESS_WORK_BUSY && retryContention)
         {
             if (++contention == 64)
@@ -505,20 +520,25 @@ int32_t ProcessWorkChannel::trySend(const char* data, int32_t length, int32_t ty
             {
                 std::this_thread::yield();
             }
-            continue;
         }
-        if (retryCapacity && (result == PROCESS_WORK_CAPACITY || result == PROCESS_WORK_RESOURCE))
+        else if (retryCapacity && (result == PROCESS_WORK_CAPACITY || result == PROCESS_WORK_RESOURCE))
         {
             if (!ProcessWorkTime::waitCapacity(capacity) ||
                 (capacity == 4096 && !waitForSpaceImpl(0, false)))
             {
                 return PROCESS_WORK_UNAVAILABLE;
             }
-            continue;
         }
-        return result;
+        else
+        {
+            return result;
+        }
+        if (stop != nullptr && stop->load(std::memory_order_acquire))
+        {
+            return PROCESS_WORK_UNAVAILABLE;
+        }
+        result = transmit(data, length, type, retryContention, retryCapacity, capacity, stop);
     }
-    return PROCESS_WORK_UNAVAILABLE;
 }
 
 int32_t ProcessWorkChannel::send(const char* data, int32_t length, int32_t type, const std::atomic<bool>* stop)
@@ -526,7 +546,7 @@ int32_t ProcessWorkChannel::send(const char* data, int32_t length, int32_t type,
     return trySend(data, length, type, true, true, stop);
 }
 
-bool ProcessWorkChannel::waitForGrant(ProcessWorkProducerState& producer, bool node, uint32_t& index, uint32_t& attempts, const std::atomic<bool>* stop)
+bool ProcessWorkChannel::waitForGrant(ProcessWorkProducerState& producer, bool node, uint32_t& index, uint32_t& attempts, int32_t length, const std::atomic<bool>* stop)
 {
     // 只有发布过授予请求的慢路径才需要取消守卫；借用登记不在此销毁。
     auto cancelRequest = [this](ProcessWorkProducerState* value)
@@ -538,6 +558,7 @@ bool ProcessWorkChannel::waitForGrant(ProcessWorkProducerState& producer, bool n
         }
     };
     std::unique_ptr<ProcessWorkProducerState, decltype(cancelRequest)> requestScope(&producer, cancelRequest);
+    const bool yieldWhileWaiting = length >= 4096 || ChannelLoad64(&m_control->m_nextStream) == 1;
     m_sharedQueue->request(producer, node);
     signalData();
     while (ready() && (stop == nullptr || !stop->load(std::memory_order_acquire)))
@@ -545,6 +566,12 @@ bool ProcessWorkChannel::waitForGrant(ProcessWorkProducerState& producer, bool n
         if (m_sharedQueue->takeGrant(producer, node, index))
         {
             return true;
+        }
+        if (yieldWhileWaiting && attempts < 4096)
+        {
+            // 大包复制或单发送流需要给接收器归还资源的机会，避免过早耗尽快速重试。
+            // 多生产者短包保留快速探测，避免频繁调度反而降低共享池周转率。
+            std::this_thread::yield();
         }
         if (!ProcessWorkTime::waitCapacity(attempts))
         {
@@ -670,27 +697,24 @@ int32_t ProcessWorkChannel::transmit(const char* data, int32_t length, int32_t t
         {
             return failure;
         }
-        if (!waitForGrant(*producer, false, index, capacityAttempts, stop))
+        if (!waitForGrant(*producer, false, index, capacityAttempts, length, stop))
         {
             return PROCESS_WORK_UNAVAILABLE;
         }
-        block = m_storage->block(index);
+        // 公平授予的槽可能不在刚才扫描页，正文地址必须同步切换到授予页。
+        producer->m_bodyPage = m_storage->page(index);
+        producer->m_bodyPageIndex = index >> 8;
+        block = producer->m_bodyPage == nullptr ? nullptr :
+            &producer->m_bodyPage->m_metadata->m_blocks[index & 255];
         if (block == nullptr || ProcessWorkAtomic::load(&block->m_owner) != token)
         {
             return PROCESS_WORK_UNAVAILABLE;
         }
     }
     const bool inlined = static_cast<size_t>(length) + 12 <= sizeof(block->m_inlineData);
-    // 内联正文优先复用最近256槽；独立正文映射保留分散步长，避免过早追上正在读取的槽。
+    // 优先复用最近256槽，独立正文也避免遍历全部映射放大TLB工作集。
     // 两者只改变下次扫描提示，忙时仍检查整个共享池，不私占容量或跳过已排队授予。
-    if (inlined)
-    {
-        s_reservationCursor = (index & 255U) != 0 ? index : index - 256;
-    }
-    else
-    {
-        s_reservationCursor = index + ((producer->m_index - 1) & 3U) * 2;
-    }
+    s_reservationCursor = (index & 255U) != 0 ? index : index - 256;
     // 参数为本次尚未交付的资源；按对应所有者规则释放，不传播异常。
     auto releaseBlock = [this, token](ProcessWorkSharedBlock* value)
     {
@@ -700,7 +724,7 @@ int32_t ProcessWorkChannel::transmit(const char* data, int32_t length, int32_t t
     std::unique_ptr<ProcessWorkSharedBlock, decltype(releaseBlock)> bodyReservation(block, releaseBlock);
     std::unique_ptr<SharedMemory> temporary;
     char* target = inlined ? block->m_inlineData :
-        m_storage->data(index, static_cast<uint32_t>(ChannelLoad64(&block->m_generation)), temporary);
+        m_storage->data(*producer->m_bodyPage, index, static_cast<uint32_t>(ChannelLoad64(&block->m_generation)), temporary);
     if (target == nullptr)
     {
         // 已取得独占正文槽，映射失败不是CAS竞争；RAII归还槽后让调用者处理资源失败。
@@ -733,7 +757,7 @@ int32_t ProcessWorkChannel::transmit(const char* data, int32_t length, int32_t t
             return failure;
         }
         uint32_t granted = 0;
-        if (!waitForGrant(*producer, true, granted, capacityAttempts, stop))
+        if (!waitForGrant(*producer, true, granted, capacityAttempts, length, stop))
         {
             return PROCESS_WORK_UNAVAILABLE;
         }
@@ -904,6 +928,13 @@ void ProcessWorkChannel::waitForData()
         m_dataReady.processWaitResult(1);
         return;
     }
+    // 清除通知标记后也复查容量请求：请求可能在上一轮service之后到达，
+    // 并被旧的dataSignal合并。只复查正文会让已有空位的发送者等到定时重试。
+    // 此后新请求会看到清除后的标记并通知，不依赖发送者重复唤醒。
+    if (m_sharedQueue->hasWaiters())
+    {
+        m_sharedQueue->service(static_cast<uint32_t>(ChannelLoad32(&m_control->m_extent)));
+    }
     uint32_t node = 0;
     int32_t buffer = 0;
     if (!m_sharedQueue->front(node, buffer))
@@ -959,10 +990,10 @@ int32_t ProcessWorkChannel::pumpImpl(LockFreeQueue<char*>* queue, Semaphore& not
     // 单次搬运有工作预算，避免持续高负载推迟停止请求和维护。
     for (int32_t step = 0; step < 256; ++step)
     {
-        uint32_t nodeIndex = 0;
         int32_t index = 0;
         bool inlined = false;
-        if (!m_sharedQueue->front(nodeIndex, index, inlined))
+        uint32_t slot = 0;
+        if (!m_sharedQueue->front(slot, index, inlined))
         {
             break;
         }
@@ -993,7 +1024,7 @@ int32_t ProcessWorkChannel::pumpImpl(LockFreeQueue<char*>* queue, Semaphore& not
         }
         std::unique_ptr<SharedMemory> temporary;
         char* source = inlined ? block->m_inlineData :
-            m_storage->data(index, static_cast<uint32_t>(ChannelLoad64(&block->m_generation)), temporary);
+            m_storage->data(*m_readPage, index, static_cast<uint32_t>(ChannelLoad64(&block->m_generation)), temporary);
         if (source == nullptr)
         {
             m_retryDelay.store(true, std::memory_order_relaxed);
@@ -1042,7 +1073,7 @@ int32_t ProcessWorkChannel::pumpImpl(LockFreeQueue<char*>* queue, Semaphore& not
                 break;
             }
         }
-        if (!m_sharedQueue->consume(nodeIndex, header[2] >= 0 ? static_cast<uint32_t>(header[2]) + 12 : 0))
+        if (!m_sharedQueue->consume(slot, header[2] >= 0 ? static_cast<uint32_t>(header[2]) + 12 : 0))
         {
             // 本地队列已经接收所有权，不能再次复制同一共享正文。
             // 单消费者下不应失败；协议损坏时撤销入口，等待owner关闭重建。

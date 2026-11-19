@@ -124,6 +124,15 @@ public:
     */
     void clear();
 
+    /** 可选的发送准备；send及Post后台共用准备后的通道，不发送业务消息
+    @param [in] destPid 已启动接收器的正PID
+    @param [in] blocks 初始块前缀数量；-1准备全部，正数不得超过远端初始容量
+    @param [in] payloads true同时打开非内联正文映射，false仅元数据
+    @return true准备完成；false参数、对端或资源不可用，保留已完成的可复用映射
+    扩容块不在准备范围；首次映射成本前移到本函数，准备期间仍需系统资源与时间
+    */
+    bool prepareSend(int32_t destPid, int32_t blocks = -1, bool payloads = false);
+
     /** 初始化发送线程，不可并行
     @return true已启动或原线程已存在；false资源准备失败，不抛出异常
     */

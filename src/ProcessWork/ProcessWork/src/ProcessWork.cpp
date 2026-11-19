@@ -421,6 +421,7 @@ std::shared_ptr<ProcessWorkChannel> ProcessWork::resolveName(const std::string& 
     {
         return std::shared_ptr<ProcessWorkChannel>();
     }
+    const uint64_t cacheEpoch = m_sendCache.epoch();
     std::shared_ptr<SharedMemory> memory;
     LockFreeMapToken token;
     m_sendNameMemoryMap.lockFreeMapGet(name, memory, token);
@@ -448,6 +449,7 @@ std::shared_ptr<ProcessWorkChannel> ProcessWork::resolveName(const std::string& 
             std::shared_ptr<ProcessWorkChannel> channel = sender(pid);
             if (channel && channel->matchesIdentity(identity) && ProcessWorkAtomic::load(&directory->m_pid) == pid)
             {
+                m_sendCache.remember(pid, cacheEpoch, channel);
                 return channel;
             }
             return std::shared_ptr<ProcessWorkChannel>();
@@ -483,6 +485,50 @@ int32_t ProcessWork::trySend(const std::string& processName, const char* buffer,
     // 保留名称核验时的通道；再次按PID查找会跨过关闭/重建或PID复用边界。
     try
     {
+        ProcessWorkSendCacheLease cached;
+        ProcessWorkChannel* direct = nullptr;
+        bool expired = false;
+        // 只在名称Map保护内核验目录，不在该保护内等待发送；通道另由cached保护到调用结束。
+        // memory为只读映射拥有者；命中后写出direct，无返回值，不复制其shared_ptr。
+        m_sendNameMemoryMap.lockFreeMapVisit(processName, [this, &processName, &cached, &direct, &expired](const std::shared_ptr<SharedMemory>& memory)
+        {
+            ProcessWorkNameDirectory* directory = memory ? static_cast<ProcessWorkNameDirectory*>(memory->memory()) : nullptr;
+            if (directory == nullptr)
+            {
+                return;
+            }
+            const int32_t pid = ProcessWorkAtomic::load(&directory->m_pid);
+            if (pid <= 0 || ProcessWorkAtomic::load(&directory->m_length) != processName.size() ||
+                std::memcmp(directory->m_name, processName.data(), processName.size()) != 0)
+            {
+                return;
+            }
+            const uint64_t identity = static_cast<uint64_t>(ProcessWorkAtomic::load(reinterpret_cast<int64_t*>(&directory->m_identity)));
+            ProcessWorkChannel* channel = m_sendCache.find(pid, cached);
+            if (channel != nullptr && channel->matchesIdentity(identity) && ProcessWorkAtomic::load(&directory->m_pid) == pid)
+            {
+                direct = channel;
+            }
+            else if (channel != nullptr && !channel->ready())
+            {
+                expired = true;
+            }
+        });
+        if (direct != nullptr)
+        {
+            const int32_t result = direct->trySend(buffer, length, static_cast<int32_t>(type),
+                retryContention, retryCapacity, SendTask::currentStopFlag());
+            if (result != PROCESS_WORK_UNAVAILABLE || direct->ready())
+            {
+                return result;
+            }
+        }
+        if (expired || direct != nullptr)
+        {
+            // 旧接收器已撤销会话，摘除旧快缓存，允许后续权威查找填入新通道。
+            m_sendCache.clear();
+        }
+        cached.reset();
         return sendChannel(resolveName(processName), buffer, length, type, retryContention, retryCapacity);
     }
     catch (const std::bad_alloc&)
@@ -511,6 +557,43 @@ bool ProcessWork::send(const std::string& name, const std::string& message, Mess
         return send(name, message.data(), static_cast<int32_t>(message.size()), type);
     }
     return false;
+}
+
+/** 复制Post已经校验的短正文，避免逐包进入通用复制例程
+@param [out] target 至少length个可写字节，与source不重叠
+@param [in] source 至少length个可读字节，length为0时允许空指针
+@param [in] length 非负正文长度；超过32字节仍使用标准复制
+*/
+static void CopyPostBody(char* target, const char* source, uint32_t length)
+{
+    if (length > 32)
+    {
+        std::memcpy(target, source, length);
+        return;
+    }
+    while (length >= 8)
+    {
+        std::memcpy(target, source, 8);
+        target += 8;
+        source += 8;
+        length -= 8;
+    }
+    if ((length & 4) != 0)
+    {
+        std::memcpy(target, source, 4);
+        target += 4;
+        source += 4;
+    }
+    if ((length & 2) != 0)
+    {
+        std::memcpy(target, source, 2);
+        target += 2;
+        source += 2;
+    }
+    if ((length & 1) != 0)
+    {
+        *target = *source;
+    }
 }
 
 int32_t ProcessWork::enqueue(int32_t pid, const std::string& name, const char* buffer, int32_t length,
@@ -555,7 +638,7 @@ int32_t ProcessWork::enqueue(int32_t pid, const std::string& name, const char* b
     }
     if (length != 0)
     {
-        std::memcpy(packet.get() + 16 + name.size(), buffer, length);
+        CopyPostBody(packet.get() + 16 + name.size(), buffer, static_cast<uint32_t>(length));
     }
     uint32_t contention = 0;
     for (;;)
@@ -688,8 +771,35 @@ bool ProcessWork::post(const std::string& name, const std::string& message, Mess
     return false;
 }
 
+bool ProcessWork::prepareSend(int32_t destPid, int32_t blocks, bool payloads)
+{
+    if (destPid <= 0 || blocks == 0 || blocks < -1)
+    {
+        return false;
+    }
+    try
+    {
+        const uint64_t epoch = m_sendCache.epoch();
+        std::shared_ptr<ProcessWorkChannel> channel = sender(destPid);
+        if (!channel || !channel->prepareSend(blocks, payloads))
+        {
+            return false;
+        }
+        m_sendCache.remember(destPid, epoch, channel);
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
 bool ProcessWork::initPostThread()
 {
+    if (!m_postQueue.notificationReady())
+    {
+        return false;
+    }
     if (m_postThreadId != 0)
     {
         return m_postStarted;
@@ -889,6 +999,8 @@ int main()
         config.m_receiveMemory.m_queuePool.initialCapacity = 64;
         config.m_receiveMemory.m_freeQueuePool.initialCapacity = 64;
         config.m_postMemory.m_postBufferReserve = 64;
+        // 可选128字节槽，适合64字节正文；预留槽数相同时正文池占用加倍。
+        config.m_postMemory.m_postBufferSlotBytes = 128;
         config.m_postMemory.m_queuePool.initialCapacity = 64;
         // 其他池、Map和三条任务线程的参数可通过config相应字段逐项设置。
         // 不设置m_configureManager，避免覆盖同进程其他库的线程管理器配置。
@@ -914,6 +1026,11 @@ int main()
             return 5;
         }
         std::printf("blocks=%d, max payload=%d\n", ipc.receiveBufferCount(), ipc.receivePayloadCapacity());
+        // 可选：提前打开当前目标的全部初始映射。这里只准备，不发送任何消息。
+        if (!ipc.prepareSend(pid, -1, true))
+        {
+            return 13;
+        }
         const std::string message("123456");
         // send成功：完整正文已经共享提交，但不表示对方业务处理完成。
         if (!ipc.send(pid, message.data(), 6) || !ipc.send(pid, message) ||

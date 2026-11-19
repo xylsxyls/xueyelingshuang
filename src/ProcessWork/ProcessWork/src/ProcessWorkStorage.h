@@ -26,6 +26,8 @@ public:
     ProcessWorkSharedMetadata* m_metadata;
     // 本地正文映射所有权；发送侧仅缓存不可缩容的初始块
     std::atomic<SharedMemory*> m_data[256];
+    // 已发布正文地址；初始块到关闭前稳定，接收方退役扩容块时先清空再解除映射
+    std::atomic<char*> m_addresses[256];
     // 仅接收线程读写的正文闲置时间。
     uint64_t m_idleSince[256];
 };
@@ -69,6 +71,13 @@ public:
     */
     ~ProcessWorkStorage();
 
+    /** 发送方预先打开指定初始块覆盖的元数据及可选正文，不申请新的共享容量
+    @param [in] blocks 初始块前缀数量，1..构造时initial
+    @param [in] payloads true同时准备非内联正文映射；false仅元数据
+    @return true全部准备；false参数、资源或映射失败，已缓存部分仍可安全使用
+    */
+    bool prepare(uint32_t blocks, bool payloads);
+
     /** 取得并缓存元数据页；创建只允许接收线程。
     @param [in] index 节点或正文下标，范围0..0xffffff
     @param [in] create true允许接收方创建新页
@@ -109,6 +118,15 @@ public:
     */
     char* data(uint32_t index, uint32_t generation, std::unique_ptr<SharedMemory>& temporary);
 
+    /** 复用调用方已取得的元数据页及正文地址，避免逐包重复查页
+    @param [in] mapped 必须是index所属的本实例页，调用期保持有效
+    @param [in] index 当前独占正文槽下标
+    @param [in] generation 当前槽代次
+    @param [out] temporary 发送方可缩容块的临时映射所有权
+    @return 当前代正文地址；打开失败返回nullptr
+    */
+    char* data(ProcessWorkPage& mapped, uint32_t index, uint32_t generation, std::unique_ptr<SharedMemory>& temporary);
+
     /** 将FREE扩容正文槽退役，初始块不可退役。
     @param [in] index 正文下标
     @return true已释放本地映射并撤名，false仍保持原状态
@@ -134,6 +152,15 @@ public:
         uint32_t session, uint32_t index = 0, uint32_t generation = 0);
 
 private:
+    /** 打开尚未缓存的正文映射；只缓存发送方不可缩容的初始块
+    @param [in] mapped index对应的元数据页
+    @param [in] index 当前独占正文槽下标
+    @param [in] generation 当前代次
+    @param [out] temporary 可缩容块的映射所有权
+    @return 正文地址；失败返回nullptr
+    */
+    char* mapData(ProcessWorkPage& mapped, uint32_t index, uint32_t generation, std::unique_ptr<SharedMemory>& temporary);
+
     /** 只读取已经发布的本地页目录，未映射时由慢路径负责打开。
     @param [in] index 全局槽下标
     @return 已映射页或nullptr

@@ -24,8 +24,10 @@ public:
     uint32_t m_localQueueInitialCapacity;
     // 接收端初始化时预分配的标准批次数，默认0按需申请；空闲备用块不占用消息积压额度
     uint32_t m_receiveBatchReserve;
-    // Post小包备用槽数，默认0；每槽64字节，正文含内部头和计费前缀至多60字节
+    // Post小包备用槽数，默认0；每槽字节数由m_postBufferSlotBytes指定
     uint32_t m_postBufferReserve;
+    // 每槽64或128字节，默认128；扣除4字节所有者及消息内部头
+    uint32_t m_postBufferSlotBytes;
     // Post小包缓存池最大槽数，-1无配置上限，0关闭缓存池；大包及缓存未命中仍受本地字节预算约束
     int64_t m_postBufferMaximum;
     // 本地就绪队列完整配置；旧initial参数非64时覆盖这里的初始容量，冲突配置拒绝
