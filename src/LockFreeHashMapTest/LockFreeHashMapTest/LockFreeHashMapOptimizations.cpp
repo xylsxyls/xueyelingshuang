@@ -442,6 +442,11 @@ void LockFreeHashMapTestAccess::readOptimizations()
         completed = map.forEach(std::move(throwingLegacy));
         LockFreeHashMapTests::check(walked.m_status == LockFreeHashMapUserException && walked.m_count == 0 &&
             completed == 0 && calls == 2 && map.contains(1), "callback move failure is caught without invoking or modifying the entry");
+        void (*emptyCallback)(const int&, const LockFreeHashMapReadPayload&) = nullptr;
+        walked = map.forEachResult(emptyCallback);
+        LockFreeHashMapTests::check(walked.m_status == LockFreeHashMapInvalidArgument && !walked.m_committed &&
+            walked.m_count == 0 && map.forEach(emptyCallback) == 0 && map.contains(1),
+            "typed null traversal reports invalid input and leaves entries intact");
         walked = map.forEachResult(ignoreReadPayload);
         LockFreeHashMapTests::check(walked.m_status == LockFreeHashMapOk && walked.m_count == 1 &&
             map.forEach(ignoreReadPayload) == 1 && map.forEachResult<decltype(callback)>(callback).m_count == 1,
@@ -553,13 +558,12 @@ void LockFreeHashMapTestAccess::sharedContention()
                                 }
                                 result = map.compareExchange(key, observed.m_version, candidate);
                                 if (!result.m_committed && result.m_status != LockFreeHashMapNotFound &&
-                                    result.m_status != LockFreeHashMapVersionMismatch && result.m_status != LockFreeHashMapCleared &&
-                                    result.m_status != LockFreeHashMapCapacityLimit && result.m_status != LockFreeHashMapReservationBusy)
+                                    result.m_status != LockFreeHashMapVersionMismatch && result.m_status != LockFreeHashMapCapacityLimit)
                                 {
                                     errors.fetch_add(1);
                                 }
                             }
-                            else if (result.m_status != LockFreeHashMapNotFound && result.m_status != LockFreeHashMapCleared)
+                            else if (result.m_status != LockFreeHashMapNotFound)
                             {
                                 errors.fetch_add(1);
                             }
@@ -576,8 +580,7 @@ void LockFreeHashMapTestAccess::sharedContention()
                                     errors.fetch_add(1);
                                 }
                             }
-                            else if ((result.m_status != LockFreeHashMapCleared && result.m_status != LockFreeHashMapCapacityLimit &&
-                                result.m_status != LockFreeHashMapReservationBusy) || result.m_committed)
+                            else if (result.m_status != LockFreeHashMapCapacityLimit || result.m_committed)
                             {
                                 errors.fetch_add(1);
                             }
@@ -594,10 +597,13 @@ void LockFreeHashMapTestAccess::sharedContention()
                         else if (i % 3 == 0)
                         {
                             std::shared_ptr<int> got;
-                            if (map.get(key, got) && (!got || *got < 0 || *got >= 64 || *got % 4 != key || got != values[*got]))
+                            const bool found = map.get(key, got);
+                            if (found && (!got || *got < 0 || *got >= 64 || *got % 4 != key || got != values[*got]))
                             {
                                 errors.fetch_add(1);
                             }
+                            // 布尔读取没有状态码；不能把未命中计入默认构造的 Ok。
+                            continue;
                         }
                         else
                         {
@@ -644,7 +650,10 @@ void LockFreeHashMapTestAccess::sharedContention()
     map.clear();
     for (size_t i = 0; i < 8; ++i)
     {
-        map.maintain(64);
+        if (map.maintain(64).m_status != LockFreeHashMapOk)
+        {
+            errors.fetch_add(1);
+        }
     }
     LockFreeHashMapPoolStats reclaimed = {};
     bool reclaimedAll = map.poolStats(reclaimed).m_status == LockFreeHashMapOk && reclaimed.occupied == 0 && reclaimed.retired == 0;

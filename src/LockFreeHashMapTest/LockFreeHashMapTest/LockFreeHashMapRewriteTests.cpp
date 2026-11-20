@@ -843,7 +843,7 @@ void LockFreeHashMapRewriteTests::contention()
                         {
                             break;
                         }
-                        check(changed.m_status == LockFreeHashMapVersionMismatch || changed.m_status == LockFreeHashMapReservationBusy, "CAS loser has a retryable conflict");
+                        check(changed.m_status == LockFreeHashMapVersionMismatch, "CAS loser has a retryable conflict");
                     }
                 }
             }));
@@ -956,6 +956,7 @@ void LockFreeHashMapRewriteTests::scalarCache()
     LockFreeHashMapValueCache<uint64_t, uint64_t, std::equal_to<uint64_t>> cache;
     check(cache.initialize(3) == LockFreeHashMapInvalidArgument && cache.count() == 0, "cache rejects non power of two");
     LOCKFREEHASHMAP_TEST_ALIGN_64 std::atomic<uint64_t> generation(1);
+    LOCKFREEHASHMAP_TEST_ALIGN_64 const std::atomic<uint64_t> firstGeneration(1), secondGeneration(2);
     uint64_t output = 11;
     check(!cache.lookup(1, generation, &output) && output == 11, "disabled cache preserves output with atomic generation");
     LockFreeHashMapValueCache<std::string, uint64_t, std::equal_to<std::string>> disabled;
@@ -999,10 +1000,10 @@ void LockFreeHashMapRewriteTests::scalarCache()
     }
     check(cache.initialize(1) == LockFreeHashMapOk, "one cache entry initialized");
     uint64_t key = UINT64_C(0xfedcba9876543210), value = UINT64_C(0x8765432100000001);
-    check(!cache.lookup(key, 1, &output) && output == 11, "empty cache keeps output unchanged");
+    check(!cache.lookup(key, firstGeneration, &output) && output == 11, "empty cache keeps output unchanged");
     cache.invalidate(key, 1);
     cache.publish(key, value, 1, 1);
-    check(cache.lookup(key, 1, &output) && output == value, "full width key and value preserved");
+    check(cache.lookup(key, firstGeneration, &output) && output == value, "full width key and value preserved");
     check(cache.lookup(key, generation, &output) && output == value,
         "atomic generation reads a complete published copy");
     generation.store(2);
@@ -1015,35 +1016,36 @@ void LockFreeHashMapRewriteTests::scalarCache()
     generation.store(1);
     check(cache.lookup(key, generation, static_cast<uint64_t*>(nullptr)),
         "atomic generation supports existence query without value output");
-    check(!cache.lookup(key ^ (UINT64_C(1) << 48), 1, &output), "high key bits distinguish colliding cache keys");
-    check(!cache.lookup(key, 2, &output), "clear generation rejects old cache");
+    check(!cache.lookup(key ^ (UINT64_C(1) << 48), firstGeneration, &output), "high key bits distinguish colliding cache keys");
+    check(!cache.lookup(key, secondGeneration, &output), "clear generation rejects old cache");
     cache.invalidate(key, 2);
     cache.publish(key, value, 1, 1);
-    check(!cache.lookup(key, 1, &output), "late publisher cannot restore old identity");
+    check(!cache.lookup(key, firstGeneration, &output), "late publisher cannot restore old identity");
     cache.publish(key, value + 1, 1, 2);
-    check(cache.lookup(key, 1, &output) && output == value + 1, "next identity published");
+    check(cache.lookup(key, firstGeneration, &output) && output == value + 1, "next identity published");
     LockFreeHashMapValueCacheEntry& entry = LockFreeHashMapValueCacheTestAccess::first(cache);
     entry.m_publishing.store(true);
     for (uint64_t version = 3; version < 100; ++version)
     {
         cache.invalidate(key, version);
         cache.publish(key, value + version, 1, version);
-        check(!cache.lookup(key, 1, &output), "paused cache publisher does not block later invalidations");
+        check(!cache.lookup(key, firstGeneration, &output), "paused cache publisher does not block later invalidations");
     }
     entry.m_publishing.store(false);
     cache.publish(key, value + 2, 1, 3);
-    check(!cache.lookup(key, 1, &output), "old publisher stays invalid after resuming");
+    check(!cache.lookup(key, firstGeneration, &output), "old publisher stays invalid after resuming");
     cache.publish(key, value + 99, 1, 99);
-    check(cache.lookup(key, 1, &output) && output == value + 99, "current publisher resumes normally");
+    check(cache.lookup(key, firstGeneration, &output) && output == value + 99, "current publisher resumes normally");
     cache.invalidate(key, 0);
-    check(!cache.lookup(key, 1, &output), "delete invalidates without allocating a version");
+    check(!cache.lookup(key, firstGeneration, &output), "delete invalidates without allocating a version");
     uint64_t maximum = (std::numeric_limits<uint64_t>::max)();
+    LOCKFREEHASHMAP_TEST_ALIGN_64 const std::atomic<uint64_t> lastGeneration(maximum);
     cache.invalidate(key, maximum >> 1);
     cache.publish(key, value, maximum, maximum >> 1);
-    check(cache.lookup(key, maximum, &output) && output == value, "last encodable identity and full generation supported");
+    check(cache.lookup(key, lastGeneration, &output) && output == value, "last encodable identity and full generation supported");
     cache.invalidate(key, (maximum >> 1) + 1);
     cache.publish(key, value, maximum, (maximum >> 1) + 1);
-    check(!cache.lookup(key, maximum, &output), "cache identity exhaustion disables copies without wrapping");
+    check(!cache.lookup(key, lastGeneration, &output), "cache identity exhaustion disables copies without wrapping");
 
     LockFreeHashMapValueCache<int32_t, int32_t, std::equal_to<int32_t>> narrow;
     check(narrow.initialize(1) == LockFreeHashMapOk, "single-slot narrow cache forces collisions independently of indexing");
@@ -1051,22 +1053,22 @@ void LockFreeHashMapRewriteTests::scalarCache()
     int32_t narrowOutput = 99;
     narrow.invalidate(minimumKey, 1);
     narrow.publish(minimumKey, -12, 1, 1);
-    check(narrow.lookup(minimumKey, 1, &narrowOutput) && narrowOutput == -12,
+    check(narrow.lookup(minimumKey, firstGeneration, &narrowOutput) && narrowOutput == -12,
         "minimum signed key keeps all identity and payload bits");
     narrow.invalidate(0, 2);
     narrow.publish(0, 13, 1, 2);
-    check(!narrow.lookup(minimumKey, 1, &narrowOutput) && narrowOutput == -12 &&
-        narrow.lookup(0, 1, &narrowOutput) && narrowOutput == 13,
+    check(!narrow.lookup(minimumKey, firstGeneration, &narrowOutput) && narrowOutput == -12 &&
+        narrow.lookup(0, firstGeneration, &narrowOutput) && narrowOutput == 13,
         "colliding minimum and zero keys cannot return each other's values");
     narrow.invalidate(-1, 3);
     narrow.publish(-1, -14, 1, 3);
-    check(narrow.lookup(-1, 1, &narrowOutput) && narrowOutput == -14, "negative narrow key round trip");
+    check(narrow.lookup(-1, firstGeneration, &narrowOutput) && narrowOutput == -14, "negative narrow key round trip");
     narrow.invalidate(7, 4);
     narrow.publish(-1, -14, 1, 3);
-    check(!narrow.lookup(-1, 1, &narrowOutput) && narrowOutput == -14,
+    check(!narrow.lookup(-1, firstGeneration, &narrowOutput) && narrowOutput == -14,
         "late negative publisher cannot cross a colliding positive-key invalidation");
     narrow.publish(7, 15, 1, 4);
-    check(narrow.lookup(7, 1, &narrowOutput) && narrowOutput == 15 && !narrow.lookup(-1, 1, &narrowOutput),
+    check(narrow.lookup(7, firstGeneration, &narrowOutput) && narrowOutput == 15 && !narrow.lookup(-1, firstGeneration, &narrowOutput),
         "positive colliding key publishes with its own complete identity");
 
     // 窄值对象表示、无符号最高位及混合位宽都通过完整输入/输出验证，不读取缓存编码。
@@ -1079,10 +1081,10 @@ void LockFreeHashMapRewriteTests::scalarCache()
         int8_t actual = 42;
         bytes.invalidate(shortKeys[i], i + 1);
         bytes.publish(shortKeys[i], byteValues[i], maximum, i + 1);
-        check(bytes.lookup(shortKeys[i], maximum, &actual) && actual == byteValues[i] &&
-            bytes.lookup(shortKeys[i], maximum, static_cast<int8_t*>(nullptr)), "signed byte representation and full generation preserved");
+        check(bytes.lookup(shortKeys[i], lastGeneration, &actual) && actual == byteValues[i] &&
+            bytes.lookup(shortKeys[i], lastGeneration, static_cast<int8_t*>(nullptr)), "signed byte representation and full generation preserved");
         actual = 42;
-        check(!bytes.lookup(shortKeys[(i + 1) % 4], maximum, &actual) && actual == 42,
+        check(!bytes.lookup(shortKeys[(i + 1) % 4], lastGeneration, &actual) && actual == 42,
             "small signed collision preserves missing output");
     }
     LockFreeHashMapValueCache<uint32_t, uint32_t, std::equal_to<uint32_t>> unsignedWords;
@@ -1090,20 +1092,20 @@ void LockFreeHashMapRewriteTests::scalarCache()
     uint32_t word = 0;
     unsignedWords.invalidate(UINT32_MAX, 1);
     unsignedWords.publish(UINT32_MAX, UINT32_C(0x80000001), maximum, 1);
-    check(unsignedWords.lookup(UINT32_MAX, maximum, &word) && word == UINT32_C(0x80000001),
+    check(unsignedWords.lookup(UINT32_MAX, lastGeneration, &word) && word == UINT32_C(0x80000001),
         "unsigned key and value retain their high bits");
     LockFreeHashMapValueCache<uint32_t, uint64_t, std::equal_to<uint32_t>> wideValue;
     check(wideValue.initialize(1) == LockFreeHashMapOk, "mixed width value cache initialized");
     wideValue.invalidate(UINT32_MAX, 1);
     wideValue.publish(UINT32_MAX, value, maximum, 1);
-    check(wideValue.lookup(UINT32_MAX, maximum, &output) && output == value,
+    check(wideValue.lookup(UINT32_MAX, lastGeneration, &output) && output == value,
         "narrow key never truncates a wide value");
     LockFreeHashMapValueCache<uint64_t, uint32_t, std::equal_to<uint64_t>> wideKey;
     check(wideKey.initialize(1) == LockFreeHashMapOk, "mixed width key cache initialized");
     wideKey.invalidate(key, 1);
     wideKey.publish(key, UINT32_MAX, maximum, 1);
-    check(wideKey.lookup(key, maximum, &word) && word == UINT32_MAX &&
-        !wideKey.lookup(key ^ (UINT64_C(1) << 48), maximum, &word) && word == UINT32_MAX,
+    check(wideKey.lookup(key, lastGeneration, &word) && word == UINT32_MAX &&
+        !wideKey.lookup(key ^ (UINT64_C(1) << 48), lastGeneration, &word) && word == UINT32_MAX,
         "narrow value never truncates a wide key");
 
     LockFreeHashMapPoolConfig signedConfig;
@@ -1450,8 +1452,8 @@ int LockFreeHashMapRewriteTests::run(bool alignmentOnly)
         if (alignmentOnly)
         {
             alignment();
-            std::cout << "MODULE_RESULT checks=" << s_checks.load() << " failed=" << s_failed.load() << std::endl;
-            return 0;
+            std::cout << "MODULE_RESULT id=alignment checks=" << s_checks.load() << " failed=" << s_failed.load() << std::endl;
+            return s_failed.load() == 0 ? 0 : 1;
         }
         if (LockFreeHashMapPoolTests::run() != 0)
         {
@@ -1505,7 +1507,7 @@ int LockFreeHashMapRewriteTests::run(bool alignmentOnly)
             std::cerr << "REWRITE_EXCEPTION unknown" << std::endl;
         }
     }
-    std::cout << "MODULE_RESULT checks=" << s_checks.load() << " failed=" << s_failed.load() << std::endl;
+    std::cout << "MODULE_RESULT id=rewrite checks=" << s_checks.load() << " failed=" << s_failed.load() << std::endl;
     return s_failed.load() == 0 ? 0 : 1;
 }
 

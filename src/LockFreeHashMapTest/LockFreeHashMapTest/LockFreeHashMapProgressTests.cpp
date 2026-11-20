@@ -336,6 +336,11 @@ static bool ProgressRun(int32_t operation, bool oneCpu, bool loaded, int32_t del
                         sample.m_maxCallMs = (std::max)(sample.m_maxCallMs, (after - before) * 1000);
                         if (result.m_status == LockFreeHashMapOk)
                         {
+                            const bool changesTable = operation <= 3 || operation == 5 || operation == 6;
+                            if (result.m_committed != changesTable)
+                            {
+                                ++sample.m_failures;
+                            }
                             ++sample.m_completed;
                             if (after <= deadline)
                             {
@@ -363,7 +368,10 @@ static bool ProgressRun(int32_t operation, bool oneCpu, bool loaded, int32_t del
                                 ++sample.m_failures;
                             }
                         }
-                        else if (result.m_status == LockFreeHashMapNotFound || result.m_status == LockFreeHashMapExists)
+                        else if (!result.m_committed &&
+                            ((result.m_status == LockFreeHashMapExists && operation == 1 && index < workers) ||
+                            (result.m_status == LockFreeHashMapNotFound && ((operation == 1 && index == workers) ||
+                            ((operation == 2 || operation == 3) && index < workers)))))
                         {
                             ++sample.m_logicalMisses;
                         }
@@ -463,9 +471,9 @@ static bool ProgressRun(int32_t operation, bool oneCpu, bool loaded, int32_t del
         {
             continue;
         }
-        completed += s.m_completed;
-        minimum = (std::min)(minimum, s.m_completed);
-        maximum = (std::max)(maximum, s.m_completed);
+        completed += s.m_windowCompleted;
+        minimum = (std::min)(minimum, s.m_windowCompleted);
+        maximum = (std::max)(maximum, s.m_windowCompleted);
         worstCall = (std::max)(worstCall, s.m_maxCallMs);
         worstGap = (std::max)(worstGap, s.m_maxProgressGapMs);
         taken.insert(taken.end(), s.m_taken.begin(), s.m_taken.end());
@@ -484,7 +492,7 @@ static bool ProgressRun(int32_t operation, bool oneCpu, bool loaded, int32_t del
     passed = passed && map.poolStats(stats).m_status == LockFreeHashMapOk && stats.capacity == 0;
     std::cout << "PROGRESS api=" << names[operation] << " cpu=" << (oneCpu ? "one" : "all")
         << " loaded=" << loaded << " injected_delay=" << delayed << " workers=" << workers << " window_ms=1200"
-        << " completed=" << completed << " min=" << minimum << " max=" << maximum
+        << " window_completed=" << completed << " min=" << minimum << " max=" << maximum
         << " min_max=" << double(minimum) / double(maximum ? maximum : 1) << " max_call_ms=" << worstCall
         << " max_gap_ms=" << worstGap << " failures=" << failures << " passed=" << passed << std::endl;
     return passed;
@@ -553,7 +561,7 @@ int main(int argc, char** argv)
                 }
             }
         }
-        std::cout << "MODULE_RESULT checks=" << checks << " failed=" << failed << std::endl;
+        std::cout << "MODULE_RESULT id=" << (controlOnly ? argv[1] : "progress") << " checks=" << checks << " failed=" << failed << std::endl;
         return failed ? 1 : 0;
     }
     catch (const std::exception& error)

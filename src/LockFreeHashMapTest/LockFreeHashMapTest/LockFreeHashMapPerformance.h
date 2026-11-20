@@ -4,9 +4,6 @@
 #include "LockFreeHashMapPerfValidation.h"
 #include "LockFreeHashMapTestThread.h"
 #if defined(LOCKFREEHASHMAP_PERF_STD_MUTEX)
-#if defined(LOCKFREEHASHMAP_PERF_CURRENT)
-#error Standard mutex baseline has no version snapshot interface
-#endif
 #include "LockFreeHashMapStdMutex.h"
 #else
 #include <LockFreeHashMap.h>

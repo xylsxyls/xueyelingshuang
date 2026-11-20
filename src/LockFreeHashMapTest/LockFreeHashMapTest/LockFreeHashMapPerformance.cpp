@@ -111,7 +111,7 @@ int main(int argc, char** argv)
                 return 2;
             }
         }
-#if !defined(LOCKFREEHASHMAP_PERF_CURRENT)
+#if defined(LOCKFREEHASHMAP_PERF_STD_MUTEX)
         if (LockFreeHashMapPerfModels::currentOnly(specs[id - 1]))
         {
             return 2;

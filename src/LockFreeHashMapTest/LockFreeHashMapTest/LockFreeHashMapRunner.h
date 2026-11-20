@@ -43,15 +43,15 @@ public:
     static bool cases(const std::string& executable, const std::string& prefix,
         const std::vector<int>& ids, int repeats);
 
-    /** 三版本按轮换顺序运行完全相同负载并输出中位数表
-    @param [in] executables 原版、整改前版、当前版可执行文件，恰好三个
+    /** 运行当前程序的十项负载并输出各项中位数
+    @param [in] executable 当前负载程序
     @param [in] prefix 已存在目录中的新文件前缀
     @param [in] scale 负载倍率，范围 1 至 20
     @param [in] rounds 轮数，范围 1 至 9
-    @param [in] affinityMask 三版本共用的 Windows CPU 掩码，0 使用默认调度
+    @param [in] affinityMask 工作进程的 Windows CPU 掩码，0 使用默认调度
     @return 每轮成功、负载齐全且报告落盘成功为 true
     */
-    static bool compare(const std::vector<std::string>& executables, const std::string& prefix,
+    static bool workloads(const std::string& executable, const std::string& prefix,
         int scale, int rounds, unsigned affinityMask = 0);
 
     /** 严格解析一个十进制正数，不接受截断后缀、符号或溢出
@@ -71,9 +71,10 @@ public:
 
     /** 核对模块汇总，组合模块的每一条汇总都必须有效且通过
     @param [in,out] input 模块日志流，从当前位置读到结尾
-    @return 至少存在一个非零检查数的成功汇总，且没有失败汇总为true
+    @param [in] mode 预期的模块名，决定汇总数及资源净差行
+    @return 证据齐全且均通过为true
     */
-    static bool verifyModule(std::istream& input);
+    static bool verifyModule(std::istream& input, const std::string& mode);
 
     /** 独占创建证据文件后交给标准输出流，重复前缀不能覆盖已有结果
     @param [in] path 尚不存在的报告路径

@@ -55,6 +55,14 @@ public:
     @return 单调异常数量，不由用例重置
     */
     static int failures();
+
+#if defined(_WIN32)
+    /** 用 Windows 快照完整枚举本进程的线程
+    @param [out] count 枚举正常结束且成功关闭快照时写入，失败保持原值
+    @return 取得完整的非零线程数为 true
+    */
+    static bool processThreadCount(unsigned long& count);
+#endif
 private:
     /** 禁止复制线程所有权
     @param [in] other 不可复制的源对象

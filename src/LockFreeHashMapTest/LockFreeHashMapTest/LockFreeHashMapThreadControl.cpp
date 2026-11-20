@@ -1,4 +1,8 @@
 ﻿#include "LockFreeHashMapThreadControl.h"
+#if !defined(_MSC_VER)
+// MSVC 动态 CRT 的非抛出重载会调用本模块的计账分配器。
+#include "LockFreeHashMapTestNothrowAllocation.inl"
+#endif
 #include "LockFreeHashMapTestThread.h"
 #include <thread>
 #include <vector>
@@ -9,7 +13,6 @@
 #include <new>
 #if defined(_WIN32)
 #include <Windows.h>
-#include <TlHelp32.h>
 #endif
 
 bool LockFreeHashMapThreadControl::s_tracking = false;
@@ -135,21 +138,10 @@ int main(int argc, char** argv)
                 return 2;
             }
             DWORD count = 0;
-            HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-            if (snapshot == INVALID_HANDLE_VALUE)
+            if (!LockFreeHashMapTestThread::processThreadCount(count))
             {
                 return 3;
             }
-            THREADENTRY32 entry = {};
-            entry.dwSize = sizeof(entry);
-            if (Thread32First(snapshot, &entry))
-            {
-                do
-                {
-                    count += entry.th32OwnerProcessID == GetCurrentProcessId() ? 1 : 0;
-                } while (Thread32Next(snapshot, &entry));
-            }
-            CloseHandle(snapshot);
             std::cout << "THREAD_CONTROL standard=" << standard << " round=" << round << " handles=" << handles
                 << " threads=" << count << " live_allocations=" << LockFreeHashMapThreadControl::s_live.load() << std::endl;
         }

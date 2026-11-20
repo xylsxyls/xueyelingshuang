@@ -184,6 +184,20 @@ void LockFreeHashMapRetryTests::versions()
 
 void LockFreeHashMapRetryTests::observers()
 {
+    {
+        typedef size_t (*Growth)(const LockFreeHashMapGrowContext&);
+        Growth target = [](const LockFreeHashMapGrowContext&) -> size_t { return 1; };
+        LockFreeHashMapConfig config;
+        config.setInitialCapacity(0);
+        config.setGrowPolicy(std::ref(target));
+        LockFreeHashMap<int, int> map(config);
+        target = nullptr;
+        LockFreeHashMapTests::check(map.tryInsert(1, 1).m_status == LockFreeHashMapUserException && map.empty(),
+            "cleared borrowed growth callback reports an execution failure before publishing");
+        target = [](const LockFreeHashMapGrowContext&) -> size_t { return 2; };
+        LockFreeHashMapTests::check(map.tryInsert(1, 1).m_committed,
+            "restored borrowed growth callback can service a later request");
+    }
     long long baseline = LockFreeHashMapTests::s_liveAllocations.load();
     {
         LockFreeHashMapGrowthTestCallback target;
@@ -248,6 +262,9 @@ void LockFreeHashMapRetryTests::observers()
         void (*empty)(size_t, uint64_t) = nullptr;
         config.m_onGrowth = empty;
         LockFreeHashMapTests::check(!config.m_onGrowth, "null callback pointers stay empty");
+        void (*mixed)(const size_t&, uint64_t) = nullptr;
+        config.setGrowthObserver(mixed);
+        LockFreeHashMapTests::check(!config.m_onGrowth, "mixed-signature null function pointer clears the observer");
     }
     LockFreeHashMapTests::check(LockFreeHashMapGrowthTestCallback::s_live == 0 &&
         LockFreeHashMapTests::s_liveAllocations.load() == baseline, "all observer targets and allocations released");
@@ -334,7 +351,17 @@ void LockFreeHashMapRetryTests::concurrentGrowth()
         calls.fetch_add(1);
         slots.fetch_add(count);
     };
+    bool sawInitial = false, sawGrowth = false, consistent = true;
+    // 仅唯一维护者写这三个局部状态，容量和空闲数可以弱一致，同一个增长事实需自洽。
+    config.setShrinkPolicy([&](const LockFreeHashMapShrinkContext& context)
+    {
+        consistent = consistent && context.hasSuccessfulGrow == (context.successfulGrowCount != 0);
+        sawInitial = sawInitial || !context.hasSuccessfulGrow;
+        sawGrowth = sawGrowth || context.hasSuccessfulGrow;
+        return LockFreeHashMapShrinkDecision();
+    });
     LockFreeHashMap<int32_t, int32_t> map(8, config);
+    LockFreeHashMapTests::check(map.maintain(1).m_status == LockFreeHashMapOk && sawInitial, "observe pool before first growth");
     std::atomic<bool> start(false);
     std::vector<LockFreeHashMapTestThread> workers;
     workers.reserve(8);
@@ -362,10 +389,13 @@ void LockFreeHashMapRetryTests::concurrentGrowth()
         throw;
     }
     start.store(true);
+    LockFreeHashMapTests::check(map.maintain(1).m_status == LockFreeHashMapOk, "observe pool during concurrent growth");
     for (size_t i = 0; i < workers.size(); ++i)
     {
         workers[i].join();
     }
+    LockFreeHashMapTests::check(map.maintain(1).m_status == LockFreeHashMapOk && sawGrowth && consistent,
+        "growth flag and count agree across initial, concurrent and final observations");
     LockFreeHashMapPoolStats stats = {};
     LockFreeHashMapTests::check(map.poolStats(stats).m_status == LockFreeHashMapOk && map.size() == 64 &&
         calls.load() == stats.successfulGrowCount && slots.load() == stats.capacity,

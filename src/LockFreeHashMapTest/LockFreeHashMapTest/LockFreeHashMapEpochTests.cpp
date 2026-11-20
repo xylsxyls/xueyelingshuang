@@ -372,7 +372,7 @@ int LockFreeHashMapEpochTests::run()
     {
         check(false, "unexpected test exception");
     }
-    std::cout << "MODULE_RESULT checks=" << s_checks << " failed=" << s_failed << std::endl;
+    std::cout << "MODULE_RESULT id=epoch checks=" << s_checks << " failed=" << s_failed << std::endl;
     return s_failed == 0 ? 0 : 1;
 }
 

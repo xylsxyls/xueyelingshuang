@@ -133,7 +133,7 @@ bool LockFreeHashMapPerfRunner::parse(const std::string& line, const LockFreeHas
 }
 
 std::map<std::string, double> LockFreeHashMapPerfRunner::measure(const std::string& program,
-    const LockFreeHashMapPerfSpec& spec, int32_t repeats, bool memory, const std::string& log, unsigned mask)
+    const LockFreeHashMapPerfSpec& spec, int32_t repeats, bool memory, bool standard, const std::string& log, unsigned mask)
 {
     unsigned multiplier = !memory && spec.m_iterationMultiplier != 1 ? static_cast<unsigned>(spec.m_iterationMultiplier) : 0;
     LockFreeHashMapRunResult run = LockFreeHashMapRunner::run(program, std::to_string(repeats * 1000 + spec.m_id), log, 120, mask, multiplier,
@@ -143,24 +143,43 @@ std::map<std::string, double> LockFreeHashMapPerfRunner::measure(const std::stri
         throw std::runtime_error("child failed: " + log + " exit=" + std::to_string(run.m_code));
     }
     std::ifstream input(log.c_str());
-    std::string line;
     std::map<std::string, double> result;
-    size_t matches = 0;
-    while (std::getline(input, line))
+    if (!verifyObservation(input, spec, repeats, memory, standard, result))
     {
-        if (line.compare(0, memory ? 4 : 5, memory ? "MEM " : "PERF ") == 0)
-        {
-            if (++matches != 1 || !parse(line, spec, repeats, memory, result))
-            {
-                throw std::runtime_error("invalid result: " + log);
-            }
-        }
-    }
-    if (!input.eof() || matches != 1)
-    {
-        throw std::runtime_error("missing result: " + log);
+        throw std::runtime_error("invalid backend or result: " + log);
     }
     return result;
+}
+
+bool LockFreeHashMapPerfRunner::verifyObservation(std::istream& input, const LockFreeHashMapPerfSpec& spec,
+    int32_t repeats, bool memory, bool standard, std::map<std::string, double>& result)
+{
+    bool identified = false, measured = false;
+    std::string line;
+    while (std::getline(input, line))
+    {
+        if (line.compare(0, 8, "BACKEND ") == 0)
+        {
+            const bool current = line == "BACKEND LockFreeHashMap";
+            const bool locked = line == "BACKEND std_unordered_map_mutex max_load_factor=1 automatic_rehash=1";
+            // 内存命令接收两种独立程序；吞吐命令必须与所选的 matrix 或 std 完全对应。
+            if (identified || (!current && !locked) || (!memory && locked != standard))
+            {
+                return false;
+            }
+            identified = true;
+        }
+        else if (line.compare(0, 4, "MEM ") == 0 || line.compare(0, 5, "PERF ") == 0)
+        {
+            if (!identified || measured || !parse(line, spec, repeats, memory, result) ||
+                (!memory && result["conditional_interfaces"] != (standard ? 0 : 1)))
+            {
+                return false;
+            }
+            measured = true;
+        }
+    }
+    return input.eof() && measured;
 }
 
 double LockFreeHashMapPerfRunner::median(std::vector<double> values)
@@ -178,248 +197,103 @@ unsigned LockFreeHashMapPerfRunner::caseAffinity(int32_t threads, unsigned allow
     return threads == 1 ? allowed & (~allowed + 1U) : allowed;
 }
 
-bool LockFreeHashMapPerfRunner::compare(const std::vector<std::string>& programs, const std::string& prefix,
-    int32_t rounds, unsigned affinityMask, int32_t first, int32_t last, bool revisions, int32_t fixedRepeats,
-    size_t iterationMultiplier)
+bool LockFreeHashMapPerfRunner::matrix(const std::string& program, const std::string& prefix, int32_t rounds,
+    unsigned affinityMask, int32_t first, int32_t last, bool standard, int32_t fixedRepeats, size_t iterationMultiplier)
 {
     std::vector<LockFreeHashMapPerfSpec> specs = LockFreeHashMapPerfModels::catalogue();
-    if ((programs.size() != 5 && programs.size() != 7) || rounds < 1 || rounds > 9 || first < 1 || first > int32_t(specs.size()) ||
-        last < 0 || last > int32_t(specs.size()) || (last != 0 && last < first) || fixedRepeats < 0 || fixedRepeats > 64)
+    const int32_t end = last == 0 ? static_cast<int32_t>(specs.size()) : last;
+    if (first < 1 || end < first || end > static_cast<int32_t>(specs.size()) || rounds < 1 || rounds > 9 ||
+        fixedRepeats < 0 || fixedRepeats > 64)
     {
         return false;
     }
-    int32_t end = last == 0 ? static_cast<int32_t>(specs.size()) : last;
-    for (int32_t index = first - 1; index < end; ++index)
+    // 标准表没有条件接口；空选择必须在创建证据文件或启动子进程之前拒绝。
+    if (standard && std::find_if_not(specs.begin() + first - 1, specs.begin() + end,
+        LockFreeHashMapPerfModels::currentOnly) == specs.begin() + end)
     {
-        if (!LockFreeHashMapPerfModels::scaleIterations(specs[index], iterationMultiplier))
-        {
-            return false;
-        }
+        return false;
     }
-    int32_t versionCount = static_cast<int32_t>((programs.size() - 1) / 2);
-    const char* versions[] = { "original", "current", "std_mutex" };
     std::ofstream raw, summary, catalogue;
     if (!LockFreeHashMapRunner::openReport(prefix + "-runs.csv", raw) ||
-        !LockFreeHashMapRunner::openReport(prefix + "-comparison.csv", summary) ||
+        !LockFreeHashMapRunner::openReport(prefix + "-summary.csv", summary) ||
         !LockFreeHashMapRunner::openReport(prefix + "-catalogue.csv", catalogue))
     {
-        throw std::runtime_error("cannot open performance reports: " + prefix);
+        return false;
     }
-    raw << "id,name,phase,version,round,repeats,ops_s,seconds,p50_us,p95_us,p99_us,samples,extra_calls,attempted_calls,affinity_mask,log\n";
-    summary << "id,name,original_ops_s,current_ops_s,current_over_original,original_p50_us,current_p50_us,original_p95_us,current_p95_us,original_p99_us,current_p99_us,original_min_ops_s,original_max_ops_s,current_min_ops_s,current_max_ops_s,original_median_seconds,current_median_seconds,samples,rounds,repeats,current_only,original_extra_calls,current_extra_calls,current_vs_original_percent";
-    if (versionCount == 3)
-    {
-        summary << ",std_ops_s,current_over_std,current_vs_std_percent,std_p50_us,std_p95_us,std_p99_us,std_min_ops_s,std_max_ops_s,std_median_seconds,std_extra_calls";
-    }
-    summary << '\n';
+    raw << "id,name,round,repeats,ops_s,seconds,p50_us,p95_us,p99_us,samples,extra_calls,attempted_calls,affinity_mask,log\n";
+    summary << "id,name,median_ops_s,min_ops_s,max_ops_s,rounds,repeats\n";
     catalogue << "id,name,family,keys,buckets,threads,read_percent,iterations,operation,full_collision,shared_keys,history,calls_per_iteration,current_only,iteration_multiplier\n";
     for (int32_t index = first - 1; index < end; ++index)
     {
-        const LockFreeHashMapPerfSpec& spec = specs[index];
-        const unsigned effectiveAffinity = caseAffinity(spec.m_threads, affinityMask);
-        bool only = LockFreeHashMapPerfModels::currentOnly(spec) && !revisions;
-        catalogue << spec.m_id << ',' << spec.m_name << ',' << spec.m_family << ',' << spec.m_keys << ',' << spec.m_buckets
-            << ',' << spec.m_threads << ',' << spec.m_readPercent << ',' << spec.m_iterations << ',' << spec.m_operation
-            << ',' << spec.m_collision << ',' << spec.m_sharedKeys << ',' << spec.m_history << ','
-            << LockFreeHashMapPerfModels::callsPerIteration(spec) << ',' << only << ',' << spec.m_iterationMultiplier << '\n';
-        catalogue.flush();
-        std::map<std::string, double> pilots[3];
-        for (int32_t version = only ? 1 : 0; version < (only ? 2 : versionCount); ++version)
-        {
-            std::string log = prefix + "-pilot-id" + std::to_string(spec.m_id) + '-' + versions[version] + ".log";
-            pilots[version] = measure(only ? programs.back() : programs[version], spec, 1, false, log, effectiveAffinity);
-            if (revisions && pilots[version]["conditional_interfaces"] != 1)
-            {
-                // revision比较的两版都支持条件接口；首项就拒绝错误编译开关，不能混用不同循环代码。
-                throw std::runtime_error("revision requires conditional interfaces in both binaries: " + programs[version]);
-            }
-            raw << std::setprecision(12) << spec.m_id << ',' << spec.m_name << ",pilot," << versions[version]
-                << ",0,1," << pilots[version]["ops"] << ',' << pilots[version]["seconds"] << ','
-                << pilots[version]["p50_us"] << ',' << pilots[version]["p95_us"] << ',' << pilots[version]["p99_us"]
-                << ',' << pilots[version]["samples"] << ',' << pilots[version]["extra_calls"] << ',' << pilots[version]["attempted_calls"] << ',' << effectiveAffinity << ',' << log << '\n';
-            raw.flush();
-        }
-        double fast = only ? pilots[1]["seconds"] : (std::min)(pilots[0]["seconds"], pilots[1]["seconds"]);
-        double slow = only ? fast : (std::max)(pilots[0]["seconds"], pilots[1]["seconds"]);
-        if (!only && versionCount == 3)
-        {
-            fast = (std::min)(fast, pilots[2]["seconds"]);
-            slow = (std::max)(slow, pilots[2]["seconds"]);
-        }
-        int32_t repeats = static_cast<int32_t>((std::min)(64.0, 0.12 / fast + 1));
-        if (spec.m_operation == LockFreeHashMapPerfClear)
-        {
-            // 每批已包含一千零二十四张满表，限制批次数，避免清空短耗时反推出过量建表。
-            repeats = (std::min)(repeats, 4);
-        }
-        repeats = (std::max)(1, (std::min)(repeats, static_cast<int32_t>((std::min)(64.0, 0.5 / slow))));
-        if (fixedRepeats != 0)
-        {
-            // 一次慢校准不能迫使后续复核一直使用短样本；两版接受完全相同的明确批次预算
-            repeats = spec.m_operation == LockFreeHashMapPerfClear ? (std::min)(fixedRepeats, 4) : fixedRepeats;
-        }
-        std::map<std::string, std::vector<double>> values[3];
-        size_t samples = 0;
-        for (int32_t round = 0; round < rounds; ++round)
-        {
-            for (int32_t order = 0; order < (only ? 1 : versionCount); ++order)
-            {
-                int32_t version = only ? 1 : (round + order + spec.m_id) % versionCount;
-                std::string log = prefix + "-id" + std::to_string(spec.m_id) + '-' + versions[version] + "-r" + std::to_string(round + 1) + ".log";
-                std::map<std::string, double> measured = measure(only ? programs.back() : programs[version], spec, repeats, false, log, effectiveAffinity);
-                for (std::map<std::string, double>::const_iterator item = measured.begin(); item != measured.end(); ++item)
-                {
-                    values[version][item->first].push_back(item->second);
-                }
-                samples = static_cast<size_t>(measured["samples"]);
-                raw << std::setprecision(12) << spec.m_id << ',' << spec.m_name << ",measured," << versions[version] << ','
-                    << round + 1 << ',' << repeats << ',' << measured["ops"] << ',' << measured["seconds"] << ','
-                    << measured["p50_us"] << ',' << measured["p95_us"] << ',' << measured["p99_us"] << ',' << samples
-                    << ',' << measured["extra_calls"] << ',' << measured["attempted_calls"] << ',' << effectiveAffinity << ',' << log << '\n';
-                raw.flush();
-            }
-        }
-        double rate[2] = { only ? 0 : median(values[0]["ops"]), median(values[1]["ops"]) };
-        summary << std::setprecision(12) << spec.m_id << ',' << spec.m_name << ',';
-        if (!only)
-        {
-            summary << rate[0];
-        }
-        summary << ',' << rate[1] << ',';
-        if (!only)
-        {
-            summary << rate[1] / rate[0];
-        }
-        const char* percentiles[] = { "p50_us", "p95_us", "p99_us" };
-        for (size_t i = 0; i < 3; ++i)
-        {
-            summary << ',';
-            if (!only)
-            {
-                summary << median(values[0][percentiles[i]]);
-            }
-            summary << ',' << median(values[1][percentiles[i]]);
-        }
-        for (int32_t version = 0; version < 2; ++version)
-        {
-            summary << ',';
-            if (!only || version == 1)
-            {
-                summary << *std::min_element(values[version]["ops"].begin(), values[version]["ops"].end());
-            }
-            summary << ',';
-            if (!only || version == 1)
-            {
-                summary << *std::max_element(values[version]["ops"].begin(), values[version]["ops"].end());
-            }
-        }
-        summary << ',';
-        if (!only)
-        {
-            summary << median(values[0]["seconds"]);
-        }
-        summary << ',' << median(values[1]["seconds"]) << ',' << samples << ',' << rounds << ',' << repeats << ',' << only << ',';
-        if (!only)
-        {
-            double total = 0;
-            for (size_t i = 0; i < values[0]["extra_calls"].size(); ++i)
-            {
-                total += values[0]["extra_calls"][i];
-            }
-            summary << total;
-        }
-        double total = 0;
-        for (size_t i = 0; i < values[1]["extra_calls"].size(); ++i)
-        {
-            total += values[1]["extra_calls"][i];
-        }
-        summary << ',' << total << ',';
-        if (!only)
-        {
-            summary << (rate[1] / rate[0] - 1) * 100;
-        }
-        double standard = 0;
-        if (versionCount == 3)
-        {
-            if (only)
-            {
-                // 原版和 std 都没有版本快照接口，不用普通 get 冒充同等语义
-                summary << ",,,,,,,,,,";
-            }
-            else
-            {
-                standard = median(values[2]["ops"]);
-                double extra = 0;
-                for (size_t i = 0; i < values[2]["extra_calls"].size(); ++i)
-                {
-                    extra += values[2]["extra_calls"][i];
-                }
-                summary << ',' << standard << ',' << rate[1] / standard << ',' << (rate[1] / standard - 1) * 100;
-                for (size_t i = 0; i < 3; ++i)
-                {
-                    summary << ',' << median(values[2][percentiles[i]]);
-                }
-                summary << ',' << *std::min_element(values[2]["ops"].begin(), values[2]["ops"].end())
-                    << ',' << *std::max_element(values[2]["ops"].begin(), values[2]["ops"].end())
-                    << ',' << median(values[2]["seconds"]) << ',' << extra;
-            }
-        }
-        summary << '\n';
-        summary.flush();
-        if (!raw || !summary || !catalogue)
-        {
-            throw std::runtime_error("cannot write performance reports: " + prefix + " id=" + std::to_string(spec.m_id));
-        }
-        std::cout << "PERF_CASE " << spec.m_id << '/' << specs.size() << ' ' << spec.m_name
-            << " original=" << rate[0] << " current=" << rate[1] << " ratio=" << (only ? 0 : rate[1] / rate[0])
-            << " std=" << standard << " current_over_std=" << (standard == 0 ? 0 : rate[1] / standard) << std::endl;
-    }
-    if (first == 1 && last == 0)
-    {
-        std::vector<std::string> memoryPrograms(programs.begin() + versionCount, programs.begin() + versionCount * 2);
-        if (!compareMemory(memoryPrograms, prefix, affinityMask))
+        LockFreeHashMapPerfSpec& spec = specs[index];
+        if (!LockFreeHashMapPerfModels::scaleIterations(spec, iterationMultiplier))
         {
             return false;
         }
+        const bool conditional = LockFreeHashMapPerfModels::currentOnly(spec);
+        catalogue << spec.m_id << ',' << spec.m_name << ',' << spec.m_family << ',' << spec.m_keys << ',' << spec.m_buckets
+            << ',' << spec.m_threads << ',' << spec.m_readPercent << ',' << spec.m_iterations << ',' << spec.m_operation
+            << ',' << spec.m_collision << ',' << spec.m_sharedKeys << ',' << spec.m_history << ','
+            << LockFreeHashMapPerfModels::callsPerIteration(spec) << ',' << conditional << ',' << spec.m_iterationMultiplier << '\n';
+        if (standard && conditional)
+        {
+            continue;
+        }
+        const unsigned mask = caseAffinity(spec.m_threads, affinityMask);
+        int32_t repeats = 1;
+        std::vector<double> rates;
+        for (int32_t round = 0; round <= rounds; ++round)
+        {
+            const std::string log = prefix + "-id" + std::to_string(spec.m_id) + "-r" + std::to_string(round) + ".log";
+            auto result = measure(program, spec, repeats, false, standard, log, mask);
+            if (result["conditional_interfaces"] != (standard ? 0 : 1))
+            {
+                return false;
+            }
+            raw << std::setprecision(12) << spec.m_id << ',' << spec.m_name << ',' << round << ',' << repeats
+                << ',' << result["ops"] << ',' << result["seconds"] << ',' << result["p50_us"] << ',' << result["p95_us"]
+                << ',' << result["p99_us"] << ',' << result["samples"] << ',' << result["extra_calls"] << ','
+                << result["attempted_calls"] << ',' << mask << ',' << log << '\n';
+            if (round != 0)
+            {
+                rates.push_back(result["ops"]);
+                continue;
+            }
+            repeats = fixedRepeats != 0 ? fixedRepeats : static_cast<int32_t>((std::min)(64.0, 0.12 / result["seconds"] + 1));
+            if (spec.m_operation == LockFreeHashMapPerfClear)
+            {
+                repeats = (std::min)(repeats, 4);
+            }
+        }
+        summary << std::setprecision(12) << spec.m_id << ',' << spec.m_name << ',' << median(rates) << ','
+            << *std::min_element(rates.begin(), rates.end()) << ',' << *std::max_element(rates.begin(), rates.end())
+            << ',' << rounds << ',' << repeats << '\n';
     }
     raw.close();
     summary.close();
     catalogue.close();
-    if (!raw || !summary || !catalogue)
-    {
-        throw std::runtime_error("cannot close performance reports: " + prefix);
-    }
-    return true;
+    return raw && summary && catalogue;
 }
 
-bool LockFreeHashMapPerfRunner::compareMemory(const std::vector<std::string>& programs, const std::string& prefix, unsigned affinityMask)
+bool LockFreeHashMapPerfRunner::memoryMatrix(const std::string& program, const std::string& prefix, unsigned affinityMask)
 {
-    if (programs.size() != 2 && programs.size() != 3)
-    {
-        return false;
-    }
-    const char* versions[] = { "original", "current", "std_mutex" };
     std::ofstream memory;
     if (!LockFreeHashMapRunner::openReport(prefix + "-memory.csv", memory))
     {
         throw std::runtime_error("cannot open memory report: " + prefix);
     }
-    memory << "id,name,version,retained,peak,allocations,work_allocations,after_clear,after_free,net,log\n";
+    memory << "id,name,retained,peak,allocations,work_allocations,after_clear,after_free,net,log\n";
     std::vector<LockFreeHashMapPerfSpec> specs = LockFreeHashMapPerfModels::memoryCatalogue();
     for (size_t i = 0; i < specs.size(); ++i)
     {
-        for (size_t version = 0; version < programs.size(); ++version)
+        std::string log = prefix + "-memory-id" + std::to_string(specs[i].m_id) + ".log";
+        std::map<std::string, double> result = measure(program, specs[i], 1, true, false, log, affinityMask);
+        memory << std::setprecision(12) << specs[i].m_id << ',' << specs[i].m_name << ',' << result["retained"] << ',' << result["peak"] << ',' << result["allocations"] << ',' << result["work_allocations"]
+            << ',' << result["after_clear"] << ',' << result["after_free"] << ',' << result["net"] << ',' << log << '\n';
+        memory.flush();
+        if (!memory)
         {
-            std::string log = prefix + "-memory-id" + std::to_string(specs[i].m_id) + '-' + versions[version] + ".log";
-            std::map<std::string, double> result = measure(programs[version], specs[i], 1, true, log, affinityMask);
-            memory << std::setprecision(12) << specs[i].m_id << ',' << specs[i].m_name << ',' << versions[version]
-                << ',' << result["retained"] << ',' << result["peak"] << ',' << result["allocations"] << ',' << result["work_allocations"]
-                << ',' << result["after_clear"] << ',' << result["after_free"] << ',' << result["net"] << ',' << log << '\n';
-            memory.flush();
-            if (!memory)
-            {
-                throw std::runtime_error("cannot write memory report: " + prefix + " id=" + std::to_string(specs[i].m_id));
-            }
+            throw std::runtime_error("cannot write memory report: " + prefix + " id=" + std::to_string(specs[i].m_id));
         }
     }
     memory.close();
@@ -471,18 +345,34 @@ bool LockFreeHashMapPerfRunner::selftest()
     finite.m_operation = LockFreeHashMapPerfErase;
     std::string longValid = "PERF id=1 name=" + specs[0].m_name + " repeats=1 calls=268435456 seconds=1 ops=268435456 p50_us=1 p95_us=2 p99_us=3 samples=" +
         std::to_string((size_t(268435456) - 1) / 127 + 1) + " batch_min_s=1 batch_max_s=1 extra_calls=0 attempted_calls=268435456 iteration_multiplier=256 output_string_capacity=512 state_tail_padding=64 collection_validation=2 conditional_interfaces=1 errors=0";
-    std::string missingCapability(valid), wrongCapability(valid), legacyCapability(valid);
+    std::string missingCapability(valid), wrongCapability(valid), standardCapability(valid);
     missingCapability.erase(missingCapability.find(" conditional_interfaces=1"), std::strlen(" conditional_interfaces=1"));
     wrongCapability.replace(wrongCapability.find("conditional_interfaces=1"), std::strlen("conditional_interfaces=1"), "conditional_interfaces=2");
-    legacyCapability.replace(legacyCapability.find("conditional_interfaces=1"), std::strlen("conditional_interfaces=1"), "conditional_interfaces=0");
+    standardCapability.replace(standardCapability.find("conditional_interfaces=1"), std::strlen("conditional_interfaces=1"), "conditional_interfaces=0");
     if (parse(missingCapability, specs[0], 1, false, result) || parse(wrongCapability, specs[0], 1, false, result) ||
-        !parse(legacyCapability, specs[0], 1, false, result))
+        !parse(standardCapability, specs[0], 1, false, result))
+    {
+        return false;
+    }
+    const std::string current = "BACKEND LockFreeHashMap\n";
+    const std::string locked = "BACKEND std_unordered_map_mutex max_load_factor=1 automatic_rehash=1\n";
+    // 使用手写的负载输出，只验证归属和判定，不启动实际的计时进程。
+    const auto accepted = [&](const std::string& log, bool standard) -> bool
+    {
+        std::istringstream input(log);
+        return verifyObservation(input, specs[0], 1, false, standard, result);
+    };
+    if (!accepted(current + valid, false) || !accepted(locked + standardCapability, true) ||
+        accepted(locked + standardCapability, false) || accepted(current + valid, true) ||
+        accepted(current + standardCapability, false) || accepted(locked + valid, true) ||
+        accepted(valid, false) || accepted(current + current + valid, false) ||
+        accepted(valid + "\n" + current, false) || accepted(current + valid + "\nMEM id=1", false))
     {
         return false;
     }
     LockFreeHashMapPerfSpec conditionalSpec = specs[0];
     conditionalSpec.m_operation = LockFreeHashMapPerfFind;
-    if (!parse(valid, conditionalSpec, 1, false, result) || parse(legacyCapability, conditionalSpec, 1, false, result))
+    if (!parse(valid, conditionalSpec, 1, false, result) || parse(standardCapability, conditionalSpec, 1, false, result))
     {
         return false;
     }
@@ -542,9 +432,7 @@ bool LockFreeHashMapPerfRunner::selftest()
 
 /** 控制器入口，全部进程操作、校准和统计由 C++ 完成
 @param [in] argc 参数数量
-@param [in] argv selftest；两版参数保持原协议；three 为三方吞吐与内存；memory 为两版或三版内存程序、前缀、掩码
-@note 比较命令可在 first last 后追加 1 至 64，固定每轮批次数；省略时保持原校准方式
-@note 固定批次数后可再追加 1 至 256 的 get/set 连续循环倍率，原有短批次结果另行保留
+@param [in] argv selftest、memory、matrix 或 std 及相应程序路径和参数
 @return 0 完成且通过，1 数据失败，2 参数错误，3 设施异常
 */
 int main(int argc, char** argv)
@@ -557,50 +445,31 @@ int main(int argc, char** argv)
             std::cout << "PERF_RUNNER_SELFTEST passed=" << passed << " cases=" << LockFreeHashMapPerfModels::catalogue().size() << std::endl;
             return passed ? 0 : 1;
         }
-        if ((argc == 6 || argc == 7) && std::string(argv[1]) == "memory")
+        if (argc == 5 && std::string(argv[1]) == "memory")
         {
             int mask = 0;
-            if (std::string(argv[argc - 1]) != "0" &&
-                !LockFreeHashMapRunner::number(argv[argc - 1], (std::numeric_limits<int>::max)(), mask))
+            if (std::string(argv[4]) != "0" && !LockFreeHashMapRunner::number(argv[4], (std::numeric_limits<int>::max)(), mask))
             {
                 return 2;
             }
-            std::vector<std::string> programs;
-            for (int i = 2; i < argc - 2; ++i)
-            {
-                programs.push_back(argv[i]);
-            }
-            return LockFreeHashMapPerfRunner::compareMemory(programs, argv[argc - 2], static_cast<unsigned>(mask)) ? 0 : 1;
+            return LockFreeHashMapPerfRunner::memoryMatrix(argv[2], argv[3], static_cast<unsigned>(mask)) ? 0 : 1;
         }
-        bool revisions = argc > 1 && std::string(argv[1]) == "revision";
-        if (revisions)
-        {
-            // 保持两版原参数布局，只剥离命令前缀；两份性能程序都须启用新增接口
-            --argc;
-            ++argv;
-        }
-        bool three = argc > 1 && std::string(argv[1]) == "three";
-        if (three ? (argc != 12 && argc != 14 && argc != 15 && argc != 16) : (argc != 9 && argc != 11 && argc != 12 && argc != 13))
+        if ((argc != 6 && argc != 8 && argc != 9 && argc != 10) ||
+            (std::string(argv[1]) != "matrix" && std::string(argv[1]) != "std"))
         {
             return 2;
         }
-        int rounds = 0, mask = 0, first = 1, last = 0, fixedRepeats = 0, iterationMultiplier = 1;
-        int offset = three ? 3 : 0;
-        if (!LockFreeHashMapRunner::number(argv[7 + offset], 9, rounds) ||
-            (std::string(argv[8 + offset]) != "0" && !LockFreeHashMapRunner::number(argv[8 + offset], (std::numeric_limits<int>::max)(), mask)) ||
-            (argc >= 11 + offset && (!LockFreeHashMapRunner::number(argv[9 + offset], 999, first) || !LockFreeHashMapRunner::number(argv[10 + offset], 999, last))) ||
-            (argc >= 12 + offset && !LockFreeHashMapRunner::number(argv[11 + offset], 64, fixedRepeats)) ||
-            (argc == 13 + offset && !LockFreeHashMapRunner::number(argv[12 + offset], 256, iterationMultiplier)))
+        int rounds = 0, mask = 0, first = 1, last = 0, repeats = 0, multiplier = 1;
+        if (!LockFreeHashMapRunner::number(argv[4], 9, rounds) ||
+            (std::string(argv[5]) != "0" && !LockFreeHashMapRunner::number(argv[5], (std::numeric_limits<int>::max)(), mask)) ||
+            (argc >= 8 && (!LockFreeHashMapRunner::number(argv[6], 999, first) || !LockFreeHashMapRunner::number(argv[7], 999, last))) ||
+            (argc >= 9 && !LockFreeHashMapRunner::number(argv[8], 64, repeats)) ||
+            (argc == 10 && !LockFreeHashMapRunner::number(argv[9], 256, multiplier)))
         {
             return 2;
         }
-        std::vector<std::string> programs;
-        for (int i = three ? 2 : 1; i <= (three ? 8 : 5); ++i)
-        {
-            programs.push_back(argv[i]);
-        }
-        return LockFreeHashMapPerfRunner::compare(programs, argv[6 + offset], rounds, static_cast<unsigned>(mask), first, last, revisions, fixedRepeats,
-            static_cast<size_t>(iterationMultiplier)) ? 0 : 1;
+        return LockFreeHashMapPerfRunner::matrix(argv[2], argv[3], rounds, static_cast<unsigned>(mask), first, last,
+            std::string(argv[1]) == "std", repeats, static_cast<size_t>(multiplier)) ? 0 : 1;
     }
     catch (const std::exception& error)
     {

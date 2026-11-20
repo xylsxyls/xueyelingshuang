@@ -1,4 +1,8 @@
 ﻿#include "LockFreeHashMapBenchmark.h"
+#if !defined(_MSC_VER)
+// MSVC 动态 CRT 的非抛出重载会调用本模块的计账分配器。
+#include "LockFreeHashMapTestNothrowAllocation.inl"
+#endif
 #include <LockFreeHashMap.h>
 #include <algorithm>
 #include <chrono>

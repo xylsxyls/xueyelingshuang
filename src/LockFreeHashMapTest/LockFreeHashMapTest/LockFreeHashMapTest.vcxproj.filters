@@ -31,6 +31,9 @@
     <ClInclude Include="LockFreeHashMapTestThread.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="LockFreeHashMapTestNothrowAllocation.inl">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="LockFreeHashMapTestThread.inl">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -76,6 +79,9 @@
     <ClCompile Include="LockFreeHashMapOptimizations.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="LockFreeHashMapRunnerFiles.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="LockFreeHashMapRunner.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -96,6 +102,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="wasm_compiler.js"><Filter>资源文件</Filter></None>
     <None Include="run_wasm.js"><Filter>资源文件</Filter></None>
     <None Include="run_performance_wasm.js"><Filter>资源文件</Filter></None>
     <None Include="CMakeLists.txt"><Filter>资源文件</Filter></None>

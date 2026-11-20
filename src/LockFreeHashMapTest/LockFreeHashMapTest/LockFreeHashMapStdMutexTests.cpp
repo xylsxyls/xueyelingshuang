@@ -224,7 +224,7 @@ int LockFreeHashMapStdMutexTests::run()
         LockFreeHashMapStdMutexValue::s_throw = false;
         ++s_failed;
     }
-    std::cout << "MODULE_RESULT checks=" << s_checks << " failed=" << s_failed << std::endl;
+    std::cout << "MODULE_RESULT id=std-checks checks=" << s_checks << " failed=" << s_failed << std::endl;
     return s_failed == 0 ? 0 : 1;
 }
 

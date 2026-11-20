@@ -76,7 +76,7 @@ bool LockFreeHashMapPerformance::measure(const LockFreeHashMapPerfSpec& spec, in
         }
     }
     uint64_t calls = uint64_t(spec.m_iterations) * repeats * LockFreeHashMapPerfModels::callsPerIteration(spec);
-#if defined(LOCKFREEHASHMAP_PERF_CURRENT)
+#if !defined(LOCKFREEHASHMAP_PERF_STD_MUTEX)
     const int32_t conditionalInterfaces = 1;
 #else
     const int32_t conditionalInterfaces = 0;
@@ -242,7 +242,7 @@ bool LockFreeHashMapPerformance::batch(const LockFreeHashMapPerfSpec& spec, cons
                 else
                 {
                     unsigned char next = static_cast<unsigned char>(states[thread][local] ^ 1);
-#if defined(LOCKFREEHASHMAP_PERF_DIAGNOSTIC) && defined(LOCKFREEHASHMAP_PERF_CURRENT)
+#if defined(LOCKFREEHASHMAP_PERF_DIAGNOSTIC) && !defined(LOCKFREEHASHMAP_PERF_STD_MUTEX)
                     // 诊断编译才展开失败状态，正式比较仍使用两版共有的 bool 接口
                     LockFreeHashMapResult written = map.trySet(keys[index], candidates[index * 2 + next]);
                     ok = written.m_committed;
@@ -326,7 +326,7 @@ bool LockFreeHashMapPerformance::batch(const LockFreeHashMapPerfSpec& spec, cons
                 }
                 break;
             }
-#if defined(LOCKFREEHASHMAP_PERF_CURRENT)
+#if !defined(LOCKFREEHASHMAP_PERF_STD_MUTEX)
             case LockFreeHashMapPerfFind:
             case LockFreeHashMapPerfConditionalExists:
             case LockFreeHashMapPerfCompare:

@@ -37,6 +37,27 @@ public:
     bool operator()(const std::string& left, const std::string& right) const;
 };
 
+/** 通过重载检查遍历实际交付的键和值是否只读，两个分支都只记录调用次数
+*/
+struct LockFreeHashMapTestVisitAccess
+{
+public:
+    // 仅在回调期间借用的两个计数器，依次记录只读和可写重载
+    int* m_calls;
+public:
+    /** 记录只读访问
+    @param [in] key 遍历中的键
+    @param [in] value 同一节点的值
+    */
+    void operator()(const int& key, const int& value) const;
+
+    /** 记录错误暴露的可写访问
+    @param [in] key 遍历中的键
+    @param [in] value 同一节点的值
+    */
+    void operator()(int& key, int& value) const;
+};
+
 /** 无需分配内存的用例失败信号，由最外层入口捕获并正常返回
 */
 enum LockFreeHashMapTestFailure
@@ -333,24 +354,26 @@ public:
 
 };
 
+#if defined(_WIN32)
 /** 原生进程资源快照，与逻辑池计账分开报告，不拥有系统句柄
 */
 struct LockFreeHashMapTestResources
 {
 public:
-    // Windows 本进程句柄数量，查询不可用时为 0
+    // Windows 本进程句柄数量
     unsigned long m_handles;
-    // Windows 本进程线程数量，查询不可用时为 0
+    // Windows 本进程线程数量
     unsigned long m_threads;
     // Windows 峰值工作集字节数，不等于 map 所占堆内存
     size_t m_peakWorkingSet;
     // 本进程内核及用户 CPU 时间总秒数
     double m_cpuSeconds;
 public:
-    /** 查询本进程并立即释放临时观察句柄，非 Windows 未提供字段保持 0
+    /** 完整查询本进程并释放快照句柄，资源计数采集失败时向测试入口抛出异常
     */
     LockFreeHashMapTestResources();
 };
+#endif
 
 /** 一次外部观察的操作，用于穷举满足真实时间先后关系的顺序历史
 */
@@ -383,8 +406,8 @@ public:
     static std::atomic<int> s_failures;
     // 累计独立检查次数
     static std::atomic<int> s_checks;
-    // 入口启动后保持不变的申请跟踪开关
-    static bool s_tracking;
+    // 入口启用的进程级计账开关；专用宿主其他线程可能同时申请内存
+    static std::atomic<bool> s_tracking;
     // 申请倒计数，0 使下一次失败，-1 关闭注入
     LOCKFREEHASHMAP_TEST_ALIGN_64 static std::atomic<long long> s_failAllocation;
     // 累计被跟踪的成功申请次数
@@ -432,6 +455,10 @@ public:
     /** 编号 1，检查槽位预算、增长阈值、策略、保护及多批次缩容
     */
     static void pool();
+
+    /** 编号 1 的建表配置子场景，逐项检查默认值、设置函数、实例隔离和非法参数
+    */
+    static void configuration();
 
     /** 编号 2，固定种子下将新旧接口与独立 std::map 模型比较，包含全碰撞
     */

@@ -1,4 +1,8 @@
 ﻿#include "LockFreeHashMapTests.h"
+#if !defined(_MSC_VER)
+// MSVC 动态 CRT 的非抛出重载会调用本模块的计账分配器。
+#include "LockFreeHashMapTestNothrowAllocation.inl"
+#endif
 #include "LockFreeHashMapTestEntry.h"
 #include "LockFreeHashMapMigration.h"
 #include "LockFreeHashMapRetryTests.h"
@@ -12,48 +16,32 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <Psapi.h>
-#include <TlHelp32.h>
 #pragma comment(lib, "Psapi.lib")
 #endif
 
+#if defined(_WIN32)
 LockFreeHashMapTestResources::LockFreeHashMapTestResources() :
 m_handles(0), m_threads(0), m_peakWorkingSet(0), m_cpuSeconds(0)
 {
-#if defined(_WIN32)
-    GetProcessHandleCount(GetCurrentProcess(), &m_handles);
     PROCESS_MEMORY_COUNTERS memory = {};
     memory.cb = sizeof(memory);
-    if (GetProcessMemoryInfo(GetCurrentProcess(), &memory, sizeof(memory)))
-    {
-        m_peakWorkingSet = memory.PeakWorkingSetSize;
-    }
     FILETIME creation = {}, exit = {}, kernel = {}, user = {};
-    if (GetProcessTimes(GetCurrentProcess(), &creation, &exit, &kernel, &user))
+    HANDLE process = GetCurrentProcess();
+    if (!GetProcessHandleCount(process, &m_handles) || !GetProcessMemoryInfo(process, &memory, sizeof(memory)) ||
+        !GetProcessTimes(process, &creation, &exit, &kernel, &user) || !LockFreeHashMapTestThread::processThreadCount(m_threads))
     {
-        uint64_t ticks = (uint64_t(kernel.dwHighDateTime) << 32) + kernel.dwLowDateTime +
-            (uint64_t(user.dwHighDateTime) << 32) + user.dwLowDateTime;
-        m_cpuSeconds = double(ticks) / 10000000;
+        throw std::runtime_error("cannot capture process resources");
     }
-    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-    if (snapshot != INVALID_HANDLE_VALUE)
-    {
-        THREADENTRY32 entry = {};
-        entry.dwSize = sizeof(entry);
-        if (Thread32First(snapshot, &entry))
-        {
-            do
-            {
-                m_threads += entry.th32OwnerProcessID == GetCurrentProcessId() ? 1 : 0;
-            } while (Thread32Next(snapshot, &entry));
-        }
-        CloseHandle(snapshot);
-    }
-#endif
+    m_peakWorkingSet = memory.PeakWorkingSetSize;
+    const uint64_t kernelTicks = (uint64_t(kernel.dwHighDateTime) << 32) | kernel.dwLowDateTime;
+    const uint64_t userTicks = (uint64_t(user.dwHighDateTime) << 32) | user.dwLowDateTime;
+    m_cpuSeconds = (double(kernelTicks) + double(userTicks)) / 10000000;
 }
+#endif
 
 std::atomic<int> LockFreeHashMapTests::s_failures(0);
 std::atomic<int> LockFreeHashMapTests::s_checks(0);
-bool LockFreeHashMapTests::s_tracking = false;
+std::atomic<bool> LockFreeHashMapTests::s_tracking = ATOMIC_VAR_INIT(false);
 LOCKFREEHASHMAP_TEST_ALIGN_64 std::atomic<long long> LockFreeHashMapTests::s_failAllocation(-1);
 LOCKFREEHASHMAP_TEST_ALIGN_64 std::atomic<long long> LockFreeHashMapTests::s_allocations(0);
 LOCKFREEHASHMAP_TEST_ALIGN_64 std::atomic<long long> LockFreeHashMapTests::s_liveAllocations(0);
@@ -77,12 +65,13 @@ std::atomic<bool> LockFreeHashMapTestEqual::s_fail(false);
 */
 void* operator new(size_t size)
 {
-    long long countdown = LockFreeHashMapTests::s_tracking ? LockFreeHashMapTests::s_failAllocation.load() : -1;
+    const bool tracking = LockFreeHashMapTests::s_tracking.load(std::memory_order_relaxed);
+    long long countdown = tracking ? LockFreeHashMapTests::s_failAllocation.load() : -1;
     if (countdown >= 0 && LockFreeHashMapTests::s_failAllocation.fetch_sub(1) == 0)
     {
         throw std::bad_alloc();
     }
-    if (LockFreeHashMapTests::s_tracking && LockFreeHashMapTests::s_pauseAllocation.load() >= 0 &&
+    if (tracking && LockFreeHashMapTests::s_pauseAllocation.load() >= 0 &&
         LockFreeHashMapTests::s_pauseAllocation.fetch_sub(1) == 0)
     {
         LockFreeHashMapTests::s_allocationEntered.store(true);
@@ -100,7 +89,7 @@ void* operator new(size_t size)
     {
         throw std::bad_alloc();
     }
-    result[0] = LockFreeHashMapTests::s_tracking ? 1 : 0;
+    result[0] = tracking ? 1 : 0;
     if (result[0] != 0)
     {
         LockFreeHashMapTests::s_allocations.fetch_add(1);
@@ -312,8 +301,152 @@ void LockFreeHashMapTests::warmRuntime()
     check(false, "runtime-only allocation baseline stabilizes before container measurements");
 }
 
+void LockFreeHashMapTests::configuration()
+{
+    typedef LockFreeHashMap<int, int> Map;
+    LockFreeHashMapConfig config;
+    LockFreeHashMapPoolStats stats = {};
+    {
+        Map defaults;
+        check(defaults.bucketCount() == 1024 && defaults.poolStats(stats).m_status == LockFreeHashMapOk &&
+            stats.capacity == 64 && stats.protectionRecords == 128 && stats.lookupCacheEntries == 4096,
+            "default construction settings");
+    }
+    // 嵌套 find 需要另一条保护记录。除这一个设置外使用完全相同的默认参数。
+    for (size_t records = 1; records <= 2; ++records)
+    {
+        LockFreeHashMapConfig nestedConfig;
+        nestedConfig.setProtectionRecordCount(records);
+        Map nested(nestedConfig);
+        check(nested.set(7, 19), "prepare nested protection test");
+        Map::Snapshot snapshot;
+        LockFreeHashMapStatus status = LockFreeHashMapInvalidArgument;
+        LockFreeHashMapResult visit = nested.forEachResult([&](const int& key, const int&)
+        {
+            status = nested.find(key, snapshot).m_status;
+        });
+        check(visit.m_status == LockFreeHashMapOk && visit.m_count == 1 &&
+            (records == 1 ? status == LockFreeHashMapProtectionUnavailable && !snapshot.m_value :
+            status == LockFreeHashMapOk && snapshot.m_value && *snapshot.m_value == 19),
+            "configured record count controls actual nested admission");
+        check(nested.find(7, snapshot).m_status == LockFreeHashMapOk && snapshot.m_value && *snapshot.m_value == 19,
+            "nested traversal returns all borrowed records");
+    }
+    // 单条保护记录由遍历占用，此时 get 成功只能来自已发布的整数缓存副本。
+    const size_t cacheSizes[] = { 0, 2, 4, 4 };
+    for (size_t scenario = 0; scenario < 4; ++scenario)
+    {
+        LockFreeHashMapConfig cacheConfig;
+        cacheConfig.setProtectionRecordCount(1);
+        cacheConfig.setLookupCacheCapacity(cacheSizes[scenario]);
+        cacheConfig.setInlineScalarValues(scenario != 3);
+        Map cached(cacheConfig);
+        check(cached.set(1, 11) && cached.set(3, 33), "prepare public cache collision test");
+        LockFreeHashMapResult visit = cached.forEachResult([&](const int& key, const int&)
+        {
+            int output = -1;
+            // 两格时键 3 占用键 1 的格，四格时独立；关闭任一开关都走受保护读。
+            const bool hit = scenario == 2 || (scenario == 1 && key == 3);
+            const bool found = cached.get(key, output);
+            check(found == hit && output == (hit ? key * 11 : -1),
+                "cache size and enable flag control reads during nested admission");
+        });
+        int first = -1, second = -1;
+        check(visit.m_status == LockFreeHashMapOk && visit.m_count == 2 &&
+            cached.get(1, first) && cached.get(3, second) && first == 11 && second == 33,
+            "cache collisions and fallback preserve both stored values");
+    }
+    size_t observed = 0, shrinkCalls = 0;
+    config.setBucketCount(7);
+    config.setMaximumCapacity(3);
+    config.setInitialCapacity(1);
+    config.setGrowFreeThreshold(1);
+    config.setDirectoryCapacity(2);
+    config.setProtectionRecordCount(5);
+    config.setInlineScalarValues(true);
+    config.setLookupCacheCapacity(8);
+    // 每次请求两槽；独立通知和公开容量统计共同验证实际增长。
+    config.setGrowPolicy([](const LockFreeHashMapGrowContext&) { return size_t(2); });
+    config.setGrowthObserver([&observed](size_t slots, uint64_t) { observed += slots; });
+    config.setShrinkPolicy([&shrinkCalls](const LockFreeHashMapShrinkContext&)
+    {
+        ++shrinkCalls;
+        return LockFreeHashMapShrinkDecision(2, 1);
+    });
+    Map map(config);
+    config.setMaximumCapacity(-1);
+    config.setInlineScalarValues(false);
+    check(map.bucketCount() == 8 && map.poolStats(stats).m_status == LockFreeHashMapOk &&
+        stats.capacity == 1 && stats.protectionRecords == 5 && stats.lookupCacheEntries == 8,
+        "map copies preconstruction bucket, record and cache settings");
+    check(map.set(1, 1) && observed == 2 && map.poolStats(stats).m_status == LockFreeHashMapOk &&
+        stats.capacity == 3 && stats.successfulGrowCount == 1, "threshold triggers configured growth and observer");
+    check(map.set(2, 2) && map.set(3, 3) && map.tryInsert(4, 4).m_status == LockFreeHashMapCapacityLimit &&
+        !map.contains(4), "copied maximum limits published entries");
+    check(map.erase(2) && map.erase(3), "only the grown block becomes idle");
+    for (int i = 0; i < 8; ++i)
+    {
+        pause(2);
+        check(map.maintain(64).m_status == LockFreeHashMapOk, "maintenance invokes installed shrink policy");
+    }
+    check(shrinkCalls != 0 && map.poolStats(stats).m_status == LockFreeHashMapOk && stats.capacity == 1,
+        "configured shrink releases growth and preserves the floor");
+    config.setGrowFreeThreshold(0);
+    config.setDirectoryCapacity(1);
+    Map limited(config);
+    check(limited.set(1, 1) && limited.tryInsert(2, 2).m_status == LockFreeHashMapDirectoryFull &&
+        limited.poolStats(stats).m_status == LockFreeHashMapOk && stats.lookupCacheEntries == 0 &&
+        stats.reservedCapacity == 0, "unlimited slot budget still respects directory, disabled cache and reservation rollback");
+    config.setDirectoryCapacity(4);
+    Map expandable(config);
+    for (int i = 0; i < 5; ++i)
+    {
+        check(expandable.tryInsert(i, i).m_committed, "minus one permits growth beyond previous maximum");
+    }
+    // 同一组设置同时覆盖零容量、撤销回调及缓存的独立开关。
+    config.setInitialCapacity(0);
+    config.setMaximumCapacity(0);
+    config.setGrowPolicy(nullptr);
+    config.setShrinkPolicy(nullptr);
+    config.setGrowthObserver(nullptr);
+    config.setInlineScalarValues(true);
+    config.setLookupCacheCapacity(0);
+    Map zero(config);
+    check(zero.status() == LockFreeHashMapOk && zero.poolStats(stats).m_status == LockFreeHashMapOk &&
+        stats.capacity == 0 && stats.lookupCacheEntries == 0 && zero.tryInsert(1, 1).m_status == LockFreeHashMapCapacityLimit,
+        "zero maximum and disabled cache are independent settings");
+    size_t oldObserved = observed, oldShrinkCalls = shrinkCalls;
+    config.setMaximumCapacity(-1);
+    Map lazy(config);
+    check(lazy.set(1, 1) && lazy.poolStats(stats).m_status == LockFreeHashMapOk && stats.capacity == 64 &&
+        lazy.maintain(1).m_status == LockFreeHashMapOk && observed == oldObserved && shrinkCalls == oldShrinkCalls,
+        "cleared callbacks restore default growth and disable maintenance notifications");
+    config.setInlineScalarValues(false);
+    config.setProtectionRecordCount((std::numeric_limits<size_t>::max)());
+    Map oversized(config);
+    check(oversized.status() == LockFreeHashMapInvalidArgument, "unrepresentable protection storage is an invalid configuration");
+    config.setProtectionRecordCount(5);
+    config.setBucketCount(0);
+    config.setMaximumCapacity(-2);
+    Map invalidLimit(config);
+    check(invalidLimit.status() == LockFreeHashMapInvalidArgument &&
+        zero.configurePool(config).m_status == LockFreeHashMapInvalidArgument &&
+        zero.tryInsert(1, 1).m_status == LockFreeHashMapCapacityLimit,
+        "invalid negative budget is rejected without replacing the installed zero budget");
+    config.setMaximumCapacity(2);
+    Map resetBuckets(config);
+    check(resetBuckets.status() == LockFreeHashMapOk && resetBuckets.bucketCount() == 1024 &&
+        resetBuckets.set(1, 10) && resetBuckets.set(2, 20) &&
+        resetBuckets.tryInsert(3, 30).m_status == LockFreeHashMapCapacityLimit,
+        "zero bucket setting selects the default independently of a two-slot hard limit");
+    config.setLookupCacheCapacity(3);
+    Map invalid(config);
+    check(invalid.status() == LockFreeHashMapInvalidArgument, "invalid cache size rejected even when disabled");
+}
+
 void LockFreeHashMapTests::pool()
 {
+    configuration();
     // 低位终态和最高地址位必须完整保留，CAS 失败必须写回实际观察值。
     LockFreeHashMapLink link;
     check(link.isLockFree() && link.load() == 0, "atomic link initial state");
@@ -546,8 +679,50 @@ void LockFreeHashMapTests::model()
     check(caught && map.value(10, -1) == 0, "proxy source failure does not overwrite destination");
 }
 
+void LockFreeHashMapTestVisitAccess::operator()(const int& key, const int& value) const
+{
+    (void)key;
+    (void)value;
+    ++m_calls[0];
+}
+
+void LockFreeHashMapTestVisitAccess::operator()(int& key, int& value) const
+{
+    (void)key;
+    (void)value;
+    ++m_calls[1];
+}
+
 void LockFreeHashMapTests::versions()
 {
+    {
+        LockFreeHashMap<int, int> map;
+        int calls[2] = {};
+        LockFreeHashMapTestVisitAccess visitor = { calls };
+        check(map.set(7, 9), "prepare immutable traversal entry");
+        const LockFreeHashMap<int, int>& view = map;
+        LockFreeHashMapResult visited = view.forEachResult(visitor);
+        check(visited.m_status == LockFreeHashMapOk && visited.m_count == 1 && view.forEach(visitor) == 1 &&
+            calls[0] == 2 && calls[1] == 0, "both traversal APIs expose only const published keys and values");
+    }
+    {
+        typedef std::function<void()> Action;
+        typedef void (*Visitor)(const int&, const Action&);
+        Visitor target = [](const int&, const Action& action) { action(); };
+        LockFreeHashMap<int, Action> map;
+        int calls = 0;
+        Action reset = [&target, &calls]() { ++calls; target = nullptr; };
+        check(map.set(1, reset) && map.set(2, reset), "prepare two entries for borrowed callback");
+        LockFreeHashMapResult result = map.forEachResult(std::ref(target));
+        check(result.m_status == LockFreeHashMapInvalidArgument && result.m_count == 1 && calls == 1 &&
+            map.forEachResult(std::cref(target)).m_count == 0 && map.forEachResult(std::cref(target)).m_status == LockFreeHashMapInvalidArgument,
+            "borrowed function pointer cleared by first delivery stops before next invocation");
+#if defined(_WIN32) && (defined(_M_IX86) || defined(__i386__))
+        void (__stdcall *emptyVisitor)(const int&, const Action&) = nullptr;
+        check(map.forEachResult(emptyVisitor).m_status == LockFreeHashMapInvalidArgument,
+            "Win32 stdcall null callback is recognized before traversal");
+#endif
+    }
     check(LockFreeHashMapMigration::run(), "compiled ProcessWork caches and registry migration");
     typedef LockFreeHashMap<int, int> Map;
     Map map;
@@ -834,7 +1009,7 @@ void LockFreeHashMapTests::contention()
                     }
                     LockFreeHashMapResult write = map.compareExchange(1, current.m_version, *current.m_value + 1);
                     done = write.m_committed;
-                    if (!done && write.m_status != LockFreeHashMapVersionMismatch && write.m_status != LockFreeHashMapReservationBusy)
+                    if (!done && write.m_status != LockFreeHashMapVersionMismatch)
                     {
                         failures.fetch_add(1);
                         break;
@@ -1460,7 +1635,7 @@ void LockFreeHashMapTests::stress()
     map.clear();
     for (int i = 0; i < 300; ++i)
     {
-        map.maintain(512);
+        check(map.maintain(512).m_status == LockFreeHashMapOk, "quiescent maintenance succeeds");
     }
     check(map.retainedNodeCount() == 0 && map.empty(), "stress complete resource reclamation");
     LockFreeHashMapPoolStats metrics = {};
@@ -1489,6 +1664,7 @@ void LockFreeHashMapTests::performance()
         }
         double seconds = timestamp() - start;
         std::sort(latency.begin(), latency.end());
+        check(seconds > 0 && latency.front() >= 0, "smoke timing has positive duration and monotone samples");
         LockFreeHashMapPoolStats metrics = {};
         check(map.poolStats(metrics).m_status == LockFreeHashMapOk, "timing smoke metrics available");
         std::cout << "PERF buckets=" << buckets << " pairs_per_second=" << 10000 / seconds << " p50_us=" << latency[5000]
@@ -1499,22 +1675,32 @@ void LockFreeHashMapTests::performance()
 
 int LockFreeHashMapRunTests(int argc, char** argv)
 {
-    LockFreeHashMapTests::s_tracking = true;
+    LockFreeHashMapTests::s_tracking.store(true, std::memory_order_relaxed);
     int runningId = 0;
     try
     {
-        LockFreeHashMapTests::warmRuntime();
-        LockFreeHashMapTests::check(LockFreeHashMapTestThread::failures() == 0,
-            "runtime warmup worker exceptions are not ignored");
-        char* end = nullptr;
-        long requested = argc == 2 ? std::strtol(argv[1], &end, 10) : 0;
-        if (argc > 2 || requested < 0 || requested > 11 ||
-            (argc == 2 && (requested == 0 || end == argv[1] || *end != 0)))
+        int selected = 0;
+        if (argc == 2 && argv != nullptr && argv[1] != nullptr)
+        {
+            // 限定十进制编号，拒绝空白、正负号和越界输入；先检查再乘十以免溢出。
+            for (const char* digit = argv[1]; *digit != 0; ++digit)
+            {
+                if (*digit < '0' || *digit > '9' || selected > 1)
+                {
+                    selected = -1;
+                    break;
+                }
+                selected = 10 * selected + (*digit - '0');
+            }
+        }
+        if (argc < 1 || argc > 2 || (argc == 2 && (selected < 1 || selected > 11)))
         {
             std::cerr << "invalid test ID; choose 1..11 or omit for all" << std::endl;
             return 2;
         }
-        int selected = static_cast<int>(requested);
+        LockFreeHashMapTests::warmRuntime();
+        LockFreeHashMapTests::check(LockFreeHashMapTestThread::failures() == 0,
+            "runtime warmup worker exceptions are not ignored");
         for (int id = 1; id <= 11; ++id)
         {
             if (selected != 0 && selected != id)
@@ -1525,6 +1711,10 @@ int LockFreeHashMapRunTests(int argc, char** argv)
             if (id != 1 && id != 2 && id != 3 && id != 4 && id != 9 && id != 11)
             {
                 std::cout << "NOT_RUN id=" << id << " reason=single_thread_host" << std::endl;
+                if (selected == id)
+                {
+                    return 77;
+                }
                 continue;
             }
 #endif
@@ -1533,7 +1723,9 @@ int LockFreeHashMapRunTests(int argc, char** argv)
             runningId = id;
             std::cout << "BEGIN id=" << id << std::endl;
             long long allocationsBefore = LockFreeHashMapTests::s_liveAllocations.load();
+#if defined(_WIN32)
             LockFreeHashMapTestResources resourcesBefore;
+#endif
             if (id == 1)
             {
                 LockFreeHashMapTests::pool();
@@ -1578,7 +1770,9 @@ int LockFreeHashMapRunTests(int argc, char** argv)
             {
                 LockFreeHashMapTests::check(LockFreeHashMapRetryTest(), "retry flags and capacity backoff");
             }
+#if defined(_WIN32)
             LockFreeHashMapTestResources resourcesAfter;
+#endif
             LockFreeHashMapTests::check(LockFreeHashMapTestThread::failures() == threadFailuresBefore,
                 "all worker functions and thread joins completed without hidden exceptions");
             LockFreeHashMapTests::check(LockFreeHashMapTests::s_liveAllocations.load() == allocationsBefore,
@@ -1586,12 +1780,14 @@ int LockFreeHashMapRunTests(int argc, char** argv)
 #if defined(_WIN32)
             LockFreeHashMapTests::check(resourcesAfter.m_handles != 0 && resourcesAfter.m_threads != 0,
                 "native process observations available; compare with independent runtime control");
-#endif
             std::cout << "RESOURCES handles_before=" << resourcesBefore.m_handles << " handles_after=" << resourcesAfter.m_handles
                 << " threads_before=" << resourcesBefore.m_threads << " threads_after=" << resourcesAfter.m_threads
                 << " peak_working_set=" << resourcesAfter.m_peakWorkingSet
-                << " allocation_delta=" << LockFreeHashMapTests::s_liveAllocations.load() - allocationsBefore
-                << " cpu_seconds=" << resourcesAfter.m_cpuSeconds - resourcesBefore.m_cpuSeconds << std::endl;
+                << " cpu_seconds=" << resourcesAfter.m_cpuSeconds - resourcesBefore.m_cpuSeconds;
+#else
+            std::cout << "RESOURCES process_metrics=NOT_MEASURED";
+#endif
+            std::cout << " allocation_delta=" << LockFreeHashMapTests::s_liveAllocations.load() - allocationsBefore << std::endl;
             std::cout << "END id=" << id << " result=" << (before == LockFreeHashMapTests::s_failures ? "PASS" : "FAIL") << std::endl;
         }
         std::cout << "RESULT checks=" << LockFreeHashMapTests::s_checks << " failed=" << LockFreeHashMapTests::s_failures << std::endl;

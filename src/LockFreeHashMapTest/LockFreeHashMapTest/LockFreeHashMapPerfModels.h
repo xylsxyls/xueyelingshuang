@@ -153,7 +153,7 @@ public:
     */
     static uint64_t callsPerIteration(const LockFreeHashMapPerfSpec& spec);
 
-    /** 判断原始版是否没有此接口
+    /** 判断该负载是否需要标准库对照表缺少的版本或快照接口
     @param [in] spec 负载配置
     @return 只能单独测当前版为 true
     */
