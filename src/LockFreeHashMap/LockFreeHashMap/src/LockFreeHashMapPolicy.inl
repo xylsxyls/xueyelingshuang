@@ -1,5 +1,24 @@
 ﻿#pragma once
 
+template <typename Target>
+inline bool LockFreeHashMapNullCallback(Target* function)
+{
+    return function == nullptr;
+}
+
+template <typename F>
+inline bool LockFreeHashMapNullCallback(const F& function)
+{
+    (void)function;
+    return false;
+}
+
+template <typename F>
+inline bool LockFreeHashMapNullCallback(const std::reference_wrapper<F>& function)
+{
+    return LockFreeHashMapNullCallback(function.get());
+}
+
 template <typename R, typename... C>
 LockFreeHashMapPolicyFunction<R, C...>::~LockFreeHashMapPolicyFunction()
 {
@@ -16,6 +35,10 @@ m_function(function)
 template <typename R, typename F, typename... C>
 R LockFreeHashMapPolicyHolder<R, F, C...>::invoke(const C&... context)
 {
+    if (LockFreeHashMapNullCallback(m_function))
+    {
+        throw std::bad_function_call();
+    }
     return m_function(context...);
 }
 
@@ -47,10 +70,12 @@ LockFreeHashMapPolicy<R, C...>& LockFreeHashMapPolicy<R, C...>::operator=(const 
 
 template <typename R, typename... C>
 template <typename F>
-LockFreeHashMapPolicy<R, C...>::LockFreeHashMapPolicy(const F& function) :
-m_function(std::make_shared<LockFreeHashMapPolicyHolder<R, typename std::decay<F>::type, C...>>(function))
+LockFreeHashMapPolicy<R, C...>::LockFreeHashMapPolicy(const F& function)
 {
-
+    if (!LockFreeHashMapNullCallback(function))
+    {
+        m_function = std::make_shared<LockFreeHashMapPolicyHolder<R, typename std::decay<F>::type, C...>>(function);
+    }
 }
 
 template <typename R, typename... C>
@@ -85,6 +110,10 @@ LockFreeHashMapPolicy<R, C...> LockFreeHashMapPolicy<R, C...>::fromShared(const 
     */
     return LockFreeHashMapPolicy([function](const C&... context) -> R
     {
+        if (LockFreeHashMapNullCallback(*function))
+        {
+            throw std::bad_function_call();
+        }
         return (*function)(context...);
     });
 }

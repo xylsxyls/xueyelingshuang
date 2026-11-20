@@ -55,3 +55,64 @@ lookupCacheCapacity(4096)
 {
 
 }
+
+inline void LockFreeHashMapPoolConfig::setInitialCapacity(size_t value)
+{
+    initialCapacity = value;
+}
+
+inline void LockFreeHashMapPoolConfig::setMaximumCapacity(int64_t value)
+{
+    maximumCapacity = value;
+}
+
+inline void LockFreeHashMapPoolConfig::setGrowFreeThreshold(size_t value)
+{
+    growFreeThreshold = value;
+}
+
+inline void LockFreeHashMapPoolConfig::setDirectoryCapacity(size_t value)
+{
+    directoryCapacity = value;
+}
+
+inline void LockFreeHashMapPoolConfig::setProtectionRecordCount(size_t value)
+{
+    protectionRecordCount = value;
+}
+
+inline void LockFreeHashMapPoolConfig::setInlineScalarValues(bool value)
+{
+    inlineScalarValues = value;
+}
+
+inline void LockFreeHashMapPoolConfig::setLookupCacheCapacity(size_t value)
+{
+    lookupCacheCapacity = value;
+}
+
+inline void LockFreeHashMapPoolConfig::setGrowPolicy(const LockFreeHashMapGrowPolicy& value)
+{
+    growPolicy = value;
+}
+
+inline void LockFreeHashMapPoolConfig::setShrinkPolicy(const LockFreeHashMapShrinkPolicy& value)
+{
+    shrinkPolicy = value;
+}
+
+inline void LockFreeHashMapPoolConfig::setGrowthObserver(const LockFreeHashMapGrowthObserver& value)
+{
+    m_onGrowth = value;
+}
+
+inline LockFreeHashMapConfig::LockFreeHashMapConfig() :
+m_bucketCount(1024)
+{
+
+}
+
+inline void LockFreeHashMapConfig::setBucketCount(size_t value)
+{
+    m_bucketCount = value;
+}

@@ -40,17 +40,16 @@ inline LockFreeHashMapEpoch::~LockFreeHashMapEpoch()
     delete[] m_allocation;
 }
 
+inline bool LockFreeHashMapEpoch::validCount(size_t count)
+{
+    return count != 0 && count <= ((std::numeric_limits<size_t>::max)() - 63) / kRecordStride;
+}
+
 inline bool LockFreeHashMapEpoch::initialize(size_t count)
 {
-    const size_t maximum = (std::numeric_limits<size_t>::max)();
     const size_t alignment = 64;
-    if (m_allocation != nullptr || count == 0 || !supported() ||
-        sizeof(LockFreeHashMapEpochRecord) > maximum - (alignment - 1))
-    {
-        return false;
-    }
     const size_t stride = kRecordStride;
-    if (count > (maximum - alignment + 1) / stride)
+    if (m_allocation != nullptr || !validCount(count) || !supported())
     {
         return false;
     }
@@ -82,7 +81,9 @@ inline bool LockFreeHashMapEpoch::initialize(size_t count)
 
 inline bool LockFreeHashMapEpoch::supported() const
 {
-    return m_clock.is_lock_free();
+    LOCKFREEHASHMAP_ALIGN_64 std::atomic<int64_t> delta(0);
+    std::atomic<size_t> count(0);
+    return m_clock.is_lock_free() && delta.is_lock_free() && count.is_lock_free();
 }
 
 inline size_t LockFreeHashMapEpoch::count() const

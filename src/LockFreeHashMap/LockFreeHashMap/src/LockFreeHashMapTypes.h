@@ -241,6 +241,74 @@ public:
     /** 默认 64 槽、阈值 0、上限 -1、1024 块目录、128 保护记录，整数副本缓存 4096 格
     */
     LockFreeHashMapPoolConfig();
+
+    /** 预留初始槽位及自动缩容下限
+    @param [in] value 槽位数，0 允许延迟增长
+    */
+    void setInitialCapacity(size_t value);
+
+    /** 设置节点池的硬预算
+    @param [in] value 槽位数，-1 取消配置上限，非负数须至少覆盖初始容量
+    */
+    void setMaximumCapacity(int64_t value);
+
+    /** 设置评估预增长的剩余空闲阈值
+    @param [in] value 槽位数，0 仅在需求申请耗尽时增长
+    */
+    void setGrowFreeThreshold(size_t value);
+
+    /** 设置固定块目录容量
+    @param [in] value 正数，单位为块，每块最多 65535 个槽
+    */
+    void setDirectoryCapacity(size_t value);
+
+    /** 设置可同时借用的保护记录数
+    @param [in] value 正数，含回调重入需要的额外记录
+    */
+    void setProtectionRecordCount(size_t value);
+
+    /** 选择是否启用整数值副本缓存
+    @param [in] value true 对受支持类型启用，false 关闭
+    */
+    void setInlineScalarValues(bool value);
+
+    /** 设置固定副本缓存格数
+    @param [in] value 0 关闭，正数必须是 2 的幂
+    */
+    void setLookupCacheCapacity(size_t value);
+
+    /** 保存扩容策略的共享句柄
+    @param [in] value 空句柄使用内置增长算法，非空策略可并发调用
+    */
+    void setGrowPolicy(const LockFreeHashMapGrowPolicy& value);
+
+    /** 保存缩容策略的共享句柄
+    @param [in] value 空句柄关闭自动缩容，非空策略由维护者调用
+    */
+    void setShrinkPolicy(const LockFreeHashMapShrinkPolicy& value);
+
+    /** 保存成功增长通知的共享句柄
+    @param [in] value 空句柄关闭通知，非空回调可并发执行，不能重入同一池
+    */
+    void setGrowthObserver(const LockFreeHashMapGrowthObserver& value);
+};
+
+/** 建表配置，桶数用于构造，池字段由实例复制；在交给其他线程前准备完毕
+*/
+struct LockFreeHashMapConfig : public LockFreeHashMapPoolConfig
+{
+public:
+    // 固定桶数请求，0 使用默认值，其余向上取整为 2 的幂
+    size_t m_bucketCount;
+public:
+    /** 使用默认的 1024 桶及节点池参数
+    */
+    LockFreeHashMapConfig();
+
+    /** 指定构造时的桶数请求
+    @param [in] value 桶数，0 使用默认值，无法表示的取整结果由构造状态报告
+    */
+    void setBucketCount(size_t value);
 };
 
 /** 弱一致资源观测，包含候选及退役占用，不等于逻辑条目数或进程 RSS

@@ -19,9 +19,9 @@ public:
     // 实例内永不复用的完整值版本
     uint64_t m_version;
     // 发布后不可修改的键副本
-    KeyType m_key;
+    const KeyType m_key;
     // 发布后不可修改的值副本，与键合并在同一个受控池槽中
-    ValueType m_value;
+    const ValueType m_value;
 
 public:
     /** 完整构造候选，复制异常交由尚未提交的修改边界捕获

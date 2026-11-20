@@ -21,16 +21,17 @@
 //    try
 //    {
 //        typedef LockFreeHashMap<int32_t, int32_t> Map;
-//        LockFreeHashMapPoolConfig config;
-//        config.initialCapacity = 64;
-//        config.maximumCapacity = 512;
-//        config.directoryCapacity = 16;
-//        config.protectionRecordCount = 16;
-//        config.growFreeThreshold = 8;
-//        config.lookupCacheCapacity = 64;
+//        LockFreeHashMapConfig config;
+//        config.setBucketCount(64);
+//        config.setInitialCapacity(64);
+//        config.setMaximumCapacity(512);
+//        config.setDirectoryCapacity(16);
+//        config.setProtectionRecordCount(16);
+//        config.setGrowFreeThreshold(8);
+//        config.setLookupCacheCapacity(64);
 //
 //        // 直接按配置构造，避免先分配默认池再替换；桶数与池容量分别设置。
-//        Map map(64, config);
+//        Map map(config);
 //        if (map.status() != LockFreeHashMapOk)
 //        {
 //            std::cerr << "initialize status=" << map.status() << std::endl;

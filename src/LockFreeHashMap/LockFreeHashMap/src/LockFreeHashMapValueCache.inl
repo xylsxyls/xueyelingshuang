@@ -27,15 +27,6 @@ LockFreeHashMapStatus LockFreeHashMapValueCache<K, V, E, Enabled>::initialize(si
 }
 
 template <typename K, typename V, typename E, bool Enabled>
-bool LockFreeHashMapValueCache<K, V, E, Enabled>::lookup(const K& key, uint64_t generation, V* value) const
-{
-    (void)key;
-    (void)generation;
-    (void)value;
-    return false;
-}
-
-template <typename K, typename V, typename E, bool Enabled>
 bool LockFreeHashMapValueCache<K, V, E, Enabled>::lookup(const K& key, const std::atomic<uint64_t>& generation, V* value) const
 {
     (void)key;
@@ -146,20 +137,6 @@ LockFreeHashMapStatus LockFreeHashMapValueCache<K, V, E, true>::initialize(size_
 }
 
 template <typename K, typename V, typename E>
-LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMapValueCache<K, V, E, true>::lookup(const K& key, uint64_t generation, V* value) const
-{
-    size_t count = m_count;
-    return count != 0 && lookupAtGeneration(key, generation, value, count);
-}
-
-template <typename K, typename V, typename E>
-LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMapValueCache<K, V, E, true>::lookup(const K& key, const std::atomic<uint64_t>& generation, V* value) const
-{
-    size_t count = m_count;
-    return count != 0 && lookupAtGeneration(key, generation, value, count);
-}
-
-template <typename K, typename V, typename E>
 LOCKFREEHASHMAP_FORCE_INLINE size_t LockFreeHashMapValueCache<K, V, E, true>::keyBits(const K& key)
 {
     if (sizeof(K) <= sizeof(uint32_t))
@@ -171,9 +148,13 @@ LOCKFREEHASHMAP_FORCE_INLINE size_t LockFreeHashMapValueCache<K, V, E, true>::ke
 }
 
 template <typename K, typename V, typename E>
-template <typename GenerationType>
-LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMapValueCache<K, V, E, true>::lookupAtGeneration(const K& key, const GenerationType& generation, V* value, size_t count) const
+LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMapValueCache<K, V, E, true>::lookup(const K& key, const std::atomic<uint64_t>& generation, V* value) const
 {
+    const size_t count = m_count;
+    if (count == 0)
+    {
+        return false;
+    }
     Entry& entry = m_entries[keyBits(key) & (count - 1)];
     uint64_t before = entry.m_stamp.load();
     if ((before & 1) == 0)
@@ -189,8 +170,8 @@ LOCKFREEHASHMAP_FORCE_INLINE bool LockFreeHashMapValueCache<K, V, E, true>::look
     // 缓存碰撞先排除异键，避免额外读取独立值字段；窄键值共用一个原子字，仍验证代次与末次身份。
     uint64_t observedGeneration = entry.m_generation.load(std::memory_order_acquire);
     ValueWord observedValue = loadValue(entry, observedKey, value != nullptr);
-    // 原子整数的标准转换等价于顺序一致的load；缓存未命中时省去这次全局代次读取。
-    uint64_t currentGeneration = static_cast<uint64_t>(generation);
+    // 只有完整键匹配时才读取全局代次，随后重新核对缓存身份。
+    uint64_t currentGeneration = generation.load();
     if (currentGeneration == 0 || observedGeneration != currentGeneration || entry.m_stamp.load() != before)
     {
         return false;

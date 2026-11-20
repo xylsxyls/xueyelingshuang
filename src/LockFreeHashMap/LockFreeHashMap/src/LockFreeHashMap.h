@@ -76,6 +76,11 @@ public:
     */
     explicit LockFreeHashMap(size_t bucketCount = 1024);
 
+    /** 使用初始化前准备的完整配置建表，失败通过 status 查询
+    @param [in] config 构造时读取桶数、复制池参数和回调句柄；之后可独立复用配置对象
+    */
+    explicit LockFreeHashMap(const LockFreeHashMapConfig& config);
+
     /** 直接按指定参数建立节点池，避免先构造默认池再替换；失败由 status 查询
     @note 键和值对齐超出std::max_align_t时返回Unsupported，避免C++11快照和导出分配错位
     @param [in] bucketCount 桶数量，0 使用 1024，其余向上取整为 2 的幂
@@ -267,7 +272,7 @@ public:
 
     /** 遍历安全借用，回调可以重入，借用不得带出回调
     @param [in] function 接收仅在回调期间有效的 const KeyType& 和 const ValueType&
-    @return 已正常返回的回调次数
+    @return 已正常返回的回调次数，空函数指针为零
     */
     template <typename FunctionType>
     size_t forEach(const FunctionType& function) const;
@@ -281,7 +286,7 @@ public:
 
     /** 单次向前弱遍历，跳过终态和非观察代次节点；沿观察后继推进，不重放已完成回调
     @param [in] function 接收仅在回调期间有效的 const KeyType& 和 const ValueType&
-    @return 状态及已正常完成的回调数 m_count，回调异常被捕获
+    @return 状态及已正常完成的回调数 m_count，空函数指针返回 InvalidArgument，回调异常被捕获
     */
     template <typename FunctionType>
     LockFreeHashMapResult forEachResult(const FunctionType& function) const;
@@ -510,8 +515,8 @@ private:
     @param [out] found 匹配的受保护槽，未找到为空
     @param [out] link 指向 found 的桶头或前驱链接
     @param [out] head 不存在时发布校验所用的桶头
-    @param [in] retryLimit 非零时只供维护限制重启次数；数据操作为零并保留请求
-    @return 找到、未找到或 clear 冲突，比较异常向操作边界传播
+    @param [in] retryLimit 累计冲突达到此次数即返回 ReservationBusy，0 表示持续重试；快速 try 使用 1，附带维护使用 2
+    @return 找到返回 Ok，缺键返回 NotFound，代次变化返回 Cleared，达到冲突次数上限返回 ReservationBusy；比较异常向操作边界传播
     */
     LockFreeHashMapStatus locate(const KeyType* key, size_t hash, uint64_t generation,
         Slot*& found, LockFreeHashMapLink*& link, uintptr_t& head, size_t retryLimit = 0) const;

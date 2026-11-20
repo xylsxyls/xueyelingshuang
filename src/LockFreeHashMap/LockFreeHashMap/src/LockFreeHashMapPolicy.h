@@ -4,6 +4,27 @@
 #include <type_traits>
 #include <cstddef>
 
+/** 检查普通函数指针能否调用，接受兼容的返回值和参数签名
+@param [in] function 只检查地址，不调用目标
+@return 空地址返回 true
+*/
+template <typename Target>
+bool LockFreeHashMapNullCallback(Target* function);
+
+/** 函数对象按其调用合同执行，不尝试转换为 bool 或复制目标
+@param [in] function 调用期间借用的函数对象
+@return false
+*/
+template <typename F>
+bool LockFreeHashMapNullCallback(const F& function);
+
+/** 检查借用回调的当前目标；包装对象本身可以非空而其中的函数指针已清除
+@param [in] function 调用期间有效的引用包装，原对象由调用方同步访问
+@return 被借用的函数指针为空时返回 true
+*/
+template <typename F>
+bool LockFreeHashMapNullCallback(const std::reference_wrapper<F>& function);
+
 /** 策略调用接口，由共享句柄拥有，避免 v120 的 std::function::_Copy 异常泄漏
 */
 template <typename ResultType, typename... ContextTypes>

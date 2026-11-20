@@ -65,14 +65,6 @@ public:
     */
     LockFreeHashMapStatus initialize(size_t count);
 
-    /** 未启用类型的固定代次查询从不命中
-    @param [in] key 查询键
-    @param [in] generation 调用方已取得的代次值，此重载不使用
-    @param [out] value 可空的输出，不修改
-    @return false
-    */
-    bool lookup(const KeyType& key, uint64_t generation, ValueType* value) const;
-
     /** 未启用类型的原子代次查询直接返回，不读取容器代次
     @param [in] key 查询键
     @param [in] generation 容器代次原子变量，不读取
@@ -137,14 +129,6 @@ public:
     @return 初始化状态，不向外抛异常；首次申请失败保留空配置
     */
     LockFreeHashMapStatus initialize(size_t count);
-
-    /** 纯原子读取独立副本，不访问池和用户对象，无重试循环
-    @param [in] key 完整查询键
-    @param [in] generation 调用方已取得的固定观察代次；本重载不再读取表的代次原子
-    @param [out] value 非空时写入整数副本，未命中不修改
-    @return 同身份、同代次且完整键相同时为 true
-    */
-    bool lookup(const KeyType& key, uint64_t generation, ValueType* value) const;
 
     /** 只检查一次缓存容量；关闭缓存时不读取容器代次
     @param [in] key 完整查询键
@@ -212,16 +196,6 @@ private:
     @param [in] value 完整值
     */
     static void storeValue(LockFreeHashMapValueCacheEntry& entry, const KeyType& key, const ValueType& value);
-
-    /** 使用已经检查过的固定容量读取副本，避免原子读取后重复获取容量
-    @param [in] key 完整查询键
-    @param [in] generation 固定代次或原子代次源，只有缓存键匹配时读取
-    @param [out] value 非空时写入整数副本，未命中不修改
-    @param [in] count 本实例非零的固定容量
-    @return 同身份、同代次且完整键相同时为 true
-    */
-    template <typename GenerationType>
-    bool lookupAtGeneration(const KeyType& key, const GenerationType& generation, ValueType* value, size_t count) const;
 
     /** 生成缓存索引位；窄整数直接使用有效位，宽整数保留高低位折叠
     @param [in] key 完整整数键，负数到无符号的转换按标准取模

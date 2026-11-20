@@ -69,8 +69,14 @@ public:
     */
     bool initialize(size_t count);
 
+    /** 检查固定记录区及对齐余量的字节数能否用 size_t 表示
+    @param [in] count 同时借用记录数，必须为正数
+    @return 单次申请的长度合法时为 true
+    */
+    static bool validCount(size_t count);
+
     /** 查询本后端要求的原子是否真正无锁
-    @return 六十四位代际原子无锁为 true
+    @return 代际、计数差量及槽数原子均无锁时为 true
     */
     bool supported() const;
 

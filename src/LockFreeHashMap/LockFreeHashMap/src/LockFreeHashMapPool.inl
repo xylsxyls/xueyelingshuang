@@ -144,7 +144,7 @@ LockFreeHashMapStatus LockFreeHashMapPool<T>::initialize(const LockFreeHashMapPo
 {
     const size_t maximum = (std::numeric_limits<size_t>::max)();
     if (m_directory != nullptr || config.maximumCapacity < -1 || config.directoryCapacity == 0 ||
-        config.directoryCapacity > maximum / sizeof(LockFreeHashMapPoolEntry) || config.protectionRecordCount == 0 ||
+        config.directoryCapacity > maximum / sizeof(LockFreeHashMapPoolEntry) || !LockFreeHashMapEpoch::validCount(config.protectionRecordCount) ||
         config.initialCapacity > maximum / sizeof(LockFreeHashMapPoolSlot<T>) ||
         (config.maximumCapacity >= 0 && static_cast<uint64_t>(config.maximumCapacity) < config.initialCapacity) ||
         (config.lookupCacheCapacity != 0 && (config.lookupCacheCapacity & (config.lookupCacheCapacity - 1)) != 0) ||
@@ -153,7 +153,8 @@ LockFreeHashMapStatus LockFreeHashMapPool<T>::initialize(const LockFreeHashMapPo
         return LockFreeHashMapInvalidArgument;
     }
     std::atomic<uintptr_t> pointer(0);
-    if (!pointer.is_lock_free() || !m_budget.is_lock_free() || !m_grows.is_lock_free() || !m_epoch.supported())
+    std::atomic<uint32_t> kind(0);
+    if (!pointer.is_lock_free() || !kind.is_lock_free() || !m_epoch.supported())
     {
         return LockFreeHashMapUnsupported;
     }
@@ -378,12 +379,8 @@ LockFreeHashMapPoolSlot<T>* LockFreeHashMapPool<T>::acquire(LockFreeHashMapEpoch
         if (available <= m_config.growFreeThreshold)
         {
             reclaim();
-            observe(capacity, available);
-            if (available <= m_config.growFreeThreshold)
-            {
-                // 预增长失败不撤销已经取得的槽位
-                evaluateGrowth(false);
-            }
+            // evaluateGrowth 会重新观察回收后的空闲数；预增长失败不撤销已取得的槽。
+            evaluateGrowth(false);
         }
     }
     return result;
@@ -784,8 +781,10 @@ LockFreeHashMapResult LockFreeHashMapPool<T>::shrink()
     observe(capacity, available);
     uint64_t time = now();
     uint64_t last = m_lastGrow.load();
-    LockFreeHashMapShrinkContext context = { m_config.initialCapacity, m_grows.load(), capacity, available,
-        m_grows.load() != 0, time >= last && last != 0 ? time - last : 0 };
+    // 次数和是否已经增长描述同一个事实，须取自一次观察。
+    const uint64_t grows = m_grows.load();
+    LockFreeHashMapShrinkContext context = { m_config.initialCapacity, grows, capacity, available,
+        grows != 0, time >= last && last != 0 ? time - last : 0 };
     LockFreeHashMapShrinkDecision decision;
     try
     {

@@ -76,6 +76,13 @@ LockFreeHashMap(bucketCount, LockFreeHashMapPoolConfig())
 }
 
 template <typename K, typename V, typename H, typename E>
+LockFreeHashMap<K, V, H, E>::LockFreeHashMap(const LockFreeHashMapConfig& config) :
+LockFreeHashMap(config.m_bucketCount, config)
+{
+
+}
+
+template <typename K, typename V, typename H, typename E>
 LockFreeHashMap<K, V, H, E>::LockFreeHashMap(size_t bucketCount, const LockFreeHashMapPoolConfig& config) :
 m_buckets(nullptr),
 m_bucketCount(normalizeBucketCount(bucketCount)),
@@ -355,7 +362,7 @@ LockFreeHashMapStatus LockFreeHashMap<K, V, H, E>::locate(const K* key, size_t h
         }
         if (retryLimit != 0 && ++retries >= retryLimit)
         {
-            // 仅结束本轮附带维护，不能作为用户数据操作的失败结果
+            // 快速 try 将本次结构竞争报告给调用方；附带维护放弃本轮扫描，后续仍可继续清理
             return LockFreeHashMapReservationBusy;
         }
         contention.pause();
@@ -755,7 +762,6 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::modify(const K& key, const V*
     {
         return LockFreeHashMapResult(LockFreeHashMapUserException);
     }
-    return LockFreeHashMapResult(LockFreeHashMapCapacityLimit);
 }
 
 template <typename K, typename V, typename H, typename E>
@@ -1369,6 +1375,10 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::forEachProtected(F&& function
     {
         return LockFreeHashMapResult(m_status);
     }
+    if (LockFreeHashMapNullCallback(function))
+    {
+        return LockFreeHashMapResult(LockFreeHashMapInvalidArgument);
+    }
     // 把接纳扫描留在只读保护构造中，避免扩大遍历热点的寄存器占用。
     // 同一记录无间隙地转为回调保护，复制回调和执行用户代码前已登记重入链。
     LockFreeHashMapReadGuard admission(m_storage->epoch());
@@ -1404,6 +1414,11 @@ LockFreeHashMapResult LockFreeHashMap<K, V, H, E>::forEachProtected(F&& function
                 uintptr_t next = node->m_next.load();
                 if ((next & 3) == 0 && node->m_generation == generation)
                 {
+                    // std::ref 借用的函数指针可能被上一次回调清空；只统计已经成功交付的条目。
+                    if (LockFreeHashMapNullCallback(callback))
+                    {
+                        return LockFreeHashMapResult(LockFreeHashMapInvalidArgument, false, count);
+                    }
                     callback(node->m_key, node->m_value);
                     // 完成回调后再计数，异常时只报告已成功交付的条目。
                     if (Count)
