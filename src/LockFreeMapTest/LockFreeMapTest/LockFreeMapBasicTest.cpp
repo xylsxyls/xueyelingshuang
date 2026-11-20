@@ -1,5 +1,6 @@
 ﻿#include "LockFreeMapTest.h"
 #include "LockFreeMap/LockFreeMapAPI.h"
+#include "LockFreeMapTestCopyKey.h"
 #include "LockFreeMap/MapNode.h"
 #ifndef LOCK_FREE_MAP_TEST_SINGLE
 #include "LockFreeMapTestThread.h"
@@ -251,6 +252,49 @@ static bool CheckLegacyNode()
     return valid;
 }
 
+/** 在导出中途抛出复制异常，核对后续复制次数、整批丢弃及再次导出
+@return 三个入口均停在失败元素、归还读保护且随后能完整导出时为 true
+*/
+static bool CheckExportCopyFailure()
+{
+    typedef LockFreeMapTestCopyKey Probe;
+    LockFreeMap<Probe, Probe> map;
+    for (int index = 0; index != 4; ++index)
+    {
+        if (!map.insert(Probe(index), Probe(index + 10)))
+        {
+            return false;
+        }
+    }
+    for (int mode = 0; mode != 3; ++mode)
+    {
+        // 单列在第二个元素失败；键值对在第二对的值失败，均已有一个完整结果。
+        const int failure = mode == 2 ? 4 : 2;
+        Probe::m_copies.store(0);
+        Probe::m_failOnCopy = failure;
+        const bool empty = mode == 0 ? map.keys().empty() : mode == 1 ? map.values().empty() : map.toVector().empty();
+        Probe::m_failOnCopy = 0;
+        if (!empty || Probe::m_copies.load() != failure || map.lockFreeMapStats().activeOperations != 0)
+        {
+            return false;
+        }
+    }
+    const std::vector<std::pair<Probe, Probe>> recovered = map.toVector();
+    if (recovered.size() != 4)
+    {
+        return false;
+    }
+    for (size_t index = 0; index < recovered.size(); ++index)
+    {
+        if (recovered[index].first.m_value != static_cast<int>(index) ||
+            recovered[index].second.m_value != static_cast<int>(index) + 10)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 /** 以独立有序容器对照公开操作
 @return 失败时返回非零
 */
@@ -259,6 +303,11 @@ int LockFreeMapBasic()
     int failed = 0;
     try
     {
+        if (!CheckExportCopyFailure())
+        {
+            std::fprintf(LockFreeMapTestReport::m_file, "basic_failure,stage=export_copy_failure\n");
+            return 1;
+        }
         if (!CheckLegacyNode())
         {
             std::fprintf(LockFreeMapTestReport::m_file, "basic_failure,stage=legacy_node\n");

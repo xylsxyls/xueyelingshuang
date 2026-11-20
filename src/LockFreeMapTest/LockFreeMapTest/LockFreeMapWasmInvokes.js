@@ -41,8 +41,15 @@ function ReadFunctionNames(source, destination) {
     if (path.resolve(source) === path.resolve(destination) || fs.existsSync(destination)) {
         throw new Error('名称映射必须输出到新文件，不能覆盖输入Wasm或已有产物');
     }
-    const bytes = fs.readFileSync(source);
-    if (bytes.length < 8 || bytes.readUInt32LE(0) !== 0x6d736100) {
+    const names = ParseFunctionNames(fs.readFileSync(source));
+    fs.writeFileSync(destination, JSON.stringify(names, null, 2), {encoding: 'utf8', flag: 'wx'});
+}
+
+/** 解析给定模块字节中函数名称子段；名称、索引或子段长度不合法时抛异常
+ * bytes 是只读的输入 Buffer，返回索引到 UTF-8 名称的映射
+ */
+function ParseFunctionNames(bytes) {
+    if (bytes.length < 8 || bytes.readUInt32LE(0) !== 0x6d736100 || bytes.readUInt32LE(4) !== 1) {
         throw new Error('输入不是Wasm模块');
     }
     const cursor = {position: 8, limit: bytes.length};
@@ -72,6 +79,9 @@ function ReadFunctionNames(source, destination) {
             throw new Error('函数名越界');
         }
         const name = bytes.toString('utf8', cursor.position, end);
+        if (!Buffer.from(name, 'utf8').equals(bytes.subarray(cursor.position, end))) {
+            throw new Error('名称不是有效UTF-8');
+        }
         cursor.position = end;
         return name;
     }
@@ -99,7 +109,13 @@ function ReadFunctionNames(source, destination) {
                     const count = ReadUnsigned();
                     for (let index = 0; index < count; ++index) {
                         const functionIndex = ReadUnsigned();
+                        if (Object.prototype.hasOwnProperty.call(result, functionIndex)) {
+                            throw new Error('重复的函数索引');
+                        }
                         result[functionIndex] = ReadName();
+                    }
+                    if (cursor.position !== subsectionEnd) {
+                        throw new Error('函数名称子段字节数不符');
                     }
                 }
                 cursor.position = subsectionEnd;
@@ -110,10 +126,38 @@ function ReadFunctionNames(source, destination) {
     if (Object.keys(result).length === 0) {
         throw new Error('模块没有函数名称段');
     }
-    fs.writeFileSync(destination, JSON.stringify(result, null, 2), {encoding: 'utf8', flag: 'wx'});
+    return result;
+}
+
+/** 用内存内的一个名称子段及其损坏变体检查诊断解析器
+ * 正常映射不符或接受损坏输入时抛异常
+ */
+function TestFunctionNames() {
+    const header = [0, 97, 115, 109, 1, 0, 0, 0];
+    // 将给定的名称映射正文包装成 name 自定义段。
+    const fixture = data => Buffer.from(header.concat([0, 7 + data.length, 4, 110, 97, 109, 101, 1, data.length], data));
+    const valid = fixture([1, 0, 1, 102]);
+    if (ParseFunctionNames(valid)[0] !== 'f') {
+        throw new Error('有效名称未解析');
+    }
+    const version = Buffer.from(valid);
+    version[4] = 2;
+    const invalid = [version, valid.subarray(0, valid.length - 1), Buffer.from(header),
+        fixture([2, 0, 1, 102, 0, 1, 103]), fixture([1, 0, 1, 102, 0]),
+        fixture([1, 0, 1, 255]), fixture([1, 128, 128, 128, 128, 16, 0])];
+    for (const bytes of invalid) {
+        try {
+            ParseFunctionNames(bytes);
+        } catch (error) {
+            continue;
+        }
+        throw new Error('损坏的名称段未被拒绝');
+    }
 }
 try {
-    if (process.argv[2] === '--names' && process.argv.length === 5) {
+    if (process.argv.length === 3 && process.argv[2] === '--selftest-names') {
+        TestFunctionNames();
+    } else if (process.argv[2] === '--names' && process.argv.length === 5) {
         ReadFunctionNames(process.argv[3], process.argv[4]);
     } else {
         InstrumentInvokes();

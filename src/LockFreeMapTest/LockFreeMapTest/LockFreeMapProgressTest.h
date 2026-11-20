@@ -3,7 +3,7 @@
 #include <ostream>
 #include <vector>
 
-/** 仅查询参数携带交错动作的测试键，已发布键不保存动作或测试状态
+/** 测试只插入不带动作的键，带动作的键用于查询及已有条目操作；隐式复制保留指针
 */
 struct LockFreeMapProgressKey
 {
@@ -64,7 +64,7 @@ public:
     void recordStatus(LockFreeMapStatus status);
 };
 
-/** 对当前代码和冻结基线使用同一组持续竞争负载，不预先给各线程固定成功配额
+/** 使用持续竞争负载观察逐线程进展，不预先给各线程固定成功配额
 */
 class LockFreeMapProgressTest
 {

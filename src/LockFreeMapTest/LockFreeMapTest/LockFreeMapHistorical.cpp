@@ -86,7 +86,7 @@ int LockFreeMapHistorical()
 {
     int32_t totalCount = 0;
     int32_t failCount = 0;
-    /** 累计历史判定并把名称、结果写入当前报告
+    /** 累计公开接口断言并把名称、结果写入当前报告
     @param [in] ok 本项独立判定结果
     @param [in] name 本项报告名称，仅本次调用期间借用
     */
@@ -388,5 +388,5 @@ int LockFreeMapHistorical()
     check(rebuildAfterStressOk && highStressMap.count() == 1024, "LockFreeMap rebuild after high stress");
     highStressMap.clearAndFreeMemory();
 
-    return failCount == 0 ? 0 : 1;
+    return totalCount == 52 && failCount == 0 ? 0 : 1;
 }

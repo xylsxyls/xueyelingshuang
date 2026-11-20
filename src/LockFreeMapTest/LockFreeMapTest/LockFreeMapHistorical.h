@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <stdint.h>
 
-/** 历史兼容性用例专用故障开关，仅由单线程故障阶段设置
+/** 公开接口测试专用故障开关，仅由单线程故障阶段设置
 */
 struct LockFreeMapHistoricalFaults
 {
@@ -16,7 +16,7 @@ public:
     static bool m_less;
 };
 
-/** 历史用例中的可注入复制故障的键
+/** 公开接口用例中的可注入复制故障的键
 */
 struct LockFreeMapHistoricalKey
 {
@@ -42,7 +42,7 @@ public:
     LockFreeMapHistoricalKey& operator=(const LockFreeMapHistoricalKey& other);
 };
 
-/** 历史用例中的可注入复制和赋值故障的值
+/** 公开接口用例中的可注入复制和赋值故障的值
 */
 struct LockFreeMapHistoricalValue
 {
@@ -68,7 +68,7 @@ public:
     LockFreeMapHistoricalValue& operator=(const LockFreeMapHistoricalValue& other);
 };
 
-/** 历史用例的可抛异常比较器
+/** 公开接口用例的可抛异常比较器
 */
 struct LockFreeMapHistoricalLess
 {

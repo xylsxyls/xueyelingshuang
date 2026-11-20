@@ -20,8 +20,8 @@ class LockFreeMapTestRunner
 {
 public:
     /** 校验参数并执行实际存在的用例
-    @param [in] argc 参数个数
-    @param [in] argv 参数数组
+    @param [in] argc 包括程序名的参数个数，至少为一
+    @param [in] argv 至少含 argc 项的参数数组，每项指向有效的零结尾字符串
     @return 测试进程退出码
     */
     static int run(int argc, char** argv);

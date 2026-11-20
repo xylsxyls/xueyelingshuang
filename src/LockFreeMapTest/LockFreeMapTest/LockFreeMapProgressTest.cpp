@@ -28,11 +28,6 @@ bool LockFreeMapProgressKey::operator<(const LockFreeMapProgressKey& other) cons
 
 unsigned LockFreeMapProgressTest::queryChurn(std::ostream& report)
 {
-#ifdef LOCK_FREE_MAP_PROGRESS_COMMON
-    // 线上源码没有借用接口，共有接口性能入口不提供该专用诊断
-    (void)report;
-    return 0;
-#else
     LockFreeMap<LockFreeMapProgressKey, int> map;
     if (!map.set(LockFreeMapProgressKey(5), 7))
     {
@@ -73,7 +68,6 @@ unsigned LockFreeMapProgressTest::queryChurn(std::ostream& report)
     report << "query_churn,visit," << changes << '\n';
     return errors == 0 && status == LOCK_FREE_MAP_OK && value == 7 && calls == 1 && changes != 0 ?
         (std::max)(maximum, changes) : 0;
-#endif
 }
 
 LockFreeMapProgressWorker::LockFreeMapProgressWorker() :
@@ -226,11 +220,6 @@ bool LockFreeMapProgressTest::attempt(LockFreeMap<int, uint64_t>& map, LockFreeM
     {
         if (mode == 3)
         {
-#ifdef LOCK_FREE_MAP_PROGRESS_COMMON
-            // 借用查询没有线上等价接口，不能用复制查询伪造比较
-            ++worker.m_errors;
-            return false;
-#else
             unsigned callbacks = 0;
             // 参数只在借用期间有效；输出到线程私有变量并核对每次调用至多回调一次
             /** 复制借用值并累计当前操作的回调次数，供独立判定
@@ -245,7 +234,6 @@ bool LockFreeMapProgressTest::attempt(LockFreeMap<int, uint64_t>& map, LockFreeM
             {
                 ++worker.m_errors;
             }
-#endif
         }
         else
         {
@@ -277,13 +265,7 @@ int LockFreeMapProgressTest::scenario(std::ostream& report, unsigned mode, unsig
 {
     static const char* const kNames[] = { "same_key_set", "same_key_legacy_set", "mixed_get", "mixed_visit", "pipeline_128", "priority_128", "record_limit_2", "pipeline_erase", "erase_restore", "readers_only", "conditional_update" };
     const unsigned workers = 8;
-#ifdef LOCK_FREE_MAP_PROGRESS_COMMON
-    // 两版均用共有构造及静止期释放接口，配置过程在计时之前完成
-    LockFreeMap<int, uint64_t> map;
-    map.clearAndFreeMemory();
-#else
     LockFreeMap<int, uint64_t> map(false);
-#endif
     LockFreeMapConfig config;
     config.nodes.initialCapacity = 256;
     config.values.initialCapacity = 512;
@@ -554,12 +536,6 @@ int LockFreeMapProgressTest::run(std::ostream& report, unsigned milliseconds)
     {
         for (unsigned mode = 0; mode < 11; ++mode)
         {
-#ifdef LOCK_FREE_MAP_PROGRESS_COMMON
-            if (mode == 3)
-            {
-                continue;
-            }
-#endif
             const int scenarioErrors = scenario(report, mode, milliseconds);
             report << "progress_scenario_errors," << mode << ',' << scenarioErrors << '\n';
             errors += scenarioErrors;

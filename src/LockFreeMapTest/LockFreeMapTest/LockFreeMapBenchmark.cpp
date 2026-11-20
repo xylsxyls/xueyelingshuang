@@ -146,7 +146,7 @@ int LockFreeMapBenchmark::phase(std::ostream& report, LockFreeMapBenchmarkMap<in
         }
         else if (kind == 5)
         {
-#ifndef LOCK_FREE_MAP_BASELINE
+#ifndef LOCK_FREE_MAP_BENCHMARK_STD_MUTEX
             size_t released = 0;
             if (map.lockFreeMapMaintain(4096, released) != LOCK_FREE_MAP_OK)
             {
@@ -201,7 +201,7 @@ int LockFreeMapBenchmark::phase(std::ostream& report, LockFreeMapBenchmarkMap<in
         }
     }
     std::sort(samples.begin(), samples.end());
-#ifndef LOCK_FREE_MAP_BASELINE
+#ifndef LOCK_FREE_MAP_BENCHMARK_STD_MUTEX
     uint64_t retries = 0;
     size_t nodeCapacity = 0, valueCapacity = 0, managed = 0;
     LockFreeMapStats stats = map.lockFreeMapStats();
@@ -216,7 +216,7 @@ int LockFreeMapBenchmark::phase(std::ostream& report, LockFreeMapBenchmarkMap<in
     report << allocations << ',' << LockFreeMapBenchmark::m_peak.load() << ',' << LockFreeMapBenchmark::m_bytes.load() << ',';
 #endif
     report << map.retainedNodeCount() << ',' << map.retainedValueCount() << ',';
-#ifdef LOCK_FREE_MAP_BASELINE
+#ifdef LOCK_FREE_MAP_BENCHMARK_STD_MUTEX
     report << "NA,NA,NA,NA,";
 #else
     report << nodeCapacity << ',' << valueCapacity << ',' << managed << ',' << retries << ',';
@@ -403,7 +403,7 @@ int LockFreeMapBenchmark::changing(std::ostream& report, int keys, int workers)
             ++errors;
         }
     }
-#ifndef LOCK_FREE_MAP_BASELINE
+#ifndef LOCK_FREE_MAP_BENCHMARK_STD_MUTEX
     size_t released = 0;
     map.lockFreeMapMaintain(65536, released);
     if (map.retainedValueCount() != static_cast<size_t>(keys))
@@ -465,7 +465,7 @@ int LockFreeMapBenchmark::randomUpdates(std::ostream& report, int keys)
         int value = -1;
         errors += !map.get(key, value) || value != expected[key];
     }
-#ifndef LOCK_FREE_MAP_BASELINE
+#ifndef LOCK_FREE_MAP_BENCHMARK_STD_MUTEX
     size_t released = 0;
     map.lockFreeMapMaintain(65536, released);
     errors += map.retainedValueCount() != static_cast<size_t>(keys);
@@ -622,9 +622,9 @@ int LockFreeMapBenchmark::run(std::ostream& report)
 #else
     report << "allocator_instrumentation=enabled\n";
 #endif
-#ifdef LOCK_FREE_MAP_BASELINE
-    // 原始版本没有维护接口，共有接口对照时两端都使用这一负载集合
-    report << "interface_set=legacy\n";
+#ifdef LOCK_FREE_MAP_BENCHMARK_STD_MUTEX
+    // 标准库对照没有显式维护接口
+    report << "interface_set=std_mutex\n";
 #else
     report << "interface_set=full\n";
 #endif
@@ -691,7 +691,7 @@ int LockFreeMapBenchmark::run(std::ostream& report)
         errors += LockFreeMapBenchmark::phase(report, map, "history_churn", 4, 20000);
         errors += LockFreeMapBenchmark::phase(report, map, "get_after_history", 0, 20000);
         errors += LockFreeMapBenchmark::phase(report, map, "logical_clear", 6, 1000);
-#ifndef LOCK_FREE_MAP_BASELINE
+#ifndef LOCK_FREE_MAP_BENCHMARK_STD_MUTEX
         errors += LockFreeMapBenchmark::phase(report, map, "reclaim", 5, 1000);
 #endif
         map.clearAndFreeMemory();
@@ -858,7 +858,7 @@ bool LockFreeMapBenchmark::read(const char* path, std::map<std::string, double>&
     std::string line;
     bool plain = false;
     bool passed = false;
-    bool legacy = false;
+    bool stdMutex = false;
     bool interfaceSeen = false;
     bool bulk = false;
     bool single = false;
@@ -925,12 +925,12 @@ bool LockFreeMapBenchmark::read(const char* path, std::map<std::string, double>&
         }
         if (line.find("interface_set=") == 0)
         {
-            if (interfaceSeen || (line != "interface_set=legacy" && line != "interface_set=full"))
+            if (interfaceSeen || (line != "interface_set=std_mutex" && line != "interface_set=full"))
             {
                 return false;
             }
             interfaceSeen = true;
-            legacy = line == "interface_set=legacy";
+            stdMutex = line == "interface_set=std_mutex";
         }
         if (line.find("bulk_erase_insert=") == 0)
         {
@@ -989,14 +989,14 @@ bool LockFreeMapBenchmark::read(const char* path, std::map<std::string, double>&
             return false;
         }
     }
-    // 早期完整报告没有集合标记，仍必须含全部17项；缺项不能自动降级为共有接口报告
-    return plain && passed && iterations != 0 && input.eof() && !input.bad() &&
-        values.size() == static_cast<size_t>((legacy ? 16 : 17) + (bulk ? 1 : 0) - (single ? 3 : 0)) &&
+    // 必须有运行模式和负载集合标记，避免将截断报告识别为完整数据
+    return interfaceSeen && bulk && steadySeen && threadModelSeen && placementSeen && plain && passed && iterations != 0 && input.eof() && !input.bad() &&
+        values.size() == static_cast<size_t>((stdMutex ? 16 : 17) + (bulk ? 1 : 0) - (single ? 3 : 0)) &&
         values.count("changing/keys=128/threads=4") == (single ? 0 : 1) &&
         values.count("changing/keys=128/threads=8") == (single ? 0 : 1) &&
         values.count("changing/keys=1/threads=4") == (single ? 0 : 1) &&
         values.count("erase_insert_bulk/keys=128/threads=1") == (bulk ? 1 : 0) &&
-        (legacy ? values.count("reclaim") == 0 : values.count("reclaim") == 1);
+        (stdMutex ? values.count("reclaim") == 0 : values.count("reclaim") == 1);
 }
 
 int LockFreeMapBenchmark::compare(int argc, char** argv)
@@ -1010,6 +1010,7 @@ int LockFreeMapBenchmark::compare(int argc, char** argv)
         return 3;
     }
     std::map<std::string, std::vector<double>> before, after;
+    bool leftHasMaintenance = false, rightHasMaintenance = false;
     unsigned iterations = 0;
     bool steady = false;
     std::string placement;
@@ -1021,10 +1022,28 @@ int LockFreeMapBenchmark::compare(int argc, char** argv)
         std::string leftPlacement, rightPlacement;
         if (!read(argv[index], left, leftCount, leftSteady, leftPlacement) ||
             !read(argv[index + 1], right, rightCount, rightSteady, rightPlacement) ||
-            left.size() != right.size() || leftCount != rightCount ||
+            leftCount != rightCount ||
             leftSteady != rightSteady || leftPlacement != rightPlacement ||
-            (iterations != 0 && (iterations != leftCount || before.size() != left.size() ||
+            (iterations != 0 && (iterations != leftCount ||
                 steady != leftSteady || placement != leftPlacement)))
+        {
+            return 1;
+        }
+        const bool leftFull = left.count("reclaim") != 0;
+        const bool rightFull = right.count("reclaim") != 0;
+        if (iterations != 0 && (leftFull != leftHasMaintenance || rightFull != rightHasMaintenance))
+        {
+            return 1;
+        }
+        leftHasMaintenance = leftFull;
+        rightHasMaintenance = rightFull;
+        if (leftFull != rightFull)
+        {
+            // 两份完整报告唯一允许省略的对照项是标准库没有的显式维护。
+            left.erase("reclaim");
+            right.erase("reclaim");
+        }
+        if (left.size() != right.size() || (iterations != 0 && before.size() != left.size()))
         {
             return 1;
         }

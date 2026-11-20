@@ -13,6 +13,10 @@ int LockFreeMapPoolModule()
     {
         LockFreeMapReclamation domain(4);
         LockFreeMapGuard guard(domain);
+        if (guard.m_record == nullptr)
+        {
+            return 1;
+        }
         LockFreeMapPoolConfig config;
         config.initialCapacity = 2;
         config.maximumCapacity = 3;
@@ -79,6 +83,10 @@ int LockFreeMapPoolModule()
         LockFreeMapPoolBlock<int>* block = held->m_block;
         pool.release(held);
         LockFreeMapGuard heldGuard(domain);
+        if (heldGuard.m_record == nullptr)
+        {
+            return 1;
+        }
         heldGuard.m_record->m_pointer[2].store(block);
         pool.maintain(10, released);
         std::this_thread::sleep_for(std::chrono::milliseconds(3));

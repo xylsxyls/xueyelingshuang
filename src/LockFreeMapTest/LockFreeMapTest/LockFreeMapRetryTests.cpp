@@ -353,7 +353,7 @@ static bool NestedRecordsCase()
             }
         }
         LockFreeMapHazardRecord* extra = domain.acquire();
-        passed = extra == nullptr && domain.active() == 64 && domain.protects(&source) && passed;
+        passed = extra == nullptr && domain.active() == 64 && domain.protectsRoot(&source) && passed;
         if (extra != nullptr)
         {
             extra->release();
@@ -367,7 +367,7 @@ static bool NestedRecordsCase()
                 records[index - 1]->release();
             }
         }
-        if (!passed || domain.active() != 0 || domain.protects(&source))
+        if (!passed || domain.active() != 0 || domain.protectsRoot(&source))
         {
             return false;
         }
@@ -383,16 +383,17 @@ static bool ReadCompletionCase()
 {
     LockFreeMapReclamation domain(1);
     int source = 7, replacement = 9;
+    std::atomic<int*> current(&source);
     LockFreeMapHazardRecord* reused = nullptr;
     {
-        LockFreeMapGuard guard(domain, &source);
+        LockFreeMapGuard guard(domain, current);
         if (guard.m_record == nullptr)
         {
             return false;
         }
         guard.m_record->m_pointer[1].store(&source);
         guard.finishRead();
-        if (domain.active() != 0 || domain.protects(&source))
+        if (domain.active() != 0 || domain.protectsRoot(&source))
         {
             return false;
         }
@@ -403,9 +404,9 @@ static bool ReadCompletionCase()
         }
     }
     // 旧守卫已经析构；新的源仍由复用者独占，不能被再次清空。
-    const bool preserved = domain.active() == 1 && domain.protects(&replacement);
+    const bool preserved = domain.active() == 1 && domain.protectsRoot(&replacement);
     reused->release();
-    return preserved && domain.active() == 0 && !domain.protects(&replacement);
+    return preserved && domain.active() == 0 && !domain.protectsRoot(&replacement);
 }
 
 /** 根保护兼作领取状态时，清空借用不能提前开放记录复用
@@ -415,24 +416,26 @@ static bool SourceProtectionCase()
 {
     LockFreeMapReclamation domain(1);
     int source = 1, replacement = 2;
+    std::atomic<int*> current(&source);
     {
-        LockFreeMapGuard guard(domain, &source);
-        if (guard.m_record == nullptr || domain.active() != 1 || !domain.protects(&source))
+        LockFreeMapGuard guard(domain, current);
+        if (guard.m_record == nullptr || domain.active() != 1 || !domain.protectsRoot(&source))
         {
             return false;
         }
         guard.m_record->m_pointer[0].store(nullptr);
-        if (!guard.m_record->claimed() || domain.protects(&source))
+        if (!guard.m_record->claimed() || domain.protectsRoot(&source))
         {
             return false;
         }
-        LockFreeMapGuard nested(domain, &replacement);
+        current.store(&replacement);
+        LockFreeMapGuard nested(domain, current);
         if (nested.m_record != nullptr)
         {
             return false;
         }
         guard.m_record->m_pointer[0].store(&replacement);
-        if (!domain.protects(&replacement))
+        if (!domain.protectsRoot(&replacement))
         {
             return false;
         }
@@ -440,16 +443,15 @@ static bool SourceProtectionCase()
         guard.m_record->m_pointer[1].store(&source);
         guard.m_record->m_pointer[2].store(&replacement);
         guard.m_record->m_pointer[0].store(nullptr);
-        if (!domain.protectsValue(&source) || !domain.protects(&replacement))
+        if (!domain.protectsValue(&source) || !domain.protectsBlock(&replacement))
         {
             return false;
         }
     }
-    if (domain.active() != 0 || domain.protects(&source) || domain.protects(&replacement))
+    if (domain.active() != 0 || domain.protectsValue(&source) || domain.protectsBlock(&replacement) || domain.protectsRoot(&replacement))
     {
         return false;
     }
-    std::atomic<int*> current(&source);
     for (unsigned iteration = 0; iteration < 3; ++iteration)
     {
         int* expected = iteration == 0 ? &source : iteration == 1 ? &replacement : nullptr;
@@ -457,18 +459,70 @@ static bool SourceProtectionCase()
         LockFreeMapGuard guard(domain, current);
         if (guard.m_record == nullptr || !guard.m_record->claimed() || domain.active() != 1 ||
             guard.m_record->m_pointer[0].load() != expected ||
-            (expected != nullptr && !domain.protects(expected)))
+            (expected != nullptr && !domain.protectsRoot(expected)))
         {
             return false;
         }
         // 来源变化不自动解除旧借用；守卫退出后才能开放复用。
         current.store(nullptr);
-        if (expected != nullptr && !domain.protects(expected))
+        if (expected != nullptr && !domain.protectsRoot(expected))
         {
             return false;
         }
     }
-    return domain.active() == 0 && !domain.protects(&source) && !domain.protects(&replacement);
+    return domain.active() == 0 && !domain.protectsRoot(&source) && !domain.protectsRoot(&replacement);
+}
+
+/** 让值池的唯一块目录被占用，观察配置好的容量重试是否真正经过公开写入口
+@return 可阻塞目标按配置等待后重新评估策略，单线程 Wasm 立即报告资源状态时为 true
+*/
+static bool CheckConfiguredCapacityWait()
+{
+    unsigned calls = 0;
+    uint64_t first = 0, second = 0;
+    LockFreeMapConfig config;
+    if (config.capacityFastRetries != 4096 || config.capacitySleepMilliseconds != 1 ||
+        config.setCapacityWait(0, 4) != LOCK_FREE_MAP_OK || config.setCapacityWait(9, 0) != LOCK_FREE_MAP_INVALID ||
+        config.setCapacityWait(9, -1) != LOCK_FREE_MAP_INVALID || config.capacityFastRetries != 0 ||
+        config.capacitySleepMilliseconds != 4 || config.values.setCapacity(1, -1) != LOCK_FREE_MAP_OK ||
+        config.values.setBlockRecordLimit(1) != LOCK_FREE_MAP_OK)
+    {
+        return false;
+    }
+    /** 首次允许申请第二块，后续拒绝增长以结束本次公开调用
+    @param [in] context 已分配容量的观察值
+    @return 首次且当前仅一槽时返回一个槽，其余返回零
+    */
+    const auto grow = [&](const LockFreeMapGrowContext& context) -> size_t
+    {
+        if (++calls == 1)
+        {
+            first = LockFreeMapBenchmarkClock::nanoseconds();
+            return context.currentCapacity == 1 ? 1 : 0;
+        }
+        second = LockFreeMapBenchmarkClock::nanoseconds();
+        return 0;
+    };
+    LockFreeMap<int, int> map(false);
+    config.capacitySleepMilliseconds = 0;
+    if (map.lockFreeMapConfigure(config) != LOCK_FREE_MAP_INVALID || map.lockFreeMapSet(1, 1) != LOCK_FREE_MAP_INVALID ||
+        config.setCapacityWait(0, 4) != LOCK_FREE_MAP_OK ||
+        config.values.setGrow(grow) != LOCK_FREE_MAP_OK || map.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK ||
+        config.setCapacityWait(8, 1) != LOCK_FREE_MAP_OK || !map.set(1, 7))
+    {
+        return false;
+    }
+    const LockFreeMapStatus status = map.trySet(1, 9, true, true);
+    if (map.value(1) != 7 || map.lockFreeMapStats().activeOperations != 0)
+    {
+        return false;
+    }
+#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+    return status == LOCK_FREE_MAP_RECORD_LIMIT && calls == 1 && second == 0;
+#else
+    return status == LOCK_FREE_MAP_GROW_DENIED && calls == 2 && first != 0 && second >= first &&
+        second - first >= 4000000;
+#endif
 }
 
 bool LockFreeMapRetryTest()
@@ -479,7 +533,8 @@ bool LockFreeMapRetryTest()
         return false;
     }
 #endif
-    if (!SourceProtectionCase() || !ReadCompletionCase() || !QueryContentionCase(false) || !QueryContentionCase(true))
+    if (!CheckConfiguredCapacityWait() || !SourceProtectionCase() || !ReadCompletionCase() ||
+        !QueryContentionCase(false) || !QueryContentionCase(true))
     {
         return false;
     }
@@ -591,7 +646,7 @@ bool LockFreeMapGrowthTest()
     config.nodes.maximumCapacity = config.values.maximumCapacity = 128;
     /** 累计节点池实际新增容量及通知次数，检查非零增长信息
     @param [in] added 本次实际新增槽数
-    @note 第2个未命名参数是同步借用输入，本回调不使用其内容
+    @param [in] count 成功增长次数的观察值，实际通知时应非零
     */
     config.nodes.m_onGrowth = [&](size_t added, uint64_t count)
     {
@@ -601,7 +656,7 @@ bool LockFreeMapGrowthTest()
     };
     /** 记录值池增长后抛受控异常，验证通知异常不撤销增长
     @param [in] added 本次实际新增槽数
-    @note 第2个未命名参数是同步借用输入，本回调不使用其内容
+    @param [in] count 成功增长次数的观察值，实际通知时应非零
     */
     config.values.m_onGrowth = [&](size_t added, uint64_t count)
     {

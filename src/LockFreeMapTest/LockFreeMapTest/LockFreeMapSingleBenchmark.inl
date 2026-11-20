@@ -144,7 +144,6 @@ bool LockFreeMapSingleBenchmark::exercise(LockFreeMapSingleContainer& map,
         }
         else if (Operation == 13)
         {
-            // 回调只累加借用值，不让引用逃出当前调用
             /** 将本次借用值写入局部value供校验，不保留借用引用
             @param [in] borrowed 本次输入值；引用仅在当前回调期间借用，不向外保存
             */

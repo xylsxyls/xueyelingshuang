@@ -32,6 +32,11 @@ int main(int argc, char** argv)
     {
         for (unsigned round = 0; round < 10; ++round)
         {
+            // 各轮独立等待本轮的缓冲区，保留累计计数供最终报告使用。
+            const unsigned previousAllocations = allocationFailures.load();
+            const unsigned previousExceptions = workerExceptions.load();
+            const unsigned previousFailures = failures.load();
+            const size_t previousThreadErrors = LockFreeMapTestThread::m_errors.load();
             std::atomic<unsigned> held(0);
             std::atomic<bool> start(false), cancel(false);
 #ifdef __EMSCRIPTEN__
@@ -126,7 +131,7 @@ int main(int argc, char** argv)
                 }));
             }
             const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-            while (held.load() != 16 && allocationFailures.load() == 0 && workerExceptions.load() == 0 &&
+            while (held.load() != 16 && allocationFailures.load() == previousAllocations && workerExceptions.load() == previousExceptions &&
                 std::chrono::steady_clock::now() < deadline)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -153,7 +158,10 @@ int main(int argc, char** argv)
                     joinFailures.fetch_add(1);
                 }
             }
-            written = std::fprintf(report, "round,%u,errors,%u\n", round + 1, failures.load()) > 0 && written;
+            const size_t roundErrors = failures.load() - previousFailures + allocationFailures.load() - previousAllocations +
+                workerExceptions.load() - previousExceptions + (LockFreeMapTestThread::m_errors.load() - previousThreadErrors);
+            written = std::fprintf(report, "round,%u,errors,%llu\n", round + 1,
+                static_cast<unsigned long long>(roundErrors)) > 0 && written;
             written = std::fflush(report) == 0 && written;
         }
     }
@@ -161,12 +169,12 @@ int main(int argc, char** argv)
     {
         failures.fetch_add(1);
     }
-    const unsigned errors = failures.load() + allocationFailures.load() + workerExceptions.load() + joinFailures.load() +
-        (LockFreeMapTestThread::m_errors.load() != 0 ? 1 : 0);
+    // join 失败已计入线程封装的错误总数，额外记录的 joinFailures 只用来诊断。
+    const size_t errors = failures.load() + allocationFailures.load() + workerExceptions.load() + LockFreeMapTestThread::m_errors.load();
     written = std::fprintf(report, "runtime_counts,allocation_failures=%u,worker_exceptions=%u,join_failures=%u,thread_errors=%llu\n",
         allocationFailures.load(), workerExceptions.load(), joinFailures.load(),
         static_cast<unsigned long long>(LockFreeMapTestThread::m_errors.load())) > 0 && written;
-    written = std::fprintf(report, "failures,%u\n", errors) > 0 && written;
+    written = std::fprintf(report, "failures,%llu\n", static_cast<unsigned long long>(errors)) > 0 && written;
     written = std::ferror(report) == 0 && written;
     written = std::fclose(report) == 0 && written;
     return !written ? 3 : errors == 0 ? 0 : 1;

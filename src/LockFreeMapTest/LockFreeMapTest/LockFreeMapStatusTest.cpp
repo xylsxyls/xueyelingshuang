@@ -2,6 +2,42 @@
 #include "LockFreeMapTest.h"
 #include "LockFreeMap/LockFreeMap.h"
 #include <stdexcept>
+#include <new>
+#include <limits>
+
+LockFreeMapPolicyCopyFault::LockFreeMapPolicyCopyFault(bool allocation) :
+m_allocation(allocation)
+{
+
+}
+
+LockFreeMapPolicyCopyFault::LockFreeMapPolicyCopyFault(const LockFreeMapPolicyCopyFault& other) :
+m_allocation(other.m_allocation)
+{
+    if (m_allocation)
+    {
+        throw std::bad_alloc();
+    }
+    throw std::runtime_error("policy copy");
+}
+
+std::size_t LockFreeMapPolicyCopyFault::operator()(const LockFreeMapGrowContext& context) const
+{
+    (void)context;
+    return 0;
+}
+
+LockFreeMapShrinkDecision LockFreeMapPolicyCopyFault::operator()(const LockFreeMapShrinkContext& context) const
+{
+    (void)context;
+    return LockFreeMapShrinkDecision();
+}
+
+void LockFreeMapPolicyCopyFault::operator()(std::size_t added, uint64_t count) const
+{
+    (void)added;
+    (void)count;
+}
 
 LockFreeMapStatusKey::LockFreeMapStatusKey(int value, std::function<void()>* compare) :
 m_value(value),
@@ -58,10 +94,379 @@ LockFreeMapStatusValue& LockFreeMapStatusValue::operator=(const LockFreeMapStatu
     return *this;
 }
 
+bool LockFreeMapStatusValue::operator<(const LockFreeMapStatusValue& other) const
+{
+    return m_value < other.m_value;
+}
+
+/** 使输出与查询键或候选重叠，检查发布顺序和重试输入
+@return 两种公开入口都保留原输入且未删错键时true
+*/
+static bool CheckOverlappingArguments()
+{
+    for (int mode = 0; mode != 2; ++mode)
+    {
+        LockFreeMap<int, int> map;
+        int key = 2;
+        LockFreeMapToken token;
+        if (!map.set(5, 50))
+        {
+            return false;
+        }
+        const LockFreeMapStatus result = mode == 0 ? map.lockFreeMapGetOrInsert(key, 7, key, token) :
+            map.tryGetOrInsert(key, 7, key, token, true, false);
+        if (result != LOCK_FREE_MAP_COMMITTED || key != 7 || map.contains(7) || map.value(2) != 7 ||
+            map.value(5) != 50 || map.lockFreeMapUpdate(2, token, 8) != LOCK_FREE_MAP_COMMITTED)
+        {
+            return false;
+        }
+        LockFreeMap<int, LockFreeMapStatusValue> nested;
+        if (!nested.set(5, LockFreeMapStatusValue(7)) || !nested.set(7, LockFreeMapStatusValue(99)))
+        {
+            return false;
+        }
+        unsigned calls = 0;
+        bool changed = false;
+        /** 首次复制输出时修改无关键，迫使外层提取重新验证根
+        */
+        std::function<void()> churn = [&]()
+        {
+            if (++calls == 1)
+            {
+                changed = nested.set(1, LockFreeMapStatusValue(1));
+            }
+        };
+        LockFreeMapStatusValue output(5, &churn);
+        const LockFreeMapStatus taken = mode == 0 ? nested.lockFreeMapExtract(output.m_value, output) :
+            nested.tryExtract(output.m_value, output, true, false);
+        if (taken != LOCK_FREE_MAP_COMMITTED || calls != 2 || !changed || output.m_value != 7 ||
+            nested.contains(5) || !nested.contains(7))
+        {
+            return false;
+        }
+        calls = 0;
+        /** 写输出时改变候选原对象，仍须提交调用开始时的候选
+        */
+        churn = [&]()
+        {
+            if (++calls == 1)
+            {
+                output.m_value = 123;
+                changed = nested.erase(1);
+            }
+        };
+        const LockFreeMapStatus created = mode == 0 ? nested.lockFreeMapGetOrInsert(3, output, output, token) :
+            nested.tryGetOrInsert(3, output, output, token, true, false);
+        if (created != LOCK_FREE_MAP_COMMITTED || calls != 2 || !changed || output.m_value != 7 ||
+            nested.value(3).m_value != 7)
+        {
+            return false;
+        }
+        LockFreeMap<LockFreeMapStatusValue, LockFreeMapToken> priorities;
+        const LockFreeMapToken payload;
+        LockFreeMapToken out;
+        LockFreeMapStatusValue selected;
+        if (!priorities.set(LockFreeMapStatusValue(4), payload) ||
+            priorities.lockFreeMapLast(selected, out, token) != LOCK_FREE_MAP_OK)
+        {
+            return false;
+        }
+        out = token;
+        calls = 0;
+        /** 键输出第一次赋值时插入较低优先级，随后值输出覆盖原凭据
+        */
+        churn = [&]()
+        {
+            if (++calls == 1)
+            {
+                changed = priorities.set(LockFreeMapStatusValue(1), payload);
+            }
+        };
+        selected.m_assign = &churn;
+        const LockFreeMapStatus last = mode == 0 ? priorities.lockFreeMapExtractLast(out, selected, out) :
+            priorities.tryExtractLast(out, selected, out, true, false);
+        if (last != LOCK_FREE_MAP_COMMITTED || calls != 2 || !changed || selected.m_value != 4 ||
+            out.m_identity || out.m_version != 0 || priorities.size() != 1 || !priorities.contains(LockFreeMapStatusValue(1)))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+/** 比较清空后首次写入使用不同自动维护预算的实际回收量
+@param [in] budget 待验证的正预算
+@param [out] retained 成功时仍然存活的键对象数
+@return 配置、插入和清空后的新键提交都成功时true
+*/
+static bool ObserveMaintenance(size_t budget, size_t& retained)
+{
+    LockFreeMapConfig config;
+    LockFreeMap<int, int> map(false);
+    if (config.setMaintenanceBudget(budget) != LOCK_FREE_MAP_OK ||
+        map.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK)
+    {
+        return false;
+    }
+    for (int key = 0; key != 12; ++key)
+    {
+        if (!map.insert(key, key))
+        {
+            return false;
+        }
+    }
+    map.clear();
+    if (!map.insert(31, 45))
+    {
+        return false;
+    }
+    retained = map.retainedNodeCount();
+    return map.size() == 1 && map.value(31) == 45;
+}
+
+/** 验证单个操作记录在指定写入次数时触发维护，覆盖之间不发生缺槽或结构变化
+@param [in] interval 待设置的正间隔
+@param [in] lastAttempt 含首次插入在内的写入次数
+@return 每次覆盖后的值与维护回调次数均符合独立预期时为true
+*/
+static bool CheckMaintenanceInterval(uint32_t interval, unsigned lastAttempt)
+{
+    LockFreeMapConfig config;
+    unsigned calls = 0;
+    /** 只记录键池维护，不要求释放块
+    @note 未命名参数为键池容量观察
+    @return 不缩容
+    */
+    const auto observe = [&calls](const LockFreeMapShrinkContext&)
+    {
+        ++calls;
+        return LockFreeMapShrinkDecision();
+    };
+    LockFreeMap<int, int> map(false);
+    if (config.setMaintenanceInterval(interval) != LOCK_FREE_MAP_OK ||
+        config.setMaintenanceInterval(0) != LOCK_FREE_MAP_INVALID ||
+        config.nodes.setShrink(observe) != LOCK_FREE_MAP_OK ||
+        map.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK || !map.insert(9, 1))
+    {
+        return false;
+    }
+    // 首次插入空表会触发结构维护，也占一次写入计数。
+    unsigned expected = calls;
+    for (unsigned attempt = 2; attempt <= lastAttempt; ++attempt)
+    {
+        const int value = static_cast<int>(attempt);
+        if (attempt % interval == 0)
+        {
+            ++expected;
+        }
+        if (!map.set(9, value) || map.value(9) != value || calls != expected)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+/** 检查双池零容量起步的默认增长边界及清空后的槽复用
+@return 两池仅在缺槽时从零增至16再增至32，清空与维护后可复用时返回true
+*/
+static bool CheckDefaultPoolGrowth()
+{
+    LockFreeMapConfig config;
+    LockFreeMap<int, int> map(false);
+    if (config.nodes.setCapacity(0, -1) != LOCK_FREE_MAP_OK || config.values.setCapacity(0, -1) != LOCK_FREE_MAP_OK ||
+        map.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK)
+    {
+        return false;
+    }
+    const LockFreeMapStats initial = map.lockFreeMapStats();
+    if (initial.nodes.capacity != 0 || initial.values.capacity != 0)
+    {
+        return false;
+    }
+    for (int key = 0; key <= 16; ++key)
+    {
+        if (!map.insert(key, key + 10))
+        {
+            return false;
+        }
+        const size_t expected = key < 16 ? 16 : 32;
+        const uint64_t grows = key < 16 ? 1 : 2;
+        const LockFreeMapStats stats = map.lockFreeMapStats();
+        if (stats.nodes.capacity != expected || stats.values.capacity != expected ||
+            stats.nodes.successfulGrowCount != grows || stats.values.successfulGrowCount != grows)
+        {
+            return false;
+        }
+    }
+    map.clear();
+    size_t released = 0;
+    if (map.lockFreeMapMaintain(512, released) != LOCK_FREE_MAP_OK || released != 0 || !map.empty() ||
+        !map.insert(23, 37) || map.value(23) != 37)
+    {
+        return false;
+    }
+    const LockFreeMapStats reused = map.lockFreeMapStats();
+    return reused.nodes.capacity == 32 && reused.values.capacity == 32 &&
+        reused.nodes.successfulGrowCount == 2 && reused.values.successfulGrowCount == 2;
+}
+
+bool LockFreeMapConfigurationTest()
+{
+    if (!CheckDefaultPoolGrowth())
+    {
+        return false;
+    }
+    LockFreeMapConfig config;
+    LockFreeMap<int, int> defaults;
+    const LockFreeMapStats initial = defaults.lockFreeMapStats();
+    if (initial.nodes.capacity != 16 || initial.values.capacity != 16 || config.operationRecordLimit != 64 ||
+        config.maintenanceBudget != 64 || config.maintenanceInterval != 64 ||
+        config.nodes.maximumCapacity != -1 || config.nodes.blockRecordLimit != 256 ||
+        config.nodes.growFreeThreshold != 0 || config.nodes.m_onGrowth)
+    {
+        return false;
+    }
+    size_t growth = 0, shrinks = 0;
+    /** 每批新增三个槽，拒绝不符合预期的上下文
+    @param [in] context 增长前的初始及当前容量
+    @return 初始容量符合测试配置时为三
+    */
+    const auto grow = [](const LockFreeMapGrowContext& context) -> size_t
+    {
+        return context.initialCapacity == 2 && context.currentCapacity >= 2 ? 3 : 0;
+    };
+    /** 统计实际发布数，不计初始容量及失败增长
+    @param [in] added 本次实际新增槽数
+    @param [in] count 已成功增长的次数
+    */
+    const auto notify = [&](size_t added, uint64_t count)
+    {
+        growth += count == 1 ? added : 1000;
+    };
+    /** 记录缩容回调的调用，保持容量以检查预增长
+    @param [in] context 当前容量观察
+    @return 禁用释放的决策
+    */
+    const auto shrink = [&](const LockFreeMapShrinkContext& context)
+    {
+        shrinks += context.initialCapacity == 2 ? 1 : 0;
+        return LockFreeMapShrinkDecision();
+    };
+    config.nodes.setGrowFreeThreshold(1);
+    if (config.nodes.setCapacity(2, 4) != LOCK_FREE_MAP_OK || config.nodes.setCapacity(3, 1) != LOCK_FREE_MAP_INVALID ||
+        config.nodes.setCapacity(0, -2) != LOCK_FREE_MAP_INVALID || config.nodes.setBlockRecordLimit(2) != LOCK_FREE_MAP_OK ||
+        config.nodes.setBlockRecordLimit(0) != LOCK_FREE_MAP_INVALID || config.nodes.setGrow(grow) != LOCK_FREE_MAP_OK ||
+        config.nodes.setShrink(shrink) != LOCK_FREE_MAP_OK || config.nodes.setOnGrowth(notify) != LOCK_FREE_MAP_OK ||
+        config.values.setCapacity(8, -1) != LOCK_FREE_MAP_OK || config.setOperationRecordLimit(1) != LOCK_FREE_MAP_OK ||
+        config.setOperationRecordLimit(0) != LOCK_FREE_MAP_INVALID || config.setMaintenanceBudget(0) != LOCK_FREE_MAP_INVALID)
+    {
+        return false;
+    }
+    LockFreeMap<int, int> map(false);
+    if (map.lockFreeMapSet(1, 1) != LOCK_FREE_MAP_INVALID || map.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK ||
+        map.lockFreeMapStats().nodes.capacity != 2 || map.lockFreeMapStats().values.capacity != 8 ||
+        !map.insert(1, 1) || growth != 2 || shrinks == 0 || map.lockFreeMapStats().nodes.capacity != 4)
+    {
+        return false;
+    }
+    LockFreeMapStatus nested = LOCK_FREE_MAP_OK;
+    /** 唯一记录已由访问回调占用，重入写入应明确报告记录不足
+    @param [in] value 当前借用的值
+    */
+    const auto reenter = [&](const int& value) { nested = map.lockFreeMapSet(9, value); };
+    if (map.lockFreeMapVisit(1, reenter) != LOCK_FREE_MAP_OK || nested != LOCK_FREE_MAP_RECORD_LIMIT ||
+        !map.insert(2, 2) || !map.insert(3, 3) || !map.insert(4, 4) ||
+        map.tryInsert(5, 5) != LOCK_FREE_MAP_CAPACITY || map.contains(5))
+    {
+        return false;
+    }
+    map.clearAndFreeMemory();
+    config.nodes.setGrowFreeThreshold(0);
+    if (config.nodes.setCapacity(2, -1) != LOCK_FREE_MAP_OK || config.nodes.setBlockRecordLimit(1) != LOCK_FREE_MAP_OK ||
+        map.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK || !map.insert(1, 1) || !map.insert(2, 2) ||
+        map.tryInsert(3, 3) != LOCK_FREE_MAP_RECORD_LIMIT)
+    {
+        return false;
+    }
+    map.clearAndFreeMemory();
+    if (config.nodes.setCapacity(0, 0) != LOCK_FREE_MAP_OK ||
+        config.nodes.setGrow(std::function<size_t(const LockFreeMapGrowContext&)>()) != LOCK_FREE_MAP_OK ||
+        map.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK || map.trySet(1, 1) != LOCK_FREE_MAP_CAPACITY ||
+        !map.empty())
+    {
+        return false;
+    }
+    // 只放宽上限，保持零初始容量和刚清除的增长策略，区分额度用完和策略拒绝。
+    if (config.nodes.setCapacity(0, -1) != LOCK_FREE_MAP_OK || map.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK ||
+        map.tryInsert(7, 9) != LOCK_FREE_MAP_GROW_DENIED || !map.empty() || map.lockFreeMapStats().nodes.capacity != 0)
+    {
+        return false;
+    }
+    // 独立配置值池。首次插入触发预增长，覆盖仍只替换值；两次操作都不应增长键池。
+    LockFreeMapConfig valueConfig;
+    growth = 0;
+    shrinks = 0;
+    valueConfig.values.setGrowFreeThreshold(1);
+    if (valueConfig.values.setCapacity(2, 6) != LOCK_FREE_MAP_OK ||
+        valueConfig.values.setBlockRecordLimit(2) != LOCK_FREE_MAP_OK ||
+        valueConfig.values.setGrow(grow) != LOCK_FREE_MAP_OK ||
+        valueConfig.values.setGrow(LockFreeMapPolicyCopyFault(true)) != LOCK_FREE_MAP_ALLOCATION_FAILURE ||
+        valueConfig.values.setGrow(LockFreeMapPolicyCopyFault(false)) != LOCK_FREE_MAP_USER_EXCEPTION ||
+        valueConfig.values.setShrink(shrink) != LOCK_FREE_MAP_OK ||
+        valueConfig.values.setShrink(LockFreeMapPolicyCopyFault(true)) != LOCK_FREE_MAP_ALLOCATION_FAILURE ||
+        valueConfig.values.setShrink(LockFreeMapPolicyCopyFault(false)) != LOCK_FREE_MAP_USER_EXCEPTION ||
+        valueConfig.values.setOnGrowth(notify) != LOCK_FREE_MAP_OK ||
+        valueConfig.values.setOnGrowth(LockFreeMapPolicyCopyFault(true)) != LOCK_FREE_MAP_ALLOCATION_FAILURE ||
+        valueConfig.values.setOnGrowth(LockFreeMapPolicyCopyFault(false)) != LOCK_FREE_MAP_USER_EXCEPTION ||
+        map.lockFreeMapConfigure(valueConfig) != LOCK_FREE_MAP_OK || !map.insert(1, 17) ||
+        !map.set(1, 23) || map.value(1) != 23 || growth != 3 || shrinks == 0)
+    {
+        return false;
+    }
+    const LockFreeMapStats valueStats = map.lockFreeMapStats();
+    if (valueStats.nodes.capacity != 16 || valueStats.nodes.successfulGrowCount != 0 ||
+        valueStats.values.capacity != 5 || valueStats.values.successfulGrowCount != 1)
+    {
+        return false;
+    }
+    // 覆盖已有键也需要一个新值槽。分别只放宽容量和块目录，检查两种失败原因。
+    LockFreeMapConfig limit;
+    LockFreeMap<int, int> bounded(false);
+    if (limit.values.setCapacity(1, 1) != LOCK_FREE_MAP_OK || limit.values.setBlockRecordLimit(1) != LOCK_FREE_MAP_OK ||
+        bounded.lockFreeMapConfigure(limit) != LOCK_FREE_MAP_OK || !bounded.set(1, 10) ||
+        bounded.trySet(1, 20) != LOCK_FREE_MAP_CAPACITY || bounded.value(1) != 10)
+    {
+        return false;
+    }
+    bounded.clearAndFreeMemory();
+    if (limit.values.setCapacity(1, -1) != LOCK_FREE_MAP_OK || bounded.lockFreeMapConfigure(limit) != LOCK_FREE_MAP_OK ||
+        !bounded.set(1, 10) || bounded.trySet(1, 20) != LOCK_FREE_MAP_RECORD_LIMIT || bounded.value(1) != 10)
+    {
+        return false;
+    }
+    bounded.clearAndFreeMemory();
+    if (limit.values.setBlockRecordLimit(2) != LOCK_FREE_MAP_OK || bounded.lockFreeMapConfigure(limit) != LOCK_FREE_MAP_OK ||
+        !bounded.set(1, 10) || bounded.trySet(1, 20) != LOCK_FREE_MAP_COMMITTED || bounded.value(1) != 20 ||
+        bounded.lockFreeMapStats().values.capacity != 2)
+    {
+        return false;
+    }
+    size_t retainedSmall = 0, retainedLarge = 0;
+    return ObserveMaintenance(1, retainedSmall) && ObserveMaintenance(64, retainedLarge) &&
+        retainedSmall > retainedLarge && retainedLarge == 1 &&
+        CheckMaintenanceInterval(1, 3) && CheckMaintenanceInterval(3, 7) && CheckMaintenanceInterval(64, 129) &&
+        CheckMaintenanceInterval((std::numeric_limits<uint32_t>::max)(), 129);
+}
+
 int LockFreeMapStatusContract()
 {
     try
     {
+        if (!CheckOverlappingArguments())
+        {
+            return 28;
+        }
         // 分别启用键池和值池的缩容路径，逐个核对成功写入归还唯一操作记录及最终载荷。
         // 单记录预算使遗漏归还不能被另一个空闲记录掩盖；此检查也在单线程 Wasm 执行。
         for (unsigned flags = 0; flags < 4; ++flags)

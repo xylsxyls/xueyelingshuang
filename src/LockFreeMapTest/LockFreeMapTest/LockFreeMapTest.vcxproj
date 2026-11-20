@@ -215,11 +215,6 @@
     <MakeDir Directories="$(IntDir)include\LockFreeMap" />
     <Copy SourceFiles="@(LockFreeMapTestHeader)" DestinationFolder="$(IntDir)include\LockFreeMap" SkipUnchangedFiles="true" />
   </Target>
-  <ItemDefinitionGroup Condition="'$(LockFreeMapTestLegacy)'=='true'">
-    <ClCompile>
-      <PreprocessorDefinitions>LOCK_FREE_MAP_BASELINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(LockFreeMapTestStdMutex)'=='true'">
     <ClCompile>
       <PreprocessorDefinitions>LOCK_FREE_MAP_BENCHMARK_STD_MUTEX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -240,9 +235,6 @@
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(LockFreeMapTestBenchmark)'=='true' and '$(LockFreeMapTestProgress)'=='true'">
     <ClCompile><PreprocessorDefinitions>LOCK_FREE_MAP_BENCHMARK_PROGRESS;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(LockFreeMapProgressCommon)'=='true'">
-    <ClCompile><PreprocessorDefinitions>LOCK_FREE_MAP_PROGRESS_COMMON;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="LockFreeMapRetryTests.h" />

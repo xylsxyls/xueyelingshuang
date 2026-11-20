@@ -59,7 +59,7 @@ private:
 
     /** 执行编译期选定的操作，不在热循环内进行运行期场景分派
     @param [in,out] map 被测容器
-    @param [in] queries 预生成的确定性随机排列，元素是偶数键
+    @param [in] queries 非空且长度为二的幂的查询数组，常规场景用偶数键，稀疏场景用散布键
     @param [in] iterations 操作次数；扫描按整表次数，批次按完整插入及清空轮数
     @param [out] checksum 对所有结果求和，避免编译器消除访问
     @return 操作返回值或数量异常时返回 false
@@ -68,7 +68,7 @@ private:
     static bool exercise(LockFreeMapSingleContainer& map, const std::vector<uint32_t>& queries,
         uint64_t iterations, uint64_t& checksum);
 
-    /** 使用独立公式和最终内容验证负载，再预热并计时
+    /** 预热并计时，再用独立公式与最终内容校验负载
     @param [in] name 场景标识
     @param [in] keys 偶数键数量
     @param [in] iterations 零表示校准；否则按给定固定次数运行

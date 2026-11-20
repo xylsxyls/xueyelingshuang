@@ -8,8 +8,8 @@ struct LockFreeMapTestCopyKey
 public:
     // 键复制构造的实际次数
     static std::atomic<int> m_copies;
-    // 是否在复制构造中抛出受控异常
-    static bool m_throw;
+    // 从一开始的失败复制序号，零表示关闭；只在没有并发复制时设置
+    static int m_failOnCopy;
     // 独立键值
     int m_value;
 

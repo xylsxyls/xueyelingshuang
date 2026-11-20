@@ -2,9 +2,6 @@
 #include "LockFreeMap/LockFreeMapAPI.h"
 #ifdef LOCK_FREE_MAP_BENCHMARK_STD_MUTEX
 #include "LockFreeMapBenchmarkMutex.h"
-#ifndef LOCK_FREE_MAP_BASELINE
-#define LOCK_FREE_MAP_BASELINE
-#endif
 template <typename Key, typename Value>
 using LockFreeMapBenchmarkMap = LockFreeMapBenchmarkMutex<Key, Value>;
 #else
@@ -17,7 +14,7 @@ using LockFreeMapBenchmarkMap = LockFreeMap<Key, Value>;
 #include <vector>
 #include <stdint.h>
 
-/** 以相同旧接口负载对照整改前后性能
+/** 测量当前容器和标准库加锁对照的公共负载
 */
 class LockFreeMapBenchmark
 {

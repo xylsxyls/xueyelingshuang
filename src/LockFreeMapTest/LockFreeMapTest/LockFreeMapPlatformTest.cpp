@@ -17,6 +17,18 @@ int LockFreeMapPlatform()
         static_cast<unsigned long long>(sizeof(void*)), static_cast<unsigned long long>(std::alignment_of<long double>::value));
     try
     {
+        // 直接检查跨越首尾的槽数组；仅对启用了缓存行对齐的后端要求 64 字节边界。
+        LockFreeMapPoolBlock<int> block(17);
+        if (block.m_slots == nullptr || block.m_count != 17 ||
+            (LockFreeMapPoolBlock<int>::kAlignmentPadding != 0 && reinterpret_cast<uintptr_t>(block.m_slots) % 64 != 0))
+        {
+            return 1;
+        }
+        for (size_t position = 0; position < block.m_count; ++position)
+        {
+            const LockFreeMapPoolSlot<int>& slot = block.m_slots[position];
+            failures += slot.m_block != &block || slot.m_references.load() != 0 || slot.m_version != 0;
+        }
         // 使用当前平台基本对齐要求检查实际载荷地址
         LockFreeMap<int, long double> aligned;
         for (int key = 0; key < 128; ++key)
@@ -27,11 +39,12 @@ int LockFreeMapPlatform()
         @param [in] key 当前受保护条目的键，仅回调期间借用
         @param [in] value 本次输入值；引用仅在当前回调期间借用，不向外保存
         */
-        failures += aligned.forEach([&failures](const int& key, const long double& value) -> void
+        const size_t visited = aligned.forEach([&failures](const int& key, const long double& value) -> void
         {
             failures += reinterpret_cast<uintptr_t>(&value) % std::alignment_of<long double>::value != 0;
             failures += value != static_cast<long double>(key) + 0.25L;
-        }) != 128;
+        });
+        failures += visited != 128;
         aligned.clearAndFreeMemory();
         failures += aligned.retainedNodeCount() != 0 || aligned.retainedValueCount() != 0;
         LockFreeMap<int, int> map;

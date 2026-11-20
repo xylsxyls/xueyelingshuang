@@ -2,6 +2,7 @@
 #include "LockFreeMapTestCopyKey.h"
 #include <cstdlib>
 #include <cstdio>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 #include <string>
@@ -253,8 +254,10 @@ bool LockFreeMapTests::tokens()
         return false;
     }
     LockFreeMap<int, int, std::greater<int>> reverse;
-    reverse.set(1, 10);
-    reverse.set(9, 90);
+    if (!reverse.set(1, 10) || !reverse.set(9, 90) || reverse.size() != 2)
+    {
+        return false;
+    }
     int maximum = 0;
     LockFreeMapToken token;
     return reverse.lockFreeMapLast(maximum, value, token) == LOCK_FREE_MAP_OK && maximum == 1 && value == 10;
@@ -318,48 +321,75 @@ bool LockFreeMapTests::exceptions()
 
 bool LockFreeMapTests::sameKey()
 {
+    const int workers = 16;
     LockFreeMap<int, int> map;
-    std::atomic<int> start(0), published(0), failed(0);
+    std::atomic<int> ready(0), start(0);
+    LockFreeMapStatus results[workers] = {};
+    LockFreeMapToken tokens[workers];
+    int values[workers] = {};
     std::vector<LockFreeMapTestThread> threads;
-    threads.reserve(16);
+    threads.reserve(workers);
     try
     {
-        for (int id = 0; id < 16; ++id)
+        for (int id = 0; id < workers; ++id)
         {
-            /** 共同起跑后竞争查找或插入同键，核对胜出值及凭据
+            /** 各自提交线程编号作为候选，并保存本次调用的输出供汇合后比较
             */
-            threads.push_back(LockFreeMapTestThread([&map, &start, &published, &failed, id]() -> void
+            threads.emplace_back([&, id]()
             {
-                if (!wait(start))
+                if (ready.fetch_add(1) + 1 == workers)
                 {
-                    failed.fetch_add(1);
-                    return;
+                    start.store(1);
                 }
-                int actual = -1;
-                LockFreeMapToken token;
-                // 默认容量足够容纳全部候选；普通接口不得把 CAS 竞争交给测试代码重试
-                const LockFreeMapStatus result = map.lockFreeMapGetOrInsert(7, id, actual, token);
-                if (result == LOCK_FREE_MAP_COMMITTED)
+                if (wait(start))
                 {
-                    published.fetch_add(1);
+                    values[id] = -1;
+                    results[id] = map.lockFreeMapGetOrInsert(7, id, values[id], tokens[id]);
                 }
-                if ((result != LOCK_FREE_MAP_COMMITTED && result != LOCK_FREE_MAP_EXISTS) || map.value(7, -2) != actual)
-                {
-                    failed.fetch_add(1);
-                }
-            }));
+            });
         }
     }
     catch (...)
     {
-        failed.fetch_add(1);
+        start.store(1);
+        // 线程数组先析构并汇合，再销毁其借用的各项结果。
+        return false;
     }
-    start.store(1);
     for (size_t index = 0; index < threads.size(); ++index)
     {
-        threads[index].join();
+        if (!threads[index].join())
+        {
+            return false;
+        }
     }
-    return failed.load() == 0 && published.load() == 1 && map.size() == 1;
+    int winner = -1;
+    for (int id = 0; id < workers; ++id)
+    {
+        if (results[id] == LOCK_FREE_MAP_COMMITTED && winner < 0)
+        {
+            winner = id;
+        }
+        else if (results[id] != LOCK_FREE_MAP_EXISTS)
+        {
+            return false;
+        }
+    }
+    int actual = -1;
+    LockFreeMapToken current;
+    if (winner < 0 || map.size() != 1 || map.lockFreeMapGet(7, actual, current) != LOCK_FREE_MAP_OK ||
+        actual != winner || !current.m_identity || current.m_version == 0)
+    {
+        return false;
+    }
+    for (int id = 0; id < workers; ++id)
+    {
+        if (values[id] != winner || tokens[id].m_identity != current.m_identity || tokens[id].m_version != current.m_version)
+        {
+            return false;
+        }
+    }
+    // 任一未胜出线程拿到的凭据也应能实际提交条件更新。
+    return map.lockFreeMapUpdate(7, tokens[(winner + 1) % workers], 17) == LOCK_FREE_MAP_COMMITTED && map.value(7) == 17;
 }
 
 bool LockFreeMapTests::pausedReader()
@@ -392,19 +422,21 @@ bool LockFreeMapTests::pausedReader()
         ok = ok && map.retainedValueCount() <= 4;
     }
     LockFreeMapTestValue::m_release.store(1);
-    reader.join();
+    const bool joined = reader.join();
     size_t released = 0;
-    map.lockFreeMapMaintain(4096, released);
-    ok = ok && read && output.m_value == 11 && map.retainedValueCount() == 1;
+    ok = ok && joined && map.lockFreeMapMaintain(4096, released) == LOCK_FREE_MAP_OK && read &&
+        output.m_value == 11 && map.retainedValueCount() == 1;
     LockFreeMap<int, LockFreeMapTestValue> limited;
     config.values.initialCapacity = 2;
     config.values.maximumCapacity = 2;
-    if (!ok || limited.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK || !limited.set(1, LockFreeMapTestValue(11)))
+    if (!ok || limited.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK || !limited.set(1, LockFreeMapTestValue(21)))
     {
         return false;
     }
     LockFreeMapTestValue::m_entered.store(0);
     LockFreeMapTestValue::m_release.store(0);
+    read = false;
+    output.m_value = -1;
     /** 在有限值池中暂停读取，制造暂不可回收的旧值
     */
     LockFreeMapTestThread held([&]()
@@ -412,20 +444,25 @@ bool LockFreeMapTests::pausedReader()
         read = limited.get(1, output);
     });
     ok = wait(LockFreeMapTestValue::m_entered) && limited.set(1, LockFreeMapTestValue(12)) &&
-    limited.lockFreeMapSet(1, LockFreeMapTestValue(13)) == LOCK_FREE_MAP_CAPACITY && limited.erase(1);
+        limited.lockFreeMapSet(1, LockFreeMapTestValue(13)) == LOCK_FREE_MAP_CAPACITY && limited.erase(1);
     LockFreeMapTestValue::m_release.store(1);
-    held.join();
-    return ok && read && output.m_value == 11 && limited.set(1, LockFreeMapTestValue(14));
+    const bool heldJoined = held.join();
+    output.m_pauseAssignment = false;
+    return heldJoined && ok && read && output.m_value == 21 && limited.empty() &&
+        limited.set(1, LockFreeMapTestValue(14)) && limited.get(1, output) && output.m_value == 14;
 }
 
 bool LockFreeMapTests::maximumRace()
 {
     LockFreeMap<int, LockFreeMapTestValue> map;
-    map.set(1, LockFreeMapTestValue(1));
     int key = 0;
     LockFreeMapTestValue value;
     LockFreeMapToken selected;
-    map.lockFreeMapLast(key, value, selected);
+    if (!map.set(1, LockFreeMapTestValue(11)) || map.lockFreeMapLast(key, value, selected) != LOCK_FREE_MAP_OK ||
+        key != 1 || value.m_value != 11)
+    {
+        return false;
+    }
     value.m_pauseAssignment = true;
     LockFreeMapTestValue::m_entered.store(0);
     LockFreeMapTestValue::m_release.store(0);
@@ -436,13 +473,21 @@ bool LockFreeMapTests::maximumRace()
     {
         result = map.lockFreeMapExtractLast(selected, key, value);
     });
-    bool ok = wait(LockFreeMapTestValue::m_entered) && map.set(2, LockFreeMapTestValue(2));
+    const bool inserted = wait(LockFreeMapTestValue::m_entered) && map.set(2, LockFreeMapTestValue(29));
     LockFreeMapTestValue::m_release.store(1);
-    extractor.join();
+    const bool joined = extractor.join();
     value.m_pauseAssignment = false;
-    ok = ok && result == LOCK_FREE_MAP_CONFLICT && map.size() == 2;
-    ok = ok && map.lockFreeMapLast(key, value, selected) == LOCK_FREE_MAP_OK && key == 2;
-    return ok && map.lockFreeMapExtractLast(selected, key, value) == LOCK_FREE_MAP_COMMITTED && key == 2 && map.size() == 1;
+    if (!joined || !inserted || result != LOCK_FREE_MAP_CONFLICT || map.size() != 2 ||
+        !map.get(1, value) || value.m_value != 11 || map.lockFreeMapLast(key, value, selected) != LOCK_FREE_MAP_OK ||
+        key != 2 || value.m_value != 29)
+    {
+        return false;
+    }
+    // 分别重置两个输出，防止查询结果掩盖提取漏写的键或值。
+    key = -1;
+    value.m_value = -1;
+    return map.lockFreeMapExtractLast(selected, key, value) == LOCK_FREE_MAP_COMMITTED && key == 2 &&
+        value.m_value == 29 && map.size() == 1 && !map.contains(2) && map.get(1, value) && value.m_value == 11;
 }
 
 bool LockFreeMapTests::clearRace()
@@ -483,6 +528,7 @@ bool LockFreeMapTests::clearRace()
     }
     return true;
 }
+
 bool LockFreeMapTests::fullPools()
 {
     LockFreeMap<int, LockFreeMapTestValue> map;
@@ -535,8 +581,9 @@ bool LockFreeMapTests::fullPools()
         return false;
     }
     size_t released = 0;
-    map.lockFreeMapMaintain(4096, released);
-    return map.lockFreeMapStats().values.retained == 1 && map.set(1, LockFreeMapTestValue(3));
+    return map.lockFreeMapMaintain(4096, released) == LOCK_FREE_MAP_OK && map.lockFreeMapStats().values.retained == 1 &&
+        map.size() == 1 && !map.contains(2) && map.get(1, output) && output.m_value == 1 &&
+        map.set(1, LockFreeMapTestValue(3)) && map.get(1, output) && output.m_value == 3;
 }
 
 bool LockFreeMapTests::shrinking()
@@ -561,7 +608,7 @@ bool LockFreeMapTests::shrinking()
     */
     config.nodes.shrink = config.values.shrink = [&](const LockFreeMapShrinkContext& c)
     {
-        if (c.initialCapacity != 2 || (c.successfulGrowCount == 0 && c.hasSuccessfulGrow))
+        if (c.initialCapacity != 2 || c.hasSuccessfulGrow != (c.successfulGrowCount != 0))
         {
             contextErrors.fetch_add(1);
         }
@@ -578,24 +625,43 @@ bool LockFreeMapTests::shrinking()
             return false;
         }
     }
-    size_t released = 0;
-    map.lockFreeMapMaintain(4096, released);
-    if (map.lockFreeMapStats().nodes.capacity != 8 || map.lockFreeMapStats().nodes.retained != 8)
+    /** 在没有并发写者时，用两个池的容量差核验本次维护报告的物理释放槽数
+    @return 维护成功、两池容量均未增加且释放槽数准确时返回true
+    */
+    const auto maintain = [&map]() -> bool
+    {
+        const LockFreeMapStats before = map.lockFreeMapStats();
+        size_t released = (std::numeric_limits<size_t>::max)();
+        if (map.lockFreeMapMaintain(4096, released) != LOCK_FREE_MAP_OK)
+        {
+            return false;
+        }
+        const LockFreeMapStats after = map.lockFreeMapStats();
+        return after.nodes.capacity <= before.nodes.capacity && after.values.capacity <= before.values.capacity &&
+            released == (before.nodes.capacity - after.nodes.capacity) + (before.values.capacity - after.values.capacity);
+    };
+    if (!maintain() || map.lockFreeMapStats().nodes.capacity != 8 || map.lockFreeMapStats().values.capacity != 8 ||
+        map.lockFreeMapStats().nodes.retained != 8)
     {
         return false;
     }
     map.clear();
-    map.lockFreeMapMaintain(4096, released);
+    if (!maintain())
+    {
+        return false;
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    map.lockFreeMapMaintain(4096, released);
-    if (map.lockFreeMapStats().nodes.capacity != 8)
+    if (!maintain() || map.lockFreeMapStats().nodes.capacity != 8 || map.lockFreeMapStats().values.capacity != 8)
     {
         return false;
     }
     enabled.store(2);
     for (int pass = 0; pass < 12; ++pass)
     {
-        map.lockFreeMapMaintain(4096, released);
+        if (!maintain())
+        {
+            return false;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(3));
     }
     if (map.lockFreeMapStats().nodes.capacity != 2 || map.lockFreeMapStats().values.capacity != 2)
@@ -610,8 +676,9 @@ bool LockFreeMapTests::shrinking()
         }
     }
     map.clearAndFreeMemory();
-    return contextErrors.load() == 0 && map.lockFreeMapStats().nodes.capacity == 0 &&
-    map.lockFreeMapStats().values.bytes == 0 && map.set(1, 1);
+    const LockFreeMapStats freed = map.lockFreeMapStats();
+    return contextErrors.load() == 0 && freed.nodes.capacity == 0 && freed.values.capacity == 0 &&
+        freed.nodes.bytes == 0 && freed.values.bytes == 0 && map.set(1, 1) && map.value(1, -1) == 1;
 }
 
 bool LockFreeMapTests::stress()
@@ -695,8 +762,9 @@ bool LockFreeMapTests::stress()
                     {
                         ++statuses[id][status];
                     }
-                    if (status != LOCK_FREE_MAP_OK && status != LOCK_FREE_MAP_COMMITTED &&
-                        status != LOCK_FREE_MAP_NOT_FOUND)
+                    // 写入必须提交；只有提取允许未找到，维护则必须返回 OK。
+                    const LockFreeMapStatus expected = operation <= 2 ? LOCK_FREE_MAP_COMMITTED : LOCK_FREE_MAP_OK;
+                    if (status != expected && !(operation == 2 && status == LOCK_FREE_MAP_NOT_FOUND))
                     {
                         errors.fetch_add(1);
                     }
@@ -717,7 +785,10 @@ bool LockFreeMapTests::stress()
     size_t released = 0;
     for (int pass = 0; pass < 20; ++pass)
     {
-        map.lockFreeMapMaintain(65536, released);
+        if (map.lockFreeMapMaintain(65536, released) != LOCK_FREE_MAP_OK)
+        {
+            errors.fetch_add(1);
+        }
     }
     LockFreeMapStats stats = map.lockFreeMapStats();
 
@@ -1046,16 +1117,17 @@ bool LockFreeMapTests::limits()
         return false;
     }
     LockFreeMapIndexStore<int, int, std::less<int>> store(config);
+    LockFreeMapGuard versionGuard(store.m_domain);
     store.m_version.store((std::numeric_limits<uint64_t>::max)() - 1);
     uint64_t version = 0;
-    if (!store.nextVersion(version) || version != (std::numeric_limits<uint64_t>::max)() || store.nextVersion(version))
+    if (versionGuard.m_record == nullptr || !store.nextVersion(version, versionGuard) || version != (std::numeric_limits<uint64_t>::max)() || store.nextVersion(version, versionGuard))
     {
         return false;
     }
     LockFreeMapIndexStore<int, int, std::less<int>> ranged(config);
     LockFreeMapGuard rangeGuard(ranged.m_domain);
     ranged.m_version.store((std::numeric_limits<uint64_t>::max)() - 2);
-    if (!ranged.nextVersion(version, rangeGuard) || version != (std::numeric_limits<uint64_t>::max)() - 1 ||
+    if (rangeGuard.m_record == nullptr || !ranged.nextVersion(version, rangeGuard) || version != (std::numeric_limits<uint64_t>::max)() - 1 ||
         !ranged.nextVersion(version, rangeGuard) || version != (std::numeric_limits<uint64_t>::max)() ||
         ranged.nextVersion(version, rangeGuard))
     {
@@ -1517,20 +1589,23 @@ bool LockFreeMapTests::descriptorHelping()
             return false;
         }
         LockFreeMapGuard producer(store.m_domain);
+        if (producer.m_record == nullptr)
+        {
+            return false;
+        }
         LockFreeMapStatus status = LOCK_FREE_MAP_INVALID;
         LockFreeMapPoolSlot<int>* first = store.m_values.create(11, 1, producer, status);
         if (first == nullptr)
         {
             return false;
         }
-        LockFreeMapPoolSlot<LockFreeMapKey<int, int>>* node = store.m_nodes.create(
-            LockFreeMapKey<int, int>(1, store.m_values), 0, producer, status);
+        LockFreeMapPoolSlot<LockFreeMapKey<int, int>>* node = store.m_nodes.emplace(
+            0, producer, status, 1, store.m_values, first);
         if (node == nullptr)
         {
             store.m_values.release(first);
             return false;
         }
-        node->mutableValue().m_value.store(first);
         LockFreeMapIndex<int, int>* initial = store.build(nullptr, 0, false, node, nullptr, producer, status);
         if (initial == nullptr)
         {
@@ -1566,6 +1641,10 @@ bool LockFreeMapTests::descriptorHelping()
         LockFreeMapTestThread helper([&]()
         {
             LockFreeMapGuard observer(store.m_domain);
+            if (observer.m_record == nullptr)
+            {
+                return;
+            }
             LockFreeMapIndex<int, int>* view = store.protect(observer);
             helped = pending->m_state.load() == 1 && view == pending &&
                 view->count() == static_cast<size_t>(changed);
@@ -1694,9 +1773,9 @@ bool LockFreeMapTests::directKeyConstruction()
     {
         return false;
     }
-    LockFreeMapTestCopyKey::m_throw = true;
+    LockFreeMapTestCopyKey::m_failOnCopy = LockFreeMapTestCopyKey::m_copies.load() + 1;
     const LockFreeMapStatus failed = map.lockFreeMapSet(second, 9);
-    LockFreeMapTestCopyKey::m_throw = false;
+    LockFreeMapTestCopyKey::m_failOnCopy = 0;
     int value = 0;
     const LockFreeMapStats stats = map.lockFreeMapStats();
     if (failed != LOCK_FREE_MAP_USER_EXCEPTION || map.contains(second) || !map.get(first, value) || value != 8 ||
@@ -1857,6 +1936,10 @@ bool LockFreeMapTests::sharedIndex()
         return false;
     }
     LockFreeMapGuard producer(store.m_domain);
+    if (producer.m_record == nullptr)
+    {
+        return false;
+    }
     LockFreeMapStatus status = LOCK_FREE_MAP_INVALID;
     for (int key = 1; key <= 2; ++key)
     {
@@ -1865,13 +1948,12 @@ bool LockFreeMapTests::sharedIndex()
         {
             return false;
         }
-        auto* node = store.m_nodes.emplace(0, producer, status, key, store.m_values);
+        auto* node = store.m_nodes.emplace(0, producer, status, key, store.m_values, value);
         if (node == nullptr)
         {
             store.m_values.release(value);
             return false;
         }
-        node->mutableValue().m_value.store(value);
         auto* source = store.protect(producer);
         auto* next = store.build(source, key - 1, false, node, nullptr, producer, status);
         if (next == nullptr)
@@ -1883,6 +1965,10 @@ bool LockFreeMapTests::sharedIndex()
         store.complete(next, source, producer);
     }
     LockFreeMapGuard reader(store.m_domain);
+    if (reader.m_record == nullptr)
+    {
+        return false;
+    }
     auto* oldView = store.protect(reader);
     auto* source = store.protect(producer);
     // 读者保持旧数组时删除首项并在同一排序位置插入不同键；旧视图不能被补写改变
@@ -1899,13 +1985,12 @@ bool LockFreeMapTests::sharedIndex()
     {
         return false;
     }
-    auto* replacement = store.m_nodes.emplace(0, producer, status, 0, store.m_values);
+    auto* replacement = store.m_nodes.emplace(0, producer, status, 0, store.m_values, replacementValue);
     if (replacement == nullptr)
     {
         store.m_values.release(replacementValue);
         return false;
     }
-    replacement->mutableValue().m_value.store(replacementValue);
     auto* replaced = store.build(source, 0, false, replacement, nullptr, producer, status);
     if (replaced == nullptr)
     {
@@ -1925,13 +2010,12 @@ bool LockFreeMapTests::sharedIndex()
     {
         return false;
     }
-    auto* added = store.m_nodes.emplace(0, producer, status, 3, store.m_values);
+    auto* added = store.m_nodes.emplace(0, producer, status, 3, store.m_values, value);
     if (added == nullptr)
     {
         store.m_values.release(value);
         return false;
     }
-    added->mutableValue().m_value.store(value);
     auto* pending = store.build(source, 2, false, added, nullptr, producer, status);
     if (pending == nullptr)
     {
@@ -1947,6 +2031,10 @@ bool LockFreeMapTests::sharedIndex()
     LockFreeMapTestThread helper([&]()
     {
         LockFreeMapGuard guard(store.m_domain);
+        if (guard.m_record == nullptr)
+        {
+            return;
+        }
         auto* view = store.protect(guard);
         LockFreeMapStatus result = LOCK_FREE_MAP_INVALID;
         auto* nextValue = store.m_values.create(44, 4, guard, result);
@@ -1954,13 +2042,12 @@ bool LockFreeMapTests::sharedIndex()
         {
             return;
         }
-        auto* node = store.m_nodes.emplace(0, guard, result, 4, store.m_values);
+        auto* node = store.m_nodes.emplace(0, guard, result, 4, store.m_values, nextValue);
         if (node == nullptr)
         {
             store.m_values.release(nextValue);
             return;
         }
-        node->mutableValue().m_value.store(nextValue);
         auto* next = store.build(view, 3, false, node, nullptr, guard, result);
         if (next == nullptr)
         {
@@ -1995,13 +2082,12 @@ bool LockFreeMapTests::sharedIndex()
     {
         return false;
     }
-    added = store.m_nodes.emplace(0, producer, status, 5, store.m_values);
+    added = store.m_nodes.emplace(0, producer, status, 5, store.m_values, value);
     if (added == nullptr)
     {
         store.m_values.release(value);
         return false;
     }
-    added->mutableValue().m_value.store(value);
     auto* discarded = store.build(source, 4, false, added, nullptr, producer, status);
     if (discarded == nullptr)
     {
@@ -2043,13 +2129,13 @@ bool LockFreeMapTests::slotCache()
                 return false;
             }
             owner.m_record->m_pointer[0].store(&protectedValue);
-            if (!single.protects(&protectedValue))
+            if (!single.protectsRoot(&protectedValue))
             {
                 return false;
             }
             owner.m_record->m_pointer[0].store(nullptr);
             LockFreeMapGuard nested(single);
-            if (nested.m_record != nullptr || single.active() != 1 || single.protects(&protectedValue))
+            if (nested.m_record != nullptr || single.active() != 1 || single.protectsRoot(&protectedValue))
             {
                 return false;
             }
@@ -2073,6 +2159,10 @@ bool LockFreeMapTests::slotCache()
     LockFreeMapPoolSlot<LockFreeMapTestValue>* cached = nullptr;
     {
         LockFreeMapGuard owner(domain);
+        if (owner.m_record == nullptr)
+        {
+            return false;
+        }
         LockFreeMapStatus status = LOCK_FREE_MAP_INVALID;
         cached = pool.emplace(1, owner, status, 11);
         if (cached == nullptr)
@@ -2092,6 +2182,10 @@ bool LockFreeMapTests::slotCache()
         LockFreeMapTestThread contender([&]()
         {
             LockFreeMapGuard guard(domain);
+            if (guard.m_record == nullptr)
+            {
+                return;
+            }
             LockFreeMapStatus result = LOCK_FREE_MAP_INVALID;
             auto* value = pool.emplace(2, guard, result, 22);
             progressed = value == nullptr && result == LOCK_FREE_MAP_CAPACITY;
@@ -2119,6 +2213,10 @@ bool LockFreeMapTests::slotCache()
     }
     {
         LockFreeMapGuard next(domain);
+        if (next.m_record == nullptr)
+        {
+            return false;
+        }
         next.m_record->m_poolOwner[1] = &pool;
         next.m_record->m_poolCache[1] = moved;
         LockFreeMapStatus status = LOCK_FREE_MAP_INVALID;
@@ -2154,6 +2252,10 @@ bool LockFreeMapTests::slotCache()
     }
     {
         LockFreeMapGuard rebuilt(domain);
+        if (rebuilt.m_record == nullptr)
+        {
+            return false;
+        }
         LockFreeMapStatus status = LOCK_FREE_MAP_INVALID;
         auto* value = pool.emplace(7, rebuilt, status, 77);
         if (value == nullptr || value->value().m_value != 77 || value->m_version != 7)
