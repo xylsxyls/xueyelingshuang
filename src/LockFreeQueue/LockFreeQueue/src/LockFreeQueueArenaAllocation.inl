@@ -431,7 +431,7 @@ LockFreeQueueResult LockFreeQueueArena<T>::unavailableResult() const
 }
 
 template <class T>
-LockFreeQueueResult LockFreeQueueArena<T>::grow(Record* record, bool required)
+LockFreeQueueResult LockFreeQueueArena<T>::grow(Record& record, bool required)
 {
     LockFreeQueueProgress committedProgress;
     const size_t returned = consumed();
@@ -484,13 +484,9 @@ LockFreeQueueResult LockFreeQueueArena<T>::grow(Record* record, bool required)
             amount = granted;
             break;
         }
-        if (record != nullptr && !record->m_progress.retry())
+        if (!record.m_progress.retry())
         {
             return LockFreeQueueBusy;
-        }
-        if (record == nullptr)
-        {
-            committedProgress.retry();
         }
     }
     size_t peak = m_peak.load(std::memory_order_relaxed);
@@ -528,15 +524,11 @@ LockFreeQueueResult LockFreeQueueArena<T>::grow(Record* record, bool required)
         {
             break;
         }
-        if (record != nullptr && !record->m_progress.retry())
+        if (!record.m_progress.retry())
         {
             deleteBlock(block, true);
             m_budget.fetch_sub(amount);
             return LockFreeQueueBusy;
-        }
-        if (record == nullptr)
-        {
-            committedProgress.retry();
         }
     }
     // A published-but-not-open block remains charged and cannot be allocated or
@@ -658,7 +650,7 @@ typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::acquireUncachedNode
         }
         // 空闲统计是弱一致快照，可能先于实际位图或额度的归还发布。
         // 两次实际领取仍失败时走必要扩容，不以正的统计值拒绝，也不等待某个归还者。
-        result = grow(&record, true);
+        result = grow(record, true);
         if (record.m_progress.interrupted())
         {
             return nullptr;
@@ -688,7 +680,7 @@ typename LockFreeQueueArena<T>::Node* LockFreeQueueArena<T>::acquireUncachedNode
         if (available() <= m_config.growThreshold && pending <= m_config.growThreshold)
         {
             // Proactive failure never revokes the acquired node.
-            grow(&record);
+            grow(record);
             // 提前扩容竞争失败不能撤销本次已经取得的节点。
             record.m_progress.resume();
         }

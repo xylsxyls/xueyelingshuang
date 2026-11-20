@@ -79,8 +79,8 @@ public:
     typedef typename LockFreeQueueArena<T>::Record Record;
 
     /** 借用登记记录并建立作用域守卫；不重新申请租约
-    @param [in,out] arena 生命周期覆盖适配器的节点池；不转移所有权
-    @param [in,out] record 可空的独占登记槽；nullptr表示消费者适配或无须清理，非空借用至适配器析构
+    @param [in,out] arena 生命周期覆盖本守卫的节点池；不转移所有权
+    @param [in,out] record 独占的生产者登记槽，借用至本守卫析构；申请失败时传 nullptr，无须归还
     @param [in] releaseLease 是否在离开时归还登记租约
     */
     LockFreeQueueArenaLease(LockFreeQueueArena<T>& arena, Record* record, bool releaseLease);
@@ -90,9 +90,9 @@ public:
     ~LockFreeQueueArenaLease();
 
 private:
-    // 借用节点池，必须覆盖本适配器生命周期
+    // 借用节点池，必须覆盖本守卫生命周期
     LockFreeQueueArena<T>* m_arena;
-    // 借用的独占生产者记录；nullptr 表示消费者适配或未绑定
+    // 借用的独占生产者记录；nullptr 表示本次没有取得登记槽
     Record* m_record;
     // 析构时是否归还本操作的登记槽
     bool m_releaseLease;

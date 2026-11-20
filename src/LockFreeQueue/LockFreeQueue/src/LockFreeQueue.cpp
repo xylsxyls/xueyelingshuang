@@ -7,7 +7,7 @@
 // 使用前配置，停止并收敛全部使用者后才能 init/destroy；Producer 必须先于队列释放。
 // 使用方法：复制下方 BEGIN/END 之间的内容，去掉每行最前面的 //，作为独立控制台程序编译。
 // 单独复制时还需 #include "LockFreeQueueAPI.h"，并配置本库头文件包含目录。
-// 已验证：VS2013 Win32/x64 的 Debug/Release，四次编译运行通过；不是并发或性能测试。
+// 测试工程从下列注释提取原样示例，可在 Windows 和 Wasm 以同一套公开接口运行。
 // BEGIN LOCKFREEQUEUE USAGE DEMO
 
 // #include <iostream>
@@ -104,8 +104,12 @@
 //             config.initialCapacity = 16;
 //             config.growThreshold = 1;
 //             config.maximumCapacity = 512; // -1 为无配置上限，仍可能分配失败。
+//             config.producerYieldInterval = 1024; // 每个登记独立累计让步预算。
 //             config.maximumProducers = 4; // 覆盖同时登记的普通调用和绑定上下文。
 //             if (!succeeded("configurePool", queue.configurePool(config)) ||
+//                 !succeeded("configureAutomaticMaintenance", queue.configureAutomaticMaintenance(32, 4)) ||
+//                 !succeeded("configureConsumerYieldInterval", queue.configureConsumerYieldInterval(2048)) ||
+//                 !succeeded("configureCapacityWait", queue.configureCapacityWait(4096, 1)) ||
 //                 !succeeded("configureProducerCounters", queue.configureProducerCounters(true)) ||
 //                 !succeeded("configureCancelableReservations", queue.configureCancelableReservations(false)) ||
 //                 !succeeded("configureEntryOnly", queue.configureEntryOnly(false)))
@@ -275,11 +279,17 @@
 //             }
 //             // 返回后借用结束，才允许修改/复用；队列不析构 Entry 中的 T。
 //             first.m_value = 202;
-//             if (!succeeded("reuse Entry", queue.tryPushEntryAndFence(first)))
+//             if (!succeeded("reuse first Entry", queue.tryPushEntryAndFence(first)) ||
+//                 !succeeded("reuse second Entry", producer.tryPushEntry(second)))
 //             {
 //                 return 1;
 //             }
-//             queue.clear(); // 结束本次借用；不会 delete 外部 Entry。
+//             // 两种 probe 都会消费；先用预算 1 取第一个地址，再用 Span 取余下的项。
+//             if (!queue.probeReadyEntryPrefix(ready, 1, consumed) || consumed != 1 || ready[0] != &first ||
+//                 !queue.probeReadyEntrySpan(ready, 2, consumed) || consumed != 1 || ready[0] != &second)
+//             {
+//                 return 1;
+//             }
 //             producer.release();
 //             if (!queue.empty() || first.m_value != 202)
 //             {

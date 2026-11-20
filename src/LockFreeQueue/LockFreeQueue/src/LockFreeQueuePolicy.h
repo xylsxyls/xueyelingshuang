@@ -52,10 +52,12 @@ public:
     int64_t maximumCapacity;
     // Fixed per-instance protection records; no TLS registration or thread handles.
     size_t maximumProducers;
+    // 生产者登记的协作让步间隔，1..65535 次操作，默认 4096
+    uint32_t producerYieldInterval;
     // 成功发布新增块后通知实际新增槽数及成功计数快照，不含初始化；可并发，不可重入本队列，异常忽略
     std::function<void(size_t, uint64_t)> m_onGrowth;
 
-    /** Construct defaults: 64 nodes, threshold 0, unlimited, 1024 producers
+    /** Construct defaults: 64 nodes, threshold 0, unlimited, 1024 producers, producer yield interval 4096
     */
     LockFreeQueuePoolConfig();
 };

@@ -7,16 +7,9 @@
 
 template <class T>
 LockFreeQueue<T>::LockFreeQueue() :
-m_channel(nullptr),
-m_cancelableReservations(false),
-m_prepared(0),
-m_distributedCounters(false),
-m_maintenance(0),
-m_prefixSingleBudget(0),
-m_emptyReclamation(0),
-m_emptyHintBudget(0)
+LockFreeQueue(true)
 {
-    init();
+
 }
 
 template <class T>
@@ -25,7 +18,11 @@ m_channel(nullptr),
 m_cancelableReservations(false),
 m_prepared(0),
 m_distributedCounters(false),
+m_capacityRetriesBeforeSleep(4096),
+m_capacitySleepMilliseconds(1),
 m_maintenance(0),
+m_maintenanceInterval(64),
+m_maintenanceBudget(8),
 m_prefixSingleBudget(0),
 m_emptyReclamation(0),
 m_emptyHintBudget(0)
@@ -101,6 +98,38 @@ LockFreeQueueResult LockFreeQueue<T>::configureProducerCounters(bool distributed
         return LockFreeQueueInvalidState;
     }
     m_distributedCounters = distributed;
+    return LockFreeQueueSuccess;
+}
+
+template <class T>
+LockFreeQueueResult LockFreeQueue<T>::configureAutomaticMaintenance(uint32_t interval, size_t workBudget)
+{
+    if (m_arena.initialized())
+    {
+        return LockFreeQueueInvalidState;
+    }
+    if (interval == 0 || workBudget == 0)
+    {
+        return LockFreeQueueInvalidConfiguration;
+    }
+    m_maintenanceInterval = interval;
+    m_maintenanceBudget = workBudget;
+    return LockFreeQueueSuccess;
+}
+
+template <class T>
+LockFreeQueueResult LockFreeQueue<T>::configureCapacityWait(uint32_t retriesBeforeSleep, uint32_t sleepMilliseconds)
+{
+    if (m_arena.initialized())
+    {
+        return LockFreeQueueInvalidState;
+    }
+    if (sleepMilliseconds == 0)
+    {
+        return LockFreeQueueInvalidConfiguration;
+    }
+    m_capacityRetriesBeforeSleep = retriesBeforeSleep;
+    m_capacitySleepMilliseconds = sleepMilliseconds;
     return LockFreeQueueSuccess;
 }
 
@@ -226,7 +255,7 @@ LockFreeQueueResult LockFreeQueue<T>::retryAcquireProducer(LockFreeQueueProducer
     uint32_t capacityRetries = 0;
     for (;;)
     {
-        if (!LockFreeQueueProgress::waitCapacity(capacityRetries))
+        if (!LockFreeQueueProgress::waitCapacity(capacityRetries, m_capacityRetriesBeforeSleep, m_capacitySleepMilliseconds))
         {
             return LockFreeQueueResourceUnavailable;
         }
@@ -341,7 +370,7 @@ LockFreeQueueResult LockFreeQueue<T>::retryPushFailure(const T& value, bool retr
             {
                 m_arena.releaseCache(*retained);
             }
-            if (!LockFreeQueueProgress::waitCapacity(capacityRetries))
+            if (!LockFreeQueueProgress::waitCapacity(capacityRetries, m_capacityRetriesBeforeSleep, m_capacitySleepMilliseconds))
             {
                 return LockFreeQueueResourceUnavailable;
             }
@@ -394,7 +423,7 @@ LockFreeQueueResult LockFreeQueue<T>::retryEntryFailure(LockFreeQueueEntry<T>& e
             {
                 m_arena.releaseCache(*retained);
             }
-            if (!LockFreeQueueProgress::waitCapacity(capacityRetries))
+            if (!LockFreeQueueProgress::waitCapacity(capacityRetries, m_capacityRetriesBeforeSleep, m_capacitySleepMilliseconds))
             {
                 return LockFreeQueueResourceUnavailable;
             }
@@ -413,13 +442,13 @@ void LockFreeQueue<T>::releaseProducer(Record& record)
 template <class T>
 LockFreeQueueResult LockFreeQueue<T>::pushImpl(const T& value, bool wait, Record* retained)
 {
-    if (m_arena.entryOnly())
-    {
-        return LockFreeQueueInvalidConfiguration;
-    }
     if (!m_arena.initialized())
     {
         return LockFreeQueueNotInitialized;
+    }
+    if (m_arena.entryOnly())
+    {
+        return LockFreeQueueInvalidConfiguration;
     }
     LockFreeQueueResult result = LockFreeQueueSuccess;
     Record* record = retained == nullptr ? m_arena.enter(wait, &result) : retained;
@@ -659,13 +688,13 @@ inline
 bool LockFreeQueue<T>::popReadyEntryPrefix(LockFreeQueueEntry<T>** output, size_t maximum, size_t& consumed)
 {
     consumed = 0;
-    if (maximum == 0)
+    if (maximum == 0 || !m_arena.entryOnly())
     {
         return false;
     }
     SegmentPool pool(m_arena, nullptr);
     Node* node = m_channel.front(pool);
-    if (node == nullptr || !m_arena.entryOnly())
+    if (node == nullptr)
     {
         return false;
     }
@@ -694,11 +723,7 @@ bool LockFreeQueue<T>::popReadyEntryPrefix(LockFreeQueueEntry<T>** output, size_
         m_channel.consume();
         consumed = 1;
         m_arena.releaseEntryCredits(*owner, 1);
-        if (m_arena.automaticMaintenanceNeeded() && ++m_maintenance == 64)
-        {
-            m_maintenance = 0;
-            maintain(8);
-        }
+        accountMaintenance(1);
         return true;
     }
     return consumeEntryPrefix(node, output, (std::min)(maximum, size_t(64)), consumed);
@@ -707,31 +732,20 @@ bool LockFreeQueue<T>::popReadyEntryPrefix(LockFreeQueueEntry<T>** output, size_
 template <class T>
 bool LockFreeQueue<T>::probeReadyEntryPrefix(LockFreeQueueEntry<T>** output, size_t maximum, size_t& consumed)
 {
-    consumed = 0;
-    if (maximum == 0)
-    {
-        return false;
-    }
-    SegmentPool pool(m_arena, nullptr);
-    Node* node = m_channel.front(pool);
-    if (node == nullptr || !m_arena.entryOnly())
-    {
-        return false;
-    }
-    return consumeEntryPrefix(node, output, (std::min)(maximum, size_t(64)), consumed);
+    return probeReadyEntrySpan(output, (std::min)(maximum, size_t(64)), consumed);
 }
 
 template <class T>
 bool LockFreeQueue<T>::probeReadyEntrySpan(LockFreeQueueEntry<T>** output, size_t maximum, size_t& consumed)
 {
     consumed = 0;
-    if (maximum == 0)
+    if (maximum == 0 || !m_arena.entryOnly())
     {
         return false;
     }
     SegmentPool pool(m_arena, nullptr);
     Node* node = m_channel.front(pool);
-    if (node == nullptr || !m_arena.entryOnly())
+    if (node == nullptr)
     {
         return false;
     }
@@ -844,15 +858,25 @@ void LockFreeQueue<T>::releaseBatch(Node* const* nodes, Block* const* externalOw
     if (count != 0)
     {
         m_arena.releaseNodes(nodes, count, externalOwners);
-        if (m_arena.automaticMaintenanceNeeded())
+        accountMaintenance(count);
+    }
+}
+
+template <class T>
+void LockFreeQueue<T>::accountMaintenance(size_t count)
+{
+    if (m_arena.automaticMaintenanceNeeded())
+    {
+        const size_t remaining = m_maintenanceInterval - m_maintenance;
+        if (count < remaining)
         {
             m_maintenance += count;
-            if (m_maintenance >= 64)
-            {
-                m_maintenance %= 64;
-                maintain(8);
-            }
+            return;
         }
+        // 先减再计算余数，Win32 上 interval 取 UINT32_MAX 时也不会溢出。
+        const size_t excess = count - remaining;
+        m_maintenance = excess < m_maintenanceInterval ? excess : excess % m_maintenanceInterval;
+        maintain(m_maintenanceBudget);
     }
 }
 
@@ -862,15 +886,7 @@ void LockFreeQueue<T>::releaseBatch(Block& owner, size_t count)
     if (count != 0)
     {
         m_arena.releaseEntryCredits(owner, count);
-        if (m_arena.automaticMaintenanceNeeded())
-        {
-            m_maintenance += count;
-            if (m_maintenance >= 64)
-            {
-                m_maintenance %= 64;
-                maintain(8);
-            }
-        }
+        accountMaintenance(count);
     }
 }
 
@@ -885,11 +901,7 @@ bool LockFreeQueue<T>::consumeNode(Node* node, T* output, size_t* consumed)
         *consumed = 1;
     }
     m_arena.releaseNode(credit, nullptr, externalOwner);
-    if (m_arena.automaticMaintenanceNeeded() && ++m_maintenance == 64)
-    {
-        m_maintenance = 0;
-        maintain(8);
-    }
+    accountMaintenance(1);
     return true;
 }
 

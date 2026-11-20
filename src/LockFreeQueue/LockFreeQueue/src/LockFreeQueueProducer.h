@@ -39,7 +39,7 @@ public:
     /** 尝试复制并发布；竞争失败为 Busy，额度已满为 CapacityLimit；失败未接纳
     @param [in] value 待复制的载荷；借用至本次调用返回
     @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
-    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
+    @param [in] retryCapacity true等待容量；按所属队列的 configureCapacityWait 配置退避；单线程Wasm不能等待时返回ResourceUnavailable
     @return 成功或明确失败状态；失败不接纳当前载荷
     */
     LockFreeQueueResult tryPush(const T& value, bool retryContention = false, bool retryCapacity = false);
@@ -47,7 +47,7 @@ public:
     /** 复用上下文发布一项，并完成发布到调用者后续原子读取之间的完整屏障
     @param [in] value 借用至返回，复制和失败语义与 tryPush 一致
     @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
-    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
+    @param [in] retryCapacity true等待容量；按所属队列的 configureCapacityWait 配置退避；单线程Wasm不能等待时返回ResourceUnavailable
     @return 成功时可与消费者 SC 屏障和队列复查配对；不排序返回后的新写入
     */
     LockFreeQueueResult tryPushAndFence(const T& value, bool retryContention = false, bool retryCapacity = false);
@@ -55,7 +55,7 @@ public:
     /** 发布调用方拥有的外部载荷，仍消耗一个节点池额度；不得重复提交尚未消费的同一对象
     @param [in,out] entry 成功后借用到消费返回或静止destroy；只提取Entry地址时不要求T可赋值
     @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
-    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
+    @param [in] retryCapacity true等待容量；按所属队列的 configureCapacityWait 配置退避；单线程Wasm不能等待时返回ResourceUnavailable
     @return 失败未接纳，既有复制入队接口及其所有权语义不变
     */
     LockFreeQueueResult tryPushEntry(LockFreeQueueEntry<T>& entry, bool retryContention = false, bool retryCapacity = false);
@@ -63,7 +63,7 @@ public:
     /** 发布外部载荷，并保证发布先于调用者后续原子读取
     @param [in,out] entry 借用与失败语义同 tryPushEntry
     @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
-    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
+    @param [in] retryCapacity true等待容量；按所属队列的 configureCapacityWait 配置退避；单线程Wasm不能等待时返回ResourceUnavailable
     @return 成功路径具有与 tryPushAndFence 相同的发布屏障保证
     */
     LockFreeQueueResult tryPushEntryAndFence(LockFreeQueueEntry<T>& entry, bool retryContention = false, bool retryCapacity = false);

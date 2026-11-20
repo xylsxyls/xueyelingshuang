@@ -2,9 +2,15 @@
 #define LOCK_FREE_QUEUE_PROGRESS_INL
 
 inline LockFreeQueueProgress::LockFreeQueueProgress() :
-m_remaining(4096), m_state(kWaiting)
+m_remaining(4096), m_interval(4096), m_state(kWaiting)
 {
 
+}
+
+inline void LockFreeQueueProgress::configureInterval(uint16_t operations)
+{
+    m_remaining = operations;
+    m_interval = operations;
 }
 
 inline void LockFreeQueueProgress::begin(bool wait)
@@ -41,9 +47,9 @@ inline bool LockFreeQueueProgress::retry(uint8_t attemptBudget)
     return true;
 }
 
-inline bool LockFreeQueueProgress::waitCapacity(uint32_t& retries)
+inline bool LockFreeQueueProgress::waitCapacity(uint32_t& retries, uint32_t retriesBeforeSleep, uint32_t sleepMilliseconds)
 {
-    if (retries < 4096)
+    if (retries < retriesBeforeSleep)
     {
         ++retries;
         // 容量只能由消费或回收释放；密集重试也要给这些线程运行机会。
@@ -54,11 +60,12 @@ inline bool LockFreeQueueProgress::waitCapacity(uint32_t& retries)
         return true;
     }
 #if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+    (void)sleepMilliseconds;
     return false;
 #else
     try
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleepMilliseconds));
         return true;
     }
     catch (...)
@@ -115,7 +122,7 @@ inline void LockFreeQueueProgress::advance(size_t count)
     if (count == 1)
     {
         // The common one-operation path is a decrement and zero test.
-        // The constructor and every slow path keep the counter in1..4096.
+        // The constructor and every slow path keep the counter in 1..m_interval.
         if (--m_remaining == 0)
         {
             yieldOperations();
@@ -140,7 +147,7 @@ __attribute__((noinline))
 #endif
 inline void LockFreeQueueProgress::yieldOperations()
 {
-    m_remaining = 4096;
+    m_remaining = m_interval;
     std::this_thread::yield();
 }
 

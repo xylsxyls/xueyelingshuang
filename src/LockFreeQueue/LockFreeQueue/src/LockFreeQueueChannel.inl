@@ -471,12 +471,9 @@ void LockFreeQueueChannel<Node, SegmentPool, RecordType>::close(Segment* segment
     {
         LockFreeQueueAtomic<uintptr_t>& cell = segment->m_cells[Segment::mapped(position)];
         uintptr_t expected = cell.load(std::memory_order_acquire);
-        if (expected == 1 || (expected == 0 && cell.compare_exchange_strong(
-                                                   expected, 1, std::memory_order_acq_rel, std::memory_order_acquire)))
-        {
-            return;
-        }
-        if (expected == 1)
+        // A failed CAS refreshes expected, including a marker that is already present.
+        if ((expected == 0 && cell.compare_exchange_strong(expected, 1, std::memory_order_acq_rel,
+            std::memory_order_acquire)) || expected == 1)
         {
             return;
         }
@@ -677,8 +674,11 @@ bool LockFreeQueueChannel<Node, SegmentPool, RecordType>::publishedBefore(Segmen
                 return true;
             }
         }
-        // 大量已取消预约的有限快照扫描也定期让步，不持续独占消费者时间片。
-        advanceConsumer(end - begin);
+        // 单发布者留下的尾提示可能落后于消费游标。只给实际扫描过的槽位计费。
+        if (begin < end)
+        {
+            advanceConsumer(end - begin);
+        }
         if (segment == boundary)
         {
             return false;

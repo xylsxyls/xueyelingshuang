@@ -56,7 +56,7 @@ public:
     void destroy();
 
     /** 设置节点池参数；仅允许未初始化且外部静止时调用
-    @param [in] config 节点数配置，最大容量仅允许 -1 或不小于初始容量；借用至返回
+    @param [in] config 本实例保存的配置副本；最大容量为 -1 或不小于初始容量，传入的对象只借用至返回
     @return Success表示配置已保存；InvalidState或InvalidConfiguration保持原配置，回调复制失败返回AllocationFailure
     */
     LockFreeQueueResult configurePool(const LockFreeQueuePoolConfig& config);
@@ -66,6 +66,20 @@ public:
     @return 已初始化则拒绝，成功后仍保持近似 size 和精确静止计数语义
     */
     LockFreeQueueResult configureProducerCounters(bool distributed);
+
+    /** 配置消费者按已取项数触发自动维护的间隔与预算，仅限初始化前外部静止时调用
+    @param [in] interval 正的消费项数，默认 64；单次消费批次至多触发一次维护
+    @param [in] workBudget 每次自动维护的正工作预算，默认 8；显式 maintain 独立传参
+    @return Success 表示保存，零参数返回 InvalidConfiguration，已初始化返回 InvalidState
+    */
+    LockFreeQueueResult configureAutomaticMaintenance(uint32_t interval, size_t workBudget);
+
+    /** 设置等待容量的生产者退避，仅限未初始化且外部静止时调用
+    @param [in] retriesBeforeSleep 首次休眠前的重试次数，默认 4096，0 表示直接进入休眠阶段
+    @param [in] sleepMilliseconds 后续每次等待的毫秒数，必须为正，默认 1；单线程 Wasm 在此阶段返回资源不可用
+    @return Success 表示保存，零时长返回 InvalidConfiguration，已初始化返回 InvalidState；失败保留原设置
+    */
+    LockFreeQueueResult configureCapacityWait(uint32_t retriesBeforeSleep, uint32_t sleepMilliseconds);
 
     /** 设置唯一消费者的协作让步间隔；仅限未初始化且外部静止时调用
     @param [in] operations 协作记账阈值，1..65536，默认4096；按单项或整批结算，批次可越过阈值
@@ -81,7 +95,7 @@ public:
     LockFreeQueueResult configureCancelableReservations(bool enabled);
 
     /** 静止且未初始化时选择仅借用外部载荷模式；默认关闭
-    @param [in] enabled true 时只接纳 tryPushEntry 系列，普通 push 返回false，普通tryPush返回配置错误
+    @param [in] enabled true 时初始化成功后只接纳 Entry 入队，值 push 返回 false，值 tryPush 返回 InvalidConfiguration
     @return 配置结果；容量和扩缩容规则保持不变，每个外部载荷仍占一个池额度
     */
     LockFreeQueueResult configureEntryOnly(bool enabled);
@@ -99,7 +113,7 @@ public:
     LockFreeQueueResult setShrinkPolicy(const LockFreeQueueShrinkPolicy& policy);
 
     /** 由本线程复制并发布一个元素；竞争持续重试并定期让出执行机会
-    容量不足持续重试，超过4096次后每次等待1毫秒；不返回竞争或满载失败
+    容量不足持续重试，按 configureCapacityWait 设置从重试切换为休眠；不返回竞争或满载失败
     单线程Wasm不能阻塞等待消费者，容量重试耗尽后返回false；勿在唯一消费者线程向满池push
     @param [in] value 待复制的载荷；借用至本次调用返回
     @return true已提交；false为初始化、分配或复制等错误，不传播异常
@@ -110,15 +124,15 @@ public:
     单线程Wasm无法完成容量等待时返回ResourceUnavailable；需要等待的业务应在宿主异步重试
     @param [in] value 待复制的载荷；借用至本次调用返回
     @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
-    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
-    @return 成功或明确失败状态；失败不接纳当前载荷
+    @param [in] retryCapacity true等待容量；按 configureCapacityWait 决定重试次数和随后每次休眠时长；单线程Wasm不能等待时返回ResourceUnavailable
+    @return 未初始化返回 NotInitialized，初始化后的 EntryOnly 返回 InvalidConfiguration；仅 Success 表示接纳
     */
     LockFreeQueueResult tryPush(const T& value, bool retryContention = false, bool retryCapacity = false);
 
     /** 复制并发布一项，成功路径保证发布先于调用者后续的原子读取
     @param [in] value 借用至返回，与 tryPush 使用相同的复制及失败语义
     @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
-    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
+    @param [in] retryCapacity true等待容量；按 configureCapacityWait 决定重试次数和随后每次休眠时长；单线程Wasm不能等待时返回ResourceUnavailable
     @return 成功时附加完整发布屏障，可与消费者的 SC 屏障及复查配对；不排序返回后的新写入
     */
     LockFreeQueueResult tryPushAndFence(const T& value, bool retryContention = false, bool retryCapacity = false);
@@ -126,7 +140,7 @@ public:
     /** 发布调用方拥有的外部载荷；容量、扩缩容、计数、FIFO 与复制入队共用同一队列
     @param [in,out] entry 不得重复提交在队对象；成功后地址和字段保持不变至消费返回或静止 destroy
     @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
-    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
+    @param [in] retryCapacity true等待容量；按 configureCapacityWait 决定重试次数和随后每次休眠时长；单线程Wasm不能等待时返回ResourceUnavailable
     @return 失败未接纳；值输出接口复制临时 T 后赋值，Entry 地址接口不复制载荷
     */
     LockFreeQueueResult tryPushEntry(LockFreeQueueEntry<T>& entry, bool retryContention = false, bool retryCapacity = false);
@@ -134,7 +148,7 @@ public:
     /** 发布外部载荷，并完成发布到调用者后续原子读取之间的屏障
     @param [in,out] entry 借用与失败语义同 tryPushEntry；队列不析构其中的 T
     @param [in] retryContention true持续重试CAS竞争，false允许返回Busy
-    @param [in] retryCapacity true等待容量；先重试4096次，之后每次等待1毫秒；单线程Wasm不能等待时返回ResourceUnavailable
+    @param [in] retryCapacity true等待容量；按 configureCapacityWait 决定重试次数和随后每次休眠时长；单线程Wasm不能等待时返回ResourceUnavailable
     @return 成功时具有与 tryPushAndFence 相同的发布屏障保证
     */
     LockFreeQueueResult tryPushEntryAndFence(LockFreeQueueEntry<T>& entry, bool retryContention = false, bool retryCapacity = false);
@@ -142,8 +156,8 @@ public:
     /** 取得可选生产者上下文；成功后必须在队列换代或析构前释放
     @param [in,out] producer 未绑定的上下文；成功后借用本队列，须在换代前 release
     @param [in] retryContention true持续重试CAS竞争，false允许返回未提交竞争状态
-    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
-    @return Success表示取得独占登记租约；失败时producer仍未绑定，已绑定时返回InvalidState
+    @param [in] retryCapacity true等待可复用容量；退避参数由 configureCapacityWait 设置
+    @return Success 表示取得独占登记；已绑定时返回 InvalidState 并保留原绑定，未绑定时失败仍可重试
     */
     LockFreeQueueResult tryAcquireProducer(LockFreeQueueProducer<T>& producer,
         bool retryContention = false, bool retryCapacity = false);
@@ -371,7 +385,12 @@ private:
     */
     void releaseBatch(Node* const* nodes, Block* const* externalOwners, size_t count);
 
-    /** 归还已知同一块的外部额度；整批累计至64时执行一次预算8维护并保留余数
+    /** 唯一消费者结算已归还的额度，达到配置间隔时执行一次有界维护
+    @param [in] count 本次实际消费的正项数，最多一个段
+    */
+    void accountMaintenance(size_t count);
+
+    /** 归还已知同一块的外部额度，并结算自动维护间隔
     @param [in,out] owner 已取出 Entry 的共同归属块；必须处于 entry-only 模式
     @param [in] count 有效额度数，0 至 256
     */
@@ -407,10 +426,18 @@ private:
     std::atomic<size_t> m_prepared;
     // 初始化后冻结；true 使用租约位置的私有累计预留
     bool m_distributedCounters;
+    // 等待容量时切换到休眠前允许的重试次数，初始化后只读
+    uint32_t m_capacityRetriesBeforeSleep;
+    // 容量重试进入休眠后的每次等待毫秒数，初始化后只读
+    uint32_t m_capacitySleepMilliseconds;
     // 缓存行隔离填充，不承载业务状态
     char m_preparedPadding[64];
     // 唯一消费者自动维护的摊销计数
     size_t m_maintenance;
+    // 自动维护触发间隔，单位为消费项，初始化期间冻结
+    uint32_t m_maintenanceInterval;
+    // 每次自动维护最多执行的工作量
+    size_t m_maintenanceBudget;
     // 唯一消费者的短前缀探测间隔；浅队列先逐项读取，定期重新尝试批量
     size_t m_prefixSingleBudget;
     // Sole-consumer cadence for retrying retirement scans during empty polling.

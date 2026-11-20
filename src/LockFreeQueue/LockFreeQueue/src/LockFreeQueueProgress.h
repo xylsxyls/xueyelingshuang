@@ -9,6 +9,11 @@
 class LockFreeQueueProgress
 {
 public:
+    /** 初始化尚未共享的生产者登记的操作预算
+    @param [in] operations 每次让步之间的操作数，已由配置入口校验为 1..65535
+    */
+    void configureInterval(uint16_t operations);
+
     /** 建立确定状态，默认内部重试；公开尝试接口须显式 begin(false)
     */
     LockFreeQueueProgress();
@@ -47,11 +52,13 @@ public:
     */
     void advance(size_t count = 1);
 
-    /** 容量不足先重试4096次且每16次让出执行机会，之后每次等待1毫秒，不累计溢出
+    /** 容量不足时按配置重试，每16次让步；进入休眠阶段后不再累加计数
     @param [in,out] retries 本次操作的容量重试次数，开始时为0
+    @param [in] retriesBeforeSleep 转入休眠前的重试上限，0 直接进入休眠阶段
+    @param [in] sleepMilliseconds 等待毫秒数，调用方已校验为正
     @return true继续重试；宿主不支持阻塞或休眠失败时false
     */
-    static bool waitCapacity(uint32_t& retries);
+    static bool waitCapacity(uint32_t& retries, uint32_t retriesBeforeSleep, uint32_t sleepMilliseconds);
 
     /** Short scheduler backoff for sustained contention or a lost publication CAS
     Sleep failure falls back to yield; actual wake-up latency is host-controlled
@@ -60,13 +67,15 @@ public:
     static void pausePublisher();
 
 private:
-    /** 重置本执行流的4096项预算并让出执行机会；仅由预算耗尽路径调用
+    /** 按配置重置本执行流的操作预算并让出执行机会；仅由预算耗尽路径调用
     */
     void yieldOperations();
 
 private:
-    // 距离下一次协作让步的剩余操作数，始终为1..4096。
+    // 距离下一次协作让步的剩余操作数，始终为1..m_interval。
     uint16_t m_remaining;
+    // 预算用尽后的重置值，默认 4096
+    uint16_t m_interval;
     // 状态字低八位保存周期退避次数
     static const int32_t kFailureMask = 255;
     // 本次调用持续重试竞争的标志位

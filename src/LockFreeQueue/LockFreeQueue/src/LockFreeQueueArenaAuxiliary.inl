@@ -2,24 +2,19 @@
 #define LOCK_FREE_QUEUE_ARENA_AUXILIARY_INL
 
 template <class T>
-bool LockFreeQueueArena<T>::assignGeneration(Segment* segment, LockFreeQueueResult* result, Record* record)
+bool LockFreeQueueArena<T>::assignGeneration(Segment* segment, LockFreeQueueResult* result, Record& record)
 {
-    LockFreeQueueProgress progress;
     uint64_t generation = m_segmentSequence.load(std::memory_order_relaxed);
     while (generation != UINT64_MAX &&
            !m_segmentSequence.compare_exchange_weak(generation, generation + 1, std::memory_order_relaxed))
     {
-        if (record != nullptr && !record->m_progress.retry())
+        if (!record.m_progress.retry())
         {
             if (result != nullptr)
             {
                 *result = LockFreeQueueBusy;
             }
             return false;
-        }
-        if (record == nullptr)
-        {
-            progress.retry();
         }
     }
     if (generation == UINT64_MAX)
@@ -87,7 +82,7 @@ typename LockFreeQueueArena<T>::Segment* LockFreeQueueArena<T>::acquireAuxiliary
             }
             segment->m_idleSince = 0;
             segment->reset();
-            if (!assignGeneration(segment, result, &record))
+            if (!assignGeneration(segment, result, record))
             {
                 slot.m_bits.store(reinterpret_cast<uintptr_t>(segment), std::memory_order_release);
                 return nullptr;

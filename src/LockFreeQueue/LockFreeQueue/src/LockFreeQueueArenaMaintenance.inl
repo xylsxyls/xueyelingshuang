@@ -41,7 +41,7 @@ typename LockFreeQueueArena<T>::Segment* LockFreeQueueArena<T>::acquireSegment(
                         Segment* segment = new (&block->m_segments[index]) Segment();
                         segment->m_poolIndex = index;
                         segment->m_owner = block;
-                        if (!assignGeneration(segment, result, &record))
+                        if (!assignGeneration(segment, result, record))
                         {
                             releaseSegment(segment, initialOnly ? nullptr : &record);
                             return nullptr;

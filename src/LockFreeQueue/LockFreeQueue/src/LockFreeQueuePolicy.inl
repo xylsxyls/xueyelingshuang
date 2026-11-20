@@ -5,7 +5,8 @@ inline LockFreeQueuePoolConfig::LockFreeQueuePoolConfig() :
 initialCapacity(64),
 growThreshold(0),
 maximumCapacity(-1),
-maximumProducers(1024)
+maximumProducers(1024),
+producerYieldInterval(4096)
 {
 
 }

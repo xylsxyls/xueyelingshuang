@@ -441,11 +441,11 @@ private:
     LockFreeQueueResult unavailableResult() const;
 
     /** 调用一次策略、原子预留额度并发布增长块；失败退还预留
-    @param [in,out] record 可空的本线程登记；指定 push 或 tryPush 的竞争重试方式
+    @param [in,out] record 本次操作独占的生产者登记；指定 push 或 tryPush 的竞争重试方式
     @param [in] required 已实际领取失败时为true；只有观察到新的容量或消费进展且空闲量超过阈值，才取消本次必要扩容并重新领取
     @return Success表示本次增长已完成或已无增长需要；失败返回策略、资源、竞争或分配状态
     */
-    LockFreeQueueResult grow(Record* record = nullptr, bool required = false);
+    LockFreeQueueResult grow(Record& record, bool required = false);
 
     /** 合成可复用空闲快照；混合快照溢出按零处理，不作为位图接纳许可
     @return 当前可复用节点额度的弱一致数量，不作为独占领取凭据
@@ -462,10 +462,10 @@ private:
     /** 领取不回绕的发布段代次；耗尽显式拒绝新发布
     @param [in,out] segment 受保护或独占的发布段；借用至返回
     @param [out] result 申请结果；指针形式允许 nullptr 表示忽略结果
-    @param [in,out] record 可空的本线程登记；指定竞争重试方式
+    @param [in,out] record 本次操作独占的生产者登记；指定竞争重试方式
     @return true表示已写入非零新代次；false表示竞争中断或序号耗尽，并按需填写result
     */
-    bool assignGeneration(Segment* segment, LockFreeQueueResult* result, Record* record = nullptr);
+    bool assignGeneration(Segment* segment, LockFreeQueueResult* result, Record& record);
 
     /** 禁止复制或移动；所有权、登记与原子状态不能按位转移
     @param [in] other 禁止复制或移动的源对象

@@ -27,6 +27,7 @@ bool LockFreeQueueArena<T>::validate(const LockFreeQueuePoolConfig& config, size
 {
     const size_t maximum = (std::numeric_limits<size_t>::max)();
     if (config.initialCapacity == 0 || config.maximumProducers == 0 || config.maximumCapacity < -1 ||
+        config.producerYieldInterval == 0 || config.producerYieldInterval > UINT16_MAX ||
         config.maximumProducers > (maximum - sizeof(LockFreeQueueArena) - 4096 - 4 * sizeof(Auxiliary)) /
                                       (sizeof(Record) + sizeof(LockFreeQueueAtomic<Block*>) + 4 * sizeof(Auxiliary)))
     {
@@ -67,6 +68,7 @@ LockFreeQueueResult LockFreeQueueArena<T>::configure(const LockFreeQueuePoolConf
         m_config.growThreshold = candidate.growThreshold;
         m_config.maximumCapacity = candidate.maximumCapacity;
         m_config.maximumProducers = candidate.maximumProducers;
+        m_config.producerYieldInterval = candidate.producerYieldInterval;
         m_config.m_onGrowth.swap(candidate.m_onGrowth);
         m_limit = limit;
         return LockFreeQueueSuccess;
@@ -255,6 +257,7 @@ LockFreeQueueResult LockFreeQueueArena<T>::initialize()
     for (size_t i = 0; i < m_config.maximumProducers; ++i)
     {
         new (&m_records[i]) Record();
+        m_records[i].m_progress.configureInterval(static_cast<uint16_t>(m_config.producerYieldInterval));
     }
     m_traversal = reinterpret_cast<LockFreeQueueAtomic<Block*>*>(m_records + m_config.maximumProducers);
     for (size_t i = 0; i < m_config.maximumProducers; ++i)
