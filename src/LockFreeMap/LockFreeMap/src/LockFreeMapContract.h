@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <functional>
 #include <memory>
+#include <new>
 #include <exception>
 
 /** BASE-LF-1.0 条目操作结果，只有 COMMITTED 表示写入已提交
@@ -163,11 +164,59 @@ public:
     */
     LockFreeMapPoolConfig();
 
+    /** 设置初始槽数及保留容量上限，初始容量也是自动缩容下限
+    @param [in] initial 初始槽数，允许零
+    @param [in] maximum 槽数上限，-1表示由地址空间和块目录约束
+    @return OK已保存，参数不合法返回INVALID且保留原设置，配置时另行验证目标可分配范围
+    */
+    LockFreeMapStatus setCapacity(size_t initial, int64_t maximum);
+
+    /** 设置剩余空槽触发预增长的阈值
+    @param [in] threshold 以槽为单位，零表示只在取槽失败后增长
+    */
+    void setGrowFreeThreshold(size_t threshold);
+
+    /** 设置池块目录的固定记录数
+    @param [in] count 可同时管理的块数，必须为正
+    @return OK已保存，参数不合法返回INVALID且保留原设置，配置时另行验证目标可分配范围
+    */
+    LockFreeMapStatus setBlockRecordLimit(size_t count);
+
+    /** 保存增长策略副本
+    @param [in] policy 接受增长上下文并返回新增槽数，空策略拒绝增长
+    @return OK已保存，复制失败返回ALLOCATION_FAILURE或USER_EXCEPTION，原策略保留
+    */
+    template <typename Function>
+    LockFreeMapStatus setGrow(const Function& policy);
+
+    /** 保存缩容策略副本
+    @param [in] policy 接受缩容上下文并返回整块释放决策，空策略关闭缩容
+    @return OK已保存，复制失败返回ALLOCATION_FAILURE或USER_EXCEPTION，原策略保留
+    */
+    template <typename Function>
+    LockFreeMapStatus setShrink(const Function& policy);
+
+    /** 保存成功扩容后的通知副本
+    @param [in] policy 接受实际新增槽数和成功增长计数，空回调关闭通知
+    @return OK已保存，复制失败返回ALLOCATION_FAILURE或USER_EXCEPTION，原策略保留
+    */
+    template <typename Function>
+    LockFreeMapStatus setOnGrowth(const Function& policy);
+
     /** 默认策略，永久关闭自动整块释放
     @param [in] context 本次观察，此固定策略不使用上下文
     @return 释放数量及空闲时间均为零
     */
     static LockFreeMapShrinkDecision defaultShrink(const LockFreeMapShrinkContext& context);
+
+private:
+    /** 在临时函数对象中完成复制，再替换配置中的回调
+    @param [in,out] target 待更新的配置项
+    @param [in] policy 同步复制的可调用对象或空指针
+    @return OK表示成功，申请失败及其他复制异常分别转换为状态
+    */
+    template <typename Target, typename Function>
+    static LockFreeMapStatus copyPolicy(Target& target, const Function& policy);
 };
 
 /** 静止期配置，键槽和值槽分别预算
@@ -183,11 +232,42 @@ public:
     size_t operationRecordLimit;
     // 每次池维护预算；结构写入另计索引大小的回收工作
     size_t maintenanceBudget;
+    // 每条操作记录触发周期维护的写入尝试间隔，首次写入计为一
+    uint32_t maintenanceInterval;
+    // 显式等待容量时，首次休眠前允许的快速重试数
+    uint32_t capacityFastRetries;
+    // 快速重试耗尽后的每次休眠毫秒数，必须为正
+    int32_t capacitySleepMilliseconds;
 
 public:
-    /** 默认 64 个并发调用，每次维护预算 64 项
+    /** 默认 64 个并发调用，每条记录每 64 次写入尝试触发周期维护，每次预算 64 项
     */
     LockFreeMapConfig();
+
+    /** 设置并发及同步重入可占用的操作记录数
+    @param [in] count 固定记录数，必须为正
+    @return OK已保存，参数不合法返回INVALID且保留原设置，配置时另行验证目标可分配范围
+    */
+    LockFreeMapStatus setOperationRecordLimit(size_t count);
+
+    /** 设置写入触发的每次维护预算
+    @param [in] count 索引及各池分别使用的正预算，不是整次调用的析构上限
+    @return OK已保存，参数不合法返回INVALID且保留原设置，配置时另行验证目标可分配范围
+    */
+    LockFreeMapStatus setMaintenanceBudget(size_t count);
+
+    /** 设置周期维护间隔；结构变更和容量压力仍可提前触发维护
+    @param [in] attempts 每条操作记录的写入尝试次数，重新领取记录的重试计数，同一记录内的值 CAS 重试不另计，必须为正
+    @return OK 表示已保存，零返回 INVALID 并保留原设置
+    */
+    LockFreeMapStatus setMaintenanceInterval(uint32_t attempts);
+
+    /** 设置启用容量等待时的重试节奏，默认快速重试 4096 次，之后每次休眠 1 毫秒
+    @param [in] fastRetries 首次休眠前的重试次数，零表示直接休眠
+    @param [in] sleepMilliseconds 每次休眠的正毫秒数
+    @return OK 表示已保存，休眠时间非正时返回 INVALID 并保留两个原设置
+    */
+    LockFreeMapStatus setCapacityWait(uint32_t fastRetries, int32_t sleepMilliseconds);
 };
 
 /** 池统计为各项独立原子观察，不提供容量预留

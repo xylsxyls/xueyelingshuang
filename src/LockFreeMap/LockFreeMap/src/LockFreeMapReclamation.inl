@@ -267,29 +267,6 @@ LockFreeMapHazardRecord* LockFreeMapReclamation::acquireSource(void* source, std
     return nullptr;
 }
 
-inline bool LockFreeMapReclamation::protects(void* pointer, const LockFreeMapHazardRecord* ignored) const
-{
-    const size_t span = m_span.load();
-    // 登记先于源指针验证，后来扩展的记录不能借用扫描前已摘除对象
-    // 始终扫描保护指针，不按 claimed 标志跳过，避免观察间隙的记录复用
-    // 发布使用顺序一致内存序，清空以 release 结束此前的借用
-    for (size_t index = 0; index < span; ++index)
-    {
-        if (&m_records[index] == ignored)
-        {
-            continue;
-        }
-        for (size_t slot = 0; slot < 3; ++slot)
-        {
-            if (m_records[index].m_pointer[slot].load() == pointer)
-            {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 inline bool LockFreeMapReclamation::protectsRoot(void* pointer, const LockFreeMapHazardRecord* ignored) const
 {
     const size_t span = m_span.load();
@@ -417,12 +394,6 @@ inline void LockFreeMapReclamation::clearPoolCaches(void* pool)
 
 inline LockFreeMapGuard::LockFreeMapGuard(LockFreeMapReclamation& domain) :
 m_record(domain.acquire())
-{
-
-}
-
-inline LockFreeMapGuard::LockFreeMapGuard(LockFreeMapReclamation& domain, void* source) :
-m_record(domain.acquire(source))
 {
 
 }

@@ -1,5 +1,5 @@
-﻿#ifndef __MAP_VALUE_HOLDER_INL__
-#define __MAP_VALUE_HOLDER_INL__
+﻿#ifndef LOCK_FREE_MAP_VALUE_HOLDER_INL
+#define LOCK_FREE_MAP_VALUE_HOLDER_INL
 
 template <typename ValueType>
 MapValueHolder<ValueType>::MapValueHolder(const ValueType& value, uint64_t generation) :
@@ -16,4 +16,4 @@ MapValueHolder<ValueType>::~MapValueHolder()
 
 }
 
-#endif // __MAP_VALUE_HOLDER_INL__
+#endif // LOCK_FREE_MAP_VALUE_HOLDER_INL

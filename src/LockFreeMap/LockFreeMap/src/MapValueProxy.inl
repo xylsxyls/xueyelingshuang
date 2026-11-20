@@ -1,5 +1,5 @@
-﻿#ifndef __MAP_VALUE_PROXY_INL__
-#define __MAP_VALUE_PROXY_INL__
+﻿#ifndef LOCK_FREE_MAP_VALUE_PROXY_INL
+#define LOCK_FREE_MAP_VALUE_PROXY_INL
 
 template <typename KeyType, typename ValueType, typename LessType, size_t MaxLevel>
 MapValueProxy<KeyType, ValueType, LessType, MaxLevel>::MapValueProxy(LockFreeMap<KeyType, ValueType, LessType, MaxLevel>* map, const KeyType& key) :
@@ -91,4 +91,4 @@ ValueType MapValueProxy<KeyType, ValueType, LessType, MaxLevel>::value(const Val
     return result;
 }
 
-#endif // __MAP_VALUE_PROXY_INL__
+#endif // LOCK_FREE_MAP_VALUE_PROXY_INL

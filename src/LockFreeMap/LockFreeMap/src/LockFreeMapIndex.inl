@@ -2,28 +2,10 @@
 #define LOCK_FREE_MAP_INDEX_INL
 
 template <typename K, typename V>
-LockFreeMapKey<K, V>::LockFreeMapKey(const K& key, LockFreeMapPool<V>& pool) :
-m_key(key),
-m_value(nullptr),
-m_pool(&pool)
-{
-
-}
-
-template <typename K, typename V>
 LockFreeMapKey<K, V>::LockFreeMapKey(const K& key, LockFreeMapPool<V>& pool, LockFreeMapPoolSlot<V>* value) :
 m_key(key),
 m_value(value),
 m_pool(&pool)
-{
-
-}
-
-template <typename K, typename V>
-LockFreeMapKey<K, V>::LockFreeMapKey(const LockFreeMapKey& other) :
-m_key(other.m_key),
-m_value(nullptr),
-m_pool(other.m_pool)
 {
 
 }
@@ -116,7 +98,12 @@ const LockFreeMapIndexEntry<K, V>& LockFreeMapIndex<K, V>::rawEntry(size_t posit
 template <typename K, typename V, typename Less>
 LockFreeMapIndexStore<K, V, Less>::LockFreeMapIndexStore(const LockFreeMapConfig& config) :
 m_less(),
-m_config(config),
+m_maintenanceBudget(config.maintenanceBudget),
+m_maintenanceInterval(config.maintenanceInterval),
+m_capacityFastRetries(config.capacityFastRetries),
+m_capacitySleepMilliseconds(config.capacitySleepMilliseconds),
+m_nodeMaximum(config.nodes.maximumCapacity),
+m_boundedValues(config.values.maximumCapacity >= 0),
 m_domain(config.operationRecordLimit),
 m_nodes(config.nodes, m_domain),
 m_values(config.values, m_domain, true),
@@ -599,21 +586,6 @@ size_t LockFreeMapIndexStore<K, V, Less>::findForWrite(LockFreeMapIndex<K, V>* i
 }
 
 template <typename K, typename V, typename Less>
-bool LockFreeMapIndexStore<K, V, Less>::nextVersion(uint64_t& version)
-{
-    uint64_t previous = m_version.load();
-    while (previous != (std::numeric_limits<uint64_t>::max)())
-    {
-        if (m_version.compare_exchange_weak(previous, previous + 1))
-        {
-            version = previous + 1;
-            return true;
-        }
-    }
-    return false;
-}
-
-template <typename K, typename V, typename Less>
 bool LockFreeMapIndexStore<K, V, Less>::nextVersion(uint64_t& version, LockFreeMapGuard& guard)
 {
     LockFreeMapHazardRecord& record = *guard.m_record;
@@ -653,9 +625,9 @@ LockFreeMapIndexBuffer<K, V>* LockFreeMapIndexStore<K, V, Less>::buffer(size_t c
     }
     // 扩容时新旧数组短暂共存，把该峰值也纳入字节溢出上限
     size_t maximum = (std::numeric_limits<size_t>::max)() / 2 / sizeof(LockFreeMapIndexEntry<K, V>) / m_indexCount;
-    if (m_config.nodes.maximumCapacity >= 0 && static_cast<uint64_t>(m_config.nodes.maximumCapacity) < maximum)
+    if (m_nodeMaximum >= 0 && static_cast<uint64_t>(m_nodeMaximum) < maximum)
     {
-        maximum = static_cast<size_t>(m_config.nodes.maximumCapacity);
+        maximum = static_cast<size_t>(m_nodeMaximum);
     }
     if (count > maximum)
     {
@@ -897,7 +869,6 @@ LockFreeMapIndex<K, V>* LockFreeMapIndexStore<K, V, Less>::build(LockFreeMapInde
         candidate->m_added = key;
     }
     // 私有状态和构造者的源保护共同覆盖借用，完成转换前不能开放回收
-    (void)guard;
     return candidate;
 }
 
@@ -1010,6 +981,13 @@ void LockFreeMapIndexStore<K, V, Less>::discard(LockFreeMapIndex<K, V>* candidat
     candidate->m_entries = nullptr;
     candidate->m_count.store(0, std::memory_order_relaxed);
     candidate->m_state.store(0, std::memory_order_release);
+}
+
+template <typename K, typename V, typename Less>
+void LockFreeMapIndexStore<K, V, Less>::collectForWrite(size_t count, LockFreeMapHazardRecord* completed)
+{
+    const size_t maximum = (std::numeric_limits<size_t>::max)();
+    collect(count > maximum - m_maintenanceBudget ? maximum : count + m_maintenanceBudget, completed);
 }
 
 template <typename K, typename V, typename Less>

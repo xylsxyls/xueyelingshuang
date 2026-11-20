@@ -16,11 +16,13 @@ public:
     */
     static uint64_t milliseconds();
 
-    /** 容量不足先重试4096次，之后每次等待1毫秒
-    @param [in,out] retries 本次操作计数，饱和于4096
+    /** 达到快速重试阈值后，按实例配置等待容量
+    @param [in,out] retries 本次操作已使用的快速重试次数，达到阈值后保持不变
+    @param [in] fastRetries 首次休眠前可快速重试的次数
+    @param [in] sleepMilliseconds 休眠时长，配置入口保证为正毫秒数
     @return true允许重试；阻塞不可用或系统异常时false
     */
-    static bool waitCapacity(uint32_t& retries);
+    static bool waitCapacity(uint32_t& retries, uint32_t fastRetries = 4096, int32_t sleepMilliseconds = 1);
 
 private:
     /** 换算系统计数器，并检查整数及小数乘积溢出

@@ -166,13 +166,6 @@ public:
     template <typename T>
     LockFreeMapHazardRecord* acquire(std::atomic<T*>& source);
 
-    /** 扫描全部已登记保护指针
-    @param [in] pointer 已摘除对象的地址
-    @param [in] ignored 已确认不再访问计划字段的调用记录，无则为 nullptr
-    @return 仍有调用可能借用该地址时返回 true
-    */
-    bool protects(void* pointer, const LockFreeMapHazardRecord* ignored = nullptr) const;
-
     /** 扫描索引根保护；索引地址只发布在根槽，不需要访问值和块的缓存行
     @param [in] pointer 已摘除的非空索引地址，不接受领取标记
     @param [in] ignored 已确认结束源借用的记录，无则为 nullptr
@@ -304,12 +297,6 @@ public:
     @param [in,out] domain 借用的所属保护域，必须覆盖守卫生命期
     */
     explicit LockFreeMapGuard(LockFreeMapReclamation& domain);
-
-    /** 取得记录并预先发布源提示，调用方仍须核对源指针后才能访问
-    @param [in,out] domain 所属保护域
-    @param [in] source 尚未解引用的源提示
-    */
-    LockFreeMapGuard(LockFreeMapReclamation& domain, void* source);
 
     /** 读取原子来源并领取记录，返回后由调用方完成来源验证
     @param [in,out] domain 所属保护域

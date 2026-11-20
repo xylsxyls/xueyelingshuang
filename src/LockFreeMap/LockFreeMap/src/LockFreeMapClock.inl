@@ -3,19 +3,20 @@
 
 #include <thread>
 
-inline bool LockFreeMapClock::waitCapacity(uint32_t& retries)
+inline bool LockFreeMapClock::waitCapacity(uint32_t& retries, uint32_t fastRetries, int32_t sleepMilliseconds)
 {
-    if (retries < 4096)
+    if (retries < fastRetries)
     {
         ++retries;
         return true;
     }
 #if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+    (void)sleepMilliseconds;
     return false;
 #else
     try
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleepMilliseconds));
         return true;
     }
     catch (...)

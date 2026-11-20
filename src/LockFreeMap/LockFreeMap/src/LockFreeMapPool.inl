@@ -64,31 +64,24 @@ m_idleStart(0)
             return;
         }
         const size_t offset = (64 - (reinterpret_cast<uintptr_t>(m_allocation) & 63)) & 63;
-        m_slots = reinterpret_cast<LockFreeMapPoolSlot<T>*>(m_allocation + offset);
         try
         {
-            for (; m_count < count; ++m_count)
-            {
-                new (&m_slots[m_count]) LockFreeMapPoolSlot<T>();
-                m_slots[m_count].m_block = this;
-            }
+            // 一次建立数组生命周期，使槽的下标访问及同块指针相减均有定义。
+            m_slots = ::new (static_cast<void*>(m_allocation + offset)) LockFreeMapPoolSlot<T>[count];
         }
         catch (...)
         {
-            // 当前槽构造只初始化基础字段；保留完整退款，防止后续构造逻辑改变时泄漏。
-            for (size_t index = 0; index < m_count; ++index)
-            {
-                m_slots[index].~LockFreeMapPoolSlot<T>();
-            }
+            // 数组表达式已逆序析构成功构造的元素，此处只归还原始存储。
             delete[] m_allocation;
             m_allocation = nullptr;
-            m_slots = nullptr;
-            m_count = 0;
+            return;
         }
-        return;
     }
+    else
 #endif
-    m_slots = new (std::nothrow) LockFreeMapPoolSlot<T>[count];
+    {
+        m_slots = new (std::nothrow) LockFreeMapPoolSlot<T>[count];
+    }
     m_count = m_slots == nullptr ? 0 : count;
     for (size_t index = 0; index < m_count; ++index)
     {
@@ -102,9 +95,9 @@ LockFreeMapPoolBlock<T>::~LockFreeMapPoolBlock()
 #if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
     if (m_allocation != nullptr)
     {
-        for (size_t index = 0; index < m_count; ++index)
+        for (size_t index = m_count; index != 0; --index)
         {
-            m_slots[index].~LockFreeMapPoolSlot<T>();
+            m_slots[index - 1].~LockFreeMapPoolSlot<T>();
         }
         delete[] m_allocation;
         return;
@@ -214,26 +207,6 @@ LockFreeMapStatus LockFreeMapPool<T>::grow(bool initial, LockFreeMapHazardRecord
     {
         return LOCK_FREE_MAP_ALLOCATION_FAILURE;
     }
-    size_t requested = m_config.initialCapacity;
-    if (!initial)
-    {
-        LockFreeMapGrowContext context;
-        context.initialCapacity = m_config.initialCapacity;
-        context.successfulGrowCount = m_grows.load();
-        context.currentCapacity = m_capacity.load();
-        try
-        {
-            requested = m_config.grow ? m_config.grow(context) : 0;
-        }
-        catch (...)
-        {
-            return LOCK_FREE_MAP_POLICY_EXCEPTION;
-        }
-    }
-    if (requested == 0)
-    {
-        return LOCK_FREE_MAP_GROW_DENIED;
-    }
     const size_t limit = (std::numeric_limits<size_t>::max)();
     // 总字节上限包含每槽独占一块时的最坏块头开销
     size_t maximum = limit / (sizeof(LockFreeMapPoolSlot<T>) + sizeof(LockFreeMapPoolBlock<T>) + LockFreeMapPoolBlock<T>::kAlignmentPadding);
@@ -242,12 +215,33 @@ LockFreeMapStatus LockFreeMapPool<T>::grow(bool initial, LockFreeMapHazardRecord
         maximum = static_cast<size_t>(m_config.maximumCapacity);
     }
     size_t previous = m_budget.load();
+    size_t requested = initial ? m_config.initialCapacity : 0;
     size_t count = 0;
     for (;;)
     {
         if (previous >= maximum)
         {
             return m_capacity.load() < previous ? LOCK_FREE_MAP_RESERVED : LOCK_FREE_MAP_CAPACITY;
+        }
+        // 满额和在途预留先报告真实容量状态，尚有额度时才询问策略，每次增长只询问一次。
+        if (requested == 0)
+        {
+            LockFreeMapGrowContext context;
+            context.initialCapacity = m_config.initialCapacity;
+            context.successfulGrowCount = m_grows.load();
+            context.currentCapacity = m_capacity.load();
+            try
+            {
+                requested = m_config.grow ? m_config.grow(context) : 0;
+            }
+            catch (...)
+            {
+                return LOCK_FREE_MAP_POLICY_EXCEPTION;
+            }
+            if (requested == 0)
+            {
+                return LOCK_FREE_MAP_GROW_DENIED;
+            }
         }
         count = requested < maximum - previous ? requested : maximum - previous;
         if (m_budget.compare_exchange_weak(previous, previous + count))
@@ -495,7 +489,7 @@ LockFreeMapPoolSlot<T>* LockFreeMapPool<T>::emplace(uint64_t version,
     }
     try
     {
-        new (&slot->m_storage) T(std::forward<Arguments>(arguments)...);
+        ::new (&slot->m_storage) T(std::forward<Arguments>(arguments)...);
     }
     catch (...)
     {

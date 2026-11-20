@@ -18,23 +18,12 @@ public:
     LockFreeMapPool<V>* m_pool;
 
 public:
-    /** 构造尚未发布值的私有键对象
-    @param [in] key 用于排序和等价判定的键
-    @param [in] pool 拥有值槽的池，借用至键对象析构
-    */
-    LockFreeMapKey(const K& key, LockFreeMapPool<V>& pool);
-
     /** 构造完整的私有键对象，成功后接管值引用
     @param [in] key 用于排序和等价判定的键
     @param [in] pool 拥有值槽的池，借用至键对象析构
     @param [in] value 待转交的值；键复制失败时仍由调用方负责
     */
     LockFreeMapKey(const K& key, LockFreeMapPool<V>& pool, LockFreeMapPoolSlot<V>* value);
-
-    /** 只复制私有键；值所有权单独转交
-    @param [in] other 尚未发布的源键对象
-    */
-    LockFreeMapKey(const LockFreeMapKey& other);
 
     /** 最后一个索引拥有者退出后释放当前值
     */
@@ -163,8 +152,18 @@ class LockFreeMapIndexStore
 public:
     // 实例生命周期内稳定且线程安全的严格弱序比较器
     Less m_less;
-    // 初始化后不再修改的配置快照
-    LockFreeMapConfig m_config;
+    // 结构写入按此预算回收，键池和值池各自拥有其策略副本
+    size_t m_maintenanceBudget;
+    // 本实例每条操作记录触发周期维护的写入尝试间隔
+    uint32_t m_maintenanceInterval;
+    // 容量等待转入休眠前的快速重试数
+    uint32_t m_capacityFastRetries;
+    // 容量等待每次休眠的正毫秒数
+    int32_t m_capacitySleepMilliseconds;
+    // 键池保留容量上限，同时约束索引数组容量，-1表示无配置上限
+    int64_t m_nodeMaximum;
+    // 值池是否有配置上限，决定无输出删除是否需要关闭旧值
+    bool m_boundedValues;
     // 每实例有界操作登记域
     LockFreeMapReclamation m_domain;
     // 独立键槽预算
@@ -258,12 +257,6 @@ public:
     */
     size_t findForWrite(LockFreeMapIndex<K, V>* index, const K& key, bool& found, LockFreeMapHazardRecord* record) const;
 
-    /** 取得不回绕的条目版本
-    @param [out] version 非零版本号
-    @return 版本达到生命周期上限时返回 false
-    */
-    bool nextVersion(uint64_t& version);
-
     /** 从每操作记录的有界预留段取得唯一版本
     @param [out] version 不透明非零版本号，不表示时间戳
     @param [in,out] guard 独占保护记录的守卫；预留段跨清空和释放保留
@@ -320,6 +313,12 @@ public:
     @param [in] count 复制条目数，零允许空源
     */
     void copyEntries(LockFreeMapIndexEntry<K, V>* destination, LockFreeMapIndex<K, V>* source, size_t begin, size_t count);
+
+    /** 写入期间按可见键数加维护预算回收索引，求和超过 size_t 上限时取上限
+    @param [in] count 本次写入所保护根的可见键数
+    @param [in] completed 已完成帮助的写入记录，调用期间保持有效
+    */
+    void collectForWrite(size_t count, LockFreeMapHazardRecord* completed);
 
     /** 在预算内释放退役索引引用，不等待读者
     @param [in] budget 最多释放的条目引用数

@@ -1,6 +1,6 @@
 ﻿#include "LockFreeMap.h"
 
-// 使用示例：去掉下面这一对块注释后，单独将本文件编译为控制台程序运行
+// 使用示例：从//#include开始去掉每行的首组//，再将本文件单独编译为控制台程序
 // 库的正常构建保留注释；示例通过返回码报告结果，不输出运行日志
 
 //#include <exception>
@@ -8,9 +8,9 @@
 //#include <utility>
 //#include <vector>
 //
-// 单线程使用示例；返回零表示整个流程成功，其他返回值对应下方失败步骤
-// 实际多线程使用时，各次调用之间可能发生变化，不能把多步查询当作原子事务
-// 配置、clearAndFreeMemory 和析构都要求外部保证没有其他线程访问本表
+//// 单线程使用示例；返回零表示整个流程成功，其他返回值对应下方失败步骤
+//// 实际多线程使用时，各次调用之间可能发生变化，不能把多步查询当作原子事务
+//// 配置、clearAndFreeMemory 和析构都要求外部保证没有其他线程访问本表
 //int main()
 //{
 //    try
@@ -24,15 +24,37 @@
 //            }
 //        }
 //
+//        // try接口可独立选择是否重试竞争、是否等待容量。先检查状态再消费输出。
+//        {
+//            LockFreeMap<int, int> tasks;
+//            LockFreeMapToken ticket;
+//            int actual = 0, key = 0;
+//            if (tasks.trySet(1, 10) != LOCK_FREE_MAP_COMMITTED || tasks.tryInsert(1, 11) != LOCK_FREE_MAP_EXISTS ||
+//                tasks.tryGetOrInsert(2, 20, actual, ticket) != LOCK_FREE_MAP_COMMITTED || actual != 20 ||
+//                tasks.tryUpdate(2, ticket, 21) != LOCK_FREE_MAP_COMMITTED ||
+//                tasks.tryEraseIf(2, ticket) != LOCK_FREE_MAP_CONFLICT ||
+//                tasks.lockFreeMapLast(key, actual, ticket) != LOCK_FREE_MAP_OK ||
+//                tasks.tryExtractLast(ticket, key, actual) != LOCK_FREE_MAP_COMMITTED || key != 2 || actual != 21 ||
+//                tasks.tryExtract(1, actual) != LOCK_FREE_MAP_COMMITTED || actual != 10 ||
+//                tasks.tryErase(1) != LOCK_FREE_MAP_NOT_FOUND)
+//            {
+//                return 29;
+//            }
+//        }
+//
 //        // 延迟构造便于先设置池预算，避免先申请一套默认池
 //        LockFreeMap<int32_t, int32_t> map(false);
 //        LockFreeMapConfig config;
-//        config.nodes.initialCapacity = 8;
-//        config.nodes.maximumCapacity = 64;
-//        config.values.initialCapacity = 16;
-//        config.values.maximumCapacity = 128;
-//        config.operationRecordLimit = 8;
-//        config.maintenanceBudget = 16;
+//        if (config.nodes.setCapacity(8, 64) != LOCK_FREE_MAP_OK ||
+//            config.values.setCapacity(16, 128) != LOCK_FREE_MAP_OK ||
+//            config.setOperationRecordLimit(8) != LOCK_FREE_MAP_OK ||
+//            config.setMaintenanceBudget(16) != LOCK_FREE_MAP_OK ||
+//            config.setMaintenanceInterval(32) != LOCK_FREE_MAP_OK ||
+//            config.setCapacityWait(8, 2) != LOCK_FREE_MAP_OK)
+//        {
+//            return 2;
+//        }
+//        config.nodes.setGrowFreeThreshold(2);
 //        // 值池还容纳未提交候选及待回收的旧版本，不宜只按当前元素数设置上限
 //        // 此例沿用默认增长策略；默认关闭自动缩容，可按业务另设 grow 和 shrink
 //        if (map.lockFreeMapConfigure(config) != LOCK_FREE_MAP_OK)

@@ -14,6 +14,9 @@ m_store(nullptr),
 m_initialStatus(LOCK_FREE_MAP_INVALID)
 {
     static_assert(Levels > 0, "LockFreeMap MaxLevel must be positive");
+    // 比较器内嵌在普通 C++11 new 分配的存储中，过度对齐会使整块存储失去对齐保证。
+    static_assert(std::alignment_of<Less>::value <= std::alignment_of<std::max_align_t>::value,
+        "LockFreeMap comparator requires unsupported extended alignment");
     try
     {
         if (initializeImmediately)
@@ -56,7 +59,8 @@ LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapConfigure(const Lo
     }
     const size_t limit = (std::numeric_limits<size_t>::max)();
     if (!LockFreeMapPool<LockFreeMapKey<K, V>>::valid(config.nodes) || !LockFreeMapPool<V>::valid(config.values) ||
-        config.operationRecordLimit == 0 || config.maintenanceBudget == 0 ||
+        config.operationRecordLimit == 0 || config.maintenanceBudget == 0 || config.maintenanceInterval == 0 ||
+        config.capacitySleepMilliseconds <= 0 ||
         config.operationRecordLimit > (limit / sizeof(LockFreeMapIndex<K, V>) - 4) / 4 ||
         config.operationRecordLimit > limit / sizeof(LockFreeMapHazardRecord) ||
         config.operationRecordLimit > limit / 16)
@@ -302,7 +306,11 @@ noexcept try
         }
         LockFreeMapIndex<K, V>* root = store->protect(guard);
         const size_t count = root == nullptr ? 0 : root->count();
-        guard.m_record->m_maintenanceTick = (guard.m_record->m_maintenanceTick + 1) & 63;
+        const bool maintenanceDue = ++guard.m_record->m_maintenanceTick == store->m_maintenanceInterval;
+        if (maintenanceDue)
+        {
+            guard.m_record->m_maintenanceTick = 0;
+        }
         LockFreeMapPoolSlot<LockFreeMapKey<K, V>>* ownedKey = nullptr;
         LockFreeMapPoolSlot<V>* ownedValue = nullptr;
         LockFreeMapStatus status = LOCK_FREE_MAP_OK;
@@ -340,7 +348,7 @@ noexcept try
 #endif
             }
             const bool deleting = Mode == 2 || Mode == 4 || Mode == 5;
-            const bool logicalOnly = Mode == 2 && (Outputs & 2) == 0 && store->m_config.values.maximumCapacity < 0;
+            const bool logicalOnly = Mode == 2 && (Outputs & 2) == 0 && !store->m_boundedValues;
             // 无输出的逻辑删除只提交键集合；根 CAS 会验证存在性，不需要读取目标值缓存行
             LockFreeMapPoolSlot<LockFreeMapKey<K, V>>* node = found && !logicalOnly ? root->entry(position).m_key : nullptr;
             LockFreeMapPoolSlot<V>* previous = nullptr;
@@ -385,11 +393,11 @@ noexcept try
                     }
                     continue;
                 }
-                if ((Mode == 1 || Mode == 2 || Mode == 5) && (Outputs & 2) != 0)
+                if ((Outputs & 2) != 0)
                 {
                     *outputValue = previous->value();
                 }
-                if (Mode == 1 && (Outputs & 4) != 0)
+                if ((Outputs & 4) != 0)
                 {
                     outputToken->m_identity = store->m_identity;
                     outputToken->m_version = previous->m_version;
@@ -398,21 +406,19 @@ noexcept try
             }
             // 结构写入先回收旧索引，再判断满池是否需要扩容
             // 已有键覆盖只按固定操作次数分摊策略维护
-            const bool maintenanceNeeded = guard.m_record->m_maintenanceTick == 0 || ((!found || deleting) && store->m_domain.multipleRecords()) ||
-                (!found && (root == nullptr || store->m_config.nodes.maximumCapacity >= 0 || store->m_config.values.maximumCapacity >= 0));
+            const bool maintenanceNeeded = maintenanceDue || ((!found || deleting) && store->m_domain.multipleRecords()) ||
+                (!found && (root == nullptr || store->m_nodeMaximum >= 0 || store->m_boundedValues));
             const bool skippedMaintenance = maintainedBeforeRetry;
             const bool performMaintenance = maintenanceNeeded && !skippedMaintenance;
             maintainedBeforeRetry = false;
             if (performMaintenance)
             {
-                const size_t extra = store->m_config.maintenanceBudget;
-                const size_t maximum = (std::numeric_limits<size_t>::max)();
-                store->collect(count > maximum - extra ? maximum : count + extra, guard.m_record);
+                store->collectForWrite(count, guard.m_record);
                 size_t released = 0;
                 // 自动维护保留已析构的有界槽缓存；容量压力和显式维护才归还空闲缓存，退役对象仍照常回收。
                 const bool releaseIdleCaches = false;
-                store->m_nodes.maintain(extra, released, releaseIdleCaches);
-                store->m_values.maintain(extra, released, releaseIdleCaches);
+                store->m_nodes.maintain(store->m_maintenanceBudget, released, releaseIdleCaches);
+                store->m_values.maintain(store->m_maintenanceBudget, released, releaseIdleCaches);
                 if (root != store->m_root.load())
                 {
                     // 回收可能较慢，不能让旧快照继续构造必败候选；守卫先清理旧借用
@@ -446,9 +452,7 @@ noexcept try
                     status == LOCK_FREE_MAP_RECORD_LIMIT))
                 {
                     // 旧根在上轮维护后才解除保护；报告资源不足前补回这次索引回收
-                    const size_t extra = store->m_config.maintenanceBudget;
-                    const size_t maximum = (std::numeric_limits<size_t>::max)();
-                    store->collect(count > maximum - extra ? maximum : count + extra, guard.m_record);
+                    store->collectForWrite(count, guard.m_record);
                     ownedValue = store->m_values.create(*value, version, guard, status);
                 }
                 if (ownedValue == nullptr)
@@ -472,9 +476,7 @@ noexcept try
                         (status == LOCK_FREE_MAP_CAPACITY || status == LOCK_FREE_MAP_RESERVED ||
                         status == LOCK_FREE_MAP_RECORD_LIMIT))
                     {
-                        const size_t extra = store->m_config.maintenanceBudget;
-                        const size_t maximum = (std::numeric_limits<size_t>::max)();
-                        store->collect(count > maximum - extra ? maximum : count + extra, guard.m_record);
+                        store->collectForWrite(count, guard.m_record);
                         ownedKey = store->m_nodes.emplace(0, guard, status, *key, store->m_values, ownedValue);
                     }
                     if (ownedKey == nullptr)
@@ -572,9 +574,7 @@ noexcept try
                     ownedKey, deleting ? previous : nullptr, guard, status, logicalOnly);
                 if (status == LOCK_FREE_MAP_RECORD_LIMIT)
                 {
-                    const size_t extra = store->m_config.maintenanceBudget;
-                    const size_t maximum = (std::numeric_limits<size_t>::max)();
-                    store->collect(count > maximum - extra ? maximum : count + extra, guard.m_record);
+                    store->collectForWrite(count, guard.m_record);
                     candidate = store->build(root, position, found, ownedKey, deleting ? previous : nullptr, guard, status, logicalOnly);
                 }
                 if (status == LOCK_FREE_MAP_OK)
@@ -666,11 +666,51 @@ catch (...)
 #endif
 
 template <typename K, typename V, typename Less, size_t Levels>
+bool LockFreeMap<K, V, Less, Levels>::overlaps(const void* input, size_t inputSize, const void* output, size_t outputSize)
+{
+    if (input == nullptr || output == nullptr)
+    {
+        return false;
+    }
+    const uintptr_t first = reinterpret_cast<uintptr_t>(input);
+    const uintptr_t second = reinterpret_cast<uintptr_t>(output);
+    return first <= second ? second - first < inputSize : first - second < outputSize;
+}
+
+template <typename K, typename V, typename Less, size_t Levels>
 template <uint32_t Mode, uint32_t Outputs>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::writeRetry(const K* key, const V* value,
     const LockFreeMapToken* token, K* outputKey, V* outputValue, LockFreeMapToken* outputToken,
     bool retryContention, bool retryCapacity)
 {
+    // 输出赋值可发生在发布前并触发重试；仅在会覆盖输入时保存原对象。
+    // 副本跨越全部重试，使用独立存储避免大键值占用调用栈。
+    if (Outputs != 0 && m_store != nullptr)
+    {
+        const bool saveKey = overlaps(key, sizeof(K), outputValue, sizeof(V));
+        const bool saveValue = overlaps(value, sizeof(V), outputValue, sizeof(V));
+        const bool saveToken = overlaps(token, sizeof(LockFreeMapToken), outputKey, sizeof(K)) ||
+            overlaps(token, sizeof(LockFreeMapToken), outputValue, sizeof(V));
+        if (saveKey || saveValue || saveToken)
+        {
+            try
+            {
+                const auto stableKey = saveKey ? std::make_shared<K>(*key) : std::shared_ptr<K>();
+                const auto stableValue = saveValue ? std::make_shared<V>(*value) : std::shared_ptr<V>();
+                const LockFreeMapToken stableToken = saveToken ? *token : LockFreeMapToken();
+                return writeRetry<Mode, Outputs>(saveKey ? stableKey.get() : key, saveValue ? stableValue.get() : value,
+                    saveToken ? std::addressof(stableToken) : token, outputKey, outputValue, outputToken, retryContention, retryCapacity);
+            }
+            catch (const std::bad_alloc&)
+            {
+                return LOCK_FREE_MAP_ALLOCATION_FAILURE;
+            }
+            catch (...)
+            {
+                return LOCK_FREE_MAP_USER_EXCEPTION;
+            }
+        }
+    }
 #if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
     uint32_t capacityRetries = 0;
 #endif
@@ -688,11 +728,11 @@ LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::writeRetry(const K* key, cons
         return status;
 #else
         // 模块共享实例内的记录可识别跨 DLL 重入；命中只拒绝等待，不授予任何所有权。
-        if (m_store != nullptr && m_store->m_domain.mayBeHeldByCurrentThread())
+        if (m_store == nullptr || m_store->m_domain.mayBeHeldByCurrentThread())
         {
             return status;
         }
-        if (!LockFreeMapClock::waitCapacity(capacityRetries))
+        if (!LockFreeMapClock::waitCapacity(capacityRetries, m_store->m_capacityFastRetries, m_store->m_capacitySleepMilliseconds))
         {
             return LOCK_FREE_MAP_SYSTEM_ERROR;
         }
@@ -703,97 +743,97 @@ LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::writeRetry(const K* key, cons
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::trySet(const K& key, const V& value, bool retryContention, bool retryCapacity)
 {
-    return writeRetry<0>(&key, &value, nullptr, nullptr, nullptr, nullptr, retryContention, retryCapacity);
+    return writeRetry<0>(std::addressof(key), std::addressof(value), nullptr, nullptr, nullptr, nullptr, retryContention, retryCapacity);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::tryInsert(const K& key, const V& value, bool retryContention, bool retryCapacity)
 {
-    return writeRetry<1>(&key, &value, nullptr, nullptr, nullptr, nullptr, retryContention, retryCapacity);
+    return writeRetry<1>(std::addressof(key), std::addressof(value), nullptr, nullptr, nullptr, nullptr, retryContention, retryCapacity);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::tryGetOrInsert(const K& key, const V& candidate, V& value, LockFreeMapToken& token, bool retryContention, bool retryCapacity)
 {
-    return writeRetry<1, 6>(&key, &candidate, nullptr, nullptr, &value, &token, retryContention, retryCapacity);
+    return writeRetry<1, 6>(std::addressof(key), std::addressof(candidate), nullptr, nullptr, std::addressof(value), std::addressof(token), retryContention, retryCapacity);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::tryUpdate(const K& key, const LockFreeMapToken& token, const V& value, bool retryContention, bool retryCapacity)
 {
-    return writeRetry<3>(&key, &value, &token, nullptr, nullptr, nullptr, retryContention, retryCapacity);
+    return writeRetry<3>(std::addressof(key), std::addressof(value), std::addressof(token), nullptr, nullptr, nullptr, retryContention, retryCapacity);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::tryErase(const K& key, bool retryContention, bool retryCapacity)
 {
-    return writeRetry<2>(&key, nullptr, nullptr, nullptr, nullptr, nullptr, retryContention, retryCapacity);
+    return writeRetry<2>(std::addressof(key), nullptr, nullptr, nullptr, nullptr, nullptr, retryContention, retryCapacity);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::tryEraseIf(const K& key, const LockFreeMapToken& token, bool retryContention, bool retryCapacity)
 {
-    return writeRetry<4>(&key, nullptr, &token, nullptr, nullptr, nullptr, retryContention, retryCapacity);
+    return writeRetry<4>(std::addressof(key), nullptr, std::addressof(token), nullptr, nullptr, nullptr, retryContention, retryCapacity);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::tryExtract(const K& key, V& value, bool retryContention, bool retryCapacity)
 {
-    return writeRetry<2, 2>(&key, nullptr, nullptr, nullptr, &value, nullptr, retryContention, retryCapacity);
+    return writeRetry<2, 2>(std::addressof(key), nullptr, nullptr, nullptr, std::addressof(value), nullptr, retryContention, retryCapacity);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::tryExtractLast(const LockFreeMapToken& token, K& key, V& value, bool retryContention, bool retryCapacity)
 {
-    return writeRetry<5, 3>(nullptr, nullptr, &token, &key, &value, nullptr, retryContention, retryCapacity);
+    return writeRetry<5, 3>(nullptr, nullptr, std::addressof(token), std::addressof(key), std::addressof(value), nullptr, retryContention, retryCapacity);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapGet(const K& key, V& value, LockFreeMapToken& token) const
 {
-    return read<0, 6>(&key, nullptr, &value, &token);
+    return read<0, 6>(std::addressof(key), nullptr, std::addressof(value), std::addressof(token));
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapGetOrInsert(const K& key, const V& candidate, V& value, LockFreeMapToken& token)
 {
-    return write<1, true, 6>(&key, &candidate, nullptr, nullptr, &value, &token);
+    return tryGetOrInsert(key, candidate, value, token, true, false);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapUpdate(const K& key, const LockFreeMapToken& token, const V& value)
 {
-    return write<3, true>(&key, &value, &token, nullptr, nullptr, nullptr);
+    return write<3, true>(std::addressof(key), std::addressof(value), std::addressof(token), nullptr, nullptr, nullptr);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapErase(const K& key, const LockFreeMapToken& token)
 {
-    return write<4, true>(&key, nullptr, &token, nullptr, nullptr, nullptr);
+    return write<4, true>(std::addressof(key), nullptr, std::addressof(token), nullptr, nullptr, nullptr);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapExtract(const K& key, V& value)
 {
-    return write<2, true, 2>(&key, nullptr, nullptr, nullptr, &value, nullptr);
+    return tryExtract(key, value, true, false);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapLast(K& key, V& value, LockFreeMapToken& token) const
 {
-    return read<2, 7>(nullptr, &key, &value, &token);
+    return read<2, 7>(nullptr, std::addressof(key), std::addressof(value), std::addressof(token));
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapExtractLast(const LockFreeMapToken& token, K& key, V& value)
 {
-    return write<5, true, 3>(nullptr, nullptr, &token, &key, &value, nullptr);
+    return tryExtractLast(token, key, value, true, false);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 LockFreeMapStatus LockFreeMap<K, V, Less, Levels>::lockFreeMapSet(const K& key, const V& value)
 {
-    return write<0, true>(&key, &value, nullptr, nullptr, nullptr, nullptr);
+    return write<0, true>(std::addressof(key), std::addressof(value), nullptr, nullptr, nullptr, nullptr);
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
@@ -805,13 +845,13 @@ bool LockFreeMap<K, V, Less, Levels>::set(const K& key, const V& value)
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::insert(const K& key, const V& value)
 {
-    return write<1, true>(&key, &value, nullptr, nullptr, nullptr, nullptr) == LOCK_FREE_MAP_COMMITTED;
+    return write<1, true>(std::addressof(key), std::addressof(value), nullptr, nullptr, nullptr, nullptr) == LOCK_FREE_MAP_COMMITTED;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::erase(const K& key)
 {
-    return write<2, true>(&key, nullptr, nullptr, nullptr, nullptr, nullptr) == LOCK_FREE_MAP_COMMITTED;
+    return write<2, true>(std::addressof(key), nullptr, nullptr, nullptr, nullptr, nullptr) == LOCK_FREE_MAP_COMMITTED;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
@@ -823,7 +863,7 @@ bool LockFreeMap<K, V, Less, Levels>::remove(const K& key)
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::get(const K& key, V& value) const
 {
-    return read<0, 2>(&key, nullptr, &value, nullptr) == LOCK_FREE_MAP_OK;
+    return read<0, 2>(std::addressof(key), nullptr, std::addressof(value), nullptr) == LOCK_FREE_MAP_OK;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
@@ -837,7 +877,7 @@ V LockFreeMap<K, V, Less, Levels>::value(const K& key, const V& defaultValue) co
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::contains(const K& key) const
 {
-    return read<0, 0>(&key, nullptr, nullptr, nullptr) == LOCK_FREE_MAP_OK;
+    return read<0, 0>(std::addressof(key), nullptr, nullptr, nullptr) == LOCK_FREE_MAP_OK;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
@@ -928,36 +968,41 @@ void LockFreeMap<K, V, Less, Levels>::visitView(LockFreeMapIndexStore<K, V, Less
 
 template <typename K, typename V, typename Less, size_t Levels>
 template <typename Function>
-size_t LockFreeMap<K, V, Less, Levels>::forEach(Function function) const
+void LockFreeMap<K, V, Less, Levels>::visitAll(Function& function, size_t& completed) const
 {
-    // 配置和析构要求外部静止；当前调用复用固定存储地址，避免跨辅助调用重复加载。
     LockFreeMapIndexStore<K, V, Less>* const store = m_store;
     if (store == nullptr)
     {
-        return 0;
+        return;
     }
     LockFreeMapGuard guard(store->m_domain, store->m_root);
     if (guard.m_record == nullptr)
     {
-        return 0;
+        return;
     }
     LockFreeMapIndex<K, V>* root = store->protect(guard);
+    if (root != nullptr)
+    {
+        // 根保护固定键视图；只有已合并且无省略项时才直接遍历连续数组。
+        if (root->m_decision.load() != 2 && root->m_merged.load(std::memory_order_acquire) != 0)
+        {
+            visitView<true>(store, root, guard, function, completed);
+        }
+        else
+        {
+            visitView<false>(store, root, guard, function, completed);
+        }
+    }
+}
+
+template <typename K, typename V, typename Less, size_t Levels>
+template <typename Function>
+size_t LockFreeMap<K, V, Less, Levels>::forEach(Function function) const
+{
     size_t completed = 0;
     try
     {
-        if (root != nullptr)
-        {
-            // 视图在保护期内固定，普通连续数组无需逐项重复检查省略和覆盖位置。
-            // acquire观察合并完成后，数组中的覆盖项已经可见；根保护阻止后继改写本视图。
-            if (root->m_decision.load() != 2 && root->m_merged.load(std::memory_order_acquire) != 0)
-            {
-                visitView<true>(store, root, guard, function, completed);
-            }
-            else
-            {
-                visitView<false>(store, root, guard, function, completed);
-            }
-        }
+        visitAll(function, completed);
     }
     catch (...)
     {
@@ -967,39 +1012,36 @@ size_t LockFreeMap<K, V, Less, Levels>::forEach(Function function) const
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
-std::vector<K> LockFreeMap<K, V, Less, Levels>::keys() const
+template <typename Element, typename Append>
+void LockFreeMap<K, V, Less, Levels>::copyAll(std::vector<Element>& result, Append append) const
 {
-    std::vector<K> result;
-    // 计数仅用作预留提示，实际结果仍由受保护遍历决定；并发增长可继续扩展。
     try
     {
+        // 弱一致的数量只用于预留；实际导出项由读保护中的视图决定。
         result.reserve(count());
+        size_t completed = 0;
+        visitAll(append, completed);
     }
     catch (...)
     {
-        return result;
+        // 首次复制失败即退出遍历，归还保护后再销毁已复制的前缀和预留空间。
+        std::vector<Element>().swap(result);
     }
-    bool failed = false;
-    // 将回调内借用的键复制到调用方容器；复制失败标记整次输出无效
-    /** 复制借用键到result，复制异常通过failed标记整次输出无效
-    @param [in] key 当前受保护条目的键，仅回调期间借用
-    @note 第2个未命名参数是同步借用输入，本回调不使用其内容
+}
+
+template <typename K, typename V, typename Less, size_t Levels>
+std::vector<K> LockFreeMap<K, V, Less, Levels>::keys() const
+{
+    std::vector<K> result;
+    /** 复制当前借用键
+    @param [in] key 本项键
+    @param [in] value 本项值，导出键时忽略
     */
-    forEach([&result, &failed](const K& key, const V&) -> void
+    copyAll(result, [&result](const K& key, const V& value)
     {
-        try
-        {
-            result.push_back(key);
-        }
-        catch (...)
-        {
-            failed = true;
-        }
+        (void)value;
+        result.push_back(key);
     });
-    if (failed)
-    {
-        result.clear();
-    }
     return result;
 }
 
@@ -1007,36 +1049,15 @@ template <typename K, typename V, typename Less, size_t Levels>
 std::vector<V> LockFreeMap<K, V, Less, Levels>::values() const
 {
     std::vector<V> result;
-    // 计数仅用作预留提示，实际结果仍由受保护遍历决定；并发增长可继续扩展。
-    try
-    {
-        result.reserve(count());
-    }
-    catch (...)
-    {
-        return result;
-    }
-    bool failed = false;
-    // 将回调内借用的值复制到调用方容器；复制失败标记整次输出无效
-    /** 复制借用值到result，复制异常通过failed标记整次输出无效
-    @note 第1个未命名参数是同步借用输入，本回调不使用其内容
-    @param [in] value 本次输入值；引用仅在当前回调期间借用，不向外保存
+    /** 复制当前借用值
+    @param [in] key 本项键，导出值时忽略
+    @param [in] value 本项值
     */
-    forEach([&result, &failed](const K&, const V& value) -> void
+    copyAll(result, [&result](const K& key, const V& value)
     {
-        try
-        {
-            result.push_back(value);
-        }
-        catch (...)
-        {
-            failed = true;
-        }
+        (void)key;
+        result.push_back(value);
     });
-    if (failed)
-    {
-        result.clear();
-    }
     return result;
 }
 
@@ -1044,61 +1065,39 @@ template <typename K, typename V, typename Less, size_t Levels>
 std::vector<std::pair<K, V>> LockFreeMap<K, V, Less, Levels>::toVector() const
 {
     std::vector<std::pair<K, V>> result;
-    // 计数仅用作预留提示，实际结果仍由受保护遍历决定；并发增长可继续扩展。
-    try
-    {
-        result.reserve(count());
-    }
-    catch (...)
-    {
-        return result;
-    }
-    bool failed = false;
-    // 复制回调借用的键值；任何一次复制异常均使整个结果无效
-    /** 复制借用键值对到result，复制异常通过failed标记整次输出无效
-    @param [in] key 当前受保护条目的键，仅回调期间借用
-    @param [in] value 本次输入值；引用仅在当前回调期间借用，不向外保存
+    /** 从受保护条目直接构造输出键值对
+    @param [in] key 本项键
+    @param [in] value 本项值
     */
-    forEach([&result, &failed](const K& key, const V& value) -> void
+    copyAll(result, [&result](const K& key, const V& value)
     {
-        try
-        {
-            result.emplace_back(key, value);
-        }
-        catch (...)
-        {
-            failed = true;
-        }
+        result.emplace_back(key, value);
     });
-    if (failed)
-    {
-        result.clear();
-    }
     return result;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::first(K& key, V& value) const
 {
-    return read<1, 3>(nullptr, &key, &value, nullptr) == LOCK_FREE_MAP_OK;
+    return read<1, 3>(nullptr, std::addressof(key), std::addressof(value), nullptr) == LOCK_FREE_MAP_OK;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::last(K& key, V& value) const
 {
-    return read<2, 3>(nullptr, &key, &value, nullptr) == LOCK_FREE_MAP_OK;
+    return read<2, 3>(nullptr, std::addressof(key), std::addressof(value), nullptr) == LOCK_FREE_MAP_OK;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::lowerBound(const K& key, K& foundKey, V& value) const
 {
-    return read<3, 3>(&key, &foundKey, &value, nullptr) == LOCK_FREE_MAP_OK;
+    return read<3, 3>(std::addressof(key), std::addressof(foundKey), std::addressof(value), nullptr) == LOCK_FREE_MAP_OK;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>
 bool LockFreeMap<K, V, Less, Levels>::upperBound(const K& key, K& foundKey, V& value) const
 {
-    return read<4, 3>(&key, &foundKey, &value, nullptr) == LOCK_FREE_MAP_OK;
+    return read<4, 3>(std::addressof(key), std::addressof(foundKey), std::addressof(value), nullptr) == LOCK_FREE_MAP_OK;
 }
 
 template <typename K, typename V, typename Less, size_t Levels>

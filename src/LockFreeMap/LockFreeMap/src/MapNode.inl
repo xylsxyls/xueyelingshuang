@@ -1,5 +1,5 @@
-﻿#ifndef __MAP_NODE_INL__
-#define __MAP_NODE_INL__
+﻿#ifndef LOCK_FREE_MAP_NODE_INL
+#define LOCK_FREE_MAP_NODE_INL
 
 template <typename KeyType, typename ValueType, size_t MaxLevel>
 MapNode<KeyType, ValueType, MaxLevel>::MapNode(const KeyType& key, size_t level) :
@@ -103,4 +103,4 @@ void MapNode<KeyType, ValueType, MaxLevel>::releaseValueHolders()
     m_value.store(nullptr, std::memory_order_release);
 }
 
-#endif // __MAP_NODE_INL__
+#endif // LOCK_FREE_MAP_NODE_INL
