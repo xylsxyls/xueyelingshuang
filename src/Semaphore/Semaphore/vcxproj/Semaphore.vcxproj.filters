@@ -69,7 +69,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\SemaphoreRetry.h" />
+    <ClInclude Include="..\src\SemaphoreConfig.h" />
     <ClCompile Include="..\src\SemaphoreRetry.cpp" />
+    <ClCompile Include="..\src\SemaphoreConfig.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\SemaphoreWake.inl" />

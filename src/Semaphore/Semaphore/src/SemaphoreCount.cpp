@@ -1,4 +1,5 @@
 ﻿#include "SemaphoreCount.h"
+#include "SemaphoreDeadline.h"
 #include "SemaphoreWake.h"
 
 SemaphoreCount::SemaphoreCount(const SemaphorePoolConfig& config) :
@@ -7,28 +8,24 @@ SemaphoreEventPool(config)
 
 }
 
-SemaphoreResult SemaphoreCount::initializationResult() const
-{
-    return SemaphoreEventPool::initializationResult();
-}
-
-SemaphoreResult SemaphoreCount::begin(std::atomic<uint64_t>& state, SemaphoreEventRecord*& record, bool probe)
+SemaphoreResult SemaphoreCount::begin(std::atomic<uint64_t>& state, SemaphoreEventRecord*& record, bool probe,
+    const SemaphoreDeadline* deadline)
 {
     record = nullptr;
-    size_t budget = 64;
+    size_t budget = m_config.m_maintenanceBudget;
     SemaphoreEventPool::reclaim(budget);
     if (!SemaphoreEventPool::enter())
     {
         return SemaphoreResult(SEMAPHORE_CAPACITY);
     }
-    const SemaphoreResult result = beginProtected(state, record, probe);
+    const SemaphoreResult result = beginProtected(state, record, probe, deadline);
     SemaphoreEventPool::leave();
     return result;
 }
 
 SemaphoreResult SemaphoreCount::signal(std::atomic<uint64_t>& state, SemaphoreWake& wake, bool notify, bool retryContention)
 {
-    size_t budget = 64;
+    size_t budget = m_config.m_maintenanceBudget;
     SemaphoreEventPool::reclaim(budget);
     if (!SemaphoreEventPool::enter())
     {
@@ -53,7 +50,7 @@ bool SemaphoreCount::finish(std::atomic<uint64_t>& state, SemaphoreEventRecord* 
     {
         sweep(state);
         record->m_state.store(3, std::memory_order_release);
-        size_t budget = 64;
+        size_t budget = m_config.m_maintenanceBudget;
         SemaphoreEventPool::reclaim(budget, true);
     }
     else
@@ -83,16 +80,6 @@ void SemaphoreCount::clear(std::atomic<uint64_t>& state)
         discard(record);
         record = next;
     }
-}
-
-SemaphorePoolStats SemaphoreCount::statistics() const
-{
-    return SemaphoreEventPool::statistics();
-}
-
-SemaphoreResult SemaphoreCount::maintain(size_t& released)
-{
-    return SemaphoreEventPool::maintain(released);
 }
 
 uint64_t SemaphoreCount::directLimit()
@@ -139,10 +126,11 @@ void SemaphoreCount::discard(SemaphoreEventRecord* record, bool large)
 }
 
 SemaphoreResult SemaphoreCount::beginProtected(
-    std::atomic<uint64_t>& state, SemaphoreEventRecord*& record, bool probe)
+    std::atomic<uint64_t>& state, SemaphoreEventRecord*& record, bool probe,
+    const SemaphoreDeadline* deadline)
 {
     SemaphoreEventRecord* candidate = nullptr;
-    for (;;)
+    do
     {
         uint64_t current = state.load();
         if (current != 0 && current <= directLimit())
@@ -188,7 +176,12 @@ SemaphoreResult SemaphoreCount::beginProtected(
             record = candidate;
             return SemaphoreResult();
         }
+    } while (deadline == nullptr || deadline->remaining() != 0);
+    if (candidate != nullptr)
+    {
+        discard(candidate);
     }
+    return SemaphoreResult(SEMAPHORE_TIMEOUT);
 }
 
 SemaphoreResult SemaphoreCount::signalProtected(std::atomic<uint64_t>& state, SemaphoreWake& wake, bool notify, bool retryContention)
@@ -238,7 +231,19 @@ SemaphoreResult SemaphoreCount::signalProtected(std::atomic<uint64_t>& state, Se
         SemaphoreEventRecord* selected = SemaphoreEventPool::oldest(reinterpret_cast<uintptr_t>(node(current)));
         if (selected == nullptr)
         {
-            sweep(state);
+            sweep(state, retryContention);
+            if (!retryContention)
+            {
+                // 清完取消链后仍可直接积存；期间有其他发布或登记则交回外层核对期限。
+                uint64_t empty = 0;
+                if (!state.compare_exchange_strong(empty, 1))
+                {
+                    return SemaphoreResult(SEMAPHORE_BUSY);
+                }
+                SemaphoreResult result = notify ? wake.notify() : SemaphoreResult();
+                result.committed = true;
+                return result;
+            }
             continue;
         }
         uint32_t waiting = 0;
@@ -253,7 +258,7 @@ SemaphoreResult SemaphoreCount::signalProtected(std::atomic<uint64_t>& state, Se
         // 此CAS已经交付本次许可。即使接收者暂停或系统提示失败，后来者也不能夺走。
         SemaphoreResult result = notify ? wake.notify(wake.canWaitAddress() ? &selected->m_state : nullptr) : SemaphoreResult();
         result.committed = true;
-        sweep(state);
+        sweep(state, false);
         return result;
     }
 }
@@ -289,7 +294,7 @@ SemaphoreResult SemaphoreCount::replaceLarge(std::atomic<uint64_t>& state, uint6
     return SemaphoreResult(SEMAPHORE_OK, true);
 }
 
-void SemaphoreCount::sweep(std::atomic<uint64_t>& state)
+void SemaphoreCount::sweep(std::atomic<uint64_t>& state, bool retry)
 {
     for (;;)
     {
@@ -337,7 +342,7 @@ void SemaphoreCount::sweep(std::atomic<uint64_t>& state)
                 current = next;
             }
         }
-        if (!restart)
+        if (!restart || !retry)
         {
             return;
         }

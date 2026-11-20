@@ -14,7 +14,8 @@ static const uint32_t kSemaphoreRetiredReferences = kSemaphoreRetiredPending - 1
 SemaphorePoolConfig::SemaphorePoolConfig() :
 initialCapacity(16),
 freeThreshold(0),
-maxCapacity(-1)
+maxCapacity(-1),
+m_maintenanceBudget(64)
 {
 
 }
@@ -58,7 +59,7 @@ m_grows(0),
 m_lastGrow(0)
 {
     const size_t addressLimit = ((std::numeric_limits<size_t>::max)() - sizeof(*this)) / sizeof(SemaphoreEventRecord);
-    if (config.maxCapacity < -1 || config.initialCapacity > addressLimit ||
+    if (config.m_maintenanceBudget == 0 || config.m_maintenanceBudget > 64 || config.maxCapacity < -1 || config.initialCapacity > addressLimit ||
         (config.maxCapacity != -1 && static_cast<uint64_t>(config.maxCapacity) < config.initialCapacity))
     {
         m_initialization = SemaphoreResult(SEMAPHORE_INVALID);
@@ -93,7 +94,7 @@ SemaphoreEventPool::~SemaphoreEventPool()
     sweep();
     while (m_retired.load() != nullptr)
     {
-        size_t budget = 64;
+        size_t budget = m_config.m_maintenanceBudget;
         reclaim(budget);
     }
     SemaphoreEventRecord* node = m_free.exchange(nullptr);
@@ -369,11 +370,8 @@ SemaphoreResult SemaphoreEventPool::allocate(size_t count, bool initial)
     const uint64_t timestamp = m_config.shrink ? SemaphoreDeadline::now() : 0;
     for (size_t index = 0; index < reserved; ++index)
     {
-        SemaphoreEventRecord* node = nullptr;
-        {
-            // 记录构造不抛异常；申请失败直接回滚未发布批次，不用异常作正常分支
-            node = new (std::nothrow) SemaphoreEventRecord;
-        }
+        // 单条申请失败时，整批尚未发布，可直接回滚。
+        SemaphoreEventRecord* node = new (std::nothrow) SemaphoreEventRecord;
         if (node == nullptr)
         {
             while (first != nullptr)
@@ -437,7 +435,7 @@ SemaphoreResult SemaphoreEventPool::grow()
 SemaphoreResult SemaphoreEventPool::begin(SemaphoreEventRecord*& record)
 {
     record = nullptr;
-    size_t budget = 64;
+    size_t budget = m_config.m_maintenanceBudget;
     reclaim(budget);
     if (!enter())
     {
@@ -518,7 +516,7 @@ bool SemaphoreEventPool::finish(SemaphoreEventRecord* record)
     if (enter())
     {
         sweep();
-        size_t budget = 64;
+        size_t budget = m_config.m_maintenanceBudget;
         reclaim(budget, true);
     }
     return notified;
@@ -591,7 +589,7 @@ SemaphoreResult SemaphoreEventPool::notify(bool all, SemaphoreWake* wake, bool r
 
 SemaphoreResult SemaphoreEventPool::maintain(size_t& released)
 {
-    size_t reclaimBudget = 64;
+    size_t reclaimBudget = m_config.m_maintenanceBudget;
     released = reclaim(reclaimBudget);
     if (!m_config.shrink)
     {
@@ -621,7 +619,7 @@ SemaphoreResult SemaphoreEventPool::maintain(size_t& released)
         leave();
         return SemaphoreResult();
     }
-    const size_t budget = (std::min)(size_t(64), decision.shrinkCount);
+    const size_t budget = (std::min)(m_config.m_maintenanceBudget, decision.shrinkCount);
     for (size_t index = 0; index < budget; ++index)
     {
         SemaphoreEventRecord* node = takeFree();

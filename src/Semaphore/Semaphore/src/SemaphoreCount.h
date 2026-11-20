@@ -2,6 +2,7 @@
 #include "SemaphoreEventPool.h"
 
 class SemaphoreWake;
+class SemaphoreDeadline;
 
 /** 本地计数的慢路径：同一原子字表示积存数或等待链，避免登记与直接交付之间的空隙
     低于2^63的积存计数直接存储；最高位为1时保存受读者保护的记录地址
@@ -20,15 +21,17 @@ public:
     /** 查询构造时的初始化结果，不抛出异常
     @return OK可使用；失败时保留具体原因
     */
-    SemaphoreResult initializationResult() const;
+    using SemaphoreEventPool::initializationResult;
 
     /** 取得许可或登记等待；probe不登记，已有等待者时不能插队
+    @param [in] deadline 空指针表示无竞争期限，否则CAS失败后扣除本次总预算
     @param [in,out] state Semaphore持有的原子状态
     @param [out] record 非空表示已登记，调用者必须finish
     @param [in] probe 是否仅立即探测
     @return OK且committed表示立即消费，否则OK表示已登记；失败不消费
     */
-    SemaphoreResult begin(std::atomic<uint64_t>& state, SemaphoreEventRecord*& record, bool probe);
+    SemaphoreResult begin(std::atomic<uint64_t>& state, SemaphoreEventRecord*& record, bool probe,
+        const SemaphoreDeadline* deadline = nullptr);
 
     /** 优先直接交付最早等待者；没有合格等待者时才积存
     @param [in,out] state Semaphore持有的原子状态
@@ -54,13 +57,13 @@ public:
     /** 计数等待专用池的观测值，不包含事件池
     @return 已保留、使用中、退役及预留容量
     */
-    SemaphorePoolStats statistics() const;
+    using SemaphoreEventPool::statistics;
 
     /** 静止空闲期按配置维护计数记录池
     @param [out] released 物理释放记录数
     @return 维护结果
     */
-    SemaphoreResult maintain(size_t& released);
+    using SemaphoreEventPool::maintain;
 
     /** 可直接存储的最大积存数，大于此值仍通过不可变记录表示
     @return 2^63-1
@@ -84,9 +87,11 @@ private:
     @param [in,out] state 计数或等待链
     @param [out] record 已登记记录，立即消费时为空
     @param [in] probe 是否仅探测
+    @param [in] deadline 原调用期限，空指针表示无竞争期限
     @return 本次登记或消费结果
     */
-    SemaphoreResult beginProtected(std::atomic<uint64_t>& state, SemaphoreEventRecord*& record, bool probe);
+    SemaphoreResult beginProtected(std::atomic<uint64_t>& state, SemaphoreEventRecord*& record, bool probe,
+        const SemaphoreDeadline* deadline);
 
     /** 读者保护内的发布入口
     @param [in,out] state 计数或等待链
@@ -106,9 +111,10 @@ private:
     SemaphoreResult replaceLarge(std::atomic<uint64_t>& state, uint64_t expected, uint64_t value);
 
     /** 帮助摘除已交付或取消记录，暂停等待者不会阻止后续许可发布
+    @param [in] retry 摘链竞争后是否重新扫描；false允许后续线程继续帮助
     @param [in,out] state 计数或等待链
     */
-    void sweep(std::atomic<uint64_t>& state);
+    void sweep(std::atomic<uint64_t>& state, bool retry = true);
 
     /** 解码已验证的记录地址；调用者须有读者保护
     @param [in] state 带最高位标记的状态

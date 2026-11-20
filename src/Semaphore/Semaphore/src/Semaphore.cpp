@@ -40,6 +40,30 @@ m_processCreated(false)
     }
 }
 
+Semaphore::Semaphore(const SemaphoreConfig& config) : Semaphore()
+{
+    m_policy = config.waitPolicy();
+    SemaphoreResult result = initializationResult();
+    if (result.status == SEMAPHORE_OK && config.eventPool() != nullptr)
+    {
+        result = configureEventPool(*config.eventPool());
+    }
+    if (result.status == SEMAPHORE_OK && config.countPool() != nullptr)
+    {
+        result = configureCountPool(*config.countPool());
+    }
+    if (result.status != SEMAPHORE_OK)
+    {
+        delete m_eventPool.exchange(nullptr);
+        m_wake.failInitialization(result.status, result.nativeError);
+    }
+}
+
+SemaphoreWaitPolicy Semaphore::waitPolicy() const
+{
+    return m_policy;
+}
+
 SemaphoreResult Semaphore::initializationResult() const
 {
     return m_wake.initializationResult();
@@ -89,20 +113,20 @@ SemaphoreResult Semaphore::trySignal(bool retryContention, bool retryCapacity)
     for (;;)
     {
         // 每轮先离开计数池读者保护，再重试或休眠，允许退役记录回收。
-        const SemaphoreResult result = publishCount(true, false);
+        const SemaphoreResult result = publishCount(true);
         if (result.committed)
         {
             return result;
         }
         if (result.status == SEMAPHORE_BUSY && retryContention)
         {
-            SemaphoreRetry::contention(contention);
+            SemaphoreRetry::contention(contention, m_policy);
             continue;
         }
         if (retryCapacity && (result.status == SEMAPHORE_OVERFLOW ||
             result.status == SEMAPHORE_CAPACITY || result.status == SEMAPHORE_RETRY))
         {
-            const SemaphoreResult waited = SemaphoreRetry::capacity(capacity);
+            const SemaphoreResult waited = SemaphoreRetry::capacity(capacity, m_policy.m_capacityAttempts, m_policy.m_capacitySleep);
             if (waited.status != SEMAPHORE_OK)
             {
                 return waited;
@@ -113,58 +137,50 @@ SemaphoreResult Semaphore::trySignal(bool retryContention, bool retryCapacity)
     }
 }
 
-SemaphoreResult Semaphore::publishCount(bool notify, bool retryContention)
+SemaphoreResult Semaphore::publishCount(bool notify)
 {
     if (m_wake.initializationStatus() != SEMAPHORE_OK)
     {
         return m_wake.initializationResult();
     }
-    bool contended = false;
-    if (incrementCount(retryContention, contended))
+    uint64_t count = m_count.load();
+    const uint64_t next = count + 1;
+    // 地址编码和超出普通范围的计数都由计数池处理。
+    if (static_cast<int64_t>(next) >= 0)
     {
-        SemaphoreResult result = notify ? m_wake.notify() : SemaphoreResult();
-        result.committed = true;
-        return result;
-    }
-    if (contended)
-    {
-        return SemaphoreResult(SEMAPHORE_BUSY);
+        if (m_count.compare_exchange_strong(count, next))
+        {
+            SemaphoreResult result = notify ? m_wake.notify() : SemaphoreResult();
+            result.committed = true;
+            return result;
+        }
+        if (count < SemaphoreCount::directLimit())
+        {
+            return SemaphoreResult(SEMAPHORE_BUSY);
+        }
     }
     SemaphoreCount* pool = nullptr;
     const SemaphoreResult prepared = prepareCountPool(pool);
-    return prepared.status == SEMAPHORE_OK ? pool->signal(m_count, m_wake, notify, retryContention) : prepared;
+    return prepared.status == SEMAPHORE_OK ? pool->signal(m_count, m_wake, notify, false) : prepared;
 }
 
-bool Semaphore::incrementCount(bool retryContention, bool& contended)
+SemaphoreResult Semaphore::publishForWait(const SemaphoreDeadline& deadline, bool process, bool notify)
 {
-    contended = false;
     uint32_t contention = 0;
-    uint64_t count = m_count.load();
-    for (;;)
+    do
     {
-        const uint64_t next = count + 1;
-        // 记录地址非空且至少4字节对齐，不会编码为UINT64_MAX；这里只修改普通积存数。
-        if (static_cast<int64_t>(next) < 0)
+        const SemaphoreResult result = process ? publishProcess() : publishCount(notify);
+        if (result.status != SEMAPHORE_BUSY || result.committed)
         {
-            return false;
+            return result;
         }
-        if (m_count.compare_exchange_strong(count, next))
+        if (deadline.remaining() == 0)
         {
-            return true;
+            break;
         }
-        if (!retryContention)
-        {
-            // 失败后若已切入大计数/等待链，重新判定真实资源状态。
-            if (count < SemaphoreCount::directLimit())
-            {
-                contended = true;
-            }
-            return false;
-        }
-        SemaphoreRetry::contention(contention);
-        // 退避期间其他线程可能继续提交，重新读取，避免拿过时比较值再争抢。
-        count = m_count.load();
-    }
+        SemaphoreRetry::contention(contention, m_policy);
+    } while (deadline.remaining() != 0);
+    return SemaphoreResult(SEMAPHORE_TIMEOUT);
 }
 
 // 将结果构造和重试循环留在慢路径，避免普通发布为了冷分支建立较大的栈帧。
@@ -222,7 +238,10 @@ void Semaphore::reset()
     {
         pool->clear(m_count);
     }
-    m_count.store(0);
+    else
+    {
+        m_count.store(0);
+    }
 }
 
 bool Semaphore::event()
@@ -266,12 +285,12 @@ SemaphoreResult Semaphore::tryEvent(bool all, bool retryContention, bool retryCa
         }
         if (result.status == SEMAPHORE_BUSY && retryContention)
         {
-            SemaphoreRetry::contention(contention);
+            SemaphoreRetry::contention(contention, m_policy);
             continue;
         }
         if (result.status == SEMAPHORE_CAPACITY && retryCapacity)
         {
-            const SemaphoreResult waited = SemaphoreRetry::capacity(capacity);
+            const SemaphoreResult waited = SemaphoreRetry::capacity(capacity, m_policy.m_capacityAttempts, m_policy.m_capacitySleep);
             if (waited.status != SEMAPHORE_OK)
             {
                 return waited;
@@ -307,17 +326,23 @@ SemaphoreResult Semaphore::eventWaitResult(int32_t timeout)
     return waitEvent(false, static_cast<uint32_t>(timeout));
 }
 
-SemaphoreResult Semaphore::configureEventPool(const SemaphorePoolConfig& config)
+/** 静止期先完整构造候选池，成功后才替换实例拥有的指针
+@param [in,out] slot 当前实例的池指针
+@param [in] config 候选池的容量和策略
+@return 成功或具体的配置、分配、系统或回调错误
+*/
+template <typename Pool>
+static SemaphoreResult ReplacePool(std::atomic<Pool*>& slot, const SemaphorePoolConfig& config)
 {
     try
     {
-        std::unique_ptr<SemaphoreEventPool> candidate(new SemaphoreEventPool(config));
+        std::unique_ptr<Pool> candidate(new Pool(config));
         const SemaphoreResult prepared = candidate->initializationResult();
         if (prepared.status != SEMAPHORE_OK)
         {
             return prepared;
         }
-        delete m_eventPool.exchange(candidate.release());
+        delete slot.exchange(candidate.release());
         return SemaphoreResult();
     }
     catch (const std::invalid_argument&)
@@ -336,6 +361,11 @@ SemaphoreResult Semaphore::configureEventPool(const SemaphorePoolConfig& config)
     {
         return SemaphoreResult(SEMAPHORE_POLICY);
     }
+}
+
+SemaphoreResult Semaphore::configureEventPool(const SemaphorePoolConfig& config)
+{
+    return ReplacePool(m_eventPool, config);
 }
 
 SemaphoreResult Semaphore::maintainEventPool(size_t& released)
@@ -362,33 +392,7 @@ SemaphoreResult Semaphore::configureCountPool(const SemaphorePoolConfig& config)
     {
         return SemaphoreResult(SEMAPHORE_INVALID);
     }
-    try
-    {
-        std::unique_ptr<SemaphoreCount> candidate(new SemaphoreCount(config));
-        const SemaphoreResult prepared = candidate->initializationResult();
-        if (prepared.status != SEMAPHORE_OK)
-        {
-            return prepared;
-        }
-        delete m_countPool.exchange(candidate.release());
-        return SemaphoreResult();
-    }
-    catch (const std::invalid_argument&)
-    {
-        return SemaphoreResult(SEMAPHORE_INVALID);
-    }
-    catch (const std::bad_alloc&)
-    {
-        return SemaphoreResult(SEMAPHORE_NO_MEMORY);
-    }
-    catch (const std::system_error& error)
-    {
-        return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, error.code().value());
-    }
-    catch (...)
-    {
-        return SemaphoreResult(SEMAPHORE_POLICY);
-    }
+    return ReplacePool(m_countPool, config);
 }
 
 SemaphoreResult Semaphore::maintainCountPool(size_t& released)
@@ -482,7 +486,7 @@ SemaphoreResult Semaphore::closeProcessResult()
     if (m_processMemory)
     {
         const SemaphoreResult result = m_processMemory->close();
-        m_processSemaphore = m_processMemory->m_words;
+        m_processSemaphore = nullptr;
         if (result.status != SEMAPHORE_OK)
         {
             return result;
@@ -576,12 +580,12 @@ SemaphoreResult Semaphore::tryProcessSignalResult(bool retryContention, bool ret
         }
         if (result.status == SEMAPHORE_BUSY && retryContention)
         {
-            SemaphoreRetry::contention(contention);
+            SemaphoreRetry::contention(contention, m_policy);
             continue;
         }
         if (result.status == SEMAPHORE_OVERFLOW && retryCapacity)
         {
-            const SemaphoreResult waited = SemaphoreRetry::capacity(capacity);
+            const SemaphoreResult waited = SemaphoreRetry::capacity(capacity, m_policy.m_capacityAttempts, m_policy.m_capacitySleep);
             if (waited.status != SEMAPHORE_OK)
             {
                 return waited;
@@ -594,6 +598,9 @@ SemaphoreResult Semaphore::tryProcessSignalResult(bool retryContention, bool ret
 
 SemaphoreResult Semaphore::publishProcess()
 {
+#ifdef __EMSCRIPTEN__
+    return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
+#else
     if (m_processSemaphore == nullptr)
     {
         return SemaphoreResult(SEMAPHORE_NOT_OPEN);
@@ -623,8 +630,6 @@ SemaphoreResult Semaphore::publishProcess()
     const DWORD error = ::GetLastError();
     return SemaphoreResult(error == ERROR_TOO_MANY_POSTS ? SEMAPHORE_OVERFLOW : SEMAPHORE_SYSTEM_ERROR, false,
         error == ERROR_TOO_MANY_POSTS ? 0 : static_cast<int32_t>(error));
-#elif defined(__EMSCRIPTEN__)
-    return SemaphoreResult(SEMAPHORE_UNSUPPORTED);
 #else
     if (::sem_post(static_cast<sem_t*>(m_processSemaphore)) == 0)
     {
@@ -633,6 +638,7 @@ SemaphoreResult Semaphore::publishProcess()
     const int32_t error = errno;
     return SemaphoreResult(
         error == EOVERFLOW ? SEMAPHORE_OVERFLOW : SEMAPHORE_SYSTEM_ERROR, false, error == EOVERFLOW ? 0 : error);
+#endif
 #endif
 }
 
@@ -730,7 +736,7 @@ SemaphoreSignalWaitResult Semaphore::processSignalAndWaitResult(Semaphore& waitO
         static_cast<int32_t>(error != 0 ? error : ERROR_GEN_FAILURE));
 #else
     const SemaphoreDeadline deadline(timeout < 0, timeout < 0 ? 0 : static_cast<uint32_t>(timeout));
-    const SemaphoreResult sent = tryProcessSignalResult(true, false);
+    const SemaphoreResult sent = publishForWait(deadline, true, true);
     if (sent.status != SEMAPHORE_OK)
     {
         return SemaphoreSignalWaitResult(sent.status, sent.committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE,
@@ -827,7 +833,15 @@ SemaphoreResult Semaphore::waitProcess(const SemaphoreDeadline& deadline, bool i
             {
                 return SemaphoreResult(SEMAPHORE_OK, true);
             }
+            if (!infinite && deadline.remaining() == 0)
+            {
+                return SemaphoreResult(SEMAPHORE_TIMEOUT);
+            }
             count = SemaphoreProcessMemory::load(words);
+            if (count < 0 || count > maximum)
+            {
+                return SemaphoreResult(SEMAPHORE_INVALID);
+            }
         }
 #else
         const int32_t result = infinite ? ::sem_wait(static_cast<sem_t*>(m_processSemaphore))
@@ -846,11 +860,11 @@ SemaphoreResult Semaphore::waitProcess(const SemaphoreDeadline& deadline, bool i
             continue;
         }
 #endif
-        // 沿用移动端1ms/桌面POSIX有限等待2ms补查，EINTR也不重置总预算。
+        // 按实例配置的移动端或桌面POSIX间隔补查，EINTR也不重置总预算。
 #ifdef SEMAPHORE_SHARED_COUNTER
-        const uint32_t maximumSlice = 1;
+        const uint32_t maximumSlice = m_policy.m_mobileSlice;
 #else
-        const uint32_t maximumSlice = 2;
+        const uint32_t maximumSlice = m_policy.m_posixSlice;
 #endif
         const uint32_t slice = deadline.remaining(maximumSlice);
         if (slice == 0)
@@ -947,7 +961,8 @@ SemaphoreResult Semaphore::waitCount(bool infinite, uint32_t timeout)
             return consumeCount() ? SemaphoreResult(SEMAPHORE_OK, true) : SemaphoreResult(SEMAPHORE_TIMEOUT);
         }
         SemaphoreEventRecord* unused = nullptr;
-        return m_countPool.load()->begin(m_count, unused, true);
+        const SemaphoreDeadline probeDeadline(false, 0);
+        return m_countPool.load()->begin(m_count, unused, true, &probeDeadline);
     }
     const SemaphoreDeadline deadline(infinite, timeout);
     return waitCountRegistered(deadline);
@@ -955,7 +970,7 @@ SemaphoreResult Semaphore::waitCount(bool infinite, uint32_t timeout)
 
 SemaphoreResult Semaphore::waitCountRegistered(const SemaphoreDeadline& deadline)
 {
-    if (consumeCount())
+    if (consumeCount(&deadline))
     {
         return SemaphoreResult(SEMAPHORE_OK, true);
     }
@@ -963,7 +978,7 @@ SemaphoreResult Semaphore::waitCountRegistered(const SemaphoreDeadline& deadline
     if (observed > (UINT64_MAX >> 1) && (observed & 1) != 0)
     {
         SemaphoreEventRecord* unused = nullptr;
-        const SemaphoreResult result = m_countPool.load()->begin(m_count, unused, true);
+        const SemaphoreResult result = m_countPool.load()->begin(m_count, unused, true, &deadline);
         if (result.status != SEMAPHORE_TIMEOUT)
         {
             return result;
@@ -971,7 +986,7 @@ SemaphoreResult Semaphore::waitCountRegistered(const SemaphoreDeadline& deadline
     }
     if (deadline.remaining() == 0)
     {
-        return consumeCount() ? SemaphoreResult(SEMAPHORE_OK, true) : SemaphoreResult(SEMAPHORE_TIMEOUT);
+        return consumeCount(&deadline) ? SemaphoreResult(SEMAPHORE_OK, true) : SemaphoreResult(SEMAPHORE_TIMEOUT);
     }
     if (!SemaphoreWake::canBlock())
     {
@@ -985,7 +1000,7 @@ SemaphoreResult Semaphore::waitCountRegistered(const SemaphoreDeadline& deadline
     }
     if (deadline.remaining() == 0)
     {
-        return consumeCount() ? SemaphoreResult(SEMAPHORE_OK, true) : SemaphoreResult(SEMAPHORE_TIMEOUT);
+        return consumeCount(&deadline) ? SemaphoreResult(SEMAPHORE_OK, true) : SemaphoreResult(SEMAPHORE_TIMEOUT);
     }
     SemaphoreCount* pool = nullptr;
     SemaphoreResult result = prepareCountPool(pool);
@@ -994,7 +1009,7 @@ SemaphoreResult Semaphore::waitCountRegistered(const SemaphoreDeadline& deadline
         return result;
     }
     SemaphoreEventRecord* record = nullptr;
-    result = pool->begin(m_count, record, deadline.remaining() == 0);
+    result = pool->begin(m_count, record, deadline.remaining() == 0, &deadline);
     if (result.status != SEMAPHORE_OK || record == nullptr)
     {
         return result;
@@ -1010,19 +1025,19 @@ SemaphoreResult Semaphore::waitCountCompetitive(const SemaphoreDeadline& deadlin
     {
         return result;
     }
-    // 普通等待先复用共享系统提示；单次等待持续32ms未取得许可后再进入优先交付链。
+    // 普通等待先复用共享系统提示；单次等待达到配置的升级时间仍未取得许可后再进入优先交付链。
     // 这是防止长期抢不到许可的升级时间，不是每个线程必须等待的时间或调度上限。
-    const SemaphoreDeadline promotion(false, 32);
+    const SemaphoreDeadline promotion(false, m_policy.m_promotionMilliseconds);
     for (;;)
     {
         const uint32_t expected = m_wake.snapshot();
-        if (consumeCount())
+        if (consumeCount(&deadline))
         {
             result = SemaphoreResult(SEMAPHORE_OK, true);
             break;
         }
         const uint64_t state = m_count.load();
-        const uint32_t allowance = promotion.remaining(32);
+        const uint32_t allowance = promotion.remaining(m_policy.m_localSlice);
         if (allowance == 0 || (state > (UINT64_MAX >> 1) && (state & 1) != 0))
         {
             // 大计数也交给受读者保护的路径处理，不能在这里解引用记录地址。
@@ -1046,6 +1061,29 @@ SemaphoreResult Semaphore::waitCountCompetitive(const SemaphoreDeadline& deadlin
     return result;
 }
 
+SemaphoreResult Semaphore::waitForDelivery(SemaphoreEventRecord& record, const SemaphoreDeadline& deadline, bool direct)
+{
+    for (;;)
+    {
+        // 公共后端先读提示代次，再查真实交付状态；地址后端直接等待该记录离开状态0。
+        const uint32_t expected = direct ? 0 : m_wake.snapshot();
+        if (record.m_state.load() == 1)
+        {
+            return SemaphoreResult(SEMAPHORE_OK, true);
+        }
+        const uint32_t slice = deadline.remaining(m_policy.m_localSlice);
+        if (slice == 0)
+        {
+            return SemaphoreResult(SEMAPHORE_TIMEOUT);
+        }
+        const SemaphoreResult slept = m_wake.sleep(expected, slice, direct ? &record.m_state : nullptr);
+        if (slept.status != SEMAPHORE_OK && slept.status != SEMAPHORE_TIMEOUT)
+        {
+            return slept;
+        }
+    }
+}
+
 SemaphoreResult Semaphore::waitCountRecord(
     SemaphoreEventRecord* record, const SemaphoreDeadline& deadline, bool entered)
 {
@@ -1062,26 +1100,7 @@ SemaphoreResult Semaphore::waitCountRecord(
         }
         entered = true;
     }
-    for (;;)
-    {
-        const uint32_t expected = direct ? 0 : m_wake.snapshot();
-        if (record->m_state.load() == 1)
-        {
-            result = SemaphoreResult(SEMAPHORE_OK, true);
-            break;
-        }
-        const uint32_t slice = deadline.remaining(32);
-        if (slice == 0)
-        {
-            result = SemaphoreResult(SEMAPHORE_TIMEOUT);
-            break;
-        }
-        result = m_wake.sleep(expected, slice, direct ? &record->m_state : nullptr);
-        if (result.status != SEMAPHORE_OK && result.status != SEMAPHORE_TIMEOUT)
-        {
-            break;
-        }
-    }
+    result = waitForDelivery(*record, deadline, direct);
     result.committed = pool->finish(m_count, record);
     if (result.committed && result.status == SEMAPHORE_TIMEOUT)
     {
@@ -1128,26 +1147,7 @@ SemaphoreResult Semaphore::waitEvent(bool infinite, uint32_t timeout)
             return result;
         }
     }
-    for (;;)
-    {
-        const uint32_t expected = direct ? 0 : m_wake.snapshot();
-        if (record->m_state.load() == 1)
-        {
-            result = SemaphoreResult(SEMAPHORE_OK, true);
-            break;
-        }
-        const uint32_t slice = deadline.remaining(32);
-        if (slice == 0)
-        {
-            result = SemaphoreResult(SEMAPHORE_TIMEOUT);
-            break;
-        }
-        result = m_wake.sleep(expected, slice, direct ? &record->m_state : nullptr);
-        if (result.status != SEMAPHORE_OK && result.status != SEMAPHORE_TIMEOUT)
-        {
-            break;
-        }
-    }
+    result = waitForDelivery(*record, deadline, direct);
     // finish的CAS决定通知与超时谁先完成；发生系统错误仍如实保留已提交状态。
     result.committed = pool->finish(record);
     if (result.committed && result.status == SEMAPHORE_TIMEOUT)
@@ -1173,7 +1173,7 @@ SemaphoreSignalWaitResult Semaphore::signalAndWaitLocal(Semaphore& waitOn, bool 
     if (!m_wake.canSignalAndWait(waitOn.m_wake))
     {
         // 普通组合操作重试竞争；容量错误立即报告，不能因发布端满载无限延长有限等待。
-        const SemaphoreResult sent = trySignal(true, false);
+        const SemaphoreResult sent = publishForWait(deadline, false, true);
         if (sent.status != SEMAPHORE_OK)
         {
             return SemaphoreSignalWaitResult(sent.status,
@@ -1192,7 +1192,7 @@ SemaphoreSignalWaitResult Semaphore::signalAndWaitLocal(Semaphore& waitOn, bool 
             entered.status, SEMAPHORE_COMMIT_NONE, SEMAPHORE_COMMIT_NONE, entered.nativeError);
     }
     const uint32_t expected = waitOn.m_wake.snapshot();
-    const SemaphoreResult sent = publishCount(false);
+    const SemaphoreResult sent = publishForWait(deadline, false, false);
     if (sent.status != SEMAPHORE_OK)
     {
         waitOn.m_wake.leaveWait();
@@ -1201,10 +1201,23 @@ SemaphoreSignalWaitResult Semaphore::signalAndWaitLocal(Semaphore& waitOn, bool 
     }
     SemaphoreCount* pool = nullptr;
     SemaphoreEventRecord* record = nullptr;
-    SemaphoreResult received = waitOn.consumeCount() ? SemaphoreResult(SEMAPHORE_OK, true) : waitOn.prepareCountPool(pool);
-    if (received.status == SEMAPHORE_OK && !received.committed)
+    SemaphoreResult received;
+    if (waitOn.consumeCount(&deadline))
     {
-        received = pool->begin(waitOn.m_count, record, deadline.remaining() == 0);
+        received.committed = true;
+    }
+    else if (deadline.remaining() == 0)
+    {
+        // 探测已有大计数或普通许可，不为零预算的空目标创建登记池。
+        received = waitOn.waitResult(0);
+    }
+    else
+    {
+        received = waitOn.prepareCountPool(pool);
+        if (received.status == SEMAPHORE_OK)
+        {
+            received = pool->begin(waitOn.m_count, record, deadline.remaining() == 0, &deadline);
+        }
     }
     if (record == nullptr)
     {
@@ -1215,7 +1228,7 @@ SemaphoreSignalWaitResult Semaphore::signalAndWaitLocal(Semaphore& waitOn, bool 
             SEMAPHORE_COMMIT_DONE, received.committed ? SEMAPHORE_COMMIT_DONE : SEMAPHORE_COMMIT_NONE,
             woke.status != SEMAPHORE_OK ? woke.nativeError : received.nativeError);
     }
-    const uint32_t slice = deadline.remaining(32);
+    const uint32_t slice = deadline.remaining(waitOn.m_policy.m_localSlice);
     const SemaphoreResult slept = record->m_state.load() == 1 || slice == 0
         ? m_wake.notify() : m_wake.signalAndSleep(waitOn.m_wake, expected, slice);
     if (slept.status != SEMAPHORE_OK && slept.status != SEMAPHORE_TIMEOUT)
@@ -1242,25 +1255,12 @@ bool Semaphore::waitCountQuick(bool infinite, uint32_t timeout)
             {
                 return true;
             }
-            // CAS竞争才退避；没有许可时直接进入原有系统等待协议。
-            return waitCountContended(infinite, timeout);
         }
     }
     return waitCountCommitted(infinite, timeout);
 }
 
-// 快速消费失败后先退避，避免立即重试加剧缓存行争抢；热路径仅需尾调用。
-#ifdef _MSC_VER
-__declspec(noinline)
-#elif defined(__GNUC__)
-__attribute__((noinline))
-#endif
-bool Semaphore::waitCountContended(bool infinite, uint32_t timeout)
-{
-    return consumeCountContended() || waitCountCommitted(infinite, timeout);
-}
-
-bool Semaphore::consumeCount()
+bool Semaphore::consumeCount(const SemaphoreDeadline* deadline)
 {
     if (m_wake.initializationStatus() != SEMAPHORE_OK)
     {
@@ -1273,15 +1273,15 @@ bool Semaphore::consumeCount()
     {
         return false;
     }
-    return m_count.compare_exchange_strong(count, next) || consumeCountContended();
+    return m_count.compare_exchange_strong(count, next) || (deadline != nullptr && consumeCountContended(*deadline));
 }
 
-bool Semaphore::consumeCountContended()
+bool Semaphore::consumeCountContended(const SemaphoreDeadline& deadline)
 {
     uint32_t contention = 0;
-    for (;;)
+    while (deadline.remaining() != 0)
     {
-        SemaphoreRetry::contention(contention);
+        SemaphoreRetry::contention(contention, m_policy);
         // 退避后读取最新状态，避免使用失败CAS带回的过时比较值。
         uint64_t count = m_count.load();
         const uint64_t next = count - 1;
@@ -1294,6 +1294,7 @@ bool Semaphore::consumeCountContended()
             return true;
         }
     }
+    return false;
 }
 
 bool Semaphore::validProcessName(const std::string& name)
@@ -1311,3 +1312,310 @@ bool Semaphore::validProcessName(const std::string& name)
 #endif
     return true;
 }
+
+// 使用示例：复制下面的头文件和 main 到独立调用程序，去掉行首注释即可运行。
+// #include "Semaphore.h"
+// #include <atomic>
+// #include <cstdio>
+// #include <cstdlib>
+// #include <stdexcept>
+// #include <thread>
+// #ifdef __APPLE__
+// #include <TargetConditionals.h>
+// #endif
+// #ifdef _WIN32
+// #include <Windows.h>
+// #else
+// #include <unistd.h>
+// #include <time.h>
+// #include <cerrno>
+// #endif
+//
+// /** Semaphore公开接口的调用演示，不采样、不计时、不测吞吐
+//     同线程按步骤展示生产/消费两端；真实业务可把相应步骤放到不同线程或进程
+//     事件部分由独立线程周期发布状态，结束前先停止并join，再销毁Semaphore
+//     Android/iOS须先由宿主设置SEMAPHORE_DEMO_DIRECTORY为已存在的私有共享目录
+//     Wasm主线程不能运行以下阻塞/命名IPC流程；其能力示例见SemaphoreTest工程
+// @return 0演示完成，1操作失败，77当前宿主不适用
+// */
+// int32_t main()
+// {
+// #ifdef __EMSCRIPTEN__
+//     std::printf("This native blocking demo is not applicable to a Wasm main thread.\n");
+//     return 77;
+// #else
+//     const uint32_t cleanupBefore = Semaphore::cleanupFailures();
+//     try
+//     {
+//         /** 记录预期未满足的步骤，由main统一报告并正常退出
+//         @param [in] condition 当前步骤是否成立
+//         @param [in] step 步骤名称
+//         */
+//         const auto expect = [](bool condition, const char* step)
+//         {
+//             if (!condition)
+//             {
+//                 throw std::runtime_error(step);
+//             }
+//         };
+//         /** 展示普通Result；失败只退出示例，不重发可能已提交的通知
+//         @param [in] step 步骤名称
+//         @param [in] result 当前操作的状态和提交信息
+//         */
+//         const auto showResult = [](const char* step, const SemaphoreResult& result)
+//         {
+//             std::printf("%s: status=%d committed=%d native=%d\n", step,
+//                 static_cast<int32_t>(result.status), result.committed ? 1 : 0, result.nativeError);
+//             if (result.status != SEMAPHORE_OK)
+//             {
+//                 throw std::runtime_error(step);
+//             }
+//         };
+//         /** 分别展示组合操作的发送和消费阶段，不能因等待失败重发整个操作
+//         @param [in] step 步骤名称
+//         @param [in] result 本次组合结果；UNKNOWN须由业务代次恢复
+//         */
+//         const auto showCombined = [](const char* step, const SemaphoreSignalWaitResult& result)
+//         {
+//             std::printf("%s: status=%d signal=%d wait=%d native=%d\n", step,
+//                 static_cast<int32_t>(result.status), static_cast<int32_t>(result.signalState),
+//                 static_cast<int32_t>(result.waitState), result.nativeError);
+//             if (result.status != SEMAPHORE_OK || result.signalState != SEMAPHORE_COMMIT_DONE ||
+//                 result.waitState != SEMAPHORE_COMMIT_DONE)
+//             {
+//                 throw std::runtime_error(step);
+//             }
+//         };
+//
+//         // 一、本地任务计数：通知可提前到达，每次成功等待恰好消费一个许可
+//         {
+//             SemaphoreConfig startup;
+//             startup.configureEventPool().initialCapacity = 4;
+//             SemaphoreWaitPolicy policy;
+//             policy.m_promotionMilliseconds = 16;
+//             showResult("configure wait policy", startup.setWaitPolicy(policy));
+//             Semaphore tasks(startup);
+//             expect(tasks.waitPolicy().m_promotionMilliseconds == 16, "instance wait policy");
+//             showResult("initialize count", tasks.initializationResult());
+//             // 可选：并发启动前、计数为空时预分配计数等待记录；不调用也会按需建立默认池
+//             SemaphorePoolConfig countConfig;
+//             countConfig.initialCapacity = 16;
+//             countConfig.maxCapacity = 64;
+//             showResult("configure optional count pool", tasks.configureCountPool(countConfig));
+//             const SemaphorePoolStats countStats = tasks.countPoolStatistics();
+//             expect(countStats.capacity == 16, "count pool prepared");
+//             expect(tasks.signal(), "tasks signal");
+//             expect(tasks.wait(), "tasks wait");
+//             expect(tasks.signal(), "tasks signal");
+//             expect(tasks.wait(1000), "count timed wait");
+//             showResult("count publish", tasks.trySignal(true, false));
+//             showResult("count infinite wait", tasks.waitResult());
+//             showResult("count publish again", tasks.trySignal());
+//             showResult("count timed result", tasks.waitResult(1000));
+//             // 持续阻塞会按需进入优先交付链，避免后来者夺走已交付许可；无需改变调用方式
+//             // wait(0)只探测，不适合循环抢占；停止时先提交退出状态，再发退出许可并join
+//
+//             // reset只用于生产者、消费者均已停止的静止阶段，不作为并发取消接口
+//             expect(tasks.signal(), "tasks signal");
+//             tasks.reset();
+//             expect(tasks.waitResult(0).status == SEMAPHORE_TIMEOUT, "reset clears pending count");
+//             // 维护不是每次等待的前置步骤；没有缩容策略时只尝试安全回收退役记录
+//             size_t countReleased = 0;
+//             showResult("maintain optional count pool", tasks.maintainCountPool(countReleased));
+//         }
+//
+//         // 二、周期状态事件：事件不积存，唤醒后读取业务版本，不能把提示当成任务数量
+//         {
+//             Semaphore changed;
+//             showResult("initialize event", changed.initializationResult());
+//             SemaphorePoolConfig config;
+//             config.initialCapacity = 2;
+//             config.maxCapacity = 8;
+//             /** 提供可选缩容策略；维护仍遵守初始容量下限与安全回收条件
+//             @param [in] context 本次维护的容量快照
+//             @return 最多回收4条、连续空闲至少1000毫秒的记录
+//             */
+//             config.shrink = [](const SemaphoreShrinkContext& context)
+//             {
+//                 SemaphoreShrinkDecision decision = {};
+//                 decision.shrinkCount = context.currentCapacity > context.initialCapacity ? 4 : 0;
+//                 decision.idleMilliseconds = 1000;
+//                 return decision;
+//             };
+//             showResult("configure optional event pool", changed.configureEventPool(config));
+//             std::atomic<bool> stop(false);
+//             std::atomic<bool> publishFailed(false);
+//             std::atomic<uint32_t> version(0);
+//             /** 周期发布新的业务版本；轮流展示单个提示、广播及Result版本
+//                 周期更新允许错过中间版本；休眠让出CPU，不用持续轮询等待登记
+//             */
+//             std::thread publisher([&]()
+//             {
+//                 while (!stop.load())
+//                 {
+//                     const uint32_t current = version.fetch_add(1) + 1;
+//                     try
+//                     {
+//                         if (current % 3 == 1)
+//                         {
+//                             if (!changed.event()) publishFailed.store(true);
+//                         }
+//                         else if (current % 3 == 2)
+//                         {
+//                             // 有多个订阅者时，eventAll提示本次已登记的全部等待者
+//                             if (!changed.eventAll()) publishFailed.store(true);
+//                         }
+//                         else
+//                         {
+//                             const SemaphoreResult result = changed.tryEvent(false, true, false);
+//                             if (result.status != SEMAPHORE_OK)
+//                             {
+//                                 publishFailed.store(true);
+//                             }
+//                             // committed=false表示此刻没有合格等待者，不是积存了一次事件
+//                             // committed=true但status失败时也不能盲目重发，本例只记录失败
+//                         }
+//                     }
+//                     catch (...)
+//                     {
+//                         publishFailed.store(true);
+//                     }
+// #ifdef _WIN32
+//                     ::Sleep(20);
+// #else
+//                     struct timespec delay = {0, 20000000};
+//                     if (::nanosleep(&delay, nullptr) != 0 && errno != EINTR)
+//                     {
+//                         publishFailed.store(true);
+//                     }
+// #endif
+//                 }
+//             });
+//             try
+//             {
+//                 // 无参数版本无限等待，要求发布者仍存活；有限版本便于检查退出/业务条件
+//                 expect(changed.eventWait(), "event infinite wait");
+//                 std::printf("event observed version=%u\n", static_cast<unsigned>(version.load()));
+//                 showResult("event infinite result", changed.eventWaitResult());
+//                 expect(changed.eventWait(1000), "event timed wait");
+//                 showResult("event timed result", changed.eventWaitResult(1000));
+//             }
+//             catch (...)
+//             {
+//                 stop.store(true);
+//                 publisher.join();
+//                 throw;
+//             }
+//             stop.store(true);
+//             publisher.join();
+//             expect(!publishFailed.load(), "event publisher");
+//             const SemaphorePoolStats stats = changed.eventPoolStatistics();
+//             std::printf("event pool: capacity=%u free=%u\n",
+//                 static_cast<unsigned>(stats.capacity), static_cast<unsigned>(stats.freeCapacity));
+//             size_t released = 0;
+//             showResult("optional event pool maintenance", changed.maintainEventPool(released));
+//             // 本例没有超过初始容量，released为0也正常；普通事件使用不必配置或维护池
+//             std::printf("event pool released=%u\n", static_cast<unsigned>(released));
+//         }
+//
+//         // 三、本地生产/消费组合：发布已完成工作，然后取得下一空槽
+//         // 假设当前生产者已持有一个槽位，另有一个空槽；这里只演示通知，不承载真实队列数据
+//         {
+//             Semaphore jobs;
+//             Semaphore freeSlots;
+//             showResult("initialize jobs", jobs.initializationResult());
+//             showResult("initialize free slots", freeSlots.initializationResult());
+//             showResult("prepare jobs", jobs.prepareSignalAndWait());
+//             showResult("prepare free slots", freeSlots.prepareSignalAndWait());
+//             expect(freeSlots.signal(), "freeSlots signal");
+//             showCombined("publish job and acquire next slot", jobs.signalAndWaitResult(freeSlots));
+//             expect(jobs.wait(), "jobs wait");
+//             expect(freeSlots.signal(), "freeSlots signal"); // 消费者处理上一工作后归还槽位
+//             showCombined("publish job and acquire slot with budget", jobs.signalAndWaitResult(freeSlots, 1000));
+//             expect(jobs.wait(), "jobs wait");
+//             // 真实冷通知后立即等待可优先使用组合接口；持续热往返不宜机械切换准备模式
+//         }
+//
+//         // 四、命名通知：同一程序按顺序模拟两个进程端，真实两端必须约定相同目录和名称
+// #if defined(__ANDROID__) || (defined(__APPLE__) && TARGET_OS_IPHONE)
+//         const char* directory = std::getenv("SEMAPHORE_DEMO_DIRECTORY");
+//         expect(directory != nullptr, "set an existing owned SEMAPHORE_DEMO_DIRECTORY");
+//         expect(Semaphore::setProcessDirectory(directory), "configure mobile shared directory");
+// #else
+//         expect(Semaphore::setProcessDirectory(""), "desktop native notification directory");
+// #endif
+//         {
+//             char name[32];
+// #ifdef _WIN32
+//             std::sprintf(name, "SemDemo%lu", static_cast<unsigned long>(::GetCurrentProcessId()));
+// #else
+//             std::sprintf(name, "SemDemo%lu", static_cast<unsigned long>(::getpid()));
+// #endif
+//             const std::string jobsName = std::string(name) + "j";
+//             const std::string slotsName = std::string(name) + "s";
+//             Semaphore jobsOwner, slotsOwner, jobsReader, slotsReader, probe;
+//             showResult("initialize jobs owner", jobsOwner.initializationResult());
+//             showResult("initialize slots owner", slotsOwner.initializationResult());
+//             showResult("initialize jobs reader", jobsReader.initializationResult());
+//             showResult("initialize slots reader", slotsReader.initializationResult());
+//             showResult("initialize probe", probe.initializationResult());
+//
+//             // 旧void包装便于兼容；新调用方优先Result接口，以便观察失败原因
+//             jobsOwner.createProcessSemaphore(jobsName, 4);
+//             showResult("create named slots", slotsOwner.createProcessResult(slotsName, 4));
+//             expect(probe.tryOpenProcessSemaphore(jobsName), "probe existing named jobs");
+//             jobsReader.openProcessSemaphore(jobsName);
+//             showResult("open named slots", slotsReader.openProcessResult(slotsName));
+//
+//             // 普通发送以bool报告是否提交；竞争及满载会内部重试，需要期限时优先try接口。
+//             expect(jobsOwner.processSignal(), "publish named job bool");
+//             expect(jobsReader.processWait(1000), "consume legacy named job with budget");
+//             // 此处没有其他消费者，确认发布成功后才演示旧的无限等待
+//             expect(jobsOwner.tryProcessSignal() == 0, "publish named job");
+//             expect(jobsReader.processWait(1000), "consume named try job");
+//             // 允许重试竞争，但满载立即交还调用方，避免无限等自己应释放的容量。
+//             showResult("named try result", jobsOwner.tryProcessSignalResult(true, false));
+//             jobsReader.processWait();
+//             showResult("publish named job result", jobsOwner.processSignalResult());
+//             showResult("consume named job result", jobsReader.processWaitResult(1000));
+//
+//             // 空槽通知可以先到达；此组合只合并发布工作和等待空槽，不是两阶段原子事务
+//             showResult("return named free slot", slotsOwner.processSignalResult());
+//             showCombined("named publish and acquire slot", jobsOwner.processSignalAndWaitResult(slotsReader, 1000));
+//             showResult("consume combined named job", jobsReader.processWaitResult(1000));
+//
+//             const bool unlinked = jobsOwner.unlinkProcessName();
+// #ifdef _WIN32
+//             expect(!unlinked, "Windows names are released with kernel references");
+// #else
+//             expect(unlinked, "owner unlinks its POSIX name");
+// #endif
+//             probe.closeProcessSemaphore();
+//             jobsReader.closeProcessSemaphore();
+//             showResult("close named reader", slotsReader.closeProcessResult());
+//             showResult("close named owner", jobsOwner.closeProcessResult());
+//             slotsOwner.closeProcessSemaphore();
+//             // 所有调用结束后离开作用域，由析构兜底释放；不手动调用析构函数
+//         }
+//
+//         // 可选诊断适用于两组接口；读取计数不执行资源清理，也不是其他接口的调用前提
+//         const uint32_t cleanupAfter = Semaphore::cleanupFailures();
+//         std::printf("cleanup failures: before=%u after=%u\n",
+//             static_cast<unsigned>(cleanupBefore), static_cast<unsigned>(cleanupAfter));
+//         expect(cleanupAfter == cleanupBefore, "resource cleanup");
+//         std::printf("Semaphore public API demo completed.\n");
+//         return 0;
+//     }
+//     catch (const std::exception& error)
+//     {
+//         std::fprintf(stderr, "Semaphore demo failed: %s; cleanup failures=%u\n", error.what(),
+//             static_cast<unsigned>(Semaphore::cleanupFailures()));
+//     }
+//     catch (...)
+//     {
+//         std::fprintf(stderr, "Semaphore demo failed with an unknown exception; cleanup failures=%u\n",
+//             static_cast<unsigned>(Semaphore::cleanupFailures()));
+//     }
+//     return 1;
+// #endif
+// }

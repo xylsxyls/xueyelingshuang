@@ -68,7 +68,7 @@ public:
     /** 提示当前对象并睡眠于目标；调用方已发布业务状态及登记目标等待者
     @param [in,out] waitOn 已准备并登记的目标后端
     @param [in] expected 目标提示字快照，取得后调用方已重查目标业务谓词
-    @param [in] milliseconds 单次等待预算，1至32毫秒
+    @param [in] milliseconds 单次等待预算，单位毫秒，由实例等待策略和剩余期限共同决定
     @return 原生提示/超时/错误，不代表业务许可消费；失败不可重发业务许可
     */
     SemaphoreResult signalAndSleep(SemaphoreWake& waitOn, uint32_t expected, uint32_t milliseconds);
@@ -84,7 +84,7 @@ public:
 
     /** 在比较字未变时阻塞；公共比较字须先enterWait，独立事件地址由池登记并持有引用
     @param [in] expected 睡眠前快照
-    @param [in] milliseconds 本次相对预算，1至32毫秒
+    @param [in] milliseconds 本次相对预算，单位毫秒，由实例等待策略和剩余期限共同决定
     @param [in] address 非空时在该稳定事件记录地址等待，等待者持有记录引用；否则使用公共比较字
     @return 提示/分片超时/系统错误，不表示业务成功
     */
@@ -122,7 +122,7 @@ private:
     /** 仅在指定比较字仍为expected时进入系统等待
     @param [in,out] word 生命周期已受调用者保护的32位原子字
     @param [in] expected 入睡前比较值
-    @param [in] milliseconds 单片预算，1至32毫秒
+    @param [in] milliseconds 单片预算，单位毫秒，由实例等待策略和剩余期限共同决定
     @return 系统提示、超时或错误
     */
     SemaphoreResult sleepAddress(std::atomic<uint32_t>& word, uint32_t expected, uint32_t milliseconds);

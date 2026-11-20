@@ -250,7 +250,7 @@ SemaphoreResult SemaphoreWake::sleep(
         return sleepAddress(address != nullptr ? *address : m_word, expected, milliseconds);
     }
 #ifdef _WIN32
-    // 兼容后端先复位再比较。另一等待者可消除提示，固定32ms补查保证无永久睡眠。
+    // 兼容后端先复位再比较。另一等待者可消除提示，按配置的有限片段补查谓词。
     if (!::ResetEvent(m_handle))
     {
         return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, static_cast<int32_t>(::GetLastError()));
@@ -408,7 +408,9 @@ SemaphoreResult SemaphoreWake::sleepAddress(
 #endif
 #elif defined(__linux__) || defined(__ANDROID__)
     // SYS_futex使用内核long布局的相对超时；32位libc的time64 timespec不能直接传入
-    const __kernel_long_t duration[2] = {0, static_cast<__kernel_long_t>(milliseconds) * 1000000};
+    // futex 的纳秒字段必须小于一秒，32 位目标也要先取余再换算。
+    const __kernel_long_t duration[2] = {static_cast<__kernel_long_t>(milliseconds / 1000),
+        static_cast<__kernel_long_t>(milliseconds % 1000) * 1000000};
     if (::syscall(SYS_futex, &word, FUTEX_WAIT_PRIVATE, expected, duration, nullptr, 0) == 0)
     {
         return SemaphoreResult();

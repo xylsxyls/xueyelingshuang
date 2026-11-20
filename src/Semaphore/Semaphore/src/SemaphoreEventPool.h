@@ -58,6 +58,8 @@ public:
     size_t freeThreshold;
     // 默认-1无配置上限；仍受size_t和分配失败限制
     int64_t maxCapacity;
+    // 每次整理最多处理的退役记录数及每次维护最多缩减的容量，1至64，默认64。
+    size_t m_maintenanceBudget;
 #if defined(_MSC_VER) && !defined(STATIC_LIB)
     // 保留回调配置契约，仅豁免当前载体；跨DLL复制须匹配工具链和CRT
 #pragma warning(push)
