@@ -32,7 +32,7 @@ inline bool LockFreeQueuePerformanceExtra::observe(size_t recordCount)
     {
         return false;
     }
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
     std::vector<std::unique_ptr<LockFreeQueueProducer<uint64_t>>> sessions(recordCount);
     for (size_t i = 0; i < recordCount; ++i)
     {
@@ -123,7 +123,7 @@ inline bool LockFreeQueuePerformanceExtra::lifecycle()
     {
         std::unique_ptr<LockFreeQueue<uint64_t>> queue(new LockFreeQueue<uint64_t>());
         valid = queue->empty() && valid;
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
         valid = queue->poolStatistics().currentCapacity != 0 && valid;
 #endif
     }
@@ -139,7 +139,7 @@ inline bool LockFreeQueuePerformanceExtra::lifecycle()
     for (size_t i = 0; i < repeats; ++i)
     {
         queue.destroy();
-#ifdef LOCK_FREE_QUEUE_BASELINE
+#ifdef LOCK_FREE_QUEUE_LIST_MUTEX
         queue.init();
 #else
         valid = queue.tryInit() == LockFreeQueueSuccess && valid;
@@ -170,7 +170,7 @@ inline bool LockFreeQueuePerformanceExtra::lifecycle()
     queue.destroy();
     valid = queue.empty() && valid;
     finish("destroy_65536", began, cpuStart, 65536, valid);
-#ifdef LOCK_FREE_QUEUE_BASELINE
+#ifdef LOCK_FREE_QUEUE_LIST_MUTEX
     queue.init();
 #else
     valid = queue.tryInit() == LockFreeQueueSuccess && valid;
@@ -181,8 +181,8 @@ inline bool LockFreeQueuePerformanceExtra::lifecycle()
 
 inline bool LockFreeQueuePerformanceExtra::rejection()
 {
-#ifdef LOCK_FREE_QUEUE_BASELINE
-    std::cout << "REJECTION NOT_APPLICABLE=original_has_no_capacity_api" << std::endl;
+#ifdef LOCK_FREE_QUEUE_LIST_MUTEX
+    std::cout << "REJECTION NOT_APPLICABLE=std_list_mutex_has_no_capacity_api" << std::endl;
     return true;
 #else
     std::unique_ptr<LockFreeQueue<uint64_t>> instance(new LockFreeQueue<uint64_t>());
@@ -236,8 +236,8 @@ inline bool LockFreeQueuePerformanceExtra::rejection()
 
 inline bool LockFreeQueuePerformanceExtra::registration()
 {
-#ifdef LOCK_FREE_QUEUE_BASELINE
-    std::cout << "REGISTRATION NOT_APPLICABLE=original_has_no_context_api" << std::endl;
+#ifdef LOCK_FREE_QUEUE_LIST_MUTEX
+    std::cout << "REGISTRATION NOT_APPLICABLE=std_list_mutex_has_no_context_api" << std::endl;
     return true;
 #else
     std::unique_ptr<LockFreeQueue<uint64_t>> instance(new LockFreeQueue<uint64_t>());
@@ -269,7 +269,7 @@ bool LockFreeQueuePerformanceExtra::payload(const char* name, const T& body, siz
     std::unique_ptr<LockFreeQueue<Message>> instance(new LockFreeQueue<Message>());
     LockFreeQueue<Message>& queue = *instance;
     const size_t width = 256;
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
     if (g_lockFreeQueueBenchmarkProfile != 2)
     {
         queue.destroy();

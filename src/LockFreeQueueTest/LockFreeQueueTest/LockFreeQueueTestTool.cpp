@@ -24,13 +24,13 @@
 LockFreeQueueTestTool::LockFreeQueueTestTool(int32_t argc, char** argv) :
 m_command(argc > 1 ? argv[1] : "help")
 {
-    const std::set<std::string> flags = {"matrix", "consumers", "projects", "resume", "wave",
-        "build-only", "prepare-only", "measure-only", "after-only", "candidate-only", "plan"};
+    const std::set<std::string> flags = {"matrix", "consumers", "projects", "resume",
+        "build-only", "prepare-only", "measure-only", "plan"};
     const std::set<std::string> values = {"root", "source", "output", "batch", "cases", "arch",
-        "configuration", "repeat", "stress-seconds", "baseline-dir", "peer-snapshot-dir", "vcvars",
-        "before-dir", "after-dir", "previous-dir", "calls", "rounds", "supplement-rounds", "git",
+        "configuration", "repeat", "stress-seconds", "peer-snapshot-dir", "vcvars",
+        "calls", "rounds",
         "allocation-rounds", "affinity", "items", "producers", "modes", "duration-ms", "masks",
-        "capacities", "suite", "profiles", "versions"};
+        "capacities", "suite", "profiles"};
     for (int32_t i = 2; i < argc; ++i)
     {
         std::string key(argv[i]);
@@ -71,37 +71,22 @@ m_command(argc > 1 ? argv[1] : "help")
         permitted.insert({"batch", "arch", "vcvars", "affinity", "resume", "plan", "build-only", "prepare-only", "measure-only"});
         if (m_command == "tests")
         {
-            permitted.insert({"cases", "configuration", "matrix", "consumers", "projects", "repeat", "stress-seconds", "baseline-dir", "peer-snapshot-dir", "git"});
+            permitted.insert({"cases", "configuration", "matrix", "consumers", "projects", "repeat", "stress-seconds", "peer-snapshot-dir"});
         }
         else
         {
             permitted.insert("rounds");
-            if (m_command == "performance" || m_command == "three-way")
+            if (m_command == "performance")
             {
-                permitted.insert({"baseline-dir", "supplement-rounds", "allocation-rounds", "suite", "profiles", "git"});
-                if (m_command == "three-way")
-                {
-                    permitted.insert("wave");
-                    permitted.insert("previous-dir");
-                    permitted.insert("versions");
-                }
+                permitted.insert({"calls", "allocation-rounds", "suite", "profiles"});
             }
-            else
+            else if (m_command == "scheduling")
             {
-                permitted.insert("before-dir");
-                permitted.insert("after-dir");
-                if (m_command == "revision")
-                {
-                    permitted.insert({"calls", "allocation-rounds", "suite", "profiles"});
-                }
-                else if (m_command == "scheduling")
-                {
-                    permitted.insert({"duration-ms", "masks", "modes", "capacities", "after-only", "producers"});
-                }
-                else if (m_command == "shared-ptr")
-                {
-                    permitted.insert({"items", "producers", "modes", "candidate-only"});
-                }
+                permitted.insert({"duration-ms", "masks", "modes", "capacities", "producers"});
+            }
+            else if (m_command == "shared-ptr")
+            {
+                permitted.insert({"items", "producers", "modes"});
             }
         }
     }
@@ -657,12 +642,10 @@ int32_t LockFreeQueueTestTool::run()
 {
     if (m_command == "help" || m_command == "--help")
     {
-        std::cout << "QueueTest C++ host: whitebox | tests | performance | three-way | revision | scheduling | shared-ptr | summarize | self-test\n"
+        std::cout << "QueueTest C++ host: whitebox | tests | performance | scheduling | shared-ptr | summarize | self-test\n"
             "All outputs: --batch NAME under src/temp/LockFreeQueueTest. Lists use commas.\n"
             "tests --cases all|instant|stress|1,3-8 --matrix --consumers --projects\n"
             "whitebox --source DIR --output PRIVATE_TEMP_DIR\n"
-            "performance/three-way --baseline-dir DIR; revision/scheduling/shared-ptr --before-dir DIR\n"
-            "three-way --previous-dir DIR --versions current,previous[,std_list_mutex,original]\n"
             "--arch both|x64|Win32 --rounds N --plan (validate/list matrix without measuring)\n"
             "--prepare-only then --measure-only --resume freezes source and binary identities.\n"
             "See LockFreeQueueTest.h for all cases, defaults and interpretation.\n";
@@ -816,24 +799,6 @@ void LockFreeQueueTestTool::selfTest() const
     }
     LockFreeQueueTestTool whiteboxTool(static_cast<int32_t>(whiteboxPointers.size()), whiteboxPointers.data());
     check(whiteboxTool.option("source") == source() && whiteboxTool.option("output") == join(batch(), "cli-whitebox"), "whitebox CLI option pair");
-    std::vector<std::string> revisionArguments = {executable(), "revision", "--root", root(),
-        "--before-dir", source(), "--after-dir", source(), "--batch", "parser-only"};
-    std::vector<char*> revisionPointers;
-    for (size_t i = 0; i < revisionArguments.size(); ++i)
-    {
-        revisionPointers.push_back(&revisionArguments[i][0]);
-    }
-    LockFreeQueueTestTool revisionTool(static_cast<int32_t>(revisionPointers.size()), revisionPointers.data());
-    check(revisionTool.option("before-dir") == source() && revisionTool.option("after-dir") == source(), "revision CLI option pair");
-    std::vector<std::string> comparisonArguments = {executable(), "three-way", "--root", root(),
-        "--previous-dir", source(), "--versions", "current,previous", "--batch", "parser-only"};
-    std::vector<char*> comparisonPointers;
-    for (size_t i = 0; i < comparisonArguments.size(); ++i)
-    {
-        comparisonPointers.push_back(&comparisonArguments[i][0]);
-    }
-    LockFreeQueueTestTool comparisonTool(static_cast<int32_t>(comparisonPointers.size()), comparisonPointers.data());
-    check(comparisonTool.option("versions") == "current,previous" && comparisonTool.option("previous-dir") == source(), "paired Git comparison CLI");
     check(LockFreeQueueTestRunner::select("all").size() == 49, "registry count");
     check(LockFreeQueueTestRunner::select("instant").size() == 34, "instant registry");
     check(LockFreeQueueTestRunner::select("stress").size() == 15, "pressure registry");
@@ -841,7 +806,7 @@ void LockFreeQueueTestTool::selfTest() const
     check(LockFreeQueueTestRunner::select("47").size() == 1, "retry contract registered");
     check(LockFreeQueueTestRunner::select("48-49").size() == 2, "new public contracts registered");
     check(usageDemo(read(join(source(), "LockFreeQueue.cpp"))).find("int main(") != std::string::npos, "public demo extracted");
-    const char* invalid[] = {"", "0", "50", "3-1", "1,,2", "1-2-3", "99999999999999", "x", "-1"};
+    const char* invalid[] = {"", "0", "51", "24", "3-1", "1,,2", "1-2-3", "99999999999999", "x", "-1"};
     for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
     {
         bool rejected = false;
@@ -881,8 +846,8 @@ void LockFreeQueueTestTool::selfTest() const
     core["kind"] = "core";
     core["ids"].append(1);
     check(LockFreeQueueTestResults::parse("PASS id=1\n", core, 0)["samples"].empty(), "exact core PASS accepted");
-    const char* badCore[] = {"PASS id=1.5\n", "PASS id=0\n", "PASS id=50\n", "PASS id=2\n", "PASS\n", "PASS id=1\nPASS id=1\n", ""};
-    for (size_t i = 0; i < 7; ++i)
+    const char* badCore[] = {"PASS id=1.5\n", "PASS id=0\n", "PASS id=51\n", "PASS id=2\n", "PASS\n", "PASS id=1\nPASS id=1\n", "PASS id=1\nPASS\n", ""};
+    for (size_t i = 0; i < sizeof(badCore) / sizeof(badCore[0]); ++i)
     {
         bool refused = false;
         try
@@ -895,6 +860,116 @@ void LockFreeQueueTestTool::selfTest() const
         }
         check(refused, "fractional/wrong/missing/duplicate core ID rejected");
     }
+    core["require_summary"] = true;
+    const std::string goodCore = "PASS id=1\nSUMMARY executed=1 failed=0\n";
+    check(LockFreeQueueTestResults::parse(goodCore, core, 0)["samples"].empty(), "complete core summary accepted");
+    const std::string badSummaries[] = {"PASS id=1\n", goodCore + "SUMMARY executed=1 failed=0\n",
+        "PASS id=1\nSUMMARY executed=2 failed=0\n", "PASS id=1\nSUMMARY executed=1 failed=1\n"};
+    for (size_t i = 0; i < sizeof(badSummaries) / sizeof(badSummaries[0]); ++i)
+    {
+        bool refused = false;
+        try
+        {
+            LockFreeQueueTestResults::parse(badSummaries[i], core, 0);
+        }
+        catch (const std::exception&)
+        {
+            refused = true;
+        }
+        check(refused, "missing, duplicate or contradictory core summary rejected");
+    }
+    Json::Value backlog;
+    backlog["kind"] = "core";
+    backlog["ids"].append(22);
+    std::string backlogRows;
+    const char* backlogCounts[] = {"1", "1024", "65536", "262144"};
+    for (size_t i = 0; i < 4; ++i)
+    {
+        backlogRows += std::string("BACKLOG count=") + backlogCounts[i] + " first_pop_ns=1 valid=1\n" +
+            "LATENCY operation=pop_backlog samples=" + backlogCounts[i] + " p50_ns=1 p95_ns=1 p99_ns=1 max_ns=1\n";
+    }
+    const std::string backlogPass = "PASS id=22\n";
+    const Json::Value backlogData = LockFreeQueueTestResults::parse(backlogRows + backlogPass, backlog, 0);
+    check(backlogData["latencies"].size() == 4 && backlogData["samples"][0u]["case"].asString() == "backlog1" &&
+        backlogData["latencies"][3u]["case"].asString() == "backlog262144",
+        "all four backlog distributions recorded");
+    const std::string badBacklogs[] = {"", backlogRows + backlogRows,
+        replaceOnce(backlogRows, "samples=1024 ", "samples=1 "),
+        replaceOnce(backlogRows, "count=65536 ", "count=1024 "),
+        replaceOnce(backlogRows, "samples=262144 p50_ns=1", "samples=262144 p50_ns=2"),
+        replaceOnce(backlogRows, "samples=1 p50_ns=1", "samples=1 p50_ns=0"),
+        replaceOnce(backlogRows, "samples=65536 p50_ns=1", "samples=65536")};
+    for (size_t i = 0; i < sizeof(badBacklogs) / sizeof(badBacklogs[0]); ++i)
+    {
+        bool refused = false;
+        try
+        {
+            LockFreeQueueTestResults::parse(badBacklogs[i] + backlogPass, backlog, 0);
+        }
+        catch (const std::exception&)
+        {
+            refused = true;
+        }
+        check(refused, "incomplete, duplicate or contradictory backlog evidence rejected");
+    }
+    Json::Value notification;
+    notification["kind"] = "core";
+    notification["ids"].append(9);
+    const std::string wakeCounts = "NOTIFICATION received=6000 wake_permits=191 coalesced_batch=32 finite_wait_ms=5 valid=1\n";
+    const std::string wakePass = "PASS id=9\n";
+    check(LockFreeQueueTestResults::parse(wakeCounts + wakePass, notification, 0)["samples"].empty(),
+        "all notification permits accounted for");
+    const std::string badWakes[] = {wakePass, wakeCounts + wakeCounts + wakePass,
+        replaceOnce(wakeCounts, "191", "189") + wakePass, replaceOnce(wakeCounts, "191", "192") + wakePass,
+        replaceOnce(wakeCounts, "6000", "5999") + wakePass};
+    for (size_t i = 0; i < sizeof(badWakes) / sizeof(badWakes[0]); ++i)
+    {
+        bool refused = false;
+        try
+        {
+            LockFreeQueueTestResults::parse(badWakes[i], notification, 0);
+        }
+        catch (const std::exception&)
+        {
+            refused = true;
+        }
+        check(refused, "missing, surplus or inconsistent notification data rejected");
+    }
+    Json::Value evidence;
+    const std::string module = "PASS module_consumer engines=2 cross_module_inline=1 producer_context=1 pointer_bytes=8\n";
+    const std::string demo = "LockFreeQueue usage demo passed\n";
+    for (size_t target = 0; target < 2; ++target)
+    {
+        const std::string marker = target == 0 ? demo : module;
+        evidence["kind"] = target == 0 ? "demo" : "module";
+        evidence["pointer_bytes"] = 8;
+        LockFreeQueueTestResults::parse(marker, evidence, 0);
+        const std::string invalid[] = {"", marker + marker, target == 0 ? module : demo, marker};
+        for (size_t i = 0; i < 4; ++i)
+        {
+            bool refused = false;
+            try
+            {
+                LockFreeQueueTestResults::parse(invalid[i], evidence, i == 3 ? 1 : 0);
+            }
+            catch (const std::exception&)
+            {
+                refused = true;
+            }
+            check(refused, "missing/wrong/duplicate marker or child failure rejected");
+        }
+    }
+    evidence["pointer_bytes"] = 4;
+    bool wrongWidth = false;
+    try
+    {
+        LockFreeQueueTestResults::parse(module, evidence, 0);
+    }
+    catch (const std::exception&)
+    {
+        wrongWidth = true;
+    }
+    check(wrongWidth, "module CPU width mismatch rejected");
     Json::Value invalidPassMeta;
     invalidPassMeta["kind"] = "performance";
     invalidPassMeta["suite"] = "38";
@@ -916,13 +991,53 @@ void LockFreeQueueTestTool::selfTest() const
     meta["kind"] = "shared-ptr";
     meta["items"] = 16.0;
     meta["producers"] = 1.0;
-    const std::string sharedMetrics = " items=16 producers=1 producer_seconds=2 consumer_seconds=1 producer_items_per_second=8 consumer_items_per_second=16 pool_allocations=0 pool_grows=0 valid=1\n";
-    std::string rows = "RESULT phase=separate" + sharedMetrics + "RESULT phase=concurrent" + sharedMetrics;
-    check(LockFreeQueueTestResults::parse(rows, meta, 0)["samples"].size() == 2, "both shared-ptr phases");
+    const std::string sharedMetrics = " case=46 status=0 items=16 producers=1 producer_seconds=2 consumer_seconds=1 producer_items_per_second=8 consumer_items_per_second=16 pool_allocations=0 pool_grows=0 valid=1\n";
+    meta["mode"] = "plain";
+    const std::string setup = "SETUP case=46 items=16 producers=1 capacity=17 bound=0 prefix=0 distributed=0 reserved=0\n";
+    std::string rows = setup + "RESULT phase=separate" + sharedMetrics + "RESULT phase=concurrent" + sharedMetrics;
+    const std::string incomplete = rows;
+    const char* sharedPhases[] = {"separate", "concurrent"};
+    for (size_t i = 0; i < 2; ++i)
+    {
+        const std::string lane = std::string("LANE phase=") + sharedPhases[i];
+        rows += lane + " index=0 consumer=0 cpu_milliseconds=0\n" + lane + " index=1 consumer=1 cpu_milliseconds=2\n";
+    }
+    const Json::Value parsedShared = LockFreeQueueTestResults::parse(rows, meta, 0);
+    check(parsedShared["samples"].size() == 2 && parsedShared["lanes"].size() == 4, "both phases and every lane");
+    const char* modes[] = {"bound", "prefix", "distributed", "reserved", "distributed_pop"};
+    const char* settings[] = {"1 prefix=0 distributed=0 reserved=0", "1 prefix=1 distributed=0 reserved=0",
+        "1 prefix=1 distributed=1 reserved=0", "1 prefix=1 distributed=1 reserved=1", "1 prefix=0 distributed=1 reserved=0"};
+    for (size_t i = 0; i < sizeof(modes) / sizeof(modes[0]); ++i)
+    {
+        Json::Value requested = meta;
+        requested["mode"] = modes[i];
+        const std::string actual = replaceOnce(rows, "bound=0 prefix=0 distributed=0 reserved=0",
+            std::string("bound=") + settings[i]);
+        check(LockFreeQueueTestResults::parse(actual, requested, 0)["samples"].size() == 2, "shared-ptr mode accepted");
+    }
+    const std::string invalidLanes[] = {rows.substr(setup.size()), setup + rows,
+        replaceOnce(rows, "phase=separate case=46", "phase=separate case=45"), replaceOnce(rows, "phase=separate case=46 status=0", "phase=separate case=46 status=-1"),
+        replaceOnce(rows, "bound=0", "bound=1"), replaceOnce(rows, "prefix=0", "prefix=1"),
+        replaceOnce(rows, "distributed=0", "distributed=1"), replaceOnce(rows, "reserved=0", "reserved=1"),
+        replaceOnce(rows, "capacity=17", "capacity=16"), incomplete, rows + "LANE phase=separate index=0 consumer=0 cpu_milliseconds=0\n",
+        replaceOnce(rows, "phase=separate index=1 consumer=1", "phase=separate index=1 consumer=0")};
+    for (size_t i = 0; i < sizeof(invalidLanes) / sizeof(invalidLanes[0]); ++i)
+    {
+        bool refused = false;
+        try
+        {
+            LockFreeQueueTestResults::parse(invalidLanes[i], meta, 0);
+        }
+        catch (const std::exception&)
+        {
+            refused = true;
+        }
+        check(refused, "wrong shared-ptr setup, result or lane rejected");
+    }
     bool rejected = false;
     try
     {
-        LockFreeQueueTestResults::parse(rows.substr(rows.find('\n') + 1), meta, 0);
+        LockFreeQueueTestResults::parse(replaceOnce(rows, "RESULT phase=separate" + sharedMetrics, ""), meta, 0);
     }
     catch (const std::exception&)
     {
@@ -984,11 +1099,14 @@ void LockFreeQueueTestTool::selfTest() const
     perf["profile"] = "fixed";
     perf["reference"] = false;
     perf["counted"] = true;
-    std::string sufficient;
+    perf["expected_variant"] = 1;
+    perf["expected_profile"] = 0;
+    const std::string bench = "BENCH variant=1 profile=0 pure_items=4000000 concurrent_items=1000000\n";
+    std::string sufficient = bench;
     for (int32_t p = 1; p <= 16; p *= 2)
     {
-        sufficient += "SCENARIO phase=producer producers=" + integer(p) + "\nREGISTERED_PRODUCERS items=4000000 elapsed_ns=100 allocations=0 valid=1\nPOOL_VERIFY allocation_delta=0 grow_delta=0\n";
-        sufficient += "SCENARIO phase=mpsc producers=" + integer(p) + "\nREGISTERED_MPSC items=1000000 elapsed_ns=100 allocations=0 valid=1\nPOOL_VERIFY allocation_delta=0 grow_delta=0\n";
+        sufficient += "SCENARIO phase=producer producers=" + integer(p) + "\nREGISTERED_PRODUCERS producers=" + integer(p) + " items=4000000 elapsed_ns=100 allocations=0 valid=1\nPOOL_VERIFY allocation_delta=0 grow_delta=0\n";
+        sufficient += "SCENARIO phase=mpsc producers=" + integer(p) + "\nREGISTERED_MPSC producers=" + integer(p) + " items=1000000 elapsed_ns=100 allocations=0 valid=1\nPOOL_VERIFY allocation_delta=0 grow_delta=0\n";
     }
     sufficient += "PASS id=35\n";
     check(LockFreeQueueTestResults::parse(sufficient, perf, 0)["samples"].size() == 10, "sufficient pool row/verification contract");
@@ -998,8 +1116,19 @@ void LockFreeQueueTestTool::selfTest() const
     std::string allocationFailure = sufficient;
     allocationFailure.replace(allocationFailure.find("allocations=0"), 13, "allocations=1");
     badLogs.push_back(allocationFailure);
-    const char* brokenBefore[] = {"producers=16", "items=4000000", "elapsed_ns=100", "elapsed_ns=100", "id=35", "producers=1\n"};
-    const char* brokenAfter[] = {"producers=1", "items=3999999", "missing=100", "elapsed_ns=0", "id=38", "producers=1.5\n"};
+    badLogs.push_back(sufficient.substr(bench.size()));
+    badLogs.push_back(bench + sufficient);
+    badLogs.push_back(replaceOnce(sufficient, "BENCH variant=1", "BENCH variant=3"));
+    badLogs.push_back(replaceOnce(sufficient, "profile=0", "profile=1"));
+    badLogs.push_back(replaceOnce(sufficient, "pure_items=4000000", "pure_items=400000"));
+    badLogs.push_back(replaceOnce(sufficient, "concurrent_items=1000000", "concurrent_items=100000"));
+    badLogs.push_back(replaceOnce(sufficient, "REGISTERED_MPSC producers=16 ", "REGISTERED_PRODUCERS producers=16 "));
+    badLogs.push_back(replaceOnce(sufficient, "REGISTERED_PRODUCERS producers=8 ", "REGISTERED_MPSC producers=8 "));
+    badLogs.push_back(replaceOnce(sufficient, "REGISTERED_MPSC producers=4 ", "REGISTERED_MPSC producers=2 "));
+    badLogs.push_back(replaceOnce(sufficient, "REGISTERED_PRODUCERS producers=2 ", "REGISTERED_PRODUCERS "));
+    badLogs.push_back(replaceOnce(sufficient, "REGISTERED_MPSC producers=1 ", "POLICY_RESULT producers=1 "));
+    const char* brokenBefore[] = {"producers=16", " items=4000000", "elapsed_ns=100", "elapsed_ns=100", "id=35", "producers=1\n"};
+    const char* brokenAfter[] = {"producers=1", " items=3999999", "missing=100", "elapsed_ns=0", "id=38", "producers=1.5\n"};
     for (size_t i = 0; i < 6; ++i)
     {
         std::string broken = sufficient;
@@ -1017,11 +1146,11 @@ void LockFreeQueueTestTool::selfTest() const
         {
             rejected = true;
         }
-        check(rejected, "missing PASS/extra pool window/timed allocation rejected");
+        check(rejected, ("invalid registered benchmark fixture " + integer(i)).c_str());
     }
     Json::Value poolMeta = perf;
     poolMeta["suite"] = "38";
-    std::string poolLog;
+    std::string poolLog = bench;
     const char* poolCases[] = {"default_zero", "default_positive", "finite_fixed_zero", "finite_fixed_positive",
         "finite_proportional", "shrink_regrow_zero", "shrink_regrow_positive"};
     for (size_t kind = 0; kind < 7; ++kind)
@@ -1067,7 +1196,7 @@ void LockFreeQueueTestTool::selfTest() const
     }
     Json::Value waveMeta = perf;
     waveMeta["suite"] = "40";
-    std::string waveLog;
+    std::string waveLog = bench;
     for (int32_t threshold = 0; threshold <= 8; threshold += 8)
     {
         for (int32_t producers = 1; producers <= 16; producers *= 2)
@@ -1113,7 +1242,7 @@ void LockFreeQueueTestTool::selfTest() const
     }
     Json::Value extra = perf;
     extra["suite"] = "extra";
-    std::string extraLog = "BURST width=1 items=2000000 elapsed_ns=100 valid=1\n"
+    std::string extraLog = bench + "BURST width=1 items=2000000 elapsed_ns=100 valid=1\n"
         "BURST width=4096 items=1048576 elapsed_ns=100 valid=1\n"
         "BURST width=65536 items=1048576 elapsed_ns=100 valid=1\n";
     const char* observers[] = {"size_empty", "empty_empty", "pop_empty", "size_one", "push_pop_empty_cycle"};
@@ -1156,14 +1285,12 @@ void LockFreeQueueTestTool::selfTest() const
     }
     Json::Value schedule;
     schedule["kind"] = "scheduling";
-    schedule["version"] = "before";
     schedule["producers"] = 1.0;
     schedule["duration_ms"] = 2000;
-    const std::string lanes = "LANE index=0 consumer=0 count=1 active_count=1 active_attempts=1 cycles=1 sampled_cpu_gap_ms=1800\n"
-        "LANE index=1 consumer=1 count=1 active_count=1 active_attempts=1 cycles=1 sampled_cpu_gap_ms=10\n";
-    const std::string noProgress = lanes + "SCHEDULE producers=1 capacity=65536 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=0 valid=0\n";
-    check(LockFreeQueueTestResults::parse(noProgress, schedule, 3)["lanes"].size() == 2, "baseline-only no-progress evidence");
-    schedule["version"] = "after";
+    const std::string lanes = "LANE index=0 consumer=0 priority=0 count=1 active_count=1 active_attempts=1 cycles=1 sampled_cpu_gap_ms=1800\n"
+        "LANE index=1 consumer=1 priority=0 count=1 active_count=1 active_attempts=1 cycles=1 sampled_cpu_gap_ms=10\n";
+    const std::string noProgress = lanes + "SCHEDULE producers=1 capacity=65536 items=1 consumed=1 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=0 valid=0\n";
+    schedule["version"] = "current";
     rejected = false;
     try
     {
@@ -1177,7 +1304,7 @@ void LockFreeQueueTestTool::selfTest() const
     rejected = false;
     try
     {
-        LockFreeQueueTestResults::parse(lanes + "SCHEDULE producers=1 capacity=65536 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n", schedule, 0);
+        LockFreeQueueTestResults::parse(lanes + "SCHEDULE producers=1 capacity=65536 items=1 consumed=1 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n", schedule, 0);
     }
     catch (const std::exception&)
     {
@@ -1188,21 +1315,21 @@ void LockFreeQueueTestTool::selfTest() const
     const std::string controlled = noProgress.substr(0, noProgress.size() - 1) + " negative_control=1\n";
     check(LockFreeQueueTestResults::parse(controlled, schedule, 3)["samples"].size() == 1, "explicit stall negative control accepted");
     schedule["negative_control"] = false;
-    const std::string waitingLanes = "LANE index=0 consumer=0 count=1 active_count=0 active_attempts=0 cycles=1 sampled_cpu_gap_ms=10\n"
-        "LANE index=1 consumer=1 count=1 active_count=1 active_attempts=1 cycles=1 sampled_cpu_gap_ms=10\n";
+    const std::string waitingLanes = "LANE index=0 consumer=0 priority=0 count=1 active_count=0 active_attempts=0 cycles=1 sampled_cpu_gap_ms=10\n"
+        "LANE index=1 consumer=1 priority=0 count=1 active_count=1 active_attempts=1 cycles=1 sampled_cpu_gap_ms=10\n";
     check(LockFreeQueueTestResults::parse(waitingLanes +
-        "SCHEDULE producers=1 mode=7 capacity=256 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n",
+        "SCHEDULE producers=1 mode=7 capacity=256 items=1 consumed=1 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n",
         schedule, 0)["samples"].size() == 1, "extended ordinary push may finish its capacity wait during drain");
     Json::Value configured = schedule;
     configured["mode"] = 7;
     configured["capacity"] = 256;
     configured["cancelable"] = 0;
     const std::string exactSchedule = waitingLanes +
-        "SCHEDULE producers=1 mode=7 capacity=256 cancelable=0 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n";
+        "SCHEDULE producers=1 mode=7 capacity=256 cancelable=0 items=1 consumed=1 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n";
     check(LockFreeQueueTestResults::parse(exactSchedule, configured, 0)["samples"].size() == 1, "scheduling actual configuration matches request");
-    const char* beforeFields[] = {"producers=1", "mode=7", "capacity=256", "cancelable=0", "index=0", "consumer=0", "active_count=0"};
-    const char* afterFields[] = {"producers=2", "mode=0", "capacity=65536", "cancelable=1", "index=0.5", "consumer=0.5", "active_count=2"};
-    for (size_t i = 0; i < 7; ++i)
+    const char* beforeFields[] = {"producers=1", "mode=7", "capacity=256", "cancelable=0", "index=0", "consumer=0", "active_count=0", "priority=0", "items=1", "consumed=1", "cycles=1"};
+    const char* afterFields[] = {"producers=2", "mode=0", "capacity=65536", "cancelable=1", "index=0.5", "consumer=0.5", "active_count=2", "priority=1", "items=2", "consumed=2", "cycles=1.5"};
+    for (size_t i = 0; i < sizeof(beforeFields) / sizeof(beforeFields[0]); ++i)
     {
         std::string broken = exactSchedule;
         broken.replace(broken.find(beforeFields[i]), std::string(beforeFields[i]).size(), afterFields[i]);
@@ -1224,7 +1351,7 @@ void LockFreeQueueTestTool::selfTest() const
         try
         {
             LockFreeQueueTestResults::parse(waitingLanes + "SCHEDULE producers=1 mode=" + nonwaitingModes[i] +
-                " capacity=256 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n", schedule, 0);
+                " capacity=256 items=1 consumed=1 max_cpu_gap_ms=500 data_valid=1 same_priority=1 progress_valid=1 valid=1\n", schedule, 0);
         }
         catch (const std::exception&)
         {

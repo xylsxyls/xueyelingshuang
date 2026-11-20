@@ -7,7 +7,6 @@
     <ClCompile Include="LockFreeQueueTest.cpp"><Filter>Tests</Filter></ClCompile>
     <ClInclude Include="LockFreeQueueTest.h"><Filter>Tests</Filter></ClInclude>
     <ClInclude Include="LockFreeQueueArenaTests.inl"><Filter>Tests</Filter></ClInclude>
-    <None Include="LockFreeQueueBaseline.cpp"><Filter>Tests</Filter></None>
     <None Include="LockFreeQueueConsumer.cpp"><Filter>Tests</Filter></None>
     <ClInclude Include="LockFreeQueueConsumer.h"><Filter>Tests</Filter></ClInclude>
     <None Include="LockFreeQueueIntegration.cpp"><Filter>Tests</Filter></None>

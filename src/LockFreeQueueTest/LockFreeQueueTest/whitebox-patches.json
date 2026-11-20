@@ -63,8 +63,8 @@
                                                                "after":  "    if (!m_entryOnly \u0026\u0026 externalOwner == nullptr)\n    {\n        node-\u003ereset();\n    }\n#ifdef LOCK_FREE_QUEUE_TESTING\n    if (producer == nullptr)\n    {\n        LockFreeQueueTestHook(23, this);\n    }\n#endif\n"
                                                            },
                                                            {
-                                                               "before":  "template \u003cclass T\u003e\nLockFreeQueueResult LockFreeQueueArena\u003cT\u003e::grow(Record* record, bool required)\n{\n    LockFreeQueueProgress committedProgress;\n    const size_t returned = consumed();\n",
-                                                               "after":  "template \u003cclass T\u003e\nLockFreeQueueResult LockFreeQueueArena\u003cT\u003e::grow(Record* record, bool required)\n{\n    LockFreeQueueProgress committedProgress;\n    const size_t returned = consumed();\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestHook(18, this);\n#endif\n"
+                                                               "before":  "template \u003cclass T\u003e\nLockFreeQueueResult LockFreeQueueArena\u003cT\u003e::grow(Record& record, bool required)\n{\n    LockFreeQueueProgress committedProgress;\n    const size_t returned = consumed();\n",
+                                                               "after":  "template \u003cclass T\u003e\nLockFreeQueueResult LockFreeQueueArena\u003cT\u003e::grow(Record& record, bool required)\n{\n    LockFreeQueueProgress committedProgress;\n    const size_t returned = consumed();\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestHook(18, this);\n#endif\n"
                                                            },
                                                            {
                                                                "before":  "    }\n    // Optional proactive growth can be cancelled by a newer free-count snapshot.\n    // Required growth only retries on newer resource progress, not the same stale snapshot.\n    if (available() \u003e m_config.growThreshold \u0026\u0026 (!required ||\n        m_capacity.load() != context.currentCapacity || consumed() != returned))\n    {\n        m_budget.fetch_sub(amount);\n",
@@ -138,17 +138,17 @@
                   "LockFreeQueueProgress.h":  [
                                                   {
                                                       "before":  "class LockFreeQueueProgress\n",
-                                                      "after":  "#ifdef LOCK_FREE_QUEUE_TESTING\n/** Observe the real cooperative scheduling branch in the isolated copy\n@param [in] sleeping True for a sleep branch, false for yield\n*/\nvoid LockFreeQueueTestSchedule(bool sleeping);\n/** Count a real capacity-wait retry in the isolated test copy\n*/\nvoid LockFreeQueueTestCapacityWait();\n#endif\nclass LockFreeQueueProgress\n"
+                                                      "after":  "#ifdef LOCK_FREE_QUEUE_TESTING\n/** Observe the real cooperative scheduling branch in the isolated copy\n@param [in] sleeping True for a sleep branch, false for yield\n*/\nvoid LockFreeQueueTestSchedule(bool sleeping);\n/** Observe one capacity retry in the isolated copy\n@param [in] sleepMilliseconds Configured wait duration\n*/\nvoid LockFreeQueueTestCapacityWait(uint32_t sleepMilliseconds);\n#endif\nclass LockFreeQueueProgress\n"
                                                   }
                                               ],
                   "LockFreeQueueProgress.inl":  [
                                                     {
-                                                        "before":  "inline bool LockFreeQueueProgress::waitCapacity(uint32_t\u0026 retries)\n{\n",
-                                                        "after":  "inline bool LockFreeQueueProgress::waitCapacity(uint32_t\u0026 retries)\n{\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestCapacityWait();\n#endif\n"
+                                                        "before":  "inline bool LockFreeQueueProgress::waitCapacity(uint32_t\u0026 retries, uint32_t retriesBeforeSleep, uint32_t sleepMilliseconds)\n{\n",
+                                                        "after":  "inline bool LockFreeQueueProgress::waitCapacity(uint32_t\u0026 retries, uint32_t retriesBeforeSleep, uint32_t sleepMilliseconds)\n{\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestCapacityWait(sleepMilliseconds);\n#endif\n"
                                                     },
                                                     {
-                                                        "before":  "        std::this_thread::sleep_for(std::chrono::milliseconds(1));\n",
-                                                        "after":  "#ifdef LOCK_FREE_QUEUE_TESTING\n        LockFreeQueueTestSchedule(true);\n#endif\n        std::this_thread::sleep_for(std::chrono::milliseconds(1));\n"
+                                                        "before":  "        std::this_thread::sleep_for(std::chrono::milliseconds(sleepMilliseconds));\n",
+                                                        "after":  "#ifdef LOCK_FREE_QUEUE_TESTING\n        LockFreeQueueTestSchedule(true);\n#endif\n        std::this_thread::sleep_for(std::chrono::milliseconds(sleepMilliseconds));\n"
                                                     },
                                                     {
                                                         "before":  "        else\n#endif\n        {\n            std::this_thread::yield();\n",
@@ -159,8 +159,8 @@
                                                         "after":  "        if ((retries \u0026 15) == 0)\n        {\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestSchedule(false);\n#endif\n            std::this_thread::yield();\n"
                                                     },
                                                     {
-                                                        "before":  "    m_remaining = 4096;\n    std::this_thread::yield();\n",
-                                                        "after":  "    m_remaining = 4096;\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestSchedule(false);\n#endif\n    std::this_thread::yield();\n"
+                                                        "before":  "    m_remaining = m_interval;\n    std::this_thread::yield();\n",
+                                                        "after":  "    m_remaining = m_interval;\n#ifdef LOCK_FREE_QUEUE_TESTING\n    LockFreeQueueTestSchedule(false);\n#endif\n    std::this_thread::yield();\n"
                                                     },
                                                     {
                                                         "before":  "        std::this_thread::sleep_for(quantum);\n",

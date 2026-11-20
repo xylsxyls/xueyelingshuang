@@ -73,7 +73,6 @@
     <ClInclude Include="LockFreeQueueRetryContract.h" />
     <ClInclude Include="LockFreeQueueTest.h" />
     <ClInclude Include="LockFreeQueueArenaTests.inl" />
-    <None Include="LockFreeQueueBaseline.cpp" />
     <None Include="LockFreeQueueConsumer.cpp" />
     <ClInclude Include="LockFreeQueueConsumer.h" />
     <None Include="LockFreeQueueIntegration.cpp" />

@@ -11,14 +11,19 @@
 #include <stdexcept>
 
 static std::atomic<size_t> s_capacityWaits(0);
+// 隔离副本最近一次容量退避收到的休眠毫秒数。
+static std::atomic<uint32_t> s_capacitySleepMilliseconds(0);
 static std::atomic<bool> s_observeCancelled(false);
 static std::atomic<uint32_t> s_cancelledMask(0);
 static std::thread::id s_cancelledWorkers[3];
 bool LockFreeQueueRetryValue::m_failCopy = false;
 
-/** 仅隔离副本记录实际进入容量等待，不修改队列结果 */
-void LockFreeQueueTestCapacityWait()
+/** 仅隔离副本记录实际进入容量等待
+@param [in] sleepMilliseconds 当前队列配置的休眠毫秒数
+*/
+void LockFreeQueueTestCapacityWait(uint32_t sleepMilliseconds)
 {
+    s_capacitySleepMilliseconds.store(sleepMilliseconds);
     s_capacityWaits.fetch_add(1);
     if (s_observeCancelled.load())
     {
@@ -156,6 +161,64 @@ bool LockFreeQueueRetryContract::capacity(size_t mode, bool retryContention, boo
     return valid && result == LockFreeQueueSuccess && queue.pop(&value) && value == 2 && queue.empty();
 }
 
+bool LockFreeQueueRetryContract::capacitySettings()
+{
+#ifdef LOCK_FREE_QUEUE_TESTING
+    LockFreeQueuePoolConfig config;
+    config.initialCapacity = 2;
+    config.maximumCapacity = 2;
+    config.maximumProducers = 1;
+    LockFreeQueueEntry<int32_t> entry(8);
+    LockFreeQueue<int32_t> queue(false);
+    if (queue.configurePool(config) != LockFreeQueueSuccess)
+    {
+        return false;
+    }
+    const uint32_t spins[] = {4096, 0, 3, 3};
+    const uint32_t delays[] = {1, 7, 11, 11};
+    for (size_t i = 0; i < 4; ++i)
+    {
+        queue.destroy();
+        if ((i == 1 || i == 2) && queue.configureCapacityWait(spins[i], delays[i]) != LockFreeQueueSuccess)
+        {
+            return false;
+        }
+        if (queue.configureCapacityWait(17, 0) != LockFreeQueueInvalidConfiguration ||
+            queue.tryInit() != LockFreeQueueSuccess || queue.configureCapacityWait(9, 5) != LockFreeQueueInvalidState ||
+            queue.tryPush(3) != LockFreeQueueSuccess)
+        {
+            return false;
+        }
+        LockFreeQueueProducer<int32_t> held, extra;
+        if (queue.tryAcquireProducer(held) != LockFreeQueueSuccess)
+        {
+            return false;
+        }
+        LockFreeQueueTestControl::m_failPoint.store(1001);
+        for (size_t path = 0; path < 3; ++path)
+        {
+            s_capacityWaits.store(0);
+            s_capacitySleepMilliseconds.store(0);
+            const LockFreeQueueResult status = path == 0 ? held.tryPush(7, true, true) :
+                (path == 1 ? held.tryPushEntry(entry, true, true) : queue.tryAcquireProducer(extra, true, true));
+            if (status != LockFreeQueueResourceUnavailable || s_capacityWaits.load() != spins[i] + 1 ||
+                s_capacitySleepMilliseconds.load() != delays[i])
+            {
+                LockFreeQueueTestControl::m_failPoint.store(0);
+                return false;
+            }
+        }
+        LockFreeQueueTestControl::m_failPoint.store(0);
+        int32_t value = 0;
+        if (!queue.pop(&value) || value != 3 || !queue.empty())
+        {
+            return false;
+        }
+    }
+#endif
+    return true;
+}
+
 bool LockFreeQueueRetryContract::delay()
 {
     uint32_t retries = 0;
@@ -164,7 +227,7 @@ bool LockFreeQueueRetryContract::delay()
 #endif
     for (uint32_t i = 0; i < 4096; ++i)
     {
-        if (!LockFreeQueueProgress::waitCapacity(retries) || retries != i + 1)
+        if (!LockFreeQueueProgress::waitCapacity(retries, 4096, 1) || retries != i + 1)
         {
             return false;
         }
@@ -179,13 +242,13 @@ bool LockFreeQueueRetryContract::delay()
     for (size_t i = 0; i < 8; ++i)
     {
 #if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
-        if (LockFreeQueueProgress::waitCapacity(retries) || retries != 4096)
+        if (LockFreeQueueProgress::waitCapacity(retries, 4096, 1) || retries != 4096)
         {
             return false;
         }
 #else
         const std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-        if (!LockFreeQueueProgress::waitCapacity(retries) || retries != 4096 ||
+        if (!LockFreeQueueProgress::waitCapacity(retries, 4096, 1) || retries != 4096 ||
             std::chrono::steady_clock::now() - begin < std::chrono::milliseconds(1))
         {
             return false;
@@ -611,17 +674,19 @@ bool LockFreeQueueRetryContract::reservationProgress()
     }
     std::cout << "RESERVED_EMPTY seals=32 reinitialized=1 valid=1" << std::endl;
 #if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
-    for (size_t phase = 0; phase < 2; ++phase)
+    for (size_t phase = 0; phase < 3; ++phase)
     {
         LockFreeQueueTestControl::reset();
         g_lockFreeQueueTestLane = 0;
         LockFreeQueue<int32_t> queue(false);
         if (queue.configurePool(config) != LockFreeQueueSuccess ||
             queue.configureCancelableReservations(true) != LockFreeQueueSuccess || !queue.init() ||
-            !queue.push(0) || !queue.pop(&value) || value != 0)
+            (phase != 2 && (!queue.push(0) || !queue.pop(&value) || value != 0)))
         {
             return false;
         }
+        // Phase 2 starts with a fresh cell: a reservation after sequential warmup
+        // may first encounter an already published cell before it can claim an empty one.
         LockFreeQueueProducer<int32_t> firstLease, secondLease;
         if (queue.tryAcquireProducer(firstLease) != LockFreeQueueSuccess ||
             queue.tryAcquireProducer(secondLease) != LockFreeQueueSuccess)
@@ -649,17 +714,39 @@ bool LockFreeQueueRetryContract::reservationProgress()
         });
         bool valid = LockFreeQueueTestControl::waitReached();
         value = -1;
-        valid = !queue.pop(&value) && value == -1 && valid;
+        if (phase != 2)
+        {
+            valid = !queue.pop(&value) && value == -1 && valid;
+        }
         if (phase != 0)
         {
             // The general reserved path must reach222 while111 remains paused.
             const LockFreeQueueResult secondResult = queue.tryPush(222, true, false);
-            valid = secondResult == LockFreeQueueSuccess && queue.pop(&value) && value == 222 && valid;
+            valid = secondResult == LockFreeQueueSuccess && valid;
+            if (phase == 1)
+            {
+                valid = queue.pop(&value) && value == 222 && valid;
+            }
+            else
+            {
+                // Value mode: rejected Entry probes must leave the older live reservation intact.
+                size_t count = 9;
+                valid = !queue.popReadyEntryPrefix(nullptr, 4, count) && count == 0 && valid;
+                count = 9;
+                valid = !queue.probeReadyEntryPrefix(nullptr, 4, count) && count == 0 && valid;
+                count = 9;
+                valid = !queue.probeReadyEntrySpan(nullptr, 4, count) && count == 0 && valid;
+            }
         }
         LockFreeQueueTestControl::m_release.store(true);
         threads.join();
         valid = !LockFreeQueueTestControl::m_timedOut.load() && firstResult.load() == LockFreeQueueSuccess &&
-            queue.pop(&value) && value == 111 && !queue.pop(nullptr) && queue.empty() && valid;
+            queue.pop(&value) && value == 111 && valid;
+        if (phase == 2)
+        {
+            valid = queue.pop(&value) && value == 222 && valid;
+        }
+        valid = !queue.pop(nullptr) && queue.empty() && valid;
         LockFreeQueueTestControl::reset();
         std::cout << "RESERVED_EMPTY phase=" << phase << " second_publisher=" << (phase != 0)
                   << " valid=" << valid << std::endl;
@@ -1234,6 +1321,25 @@ bool LockFreeQueueRetryContract::consumerYield()
             queue.destroy();
         }
     }
+    // 第一条生产流发布的一项已被取走，第二条流此时登记；尾提示仍可能落后于消费游标。
+    LockFreeQueue<int> reserved(false);
+    LockFreeQueueProducer<int> first, second;
+    LFQ_NEW_API_CHECK(reserved.configureCancelableReservations(true) == LockFreeQueueSuccess);
+    LFQ_NEW_API_CHECK(reserved.configureConsumerYieldInterval(4) == LockFreeQueueSuccess);
+    LFQ_NEW_API_CHECK(reserved.tryInit() == LockFreeQueueSuccess);
+    LFQ_NEW_API_CHECK(reserved.tryAcquireProducer(first) == LockFreeQueueSuccess);
+    LFQ_NEW_API_CHECK(first.tryPush(71) == LockFreeQueueSuccess);
+    int received = 0;
+    LFQ_NEW_API_CHECK(reserved.popReady(&received) && received == 71);
+    LFQ_NEW_API_CHECK(reserved.tryAcquireProducer(second) == LockFreeQueueSuccess);
+    const size_t beforeEmpty = LockFreeQueueTestControl::m_scheduleYields.load();
+    for (size_t empty = 1; empty <= 7; ++empty)
+    {
+        LFQ_NEW_API_CHECK(!reserved.popReady(&received));
+        LFQ_NEW_API_CHECK(LockFreeQueueTestControl::m_scheduleYields.load() - beforeEmpty == (1 + empty) / 4);
+    }
+    LFQ_NEW_API_CHECK(second.tryPush(72, true, false) == LockFreeQueueSuccess);
+    LFQ_NEW_API_CHECK(reserved.popReady(&received) && received == 72 && reserved.empty());
     return consumerBatchBudget();
 }
 

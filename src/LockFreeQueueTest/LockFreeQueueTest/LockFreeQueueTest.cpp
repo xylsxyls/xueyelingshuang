@@ -845,9 +845,9 @@ bool LockFreeQueueTests::lifecycle()
     {
         LockFreeQueue<int32_t> a;
         LockFreeQueue<int32_t> b;
-        a.tryPush(1, true, false);
-        b.tryPush(2, true, false);
-        a.init();
+        LFQ_CHECK(a.tryPush(1, true, false) == LockFreeQueueSuccess && a.size() == 1);
+        LFQ_CHECK(b.tryPush(2, true, false) == LockFreeQueueSuccess);
+        LFQ_CHECK(a.init());
         int32_t value = 0;
         LFQ_CHECK(a.empty() && b.pop(&value) && value == 2);
         a.destroy();
@@ -871,9 +871,9 @@ bool LockFreeQueueTests::ownership()
     LFQ_CHECK(queue.pop(nullptr) && weak.expired());
     LockFreeQueue<LockFreeQueueTestValue*> raw;
     std::unique_ptr<LockFreeQueueTestValue> owned(new LockFreeQueueTestValue(7));
-    raw.tryPush(owned.get(), true, false);
+    LFQ_CHECK(raw.tryPush(owned.get(), true, false) == LockFreeQueueSuccess && raw.size() == 1);
     raw.clear();
-    LFQ_CHECK(owned->m_value == 7);
+    LFQ_CHECK(raw.empty() && owned->m_value == 7);
     owned.reset();
     LFQ_CHECK(LockFreeQueueTestValue::m_live.load() == 0);
     return true;
@@ -881,6 +881,33 @@ bool LockFreeQueueTests::ownership()
 
 bool LockFreeQueueTests::reuse()
 {
+    // One payload slot per block fills all 64 groups in a single prefix return.
+    LockFreeQueue<int32_t> grouped(false);
+    LockFreeQueuePoolConfig config;
+    config.initialCapacity = 2;
+    config.maximumCapacity = 65;
+    config.maximumProducers = 1;
+    LFQ_CHECK(grouped.configurePool(config) == LockFreeQueueSuccess);
+    LFQ_CHECK(grouped.setGrowPolicy([](const LockFreeQueueGrowContext&) { return size_t(1); }) == LockFreeQueueSuccess);
+    LFQ_CHECK(grouped.tryInit() == LockFreeQueueSuccess);
+    for (int32_t pass = 0; pass < 2; ++pass)
+    {
+        for (int32_t i = 0; i < 64; ++i)
+        {
+            LFQ_CHECK(grouped.tryPush(pass * 64 + i) == LockFreeQueueSuccess);
+        }
+        LFQ_CHECK(grouped.tryPush(-1) == LockFreeQueueCapacityLimit);
+        int32_t output[64] = {};
+        size_t consumed = 0;
+        LFQ_CHECK(grouped.popReadyPrefix(output, 64, consumed) && consumed == 64);
+        for (int32_t i = 0; i < 64; ++i)
+        {
+            LFQ_CHECK(output[i] == pass * 64 + i);
+        }
+        const LockFreeQueuePoolStatistics stats = grouped.poolStatistics();
+        LFQ_CHECK(grouped.empty() && stats.currentCapacity == 65 && stats.successfulGrowCount == 63 &&
+            stats.usedNodes == 1);
+    }
     LockFreeQueue<int32_t> queue;
     LFQ_CHECK(configure(queue, 8, 8));
     const uint64_t allocations = queue.poolStatistics().allocationCalls;
@@ -1121,12 +1148,12 @@ bool LockFreeQueueTests::policies()
 {
     LockFreeQueue<int32_t> queue;
     LFQ_CHECK(configure(queue, 2, 5));
-    queue.setGrowPolicy([](const LockFreeQueueGrowContext&) { return size_t(0); });
-    queue.tryPush(1, true, false);
+    LFQ_CHECK(queue.setGrowPolicy([](const LockFreeQueueGrowContext&) { return size_t(0); }) == LockFreeQueueSuccess);
+    LFQ_CHECK(queue.tryPush(1, true, false) == LockFreeQueueSuccess);
     LFQ_CHECK(queue.tryPush(2) == LockFreeQueueGrowthDeclined);
-    queue.setGrowPolicy([](const LockFreeQueueGrowContext&) -> size_t { throw std::runtime_error("policy"); });
+    LFQ_CHECK(queue.setGrowPolicy([](const LockFreeQueueGrowContext&) -> size_t { throw std::runtime_error("policy"); }) == LockFreeQueueSuccess);
     LFQ_CHECK(queue.tryPush(2) == LockFreeQueuePolicyFailure);
-    queue.setGrowPolicy(
+    LFQ_CHECK(queue.setGrowPolicy(
         [](const LockFreeQueueGrowContext& context)
         {
             if (context.initialCapacity != 2 || context.currentCapacity != 2 || context.successfulGrowCount != 0)
@@ -1134,7 +1161,7 @@ bool LockFreeQueueTests::policies()
                 return size_t(0);
             }
             return (std::numeric_limits<size_t>::max)();
-        });
+        }) == LockFreeQueueSuccess);
     LFQ_CHECK(queue.tryPush(2) == LockFreeQueueSuccess);
     LFQ_CHECK(queue.poolStatistics().currentCapacity == 5 && queue.poolStatistics().successfulGrowCount == 1);
     LockFreeQueueGrowPolicy policy = LockFreeQueueTestPolicy();
@@ -1147,24 +1174,24 @@ bool LockFreeQueueTests::policies()
     LockFreeQueueArena<int32_t>::testIncrement(saturated);
     LFQ_CHECK(saturated.load() == (std::numeric_limits<uint64_t>::max)());
     LFQ_CHECK(configure(queue, 2, -1));
-    queue.setGrowPolicy(LockFreeQueueGrowPolicy());
-    queue.tryPush(1, true, false);
-    queue.tryPush(2, true, false);
+    LFQ_CHECK(queue.setGrowPolicy(LockFreeQueueGrowPolicy()) == LockFreeQueueSuccess);
+    LFQ_CHECK(queue.tryPush(1, true, false) == LockFreeQueueSuccess);
+    LFQ_CHECK(queue.tryPush(2, true, false) == LockFreeQueueSuccess);
     LFQ_CHECK(queue.poolStatistics().currentCapacity == 4);
     LFQ_CHECK(configure(queue, 3, 10));
-    queue.setGrowPolicy(
+    LFQ_CHECK(queue.setGrowPolicy(
         [](const LockFreeQueueGrowContext& context)
         {
             return context.currentCapacity / 2; // Deliberate integer rounding: 3 / 2 == 1.
-        });
-    queue.tryPush(1, true, false);
-    queue.tryPush(2, true, false);
-    queue.tryPush(3, true, false);
+        }) == LockFreeQueueSuccess);
+    LFQ_CHECK(queue.tryPush(1, true, false) == LockFreeQueueSuccess);
+    LFQ_CHECK(queue.tryPush(2, true, false) == LockFreeQueueSuccess);
+    LFQ_CHECK(queue.tryPush(3, true, false) == LockFreeQueueSuccess);
     LFQ_CHECK(queue.poolStatistics().currentCapacity == 4);
-    queue.tryPush(4, true, false);
+    LFQ_CHECK(queue.tryPush(4, true, false) == LockFreeQueueSuccess);
     LFQ_CHECK(queue.poolStatistics().currentCapacity == 6 && queue.poolStatistics().successfulGrowCount == 2);
-    queue.setShrinkPolicy([](const LockFreeQueueShrinkContext&) -> LockFreeQueueShrinkDecision
-        { throw std::runtime_error("shrink policy"); });
+    LFQ_CHECK(queue.setShrinkPolicy([](const LockFreeQueueShrinkContext&) -> LockFreeQueueShrinkDecision
+        { throw std::runtime_error("shrink policy"); }) == LockFreeQueueSuccess);
     LFQ_CHECK(queue.maintain(32).result == LockFreeQueuePolicyFailure);
     LockFreeQueueTestControl::m_clock.store(0);
     LFQ_CHECK(queue.maintain(32).result == LockFreeQueueClockUnavailable);
@@ -1853,9 +1880,10 @@ bool LockFreeQueueTests::steady(uint32_t seconds, bool producerSession, bool dyn
         {
             std::this_thread::yield();
         }
+        const bool allReady = ready.load() == 8;
         release.store(true);
         warm.join();
-        LFQ_CHECK(ready.load() == 8);
+        LFQ_CHECK(allReady);
     }
     const uint32_t beforeHandles = LockFreeQueueTestControl::settledHandles();
     LFQ_CHECK(beforeHandles != UINT32_MAX);
@@ -1882,6 +1910,7 @@ bool LockFreeQueueTests::steady(uint32_t seconds, bool producerSession, bool dyn
     const size_t auxiliaryLimit = config.maximumProducers * 4 + 4;
     std::atomic<bool> start(false), stop(false), failed(false);
     std::atomic<size_t> done(0);
+    std::atomic<size_t> readyProducers(0);
     std::atomic<uint64_t> accepted[8];
     uint64_t consumed[8] = {};
     std::atomic<uint64_t> retries(0);
@@ -1896,11 +1925,12 @@ bool LockFreeQueueTests::steady(uint32_t seconds, bool producerSession, bool dyn
             [&, lane]()
             {
                 LockFreeQueueProducer<uint64_t> producer;
-                if (producerSession && queue.tryAcquireProducer(producer) != LockFreeQueueSuccess)
+                if (producerSession && queue.tryAcquireProducer(producer, true, false) != LockFreeQueueSuccess)
                 {
                     failed.store(true);
                     stop.store(true);
                 }
+                readyProducers.fetch_add(1);
                 while (!start.load())
                 {
                     std::this_thread::yield();
@@ -1930,6 +1960,13 @@ bool LockFreeQueueTests::steady(uint32_t seconds, bool producerSession, bool dyn
                 done.fetch_add(1);
             });
     }
+    // Start the observation window only after every worker has entered this run.
+    const uint64_t readyDeadline = LockFreeQueueTestControl::ticks() + UINT64_C(10000000000);
+    while (readyProducers.load() != 8 && LockFreeQueueTestControl::ticks() < readyDeadline)
+    {
+        std::this_thread::yield();
+    }
+    LFQ_CHECK(readyProducers.load() == 8 && !failed.load());
     const uint64_t began = LockFreeQueueTestControl::ticks();
     const uint64_t deadline = began + uint64_t(seconds) * 1000000000ULL;
     uint64_t nextObservation = began;
@@ -1979,7 +2016,12 @@ bool LockFreeQueueTests::steady(uint32_t seconds, bool producerSession, bool dyn
     group.join();
     for (size_t lane = 0; lane < 8; ++lane)
     {
-        valid = consumed[lane] == accepted[lane].load() && consumed[lane] != 0 && valid;
+        if (consumed[lane] != accepted[lane].load() || consumed[lane] == 0)
+        {
+            std::cerr << "STEADY_LANE lane=" << lane << " accepted=" << accepted[lane].load()
+                      << " consumed=" << consumed[lane] << std::endl;
+            valid = false;
+        }
     }
     valid = queue.maintain(2048).result == LockFreeQueueSuccess && valid;
     const LockFreeQueuePoolStatistics snapshot = queue.poolStatistics();
@@ -2608,6 +2650,7 @@ bool LockFreeQueueTests::reservedProducer()
     {
         LockFreeQueue<int32_t> queue;
         LFQ_CHECK(configure(queue, 8, mode == 0 ? 8 : -1, 0, 2));
+        LockFreeQueue<int32_t> other(false);
         LockFreeQueueProducer<int32_t> first, second, extra;
         LFQ_CHECK(!first.attached() && first.tryPush(1) == LockFreeQueueNotInitialized);
         LFQ_CHECK(first.tryPush(1, true, false) == LockFreeQueueNotInitialized);
@@ -2615,19 +2658,20 @@ bool LockFreeQueueTests::reservedProducer()
         LFQ_CHECK(queue.tryAcquireProducer(first) == LockFreeQueueInvalidState && first.attached());
         LFQ_CHECK(queue.tryAcquireProducer(second) == LockFreeQueueSuccess);
         LFQ_CHECK(queue.tryAcquireProducer(extra) == LockFreeQueueCapacityLimit && !extra.attached());
-        LockFreeQueue<int32_t> other;
-        LFQ_CHECK(other.tryAcquireProducer(first) == LockFreeQueueInvalidState);
+        LFQ_CHECK(other.tryAcquireProducer(first, true, true) == LockFreeQueueInvalidState);
+        LFQ_CHECK(other.tryInit() == LockFreeQueueSuccess);
+        LFQ_CHECK(other.tryAcquireProducer(first) == LockFreeQueueInvalidState && other.empty());
         for (int32_t value = 0; value < 10000; ++value)
         {
             int32_t output = -1;
-            (value % 2 == 0 ? first : second).tryPush(value, true, false);
+            LFQ_CHECK((value % 2 == 0 ? first : second).tryPush(value, true, false) == LockFreeQueueSuccess);
             LFQ_CHECK(queue.pop(&output) && output == value);
         }
         if (mode != 0)
         {
             for (int32_t index = 0; index < 70; ++index)
             {
-                first.tryPush(index, true, false);
+                LFQ_CHECK(first.tryPush(index, true, false) == LockFreeQueueSuccess);
             }
             const size_t peak = queue.poolStatistics().currentCapacity;
             for (int32_t index = 0; index < 70; ++index)
@@ -2635,16 +2679,16 @@ bool LockFreeQueueTests::reservedProducer()
                 int32_t output = -1;
                 LFQ_CHECK(queue.pop(&output) && output == index);
             }
-            queue.setShrinkPolicy(
+            LFQ_CHECK(queue.setShrinkPolicy(
                 [](const LockFreeQueueShrinkContext&)
                 {
                     const LockFreeQueueShrinkDecision decision = {1024, 1};
                     return decision;
-                });
-            queue.maintain(4096);
+                }) == LockFreeQueueSuccess);
+            LFQ_CHECK(queue.maintain(4096).result == LockFreeQueueSuccess);
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
-            queue.maintain(4096);
-            queue.maintain(4096);
+            LFQ_CHECK(queue.maintain(4096).result == LockFreeQueueSuccess);
+            LFQ_CHECK(queue.maintain(4096).result == LockFreeQueueSuccess);
             LFQ_CHECK(queue.poolStatistics().currentCapacity < peak && queue.poolStatistics().activeProducers == 2);
         }
         first.release();
@@ -2652,6 +2696,10 @@ bool LockFreeQueueTests::reservedProducer()
         LFQ_CHECK(!first.attached() && queue.tryPush(77) == LockFreeQueueSuccess);
         int32_t value = -1;
         LFQ_CHECK(queue.pop(&value) && value == 77);
+        LFQ_CHECK(other.tryAcquireProducer(first) == LockFreeQueueSuccess && first.attached());
+        LFQ_CHECK(first.tryPush(78) == LockFreeQueueSuccess && queue.empty());
+        LFQ_CHECK(other.pop(&value) && value == 78 && other.empty());
+        first.release();
         second.release();
         LFQ_CHECK(queue.poolStatistics().activeProducers == 0);
         queue.destroy();
@@ -3287,7 +3335,7 @@ bool LockFreeQueueTests::cooperativeProgress()
     }
     LFQ_CHECK(LockFreeQueueTestControl::m_scheduleSleeps.load() == 1 && !progress.interrupted());
     uint32_t capacityRetries = 4096;
-    LFQ_CHECK(!LockFreeQueueProgress::waitCapacity(capacityRetries) && capacityRetries == 4096);
+    LFQ_CHECK(!LockFreeQueueProgress::waitCapacity(capacityRetries, 4096, 1) && capacityRetries == 4096);
     LockFreeQueueTestControl::m_failPoint.store(0);
     LFQ_CHECK(progress.retry());
 #endif
@@ -3362,6 +3410,128 @@ bool LockFreeQueueTests::cooperativeProgress()
     std::cout << "COOPERATIVE_PROGRESS producer_yields=" << producerYields
               << " consumer_yields=" << consumerYields << " empty_yields=" << emptyYields
               << " record_bytes=" << sizeof(LockFreeQueueArenaRecord<int32_t>) << std::endl;
+    return true;
+}
+
+bool LockFreeQueueTests::configuration()
+{
+    // Both live queues must keep their own copy when the caller reuses its config.
+    LockFreeQueue<int32_t> fixed(false), growing(false);
+    LockFreeQueuePoolConfig limits;
+    limits.initialCapacity = 2;
+    limits.maximumCapacity = 2;
+    limits.maximumProducers = 1;
+    LFQ_CHECK(fixed.configurePool(limits) == LockFreeQueueSuccess);
+    limits.maximumCapacity = 4;
+    LFQ_CHECK(growing.configurePool(limits) == LockFreeQueueSuccess);
+    limits.maximumCapacity = 1;
+    LFQ_CHECK(growing.configurePool(limits) == LockFreeQueueInvalidConfiguration);
+    for (size_t generation = 0; generation < 2; ++generation)
+    {
+        LFQ_CHECK(fixed.tryInit() == LockFreeQueueSuccess && growing.tryInit() == LockFreeQueueSuccess);
+        LFQ_CHECK(fixed.tryPush(10) == LockFreeQueueSuccess && fixed.tryPush(11) == LockFreeQueueCapacityLimit);
+        LFQ_CHECK(growing.tryPush(20) == LockFreeQueueSuccess && growing.tryPush(21) == LockFreeQueueSuccess);
+        LFQ_CHECK(fixed.poolStatistics().currentCapacity == 2);
+        int32_t value = 0;
+        LFQ_CHECK(fixed.pop(&value) && value == 10 && fixed.empty());
+        fixed.destroy();
+        const size_t capacity = growing.poolStatistics().currentCapacity;
+        LFQ_CHECK(capacity > 2 && capacity <= 4);
+        LFQ_CHECK(growing.pop(&value) && value == 20 && growing.pop(&value) && value == 21 && growing.empty());
+        growing.destroy();
+    }
+    // Switch the same instance from a finite limit to -1, then restore its original limit.
+    limits.maximumCapacity = -1;
+    LFQ_CHECK(fixed.configurePool(limits) == LockFreeQueueSuccess && fixed.tryInit() == LockFreeQueueSuccess);
+    for (int32_t i = 0; i < 64; ++i)
+    {
+        LFQ_CHECK(fixed.tryPush(i) == LockFreeQueueSuccess);
+    }
+    LFQ_CHECK(fixed.poolStatistics().currentCapacity >= 65);
+    for (int32_t i = 0; i < 64; ++i)
+    {
+        int32_t received = -1;
+        LFQ_CHECK(fixed.pop(&received) && received == i);
+    }
+    fixed.destroy();
+    limits.maximumCapacity = 2;
+    LFQ_CHECK(fixed.configurePool(limits) == LockFreeQueueSuccess && fixed.tryInit() == LockFreeQueueSuccess);
+    LFQ_CHECK(fixed.poolStatistics().currentCapacity == 2 && fixed.tryPush(1) == LockFreeQueueSuccess);
+    LFQ_CHECK(fixed.tryPush(2) == LockFreeQueueCapacityLimit);
+    LockFreeQueueEntry<int32_t> entry(11);
+    LockFreeQueue<int32_t> entries(false);
+    LFQ_CHECK(entries.configureEntryOnly(true) == LockFreeQueueSuccess);
+    for (size_t generation = 0; generation < 2; ++generation)
+    {
+        LFQ_CHECK(entries.tryPush(7) == LockFreeQueueNotInitialized);
+        LFQ_CHECK(entries.tryPushAndFence(7, true, true) == LockFreeQueueNotInitialized);
+        LFQ_CHECK(entries.tryPushEntry(entry) == LockFreeQueueNotInitialized);
+        LFQ_CHECK(entries.tryInit() == LockFreeQueueSuccess);
+        LFQ_CHECK(entries.tryPush(7) == LockFreeQueueInvalidConfiguration && entries.empty());
+        LFQ_CHECK(entries.tryPushEntry(entry) == LockFreeQueueSuccess);
+        LockFreeQueueEntry<int32_t>* delivered = nullptr;
+        size_t count = 0;
+        LFQ_CHECK(entries.probeReadyEntryPrefix(&delivered, 1, count) && count == 1 && delivered == &entry);
+        entries.destroy();
+    }
+    // Reconfigure the same instance: a rejected live change must not switch its storage mode.
+    LFQ_CHECK(entries.configureEntryOnly(false) == LockFreeQueueSuccess && entries.tryInit() == LockFreeQueueSuccess);
+    LFQ_CHECK(entries.configureEntryOnly(true) == LockFreeQueueInvalidState);
+    LFQ_CHECK(entries.tryPush(73) == LockFreeQueueSuccess);
+    LockFreeQueueEntry<int32_t>* observed = nullptr;
+    size_t observedCount = 7;
+    LFQ_CHECK(!entries.probeReadyEntrySpan(&observed, 1, observedCount) && observedCount == 0);
+    int32_t restoredValue = 0;
+    LFQ_CHECK(entries.pop(&restoredValue) && restoredValue == 73 && entries.empty());
+    size_t calls = 0;
+    LockFreeQueue<int32_t> queue(false);
+    LockFreeQueuePoolConfig config;
+    LFQ_CHECK(config.initialCapacity == 64 && config.maximumCapacity == -1 && config.growThreshold == 0 &&
+        config.maximumProducers == 1024 && config.producerYieldInterval == 4096 && !config.m_onGrowth);
+    config.initialCapacity = 16;
+    config.maximumCapacity = 16;
+    config.maximumProducers = 1;
+    config.producerYieldInterval = 65535;
+    LFQ_CHECK(queue.configurePool(config) == LockFreeQueueSuccess);
+    config.producerYieldInterval = 2;
+    LFQ_CHECK(queue.configurePool(config) == LockFreeQueueSuccess);
+    config.producerYieldInterval = 0;
+    LFQ_CHECK(queue.configurePool(config) == LockFreeQueueInvalidConfiguration);
+    config.producerYieldInterval = 65536;
+    LFQ_CHECK(queue.configurePool(config) == LockFreeQueueInvalidConfiguration);
+    LFQ_CHECK(queue.configureAutomaticMaintenance(UINT32_MAX, 1) == LockFreeQueueSuccess);
+    LFQ_CHECK(queue.configureAutomaticMaintenance(3, 2) == LockFreeQueueSuccess);
+    LFQ_CHECK(queue.configureAutomaticMaintenance(0, 1) == LockFreeQueueInvalidConfiguration);
+    LFQ_CHECK(queue.configureAutomaticMaintenance(1, 0) == LockFreeQueueInvalidConfiguration);
+    // 策略收到维护快照时计数，返回零退役量，以便独立核对维护轮数与预算。
+    LFQ_CHECK(queue.setShrinkPolicy([&calls](const LockFreeQueueShrinkContext&) -> LockFreeQueueShrinkDecision
+        {
+            ++calls;
+            const LockFreeQueueShrinkDecision keep = {0, 0};
+            return keep;
+        }) == LockFreeQueueSuccess);
+    for (size_t generation = 0; generation < 2; ++generation)
+    {
+        LFQ_CHECK(queue.tryInit() == LockFreeQueueSuccess);
+        LFQ_CHECK(queue.configureAutomaticMaintenance(1, 1) == LockFreeQueueInvalidState);
+        LFQ_CHECK(queue.configurePool(config) == LockFreeQueueInvalidState);
+        const size_t start = LockFreeQueueTestControl::m_scheduleYields.load();
+        for (int32_t i = 0; i < 6; ++i)
+        {
+            LFQ_CHECK(queue.tryPush(i) == LockFreeQueueSuccess);
+            LFQ_CHECK(LockFreeQueueTestControl::m_scheduleYields.load() == start + (i + 1) / 2);
+        }
+        calls = 0;
+        LockFreeQueueTestControl::m_maintenanceVisits.store(0);
+        int32_t out[4] = {};
+        size_t consumed = 0;
+        LFQ_CHECK(queue.pop(out) && out[0] == 0 && calls == 0);
+        LFQ_CHECK(queue.popReadyBatch(out, 4, consumed) && consumed == 4 &&
+            out[0] == 1 && out[1] == 2 && out[2] == 3 && out[3] == 4);
+        LFQ_CHECK(calls == 1 && LockFreeQueueTestControl::m_maintenanceVisits.load() == 2);
+        LFQ_CHECK(queue.popReady(out) && out[0] == 5 && queue.empty());
+        LFQ_CHECK(calls == 2 && LockFreeQueueTestControl::m_maintenanceVisits.load() == 4);
+    }
     return true;
 }
 
@@ -3448,6 +3618,8 @@ bool LockFreeQueueTests::dispatch(int32_t id)
         LockFreeQueueRetryContract tests;
         return tests.run();
     }
+    case 50:
+        return configuration() && LockFreeQueueRetryContract().capacitySettings();
     case 48:
     case 49:
     {
@@ -3461,6 +3633,11 @@ bool LockFreeQueueTests::dispatch(int32_t id)
 
 int LockFreeQueueTests::run(int argc, char** argv)
 {
+#if defined(__EMSCRIPTEN_PTHREADS__)
+    std::cout << "WASM_THREADS enabled=1" << std::endl;
+#elif defined(__EMSCRIPTEN__)
+    std::cout << "WASM_THREADS enabled=0" << std::endl;
+#endif
     const std::map<int32_t, std::string> names = {{1, "单生产者FIFO"}, {2, "多生产者集合及顺序"}, {3, "生命周期"},
         {4, "分级并发压力"}, {6, "载荷所有权"}, {7, "清理并发"}, {8, "池复用"}, {10, "非默认构造"},
         {11, "复制赋值异常"}, {12, "空及非法配置"}, {13, "阈值与上限"}, {14, "策略与饱和"}, {15, "分配故障"},
@@ -3470,7 +3647,7 @@ int LockFreeQueueTests::run(int argc, char** argv)
         {31, "批量空闲缓存及接手"}, {32, "固定池载荷及策略切换"}, {34, "生产者上下文及租约转交"},
         {36, "上下文持续有界压力"}, {37, "初始块及动态增长"}, {39, "空返回及维护工作上限"}, {41, "普通入队持续重试竞争"},
         {42, "登记槽占满时明确结束"}, {43, "活跃缓存占额时明确结束"}, {44, "生产消费调度让步及错误码"}, {45, "Busy竞争与空间不足分离"}, {47, "两项重试开关及满载延迟"},
-        {48, "消费者协作间隔及整批结算"}, {49, "长Entry前缀边界及额度复用"}};
+        {48, "消费者协作间隔及整批结算"}, {49, "长Entry前缀边界及额度复用"}, {50, "配置边界和维护预算"}};
     if ((argc == 3 || argc == 4) && (std::string(argv[1]) == "25" || std::string(argv[1]) == "36"))
     {
         const std::string seconds(argv[2]);

@@ -59,7 +59,7 @@ public:
     */
     static bool producersOnly(size_t producers, size_t count);
 
-    /** Explicit producer sessions acquired before timing, with identical readiness in the baseline
+    /** Explicit producer sessions acquired before timing, all producers start after registration
     @param [in] producers Concurrent callers, each holding a distinct session
     @param [in] count Values per caller; all IDs are independently verified
     @param [in] consume Whether the caller concurrently consumes during timing
@@ -70,7 +70,7 @@ public:
     /** Prepare the full workload capacity and warm both versions before timing
     @param [in,out] queue Externally quiescent queue owned by this measurement
     @param [in] itemCount Maximum simultaneous payload count; space also includes a sentinel
-    @param [out] allocationCalls Pool allocation baseline after preparation, zero for the old version
+    @param [out] allocationCalls Pool allocation baseline after preparation, zero for the optional standard list comparison
     @return Whether warm-up FIFO and the preallocated resource preconditions passed
     */
     static bool preparePool(LockFreeQueue<uint64_t>& queue, size_t itemCount, uint64_t& allocationCalls);

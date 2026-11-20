@@ -74,8 +74,7 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
         }
     }
     // All 20 million objects remain distinct and owned throughout both phases.
-    Queue queue;
-    queue.destroy();
+    Queue queue(false);
     LockFreeQueuePoolConfig config;
     config.initialCapacity = items + 64 * producers + 1;
     config.maximumCapacity = static_cast<int64_t>(config.initialCapacity);
@@ -85,7 +84,6 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
     {
         throw std::runtime_error("Fixed pool configuration failed");
     }
-#if defined(LOCK_FREE_QUEUE_SHARED_EXTRA)
     if (queue.configureProducerCounters(distributed) != LockFreeQueueSuccess)
     {
         throw std::runtime_error("Counter configuration failed");
@@ -94,12 +92,6 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
     {
         throw std::runtime_error("Publication configuration failed");
     }
-#else
-    if (prefix || distributed || reserved)
-    {
-        throw std::runtime_error("Requested API is unavailable in this baseline");
-    }
-#endif
     const LockFreeQueueResult initialized = queue.tryInit();
     if (initialized != LockFreeQueueSuccess)
     {
@@ -151,7 +143,7 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
                 LockFreeQueueProducer<Value> producer;
                 if (bound)
                 {
-                    const int32_t acquired = queue.tryAcquireProducer(producer);
+                    const int32_t acquired = queue.tryAcquireProducer(producer, true, false);
                     if (acquired != LockFreeQueueSuccess)
                     {
                         failure.store(acquired);
@@ -190,7 +182,7 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
                 producer.release();
             });
         }
-        /** Consume and verify per-producer identity/FIFO inside both revisions' timed windows
+        /** Consume and verify per-producer identity/FIFO inside the separate and concurrent timing windows
         Captured owners and queue outlive this sole-consumer call; writes consumer counts,
         completion time, CPU observations and failure state for inspection after join
         */
@@ -203,13 +195,11 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
             while (localConsumed < items && !stop.load(std::memory_order_relaxed))
             {
                 size_t count = 0;
-#if defined(LOCK_FREE_QUEUE_SHARED_EXTRA)
                 if (prefix)
                 {
                     queue.popReadyPrefix(output, 64, count);
                 }
                 else
-#endif
                 {
                     count = queue.pop(output) ? 1 : 0;
                 }
@@ -227,7 +217,7 @@ int LockFreeQueueSharedPtrBenchmark::run(size_t producers, size_t items, bool bo
                     }
                     const uint64_t identity = output[index]->m_identity;
                     const size_t lane = static_cast<size_t>(identity >> 48);
-                    const size_t sequence = static_cast<size_t>(identity & UINT64_C(0x0000FFFFFFFFFFFF));
+                    const uint64_t sequence = identity & UINT64_C(0x0000FFFFFFFFFFFF);
                     if (lane >= producers || sequence != expected[lane] || sequence >= perProducer)
                     {
                         failure.store(-2);

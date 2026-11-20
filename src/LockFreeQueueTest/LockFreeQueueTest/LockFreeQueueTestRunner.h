@@ -41,10 +41,6 @@ private:
     */
     void snapshot(const std::string& version, const std::string& source);
 
-    /** Freeze the original headers from the requested directory or pinned Git commit
-    */
-    void baseline();
-
     /** Preserve exact bytes and reject attempts to overwrite different evidence
     @param [in] path Destination strictly within this batch
     @param [in] bytes Complete intended content
@@ -85,10 +81,9 @@ private:
     */
     void functional();
 
-    /** Materialize the preserved capacity/interface/version matrix
-    @param [in] mode performance, three-way or revision
+    /** Materialize the preserved capacity and interface matrix for the current implementation
     */
-    void performance(const std::string& mode);
+    void performance();
 
     /** Materialize equal-priority producer/consumer progress scenarios
     */

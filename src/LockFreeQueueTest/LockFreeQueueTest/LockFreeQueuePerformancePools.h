@@ -38,7 +38,7 @@ private:
     */
     static bool pressure(size_t threshold, size_t producers);
 
-    /** Print pool state outside timing; baseline has no equivalent observer
+    /** Print pool state outside timing; std::list has no node-pool observer
     @param [in] queue Externally quiescent queue
     */
     static void pool(const LockFreeQueue<uint64_t>& queue);

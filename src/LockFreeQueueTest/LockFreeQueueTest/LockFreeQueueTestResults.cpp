@@ -162,11 +162,21 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
     std::string currentCase;
     Json::Value cycle;
     int32_t high = 0, verification = 0, waveStages = 0, shrink = 0;
-    bool pass = false;
+    bool pass = false, sawNotification = false;
+    size_t completions = 0;
+    std::map<std::string, std::set<size_t>> sharedLanes;
     std::set<int32_t> passed;
     bool reference = meta["reference"].asBool();
     std::string suite = meta["suite"].asString(), profile = meta["profile"].asString();
     bool sufficient = profile == "fixed" || profile == "dynamic" || profile == "grown_reuse";
+    const bool backlog = kind == "core" && meta["ids"].size() == 1 && meta["ids"][0u].asInt() == 22;
+    std::set<int32_t> remainingBacklogs;
+    if (backlog)
+    {
+        remainingBacklogs = {1, 1024, 65536, 262144};
+    }
+    int32_t pendingCount = 0;
+    double firstPop = 0;
     std::set<std::string> measured, verified, stages, shrunk, reclaimed;
     const std::map<std::string, double> expected = kind == "performance" ? scenarios(suite, reference) :
         std::map<std::string, double>();
@@ -180,6 +190,72 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         {
             row[keys[k]] = values[keys[k]];
         }
+        if (backlog && tag == "BACKLOG")
+        {
+            const int32_t count = static_cast<int32_t>(whole(values, "count", 262144));
+            if (pendingCount || !remainingBacklogs.erase(count) || whole(values, "valid", 1) != 1)
+            {
+                throw std::runtime_error("Wrong, duplicate or unfinished backlog");
+            }
+            firstPop = whole(values, "first_pop_ns", 9007199254740991.0);
+            pendingCount = count;
+            row["case"] = "backlog" + IO::integer(pendingCount);
+            output["samples"].append(row);
+        }
+        if (backlog && tag == "LATENCY")
+        {
+            if (!pendingCount || values["operation"].asString() != "pop_backlog" ||
+                whole(values, "samples", 262144) != pendingCount)
+            {
+                throw std::runtime_error("Wrong backlog latency operation or sample count");
+            }
+            const char* quantiles[] = {"p50_ns", "p95_ns", "p99_ns", "max_ns"};
+            double previous = 0;
+            for (size_t q = 0; q < 4; ++q)
+            {
+                const double current = whole(values, quantiles[q], 9007199254740991.0);
+                if (current < previous || (pendingCount == 1 && current != firstPop) || (q == 3 && current < firstPop))
+                {
+                    throw std::runtime_error("Inconsistent backlog latency distribution");
+                }
+                previous = current;
+            }
+            row["case"] = "backlog" + IO::integer(pendingCount);
+            output["latencies"].append(row);
+            pendingCount = 0;
+        }
+        if (kind == "core" && tag == "NOTIFICATION")
+        {
+            if (sawNotification || whole(values, "received", 6000) != 6000 || whole(values, "wake_permits", 191) != 191 ||
+                whole(values, "coalesced_batch", 32) != 32 || whole(values, "finite_wait_ms", 5) != 5 ||
+                whole(values, "valid", 1) != 1)
+            {
+                throw std::runtime_error("Wrong or duplicate notification evidence");
+            }
+            sawNotification = true;
+        }
+        if (kind == "core" && tag == "SUMMARY")
+        {
+            if (++completions != 1 || whole(values, "executed", 50) != meta["ids"].size() || whole(values, "failed", 0) != 0)
+            {
+                throw std::runtime_error("Wrong or duplicate core summary");
+            }
+        }
+        if (kind == "demo" && line == "LockFreeQueue usage demo passed")
+        {
+            ++completions;
+        }
+        if (kind == "module" && tag == "PASS")
+        {
+            const int32_t width = meta["pointer_bytes"].asInt();
+            if ((width != 4 && width != 8) || line.find("PASS module_consumer ") != 0 ||
+                whole(values, "engines", 2) != 2 || whole(values, "cross_module_inline", 1) != 1 ||
+                whole(values, "producer_context", 1) != 1 || whole(values, "pointer_bytes", 8) != width)
+            {
+                throw std::runtime_error("Wrong module completion evidence");
+            }
+            ++completions;
+        }
         if (tag == "PASS")
         {
             int32_t id = 0;
@@ -187,7 +263,7 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
             {
                 // Validate before narrowing so fractional and out-of-range IDs
                 // follow the same evidence contract before JsonCpp conversion.
-                id = static_cast<int32_t>(whole(values, "id", 49));
+                id = static_cast<int32_t>(whole(values, "id", 50));
                 if (id == 0)
                 {
                     throw std::runtime_error("Zero PASS id");
@@ -196,6 +272,10 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
                 {
                     throw std::runtime_error("Duplicate PASS id");
                 }
+            }
+            if (kind == "core" && id == 0)
+            {
+                throw std::runtime_error("Core PASS requires an ID");
             }
             if (kind == "performance" && (pass || (suite == "extra" ? values["suite"].asString() != "extra" :
                 id != std::atoi(suite.c_str()))))
@@ -208,6 +288,35 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         {
             throw std::runtime_error("Workload oracle failed: " + line);
         }
+        if (kind == "shared-ptr" && tag == "SETUP")
+        {
+            const std::string mode = meta["mode"].asString();
+            const bool prefix = mode == "prefix" || mode == "distributed" || mode == "reserved";
+            const bool distributed = mode == "distributed" || mode == "distributed_pop" || mode == "reserved";
+            const bool known = mode == "plain" || mode == "bound" || prefix || distributed;
+            if (++completions != 1 || !known || whole(values, "case", 46) != 46 ||
+                whole(values, "items", 20000000) != number(meta, "items", true) ||
+                whole(values, "producers", 16) != number(meta, "producers", true) ||
+                whole(values, "capacity", 9007199254740991.0) <= number(meta, "items", true) ||
+                (whole(values, "bound", 1) != 0) != (mode != "plain") || (whole(values, "prefix", 1) != 0) != prefix ||
+                (whole(values, "distributed", 1) != 0) != distributed || (whole(values, "reserved", 1) != 0) != (mode == "reserved"))
+            {
+                throw std::runtime_error("Shared-ptr setup differs from requested workload");
+            }
+        }
+        if (kind == "shared-ptr" && tag == "LANE")
+        {
+            const std::string phase = values["phase"].asString();
+            const size_t producers = static_cast<size_t>(whole(meta, "producers", 16));
+            const size_t index = static_cast<size_t>(whole(values, "index", static_cast<double>(producers)));
+            if ((phase != "separate" && phase != "concurrent") || !sharedLanes[phase].insert(index).second ||
+                whole(values, "consumer", 1) != (index == producers ? 1 : 0))
+            {
+                throw std::runtime_error("Wrong or duplicate shared-ptr lane");
+            }
+            number(values, "cpu_milliseconds", false);
+            output["lanes"].append(row);
+        }
         if (kind == "shared-ptr" && tag == "RESULT")
         {
             const double items = number(values, "items", true);
@@ -218,13 +327,14 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
             {
                 const double elapsed = number(values, seconds[metric], true);
                 const double speed = number(values, speeds[metric], true);
-                // Workloads print six significant digits; tolerate only that rounding.
-                if (std::fabs(speed * elapsed / items - 1) > 0.0001)
+                // The workload writes twelve significant digits for both time and rate.
+                if (std::fabs(speed * elapsed / items - 1) > 1e-9)
                 {
                     throw std::runtime_error("Shared-ptr count/time/rate disagree");
                 }
             }
-            if (values["valid"].asDouble() != 1 || values["items"] != meta["items"] || values["producers"] != meta["producers"] ||
+            if (whole(values, "case", 46) != 46 || whole(values, "status", 0) != 0 || values["valid"].asDouble() != 1 ||
+                values["items"] != meta["items"] || values["producers"] != meta["producers"] ||
                 values["pool_allocations"].asDouble() != 0 || values["pool_grows"].asDouble() != 0 ||
                 !values.isMember("pool_allocations") || !values.isMember("pool_grows"))
             {
@@ -257,6 +367,15 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         if (kind != "performance")
         {
             continue;
+        }
+        if (tag == "BENCH")
+        {
+            if (++completions != 1 || whole(values, "variant", 4) != whole(meta, "expected_variant", 4) ||
+                whole(values, "profile", 5) != whole(meta, "expected_profile", 5) ||
+                whole(values, "pure_items", 4000000) != 4000000 || whole(values, "concurrent_items", 1000000) != 1000000)
+            {
+                throw std::runtime_error("Benchmark executable or pool profile differs from the request");
+            }
         }
         if (tag == "WAVE")
         {
@@ -326,6 +445,20 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         }
         if (tag == "REGISTERED_PRODUCERS" || tag == "REGISTERED_MPSC" || tag == "BURST" || tag == "EXTRA" || tag == "POLICY_RESULT" || tag == "WAVE_RESULT")
         {
+            if (suite == "35")
+            {
+                const std::string phase = tag == "REGISTERED_PRODUCERS" ? "producer" : "mpsc";
+                if ((tag != "REGISTERED_PRODUCERS" && tag != "REGISTERED_MPSC") ||
+                    phase + IO::integer(static_cast<int64_t>(whole(values, "producers", 16))) != currentCase)
+                {
+                    throw std::runtime_error("Measured producer count or phase differs from the requested scenario");
+                }
+            }
+            else if ((suite == "38" && tag != "POLICY_RESULT") || (suite == "40" && tag != "WAVE_RESULT") ||
+                (suite == "extra" && tag != "BURST" && tag != "EXTRA"))
+            {
+                throw std::runtime_error("Result row belongs to a different benchmark suite");
+            }
             const double count = number(values, values.isMember("items") ? "items" : "operations", true);
             number(values, "elapsed_ns", true);
             if (!expected.count(scenario) || expected.find(scenario)->second != count || !measured.insert(scenario).second)
@@ -418,7 +551,7 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
     }
     if (kind == "performance")
     {
-        if (measured.size() != expected.size() || !pass || code != 0)
+        if (completions != 1 || measured.size() != expected.size() || !pass || code != 0)
         {
             throw std::runtime_error("Missing benchmark rows/PASS; got " + IO::integer(output["samples"].size()));
         }
@@ -437,7 +570,7 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
     }
     else if (kind == "shared-ptr")
     {
-        if (code || output["samples"].size() != 2)
+        if (code || completions != 1 || output["samples"].size() != 2)
         {
             throw std::runtime_error("Missing shared-ptr measurement phase");
         }
@@ -446,7 +579,9 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         {
             phases.insert(output["samples"][i]["phase"].asString());
         }
-        if (phases != std::set<std::string>({"separate", "concurrent"}))
+        const size_t laneCount = static_cast<size_t>(whole(meta, "producers", 16)) + 1;
+        if (phases != std::set<std::string>({"separate", "concurrent"}) ||
+            sharedLanes["separate"].size() != laneCount || sharedLanes["concurrent"].size() != laneCount)
         {
             throw std::runtime_error("Invalid shared-ptr phases");
         }
@@ -459,7 +594,7 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         }
         Json::Value summary = output["samples"][0u];
         const bool control = meta.get("negative_control", false).asBool();
-        bool negative = (meta["version"].asString() == "before" || control) && code == 3 && summary["progress_valid"].asDouble() == 0;
+        bool negative = control && code == 3 && summary["progress_valid"].asDouble() == 0;
         if (control && (!negative || summary["negative_control"].asDouble() != 1))
         {
             throw std::runtime_error("Scheduling negative control did not detect the injected stall");
@@ -476,6 +611,9 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         {
             throw std::runtime_error("Scheduling CPU gap limit differs from requested window");
         }
+        const double exactLimit = 9007199254740991.0;
+        double produced = 0, consumed = 0;
+        const Json::Value& priority = output["lanes"][0u]["priority"];
         bool observedProgress = true;
         for (Json::Value::UInt i = 0; i < output["lanes"].size(); ++i)
         {
@@ -489,18 +627,40 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
             {
                 throw std::runtime_error("Wrong consumer lane");
             }
+            if (!priority.isNumeric() || !lane["priority"].isNumeric() || lane["priority"] != priority ||
+                priority.asDouble() != std::floor(priority.asDouble()))
+            {
+                throw std::runtime_error("Scheduling lanes disagree on thread priority");
+            }
             const bool admission = summary["capacity"].asInt() != 256 || lane["consumer"].asInt() == 1;
             const int32_t mode = summary["mode"].asInt();
             const bool capacityWait = !admission && (mode == 0 || mode == 1 || mode == 5 || mode == 7);
             const double gap = number(lane, "sampled_cpu_gap_ms", false);
-            const double attempts = number(lane, "active_attempts", false), cycles = number(lane, "cycles", false);
-            const double active = number(lane, "active_count", false), count = number(lane, "count", false);
+            const double attempts = whole(lane, "active_attempts", exactLimit), cycles = whole(lane, "cycles", exactLimit);
+            const double active = whole(lane, "active_count", exactLimit), count = whole(lane, "count", exactLimit);
+            if (lane["consumer"].asInt())
+            {
+                consumed = count;
+            }
+            else
+            {
+                if (count > exactLimit - produced)
+                {
+                    throw std::runtime_error("Scheduling producer sum exceeds exact integer range");
+                }
+                produced += count;
+            }
             if (active > count)
             {
                 throw std::runtime_error("Scheduling active count exceeds final count");
             }
             observedProgress = observedProgress && gap <= gapLimit && (capacityWait ? count > 0 : attempts > 0) && cycles > 0 &&
                 (!admission || (active > 0 && count > 0));
+        }
+        if (produced != consumed || produced != whole(summary, "items", exactLimit) ||
+            consumed != whole(summary, "consumed", exactLimit) || whole(summary, "valid", 1) != (negative ? 0 : 1))
+        {
+            throw std::runtime_error("Scheduling totals or final verdict disagree with lane evidence");
         }
         if (observedProgress != (summary["progress_valid"].asDouble() == 1))
         {
@@ -514,9 +674,18 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
         {
             expected.insert(meta["ids"][i].asInt());
         }
-        if (code || expected.empty() || passed != expected)
+        if (code || expected.empty() || passed != expected || pendingCount || !remainingBacklogs.empty() ||
+            sawNotification != (expected.count(9) != 0) ||
+            (meta["require_summary"].asBool() && completions != 1))
         {
             throw std::runtime_error("Core selection and PASS IDs disagree");
+        }
+    }
+    else if (kind == "module" || kind == "demo")
+    {
+        if (code != 0 || completions != 1)
+        {
+            throw std::runtime_error("Missing or repeated completion evidence");
         }
     }
     else if (code != meta.get("expected_exit", 0).asInt())
@@ -704,7 +873,7 @@ void LockFreeQueueTestResults::summarize(const std::string& batch)
     // Key by semantic scenario, including cycle/phase, never by version or round.
     std::map<std::string, std::map<std::string, std::vector<Json::Value>>> groups;
     std::map<std::string, Json::Value> keys;
-    const char* keyFields[] = {"arch", "profile", "suite", "case", "cycle", "phase", "mode", "producers", "mask", "cancelable", "capacity", "call", "operation", "index", "consumer"};
+    const char* keyFields[] = {"arch", "configuration", "profile", "suite", "case", "cycle", "phase", "mode", "producers", "mask", "cancelable", "capacity", "call", "operation", "index", "consumer"};
     for (size_t t = 0; t < tables.size(); ++t)
     {
         if (tables[t] == "maintenance" || tables[t] == "pools")
@@ -739,14 +908,6 @@ void LockFreeQueueTestResults::summarize(const std::string& batch)
                 row = rates(row, extra);
             }
             std::string encoded = Json::FastWriter().write(key), version = row["version"].asString();
-            // Revision call variants share the same comparison group.
-            size_t hyphen = version.find('-');
-            if (hyphen != std::string::npos && (version.compare(0, 7, "before-") == 0 || version.compare(0, 6, "after-") == 0))
-            {
-                key["call"] = version.substr(hyphen + 1);
-                version = version.substr(0, hyphen);
-                encoded = Json::FastWriter().write(key);
-            }
             keys[encoded] = key;
             groups[encoded][version].push_back(row);
         }
@@ -785,7 +946,7 @@ void LockFreeQueueTestResults::summarize(const std::string& batch)
                 out[version->first + "_" + metric + "_max"] = *std::max_element(values.begin(), values.end());
             }
         }
-        std::string candidate = medians.count("after") ? "after" : (medians.count("candidate") ? "candidate" : (medians.count("current") ? "current" : "push"));
+        std::string candidate = medians.count("current") ? "current" : "push";
         if (medians.count(candidate))
         {
             for (std::map<std::string, std::map<std::string, double>>::const_iterator reference = medians.begin(); reference != medians.end(); ++reference)

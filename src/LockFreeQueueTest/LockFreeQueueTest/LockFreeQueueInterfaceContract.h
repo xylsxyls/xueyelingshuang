@@ -23,6 +23,12 @@ static_assert(std::is_same<decltype(&LockFreeQueueContractType::pop),
 static_assert(std::is_same<decltype(&LockFreeQueueContractType::probeReadyEntryPrefix),
     bool (LockFreeQueueContractType::*)(LockFreeQueueEntry<int32_t>**, size_t, size_t&)>::value,
     "Entry prefix probe signature changed");
+static_assert(std::is_same<decltype(&LockFreeQueueContractType::configureAutomaticMaintenance),
+    LockFreeQueueResult (LockFreeQueueContractType::*)(uint32_t, size_t)>::value,
+    "Automatic maintenance signature changed");
+static_assert(std::is_same<decltype(&LockFreeQueueContractType::configureCapacityWait),
+    LockFreeQueueResult (LockFreeQueueContractType::*)(uint32_t, uint32_t)>::value,
+    "Capacity wait signature changed");
 static_assert(std::is_same<decltype(&LockFreeQueueContractType::configureConsumerYieldInterval),
     LockFreeQueueResult (LockFreeQueueContractType::*)(uint32_t)>::value,
     "Consumer interval signature changed");

@@ -1,10 +1,6 @@
 ﻿#include "LockFreeQueueMeasurements.h"
 #include "LockFreeQueueThreadGroup.h"
-#ifdef LOCK_FREE_QUEUE_BASELINE
 #include "LockFreeQueue.h"
-#else
-#include "LockFreeQueue.h"
-#endif
 #include "LockFreeQueueBenchmarkPush.h"
 #include <atomic>
 #include <chrono>
@@ -144,7 +140,6 @@ bool LockFreeQueueMeasurements::preparePool(LockFreeQueue<uint64_t>& queue, size
     {
         return false;
     }
-#ifndef LOCK_FREE_QUEUE_BASELINE
     if (reinterpret_cast<uintptr_t>(&queue) % 8 != 0)
     {
         std::cout << "FAIL queue_atomic_alignment address=" << &queue << std::endl;
@@ -159,7 +154,6 @@ bool LockFreeQueueMeasurements::preparePool(LockFreeQueue<uint64_t>& queue, size
     {
         return false;
     }
-#endif
     for (size_t i = 0; i < itemCount; ++i)
     {
         LockFreeQueueBenchmarkPush::checked(queue, static_cast<uint64_t>(i));
@@ -170,7 +164,6 @@ bool LockFreeQueueMeasurements::preparePool(LockFreeQueue<uint64_t>& queue, size
         uint64_t value = UINT64_MAX;
         valid = queue.pop(&value) && value == i && valid;
     }
-#ifndef LOCK_FREE_QUEUE_BASELINE
     // Recover the warmed nodes before timing. No shrink callback is installed.
     for (size_t pass = 0; pass < 4; ++pass)
     {
@@ -183,16 +176,12 @@ bool LockFreeQueueMeasurements::preparePool(LockFreeQueue<uint64_t>& queue, size
     std::cout << "PREPARED capacity=" << stats.currentCapacity << " reusable=" << stats.reusableFreeCapacity <<
         " allocation_calls=" << allocationCalls << " grow_count=" << stats.successfulGrowCount <<
         " retained_bytes=" << stats.retainedBytes << " valid=" << valid << std::endl;
-#else
-    std::cout << "PREPARED baseline_warm_items=" << itemCount << " valid=" << valid << std::endl;
-#endif
     return valid && queue.empty();
 }
 
 bool LockFreeQueueMeasurements::verifyPool(const LockFreeQueue<uint64_t>& queue, size_t itemCount,
     uint64_t allocationCalls)
 {
-#ifndef LOCK_FREE_QUEUE_BASELINE
     const LockFreeQueuePoolStatistics stats = queue.poolStatistics();
     const bool valid = stats.currentCapacity == itemCount + 1 && stats.successfulGrowCount == 0 &&
         stats.allocationCalls == allocationCalls &&
@@ -202,12 +191,6 @@ bool LockFreeQueueMeasurements::verifyPool(const LockFreeQueue<uint64_t>& queue,
         " allocation_delta=" << stats.allocationCalls - allocationCalls <<
         " grow_count=" << stats.successfulGrowCount << " valid=" << valid << std::endl;
     return valid;
-#else
-    (void)queue;
-    (void)itemCount;
-    (void)allocationCalls;
-    return true;
-#endif
 }
 
 bool LockFreeQueueMeasurements::burst(size_t width, size_t rounds)
@@ -274,13 +257,9 @@ bool LockFreeQueueMeasurements::burst(size_t width, size_t rounds)
         " elapsed_ns=" << elapsed << " cpu_ns=" << cpuElapsed << " items_per_second=" <<
         (double(width) * rounds * 1000000000.0 / elapsed) << " allocations=" << g_lockFreeQueueMeasureCalls.load() <<
         " allocated_bytes=" << g_lockFreeQueueMeasureBytes.load() << " valid=" << valid << std::endl;
-#ifndef LOCK_FREE_QUEUE_BASELINE
     const LockFreeQueuePoolStatistics stats = queue.poolStatistics();
     std::cout << "POOL capacity=" << stats.currentCapacity << " retained_bytes=" << stats.retainedBytes <<
         " protection_bytes=" << stats.protectionBytes << " retries=" << stats.casRetries << std::endl;
-#else
-    std::cout << "POOL capacity=1 retained_bytes=" << sizeof(queue) + sizeof(QueueNode<uint64_t>) << std::endl;
-#endif
     latency("push", pushes);
     latency("pop", pops);
     resources("drained");
@@ -325,9 +304,6 @@ bool LockFreeQueueMeasurements::concurrent(size_t producers, size_t count)
             {
                 const uint64_t begin = i % 64 == 0 ? ticks() : 0;
                 const uint64_t value = (uint64_t(lane) << 32) | i;
-#ifdef LOCK_FREE_QUEUE_BASELINE
-                LockFreeQueueBenchmarkPush::checked(queue, value);
-#else
                 while (!stop.load())
                 {
                     const LockFreeQueueResult result = queue.tryPush(value);
@@ -343,7 +319,6 @@ bool LockFreeQueueMeasurements::concurrent(size_t producers, size_t count)
                     refused.fetch_add(1);
                     std::this_thread::yield();
                 }
-#endif
                 if (i % 64 == 0)
                 {
                     pushSamples[lane].push_back(ticks() - begin);
@@ -397,6 +372,10 @@ bool LockFreeQueueMeasurements::concurrent(size_t producers, size_t count)
     g_lockFreeQueueMeasureAllocations.store(false);
     const uint64_t elapsed = ticks() - begin;
     const uint64_t cpuElapsed = cpu() - cpuStart;
+    for (size_t lane = 0; lane < producers; ++lane)
+    {
+        valid = next[lane] == count && valid;
+    }
     valid = valid && !error.load() && received == producers * count;
     if (g_lockFreeQueueMeasurePreallocated)
     {
@@ -414,11 +393,9 @@ bool LockFreeQueueMeasurements::concurrent(size_t producers, size_t count)
     }
     latency("push", combined);
     latency("pop", popSamples);
-#ifndef LOCK_FREE_QUEUE_BASELINE
     const LockFreeQueuePoolStatistics stats = queue.poolStatistics();
     std::cout << "POOL capacity=" << stats.currentCapacity << " retained_bytes=" << stats.retainedBytes <<
         " protection_bytes=" << stats.protectionBytes << " retries=" << stats.casRetries << std::endl;
-#endif
     resources("joined");
     return valid;
 }
@@ -454,9 +431,6 @@ bool LockFreeQueueMeasurements::producersOnly(size_t producers, size_t count)
                 {
                     const uint64_t value = (uint64_t(lane) << 32) | index;
                     const uint64_t began = index % 64 == 0 ? ticks() : 0;
-#ifdef LOCK_FREE_QUEUE_BASELINE
-                    LockFreeQueueBenchmarkPush::checked(queue, value);
-#else
                     for (;;)
                     {
                         const LockFreeQueueResult result = queue.tryPush(value);
@@ -473,7 +447,6 @@ bool LockFreeQueueMeasurements::producersOnly(size_t producers, size_t count)
                         }
                         std::this_thread::yield();
                     }
-#endif
                     if (index % 64 == 0)
                     {
                         samples[lane].push_back(ticks() - began);
@@ -516,6 +489,10 @@ bool LockFreeQueueMeasurements::producersOnly(size_t producers, size_t count)
         ++received;
     }
     valid = received == producers * count && queue.empty() && valid;
+    for (size_t lane = 0; lane < producers; ++lane)
+    {
+        valid = next[lane] == count && valid;
+    }
     valid = verifyPool(queue, capacityItems, baseline) && valid;
     std::cout << "PRODUCERS_ONLY producers=" << producers << " items=" << received <<
         " capacity_items=" << capacityItems << " elapsed_ns=" << elapsed << " cpu_ns=" << cpuElapsed <<
@@ -528,11 +505,9 @@ bool LockFreeQueueMeasurements::producersOnly(size_t producers, size_t count)
         combined.insert(combined.end(), samples[lane].begin(), samples[lane].end());
     }
     latency("push", combined);
-#ifndef LOCK_FREE_QUEUE_BASELINE
     const LockFreeQueuePoolStatistics stats = queue.poolStatistics();
     std::cout << "POOL capacity=" << stats.currentCapacity << " retained_bytes=" << stats.retainedBytes <<
         " protection_bytes=" << stats.protectionBytes << " retries=" << stats.casRetries << std::endl;
-#endif
     return valid;
 }
 
@@ -559,14 +534,12 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
     {
         samples[lane].reserve(count / 64 + 1);
         group.m_threads.emplace_back([&, lane]() {
-#ifndef LOCK_FREE_QUEUE_BASELINE
             LockFreeQueueProducer<uint64_t> producer;
             if (queue.tryAcquireProducer(producer) != LockFreeQueueSuccess)
             {
                 failed.store(true);
                 stop.store(true);
             }
-#endif
             ready.fetch_add(1);
             while (!start.load())
             {
@@ -578,9 +551,6 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
                 {
                     const uint64_t value = (uint64_t(lane) << 32) | index;
                     const uint64_t began = index % 64 == 0 ? ticks() : 0;
-#ifdef LOCK_FREE_QUEUE_BASELINE
-                    LockFreeQueueBenchmarkPush::checked(queue, value);
-#else
                     for (;;)
                     {
                         const LockFreeQueueResult result = producer.tryPush(value);
@@ -597,7 +567,6 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
                         }
                         std::this_thread::yield();
                     }
-#endif
                     if (index % 64 == 0)
                     {
                         samples[lane].push_back(ticks() - began);
@@ -609,9 +578,7 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
                 failed.store(true);
                 stop.store(true);
             }
-#ifndef LOCK_FREE_QUEUE_BASELINE
             producer.release();
-#endif
             if (done.fetch_add(1) + 1 == producers)
             {
                 ended.store(ticks());
@@ -676,6 +643,10 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
         }
     }
     valid = valid && !failed.load() && received == producers * count && queue.empty();
+    for (size_t lane = 0; lane < producers; ++lane)
+    {
+        valid = next[lane] == count && valid;
+    }
     valid = verifyPool(queue, capacityItems, allocationBaseline) && valid;
     std::cout << (consume ? "REGISTERED_MPSC" : "REGISTERED_PRODUCERS") << " producers=" << producers <<
         " items=" << received << " capacity_items=" << capacityItems << " elapsed_ns=" << elapsed <<
@@ -690,13 +661,11 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
     }
     latency("push", combined);
     latency("pop", popSamples);
-#ifndef LOCK_FREE_QUEUE_BASELINE
     const LockFreeQueuePoolStatistics stats = queue.poolStatistics();
     std::cout << "POOL capacity=" << stats.currentCapacity << " retained_bytes=" << stats.retainedBytes <<
         " protection_bytes=" << stats.protectionBytes << " retries=" << stats.casRetries <<
         " active_producers=" << stats.activeProducers << std::endl;
     valid = stats.activeProducers == 0 && valid;
-#endif
     return valid;
 }
 
@@ -725,7 +694,6 @@ bool LockFreeQueueMeasurements::backlog(size_t count)
 
 bool LockFreeQueueMeasurements::poolPaths()
 {
-#ifndef LOCK_FREE_QUEUE_BASELINE
     std::vector<uint64_t> growth, full, shrink;
     growth.reserve(50);
     full.reserve(50);
@@ -779,10 +747,6 @@ bool LockFreeQueueMeasurements::poolPaths()
     std::cout << "SHRINK before_retained_bytes=" << beforeBytes << " after_retained_bytes=" << afterBytes <<
         " initial_capacity=2 drained_capacity=2 valid=" << valid << std::endl;
     return valid;
-#else
-    std::cout << "POOL_PATHS NOT_APPLICABLE=baseline_has_no_pool" << std::endl;
-    return true;
-#endif
 }
 
 bool LockFreeQueueMeasurements::payloadCost()
@@ -845,11 +809,7 @@ int LockFreeQueueMeasurements::run(int argc, char** argv)
     }
     std::cout << "ENV allocation_tracking=" << (g_lockFreeQueueMeasureSkipAllocations ? "disabled" : "enabled") <<
         " pointer_bytes=" << sizeof(void*) << " seed=20261104 implementation=";
-#ifdef LOCK_FREE_QUEUE_BASELINE
-    std::cout << "baseline";
-#else
     std::cout << "current";
-#endif
     std::cout << " preallocated=" << g_lockFreeQueueMeasurePreallocated << std::endl;
     resources("before");
     bool valid = true;

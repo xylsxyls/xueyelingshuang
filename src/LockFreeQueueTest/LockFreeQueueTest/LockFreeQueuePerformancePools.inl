@@ -3,7 +3,7 @@
 inline int32_t LockFreeQueuePerformancePools::submit(LockFreeQueue<uint64_t>& queue,
     uint64_t value, LockFreeQueueProducer<uint64_t>* producer)
 {
-#ifdef LOCK_FREE_QUEUE_BASELINE
+#ifdef LOCK_FREE_QUEUE_LIST_MUTEX
     (void)producer;
     LockFreeQueueBenchmarkPush::checked(queue, value);
     return 0;
@@ -26,7 +26,7 @@ inline int32_t LockFreeQueuePerformancePools::submit(LockFreeQueue<uint64_t>& qu
 
 inline void LockFreeQueuePerformancePools::pool(const LockFreeQueue<uint64_t>& queue)
 {
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
     const LockFreeQueuePoolStatistics s = queue.poolStatistics();
     std::cout << "POLICY_POOL capacity=" << s.currentCapacity << " used=" << s.usedNodes <<
         " free=" << s.reusableFreeCapacity << " retired=" << s.retiredNodes <<
@@ -47,7 +47,7 @@ inline bool LockFreeQueuePerformancePools::cycles(const char* name, size_t thres
     const size_t count = growth == 0 ? 32768 : 4095;
     const size_t rounds = shrink ? 8 : 4;
     bool valid = true;
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
     queue.destroy();
     LockFreeQueuePoolConfig config;
     config.initialCapacity = 64;
@@ -69,7 +69,7 @@ inline bool LockFreeQueuePerformancePools::cycles(const char* name, size_t thres
 #endif
     for (size_t round = 0; round < rounds; ++round)
     {
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
         if (shrink)
         {
             // Each cycle times growth with shrinking disabled; explicit owner
@@ -89,7 +89,7 @@ inline bool LockFreeQueuePerformancePools::cycles(const char* name, size_t thres
         std::vector<uint64_t> pushes, pops;
         pushes.reserve((count + 63) / 64);
         pops.reserve((count + 63) / 64);
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
         const LockFreeQueuePoolStatistics before = queue.poolStatistics();
 #endif
         std::cout << "POLICY case=" << name << " phase=" << (round == 0 || shrink ? "growth" : "reuse") <<
@@ -132,7 +132,7 @@ inline bool LockFreeQueuePerformancePools::cycles(const char* name, size_t thres
         owner.release();
 #endif
         valid = queue.empty() && valid;
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
         LockFreeQueuePoolStatistics after = queue.poolStatistics();
         valid = after.activeProducers == 0 && (growth == 0 || after.peakReservedCapacity <= 4096) && valid;
         valid = (round == 0 || shrink ? after.successfulGrowCount > before.successfulGrowCount :
@@ -145,7 +145,7 @@ inline bool LockFreeQueuePerformancePools::cycles(const char* name, size_t thres
         LockFreeQueueMeasurements::latency("pop", pops);
         pool(queue);
         LockFreeQueueMeasurements::resources("policy_drained");
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
         // Cleanup is outside the roundtrip timer and measured separately.
         const uint64_t maintenanceStarted = LockFreeQueueMeasurements::ticks();
         for (size_t pass = 0; pass < 8; ++pass)
@@ -191,7 +191,7 @@ inline bool LockFreeQueuePerformancePools::cycles(const char* name, size_t thres
         if (shrink)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(4));
-            std::cout << "MAINTENANCE NOT_APPLICABLE=original_has_no_pool" << std::endl;
+            std::cout << "MAINTENANCE NOT_APPLICABLE=std_list_mutex_has_no_pool" << std::endl;
         }
 #endif
         if (!valid)
@@ -207,7 +207,7 @@ inline bool LockFreeQueuePerformancePools::pressure(size_t threshold, size_t pro
     std::unique_ptr<LockFreeQueue<uint64_t>> instance(new LockFreeQueue<uint64_t>());
     LockFreeQueue<uint64_t>& queue = *instance;
     const size_t count = 200000 / producers;
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
     queue.destroy();
     LockFreeQueuePoolConfig config;
     config.initialCapacity = 256;
@@ -218,7 +218,7 @@ inline bool LockFreeQueuePerformancePools::pressure(size_t threshold, size_t pro
         return false;
     }
 #endif
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
     const LockFreeQueuePoolStatistics initialized = queue.poolStatistics();
 #endif
     std::cout << "POLICY case=bounded" << threshold << "_p" << producers << " phase=pressure cycle=0 items=" << count * producers << std::endl;
@@ -266,7 +266,7 @@ inline bool LockFreeQueuePerformancePools::pressure(size_t threshold, size_t pro
                             break;
                         }
                         ++refused[lane];
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
                         if (result != LockFreeQueueCapacityLimit && !LockFreeQueueBenchmarkPush::transient(result))
                         {
                             failed.store(true);
@@ -339,7 +339,7 @@ inline bool LockFreeQueuePerformancePools::pressure(size_t threshold, size_t pro
         rejections += refused[lane];
         combined.insert(combined.end(), samples[lane].begin(), samples[lane].end());
     }
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
     const LockFreeQueuePoolStatistics after = queue.poolStatistics();
     // The new allocator has two initial allocations. Extra publication segments
     // are a bounded metadata cache, not extra payload capacity. Keep measuring

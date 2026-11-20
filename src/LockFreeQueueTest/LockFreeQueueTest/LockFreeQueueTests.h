@@ -64,8 +64,8 @@ enum LockFreeQueueTestId
     LockFreeQueueTestBacklog = 22,
     // 四库头文件同编译单元
     LockFreeQueueTestFourHeaders = 23,
-    // 历史补链缺陷的独立复现
-    LockFreeQueueTestOldDefect = 24,
+    // 停用编号，禁止复用
+    LockFreeQueueTestRetired24 = 24,
     // 持续有界多生产压力
     LockFreeQueueTestSteady = 25,
     // 私有空闲批次及共享组
@@ -115,7 +115,9 @@ enum LockFreeQueueTestId
     // Consumer scheduling interval and batch accounting
     LockFreeQueueTestConsumerYield = 48,
     // Entry spans across publication segments and reuse boundaries
-    LockFreeQueueTestEntrySpan = 49
+    LockFreeQueueTestEntrySpan = 49,
+    // 初始化前设置的实际执行效果和拒绝边界
+    LockFreeQueueTestConfiguration = 50
 };
 
 // Test-only control, never part of the production ABI.
@@ -469,6 +471,11 @@ public:
     @return Whether every stated invariant passed
     */
     static bool lifecycle();
+
+    /** 验证新建及重新初始化的实例执行指定的维护及调度参数
+    @return 全部边界与行为符合预期时返回true
+    */
+    static bool configuration();
 
     /** Immediate shared lifetime release and caller-owned raw pointers
     @return Whether every stated invariant passed

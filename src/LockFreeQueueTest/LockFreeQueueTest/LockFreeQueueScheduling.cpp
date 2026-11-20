@@ -67,12 +67,6 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
     const bool useSpan = mode == 6;
     const bool extendedYield = mode >= 6;
     mode = mode == 6 ? 4 : (mode == 7 ? 0 : mode);
-#ifndef LOCK_FREE_QUEUE_EXTENDED_SCHEDULING
-    if (extendedYield)
-    {
-        return 2;
-    }
-#endif
     // Mode 0: ordinary push; 1: bound push; 2: ordinary tryPush;
     // 3: bound tryPush; 4: external Entry with ready-prefix consumer;
     // 5: bound push, distributed counters and value-prefix consumer.
@@ -85,12 +79,10 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
     config.maximumCapacity = static_cast<int64_t>(capacity);
     config.growThreshold = 0;
     config.maximumProducers = producers + 4;
-#ifdef LOCK_FREE_QUEUE_EXTENDED_SCHEDULING
     if (extendedYield && queue.configureConsumerYieldInterval(65536) != LockFreeQueueSuccess)
     {
         throw std::runtime_error("Consumer interval configuration failed" );
     }
-#endif
     if (queue.configurePool(config) != LockFreeQueueSuccess ||
         queue.configureCancelableReservations(cancelable) != LockFreeQueueSuccess ||
         queue.configureProducerCounters(mode == 5) != LockFreeQueueSuccess ||
@@ -180,7 +172,7 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
                     }
                     else if (LockFreeQueueBenchmarkPush::transient(status) || status == LockFreeQueueCapacityLimit)
                     {
-                        // Identical caller backpressure for both revisions.
+                        // Yield between unsuccessful attempts so the consumer can run.
                         std::this_thread::yield();
                     }
                     else { throw std::runtime_error("Unexpected producer result"); }
@@ -221,13 +213,11 @@ int LockFreeQueueScheduling::run(size_t producers, uint32_t milliseconds, int mo
                 size_t count = 0;
                 if (mode == 4)
                 {
-#ifdef LOCK_FREE_QUEUE_EXTENDED_SCHEDULING
                     if (useSpan)
                     {
                         queue.probeReadyEntrySpan(batch, 256, count);
                     }
                     else
-#endif
                     {
                         queue.popReadyEntryPrefix(batch, 64, count);
                     }

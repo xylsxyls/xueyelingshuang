@@ -3,7 +3,7 @@
 inline bool LockFreeQueuePerformanceWave::scenario(size_t producers, size_t threshold)
 {
     LockFreeQueue<uint64_t> queue;
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
     queue.destroy();
     LockFreeQueuePoolConfig config;
     config.initialCapacity = 750;
@@ -83,7 +83,7 @@ inline bool LockFreeQueuePerformanceWave::scenario(size_t producers, size_t thre
                             {
                                 break;
                             }
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
                             if (!LockFreeQueueBenchmarkPush::transient(result) && result != LockFreeQueueCapacityLimit)
                             {
                                 if (result < 0)
@@ -184,7 +184,7 @@ inline bool LockFreeQueuePerformanceWave::scenario(size_t producers, size_t thre
                     valid = false;
                     stop.store(true);
                 }
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
                 if (time - lastMaintenance >= 1000000)
                 {
                     const LockFreeQueueMaintenanceResult result = queue.maintain(64);
@@ -199,7 +199,7 @@ inline bool LockFreeQueuePerformanceWave::scenario(size_t producers, size_t thre
         }
         live[stage] = committed.load() - received;
         valid = live[stage] == (stage % 3 == 0 ? 1000 : 500) && valid;
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
         const LockFreeQueuePoolStatistics state = queue.poolStatistics();
         capacities[stage] = state.currentCapacity;
         grows[stage] = static_cast<size_t>(state.successfulGrowCount);
@@ -238,7 +238,7 @@ inline bool LockFreeQueuePerformanceWave::scenario(size_t producers, size_t thre
         retries += rejected[lane];
         combined.insert(combined.end(), pushSamples[lane].begin(), pushSamples[lane].end());
     }
-#ifndef LOCK_FREE_QUEUE_BASELINE
+#ifndef LOCK_FREE_QUEUE_LIST_MUTEX
     const LockFreeQueuePoolStatistics state = queue.poolStatistics();
     valid = state.successfulGrowCount > 0 && state.activeProducers == 0 && valid;
 #endif
