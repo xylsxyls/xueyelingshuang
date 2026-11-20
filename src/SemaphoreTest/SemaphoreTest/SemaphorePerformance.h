@@ -53,14 +53,14 @@ private:
     std::atomic<size_t> m_ready;
 };
 
-/** 稳定性能用例，原版和当前版共用工作量、计时边界及断言
+/** 稳定性能用例，固定工作量、计时边界及独立判定
 */
 class SemaphorePerformance
 {
 public:
     /** 执行指定性能组
     @param [in] id 55完整组，66冷唤醒与IPC组，71对齐，72事件，73计数，74命名IPC，79记录池
-    @param [in] combined 是否使用组合接口，原版不支持
+    @param [in] combined 是否使用组合接口执行往返负载
     @return 计数或超时判定失败返回非零
     */
     static int32_t run(int32_t id = 55, bool combined = false);

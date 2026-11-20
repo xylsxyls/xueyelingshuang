@@ -46,7 +46,7 @@
     <ClCompile Include="SemaphoreFairness.cpp"><Filter>源文件</Filter></ClCompile>
     <None Include="SemaphoreWasmTests.cpp"><Filter>源文件</Filter></None>
     <None Include="run_wasm.js"><Filter>源文件</Filter></None>
-    <None Include="SemaphoreDemo.cpp"><Filter>源文件</Filter></None>
+    <None Include="SemaphoreWasmRunnerTests.js"><Filter>源文件</Filter></None>
     <ClCompile Include="SemaphoreTestProcessMemory.cpp"><Filter>源文件</Filter></ClCompile>
     <ClInclude Include="SemaphoreTestProcessMemory.h"><Filter>头文件</Filter></ClInclude>
   </ItemGroup>

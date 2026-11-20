@@ -24,7 +24,7 @@ int32_t SemaphoreTestInstrument::run(const std::string& sourceDirectory, const s
         std::fprintf(stderr, "Instrumentation needs distinct existing source and output directories\n");
         return 1;
     }
-    const char* files[] = {"Semaphore.cpp", "SemaphoreWake.cpp", "SemaphoreEventPool.cpp", "SemaphoreCount.cpp"};
+    const char* files[] = {"Semaphore.cpp", "SemaphoreWake.cpp", "SemaphoreEventPool.cpp", "SemaphoreCount.cpp", "SemaphoreRetry.cpp"};
     const size_t fileCount = sizeof(files) / sizeof(files[0]);
     std::string generated[fileCount];
     for (size_t i = 0; i < fileCount; ++i)
@@ -46,7 +46,7 @@ int32_t SemaphoreTestInstrument::run(const std::string& sourceDirectory, const s
             return 1;
         }
     }
-    std::printf("Generated 4 instrumented sources from current production files\n");
+    std::printf("Generated %u instrumented sources from current production files\n", static_cast<unsigned>(fileCount));
     return 0;
 }
 

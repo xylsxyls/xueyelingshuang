@@ -10,7 +10,15 @@
 static Semaphore* s_workerSemaphore = nullptr;
 static std::atomic<int32_t> s_workerStage(0);
 static std::atomic<int32_t> s_workerResult(-1);
-static std::atomic<bool> s_cleanupFailed(false);
+// 两个用例的交付通道独立，主循环只在消费67号请求后发送回执。
+static Semaphore s_exchangeRequest;
+static Semaphore s_exchangeReply;
+static std::atomic<bool> s_exchangePending(false);
+// 工作线程在发布s_workerResult前写入；主循环取得完成状态后读取。
+static int32_t s_exchangeResult = -1;
+static bool s_countPublishFailed = false;
+static bool s_replyDelivered = false;
+static bool s_threadCleanupFailed = false;
 
 /** JavaScript事件循环回调，不在主线程阻塞或回收尚未结束的工作线程
 */
@@ -18,14 +26,23 @@ void SemaphoreWasmTests::poll(void* context)
 {
     (void)context;
     int32_t ready = 1;
-    bool publish = s_workerStage.compare_exchange_strong(ready, 2);
-    if (!publish && ready == 3)
+    if (s_workerStage.compare_exchange_strong(ready, 2))
     {
-        publish = s_workerStage.compare_exchange_strong(ready, 4);
+        const SemaphoreResult sent = s_workerSemaphore->trySignal();
+        s_countPublishFailed = sent.status != SEMAPHORE_OK || !sent.committed;
     }
-    if (publish && s_workerSemaphore->trySignal().status != SEMAPHORE_OK)
+    if (s_exchangePending.load())
     {
-        s_cleanupFailed.store(true);
+        const SemaphoreResult request = s_exchangeRequest.waitResult(0);
+        if (request.status != SEMAPHORE_TIMEOUT || request.committed)
+        {
+            s_exchangePending.store(false);
+            if (request.status == SEMAPHORE_OK && request.committed)
+            {
+                const SemaphoreResult reply = s_exchangeReply.trySignal();
+                s_replyDelivered = reply.status == SEMAPHORE_OK && reply.committed;
+            }
+        }
     }
     if (s_workerStage.load() == 5)
     {
@@ -36,33 +53,35 @@ void SemaphoreWasmTests::poll(void* context)
             const SemaphoreResult event = s_workerSemaphore->tryEvent();
             if (event.status != SEMAPHORE_OK)
             {
-                s_cleanupFailed.store(true);
+                s_countPublishFailed = true;
             }
             if (event.committed)
             {
                 s_workerStage.store(6);
                 // 单独许可确认tryEvent已经返回，工作线程据此在通知读者退出后检查回收。
-                if (s_workerSemaphore->trySignal().status != SEMAPHORE_OK)
+                const SemaphoreResult ack = s_workerSemaphore->trySignal();
+                if (ack.status != SEMAPHORE_OK || !ack.committed)
                 {
-                    s_cleanupFailed.store(true);
+                    s_countPublishFailed = true;
                 }
             }
         }
     }
     const int32_t observed = s_workerResult.load();
-    const int32_t result = observed >= 0 && s_cleanupFailed.load() ? 7 : observed;
-    if (result < 0)
+    if (observed < 0)
     {
         emscripten_async_call(SemaphoreWasmTests::poll, nullptr, 1);
         return;
     }
+    const int32_t result = s_countPublishFailed ? 7 : observed;
+    const int32_t combined = s_exchangeResult == 0 && !s_replyDelivered ? 7 : s_exchangeResult;
     delete s_workerSemaphore;
     s_workerSemaphore = nullptr;
     std::printf(
         "%s id=49 Wasm pthread count/event timeout and main-loop notification result=%d\n", result == 0 ? "PASS" : "FAIL", result);
     std::printf(
-        "%s id=67 Wasm combined timeout and main-loop reply result=%d\n", result == 0 ? "PASS" : "FAIL", result);
-    emscripten_force_exit(result);
+        "%s id=67 Wasm combined timeout and main-loop reply result=%d\n", combined == 0 ? "PASS" : "FAIL", combined);
+    emscripten_force_exit(result != 0 || combined != 0 || s_threadCleanupFailed ? 1 : 0);
 }
 #endif
 
@@ -80,8 +99,9 @@ int32_t SemaphoreWasmTests::admission()
     bool passed = true;
     for (size_t index = 0; index < 2; ++index)
     {
-        passed = events.begin(eventRecords[index]).status == SEMAPHORE_OK && passed;
-        passed = counts.begin(state, countRecords[index], false).status == SEMAPHORE_OK && passed;
+        const SemaphoreResult registered = counts.begin(state, countRecords[index], false);
+        passed = events.begin(eventRecords[index]).status == SEMAPHORE_OK && eventRecords[index] != nullptr &&
+            registered.status == SEMAPHORE_OK && !registered.committed && countRecords[index] != nullptr && passed;
     }
     for (size_t turn = 0; turn < 32 && passed; ++turn)
     {
@@ -93,8 +113,9 @@ int32_t SemaphoreWasmTests::admission()
         passed = counts.finish(state, countRecords[chosen]) && passed;
         eventRecords[chosen] = nullptr;
         countRecords[chosen] = nullptr;
-        passed = events.begin(eventRecords[chosen]).status == SEMAPHORE_OK && passed;
-        passed = counts.begin(state, countRecords[chosen], false).status == SEMAPHORE_OK && passed;
+        const SemaphoreResult registered = counts.begin(state, countRecords[chosen], false);
+        passed = events.begin(eventRecords[chosen]).status == SEMAPHORE_OK && eventRecords[chosen] != nullptr &&
+            registered.status == SEMAPHORE_OK && !registered.committed && countRecords[chosen] != nullptr && passed;
     }
     for (size_t index = 0; index < 2; ++index)
     {
@@ -131,7 +152,15 @@ int32_t SemaphoreWasmTests::run()
             return 1;
         }
         {
-            Semaphore sem;
+            SemaphoreConfig config;
+            config.configureEventPool().initialCapacity = 3;
+            Semaphore sem(config);
+            if (sem.initializationResult().status != SEMAPHORE_OK || sem.eventPoolStatistics().capacity != 3 ||
+                sem.waitPolicy().m_localSlice != 32)
+            {
+                std::printf("FAIL id=48 Wasm instance configuration\n");
+                return 1;
+            }
             sem.signal();
             if (!sem.wait(0) || sem.wait(0) || sem.waitResult(10).status != SEMAPHORE_UNSUPPORTED ||
                 sem.eventWaitResult(10).status != SEMAPHORE_UNSUPPORTED ||
@@ -139,6 +168,15 @@ int32_t SemaphoreWasmTests::run()
                 sem.processWaitResult(0).status != SEMAPHORE_UNSUPPORTED)
             {
                 std::printf("FAIL id=48 Wasm main-thread capability\n");
+                return 1;
+            }
+            const SemaphoreResult posted = sem.processSignalResult();
+            const SemaphoreResult tried = sem.tryProcessSignalResult(true, true);
+            if (posted.status != SEMAPHORE_UNSUPPORTED || posted.committed ||
+                tried.status != SEMAPHORE_UNSUPPORTED || tried.committed ||
+                sem.processSignal() || sem.tryProcessSignal() != -1)
+            {
+                std::printf("FAIL id=48 Wasm named publication capability\n");
                 return 1;
             }
             Semaphore reply;
@@ -157,6 +195,13 @@ int32_t SemaphoreWasmTests::run()
                 std::printf("FAIL id=48 Wasm nonblocking combined permit accounting\n");
                 return 1;
             }
+            const SemaphoreSignalWaitResult empty = sem.signalAndWaitResult(reply, 0);
+            if (empty.status != SEMAPHORE_TIMEOUT || empty.signalState != SEMAPHORE_COMMIT_DONE ||
+                empty.waitState != SEMAPHORE_COMMIT_NONE || !sem.wait(0) || reply.countPoolStatistics().capacity != 0)
+            {
+                std::printf("FAIL id=48 Wasm empty zero-budget reply\n");
+                return 1;
+            }
             const SemaphoreSignalWaitResult blocked = sem.signalAndWaitResult(reply, 10);
             if (blocked.status != SEMAPHORE_UNSUPPORTED || blocked.signalState != SEMAPHORE_COMMIT_DONE ||
                 blocked.waitState != SEMAPHORE_COMMIT_NONE || !sem.wait(0) || sem.wait(0))
@@ -166,7 +211,16 @@ int32_t SemaphoreWasmTests::run()
             }
         }
 #ifdef __EMSCRIPTEN_PTHREADS__
-        s_workerSemaphore = new Semaphore;
+        SemaphoreConfig workerConfig;
+        SemaphoreWaitPolicy policy;
+        policy.m_localSlice = UINT32_MAX - 1;
+        policy.m_promotionMilliseconds = UINT32_MAX - 1;
+        if (workerConfig.setWaitPolicy(policy).status != SEMAPHORE_OK)
+        {
+            std::fprintf(stderr, "FAIL id=49 invalid worker wait configuration\n");
+            return 1;
+        }
+        s_workerSemaphore = new Semaphore(workerConfig);
         pthread_attr_t attributes;
         if (pthread_attr_init(&attributes) != 0)
         {
@@ -187,13 +241,14 @@ int32_t SemaphoreWasmTests::run()
         }
         if (released != 0)
         {
-            s_cleanupFailed.store(true);
+            std::fprintf(stderr, "FAIL worker attribute cleanup: %d\n", released);
+            s_threadCleanupFailed = true;
         }
         std::printf("PASS id=48 Wasm main-thread rejection; count probe; IPC unsupported\n");
         emscripten_async_call(SemaphoreWasmTests::poll, nullptr, 1);
         emscripten_exit_with_live_runtime();
 #else
-        std::printf("NOT_RUN id=49 nonpthread build\n");
+        std::printf("NOT_RUN id=49 nonpthread build\nNOT_RUN id=67 nonpthread build\n");
 #endif
         std::printf("PASS id=48 Wasm main-thread rejection; count probe; IPC unsupported\n");
         return 0;
@@ -211,7 +266,10 @@ void* SemaphoreWasmTests::worker(void* context)
     int32_t result = 0;
     try
     {
-        if (s_workerSemaphore->waitResult(30).status != SEMAPHORE_TIMEOUT)
+        // 长片段仍受单次调用的总预算约束；主循环只有收到登记阶段后才允许发布。
+        const double countStarted = emscripten_get_now();
+        const SemaphoreResult count = s_workerSemaphore->waitResult(1250);
+        if (count.status != SEMAPHORE_TIMEOUT || count.committed || emscripten_get_now() - countStarted < 1240)
         {
             result = 1;
         }
@@ -220,27 +278,12 @@ void* SemaphoreWasmTests::worker(void* context)
         {
             result = 2;
         }
-        Semaphore sender, empty;
-        if (sender.prepareSignalAndWait().status != SEMAPHORE_OK || empty.prepareSignalAndWait().status != SEMAPHORE_OK)
-        {
-            result = 4;
-        }
-        const SemaphoreSignalWaitResult timed = sender.signalAndWaitResult(empty, 30);
-        if (timed.status != SEMAPHORE_TIMEOUT || timed.signalState != SEMAPHORE_COMMIT_DONE ||
-            timed.waitState != SEMAPHORE_COMMIT_NONE || !sender.wait(0) || sender.wait(0))
-        {
-            result = 5;
-        }
-        s_workerStage.store(3);
-        const SemaphoreSignalWaitResult replied = sender.signalAndWaitResult(*s_workerSemaphore, 1000);
-        if (replied.status != SEMAPHORE_OK || replied.signalState != SEMAPHORE_COMMIT_DONE ||
-            replied.waitState != SEMAPHORE_COMMIT_DONE || !sender.wait(0) || sender.wait(0))
-        {
-            result = 6;
-        }
         // 先验证提前事件不积存，再验证工作线程在独立记录地址等待并由主循环唤醒。
-        if (s_workerSemaphore->tryEvent().committed ||
-            s_workerSemaphore->eventWaitResult(20).status != SEMAPHORE_TIMEOUT)
+        const SemaphoreResult early = s_workerSemaphore->tryEvent();
+        const double eventStarted = emscripten_get_now();
+        const SemaphoreResult emptyEvent = s_workerSemaphore->eventWaitResult(1250);
+        if (early.status != SEMAPHORE_OK || early.committed || emptyEvent.status != SEMAPHORE_TIMEOUT ||
+            emptyEvent.committed || emscripten_get_now() - eventStarted < 1240)
         {
             result = 8;
         }
@@ -260,6 +303,26 @@ void* SemaphoreWasmTests::worker(void* context)
     catch (...)
     {
         result = 3;
+    }
+    try
+    {
+        Semaphore sender, empty;
+        const bool timedPrepared = sender.prepareSignalAndWait().status == SEMAPHORE_OK &&
+            empty.prepareSignalAndWait().status == SEMAPHORE_OK;
+        const SemaphoreSignalWaitResult timed = sender.signalAndWaitResult(empty, 30);
+        const bool timeoutValid = timed.status == SEMAPHORE_TIMEOUT && timed.signalState == SEMAPHORE_COMMIT_DONE &&
+            timed.waitState == SEMAPHORE_COMMIT_NONE && sender.wait(0) && !sender.wait(0);
+        const bool prepared = s_exchangeRequest.prepareSignalAndWait().status == SEMAPHORE_OK &&
+            s_exchangeReply.prepareSignalAndWait().status == SEMAPHORE_OK;
+        s_exchangePending.store(true);
+        const SemaphoreSignalWaitResult replied = s_exchangeRequest.signalAndWaitResult(s_exchangeReply, 1000);
+        const bool replyValid = replied.status == SEMAPHORE_OK && replied.signalState == SEMAPHORE_COMMIT_DONE &&
+            replied.waitState == SEMAPHORE_COMMIT_DONE && !s_exchangeRequest.wait(0) && !s_exchangeReply.wait(0);
+        s_exchangeResult = timedPrepared && prepared && timeoutValid && replyValid ? 0 : 6;
+    }
+    catch (...)
+    {
+        s_exchangeResult = 3;
     }
     // 此后不再访问Semaphore，主线程取得结果后才回收对象
     s_workerResult.store(result);

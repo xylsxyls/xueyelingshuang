@@ -42,6 +42,11 @@ int32_t SemaphoreProcessMemory::load(int32_t* value)
 
 bool SemaphoreProcessMemory::compareExchange(int32_t* value, int32_t expected, int32_t desired)
 {
+    // 模拟另一参与者赢得一次消费CAS，保留许可用于检查超时后能否正常消费。
+    if ((desired < expected && SemaphoreTestFault(20) != 0) || (desired > expected && SemaphoreTestFault(23) != 0))
+    {
+        return false;
+    }
     return ::InterlockedCompareExchange(reinterpret_cast<volatile LONG*>(value), desired, expected) == expected;
 }
 
@@ -81,6 +86,10 @@ SemaphoreResult SemaphoreProcessMemory::close()
     SemaphoreResult result;
     if (m_words != nullptr)
     {
+        if (SemaphoreTestFault(21) != 0)
+        {
+            return SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, ERROR_BUSY);
+        }
         if (!::UnmapViewOfFile(m_words))
         {
             result = SemaphoreResult(SEMAPHORE_SYSTEM_ERROR, false, static_cast<int32_t>(::GetLastError()));

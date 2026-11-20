@@ -17,6 +17,16 @@ option(SEMAPHORE_TEST_QUEUE "Enable read-only integration with current Queue hea
 set(SEMAPHORE_TEST_BORROWED_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/../../../include" CACHE PATH "Read-only borrowed library headers")
 
 if(EMSCRIPTEN)
+    if(SEMAPHORE_TEST_INSTRUMENTATION)
+        message(FATAL_ERROR "Wasm uses its own admission fixture; disable native test instrumentation")
+    endif()
+    # 用当前生产源单独生成测试私有静态库，归档与调用者采用同一地址宽度和线程模型。
+    if(NOT TARGET Semaphore AND NOT SEMAPHORE_TEST_LIBRARY AND NOT SEMAPHORE_TEST_INSTRUMENTATION)
+        file(GLOB semaphore_wasm_sources CONFIGURE_DEPENDS "${semaphore_source}/*.cpp")
+        add_library(Semaphore STATIC ${semaphore_wasm_sources})
+        target_compile_definitions(Semaphore PUBLIC STATIC_LIB)
+        target_compile_options(Semaphore PRIVATE -fexceptions)
+    endif()
     add_executable(SemaphoreTest SemaphoreWasmTests.cpp)
     target_compile_options(SemaphoreTest PRIVATE -fexceptions)
     target_link_options(SemaphoreTest PRIVATE -fexceptions -sDISABLE_EXCEPTION_CATCHING=0 -sEXIT_RUNTIME=1)
@@ -28,16 +38,25 @@ if(EMSCRIPTEN)
         endif()
     endif()
 else()
-    add_executable(SemaphoreTest SemaphoreTest.cpp SemaphoreTestProcess.cpp SemaphoreTests.cpp SemaphorePolicyTests.cpp SemaphoreFairness.cpp SemaphoreRetryTests.cpp)
+    option(SEMAPHORE_TEST_HOST_LIBRARY "Build a native test library for a mobile host" OFF)
+    if(SEMAPHORE_TEST_HOST_LIBRARY)
+        add_library(SemaphoreTest STATIC)
+        target_compile_definitions(SemaphoreTest PRIVATE SEMAPHORE_TEST_HOST_LIBRARY)
+    else()
+        add_executable(SemaphoreTest)
+    endif()
+    target_sources(SemaphoreTest PRIVATE SemaphoreTest.cpp SemaphoreTestProcess.cpp SemaphoreTests.cpp SemaphorePolicyTests.cpp SemaphoreFairness.cpp SemaphoreRetryTests.cpp)
     find_package(Threads REQUIRED)
-    target_link_libraries(SemaphoreTest PRIVATE Threads::Threads)
+    target_link_libraries(SemaphoreTest PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
+    set_target_properties(SemaphoreTest PROPERTIES POSITION_INDEPENDENT_CODE ON)
     if(SEMAPHORE_TEST_QUEUE)
         target_sources(SemaphoreTest PRIVATE SemaphoreQueueTests.cpp)
         target_compile_definitions(SemaphoreTest PRIVATE SEMAPHORE_TEST_QUEUE)
         target_include_directories(SemaphoreTest BEFORE PRIVATE "${SEMAPHORE_TEST_BORROWED_INCLUDE}")
     endif()
 endif()
-target_include_directories(SemaphoreTest PRIVATE "${SEMAPHORE_TEST_INCLUDE}")
+# 仅用于项目双引号头，避免大小写不敏感卷把系统 <semaphore.h> 解析到 Semaphore.h。
+target_compile_options(SemaphoreTest PRIVATE "-iquote${SEMAPHORE_TEST_INCLUDE}")
 
 # 白盒副本仅在测试构建目录生成，生产源码不包含测试宏或钩子
 if(SEMAPHORE_TEST_INSTRUMENTATION)
@@ -55,7 +74,7 @@ if(SEMAPHORE_TEST_INSTRUMENTATION)
     set(semaphore_generated "${CMAKE_CURRENT_BINARY_DIR}/SemaphoreInstrumented")
     set(semaphore_instrumented_sources
         "${semaphore_generated}/Semaphore.cpp" "${semaphore_generated}/SemaphoreWake.cpp"
-        "${semaphore_generated}/SemaphoreEventPool.cpp" "${semaphore_generated}/SemaphoreCount.cpp")
+        "${semaphore_generated}/SemaphoreEventPool.cpp" "${semaphore_generated}/SemaphoreCount.cpp" "${semaphore_generated}/SemaphoreRetry.cpp")
     add_custom_target(SemaphoreTestGenerateSources
         COMMAND "${CMAKE_COMMAND}" -E make_directory "${semaphore_generated}"
         COMMAND "${semaphore_instrument_command}" "${semaphore_source}" "${semaphore_generated}"
@@ -68,18 +87,41 @@ if(SEMAPHORE_TEST_INSTRUMENTATION)
     set_source_files_properties(${semaphore_instrumented_sources} PROPERTIES GENERATED TRUE)
     target_sources(SemaphoreTest PRIVATE ${semaphore_instrumented_sources}
         "${semaphore_source}/SemaphoreResult.cpp" "${semaphore_source}/SemaphoreDeadline.cpp"
-        "${semaphore_source}/SemaphoreProcessMemory.cpp" "${semaphore_source}/SemaphoreRetry.cpp")
-    target_include_directories(SemaphoreTest PRIVATE "${semaphore_generated}" "${semaphore_source}" "${CMAKE_CURRENT_LIST_DIR}")
+        "${semaphore_source}/SemaphoreConfig.cpp" "${semaphore_source}/SemaphoreProcessMemory.cpp")
+    target_compile_options(SemaphoreTest PRIVATE "-iquote${semaphore_generated}" "-iquote${semaphore_source}" "-iquote${CMAKE_CURRENT_LIST_DIR}")
     target_compile_definitions(SemaphoreTest PRIVATE STATIC_LIB SEMAPHORE_TEST_INSTRUMENTATION)
-    if(CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android)$")
-        target_link_libraries(SemaphoreTest PRIVATE atomic)
-    endif()
 elseif(TARGET Semaphore)
     target_link_libraries(SemaphoreTest PRIVATE Semaphore)
 elseif(EXISTS "${SEMAPHORE_TEST_LIBRARY}")
     target_link_libraries(SemaphoreTest PRIVATE "${SEMAPHORE_TEST_LIBRARY}")
 else()
     message(FATAL_ERROR "Set SEMAPHORE_TEST_LIBRARY to a matching prepared library")
+endif()
+# 私有白盒和直接传入的静态库路径都需要目标平台的链接依赖。
+# CMake目标自带依赖；对于裸归档，实际链接一次，以免在不需要的架构强加libatomic。
+if(CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android)$" AND (SEMAPHORE_TEST_INSTRUMENTATION OR NOT TARGET Semaphore))
+    include(CheckCXXSourceCompiles)
+    function(semaphore_test_link_atomics)
+        set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
+        check_cxx_source_compiles([=[
+            #include <atomic>
+            #include <stdint.h>
+            int main()
+            {
+                std::atomic<uint64_t> count(0);
+                uint64_t expected = 0;
+                count.compare_exchange_strong(expected, 1);
+                return count.is_lock_free() ? 0 : 1;
+            }
+        ]=] SEMAPHORE_TEST_ATOMICS_LINK)
+        if(NOT SEMAPHORE_TEST_ATOMICS_LINK)
+            target_link_libraries(SemaphoreTest PRIVATE atomic)
+        endif()
+    endfunction()
+    semaphore_test_link_atomics()
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_link_libraries(SemaphoreTest PRIVATE rt)
+    endif()
 endif()
 option(PROCESS_WORK_PORTABLE_NOTIFY "Exercise the mobile backend in a private test build" OFF)
 if(PROCESS_WORK_PORTABLE_NOTIFY)
@@ -92,7 +134,7 @@ enable_testing()
 if(EMSCRIPTEN)
     add_test(NAME SemaphoreWasm COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} "$<TARGET_FILE:SemaphoreTest>")
     set_tests_properties(SemaphoreWasm PROPERTIES TIMEOUT 180)
-else()
-    add_test(NAME SemaphoreTest COMMAND SemaphoreTest --mode instant --output "${CMAKE_CURRENT_BINARY_DIR}/reports")
-    set_tests_properties(SemaphoreTest PROPERTIES TIMEOUT 180)
+elseif(NOT SEMAPHORE_TEST_HOST_LIBRARY)
+    add_test(NAME SemaphoreTest COMMAND SemaphoreTest --mode instant --output-parent "${CMAKE_CURRENT_BINARY_DIR}")
+    set_tests_properties(SemaphoreTest PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
 endif()

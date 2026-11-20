@@ -4,6 +4,8 @@
 #include "SemaphoreTestProcess.h"
 #ifdef SEMAPHORE_TEST_INSTRUMENTATION
 #include "SemaphoreCount.h"
+#include "SemaphoreRetry.h"
+#include "SemaphoreDeadline.h"
 #endif
 #if defined(_WIN32) && defined(PROCESS_WORK_PORTABLE_NOTIFY)
 #include "SemaphoreTestProcessMemory.h"
@@ -27,8 +29,12 @@
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <signal.h>
+#ifndef SEMAPHORE_TEST_EXTERNAL_LAUNCH
 #include <spawn.h>
+#endif
+#ifndef SEMAPHORE_TEST_EXTERNAL_LAUNCH
 extern char** environ;
+#endif
 #endif
 
 static std::atomic<SemaphoreTestGate*> s_gate(nullptr);
@@ -40,6 +46,23 @@ static uint64_t s_seedValue = 0;
 static std::atomic<int32_t> s_spuriousWakes(0);
 static double s_spuriousUntil = 0;
 static std::atomic<uint32_t> s_publishAttempts(0);
+
+// UINT32_MAX关闭记录，0等待下一次实际睡眠参数。
+static std::atomic<uint32_t> s_observedSlice(UINT32_MAX);
+
+// 本轮退避采用的提示次数，配置用例在同一线程读取。
+static std::atomic<uint32_t> s_observedPauses(0);
+
+void SemaphoreTestObservePauses(uint32_t pauses)
+{
+    s_observedPauses.store(pauses);
+}
+
+void SemaphoreTestObserveSlice(uint32_t milliseconds)
+{
+    uint32_t expected = 0;
+    s_observedSlice.compare_exchange_strong(expected, milliseconds);
+}
 
 uint32_t SemaphoreTestPublishAttempts(bool reset)
 {
@@ -319,7 +342,68 @@ std::string SemaphoreTests::name(int32_t suffix)
     return buffer;
 }
 
-int32_t SemaphoreTests::peer(const std::string& logicalName, bool exchange)
+/** 在创建端等待对端就绪，逐次核对发布与回执；两端只使用公开命名通知接口。
+@param [in,out] request 已打开的请求对象
+@param [in,out] response 已打开的响应对象
+@param [in] combined true时完成200次组合往返，false时完成一次分步往返
+@param [in] readyTimeout 等待对端启动的毫秒数
+@return 在预算内交付并确认全部请求
+*/
+static bool ExchangeRequests(Semaphore& request, Semaphore& response, bool combined, int32_t readyTimeout)
+{
+    if (!response.processWait(readyTimeout))
+    {
+        return false;
+    }
+    for (int32_t i = 0; i < (combined ? 200 : 1); ++i)
+    {
+        if (combined)
+        {
+            const SemaphoreSignalWaitResult result = request.processSignalAndWaitResult(response, 5000);
+            if (result.status != SEMAPHORE_OK || result.signalState != SEMAPHORE_COMMIT_DONE ||
+                result.waitState != SEMAPHORE_COMMIT_DONE)
+            {
+                return false;
+            }
+        }
+        else
+        {
+            const SemaphoreResult sent = request.processSignalResult();
+            if (sent.status != SEMAPHORE_OK || !sent.committed || !response.processWait(5000))
+            {
+                return false;
+            }
+        }
+    }
+    return !request.processWait(0) && !response.processWait(0);
+}
+
+int32_t SemaphoreTests::session(int32_t id, const std::string& role, const std::string& logicalName)
+{
+    if ((id != 41 && id != 60) || logicalName.empty() || logicalName.size() > 29)
+    {
+        return 2;
+    }
+    if (role == "peer")
+    {
+        return peer(logicalName, id == 60, 30000);
+    }
+    if (role != "owner")
+    {
+        return 2;
+    }
+    Semaphore request, response;
+    check(request.createProcessResult(logicalName).status == SEMAPHORE_OK, "external owner creates request");
+    check(response.createProcessResult(logicalName + "r").status == SEMAPHORE_OK, "external owner creates response");
+    std::printf("READY id=%d name=%s\n", id, logicalName.c_str());
+    std::fflush(stdout);
+    check(ExchangeRequests(request, response, id == 60, 30000), "external IPC exchange and permit balance");
+    check(response.closeProcessResult().status == SEMAPHORE_OK, "external owner closes response");
+    check(request.closeProcessResult().status == SEMAPHORE_OK, "external owner closes request");
+    return 0;
+}
+
+int32_t SemaphoreTests::peer(const std::string& logicalName, bool exchange, int32_t firstTimeout)
 {
     try
     {
@@ -328,7 +412,7 @@ int32_t SemaphoreTests::peer(const std::string& logicalName, bool exchange)
         check(request.openProcessResult(logicalName).status == SEMAPHORE_OK, "child open request");
         check(response.openProcessResult(logicalName + "r").status == SEMAPHORE_OK, "child open response");
         check(response.processSignalResult().committed, "child ready");
-        check(request.processWaitResult(-1).committed, "child infinite request");
+        check(request.processWaitResult(firstTimeout).committed, "child receives first request");
         if (exchange)
         {
             for (int32_t i = 0; i < 199; ++i)
@@ -353,6 +437,301 @@ int32_t SemaphoreTests::peer(const std::string& logicalName, bool exchange)
 
 bool SemaphoreTests::runCase(int32_t id)
 {
+    if (id == 91 || id == 92)
+    {
+#ifndef SEMAPHORE_TEST_INSTRUMENTATION
+        if (id == 92)
+        {
+            return false;
+        }
+#endif
+        for (int32_t prepared = 0; prepared <= 1; ++prepared)
+        {
+            Semaphore sender, receiver;
+            if (prepared != 0)
+            {
+                check(sender.prepareSignalAndWait().status == SEMAPHORE_OK &&
+                    receiver.prepareSignalAndWait().status == SEMAPHORE_OK, "prepare both endpoints");
+            }
+            if (id == 91)
+            {
+                const SemaphoreSignalWaitResult result = sender.signalAndWaitResult(receiver, 0);
+                check(result.status == SEMAPHORE_TIMEOUT && result.signalState == SEMAPHORE_COMMIT_DONE &&
+                    result.waitState == SEMAPHORE_COMMIT_NONE && sender.wait(0) && !sender.wait(0) &&
+                    receiver.countPoolStatistics().capacity == 0, "empty zero-budget reply must not create a pool");
+            }
+#ifdef SEMAPHORE_TEST_INSTRUMENTATION
+            else
+            {
+                check(receiver.signal(), "prepare a reply before the losing send");
+                SemaphoreTestGate gate(23);
+                SemaphoreTestThreads threads;
+                SemaphoreSignalWaitResult result;
+                /** 捕获两端与结果，等待竞争者先更新源计数；主线程在回收后检查结果
+                */
+                threads.start([&]()
+                {
+                    result = sender.signalAndWaitResult(receiver, prepared == 0 ? 0 : 10);
+                });
+                const bool reached = gate.reached();
+                const bool other = sender.signal();
+                if (prepared != 0)
+                {
+                    pause(30);
+                }
+                gate.release();
+                threads.join();
+                check(reached && other && result.status == SEMAPHORE_TIMEOUT &&
+                    result.signalState == SEMAPHORE_COMMIT_NONE && result.waitState == SEMAPHORE_COMMIT_NONE &&
+                    sender.wait(0) && !sender.wait(0) && receiver.wait(0) && !receiver.wait(0),
+                    "expired combined send must not retry a lost CAS or consume a reply");
+            }
+#endif
+        }
+#if defined(_WIN32) && defined(PROCESS_WORK_PORTABLE_NOTIFY) && defined(SEMAPHORE_TEST_INSTRUMENTATION)
+        if (id == 92)
+        {
+            Semaphore sender, receiver;
+            check(sender.createProcessResult(name(id)).status == SEMAPHORE_OK &&
+                receiver.createProcessResult(name(id) + "r").status == SEMAPHORE_OK && receiver.processSignal(),
+                "prepare shared counter reply");
+            s_faultCountdown.store(1);
+            s_faultPoint.store(23);
+            const SemaphoreSignalWaitResult result = sender.processSignalAndWaitResult(receiver, 0);
+            s_faultPoint.store(0);
+            check(result.status == SEMAPHORE_TIMEOUT && result.signalState == SEMAPHORE_COMMIT_NONE &&
+                result.waitState == SEMAPHORE_COMMIT_NONE && !sender.processWait(0) &&
+                receiver.processWait(0) && !receiver.processWait(0), "expired mobile send leaves the reply untouched");
+        }
+#endif
+        return true;
+    }
+    if (id == 90)
+    {
+        SemaphoreConfig config;
+        SemaphoreWaitPolicy policy;
+        policy.m_localSlice = UINT32_MAX - 1;
+        policy.m_promotionMilliseconds = UINT32_MAX - 1;
+        check(config.setWaitPolicy(policy).status == SEMAPHORE_OK, "accept maximum finite local slice");
+        Semaphore sem(config);
+        for (int32_t mode = 0; mode < 2; ++mode)
+        {
+            const double started = now();
+            const SemaphoreResult result = mode == 0 ? sem.waitResult(1250) : sem.eventWaitResult(1250);
+            check(result.status == SEMAPHORE_TIMEOUT && !result.committed && now() - started >= 1240,
+                "multi-second slice respects the finite count or event deadline");
+        }
+        sem.signal();
+        check(sem.wait(0) && !sem.wait(0), "long timeout leaves the next permit usable exactly once");
+        return true;
+    }
+    if (id == 89)
+    {
+        SemaphoreConfig config;
+        Semaphore lazy(config);
+        const SemaphoreWaitPolicy defaults = lazy.waitPolicy();
+        check(defaults.m_promotionMilliseconds == 32 && defaults.m_localSlice == 32 && defaults.m_mobileSlice == 1 &&
+            defaults.m_posixSlice == 2 && defaults.m_capacityAttempts == 4096 && defaults.m_capacitySleep == 1 && defaults.m_contentionYieldInterval == 16 &&
+            defaults.m_initialPauses == 16 && defaults.m_maximumPauses == 256 &&
+            lazy.eventPoolStatistics().capacity == 0 && lazy.countPoolStatistics().capacity == 0, "lazy defaults");
+        SemaphoreWaitPolicy policy;
+        policy.m_promotionMilliseconds = 0;
+        policy.m_localSlice = 3;
+        policy.m_mobileSlice = 4;
+        policy.m_posixSlice = 5;
+        policy.m_capacityAttempts = 0;
+        policy.m_capacitySleep = 2;
+        policy.m_contentionYieldInterval = 2;
+        policy.m_initialPauses = 0;
+        policy.m_maximumPauses = 0;
+        check(config.setWaitPolicy(policy).status == SEMAPHORE_OK, "custom wait policy");
+        SemaphoreWaitPolicy invalid = policy;
+        invalid.m_localSlice = 0;
+        check(config.setWaitPolicy(invalid).status == SEMAPHORE_INVALID, "zero sleep rejected");
+        // 逐字段拒绝非法参数，每次都从同一有效配置出发，避免上一次错误掩盖下一项。
+        for (int32_t field = 0; field < 10; ++field)
+        {
+            invalid = policy;
+            switch (field)
+            {
+            case 0: invalid.m_promotionMilliseconds = UINT32_MAX; break;
+            case 1: invalid.m_localSlice = UINT32_MAX; break;
+            case 2: invalid.m_mobileSlice = 0; break;
+            case 3: invalid.m_mobileSlice = 1000; break;
+            case 4: invalid.m_posixSlice = 0; break;
+            case 5: invalid.m_posixSlice = 1000; break;
+            case 6: invalid.m_capacitySleep = 0; break;
+            case 7: invalid.m_contentionYieldInterval = 0; break;
+            case 8: invalid.m_initialPauses = 1; break;
+            case 9: invalid.m_capacitySleep = UINT32_MAX; break;
+            }
+            check(config.setWaitPolicy(invalid).status == SEMAPHORE_INVALID, "invalid policy field");
+        }
+        invalid = policy;
+        invalid.m_maximumPauses = 1025;
+        check(config.setWaitPolicy(invalid).status == SEMAPHORE_INVALID && config.eventPool() == nullptr &&
+            config.countPool() == nullptr && config.waitPolicy().m_localSlice == 3, "policy errors preserve configuration");
+        SemaphoreConfig priority;
+        check(priority.setWaitPolicy(policy).status == SEMAPHORE_OK, "zero promotion setup");
+        priority.configureCountPool().initialCapacity = 0;
+        priority.configureCountPool().maxCapacity = 0;
+        Semaphore denied(priority);
+        check(denied.waitResult(1000).status == SEMAPHORE_CAPACITY, "zero promotion reaches configured empty count pool");
+#ifdef SEMAPHORE_TEST_INSTRUMENTATION
+        SemaphoreCount countPool;
+        std::atomic<uint64_t> available(1);
+        SemaphoreEventRecord* record = nullptr;
+        const SemaphoreDeadline expired(false, 0);
+        s_faultCountdown.store(1);
+        s_faultPoint.store(22);
+        const SemaphoreResult lost = countPool.begin(available, record, true, &expired);
+        s_faultPoint.store(0);
+        check(lost.status == SEMAPHORE_TIMEOUT && !lost.committed && record == nullptr && available.load() == 1,
+            "no second CAS after losing a probe at its deadline");
+        uint32_t attempts = 0;
+        SemaphoreRetry::contention(attempts, policy);
+        check(attempts == 1, "first contention round");
+        SemaphoreRetry::contention(attempts, policy);
+        check(attempts == 0, "custom contention yield period");
+#if defined(_M_IX86) || defined(_M_X64) || defined(__i386__) || defined(__x86_64__)
+        check(s_observedPauses.load() == 0, "configured zero disables processor pauses");
+        SemaphoreConfig backoff;
+        SemaphoreWaitPolicy tuned;
+        tuned.m_initialPauses = 3;
+        tuned.m_maximumPauses = 7;
+        tuned.m_contentionYieldInterval = 4;
+        check(backoff.setWaitPolicy(tuned).status == SEMAPHORE_OK, "configure processor backoff");
+        Semaphore tunedInstance(backoff);
+        const uint32_t expected[] = {3, 6, 7, 7, 3};
+        for (size_t i = 0; i < sizeof(expected) / sizeof(expected[0]); ++i)
+        {
+            SemaphoreRetry::contention(attempts, tunedInstance.waitPolicy());
+            check(s_observedPauses.load() == expected[i], "backoff follows initial, cap and yield reset");
+        }
+        attempts = 0;
+#endif
+        const double retryStarted = now();
+        check(SemaphoreRetry::capacity(attempts, policy.m_capacityAttempts, policy.m_capacitySleep).status == SEMAPHORE_OK &&
+            attempts == 0 && now() - retryStarted >= 1, "zero fast attempts sleeps on first retry");
+#endif
+        SemaphorePoolConfig& events = config.configureEventPool();
+        events.initialCapacity = 0;
+        events.freeThreshold = 1;
+        events.maxCapacity = -1;
+        events.m_maintenanceBudget = 1;
+        // 回调返回固定数量，便于从公开统计独立检查增长和维护预算。
+        /** 以固定增长量验证配置在真正申请记录时被调用
+        @param [in] context 当前池的增长快照
+        @return 单批新增三条记录
+        */
+        events.grow = [](const SemaphoreGrowContext& context) -> size_t
+        {
+            return context.initialCapacity == 0 ? 3 : 0;
+        };
+        /** 空闲满一毫秒后请求缩减全部空闲容量，用每次实际释放量校验维护预算
+        @param [in] context 当前池的缩减快照
+        @return 缩减申请及空闲期限
+        */
+        events.shrink = [](const SemaphoreShrinkContext& context) -> SemaphoreShrinkDecision
+        {
+            const SemaphoreShrinkDecision decision = {context.freeCapacity, 1};
+            return decision;
+        };
+        SemaphorePoolConfig& counts = config.configureCountPool();
+        counts.initialCapacity = 2;
+        counts.maxCapacity = 2;
+        Semaphore configured(config);
+        const SemaphoreWaitPolicy applied = configured.waitPolicy();
+        check(configured.initializationResult().status == SEMAPHORE_OK && configured.countPoolStatistics().capacity == 2 &&
+            applied.m_promotionMilliseconds == 0 && applied.m_localSlice == 3 && applied.m_mobileSlice == 4 &&
+            applied.m_posixSlice == 5 && applied.m_capacityAttempts == 0 && applied.m_capacitySleep == 2 && applied.m_contentionYieldInterval == 2 &&
+            applied.m_initialPauses == 0 && applied.m_maximumPauses == 0, "instance policy");
+#ifdef SEMAPHORE_TEST_INSTRUMENTATION
+#if defined(PROCESS_WORK_PORTABLE_NOTIFY) || defined(SEMAPHORE_TEST_POSIX_NAME) || !defined(_WIN32)
+        {
+            Semaphore owner(config);
+            check(owner.createProcessResult(name(id + 100), 1).status == SEMAPHORE_OK, "slice owner");
+            s_observedSlice.store(0);
+            const SemaphoreResult empty = owner.processWaitResult(60);
+#if defined(SEMAPHORE_SHARED_COUNTER) || defined(PROCESS_WORK_PORTABLE_NOTIFY)
+            const uint32_t expectedSlice = applied.m_mobileSlice;
+#else
+            const uint32_t expectedSlice = applied.m_posixSlice;
+#endif
+            check(empty.status == SEMAPHORE_TIMEOUT && s_observedSlice.exchange(UINT32_MAX) == expectedSlice &&
+                owner.closeProcessResult().status == SEMAPHORE_OK, "configured named sleep slice");
+        }
+#endif
+        s_observedSlice.store(0);
+#endif
+        check(configured.eventWaitResult(60).status == SEMAPHORE_TIMEOUT && configured.eventPoolStatistics().capacity == 3,
+            "configured pool grows by callback");
+#ifdef SEMAPHORE_TEST_INSTRUMENTATION
+        check(s_observedSlice.exchange(UINT32_MAX) == applied.m_localSlice, "configured local sleep slice");
+#endif
+        size_t released = 0;
+        check(configured.maintainEventPool(released).status == SEMAPHORE_OK, "reclaim retired event");
+        pause(5);
+        const size_t before = configured.eventPoolStatistics().capacity;
+        check(configured.maintainEventPool(released).status == SEMAPHORE_OK && released == 1 &&
+            configured.eventPoolStatistics().capacity == before - 1, "bounded maintenance");
+        // 用另一个实例复用策略，只配置计数池。增长、上限和每次缩减量通过公开接口观测。
+        SemaphorePoolConfig& countPolicy = priority.configureCountPool();
+        countPolicy = events;
+        countPolicy.maxCapacity = 2;
+        countPolicy.freeThreshold = 0;
+        Semaphore countOnly(priority);
+        check(countOnly.initializationResult().status == SEMAPHORE_OK && countOnly.countPoolStatistics().capacity == 0 &&
+            countOnly.waitResult(60).status == SEMAPHORE_TIMEOUT && countOnly.countPoolStatistics().capacity == 2 &&
+            countOnly.eventPoolStatistics().capacity == 0, "count pool callback growth and cap");
+        check(countOnly.maintainCountPool(released).status == SEMAPHORE_OK, "reclaim retired count record");
+        pause(5);
+        const size_t countBefore = countOnly.countPoolStatistics().capacity;
+        check(countBefore > 0 && countOnly.maintainCountPool(released).status == SEMAPHORE_OK && released == 1 &&
+            countOnly.countPoolStatistics().capacity == countBefore - 1, "independent count pool maintenance budget");
+        // 池仍有空闲记录时，只有正阈值会触发提前增长。两个实例的选择互不影响。
+        countPolicy = SemaphorePoolConfig();
+        countPolicy.initialCapacity = 2;
+        countPolicy.maxCapacity = 4;
+        Semaphore onExhaustion(priority);
+        countPolicy.freeThreshold = 1;
+        Semaphore atThreshold(priority);
+        check(onExhaustion.initializationResult().status == SEMAPHORE_OK && atThreshold.initializationResult().status == SEMAPHORE_OK,
+            "preallocate independent count pools");
+        check(onExhaustion.waitResult(60).status == SEMAPHORE_TIMEOUT && atThreshold.waitResult(60).status == SEMAPHORE_TIMEOUT,
+            "single wait uses one record in each count pool");
+        const SemaphorePoolStats exhausted = onExhaustion.countPoolStatistics();
+        const SemaphorePoolStats early = atThreshold.countPoolStatistics();
+        check(exhausted.capacity == 2 && exhausted.successfulGrowCount == 0 && early.capacity == 4 && early.successfulGrowCount == 1,
+            "count free threshold controls growth before exhaustion");
+        counts.initialCapacity = 3;
+        Semaphore failed(config);
+        check(failed.initializationResult().status == SEMAPHORE_INVALID && failed.eventPoolStatistics().capacity == 0 &&
+            !failed.signal() && configured.signal() && configured.wait(0) && lazy.eventPoolStatistics().capacity == 0,
+            "partial initialization rolls back and instances are independent");
+        counts.initialCapacity = 2;
+        events.m_maintenanceBudget = 65;
+        Semaphore invalidBudget(config);
+        check(invalidBudget.initializationResult().status == SEMAPHORE_INVALID, "invalid maintenance budget");
+#if defined(_WIN32) && defined(PROCESS_WORK_PORTABLE_NOTIFY) && defined(SEMAPHORE_TEST_INSTRUMENTATION)
+        check(configured.createProcessResult(name(id), 1).status == SEMAPHORE_OK && configured.processSignal(),
+            "mobile fixture posted permit");
+        s_faultCountdown.store(1);
+        s_faultPoint.store(20);
+        const SemaphoreResult poll = configured.processWaitResult(0);
+        s_faultPoint.store(0);
+        check(poll.status == SEMAPHORE_TIMEOUT && !poll.committed && configured.processWait(0),
+            "expired budget after lost CAS preserves permit");
+        s_faultCountdown.store(1);
+        s_faultPoint.store(21);
+        const SemaphoreResult partial = configured.closeProcessResult();
+        s_faultPoint.store(0);
+        check(partial.status == SEMAPHORE_SYSTEM_ERROR && configured.processWaitResult(0).status == SEMAPHORE_NOT_OPEN &&
+            !configured.tryOpenProcessSemaphore(name(id)) && configured.closeProcessResult().status == SEMAPHORE_OK,
+            "partial close only permits cleanup retry");
+#endif
+        return true;
+    }
     if (id == 88)
     {
         check(SemaphoreRetryTests::run(), "retry options, capacity release and saturated backoff");
@@ -980,7 +1359,7 @@ bool SemaphoreTests::runCase(int32_t id)
             });
         threads.join();
         size_t released;
-        sem.maintainEventPool(released);
+        check(completed.load() == 12000 && sem.maintainEventPool(released).status == SEMAPHORE_OK, "stress completed");
         const SemaphorePoolStats stats = sem.eventPoolStatistics();
         check(stats.capacity <= 64 && stats.freeCapacity == stats.capacity && stats.retiredCapacity == 0,
             "stress no lost records");
@@ -1158,9 +1537,9 @@ bool SemaphoreTests::runCase(int32_t id)
     {
 #if defined(SEMAPHORE_TEST_POSIX_NAME)
         return false; // 进程内名称替身不能验证独立进程共享。
-#elif defined(__APPLE__) && TARGET_OS_IPHONE
+#elif defined(SEMAPHORE_TEST_EXTERNAL_LAUNCH)
         std::printf(
-            "NOT_RUN_DETAIL id=%d iOS requires two host applications sharing an App Group; fork is unavailable\n", id);
+            "NOT_RUN_DETAIL id=%d external mobile IPC peer required; isolated peer launch unavailable\n", id);
         return false;
 #else
         Semaphore request;
@@ -1180,26 +1559,7 @@ bool SemaphoreTests::runCase(int32_t id)
         check(::CreateProcessA(nullptr, &mutableCommand[0], nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr,
                   &startup, &process) != FALSE,
             "spawn independent process");
-        const bool ready = response.processWait(5000);
-        bool sent = true, replied = true;
-        for (int32_t i = 0; i < (id == 60 ? 200 : 1); ++i)
-        {
-            if (id == 60)
-            {
-                const SemaphoreSignalWaitResult result = request.processSignalAndWaitResult(response, 5000);
-                sent = sent && result.signalState == SEMAPHORE_COMMIT_DONE;
-                replied = replied && result.status == SEMAPHORE_OK && result.waitState == SEMAPHORE_COMMIT_DONE;
-            }
-            else
-            {
-                sent = request.processSignalResult().committed;
-                replied = response.processWait(5000);
-            }
-            if (!sent || !replied)
-            {
-                break;
-            }
-        }
+        const bool exchanged = ExchangeRequests(request, response, id == 60, 5000);
         const DWORD waited = ::WaitForSingleObject(process.hProcess, 5000);
         DWORD code = 1;
         if (waited != WAIT_OBJECT_0)
@@ -1210,7 +1570,7 @@ bool SemaphoreTests::runCase(int32_t id)
         const bool statusRead = ::GetExitCodeProcess(process.hProcess, &code) != FALSE;
         const bool threadClosed = ::CloseHandle(process.hThread) != FALSE;
         const bool processClosed = ::CloseHandle(process.hProcess) != FALSE;
-        check(ready && sent && replied && waited == WAIT_OBJECT_0 && statusRead && code == 0 &&
+        check(exchanged && waited == WAIT_OBJECT_0 && statusRead && code == 0 &&
                 threadClosed && processClosed, "true IPC handshake, child exit and resource cleanup");
 #else
         // 子程序从全新地址空间打开对象，不能在fork后调用继承的库实例
@@ -1221,26 +1581,7 @@ bool SemaphoreTests::runCase(int32_t id)
         pid_t child = -1;
         check(::posix_spawn(&child, executable.c_str(), nullptr, nullptr, arguments, environ) == 0,
             "spawn independent peer");
-        const bool ready = response.processWait(5000);
-        bool sent = true, replied = true;
-        for (int32_t i = 0; i < (id == 60 ? 200 : 1); ++i)
-        {
-            if (id == 60)
-            {
-                const SemaphoreSignalWaitResult result = request.processSignalAndWaitResult(response, 5000);
-                sent = sent && result.signalState == SEMAPHORE_COMMIT_DONE;
-                replied = replied && result.status == SEMAPHORE_OK && result.waitState == SEMAPHORE_COMMIT_DONE;
-            }
-            else
-            {
-                sent = request.processSignalResult().committed;
-                replied = response.processWait(5000);
-            }
-            if (!sent || !replied)
-            {
-                break;
-            }
-        }
+        const bool exchanged = ExchangeRequests(request, response, id == 60, 5000);
         int32_t status = 0;
         pid_t joined = 0;
         const double deadline = now() + 5000;
@@ -1268,10 +1609,9 @@ bool SemaphoreTests::runCase(int32_t id)
             }
             check(stopped && reaped == child, "timed out IPC peer is terminated and reaped");
         }
-        check(ready && sent && replied && joined == child && WIFEXITED(status) && WEXITSTATUS(status) == 0,
+        check(exchanged && joined == child && WIFEXITED(status) && WEXITSTATUS(status) == 0,
             "true IPC handshake");
 #endif
-        check(!request.processWait(0) && !response.processWait(0), "IPC handshake leaves no surplus permits");
 #endif
     }
     else if (id == 42)
@@ -1391,51 +1731,55 @@ bool SemaphoreTests::runCase(int32_t id)
     else if (id == 45)
     {
 #ifdef SEMAPHORE_TEST_INSTRUMENTATION
-        const int32_t before = s_allocationCalls.load();
-        delete new Semaphore;
-        const int32_t allocationSites = s_allocationCalls.load() - before;
-        check(allocationSites >= 1, "real object allocation sites observed");
-        for (int32_t failure = 1; failure <= allocationSites; ++failure)
+        const int32_t before = s_liveAllocations.load();
         {
-            s_allocationCountdown.store(failure);
-            bool failed = false;
-            try
+            const int32_t before = s_allocationCalls.load();
+            delete new Semaphore;
+            const int32_t allocationSites = s_allocationCalls.load() - before;
+            check(allocationSites >= 1, "real object allocation sites observed");
+            for (int32_t failure = 1; failure <= allocationSites; ++failure)
             {
-                delete new Semaphore;
+                s_allocationCountdown.store(failure);
+                bool failed = false;
+                try
+                {
+                    delete new Semaphore;
+                }
+                catch (const std::bad_alloc&)
+                {
+                    failed = true;
+                }
+                s_allocationCountdown.store(0);
+                check(failed, "real allocation failure propagated");
+                Semaphore retry;
+                retry.signal();
+                check(retry.wait(0), "construction retry after failure");
             }
-            catch (const std::bad_alloc&)
+            Semaphore prepared;
+            const int32_t beforeEvent = s_allocationCalls.load();
+            check(prepared.eventWaitResult(1).status == SEMAPHORE_TIMEOUT, "initial event allocation probe");
+            const int32_t eventSites = s_allocationCalls.load() - beforeEvent;
+            check(eventSites >= 17, "real lazy pool allocations observed");
+            for (int32_t failure = 1; failure <= eventSites; ++failure)
             {
-                failed = true;
+                Semaphore fresh;
+                s_allocationCountdown.store(failure);
+                const SemaphoreResult result = fresh.eventWaitResult(1);
+                s_allocationCountdown.store(0);
+                check(result.status == SEMAPHORE_NO_MEMORY && fresh.eventPoolStatistics().capacity == 0,
+                    "failed lazy pool leaves no partial publication");
+                check(fresh.eventWaitResult(1).status == SEMAPHORE_TIMEOUT, "lazy pool retry after allocation failure");
             }
-            s_allocationCountdown.store(0);
-            check(failed, "real allocation failure propagated");
-            Semaphore retry;
-            retry.signal();
-            check(retry.wait(0), "construction retry after failure");
+            Semaphore sem;
+            const int32_t quiet = s_allocationCalls.load();
+            sem.signal();
+            sem.event();
+            sem.eventAll();
+            check(s_allocationCalls.load() == quiet, "signal/event paths allocate nothing");
+            std::printf(
+                "METRIC constructor_allocation_sites=%d first_event_allocation_sites=%d\n", allocationSites, eventSites);
         }
-        Semaphore prepared;
-        const int32_t beforeEvent = s_allocationCalls.load();
-        check(prepared.eventWaitResult(1).status == SEMAPHORE_TIMEOUT, "initial event allocation probe");
-        const int32_t eventSites = s_allocationCalls.load() - beforeEvent;
-        check(eventSites >= 17, "real lazy pool allocations observed");
-        for (int32_t failure = 1; failure <= eventSites; ++failure)
-        {
-            Semaphore fresh;
-            s_allocationCountdown.store(failure);
-            const SemaphoreResult result = fresh.eventWaitResult(1);
-            s_allocationCountdown.store(0);
-            check(result.status == SEMAPHORE_NO_MEMORY && fresh.eventPoolStatistics().capacity == 0,
-                "failed lazy pool leaves no partial publication");
-            check(fresh.eventWaitResult(1).status == SEMAPHORE_TIMEOUT, "lazy pool retry after allocation failure");
-        }
-        Semaphore sem;
-        const int32_t quiet = s_allocationCalls.load();
-        sem.signal();
-        sem.event();
-        sem.eventAll();
-        check(s_allocationCalls.load() == quiet, "signal/event paths allocate nothing");
-        std::printf(
-            "METRIC constructor_allocation_sites=%d first_event_allocation_sites=%d\n", allocationSites, eventSites);
+        check(s_liveAllocations.load() == before, "failed allocations and retry release all owned storage");
 #else
         return false;
 #endif
@@ -2060,7 +2404,9 @@ bool SemaphoreTests::runCase(int32_t id)
     {
 #if defined(SEMAPHORE_SHARED_COUNTER) && !defined(_WIN32) && !defined(__EMSCRIPTEN__)
         const std::string logicalName = name(id);
-        const std::string path = SemaphoreProcessMemory::directory() + "/m_" + logicalName + ".s";
+        const char* directory = std::getenv("SEMAPHORE_TEST_DIRECTORY");
+        check(directory != nullptr && directory[0] == '/', "an owned shared directory is required for the FIFO case");
+        const std::string path = std::string(directory) + "/m_" + logicalName + ".s";
         check(::mkfifo(path.c_str(), 0600) == 0, "create wrong-type shared name");
         bool rejected = false;
         bool preserved = false;
@@ -2244,6 +2590,10 @@ bool SemaphoreTests::runCase(int32_t id)
             check(accepted.load() == 2000 && replied.load() == 2000 && !request.wait(0) && !reply.wait(0),
                 "combined concurrency neither loses nor duplicates permits");
         }
+    }
+    else
+    {
+        return false;
     }
     return true;
 }

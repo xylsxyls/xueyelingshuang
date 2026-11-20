@@ -11,6 +11,16 @@ class SemaphoreEventPool;
 */
 int32_t SemaphoreTestFault(int32_t point);
 
+/** 记录x86本轮CAS退避使用的处理器提示次数
+@param [in] pauses 生产循环将执行的次数
+*/
+void SemaphoreTestObservePauses(uint32_t pauses);
+
+/** 记录配置用例首次交给后端的休眠时间
+@param [in] milliseconds 将交给后端的一段等待预算
+*/
+void SemaphoreTestObserveSlice(uint32_t milliseconds);
+
 /** 在真实系统睡眠边界触发受控暂停
 */
 void SemaphoreTestWakeHook();
@@ -25,6 +35,11 @@ bool SemaphoreTestSpuriousWake();
 @return 清零前或当前的调用次数
 */
 uint32_t SemaphoreTestPublishAttempts(bool reset = false);
+
+/** 观察命名容量重试第一次交给系统的休眠时间
+@param [in] milliseconds 已送入退避路径的休眠毫秒数
+*/
+void SemaphoreTestObserveCapacitySleep(uint32_t milliseconds);
 
 /** 报告实际选用的Windows睡眠后端
 @param [in] addressWait 是否使用地址等待

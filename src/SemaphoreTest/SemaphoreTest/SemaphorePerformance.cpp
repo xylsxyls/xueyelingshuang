@@ -182,7 +182,7 @@ __declspec(noinline) uint32_t SemaphorePerformance::stackAlignment(uint32_t dept
     Semaphore sem;
     const uintptr_t address = reinterpret_cast<uintptr_t>(&sem);
     uint32_t failures = address % sizeof(uint64_t) == 0 ? 0 : 1;
-#if !defined(SEMAPHORE_TEST_BASELINE) && defined(STATIC_LIB)
+#ifdef STATIC_LIB
     SemaphorePoolConfig config;
     config.initialCapacity = 0;
     config.maxCapacity = 0;
@@ -223,7 +223,7 @@ void SemaphorePerformance::alignment()
     threads.join();
     failures += workerFailures.load();
     // DLL只消费公开Semaphore接口；内部池的真实栈对齐由静态和白盒配置覆盖。
-#if !defined(SEMAPHORE_TEST_BASELINE) && defined(STATIC_LIB)
+#ifdef STATIC_LIB
     const uint32_t objects = 160;
 #else
     const uint32_t objects = 80;
@@ -348,14 +348,12 @@ void SemaphorePerformance::contention(const char* name, int32_t producers, int32
 void SemaphorePerformance::handoff(bool cold)
 {
     Semaphore request, reply, ready;
-#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
     if (s_combined)
     {
         require(request.prepareSignalAndWait().status == SEMAPHORE_OK &&
                 reply.prepareSignalAndWait().status == SEMAPHORE_OK,
             "local handoff preparation");
     }
-#endif
     const int32_t measured = cold ? 300 : 20000;
     const int32_t warmup = cold ? 10 : 1000;
     std::vector<double> samples(measured);
@@ -389,7 +387,6 @@ void SemaphorePerformance::handoff(bool cold)
             ::Sleep(5);
         }
         const double started = now();
-#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
         if (s_combined)
         {
             const SemaphoreSignalWaitResult result = request.signalAndWaitResult(reply, 5000);
@@ -398,7 +395,6 @@ void SemaphorePerformance::handoff(bool cold)
                 "local handoff reply");
         }
         else
-#endif
         {
             request.signal();
             require(reply.wait(5000), "handoff reply");
@@ -417,12 +413,10 @@ void SemaphorePerformance::handoff(bool cold)
 void SemaphorePerformance::events(int32_t count, bool prepared, bool dropNotification)
 {
     Semaphore event, ready, reply;
-#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
     if (prepared)
     {
         require(event.prepareSignalAndWait().status == SEMAPHORE_OK, "event backend preparation");
     }
-#endif
     std::atomic<int32_t> generation(0);
     std::atomic<int32_t> rescueTimeouts(0);
     const int32_t measured = 200, warmup = 10;
@@ -440,18 +434,22 @@ void SemaphorePerformance::events(int32_t count, bool prepared, bool dropNotific
                     ready.signal();
                     const double limit = now() + 5000000;
                     // 每轮必须实际消费事件；代次标记仅校验归属，不能替代通知。
-                    const bool received = event.eventWait(1000);
-                    if (!received)
+                    const SemaphoreResult received = event.eventWaitResult(1000);
+                    if (received.status == SEMAPHORE_TIMEOUT && !received.committed)
                     {
+                        // 把真实超时也交给主线程判定；其余等待者仍能报告同一轮的结果。
                         rescueTimeouts.fetch_add(1);
+                        require(reply.signal(), "event timeout acknowledgement");
+                        return;
                     }
-                    require(received && generation.load() == round && now() < limit,
-                        "event notification missing or belongs to another round");
+                    require(received.status == SEMAPHORE_OK && received.committed &&
+                        generation.load() == round && now() < limit, "event failed or belongs to another round");
                     observations[w] = now();
                     reply.signal();
                 }
             });
     }
+    threads.prepare();
     threads.start();
     for (int32_t round = 1; round <= measured + warmup; ++round)
     {
@@ -476,8 +474,11 @@ void SemaphorePerformance::events(int32_t count, bool prepared, bool dropNotific
         }
         for (int32_t w = 0; w < count; ++w)
         {
-            require(reply.wait(5000), "event reply");
+            require(reply.wait(5000), "event completion missing");
         }
+        const int32_t missed = rescueTimeouts.load();
+        require(!dropNotification || missed == count, "unexpected delivery without an event");
+        require(missed == 0, "event reply");
         const double elapsed = *std::max_element(observations.begin(), observations.end()) - started;
         if (round > warmup)
         {
@@ -567,7 +568,6 @@ void SemaphorePerformance::allocations()
             std::printf("METRIC {\"name\":\"%s\",\"calls\":%u,\"bytes\":%u}\n", phases[phase],
                 static_cast<unsigned>(s_allocationCalls.load()), static_cast<unsigned>(s_allocationBytes.load()));
         }
-#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
         const SemaphorePoolStats stats = sem.eventPoolStatistics();
         require(stats.capacity == 16 && stats.freeCapacity == 16 && stats.retiredCapacity == 0 &&
                 stats.reservedCapacity == 0 && stats.successfulGrowCount == 0,
@@ -575,7 +575,6 @@ void SemaphorePerformance::allocations()
         std::printf("METRIC {\"name\":\"event_pool_retained\",\"capacity\":%u,\"free\":%u,\"retired\":%u,\"bytes\":%u}\n",
             static_cast<unsigned>(stats.capacity), static_cast<unsigned>(stats.freeCapacity),
             static_cast<unsigned>(stats.retiredCapacity), static_cast<unsigned>(stats.retainedBytes));
-#endif
     }
     catch (...)
     {
@@ -643,7 +642,6 @@ int32_t SemaphorePerformance::peer(const char* name, bool combined)
             require(request.processWait(5000), "peer first request");
             for (int32_t i = 0; i < 2100; ++i)
             {
-#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
                 if (combined && i != 2099)
                 {
                     const SemaphoreSignalWaitResult result = reply.processSignalAndWaitResult(request, 5000);
@@ -652,7 +650,6 @@ int32_t SemaphorePerformance::peer(const char* name, bool combined)
                         "peer reply and next request");
                 }
                 else
-#endif
                 {
                     require(reply.tryProcessSignal() == 0, "peer reply");
                     if (i != 2099)
@@ -666,9 +663,7 @@ int32_t SemaphorePerformance::peer(const char* name, bool combined)
 #ifdef SEMAPHORE_TEST_NATIVE_CONTROL
         require(SemaphoreNativeIpc::nativeCleanupFailures() == 0, "peer native cleanup errors");
 #endif
-#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
         require(Semaphore::cleanupFailures() == 0, "peer Semaphore cleanup errors");
-#endif
         return 0;
     }
     catch (...)
@@ -702,7 +697,6 @@ void SemaphorePerformance::ipc()
         for (int32_t i = 0; i < 2100; ++i)
         {
             const double started = now();
-#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
             if (s_combined)
             {
                 const SemaphoreSignalWaitResult result = request.processSignalAndWaitResult(reply, 5000);
@@ -711,7 +705,6 @@ void SemaphorePerformance::ipc()
                     "IPC roundtrip");
             }
             else
-#endif
             {
                 require(request.tryProcessSignal() == 0 && reply.processWait(5000), "IPC roundtrip");
             }
@@ -764,13 +757,20 @@ int32_t SemaphorePerformance::run(int32_t id, bool combined)
         std::printf("ENV pid=%lu logical_processors=%u sizeof_semaphore=%u affinity=%I64x priority=%lu\n",
             ::GetCurrentProcessId(), std::thread::hardware_concurrency(), static_cast<unsigned>(sizeof(Semaphore)),
             static_cast<unsigned long long>(affinity), priority);
-#ifdef SEMAPHORE_PERF_ALLOCATION
-        allocations();
-#else
         if (id == -72 || id == -73)
         {
             events(id == -72 ? 1 : 8, false, true);
         }
+#ifdef SEMAPHORE_PERF_ALLOCATION
+        else if (id == 55)
+        {
+            allocations();
+        }
+        else
+        {
+            return 77;
+        }
+#else
         else if (id == 79)
         {
 #ifdef SEMAPHORE_TEST_POOL_PERFORMANCE
@@ -826,9 +826,7 @@ int32_t SemaphorePerformance::run(int32_t id, bool combined)
         require(SemaphoreNativeIpc::nativeCleanupFailures() == 0, "native cleanup errors");
 #endif
         require(s_cleanupFailures.load() == 0, "benchmark cleanup errors");
-#if !defined(SEMAPHORE_TEST_BASELINE) || defined(SEMAPHORE_TEST_RECENT_BASELINE)
         require(Semaphore::cleanupFailures() == 0, "Semaphore cleanup errors");
-#endif
         std::printf("PASS id=%d all performance workload invariants\n", id);
         return 0;
     }

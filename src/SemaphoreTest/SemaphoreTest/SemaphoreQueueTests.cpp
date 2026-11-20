@@ -59,7 +59,11 @@ int32_t SemaphoreQueueTests()
                                     // 测试调用方背压，未成功提交的队列项不发布许可
                                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                                 }
-                                wake.signal();
+                                if (!wake.signal())
+                                {
+                                    errors.fetch_add(1);
+                                    return;
+                                }
                             }
                         }
                         catch (...)

@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <thread>
 
-/** 仅使用公共接口的历史性能烟测，保留原工作量
+/** 用公共接口执行固定工作量的往返和积存烟测
 */
 int32_t SemaphoreBench()
 {
@@ -43,7 +43,11 @@ int32_t SemaphoreBench()
                             failed.store(true);
                             break;
                         }
-                        reply.signal();
+                        if (!reply.signal())
+                        {
+                            failed.store(true);
+                            return;
+                        }
                     }
                 }
                 catch (...)
@@ -56,8 +60,7 @@ int32_t SemaphoreBench()
             for (int32_t index = 0; index < 1000; ++index)
             {
                 const double started = now();
-                request.signal();
-                if (!reply.wait(5000))
+                if (!request.signal() || !reply.wait(5000))
                 {
                     failed.store(true);
                     break;
@@ -78,7 +81,10 @@ int32_t SemaphoreBench()
         const double started = now();
         for (int32_t index = 0; index < 50000; ++index)
         {
-            request.signal();
+            if (!request.signal())
+            {
+                return 1;
+            }
         }
         for (int32_t index = 0; index < 50000; ++index)
         {

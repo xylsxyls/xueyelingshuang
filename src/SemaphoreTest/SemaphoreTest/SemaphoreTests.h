@@ -77,7 +77,7 @@ private:
     bool m_released;
 };
 
-/** 稳定用例25起的功能断言，历史1至24不再执行且编号不复用
+/** 当前原生测试共用的断言、线程控制与独立进程入口
 */
 class SemaphoreTests
 {
@@ -88,12 +88,21 @@ public:
     */
     static bool fairness(int32_t id);
 
+    /** 供两个独立移动宿主或桌面进程执行同一会话，各自把退出码交给启动方。
+    @param [in] id 41为分步、60为组合往返
+    @param [in] role owner创建并等待就绪，peer收到READY后连接
+    @param [in] logicalName 每次运行独占的基础名称，最多29字节
+    @return 0表示本角色通过，2表示参数错误；资源或断言失败由入口记录
+    */
+    static int32_t session(int32_t id, const std::string& role, const std::string& logicalName);
+
     /** 命名通知子进程入口
     @param [in] name 父进程生成的本轮唯一名称
     @param [in] exchange 是否进行200次组合往返
+    @param [in] firstTimeout 首个请求等待预算；自动子进程用-1，独立宿主使用有限预算
     @return 退出码
     */
-    static int32_t peer(const std::string& name, bool exchange = false);
+    static int32_t peer(const std::string& name, bool exchange = false, int32_t firstTimeout = -1);
 
     /** 通过异常将失败交给测试入口记录，不主动崩溃
     @param [in] ok 独立预期是否满足
