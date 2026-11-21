@@ -814,16 +814,12 @@ def publish_static(library, build, bit, mode, compiler, sdk, vendors):
     wasm_message('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': C++ static archive ' + str(len(payload)) + ' bytes')
 
 
-def vendor_headers(vendor):
-    """Select Wasm-specific headers, or headers shared by all targets."""
-    root = ROOT / 'tools' / vendor / 'include'
-    specific = root / (vendor + 'wasm')
-    if specific.is_dir():
-        return specific
-    if root.is_dir() and any(path.is_file() and path.suffix.lower() in ('.h', '.hpp')
-                             for path in root.iterdir()):
-        return root
-    raise ValueError('Missing Wasm or platform-independent vendor headers: ' + str(root))
+def vendor_headers(archive):
+    """Read the same target-specific header selection used by before."""
+    helpers = str(ROOT / 'common' / 'CloudRebuild')
+    if helpers not in sys.path: sys.path.insert(0, helpers)
+    from WasmVendorHeaders import selected_headers
+    return selected_headers(ROOT, archive)
 
 
 def build_inputs(library, bit, mode, linkage, scope, private):
@@ -852,12 +848,10 @@ def build_inputs(library, bit, mode, linkage, scope, private):
             raise ValueError('Missing or mismatched prepared Wasm vendor: ' + str(prepared))
         vendor_paths.append(prepared)
         vendor = source.relative_to(ROOT / 'tools').parts[0]
-        headers = vendor_headers(vendor)
-        for header in headers.rglob('*'):
-            if header.is_file():
-                target = SDK_ROOT / 'include' / vendor / header.relative_to(headers)
-                if not target.is_file() or target.read_bytes() != header.read_bytes():
-                    raise ValueError('Missing or mismatched Wasm header: ' + str(target))
+        for relative_header, header in vendor_headers(source).items():
+            target = SDK_ROOT / 'include' / vendor / relative_header
+            if not target.is_file() or target.read_bytes() != header.read_bytes():
+                raise ValueError('Missing or mismatched Wasm header: ' + str(target))
     if scope == 'only':
         for dep in names:
             if dep != library: validate(dep, bit, mode)
@@ -935,9 +929,8 @@ def stage_sdk(destination, libraries=None):
         source = ROOT / relative
         copy(SDK_ROOT / 'lib' / source.name)
         vendor = source.relative_to(ROOT / 'tools').parts[0]
-        headers = vendor_headers(vendor)
-        for header in headers.rglob('*'):
-            if header.is_file(): copy(SDK_ROOT / 'include' / vendor / header.relative_to(headers))
+        for header in (SDK_ROOT / 'include' / vendor).rglob('*'):
+            if header.is_file(): copy(header)
     destination.mkdir(parents=True, exist_ok=True)
     (destination / '.wasm-baseline.json').write_text(json.dumps(baseline), encoding='utf-8')
 
@@ -973,9 +966,7 @@ def publish_tree(destination, libraries, bit, mode):
             source = ROOT / relative
             files.add(SDK_ROOT / 'lib' / source.name)
             vendor = source.relative_to(ROOT / 'tools').parts[0]
-            headers = vendor_headers(vendor)
-            files.update(SDK_ROOT / 'include' / vendor / header.relative_to(headers)
-                         for header in headers.rglob('*') if header.is_file())
+            files.update(SDK_ROOT / 'include' / vendor / relative_header for relative_header in vendor_headers(source))
     for file in files:
         updates[destination / file.relative_to(SDK_ROOT)] = file.read_bytes()
     for name in libraries:
@@ -1393,7 +1384,7 @@ foreach(native_config DEBUG RELEASE)
         ARCHIVE_OUTPUT_DIRECTORY_${native_config} "${SDK_ROOT}/lib"
         LIBRARY_OUTPUT_DIRECTORY_${native_config} "${SDK_ROOT}/lib")
 endforeach()
-target_include_directories(ProtoMessageManager PUBLIC "${SDK_ROOT}/include")
+target_include_directories(ProtoMessageManager PUBLIC "${SDK_ROOT}/include" PRIVATE "${SDK_ROOT}/include/protobuf")
 target_compile_options(ProtoMessageManager PRIVATE "$<$<CONFIG:Release>:-O2>" "$<$<CONFIG:Release>:-g>")
 if(APPLE)
     set_target_properties(ProtoMessageManager PROPERTIES MACOSX_RPATH ON INSTALL_NAME_DIR "@rpath")
@@ -1403,6 +1394,17 @@ endif()
 
 # CloudRebuild or the IDE supplies the existing dependency list; never build dependencies here.
 set(native_prepared_libraries)
+if(DLLLIB STREQUAL "dll" AND NOT LIBRARIESRELY)
+    set(variant_name Variant)
+    if(DEBUGRELEASE STREQUAL "debug")
+        set(variant_name Variantd)
+    endif()
+    find_library(native_variant NAMES "${variant_name}" PATHS "${SDK_ROOT}/lib" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+    if(NOT native_variant)
+        message(FATAL_ERROR "Prepare ${variant_name} for the target SDK first")
+    endif()
+    set(LIBRARIESRELY "${native_variant}" libprotobuf-lite.a)
+endif()
 foreach(native_dependency IN LISTS LIBRARIESRELY)
     if(NOT native_dependency)
         continue()

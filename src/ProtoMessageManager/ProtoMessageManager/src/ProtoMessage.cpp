@@ -6,14 +6,10 @@
 #include <cstring>
 
 #if defined(_MSC_VER)
-#if defined _WIN64 && defined _DEBUG
-#pragma comment(lib, "libprotobuf-litestatic64d.lib")
-#elif defined _WIN64
-#pragma comment(lib, "libprotobuf-litestatic64.lib")
-#elif defined _DEBUG
-#pragma comment(lib, "libprotobuf-litestatic32d.lib")
+#if defined(_DEBUG)
+#pragma comment(lib, "libprotobuf-lited.lib")
 #else
-#pragma comment(lib, "libprotobuf-litestatic32.lib")
+#pragma comment(lib, "libprotobuf-lite.lib")
 #endif
 #endif
 

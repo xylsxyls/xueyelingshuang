@@ -23,90 +23,61 @@ fi
 librariesrely+=($'project\tVariant\t'"$Variant_dlllib")
 
 #--------------------------------------------------------------------
-# The build host and the native target can differ (Android/iOS cross builds).
-if [[ $1 != 'wasm32' ]] && [[ $1 != 'wasm64' ]]; then
-    native_target="${CMAKE_SYSTEM_NAME:-}"
-    if [[ -z "$native_target" ]]; then
-        case "${CMAKE_TOOLCHAIN_FILE:-}" in
-            *android.toolchain.cmake) native_target=Android ;;
-        esac
-    fi
-    if [[ -z "$native_target" ]]; then
-        case "${CMAKE_OSX_SYSROOT:-}" in
-            *iphone*) native_target=iOS ;;
-        esac
-    fi
-    if [[ -z "$native_target" ]]; then
-        case "$OSTYPE" in
-            linux*) native_target=Linux ;;
-            darwin*) native_target=Darwin ;;
-            msys*|cygwin*|win32*) native_target=Windows ;;
-            *) echo "Unsupported native host: $OSTYPE" >&2; false ;;
-        esac
-    fi
-    case "$native_target" in
-        Darwin|iOS|Android)
-            native_root=$(cd "$(dirname "$0")/../../.." && pwd)
-            native_sdk="${CLOUD_REBUILD_SDK_ROOT:-$native_root}"
-            if [[ ! -f "$native_sdk/include/protobuf/google/protobuf/message_lite.h" ]] || [[ ! -f "$native_sdk/lib/libprotobuf-litestatic${1}.a" ]]; then
-                echo "Prepare the $native_target protobuf headers and libprotobuf-litestatic${1}.a in $native_sdk first; host libraries are not interchangeable." >&2
-                false
-            fi
-            librariesrely+=($'link\t'"libprotobuf-litestatic${1}.a")
-            native_prepared=1
-            ;;
-        Linux|Windows) ;;
-        *) echo "Unsupported native target: $native_target" >&2; false ;;
-    esac
-fi
-
-if [[ ${native_prepared:-0} != 1 ]]; then
-SHELL_FOLDER=$(cd "$(dirname "$0")" && pwd)
-xueyelingshuang=$SHELL_FOLDER/../../..
-
-thirdpartylib="protobuf"
-thirdpartywasmlibname="libprotobuf-lite"
-sdkpath="${CLOUD_REBUILD_SDK_ROOT:-$xueyelingshuang}"
-if [[ $1 == 'wasm32' ]] || [[ $1 == 'wasm64' ]]; then
-    thirdpartybit=${1#wasm}
-    # Prepared protobuf-lite has one archive per ABI, shared by Debug and Release.
-    thirdpartyarchive="${thirdpartywasmlibname}${thirdpartybit}.a"
-    mkdir -p "$sdkpath/include/$thirdpartylib" "$sdkpath/lib"
-    cp -Rf "$xueyelingshuang/tools/$thirdpartylib/include/${thirdpartylib}wasm/." "$sdkpath/include/$thirdpartylib/"
-    cp -f "$xueyelingshuang/tools/$thirdpartylib/lib/wasm/$thirdpartyarchive" "$sdkpath/lib/"
-    librariesrely+=($'vendor\t'"tools/$thirdpartylib/lib/wasm/$thirdpartyarchive")
+root=$(cd "$(dirname "$0")/../../.." && pwd) || exit 1
+case "$1" in 32|wasm32|arm32) bits=x86 ;; 64|wasm64|arm64) bits=x64 ;; *) exit 2 ;; esac
+case "${THIRDPARTY_PLATFORM:-${CMAKE_SYSTEM_NAME:-$OSTYPE}}" in
+    [Ww]indows|msys*|cygwin*|win32*) windows=1 ;;
+    *) windows=0 ;;
+esac
+config=release
+if [[ $1 == wasm* ]]; then
+    archive=libprotobuf-lite.a
+    librariesrely+=($'vendor\t'"tools/protobuf/lib/wasm/static/$bits/$archive")
 else
-    # Native protobuf headers are shared across native platforms in this SDK.
-    nativeinclude="$xueyelingshuang/tools/$thirdpartylib/include"
-    thirdpartylibname="libprotobuf-lite"
-    thirdpartybit=$1
-    thirdpartysuffix=".lib"
-    thirdpartydebug=""
-    if [[ "$native_target" == Linux ]]; then
-        thirdpartysuffix=".a"
-    elif [[ $3 == 'debug' ]]; then
-        thirdpartydebug="d"
+    if [[ $windows == 1 ]]; then
+        suffix=
+        if [[ $3 == debug ]]; then suffix=d; config=debug; fi
+        archive="libprotobuf-lite${suffix}.lib"
+    else
+        archive=libprotobuf-lite.a
     fi
-    thirdpartyarchive="${thirdpartylibname}static${thirdpartybit}${thirdpartydebug}${thirdpartysuffix}"
-    if [[ ! -f "$xueyelingshuang/tools/$thirdpartylib/lib/$thirdpartyarchive" ]]; then
-        echo "Missing prepared protobuf SDK: $thirdpartyarchive" >&2
-        false
-    fi
-    mkdir -p "$sdkpath/include/$thirdpartylib" "$sdkpath/lib"
-    cp -Rf "$nativeinclude/google" "$sdkpath/include/$thirdpartylib/"
-    cp -f "$xueyelingshuang/tools/$thirdpartylib/lib/$thirdpartyarchive" "$sdkpath/lib/"
-    protocname="protoc.exe"
-    if [[ "$OSTYPE" =~ ^linux ]]; then
-        protocname="protoc"
-    fi
-    "$xueyelingshuang/tools/protobuf/$protocname" \
-        -I="$xueyelingshuang/src/ProtoMessageManager/ProtoMessageManager/src" \
-        --cpp_out="$xueyelingshuang/src/ProtoMessageManager/ProtoMessageManager/src" \
-        "$xueyelingshuang/src/ProtoMessageManager/ProtoMessageManager/src/ProtoMessage.proto"
+    librariesrely+=($'link\t'"$archive")
 fi
-if [[ $1 != wasm32 && $1 != wasm64 ]]; then
-    librariesrely+=($'link\t'"$thirdpartyarchive")
-fi
+THIRDPARTY_FILES="$archive" bash "$root/tools/thirdparty.sh" protobuf "$1" lib "$config" "$4" || exit 1
+# protoc 在构建主机运行，生成代码与目标架构无关
+if [[ $1 != wasm* ]]; then
+    generator="${PROTOC_EXECUTABLE:-}"
+    if [[ -z $generator ]]; then
+        case "$OSTYPE:$(uname -m)" in
+            msys*|cygwin*|win32*) generator="$root/tools/protobuf/bin/windows/x86/protoc.exe" ;;
+            linux*:x86_64) generator="$root/tools/protobuf/bin/linux/x64/protoc" ;;
+            linux*:aarch64|linux*:arm64) generator="$root/tools/protobuf/bin/arm/x64/protoc" ;;
+        esac
+    fi
+    src="$root/src/ProtoMessageManager/ProtoMessageManager/src"
+    if [[ -n $generator ]]; then
+        actual=$("$generator" --version) || exit 1
+        [[ $actual == "libprotoc 3.3.0" ]] || { echo "Expected protoc 3.3.0, found $actual" >&2; exit 1; }
+        # 在当前构建的临时目录先生成；同一schema的并行编译不得重写正在读取的源码
+        generated=$(mktemp -d) || exit 1
+        if ! (
+            "$generator" -I="$src" --cpp_out="$generated" "$src/ProtoMessage.proto" || exit 1
+            for name in ProtoMessage.pb.h ProtoMessage.pb.cc; do
+                if ! cmp -s "$generated/$name" "$src/$name"; then
+                    cp "$generated/$name" "$src/$name" || exit 1
+                fi
+            done
+        ); then
+            rm -f "$generated/ProtoMessage.pb.h" "$generated/ProtoMessage.pb.cc"
+            rmdir "$generated"
+            exit 1
+        fi
+        rm -f "$generated/ProtoMessage.pb.h" "$generated/ProtoMessage.pb.cc" || exit 1
+        rmdir "$generated" || exit 1
+    elif [[ ! -s $src/ProtoMessage.pb.cc || ! -s $src/ProtoMessage.pb.h ]]; then
+        echo "Set PROTOC_EXECUTABLE to a host build of protoc 3.3.0." >&2
+        exit 1
+    fi
 fi
 
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return
