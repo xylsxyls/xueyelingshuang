@@ -399,8 +399,8 @@ if __name__ != '__main__' or wasm_arguments:
             parts = Path(header).parts
             if len(parts) < 2 or not parts[0].isidentifier() or '..' in parts:
                 raise ValueError('Invalid SDK protocol header: ' + header)
-            path = ((ROOT / 'src' / library / library / 'src') if parts[0] == library else (SDK_ROOT / 'include' / 'wasm' / parts[0])) / Path(*parts[1:])
-            path.resolve().relative_to((ROOT / 'src').resolve())
+            base = ROOT / 'src' / library / library / 'src' if parts[0] == library else SDK_ROOT / 'include' / 'wasm' / parts[0]
+            path = sdk_headers.checked_path(base, Path(*parts[1:]).as_posix())
             pattern = r'\b(' + re.escape(prefix[0]) + r'[A-Z0-9_]+)\s*=\s*(0x[0-9a-fA-F]+|[0-9]+)[Uu]?\b'
             for name, value in re.findall(pattern, path.read_text(encoding='utf-8-sig')):
                 number = int(value, 16 if value.lower().startswith('0x') else 10)
@@ -1307,7 +1307,9 @@ def BuildProject(command):
     if not UseMSBuild and os.path.isfile('IncrediBuild.log'):
         os.remove('IncrediBuild.log')
     start = time.monotonic()
-    code = RunNativeCommand(command)
+    # A clean must only read tracking logs from this invocation, including IncrediBuild.
+    environment = dict(os.environ, CLOUD_REBUILD_INT_ROOT=str(Path.cwd() / 'obj'))
+    code = RunNativeCommand(command, environment=environment)
     success = code == 0
     if not UseMSBuild and '/clean' not in command:
         success = False

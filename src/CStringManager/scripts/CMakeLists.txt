@@ -470,8 +470,8 @@ def protocol_constants(library):
         parts = Path(header).parts
         if len(parts) < 2 or not parts[0].isidentifier() or '..' in parts:
             raise ValueError('Invalid SDK protocol header: ' + header)
-        path = ((ROOT / 'src' / library / library / 'src') if parts[0] == library else (SDK_ROOT / 'include' / 'wasm' / parts[0])) / Path(*parts[1:])
-        path.resolve().relative_to((ROOT / 'src').resolve())
+        base = ROOT / 'src' / library / library / 'src' if parts[0] == library else SDK_ROOT / 'include' / 'wasm' / parts[0]
+        path = sdk_headers.checked_path(base, Path(*parts[1:]).as_posix())
         pattern = r'\b(' + re.escape(prefix[0]) + r'[A-Z0-9_]+)\s*=\s*(0x[0-9a-fA-F]+|[0-9]+)[Uu]?\b'
         for name, value in re.findall(pattern, path.read_text(encoding='utf-8-sig')):
             number = int(value, 16 if value.lower().startswith('0x') else 10)
@@ -1392,6 +1392,12 @@ foreach(native_dependency IN LISTS LIBRARIESRELY)
         set(native_dependency_path "${native_dependency}")
     else()
         set(native_dependency_path "${SDK_ROOT}/lib/${native_dependency}")
+    endif()
+    get_filename_component(native_dependency_path "${native_dependency_path}" REALPATH)
+    get_filename_component(native_sdk_lib "${SDK_ROOT}/lib" REALPATH)
+    get_filename_component(native_dependency_dir "${native_dependency_path}" DIRECTORY)
+    if(NOT native_dependency_dir STREQUAL native_sdk_lib)
+        message(FATAL_ERROR "Dependency must be staged in ${SDK_ROOT}/lib: ${native_dependency}")
     endif()
     if(NOT EXISTS "${native_dependency_path}" OR IS_DIRECTORY "${native_dependency_path}")
         message(FATAL_ERROR "Missing prepared dependency: ${native_dependency_path}; run before/version for this target first")
