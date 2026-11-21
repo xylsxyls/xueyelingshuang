@@ -1,5 +1,7 @@
 ﻿#pragma once
 #include "CorrespondParamMacro.h"
+#include "AccountProtocol.h"
+#include <stdint.h>
 
 enum
 {
@@ -64,7 +66,9 @@ enum StockEnum
 	STOCK_WR20
 };
 
-enum MessageType
+// 线协议使用32位类型值，固定底层类型使业务自定义值也在枚举表示域内。
+// ProcessWork仅接受非负值；负值可安全表示，但由发送入口拒绝。
+enum MessageType : int32_t
 {
 	INIT,
 	CLIENT_INIT,
@@ -94,6 +98,41 @@ enum MessageType
 	LOGTEST_FILE_MESSAGE
 };
 
+// 新网关消息使用显式保留区，不改变上方历史枚举数值。
+enum GatewayMessageType
+{
+    GATEWAY_LOCAL_MESSAGE = 2000,
+    ACCOUNT_REGISTER_PASSWORD = 40000,
+    ACCOUNT_LOGIN_PASSWORD = 40001,
+    ACCOUNT_QUERY_STATE = 40002,
+    ACCOUNT_LOGOUT = 40003,
+    ACCOUNT_REFRESH_SESSION = 40004,
+    ACCOUNT_CREATE_MATH_ORDER = 40005,
+    ACCOUNT_REFRESH_QUESTION = 40006,
+    ACCOUNT_ANSWER_QUESTION = 40007,
+    ACCOUNT_QUERY_ORDER = 40008,
+    ACCOUNT_REQUIRE_VIP = 40009,
+    ACCOUNT_CANCEL_ORDER = 40010,
+    ACCOUNT_SEND_SMS = 40011,
+    ACCOUNT_LOGIN_SMS = 40012,
+    ACCOUNT_BIND_PHONE = 40013,
+    ACCOUNT_LOGIN_WECHAT = 40014,
+    ACCOUNT_LOGIN_QQ = 40015,
+    ACCOUNT_QUERY_CHANNELS = 40016,
+    ACCOUNT_VERIFY_PASSWORD_SMS = 40018, // 独立验证改密短信，返回一次性短期凭据
+    ACCOUNT_RESET_PASSWORD = 40019, // 仅凭已验证凭据设置新密码
+    ACCOUNT_EVENT_SESSION_REPLACED = 40017
+};
+
+enum GatewayProduct
+{
+    PROJECT_ACCOUNT_SERVER = 0,
+    PROJECT_COOK = 100,
+    PROJECT_LUMA_PLAYER = 101,
+    PROJECT_SPLIT_VIEWER = 102,
+    PROJECT_PDF_READER = 103
+};
+
 enum
 {
 	PROJECT_LOGTEST = 1,
@@ -101,8 +140,10 @@ enum
 	PROJECT_QUANT
 };
 
+#ifdef __cplusplus
 class CorrespondParamAPI CorrespondParam
 {
 public:
 	CorrespondParam();
 };
+#endif

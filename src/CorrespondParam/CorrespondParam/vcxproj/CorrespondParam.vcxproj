@@ -174,4 +174,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\AccountProtocol.h" />
+  </ItemGroup>
 </Project>

@@ -24,4 +24,7 @@
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\AccountProtocol.h" />
+  </ItemGroup>
 </Project>
