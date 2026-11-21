@@ -10,6 +10,6 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define SqlStringAPI __attribute__ ((visibility("default")))
     #else
-        #define SqlStringAPI
+        #define SqlStringAPI 
     #endif
 #endif
