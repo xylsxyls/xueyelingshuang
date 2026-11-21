@@ -1,88 +1,110 @@
 ﻿#include "Compress.h"
-extern "C"
-{
-#include "zlib/zlib.h"
-}
+#include "zstandard/zstd.h"
+#include "zstandard/zstd_errors.h"
 #include <cstring>
+#include <memory>
+
 #if defined(_MSC_VER) && !defined(COMPRESS_NO_AUTOLINK)
-#if defined(_WIN64) && defined(_DEBUG)
-#pragma comment(lib, "zlibstatic64d.lib")
-#elif defined(_WIN64)
-#pragma comment(lib, "zlibstatic64.lib")
-#elif defined(_DEBUG)
-#pragma comment(lib, "zlibstatic32d.lib")
+#if defined(_DEBUG)
+#pragma comment(lib, "zstdd.lib")
 #else
-#pragma comment(lib, "zlibstatic32.lib")
+#pragma comment(lib, "zstd.lib")
 #endif
 #endif
 
 static const uint32_t kCompressLengthSize = sizeof(uint32_t);
 
-uint32_t Compress::zlibRawCompressBound(uint32_t srcLength)
+/** 将Zstandard返回的错误转换为公开接口错误
+@param [in] result 已由ZSTD_isError判断为失败的结果
+@param [in] fallback 其余错误对应的公开错误码
+@return CompressResult中的错误码
+*/
+static int32_t CompressError(size_t result, int32_t fallback)
 {
-    // 新版zlib可能以ULONG_MAX表示上界饱和，不能将它当作可保证的容量
-    const uLong bound = ::compressBound(srcLength);
-    if (bound < srcLength || bound >= UINT32_MAX)
+    switch (ZSTD_getErrorCode(result))
+    {
+    case ZSTD_error_dstSize_tooSmall:
+        return COMPRESS_BUFFER_TOO_SMALL;
+    case ZSTD_error_memory_allocation:
+        return COMPRESS_NO_MEMORY;
+    default:
+        return fallback;
+    }
+}
+
+uint32_t Compress::rawCompressBound(uint32_t srcLength)
+{
+    const size_t bound = ZSTD_compressBound(srcLength);
+    if (ZSTD_isError(bound) || bound < srcLength || bound > UINT32_MAX)
     {
         return 0;
     }
     return static_cast<uint32_t>(bound);
 }
 
-int32_t Compress::zlibRawCompress(uint8_t* dest, uint32_t& destLength, const uint8_t* src, uint32_t srcLength, int32_t level)
+int32_t Compress::rawCompress(uint8_t* dest, uint32_t& destLength, const uint8_t* src, uint32_t srcLength, int32_t level)
 {
-    uLongf length = destLength;
+    const uint32_t capacity = destLength;
     destLength = 0;
     if (dest == nullptr || src == nullptr || level < 0 || level > 9)
     {
         return COMPRESS_INVALID_ARGUMENT;
     }
-    const int result = ::compress2(dest, &length, src, srcLength, level);
-    if (result == Z_MEM_ERROR)
+    ZSTD_CCtx* context = ZSTD_createCCtx();
+    if (context == nullptr)
     {
         return COMPRESS_NO_MEMORY;
     }
-    if (result == Z_BUF_ERROR)
+    size_t result = ZSTD_CCtx_setParameter(context, ZSTD_c_compressionLevel, level);
+    if (!ZSTD_isError(result))
     {
-        return COMPRESS_BUFFER_TOO_SMALL;
+        result = ZSTD_CCtx_setParameter(context, ZSTD_c_checksumFlag, 1);
     }
-    if (result != Z_OK)
+    if (!ZSTD_isError(result))
     {
-        return COMPRESS_INVALID_ARGUMENT;
+        result = ZSTD_compress2(context, dest, capacity, src, srcLength);
     }
-    destLength = static_cast<uint32_t>(length);
+    ZSTD_freeCCtx(context);
+    if (ZSTD_isError(result))
+    {
+        return CompressError(result, COMPRESS_INVALID_ARGUMENT);
+    }
+    destLength = static_cast<uint32_t>(result);
     return COMPRESS_OK;
 }
 
-int32_t Compress::zlibRawUnCompress(uint8_t* dest, uint32_t& destLength, const uint8_t* src, uint32_t& srcLength)
+int32_t Compress::rawUncompress(uint8_t* dest, uint32_t& destLength, const uint8_t* src, uint32_t& srcLength)
 {
-    uLongf length = destLength;
-    uLong consumed = srcLength;
+    const uint32_t capacity = destLength;
+    const uint32_t available = srcLength;
     destLength = 0;
     srcLength = 0;
     if (dest == nullptr || src == nullptr)
     {
         return COMPRESS_INVALID_ARGUMENT;
     }
-    const int result = ::uncompress2(dest, &length, src, &consumed);
-    if (result == Z_MEM_ERROR)
-    {
-        return COMPRESS_NO_MEMORY;
-    }
-    if (result == Z_BUF_ERROR)
-    {
-        return COMPRESS_BUFFER_TOO_SMALL;
-    }
-    if (result != Z_OK)
+    // 网络协议只接受标准数据帧，解出首帧后将消费长度交回上层。
+    const uint8_t magic[] = {0x28, 0xb5, 0x2f, 0xfd};
+    if (available < sizeof(magic) || std::memcmp(src, magic, sizeof(magic)) != 0)
     {
         return COMPRESS_DATA_ERROR;
     }
-    destLength = static_cast<uint32_t>(length);
-    srcLength = static_cast<uint32_t>(consumed);
+    const size_t frameSize = ZSTD_findFrameCompressedSize(src, available);
+    if (ZSTD_isError(frameSize))
+    {
+        return COMPRESS_DATA_ERROR;
+    }
+    const size_t result = ZSTD_decompress(dest, capacity, src, frameSize);
+    if (ZSTD_isError(result))
+    {
+        return CompressError(result, COMPRESS_DATA_ERROR);
+    }
+    destLength = static_cast<uint32_t>(result);
+    srcLength = static_cast<uint32_t>(frameSize);
     return COMPRESS_OK;
 }
 
-void Compress::zlibCompress(char* dest, uint32_t& destLength, const char* src, uint32_t srcLength, int32_t level)
+void Compress::compress(char* dest, uint32_t& destLength, const char* src, uint32_t srcLength, int32_t level)
 {
     const uint32_t capacity = destLength;
     destLength = 0;
@@ -91,7 +113,7 @@ void Compress::zlibCompress(char* dest, uint32_t& destLength, const char* src, u
         return;
     }
     uint32_t length = capacity - kCompressLengthSize;
-    if (zlibRawCompress(reinterpret_cast<uint8_t*>(dest) + kCompressLengthSize, length,
+    if (Compress::rawCompress(reinterpret_cast<uint8_t*>(dest) + kCompressLengthSize, length,
         reinterpret_cast<const uint8_t*>(src), srcLength, level) != COMPRESS_OK)
     {
         return;
@@ -100,7 +122,7 @@ void Compress::zlibCompress(char* dest, uint32_t& destLength, const char* src, u
     destLength = length + kCompressLengthSize;
 }
 
-void Compress::zlibCompress(std::string& dest, const std::string& src, int32_t level)
+void Compress::compress(std::string& dest, const std::string& src, int32_t level)
 {
     if (src.empty() || src.size() > UINT32_MAX || level < 0 || level > 9)
     {
@@ -108,51 +130,118 @@ void Compress::zlibCompress(std::string& dest, const std::string& src, int32_t l
         return;
     }
     const uint32_t length = static_cast<uint32_t>(src.size());
-    const uint32_t capacity = zlibCompressBound(length);
+    const uint32_t capacity = Compress::compressBound(length);
     if (capacity == 0)
     {
         dest.clear();
         return;
     }
-    // 延迟提交结果，使输入和输出引用同一个字符串时也能安全处理
-    std::string packed(capacity, '\0');
+    // 只有原地压缩才需要独立输出，分离的目标可以沿用上一帧的容量
+    std::string temporary;
+    std::string& packed = &dest == &src ? temporary : dest;
+    packed.resize(capacity);
     uint32_t actual = capacity;
-    zlibCompress(&packed[0], actual, src.data(), length, level);
+    Compress::compress(&packed[0], actual, src.data(), length, level);
     if (actual == 0)
     {
         dest.clear();
         return;
     }
     packed.resize(actual);
-    dest.swap(packed);
+    if (&packed != &dest)
+    {
+        dest.swap(packed);
+    }
 }
 
-void Compress::zlibUnCompress(std::string& dest, const std::string& src)
+void Compress::uncompress(std::string& dest, const std::string& src)
 {
     if (src.size() <= kCompressLengthSize || src.size() > UINT32_MAX)
     {
         dest.clear();
         return;
     }
-    const uint32_t expected = zlibUnCompressBound(src.data());
-    std::string plain(expected, '\0');
-    uint8_t empty = 0;
-    uint8_t* bytes = expected == 0 ? &empty : reinterpret_cast<uint8_t*>(&plain[0]);
-    uint32_t actual = expected;
-    uint32_t consumed = static_cast<uint32_t>(src.size()) - kCompressLengthSize;
-    const int32_t result = zlibRawUnCompress(bytes, actual,
-        reinterpret_cast<const uint8_t*>(src.data()) + kCompressLengthSize, consumed);
-    if (result != COMPRESS_OK || actual != expected || consumed != src.size() - kCompressLengthSize)
+    const uint32_t expected = Compress::uncompressBound(src.data());
+    const char* frame = src.data() + kCompressLengthSize;
+    const size_t frameSize = src.size() - kCompressLengthSize;
+    // 完整帧可以省略内容长度；长度头与实际解码字节数始终需要一致。
+    const unsigned long long declared = ZSTD_getFrameContentSize(frame, frameSize);
+    const uint8_t magic[] = {0x28, 0xb5, 0x2f, 0xfd};
+    if (frameSize < sizeof(magic) || std::memcmp(frame, magic, sizeof(magic)) != 0 ||
+        (declared != ZSTD_CONTENTSIZE_UNKNOWN && declared != expected) ||
+        ZSTD_findFrameCompressedSize(frame, frameSize) != frameSize)
     {
         dest.clear();
         return;
     }
-    dest.swap(plain);
+    std::string temporary;
+    std::string& plain = &dest == &src ? temporary : dest;
+    if (declared != ZSTD_CONTENTSIZE_UNKNOWN &&
+        (expected <= plain.capacity() || expected <= ZSTD_DStreamOutSize()))
+    {
+        // 已有容量或小帧直接解码，避免常见调用的分块开销。
+        plain.resize(expected);
+        uint8_t empty = 0;
+        void* bytes = expected == 0 ? static_cast<void*>(&empty) : &plain[0];
+        const size_t actual = ZSTD_decompress(bytes, expected, frame, frameSize);
+        if (ZSTD_isError(actual) || actual != expected)
+        {
+            dest.clear();
+            return;
+        }
+    }
+    else
+    {
+        // 未知原长或大幅扩容时只按实际产生的字节增长，避免先按伪造的长度分配。
+        std::unique_ptr<ZSTD_DStream, decltype(&ZSTD_freeDStream)> stream(ZSTD_createDStream(), &ZSTD_freeDStream);
+        if (!stream || ZSTD_isError(ZSTD_initDStream(stream.get())))
+        {
+            dest.clear();
+            return;
+        }
+        ZSTD_inBuffer input = {frame, frameSize, 0};
+        char chunk[8192];
+        plain.clear();
+        size_t remaining = 1;
+        while (remaining != 0)
+        {
+            ZSTD_outBuffer output = {chunk, sizeof(chunk), 0};
+            const size_t before = input.pos;
+            remaining = ZSTD_decompressStream(stream.get(), &output, &input);
+            if (ZSTD_isError(remaining) || output.pos > expected - plain.size() ||
+                (remaining != 0 && output.pos == 0 && before == input.pos))
+            {
+                dest.clear();
+                return;
+            }
+            plain.append(chunk, output.pos);
+        }
+        if (plain.size() != expected || input.pos != frameSize)
+        {
+            dest.clear();
+            return;
+        }
+    }
+    if (&plain != &dest)
+    {
+        dest.swap(plain);
+    }
 }
 
-uint32_t Compress::zlibCompressBound(uint32_t srcLength)
+void Compress::uncompress(std::string& dest, const std::string& src, int64_t maxOutputBytes)
 {
-    const uint32_t length = zlibRawCompressBound(srcLength);
+    if (maxOutputBytes < -1 || src.size() <= kCompressLengthSize ||
+        (maxOutputBytes >= 0 && Compress::uncompressBound(src.data()) > maxOutputBytes))
+    {
+        dest.clear();
+        return;
+    }
+    Compress::uncompress(dest, src);
+}
+
+uint32_t Compress::compressBound(uint32_t srcLength)
+{
+    const uint32_t length = Compress::rawCompressBound(srcLength);
     if (length == 0 || length > UINT32_MAX - kCompressLengthSize)
     {
         return 0;
@@ -160,7 +249,7 @@ uint32_t Compress::zlibCompressBound(uint32_t srcLength)
     return length + kCompressLengthSize;
 }
 
-uint32_t Compress::zlibUnCompressBound(const char* src)
+uint32_t Compress::uncompressBound(const char* src)
 {
     uint32_t length = 0;
     if (src != nullptr)
@@ -170,7 +259,7 @@ uint32_t Compress::zlibUnCompressBound(const char* src)
     return length;
 }
 
-void Compress::zlibUnCompress(char* dest, uint32_t& destLength, const char* src, uint32_t srcLength)
+void Compress::uncompress(char* dest, uint32_t& destLength, const char* src, uint32_t srcLength)
 {
     const uint32_t capacity = destLength;
     destLength = 0;
@@ -178,14 +267,14 @@ void Compress::zlibUnCompress(char* dest, uint32_t& destLength, const char* src,
     {
         return;
     }
-    const uint32_t expected = zlibUnCompressBound(src);
+    const uint32_t expected = Compress::uncompressBound(src);
     if (expected > capacity)
     {
         return;
     }
     uint32_t actual = capacity;
     uint32_t consumed = srcLength - kCompressLengthSize;
-    if (zlibRawUnCompress(reinterpret_cast<uint8_t*>(dest), actual,
+    if (Compress::rawUncompress(reinterpret_cast<uint8_t*>(dest), actual,
         reinterpret_cast<const uint8_t*>(src) + kCompressLengthSize, consumed) != COMPRESS_OK ||
         actual != expected || consumed != srcLength - kCompressLengthSize)
     {
@@ -194,225 +283,66 @@ void Compress::zlibUnCompress(char* dest, uint32_t& destLength, const char* src,
     destLength = actual;
 }
 
-std::string Compress::zlibCompress(const std::string& src, int32_t level)
+std::string Compress::compress(const std::string& src, int32_t level)
 {
     std::string result;
-    zlibCompress(result, src, level);
+    Compress::compress(result, src, level);
     return result;
 }
 
-std::string Compress::zlibUnCompress(const std::string& src)
+std::string Compress::uncompress(const std::string& src)
 {
     std::string result;
-    zlibUnCompress(result, src);
+    Compress::uncompress(result, src);
     return result;
 }
 
-//int main()
-//{
-//	/*原始数据*/
-//	unsigned char strsrc[] = "这些是测试数据。123456789 abcdefghigklmnopqrstuvwxyz\n\t\0abcdefghijklmnopqrstuvwxyz\n"; //包含\0字符
-//	unsigned char buf[1024] = { 0 };
-//	unsigned char strdst[1024] = { 0 };
-//	unsigned long srclen = sizeof(strsrc);
-//	unsigned long buflen = sizeof(buf);
-//	unsigned long dstlen = sizeof(strdst);
-//	int i;
-//	FILE * fp;
-//
-//	printf("源串:");
-//	for (i = 0; i < srclen; ++i)
-//	{
-//		printf("%c", strsrc[i]);
-//	}
-//	printf("原串长度为:%ld\n", srclen);
-//
-//	printf("字符串预计算长度为:%ld\n", compressBound(srclen));
-//	//压缩
-//	compress(buf, &buflen, strsrc, srclen);
-//	printf("压缩后实际长度为:%ld\n", buflen);
-//	dstlen = 1024;
-//	//解压缩
-//	uncompress(strdst, &dstlen, buf, buflen);
-//
-//	printf("目的串:");
-//	for (i = 0; i < dstlen; ++i)
-//	{
-//		printf("%c", strdst[i]);
-//	}
-//
-//	getchar();
-//	return 0;
-//}
-
-// Compress回归测试：测试时取消下面逐行注释，完成后恢复注释
+// 使用示例（独立消费者，已在 Windows x64 Release 验证）
+//#include "Compress/CompressAPI.h"
 //#include <cstdio>
 //#include <vector>
-//#if defined(COMPRESS_MYSQL_COEXIST_TEST)
-//#include "MysqlCpp/MysqlCppAPI.h"
-//#endif
-//
-//#define COMPRESS_CHECK(value) { if (!(value)) { std::printf("FAIL line=%d\n", __LINE__); return 1; } }
 //
 //int main()
 //{
-//#if defined(COMPRESS_MYSQL_COEXIST_TEST)
-//    // 只初始化本地驱动，不连接数据库；MySQL经DLL隔离，压缩使用tools预编译zlib
-//    MysqlCpp database;
-//    COMPRESS_CHECK(database.init());
-//#endif
-//    // 容量包含四字节长度头，输出不足时不能写入容量之外的哨兵
-//    uint8_t zeroes[1024] = {};
-//    std::vector<char> tight(10, 0x5a);
-//    uint32_t tightLength = 6;
-//    Compress::zlibCompress(tight.data(), tightLength, reinterpret_cast<const char*>(zeroes), sizeof(zeroes), 1);
-//    for (size_t index = 6; index < tight.size(); ++index)
+//    const std::string source("binary\0sample", 13);
+//    // 上层已有报文头时传原始Zstandard帧，并核对解压消耗的输入字节数
+//    std::vector<uint8_t> frame(Compress::rawCompressBound(static_cast<uint32_t>(source.size())));
+//    uint32_t size = static_cast<uint32_t>(frame.size());
+//    if (Compress::rawCompress(frame.data(), size, reinterpret_cast<const uint8_t*>(source.data()),
+//        static_cast<uint32_t>(source.size()), 3) != COMPRESS_OK)
 //    {
-//        COMPRESS_CHECK(tight[index] == 0x5a);
+//        return 1;
 //    }
-//    COMPRESS_CHECK(tightLength == 0);
-//
-//    const uint32_t sizes[] = {0, 1, 1023, 1024, 65537, 1048576};
-//    const int32_t levels[] = {0, 1, 7, 9};
-//    uint32_t rawCases = 0;
-//    for (uint32_t i = 0; i < 6; ++i)
+//    std::vector<uint8_t> output(source.size());
+//    uint32_t capacity = static_cast<uint32_t>(output.size());
+//    uint32_t consumed = size;
+//    if (Compress::rawUncompress(output.data(), capacity, frame.data(), consumed) != COMPRESS_OK ||
+//        consumed != size || std::string(output.begin(), output.end()) != source)
 //    {
-//        for (uint32_t j = 0; j < 4; ++j)
-//        {
-//            std::vector<uint8_t> input(sizes[i] + 1, 0x41);
-//            uint32_t random = 0x896f13a5;
-//            for (size_t index = 0; j % 2 && index < input.size(); ++index)
-//            {
-//                random ^= random << 13; random ^= random >> 17; random ^= random << 5;
-//                input[index] = static_cast<uint8_t>(random);
-//            }
-//            const uint32_t capacity = Compress::zlibRawCompressBound(sizes[i]);
-//            COMPRESS_CHECK(capacity != 0);
-//            std::vector<uint8_t> packed(capacity + 1, 0x5a);
-//            uint32_t length = capacity;
-//            COMPRESS_CHECK(Compress::zlibRawCompress(packed.data(), length, input.data(), sizes[i], levels[j]) == COMPRESS_OK);
-//            COMPRESS_CHECK(packed[capacity] == 0x5a);
-//            std::vector<uint8_t> output(sizes[i] + 1, 0x5a);
-//            uint32_t actual = sizes[i], consumed = length;
-//            COMPRESS_CHECK(Compress::zlibRawUnCompress(output.data(), actual, packed.data(), consumed) == COMPRESS_OK);
-//            COMPRESS_CHECK(actual == sizes[i] && consumed == length && std::memcmp(input.data(), output.data(), actual) == 0);
-//            COMPRESS_CHECK(output[sizes[i]] == 0x5a);
-//            consumed = length + 1; actual = sizes[i];
-//            COMPRESS_CHECK(Compress::zlibRawUnCompress(output.data(), actual, packed.data(), consumed) == COMPRESS_OK && consumed == length);
-//            consumed = length - 1; actual = sizes[i];
-//            COMPRESS_CHECK(Compress::zlibRawUnCompress(output.data(), actual, packed.data(), consumed) == COMPRESS_DATA_ERROR);
-//            COMPRESS_CHECK(consumed == 0 && actual == 0);
-//            packed[0] ^= 0xff; consumed = length; actual = sizes[i];
-//            COMPRESS_CHECK(Compress::zlibRawUnCompress(output.data(), actual, packed.data(), consumed) == COMPRESS_DATA_ERROR);
-//            COMPRESS_CHECK(consumed == 0 && actual == 0);
-//            ++rawCases;
-//        }
+//        return 2;
 //    }
-//
-//    uint32_t legacyCases = 0;
-//    for (uint32_t i = 1; i < 6; ++i)
+//    // 历史接口自带四字节原长头，可直接使用字符串或由应用提供缓冲
+//    std::string packed = Compress::compress(source);
+//    if (Compress::uncompress(packed) != source)
 //    {
-//        for (uint32_t pattern = 0; pattern < 2; ++pattern)
-//        {
-//            std::string input(sizes[i], '\0');
-//            uint32_t random = 0x123b59e1;
-//            for (size_t index = 0; index < input.size(); ++index)
-//            {
-//                random ^= random << 13; random ^= random >> 17; random ^= random << 5;
-//                input[index] = pattern ? static_cast<char>(random) : static_cast<char>('A' + index % 3);
-//            }
-//            for (uint32_t j = 0; j < 4; ++j)
-//            {
-//                const std::string packed = Compress::zlibCompress(input, levels[j]);
-//                COMPRESS_CHECK(packed.size() > 4 && Compress::zlibUnCompressBound(packed.data()) == input.size());
-//                COMPRESS_CHECK(Compress::zlibUnCompress(packed) == input);
-//                std::string reused("previous output");
-//                Compress::zlibCompress(reused, input, levels[j]);
-//                COMPRESS_CHECK(reused == packed);
-//                Compress::zlibUnCompress(reused, packed);
-//                COMPRESS_CHECK(reused == input);
-//                const uint32_t capacity = Compress::zlibCompressBound(sizes[i]);
-//                std::vector<char> buffer(static_cast<size_t>(capacity) + 2, 0x5a);
-//                uint32_t actual = capacity;
-//                Compress::zlibCompress(buffer.data() + 1, actual, input.data(), sizes[i], levels[j]);
-//                COMPRESS_CHECK(actual == packed.size() && std::memcmp(buffer.data() + 1, packed.data(), actual) == 0);
-//                COMPRESS_CHECK(buffer.front() == 0x5a && buffer.back() == 0x5a);
-//                COMPRESS_CHECK(Compress::zlibUnCompressBound(buffer.data() + 1) == sizes[i]);
-//                std::vector<char> plain(static_cast<size_t>(sizes[i]) + 2, 0x5a);
-//                uint32_t plainLength = sizes[i];
-//                Compress::zlibUnCompress(plain.data() + 1, plainLength, buffer.data() + 1, actual);
-//                COMPRESS_CHECK(plainLength == sizes[i] && std::memcmp(plain.data() + 1, input.data(), sizes[i]) == 0);
-//                COMPRESS_CHECK(plain.front() == 0x5a && plain.back() == 0x5a);
-//                ++legacyCases;
-//            }
-//        }
+//        return 3;
 //    }
-//
-//    // 失败时清理输出，旧格式拒绝损坏、截断、尾随字节及原长不匹配
-//    const std::string original(1024, 'Z');
-//    const std::string valid = Compress::zlibCompress(original);
-//    for (uint32_t index = 0; index < 5; ++index)
+//    Compress::compress(packed, source, 3);
+//    Compress::uncompress(packed, packed, static_cast<int64_t>(source.size()));
+//    if (packed != source)
 //    {
-//        std::string invalid = valid;
-//        if (index == 0)
-//        {
-//            invalid.back() ^= 1;
-//        }
-//        if (index == 1)
-//        {
-//            invalid.resize(invalid.size() - 1);
-//        }
-//        if (index == 2)
-//        {
-//            invalid += 'x';
-//        }
-//        if (index == 3)
-//        {
-//            invalid.resize(3);
-//        }
-//        if (index == 4)
-//        {
-//            const uint32_t wrong = static_cast<uint32_t>(original.size()) - 1;
-//            std::memcpy(&invalid[0], &wrong, sizeof(wrong));
-//        }
-//        std::string output("previous output");
-//        Compress::zlibUnCompress(output, invalid);
-//        COMPRESS_CHECK(output.empty() && Compress::zlibUnCompress(invalid).empty());
-//        std::vector<char> buffer(original.size() + 2, 0x5a);
-//        uint32_t actual = static_cast<uint32_t>(original.size());
-//        Compress::zlibUnCompress(buffer.data() + 1, actual, invalid.data(), static_cast<uint32_t>(invalid.size()));
-//        COMPRESS_CHECK(actual == 0 && buffer.front() == 0x5a && buffer.back() == 0x5a);
+//        return 4;
 //    }
-//    std::string alias = original;
-//    Compress::zlibCompress(alias, alias);
-//    COMPRESS_CHECK(alias == valid);
-//    Compress::zlibUnCompress(alias, alias);
-//    COMPRESS_CHECK(alias == original);
-//    std::string output("previous output");
-//    Compress::zlibCompress(output, std::string());
-//    COMPRESS_CHECK(output.empty());
-//    output = "previous output";
-//    Compress::zlibUnCompress(output, std::string());
-//    COMPRESS_CHECK(output.empty());
-//    output = "previous output";
-//    Compress::zlibCompress(output, original, 10);
-//    COMPRESS_CHECK(output.empty());
-//    COMPRESS_CHECK(Compress::zlibUnCompressBound(nullptr) == 0);
-//    COMPRESS_CHECK(Compress::zlibCompressBound(UINT32_MAX) == 0);
-//    uint32_t length = 1023;
-//    std::vector<char> small(1025, 0x5a);
-//    Compress::zlibUnCompress(small.data() + 1, length, valid.data(), static_cast<uint32_t>(valid.size()));
-//    COMPRESS_CHECK(length == 0 && small.front() == 0x5a && small[1024] == 0x5a);
-//    uint8_t dest[64] = {};
-//    length = 1;
-//    COMPRESS_CHECK(Compress::zlibRawCompress(dest, length, zeroes, sizeof(zeroes), 1) == COMPRESS_BUFFER_TOO_SMALL && length == 0);
-//    length = sizeof(dest);
-//    COMPRESS_CHECK(Compress::zlibRawCompress(dest, length, zeroes, sizeof(zeroes), 10) == COMPRESS_INVALID_ARGUMENT && length == 0);
-//    length = sizeof(dest);
-//    COMPRESS_CHECK(Compress::zlibRawCompress(nullptr, length, zeroes, sizeof(zeroes)) == COMPRESS_INVALID_ARGUMENT && length == 0);
-//    COMPRESS_CHECK(Compress::zlibRawCompressBound(UINT32_MAX) == 0);
-//    std::printf("PASS Compress main raw=%u legacy=%u; sentinels, invalid data, capacity, alias and overflow\n", rawCases, legacyCases);
-//    return 0;
+//    std::vector<char> buffer(Compress::compressBound(static_cast<uint32_t>(source.size())));
+//    size = static_cast<uint32_t>(buffer.size());
+//    Compress::compress(buffer.data(), size, source.data(), static_cast<uint32_t>(source.size()));
+//    if (size == 0 || Compress::uncompressBound(buffer.data()) != source.size())
+//    {
+//        return 5;
+//    }
+//    std::vector<char> plain(source.size());
+//    capacity = static_cast<uint32_t>(plain.size());
+//    Compress::uncompress(plain.data(), capacity, buffer.data(), size);
+//    std::printf("original=%u framed=%u\n", static_cast<unsigned>(capacity), static_cast<unsigned>(size));
+//    return capacity == source.size() && std::string(plain.begin(), plain.end()) == source ? 0 : 6;
 //}
-//
-//#undef COMPRESS_CHECK
