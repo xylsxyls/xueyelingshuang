@@ -1,8 +1,10 @@
-﻿#include "PlatformTest/PlatformTestAPI.h"
+﻿#if !defined(_WIN32) && !defined(_FILE_OFFSET_BITS)
+#define _FILE_OFFSET_BITS 64
+#endif
 #include "SharedMemoryTest.h"
+#include "PlatformTest/PlatformTestAPI.h"
 #include "SharedMemory/SharedMemoryAPI.h"
 #include <chrono>
-#include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -35,14 +37,36 @@
 */
 static int RunBenchmarks()
 {
-    SharedMemory mapping("", 4096, false);
-    uint8_t* data = static_cast<uint8_t*>(mapping.writeWithoutLock());
-    const uint32_t capacity = mapping.realSize();
-    if (data == nullptr || capacity < 4096)
+#ifdef _WIN32
+    // 固定到调用方允许的一个逻辑处理器，避免同一批在不同类型的核心间迁移。
+    DWORD_PTR processMask = 0;
+    DWORD_PTR systemMask = 0;
+    if (!::GetProcessAffinityMask(::GetCurrentProcess(), &processMask, &systemMask) || processMask == 0)
     {
         return 1;
     }
-    uint32_t invalid = 0;
+    const DWORD_PTR selected = processMask & (~processMask + 1);
+    if (::SetThreadAffinityMask(::GetCurrentThread(), selected) == 0)
+    {
+        return 1;
+    }
+    std::ostringstream mask;
+    mask << std::hex << selected;
+    std::printf("benchmark affinity mask = 0x%s\n", mask.str().c_str());
+#endif
+    SharedMemory mapping("", 4096, false);
+    uint8_t* data = static_cast<uint8_t*>(mapping.writeWithoutLock());
+    uint32_t capacity = 4096;
+#ifdef _WIN32
+    SYSTEM_INFO system = {};
+    ::GetSystemInfo(&system);
+    capacity = ((capacity + system.dwPageSize - 1) / system.dwPageSize) * system.dwPageSize;
+#endif
+    if (data == nullptr || mapping.realSize() != capacity)
+    {
+        return 1;
+    }
+    bool invalid = false;
     LibraryBenchmark::run("SharedMemory.writeWithoutLock.warm", [&](uint32_t count) -> uint64_t {
         uint64_t successes = 0;
         for (uint32_t i = 0; i < count; ++i)
@@ -87,16 +111,14 @@ static int RunBenchmarks()
         invalid |= sum != 0;
         return sum;
     });
-    if (invalid != 0)
-    {
-        return 1;
-    }
-    return 0;
+    return invalid ? 1 : 0;
 }
 
 #define CHECK(expression) do { if (!(expression)) { std::fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #expression); return 1; } } while (false)
 
-/** 设置平台共享目录并验证非法路径，成功返回 0。 */
+/** 设置平台共享目录并验证非法路径
+@return 所有断言通过时返回 0，失败返回 1
+*/
 static int ConfigureDirectory()
 {
 #ifdef SHARED_MEMORY_MOBILE
@@ -114,7 +136,9 @@ static int ConfigureDirectory()
     return 0;
 }
 
-/** 生成当前场景独占的名称。 */
+/** 生成当前场景独占的名称
+@return 包含进程身份和本次序号的可移植名称
+*/
 static std::string TestName()
 {
     std::ostringstream key;
@@ -124,9 +148,9 @@ static std::string TestName()
 #else
     key << ::getpid();
 #endif
-    static std::atomic<uint32_t> sequence(0);
+    static uint32_t s_sequence = 0;
     key << '_' << static_cast<uint32_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count())
-        << '_' << sequence.fetch_add(1);
+        << '_' << s_sequence++;
     return key.str();
 }
 
@@ -153,6 +177,13 @@ static int TestMappingExtent()
     CHECK(::VirtualProtect(view + page, page, oldProtection, &ignored));
     owner.clear();
     CHECK(view[0] == 0 && view[2 * page] == 0);
+    view[0] = 0x52;
+    CHECK(::VirtualProtect(view + page, page, PAGE_READWRITE | PAGE_GUARD, &ignored));
+    owner.clear();
+    MEMORY_BASIC_INFORMATION guarded = {};
+    CHECK(::VirtualQuery(view + page, &guarded, sizeof(guarded)) == sizeof(guarded));
+    CHECK(view[0] == 0x52 && (guarded.Protect & PAGE_GUARD) != 0);
+    CHECK(::VirtualProtect(view + page, page, oldProtection, &ignored));
 #ifdef _WIN64
     const std::string name = TestName();
     std::unique_ptr<void, decltype(&::CloseHandle)> section(
@@ -171,7 +202,9 @@ static int TestMappingExtent()
 }
 #endif
 
-/** 两实例检验碰撞、别名、双向读写与清零，成功返回 0。 */
+/** 两实例检验碰撞、别名、双向读写与清零
+@return 所有断言通过时返回 0，失败返回 1
+*/
 static int TestViews()
 {
     CHECK(ConfigureDirectory() == 0);
@@ -197,7 +230,17 @@ static int TestViews()
     CHECK(oversize.isFailed() && oversize.writeWithoutLock() == nullptr);
     CHECK(!oversize.unlinkName());
     SharedMemory withinPage(name, 129, true);
-#ifdef _WIN32
+#if defined(__APPLE__) && !defined(SHARED_MEMORY_MOBILE)
+    const int native = ::shm_open(("/" + name).c_str(), O_RDONLY, 0);
+    CHECK(native >= 0);
+    struct stat region = {};
+    const int queried = ::fstat(native, &region);
+    ::close(native);
+    CHECK(queried == 0 && region.st_size >= 128 && region.st_size < UINT32_MAX);
+    CHECK(owner.realSize() == region.st_size && withinPage.isFailed() == (region.st_size < 129));
+    SharedMemory outside(name, static_cast<uint32_t>(region.st_size) + 1, true);
+    CHECK(outside.isFailed());
+#elif defined(_WIN32)
     SYSTEM_INFO information = {};
     ::GetSystemInfo(&information);
     CHECK(information.dwPageSize >= 129 && !withinPage.isFailed());
@@ -245,7 +288,8 @@ static int TestViews()
     {
         CHECK(view[i] == 0);
     }
-    reader.close(); reader.close();
+    reader.close();
+    reader.close();
     owner.close();
     return 0;
 }
@@ -275,7 +319,9 @@ static int TestPartialClear()
     return 0;
 }
 
-/** 验证缺失名称与匿名映射的生命周期，成功返回 0。 */
+/** 验证缺失名称与匿名映射的生命周期
+@return 所有断言通过时返回 0，失败返回 1
+*/
 static int TestAnonymous()
 {
     CHECK(ConfigureDirectory() == 0);
@@ -283,6 +329,9 @@ static int TestAnonymous()
     SharedMemory absent(name);
     CHECK(absent.readWithoutLock() == nullptr && absent.writeWithoutLock() == nullptr && absent.realSize() == 0);
     SharedMemory anonymous("", 16, false);
+    SharedMemory empty("");
+    CHECK(empty.isFailed() && empty.realSize() == 0 && empty.readWithoutLock() == nullptr &&
+        empty.writeWithoutLock() == nullptr && empty.memory() == nullptr && !empty.unlinkName());
     CHECK(!anonymous.isFailed() && anonymous.writeWithoutLock() != nullptr && !anonymous.unlinkName());
     uint8_t* privateData = static_cast<uint8_t*>(anonymous.writeWithoutLock());
     std::memset(privateData, 0x9a, 16);
@@ -340,8 +389,52 @@ static int TestNameLifetime()
     return 0;
 }
 
+/** 验证创建者默认析构以及 close 和最后一个后备引用的不同寿命
+@return 旧视图可读、名称可见性与所属后端一致且最后可排他重建时返回 0
+*/
+static int TestDefaultNameLifetime()
+{
+    CHECK(ConfigureDirectory() == 0);
+    const std::string name = TestName();
+    {
+        SharedMemory peer(name);
+        const uint8_t* read = nullptr;
+        {
+            SharedMemory owner(name, 32, false);
+            uint8_t* data = static_cast<uint8_t*>(owner.writeWithoutLock());
+            CHECK(data != nullptr);
+            data[31] = 0x48;
+            read = static_cast<const uint8_t*>(peer.readWithoutLock());
+            CHECK(read != nullptr && read[31] == 0x48);
+        }
+        CHECK(read[31] == 0x48 && peer.memory() == read);
+        peer.close();
+        CHECK(peer.memory() == nullptr);
+        read = static_cast<const uint8_t*>(peer.readWithoutLock());
+        CHECK(read != nullptr && read[31] == 0x48);
+        SharedMemory newcomer(name);
 #ifdef _WIN32
-/** 使用系统创建的只读映射，验证写升级失败后原读视图及 memory() 仍有效。 */
+        const uint8_t* same = static_cast<const uint8_t*>(newcomer.readWithoutLock());
+        CHECK(same != nullptr && same[31] == 0x48);
+#else
+        CHECK(newcomer.readWithoutLock() == nullptr);
+        SharedMemory replacement(name, 32, false);
+        uint8_t* newData = static_cast<uint8_t*>(replacement.writeWithoutLock());
+        CHECK(newData != nullptr && newData[31] == 0);
+        newData[31] = 0x51;
+        CHECK(read[31] == 0x48);
+#endif
+    }
+    SharedMemory fresh(name, 32, false);
+    const uint8_t* read = static_cast<const uint8_t*>(fresh.readWithoutLock());
+    CHECK(read != nullptr && read[31] == 0);
+    return 0;
+}
+
+#ifdef _WIN32
+/** 使用系统创建的只读映射，验证写升级失败后原读视图及 memory() 仍有效
+@return 所有断言通过时返回 0，失败返回 1
+*/
 static int TestReadAccess()
 {
     const std::string name = TestName();
@@ -383,6 +476,7 @@ static int TestReadAccess()
     CHECK(writable[7] == 0x26 && original[7] == 0x26);
     return 0;
 }
+
 /** 以操作系统准许的 FILE_MAP_WRITE 视图作为容量和字节可见性的独立预期
 @return 按名加入、首次读写、查询容量和重新映射都成功时返回 0
 */
@@ -434,11 +528,33 @@ static int TestWriteMappingRight()
     return 0;
 }
 #else
-/** 校验只读权限，系统原生的读写打开结果用作独立预期。 */
+/** 校验只读权限，系统原生的读写打开结果用作独立预期
+@return 所有断言通过时返回 0，失败返回 1
+*/
 static int TestReadAccess()
 {
     CHECK(ConfigureDirectory() == 0);
     const std::string name = TestName();
+#if defined(__APPLE__) && !defined(SHARED_MEMORY_MOBILE)
+    // Darwin 的共享内存使用创建时的权限，普通文件后备则可用 fchmod 改权。
+    const std::string path = "/" + name;
+    const int descriptor = ::shm_open(path.c_str(), O_CREAT | O_EXCL | O_RDWR, 0400);
+    CHECK(descriptor >= 0);
+    const bool sized = ::ftruncate(descriptor, 64) == 0;
+    void* initial = sized ? ::mmap(nullptr, 64, PROT_READ | PROT_WRITE, MAP_SHARED, descriptor, 0) : MAP_FAILED;
+    if (initial != MAP_FAILED)
+    {
+        static_cast<uint8_t*>(initial)[17] = 0x73;
+        ::munmap(initial, 64);
+    }
+    struct stat info = {};
+    const bool queried = ::fstat(descriptor, &info) == 0;
+    ::close(descriptor);
+    SharedMemory peer(name);
+    const int writable = ::shm_open(path.c_str(), O_RDWR, 0);
+    const uint32_t actual = peer.realSize();
+    const bool validFixture = initial != MAP_FAILED && queried && actual == info.st_size && actual >= 64;
+#else
     SharedMemory owner(name, 64, false);
     uint8_t* original = static_cast<uint8_t*>(owner.writeWithoutLock());
     CHECK(original != nullptr);
@@ -464,15 +580,22 @@ static int TestReadAccess()
 #else
     const int writable = ::shm_open(path.c_str(), O_RDWR, 0);
 #endif
+    SharedMemory peer(name);
+    CHECK(peer.realSize() == 64);
+#endif
     if (writable >= 0)
     {
         ::close(writable);
     }
-    SharedMemory peer(name);
-    CHECK(peer.realSize() == 64);
     const uint8_t* view = static_cast<const uint8_t*>(peer.readWithoutLock());
+    void* writeView = peer.writeWithoutLock();
+#if defined(__APPLE__) && !defined(SHARED_MEMORY_MOBILE)
+    const bool removedName = ::shm_unlink(path.c_str()) == 0;
+    CHECK(validFixture && removedName);
+#endif
     CHECK(view != nullptr && view[17] == 0x73);
-    CHECK((peer.writeWithoutLock() != nullptr) == (writable >= 0));
+    CHECK((writeView != nullptr) == (writable >= 0));
+    CHECK(peer.memory() == (writeView != nullptr ? writeView : view));
     // 模拟另一个创建者已发布名称，稍后才完成扩容和权限设置。
     const std::string pendingName = TestName();
 #ifdef SHARED_MEMORY_MOBILE
@@ -484,8 +607,13 @@ static int TestReadAccess()
 #endif
     CHECK(pending >= 0);
     SharedMemory retry(pendingName);
+#if defined(__APPLE__) && !defined(SHARED_MEMORY_MOBILE)
+    const bool empty = retry.readWithoutLock() == nullptr;
+    const bool ready = ::ftruncate(pending, 64) == 0;
+#else
     const bool empty = ::fchmod(pending, 0400) == 0 && retry.readWithoutLock() == nullptr;
     const bool ready = ::ftruncate(pending, 64) == 0 && ::fchmod(pending, 0600) == 0;
+#endif
     ::close(pending);
     uint8_t* data = static_cast<uint8_t*>(retry.writeWithoutLock());
     bool shared = false;
@@ -567,10 +695,16 @@ static int ProbeDirectory(const std::string& directory)
     return 0;
 }
 
-/** 用新建的临时目录验证命名映射的配置，不依赖其他用例的进程全局设置。 */
+/** 用新建的临时目录验证命名映射的配置，不依赖其他用例的进程全局设置
+@return 所有断言通过时返回 0，失败返回 1
+*/
 static int TestDirectory()
 {
-    const char* temp = std::getenv("TMPDIR");
+    const char* temp = std::getenv("SHARED_MEMORY_TEST_DIR");
+    if (temp == nullptr || *temp == '\0')
+    {
+        temp = std::getenv("TMPDIR");
+    }
     std::string pattern = std::string(temp && *temp ? temp : "/tmp") + "/SharedMemoryTest-XXXXXX";
     std::vector<char> directory(pattern.begin(), pattern.end());
     directory.push_back('\0');
@@ -612,7 +746,9 @@ static int ProbePeer(const std::string& name)
     return 0;
 }
 
-/** 父子进程独立打开同一个命名映射，父进程在子进程退出后核对回写值。 */
+/** 父子进程独立打开同一个命名映射，父进程在子进程退出后核对回写值
+@return 所有断言通过时返回 0，失败返回 1
+*/
 static int TestProcesses()
 {
     CHECK(ConfigureDirectory() == 0);
@@ -679,22 +815,23 @@ int main(int argc, char** argv)
         return RunBenchmarks();
     }
     const LibraryTestCase cases[] = {
-        {1, false, TestViews},
-        {2, false, TestAnonymous},
-        {3, false, TestReadAccess},
+        {kNamedViews, false, TestViews},
+        {kAnonymous, false, TestAnonymous},
+        {kReadAccess, false, TestReadAccess},
 #ifdef SHARED_MEMORY_TEST_CAN_EXEC
-        {4, false, TestProcesses},
+        {kProcesses, false, TestProcesses},
 #ifndef _WIN32
-        {5, false, TestDirectory},
+        {kDirectory, false, TestDirectory},
 #else
-        {6, false, TestMappingExtent},
+        {kMappingExtent, false, TestMappingExtent},
 #endif
 #endif
-        {7, false, TestNameLifetime},
-        {8, false, TestPartialClear},
+        {kNameLifetime, false, TestNameLifetime},
+        {kPartialClear, false, TestPartialClear},
 #ifdef _WIN32
-        {9, false, TestWriteMappingRight},
+        {kWriteMappingRight, false, TestWriteMappingRight},
 #endif
+        {kDefaultNameLifetime, false, TestDefaultNameLifetime},
     };
     return LibraryCaseSelection::run(argc, argv, cases);
 }
