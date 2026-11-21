@@ -630,10 +630,15 @@ bool SharedMemory::unlinkName()
 //     {
 //         return 3;
 //     }
-//     std::memcpy(writable, "ready", 6);
+//     const char message[] = "ready";
+//     std::memcpy(writable, message, sizeof(message));
 //     SharedMemory peer(owner.mapName());
+//     if (peer.realSize() < sizeof(message))
+//     {
+//         return 4;
+//     }
 //     const void* readable = peer.readWithoutLock();
-//     if (readable == nullptr || readable != peer.memory() || std::memcmp(readable, "ready", 6) != 0)
+//     if (readable == nullptr || readable != peer.memory() || std::memcmp(readable, message, sizeof(message)) != 0)
 //     {
 //         return 4;
 //     }

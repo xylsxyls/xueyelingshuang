@@ -31,7 +31,7 @@ public:
     /** 创建或打开内存；size为0只打开，不创建不存在对象
     @param [in] name 逻辑名称；非零容量时空名表示匿名；建议用 1 至 30 字节 ASCII 字母和数字，POSIX 排除斜杠、单点及双点，所有平台排除 NUL
     @param [in] size 请求的容量（字节），非零时创建或加入；0 只打开
-    @param [in] isAllowExist 是否允许加入既有对象；false 碰撞明确失败，true 加入时须获读写权限并能映射请求容量
+    @param [in] isAllowExist 非零容量请求是否允许加入既有对象；false 时重名失败，true 时需要读写权限且后备足以容纳 size 字节。size 为 0 时忽略此参数
     */
     SharedMemory(const std::string& name, uint32_t size = 0, bool isAllowExist = true);
 
@@ -41,22 +41,23 @@ public:
     ~SharedMemory();
 
     /** 查询是否尚未取得有效资源
-    @return 尚无有效句柄时为true；只打开的实例可能要在首次映射后才成功
+    @return 尚未取得有效后备时为 true。只打开的实例在首次成功打开前为 true，POSIX 匿名实例取得容量后为 false
     */
     bool isFailed();
 
     /** 本次请求的创建容量
-    @return 只打开对象时0
+    @return 构造时传入的字节数，只打开对象时为 0
     */
     uint32_t size();
 
     /** 实际后备容量（字节）。Windows 含同一视图中不同保护区域；Windows 和 macOS 默认命名后备可按页取整
-    @return 无效或容量无法用 uint32_t 表示时返回 0
+    Windows 没有现成视图时临时映射整个对象，查询不会改变 memory()；POSIX 取得后备后复用已核实的容量
+    @return 无法查询或容量超出 uint32_t 时返回 0
     */
     uint32_t realSize();
 
     /** 取得逻辑名称，不暴露原生HANDLE
-    @return 构造时的名称
+    @return 构造时传入的名称副本，匿名对象返回空字符串
     */
     std::string mapName();
 
@@ -67,12 +68,12 @@ public:
 
     /** 取得可读映射；已有后备仅授予读取权限时仍可打开
     Windows 优先使用只读视图。仅授予 FILE_MAP_WRITE 时使用操作系统允许的读写视图
-    @return 映射失败为nullptr
+    @return 借用的读地址，close 或析构后失效；失败返回 nullptr。写入须先调用 writeWithoutLock
     */
     void* readWithoutLock();
 
     /** 取得可读写映射，调用方负责共享数据同步
-    @return 映射失败为nullptr
+    @return 借用的读写地址，close 或析构后失效；获取失败返回 nullptr
     */
     void* writeWithoutLock();
 
@@ -197,7 +198,7 @@ private:
     bool m_nameUnlinked;
     // 原生对象名称；目录后备时为相对于已持有目录描述符的数据文件名
     std::string m_nativeName;
-    // 非负值表示基于宿主目录的映射；持有目录描述符，避免路径在映射期被替换。
+    // 非负值为本实例持有的后备目录描述符，目录改名后仍指向原目录
     int32_t m_directoryDescriptor;
 #endif
 };
