@@ -160,7 +160,7 @@ def signatures(root, library, exports=None):
     files = [file for file in source.iterdir() if file.suffix in ('.h', '.hpp', '.cpp', '.cc', '.cxx', '.c')]
     for header in sdk_setting(library, 'WASM_BUILD_ABI_HEADERS') or []:
         name, relative = header.split('/', 1)
-        files.append(root / 'src' / name / name / 'src' / relative)
+        files.append(source / relative if name == library else SDK_ROOT / 'include' / 'wasm' / name / relative)
     # Read referenced source declarations, including their ABI typedefs. Do not
     # guess types from function names or read potentially stale installed headers.
     pending, visited = list(files), set()
@@ -173,7 +173,7 @@ def signatures(root, library, exports=None):
             candidates = [file.parent / include]
             if '/' in include:
                 owner, relative = include.split('/', 1)
-                candidates.append(root / 'src' / owner / owner / 'src' / relative)
+                candidates.append(source / relative if owner == library else SDK_ROOT / 'include' / 'wasm' / owner / relative)
             for candidate in candidates:
                 if candidate.is_file():
                     pending.append(candidate)
@@ -249,6 +249,8 @@ def signatures(root, library, exports=None):
 
 ROOT = Path(os.environ.get('CMAKE_WASM_REPOSITORY_ROOT', str(Path(__file__).resolve().parents[3]))).resolve()
 SDK_ROOT = ROOT
+sys.path.insert(0, str(ROOT / 'common' / 'CloudRebuild'))
+import PreparedWasmHeaders as sdk_headers
 BUILD_LINKAGES = {}
 MARKER = '\n// SDK identity: '
 
@@ -328,13 +330,11 @@ def artifact_digest(data):
 
 
 def validate_vendor_identity(data):
+    sdk_headers.verify(SDK_ROOT, data)
     for relative, expected in data.get('vendorSha256', {}).items():
-        source = (ROOT / relative).resolve()
-        if ROOT / 'tools' not in source.parents:
-            raise ValueError('Vendor identity outside tools: ' + relative)
-        prepared = SDK_ROOT / 'lib' / source.name
-        if (hashlib.sha256(source.read_bytes()).hexdigest() != expected or
-                hashlib.sha256(prepared.read_bytes()).hexdigest() != expected):
+        sdk_headers.vendor_name(relative)
+        prepared = SDK_ROOT / 'lib' / Path(relative).name
+        if not prepared.is_file() or hashlib.sha256(prepared.read_bytes()).hexdigest() != expected:
             raise ValueError('Rebuild SDK: vendor identity changed: ' + relative)
 
 
@@ -422,8 +422,7 @@ def validate(library, bit, mode, active=None, linkage=None):
     validate_vendor_identity(data)
     alias = data.get('entryAlias')
     if alias is not None:
-        expected_alias = sdk_setting(library, 'WASM_SDK_ENTRY_ALIAS') or []
-        if expected_alias != [alias] or not alias.isidentifier() or alias == library:
+        if not alias.isidentifier() or alias == library:
             raise ValueError('Invalid public SDK entry alias: ' + str(alias))
         entry = SDK_ROOT / 'include' / alias / (alias + 'API.js')
         if not entry.is_file() or hashlib.sha256(entry.read_bytes()).hexdigest() != data.get('entryAliasSha256'):
@@ -471,7 +470,7 @@ def protocol_constants(library):
         parts = Path(header).parts
         if len(parts) < 2 or not parts[0].isidentifier() or '..' in parts:
             raise ValueError('Invalid SDK protocol header: ' + header)
-        path = ROOT / 'src' / parts[0] / parts[0] / 'src' / Path(*parts[1:])
+        path = ((ROOT / 'src' / library / library / 'src') if parts[0] == library else (SDK_ROOT / 'include' / 'wasm' / parts[0])) / Path(*parts[1:])
         path.resolve().relative_to((ROOT / 'src').resolve())
         pattern = r'\b(' + re.escape(prefix[0]) + r'[A-Z0-9_]+)\s*=\s*(0x[0-9a-fA-F]+|[0-9]+)[Uu]?\b'
         for name, value in re.findall(pattern, path.read_text(encoding='utf-8-sig')):
@@ -519,9 +518,8 @@ def runtime_dependencies(library):
 def vendor_libraries(library, bit, mode='release'):
     result = {}
     for name in prepared_inputs(library)['vendors']:
-        path = (ROOT / name).resolve()
-        if ROOT / 'tools' not in path.parents or 'wasm' not in path.parts:
-            raise ValueError('Wasm vendor must be a prepared tools archive: ' + name)
+        sdk_headers.vendor_name(name)
+        path = SDK_ROOT / 'lib' / Path(name).name
         payload = path.read_bytes()
         if archive_bits(payload) != bit:
             raise ValueError('Expected wasm' + str(bit) + ' vendor archive: ' + name)
@@ -541,8 +539,8 @@ def plan(library, linkage, scope, active=None):
     if library in BUILD_LINKAGES:
         if BUILD_LINKAGES[library] != linkage: raise ValueError('Conflicting Wasm linkage for ' + library)
         return
-    supported = sdk_setting(library, 'WASM_SDK_LINKAGES') or []
-    if linkage not in supported: raise ValueError('No Wasm ' + linkage + ' entry for ' + library)
+    if not active and linkage not in (sdk_setting(library, 'WASM_SDK_LINKAGES') or []):
+        raise ValueError('No Wasm ' + linkage + ' entry for ' + library)
     active.add(library)
     children = dependency_linkages(library)
     for dep, kind in children.items(): plan(dep, kind, scope, active)
@@ -687,10 +685,9 @@ def prepare_before(session, library, target, linkage, mode, scope, environment):
                     session.write_text(json.dumps(current), encoding='utf-8')
                 continue
             if node is None:
-                current['nodes'][child] = dict(linkage=kind, done=True, inputs={})
+                data = validate(child, int(target[4:]), mode, linkage=kind)
+                current['nodes'][child] = dict(linkage=kind, done=True, inputs=data['preparedInputs'])
                 session.write_text(json.dumps(current), encoding='utf-8')
-                report = before_output([cloud, '--before', child, target, kind, mode, 'only'], environment)
-                before_receipt(session, child, report)
             collect(child)
         active.remove(name)
         visited.add(name)
@@ -745,6 +742,8 @@ def publish(library, build, bit, mode, compiler, sdk, vendors):
                               for dep in dependencies(library) if BUILD_LINKAGES[dep] == 'dll'},
                 buildDependencies={dep: artifact_digest(validate(dep, bit, mode)) for dep in dependencies(library)},
                 buildDependencyLinkages={dep: BUILD_LINKAGES[dep] for dep in dependencies(library)})
+    source = ROOT / 'src' / library / library / 'src'
+    published_headers = sdk_headers.header_updates(source, SDK_ROOT, library, 'dll', vendors, data)
     alias = sdk_setting(library, 'WASM_SDK_ENTRY_ALIAS') or []
     alias_content = None
     if alias:
@@ -759,6 +758,7 @@ def publish(library, build, bit, mode, compiler, sdk, vendors):
     target.mkdir(parents=True, exist_ok=True)
     # Validate first, then publish with rollback. Identity checks reject an interrupted pair.
     updates = {SDK_ROOT / 'lib' / wasm.name: wasm.read_bytes(), target / (library + 'API.js'): body.encode('utf-8')}
+    updates.update(published_headers)
     if alias_content is not None:
         updates[SDK_ROOT / 'include' / alias[0] / (alias[0] + 'API.js')] = alias_content
     previous_js = target / (library + 'API.js')
@@ -807,19 +807,14 @@ def publish_static(library, build, bit, mode, compiler, sdk, vendors):
                 dependencies={dep: artifact_digest(validate(dep, bit, mode)) for dep in dependencies(library)},
                 dependencyLinkages={dep: BUILD_LINKAGES[dep] for dep in dependencies(library)})
     target = SDK_ROOT / 'include' / library
+    source = ROOT / 'src' / library / library / 'src'
+    published_headers = sdk_headers.header_updates(source, SDK_ROOT, library, 'lib', vendors, data)
     updates = {SDK_ROOT / 'lib' / archive.name: payload,
                target / (library + 'WasmSDK.json'): json.dumps(data, indent=2, sort_keys=True).encode('utf-8')}
+    updates.update(published_headers)
     updates[target / (library + 'WasmLICENSE.txt')] = None
     commit_sdk(library, updates, bit, mode)
     wasm_message('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': C++ static archive ' + str(len(payload)) + ' bytes')
-
-
-def vendor_headers(archive):
-    """Read the same target-specific header selection used by before."""
-    helpers = str(ROOT / 'common' / 'CloudRebuild')
-    if helpers not in sys.path: sys.path.insert(0, helpers)
-    from WasmVendorHeaders import selected_headers
-    return selected_headers(ROOT, archive)
 
 
 def build_inputs(library, bit, mode, linkage, scope, private):
@@ -847,29 +842,20 @@ def build_inputs(library, bit, mode, linkage, scope, private):
         if not prepared.is_file() or hashlib.sha256(prepared.read_bytes()).hexdigest() != digest:
             raise ValueError('Missing or mismatched prepared Wasm vendor: ' + str(prepared))
         vendor_paths.append(prepared)
-        vendor = source.relative_to(ROOT / 'tools').parts[0]
-        for relative_header, header in vendor_headers(source).items():
-            target = SDK_ROOT / 'include' / vendor / relative_header
-            if not target.is_file() or target.read_bytes() != header.read_bytes():
-                raise ValueError('Missing or mismatched Wasm header: ' + str(target))
-    if scope == 'only':
-        for dep in names:
-            if dep != library: validate(dep, bit, mode)
-    header_names = set(names)
-    for name in names:
-        header_names.update(prepared_inputs(name)['headers'])
-    for name in header_names:
-        if not name.isidentifier(): raise ValueError('Invalid private header project: ' + name)
-        source = ROOT / 'src' / name / name / 'src'
-        for header in source.rglob('*'):
-            if header.is_file() and header.suffix.lower() in ('.h', '.hpp', '.inl'):
-                target = private / 'include' / name / header.relative_to(source)
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(header, target)
     source = ROOT / 'src' / library / library / 'src'
+    for relative, header in sdk_headers.project_headers(source, library, linkage).items():
+        target = private / 'include' / library / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(header, target)
+    for name in set(names) - {library}:
+        validate(name, bit, mode, linkage=BUILD_LINKAGES[name])
+    for name in names:
+        for provider in prepared_inputs(name)['headers']:
+            if not provider.isidentifier() or not (SDK_ROOT / 'include' / 'wasm' / provider / (provider + 'API.h')).is_file():
+                raise ValueError('Missing prepared header dependency: ' + provider)
     sources = sorted(file for file in source.iterdir() if file.suffix in ('.cpp', '.cc', '.cxx', '.c'))
     if not sources: raise ValueError('No Wasm sources: ' + library)
-    includes = [private / 'include', source]
+    includes = [private / 'include', source, SDK_ROOT / 'include' / 'wasm']
     for vendor in sorted({(ROOT / name).relative_to(ROOT / 'tools').parts[0] for name in vendors}):
         if vendor != 'zlib': includes.append(SDK_ROOT / 'include' / vendor)
     # Upstream include names (google/..., mbedtls/...) must select the target SDK
@@ -917,13 +903,16 @@ def stage_sdk(destination, libraries=None):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
     for name in selected:
-        # The alias is part of this provider's transaction, not a second Wasm module.
-        for alias in sdk_setting(name, 'WASM_SDK_ENTRY_ALIAS') or []:
-            if not alias.isidentifier() or alias == name: raise ValueError('Invalid SDK entry alias')
-            copy(SDK_ROOT / 'include' / alias / (alias + 'API.js'))
         source = SDK_ROOT / 'include' / name
         for file in source.rglob('*'):
             if file.is_file() and (file.suffix == '.js' or file.name.endswith('WasmSDK.json')): copy(file)
+        for header in sdk_headers.header_files(SDK_ROOT / 'include' / 'wasm' / name): copy(header)
+        entry = source / (name + 'API.js')
+        if entry.is_file():
+            alias = identity(entry).get('entryAlias')
+            if alias:
+                if not alias.isidentifier() or alias == name: raise ValueError('Invalid SDK entry alias')
+                copy(SDK_ROOT / 'include' / alias / (alias + 'API.js'))
         for suffix in ('.a', 'd.a', '.wasm', 'd.wasm'): copy(SDK_ROOT / 'lib' / (name + suffix))
     for relative in vendors:
         source = ROOT / relative
@@ -947,12 +936,12 @@ def validate_staged_origin(destination):
 def publish_tree(destination, libraries, bit, mode):
     """Commit one complete SDK batch, restoring every replaced file on failure."""
     updates = {}
-    for name in libraries: validate(name, bit, mode)
     files = set()
     for name in libraries:
         data = validate(name, bit, mode)
         files.add(SDK_ROOT / 'lib' / data.get('archive', data.get('wasm')))
         public = SDK_ROOT / 'include' / name
+        files.update(path for path, digest in sdk_headers.receipt_paths(SDK_ROOT, data))
         if data.get('entryAlias'):
             alias = data['entryAlias']
             files.add(SDK_ROOT / 'include' / alias / (alias + 'API.js'))
@@ -965,8 +954,6 @@ def publish_tree(destination, libraries, bit, mode):
         for relative in data.get('vendorSha256', {}):
             source = ROOT / relative
             files.add(SDK_ROOT / 'lib' / source.name)
-            vendor = source.relative_to(ROOT / 'tools').parts[0]
-            files.update(SDK_ROOT / 'include' / vendor / relative_header for relative_header in vendor_headers(source))
     for file in files:
         updates[destination / file.relative_to(SDK_ROOT)] = file.read_bytes()
     for name in libraries:

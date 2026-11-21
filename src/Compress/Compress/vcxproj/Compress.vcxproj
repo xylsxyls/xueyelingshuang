@@ -82,23 +82,23 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(ProjectDir)..\..\..\..\lib\</OutDir>
+    <OutDir>$(VendorSDKRoot)\lib\</OutDir>
     <IntDir>$(ProjectDir)..\..\..\temp\$(ProjectName)\dll\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>$(ProjectName)d</TargetName>
     <IntDir>$(ProjectDir)..\..\..\temp\$(ProjectName)\dll\$(Platform)\$(Configuration)\</IntDir>
-    <OutDir>$(ProjectDir)..\..\..\..\lib\</OutDir>
+    <OutDir>$(VendorSDKRoot)\lib\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(ProjectDir)..\..\..\..\lib\</OutDir>
+    <OutDir>$(VendorSDKRoot)\lib\</OutDir>
     <IntDir>$(ProjectDir)..\..\..\temp\$(ProjectName)\dll\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IntDir>$(ProjectDir)..\..\..\temp\$(ProjectName)\dll\$(Platform)\$(Configuration)\</IntDir>
-    <OutDir>$(ProjectDir)..\..\..\..\lib\</OutDir>
+    <OutDir>$(VendorSDKRoot)\lib\</OutDir>
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
