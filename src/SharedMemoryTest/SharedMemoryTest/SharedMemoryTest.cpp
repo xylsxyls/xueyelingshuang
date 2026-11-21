@@ -67,6 +67,7 @@ static int RunBenchmarks()
         return 1;
     }
     bool invalid = false;
+    // 各批接收调用次数 count，返回该批的实际累加值；发现后置条件不符即记录到最终退出状态。
     LibraryBenchmark::run("SharedMemory.writeWithoutLock.warm", [&](uint32_t count) -> uint64_t {
         uint64_t successes = 0;
         for (uint32_t i = 0; i < count; ++i)
@@ -218,9 +219,20 @@ static int TestViews()
 #endif
     SharedMemory truncated(name + std::string("\0invalid", 8));
     CHECK(truncated.readWithoutLock() == nullptr && truncated.writeWithoutLock() == nullptr && truncated.realSize() == 0);
-    SharedMemory unopened(name);
-    unopened.clear();
-    CHECK(unopened.memory() == nullptr);
+    SharedMemory invalidJoin(name + std::string("\0invalid", 8), 128, true);
+    CHECK(invalidJoin.isFailed() && invalidJoin.writeWithoutLock() == nullptr && !invalidJoin.unlinkName());
+#ifndef _WIN32
+#ifdef SHARED_MEMORY_MOBILE
+    const size_t maxLength = 128;
+#else
+    const size_t maxLength = 30;
+#endif
+    std::string boundaryName = name;
+    boundaryName.resize(maxLength, 'a');
+    SharedMemory boundary(boundaryName, 1, false);
+    SharedMemory tooLong(boundaryName + "a", 1, false);
+    CHECK(boundary.writeWithoutLock() != nullptr && tooLong.isFailed() && !tooLong.unlinkName());
+#endif
     SharedMemory collision(name, 128, false);
     CHECK(collision.isFailed());
     CHECK(!collision.unlinkName());
@@ -259,6 +271,11 @@ static int TestViews()
         expected[i] = static_cast<uint8_t>(i + 1);
     }
     std::memcpy(contents, expected, sizeof(expected));
+    SharedMemory unopened(name);
+    CHECK(unopened.isFailed() && unopened.memory() == nullptr);
+    unopened.clear();
+    CHECK(unopened.isFailed() && unopened.memory() == nullptr && std::memcmp(contents, expected, sizeof(expected)) == 0);
+    CHECK(unopened.realSize() == owner.realSize() && !unopened.isFailed() && unopened.memory() == nullptr);
     CHECK(std::memcmp(view, expected, sizeof(expected)) == 0);
     CHECK(reader.size() == 0 && reader.memory() == view);
     reader.clear();
@@ -332,14 +349,21 @@ static int TestAnonymous()
     SharedMemory empty("");
     CHECK(empty.isFailed() && empty.realSize() == 0 && empty.readWithoutLock() == nullptr &&
         empty.writeWithoutLock() == nullptr && empty.memory() == nullptr && !empty.unlinkName());
-    CHECK(!anonymous.isFailed() && anonymous.writeWithoutLock() != nullptr && !anonymous.unlinkName());
     uint8_t* privateData = static_cast<uint8_t*>(anonymous.writeWithoutLock());
+    CHECK(!anonymous.isFailed() && privateData != nullptr && !anonymous.unlinkName());
     std::memset(privateData, 0x9a, 16);
+    SharedMemory independent("", 16, true);
+    uint8_t* separate = static_cast<uint8_t*>(independent.writeWithoutLock());
+    const uint8_t zero[16] = {};
+    CHECK(separate != nullptr && std::memcmp(separate, zero, sizeof(zero)) == 0);
+    separate[15] = 0x51;
+    CHECK(privateData[15] == 0x9a);
     anonymous.clear();
     for (int i = 0; i < 16; ++i)
     {
         CHECK(privateData[i] == 0);
     }
+    CHECK(separate[15] == 0x51);
     privateData[0] = 0x49;
     anonymous.close();
     CHECK(anonymous.memory() == nullptr);
@@ -641,23 +665,30 @@ static const char* testExecutable = nullptr;
 */
 static bool ChildPassed(pid_t child)
 {
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(15);
     int status = 0;
-    while (std::chrono::steady_clock::now() < deadline)
+    // seconds 为等待上限。返回已回收的子进程 ID、超时的 0 或系统错误的 -1；成功时 status 接收退出状态。
+    const auto waitForExit = [&](int seconds) -> pid_t {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
+        do
+        {
+            const pid_t result = ::waitpid(child, &status, WNOHANG);
+            if (result == child || (result < 0 && errno != EINTR))
+            {
+                return result;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        } while (std::chrono::steady_clock::now() < deadline);
+        return 0;
+    };
+    const pid_t result = waitForExit(15);
+    if (result == child)
     {
-        const pid_t result = ::waitpid(child, &status, WNOHANG);
-        if (result == child)
-        {
-            return WIFEXITED(status) && WEXITSTATUS(status) == 0;
-        }
-        if (result < 0 && errno != EINTR)
-        {
-            return false;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        return WIFEXITED(status) && WEXITSTATUS(status) == 0;
     }
-    ::kill(child, SIGKILL);
-    while (::waitpid(child, &status, 0) < 0 && errno == EINTR) {}
+    if (result == 0 && ::kill(child, SIGKILL) == 0)
+    {
+        waitForExit(1);
+    }
     return false;
 }
 
@@ -669,7 +700,9 @@ static int ProbeDirectory(const std::string& directory)
 {
     const std::string selected = directory + "/selected";
     const std::string moved = directory + "/moved";
+    CHECK(SharedMemory::setProcessDirectory(directory));
     CHECK(::mkdir(selected.c_str(), 0700) == 0 && SharedMemory::setProcessDirectory(selected));
+    CHECK(!SharedMemory::setProcessDirectory(moved));
     CHECK(::rename(selected.c_str(), moved.c_str()) == 0 && ::mkdir(selected.c_str(), 0700) == 0);
     const std::string other = moved + "/m_reserved";
     CHECK(::mkdir(other.c_str(), 0700) == 0);
@@ -739,7 +772,7 @@ static int ProbePeer(const std::string& name)
     CHECK(ConfigureDirectory() == 0);
     SharedMemory peer(name);
     const uint8_t* read = static_cast<const uint8_t*>(peer.readWithoutLock());
-    CHECK(read != nullptr && read[0] == 0x36);
+    CHECK(peer.realSize() >= 2 && read != nullptr && read[0] == 0x36);
     uint8_t* write = static_cast<uint8_t*>(peer.writeWithoutLock());
     CHECK(write != nullptr);
     write[1] = 0x91;
@@ -771,10 +804,9 @@ static int TestProcesses()
         nullptr, nullptr, &startup, &process) != FALSE);
     ::CloseHandle(process.hThread);
     const DWORD waited = ::WaitForSingleObject(process.hProcess, 15000);
-    if (waited != WAIT_OBJECT_0)
+    if (waited != WAIT_OBJECT_0 && ::TerminateProcess(process.hProcess, 1))
     {
-        ::TerminateProcess(process.hProcess, 1);
-        ::WaitForSingleObject(process.hProcess, INFINITE);
+        ::WaitForSingleObject(process.hProcess, 1000);
     }
     DWORD code = 1;
     const BOOL queried = ::GetExitCodeProcess(process.hProcess, &code);
@@ -795,6 +827,11 @@ static int TestProcesses()
 }
 #endif
 
+/** 执行独立子进程探测、性能用例或选中的功能用例
+@param [in] argc 含程序名的参数数量
+@param [in] argv 测试程序命令行参数
+@return 成功为 0，用例失败为 1，非法或空选择为 2
+*/
 int main(int argc, char** argv)
 {
 #ifdef SHARED_MEMORY_TEST_CAN_EXEC
