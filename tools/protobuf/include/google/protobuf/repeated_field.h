@@ -1508,9 +1508,10 @@ inline typename TypeHandler::Type* RepeatedPtrFieldBase::Add(
   if (!rep_ || rep_->allocated_size == total_size_) {
     Reserve(total_size_ + 1);
   }
-  ++rep_->allocated_size;
   typename TypeHandler::Type* result =
       TypeHandler::NewFromPrototype(prototype, arena_);
+  // Publish ownership only after construction succeeds; new may throw.
+  ++rep_->allocated_size;
   rep_->elements[current_size_++] = result;
   return result;
 }
@@ -1527,9 +1528,10 @@ inline void RepeatedPtrFieldBase::Add(
   if (!rep_ || rep_->allocated_size == total_size_) {
     Reserve(total_size_ + 1);
   }
-  ++rep_->allocated_size;
   typename TypeHandler::Type* result =
       TypeHandler::New(arena_, std::move(value));
+  // Publish ownership only after construction succeeds; new may throw.
+  ++rep_->allocated_size;
   rep_->elements[current_size_++] = result;
 }
 #endif
@@ -1564,8 +1566,20 @@ template <typename TypeHandler>
 inline void RepeatedPtrFieldBase::MergeFrom(const RepeatedPtrFieldBase& other) {
   GOOGLE_DCHECK_NE(&other, this);
   if (other.current_size_ == 0) return;
-  MergeFromInternal(
-      other, &RepeatedPtrFieldBase::MergeFromInnerLoop<TypeHandler>);
+#if defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+  try {
+#endif
+    MergeFromInternal(
+        other, &RepeatedPtrFieldBase::MergeFromInnerLoop<TypeHandler>);
+#if defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+  } catch (...) {
+    // Uncommitted slots remain owned, but must be cleared before Add reuses them.
+    for (int i = current_size_; rep_ != NULL && i < rep_->allocated_size; ++i) {
+      TypeHandler::Clear(cast<TypeHandler>(rep_->elements[i]));
+    }
+    throw;
+  }
+#endif
 }
 
 inline void RepeatedPtrFieldBase::MergeFromInternal(
@@ -1605,8 +1619,10 @@ void RepeatedPtrFieldBase::MergeFromInnerLoop(
         reinterpret_cast<typename TypeHandler::Type*>(other_elems[i]);
     typename TypeHandler::Type* new_elem =
         TypeHandler::NewFromPrototype(other_elem, arena);
-    TypeHandler::Merge(*other_elem, new_elem);
+    // Commit destruction ownership before Merge, which may allocate and throw.
     our_elems[i] = new_elem;
+    ++rep_->allocated_size;
+    TypeHandler::Merge(*other_elem, new_elem);
   }
 }
 
@@ -1875,20 +1891,39 @@ template <typename Element>
 inline RepeatedPtrField<Element>::RepeatedPtrField(
     const RepeatedPtrField& other)
   : RepeatedPtrFieldBase() {
-  MergeFrom(other);
+#if defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+  try {
+#endif
+    MergeFrom(other);
+#if defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+  } catch (...) {
+    // The derived destructor is not called when this constructor fails.
+    Destroy<TypeHandler>();
+    throw;
+  }
+#endif
 }
 
 template <typename Element>
 template <typename Iter>
 inline RepeatedPtrField<Element>::RepeatedPtrField(
     Iter begin, const Iter& end) {
-  int reserve = internal::CalculateReserve(begin, end);
-  if (reserve != -1) {
-    Reserve(reserve);
+#if defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+  try {
+#endif
+    int reserve = internal::CalculateReserve(begin, end);
+    if (reserve != -1) {
+      Reserve(reserve);
+    }
+    for (; begin != end; ++begin) {
+      *Add() = *begin;
+    }
+#if defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+  } catch (...) {
+    Destroy<TypeHandler>();
+    throw;
   }
-  for (; begin != end; ++begin) {
-    *Add() = *begin;
-  }
+#endif
 }
 
 template <typename Element>

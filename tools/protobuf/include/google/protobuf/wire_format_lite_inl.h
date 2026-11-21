@@ -443,12 +443,15 @@ inline bool WireFormatLite::ReadMessage(io::CodedInputStream* input,
                                         MessageLite* value) {
   int length;
   if (!input->ReadVarintSizeAsInt(&length)) return false;
+  // EOF or a tighter enclosing limit must not accept a truncated message.
+  const int start = input->CurrentPosition();
   std::pair<io::CodedInputStream::Limit, int> p =
       input->IncrementRecursionDepthAndPushLimit(length);
   if (p.second < 0 || !value->MergePartialFromCodedStream(input)) return false;
   // Make sure that parsing stopped when the limit was hit, not at an endgroup
   // tag.
- return input->DecrementRecursionDepthAndPopLimit(p.first);
+ return input->DecrementRecursionDepthAndPopLimit(p.first) &&
+      input->CurrentPosition() - start == length;
 }
 
 // We name the template parameter something long and extremely unlikely to occur
@@ -489,6 +492,8 @@ inline bool WireFormatLite::ReadMessageNoVirtual(
     io::CodedInputStream* input, MessageType_WorkAroundCppLookupDefect* value) {
   int length;
   if (!input->ReadVarintSizeAsInt(&length)) return false;
+  // EOF or a tighter enclosing limit must not accept a truncated message.
+  const int start = input->CurrentPosition();
   std::pair<io::CodedInputStream::Limit, int> p =
       input->IncrementRecursionDepthAndPushLimit(length);
   if (p.second < 0 || !value->
@@ -496,19 +501,25 @@ inline bool WireFormatLite::ReadMessageNoVirtual(
     return false;
   // Make sure that parsing stopped when the limit was hit, not at an endgroup
   // tag.
-  return input->DecrementRecursionDepthAndPopLimit(p.first);
+  return input->DecrementRecursionDepthAndPopLimit(p.first) &&
+      input->CurrentPosition() - start == length;
 }
 
 template<typename MessageType_WorkAroundCppLookupDefect>
 inline bool WireFormatLite::ReadMessageNoVirtualNoRecursionDepth(
     io::CodedInputStream* input, MessageType_WorkAroundCppLookupDefect* value) {
-  io::CodedInputStream::Limit old_limit = input->ReadLengthAndPushLimit();
+  int length;
+  if (!input->ReadVarintSizeAsInt(&length)) return false;
+  // EOF or a tighter enclosing limit must not accept a truncated message.
+  const int start = input->CurrentPosition();
+  io::CodedInputStream::Limit old_limit = input->PushLimit(length);
   if (!value->
       MessageType_WorkAroundCppLookupDefect::MergePartialFromCodedStream(input))
     return false;
   // Make sure that parsing stopped when the limit was hit, not at an endgroup
   // tag.
-  return input->CheckEntireMessageConsumedAndPopLimit(old_limit);
+  return input->CheckEntireMessageConsumedAndPopLimit(old_limit) &&
+      input->CurrentPosition() - start == length;
 }
 
 // ===================================================================
