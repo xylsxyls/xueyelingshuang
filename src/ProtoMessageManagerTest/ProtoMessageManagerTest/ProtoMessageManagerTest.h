@@ -19,6 +19,8 @@ Wasm 的两个位宽分别以 BIT=wasm32 和 BIT=wasm64 构建。启用 LIBRARY_
 微信将 ProtoMessageManagerTest.js、ProtoMessageManagerTest.wasm 和 LibraryTestHost.js 放入分包，调用
 await require('./LibraryTestHost')(require('./ProtoMessageManagerTest'), { wasmPath: '包内路径/ProtoMessageManagerTest.wasm' })。
 运行 wasm64 的宿主必须支持 Memory64。
+Protobuf 平台备注：Windows、Linux x86/x64 和 Wasm 使用 3.3.0。Linux ARM64 的头和 libprotobuf-lite.a 实际为 3.19.3，沿用 tools/protobuf 目录单独发布。当前 ProtoMessage.pb.h/.cc 由 protoc 3.3.0 生成，ARM 头要求至少 3.19.0，现有组合会触发版本检查。恢复 ARM 测试时，先为 ARM 单独准备与 3.19.3 匹配的生成代码并链接对应归档。本轮仅核对 ARM 的头库发布，未在 ARM 设备上运行。
+常规构建的 before 校验宿主生成器为 libprotoc 3.3.0；可以用 PROTOC_EXECUTABLE 指定其路径，Wasm 可直接使用已生成的配套文件。
 */
 
 /** 性能用例
@@ -42,7 +44,6 @@ Wasm Release 使用 Emscripten 3.1.74。Node 24.0.0、Chrome 157 和微信开发
   Node wasm32    4.386 [4.291, 4.546]    14.334 [14.265, 14.576]
   Node wasm64    7.095 [7.031, 7.368]    39.036 [38.601, 45.517]
 Chrome 和微信的数据缺少独立宿主进程复测。微信开发者工具强制 wasm64 时实例化失败。Linux、macOS、Android、iOS、微信手机及原生 Windows x86 缺少同口径的性能数据。
-分发的 C++ 运行库及 protoc 为 3.3.0。before 按运行构建脚本的宿主选择 Windows x86、Linux x64 或 Linux arm64 的 protoc，也可以设置 PROTOC_EXECUTABLE，脚本核对 --version。其他宿主可使用仓库已有的匹配生成文件。
 */
 
 /** 当前功能组的稳定数字编号。 */
