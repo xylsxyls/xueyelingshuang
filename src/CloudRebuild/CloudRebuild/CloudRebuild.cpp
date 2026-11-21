@@ -944,17 +944,18 @@ static int RunMain(int argc, char** argv)
 	//工程路径
 	std::string projectPath = xueyePath + "src" + PATHLEVEL + projectName + PATHLEVEL;
     std::string sdkRoot(xueyePath);
-#ifndef _WIN32
     const char* configuredSdk = std::getenv("CLOUD_REBUILD_SDK_ROOT");
     if (configuredSdk != nullptr && configuredSdk[0] != '\0')
     {
         sdkRoot = configuredSdk;
-        if (sdkRoot.back() != '/')
+#ifdef _WIN32
+        std::replace(sdkRoot.begin(), sdkRoot.end(), '/', '\\');
+#endif
+        if (sdkRoot.back() != PATHLEVEL[0])
         {
-            sdkRoot += '/';
+            sdkRoot += PATHLEVEL;
         }
     }
-#endif
 
 	//准备脚本路径
 	std::string beforeBatPath = projectPath + "scripts" + PATHLEVEL + "before_" + projectName + ".sh";
@@ -1123,8 +1124,8 @@ static int RunMain(int argc, char** argv)
 	system(("del" + SPACE + MARK(projectPath + "scripts" + PATHLEVEL + "@AutomationLog.txt")).c_str());
 	system(("del" + SPACE + MARK(projectPath + "scripts" + PATHLEVEL + "msbuild.log")).c_str());
 	
-	system(("del" + SPACE + MARK(xueyePath + "lib" + PATHLEVEL + projectName + d + ".ilk")).c_str());
-	system(("del" + SPACE + MARK(xueyePath + "lib" + PATHLEVEL + projectName + d + ".exp")).c_str());
+	std::remove((sdkRoot + "lib" + PATHLEVEL + projectName + d + ".ilk").c_str());
+	std::remove((sdkRoot + "lib" + PATHLEVEL + projectName + d + ".exp").c_str());
 #elif defined(__unix__) || defined(__APPLE__)
     // 保留隔离构建目录用于定位失败，不删除其他目标的CMake缓存
 #endif
