@@ -1,0 +1,1 @@
+"$CLOUD_REBUILD" RapidJsonCpp 32 dll release same
