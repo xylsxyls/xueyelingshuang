@@ -1,7 +1,6 @@
-﻿#include "../../../common/PlatformTest/LibraryCaseSelection.h"
+﻿#include "PlatformTest/PlatformTestAPI.h"
 #include "CStringManagerTest.h"
 #include "CStringManager/CStringManagerAPI.h"
-#include "../../../common/PlatformTest/LibraryBenchmark.h"
 #include <cstring>
 #include <clocale>
 #include <atomic>

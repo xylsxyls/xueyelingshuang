@@ -1,5 +1,5 @@
 ﻿#include "CStringManagerTest.h"
-#include <CStringManager/CStringManagerAPI.h>
+#include "CStringManager/CStringManagerAPI.h"
 #include <cstdio>
 #include <new>
 #include <clocale>
