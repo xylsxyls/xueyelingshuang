@@ -48,7 +48,6 @@
 #include <sys/file.h>
 #include <sys/wait.h>
 #include <limits.h>
-#include <algorithm>
 #include <codecvt>
 #include <dirent.h>
 #include <dlfcn.h>
@@ -61,7 +60,6 @@
 #include <queue>
 #include <iostream>
 #include <iterator>
-#include <cstring>
 #include <cctype>
 #include <cstdlib>
 #include <functional>
@@ -72,12 +70,9 @@
 #elif defined(__APPLE__)
 #include <Security/SecRandom.h>
 #elif defined(__linux__) && !defined(__EMSCRIPTEN__)
-#include <sys/syscall.h>
 #include <linux/random.h>
 #endif
 #ifdef __APPLE__
-#include <codecvt>
-#include <locale>
 #include <TargetConditionals.h>
 #if !TARGET_OS_IPHONE
 #include <sys/sysctl.h>
@@ -105,9 +100,7 @@ RECT CSystem::GetTaskbarRect()
     }
     return r;
 }
-#endif
 
-#ifdef _MSC_VER
 RECT CSystem::GetWindowResolution()
 {
     int screenwidth_real = ::GetSystemMetrics(SM_CXSCREEN);
@@ -119,9 +112,7 @@ RECT CSystem::GetWindowResolution()
     rectResult.bottom = screenheight_real;
     return rectResult;
 }
-#endif
 
-#ifdef _MSC_VER
 POINT CSystem::taskbarRightBottomPoint()
 {
     RECT rect = { 0, 0, 0, 0 };
@@ -148,9 +139,7 @@ POINT CSystem::taskbarRightBottomPoint()
         return point;
     }
 }
-#endif
 
-#ifdef _MSC_VER
 POINT CSystem::screenCenterPoint()
 {
     int32_t screenwidth_real = ::GetSystemMetrics(SM_CXSCREEN);
@@ -158,9 +147,7 @@ POINT CSystem::screenCenterPoint()
     POINT point = { screenwidth_real / 2, screenheight_real / 2 };
     return point;
 }
-#endif
 
-#ifdef _MSC_VER
 void CSystem::setClipboardData(HWND hWnd, const std::string& str)
 {
     //打开剪贴板
@@ -202,53 +189,43 @@ void CSystem::setClipboardData(HWND hWnd, const std::string& str)
     //关闭剪贴板
     ::CloseClipboard();
 }
-#endif
 
-#ifdef _MSC_VER
 std::string CSystem::GetClipboardData(HWND hWnd)
 {
-    std::string result;
-    //打开剪贴板
-    if (::OpenClipboard(hWnd))
+    if (!::OpenClipboard(hWnd))
     {
-        //判断格式是否是我们所需要
-        if (::IsClipboardFormatAvailable(CF_TEXT))
-        {
-            //读取数据
-            HANDLE hClip = ::GetClipboardData(CF_TEXT);
-            if (hClip != nullptr)
-            {
-                char* pBuf = static_cast<char*>(::GlobalLock(hClip));
-                if (pBuf != nullptr)
-                {
-                    result = pBuf;
-                    ::GlobalUnlock(hClip);
-                }
-            }
-        }
-        ::CloseClipboard();
+        return "";
     }
-    return result;
+    const auto closeClipboard = [](void*) { ::CloseClipboard(); };
+    std::unique_ptr<void, decltype(closeClipboard)> clipboard(&hWnd, closeClipboard);
+    HANDLE data = ::GetClipboardData(CF_TEXT);
+    if (data == nullptr)
+    {
+        return "";
+    }
+    const size_t size = ::GlobalSize(data);
+    const char* text = static_cast<const char*>(::GlobalLock(data));
+    if (text == nullptr)
+    {
+        return "";
+    }
+    std::unique_ptr<void, decltype(&::GlobalUnlock)> locked(data, ::GlobalUnlock);
+    const char* end = static_cast<const char*>(std::memchr(text, 0, size));
+    return end == nullptr ? "" : std::string(text, end);
 }
-#endif
 
-#ifdef _MSC_VER
 HWND CSystem::GetConsoleHwnd()
 {
     return ::GetConsoleWindow();
 }
-#endif
 
-#ifdef _MSC_VER
 HWND CSystem::GetHwndByProcessId(uint32_t dwProcessId)
 {
     std::pair<uint32_t, HWND> query(dwProcessId, nullptr);
     ::EnumWindows(findWindowCallback, reinterpret_cast<LPARAM>(&query));
     return query.second;
 }
-#endif
 
-#ifdef _MSC_VER
 HWND CSystem::findVisibleWindowByProcessId(uint32_t processId)
 {
     if (processId == 0)
@@ -259,9 +236,7 @@ HWND CSystem::findVisibleWindowByProcessId(uint32_t processId)
     EnumWindows(findVisibleWindowCallback, reinterpret_cast<LPARAM>(&query));
     return query.second;
 }
-#endif
 
-#ifdef _MSC_VER
 std::string CSystem::GetRegOcxPath(const std::string& classid)
 {
     HKEY hKey = nullptr;
@@ -289,9 +264,7 @@ std::string CSystem::GetRegOcxPath(const std::string& classid)
     std::string result = temp.substr(0, position + 1);
     return result;
 }
-#endif
 
-#ifdef _MSC_VER
 void* CSystem::ForbidRedir()
 {
     if (GetSystemBits() != 64)
@@ -302,9 +275,7 @@ void* CSystem::ForbidRedir()
     Wow64DisableWow64FsRedirection(&oldValue);
     return oldValue;
 }
-#endif
 
-#ifdef _MSC_VER
 void CSystem::RecoveryRedir(void* oldValue)
 {
     if (GetSystemBits() != 64)
@@ -313,44 +284,32 @@ void CSystem::RecoveryRedir(void* oldValue)
     }
     Wow64RevertWow64FsRedirection(oldValue);
 }
-#endif
 
-#ifdef _MSC_VER
 int CSystem::GetVisibleHeight()
 {
     return GetSystemMetrics(SM_CYFULLSCREEN);
 }
-#endif
 
-#ifdef _MSC_VER
 void CSystem::OpenWebPage(const std::string& webPage)
 {
     ShellExecuteA(NULL, "open", webPage.c_str(), NULL, NULL, SW_SHOWNORMAL);
 }
-#endif
 
-#ifdef _MSC_VER
 bool CSystem::isMouseLeftDown()
 {
     return ((::GetAsyncKeyState(VK_LBUTTON) & 0x8000) ? 1 : 0);
 }
-#endif
 
-#ifdef _MSC_VER
 bool CSystem::isMouseRightDown()
 {
     return ((::GetAsyncKeyState(VK_RBUTTON) & 0x8000) ? 1 : 0);
 }
-#endif
 
-#ifdef _MSC_VER
 bool CSystem::isMouseMidDown()
 {
     return ((::GetAsyncKeyState(VK_MBUTTON) & 0x8000) ? 1 : 0);
 }
-#endif
 
-#ifdef _MSC_VER
 bool CSystem::ShellCopy(const char* from, const char* dest)
 {
     if (from == nullptr || dest == nullptr)
@@ -377,10 +336,7 @@ bool CSystem::ShellCopy(const char* from, const char* dest)
     fileOp.fFlags = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
     return SHFileOperationA(&fileOp) == 0;
 }
-#endif
 
-#ifdef _MSC_VER
-#if !defined(__APPLE__) || !TARGET_OS_IPHONE
 uint32_t CSystem::processFirstPid(const std::wstring& processNameW)
 {
     if (processNameW.empty())
@@ -404,11 +360,7 @@ uint32_t CSystem::processFirstPid(const std::wstring& processNameW)
     ::CloseHandle(hSnapshot);
     return 0;
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
-#endif
 
-#ifdef _MSC_VER
-#if !defined(__APPLE__) || !TARGET_OS_IPHONE
 std::vector<uint32_t> CSystem::processPid(const std::wstring& processNameW)
 {
     std::vector<uint32_t> result;
@@ -432,10 +384,7 @@ std::vector<uint32_t> CSystem::processPid(const std::wstring& processNameW)
     ::CloseHandle(hSnapshot);
     return result;
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
-#endif
 
-#ifdef _MSC_VER
 std::wstring CSystem::processNameW(uint32_t pid)
 {
     std::wstring result;
@@ -458,9 +407,7 @@ std::wstring CSystem::processNameW(uint32_t pid)
     }
     return result;
 }
-#endif
 
-#ifdef _MSC_VER
 std::vector<std::string> CSystem::processMountDll(uint32_t pid)
 {
     std::vector<std::string> result;
@@ -480,9 +427,7 @@ std::vector<std::string> CSystem::processMountDll(uint32_t pid)
     ::CloseHandle(hShot);
     return result;
 }
-#endif
 
-#ifdef _MSC_VER
 std::vector<std::string> CSystem::allCameraName()
 {
     std::vector<std::string> result;
@@ -494,19 +439,11 @@ std::vector<std::string> CSystem::allCameraName()
             displayDeviceInformation(pEnum, result);
             pEnum->Release();
         }
-        //麦克风...........
-        //        hr = enumerateDevices(CLSID_AudioInputDeviceCategory, &pEnum);
-        //        if (SUCCEEDED(hr)){
-        //            displayDeviceInformation(pEnum,list);
-        //            pEnum->Release();
-        //        }
         ::CoUninitialize();
     }
     return result;
 }
-#endif
 
-#ifdef _MSC_VER
 std::map<std::string, std::vector<std::string>> CSystem::allDeviceInfo()
 {
     std::map<std::string, std::vector<std::string>> allDeviceInfo;
@@ -533,7 +470,7 @@ std::map<std::string, std::vector<std::string>> CSystem::allDeviceInfo()
         }
 
         std::vector<std::string> vecDeviceInfo;
-        split(vecDeviceInfo, szDIS, "\\");
+        split(vecDeviceInfo, szDIS, '\\');
         if (vecDeviceInfo.empty())
         {
             continue;
@@ -826,8 +763,20 @@ void CSystem::OutputVector(const std::vector<std::string>& stringVector, const s
 #if CSYSTEM_HAS_DESKTOP_API
 void CSystem::ClearScanf()
 {
+    ClearScanf(&std::getchar);
+}
+
+void CSystem::ClearScanf(int (*readCharacter)())
+{
+    if (readCharacter == nullptr)
+    {
+        return;
+    }
     int ch;
-    do { ch = std::getchar(); } while (ch != '\n' && ch != EOF);
+    do
+    {
+        ch = readCharacter();
+    } while (ch != '\n' && ch != EOF);
 }
 #endif // CSYSTEM_PLATFORM_CAPABILITY
 
@@ -835,16 +784,21 @@ std::vector<std::string> CSystem::exeParam(int argc, char** argv)
 {
     std::vector<std::string> result;
 #ifdef _WIN32
-    for (int32_t index = 0; index < __argc; ++index)
-    {
-        result.push_back(__argv[index]);
-    }
-#elif defined(__unix__) || defined(__APPLE__)
-for (int32_t index = 0; index < argc; ++index)
-    {
-        result.push_back(argv[index]);
-    }
+    argc = __argc;
+    argv = __argv;
 #endif
+    if (argv == nullptr)
+    {
+        return result;
+    }
+    for (int32_t index = 0; index < argc; ++index)
+    {
+        if (argv[index] == nullptr)
+        {
+            return std::vector<std::string>();
+        }
+        result.emplace_back(argv[index]);
+    }
     return result;
 }
 
@@ -981,7 +935,6 @@ uint32_t CSystem::SystemThreadId()
 {
 #ifdef _WIN32
     return ::GetCurrentThreadId();
-    //return ((_Thrd_t*)(char*)&(std::this_thread::get_id()))->_Id;
 #elif defined(__APPLE__)
     uint64_t id = 0;
     pthread_threadid_np(nullptr, &id);
@@ -1044,21 +997,16 @@ int32_t CSystem::GetSystemVersionNum()
     }
     return dwVersion;
 #elif defined(__unix__) || defined(__APPLE__)
-    std::string result;
-    if (SystemCommand("cat /etc/issue", result) == -1 || result.empty())
-    {
-        return 0;
-    }
-    result.pop_back();
+    const std::string result = readFile("/etc/issue");
 
     std::vector<std::string> vec;
-    split(vec, result, " ");
+    split(vec, result, ' ');
     if(vec.size() < 2)
     {
         return 0;
     }
     std::vector<std::string> vecOs;
-    split(vecOs, vec[1], ".");
+    split(vecOs, vec[1], '.');
     if(vecOs.size() < 2)
     {
         return 0;
@@ -1268,9 +1216,7 @@ uint32_t CSystem::processFirstPid(const std::string& processName)
     return matches.empty() ? 0 : matches.front();
 #endif
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if !defined(__APPLE__) || !TARGET_OS_IPHONE
 std::vector<uint32_t> CSystem::processPid(const std::string& processName)
 {
 #ifdef _WIN32
@@ -1355,9 +1301,7 @@ std::vector<uint32_t> CSystem::processPid(const std::string& processName)
     return matches;
 #endif
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if !defined(__APPLE__) || !TARGET_OS_IPHONE
 std::string CSystem::processName(uint32_t pid)
 {
 #ifdef _WIN32
@@ -1483,20 +1427,35 @@ std::string CSystem::getComputerName()
     DWORD length = 256;
     GetComputerNameA(computerName, &length);
 #elif defined(__unix__) || defined(__APPLE__)
-    gethostname(computerName, 256);
+    if (::gethostname(computerName, sizeof(computerName)) != 0 || computerName[sizeof(computerName) - 1] != '\0')
+    {
+        return "";
+    }
 #endif
     return computerName;
 }
 
 std::string CSystem::GetCurrentDllPath()
 {
-    char szFilePath[1024] = {};
-#ifdef _MSC_VER
-    ::GetModuleFileNameA(getCurrentModule(), szFilePath, 1024);
-#elif defined(__unix__) || defined(__APPLE__)
-    getModuleCurrentPath(szFilePath);
+#ifdef _WIN32
+    HMODULE module = nullptr;
+    if (!::GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        reinterpret_cast<LPCSTR>(&CSystem::GetCurrentDllPath), &module))
+    {
+        return "";
+    }
+    char path[32768];
+    const DWORD size = ::GetModuleFileNameA(module, path, sizeof(path));
+    return size > 0 && size < sizeof(path) ? GetName(std::string(path, size), 4) : "";
+#else
+    Dl_info info = {};
+    if (::dladdr(reinterpret_cast<const void*>(&CSystem::GetCurrentDllPath), &info) == 0 || info.dli_fname == nullptr)
+    {
+        return "";
+    }
+    const std::string path(info.dli_fname);
+    return path.substr(0, path.rfind('/') + 1);
 #endif
-    return CSystem::GetName(szFilePath, 4);
 }
 
 std::string CSystem::currentExecutablePathUtf8()
@@ -1527,80 +1486,37 @@ std::string CSystem::currentExecutablePathUtf8()
 #endif
 }
 
+std::string CSystem::executablePathPart(int32_t flag)
+{
+#ifdef _WIN32
+    char path[32768];
+    const DWORD size = ::GetModuleFileNameA(nullptr, path, sizeof(path));
+    return size > 0 && size < sizeof(path) ? GetName(std::string(path, size), flag) : "";
+#else
+    const std::string path = currentExecutablePathUtf8();
+    const size_t start = path.rfind('/') + 1;
+    if (flag == 4)
+    {
+        return path.substr(0, start);
+    }
+    const size_t dot = path.rfind('.');
+    return path.substr(start, flag == 3 && dot >= start ? dot - start : std::string::npos);
+#endif
+}
+
 std::string CSystem::GetCurrentExePath()
 {
-    char szFilePath[1024] = {};
-#ifdef _WIN32
-    ::GetModuleFileNameA(NULL, szFilePath, 1024);
-#elif defined(__APPLE__)
-    uint32_t size = sizeof(szFilePath);
-    if (_NSGetExecutablePath(szFilePath, &size) != 0)
-    {
-        return "";
-    }
-#elif defined(__unix__) || defined(__APPLE__)
-    ssize_t len = ::readlink("/proc/self/exe", szFilePath, sizeof(szFilePath) - 1);
-    if (len < 0)
-    {
-        return "";
-    }
-    szFilePath[len] = '\0';
-#endif
-    return CSystem::GetName(szFilePath, 4);
+    return executablePathPart(4);
 }
 
 std::string CSystem::GetCurrentExeName()
 {
-    // 默认进程名只从完整路径提取；截短路径可能指向另一个文件名。
-    char szFilePath[1024] = {};
-#ifdef _WIN32
-    const uint32_t length = ::GetModuleFileNameA(NULL, szFilePath, sizeof(szFilePath));
-    if (length == 0 || length >= sizeof(szFilePath))
-    {
-        return "";
-    }
-#elif defined(__APPLE__)
-    uint32_t size = sizeof(szFilePath);
-    if (_NSGetExecutablePath(szFilePath, &size) != 0)
-    {
-        return "";
-    }
-#elif defined(__unix__) || defined(__APPLE__)
-    ssize_t len = ::readlink("/proc/self/exe", szFilePath, sizeof(szFilePath) - 1);
-    if (len < 0 || static_cast<size_t>(len) >= sizeof(szFilePath) - 1)
-    {
-        return "";
-    }
-    szFilePath[len] = '\0';
-#endif
-    return CSystem::GetName(szFilePath, 3);
+    return executablePathPart(3);
 }
 
 std::string CSystem::GetCurrentExeFullName()
 {
-    // readlink返回缓冲区上限时无法确认完整性，不能登记被截短的名字。
-    char szFilePath[1024] = {};
-#ifdef _WIN32
-    const uint32_t length = ::GetModuleFileNameA(NULL, szFilePath, sizeof(szFilePath));
-    if (length == 0 || length >= sizeof(szFilePath))
-    {
-        return "";
-    }
-#elif defined(__APPLE__)
-    uint32_t size = sizeof(szFilePath);
-    if (_NSGetExecutablePath(szFilePath, &size) != 0)
-    {
-        return "";
-    }
-#elif defined(__unix__) || defined(__APPLE__)
-    ssize_t len = ::readlink("/proc/self/exe", szFilePath, sizeof(szFilePath) - 1);
-    if (len < 0 || static_cast<size_t>(len) >= sizeof(szFilePath) - 1)
-    {
-        return "";
-    }
-    szFilePath[len] = '\0';
-#endif
-    return CSystem::GetName(szFilePath, 1);
+    return executablePathPart(1);
 }
 
 std::string CSystem::GetSystemTempPath()
@@ -1614,7 +1530,7 @@ std::string CSystem::GetSystemTempPath()
     return std::string(szPath) + "\\";
 #elif defined(__unix__) || defined(__APPLE__)
     const char* directory = std::getenv("TMPDIR");
-    return directory && *directory ? joinPath(directory, "") + (directory[std::strlen(directory) - 1] == '/' ? "" : "/") : "/tmp/";
+    return directory && *directory ? std::string(directory) + (directory[std::strlen(directory) - 1] == '/' ? "" : "/") : "/tmp/";
 #endif
 }
 #endif // CSYSTEM_NATIVE_API
@@ -1694,9 +1610,16 @@ std::string CSystem::canonicalPath(const std::string& path, bool requireExisting
         }
         result.assign(&buffer[0], written);
     }
-    for (size_t i = 0; i < result.size(); ++i)
+    for (char& byte : result)
     {
-        result[i] = result[i] == '/' ? '\\' : static_cast<char>(std::tolower(static_cast<unsigned char>(result[i])));
+        if (byte == '/')
+        {
+            byte = '\\';
+        }
+        else if (byte >= 'A' && byte <= 'Z')
+        {
+            byte = static_cast<char>(byte - 'A' + 'a');
+        }
     }
     while (result.size() > 3 && result.back() == '\\')
     {
@@ -1783,7 +1706,19 @@ bool CSystem::migrateDirectory(const std::string& source, const std::string& des
     }
     if (!DirOrFileExist(source))
     {
-        return true;
+#ifdef _WIN32
+        const DWORD attributes = ::GetFileAttributesA(source.c_str());
+        const DWORD error = ::GetLastError();
+        if (attributes == INVALID_FILE_ATTRIBUTES && (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND))
+#else
+        struct stat info = {};
+        if (::lstat(source.c_str(), &info) != 0 && errno == ENOENT)
+#endif
+        {
+            return true;
+        }
+        errorText = "Cannot inspect migration source";
+        return false;
     }
     if (!plainDirectory(source) ||
         (DirOrFileExist(destination) && !plainDirectory(destination)))
@@ -1791,7 +1726,50 @@ bool CSystem::migrateDirectory(const std::string& source, const std::string& des
         errorText = "Migration root is not a plain directory";
         return false;
     }
+    // 从目标最近的已存在父目录解析真实位置，避免经过目录别名后把目标建在源树内。
+    const std::string realSource = canonicalPath(source);
+    std::string ancestor = destination;
+    std::string tail;
+#ifdef _WIN32
+    const char* separators = "/\\";
+#else
+    const char* separators = "/";
+#endif
+    while (!DirOrFileExist(ancestor))
+    {
+        const size_t end = ancestor.find_last_not_of(separators);
+        if (end == std::string::npos)
+        {
+            errorText = "Cannot resolve migration destination";
+            return false;
+        }
+        const size_t slash = ancestor.find_last_of(separators, end);
+        const size_t start = slash == std::string::npos ? 0 : slash + 1;
+        const std::string component = ancestor.substr(start, end + 1 - start);
+        if (component == ".." || (slash == std::string::npos && ancestor == "."))
+        {
+            errorText = "Cannot resolve migration destination parent";
+            return false;
+        }
+        if (component != ".")
+        {
+            tail = "/" + component + tail;
+        }
+        ancestor = slash == std::string::npos ? "." : ancestor.substr(0, slash + 1);
+    }
+    const std::string realAncestor = canonicalPath(ancestor);
+    const std::string realTarget = realAncestor.empty() ? "" : canonicalPath(realAncestor + tail, false);
+    if (realSource.empty() || realTarget.empty() || realSource == realTarget ||
+        isPathWithin(realTarget, realSource, false) || isPathWithin(realSource, realTarget, false))
+    {
+        errorText = "Unresolved or overlapping migration directories";
+        return false;
+    }
+#ifdef _WIN32
     return migrateTree(source, destination, errorText);
+#else
+    return migrateTree(source, realTarget, errorText);
+#endif
 }
 
 bool CSystem::createDirectories(const std::string& path)
@@ -2424,9 +2402,7 @@ void CSystem::OpenFolder(const std::string& folder)
     openDesktopPath("xdg-open", nullptr, folder);
 #endif
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if CSYSTEM_HAS_DESKTOP_API
 void CSystem::OpenFolderAndSelectFile(const std::string& file)
 {
     if (file.empty() || file.find('\0') != std::string::npos) { return; }
@@ -2438,9 +2414,7 @@ void CSystem::OpenFolderAndSelectFile(const std::string& file)
     openDesktopPath("nautilus", "--select", file);
 #endif
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if CSYSTEM_HAS_DESKTOP_API
 void CSystem::OpenFile(const std::string& file)
 {
     if (file.empty() || file.find('\0') != std::string::npos) { return; }
@@ -2518,11 +2492,9 @@ std::string CSystem::commonFile(const std::string& name)
 #endif
     double version = 0;
     std::string result;
-    std::vector<std::string> vecPath = CSystem::findFilePath(path, 3);
-    int32_t index = -1;
-    while (index++ != vecPath.size() - 1)
+    const std::vector<std::string> vecPath = CSystem::findFilePath(path, 3);
+    for (const std::string& filePath : vecPath)
     {
-        const std::string& filePath = vecPath[index];
         std::string fileName = CSystem::GetName(filePath, 1);
         std::string fileSuffix = CSystem::GetName(filePath, 2);
 #ifdef _WIN32
@@ -2530,10 +2502,7 @@ std::string CSystem::commonFile(const std::string& name)
         {
             continue;
         }
-        fileName.pop_back();
-        fileName.pop_back();
-        fileName.pop_back();
-        fileName.pop_back();
+        fileName.resize(fileName.size() - 4);
 #elif defined(__unix__) || defined(__APPLE__)
         if (std::count(fileName.begin(), fileName.end(), '.') != 1)
         {
@@ -2626,9 +2595,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
     }
 #ifdef _WIN32
     dir.push_back('*');
-#endif
 
-#ifdef _WIN32
     _finddata_t fileDir;
 #elif defined(__unix__) || defined(__APPLE__)
     struct dirent *pDirent = nullptr;
@@ -3098,10 +3065,6 @@ bool CSystem::readFileHandle(intptr_t handle, uint64_t offset, uint8_t* output, 
     }
     uint32_t used = 0;
 #ifdef _WIN32
-    if (reinterpret_cast<HANDLE>(handle) == INVALID_HANDLE_VALUE)
-    {
-        return systemFileFailure(error, ERROR_INVALID_HANDLE);
-    }
     LARGE_INTEGER position;
     position.QuadPart = static_cast<LONGLONG>(offset);
     if (!SetFilePointerEx(reinterpret_cast<HANDLE>(handle), position, nullptr, FILE_BEGIN))
@@ -3122,10 +3085,6 @@ bool CSystem::readFileHandle(intptr_t handle, uint64_t offset, uint8_t* output, 
         used += count;
     }
 #else
-    if (static_cast<int>(handle) < 0)
-    {
-        return systemFileFailure(error, EBADF);
-    }
     uint32_t interrupted = 0;
     while (used < capacity)
     {
@@ -3146,10 +3105,6 @@ bool CSystem::readFileHandle(intptr_t handle, uint64_t offset, uint8_t* output, 
     }
 #endif
     *received = used;
-    if (error)
-    {
-        *error = 0;
-    }
     return true;
 }
 
@@ -3177,10 +3132,6 @@ bool CSystem::writeFileHandle(intptr_t handle, uint64_t offset, const uint8_t* i
     }
     uint32_t used = 0;
 #ifdef _WIN32
-    if (reinterpret_cast<HANDLE>(handle) == INVALID_HANDLE_VALUE)
-    {
-        return systemFileFailure(error, ERROR_INVALID_HANDLE);
-    }
     LARGE_INTEGER position;
     position.QuadPart = static_cast<LONGLONG>(offset);
     if (!SetFilePointerEx(reinterpret_cast<HANDLE>(handle), position, nullptr, FILE_BEGIN))
@@ -3201,10 +3152,6 @@ bool CSystem::writeFileHandle(intptr_t handle, uint64_t offset, const uint8_t* i
         used += count;
     }
 #else
-    if (static_cast<int>(handle) < 0)
-    {
-        return systemFileFailure(error, EBADF);
-    }
     uint32_t interrupted = 0;
     while (used < size)
     {
@@ -3224,10 +3171,6 @@ bool CSystem::writeFileHandle(intptr_t handle, uint64_t offset, const uint8_t* i
         used += static_cast<uint32_t>(count);
     }
 #endif
-    if (error)
-    {
-        *error = 0;
-    }
     return true;
 }
 
@@ -3246,28 +3189,16 @@ bool CSystem::flushFileHandle(intptr_t handle, uint32_t* error)
 #endif
     }
 #ifdef _WIN32
-    if (reinterpret_cast<HANDLE>(handle) == INVALID_HANDLE_VALUE)
-    {
-        return systemFileFailure(error, ERROR_INVALID_HANDLE);
-    }
     if (!FlushFileBuffers(reinterpret_cast<HANDLE>(handle)))
     {
         return systemFileFailure(error, GetLastError());
     }
 #else
-    if (static_cast<int>(handle) < 0)
-    {
-        return systemFileFailure(error, EBADF);
-    }
     if (fsync(static_cast<int>(handle)) != 0)
     {
         return systemFileFailure(error, errno);
     }
 #endif
-    if (error)
-    {
-        *error = 0;
-    }
     return true;
 }
 
@@ -3288,10 +3219,6 @@ bool CSystem::fileHandleSize(intptr_t handle, uint64_t* bytes, uint32_t* error)
 #else
         return systemFileFailure(error, EBADF);
 #endif
-    }
-    if (bytes != nullptr)
-    {
-        *bytes = 0;
     }
     if (bytes == nullptr)
     {
@@ -3324,10 +3251,6 @@ bool CSystem::fileHandleSize(intptr_t handle, uint64_t* bytes, uint32_t* error)
     }
     *bytes = static_cast<uint64_t>(information.st_size);
 #endif
-    if (error)
-    {
-        *error = 0;
-    }
     return true;
 }
 
@@ -3366,10 +3289,6 @@ bool CSystem::resizeFileHandle(intptr_t handle, uint64_t bytes, uint32_t* error)
         return systemFileFailure(error, errno);
     }
 #endif
-    if (error)
-    {
-        *error = 0;
-    }
     return true;
 }
 
@@ -3457,8 +3376,9 @@ bool CSystem::publishFileUtf8(const char* source, const char* destination, bool 
         // 目标已经原子发布，残留临时链接交宿主恢复时清理，不伪装成没有发布。
         ::unlink(source);
     }
-    const std::string parent = CSystem::GetName(destination, 4);
-    const int directory = ::open(parent.empty() ? "." : parent.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    const char* slash = std::strrchr(destination, '/');
+    const std::string parent = slash == nullptr ? "." : std::string(destination, slash + 1);
+    const int directory = ::open(parent.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
     if (directory < 0)
     {
         return false;
@@ -3472,7 +3392,6 @@ bool CSystem::publishFileUtf8(const char* source, const char* destination, bool 
 #if defined(_WIN32)
 bool CSystem::bindInheritedOutput()
 {
-#ifdef _WIN32
     const DWORD identifiers[] = { STD_OUTPUT_HANDLE, STD_ERROR_HANDLE };
     FILE* streams[] = { stdout, stderr };
     for (uint32_t index = 0; index < 2; ++index)
@@ -3505,20 +3424,15 @@ bool CSystem::bindInheritedOutput()
             return false;
         }
     }
-#endif
     return true;
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
 uint32_t CSystem::startDetachedProcess(const std::string& executable, const std::vector<std::string>& arguments,
     uint32_t& pid, uint64_t& monitor)
 {
     return startOwnedProcess(executable, arguments, std::string(), pid, monitor);
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
 uint32_t CSystem::startCapturedProcess(const std::string& executable, const std::vector<std::string>& arguments,
     const std::string& output, uint32_t& pid, uint64_t& monitor)
 {
@@ -3530,15 +3444,12 @@ uint32_t CSystem::startCapturedProcess(const std::string& executable, const std:
     }
     return startOwnedProcess(executable, arguments, output, pid, monitor);
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
 bool CSystem::queryProcessResources(uint64_t monitor, uint64_t& privateBytes, uint64_t& workingSet,
     uint64_t& cpuTime100ns, uint32_t& handles, uint32_t& threads)
 {
     privateBytes = workingSet = cpuTime100ns = 0;
     handles = threads = 0;
-#ifdef _WIN32
     HANDLE process = monitor == 0 ? GetCurrentProcess() : reinterpret_cast<HANDLE>(static_cast<uintptr_t>(monitor));
     PROCESS_MEMORY_COUNTERS_EX memory = {};
     memory.cb = sizeof(memory);
@@ -3581,30 +3492,16 @@ bool CSystem::queryProcessResources(uint64_t monitor, uint64_t& privateBytes, ui
         (static_cast<uint64_t>(user.dwHighDateTime) << 32 | user.dwLowDateTime);
     handles = count;
     return true;
-#else
-    (void)monitor;
-    return false;
-#endif
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
 uint64_t CSystem::openProcessMonitor(uint32_t pid)
 {
-#ifdef _WIN32
     return pid == 0 ? 0 : reinterpret_cast<uintptr_t>(OpenProcess(SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid));
-#else
-    (void)pid;
-    return 0;
-#endif
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
 int32_t CSystem::pollProcessMonitor(uint64_t monitor, int32_t& exitCode)
 {
     exitCode = 0;
-#ifdef _WIN32
     if (monitor == 0)
     {
         return -1;
@@ -3622,27 +3519,17 @@ int32_t CSystem::pollProcessMonitor(uint64_t monitor, int32_t& exitCode)
     }
     exitCode = static_cast<int32_t>(code);
     return 1;
-#else
-    (void)monitor;
-    return -1;
-#endif
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
 void CSystem::closeProcessMonitor(uint64_t& monitor)
 {
-#ifdef _WIN32
     if (monitor != 0)
     {
         CloseHandle(reinterpret_cast<HANDLE>(static_cast<uintptr_t>(monitor)));
     }
-#endif
     monitor = 0;
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
 uint32_t CSystem::setUserLoginStartup(const std::string& name, const std::string& command)
 {
     if (name.empty() || name.size() > 80 ||
@@ -3651,7 +3538,6 @@ uint32_t CSystem::setUserLoginStartup(const std::string& name, const std::string
     {
         return 87;
     }
-#ifdef _WIN32
     const std::wstring value = utf8PathToWide(name);
     const std::wstring wide = utf8PathToWide(command);
     if ((!command.empty() && wide.empty()) || wide.size() > 260)
@@ -3675,9 +3561,6 @@ uint32_t CSystem::setUserLoginStartup(const std::string& name, const std::string
             static_cast<DWORD>((wide.size() + 1) * sizeof(wchar_t)));
     RegCloseKey(key);
     return command.empty() && result == ERROR_FILE_NOT_FOUND ? ERROR_SUCCESS : static_cast<uint32_t>(result);
-#else
-    return 50;
-#endif
 }
 #endif // CSYSTEM_PLATFORM_CAPABILITY
 
@@ -3849,9 +3732,7 @@ int32_t CSystem::acquireNamedProcessLease(const std::string& name, const std::st
         return -1;
     }
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if CSYSTEM_HAS_DESKTOP_API
 bool CSystem::setProcessLeaseReady(const std::vector<uint64_t>& state, bool ready)
 {
     if (state.size() != 3)
@@ -3868,9 +3749,7 @@ bool CSystem::setProcessLeaseReady(const std::vector<uint64_t>& state, bool read
     return false;
 #endif
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if CSYSTEM_HAS_DESKTOP_API
 bool CSystem::processLeaseStopRequested(const std::vector<uint64_t>& state)
 {
     if (state.size() != 3)
@@ -3886,9 +3765,7 @@ bool CSystem::processLeaseStopRequested(const std::vector<uint64_t>& state)
     return true;
 #endif
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if CSYSTEM_HAS_DESKTOP_API
 void CSystem::releaseProcessLease(std::vector<uint64_t>& state)
 {
     if (state.size() != 3)
@@ -3908,9 +3785,7 @@ void CSystem::releaseProcessLease(std::vector<uint64_t>& state)
 #endif
     state.clear();
 }
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if CSYSTEM_HAS_DESKTOP_API
 bool CSystem::isProcessLeaseReady(const std::string& name, uint32_t pid)
 {
     if (pid == 0 || pid > INT32_MAX || name.empty() || name.size() > 80 ||
@@ -4042,67 +3917,31 @@ bool CSystem::setProcessDirectory(const std::string& directory)
 }
 
 // 按单字符分隔字符串，函数开始时清空输出数组。
-void CSystem::split(std::vector<std::string>& result, const std::string& splitString, char separate_character)
+void CSystem::split(std::vector<std::string>& result, const std::string& splitString, char separateCharacter)
 {
     result.clear();
     size_t splitCount = 1;
     size_t lastPosition = 0;
-    size_t index = splitString.find(separate_character, lastPosition);
+    size_t index = splitString.find(separateCharacter, lastPosition);
     while (index != std::string::npos)
     {
         ++splitCount;
         lastPosition = index + 1;
-        index = splitString.find(separate_character, lastPosition);
+        index = splitString.find(separateCharacter, lastPosition);
     }
     result.reserve(splitCount);
 
     lastPosition = 0;
-    index = splitString.find(separate_character, lastPosition);
+    index = splitString.find(separateCharacter, lastPosition);
     while (index != std::string::npos)
     {
         result.emplace_back(splitString, lastPosition, index - lastPosition);
         lastPosition = index + 1;
-        index = splitString.find(separate_character, lastPosition);
+        index = splitString.find(separateCharacter, lastPosition);
     }
     result.emplace_back(splitString, lastPosition);
 }
 
-// 按字符串分隔字符串，函数开始时清空输出数组。
-void CSystem::split(std::vector<std::string>& result, const std::string& splitString, const std::string& separate_character)
-{
-    result.clear();
-    if (separate_character.empty())
-    {
-        result.push_back(splitString);
-        return;
-    }
-
-    size_t separate_characterLen = separate_character.length();
-    size_t splitCount = 1;
-    size_t lastPosition = 0;
-    size_t index = splitString.find(separate_character, lastPosition);
-    while (index != std::string::npos)
-    {
-        ++splitCount;
-        lastPosition = index + separate_characterLen;
-        index = splitString.find(separate_character, lastPosition);
-    }
-    result.reserve(splitCount);
-
-    lastPosition = 0;
-    index = splitString.find(separate_character, lastPosition);
-    while (index != std::string::npos)
-    {
-        result.emplace_back(splitString, lastPosition, index - lastPosition);
-        lastPosition = index + separate_characterLen;
-        index = splitString.find(separate_character, lastPosition);
-    }
-    result.emplace_back(splitString, lastPosition);
-}
-
-// SetSystemError入参：errorText是可选错误输出对象，value是要写入的错误文本。
-// SetSystemError出参：errorText不为空时写入错误文本。
-// SetSystemError返回值：无。
 void CSystem::setSystemError(std::string* errorText, const std::string& value)
 {
     if (errorText != nullptr)
@@ -4168,9 +4007,7 @@ HRESULT CSystem::enumerateDevices(REFGUID category, IEnumMoniker** ppEnum)
     }
     return hr;
 }
-#endif
 
-#ifdef _MSC_VER
 // 从DirectShow设备枚举器读取设备显示名称。
 void CSystem::displayDeviceInformation(IEnumMoniker* pEnum, std::vector<std::string>& list)
 {
@@ -4210,34 +4047,11 @@ void CSystem::displayDeviceInformation(IEnumMoniker* pEnum, std::vector<std::str
             }
             ::VariantClear(&var);
         }
-        hr = pPropBag->Read(L"WaveInID", &var, nullptr);
-        if (SUCCEEDED(hr))
-        {
-            ::VariantClear(&var);
-        }
-        hr = pPropBag->Read(L"DevicePath", &var, nullptr);
-        if (SUCCEEDED(hr))
-        {
-            ::VariantClear(&var);
-        }
-
         pPropBag->Release();
         pMoniker->Release();
     }
 }
-#endif
 
-#ifdef _MSC_VER
-// 获取当前代码所在模块句柄。
-HMODULE CSystem::getCurrentModule()
-{
-    HMODULE hModule = nullptr;
-    ::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCTSTR)getCurrentModule, &hModule);
-    return hModule;
-}
-#endif
-
-#ifdef _MSC_VER
 BOOL CALLBACK CSystem::findWindowCallback(HWND window, LPARAM context)
 {
     std::pair<uint32_t, HWND>* query = reinterpret_cast<std::pair<uint32_t, HWND>*>(context);
@@ -4250,9 +4064,7 @@ BOOL CALLBACK CSystem::findWindowCallback(HWND window, LPARAM context)
     }
     return TRUE;
 }
-#endif
 
-#ifdef _MSC_VER
 BOOL CALLBACK CSystem::findVisibleWindowCallback(HWND window, LPARAM context)
 {
     std::pair<uint32_t, HWND>* query = reinterpret_cast<std::pair<uint32_t, HWND>*>(context);
@@ -4411,30 +4223,6 @@ bool CSystem::linuxProcessStatExited(const std::string& line)
         cursor = end + 1;
     }
     return false;
-}
-#endif
-
-#if defined(__unix__) || defined(__APPLE__)
-// 获取当前动态库所在目录，入参为空时返回nullptr。
-char* CSystem::getModuleCurrentPath(char* sCurPath)
-{
-    if (sCurPath == nullptr)
-    {
-        return nullptr;
-    }
-    Dl_info dl_info;
-    memset(&dl_info, 0, sizeof(dl_info));
-    if (dladdr((void*)getModuleCurrentPath, &dl_info) == 0 || dl_info.dli_fname == nullptr)
-    {
-        sCurPath[0] = '\0';
-        return sCurPath;
-    }
-    std::string path(dl_info.dli_fname);
-    std::string wdir = path.substr(0, path.find_last_of('/') + 1);
-    const size_t maxPathLen = 1024;
-    ::strncpy(sCurPath, wdir.c_str(), maxPathLen - 1);
-    sCurPath[maxPathLen - 1] = '\0';
-    return sCurPath;
 }
 #endif
 
@@ -4599,6 +4387,8 @@ bool CSystem::migrateTree(const std::string& source, const std::string& destinat
         errorText = "Cannot enumerate migration source";
         return false;
     }
+    const auto closeSearch = [](void* handle) { ::FindClose(handle); };
+    std::unique_ptr<void, decltype(closeSearch)> searchGuard(search, closeSearch);
     do
     {
         const std::string name(info.cFileName);
@@ -4608,7 +4398,7 @@ bool CSystem::migrateTree(const std::string& source, const std::string& destinat
         }
     } while (FindNextFileA(search, &info));
     const DWORD enumerationError = GetLastError();
-    FindClose(search);
+    searchGuard.reset();
     if (enumerationError != ERROR_NO_MORE_FILES)
     {
         errorText = "Migration enumeration failed";
@@ -4621,16 +4411,27 @@ bool CSystem::migrateTree(const std::string& source, const std::string& destinat
         errorText = "Cannot enumerate migration source";
         return false;
     }
-    struct dirent* entry;
-    while ((entry = readdir(directory)) != nullptr)
+    std::unique_ptr<DIR, int (*)(DIR*)> search(directory, ::closedir);
+    for (;;)
     {
+        errno = 0;
+        struct dirent* entry = ::readdir(directory);
+        if (entry == nullptr)
+        {
+            if (errno != 0)
+            {
+                errorText = "Migration enumeration failed";
+                return false;
+            }
+            break;
+        }
         const std::string name(entry->d_name);
         if (name != "." && name != "..")
         {
             names.push_back(name);
         }
     }
-    closedir(directory);
+    search.reset();
 #else
     errorText = "Directory migration is unsupported on this platform";
     return false;
@@ -4731,7 +4532,6 @@ uint32_t CSystem::startOwnedProcess(const std::string& executable, const std::ve
     {
         return 87;
     }
-#ifdef _WIN32
     const std::wstring path = utf8PathToWide(executable);
     if (path.size() > 32750)
     {
@@ -4871,10 +4671,6 @@ uint32_t CSystem::startOwnedProcess(const std::string& executable, const std::ve
     pid = process.dwProcessId;
     monitor = reinterpret_cast<uintptr_t>(process.hProcess);
     return ERROR_SUCCESS;
-#else
-    (void)output;
-    return 50;
-#endif
 }
 #endif // CSYSTEM_PLATFORM_CAPABILITY
 
@@ -4918,17 +4714,13 @@ std::string& CSystem::processDirectory()
     static std::string s_directory;
     return s_directory;
 }
-#endif
 
-#ifdef CSYSTEM_SHARED_IDENTITY
 std::atomic<bool>& CSystem::processDirectorySealed()
 {
     static std::atomic<bool> s_sealed(false);
     return s_sealed;
 }
-#endif
 
-#ifdef CSYSTEM_SHARED_IDENTITY
 #ifndef _WIN32
 int CSystem::openProcessDirectory(const std::string& directory)
 {
@@ -4950,9 +4742,7 @@ int CSystem::openProcessDirectory(const std::string& directory)
     return descriptor;
 }
 #endif
-#endif
 
-#ifdef CSYSTEM_SHARED_IDENTITY
 bool CSystem::publishProcessIdentity(uint64_t identity)
 {
     if (identity == 0 || processDirectory().empty())
@@ -5034,9 +4824,7 @@ bool CSystem::publishProcessIdentity(uint64_t identity)
     return success;
 #endif
 }
-#endif
 
-#ifdef CSYSTEM_SHARED_IDENTITY
 bool CSystem::readProcessIdentity(uint32_t processId, uint64_t& identity)
 {
     identity = 0;
@@ -5207,7 +4995,7 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 //     valid = writer != -1 && duplicate != -1 && CSystem::writeFileHandle(writer, 0, text, 3) &&
 //         CSystem::flushFileHandle(writer) && CSystem::fileHandleSize(duplicate, &size) && size == 3 &&
 //         CSystem::readFileHandle(duplicate, 0, readback, 3, &received) && received == 3 &&
-//         CSystem::resizeFileHandle(writer, 3);
+//         std::memcmp(readback, text, sizeof(text)) == 0 && CSystem::resizeFileHandle(writer, 3);
 //     CSystem::closeFileHandle(&duplicate);
 //     CSystem::closeFileHandle(&writer);
 //     if (valid)
@@ -5242,6 +5030,26 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 //     uint64_t identity = 0;
 //     CSystem::processIdentity(pid, identity);
 //     CSystem::Sleep(1);
+//     CSystem::sleepPrecise(1);
+// #if CSYSTEM_HAS_DESKTOP_API
+//     std::printf("CPU frequency %.3f GHz\\n", CSystem::GetCPUSpeedGHz());
+//     std::vector<uint64_t> lease;
+//     const std::string role = "CSystemDemo." + unique;
+//     if (CSystem::acquireProcessLease(role, false, 0, lease) == 1)
+//     {
+//         valid = CSystem::setProcessLeaseReady(lease, true) && CSystem::isProcessLeaseReady(role, pid) &&
+//             !CSystem::processLeaseStopRequested(lease) && valid;
+//         CSystem::releaseProcessLease(lease);
+// #ifndef _WIN32
+//         CSystem::deleteFile(("/tmp/xyls." + role + ".lease").c_str());
+//         CSystem::deleteFile(("/tmp/xyls." + role + ".ready." + std::to_string(pid)).c_str());
+// #endif
+//     }
+//     else
+//     {
+//         valid = false;
+//     }
+// #endif
 // #ifdef _WIN32
 //     uint64_t monitor = CSystem::openProcessMonitor(pid);
 //     uint64_t privateBytes = 0, resident = 0, cpu = 0;

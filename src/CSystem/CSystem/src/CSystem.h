@@ -86,20 +86,18 @@ public:
     static int32_t acquireProcessLease(const std::string& name, bool replace, uint32_t timeoutMs,
         std::vector<uint64_t>& state);
 
-    /** 兼容原有命名空间的租约调用；新调用者给每个独立角色选择独有的 name。
-    @param [in] name 角色名，与原有就绪查询配套
+    /** 按角色与隔离后缀取得锁，就绪记录始终按角色和进程号查询
+    @param [in] name 用于查询就绪记录的角色名
     @param [in] replace 是否要求旧实例正常退出
     @param [in] timeoutMs 等待上限，最多30000毫秒
     @param [out] state 成功取得的独占租约
-    @param [in] isolated 既有调用者使用的隔离后缀；空串取得普通角色租约
+    @param [in] isolated 隔离后缀，最多 40 个 ASCII 字母、数字、点、下划线或连字符；空串使用角色名
     @return 1取得，0已有实例，-1失败
     @note 支持平台 Windows、Linux、macOS
     */
     static int32_t acquireProcessLease(const std::string& name, bool replace, uint32_t timeoutMs,
         std::vector<uint64_t>& state, const std::string& isolated);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if CSYSTEM_HAS_DESKTOP_API
     /** 发布或撤销本进程可接入状态，只有完整初始化后才置true
     @param [in] state 已取得租约
     @param [in] ready 当前是否可接入
@@ -107,26 +105,20 @@ public:
     @note 支持平台 Windows、Linux、macOS
     */
     static bool setProcessLeaseReady(const std::vector<uint64_t>& state, bool ready);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if CSYSTEM_HAS_DESKTOP_API
     /** 查询替换请求，由主循环转换为正常关闭
     @param [in] state 已取得租约
     @return 是否已收到停止请求；无效状态返回true
     @note 支持平台 Windows、Linux、macOS
     */
     static bool processLeaseStopRequested(const std::vector<uint64_t>& state);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if CSYSTEM_HAS_DESKTOP_API
     /** 撤销就绪并释放内核句柄；只能在所有工作已结束后调用
     @param [in,out] state 成功取得的租约，返回时清空
     @note 支持平台 Windows、Linux、macOS
     */
     static void releaseProcessLease(std::vector<uint64_t>& state);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if CSYSTEM_HAS_DESKTOP_API
     /** 验证指定PID已发布就绪；实际接入仍须完成IPC和TLS握手
     @param [in] name 角色名
     @param [in] pid 正进程号
@@ -144,9 +136,7 @@ public:
     @note 支持平台 Windows
     */
     static uint32_t setUserLoginStartup(const std::string& name, const std::string& command);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
     /** 以独立后台进程启动绝对路径，不经shell，仅Windows公开
     @param [in] executable UTF8绝对路径
     @param [in] arguments 原始UTF8参数，各自引用转义，最多64项
@@ -157,9 +147,7 @@ public:
     */
     static uint32_t startDetachedProcess(const std::string& executable, const std::vector<std::string>& arguments,
         uint32_t& pid, uint64_t& monitor);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
     /** 后台启动进程并独占创建输出文件，不经shell，仅Windows公开
     @param [in] executable UTF8绝对EXE路径
     @param [in] arguments 逐项原始参数，最多64项
@@ -171,9 +159,7 @@ public:
     */
     static uint32_t startCapturedProcess(const std::string& executable, const std::vector<std::string>& arguments,
         const std::string& output, uint32_t& pid, uint64_t& monitor);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
     /** 采样有效监视句柄所属进程资源，仅Windows公开
     @param [in] monitor 0为当前进程，其他为本库取得且未释放的句柄，需具备查询和读取权限
     @param [out] privateBytes 私有提交字节
@@ -186,18 +172,14 @@ public:
     */
     static bool queryProcessResources(uint64_t monitor, uint64_t& privateBytes, uint64_t& workingSet,
         uint64_t& cpuTime100ns, uint32_t& handles, uint32_t& threads);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
     /** Windows打开进程退出监视句柄，持有期间不会混淆复用PID
     @param [in] pid 目标进程号
     @return 独占句柄，失败为0；权限不足不当成已退出
     @note 支持平台 Windows
     */
     static uint64_t openProcessMonitor(uint32_t pid);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
     /** 非阻塞查询已持有进程的退出事实
     @param [in] monitor 有效句柄
     @param [out] exitCode 已退出时为实际退出码，其他情况0
@@ -205,17 +187,13 @@ public:
     @note 支持平台 Windows
     */
     static int32_t pollProcessMonitor(uint64_t monitor, int32_t& exitCode);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
     /** 关闭监视句柄，不关闭目标进程
     @param [in,out] monitor 本模块创建的独占句柄，释放后0
     @note 支持平台 Windows
     */
     static void closeProcessMonitor(uint64_t& monitor);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if defined(_WIN32)
     /** Windows无控制台程序将CRT输出绑定到调用方明确重定向的管道/文件
     @return 绑定成功；没有重定向时为true，不分配或附加控制台
     @note 支持平台 Windows
@@ -226,7 +204,6 @@ public:
 
 #ifdef _WIN32
 
-#if CSYSTEM_HAS_NATIVE_API
     /** 获取系统任务栏矩形大小
     @return 返回任务栏矩形，获取失败时字段通常为0
     @note 支持平台 Windows
@@ -349,9 +326,7 @@ public:
     @note 支持平台 Windows
     */
     static uint32_t processFirstPid(const std::wstring& processNameW);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if !defined(__APPLE__) || !TARGET_OS_IPHONE
     /** 获取指定进程名的全部进程ID
     @param [in] processNameW 进程名宽字符串
     @return 返回进程ID列表
@@ -385,7 +360,6 @@ public:
     @note 支持平台 Windows
     */
     static std::map<std::string, std::vector<std::string>> allDeviceInfo();
-#endif // CSYSTEM_NATIVE_API
 
 #endif
 
@@ -404,7 +378,7 @@ public:
     */
     static void Sleep(long long milliseconds);
 
-    /** 网络轮询的短时阻塞等待，不占用CPU自旋或更改全局定时器分辨率
+    /** 网络轮询的短时阻塞等待，Windows 普通计时器回退首次按需申请 1 毫秒精度
     @param [in] milliseconds 等待毫秒；Windows支持时使用高精度等待计时器，其他情况回退Sleep
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
@@ -425,7 +399,7 @@ public:
     */
     static void CopyFileOver(const std::string& dstFile, const std::string& srcFile, bool over);
 
-    /** 获取当前操作系统位数
+    /** 查询 Windows 系统架构位数或 POSIX 当前进程指针位数
     @return 返回32或64，无法判断时返回0
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
@@ -478,17 +452,13 @@ public:
     @note 支持平台 Windows、Linux、macOS
     */
     static void OpenFolder(const std::string& folder);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if CSYSTEM_HAS_DESKTOP_API
     /** 打开系统文件夹并选中文件
     @param [in] file 文件路径
     @note 支持平台 Windows、Linux、macOS
     */
     static void OpenFolderAndSelectFile(const std::string& file);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if CSYSTEM_HAS_DESKTOP_API
     /** 使用系统或指定外部程序打开文件
     @param [in] file 文件路径，Linux下可包含外部程序名，例如gedit
     @note 支持平台 Windows、Linux、macOS
@@ -506,7 +476,7 @@ public:
     /** 创建动态二维数组
     @param [in] row 行数
     @param [in] column 列数
-    @return 返回二维数组指针，失败返回空指针
+    @return 各行分别分配，尺寸非正或分配返回空时返回空指针；元素构造异常在已构造元素释放后向上传播
     @note 支持平台 Windows、Linux、macOS、Android、iOS、Wasm
     */
     template <typename TypeClass>
@@ -552,16 +522,22 @@ public:
     static void OutputVector(const std::vector<std::string>& stringVector, const std::string& path = "");
 
 #if CSYSTEM_HAS_DESKTOP_API
-    /** 清空scanf输入缓存区
+    /** 从本模块的标准输入丢弃一行，遇到换行或 EOF 返回；与本模块 inputString 共用输入
     @note 支持平台 Windows、Linux、macOS
     */
     static void ClearScanf();
+
+    /** 从调用方指定的字符流丢弃一行，适用于调用方和 DLL 分别静态链接 CRT
+    @param [in] readCharacter 同步借用，通常传调用方的 getchar；每次返回一个无符号字节或 EOF，空指针直接返回
+    @note 支持平台 Windows、Linux、macOS
+    */
+    static void ClearScanf(int (*readCharacter)());
 #endif // CSYSTEM_PLATFORM_CAPABILITY
 
     /** 获取执行参数列表
     @param [in] argc main函数参数数量，Windows下可传默认值
     @param [in] argv main函数参数数组，Windows下可传默认值
-    @return Windows下返回进程路径，Linux下返回argv列表，第一个通常是可执行文件绝对路径
+    @return 包含程序名的参数列表；Windows 取 CRT 当前进程参数，其余原生平台取传入数组，无效数组返回空列表
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static std::vector<std::string> exeParam(int argc = 0, char** argv = nullptr);
@@ -632,7 +608,7 @@ public:
     @param [in] argc 标准main参数个数1至4096；Windows GUI入口可用0并传空argv
     @param [in] argv 标准main参数；Windows使用系统宽字符命令行，GUI入口允许与argc=0成对为空
     @param [out] arguments 成功替换列表，参数错误或编码失败保持原值
-    @return 是否成功，标准库分配异常由调用边界处理
+    @return 是否成功；结果从程序名后的第一个参数开始，标准库分配异常由调用边界处理
     @note 支持平台 Windows、Linux、macOS、Android、iOS、Wasm
     */
     static bool commandArguments(int32_t argc, char** argv, std::vector<std::string>& arguments);
@@ -645,18 +621,14 @@ public:
     @note 支持平台 Windows、Linux、macOS、Android
     */
     static uint32_t processFirstPid(const std::string& processName);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if !defined(__APPLE__) || !TARGET_OS_IPHONE
     /** 获取指定进程名的全部进程ID
     @param [in] processName 进程名
     @return 返回进程ID列表，Linux/Android 按可见 PID 降序返回
     @note 支持平台 Windows、Linux、macOS、Android。Android进程可见范围受系统权限限制
     */
     static std::vector<uint32_t> processPid(const std::string& processName);
-#endif // CSYSTEM_PLATFORM_CAPABILITY
 
-#if !defined(__APPLE__) || !TARGET_OS_IPHONE
     /** 根据进程ID获取进程全名
     @param [in] pid 进程ID
     @return 返回进程名，失败返回空字符串
@@ -750,7 +722,7 @@ public:
     */
     static std::string GetCurrentExePath();
 
-    /** 取得当前可执行文件完整UTF8路径，不改变GetCurrentExePath的历史编码契约
+    /** 取得当前可执行文件完整UTF8路径，Windows 通过宽字符系统 API 查询
     @return 完整路径，失败空；不依赖当前工作目录
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
@@ -800,7 +772,7 @@ public:
     */
     static std::string canonicalPath(const std::string& path, bool requireExisting = true);
 
-    /** 明确UTF8输入/输出的绝对路径；旧canonicalPath及GetCurrentExePath的历史编码契约保持
+    /** 明确UTF8输入/输出的绝对路径；Windows 通过宽字符系统 API 查询
     @param [in] path UTF8非空路径，不允许零字符
     @param [in] requireExisting true解析实际目标，false规范绝对词法路径
     @return UTF8绝对路径，失败空；Windows统一ASCII大小写
@@ -888,7 +860,7 @@ public:
     */
     static bool installFileIfAbsent(const std::wstring& sourcePath, const std::wstring& destinationPath);
 
-    /** 按UTF8检查普通文件，拒绝目录、符号链接及Windows重解析点，保持旧plainFile编码契约
+    /** 按UTF8检查普通文件，拒绝目录、符号链接及Windows重解析点
     @param [in] path 非空UTF8路径，不允许NUL
     @return 普通文件存在
     @note 支持平台 Windows、Linux、macOS、Android、iOS
@@ -906,7 +878,7 @@ public:
 
     /** 写入由 openBinaryOutputFile 创建的文件，避免跨 DLL 使用不同 CRT 的 FILE
     @param [in] file CSystem 创建的输出文件
-    @param [in] data 待写字节
+    @param [in] data 非空的待写字节缓冲，借用至返回
     @param [in] size 字节数量
     @return 完整写入返回 true
     @note 支持平台 Windows、Linux、macOS、Android、iOS
@@ -968,9 +940,9 @@ public:
     static std::string timetToStr(time_t timet, bool isLocal = true);
 
 #if CSYSTEM_HAS_NATIVE_API
-    /** 获取common目录中的文件路径
-    @param [in] name common目录下的文件名
-    @return 返回文件完整路径
+    /** 在 XUEYELINGSHUANG 指定的 common 目录递归选择带数值版本的程序
+    @param [in] name 文件名中位于版本号之前的前缀
+    @return 匹配到的最高正数版本路径；没有匹配时返回空串
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static std::string commonFile(const std::string& name);
@@ -1003,8 +975,8 @@ public:
     @param [in] flag 1表示查找文件，2表示查找文件后缀名，3表示查找所有文件，fileStr不起作用
     @param [in] fileStr 传文件名带后缀名或后缀名不带点，多个后缀名点分隔，如果填2传空或分隔后有空字符串则会搜索不含后缀名的文件，不查找文件夹
     @param [in] EveryFilePath 在每添加一个文件路径之前调用此函数，返回true表示中断搜索，继续搜索返回false
-    @param [in] unVisitPath 把当前文件夹下不可访问的文件夹列出来，传空代表不存储，所有文件夹路径带\符号
-    @return 返回所有查找到文件的绝对路径
+    @param [in] unVisitPath 非空时清空并收集未能打开的目录；传空跳过记录
+    @return 按遍历次序返回匹配路径；传相对根目录时结果也可以是相对路径
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static std::vector<std::string> findFilePath(const std::string& strPath,
@@ -1025,7 +997,7 @@ public:
     /** 独占创建可由其他执行者只读观察的输出文件，不覆盖既有文件
     @param [in] path UTF8绝对路径
     @param [out] error 可空系统错误
-    @return 本模块文件句柄或-1；使用既有write/flush/closeFileHandle，其他写者不能打开
+    @return 本模块文件句柄或-1；使用 write/flush/closeFileHandle；Windows 拒绝其他写者，POSIX 的 O_EXCL 仅保证首次创建
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static intptr_t createObservedOutputFile(const char* path, uint32_t* error = nullptr);
@@ -1146,6 +1118,13 @@ private:
 #endif
 #endif
 #if CSYSTEM_HAS_NATIVE_API
+    /** 取得当前可执行文件路径中的指定部分，Windows 使用系统窄字符编码
+    @param [in] flag 1 取全名，3 去掉扩展名，4 取目录并保留末尾分隔符
+    @return 指定路径部分，查询失败返回空串
+    @note 支持平台 Windows、Linux、macOS、Android、iOS
+    */
+    static std::string executablePathPart(int32_t flag);
+
     /** 判断存在路径是普通目录，不接受链接或重解析点
     @param [in] path 待检查目录
     @return 普通无链接目录返回true
@@ -1227,14 +1206,6 @@ private:
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static void split(std::vector<std::string>& result, const std::string& splitString, char separateCharacter);
-
-    /** 按完整字符串分隔并保留空字段，空分隔符保留原输入
-    @param [out] result 本次切分结果
-    @param [in] splitString 待切分字节串
-    @param [in] separateCharacter 分隔字符串，可空
-    @note 支持平台 Windows、Linux、macOS、Android、iOS
-    */
-    static void split(std::vector<std::string>& result, const std::string& splitString, const std::string& separateCharacter);
 
     /** 向可选错误输出写入固定错误文本
     @param [out] errorText 可空，非空时替换内容
@@ -1337,21 +1308,6 @@ private:
     */
     static void displayDeviceInformation(IEnumMoniker* enumeration, std::vector<std::string>& names);
 
-    /** 取得当前代码所在模块并增加系统模块引用
-    @return 模块句柄，失败为空；调用方沿用既有进程级持有方式
-    @note 支持平台 Windows
-    */
-    static HMODULE getCurrentModule();
-#endif
-
-#if defined(__unix__) || defined(__APPLE__)
-
-    /** 使用动态加载器信息取得当前模块目录
-    @param [out] pathBuffer 可空，非空时必须至少有1024字节，失败写空串
-    @return 原缓冲指针；传入空指针返回nullptr
-    @note 支持平台 Linux、macOS、Android、iOS
-    */
-    static char* getModuleCurrentPath(char* pathBuffer);
 #endif
 
 #if defined(__linux__)
