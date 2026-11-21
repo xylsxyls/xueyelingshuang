@@ -10,6 +10,6 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define MysqlCppAPI __attribute__ ((visibility("default")))
     #else
-        #define MysqlCppAPI
+        #define MysqlCppAPI 
     #endif
 #endif
