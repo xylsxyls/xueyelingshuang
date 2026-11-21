@@ -1,0 +1,35 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Windows · Debug（先生成对应的 .sln）",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/../../lib/CSystemTestd.exe",
+            "cwd": "${workspaceFolder}",
+            "args": []
+        },
+        {
+            "name": "Windows · Release（先生成对应的 .sln）",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/../../lib/CSystemTest.exe",
+            "cwd": "${workspaceFolder}",
+            "args": []
+        },
+        {
+            "name": "Linux / macOS · 当前 CMake 目标",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "cwd": "${workspaceFolder}",
+            "linux": {
+                "MIMode": "gdb"
+            },
+            "osx": {
+                "MIMode": "lldb"
+            },
+            "args": []
+        }
+    ]
+}
