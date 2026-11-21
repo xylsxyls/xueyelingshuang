@@ -1,7 +1,6 @@
-﻿#include "../../../common/PlatformTest/LibraryCaseSelection.h"
+﻿#include "PlatformTest/PlatformTestAPI.h"
 #include "TimerTest.h"
 #include "Timer/TimerAPI.h"
-#include "../../../common/PlatformTest/LibraryBenchmark.h"
 #include <cstring>
 #include <memory>
 #include <utility>
