@@ -5,6 +5,7 @@
 #endif
 #include "CSystem.h"
 #include <cstring>
+#include <system_error>
 #if CSYSTEM_HAS_NATIVE_API
 #include <mutex>
 #include <algorithm>
@@ -16,6 +17,8 @@
 #else
 #include <cerrno>
 #include <fcntl.h>
+#include <pthread.h>
+#include <sched.h>
 #endif
 #if (_MSC_VER >= 1800 || defined(__unix__) || defined(__APPLE__))
 #include <thread>
@@ -43,6 +46,7 @@
 #include <termios.h>
 #include <sys/stat.h>
 #include <sys/file.h>
+#include <sys/wait.h>
 #include <limits.h>
 #include <algorithm>
 #include <codecvt>
@@ -81,7 +85,6 @@
 #include <libproc.h>
 #endif
 #include <mach-o/dyld.h>
-#include <pthread.h>
 #include <uuid/uuid.h>
 #endif
 #if defined(__linux__)
@@ -232,29 +235,7 @@ std::string CSystem::GetClipboardData(HWND hWnd)
 #ifdef _MSC_VER
 HWND CSystem::GetConsoleHwnd()
 {
-    const int32_t bufsize = 1024;
-    //This is what is returned to the caller.
-    HWND hwndFound;
-    // Contains fabricated
-    char pszNewWindowTitle[bufsize];
-    // WindowTitle.
-    // Contains original
-    char pszOldWindowTitle[bufsize];
-    // WindowTitle.
-    // Fetch current window title.
-    GetConsoleTitleA(pszOldWindowTitle, bufsize);
-    // Format a "unique" NewWindowTitle.
-    _snprintf(pszNewWindowTitle, bufsize, "%lu/%lu", static_cast<unsigned long>(GetTickCount()), static_cast<unsigned long>(GetCurrentProcessId()));
-    pszNewWindowTitle[bufsize - 1] = '\0';
-    // Change current window title.
-    SetConsoleTitleA(pszNewWindowTitle);
-    // Ensure window title has been updated.
-    Sleep(40);
-    // Look for NewWindowTitle.
-    hwndFound = FindWindowA(NULL, pszNewWindowTitle);
-    // Restore original window title.
-    SetConsoleTitleA(pszOldWindowTitle);
-    return(hwndFound);
+    return ::GetConsoleWindow();
 }
 #endif
 
@@ -351,21 +332,21 @@ void CSystem::OpenWebPage(const std::string& webPage)
 #ifdef _MSC_VER
 bool CSystem::isMouseLeftDown()
 {
-    return ((::GetAsyncKeyState(MOUSE_MOVED) & 0x8000) ? 1 : 0);
+    return ((::GetAsyncKeyState(VK_LBUTTON) & 0x8000) ? 1 : 0);
 }
 #endif
 
 #ifdef _MSC_VER
 bool CSystem::isMouseRightDown()
 {
-    return ((::GetAsyncKeyState(MOUSE_EVENT) & 0x8000) ? 1 : 0);
+    return ((::GetAsyncKeyState(VK_RBUTTON) & 0x8000) ? 1 : 0);
 }
 #endif
 
 #ifdef _MSC_VER
 bool CSystem::isMouseMidDown()
 {
-    return ((::GetAsyncKeyState(MOUSE_WHEELED) & 0x8000) ? 1 : 0);
+    return ((::GetAsyncKeyState(VK_MBUTTON) & 0x8000) ? 1 : 0);
 }
 #endif
 
@@ -567,110 +548,25 @@ std::map<std::string, std::vector<std::string>> CSystem::allDeviceInfo()
 #if CSYSTEM_HAS_DESKTOP_API
 double CSystem::GetCPUSpeedGHz()
 {
-#ifdef _WIN64
-    //VC++默认只支持32位的内联汇编，若要支持64位，需要安装Intel C++ Compiler XE
-    return 0;
-#elif _WIN32
-    //先是存放计时次数，后存放固定时间间隔值
-    unsigned long int       ticks;
-    //存放两固定时刻的CPU内置时钟值，值的含意为计数
-    unsigned long int       stock0, stock1;
-    //存放内置时钟值之差，好固定时段的计数值
-    unsigned long int       cycles;
-    //存放频率，为了提高精度，采用了相邻的测的5个频率的平均值
-    unsigned long int       freq[5] = { 0, 0, 0, 0, 0 };
-    //循环次数
-    unsigned long int       nums = 0;
-    //存放频率之和
-    unsigned long int       total = 0;
-    LARGE_INTEGER       t0, t1;
-    LARGE_INTEGER       countfreq;
-    //返回高精度的计数频率，即每秒多少次;
-    if (!QueryPerformanceFrequency(&countfreq))
+#ifdef _WIN32
+    HKEY key = nullptr;
+    if (::RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+        0, KEY_QUERY_VALUE, &key) != ERROR_SUCCESS)
     {
-        return 0.0f;
+        return 0;
     }
-    //返回特定进程的优先级;
-    DWORD priority_class = GetPriorityClass(GetCurrentProcess());
-    //返回特定线程的优先级;
-    int   thread_priority = GetThreadPriority(GetCurrentThread());
-    //将当前进程设成实时进程;
-    SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
-    //设定线程优先级;
-    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-    do
-    {
-        nums++;
-        freq[4] = freq[3];
-        freq[3] = freq[2];
-        freq[2] = freq[1];
-        freq[1] = freq[0];
-        //返回高精度计数的值;
-        QueryPerformanceCounter(&t0);
-        t1.LowPart = t0.LowPart;
-        t1.HighPart = t0.HighPart;
-        //这句中的50和后面相同语句中的1000是一个经验值，起的作用是控制时间间隔，可以
-        //调节这两个值来实现最佳时间间隔。
-        while ((unsigned long int)t1.LowPart - (unsigned long int)t0.LowPart < 10)
-        {
-            QueryPerformanceCounter(&t1);
-        }
-        _asm
-        {
-            //启动读取CPU的内置时钟，其返回值是个64位的整数，高32到EDX，低32到EAX里
-            rdtsc
-                //高位部份在短暂时间内是不会有变化的，故无需读出对比
-                mov stock0, EAX
-        }
-        // 重置初始时刻
-        t0.LowPart = t1.LowPart;
-        t0.HighPart = t1.HighPart;
-        while ((unsigned long int)t1.LowPart - (unsigned long int)t0.LowPart < 1000)
-        {
-            QueryPerformanceCounter(&t1);
-        }
-        _asm
-        {
-            rdtsc
-                mov  stock1, EAX
-        }
-        cycles = stock1 - stock0;
-        ticks = (unsigned long int) t1.LowPart - (unsigned long int) t0.LowPart;
-        ticks = ticks * 1000000;
-        ticks = ticks / countfreq.LowPart;
-        if (ticks % countfreq.LowPart > countfreq.LowPart / 2)
-        {
-            // 使数据收敛
-            ticks++;
-        }
-        // 求出频率，单位：MHz
-        freq[0] = cycles / ticks;
-        if (cycles%ticks > ticks / 2)
-        {
-            // 使数据收敛
-            freq[0]++;
-        }
-        total = (freq[0] + freq[1] + freq[2] + freq[3] + freq[4]);
-    } while ((nums < 5) || (nums < 100) && ((abs(5 * (long)freq[0] - (long)total) < 5)
-        || (abs(5 * (long)freq[1] - (long)total) < 5) || (abs(5 * (long)freq[2] - (long)total) < 5)
-        || (abs(5 * (long)freq[3] - (long)total) < 5) || (abs(5 * (long)freq[4] - (long)total) < 5)
-        ));
-    //条件循环，以确保循环不少于5次，在大于5次后确保达到一定的精度后退出
-    if (total / 5 != (total + 1) / 5)
-    {
-        // 使数据收敛
-        total++;
-    }
-    // 恢复进程及线程的优先级别;
-    SetPriorityClass(GetCurrentProcess(), priority_class);
-    SetThreadPriority(GetCurrentThread(), thread_priority);
-    return double(total) / 5.0 / 1000.0;
-#elif defined(__unix__) || defined(__APPLE__)
-    int delayms = 700;
-    uint64_t oldTime = getCycleCount();
-    usleep(delayms * 1000);
-    uint64_t newTime = getCycleCount();
-    return ((newTime - oldTime) / (delayms * 1000)) / 1000.0;
+    DWORD mhz = 0, bytes = sizeof(mhz), type = 0;
+    const LONG status = ::RegQueryValueExW(key, L"~MHz", nullptr, &type, reinterpret_cast<BYTE*>(&mhz), &bytes);
+    ::RegCloseKey(key);
+    return status == ERROR_SUCCESS && type == REG_DWORD && bytes == sizeof(mhz) ? mhz / 1000.0 : 0.0;
+#elif defined(__APPLE__)
+    uint64_t hz = 0;
+    size_t bytes = sizeof(hz);
+    return ::sysctlbyname("hw.cpufrequency", &hz, &bytes, nullptr, 0) == 0 && bytes == sizeof(hz) ? hz / 1e9 : 0.0;
+#else
+    std::ifstream source("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq");
+    uint64_t khz = 0;
+    return source >> khz ? khz / 1e6 : 0.0;
 #endif
 }
 #endif // CSYSTEM_PLATFORM_CAPABILITY
@@ -682,15 +578,68 @@ void CSystem::Sleep(long long milliseconds)
 #endif
 }
 
+#ifdef _WIN32
+BOOL CALLBACK CSystem::initializeTimerResolution(PINIT_ONCE once, PVOID parameter, PVOID* context)
+{
+    (void)once;
+    (void)parameter;
+    (void)context;
+    try
+    {
+        wchar_t directory[MAX_PATH] = {};
+        const UINT length = ::GetSystemDirectoryW(directory, MAX_PATH);
+        if (length == 0 || length >= MAX_PATH)
+        {
+            return TRUE;
+        }
+        const std::wstring path = std::wstring(directory, length) + L"\\winmm.dll";
+        HMODULE module = ::LoadLibraryW(path.c_str());
+        if (module == nullptr)
+        {
+            return TRUE;
+        }
+        typedef UINT(WINAPI* PeriodFunction)(UINT);
+        PeriodFunction beginPeriod = reinterpret_cast<PeriodFunction>(::GetProcAddress(module, "timeBeginPeriod"));
+        PeriodFunction endPeriod = reinterpret_cast<PeriodFunction>(::GetProcAddress(module, "timeEndPeriod"));
+        const bool active = beginPeriod != nullptr && endPeriod != nullptr && beginPeriod(1) == 0;
+        // InitOnce串行创建，shared_ptr在模块卸载时成对归还计时精度并释放系统模块。
+        /** 归还本模块持有的系统计时精度租约
+        @param [in] value 由shared_ptr独占管理的系统模块句柄
+        */
+        static std::shared_ptr<void> s_resolution(module, [endPeriod, active](void* value)
+        {
+            if (active)
+            {
+                endPeriod(1);
+            }
+            ::FreeLibrary(static_cast<HMODULE>(value));
+        });
+        return TRUE;
+    }
+    catch (...)
+    {
+        // shared_ptr构造失败也会调用删除器，不能让异常穿过Windows回调边界。
+        return FALSE;
+    }
+}
+
+void CSystem::sleepWithTimerResolution(uint32_t milliseconds)
+{
+    if (milliseconds != 0)
+    {
+        static INIT_ONCE s_legacyTimerOnce = INIT_ONCE_STATIC_INIT;
+        ::InitOnceExecuteOnce(&s_legacyTimerOnce, initializeTimerResolution, nullptr, nullptr);
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+}
+#endif
+
 void CSystem::sleepPrecise(uint32_t milliseconds)
 {
 #ifdef _WIN32
     typedef HANDLE(WINAPI* CreateTimer)(LPSECURITY_ATTRIBUTES, LPCWSTR, DWORD, DWORD);
     CreateTimer createTimer = reinterpret_cast<CreateTimer>(
         ::GetProcAddress(::GetModuleHandleW(L"kernel32.dll"), "CreateWaitableTimerExW"));
-#ifdef CSYSTEM_PRECISE_SLEEP_TEST_LEGACY
-    createTimer = nullptr;
-#endif
     if (milliseconds > 0 && createTimer != nullptr)
     {
         HANDLE timer = createTimer(nullptr, nullptr, 0x00000002, TIMER_MODIFY_STATE | SYNCHRONIZE);
@@ -707,14 +656,10 @@ void CSystem::sleepPrecise(uint32_t milliseconds)
             }
         }
     }
-    if (milliseconds > 0)
-    {
-        // 旧Windows不支持高精度计时器，每模块只申请一次平衡的计时精度租约。
-        static INIT_ONCE s_legacyTimerOnce = INIT_ONCE_STATIC_INIT;
-        ::InitOnceExecuteOnce(&s_legacyTimerOnce, initializeTimerResolution, nullptr, nullptr);
-    }
-#endif
+    sleepWithTimerResolution(milliseconds);
+#else
     Sleep(milliseconds);
+#endif
 }
 
 std::string CSystem::uuid(int flag)
@@ -795,24 +740,30 @@ std::string CSystem::uuid(int flag)
 
 void CSystem::CopyFileOver(const std::string& dstFile, const std::string& srcFile, bool over)
 {
+    if (srcFile.empty() || dstFile.empty() || srcFile.find('\0') != std::string::npos ||
+        dstFile.find('\0') != std::string::npos) { return; }
 #ifdef _WIN32
     ::CopyFileA(srcFile.c_str(), dstFile.c_str(), over == false);
 #elif defined(__unix__) || defined(__APPLE__)
-    if(CSystem::DirOrFileExist(dstFile) && !over)
+    std::unique_ptr<FILE, int(*)(FILE*)> source(std::fopen(srcFile.c_str(), "rb"), std::fclose);
+    struct stat from = {}, to = {};
+    if (!source || ::fstat(::fileno(source.get()), &from) != 0 || S_ISDIR(from.st_mode)) { return; }
+    const int fd = ::open(dstFile.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC | (over ? 0 : O_EXCL), 0666);
+    if (fd < 0) { return; }
+    std::unique_ptr<FILE, int(*)(FILE*)> destination(::fdopen(fd, "wb"), std::fclose);
+    if (!destination) { ::close(fd); return; }
+    if (::fstat(fd, &to) != 0 ||
+        (from.st_dev == to.st_dev && from.st_ino == to.st_ino) ||
+        (S_ISREG(to.st_mode) && ::ftruncate(fd, 0) != 0))
     {
         return;
     }
-    std::ifstream src(srcFile.c_str(), std::ios::binary);
-    if (!src.is_open())
+    char block[16384];
+    size_t count;
+    while ((count = std::fread(block, 1, sizeof(block), source.get())) != 0)
     {
-        return;
+        if (std::fwrite(block, 1, count, destination.get()) != count) { return; }
     }
-    std::ofstream dst(dstFile.c_str(), std::ios::binary | std::ios::trunc);
-    if (!dst.is_open())
-    {
-        return;
-    }
-    dst << src.rdbuf();
 #endif
 }
 
@@ -821,8 +772,10 @@ int CSystem::GetSystemBits()
 #ifdef _WIN32
     SYSTEM_INFO si;
     getNativeSystemInfo(&si);
+    const WORD arm64Architecture = 12; // 兼容未定义 PROCESSOR_ARCHITECTURE_ARM64 的旧 Windows SDK。
     if (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64 ||
-        si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64)
+        si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64 ||
+        si.wProcessorArchitecture == arm64Architecture)
     {
         return 64;
     }
@@ -834,7 +787,9 @@ int CSystem::GetSystemBits()
 
 void CSystem::OutputMap(const std::map<std::string, std::string>& stringMap, const std::string& path)
 {
-    std::ofstream file(path.c_str(), std::ios_base::binary | std::ios_base::app);
+    if (path.find('\0') != std::string::npos) { return; }
+    std::ofstream file;
+    if (!path.empty()) { file.open(path.c_str(), std::ios_base::binary | std::ios_base::app); }
     for (auto itData = stringMap.begin(); itData != stringMap.end(); ++itData)
     {
         if (path.empty())
@@ -851,7 +806,9 @@ void CSystem::OutputMap(const std::map<std::string, std::string>& stringMap, con
 
 void CSystem::OutputVector(const std::vector<std::string>& stringVector, const std::string& path)
 {
-    std::ofstream file(path.c_str(), std::ios_base::binary | std::ios_base::app);
+    if (path.find('\0') != std::string::npos) { return; }
+    std::ofstream file;
+    if (!path.empty()) { file.open(path.c_str(), std::ios_base::binary | std::ios_base::app); }
     for (auto itData = stringVector.begin(); itData != stringVector.end(); ++itData)
     {
         if (path.empty())
@@ -869,10 +826,8 @@ void CSystem::OutputVector(const std::vector<std::string>& stringVector, const s
 #if CSYSTEM_HAS_DESKTOP_API
 void CSystem::ClearScanf()
 {
-    char pathJar[1024] = {};
-    scanf("%[^\n]", pathJar);
-    scanf("%*[^\n]");
-    scanf("%*c");
+    int ch;
+    do { ch = std::getchar(); } while (ch != '\n' && ch != EOF);
 }
 #endif // CSYSTEM_PLATFORM_CAPABILITY
 
@@ -904,13 +859,13 @@ std::string CSystem::PasswordScanf()
     char backspace = 127;
 #endif
     std::string password;
-    char ch;
-    while ((ch = CSystem::getConsoleCharacter()) != returnCode)
+    int ch;
+    while ((ch = CSystem::getConsoleCharacter()) != EOF && ch != returnCode)
     {
         //不是Backspace就录入
         if (ch != backspace)
         {
-            password.push_back(ch);
+            password.push_back(static_cast<char>(ch));
             //并且输出*号
             putchar('*');
         }
@@ -936,94 +891,88 @@ std::string CSystem::PasswordScanf()
 #if !defined(__APPLE__) || !TARGET_OS_IPHONE
 int32_t CSystem::SystemCommand(const std::string& command, std::string& result, bool isShowCmd)
 {
-#if defined(__APPLE__) && TARGET_OS_IPHONE
-    result.clear();
-    return -1; // iOS forbids spawning a shell; the host must provide the corresponding capability.
-#else
-    if (command.size() == 0)
+    if (command.empty() || command.find('\0') != std::string::npos)
     {
-        //command is empty
         return -1;
     }
+    // 命令可能引用 result，清空输出前先保留输入。
+    const std::string text(command);
+    result.clear();
+#ifdef _WIN32
     if (!isShowCmd)
     {
-#ifdef _WIN32
-        result.clear();
-        SECURITY_ATTRIBUTES sa;
-        HANDLE hRead = nullptr;
-        HANDLE hWrite = nullptr;
-        sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-        sa.lpSecurityDescriptor = nullptr;
-        sa.bInheritHandle = TRUE;
-        if (!CreatePipe(&hRead, &hWrite, &sa, 0))
+        std::vector<char> arguments(text.begin(), text.end());
+        arguments.push_back('\0');
+        SECURITY_ATTRIBUTES security = {sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
+        HANDLE readHandle = nullptr, writeHandle = nullptr;
+        if (!::CreatePipe(&readHandle, &writeHandle, &security, 0)) { return -1; }
+        typedef std::unique_ptr<void, decltype(&::CloseHandle)> Handle;
+        Handle reader(readHandle, ::CloseHandle), writer(writeHandle, ::CloseHandle);
+        if (!::SetHandleInformation(readHandle, HANDLE_FLAG_INHERIT, 0)) { return -1; }
+        // 只允许本次子进程继承自己的标准流，其他并发调用的管道不能延迟本次 EOF。
+        HANDLE input = nullptr;
+        const HANDLE standard = ::GetStdHandle(STD_INPUT_HANDLE);
+        if (standard == nullptr || standard == INVALID_HANDLE_VALUE ||
+            !::DuplicateHandle(::GetCurrentProcess(), standard, ::GetCurrentProcess(), &input, 0, TRUE, DUPLICATE_SAME_ACCESS))
         {
-            return -1;
+            input = ::CreateFileW(L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, &security, OPEN_EXISTING, 0, nullptr);
+            if (input == INVALID_HANDLE_VALUE) { return -1; }
         }
-
-        STARTUPINFOA si = { 0 };
-        PROCESS_INFORMATION pi = { 0 };
-        si.cb = sizeof(STARTUPINFOA);
-        si.hStdInput = ::GetStdHandle(STD_INPUT_HANDLE);
-        si.hStdError = hWrite;
-        si.hStdOutput = hWrite;
-        si.wShowWindow = SW_HIDE;
-        si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
-        std::vector<char> commandBuffer(command.begin(), command.end());
-        commandBuffer.push_back('\0');
-        //关键步骤，CreateProcess函数参数意义请查阅MSDN
-        if (!CreateProcessA(nullptr, &commandBuffer[0], nullptr, nullptr, TRUE, 0, nullptr, nullptr, &si, &pi))
+        Handle childInput(input, ::CloseHandle);
+        SIZE_T attributeBytes = 0;
+        ::InitializeProcThreadAttributeList(nullptr, 1, 0, &attributeBytes);
+        if (attributeBytes == 0) { return -1; }
+        std::vector<unsigned char> storage(attributeBytes);
+        STARTUPINFOEXA startup = {};
+        startup.lpAttributeList = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(storage.data());
+        if (!::InitializeProcThreadAttributeList(startup.lpAttributeList, 1, 0, &attributeBytes)) { return -1; }
+        HANDLE streams[] = {input, writeHandle};
+        startup.StartupInfo.cb = sizeof(startup);
+        startup.StartupInfo.hStdInput = input;
+        startup.StartupInfo.hStdOutput = startup.StartupInfo.hStdError = writeHandle;
+        startup.StartupInfo.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
+        startup.StartupInfo.wShowWindow = SW_HIDE;
+        PROCESS_INFORMATION child = {};
+        const bool started = ::UpdateProcThreadAttribute(startup.lpAttributeList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+            streams, sizeof(streams), nullptr, nullptr) && ::CreateProcessA(nullptr, arguments.data(), nullptr, nullptr,
+            TRUE, EXTENDED_STARTUPINFO_PRESENT, nullptr, nullptr, &startup.StartupInfo, &child);
+        ::DeleteProcThreadAttributeList(startup.lpAttributeList);
+        if (!started) { return -1; }
+        Handle process(child.hProcess, ::CloseHandle), thread(child.hThread, ::CloseHandle);
+        writer.reset();
+        char buffer[4096];
+        DWORD received = 0;
+        for (;;)
         {
-            ::CloseHandle(hRead);
-            ::CloseHandle(hWrite);
-            return -1;
-        }
-        ::CloseHandle(hWrite);
-        char buffer[4096] = { 0 };
-        DWORD bytesRead = 0;
-        while (true)
-        {
-            if (!::ReadFile(hRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) || bytesRead == 0)
+            if (!::ReadFile(reader.get(), buffer, sizeof(buffer), &received, nullptr))
             {
+                if (::GetLastError() != ERROR_BROKEN_PIPE) { return -1; }
                 break;
             }
-            //buffer中就是执行的结果，可以保存到文本，也可以直接输出
-            buffer[bytesRead] = '\0';
-            result.append(buffer, bytesRead);
-            Sleep(10);
+            if (received == 0) { break; }
+            result.append(buffer, received);
         }
-        ::CloseHandle(hRead);
-        ::CloseHandle(pi.hThread);
-        ::CloseHandle(pi.hProcess);
-        return 0;
-#endif
+        DWORD code = 0;
+        if (::WaitForSingleObject(process.get(), INFINITE) != WAIT_OBJECT_0 || !::GetExitCodeProcess(process.get(), &code)) { return -1; }
+        return static_cast<int32_t>(code);
     }
-    char buffer[4096] = {};
-    std::string fresult;
+    std::unique_ptr<FILE, int(*)(FILE*)> pipe(_popen(text.c_str(), "rb"), _pclose);
+#else
+    (void)isShowCmd;
+    std::unique_ptr<FILE, int(*)(FILE*)> pipe(::popen(text.c_str(), "r"), ::pclose);
+#endif
+    if (!pipe) { return -1; }
+    char bytes[4096];
+    size_t count;
+    while ((count = std::fread(bytes, 1, sizeof(bytes), pipe.get())) != 0) { result.append(bytes, count); }
+    if (std::ferror(pipe.get())) { return -1; }
+    const int status = pipe.get_deleter()(pipe.release());
 #ifdef _WIN32
-    FILE* pin = _popen((command + " &").c_str(), "r");
-#elif defined(__unix__) || defined(__APPLE__)
-    FILE* pin = popen((command + " &").c_str(), "r");
-#endif
-    if (!pin)
-    {
-        //popen failed
-        return -1;
-    }
-    result.clear();
-    while (!feof(pin))
-    {
-        if (fgets(buffer, sizeof(buffer), pin) != nullptr)
-        {
-            fresult += buffer;
-        }
-    }
-    result = fresult;
-    //-1:pclose failed; else shell ret
-#ifdef _WIN32
-    return _pclose(pin);
-#elif defined(__unix__) || defined(__APPLE__)
-    return pclose(pin);
-#endif
+    return status;
+#else
+    if (status == -1) { return -1; }
+    if (WIFEXITED(status)) { return WEXITSTATUS(status); }
+    return WIFSIGNALED(status) ? 128 + WTERMSIG(status) : -1;
 #endif
 }
 #endif // CSYSTEM_PLATFORM_CAPABILITY
@@ -1314,23 +1263,9 @@ uint32_t CSystem::processFirstPid(const std::string& processName)
     }
     ::CloseHandle(hSnapshot);
     return 0;
-#elif defined(__APPLE__)
+#else
     const std::vector<uint32_t> matches = processPid(processName);
     return matches.empty() ? 0 : matches.front();
-#elif defined(__unix__)
-    std::string result;
-    if (SystemCommand("pidof " + processName, result) == -1 || result.empty())
-    {
-        return 0;
-    }
-    result.pop_back();
-    std::vector<std::string> vecPid;
-    split(vecPid, result, " ");
-    if(vecPid.empty())
-    {
-        return 0;
-    }
-    return atoi(vecPid[0].c_str());
 #endif
 }
 #endif // CSYSTEM_PLATFORM_CAPABILITY
@@ -1398,26 +1333,26 @@ std::vector<uint32_t> CSystem::processPid(const std::string& processName)
     (void)processName; // iOS不支持独立网关进程，本入口不枚举其他应用。
 #endif
     return matches;
-#elif defined(__unix__)
-    std::vector<uint32_t> vecResult;
-    std::string result;
-    if (SystemCommand("pidof " + processName, result) == -1 || result.empty())
+#elif defined(__linux__)
+    std::vector<uint32_t> matches;
+    if (processName.empty() || processName.find('/') != std::string::npos || processName.find('\0') != std::string::npos)
     {
-        return vecResult;
+        return matches;
     }
-    result.pop_back();
-    std::vector<std::string> vecPid;
-    split(vecPid, result, " ");
-    if(vecPid.empty())
+    std::unique_ptr<DIR, int(*)(DIR*)> processes(::opendir("/proc"), ::closedir);
+    if (!processes) { return matches; }
+    while (dirent* entry = ::readdir(processes.get()))
     {
-        return vecResult;
+        if (entry->d_name[0] < '1' || entry->d_name[0] > '9') { continue; }
+        char* end = nullptr;
+        const unsigned long pid = std::strtoul(entry->d_name, &end, 10);
+        if (*end == '\0' && pid <= INT32_MAX && CSystem::processName(static_cast<uint32_t>(pid)) == processName)
+        {
+            matches.push_back(static_cast<uint32_t>(pid));
+        }
     }
-    int32_t index = -1;
-    while (index++ != vecPid.size() - 1)
-    {
-        vecResult.push_back(atoi(vecPid[index].c_str()));
-    }
-    return vecResult;
+    std::sort(matches.begin(), matches.end(), std::greater<uint32_t>());
+    return matches;
 #endif
 }
 #endif // CSYSTEM_PLATFORM_CAPABILITY
@@ -1459,13 +1394,14 @@ std::string CSystem::processName(uint32_t pid)
     const int shortCount = ::proc_name(static_cast<int>(pid), name, sizeof(name));
     return shortCount > 0 && static_cast<size_t>(shortCount) < sizeof(name) ?
         std::string(name, shortCount) : std::string();
-#elif defined(__unix__) || defined(__APPLE__)
-    std::string result;
-    if (SystemCommand("cat /proc/" + std::to_string(pid) + "/cmdline", result) == -1 || result.empty())
-    {
-        return "";
-    }
-    return CSystem::GetName(result, 1);
+#elif defined(__linux__)
+    if (pid == 0 || pid > INT32_MAX) { return ""; }
+    // argv[0] 单独以 NUL 结尾。后继参数可含斜杠，不能当作可执行文件名。
+    std::ifstream command(("/proc/" + std::to_string(pid) + "/cmdline").c_str(), std::ios::binary);
+    std::string first;
+    if (!std::getline(command, first, '\0')) { return ""; }
+    const size_t separator = first.rfind('/');
+    return separator == std::string::npos ? first : first.substr(separator + 1);
 #endif
 }
 #endif // CSYSTEM_PLATFORM_CAPABILITY
@@ -1474,9 +1410,8 @@ std::string CSystem::processName(uint32_t pid)
 uint64_t CSystem::currentMemory()
 {
 #ifdef _MSC_VER
-    PROCESS_MEMORY_COUNTERS pmc;
-    GetProcessMemoryInfo(::GetCurrentProcess(), &pmc, sizeof(pmc));
-    return pmc.WorkingSetSize;
+    PROCESS_MEMORY_COUNTERS pmc = {};
+    return GetProcessMemoryInfo(::GetCurrentProcess(), &pmc, sizeof(pmc)) ? pmc.WorkingSetSize : 0;
 #elif defined(__unix__) || defined(__APPLE__)
     std::string stat_info = CSystem::readFile("/proc/self/status");
     const std::string key = "VmRSS:";
@@ -1695,7 +1630,16 @@ std::string CSystem::joinPath(const std::string& directory, const std::string& n
         return directory;
     }
     const char last = directory[directory.size() - 1];
-    return directory + (last == '/' || last == '\\' ? "" : "/") + name;
+    const bool separator = last != '/' && last != '\\';
+    std::string result;
+    result.reserve(directory.size() + name.size() + (separator ? 1 : 0));
+    result.append(directory);
+    if (separator)
+    {
+        result.push_back('/');
+    }
+    result.append(name);
+    return result;
 }
 
 #if CSYSTEM_HAS_NATIVE_API
@@ -1765,11 +1709,11 @@ std::string CSystem::canonicalPath(const std::string& path, bool requireExisting
     {
         return realpath(path.c_str(), buffer) == nullptr ? "" : std::string(buffer);
     }
-    if (getcwd(buffer, sizeof(buffer)) == nullptr)
+    if (path[0] != '/' && getcwd(buffer, sizeof(buffer)) == nullptr)
     {
         return "";
     }
-    const std::string absolute = path[0] == '/' ? path : joinPath(buffer, path);
+    const std::string absolute = path[0] == '/' ? path : std::string(buffer) + "/" + path;
     std::vector<std::string> parts;
     size_t begin = 0;
     while (begin < absolute.size())
@@ -1861,13 +1805,18 @@ bool CSystem::createDirectories(const std::string& path)
     {
         return plainDirectory(target);
     }
-    const size_t slash = target.find_last_of("\\/");
-    if (slash == std::string::npos || slash == 0)
+#ifdef _WIN32
+    const size_t slash = target.rfind('\\');
+#else
+    const size_t slash = target.rfind('/');
+#endif
+    if (slash != std::string::npos && slash != 0 &&
+        (slash + 1 == target.size() || !createDirectories(target.substr(0, slash + 1))))
     {
-        return CreateDir(target) && plainDirectory(target);
+        return false;
     }
-    const std::string parent = target.substr(0, slash + 1);
-    return parent != target && createDirectories(parent) && CreateDir(target) && plainDirectory(target);
+    // 另一创建者可能已完成 mkdir，只在最后检查到普通目录时接受 EEXIST。
+    return (CreateDir(target) || errno == EEXIST) && plainDirectory(target);
 }
 #endif // CSYSTEM_NATIVE_API
 
@@ -1892,30 +1841,38 @@ std::string CSystem::ensureFileExtension(const std::string& path, const std::str
 
 std::string CSystem::GetName(const std::string& path, int32_t flag)
 {
-    int32_t left = (int32_t)path.find_last_of("/\\");
-    std::string name = path.substr(left + 1, path.length() - left - 1);
-    int32_t point = (int32_t)name.find_last_of(".");
-    switch (flag)
+    if (flag < 1 || flag > 4)
     {
-    case 1:
+        return std::string();
+    }
+    size_t start = path.size();
+    size_t dot = std::string::npos;
+    while (start > 0)
     {
-        return name;
+        const char ch = path[start - 1];
+        if (ch == '/' || ch == '\\')
+        {
+            break;
+        }
+        --start;
+        if (ch == '.' && dot == std::string::npos)
+        {
+            dot = start;
+        }
     }
-    case 2:
+    if (flag == 1)
     {
-        return name.substr(point + 1, point == -1 ? 0 : name.length() - point - 1);
+        return std::string(path.data() + start, path.size() - start);
     }
-    case 3:
+    if (flag == 4)
     {
-        return name.substr(0, point == -1 ? name.length() : point);
+        return std::string(path.data(), start);
     }
-    case 4:
+    if (flag == 2)
     {
-        return path.substr(0, left + 1);
+        return dot == std::string::npos ? std::string() : std::string(path.data() + dot + 1, path.size() - dot - 1);
     }
-    default:
-        return "";
-    }
+    return std::string(path.data() + start, (dot == std::string::npos ? path.size() : dot) - start);
 }
 
 #if CSYSTEM_HAS_NATIVE_API
@@ -1931,9 +1888,9 @@ bool CSystem::deleteFile(const char* path)
 FILE* CSystem::openBinaryOutputFile(const std::wstring& path, std::string* errorText)
 {
     setSystemError(errorText, "");
-    if (path.empty())
+    if (path.empty() || path.find(L'\0') != std::wstring::npos)
     {
-        setSystemError(errorText, "file path is empty");
+        setSystemError(errorText, "invalid file path");
         return nullptr;
     }
 
@@ -2240,7 +2197,7 @@ bool CSystem::closeBinaryOutputFile(FILE* file)
 
 bool CSystem::deleteFile(const std::wstring& path)
 {
-    if (path.empty())
+    if (path.empty() || path.find(L'\0') != std::wstring::npos)
     {
         return false;
     }
@@ -2261,7 +2218,7 @@ bool CSystem::deleteFile(const std::wstring& path)
 
 bool CSystem::fileExists(const std::wstring& path)
 {
-    if (path.empty())
+    if (path.empty() || path.find(L'\0') != std::wstring::npos)
     {
         return false;
     }
@@ -2322,12 +2279,14 @@ void CSystem::killProcess(int32_t pid)
 
 bool CSystem::rename(const std::string& oldPath, const std::string& newPath)
 {
-    return ::rename(oldPath.c_str(), newPath.c_str()) == 0;
+    return !oldPath.empty() && !newPath.empty() && oldPath.find('\0') == std::string::npos &&
+        newPath.find('\0') == std::string::npos && ::rename(oldPath.c_str(), newPath.c_str()) == 0;
 }
 
 bool CSystem::replaceFile(const std::wstring& sourcePath, const std::wstring& destinationPath)
 {
-    if (sourcePath.empty() || destinationPath.empty())
+    if (sourcePath.empty() || destinationPath.empty() || sourcePath.find(L'\0') != std::wstring::npos ||
+        destinationPath.find(L'\0') != std::wstring::npos)
     {
         return false;
     }
@@ -2359,11 +2318,13 @@ std::string CSystem::GetSysUserName()
     {
         return pwd->pw_name;
     }
+#if !defined(__APPLE__) || !TARGET_OS_IPHONE
     SystemCommand("whoami", name);
     if (!name.empty() && name.back() == '\n')
     {
         name.pop_back();
     }
+#endif
     return name;
 #endif
 }
@@ -2384,6 +2345,7 @@ std::string CSystem::GetEnvironment(const char* name)
 
 bool CSystem::CreateDir(const std::string& dir)
 {
+    if (dir.empty() || dir.find('\0') != std::string::npos) { return false; }
 #ifdef _WIN32
     return _mkdir(dir.c_str()) == 0;
 #elif defined(__unix__) || defined(__APPLE__)
@@ -2393,6 +2355,7 @@ bool CSystem::CreateDir(const std::string& dir)
 
 bool CSystem::DestroyDir(const std::string& dir)
 {
+    if (dir.empty() || dir.find('\0') != std::string::npos) { return false; }
 #ifdef _WIN32
     return _rmdir(dir.c_str()) == 0;
 #elif defined(__unix__) || defined(__APPLE__)
@@ -2402,6 +2365,7 @@ bool CSystem::DestroyDir(const std::string& dir)
 
 bool CSystem::DirOrFileExist(const std::string& dir)
 {
+    if (dir.empty() || dir.find('\0') != std::string::npos) { return false; }
 #ifdef _WIN32
     return _access(dir.c_str(), 0) == 0;
 #elif defined(__unix__) || defined(__APPLE__)
@@ -2409,20 +2373,55 @@ bool CSystem::DirOrFileExist(const std::string& dir)
 #endif
 }
 
+#if CSYSTEM_HAS_DESKTOP_API && !defined(_WIN32)
+void CSystem::openDesktopPath(const std::string& program, const char* option, const std::string& path)
+{
+    // 在 fork 前完成 PATH 查找及字符串分配，子进程仅执行异步信号安全的系统调用。
+    std::string executable = program;
+    if (program.find('/') == std::string::npos)
+    {
+        const char* search = std::getenv("PATH");
+        if (search == nullptr) { return; }
+        std::string paths(search);
+        size_t start = 0;
+        for (;;)
+        {
+            const size_t end = paths.find(':', start);
+            const std::string dir = paths.substr(start, end - start);
+            executable = joinPath(dir.empty() ? "." : dir, program);
+            if (::access(executable.c_str(), X_OK) == 0) { break; }
+            if (end == std::string::npos) { return; }
+            start = end + 1;
+        }
+    }
+    const char* binary = executable.c_str();
+    char* argument = const_cast<char*>(path.c_str());
+    char* args[] = {const_cast<char*>(binary), option == nullptr ? argument : const_cast<char*>(option),
+        option == nullptr ? nullptr : argument, nullptr};
+    const pid_t child = ::fork();
+    if (child == 0)
+    {
+        if (::fork() == 0) { ::execv(binary, args); }
+        ::_exit(0);
+    }
+    if (child > 0)
+    {
+        int status = 0;
+        while (::waitpid(child, &status, 0) < 0 && errno == EINTR) {}
+    }
+}
+#endif
+
 #if CSYSTEM_HAS_DESKTOP_API
 void CSystem::OpenFolder(const std::string& folder)
 {
+    if (folder.empty() || folder.find('\0') != std::string::npos) { return; }
 #ifdef _WIN32
-    ShellExecuteA(NULL, "open", NULL, NULL, folder.c_str(), SW_SHOWNORMAL);
-#elif defined(__APPLE__) && TARGET_OS_IPHONE
-    throw std::runtime_error("Opening folders on iOS requires a host UI adapter");
-#elif defined(__unix__) || defined(__APPLE__)
-    if (fork() == 0)
-    {
-        std::string result;
-        SystemCommand("nautilus " + folder, result);
-        childProcessExit(0);
-    }
+    ShellExecuteA(NULL, "open", folder.c_str(), NULL, NULL, SW_SHOWNORMAL);
+#elif defined(__APPLE__)
+    openDesktopPath("/usr/bin/open", nullptr, folder);
+#else
+    openDesktopPath("xdg-open", nullptr, folder);
 #endif
 }
 #endif // CSYSTEM_PLATFORM_CAPABILITY
@@ -2430,17 +2429,13 @@ void CSystem::OpenFolder(const std::string& folder)
 #if CSYSTEM_HAS_DESKTOP_API
 void CSystem::OpenFolderAndSelectFile(const std::string& file)
 {
+    if (file.empty() || file.find('\0') != std::string::npos) { return; }
 #ifdef _WIN32
-    ShellExecuteA(NULL, "open", "Explorer.exe", ("/select, " + file).c_str(), NULL, SW_SHOWDEFAULT);
-#elif defined(__APPLE__) && TARGET_OS_IPHONE
-    throw std::runtime_error("Selecting files on iOS requires a host UI adapter");
-#elif defined(__unix__) || defined(__APPLE__)
-    if (fork() == 0)
-    {
-        std::string result;
-        SystemCommand("nautilus " + file, result);
-        childProcessExit(0);
-    }
+    ShellExecuteA(NULL, "open", "Explorer.exe", ("/select,\"" + file + "\"").c_str(), NULL, SW_SHOWDEFAULT);
+#elif defined(__APPLE__)
+    openDesktopPath("/usr/bin/open", "-R", file);
+#else
+    openDesktopPath("nautilus", "--select", file);
 #endif
 }
 #endif // CSYSTEM_PLATFORM_CAPABILITY
@@ -2448,17 +2443,19 @@ void CSystem::OpenFolderAndSelectFile(const std::string& file)
 #if CSYSTEM_HAS_DESKTOP_API
 void CSystem::OpenFile(const std::string& file)
 {
+    if (file.empty() || file.find('\0') != std::string::npos) { return; }
 #ifdef _WIN32
     ShellExecuteA(NULL, "open", file.c_str(), NULL, NULL, SW_SHOWNORMAL);
-#elif defined(__APPLE__) && TARGET_OS_IPHONE
-    throw std::runtime_error("Opening external files on iOS requires a host UI adapter");
-#elif defined(__unix__) || defined(__APPLE__)
-    if (fork() == 0)
+#elif defined(__APPLE__)
+    openDesktopPath("/usr/bin/open", nullptr, file);
+#else
+    // 兼容现有“程序名 路径”入口；已有文件（包括带空格的路径）总是交给默认程序。
+    const size_t space = file.find(' ');
+    if (space != std::string::npos && space > 0 && space + 1 < file.size() && ::access(file.c_str(), F_OK) != 0)
     {
-        std::string result;
-        SystemCommand(file, result);
-        childProcessExit(0);
+        openDesktopPath(file.substr(0, space), nullptr, file.substr(space + 1));
     }
+    else { openDesktopPath("xdg-open", nullptr, file); }
 #endif
 }
 #endif // CSYSTEM_PLATFORM_CAPABILITY
@@ -2504,7 +2501,10 @@ std::string CSystem::timetToStr(time_t timet, bool isLocal)
             return "";
         }
     }
-    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeInfo);
+    if (strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeInfo) == 0)
+    {
+        return "";
+    }
     return buf;
 }
 
@@ -2556,40 +2556,33 @@ std::string CSystem::commonFile(const std::string& name)
 
 std::string CSystem::readFile(const std::string& path)
 {
-    FILE* file = fopen(path.c_str(), "rb");
-    if (file == nullptr)
+    if (path.find('\0') != std::string::npos)
     {
         return "";
     }
-    if (fseek(file, 0, SEEK_END) != 0)
+    std::unique_ptr<FILE, int (*)(FILE*)> file(fopen(path.c_str(), "rb"), &fclose);
+    if (!file)
     {
-        fclose(file);
         return "";
     }
-    long length = ftell(file);
-    if (length <= 0)
-    {
-        fclose(file);
-        return "";
-    }
-    if (fseek(file, 0, SEEK_SET) != 0)
-    {
-        fclose(file);
-        return "";
-    }
+    // procfs 文件与管道不一定有可查询的长度。
+    char buffer[16384];
     std::string result;
-    result.resize(static_cast<size_t>(length));
-    size_t readLength = fread(&result[0], 1, result.size(), file);
-    if (readLength != result.size())
+    size_t count = 0;
+    while ((count = fread(buffer, 1, sizeof(buffer), file.get())) != 0)
     {
-        result.resize(readLength);
+        result.append(buffer, count);
     }
-    fclose(file);
+    if (ferror(file.get()))
+    {
+        return "";
+    }
     return result;
 }
 
 void CSystem::saveFile(const std::string& content, const std::string& path)
 {
+    if (path.find('\0') != std::string::npos) { return; }
     FILE* file = fopen(path.c_str(), "wb");
     if (file == nullptr)
     {
@@ -2612,6 +2605,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
         unVisitPath->clear();
     }
 
+    if (flag < 1 || flag > 3 || strPath.find('\0') != std::string::npos) { return result; }
     std::string dir = strPath;
     if (dir.empty())
     {
@@ -2639,6 +2633,14 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 #elif defined(__unix__) || defined(__APPLE__)
     struct dirent *pDirent = nullptr;
 #endif
+
+    std::vector<std::string> vecLowerFileStr;
+    if (flag == 2)
+    {
+        std::string lowerFileStr;
+        std::transform(fileStr.begin(), fileStr.end(), std::back_inserter(lowerFileStr), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+        split(vecLowerFileStr, lowerFileStr, '.');
+    }
 
     //用队列实现递归
     std::queue<std::string> queue_dir;
@@ -2669,14 +2671,12 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
             continue;
         }
 
-        std::vector<std::string> vecLowerFileStr;
-        if (flag == 2)
-        {
-            std::string lowerFileStr;
-            std::transform(fileStr.begin(), fileStr.end(), std::back_inserter(lowerFileStr), ::tolower);
-            split(vecLowerFileStr, lowerFileStr, '.');
-        }
-
+#ifdef _WIN32
+        auto closeSearch = [](intptr_t* handle) { ::_findclose(*handle); };
+        std::unique_ptr<intptr_t, decltype(closeSearch)> search(&lfDir, closeSearch);
+#else
+        std::unique_ptr<DIR, int(*)(DIR*)> search(pDir, ::closedir);
+#endif
 #ifdef _WIN32
         do
 #elif defined(__unix__) || defined(__APPLE__)
@@ -2692,7 +2692,9 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 #ifdef _WIN32
             if ((fileDir.attrib & _A_SUBDIR) != 0)
 #elif defined(__unix__) || defined(__APPLE__)
-            if (pDirent->d_type == DT_DIR)
+            struct stat entryInfo = {};
+            if (pDirent->d_type == DT_DIR || (pDirent->d_type == DT_UNKNOWN &&
+                ::fstatat(::dirfd(pDir), strName.c_str(), &entryInfo, AT_SYMLINK_NOFOLLOW) == 0 && S_ISDIR(entryInfo.st_mode)))
 #endif
             {
                 //去掉当前目录和上一级目录
@@ -2706,6 +2708,10 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
                 tmpstr.pop_back();
 #endif
                 tmpstr.append(strName);
+#ifdef _WIN32
+                const DWORD attributes = ::GetFileAttributesA(tmpstr.c_str());
+                if (attributes == INVALID_FILE_ATTRIBUTES || (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0) { continue; }
+#endif
                 //把当前目录放到队列中以便下一次遍历
                 tmpstr.push_back(level);
 #ifdef _WIN32
@@ -2740,7 +2746,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
             {
                 std::string nameSuffix = CSystem::GetName(strName, 2);
                 std::string lowerNameSuffix;
-                std::transform(nameSuffix.begin(), nameSuffix.end(), std::back_inserter(lowerNameSuffix), ::tolower);
+                std::transform(nameSuffix.begin(), nameSuffix.end(), std::back_inserter(lowerNameSuffix), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
                 if ((vecLowerFileStr.empty() && lowerNameSuffix.empty()) ||
                     (!vecLowerFileStr.empty() && std::find(vecLowerFileStr.begin(), vecLowerFileStr.end(), lowerNameSuffix) != vecLowerFileStr.end()))
                 {
@@ -2771,17 +2777,12 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
             }
             if (isExit)
             {
-                break;
+                return result;
             }
 #ifdef _WIN32
         } while (_findnext(lfDir, &fileDir) == 0);
 #elif defined(__unix__) || defined(__APPLE__)
         }
-#endif
-#ifdef _WIN32
-        _findclose(lfDir);
-#elif defined(__unix__) || defined(__APPLE__)
-        closedir(pDir);
 #endif
     }
     return result;
@@ -3085,10 +3086,6 @@ bool CSystem::readFileHandle(intptr_t handle, uint64_t offset, uint8_t* output, 
 #else
         return systemFileFailure(error, EBADF);
 #endif
-    }
-    if (received != nullptr)
-    {
-        *received = 0;
     }
     if (received == nullptr || (capacity != 0 && output == nullptr) || capacity > 16777216 ||
         offset > static_cast<uint64_t>(INT64_MAX) - capacity)
@@ -3686,17 +3683,34 @@ uint32_t CSystem::setUserLoginStartup(const std::string& name, const std::string
 
 #if CSYSTEM_HAS_DESKTOP_API
 int32_t CSystem::acquireProcessLease(const std::string& name, bool replace, uint32_t timeoutMs,
+    std::vector<uint64_t>& state)
+{
+    return acquireNamedProcessLease(name, name, replace, timeoutMs, state);
+}
+
+int32_t CSystem::acquireProcessLease(const std::string& name, bool replace, uint32_t timeoutMs,
     std::vector<uint64_t>& state, const std::string& isolated)
 {
+    if (isolated.empty()) { return acquireProcessLease(name, replace, timeoutMs, state); }
+    if (name.size() > 80 || isolated.size() > 40 ||
+        isolated.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-") != std::string::npos)
+    {
+        return -1;
+    }
+    try { return acquireNamedProcessLease(name, name + ".test." + isolated, replace, timeoutMs, state); }
+    catch (...) { return -1; }
+}
+
+int32_t CSystem::acquireNamedProcessLease(const std::string& name, const std::string& slot, bool replace,
+    uint32_t timeoutMs, std::vector<uint64_t>& state)
+{
     if (!state.empty() || name.empty() || name.size() > 80 || timeoutMs > 30000 ||
-        name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-") != std::string::npos ||
-        isolated.size() > 40 || isolated.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-") != std::string::npos)
+        name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-") != std::string::npos)
     {
         return -1;
     }
     try
     {
-        const std::string slot = name + (isolated.empty() ? "" : ".test." + isolated);
         // 准备输出存储及全部对象名称后再取得系统资源；不能因异常遗留已拥有的租约。
         state.reserve(3);
 #ifdef _WIN32
@@ -4253,27 +4267,6 @@ BOOL CALLBACK CSystem::findVisibleWindowCallback(HWND window, LPARAM context)
 }
 #endif
 
-#if defined(__unix__) || defined(__APPLE__)
-#if CSYSTEM_HAS_DESKTOP_API
-// 获取当前CPU周期计数，不支持的平台返回0。
-uint64_t CSystem::getCycleCount()
-{
-#ifdef __x86_64__
-    uint32_t lo = 0;
-    uint32_t hi = 0;
-    __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-    return ((uint64_t)hi << 32) | lo;
-#elif __aarch64__
-    uint64_t val = 0;
-    __asm__ __volatile__ ("mrs %0, cntvct_el0" : "=r" (val));
-    return val;
-#else
-    return 0;
-#endif
-}
-#endif // CSYSTEM_PLATFORM_CAPABILITY
-#endif
-
 #ifdef _WIN32
 //安全的取得真实系统信息
 VOID CSystem::getNativeSystemInfo(__out LPSYSTEM_INFO lpSystemInfo)
@@ -4302,10 +4295,16 @@ int CSystem::getConsoleCharacter()
     return ::_getch();
 #elif defined(__unix__) || defined(__APPLE__)
     struct termios previous = {}, current = {};
-    ::tcgetattr(STDIN_FILENO, &previous);
+    if (::tcgetattr(STDIN_FILENO, &previous) != 0)
+    {
+        return ::getchar();
+    }
     current = previous;
     current.c_lflag &= ~(ICANON | ECHO);
-    ::tcsetattr(STDIN_FILENO, TCSANOW, &current);
+    if (::tcsetattr(STDIN_FILENO, TCSANOW, &current) != 0)
+    {
+        return EOF;
+    }
     const int value = ::getchar();
     ::tcsetattr(STDIN_FILENO, TCSANOW, &previous);
     return value;
@@ -4638,7 +4637,12 @@ bool CSystem::migrateTree(const std::string& source, const std::string& destinat
 #endif
     for (size_t i = 0; i < names.size(); ++i)
     {
-        const std::string from = CSystem::joinPath(source, names[i]), to = CSystem::joinPath(destination, names[i]);
+#ifdef _WIN32
+        const std::string from = joinPath(source, names[i]), to = joinPath(destination, names[i]);
+#else
+        // POSIX 的反斜杠可能是目录名称的一部分，子路径必须用斜杠连接。
+        const std::string from = source + "/" + names[i], to = destination + "/" + names[i];
+#endif
         if (!(plainDirectory(from) ? migrateTree(from, to, errorText) : migrateFile(from, to, errorText)))
         {
             return false;
@@ -4908,52 +4912,6 @@ std::wstring CSystem::utf8PathToWide(const std::string& text)
     }
 }
 
-#ifdef _WIN32
-BOOL CALLBACK CSystem::initializeTimerResolution(PINIT_ONCE once, PVOID parameter, PVOID* context)
-{
-    (void)once;
-    (void)parameter;
-    (void)context;
-    try
-    {
-        wchar_t directory[MAX_PATH] = {};
-        const UINT length = ::GetSystemDirectoryW(directory, MAX_PATH);
-        if (length == 0 || length >= MAX_PATH)
-        {
-            return TRUE;
-        }
-        const std::wstring path = std::wstring(directory, length) + L"\\winmm.dll";
-        HMODULE module = ::LoadLibraryW(path.c_str());
-        if (module == nullptr)
-        {
-            return TRUE;
-        }
-        typedef UINT(WINAPI* PeriodFunction)(UINT);
-        PeriodFunction beginPeriod = reinterpret_cast<PeriodFunction>(::GetProcAddress(module, "timeBeginPeriod"));
-        PeriodFunction endPeriod = reinterpret_cast<PeriodFunction>(::GetProcAddress(module, "timeEndPeriod"));
-        const bool active = beginPeriod != nullptr && endPeriod != nullptr && beginPeriod(1) == 0;
-        // InitOnce串行创建，shared_ptr在模块卸载时成对归还计时精度并释放系统模块。
-        /** 归还本模块持有的系统计时精度租约
-        @param [in] value 由shared_ptr独占管理的系统模块句柄
-        */
-        static std::shared_ptr<void> s_resolution(module, [endPeriod, active](void* value)
-        {
-            if (active)
-            {
-                endPeriod(1);
-            }
-            ::FreeLibrary(static_cast<HMODULE>(value));
-        });
-        return TRUE;
-    }
-    catch (...)
-    {
-        // shared_ptr构造失败也会调用删除器，不能让异常穿过Windows回调边界。
-        return FALSE;
-    }
-}
-#endif
-
 #ifdef CSYSTEM_SHARED_IDENTITY
 std::string& CSystem::processDirectory()
 {
@@ -5143,322 +5101,179 @@ bool CSystem::readProcessIdentity(uint32_t processId, uint64_t& identity)
 }
 #endif
 #endif // CSYSTEM_NATIVE_API
-#if CSYSTEM_HAS_NATIVE_API
-#ifdef CSYSTEM_PRECISE_SLEEP_TEST
-int main()
+
+CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int32_t relative, int32_t& nativeError)
 {
-    // Compile this same translation unit with CSYSTEM_PRECISE_SLEEP_TEST_LEGACY
-    // as well to exercise the Server 2012 fallback on a modern build machine.
-    CSystem::sleepPrecise(1);
-    const auto start = std::chrono::steady_clock::now();
-    for (int i = 0; i < 20; ++i) CSystem::sleepPrecise(2);
-    const long long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - start).count();
-    std::cout << "PRECISE_SLEEP elapsed_ms=" << elapsed << " requested_ms=40" << std::endl;
-    return elapsed >= 38 && elapsed < 160 ? 0 : 1;
-}
-#endif
-
-//#include <atomic>
-//#include <functional>
-//#include <iostream>
-//#include <thread>
-//
-//int main()
-//{
-//    int32_t totalCount = 0;
-//    int32_t failCount = 0;
-//    std::function<void(bool, const std::string&)> check = [&totalCount, &failCount](bool ok, const std::string& name) -> void
-//    {
-//        ++totalCount;
-//        std::cout << (ok ? "[PASS] " : "[FAIL] ") << name << std::endl;
-//        if (!ok)
-//        {
-//            ++failCount;
-//        }
-//    };
-//
-//    check(CSystem::currentProcessPid() > 0, "CSystem currentProcessPid");
-//    check(CSystem::SystemThreadId() > 0, "CSystem SystemThreadId");
-//    check(!CSystem::GetCurrentExePath().empty(), "CSystem GetCurrentExePath");
-//    check(!CSystem::GetCurrentExeName().empty(), "CSystem GetCurrentExeName");
-//    check(!CSystem::GetCurrentExeFullName().empty(), "CSystem GetCurrentExeFullName");
-//    check(CSystem::GetSystemBits() == 32 || CSystem::GetSystemBits() == 64, "CSystem GetSystemBits");
-//    check(!CSystem::uuid(1).empty() && !CSystem::uuid(0).empty(), "CSystem uuid");
-//    check(!CSystem::timetToStr(0).empty(), "CSystem timetToStr local");
-//    check(!CSystem::timetToStr(0, false).empty(), "CSystem timetToStr utc");
-//    std::string emptyEnvironmentName = "CSYSTEM_EMPTY_ENV_" + CSystem::uuid(0);
-//    check(CSystem::GetEnvironment(nullptr).empty(), "CSystem GetEnvironment null");
-//    check(CSystem::GetEnvironment(emptyEnvironmentName.c_str()).empty(), "CSystem GetEnvironment missing");
-//    int32_t** dyadicArray = CSystem::CreateDyadicArray<int32_t>(2, 3);
-//    check(dyadicArray != nullptr, "CSystem CreateDyadicArray normal");
-//    if (dyadicArray != nullptr)
-//    {
-//        dyadicArray[1][2] = 7;
-//        check(dyadicArray[1][2] == 7, "CSystem CreateDyadicArray write");
-//        CSystem::DestroyDyadicArray(dyadicArray, 2);
-//    }
-//    check(CSystem::CreateDyadicArray<int32_t>(0, 3) == nullptr, "CSystem CreateDyadicArray invalid");
-//
-//    std::chrono::high_resolution_clock::time_point beginTime = CSystem::GetHighTickCount();
-//    CSystem::Sleep(1);
-//    check(CSystem::GetHighTickCountMilliRunTime(beginTime) >= 0, "CSystem Sleep and high tick");
-//
-//#ifdef _WIN32
-//    std::string separator = "\\";
-//#else
-//    std::string separator = "/";
-//#endif
-//    std::string root = CSystem::GetCurrentExePath() + "CSystemTest_" + CSystem::uuid(0);
-//    std::string filePath = root + separator + "data.txt";
-//    std::string emptyFilePath = root + separator + "empty.txt";
-//    std::string renamePath = root + separator + "rename.txt";
-//    check(CSystem::CreateDir(root), "CSystem CreateDir");
-//    check(CSystem::DirOrFileExist(root), "CSystem DirOrFileExist dir");
-//    check(CSystem::canonicalPath("").empty(), "CSystem canonicalPath empty");
-//    check(CSystem::canonicalPath(std::string("a\0b", 3), false).empty(), "CSystem canonicalPath embedded null");
-//    check(!CSystem::canonicalPath(root).empty(), "CSystem canonicalPath existing");
-//    check(CSystem::canonicalPath(root, false) == CSystem::canonicalPath(root), "CSystem canonicalPath lexical and existing");
-//    check(CSystem::canonicalPath(CSystem::joinPath(root, "missing")).empty(), "CSystem canonicalPath missing");
-//    check(CSystem::isPathWithin(CSystem::joinPath(root, "child"), root, false), "CSystem isPathWithin child");
-//    check(!CSystem::isPathWithin(root, root, false), "CSystem isPathWithin excludes root");
-//    check(!CSystem::isPathWithin(root + "_sibling", root, false), "CSystem isPathWithin excludes shared prefix");
-//    std::string migrationParent = CSystem::joinPath(root, "migration source");
-//    std::string migrationSource = CSystem::joinPath(migrationParent, "nested");
-//    std::string migrationTarget = CSystem::joinPath(root, "migration target");
-//    std::string migrationError;
-//    check(CSystem::createDirectories(migrationSource), "CSystem createDirectories recursive");
-//    check(CSystem::createDirectories(migrationSource), "CSystem createDirectories existing");
-//    check(CSystem::createDirectories(migrationTarget), "CSystem createDirectories target");
-//    CSystem::saveFile("migration content", CSystem::joinPath(migrationSource, "data.bin"));
-//    CSystem::saveFile("", CSystem::joinPath(migrationSource, "empty.bin"));
-//    CSystem::saveFile("migration content", CSystem::joinPath(migrationTarget, "data.bin"));
-//    check(!CSystem::migrateDirectory(migrationSource, CSystem::joinPath(migrationSource, "child"), migrationError), "CSystem migrateDirectory rejects overlap");
-//    check(!CSystem::DirOrFileExist(CSystem::joinPath(migrationSource, "child")) && CSystem::readFile(CSystem::joinPath(migrationSource, "data.bin")) == "migration content", "CSystem migrateDirectory overlap has no side effect");
-//    check(CSystem::migrateDirectory(migrationSource, migrationTarget, migrationError), "CSystem migrateDirectory merges matching content");
-//    check(!CSystem::DirOrFileExist(migrationSource) && CSystem::readFile(CSystem::joinPath(migrationTarget, "data.bin")) == "migration content", "CSystem migrateDirectory verifies bytes before source removal");
-//    check(CSystem::DirOrFileExist(CSystem::joinPath(migrationTarget, "empty.bin")), "CSystem migrateDirectory preserves empty file");
-//    check(!CSystem::createDirectories(CSystem::joinPath(migrationTarget, "data.bin")), "CSystem createDirectories rejects file");
-//    check(CSystem::createDirectories(migrationSource), "CSystem migration conflict source");
-//    CSystem::saveFile("different content", CSystem::joinPath(migrationSource, "data.bin"));
-//    check(!CSystem::migrateDirectory(migrationSource, migrationTarget, migrationError) && !migrationError.empty(), "CSystem migrateDirectory rejects conflict");
-//    check(CSystem::readFile(CSystem::joinPath(migrationSource, "data.bin")) == "different content" && CSystem::readFile(CSystem::joinPath(migrationTarget, "data.bin")) == "migration content", "CSystem migrateDirectory conflict preserves both files");
-//    check(CSystem::deleteFile(CSystem::joinPath(migrationSource, "data.bin").c_str()) && CSystem::DestroyDir(migrationSource), "CSystem migration source cleanup");
-//    check(CSystem::migrateDirectory(migrationSource, migrationTarget, migrationError), "CSystem migrateDirectory missing source is complete");
-//    check(CSystem::deleteFile(CSystem::joinPath(migrationTarget, "data.bin").c_str()) && CSystem::deleteFile(CSystem::joinPath(migrationTarget, "empty.bin").c_str()), "CSystem migration target file cleanup");
-//    check(CSystem::DestroyDir(migrationTarget) && CSystem::DestroyDir(migrationParent), "CSystem migration directory cleanup");
-//    CSystem::saveFile("hello system", filePath);
-//    check(CSystem::readFile(filePath) == "hello system", "CSystem saveFile readFile");
-//    CSystem::saveFile("", emptyFilePath);
-//    check(CSystem::DirOrFileExist(emptyFilePath) && CSystem::readFile(emptyFilePath).empty(), "CSystem empty readFile");
-//    check(CSystem::rename(filePath, renamePath), "CSystem rename file");
-//    check(CSystem::readFile(renamePath) == "hello system", "CSystem read renamed file");
-//    std::vector<std::string> findFiles = CSystem::findFilePath(root, 1, "rename.txt");
-//    check(!findFiles.empty(), "CSystem findFilePath");
-//    check(CSystem::deleteFile(renamePath.c_str()), "CSystem deleteFile");
-//    check(CSystem::deleteFile(emptyFilePath.c_str()), "CSystem delete empty file");
-//    check(!CSystem::DirOrFileExist(renamePath), "CSystem deleted file missing");
-//    check(CSystem::DestroyDir(root), "CSystem DestroyDir");
-//
-//    std::atomic<int32_t> failedThreadCount(0);
-//    std::vector<std::thread> threads;
-//    for (int32_t threadIndex = 0; threadIndex < 8; ++threadIndex)
-//    {
-//        threads.push_back(std::thread([&failedThreadCount]() -> void
-//        {
-//            for (int32_t loopIndex = 0; loopIndex < 2000; ++loopIndex)
-//            {
-//                if (CSystem::SystemThreadId() == 0 || CSystem::uuid(0).empty())
-//                {
-//                    failedThreadCount.fetch_add(1);
-//                    return;
-//                }
-//            }
-//        }));
-//    }
-//    for (size_t i = 0; i < threads.size(); ++i)
-//    {
-//        threads[i].join();
-//    }
-//    check(failedThreadCount.load() == 0, "CSystem multithread pressure");
-//
-//    std::cout << "CSystem test " << (failCount == 0 ? "PASS" : "FAIL") << ", total=" << totalCount << ", failed=" << failCount << std::endl;
-//    return failCount == 0 ? 0 : 1;
-//}
-
-#if 0 // SYSTEM_ENTROPY_UNIT_TEST_BEGIN
-#include "CSystem/CSystemAPI.h"
-#include <cstdio>
-#include <cstring>
-
-int main()
-{
-    uint32_t assertions = 0;
-#define ENTROPY_CHECK(condition) { ++assertions; if (!(condition)) { std::printf("FAIL line %u: %s\n", static_cast<uint32_t>(__LINE__), #condition); return 1; } }
-    ENTROPY_CHECK(CSystem::secureRandomBytes(nullptr, 0));
-    ENTROPY_CHECK(!CSystem::secureRandomBytes(nullptr, 1));
-    ENTROPY_CHECK(CSystem::secureRandomBytesCallback(nullptr, nullptr, 0) == 0);
-    ENTROPY_CHECK(CSystem::secureRandomBytesCallback(nullptr, nullptr, 1) == -1);
-    uint8_t bytes[8194];
-    std::memset(bytes, 0xa5, sizeof(bytes));
-    ENTROPY_CHECK(!CSystem::secureRandomBytes(bytes + 1, 8193));
-    for (size_t index = 0; index < sizeof(bytes); ++index)
+    nativeError = 0;
+    if (!thread.joinable() || relative < -2 || relative > 2)
     {
-        ENTROPY_CHECK(bytes[index] == 0xa5);
+        return CSystemThreadPriorityInvalid;
     }
-    const uint32_t sizes[] = {0, 1, 32, 256, 8192};
-    for (size_t index = 0; index < sizeof(sizes) / sizeof(sizes[0]); ++index)
+    try
     {
-        std::memset(bytes, 0xa5, sizeof(bytes));
-        ENTROPY_CHECK(CSystem::secureRandomBytes(bytes + 1, sizes[index]));
-        ENTROPY_CHECK(bytes[0] == 0xa5 && bytes[sizes[index] + 1] == 0xa5);
-    }
-    uint8_t other[8192];
-    ENTROPY_CHECK(CSystem::secureRandomBytesCallback(nullptr, other, 32) == 0);
-    ENTROPY_CHECK(CSystem::secureRandomBytes(other, sizeof(other)));
-    ENTROPY_CHECK(std::memcmp(other, bytes + 1, sizeof(other)) != 0);
-    std::printf("CSystem entropy PASS %u assertions\n", assertions);
-    return 0;
-#undef ENTROPY_CHECK
-}
-#endif // SYSTEM_ENTROPY_UNIT_TEST_END
-
-#if 0 // SYSTEM_LEASE_UNIT_BEGIN
-#include <CSystem/CSystemAPI.h>
-#include <cstdio>
-#if defined(_WIN32) && defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
-#include <crtdbg.h>
-// 独立main的CRT故障注入，不与其他业务线程同时运行。
-static uint32_t s_leaseRemaining = 0;
-static uint32_t s_leaseRejected = 0;
-/** 从指定普通堆分配位置开始持续拒绝，其他参数沿用CRT原型
-@param [in] operation 分配操作
-@return 是否允许
-*/
-static int __cdecl LeaseMemoryHook(int operation, void*, size_t, int block, long, const unsigned char*, int)
-{
-    if ((operation == _HOOK_ALLOC || operation == _HOOK_REALLOC) && block == _NORMAL_BLOCK)
-    {
-        if (s_leaseRemaining == 0)
-        {
-            ++s_leaseRejected;
-            return 0;
-        }
-        --s_leaseRemaining;
-    }
-    return 1;
-}
-#endif
-
-/** 使用测试专属名称验证租约取得失败回滚、就绪及释放，不操作正式网关租约
-@return 所有检查通过为true；非Windows平台本main暂不作为运行验证
-*/
-static bool SystemLeaseAudit()
-{
 #ifdef _WIN32
-    uint32_t checks = 0;
-    uint32_t failures = 0;
-    uint32_t successes = 0;
-#define LEASE_CHECK(value) { ++checks; if (!(value)) { std::printf("System lease line=%d FAIL\n", __LINE__); return false; } }
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
-    // CRT首次处理分配异常会建立自身常驻资源；先单独触发，不把它计为租约泄漏。
-    std::string warm;
-    const _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(LeaseMemoryHook);
-    try { warm.resize(4096); } catch (...) {}
-    _CrtSetAllocHook(previous);
-#endif
-    const std::string name = "NetLeaseAllocationAudit";
-    for (uint32_t position = 0; position < 32; ++position)
-    {
-        const std::string isolated = std::to_string(CSystem::currentProcessPid()) + "." + std::to_string(position);
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
-        _CrtMemState before = {};
-        _CrtMemCheckpoint(&before);
-        DWORD handlesBefore = 0;
-        LEASE_CHECK(GetProcessHandleCount(GetCurrentProcess(), &handlesBefore) != FALSE);
-#endif
-        bool escaped = false;
-        bool valid = true;
+        const int levels[] = {THREAD_PRIORITY_IDLE, THREAD_PRIORITY_BELOW_NORMAL, THREAD_PRIORITY_NORMAL,
+            THREAD_PRIORITY_ABOVE_NORMAL, THREAD_PRIORITY_HIGHEST};
+        if (!SetThreadPriority(thread.native_handle(), levels[relative + 2]))
         {
-            std::vector<uint64_t> state;
-            int32_t acquired = -99;
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
-            s_leaseRemaining = position;
-            s_leaseRejected = 0;
-            const _CRT_ALLOC_HOOK old = _CrtSetAllocHook(LeaseMemoryHook);
-#endif
-            try
-            {
-                acquired = CSystem::acquireProcessLease(name, false, 0, state, isolated);
-            }
-            catch (...)
-            {
-                escaped = true;
-            }
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
-            _CrtSetAllocHook(old);
-#endif
-            if (acquired == 1)
-            {
-                ++successes;
-                valid = state.size() == 3 && !CSystem::processLeaseStopRequested(state) &&
-                    CSystem::setProcessLeaseReady(state, true) && CSystem::isProcessLeaseReady(name, CSystem::currentProcessPid());
-                // 重复使用同一个输出容器是非法输入，必须保留已取得租约，不改变ready。
-                valid = valid && CSystem::acquireProcessLease(name, false, 0, state, isolated) == -1 &&
-                    state.size() == 3 && CSystem::isProcessLeaseReady(name, CSystem::currentProcessPid());
-            }
-            else
-            {
-                ++failures;
-                valid = acquired == -1 && state.empty() && !CSystem::isProcessLeaseReady(name, CSystem::currentProcessPid());
-            }
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
-            s_leaseRemaining = 0;
-            s_leaseRejected = 0;
-            const _CRT_ALLOC_HOOK cleanupHook = _CrtSetAllocHook(LeaseMemoryHook);
-#endif
-            CSystem::releaseProcessLease(state);
-            CSystem::releaseProcessLease(state);
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
-            _CrtSetAllocHook(cleanupHook);
-            valid = valid && s_leaseRejected == 0;
-#endif
-            valid = valid && state.empty() && !CSystem::isProcessLeaseReady(name, CSystem::currentProcessPid());
+            nativeError = static_cast<int32_t>(GetLastError());
+            return CSystemThreadPriorityFailed;
         }
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
-        DWORD handlesAfter = 0;
-        LEASE_CHECK(GetProcessHandleCount(GetCurrentProcess(), &handlesAfter) != FALSE && handlesBefore == handlesAfter);
-        _CrtMemState after = {};
-        _CrtMemCheckpoint(&after);
-        LEASE_CHECK(before.lCounts[_NORMAL_BLOCK] == after.lCounts[_NORMAL_BLOCK] && before.lSizes[_NORMAL_BLOCK] == after.lSizes[_NORMAL_BLOCK]);
+#elif defined(__EMSCRIPTEN__)
+        return CSystemThreadPriorityUnsupported;
+#else
+        if (relative < 0)
+        {
+            return CSystemThreadPriorityUnsupported;
+        }
+        const int policy = relative == 0 ? SCHED_OTHER : SCHED_RR;
+        sched_param parameter = {};
+        if (relative > 0)
+        {
+            const int minimum = sched_get_priority_min(policy);
+            if (minimum < 0)
+            {
+                nativeError = errno;
+                return CSystemThreadPriorityFailed;
+            }
+            const int maximum = sched_get_priority_max(policy);
+            if (maximum < minimum)
+            {
+                nativeError = errno;
+                return CSystemThreadPriorityFailed;
+            }
+            parameter.sched_priority = relative == 1 ? minimum : minimum + (maximum - minimum) / 2;
+        }
+        nativeError = pthread_setschedparam(thread.native_handle(), policy, &parameter);
+        if (nativeError != 0)
+        {
+            return CSystemThreadPriorityFailed;
+        }
 #endif
-        LEASE_CHECK(!escaped && valid);
+        return CSystemThreadPriorityApplied;
     }
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
-    LEASE_CHECK(failures != 0 && successes != 0);
-#else
-    LEASE_CHECK(failures == 0 && successes == 32);
-#endif
-    std::printf("System lease positions=32 failed=%u acquired=%u checks=%u PASS\n", failures, successes, checks);
-    return true;
-#undef LEASE_CHECK
-#else
-    std::puts("System lease Windows fault injection not executed on this platform");
-    return false;
-#endif
+    catch (const std::system_error& error)
+    {
+        nativeError = error.code().value();
+        return CSystemThreadPriorityFailed;
+    }
+    catch (...)
+    {
+        return CSystemThreadPriorityFailed;
+    }
 }
 
-#ifndef SYSTEM_LEASE_NO_MAIN
-/** 独立测试入口；正式库保留整段注释
-@return 零表示成功
-*/
-int main()
-{
-    std::setvbuf(stdout, nullptr, _IONBF, 0);
-    return SystemLeaseAudit() ? 0 : 1;
-}
-#endif
-
-#endif // SYSTEM_LEASE_UNIT_END
-
-#endif // CSYSTEM_NATIVE_API
+// 使用示例：在本翻译单元末尾启用以下 main，单独构建控制台程序
+// #include <cstdio>
+// #include <ctime>
+//
+// int main(int argc, char** argv)
+// {
+//     std::vector<std::string> args;
+//     if (!CSystem::commandArguments(argc, argv, args))
+//     {
+//         return 1;
+//     }
+//     const auto begin = CSystem::GetHighTickCount();
+//     const std::string leaf = CSystem::ensureFileExtension("session", ".txt");
+//     const std::string example = CSystem::joinPath("logs", leaf);
+//     std::printf("%s %s %s\n", CSystem::timetToStr(std::time(nullptr), false).c_str(),
+//         CSystem::GetName(example, 1).c_str(), CSystem::GetName(example, 2).c_str());
+//     int** counts = CSystem::CreateDyadicArray<int>(2, 3);
+//     if (counts == nullptr)
+//     {
+//         return 2;
+//     }
+//     counts[0][0] = argc;
+//     CSystem::DestroyDyadicArray(counts, 2);
+//     bool valid = true;
+// #if CSYSTEM_HAS_NATIVE_API
+//     const uint32_t pid = CSystem::currentProcessPid();
+//     const std::string unique = CSystem::uuid(0);
+//     std::printf("user directory=%s\n", CSystem::GetSystemTempPath().c_str());
+//     const std::string directory = CSystem::joinPath(".", "csdemo_" + unique);
+//     if (unique.empty() || CSystem::DirOrFileExist(directory) || !CSystem::CreateDir(directory))
+//     {
+//         return 3;
+//     }
+//     const std::string first = CSystem::joinPath(directory, "draft.txt");
+//     const std::string target = CSystem::joinPath(directory, leaf);
+//     const uint8_t text[] = {'l', 'o', 'g'};
+//     intptr_t writer = CSystem::openFileHandle(first.c_str(), 2);
+//     intptr_t duplicate = CSystem::duplicateFileHandle(writer);
+//     uint64_t size = 0;
+//     uint8_t readback[3] = {};
+//     uint32_t received = 0;
+//     valid = writer != -1 && duplicate != -1 && CSystem::writeFileHandle(writer, 0, text, 3) &&
+//         CSystem::flushFileHandle(writer) && CSystem::fileHandleSize(duplicate, &size) && size == 3 &&
+//         CSystem::readFileHandle(duplicate, 0, readback, 3, &received) && received == 3 &&
+//         CSystem::resizeFileHandle(writer, 3);
+//     CSystem::closeFileHandle(&duplicate);
+//     CSystem::closeFileHandle(&writer);
+//     if (valid)
+//     {
+//         valid = CSystem::publishFileUtf8(first.c_str(), target.c_str()) && CSystem::plainFileUtf8(target);
+//     }
+//     uint64_t stamp = 0;
+//     if (valid)
+//     {
+//         valid = CSystem::fileStampUtf8(target, &size, &stamp) && CSystem::readFile(target) == "log" &&
+//             CSystem::isPathWithin(target, directory) && CSystem::findFilePath(directory, 1, leaf).size() == 1;
+//     }
+//     std::printf("directory=%s utf8=%s\n", CSystem::canonicalPath(directory).c_str(), CSystem::canonicalPathUtf8(directory).c_str());
+//     const std::string second = CSystem::joinPath(directory, "copy.txt");
+//     CSystem::saveFile("demo", second);
+//     const std::string renamed = CSystem::joinPath(directory, "renamed.txt");
+//     if (CSystem::rename(second, renamed))
+//     {
+//         CSystem::deleteFile(renamed.c_str());
+//     }
+//     CSystem::deleteFile(first.c_str());
+//     CSystem::deleteFile(second.c_str());
+//     CSystem::deleteFile(target.c_str());
+//     valid = CSystem::DestroyDir(directory) && valid;
+//     uint8_t nonce[16] = {};
+//     valid = CSystem::secureRandomBytes(nonce, 8) && CSystem::secureRandomBytesCallback(nullptr, nonce + 8, 8) == 0 && valid;
+//     std::printf("pid=%u thread=%u bits=%d cores=%d tick=%u\n", pid, CSystem::SystemThreadId(), CSystem::GetSystemBits(),
+//         CSystem::GetCPUCoreCount(), CSystem::GetTickCount());
+//     std::printf("host=%s user=%s exe=%s directory=%s file=%s utf8=%s\n",
+//         CSystem::getComputerName().c_str(), CSystem::GetSysUserName().c_str(), CSystem::GetCurrentExeName().c_str(),
+//         CSystem::GetCurrentExePath().c_str(), CSystem::GetCurrentExeFullName().c_str(), CSystem::currentExecutablePathUtf8().c_str());
+//     uint64_t identity = 0;
+//     CSystem::processIdentity(pid, identity);
+//     CSystem::Sleep(1);
+// #ifdef _WIN32
+//     uint64_t monitor = CSystem::openProcessMonitor(pid);
+//     uint64_t privateBytes = 0, resident = 0, cpu = 0;
+//     uint32_t handles = 0, threads = 0;
+//     if (monitor != 0)
+//     {
+//         int32_t exitCode = 0;
+//         CSystem::queryProcessResources(monitor, privateBytes, resident, cpu, handles, threads);
+//         CSystem::pollProcessMonitor(monitor, exitCode);
+//         CSystem::closeProcessMonitor(monitor);
+//     }
+//     RECT screen = CSystem::rectValid(CSystem::GetWindowResolution());
+//     const RECT taskbar = CSystem::GetTaskbarRect();
+//     const POINT corner = CSystem::taskbarRightBottomPoint();
+//     const POINT center = CSystem::screenCenterPoint();
+//     std::printf("screen=%ldx%ld center=%ld,%ld taskbar=%ld,%ld corner=%ld,%ld visible=%d\n",
+//         screen.right, screen.bottom, center.x, center.y, taskbar.left, taskbar.top, corner.x, corner.y, CSystem::GetVisibleHeight());
+//     const std::wstring executable = CSystem::processNameW(pid);
+//     std::printf("processes=%u modules=%u first=%u version=%d\n",
+//         static_cast<unsigned>(CSystem::processPid(executable).size()), static_cast<unsigned>(CSystem::processMountDll(pid).size()),
+//         CSystem::processFirstPid(executable), CSystem::GetSystemVersionNum());
+//     std::printf("module=%s console=%p window=%p visible=%p\n", CSystem::GetCurrentDllPath().c_str(),
+//         static_cast<void*>(CSystem::GetConsoleHwnd()), static_cast<void*>(CSystem::GetHwndByProcessId(pid)),
+//         static_cast<void*>(CSystem::findVisibleWindowByProcessId(pid)));
+//     std::printf("session=%s args=%u memory=%llu\n", CSystem::GetEnvironment("SESSIONNAME").c_str(),
+//         static_cast<unsigned>(CSystem::exeParam(argc, argv).size()), static_cast<unsigned long long>(CSystem::currentMemory()));
+// #endif
+// #endif
+//     const auto end = CSystem::GetHighTickCount();
+//     std::printf("elapsed ms=%d us=%d ns=%lld (now %d/%d/%lld)\n", CSystem::GetMilliRunTime(end, begin),
+//         CSystem::GetMicroRunTime(end, begin), static_cast<long long>(CSystem::GetNanoRunTime(end, begin)),
+//         CSystem::GetHighTickCountMilliRunTime(begin), CSystem::GetHighTickCountMicroRunTime(begin),
+//         static_cast<long long>(CSystem::GetHighTickCountNanoRunTime(begin)));
+//     return valid ? 0 : 4;
+// }
