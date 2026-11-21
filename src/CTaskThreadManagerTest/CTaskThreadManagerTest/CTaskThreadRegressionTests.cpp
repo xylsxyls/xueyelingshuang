@@ -121,7 +121,8 @@ void taskStopFailureJoinTest()
         workers.drain();
         throw;
     }
-    // 失败通知保留诊断，已 join 的线程随后仍可完成注册表清理。
+    bbCheck(CTaskThreadManager::instance().count() == 0, "joined worker remained registered after stop callback failure");
+    // 再次收尾可以观察到已注销，不能依赖第二次调用清理登记。
     workers.drain();
     bbCheck(!returnedEarly && exited && result.m_status == CTaskThreadCallbackFailure &&
         result.m_committed && worker->statistics().m_errors == 1 &&

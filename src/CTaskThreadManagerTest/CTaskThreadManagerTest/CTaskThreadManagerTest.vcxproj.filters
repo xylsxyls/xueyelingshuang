@@ -56,16 +56,16 @@
     <ClInclude Include="CTaskPreparedBenchmark.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CTaskV3ModuleTests.cpp" />
-    <ClInclude Include="CTaskV3ModuleTests.h" />
+    <ClCompile Include="CTaskStorageTests.cpp" />
+    <ClInclude Include="CTaskStorageTests.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CTaskPrivateTestAccess.h" />
     <ClInclude Include="CTaskPrivateTestAccess.inl" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CTaskV5Tests.h" />
-    <ClCompile Include="CTaskV5Tests.cpp" />
+    <ClInclude Include="CTaskRedoTests.h" />
+    <ClCompile Include="CTaskRedoTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CTaskIntrusivePrototype.h" />
@@ -91,7 +91,5 @@
   <ItemGroup>
     <ClInclude Include="CTaskRetryContractTests.h" />
     <ClCompile Include="CTaskRetryContractTests.cpp" />
-    <ClInclude Include="CTaskPostCompatibility.h" />
-    <ClInclude Include="CTaskPostCompatibility.inl" />
   </ItemGroup>
 </Project>

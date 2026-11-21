@@ -4,16 +4,16 @@
 
 /** 拥有本轮线程及三层门控；析构先放行全部回调，再排空线程
 */
-class CTaskV5RedoFixture
+class CTaskRedoTestRedoFixture
 {
 public:
     /** 建立独立工作线程和未放行的门控
     */
-    CTaskV5RedoFixture();
+    CTaskRedoTestRedoFixture();
 
     /** 即使用例断言失败，也放行并等待全部借用本夹具的任务
     */
-    ~CTaskV5RedoFixture();
+    ~CTaskRedoTestRedoFixture();
 
     /** 创建记录顺序的原任务；工厂仅在真实重做时创建下一代
     @param [in] slot 0 至 2 的独立门控及工厂计数位置
@@ -64,59 +64,59 @@ private:
 
 /** 验证低级重做已生成时，高级插队仍先于低级重做及普通任务
 */
-void taskV5PendingRedoPriorityTest();
+void taskPendingRedoPriorityTest();
 
 /** 验证低级和中级依次被打断，两级工厂各执行一次且按原级重做
 */
-void taskV5NestedPreemptionTest();
+void taskNestedPreemptionTest();
 
 /** 验证更高级已在等待时，优先级选择和同级 FIFO 同时保持
 */
-void taskV5QueuedHigherPriorityTest();
+void taskQueuedHigherPriorityTest();
 
 /** 验证工厂在途期间发布更高级任务及关闭时的接纳与收尾
 */
-void taskV5FactoryPublicationRaceTest();
+void taskFactoryPublicationRaceTest();
 
 /** 验证路由回收遵守旧读者保护、单次预算、并发帮助及精确释放
 */
-void taskV5ReclaimRoutingTest();
+void taskReclaimRoutingTest();
 
 /** 验证连续 64 代继承同一工厂，每代仍在原优先级队首且仅按需构造
 */
-void taskV5RepeatedRedoTest();
+void taskRepeatedRedoTest();
 
 /** 对照测量百万普通任务中的一百次真实重做；工厂和完成账本必须精确一致
 */
-void taskV5RedoPerformanceTest();
+void taskRedoPerformanceTest();
 
 /** 验证首次发布更高优先级与下一条任务开始竞争时，抢占通知不会丢失
 */
-void taskV5FirstPriorityRaceTest();
+void taskFirstPriorityRaceTest();
 
 /** 验证丢弃关闭与最高级任务交接竞争时，已开始任务仍能收到合作停止
 */
-void taskV5ShutdownHandoffTest();
+void taskShutdownHandoffTest();
 
 /** 验证回收批次全满、暂停帮助者、部分归还和后续复用均保持精确释放
 */
-void taskV5ReclaimBatchesTest();
+void taskReclaimBatchesTest();
 
 /** 验证按属性停止时当前任务不受等待级别筛选限制，等待任务仍按级别筛选
 */
-void taskV5CurrentPropertyStopTest();
+void taskCurrentPropertyStopTest();
 
 /** 并发关闭不同线程后，成功结果必须同时表示系统线程已结束且管理器登记已移除
 */
-void taskV5ConcurrentRemovalTest();
+void taskConcurrentRemovalTest();
 
 /** 验证发布顺序、跨段消费、部分封口和全部生产者位置的容量回收
 */
-void taskV5ChannelPublicationTest();
+void taskChannelPublicationTest();
 
 /** 单个任务的外部调用区间；写入线程各自独占，join 后统一检查
 */
-struct CTaskV5HistoryItem
+struct CTaskRedoTestHistoryItem
 {
 public:
     // 投递调用之前的全局事件序号
@@ -129,13 +129,13 @@ public:
 public:
     /** 建立尚未投递和消费的记录
     */
-    CTaskV5HistoryItem();
+    CTaskRedoTestHistoryItem();
 
 };
 
 /** 消费者观察空队列时的外部调用区间
 */
-struct CTaskV5EmptyObservation
+struct CTaskRedoTestEmptyObservation
 {
 public:
     // 空观察调用之前的全局事件序号
@@ -151,13 +151,13 @@ public:
     @param [in] end 返回后事件
     @param [in] delivered 调用前消费数量
     */
-    CTaskV5EmptyObservation(uint64_t begin, uint64_t end, size_t delivered);
+    CTaskRedoTestEmptyObservation(uint64_t begin, uint64_t end, size_t delivered);
 
 };
 
 /** 仅用于串行白盒模型的发布记录，覆盖正式通道所需的保护字段
 */
-struct CTaskV5ChannelRecord
+struct CTaskRedoTestChannelRecord
 {
 public:
     // 当前生产者保护的发布段
@@ -176,13 +176,13 @@ public:
 public:
     /** 建立空保护和零代次的独立测试记录
     */
-    CTaskV5ChannelRecord();
+    CTaskRedoTestChannelRecord();
 
 };
 
 /** 测试段池保留全部退役段，便于恢复暂停生产者检查旧位置；只用于串行模型
 */
-class CTaskV5ChannelPool
+class CTaskRedoTestChannelPool
 {
 public:
     /** 模型中可能存在暂停的预约者，保守报告多发布者
@@ -197,7 +197,7 @@ public:
 
     /** 释放本用例保留的全部测试段，要求通道已停止使用
     */
-    ~CTaskV5ChannelPool();
+    ~CTaskRedoTestChannelPool();
 
     /** 创建并登记一个私有发布段
     @return 成功返回段地址；分配异常由用例框架报告失败

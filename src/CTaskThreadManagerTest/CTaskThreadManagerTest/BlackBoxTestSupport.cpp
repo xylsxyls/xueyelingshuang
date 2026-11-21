@@ -281,6 +281,8 @@ void BlackBoxChild::startProgram(const std::string& executable, const std::vecto
     const DWORD resumed = ResumeThread(process.hThread);
     CloseHandle(process.hThread);
     bbCheck(resumed != static_cast<DWORD>(-1), "resume child failed");
+#elif defined(CTTM_TEST_SINGLE_PROCESS)
+    bbCheck(false, "child process unavailable in single-process target");
 #else
     std::vector<char*> args;
     args.push_back(const_cast<char*>(executable.c_str()));
@@ -304,7 +306,10 @@ void BlackBoxChild::startProgram(const std::string& executable, const std::vecto
         {
             _exit(126);
         }
-        close(log);
+        if (log != STDOUT_FILENO && log != STDERR_FILENO)
+        {
+            close(log);
+        }
         execv(executable.c_str(), &args[0]);
         _exit(127);
     }
@@ -402,12 +407,19 @@ int bbRun(int argc, char** argv, const char* suite, const std::vector<BlackBoxCa
         SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
 #endif
         bool list = false, stress = false, all = false;
+        bool haveMode = false, requireAll = false;
         int childCase = 0;
         std::set<int> selected;
         std::string report = std::string(suite) + "-results.tsv";
         for (int i = 1; i < argc; ++i)
         {
             const std::string arg = argv[i];
+            if (arg == "--list" || arg == "--all" || arg == "--stress" || arg == "--instant" ||
+                arg == "--case" || arg == "--tests")
+            {
+                bbCheck(!haveMode, "conflicting test selection modes");
+                haveMode = true;
+            }
             if (arg == "--list")
             {
                 list = true;
@@ -423,6 +435,10 @@ int bbRun(int argc, char** argv, const char* suite, const std::vector<BlackBoxCa
             else if (arg == "--instant")
             {
 
+            }
+            else if (arg == "--require-all")
+            {
+                requireAll = true;
             }
             else if (arg == "--report" && i + 1 < argc)
             {
@@ -478,6 +494,9 @@ int bbRun(int argc, char** argv, const char* suite, const std::vector<BlackBoxCa
             std::cout << "case completed\n";
             return 0;
         }
+#ifdef CTTM_TEST_SINGLE_PROCESS
+        bbCheck(list, "use --list or let the host launch one --case ID per invocation");
+#endif
         std::ofstream output;
         if (!list)
         {
@@ -574,7 +593,7 @@ int bbRun(int argc, char** argv, const char* suite, const std::vector<BlackBoxCa
             std::cout << "executed=" << passed + failed << " instant=" << instantCount << " stress=" << stressCount
                       << " passed=" << passed << " failed=" << failed << " not_run=" << notRun << " report=" << report << "\n";
         }
-        return failed ? 1 : (!list && passed == 0 ? 77 : 0);
+        return failed ? 1 : (!list && (passed == 0 || (requireAll && notRun != 0)) ? 77 : 0);
     }
     catch (const std::exception& error)
     {

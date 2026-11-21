@@ -169,7 +169,11 @@ static void ExamplePriority(const CTaskThreadConfig& config)
     CTaskThreadManager& manager = CTaskThreadManager::instance();
     std::shared_ptr<CTaskThread> target = Open(config);
     Check(manager.count() == 1, "manager count");
+#ifdef __EMSCRIPTEN__
+    Check(target->setSystemPriority(CTaskPriorityNormal).m_status == CTaskThreadUnsupported, "Wasm system priority");
+#else
     Check(target->setSystemPriority(CTaskPriorityNormal).m_status == CTaskThreadOk, "system priority");
+#endif
     std::shared_ptr<std::atomic<bool>> release = std::make_shared<std::atomic<bool>>(false);
     std::shared_ptr<UsageTask> gate = Gate(900, release);
     Post(target, gate, 16);
@@ -349,19 +353,31 @@ static void ExampleResources(const CTaskThreadConfig& source)
         shrinks->fetch_add(1);
         return LockFreeHashMapShrinkDecision(context.reusableFreeCapacity / 2, 20);
     };
-    config.m_queue.initialCapacity = 8;
-    config.m_queue.maximumCapacity = 1024;
-    config.m_queueGrow = [queueGrows](const LockFreeQueueGrowContext& context) -> size_t
+    const std::shared_ptr<std::atomic<uint32_t>> queueNotifications = std::make_shared<std::atomic<uint32_t>>(0);
+    const std::shared_ptr<std::atomic<uint32_t>> queueShrinks = std::make_shared<std::atomic<uint32_t>>(0);
+    LockFreeQueuePoolConfig queuePool = config.m_queue;
+    queuePool.initialCapacity = 8;
+    queuePool.maximumCapacity = 1024;
+    // 仅统计实际发布的增长，独立核对策略和通知两个接口。
+    queuePool.m_onGrowth = [queueNotifications](size_t added, uint64_t growCount)
+    {
+        if (added != 0 && growCount != 0)
+        {
+            queueNotifications->fetch_add(1);
+        }
+    };
+    Check(config.configurePool(queuePool) == LockFreeQueueSuccess, "configure FIFO pool");
+    Check(config.setGrowPolicy([queueGrows](const LockFreeQueueGrowContext& context) -> size_t
     {
         queueGrows->fetch_add(1);
         return (std::max)(size_t(32), context.currentCapacity / 2);
-    };
-    config.m_queueShrink = [shrinks](const LockFreeQueueShrinkContext& context) -> LockFreeQueueShrinkDecision
+    }) == LockFreeQueueSuccess, "configure FIFO growth");
+    Check(config.setShrinkPolicy([queueShrinks](const LockFreeQueueShrinkContext& context) -> LockFreeQueueShrinkDecision
     {
-        shrinks->fetch_add(1);
+        queueShrinks->fetch_add(1);
         LockFreeQueueShrinkDecision decision = {context.reusableFreeCapacity / 2, 20};
         return decision;
-    };
+    }) == LockFreeQueueSuccess, "configure FIFO shrink");
     config.m_maximumTasks = -1;
     std::shared_ptr<CTaskThread> target = Open(config);
     std::shared_ptr<std::atomic<bool>> release = std::make_shared<std::atomic<bool>>(false);
@@ -380,12 +396,12 @@ static void ExampleResources(const CTaskThreadConfig& source)
         Post(target, work, i < 190 ? 1 : i - 188);
     }
     release->store(true);
-    Check(WaitUntil([work, shrinks]() -> bool
+    Check(WaitUntil([work, shrinks, queueShrinks]() -> bool
     {
-        return work->runs() == 200 && shrinks->load() != 0;
+        return work->runs() == 200 && shrinks->load() != 0 && queueShrinks->load() != 0;
     }), "growth/shrink callbacks");
     Check(CTaskThreadManager::instance().waitForEnd(target->threadId()).m_status == CTaskThreadOk, "growth drain");
-    Check(mapGrows->load() != 0 && taskGrows->load() != 0 && queueGrows->load() != 0 && target->statistics().m_errors == 0, "physical pool growth");
+    Check(mapGrows->load() != 0 && taskGrows->load() != 0 && queueGrows->load() != 0 && queueNotifications->load() != 0 && target->statistics().m_errors == 0, "physical pool growth");
     // 上面只通过公开行为核对缩容策略被调用，不把它说成实际释放了精确数量。
     config = source;
     config.m_maximumTasks = 2;
@@ -620,7 +636,7 @@ int32_t runTaskUsageTests(size_t scenario)
         config.m_queue.growThreshold = 0;
         config.m_queue.maximumProducers = 16;
         config.m_maximumTasks = 64;
-        config.m_systemPriority = CTaskPriorityNormal;
+        config.m_systemPriority = CTaskPriorityInherited;
         Check(scenario <= 7, "unknown usage scenario");
         if (scenario == 0 || scenario == 1)
         {

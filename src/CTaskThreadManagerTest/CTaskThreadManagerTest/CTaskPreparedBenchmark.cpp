@@ -1,5 +1,4 @@
-﻿#include "CTaskPostCompatibility.h"
-#include "CTaskPreparedBenchmark.h"
+﻿#include "CTaskPreparedBenchmark.h"
 #include "BlackBoxTestSupport.h"
 #include "CTaskPreparedProfiler.h"
 #include <algorithm>
@@ -291,7 +290,7 @@ void CTaskPreparedCountedItem::doTask()
     }
 }
 
-CTaskPreparedProducer::CTaskPreparedProducer(CTaskPreparedState& state, const std::shared_ptr<CTaskPreparedThread>& target, size_t producer) :
+CTaskPreparedProducer::CTaskPreparedProducer(CTaskPreparedState& state, const std::shared_ptr<CTaskThread>& target, size_t producer) :
 m_state(&state),
 m_target(target),
 m_producer(producer)
@@ -343,15 +342,11 @@ void CTaskPreparedProducer::doTask()
                 sample->m_begin = CTaskPreparedState::now();
             }
             const std::shared_ptr<CTask>& task = m_state->m_tasks[taskIndex];
-#if defined(CTTM_BENCH_NEW) || defined(CTTM_TEST_NO_LEGACY_SEND_TASK)
-            const CTaskThreadResult result = CTaskPostCompatibility::submit(*m_target, task, level, 0);
+            const CTaskThreadResult result = m_target->postTaskResult(task, level);
             if (!result.m_committed || result.m_status != CTaskThreadOk)
             {
                 throw std::runtime_error("ordinary postTask failed for prepared task; external retry prohibited");
             }
-#else
-            CTaskPostCompatibility::submit(*m_target, task, level, 0);
-#endif
             if (sample != nullptr)
             {
                 sample->m_returned = CTaskPreparedState::now();
@@ -402,12 +397,12 @@ CTaskPreparedSession::~CTaskPreparedSession()
         {
             if (m_producerIds[i] != 0)
             {
-                CTaskPreparedManager::instance().uninit(m_producerIds[i]);
+                CTaskThreadManager::instance().uninit(m_producerIds[i]);
             }
         }
         if (m_targetId != 0)
         {
-            CTaskPreparedManager::instance().uninit(m_targetId);
+            CTaskThreadManager::instance().uninit(m_targetId);
         }
     }
     catch (...)
@@ -416,35 +411,19 @@ CTaskPreparedSession::~CTaskPreparedSession()
     }
 }
 
-/** 静止创建消费者，V2 预留足以容纳整批任务的容量，V1 保持真实原实现
+/** 创建消费者并预留整轮任务所需的槽位及 FIFO 容量
 @param [in] total 总任务数
 @param [in] levels 优先级数
-@param [out] hashCapacity V2 双槽池总容量，V1 为 0
-@param [out] queueCapacity V2 每优先级节点容量，V1 为 0
-@param [out] buckets V2 哈希桶数，V1 为 0
+@param [out] hashCapacity 稳定任务槽总容量
+@param [out] queueCapacity 每个优先级的队列容量
 @return 消费者 ID，0 表示失败
 */
-static uint32_t PreparedCreateTarget(size_t total, int32_t levels, size_t& hashCapacity, size_t& queueCapacity, size_t& buckets)
+static uint32_t PreparedCreateTarget(size_t total, int32_t levels, size_t& hashCapacity, size_t& queueCapacity)
 {
-    hashCapacity = 0;
-    queueCapacity = 0;
-    buckets = 0;
-#if defined(CTTM_BENCH_NEW) || defined(CTTM_TEST_NO_LEGACY_SEND_TASK)
     CTaskThreadConfig config;
-    hashCapacity = 2 * (total + 4096);
-    queueCapacity = (total + levels - 1) / levels + 4096;
-    buckets = 1024;
-    while (buckets < total + 4096)
-    {
-        buckets *= 2;
-    }
-#ifdef CTTM_BENCH_V3
-    // V3 一条记录占一槽，V2 一条记录占键/值两槽；按相同可容纳任务数预留。
+    // 每次投递占一条稳定记录，各级 FIFO 单独预留维护余量。
     hashCapacity = total + 4096;
-    buckets = 0;
-#else
-    config.m_taskBuckets = buckets;
-#endif
+    queueCapacity = (total + levels - 1) / levels + 4096;
     config.m_taskMap.initialCapacity = hashCapacity;
     config.m_taskMap.maximumCapacity = static_cast<int64_t>(hashCapacity);
     config.m_taskMap.growFreeThreshold = 0;
@@ -453,10 +432,7 @@ static uint32_t PreparedCreateTarget(size_t total, int32_t levels, size_t& hashC
     config.m_queue.growThreshold = 0;
     config.m_priorityMap.nodes.initialCapacity = 64;
     config.m_priorityMap.values.initialCapacity = 128;
-    return CTaskPreparedManager::instance().init(config);
-#else
-    return CTaskPreparedManager::instance().init();
-#endif
+    return CTaskThreadManager::instance().init(config);
 }
 
 /** 在计时外预建各优先级队列并验证预热任务已经执行
@@ -464,20 +440,16 @@ static uint32_t PreparedCreateTarget(size_t total, int32_t levels, size_t& hashC
 @param [in] target 消费者
 @param [in] frequency 时钟频率
 */
-static void PreparedWarmup(CTaskPreparedState& warmState, const std::shared_ptr<CTaskPreparedThread>& target, uint64_t frequency)
+static void PreparedWarmup(CTaskPreparedState& warmState, const std::shared_ptr<CTaskThread>& target, uint64_t frequency)
 {
     for (size_t i = 0; i < warmState.m_total; ++i)
     {
-#if defined(CTTM_BENCH_NEW) || defined(CTTM_TEST_NO_LEGACY_SEND_TASK)
-        const CTaskThreadResult result = CTaskPostCompatibility::submit(*target, warmState.m_tasks[i],
-            static_cast<int32_t>(i % warmState.m_levels) + 1, 0);
+        const CTaskThreadResult result = target->postTaskResult(warmState.m_tasks[i],
+            static_cast<int32_t>(i % warmState.m_levels) + 1);
         if (!result.m_committed || result.m_status != CTaskThreadOk)
         {
             throw std::runtime_error("warmup rejected");
         }
-#else
-        CTaskPostCompatibility::submit(*target, warmState.m_tasks[i], static_cast<int32_t>(i % warmState.m_levels) + 1, 0);
-#endif
     }
     const uint64_t deadline = CTaskPreparedState::now() + frequency * 120;
     while (warmState.m_finish.load(std::memory_order_acquire) == 0)
@@ -576,7 +548,7 @@ int runPreparedTaskBenchmark(int argc, char** argv)
         }
         const uint64_t frequency = CTaskPreparedState::frequency();
         const uint64_t preparationStart = CTaskPreparedState::now();
-        CTaskPreparedManager& manager = CTaskPreparedManager::instance();
+        CTaskThreadManager& manager = CTaskThreadManager::instance();
         const bool separate = mode == "throughput-separated" || mode == "throughput-reused-separated";
         const bool countOnly = mode == "throughput-counted";
         const bool latency = mode == "latency" || mode == "latency-reused" || mode == "latency-window";
@@ -602,9 +574,9 @@ int runPreparedTaskBenchmark(int argc, char** argv)
         // 时间线内存同样在计时前申请并触碰；顺序表由 state 在准备期建立。
         std::vector<uint64_t> timeline;
         timeline.reserve(180000);
-        size_t hashCapacity = 0, queueCapacity = 0, buckets = 0;
-        session.m_targetId = PreparedCreateTarget(total, levels, hashCapacity, queueCapacity, buckets);
-        const std::shared_ptr<CTaskPreparedThread> target = manager.getThreadInterface(session.m_targetId);
+        size_t hashCapacity = 0, queueCapacity = 0;
+        session.m_targetId = PreparedCreateTarget(total, levels, hashCapacity, queueCapacity);
+        const std::shared_ptr<CTaskThread> target = manager.getThreadInterface(session.m_targetId);
         if (!target)
         {
             throw std::runtime_error("consumer initialization failed");
@@ -618,25 +590,17 @@ int runPreparedTaskBenchmark(int argc, char** argv)
                 throw std::runtime_error("producer initialization failed");
             }
             session.m_producerIds.push_back(id);
-            const std::shared_ptr<CTaskPreparedThread> thread = manager.getThreadInterface(id);
+            const std::shared_ptr<CTaskThread> thread = manager.getThreadInterface(id);
             const std::shared_ptr<CTask> producer = std::make_shared<CTaskPreparedProducer>(state, target, p);
-#if defined(CTTM_BENCH_NEW) || defined(CTTM_TEST_NO_LEGACY_SEND_TASK)
             if (!thread)
             {
                 throw std::runtime_error("producer lookup failed");
             }
-            const CTaskThreadResult producerStarted = CTaskPostCompatibility::submit(*thread, producer, 1, 0);
+            const CTaskThreadResult producerStarted = thread->postTaskResult(producer, 1);
             if (!producerStarted.m_committed || producerStarted.m_status != CTaskThreadOk)
             {
                 throw std::runtime_error("producer start rejected");
             }
-#else
-            if (!thread)
-            {
-                throw std::runtime_error("producer lookup failed");
-            }
-            CTaskPostCompatibility::submit(*thread, producer, 1, 0);
-#endif
         }
         const uint64_t readyDeadline = CTaskPreparedState::now() + frequency * 30;
         while (state.m_ready.load(std::memory_order_acquire) != producers)
@@ -699,8 +663,7 @@ int runPreparedTaskBenchmark(int argc, char** argv)
         }
         for (size_t p = 0; p < producers; ++p)
         {
-#if defined(CTTM_BENCH_NEW) || defined(CTTM_TEST_NO_LEGACY_SEND_TASK)
-            const std::shared_ptr<CTaskPreparedThread> producer = manager.getThreadInterface(session.m_producerIds[p]);
+            const std::shared_ptr<CTaskThread> producer = manager.getThreadInterface(session.m_producerIds[p]);
             if (!producer || manager.waitForEnd(session.m_producerIds[p]).m_status != CTaskThreadOk)
             {
                 throw std::runtime_error("producer drain failed");
@@ -709,12 +672,8 @@ int runPreparedTaskBenchmark(int argc, char** argv)
             {
                 throw std::runtime_error("prepared producer reported internal errors");
             }
-#else
-            manager.waitForEnd(session.m_producerIds[p]);
-#endif
             session.m_producerIds[p] = 0;
         }
-#if defined(CTTM_BENCH_NEW) || defined(CTTM_TEST_NO_LEGACY_SEND_TASK)
         if (manager.waitForEnd(session.m_targetId).m_status != CTaskThreadOk)
         {
             throw std::runtime_error("consumer drain failed");
@@ -727,9 +686,6 @@ int runPreparedTaskBenchmark(int argc, char** argv)
                 << state.m_errors.load() << " outstanding=" << consumerStatistics.m_outstanding << std::endl;
             throw std::runtime_error("prepared consumer reported internal errors");
         }
-#else
-        manager.waitForEnd(session.m_targetId);
-#endif
         session.m_targetId = 0;
         // 另记线程退出及任务池清理终点；外部target仍持有门面，不含其最终析构。
         const uint64_t drained = CTaskPreparedState::now();
@@ -797,7 +753,6 @@ int runPreparedTaskBenchmark(int argc, char** argv)
         const double submitMs = (submit - start) * 1000.0 / frequency;
         const double completeMs = (finish - start) * 1000.0 / frequency;
         const double drainMs = finish > submit ? (finish - submit) * 1000.0 / frequency : 0;
-        double peakMiB = 0;
 #ifdef _WIN32
         PROCESS_MEMORY_COUNTERS memory = {};
         memory.cb = sizeof(memory);
@@ -805,7 +760,7 @@ int runPreparedTaskBenchmark(int argc, char** argv)
         {
             throw std::runtime_error("GetProcessMemoryInfo failed");
         }
-        peakMiB = memory.PeakWorkingSetSize / 1048576.0;
+        const double peakMiB = memory.PeakWorkingSetSize / 1048576.0;
 #endif
         std::ofstream output(argv[5], std::ios::binary | std::ios::trunc);
         std::ofstream trace((std::string(argv[5]) + ".timeline.csv").c_str(), std::ios::binary | std::ios::trunc);
@@ -813,28 +768,26 @@ int runPreparedTaskBenchmark(int argc, char** argv)
         {
             throw std::runtime_error("cannot create prepared reports");
         }
-#if defined(CTTM_BENCH_NEW) || defined(CTTM_TEST_NO_LEGACY_SEND_TASK)
-#ifdef CTTM_BENCH_V3
-#ifdef CTTM_BENCH_V5
-        const char* version = "V5";
-#elif defined(CTTM_BENCH_V4)
-        const char* version = "V4";
-#else
-        const char* version = "V3";
+        uint64_t consumerMask = 0;
+        uint64_t producerMask = 0;
+#if defined(CTTM_BENCH_FIXED_CPU) && defined(_WIN32)
+        consumerMask = warmState.m_consumerMask;
+        producerMask = state.m_producerMask;
 #endif
-#else
-        const char* version = "V2";
-#endif
-#else
-        const char* version = "V1";
-#endif
-        output << "version,mode,producers,levels,total,accepted,completed,submit_ms,complete_ms,submit_ops_s,complete_ops_s,consumed_at_submit_lower_bound,overlap_consume_ops_s_lower_bound,drain_ms,retries,peak_mib,preparation_ms,hash_slots,queue_nodes_per_level,hash_buckets,errors,task_objects,drained_ms,drained_ops_s\n";
+        const char* version = "current";
+        output << "version,mode,producers,levels,total,accepted,completed,submit_ms,complete_ms,submit_ops_s,complete_ops_s,consumed_at_submit_lower_bound,overlap_consume_ops_s_lower_bound,drain_ms,retries,peak_mib,preparation_ms,hash_slots,queue_nodes_per_level,errors,task_objects,drained_ms,drained_ops_s,consumer_mask,producer_mask\n";
         output << std::fixed << std::setprecision(6) << version << ',' << mode << ',' << producers << ',' << levels << ',' << total << ','
                << accepted << ',' << state.m_completed << ',' << submitMs << ',' << completeMs << ',' << total * 1000.0 / submitMs << ','
                << total * 1000.0 / completeMs << ',' << consumedAtSubmit << ',' << consumedAtSubmit * 1000.0 / submitMs << ',' << drainMs << ','
-               << retries << ',' << peakMiB << ',' << (start - preparationStart) * 1000.0 / frequency << ',' << hashCapacity << ','
-               << queueCapacity << ',' << buckets << ',' << state.m_errors.load() << ',' << state.m_tasks.size() << ','
-               << (drained - start) * 1000.0 / frequency << ',' << total * static_cast<double>(frequency) / (drained - start) << '\n';
+               << retries << ',';
+#ifdef _WIN32
+        output << peakMiB;
+#else
+        output << "NA";
+#endif
+        output << ',' << (start - preparationStart) * 1000.0 / frequency << ',' << hashCapacity << ','
+               << queueCapacity << ',' << state.m_errors.load() << ',' << state.m_tasks.size() << ','
+               << (drained - start) * 1000.0 / frequency << ',' << total * static_cast<double>(frequency) / (drained - start) << ',' << consumerMask << ',' << producerMask << '\n';
         trace << "elapsed_ms,submitted_lower_bound,completed_lower_bound\n"
               << std::fixed << std::setprecision(6);
         for (size_t i = 0; i < timeline.size(); i += 3)
@@ -922,15 +875,11 @@ void CTaskPreparedProducer::produceWindow()
             sample->m_begin = CTaskPreparedState::now();
         }
         const std::shared_ptr<CTask>& task = m_state->m_tasks[taskIndex];
-#if defined(CTTM_BENCH_NEW) || defined(CTTM_TEST_NO_LEGACY_SEND_TASK)
-        const CTaskThreadResult result = CTaskPostCompatibility::submit(*m_target, task, level, 0);
+        const CTaskThreadResult result = m_target->postTaskResult(task, level);
         if (!result.m_committed || result.m_status != CTaskThreadOk)
         {
             throw std::runtime_error("ordinary windowed postTask failed for prepared task; external retry prohibited");
         }
-#else
-        CTaskPostCompatibility::submit(*m_target, task, level, 0);
-#endif
         if (sample != nullptr)
         {
             sample->m_returned = CTaskPreparedState::now();

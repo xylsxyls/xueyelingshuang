@@ -24,7 +24,7 @@ void CTaskWasmSmokeTask::doTask()
     m_ledger->push_back(m_value);
 }
 
-/** 运行独立 Wasm 线程和任务顺序冒烟检查
+/** 在当前平台进程内验证工作线程、严格优先级、FIFO 和注销
 @return 全部检查通过返回 0，失败返回 1
 */
 int main()
@@ -40,7 +40,7 @@ int main()
         if (!initialized.m_committed || initialized.m_status != CTaskThreadOk || id == 0)
         {
             manager.uninitAll();
-            std::puts("FAIL: Wasm worker initialization");
+            std::puts("FAIL: worker initialization");
             return 1;
         }
         std::shared_ptr<CTaskThread> worker = manager.getThreadInterface(id);
@@ -49,7 +49,11 @@ int main()
         {
             accepted = worker->postTask(std::shared_ptr<CTask>(new CTaskWasmSmokeTask(value, ledger, nullptr)), value < 100 ? 1 : 10);
         }
+#ifdef __EMSCRIPTEN__
         const bool priorityReported = worker && worker->setSystemPriority(CTaskPriorityHigh).m_status == CTaskThreadUnsupported;
+#else
+        const bool priorityReported = worker && worker->setSystemPriority(CTaskPriorityInherited).m_status == CTaskThreadOk;
+#endif
         gate.store(true, std::memory_order_release);
         const bool drained = manager.waitForEnd(id).m_status == CTaskThreadOk;
         bool ordered = ledger.size() == 201 && ledger[0] == -1;
@@ -59,14 +63,14 @@ int main()
         }
         const bool clean = worker && worker->statistics().m_errors == 0 && worker->statistics().m_outstanding == 0;
         const bool passed = accepted && drained && ordered && priorityReported && clean && manager.count() == 0;
-        std::puts(passed ? "PASS: Wasm pthread, 201 tasks, priority/FIFO, unsupported OS priority, drain and cleanup" : "FAIL: Wasm task contract");
+        std::puts(passed ? "PASS: 201 tasks, priority/FIFO, platform priority contract, drain and cleanup" : "FAIL: task contract");
         return passed ? 0 : 1;
     }
     catch (...)
     {
         gate.store(true, std::memory_order_release);
         CTaskThreadManager::instance().uninitAll();
-        std::puts("FAIL: unexpected Wasm exception");
+        std::puts("FAIL: unexpected exception");
         return 1;
     }
 }

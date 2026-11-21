@@ -3,8 +3,8 @@
 #include "CTaskPreparedBenchmark.h"
 #include "CTaskThreadRegressionTests.h"
 #include "CTaskThreadModuleTests.h"
-#include "CTaskV3ModuleTests.h"
-#include "CTaskV5Tests.h"
+#include "CTaskStorageTests.h"
+#include "CTaskRedoTests.h"
 #include "CTaskFairnessTests.h"
 #include "CTaskThreadWhiteBoxTests.h"
 #include "CTaskThreadStressTests.h"
@@ -13,6 +13,7 @@
 #include "CTaskUsageTests.h"
 #include "CTaskRetryContractTests.h"
 #include "CTaskThreadTestAccess.h"
+#include "CTaskFaultAllocation.h"
 #include <cstdlib>
 #include <algorithm>
 #include <climits>
@@ -60,7 +61,7 @@ static const std::map<int32_t, CTaskTestCaseDescription> g_taskCaseDescriptions 
     // 16 尝试投递竞争
     {CTaskTestTryPostContention, {"try-post-contention", "尝试投递竞争", "try 投递只重试未接纳项；无重复、遗漏，已提交项不得重发。"}},
     // 17 多线程派生分发
-    {CTaskTestLegacy20ThreadDispatch, {"legacy-20-thread-dispatch", "多线程派生分发", "20 条工作线程、10 类任务有界派生 200 个子任务；全部完成并退出。"}},
+    {CTaskTest20ThreadDispatch, {"recursive-20-thread-dispatch", "多线程派生分发", "20 条工作线程、10 类任务有界派生 200 个子任务；全部完成并退出。"}},
     // 18 异步投递后显式排空
     {CTaskTestPostAndExplicitDrain, {"post-and-explicit-drain", "异步投递后显式排空", "投递后调用排空接口；返回时已接纳任务全部完成。"}},
     // 19 批量注销
@@ -144,19 +145,19 @@ static const std::map<int32_t, CTaskTestCaseDescription> g_taskCaseDescriptions 
     // 58 有界并发统计
     {CTaskTestConcurrentBoundedStatistics, {"concurrent-bounded-statistics", "有界并发统计", "4 个生产者、容量 3、20000 项；逻辑上限、提交和完成计数一致。"}},
     // 59 读域寿命及延迟回收
-    {CTaskTestV3ReadDomain, {"v3-read-domain", "读域寿命及延迟回收", "读租约持有时关闭或回收；不能提前释放，租约结束后可回收。"}},
+    {CTaskTestReadDomain, {"read-domain", "读域寿命及延迟回收", "读租约持有时关闭或回收；不能提前释放，租约结束后可回收。"}},
     // 60 稳定任务槽位池
-    {CTaskTestV3TaskStorage, {"v3-task-storage", "稳定任务槽位池", "容量、持有引用、扩缩容及并发分配；槽位不重用在途对象。"}},
+    {CTaskTestTaskStorage, {"task-storage", "稳定任务槽位池", "容量、持有引用、扩缩容及并发分配；槽位不重用在途对象。"}},
     // 61 槽位失败与缩容边界
-    {CTaskTestV3StorageFailure, {"v3-storage-failure", "槽位失败与缩容边界", "分配失败、策略拒绝或异常、旧读者暂停；回滚并守住初始容量。"}},
+    {CTaskTestStorageFailure, {"storage-failure", "槽位失败与缩容边界", "分配失败、策略拒绝或异常、旧读者暂停时仍受保护，策略持续失败时报告错误并回收已退役块，守住初始容量。"}},
     // 62 队列跨段就绪
-    {CTaskTestV3QueueReady, {"v3-queue-ready", "队列跨段就绪", "跨段 FIFO、空检查及显式回收；在途上下文不被释放，静止数量归零。"}},
+    {CTaskTestQueueReady, {"queue-ready", "队列跨段就绪", "跨段 FIFO、空检查及显式回收；在途上下文不被释放，静止数量归零。"}},
     // 63 最高优先级发布竞争
-    {CTaskTestV3ReadyIndex, {"v3-ready-index", "最高优先级发布竞争", "8 生产者、16 级、160000 次发布和消费下调交错；最高级提示不漏项。"}},
+    {CTaskTestReadyIndex, {"ready-index", "最高优先级发布竞争", "8 生产者、16 级、160000 次发布和消费下调交错；最高级提示不漏项。"}},
     // 64 队列分布计数压力
-    {CTaskTestV3QueueCounters, {"v3-queue-counters", "队列分布计数压力", "独立生产者上下文、有界池与同步消费；精确计数、同线程 FIFO、收尾归零。"}},
+    {CTaskTestQueueCounters, {"queue-counters", "队列分布计数压力", "独立生产者上下文、有界池与同步消费；精确计数、同线程 FIFO、收尾归零。"}},
     // 65 有界前缀与异常提交
-    {CTaskTestV3QueueBatch, {"v3-queue-batch", "有界前缀与异常提交", "0 预算、最大 16 项、跨段和第二次赋值异常；只提交成功前缀。"}},
+    {CTaskTestQueueBatch, {"queue-batch", "有界前缀与异常提交", "0 预算、最大 16 项、跨段和第二次赋值异常；只提交成功前缀。"}},
     // 66 预取后抢占重做停止
     {CTaskTestPrefetchedPriorityRedoStop, {"prefetched-priority-redo-stop", "预取后抢占重做停止", "已预取同级任务再来高级任务；维持优先级、重做队首及属性停止覆盖。"}},
     // 67 高级任务即时唤醒
@@ -182,27 +183,27 @@ static const std::map<int32_t, CTaskTestCaseDescription> g_taskCaseDescriptions 
     // 77 工厂与关闭生命周期
     {CTaskTestLazyRedoFactoryLifecycle, {"lazy-redo-factory-lifecycle", "工厂与关闭生命周期", "子任务自有工厂优先；在途工厂返回时已关闭，不得再提交或泄漏。"}},
     // 78 待重做项与高级任务
-    {CTaskTestV5PendingRedoPriority, {"v5-pending-redo-priority", "待重做项与高级任务", "原级重做已准备但尚未执行时来高级任务；高级先，原级同级 FIFO。"}},
+    {CTaskTestPendingRedoPriority, {"pending-redo-priority", "待重做项与高级任务", "原级重做已准备但尚未执行时来高级任务；高级先，原级同级 FIFO。"}},
     // 79 嵌套抢占
-    {CTaskTestV5NestedPreemption, {"v5-nested-preemption", "嵌套抢占", "两个优先级先后被打断；各在原级重做一次，最高级优先。"}},
+    {CTaskTestNestedPreemption, {"nested-preemption", "嵌套抢占", "两个优先级先后被打断；各在原级重做一次，最高级优先。"}},
     // 80 已排队的更高级任务
-    {CTaskTestV5QueuedHigherPriority, {"v5-queued-higher-priority", "已排队的更高级任务", "高级项已在队列后续位置；重做不能越过它。"}},
+    {CTaskTestQueuedHigherPriority, {"queued-higher-priority", "已排队的更高级任务", "高级项已在队列后续位置；重做不能越过它。"}},
     // 81 工厂发布竞争
-    {CTaskTestV5FactoryPublicationRace, {"v5-factory-publication-race", "工厂发布竞争", "工厂执行过程中再投递高级或丢弃关闭；顺序和任务所有权正确。"}},
+    {CTaskTestFactoryPublicationRace, {"factory-publication-race", "工厂发布竞争", "工厂执行过程中再投递高级或丢弃关闭；顺序和任务所有权正确。"}},
     // 82 多代连续重做
-    {CTaskTestV5RepeatedRedo, {"v5-repeated-redo", "多代连续重做", "64 个继承工厂代次；延迟构造、原级和执行顺序正确。"}},
+    {CTaskTestRepeatedRedo, {"repeated-redo", "多代连续重做", "64 个继承工厂代次；延迟构造、原级和执行顺序正确。"}},
     // 83 重做成本基准
-    {CTaskTestV5RedoPerformance, {"v5-redo-performance", "重做成本基准", "百万普通执行与 100 次合作打断成对计时；工厂次数准确，同时输出开销。"}},
+    {CTaskTestRedoPerformance, {"redo-performance", "重做成本基准", "百万普通执行与 100 次合作打断成对计时；工厂次数准确，同时输出开销。"}},
     // 84 首次高级发布与交接
-    {CTaskTestV5FirstPriorityRace, {"v5-first-priority-race", "首次高级发布与交接", "第一个高级桶发布恰遇当前任务交接；不能丢抢占或执行项。"}},
+    {CTaskTestFirstPriorityRace, {"first-priority-race", "首次高级发布与交接", "第一个高级桶发布恰遇当前任务交接；不能丢抢占或执行项。"}},
     // 85 关闭与最高级交接
-    {CTaskTestV5ShutdownHandoff, {"v5-shutdown-handoff", "关闭与最高级交接", "丢弃关闭恰遇高级任务交接；运行任务不能漏 stopTask。"}},
+    {CTaskTestShutdownHandoff, {"shutdown-handoff", "关闭与最高级交接", "丢弃关闭恰遇高级任务交接；运行任务不能漏 stopTask。"}},
     // 86 回收批次帮助
-    {CTaskTestV5ReclaimBatches, {"v5-reclaim-batches", "回收批次帮助", "回收邮箱满且帮助者暂停；其他批次仍能推进，无重复释放。"}},
+    {CTaskTestReclaimBatches, {"reclaim-batches", "回收批次帮助", "回收邮箱满且帮助者暂停；其他批次仍能推进，无重复释放。"}},
     // 87 当前任务属性停止
-    {CTaskTestV5CurrentPropertyStop, {"v5-current-property-stop", "当前任务属性停止", "当前项属性匹配不受队列级别过滤影响；排队匹配通知去重且不删除。"}},
+    {CTaskTestCurrentPropertyStop, {"current-property-stop", "当前任务属性停止", "当前项属性匹配不受队列级别过滤影响；排队匹配通知去重且不删除。"}},
     // 88 多线程并发注销
-    {CTaskTestV5ConcurrentRemoval, {"v5-concurrent-removal", "多线程并发注销", "16 个不同 ID 同时 join；成功返回的线程不再残留注册表。"}},
+    {CTaskTestConcurrentRemoval, {"concurrent-removal", "多线程并发注销", "16 个不同 ID 同时 join；成功返回的线程不再残留注册表。"}},
     // 89 重入读保护耗尽
     {CTaskTestReentrantProtectionExhaustion, {"reentrant-protection-exhaustion", "重入读保护耗尽", "回调占最后保护记录时重入；返回 SelfWait，退出回调后恢复。"}},
     // 90 投递结果契约
@@ -276,6 +277,8 @@ static const std::map<int32_t, CTaskTestCaseDescription> g_taskCaseDescriptions 
     {CTaskTestPoolProtectionDestruction, {"pool-protection-destruction", "保护耗尽析构线程池", "占满工作线程四条保护记录，关闭返回容量错误后析构仍等待借用释放并完成全部线程退出。"}},
     // 125 原生通知初始化失败
     {CTaskTestSemaphoreInitialization, {"semaphore-initialization", "原生通知初始化失败", "工作线程两处及池控制通知各注入三种初始化错误；启动拒绝并保留原码，无登记残留，新实例可恢复。"}},
+    {CTaskTestDependencyConfiguration, {"dependency-configuration", "独立队列与默认配置", "逐级满载、非法配置回滚、配置复制、显式线程覆盖默认值，排空后检查执行账本。"}},
+    {CTaskTestRegistryColdFailure, {"registry-cold-failure", "注册表首次分配失败恢复", "首次建表分配失败应无登记；解除故障后直接初始化、提交、执行与注销成功。"}},
 };
 
 std::atomic<int> TestTask::m_live(0);
@@ -617,17 +620,26 @@ static void PriorityFifo()
         TestPost(w, Record(ledger, i + 1), levels[i]);
     }
     std::map<int32_t, int32_t> info;
+#ifndef CTTM_TEST_DLL
     info[-10] = 99;
-    w->getWaitTaskInfo(info);
-    bbCheck(info.size() == 3 && info[1] == 2 && info[2] == 2 && info[3] == 2, "wait info not exact/old entry not cleared");
+    // 第二个输出节点分配失败时必须撤回已写入的第一个级别，随后一次查询仍可成功。
+    CTaskFaultAllocation::begin(2);
+    const CTaskThreadResult partial = w->getWaitTaskInfo(info);
+    CTaskFaultAllocation::end();
+    bbCheck(CTaskFaultAllocation::triggered() && partial.m_status == CTaskThreadNoMemory && info.empty(),
+        "partial priority snapshot survived allocation failure");
+#endif
+    info[-10] = 99;
+    const CTaskThreadResult snapshot = w->getWaitTaskInfo(info);
+    bbCheck(snapshot.m_status == CTaskThreadOk && info.size() == 3 && info[1] == 2 && info[2] == 2 && info[3] == 2, "wait info not exact/old entry not cleared");
     bbCheck(w->hasTask() && w->getWaitTaskCount() == 6 && w->getCurTaskLevel() == INT_MAX, "current included in pending count");
     release = true;
     workers.drain();
     const int expected[] = {2, 4, 3, 6, 1, 5};
     bbCheck(ledger.snapshot() == std::vector<int>(expected, expected + 6), "highest priority / same-level FIFO violated");
     info[42] = 9;
-    w->getWaitTaskInfo(info);
-    bbCheck(info.empty() && !w->hasTask() && !w->getWaitTaskCount(), "queue did not drain");
+    const CTaskThreadResult closed = w->getWaitTaskInfo(info);
+    bbCheck(closed.m_status == CTaskThreadClosed && info.empty() && !w->hasTask() && !w->getWaitTaskCount(), "queue did not drain");
 }
 
 /** 验证高优先级抢占后的重做与原队列相对顺序
@@ -848,17 +860,7 @@ static void ManyProducers(bool tryPost, int count)
                 }
                 else
                 {
-#ifdef CTTM_TEST_NO_LEGACY_SEND_TASK
-                    bbWait([target, task]()
-                    {
-                        const CTaskThreadResult result = target->postTaskResult(task);
-                        bbCheck(result.m_status == CTaskThreadOk && result.m_committed,
-                            "postTask rejected with status=" + bbNumber(result.m_status));
-                        return result.m_committed;
-                    }, "ordinary postTask handles contention internally");
-#else
                     TestPost(target, task);
-#endif
                 }
             }
         }));
@@ -986,23 +988,10 @@ static void IdleWake()
     workers.drain();
 }
 
-/** 仅在旧版基线验证已移除的同步投递接口
+/** 验证异步投递后显式排空，任务只执行一次
 */
-static void SynchronousLegacy()
+static void PostAndDrain()
 {
-#ifndef CTTM_TEST_NO_LEGACY_SEND_TASK
-    std::atomic<int> completed(0);
-    TestWorkers workers;
-    std::shared_ptr<CTaskThread> w = workers.add();
-    w->SendTask(std::make_shared<TestTask>(2, [&completed](TestTask&)
-    {
-        completed = 1;
-    }),
-        2);
-    bbCheck(completed == 1, "SendTask returned before execution");
-    workers.drain();
-#else
-    // SendTask 已按本轮明确需求移除，保留 ID 18 作为取消同步发送后的替代行为验证。
     std::atomic<int> completed(0);
     TestWorkers workers;
     std::shared_ptr<CTaskThread> worker = workers.add();
@@ -1013,7 +1002,245 @@ static void SynchronousLegacy()
         "asynchronous replacement rejected");
     workers.drain();
     bbCheck(completed == 1, "postTask plus explicit drain did not complete");
+}
+
+/** 在独立进程内触发首次创建管理器状态时的分配失败，解除故障后直接从公开入口重试
+*/
+static void RegistryColdFailure()
+{
+    CTaskThreadManager& manager = CTaskThreadManager::instance();
+    CTaskThreadConfig config;
+    uint32_t id = 17;
+    CTaskFaultAllocation::begin(2);
+    const CTaskThreadResult first = manager.initialize(config, id);
+    CTaskFaultAllocation::end();
+    bbCheck(CTaskFaultAllocation::triggered() && first.m_status == CTaskThreadNoMemory &&
+        !first.m_committed && id == 0 && manager.count() == 0, "cold failure reported ready");
+    const uint32_t recovered = manager.init();
+    bbCheck(recovered != 0, "default registry did not recover after transient startup allocation failure");
+    TaskLedger ledger;
+    TestWorkers workers;
+    const std::shared_ptr<CTaskThread> worker = workers.adopt(recovered);
+    TestPost(worker, Record(ledger, 17));
+    workers.drain();
+    bbCheck(ledger.snapshot() == std::vector<int>(1, 17) && manager.count() == 0, "recovered worker did not drain cleanly");
+}
+
+/** 两个级别各自占满配额，验证默认配置复制、逐级覆盖及非法设置回滚。
+*/
+static void DependencyConfiguration()
+{
+    CTaskThreadManager& manager = CTaskThreadManager::instance();
+    CTaskThreadManagerConfig config;
+    bbCheck(config.m_defaultThread.m_entryOnly && config.m_defaultThread.m_cancelableReservations, "unexpected default FIFO modes");
+    for (int32_t mode = 0; mode < 4; ++mode)
+    {
+        CTaskThreadConfig modes;
+        CTaskQueueConfig selected;
+        bbCheck(selected.configureEntryOnly((mode & 1) != 0) == LockFreeQueueSuccess &&
+            selected.configureCancelableReservations((mode & 2) != 0) == LockFreeQueueSuccess &&
+            modes.setPriorityQueueConfig(2, selected).m_committed, "cannot select FIFO modes");
+#ifndef CTTM_TEST_DLL
+        CTaskThreadTestAccess::verifyQueueSettings(modes, 1);
+        CTaskThreadTestAccess::verifyQueueSettings(modes, 2);
 #endif
+        TaskLedger actual;
+        std::atomic<bool> entered(false), release(false);
+        TestWorkers workers;
+        const std::shared_ptr<CTaskThread> worker = workers.add(modes);
+        Block(worker, entered, release);
+        TestPost(worker, Record(actual, -1), 1);
+        std::vector<int> expected;
+        for (int n = 0; n < 129; ++n)
+        {
+            expected.push_back(n);
+            TestPost(worker, Record(actual, n), 2);
+        }
+        expected.push_back(-1);
+        release.store(true);
+        workers.drain();
+        bbCheck(actual.snapshot() == expected, "configured FIFO lost, duplicated or reordered a task");
+    }
+    // 各物理池保留一个哨兵，3、2 个物理节点分别可以暂存 2、1 个任务。
+    config.m_defaultThread.m_queue.initialCapacity = 3;
+    config.m_defaultThread.m_queue.maximumCapacity = 3;
+    CTaskQueueConfig priority = config.m_defaultThread;
+    LockFreeQueuePoolConfig nodes(priority.m_queue);
+    nodes.initialCapacity = 2;
+    nodes.maximumCapacity = 2;
+    nodes.maximumProducers = 5;
+    nodes.producerYieldInterval = 37;
+    nodes.growThreshold = 1;
+    bbCheck(priority.configurePool(nodes) == LockFreeQueueSuccess && priority.m_queue.producerYieldInterval == 37 &&
+        priority.m_queue.maximumProducers == 5, "valid pool registration settings were lost");
+    nodes.maximumCapacity = 1;
+    bbCheck(priority.configurePool(nodes) == LockFreeQueueInvalidConfiguration && priority.m_queue.maximumCapacity == 2,
+        "invalid pool config changed prior maximum");
+    bbCheck(priority.setGrowPolicy([](const LockFreeQueueGrowContext&) -> size_t { return 7; }) == LockFreeQueueSuccess &&
+        priority.setShrinkPolicy([](const LockFreeQueueShrinkContext&) { return LockFreeQueueShrinkDecision(); }) == LockFreeQueueSuccess,
+        "queue policy setters rejected");
+    LockFreeQueueGrowContext growth = {};
+    bbCheck(priority.m_queueGrow(growth) == 7, "growth policy copy lost");
+#ifndef CTTM_TEST_DLL
+    // 捕获非空向量，使策略复制一定需要分配；注入只覆盖设置调用，随后核对旧配置仍可用。
+    const std::vector<size_t> values(8, 17);
+    const LockFreeQueueGrowPolicy newGrow = [values](const LockFreeQueueGrowContext&) { return values[0]; };
+    const LockFreeQueueShrinkPolicy newShrink = [values](const LockFreeQueueShrinkContext&)
+    {
+        LockFreeQueueShrinkDecision decision = {values[0], 1};
+        return decision;
+    };
+    CTaskFaultAllocation::begin(1);
+    const LockFreeQueueResult growResult = priority.setGrowPolicy(newGrow);
+    CTaskFaultAllocation::end();
+    bbCheck(CTaskFaultAllocation::triggered() && growResult == LockFreeQueueAllocationFailure &&
+        priority.m_queueGrow(growth) == 7, "failed grow policy replacement changed the active callback");
+    CTaskFaultAllocation::begin(1);
+    const LockFreeQueueResult shrinkResult = priority.setShrinkPolicy(newShrink);
+    CTaskFaultAllocation::end();
+    LockFreeQueueShrinkContext shrink = {};
+    bbCheck(CTaskFaultAllocation::triggered() && shrinkResult == LockFreeQueueAllocationFailure &&
+        priority.m_queueShrink(shrink).shrinkCount == 0, "failed shrink policy replacement changed the active callback");
+    LockFreeQueuePoolConfig replacement = priority.m_queue;
+    replacement.initialCapacity = 8;
+    replacement.maximumCapacity = 16;
+    replacement.m_onGrowth = [values](size_t, uint64_t) { (void)values; };
+    CTaskFaultAllocation::begin(1);
+    const LockFreeQueueResult poolResult = priority.configurePool(replacement);
+    CTaskFaultAllocation::end();
+    bbCheck(CTaskFaultAllocation::triggered() && poolResult == LockFreeQueueAllocationFailure &&
+        priority.m_queue.initialCapacity == 2 && priority.m_queue.maximumCapacity == 2 && !priority.m_queue.m_onGrowth,
+        "failed FIFO pool replacement changed capacity or notification");
+#endif
+    bbCheck(priority.configureAutomaticMaintenance(1, 2) == LockFreeQueueSuccess &&
+        priority.configureConsumerYieldInterval(3) == LockFreeQueueSuccess &&
+        priority.configureCapacityWait(0, 2) == LockFreeQueueSuccess &&
+        priority.configureProducerCounters(false) == LockFreeQueueSuccess, "valid FIFO settings rejected");
+    bbCheck(priority.configureAutomaticMaintenance(0, 4) == LockFreeQueueInvalidConfiguration &&
+        priority.configureConsumerYieldInterval(0) == LockFreeQueueInvalidConfiguration &&
+        priority.configureCapacityWait(4, 0) == LockFreeQueueInvalidConfiguration &&
+        priority.m_maintenanceInterval == 1 && priority.m_maintenanceBudget == 2 && priority.m_consumerYieldInterval == 3 &&
+        priority.m_capacityRetries == 0 && priority.m_capacitySleepMilliseconds == 2 && !priority.m_distributedCounters,
+        "rejected FIFO settings changed earlier values");
+    bbCheck(config.m_defaultThread.setPriorityQueueConfig(2, priority).m_committed, "valid priority override rejected");
+#ifndef CTTM_TEST_DLL
+    CTaskThreadTestAccess::verifyQueueSettings(config.m_defaultThread, 1);
+    CTaskThreadTestAccess::verifyQueueSettings(config.m_defaultThread, 2);
+#endif
+    bbCheck(config.m_defaultThread.hasQueueShrinkPolicy(), "priority shrink policy ignored during maintenance");
+    bbCheck(config.m_defaultThread.setPriorityQueueConfig(0, priority).m_status == CTaskThreadInvalid, "invalid level accepted");
+    for (int32_t i = 0; i < 5; ++i)
+    {
+        CTaskQueueConfig invalid(priority);
+        if (i == 0)
+        {
+            invalid.m_maintenanceInterval = 0;
+        }
+        if (i == 1)
+        {
+            invalid.m_maintenanceBudget = 0;
+        }
+        if (i == 2)
+        {
+            invalid.m_consumerYieldInterval = 65537;
+        }
+        if (i == 3)
+        {
+            invalid.m_capacitySleepMilliseconds = 0;
+        }
+        if (i == 4)
+        {
+            invalid.m_queue.initialCapacity = 3;
+        }
+        bbCheck(config.m_defaultThread.setPriorityQueueConfig(2, invalid).m_status == CTaskThreadInvalid,
+            "invalid override replaced valid queue configuration");
+    }
+    // 一级覆盖有效时也必须校验其余级别共用的默认 FIFO，初始化失败不能留下登记。
+    CTaskThreadConfig masked;
+    bbCheck(masked.setPriorityQueueConfig(1, priority).m_committed, "valid level-one override rejected");
+    masked.m_maintenanceInterval = 0;
+    uint32_t invalidId = 17;
+    const CTaskThreadResult invalidDefault = manager.initialize(masked, invalidId);
+    if (invalidDefault.m_committed)
+    {
+        manager.waitForEnd(invalidId);
+    }
+    bbCheck(invalidDefault.m_status == CTaskThreadInvalid && !invalidDefault.m_committed && invalidId == 0 &&
+        manager.count() == 0, "level-one override masked invalid default FIFO");
+    bbCheck(manager.configure(config).m_status == CTaskThreadOk, "default thread configuration rejected");
+    config.m_defaultThread.m_maximumTasks = 0;
+    const uint32_t id = manager.init();
+    std::shared_ptr<CTaskThread> worker = manager.getThreadInterface(id);
+    bbCheck(id != 0 && worker, "configured default worker failed");
+    TaskLedger ledger;
+    std::atomic<bool> entered(false), release(false);
+    TestWorkers workers;
+    workers.m_ids.push_back(id);
+    Block(worker, entered, release);
+    const CTaskThreadResult first = worker->tryPostTaskResult(Record(ledger, 1), 1, true, false);
+    const CTaskThreadResult second = worker->tryPostTaskResult(Record(ledger, 2), 1, true, false);
+    const CTaskThreadResult third = worker->tryPostTaskResult(Record(ledger, 3), 2, true, false);
+    const CTaskThreadResult low = worker->tryPostTaskResult(Record(ledger, 4), 1);
+    const CTaskThreadResult high = worker->tryPostTaskResult(Record(ledger, 5), 2);
+    release = true;
+    workers.drain();
+    bbCheck(first.m_committed && second.m_committed && third.m_committed, "premature rejection at levels 1/1/2: " +
+        bbNumber(first.m_status) + "/" + bbNumber(second.m_status) + "/" + bbNumber(third.m_status));
+    bbCheck(!low.m_committed && !high.m_committed && low.m_status == CTaskThreadCapacity &&
+        high.m_status == CTaskThreadCapacity, "priority queues did not enforce independent capacities");
+    const int expected[] = {3, 1, 2};
+    bbCheck(ledger.snapshot() == std::vector<int>(expected, expected + 3), "configuration changed delivery order");
+    const uint32_t explicitId = manager.init(config.m_defaultThread);
+    worker = manager.getThreadInterface(explicitId);
+    bbCheck(worker && worker->tryPostTaskResult(Record(ledger, 6)).m_status == CTaskThreadCapacity,
+        "explicit worker config did not override manager default");
+    bbCheck(manager.waitForEnd(explicitId).m_status == CTaskThreadOk && manager.count() == 0, "explicit worker cleanup failed");
+
+    for (int32_t source = 0; source < 3; ++source)
+    {
+        // 每个工作线程只安装一个失败策略，确保错误来自选中的池。
+        CTaskThreadConfig throwing;
+        if (source == 0)
+        {
+            throwing.m_taskMap.shrinkPolicy = [](const LockFreeHashMapShrinkContext&) -> LockFreeHashMapShrinkDecision
+            {
+                throw std::runtime_error("intentional slot maintenance error");
+            };
+        }
+        else if (source == 1)
+        {
+            bbCheck(throwing.setShrinkPolicy([](const LockFreeQueueShrinkContext&) -> LockFreeQueueShrinkDecision
+            {
+                throw std::runtime_error("intentional FIFO maintenance error");
+            }) == LockFreeQueueSuccess, "cannot install FIFO shrink policy");
+        }
+        else
+        {
+            throwing.m_priorityMap.nodes.shrink = [](const LockFreeMapShrinkContext&) -> LockFreeMapShrinkDecision
+            {
+                throw std::runtime_error("intentional priority map maintenance error");
+            };
+        }
+        worker = workers.add(throwing);
+        bbWait([worker]() { return worker->statistics().m_errors > 0; }, "maintenance error missing from worker statistics");
+        TestPost(worker, Record(ledger, 7 + source));
+        workers.drain();
+    }
+    const int afterError[] = {3, 1, 2, 7, 8, 9};
+    bbCheck(ledger.snapshot() == std::vector<int>(afterError, afterError + 6), "maintenance error interrupted normal task execution");
+
+    CTaskThreadPoolConfig poolConfig;
+    poolConfig.m_initialThreads = 1;
+    poolConfig.m_maximumThreads = 1;
+    poolConfig.m_checkMilliseconds = 2;
+    poolConfig.m_members.values.shrink = [](const LockFreeMapShrinkContext&) -> LockFreeMapShrinkDecision
+    {
+        throw std::runtime_error("intentional pool member map maintenance error");
+    };
+    CTaskThreadPool pool;
+    bbCheck(pool.initialize(poolConfig).m_status == CTaskThreadOk, "member map policy prevented pool startup");
+    bbWait([&pool]() { return pool.statistics().m_errors > 0; }, "member map error missing from pool statistics");
+    bbCheck(pool.shutdown(true).m_status == CTaskThreadOk && manager.count() == 0, "member map policy prevented pool cleanup");
 }
 
 /** 按顺序模型验证多优先级任务的选择结果
@@ -1255,12 +1482,25 @@ static void CallbackSelfWait()
 static void NativePriority()
 {
     CTaskThreadConfig config;
+#ifdef __EMSCRIPTEN__
     config.m_systemPriority = CTaskPriorityNormal;
+    uint32_t refused = 0;
+    const CTaskThreadResult unsupported = CTaskThreadManager::instance().initialize(config, refused);
+    bbCheck(unsupported.m_status == CTaskThreadUnsupported && !unsupported.m_committed && refused == 0,
+        "unsupported priority left a registered thread");
+    config.m_systemPriority = CTaskPriorityInherited;
+#else
+    config.m_systemPriority = CTaskPriorityNormal;
+#endif
     TestWorkers workers;
     const uint32_t id = CTaskThreadManager::instance().init(config);
     bbCheck(id != 0, "normal priority startup failed");
     std::shared_ptr<CTaskThread> worker = workers.adopt(id);
+#ifdef __EMSCRIPTEN__
+    bbCheck(worker->setSystemPriority(CTaskPriorityNormal).m_status == CTaskThreadUnsupported, "Wasm OS priority accepted");
+#else
     bbCheck(worker->setSystemPriority(CTaskPriorityNormal).m_committed, "normal priority runtime update failed");
+#endif
     bbCheck(worker->setSystemPriority(static_cast<CTaskSystemPriority>(999)).m_status == CTaskThreadInvalid, "invalid priority accepted");
     workers.drain();
     bbCheck(worker->setSystemPriority(CTaskPriorityNormal).m_status == CTaskThreadClosed, "priority touched joined native handle");
@@ -1395,12 +1635,8 @@ std::vector<BlackBoxCase> taskCases()
     {
         ManyProducers(true, 100);
     });
-    add("legacy-20-thread-dispatch", "10 legacy types dispatch 200 bounded children", false, RecursiveDispatch);
-#ifdef CTTM_TEST_NO_LEGACY_SEND_TASK
-    add("post-and-explicit-drain", "async post plus explicit drain preserves completion", false, SynchronousLegacy);
-#else
-    add("legacy-send-task", "synchronous task completes before return", false, SynchronousLegacy);
-#endif
+    add("recursive-20-thread-dispatch", "10 task types dispatch 200 bounded children", false, RecursiveDispatch);
+    add("post-and-explicit-drain", "async post plus explicit drain preserves completion", false, PostAndDrain);
     add("bulk-uninit-all", "20 running threads stopped and joined", false, BulkExit);
     add("idle-wakeup", "100 single-level plus 100 changing-level empty transitions have no lost wakeup", false, IdleWake);
     add("repeated-lifecycle-ownership", "100 lifecycles; no retained TestTask objects", true, RepeatLifecycle);
@@ -1435,16 +1671,16 @@ std::vector<BlackBoxCase> taskCases()
     const std::vector<BlackBoxCase> regression = taskThreadRegressionCases(static_cast<int32_t>(cases.size()) + 1);
     cases.insert(cases.end(), regression.begin(), regression.end());
 #ifndef CTTM_TEST_DLL
-    add("v3-read-domain", "read leases, delayed reclamation, concurrent close", false, taskV3ReadDomainTest);
-    add("v3-task-storage", "bounded slots, reclamation, growth, shrink, concurrent allocation", false, taskV3StorageTest);
-    add("v3-storage-failure", "allocation/policy failure rollback and delayed shrink floor", false, taskV3StorageFailureTest);
-    add("v3-queue-ready", "FIFO across segments and explicit reclamation after empty checks", false, taskV3QueueReadyTest);
-    add("v3-ready-index", "highest-priority publication and consumer lowering race", false, taskV3ReadyIndexTest);
-    add("v3-queue-counters", "bounded concurrent producers, exact count, FIFO and counter reset", true, taskV3QueueCounterTest);
-    add("v3-queue-batch", "bounded prefix, cross-segment FIFO and exact exception commit count", false, taskV3QueueBatchTest);
+    add("read-domain", "read leases, delayed reclamation, concurrent close", false, taskReadDomainTest);
+    add("task-storage", "bounded slots, reclamation, growth, shrink, concurrent allocation", false, taskStorageTest);
+    add("storage-failure", "allocation/policy failure rollback and delayed shrink floor", false, taskStorageFailureTest);
+    add("queue-ready", "FIFO across segments and explicit reclamation after empty checks", false, taskQueueReadyTest);
+    add("ready-index", "highest-priority publication and consumer lowering race", false, taskReadyIndexTest);
+    add("queue-counters", "bounded concurrent producers, exact count, FIFO and counter reset", true, taskQueueCounterTest);
+    add("queue-batch", "bounded prefix, cross-segment FIFO and exact exception commit count", false, taskQueueBatchTest);
 #else
-    const char* moduleNames[] = {"v3-read-domain", "v3-task-storage", "v3-storage-failure", "v3-queue-ready",
-        "v3-ready-index", "v3-queue-counters", "v3-queue-batch"};
+    const char* moduleNames[] = {"read-domain", "task-storage", "storage-failure", "queue-ready",
+        "ready-index", "queue-counters", "queue-batch"};
     for (size_t i = 0; i < 7; ++i)
     {
         add(moduleNames[i], "internal module coverage belongs to static build", i == 5, std::function<void()>());
@@ -1454,14 +1690,14 @@ std::vector<BlackBoxCase> taskCases()
     add("prefetched-priority-redo-stop", "local prefix retains priority, redo front, property stop and FIFO", false, taskPrefetchedPriorityTest);
     add("priority-wake-without-heartbeat", "200 high-priority idle/burst transitions finish without 60s heartbeat", false, taskPriorityWakeTest);
 #ifndef CTTM_TEST_DLL
-    add("external-queue-entry", "borrowed lifetime, mixed FIFO, exception prefix, capacity and concurrent exact delivery", true, taskV4QueueEntryTest);
+    add("external-queue-entry", "borrowed lifetime, mixed FIFO, exception prefix, capacity and concurrent exact delivery", true, taskQueueEntryTest);
 #else
     add("external-queue-entry", "external entry module coverage belongs to static build", true, std::function<void()>());
     cases.back().m_unavailableReason = "module coverage tested in static build";
 #endif
 #ifndef CTTM_TEST_DLL
-    add("map-buffer-maintenance", "concurrent maintenance preserves keys and releases reusable buffers", false, taskV4MapMaintenanceTest);
-    add("prepared-benchmark-validator", "detect balanced duplicates/missing and per-level reordering", false, taskV4BenchmarkValidatorTest);
+    add("map-buffer-maintenance", "concurrent maintenance preserves keys and releases reusable buffers", false, taskMapMaintenanceTest);
+    add("prepared-benchmark-validator", "detect balanced duplicates/missing and per-level reordering", false, taskBenchmarkValidatorTest);
 #else
     add("map-buffer-maintenance", "module coverage belongs to static build", false, std::function<void()>());
     cases.back().m_unavailableReason = "module coverage tested in static build";
@@ -1472,7 +1708,7 @@ std::vector<BlackBoxCase> taskCases()
     add("external-entry-quota", "entry-only module coverage belongs to static build", true, std::function<void()>());
     cases.back().m_unavailableReason = "module coverage tested in static build";
 #else
-    add("external-entry-quota", "bounded entry credits, growth failure, shrink, lifetime and concurrent FIFO", true, taskV4EntryQuotaTest);
+    add("external-entry-quota", "bounded entry credits, growth failure, shrink, lifetime and concurrent FIFO", true, taskEntryQuotaTest);
 #endif
 #ifdef CTTM_TEST_DLL
     cases[27].m_unavailableReason = "private module helpers tested in static build; DLL has public API tests";
@@ -1490,20 +1726,20 @@ std::vector<BlackBoxCase> taskCases()
     cases.back().m_unavailableReason = "executable operator-new injection does not cover DLL allocation";
 #endif
     add("lazy-redo-factory-lifecycle", "child factory overrides inheritance; in-flight factory shutdown cannot commit redo", false, taskRedoFactoryLifecycleTest);
-    add("v5-pending-redo-priority", "higher task precedes a prepared low redo and equal-level FIFO", false, taskV5PendingRedoPriorityTest);
-    add("v5-nested-preemption", "two interrupted levels each redo once at their original priority", false, taskV5NestedPreemptionTest);
-    add("v5-queued-higher-priority", "already queued higher work cannot be bypassed by redo", false, taskV5QueuedHigherPriorityTest);
-    add("v5-factory-publication-race", "higher post and discard during factory obey priority and ownership", false, taskV5FactoryPublicationRaceTest);
-    add("v5-repeated-redo", "64 inherited generations preserve original priority and lazy construction", false, taskV5RepeatedRedoTest);
-    add("v5-redo-performance", "one million ordinary tasks and 100 cooperative interruptions, lazy factory counts and paired timings", false, taskV5RedoPerformanceTest);
-    add("v5-first-priority-race", "first higher priority publication racing with task handoff cannot lose preemption", false, taskV5FirstPriorityRaceTest);
-    add("v5-shutdown-handoff", "discard shutdown racing with highest-priority task handoff cannot lose stopTask", false, taskV5ShutdownHandoffTest);
-    add("v5-reclaim-batches", "full reclaim mailboxes and a paused helper cannot block other batches or duplicate release", false, taskV5ReclaimBatchesTest);
+    add("pending-redo-priority", "higher task precedes a prepared low redo and equal-level FIFO", false, taskPendingRedoPriorityTest);
+    add("nested-preemption", "two interrupted levels each redo once at their original priority", false, taskNestedPreemptionTest);
+    add("queued-higher-priority", "already queued higher work cannot be bypassed by redo", false, taskQueuedHigherPriorityTest);
+    add("factory-publication-race", "higher post and discard during factory obey priority and ownership", false, taskFactoryPublicationRaceTest);
+    add("repeated-redo", "64 inherited generations preserve original priority and lazy construction", false, taskRepeatedRedoTest);
+    add("redo-performance", "one million ordinary tasks and 100 cooperative interruptions, lazy factory counts and paired timings", false, taskRedoPerformanceTest);
+    add("first-priority-race", "first higher priority publication racing with task handoff cannot lose preemption", false, taskFirstPriorityRaceTest);
+    add("shutdown-handoff", "discard shutdown racing with highest-priority task handoff cannot lose stopTask", false, taskShutdownHandoffTest);
+    add("reclaim-batches", "full reclaim mailboxes and a paused helper cannot block other batches or duplicate release", false, taskReclaimBatchesTest);
 #ifdef CTTM_TEST_DLL
     cases.back().m_unavailableReason = "private reclaim model tested in static build; DLL has public lifecycle coverage";
 #endif
-    add("v5-current-property-stop", "current property match ignores queued-level filter; queued matches are deduplicated and kept", false, taskV5CurrentPropertyStopTest);
-    add("v5-concurrent-removal", "16 concurrent joins on different IDs leave no successful-but-registered worker", true, taskV5ConcurrentRemovalTest);
+    add("current-property-stop", "current property match ignores queued-level filter; queued matches are deduplicated and kept", false, taskCurrentPropertyStopTest);
+    add("concurrent-removal", "16 concurrent joins on different IDs leave no successful-but-registered worker", true, taskConcurrentRemovalTest);
 #ifndef CTTM_TEST_DLL
     add("reentrant-protection-exhaustion", "callback holding last read protection returns SelfWait; later recovery remains valid", false, taskReentrantProtectionTest);
 #else
@@ -1586,12 +1822,30 @@ std::vector<BlackBoxCase> taskCases()
 #ifdef CTTM_TEST_DLL
     cases.back().m_unavailableReason = "native initialization fault injection belongs to static build";
 #endif
+    add("dependency-configuration", "independent queue capacities and frozen manager defaults", false, DependencyConfiguration);
+    add("registry-cold-failure", "recover from cold registry allocation failure", false, RegistryColdFailure);
+#ifdef CTTM_TEST_DLL
+    cases.back().m_unavailableReason = "allocation interposition requires the static library";
+#endif
     bbCheck(cases.size() == g_taskCaseDescriptions.size(), "test metadata coverage mismatch");
     for (size_t i = 0; i < cases.size(); ++i)
     {
         const std::map<int32_t, CTaskTestCaseDescription>::const_iterator item = g_taskCaseDescriptions.find(cases[i].m_id);
         bbCheck(item != g_taskCaseDescriptions.end() && std::string(cases[i].m_name) == item->second.m_key,
             "stable test identity changed");
+#if defined(CTTM_TEST_SINGLE_PROCESS)
+        if (cases[i].m_id == CTaskTestNativeAutomationSelfTest ||
+            (cases[i].m_id >= CTaskTestQueueEmptyScanReturnValue && cases[i].m_id <= CTaskTestQueuePartialReturnPublication))
+        {
+            cases[i].m_unavailableReason = "requires native subprocess isolation";
+        }
+#endif
+#ifndef _WIN32
+        if (cases[i].m_id >= 109 && cases[i].m_id <= 117)
+        {
+            cases[i].m_unavailableReason = "fixed CPU affinity scenarios require the Windows test backend";
+        }
+#endif
         cases[i].m_name = item->second.m_name;
         cases[i].m_expectation = item->second.m_expectation;
     }

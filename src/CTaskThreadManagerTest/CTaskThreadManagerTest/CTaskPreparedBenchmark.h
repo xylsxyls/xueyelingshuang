@@ -4,9 +4,6 @@
 #include <vector>
 #include <string>
 
-typedef CTaskThread CTaskPreparedThread;
-typedef CTaskThreadManager CTaskPreparedManager;
-
 /** 采样时间由生产者和单消费者分别写入；全部线程收敛后读取
 */
 struct CTaskPreparedSample
@@ -259,7 +256,7 @@ public:
     @param [in] target 单消费者线程
     @param [in] producer 生产者索引
     */
-    CTaskPreparedProducer(CTaskPreparedState& state, const std::shared_ptr<CTaskPreparedThread>& target, size_t producer);
+    CTaskPreparedProducer(CTaskPreparedState& state, const std::shared_ptr<CTaskThread>& target, size_t producer);
 
     /** 同步开始后全速提交；异常记录为失败
     */
@@ -278,7 +275,7 @@ private:
     // 借用本轮状态
     CTaskPreparedState* m_state;
     // 生命周期覆盖本生产者的目标
-    std::shared_ptr<CTaskPreparedThread> m_target;
+    std::shared_ptr<CTaskThread> m_target;
     // 生产者索引
     size_t m_producer;
 };
@@ -308,7 +305,7 @@ private:
     CTaskPreparedState* m_state;
 };
 
-/** 预创建任务的吞吐及延迟基准；同一源码分别链接 V1/V3/V4/V5
+/** 预创建任务的吞吐及延迟基准；校验提交、完成和排空的独立时刻
 @param [in] argc 六个参数，包含程序名
 @param [in] argv 程序名、throughput/throughput-reused/latency 等模式、生产者数、总数、优先级数、CSV 路径
 @return 0 表示完整性检查及报告写入成功，非 0 失败

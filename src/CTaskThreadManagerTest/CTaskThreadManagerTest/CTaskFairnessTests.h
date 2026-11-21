@@ -9,7 +9,7 @@
 struct CTaskFairnessCounter
 {
 public:
-    // 当前执行流累计成功数，每 64 项或退出时发布
+    // 当前执行流逐项发布的成功数
     std::atomic<uint64_t> m_published;
     // 该执行流已开始参与测量
     std::atomic<bool> m_started;
@@ -19,8 +19,10 @@ public:
     unsigned char m_padding[128];
     // 线程结束后的精确计数
     uint64_t m_count;
-    // 相邻64项实际进展间隔，毫秒，由所属执行线程写入
+    // 相邻两次实际进展的最大间隔，毫秒，由所属执行线程写入
     uint64_t m_maxGap;
+    // 最大间隔结束时刻，配合测量停止点定位停顿发生在生产期还是退出阶段
+    uint64_t m_maxGapAt;
     // 所属执行线程上次记录进展的时间
     uint64_t m_eventLast;
     // 线程 CPU 时间，100 纳秒，非 Windows 为零
@@ -37,9 +39,10 @@ public:
     */
     CTaskFairnessCounter();
 
-    /** 发布本线程进展并更新事件时间间隔
+    /** 发布一次已经完成的操作，并更新相邻成功事件之间的间隔
+    @param [in] now 本次实际进展的单调时钟毫秒值
     */
-    void publish();
+    void publish(uint64_t now);
 
 };
 

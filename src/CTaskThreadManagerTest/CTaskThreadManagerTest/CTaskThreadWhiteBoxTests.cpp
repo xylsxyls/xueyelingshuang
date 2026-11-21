@@ -96,13 +96,13 @@ static void ManagerSequenceBoundary()
 */
 static void HelpClosedBucket()
 {
-    for (size_t mode = 0; mode < 2; ++mode)
+    for (size_t mode = 0; mode < 4; ++mode)
     {
         std::atomic<int> calls(0);
         std::atomic<bool> entered(false), release(false);
         TestWorkers workers;
         CTaskThreadConfig config;
-        if (mode == 0)
+        if (mode % 2 == 0)
         {
             // 有限池的1级桶可退役；默认配置的固定桶不能人工制造运行期关闭。
             config.m_priorityMap.nodes.initialCapacity = 8;
@@ -110,7 +110,7 @@ static void HelpClosedBucket()
             config.m_priorityMap.values.initialCapacity = 8;
             config.m_priorityMap.values.maximumCapacity = 8;
         }
-        const int32_t level = mode == 0 ? 1 : 17;
+        const int32_t level = mode % 2 == 0 ? 1 : 17;
         const uint32_t id = CTaskThreadManager::instance().init(config);
         bbCheck(id != 0, "closed bucket fixture initialization failed");
         const std::shared_ptr<CTaskThread> worker = workers.adopt(id);
@@ -138,10 +138,16 @@ static void HelpClosedBucket()
         }, "closed bucket fixture consumer entered");
         bbCheck(calls.load() == 1, "fixture did not prepare exactly one completed task");
         // 消费者停在业务门控，不能替测试摘桶；必须由真实投递路径帮助替换。
-        bbCheck(CTaskThreadTestAccess::closeIdleBucket(*worker, level), "cannot close recyclable empty queue");
-        const CTaskThreadResult posted = worker->postTaskResult(task, level);
-        bbCheck(posted.m_committed && posted.m_status == CTaskThreadOk,
-            "producer could not help remove closed bucket");
+        if (mode < 2)
+        {
+            bbCheck(CTaskThreadTestAccess::closeIdleBucket(*worker, level, nullptr), "cannot close recyclable empty queue");
+            const CTaskThreadResult posted = worker->postTaskResult(task, level);
+            bbCheck(posted.m_committed && posted.m_status == CTaskThreadOk, "producer could not help remove closed bucket");
+        }
+        else
+        {
+            bbCheck(!CTaskThreadTestAccess::closeIdleBucket(*worker, level, task), "stale empty observation closed a bucket with a committed task");
+        }
         release.store(true, std::memory_order_release);
         workers.drain();
         bbCheck(calls.load() == 2, "replacement bucket lost or duplicated a task");

@@ -12,9 +12,15 @@ class CTaskThreadTestAccess
 {
 public:
     /** 静止注入三种Semaphore初始化错误，检查工作线程及控制线程在启动前拒绝
-    不占用真实系统资源制造故障；验证状态、原生错误、未提交及正常新实例恢复
+    三处通知分别读回九项等待策略和双池容量，验证非法设置保留原值；注入失败后核对原生错误、未提交及新实例恢复
     */
     static void semaphoreInitializationTest();
+
+    /** 由真实优先级桶初始化队列，读取原生队列字段核对传入参数。
+    @param [in] config 已指定逐级覆盖项的线程配置
+    @param [in] level 静止构造的桶级别
+    */
+    static void verifyQueueSettings(const CTaskThreadConfig& config, int32_t level);
 
     /** 静止设置线程记录序号，部分尾段仅供当前测试线程随后投递
     @param [in,out] thread 空闲线程，外部保证没有投递
@@ -58,9 +64,10 @@ public:
     /** 关闭允许退役的空桶但不摘除，验证生产者能帮助完成删除
     @param [in,out] thread 工作线程
     @param [in] level 非固定桶级别；调用方须控制消费者停在其他桶且本桶已排空
+    @param [in] interveningTask 可空。非空时在观察为空与尝试关闭之间经公开接口完成一次投递
     @return 是否关闭成功
     */
-    static bool closeIdleBucket(CTaskThread& thread, int32_t level);
+    static bool closeIdleBucket(CTaskThread& thread, int32_t level, const std::shared_ptr<CTask>& interveningTask);
 
     /** 模拟已完成投递的迟到抢占通知
     @param [in,out] thread 正在执行低优先级任务的线程

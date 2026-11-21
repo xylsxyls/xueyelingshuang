@@ -77,7 +77,7 @@ public:
     std::atomic<uint64_t> m_errors;
     // 最后提交时刻
     std::atomic<uint64_t> m_submitTime;
-    // 最后执行完成时刻
+    // 当前场景的完成终点：吞吐取最后执行完成，往返取调用方观察完成，逐次建线程还包含注销。
     std::atomic<uint64_t> m_finishTime;
     // 保持消费者写入与调用方相邻栈变量至少相隔一个完整缓存行。
     unsigned char m_tailPadding[128];
@@ -111,7 +111,7 @@ private:
     uint64_t m_timestamp;
 };
 
-/** 独立生产任务，同一代码分别链接原版和新版
+/** 独立生产任务，记录已接纳、完成、延迟和资源观察
 */
 class CTaskBenchmarkProducer : public CTask
 {

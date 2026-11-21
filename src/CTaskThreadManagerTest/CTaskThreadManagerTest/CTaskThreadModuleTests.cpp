@@ -54,6 +54,15 @@ void taskThreadModelsTest()
     CTaskPriorityBucket bucket(7);
     bbCheck(bucket.initialize(config).m_status == CTaskThreadOk, "bucket configuration failed");
     bbCheck(bucket.m_level == 7 && bucket.m_queued == 0 && bucket.m_queue.empty(), "bucket not empty");
+    bbCheck(bucket.m_writers.enter(), "cannot admit bucket producer");
+    bucket.reserveQueued();
+    bucket.reserveQueued();
+    bucket.m_writers.leave();
+    bbCheck(!bucket.m_writers.closeIfEmpty() && bucket.m_queued == 2, "queued reservations failed to protect bucket");
+    bucket.releaseQueued();
+    bbCheck(!bucket.m_writers.closeIfEmpty() && bucket.m_queued == 1, "partial rollback dropped bucket protection");
+    bucket.releaseQueued();
+    bbCheck(bucket.m_queued == 0 && bucket.m_writers.closeIfEmpty(), "final dequeue or rollback blocked retirement");
     bbCheck(CTaskResultAdapter::queue(LockFreeQueueCapacityLimit).m_status == CTaskThreadCapacity, "capacity conversion lost");
     bbCheck(CTaskResultAdapter::map(LOCK_FREE_MAP_COMMITTED).m_committed, "map commit conversion lost");
     bbCheck(CTaskResultAdapter::queue(LockFreeQueueResourceUnavailable).m_status == CTaskThreadResourceUnavailable &&
@@ -64,7 +73,7 @@ void taskThreadModelsTest()
         "pure contention lost internal retry classification");
     bbCheck(CTaskResultAdapter::map(LOCK_FREE_MAP_RESERVED).m_status == CTaskThreadCapacity &&
         CTaskResultAdapter::map(LOCK_FREE_MAP_RECORD_LIMIT).m_status == CTaskThreadCapacity &&
-        CTaskResultAdapter::hash(LockFreeHashMapResult(LockFreeHashMapProtectionUnavailable)).m_status == CTaskThreadCapacity,
+        CTaskResultAdapter::queue(LockFreeQueueGrowthDeclined).m_status == CTaskThreadCapacity,
         "bounded resource exhaustion was reported as contention");
     bbCheck(config.m_maximumTasks == -1 && config.m_queue.growThreshold == 0, "incorrect unlimited/on-demand defaults");
     bbCheck(config.m_priorityMap.nodes.maximumCapacity == -1 && config.m_queue.maximumProducers > 1, "invalid map/queue defaults");
@@ -83,11 +92,24 @@ void taskThreadModelsTest()
     const CTaskThreadResult invalid = CTaskThreadPriority::apply(thread, static_cast<CTaskSystemPriority>(999));
     passed = passed && invalid.m_status == CTaskThreadInvalid && !invalid.m_committed;
     const CTaskThreadResult normal = CTaskThreadPriority::apply(thread, CTaskPriorityNormal);
+#ifdef __EMSCRIPTEN__
+    passed = passed && normal.m_status == CTaskThreadUnsupported && !normal.m_committed;
+#else
     passed = passed && normal.m_status == CTaskThreadOk && normal.m_committed;
+#endif
 #ifdef _WIN32
     passed = passed && GetThreadPriority(thread.native_handle()) == THREAD_PRIORITY_NORMAL;
-    const CTaskThreadResult low = CTaskThreadPriority::apply(thread, CTaskPriorityLow);
-    passed = passed && low.m_committed && GetThreadPriority(thread.native_handle()) == THREAD_PRIORITY_BELOW_NORMAL;
+    const CTaskSystemPriority levels[] = {CTaskPriorityIdle, CTaskPriorityLow, CTaskPriorityHigh, CTaskPriorityHighest};
+    const int native[] = {THREAD_PRIORITY_IDLE, THREAD_PRIORITY_BELOW_NORMAL, THREAD_PRIORITY_ABOVE_NORMAL, THREAD_PRIORITY_HIGHEST};
+    for (size_t i = 0; i < sizeof(levels) / sizeof(levels[0]); ++i)
+    {
+        const CTaskThreadResult changed = CTaskThreadPriority::apply(thread, levels[i]);
+        passed = passed && changed.m_status == CTaskThreadOk && changed.m_committed && changed.m_nativeError == 0 &&
+            GetThreadPriority(thread.native_handle()) == native[i];
+    }
+    const CTaskThreadResult inherited = CTaskThreadPriority::apply(thread, CTaskPriorityInherited);
+    passed = passed && inherited.m_status == CTaskThreadOk && inherited.m_committed &&
+        GetThreadPriority(thread.native_handle()) == THREAD_PRIORITY_HIGHEST;
 #else
     const CTaskThreadResult low = CTaskThreadPriority::apply(thread, CTaskPriorityLow);
     passed = passed && low.m_status == CTaskThreadUnsupported && !low.m_committed;

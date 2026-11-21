@@ -1,5 +1,6 @@
 ﻿#include "CTaskThreadTestAccess.h"
 #ifndef CTTM_TEST_DLL
+#include <memory>
 #include "CTaskPrivateTestAccess.h"
 #include "BlackBoxTestSupport.h"
 #include <climits>
@@ -48,6 +49,55 @@ template struct CTaskPrivateBinding<CTaskTestCompletion, &CTaskThreadState::m_co
 template struct CTaskPrivateBinding<CTaskTestPoolChanged, &CTaskPoolState::m_changed>;
 template struct CTaskPrivateBinding<CTaskTestSemaphoreWake, &Semaphore::m_wake>;
 
+typedef LockFreeQueue<CTaskStorageSlot*> CTaskBoundQueue;
+typedef LockFreeQueueChannel<LockFreeQueueArenaNode<CTaskStorageSlot*>, LockFreeQueueChannelPool<CTaskStorageSlot*>,
+    LockFreeQueueArenaRecord<CTaskStorageSlot*>> CTaskBoundChannel;
+typedef LockFreeQueueArena<CTaskStorageSlot*> CTaskBoundArena;
+template struct CTaskPrivateBinding<CTaskTestQueueSetting<CTaskBoundArena, 7>, &CTaskBoundQueue::m_arena>;
+template struct CTaskPrivateBinding<CTaskTestQueueSetting<LockFreeQueuePoolConfig, 8, CTaskBoundArena>, &CTaskBoundArena::m_config>;
+template struct CTaskPrivateBinding<CTaskTestQueueSetting<CTaskBoundChannel, 5>, &CTaskBoundQueue::m_channel>;
+template struct CTaskPrivateBinding<CTaskTestQueueSetting<uint32_t, 6, CTaskBoundChannel>, &CTaskBoundChannel::m_consumerInterval>;
+template struct CTaskPrivateBinding<CTaskTestQueueSetting<bool, 0>, &CTaskBoundQueue::m_distributedCounters>;
+template struct CTaskPrivateBinding<CTaskTestQueueSetting<bool, 9>, &CTaskBoundQueue::m_cancelableReservations>;
+template struct CTaskPrivateBinding<CTaskTestQueueSetting<uint32_t, 1>, &CTaskBoundQueue::m_capacityRetriesBeforeSleep>;
+template struct CTaskPrivateBinding<CTaskTestQueueSetting<uint32_t, 2>, &CTaskBoundQueue::m_capacitySleepMilliseconds>;
+template struct CTaskPrivateBinding<CTaskTestQueueSetting<uint32_t, 3>, &CTaskBoundQueue::m_maintenanceInterval>;
+template struct CTaskPrivateBinding<CTaskTestQueueSetting<size_t, 4>, &CTaskBoundQueue::m_maintenanceBudget>;
+
+void CTaskThreadTestAccess::verifyQueueSettings(const CTaskThreadConfig& config, int32_t level)
+{
+    CTaskPriorityBucket bucket(level);
+    bbCheck(bucket.initialize(config).m_committed, "configured bucket initialization failed");
+    const CTaskQueueConfig& settings = config.priorityQueueConfig(level);
+    CTaskBoundQueue& queue = bucket.m_queue;
+    const CTaskBoundArena& arena = queue.*CTaskTestQueueSetting<CTaskBoundArena, 7>::m_member;
+    bbCheck(arena.entryOnly() == settings.m_entryOnly && bucket.m_entryOnly == settings.m_entryOnly &&
+        queue.*CTaskTestQueueSetting<bool, 9>::m_member == settings.m_cancelableReservations,
+        "queue payload or reservation mode differs from selected configuration");
+    const LockFreeQueuePoolConfig& nativePool = arena.*CTaskTestQueueSetting<LockFreeQueuePoolConfig, 8, CTaskBoundArena>::m_member;
+    bbCheck(nativePool.initialCapacity == settings.m_queue.initialCapacity && nativePool.maximumCapacity == settings.m_queue.maximumCapacity &&
+        nativePool.growThreshold == settings.m_queue.growThreshold && nativePool.producerYieldInterval == settings.m_queue.producerYieldInterval &&
+        nativePool.maximumProducers == settings.m_queue.maximumProducers, "native FIFO pool differs from selected settings");
+    // 按所选级别的上限实际登记，额外申请失败后，归还一项应允许再次登记。
+    const size_t limit = settings.m_queue.maximumProducers;
+    std::unique_ptr<LockFreeQueueProducer<CTaskStorageSlot*>[]> producers(new LockFreeQueueProducer<CTaskStorageSlot*>[limit]);
+    for (size_t i = 0; i < limit; ++i)
+    {
+        bbCheck(queue.tryAcquireProducer(producers[i]) == LockFreeQueueSuccess, "producer registration rejected before configured limit");
+    }
+    LockFreeQueueProducer<CTaskStorageSlot*> extra;
+    bbCheck(queue.tryAcquireProducer(extra) == LockFreeQueueCapacityLimit, "native FIFO ignored producer registration limit");
+    producers[0].release();
+    bbCheck(queue.tryAcquireProducer(extra) == LockFreeQueueSuccess, "returned producer registration was not reusable");
+    const CTaskBoundChannel& channel = queue.*CTaskTestQueueSetting<CTaskBoundChannel, 5>::m_member;
+    bbCheck(channel.*CTaskTestQueueSetting<uint32_t, 6, CTaskBoundChannel>::m_member == settings.m_consumerYieldInterval &&
+        queue.*CTaskTestQueueSetting<bool, 0>::m_member == settings.m_distributedCounters &&
+        queue.*CTaskTestQueueSetting<uint32_t, 1>::m_member == settings.m_capacityRetries &&
+        queue.*CTaskTestQueueSetting<uint32_t, 2>::m_member == settings.m_capacitySleepMilliseconds &&
+        queue.*CTaskTestQueueSetting<uint32_t, 3>::m_member == settings.m_maintenanceInterval &&
+        queue.*CTaskTestQueueSetting<size_t, 4>::m_member == settings.m_maintenanceBudget, "native FIFO settings differ from selected configuration");
+}
+
 void CTaskThreadTestAccess::semaphoreInitializationTest()
 {
     const SemaphoreStatus failures[] = {SEMAPHORE_NO_MEMORY, SEMAPHORE_UNSUPPORTED, SEMAPHORE_SYSTEM_ERROR};
@@ -56,15 +106,43 @@ void CTaskThreadTestAccess::semaphoreInitializationTest()
     CTaskThreadPoolConfig poolConfig;
     poolConfig.m_initialThreads = 1;
     poolConfig.m_maximumThreads = 1;
+    SemaphoreConfig* settings[] = {&threadConfig.m_wakeupSemaphore, &threadConfig.m_completionSemaphore, &poolConfig.m_changeSemaphore};
+    for (size_t i = 0; i < 3; ++i)
+    {
+        SemaphoreWaitPolicy policy;
+        const uint32_t offset = static_cast<uint32_t>(i);
+        policy.m_promotionMilliseconds = offset + 5;
+        policy.m_localSlice = offset + 7;
+        policy.m_mobileSlice = offset + 2;
+        policy.m_posixSlice = offset + 4;
+        policy.m_capacityAttempts = offset + 9;
+        policy.m_capacitySleep = offset + 3;
+        policy.m_contentionYieldInterval = offset + 11;
+        policy.m_initialPauses = offset + 13;
+        policy.m_maximumPauses = offset + 17;
+        bbCheck(settings[i]->setWaitPolicy(policy).status == SEMAPHORE_OK, "notification wait policy rejected");
+        policy.m_localSlice = 0;
+        bbCheck(settings[i]->setWaitPolicy(policy).status == SEMAPHORE_INVALID, "invalid replacement wait policy accepted");
+        settings[i]->configureEventPool().initialCapacity = i + 2;
+        settings[i]->configureCountPool().initialCapacity = i + 5;
+    }
     for (size_t failure = 0; failure < 3; ++failure)
     {
         const int32_t nativeError = failures[failure] == SEMAPHORE_SYSTEM_ERROR ? 1234 : 0;
         for (size_t kind = 0; kind < 3; ++kind)
         {
-            CTaskThreadState thread(threadConfig);
+            std::unique_ptr<CTaskThreadState> threadOwner(new CTaskThreadState(threadConfig));
+            CTaskThreadState& thread = *threadOwner;
             CTaskPoolState pool(poolConfig);
             Semaphore& notification = kind == 0 ? thread.*CTaskTestWakeup::m_member :
                 (kind == 1 ? thread.*CTaskTestCompletion::m_member : pool.*CTaskTestPoolChanged::m_member);
+            const SemaphoreWaitPolicy& policy = notification.waitPolicy();
+            bbCheck(policy.m_promotionMilliseconds == kind + 5 && policy.m_localSlice == kind + 7 &&
+                policy.m_mobileSlice == kind + 2 && policy.m_posixSlice == kind + 4 &&
+                policy.m_capacityAttempts == kind + 9 && policy.m_capacitySleep == kind + 3 &&
+                policy.m_contentionYieldInterval == kind + 11 && policy.m_initialPauses == kind + 13 && policy.m_maximumPauses == kind + 17 &&
+                notification.eventPoolStatistics().capacity == kind + 2 && notification.countPoolStatistics().capacity == kind + 5,
+                "independent notification settings did not reach the native instance");
             (notification.*CTaskTestSemaphoreWake::m_member).failInitialization(failures[failure], nativeError);
             bbCheck(notification.initializationResult().status == failures[failure], "semaphore fault fixture not applied");
             const CTaskThreadResult result = kind == 2 ? pool.start() : thread.start();
@@ -74,7 +152,8 @@ void CTaskThreadTestAccess::semaphoreInitializationTest()
         }
     }
     // 注入只作用于被测实例；新实例仍可启动并正常结束，不能用全局失败掩盖回滚问题。
-    CTaskThreadState thread(threadConfig);
+    std::unique_ptr<CTaskThreadState> threadOwner(new CTaskThreadState(threadConfig));
+    CTaskThreadState& thread = *threadOwner;
     bbCheck(thread.start().m_status == CTaskThreadOk, "fresh worker failed after semaphore fault");
     bbCheck(thread.finish(true).m_status == CTaskThreadOk && thread.statistics().m_exited,
         "fresh worker did not join after semaphore fault");
@@ -237,7 +316,7 @@ void CTaskThreadTestAccess::resetCapacityPressure(CTaskThread& thread)
     (TestState(thread).*CTaskTestCapacityPressure::m_member).store(0, std::memory_order_release);
 }
 
-bool CTaskThreadTestAccess::closeIdleBucket(CTaskThread& thread, int32_t level)
+bool CTaskThreadTestAccess::closeIdleBucket(CTaskThread& thread, int32_t level, const std::shared_ptr<CTask>& interveningTask)
 {
     if (!(TestState(thread).*CTaskTestObservers::m_member).enter())
     {
@@ -245,12 +324,22 @@ bool CTaskThreadTestAccess::closeIdleBucket(CTaskThread& thread, int32_t level)
     }
     std::shared_ptr<CTaskPriorityBucket> bucket;
     LockFreeMapToken token;
-    bool closed = false;
-    if ((TestState(thread).*CTaskTestBuckets::m_member).lockFreeMapGet(level, bucket, token) == LOCK_FREE_MAP_OK && bucket->m_queued.load() == 0)
-    {
-        closed = bucket->m_writers.closeIfEmpty();
-    }
+    const bool empty = (TestState(thread).*CTaskTestBuckets::m_member).lockFreeMapGet(level, bucket, token) == LOCK_FREE_MAP_OK &&
+        bucket->m_queued.load() == 0;
+    // 保留真实桶的强引用后即可归还观察登记；下一次投递必须通过正常公开入口。
     (TestState(thread).*CTaskTestObservers::m_member).leave();
+    bbCheck(empty, "fixture did not observe an empty bucket");
+    if (interveningTask)
+    {
+        const CTaskThreadResult result = thread.postTaskResult(interveningTask, level);
+        bbCheck(result.m_status == CTaskThreadOk && result.m_committed, "interleaved post did not commit");
+    }
+    const bool closed = bucket->m_writers.closeIfEmpty();
+    if (closed && interveningTask)
+    {
+        // 旧实现若错关有货的桶，先恢复现场，让夹具仍能排空并报告真正失败的断言。
+        bucket->m_writers.reopen();
+    }
     return closed;
 }
 

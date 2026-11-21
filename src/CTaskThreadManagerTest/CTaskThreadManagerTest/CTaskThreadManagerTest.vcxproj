@@ -93,7 +93,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(BlackBoxIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>CTTM_TEST_NO_LEGACY_SEND_TASK;CTTM_BENCH_V3;CTTM_BENCH_V5;$(BlackBoxDefinitions);NOMINMAX;_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>$(BlackBoxDefinitions);NOMINMAX;_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
@@ -111,7 +111,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(BlackBoxIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>CTTM_TEST_NO_LEGACY_SEND_TASK;CTTM_BENCH_V3;CTTM_BENCH_V5;$(BlackBoxDefinitions);NOMINMAX;_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>$(BlackBoxDefinitions);NOMINMAX;_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
@@ -131,7 +131,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(BlackBoxIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>CTTM_TEST_NO_LEGACY_SEND_TASK;CTTM_BENCH_V3;CTTM_BENCH_V5;$(BlackBoxDefinitions);NOMINMAX;NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>$(BlackBoxDefinitions);NOMINMAX;NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -153,7 +153,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(BlackBoxIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>CTTM_TEST_NO_LEGACY_SEND_TASK;CTTM_BENCH_V3;CTTM_BENCH_V5;$(BlackBoxDefinitions);NOMINMAX;NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>$(BlackBoxDefinitions);NOMINMAX;NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -183,8 +183,6 @@
     <ClInclude Include="CTaskFaultAllocation.h" />
     <ClCompile Include="CTaskRetryContractTests.cpp" />
     <ClInclude Include="CTaskRetryContractTests.h" />
-    <ClInclude Include="CTaskPostCompatibility.h" />
-    <ClInclude Include="CTaskPostCompatibility.inl" />
     <ClCompile Include="CTaskThreadModuleTests.cpp" />
     <ClInclude Include="CTaskThreadModuleTests.h" />
     <ClCompile Include="CTaskThreadStressTests.cpp" />
@@ -210,16 +208,16 @@
     <ClInclude Include="CTaskPreparedBenchmark.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CTaskV3ModuleTests.cpp" />
-    <ClInclude Include="CTaskV3ModuleTests.h" />
+    <ClCompile Include="CTaskStorageTests.cpp" />
+    <ClInclude Include="CTaskStorageTests.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CTaskPrivateTestAccess.h" />
     <ClInclude Include="CTaskPrivateTestAccess.inl" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CTaskV5Tests.h" />
-    <ClCompile Include="CTaskV5Tests.cpp" />
+    <ClInclude Include="CTaskRedoTests.h" />
+    <ClCompile Include="CTaskRedoTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CTaskIntrusivePrototype.h" />

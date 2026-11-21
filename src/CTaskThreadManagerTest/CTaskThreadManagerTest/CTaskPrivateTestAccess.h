@@ -219,5 +219,19 @@ public:
     static Type m_member;
 };
 
+/** 绑定 FIFO 配置成员，供静止夹具验证配置已传入基础库。
+@param Value 底层字段类型
+@param Index 区分同一类型的不同字段
+@param Owner 字段所属的队列或其发布通道
+*/
+template <class Value, unsigned Index, class Owner = LockFreeQueue<CTaskStorageSlot*>>
+struct CTaskTestQueueSetting
+{
+public:
+    typedef Value Owner::* Type;
+    // 初始化后只读，引用完整队列配置。
+    static Type m_member;
+};
+
 #include "CTaskPrivateTestAccess.inl"
 #endif

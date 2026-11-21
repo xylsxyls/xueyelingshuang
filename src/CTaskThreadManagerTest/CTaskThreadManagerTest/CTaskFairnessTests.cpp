@@ -40,18 +40,18 @@ static uint64_t FairnessCpu()
 }
 
 CTaskFairnessCounter::CTaskFairnessCounter() :
-m_published(0), m_started(false), m_lastProgress(0), m_count(0), m_maxGap(0), m_eventLast(0),
+m_published(0), m_started(false), m_lastProgress(0), m_count(0), m_maxGap(0), m_maxGapAt(0), m_eventLast(0),
 m_cpu(0), m_capacity(0), m_resources(0), m_retries(0)
 {
 
 }
 
-void CTaskFairnessCounter::publish()
+void CTaskFairnessCounter::publish(uint64_t now)
 {
-    const uint64_t now = FairnessNow();
-    if (m_eventLast != 0)
+    if (m_eventLast != 0 && now > m_eventLast && now - m_eventLast > m_maxGap)
     {
-        m_maxGap = (std::max)(m_maxGap, now - m_eventLast);
+        m_maxGap = now - m_eventLast;
+        m_maxGapAt = now;
     }
     m_eventLast = now;
     m_lastProgress.store(now, std::memory_order_release);
@@ -76,15 +76,11 @@ void CTaskFairnessState::consume(size_t producer, size_t ordinal)
         m_errors.fetch_add(1, std::memory_order_relaxed);
     }
     ++order;
-    if ((++m_consumer.m_count & 63) == 0 || m_consumer.m_count == 1)
-    {
-        m_consumer.publish();
-    }
+    ++m_consumer.m_count;
+    m_consumer.publish(FairnessNow());
     CTaskFairnessCounter& count = m_received[producer];
-    if ((++count.m_count & 63) == 0)
-    {
-        count.m_published.store(count.m_count, std::memory_order_release);
-    }
+    ++count.m_count;
+    count.m_published.store(count.m_count, std::memory_order_release);
     if (count.m_count == 1)
     {
 #ifdef _WIN32
@@ -161,7 +157,9 @@ int runTaskFairnessTests(int argc, char** argv)
         CTaskThreadManager& manager = CTaskThreadManager::instance();
         CTaskFairnessState state(producers, levels);
         CTaskThreadConfig config;
+#ifndef __EMSCRIPTEN__
         config.m_systemPriority = CTaskPriorityNormal;
+#endif
         config.m_maximumTasks = 65536;
         config.m_taskMap.initialCapacity = 196608;
         config.m_taskMap.maximumCapacity = 196608;
@@ -189,12 +187,13 @@ int runTaskFairnessTests(int argc, char** argv)
             throw std::runtime_error("fairness target initialization failed");
         }
         uint64_t receiveGap = 0;
+        std::atomic<size_t> ready(0);
         try
         {
             for (size_t p = 0; p < producers; ++p)
             {
                 // p 对应唯一生产计数；外部预建任务、只读配置和 target 保持到 join 之后。
-                threads.push_back(std::thread([&state, &tasks, target, p]()
+                threads.push_back(std::thread([&state, &tasks, &ready, target, p]()
                 {
                     try
                     {
@@ -204,18 +203,30 @@ int runTaskFairnessTests(int argc, char** argv)
                             throw std::runtime_error("producer priority failed");
                         }
 #endif
-                        while (!state.m_start.load(std::memory_order_acquire) && !state.m_stop.load())
+                        ready.fetch_add(1, std::memory_order_release);
+                        while (!state.m_start.load(std::memory_order_acquire))
                         {
-                            std::this_thread::yield();
+                            if (state.m_stop.load(std::memory_order_acquire))
+                            {
+                                return;
+                            }
+                            bbSleep(1);
                         }
                         // 后四分之一生产者晚加入，检验既有成功者不会永久占据机会。
-                        if (p >= state.m_producers * 3 / 4 && state.m_producers >= 4)
+                        const bool late = p >= state.m_producers * 3 / 4 && state.m_producers >= 4;
+                        const uint64_t eligible = state.m_begin + (late ? 500 : 0);
+                        if (late)
                         {
-                            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                            const uint64_t now = FairnessNow();
+                            if (now < eligible)
+                            {
+                                std::this_thread::sleep_for(std::chrono::milliseconds(eligible - now));
+                            }
                         }
                         CTaskFairnessCounter& count = state.m_sent[p];
                         const uint64_t cpu = FairnessCpu();
-                        count.publish();
+                        count.m_eventLast = eligible;
+                        count.m_lastProgress.store(count.m_eventLast, std::memory_order_release);
                         count.m_started.store(true, std::memory_order_release);
                         while (!state.m_stop.load(std::memory_order_acquire))
                         {
@@ -224,10 +235,7 @@ int runTaskFairnessTests(int argc, char** argv)
                             if (result.m_committed)
                             {
                                 ++count.m_count;
-                                if ((count.m_count & 63) == 0)
-                                {
-                                    count.publish();
-                                }
+                                count.publish(FairnessNow());
                                 if (result.m_status != CTaskThreadOk)
                                 {
                                     ++state.m_errors;
@@ -239,13 +247,11 @@ int runTaskFairnessTests(int argc, char** argv)
                                 count.m_retries += result.m_status == CTaskThreadRetry ? 1 : 0;
                                 std::this_thread::yield();
                             }
-#ifndef CTTM_LEGACY_API
                             else if (result.m_status == CTaskThreadResourceUnavailable)
                             {
                                 ++count.m_resources;
                                 std::this_thread::yield();
                             }
-#endif
                             else
                             {
                                 ++state.m_errors;
@@ -253,7 +259,6 @@ int runTaskFairnessTests(int argc, char** argv)
                             }
                         }
                         count.m_cpu = FairnessCpu() - cpu;
-                        count.publish();
                     }
                     catch (...)
                     {
@@ -262,6 +267,12 @@ int runTaskFairnessTests(int argc, char** argv)
                     }
                 }));
             }
+            // 等所有宿主线程完成启动再计时，保留后四分之一生产者的有意迟到。
+            bbWait([&ready, &state, producers]()
+            {
+                return ready.load(std::memory_order_acquire) == producers || state.m_stop.load(std::memory_order_acquire);
+            }, "fairness producers ready", 30000);
+            bbCheck(!state.m_stop.load(std::memory_order_acquire), "fairness producer setup failed");
             state.m_begin = FairnessNow();
             // 生产者放行前消费者尚无任务；记录首次执行等待，后续由消费者独占更新。
             state.m_consumer.m_eventLast = state.m_begin;
@@ -300,6 +311,7 @@ int runTaskFairnessTests(int argc, char** argv)
             manager.uninit(id);
             throw;
         }
+        const uint64_t measurementEnd = FairnessNow();
         state.m_stop = true;
         for (size_t p = 0; p < threads.size(); ++p)
         {
@@ -315,20 +327,34 @@ int runTaskFairnessTests(int argc, char** argv)
         {
             throw std::runtime_error("cannot open fairness report");
         }
-        out << "producer,producers,levels,cpus,queue_producers,submitted,consumed,max_submit_gap_ms,consumer_max_gap_ms,producer_cpu_ms,capacity_failures,external_retries,submit_ms,complete_ms,errors,resource_failures\n";
-        bool valid = closed.m_status == CTaskThreadOk && state.m_errors == 0 && target->statistics().m_errors == 0 && receiveGap < 2000;
+        out << "producer,producers,levels,cpus,queue_producers,submitted,consumed,max_submit_gap_ms,consumer_max_gap_ms,producer_cpu_ms,capacity_failures,external_retries,submit_ms,complete_ms,errors,resource_failures,observation_ms\n";
+        const uint64_t workerErrors = target->statistics().m_errors;
+        bool valid = measurementEnd - state.m_begin >= seconds * 1000 && closed.m_status == CTaskThreadOk && state.m_errors == 0 && workerErrors == 0 && receiveGap < 2000;
         for (size_t p = 0; p < producers; ++p)
         {
             const CTaskFairnessCounter& sent = state.m_sent[p];
             const CTaskFairnessCounter& received = state.m_received[p];
             const uint64_t submitGap = (std::max)(sent.m_maxGap, observedGap[p]);
-            valid = valid && sent.m_count == received.m_count && sent.m_count >= 1000 && submitGap < 2000;
-#ifndef CTTM_LEGACY_API
-            valid = valid && sent.m_retries == 0 && sent.m_capacity == 0 && sent.m_resources == 0;
-#endif
+            if (sent.m_count != received.m_count || sent.m_count < 1000 || submitGap >= 2000 ||
+                sent.m_retries != 0 || sent.m_capacity != 0 || sent.m_resources != 0)
+            {
+                valid = false;
+                std::cerr << "fairness producer=" << p << " submitted=" << sent.m_count << " consumed=" << received.m_count
+                    << " submit_gap_ms=" << submitGap << " producer_event_gap_ms=" << sent.m_maxGap
+                    << " monitor_gap_ms=" << observedGap[p] << " event_end_ms="
+                    << (sent.m_maxGapAt > state.m_begin ? sent.m_maxGapAt - state.m_begin : uint64_t(0))
+                    << " measurement_end_ms=" << measurementEnd - state.m_begin << " capacity=" << sent.m_capacity << " retries=" << sent.m_retries
+                    << " resources=" << sent.m_resources << '\n';
+            }
             out << p << ',' << producers << ',' << levels << ',' << cpuCount << ',' << queueProducers << ',' << sent.m_count << ',' << received.m_count << ','
-                << submitGap << ',' << receiveGap << ',' << sent.m_cpu / 10000.0 << ',' << sent.m_capacity << ',' << sent.m_retries << ','
-                << submitEnd - state.m_begin << ',' << ended - state.m_begin << ',' << state.m_errors.load() << ',' << sent.m_resources << '\n';
+                << submitGap << ',' << receiveGap << ',';
+#ifdef _WIN32
+            out << sent.m_cpu / 10000.0;
+#else
+            out << "NA";
+#endif
+            out << ',' << sent.m_capacity << ',' << sent.m_retries << ','
+                << submitEnd - state.m_begin << ',' << ended - state.m_begin << ',' << state.m_errors.load() << ',' << sent.m_resources << ',' << measurementEnd - state.m_begin << '\n';
         }
         out.close();
         if (!out)
@@ -336,7 +362,8 @@ int runTaskFairnessTests(int argc, char** argv)
             throw std::runtime_error("fairness report write failed");
         }
         std::cout << "fairness " << (valid ? "PASS" : "FAIL") << " producers=" << producers << " levels=" << levels << " cpus=" << cpuCount
-            << " consumer_gap_ms=" << receiveGap << " errors=" << state.m_errors.load() << "\n";
+            << " consumer_gap_ms=" << receiveGap << " errors=" << state.m_errors.load() << " worker_errors=" << workerErrors
+            << " close_status=" << closed.m_status << "\n";
         return valid ? 0 : 1;
     }
     catch (const std::exception& error)

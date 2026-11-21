@@ -1,4 +1,4 @@
-﻿#include "CTaskV5Tests.h"
+﻿#include "CTaskRedoTests.h"
 #include <algorithm>
 #include <chrono>
 #include <climits>
@@ -6,12 +6,13 @@
 #include <thread>
 #include <iomanip>
 #ifndef CTTM_TEST_DLL
+#include <memory>
 #include "CTaskThreadManager/CTaskStorage.h"
 #include "CTaskPrivateTestAccess.h"
-#include "CTaskV3ModuleTests.h"
+#include "CTaskStorageTests.h"
 #endif
 
-CTaskV5ChannelRecord::CTaskV5ChannelRecord() :
+CTaskRedoTestChannelRecord::CTaskRedoTestChannelRecord() :
 m_hazard(nullptr),
 m_generation(0),
 m_hint(0),
@@ -21,12 +22,12 @@ m_retries(0)
 
 }
 
-bool CTaskV5ChannelPool::singlePublisherRegistered() const
+bool CTaskRedoTestChannelPool::singlePublisherRegistered() const
 {
     return false;
 }
 
-CTaskV5ChannelPool::~CTaskV5ChannelPool()
+CTaskRedoTestChannelPool::~CTaskRedoTestChannelPool()
 {
     for (size_t i = 0; i < m_segments.size(); ++i)
     {
@@ -34,12 +35,12 @@ CTaskV5ChannelPool::~CTaskV5ChannelPool()
     }
 }
 
-bool CTaskV5ChannelPool::amplePublisherCapacity() const
+bool CTaskRedoTestChannelPool::amplePublisherCapacity() const
 {
     return false;
 }
 
-LockFreeQueueChannelSegment<int>* CTaskV5ChannelPool::acquire()
+LockFreeQueueChannelSegment<int>* CTaskRedoTestChannelPool::acquire()
 {
     std::unique_ptr<LockFreeQueueChannelSegment<int>> segment(new LockFreeQueueChannelSegment<int>());
     segment->m_generation = m_segments.size() + 1;
@@ -47,22 +48,22 @@ LockFreeQueueChannelSegment<int>* CTaskV5ChannelPool::acquire()
     return segment.release();
 }
 
-LockFreeQueueChannelSegment<int>* CTaskV5ChannelPool::acquireInitial()
+LockFreeQueueChannelSegment<int>* CTaskRedoTestChannelPool::acquireInitial()
 {
     return acquire();
 }
 
-void CTaskV5ChannelPool::release(LockFreeQueueChannelSegment<int>* segment)
+void CTaskRedoTestChannelPool::release(LockFreeQueueChannelSegment<int>* segment)
 {
     (void)segment;
 }
 
-void CTaskV5ChannelPool::retire(LockFreeQueueChannelSegment<int>* segment)
+void CTaskRedoTestChannelPool::retire(LockFreeQueueChannelSegment<int>* segment)
 {
     (void)segment;
 }
 
-CTaskV5HistoryItem::CTaskV5HistoryItem() :
+CTaskRedoTestHistoryItem::CTaskRedoTestHistoryItem() :
 m_begin(0),
 m_end(0),
 m_position(static_cast<size_t>(-1))
@@ -70,7 +71,7 @@ m_position(static_cast<size_t>(-1))
 
 }
 
-CTaskV5EmptyObservation::CTaskV5EmptyObservation(uint64_t begin, uint64_t end, size_t delivered) :
+CTaskRedoTestEmptyObservation::CTaskRedoTestEmptyObservation(uint64_t begin, uint64_t end, size_t delivered) :
 m_begin(begin),
 m_end(end),
 m_delivered(delivered)
@@ -97,8 +98,8 @@ static void RunQueueHistoryTest(bool reservations, bool entryAddresses = false)
             queue.configureCancelableReservations(reservations) == LockFreeQueueSuccess &&
             queue.configureEntryOnly(entryAddresses) == LockFreeQueueSuccess &&
             queue.tryInit() == LockFreeQueueSuccess, "history queue initialization");
-        CTaskV5HistoryItem items[256];
-        std::vector<CTaskV5EmptyObservation> empty;
+        CTaskRedoTestHistoryItem items[256];
+        std::vector<CTaskRedoTestEmptyObservation> empty;
         std::vector<std::thread> producers;
         producers.reserve(4);
         std::atomic<uint64_t> clock(1);
@@ -185,7 +186,7 @@ static void RunQueueHistoryTest(bool reservations, bool entryAddresses = false)
                 }
                 else
                 {
-                    empty.push_back(CTaskV5EmptyObservation(begin, end, delivered));
+                    empty.push_back(CTaskRedoTestEmptyObservation(begin, end, delivered));
                     queue.maintain(8);
                     std::this_thread::yield();
                 }
@@ -327,23 +328,23 @@ static void RunEntryAddressPrefixTest()
         }
     }
 #ifndef CTTM_TEST_DLL
-    LockFreeQueueEntry<CTaskV4MoveAssignmentValue> item(CTaskV4MoveAssignmentValue(23));
-    LockFreeQueue<CTaskV4MoveAssignmentValue> noCopy(false);
+    LockFreeQueueEntry<CTaskMoveAssignmentValue> item(CTaskMoveAssignmentValue(23));
+    LockFreeQueue<CTaskMoveAssignmentValue> noCopy(false);
     bbCheck(noCopy.configureEntryOnly(true) == LockFreeQueueSuccess && noCopy.tryInit() == LockFreeQueueSuccess &&
         noCopy.tryPushEntry(item) == LockFreeQueueSuccess, "entry address copy-free setup");
-    CTaskV4MoveAssignmentValue::m_failCopy = true;
+    CTaskMoveAssignmentValue::m_failCopy = true;
     try
     {
-        LockFreeQueueEntry<CTaskV4MoveAssignmentValue>* output = nullptr;
+        LockFreeQueueEntry<CTaskMoveAssignmentValue>* output = nullptr;
         bbCheck(noCopy.popReadyEntryPrefix(&output, 1, received) && received == 1 && output == &item &&
             item.m_value.m_value == 23, "entry address copied or moved payload");
     }
     catch (...)
     {
-        CTaskV4MoveAssignmentValue::m_failCopy = false;
+        CTaskMoveAssignmentValue::m_failCopy = false;
         throw;
     }
-    CTaskV4MoveAssignmentValue::m_failCopy = false;
+    CTaskMoveAssignmentValue::m_failCopy = false;
 #endif
 }
 
@@ -354,10 +355,10 @@ static void RunChannelGenerationTest()
     for (size_t mode = 0; mode < 2; ++mode)
     {
         int values[2] = {41, 42};
-        CTaskV5ChannelPool pool;
-        CTaskV5ChannelRecord record;
+        CTaskRedoTestChannelPool pool;
+        CTaskRedoTestChannelRecord record;
         LockFreeQueueChannelSegment<int>* segment = pool.acquire();
-        LockFreeQueueChannel<int, CTaskV5ChannelPool, CTaskV5ChannelRecord> channel(segment);
+        LockFreeQueueChannel<int, CTaskRedoTestChannelPool, CTaskRedoTestChannelRecord> channel(segment);
         channel.reset(segment, mode != 0);
         for (uint64_t generation = 1; generation <= 128; ++generation)
         {
@@ -397,7 +398,7 @@ static void RunChannelGenerationTest()
     }
 }
 
-void taskV5ChannelPublicationTest()
+void taskChannelPublicationTest()
 {
     RunChannelGenerationTest();
     RunEntryAddressPrefixTest();
@@ -407,9 +408,9 @@ void taskV5ChannelPublicationTest()
     RunQueueHistoryTest(true, true);
     for (size_t mode = 0; mode < 2; ++mode)
     {
-        CTaskV5ChannelPool prefixPool;
-        CTaskV5ChannelRecord prefixRecord;
-        LockFreeQueueChannel<int, CTaskV5ChannelPool, CTaskV5ChannelRecord> prefix(prefixPool.acquire());
+        CTaskRedoTestChannelPool prefixPool;
+        CTaskRedoTestChannelRecord prefixRecord;
+        LockFreeQueueChannel<int, CTaskRedoTestChannelPool, CTaskRedoTestChannelRecord> prefix(prefixPool.acquire());
         prefix.reset(prefix.consumerSegment(), mode != 0);
         int values[320] = {};
         int* output[64] = {};
@@ -438,10 +439,10 @@ void taskV5ChannelPublicationTest()
         bbCheck(prefix.front(prefixPool) == nullptr, "reset generation duplicated its only item");
     }
     {
-        CTaskV5ChannelPool reservedPool;
-        CTaskV5ChannelRecord reservedRecord;
+        CTaskRedoTestChannelPool reservedPool;
+        CTaskRedoTestChannelRecord reservedRecord;
         LockFreeQueueChannelSegment<int>* firstReserved = reservedPool.acquire();
-        LockFreeQueueChannel<int, CTaskV5ChannelPool, CTaskV5ChannelRecord> reserved(firstReserved);
+        LockFreeQueueChannel<int, CTaskRedoTestChannelPool, CTaskRedoTestChannelRecord> reserved(firstReserved);
         reserved.reset(firstReserved, true);
         int early = 1;
         int later = 2;
@@ -489,40 +490,40 @@ void taskV5ChannelPublicationTest()
             bbCheck(reserved.front(reservedPool) == nullptr, "repeated partial seal duplicated work");
         }
     }
-    CTaskV5ChannelPool pool;
-    CTaskV5ChannelRecord record;
+    CTaskRedoTestChannelPool pool;
+    CTaskRedoTestChannelRecord record;
     LockFreeQueueChannelSegment<int>* first = pool.acquire();
-    LockFreeQueueChannel<int, CTaskV5ChannelPool, CTaskV5ChannelRecord> channel(first);
+    LockFreeQueueChannel<int, CTaskRedoTestChannelPool, CTaskRedoTestChannelRecord> channel(first);
     int late = 1;
     int ready = 2;
     // 私有准备不修改共享发布位置；真正的暂停交错由 Queue 原有用例 16、17、29 验证。
     bbCheck(channel.front(pool) == nullptr && first->m_cells[0].load() == 0,
-        "V5 empty observation changed the first publication cell");
-    bbCheck(channel.publish(&ready, record, pool), "V5 successor publication");
-    bbCheck(channel.publish(&late, record, pool), "V5 later publication");
-    bbCheck(channel.front(pool) == &ready, "V5 later publisher overtook committed work");
+        "empty observation changed the first publication cell");
+    bbCheck(channel.publish(&ready, record, pool), "successor publication");
+    bbCheck(channel.publish(&late, record, pool), "later publication");
+    bbCheck(channel.front(pool) == &ready, "later publisher overtook committed work");
     channel.consume();
-    bbCheck(channel.front(pool) == &late, "V5 later publisher FIFO");
+    bbCheck(channel.front(pool) == &late, "later publisher FIFO");
     channel.consume();
-    bbCheck(channel.front(pool) == nullptr, "V5 duplicate after ordered publication");
+    bbCheck(channel.front(pool) == nullptr, "duplicate after ordered publication");
     // 连续真实发布跨越段边界，不能用改写共享尾下标制造未发布的空洞。
     for (size_t i = 2; i <= LockFreeQueueChannelSegment<int>::kCellCount; ++i)
     {
-        bbCheck(channel.publish(&ready, record, pool), "V5 cross-segment publication");
+        bbCheck(channel.publish(&ready, record, pool), "cross-segment publication");
     }
     for (size_t i = 2; i <= LockFreeQueueChannelSegment<int>::kCellCount; ++i)
     {
-        bbCheck(channel.front(pool) == &ready, "V5 cross-segment FIFO");
+        bbCheck(channel.front(pool) == &ready, "cross-segment FIFO");
         channel.consume();
     }
     bbCheck(channel.front(pool) == nullptr && channel.seal(pool),
-        "V5 partial seal contract");
-    bbCheck(channel.publish(&late, record, pool) && channel.front(pool) == &late, "V5 post after partial seal");
+        "partial seal contract");
+    bbCheck(channel.publish(&late, record, pool) && channel.front(pool) == &late, "post after partial seal");
     channel.consume();
-    bbCheck(channel.front(pool) == nullptr, "V5 final channel empty");
+    bbCheck(channel.front(pool) == nullptr, "final channel empty");
     LockFreeQueueChannelSegment<int>* sealed = channel.consumerSegment();
     bbCheck(channel.seal(pool) && channel.front(pool) == nullptr && channel.consumerSegment() != sealed,
-        "V5 empty observation retained a closed segment instead of allowing shrink");
+        "empty observation retained a closed segment instead of allowing shrink");
 
     LockFreeQueue<size_t> quota(false);
     LockFreeQueuePoolConfig config;
@@ -532,13 +533,13 @@ void taskV5ChannelPublicationTest()
     // 基础池的一项物理额度用于保留哨兵，与现有容量契约一致。
     const size_t usable = config.initialCapacity - 1;
     bbCheck(quota.configurePool(config) == LockFreeQueueSuccess && quota.tryInit() == LockFreeQueueSuccess,
-        "V5 many-producer quota initialization");
+        "many-producer quota initialization");
     LockFreeQueueProducer<size_t> producers[32];
     for (size_t i = 0; i < 32; ++i)
     {
-        bbCheck(quota.tryAcquireProducer(producers[i]) == LockFreeQueueSuccess, "V5 producer registration");
+        bbCheck(quota.tryAcquireProducer(producers[i]) == LockFreeQueueSuccess, "producer registration");
     }
-    bbCheck(producers[31].tryPush(1) == LockFreeQueueSuccess, "V5 last producer initial item");
+    bbCheck(producers[31].tryPush(1) == LockFreeQueueSuccess, "last producer initial item");
     for (size_t i = 0; i < 31; ++i)
     {
         producers[i].release();
@@ -552,7 +553,7 @@ void taskV5ChannelPublicationTest()
     // 活跃上下文的私有缓存也占硬额度；新版将这类资源不足明确返回 CapacityLimit。
     // 下面仍必须验证释放上下文后全部额度恢复，不能靠改状态检查掩盖额度泄漏。
     bbCheck(accepted < usable && result == LockFreeQueueCapacityLimit,
-        "V5 pinned producer cache did not report the documented capacity limit");
+        "pinned producer cache did not report the documented capacity limit");
     producers[31].release();
     while (accepted < usable)
     {
@@ -561,16 +562,16 @@ void taskV5ChannelPublicationTest()
         {
             std::cerr << "last_producer_quota accepted=" << accepted << " status=" << result << '\n';
         }
-        bbCheck(result == LockFreeQueueSuccess, "V5 released last-producer quota was lost");
+        bbCheck(result == LockFreeQueueSuccess, "released last-producer quota was lost");
         ++accepted;
     }
-    bbCheck(quota.tryPush(usable + 1) == LockFreeQueueCapacityLimit, "V5 physical quota exceeded");
+    bbCheck(quota.tryPush(usable + 1) == LockFreeQueueCapacityLimit, "physical quota exceeded");
     for (size_t i = 1; i <= usable; ++i)
     {
         size_t value = 0;
-        bbCheck(quota.pop(&value) && value == i, "V5 cached quota changed committed FIFO");
+        bbCheck(quota.pop(&value) && value == i, "cached quota changed committed FIFO");
     }
-    bbCheck(quota.empty(), "V5 cached quota retained extra items");
+    bbCheck(quota.empty(), "cached quota retained extra items");
 
     int values[1024] = {};
     LockFreeQueueEntry<int*> entries[1024];
@@ -580,29 +581,29 @@ void taskV5ChannelPublicationTest()
     pointerConfig.maximumCapacity = 1025;
     bbCheck(pointers.configurePool(pointerConfig) == LockFreeQueueSuccess &&
         pointers.configureEntryOnly(true) == LockFreeQueueSuccess && pointers.tryInit() == LockFreeQueueSuccess,
-        "V5 direct pointer initialization failed");
+        "direct pointer initialization failed");
     for (size_t round = 0; round < 3; ++round)
     {
         for (size_t i = 0; i < 1024; ++i)
         {
             entries[i].m_value = (i + round) % 7 == 0 ? nullptr : &values[(i + round) % 1024];
             bbCheck(pointers.tryPushEntry(entries[i]) == LockFreeQueueSuccess,
-                "V5 direct pointer publication lost reusable capacity");
+                "direct pointer publication lost reusable capacity");
         }
         for (size_t consumed = 0; consumed < 1024;)
         {
             int* output[64] = {};
             size_t received = 0;
             bbCheck(pointers.popReadyPrefix(output, 64, received) && received != 0,
-                "V5 direct pointer prefix reported an empty nonempty queue");
+                "direct pointer prefix reported an empty nonempty queue");
             for (size_t i = 0; i < received; ++i)
             {
                 bbCheck(output[i] == entries[consumed + i].m_value,
-                    "V5 direct pointer changed FIFO, null value, or reused entry identity");
+                    "direct pointer changed FIFO, null value, or reused entry identity");
             }
             consumed += received;
         }
-        bbCheck(pointers.empty(), "V5 direct pointer duplicated a publication");
+        bbCheck(pointers.empty(), "direct pointer duplicated a publication");
     }
 
     // 双发布模式覆盖非整批外部额度归还、硬上限和跨段 FIFO，重复使用同一批载荷。
@@ -618,40 +619,40 @@ void taskV5ChannelPublicationTest()
             cachedEntries.configureEntryOnly(true) == LockFreeQueueSuccess &&
             cachedEntries.configureCancelableReservations(mode != 0) == LockFreeQueueSuccess &&
             cachedEntries.tryInit() == LockFreeQueueSuccess,
-            "V5 external credit cache initialization failed");
+            "external credit cache initialization failed");
         for (size_t round = 0; round < 3; ++round)
         {
             LockFreeQueueProducer<size_t> first;
             bbCheck(cachedEntries.tryAcquireProducer(first) == LockFreeQueueSuccess,
-                "V5 external credit cache producer unavailable");
+                "external credit cache producer unavailable");
             for (size_t i = 0; i < 97; ++i)
             {
                 cachedValues[i].m_value = i;
                 bbCheck(first.tryPushEntry(cachedValues[i]) == LockFreeQueueSuccess,
-                    "V5 partial external credit cache publication failed");
+                    "partial external credit cache publication failed");
             }
             first.release();
             // 非整批发布后释放租约，所有未用额度必须立即能被下一生产者领取。
             LockFreeQueueProducer<size_t> second;
             bbCheck(cachedEntries.tryAcquireProducer(second) == LockFreeQueueSuccess,
-                "V5 replacement external credit cache producer unavailable");
+                "replacement external credit cache producer unavailable");
             for (size_t i = 97; i < 4096; ++i)
             {
                 cachedValues[i].m_value = i;
                 bbCheck(second.tryPushEntry(cachedValues[i]) == LockFreeQueueSuccess,
-                    "V5 released external credit cache lost physical capacity");
+                    "released external credit cache lost physical capacity");
             }
             bbCheck(second.tryPushEntry(cachedValues[4096]) == LockFreeQueueCapacityLimit,
-                "V5 external credit cache exceeded the hard limit");
+                "external credit cache exceeded the hard limit");
             second.release();
             for (size_t i = 0; i < 4096; ++i)
             {
                 size_t value = 4096;
                 bbCheck(cachedEntries.pop(&value) && value == i,
-                    "V5 external credit cache changed FIFO or returned a duplicate");
+                    "external credit cache changed FIFO or returned a duplicate");
             }
             bbCheck(cachedEntries.empty() && !cachedEntries.pop(nullptr),
-                "V5 external credit cache retained phantom items");
+                "external credit cache retained phantom items");
         }
     }
 
@@ -663,17 +664,17 @@ void taskV5ChannelPublicationTest()
     pointerConfig.maximumCapacity = 129;
     bbCheck(mixed.configurePool(pointerConfig) == LockFreeQueueSuccess &&
         mixed.configureEntryOnly(true) == LockFreeQueueSuccess && mixed.tryInit() == LockFreeQueueSuccess,
-        "V5 mixed pointer initialization failed");
+        "mixed pointer initialization failed");
     for (size_t round = 0; round < 3; ++round)
     {
         for (size_t i = 0; i < 128; ++i)
         {
             mixedEntries[i].m_value = i % 9 == 0 ? nullptr : &bytes[i];
             bbCheck(mixed.tryPushEntry(mixedEntries[i]) == LockFreeQueueSuccess,
-                "V5 pointer fallback growth or reused capacity failed");
+                "pointer fallback growth or reused capacity failed");
         }
         bbCheck(mixed.tryPushEntry(mixedEntries[128]) == LockFreeQueueCapacityLimit,
-            "V5 pointer encoding bypassed the configured quota");
+            "pointer encoding bypassed the configured quota");
         if (round == 1)
         {
             mixed.clear();
@@ -684,14 +685,14 @@ void taskV5ChannelPublicationTest()
             {
                 char* output = nullptr;
                 bbCheck(mixed.pop(&output) && output == mixedEntries[i].m_value,
-                    "V5 pointer fallback changed address or FIFO");
+                    "pointer fallback changed address or FIFO");
             }
         }
-        bbCheck(mixed.empty(), "V5 pointer fallback failed to return all credits");
+        bbCheck(mixed.empty(), "pointer fallback failed to return all credits");
     }
 }
 
-void taskV5ConcurrentRemovalTest()
+void taskConcurrentRemovalTest()
 {
     CTaskThreadManager& manager = CTaskThreadManager::instance();
     for (size_t round = 0; round < 16; ++round)
@@ -752,7 +753,7 @@ void taskV5ConcurrentRemovalTest()
     }
 }
 
-CTaskV5RedoFixture::CTaskV5RedoFixture() :
+CTaskRedoTestRedoFixture::CTaskRedoTestRedoFixture() :
 m_holdFactory(false),
 m_factoryEntered(false),
 m_factoryRelease(false)
@@ -766,7 +767,7 @@ m_factoryRelease(false)
     m_thread = m_workers.add();
 }
 
-CTaskV5RedoFixture::~CTaskV5RedoFixture()
+CTaskRedoTestRedoFixture::~CTaskRedoTestRedoFixture()
 {
     for (size_t i = 0; i < 3; ++i)
     {
@@ -783,7 +784,7 @@ CTaskV5RedoFixture::~CTaskV5RedoFixture()
     }
 }
 
-std::shared_ptr<TestFactoryTask> CTaskV5RedoFixture::create(size_t slot, int32_t marker, bool blocked, bool redo)
+std::shared_ptr<TestFactoryTask> CTaskRedoTestRedoFixture::create(size_t slot, int32_t marker, bool blocked, bool redo)
 {
     // 无返回值；门控使原任务保持在真实 doTask 内，供外部投递触发抢占。
     std::shared_ptr<TestFactoryTask> task(new TestFactoryTask(marker, [this, slot, marker, blocked](TestTask&)
@@ -795,7 +796,7 @@ std::shared_ptr<TestFactoryTask> CTaskV5RedoFixture::create(size_t slot, int32_t
             bbWait([this, slot]()
             {
                 return m_release[slot].load();
-            }, "V5 original task release");
+            }, "original task release");
         }
     }, redo));
     if (redo)
@@ -810,40 +811,40 @@ std::shared_ptr<TestFactoryTask> CTaskV5RedoFixture::create(size_t slot, int32_t
                 bbWait([this]()
                 {
                     return m_factoryRelease.load();
-                }, "V5 redo factory release");
+                }, "redo factory release");
             }
             return new TestFactoryTask(marker, [this, marker](TestTask&)
             {
                 m_ledger.add(marker + 1);
             }, false);
-        }), "V5 factory registration failed");
+        }), "factory registration failed");
     }
     return task;
 }
 
-void CTaskV5RedoFixture::post(const std::shared_ptr<CTask>& task, int32_t level)
+void CTaskRedoTestRedoFixture::post(const std::shared_ptr<CTask>& task, int32_t level)
 {
     const CTaskThreadResult result = m_thread->postTaskResult(task, level);
     bbCheck(result.m_committed && result.m_status == CTaskThreadOk,
-        "V5 ordinary post failed; external retry prohibited");
+        "ordinary post failed; external retry prohibited");
 }
 
-void CTaskV5RedoFixture::waitEntered(size_t slot)
+void CTaskRedoTestRedoFixture::waitEntered(size_t slot)
 {
     bbWait([this, slot]()
     {
         return m_entered[slot].load();
-    }, "V5 original task entered");
+    }, "original task entered");
 }
 
-void CTaskV5RedoFixture::drain()
+void CTaskRedoTestRedoFixture::drain()
 {
     m_workers.drain();
 }
 
-void taskV5PendingRedoPriorityTest()
+void taskPendingRedoPriorityTest()
 {
-    CTaskV5RedoFixture fixture;
+    CTaskRedoTestRedoFixture fixture;
     fixture.post(fixture.create(0, 10, true, true), 1);
     fixture.waitEntered(0);
     fixture.post(fixture.create(1, 20, true, false), 2);
@@ -862,13 +863,13 @@ void taskV5PendingRedoPriorityTest()
         "unexpected factory invocation while redo was merely queued");
 }
 
-void taskV5NestedPreemptionTest()
+void taskNestedPreemptionTest()
 {
     const int32_t levels[3][3] = {{1, 2, 3}, {1, 16, 17}, {16, 17, INT_MAX}};
     // 同时覆盖缓存目录内、跨越目录上界和通用 Map 的嵌套抢占及两级重做。
     for (size_t scenario = 0; scenario < 3; ++scenario)
     {
-        CTaskV5RedoFixture fixture;
+        CTaskRedoTestRedoFixture fixture;
         const std::shared_ptr<TestFactoryTask> low = fixture.create(0, 10, true, true);
         const std::shared_ptr<TestFactoryTask> middle = fixture.create(1, 20, true, true);
         fixture.post(low, levels[scenario][0]);
@@ -892,9 +893,9 @@ void taskV5NestedPreemptionTest()
     }
 }
 
-void taskV5QueuedHigherPriorityTest()
+void taskQueuedHigherPriorityTest()
 {
-    CTaskV5RedoFixture fixture;
+    CTaskRedoTestRedoFixture fixture;
     fixture.post(fixture.create(0, 10, true, true), 1);
     fixture.waitEntered(0);
     fixture.post(fixture.create(1, 20, false, true), 2);
@@ -911,11 +912,11 @@ void taskV5QueuedHigherPriorityTest()
         "queued middle task was incorrectly treated as interrupted execution");
 }
 
-void taskV5FactoryPublicationRaceTest()
+void taskFactoryPublicationRaceTest()
 {
     for (int32_t mode = 0; mode < 2; ++mode)
     {
-        CTaskV5RedoFixture fixture;
+        CTaskRedoTestRedoFixture fixture;
         fixture.m_holdFactory.store(true);
         fixture.post(fixture.create(0, 10, true, true), 1);
         fixture.waitEntered(0);
@@ -924,7 +925,7 @@ void taskV5FactoryPublicationRaceTest()
         bbWait([&fixture]()
         {
             return fixture.m_factoryEntered.load();
-        }, "V5 factory entered before later post");
+        }, "factory entered before later post");
         fixture.post(fixture.create(2, 30, false, false), 3);
         if (mode == 1)
         {
@@ -941,14 +942,14 @@ void taskV5FactoryPublicationRaceTest()
     }
 }
 
-void taskV5ReclaimRoutingTest()
+void taskReclaimRoutingTest()
 {
 #ifndef CTTM_TEST_DLL
     const size_t capacities[] = {1, 63, 64, 65, 65535};
     for (size_t c = 0; c < sizeof(capacities) / sizeof(capacities[0]); ++c)
     {
         CTaskStorageBlock block;
-        bbCheck(block.initialize(capacities[c]), "V5 state mapping block initialization failed");
+        bbCheck(block.initialize(capacities[c]), "state mapping block initialization failed");
         for (size_t i = 0; i < capacities[c]; ++i)
         {
             CTaskStoragePage& page = block.m_pages[i / 64];
@@ -957,14 +958,14 @@ void taskV5ReclaimRoutingTest()
             const uintptr_t begin = reinterpret_cast<uintptr_t>(&page.m_states[0]);
             const uintptr_t end = reinterpret_cast<uintptr_t>(&page.m_states[64]);
             bbCheck(address >= begin && address < end && (address - begin) % sizeof(CTaskStorageState) == 0,
-                "V5 state mapping points outside its page");
-            bbCheck(slot.m_state->m_bits.load() == 0, "V5 state mapping aliases another live record");
+                "state mapping points outside its page");
+            bbCheck(slot.m_state->m_bits.load() == 0, "state mapping aliases another live record");
             slot.m_state->m_bits.store(static_cast<uint32_t>(i + 1));
         }
         for (size_t i = 0; i < capacities[c]; ++i)
         {
             bbCheck(block.m_pages[i / 64].m_slots[i % 64].m_state->m_bits.load() == i + 1,
-                "V5 state mapping overwrote an independent record");
+                "state mapping overwrote an independent record");
         }
     }
     {
@@ -989,21 +990,21 @@ void taskV5ReclaimRoutingTest()
                     CTaskStorageSlot* expected = records[i].m_level < incoming &&
                         records[i].m_level >= minimum ? &records[i] : nullptr;
                     bbCheck(running.below(incoming, minimum) == expected,
-                        "V5 running directory crossed priority bounds or selected completed work");
+                        "running directory crossed priority bounds or selected completed work");
                 }
             }
             states[i].m_bits.store(3);
             bbCheck(running.below(INT_MAX, 1) == nullptr,
-                "V5 running directory retained finished work");
+                "running directory retained finished work");
             states[i].m_bits.store(0);
         }
         running.clear();
         bbCheck(running.below(INT_MAX, 1) == nullptr,
-            "V5 running directory retained reclaimable pointers");
+            "running directory retained reclaimable pointers");
         records[0].m_level = 17;
         running.publish(records[0], records[0].m_level);
         bbCheck(running.below(INT_MAX, 1) == nullptr,
-            "V5 uncommon level entered the cached directory");
+            "uncommon level entered the cached directory");
     }
     {
         CTaskThreadConfig taskConfig;
@@ -1015,38 +1016,40 @@ void taskV5ReclaimRoutingTest()
 
         }));
         // 白盒状态借用栈记录；失败退栈也必须先销毁状态，再释放其记录及位状态。
-        CTaskThreadState state(taskConfig);
+        std::unique_ptr<CTaskThreadState> stateOwner(new CTaskThreadState(taskConfig));
+        CTaskThreadState& state = *stateOwner;
         CTaskReadDomain& readers = state.*CTaskTestDomain::m_member;
-        bbCheck(readers.initialize(4), "V5 completed-current reader initialization failed");
+        bbCheck(readers.initialize(4), "completed-current reader initialization failed");
         record.m_task = task;
         (state.*CTaskTestCurrent::m_member).store(&record);
         record.m_state->m_bits.store(3);
         bbCheck(state.stop(0, 0, true, true).m_status == CTaskThreadOk &&
             state.stop(0, 0, true, false).m_status == CTaskThreadOk && task->m_stops == 0,
-            "V5 retained completed record received a late stop");
+            "retained completed record received a late stop");
         record.m_state->m_bits.store(0);
         bbCheck(state.stop(0, 0, true, true).m_status == CTaskThreadOk && task->m_stops == 1,
-            "V5 active current record lost a stop");
+            "active current record lost a stop");
         (state.*CTaskTestCurrent::m_member).store(nullptr);
     }
     CTaskReadDomain domain;
-    bbCheck(domain.initialize(4), "V5 reclaim domain initialization failed");
-    CTaskStorage storage(domain);
+    bbCheck(domain.initialize(4), "reclaim domain initialization failed");
+    std::unique_ptr<CTaskStorage> storageOwner(new CTaskStorage(domain));
+    CTaskStorage& storage = *storageOwner;
     LockFreeHashMapPoolConfig config;
     config.initialCapacity = 128;
     config.maximumCapacity = 128;
     config.directoryCapacity = 4;
     config.growFreeThreshold = 0;
-    bbCheck(storage.initialize(config).m_status == CTaskThreadOk, "V5 reclaim pool initialization failed");
+    bbCheck(storage.initialize(config).m_status == CTaskThreadOk, "reclaim pool initialization failed");
     const int initialLive = TestTask::m_live.load();
     CTaskReadPosition* held = domain.enter();
-    bbCheck(held != nullptr, "V5 reclaim reader registration failed");
+    bbCheck(held != nullptr, "reclaim reader registration failed");
     std::vector<CTaskStorageSlot*> slots;
     for (size_t i = 0; i < 128; ++i)
     {
         CTaskThreadResult result;
         CTaskStorageSlot* slot = storage.acquire(storage.cache(i / 64), result);
-        bbCheck(slot != nullptr && result.m_status == CTaskThreadOk, "V5 reclaim record allocation failed");
+        bbCheck(slot != nullptr && result.m_status == CTaskThreadOk, "reclaim record allocation failed");
         slot->m_task = std::make_shared<TestTask>(1, [](TestTask&)
         {
 
@@ -1056,12 +1059,12 @@ void taskV5ReclaimRoutingTest()
         storage.retire(*slot);
     }
     bbCheck(storage.collect(128, true) == 0 && TestTask::m_live == initialLive + 128,
-        "V5 delegated reclaim crossed an old reader");
+        "delegated reclaim crossed an old reader");
     domain.leave(*held);
     bbCheck(storage.collect(128, true) == 128 && TestTask::m_live == initialLive + 128,
-        "V5 owner routing lost a batch or reclaimed before help");
+        "owner routing lost a batch or reclaimed before help");
     bbCheck(storage.collect(1) == 1 && TestTask::m_live == initialLive + 127,
-        "V5 explicit reclaim exceeded its budget");
+        "explicit reclaim exceeded its budget");
     std::atomic<size_t> released(0);
     std::vector<std::thread> helpers;
     helpers.reserve(8);
@@ -1093,14 +1096,14 @@ void taskV5ReclaimRoutingTest()
     released.fetch_add(storage.helpReclaim(storage.cache(0)));
     released.fetch_add(storage.helpReclaim(storage.cache(1)));
     bbCheck(released == 127 && TestTask::m_live == initialLive && storage.collect(128) == 0,
-        "V5 concurrent helpers duplicated or leaked a task reference");
+        "concurrent helpers duplicated or leaked a task reference");
     slots.clear();
     for (size_t i = 0; i < 128; ++i)
     {
         CTaskThreadResult result;
         CTaskStorageSlot* slot = storage.acquire(storage.cache(i / 64), result);
-        bbCheck(slot != nullptr && result.m_status == CTaskThreadOk, "V5 helped records did not restore bounded capacity");
-        bbCheck(std::find(slots.begin(), slots.end(), slot) == slots.end(), "V5 helper returned a record twice");
+        bbCheck(slot != nullptr && result.m_status == CTaskThreadOk, "helped records did not restore bounded capacity");
+        bbCheck(std::find(slots.begin(), slots.end(), slot) == slots.end(), "helper returned a record twice");
         slots.push_back(slot);
     }
     for (size_t i = 0; i < slots.size(); ++i)
@@ -1109,14 +1112,15 @@ void taskV5ReclaimRoutingTest()
     }
     {
         CTaskReadDomain boundaryDomain;
-        bbCheck(boundaryDomain.initialize(4), "V5 boundary domain initialization failed");
-        CTaskStorage boundaryStorage(boundaryDomain);
+        bbCheck(boundaryDomain.initialize(4), "boundary domain initialization failed");
+        std::unique_ptr<CTaskStorage> boundaryStorageOwner(new CTaskStorage(boundaryDomain));
+        CTaskStorage& boundaryStorage = *boundaryStorageOwner;
         LockFreeHashMapPoolConfig boundaryConfig;
         boundaryConfig.initialCapacity = 8192;
         boundaryConfig.maximumCapacity = 8192;
         boundaryConfig.growFreeThreshold = 0;
         bbCheck(boundaryStorage.initialize(boundaryConfig).m_status == CTaskThreadOk,
-            "V5 boundary pool initialization failed");
+            "boundary pool initialization failed");
         CTaskReadPosition* partialReader = nullptr;
         for (size_t i = 0; i < 80; ++i)
         {
@@ -1124,12 +1128,12 @@ void taskV5ReclaimRoutingTest()
             {
                 boundaryDomain.advance();
                 partialReader = boundaryDomain.tryEnter(3);
-                bbCheck(partialReader != nullptr, "V5 partial-prefix reader initialization failed");
+                bbCheck(partialReader != nullptr, "partial-prefix reader initialization failed");
             }
             CTaskThreadResult result;
             CTaskStorageSlot* slot = boundaryStorage.acquire(boundaryStorage.cache(0), result);
             bbCheck(slot != nullptr && result.m_status == CTaskThreadOk,
-                "V5 partial-prefix record allocation failed");
+                "partial-prefix record allocation failed");
             slot->m_task = std::make_shared<TestTask>(626, [](TestTask&)
             {
 
@@ -1138,22 +1142,22 @@ void taskV5ReclaimRoutingTest()
             boundaryStorage.retire(*slot);
         }
         bbCheck(boundaryStorage.collect(80) == 63 && TestTask::m_live == initialLive + 17,
-            "V5 partial-prefix reclaim crossed or stopped before the exact protection boundary");
+            "partial-prefix reclaim crossed or stopped before the exact protection boundary");
         boundaryDomain.leave(*partialReader);
         bbCheck(boundaryStorage.collect(80) == 17 && TestTask::m_live == initialLive,
-            "V5 partial-prefix tail was lost after its reader left");
+            "partial-prefix tail was lost after its reader left");
         const size_t counts[] = {1023, 1024, 1031, 4095, 4096, 4103};
         for (size_t round = 0; round < sizeof(counts) / sizeof(counts[0]); ++round)
         {
             CTaskReadPosition* protectedReader = boundaryDomain.tryEnter(3);
-            bbCheck(protectedReader != nullptr, "V5 boundary reader initialization failed");
+            bbCheck(protectedReader != nullptr, "boundary reader initialization failed");
             std::vector<CTaskStorageSlot*> records;
             for (size_t i = 0; i < counts[round]; ++i)
             {
                 CTaskThreadResult result;
                 CTaskStorageSlot* slot = boundaryStorage.acquire(boundaryStorage.cache(i % 3), result);
                 bbCheck(slot != nullptr && result.m_status == CTaskThreadOk,
-                    "V5 boundary record allocation failed");
+                    "boundary record allocation failed");
                 slot->m_task = std::make_shared<TestTask>(626, [](TestTask&)
                 {
 
@@ -1167,30 +1171,30 @@ void taskV5ReclaimRoutingTest()
             }
             bbCheck(boundaryStorage.collect(counts[round], true) == 0 &&
                 TestTask::m_live == initialLive + static_cast<int>(counts[round]),
-                "V5 boundary reclamation crossed a protected reader");
+                "boundary reclamation crossed a protected reader");
             boundaryDomain.leave(*protectedReader);
             bbCheck(boundaryStorage.collect(counts[round], true) == counts[round],
-                "V5 boundary retirement lost the window or overflow tail");
+                "boundary retirement lost the window or overflow tail");
             const int beforeHelp = TestTask::m_live.load();
             size_t helped = 0;
             for (size_t owner = 0; owner < 3; ++owner)
             {
                 const size_t count = boundaryStorage.helpReclaim(boundaryStorage.cache(owner), 1024);
-                bbCheck(count != 0, "V5 boundary retirement routed no records to a live owner");
+                bbCheck(count != 0, "boundary retirement routed no records to a live owner");
                 helped += count;
             }
             bbCheck(boundaryStorage.helpReclaim(boundaryStorage.cache(3), 1024) == 0,
-                "V5 boundary retirement routed a record to the wrong owner");
+                "boundary retirement routed a record to the wrong owner");
             helped += boundaryStorage.collect(counts[round]);
             bbCheck(helped == static_cast<size_t>(beforeHelp - initialLive) && TestTask::m_live == initialLive &&
                 boundaryStorage.collect(counts[round]) == 0,
-                "V5 boundary retirement duplicated or retained a task reference");
+                "boundary retirement duplicated or retained a task reference");
         }
     }
 #endif
 }
 
-void taskV5RepeatedRedoTest()
+void taskRepeatedRedoTest()
 {
     const uint32_t rounds = 64;
     TaskLedger ledger;
@@ -1210,7 +1214,7 @@ void taskV5RepeatedRedoTest()
             bbWait([&, generation]()
             {
                 return released.load() > generation;
-            }, "V5 repeated redo generation release");
+            }, "repeated redo generation release");
         }, true);
     };
     std::shared_ptr<CTask> original(make(0));
@@ -1218,37 +1222,37 @@ void taskV5RepeatedRedoTest()
     {
         const uint32_t generation = factories.fetch_add(1) + 1;
         return make(generation);
-    }), "V5 repeated redo factory registration failed");
+    }), "repeated redo factory registration failed");
     TestWorkers workers;
     std::shared_ptr<CTaskThread> worker = workers.add();
     try
     {
-        bbCheck(worker->postTaskResult(original, 1).m_committed, "V5 repeated original rejected");
+        bbCheck(worker->postTaskResult(original, 1).m_committed, "repeated original rejected");
         bbCheck(worker->postTaskResult(std::make_shared<TestTask>(91, [&](TestTask&)
         {
             ledger.add(9999);
-        }), 1).m_committed, "V5 repeated follower rejected");
+        }), 1).m_committed, "repeated follower rejected");
         for (uint32_t round = 0; round < rounds; ++round)
         {
             bbWait([&]()
             {
                 return entered.load() == round + 1;
-            }, "V5 repeated generation entered");
-            bbCheck(factories.load() == round, "V5 factory ran before this generation returned");
+            }, "repeated generation entered");
+            bbCheck(factories.load() == round, "factory ran before this generation returned");
             bbCheck(worker->postTaskResult(std::make_shared<TestTask>(92, [&, round](TestTask&)
             {
                 ledger.add(2000 + round);
-            }), 2).m_committed, "V5 repeated middle rejected");
+            }), 2).m_committed, "repeated middle rejected");
             bbCheck(worker->postTaskResult(std::make_shared<TestTask>(93, [&, round](TestTask&)
             {
                 ledger.add(3000 + round);
-            }), 3).m_committed, "V5 repeated higher rejected");
+            }), 3).m_committed, "repeated higher rejected");
             released.store(round + 1);
         }
         bbWait([&]()
         {
             return entered.load() == rounds + 1;
-        }, "V5 final generation entered");
+        }, "final generation entered");
         released.store(UINT32_MAX);
         workers.drain();
     }
@@ -1267,16 +1271,16 @@ void taskV5RepeatedRedoTest()
     }
     expected.push_back(100 + rounds);
     expected.push_back(9999);
-    bbCheck(ledger.snapshot() == expected, "V5 repeated redo lost its original priority or queue head");
+    bbCheck(ledger.snapshot() == expected, "repeated redo lost its original priority or queue head");
     bbCheck(factories.load() == rounds && worker->statistics().m_errors == 0 &&
-        worker->statistics().m_outstanding == 0, "V5 repeated redo leaked work or duplicated factories");
+        worker->statistics().m_outstanding == 0, "repeated redo leaked work or duplicated factories");
 }
 
 /** 门控等待只检查本轮协议，不向生产库嵌入测试钩子
 @param [in] predicate 观察原子门控的判断函数
 @param [in] reason 超时说明
 */
-static void TaskV5SpinUntil(const std::function<bool()>& predicate, const char* reason)
+static void WaitForCondition(const std::function<bool()>& predicate, const char* reason)
 {
     const uint64_t deadline = bbNow() + 5000;
     size_t iterations = 0;
@@ -1294,7 +1298,7 @@ static void TaskV5SpinUntil(const std::function<bool()>& predicate, const char* 
 @param [in] redo 是否在每次合作打断后真正生成一个重做任务
 @return 一百万普通任务和一百轮打断从首个投递到最后执行的毫秒数
 */
-static double TaskV5MeasureRedo(bool redo)
+static double MeasureRedo(bool redo)
 {
     const size_t rounds = 100;
     const size_t perRound = 10000;
@@ -1325,10 +1329,10 @@ static double TaskV5MeasureRedo(bool redo)
         std::shared_ptr<TestFactoryTask> original(new TestFactoryTask(612, [&, i](TestTask& task)
         {
             entered.store(i + 1, std::memory_order_release);
-            TaskV5SpinUntil([&]()
+            WaitForCondition([&]()
             {
                 return task.m_stopped.load(std::memory_order_acquire) || cancel.load(std::memory_order_acquire);
-            }, "V5 redo performance original never received stopTask");
+            }, "redo performance original never received stopTask");
         }, redo));
         bbCheck(original->clone([&]() -> CTask*
         {
@@ -1337,14 +1341,14 @@ static double TaskV5MeasureRedo(bool redo)
             {
                 ++repeated;
             });
-        }), "V5 redo performance factory configuration failed");
+        }), "redo performance factory configuration failed");
         originals.push_back(original);
         markers.push_back(std::make_shared<TestTask>(614, [&, i](TestTask&)
         {
             bbCheck(executed == (i + 1) * perRound && highExecuted == i + 1,
-                "V5 redo performance ordinary/high execution order mismatch");
+                "redo performance ordinary/high execution order mismatch");
             bbCheck(factories == (redo ? i + 1 : 0) && repeated == factories,
-                "V5 redo performance factory ran early, twice, or after same-level follower");
+                "redo performance factory ran early, twice, or after same-level follower");
             if (i + 1 == rounds)
             {
                 finished = std::chrono::steady_clock::now();
@@ -1357,7 +1361,7 @@ static double TaskV5MeasureRedo(bool redo)
     config.m_taskMap.initialCapacity = perRound * 2;
     config.m_queue.initialCapacity = perRound * 2;
     const uint32_t id = CTaskThreadManager::instance().init(config);
-    bbCheck(id != 0, "V5 redo performance initialization failed");
+    bbCheck(id != 0, "redo performance initialization failed");
     const std::shared_ptr<CTaskThread> worker = workers.adopt(id);
     /** 普通投递并检查完整结果，禁止测试侧掩盖失败
     @param [in] task 待投递任务
@@ -1368,7 +1372,7 @@ static double TaskV5MeasureRedo(bool redo)
     {
         const CTaskThreadResult result = worker->postTaskResult(task, level);
         bbCheck(result.m_committed && result.m_status == CTaskThreadOk,
-            "V5 redo performance ordinary post failed; external retry prohibited");
+            "redo performance ordinary post failed; external retry prohibited");
     };
     const std::chrono::steady_clock::time_point started = std::chrono::steady_clock::now();
     try
@@ -1380,16 +1384,16 @@ static double TaskV5MeasureRedo(bool redo)
                 post(ordinary[j % ordinary.size()], 1);
             }
             post(originals[i], 1);
-            TaskV5SpinUntil([&]()
+            WaitForCondition([&]()
             {
                 return entered.load(std::memory_order_acquire) == i + 1;
-            }, "V5 redo performance original did not start");
+            }, "redo performance original did not start");
             post(high, 2);
             post(markers[i], 1);
-            TaskV5SpinUntil([&]()
+            WaitForCondition([&]()
             {
                 return completedRounds.load(std::memory_order_acquire) == i + 1;
-            }, "V5 redo performance round did not complete");
+            }, "redo performance round did not complete");
         }
         workers.drain();
     }
@@ -1401,11 +1405,11 @@ static double TaskV5MeasureRedo(bool redo)
     }
     bbCheck(executed == rounds * perRound && factories == (redo ? rounds : 0) && repeated == factories &&
         worker->statistics().m_outstanding == 0 && worker->statistics().m_errors == 0,
-        "V5 redo performance lost tasks, leaked admission, or failed a callback");
+        "redo performance lost tasks, leaked admission, or failed a callback");
     return std::chrono::duration<double, std::milli>(finished - started).count();
 }
 
-void taskV5RedoPerformanceTest()
+void taskRedoPerformanceTest()
 {
     double baseline[3];
     double redo[3];
@@ -1415,13 +1419,13 @@ void taskV5RedoPerformanceTest()
         std::cout << "redo_performance starting_pair=" << round + 1 << std::endl;
         if ((round & 1) == 0)
         {
-            baseline[round] = TaskV5MeasureRedo(false);
-            redo[round] = TaskV5MeasureRedo(true);
+            baseline[round] = MeasureRedo(false);
+            redo[round] = MeasureRedo(true);
         }
         else
         {
-            redo[round] = TaskV5MeasureRedo(true);
-            baseline[round] = TaskV5MeasureRedo(false);
+            redo[round] = MeasureRedo(true);
+            baseline[round] = MeasureRedo(false);
         }
         std::cout << std::fixed << std::setprecision(6) << "redo_performance round=" << round + 1
             << " ordinary=1000000 interruptions=100 baseline_ms=" << baseline[round]
@@ -1438,15 +1442,15 @@ void taskV5RedoPerformanceTest()
 @param [in] task 本轮不可变任务
 @param [in] level 优先级
 */
-static void TaskV5PostChecked(const std::shared_ptr<CTaskThread>& worker,
+static void PostChecked(const std::shared_ptr<CTaskThread>& worker,
     const std::shared_ptr<CTask>& task, int32_t level)
 {
     const CTaskThreadResult result = worker->postTaskResult(task, level);
     bbCheck(result.m_committed && result.m_status == CTaskThreadOk,
-        "V5 race ordinary post failed; external retry prohibited");
+        "race ordinary post failed; external retry prohibited");
 }
 
-void taskV5FirstPriorityRaceTest()
+void taskFirstPriorityRaceTest()
 {
     for (size_t mode = 0; mode < 2; ++mode)
     {
@@ -1463,7 +1467,7 @@ void taskV5FirstPriorityRaceTest()
         {
             const int32_t level = mode == 1 && i == 3 ? 17 : (mode == 1 && i == 5 ? INT_MAX : levels[i]);
             // 从公开接口连续切换级别，覆盖正常完成、异常完成及通用级别路径。
-            TaskV5PostChecked(worker, std::make_shared<TestTask>(623, [&, i, level](TestTask&)
+            PostChecked(worker, std::make_shared<TestTask>(623, [&, i, level](TestTask&)
             {
                 if (worker->getCurTaskLevel() != level)
                 {
@@ -1471,20 +1475,20 @@ void taskV5FirstPriorityRaceTest()
                 }
                 completed.store(i + 1, std::memory_order_release);
             }), level);
-            TaskV5SpinUntil([&]() { return completed.load(std::memory_order_acquire) == i + 1; },
-                "V5 priority handoff did not execute the next task");
+            WaitForCondition([&]() { return completed.load(std::memory_order_acquire) == i + 1; },
+                "priority handoff did not execute the next task");
             if (i == 6)
             {
                 // TestTask 会捕获自身断言；用既有故障任务将异常实际交给工作线程处理。
-                TaskV5PostChecked(worker, std::make_shared<TestFaultTask>(1, faultCalls, faultEntered, faultRelease), level);
-                TaskV5SpinUntil([&]() { return faultEntered.load(std::memory_order_acquire); },
-                    "V5 priority handoff exception task did not start");
+                PostChecked(worker, std::make_shared<TestFaultTask>(1, faultCalls, faultEntered, faultRelease), level);
+                WaitForCondition([&]() { return faultEntered.load(std::memory_order_acquire); },
+                    "priority handoff exception task did not start");
             }
         }
         workers.drain();
         bbCheck(!failed.load() && completed.load() == total && worker->getCurTaskLevel() == 0 &&
             worker->statistics().m_executed == total + 1 && worker->statistics().m_errors == 1 && faultCalls == 1,
-            "V5 priority handoff retained an earlier level or lost exception recovery");
+            "priority handoff retained an earlier level or lost exception recovery");
     }
     for (size_t round = 0; round < 128; ++round)
     {
@@ -1498,22 +1502,22 @@ void taskV5FirstPriorityRaceTest()
         std::thread publisher;
         try
         {
-            TaskV5PostChecked(worker, std::make_shared<TestTask>(620, [&](TestTask&)
+            PostChecked(worker, std::make_shared<TestTask>(620, [&](TestTask&)
             {
                 entered.store(true, std::memory_order_release);
-                TaskV5SpinUntil([&]() { return release.load(std::memory_order_acquire); },
-                    "V5 first priority gate was not released");
+                WaitForCondition([&]() { return release.load(std::memory_order_acquire); },
+                    "first priority gate was not released");
             }), 1);
-            TaskV5SpinUntil([&]() { return entered.load(std::memory_order_acquire); },
-                "V5 first priority gate did not start");
-            TaskV5PostChecked(worker, std::make_shared<TestTask>(621, [&](TestTask& task)
+            WaitForCondition([&]() { return entered.load(std::memory_order_acquire); },
+                "first priority gate did not start");
+            PostChecked(worker, std::make_shared<TestTask>(621, [&](TestTask& task)
             {
                 ++lowerExecutions;
                 // 两种合法顺序：高级已经先执行，或者低级先执行并收到高级的通知。
-                TaskV5SpinUntil([&]()
+                WaitForCondition([&]()
                 {
                     return higherExecuted.load(std::memory_order_acquire) || task.m_stopped.load();
-                }, "V5 first higher publication lost its preemption notification");
+                }, "first higher publication lost its preemption notification");
             }), 1);
             const std::shared_ptr<CTask> higher = std::make_shared<TestTask>(622, [&](TestTask&)
             {
@@ -1523,9 +1527,9 @@ void taskV5FirstPriorityRaceTest()
             {
                 try
                 {
-                    TaskV5SpinUntil([&]() { return release.load(std::memory_order_acquire); },
-                        "V5 higher publisher was not released");
-                    TaskV5PostChecked(worker, higher, round % 3 == 0 ? 17 : 2);
+                    WaitForCondition([&]() { return release.load(std::memory_order_acquire); },
+                        "higher publisher was not released");
+                    PostChecked(worker, higher, round % 3 == 0 ? 17 : 2);
                 }
                 catch (...)
                 {
@@ -1537,7 +1541,7 @@ void taskV5FirstPriorityRaceTest()
             workers.drain();
             bbCheck(!failed.load() && higherExecuted.load() && lowerExecutions == 1 &&
                 worker->statistics().m_errors == 0 && worker->statistics().m_outstanding == 0,
-                "V5 first priority race lost work or leaked admission");
+                "first priority race lost work or leaked admission");
         }
         catch (...)
         {
@@ -1552,17 +1556,18 @@ void taskV5FirstPriorityRaceTest()
     }
 }
 
-void taskV5ReclaimBatchesTest()
+void taskReclaimBatchesTest()
 {
 #ifndef CTTM_TEST_DLL
     CTaskReadDomain domain;
-    bbCheck(domain.initialize(2), "V5 reclaim batches domain initialization failed");
-    CTaskStorage storage(domain);
+    bbCheck(domain.initialize(2), "reclaim batches domain initialization failed");
+    std::unique_ptr<CTaskStorage> storageOwner(new CTaskStorage(domain));
+    CTaskStorage& storage = *storageOwner;
     LockFreeHashMapPoolConfig config;
     config.initialCapacity = 1024;
     config.maximumCapacity = 1024;
     config.growFreeThreshold = 0;
-    bbCheck(storage.initialize(config).m_status == CTaskThreadOk, "V5 reclaim batches pool failed");
+    bbCheck(storage.initialize(config).m_status == CTaskThreadOk, "reclaim batches pool failed");
     const int initialLive = TestTask::m_live.load();
     CTaskStorageCache& cache = storage.cache(0);
     // 按声明的批次额度制造满载和额外一批，验证实现没有少用或越过这些位置。
@@ -1575,7 +1580,7 @@ void taskV5ReclaimBatchesTest()
         {
             CTaskThreadResult result;
             CTaskStorageSlot* slot = storage.acquire(cache, result);
-            bbCheck(slot != nullptr && result.m_status == CTaskThreadOk, "V5 reclaim batches allocation failed");
+            bbCheck(slot != nullptr && result.m_status == CTaskThreadOk, "reclaim batches allocation failed");
             slot->m_task = std::make_shared<TestTask>(625, [](TestTask&)
             {
 
@@ -1588,21 +1593,21 @@ void taskV5ReclaimBatchesTest()
             storage.retire(*slots[i]);
         }
         bbCheck(storage.collect(total, true) == total && TestTask::m_live == initialLive + retainedCapacity,
-            "V5 full reclaim batches failed to release the overflow directly");
+            "full reclaim batches failed to release the overflow directly");
         // 只在测试模型中停在帮助者取得批次之后；其余真实帮助入口仍应前进。
         int32_t count = 64;
         bbCheck(cache.m_reclaims[0].m_count.compare_exchange_strong(count, -1),
-            "V5 reclaim pause model failed to claim its batch");
+            "reclaim pause model failed to claim its batch");
         bbCheck(storage.helpReclaim(cache, retainedCapacity) == retainedCapacity - 64 && TestTask::m_live == initialLive + 64,
-            "V5 paused helper blocked independent batches");
+            "paused helper blocked independent batches");
         cache.m_reclaims[0].m_count.store(64, std::memory_order_release);
         for (size_t i = 0; i < 64; ++i)
         {
             bbCheck(storage.helpReclaim(cache, 1) == 1 && TestTask::m_live == initialLive + 63 - i,
-                "V5 partial reclaim changed its budget or duplicated release");
+                "partial reclaim changed its budget or duplicated release");
         }
         bbCheck(storage.helpReclaim(cache) == 0 && storage.collect(512) == 0 && TestTask::m_live == initialLive,
-            "V5 reclaimed batch retained a task or appeared twice");
+            "reclaimed batch retained a task or appeared twice");
     }
     // 不足一批的尾部也必须遵守显式回收预算，并在消费者空闲维护时释放。
     const size_t tails[] = {1, 15, 16, 31, 32, 63, 64};
@@ -1614,7 +1619,7 @@ void taskV5ReclaimBatchesTest()
             CTaskThreadResult result;
             CTaskStorageSlot* slot = storage.acquire(cache, result);
             bbCheck(slot != nullptr && result.m_status == CTaskThreadOk,
-                "V5 partial reclaim batch allocation failed");
+                "partial reclaim batch allocation failed");
             slot->m_task = std::make_shared<TestTask>(625, [](TestTask&)
             {
 
@@ -1623,11 +1628,11 @@ void taskV5ReclaimBatchesTest()
             storage.retire(*slot);
         }
         bbCheck(storage.collect(count, true) == count && TestTask::m_live == initialLive + count,
-            "V5 partial delegated batch lost a task reference");
+            "partial delegated batch lost a task reference");
         bbCheck(storage.collect(1) == 1 && TestTask::m_live == initialLive + count - 1,
-            "V5 partial tail reclamation exceeded its explicit budget");
+            "partial tail reclamation exceeded its explicit budget");
         bbCheck(storage.collect(512) == count - 1 && TestTask::m_live == initialLive,
-            "V5 idle reclamation retained the partial tail");
+            "idle reclamation retained the partial tail");
     }
     // 清理必须兼顾从未分配、只有一块及跨块目录，并可在退出和析构时重复调用。
     const size_t clearCapacities[] = {0, 1, 257, 65536};
@@ -1635,7 +1640,8 @@ void taskV5ReclaimBatchesTest()
     {
         CTaskReadDomain clearDomain;
         bbCheck(clearDomain.initialize(2), "clear boundary domain failed");
-        CTaskStorage clearStorage(clearDomain);
+        std::unique_ptr<CTaskStorage> clearStorageOwner(new CTaskStorage(clearDomain));
+        CTaskStorage& clearStorage = *clearStorageOwner;
         LockFreeHashMapPoolConfig clearConfig;
         clearConfig.initialCapacity = clearCapacities[i];
         clearConfig.maximumCapacity = static_cast<int64_t>(clearCapacities[i]);
@@ -1663,7 +1669,8 @@ void taskV5ReclaimBatchesTest()
     // 四轮交错归还十六个所有者的页，重复访问同一分组也必须精确归还租约。
     CTaskReadDomain groupedDomain;
     bbCheck(groupedDomain.initialize(16), "grouped reclamation domain failed");
-    CTaskStorage grouped(groupedDomain);
+    std::unique_ptr<CTaskStorage> groupedOwner(new CTaskStorage(groupedDomain));
+    CTaskStorage& grouped = *groupedOwner;
     LockFreeHashMapPoolConfig groupedConfig;
     groupedConfig.initialCapacity = 2048;
     groupedConfig.maximumCapacity = 2048;
@@ -1705,7 +1712,7 @@ void taskV5ReclaimBatchesTest()
 #endif
 }
 
-void taskV5CurrentPropertyStopTest()
+void taskCurrentPropertyStopTest()
 {
     std::atomic<bool> entered(false);
     std::atomic<bool> release(false);
@@ -1715,8 +1722,8 @@ void taskV5CurrentPropertyStopTest()
     const std::shared_ptr<TestTask> current = std::make_shared<TestTask>(630, [&](TestTask&)
     {
         entered.store(true, std::memory_order_release);
-        TaskV5SpinUntil([&]() { return release.load(std::memory_order_acquire); },
-            "V5 current property stop gate was not released");
+        WaitForCondition([&]() { return release.load(std::memory_order_acquire); },
+            "current property stop gate was not released");
         ++completed;
     });
     const std::shared_ptr<TestTask> matching = std::make_shared<TestTask>(630, [&](TestTask&) { ++completed; });
@@ -1724,21 +1731,21 @@ void taskV5CurrentPropertyStopTest()
     const std::shared_ptr<TestTask> differentProperty = std::make_shared<TestTask>(631, [&](TestTask&) { ++completed; });
     try
     {
-        TaskV5PostChecked(worker, current, 10);
-        TaskV5SpinUntil([&]() { return entered.load(std::memory_order_acquire); },
-            "V5 current property stop task did not start");
-        TaskV5PostChecked(worker, matching, 1);
-        TaskV5PostChecked(worker, matching, 1);
-        TaskV5PostChecked(worker, differentLevel, 2);
-        TaskV5PostChecked(worker, differentProperty, 1);
+        PostChecked(worker, current, 10);
+        WaitForCondition([&]() { return entered.load(std::memory_order_acquire); },
+            "current property stop task did not start");
+        PostChecked(worker, matching, 1);
+        PostChecked(worker, matching, 1);
+        PostChecked(worker, differentLevel, 2);
+        PostChecked(worker, differentProperty, 1);
         bbCheck(worker->stopTask(630, 1).m_status == CTaskThreadOk && current->m_stops == 1 &&
             matching->m_stops == 1 && differentLevel->m_stops == 0 && differentProperty->m_stops == 0,
-            "V5 current identity or queued property/priority selection changed");
-        bbCheck(worker->getWaitTaskCount() == 4, "V5 property stop removed queued work");
+            "current identity or queued property/priority selection changed");
+        bbCheck(worker->getWaitTaskCount() == 4, "property stop removed queued work");
         release.store(true, std::memory_order_release);
         workers.drain();
         bbCheck(completed == 5 && worker->statistics().m_errors == 0,
-            "V5 current property stop lost work or recorded a callback error");
+            "current property stop lost work or recorded a callback error");
     }
     catch (...)
     {
@@ -1748,7 +1755,7 @@ void taskV5CurrentPropertyStopTest()
     }
 }
 
-void taskV5ShutdownHandoffTest()
+void taskShutdownHandoffTest()
 {
     for (size_t round = 0; round < 256; ++round)
     {
@@ -1761,26 +1768,26 @@ void taskV5ShutdownHandoffTest()
         std::thread stopper;
         try
         {
-            TaskV5PostChecked(worker, std::make_shared<TestTask>(623, [&](TestTask&)
+            PostChecked(worker, std::make_shared<TestTask>(623, [&](TestTask&)
             {
                 entered.store(true, std::memory_order_release);
-                TaskV5SpinUntil([&]() { return release.load(std::memory_order_acquire); },
-                    "V5 shutdown gate was not released");
+                WaitForCondition([&]() { return release.load(std::memory_order_acquire); },
+                    "shutdown gate was not released");
             }), 1);
-            TaskV5SpinUntil([&]() { return entered.load(std::memory_order_acquire); },
-                "V5 shutdown gate did not start");
-            TaskV5PostChecked(worker, std::make_shared<TestTask>(624, [&](TestTask& task)
+            WaitForCondition([&]() { return entered.load(std::memory_order_acquire); },
+                "shutdown gate did not start");
+            PostChecked(worker, std::make_shared<TestTask>(624, [&](TestTask& task)
             {
                 ++executions;
-                TaskV5SpinUntil([&]() { return task.m_stopped.load(std::memory_order_acquire); },
-                    "V5 discard shutdown missed task handoff");
+                WaitForCondition([&]() { return task.m_stopped.load(std::memory_order_acquire); },
+                    "discard shutdown missed task handoff");
             }), 1);
             stopper = std::thread([&]()
             {
                 try
                 {
-                    TaskV5SpinUntil([&]() { return release.load(std::memory_order_acquire); },
-                        "V5 shutdown caller was not released");
+                    WaitForCondition([&]() { return release.load(std::memory_order_acquire); },
+                        "shutdown caller was not released");
                     if (worker->requestShutdown(false).m_status != CTaskThreadOk)
                     {
                         failed.store(true);
@@ -1794,11 +1801,11 @@ void taskV5ShutdownHandoffTest()
             release.store(true, std::memory_order_release);
             stopper.join();
             // 等待本次关闭自行结束，再 join；不允许额外一次停止掩盖丢通知。
-            TaskV5SpinUntil([&]() { return worker->statistics().m_exited; },
-                "V5 discard shutdown did not finish without a second notification");
+            WaitForCondition([&]() { return worker->statistics().m_exited; },
+                "discard shutdown did not finish without a second notification");
             workers.drain();
             bbCheck(!failed.load() && executions <= 1 && worker->statistics().m_errors == 0 &&
-                worker->statistics().m_outstanding == 0, "V5 shutdown handoff failed or leaked work");
+                worker->statistics().m_outstanding == 0, "shutdown handoff failed or leaked work");
         }
         catch (...)
         {
