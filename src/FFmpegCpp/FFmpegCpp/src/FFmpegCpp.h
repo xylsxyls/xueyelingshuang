@@ -1,9 +1,10 @@
 ﻿#pragma once
 #include "FFmpegCppMacro.h"
 #include "FFmpegCppModels.h"
+#include <atomic>
 
 /** FFmpeg视频文件对象封装，一个对象代表一个已打开或准备打开的视频文件
-本实例拥有媒体和编解码上下文，调用方负责串行访问，不在库内启动后台任务
+本实例拥有媒体和编解码上下文，除 cancelCurrentTask 外由调用方串行访问，不在库内启动后台任务
 */
 class FFmpegCppAPI FFmpegCpp
 {
@@ -106,7 +107,7 @@ public:
         const FFmpegCppFrameExtractOption& option = FFmpegCppFrameExtractOption());
 
     /** 从当前视频指定时间位置截取一帧图片并写入内存
-    @param [in] timestampMilliseconds 截图时间点，单位毫秒；小于0时按0处理，大于总时长时由实现层裁剪到可用范围
+    @param [in] timestampMilliseconds 相对视频起点的截图时间，单位毫秒。帧间位置选正在显示的前一帧；小于0时按0处理，大于总时长时由实现层裁剪到可用范围
     @param [out] imageData 输出编码后的图片数据，不能为空；成功时会写入图片格式、宽高、mimeType和二进制数据
     @param [in] option 截图选项；option.timestampMilliseconds会被timestampMilliseconds参数覆盖
     @return 返回true表示截图成功
@@ -126,7 +127,7 @@ public:
         std::string* savedFilePath = nullptr);
 
     /** 从当前视频指定时间位置截取一帧图片并保存到文件
-    @param [in] timestampMilliseconds 截图时间点，单位毫秒
+    @param [in] timestampMilliseconds 相对视频起点的截图时间，单位毫秒。帧间位置选正在显示的前一帧
     @param [in] outputFilePath 输出图片完整路径；为空时实现层可按filePath、时间点和图片格式自动生成路径
     @param [in] option 截图选项；option.timestampMilliseconds会被timestampMilliseconds参数覆盖
     @param [out] savedFilePath 可选输出最终保存路径，传nullptr表示不需要
@@ -149,17 +150,17 @@ public:
         FFmpegCppProgressCallback progressCallback = nullptr,
         void* userData = nullptr);
 
-    /** 请求取消当前正在执行的截图或转码任务
+    /** 请求取消当前正在执行的截图或转码任务，可在另一线程调用；对象须在调用期间保持存活。
     @return 返回true表示取消请求已经记录；如果当前没有任务，也返回true
     */
     bool cancelCurrentTask();
 
 private:
-    // 当前打开的媒体文件路径
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
+    // 当前打开的媒体文件路径
     std::string m_filePath;
     // 最近一次失败原因
     std::string m_lastError;
@@ -171,13 +172,9 @@ private:
     // 是否已经打开媒体文件
     bool m_isOpen;
     // 当前长任务是否被请求取消
-    bool m_cancelRequested;
+    std::atomic<bool> m_cancelRequested;
     // AVFormatContext指针，头文件不暴露ffmpeg类型
     void* m_formatContext;
-    // 预留视频解码上下文指针，close兜底释放
-    void* m_videoCodecContext;
-    // 预留音频解码上下文指针，close兜底释放
-    void* m_audioCodecContext;
-    // 预留缩放上下文指针，close兜底释放
-    void* m_scaleContext;
+    // 保留公开 SDK 的对象大小和对齐；截图的编解码资源在调用内释放
+    void* m_reserved[3];
 };

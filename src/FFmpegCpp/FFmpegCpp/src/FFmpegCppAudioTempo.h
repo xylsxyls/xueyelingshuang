@@ -18,10 +18,19 @@ public:
 
     /** 初始化16位交错PCM流，失败保持关闭
     @param [in] sampleRate 采样率，1000至500000
-    @param [in] channels 声道数，1至32
+    @param [in] channels 声道数，1至32。目标运行库早于SoundTouch 2.4.1时最多16声道
     @return 初始化是否成功
     */
     bool init(int32_t sampleRate, int32_t channels);
+
+    /** 在写入首个样本前同步设置采样格式、速度和音调；失败后保持关闭
+    @param [in] sampleRate 每秒采样数，1000至500000
+    @param [in] channels 每帧交错声道数，1至32
+    @param [in] ratePermille 速度千分比，50至20000，1000为原速
+    @param [in] semitones 半音偏移，-7至7，省略使用原调
+    @return 所有设置生效返回true
+    */
+    bool init(int32_t sampleRate, int32_t channels, int32_t ratePermille, int32_t semitones = 0);
 
     /** 丢弃未读样本并释放流，可重复调用
     */

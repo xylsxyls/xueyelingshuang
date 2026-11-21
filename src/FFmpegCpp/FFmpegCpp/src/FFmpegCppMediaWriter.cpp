@@ -50,6 +50,9 @@ void FFmpegCppMediaWriter::close()
         avformat_free_context(m_format);
         m_format = nullptr;
     }
+    m_audioStream = nullptr;
+    m_videoStream = nullptr;
+    m_pending.clear();
     m_started = false;
 }
 
@@ -68,11 +71,31 @@ std::string FFmpegCppMediaWriter::error() const
 
 bool FFmpegCppMediaWriter::open(const std::string& path, bool withVideo, int width, int height)
 {
-    if (m_format || m_native || path.empty() || (withVideo && (width < 2 || height < 2 || width > 16384 ||
-        height > 16384 || width % 2 || height % 2))) return fail(AVERROR(EINVAL), "invalid writer settings");
+    if (m_started || path.empty() || path.find('\0') != std::string::npos || (withVideo && (width < 2 || height < 2 || width > 16384 ||
+        height > 16384 || width % 2 || height % 2)))
+    {
+        return fail(AVERROR(EINVAL), "invalid writer settings");
+    }
+    try
+    {
+        if (openSession(path, withVideo, width, height))
+        {
+            return true;
+        }
+    }
+    catch (...)
+    {
+        close();
+        throw;
+    }
+    close();
+    return false;
+}
+
+bool FFmpegCppMediaWriter::openSession(const std::string& path, bool withVideo, int width, int height)
+{
     m_error.clear();
     m_audioFrames = 0;
-    m_pending.clear();
     m_width = withVideo ? width : 0;
     m_height = withVideo ? height : 0;
 #ifdef _WIN32
@@ -82,7 +105,10 @@ bool FFmpegCppMediaWriter::open(const std::string& path, bool withVideo, int wid
     {
         m_native = new FFmpegCppNativeMediaWriter;
         m_started = m_native->open(path, withVideo, width, height);
-        if (!m_started) { m_error = m_native->error(); close(); }
+        if (!m_started)
+        {
+            m_error = m_native->error();
+        }
         return m_started;
     }
 #endif
@@ -105,10 +131,13 @@ bool FFmpegCppMediaWriter::open(const std::string& path, bool withVideo, int wid
             codec->width = width;
             codec->height = height;
             codec->pix_fmt = AV_PIX_FMT_YUV420P;
-            codec->time_base = AVRational{1, 30};
+            // 时间基不能固定为1/30；60fps或可变帧率源会产生重复PTS。
+            codec->time_base = AVRational{1, 90000};
             codec->framerate = AVRational{30, 1};
             codec->gop_size = 60;
             codec->max_b_frames = 0;
+            // 将调用方提供的帧时长传到编码包，MP4 才能保留最后一帧的显示区间。
+            codec->flags |= AV_CODEC_FLAG_FRAME_DURATION;
         }
         else
         {
@@ -118,6 +147,9 @@ bool FFmpegCppMediaWriter::open(const std::string& path, bool withVideo, int wid
             codec->time_base = AVRational{1, 48000};
         }
         if (m_format->oformat->flags & AVFMT_GLOBALHEADER) codec->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+#ifdef __EMSCRIPTEN__
+        codec->thread_count = 1;
+#endif
         result = avcodec_open2(codec, encoder, nullptr);
         if (result < 0) return fail(result, "open encoder");
         result = avcodec_parameters_from_context(stream->codecpar, codec);
@@ -198,12 +230,24 @@ bool FFmpegCppMediaWriter::audio(const int16_t* samples, size_t frames)
 
 bool FFmpegCppMediaWriter::video(const unsigned char* pixels, size_t bytes, int64_t time100ns)
 {
-    if (!m_started || m_width == 0 || !pixels || time100ns < 0 ||
-        bytes != static_cast<size_t>(m_width) * m_height * 4) return fail(AVERROR(EINVAL), "invalid video frame");
+    return video(pixels, bytes, time100ns, 10000000LL / 30);
+}
+
+bool FFmpegCppMediaWriter::video(const unsigned char* pixels, size_t bytes, int64_t time100ns, int64_t duration100ns)
+{
+    if (!m_started || m_width == 0 || !pixels || time100ns < 0 || duration100ns <= 0 ||
+        time100ns > INT64_MAX - duration100ns ||
+        bytes != static_cast<size_t>(m_width) * m_height * 4)
+    {
+        return fail(AVERROR(EINVAL), "invalid video frame");
+    }
 #ifdef _WIN32
     if (m_native)
     {
-        if (m_native->video(pixels, bytes, time100ns, 10000000LL / 30)) return true;
+        if (m_native->video(pixels, bytes, time100ns, duration100ns))
+        {
+            return true;
+        }
         m_error = m_native->error();
         return false;
     }
@@ -214,6 +258,7 @@ bool FFmpegCppMediaWriter::video(const unsigned char* pixels, size_t bytes, int6
     frame->width = m_video->width;
     frame->height = m_video->height;
     frame->pts = av_rescale_q(time100ns, AVRational{1, 10000000}, m_video->time_base);
+    frame->duration = (std::max<int64_t>)(1, av_rescale_q(duration100ns, AVRational{1, 10000000}, m_video->time_base));
     int result = av_frame_get_buffer(frame, 32);
     if (result >= 0)
     {
@@ -241,18 +286,25 @@ bool FFmpegCppMediaWriter::finish()
     {
         const bool result = m_native->finish();
         if (!result) m_error = m_native->error();
-        delete m_native;
-        m_native = nullptr;
-        m_started = false;
+        close();
         return result;
     }
 #endif
-    if (!m_pending.empty() && !audioBlock(m_pending.size() / 2)) return false;
-    if (!encode(m_audio, m_audioStream, nullptr) || (m_video && !encode(m_video, m_videoStream, nullptr))) return false;
-    const int result = av_write_trailer(m_format);
-    m_started = false;
-    if (result < 0) return fail(result, "finish output");
+    bool ok = (m_pending.empty() || audioBlock(m_pending.size() / 2)) &&
+        encode(m_audio, m_audioStream, nullptr) && (m_video == nullptr || encode(m_video, m_videoStream, nullptr));
+    if (ok)
+    {
+        const int trailer = av_write_trailer(m_format);
+        if (trailer < 0)
+        {
+            ok = fail(trailer, "finish output");
+        }
+    }
     const int closed = avio_closep(&m_format->pb);
-    if (closed < 0) return fail(closed, "close output");
-    return true;
+    if (ok && closed < 0)
+    {
+        ok = fail(closed, "close output");
+    }
+    close();
+    return ok;
 }

@@ -51,6 +51,17 @@ p(nullptr)
     {
         return p;
     }
+private:
+    /** 禁止复制独占资源，避免对同一个引用重复释放
+    @param [in] other 另一资源所有者
+    */
+    FFmpegCppComPtr(const FFmpegCppComPtr& other) = delete;
+
+    /** 禁止赋值独占资源
+    @param [in] other 另一资源所有者
+    @return 禁用操作
+    */
+    FFmpegCppComPtr& operator=(const FFmpegCppComPtr& other) = delete;
 };
 
 /** Windows编码会话状态，拥有SinkWriter及本次成功初始化的COM和MF资源
@@ -127,6 +138,17 @@ m_stage("initialize")
         if (SUCCEEDED(m_status)) m_status = m_writer->WriteSample(index, sample.p);
         return SUCCEEDED(m_status);
     }
+private:
+    /** 禁止复制独占资源，避免对同一个引用重复释放
+    @param [in] other 另一资源所有者
+    */
+    FFmpegCppNativeMediaWriterState(const FFmpegCppNativeMediaWriterState& other) = delete;
+
+    /** 禁止赋值独占资源
+    @param [in] other 另一资源所有者
+    @return 禁用操作
+    */
+    FFmpegCppNativeMediaWriterState& operator=(const FFmpegCppNativeMediaWriterState& other) = delete;
 };
 
 /** FFmpeg缺少MP3、AAC或H.264编码器时使用的Windows系统后备编码器

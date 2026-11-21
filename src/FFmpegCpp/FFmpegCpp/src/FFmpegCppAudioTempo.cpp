@@ -1,6 +1,13 @@
 ﻿#include "FFmpegCppAudioTempo.h"
-#include "soundtouchinclude/SoundTouch.h"
-#include "soundtouchinclude/SoundTouchDLL.h"
+#include "soundtouch/SoundTouch.h"
+#include "soundtouch/SoundTouchDLL.h"
+#ifdef _MSC_VER
+#ifdef _DEBUG
+#pragma comment(lib, "SoundTouchDLLd.lib")
+#else
+#pragma comment(lib, "SoundTouchDLL.lib")
+#endif
+#endif
 #include <climits>
 #include <cmath>
 #include <algorithm>
@@ -25,6 +32,11 @@ bool FFmpegCppAudioTempo::init(int32_t sampleRate, int32_t channels)
     {
         return false;
     }
+    // 旧版目标 SDK 的多声道滤波器仅支持 16 个声道。
+    if (channels > 16 && soundtouch_getVersionId() < 20401)
+    {
+        return false;
+    }
     try
     {
         m_stream = soundtouch_createInstance();
@@ -45,6 +57,16 @@ bool FFmpegCppAudioTempo::init(int32_t sampleRate, int32_t channels)
         uninit();
     }
     return m_stream != nullptr;
+}
+
+bool FFmpegCppAudioTempo::init(int32_t sampleRate, int32_t channels, int32_t ratePermille, int32_t semitones)
+{
+    if (!init(sampleRate, channels) || !setRate(ratePermille) || !setPitchSemitones(semitones))
+    {
+        uninit();
+        return false;
+    }
+    return true;
 }
 
 void FFmpegCppAudioTempo::uninit()

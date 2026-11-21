@@ -81,7 +81,7 @@ public:
     */
     bool readVideoFrameAt(int64_t position100ns, size_t maxReadFrameCount, FFmpegCppPlaybackVideoFrame* frame);
 
-    /** 使用有界原始帧缓存读取当前帧前后相邻的真实展示帧
+    /** 使用可配置的原始帧缓存读取当前帧前后相邻的真实展示帧
     @param [in] origin100ns 当前帧起点，单位100纳秒
     @param [in] direction 负数向前一帧，正数向后一帧，不允许0
     @param [in] option 取消条件及读取选项，调用期间借用
@@ -178,6 +178,12 @@ private:
     */
     void resetReadState(int64_t position100ns);
 
+    /** 判断展示区间是否完全位于当前门限之前，解码和队列交付同时检查
+    @param [in] frame 已归一化起点及展示时长的视频帧
+    @return true 表示该帧应跳过
+    */
+    bool videoBeforeFloor(const FFmpegCppPlaybackVideoFrame& frame) const;
+
     /** 取出最早解码完成的排队帧
     @param [out] frame 接收队首帧，不可为空，由调用方持有输出数据
     @return true表示取到帧，队列为空返回false
@@ -211,7 +217,7 @@ private:
     bool queueVideoFrame(const AVFrame* frame);
 
     /** 重采样音频为交错S16并加入输出队列
-    @param [in] frame 解码得到的音频帧，不可为空，不转移所有权
+    @param [in] frame 借用的音频帧，空指针表示解码器已结束，取出重采样器剩余样本
     @return true表示转换成功，无输出样本时也返回true
     */
     bool queueAudioFrame(const AVFrame* frame);
@@ -268,6 +274,8 @@ public:
     int64_t m_videoFrameDuration100ns;
     // 视频缺少有效时间戳时的下一起点，单位100纳秒
     int64_t m_nextVideoTimestamp100ns;
+    // 实时播放允许跳过像素转换的最早边界；0保留全部帧
+    int64_t m_videoPresentationFloor100ns;
     // 音频缺少有效时间戳时的下一起点，单位100纳秒
     int64_t m_nextAudioTimestamp100ns;
     // 源视频宽度，单位像素，无视频时为0
@@ -288,6 +296,8 @@ public:
     bool m_videoDrained;
     // 音频解码器是否已输出全部尾帧
     bool m_audioDrained;
+    // 输入结束后重采样器已排空，读取可返回 EOF
+    bool m_audioResamplerDrained;
     // 当前读取状态下已解封装的包数，定位或关闭时重置
     uint64_t m_readPacketCount;
     // 当前读取状态下已接收的视频帧数

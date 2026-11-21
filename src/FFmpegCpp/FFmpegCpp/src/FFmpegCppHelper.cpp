@@ -4,6 +4,7 @@
 #include <cctype>
 #include <iomanip>
 #include <sstream>
+#include <locale>
 #include <cstring>
 
 #ifdef _MSC_VER
@@ -28,7 +29,10 @@ bool FFmpegCppHelper::fitBgraFrame(const std::vector<unsigned char>& pixels, int
     }
     try
     {
-        output->assign(static_cast<size_t>(outputWidth) * outputHeight * 4, 0);
+        // 同一 vector 同时用作输入和输出时，必须先保留完整原图供复制或缩放读取
+        std::vector<unsigned char> temporary;
+        std::vector<unsigned char>& canvas = output == &pixels ? temporary : *output;
+        canvas.assign(static_cast<size_t>(outputWidth) * outputHeight * 4, 0);
         int32_t fitWidth = width, fitHeight = height;
         if (width > outputWidth || height > outputHeight || outputWidth - width > 1 || outputHeight - height > 1)
         {
@@ -36,24 +40,37 @@ bool FFmpegCppHelper::fitBgraFrame(const std::vector<unsigned char>& pixels, int
             fitWidth = (std::max)(1, static_cast<int32_t>(width * factor));
             fitHeight = (std::max)(1, static_cast<int32_t>(height * factor));
         }
-        unsigned char* destination = output->data() + ((outputHeight - fitHeight) / 2 * outputWidth + (outputWidth - fitWidth) / 2) * 4;
+        unsigned char* destination = canvas.data() + ((outputHeight - fitHeight) / 2 * outputWidth + (outputWidth - fitWidth) / 2) * 4;
         if (width == fitWidth && height == fitHeight)
         {
             for (int32_t y = 0; y < height; ++y)
             {
                 std::memcpy(destination + y * outputWidth * 4, pixels.data() + static_cast<size_t>(y) * stride, width * 4);
             }
-            return true;
         }
-        SwsContext* scaler = sws_getContext(width, height, AV_PIX_FMT_BGRA, fitWidth, fitHeight,
-            AV_PIX_FMT_BGRA, SWS_BICUBIC, nullptr, nullptr, nullptr);
-        if (!scaler) return false;
-        const unsigned char* inputs[4] = {pixels.data(), nullptr, nullptr, nullptr};
-        unsigned char* outputs[4] = {destination, nullptr, nullptr, nullptr};
-        const int inputStride[4] = {stride, 0, 0, 0}, outputStride[4] = {outputWidth * 4, 0, 0, 0};
-        const int lines = sws_scale(scaler, inputs, inputStride, 0, height, outputs, outputStride);
-        sws_freeContext(scaler);
-        return lines == fitHeight;
+        else
+        {
+            SwsContext* scaler = sws_getContext(width, height, AV_PIX_FMT_BGRA, fitWidth, fitHeight,
+                AV_PIX_FMT_BGRA, SWS_BICUBIC, nullptr, nullptr, nullptr);
+            if (scaler == nullptr)
+            {
+                return false;
+            }
+            const unsigned char* inputs[4] = {pixels.data(), nullptr, nullptr, nullptr};
+            unsigned char* outputs[4] = {destination, nullptr, nullptr, nullptr};
+            const int inputStride[4] = {stride, 0, 0, 0}, outputStride[4] = {outputWidth * 4, 0, 0, 0};
+            const int lines = sws_scale(scaler, inputs, inputStride, 0, height, outputs, outputStride);
+            sws_freeContext(scaler);
+            if (lines != fitHeight)
+            {
+                return false;
+            }
+        }
+        if (output == &pixels)
+        {
+            output->swap(temporary);
+        }
+        return true;
     }
     catch (...)
     {
@@ -443,6 +460,7 @@ std::string FFmpegCppHelper::formatMilliseconds(int64_t milliseconds)
     milliseconds %= 1000;
 
     std::ostringstream stream;
+    stream.imbue(std::locale::classic());
     stream << std::setfill('0')
            << std::setw(2) << hours << ":"
            << std::setw(2) << minutes << ":"

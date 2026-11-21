@@ -7,9 +7,13 @@ extern "C"
 #include <ffmpeg/libavformat/avformat.h>
 #include <ffmpeg/libavcodec/avcodec.h>
 #include <ffmpeg/libavutil/imgutils.h>
+#include <ffmpeg/libavutil/common.h>
 }
 
 FFmpegCppAdjacentReader::FFmpegCppAdjacentReader() :
+m_maxFrames(16),
+m_maxBytes(64 * 1024 * 1024),
+m_cachedBytes(0),
 m_draining(false),
 m_ended(false)
 {
@@ -28,8 +32,43 @@ void FFmpegCppAdjacentReader::reset()
         av_frame_free(&m_frames[i]);
     }
     m_frames.clear();
+    m_cachedBytes = 0;
     m_draining = false;
     m_ended = false;
+}
+
+/** 估算帧的原始像素字节数，忽略行对齐及解码器内部引用
+@param [in] frame 缓存持有的非空帧
+@return 有效图像大小，未知格式返回0
+*/
+static int32_t AdjacentFrameBytes(const AVFrame* frame)
+{
+    const int32_t bytes = av_image_get_buffer_size(static_cast<AVPixelFormat>(frame->format), frame->width, frame->height, 1);
+    return bytes > 0 ? bytes : 0;
+}
+
+bool FFmpegCppAdjacentReader::setLimits(int64_t maxFrames, int64_t maxBytes)
+{
+    if ((maxFrames != -1 && maxFrames < 3) || (maxBytes != -1 && maxBytes <= 0))
+    {
+        return false;
+    }
+    m_maxFrames = maxFrames;
+    m_maxBytes = maxBytes;
+    trim();
+    return true;
+}
+
+void FFmpegCppAdjacentReader::trim()
+{
+    while (m_frames.size() > 3 && ((m_maxFrames >= 0 && m_frames.size() > static_cast<uint64_t>(m_maxFrames)) ||
+        (m_maxBytes >= 0 && m_cachedBytes > m_maxBytes)))
+    {
+        AVFrame* first = m_frames.front();
+        m_cachedBytes -= AdjacentFrameBytes(first);
+        av_frame_free(&first);
+        m_frames.pop_front();
+    }
 }
 
 bool FFmpegCppAdjacentReader::canceled(const FFmpegCppPlaybackPreviewOption& option, FFmpegCppPlaybackPreviewProfile* profile)
@@ -54,7 +93,7 @@ int64_t FFmpegCppAdjacentReader::timestamp(const AVFrame* frame, AVFormatContext
         return -1;
     }
     AVRational target = { 1, FFMPEG_ADJACENT_TICKS_PER_SECOND };
-    return av_rescale_q(value, format->streams[streamIndex]->time_base, target) - start100ns;
+    return av_sat_sub64(av_rescale_q(value, format->streams[streamIndex]->time_base, target), start100ns);
 }
 
 AVFrame* FFmpegCppAdjacentReader::decodeNext(AVFormatContext* format, AVCodecContext* codec, int32_t streamIndex,
@@ -155,13 +194,15 @@ const AVFrame* FFmpegCppAdjacentReader::read(AVFormatContext* format, AVCodecCon
         int64_t position = direction > 0 ? origin100ns : (origin100ns > FFMPEG_ADJACENT_TICKS_PER_SECOND ? origin100ns - FFMPEG_ADJACENT_TICKS_PER_SECOND : 0);
         seekPosition = position;
         AVRational source = { 1, FFMPEG_ADJACENT_TICKS_PER_SECOND };
-        int64_t target = av_rescale_q_rnd(position + start100ns, source, format->streams[streamIndex]->time_base, AV_ROUND_DOWN);
+        int64_t target = av_rescale_q_rnd(av_sat_add64(position, start100ns), source, format->streams[streamIndex]->time_base, AV_ROUND_DOWN);
         if (av_seek_frame(format, streamIndex, target, AVSEEK_FLAG_BACKWARD) < 0)
         {
             return nullptr;
         }
         avcodec_flush_buffers(codec);
     }
+    const size_t frameBudget = option.frameBudget();
+    size_t decodedFrames = 0;
     for (;;)
     {
         if (canceled(option, profile))
@@ -205,11 +246,11 @@ const AVFrame* FFmpegCppAdjacentReader::read(AVFormatContext* format, AVCodecCon
                 return nullptr;
             }
             int64_t distance = origin100ns - seekPosition;
-            distance = distance > 0 ? distance * 2 : FFMPEG_ADJACENT_TICKS_PER_SECOND;
+            distance = distance > 0 ? av_sat_add64(distance, distance) : FFMPEG_ADJACENT_TICKS_PER_SECOND;
             seekPosition = origin100ns > distance ? origin100ns - distance : 0;
             reset();
             AVRational source = { 1, FFMPEG_ADJACENT_TICKS_PER_SECOND };
-            int64_t target = av_rescale_q_rnd(seekPosition + start100ns, source, format->streams[streamIndex]->time_base, AV_ROUND_DOWN);
+            int64_t target = av_rescale_q_rnd(av_sat_add64(seekPosition, start100ns), source, format->streams[streamIndex]->time_base, AV_ROUND_DOWN);
             if (av_seek_frame(format, streamIndex, target, AVSEEK_FLAG_BACKWARD) < 0)
             {
                 return nullptr;
@@ -218,6 +259,10 @@ const AVFrame* FFmpegCppAdjacentReader::read(AVFormatContext* format, AVCodecCon
             continue;
         }
         if (m_ended)
+        {
+            return nullptr;
+        }
+        if (decodedFrames >= frameBudget)
         {
             return nullptr;
         }
@@ -230,6 +275,7 @@ const AVFrame* FFmpegCppAdjacentReader::read(AVFormatContext* format, AVCodecCon
             }
             return nullptr;
         }
+        ++decodedFrames;
         if (timestamp(decoded, format, streamIndex, start100ns) < 0)
         {
             av_frame_free(&decoded);
@@ -244,20 +290,7 @@ const AVFrame* FFmpegCppAdjacentReader::read(AVFormatContext* format, AVCodecCon
             av_frame_free(&decoded);
             throw;
         }
-        int64_t bytes = 0;
-        for (size_t i = 0; i < m_frames.size(); ++i)
-        {
-            AVFrame* current = m_frames[i];
-            int32_t size = av_image_get_buffer_size(static_cast<AVPixelFormat>(current->format), current->width, current->height, 1);
-            bytes += size > 0 ? size : 0;
-        }
-        while (m_frames.size() > 3 && (m_frames.size() > kMaxCachedFrames || bytes > kCacheBudgetBytes))
-        {
-            AVFrame* first = m_frames.front();
-            int32_t size = av_image_get_buffer_size(static_cast<AVPixelFormat>(first->format), first->width, first->height, 1);
-            bytes -= size > 0 ? size : 0;
-            av_frame_free(&first);
-            m_frames.pop_front();
-        }
+        m_cachedBytes += AdjacentFrameBytes(decoded);
+        trim();
     }
 }

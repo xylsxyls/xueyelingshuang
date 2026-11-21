@@ -288,7 +288,7 @@ public:
     int32_t jpegQuality;
     // 截图超时时间，单位毫秒，小于等于0表示不限制
     int32_t timeoutMilliseconds;
-    // 是否允许硬件解码
+    // 允许使用硬件时仍可回退到软件；目前分发的截图实现始终使用软件解码
     bool allowHardwareDecode;
 
 public:
@@ -344,7 +344,7 @@ public:
     bool overwriteOutput;
     // 是否移除音频
     bool removeAudio;
-    // 是否允许硬件编码
+    // 允许使用硬件时仍可回退到软件；目前分发的转码实现始终使用软件编码
     bool allowHardwareEncode;
     // 转码超时时间，单位毫秒，小于等于0表示不限制
     int32_t timeoutMilliseconds;

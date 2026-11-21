@@ -42,7 +42,7 @@ typedef bool (*FFmpegCppPlaybackCancelCallback)(void* userData);
 struct FFmpegCppAPI FFmpegCppPlaybackPreviewOption
 {
 public:
-    // 预览最多解码的视频帧数，0使用内部默认预算
+    // 单次预览最多新增解码的帧数，0使用8192帧，static_cast<size_t>(-1)解除数量限制
     size_t maxReadFrameCount;
     // 可选的同步取消回调，为空表示不检查外部取消
     FFmpegCppPlaybackCancelCallback cancelCallback;
@@ -53,6 +53,11 @@ public:
     /** Build default preview options
     */
     FFmpegCppPlaybackPreviewOption();
+
+    /** 取得本次预览允许新解码的帧数，复用缓存的帧不计入
+    @return 显式帧数预算或默认8192帧
+    */
+    size_t frameBudget() const;
 
     /** Check whether the caller has canceled the preview request
     @return true if the request should stop
@@ -315,6 +320,12 @@ public:
     */
     bool seek(int64_t position100ns);
 
+    /** 设置实时播放的最早显示边界，过期帧仍解码但跳过BGRA转换
+    @param [in] position100ns 归一化时间，单位100纳秒；0禁用；seek/open后自动禁用
+    同一读取器由拥有线程串行调用，精确预览及导出不应启用此策略
+    */
+    void setVideoPresentationFloor(int64_t position100ns);
+
     /** 精确定位纯视频reader并保留下一帧供read连续播放
     @param [in] position100ns 目标媒体位置，100纳秒
     @param [in] option 解码预算及取消条件
@@ -361,13 +372,20 @@ public:
         FFmpegCppPlaybackVideoFrame* frame,
         FFmpegCppPlaybackPreviewProfile* profile);
 
-    /** 可取消地读取相邻展示帧，复用有界原始帧缓存，仅转换目标帧
-    @param [in] origin100ns 当前帧起点，单位100纳秒
+    /** 设置相邻预览的原始帧缓存，可在open前或读取间调用，close后保留
+    @param [in] maxFrames 最大帧数，默认16，至少3；-1解除帧数限制
+    @param [in] maxBytes 原始像素预算，默认64 MiB，接受正数或-1解除限制；至少保留3帧，可能超出字节预算
+    @return true表示立即生效并淘汰超额旧帧；无效参数返回false并保留原设置
+    */
+    bool setAdjacentCacheLimits(int64_t maxFrames, int64_t maxBytes);
+
+    /** 可取消地读取相邻展示帧，复用可配置的原始帧缓存，仅转换目标帧
+    @param [in] origin100ns 当前帧非负起点，单位100纳秒
     @param [in] direction 负数向左，正数向右，不允许0
     @param [in] option 取消回调配置
-    @param [out] frame 相邻帧及完整展示时长
+    @param [out] frame 相邻帧及完整展示时长；失败或取消后重置为空帧
     @param [out] profile 统计及取消状态，可为空
-    @return 成功返回true，失败或取消返回false
+    @return 成功返回true；失败或取消返回false，可用lastError查询原因
     */
     bool readAdjacentVideoFrameEx(int64_t origin100ns, int32_t direction,
         const FFmpegCppPlaybackPreviewOption& option, FFmpegCppPlaybackVideoFrame* frame,

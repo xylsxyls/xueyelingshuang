@@ -5,10 +5,9 @@
 #include <chrono>
 #include <cstring>
 #include <fstream>
-#include <functional>
-#include <iostream>
 #include <sstream>
-#include <stdio.h>
+#include <locale>
+#include <cstdio>
 #if defined(_WIN32) && defined(FFMPEGCPP_WINDOWS_ANSI_PATH)
 #include "CStringManager/CStringManagerAPI.h"
 #endif
@@ -18,21 +17,29 @@
 #pragma warning(disable:4996)
 #endif
 
-#ifdef FFMPEGCPP_TEST_MAIN
-#include <errno.h>
 #ifdef _WIN32
-#include <direct.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #else
 #include <sys/stat.h>
 #endif
-#endif
 
 #ifdef _WIN32
+#if defined(_DEBUG)
+#pragma comment(lib, "avformatd.lib")
+#pragma comment(lib, "avcodecd.lib")
+#pragma comment(lib, "swscaled.lib")
+#pragma comment(lib, "swresampled.lib")
+#pragma comment(lib, "avutild.lib")
+#else
 #pragma comment(lib, "avformat.lib")
 #pragma comment(lib, "avcodec.lib")
 #pragma comment(lib, "swscale.lib")
 #pragma comment(lib, "swresample.lib")
 #pragma comment(lib, "avutil.lib")
+#endif
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "user32.lib")
@@ -62,6 +69,71 @@ static std::string ffmpegCppAvFilePath(const std::string& filePath)
     return CStringManager::AnsiToUtf8(filePath);
 #else
     return filePath;
+#endif
+}
+
+#ifdef _WIN32
+/** 将调用方路径转换为Windows文件API接受的Unicode字符串
+@param [in] path 与当前SDK路径编码约定一致的路径
+@return 转换结果，失败返回空字符串
+*/
+static std::wstring WideMediaPath(const std::string& path)
+{
+    const std::string utf8 = ffmpegCppAvFilePath(path);
+    const int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.c_str(), -1, nullptr, 0);
+    if (count <= 1)
+    {
+        return std::wstring();
+    }
+    std::wstring wide(count, L'\0');
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.c_str(), -1, &wide[0], count))
+    {
+        return std::wstring();
+    }
+    wide.resize(count - 1);
+    return wide;
+}
+
+/** 获取已有文件的卷号和文件标识，覆盖大小写、硬链接与目录别名
+@param [in] path FFmpeg可读的文件路径，操作期间借用
+@param [out] info 仅成功时提供标识
+@return 是否读取到已有文件的标识
+*/
+static bool ReadFileIdentity(const std::string& path, BY_HANDLE_FILE_INFORMATION& info)
+{
+    const std::wstring wide = WideMediaPath(path);
+    HANDLE file = CreateFileW(wide.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file == INVALID_HANDLE_VALUE)
+    {
+        return false;
+    }
+    const bool ok = GetFileInformationByHandle(file, &info) != 0;
+    CloseHandle(file);
+    return ok;
+}
+#endif
+
+/** 检查输出是否指向已打开的输入文件，避免写入时截断自己的素材
+@param [in] input 输入文件路径
+@param [in] output 输出文件路径，可尚不存在
+@return 同一路径或同一已有文件返回true
+*/
+static bool SameMediaFile(const std::string& input, const std::string& output)
+{
+    if (input == output)
+    {
+        return true;
+    }
+#ifdef _WIN32
+    BY_HANDLE_FILE_INFORMATION left = {}, right = {};
+    return ReadFileIdentity(input, left) && ReadFileIdentity(output, right) &&
+        left.dwVolumeSerialNumber == right.dwVolumeSerialNumber &&
+        left.nFileIndexHigh == right.nFileIndexHigh && left.nFileIndexLow == right.nFileIndexLow;
+#else
+    struct stat left = {}, right = {};
+    return stat(input.c_str(), &left) == 0 && stat(output.c_str(), &right) == 0 &&
+        left.st_dev == right.st_dev && left.st_ino == right.st_ino;
 #endif
 }
 
@@ -122,7 +194,8 @@ static int64_t ffmpegCppFromMilliseconds(int64_t timestampMilliseconds, AVRation
     AVRational millisecondBase;
     millisecondBase.num = 1;
     millisecondBase.den = 1000;
-    return av_rescale_q(timestampMilliseconds, millisecondBase, timeBase);
+    // 帧间时刻向下取整，避免在低分辨率时间基上将下一帧提前返回。
+    return av_rescale_q_rnd(timestampMilliseconds, millisecondBase, timeBase, AV_ROUND_DOWN);
 }
 
 /** 检查文件是否能按二进制方式打开读取
@@ -131,8 +204,12 @@ static int64_t ffmpegCppFromMilliseconds(int64_t timestampMilliseconds, AVRation
 */
 static bool ffmpegCppFileExists(const std::string& filePath)
 {
+#ifdef _WIN32
+    return GetFileAttributesW(WideMediaPath(filePath).c_str()) != INVALID_FILE_ATTRIBUTES;
+#else
     std::ifstream stream(filePath.c_str(), std::ios::binary);
     return stream.good();
+#endif
 }
 
 /** 读取文件字节长度
@@ -141,12 +218,24 @@ static bool ffmpegCppFileExists(const std::string& filePath)
 */
 static int64_t ffmpegCppFileSize(const std::string& filePath)
 {
+#ifdef _WIN32
+    WIN32_FILE_ATTRIBUTE_DATA data = {};
+    if (!GetFileAttributesExW(WideMediaPath(filePath).c_str(), GetFileExInfoStandard, &data))
+    {
+        return 0;
+    }
+    ULARGE_INTEGER size;
+    size.HighPart = data.nFileSizeHigh;
+    size.LowPart = data.nFileSizeLow;
+    return static_cast<int64_t>(size.QuadPart);
+#else
     std::ifstream stream(filePath.c_str(), std::ios::binary | std::ios::ate);
     if (!stream.good())
     {
         return 0;
     }
     return static_cast<int64_t>(stream.tellg());
+#endif
 }
 
 /** 移除路径最后一个文件名的扩展名
@@ -179,6 +268,7 @@ static std::string ffmpegCppMakeFrameFilePath(const std::string& sourceFilePath,
     FFmpegCppImageFormat imageFormat)
 {
     std::ostringstream stream;
+    stream.imbue(std::locale::classic());
     stream << ffmpegCppRemoveExtension(sourceFilePath)
            << "_"
            << timestampMilliseconds
@@ -1169,7 +1259,11 @@ static bool ffmpegCppOpenVideoDecoder(AVStream* videoStream,
         return false;
     }
 
+#ifdef __EMSCRIPTEN__
+    localDecodeContext->thread_count = 1;
+#else
     localDecodeContext->thread_count = codecThreads;
+#endif
     result = avcodec_open2(localDecodeContext, decoder, nullptr);
     if (result < 0)
     {
@@ -1238,7 +1332,11 @@ static bool ffmpegCppOpenVideoEncoder(AVFormatContext* outputContext,
     localEncodeContext->sample_aspect_ratio = decodeContext->sample_aspect_ratio;
     localEncodeContext->bit_rate = option.videoBitRateKbps > 0 ? static_cast<int64_t>(option.videoBitRateKbps) * 1000 : 0;
     localEncodeContext->rc_max_rate = static_cast<int64_t>(option.maxVideoBitRateKbps) * 1000;
+#ifdef __EMSCRIPTEN__
+    localEncodeContext->thread_count = 1;
+#else
     localEncodeContext->thread_count = option.codecThreads;
+#endif
 
     AVRational frameRate = inputVideoStream->avg_frame_rate.num != 0 && inputVideoStream->avg_frame_rate.den != 0 ? inputVideoStream->avg_frame_rate : inputVideoStream->r_frame_rate;
     if (option.maxFrameRate > 0 && (frameRate.num <= 0 || frameRate.den <= 0 || av_q2d(frameRate) > option.maxFrameRate))
@@ -1282,6 +1380,7 @@ static bool ffmpegCppOpenVideoEncoder(AVFormatContext* outputContext,
     if (option.crf > 0 && localEncodeContext->priv_data != nullptr)
     {
         std::ostringstream stream;
+        stream.imbue(std::locale::classic());
         stream << option.crf;
         av_opt_set(localEncodeContext->priv_data, "crf", stream.str().c_str(), 0);
     }
@@ -1323,7 +1422,7 @@ static bool ffmpegCppOpenVideoEncoder(AVFormatContext* outputContext,
 @param [in] totalMilliseconds 媒体总时长，单位毫秒，非正数表示未知
 @param [in] outputFilePath 目标输出文件路径，不可为空
 @param [in] option 目标尺寸、编码及处理选项，调用期间借用
-@param [in] cancelRequested 可选取消标记的借用地址；只读取，不提供跨线程同步
+@param [in] cancelRequested 可选的原子取消标记，借用期间只读
 @param [in] progressCallback 同步进度回调，可为空；返回false请求取消
 @param [in,out] userData 回调上下文，库不读取也不释放，须在整个调用期间有效
 @param [out] errorText 失败说明，成功时不保证清空
@@ -1333,7 +1432,7 @@ static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
     int64_t totalMilliseconds,
     const std::string& outputFilePath,
     const FFmpegCppTranscodeOption& option,
-    bool* cancelRequested,
+    const std::atomic<bool>* cancelRequested,
     FFmpegCppProgressCallback progressCallback,
     void* userData,
     std::string& errorText)
@@ -1353,6 +1452,8 @@ static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
 
     AVStream* inputVideoStream = inputContext->streams[videoStreamIndex];
     int32_t rotationDegree = ffmpegCppStreamRotationDegree(inputVideoStream);
+    AVStream* outputVideoStream = nullptr;
+    AVDictionary* muxOptions = nullptr;
     AVCodecContext* decodeContext = nullptr;
     AVCodecContext* encodeContext = nullptr;
     AVFormatContext* outputContext = nullptr;
@@ -1382,7 +1483,6 @@ static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
         goto cleanup;
     }
 
-    AVStream* outputVideoStream = nullptr;
     if (!ffmpegCppOpenVideoEncoder(outputContext,
                                    decodeContext,
                                    inputVideoStream,
@@ -1460,7 +1560,6 @@ static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
         }
     }
 
-    AVDictionary* muxOptions = nullptr;
     if (option.fastStart && ffmpegCppIsMovLikeOutput(outputContext->oformat))
     {
         av_dict_set(&muxOptions, "movflags", "faststart", 0);
@@ -1683,9 +1782,7 @@ m_mediaInfo(),
 m_isOpen(false),
 m_cancelRequested(false),
 m_formatContext(nullptr),
-m_videoCodecContext(nullptr),
-m_audioCodecContext(nullptr),
-m_scaleContext(nullptr)
+m_reserved()
 {
     av_log_set_level(AV_LOG_ERROR);
 }
@@ -1699,9 +1796,9 @@ bool FFmpegCpp::open(const std::string& filePath)
 {
     close();
     m_lastError.clear();
-    if (filePath.empty())
+    if (filePath.empty() || filePath.find('\0') != std::string::npos)
     {
-        m_lastError = "filePath is empty";
+        m_lastError = "filePath is empty or contains NUL";
         return false;
     }
 
@@ -1735,26 +1832,6 @@ bool FFmpegCpp::open(const std::string& filePath)
 
 void FFmpegCpp::close()
 {
-    if (m_videoCodecContext != nullptr)
-    {
-        AVCodecContext* videoCodecContext = static_cast<AVCodecContext*>(m_videoCodecContext);
-        avcodec_free_context(&videoCodecContext);
-        m_videoCodecContext = nullptr;
-    }
-
-    if (m_audioCodecContext != nullptr)
-    {
-        AVCodecContext* audioCodecContext = static_cast<AVCodecContext*>(m_audioCodecContext);
-        avcodec_free_context(&audioCodecContext);
-        m_audioCodecContext = nullptr;
-    }
-
-    if (m_scaleContext != nullptr)
-    {
-        sws_freeContext(static_cast<SwsContext*>(m_scaleContext));
-        m_scaleContext = nullptr;
-    }
-
     if (m_formatContext != nullptr)
     {
         AVFormatContext* formatContext = static_cast<AVFormatContext*>(m_formatContext);
@@ -1945,7 +2022,17 @@ bool FFmpegCpp::extractFrameToMemory(int64_t timestampMilliseconds,
         return false;
     }
 
-    int64_t seekTimestamp = ffmpegCppFromMilliseconds(timestampMilliseconds, videoStream->time_base);
+    const int64_t origin = videoStream->start_time != AV_NOPTS_VALUE ? videoStream->start_time :
+        (formatContext->start_time == AV_NOPTS_VALUE ? 0 :
+        av_rescale_q(formatContext->start_time, AVRational{1, AV_TIME_BASE}, videoStream->time_base));
+    const int64_t offset = ffmpegCppFromMilliseconds(timestampMilliseconds, videoStream->time_base);
+    if (offset < 0 || (origin > 0 && offset > INT64_MAX - origin))
+    {
+        avcodec_free_context(&decodeContext);
+        m_lastError = "snapshot timestamp is out of range";
+        return false;
+    }
+    const int64_t seekTimestamp = origin + offset;
     result = av_seek_frame(formatContext, videoStreamIndex, seekTimestamp, AVSEEK_FLAG_BACKWARD);
     if (result < 0 && timestampMilliseconds > 0)
     {
@@ -1957,102 +2044,95 @@ bool FFmpegCpp::extractFrameToMemory(int64_t timestampMilliseconds,
 
     AVPacket* packet = av_packet_alloc();
     AVFrame* frame = av_frame_alloc();
-    if (packet == nullptr || frame == nullptr)
+    AVFrame* previous = av_frame_alloc();
+    if (packet == nullptr || frame == nullptr || previous == nullptr)
     {
         av_packet_free(&packet);
         av_frame_free(&frame);
+        av_frame_free(&previous);
         avcodec_free_context(&decodeContext);
         m_lastError = "alloc decode packet or frame failed";
         return false;
     }
 
-    bool foundFrame = false;
-    std::string encodeError;
-    std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
-    while (!foundFrame)
+    AVFrame* selected = nullptr;
+    int64_t selectedTime = 0;
+    int64_t previousTime = 0;
+    const std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
+    while (selected == nullptr)
     {
-        if (m_cancelRequested)
+        if (m_cancelRequested || ffmpegCppTimeoutReached(startTime, option.timeoutMilliseconds))
         {
-            m_lastError = "extract frame cancelled";
+            m_lastError = m_cancelRequested ? "extract frame cancelled" : "extract frame timeout";
             break;
         }
-        if (ffmpegCppTimeoutReached(startTime, option.timeoutMilliseconds))
+        result = avcodec_receive_frame(decodeContext, frame);
+        if (result == 0)
         {
-            m_lastError = "extract frame timeout";
+            const int64_t pts = frame->best_effort_timestamp != AV_NOPTS_VALUE ? frame->best_effort_timestamp : frame->pts;
+            const int64_t relative = pts == AV_NOPTS_VALUE ? 0 : av_sat_sub64(pts, origin);
+            const int64_t currentTime = ffmpegCppToMilliseconds(relative, videoStream->time_base);
+            if (pts != AV_NOPTS_VALUE && pts < seekTimestamp)
+            {
+                // 向后定位到的是关键帧。保留请求时刻前的最后一帧，直至后续帧划定显示区间。
+                av_frame_unref(previous);
+                av_frame_move_ref(previous, frame);
+                previousTime = currentTime;
+                continue;
+            }
+            const bool usePrevious = pts != AV_NOPTS_VALUE && pts > seekTimestamp && previous->data[0] != nullptr;
+            selected = usePrevious ? previous : frame;
+            selectedTime = usePrevious ? previousTime : currentTime;
             break;
         }
-
-        result = av_read_frame(formatContext, packet);
-        if (result < 0)
+        if (result == AVERROR_EOF)
         {
-            result = avcodec_send_packet(decodeContext, nullptr);
-            if (result < 0 && result != AVERROR_EOF)
+            if (previous->data[0] != nullptr)
             {
-                m_lastError = ffmpegCppAppendError("flush decoder failed", result);
-                break;
+                selected = previous;
+                selectedTime = previousTime;
             }
-        }
-        else if (packet->stream_index == videoStreamIndex)
-        {
-            result = avcodec_send_packet(decodeContext, packet);
-            av_packet_unref(packet);
-            if (result < 0 && result != AVERROR(EAGAIN))
-            {
-                m_lastError = ffmpegCppAppendError("send packet to decoder failed", result);
-                break;
-            }
-        }
-        else
-        {
-            av_packet_unref(packet);
-            continue;
-        }
-
-        while (true)
-        {
-            result = avcodec_receive_frame(decodeContext, frame);
-            if (result == 0)
-            {
-                int64_t frameTimestamp = frame->best_effort_timestamp != AV_NOPTS_VALUE ? frame->best_effort_timestamp : frame->pts;
-                int64_t frameMilliseconds = ffmpegCppToMilliseconds(frameTimestamp, videoStream->time_base);
-                if (ffmpegCppEncodeFrameToImage(frame, decodeContext, rotationDegree, frameMilliseconds, option, imageData, encodeError))
-                {
-                    if (imageData->timestampMilliseconds == 0)
-                    {
-                        imageData->timestampMilliseconds = timestampMilliseconds;
-                    }
-                    foundFrame = true;
-                    break;
-                }
-
-                m_lastError = encodeError;
-                break;
-            }
-            if (result == AVERROR(EAGAIN))
-            {
-                result = 0;
-                break;
-            }
-            if (result == AVERROR_EOF)
+            else
             {
                 m_lastError = "video frame is not found";
-                break;
             }
-
+            break;
+        }
+        if (result != AVERROR(EAGAIN))
+        {
             m_lastError = ffmpegCppAppendError("receive decoded frame failed", result);
             break;
         }
-
-        if (result == AVERROR_EOF || (!foundFrame && !m_lastError.empty()))
+        result = av_read_frame(formatContext, packet);
+        if (result == AVERROR_EOF)
         {
+            result = avcodec_send_packet(decodeContext, nullptr);
+        }
+        else if (result < 0)
+        {
+            m_lastError = ffmpegCppAppendError("read input packet failed", result);
             break;
         }
-        if (result < 0)
+        else
         {
+            if (packet->stream_index != videoStreamIndex)
+            {
+                av_packet_unref(packet);
+                continue;
+            }
+            result = avcodec_send_packet(decodeContext, packet);
+            av_packet_unref(packet);
+        }
+        if (result < 0 && result != AVERROR_EOF)
+        {
+            m_lastError = ffmpegCppAppendError("send packet to decoder failed", result);
             break;
         }
     }
 
+    const bool foundFrame = selected != nullptr && ffmpegCppEncodeFrameToImage(selected, decodeContext,
+        rotationDegree, selectedTime, option, imageData, m_lastError);
+    av_frame_free(&previous);
     av_packet_free(&packet);
     av_frame_free(&frame);
     avcodec_free_context(&decodeContext);
@@ -2071,6 +2151,11 @@ bool FFmpegCpp::extractFrameToFile(int64_t timestampMilliseconds,
     const FFmpegCppFrameExtractOption& option,
     std::string* savedFilePath)
 {
+    if (outputFilePath.find('\0') != std::string::npos)
+    {
+        m_lastError = "output image path contains NUL";
+        return false;
+    }
     FFmpegCppImageData imageData;
     if (!extractFrameToMemory(timestampMilliseconds, &imageData, option))
     {
@@ -2083,17 +2168,24 @@ bool FFmpegCpp::extractFrameToFile(int64_t timestampMilliseconds,
         finalFilePath = ffmpegCppMakeFrameFilePath(m_filePath, timestampMilliseconds, option.imageFormat);
     }
 
-    std::ofstream stream(finalFilePath.c_str(), std::ios::binary);
-    if (!stream.good())
+    if (SameMediaFile(m_filePath, finalFilePath))
+    {
+        m_lastError = "output image refers to the input file";
+        return false;
+    }
+#ifdef _WIN32
+    FILE* stream = _wfopen(WideMediaPath(finalFilePath).c_str(), L"wb");
+#else
+    FILE* stream = std::fopen(finalFilePath.c_str(), "wb");
+#endif
+    if (stream == nullptr)
     {
         m_lastError = "open output image failed";
         return false;
     }
-    if (!imageData.data.empty())
-    {
-        stream.write(reinterpret_cast<const char*>(&imageData.data[0]), static_cast<std::streamsize>(imageData.data.size()));
-    }
-    if (!stream.good())
+    const size_t written = std::fwrite(imageData.data.data(), 1, imageData.data.size(), stream);
+    const int closed = std::fclose(stream);
+    if (written != imageData.data.size() || closed != 0)
     {
         m_lastError = "write output image failed";
         return false;
@@ -2116,9 +2208,9 @@ bool FFmpegCpp::transcode(const std::string& outputFilePath,
         m_lastError = "file is not open";
         return false;
     }
-    if (outputFilePath.empty())
+    if (outputFilePath.empty() || outputFilePath.find('\0') != std::string::npos)
     {
-        m_lastError = "outputFilePath is empty";
+        m_lastError = "outputFilePath is empty or contains NUL";
         return false;
     }
     if (option.maxFrameRate < 0 || option.maxFrameRate > 240 || option.maxVideoBitRateKbps < 0 ||
@@ -2126,6 +2218,11 @@ bool FFmpegCpp::transcode(const std::string& outputFilePath,
         option.codecThreads < 0 || option.codecThreads > 64)
     {
         m_lastError = "invalid frame rate, bitrate, keyframe interval or codec thread limit";
+        return false;
+    }
+    if (SameMediaFile(m_filePath, outputFilePath))
+    {
+        m_lastError = "output media refers to the input file";
         return false;
     }
     if (!option.overwriteOutput && ffmpegCppFileExists(outputFilePath))
@@ -2366,433 +2463,64 @@ bool FFmpegCpp::cancelCurrentTask()
     return true;
 }
 
-#ifdef FFMPEGCPP_TEST_MAIN
-/** 为宏开关控制的测试入口创建一级输出目录
-@param [in] directoryPath 测试输出目录路径，不可为空
-@return true表示创建成功或目录已经存在
-*/
-static bool ffmpegCppTestCreateDirectory(const std::string& directoryPath)
-{
-    if (directoryPath.empty())
-    {
-        return false;
-    }
-
-#ifdef _WIN32
-    int result = _mkdir(directoryPath.c_str());
-#else
-    int result = mkdir(directoryPath.c_str(), 0755);
-#endif
-    return result == 0 || errno == EEXIST;
-}
-
-/** 检查测试输出能否打开且包含数据
-@param [in] filePath 文件路径，调用期间借用
-@return true表示文件长度大于0
-*/
-static bool ffmpegCppTestFileExistsAndNotEmpty(const std::string& filePath)
-{
-    std::ifstream stream(filePath.c_str(), std::ios::binary | std::ios::ate);
-    if (!stream.good())
-    {
-        return false;
-    }
-    return stream.tellg() > 0;
-}
-
-/** 检查测试图片是否具有JPEG起止标记
-@param [in] imageData 待检查的编码图片数据
-@return true表示首尾标记匹配，不表示完成了图片解码校验
-*/
-static bool ffmpegCppTestIsJpeg(const FFmpegCppImageData& imageData)
-{
-    if (imageData.data.size() < 4)
-    {
-        return false;
-    }
-    return imageData.data[0] == 0xFF
-        && imageData.data[1] == 0xD8
-        && imageData.data[imageData.data.size() - 2] == 0xFF
-        && imageData.data[imageData.data.size() - 1] == 0xD9;
-}
-
-/** 运行受FFMPEGCPP_TEST_MAIN控制的本库测试入口
-@param [in] argc 命令行参数数量
-@param [in] argv 命令行参数数组，可通过参数指定测试媒体
-@return 全部检查通过返回0，否则返回非0
-*/
-int main(int argc, char* argv[])
-{
-    ffmpegCppTestCreateDirectory("src/temp");
-    ffmpegCppTestCreateDirectory("src/temp/FFmpegCppTestMain");
-
-    int32_t totalCount = 0;
-    int32_t failCount = 0;
-
-    /** 记录一个测试断言并累计失败数
-    @param [in] ok 是否满足该检查的独立预期
-    @param [in] name 检查名称，写入控制台
-    */
-    std::function<void(bool, const std::string&)> check = [&totalCount, &failCount](bool ok, const std::string& name) -> void
-    {
-        ++totalCount;
-        std::cout << (ok ? "[PASS] " : "[FAIL] ") << name << std::endl;
-        if (!ok)
-        {
-            ++failCount;
-        }
-    };
-
-    const std::string inputFilePath = argc > 1 ? argv[1] : "common/CookServer/res/video/cook_000005.mp4";
-    const std::string outputCopy = "src/temp/FFmpegCppTestMain/copy_output.mp4";
-    remove(outputCopy.c_str());
-
-    FFmpegCpp emptyObject;
-    check(!emptyObject.open(""), "open empty path");
-    check(!emptyObject.isOpen(), "empty object not open");
-    check(!emptyObject.getMediaInfo(nullptr), "get media info null");
-    check(!emptyObject.extractFirstFrameToMemory(nullptr), "extract null image data");
-    emptyObject.close();
-    emptyObject.close();
-    check(!emptyObject.isOpen(), "repeated close");
-
-    check(FFmpegCppHelper::isCommonVideoFileExtension("test.MP4"), "common video extension true");
-    check(!FFmpegCppHelper::isCommonVideoFileExtension("test.txt"), "common video extension false");
-    check(FFmpegCppHelper::guessVideoMimeTypeByFilePath("a.mkv") == "video/x-matroska", "video mime");
-    check(FFmpegCppHelper::imageFormatToExtension(FFmpegCppImageFormatBmp) == "bmp", "image extension bmp");
-    check(FFmpegCppHelper::imageFormatToMimeType(FFmpegCppImageFormatPng) == "image/png", "image mime png");
-    check(FFmpegCppHelper::videoCodecToEncoderName(FFmpegCppVideoCodecH265) == "libx265", "h265 encoder name");
-    check(FFmpegCppHelper::audioCodecToEncoderName(FFmpegCppAudioCodecNone).empty(), "audio none encoder name");
-    check(FFmpegCppHelper::formatMilliseconds(3723004) == "01:02:03.004", "format milliseconds");
-
-    FFmpegCpp ffmpegCpp;
-    check(ffmpegCpp.open(inputFilePath), "open real video");
-    check(ffmpegCpp.isOpen() && ffmpegCpp.filePath() == inputFilePath, "open state");
-
-    FFmpegCppMediaInfo mediaInfo;
-    check(ffmpegCpp.getMediaInfo(&mediaInfo), "get media info");
-    check(mediaInfo.fileSizeBytes > 0 && mediaInfo.hasVideo, "media info values");
-
-    FFmpegCppStreamInfo videoStream;
-    check(ffmpegCpp.getMainVideoStreamInfo(&videoStream) && videoStream.width > 0 && videoStream.height > 0, "main video stream");
-
-    FFmpegCppFrameExtractOption extractOption;
-    extractOption.maxWidth = 360;
-    extractOption.maxHeight = 640;
-    extractOption.applyRotation = true;
-    extractOption.imageFormat = FFmpegCppImageFormatJpeg;
-    extractOption.jpegQuality = 82;
-    extractOption.timeoutMilliseconds = 10000;
-
-    FFmpegCppImageData imageData;
-    bool extractJpegResult = ffmpegCpp.extractFirstFrameToMemory(&imageData, extractOption);
-    if (!extractJpegResult)
-    {
-        std::cout << "extract jpeg error: " << ffmpegCpp.lastError() << std::endl;
-    }
-    check(extractJpegResult, "extract first frame jpeg");
-    check(!imageData.empty() && imageData.width > 0 && imageData.height > 0 && imageData.mimeType == "image/jpeg", "jpeg image data");
-    check(ffmpegCppTestIsJpeg(imageData), "jpeg magic");
-
-    FFmpegCppTranscodeOption transcodeOption;
-    transcodeOption.videoCodec = FFmpegCppVideoCodecCopy;
-    transcodeOption.audioCodec = FFmpegCppAudioCodecCopy;
-    transcodeOption.outputContainer = "mp4";
-    transcodeOption.overwriteOutput = true;
-    transcodeOption.timeoutMilliseconds = 30000;
-    bool copyResult = ffmpegCpp.transcode(outputCopy, transcodeOption, nullptr, nullptr);
-    if (!copyResult)
-    {
-        std::cout << "copy transcode error: " << ffmpegCpp.lastError() << std::endl;
-    }
-    check(copyResult && ffmpegCppTestFileExistsAndNotEmpty(outputCopy), "stream copy transcode");
-
-    std::cout << "h264 encoder available=" << (FFmpegCppHelper::isVideoEncoderAvailable(FFmpegCppVideoCodecH264) ? "true" : "false") << std::endl;
-    std::cout << "h265 encoder available=" << (FFmpegCppHelper::isVideoEncoderAvailable(FFmpegCppVideoCodecH265) ? "true" : "false") << std::endl;
-
-    ffmpegCpp.close();
-    check(!ffmpegCpp.isOpen(), "close after work");
-
-    std::cout << "FFmpegCpp runtime test " << (failCount == 0 ? "PASS" : "FAIL") << ", total=" << totalCount << ", failed=" << failCount << std::endl;
-    return failCount == 0 ? 0 : 1;
-}
-#endif
-
-//static bool writeVideoPacket(AVFormatContext* formatContext, AVCodecContext* codecContext, AVStream* stream, AVPacket* packet)
+// 使用示例（独立消费者，已在 Windows x64 Release 验证）
+//#include "FFmpegCpp/FFmpegCppAPI.h"
+//#include <cstdio>
+//
+//int main(int argc, char* argv[])
 //{
-//    packet->stream_index = stream->index;
-//    av_packet_rescale_ts(packet, codecContext->time_base, stream->time_base);
-//    return av_interleaved_write_frame(formatContext, packet) == 0;
-//}
-//
-//static bool receiveVideoPackets(AVFormatContext* formatContext, AVCodecContext* codecContext, AVStream* stream)
-//{
-//    AVPacket* packet = av_packet_alloc();
-//    if (packet == nullptr)
+//    // 参数依次为含视频轨的输入文件、预览图路径、新的MP4输出路径
+//    if (argc != 4)
 //    {
-//        return false;
+//        std::fprintf(stderr, "usage: media-demo INPUT PREVIEW.jpg OUTPUT.mp4\n");
+//        return 1;
 //    }
-//
-//    bool result = true;
-//    while (true)
+//    FFmpegCpp media;
+//    if (!media.open(argv[1]) || !media.isOpen() || !media.reloadMediaInfo())
 //    {
-//        int receiveResult = avcodec_receive_packet(codecContext, packet);
-//        if (receiveResult == AVERROR(EAGAIN) || receiveResult == AVERROR_EOF)
-//        {
-//            break;
-//        }
-//        if (receiveResult < 0)
-//        {
-//            result = false;
-//            break;
-//        }
-//        if (!writeVideoPacket(formatContext, codecContext, stream, packet))
-//        {
-//            result = false;
-//            av_packet_unref(packet);
-//            break;
-//        }
-//        av_packet_unref(packet);
+//        std::fprintf(stderr, "%s\n", media.lastError().c_str());
+//        return 2;
 //    }
-//
-//    av_packet_free(&packet);
-//    return result;
-//}
-//
-//static bool writeTestAvi(const std::string& filePath, int32_t width, int32_t height)
-//{
-//    AVFormatContext* formatContext = nullptr;
-//    if (avformat_alloc_output_context2(&formatContext, nullptr, "avi", filePath.c_str()) < 0 || formatContext == nullptr)
+//    FFmpegCppMediaInfo info;
+//    FFmpegCppStreamInfo stream;
+//    if (!media.getMediaInfo(&info) || !media.hasVideo() || !media.getMainVideoStreamInfo(&stream))
 //    {
-//        return false;
+//        return 3;
 //    }
-//
-//    const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_MJPEG);
-//    if (codec == nullptr)
+//    std::printf("%s duration_ms=%lld video=%d audio=%d\n", media.filePath().c_str(),
+//        static_cast<long long>(media.durationMilliseconds()), int(media.hasVideo()), int(media.hasAudio()));
+//    FFmpegCppFrameExtractOption preview;
+//    preview.maxWidth = 320;
+//    preview.maxHeight = 320;
+//    preview.imageFormat = FFmpegCppImageFormatJpeg;
+//    FFmpegCppImageData frame;
+//    if (!media.extractFirstFrameToMemory(&frame, preview) || frame.empty() ||
+//        !media.extractFrameToMemory(0, &frame, preview) || !media.extractFirstFrameToFile(argv[2], preview))
 //    {
-//        avformat_free_context(formatContext);
-//        return false;
+//        return 4;
 //    }
-//
-//    AVStream* stream = avformat_new_stream(formatContext, nullptr);
-//    AVCodecContext* codecContext = avcodec_alloc_context3(codec);
-//    if (stream == nullptr || codecContext == nullptr)
+//    // 复制已编码的音视频流，无需重新压缩
+//    FFmpegCppTranscodeOption copy;
+//    copy.outputContainer = "mp4";
+//    copy.videoCodec = FFmpegCppVideoCodecCopy;
+//    copy.audioCodec = FFmpegCppAudioCodecCopy;
+//    copy.overwriteOutput = false;
+//    if (!media.transcode(argv[3], copy))
 //    {
-//        avcodec_free_context(&codecContext);
-//        avformat_free_context(formatContext);
-//        return false;
+//        std::fprintf(stderr, "%s\n", media.lastError().c_str());
+//        return 5;
 //    }
-//
-//    codecContext->codec_id = AV_CODEC_ID_MJPEG;
-//    codecContext->codec_type = AVMEDIA_TYPE_VIDEO;
-//    codecContext->width = width;
-//    codecContext->height = height;
-//    codecContext->pix_fmt = AV_PIX_FMT_YUVJ420P;
-//    codecContext->time_base.num = 1;
-//    codecContext->time_base.den = 25;
-//    if ((formatContext->oformat->flags & AVFMT_GLOBALHEADER) != 0)
+//    media.close();
+//    // 读取器在打开前设置相邻帧缓存。输出帧拥有自己的像素，关闭读取器后仍可使用。
+//    FFmpegCppPlaybackReader reader;
+//    FFmpegCppPlaybackFrame decoded;
+//    FFmpegCppPlaybackOpenOption playback;
+//    playback.decodeAudio = false;
+//    if (!reader.setAdjacentCacheLimits(8, 32 * 1024 * 1024) || !reader.open(argv[3], playback) ||
+//        reader.read(&decoded) != FFmpegCppPlaybackReadResultFrame)
 //    {
-//        codecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+//        return 6;
 //    }
-//
-//    bool result = false;
-//    if (avcodec_open2(codecContext, codec, nullptr) >= 0
-//        && avcodec_parameters_from_context(stream->codecpar, codecContext) >= 0)
-//    {
-//        stream->time_base = codecContext->time_base;
-//        if ((formatContext->oformat->flags & AVFMT_NOFILE) != 0 || avio_open(&formatContext->pb, filePath.c_str(), AVIO_FLAG_WRITE) >= 0)
-//        {
-//            if (avformat_write_header(formatContext, nullptr) >= 0)
-//            {
-//                AVFrame* frame = av_frame_alloc();
-//                if (frame != nullptr)
-//                {
-//                    frame->format = codecContext->pix_fmt;
-//                    frame->width = width;
-//                    frame->height = height;
-//                    if (av_frame_get_buffer(frame, 32) >= 0)
-//                    {
-//                        result = true;
-//                        for (int32_t frameIndex = 0; frameIndex < 5 && result; ++frameIndex)
-//                        {
-//                            if (av_frame_make_writable(frame) < 0)
-//                            {
-//                                result = false;
-//                                break;
-//                            }
-//                            for (int32_t y = 0; y < height; ++y)
-//                            {
-//                                for (int32_t x = 0; x < width; ++x)
-//                                {
-//                                    frame->data[0][y * frame->linesize[0] + x] = static_cast<unsigned char>((x + y + frameIndex * 10) % 255);
-//                                }
-//                            }
-//                            for (int32_t y = 0; y < height / 2; ++y)
-//                            {
-//                                for (int32_t x = 0; x < width / 2; ++x)
-//                                {
-//                                    frame->data[1][y * frame->linesize[1] + x] = static_cast<unsigned char>(90 + frameIndex * 10);
-//                                    frame->data[2][y * frame->linesize[2] + x] = static_cast<unsigned char>(160 - frameIndex * 10);
-//                                }
-//                            }
-//                            frame->pts = frameIndex;
-//                            if (avcodec_send_frame(codecContext, frame) < 0)
-//                            {
-//                                result = false;
-//                                break;
-//                            }
-//                            result = receiveVideoPackets(formatContext, codecContext, stream);
-//                        }
-//                        if (result && avcodec_send_frame(codecContext, nullptr) >= 0)
-//                        {
-//                            result = receiveVideoPackets(formatContext, codecContext, stream);
-//                        }
-//                    }
-//                    av_frame_free(&frame);
-//                }
-//                result = av_write_trailer(formatContext) >= 0 && result;
-//            }
-//            if ((formatContext->oformat->flags & AVFMT_NOFILE) == 0)
-//            {
-//                avio_closep(&formatContext->pb);
-//            }
-//        }
-//    }
-//
-//    avcodec_free_context(&codecContext);
-//    avformat_free_context(formatContext);
-//    return result;
-//}
-//
-//static bool fileExistsAndNotEmpty(const std::string& filePath)
-//{
-//    std::ifstream stream(filePath.c_str(), std::ios::binary | std::ios::ate);
-//    if (!stream.good())
-//    {
-//        return false;
-//    }
-//    return stream.tellg() > 0;
-//}
-//
-//static bool progressCancelCallback(const FFmpegCppProgress&, void*)
-//{
-//    return false;
-//}
-//
-//int main()
-//{
-//    av_log_set_level(AV_LOG_QUIET);
-//
-//    int totalCount = 0;
-//    int failCount = 0;
-//    std::function<void(bool, const std::string&)> check = [&totalCount, &failCount](bool ok, const std::string& name) -> void
-//    {
-//        ++totalCount;
-//        std::cout << (ok ? "[PASS] " : "[FAIL] ") << name << std::endl;
-//        if (!ok)
-//        {
-//            ++failCount;
-//        }
-//    };
-//
-//    const std::string inputAvi = "src/temp/ffmpegcpp_input.avi";
-//    const std::string outputBmp = "src/temp/ffmpegcpp_frame.bmp";
-//    const std::string copyOutput = "src/temp/ffmpegcpp_copy.avi";
-//    remove(inputAvi.c_str());
-//    remove(outputBmp.c_str());
-//    remove(copyOutput.c_str());
-//
-//    FFmpegCpp emptyObject;
-//    check(!emptyObject.open(""), "FFmpegCpp open empty path");
-//    check(!emptyObject.isOpen(), "FFmpegCpp unopened state");
-//    check(!emptyObject.getMediaInfo(nullptr), "FFmpegCpp get media info null");
-//    check(!emptyObject.extractFirstFrameToMemory(nullptr), "FFmpegCpp extract null image data");
-//    emptyObject.close();
-//    emptyObject.close();
-//    check(!emptyObject.isOpen(), "FFmpegCpp repeated close");
-//
-//    check(FFmpegCppHelper::isCommonVideoFileExtension("test.MP4"), "FFmpegCpp helper extension true");
-//    check(!FFmpegCppHelper::isCommonVideoFileExtension("test.txt"), "FFmpegCpp helper extension false");
-//    check(FFmpegCppHelper::guessVideoMimeTypeByFilePath("a.mkv") == "video/x-matroska", "FFmpegCpp helper mime");
-//    check(FFmpegCppHelper::imageFormatToExtension(FFmpegCppImageFormatBmp) == "bmp", "FFmpegCpp helper image extension");
-//    check(FFmpegCppHelper::imageFormatToMimeType(FFmpegCppImageFormatJpeg) == "image/jpeg", "FFmpegCpp helper image mime");
-//    check(FFmpegCppHelper::videoCodecToEncoderName(FFmpegCppVideoCodecCopy) == "copy", "FFmpegCpp helper video codec copy");
-//    check(FFmpegCppHelper::audioCodecToEncoderName(FFmpegCppAudioCodecNone).empty(), "FFmpegCpp helper audio none");
-//    check(FFmpegCppHelper::formatMilliseconds(3723004) == "01:02:03.004", "FFmpegCpp helper time text");
-//
-//    std::string errorText;
-//    FFmpegCppMediaInfo mediaInfo;
-//    check(!FFmpegCppHelper::probeMediaInfo("", &mediaInfo, &errorText) && !errorText.empty(), "FFmpegCpp helper probe invalid");
-//    check(!FFmpegCppHelper::probeMediaInfo(inputAvi, nullptr, &errorText) && !errorText.empty(), "FFmpegCpp helper probe null");
-//
-//    check(writeTestAvi(inputAvi, 64, 48), "FFmpegCpp write test avi");
-//
-//    FFmpegCpp ffmpegCpp;
-//    check(ffmpegCpp.open(inputAvi), "FFmpegCpp open avi");
-//    check(ffmpegCpp.isOpen() && ffmpegCpp.filePath() == inputAvi, "FFmpegCpp open state");
-//    check(ffmpegCpp.reloadMediaInfo(), "FFmpegCpp reload media info");
-//    check(ffmpegCpp.getMediaInfo(&mediaInfo), "FFmpegCpp get media info");
-//    check(mediaInfo.fileSizeBytes > 0 && mediaInfo.hasVideo && !mediaInfo.hasAudio, "FFmpegCpp media info values");
-//    FFmpegCppStreamInfo videoStream;
-//    check(ffmpegCpp.getMainVideoStreamInfo(&videoStream) && videoStream.width == 64 && videoStream.height == 48, "FFmpegCpp main video stream");
-//    check(!ffmpegCpp.getMainAudioStreamInfo(&videoStream), "FFmpegCpp missing audio stream");
-//
-//    FFmpegCppFrameExtractOption extractOption;
-//    extractOption.maxWidth = 32;
-//    extractOption.maxHeight = 32;
-//    extractOption.imageFormat = FFmpegCppImageFormatJpeg;
-//    FFmpegCppImageData imageData;
-//    bool extractJpegResult = ffmpegCpp.extractFirstFrameToMemory(&imageData, extractOption);
-//    if (!extractJpegResult)
-//    {
-//        std::cout << "extract jpeg error: " << ffmpegCpp.lastError() << std::endl;
-//    }
-//    check(extractJpegResult, "FFmpegCpp extract first frame jpeg");
-//    check(!imageData.empty() && imageData.width <= 32 && imageData.height <= 32 && imageData.mimeType == "image/jpeg", "FFmpegCpp jpeg image data");
-//
-//    extractOption.imageFormat = FFmpegCppImageFormatBmp;
-//    std::string savedFilePath;
-//    bool extractBmpFileResult = ffmpegCpp.extractFrameToFile(0, outputBmp, extractOption, &savedFilePath);
-//    if (!extractBmpFileResult)
-//    {
-//        std::cout << "extract bmp error: " << ffmpegCpp.lastError() << std::endl;
-//    }
-//    check(extractBmpFileResult, "FFmpegCpp extract frame file bmp");
-//    check(savedFilePath == outputBmp && fileExistsAndNotEmpty(outputBmp), "FFmpegCpp output bmp exists");
-//
-//    extractOption.imageFormat = FFmpegCppImageFormatPng;
-//    check(!ffmpegCpp.extractFirstFrameToMemory(&imageData, extractOption) && !ffmpegCpp.lastError().empty(), "FFmpegCpp unsupported png branch");
-//
-//    FFmpegCppTranscodeOption transcodeOption;
-//    check(!ffmpegCpp.transcode("", transcodeOption), "FFmpegCpp transcode empty output");
-//    transcodeOption.videoCodec = FFmpegCppVideoCodecH264;
-//    transcodeOption.audioCodec = FFmpegCppAudioCodecAac;
-//    check(!ffmpegCpp.transcode(copyOutput, transcodeOption), "FFmpegCpp unsupported encode transcode");
-//    transcodeOption.videoCodec = FFmpegCppVideoCodecCopy;
-//    transcodeOption.audioCodec = FFmpegCppAudioCodecNone;
-//    transcodeOption.removeAudio = true;
-//    transcodeOption.outputContainer = "avi";
-//    transcodeOption.overwriteOutput = true;
-//    bool copyResult = ffmpegCpp.transcode(copyOutput, transcodeOption, progressCancelCallback, nullptr);
-//    check(!copyResult || fileExistsAndNotEmpty(copyOutput), "FFmpegCpp copy transcode branch");
-//    check(ffmpegCpp.cancelCurrentTask(), "FFmpegCpp cancel flag");
-//    ffmpegCpp.close();
-//    check(!ffmpegCpp.isOpen(), "FFmpegCpp close after work");
-//
-//    FFmpegCppImageData helperImage;
-//    extractOption.imageFormat = FFmpegCppImageFormatBmp;
-//    bool helperExtractResult = FFmpegCppHelper::extractFirstFrameToMemory(inputAvi, &helperImage, extractOption, &errorText);
-//    if (!helperExtractResult)
-//    {
-//        std::cout << "helper extract error: " << errorText << std::endl;
-//    }
-//    check(helperExtractResult, "FFmpegCpp helper extract memory");
-//    check(!helperImage.empty(), "FFmpegCpp helper image data");
-//
-//    remove(inputAvi.c_str());
-//    remove(outputBmp.c_str());
-//    remove(copyOutput.c_str());
-//
-//    std::cout << "FFmpegCpp runtime test " << (failCount == 0 ? "PASS" : "FAIL") << ", total=" << totalCount << ", failed=" << failCount << std::endl;
-//    return failCount == 0 ? 0 : 1;
+//    reader.close();
+//    return decoded.type == FFmpegCppPlaybackFrameTypeVideo && !decoded.videoFrame.empty() ? 0 : 7;
 //}

@@ -31,7 +31,7 @@ public:
     @param [in] video true创建MP4，false创建MP3
     @param [in] width 视频宽度，单位像素；视频模式要求2至16384的偶数，音频模式忽略
     @param [in] height 视频高度，单位像素；范围同width
-    @return true表示输出已就绪；失败原因通过error读取
+    @return true表示输出已就绪；活动会话拒绝重复打开。新会话创建失败可读取error并重新open
     */
     bool open(const std::string& path, bool video, int width, int height);
 
@@ -50,8 +50,17 @@ public:
     */
     bool video(const unsigned char* pixels, size_t bytes, int64_t time100ns);
 
+    /** 按源时间戳和帧时长编码一帧，支持非30fps及AB结束处截短
+    @param [in] pixels 调用期借用的紧密BGRA像素
+    @param [in] bytes 必须等于宽乘高乘4
+    @param [in] time100ns 非负、严格递增的输出时间戳，单位100纳秒
+    @param [in] duration100ns 正数显示时长，单位100纳秒
+    @return 是否接受并写出当前可用包；不改变音频时间轴
+    */
+    bool video(const unsigned char* pixels, size_t bytes, int64_t time100ns, int64_t duration100ns);
+
     /** 排空音频尾块及编码器，写入容器尾并关闭输出文件
-    @return true表示文件已完成；未打开或写入失败返回false
+    @return true表示文件已完成；未打开或写入失败返回false。会话结束后可再次open
     */
     bool finish();
 
@@ -71,6 +80,15 @@ private:
     @return 禁用操作，不提供实现
     */
     FFmpegCppMediaWriter& operator=(const FFmpegCppMediaWriter& other);
+
+    /** 按已验证的配置建立输出资源；部分初始化失败由open统一释放
+    @param [in] path 本次输出路径，调用期间借用
+    @param [in] withVideo true创建音视频会话，false创建纯音频会话
+    @param [in] width 视频宽度，像素；纯音频忽略
+    @param [in] height 视频高度，像素；纯音频忽略
+    @return 所有编码器与容器头都已准备好返回true
+    */
+    bool openSession(const std::string& path, bool withVideo, int width, int height);
 
     /** 向编码器发送一帧并把当前可用包写入输出流
     @param [in] codec 已打开的编码上下文，调用期间借用

@@ -150,7 +150,7 @@ public:
     @param [in] stride Source positive row stride
     @param [in] outputWidth Canvas width
     @param [in] outputHeight Canvas height
-    @param [out] output Contiguous BGRA canvas
+    @param [out] output Contiguous BGRA canvas; may be the source vector for an in-place conversion
     @return True on valid conversion; odd dimensions are padded, not cropped
     */
     static bool fitBgraFrame(const std::vector<unsigned char>& pixels, int32_t width, int32_t height,

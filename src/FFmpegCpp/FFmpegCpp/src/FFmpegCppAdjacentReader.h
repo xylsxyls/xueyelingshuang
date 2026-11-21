@@ -7,7 +7,7 @@ struct AVFrame;
 struct AVFormatContext;
 struct AVCodecContext;
 
-/** 相邻展示帧读取状态，借用解码器，持有有界原始帧缓存，不持有平台或业务对象
+/** 相邻展示帧读取状态，借用解码器，持有可配置的原始帧缓存，不持有平台或业务对象
 */
 class FFmpegCppAdjacentReader
 {
@@ -23,6 +23,13 @@ public:
     /** 外部seek、换媒体或关闭前清除缓存和顺序读取状态
     */
     void reset();
+
+    /** 修改并立即应用相邻帧缓存限制，保留解码所需的至少三帧
+    @param [in] maxFrames 最大缓存帧数，至少3，-1取消帧数限制
+    @param [in] maxBytes 原始像素目标字节数，正数或-1取消字节限制
+    @return true表示生效，无效参数返回false并保留原限制
+    */
+    bool setLimits(int64_t maxFrames, int64_t maxBytes);
 
     /** 查找真实相邻展示帧，仅返回借用的原始帧，颜色转换由调用方执行
     @param [in] format 已打开的媒体上下文，不为空
@@ -82,11 +89,17 @@ private:
         const FFmpegCppPlaybackPreviewOption& option, FFmpegCppPlaybackPreviewProfile* profile);
 
 private:
-    // 缓存帧数上限
-    static const size_t kMaxCachedFrames = 16;
-    // 原始像素缓存目标，不含解码器内部参考帧和行对齐开销
-    static const int64_t kCacheBudgetBytes = 67108864;
-    // 原始帧引用，最多保留16帧且以64MiB为目标，至少保留3帧
+    /** 释放最早的多余帧，使已持有的缓存符合当前限制
+    */
+    void trim();
+
+    // 最大缓存帧数，默认16；-1取消该限制
+    int64_t m_maxFrames;
+    // 原始像素目标字节数，默认64 MiB；-1取消该限制
+    int64_t m_maxBytes;
+    // 缓存内原始像素的估算总字节数，不含解码器参考帧和行对齐开销
+    int64_t m_cachedBytes;
+    // 独占原始帧引用，缓存裁剪时保留最近三帧
     std::deque<AVFrame*> m_frames;
     // 是否已给解码器发送文件结束标记
     bool m_draining;
