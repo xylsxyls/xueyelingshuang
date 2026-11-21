@@ -1,5 +1,4 @@
 ﻿#include "CSystemTest.h"
-#include "CSystem/CSystemAPI.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -8,6 +7,9 @@
 #if CSYSTEM_HAS_NATIVE_API
 #include <atomic>
 #include <thread>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 #endif
 
 /** 验证本进程的系统接口，文件操作限制在本轮新建的独占目录
@@ -33,7 +35,11 @@ int RunSystemInterfaceTests()
     check(CSystem::SystemThreadId() > 0, "CSystem SystemThreadId");
     check(!CSystem::GetCurrentExePath().empty(), "CSystem GetCurrentExePath");
     check(!CSystem::GetCurrentExeName().empty(), "CSystem GetCurrentExeName");
-    check(!CSystem::GetCurrentExeFullName().empty(), "CSystem GetCurrentExeFullName");
+    const std::string executable = CSystem::GetCurrentExeFullName();
+    check(!executable.empty() && CSystem::GetName(executable, 3) == CSystem::GetCurrentExeName() &&
+        CSystem::DirOrFileExist(CSystem::joinPath(CSystem::GetCurrentExePath(), executable)), "executable directory and names");
+    check(!CSystem::GetCurrentDllPath().empty() && CSystem::DirOrFileExist(CSystem::GetCurrentDllPath()),
+        "module directory exists");
     check(CSystem::GetSystemBits() == 32 || CSystem::GetSystemBits() == 64, "CSystem GetSystemBits");
     check(!CSystem::uuid(1).empty() && !CSystem::uuid(0).empty(), "CSystem uuid");
 #endif
@@ -125,6 +131,13 @@ int RunSystemInterfaceTests()
     check(CSystem::deleteFile(CSystem::joinPath(migrationTarget, "data.bin").c_str()) && CSystem::deleteFile(CSystem::joinPath(migrationTarget, "empty.bin").c_str()), "CSystem migration target file cleanup");
     check(CSystem::DestroyDir(migrationTarget) && CSystem::DestroyDir(migrationParent), "CSystem migration directory cleanup");
 #ifndef _WIN32
+    const std::string real = root + "/original";
+    const std::string alias = root + "/alias";
+    check(CSystem::CreateDir(real) && ::symlink(real.c_str(), alias.c_str()) == 0, "create migration alias");
+    check(!CSystem::migrateDirectory(real, alias + "/nested/target", migrationError) &&
+        !CSystem::DirOrFileExist(real + "/nested"), "physical overlap rejected before creating children");
+    check(CSystem::DestroyDir(real) && !CSystem::migrateDirectory(alias, real, migrationError) &&
+        ::unlink(alias.c_str()) == 0, "dangling source is rejected");
     // POSIX 允许目录名以反斜杠结尾，以显式斜杠建立独立的预期子路径。
     const std::string slashSource = root + "/source\\";
     const std::string slashTarget = root + "/target\\";
@@ -159,7 +172,8 @@ int RunSystemInterfaceTests()
     check(CSystem::rename(filePath, renamePath), "CSystem rename file");
     check(CSystem::readFile(renamePath) == "hello system", "CSystem read renamed file");
     std::vector<std::string> findFiles = CSystem::findFilePath(root, 1, "rename.txt");
-    check(!findFiles.empty(), "CSystem findFilePath");
+    check(findFiles.size() == 1 && CSystem::canonicalPath(findFiles.front()) == CSystem::canonicalPath(renamePath),
+        "CSystem findFilePath exact result");
     const std::string nested = CSystem::joinPath(root, "nested");
     const std::string concurrentDir = CSystem::joinPath(root, "mkdir-race");
     std::atomic<int> ready(0);
@@ -176,6 +190,13 @@ int RunSystemInterfaceTests()
     for (auto& creator : creators) { creator.join(); }
     check(successes.load() == 4 && CSystem::DestroyDir(concurrentDir), "all concurrent directory creators succeed");
 #ifndef _WIN32
+    const std::string pending = root + "/draft";
+    const std::string published = root + "/final\\name";
+    CSystem::saveFile("published", pending);
+    check(CSystem::publishFileUtf8(pending.c_str(), published.c_str()) && CSystem::readFile(published) == "published" &&
+        !CSystem::DirOrFileExist(pending), "publish fsyncs the POSIX parent of a literal backslash");
+    CSystem::deleteFile(pending.c_str());
+    CSystem::deleteFile(published.c_str());
     const std::string literal = CSystem::joinPath(root, "part\\leaf");
     check(CSystem::createDirectories(literal) && CSystem::DestroyDir(literal),
         "POSIX directory component preserves literal backslash");
@@ -311,18 +332,23 @@ bool SystemLeaseAudit()
     uint32_t failures = 0;
     uint32_t successes = 0;
 #define LEASE_CHECK(value) { ++checks; if (!(value)) { std::printf("System lease line=%d FAIL\n", __LINE__); return false; } }
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
+#if defined(_WIN32) && defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
     // CRT首次处理分配异常会建立自身常驻资源；先单独触发，不把它计为租约泄漏。
     std::string warm;
     const _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(LeaseMemoryHook);
     try { warm.resize(4096); } catch (...) {}
     _CrtSetAllocHook(previous);
 #endif
+#ifdef _WIN32
+    // 本进程的编号已独占命名空间，快照前避免初始化 RPC 的 UUID 后台工作。
+    const std::string prefix = "CSystemTestLease." + std::to_string(CSystem::currentProcessPid());
+#else
     const std::string prefix = "CSystemTestLease." + CSystem::uuid(0);
+#endif
     for (uint32_t position = 0; position < 32; ++position)
     {
         const std::string name = prefix + "." + std::to_string(position);
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
+#if defined(_WIN32) && defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
         _CrtMemState before = {};
         _CrtMemCheckpoint(&before);
         DWORD handlesBefore = 0;
@@ -333,7 +359,7 @@ bool SystemLeaseAudit()
         {
             std::vector<uint64_t> state;
             int32_t acquired = -99;
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
+#if defined(_WIN32) && defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
             s_leaseRemaining = position;
             s_leaseRejected = 0;
             const _CRT_ALLOC_HOOK old = _CrtSetAllocHook(LeaseMemoryHook);
@@ -346,7 +372,7 @@ bool SystemLeaseAudit()
             {
                 escaped = true;
             }
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
+#if defined(_WIN32) && defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
             _CrtSetAllocHook(old);
 #endif
             if (acquired == 1)
@@ -366,22 +392,29 @@ bool SystemLeaseAudit()
                 ++failures;
                 valid = acquired == -1 && state.empty() && !CSystem::isProcessLeaseReady(name, CSystem::currentProcessPid());
             }
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
+#if defined(_WIN32) && defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
             s_leaseRemaining = 0;
             s_leaseRejected = 0;
             const _CRT_ALLOC_HOOK cleanupHook = _CrtSetAllocHook(LeaseMemoryHook);
 #endif
             CSystem::releaseProcessLease(state);
             CSystem::releaseProcessLease(state);
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
+#if defined(_WIN32) && defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
             _CrtSetAllocHook(cleanupHook);
             valid = valid && s_leaseRejected == 0;
 #endif
             valid = valid && state.empty() && !CSystem::isProcessLeaseReady(name, CSystem::currentProcessPid());
+            valid = valid && CSystem::acquireProcessLease(name, false, 0, state) == 1;
+            CSystem::releaseProcessLease(state);
         }
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
+#if defined(_WIN32) && defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
         DWORD handlesAfter = 0;
-        LEASE_CHECK(GetProcessHandleCount(GetCurrentProcess(), &handlesAfter) != FALSE && handlesBefore == handlesAfter);
+        LEASE_CHECK(GetProcessHandleCount(GetCurrentProcess(), &handlesAfter) != FALSE);
+        if (handlesBefore != handlesAfter)
+        {
+            std::fprintf(stderr, "lease position=%u process handles before=%lu after=%lu\n", position, handlesBefore, handlesAfter);
+        }
+        LEASE_CHECK(handlesBefore == handlesAfter);
         _CrtMemState after = {};
         _CrtMemCheckpoint(&after);
         LEASE_CHECK(before.lCounts[_NORMAL_BLOCK] == after.lCounts[_NORMAL_BLOCK] && before.lSizes[_NORMAL_BLOCK] == after.lSizes[_NORMAL_BLOCK]);
@@ -393,11 +426,28 @@ bool SystemLeaseAudit()
 #endif
         LEASE_CHECK(!escaped && valid);
     }
-#if defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
+#if defined(_WIN32) && defined(_DEBUG) && !defined(SYSTEM_LEASE_NO_HEAP)
     LEASE_CHECK(failures != 0 && successes != 0);
 #else
     LEASE_CHECK(failures == 0 && successes == 32);
 #endif
+    // 独立验证竞争，线程启动和 CRT 线程状态的延迟清理不进入故障注入的资源差值。
+    const std::string contest = prefix + ".contest";
+    std::vector<uint64_t> owner;
+    LEASE_CHECK(CSystem::acquireProcessLease(contest, false, 0, owner) == 1);
+    int32_t competing = -1;
+    std::thread contender([&]() {
+        std::vector<uint64_t> another;
+        competing = CSystem::acquireProcessLease(contest, false, 0, another);
+        CSystem::releaseProcessLease(another);
+    });
+    contender.join();
+    CSystem::releaseProcessLease(owner);
+#ifndef _WIN32
+    LEASE_CHECK(CSystem::deleteFile(("/tmp/xyls." + contest + ".lease").c_str()));
+    LEASE_CHECK(CSystem::deleteFile(("/tmp/xyls." + contest + ".ready." + std::to_string(CSystem::currentProcessPid())).c_str()));
+#endif
+    LEASE_CHECK(competing == 0 && owner.empty());
     std::printf("System lease positions=32 failed=%u acquired=%u checks=%u PASS\n", failures, successes, checks);
     return true;
 #undef LEASE_CHECK

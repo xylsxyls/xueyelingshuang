@@ -1,6 +1,5 @@
 ﻿#include "PlatformTest/PlatformTestAPI.h"
 #include "CSystemTest.h"
-#include "CSystem/CSystemAPI.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -19,11 +18,15 @@ static int RunBenchmarks()
     const std::string dirs[] = {"project/media/recordings/session-alpha", "project/media/recordings/session-bravo/"};
     const std::string file = "session-recording.2026.final.flac";
     const std::string paths[] = {dirs[0] + "/" + file, dirs[1] + file};
-    if (CSystem::GetName(paths[0], 2) != "flac" || CSystem::GetName(paths[1], 1) != file ||
-        CSystem::joinPath(dirs[0], file) != paths[0] || CSystem::joinPath(dirs[1], file) != paths[1])
+    for (size_t index = 0; index < 2; ++index)
     {
-        return 1;
+        if (CSystem::GetName(paths[index], 1) != file || CSystem::GetName(paths[index], 2) != "flac" ||
+            CSystem::joinPath(dirs[index], file) != paths[index])
+        {
+            return 1;
+        }
     }
+    bool valid = true;
     for (int32_t mode = 1; mode <= 2; ++mode)
     {
         LibraryBenchmark::run(mode == 1 ? "CSystem.GetName.filename" : "CSystem.GetName.extension", [&](uint32_t count) -> uint64_t {
@@ -32,6 +35,8 @@ static int RunBenchmarks()
             {
                 sum += CSystem::GetName(paths[i & 1], mode).size();
             }
+            const uint64_t length = mode == 1 ? file.size() : 4;
+            valid = valid && sum == count * length;
             return sum;
         });
     }
@@ -41,9 +46,12 @@ static int RunBenchmarks()
         {
             sum += CSystem::joinPath(dirs[i & 1], file).size();
         }
+        const uint64_t expected = uint64_t(count / 2) * (paths[0].size() + paths[1].size()) +
+            uint64_t(count % 2) * paths[0].size();
+        valid = valid && sum == expected;
         return sum;
     });
-    return 0;
+    return valid ? 0 : 1;
 }
 
 #define CHECK(expression) do { if (!(expression)) { std::fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #expression); return 1; } } while (false)
@@ -232,7 +240,23 @@ static int TestCommon()
     char program[] = "CSystemTest";
     char* sample[] = {program};
     CHECK(CSystem::commandArguments(1, sample, arguments));
-    CHECK(!CSystem::commandArguments(-1, nullptr, arguments));
+#ifdef _WIN32
+    const std::vector<std::string> actual = CSystem::exeParam();
+    CHECK(!actual.empty() && arguments == std::vector<std::string>(actual.begin() + 1, actual.end()));
+#else
+    CHECK(arguments.empty());
+    char empty[] = "";
+    char spaced[] = "two words";
+    char* supplied[] = {program, empty, spaced};
+    CHECK(CSystem::commandArguments(3, supplied, arguments));
+    CHECK(arguments.size() == 2 && arguments[0].empty() && arguments[1] == spaced);
+    supplied[1] = nullptr;
+    CHECK(!CSystem::commandArguments(3, supplied, arguments) && arguments.size() == 2 &&
+        arguments[0].empty() && arguments[1] == spaced);
+#endif
+    const std::vector<std::string> savedArguments = arguments;
+    CHECK(!CSystem::commandArguments(-1, nullptr, arguments) && arguments == savedArguments);
+    CHECK(!CSystem::commandArguments(4097, sample, arguments) && arguments == savedArguments);
     std::chrono::high_resolution_clock::time_point a = CSystem::GetHighTickCount();
     const auto b = a + std::chrono::seconds(2);
     CHECK(CSystem::GetMilliRunTime(b, a) == 2000 && CSystem::GetMicroRunTime(b, a) == 2000000);
@@ -319,7 +343,10 @@ static int TestNative()
     const std::string path = CSystem::joinPath(directory, "csystem-test-" + CSystem::uuid(0) + ".bin");
     CSystemTestFile file(path);
     CHECK(file.m_handle != -1 && CSystem::plainFileUtf8(path));
-    CHECK(CSystem::openFileHandle(path.c_str(), 2) == -1);
+    uint32_t error = 0;
+    CHECK(CSystem::openFileHandle(path.c_str(), 2, &error) == -1 && error != 0);
+    CHECK(CSystem::openFileHandle(path.c_str(), 0, &error) == -1 && error != 0);
+    CHECK(CSystem::openFileHandle(path.c_str(), 4, &error) == -1 && error != 0);
     const uint8_t content[] = {0x42, 0, 0x80, 0x7f, 0xff};
     CHECK(CSystem::writeFileHandle(file.m_handle, 0, content, sizeof(content)) && CSystem::flushFileHandle(file.m_handle));
     uint64_t length = 0;
@@ -328,6 +355,9 @@ static int TestNative()
     CHECK(file.m_duplicate != -1);
     uint8_t bytes[9] = {};
     uint32_t received = 99;
+    CHECK(!CSystem::readFileHandle(file.m_handle, UINT64_MAX, bytes, 1, &received, &error) && received == 0 && error != 0);
+    CHECK(!CSystem::writeFileHandle(file.m_handle, UINT64_MAX, content, 1, &error) && error != 0);
+    CHECK(CSystem::readFileHandle(file.m_handle, 0, nullptr, 0, &received, &error) && received == 0 && error == 0);
     CHECK(CSystem::readFileHandle(file.m_duplicate, 1, bytes, sizeof(bytes), &received) && received == 4 &&
         std::memcmp(bytes, content + 1, 4) == 0);
     CHECK(CSystem::readFileHandle(file.m_handle, sizeof(content), bytes, sizeof(bytes), &received) && received == 0);
@@ -475,9 +505,28 @@ int main(int argc, char** argv)
     {
         // 此入口由父进程从标准输入提供两行，第二行只有一个大写 X。
         CSystem::ClearScanf();
-        if (std::getchar() != 'X') { return 1; }
+        if (CSystem::inputString("") != "X")
+        {
+            return 1;
+        }
         CSystem::ClearScanf();
-        CSystem::ClearScanf();
+        return 0;
+    }
+    if (argc == 2 && std::strcmp(argv[1], "--console-reader") == 0)
+    {
+        // 先从应用自己的 CRT 预读，再让库通过同一读取函数清行。
+        if (std::getchar() == EOF)
+        {
+            return 1;
+        }
+        CSystem::ClearScanf(nullptr);
+        CSystem::ClearScanf(&std::getchar);
+        if (std::getchar() != 'X')
+        {
+            return 1;
+        }
+        CSystem::ClearScanf(&std::getchar);
+        CSystem::ClearScanf(&std::getchar);
         return std::feof(stdin) ? 0 : 1;
     }
 #endif
