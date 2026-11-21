@@ -1,7 +1,6 @@
 ﻿#include "CompressTest.h"
-#include "../../../common/PlatformTest/LibraryBenchmark.h"
-#include "../../../common/PlatformTest/LibraryNamedCaseSelection.h"
-#include "CompressAPI.h"
+#include "PlatformTest/PlatformTestAPI.h"
+#include "Compress/CompressAPI.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #endif
