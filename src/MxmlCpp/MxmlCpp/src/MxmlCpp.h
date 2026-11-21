@@ -26,8 +26,8 @@ public:
     */
     MxmlCpp& operator=(const MxmlCpp& other) = delete;
 
-    /** 读取 UTF-8 文档，成功后替换整棵树。带 XML 声明时停在文档层，否则停在根元素。
-    @param [in] xml 完整 XML 字节，允许 UTF-8 BOM
+    /** 读取 UTF-8 的 XML 1.0 文档，成功后替换整棵树。带 XML 声明时停在文档层，否则停在根元素。
+    @param [in] xml 完整 XML 字节，可带文首 BOM；声明中的编码可省略或写 UTF-8
     @return 成功返回 true，失败保留原树和游标
     */
     bool load(const std::string& xml);
@@ -91,7 +91,7 @@ public:
     */
     std::string attr(const std::string& name);
 
-    /** 连接当前元素的直接文本及 CDATA，保持空白，不递归读取子元素。
+    /** 连接当前元素的直接文本及 CDATA。解析时字面 CRLF 和 CR 归一为 LF，字符引用保持原码点。
     @return 文本副本，无内容返回空串
     */
     std::string text();
