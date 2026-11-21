@@ -24,7 +24,7 @@ librariesrely+=($'project\tCStringManager\t'"$CStringManager_dlllib")
 
 SHELL_FOLDER=$(cd "$(dirname "$0")"; pwd)
 root="$SHELL_FOLDER/../../.."
-case "${THIRDPARTY_PLATFORM:-${CMAKE_SYSTEM_HiRedis:-$OSTYPE}}" in
+case "${THIRDPARTY_PLATFORM:-${CMAKE_SYSTEM_NAME:-$OSTYPE}}" in
     [Ww]indows|msys*|cygwin*|win32*) windows=1 ;;
     [Ll]inux*|arm) windows=0 ;;
     *) echo "HiRedis supports Windows and Linux" >&2; exit 2 ;;
