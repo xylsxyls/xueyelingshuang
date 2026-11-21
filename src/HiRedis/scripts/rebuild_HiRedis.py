@@ -180,8 +180,84 @@ if __name__ != '__main__' or wasm_arguments:
 
     ROOT = Path(__file__).resolve().parents[3]
     SDK_ROOT = ROOT
-    sys.path.insert(0, str(ROOT / 'common' / 'CloudRebuild'))
-    import PreparedWasmHeaders as sdk_headers
+    from pathlib import PurePosixPath
+
+    def sdk_header_files(directory):
+        return sorted(path for path in directory.rglob('*') if path.is_file() and
+                      path.suffix.lower() in ('.h', '.hpp', '.hh', '.inl', '.inc'))
+
+
+    def sdk_project_headers(source, library, linkage):
+        """Preserve nested paths and select the project's own static or dynamic macro header."""
+        entries = {path.relative_to(source).as_posix(): path for path in sdk_header_files(source)}
+        macro = source / (library + ('MacroLib.h' if linkage == 'lib' else 'MacroDll.h'))
+        public_macro = library + 'Macro.h'
+        if macro.is_file():
+            entries[public_macro] = macro
+        for name, path in entries.items():
+            if not path.is_file():
+                raise ValueError('Missing public C++ SDK header: ' + str(path))
+        if library + 'API.h' not in entries:
+            raise ValueError('Missing public C++ SDK entry: ' + library)
+        return entries
+
+
+    def sdk_vendor_name(archive):
+        """A before record identifies the package; compilation reads the prepared SDK copy."""
+        parts = PurePosixPath(archive).parts
+        if len(parts) < 4 or parts[0] != 'tools' or '..' in parts or 'wasm' not in parts:
+            raise ValueError('Invalid Wasm vendor archive record: ' + archive)
+        return parts[1]
+
+
+    def sdk_checked_path(directory, relative):
+        parts = PurePosixPath(relative).parts
+        if not parts or '\\' in relative or ':' in relative or '..' in parts or PurePosixPath(relative).is_absolute():
+            raise ValueError('Invalid SDK header path: ' + relative)
+        path = directory.joinpath(*parts)
+        if directory.resolve() not in path.resolve().parents:
+            raise ValueError('Header outside prepared SDK: ' + relative)
+        return path
+
+
+    def sdk_header_updates(source, sdk, library, linkage, vendors, data):
+        """Return project header writes and record the exact third-party headers prepared by before."""
+        public = sdk / 'include' / 'wasm' / library
+        contents = {relative: path.read_bytes() for relative, path in sdk_project_headers(source, library, linkage).items()}
+        data['projectHeaderSha256'] = {relative: hashlib.sha256(payload).hexdigest() for relative, payload in contents.items()}
+        vendor_headers = {}
+        include = sdk / 'include'
+        for vendor in sorted({sdk_vendor_name(relative) for relative in vendors}):
+            for path in sdk_header_files(include / vendor):
+                relative = path.relative_to(include).as_posix()
+                vendor_headers[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+        data['vendorHeaderSha256'] = vendor_headers
+        return {public / relative: payload for relative, payload in contents.items()}
+
+
+    def sdk_receipt_paths(sdk, data):
+        """Resolve only the paths owned by the receipt. Native and other vendor headers stay separate."""
+        library = data['library']
+        if not library.isidentifier():
+            raise ValueError('Invalid SDK library name: ' + library)
+        project = data.get('projectHeaderSha256')
+        vendors = data.get('vendorHeaderSha256')
+        if not isinstance(project, dict) or library + 'API.h' not in project or not isinstance(vendors, dict):
+            raise ValueError('Rebuild ' + library + ' with same/librely to publish its C++ SDK headers')
+        include = sdk / 'include'
+        for relative, digest in project.items():
+            yield sdk_checked_path(include / 'wasm' / library, relative), digest
+        owners = {sdk_vendor_name(archive) for archive in data.get('vendorSha256', {})}
+        for relative, digest in vendors.items():
+            if PurePosixPath(relative).parts[0] not in owners:
+                raise ValueError('Unexpected Wasm vendor header: ' + relative)
+            yield sdk_checked_path(include, relative), digest
+
+
+    def sdk_verify(sdk, data):
+        for path, digest in sdk_receipt_paths(sdk, data):
+            if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                raise ValueError('Missing or mismatched prepared Wasm header: ' + str(path))
     BUILD_LINKAGES = {}
     MARKER = '\n// SDK identity: '
 
@@ -261,9 +337,9 @@ if __name__ != '__main__' or wasm_arguments:
 
 
     def validate_vendor_identity(data):
-        sdk_headers.verify(SDK_ROOT, data)
+        sdk_verify(SDK_ROOT, data)
         for relative, expected in data.get('vendorSha256', {}).items():
-            sdk_headers.vendor_name(relative)
+            sdk_vendor_name(relative)
             prepared = SDK_ROOT / 'lib' / Path(relative).name
             if not prepared.is_file() or hashlib.sha256(prepared.read_bytes()).hexdigest() != expected:
                 raise ValueError('Rebuild SDK: vendor identity changed: ' + relative)
@@ -400,7 +476,7 @@ if __name__ != '__main__' or wasm_arguments:
             if len(parts) < 2 or not parts[0].isidentifier() or '..' in parts:
                 raise ValueError('Invalid SDK protocol header: ' + header)
             base = ROOT / 'src' / library / library / 'src' if parts[0] == library else SDK_ROOT / 'include' / 'wasm' / parts[0]
-            path = sdk_headers.checked_path(base, Path(*parts[1:]).as_posix())
+            path = sdk_checked_path(base, Path(*parts[1:]).as_posix())
             pattern = r'\b(' + re.escape(prefix[0]) + r'[A-Z0-9_]+)\s*=\s*(0x[0-9a-fA-F]+|[0-9]+)[Uu]?\b'
             for name, value in re.findall(pattern, path.read_text(encoding='utf-8-sig')):
                 number = int(value, 16 if value.lower().startswith('0x') else 10)
@@ -447,7 +523,7 @@ if __name__ != '__main__' or wasm_arguments:
     def vendor_libraries(library, bit, mode='release'):
         result = {}
         for name in prepared_inputs(library)['vendors']:
-            sdk_headers.vendor_name(name)
+            sdk_vendor_name(name)
             path = SDK_ROOT / 'lib' / Path(name).name
             payload = path.read_bytes()
             if archive_bits(payload) != bit:
@@ -673,7 +749,7 @@ if __name__ != '__main__' or wasm_arguments:
                     buildDependencies={dep: artifact_digest(validate(dep, bit, mode)) for dep in dependencies(library)},
                     buildDependencyLinkages={dep: BUILD_LINKAGES[dep] for dep in dependencies(library)})
         source = ROOT / 'src' / library / library / 'src'
-        published_headers = sdk_headers.header_updates(source, SDK_ROOT, library, 'dll', vendors, data)
+        published_headers = sdk_header_updates(source, SDK_ROOT, library, 'dll', vendors, data)
         alias = sdk_setting(library, 'WASM_SDK_ENTRY_ALIAS') or []
         alias_content = None
         if alias:
@@ -740,7 +816,7 @@ if __name__ != '__main__' or wasm_arguments:
                     dependencyLinkages={dep: BUILD_LINKAGES[dep] for dep in dependencies(library)})
         target = SDK_ROOT / 'include' / library
         source = ROOT / 'src' / library / library / 'src'
-        published_headers = sdk_headers.header_updates(source, SDK_ROOT, library, 'lib', vendors, data)
+        published_headers = sdk_header_updates(source, SDK_ROOT, library, 'lib', vendors, data)
         updates = {SDK_ROOT / 'lib' / archive.name: payload,
                    target / (library + 'WasmSDK.json'): json.dumps(data, indent=2, sort_keys=True).encode('utf-8')}
         updates.update(published_headers)
@@ -775,7 +851,7 @@ if __name__ != '__main__' or wasm_arguments:
                 raise ValueError('Missing or mismatched prepared Wasm vendor: ' + str(prepared))
             vendor_paths.append(prepared)
         source = ROOT / 'src' / library / library / 'src'
-        for relative, header in sdk_headers.project_headers(source, library, linkage).items():
+        for relative, header in sdk_project_headers(source, library, linkage).items():
             target = private / 'include' / library / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(header, target)
@@ -835,7 +911,7 @@ if __name__ != '__main__' or wasm_arguments:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, target)
         # Header-only providers have no archive receipt. The Wasm namespace excludes native macros.
-        for header in sdk_headers.header_files(include / 'wasm'): copy(header)
+        for header in sdk_header_files(include / 'wasm'): copy(header)
         for name in selected:
             source = SDK_ROOT / 'include' / name
             for file in source.rglob('*'):
@@ -874,7 +950,7 @@ if __name__ != '__main__' or wasm_arguments:
             data = validate(name, bit, mode)
             files.add(SDK_ROOT / 'lib' / data.get('archive', data.get('wasm')))
             public = SDK_ROOT / 'include' / name
-            files.update(path for path, digest in sdk_headers.receipt_paths(SDK_ROOT, data))
+            files.update(path for path, digest in sdk_receipt_paths(SDK_ROOT, data))
             if data.get('entryAlias'):
                 alias = data['entryAlias']
                 files.add(SDK_ROOT / 'include' / alias / (alias + 'API.js'))
