@@ -4,6 +4,9 @@
     <ClInclude Include="..\src\Timer.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\TimerState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\TimerAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -21,6 +24,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Timer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\TimerState.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
