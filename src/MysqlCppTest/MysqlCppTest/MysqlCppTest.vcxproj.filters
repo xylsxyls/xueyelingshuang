@@ -20,9 +20,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\MysqlCpp\MysqlCpp\src\MysqlCppHelper.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="MysqlCppTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>

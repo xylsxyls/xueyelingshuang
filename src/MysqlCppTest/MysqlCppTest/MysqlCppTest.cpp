@@ -1,18 +1,13 @@
-﻿#include "../../../common/PlatformTest/LibraryCaseSelection.h"
+﻿#include "PlatformTest/PlatformTestAPI.h"
 #include "MysqlCppTest.h"
-#include "../../../common/PlatformTest/LibraryBenchmark.h"
 #include <cstring>
 #include <cstdio>
 #include <fstream>
 #include "MysqlCpp/MysqlCppAPI.h"
-#include <chrono>
-#include "MysqlCpp/MysqlCppConnectionPool.h"
-
 #include "MysqlCpp/MysqlCppHelper.h"
+#include <chrono>
+
 #include "mysql-connector-cpp/cppconn/exception.h"
-#include "MysqlCpp/MysqlCppPrepareStatement.h"
-#include "MysqlCpp/MysqlCppTransaction.h"
-#include "MysqlCpp/MysqlSqlString.h"
 #include <atomic>
 #include <cstdlib>
 #include <ctime>
