@@ -19,7 +19,7 @@ librariesrely+=($'project\tCStringManager\t'"$2")
 
 SHELL_FOLDER=$(cd "$(dirname "$0")"; pwd)
 root="$SHELL_FOLDER/../../.."
-case "${THIRDPARTY_PLATFORM:-${CMAKE_SYSTEM_MysqlCpp:-$OSTYPE}}" in
+case "${THIRDPARTY_PLATFORM:-${CMAKE_SYSTEM_NAME:-$OSTYPE}}" in
     [Ww]indows|msys*|cygwin*|win32*) windows=1 ;;
     [Ll]inux*|arm) windows=0 ;;
     *) echo "MysqlCpp supports Windows and Linux" >&2; exit 2 ;;
