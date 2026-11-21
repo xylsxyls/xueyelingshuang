@@ -1,0 +1,1 @@
+var WebAssembly = Module['wasmApi'] || globalThis.WebAssembly;
