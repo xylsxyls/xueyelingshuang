@@ -10,7 +10,7 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define HttpRequestAPI __attribute__ ((visibility("default")))
     #else
-        #define HttpRequestAPI
+        #define HttpRequestAPI 
     #endif
 #endif
 
