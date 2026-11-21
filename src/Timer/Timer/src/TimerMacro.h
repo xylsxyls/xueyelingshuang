@@ -10,7 +10,7 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define TimerAPI __attribute__ ((visibility("default")))
     #else
-        #define TimerAPI
+        #define TimerAPI 
     #endif
 #endif
 
