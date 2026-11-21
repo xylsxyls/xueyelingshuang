@@ -100,7 +100,7 @@ public:
 	size_t size() const;
 
 	/** 为数组预留容量，当前值不是数组时不生效
-	@param [in] capacity 预留元素数量，超出 RapidJSON SizeType 表示范围时抛出 std::length_error
+	@param [in] capacity 预留元素数量，超出 RapidJSON SizeType 或本机可寻址数组范围时抛出 std::length_error
 	*/
 	void reserve(size_t capacity);
 
@@ -205,7 +205,7 @@ public:
 	std::vector<std::string> getStringArrayOrEmpty(const char* key) const;
 
 	/** 将当前JSON值序列化为字符串
-	@return 返回JSON文本
+	@return 返回 JSON 文本，含非法 UTF-8 或非有限数时返回空字符串
 	*/
 	std::string toString() const;
 

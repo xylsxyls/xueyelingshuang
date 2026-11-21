@@ -1,7 +1,6 @@
 ﻿#include "RapidJsonCpp.h"
 #include "RapidJsonHelper.h"
 #include "rapidjson/document.h"
-#include <cstring>
 #include <memory>
 
 RapidJsonCpp::RapidJsonCpp() :
@@ -10,7 +9,7 @@ m_value(nullptr),
 m_hasKey(false)
 {
 	std::unique_ptr<rapidjson::Document> document(new rapidjson::Document());
-	std::unique_ptr<rapidjson::Value> value(new rapidjson::Value());
+	std::unique_ptr<rapidjson::Document> value(new rapidjson::Document());
 	document->SetObject();
 	m_document = document.release();
 	m_value = value.release();
@@ -23,9 +22,9 @@ m_key(rapidJson.m_key),
 m_hasKey(rapidJson.m_hasKey)
 {
 	std::unique_ptr<rapidjson::Document> document(new rapidjson::Document());
-	std::unique_ptr<rapidjson::Value> value(new rapidjson::Value());
+	std::unique_ptr<rapidjson::Document> value(new rapidjson::Document());
 	document->CopyFrom(*rapidJson.m_document, document->GetAllocator());
-	value->CopyFrom(*rapidJson.m_value, document->GetAllocator());
+	value->CopyFrom(*rapidJson.m_value, value->GetAllocator());
 	m_document = document.release();
 	m_value = value.release();
 }
@@ -36,7 +35,7 @@ m_value(nullptr),
 m_hasKey(false)
 {
 	std::unique_ptr<rapidjson::Document> document(new rapidjson::Document());
-	std::unique_ptr<rapidjson::Value> value(new rapidjson::Value());
+	std::unique_ptr<rapidjson::Document> value(new rapidjson::Document());
 	if (rapidjson == nullptr)
 	{
 		document->SetNull();
@@ -45,7 +44,7 @@ m_hasKey(false)
 		m_value = value.release();
 		return;
 	}
-	value->CopyFrom(*rapidjson, document->GetAllocator(), true);
+	value->CopyFrom(*rapidjson, value->GetAllocator(), true);
 	document->CopyFrom(*rapidjson, document->GetAllocator(), true);
 	m_document = document.release();
 	m_value = value.release();
@@ -61,27 +60,19 @@ bool RapidJsonCpp::parse(const std::string& json)
 {
 	m_key.clear();
 	m_hasKey = false;
-	m_value->SetNull();
-	if (json.empty())
-	{
-		m_document->SetObject();
-		return false;
-	}
-	if (json.find('\0') != std::string::npos)
-	{
-		m_document->SetObject();
-		return false;
-	}
-	rapidjson::Document parsed;
-	parsed.Parse<rapidjson::kParseValidateEncodingFlag | rapidjson::kParseIterativeFlag>(json.c_str(), json.size());
-	m_document->Swap(parsed);
-	if (m_document->HasParseError())
-	{
-		m_document->SetObject();
-		return false;
-	}
-	m_value->CopyFrom(*m_document, m_document->GetAllocator());
-	return true;
+    const bool valid = RapidJsonHelper::parse(*m_document, json);
+    setSelected(valid ? m_document : nullptr);
+    return valid;
+}
+
+void RapidJsonCpp::setSelected(const rapidjson::Value* value)
+{
+    m_value->SetNull();
+    m_value->GetAllocator().Clear();
+    if (value != nullptr)
+    {
+        m_value->CopyFrom(*value, m_value->GetAllocator());
+    }
 }
 
 bool RapidJsonCpp::hasMember(const std::string& key)
@@ -144,7 +135,7 @@ std::vector<RapidJsonCpp> RapidJsonCpp::toArray()
 	result.reserve(rapidjsonArray.Size());
 	for (rapidjson::SizeType index = 0; index < rapidjsonArray.Size(); ++index)
 	{
-		result.push_back(RapidJsonCpp(&rapidjsonArray[index]));
+		result.emplace_back(&rapidjsonArray[index]);
 	}
 	return result;
 }
@@ -153,8 +144,11 @@ RapidJsonCpp& RapidJsonCpp::assignValue(rapidjson::Value& value)
 {
     if (!m_hasKey)
     {
-        static_cast<rapidjson::Value&>(*m_document).Swap(value);
-        m_value->CopyFrom(*m_document, m_document->GetAllocator());
+        setSelected(&value);
+        value.SetNull();
+        m_document->SetNull();
+        m_document->GetAllocator().Clear();
+        m_document->CopyFrom(*m_value, m_document->GetAllocator());
         return *this;
     }
     if (!m_document->IsObject())
@@ -164,7 +158,7 @@ RapidJsonCpp& RapidJsonCpp::assignValue(rapidjson::Value& value)
     rapidjson::Document::AllocatorType& allocator = m_document->GetAllocator();
     rapidjson::Value key(rapidjson::StringRef(m_key.c_str(), RapidJsonHelper::jsonSize(m_key.size())));
     rapidjson::Value::MemberIterator it = m_document->FindMember(key);
-    m_value->CopyFrom(value, allocator);
+    setSelected(&value);
     if (it != m_document->MemberEnd())
     {
         it->value.Swap(value);
@@ -231,6 +225,10 @@ RapidJsonCpp& RapidJsonCpp::operator=(const RapidJsonCpp& value)
 
 RapidJsonCpp& RapidJsonCpp::operator[](const std::string& key)
 {
+    if (m_hasKey && m_key == key)
+    {
+        return *this;
+    }
 	m_key = key;
 	m_hasKey = true;
 	if (m_document->IsObject())
@@ -240,11 +238,11 @@ RapidJsonCpp& RapidJsonCpp::operator[](const std::string& key)
 		rapidjson::Value::MemberIterator it = m_document->FindMember(strKey);
 		if (it != m_document->MemberEnd())
 		{
-			m_value->CopyFrom(it->value, m_document->GetAllocator());
+			setSelected(&it->value);
 			return *this;
 		}
 	}
-	m_value->SetNull();
+	setSelected(nullptr);
 	return *this;
 }
 

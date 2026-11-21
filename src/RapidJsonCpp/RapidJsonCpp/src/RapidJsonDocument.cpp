@@ -1,5 +1,5 @@
 ﻿#include "RapidJsonDocument.h"
-#include "rapidjson/document.h"
+#include "RapidJsonHelper.h"
 #include <utility>
 
 RapidJsonDocument::RapidJsonDocument() = default;
@@ -21,20 +21,7 @@ RapidJsonDocument& RapidJsonDocument::operator=(RapidJsonDocument&& document)
 
 bool RapidJsonDocument::parse(const std::string& json)
 {
-    if (json.empty() || json.find('\0') != std::string::npos)
-    {
-        setObject();
-        return false;
-    }
-    rapidjson::Document parsed;
-    parsed.Parse<rapidjson::kParseValidateEncodingFlag | rapidjson::kParseIterativeFlag>(json.c_str(), json.size());
-    if (parsed.HasParseError())
-    {
-        setObject();
-        return false;
-    }
-    m_root.m_document->Swap(parsed);
-    return true;
+    return RapidJsonHelper::parse(*m_root.m_document, json);
 }
 
 void RapidJsonDocument::setObject()

@@ -141,7 +141,7 @@ public:
 	std::vector<std::string> getStringArrayOrEmpty(const char* key) const;
 
 	/** 将整个JSON文档序列化为字符串
-	@return 返回JSON文本
+	@return 返回 JSON 文本，含非法 UTF-8 或非有限数时返回空字符串
 	*/
 	std::string toString() const;
 

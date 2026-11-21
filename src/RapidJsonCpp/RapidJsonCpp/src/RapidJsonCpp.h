@@ -15,6 +15,8 @@ namespace rapidjson
 	typedef GenericDocument<UTF8<char>, MemoryPoolAllocator<CrtAllocator>, CrtAllocator> Document;
 }
 
+/** 拥有根文档与当前选中值，下标选择根对象成员，赋值后可继续读取该成员
+*/
 class RapidJsonCppAPI RapidJsonCpp
 {
 public:
@@ -48,8 +50,8 @@ public:
 	*/
 	bool hasMember(const std::string& key);
 
-	/** 转化为字符串
-	@return 返回转化的字符串
+	/** 将整个根文档序列化为紧凑 JSON
+	@return 返回 JSON 文本，含非法 UTF-8 或非有限数时返回空字符串
 	*/
 	std::string toString();
 
@@ -75,8 +77,8 @@ public:
 	*/
 	std::string toStringOrDefault(const std::string& defaultValue) const;
 
-	/** 获取底层rapidjson::Value指针，供封装内部桥接使用，调用方不能在RapidJsonCpp对象析构后继续保存或使用该指针
-	@return 返回底层rapidjson::Value指针
+	/** 借用当前选中值，后续选择或写入会更新它，节点内部指针和迭代器也会失效
+	@return 返回随所有者析构而失效的只读指针
 	*/
 	const rapidjson::Value* toRapidJsonValue() const;
 
@@ -128,16 +130,23 @@ public:
 	RapidJsonCpp& operator[](const std::string& key);
 
 private:
+    /** 重置独立分配的选中值快照，已借出的 Value 指针继续指向当前选择
+    @param [in] value 来自快照以外的节点，空指针表示选择空值
+    @return 无
+    */
+    void setSelected(const rapidjson::Value* value);
+
     /** 写入已拥有的临时节点，同时更新当前选中值
     @param [in,out] value 使用本文档分配器创建的节点，写入后可被移动
     @return 当前封装对象
     */
     RapidJsonCpp& assignValue(rapidjson::Value& value);
 
+private:
 	// 底层JSON文档对象，由RapidJsonCpp负责释放
 	rapidjson::Document* m_document;
-	// 当前选中的JSON值，由RapidJsonCpp负责释放
-	rapidjson::Value* m_value;
+	// 当前选中值及其独立内存池，切换选择时释放上一个快照
+	rapidjson::Document* m_value;
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)

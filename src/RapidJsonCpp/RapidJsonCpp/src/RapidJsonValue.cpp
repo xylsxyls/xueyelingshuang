@@ -4,6 +4,8 @@
 #include "rapidjson/document.h"
 #include <cstring>
 #include <memory>
+#include <limits>
+#include <stdexcept>
 
 RapidJsonValue::RapidJsonValue() :
 m_document(new rapidjson::Document(rapidjson::kObjectType))
@@ -120,6 +122,10 @@ void RapidJsonValue::reserve(size_t capacity)
 {
 	if (m_document->IsArray())
 	{
+        if (capacity > static_cast<size_t>((std::numeric_limits<ptrdiff_t>::max)()) / sizeof(rapidjson::Value))
+        {
+            throw std::length_error("RapidJSON array size exceeds the addressable range");
+        }
 		m_document->Reserve(RapidJsonHelper::jsonSize(capacity), m_document->GetAllocator());
 	}
 }
@@ -424,7 +430,7 @@ std::vector<RapidJsonValue> RapidJsonValue::getArrayValueOrEmpty(const char* key
 	values.reserve(static_cast<size_t>(it->value.Size()));
 	for (rapidjson::SizeType i = 0; i < it->value.Size(); ++i)
 	{
-		values.push_back(RapidJsonValue(&it->value[i]));
+		values.emplace_back(&it->value[i]);
 	}
 	return values;
 }
