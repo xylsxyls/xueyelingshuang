@@ -1,0 +1,1 @@
+"$CLOUD_REBUILD" MysqlCpp 32 dll debug same
