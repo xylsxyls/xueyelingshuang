@@ -84,7 +84,7 @@ public:
 
     /** 获取排队数量，先清空输出
     @param [out] counts 优先级到等待数量
-    @return 查询结果，运行中为弱一致观察
+    @return 运行中成功返回 Ok 和弱一致计数；观察入口关闭返回 Closed，保护记录不足返回 ResourceUnavailable，输出分配失败返回 NoMemory。失败时 counts 为空
     */
     CTaskThreadResult getWaitTaskInfo(std::map<int32_t, int32_t>& counts);
 

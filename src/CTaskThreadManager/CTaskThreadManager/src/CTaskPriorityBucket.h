@@ -13,16 +13,38 @@ public:
     */
     explicit CTaskPriorityBucket(int32_t level);
 
+    /** 对静止的未启动队列应用并校验参数，不建立节点池。
+    @param [in] config 本级队列参数
+    @return 基础库配置结果
+    */
+    CTaskThreadResult configure(const CTaskQueueConfig& config);
+
     /** 静止期配置队列
     @param [in] config 每线程配置
     @return 初始化结果
     */
     CTaskThreadResult initialize(const CTaskThreadConfig& config);
 
+    /** 唯一消费者从混合模式队列读取一个值前缀，保存稳定记录供逐项选级
+    调用前已消费完上次暂存的前缀；未观察到已发布项时有效项数为零
+    */
+    void refillValuePrefix();
+
+    /** 为可回收桶预留一项，队列从空变为非空时同时持有一份退役保护。
+    调用者须已登记为生产者，或是正在提交重做的唯一消费者。
+    */
+    void reserveQueued();
+
+    /** 归还可回收桶的一项预留；最后一次取走或投递回滚时解除退役保护。
+    */
+    void releaseQueued();
+
 public:
     // 不变优先级
     const int32_t m_level;
-    // 队列生产者的接纳计数；关闭空桶后拒绝旧引用发布
+    // 建桶时从本级配置复制；仅专用模式支持按 Entry 地址读取前缀
+    bool m_entryOnly;
+    // 退役门计入在途生产者；可回收桶有排队预留时还持有一份登记
     CTaskAdmission m_writers;
     // 接纳计数不与 FIFO 的首个缓存行共用
     char m_writerPadding[64];

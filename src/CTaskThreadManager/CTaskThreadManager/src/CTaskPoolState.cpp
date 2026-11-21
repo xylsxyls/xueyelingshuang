@@ -15,7 +15,9 @@ static thread_local CTaskPoolState* s_currentTaskPool = nullptr;
 CTaskPoolState::CTaskPoolState(const CTaskThreadPoolConfig& config) :
 m_config(config),
 m_policy(config.m_policy),
+m_workers(false),
 m_controller(0),
+m_changed(config.m_changeSemaphore),
 m_stop(false),
 m_discardRequested(false),
 m_accepting(false),
@@ -389,8 +391,16 @@ void CTaskPoolState::rebalance(uint64_t now)
             }
         }
     }
+    maintainMembers(64);
+}
+
+void CTaskPoolState::maintainMembers(size_t budget)
+{
     size_t released = 0;
-    m_workers.lockFreeMapMaintain(64, released);
+    if (m_workers.lockFreeMapMaintain(budget, released) == LOCK_FREE_MAP_POLICY_EXCEPTION)
+    {
+        m_errors.fetch_add(1, std::memory_order_relaxed);
+    }
 }
 
 CTaskThreadResult CTaskPoolState::shutdown(bool drain)
@@ -503,8 +513,7 @@ CTaskThreadResult CTaskPoolState::shutdown(bool drain)
             if (result.m_status == CTaskThreadOk)
             {
                 m_workers.clear();
-                size_t released = 0;
-                m_workers.lockFreeMapMaintain((std::numeric_limits<size_t>::max)(), released);
+                maintainMembers((std::numeric_limits<size_t>::max)());
                 m_closed.store(true, std::memory_order_release);
                 result.m_committed = true;
             }

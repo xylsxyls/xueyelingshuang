@@ -14,6 +14,12 @@ CTaskThreadResult CTaskResultAdapter::semaphoreInitialization(const Semaphore& s
     {
         return CTaskThreadResult();
     }
+    if (result.status == SEMAPHORE_INVALID || result.status == SEMAPHORE_CAPACITY || result.status == SEMAPHORE_POLICY)
+    {
+        const CTaskThreadStatus status = result.status == SEMAPHORE_INVALID ? CTaskThreadInvalid :
+            (result.status == SEMAPHORE_CAPACITY ? CTaskThreadCapacity : CTaskThreadPolicyFailure);
+        return CTaskThreadResult(status, false, result.nativeError);
+    }
     const CTaskThreadStatus status = result.status == SEMAPHORE_NO_MEMORY ? CTaskThreadNoMemory :
         (result.status == SEMAPHORE_UNSUPPORTED ? CTaskThreadUnsupported : CTaskThreadSystemFailure);
     return CTaskThreadResult(status, false, result.nativeError);
@@ -56,10 +62,10 @@ CTaskThreadResult CTaskResultAdapter::pause(uint32_t& attempts)
     }
 }
 
-CTaskThreadResult CTaskResultAdapter::pauseCapacity(uint32_t& attempts)
+CTaskThreadResult CTaskResultAdapter::pauseCapacity(uint32_t& attempts, uint32_t retries, uint32_t milliseconds)
 {
 #if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
-    if (attempts < 4096)
+    if (attempts < retries)
     {
         ++attempts;
         return CTaskThreadResult();
@@ -68,7 +74,7 @@ CTaskThreadResult CTaskResultAdapter::pauseCapacity(uint32_t& attempts)
 #else
     try
     {
-        if (attempts < 4096)
+        if (attempts < retries)
         {
             ++attempts;
             // 快速阶段不做正时长休眠，但也不能让过量生产者连续争写额度、挤占消费者。
@@ -89,7 +95,7 @@ CTaskThreadResult CTaskResultAdapter::pauseCapacity(uint32_t& attempts)
 #endif
             return CTaskThreadResult();
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
         return CTaskThreadResult();
     }
     catch (const std::system_error& error)
@@ -249,63 +255,4 @@ CTaskThreadResult CTaskResultAdapter::map(LockFreeMapStatus status)
         return CTaskThreadResult(CTaskThreadInvalid);
     }
     }
-}
-
-CTaskThreadResult CTaskResultAdapter::hash(const LockFreeHashMapResult& result)
-{
-    CTaskThreadStatus status = CTaskThreadInvalid;
-    switch (result.m_status)
-    {
-    case LockFreeHashMapOk:
-    case LockFreeHashMapExists:
-    {
-        status = CTaskThreadOk;
-        break;
-    }
-    case LockFreeHashMapNotFound:
-    {
-        status = CTaskThreadNotFound;
-        break;
-    }
-    case LockFreeHashMapReservationBusy:
-    case LockFreeHashMapVersionMismatch:
-    case LockFreeHashMapCleared:
-    {
-        status = CTaskThreadRetry;
-        break;
-    }
-    case LockFreeHashMapCapacityLimit:
-    case LockFreeHashMapDirectoryFull:
-    case LockFreeHashMapProtectionUnavailable:
-    case LockFreeHashMapGrowthDeclined:
-    {
-        status = CTaskThreadCapacity;
-        break;
-    }
-    case LockFreeHashMapNoMemory:
-    {
-        status = CTaskThreadNoMemory;
-        break;
-    }
-    case LockFreeHashMapUserException:
-    {
-        status = CTaskThreadCallbackFailure;
-        break;
-    }
-    case LockFreeHashMapUnsupported:
-    {
-        status = CTaskThreadUnsupported;
-        break;
-    }
-    case LockFreeHashMapVersionExhausted:
-    {
-        status = CTaskThreadSequenceExhausted;
-        break;
-    }
-    default:
-    {
-        break;
-    }
-    }
-    return CTaskThreadResult(status, result.m_committed);
 }

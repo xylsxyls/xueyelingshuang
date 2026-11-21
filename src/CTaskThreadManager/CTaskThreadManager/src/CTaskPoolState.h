@@ -80,6 +80,11 @@ private:
     */
     void rebalance(uint64_t now);
 
+    /** 维护成员索引，把本轮缩容策略异常计入池统计
+    @param [in] budget 索引回收及各节点池的维护访问预算
+    */
+    void maintainMembers(size_t budget);
+
     /** 读取单调时间
     @return 毫秒值，时钟异常由调用边界捕获
     */

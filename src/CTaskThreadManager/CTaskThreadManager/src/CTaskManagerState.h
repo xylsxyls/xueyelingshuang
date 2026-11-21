@@ -2,12 +2,12 @@
 #include "CTaskThread.h"
 #include "CTaskAdmission.h"
 
-/** 管理器私有注册状态，构造完成后一次性发布，运行期间不移动
+/** 管理器私有注册状态，首次配置成功后一次性发布，运行期间不移动
 */
 class CTaskManagerState
 {
 public:
-    /** 创建空注册表
+    /** 构造未配置的注册状态，暂不分配注册表节点池
     */
     CTaskManagerState();
 
@@ -15,15 +15,20 @@ public:
     */
     ~CTaskManagerState();
 
-    /** 静止期配置注册表
+    /** 静止期配置注册表和默认工作线程
     @param [in] config 初始化参数
     @return 配置结果
     */
     CTaskThreadResult configure(const CTaskThreadManagerConfig& config);
 
+    /** 使用静止期配置的默认线程参数创建线程。
+    @return 成功返回编号，失败返回 0
+    */
+    uint32_t initializeDefault();
+
     /** 创建并登记线程
     @param [in] config 线程参数
-    @param [out] threadId 成功编号
+    @param [out] threadId 成功时为登记编号，未登记时为 0
     @return 接纳结果
     */
     CTaskThreadResult initialize(const CTaskThreadConfig& config, uint32_t& threadId);
@@ -58,6 +63,8 @@ private:
     uint32_t nextThreadId();
 
 private:
+    // configure 成功后替换的默认值，静止期写入，运行期只读。
+    std::unique_ptr<CTaskThreadConfig> m_defaultThread;
     // 有序注册表，允许并发维护
     LockFreeMap<uint32_t, std::shared_ptr<CTaskThread>> m_threads;
     // 创建调用的接纳门

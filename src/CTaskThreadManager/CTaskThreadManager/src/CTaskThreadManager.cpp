@@ -18,38 +18,58 @@ CTaskThreadManager& CTaskThreadManager::instance()
     return s_instance;
 }
 
-CTaskManagerState* CTaskThreadManager::state()
+CTaskThreadResult CTaskThreadManager::prepareState(CTaskManagerState*& current, const CTaskThreadManagerConfig* config)
 {
-    CTaskManagerState* current = m_state.load(std::memory_order_acquire);
-    if (current == nullptr && m_state.is_lock_free())
+    current = m_state.load(std::memory_order_acquire);
+    if (current != nullptr)
     {
-        try
-        {
-            std::unique_ptr<CTaskManagerState> candidate(new CTaskManagerState);
-            if (m_state.compare_exchange_strong(current, candidate.get(), std::memory_order_acq_rel, std::memory_order_acquire))
-            {
-                current = candidate.release();
-            }
-        }
-        catch (...)
-        {
-            return nullptr;
-        }
+        return config ? current->configure(*config) : CTaskThreadResult();
     }
-    return current;
+    if (!m_state.is_lock_free())
+    {
+        return CTaskThreadResult(CTaskThreadUnsupported);
+    }
+    try
+    {
+        std::unique_ptr<CTaskManagerState> candidate(new CTaskManagerState);
+        const CTaskThreadResult result = config ? candidate->configure(*config) : candidate->configure(CTaskThreadManagerConfig());
+        if (result.m_status != CTaskThreadOk)
+        {
+            return result;
+        }
+        // 初始化成功后才发布。并发的默认初始化可使用赢家；显式配置要求外部静止。
+        if (m_state.compare_exchange_strong(current, candidate.get(), std::memory_order_acq_rel, std::memory_order_acquire))
+        {
+            current = candidate.release();
+        }
+        else if (config != nullptr)
+        {
+            return CTaskThreadResult(CTaskThreadInvalid);
+        }
+        return result;
+    }
+    catch (const std::bad_alloc&)
+    {
+        return CTaskThreadResult(CTaskThreadNoMemory);
+    }
+    catch (...)
+    {
+        return CTaskThreadResult(CTaskThreadSystemFailure);
+    }
 }
 
 CTaskThreadResult CTaskThreadManager::configure(const CTaskThreadManagerConfig& config)
 {
-    CTaskManagerState* current = state();
-    return current ? current->configure(config) : CTaskThreadResult(m_state.is_lock_free() ? CTaskThreadNoMemory : CTaskThreadUnsupported);
+    CTaskManagerState* current = nullptr;
+    return prepareState(current, &config);
 }
 
 uint32_t CTaskThreadManager::init()
 {
     try
     {
-        return init(CTaskThreadConfig());
+        CTaskManagerState* current = nullptr;
+        return prepareState(current, nullptr).m_status == CTaskThreadOk ? current->initializeDefault() : 0;
     }
     catch (...)
     {
@@ -67,8 +87,9 @@ uint32_t CTaskThreadManager::init(const CTaskThreadConfig& config)
 CTaskThreadResult CTaskThreadManager::initialize(const CTaskThreadConfig& config, uint32_t& threadId)
 {
     threadId = 0;
-    CTaskManagerState* current = state();
-    return current ? current->initialize(config, threadId) : CTaskThreadResult(m_state.is_lock_free() ? CTaskThreadNoMemory : CTaskThreadUnsupported);
+    CTaskManagerState* current = nullptr;
+    const CTaskThreadResult result = prepareState(current, nullptr);
+    return result.m_status == CTaskThreadOk ? current->initialize(config, threadId) : result;
 }
 
 CTaskThreadResult CTaskThreadManager::waitForEnd(uint32_t threadId)
@@ -102,14 +123,12 @@ int32_t CTaskThreadManager::count()
 }
 
 // 调用库的独立 main 使用示例
-// 以下全部是注释，不参与库编译。复制声明与实现到独立示例工程后运行最后的main。
+// 以下全部是注释，不参与库编译。把下方示例从首个 #include 到 main 末尾复制到一个 .cpp，去掉每行开头的 // 后编译运行。
 // 覆盖优先级/FIFO、延迟重做、停止、资源配置、异常、动态池与系统线程优先级。
 // Check/WaitUntil只用于核对示例结果，实际业务须定义完成、取消及背压处理。
 // 公开用法回归位于CTaskThreadManagerTest中的CTaskUsageTests；使用契约见
 // common/AI文档/线程开发规范.txt。示例不构成性能或全部平台验证结论。
 //
-// ========== UsageExample.h ==========
-// #pragma once
 // #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 // #include <atomic>
 // #include <functional>
@@ -192,8 +211,6 @@ int32_t CTaskThreadManager::count()
 //     std::atomic<size_t> m_target;
 // };
 //
-// ========== UsageExample.cpp ==========
-// #include "UsageExample.h"
 // #include "Semaphore/SemaphoreAPI.h"
 // #include <algorithm>
 // #include <chrono>
@@ -364,7 +381,11 @@ int32_t CTaskThreadManager::count()
 //     CTaskThreadManager& manager = CTaskThreadManager::instance();
 //     std::shared_ptr<CTaskThread> target = Open(config);
 //     Check(manager.count() == 1, "manager count");
+// #ifdef __EMSCRIPTEN__
+//     Check(target->setSystemPriority(CTaskPriorityNormal).m_status == CTaskThreadUnsupported, "Wasm system priority");
+// #else
 //     Check(target->setSystemPriority(CTaskPriorityNormal).m_status == CTaskThreadOk, "system priority");
+// #endif
 //     std::shared_ptr<std::atomic<bool>> release = std::make_shared<std::atomic<bool>>(false);
 //     std::shared_ptr<UsageTask> gate = Gate(900, release);
 //     Post(target, gate, 16);
@@ -512,6 +533,8 @@ int32_t CTaskThreadManager::count()
 // static void ExampleResources(const CTaskThreadConfig& source)
 // {
 //     CTaskThreadConfig config = source;
+//     Check(config.configureEntryOnly(false) == LockFreeQueueSuccess &&
+//         config.configureCancelableReservations(false) == LockFreeQueueSuccess, "configure FIFO publication and payload");
 //     std::shared_ptr<std::atomic<uint32_t>> mapGrows = std::make_shared<std::atomic<uint32_t>>(0);
 //     std::shared_ptr<std::atomic<uint32_t>> taskGrows = std::make_shared<std::atomic<uint32_t>>(0);
 //     std::shared_ptr<std::atomic<uint32_t>> queueGrows = std::make_shared<std::atomic<uint32_t>>(0);
@@ -802,6 +825,10 @@ int32_t CTaskThreadManager::count()
 //         managerConfig.m_threadMap.values.initialCapacity = 64;
 //         Check(manager.configure(managerConfig).m_status == CTaskThreadOk, "configure manager");
 //         CTaskThreadConfig config;
+//         CTaskQueueConfig urgent = config;
+//         Check(urgent.configureAutomaticMaintenance(32, 8) == LockFreeQueueSuccess, "configure maintenance");
+//         Check(config.setPriorityQueueConfig(10, urgent).m_committed, "configure priority queue");
+//         config.m_completionSemaphore.configureCountPool().initialCapacity = 8;
 //         config.m_priorityMap.nodes.initialCapacity = 32;
 //         config.m_priorityMap.values.initialCapacity = 64;
 //         config.m_priorityMap.nodes.maximumCapacity = -1;
@@ -814,7 +841,7 @@ int32_t CTaskThreadManager::count()
 //         config.m_queue.growThreshold = 0;
 //         config.m_queue.maximumProducers = 16;
 //         config.m_maximumTasks = 64;
-//         config.m_systemPriority = CTaskPriorityNormal;
+//         config.m_systemPriority = CTaskPriorityInherited;
 //         ExamplePriority(config);
 //         ExampleRedo(config);
 //         ExampleStopping(config);
@@ -842,5 +869,3 @@ int32_t CTaskThreadManager::count()
 //     }
 //     return 1;
 // }
-//
-// ========== 调用示例结束 ==========

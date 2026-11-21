@@ -7,6 +7,7 @@
 #include <limits>
 
 CTaskManagerState::CTaskManagerState() :
+m_threads(false),
 m_bulk(false),
 m_threadId(0)
 {
@@ -28,7 +29,34 @@ CTaskThreadResult CTaskManagerState::configure(const CTaskThreadManagerConfig& c
     {
         return CTaskThreadResult(CTaskThreadInvalid);
     }
-    return CTaskResultAdapter::map(m_threads.lockFreeMapConfigure(config.m_threadMap));
+    try
+    {
+        std::unique_ptr<CTaskThreadConfig> candidate(new CTaskThreadConfig(config.m_defaultThread));
+        CTaskThreadResult result = CTaskResultAdapter::map(m_threads.lockFreeMapConfigure(config.m_threadMap));
+        if (result.m_status == CTaskThreadOk)
+        {
+            m_defaultThread.swap(candidate);
+        }
+        return result;
+    }
+    catch (const std::bad_alloc&)
+    {
+        return CTaskThreadResult(CTaskThreadNoMemory);
+    }
+    catch (...)
+    {
+        return CTaskThreadResult(CTaskThreadPolicyFailure);
+    }
+}
+
+uint32_t CTaskManagerState::initializeDefault()
+{
+    uint32_t id = 0;
+    if (m_defaultThread)
+    {
+        initialize(*m_defaultThread, id);
+    }
+    return id;
 }
 
 CTaskThreadResult CTaskManagerState::initialize(const CTaskThreadConfig& config, uint32_t& threadId)
@@ -128,8 +156,10 @@ CTaskThreadResult CTaskManagerState::finish(uint32_t threadId, bool drain)
             return result;
         }
     }
-    CTaskThreadResult result = thread->finish(drain);
-    if (result.m_status != CTaskThreadOk)
+    const CTaskThreadResult joined = thread->finish(drain);
+    CTaskThreadResult result = joined;
+    // 回调错误在 join 成功后返回；继续清理登记并在成功时保留回调诊断。
+    if (joined.m_status != CTaskThreadOk && joined.m_status != CTaskThreadCallbackFailure)
     {
         return result;
     }
@@ -174,7 +204,7 @@ CTaskThreadResult CTaskManagerState::finish(uint32_t threadId, bool drain)
     }
     size_t released = 0;
     m_threads.lockFreeMapMaintain((std::numeric_limits<size_t>::max)(), released);
-    return result;
+    return result.m_status == CTaskThreadOk ? joined : result;
 }
 
 CTaskThreadResult CTaskManagerState::shutdown()

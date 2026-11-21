@@ -23,11 +23,13 @@ public:
     */
     static CTaskThreadResult pause(uint32_t& attempts);
 
-    /** 容量等待先连续重试4096次，之后每次休眠1毫秒
-    @param [in,out] attempts 容量等待次数，饱和于4096
+    /** 容量等待先快速重试，达到阈值后每次休眠
+    @param [in,out] attempts 快速重试次数，饱和于 retries
+    @param [in] retries 进入休眠前的重试数
+    @param [in] milliseconds 每次休眠毫秒数
     @return Ok可以重试；宿主不支持或系统失败明确返回错误
     */
-    static CTaskThreadResult pauseCapacity(uint32_t& attempts);
+    static CTaskThreadResult pauseCapacity(uint32_t& attempts, uint32_t retries = 4096, uint32_t milliseconds = 1);
 
     /** 复制线程强引用后释放 Map 保护，后续等待或回调不占用容器保护记录
     @param [in] threads 线程注册表
@@ -48,11 +50,5 @@ public:
     @return 管理器状态
     */
     static CTaskThreadResult map(LockFreeMapStatus status);
-
-    /** 转换哈希表结果
-    @param [in] result 基础库结果
-    @return 管理器状态
-    */
-    static CTaskThreadResult hash(const LockFreeHashMapResult& result);
 
 };

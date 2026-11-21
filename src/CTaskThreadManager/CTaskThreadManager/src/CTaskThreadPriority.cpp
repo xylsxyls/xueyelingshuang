@@ -2,10 +2,10 @@
 #include <system_error>
 #ifdef _WIN32
 #include <Windows.h>
-#else
+#elif !defined(__EMSCRIPTEN__)
 #include <pthread.h>
 #include <sched.h>
-#include <errno.h>
+#include <cerrno>
 #endif
 
 CTaskThreadResult CTaskThreadPriority::apply(std::thread& thread, CTaskSystemPriority priority)
@@ -71,8 +71,12 @@ CTaskThreadResult CTaskThreadPriority::apply(std::thread& thread, CTaskSystemPri
         {
             policy = SCHED_RR;
             const int minimum = sched_get_priority_min(policy);
+            if (minimum < 0)
+            {
+                return CTaskThreadResult(CTaskThreadSystemFailure, false, errno);
+            }
             const int maximum = sched_get_priority_max(policy);
-            if (minimum < 0 || maximum < minimum)
+            if (maximum < minimum)
             {
                 return CTaskThreadResult(CTaskThreadSystemFailure, false, errno);
             }

@@ -66,6 +66,8 @@ public:
     CTaskThreadConfig m_worker;
     // 扩缩容控制线程的完整配置，独立于工作线程；默认Queue并发记录4，其余沿用线程默认值
     CTaskThreadConfig m_control;
+    // 线程池控制循环的变更通知配置，独立于工作和控制线程的内部通知。
+    SemaphoreConfig m_changeSemaphore;
     // 线程池成员索引的节点池
 #ifdef _MSC_VER
 #pragma warning(push)

@@ -100,12 +100,6 @@ private:
     */
     CTaskThreadResult stopOnce(int32_t propertyId, int32_t level, bool all, bool currentOnly);
 
-    /** 执行一次分级计数查询，失败不保留部分输出
-    @param [out] counts 排队计数
-    @return 查询结果，普通查询在外层处理竞争
-    */
-    CTaskThreadResult waitInfoOnce(std::map<int32_t, int32_t>& counts);
-
     /** 分配不回绕序号
     @param [in,out] cache 本调用独占的位置及预留序号段
     @return 非零序号，耗尽返回零
@@ -244,6 +238,8 @@ private:
 private:
     // 冻结配置
     const CTaskThreadConfig m_config;
+    // 冻结配置时汇总各优先级是否需要缩容，避免维护过程中重复遍历。
+    const bool m_hasQueueShrink;
     // 只单向关闭接纳；在途投递由读侧位置保护，不竞争统一接纳计数
     std::atomic<bool> m_accepting;
     // 停止通知及容器快照的借用；工作线程退出前关闭并等待现有借用归还

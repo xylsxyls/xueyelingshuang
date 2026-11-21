@@ -61,6 +61,7 @@ static inline void PrefetchTaskAddress(const void* address, bool writeAccess = f
 
 CTaskThreadState::CTaskThreadState(const CTaskThreadConfig& config) :
 m_config(config),
+m_hasQueueShrink(config.hasQueueShrinkPolicy()),
 m_accepting(true),
 m_buckets(false),
 // 最多固定16级，按两个初始池的较小值保留至少一个可回收位置。
@@ -71,6 +72,8 @@ m_pinnedLevels(config.m_priorityMap.nodes.maximumCapacity == -1 && config.m_prio
 m_writePrefetch(TaskWritePrefetchAvailable()),
 m_scanBuckets(false),
 m_storage(m_readDomain),
+m_wakeup(config.m_wakeupSemaphore),
+m_completion(config.m_completionSemaphore),
 m_started(0),
 m_stopMode(0),
 m_joining(false),
@@ -147,6 +150,15 @@ CTaskThreadResult CTaskThreadState::start()
     try
     {
         std::shared_ptr<CTaskPriorityBucket> initial(new CTaskPriorityBucket(1));
+        if (&m_config.priorityQueueConfig(1) != static_cast<const CTaskQueueConfig*>(&m_config))
+        {
+            // 一级采用覆盖项时，仍在启动前校验冷级别将使用的默认配置；这里只配置，尚不建池。
+            result = initial->configure(m_config);
+            if (result.m_status != CTaskThreadOk)
+            {
+                return result;
+            }
+        }
         result = initial->initialize(m_config);
         if (result.m_status != CTaskThreadOk)
         {
@@ -286,9 +298,13 @@ void CTaskThreadState::countPublication(CTaskStorageCache& cache, CTaskPriorityB
         std::atomic<uint64_t>& levelCount = cache.m_levels[bucket.m_level - 1];
         levelCount.store(levelCount.load(std::memory_order_relaxed) + amount, std::memory_order_release);
     }
+    else if (add)
+    {
+        bucket.reserveQueued();
+    }
     else
     {
-        bucket.m_queued.fetch_add(amount, std::memory_order_relaxed);
+        bucket.releaseQueued();
     }
 }
 
@@ -568,7 +584,8 @@ CTaskThreadResult CTaskThreadState::post(const std::shared_ptr<CTask>& task, int
                 break;
             }
             m_pressureYields.store(64, std::memory_order_relaxed);
-            result = CTaskResultAdapter::pauseCapacity(capacityRetries);
+            const CTaskQueueConfig& queue = m_config.priorityQueueConfig(level);
+            result = CTaskResultAdapter::pauseCapacity(capacityRetries, queue.m_capacityRetries, queue.m_capacitySleepMilliseconds);
         }
         else if (result.m_status == CTaskThreadRetry && retryTransient)
         {
@@ -1021,7 +1038,7 @@ bool CTaskThreadState::take(CTaskPriorityBucket*& bucket, CTaskStorageSlot*& rec
     }
     else
     {
-        bucket->m_queued.fetch_sub(1, std::memory_order_relaxed);
+        bucket->releaseQueued();
     }
     return true;
 }
@@ -1082,6 +1099,11 @@ __attribute__((noinline))
 void CTaskThreadState::refillFront(CTaskPriorityBucket& bucket)
 {
     bucket.m_readyHead = 0;
+    if (!bucket.m_entryOnly)
+    {
+        bucket.refillValuePrefix();
+        return;
+    }
     // 单级批次合并队列交接，多级保留短批次；实际执行前逐项重新选择最高级别。
     const bool singleLevel = m_readyIndex.highest() == 1 && !m_scanBuckets.load(std::memory_order_acquire);
     const bool received = singleLevel ? bucket.m_queue.probeReadyEntrySpan(bucket.m_readyEntries, 256, bucket.m_readyCount) :
@@ -1280,7 +1302,7 @@ void CTaskThreadState::maintain()
     m_runningIndex.clear();
     m_current.store(nullptr, std::memory_order_release);
     const bool pressure = m_trimBuckets.exchange(false, std::memory_order_acq_rel);
-    if (pressure || m_config.m_queueShrink)
+    if (pressure || m_hasQueueShrink)
     {
         // 缩容需要解除旧段保护；常规消费不反复拆除仍可复用的生产者上下文。
         // 登记槽不足或节点池满时，publish 仍立即回收空闲上下文并重试。
@@ -1289,7 +1311,10 @@ void CTaskThreadState::maintain()
     const bool retire = pressure || m_buckets.size() > m_config.m_priorityMap.nodes.initialCapacity;
     m_buckets.forEach([this, retire](const int32_t& level, const std::shared_ptr<CTaskPriorityBucket>& bucket)
     {
-        bucket->m_queue.maintain(16);
+        if (bucket->m_queue.maintain(16).result != LockFreeQueueSuccess)
+        {
+            m_errors.fetch_add(1, std::memory_order_relaxed);
+        }
         if (retire && (level > m_pinnedLevels) && bucketQueuedCount(*bucket) == 0 && bucket->m_writers.closeIfEmpty())
         {
             std::shared_ptr<CTaskPriorityBucket> found;
@@ -1323,9 +1348,15 @@ void CTaskThreadState::maintain()
         }
     }
     m_storage.collect(256);
-    m_storage.maintain();
+    if (m_storage.maintain().m_status != CTaskThreadOk)
+    {
+        m_errors.fetch_add(1, std::memory_order_relaxed);
+    }
     size_t released = 0;
-    m_buckets.lockFreeMapMaintain(16, released);
+    if (m_buckets.lockFreeMapMaintain(16, released) == LOCK_FREE_MAP_POLICY_EXCEPTION)
+    {
+        m_errors.fetch_add(1, std::memory_order_relaxed);
+    }
 }
 
 void CTaskThreadState::discard()
@@ -1338,7 +1369,11 @@ void CTaskThreadState::discard()
         bucket->m_redo = nullptr;
         bucket->m_readyHead = 0;
         bucket->m_readyCount = 0;
-        bucket->m_queued.store(0, std::memory_order_relaxed);
+        // 此时生产者已收敛；丢弃所有排队项只需归还一次非空登记。
+        if (bucket->m_queued.exchange(0, std::memory_order_relaxed) != 0)
+        {
+            bucket->m_writers.leave();
+        }
     });
     // 保留累计基数；即使 statistics 与清理并发，也不会把旧归还量减去清零后的基数。
     m_dequeuedTasks.store(m_config.m_maximumTasks == -1 ? m_storage.publishedCount() : m_queued.load(std::memory_order_relaxed), std::memory_order_release);
@@ -1499,24 +1534,6 @@ int32_t CTaskThreadState::currentLevel() const
 
 CTaskThreadResult CTaskThreadState::waitInfo(std::map<int32_t, int32_t>& counts)
 {
-    uint32_t attempts = 0;
-    for (;;)
-    {
-        CTaskThreadResult result = waitInfoOnce(counts);
-        if (result.m_status != CTaskThreadRetry)
-        {
-            return result;
-        }
-        result = CTaskResultAdapter::pause(attempts);
-        if (result.m_status != CTaskThreadOk)
-        {
-            return result;
-        }
-    }
-}
-
-CTaskThreadResult CTaskThreadState::waitInfoOnce(std::map<int32_t, int32_t>& counts)
-{
     counts.clear();
     if (!m_observers.enter())
     {
@@ -1525,6 +1542,10 @@ CTaskThreadResult CTaskThreadState::waitInfoOnce(std::map<int32_t, int32_t>& cou
     bool failed = false;
     const size_t visited = m_buckets.forEach([this, &counts, &failed](const int32_t& level, const std::shared_ptr<CTaskPriorityBucket>& bucket)
     {
+        if (failed)
+        {
+            return;
+        }
         try
         {
             const uint64_t count = bucketQueuedCount(*bucket);

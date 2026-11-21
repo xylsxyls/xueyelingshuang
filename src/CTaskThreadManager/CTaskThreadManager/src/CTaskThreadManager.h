@@ -10,7 +10,7 @@ class CTaskManagerState;
 class CTaskThreadManagerAPI CTaskThreadManager
 {
 private:
-    /** 创建默认空注册表
+    /** 创建空管理器门面；首次配置或创建线程时再分配注册表
     */
     CTaskThreadManager();
 
@@ -24,8 +24,8 @@ public:
     */
     static CTaskThreadManager& instance();
 
-    /** 静止且没有线程时配置注册表
-    @param [in] config Map 初始化参数
+    /** 静止且没有线程时配置注册表及无参 init 的默认工作线程
+    @param [in] config 注册表及默认工作线程参数，调用成功时复制
     @return 配置结果；调用者保证没有并发公开调用
     */
     CTaskThreadResult configure(const CTaskThreadManagerConfig& config);
@@ -56,7 +56,7 @@ public:
 
     /** 关闭接纳、停止当前任务、丢弃排队任务并注销
     @param [in] threadId 线程编号
-    @return Ok 表示退出及注销都完成，竞争内部重试
+    @return Ok 表示退出及注销都完成。停止回调异常时仍完成 join 和移除登记，并返回 CallbackFailure；竞争内部重试
     */
     CTaskThreadResult uninit(uint32_t threadId);
 
@@ -77,10 +77,12 @@ public:
     int32_t count();
 
 private:
-    /** 并发创建完整私有状态后 CAS 发布；失败返回空，不发布半成品
-    @return 运行期间地址不变的私有状态
+    /** 静止期应用指定配置，或为创建线程取得完整注册表；首次失败留待下次重新创建
+    @param [out] current 成功时借用至管理器析构；失败时调用方不得使用
+    @param [in] config 非空表示静止期显式配置，空表示沿用已发布状态或按默认值创建
+    @return 配置或初始化结果，保留注册表原始错误类别
     */
-    CTaskManagerState* state();
+    CTaskThreadResult prepareState(CTaskManagerState*& current, const CTaskThreadManagerConfig* config);
 
 private:
     // 稳定私有状态，析构时要求外部静止

@@ -97,7 +97,7 @@ public:
     void forEach(const std::function<void(CTaskStorageSlot&)>& visit);
 
     /** 唯一消费者评估缩容；空闲缓存应先由外部有界清理
-    @return 维护结果，异常不越过接口
+    @return 策略异常返回 PolicyFailure；已退役块仍按读者保护期回收
     */
     CTaskThreadResult maintain();
 

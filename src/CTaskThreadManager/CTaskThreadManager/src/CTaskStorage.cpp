@@ -780,15 +780,16 @@ CTaskThreadResult CTaskStorage::maintain()
     const uint64_t cutoff = m_domain->advance();
     const uint64_t oldest = m_domain->oldest();
     LockFreeHashMapShrinkDecision decision;
-    size_t retained = 0, available = 0;
-    observe(retained, available);
+    CTaskThreadResult result;
+    size_t retained = 0;
     const uint64_t time = now();
-    if (m_config.shrinkPolicy && time != 0)
+    if (time != 0)
     {
         try
         {
             flushIdleCaches();
             flush(m_caches[m_domain->capacity()]);
+            size_t available = 0;
             observe(retained, available);
             const uint64_t last = m_lastGrow.load(std::memory_order_relaxed);
             const LockFreeHashMapShrinkContext context = {m_config.initialCapacity, m_grows.load(std::memory_order_relaxed), retained,
@@ -797,7 +798,8 @@ CTaskThreadResult CTaskStorage::maintain()
         }
         catch (...)
         {
-            return CTaskThreadResult(CTaskThreadPolicyFailure);
+            // 本轮没有新的缩容决策。先前已退役的块仍须按读者保护期回收。
+            result.m_status = CTaskThreadPolicyFailure;
         }
     }
     const uint64_t closed = UINT64_C(1) << 63;
@@ -858,7 +860,7 @@ CTaskThreadResult CTaskStorage::maintain()
             m_budget.fetch_sub(count, std::memory_order_release);
         }
     }
-    return CTaskThreadResult();
+    return result;
 }
 
 void CTaskStorage::clear()
