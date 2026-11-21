@@ -10,7 +10,7 @@
 #include <crtdbg.h>
 #endif
 #endif
-#if defined(_WIN32) && defined(_DEBUG) && !defined(CSTRING_CONVERSION_NO_HEAP)
+#if defined(_WIN32) && defined(_DEBUG)
 // 当前串行回归允许的普通堆分配次数，负值时不拒绝。
 static int32_t s_conversionRejectAfter = -1;
 // 当前调用观察到的普通堆分配总次数。
@@ -44,6 +44,58 @@ static int __cdecl ConversionMemoryHook(int operation, void*, size_t size, int b
     return 1;
 }
 #endif
+
+int TestReplaceAll()
+{
+    std::string value(4096, 'a');
+    value[8] = '\0';
+    const std::string expected(value);
+    const std::string pattern("a\0a", 3);
+    const std::string samePattern(pattern);
+#if defined(_WIN32) && defined(_DEBUG)
+    s_conversionRejectAfter = -1;
+    s_conversionAllocations = 0;
+    const _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(ConversionMemoryHook);
+#endif
+    bool completed = false;
+    try
+    {
+        CStringManager::ReplaceAll(value, value, value);
+        CStringManager::ReplaceAll(value, expected, value);
+        CStringManager::ReplaceAll(value, pattern, samePattern);
+        completed = true;
+    }
+    catch (...)
+    {
+        std::fputs("ReplaceAll threw for identical text\n", stderr);
+    }
+#if defined(_WIN32) && defined(_DEBUG)
+    _CrtSetAllocHook(previous);
+    if (s_conversionAllocations != 0)
+    {
+        std::printf("ReplaceAll unchanged text: %u unexpected heap allocations\n", s_conversionAllocations);
+        return 1;
+    }
+#endif
+    if (!completed || value != expected)
+    {
+        std::fputs("ReplaceAll changed identical binary text\n", stderr);
+        return 1;
+    }
+    std::string equalLength("aaab");
+    CStringManager::ReplaceAll(equalLength, "ab", "ba");
+    std::string binary("a\0a\0", 4);
+    CStringManager::ReplaceAll(binary, std::string("a\0", 2), std::string("\0xy", 3));
+    std::string aliased("aba");
+    CStringManager::ReplaceAll(aliased, "a", aliased);
+    CStringManager::ReplaceAll(aliased, "abababab", aliased);
+    if (equalLength != "baaa" || binary != std::string("\0xy\0xy", 6) || aliased != "abababa")
+    {
+        std::fputs("ReplaceAll boundary or binary expansion mismatch\n", stderr);
+        return 1;
+    }
+    return 0;
+}
 
 /** 检查六种编码的内容、内嵌零、系统替代规则和低内存收敛
 @return 全部通过返回true
@@ -121,7 +173,7 @@ static bool CStringConversionAudit()
     CONVERSION_CHECK(invalidCount > 0);
     CONVERSION_CHECK(CStringManager::Utf8ToUnicode(invalid) == std::wstring(expectedInvalid, static_cast<size_t>(invalidCount)));
 #endif
-#if defined(_WIN32) && defined(_DEBUG) && !defined(CSTRING_CONVERSION_NO_HEAP)
+#if defined(_WIN32) && defined(_DEBUG)
     uint32_t rejected = 0;
     uint32_t accepted = 0;
     uint32_t allocatorExceptions = 0;
@@ -194,7 +246,8 @@ static bool CStringConversionAudit()
             {
                 std::printf("CSTRING_FAULT mode=%u position=%d escaped=%u allocations=%u\n", mode, position, escaped ? 1U : 0U, s_conversionAllocations);
             }
-            CONVERSION_CHECK(!escaped && (full || empty || allocationFailed));
+            const bool faultInjected = s_conversionAllocations > static_cast<uint32_t>(position);
+            CONVERSION_CHECK(!escaped && (full || (faultInjected && (empty || allocationFailed))));
             if (before.lCounts[_NORMAL_BLOCK] != after.lCounts[_NORMAL_BLOCK] || before.lSizes[_NORMAL_BLOCK] != after.lSizes[_NORMAL_BLOCK])
             {
                 std::printf("CSTRING_HEAP mode=%u position=%d blocks=%lld bytes=%lld allocation_failed=%u\n", mode, position,
@@ -222,7 +275,7 @@ static bool CStringConversionAudit()
 #undef CONVERSION_CHECK
 }
 
-#if defined(_WIN32) && defined(_DEBUG) && !defined(CSTRING_FORMAT_NO_HEAP)
+#if defined(_WIN32) && defined(_DEBUG)
 // 本次格式化允许成功的普通堆分配次数。
 static uint32_t s_formatRemaining = 0;
 // 当前故障位置拒绝的分配次数。
@@ -286,7 +339,7 @@ static bool CStringFormatAudit()
     CStringManager::Format(format, static_cast<const char*>(nullptr));
     CStringManager::Format(wideFormat, static_cast<const wchar_t*>(nullptr));
     FORMAT_CHECK(format.empty() && wideFormat.empty());
-#if defined(_WIN32) && defined(_DEBUG) && !defined(CSTRING_FORMAT_NO_HEAP)
+#if defined(_WIN32) && defined(_DEBUG)
     uint32_t rejected = 0;
     uint32_t accepted = 0;
     const std::string expected = std::string(4095, '0') + "7";
@@ -299,9 +352,11 @@ static bool CStringFormatAudit()
             _CrtMemCheckpoint(&before);
             bool valid = false;
             bool escaped = false;
+            bool unexpected = false;
             {
-                std::string output;
-                std::wstring wideOutput;
+                // 引用重载必须在失败时清空已有结果。
+                std::string output(mode == 0 ? "previous" : "");
+                std::wstring wideOutput(mode == 1 ? L"previous" : L"");
                 s_formatRemaining = position;
                 s_formatRejected = 0;
                 const _CRT_ALLOC_HOOK old = _CrtSetAllocHook(FormatMemoryHook);
@@ -316,14 +371,20 @@ static bool CStringFormatAudit()
                 {
                     escaped = true;
                 }
+                catch (...)
+                {
+                    unexpected = true;
+                }
                 _CrtSetAllocHook(old);
-                valid = (output.empty() || output == expected) && (wideOutput.empty() || wideOutput == wideExpected);
+                const bool full = mode == 0 || mode == 2 ? output == expected : wideOutput == wideExpected;
+                const bool empty = output.empty() && wideOutput.empty();
+                valid = full || (s_formatRejected != 0 && empty);
                 if (s_formatRejected != 0) { ++rejected; }
                 else { ++accepted; }
             }
             _CrtMemState after = {};
             _CrtMemCheckpoint(&after);
-            FORMAT_CHECK(valid && (!escaped || mode >= 2));
+            FORMAT_CHECK(valid && !unexpected && (!escaped || (mode >= 2 && s_formatRejected != 0)));
             FORMAT_CHECK(before.lCounts[_NORMAL_BLOCK] == after.lCounts[_NORMAL_BLOCK] && before.lSizes[_NORMAL_BLOCK] == after.lSizes[_NORMAL_BLOCK]);
         }
     }
@@ -334,8 +395,6 @@ static bool CStringFormatAudit()
     return true;
 #undef FORMAT_CHECK
 }
-
-
 
 /** 验证编码转换与格式化，Windows 调试版另外逐位置拒绝普通堆分配
 @return 每一条已执行的输入输出及资源约束均通过时返回 true
@@ -357,7 +416,9 @@ bool RunCStringManagerRegressionTests()
     bool passed = false;
     try
     {
-        passed = CStringConversionAudit() && CStringFormatAudit();
+        const bool conversion = CStringConversionAudit();
+        const bool format = CStringFormatAudit();
+        passed = conversion && format;
     }
     catch (...)
     {

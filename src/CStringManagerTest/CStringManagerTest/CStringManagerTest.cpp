@@ -3,10 +3,16 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include <cstring>
 #include <clocale>
+#include <cctype>
 #include <atomic>
 #include <functional>
 #include <iostream>
 #include <thread>
+#include <limits>
+#include <mutex>
+#include <cwchar>
+#include <climits>
+#include <stdexcept>
 
 /** 校准并测量返回新字符串的变换；计入结果构造和销毁，用长度与轮换字节校验实际输出。
 @param [in] name 性能记录名
@@ -22,7 +28,7 @@ static void MeasureByteConversion(const char* name, const std::string& input)
             const std::string value = Transform(input);
             if (value.empty())
             {
-                return 0;
+                throw std::runtime_error("Unexpected empty benchmark output");
             }
             sum += value.size() + static_cast<unsigned char>(value[i % value.size()]);
         }
@@ -42,37 +48,34 @@ static int RunBenchmarks()
         input.append(pattern);
     }
     input.resize(4096);
-    const std::string encoded = CStringManager::UrlEncode(input);
-    if (CStringManager::UrlDecode(encoded) != input)
+    std::string expectedUrl;
+    for (size_t i = 0; i < input.size(); ++i)
+    {
+        switch (input[i])
+        {
+        case '!': expectedUrl += "%21"; break;
+        case ' ': expectedUrl += "%20"; break;
+        case '+': expectedUrl += "%2B"; break;
+        case '%': expectedUrl += "%25"; break;
+        default: expectedUrl += input[i]; break;
+        }
+    }
+    if (CStringManager::UrlEncode(input) != expectedUrl || CStringManager::UrlDecode(expectedUrl) != input)
     {
         return 1;
     }
-    LibraryBenchmark::run("CStringManager.UrlEncode.4KiB", [&](uint32_t count) -> uint64_t {
-        uint64_t sum = 0;
-        for (uint32_t i = 0; i < count; ++i)
-        {
-            const std::string value = CStringManager::UrlEncode(input);
-            sum += value.size() + static_cast<unsigned char>(value[i % value.size()]);
-        }
-        return sum;
-    });
-    LibraryBenchmark::run("CStringManager.UrlDecode.4KiB-output", [&](uint32_t count) -> uint64_t {
-        uint64_t sum = 0;
-        for (uint32_t i = 0; i < count; ++i)
-        {
-            const std::string value = CStringManager::UrlDecode(encoded);
-            sum += value.size() + static_cast<unsigned char>(value[i % value.size()]);
-        }
-        return sum;
-    });
+    MeasureByteConversion<CStringManager::UrlEncode>("CStringManager.UrlEncode.4KiB", input);
+    MeasureByteConversion<CStringManager::UrlDecode>("CStringManager.UrlDecode.4KiB-output", expectedUrl);
     std::string original;
+    std::string expectedReplacement;
     for (size_t i = 0; i < 1024; ++i)
     {
         original.append("xa");
+        expectedReplacement.append("ya");
     }
     std::string check(original);
     CStringManager::ReplaceAll(check, "x", "y");
-    if (check.size() != 2048 || check.find('x') != std::string::npos)
+    if (check != expectedReplacement)
     {
         return 1;
     }
@@ -156,7 +159,8 @@ static int TestStrings()
         wideSplitResult[2].empty(), "CStringManager split wide string");
     std::vector<std::string> splitCharResult;
     CStringManager::split(splitCharResult, "a,b,", ',');
-    check(splitCharResult.size() == 3 && splitCharResult[2].empty(), "CStringManager split char");
+    check(splitCharResult.size() == 3 && splitCharResult[0] == "a" &&
+        splitCharResult[1] == "b" && splitCharResult[2].empty(), "CStringManager split char");
     std::vector<std::string> aliased(1, "alpha,beta,gamma");
     CStringManager::split(aliased, aliased[0], ',');
     check(aliased.size() == 3 && aliased[0] == "alpha" && aliased[1] == "beta" && aliased[2] == "gamma", "split from its own output");
@@ -164,6 +168,12 @@ static int TestStrings()
     std::wstring wideDuplicated(L"aba");
     check(CStringManager::Replace(duplicated, "a", duplicated) == 2 && duplicated == "abababa", "replacement aliases output");
     check(CStringManager::Replace(wideDuplicated, L"a", wideDuplicated) == 2 && wideDuplicated == L"abababa", "wide replacement aliases output");
+    check(CStringManager::Replace(duplicated, duplicated, "x") == 1 && duplicated == "x" &&
+        CStringManager::Replace(duplicated, duplicated, duplicated) == 1 && duplicated == "x",
+        "whole narrow pattern aliases target");
+    check(CStringManager::Replace(wideDuplicated, wideDuplicated, L"") == 1 && wideDuplicated.empty() &&
+        CStringManager::Replace(wideDuplicated, wideDuplicated, L"x") == 0 && wideDuplicated.empty(),
+        "whole wide pattern and empty pattern alias target");
     std::string overlap("abcde");
     check(CStringManager::CopyToBuffer(overlap, &overlap[1], 4) == 6 && overlap == std::string("aabc\0", 5), "bounded overlapping copy");
     std::string replaceText = "aa-bb-aa";
@@ -201,7 +211,7 @@ static int TestStrings()
     check(editText == "aXbc", "CStringManager Insert Delete");
     CStringManager::Insert(editText, 999, "Z");
     check(editText == "aXbcZ", "CStringManager Insert oversize offset");
-    check(CStringManager::Delete(editText, 999, 2) == editText.length(), "CStringManager Delete oversize offset");
+    check(CStringManager::Delete(editText, 999, 2) == 5 && editText == "aXbcZ", "CStringManager Delete oversize offset");
     check(CStringManager::Format("%s-%d", "value", 7) == "value-7", "CStringManager Format string");
     check(CStringManager::Format("") == "", "CStringManager Format empty string");
     check(CStringManager::Format(static_cast<const char*>(nullptr)) == "", "CStringManager Format null string");
@@ -215,8 +225,10 @@ static int TestStrings()
     check(CStringManager::MakeUpper("aBc") == "ABC", "CStringManager MakeUpper");
     check(CStringManager::MakeLower("aBc") == "abc", "CStringManager MakeLower");
     std::string highByteText;
-    highByteText.push_back(static_cast<char>(0xff));
-    check(CStringManager::MakeUpper(highByteText).size() == 1 && CStringManager::MakeLower(highByteText).size() == 1,
+    highByteText.push_back('\xff');
+    const unsigned char highByte = static_cast<unsigned char>(highByteText[0]);
+    check(CStringManager::MakeUpper(highByteText) == std::string(1, static_cast<char>(std::toupper(highByte))) &&
+        CStringManager::MakeLower(highByteText) == std::string(1, static_cast<char>(std::tolower(highByte))),
         "CStringManager MakeUpper MakeLower high byte");
     check(CStringManager::GetMidString("left[value]right", "[", "]") == "value", "CStringManager GetMidString");
     check(CStringManager::GetMidString("left[[value]]right", "[[", "]]") == "value", "CStringManager GetMidString multi tag");
@@ -231,6 +243,7 @@ static int TestStrings()
     check(CStringManager::UrlDecode(urlEncoded) == "a b+c", "CStringManager UrlEncode UrlDecode");
     check(CStringManager::UrlDecode("%") == "%" && CStringManager::UrlDecode("%GZ") == "%GZ", "CStringManager UrlDecode invalid percent");
     check(CStringManager::UrlDecode("%2f%2F") == "//", "CStringManager UrlDecode lower upper hex");
+    check(CStringManager::UrlDecode("a+b%2Bc%20") == "a b+c ", "URL literal plus and escaped plus");
     std::wstring unicodeText = CStringManager::Utf8ToUnicode("abc");
     check(CStringManager::UnicodeToUtf8(unicodeText) == "abc", "CStringManager Utf8 Unicode");
     std::cout << "CStringManager test " << (failCount == 0 ? "PASS" : "FAIL") << ", total=" << totalCount << ", failed=" << failCount << std::endl;
@@ -298,10 +311,16 @@ static int TestEncoding()
     const std::vector<uint8_t> utf16(utf16Data, utf16Data + sizeof(utf16Data));
     std::wstring wide;
     std::vector<uint8_t> encodedBytes;
-    check(CStringManager::utf16LeToWide(utf16, wide) && wide.size() == (sizeof(wchar_t) == 2 ? 4 : 3) &&
-        wide[0] == L'A' && wide[1] == 0, "UTF16LE consumes BOM and decodes embedded zero and supplementary character");
-    check(CStringManager::wideToUtf16Le(wide, encodedBytes) && encodedBytes == utf16, "UTF16LE reproduces independent byte vector");
-    check(CStringManager::wideToUtf16Le(wide, encodedBytes, false) && encodedBytes == std::vector<uint8_t>(utf16.begin() + 2, utf16.end()),
+    std::wstring expectedWide(L"A\0", 2);
+#if WCHAR_MAX <= 0xffff
+    expectedWide.push_back(static_cast<wchar_t>(0xd83d));
+    expectedWide.push_back(static_cast<wchar_t>(0xde00));
+#else
+    expectedWide.push_back(static_cast<wchar_t>(0x1f600));
+#endif
+    check(CStringManager::utf16LeToWide(utf16, wide) && wide == expectedWide, "UTF16LE consumes BOM and decodes embedded zero and supplementary character");
+    check(CStringManager::wideToUtf16Le(expectedWide, encodedBytes) && encodedBytes == utf16, "UTF16LE reproduces independent byte vector");
+    check(CStringManager::wideToUtf16Le(expectedWide, encodedBytes, false) && encodedBytes == std::vector<uint8_t>(utf16.begin() + 2, utf16.end()),
         "UTF16LE optional BOM");
     const std::wstring preserved = wide;
     const std::vector<uint8_t> highSurrogate(utf16.begin() + 6, utf16.begin() + 8);
@@ -441,15 +460,12 @@ static int TestPathEncoding()
         return 1;
     }
     std::wstring path(L"/\u4e2d:");
-    if (sizeof(wchar_t) == 2)
-    {
-        path.push_back(static_cast<wchar_t>(0xd83d));
-        path.push_back(static_cast<wchar_t>(0xde00));
-    }
-    else
-    {
-        path.push_back(static_cast<wchar_t>(0x1f600));
-    }
+#if WCHAR_MAX <= 0xffff
+    path.push_back(static_cast<wchar_t>(0xd83d));
+    path.push_back(static_cast<wchar_t>(0xde00));
+#else
+    path.push_back(static_cast<wchar_t>(0x1f600));
+#endif
     path.append(L" ?#\0X", 5);
     std::wstring wideExpected(L"/%E4%B8%AD:%F0%9F%98%80%20%3F%23");
     wideExpected.append(L"\0X", 2);
@@ -470,30 +486,143 @@ static int TestPathEncoding()
 static int TestConcurrentFormat()
 {
     std::atomic<int32_t> failedThreadCount(0);
-    std::vector<std::thread> threads;
-    for (int32_t threadIndex = 0; threadIndex < 8; ++threadIndex)
+    std::thread threads[8];
+    std::mutex start;
     {
-        threads.push_back(std::thread([threadIndex, &failedThreadCount]() -> void
+        // 等所有线程均已创建再放行，避免前几个线程在其他线程启动之前完成。
+        std::lock_guard<std::mutex> holdStart(start);
+        try
         {
-            for (int32_t loopIndex = 0; loopIndex < 5000; ++loopIndex)
+            for (int32_t threadIndex = 0; threadIndex < 8; ++threadIndex)
             {
-                std::string value = CStringManager::Format("%d-%d", threadIndex, loopIndex);
-                std::vector<std::string> parts = CStringManager::split(value, "-");
-                if (parts.size() != 2 || std::to_string(threadIndex) != parts[0] || std::to_string(loopIndex) != parts[1])
+                threads[threadIndex] = std::thread([threadIndex, &start, &failedThreadCount]()
                 {
-                    failedThreadCount.fetch_add(1);
-                    return;
-                }
+                    try
+                    {
+                        {
+                            std::lock_guard<std::mutex> waitForStart(start);
+                        }
+                        for (int32_t loopIndex = 0; loopIndex < 5000; ++loopIndex)
+                        {
+                            const std::string value = CStringManager::Format("%d-%d", threadIndex, loopIndex);
+                            const std::vector<std::string> parts = CStringManager::split(value, "-");
+                            if (parts.size() != 2 || parts[0] != std::to_string(threadIndex) ||
+                                parts[1] != std::to_string(loopIndex))
+                            {
+                                ++failedThreadCount;
+                                return;
+                            }
+                        }
+                    }
+                    catch (...)
+                    {
+                        ++failedThreadCount;
+                    }
+                });
             }
-        }));
+        }
+        catch (...)
+        {
+            // 无法创建全部线程也要放行并回收已经启动的线程。
+            ++failedThreadCount;
+        }
     }
-    for (size_t i = 0; i < threads.size(); ++i)
+    for (size_t i = 0; i < sizeof(threads) / sizeof(threads[0]); ++i)
     {
-        threads[i].join();
+        if (threads[i].joinable())
+        {
+            threads[i].join();
+        }
     }
     return failedThreadCount.load() == 0 ? 0 : 1;
 }
 #endif
+
+/** 验证容量、下标、精度和字节序参数的生效边界
+@return 满足所有返回值及输出约束时为零
+*/
+static int TestParameterBounds()
+{
+    char buffer[] = {'x', 'y'};
+    if (CStringManager::CopyToBuffer("abc", buffer, 0) != 4 || buffer[0] != 'x' ||
+        CStringManager::CopyToBuffer("abc", buffer, 1) != 4 || buffer[0] != 0 || buffer[1] != 'y')
+    {
+        std::cerr << "CopyToBuffer capacity boundary" << std::endl;
+        return 1;
+    }
+    std::string edited("aba");
+    if (CStringManager::Find(edited, 'a', 1) != 2 || CStringManager::Find(edited, "a", 3) != std::string::npos ||
+        CStringManager::ReserveFind(edited, 'a') != 2 || CStringManager::GetLength(edited) != 3 ||
+        CStringManager::Insert(edited, 9, '!') != 4 || edited != "aba!" ||
+        CStringManager::Delete(edited, 1, 99) != 1 || edited != "a" ||
+        CStringManager::Replace(edited, 'a', 'b') != 1 || edited != "b" ||
+        CStringManager::Replace("abba", "bb", "x") != "axa" || !CStringManager::Replace(nullptr, "x", "").empty())
+    {
+        std::cerr << "Find, edit or length result" << std::endl;
+        return 1;
+    }
+    if (CStringManager::formatFixedDouble(1.25, 0) != L"1" ||
+        CStringManager::formatFixedDouble(0.5, 17) != L"0.50000000000000000" ||
+        !CStringManager::formatFixedDouble(0.0, -1).empty() ||
+        !CStringManager::formatFixedDouble(std::numeric_limits<double>::infinity(), 2).empty())
+    {
+        std::cerr << "Fixed precision limits" << std::endl;
+        return 1;
+    }
+    const uint8_t invalid[][4] = {{0xfe, 0xff, 65, 0}, {0, 0xd8, 65, 0}, {0, 0xdc, 65, 0}};
+    std::wstring text(L"keep");
+    for (size_t i = 0; i < 3; ++i)
+    {
+        if (CStringManager::utf16LeToWide(std::vector<uint8_t>(invalid[i], invalid[i] + 4), text) || text != L"keep")
+        {
+            std::cerr << "Invalid UTF-16 case " << i << std::endl;
+            return 1;
+        }
+    }
+    const uint8_t bom[] = {0xff, 0xfe};
+    const std::vector<uint8_t> marker(bom, bom + 2);
+    std::vector<uint8_t> bytes;
+    return CStringManager::utf16LeToWide(marker, text) && text.empty() &&
+        CStringManager::wideToUtf16Le(text, bytes) && bytes == marker &&
+        CStringManager::wideToUtf16Le(text, bytes, false) && bytes.empty() ? 0 : 1;
+}
+
+/** 转发两次同一份参数表；可能覆盖借用源的调用放在最后
+@param [out] first 独立输出
+@param [in,out] second 允许格式或实参借用的输出
+@param [in] format 与变参匹配的窄或宽格式，可空
+*/
+template<class String, class Char>
+static void ForwardTwice(String& first, String& second, const Char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    CStringManager::formatV(first, format, args);
+    CStringManager::formatV(second, format, args);
+    va_end(args);
+}
+
+/** 检查调用方可重复转发参数以及原位格式化和空格式
+@return 两种字符宽度均满足契约时返回零
+*/
+static int TestForwardedArguments()
+{
+    std::string a, b("data");
+    ForwardTwice(a, b, "%s%c%d", b.c_str(), 0, 17);
+    if (a != std::string("data\0" "17", 7) || a != b)
+    {
+        return 1;
+    }
+    std::wstring c, d(L"%ls%lc%d");
+    ForwardTwice(c, d, d.c_str(), L"data", static_cast<wint_t>(0), 17);
+    if (c != std::wstring(L"data\0" L"17", 7) || c != d)
+    {
+        return 1;
+    }
+    ForwardTwice(a, b, static_cast<const char*>(nullptr));
+    ForwardTwice(c, d, static_cast<const wchar_t*>(nullptr));
+    return a.empty() && b.empty() && c.empty() && d.empty() ? 0 : 1;
+}
 
 int main(int argc, char** argv)
 {
@@ -502,15 +631,31 @@ int main(int argc, char** argv)
         return RunBenchmarks();
     }
     const LibraryTestCase cases[] = {
-        {1, false, TestStrings},
-        {2, false, TestEncoding},
-        {3, false, TestConversions},
+        {kCaseStrings, false, TestStrings},
+        {kCaseEncoding, false, TestEncoding},
+        {kCaseConversions, false, TestConversions},
 #if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
-        {4, true, TestConcurrentFormat},
+        {kCaseConcurrentFormat, true, TestConcurrentFormat},
 #endif
-        {5, false, TestNumberAndFormat},
-        {6, false, TestHexBytes},
-        {7, false, TestPathEncoding},
+        {kCaseNumberAndFormat, false, TestNumberAndFormat},
+        {kCaseHexBytes, false, TestHexBytes},
+        {kCasePathEncoding, false, TestPathEncoding},
+        {kCaseParameterBounds, false, TestParameterBounds},
+        {kCaseForwardedArguments, false, TestForwardedArguments},
+        {kCaseReplaceAll, false, TestReplaceAll},
     };
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    // 全量先完成瞬时用例，再执行并发压力；指定编号仍按 ID 升序调度。
+    if (argc == 1 || (argc == 2 && std::strcmp(argv[1], "--all") == 0))
+    {
+        char instant[] = "--instant";
+        char stress[] = "--stress";
+        char* selection[] = {argv[0], instant, nullptr};
+        const int instantResult = LibraryCaseSelection::run(2, selection, cases);
+        selection[1] = stress;
+        const int stressResult = LibraryCaseSelection::run(2, selection, cases);
+        return instantResult != 0 ? instantResult : stressResult;
+    }
+#endif
     return LibraryCaseSelection::run(argc, argv, cases);
 }
