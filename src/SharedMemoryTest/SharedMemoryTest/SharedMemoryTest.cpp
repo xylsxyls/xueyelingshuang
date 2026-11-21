@@ -1,7 +1,6 @@
-﻿#include "../../../common/PlatformTest/LibraryCaseSelection.h"
+﻿#include "PlatformTest/PlatformTestAPI.h"
 #include "SharedMemoryTest.h"
 #include "SharedMemory/SharedMemoryAPI.h"
-#include "../../../common/PlatformTest/LibraryBenchmark.h"
 #include <chrono>
 #include <atomic>
 #include <cstdio>
