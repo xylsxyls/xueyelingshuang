@@ -26,7 +26,7 @@ struct HttpServiceAPI HttpServiceOptions
     int32_t m_workerThreads;
     // 单个请求超时时间，单位毫秒
     int32_t m_requestTimeoutMs;
-    // 允许读取的最大请求体大小，单位字节
+    // 允许读取的最大请求体大小，单位字节，-1 取消软件上限，0 采用默认 1 MiB
     int64_t m_maxRequestBodyBytes;
     // 是否允许HTTP长连接
     bool m_enableKeepAlive;

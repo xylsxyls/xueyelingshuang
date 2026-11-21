@@ -18,9 +18,20 @@ m_handler(handler)
 
 int32_t HandlerContext::operator()(void* conn) const
 {
-    if (m_service == nullptr || m_handler.get() == nullptr)
+    std::shared_ptr<HttpHandler> handler;
+    {
+        std::lock_guard<std::mutex> lock(m_handlerMutex);
+        handler = m_handler;
+    }
+    if (m_service == nullptr || !handler)
     {
         return 0;
     }
-    return m_service->handleContextConnection(conn, m_handler);
+    return m_service->handleContextConnection(conn, handler);
+}
+
+void HandlerContext::setHandler(const std::shared_ptr<HttpHandler>& handler)
+{
+    std::lock_guard<std::mutex> lock(m_handlerMutex);
+    m_handler = handler;
 }

@@ -1,4 +1,6 @@
 ﻿#include "HttpResponse.h"
+#include "HttpServiceHelper.h"
+#include "civetweb.h"
 
 HttpResponse::HttpResponse() :
 m_statusCode(kHttpStatusOk),
@@ -20,12 +22,13 @@ m_closeConnection(true)
 
 std::string HttpResponse::defaultStatusText(int32_t code)
 {
-    std::map<HttpStatus, std::string>::const_iterator it = kHttpStatusTextMap.find(static_cast<HttpStatus>(code));
+    const auto it = code >= kHttpStatusOk && code <= kHttpStatusServiceUnavailable ?
+        kHttpStatusTextMap.find(static_cast<HttpStatus>(code)) : kHttpStatusTextMap.end();
     if (it != kHttpStatusTextMap.end())
     {
         return it->second;
     }
-    return "OK";
+    return mg_get_response_code_text(nullptr, code);
 }
 
 HttpResponse HttpResponse::json(const std::string& bodyText, int32_t code)
@@ -52,9 +55,17 @@ void HttpResponse::setStatus(int32_t code)
 
 void HttpResponse::setHeader(const std::string& name, const std::string& value)
 {
-    if (name.empty())
+    if (!HttpServiceHelper::validName(name) || !HttpServiceHelper::validValue(value))
     {
         return;
     }
-    m_headers[name] = value;
+    for (auto& field : m_headers)
+    {
+        if (HttpServiceHelper::sameName(field.first, name))
+        {
+            field.second = value;
+            return;
+        }
+    }
+    m_headers.emplace(name, value);
 }

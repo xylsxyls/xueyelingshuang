@@ -1,35 +1,41 @@
 ﻿#include "HttpServiceHelper.h"
-#include <cctype>
+#include <cstring>
+
+bool HttpServiceHelper::validName(const std::string& name)
+{
+    for (unsigned char c : name)
+    {
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) { continue; }
+        if (c == 0 || std::strchr("!#$%&'*+-.^_`|~", c) == nullptr) { return false; }
+    }
+    return !name.empty();
+}
+
+bool HttpServiceHelper::validValue(const std::string& value)
+{
+    for (unsigned char c : value)
+    {
+        if ((c < 32 && c != '\t') || c == 127) { return false; }
+    }
+    return true;
+}
+
+bool HttpServiceHelper::sameName(const std::string& left, const std::string& right)
+{
+    if (left.size() != right.size()) { return false; }
+    for (size_t i = 0; i < left.size(); ++i)
+    {
+        const char a = left[i], b = right[i];
+        if ((a >= 'A' && a <= 'Z' ? a + 32 : a) != (b >= 'A' && b <= 'Z' ? b + 32 : b)) { return false; }
+    }
+    return true;
+}
 
 bool HttpServiceHelper::hasHeader(const std::map<std::string, std::string>& headers, const std::string& name)
 {
-    // headerEquals入参：left和right是两个待比较的HTTP头名称。
-    // headerEquals出参：无。
-    // headerEquals返回值：返回true表示两个头名称在忽略大小写后相同。
-    auto headerEquals = [](const std::string& left, const std::string& right) -> bool
+    for (const auto& field : headers)
     {
-        if (left.size() != right.size())
-        {
-            return false;
-        }
-        for (size_t i = 0; i < left.size(); ++i)
-        {
-            if (std::tolower(static_cast<unsigned char>(left[i])) !=
-                std::tolower(static_cast<unsigned char>(right[i])))
-            {
-                return false;
-            }
-        }
-        return true;
-    };
-
-    std::map<std::string, std::string>::const_iterator it = headers.begin();
-    for (; it != headers.end(); ++it)
-    {
-        if (headerEquals(it->first, name))
-        {
-            return true;
-        }
+        if (sameName(field.first, name) && validValue(field.second)) { return true; }
     }
     return false;
 }

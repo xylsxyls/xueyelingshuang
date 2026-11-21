@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <memory>
+#include <mutex>
 #include <stdint.h>
 
 class HttpHandler;
@@ -19,6 +20,11 @@ public:
     @param [in] handler 当前路由处理器，内部会持有智能指针保证回调期间有效
     */
     HandlerContext(HttpService* service, const std::shared_ptr<HttpHandler>& handler);
+
+    /** 替换后续请求使用的处理器，已开始的回调继续持有自己的旧处理器。
+    @param [in] handler 路由所有者已验证的非空处理器
+    */
+    void setHandler(const std::shared_ptr<HttpHandler>& handler);
 
     /** 调用当前上下文绑定的路由处理器
     @param [in] conn 底层HTTP连接，具体类型由HttpService.cpp解释
@@ -43,4 +49,6 @@ private:
     HttpService* m_service;
     // 当前路由绑定的处理器，持有引用保证回调期间对象有效
     std::shared_ptr<HttpHandler> m_handler;
+    // 仅保护共享处理器快照的读写，不跨业务回调持锁。
+    mutable std::mutex m_handlerMutex;
 };

@@ -16,6 +16,9 @@
 #include <memory>
 #include <new>
 
+// 自动 OPTIONS 响应和 CORS 预检公布相同的请求方法。
+static const char kAllowedMethods[] = "GET, HEAD, POST, PUT, DELETE, PATCH, OPTIONS";
+
 HttpService::HttpService() :
 m_context(nullptr),
 m_running(false)
@@ -32,7 +35,7 @@ bool HttpService::addHandler(const std::string& uri, const std::shared_ptr<HttpH
 {
     std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
-    if (uri.empty() || handler.get() == nullptr)
+    if (uri.empty() || uri.find('\0') != std::string::npos || handler.get() == nullptr)
     {
         m_lastError = "invalid http handler";
         return false;
@@ -44,12 +47,11 @@ bool HttpService::addHandler(const std::string& uri, const std::shared_ptr<HttpH
         {
             if (m_running.load())
             {
-                if (!registerRoute(uri, handler))
-                {
-                    return false;
-                }
+                // 运行期每条路由只有一个回调上下文。正在处理的请求持有自己的快照。
+                m_contexts[i]->setHandler(handler);
             }
             m_routes[i].second = handler;
+            m_lastError.clear();
             return true;
         }
     }
@@ -71,6 +73,7 @@ bool HttpService::addHandler(const std::string& uri, const std::shared_ptr<HttpH
             return false;
         }
     }
+    m_lastError.clear();
     return true;
 }
 
@@ -110,12 +113,34 @@ bool HttpService::start(const HttpServiceOptions& options)
     std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
     stop();
-    m_options = options;
-    if (m_options.m_port == 0)
+    return setOptions(options) && start();
+}
+
+bool HttpService::setOptions(const HttpServiceOptions& options)
+{
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    if (m_running.load())
+    {
+        m_lastError = "http service is already running";
+        return false;
+    }
+    if (options.m_port == 0)
     {
         m_lastError = "http port is zero";
         return false;
     }
+    if (options.m_maxRequestBodyBytes < -1)
+    {
+        m_lastError = "invalid http body limit";
+        return false;
+    }
+    if (!HttpServiceHelper::validValue(options.m_listenHost) ||
+        (options.m_enableCors && !HttpServiceHelper::validValue(options.m_corsAllowOrigin)))
+    {
+        m_lastError = "invalid http listen address or CORS origin";
+        return false;
+    }
+    m_options = options;
     if (m_options.m_workerThreads <= 0)
     {
         m_options.m_workerThreads = 16;
@@ -124,11 +149,28 @@ bool HttpService::start(const HttpServiceOptions& options)
     {
         m_options.m_requestTimeoutMs = 30000;
     }
-    if (m_options.m_maxRequestBodyBytes <= 0)
+    if (m_options.m_maxRequestBodyBytes == 0)
     {
         m_options.m_maxRequestBodyBytes = 1024 * 1024;
     }
 
+    m_lastError.clear();
+    return true;
+}
+
+bool HttpService::start()
+{
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    if (m_running.load())
+    {
+        m_lastError.clear();
+        return true;
+    }
+    if (m_options.m_port == 0)
+    {
+        m_lastError = "http port is zero";
+        return false;
+    }
     // buildListenPort入参：listenOptions是当前HTTP服务启动配置。
     // buildListenPort出参：无。
     // buildListenPort返回值：返回civetweb要求的监听端口文本，可能是端口，也可能是IP:端口。
@@ -151,6 +193,12 @@ bool HttpService::start(const HttpServiceOptions& options)
     optionText.push_back(CStringManager::toStringInt32(m_options.m_requestTimeoutMs));
     optionText.push_back("enable_keep_alive");
     optionText.push_back(m_options.m_enableKeepAlive ? "yes" : "no");
+
+    // 预检由路由按本服务的 CORS 配置应答，避免 CivetWeb 使用其默认来源提前响应。
+    optionText.push_back("access_control_allow_methods");
+    optionText.push_back("");
+    optionText.push_back("access_control_allow_origin");
+    optionText.push_back("");
 
     std::vector<const char*> rawOptions;
     for (size_t i = 0; i < optionText.size(); ++i)
@@ -210,14 +258,21 @@ void HttpService::run(uint16_t port, const std::vector<std::pair<std::string, Ht
 {
     std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
+    // 派生服务可能传入自身的受保护路由表，停止旧服务前先取得本次注册列表。
+    std::vector<std::pair<std::string, HttpInterface*>> routes(vecInterface);
     clearHandlers();
-    m_vecInterface = vecInterface;
+    m_vecInterface.swap(routes);
     for (size_t i = 0; i < m_vecInterface.size(); ++i)
     {
-        addHandler(m_vecInterface[i].first, m_vecInterface[i].second);
+        if (!addHandler(m_vecInterface[i].first, m_vecInterface[i].second))
+        {
+            m_vecInterface.clear();
+            m_routes.clear();
+            return;
+        }
     }
 
-    HttpServiceOptions options;
+    HttpServiceOptions options = m_options;
     options.m_port = port;
     start(options);
 }
@@ -229,10 +284,14 @@ void HttpService::run(uint16_t port, const std::vector<std::pair<std::string, st
     clearHandlers();
     for (size_t i = 0; i < vecInterface.size(); ++i)
     {
-        addHandler(vecInterface[i].first, std::static_pointer_cast<HttpHandler>(vecInterface[i].second));
+        if (!addHandler(vecInterface[i].first, std::static_pointer_cast<HttpHandler>(vecInterface[i].second)))
+        {
+            m_routes.clear();
+            return;
+        }
     }
 
-    HttpServiceOptions options;
+    HttpServiceOptions options = m_options;
     options.m_port = port;
     start(options);
 }
@@ -308,7 +367,7 @@ int32_t HttpService::handleConnection(void* conn, const std::shared_ptr<HttpHand
     if (request.m_method == "OPTIONS")
     {
         HttpResponse response = HttpResponse::text("", kHttpStatusNoContent);
-        response.setHeader("Allow", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+        response.setHeader("Allow", kAllowedMethods);
         writeResponse(conn, response);
         return 1;
     }
@@ -457,13 +516,46 @@ bool HttpService::buildRequest(void* connData, HttpRequest& request, HttpRespons
     {
         maxStringSize = static_cast<int64_t>((std::numeric_limits<size_t>::max)());
     }
-    if (contentLength > m_options.m_maxRequestBodyBytes || contentLength > maxStringSize)
+    if ((m_options.m_maxRequestBodyBytes >= 0 && contentLength > m_options.m_maxRequestBodyBytes) || contentLength > maxStringSize)
     {
         errorResponse = HttpResponse::text("Payload Too Large", kHttpStatusPayloadTooLarge);
         return false;
     }
 
-    if (contentLength > 0)
+    const char* transferEncoding = mg_get_header(conn, "Transfer-Encoding");
+    if (requestInfo->content_length < 0 && transferEncoding != nullptr &&
+        HttpServiceHelper::sameName(transferEncoding, "chunked"))
+    {
+        // CivetWeb 负责解析分块。按实际收到的字节检查同一上限，不预分配未声明的正文。
+        char buffer[8192];
+        const uint64_t limit = m_options.m_maxRequestBodyBytes < 0 ?
+            static_cast<uint64_t>(maxStringSize) : static_cast<uint64_t>(m_options.m_maxRequestBodyBytes);
+        int bytes;
+        while ((bytes = mg_read(conn, buffer, sizeof(buffer))) > 0)
+        {
+            if (static_cast<uint64_t>(bytes) > limit - request.m_body.size())
+            {
+                errorResponse = HttpResponse::text("Payload Too Large", kHttpStatusPayloadTooLarge);
+                return false;
+            }
+            try
+            {
+                request.m_body.append(buffer, static_cast<size_t>(bytes));
+            }
+            catch (...)
+            {
+                errorResponse = HttpResponse::text("Payload Too Large", kHttpStatusPayloadTooLarge);
+                return false;
+            }
+        }
+        if (bytes < 0)
+        {
+            errorResponse = HttpResponse::text("Bad Request", kHttpStatusBadRequest);
+            return false;
+        }
+        request.m_contentLength = static_cast<int64_t>(request.m_body.size());
+    }
+    else if (contentLength > 0)
     {
         int64_t totalRead = 0;
         try
@@ -501,29 +593,27 @@ bool HttpService::buildRequest(void* connData, HttpRequest& request, HttpRespons
     return true;
 }
 
-void HttpService::writeCorsHeaders(void* connData, const HttpResponse& response) const
+void HttpService::appendCorsHeaders(std::string& headers, const HttpResponse& response) const
 {
     if (!m_options.m_enableCors)
     {
         return;
     }
-    if (connData == nullptr)
-    {
-        return;
-    }
-
-    struct mg_connection* conn = static_cast<struct mg_connection*>(connData);
     if (!HttpServiceHelper::hasHeader(response.m_headers, "Access-Control-Allow-Origin"))
     {
-        mg_printf(conn, "Access-Control-Allow-Origin: %s\r\n", m_options.m_corsAllowOrigin.c_str());
+        headers.append("Access-Control-Allow-Origin: ").append(m_options.m_corsAllowOrigin.c_str()).append("\r\n");
     }
     if (!HttpServiceHelper::hasHeader(response.m_headers, "Access-Control-Allow-Headers"))
     {
-        mg_printf(conn, "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Idempotency-Key, X-Cook-Run-Id, X-Cook-Request-Id, X-Cook-Attempt, X-Cook-Trace-Id, X-Cook-Request-Begin-Ms, X-Cook-Queue-Wait-Ms, X-Cook-Purpose\r\n");
+        headers.append("Access-Control-Allow-Headers: Content-Type, Authorization, Range, If-Range, If-None-Match, X-Requested-With, X-Idempotency-Key, X-Cook-Run-Id, X-Cook-Request-Id, X-Cook-Attempt, X-Cook-Trace-Id, X-Cook-Request-Begin-Ms, X-Cook-Queue-Wait-Ms, X-Cook-Purpose\r\n");
+    }
+    if (!HttpServiceHelper::hasHeader(response.m_headers, "Access-Control-Expose-Headers"))
+    {
+        headers.append("Access-Control-Expose-Headers: Content-Range, ETag\r\n");
     }
     if (!HttpServiceHelper::hasHeader(response.m_headers, "Access-Control-Allow-Methods"))
     {
-        mg_printf(conn, "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS\r\n");
+        headers.append("Access-Control-Allow-Methods: ").append(kAllowedMethods).append("\r\n");
     }
 }
 
@@ -535,447 +625,97 @@ void HttpService::writeResponse(void* connData, const HttpResponse& response)
     }
 
     struct mg_connection* conn = static_cast<struct mg_connection*>(connData);
-    std::string statusText = response.m_statusText.empty() ?
+    std::string statusText = response.m_statusText.empty() || !HttpServiceHelper::validValue(response.m_statusText) ?
         HttpResponse::defaultStatusText(response.m_statusCode) : response.m_statusText;
 
-    mg_printf(conn, "HTTP/1.1 %d %s\r\n", response.m_statusCode, statusText.c_str());
+    std::string headers;
+    headers.reserve(512);
+    headers.append("HTTP/1.1 ").append(std::to_string(response.m_statusCode)).append(" ").append(statusText.c_str()).append("\r\n");
     if (!HttpServiceHelper::hasHeader(response.m_headers, "Content-Type"))
     {
-        mg_printf(conn, "Content-Type: %s\r\n", response.m_contentType.c_str());
+        const bool validType = !response.m_contentType.empty() && HttpServiceHelper::validValue(response.m_contentType);
+        headers.append("Content-Type: ").append(validType ? response.m_contentType : "application/octet-stream").append("\r\n");
     }
-    mg_printf(conn, "Content-Length: %s\r\n",
-        CStringManager::toStringInt64(static_cast<int64_t>(response.m_body.size())).c_str());
-    mg_printf(conn, "Connection: %s\r\n", response.m_closeConnection ? "close" : "keep-alive");
-    writeCorsHeaders(connData, response);
+    const mg_request_info* info = mg_get_request_info(conn);
+    const bool head = info && info->request_method && std::strcmp(info->request_method, "HEAD") == 0;
+    const int32_t code = response.m_statusCode;
+    // HEAD 可以预告表示的长度。1xx、204 和 304 省略长度，205 显式标示零长度。
+    const bool omitLength = (code >= 100 && code < 200) || code == 204 || code == 304;
+    if (!omitLength)
+    {
+        headers.append("Content-Length: ").append(std::to_string(code == 205 ? size_t(0) : response.m_body.size())).append("\r\n");
+    }
+    const bool sendBody = !head && !omitLength && code != 205;
+    bool keep = false;
+    if (!response.m_closeConnection && m_options.m_enableKeepAlive)
+    {
+        const char* requested = mg_get_header(conn, "Connection");
+        keep = requested ? HttpServiceHelper::sameName(requested, "keep-alive") :
+            (info && info->http_version && std::strcmp(info->http_version, "1.1") == 0);
+    }
+    headers.append(keep ? "Connection: keep-alive\r\n" : "Connection: close\r\n");
+    appendCorsHeaders(headers, response);
 
     std::map<std::string, std::string>::const_iterator it = response.m_headers.begin();
     for (; it != response.m_headers.end(); ++it)
     {
-        mg_printf(conn, "%s: %s\r\n", it->first.c_str(), it->second.c_str());
-    }
-    mg_printf(conn, "\r\n");
-    if (!response.m_body.empty())
-    {
-        size_t totalWrite = 0;
-        const size_t writeChunkBytes = 64 * 1024;
-        while (totalWrite < response.m_body.size())
+        const std::string& name = it->first;
+        if (!HttpServiceHelper::validName(name) || !HttpServiceHelper::validValue(it->second) ||
+            HttpServiceHelper::sameName(name, "Content-Length") || HttpServiceHelper::sameName(name, "Transfer-Encoding") ||
+            HttpServiceHelper::sameName(name, "Connection"))
         {
-            size_t unreadBytes = response.m_body.size() - totalWrite;
-            size_t currentWriteBytes = unreadBytes > writeChunkBytes ? writeChunkBytes : unreadBytes;
-            int32_t writeSize = mg_write(conn, response.m_body.data() + totalWrite, currentWriteBytes);
+            continue;
+        }
+        headers.append(name).append(": ").append(it->second).append("\r\n");
+    }
+    headers.append("\r\n");
+    // 小响应的头和正文一次交给 socket；大正文始终借用原缓冲分段写，避免整段复制。
+    const bool combined = response.m_body.size() <= 1024;
+    if (sendBody && combined)
+    {
+        headers.append(response.m_body);
+    }
+    const std::string* segments[] = {&headers, &response.m_body};
+    for (size_t index = 0; index < (sendBody && !combined ? 2u : 1u); ++index)
+    {
+        const std::string& segment = *segments[index];
+        size_t offset = 0;
+        while (offset < segment.size())
+        {
+            const size_t count = (std::min)(segment.size() - offset, static_cast<size_t>(64 * 1024));
+            const int32_t writeSize = mg_write(conn, segment.data() + offset, count);
             if (writeSize <= 0)
             {
-                break;
+                return;
             }
-            totalWrite += static_cast<size_t>(writeSize);
+            offset += static_cast<size_t>(writeSize);
         }
     }
 }
 
-//#include "HandlerContext.h"
-//#include "HttpHandler.h"
-//#include "HttpInterface.h"
-//#include "CSystem/CSystemAPI.h"
-//#include "CStringManager/CStringManagerAPI.h"
-//#include "civetweb.h"
-//#include <atomic>
-//#include <cstdlib>
-//#include <functional>
-//#include <iostream>
-//#include <memory>
-//#include <sstream>
-//#include <thread>
+// 下列示例已用 Windows x64 Release 单独编译运行。
+// #include "HttpService/HttpServiceAPI.h"
+// #include <cstdlib>
+// #include <iostream>
+// #include <memory>
 //
-//int main(int argc, char* argv[])
-//{
-//	int32_t totalCount = 0;
-//	int32_t failCount = 0;
-//	std::function<void(bool, const std::string&)> check = [&totalCount, &failCount](bool ok, const std::string& name) -> void
-//	{
-//		++totalCount;
-//		std::cout << (ok ? "[PASS] " : "[FAIL] ") << name << std::endl;
-//		if (!ok)
-//		{
-//			++failCount;
-//		}
-//	};
-//	std::function<int32_t(const char*, int32_t)> envInt = [](const char* name, int32_t defaultValue) -> int32_t
-//	{
-//		const char* value = std::getenv(name);
-//		return value == nullptr ? defaultValue : static_cast<int32_t>(std::atoi(value));
-//	};
-//	std::function<bool(uint16_t, const std::string&, int32_t&, std::string&)> httpRequestByPort =
-//		[](uint16_t port, const std::string& requestText, int32_t& statusCode, std::string& body) -> bool
-//	{
-//		char error[256] = {};
-//		struct mg_connection* conn = mg_download("127.0.0.1", port, 0, error, sizeof(error), "%s", requestText.c_str());
-//		if (conn == nullptr)
-//		{
-//			body = error;
-//			statusCode = 0;
-//			return false;
-//		}
-//		const struct mg_response_info* responseInfo = mg_get_response_info(conn);
-//		statusCode = responseInfo == nullptr ? 0 : responseInfo->status_code;
-//		char buffer[1024] = {};
-//		int32_t readSize = 0;
-//		body.clear();
-//		while ((readSize = mg_read(conn, buffer, sizeof(buffer))) > 0)
-//		{
-//			body.append(buffer, static_cast<size_t>(readSize));
-//		}
-//		mg_close_connection(conn);
-//		return true;
-//	};
-//
-//	class TestHandler : public HttpHandler
-//	{
-//	public:
-//		TestHandler() :
-//		m_count(0)
-//		{
-//
-//		}
-//
-//		virtual HttpResponse handle(const HttpRequest& request)
-//		{
-//			++m_count;
-//			if (request.m_method == "GET")
-//			{
-//				std::map<std::string, std::string>::const_iterator it = request.m_query.find("name");
-//				std::string name = it == request.m_query.end() ? "" : it->second;
-//				return HttpResponse::text("GET:" + name);
-//			}
-//			if (request.m_method == "POST")
-//			{
-//				return HttpResponse::json("{\"method\":\"POST\",\"body\":\"" + request.m_body + "\"}");
-//			}
-//			return HttpResponse::text("method not allowed", kHttpStatusMethodNotAllowed);
-//		}
-//
-//		std::atomic<int32_t> m_count;
-//	};
-//
-//	class ThrowHandler : public HttpHandler
-//	{
-//	public:
-//		virtual HttpResponse handle(const HttpRequest& request)
-//		{
-//			(void)request;
-//			throw 1;
-//		}
-//	};
-//
-//	class ReplaceHandler : public HttpHandler
-//	{
-//	public:
-//		explicit ReplaceHandler(const std::string& text) :
-//		m_text(text)
-//		{
-//
-//		}
-//
-//		virtual HttpResponse handle(const HttpRequest& request)
-//		{
-//			(void)request;
-//			return HttpResponse::text(m_text);
-//		}
-//
-//		std::string m_text;
-//	};
-//
-//	class LargeHandler : public HttpHandler
-//	{
-//	public:
-//		virtual HttpResponse handle(const HttpRequest& request)
-//		{
-//			(void)request;
-//			return HttpResponse::text(std::string(200000, 'L'));
-//		}
-//	};
-//
-//	class LegacyInterface : public HttpInterface
-//	{
-//	public:
-//		virtual bool httpGetReceive(const std::string& request)
-//		{
-//			writeSuccess();
-//			writeResult("LEGACY_GET:" + request);
-//			return true;
-//		}
-//
-//		virtual bool httpPostReceive(const std::string& request)
-//		{
-//			writeSuccess();
-//			writeResult("LEGACY_POST:" + request);
-//			return true;
-//		}
-//	};
-//
-//	if (argc >= 3 && argv != nullptr && argv[1] != nullptr && std::string(argv[1]) == "--httpservice-child")
-//	{
-//		int32_t childPortValue = argv[2] == nullptr ? 0 : static_cast<int32_t>(std::atoi(argv[2]));
-//		if (childPortValue <= 0)
-//		{
-//			return 2;
-//		}
-//
-//		std::shared_ptr<TestHandler> childHandler(new TestHandler);
-//		HttpService childService;
-//		if (!childService.addHandler("/child", childHandler))
-//		{
-//			return 3;
-//		}
-//		HttpServiceOptions childOptions;
-//		childOptions.m_listenHost = "127.0.0.1";
-//		childOptions.m_port = static_cast<uint16_t>(childPortValue);
-//		childOptions.m_workerThreads = 4;
-//		childOptions.m_enableKeepAlive = false;
-//		childOptions.m_enableCors = true;
-//		childOptions.m_requestTimeoutMs = 3000;
-//		childOptions.m_maxRequestBodyBytes = 128;
-//		if (!childService.start(childOptions))
-//		{
-//			return 4;
-//		}
-//
-//		bool childOk = true;
-//		for (int32_t i = 0; i < 10; ++i)
-//		{
-//			int32_t childStatusCode = 0;
-//			std::string childBody;
-//			if (!httpRequestByPort(childOptions.m_port,
-//				"GET /child?name=process HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n",
-//				childStatusCode,
-//				childBody) ||
-//				childStatusCode != kHttpStatusOk ||
-//				childBody != "GET:process")
-//			{
-//				childOk = false;
-//				break;
-//			}
-//		}
-//		childService.clearHandlers();
-//		return childOk ? 0 : 5;
-//	}
-//
-//	HttpRequest request;
-//	check(request.m_method.empty() && request.m_remotePort == 0 && request.m_contentLength == 0, "HttpRequest default value");
-//	HttpResponse okResponse = HttpResponse::json("{\"ok\":true}");
-//	check(okResponse.m_statusCode == kHttpStatusOk && okResponse.m_contentType.find("json") != std::string::npos, "HttpResponse json");
-//	HttpResponse textResponse = HttpResponse::text("hello", kHttpStatusCreated);
-//	check(textResponse.m_statusCode == kHttpStatusCreated && textResponse.m_body == "hello", "HttpResponse text");
-//	textResponse.setHeader("X-Test", "1");
-//	check(textResponse.m_headers["X-Test"] == "1", "HttpResponse setHeader");
-//	check(HttpServiceHelper::hasHeader(textResponse.m_headers, "x-test"), "HttpServiceHelper hasHeader ignore case");
-//	textResponse.setHeader("", "bad");
-//	check(textResponse.m_headers.find("") == textResponse.m_headers.end(), "HttpResponse ignore empty header name");
-//	check(HttpResponse::defaultStatusText(kHttpStatusNotFound) == "Not Found", "HttpResponse status text");
-//	HttpServiceOptions defaultOptions;
-//	check(defaultOptions.m_port == 0 && defaultOptions.m_workerThreads > 0, "HttpServiceOptions default");
-//	HandlerContext emptyContext;
-//	check(emptyContext(nullptr) == 0, "HandlerContext empty callback");
-//
-//	HttpService invalidService;
-//	check(!invalidService.addHandler("", std::shared_ptr<HttpHandler>()), "HttpService add invalid shared handler");
-//	check(!invalidService.addHandler("/raw_null", static_cast<HttpHandler*>(nullptr)), "HttpService add invalid raw handler");
-//	HttpServiceOptions invalidOptions;
-//	check(!invalidService.start(invalidOptions), "HttpService start invalid port");
-//
-//	TestHandler rawHandler;
-//	HttpService rawService;
-//	check(rawService.addHandler("/raw", &rawHandler), "HttpService raw handler compatibility");
-//	rawService.clearHandlers();
-//
-//	std::shared_ptr<TestHandler> handler(new TestHandler);
-//	std::weak_ptr<TestHandler> handlerWatcher = handler;
-//	std::shared_ptr<ThrowHandler> throwHandler(new ThrowHandler);
-//	std::shared_ptr<ReplaceHandler> replaceHandlerA(new ReplaceHandler("replace_a"));
-//	std::shared_ptr<ReplaceHandler> replaceHandlerB(new ReplaceHandler("replace_b"));
-//	std::shared_ptr<LargeHandler> largeHandler(new LargeHandler);
-//	std::shared_ptr<LegacyInterface> legacyInterface(new LegacyInterface);
-//	HttpService service;
-//	check(service.handleContextConnection(nullptr, handler) == 0, "HttpService null context connection");
-//	check(service.addHandler("/test", handler), "HttpService add shared handler");
-//	handler.reset();
-//	check(!handlerWatcher.expired(), "HttpService shared handler retained before start");
-//	check(service.addHandler("/throw", throwHandler), "HttpService add throw handler");
-//	check(service.addHandler("/replace", replaceHandlerA), "HttpService add replace handler");
-//	check(service.addHandler("/large", largeHandler), "HttpService add large handler");
-//	check(service.addHandler("/legacy", legacyInterface), "HttpService add legacy interface");
-//	HttpServiceOptions options;
-//	options.m_listenHost = "127.0.0.1";
-//	options.m_workerThreads = 0;
-//	options.m_enableKeepAlive = false;
-//	options.m_enableCors = true;
-//	options.m_requestTimeoutMs = 0;
-//	options.m_maxRequestBodyBytes = 64;
-//	options.m_port = static_cast<uint16_t>(envInt("HTTPSERVICE_TEST_PORT", 58207));
-//	bool started = false;
-//	for (int32_t offset = 0; offset < 20; ++offset)
-//	{
-//		options.m_port = static_cast<uint16_t>(envInt("HTTPSERVICE_TEST_PORT", 58207) + offset);
-//		if (service.start(options))
-//		{
-//			started = true;
-//			break;
-//		}
-//	}
-//	check(started && service.isRunning(), "HttpService start");
-//	if (!started)
-//	{
-//		std::cout << "HttpService test FAIL, total=" << totalCount << ", failed=" << failCount << std::endl;
-//		return 1;
-//	}
-//
-//	std::function<bool(const std::string&, int32_t&, std::string&)> httpRequest =
-//		[&options, &httpRequestByPort](const std::string& requestText, int32_t& statusCode, std::string& body) -> bool
-//	{
-//		return httpRequestByPort(options.m_port, requestText, statusCode, body);
-//	};
-//
-//	int32_t statusCode = 0;
-//	std::string body;
-//	check(httpRequest("GET /test?name=cook%20test HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n", statusCode, body) &&
-//		statusCode == kHttpStatusOk && body == "GET:cook test", "HttpService GET");
-//	check(httpRequest("POST /test HTTP/1.0\r\nHost: 127.0.0.1\r\nContent-Type: text/plain\r\nContent-Length: 11\r\n\r\nhello world", statusCode, body) &&
-//		statusCode == kHttpStatusOk && body.find("hello world") != std::string::npos, "HttpService POST");
-//	std::string exactBody(64, 'y');
-//	std::ostringstream exactRequest;
-//	exactRequest << "POST /test HTTP/1.0\r\nHost: 127.0.0.1\r\nContent-Length: " << exactBody.size() << "\r\n\r\n" << exactBody;
-//	check(httpRequest(exactRequest.str(), statusCode, body) &&
-//		statusCode == kHttpStatusOk && body.find(exactBody) != std::string::npos, "HttpService payload exact limit");
-//	check(httpRequest("GET /test?name=a%ZZ+b%2F HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n", statusCode, body) &&
-//		statusCode == kHttpStatusOk && body == "GET:a%ZZ b/", "HttpService GET query decode edge");
-//	check(httpRequest("GET /test?name=edge% HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n", statusCode, body) &&
-//		statusCode == kHttpStatusOk && body == "GET:edge%", "HttpService GET query trailing percent");
-//	check(httpRequest("DELETE /test HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n", statusCode, body) &&
-//		statusCode == kHttpStatusMethodNotAllowed, "HttpService method not allowed");
-//	std::string largeBody(128, 'x');
-//	std::ostringstream largeRequest;
-//	largeRequest << "POST /test HTTP/1.0\r\nHost: 127.0.0.1\r\nContent-Length: " << largeBody.size() << "\r\n\r\n" << largeBody;
-//	check(httpRequest(largeRequest.str(), statusCode, body) && statusCode == kHttpStatusPayloadTooLarge, "HttpService payload too large");
-//	check(httpRequest("OPTIONS /test HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n", statusCode, body) &&
-//		statusCode == kHttpStatusNoContent, "HttpService OPTIONS");
-//	check(httpRequest("GET /missing HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n", statusCode, body) &&
-//		statusCode == kHttpStatusNotFound, "HttpService not found");
-//	check(httpRequest("GET /throw HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n", statusCode, body) &&
-//		statusCode == kHttpStatusInternalServerError, "HttpService handler exception");
-//	check(httpRequest("GET /large HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n", statusCode, body) &&
-//		statusCode == kHttpStatusOk && body.size() == 200000, "HttpService large response");
-//	check(httpRequest("GET /replace HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n", statusCode, body) &&
-//		statusCode == kHttpStatusOk && body == "replace_a", "HttpService replace route before update");
-//	check(service.addHandler("/replace", replaceHandlerB), "HttpService replace route when running");
-//	check(httpRequest("GET /replace HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n", statusCode, body) &&
-//		statusCode == kHttpStatusOk && body == "replace_b", "HttpService replace route after update");
-//	check(httpRequest("GET /legacy?x=1 HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n", statusCode, body) &&
-//		statusCode == kHttpStatusOk && body == "LEGACY_GET:x=1", "HttpInterface legacy GET");
-//	check(httpRequest("POST /legacy HTTP/1.0\r\nHost: 127.0.0.1\r\nContent-Length: 3\r\n\r\nabc", statusCode, body) &&
-//		statusCode == kHttpStatusOk && body == "LEGACY_POST:abc", "HttpInterface legacy POST");
-//
-//	std::atomic<int32_t> threadFailCount(0);
-//	std::vector<std::thread> threads;
-//	for (int32_t threadIndex = 0; threadIndex < 8; ++threadIndex)
-//	{
-//		threads.push_back(std::thread([threadIndex, &httpRequest, &threadFailCount]() -> void
-//		{
-//			for (int32_t loopIndex = 0; loopIndex < 30; ++loopIndex)
-//			{
-//				std::ostringstream requestStream;
-//				requestStream << "GET /test?name=t" << threadIndex << "_" << loopIndex << " HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n";
-//				int32_t status = 0;
-//				std::string responseBody;
-//				if (!httpRequest(requestStream.str(), status, responseBody) ||
-//					status != kHttpStatusOk ||
-//					responseBody.find("GET:t") != 0)
-//				{
-//					threadFailCount.fetch_add(1);
-//				}
-//			}
-//		}));
-//	}
-//	for (size_t i = 0; i < threads.size(); ++i)
-//	{
-//		threads[i].join();
-//	}
-//	check(threadFailCount.load() == 0, "HttpService multithread pressure");
-//	std::shared_ptr<TestHandler> retainedHandler = handlerWatcher.lock();
-//	check(retainedHandler.get() != nullptr && retainedHandler->m_count.load() >= 246, "HttpService handler count");
-//	retainedHandler.reset();
-//
-//	std::atomic<int32_t> processFailCount(0);
-//	std::vector<std::thread> processThreads;
-//	std::string exePath = (argc > 0 && argv != nullptr && argv[0] != nullptr) ? argv[0] : CSystem::GetCurrentExeFullName();
-//	auto quoteCommandArgument = [](const std::string& text) -> std::string
-//	{
-//		std::string result = "\"";
-//		for (size_t i = 0; i < text.size(); ++i)
-//		{
-//			if (text[i] == '"')
-//			{
-//				result += "\\\"";
-//			}
-//			else
-//			{
-//				result.push_back(text[i]);
-//			}
-//		}
-//		result += "\"";
-//		return result;
-//	};
-//	for (int32_t processIndex = 0; processIndex < 4; ++processIndex)
-//	{
-//		processThreads.push_back(std::thread([processIndex, &processFailCount, &exePath, &quoteCommandArgument, &options]() -> void
-//		{
-//			if (exePath.empty())
-//			{
-//				processFailCount.fetch_add(1);
-//				return;
-//			}
-//			uint16_t processPort = static_cast<uint16_t>(options.m_port + 100 + processIndex);
-//			std::string command = quoteCommandArgument(exePath) + " --httpservice-child " + CStringManager::toStringInt32(processPort);
-//			int32_t result = std::system(command.c_str());
-//			if (result != 0)
-//			{
-//				processFailCount.fetch_add(1);
-//			}
-//		}));
-//	}
-//	for (size_t i = 0; i < processThreads.size(); ++i)
-//	{
-//		processThreads[i].join();
-//	}
-//	check(processFailCount.load() == 0, "HttpService multiprocess pressure");
-//
-//	std::shared_ptr<LegacyInterface> runInterface(new LegacyInterface);
-//	std::weak_ptr<LegacyInterface> runInterfaceWatcher = runInterface;
-//	std::vector<std::pair<std::string, std::shared_ptr<HttpInterface>>> runInterfaces;
-//	runInterfaces.push_back(std::make_pair(std::string("/run"), runInterface));
-//	runInterface.reset();
-//	HttpService runService;
-//	bool runStarted = false;
-//	for (int32_t offset = 40; offset < 60; ++offset)
-//	{
-//		runService.run(static_cast<uint16_t>(options.m_port + offset), runInterfaces);
-//		if (runService.isRunning())
-//		{
-//			runStarted = true;
-//			break;
-//		}
-//	}
-//	check(runStarted, "HttpService shared interface run");
-//	check(!runInterfaceWatcher.expired(), "HttpService shared interface retained after caller reset");
-//	runInterfaces.clear();
-//	check(!runInterfaceWatcher.expired(), "HttpService shared interface retained by route");
-//	runService.clearHandlers();
-//	check(runInterfaceWatcher.expired(), "HttpService shared interface released after clearHandlers");
-//
-//	service.stop();
-//	check(!service.isRunning(), "HttpService stop");
-//	check(!handlerWatcher.expired(), "HttpService shared handler retained after stop");
-//	service.clearHandlers();
-//	check(handlerWatcher.expired(), "HttpService shared handler released after clearHandlers");
-//	std::cout << "HttpService test " << (failCount == 0 ? "PASS" : "FAIL") <<
-//		", total=" << totalCount << ", failed=" << failCount << std::endl;
-//	return failCount == 0 ? 0 : 1;
-//}
+// int main(int argc, char** argv)
+// {
+//     if (argc != 2) { return 2; }
+//     HttpService service;
+//     std::shared_ptr<HttpInterface> endpoint(new HttpInterface);
+//     if (!service.addHandler("/api/recipes", endpoint)) { return 1; }
+//     HttpServiceOptions options;
+//     options.m_listenHost = "127.0.0.1";
+//     options.m_port = static_cast<uint16_t>(std::atoi(argv[1]));
+//     options.m_workerThreads = 4;
+//     if (!service.setOptions(options) || !service.start())
+//     {
+//         std::cerr << service.lastError() << std::endl;
+//         return 1;
+//     }
+//     const bool running = service.isRunning();
+//     service.stop();
+//     service.clearHandlers();
+//     return running && !service.isRunning() ? 0 : 1;
+// }

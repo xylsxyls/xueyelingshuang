@@ -9,6 +9,6 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define HttpServiceAPI __attribute__ ((visibility("default")))
     #else
-        #define HttpServiceAPI
+        #define HttpServiceAPI 
     #endif
 #endif

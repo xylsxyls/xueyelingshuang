@@ -48,6 +48,17 @@ public:
     */
     void clearHandlers();
 
+    /** 为停止状态的服务保存下一次启动所用的配置
+    @param [in] options 服务的监听、线程、正文限制与响应配置
+    @return 端口有效且服务已停止时返回 true
+    */
+    bool setOptions(const HttpServiceOptions& options);
+
+    /** 用已保存的配置启动，默认端口为 0，调用方须先指定有效端口
+    @return 服务启动成功时返回 true
+    */
+    bool start();
+
     /** 启动HTTP服务
     @param [in] options 服务启动配置
     @return 返回是否启动成功
@@ -69,12 +80,14 @@ public:
     std::string lastError();
 
     /** 兼容旧接口的启动入口，注册HttpInterface列表并启动服务
+    复用已保存的监听地址、限额、线程与响应配置。
     @param [in] port 监听端口
     @param [in] vecInterface 路由路径和接口对象列表
     */
     void run(uint16_t port, const std::vector<std::pair<std::string, HttpInterface*>>& vecInterface);
 
     /** 兼容旧接口风格的智能指针启动入口，HttpService会持有接口对象生命周期
+    复用已保存的监听地址、限额、线程与响应配置。
     @param [in] port 监听端口
     @param [in] vecInterface 路由路径和接口对象智能指针列表
     */
@@ -136,11 +149,11 @@ private:
     */
     bool buildRequest(void* conn, HttpRequest& request, HttpResponse& errorResponse);
 
-    /** 根据服务配置写入跨域响应头
-    @param [in] conn 底层HTTP连接，cpp内部转换为civetweb连接对象
+    /** 根据服务配置向当前响应头文本追加跨域字段
+    @param [in,out] headers 本次发送的响应头缓冲
     @param [in] response 要发送的响应对象
     */
-    void writeCorsHeaders(void* conn, const HttpResponse& response) const;
+    void appendCorsHeaders(std::string& headers, const HttpResponse& response) const;
 
     /** 将响应写回底层HTTP连接
     @param [in] conn 底层HTTP连接，cpp内部转换为civetweb连接对象

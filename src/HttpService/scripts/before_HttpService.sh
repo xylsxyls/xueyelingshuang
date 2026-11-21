@@ -12,6 +12,20 @@ fi
 librariesrely+=($'project\tDllRelyTest\t'"$DllRelyTest_dlllib")
 !EOF!
 
+if [[ $1 == wasm32 || $1 == wasm64 ]]; then
+    echo 'HttpService server targets Windows and Linux' >&2
+    exit 1
+fi
+case "${THIRDPARTY_PLATFORM:-${CMAKE_SYSTEM_NAME:-}}:${CMAKE_TOOLCHAIN_FILE:-}:$OSTYPE" in
+    :*android.toolchain.cmake:*) echo 'HttpService server targets Windows and Linux' >&2; exit 1 ;;
+    windows:*|Windows:*|:*:msys*|:*:cygwin*|:*:win32*)
+        archive=civetweb.lib
+        [[ $3 != debug ]] || archive=civetwebd.lib
+        config=$3 ;;
+    linux:*|Linux:*|arm:*|:*:linux*) archive=libcivetweb.a; config=release ;;
+    *) echo 'HttpService server targets Windows and Linux' >&2; exit 1 ;;
+esac
+
 #--------------------------------------------------------------------
 CStringManager_bit=$1
 CStringManager_dlllib=$2
@@ -32,54 +46,8 @@ if [[ $4 != only ]]; then
 fi
 librariesrely+=($'project\tCSystem\t'"$CSystem_dlllib")
 
-if [[ $1 != wasm32 && $1 != wasm64 ]]; then
-SHELL_FOLDER=$(cd "$(dirname "$0")"; pwd)
-xueyelingshuang="$SHELL_FOLDER/../../.."
-sdkpath="${CLOUD_REBUILD_SDK_ROOT:-$xueyelingshuang}"
-native_target="${CMAKE_SYSTEM_NAME:-}"
-if [[ -z "$native_target" && "${CMAKE_TOOLCHAIN_FILE:-}" == *android.toolchain.cmake ]]; then native_target=Android; fi
-if [[ -z "$native_target" && "${CMAKE_OSX_SYSROOT:-}" == *iphone* ]]; then native_target=iOS; fi
-if [[ -z "$native_target" ]]; then
-    case "$OSTYPE" in
-        linux*) native_target=Linux ;;
-        msys*|cygwin*|win32*) native_target=Windows ;;
-        darwin*) native_target=Darwin ;;
-    esac
-fi
-sdk_debug=""
-if [[ $3 == debug ]]; then sdk_debug=d; fi
-case "$native_target" in
-    Windows)
-        vendor_archives=("civetwebstatic${1}${sdk_debug}.lib")
-        vendor_headers="$xueyelingshuang/tools/civetweb/include"
-        ;;
-    Linux)
-        vendor_archives=("libcivetwebstatic${1}.a")
-        vendor_headers="$xueyelingshuang/tools/civetweb/include"
-        ;;
-    Darwin|iOS|Android)
-        vendor_archives=("libcivetwebstatic${1}.a")
-        vendor_headers=""
-        if [[ ! -f "$sdkpath/include/civetweb/civetweb.h" ]]; then
-            echo "Prepare $native_target civetweb headers in $sdkpath/include/civetweb first." >&2
-            false
-        fi
-        ;;
-    *) echo "Unsupported native target: $native_target" >&2; false ;;
-esac
-mkdir -p "$sdkpath/include/civetweb" "$sdkpath/lib"
-if [[ -n "$vendor_headers" ]]; then
-    cp -Rf "$vendor_headers/." "$sdkpath/include/civetweb/"
-fi
-for vendor_archive in "${vendor_archives[@]}"; do
-    if [[ -n "$vendor_headers" ]]; then
-        cp -f "$xueyelingshuang/tools/civetweb/lib/$vendor_archive" "$sdkpath/lib/"
-    elif [[ ! -f "$sdkpath/lib/$vendor_archive" ]]; then
-        echo "Prepare the matching $native_target civetweb archive: $sdkpath/lib/$vendor_archive" >&2
-        false
-    fi
-    librariesrely+=($'link\t'"$vendor_archive")
-done
-fi
+root=$(cd "$(dirname "$0")/../../.." && pwd)
+THIRDPARTY_FILES="$archive" bash "$root/tools/thirdparty.sh" civetweb "$1" lib "$config" "$4" || exit 1
+librariesrely+=($'link\t'"$archive")
 
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return

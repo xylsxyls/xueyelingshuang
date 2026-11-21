@@ -20,19 +20,19 @@ struct HttpServiceAPI HttpResponse
 
     /** 获取状态码默认文本
     @param [in] code HTTP状态码
-    @return 返回常见状态码对应的英文状态文本
+    @return 返回对应的英文状态文本。未登记的 100 至 599 代码返回类别文本，超出范围返回空字符串
     */
     static std::string defaultStatusText(int32_t code);
 
     /** 创建JSON响应
-    @param [in] body 响应体内容
+    @param [in] bodyText 响应体内容
     @param [in] code HTTP状态码
     @return 返回JSON类型响应对象
     */
     static HttpResponse json(const std::string& bodyText, int32_t code = kHttpStatusOk);
 
     /** 创建纯文本响应
-    @param [in] body 响应体内容
+    @param [in] bodyText 响应体内容
     @param [in] code HTTP状态码
     @return 返回文本类型响应对象
     */
@@ -43,7 +43,7 @@ struct HttpServiceAPI HttpResponse
     */
     void setStatus(int32_t code);
 
-    /** 设置响应头
+    /** 按字段名忽略 ASCII 大小写设置响应字段，同名字段保留首次拼写并更新值。正文长度、传输编码及连接策略由服务生成
     @param [in] name 响应头名称
     @param [in] value 响应头内容
     */
@@ -66,6 +66,6 @@ struct HttpServiceAPI HttpResponse
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-    // 是否在响应后关闭连接
+    // true 时通过 Connection: close 告知对端结束连接，底层按请求与服务保活策略回收
     bool m_closeConnection;
 };
