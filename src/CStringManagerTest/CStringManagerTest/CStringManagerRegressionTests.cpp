@@ -166,7 +166,7 @@ static bool CStringConversionAudit()
             CONVERSION_CHECK(back == unicode);
         }
     }
-    // flags=0沿用系统替代规则；修复所有权时不暗中改成严格拒绝输入。
+    // flags=0 使用系统替代规则，以同一代码页的系统输出作为预期。
     const std::string invalid("\xff\xc0\x80\0Z", 5);
     wchar_t expectedInvalid[16] = {};
     const int invalidCount = MultiByteToWideChar(CP_UTF8, 0, invalid.data(), 5, expectedInvalid, 16);
@@ -179,6 +179,8 @@ static bool CStringConversionAudit()
     uint32_t allocatorExceptions = 0;
     for (uint32_t mode = 0; mode < 6; ++mode)
     {
+        const uint32_t acceptedBefore = accepted;
+        const uint32_t rejectedBefore = rejected;
         for (int32_t position = 0; position < 8; ++position)
         {
             _CrtMemState before, after;
@@ -195,37 +197,23 @@ static bool CStringConversionAudit()
             {
                 if (mode == 0 || mode == 2)
                 {
-                    std::wstring result;
-                    if (mode == 0)
-                    {
-                        result = CStringManager::Utf8ToUnicode(narrow);
-                    }
-                    else
-                    {
-                        result = CStringManager::AnsiToUnicode(narrow);
-                    }
+                    // 直接借用 API 的返回对象，避免测试端的空字符串构造占用故障位置。
+                    const auto decode = mode == 0 ? CStringManager::Utf8ToUnicode : CStringManager::AnsiToUnicode;
+                    const std::wstring& result = decode(narrow);
                     full = result == wide;
+                    empty = result.empty();
+                }
+                else if (mode == 1 || mode == 3)
+                {
+                    const auto encode = mode == 1 ? CStringManager::UnicodeToUtf8 : CStringManager::UnicodeToAnsi;
+                    const std::string& result = encode(wide);
+                    full = result == narrow;
                     empty = result.empty();
                 }
                 else
                 {
-                    std::string result;
-                    if (mode == 1)
-                    {
-                        result = CStringManager::UnicodeToUtf8(wide);
-                    }
-                    else if (mode == 3)
-                    {
-                        result = CStringManager::UnicodeToAnsi(wide);
-                    }
-                    else if (mode == 4)
-                    {
-                        result = CStringManager::AnsiToUtf8(narrow);
-                    }
-                    else
-                    {
-                        result = CStringManager::Utf8ToAnsi(narrow);
-                    }
+                    const auto convert = mode == 4 ? CStringManager::AnsiToUtf8 : CStringManager::Utf8ToAnsi;
+                    const std::string& result = convert(narrow);
                     full = result == narrow;
                     empty = result.empty();
                 }
@@ -266,8 +254,9 @@ static bool CStringConversionAudit()
                 allocatorExceptions += allocationFailed ? 1U : 0U;
             }
         }
+        CONVERSION_CHECK(accepted > acceptedBefore && rejected > rejectedBefore);
     }
-    CONVERSION_CHECK(accepted > 0 && rejected >= 8);
+    CONVERSION_CHECK(rejected >= 8);
     std::printf("CSTRING_CONVERSION allocation_positions=48 accepted=%u rejected=%u allocator_exceptions=%u heap_delta=0 direct_payload_allocations=1\n", accepted, rejected, allocatorExceptions);
 #endif
     std::printf("CString conversion checks=%u PASS\n", checks);

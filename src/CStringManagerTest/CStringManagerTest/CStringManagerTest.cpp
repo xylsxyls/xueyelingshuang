@@ -12,34 +12,55 @@
 #include <mutex>
 #include <cwchar>
 #include <climits>
-#include <stdexcept>
+#include <cstdio>
+#include <exception>
 
-/** 校准并测量返回新字符串的变换；计入结果构造和销毁，用长度与轮换字节校验实际输出。
+/** 核对完整转换结果，启用计时时计算每批的长度与轮换字节校验值
 @param [in] name 性能记录名
-@param [in] input 计时外已准备的非空输入
+@param [in] input 固定输入
+@param [in] expected 独立生成的非空预期输出
+@param [in] measure 为 true 时启用计时
+@return 输出匹配且每次采样长度有效时返回 true
 */
 template<std::string (*Transform)(const std::string&)>
-static void MeasureByteConversion(const char* name, const std::string& input)
+static bool CheckByteConversion(const char* name, const std::string& input, const std::string& expected, bool measure)
 {
-    LibraryBenchmark::run(name, [&](uint32_t count) -> uint64_t {
-        uint64_t sum = 0;
-        for (uint32_t i = 0; i < count; ++i)
+    if (expected.empty() || Transform(input) != expected)
+    {
+        std::fprintf(stderr, "%s: unexpected output\n", name);
+        return false;
+    }
+    bool valid = true;
+    if (measure)
+    {
+        LibraryBenchmark::run(name, [&](uint32_t count) -> uint64_t
         {
-            const std::string value = Transform(input);
-            if (value.empty())
+            uint64_t sum = 0;
+            for (uint32_t i = 0; i < count; ++i)
             {
-                throw std::runtime_error("Unexpected empty benchmark output");
+                const std::string value = Transform(input);
+                if (value.size() != expected.size())
+                {
+                    valid = false;
+                    return 0;
+                }
+                sum += value.size() + static_cast<unsigned char>(value[i % value.size()]);
             }
-            sum += value.size() + static_cast<unsigned char>(value[i % value.size()]);
-        }
-        return sum;
-    });
+            return sum;
+        });
+    }
+    if (!valid)
+    {
+        std::fprintf(stderr, "%s: output length changed during sampling; discard result\n", name);
+    }
+    return valid;
 }
 
-/** 运行本工程的接口性能用例
-@return 输入和结果满足各用例约定时返回0
+/** 核对固定负载的独立预期，并按调用入口选择是否计时
+@param [in] measure 为 true 时测量各接口，为 false 时仅检查功能
+@return 输入和结果满足各用例约定时返回零
 */
-static int RunBenchmarks()
+static int RunBenchmarkScenarios(bool measure)
 {
     const std::string pattern = "abcdefghijklmno! +%";
     std::string input;
@@ -60,12 +81,11 @@ static int RunBenchmarks()
         default: expectedUrl += input[i]; break;
         }
     }
-    if (CStringManager::UrlEncode(input) != expectedUrl || CStringManager::UrlDecode(expectedUrl) != input)
+    if (!CheckByteConversion<CStringManager::UrlEncode>("CStringManager.UrlEncode.4KiB", input, expectedUrl, measure) ||
+        !CheckByteConversion<CStringManager::UrlDecode>("CStringManager.UrlDecode.4KiB-output", expectedUrl, input, measure))
     {
         return 1;
     }
-    MeasureByteConversion<CStringManager::UrlEncode>("CStringManager.UrlEncode.4KiB", input);
-    MeasureByteConversion<CStringManager::UrlDecode>("CStringManager.UrlDecode.4KiB-output", expectedUrl);
     std::string original;
     std::string expectedReplacement;
     for (size_t i = 0; i < 1024; ++i)
@@ -79,16 +99,65 @@ static int RunBenchmarks()
     {
         return 1;
     }
-    LibraryBenchmark::run("CStringManager.ReplaceAll.1024-matches", [&](uint32_t count) -> uint64_t {
+    const std::string from("x"), to("y");
+    CStringManager::ReplaceAll(check, to, from);
+    if (check != original)
+    {
+        return 1;
+    }
+    // 每轮先替换再还原，同一块已分配的文本可供下一轮复用。抽样位置始终是被替换的字节。
+    bool validReplacement = true;
+    const auto roundTrips = [&](uint32_t count) -> uint64_t
+    {
         uint64_t sum = 0;
         for (uint32_t i = 0; i < count; ++i)
         {
-            std::string value(original);
-            CStringManager::ReplaceAll(value, "x", "y");
-            sum += value.size() + static_cast<unsigned char>(value[i % value.size()]);
+            const size_t offset = 2 * (i % 1024);
+            CStringManager::ReplaceAll(check, from, to);
+            if (check.size() != original.size())
+            {
+                validReplacement = false;
+                return 0;
+            }
+            sum += static_cast<unsigned char>(check[offset]);
+            CStringManager::ReplaceAll(check, to, from);
+            if (check.size() != original.size())
+            {
+                validReplacement = false;
+                return 0;
+            }
+            sum += static_cast<unsigned char>(check[offset]);
         }
         return sum;
-    });
+    };
+    if (roundTrips(1) != static_cast<unsigned>('y' + 'x') || check != original)
+    {
+        return 1;
+    }
+    if (measure)
+    {
+        LibraryBenchmark::run("CStringManager.ReplaceAll.1024-matches", [&](uint32_t count) -> uint64_t {
+            uint64_t sum = 0;
+            for (uint32_t i = 0; i < count; ++i)
+            {
+                std::string value(original);
+                CStringManager::ReplaceAll(value, "x", "y");
+                if (value.size() != original.size())
+                {
+                    validReplacement = false;
+                    return 0;
+                }
+                sum += value.size() + static_cast<unsigned char>(value[i % value.size()]);
+            }
+            return sum;
+        });
+        LibraryBenchmark::run("CStringManager.ReplaceAll.in-place.1024-matches", roundTrips, 2);
+        if (!validReplacement || check != original)
+        {
+            std::fputs("ReplaceAll: invalid output during sampling; discard result\n", stderr);
+            return 1;
+        }
+    }
     const std::string block("A/:\0\xff ~?", 8);
     const std::string pathBlock("A/:\0%FF%20~%3F", 14);
     std::string binary;
@@ -100,15 +169,21 @@ static int RunBenchmarks()
         hex += "412f3a00ff207e3f";
         path += pathBlock;
     }
-    if (CStringManager::EncodeUrlPath(binary) != path || CStringManager::StrToHex(binary) != hex ||
-        CStringManager::HexToStr(hex) != binary)
+    if (!CheckByteConversion<CStringManager::EncodeUrlPath>("CStringManager.EncodeUrlPath.4KiB", binary, path, measure) ||
+        !CheckByteConversion<CStringManager::StrToHex>("CStringManager.StrToHex.4KiB", binary, hex, measure) ||
+        !CheckByteConversion<CStringManager::HexToStr>("CStringManager.HexToStr.8KiB", hex, binary, measure))
     {
         return 1;
     }
-    MeasureByteConversion<CStringManager::EncodeUrlPath>("CStringManager.EncodeUrlPath.4KiB", binary);
-    MeasureByteConversion<CStringManager::StrToHex>("CStringManager.StrToHex.4KiB", binary);
-    MeasureByteConversion<CStringManager::HexToStr>("CStringManager.HexToStr.8KiB", hex);
     return 0;
+}
+
+/** 核对性能场景使用的固定输入、预期字节和调用次数，全程不计时
+@return 所有负载的功能检查成功时返回零
+*/
+static int TestBenchmarkInputs()
+{
+    return RunBenchmarkScenarios(false);
 }
 
 std::string CStringManagerTestGrouping::do_grouping() const
@@ -286,10 +361,18 @@ static int TestEncoding()
     check(CStringManager::UrlEncode(bytes) == expected && CStringManager::UrlDecode(expected) == bytes,
         "URL encoding C locale uses uppercase hex for all 256 byte values");
     const std::locale savedNumeric = std::locale::global(std::locale(std::locale::classic(), new CStringManagerTestGrouping));
-    const std::string signed32 = CStringManager::toStringInt32(INT32_MIN);
-    const std::string signed64 = CStringManager::toStringInt64(INT64_MAX);
+    bool numbersMatch = false;
+    try
+    {
+        numbersMatch = CStringManager::toStringInt32(INT32_MIN) == "-2147483648" &&
+            CStringManager::toStringInt64(INT64_MAX) == "9223372036854775807";
+    }
+    catch (const std::exception& error)
+    {
+        std::fprintf(stderr, "Integer conversion under grouped locale: %s\n", error.what());
+    }
     std::locale::global(savedNumeric);
-    check(signed32 == "-2147483648" && signed64 == "9223372036854775807",
+    check(numbersMatch,
         "protocol integers exclude locale grouping separators");
     check(CStringManager::atoi64(" -42tail") == -42 && CStringManager::atoui64("-1") == UINT64_MAX &&
         CStringManager::atoui64("18446744073709551616") == UINT64_MAX, "legacy integer prefix and saturation");
@@ -298,11 +381,25 @@ static int TestEncoding()
         "strict parsers reject embedded NUL followed by more input");
 #ifdef _WIN32
     // 1252 代码页把 0xe9 分类为字母，URL 仍须按同一组 ASCII 规则传输
-    const std::string savedCtype(std::setlocale(LC_CTYPE, nullptr));
+    const char* currentCtype = std::setlocale(LC_CTYPE, nullptr);
+    if (currentCtype == nullptr)
+    {
+        std::fputs("Cannot read LC_CTYPE\n", stderr);
+        return 1;
+    }
+    const std::string savedCtype(currentCtype);
     const bool changed = std::setlocale(LC_CTYPE, ".1252") != nullptr;
-    const std::string encodedHigh = CStringManager::UrlEncode(std::string("x\xe9", 2));
+    bool encodedHigh = false;
+    try
+    {
+        encodedHigh = CStringManager::UrlEncode(std::string("x\xe9", 2)) == "x%E9";
+    }
+    catch (const std::exception& error)
+    {
+        std::fprintf(stderr, "URL encoding under Windows locale: %s\n", error.what());
+    }
     const bool restored = std::setlocale(LC_CTYPE, savedCtype.c_str()) != nullptr;
-    check(changed && restored && encodedHigh == "x%E9", "URL encoding is independent of the ANSI code page");
+    check(changed && restored && encodedHigh, "URL encoding is independent of the ANSI code page");
 #else
     check(CStringManager::Utf8ToUnicode(std::string("ok\xe2\x82", 4)).empty(),
         "truncated UTF-8 does not return the valid prefix");
@@ -550,6 +647,21 @@ static int TestParameterBounds()
         std::cerr << "CopyToBuffer capacity boundary" << std::endl;
         return 1;
     }
+    const std::string binary("A\0B", 3);
+    char exact[] = {'?', '?', '?', '?', '!'};
+    if (CStringManager::CopyToBuffer(binary, nullptr, sizeof(exact)) != 4 ||
+        CStringManager::CopyToBuffer(binary, exact, 4) != 4 || std::memcmp(exact, "A\0B\0!", 5) != 0)
+    {
+        std::cerr << "CopyToBuffer exact capacity with embedded NUL" << std::endl;
+        return 1;
+    }
+    char partial[] = {'?', '?', '!'};
+    if (CStringManager::CopyToBuffer("\xe4\xb8\xad", partial, 2) != 4 ||
+        std::memcmp(partial, "\xe4\0!", 3) != 0)
+    {
+        std::cerr << "CopyToBuffer truncates UTF-8 by byte" << std::endl;
+        return 1;
+    }
     std::string edited("aba");
     if (CStringManager::Find(edited, 'a', 1) != 2 || CStringManager::Find(edited, "a", 3) != std::string::npos ||
         CStringManager::ReserveFind(edited, 'a') != 2 || CStringManager::GetLength(edited) != 3 ||
@@ -582,9 +694,54 @@ static int TestParameterBounds()
     const uint8_t bom[] = {0xff, 0xfe};
     const std::vector<uint8_t> marker(bom, bom + 2);
     std::vector<uint8_t> bytes;
-    return CStringManager::utf16LeToWide(marker, text) && text.empty() &&
-        CStringManager::wideToUtf16Le(text, bytes) && bytes == marker &&
-        CStringManager::wideToUtf16Le(text, bytes, false) && bytes.empty() ? 0 : 1;
+    if (!CStringManager::utf16LeToWide(marker, text) || !text.empty() ||
+        !CStringManager::wideToUtf16Le(text, bytes) || bytes != marker ||
+        !CStringManager::wideToUtf16Le(text, bytes, false) || !bytes.empty())
+    {
+        std::cerr << "Empty UTF-16 stream with and without BOM" << std::endl;
+        return 1;
+    }
+    const uint8_t wire[] = {0xff, 0xfe, 0xff, 0xfe, 0xff, 0xd7, 0x00, 0xe0,
+        0x00, 0xd8, 0x00, 0xdc, 0xff, 0xdb, 0xff, 0xdf};
+    const std::vector<uint8_t> expectedBytes(wire, wire + sizeof(wire));
+    std::wstring expectedText(1, static_cast<wchar_t>(0xfeff));
+    expectedText.push_back(static_cast<wchar_t>(0xd7ff));
+    expectedText.push_back(static_cast<wchar_t>(0xe000));
+#if WCHAR_MAX <= 0xffff
+    expectedText.push_back(static_cast<wchar_t>(0xd800));
+    expectedText.push_back(static_cast<wchar_t>(0xdc00));
+    expectedText.push_back(static_cast<wchar_t>(0xdbff));
+    expectedText.push_back(static_cast<wchar_t>(0xdfff));
+#else
+    expectedText.push_back(static_cast<wchar_t>(0x10000));
+    expectedText.push_back(static_cast<wchar_t>(0x10ffff));
+#endif
+    if (!CStringManager::wideToUtf16Le(expectedText, bytes) || bytes != expectedBytes ||
+        !CStringManager::utf16LeToWide(expectedBytes, text) || text != expectedText ||
+        !CStringManager::wideToUtf16Le(expectedText, bytes, false) ||
+        bytes != std::vector<uint8_t>(expectedBytes.begin() + 2, expectedBytes.end()) ||
+        !CStringManager::utf16LeToWide(bytes, text) || text != expectedText.substr(1))
+    {
+        std::cerr << "UTF-16 text BOM and scalar boundaries" << std::endl;
+        return 1;
+    }
+    const std::vector<uint8_t> savedBytes(bytes);
+    std::wstring invalidText(L"valid prefix");
+    invalidText.push_back(static_cast<wchar_t>(0xd800));
+    if (CStringManager::wideToUtf16Le(invalidText, bytes) || bytes != savedBytes)
+    {
+        std::cerr << "Trailing high surrogate changed output" << std::endl;
+        return 1;
+    }
+#if WCHAR_MAX > 0xffff
+    invalidText.back() = static_cast<wchar_t>(0x110000);
+    if (CStringManager::wideToUtf16Le(invalidText, bytes, false) || bytes != savedBytes)
+    {
+        std::cerr << "Out-of-range Unicode scalar changed output" << std::endl;
+        return 1;
+    }
+#endif
+    return 0;
 }
 
 /** 转发两次同一份参数表；可能覆盖借用源的调用放在最后
@@ -624,11 +781,38 @@ static int TestForwardedArguments()
     return a.empty() && b.empty() && c.empty() && d.empty() ? 0 : 1;
 }
 
+/** 执行所选用例，报告标准库异常，使后续独立用例仍能运行
+@param [in] item 本平台已登记的用例
+@return 用例状态，发生异常返回 1
+*/
+static int RunSelectedCase(const LibraryTestCase& item)
+{
+    try
+    {
+        return item.run();
+    }
+    catch (const std::exception& error)
+    {
+        std::fprintf(stderr, "case %u: %s\n", item.id, error.what());
+    }
+    catch (...)
+    {
+        std::fprintf(stderr, "case %u: unexpected exception\n", item.id);
+    }
+    return 1;
+}
+
+/** 按控制台参数选择功能或计时入口
+@param [in] argc 参数数量
+@param [in] argv 参数数组
+@return 成功为 0，用例失败为 1，选择无效为 2
+*/
 int main(int argc, char** argv)
+try
 {
     if (argc == 2 && std::strcmp(argv[1], "--benchmark") == 0)
     {
-        return RunBenchmarks();
+        return RunBenchmarkScenarios(true);
     }
     const LibraryTestCase cases[] = {
         {kCaseStrings, false, TestStrings},
@@ -643,6 +827,7 @@ int main(int argc, char** argv)
         {kCaseParameterBounds, false, TestParameterBounds},
         {kCaseForwardedArguments, false, TestForwardedArguments},
         {kCaseReplaceAll, false, TestReplaceAll},
+        {kCaseBenchmarkInputs, false, TestBenchmarkInputs},
     };
 #if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
     // 全量先完成瞬时用例，再执行并发压力；指定编号仍按 ID 升序调度。
@@ -651,11 +836,21 @@ int main(int argc, char** argv)
         char instant[] = "--instant";
         char stress[] = "--stress";
         char* selection[] = {argv[0], instant, nullptr};
-        const int instantResult = LibraryCaseSelection::run(2, selection, cases);
+        const int instantResult = LibraryCaseSelection::run(2, selection, cases, RunSelectedCase);
         selection[1] = stress;
-        const int stressResult = LibraryCaseSelection::run(2, selection, cases);
+        const int stressResult = LibraryCaseSelection::run(2, selection, cases, RunSelectedCase);
         return instantResult != 0 ? instantResult : stressResult;
     }
 #endif
-    return LibraryCaseSelection::run(argc, argv, cases);
+    return LibraryCaseSelection::run(argc, argv, cases, RunSelectedCase);
+}
+catch (const std::exception& error)
+{
+    std::fprintf(stderr, "CStringManagerTest: %s\n", error.what());
+    return 1;
+}
+catch (...)
+{
+    std::fputs("CStringManagerTest: unexpected exception\n", stderr);
+    return 1;
 }
