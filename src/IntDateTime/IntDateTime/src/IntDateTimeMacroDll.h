@@ -10,6 +10,6 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define IntDateTimeAPI __attribute__ ((visibility("default")))
     #else
-        #define IntDateTimeAPI
+        #define IntDateTimeAPI 
     #endif
 #endif
