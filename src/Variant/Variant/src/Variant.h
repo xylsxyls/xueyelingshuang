@@ -125,7 +125,7 @@ public:
     Variant(const std::string& value);
 
     /** 按指定类型解释文本或恢复原始序列化字节；非法类型/宽度为INIT
-    @param [in] data 本次借用且携带完整长度；isBlob=false时数字沿用C文本转换
+    @param [in] data 本次借用且携带完整长度；文本 INT32 读取十进制前缀，超界饱和为 INT32_MIN/MAX；DOUBLE 支持标准小数点及运行时本地小数点
     @param [in] type 结果类型；不会因为isBlob=true而统一变为BLOB
     @param [in] isBlob false时STRING在首个\0处截断，BLOB仍复制全部字节；true用于反序列化，
         数字校验固定宽度，STRING/BLOB均按长度原样恢复，允许内部\0且不校验文本编码

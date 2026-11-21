@@ -10,7 +10,7 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define VariantAPI __attribute__ ((visibility("default")))
     #else
-        #define VariantAPI
+        #define VariantAPI 
     #endif
 #endif
 
