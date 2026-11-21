@@ -1,5 +1,8 @@
 ﻿#pragma once
 #include "SharedMemoryMacro.h"
+#ifndef _WIN32
+#include <atomic>
+#endif
 #include <stdint.h>
 #include <string>
 #ifdef __APPLE__
@@ -16,18 +19,18 @@ class SharedMemoryAPI SharedMemory
 {
 public:
     /** 设置命名映射目录；必须在本进程首次命名IPC前由初始化线程调用
-    Android使用应用私有共享目录，iOS使用App Group容器中的专用目录，目录须已存在
+    Android使用应用私有共享目录，iOS使用App Group容器中的专用目录；目录须已存在且归当前有效用户所有
     POSIX桌面默认空值使用shm_open，也可显式选择目录；Windows仅接受空值
     配置成功后引用该目录本身。目录改名或原路径被重新创建时，后续映射仍使用原目录
     文件仅作为mmap数据后备，不加文件锁；调用方不得删除或截短正在使用的文件
     @param [in] directory 绝对路径，不含NUL；移动端不允许空值
-    @return 配置有效为true，已启用后更换目录或权限不允许为false
+    @return 目录配置被接受时为true，创建或打开对象的具体访问权限在使用时检查
     */
     static bool setProcessDirectory(const std::string& directory);
 
     /** 创建或打开内存；size为0只打开，不创建不存在对象
-    @param [in] name 逻辑名称；创建时空名表示匿名内存；跨桌面可移植名称不超过30字节且无斜杠/NUL
-    @param [in] size 创建容量，0只打开
+    @param [in] name 逻辑名称；非零容量时空名表示匿名；建议用 1 至 30 字节 ASCII 字母和数字，POSIX 排除斜杠、单点及双点，所有平台排除 NUL
+    @param [in] size 请求的容量（字节），非零时创建或加入；0 只打开
     @param [in] isAllowExist 是否允许加入既有对象；false 碰撞明确失败，true 加入时须获读写权限并能映射请求容量
     */
     SharedMemory(const std::string& name, uint32_t size = 0, bool isAllowExist = true);
@@ -47,7 +50,7 @@ public:
     */
     uint32_t size();
 
-    /** 实际映射容量。Windows 按页取整，并包含同一视图中不同保护属性的区域
+    /** 实际后备容量（字节）。Windows 含同一视图中不同保护区域；Windows 和 macOS 默认命名后备可按页取整
     @return 无效或容量无法用 uint32_t 表示时返回 0
     */
     uint32_t realSize();
@@ -94,6 +97,7 @@ public:
     只影响POSIX析构撤名；仍正常解除映射和关闭描述符。Windows不需要撤名
     */
     void preserveName();
+
 private:
     /** 禁止复制资源
     @param [in] other 不可复制实例
@@ -110,9 +114,61 @@ private:
     @param [in] readOnly 是否只需读权限
     */
     void open(bool readOnly);
+
+#ifdef _WIN32
+    /** 打开命名映射，优先保留独立只读视图的能力
+    @param [in] readOnly 是否只请求读取现有数据
+    @return 调用者负责关闭的句柄，权限不足或对象不存在时返回空
+    */
+    void* openMappingHandle(bool readOnly) const;
+
+    /** 从现有句柄映射可读数据，优先取得只读视图
+    @return 须由调用者解除的视图，无法映射时返回空
+    */
+    void* mapReadableView() const;
+
+    /** 累计同一视图中连续的区域，达到所需长度即结束
+    @param [in] view 从偏移零开始映射的视图基址
+    @param [in] required 至少需要核对的字节数
+    @param [in] writableOnly 只累计已提交且可写的连续区域
+    @return 通过核对的区域总字节数，最后一个区域可以超过所需长度
+    */
+    static uint64_t windowsViewBytes(void* view, uint64_t required, bool writableOnly);
+#else
+    /** 释放进程配置持有的目录引用，切换后备或退出时调用
+    */
+    static void closeProcessDirectory();
+
+#if !defined(__EMSCRIPTEN__)
+    /** 打开或排他创建命名后备；文件类型由调用者在取得描述符后验证
+    @param [in] flags 读写权限及创建标志
+    @return 调用者负责关闭的描述符，失败时返回 -1 并保留 errno
+    */
+    int openSharedObject(int flags) const;
+
+    /** 查询已打开后备的可表示容量，目录后备还须为普通文件
+    @return 可映射的字节数，空对象、类型错误、查询失败或溢出时为 0
+    */
+    uint32_t sharedObjectCapacity() const;
+#endif
+
+    /** 复用或建立与当前描述符权限相符的视图
+    @param [in] protection mmap 的 PROT_READ 或 PROT_READ | PROT_WRITE
+    @return 借用的视图地址，close 后失效；无有效容量或映射失败时返回 nullptr
+    */
+    void* mapPosixView(int protection);
+#endif
+
 private:
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4251)
+#endif
     // 调用方指定的逻辑名，空值表示匿名
     std::string m_memoryName;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
     // 构造时请求的字节数，只打开对象时为0
     uint32_t m_size;
     // 最近成功请求的映射视图，close后失效
@@ -125,6 +181,10 @@ private:
     // Windows独立读写视图
     void* m_writeMemoryPtr;
 #else
+    // 全进程持有的后备目录，-1 表示尚未选择目录
+    static int m_processDirectoryDescriptor;
+    // 首次有效命名请求后封存目录配置
+    static std::atomic<bool> m_processDirectorySealed;
     // POSIX映射后备描述符，未取得时为-1
     int32_t m_descriptor;
     // 后备描述符仅有读权限，禁止从该实例取得可写视图
