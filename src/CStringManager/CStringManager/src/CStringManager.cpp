@@ -8,7 +8,6 @@
 #include <cstring>
 #include <cstdlib>
 #include <cwctype>
-#include <new>
 #include <sstream>
 #include <cmath>
 #include <locale>
@@ -197,8 +196,14 @@ size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight
     {
         for (size_t i = nSelect + 1; i < str.size(); ++i)
         {
-            if (str[i] == cLeft) { ++depth; }
-            else if (str[i] == cRight && --depth == 0) { return i; }
+            if (str[i] == cLeft)
+            {
+                ++depth;
+            }
+            else if (str[i] == cRight && --depth == 0)
+            {
+                return i;
+            }
         }
     }
     else
@@ -206,8 +211,14 @@ size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight
         for (size_t i = nSelect; i > 0;)
         {
             const char current = str[--i];
-            if (current == cRight) { ++depth; }
-            else if (current == cLeft && --depth == 0) { return i; }
+            if (current == cRight)
+            {
+                ++depth;
+            }
+            else if (current == cLeft && --depth == 0)
+            {
+                return i;
+            }
         }
     }
     return std::string::npos;
@@ -220,7 +231,7 @@ size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight
 @return 按输入顺序排列的字段
 */
 template<class String, class Separator>
-static std::vector<String> splitFields(const String& text, const Separator& separator, size_t width)
+static std::vector<String> SplitFields(const String& text, const Separator& separator, size_t width)
 {
     std::vector<String> fields;
     if (width == 0)
@@ -248,23 +259,29 @@ static std::vector<String> splitFields(const String& text, const Separator& sepa
 
 std::vector<std::string> CStringManager::split(const std::string& splitString, const std::string& separate_character)
 {
-    return splitFields(splitString, separate_character, separate_character.size());
+    return SplitFields(splitString, separate_character, separate_character.size());
 }
 
 std::vector<std::wstring> CStringManager::split(const std::wstring& splitString, const std::wstring& separate_character)
 {
-    return splitFields(splitString, separate_character, separate_character.size());
+    return SplitFields(splitString, separate_character, separate_character.size());
 }
 
 void CStringManager::split(std::vector<std::string>& result, const std::string& splitString, char separate_character)
 {
-    splitFields(splitString, separate_character, 1).swap(result);
+    SplitFields(splitString, separate_character, 1).swap(result);
 }
 
 void CStringManager::ReplaceAll(std::string& str, const std::string& old_value, const std::string& new_value)
 {
-    if (old_value.empty())
+    if (old_value.empty() || old_value == new_value)
     {
+        return;
+    }
+    if (&str == &old_value)
+    {
+        // 整个目标恰好匹配一次；缩短或等长替换都无法再匹配原来的整串。
+        str = new_value;
         return;
     }
     if (old_value.size() == 1 && new_value.size() == 1)
@@ -272,18 +289,12 @@ void CStringManager::ReplaceAll(std::string& str, const std::string& old_value, 
         Replace(str, old_value[0], new_value[0]);
         return;
     }
-    if (&str == &old_value || &str == &new_value)
-    {
-        const std::string oldCopy(old_value);
-        const std::string newCopy(new_value);
-        ReplaceAll(str, oldCopy, newCopy);
-        return;
-    }
-    if (new_value.size() > old_value.size() || new_value == old_value)
+    if (new_value.size() > old_value.size())
     {
         Replace(str, old_value, new_value);
         return;
     }
+    // 此处若 new_value 就是目标，旧模式至少与目标等长且内容不同，find 必然失败。
     size_t position = str.find(old_value);
     while (position != std::string::npos)
     {
@@ -370,32 +381,43 @@ size_t CStringManager::Insert(std::string& str, size_t offset, char ch)
 	return str.insert(offset, &ch, 1).length();
 }
 
+/** 按从左到右的顺序替换非重叠匹配，跳过刚写入的内容
+@param [in,out] str 待编辑的窄或宽字符串
+@param [in] oldstr 匹配文本，可借用 str；空串不匹配
+@param [in] newstr 替换文本，可借用 str
+@return 完成替换的次数
+*/
+template<class String>
+static size_t ReplaceMatches(String& str, const String& oldstr, const String& newstr)
+{
+    if (oldstr.empty())
+    {
+        return 0;
+    }
+    if (&str == &oldstr)
+    {
+        str = newstr;
+        return 1;
+    }
+    if (&str == &newstr)
+    {
+        const String replacement(newstr);
+        return ReplaceMatches(str, oldstr, replacement);
+    }
+    size_t count = 0;
+    size_t pos = str.find(oldstr);
+    while (pos != String::npos)
+    {
+        str.replace(pos, oldstr.size(), newstr);
+        ++count;
+        pos = str.find(oldstr, pos + newstr.size());
+    }
+    return count;
+}
+
 size_t CStringManager::Replace(std::string& str, const std::string& oldstr, const std::string& newstr)
 {
-	if (oldstr.empty())
-	{
-		return 0;
-	}
-    if (&str == &oldstr || &str == &newstr)
-    {
-        const std::string pattern(oldstr);
-        const std::string replacement(newstr);
-        return Replace(str, pattern, replacement);
-    }
-	size_t count = 0;
-	size_t pos = 0;
-	while (true)
-	{
-		pos = str.find(oldstr, pos);
-		if (pos == std::string::npos)
-		{
-			break;
-		}
-		str.replace(pos, oldstr.length(), newstr);
-		pos += newstr.length();
-		++count;
-	}
-	return count;
+    return ReplaceMatches(str, oldstr, newstr);
 }
 
 std::string CStringManager::Replace(const char* str, const std::string& oldstr, const std::string& newstr)
@@ -411,30 +433,7 @@ std::string CStringManager::Replace(const char* str, const std::string& oldstr, 
 
 size_t CStringManager::Replace(std::wstring& str, const std::wstring& oldstr, const std::wstring& newstr)
 {
-	if (oldstr.empty())
-	{
-		return 0;
-	}
-    if (&str == &oldstr || &str == &newstr)
-    {
-        const std::wstring pattern(oldstr);
-        const std::wstring replacement(newstr);
-        return Replace(str, pattern, replacement);
-    }
-	size_t count = 0;
-	size_t pos = 0;
-	while (true)
-	{
-		pos = str.find(oldstr, pos);
-		if (pos == std::wstring::npos)
-		{
-			break;
-		}
-		str.replace(pos, oldstr.length(), newstr);
-		pos += newstr.length();
-		++count;
-	}
-	return count;
+    return ReplaceMatches(str, oldstr, newstr);
 }
 
 size_t CStringManager::Replace(std::string& str, char ch1, char ch2)
@@ -453,24 +452,9 @@ size_t CStringManager::Replace(std::string& str, char ch1, char ch2)
 
 void CStringManager::Format(std::string& str, const char* fmt, ...)
 {
-    if (fmt == nullptr)
-    {
-        str.clear();
-        return;
-    }
     va_list args;
     va_start(args, fmt);
-    try
-    {
-        // fmt及%s参数可能借用str，格式化完成前不得resize或清空原输出。
-        std::string output;
-        formatNarrowArguments(output, fmt, args);
-        str.swap(output);
-    }
-    catch (...)
-    {
-        str.clear();
-    }
+    formatV(str, fmt, args);
     va_end(args);
 }
 
@@ -497,23 +481,9 @@ std::string CStringManager::Format(const char* fmt, ...)
 
 void CStringManager::Format(std::wstring& str, const wchar_t* fmt, ...)
 {
-    if (fmt == nullptr)
-    {
-        str.clear();
-        return;
-    }
     va_list args;
     va_start(args, fmt);
-    try
-    {
-        std::wstring output;
-        formatWideArguments(output, fmt, args);
-        str.swap(output);
-    }
-    catch (...)
-    {
-        str.clear();
-    }
+    formatV(str, fmt, args);
     va_end(args);
 }
 
@@ -561,10 +531,6 @@ void CStringManager::MakeReverse(std::string& str)
 std::string CStringManager::MakeUpper(const std::string& src)
 {
 	std::string dst;
-#if defined _MSC_VER && (_MSC_VER < 1800)
-	return dst;
-#endif
-	//如果dst是有值的话则第三个参数传dst.begin()，从头开始覆盖
 	std::transform(src.begin(), src.end(), std::back_inserter(dst),
 		[](unsigned char ch) { return static_cast<char>(std::toupper(ch)); });
 	return dst;
@@ -573,9 +539,6 @@ std::string CStringManager::MakeUpper(const std::string& src)
 std::string CStringManager::MakeLower(const std::string& src)
 {
 	std::string dst;
-#if defined _MSC_VER && (_MSC_VER < 1800)
-	return dst;
-#endif
 	std::transform(src.begin(), src.end(), std::back_inserter(dst),
 		[](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
 	return dst;
@@ -584,9 +547,6 @@ std::string CStringManager::MakeLower(const std::string& src)
 std::wstring CStringManager::MakeUpper(const std::wstring& src)
 {
 	std::wstring dst;
-#if defined _MSC_VER && (_MSC_VER < 1800)
-	return dst;
-#endif
 	std::transform(src.begin(), src.end(), std::back_inserter(dst),
 		[](wchar_t ch) { return static_cast<wchar_t>(::towupper(ch)); });
 	return dst;
@@ -595,9 +555,6 @@ std::wstring CStringManager::MakeUpper(const std::wstring& src)
 std::wstring CStringManager::MakeLower(const std::wstring& src)
 {
 	std::wstring dst;
-#if defined _MSC_VER && (_MSC_VER < 1800)
-	return dst;
-#endif
 	std::transform(src.begin(), src.end(), std::back_inserter(dst),
 		[](wchar_t ch) { return static_cast<wchar_t>(::towlower(ch)); });
 	return dst;
@@ -612,7 +569,7 @@ std::string CStringManager::GetMidString(const std::string& src, const std::stri
 	}
 	size_t begin = left + leftString.size();
 	size_t right = src.find(rightString, begin);
-	if (right == std::string::npos || right < begin)
+	if (right == std::string::npos)
 	{
 		return "";
 	}
@@ -717,14 +674,20 @@ std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
 #elif defined(__unix__) || defined(__APPLE__)
     try
     {
-        if (wstrSrc.empty()) return "";
+        if (wstrSrc.empty())
+        {
+            return "";
+        }
         const std::locale locale = createAnsiLocale();
         const std::codecvt<wchar_t, char, std::mbstate_t>& converter =
             std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(locale);
         std::string result;
         const int32_t maximum = converter.max_length();
         // GBK每个宽字符最多maximum字节，额外预留一次结束转换的空间；先检查乘法溢出。
-        if (maximum <= 0 || wstrSrc.size() >= result.max_size() / static_cast<size_t>(maximum)) return "";
+        if (maximum <= 0 || wstrSrc.size() >= result.max_size() / static_cast<size_t>(maximum))
+        {
+            return "";
+        }
         result.resize((wstrSrc.size() + 1) * static_cast<size_t>(maximum));
         std::mbstate_t state = {};
         const wchar_t* inputEnd = wstrSrc.data() + wstrSrc.size();
@@ -732,10 +695,16 @@ std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
         char* outputNext = &result[0];
         char* outputEnd = &result[0] + result.size();
         if (converter.out(state, wstrSrc.data(), inputEnd, inputNext, &result[0], outputEnd, outputNext) !=
-            std::codecvt_base::ok || inputNext != inputEnd) return "";
+            std::codecvt_base::ok || inputNext != inputEnd)
+        {
+            return "";
+        }
         char* finalNext = outputNext;
         const std::codecvt_base::result ending = converter.unshift(state, outputNext, outputEnd, finalNext);
-        if (ending != std::codecvt_base::ok && ending != std::codecvt_base::noconv) return "";
+        if (ending != std::codecvt_base::ok && ending != std::codecvt_base::noconv)
+        {
+            return "";
+        }
         result.resize(static_cast<size_t>(finalNext - &result[0]));
         return result;
     }
@@ -755,7 +724,10 @@ std::wstring CStringManager::AnsiToUnicode(const std::string& strSrc)
 #elif defined(__unix__) || defined(__APPLE__)
     try
     {
-        if (strSrc.empty()) return L"";
+        if (strSrc.empty())
+        {
+            return L"";
+        }
         const std::locale locale = createAnsiLocale();
         const std::codecvt<wchar_t, char, std::mbstate_t>& converter =
             std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(locale);
@@ -766,7 +738,10 @@ std::wstring CStringManager::AnsiToUnicode(const std::string& strSrc)
         const char* inputNext = strSrc.data();
         wchar_t* outputNext = &result[0];
         if (converter.in(state, strSrc.data(), inputEnd, inputNext, &result[0], &result[0] + result.size(), outputNext) !=
-            std::codecvt_base::ok || inputNext != inputEnd) return L"";
+            std::codecvt_base::ok || inputNext != inputEnd)
+        {
+            return L"";
+        }
         result.resize(static_cast<size_t>(outputNext - &result[0]));
         return result;
     }
@@ -839,7 +814,7 @@ std::wstring CStringManager::Utf8ToUnicode(const std::string& strSrc)
 @return 使用大写十六进制数字的编码结果
 */
 template<bool preservePath>
-static std::string encodeUrlBytes(const std::string& sIn)
+static std::string EncodeUrlBytes(const std::string& sIn)
 {
     std::string output;
     output.reserve(sIn.size());
@@ -872,12 +847,12 @@ static std::string encodeUrlBytes(const std::string& sIn)
 
 std::string CStringManager::UrlEncode(const std::string& sIn)
 {
-    return encodeUrlBytes<false>(sIn);
+    return EncodeUrlBytes<false>(sIn);
 }
 
 std::string CStringManager::EncodeUrlPath(const std::string& path)
 {
-    return encodeUrlBytes<true>(path);
+    return EncodeUrlBytes<true>(path);
 }
 
 void CStringManager::EncodeUnicodeUrl(std::wstring& path)
@@ -1013,7 +988,7 @@ std::wstring CStringManager::convertWindowsBytes(const std::string& source, uint
 #if CSTRING_MANAGER_HAS_ANSI && !defined(_WIN32)
 std::locale CStringManager::createAnsiLocale()
 {
-    // locale拥有facet，通过标准库释放；不再为公开析构权限单独派生辅助类。
+    // locale 接管 facet 并在最后一份引用销毁时释放
     return std::locale(std::locale::classic(), new std::codecvt_byname<wchar_t, char, std::mbstate_t>("zh_CN.GBK"));
 }
 #endif
@@ -1037,12 +1012,6 @@ int CStringManager::CharToHex(char digit)
 
 void CStringManager::formatNarrowArguments(std::string& output, const char* format, va_list arguments)
 {
-    if (format == nullptr)
-    {
-        output.clear();
-        return;
-    }
-
     va_list copy;
 #ifdef _WIN32
     copy = arguments;
@@ -1076,12 +1045,6 @@ void CStringManager::formatNarrowArguments(std::string& output, const char* form
 
 void CStringManager::formatWideArguments(std::wstring& output, const wchar_t* format, va_list arguments)
 {
-    if (format == nullptr)
-    {
-        output.clear();
-        return;
-    }
-
     va_list copy;
 #ifdef _WIN32
     copy = arguments;
@@ -1132,8 +1095,6 @@ void CStringManager::formatWideArguments(std::wstring& output, const wchar_t* fo
 }
 
 // 使用示例：在本翻译单元末尾启用以下 main，单独构建控制台程序
-// #include <cstdio>
-//
 // int main()
 // {
 //     const std::string title = "Track(01)";
@@ -1176,6 +1137,11 @@ void CStringManager::formatWideArguments(std::wstring& output, const wchar_t* fo
 //     {
 //         return 3;
 //     }
+//     std::string displayName = path;
+//     if (CStringManager::Replace(displayName, displayName, "Live recording") != 1 || displayName != "Live recording")
+//     {
+//         return 4;
+//     }
 //     std::string message;
 //     CStringManager::Format(message, "%s [%s]", uri.c_str(), tags.front().c_str());
 //     std::wstring formatted;
@@ -1183,6 +1149,11 @@ void CStringManager::formatWideArguments(std::wstring& output, const wchar_t* fo
 //     char buffer[64] = {};
 //     const size_t required = CStringManager::CopyToBuffer(message, buffer, sizeof(buffer));
 //     std::printf("%s\n", buffer);
+//     if (CStringManager::Find(path, '.', 0) != 8 || CStringManager::CharToHex('F') != 15 ||
+//         CStringManager::MakeLower(CStringManager::MakeUpper(std::wstring(L"wav"))) != L"wav")
+//     {
+//         return 4;
+//     }
 //     return fields.size() == 3 && wideTags.size() == 2 && path == "sample01.wav" &&
 //         CStringManager::UrlDecode(uri) == path && formatted == caption &&
 //         CStringManager::GetLength(message) + 1 == required && reversed == "10elpmas" &&

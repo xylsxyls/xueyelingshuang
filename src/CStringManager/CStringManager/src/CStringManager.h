@@ -21,6 +21,7 @@
 #endif
 
 /** 字符串工具集合，提供切分、查找、替换、格式化、大小写、编码转换和URL编解码等通用能力
+所有操作同步完成；输入只借用到返回，结果由调用方持有，本类无实例状态或共享内存池
 Android、iOS和Wasm使用UTF8接口，ANSI转换仅在CSTRING_MANAGER_HAS_ANSI为1时公开
 */
 class CStringManagerAPI CStringManager
@@ -29,9 +30,8 @@ public:
     /** 按容量复制字符串并补NUL，支持先查询完整缓冲区大小
     @param [in] value 输入字节串，按字节截断，不保证截断后UTF-8字符完整
     @param [out] buffer 输出缓冲区，可空；允许与value重叠，调用方须保证目标范围可写
-    @param [in] capacity 缓冲区容量，0时不写入；非0时最多写capacity-1字节并补NUL
+    @param [in] capacity 可写字节数；buffer 为空或容量为 0 时只查询，否则最多写 capacity-1 字节并补 NUL
     @return 完整字节数加1（包含NUL），与实际截断长度无关
-    @note 缓冲区可与源字符串现有的可写字符区域重叠，调用方须保证 capacity 字节可写。
     */
     static size_t CopyToBuffer(const std::string& value, char* buffer, size_t capacity);
 
@@ -52,7 +52,7 @@ public:
 	static std::vector<std::string> split(const std::string& splitString, const std::string& separate_character);
 
 	/** 按字符分隔符切分字符串，保留空字段
-	@param [in] result 输出切分后的字符串列表
+	@param [out] result 输出切分后的字符串列表
 	@param [in] splitString 要切分的字符串
 	@param [in] separate_character 分隔符字符
 	*/
@@ -65,8 +65,8 @@ public:
 	*/
 	static std::vector<std::wstring> split(const std::wstring& splitString, const std::wstring& separate_character);
 
-	/** 替换所有匹配，增长替换仅扫描原输入一遍
-    长度相同或缩短时重新检查跨边界匹配。增长时跳过已插入的内容，确保调用终止。
+	/** 替换所有匹配；增长时仅处理原输入中的非重叠匹配
+	旧模式为空或替换前后内容相同时直接返回。其他等长或缩短替换重新检查跨边界匹配
 	@param [in,out] str 被修改的字符串
 	@param [in] old_value 要替换的旧字符串
 	@param [in] new_value 替换后的新字符串
@@ -440,14 +440,14 @@ public:
 private:
     /** 将窄格式结果写入独立临时存储，由公开入口处理异常和别名
     @param [out] output 不与格式或实参重叠的临时结果
-    @param [in] format 目标CRT支持的可信格式，允许空指针
+    @param [in] format 目标CRT支持的非空可信格式
     @param [in] arguments 借用的参数表，各次CRT调用均复制并配对va_end
     */
     static void formatNarrowArguments(std::string& output, const char* format, std::va_list arguments);
 
     /** 将宽格式结果写入独立临时存储，按需扩容并保留原参数表
     @param [out] output 不与格式或实参重叠的临时结果
-    @param [in] format 目标CRT支持的可信宽格式，允许空指针
+    @param [in] format 目标CRT支持的非空可信宽格式
     @param [in] arguments 借用的参数表，各次CRT调用均复制并配对va_end
     */
     static void formatWideArguments(std::wstring& output, const wchar_t* format, std::va_list arguments);
