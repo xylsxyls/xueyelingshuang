@@ -229,7 +229,7 @@ public:
     static POINT screenCenterPoint();
 
     /** 将字符串写入到剪贴板
-    @param [in] hWnd 打开剪贴板时使用的窗口句柄
+    @param [in] hWnd 有效的所有者窗口句柄，传空时直接返回
     @param [in] str 要写入剪贴板的Ansi字符串
     @note 支持平台 Windows
     */
@@ -281,8 +281,8 @@ public:
     */
     static void RecoveryRedir(void* oldValue);
 
-    /** 获取去除任务栏后的可见屏幕高度
-    @return 返回工作区可见高度
+    /** 读取主显示器全屏窗口的客户区高度指标
+    @return 返回 GetSystemMetrics(SM_CYFULLSCREEN) 的像素值
     @note 支持平台 Windows
     */
     static int GetVisibleHeight();
@@ -344,7 +344,7 @@ public:
 
     /** 获取指定进程挂载的动态库列表
     @param [in] pid 进程ID
-    @return 返回动态库路径列表，第一个通常是exe路径，空列表表示失败
+    @return 返回模块文件名列表（含可执行模块），各项不含目录；枚举失败可返回空列表
     @note 支持平台 Windows
     */
     static std::vector<std::string> processMountDll(uint32_t pid);
@@ -406,7 +406,7 @@ public:
     static int GetSystemBits();
 
     /** 获取当前系统用户名
-    @return 返回当前登录用户名，例如Administrator
+    @return Windows 返回调用线程的用户名，POSIX 先按进程真实用户 ID 查询，无法取得时返回空串
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static std::string GetSysUserName();
@@ -568,7 +568,7 @@ public:
     static uint32_t SystemThreadId();
 
     /** 获取CPU硬件线程数
-    @return 返回系统可用CPU线程数，适合作为纯计算线程池的默认规模
+    @return 返回系统报告的硬件线程数，原生 POSIX 实现无法提供时可为 0
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static int32_t GetCPUCoreCount();
@@ -823,7 +823,7 @@ public:
 
 #if CSYSTEM_HAS_NATIVE_API
     /** 删除文件或空目录
-    @param [in] path 文件或目录路径，Windows下只删除文件，Linux下可删除文件或空目录
+    @param [in] path 文件或目录路径，Windows 下只删除文件，POSIX 原生端也可删除空目录
     @return 返回是否删除成功
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
@@ -869,8 +869,8 @@ public:
 
     /** 读取普通文件的字节数与修改标记，拒绝符号链接和重解析点
     @param [in] path 完整UTF8路径
-    @param [out] bytes 不可空，失败清零
-    @param [out] stamp 不可空，仅用于比较修改前后，不作为跨平台UTC时间
+    @param [out] bytes 字节数，须与 stamp 指向不同对象，失败时清零所有已提供的输出
+    @param [out] stamp 修改标记，两个输出均不可空，仅供比较，不作为跨平台 UTC 时间
     @return 成功返回true
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
@@ -893,7 +893,7 @@ public:
     static bool closeBinaryOutputFile(FILE* file);
 
     /** 删除文件或空目录，支持Windows宽字符路径
-    @param [in] path 文件或目录路径，Windows下只删除文件，Linux下可删除文件或空目录
+    @param [in] path 文件或目录路径，Windows 下只删除文件，POSIX 原生端也可删除空目录
     @return 返回是否删除成功
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
@@ -971,9 +971,9 @@ public:
     static void saveFile(const std::string& content, const std::string& path);
 
     /** 查找文件，内部没有禁止路径重定向
-    @param [in] strPath 必须传文件夹路径，寻找文件夹以下，如果传空字符串则查找exe所在路径，带不带\都可以
+    @param [in] strPath 根目录，可省略末尾分隔符，空串表示当前可执行文件所在目录
     @param [in] flag 1表示查找文件，2表示查找文件后缀名，3表示查找所有文件，fileStr不起作用
-    @param [in] fileStr 传文件名带后缀名或后缀名不带点，多个后缀名点分隔，如果填2传空或分隔后有空字符串则会搜索不含后缀名的文件，不查找文件夹
+    @param [in] fileStr 传文件名带后缀名或后缀名不带点，多个后缀名点分隔，模式 2 保留空字段以匹配无后缀文件。后缀取实际目录项最后一个点之后的字节
     @param [in] EveryFilePath 在每添加一个文件路径之前调用此函数，返回true表示中断搜索，继续搜索返回false
     @param [in] unVisitPath 非空时清空并收集未能打开的目录；传空跳过记录
     @return 按遍历次序返回匹配路径；传相对根目录时结果也可以是相对路径
@@ -985,7 +985,7 @@ public:
         const std::function<bool (const std::string&)>& EveryFilePath = nullptr,
         std::vector<std::string>* unVisitPath = nullptr);
 
-    /** 按UTF8路径打开可寻址普通文件，拒绝末级链接/重解析点
+    /** 按 UTF8 路径打开可寻址普通文件，拒绝末级链接、重解析点及 FIFO
     @param [in] path 非空UTF8路径，最长4096
     @param [in] mode 1既有只读，2独占新建读写不覆盖，3既有读写不截断
     @param [out] error 可空，Win32错误或errno，成功0
@@ -1341,7 +1341,7 @@ private:
     static uint64_t mobileSelfIdentity();
 
 #ifdef _WIN32
-    /** 由系统InitOnce初始化模拟移动后端的身份，避免VS2013的call_once异常重试兼容问题
+    /** 以 Windows InitOnce 发布共享目录后端的身份，失败时允许重试
     @param [in] once 系统初始化状态，不保存
     @param [out] parameter 不可空，指向进程级64位身份存储，仅完整发布后写入
     @param [out] context 未使用，不写入

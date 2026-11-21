@@ -41,7 +41,6 @@
 #pragma warning(disable: 4200)
 #elif defined(__unix__) || defined(__APPLE__)
 #include <unistd.h>
-#include <utime.h>
 #include <pwd.h>
 #include <termios.h>
 #include <sys/stat.h>
@@ -63,7 +62,6 @@
 #include <cctype>
 #include <cstdlib>
 #include <functional>
-#include <stdexcept>
 #ifdef _WIN32
 #include <bcrypt.h>
 #pragma comment(lib, "bcrypt.lib")
@@ -74,6 +72,7 @@
 #endif
 #ifdef __APPLE__
 #include <TargetConditionals.h>
+#include <sys/attr.h>
 #if !TARGET_OS_IPHONE
 #include <sys/sysctl.h>
 #include <sys/proc.h>
@@ -150,44 +149,31 @@ POINT CSystem::screenCenterPoint()
 
 void CSystem::setClipboardData(HWND hWnd, const std::string& str)
 {
-    //打开剪贴板
-    if (!::OpenClipboard(hWnd))
+    if (hWnd == nullptr)
     {
         return;
     }
-
-    //清空剪贴板
-    if (!::EmptyClipboard())
+    HGLOBAL data = ::GlobalAlloc(GMEM_MOVEABLE, str.size() + 1);
+    if (data == nullptr)
     {
+        return;
+    }
+    std::unique_ptr<void, decltype(&::GlobalFree)> owned(data, ::GlobalFree);
+    void* text = ::GlobalLock(data);
+    if (text == nullptr)
+    {
+        return;
+    }
+    std::memcpy(text, str.c_str(), str.size() + 1);
+    ::GlobalUnlock(data);
+    if (::OpenClipboard(hWnd))
+    {
+        if (::EmptyClipboard() && ::SetClipboardData(CF_TEXT, data) != nullptr)
+        {
+            owned.release();
+        }
         ::CloseClipboard();
-        return;
     }
-
-    //写入数据
-    HGLOBAL hClip = ::GlobalAlloc(GMEM_MOVEABLE, str.size() + 1);
-    if (hClip == nullptr)
-    {
-        ::CloseClipboard();
-        return;
-    }
-    char* pBuf = static_cast<char*>(::GlobalLock(hClip));
-    if (pBuf == nullptr)
-    {
-        ::GlobalFree(hClip);
-        ::CloseClipboard();
-        return;
-    }
-    ::memcpy(pBuf, str.c_str(), str.size() + 1);
-    //解锁
-    ::GlobalUnlock(hClip);
-    //设置格式，成功后剪贴板拥有hClip，失败时需要自己释放。
-    if (::SetClipboardData(CF_TEXT, hClip) == nullptr)
-    {
-        ::GlobalFree(hClip);
-    }
-
-    //关闭剪贴板
-    ::CloseClipboard();
 }
 
 std::string CSystem::GetClipboardData(HWND hWnd)
@@ -1033,13 +1019,14 @@ bool CSystem::processIdentity(uint32_t processId, uint64_t& identity)
         return false;
     }
 #ifdef CSYSTEM_SHARED_IDENTITY
-    if (mobileSelfIdentity() == 0)
+    const uint64_t self = mobileSelfIdentity();
+    if (self == 0)
     {
         return false;
     }
     if (processId == static_cast<uint32_t>(CSystem::currentProcessPid()))
     {
-        identity = mobileSelfIdentity();
+        identity = self;
         return true;
     }
     if (processId > static_cast<uint32_t>(INT32_MAX) || CSystem::processDefinitelyExited(processId))
@@ -1242,7 +1229,6 @@ std::vector<uint32_t> CSystem::processPid(const std::string& processName)
     return result;
 #elif defined(__APPLE__)
     std::vector<uint32_t> matches;
-#if !TARGET_OS_IPHONE
     if (processName.empty() || processName.find('/') != std::string::npos || processName.find('\0') != std::string::npos)
     {
         return matches;
@@ -1275,9 +1261,6 @@ std::vector<uint32_t> CSystem::processPid(const std::string& processName)
             matches.push_back(static_cast<uint32_t>(pids[index]));
         }
     }
-#else
-    (void)processName; // iOS不支持独立网关进程，本入口不枚举其他应用。
-#endif
     return matches;
 #elif defined(__linux__)
     std::vector<uint32_t> matches;
@@ -2016,12 +1999,14 @@ FILE* CSystem::openPrivateBinaryOutputFile(const std::wstring& path, std::string
     {
         _close(fileDescriptor);
         DeleteFileW(path.c_str());
+        setSystemError(errorText, "cannot open private file stream");
     }
     return file;
 #elif defined(__unix__) || defined(__APPLE__)
     const std::string utf8 = widePathToUtf8(path);
     if (utf8.empty())
     {
+        setSystemError(errorText, "convert private file path to utf8 failed");
         return nullptr;
     }
     int flags = O_WRONLY | O_CREAT | O_EXCL;
@@ -2042,6 +2027,7 @@ FILE* CSystem::openPrivateBinaryOutputFile(const std::wstring& path, std::string
     {
         ::close(fileDescriptor);
         ::unlink(utf8.c_str());
+        setSystemError(errorText, "cannot open private file stream");
     }
     return file;
 #else
@@ -2091,30 +2077,8 @@ bool CSystem::installFileIfAbsent(const std::wstring& sourcePath, const std::wst
 
 bool CSystem::plainFileUtf8(const std::string& path)
 {
-    if (path.empty() || path.find('\0') != std::string::npos)
-    {
-        return false;
-    }
-#ifdef _WIN32
-    if (path.size() > INT_MAX)
-    {
-        return false;
-    }
-    const int size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data(), static_cast<int>(path.size()), nullptr, 0);
-    if (size <= 0)
-    {
-        return false;
-    }
-    std::vector<wchar_t> wide(static_cast<size_t>(size) + 1, 0);
-    if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data(), static_cast<int>(path.size()), wide.data(), size) != size)
-    {
-        return false;
-    }
-    const DWORD attributes = GetFileAttributesW(wide.data());
-    return attributes != INVALID_FILE_ATTRIBUTES && (attributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) == 0;
-#else
-    return plainFile(path);
-#endif
+    uint64_t bytes = 0, stamp = 0;
+    return fileStampUtf8(path, &bytes, &stamp);
 }
 
 bool CSystem::writeBinaryOutputFile(FILE* file, const void* data, size_t size)
@@ -2124,20 +2088,30 @@ bool CSystem::writeBinaryOutputFile(FILE* file, const void* data, size_t size)
 
 bool CSystem::fileStampUtf8(const std::string& path, uint64_t* bytes, uint64_t* stamp)
 {
-    if (bytes == nullptr || stamp == nullptr)
+    if (bytes != nullptr)
     {
-        return false;
+        *bytes = 0;
     }
-    *bytes = 0;
-    *stamp = 0;
-    if (!plainFileUtf8(path))
+    if (stamp != nullptr)
+    {
+        *stamp = 0;
+    }
+    if (bytes == nullptr || stamp == nullptr || bytes == stamp || path.empty() || path.find('\0') != std::string::npos)
     {
         return false;
     }
 #ifdef _WIN32
+    if (path.size() > INT_MAX)
+    {
+        return false;
+    }
     const int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data(), static_cast<int>(path.size()), nullptr, 0);
+    if (length <= 0)
+    {
+        return false;
+    }
     std::vector<wchar_t> wide(static_cast<size_t>(length) + 1, 0);
-    if (length <= 0 || MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data(), static_cast<int>(path.size()), wide.data(), length) != length)
+    if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data(), static_cast<int>(path.size()), wide.data(), length) != length)
     {
         return false;
     }
@@ -2284,20 +2258,31 @@ std::string CSystem::GetSysUserName()
 #ifdef _WIN32
     DWORD size = 1024;
     char szName[1024] = {};
-    ::GetUserNameA(szName, &size);
-    return szName;
+    return ::GetUserNameA(szName, &size) ? szName : "";
 #elif defined(__unix__) || defined(__APPLE__)
-    uid_t userid = 0;
-    struct passwd* pwd = nullptr;
-    userid = getuid();
-    pwd = getpwuid(userid);
-    std::string name;
-    if (pwd != nullptr)
+    const uid_t user = ::getuid();
+    struct passwd entry = {};
+    struct passwd* found = nullptr;
+    std::vector<char> buffer(1024);
+    while (true)
     {
-        return pwd->pw_name;
+        const int status = ::getpwuid_r(user, &entry, buffer.data(), buffer.size(), &found);
+        if (status == 0 && found != nullptr && entry.pw_name != nullptr)
+        {
+            return entry.pw_name;
+        }
+        if (status != ERANGE || buffer.size() > buffer.max_size() / 2)
+        {
+            break;
+        }
+        buffer.resize(buffer.size() * 2);
     }
+    std::string name;
 #if !defined(__APPLE__) || !TARGET_OS_IPHONE
-    SystemCommand("whoami", name);
+    if (SystemCommand("whoami", name) != 0)
+    {
+        return "";
+    }
     if (!name.empty() && name.back() == '\n')
     {
         name.pop_back();
@@ -2601,12 +2586,14 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
     struct dirent *pDirent = nullptr;
 #endif
 
-    std::vector<std::string> vecLowerFileStr;
+    // 将当前 C 区域设置中的一个无符号字节转为小写，同样用于筛选串和目录项。
+    const auto lowerByte = [](unsigned char byte) -> char { return static_cast<char>(std::tolower(byte)); };
+    std::vector<std::string> extensions;
     if (flag == 2)
     {
-        std::string lowerFileStr;
-        std::transform(fileStr.begin(), fileStr.end(), std::back_inserter(lowerFileStr), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
-        split(vecLowerFileStr, lowerFileStr, '.');
+        std::string filter = fileStr;
+        std::transform(filter.begin(), filter.end(), filter.begin(), lowerByte);
+        split(extensions, filter, '.');
     }
 
     //用队列实现递归
@@ -2687,62 +2674,29 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
                 queue_dir.emplace(tmpstr);
                 continue;
             }
-            bool isExit = false;
-            std::string tmpfilename = curDir;
+            if (flag == 1 && strName != fileStr)
+            {
+                continue;
+            }
+            if (flag == 2)
+            {
+                // strName 已是系统返回的单个目录项，POSIX 允许反斜杠出现在扩展名中。
+                const size_t dot = strName.rfind('.');
+                std::string suffix = dot == std::string::npos ? std::string() : strName.substr(dot + 1);
+                std::transform(suffix.begin(), suffix.end(), suffix.begin(), lowerByte);
+                if (std::find(extensions.begin(), extensions.end(), suffix) == extensions.end())
+                {
+                    continue;
+                }
+            }
+            std::string filename = curDir;
 #ifdef _WIN32
-            tmpfilename.pop_back();
+            filename.pop_back();
 #endif
-            switch (flag)
-            {
-            //1表示找文件全名，带后缀名
-            case 1:
-            {
-                if (strName == fileStr)
-                {
-                    tmpfilename.append(strName);
-                    if (EveryFilePath != nullptr)
-                    {
-                        isExit = EveryFilePath(tmpfilename);
-                    }
-                    result.emplace_back(tmpfilename);
-                }
-            }
-            break;
-            //2表示找文件后缀名
-            case 2:
-            {
-                std::string nameSuffix = CSystem::GetName(strName, 2);
-                std::string lowerNameSuffix;
-                std::transform(nameSuffix.begin(), nameSuffix.end(), std::back_inserter(lowerNameSuffix), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
-                if ((vecLowerFileStr.empty() && lowerNameSuffix.empty()) ||
-                    (!vecLowerFileStr.empty() && std::find(vecLowerFileStr.begin(), vecLowerFileStr.end(), lowerNameSuffix) != vecLowerFileStr.end()))
-                {
-                    tmpfilename.append(strName);
-                    if (EveryFilePath != nullptr)
-                    {
-                        isExit = EveryFilePath(tmpfilename);
-                    }
-                    result.emplace_back(tmpfilename);
-                }
-            }
-            break;
-            //3表示查找所有文件，不做过滤全部添加进来
-            case 3:
-            {
-                tmpfilename.append(strName);
-                if (EveryFilePath != nullptr)
-                {
-                    isExit = EveryFilePath(tmpfilename);
-                }
-                result.emplace_back(tmpfilename);
-            }
-            break;
-            default:
-            {
-                break;
-            }
-            }
-            if (isExit)
+            filename.append(strName);
+            const bool stop = EveryFilePath && EveryFilePath(filename);
+            result.push_back(std::move(filename));
+            if (stop)
             {
                 return result;
             }
@@ -2947,7 +2901,9 @@ intptr_t CSystem::openFileHandle(const char* path, uint32_t mode, uint32_t* erro
     }
     handle = reinterpret_cast<intptr_t>(native);
 #else
-    handle = ::open(path, O_CLOEXEC | O_NOFOLLOW | (mode == 1 ? O_RDONLY : O_RDWR) | (mode == 2 ? O_CREAT | O_EXCL : 0), 0600);
+    // 在识别普通文件之前避免因误传 FIFO 而等待另一端；普通文件的按偏移读写不受此标志影响。
+    handle = ::open(path, O_NONBLOCK | O_CLOEXEC | O_NOFOLLOW | (mode == 1 ? O_RDONLY : O_RDWR) |
+        (mode == 2 ? O_CREAT | O_EXCL : 0), 0600);
     if (handle < 0)
     {
         systemFileFailure(error, errno);
@@ -4139,19 +4095,24 @@ uint64_t CSystem::mobileSelfIdentity()
             return 0;
         }
 #else
-        static std::once_flag s_once;
-        /** 初始化本进程登记，失败抛出以允许call_once下一次重试
-        */
-        std::call_once(s_once, []()
+        // 完成发布后身份不再修改，后续查询可直接读取；失败不封存缓存。
+        static std::atomic<bool> s_ready(false);
+        if (!s_ready.load(std::memory_order_acquire))
         {
-            uint64_t identity = 0;
-            if (!secureRandomBytes(reinterpret_cast<uint8_t*>(&identity), sizeof(identity)) || identity == 0 ||
-                !publishProcessIdentity(identity))
+            static std::mutex s_mutex;
+            std::lock_guard<std::mutex> lock(s_mutex);
+            if (!s_ready.load(std::memory_order_relaxed))
             {
-                throw std::runtime_error("process identity publication unavailable");
+                uint64_t identity = 0;
+                if (!secureRandomBytes(reinterpret_cast<uint8_t*>(&identity), sizeof(identity)) || identity == 0 ||
+                    !publishProcessIdentity(identity))
+                {
+                    return 0;
+                }
+                s_identity = identity;
+                s_ready.store(true, std::memory_order_release);
             }
-            s_identity = identity;
-        });
+        }
 #endif
         return s_identity;
     }
@@ -4295,10 +4256,22 @@ bool CSystem::copyFileMetadata(const std::string& source, const std::string& des
     {
         return false;
     }
-    struct utimbuf times;
-    times.actime = attributes.st_atime;
-    times.modtime = attributes.st_mtime;
-    return utime(destination.c_str(), &times) == 0;
+#ifdef __APPLE__
+    const struct timespec times[] = {attributes.st_atimespec, attributes.st_mtimespec};
+    if (__builtin_available(macOS 10.13, iOS 11.0, *))
+    {
+        return ::utimensat(AT_FDCWD, destination.c_str(), times, 0) == 0;
+    }
+    // 较早的 Apple 目标按属性位的顺序传入修改时间、访问时间。
+    struct attrlist fields = {};
+    fields.bitmapcount = ATTR_BIT_MAP_COUNT;
+    fields.commonattr = ATTR_CMN_MODTIME | ATTR_CMN_ACCTIME;
+    struct timespec ordered[] = {attributes.st_mtimespec, attributes.st_atimespec};
+    return ::setattrlist(destination.c_str(), &fields, ordered, sizeof(ordered), 0) == 0;
+#else
+    const struct timespec times[] = {attributes.st_atim, attributes.st_mtim};
+    return ::utimensat(AT_FDCWD, destination.c_str(), times, 0) == 0;
+#endif
 #else
     return false;
 #endif
@@ -5009,6 +4982,29 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 //             CSystem::isPathWithin(target, directory) && CSystem::findFilePath(directory, 1, leaf).size() == 1;
 //     }
 //     std::printf("directory=%s utf8=%s\n", CSystem::canonicalPath(directory).c_str(), CSystem::canonicalPathUtf8(directory).c_str());
+//     // 示例目录名只含 ASCII，可直接构造对应的宽路径。
+//     const std::wstring wideDirectory(directory.begin(), directory.end());
+//     const std::wstring draft = wideDirectory + L"/private.tmp";
+//     const std::wstring published = wideDirectory + L"/private.bin";
+//     std::string openError;
+//     FILE* privateFile = CSystem::openPrivateBinaryOutputFile(draft, &openError);
+//     if (privateFile)
+//     {
+//         const bool written = CSystem::writeBinaryOutputFile(privateFile, text, sizeof(text)) &&
+//             CSystem::flushBinaryOutputFile(privateFile);
+//         const bool closed = CSystem::closeBinaryOutputFile(privateFile);
+//         std::vector<uint8_t> content;
+//         valid = written && closed && CSystem::installFileIfAbsent(draft, published) &&
+//             CSystem::readBinaryFile(published, sizeof(text), content) &&
+//             content == std::vector<uint8_t>(text, text + sizeof(text)) && valid;
+//         CSystem::deleteFile(draft);
+//         CSystem::deleteFile(published);
+//     }
+//     else
+//     {
+//         std::fprintf(stderr, "%s\n", openError.c_str());
+//         valid = false;
+//     }
 //     const std::string second = CSystem::joinPath(directory, "copy.txt");
 //     CSystem::saveFile("demo", second);
 //     const std::string renamed = CSystem::joinPath(directory, "renamed.txt");
@@ -5032,7 +5028,7 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 //     CSystem::Sleep(1);
 //     CSystem::sleepPrecise(1);
 // #if CSYSTEM_HAS_DESKTOP_API
-//     std::printf("CPU frequency %.3f GHz\\n", CSystem::GetCPUSpeedGHz());
+//     std::printf("CPU frequency %.3f GHz\n", CSystem::GetCPUSpeedGHz());
 //     std::vector<uint64_t> lease;
 //     const std::string role = "CSystemDemo." + unique;
 //     if (CSystem::acquireProcessLease(role, false, 0, lease) == 1)
