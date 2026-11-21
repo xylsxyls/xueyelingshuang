@@ -28,9 +28,10 @@ class CStringManagerAPI CStringManager
 public:
     /** 按容量复制字符串并补NUL，支持先查询完整缓冲区大小
     @param [in] value 输入字节串，按字节截断，不保证截断后UTF-8字符完整
-    @param [out] buffer 输出缓冲区，可空；不可与value存储区重叠
+    @param [out] buffer 输出缓冲区，可空；允许与value重叠，调用方须保证目标范围可写
     @param [in] capacity 缓冲区容量，0时不写入；非0时最多写capacity-1字节并补NUL
     @return 完整字节数加1（包含NUL），与实际截断长度无关
+    @note 缓冲区可与源字符串现有的可写字符区域重叠，调用方须保证 capacity 字节可写。
     */
     static size_t CopyToBuffer(const std::string& value, char* buffer, size_t capacity);
 
@@ -38,7 +39,7 @@ public:
 	@param [in] str 要查找的字符串
 	@param [in] cLeft 左侧符号
 	@param [in] cRight 右侧符号
-	@param [in] nSelect 当前选中的左侧或右侧符号位置
+	@param [in] nSelect 当前选中的左侧或右侧符号位置；左右符号相同时按出现顺序两两配对，不解释转义字符
 	@return 返回匹配符号的位置，找不到时返回std::string::npos
 	*/
 	static size_t FindOther(const std::string& str, char cLeft, char cRight, size_t nSelect);
@@ -64,7 +65,8 @@ public:
 	*/
 	static std::vector<std::wstring> split(const std::wstring& splitString, const std::wstring& separate_character);
 
-	/** 循环替换字符串，直到结果中不再存在旧字符串；如果新字符串包含旧字符串，则只做单轮替换避免无限增长
+	/** 替换所有匹配，增长替换仅扫描原输入一遍
+    长度相同或缩短时重新检查跨边界匹配。增长时跳过已插入的内容，确保调用终止。
 	@param [in,out] str 被修改的字符串
 	@param [in] old_value 要替换的旧字符串
 	@param [in] new_value 替换后的新字符串
@@ -197,6 +199,12 @@ public:
     */
     static std::string Format(const char* fmt, ...);
 
+    /** 按窄字符 printf 格式生成以首个 NUL 结尾的文本，按实际输出长度分配
+    @param [in] fmt 可信的格式字符串，可变实参须与格式匹配
+    @return 首个 NUL 前的文本，空格式指针或格式化失败时返回空串
+    */
+    static std::string StrFormat(const char* fmt, ...);
+
     /** 格式化宽字符串，不经ANSI转换；格式和参数允许借用原输出
     @param [in,out] str 输出；空格式指针、格式化或分配失败清空
     @param [in] fmt 有效可信的宽printf格式；跨平台宽字符串用%ls，宽字符用%lc
@@ -247,14 +255,14 @@ public:
 	static std::string GetMidString(const std::string& src, const std::string& leftString, const std::string& rightString);
 
 	/** C字符串转64位无符号整数
-	@param [in] str 数字字符串，空指针返回0
-	@return 返回转换后的整数，失败返回0
+	@param [in] str 十进制C字符串，可有前导空白、符号和尾随字符
+	@return 空指针或无数字返回0；按strtoull处理符号，超出范围返回UINT64_MAX
 	*/
 	static uint64_t atoui64(const char* str);
 
 	/** C字符串转64位有符号整数
-	@param [in] str 数字字符串，空指针返回0
-	@return 返回转换后的整数，失败返回0
+	@param [in] str 十进制C字符串，可有前导空白、符号和尾随字符
+	@return 空指针或无数字返回0；溢出按strtoll饱和至INT64_MIN或INT64_MAX
 	*/
 	static int64_t atoi64(const char* str);
 
@@ -269,6 +277,44 @@ public:
 	@return 返回十进制字符串
 	*/
 	static std::string toStringInt64(int64_t value);
+
+    /** 将整数写为十进制或小写十六进制 ASCII 文本
+    @param [in] value 待转换的整数
+    @param [in] hex 为 true 时按 unsigned int 位模式输出十六进制，无 0x 前缀
+    @return 不带分组符或前导零的整数文本
+    */
+    static std::string IntToStr(int value, bool hex = false);
+
+    /** 解析整数前缀，跳过开头的空白，允许正负号，在首个非数字字节处停止
+    @param [in] text 待解析的文本，内嵌 NUL 结束读取
+    @param [in] hex 为 true 时使用十六进制，允许 0x 前缀及 unsigned int 范围的绝对值
+    @return 十进制有符号值或十六进制对应的 int 位模式，无数字或越界时返回 0
+    */
+    static int StrToInt(const std::string& text, bool hex = false);
+
+    /** 读取一位 ASCII 十六进制数字
+    @param [in] digit 待解析的字符，允许大小写
+    @return 数值 0 至 15，其他字符返回 -1
+    */
+    static int CharToHex(char digit);
+
+    /** 将一个字节写为两位大写十六进制
+    @param [in] byte 待编码的字节
+    @return 两个 ASCII 字符，必要时前补零
+    */
+    static std::string Char2Hex(unsigned char byte);
+
+    /** 将二进制数据写为连续的小写十六进制文本
+    @param [in] bytes 任意字节串，允许内嵌 NUL
+    @return 每个输入字节对应两个字符，空输入返回空串
+    */
+    static std::string StrToHex(const std::string& bytes);
+
+    /** 按位置将十六进制文本还原为字节
+    @param [in] digits 每两个字符对应一个字节，接受大小写
+    @return 非法字符占据的半字节取零，末尾的单个字符放在最后一字节的高四位
+    */
+    static std::string HexToStr(const std::string& digits);
 
 #if CSTRING_MANAGER_HAS_ANSI
     /** Ansi字符串转Unicode宽字符串
@@ -352,9 +398,20 @@ public:
 
 	/** URL编码字符串
 	@param [in] sIn 原字符串
-	@return 返回URL编码后的字符串
+	@return ASCII字母和数字原样保留，其余每个字节转为大写百分号编码
 	*/
 	static std::string UrlEncode(const std::string& sIn);
+
+    /** 按路径规则对字节串做大写百分号编码
+    @param [in] path 待编码的字节串，文本通常使用 UTF-8
+    @return 保留 ASCII 字母、数字、~-_./:()' 和内嵌 NUL，其余字节编码为 %HH
+    */
+    static std::string EncodeUrlPath(const std::string& path);
+
+    /** 先将宽字符路径转为 UTF-8，再按 EncodeUrlPath 规则转义
+    @param [in,out] path 输入宽字符路径，返回时替换为编码结果
+    */
+    static void EncodeUnicodeUrl(std::wstring& path);
 
 	/** URL解码字符串
 	@param [in] sIn URL编码字符串
@@ -394,18 +451,6 @@ private:
     @param [in] arguments 借用的参数表，各次CRT调用均复制并配对va_end
     */
     static void formatWideArguments(std::wstring& output, const wchar_t* format, std::va_list arguments);
-
-    /** 将半字节数值转换为URL编码使用的大写十六进制字符
-    @param [in] x 0至15的数值
-    @return 对应的ASCII十六进制字符
-    */
-    static unsigned char toHex(const unsigned char& x);
-
-    /** 将URL编码中的十六进制字符转换为数值
-    @param [in] x ASCII十六进制字符，大小写均可，调用方先验证是否合法
-    @return 对应的0至15数值，非法字符返回0
-    */
-    static unsigned char fromHex(const unsigned char& x);
 
 #ifdef _WIN32
     /** 查询Windows转换长度并将宽字符串写入独立字节串

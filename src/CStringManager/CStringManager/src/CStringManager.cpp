@@ -13,17 +13,16 @@
 #include <cmath>
 #include <locale>
 #include <limits>
+#include <stdexcept>
 #ifdef _WIN32
 #include <windows.h>
 #else
-#include <string.h>
-#include <stdarg.h>
 #include <codecvt>
-#include <locale>
 #endif
-#if (_MSC_VER == 1900)
 #include <iterator>
-#endif
+
+// URL 百分号转义和单字节十六进制文本使用大写数字。
+static const char kUpperHexDigits[] = "0123456789ABCDEF";
 
 int32_t CStringManager::parseInt32(const std::wstring& text, int32_t defaultValue)
 {
@@ -164,7 +163,7 @@ size_t CStringManager::CopyToBuffer(const std::string& value, char* buffer, size
         const size_t length = (std::min)(capacity - 1, value.size());
         if (length != 0)
         {
-            std::memcpy(buffer, value.data(), length);
+            std::memmove(buffer, value.data(), length);
         }
         buffer[length] = '\0';
     }
@@ -173,157 +172,127 @@ size_t CStringManager::CopyToBuffer(const std::string& value, char* buffer, size
 
 size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight, size_t nSelect)
 {
-	std::vector<size_t> vecn;
-	size_t nSelectSize = 0;
-	size_t index = 0;
-	while (index < str.size())
-	{
-		if (str[index] == cLeft)
-		{
-			vecn.push_back(index);
-			//?nSelect在左，记下现在的nSelectSize
-			if (nSelect == index)
-			{
-				nSelectSize = vecn.size();
-			}
-		}
-		if (str[index] == cRight)
-		{
-			if(nSelect == index)
-			{
-				if (vecn.empty())
-				{
-					return std::string::npos;
-				}
-				return vecn.at(vecn.size() - 1);
-			}
-			//?如果弹出之前发现size大小等于之前记录的，说明找到了对应的右侧
-			if(vecn.size() == nSelectSize && nSelectSize > 0)
-			{
-				return index;
-			}
-			if (vecn.size() > 0)
-			{
-				vecn.pop_back();
-			}
-		}
-		++index;
-	}
-	return std::string::npos;
+    if (nSelect >= str.size() || (str[nSelect] != cLeft && str[nSelect] != cRight))
+    {
+        return std::string::npos;
+    }
+    if (cLeft == cRight)
+    {
+        // 相同分隔符按出现顺序两两配对，最后一个未配对时返回 npos
+        bool opening = true;
+        size_t previous = std::string::npos;
+        for (size_t i = str.find(cLeft); i != std::string::npos; i = str.find(cLeft, i + 1))
+        {
+            if (i == nSelect)
+            {
+                return opening ? str.find(cRight, i + 1) : previous;
+            }
+            previous = i;
+            opening = !opening;
+        }
+        return std::string::npos;
+    }
+    size_t depth = 1;
+    if (str[nSelect] == cLeft)
+    {
+        for (size_t i = nSelect + 1; i < str.size(); ++i)
+        {
+            if (str[i] == cLeft) { ++depth; }
+            else if (str[i] == cRight && --depth == 0) { return i; }
+        }
+    }
+    else
+    {
+        for (size_t i = nSelect; i > 0;)
+        {
+            const char current = str[--i];
+            if (current == cRight) { ++depth; }
+            else if (current == cLeft && --depth == 0) { return i; }
+        }
+    }
+    return std::string::npos;
+}
+
+/** 用完整分隔符拆分文本，保存相邻分隔符和尾部产生的空字段
+@param [in] text 输入文本，允许含零值字符
+@param [in] separator 字符或同类型字符串分隔符
+@param [in] width 分隔符的字符数，零表示整串作为一个字段
+@return 按输入顺序排列的字段
+*/
+template<class String, class Separator>
+static std::vector<String> splitFields(const String& text, const Separator& separator, size_t width)
+{
+    std::vector<String> fields;
+    if (width == 0)
+    {
+        fields.push_back(text);
+        return fields;
+    }
+    size_t count = 1;
+    for (size_t match = text.find(separator); match != String::npos; match = text.find(separator, match + width))
+    {
+        ++count;
+    }
+    fields.reserve(count);
+    size_t begin = 0;
+    size_t match = text.find(separator);
+    while (match != String::npos)
+    {
+        fields.emplace_back(text, begin, match - begin);
+        begin = match + width;
+        match = text.find(separator, begin);
+    }
+    fields.emplace_back(text, begin);
+    return fields;
 }
 
 std::vector<std::string> CStringManager::split(const std::string& splitString, const std::string& separate_character)
 {
-	std::vector<std::string> strs;
-	if (separate_character.empty())
-	{
-		strs.emplace_back(splitString);
-		return strs;
-	}
-	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
-	size_t separate_characterLen = separate_character.length();
-	size_t splitCount = 1;
-	size_t lastPosition = 0;
-	size_t index = splitString.find(separate_character, lastPosition);
-	while (index != std::string::npos)
-	{
-		++splitCount;
-		lastPosition = index + separate_characterLen;
-		index = splitString.find(separate_character, lastPosition);
-	}
-	strs.reserve(splitCount);
-	lastPosition = 0;
-	index = splitString.find(separate_character, lastPosition);
-	while (index != std::string::npos)
-	{
-		strs.emplace_back(splitString, lastPosition, index - lastPosition);
-		lastPosition = index + separate_characterLen;
-		index = splitString.find(separate_character, lastPosition);
-	}
-	//?截取最后一个分隔符后的内容
-	//?if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
-	strs.emplace_back(splitString, lastPosition);
-	return strs;
+    return splitFields(splitString, separate_character, separate_character.size());
 }
 
 std::vector<std::wstring> CStringManager::split(const std::wstring& splitString, const std::wstring& separate_character)
 {
-	std::vector<std::wstring> strs;
-	if (separate_character.empty())
-	{
-		strs.emplace_back(splitString);
-		return strs;
-	}
-	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
-	size_t separate_characterLen = separate_character.length();
-	size_t splitCount = 1;
-	size_t lastPosition = 0;
-	size_t index = splitString.find(separate_character, lastPosition);
-	while (index != std::wstring::npos)
-	{
-		++splitCount;
-		lastPosition = index + separate_characterLen;
-		index = splitString.find(separate_character, lastPosition);
-	}
-	strs.reserve(splitCount);
-	lastPosition = 0;
-	index = splitString.find(separate_character, lastPosition);
-	while (index != std::wstring::npos)
-	{
-		strs.emplace_back(splitString, lastPosition, index - lastPosition);
-		lastPosition = index + separate_characterLen;
-		index = splitString.find(separate_character, lastPosition);
-	}
-	//?截取最后一个分隔符后的内容
-	//?if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
-	strs.emplace_back(splitString, lastPosition);
-	return strs;
+    return splitFields(splitString, separate_character, separate_character.size());
 }
 
 void CStringManager::split(std::vector<std::string>& result, const std::string& splitString, char separate_character)
 {
-	result.clear();
-	size_t splitCount = 1;
-	size_t lastPosition = 0;
-	size_t index = splitString.find(separate_character, lastPosition);
-	while (index != std::string::npos)
-	{
-		++splitCount;
-		lastPosition = index + 1;
-		index = splitString.find(separate_character, lastPosition);
-	}
-	result.reserve(splitCount);
-	lastPosition = 0;
-	index = splitString.find(separate_character, lastPosition);
-	while (index != std::string::npos)
-	{
-		result.emplace_back(splitString, lastPosition, index - lastPosition);
-		lastPosition = index + 1;
-		index = splitString.find(separate_character, lastPosition);
-	}
-	result.emplace_back(splitString, lastPosition);
+    splitFields(splitString, separate_character, 1).swap(result);
 }
 
 void CStringManager::ReplaceAll(std::string& str, const std::string& old_value, const std::string& new_value)
 {
-	if (old_value.empty())
-	{
-		return;
-	}
-	if (new_value.find(old_value) != std::string::npos)
-	{
-		Replace(str, old_value, new_value);
-		return;
-	}
-	while (true)
-	{
-		std::string::size_type pos(0);
-		if ((pos = str.find(old_value)) == std::string::npos)
-		{
-			break;
-		}
-		str.replace(pos, old_value.length(), new_value);
-	}
+    if (old_value.empty())
+    {
+        return;
+    }
+    if (old_value.size() == 1 && new_value.size() == 1)
+    {
+        Replace(str, old_value[0], new_value[0]);
+        return;
+    }
+    if (&str == &old_value || &str == &new_value)
+    {
+        const std::string oldCopy(old_value);
+        const std::string newCopy(new_value);
+        ReplaceAll(str, oldCopy, newCopy);
+        return;
+    }
+    if (new_value.size() > old_value.size() || new_value == old_value)
+    {
+        Replace(str, old_value, new_value);
+        return;
+    }
+    size_t position = str.find(old_value);
+    while (position != std::string::npos)
+    {
+        str.replace(position, old_value.size(), new_value);
+        // 仅替换位置左侧最多 old_value.size()-1 个字符可能构成新的跨边界匹配
+        const size_t overlap = old_value.size() - 1;
+        const size_t restart = position > overlap ? position - overlap : 0;
+        position = str.find(old_value, restart);
+    }
 }
 
 std::string CStringManager::Mid(const std::string& str, size_t offset, size_t count)
@@ -407,6 +376,12 @@ size_t CStringManager::Replace(std::string& str, const std::string& oldstr, cons
 	{
 		return 0;
 	}
+    if (&str == &oldstr || &str == &newstr)
+    {
+        const std::string pattern(oldstr);
+        const std::string replacement(newstr);
+        return Replace(str, pattern, replacement);
+    }
 	size_t count = 0;
 	size_t pos = 0;
 	while (true)
@@ -440,6 +415,12 @@ size_t CStringManager::Replace(std::wstring& str, const std::wstring& oldstr, co
 	{
 		return 0;
 	}
+    if (&str == &oldstr || &str == &newstr)
+    {
+        const std::wstring pattern(oldstr);
+        const std::wstring replacement(newstr);
+        return Replace(str, pattern, replacement);
+    }
 	size_t count = 0;
 	size_t pos = 0;
 	while (true)
@@ -534,6 +515,21 @@ void CStringManager::Format(std::wstring& str, const wchar_t* fmt, ...)
         str.clear();
     }
     va_end(args);
+}
+
+std::string CStringManager::StrFormat(const char* fmt, ...)
+{
+    std::string result;
+    va_list args;
+    va_start(args, fmt);
+    formatV(result, fmt, args);
+    va_end(args);
+    const size_t terminator = result.find('\0');
+    if (terminator != std::string::npos)
+    {
+        result.resize(terminator);
+    }
+    return result;
 }
 
 std::wstring CStringManager::Format(const wchar_t* fmt, ...)
@@ -643,16 +639,74 @@ int64_t CStringManager::atoi64(const char* str)
 
 std::string CStringManager::toStringInt32(int32_t value)
 {
-	std::ostringstream oss;
-	oss << value;
-	return oss.str();
+    return toStringInt64(value);
 }
 
 std::string CStringManager::toStringInt64(int64_t value)
 {
-	std::ostringstream oss;
-	oss << value;
-	return oss.str();
+    std::ostringstream stream;
+    stream.imbue(std::locale::classic());
+    stream << value;
+    return stream.str();
+}
+
+std::string CStringManager::IntToStr(int value, bool hex)
+{
+    return hex ? Format("%x", static_cast<unsigned int>(value)) : toStringInt32(value);
+}
+
+int CStringManager::StrToInt(const std::string& text, bool hex)
+{
+    const int64_t value = strtoll(text.c_str(), nullptr, hex ? 16 : 10);
+    const int maximum = (std::numeric_limits<int>::max)();
+    if (!hex)
+    {
+        return value < (std::numeric_limits<int>::min)() || value > maximum ? 0 : static_cast<int>(value);
+    }
+    const unsigned int mask = (std::numeric_limits<unsigned int>::max)();
+    if (value < -static_cast<int64_t>(mask) || value > static_cast<int64_t>(mask))
+    {
+        return 0;
+    }
+    const unsigned int bits = static_cast<unsigned int>(value);
+    // 用可表示的有符号运算还原负值，避免将超出 int 范围的无符号数直接窄化。
+    return bits <= static_cast<unsigned int>(maximum) ? static_cast<int>(bits) : -1 - static_cast<int>(mask - bits);
+}
+
+std::string CStringManager::Char2Hex(unsigned char byte)
+{
+    const char digits[] = { kUpperHexDigits[byte >> 4], kUpperHexDigits[byte & 15] };
+    return std::string(digits, sizeof(digits));
+}
+
+std::string CStringManager::StrToHex(const std::string& bytes)
+{
+    static const char digits[] = "0123456789abcdef";
+    std::string result;
+    if (bytes.size() > result.max_size() / 2)
+    {
+        throw std::length_error("StrToHex");
+    }
+    result.resize(bytes.size() * 2);
+    for (size_t i = 0; i < bytes.size(); ++i)
+    {
+        const unsigned char byte = static_cast<unsigned char>(bytes[i]);
+        result[2 * i] = digits[byte >> 4];
+        result[2 * i + 1] = digits[byte & 15];
+    }
+    return result;
+}
+
+std::string CStringManager::HexToStr(const std::string& digits)
+{
+    std::string result(digits.size() / 2 + digits.size() % 2, '\0');
+    for (size_t i = 0; i < result.size(); ++i)
+    {
+        const int high = CharToHex(digits[2 * i]);
+        const int low = 2 * i + 1 < digits.size() ? CharToHex(digits[2 * i + 1]) : 0;
+        result[i] = static_cast<char>((high < 0 ? 0 : high << 4) | (low < 0 ? 0 : low));
+    }
+    return result;
 }
 
 #if CSTRING_MANAGER_HAS_ANSI
@@ -763,7 +817,13 @@ std::wstring CStringManager::Utf8ToUnicode(const std::string& strSrc)
     try
     {
         std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-        return converter.from_bytes(strSrc);
+        std::wstring converted = converter.from_bytes(strSrc);
+        // 某些标准库遇到末尾缺失的 UTF-8 续字节时只返回已转换前缀
+        if (converter.converted() != strSrc.size())
+        {
+            return std::wstring();
+        }
+        return converted;
     }
     catch (...)
     {
@@ -774,57 +834,84 @@ std::wstring CStringManager::Utf8ToUnicode(const std::string& strSrc)
 #endif
 }
 
+/** 批量写入百分号转义结果，按入口选择允许原样保留的字节
+@param [in] sIn 待编码的字节串
+@return 使用大写十六进制数字的编码结果
+*/
+template<bool preservePath>
+static std::string encodeUrlBytes(const std::string& sIn)
+{
+    std::string output;
+    output.reserve(sIn.size());
+    char block[768];
+    size_t used = 0;
+    for (size_t index = 0; index < sIn.size(); ++index)
+    {
+        if (used > sizeof(block) - 3)
+        {
+            output.append(block, used);
+            used = 0;
+        }
+        const unsigned char byte = static_cast<unsigned char>(sIn[index]);
+        if ((byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z') ||
+            (byte >= '0' && byte <= '9') ||
+            (preservePath && std::strchr("~-_./:()'", byte) != nullptr))
+        {
+            block[used++] = sIn[index];
+        }
+        else
+        {
+            block[used++] = '%';
+            block[used++] = kUpperHexDigits[byte >> 4];
+            block[used++] = kUpperHexDigits[byte & 15];
+        }
+    }
+    output.append(block, used);
+    return output;
+}
+
 std::string CStringManager::UrlEncode(const std::string& sIn)
 {
-	std::string sOut;
-	for( size_t ix = 0; ix < sIn.size(); ix++ )
-	{
-		unsigned char buf[4];
-		::memset( buf, 0, 4 );
-		if( isalnum( (unsigned char)sIn[ix] ) )
-		{
-			buf[0] = sIn[ix];
-		}
-		//else if ( isspace( (BYTE)sIn[ix] ) ) //貌似把空格编码成%20或者+都可以
-		//{
-		//	buf[0] = '+';
-		//}
-		else
-		{
-			buf[0] = '%';
-			buf[1] = toHex( (unsigned char)sIn[ix] >> 4 );
-			buf[2] = toHex( (unsigned char)sIn[ix] % 16);
-		}
-		sOut += (char *)buf;
-	}
-	return sOut;
+    return encodeUrlBytes<false>(sIn);
+}
+
+std::string CStringManager::EncodeUrlPath(const std::string& path)
+{
+    return encodeUrlBytes<true>(path);
+}
+
+void CStringManager::EncodeUnicodeUrl(std::wstring& path)
+{
+    const std::string encoded = EncodeUrlPath(UnicodeToUtf8(path));
+    path.assign(encoded.begin(), encoded.end());
 }
 
 std::string CStringManager::UrlDecode(const std::string& sIn)
 {
-	std::string sOut;
-	for( size_t ix = 0; ix < sIn.size(); ix++ )
-	{
-		unsigned char ch = 0;
-		if(sIn[ix]=='%' && ix + 2 < sIn.size() &&
-			isxdigit(static_cast<unsigned char>(sIn[ix + 1])) &&
-			isxdigit(static_cast<unsigned char>(sIn[ix + 2])))
-		{
-			ch = (fromHex(sIn[ix+1])<<4);
-			ch |= fromHex(sIn[ix+2]);
-			ix += 2;
-		}
-		else if(sIn[ix] == '+')
-		{
-			ch = ' ';
-		}
-		else
-		{
-			ch = sIn[ix];
-		}
-		sOut += (char)ch;
-	}
-	return sOut;
+    std::string output(sIn);
+    const size_t length = sIn.size();
+    size_t written = 0;
+    for (size_t read = 0; read < length; ++read)
+    {
+        char byte = sIn[read];
+        if (byte == '%' && length - read >= 3)
+        {
+            const int high = CharToHex(sIn[read + 1]);
+            const int low = CharToHex(sIn[read + 2]);
+            if (high >= 0 && low >= 0)
+            {
+                byte = static_cast<char>((high << 4) | low);
+                read += 2;
+            }
+        }
+        else if (byte == '+')
+        {
+            byte = ' ';
+        }
+        output[written++] = byte;
+    }
+    output.resize(written);
+    return output;
 }
 
 void CStringManager::formatV(std::string& output, const char* format, va_list arguments)
@@ -931,26 +1018,21 @@ std::locale CStringManager::createAnsiLocale()
 }
 #endif
 
-unsigned char CStringManager::toHex(const unsigned char& x)
+int CStringManager::CharToHex(char digit)
 {
-	return x > 9 ? x - 10 + 'A' : x + '0';
-}
-
-unsigned char CStringManager::fromHex(const unsigned char& x)
-{
-	if (std::isdigit(x))
+	if (digit >= '0' && digit <= '9')
 	{
-		return x - '0';
+		return digit - '0';
 	}
-	if (x >= 'a' && x <= 'f')
+	if (digit >= 'a' && digit <= 'f')
 	{
-		return x - 'a' + 10;
+		return digit - 'a' + 10;
 	}
-	if (x >= 'A' && x <= 'F')
+	if (digit >= 'A' && digit <= 'F')
 	{
-		return x - 'A' + 10;
+		return digit - 'A' + 10;
 	}
-	return 0;
+	return -1;
 }
 
 void CStringManager::formatNarrowArguments(std::string& output, const char* format, va_list arguments)
@@ -1049,479 +1131,62 @@ void CStringManager::formatWideArguments(std::wstring& output, const wchar_t* fo
 #endif
 }
 
-//#include <atomic>
-//#include <functional>
-//#include <iostream>
-//#include <thread>
-//
-//int main()
-//{
-//	int32_t totalCount = 0;
-//	int32_t failCount = 0;
-//	std::function<void(bool, const std::string&)> check = [&totalCount, &failCount](bool ok, const std::string& name) -> void
-//	{
-//		++totalCount;
-//		std::cout << (ok ? "[PASS] " : "[FAIL] ") << name << std::endl;
-//		if (!ok)
-//		{
-//			++failCount;
-//		}
-//	};
-//
-//	check(CStringManager::FindOther("(a(b)c)", '(', ')', 0) == 6, "CStringManager FindOther left select");
-//	check(CStringManager::FindOther("(a(b)c)", '(', ')', 4) == 2, "CStringManager FindOther right select");
-//	check(CStringManager::FindOther("(abc", '(', ')', 0) == std::string::npos, "CStringManager FindOther missing right");
-//	std::vector<std::string> splitResult = CStringManager::split("a,,b", ",");
-//	check(splitResult.size() == 3 && splitResult[0] == "a" && splitResult[1].empty() && splitResult[2] == "b", "CStringManager split string");
-//	std::vector<std::string> emptySplitResult = CStringManager::split("abc", "");
-//	check(emptySplitResult.size() == 1 && emptySplitResult[0] == "abc", "CStringManager split empty separator");
-//	std::vector<std::string> multiSplitResult = CStringManager::split("aa<>bb<><>", "<>");
-//	check(multiSplitResult.size() == 4 && multiSplitResult[0] == "aa" && multiSplitResult[1] == "bb" &&
-//		multiSplitResult[2].empty() && multiSplitResult[3].empty(), "CStringManager split multi separator");
-//	std::vector<std::wstring> wideSplitResult = CStringManager::split(L"a|b|", L"|");
-//	check(wideSplitResult.size() == 3 && wideSplitResult[0] == L"a" && wideSplitResult[1] == L"b" &&
-//		wideSplitResult[2].empty(), "CStringManager split wide string");
-//	std::vector<std::string> splitCharResult;
-//	CStringManager::split(splitCharResult, "a,b,", ',');
-//	check(splitCharResult.size() == 3 && splitCharResult[2].empty(), "CStringManager split char");
-//	std::string replaceText = "aa-bb-aa";
-//	check(CStringManager::Replace(replaceText, "aa", "cc") == 2 && replaceText == "cc-bb-cc", "CStringManager Replace string");
-//	CStringManager::ReplaceAll(replaceText, "c", "d");
-//	check(replaceText == "dd-bb-dd", "CStringManager ReplaceAll string");
-//	std::string replaceEmptyOldText = "abc";
-//	CStringManager::ReplaceAll(replaceEmptyOldText, "", "x");
-//	check(replaceEmptyOldText == "abc", "CStringManager ReplaceAll empty old value");
-//	std::string replaceShrinkText = "aaaa";
-//	CStringManager::ReplaceAll(replaceShrinkText, "aa", "a");
-//	check(replaceShrinkText == "a", "CStringManager ReplaceAll shrink loop");
-//	std::string replaceGrowText = "a";
-//	CStringManager::ReplaceAll(replaceGrowText, "a", "aa");
-//	check(replaceGrowText == "aa", "CStringManager ReplaceAll contains old value");
-//	check(CStringManager::Mid("abcdef", 2, 3) == "cde", "CStringManager Mid");
-//	check(CStringManager::Mid("abc", 3, 1).empty(), "CStringManager Mid offset at end");
-//	check(CStringManager::Left("abcdef", 2) == "ab", "CStringManager Left");
-//	check(CStringManager::Right("abcdef", 2) == "ef", "CStringManager Right");
-//	check(CStringManager::Right("abc", 99) == "abc", "CStringManager Right oversize");
-//	check(CStringManager::Find("abcdef", "cd") == 2, "CStringManager Find string");
-//	check(CStringManager::ReserveFind("ababa", "ba") == 3, "CStringManager ReserveFind string");
-//	std::string editText = "abc";
-//	CStringManager::Insert(editText, 1, "XX");
-//	CStringManager::Delete(editText, 2, 1);
-//	check(editText == "aXbc", "CStringManager Insert Delete");
-//	CStringManager::Insert(editText, 999, "Z");
-//	check(editText == "aXbcZ", "CStringManager Insert oversize offset");
-//	check(CStringManager::Delete(editText, 999, 2) == editText.length(), "CStringManager Delete oversize offset");
-//	check(CStringManager::Format("%s-%d", "value", 7) == "value-7", "CStringManager Format string");
-//	check(CStringManager::Format("") == "", "CStringManager Format empty string");
-//	check(CStringManager::Format(static_cast<const char*>(nullptr)) == "", "CStringManager Format null string");
-//	std::string nullFormatText = "old";
-//	CStringManager::Format(nullFormatText, static_cast<const char*>(nullptr));
-//	check(nullFormatText.empty(), "CStringManager Format output null string");
-//	check(CStringManager::Format(L"%ls-%d", L"value", 7) == L"value-7", "CStringManager Format wide string");
-//	std::string reverseText = "abc";
-//	CStringManager::MakeReverse(reverseText);
-//	check(reverseText == "cba", "CStringManager MakeReverse");
-//	check(CStringManager::MakeUpper("aBc") == "ABC", "CStringManager MakeUpper");
-//	check(CStringManager::MakeLower("aBc") == "abc", "CStringManager MakeLower");
-//	std::string highByteText;
-//	highByteText.push_back(static_cast<char>(0xff));
-//	check(CStringManager::MakeUpper(highByteText).size() == 1 && CStringManager::MakeLower(highByteText).size() == 1,
-//		"CStringManager MakeUpper MakeLower high byte");
-//	check(CStringManager::GetMidString("left[value]right", "[", "]") == "value", "CStringManager GetMidString");
-//	check(CStringManager::GetMidString("left[[value]]right", "[[", "]]") == "value", "CStringManager GetMidString multi tag");
-//	check(CStringManager::GetMidString("left[value", "[", "]").empty(), "CStringManager GetMidString missing right");
-//	check(CStringManager::atoi64(nullptr) == 0, "CStringManager atoi64 null");
-//	check(CStringManager::atoi64("-12345678901") == -12345678901LL, "CStringManager atoi64");
-//	check(CStringManager::atoui64(nullptr) == 0, "CStringManager atoui64 null");
-//	check(CStringManager::atoui64("12345678901") == 12345678901ULL, "CStringManager atoui64");
-//	check(CStringManager::toStringInt32(-123) == "-123", "CStringManager toStringInt32");
-//	check(CStringManager::toStringInt64(-12345678901LL) == "-12345678901", "CStringManager toStringInt64");
-//	std::string urlEncoded = CStringManager::UrlEncode("a b+c");
-//	check(CStringManager::UrlDecode(urlEncoded) == "a b+c", "CStringManager UrlEncode UrlDecode");
-//	check(CStringManager::UrlDecode("%") == "%" && CStringManager::UrlDecode("%GZ") == "%GZ", "CStringManager UrlDecode invalid percent");
-//	check(CStringManager::UrlDecode("%2f%2F") == "//", "CStringManager UrlDecode lower upper hex");
-//	std::wstring unicodeText = CStringManager::Utf8ToUnicode("abc");
-//	check(CStringManager::UnicodeToUtf8(unicodeText) == "abc", "CStringManager Utf8 Unicode");
-//
-//	std::atomic<int32_t> failedThreadCount(0);
-//	std::vector<std::thread> threads;
-//	for (int32_t threadIndex = 0; threadIndex < 8; ++threadIndex)
-//	{
-//		threads.push_back(std::thread([threadIndex, &failedThreadCount]() -> void
-//		{
-//			for (int32_t loopIndex = 0; loopIndex < 5000; ++loopIndex)
-//			{
-//				std::string value = CStringManager::Format("%d-%d", threadIndex, loopIndex);
-//				std::vector<std::string> parts = CStringManager::split(value, "-");
-//				if (parts.size() != 2 || CStringManager::toStringInt32(threadIndex) != parts[0])
-//				{
-//					failedThreadCount.fetch_add(1);
-//					return;
-//				}
-//			}
-//		}));
-//	}
-//	for (size_t i = 0; i < threads.size(); ++i)
-//	{
-//		threads[i].join();
-//	}
-//	check(failedThreadCount.load() == 0, "CStringManager multithread pressure");
-//
-//	std::cout << "CStringManager test " << (failCount == 0 ? "PASS" : "FAIL") << ", total=" << totalCount << ", failed=" << failCount << std::endl;
-//	return failCount == 0 ? 0 : 1;
-//}
-
-// CSTRING_CONVERSION_UNIT_BEGIN
-// #include <CStringManager/CStringManagerAPI.h>
+// 使用示例：在本翻译单元末尾启用以下 main，单独构建控制台程序
 // #include <cstdio>
-// #include <new>
-// #ifdef _WIN32
-// #include <windows.h>
-// #endif
-// #if defined(_WIN32) && defined(_DEBUG) && !defined(CSTRING_CONVERSION_NO_HEAP)
-// #include <crtdbg.h>
-// // 独立main串行调用编码接口，计数器不供其他线程访问。
-// static int32_t s_conversionRejectAfter = -1;
-// static uint32_t s_conversionAllocations = 0;
-// static uint32_t s_conversionPayloadAllocations = 0;
-// /** 对编码分配逐点持续拒绝，验证异常收敛和结果缓冲的唯一所有权
-// @param [in] operation CRT操作，其他参数沿用CRT原型
-// @return 非零允许分配，零拒绝
-// */
-// static int __cdecl ConversionMemoryHook(int operation, void*, size_t size, int block, long, const unsigned char*, int)
-// {
-//     if ((operation == _HOOK_ALLOC || operation == _HOOK_REALLOC) && block == _NORMAL_BLOCK)
-//     {
-//         ++s_conversionAllocations;
-//         if (size >= 256)
-//         {
-//             ++s_conversionPayloadAllocations;
-//         }
-//         if (s_conversionRejectAfter == 0)
-//         {
-//             return 0;
-//         }
-//         if (s_conversionRejectAfter > 0)
-//         {
-//             --s_conversionRejectAfter;
-//         }
-//     }
-//     return 1;
-// }
-// #endif
 //
-// /** 检查六种编码的内容、内嵌零、系统替代规则和低内存收敛
-// @return 全部通过返回true
-// */
-// static bool CStringConversionAudit()
-// {
-//     uint32_t checks = 0;
-// #define CONVERSION_CHECK(value) do { ++checks; if (!(value)) { std::printf("CString conversion line=%d FAIL\n", __LINE__); return false; } } while (0)
-//     const std::string narrow(256, 'a');
-//     const std::wstring wide(256, L'a');
-//     CONVERSION_CHECK(CStringManager::AnsiToUnicode(narrow) == wide);
-//     CONVERSION_CHECK(CStringManager::UnicodeToAnsi(wide) == narrow);
-//     CONVERSION_CHECK(CStringManager::Utf8ToUnicode(narrow) == wide);
-//     CONVERSION_CHECK(CStringManager::UnicodeToUtf8(wide) == narrow);
-//     CONVERSION_CHECK(CStringManager::AnsiToUtf8(narrow) == narrow);
-//     CONVERSION_CHECK(CStringManager::Utf8ToAnsi(narrow) == narrow);
-//     CONVERSION_CHECK(CStringManager::AnsiToUnicode("").empty());
-//     CONVERSION_CHECK(CStringManager::UnicodeToAnsi(L"").empty());
-//     CONVERSION_CHECK(CStringManager::Utf8ToUnicode("").empty());
-//     CONVERSION_CHECK(CStringManager::UnicodeToUtf8(L"").empty());
-//     CONVERSION_CHECK(CStringManager::AnsiToUtf8("").empty());
-//     CONVERSION_CHECK(CStringManager::Utf8ToAnsi("").empty());
-//     const std::string zeroBytes("abc\0def", 7);
-//     const std::wstring zeroWide(L"abc\0def", 7);
-//     CONVERSION_CHECK(CStringManager::AnsiToUnicode(zeroBytes) == zeroWide);
-//     CONVERSION_CHECK(CStringManager::UnicodeToAnsi(zeroWide) == zeroBytes);
-//     CONVERSION_CHECK(CStringManager::Utf8ToUnicode(zeroBytes) == zeroWide);
-//     CONVERSION_CHECK(CStringManager::UnicodeToUtf8(zeroWide) == zeroBytes);
-//     CONVERSION_CHECK(CStringManager::AnsiToUtf8(zeroBytes) == zeroBytes);
-//     CONVERSION_CHECK(CStringManager::Utf8ToAnsi(zeroBytes) == zeroBytes);
-// #ifdef _WIN32
-//     const wchar_t unicodeData[] = { L'A', 0, 0x4e2d, 0xd83d, 0xde00, L'Z' };
-//     const std::wstring unicode(unicodeData, 6);
-//     for (uint32_t mode = 0; mode < 2; ++mode)
-//     {
-//         const UINT codePage = mode == 0 ? CP_UTF8 : CP_ACP;
-//         const int bytes = WideCharToMultiByte(codePage, 0, unicode.data(), 6, nullptr, 0, nullptr, nullptr);
-//         CONVERSION_CHECK(bytes > 0);
-//         std::string expected(static_cast<size_t>(bytes), '\0');
-//         CONVERSION_CHECK(WideCharToMultiByte(codePage, 0, unicode.data(), 6, &expected[0], bytes, nullptr, nullptr) == bytes);
-//         const std::string actual = mode == 0 ? CStringManager::UnicodeToUtf8(unicode) : CStringManager::UnicodeToAnsi(unicode);
-//         CONVERSION_CHECK(actual == expected);
-//         const int characters = MultiByteToWideChar(codePage, 0, expected.data(), bytes, nullptr, 0);
-//         CONVERSION_CHECK(characters > 0);
-//         std::wstring back(static_cast<size_t>(characters), L'\0');
-//         CONVERSION_CHECK(MultiByteToWideChar(codePage, 0, expected.data(), bytes, &back[0], characters) == characters);
-//         CONVERSION_CHECK((mode == 0 ? CStringManager::Utf8ToUnicode(expected) : CStringManager::AnsiToUnicode(expected)) == back);
-//         if (mode == 0)
-//         {
-//             CONVERSION_CHECK(back == unicode);
-//         }
-//     }
-//     // flags=0沿用系统替代规则；修复所有权时不暗中改成严格拒绝输入。
-//     const std::string invalid("\xff\xc0\x80\0Z", 5);
-//     wchar_t expectedInvalid[16] = {};
-//     const int invalidCount = MultiByteToWideChar(CP_UTF8, 0, invalid.data(), 5, expectedInvalid, 16);
-//     CONVERSION_CHECK(invalidCount > 0);
-//     CONVERSION_CHECK(CStringManager::Utf8ToUnicode(invalid) == std::wstring(expectedInvalid, static_cast<size_t>(invalidCount)));
-// #endif
-// #if defined(_WIN32) && defined(_DEBUG) && !defined(CSTRING_CONVERSION_NO_HEAP)
-//     uint32_t rejected = 0;
-//     uint32_t accepted = 0;
-//     uint32_t allocatorExceptions = 0;
-//     for (uint32_t mode = 0; mode < 6; ++mode)
-//     {
-//         for (int32_t position = 0; position < 8; ++position)
-//         {
-//             _CrtMemState before, after;
-//             _CrtMemCheckpoint(&before);
-//             bool escaped = false;
-//             bool allocationFailed = false;
-//             bool full = false;
-//             bool empty = false;
-//             s_conversionRejectAfter = position;
-//             s_conversionAllocations = 0;
-//             s_conversionPayloadAllocations = 0;
-//             const _CRT_ALLOC_HOOK old = _CrtSetAllocHook(ConversionMemoryHook);
-//             try
-//             {
-//                 if (mode == 0 || mode == 2)
-//                 {
-//                     std::wstring result;
-//                     if (mode == 0)
-//                     {
-//                         result = CStringManager::Utf8ToUnicode(narrow);
-//                     }
-//                     else
-//                     {
-//                         result = CStringManager::AnsiToUnicode(narrow);
-//                     }
-//                     full = result == wide;
-//                     empty = result.empty();
-//                 }
-//                 else
-//                 {
-//                     std::string result;
-//                     if (mode == 1)
-//                     {
-//                         result = CStringManager::UnicodeToUtf8(wide);
-//                     }
-//                     else if (mode == 3)
-//                     {
-//                         result = CStringManager::UnicodeToAnsi(wide);
-//                     }
-//                     else if (mode == 4)
-//                     {
-//                         result = CStringManager::AnsiToUtf8(narrow);
-//                     }
-//                     else
-//                     {
-//                         result = CStringManager::Utf8ToAnsi(narrow);
-//                     }
-//                     full = result == narrow;
-//                     empty = result.empty();
-//                 }
-//             }
-//             catch (const std::bad_alloc&)
-//             {
-//                 // VS2013 Debug连空字符串的迭代器代理都需要分配；边界捕获此分配异常。
-//                 allocationFailed = true;
-//             }
-//             catch (...)
-//             {
-//                 escaped = true;
-//             }
-//             _CrtSetAllocHook(old);
-//             s_conversionRejectAfter = -1;
-//             _CrtMemCheckpoint(&after);
-//             if (escaped || (!full && !empty && !allocationFailed))
-//             {
-//                 std::printf("CSTRING_FAULT mode=%u position=%d escaped=%u allocations=%u\n", mode, position, escaped ? 1U : 0U, s_conversionAllocations);
-//             }
-//             CONVERSION_CHECK(!escaped && (full || empty || allocationFailed));
-//             if (before.lCounts[_NORMAL_BLOCK] != after.lCounts[_NORMAL_BLOCK] || before.lSizes[_NORMAL_BLOCK] != after.lSizes[_NORMAL_BLOCK])
-//             {
-//                 std::printf("CSTRING_HEAP mode=%u position=%d blocks=%lld bytes=%lld allocation_failed=%u\n", mode, position,
-//                     static_cast<long long>(after.lCounts[_NORMAL_BLOCK]) - static_cast<long long>(before.lCounts[_NORMAL_BLOCK]),
-//                     static_cast<long long>(after.lSizes[_NORMAL_BLOCK]) - static_cast<long long>(before.lSizes[_NORMAL_BLOCK]), allocationFailed ? 1U : 0U);
-//             }
-//             CONVERSION_CHECK(before.lCounts[_NORMAL_BLOCK] == after.lCounts[_NORMAL_BLOCK] && before.lSizes[_NORMAL_BLOCK] == after.lSizes[_NORMAL_BLOCK]);
-//             if (full)
-//             {
-//                 ++accepted;
-//                 CONVERSION_CHECK(s_conversionPayloadAllocations == (mode < 4 ? 1U : 2U));
-//             }
-//             else
-//             {
-//                 ++rejected;
-//                 allocatorExceptions += allocationFailed ? 1U : 0U;
-//             }
-//         }
-//     }
-//     CONVERSION_CHECK(accepted > 0 && rejected >= 8);
-//     std::printf("CSTRING_CONVERSION allocation_positions=48 accepted=%u rejected=%u allocator_exceptions=%u heap_delta=0 direct_payload_allocations=1\n", accepted, rejected, allocatorExceptions);
-// #endif
-//     std::printf("CString conversion checks=%u PASS\n", checks);
-//     return true;
-// #undef CONVERSION_CHECK
-// }
-//
-// #ifndef CSTRING_CONVERSION_NO_MAIN
-// /** 独立回归入口；启用前解除整段注释，测试后恢复
-// @return 零表示通过
-// */
 // int main()
 // {
-//     try
+//     const std::string title = "Track(01)";
+//     const std::string label = CStringManager::GetMidString(title, "(", ")");
+//     if (CStringManager::FindOther(title, '(', ')', 5) != 8 || CStringManager::atoi64(label.c_str()) != 1)
 //     {
-//         return CStringConversionAudit() ? 0 : 1;
+//         return 1;
 //     }
-//     catch (...)
+//     const std::vector<std::string> fields = CStringManager::split("album::track::", "::");
+//     std::vector<std::string> tags;
+//     CStringManager::split(tags, "live,stereo", ',');
+//     const std::vector<std::wstring> wideTags = CStringManager::split(L"live;stereo", L";");
+//     std::string path = CStringManager::Left(title, 5) + CStringManager::Right("0001", 2);
+//     CStringManager::Insert(path, path.size(), '.');
+//     CStringManager::Insert(path, path.size(), "audio");
+//     CStringManager::Delete(path, CStringManager::Find(path, "audio"), 5);
+//     path += "RAW";
+//     CStringManager::Replace(path, "RAW", "wav");
+//     CStringManager::Replace(path, 'T', 't');
+//     CStringManager::ReplaceAll(path, "track", "sample");
+//     const std::string stem = CStringManager::Mid(path, 0, CStringManager::ReserveFind(path, '.'));
+//     const std::string upper = CStringManager::MakeUpper(stem);
+//     std::string reversed = CStringManager::MakeLower(upper);
+//     CStringManager::MakeReverse(reversed);
+//     const std::wstring caption = CStringManager::Utf8ToUnicode(path);
+//     std::vector<uint8_t> utf16;
+//     std::wstring decoded;
+//     if (!CStringManager::wideToUtf16Le(caption, utf16) || !CStringManager::utf16LeToWide(utf16, decoded))
 //     {
-//         std::puts("CString conversion unexpected exception FAIL");
 //         return 2;
 //     }
+//     std::string uri = CStringManager::UrlEncode(CStringManager::UnicodeToUtf8(decoded));
+//     std::wstring mediaPath = L"/live/a b";
+//     CStringManager::EncodeUnicodeUrl(mediaPath);
+//     const std::string packet("\0\xFA", 2);
+//     if (mediaPath != L"/live/a%20b" || CStringManager::EncodeUrlPath("/a?b") != "/a%3Fb" ||
+//         CStringManager::HexToStr(CStringManager::StrToHex(packet)) != packet ||
+//         CStringManager::StrToInt(CStringManager::IntToStr(-42, true), true) != -42 ||
+//         CStringManager::StrFormat("%s:%s", label.c_str(), CStringManager::Char2Hex(250).c_str()) != "01:FA")
+//     {
+//         return 3;
+//     }
+//     std::string message;
+//     CStringManager::Format(message, "%s [%s]", uri.c_str(), tags.front().c_str());
+//     std::wstring formatted;
+//     CStringManager::Format(formatted, L"%ls", caption.c_str());
+//     char buffer[64] = {};
+//     const size_t required = CStringManager::CopyToBuffer(message, buffer, sizeof(buffer));
+//     std::printf("%s\n", buffer);
+//     return fields.size() == 3 && wideTags.size() == 2 && path == "sample01.wav" &&
+//         CStringManager::UrlDecode(uri) == path && formatted == caption &&
+//         CStringManager::GetLength(message) + 1 == required && reversed == "10elpmas" &&
+//         CStringManager::atoui64("42") == 42 && CStringManager::parseInt32(L"42", 0) == 42 &&
+//         CStringManager::toStringInt32(42) == CStringManager::toStringInt64(42) &&
+//         CStringManager::parseFiniteDouble(CStringManager::formatFixedDouble(1.25, 2), 0.0) == 1.25 ? 0 : 3;
 // }
-// #endif
-// CSTRING_CONVERSION_UNIT_END
-
-#if 0 // CSTRING_FORMAT_UNIT_BEGIN
-#include <CStringManager/CStringManagerAPI.h>
-#include <cstdio>
-#include <new>
-#include <clocale>
-#if defined(_WIN32) && defined(_DEBUG) && !defined(CSTRING_FORMAT_NO_HEAP)
-#include <crtdbg.h>
-// 单线程main的持续故障位置，不与后台任务或其他CRT注入并行。
-static uint32_t s_formatRemaining = 0;
-static uint32_t s_formatRejected = 0;
-/** 从指定普通堆分配开始持续拒绝，其他参数遵循CRT原型
-@param [in] operation 本次操作
-@return 是否允许
-*/
-static int __cdecl FormatMemoryHook(int operation, void*, size_t, int block, long, const unsigned char*, int)
-{
-    if ((operation == _HOOK_ALLOC || operation == _HOOK_REALLOC) && block == _NORMAL_BLOCK)
-    {
-        if (s_formatRemaining == 0)
-        {
-            ++s_formatRejected;
-            return 0;
-        }
-        --s_formatRemaining;
-    }
-    return 1;
-}
-#endif
-
-/** 验证四个Format重载的独立预期、输入别名、宽文本和分配失败
-@return 全部检查通过为true
-*/
-static bool CStringFormatAudit()
-{
-    uint32_t checks = 0;
-#define FORMAT_CHECK(value) { ++checks; if (!(value)) { std::printf("CString format line=%d FAIL\n", __LINE__); return false; } }
-    FORMAT_CHECK(CStringManager::Format("%s:%04d:%.2f", "value", 7, 1.25) == "value:0007:1.25");
-    FORMAT_CHECK(CStringManager::Format(L"%ls:%04d:%.2f", L"value", 7, 1.25) == L"value:0007:1.25");
-    FORMAT_CHECK(CStringManager::Format(static_cast<const char*>(nullptr)).empty());
-    FORMAT_CHECK(CStringManager::Format(static_cast<const wchar_t*>(nullptr)).empty());
-    FORMAT_CHECK(CStringManager::Format("").empty() && CStringManager::Format(L"").empty());
-    FORMAT_CHECK(CStringManager::Format(L"\u4e2d:%ls:%lc", L"\u6587", L'\u56fd') == L"\u4e2d:\u6587:\u56fd");
-    FORMAT_CHECK(CStringManager::Format("a%cb", 0) == std::string("a\0b", 3));
-    FORMAT_CHECK(CStringManager::Format(L"a%lcb", static_cast<wint_t>(0)) == std::wstring(L"a\0b", 3));
-    const uint32_t sizes[] = {1, 15, 16, 255, 256, 257, 4096, 8192};
-    for (uint32_t index = 0; index < sizeof(sizes) / sizeof(sizes[0]); ++index)
-    {
-        const uint32_t size = sizes[index];
-        const std::string expected = std::string(size, 'x') + std::string(4095, ' ') + "7";
-        const std::wstring wideExpected = std::wstring(size, L'x') + std::wstring(4095, L' ') + L"7";
-        std::string value(size, 'x');
-        CStringManager::Format(value, "%s%4096d", value.c_str(), 7);
-        FORMAT_CHECK(value == expected);
-        std::wstring wide(size, L'x');
-        CStringManager::Format(wide, L"%ls%4096d", wide.c_str(), 7);
-        FORMAT_CHECK(wide == wideExpected);
-        FORMAT_CHECK(CStringManager::Format("%0*d", static_cast<int>(size), 7) == std::string(size - 1, '0') + "7");
-        FORMAT_CHECK(CStringManager::Format(L"%0*d", static_cast<int>(size), 7) == std::wstring(size - 1, L'0') + L"7");
-    }
-    std::string format = "%s%04096d";
-    CStringManager::Format(format, format.c_str(), "a", 7);
-    FORMAT_CHECK(format == "a" + std::string(4095, '0') + "7");
-    std::wstring wideFormat = L"%ls%04096d";
-    CStringManager::Format(wideFormat, wideFormat.c_str(), L"a", 7);
-    FORMAT_CHECK(wideFormat == L"a" + std::wstring(4095, L'0') + L"7");
-    CStringManager::Format(format, static_cast<const char*>(nullptr));
-    CStringManager::Format(wideFormat, static_cast<const wchar_t*>(nullptr));
-    FORMAT_CHECK(format.empty() && wideFormat.empty());
-#if defined(_WIN32) && defined(_DEBUG) && !defined(CSTRING_FORMAT_NO_HEAP)
-    uint32_t rejected = 0;
-    uint32_t accepted = 0;
-    const std::string expected = std::string(4095, '0') + "7";
-    const std::wstring wideExpected = std::wstring(4095, L'0') + L"7";
-    for (uint32_t mode = 0; mode < 4; ++mode)
-    {
-        for (uint32_t position = 0; position < 8; ++position)
-        {
-            _CrtMemState before = {};
-            _CrtMemCheckpoint(&before);
-            bool valid = false;
-            bool escaped = false;
-            {
-                std::string output;
-                std::wstring wideOutput;
-                s_formatRemaining = position;
-                s_formatRejected = 0;
-                const _CRT_ALLOC_HOOK old = _CrtSetAllocHook(FormatMemoryHook);
-                try
-                {
-                    if (mode == 0) { CStringManager::Format(output, "%04096d", 7); }
-                    else if (mode == 1) { CStringManager::Format(wideOutput, L"%04096d", 7); }
-                    else if (mode == 2) { output = CStringManager::Format("%04096d", 7); }
-                    else { wideOutput = CStringManager::Format(L"%04096d", 7); }
-                }
-                catch (const std::bad_alloc&)
-                {
-                    escaped = true;
-                }
-                _CrtSetAllocHook(old);
-                valid = (output.empty() || output == expected) && (wideOutput.empty() || wideOutput == wideExpected);
-                if (s_formatRejected != 0) { ++rejected; }
-                else { ++accepted; }
-            }
-            _CrtMemState after = {};
-            _CrtMemCheckpoint(&after);
-            FORMAT_CHECK(valid && (!escaped || mode >= 2));
-            FORMAT_CHECK(before.lCounts[_NORMAL_BLOCK] == after.lCounts[_NORMAL_BLOCK] && before.lSizes[_NORMAL_BLOCK] == after.lSizes[_NORMAL_BLOCK]);
-        }
-    }
-    FORMAT_CHECK(rejected != 0 && accepted != 0);
-    std::printf("CSTRING_FORMAT allocation_positions=32 rejected=%u accepted=%u heap_delta=0\n", rejected, accepted);
-#endif
-    std::printf("CString format alias/wide/variadic checks=%u PASS\n", checks);
-    return true;
-#undef FORMAT_CHECK
-}
-
-#ifndef CSTRING_FORMAT_NO_MAIN
-/** 独立测试入口，正式库保留整段注释
-@return 零表示成功
-*/
-int main()
-{
-    std::setvbuf(stdout, nullptr, _IONBF, 0);
-#ifndef _WIN32
-    // ?CRT????????????locale????main????UTF-8 locale?
-    if (std::setlocale(LC_CTYPE, "C.UTF-8") == nullptr)
-    {
-        std::puts("UTF-8 test locale unavailable");
-        return 1;
-    }
-#endif
-    return CStringFormatAudit() ? 0 : 1;
-}
-#endif
-
-#endif // CSTRING_FORMAT_UNIT_END
