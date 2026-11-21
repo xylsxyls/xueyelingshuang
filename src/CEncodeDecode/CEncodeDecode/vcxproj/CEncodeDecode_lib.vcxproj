@@ -115,6 +115,10 @@
     <OutDir>$(VendorSdkRoot)\lib\</OutDir>
     <TargetName>CEncodeDecode</TargetName>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(CLOUD_REBUILD_SDK_ROOT)'!='' Or '$(CLOUD_REBUILD_INT_ROOT)'!=''">
+    <IntDir Condition="'$(CLOUD_REBUILD_INT_ROOT)'==''">$(CLOUD_REBUILD_SDK_ROOT)\.msbuild\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir Condition="'$(CLOUD_REBUILD_INT_ROOT)'!=''">$(CLOUD_REBUILD_INT_ROOT)\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
