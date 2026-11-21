@@ -1,3 +1,3 @@
 ﻿#pragma once
 
-#define KissFFTCppAPI
+#define KissFFTCppAPI 

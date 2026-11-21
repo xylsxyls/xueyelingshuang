@@ -10,6 +10,6 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define KissFFTCppAPI __attribute__ ((visibility("default")))
     #else
-        #define KissFFTCppAPI
+        #define KissFFTCppAPI 
     #endif
 #endif

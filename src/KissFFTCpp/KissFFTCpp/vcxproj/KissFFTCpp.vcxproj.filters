@@ -33,11 +33,5 @@
     <ClCompile Include="..\src\KissFFTCpp.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\kiss_fft.c">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\kiss_fftr.c">
-      <Filter>源文件</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>
