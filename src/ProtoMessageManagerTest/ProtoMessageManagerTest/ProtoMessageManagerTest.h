@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+/** Windows 线格式用例通过 SDK 中的 ProtoMessage.pb.h 创建和读取协议样本。版本脚本准备 ProtoMessageManager 静态库，生成类型的实现由该库提供。PlatformTest 使用同配置的动态库。
+*/
+
 /** 功能用例与独立预期
 无参数运行全部功能组；--list 列出可选ID，--case=<ID>只运行该组及其素材准备。未知ID或选项退出2。
 containers：检查通用消息的链式字段、二进制赋值、分组、深拷贝、读借用、清空、移动、错误码。对专用Record、Array、Table验证容量和维度边界，失败时保留原字段或表结构。

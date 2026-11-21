@@ -20,9 +20,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\ProtoMessageManager\ProtoMessageManager\src\ProtoMessage.pb.cc">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="ProtoMessageManagerTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>

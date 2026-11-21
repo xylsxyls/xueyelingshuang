@@ -1,6 +1,5 @@
 ﻿#include "ProtoMessageManagerTest.h"
-#include "../../../common/PlatformTest/LibraryBenchmark.h"
-#include "../../../common/PlatformTest/LibraryNamedCaseSelection.h"
+#include "PlatformTest/PlatformTestAPI.h"
 #include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include "ProtoMessageManager/ProtoMessage.pb.h"
 
@@ -14,7 +13,6 @@
 #include <new>
 #include <cstdlib>
 
-// 独立生成的线格式样本在测试进程内构建，动态封装仅导出公开消息接口
 #ifdef _MSC_VER
 #ifdef _DEBUG
 #pragma comment(lib, "libprotobuf-lited.lib")
