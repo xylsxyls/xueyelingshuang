@@ -1,4 +1,5 @@
 ﻿#include "MysqlCppResultSet.h"
+#include "MysqlCppPrepareStatement.h"
 #include "MysqlCppHelper.h"
 
 #ifdef _MSC_VER
@@ -6,8 +7,8 @@
 #pragma warning(disable:4251)
 #endif
 
-#include "cppconn/resultset.h"
-#include "cppconn/resultset_metadata.h"
+#include "mysql-connector-cpp/cppconn/resultset.h"
+#include "mysql-connector-cpp/cppconn/resultset_metadata.h"
 
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -26,7 +27,7 @@ MysqlCppResultSet::~MysqlCppResultSet()
 
 bool MysqlCppResultSet::isValid() const
 {
-    return m_resultSet != nullptr;
+    return m_resultSet != nullptr && m_statement && m_statement->isValid();
 }
 
 std::vector<std::vector<std::string>> MysqlCppResultSet::toVector()
@@ -63,7 +64,7 @@ std::vector<std::map<std::string, std::string>> MysqlCppResultSet::toMapVector()
 
 int32_t MysqlCppResultSet::columnCount()
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return 0;
     }
@@ -85,7 +86,7 @@ int32_t MysqlCppResultSet::columnCount()
 std::vector<std::string> MysqlCppResultSet::columnNames() const
 {
     std::vector<std::string> names;
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return names;
     }
@@ -116,7 +117,7 @@ std::vector<std::string> MysqlCppResultSet::columnNames() const
 
 std::istream* MysqlCppResultSet::getBlob(uint32_t columnIndex) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return nullptr;
     }
@@ -137,7 +138,7 @@ std::istream* MysqlCppResultSet::getBlob(uint32_t columnIndex) const
 
 std::istream* MysqlCppResultSet::getBlob(const std::string& columnLabel) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return nullptr;
     }
@@ -153,7 +154,7 @@ std::istream* MysqlCppResultSet::getBlob(const std::string& columnLabel) const
 
 bool MysqlCppResultSet::getBoolean(uint32_t columnIndex) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return false;
     }
@@ -174,7 +175,7 @@ bool MysqlCppResultSet::getBoolean(uint32_t columnIndex) const
 
 bool MysqlCppResultSet::getBoolean(const std::string& columnLabel) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return false;
     }
@@ -190,7 +191,7 @@ bool MysqlCppResultSet::getBoolean(const std::string& columnLabel) const
 
 long double MysqlCppResultSet::getDouble(uint32_t columnIndex) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return 0;
     }
@@ -211,7 +212,7 @@ long double MysqlCppResultSet::getDouble(uint32_t columnIndex) const
 
 long double MysqlCppResultSet::getDouble(const std::string& columnLabel) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return 0;
     }
@@ -227,7 +228,7 @@ long double MysqlCppResultSet::getDouble(const std::string& columnLabel) const
 
 int32_t MysqlCppResultSet::getInt(uint32_t columnIndex) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return 0;
     }
@@ -248,7 +249,7 @@ int32_t MysqlCppResultSet::getInt(uint32_t columnIndex) const
 
 int32_t MysqlCppResultSet::getInt(const std::string& columnLabel) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return 0;
     }
@@ -264,7 +265,7 @@ int32_t MysqlCppResultSet::getInt(const std::string& columnLabel) const
 
 uint32_t MysqlCppResultSet::getUInt(uint32_t columnIndex) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return 0;
     }
@@ -285,7 +286,7 @@ uint32_t MysqlCppResultSet::getUInt(uint32_t columnIndex) const
 
 uint32_t MysqlCppResultSet::getUInt(const std::string& columnLabel) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return 0;
     }
@@ -301,7 +302,7 @@ uint32_t MysqlCppResultSet::getUInt(const std::string& columnLabel) const
 
 int64_t MysqlCppResultSet::getInt64(uint32_t columnIndex) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return 0;
     }
@@ -322,7 +323,7 @@ int64_t MysqlCppResultSet::getInt64(uint32_t columnIndex) const
 
 int64_t MysqlCppResultSet::getInt64(const std::string& columnLabel) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return 0;
     }
@@ -338,7 +339,7 @@ int64_t MysqlCppResultSet::getInt64(const std::string& columnLabel) const
 
 uint64_t MysqlCppResultSet::getUInt64(uint32_t columnIndex) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return 0;
     }
@@ -359,7 +360,7 @@ uint64_t MysqlCppResultSet::getUInt64(uint32_t columnIndex) const
 
 uint64_t MysqlCppResultSet::getUInt64(const std::string& columnLabel) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return 0;
     }
@@ -375,7 +376,7 @@ uint64_t MysqlCppResultSet::getUInt64(const std::string& columnLabel) const
 
 std::string MysqlCppResultSet::getString(uint32_t columnIndex) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return "";
     }
@@ -396,7 +397,7 @@ std::string MysqlCppResultSet::getString(uint32_t columnIndex) const
 
 std::string MysqlCppResultSet::getString(const std::string& columnLabel) const
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return "";
     }
@@ -412,7 +413,7 @@ std::string MysqlCppResultSet::getString(const std::string& columnLabel) const
 
 bool MysqlCppResultSet::next()
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return false;
     }
@@ -428,7 +429,7 @@ bool MysqlCppResultSet::next()
 
 bool MysqlCppResultSet::previous()
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return false;
     }
@@ -444,7 +445,7 @@ bool MysqlCppResultSet::previous()
 
 size_t MysqlCppResultSet::rowsCount()
 {
-    if (m_resultSet == nullptr)
+    if (!isValid())
     {
         return 0;
     }

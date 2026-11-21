@@ -15,7 +15,7 @@ struct MysqlCppAPI MysqlCppExecuteResult
     bool m_success;
     // INSERT/UPDATE/DELETE影响的行数，执行失败时为0
     int32_t m_affectedRows;
-    // 本连接最后一次INSERT产生的自增ID，没有自增ID时为0
+    // 成功的 INSERT/REPLACE 读取本会话的 LAST_INSERT_ID()，可能沿用先前的值。其他语句、执行或读取失败时为 0
     uint64_t m_lastInsertId;
 #ifdef _MSC_VER
 #pragma warning(push)

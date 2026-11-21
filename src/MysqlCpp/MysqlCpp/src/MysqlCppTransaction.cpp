@@ -3,6 +3,7 @@
 
 MysqlCppTransaction::MysqlCppTransaction(MysqlCpp& mysql) :
 m_mysql(&mysql),
+m_session(mysql.m_session),
 m_active(mysql.beginTransaction())
 {
 
@@ -10,7 +11,7 @@ m_active(mysql.beginTransaction())
 
 MysqlCppTransaction::~MysqlCppTransaction()
 {
-    if (m_active && m_mysql != nullptr)
+    if (isActive())
     {
         m_mysql->rollback();
     }
@@ -18,12 +19,12 @@ MysqlCppTransaction::~MysqlCppTransaction()
 
 bool MysqlCppTransaction::isActive() const
 {
-    return m_active;
+    return m_active && !m_session.expired();
 }
 
 bool MysqlCppTransaction::commit()
 {
-    if (!m_active || m_mysql == nullptr)
+    if (!isActive())
     {
         return false;
     }
@@ -37,9 +38,8 @@ bool MysqlCppTransaction::commit()
 
 void MysqlCppTransaction::rollback()
 {
-    if (m_active && m_mysql != nullptr)
+    if (isActive() && m_mysql->rollback())
     {
-        m_mysql->rollback();
         m_active = false;
     }
 }

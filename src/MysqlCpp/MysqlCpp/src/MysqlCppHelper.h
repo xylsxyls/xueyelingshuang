@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <string>
+#include <vector>
 
 namespace sql
 {
@@ -13,6 +14,16 @@ namespace sql
 class MysqlCppHelper
 {
 public:
+    /** 以独立参数启动 MySQL 工具并等待退出，SQL 文件作为子进程输入或输出
+    @param [in] arguments 首项为工具名或路径，后续各项原样作为独立参数
+    @param [in] path SQL 文件的 UTF-8 路径
+    @param [in] input true 表示从文件导入，false 表示向文件导出
+    @param [in] password 数据库密码，只写入工具子进程的环境
+    @return 工具的退出码，无法打开文件、启动或等待时返回 -1
+    */
+    static int runTool(const std::vector<std::string>& arguments, const std::string& path, bool input,
+        const std::string& password);
+
     /** 获取SQL文本中第一个有效单词，会跳过开头空白、行注释和块注释
     @param [in] sql SQL文本
     @return 返回大写后的第一个SQL单词，无法识别时返回空字符串

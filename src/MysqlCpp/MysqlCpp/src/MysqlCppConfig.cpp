@@ -7,7 +7,9 @@ m_autoCommit(false),
 m_autoReconnect(true),
 m_connectTimeoutSeconds(5),
 m_readTimeoutSeconds(10),
-m_writeTimeoutSeconds(10)
+m_writeTimeoutSeconds(10),
+m_poolMinConnections(1),
+m_poolMaxConnections(1)
 {
 
 }

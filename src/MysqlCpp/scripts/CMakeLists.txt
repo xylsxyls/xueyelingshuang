@@ -814,16 +814,12 @@ def publish_static(library, build, bit, mode, compiler, sdk, vendors):
     wasm_message('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': C++ static archive ' + str(len(payload)) + ' bytes')
 
 
-def vendor_headers(vendor):
-    """Select Wasm-specific headers, or headers shared by all targets."""
-    root = ROOT / 'tools' / vendor / 'include'
-    specific = root / (vendor + 'wasm')
-    if specific.is_dir():
-        return specific
-    if root.is_dir() and any(path.is_file() and path.suffix.lower() in ('.h', '.hpp')
-                             for path in root.iterdir()):
-        return root
-    raise ValueError('Missing Wasm or platform-independent vendor headers: ' + str(root))
+def vendor_headers(archive):
+    """Read the same target-specific header selection used by before."""
+    helpers = str(ROOT / 'common' / 'CloudRebuild')
+    if helpers not in sys.path: sys.path.insert(0, helpers)
+    from WasmVendorHeaders import selected_headers
+    return selected_headers(ROOT, archive)
 
 
 def build_inputs(library, bit, mode, linkage, scope, private):
@@ -852,12 +848,10 @@ def build_inputs(library, bit, mode, linkage, scope, private):
             raise ValueError('Missing or mismatched prepared Wasm vendor: ' + str(prepared))
         vendor_paths.append(prepared)
         vendor = source.relative_to(ROOT / 'tools').parts[0]
-        headers = vendor_headers(vendor)
-        for header in headers.rglob('*'):
-            if header.is_file():
-                target = SDK_ROOT / 'include' / vendor / header.relative_to(headers)
-                if not target.is_file() or target.read_bytes() != header.read_bytes():
-                    raise ValueError('Missing or mismatched Wasm header: ' + str(target))
+        for relative_header, header in vendor_headers(source).items():
+            target = SDK_ROOT / 'include' / vendor / relative_header
+            if not target.is_file() or target.read_bytes() != header.read_bytes():
+                raise ValueError('Missing or mismatched Wasm header: ' + str(target))
     if scope == 'only':
         for dep in names:
             if dep != library: validate(dep, bit, mode)
@@ -935,9 +929,8 @@ def stage_sdk(destination, libraries=None):
         source = ROOT / relative
         copy(SDK_ROOT / 'lib' / source.name)
         vendor = source.relative_to(ROOT / 'tools').parts[0]
-        headers = vendor_headers(vendor)
-        for header in headers.rglob('*'):
-            if header.is_file(): copy(SDK_ROOT / 'include' / vendor / header.relative_to(headers))
+        for header in (SDK_ROOT / 'include' / vendor).rglob('*'):
+            if header.is_file(): copy(header)
     destination.mkdir(parents=True, exist_ok=True)
     (destination / '.wasm-baseline.json').write_text(json.dumps(baseline), encoding='utf-8')
 
@@ -973,9 +966,7 @@ def publish_tree(destination, libraries, bit, mode):
             source = ROOT / relative
             files.add(SDK_ROOT / 'lib' / source.name)
             vendor = source.relative_to(ROOT / 'tools').parts[0]
-            headers = vendor_headers(vendor)
-            files.update(SDK_ROOT / 'include' / vendor / header.relative_to(headers)
-                         for header in headers.rglob('*') if header.is_file())
+            files.update(SDK_ROOT / 'include' / vendor / relative_header for relative_header in vendor_headers(source))
     for file in files:
         updates[destination / file.relative_to(SDK_ROOT)] = file.read_bytes()
     for name in libraries:
@@ -1294,6 +1285,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT DEFINED CMAKE_TRY_COMPILE_TARGET_TYP
     set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 endif()
 project(MysqlCpp LANGUAGES C CXX)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    message(FATAL_ERROR "Linux SDK for mysqlcpp is pending; no Linux release is packaged for this target")
+endif()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -1393,6 +1387,7 @@ foreach(native_config DEBUG RELEASE)
         ARCHIVE_OUTPUT_DIRECTORY_${native_config} "${SDK_ROOT}/lib"
         LIBRARY_OUTPUT_DIRECTORY_${native_config} "${SDK_ROOT}/lib")
 endforeach()
+target_include_directories(MysqlCpp BEFORE PRIVATE "${SDK_ROOT}/include/mysql-connector-cpp")
 target_include_directories(MysqlCpp PUBLIC "${SDK_ROOT}/include")
 target_compile_options(MysqlCpp PRIVATE "$<$<CONFIG:Release>:-g>")
 if(APPLE)
@@ -1441,10 +1436,6 @@ add_custom_command(TARGET MysqlCpp POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${native_macro}" "${SDK_ROOT}/include/MysqlCpp/MysqlCppMacro.h"
     VERBATIM)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -Wl,-rpath=. -O0 -g -ggdb ")
-    set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
-endif()
 
 target_compile_definitions(MysqlCpp PRIVATE CPPCONN_LIB_BUILD)
 target_compile_options(MysqlCpp PRIVATE -w)
@@ -1452,15 +1443,9 @@ if(DEFINED ENV{BOOST_ROOT} AND NOT "$ENV{BOOST_ROOT}" STREQUAL "")
     target_include_directories(MysqlCpp PRIVATE "$ENV{BOOST_ROOT}")
 endif()
 if(NOT LIBRARIESRELY)
-    set(mysql_archive "${SDK_ROOT}/lib/libmysqlcppconnstatic${BIT}.a")
+    set(mysql_archive "${SDK_ROOT}/lib/libmysqlcppconnstatic.a")
     if(NOT EXISTS "${mysql_archive}")
         message(FATAL_ERROR "Prepare the target MySQL Connector SDK first: ${mysql_archive}")
     endif()
     target_link_libraries(MysqlCpp PUBLIC "${mysql_archive}")
-    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        if(NOT EXISTS "${SDK_ROOT}/lib/libmysqlclient.so.18")
-            message(FATAL_ERROR "Prepare the target libmysqlclient.so.18 first")
-        endif()
-        target_link_libraries(MysqlCpp PUBLIC "${SDK_ROOT}/lib/libmysqlclient.so.18")
-    endif()
 endif()

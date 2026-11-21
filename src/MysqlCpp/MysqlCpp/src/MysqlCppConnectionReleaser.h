@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <atomic>
 #include <memory>
+#include <mutex>
 
 class MysqlCpp;
 class MysqlCppConnectionPool;
@@ -30,4 +31,6 @@ private:
     MysqlCppConnectionPool* m_pool;
     // 连接池生命周期标记，用于避免连接池析构后归还连接时访问悬挂指针
     std::weak_ptr<std::atomic<bool>> m_poolAlive;
+    // 与析构串行，避免在池的存活检查和实际归还之间失效
+    std::shared_ptr<std::mutex> m_returnGate;
 };

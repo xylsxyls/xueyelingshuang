@@ -84,7 +84,7 @@ public:
     */
     std::string lastError() const;
 
-    /** 选择当前连接使用的数据库，并设置自动提交策略
+    /** 先切换数据库，再设置自动提交策略。第二步失败时，已切换的库仍是当前库，重连也使用该库。
     @param [in] dbName 数据库名
     @param [in] autoCommit 是否自动提交事务
     @return 返回是否选择成功
@@ -103,7 +103,7 @@ public:
     */
     std::shared_ptr<MysqlCppPrepareStatement> prepare(const std::string& sqlString);
 
-    /** 兼容旧接口的执行函数，会根据SQL类型返回结果集
+    /** 执行一次 SQL，根据服务端返回的列信息决定是否交付结果集
     @param [in] statement 已绑定参数的预处理语句
     @param [in] isCommit 执行后是否提交事务
     @return 查询SQL返回结果集，非查询SQL返回空结果集
@@ -120,7 +120,7 @@ public:
     /** 执行INSERT/UPDATE/DELETE等非查询SQL
     @param [in] statement 已绑定参数的预处理语句
     @param [in] isCommit 执行后是否提交事务
-    @return 返回执行结果，包括影响行数、自增ID和错误信息
+    @return 返回行数、会话自增 ID 及错误信息。执行或请求的提交失败时，行数和 ID 均为 0
     */
     MysqlCppExecuteResult executeUpdate(const std::shared_ptr<MysqlCppPrepareStatement>& statement, bool isCommit = true);
 
@@ -152,18 +152,29 @@ public:
                    const std::string& password,
                    const std::string& database);
 
-    /** 执行mysql命令行导出数据
+    /** 用 mysqldump 导出一个数据库，端口取当前连接配置
     @param [in] sqlPath 导出文件保存路径
     @param [in] host MySQL服务器地址
     @param [in] user 登录账号
     @param [in] password 登录密码
-    @param [in] exportData mysqldump后面的导出目标参数
+    @param [in] exportData 数据库名，按一个独立参数传递
     */
     void exportSql(const std::string& sqlPath,
                    const std::string& host,
                    const std::string& user,
                    const std::string& password,
                    const std::string& exportData);
+
+    /** 导出指定数据库中的一张表，结果通过 lastError 查询
+    @param [in] sqlPath SQL 输出路径，已存在的文件会被覆盖
+    @param [in] host 服务器主机，端口取当前连接配置，默认 3306
+    @param [in] user 登录账号
+    @param [in] password 登录密码
+    @param [in] database 数据库名
+    @param [in] table 表名，空串表示整个数据库
+    */
+    void exportSql(const std::string& sqlPath, const std::string& host, const std::string& user,
+        const std::string& password, const std::string& database, const std::string& table);
 
     /** 设置自动提交状态
     @param [in] autoCommit true表示每条SQL自动提交，false表示由调用方显式提交或回滚
@@ -175,6 +186,12 @@ protected:
     @return 返回当前连接是否可继续执行SQL
     */
     bool check() const;
+
+    /** 检查连接与预处理语句的归属并记录错误。
+    @param [in] statement 本次准备执行的语句
+    @return 当前连接拥有该有效语句时返回 true
+    */
+    bool checkStatement(const std::shared_ptr<MysqlCppPrepareStatement>& statement);
 
     /** 保存最近一次错误文本
     @param [in] error 错误文本，传空字符串表示清空错误
@@ -199,6 +216,9 @@ private:
     MysqlCpp& operator=(const MysqlCpp& other);
 
 private:
+    friend class MysqlCppTransaction;
+    // 仅当前连接持有的会话标识；关闭和重连使已借出的语句、结果和事务同时失效。
+    std::shared_ptr<unsigned char> m_session;
     // mysql-connector-cpp驱动对象，不由本类释放
     sql::Driver* m_driver;
     // 当前连接对象，由本类负责释放

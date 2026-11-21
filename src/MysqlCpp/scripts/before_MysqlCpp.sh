@@ -32,58 +32,16 @@ if [[ $4 != only ]]; then
 fi
 librariesrely+=($'project\tCSystem\t'"$CSystem_dlllib")
 
-if [[ $1 != wasm32 && $1 != wasm64 ]]; then
 SHELL_FOLDER=$(cd "$(dirname "$0")"; pwd)
-xueyelingshuang="$SHELL_FOLDER/../../.."
-sdkpath="${CLOUD_REBUILD_SDK_ROOT:-$xueyelingshuang}"
-thirdpartypath="$xueyelingshuang/tools/mysqlcpp"
-native_target="${CMAKE_SYSTEM_NAME:-}"
-if [[ -z "$native_target" && "${CMAKE_TOOLCHAIN_FILE:-}" == *android.toolchain.cmake ]]; then native_target=Android; fi
-if [[ -z "$native_target" && "${CMAKE_OSX_SYSROOT:-}" == *iphone* ]]; then native_target=iOS; fi
-if [[ -z "$native_target" ]]; then
-    case "$OSTYPE" in
-        linux*) native_target=Linux ;;
-        msys*|cygwin*|win32*) native_target=Windows ;;
-        darwin*) native_target=Darwin ;;
-    esac
-fi
-sdk_debug=""
-if [[ $3 == debug ]]; then sdk_debug=d; fi
-case "$native_target" in
-    Windows)
-        vendor_archive="mysqlcppconnstatic${1}${sdk_debug}.lib"
-        vendor_runtime="libmysql.dll"
-        ;;
-    Linux)
-        vendor_archive="libmysqlcppconnstatic${1}.a"
-        vendor_runtime="libmysqlclient.so.18"
-        ;;
-    Darwin|iOS|Android)
-        vendor_archive="libmysqlcppconnstatic${1}.a"
-        vendor_runtime=""
-        if [[ ! -f "$sdkpath/include/cppconn/connection.h" || ! -f "$sdkpath/lib/$vendor_archive" ]]; then
-            echo "Prepare the target $native_target MySQL Connector SDK in $sdkpath first." >&2
-            false
-        fi
-        ;;
-    *) echo "Unsupported native target: $native_target" >&2; false ;;
-esac
-if [[ "$native_target" == Windows || "$native_target" == Linux ]]; then
-    case "$1" in
-        32) vendor_arch=x86 ;;
-        64) vendor_arch=x64 ;;
-        arm32|arm64) vendor_arch=$1 ;;
-        *) echo "Unsupported native BIT: $1" >&2; false ;;
-    esac
-    mkdir -p "$sdkpath/include/cppconn" "$sdkpath/lib"
-    cp -Rf "$thirdpartypath/include/cppconn/." "$sdkpath/include/cppconn/"
-    cp -f "$thirdpartypath/lib/$vendor_arch/$vendor_archive" "$sdkpath/lib/"
-    cp -f "$thirdpartypath/lib/$vendor_arch/$vendor_runtime" "$sdkpath/lib/"
-fi
+root="$SHELL_FOLDER/../../.."
+suffix=""
+if [[ $3 == debug ]]; then suffix=d; fi
+vendor_archive="mysqlcppconnstatic${suffix}.lib"
+THIRDPARTY_INCLUDE_NAME=mysql-connector-cpp THIRDPARTY_FILES="$vendor_archive" \
+    bash "$root/tools/thirdparty.sh" mysqlcpp "$1" lib "$3" "$4" || exit $?
+# Oracle 的发布 DLL 供该架构的所有封装配置运行时加载。
+THIRDPARTY_CRT=md THIRDPARTY_FILES=$'libmysql.dll\nlibmysql.lib' \
+    bash "$root/tools/thirdparty.sh" mysqlclient "$1" dll release "$4" || exit $?
 librariesrely+=($'link\t'"$vendor_archive")
-if [[ "$native_target" == Linux ]]; then
-    librariesrely+=($'link\t'"$vendor_runtime")
-fi
-fi
 
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return

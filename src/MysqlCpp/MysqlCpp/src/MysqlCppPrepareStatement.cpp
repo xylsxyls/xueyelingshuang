@@ -6,7 +6,7 @@
 #pragma warning(disable:4251)
 #endif
 
-#include "cppconn/prepared_statement.h"
+#include "mysql-connector-cpp/cppconn/prepared_statement.h"
 
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -26,7 +26,7 @@ MysqlCppPrepareStatement::~MysqlCppPrepareStatement()
 
 bool MysqlCppPrepareStatement::isValid() const
 {
-    return m_preparedStatement != nullptr;
+    return m_preparedStatement != nullptr && !m_session.expired();
 }
 
 std::string MysqlCppPrepareStatement::sql() const
@@ -36,7 +36,7 @@ std::string MysqlCppPrepareStatement::sql() const
 
 void MysqlCppPrepareStatement::setBigInt(uint32_t parameterIndex, const std::string& value)
 {
-    if (m_preparedStatement == nullptr)
+    if (!isValid())
     {
         return;
     }
@@ -57,7 +57,7 @@ void MysqlCppPrepareStatement::setBigInt(uint32_t parameterIndex, const std::str
 
 void MysqlCppPrepareStatement::setBlob(uint32_t parameterIndex, std::istream* blob)
 {
-    if (m_preparedStatement == nullptr)
+    if (!isValid())
     {
         return;
     }
@@ -78,7 +78,7 @@ void MysqlCppPrepareStatement::setBlob(uint32_t parameterIndex, std::istream* bl
 
 void MysqlCppPrepareStatement::setBoolean(uint32_t parameterIndex, bool value)
 {
-    if (m_preparedStatement == nullptr)
+    if (!isValid())
     {
         return;
     }
@@ -99,7 +99,7 @@ void MysqlCppPrepareStatement::setBoolean(uint32_t parameterIndex, bool value)
 
 void MysqlCppPrepareStatement::setDateTime(uint32_t parameterIndex, const std::string& value)
 {
-    if (m_preparedStatement == nullptr)
+    if (!isValid())
     {
         return;
     }
@@ -120,7 +120,7 @@ void MysqlCppPrepareStatement::setDateTime(uint32_t parameterIndex, const std::s
 
 void MysqlCppPrepareStatement::setDouble(uint32_t parameterIndex, double value)
 {
-    if (m_preparedStatement == nullptr)
+    if (!isValid())
     {
         return;
     }
@@ -141,7 +141,7 @@ void MysqlCppPrepareStatement::setDouble(uint32_t parameterIndex, double value)
 
 void MysqlCppPrepareStatement::setInt(uint32_t parameterIndex, int32_t value)
 {
-    if (m_preparedStatement == nullptr)
+    if (!isValid())
     {
         return;
     }
@@ -162,7 +162,7 @@ void MysqlCppPrepareStatement::setInt(uint32_t parameterIndex, int32_t value)
 
 void MysqlCppPrepareStatement::setUInt(uint32_t parameterIndex, uint32_t value)
 {
-    if (m_preparedStatement == nullptr)
+    if (!isValid())
     {
         return;
     }
@@ -183,7 +183,7 @@ void MysqlCppPrepareStatement::setUInt(uint32_t parameterIndex, uint32_t value)
 
 void MysqlCppPrepareStatement::setInt64(uint32_t parameterIndex, int64_t value)
 {
-    if (m_preparedStatement == nullptr)
+    if (!isValid())
     {
         return;
     }
@@ -204,7 +204,7 @@ void MysqlCppPrepareStatement::setInt64(uint32_t parameterIndex, int64_t value)
 
 void MysqlCppPrepareStatement::setUInt64(uint32_t parameterIndex, uint64_t value)
 {
-    if (m_preparedStatement == nullptr)
+    if (!isValid())
     {
         return;
     }
@@ -225,7 +225,7 @@ void MysqlCppPrepareStatement::setUInt64(uint32_t parameterIndex, uint64_t value
 
 void MysqlCppPrepareStatement::setNull(uint32_t parameterIndex, int32_t sqlType)
 {
-    if (m_preparedStatement == nullptr)
+    if (!isValid())
     {
         return;
     }
@@ -246,7 +246,7 @@ void MysqlCppPrepareStatement::setNull(uint32_t parameterIndex, int32_t sqlType)
 
 void MysqlCppPrepareStatement::setString(uint32_t parameterIndex, const std::string& value)
 {
-    if (m_preparedStatement == nullptr)
+    if (!isValid())
     {
         return;
     }

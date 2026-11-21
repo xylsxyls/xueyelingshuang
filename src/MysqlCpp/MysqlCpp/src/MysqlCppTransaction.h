@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <memory>
 #include "MysqlCppMacro.h"
 
 class MysqlCpp;
@@ -28,7 +29,7 @@ public:
     */
     bool commit();
 
-    /** 回滚事务，回滚后事务变为非活动状态
+    /** 回滚成功后结束事务；若服务器拒绝，isActive 仍为 true，可查看连接的 lastError 并重试。
     */
     void rollback();
 
@@ -47,6 +48,8 @@ private:
 private:
     // 事务绑定的MySQL连接对象，不负责释放
     MysqlCpp* m_mysql;
+    // 事务创建时的会话标识，过期后不得在另一会话提交或回滚。
+    std::weak_ptr<unsigned char> m_session;
     // 事务是否已开启且尚未提交或回滚
     bool m_active;
 };

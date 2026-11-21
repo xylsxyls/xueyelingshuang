@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <memory>
 #include <stdint.h>
 #include <istream>
 #include <map>
@@ -41,13 +42,13 @@ public:
 public:
     /** 按列下标读取二进制流，列下标从0开始
     @param [in] columnIndex 列下标
-    @return 返回底层二进制输入流，失败返回nullptr
+    @return 成功时调用方拥有返回的新流并负责释放；读取失败返回nullptr
     */
     std::istream* getBlob(uint32_t columnIndex) const;
 
     /** 按列名读取二进制流
     @param [in] columnLabel 列名或别名
-    @return 返回底层二进制输入流，失败返回nullptr
+    @return 成功时调用方拥有返回的新流并负责释放；读取失败返回nullptr
     */
     std::istream* getBlob(const std::string& columnLabel) const;
 
@@ -180,6 +181,8 @@ private:
     MysqlCppResultSet& operator=(const MysqlCppResultSet& other);
 
 private:
+    // 保持建结果时的预处理语句存活，检查所属会话是否仍有效。
+    std::shared_ptr<class MysqlCppPrepareStatement> m_statement;
     // 底层MySQL查询结果集对象
     sql::ResultSet* m_resultSet;
 };

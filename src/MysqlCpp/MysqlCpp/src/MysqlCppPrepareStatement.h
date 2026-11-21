@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <memory>
 #include <stdint.h>
 #include <istream>
 #include <string>
@@ -39,7 +40,7 @@ public:
 
     /** 绑定二进制流参数，下标从0开始
     @param [in] parameterIndex 参数下标
-    @param [in] blob 要绑定的二进制输入流
+    @param [in] blob 调用方拥有的可读输入流，绑定后保持有效直至该次语句执行完；SQL NULL 使用 setNull
     */
     void setBlob(uint32_t parameterIndex, std::istream* blob);
 
@@ -123,6 +124,8 @@ private:
     MysqlCppPrepareStatement& operator=(const MysqlCppPrepareStatement& other);
 
 private:
+    // 连接重建后原生语句不再可执行。
+    std::weak_ptr<unsigned char> m_session;
     // 底层MySQL预编译语句对象
     sql::PreparedStatement* m_preparedStatement;
 #ifdef _MSC_VER
