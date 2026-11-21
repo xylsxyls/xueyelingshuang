@@ -15,93 +15,98 @@
 class SharedMemoryAPI SharedMemory
 {
 public:
-    /** 设置命名映射目录；必须在本进程首次命名IPC前由初始化线程调用。
-    Android使用应用私有共享目录，iOS使用App Group容器中的专用目录，目录须已存在。
-    POSIX桌面默认空值使用shm_open，也可显式选择目录；Windows仅接受空值。
-    配置成功后引用该目录本身。目录改名或原路径被重新创建时，后续映射仍使用原目录。
-    文件仅作为mmap数据后备，不加文件锁；调用方不得删除或截短正在使用的文件。
+    /** 设置命名映射目录；必须在本进程首次命名IPC前由初始化线程调用
+    Android使用应用私有共享目录，iOS使用App Group容器中的专用目录，目录须已存在
+    POSIX桌面默认空值使用shm_open，也可显式选择目录；Windows仅接受空值
+    配置成功后引用该目录本身。目录改名或原路径被重新创建时，后续映射仍使用原目录
+    文件仅作为mmap数据后备，不加文件锁；调用方不得删除或截短正在使用的文件
     @param [in] directory 绝对路径，不含NUL；移动端不允许空值
     @return 配置有效为true，已启用后更换目录或权限不允许为false
     */
     static bool setProcessDirectory(const std::string& directory);
 
-    /** 创建或打开内存；size为0只打开，不创建不存在对象。
+    /** 创建或打开内存；size为0只打开，不创建不存在对象
     @param [in] name 逻辑名称；创建时空名表示匿名内存；跨桌面可移植名称不超过30字节且无斜杠/NUL
     @param [in] size 创建容量，0只打开
     @param [in] isAllowExist 是否允许加入既有对象；false 碰撞明确失败，true 加入时须获读写权限并能映射请求容量
     */
     SharedMemory(const std::string& name, uint32_t size = 0, bool isAllowExist = true);
 
-    /** 解除映射并释放句柄；POSIX新建者移除名称，既有对端映射仍然有效。 */
+    /** 解除本实例的映射并关闭句柄或描述符
+    POSIX 创建者默认撤销名称，已调用 preserveName 的实例保留名称，其他进程的既有映射继续有效
+    */
     ~SharedMemory();
 
-    /** 查询是否尚未取得有效资源。
+    /** 查询是否尚未取得有效资源
     @return 尚无有效句柄时为true；只打开的实例可能要在首次映射后才成功
     */
     bool isFailed();
 
-    /** 本次请求的创建容量。
+    /** 本次请求的创建容量
     @return 只打开对象时0
     */
     uint32_t size();
 
-    /** 实际映射容量。Windows 按页取整，并包含同一视图中不同保护属性的区域。
+    /** 实际映射容量。Windows 按页取整，并包含同一视图中不同保护属性的区域
     @return 无效或容量无法用 uint32_t 表示时返回 0
     */
     uint32_t realSize();
 
-    /** 取得逻辑名称，不暴露原生HANDLE。
+    /** 取得逻辑名称，不暴露原生HANDLE
     @return 构造时的名称
     */
     std::string mapName();
 
-    /** 最近一次成功取得的视图；获取另一种权限失败时仍保留，close 后清空。
+    /** 最近一次成功取得的视图；获取另一种权限失败时仍保留，close 后清空
     @return 未映射时nullptr
     */
     void* memory();
 
-    /** 取得可读映射；已有后备仅授予读取权限时仍可打开。
-    Windows 优先使用只读视图。仅授予 FILE_MAP_WRITE 时使用操作系统允许的读写视图。
+    /** 取得可读映射；已有后备仅授予读取权限时仍可打开
+    Windows 优先使用只读视图。仅授予 FILE_MAP_WRITE 时使用操作系统允许的读写视图
     @return 映射失败为nullptr
     */
     void* readWithoutLock();
 
-    /** 取得可读写映射，调用方负责共享数据同步。
+    /** 取得可读写映射，调用方负责共享数据同步
     @return 映射失败为nullptr
     */
     void* writeWithoutLock();
 
-    /** 解除本实例视图；重复调用安全。命名对象保留句柄以便再次映射。
-    Windows 匿名对象保留数据；POSIX 匿名映射解除即释放数据，再映射将得到全零页。 */
+    /** 解除本实例的视图，可重复调用，命名对象保留句柄或描述符以便再次映射
+    Windows 匿名对象保留数据，POSIX 匿名映射解除后释放数据，再映射得到全零页
+    */
     void close();
 
-    /** 清零本次请求范围。只打开的实例直接返回。Windows 请求范围包含未提交页或不可写页时整段保留。 */
+    /** 将可写视图中构造时请求的字节范围清零
+    只打开的实例或无法取得可写视图时直接返回，Windows 请求范围含未提交或不可写页时保留整段内容
+    */
     void clear();
 
-    /** POSIX撤销本代名称，既有映射继续有效；Windows由最后一个引用自动释放。
-    只允许名称生命周期owner调用。非零容量创建或加入失败的实例不能撤名。
-    只打开的实例可按名清理已确认的遗留对象，不能对可能属于新代次的固定名称盲目调用。
+    /** POSIX撤销本代名称，既有映射继续有效；Windows由最后一个引用自动释放
+    只允许名称生命周期owner调用。非零容量创建或加入失败的实例不能撤名
+    只打开的实例可按名清理已确认的遗留对象，不能对可能属于新代次的固定名称盲目调用
     @return true 已移除或本来不存在；同一实例重复成功调用不影响后建同名对象。Windows/匿名对象返回 false
     */
     bool unlinkName();
 
-    /** 保留命名对象至显式unlinkName，适用于由上层CAS决定逻辑所有者的发现入口。
-    只影响POSIX析构撤名；仍正常解除映射和关闭描述符。Windows不需要撤名。
+    /** 保留命名对象至显式unlinkName，适用于由上层CAS决定逻辑所有者的发现入口
+    只影响POSIX析构撤名；仍正常解除映射和关闭描述符。Windows不需要撤名
     */
     void preserveName();
 private:
-    /** 禁止复制资源。
+    /** 禁止复制资源
     @param [in] other 不可复制实例
     */
     SharedMemory(const SharedMemory& other);
 
-    /** 禁止复制资源。
+    /** 禁止复制资源
     @param [in] other 不可复制实例
     @return 不可调用
     */
     SharedMemory& operator=(const SharedMemory& other);
 
-    /** 打开既有内存对象，不创建。
+    /** 打开既有内存对象，不创建
     @param [in] readOnly 是否只需读权限
     */
     void open(bool readOnly);
