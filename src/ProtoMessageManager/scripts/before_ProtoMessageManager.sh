@@ -44,8 +44,9 @@ else
     librariesrely+=($'link\t'"$archive")
 fi
 THIRDPARTY_FILES="$archive" bash "$root/tools/thirdparty.sh" protobuf "$1" lib "$config" "$4" || exit 1
-# protoc 在构建主机运行，生成代码与目标架构无关
-if [[ $1 != wasm* ]]; then
+# protoc 在构建主机运行。Wasm 复用已有源码，干净检出时补齐一对生成文件。
+src="$root/src/ProtoMessageManager/ProtoMessageManager/src"
+if [[ $1 != wasm* || ! -s $src/ProtoMessage.pb.h || ! -s $src/ProtoMessage.pb.cc ]]; then
     generator="${PROTOC_EXECUTABLE:-}"
     if [[ -z $generator ]]; then
         case "$OSTYPE:$(uname -m)" in
@@ -54,7 +55,6 @@ if [[ $1 != wasm* ]]; then
             linux*:aarch64|linux*:arm64) generator="$root/tools/protobuf/bin/arm/x64/protoc" ;;
         esac
     fi
-    src="$root/src/ProtoMessageManager/ProtoMessageManager/src"
     if [[ -n $generator ]]; then
         actual=$("$generator" --version) || exit 1
         [[ $actual == "libprotoc 3.3.0" ]] || { echo "Expected protoc 3.3.0, found $actual" >&2; exit 1; }

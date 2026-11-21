@@ -10,7 +10,7 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define ProtoMessageManagerAPI __attribute__ ((visibility("default")))
     #else
-        #define ProtoMessageManagerAPI
+        #define ProtoMessageManagerAPI 
     #endif
 #endif
 
