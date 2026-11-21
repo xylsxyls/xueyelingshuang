@@ -1,6 +1,5 @@
-﻿#include "../../../common/PlatformTest/LibraryCaseSelection.h"
+﻿#include "PlatformTest/PlatformTestAPI.h"
 #include "IntDateTimeTest.h"
-#include "../../../common/PlatformTest/LibraryBenchmark.h"
 #include <cstring>
 #include <cstdio>
 #include "IntDateTime/IntDateTimeAPI.h"
