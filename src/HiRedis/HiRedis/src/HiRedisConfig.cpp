@@ -6,7 +6,9 @@ m_port(6379),
 m_dbIndex(0),
 m_connectTimeoutMs(3000),
 m_commandTimeoutMs(3000),
-m_enableKeepAlive(true)
+m_enableKeepAlive(true),
+m_poolMinConnections(1),
+m_poolMaxConnections(1)
 {
 
 }

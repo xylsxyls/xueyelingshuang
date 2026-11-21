@@ -10,7 +10,8 @@ m_pool(nullptr)
 
 HiRedisConnectionReleaser::HiRedisConnectionReleaser(HiRedisConnectionPool* pool, const std::shared_ptr<std::atomic<bool>>& poolAlive) :
 m_pool(pool),
-m_poolAlive(poolAlive)
+m_poolAlive(poolAlive),
+m_returnGate(pool == nullptr ? nullptr : pool->m_returnGate)
 {
 
 }
@@ -23,10 +24,14 @@ void HiRedisConnectionReleaser::operator()(HiRedis* connection) const
     }
 
     std::shared_ptr<std::atomic<bool>> poolAlive = m_poolAlive.lock();
-    if (m_pool != nullptr && poolAlive.get() != nullptr && poolAlive->load())
+    if (m_returnGate && poolAlive)
     {
-        m_pool->releaseConnectionFromReleaser(connection);
-        return;
+        std::lock_guard<std::mutex> guard(*m_returnGate);
+        if (poolAlive->load())
+        {
+            m_pool->releaseConnectionFromReleaser(connection);
+            return;
+        }
     }
 
     connection->uninit();

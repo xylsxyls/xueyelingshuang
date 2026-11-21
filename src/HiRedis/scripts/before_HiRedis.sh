@@ -22,54 +22,13 @@ if [[ $4 != only ]]; then
 fi
 librariesrely+=($'project\tCStringManager\t'"$CStringManager_dlllib")
 
-if [[ $1 != wasm32 && $1 != wasm64 ]]; then
 SHELL_FOLDER=$(cd "$(dirname "$0")"; pwd)
-xueyelingshuang="$SHELL_FOLDER/../../.."
-sdkpath="${CLOUD_REBUILD_SDK_ROOT:-$xueyelingshuang}"
-native_target="${CMAKE_SYSTEM_NAME:-}"
-if [[ -z "$native_target" && "${CMAKE_TOOLCHAIN_FILE:-}" == *android.toolchain.cmake ]]; then native_target=Android; fi
-if [[ -z "$native_target" && "${CMAKE_OSX_SYSROOT:-}" == *iphone* ]]; then native_target=iOS; fi
-if [[ -z "$native_target" ]]; then
-    case "$OSTYPE" in
-        linux*) native_target=Linux ;;
-        msys*|cygwin*|win32*) native_target=Windows ;;
-        darwin*) native_target=Darwin ;;
-    esac
-fi
-sdk_debug=""
-if [[ $3 == debug ]]; then sdk_debug=d; fi
-case "$native_target" in
-    Windows)
-        vendor_archives=("hiredisstatic${1}${sdk_debug}.lib" "Win32_Interopstatic${1}${sdk_debug}.lib")
-        vendor_headers="$xueyelingshuang/tools/hiredis/include/hirediswindows"
-        ;;
-    Linux)
-        vendor_archives=("libhiredisstatic${1}.a")
-        vendor_headers="$xueyelingshuang/tools/hiredis/include/hiredislinux"
-        ;;
-    Darwin|iOS|Android)
-        vendor_archives=("libhiredisstatic${1}.a")
-        vendor_headers=""
-        if [[ ! -f "$sdkpath/include/hiredisinclude/hiredis.h" ]]; then
-            echo "Prepare $native_target hiredis headers in $sdkpath/include/hiredisinclude first." >&2
-            false
-        fi
-        ;;
-    *) echo "Unsupported native target: $native_target" >&2; false ;;
-esac
-mkdir -p "$sdkpath/include/hiredisinclude" "$sdkpath/lib"
-if [[ -n "$vendor_headers" ]]; then
-    cp -Rf "$vendor_headers/." "$sdkpath/include/hiredisinclude/"
-fi
-for vendor_archive in "${vendor_archives[@]}"; do
-    if [[ -n "$vendor_headers" ]]; then
-        cp -f "$xueyelingshuang/tools/hiredis/lib/$vendor_archive" "$sdkpath/lib/"
-    elif [[ ! -f "$sdkpath/lib/$vendor_archive" ]]; then
-        echo "Prepare the matching $native_target hiredis archive: $sdkpath/lib/$vendor_archive" >&2
-        false
-    fi
-    librariesrely+=($'link\t'"$vendor_archive")
-done
-fi
+root="$SHELL_FOLDER/../../.."
+suffix=""
+if [[ $3 == debug ]]; then suffix=d; fi
+vendor_archive="hiredisstatic${suffix}.lib"
+THIRDPARTY_INCLUDE_NAME=hiredisinclude THIRDPARTY_FILES="$vendor_archive" \
+    bash "$root/tools/thirdparty.sh" hiredis "$1" lib "$3" "$4" || exit $?
+librariesrely+=($'link\t'"$vendor_archive")
 
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return

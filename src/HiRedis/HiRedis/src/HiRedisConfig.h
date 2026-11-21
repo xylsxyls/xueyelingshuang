@@ -15,7 +15,7 @@ struct HiRedisAPI HiRedisConfig
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-    // Redis服务器IP或域名
+    // Redis 服务器 IP 或域名，不能含 NUL
     std::string m_ip;
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -26,7 +26,7 @@ struct HiRedisAPI HiRedisConfig
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-    // Redis认证密码，空字符串表示不认证
+    // Redis 认证密码按完整字节长度发送，空字符串表示不认证
     std::string m_password;
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -37,6 +37,10 @@ struct HiRedisAPI HiRedisConfig
     int32_t m_connectTimeoutMs;
     // 执行命令的读写超时时间，单位毫秒
     int32_t m_commandTimeoutMs;
-    // 是否启用TCP KeepAlive，Windows下由hiredis支持时生效
+    // 是否启用TCP KeepAlive，Windows 和 Linux 均在连接时设置；设置失败则连接失败
     bool m_enableKeepAlive;
+    // 初始化时预建、归还时保留的空闲连接数，默认 1；允许 0 以按需连接
+    int32_t m_poolMinConnections;
+    // 总连接上限，默认 1；-1 允许随需求增长，正值不得小于预建数量
+    int32_t m_poolMaxConnections;
 };

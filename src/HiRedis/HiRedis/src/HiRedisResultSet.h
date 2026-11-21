@@ -32,6 +32,12 @@ public:
     */
     bool isError() const;
 
+    /** 检查数组中指定的直接子回复是否为服务端错误，例如 EXEC 中单条命令执行失败。
+    @param [in] index 从零开始的子回复下标
+    @return 对应子回复为错误时返回 true，非数组或越界时返回 false；错误文本通过 at(index) 读取
+    */
+    bool isErrorAt(size_t index) const;
+
     /** 获取错误信息
     @return 返回本地错误或Redis错误回复文本，没有错误返回空字符串
     */
@@ -101,7 +107,7 @@ public:
     bool toStatus() const;
 
     /** 将回复转换为数量
-    @return 数组回复返回元素数量，整数回复返回整数值，其余返回0
+    @return 数组回复返回元素数量，整数回复返回整数值；超出 int32_t 的值饱和到相应边界，其余返回0
     */
     int32_t toCount() const;
 

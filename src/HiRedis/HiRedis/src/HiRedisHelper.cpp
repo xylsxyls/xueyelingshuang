@@ -1,11 +1,12 @@
 ﻿#include "HiRedisHelper.h"
 #include "HiRedisResultSet.h"
+#include "hiredisinclude/read.h"
 #include <cctype>
 #include <limits>
 
 bool HiRedisHelper::integerReplyOk(const std::shared_ptr<HiRedisResultSet>& result)
 {
-    return result.get() != nullptr && !result->isError() && result->toInt64() >= 0;
+    return result && result->type() == REDIS_REPLY_INTEGER && result->toStatus();
 }
 
 bool HiRedisHelper::splitCommandText(const std::string& commandText, std::vector<std::string>& args, std::string& error)
@@ -69,7 +70,19 @@ bool HiRedisHelper::splitCommandText(const std::string& commandText, std::vector
             continue;
         }
 
-        current.push_back(ch);
+        // 常见命令参数由可见 ASCII 组成，整段复制后再交回引号和转义状态机。
+        size_t end = i + 1;
+        while (end < commandText.size())
+        {
+            const unsigned char next = static_cast<unsigned char>(commandText[end]);
+            if (next <= ' ' || next >= 128 || next == '\\' || next == '\'' || next == '"')
+            {
+                break;
+            }
+            ++end;
+        }
+        current.append(commandText, i, end - i);
+        i = end - 1;
         tokenStarted = true;
     }
 

@@ -1,6 +1,6 @@
 ﻿#include "HiRedisResultSet.h"
 #include "CStringManager/CStringManagerAPI.h"
-#include <hiredis.h>
+#include "hiredisinclude/hiredis.h"
 
 HiRedisResultSet::HiRedisResultSet() :
 m_reply(nullptr)
@@ -25,6 +25,12 @@ bool HiRedisResultSet::isValid() const
 bool HiRedisResultSet::isError() const
 {
     return !m_error.empty() || (m_reply != nullptr && m_reply->type == REDIS_REPLY_ERROR);
+}
+
+bool HiRedisResultSet::isErrorAt(size_t index) const
+{
+    return m_reply != nullptr && m_reply->type == REDIS_REPLY_ARRAY && index < m_reply->elements &&
+        m_reply->element[index] != nullptr && m_reply->element[index]->type == REDIS_REPLY_ERROR;
 }
 
 std::string HiRedisResultSet::error() const
@@ -255,10 +261,12 @@ int32_t HiRedisResultSet::toCount() const
     }
     if (m_reply->type == REDIS_REPLY_ARRAY)
     {
-        return static_cast<int32_t>(m_reply->elements);
+        return m_reply->elements > INT32_MAX ? INT32_MAX : static_cast<int32_t>(m_reply->elements);
     }
     if (m_reply->type == REDIS_REPLY_INTEGER)
     {
+        if (m_reply->integer > INT32_MAX) { return INT32_MAX; }
+        if (m_reply->integer < INT32_MIN) { return INT32_MIN; }
         return static_cast<int32_t>(m_reply->integer);
     }
     return 0;

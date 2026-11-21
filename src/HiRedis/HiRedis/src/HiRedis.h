@@ -101,12 +101,13 @@ public:
 
     /** 批量发送Redis管线命令
     @param [in] commands 要按顺序发送的命令列表
-    @return 返回与命令顺序对应的结果列表
+    @return 返回顺序对应的各项回复。服务端命令错误后继续收取余下回复，lastError 保存首个命令错误；
+    传输中断时返回已取得的回复和传输错误，并关闭连接
     */
     std::vector<std::shared_ptr<HiRedisResultSet>> pipeline(const std::vector<HiRedisCommand>& commands);
 
     /** 在Redis事务中执行一组命令
-    @param [in] commands MULTI和EXEC之间执行的命令列表
+    @param [in] commands MULTI和EXEC之间执行的业务命令列表，禁止事务控制、QUIT 和 RESET
     @return 返回EXEC结果，失败时返回对应错误结果
     */
     std::shared_ptr<HiRedisResultSet> execTransaction(const std::vector<HiRedisCommand>& commands);
@@ -307,8 +308,8 @@ public:
     /** 将二维表保存为Redis哈希表
     @param [in] tableName 哈希表键名
     @param [in] table 二维表数据
-    @param [in] key 作为哈希字段名的列下标，小于0表示使用行号
-    @param [in] split 保存行内容时使用的分隔符
+    @param [in] key 作为哈希字段名的列下标，越界时使用行号并保存全部列
+    @param [in] split 相邻数据列之间的分隔符；保留空列，原字段中出现的分隔符不会转义
     @return 返回是否保存成功
     */
     bool setTable(const std::string& tableName, const std::vector<std::vector<std::string>>& table, int32_t key = -1, const std::string& split = ",");
