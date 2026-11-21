@@ -1,8 +1,11 @@
 ﻿#pragma once
 
+/** Windows 白盒用例通过 SDK 头调用命令解析辅助函数，链接 HiRedis 静态库。运行 version_debug.sh 或 version_release.sh 会准备对应配置的静态库和 PlatformTest 动态库。
+*/
+
 /** 功能用例选择
 1〔瞬时〕离线配置与解析。创建未连接对象，核对默认连接参数、命令拆分及非法输入的错误，再释放对象。
-2〔压力〕独立 Redis 8.10.3 会话。先核对 INFO 和 PING，再写入本次前缀的字符串、散列、有序集和事务命令，比较回读值及错误。用 CLIENT ID 验证非法主机配置保留原会话，检验池等待、并发归还和关闭后唤醒。收尾删除本次测试键，关闭借出的连接。
+2〔压力〕独立 Redis 8.10.3 会话。先核对 INFO 和 PING，再写入本次前缀的字符串、散列、有序集和事务命令，比较回读值及错误。用 CLIENT ID 验证非法主机配置保留原会话，检验池等待、并发归还和关闭后唤醒。主连接和连接池在同一测试库读写，收尾删除本次前缀的全部键，随后用 EXISTS 确认剩余数量为零。
 默认或 --all 运行所有适用场景，--instant 和 --stress 分类运行；--cases 1、--cases 1-2 可选择编号，非法及无适用项返回 2。
 */
 
@@ -22,7 +25,7 @@ Windows x64 / VS2013 Release / MT，527.318（483.603～623.070） ns/次。该�
 
 /** 功能验证（2026-11-22）
 管线中的单条命令失败后继续收齐其余回复，lastError 保存首个命令错误；下一次成功管线清除错误。事务逐条核对 QUEUED 后才执行 EXEC，返回按顺序排列的各项结果。执行期单条错误由 isErrorAt(i) 判断、at(i) 取原文，后续命令照常执行；Redis 命令名按 ASCII 匹配，Windows 同时验证土耳其语环境下的 discard。事务命令列表不接受 MULTI、EXEC、DISCARD、WATCH、UNWATCH、QUIT 和 RESET。事务入队失败时 DISCARD 后仍可读取原命令的错误，并继续使用连接。
-Redis 8.10.3，Windows x86/x64 的 Debug、Release 各通过 179/179 个断言，无跳过。含 NUL 的主机名必须在替换连接前被拒绝，CLIENT ID 仍与原连接一致。原始 MULTI 下 HSET 仅获 QUEUED 时返回 false，DISCARD 后无写入；对普通字符串键查询有序集成员、排名、分数时分别返回 false、-1、-1，lastError 保留服务器错误。隔离实例的测试键剩余 0 个，进程正常退出，数据目录已清理。
+Redis 8.10.3，Windows x86/x64 的 Debug、Release 各通过 181/181 个断言，无跳过。四组均使用隔离实例的 DB 11，结束后由独立连接查询 INFO keyspace，确认全部数据库无键。含 NUL 的主机名必须在替换连接前被拒绝，CLIENT ID 仍与原连接一致。原始 MULTI 下 HSET 仅获 QUEUED 时返回 false，DISCARD 后无写入；对普通字符串键查询有序集成员、排名、分数时分别返回 false、-1、-1，lastError 保留服务器错误。隔离实例的测试键剩余 0 个，进程正常退出，数据目录已清理。
 */
 
 /** 真实服务往返基准（2026-11-22）

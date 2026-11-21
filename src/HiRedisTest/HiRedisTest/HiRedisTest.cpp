@@ -1,11 +1,9 @@
-﻿#include "../../../common/PlatformTest/LibraryCaseSelection.h"
+﻿#include "PlatformTest/PlatformTestAPI.h"
 #include "HiRedisTest.h"
-#include "../../../common/PlatformTest/LibraryBenchmark.h"
 #include <cstring>
 #include <cstdio>
-#include "HiRedis/HiRedisHelper.h"
 #include "HiRedis/HiRedisAPI.h"
-#include "HiRedis/HiRedisConnectionPool.h"
+#include "HiRedis/HiRedisHelper.h"
 
 #include <atomic>
 #include <cstdlib>
@@ -229,8 +227,9 @@ static int RunChecks(bool offline, bool online, bool benchmark)
 
     check(redis.isConnected(), "HiRedis connected");
     check(redis.ping(), "HiRedis ping connected");
-    check(redis.selectDbIndex(0), "HiRedis selectDbIndex");
-    check(redis.selectDb(0), "HiRedis selectDb");
+    const int32_t testDatabase = config.m_dbIndex < 0 ? 0 : config.m_dbIndex;
+    check(redis.selectDbIndex(testDatabase), "HiRedis selectDbIndex");
+    check(redis.selectDb(testDatabase), "HiRedis selectDb");
     HiRedis compatRedis;
     check(compatRedis.connect(config), "HiRedis connect compatibility");
     const int64_t originalClient = compatRedis.command(std::vector<std::string>{"CLIENT", "ID"})->toInt64();
@@ -611,6 +610,7 @@ static int RunChecks(bool offline, bool online, bool benchmark)
             threads[i].join();
         }
         check(threadFailCount.load() == 0, "HiRedisConnectionPool multithread pressure");
+        check(redis.keyExist(prefix + "thread_0_0"), "pooled writes are visible in the configured test database");
         pool.uninit();
     }
     else
@@ -648,6 +648,9 @@ static int RunChecks(bool offline, bool online, bool benchmark)
         }
     }
     redis.del(cleanKeys);
+    cleanKeys.insert(cleanKeys.begin(), "EXISTS");
+    const auto remaining = redis.command(cleanKeys);
+    check(remaining->isValid() && !remaining->isError() && remaining->toInt64() == 0, "all keys created by this test were deleted");
     redis.uninit();
     check(!redis.isConnected(), "HiRedis uninit disconnected");
 
