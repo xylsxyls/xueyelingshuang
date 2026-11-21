@@ -8,50 +8,6 @@
  * 2012-4-20
  */
 
-// Test vector 1
-// plain: 01 23 45 67 89 ab cd ef fe dc ba 98 76 54 32 10
-// key:   01 23 45 67 89 ab cd ef fe dc ba 98 76 54 32 10
-// 	   round key and temp computing result:
-// 	   rk[ 0] = f12186f9 X[ 0] = 27fad345
-// 		   rk[ 1] = 41662b61 X[ 1] = a18b4cb2
-// 		   rk[ 2] = 5a6ab19a X[ 2] = 11c1e22a
-// 		   rk[ 3] = 7ba92077 X[ 3] = cc13e2ee
-// 		   rk[ 4] = 367360f4 X[ 4] = f87c5bd5
-// 		   rk[ 5] = 776a0c61 X[ 5] = 33220757
-// 		   rk[ 6] = b6bb89b3 X[ 6] = 77f4c297
-// 		   rk[ 7] = 24763151 X[ 7] = 7a96f2eb
-// 		   rk[ 8] = a520307c X[ 8] = 27dac07f
-// 		   rk[ 9] = b7584dbd X[ 9] = 42dd0f19
-// 		   rk[10] = c30753ed X[10] = b8a5da02
-// 		   rk[11] = 7ee55b57 X[11] = 907127fa
-// 		   rk[12] = 6988608c X[12] = 8b952b83
-// 		   rk[13] = 30d895b7 X[13] = d42b7c59
-// 		   rk[14] = 44ba14af X[14] = 2ffc5831
-// 		   rk[15] = 104495a1 X[15] = f69e6888
-// 		   rk[16] = d120b428 X[16] = af2432c4
-// 		   rk[17] = 73b55fa3 X[17] = ed1ec85e
-// 		   rk[18] = cc874966 X[18] = 55a3ba22
-// 		   rk[19] = 92244439 X[19] = 124b18aa
-// 		   rk[20] = e89e641f X[20] = 6ae7725f
-// 		   rk[21] = 98ca015a X[21] = f4cba1f9
-// 		   rk[22] = c7159060 X[22] = 1dcdfa10
-// 		   rk[23] = 99e1fd2e X[23] = 2ff60603
-// 		   rk[24] = b79bd80c X[24] = eff24fdc
-// 		   rk[25] = 1d2115b0 X[25] = 6fe46b75
-// 		   rk[26] = 0e228aeb X[26] = 893450ad
-// 		   rk[27] = f1780c81 X[27] = 7b938f4c
-// 		   rk[28] = 428d3654 X[28] = 536e4246
-// 		   rk[29] = 62293496 X[29] = 86b3e94f
-// 		   rk[30] = 01cf72e5 X[30] = d206965e
-// 		   rk[31] = 9124a012 X[31] = 681edf34
-// cypher: 68 1e df 34 d2 06 96 5e 86 b3 e9 4f 53 6e 42 46
-// 		
-// test vector 2
-// the same key and plain 1000000 times coumpting 
-// plain:  01 23 45 67 89 ab cd ef fe dc ba 98 76 54 32 10
-// key:    01 23 45 67 89 ab cd ef fe dc ba 98 76 54 32 10
-// cypher: 59 52 98 c7 c6 fd 27 1f 04 02 f8 04 c3 3d 3f 66
-
 #include "sm4.h"
 #include <string.h>
 #include <stdio.h>
@@ -62,10 +18,10 @@
 #ifndef GET_ULONG_BE
 #define GET_ULONG_BE(n,b,i)                             \
 {                                                       \
-    (n) = ( (unsigned long) (b)[(i)    ] << 24 )        \
-        | ( (unsigned long) (b)[(i) + 1] << 16 )        \
-        | ( (unsigned long) (b)[(i) + 2] <<  8 )        \
-        | ( (unsigned long) (b)[(i) + 3]       );       \
+    (n) = ( (uint32_t) (b)[(i)    ] << 24 )        \
+        | ( (uint32_t) (b)[(i) + 1] << 16 )        \
+        | ( (uint32_t) (b)[(i) + 2] <<  8 )        \
+        | ( (uint32_t) (b)[(i) + 3]       );       \
 }
 #endif
 
@@ -86,11 +42,12 @@
 #define  SHL(x,n) (((x) & 0xFFFFFFFF) << n)
 #define ROTL(x,n) (SHL((x),n) | ((x) >> (32 - n)))
 
-#define SWAP(a,b) { unsigned long t = a; a = b; b = t; t = 0; }
+#define SWAP(a,b) { uint32_t t = a; a = b; b = t; t = 0; }
 
 /*
  * Expanded SM4 S-boxes
- /* Sbox table: 8bits input convert to 8 bits output*/
+ * Sbox table: 8bits input convert to 8 bits output
+ */
  
 static const unsigned char SboxTable[16][16] = 
 {
@@ -113,10 +70,10 @@ static const unsigned char SboxTable[16][16] =
 };
 
 /* System parameter */
-static const unsigned long FK[4] = {0xa3b1bac6,0x56aa3350,0x677d9197,0xb27022dc};
+static const uint32_t FK[4] = {0xa3b1bac6,0x56aa3350,0x677d9197,0xb27022dc};
 
 /* fixed parameter */
-static const unsigned long CK[32] =
+static const uint32_t CK[32] =
 {
 0x00070e15,0x1c232a31,0x383f464d,0x545b6269,
 0x70777e85,0x8c939aa1,0xa8afb6bd,0xc4cbd2d9,
@@ -147,10 +104,10 @@ static unsigned char sm4Sbox(unsigned char inch)
  * args:    [in] a: a is a 32 bits unsigned value;
  * return: c: c is calculated with line algorithm "L" and nonline algorithm "t"
  */
-static unsigned long sm4Lt(unsigned long ka)
+static uint32_t sm4Lt(uint32_t ka)
 {
-    unsigned long bb = 0;
-    unsigned long c = 0;
+    uint32_t bb = 0;
+    uint32_t c = 0;
     unsigned char a[4];
 	unsigned char b[4];
     PUT_ULONG_BE(ka,a,0)
@@ -173,7 +130,7 @@ static unsigned long sm4Lt(unsigned long ka)
  * args:    [in] rk: encryption/decryption key;
  * return the contents of encryption/decryption contents.
  */
-static unsigned long sm4F(unsigned long x0, unsigned long x1, unsigned long x2, unsigned long x3, unsigned long rk)
+static uint32_t sm4F(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3, uint32_t rk)
 {
     return (x0^sm4Lt(x1^x2^x3^rk));
 }
@@ -184,10 +141,10 @@ static unsigned long sm4F(unsigned long x0, unsigned long x1, unsigned long x2, 
  * args:    [in] a: a is a 32 bits unsigned value;
  * return: sk[i]: i{0,1,2,3,...31}.
  */
-static unsigned long sm4CalciRK(unsigned long ka)
+static uint32_t sm4CalciRK(uint32_t ka)
 {
-    unsigned long bb = 0;
-    unsigned long rk = 0;
+    uint32_t bb = 0;
+    uint32_t rk = 0;
     unsigned char a[4];
     unsigned char b[4];
     PUT_ULONG_BE(ka,a,0)
@@ -200,11 +157,11 @@ static unsigned long sm4CalciRK(unsigned long ka)
     return rk;
 }
 
-static void sm4_setkey( unsigned long SK[32], unsigned char key[16] )
+static void sm4_setkey( uint32_t SK[32], unsigned char key[16] )
 {
-    unsigned long MK[4];
-    unsigned long k[36];
-    unsigned long i = 0;
+    uint32_t MK[4];
+    uint32_t k[36];
+    uint32_t i = 0;
 
     GET_ULONG_BE( MK[0], key, 0 );
     GET_ULONG_BE( MK[1], key, 4 );
@@ -226,12 +183,12 @@ static void sm4_setkey( unsigned long SK[32], unsigned char key[16] )
  * SM4 standard one round processing
  *
  */
-static void sm4_one_round( unsigned long sk[32],
+static void sm4_one_round( uint32_t sk[32],
                     unsigned char input[16],
                     unsigned char output[16] )
 {
-    unsigned long i = 0;
-    unsigned long ulbuf[36];
+    uint32_t i = 0;
+    uint32_t ulbuf[36];
 
     memset(ulbuf, 0, sizeof(ulbuf));
     GET_ULONG_BE( ulbuf[0], input, 0 )
@@ -257,6 +214,10 @@ static void sm4_one_round( unsigned long sk[32],
  */
 void sm4_setkey_enc( sm4_context *ctx, unsigned char key[16] )
 {
+    if (!ctx || !key)
+    {
+        return;
+    }
     ctx->mode = SM4_ENCRYPT;
 	sm4_setkey( ctx->sk, key );
 }
@@ -267,7 +228,11 @@ void sm4_setkey_enc( sm4_context *ctx, unsigned char key[16] )
 void sm4_setkey_dec( sm4_context *ctx, unsigned char key[16] )
 {
     int i;
-	ctx->mode = SM4_ENCRYPT;
+    if (!ctx || !key)
+    {
+        return;
+    }
+	ctx->mode = SM4_DECRYPT;
     sm4_setkey( ctx->sk, key );
     for( i = 0; i < 16; i ++ )
     {
@@ -286,6 +251,11 @@ void sm4_crypt_ecb( sm4_context *ctx,
 				   unsigned char *input,
                    unsigned char *output)
 {
+    if (!ctx || !input || !output || length < 0 || length % 16 != 0 ||
+        (mode != SM4_ENCRYPT && mode != SM4_DECRYPT))
+    {
+        return;
+    }
     while( length > 0 )
     {
         sm4_one_round( ctx->sk, input, output );
@@ -309,6 +279,11 @@ void sm4_crypt_cbc( sm4_context *ctx,
     int i;
     unsigned char temp[16];
 
+    if (!ctx || !iv || !input || !output || length < 0 || length % 16 != 0 ||
+        (mode != SM4_ENCRYPT && mode != SM4_DECRYPT))
+    {
+        return;
+    }
     if( mode == SM4_ENCRYPT )
     {
         while( length > 0 )

@@ -17,46 +17,6 @@
 #endif
 
 /**************************************************
-* Name: sm2_encrypt_data_test
-* Function: compute SM2 encryption with a fixed internal 
-    random number k given in GM/T 0003.5-2012
-* Parameters:
-    message[in]      input message
-    message_len[in]  input message length, size in bytes
-    pub_key[in]      SM2 public key
-    c1[out]          the first segment of ciphertext
-    c3[out]          the middle segment of ciphertext
-    c2[out]          the last segment of ciphertext
-* Return value:
-    0:                function executes successfully
-    any other value:  an error occurs
-* Notes:
-1. This function is only used for testing! When a 
-   ciphertext is created by invoking this function,
-   a fixed random number value k is used. The random
-   number value is given in GM/T 0003.5-2012.
-2. "pub_key" is a octet string of 65 byte length. It 
-   is a concatenation of 04 || X || Y. X and Y both are 
-   SM2 public key coordinates of 32 byte length.
-3. SM2 ciphertext is defined as a concatenation of 
-   c1 || c3 || c2 in GM/T 0003.4-2012.
-4. c1 is a octet string of 65 byte length. It is a 
-   point on the elliptic curve. It is a concatenation 
-   of 04 || X || Y. X and Y both are coordinates of 
-   32 byte length.
-5. c3 is a octet string of 32 byte length. It is a 
-   SM3 digest value.
-6. c2 is a octet string. Its length equals the length 
-   of input message.
-**************************************************/
-int sm2_encrypt_data_test(const unsigned char *message,
-                          const int message_len,
-			  const unsigned char *pub_key,
-			  unsigned char *c1,
-			  unsigned char *c3,
-			  unsigned char *c2);
-
-/**************************************************
 * Name: sm2_encrypt_data
 * Function: compute SM2 encryption
 * Parameters:

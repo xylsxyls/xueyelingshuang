@@ -3,6 +3,7 @@
 #define _CEncodeDecodeAPI
 #endif
 #include "CEncodeDecode.h"
+#include "CEncodeDecodeTls.h"
 
 #ifdef _WIN32
 #if defined _DEBUG

@@ -81,4 +81,22 @@
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\CEncodeDecodeHash.h" />
+    <ClCompile Include="..\src\CEncodeDecodeHash.cpp" />
+    <ClInclude Include="..\src\CEncodeDecodeTypes.h" />
+    <ClInclude Include="..\src\CEncodeDecodeMbedConfig.h" />
+    <ClInclude Include="..\src\CEncodeDecodeTlsTypes.h" />
+    <ClInclude Include="..\src\CEncodeDecodeTls.h" />
+    <ClInclude Include="..\src\CEncodeDecodeTlsState.h" />
+    <ClCompile Include="..\src\CEncodeDecodeTls.cpp" />
+    <ClCompile Include="..\src\CEncodeDecodeTlsState.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\CEncodeDecodeCertificate.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="..\src\CEncodeDecodeCertificate.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\CEncodeDecodeCertificateTypes.h"><Filter>头文件</Filter></ClInclude>
+  </ItemGroup>
 </Project>

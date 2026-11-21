@@ -12,7 +12,7 @@
 #include <openssl/obj_mac.h>
 #include <openssl/bn.h>
 #include <openssl/ec.h>
-#include <math.h>
+#include <openssl/crypto.h>
 #include "sm2_cipher_error_codes.h"
 #include "sm2_create_key_pair.h"
 
@@ -20,6 +20,7 @@
 int sm2_create_key_pair(SM2_KEY_PAIR *key_pair)
 {
 	int error_code;
+    int attempts = 0;
 	BN_CTX *ctx = NULL;
 	BIGNUM *bn_d = NULL, *bn_x = NULL, *bn_y = NULL;
 	const BIGNUM *bn_order;
@@ -27,6 +28,11 @@ int sm2_create_key_pair(SM2_KEY_PAIR *key_pair)
 	EC_POINT *ec_pt = NULL;
 	unsigned char pub_key_x[32], pub_key_y[32];
 
+    if (!key_pair)
+    {
+        return CREATE_SM2_KEY_PAIR_FAIL;
+    }
+    memset(key_pair, 0, sizeof(*key_pair));
 	error_code = ALLOCATION_MEMORY_FAIL;
 	if ( !(ctx = BN_CTX_secure_new()) )
 	{
@@ -57,7 +63,11 @@ int sm2_create_key_pair(SM2_KEY_PAIR *key_pair)
 	error_code = CREATE_SM2_KEY_PAIR_FAIL;
 	do
 	{
-		if ( !(BN_rand_range(bn_d, bn_order)) )
+        if (++attempts > 128)
+        {
+            goto clean_up;
+        }
+		if ( !(BN_priv_rand_range(bn_d, bn_order)) )
 		{
 			goto clean_up;
 		}	
@@ -101,6 +111,10 @@ int sm2_create_key_pair(SM2_KEY_PAIR *key_pair)
 	error_code = 0;
 	
 clean_up:
+    if (error_code != 0)
+    {
+        OPENSSL_cleanse(key_pair, sizeof(*key_pair));
+    }
     if (ctx)
 	{
 		BN_CTX_end(ctx);

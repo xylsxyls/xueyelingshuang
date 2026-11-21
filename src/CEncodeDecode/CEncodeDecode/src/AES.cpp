@@ -1,7 +1,8 @@
 ﻿#include "AES.h"
 #include <string.h>
 
-AES::AES(unsigned char* key)
+AES::AES(unsigned char* key) :
+m_valid(key != nullptr)
 {
 	unsigned char sBox[] =
 	{ /*  0    1    2    3    4    5    6    7    8    9    a    b    c    d    e    f */
@@ -43,16 +44,28 @@ AES::AES(unsigned char* key)
 	};
 	memcpy(Sbox, sBox, 256);
 	memcpy(InvSbox, invsBox, 256);
-	KeyExpansion(key, w);
+	memset(w, 0, sizeof(w));
+	if (m_valid)
+	{
+		KeyExpansion(key, w);
+	}
 }
 
 AES::~AES()
 {
-
+    volatile unsigned char* secret = reinterpret_cast<volatile unsigned char*>(&w);
+    for (size_t i = 0; i < sizeof(w); ++i)
+    {
+        secret[i] = 0;
+    }
 }
 
 unsigned char* AES::Cipher(unsigned char* input)
 {
+    if (!m_valid || !input)
+    {
+        return nullptr;
+    }
 	unsigned char state[4][4];
 	int i, r, c;
 
@@ -90,6 +103,10 @@ unsigned char* AES::Cipher(unsigned char* input)
 
 unsigned char* AES::InvCipher(unsigned char* input)
 {
+    if (!m_valid || !input)
+    {
+        return nullptr;
+    }
 	unsigned char state[4][4];
 	int i, r, c;
 
@@ -126,29 +143,30 @@ unsigned char* AES::InvCipher(unsigned char* input)
 
 void* AES::Cipher(void* input, int length)
 {
-	unsigned char* in = (unsigned char*)input;
-	int i;
-	if (!length) //如果是0则当做字符串处理
-	{
-		while (*(in + length++));
-		in = (unsigned char*)input;
-	}
-	for (i = 0; i < length; i += 16)
-	{
-		Cipher(in + i);
-	}
-	return input;
+    if (!m_valid || !input || length < 0 || length % 16 != 0)
+    {
+        return nullptr;
+    }
+    unsigned char* bytes = static_cast<unsigned char*>(input);
+    for (int offset = 0; offset < length; offset += 16)
+    {
+        Cipher(bytes + offset);
+    }
+    return input;
 }
 
 void* AES::InvCipher(void* input, int length)
 {
-	unsigned char* in = (unsigned char*)input;
-	int i;
-	for (i = 0; i < length; i += 16)
-	{
-		InvCipher(in + i);
-	}
-	return input;
+    if (!m_valid || !input || length < 0 || length % 16 != 0)
+    {
+        return nullptr;
+    }
+    unsigned char* bytes = static_cast<unsigned char*>(input);
+    for (int offset = 0; offset < length; offset += 16)
+    {
+        InvCipher(bytes + offset);
+    }
+    return input;
 }
 
 void AES::KeyExpansion(unsigned char* key, unsigned char w[][4][4])

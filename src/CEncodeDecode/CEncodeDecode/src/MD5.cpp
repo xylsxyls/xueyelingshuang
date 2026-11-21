@@ -2,33 +2,33 @@
 #include <string.h>
 
 /* Constants for MD5Transform routine. */
-#define S11 7  
-#define S12 12  
-#define S13 17  
-#define S14 22  
-#define S21 5  
-#define S22 9  
-#define S23 14  
-#define S24 20  
-#define S31 4  
-#define S32 11  
-#define S33 16  
-#define S34 23  
-#define S41 6  
-#define S42 10  
-#define S43 15  
-#define S44 21  
+#define S11 7
+#define S12 12
+#define S13 17
+#define S14 22
+#define S21 5
+#define S22 9
+#define S23 14
+#define S24 20
+#define S31 4
+#define S32 11
+#define S33 16
+#define S34 23
+#define S41 6
+#define S42 10
+#define S43 15
+#define S44 21
 
 /* F, G, H and I are basic MD5 functions.
 */
-#define F(x, y, z) (((x) & (y)) | ((~x) & (z)))  
-#define G(x, y, z) (((x) & (z)) | ((y) & (~z)))  
-#define H(x, y, z) ((x) ^ (y) ^ (z))  
-#define I(x, y, z) ((y) ^ ((x) | (~z)))  
+#define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
+#define G(x, y, z) (((x) & (z)) | ((y) & (~z)))
+#define H(x, y, z) ((x) ^ (y) ^ (z))
+#define I(x, y, z) ((y) ^ ((x) | (~z)))
 
 /* ROTATE_LEFT rotates x left n bits.
 */
-#define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32-(n))))  
+#define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32-(n))))
 
 /* FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4.
 Rotation is separate from addition to prevent recomputation.
@@ -42,17 +42,17 @@ Rotation is separate from addition to prevent recomputation.
 	(a) += G ((b), (c), (d)) + (x) + ac; \
 	(a) = ROTATE_LEFT ((a), (s)); \
 	(a) += (b); \
-}  
+}
 #define HH(a, b, c, d, x, s, ac) { \
 	(a) += H ((b), (c), (d)) + (x) + ac; \
 	(a) = ROTATE_LEFT ((a), (s)); \
 	(a) += (b); \
-}  
+}
 #define II(a, b, c, d, x, s, ac) { \
 	(a) += I ((b), (c), (d)) + (x) + ac; \
 	(a) = ROTATE_LEFT ((a), (s)); \
 	(a) += (b); \
-}  
+}
 
 
 const byte MD5::PADDING[64] = { 0x80 };
@@ -96,8 +96,8 @@ const byte* MD5::digest()
 {
 	if (!_finished)
 	{
-		_finished = true;
 		final();
+		_finished = true;
 	}
 	return _digest;
 }
@@ -108,6 +108,8 @@ void MD5::reset()
 	_finished = false;
 	/* reset number of bits. */
 	_count[0] = _count[1] = 0;
+    memset(_buffer, 0, sizeof(_buffer));
+    memset(_digest, 0, sizeof(_digest));
 	/* Load magic initialization constants. */
 	_state[0] = 0x67452301;
 	_state[1] = 0xefcdab89;
@@ -137,7 +139,7 @@ void MD5::update(std::ifstream& in)
 
 	std::streamsize length;
 	char buffer[BUFFER_SIZE];
-	while (!in.eof())
+	while (in)
 	{
 		in.read(buffer, BUFFER_SIZE);
 		length = in.gcount();
@@ -155,8 +157,13 @@ context.
 */
 void MD5::update(const byte* input, size_t length)
 {
-	uint32 i, index, partLen;
-	_finished = false;
+    if (!input || length == 0)
+    {
+        return;
+    }
+    size_t i;
+    uint32 index, partLen;
+    _finished = false;
 
 	/* Compute number of bytes mod 64 */
 	index = (uint32)((_count[0] >> 3) & 0x3f);
@@ -166,7 +173,7 @@ void MD5::update(const byte* input, size_t length)
 	{
 		_count[1]++;
 	}
-	_count[1] += ((uint32)length >> 29);
+	_count[1] += static_cast<uint32>(length >> 29);
 
 	partLen = 64 - index;
 
@@ -176,7 +183,7 @@ void MD5::update(const byte* input, size_t length)
 		memcpy(&_buffer[index], input, partLen);
 		transform(_buffer);
 
-		for (i = partLen; i + 63 < length; i += 64)
+		for (i = partLen; length - i >= 64; i += 64)
 		{
 			transform(&input[i]);
 		}
@@ -200,11 +207,13 @@ void MD5::final()
 	byte bits[8];
 	uint32 oldState[4];
 	uint32 oldCount[2];
+    byte oldBuffer[64];
 	uint32 index, padLen;
 
 	/* Save current state and count. */
 	memcpy(oldState, _state, 16);
 	memcpy(oldCount, _count, 8);
+    memcpy(oldBuffer, _buffer, sizeof(oldBuffer));
 
 	/* Save number of bits */
 	encode(_count, bits, 8);
@@ -223,6 +232,7 @@ void MD5::final()
 	/* Restore current state and count. */
 	memcpy(_state, oldState, 16);
 	memcpy(_count, oldCount, 8);
+    memcpy(_buffer, oldBuffer, sizeof(oldBuffer));
 }
 
 /* MD5 basic transformation. Transforms _state based on block. */
@@ -338,17 +348,13 @@ void MD5::decode(const byte *input, uint32 *output, size_t length)
 /* Convert byte array to hex string. */
 std::string MD5::bytesToHexString(const byte *input, size_t length)
 {
-	std::string str;
-	str.reserve(length << 1);
-	for (size_t i = 0; i < length; i++)
-	{
-		int t = input[i];
-		int a = t / 16;
-		int b = t % 16;
-		str.append(1, HEX[a]);
-		str.append(1, HEX[b]);
-	}
-	return str;
+    std::string result(length * 2, '0');
+    for (size_t i = 0; i < length; ++i)
+    {
+        result[i * 2] = HEX[input[i] >> 4];
+        result[i * 2 + 1] = HEX[input[i] & 15];
+    }
+    return result;
 }
 
 /* Convert digest to string value */
