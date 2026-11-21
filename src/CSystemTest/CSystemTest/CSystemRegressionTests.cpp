@@ -2,12 +2,16 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <functional>
 #include <iostream>
 #if CSYSTEM_HAS_NATIVE_API
+#include <algorithm>
 #include <atomic>
 #include <thread>
 #ifndef _WIN32
+#include <sys/stat.h>
+#include <sys/time.h>
 #include <unistd.h>
 #endif
 #endif
@@ -116,11 +120,24 @@ int RunSystemInterfaceTests()
     CSystem::saveFile("migration content", CSystem::joinPath(migrationSource, "data.bin"));
     CSystem::saveFile("", CSystem::joinPath(migrationSource, "empty.bin"));
     CSystem::saveFile("migration content", CSystem::joinPath(migrationTarget, "data.bin"));
+    const std::string sourceData = CSystem::joinPath(migrationSource, "data.bin");
+    const std::string sourceEmpty = CSystem::joinPath(migrationSource, "empty.bin");
+#ifndef _WIN32
+    const struct timeval times[] = {{1500000000, 123456}, {1500000020, 765432}};
+    check(::utimes(sourceData.c_str(), times) == 0 && ::utimes(sourceEmpty.c_str(), times) == 0,
+        "set independent subsecond modification times");
+#endif
+    uint64_t length = 0, dataStamp = 0, emptyStamp = 0, observed = 0;
+    check(CSystem::fileStampUtf8(sourceData, &length, &dataStamp) && length == 17 &&
+        CSystem::fileStampUtf8(sourceEmpty, &length, &emptyStamp) && length == 0, "record source modification times");
     check(!CSystem::migrateDirectory(migrationSource, CSystem::joinPath(migrationSource, "child"), migrationError), "CSystem migrateDirectory rejects overlap");
     check(!CSystem::DirOrFileExist(CSystem::joinPath(migrationSource, "child")) && CSystem::readFile(CSystem::joinPath(migrationSource, "data.bin")) == "migration content", "CSystem migrateDirectory overlap has no side effect");
     check(CSystem::migrateDirectory(migrationSource, migrationTarget, migrationError), "CSystem migrateDirectory merges matching content");
     check(!CSystem::DirOrFileExist(migrationSource) && CSystem::readFile(CSystem::joinPath(migrationTarget, "data.bin")) == "migration content", "CSystem migrateDirectory verifies bytes before source removal");
     check(CSystem::DirOrFileExist(CSystem::joinPath(migrationTarget, "empty.bin")), "CSystem migrateDirectory preserves empty file");
+    check(CSystem::fileStampUtf8(CSystem::joinPath(migrationTarget, "data.bin"), &length, &observed) &&
+        observed == dataStamp && CSystem::fileStampUtf8(CSystem::joinPath(migrationTarget, "empty.bin"), &length, &observed) &&
+        observed == emptyStamp, "migration preserves modification time on merge and copy");
     check(!CSystem::createDirectories(CSystem::joinPath(migrationTarget, "data.bin")), "CSystem createDirectories rejects file");
     check(CSystem::createDirectories(migrationSource), "CSystem migration conflict source");
     CSystem::saveFile("different content", CSystem::joinPath(migrationSource, "data.bin"));
@@ -176,20 +193,20 @@ int RunSystemInterfaceTests()
         "CSystem findFilePath exact result");
     const std::string nested = CSystem::joinPath(root, "nested");
     const std::string concurrentDir = CSystem::joinPath(root, "mkdir-race");
-    std::atomic<int> ready(0);
-    std::atomic<int> successes(0);
-    std::vector<std::thread> creators;
-    for (int index = 0; index < 4; ++index)
-    {
-        creators.emplace_back([&]() {
-            ++ready;
-            while (ready.load() != 4) { std::this_thread::yield(); }
-            if (CSystem::createDirectories(concurrentDir)) { ++successes; }
-        });
-    }
-    for (auto& creator : creators) { creator.join(); }
-    check(successes.load() == 4 && CSystem::DestroyDir(concurrentDir), "all concurrent directory creators succeed");
+    const bool createdTogether = RunSystemWorkers(4, [&concurrentDir](size_t) -> bool {
+        return CSystem::createDirectories(concurrentDir);
+    });
+    check(createdTogether && CSystem::DestroyDir(concurrentDir), "all concurrent directory creators succeed");
 #ifndef _WIN32
+#if CSYSTEM_HAS_DESKTOP_API
+    const std::string fifo = root + "/ordinary-file-check.fifo";
+    check(::mkfifo(fifo.c_str(), 0600) == 0, "create private FIFO fixture");
+    uint32_t openError = 0;
+    intptr_t fifoHandle = CSystem::openFileHandle(fifo.c_str(), 1, &openError);
+    const bool rejectedFifo = fifoHandle == -1 && openError != 0;
+    CSystem::closeFileHandle(&fifoHandle);
+    check(rejectedFifo && ::unlink(fifo.c_str()) == 0, "regular-file API rejects a FIFO without a writer");
+#endif
     const std::string pending = root + "/draft";
     const std::string published = root + "/final\\name";
     CSystem::saveFile("published", pending);
@@ -216,6 +233,21 @@ int RunSystemInterfaceTests()
     check(selected.size() == 1 && visits == 1, "callback stops entire search with children queued");
     check(CSystem::findFilePath(root, 2, "TxT").size() == 4 && CSystem::findFilePath(invalidRoot, 3).empty(),
         "extension filter is case insensitive and rejects invalid roots");
+    const std::string noSuffix = CSystem::joinPath(firstChild, "README");
+    CSystem::saveFile("plain", noSuffix);
+    const auto plain = CSystem::findFilePath(nested, 2, "");
+    const auto combined = CSystem::findFilePath(nested, 2, "txt.");
+    check(plain.size() == 1 && CSystem::canonicalPath(plain.front()) == CSystem::canonicalPath(noSuffix) &&
+        combined.size() == 3, "extension list preserves the empty field");
+#ifndef _WIN32
+    const std::string literalSuffix = firstChild + "/note.ab\\cd";
+    CSystem::saveFile("literal", literalSuffix);
+    const auto literalMatches = CSystem::findFilePath(nested, 2, "AB\\CD");
+    check(literalMatches.size() == 1 && literalMatches.front() == literalSuffix &&
+        CSystem::findFilePath(nested, 2, "").size() == 1, "POSIX backslash is part of the extension");
+    check(CSystem::deleteFile(literalSuffix.c_str()), "remove literal-extension fixture");
+#endif
+    check(CSystem::deleteFile(noSuffix.c_str()), "remove extensionless fixture");
     bool propagated = false;
     try
     {
@@ -236,29 +268,83 @@ int RunSystemInterfaceTests()
 }
 
 #if CSYSTEM_HAS_NATIVE_API
+bool RunSystemWorkers(size_t count, const std::function<bool(size_t)>& work)
+{
+    std::atomic<bool> start(false);
+    std::atomic<bool> success(count != 0);
+    std::vector<std::thread> threads;
+    try
+    {
+        threads.reserve(count);
+        for (size_t index = 0; index < count; ++index)
+        {
+            threads.emplace_back([&, index]() {
+                while (!start.load())
+                {
+                    std::this_thread::yield();
+                }
+                try
+                {
+                    if (!work(index))
+                    {
+                        success.store(false);
+                    }
+                }
+                catch (...)
+                {
+                    std::fprintf(stderr, "CSystemTest worker %u failed with an exception\n", static_cast<unsigned>(index));
+                    success.store(false);
+                }
+            });
+        }
+    }
+    catch (const std::exception& error)
+    {
+        std::fprintf(stderr, "CSystemTest could not start workers: %s\n", error.what());
+        success.store(false);
+    }
+    start.store(true);
+    for (auto& thread : threads)
+    {
+        thread.join();
+    }
+    return success.load();
+}
+
+/** 同时保留八个工作线程，验证线程号稳定且各不相同，并检查每次生成的 UUID
+@return 线程号和全部 UUID 均满足预期时返回 0
+*/
 int RunSystemConcurrentTests()
 {
-    std::atomic<int32_t> failedThreadCount(0);
-    std::vector<std::thread> threads;
-    for (int32_t threadIndex = 0; threadIndex < 8; ++threadIndex)
+    const size_t workerCount = 8;
+    const size_t iterations = 2000;
+    std::vector<uint32_t> ids(workerCount);
+    std::vector<std::string> values(workerCount * iterations);
+    std::atomic<size_t> finished(0);
+    const bool acceptedFailure = RunSystemWorkers(2, [&finished](size_t index) -> bool {
+        ++finished;
+        return index != 0;
+    });
+    if (acceptedFailure || finished.load() != 2)
     {
-        threads.push_back(std::thread([&failedThreadCount]() -> void
+        return 1;
+    }
+    const bool stable = RunSystemWorkers(workerCount, [&](size_t index) -> bool {
+        ids[index] = CSystem::SystemThreadId();
+        for (size_t i = 0; i < iterations; ++i)
         {
-            for (int32_t loopIndex = 0; loopIndex < 2000; ++loopIndex)
+            if (CSystem::SystemThreadId() != ids[index])
             {
-                if (CSystem::SystemThreadId() == 0 || CSystem::uuid(0).empty())
-                {
-                    failedThreadCount.fetch_add(1);
-                    return;
-                }
+                return false;
             }
-        }));
-    }
-    for (size_t i = 0; i < threads.size(); ++i)
-    {
-        threads[i].join();
-    }
-    return failedThreadCount.load() == 0 ? 0 : 1;
+            values[index * iterations + i] = CSystem::uuid(0);
+        }
+        return true;
+    });
+    std::sort(ids.begin(), ids.end());
+    std::sort(values.begin(), values.end());
+    return stable && ids.front() != 0 && std::adjacent_find(ids.begin(), ids.end()) == ids.end() &&
+        !values.front().empty() && std::adjacent_find(values.begin(), values.end()) == values.end() ? 0 : 1;
 }
 
 /** 核对随机源、回调返回值和调用者缓冲两端的保护字节
@@ -435,19 +521,18 @@ bool SystemLeaseAudit()
     const std::string contest = prefix + ".contest";
     std::vector<uint64_t> owner;
     LEASE_CHECK(CSystem::acquireProcessLease(contest, false, 0, owner) == 1);
-    int32_t competing = -1;
-    std::thread contender([&]() {
+    const bool competing = RunSystemWorkers(1, [&](size_t) -> bool {
         std::vector<uint64_t> another;
-        competing = CSystem::acquireProcessLease(contest, false, 0, another);
+        const int32_t result = CSystem::acquireProcessLease(contest, false, 0, another);
         CSystem::releaseProcessLease(another);
+        return result == 0;
     });
-    contender.join();
     CSystem::releaseProcessLease(owner);
 #ifndef _WIN32
     LEASE_CHECK(CSystem::deleteFile(("/tmp/xyls." + contest + ".lease").c_str()));
     LEASE_CHECK(CSystem::deleteFile(("/tmp/xyls." + contest + ".ready." + std::to_string(CSystem::currentProcessPid())).c_str()));
 #endif
-    LEASE_CHECK(competing == 0 && owner.empty());
+    LEASE_CHECK(competing && owner.empty());
     std::printf("System lease positions=32 failed=%u acquired=%u checks=%u PASS\n", failures, successes, checks);
     return true;
 #undef LEASE_CHECK
