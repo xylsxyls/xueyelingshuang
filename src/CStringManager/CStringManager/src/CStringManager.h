@@ -306,7 +306,7 @@ public:
 
     /** 将二进制数据写为连续的小写十六进制文本
     @param [in] bytes 任意字节串，允许内嵌 NUL
-    @return 每个输入字节对应两个字符，空输入返回空串
+    @return 每字节对应两个字符，空输入或两倍长度超过字符串上限返回空串；实际分配失败可抛出分配异常
     */
     static std::string StrToHex(const std::string& bytes);
 

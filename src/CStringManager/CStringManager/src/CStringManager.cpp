@@ -12,7 +12,6 @@
 #include <cmath>
 #include <locale>
 #include <limits>
-#include <stdexcept>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -642,7 +641,7 @@ std::string CStringManager::StrToHex(const std::string& bytes)
     std::string result;
     if (bytes.size() > result.max_size() / 2)
     {
-        throw std::length_error("StrToHex");
+        return result;
     }
     result.resize(bytes.size() * 2);
     for (size_t i = 0; i < bytes.size(); ++i)
@@ -1139,6 +1138,10 @@ void CStringManager::formatWideArguments(std::wstring& output, const wchar_t* fo
 //     }
 //     std::string displayName = path;
 //     if (CStringManager::Replace(displayName, displayName, "Live recording") != 1 || displayName != "Live recording")
+//     {
+//         return 4;
+//     }
+//     if (tags.empty())
 //     {
 //         return 4;
 //     }
