@@ -1290,9 +1290,6 @@ private:
 
 #ifdef _WIN32
 
-    // 允许等待用例直接验证旧版 Windows 的实际回退路径
-    friend class CSystemTestSleepAccess;
-
     /** 为当前模块申请旧版 Windows 的毫秒计时精度，模块卸载时归还
     @param [in] once 系统的一次性初始化状态，本回调不保存
     @param [in] parameter 未使用

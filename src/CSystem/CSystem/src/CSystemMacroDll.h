@@ -10,6 +10,6 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define CSystemAPI __attribute__ ((visibility("default")))
     #else
-        #define CSystemAPI
+        #define CSystemAPI 
     #endif
 #endif

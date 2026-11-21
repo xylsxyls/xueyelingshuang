@@ -10,11 +10,11 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define CSystemAPI __attribute__ ((visibility("default")))
     #else
-        #define CSystemAPI
+        #define CSystemAPI 
     #endif
 #endif
 
 #if defined(STATIC_LIB)
     #undef CSystemAPI
-    #define CSystemAPI
+    #define CSystemAPI 
 #endif
