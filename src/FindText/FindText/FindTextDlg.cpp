@@ -7,7 +7,6 @@
 #include "FindTextDlg.h"
 #include "afxdialogex.h"
 #include "CGetPath/CGetPathAPI.h"
-#include "CCharset/CCharsetAPI.h"
 #include "Ctxt/CtxtAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
@@ -140,7 +139,7 @@ BOOL CFindTextDlg::OnInitDialog()
                   "-----------------------------------------------------\r\n";
     m_strOutFormat = ".exe";
     m_strPath = "D:\\xueyelingshuang\\src\\工作经验\\";
-    m_outFormat.SetWindowText(CCharset::AnsiToUnicode(m_strOutFormat).c_str());
+    m_outFormat.SetWindowText(CStringManager::AnsiToUnicode(m_strOutFormat).c_str());
     m_case.SetCheck(0);
     m_chara.AddString(_T("GBK"));
     m_chara.AddString(_T("unicode"));
@@ -225,7 +224,7 @@ void CFindTextDlg::OnBnClickedButton2()
 {
     // TODO:  在此添加控件通知处理程序代码
     m_strPath = CGetPath::GetFolderFromWindow(m_hWnd);
-    m_path.SetWindowText(CCharset::AnsiToUnicode(m_strPath).c_str());
+    m_path.SetWindowText(CStringManager::AnsiToUnicode(m_strPath).c_str());
 }
 
 void CFindTextDlg::GetInfoFromWindow()
@@ -298,7 +297,7 @@ void CFindTextDlg::ShowSearchResult()
     {
         m_strFind = "无";
     }
-    m_find.SetWindowText(CCharset::AnsiToUnicode(m_strFind).c_str());
+    m_find.SetWindowText(CStringManager::AnsiToUnicode(m_strFind).c_str());
 	m_btnFind.EnableWindow(true);
 }
 
@@ -319,7 +318,7 @@ string CFindTextDlg::GetCEditString(const CEdit& m_edit)
 {
     CString text;
     m_edit.GetWindowText(text);
-    string strEdit = CCharset::UnicodeToAnsi(text.GetBuffer());
+    string strEdit = CStringManager::UnicodeToAnsi(text.GetBuffer());
     text.ReleaseBuffer();
     return strEdit;
 }

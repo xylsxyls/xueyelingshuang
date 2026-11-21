@@ -4,7 +4,6 @@
 #include "CGetPath/CGetPathAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "Ctxt/CtxtAPI.h"
-#include "CCharset/CCharsetAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include <afxwin.h>
 
@@ -91,14 +90,14 @@ void CFindTextTask::OpenFileFind(const string& path, const string& key, bool& bA
 	{
 		string& oneLine = txt.m_vectxt.at(line).at(0);
 		char* szOneLine = &oneLine[0];
-		string oneLineUtf8 = CCharset::Utf8ToAnsi(szOneLine + GetUtf8Offset(line, oneLine));
+		string oneLineUtf8 = CStringManager::Utf8ToAnsi(szOneLine + GetUtf8Offset(line, oneLine));
 		char* szOneLineBk = new char[oneLine.length() + 4];
 		memcpy(szOneLineBk, oneLine.c_str(), oneLine.length());
 		szOneLineBk[oneLine.length() + 0] = 0;
 		szOneLineBk[oneLine.length() + 1] = 0;
 		szOneLineBk[oneLine.length() + 2] = 0;
 		szOneLineBk[oneLine.length() + 3] = 0;
-		string oneLineUnicode = CCharset::UnicodeToAnsi((WCHAR*)&szOneLineBk[GetUnicodeOffset(line, oneLine)]);
+		string oneLineUnicode = CStringManager::UnicodeToAnsi((WCHAR*)&szOneLineBk[GetUnicodeOffset(line, oneLine)]);
 		delete[] szOneLineBk;
 		//如果能在一行中找到关键词
 		string gbkAddString;

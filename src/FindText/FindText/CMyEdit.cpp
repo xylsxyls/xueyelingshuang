@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "CMyEdit.h"
 #include "CSystem/CSystemAPI.h"
-#include "CCharset/CCharsetAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 BEGIN_MESSAGE_MAP(CMyEdit, CEdit)
     ON_WM_LBUTTONDBLCLK()
@@ -44,9 +44,9 @@ void CMyEdit::SelectPosLine(const CPoint& point)
         int offset = 0;
         if (strSelText[0] == 'l')
         {
-            string line = CCharset::UnicodeToAnsi(strSelText.GetBuffer()).c_str();
+            string line = CStringManager::UnicodeToAnsi(strSelText.GetBuffer()).c_str();
             int x = atoi((&line[0]) + 5);
-            int findLine = atoi(CCharset::UnicodeToAnsi(strSelText.GetBuffer()).c_str() + 5);
+            int findLine = atoi(CStringManager::UnicodeToAnsi(strSelText.GetBuffer()).c_str() + 5);
             strSelText.ReleaseBuffer();
             CString strLine;
             strLine.Format(_T("line:%d£¬GBK£º"), findLine);
@@ -54,7 +54,7 @@ void CMyEdit::SelectPosLine(const CPoint& point)
         }
         strSelText = strSelText.Mid(offset, strSelText.GetLength() - offset);
         SetSel(nBegin + offset, nEnd);
-        SetSelText(CCharset::UnicodeToAnsi(wstring(strSelText.GetBuffer())));
+        SetSelText(CStringManager::UnicodeToAnsi(wstring(strSelText.GetBuffer())));
         strSelText.ReleaseBuffer();
     }
 }
