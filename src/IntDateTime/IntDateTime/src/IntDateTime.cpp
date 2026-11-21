@@ -1,29 +1,12 @@
 ﻿#include "IntDateTime.h"
+#include <cerrno>
+#include <limits>
+#include <cstdlib>
 #include "CStringManager/CStringManagerAPI.h"
 
 IntDateTime::IntDateTime()
 {
-	time_t timep;
-	struct tm timeInfo;
-	time(&timep);
-	//?取得当地时间
-	if (!localTime(timep, timeInfo))
-	{
-		clear();
-		return;
-	}
-	int32_t year = 1900 + timeInfo.tm_year;
-	int32_t month = 1 + timeInfo.tm_mon;
-	int32_t day = timeInfo.tm_mday;
-	int32_t hour = timeInfo.tm_hour;
-	int32_t min = timeInfo.tm_min;
-	int32_t seconds = timeInfo.tm_sec;
-	std::string strLocalDate;
-	CStringManager::Format(strLocalDate, "%d%02d%02d", year, month, day);
-	m_date = atoi(strLocalDate.c_str());
-	std::string strLocalTime;
-	CStringManager::Format(strLocalTime, "%02d%02d%02d000", hour, min, seconds);
-	m_time = atoi(strLocalTime.c_str());
+    setTime(::time(nullptr));
 }
 
 IntDateTime::IntDateTime(const IntDateTime& intDateTime)
@@ -40,65 +23,22 @@ IntDateTime::IntDateTime(int32_t date, int32_t time)
 
 IntDateTime::IntDateTime(const std::string& time)
 {
-	m_date = 0;
-	m_time = 0;
-	std::vector<std::string> vecDateTime = CStringManager::split(time, " ");
-	if (vecDateTime.size() != 2 && vecDateTime.size() != 1)
-	{
-		printf("解析时间出错");
-		return;
-	}
-	std::string strDate = vecDateTime.at(0);
-	std::string strTime = (vecDateTime.size() == 1) ? "00:00:00" : vecDateTime.at(1);
-	CStringManager::Replace(strDate, "-", "");
-	m_date = atoi(strDate.c_str());
-	CStringManager::Replace(strTime, ":", "");
-	m_time = atoi(strTime.c_str()) * 1000;
+    clear();
+    setTime(time);
 }
 
 IntDateTime::IntDateTime(time_t time)
 {
-	struct tm timeInfo;
-	//?取得当地时间
-	if (!localTime(time, timeInfo))
-	{
-		clear();
-		return;
-	}
-	int32_t year = 1900 + timeInfo.tm_year;
-	int32_t month = 1 + timeInfo.tm_mon;
-	int32_t day = timeInfo.tm_mday;
-	int32_t hour = timeInfo.tm_hour;
-	int32_t min = timeInfo.tm_min;
-	int32_t seconds = timeInfo.tm_sec;
-	std::string strLocalDate;
-	CStringManager::Format(strLocalDate, "%d%02d%02d", year, month, day);
-	m_date = atoi(strLocalDate.c_str());
-	std::string strLocalTime;
-	CStringManager::Format(strLocalTime, "%02d%02d%02d000", hour, min, seconds);
-	m_time = atoi(strLocalTime.c_str());
+    setTime(time);
 }
 
 IntDateTime::IntDateTime(const char* time)
 {
-	m_date = 0;
-	m_time = 0;
-	if (time == nullptr)
-	{
-		return;
-	}
-	std::vector<std::string> vecDateTime = CStringManager::split(time, " ");
-	if (vecDateTime.size() != 2 && vecDateTime.size() != 1)
-	{
-		printf("解析时间出错");
-		return;
-	}
-	std::string strDate = vecDateTime.at(0);
-	std::string strTime = (vecDateTime.size() == 1) ? "00:00:00" : vecDateTime.at(1);
-	CStringManager::Replace(strDate, "-", "");
-	m_date = atoi(strDate.c_str());
-	CStringManager::Replace(strTime, ":", "");
-	m_time = atoi(strTime.c_str()) * 1000;
+    clear();
+    if (time != nullptr)
+    {
+        setTime(std::string(time));
+    }
 }
 
 IntDateTime IntDateTime::operator = (const IntDateTime& intDateTime)
@@ -110,43 +50,14 @@ IntDateTime IntDateTime::operator = (const IntDateTime& intDateTime)
 
 IntDateTime IntDateTime::operator=(const std::string& intDateTime)
 {
-	std::vector<std::string> vecDateTime = CStringManager::split(intDateTime, " ");
-	if (vecDateTime.size() != 2 && vecDateTime.size() != 1)
-	{
-		printf("解析时间出错");
-		return *this;
-	}
-	std::string strDate = vecDateTime.at(0);
-	std::string strTime = (vecDateTime.size() == 1) ? "00:00:00" : vecDateTime.at(1);
-	CStringManager::Replace(strDate, "-", "");
-	m_date = atoi(strDate.c_str());
-	CStringManager::Replace(strTime, ":", "");
-	m_time = atoi(strTime.c_str()) * 1000;
-	return *this;
+    setTime(intDateTime);
+    return *this;
 }
 
 IntDateTime IntDateTime::operator=(const time_t& time)
 {
-	struct tm timeInfo;
-	//?取得当地时间
-	if (!localTime(time, timeInfo))
-	{
-		clear();
-		return *this;
-	}
-	int32_t year = 1900 + timeInfo.tm_year;
-	int32_t month = 1 + timeInfo.tm_mon;
-	int32_t day = timeInfo.tm_mday;
-	int32_t hour = timeInfo.tm_hour;
-	int32_t min = timeInfo.tm_min;
-	int32_t seconds = timeInfo.tm_sec;
-	std::string strLocalDate;
-	CStringManager::Format(strLocalDate, "%d%02d%02d", year, month, day);
-	m_date = atoi(strLocalDate.c_str());
-	std::string strLocalTime;
-	CStringManager::Format(strLocalTime, "%02d%02d%02d000", hour, min, seconds);
-	m_time = atoi(strLocalTime.c_str());
-	return *this;
+    setTime(time);
+    return *this;
 }
 
 bool IntDateTime::empty() const
@@ -171,38 +82,83 @@ void IntDateTime::setTime(const std::string& time)
 	std::vector<std::string> vecDateTime = CStringManager::split(time, " ");
 	if (vecDateTime.size() != 2 && vecDateTime.size() != 1)
 	{
-		printf("解析时间出错");
 		return;
 	}
 	std::string strDate = vecDateTime.at(0);
 	std::string strTime = (vecDateTime.size() == 1) ? "00:00:00" : vecDateTime.at(1);
-	CStringManager::Replace(strDate, "-", "");
-	m_date = atoi(strDate.c_str());
+	const bool negativeYear = !strDate.empty() && strDate[0] == '-';
+    CStringManager::Replace(strDate, "-", "");
+    if (negativeYear) { strDate.insert(0, 1, '-'); }
 	CStringManager::Replace(strTime, ":", "");
-	m_time = atoi(strTime.c_str()) * 1000;
+    // 保留十进制前缀的解析规则；检查转换和毫秒缩放后再同时发布两个字段。
+    errno = 0;
+    const long date = std::strtol(strDate.c_str(), nullptr, 10);
+    if (errno == ERANGE || date < INT32_MIN || date > INT32_MAX)
+    {
+        return;
+    }
+    const long clock = std::strtol(strTime.c_str(), nullptr, 10);
+    if (errno == ERANGE || clock < INT32_MIN / 1000 || clock > INT32_MAX / 1000)
+    {
+        return;
+    }
+    m_date = static_cast<int32_t>(date);
+    m_time = static_cast<int32_t>(clock) * 1000;
 }
 
 void IntDateTime::setTime(time_t time)
 {
-	struct tm timeInfo;
-	//?取得当地时间
-	if (!localTime(time, timeInfo))
-	{
-		clear();
-		return;
-	}
-	int32_t year = 1900 + timeInfo.tm_year;
-	int32_t month = 1 + timeInfo.tm_mon;
-	int32_t day = timeInfo.tm_mday;
-	int32_t hour = timeInfo.tm_hour;
-	int32_t min = timeInfo.tm_min;
-	int32_t seconds = timeInfo.tm_sec;
-	std::string strLocalDate;
-	CStringManager::Format(strLocalDate, "%d%02d%02d", year, month, day);
-	m_date = atoi(strLocalDate.c_str());
-	std::string strLocalTime;
-	CStringManager::Format(strLocalTime, "%02d%02d%02d000", hour, min, seconds);
-	m_time = atoi(strLocalTime.c_str());
+    struct tm timeInfo;
+    if (!localTime(time, timeInfo))
+    {
+        clear();
+        return;
+    }
+    const int64_t year = static_cast<int64_t>(timeInfo.tm_year) + 1900;
+    const int32_t monthDay = (timeInfo.tm_mon + 1) * 100 + timeInfo.tm_mday;
+    const int64_t date = year * 10000 + (year < 0 ? -monthDay : monthDay);
+    if (date < INT32_MIN || date > INT32_MAX)
+    {
+        clear();
+        return;
+    }
+    m_date = static_cast<int32_t>(date);
+    m_time = ((timeInfo.tm_hour * 100 + timeInfo.tm_min) * 100 + timeInfo.tm_sec) * 1000;
+}
+
+bool IntDateTime::toTimestamp(time_t& timestamp) const
+{
+    if (empty())
+    {
+        return false;
+    }
+    struct tm parts = {};
+    parts.tm_year = getYear() - 1900;
+    parts.tm_mon = getMonth() - 1;
+    parts.tm_mday = getDay();
+    parts.tm_hour = getHour();
+    parts.tm_min = getMin();
+    parts.tm_sec = getSeconds();
+    parts.tm_isdst = -1;
+    errno = 0;
+    timestamp = mktime(&parts);
+#ifdef _WIN32
+    return timestamp != static_cast<time_t>(-1);
+#else
+    return timestamp != static_cast<time_t>(-1) || errno == 0;
+#endif
+}
+
+IntDateTime IntDateTime::shiftSeconds(int64_t seconds) const
+{
+    time_t base;
+    if (!toTimestamp(base) ||
+        (seconds > 0 && base > (std::numeric_limits<time_t>::max)() - seconds) ||
+        (seconds < 0 && base < (std::numeric_limits<time_t>::min)() - seconds))
+    {
+        return IntDateTime(0, 0);
+    }
+    return IntDateTime(static_cast<time_t>(base + seconds));
 }
 
 bool IntDateTime::localTime(time_t time, struct tm& timeInfo)
@@ -235,12 +191,12 @@ int32_t IntDateTime::getYear() const
 
 int32_t IntDateTime::getMonth() const
 {
-	return (m_date % 10000) / 100;
+	return std::abs((m_date % 10000) / 100);
 }
 
 int32_t IntDateTime::getDay() const
 {
-	return (m_date % 10000) % 100;
+	return std::abs(m_date % 100);
 }
 
 int32_t IntDateTime::getHour() const
@@ -261,21 +217,21 @@ int32_t IntDateTime::getSeconds() const
 std::string IntDateTime::toString() const
 {
 	std::string result;
-	CStringManager::Format(result, "%d-%02d-%02d %02d:%02d:%02d", m_date / 10000, (m_date % 10000) / 100, (m_date % 10000) % 100, m_time / 10000000, (m_time % 10000000) / 100000, (m_time % 100000) / 1000);
+	CStringManager::Format(result, "%d-%02d-%02d %02d:%02d:%02d", getYear(), getMonth(), getDay(), m_time / 10000000, (m_time % 10000000) / 100000, (m_time % 100000) / 1000);
 	return result;
 }
 
 std::string IntDateTime::dateToString() const
 {
 	std::string result;
-	CStringManager::Format(result, "%d-%02d-%02d", m_date / 10000, (m_date % 10000) / 100, (m_date % 10000) % 100);
+	CStringManager::Format(result, "%d-%02d-%02d", getYear(), getMonth(), getDay());
 	return result;
 }
 
 std::string IntDateTime::dateNumToString() const
 {
 	std::string result;
-	CStringManager::Format(result, "%d%02d%02d", m_date / 10000, (m_date % 10000) / 100, (m_date % 10000) % 100);
+	CStringManager::Format(result, "%d%02d%02d", getYear(), getMonth(), getDay());
 	return result;
 }
 
@@ -286,74 +242,36 @@ std::string IntDateTime::timeToString() const
 	return result;
 }
 
-//#include <atomic>
-//#include <functional>
+// 使用示例开始。单独编译本文件时可启用下方的 main。
+//#include <ctime>
 //#include <iostream>
-//#include <thread>
-//#include <vector>
 //
 //int main()
 //{
-//	int32_t totalCount = 0;
-//	int32_t failCount = 0;
-//	std::function<void(bool, const std::string&)> check = [&totalCount, &failCount](bool ok, const std::string& name) -> void
-//	{
-//		++totalCount;
-//		std::cout << (ok ? "[PASS] " : "[FAIL] ") << name << std::endl;
-//		if (!ok)
-//		{
-//			++failCount;
-//		}
-//	};
+//    // 输入和展示使用本地时间。以预约开始时间为基准，计算签到和结束窗口。
+//    IntDateTime start("2026-08-09 09:30:00");
+//    if (start.empty())
+//    {
+//        return 1;
+//    }
+//    const IntDateTime checkIn = start - 600;
+//    const IntDateTime finish = start + 3600;
+//    std::cout << start.dateToString() << " check-in " << checkIn.timeToString()
+//        << ", meeting " << start.timeToString() << " to " << finish.timeToString() << '\n';
+//    std::cout << "duration=" << finish - start << " seconds, archive=" << start.dateNumToString() << '\n';
 //
-//	IntDateTime parseTime("2026-08-09 03:41:22");
-//	check(parseTime.getDate() == 20260809 && parseTime.getTime() == 34122000, "IntDateTime parse datetime");
-//	check(parseTime.getYear() == 2026 && parseTime.getMonth() == 8 && parseTime.getDay() == 9, "IntDateTime date fields");
-//	check(parseTime.getHour() == 3 && parseTime.getMin() == 41 && parseTime.getSeconds() == 22, "IntDateTime time fields");
-//	check(parseTime.toString() == "2026-08-09 03:41:22", "IntDateTime toString");
-//	check(parseTime.dateToString() == "2026-08-09", "IntDateTime dateToString");
-//	check(parseTime.dateNumToString() == "20260809", "IntDateTime dateNumToString");
-//	check(parseTime.timeToString() == "03:41:22", "IntDateTime timeToString");
-//	IntDateTime dateOnly("2026-08-09");
-//	check(dateOnly.getDate() == 20260809 && dateOnly.getTime() == 0, "IntDateTime parse date only");
-//	IntDateTime copied(parseTime);
-//	check(copied == parseTime, "IntDateTime copy constructor");
-//	copied.clear();
-//	check(copied.empty() && copied == 0, "IntDateTime clear empty");
-//	copied.setTime(20260810, 101112000);
-//	check(copied.getDate() == 20260810 && copied.getTime() == 101112000, "IntDateTime setTime int");
-//	copied.setTime("2026-08-11 12:13:14");
-//	check(copied.toString() == "2026-08-11 12:13:14", "IntDateTime setTime string");
-//	IntDateTime nullText(static_cast<const char*>(nullptr));
-//	check(nullText.empty(), "IntDateTime null char pointer safe");
-//	IntDateTime fromEpoch(static_cast<time_t>(0));
-//	check(!fromEpoch.empty(), "IntDateTime time_t constructor safe");
-//	check(IntDateTime("2026-08-09 03:41:23") > parseTime, "IntDateTime compare greater");
-//	check(IntDateTime("2026-08-09 03:41:21") < parseTime, "IntDateTime compare less");
-//
-//	std::atomic<int32_t> failedThreadCount(0);
-//	std::vector<std::thread> threads;
-//	for (int32_t threadIndex = 0; threadIndex < 8; ++threadIndex)
-//	{
-//		threads.push_back(std::thread([&failedThreadCount]() -> void
-//		{
-//			for (int32_t loopIndex = 0; loopIndex < 5000; ++loopIndex)
-//			{
-//				IntDateTime value("2026-08-09 03:41:22");
-//				if (value.getDate() != 20260809 || value.timeToString() != "03:41:22")
-//				{
-//					failedThreadCount.fetch_add(1);
-//					return;
-//				}
-//			}
-//		}));
-//	}
-//	for (size_t i = 0; i < threads.size(); ++i)
-//	{
-//		threads[i].join();
-//	}
-//	check(failedThreadCount.load() == 0, "IntDateTime multithread pressure");
-//
-//	std::cout << "IntDateTime test " << (failCount == 0 ? "PASS" : "FAIL") << ", total=" << totalCount << ", failed=" << failCount << std::endl;
-//	return failCount == 0 ? 0 : 1;
+//    IntDateTime stored(start.getDate(), start.getTime());
+//    IntDateTime now(std::time(nullptr));
+//    std::cout << "stored=" << stored.toString() << ", year=" << stored.getYear()
+//        << ", month=" << stored.getMonth() << ", day=" << stored.getDay() << '\n';
+//    if (now >= checkIn && now < finish)
+//    {
+//        std::cout << "Registration window is open\n";
+//    }
+//    // 改期可直接设置日期与时刻整数；clear 表示取消预约。
+//    stored.setTime(20260810, 143000000);
+//    std::cout << "rescheduled=" << stored.getHour() << ':' << stored.getMin() << ':' << stored.getSeconds() << '\n';
+//    stored.clear();
+//    return stored.empty() ? 0 : 1;
 //}
+// 使用示例结束。

@@ -71,18 +71,7 @@ public:
     */
     friend IntDateTime operator+(const IntDateTime& intDateTime, int32_t seconds)
 	{
-        struct tm time = {};
-        time.tm_year = intDateTime.getYear() - 1900;
-        time.tm_mon = intDateTime.getMonth() - 1;
-        time.tm_mday = intDateTime.getDay();
-        time.tm_hour = intDateTime.getHour();
-        time.tm_min = intDateTime.getMin();
-        time.tm_sec = intDateTime.getSeconds();
-		time.tm_isdst = -1;
-        time_t timeint64 = mktime(&time);
-        IntDateTime result;
-        result = timeint64 + seconds;
-        return result;
+        return intDateTime.shiftSeconds(seconds);
     }
 
     /** 在本地时间基准上增加秒数，支持秒数在左侧的写法
@@ -92,18 +81,7 @@ public:
     */
     friend IntDateTime operator+(int32_t seconds, const IntDateTime& intDateTime)
 	{
-		struct tm time = {};
-		time.tm_year = intDateTime.getYear() - 1900;
-		time.tm_mon = intDateTime.getMonth() - 1;
-		time.tm_mday = intDateTime.getDay();
-		time.tm_hour = intDateTime.getHour();
-		time.tm_min = intDateTime.getMin();
-		time.tm_sec = intDateTime.getSeconds();
-		time.tm_isdst = -1;
-        time_t timeint64 = mktime(&time);
-        IntDateTime result;
-		result = timeint64 + seconds;
-        return result;
+        return intDateTime + seconds;
     }
 
     /** 在本地时间基准上减去秒数，忽略原毫秒
@@ -113,48 +91,32 @@ public:
     */
     friend IntDateTime operator-(const IntDateTime& intDateTime, int32_t seconds)
 	{
-		struct tm time = {};
-		time.tm_year = intDateTime.getYear() - 1900;
-		time.tm_mon = intDateTime.getMonth() - 1;
-		time.tm_mday = intDateTime.getDay();
-		time.tm_hour = intDateTime.getHour();
-		time.tm_min = intDateTime.getMin();
-		time.tm_sec = intDateTime.getSeconds();
-		time.tm_isdst = -1;
-        time_t timeint64 = mktime(&time);
-        IntDateTime result;
-		result = timeint64 - seconds;
-        return result;
+        return intDateTime.shiftSeconds(-static_cast<int64_t>(seconds));
     }
 
     /** 计算两个本地日期时间的秒差，忽略毫秒并受夏令时影响
     @param [in] intDateTime1 被减日期时间，调用方保证日期有效
     @param [in] intDateTime2 减去的日期时间，调用方保证日期有效
-    @return 前者减后者的秒数；强转为int32_t，调用方保证结果不超范围
+    @return 前者减后者的秒数，超出 int32_t 时饱和；转换失败时返回 0
     */
     friend int32_t operator-(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
 	{
-		struct tm time = {};
-		time.tm_year = intDateTime1.getYear() - 1900;
-		time.tm_mon = intDateTime1.getMonth() - 1;
-		time.tm_mday = intDateTime1.getDay();
-		time.tm_hour = intDateTime1.getHour();
-		time.tm_min = intDateTime1.getMin();
-		time.tm_sec = intDateTime1.getSeconds();
-		time.tm_isdst = -1;
-        time_t timeint64 = mktime(&time);
-
-        struct tm timeSub = {};
-		timeSub.tm_year = intDateTime2.getYear() - 1900;
-		timeSub.tm_mon = intDateTime2.getMonth() - 1;
-		timeSub.tm_mday = intDateTime2.getDay();
-		timeSub.tm_hour = intDateTime2.getHour();
-		timeSub.tm_min = intDateTime2.getMin();
-		timeSub.tm_sec = intDateTime2.getSeconds();
-		timeSub.tm_isdst = -1;
-        time_t timeint64Sub = mktime(&timeSub);
-
-		return (int32_t)difftime(timeint64, timeint64Sub);
+        time_t left;
+        time_t right;
+        if (!intDateTime1.toTimestamp(left) || !intDateTime2.toTimestamp(right))
+        {
+            return 0;
+        }
+        const double delta = difftime(left, right);
+        if (delta >= INT32_MAX)
+        {
+            return INT32_MAX;
+        }
+        if (delta <= INT32_MIN)
+        {
+            return INT32_MIN;
+        }
+        return static_cast<int32_t>(delta);
     }
 
     /** 按日期整数、时间整数依次比较是否严格小于
@@ -164,29 +126,8 @@ public:
     */
     friend bool operator< (const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
 	{
-		if (intDateTime1.m_date < intDateTime2.m_date)
-		{
-			return true;
-		}
-		else if (intDateTime1.m_date > intDateTime2.m_date)
-		{
-			return false;
-		}
-        else
-		{
-			if (intDateTime1.m_time < intDateTime2.m_time)
-			{
-				return true;
-			}
-			else if (intDateTime1.m_time > intDateTime2.m_time)
-			{
-				return false;
-			}
-			else
-			{
-				return false;
-			}
-        }
+        return intDateTime1.m_date < intDateTime2.m_date ||
+            (intDateTime1.m_date == intDateTime2.m_date && intDateTime1.m_time < intDateTime2.m_time);
     }
 
     /** 按日期整数、时间整数依次比较是否严格大于
@@ -196,29 +137,7 @@ public:
     */
     friend bool operator> (const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
 	{
-		if (intDateTime1.m_date < intDateTime2.m_date)
-		{
-			return false;
-		}
-		else if (intDateTime1.m_date > intDateTime2.m_date)
-		{
-			return true;
-		}
-        else
-		{
-			if (intDateTime1.m_time < intDateTime2.m_time)
-			{
-				return false;
-			}
-			else if (intDateTime1.m_time > intDateTime2.m_time)
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
-        }
+        return intDateTime2 < intDateTime1;
     }
 
     /** 按日期整数、时间整数依次比较是否小于或等于
@@ -228,29 +147,7 @@ public:
     */
     friend bool operator<=(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
 	{
-		if (intDateTime1.m_date < intDateTime2.m_date)
-		{
-			return true;
-		}
-		else if (intDateTime1.m_date > intDateTime2.m_date)
-		{
-			return false;
-		}
-        else
-		{
-			if (intDateTime1.m_time < intDateTime2.m_time)
-			{
-				return true;
-			}
-			else if (intDateTime1.m_time > intDateTime2.m_time)
-			{
-				return false;
-			}
-			else
-			{
-				return true;
-			}
-        }
+        return !(intDateTime2 < intDateTime1);
     }
 
     /** 按日期整数、时间整数依次比较是否大于或等于
@@ -260,29 +157,7 @@ public:
     */
     friend bool operator>=(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
 	{
-		if (intDateTime1.m_date < intDateTime2.m_date)
-		{
-			return false;
-		}
-		else if (intDateTime1.m_date > intDateTime2.m_date)
-		{
-			return true;
-		}
-        else
-		{
-			if (intDateTime1.m_time < intDateTime2.m_time)
-			{
-				return false;
-			}
-			else if (intDateTime1.m_time > intDateTime2.m_time)
-			{
-				return true;
-			}
-			else
-			{
-				return true;
-			}
-        }
+        return !(intDateTime1 < intDateTime2);
     }
 
     /** 比较日期和时间整数是否全部相等
@@ -292,14 +167,7 @@ public:
     */
     friend bool operator==(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
 	{
-		if (intDateTime1.m_date == intDateTime2.m_date && intDateTime1.m_time == intDateTime2.m_time)
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
+        return intDateTime1.m_date == intDateTime2.m_date && intDateTime1.m_time == intDateTime2.m_time;
     }
 
     /** 比较日期和时间整数是否存在不同
@@ -309,14 +177,7 @@ public:
     */
     friend bool operator!=(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
 	{
-		if (intDateTime1.m_date == intDateTime2.m_date && intDateTime1.m_time == intDateTime2.m_time)
-		{
-			return false;
-		}
-		else
-		{
-			return true;
-		}
+        return !(intDateTime1 == intDateTime2);
     }
 
     /** 与整数零比较以判断是否为空，非零整数始终不匹配
@@ -326,18 +187,7 @@ public:
     */
     friend bool operator==(const IntDateTime& intDateTime, int32_t num)
 	{
-		if (num != 0)
-		{
-			return false;
-		}
-		if (intDateTime.getDate() == 0 && intDateTime.getTime() == 0)
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
+        return num == 0 && intDateTime.empty();
     }
 
     /** 与整数零比较以判断是否为空，支持整数在左侧的写法
@@ -347,18 +197,7 @@ public:
     */
     friend bool operator==(int32_t num, const IntDateTime& intDateTime)
 	{
-		if (num != 0)
-		{
-			return false;
-		}
-		if (intDateTime.getDate() == 0 && intDateTime.getTime() == 0)
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
+        return num == 0 && intDateTime.empty();
     }
 
 	/** 判断日期和时间是否同时为零
@@ -447,6 +286,18 @@ public:
 	std::string timeToString() const;
 
 private:
+    /** 将本地日期时间转成系统时间戳，按本地夏令时规则处理
+    @param [out] timestamp 成功时返回的秒级时间戳
+    @return 有可表示的本地日期时为 true
+    */
+    bool toTimestamp(time_t& timestamp) const;
+
+    /** 在检查时间戳上下界后加减本地时间的秒数
+    @param [in] seconds 秒数，取自 int32_t 操作数或其相反数
+    @return 转换成功后的日期时间，失败时返回空值
+    */
+    IntDateTime shiftSeconds(int64_t seconds) const;
+
 
 	/** 使用可重入系统接口转换本地时间，避免共享静态缓冲区
 	@param [in] time 系统time_t时间戳，单位秒
