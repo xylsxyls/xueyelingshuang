@@ -271,6 +271,35 @@ static int LifetimeCases()
     }
     check(lifecycleFailCount == 0, "RapidJsonCpp pointer lifecycle pressure");
 
+    RapidJsonCpp cursor;
+    const std::string large(4096, 'z');
+    const std::string tree = "{\"row\":{\"data\":\"" + large + "\"},\"rows\":[7]}";
+    check(cursor.parse(tree), "prepare nested cursor");
+    RapidJsonCpp independent(cursor["row"].toRapidJsonValue());
+    bool intact = true;
+    for (int32_t index = 0; index < 128; ++index)
+    {
+        const rapidjson::Value* row = cursor["row"].toRapidJsonValue();
+        intact = intact && row->IsObject() && row->HasMember("data") && (*row)["data"].IsString() &&
+            (*row)["data"].GetStringLength() == large.size() &&
+            std::memcmp((*row)["data"].GetString(), large.data(), large.size()) == 0;
+        const std::vector<RapidJsonCpp> rows = cursor["rows"].toArray();
+        intact = intact && rows.size() == 1 && rows.front().toIntOrDefault(-1) == 7;
+    }
+    check(intact, "alternating large subtree and array selections retain their full values");
+    const rapidjson::Value* current = cursor["row"].toRapidJsonValue();
+    const std::string malformed[] = {"", std::string("null\0x", 6), "[1,2,"};
+    for (size_t index = 0; index < sizeof(malformed) / sizeof(malformed[0]); ++index)
+    {
+        check(!cursor.parse(malformed[index]) && current->IsNull() && cursor.toString() == "{}",
+            "failed parse resets selected value and root");
+        cursor = 11;
+        check(current->IsInt() && current->GetInt() == 11 && cursor.toString() == "11",
+            "failed parse clears pending key before the next root assignment");
+        check(cursor.parse(tree) && cursor["row"].toRapidJsonValue() == current, "cursor reused after failed parse");
+    }
+    check(independent["data"].toStringOrDefault("") == large, "copied subtree survives parent reset");
+
     return check.failures ? 1 : 0;
 }
 
@@ -353,6 +382,42 @@ static int BoundaryCases()
     std::string bad(invalid, sizeof invalid);
     check(!doc.parse(bad) && doc.toString() == "{}", "document rejects malformed UTF-8");
     check(!selected.parse(bad) && selected.isNull(), "cursor rejects malformed UTF-8");
+    const char* unpaired[] = {"\"\\udc00\"", "{\"\\uDFff\":1}", "\"\\\\\\uDd01\"", "\"\\uD814x\""};
+    bool rejectedSurrogates = true;
+    for (size_t i = 0; i < sizeof(unpaired) / sizeof(unpaired[0]); ++i)
+    {
+        const bool documentAccepted = doc.parse(unpaired[i]);
+        const bool cursorAccepted = selected.parse(unpaired[i]);
+        rejectedSurrogates = rejectedSurrogates && !documentAccepted && !cursorAccepted &&
+            doc.toString() == "{}" && selected.isNull();
+    }
+    check(rejectedSurrogates, "unpaired surrogate escapes in string values and keys");
+    const std::string paired = "{\"\\uD83c\\uDF4e\":\"\\ud83C\\udf4E\",\"literal\":\"\\\\uDC00\"}";
+    const char* apple = "\xF0\x9F\x8D\x8E";
+    check(doc.parse(paired) && doc.getStringOrDefault(apple, "") == apple &&
+        doc.getStringOrDefault("literal", "") == "\\uDC00", "valid Unicode pair and escaped backslash in document");
+    check(selected.parse(paired) && selected[apple].toStringOrDefault("") == apple &&
+        selected["literal"].toStringOrDefault("") == "\\uDC00", "valid Unicode pair and escaped backslash in cursor");
+    const double exact = 996.3723767827669;
+    rapidjson::Document owner;
+    rapidjson::Value parsedNumber;
+    check(doc.parse("{\"n\":996.3723767827669}"), "document accepts a decimal near a rounding boundary");
+    doc.getValue("n").copyToRapidJsonValue(&parsedNumber, &owner);
+    check(parsedNumber.IsDouble() && parsedNumber.GetDouble() == exact, "document correctly rounds double");
+    check(selected.parse("996.3723767827669") && selected.toRapidJsonValue()->IsDouble() &&
+        selected.toRapidJsonValue()->GetDouble() == exact, "cursor correctly rounds double");
+    const std::string truncated(1, static_cast<char>(0xf0));
+    doc.addString("bad", truncated);
+    check(doc.toString().empty(), "document reports invalid UTF-8 during serialization");
+    doc.addString("bad", "\xF0\x9F\x8D\x8E");
+    check(!doc.toString().empty(), "document serializes valid four-byte UTF-8");
+    selected[truncated] = 1;
+    check(selected.toString().empty(), "cursor reports invalid UTF-8 key during serialization");
+    rapidjson::Value invalidNumbers(rapidjson::kArrayType);
+    invalidNumbers.PushBack(1, owner.GetAllocator());
+    invalidNumbers.PushBack((std::numeric_limits<double>::infinity)(), owner.GetAllocator());
+    RapidJsonValue nonFinite(&invalidNumbers);
+    check(nonFinite.toString().empty(), "nested non-finite number never returns partial JSON");
     check(doc.parse("{\"min\":-2147483648,\"max\":2147483647,\"big\":2147483648,\"mixed\":[1,\"one\",false]}"), "numeric input");
     check(doc.getIntOrDefault("min", 0) == (std::numeric_limits<int32_t>::min)() &&
         doc.getIntOrDefault("max", 0) == (std::numeric_limits<int32_t>::max)() &&
@@ -367,7 +432,6 @@ static int BoundaryCases()
     check(scalar.toString() == "{\"previous\":17}", "self member preserves scalar snapshot");
     selected["status"] = 12;
     check(selected.toIntOrDefault(-1) == 12, "cursor after member assignment");
-    if (sizeof(size_t) > sizeof(rapidjson::SizeType))
     {
         bool rejected = false;
         scalar.setArray();
@@ -385,6 +449,23 @@ static int BoundaryCases()
     std::string key("a\0b", 3);
     selected[key] = -42;
     check(selected.hasMember(key) && !selected.hasMember("a") && selected[key].toIntOrDefault(0) == -42, "binary key");
+    const std::string longText(4096, 'x');
+    selected["first"] = longText;
+    selected["second"] = 42;
+    const rapidjson::Value* view = selected["first"].toRapidJsonValue();
+    const char* payload = view->GetString();
+    bool reused = true;
+    for (int i = 0; i < 256; ++i)
+    {
+        const rapidjson::Value* same = selected["first"].toRapidJsonValue();
+        reused = reused && same->GetString() == payload;
+    }
+    check(reused, "consecutive selections reuse the same long string");
+    check(selected["second"].toRapidJsonValue() == view && view->IsInt() && view->GetInt() == 42,
+        "borrowed cursor follows the newly selected value");
+    view = selected["first"].toRapidJsonValue();
+    selected = view;
+    check(selected["first"].toStringOrDefault("") == longText, "assign borrowed selected value to its own member");
     return check.failures ? 1 : 0;
 }
 
