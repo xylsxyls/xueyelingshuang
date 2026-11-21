@@ -10,6 +10,6 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define CompressAPI __attribute__ ((visibility("default")))
     #else
-        #define CompressAPI
+        #define CompressAPI 
     #endif
 #endif
