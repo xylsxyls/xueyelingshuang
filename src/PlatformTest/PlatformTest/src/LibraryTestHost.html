@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>Wasm 库测试</title>
+<pre id="result">正在加载测试</pre>
+<script src="LibraryTestHost.js"></script>
+<script src="LibraryTestWidth.js"></script>
+<script>
+const result = document.getElementById('result');
+const query = new URLSearchParams(location.search);
+const packagedTest = document.documentElement.dataset.pairedTest;
+const name = query.get('test') || packagedTest;
+if (!/^[A-Za-z][A-Za-z0-9]*Test$/.test(name || '')) {
+    result.textContent = '请在地址末尾添加 ?test=工程名，例如 ?test=CEncodeDecodeTest';
+} else {
+    (async () => {
+        try {
+            const bits = query.has('bits') || packagedTest ? await selectLibraryTestWidth(query.get('bits') || 'auto') : null;
+            const script = document.createElement('script');
+            script.src = (bits ? 'wasm' + bits + '/' : '') + name + '.js';
+            await new Promise((resolve, reject) => {
+                script.onload = resolve;
+                script.onerror = () => reject(new Error(script.src + ' 加载失败'));
+                document.body.appendChild(script);
+            });
+            const samples = [];
+            await runLibraryTest(createLibraryTest, {
+                benchmark: query.get('benchmark') === '1',
+                args: query.has('args') ? JSON.parse(query.get('args')) : undefined,
+                print(line) {
+                    console.log(line);
+                    if (line.startsWith('[BENCH]')) samples.push(line);
+                }
+            });
+            result.textContent = [name + (bits ? ' wasm' + bits : '') + ' PASS', ...samples].join('\n');
+        } catch (error) {
+            result.textContent = name + ' FAIL ' + error;
+        }
+    })();
+}
+</script>
+</html>
