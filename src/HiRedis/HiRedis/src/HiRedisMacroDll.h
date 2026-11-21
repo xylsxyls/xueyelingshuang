@@ -10,6 +10,6 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define HiRedisAPI __attribute__ ((visibility("default")))
     #else
-        #define HiRedisAPI
+        #define HiRedisAPI 
     #endif
 #endif
