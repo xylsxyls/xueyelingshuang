@@ -1,0 +1,15 @@
+{
+    "configurations": [
+        {
+            "name": "Native",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/../../include/"
+            ],
+            "defines": [],
+            "cStandard": "c11",
+            "cppStandard": "c++11"
+        }
+    ],
+    "version": 4
+}
