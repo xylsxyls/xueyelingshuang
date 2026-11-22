@@ -8,5 +8,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/../../PlatformTest/PlatformTest/src/Platfor
 platform_test_select_linux_arm()
 project(CiniTest LANGUAGES CXX)
 include(CTest)
-build_sdk_test(CiniTest PROJECTS Cini
-    ARCHIVES ${vendors} SYSTEM_LIBRARIES ${system_libraries})
+build_sdk_test(CiniTest PROJECTS Cini)
+if(MSVC AND CiniTestLinkage STREQUAL "dll")
+    set_property(TARGET CiniTest PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+endif()
