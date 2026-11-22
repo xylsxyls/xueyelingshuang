@@ -94,6 +94,43 @@ int SharedMemory::openSharedObject(int flags) const
     return ::openat(m_directoryDescriptor, m_nativeName.c_str(), flags | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK, 0600);
 }
 
+bool SharedMemory::initializeStorage() const
+{
+    // Linux 的 shm_open 和目录文件都需预留空间，其他 POSIX 平台只预留目录文件。
+#ifndef __linux__
+    if (m_directoryDescriptor >= 0)
+#endif
+    {
+#ifdef __APPLE__
+        fstore_t allocation = {};
+        allocation.fst_flags = F_ALLOCATEALL;
+        allocation.fst_posmode = F_PEOFPOSMODE;
+        allocation.fst_length = static_cast<off_t>(m_size);
+        if (::fcntl(m_descriptor, F_PREALLOCATE, &allocation) < 0)
+        {
+            return false;
+        }
+#else
+        // posix_fallocate 直接返回错误码，EINTR 时在同一描述符上重试。
+        int result;
+        do
+        {
+            result = ::posix_fallocate(m_descriptor, 0, static_cast<off_t>(m_size));
+        } while (result == EINTR);
+        if (result != 0)
+        {
+            return false;
+        }
+#endif
+    }
+    int result;
+    do
+    {
+        result = ::ftruncate(m_descriptor, static_cast<off_t>(m_size));
+    } while (result < 0 && errno == EINTR);
+    return result == 0;
+}
+
 uint32_t SharedMemory::sharedObjectCapacity() const
 {
     struct stat info = {};
@@ -248,58 +285,16 @@ m_descriptor(-1), m_readOnly(false), m_capacity(0), m_created(false), m_nameUnli
     {
         m_descriptor = openSharedObject(O_RDWR | O_CREAT | O_EXCL);
         m_created = m_descriptor >= 0;
-        if (m_created)
-        {
-            bool allocated = true;
-#ifdef __linux__
-            // Linux的shm_open同样由tmpfs承载，不能只为普通文件预留空间。
-            const bool reserveStorage = true;
-#else
-            const bool reserveStorage = m_directoryDescriptor >= 0;
-#endif
-            if (reserveStorage)
-            {
-                // 先预留空间，避免ftruncate只扩逻辑长度后，首次写页因ENOSPC触发SIGBUS。
-#ifdef __APPLE__
-                fstore_t allocation = {};
-                allocation.fst_flags = F_ALLOCATEALL;
-                allocation.fst_posmode = F_PEOFPOSMODE;
-                allocation.fst_length = static_cast<off_t>(size);
-                allocated = ::fcntl(m_descriptor, F_PREALLOCATE, &allocation) == 0;
-#else
-                // posix_fallocate直接返回错误码；信号中断后重新预留同一范围。
-                int result;
-                do
-                {
-                    result = ::posix_fallocate(m_descriptor, 0, static_cast<off_t>(size));
-                } while (result == EINTR);
-                allocated = result == 0;
-#endif
-            }
-            if (allocated)
-            {
-                int result;
-                do
-                {
-                    result = ::ftruncate(m_descriptor, size);
-                } while (result < 0 && errno == EINTR);
-                allocated = result == 0;
-            }
-            if (!allocated)
-            {
-                ::close(m_descriptor);
-                m_descriptor = -1;
-                unlinkName();
-                m_created = false;
-            }
-        }
-        else if (isAllowExist && errno == EEXIST)
+        if (!m_created && isAllowExist && errno == EEXIST)
         {
             m_descriptor = openSharedObject(O_RDWR);
         }
         if (m_descriptor >= 0)
         {
-            m_capacity = sharedObjectCapacity();
+            if (!m_created || initializeStorage())
+            {
+                m_capacity = sharedObjectCapacity();
+            }
             if (m_capacity < size)
             {
                 ::close(m_descriptor);
@@ -636,29 +631,27 @@ bool SharedMemory::unlinkName()
 //     std::ostringstream key;
 //     key << "smd" << std::hex << std::chrono::steady_clock::now().time_since_epoch().count();
 //     SharedMemory owner(key.str(), 4096, false);
-//     if (owner.isFailed() || owner.realSize() < owner.size())
+//     if (owner.isFailed())
 //     {
 //         return 2;
 //     }
 //     void* writable = owner.writeWithoutLock();
-//     if (writable == nullptr)
+//     if (writable == nullptr || owner.realSize() < owner.size())
 //     {
 //         return 3;
 //     }
 //     const char message[] = "ready";
 //     std::memcpy(writable, message, sizeof(message));
 //     SharedMemory peer(owner.mapName());
-//     if (peer.realSize() < sizeof(message))
-//     {
-//         return 4;
-//     }
 //     const void* readable = peer.readWithoutLock();
-//     if (readable == nullptr || readable != peer.memory() || std::memcmp(readable, message, sizeof(message)) != 0)
+//     if (readable == nullptr || readable != peer.memory() || peer.realSize() < sizeof(message) ||
+//         std::memcmp(readable, message, sizeof(message)) != 0)
 //     {
 //         return 4;
 //     }
 //     owner.clear();
-//     const bool cleared = static_cast<const char*>(readable)[0] == 0;
+//     const char zero[sizeof(message)] = {};
+//     const bool cleared = std::memcmp(readable, zero, sizeof(zero)) == 0;
 //     peer.close();
 // #ifndef _WIN32
 //     const bool removed = owner.unlinkName();

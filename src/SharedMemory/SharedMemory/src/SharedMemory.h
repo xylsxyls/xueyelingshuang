@@ -147,6 +147,11 @@ private:
     */
     int openSharedObject(int flags) const;
 
+    /** 为本实例排他创建的命名后备准备存储并设置请求长度
+    @return 后备长度已设置时为 true，预留或设置长度失败时由构造函数回收资源
+    */
+    bool initializeStorage() const;
+
     /** 查询已打开后备的可表示容量，目录后备还须为普通文件
     @return 可映射的字节数，空对象、类型错误、查询失败或溢出时为 0
     */
