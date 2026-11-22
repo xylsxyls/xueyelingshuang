@@ -90,10 +90,10 @@ void CEncodeDecodeHashCases::hashBoundary()
     }
 
     CEncodeDecodeHash* firstRaw = nullptr;
-    CryptoCheck(CEncodeDecode::hashCreate(&firstRaw) == CENCODE_OK, "first independent hash");
+    CryptoCheck(CEncodeDecode::hashCreate(&firstRaw) == CENCODE_OK && firstRaw != nullptr, "first independent hash");
     HashOwner first(firstRaw, &CEncodeDecode::hashDestroy);
     CEncodeDecodeHash* secondRaw = nullptr;
-    CryptoCheck(CEncodeDecode::hashCreate(&secondRaw) == CENCODE_OK, "second independent hash");
+    CryptoCheck(CEncodeDecode::hashCreate(&secondRaw) == CENCODE_OK && secondRaw != nullptr && secondRaw != firstRaw, "second independent hash");
     HashOwner second(secondRaw, &CEncodeDecode::hashDestroy);
     first->m_size = UINT64_C(0x1fffffffffffffff) - 1;
     CryptoCheck(CEncodeDecode::hashUpdate(first.get(), input, 2) == CENCODE_LIMIT &&
@@ -268,10 +268,13 @@ void CEncodeDecodeHashCases::partsBoundary()
     parts[0].m_size = 8388608;
     parts[1].m_bytes = parts[0].m_bytes + parts[0].m_size;
     parts[1].m_size = 8388608;
+    std::memset(key, 'K', sizeof(key));
     CryptoCheck(CEncodeDecode::sha256(parts[0].m_bytes, 16777216, saved, 33) == CENCODE_OK &&
-        CEncodeDecode::sha256Parts(parts, 2, output, 33) == CENCODE_OK && std::memcmp(saved, output, 32) == 0,
+        CEncodeDecode::sha256Parts(parts, 2, output, 33) == CENCODE_OK && std::memcmp(saved, output, 32) == 0 &&
+        CryptoDigestEquals(output, "5b6ff2e19d0da0fe323061018fc381393492884e74af8296c81ab9cb2694783a"),
         "parts SHA256 maximum accepted length");
     CryptoCheck(CEncodeDecode::hmacSha256(key, 20, parts[0].m_bytes, 16777216, saved, 33) == CENCODE_OK &&
-        CEncodeDecode::hmacSha256Parts(key, 20, parts, 2, output, 33) == CENCODE_OK && std::memcmp(saved, output, 32) == 0,
+        CEncodeDecode::hmacSha256Parts(key, 20, parts, 2, output, 33) == CENCODE_OK && std::memcmp(saved, output, 32) == 0 &&
+        CryptoDigestEquals(output, "4d287bd3fbd257941ee4bbaf1e44da3a78acf49c0a9715332cdaf5900d08690a"),
         "parts HMAC maximum accepted length");
 }

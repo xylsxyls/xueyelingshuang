@@ -2,15 +2,27 @@
 #include "CEncodeDecode/CEncodeDecodeAPI.h"
 #include "CEncodeDecode/CEncodeDecodeMbedConfig.h"
 #include "CEncodeDecodeTest.h"
+#include "CEncodeDecodeTlsTestData.h"
 // 第三方只作为测试的独立验证器，独立检查本库生成的证书。
 #include <mbedtls/pk.h>
 #include <mbedtls/oid.h>
+#include <mbedtls/sha256.h>
+#include <algorithm>
 #include <mbedtls/x509_crt.h>
 #include <mbedtls/x509_csr.h>
 #include <mbedtls/ecp.h>
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
+#ifdef USE_OPENSSL
+#include <memory>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <cstdlib>
+#include <unistd.h>
+#endif
+#endif
 
 /** 固定错误信息的断言，避免向日志输出私钥
 @param [in] condition 预期条件
@@ -115,6 +127,37 @@ static CEncodeDecodeBytes CertificateCryptoText(const char* text)
     return bytes;
 }
 
+#ifdef USE_OPENSSL
+/** 通过文件接口读取独立生成的证书，并与已知的 P-256 公钥比较
+@param [in] bytes PEM 或 DER 证书
+@param [in] size 待写入临时文件的字节数
+@param [in] publicKey 独立验证器给出的未压缩曲线点
+*/
+static void CheckCertificateFile(const uint8_t* bytes, size_t size, const std::string& publicKey)
+{
+#ifdef _WIN32
+    char base[MAX_PATH + 1] = {};
+    char path[MAX_PATH + 1] = {};
+    const DWORD length = GetTempPathA(sizeof(base), base);
+    CertificateCryptoCheck(length > 0 && length < sizeof(base) &&
+        GetTempFileNameA(base, "CED", 0, path) != 0, "create temporary certificate file");
+#else
+    char path[] = "CEncodeDecodeTest-XXXXXX";
+    const int descriptor = mkstemp(path);
+    CertificateCryptoCheck(descriptor >= 0, "create temporary certificate file");
+    close(descriptor);
+#endif
+    std::unique_ptr<const char, int (*)(const char*)> temporary(path, std::remove);
+    FILE* file = std::fopen(path, "wb");
+    CertificateCryptoCheck(file != nullptr, "open temporary certificate file");
+    const size_t written = std::fwrite(bytes, 1, size, file);
+    const int closed = std::fclose(file);
+    CertificateCryptoCheck(written == size && closed == 0, "write complete certificate file");
+    std::unique_ptr<X509, void (*)(X509*)> cert(CEncodeDecode::getCert(path), CEncodeDecode::releaseCert);
+    CertificateCryptoCheck(cert && CEncodeDecode::getPublicKey(cert.get()) == publicKey, "file certificate EC point");
+}
+#endif
+
 void CEncodeDecodeCertificateCases::run()
 {
     uint8_t rootKey[4096] = {};
@@ -126,16 +169,51 @@ void CEncodeDecodeCertificateCases::run()
     uint8_t signature[81];
     uint8_t digest[32] = {};
     const uint8_t name[] = "service.crypto.test";
+    static const uint8_t otherRoot[] = TEST_CA_CRT_RSA_SHA256_PEM;
     uint32_t rootKeySize = 0;
     uint32_t rootRequestSize = 0;
     uint32_t keySize = 0;
     uint32_t requestSize = 0;
+    for (unsigned shortSide = 0; shortSide < 2; ++shortSide)
+    {
+        std::memset(key, 0xa5, sizeof(key));
+        std::memset(request, 0x5a, sizeof(request));
+        const uint32_t keyCapacity = shortSide == 0 ? 1 : sizeof(key);
+        const uint32_t requestCapacity = shortSide == 1 ? 1 : sizeof(request);
+        keySize = requestSize = 0;
+        CertificateCryptoCheck(CEncodeDecode::p256CreateRequest(name, sizeof(name) - 1, CertificateCryptoEntropy, nullptr,
+            key, keyCapacity, &keySize, request, requestCapacity, &requestSize) == CENCODE_BUFFER &&
+            keySize > 1 && keySize <= sizeof(key) && requestSize > 1 && requestSize <= sizeof(request) &&
+            std::count(key, key + sizeof(key), 0xa5) == sizeof(key) &&
+            std::count(request, request + sizeof(request), 0x5a) == sizeof(request), "CSR short output pair atomicity");
+    }
+    const std::string label(63, 'a');
+    const std::string longest = label + "." + label + "." + label + "." + std::string(61, 'b');
+    CertificateCryptoCheck(CEncodeDecode::p256CreateRequest(reinterpret_cast<const uint8_t*>(longest.data()), 253,
+        CertificateCryptoEntropy, nullptr, key, sizeof(key), &keySize, request, sizeof(request), &requestSize) == CENCODE_OK,
+        "253-byte DNS name with 63-byte labels");
+    const std::string badNames[] = {"", longest + 'c', std::string(64, 'a'), ".a", "a.", "a..b", "-ab", "ab-",
+        std::string("a\0b", 3), "a_b"};
+    for (const std::string& bad : badNames)
+    {
+        keySize = requestSize = 777;
+        key[0] = request[0] = 0x5a;
+        CertificateCryptoCheck(CEncodeDecode::p256CreateRequest(reinterpret_cast<const uint8_t*>(bad.data()),
+            static_cast<uint32_t>(bad.size()), CertificateCryptoEntropy, nullptr, key, sizeof(key), &keySize,
+            request, sizeof(request), &requestSize) == CENCODE_ARGUMENT && keySize == 0 && requestSize == 0 &&
+            key[0] == 0x5a && request[0] == 0x5a, "invalid DNS name modified request outputs");
+    }
     CertificateCryptoCheck(CEncodeDecode::p256CreateRequest(name, sizeof(name) - 1, CertificateCryptoEntropy, nullptr,
         rootKey, sizeof(rootKey), &rootKeySize, rootRequest, sizeof(rootRequest), &rootRequestSize) == CENCODE_OK,
         "temporary CA key generation");
+    CertificateCryptoCheck(rootKeySize > 1 && rootKeySize <= sizeof(rootKey) && rootKey[rootKeySize - 1] == 0 &&
+        rootRequestSize > 1 && rootRequestSize <= sizeof(rootRequest) && rootRequest[rootRequestSize - 1] == 0,
+        "CA request and private key lengths");
     CertificateCryptoCheck(CertificateCryptoRoot(rootKey, rootKeySize, root), "independent temporary CA signing");
     CertificateCryptoCheck(CEncodeDecode::p256CreateRequest(name, sizeof(name) - 1, CertificateCryptoEntropy, nullptr,
         key, sizeof(key), &keySize, request, sizeof(request), &requestSize) == CENCODE_OK, "P256 leaf request");
+    CertificateCryptoCheck(keySize > 1 && keySize <= sizeof(key) && key[keySize - 1] == 0 &&
+        requestSize > 1 && requestSize <= sizeof(request) && request[requestSize - 1] == 0, "CSR and private key lengths");
     const std::string privateKey(reinterpret_cast<const char*>(key), keySize - 1);
     const CEncodeDecodeBytes alias = CertificateCryptoText("peer.crypto.test");
     CEncodeDecodeCertificateIssue options = {};
@@ -157,30 +235,85 @@ void CEncodeDecodeCertificateCases::run()
     CertificateCryptoCheck(CEncodeDecode::p256IssueCertificate(options, pem, 1, &length) == CENCODE_BUFFER &&
         length > 1 && length <= 8192 && pem[0] == 0x5a && pem[8192] == 0x5a, "issuer small buffer atomicity");
     CertificateCryptoCheck(CEncodeDecode::p256IssueCertificate(options, pem, 8192, &length) == CENCODE_OK &&
-        length > 1 && pem[length - 1] == 0 && pem[8192] == 0x5a, "issuer bounded PEM result");
+        length > 1 && length <= 8192 && pem[length - 1] == 0 && pem[8192] == 0x5a, "issuer bounded PEM result");
     const std::string certificate(reinterpret_cast<const char*>(pem), length - 1);
+    // 保留双用途证书供后续链与签名核验，另独立检查各用途开关的组合。
+    for (unsigned flags = 0; flags < 4; ++flags)
+    {
+        CEncodeDecodeCertificateIssue selected = options;
+        selected.m_tlsServer = (flags & 1) != 0;
+        selected.m_tlsClient = (flags & 2) != 0;
+        CertificateCryptoCheck(CEncodeDecode::p256IssueCertificate(selected, pem, 8192, &length) == CENCODE_OK &&
+            length > 1 && length <= 8192 && pem[length - 1] == 0, "issue certificate with selected EKU");
+        mbedtls_x509_crt leaf;
+        mbedtls_x509_crt_init(&leaf);
+        const bool parsed = mbedtls_x509_crt_parse(&leaf, pem, length) == 0;
+        const bool hasExtension = (leaf.MBEDTLS_PRIVATE(ext_types) & MBEDTLS_X509_EXT_EXTENDED_KEY_USAGE) != 0;
+        unsigned servers = 0;
+        unsigned clients = 0;
+        unsigned usages = 0;
+        for (const mbedtls_x509_sequence* entry = &leaf.ext_key_usage; entry && entry->buf.p; entry = entry->next)
+        {
+            ++usages;
+            if (MBEDTLS_OID_CMP(MBEDTLS_OID_SERVER_AUTH, &entry->buf) == 0)
+            {
+                ++servers;
+            }
+            if (MBEDTLS_OID_CMP(MBEDTLS_OID_CLIENT_AUTH, &entry->buf) == 0)
+            {
+                ++clients;
+            }
+        }
+        mbedtls_x509_crt_free(&leaf);
+        CertificateCryptoCheck(parsed && hasExtension == (flags != 0) && servers == unsigned(selected.m_tlsServer) &&
+            clients == unsigned(selected.m_tlsClient) && usages == servers + clients, "issued EKU set differs from requested flags");
+    }
+    const uint8_t embeddedNul[] = {'a', 0, 'b', 0};
+    const uint8_t missingNul[] = {'a', 'b'};
+    const CEncodeDecodeBytes invalidRoots[] = {{embeddedNul, sizeof(embeddedNul)}, {missingNul, sizeof(missingNul)},
+        {nullptr, 0}, {root, 1}};
+    for (const CEncodeDecodeBytes& input : invalidRoots)
+    {
+        CertificateCryptoCheck(CEncodeDecode::p256VerifyCertificate(certificate, input.m_bytes, input.m_size,
+            reinterpret_cast<const char*>(name)) == CENCODE_ARGUMENT, "malformed trust root text");
+    }
     CertificateCryptoCheck(CEncodeDecode::p256VerifyCertificate(certificate, options.m_authority.m_bytes,
         options.m_authority.m_size, reinterpret_cast<const char*>(name)) == CENCODE_OK, "leaf trust and name");
     CertificateCryptoCheck(CEncodeDecode::p256VerifyCertificate(certificate, options.m_authority.m_bytes,
         options.m_authority.m_size, "peer.crypto.test") == CENCODE_OK, "leaf additional SAN");
     CertificateCryptoCheck(CEncodeDecode::p256VerifyCertificate(certificate, options.m_authority.m_bytes,
-        options.m_authority.m_size, "unknown.crypto.test") != CENCODE_OK, "wrong name accepted");
+        options.m_authority.m_size, "unknown.crypto.test") == CENCODE_STATE, "wrong name accepted");
+    CertificateCryptoCheck(CEncodeDecode::p256VerifyCertificate(certificate, otherRoot, sizeof(otherRoot),
+        reinterpret_cast<const char*>(name)) == CENCODE_STATE, "unrelated trusted root accepted");
     CertificateCryptoCheck(CEncodeDecode::p256VerifyPair(certificate, privateKey, CertificateCryptoEntropy, nullptr) == CENCODE_OK &&
-        CEncodeDecode::p256VerifyPair(certificate, reinterpret_cast<const char*>(rootKey), CertificateCryptoEntropy, nullptr) != CENCODE_OK,
+        CEncodeDecode::p256VerifyPair(certificate, reinterpret_cast<const char*>(rootKey), CertificateCryptoEntropy, nullptr) == CENCODE_STATE,
         "certificate private key pair");
     CertificateCryptoCheck(CEncodeDecode::sha256(name, sizeof(name), digest, sizeof(digest)) == CENCODE_OK, "proof digest");
     std::memset(signature, 0x5a, sizeof(signature));
     uint32_t signatureSize = 999;
     CertificateCryptoCheck(CEncodeDecode::p256SignDigest(privateKey, digest, CertificateCryptoEntropy, nullptr,
-        signature, 1, &signatureSize) == CENCODE_BUFFER && signatureSize > 1 && signature[0] == 0x5a, "signature short buffer");
+        signature, 1, &signatureSize) == CENCODE_BUFFER && signatureSize > 1 && signatureSize <= 80 && signature[0] == 0x5a, "signature short buffer");
     CertificateCryptoCheck(CEncodeDecode::p256SignDigest(privateKey, digest, CertificateCryptoEntropy, nullptr,
         signature, 80, &signatureSize) == CENCODE_OK && signatureSize <= 80 && signature[80] == 0x5a, "signature bounded result");
     CertificateCryptoCheck(CEncodeDecode::p256VerifyCertificate(certificate, options.m_authority.m_bytes,
         options.m_authority.m_size, reinterpret_cast<const char*>(name), digest, signature, signatureSize) == CENCODE_OK,
         "combined trust and proof");
+    // 仅全缺省和全部提供合法；遗漏任一字段应在解析证书前返回参数错误。
+    for (uint32_t fields = 1; fields < 7; ++fields)
+    {
+        const uint8_t* proofDigest = (fields & 1) != 0 ? digest : nullptr;
+        const uint8_t* proofSignature = (fields & 2) != 0 ? signature : nullptr;
+        const uint32_t proofSize = (fields & 4) != 0 ? signatureSize : 0;
+        CertificateCryptoCheck(CEncodeDecode::p256VerifyCertificate(certificate, options.m_authority.m_bytes,
+            options.m_authority.m_size, reinterpret_cast<const char*>(name), proofDigest, proofSignature, proofSize) == CENCODE_ARGUMENT,
+            "incomplete certificate proof");
+    }
+    CertificateCryptoCheck(CEncodeDecode::p256VerifyCertificate(certificate, options.m_authority.m_bytes,
+        options.m_authority.m_size, reinterpret_cast<const char*>(name), digest, signature, sizeof(signature)) == CENCODE_ARGUMENT,
+        "oversized certificate proof");
     digest[0] ^= 1;
     CertificateCryptoCheck(CEncodeDecode::p256VerifyCertificate(certificate, options.m_authority.m_bytes,
-        options.m_authority.m_size, reinterpret_cast<const char*>(name), digest, signature, signatureSize) != CENCODE_OK,
+        options.m_authority.m_size, reinterpret_cast<const char*>(name), digest, signature, signatureSize) == CENCODE_STATE,
         "changed proof accepted");
     digest[0] ^= 1;
     for (uint32_t mode = 0; mode < 12; ++mode)
@@ -197,11 +330,16 @@ void CEncodeDecodeCertificateCases::run()
         if (mode == 7) { bad.m_entropy = nullptr; }
         if (mode == 8 || mode == 9) { bad.m_entropyContext = &entropyMode; }
         if (mode == 10) { bad.m_privateKey.m_bytes = key; bad.m_privateKey.m_size = keySize; }
-        if (mode == 11) { bad.m_authority = CertificateCryptoText(certificate.c_str()); }
+        if (mode == 11)
+        {
+            bad.m_authority = CertificateCryptoText(certificate.c_str());
+            bad.m_privateKey.m_bytes = key;
+            bad.m_privateKey.m_size = keySize;
+        }
         std::memset(pem, 0x5a, sizeof(pem));
-        length = 0;
+        length = 777;
         CertificateCryptoCheck(CEncodeDecode::p256IssueCertificate(bad, pem, 8192, &length) != CENCODE_OK &&
-            length == 0 && pem[0] == 0x5a && pem[8192] == 0x5a, "issuer invalid input or entropy modified output");
+            length == (mode == 5 || mode == 6 ? 777U : 0U) && pem[0] == 0x5a && pem[8192] == 0x5a, "issuer invalid input or entropy modified output");
     }
     for (int mode = 1; mode <= 2; ++mode)
     {
@@ -226,19 +364,39 @@ void CEncodeDecodeCertificateCases::run()
     mbedtls_x509_csr_init(&csr);
     const bool parsedOkay = mbedtls_x509_crt_parse(&parsed, reinterpret_cast<const uint8_t*>(certificate.c_str()), certificate.size() + 1) == 0 &&
         parsed.next == nullptr && parsed.MBEDTLS_PRIVATE(ca_istrue) == 0 &&
+        (parsed.MBEDTLS_PRIVATE(ext_types) & MBEDTLS_X509_EXT_KEY_USAGE) != 0 &&
+        (parsed.MBEDTLS_PRIVATE(ext_types) & MBEDTLS_X509_EXT_EXTENDED_KEY_USAGE) != 0 &&
+        mbedtls_pk_get_type(&parsed.pk) == MBEDTLS_PK_ECKEY &&
         mbedtls_ecp_keypair_get_group_id(mbedtls_pk_ec(parsed.pk)) == MBEDTLS_ECP_DP_SECP256R1 &&
         mbedtls_x509_crt_check_key_usage(&parsed, MBEDTLS_X509_KU_DIGITAL_SIGNATURE) == 0 &&
         mbedtls_x509_crt_check_extended_key_usage(&parsed, MBEDTLS_OID_SERVER_AUTH, MBEDTLS_OID_SIZE(MBEDTLS_OID_SERVER_AUTH)) == 0 &&
         mbedtls_x509_crt_check_extended_key_usage(&parsed, MBEDTLS_OID_CLIENT_AUTH, MBEDTLS_OID_SIZE(MBEDTLS_OID_CLIENT_AUTH)) == 0 &&
         mbedtls_x509_csr_parse(&csr, request, requestSize) == 0;
     bool proofOkay = false;
-    if (parsedOkay && CEncodeDecode::sha256(csr.cri.p, static_cast<uint32_t>(csr.cri.len), digest, sizeof(digest)) == CENCODE_OK)
+    if (parsedOkay && mbedtls_sha256(csr.cri.p, csr.cri.len, digest, 0) == 0)
     {
         proofOkay = mbedtls_pk_verify(&csr.pk, MBEDTLS_MD_SHA256, digest, sizeof(digest), csr.MBEDTLS_PRIVATE(sig).p, csr.MBEDTLS_PRIVATE(sig).len) == 0;
     }
+#ifdef USE_OPENSSL
+    uint8_t point[65];
+    size_t pointSize = 0;
+    const bool havePoint = parsedOkay && mbedtls_ecp_write_public_key(mbedtls_pk_ec(parsed.pk),
+        MBEDTLS_ECP_PF_UNCOMPRESSED, &pointSize, point, sizeof(point)) == 0 && pointSize == sizeof(point);
+    const size_t derSize = parsed.raw.len;
+    if (havePoint && derSize <= sizeof(pem))
+    {
+        std::memcpy(pem, parsed.raw.p, derSize);
+    }
+#endif
     mbedtls_x509_csr_free(&csr);
     mbedtls_x509_crt_free(&parsed);
     CertificateCryptoCheck(parsedOkay && proofOkay, "independent certificate and CSR verifier");
+#ifdef USE_OPENSSL
+    CertificateCryptoCheck(havePoint && derSize > 0 && derSize <= sizeof(pem), "export reference certificate and EC public key");
+    const std::string reference(reinterpret_cast<const char*>(point), pointSize);
+    CheckCertificateFile(reinterpret_cast<const uint8_t*>(certificate.data()), certificate.size(), reference);
+    CheckCertificateFile(pem, derSize, reference);
+#endif
     CEncodeDecode::wipe(key, sizeof(key));
     CEncodeDecode::wipe(rootKey, sizeof(rootKey));
     std::printf("P256 fresh CA, fixed outputs, proof, dates and entropy PASS\n");

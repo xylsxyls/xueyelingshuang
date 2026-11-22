@@ -1,2 +1,2 @@
-"$CLOUD_REBUILD" CEncodeDecode 32 dll release same
-"$CLOUD_REBUILD" PlatformTest 32 dll release same
+"$CLOUD_REBUILD" CEncodeDecode 64 lib release same
+"$CLOUD_REBUILD" PlatformTest 64 lib release same

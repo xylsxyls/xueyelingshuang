@@ -1,28 +1,69 @@
 ﻿#pragma once
 #include <stdint.h>
 
-/** CEncodeDecode 测试，适用于 Windows、Linux、macOS、Android、iOS、Wasm32 和 Wasm64。
-SHA-256、HMAC 和 PBKDF2 与公开固定向量逐字节比较，覆盖输入切分、空输入、容量不足、
-输入输出重叠、重复完成、生命周期及擦除。P-256 用例在内存生成独立的测试 CA，验证 CSR、
-签发、域名和信任链、密钥配对、摘要签名、参数错误和随机回调失败。
-TLS 用例使用 mbedTLS 上游公开 localhost 测试证书，按 17 字节分段握手，传输带 NUL 的明文，
-验证有序关闭、错误域名、默认 10000 毫秒及自定义 100 毫秒握手超时，并检查非法配置保留原值。测试在内存中运行，无需网络或外部密钥。
-旧格式使用 MD5、SM4 单轮及百万轮标准向量和 AES/RSA 往返，RSA 同时检查最大输入长度。SM2 检查启用后的往返或未启用时的失败结果。
-ID 5 的 RSA 分别调用密钥生成、OAEP 加密和解密。有效显式回调在三处均须实际调用，190 字节明文加密产生 256 字节密文，191 字节应被拒绝。失败回调先写入一个字节再返回非零或抛异常，两种情况均需停止，entropyBytes 清零指定范围并保留两侧哨兵，RSA 生成时清空预填公私钥，加解密返回空串。在五个原生端使用空回调生成另一对密钥并完成 OAEP 往返；Wasm 用已有有效密钥检查空回调加解密失败，空回调生成也失败并清空输出。
-测试工程自身保存证书验证器、TLS 素材和 SHA-256 累计长度白盒用例。
-功能 ID 1 散列、2 派生与擦除、3 多段摘要、4 P-256 证书、5 历史加密和百万轮 SM4、6 受信握手、7 错误域名、8 默认和自定义截止时间。
-ID 9 核对默认输入 32768、显式输入 41000 和输出 7 字节处的真实背压，随后用独立的按需增长队列传输 65549 字节明文，检查输出借用期和跨块字节顺序。
-无参或 --all 执行全部，用 --cases 1,6-8 指定范围，--instant 与 --stress 分别选择瞬时和较重的固定向量。执行 CEncodeDecodeTest 或 CTest。返回 0 表示全部通过，失败时输出步骤，测试数据不写盘。
+/** CEncodeDecode 功能测试。十组用例均从公开 SDK 入口调用，同一组可独立执行
+1　SHA-256 对照空串、abc、百万个 a 的摘要。以 63、64、65 字节分片更新；容量不足可重试，
+   完成后拒绝更新。两个独立对象分别保持自己的状态；白盒将其中一个的计数置于上限附近，溢出错误应持续。
+2　HMAC 对照 RFC 4231 的短密钥、长密钥和空输入向量。PBKDF2 以 1、2、4096 轮对照固定结果；
+   非法指针、长度或轮数被拒绝，输出不变。输入输出允许的重叠应成功，wipe 仅清除指定区间。
+3　Parts 在不同位置切分 abc 和 Hi There，结果应与固定摘要一致；零片段、16片段和16 MiB正好可用，
+   16 MiB 的连续和分片输入分别对照独立计算的 SHA-256、HMAC 固定值。17片段、总量超限及地址回绕应失败。拒绝请求时保持输出，允许的密钥或正文重叠应成功。
+4　在内存中创建 CA、P-256 私钥和 CSR，签发含附加 DNS 名的叶证书。主名、SAN、配对密钥和签名应通过；
+   DNS 校验覆盖 63 字节标签、253 字节全名、越界、空标签、首尾连字符和内嵌 NUL；错误信任根、错误域名、错误密钥、以叶证书及配对私钥签发、修改过的摘要及非法日期应失败。私钥或 CSR 任一侧容量不足时，两个实际长度都应返回，两个完整缓冲都应保持原值。错误输入和别名按接口契约
+   保留或清零长度。独立解析器检查单叶、曲线、KU、双用途 EKU 扩展的存在和值，并核验 CSR 签名。分别切换客户端、服务端用途时，扩展须只包含选中的 OID；两项都关闭时须省略扩展。验签的三个可选参数有六种不完整组合，每种和超长签名均须返回 ARGUMENT；与证书不匹配的摘要或私钥须返回 STATE。验信任根时，缺少结束 NUL、内嵌 NUL 或长度非法应返回 ARGUMENT。启用 OpenSSL 时分别从 PEM 和 DER 临时文件读取该叶证书，提取的公钥必须与独立解析器输出的 65 字节未压缩曲线点逐字节一致。
+5　MD5、AES-128 零块、SM4 单轮及百万轮对照固定值。以两个不同的连续分组核对 SM4 加密和解密的固定答案，错误密钥长度、空输入及残缺分组在两个方向均须返回空。AES 用固定密文核对短密钥补零、超长密钥只取前 16 字节和小写 HEX 解密；另检查跨块往返、错误长度及合法长度内的非 HEX 字符。
+   RSA 三个入口均须调用显式熵源，190 字节明文往返成功，191 字节被拒绝，密文为 256 字节。
+   回调部分写入后返回非零或抛异常时，随机缓冲被擦除且哨兵不变，生成失败清空预填密钥，加解密失败返回空串。
+   原生端验证系统熵源，Wasm 验证缺少回调时失败。启用 USE_OPENSSL 且后端支持 SM2 时检查两种前缀格式、分段长度、往返和 C3 校验；
+   默认构建及显式禁用 SM2 的 OpenSSL 配置检查失败时清空输出。库与测试须使用相同的 USE_OPENSSL 配置。空路径与空证书句柄应安全返回。
+6　用上游公开测试证书和 localhost，以最多17字节的片段驱动 TLS 握手。两种 appendExact 和 append 提交带 NUL
+   明文，对端读取的字节及顺序应一致。feed 全收返回 OK，部分接纳返回 WANT_IO；正容量 read 仅在 OK 时交付明文，等待时返回 WANT_IO 且计数为零。双段追加的第二段参数非法时返回 ARGUMENT，第一段也不得入队。检查待发与排空状态。收到 close_notify 后 read 和 status 均返回 CLOSED，
+   将 close_notify 的最后一个分片与传输结束一并交付时仍返回 CLOSED；缺少通知时返回 TRUNCATED。
+7　空标签、超过 63 字节的标签、首尾连字符须在配置阶段返回 ARGUMENT。合法单标签及带末尾根点的绝对名称可创建客户端。同一受信证书配上错误域名，客户端进入 PROTOCOL。最后一批握手密文与 EOF 同时交付时应返回相同的 PROTOCOL 和非零 detail；对端握手数据完全缺失时应返回 TRUNCATED。
+8　未完成的握手分别检查默认 10000 毫秒及显式 100、60000 毫秒，截止前一毫秒仍在握手，到点进入 TIMEOUT；
+   时钟回退进入持续的 ARGUMENT 状态。非法设置 99 或 60001 应保留原时限。
+9　输入 32768（默认）或 41000、输出 32768（默认）或 7 字节时检查真实背压；非法配置保留两个上限。
+   旧记录因密文背压被冻结时，write、append 的接纳数均为零，appendExact 返回 WANT_IO。排空后重试，新旧明文各交付一次。双向设为 -1，连续排队传送 65549 字节，在消费前核对借用前缀，最终核对完整明文。
+10　直接核对 entropyBytes。零长度应成功且不调用熵源；非零长度的空输出和 8193 字节请求应失败且不调用熵源。8192 字节成功时恰好调用一次，完整结果及前后哨兵须匹配；缺少回调时只清零有效请求范围。
+
+无参或 --all 执行全部，--cases 1,6-8 选择编号，--instant 选择除 ID 5 外的用例，--stress 选择 ID 5。
+每组开始时按稳定编号重置测试熵源，单独选择与全量运行使用相同的测试随机序列。每组成功返回 0，失败时输出组号和步骤，继续运行其余选中组。全通过时进程返回 0，有失败返回 1，选择参数无效返回 2。
+Windows 用 version_debug.sh 准备 Win32 Debug DLL，version_release.sh 准备 x64 Release 静态库，
+再用同配置的 VS2013 构建 CEncodeDecodeTest.sln 并运行。另选位宽时为两个依赖准备匹配的 SDK。
 */
 
-/** CEncodeDecodeTest 的稳定功能编号，5 为固定百万轮向量的压力场景。 */
+/** CEncodeDecodeTest 的稳定功能编号
+*/
 enum CEncodeDecodeTestCase
 {
-    kCryptoHash = 1, kCryptoDerivation = 2, kCryptoParts = 3, kCryptoCertificate = 4,
-    kCryptoLegacy = 5, kCryptoTlsTrusted = 6, kCryptoTlsWrongHost = 7, kCryptoTlsDeadline = 8, kCryptoTlsQueueLimits = 9
+    // 散列及增量对象生命周期
+    kCryptoHash = 1,
+    // 消息认证、派生及擦除
+    kCryptoDerivation = 2,
+    // 分片输入与别名
+    kCryptoParts = 3,
+    // 证书签发与验证
+    kCryptoCertificate = 4,
+    // 文本、分组和公钥算法及百万轮向量
+    kCryptoLegacy = 5,
+    // 受信连接的数据和关闭语义
+    kCryptoTlsTrusted = 6,
+    // 错误域名拒绝
+    kCryptoTlsWrongHost = 7,
+    // 握手时限和单调时钟
+    kCryptoTlsDeadline = 8,
+    // 密文队列容量及借用期
+    kCryptoTlsQueueLimits = 9,
+    // 熵源长度上限、回调调用次数及输出边界
+    kCryptoEntropy = 10
 };
 
-// 仅用于复现内存测试的字节序列，生成的测试密钥绝不能用于实际通信。
+/** 生成可复现的测试字节，仅用于本工程串行测试
+@param [in] context 保留参数，可空
+@param [out] output 可写的 size 字节缓冲
+@param [in] size 请求字节数
+@return 完整写入后返回 0
+*/
 int32_t cEncodeTestEntropy(void* context, uint8_t* output, uint32_t size);
 
 /** 定义 RSA 测试熵源响应一次取熵请求的方式
@@ -78,6 +119,7 @@ cmake -S . -B build-ios -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iph
 */
 
 /** 性能测试与运行边界
+本轮只执行功能测试。以下三项为已有 Release 样本，本次未重新采样，未验证本轮产物的运行间波动。
 2026-11-22，Intel Core i9-14900HX，Release。32 字节 MD5 返回 32 个十六进制字符。SHA-256、HMAC-SHA256 处理 4096 字节，HMAC 密钥 32 字节。各次读取实际摘要组成校验和。逻辑处理器 8，一次完整进程预热后，各目标顺序采五个独立进程，每项自动校准批量后测九轮。结果为各进程中位数的中位数、[Q1, Q3] 及全距。
 Windows x64 / MD5（ns/调用）　235.002 [233.929, 245.816]，全距 218.185–268.828
 Windows x64 / SHA-256（µs/调用）　16.614 [16.506, 16.990]，全距 16.367–17.933
@@ -88,9 +130,17 @@ Node Wasm32 / HMAC-SHA256（µs/调用）　17.507 [16.902, 17.871]，全距 16.
 Node Wasm64 / MD5（ns/调用）　313.966 [302.869, 316.230]，全距 284.024–320.370
 Node Wasm64 / SHA-256（µs/调用）　18.069 [17.812, 19.604]，全距 17.042–20.193
 Node Wasm64 / HMAC-SHA256（µs/调用）　19.431 [18.382, 19.929]，全距 18.013–25.978
-TLS 握手、密文队列及密钥生成缺少本版时延、吞吐和内存峰值数据。
-传 --benchmark 可输出原始九轮及校验和。配置 -DLIBRARY_TEST_BENCHMARKS=ON 后使用 ctest -V -L performance。
+同为 4096 字节输入，表中三组 HMAC 的中位数都略高于对应 SHA-256；32 字节 MD5 的输入和返回格式不同，不能据此比较算法的等长吞吐。
+已有五进程样本中，Wasm64 的 HMAC 最慢一组为 25.978 µs/调用，最快为 18.013 µs/调用，相差约 44%。跨次比较以同宿主、相同版本和配置下的进程中位数及四分位区间为准，同时保留全距观察波动。
+分片与增量散列、PBKDF2 各轮数、AES/SM2/SM4、RSA、P-256、TLS 握手、记录处理和队列背压均缺少本轮性能测试数据；
+熵源耗时取决于宿主，wipe 成本随擦除长度变化，均缺少独立测量。Linux、macOS、Android、iOS 缺少对应设备数据。
+OpenSSL 的 getCert 包括文件 I/O 和解析，getPublicKey 包括曲线点导出及字符串分配，这两个入口缺少独立性能数据。releaseCert 只负责释放句柄，本次不单独计时。
+队列配置的设置与读取、status、detail 是常数成本的字段访问，本次不单列性能数据。
+单独传 --benchmark 时先核验固定输入的完整摘要，再校准、采样并输出原始九轮及校验和。功能组与基准独立运行，可避免 RSA 密钥生成和 SM4 百万轮影响采样起点。配置 -DLIBRARY_TEST_BENCHMARKS=ON 后使用 ctest -V -L performance。
 双位宽包 Node 使用 node run-node.js 32 --benchmark 或 64，浏览器或微信页面加 benchmark=1。
-已运行 Windows Win32/x64 Debug/Release、Node/Chrome 的 32/64 位和微信开发者工具 32 位。
-微信开发者工具基础库 3.17.4 强制 Wasm64 在模块实例化时报告 CompileError。Linux、macOS、Android、iOS 及微信真机待设备实测。
+2026-11-22 功能验证：Windows VS2013 的 Win32/x64 Debug、Release，以及 Emscripten 3.1.74
+的 Node Wasm32、Wasm64 Release，默认 mbedTLS 配置的 ID 1 至 10 均通过。Windows x64 Release 另以 USE_OPENSSL 运行全部十组：OpenSSL 3.6.5 支持 SM2，验证两种前缀和 C3 拒绝；OpenSSL 3.5.9 的 OPENSSL_NO_SM2 构建验证不可用返回。两者均通过 PEM、DER 文件读取和公钥核对。
+CEncodeDecode.cpp 注释示例在 Windows x64 Release、Node Wasm32 和 Wasm64 单独编译运行，退出码均为 0。Linux、macOS、Android、iOS 仅按源码及构建配置核对。
+Windows x64 Release 另核对 --instant、--stress、单组 4、单组 10 和 --cases 1,6-8 的选择结果，倒序范围 8-6 和未知编号 11 均返回 2。
+本轮未运行浏览器、微信或移动设备。
 */
