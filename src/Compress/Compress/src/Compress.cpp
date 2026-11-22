@@ -12,7 +12,10 @@
 #endif
 #endif
 
+// 封装帧的本机字节序原长字段宽度
 static const uint32_t kCompressLengthSize = sizeof(uint32_t);
+// 标准数据帧的固定前缀，排除可跳过帧
+static const uint8_t kFrameMagic[] = {0x28, 0xb5, 0x2f, 0xfd};
 
 /** 将Zstandard返回的错误转换为公开接口错误
 @param [in] result 已由ZSTD_isError判断为失败的结果
@@ -79,13 +82,12 @@ int32_t Compress::rawUncompress(uint8_t* dest, uint32_t& destLength, const uint8
     const uint32_t available = srcLength;
     destLength = 0;
     srcLength = 0;
-    if (dest == nullptr || src == nullptr)
+    if (dest == nullptr || src == nullptr || &destLength == &srcLength)
     {
         return COMPRESS_INVALID_ARGUMENT;
     }
     // 网络协议只接受标准数据帧，解出首帧后将消费长度交回上层。
-    const uint8_t magic[] = {0x28, 0xb5, 0x2f, 0xfd};
-    if (available < sizeof(magic) || std::memcmp(src, magic, sizeof(magic)) != 0)
+    if (available < sizeof(kFrameMagic) || std::memcmp(src, kFrameMagic, sizeof(kFrameMagic)) != 0)
     {
         return COMPRESS_DATA_ERROR;
     }
@@ -166,8 +168,7 @@ void Compress::uncompress(std::string& dest, const std::string& src)
     const size_t frameSize = src.size() - kCompressLengthSize;
     // 完整帧可以省略内容长度；长度头与实际解码字节数始终需要一致。
     const unsigned long long declared = ZSTD_getFrameContentSize(frame, frameSize);
-    const uint8_t magic[] = {0x28, 0xb5, 0x2f, 0xfd};
-    if (frameSize < sizeof(magic) || std::memcmp(frame, magic, sizeof(magic)) != 0 ||
+    if (frameSize < sizeof(kFrameMagic) || std::memcmp(frame, kFrameMagic, sizeof(kFrameMagic)) != 0 ||
         (declared != ZSTD_CONTENTSIZE_UNKNOWN && declared != expected) ||
         ZSTD_findFrameCompressedSize(frame, frameSize) != frameSize)
     {
@@ -297,7 +298,7 @@ std::string Compress::uncompress(const std::string& src)
     return result;
 }
 
-// 使用示例（独立消费者，已在 Windows x64 Release 验证）
+// 使用示例（独立消费者）
 //#include "Compress/CompressAPI.h"
 //#include <cstdio>
 //#include <vector>
@@ -317,17 +318,23 @@ std::string Compress::uncompress(const std::string& src)
 //    uint32_t capacity = static_cast<uint32_t>(output.size());
 //    uint32_t consumed = size;
 //    if (Compress::rawUncompress(output.data(), capacity, frame.data(), consumed) != COMPRESS_OK ||
-//        consumed != size || std::string(output.begin(), output.end()) != source)
+//        capacity != source.size() || consumed != size || std::string(output.begin(), output.end()) != source)
 //    {
 //        return 2;
 //    }
-//    // 历史接口自带四字节原长头，可直接使用字符串或由应用提供缓冲
+//    // 带原长头的接口可直接使用字符串或由应用提供缓冲
 //    std::string packed = Compress::compress(source);
 //    if (Compress::uncompress(packed) != source)
 //    {
 //        return 3;
 //    }
 //    Compress::compress(packed, source, 3);
+//    std::string decoded;
+//    Compress::uncompress(decoded, packed);
+//    if (decoded != source)
+//    {
+//        return 4;
+//    }
 //    Compress::uncompress(packed, packed, static_cast<int64_t>(source.size()));
 //    if (packed != source)
 //    {
