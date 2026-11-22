@@ -20,7 +20,7 @@ union VariantStorage
 class VariantAPI Variant
 {
 public:
-    // 沿用原公开Variant::VariantType名称及数值，避免调用方更改既有类型引用。
+    // 公开类型号也用于序列化，调用方须连同原始字节保存。
     enum VariantType : int32_t
     {
         // 未赋值或非法类型/宽度输入。
@@ -32,7 +32,7 @@ public:
         // 八字节浮点数，复制时保持原始位模式。
         DOUBLE,
         // 文本类型；常规文本入口只保留首个\0之前的字节，不保存结束符。
-        // 原始字节反序列化入口可恢复含\0的历史STRING，详见带isBlob的构造函数。
+        // 原始字节反序列化入口可恢复含\0的STRING，详见带isBlob的构造函数。
         STRING,
         // 按显式长度保存的二进制字节，允许内部\0；std::string构造和赋值均生成此类型。
         BLOB
@@ -59,7 +59,7 @@ public:
     Variant& operator=(const Variant& value);
 
     /** 转移独占内容，无堆分配；源恢复INIT
-    @param [in,out] value 本次独占借用，之后只可作为INIT重新使用
+    @param [in,out] value 源对象；转移后为空，可查询、重新赋值或析构
     */
     Variant(Variant&& value);
 
@@ -74,15 +74,15 @@ public:
     */
     void swap(Variant& value);
 
-    /** 直接复制带长度的原始值，避免先构造std::string；捕获分配异常
-    @param [in] data 借用至返回，可指向当前值；size为0时可空
+    /** 直接复制带长度的原始值；空 STRING/BLOB 和空 INIT 均可保存
+    @param [in] data 借用至返回，须至少有 size 个可读字节，可取当前值的有效子区间；size 为 0 时可空
     @param [in] size 字节数；数字必须为4/8字节，INIT必须为0
     @param [in] type 结果类型；STRING同BLOB按长度保留内部NUL，不做文本转换
     @return 成功替换；参数错误或分配失败保持当前值
     */
     bool assignBytes(const void* data, size_t size, VariantType type = BLOB);
 
-    /** 零复制借用原始字节，不包含结束符；不能跨对象修改、移动或释放保存
+    /** 零复制借用原始字节，不额外补结束符；对象修改、移动、交换或释放后须重新获取
     @return 长度为0时nullptr；其余只读字节由本实例拥有，禁止释放或写入
     */
     const char* data() const;
@@ -92,7 +92,7 @@ public:
     */
     size_t size() const;
 
-    /** 仅按长度校验线格式，不读取输入内存
+    /** 按类型号和原始字节数校验，不读取正文
     @param [in] size 原始字节数
     @param [in] type 整数类型号，不得先把未经校验的数转为枚举
     @return 类型有效且数字宽度完整；STRING/BLOB允许任意长度
@@ -169,7 +169,7 @@ public:
     */
     Variant& operator=(const std::string& value);
 
-    /** 沿用历史仅比较长度和原始字节的规则，不额外比较类型号
+    /** 仅比较长度和原始字节，忽略类型号
     @param [in] value 比较对象，仅本次借用
     @return 字节一致
     */
@@ -210,12 +210,12 @@ public:
     */
     void clear();
 
-    /** 按固定classic locale和17位浮点精度输出历史文本表示
+    /** 按固定classic locale和17位浮点精度输出文本表示
     @return 数字的独立文本；STRING/BLOB保持原字节及内部\0，不是转义或十六进制编码
     */
     std::string toString() const;
 
-    /** 取得历史原生字节序表示
+    /** 取得原生字节序表示
     @return 独立字节，保留内部\0，不写入类型号；须另存类型并按size()取长度
     */
     std::string toBlob() const;
@@ -225,7 +225,7 @@ public:
     */
     void toString(std::string& result) const;
 
-    /** 输出历史原生字节表示
+    /** 输出原生字节表示
     @param [out] result 被当前完整字节替换，内部\0保留，空值清空；长度使用size()
     */
     void toBlob(std::string& result) const;
@@ -273,15 +273,10 @@ private:
     */
     void clearMemory();
 
-    /** 取得当前原始字节，不转移所有权
-    @return m_length为0时为空，其余借用至本对象修改或析构
-    */
-    const char* bytes() const;
-
 private:
-    // 原公开类型号，保持ProtoMessage线格式。
+    // 公开类型号，保持ProtoMessage线格式。
     VariantType m_type;
-    // 实际原始字节数；历史空文本数字的长度为0。
+    // 实际原始字节数；空文本数字的长度为0。
     size_t m_length;
     // 类型和长度决定有效成员；只有长STRING/BLOB持有独占堆指针
     VariantStorage m_storage;

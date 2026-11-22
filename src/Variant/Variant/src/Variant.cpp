@@ -32,39 +32,21 @@ m_storage(value.m_storage)
 Variant::Variant(const std::string& data, VariantType type, bool isBlob) :
 Variant()
 {
-    if (type < INIT || type > BLOB || (isBlob && !isValidBlob(data, static_cast<int32_t>(type))))
+    if (isBlob)
+    {
+        if (isValidBlob(data.size(), type))
+        {
+            setBytes(data.data(), data.size(), type);
+        }
+        return;
+    }
+    if (type < INIT || type > BLOB)
     {
         return;
     }
-    if (isBlob)
+    if (data.empty())
     {
-        if (type == INT32)
-        {
-            int32_t value = 0;
-            ::memcpy(&value, data.data(), sizeof(value));
-            setInt32(value);
-        }
-        else if (type == UINT64)
-        {
-            uint64_t value = 0;
-            ::memcpy(&value, data.data(), sizeof(value));
-            setUint64(value);
-        }
-        else if (type == DOUBLE)
-        {
-            double value = 0;
-            ::memcpy(&value, data.data(), sizeof(value));
-            setDouble(value);
-        }
-        else
-        {
-            setBlob(data);
-            m_type = type;
-        }
-    }
-    else if (data.empty())
-    {
-        // 保持历史空文本数字表示，读取为0但原始序列化长度仍为0。
+        // 空文本构造的数字保留类型，读取为0但原始序列化长度仍为0。
         m_type = type;
     }
     else
@@ -219,7 +201,7 @@ Variant& Variant::operator=(const std::string& value)
     return *this;
 }
 
-const char* Variant::bytes() const
+const char* Variant::data() const
 {
     if (m_length == 0)
     {
@@ -234,7 +216,7 @@ const char* Variant::bytes() const
 
 bool Variant::operator==(const Variant& value) const
 {
-    return m_length == value.m_length && (m_length == 0 || std::memcmp(bytes(), value.bytes(), m_length) == 0);
+    return m_length == value.m_length && (m_length == 0 || std::memcmp(data(), value.data(), m_length) == 0);
 }
 
 bool Variant::operator!=(const Variant& value) const
@@ -269,7 +251,7 @@ Variant::operator double() const
 
 Variant::operator std::string() const
 {
-    return (m_type == STRING || m_type == BLOB) && m_length != 0 ? std::string(bytes(), m_length) : std::string();
+    return (m_type == STRING || m_type == BLOB) && m_length != 0 ? std::string(data(), m_length) : std::string();
 }
 
 Variant::VariantType Variant::type() const
@@ -358,7 +340,7 @@ void Variant::toString(std::string& result) const
         result.assign(current, static_cast<size_t>(end - current));
         return;
     }
-    // 只有显式转换才构造格式化器，构造Variant不再建立可能抛异常的Debug文本缓存。
+    // 浮点文本使用标准小数点，以 17 位有效数字输出。
     std::ostringstream output;
     output.imbue(std::locale::classic());
     double value = 0;
@@ -376,7 +358,7 @@ void Variant::toBlob(std::string& result) const
     }
     else
     {
-        result.assign(bytes(), m_length);
+        result.assign(data(), m_length);
     }
 }
 
@@ -421,7 +403,7 @@ void Variant::setVariant(const Variant& value)
 {
     if (this != &value)
     {
-        setBytes(value.bytes(), value.m_length, value.m_type);
+        setBytes(value.data(), value.m_length, value.m_type);
     }
 }
 
@@ -457,7 +439,16 @@ void Variant::setBytes(const char* data, size_t size, VariantType type)
         clearMemory();
         if (size != 0)
         {
-            std::memcpy(&m_storage, replacement, size);
+            if (type == STRING || type == BLOB)
+            {
+                // 通过成员赋值开始内联数组的生命周期，再写入其余字节。
+                m_storage.m_small[0] = replacement[0];
+                std::memcpy(m_storage.m_small, replacement, size);
+            }
+            else
+            {
+                std::memcpy(&m_storage.m_scalar, replacement, size);
+            }
         }
     }
     m_length = size;
@@ -513,11 +504,6 @@ bool Variant::assignBytes(const void* data, size_t size, VariantType type)
     }
 }
 
-const char* Variant::data() const
-{
-    return bytes();
-}
-
 size_t Variant::size() const
 {
     return m_length;
@@ -554,11 +540,21 @@ size_t Variant::size() const
 //    std::cout << "record " << text << ", unchanged copy=" << (saved == outbound) << '\n';
 //    record = static_cast<uint64_t>(42);
 //    std::cout << "sequence " << record.toString() << '\n';
+//    record = bytes;
+//    std::cout << "archived " << record.size() << " bytes" << '\n';
 //    record = "sent";
 //    std::cout << "state " << record.toString() << '\n';
-//    record = bytes;
+//    Variant restored(serialized, Variant::BLOB, true);
+//    if (restored != saved || !Variant::isValidBlob(restored.size(), restored.type()))
+//    {
+//        return 1;
+//    }
+//    Variant delivered;
+//    delivered = std::move(restored);
+//    std::cout << "delivered " << static_cast<std::string>(delivered).size() << " bytes" << '\n';
 //    outbound.swap(record);
 //    saved.clear();
-//    return outbound.toBlob() == bytes ? 0 : 1;
+//    std::cout << "outbound state " << outbound.toString() << ", recorded bytes " << record.size() << '\n';
+//    return outbound.toString() == "sent" && record.toBlob() == bytes ? 0 : 1;
 //}
 // 使用示例结束。
