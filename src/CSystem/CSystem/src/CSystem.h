@@ -20,7 +20,6 @@
 #include <time.h>
 #ifdef _WIN32
 #include <windows.h>
-struct IEnumMoniker;
 #endif
 #ifdef __APPLE__
 #include <TargetConditionals.h>
@@ -350,13 +349,13 @@ public:
     static std::vector<std::string> processMountDll(uint32_t pid);
 
     /** 获取所有摄像头名称
-    @return 返回摄像头名称列表，内部会调用CoUninitialize
+    @return 返回可读取名称的摄像头列表；支持 STA、MTA，保留调用线程已有的 COM 初始化状态
     @note 支持平台 Windows
     */
     static std::vector<std::string> allCameraName();
 
     /** 获取所有设备信息
-    @return 返回设备类型到设备信息列表的映射
+    @return 以实例 ID 第一个反斜杠前的枚举器名分组，无法读取 ID 的设备跳过
     @note 支持平台 Windows
     */
     static std::map<std::string, std::vector<std::string>> allDeviceInfo();
@@ -412,8 +411,8 @@ public:
     static std::string GetSysUserName();
 
     /** 获取环境变量值
-    @param [in] name 环境变量名
-    @return 返回环境变量值，不存在返回空字符串
+    @param [in] name 以 NUL 结尾的变量名，Windows 使用系统 ANSI 编码
+    @return 调用时进程环境中值的副本。空指针、空名、空值或查询失败时返回空串
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static std::string GetEnvironment(const char* name);
@@ -829,10 +828,10 @@ public:
     */
     static bool deleteFile(const char* path);
 
-    /** 打开二进制输出文件，支持Windows宽字符路径
-    @param [in] path 输出文件路径
-    @param [out] errorText 打开失败原因，可为空
-    @return 打开成功返回FILE指针，失败返回nullptr
+    /** 创建或截断二进制输出文件
+    @param [in] path 非空宽路径，不能含 NUL。打开成功时已有内容立即清空
+    @param [out] errorText 可空；成功时清空，失败时写入原因
+    @return 成功返回须交给 closeBinaryOutputFile 关闭的流，失败返回 nullptr
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static FILE* openBinaryOutputFile(const std::wstring& path, std::string* errorText = nullptr);
@@ -840,7 +839,7 @@ public:
     /** 排他创建仅当前用户、系统和管理员可访问的私密文件，已存在时不覆盖
     @param [in] path 完整临时路径；宿主负责在可信目录内随机命名和最终替换
     @param [out] errorText 固定失败文案，不包含私密文件内容，可空
-    @return 由CSystem关闭的FILE；Windows保护DACL，Unix权限0600且不跟随符号链接
+    @return 由CSystem关闭的FILE；Windows 使用受保护的 DACL，POSIX 请求权限 0600，实际权限受 umask 限制，拒绝覆盖已有路径
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static FILE* openPrivateBinaryOutputFile(const std::wstring& path, std::string* errorText = nullptr);
@@ -876,18 +875,18 @@ public:
     */
     static bool fileStampUtf8(const std::string& path, uint64_t* bytes, uint64_t* stamp);
 
-    /** 写入由 openBinaryOutputFile 创建的文件，避免跨 DLL 使用不同 CRT 的 FILE
-    @param [in] file CSystem 创建的输出文件
-    @param [in] data 非空的待写字节缓冲，借用至返回
-    @param [in] size 字节数量
-    @return 完整写入返回 true
+    /** 写入本库普通或私密输出流，由创建该流的模块调用 CRT
+    @param [in] file 本库打开且尚未关闭的输出流，空指针返回 false
+    @param [in] data 待写缓冲，借用至返回，零字节请求也须非空
+    @param [in] size 字节数，允许为零
+    @return 全部字节交给流返回 true，短写返回 false 且可能已经写入前缀
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static bool writeBinaryOutputFile(FILE* file, const void* data, size_t size);
 
     /** 关闭 CSystem 创建的输出文件并检查缓冲写入结果
-    @param [in] file 输出文件，关闭后不再有效
-    @return 刷新及关闭成功返回 true
+    @param [in] file 本库打开的输出流；非空流调用后即不可再用，包括返回失败时
+    @return 成功刷新 CRT 缓冲并关闭流返回 true。需要持久化时先调用 flushBinaryOutputFile
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static bool closeBinaryOutputFile(FILE* file);
@@ -916,7 +915,7 @@ public:
 
     /** 重命名文件或目录
     @param [in] oldPath 原文件或目录路径
-    @param [in] newPath 新文件或目录路径，已存在的新文件或空目录会先删除
+    @param [in] newPath 目标路径。Windows 要求目标不存在；POSIX 在同一文件系统可替换已有普通文件或同类型空目录
     @return 返回是否重命名成功
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
@@ -941,8 +940,8 @@ public:
 
 #if CSYSTEM_HAS_NATIVE_API
     /** 在 XUEYELINGSHUANG 指定的 common 目录递归选择带数值版本的程序
-    @param [in] name 文件名中位于版本号之前的前缀
-    @return 匹配到的最高正数版本路径；没有匹配时返回空串
+    @param [in] name 紧接数字版本之前的非空文件名前缀，区分大小写
+    @return 带最高正数版本的匹配路径。未设置仓库根目录或未找到匹配时返回空串
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static std::string commonFile(const std::string& name);
@@ -975,7 +974,7 @@ public:
     @param [in] flag 1表示查找文件，2表示查找文件后缀名，3表示查找所有文件，fileStr不起作用
     @param [in] fileStr 传文件名带后缀名或后缀名不带点，多个后缀名点分隔，模式 2 保留空字段以匹配无后缀文件。后缀取实际目录项最后一个点之后的字节
     @param [in] EveryFilePath 在每添加一个文件路径之前调用此函数，返回true表示中断搜索，继续搜索返回false
-    @param [in] unVisitPath 非空时清空并收集未能打开的目录；传空跳过记录
+    @param [in] unVisitPath 非空时替换为本次未能打开的目录；允许 strPath 和 fileStr 引用调用前的列表元素，传空跳过记录
     @return 按遍历次序返回匹配路径；传相对根目录时结果也可以是相对路径
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
@@ -1283,30 +1282,6 @@ private:
     @note 支持平台 Windows
     */
     static BOOL CALLBACK findWindowCallback(HWND window, LPARAM context);
-
-    /** 兼容旧Windows动态取得真实本机系统信息
-    @param [out] information 可空，非空时写入系统信息；缺少新入口时使用GetSystemInfo
-    @note 支持平台 Windows
-    */
-    static void getNativeSystemInfo(LPSYSTEM_INFO information);
-#endif
-
-#ifdef _MSC_VER
-
-    /** 枚举指定DirectShow设备类别
-    @param [in] category 系统设备类别标识
-    @param [out] enumeration 不可空，成功后调用方负责Release
-    @return 成功S_OK；空输出E_POINTER；没有设备VFW_E_NOT_FOUND；其他情况返回COM错误
-    @note 支持平台 Windows
-    */
-    static HRESULT enumerateDevices(REFGUID category, IEnumMoniker** enumeration);
-
-    /** 从DirectShow枚举器取得设备名称并追加到结果
-    @param [in] enumeration 可空，借用至返回，不释放枚举器
-    @param [in,out] names 设备名称列表，已有内容保留
-    @note 支持平台 Windows
-    */
-    static void displayDeviceInformation(IEnumMoniker* enumeration, std::vector<std::string>& names);
 
 #endif
 

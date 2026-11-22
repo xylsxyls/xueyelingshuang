@@ -34,6 +34,7 @@
 #include <psapi.h>
 #include <dshow.h>
 #include <comdef.h>
+#include <wrl/client.h>
 #include <SetupAPI.h>
 #pragma comment(lib, "strmiids.lib")
 #pragma comment(lib, "setupapi.lib")
@@ -50,10 +51,11 @@
 #include <codecvt>
 #include <dirent.h>
 #include <dlfcn.h>
-#include <locale>
 #include <string.h>
 #endif
 #include <fstream>
+#include <locale>
+#include <sstream>
 #include <memory>
 #include <utility>
 #include <queue>
@@ -333,16 +335,15 @@ uint32_t CSystem::processFirstPid(const std::wstring& processNameW)
     {
         return 0;
     }
+    std::unique_ptr<void, decltype(&::CloseHandle)> snapshot(hSnapshot, &::CloseHandle);
     PROCESSENTRY32W pe = { sizeof(pe) };
     for (BOOL ret = Process32FirstW(hSnapshot, &pe); ret; ret = ::Process32NextW(hSnapshot, &pe))
     {
-        if (std::wstring(pe.szExeFile) == processNameW)
+        if (processNameW == pe.szExeFile)
         {
-            ::CloseHandle(hSnapshot);
             return pe.th32ProcessID;
         }
     }
-    ::CloseHandle(hSnapshot);
     return 0;
 }
 
@@ -358,15 +359,15 @@ std::vector<uint32_t> CSystem::processPid(const std::wstring& processNameW)
     {
         return result;
     }
+    std::unique_ptr<void, decltype(&::CloseHandle)> snapshot(hSnapshot, &::CloseHandle);
     PROCESSENTRY32W pe = { sizeof(pe) };
     for (BOOL ret = Process32FirstW(hSnapshot, &pe); ret; ret = ::Process32NextW(hSnapshot, &pe))
     {
-        if (std::wstring(pe.szExeFile) == processNameW)
+        if (processNameW == pe.szExeFile)
         {
             result.push_back(pe.th32ProcessID);
         }
     }
-    ::CloseHandle(hSnapshot);
     return result;
 }
 
@@ -377,6 +378,7 @@ std::wstring CSystem::processNameW(uint32_t pid)
     HANDLE snapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snapshot != INVALID_HANDLE_VALUE)
     {
+        std::unique_ptr<void, decltype(&::CloseHandle)> owned(snapshot, &::CloseHandle);
         pe32.dwSize = sizeof(PROCESSENTRY32W);
         if (::Process32FirstW(snapshot, &pe32))
         {
@@ -388,7 +390,6 @@ std::wstring CSystem::processNameW(uint32_t pid)
                 }
             } while (::Process32NextW(snapshot, &pe32));
         }
-        ::CloseHandle(snapshot);
     }
     return result;
 }
@@ -402,6 +403,7 @@ std::vector<std::string> CSystem::processMountDll(uint32_t pid)
         return result;
     }
 
+    std::unique_ptr<void, decltype(&::CloseHandle)> snapshot(hShot, &::CloseHandle);
     MODULEENTRY32 te = { sizeof(te) };
     BOOL bRet = ::Module32First(hShot, &te);
     while (bRet)
@@ -409,22 +411,51 @@ std::vector<std::string> CSystem::processMountDll(uint32_t pid)
         result.push_back(te.szModule);
         bRet = ::Module32Next(hShot, &te);
     }
-    ::CloseHandle(hShot);
     return result;
 }
 
 std::vector<std::string> CSystem::allCameraName()
 {
     std::vector<std::string> result;
-    HRESULT hr = ::CoInitialize(nullptr);
-    if (SUCCEEDED(hr)) {
-        IEnumMoniker* pEnum = nullptr;
-        hr = enumerateDevices(CLSID_VideoInputDeviceCategory, &pEnum);
-        if (SUCCEEDED(hr)) {
-            displayDeviceInformation(pEnum, result);
-            pEnum->Release();
+    const HRESULT initialized = ::CoInitialize(nullptr);
+    if (FAILED(initialized) && initialized != RPC_E_CHANGED_MODE)
+    {
+        return result;
+    }
+    // 先取得 COM 初始化的所有权，异常展开时先释放接口，再还原本线程的 COM 计数。
+    const auto uninitialize = [](void*) { ::CoUninitialize(); };
+    std::unique_ptr<void, decltype(uninitialize)> apartment(SUCCEEDED(initialized) ? &result : nullptr, uninitialize);
+    Microsoft::WRL::ComPtr<ICreateDevEnum> devices;
+    Microsoft::WRL::ComPtr<IEnumMoniker> enumeration;
+    if (FAILED(::CoCreateInstance(CLSID_SystemDeviceEnum, nullptr, CLSCTX_INPROC_SERVER,
+        IID_PPV_ARGS(devices.GetAddressOf()))) ||
+        devices->CreateClassEnumerator(CLSID_VideoInputDeviceCategory, enumeration.GetAddressOf(), 0) != S_OK)
+    {
+        return result;
+    }
+    Microsoft::WRL::ComPtr<IMoniker> moniker;
+    while (enumeration->Next(1, moniker.ReleaseAndGetAddressOf(), nullptr) == S_OK)
+    {
+        Microsoft::WRL::ComPtr<IPropertyBag> properties;
+        if (FAILED(moniker->BindToStorage(nullptr, nullptr, IID_PPV_ARGS(properties.GetAddressOf()))))
+        {
+            continue;
         }
-        ::CoUninitialize();
+        _variant_t value;
+        HRESULT status = properties->Read(L"Description", &value, nullptr);
+        if (FAILED(status))
+        {
+            value.Clear();
+            status = properties->Read(L"FriendlyName", &value, nullptr);
+        }
+        if (SUCCEEDED(status) && value.vt == VT_BSTR && value.bstrVal != nullptr)
+        {
+            std::unique_ptr<char[]> name(_com_util::ConvertBSTRToString(value.bstrVal));
+            if (name)
+            {
+                result.emplace_back(name.get());
+            }
+        }
     }
     return result;
 }
@@ -439,19 +470,18 @@ std::map<std::string, std::vector<std::string>> CSystem::allDeviceInfo()
         return allDeviceInfo;
     }
 
-    SP_DEVINFO_DATA sDevInfoData;
+    std::unique_ptr<void, decltype(&::SetupDiDestroyDeviceInfoList)> devices(hDevInfo, &::SetupDiDestroyDeviceInfoList);
+    SP_DEVINFO_DATA sDevInfoData = {};
     sDevInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
 
     //Device Identification Strings
-    TCHAR szDIS[MAX_PATH] = {};
-    DWORD nSize = 0;
+    char szDIS[MAX_PATH] = {};
 
     for (int i = 0; ::SetupDiEnumDeviceInfo(hDevInfo, i, &sDevInfoData); i++)
     {
-        nSize = 0;
-        if (!::SetupDiGetDeviceInstanceId(hDevInfo, &sDevInfoData, szDIS, sizeof(szDIS), &nSize))
+        if (!::SetupDiGetDeviceInstanceIdA(hDevInfo, &sDevInfoData, szDIS, sizeof(szDIS), nullptr))
         {
-            break;
+            continue;
         }
 
         std::vector<std::string> vecDeviceInfo;
@@ -462,7 +492,6 @@ std::map<std::string, std::vector<std::string>> CSystem::allDeviceInfo()
         }
         allDeviceInfo[vecDeviceInfo[0]].push_back(szDIS);
     }
-    ::SetupDiDestroyDeviceInfoList(hDevInfo);
     return allDeviceInfo;
 }
 #endif
@@ -691,17 +720,16 @@ void CSystem::CopyFileOver(const std::string& dstFile, const std::string& srcFil
 
 int CSystem::GetSystemBits()
 {
-#ifdef _WIN32
-    SYSTEM_INFO si;
-    getNativeSystemInfo(&si);
-    const WORD arm64Architecture = 12; // 兼容未定义 PROCESSOR_ARCHITECTURE_ARM64 的旧 Windows SDK。
-    if (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64 ||
-        si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64 ||
-        si.wProcessorArchitecture == arm64Architecture)
+#if defined(_WIN64)
+    return 64;
+#elif defined(_WIN32)
+    // 32 位进程也可能运行在 ARM64 的 x86 仿真层，须查询宿主系统。
+    wchar_t directory[1];
+    if (::GetSystemWow64DirectoryW(directory, 1) != 0)
     {
         return 64;
     }
-    return 32;
+    return ::GetLastError() == ERROR_CALL_NOT_IMPLEMENTED ? 32 : 0;
 #elif defined(__unix__) || defined(__APPLE__)
     return sizeof(void*) * 8;
 #endif
@@ -723,7 +751,6 @@ void CSystem::OutputMap(const std::map<std::string, std::string>& stringMap, con
             file << "[" << itData->first.c_str() << "] = " << itData->second.c_str() << "\n";
         }
     }
-    file.close();
 }
 
 void CSystem::OutputVector(const std::vector<std::string>& stringVector, const std::string& path)
@@ -742,7 +769,6 @@ void CSystem::OutputVector(const std::vector<std::string>& stringVector, const s
             file << itData->c_str() << "\n";
         }
     }
-    file.close();
 }
 
 #if CSYSTEM_HAS_DESKTOP_API
@@ -1186,16 +1212,15 @@ uint32_t CSystem::processFirstPid(const std::string& processName)
     {
         return 0;
     }
+    std::unique_ptr<void, decltype(&::CloseHandle)> snapshot(hSnapshot, &::CloseHandle);
     PROCESSENTRY32 pe = { sizeof(pe) };
     for (BOOL ret = Process32First(hSnapshot, &pe); ret; ret = ::Process32Next(hSnapshot, &pe))
     {
-        if (std::string(pe.szExeFile) == processName)
+        if (processName == pe.szExeFile)
         {
-            ::CloseHandle(hSnapshot);
             return pe.th32ProcessID;
         }
     }
-    ::CloseHandle(hSnapshot);
     return 0;
 #else
     const std::vector<uint32_t> matches = processPid(processName);
@@ -1216,15 +1241,15 @@ std::vector<uint32_t> CSystem::processPid(const std::string& processName)
     {
         return result;
     }
+    std::unique_ptr<void, decltype(&::CloseHandle)> snapshot(hSnapshot, &::CloseHandle);
     PROCESSENTRY32 pe = { sizeof(pe) };
     for (BOOL ret = Process32First(hSnapshot, &pe); ret; ret = ::Process32Next(hSnapshot, &pe))
     {
-        if (std::string(pe.szExeFile) == processName)
+        if (processName == pe.szExeFile)
         {
             result.push_back(pe.th32ProcessID);
         }
     }
-    ::CloseHandle(hSnapshot);
     return result;
 #elif defined(__APPLE__)
     std::vector<uint32_t> matches;
@@ -1287,25 +1312,21 @@ std::vector<uint32_t> CSystem::processPid(const std::string& processName)
 std::string CSystem::processName(uint32_t pid)
 {
 #ifdef _WIN32
-    std::string result;
-    PROCESSENTRY32 pe32 = { 0 };
     HANDLE snapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (snapshot != INVALID_HANDLE_VALUE)
+    if (snapshot == INVALID_HANDLE_VALUE)
     {
-        pe32.dwSize = sizeof(PROCESSENTRY32);
-        if (::Process32First(snapshot, &pe32))
-        {
-            do{
-                if (pe32.th32ProcessID == pid)
-                {
-                    result = pe32.szExeFile;
-                    break;
-                }
-            } while (::Process32Next(snapshot, &pe32));
-        }
-        ::CloseHandle(snapshot);
+        return "";
     }
-    return result;
+    std::unique_ptr<void, decltype(&::CloseHandle)> owned(snapshot, &::CloseHandle);
+    PROCESSENTRY32 entry = { sizeof(entry) };
+    for (BOOL available = ::Process32First(snapshot, &entry); available; available = ::Process32Next(snapshot, &entry))
+    {
+        if (entry.th32ProcessID == pid)
+        {
+            return entry.szExeFile;
+        }
+    }
+    return "";
 #elif defined(__APPLE__) && !TARGET_OS_IPHONE
     if (pid == 0 || pid > INT32_MAX)
     {
@@ -2288,16 +2309,29 @@ std::string CSystem::GetSysUserName()
 
 std::string CSystem::GetEnvironment(const char* name)
 {
-    if (name == nullptr)
+    if (name == nullptr || *name == '\0')
     {
         return "";
     }
-    char* value = ::getenv(name);
-    if (value == nullptr)
+#ifdef _WIN32
+    // 独立 CRT 的环境副本可能已过期，直接读取进程环境；两次查询之间值可能增长。
+    DWORD capacity = ::GetEnvironmentVariableA(name, nullptr, 0);
+    while (capacity != 0)
     {
-        return "";
+        std::string value(capacity, '\0');
+        const DWORD length = ::GetEnvironmentVariableA(name, &value[0], capacity);
+        if (length < capacity)
+        {
+            value.resize(length);
+            return value;
+        }
+        capacity = length;
     }
-    return value;
+    return "";
+#else
+    const char* value = std::getenv(name);
+    return value == nullptr ? "" : value;
+#endif
 }
 
 bool CSystem::CreateDir(const std::string& dir)
@@ -2415,9 +2449,7 @@ void CSystem::OpenFile(const std::string& file)
 
 void CSystem::childProcessExit(int32_t exitCode)
 {
-#ifdef _MSC_VER
-    ::_exit(exitCode);
-#elif defined(__unix__) || defined(__APPLE__)
+#if defined(_MSC_VER) || defined(__unix__) || defined(__APPLE__)
     ::_exit(exitCode);
 #else
     std::_Exit(exitCode);
@@ -2464,39 +2496,47 @@ std::string CSystem::timetToStr(time_t timet, bool isLocal)
 #if CSYSTEM_HAS_NATIVE_API
 std::string CSystem::commonFile(const std::string& name)
 {
-#ifdef _WIN32
-    std::string path = CSystem::GetEnvironment("XUEYELINGSHUANG") + "common\\";
-#elif defined(__unix__) || defined(__APPLE__)
-    std::string path = CSystem::GetEnvironment("XUEYELINGSHUANG") + "common/";
-#endif
-    double version = 0;
-    std::string result;
-    const std::vector<std::string> vecPath = CSystem::findFilePath(path, 3);
-    for (const std::string& filePath : vecPath)
+    const std::string root = GetEnvironment("XUEYELINGSHUANG");
+    if (root.empty() || name.empty() || name.find('\0') != std::string::npos)
     {
-        std::string fileName = CSystem::GetName(filePath, 1);
-        std::string fileSuffix = CSystem::GetName(filePath, 2);
+        return "";
+    }
 #ifdef _WIN32
-        if(fileSuffix != "exe")
+    const std::string directory = joinPath(root, "common");
+#else
+    const std::string directory = root + (root.back() == '/' ? "common" : "/common");
+#endif
+    double highest = 0;
+    std::string result;
+    for (const std::string& path : findFilePath(directory, 3))
+    {
+#ifdef _WIN32
+        std::string fileName = GetName(path, 1);
+        if (fileName.size() < 4 || ::_stricmp(fileName.c_str() + fileName.size() - 4, ".exe") != 0)
         {
             continue;
         }
         fileName.resize(fileName.size() - 4);
-#elif defined(__unix__) || defined(__APPLE__)
+#else
+        const std::string fileName = path.substr(path.rfind('/') + 1);
         if (std::count(fileName.begin(), fileName.end(), '.') != 1)
         {
             continue;
         }
 #endif
-        if (fileName.find(name) == 0)
+        if (fileName.size() <= name.size() || fileName.compare(0, name.size(), name) != 0 ||
+            fileName[name.size()] < '0' || fileName[name.size()] > '9')
         {
-            std::string strVersion = fileName.substr(name.size(), fileName.size() - name.size());
-            double curVersion = atof(strVersion.c_str());
-            if (curVersion > version)
-            {
-                version = curVersion;
-                result = filePath;
-            }
+            continue;
+        }
+        // 仓库文件名以点表示小数；数值后的平台后缀不参与排序。
+        std::istringstream version(fileName.substr(name.size()));
+        version.imbue(std::locale::classic());
+        double number = 0;
+        if (version >> number && number > highest)
+        {
+            highest = number;
+            result = path;
         }
     }
     return result;
@@ -2548,9 +2588,11 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
     std::vector<std::string>* unVisitPath)
 {
     std::vector<std::string> result;
+    // 根路径或筛选串可能借自上一轮未访问列表；交换后旧元素在本次遍历结束前保持有效。
+    std::vector<std::string> previousPaths;
     if (unVisitPath != nullptr)
     {
-        unVisitPath->clear();
+        previousPaths.swap(*unVisitPath);
     }
 
     if (flag < 1 || flag > 3 || strPath.find('\0') != std::string::npos) { return result; }
@@ -2592,7 +2634,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 
     //用队列实现递归
     std::queue<std::string> queue_dir;
-    queue_dir.push(std::string(dir));
+    queue_dir.push(std::move(dir));
 
     while (!queue_dir.empty())
     {
@@ -3618,7 +3660,7 @@ int32_t CSystem::acquireNamedProcessLease(const std::string& name, const std::st
         const std::string file = "/tmp/xyls." + slot + ".lease";
         const uint32_t record[3] = { currentProcessPid(), 0, 0 };
         const std::string readyFile = "/tmp/xyls." + name + ".ready." + std::to_string(record[0]);
-        const int descriptor = open(file.c_str(), O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0666);
+        const int descriptor = open(file.c_str(), O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK, 0666);
         if (descriptor < 0)
         {
             return -1;
@@ -3650,7 +3692,7 @@ int32_t CSystem::acquireNamedProcessLease(const std::string& name, const std::st
             }
             Sleep(20);
         }
-        const int ready = open(readyFile.c_str(), O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0644);
+        const int ready = open(readyFile.c_str(), O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK, 0644);
         if (ready < 0 || fstat(ready, &info) != 0 || !S_ISREG(info.st_mode) || info.st_nlink != 1 ||
             flock(ready, LOCK_EX | LOCK_NB) != 0 || pwrite(descriptor, record, sizeof(record), 0) != sizeof(record))
         {
@@ -3755,15 +3797,16 @@ bool CSystem::isProcessLeaseReady(const std::string& name, uint32_t pid)
     return result && !processDefinitelyExited(pid);
 #elif defined(__linux__) || defined(__APPLE__)
     const std::string key = "/tmp/xyls." + name + ".ready." + std::to_string(pid);
-    const int descriptor = open(key.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    // 先无阻塞打开再核对文件类型，异常的就绪记录不应挂起查询。
+    const int descriptor = open(key.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK);
     if (descriptor < 0)
     {
         return false;
     }
     uint32_t value = 0;
     struct stat info;
-    const bool ownerHeld = flock(descriptor, LOCK_SH | LOCK_NB) != 0 && (errno == EWOULDBLOCK || errno == EAGAIN);
-    const bool result = ownerHeld && fstat(descriptor, &info) == 0 && S_ISREG(info.st_mode) && info.st_nlink == 1 &&
+    const bool result = fstat(descriptor, &info) == 0 && S_ISREG(info.st_mode) && info.st_nlink == 1 &&
+        flock(descriptor, LOCK_SH | LOCK_NB) != 0 && (errno == EWOULDBLOCK || errno == EAGAIN) &&
         pread(descriptor, &value, 4, 0) == 4 && value == 1;
     close(descriptor);
     return result && (kill(static_cast<pid_t>(pid), 0) == 0 || errno == EPERM);
@@ -3935,73 +3978,6 @@ std::string CSystem::widePathToUtf8(const std::wstring& text)
 }
 
 #ifdef _MSC_VER
-// 枚举指定DirectShow设备类别，成功后调用方负责释放返回的枚举器。
-HRESULT CSystem::enumerateDevices(REFGUID category, IEnumMoniker** ppEnum)
-{
-    if (ppEnum == nullptr)
-    {
-        return E_POINTER;
-    }
-
-    *ppEnum = nullptr;
-    ICreateDevEnum* pDevEnum = nullptr;
-    HRESULT hr = ::CoCreateInstance(CLSID_SystemDeviceEnum, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pDevEnum));
-    if (SUCCEEDED(hr))
-    {
-        hr = pDevEnum->CreateClassEnumerator(category, ppEnum, 0);
-        if (hr == S_FALSE)
-        {
-            hr = VFW_E_NOT_FOUND;
-        }
-        pDevEnum->Release();
-    }
-    return hr;
-}
-
-// 从DirectShow设备枚举器读取设备显示名称。
-void CSystem::displayDeviceInformation(IEnumMoniker* pEnum, std::vector<std::string>& list)
-{
-    if (pEnum == nullptr)
-    {
-        return;
-    }
-
-    IMoniker* pMoniker = nullptr;
-    while (pEnum->Next(1, &pMoniker, nullptr) == S_OK)
-    {
-        IPropertyBag* pPropBag = nullptr;
-        HRESULT hr = pMoniker->BindToStorage(nullptr, nullptr, IID_PPV_ARGS(&pPropBag));
-        if (FAILED(hr))
-        {
-            pMoniker->Release();
-            continue;
-        }
-
-        VARIANT var;
-        ::VariantInit(&var);
-        hr = pPropBag->Read(L"Description", &var, nullptr);
-        if (FAILED(hr))
-        {
-            hr = pPropBag->Read(L"FriendlyName", &var, nullptr);
-        }
-        if (SUCCEEDED(hr))
-        {
-            if (var.vt == VT_BSTR && var.bstrVal != nullptr)
-            {
-                char* nameBuffer = _com_util::ConvertBSTRToString(var.bstrVal);
-                if (nameBuffer != nullptr)
-                {
-                    list.push_back(nameBuffer);
-                    delete[] nameBuffer;
-                }
-            }
-            ::VariantClear(&var);
-        }
-        pPropBag->Release();
-        pMoniker->Release();
-    }
-}
-
 BOOL CALLBACK CSystem::findWindowCallback(HWND window, LPARAM context)
 {
     std::pair<uint32_t, HWND>* query = reinterpret_cast<std::pair<uint32_t, HWND>*>(context);
@@ -4026,27 +4002,6 @@ BOOL CALLBACK CSystem::findVisibleWindowCallback(HWND window, LPARAM context)
         return FALSE;
     }
     return TRUE;
-}
-#endif
-
-#ifdef _WIN32
-//安全的取得真实系统信息
-VOID CSystem::getNativeSystemInfo(__out LPSYSTEM_INFO lpSystemInfo)
-{
-    if (NULL == lpSystemInfo)
-    {
-        return;
-    }
-    typedef VOID(WINAPI *LPFN_GetNativeSystemInfo)(LPSYSTEM_INFO lpSystemInfo);
-    LPFN_GetNativeSystemInfo fnGetNativeSystemInfo = (LPFN_GetNativeSystemInfo)GetProcAddress(GetModuleHandleA("kernel32"), "GetNativeSystemInfo");
-    if (NULL != fnGetNativeSystemInfo)
-    {
-        fnGetNativeSystemInfo(lpSystemInfo);
-    }
-    else
-    {
-        GetSystemInfo(lpSystemInfo);
-    }
 }
 #endif
 
@@ -4945,7 +4900,8 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 // #if CSYSTEM_HAS_NATIVE_API
 //     const uint32_t pid = CSystem::currentProcessPid();
 //     const std::string unique = CSystem::uuid(0);
-//     std::printf("user directory=%s\n", CSystem::GetSystemTempPath().c_str());
+//     const std::string repository = CSystem::GetEnvironment("XUEYELINGSHUANG");
+//     std::printf("user directory=%s repository=%s\n", CSystem::GetSystemTempPath().c_str(), repository.c_str());
 //     const std::string directory = CSystem::joinPath(".", "csdemo_" + unique);
 //     if (unique.empty() || CSystem::DirOrFileExist(directory) || !CSystem::CreateDir(directory))
 //     {
@@ -4980,17 +4936,20 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 //     const std::wstring wideDirectory(directory.begin(), directory.end());
 //     const std::wstring draft = wideDirectory + L"/private.tmp";
 //     const std::wstring published = wideDirectory + L"/private.bin";
+//     const std::wstring wideTarget(target.begin(), target.end());
+//     const uint8_t replacement[] = {'n', 'e', 'w'};
 //     std::string openError;
 //     FILE* privateFile = CSystem::openPrivateBinaryOutputFile(draft, &openError);
 //     if (privateFile)
 //     {
-//         const bool written = CSystem::writeBinaryOutputFile(privateFile, text, sizeof(text)) &&
+//         const bool written = CSystem::writeBinaryOutputFile(privateFile, replacement, sizeof(replacement)) &&
 //             CSystem::flushBinaryOutputFile(privateFile);
 //         const bool closed = CSystem::closeBinaryOutputFile(privateFile);
 //         std::vector<uint8_t> content;
 //         valid = written && closed && CSystem::installFileIfAbsent(draft, published) &&
-//             CSystem::readBinaryFile(published, sizeof(text), content) &&
-//             content == std::vector<uint8_t>(text, text + sizeof(text)) && valid;
+//             CSystem::replaceFile(published, wideTarget) &&
+//             CSystem::readBinaryFile(wideTarget, sizeof(replacement), content) &&
+//             content == std::vector<uint8_t>(replacement, replacement + sizeof(replacement)) && valid;
 //         CSystem::deleteFile(draft);
 //         CSystem::deleteFile(published);
 //     }
@@ -5010,6 +4969,10 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 //         valid = CSystem::ShellCopy(source.c_str(), destination.c_str()) && valid;
 // #endif
 //         CSystem::deleteFile(renamed.c_str());
+//     }
+//     else
+//     {
+//         valid = false;
 //     }
 //     CSystem::deleteFile(first.c_str());
 //     CSystem::deleteFile(second.c_str());
@@ -5062,6 +5025,12 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 //     const POINT center = CSystem::screenCenterPoint();
 //     std::printf("screen=%ldx%ld center=%ld,%ld taskbar=%ld,%ld corner=%ld,%ld visible=%d\n",
 //         screen.right, screen.bottom, center.x, center.y, taskbar.left, taskbar.top, corner.x, corner.y, CSystem::GetVisibleHeight());
+//     const auto cameras = CSystem::allCameraName();
+//     const auto devices = CSystem::allDeviceInfo();
+//     std::printf("cameras=%u device groups=%u\n", static_cast<unsigned>(cameras.size()), static_cast<unsigned>(devices.size()));
+//     const std::string processFile = CSystem::processName(pid);
+//     const auto matching = CSystem::processPid(processFile);
+//     std::printf("process=%s matching=%u\n", processFile.c_str(), static_cast<unsigned>(matching.size()));
 //     const std::wstring executable = CSystem::processNameW(pid);
 //     std::printf("processes=%u modules=%u first=%u version=%d\n",
 //         static_cast<unsigned>(CSystem::processPid(executable).size()), static_cast<unsigned>(CSystem::processMountDll(pid).size()),
