@@ -113,7 +113,7 @@ Windows x64 静态库 Debug、Release 均经 NMake + CMake/CTest 通过。只给
 给 x64 编译器指定 arm64 或 32、给 Release 同时指定 DEBUGRELEASE=debug，三项配置均被拒绝。四种 wasm 组合另经正式 CTest 宿主通过。
 隔离副本把 ID 3 的第一个预期文本改错一位，另让 ID 4 的副本字节观测值加一。--all 分别报告 3、4 失败，继续运行 2，最终返回 1。
 Variant.cpp 的注释 main 在 Windows x64 Release、Node wasm32 和 wasm64 单独编译运行，三端均输出 outbound state sent, recorded bytes 3 并返回 0。
-Linux、macOS、Android 和 iOS 已检查 C++11、CMake 链接和目标运行入口，未在这四端编译或运行。
+Linux ARM 的运行结果见下文。Linux x86 系列、macOS、Android 和 iOS 已检查 C++11、CMake 链接和目标运行入口。
 浏览器、微信宿主本轮未运行。CRT 分配及释放钩子仅在 MSVC Debug 执行。
 Windows 从 VariantTest.sln 构建；先运行对应 version 准备默认 32 位 DLL 依赖，其他位宽或静态组合须单独准备匹配的 SDK。
 */
@@ -127,8 +127,17 @@ await require('./LibraryTestHost')(require('./VariantTest'), { wasmPath: '包内
 内存位宽由宿主实际支持范围决定，实例化失败会报告失败。
 */
 
+/** Linux ARM 功能验证，2026-11-22
+Windows 上用 Clang 19.1.7 和 Debian 12 sysroot 交叉构建，在无网络 QEMU 的 Debian 6.1.0-50 内核中运行。ARMv7 hard-float 和 AArch64 各执行 Debug、Release 两种配置，各配置四个功能组全部通过：ownership 为 28206 项，scenario 为 41157 项、0 失败。sizeof(Variant) 在 armhf 为 24，在 AArch64 为 32。功能套件链接静态 Variant，另用 ProtoMessageManager 公开示例验证两种配置的共享库。未运行性能测试或物理开发板。
+本批 VariantTest ELF 的 SHA-256
+    armhf Release 65d52bc7da200984368fe3cca1443e156a459d844dd1aa5d1878bbd63db18385
+    armhf Debug 43b5d7c844b15f47ca0bc77efd09d2f859f62f650aab012f579fce6f2fd96973
+    arm64 Release f3f0111d69bd7dd50fa12bd08b795f5568944fe1fa5082535af874fd36c35ddf
+    arm64 Debug b12116fbaf8e97514b5ba68eb63a556ac6fe7995abf7aad267ac9017f52b697a
+*/
+
 /** Linux 与 macOS 的 CMake 入口
-从本工程目录执行 cmake -S . -B build -DSDK_ROOT=<当前系统及架构的SDK> -DBIT=<64或arm64> -DCMAKE_BUILD_TYPE=Release，
+从本工程目录执行 cmake -S . -B build -DSDK_ROOT=<当前系统及架构的SDK> -DBIT=<目标ABI> -DCMAKE_BUILD_TYPE=Release。Linux ARM 选择 arm32 或 arm64。
 执行 cmake --build build，再在 build 内运行 ctest --output-on-failure。交叉编译时需另传目标工具链；
 只有与目标 ABI 匹配的系统才能直接运行产物。
 */
