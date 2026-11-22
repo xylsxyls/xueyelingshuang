@@ -9,7 +9,9 @@
 #if CSYSTEM_HAS_NATIVE_API
 #include <codecvt>
 #include <locale>
-#ifndef _WIN32
+#ifdef _WIN32
+#include <shellapi.h>
+#else
 #include <pthread.h>
 #include <sched.h>
 #endif
@@ -153,7 +155,7 @@ extern "C" void __cdecl CSystemFallbackWait(uint32_t milliseconds);
 #endif
 
 #if CSYSTEM_HAS_NATIVE_API
-/** 检查每次短等待均走到结束；严格模式另验证原有 20 次等待的时间窗口
+/** 按整组累计时长核对 20 次短等待；严格模式另检查累计时长上界
 @param [in] wait 毫秒等待函数
 @param [in] strict 是否核验诊断模式的 160 毫秒上界
 @return 满足计时条件返回 true
@@ -230,7 +232,19 @@ static int TestCommon()
     CHECK(CSystem::commandArguments(1, sample, arguments));
 #ifdef _WIN32
     const std::vector<std::string> actual = CSystem::exeParam();
-    CHECK(!actual.empty() && arguments == std::vector<std::string>(actual.begin() + 1, actual.end()));
+    CHECK(!actual.empty() && static_cast<int>(actual.size()) == __argc);
+    for (int index = 0; index < __argc; ++index)
+    {
+        CHECK(actual[index] == __argv[index]);
+    }
+    int count = 0;
+    std::unique_ptr<wchar_t*, decltype(&::LocalFree)> systemArgs(::CommandLineToArgvW(::GetCommandLineW(), &count), ::LocalFree);
+    CHECK(systemArgs && count > 0 && arguments.size() == static_cast<size_t>(count - 1));
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> utf8;
+    for (int index = 1; index < count; ++index)
+    {
+        CHECK(arguments[index - 1] == utf8.to_bytes(systemArgs.get()[index]));
+    }
 #else
     CHECK(arguments.empty());
     char empty[] = "";
@@ -295,6 +309,10 @@ static int TestNative()
     const uint32_t self = CSystem::currentProcessPid();
     const std::string selfName = CSystem::processName(self);
     CHECK(!selfName.empty() && selfName.find('\0') == std::string::npos);
+#if defined(__APPLE__)
+    const std::string executablePath = CSystem::currentExecutablePathUtf8();
+    CHECK(!executablePath.empty() && selfName == executablePath.substr(executablePath.rfind('/') + 1));
+#endif
     const std::vector<uint32_t> matches = CSystem::processPid(selfName);
     CHECK(std::find(matches.begin(), matches.end(), self) != matches.end());
     CHECK(CSystem::processFirstPid(selfName) != 0 && CSystem::processPid("").empty());
@@ -596,6 +614,23 @@ static int TestChildProcesses()
         ::RemoveDirectoryW(root.c_str());
     };
     std::unique_ptr<const std::wstring, decltype(cleanup)> owned(&root, cleanup);
+    // U+FFFD 是合法文件名字符，损坏的 UTF-8 不得命中同一文件。
+    const std::wstring named = root + L"\\\ufffd.bin";
+    const std::string utf8Root = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(root);
+    const std::string invalidName = utf8Root + "\\\xff.bin";
+    const std::string validName = utf8Root + "\\\xef\xbf\xbd.bin";
+    FILE* fixture = CSystem::openPrivateBinaryOutputFile(named);
+    CHECK(fixture != nullptr);
+    const auto removeFixture = [](const std::wstring* path) { ::DeleteFileW(path->c_str()); };
+    std::unique_ptr<const std::wstring, decltype(removeFixture)> ownedFixture(&named, removeFixture);
+    CHECK(CSystem::closeBinaryOutputFile(fixture) && CSystem::plainFileUtf8(validName));
+    uint32_t error = 0;
+    intptr_t opened = CSystem::openFileHandle(invalidName.c_str(), 1, &error);
+    const bool refused = opened == -1 && error == ERROR_NO_UNICODE_TRANSLATION;
+    CSystem::closeFileHandle(&opened);
+    CHECK(refused && CSystem::canonicalPathUtf8(invalidName, false).empty() && !CSystem::plainFileUtf8(invalidName));
+    CHECK(!CSystem::canonicalPathUtf8(validName).empty() && CSystem::plainFileUtf8(validName));
+
     const std::string exe = CSystem::currentExecutablePathUtf8();
     uint32_t pid = 1;
     uint64_t monitor = 1;
@@ -658,7 +693,11 @@ int main(int argc, char** argv) try
         {
             return 1;
         }
-        CSystem::ClearScanf(&std::getchar);
+        const int endOfLine = std::getchar();
+        if (endOfLine != '\n' && endOfLine != EOF)
+        {
+            return 1;
+        }
         CSystem::ClearScanf(&std::getchar);
         return std::feof(stdin) ? 0 : 1;
     }

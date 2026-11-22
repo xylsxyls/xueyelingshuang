@@ -40,7 +40,8 @@ int RunSystemInterfaceTests()
     check(!CSystem::GetCurrentExePath().empty(), "CSystem GetCurrentExePath");
     check(!CSystem::GetCurrentExeName().empty(), "CSystem GetCurrentExeName");
     const std::string executable = CSystem::GetCurrentExeFullName();
-    check(!executable.empty() && CSystem::GetName(executable, 3) == CSystem::GetCurrentExeName() &&
+    // executable 已是操作系统文件名，POSIX 允许其中出现反斜杠。
+    check(!executable.empty() && executable.substr(0, executable.rfind('.')) == CSystem::GetCurrentExeName() &&
         CSystem::DirOrFileExist(CSystem::joinPath(CSystem::GetCurrentExePath(), executable)), "executable directory and names");
     check(!CSystem::GetCurrentDllPath().empty() && CSystem::DirOrFileExist(CSystem::GetCurrentDllPath()),
         "module directory exists");
@@ -110,6 +111,24 @@ int RunSystemInterfaceTests()
     check(CSystem::isPathWithin(CSystem::joinPath(root, "child"), root, false), "CSystem isPathWithin child");
     check(!CSystem::isPathWithin(root, root, false), "CSystem isPathWithin excludes root");
     check(!CSystem::isPathWithin(root + "_sibling", root, false), "CSystem isPathWithin excludes shared prefix");
+    const std::string aliasSource = CSystem::joinPath(root, "alias-source");
+    const std::string aliasTarget = CSystem::joinPath(root, "alias-target");
+    check(CSystem::CreateDir(aliasSource), "create migration alias fixture");
+    const std::string aliasFile = CSystem::joinPath(aliasSource, "file");
+    const std::string movedFile = CSystem::joinPath(aliasTarget, "file");
+    CSystem::saveFile("alias bytes", aliasFile);
+    std::string pathAndMessage = aliasSource;
+    check(CSystem::migrateDirectory(pathAndMessage, aliasTarget, pathAndMessage) && pathAndMessage.empty() &&
+        CSystem::readFile(movedFile) == "alias bytes" && !CSystem::DirOrFileExist(aliasSource),
+        "migration error output may share the source string");
+    pathAndMessage = aliasSource;
+    check(CSystem::migrateDirectory(aliasTarget, pathAndMessage, pathAndMessage) && pathAndMessage.empty() &&
+        CSystem::readFile(aliasFile) == "alias bytes" && !CSystem::DirOrFileExist(aliasTarget),
+        "migration error output may share the destination string");
+    CSystem::deleteFile(aliasFile.c_str());
+    CSystem::deleteFile(movedFile.c_str());
+    CSystem::DestroyDir(aliasTarget);
+    CSystem::DestroyDir(aliasSource);
     std::string migrationParent = CSystem::joinPath(root, "migration source");
     std::string migrationSource = CSystem::joinPath(migrationParent, "nested");
     std::string migrationTarget = CSystem::joinPath(root, "migration target");
@@ -168,8 +187,18 @@ int RunSystemInterfaceTests()
     CSystem::DestroyDir(slashSource);
     CSystem::DestroyDir(slashTarget);
 #endif
+#ifdef _WIN32
+    check(!CSystem::ShellCopy("", filePath.c_str()) && !CSystem::ShellCopy(filePath.c_str(), ""),
+        "ShellCopy rejects empty source and destination");
+#endif
     CSystem::saveFile("hello system", filePath);
     check(CSystem::readFile(filePath) == "hello system", "CSystem saveFile readFile");
+#ifdef _WIN32
+    const std::string shellTarget = CSystem::joinPath(root, "shell-copy.txt");
+    check(CSystem::ShellCopy(filePath.c_str(), shellTarget.c_str()) && CSystem::readFile(shellTarget) == "hello system",
+        "ShellCopy copies the original bytes");
+    check(CSystem::deleteFile(shellTarget.c_str()), "remove ShellCopy target");
+#endif
     const std::string rejectedPath = emptyFilePath + std::string("\0suffix", 7);
     CSystem::CopyFileOver(rejectedPath, filePath, true);
     CSystem::OutputVector(std::vector<std::string>(1, "entry"), rejectedPath);
