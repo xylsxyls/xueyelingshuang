@@ -4,6 +4,7 @@
 #include "NetInterfaceHandshake.h"
 #include "NetInterfaceRequests.h"
 #include "NetInterfaceRpc.h"
+#include "LockFreeHashMap/LockFreeHashMapAPI.h"
 
 class NetSessionState;
 
@@ -60,6 +61,12 @@ public:
     /** 停止并释放；监听者必须仍然存活，不得在回调内销毁
     */
     ~NetSession();
+
+    /** 首次连接前配置协议请求记录池，未完成应答不占普通DATA记录
+    @param [in] config 基础池初值、上限和增长策略；仅静止生命周期owner调用
+    @return NI_OK或状态/参数/资源错误
+    */
+    int32_t configureRequestPool(const LockFreeHashMapPoolConfig& config);
 
     /** 显式绑定借用通道；null只解除绑定，不创建物理传输
     @param [in] channel 借用至shutdown/更换，必须实现相同TLS及回调契约；不可在回调/活跃连接中更换
@@ -238,7 +245,7 @@ private:
 public:
     /** 启动前配置无秘密公开RPC类型，握手不支持时保持原帧
     @param [in] types count非零时不可空，各类型非零；只借用至返回
-    @param [in] count 0至64，0清空
+    @param [in] count 非负项数，0清空
     @return OK或参数/状态/内存错误，失败保留旧配置
     */
     int32_t configureCompression(const uint32_t* types, uint32_t count);

@@ -16,7 +16,7 @@ public:
     static int32_t encode(const NetInterfaceFrame& frame, uint8_t* output, uint32_t capacity, uint32_t& required);
 
     /** 先校验声明的原长，再有界解压；输出仅由同模块delete[]释放
-    @param [in] input 本次同步调用期间借用的NZC1压缩载荷
+    @param [in] input 本次同步调用期间借用的NZC2压缩载荷
     @param [in] size 输入总字节数，至少9
     @param [in] limit 允许的最大解压字节数，先检查再分配
     @param [out] output 成功分配的字节数组，须由同模块delete[]释放；失败置空

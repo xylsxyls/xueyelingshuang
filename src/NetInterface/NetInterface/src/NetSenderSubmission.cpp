@@ -1,4 +1,5 @@
-﻿#include "NetSenderSubmission.h"
+﻿#include "NetExecution.h"
+#include "NetSenderSubmission.h"
 #include "NetInterfaceMacro.h"
 #include "NetSenderSubmissionState.h"
 #include "NetInterface.h"
@@ -19,10 +20,6 @@ NetSenderSubmission::~NetSenderSubmission()
 
 int32_t NetSenderSubmission::configureGate(const NetSenderSubmissionGate& gate)
 {
-    if ((gate.m_enter == nullptr) != (gate.m_leave == nullptr))
-    {
-        return NI_INVALID_ARGUMENT;
-    }
     if (m_state->m_gateConfigured || m_state->m_generation != 0)
     {
         return NI_INVALID_STATE;
@@ -32,17 +29,63 @@ int32_t NetSenderSubmission::configureGate(const NetSenderSubmissionGate& gate)
     return NI_OK;
 }
 
+int32_t NetSenderSubmission::configurePools(const NetSenderSubmissionPools& pools)
+{
+    if (m_state->m_generation.load() != 0 || !idle())
+    {
+        return NI_INVALID_STATE;
+    }
+    NetSenderSubmissionState* replacement = nullptr;
+    try
+    {
+        replacement = new NetSenderSubmissionState(pools);
+    }
+    catch (...)
+    {
+        return NI_NO_MEMORY;
+    }
+    if (replacement->m_initializationResult != NI_OK)
+    {
+        const int32_t result = replacement->m_initializationResult;
+        delete replacement;
+        return result;
+    }
+    replacement->m_gate = m_state->m_gate;
+    replacement->m_gateConfigured = m_state->m_gateConfigured;
+    delete m_state;
+    m_state = replacement;
+    return NI_OK;
+}
+
 int32_t NetSenderSubmission::start(uint64_t generation, uint32_t product)
 {
-    NetSenderSubmissionGuard lock(m_state->m_gate);
-    if (generation == 0 || m_state->m_requests != nullptr || m_state->m_pending != nullptr ||
-        m_state->m_takenKind != NET_SUBMIT_NONE || m_state->m_receipts != nullptr)
+    if (generation == 0 || !idle())
+    {
+        return NI_INVALID_STATE;
+    }
+    m_state->quiesce();
+    m_state->pump();
+    if (!idle())
+    {
+        if (m_state->m_ready.load() && m_state->m_closeRequest.load() == 0)
+        {
+            m_state->m_admission.store(0, std::memory_order_release);
+        }
+        return NI_INVALID_STATE;
+    }
+    if (m_state->m_initializationResult != NI_OK)
+    {
+        return m_state->m_initializationResult;
+    }
+    // 全部请求/回执已经收敛，清掉可能由撤销失败留下的不可再使用身份。
+    if (!m_state->m_fronts.tryClear(true, false).m_committed || !m_state->m_tickets.tryClear(true, false).m_committed)
     {
         return NI_INVALID_STATE;
     }
     m_state->m_generation = generation;
     m_state->m_product = product;
     m_state->m_ready = false;
+    m_state->m_closeRequest = 0;
     m_state->m_closing = false;
     m_state->m_closeTaken = false;
     m_state->m_reason = 0;
@@ -51,21 +94,43 @@ int32_t NetSenderSubmission::start(uint64_t generation, uint32_t product)
 
 int32_t NetSenderSubmission::ready(uint64_t generation, uint32_t requests, uint32_t chunk)
 {
-    NetSenderSubmissionGuard lock(m_state->m_gate);
-    if (generation == 0 || generation < m_state->m_generation || requests == 0 || requests > NetSenderSubmissionState::kRequests ||
-        chunk < 1024 || chunk > 65536 || (generation != m_state->m_generation &&
-        (m_state->m_requests != nullptr || m_state->m_pending != nullptr || m_state->m_takenKind != NET_SUBMIT_NONE || m_state->pendingReceipts())))
+    if (m_state->m_initializationResult != NI_OK)
+    {
+        return m_state->m_initializationResult;
+    }
+    if (m_state->m_generation.load() == 0)
+    {
+        return NI_INVALID_STATE;
+    }
+    if (generation == 0 || generation < m_state->m_generation.load() || requests == 0 ||
+        chunk < 1024 || chunk > 65536)
     {
         return NI_PROTOCOL_ERROR;
     }
-    if (m_state->m_closing)
+    if (m_state->m_closeRequest.load() != 0)
+    {
+        return NI_CANCELLED;
+    }
+    m_state->quiesce();
+    m_state->pump();
+    if (generation != m_state->m_generation.load() && (m_state->m_requests != nullptr || m_state->m_pending != nullptr ||
+        m_state->m_takenKind != NET_SUBMIT_NONE || m_state->pendingReceipts()))
+    {
+        // 拒绝新代握手不撤销旧代的合法提交；原会话继续拥有待发正文和借用回执。
+        if (m_state->m_ready.load() && m_state->m_closeRequest.load() == 0)
+        {
+            m_state->m_admission.store(0, std::memory_order_release);
+        }
+        return NI_PROTOCOL_ERROR;
+    }
+    if (m_state->m_closeRequest.load() != 0)
     {
         return NI_CANCELLED;
     }
     m_state->m_generation = generation;
-    m_state->m_limit = requests;
     m_state->m_chunk = chunk;
     m_state->m_ready = true;
+    m_state->m_admission.store(0, std::memory_order_release);
     return NI_OK;
 }
 
@@ -83,50 +148,70 @@ int32_t NetSenderSubmission::begin(uint32_t product, uint32_t type, uint32_t tim
     {
         return NI_INVALID_ARGUMENT;
     }
+    NetSenderSubmissionAccess access(*m_state);
+    if (!access.accepted() || !m_state->m_ready.load() || m_state->m_closeRequest.load() != 0)
     {
-        NetSenderSubmissionGuard lock(m_state->m_gate);
-        if (!m_state->m_ready || m_state->m_closing)
-        {
-            return NI_INVALID_STATE;
-        }
-        if (m_state->m_product != 0 && product != m_state->m_product)
-        {
-            return NI_INVALID_ARGUMENT;
-        }
-        if (m_state->m_requestCount >= m_state->m_limit || m_state->m_nextId == UINT64_MAX)
-        {
-            return NI_LIMIT_EXCEEDED;
-        }
-        NetSenderSubmissionEntry* entry = new (std::nothrow) NetSenderSubmissionEntry();
-        if (entry == nullptr)
-        {
-            return NI_NO_MEMORY;
-        }
-        entry->m_command.m_kind = NET_SUBMIT_BEGIN;
-        entry->m_command.m_generation = m_state->m_generation;
-        entry->m_command.m_id = ++m_state->m_nextId;
-        entry->m_command.m_product = product;
-        entry->m_command.m_type = type;
-        entry->m_command.m_started = started;
-        entry->m_command.m_timeout = timeoutMs;
-        entry->m_previousRequest = m_state->m_requestsTail;
-        if (m_state->m_requestsTail != nullptr)
-        {
-            m_state->m_requestsTail->m_nextRequest = entry;
-        }
-        else
-        {
-            m_state->m_requests = entry;
-        }
-        m_state->m_requestsTail = entry;
-        ++m_state->m_requestCount;
-        id = entry->m_command.m_id;
+        return NI_INVALID_STATE;
     }
-    if (m_state->m_gate.m_wake != nullptr)
+    if (m_state->m_product.load() != 0 && product != m_state->m_product.load())
     {
-        m_state->m_gate.m_wake(m_state->m_gate.m_context);
+        return NI_INVALID_ARGUMENT;
     }
-    return NI_OK;
+    m_state->m_requestCount.fetch_add(1);
+    const uint64_t key = NetSenderSubmissionState::nextId(m_state->m_nextId);
+    NetObjectReference<NetSenderSubmissionFront> front;
+    NetObjectReference<NetSenderSubmissionInput> input;
+    bool indexed = false;
+    int32_t result = key == 0 ? NI_LIMIT_EXCEEDED : m_state->m_frontsPool.create(front);
+    if (result == NI_OK)
+    {
+        result = m_state->m_inputsPool.create(input, m_state->m_inputCount);
+    }
+    if (result == NI_OK)
+    {
+        result = m_state->m_requestsPool.create(input->m_entry);
+    }
+    if (result == NI_OK)
+    {
+        input->m_kind = NET_SUBMIT_BEGIN;
+        input->m_entry->m_storage = input->m_entry.storage();
+        input->m_entry->m_pool = &m_state->m_requestsPool;
+        NetSenderSubmissionCommand& command = input->m_entry->m_command;
+        command.m_kind = NET_SUBMIT_BEGIN;
+        command.m_generation = m_state->m_generation.load();
+        command.m_id = key;
+        command.m_product = product;
+        command.m_type = type;
+        command.m_started = started;
+        command.m_timeout = timeoutMs;
+        front->m_command = command;
+        front->m_entry = input->m_entry.get();
+        input->m_entry->m_front = front;
+        result = NetSenderSubmissionState::indexResult(m_state->m_fronts.trySet(key, front, nullptr, true, false));
+        indexed = result == NI_OK;
+        if (indexed)
+        {
+            result = NetSenderSubmissionState::queueResult(m_state->m_incoming.tryPushAndFence(input, true, false));
+        }
+        if (result == NI_OK)
+        {
+            front->m_published.store(true, std::memory_order_release);
+            id = key;
+            m_state->wake();
+            return NI_OK;
+        }
+    }
+    if (indexed)
+    {
+        front->m_retired.store(true);
+        const int32_t cleanup = NetSenderSubmissionState::indexResult(m_state->m_fronts.tryErase(key, true, false));
+        if (cleanup != NI_OK)
+        {
+            m_state->requestClose(cleanup);
+        }
+    }
+    m_state->m_requestCount.fetch_sub(1);
+    return result;
 }
 
 int32_t NetSenderSubmission::send(uint64_t id, const uint8_t* bytes, uint32_t size)
@@ -147,72 +232,75 @@ int32_t NetSenderSubmission::submitRequest(uint64_t id, const uint8_t* bytes, ui
     {
         return NI_INVALID_ARGUMENT;
     }
+    NetSenderSubmissionAccess access(*m_state);
+    if (!access.accepted() || !m_state->m_ready.load() || m_state->m_closeRequest.load() != 0)
     {
-        NetSenderSubmissionGuard lock(m_state->m_gate);
-        if (!m_state->m_ready || m_state->m_closing)
+        return NI_INVALID_STATE;
+    }
+    NetObjectReference<NetSenderSubmissionFront> front;
+    if (!m_state->m_fronts.get(id, front) || !front->m_published.load() || front->m_retired.load() || front->m_cancelled.load())
+    {
+        return NI_NOT_FOUND;
+    }
+    const uint64_t deadline = front->m_command.m_started + front->m_command.m_timeout;
+    if (now() >= deadline)
+    {
+        return NI_TIMEOUT;
+    }
+    uint32_t expected = 0;
+    if (!front->m_sent.compare_exchange_strong(expected, 1))
+    {
+        return NI_INVALID_STATE;
+    }
+    NetObjectReference<NetSenderSubmissionReceipt> receipt;
+    NetObjectReference<NetSenderSubmissionPayload> payload;
+    NetObjectReference<NetSenderSubmissionInput> input;
+    int32_t result = m_state->m_payloadsPool.create(payload, m_state->m_bodies, m_state->m_bytes, bytes, size);
+    if (result == NI_OK)
+    {
+        result = payload->m_status;
+    }
+    if (result == NI_OK && synchronous)
+    {
+        receipt = m_state->reserveReceipt(front->m_command.m_generation, deadline, result);
+    }
+    if (result == NI_OK)
+    {
+        result = m_state->m_inputsPool.create(input, m_state->m_inputCount);
+    }
+    if (result == NI_OK)
+    {
+        input->m_kind = NET_SUBMIT_SEND;
+        input->m_front = front;
+        input->m_payload = std::move(payload);
+        input->m_receipt = receipt;
+        result = NetSenderSubmissionState::queueResult(m_state->m_incoming.tryPushAndFence(input, true, false));
+        if (result == NI_OK)
         {
-            return NI_INVALID_STATE;
-        }
-        NetSenderSubmissionEntry* entry = m_state->find(id);
-        if (entry == nullptr || entry->m_cancelled)
-        {
-            return NI_NOT_FOUND;
-        }
-        if (entry->m_phase != NET_SUBMISSION_RESERVED)
-        {
-            return NI_INVALID_STATE;
-        }
-        const uint64_t deadline = entry->m_command.m_started + entry->m_command.m_timeout;
-        if (now() >= deadline)
-        {
-            return NI_TIMEOUT;
-        }
-        if (size > NetSenderSubmissionState::kInputBytes - m_state->m_bytes ||
-            (synchronous && (m_state->m_receiptCount >= 128 || m_state->m_nextSync == UINT64_MAX)))
-        {
-            return NI_LIMIT_EXCEEDED;
-        }
-        NetSenderSubmissionReceipt* receipt = synchronous ? m_state->createReceipt(m_state->m_generation, deadline) : nullptr;
-        if (synchronous && receipt == nullptr)
-        {
-            return NI_NO_MEMORY;
-        }
-        if (!entry->copy(bytes, size))
-        {
-            delete receipt;
-            return NI_NO_MEMORY;
-        }
-        entry->m_phase = NET_SUBMISSION_QUEUED;
-        m_state->m_bytes += size;
-        m_state->append(entry);
-        if (receipt != nullptr)
-        {
-            m_state->addReceipt(receipt, entry);
-            ticket = receipt->m_ticket;
+            front->m_sent.store(2);
+            ticket = receipt ? receipt->m_ticket : 0;
+            m_state->wake();
+            return NI_OK;
         }
     }
-    if (m_state->m_gate.m_wake != nullptr)
-    {
-        m_state->m_gate.m_wake(m_state->m_gate.m_context);
-    }
-    return NI_OK;
+    m_state->rollbackReceipt(receipt);
+    front->m_sent.store(0);
+    return result;
 }
 
 int32_t NetSenderSubmission::cancel(uint64_t id)
 {
+    NetSenderSubmissionAccess access(*m_state);
+    if (!access.accepted())
     {
-        NetSenderSubmissionGuard lock(m_state->m_gate);
-        NetSenderSubmissionEntry* entry = m_state->find(id);
-        if (entry == nullptr || entry->m_cancelled)
-        {
-            return NI_NOT_FOUND;
-        }
-        entry->m_cancelled = true;
+        return NI_NOT_FOUND;
     }
-    if (m_state->m_gate.m_wake != nullptr)
+    NetObjectReference<NetSenderSubmissionFront> front;
+    if (!m_state->m_fronts.get(id, front) || !front->m_published.load() || front->m_retired.load() || front->m_cancelled.exchange(true))
     {
-        m_state->m_gate.m_wake(m_state->m_gate.m_context);
+        return NI_NOT_FOUND;
     }
+    m_state->wake();
     return NI_OK;
 }
 
@@ -237,104 +325,166 @@ int32_t NetSenderSubmission::submitData(const NetInterfaceFrame& frame, bool syn
     {
         return NI_INVALID_ARGUMENT;
     }
+    NetSenderSubmissionAccess access(*m_state);
+    if (!access.accepted() || !m_state->m_ready.load() || m_state->m_closeRequest.load() != 0)
     {
-        NetSenderSubmissionGuard lock(m_state->m_gate);
-        if (!m_state->m_ready || m_state->m_closing)
-        {
-            return NI_INVALID_STATE;
-        }
-        if (frame.m_payloadSize > m_state->m_chunk + 128 ||
-            (m_state->m_product != 0 && frame.m_productId != m_state->m_product))
-        {
-            return NI_INVALID_ARGUMENT;
-        }
-        const bool control = frame.m_kind != NI_DATA;
-        uint32_t& count = control ? m_state->m_controlCount : m_state->m_frameCount;
-        uint32_t& used = control ? m_state->m_controlBytes : m_state->m_bytes;
-        const uint32_t slots = control ? NetSenderSubmissionState::kControls : NetSenderSubmissionState::kFrames;
-        const uint32_t limit = control ? NetSenderSubmissionState::kControlBytes : NetSenderSubmissionState::kInputBytes;
-        if (count >= slots || frame.m_payloadSize > limit - used || m_state->m_nextFrame == UINT64_MAX ||
-            (synchronous && (m_state->m_receiptCount >= 128 || m_state->m_nextSync == UINT64_MAX)))
-        {
-            return NI_LIMIT_EXCEEDED;
-        }
-        const uint64_t current = now();
-        if (synchronous && current > UINT64_MAX - 5000)
-        {
-            return NI_INVALID_STATE;
-        }
-        NetSenderSubmissionEntry* entry = new (std::nothrow) NetSenderSubmissionEntry();
-        if (entry == nullptr)
-        {
-            return NI_NO_MEMORY;
-        }
-        if (!entry->copy(frame.m_payload, frame.m_payloadSize))
-        {
-            delete entry;
-            return NI_NO_MEMORY;
-        }
-        NetSenderSubmissionReceipt* receipt = synchronous ? m_state->createReceipt(m_state->m_generation, current + 5000) : nullptr;
-        if (synchronous && receipt == nullptr)
-        {
-            delete entry;
-            return NI_NO_MEMORY;
-        }
-        entry->m_phase = NET_SUBMISSION_QUEUED;
-        entry->m_command.m_kind = NET_SUBMIT_DATA;
-        entry->m_command.m_generation = m_state->m_generation;
-        entry->m_command.m_id = ++m_state->m_nextFrame;
-        entry->m_command.m_frame = frame;
-        entry->m_command.m_frame.m_payload = entry->m_input;
-        ++count;
-        used += frame.m_payloadSize;
-        m_state->append(entry);
-        if (receipt != nullptr)
-        {
-            m_state->addReceipt(receipt, entry);
-            ticket = receipt->m_ticket;
-        }
+        return NI_INVALID_STATE;
     }
-    if (m_state->m_gate.m_wake != nullptr)
+    if (frame.m_payloadSize > m_state->m_chunk.load() + 128 ||
+        (m_state->m_product.load() != 0 && frame.m_productId != m_state->m_product.load()))
     {
-        m_state->m_gate.m_wake(m_state->m_gate.m_context);
+        return NI_INVALID_ARGUMENT;
     }
-    return NI_OK;
+    const bool control = frame.m_kind != NI_DATA;
+    std::atomic<uint32_t>& count = control ? m_state->m_controlCount : m_state->m_frameCount;
+    // 只有同步票据使用交付截止，普通DATA不逐条读取系统时钟。
+    const uint64_t current = synchronous ? now() : 0;
+    if (current > UINT64_MAX - 5000)
+    {
+        return NI_LIMIT_EXCEEDED;
+    }
+    // DATA本身已经带完整业务编号，不再为同一帧分配无人消费的第二个全局编号。
+    const uint64_t id = frame.m_requestId;
+    if (!synchronous && !control && frame.m_payloadSize <= 64)
+    {
+        NetSenderSubmissionItem item(frame, m_state->m_generation.load());
+        // 空正文仍占队列节点，但不占字节预算；不为加零争用原子计数的缓存行。
+        if (frame.m_payloadSize != 0)
+        {
+            m_state->m_asyncBytes.fetch_add(frame.m_payloadSize, std::memory_order_relaxed);
+        }
+        const int32_t result = NetSenderSubmissionState::queueResult(m_state->m_incoming.tryPushAndFence(item, true, false));
+        if (result == NI_OK)
+        {
+            m_state->wake();
+        }
+        else if (frame.m_payloadSize != 0)
+        {
+            m_state->m_asyncBytes.fetch_sub(frame.m_payloadSize, std::memory_order_relaxed);
+        }
+        return result;
+    }
+    if (!synchronous && !control)
+    {
+        NetSenderSubmissionItem item;
+        NetObjectReference<NetSenderSubmissionEntry> owned;
+        int32_t result = m_state->m_framesPool.create(owned);
+        if (result != NI_OK)
+        {
+            return result;
+        }
+        NetSenderSubmissionEntry& entry = *owned;
+        entry.m_storage = owned.storage();
+        entry.m_pool = &m_state->m_framesPool;
+        // 不超过64字节的异步DATA已经走入口内联路径，此分支只接纳长正文。
+        result = m_state->m_bodies.allocate(frame.m_payloadSize, entry.m_frameBuffer);
+        if (result != NI_OK)
+        {
+            return result;
+        }
+        entry.m_input = entry.m_frameBuffer.data();
+        entry.m_size = frame.m_payloadSize;
+        if (entry.m_size != 0)
+        {
+            std::memcpy(entry.m_input, frame.m_payload, entry.m_size);
+        }
+        m_state->m_asyncBytes.fetch_add(entry.m_size, std::memory_order_relaxed);
+        entry.m_frameBudget = &m_state->m_asyncBytes;
+        entry.m_command.m_kind = NET_SUBMIT_DATA;
+        entry.m_command.m_generation = m_state->m_generation.load();
+        entry.m_command.m_id = id;
+        entry.m_command.m_frame = frame;
+        entry.m_command.m_frame.m_payload = entry.m_input;
+        // 发布成功后owner可以立即销毁帧，生产者之后不再解引用该地址。
+        item.m_frame = owned.release();
+        result = NetSenderSubmissionState::queueResult(m_state->m_incoming.tryPushAndFence(item, true, false));
+        if (result == NI_OK)
+        {
+            m_state->wake();
+        }
+        else
+        {
+            m_state->m_framesPool.release(item.m_frame->m_storage);
+        }
+        return result;
+    }
+    NetObjectReference<NetSenderSubmissionReceipt> receipt;
+    NetObjectReference<NetSenderSubmissionPayload> payload;
+    NetObjectReference<NetSenderSubmissionInput> input;
+    NetObjectPool<NetSenderSubmissionPayload>& payloadPool = control ? m_state->m_controlPayloadsPool : m_state->m_payloadsPool;
+    NetObjectPool<NetSenderSubmissionEntry>& entries = control ? m_state->m_controlsPool : m_state->m_framesPool;
+    int32_t result = payloadPool.create(payload, control ? m_state->m_controlBodies : m_state->m_bodies,
+        control ? m_state->m_controlBytes : m_state->m_bytes, frame.m_payload, frame.m_payloadSize);
+    if (result == NI_OK)
+    {
+        result = payload->m_status;
+    }
+    if (result == NI_OK && synchronous)
+    {
+        receipt = m_state->reserveReceipt(m_state->m_generation.load(), current + 5000, result);
+    }
+    if (result == NI_OK)
+    {
+        result = m_state->m_inputsPool.create(input, m_state->m_inputCount);
+    }
+    if (result == NI_OK)
+    {
+        result = entries.create(input->m_entry);
+    }
+    if (result == NI_OK)
+    {
+        input->m_kind = NET_SUBMIT_DATA;
+        input->m_entry->m_storage = input->m_entry.storage();
+        input->m_entry->m_pool = &entries;
+        input->m_entry->m_command.m_kind = NET_SUBMIT_DATA;
+        input->m_entry->m_command.m_generation = m_state->m_generation.load();
+        input->m_entry->m_command.m_id = id;
+        input->m_entry->m_command.m_frame = frame;
+        input->m_entry->m_command.m_frame.m_payload = nullptr;
+        input->m_payload = std::move(payload);
+        input->m_receipt = receipt;
+        count.fetch_add(1);
+        result = NetSenderSubmissionState::queueResult(m_state->m_incoming.tryPushAndFence(input, true, false));
+        if (result == NI_OK)
+        {
+            ticket = receipt ? receipt->m_ticket : 0;
+            m_state->wake();
+            return NI_OK;
+        }
+        count.fetch_sub(1);
+    }
+    m_state->rollbackReceipt(receipt);
+    return result;
 }
 
 void NetSenderSubmission::close(int32_t reason)
 {
-    {
-        NetSenderSubmissionGuard lock(m_state->m_gate);
-        m_state->m_ready = false;
-        if (!m_state->m_closing)
-        {
-            m_state->m_closing = true;
-            m_state->m_reason = reason;
-        }
-    }
-    if (m_state->m_gate.m_wake != nullptr)
-    {
-        m_state->m_gate.m_wake(m_state->m_gate.m_context);
-    }
+    m_state->requestClose(reason);
+    m_state->wake();
 }
 
 bool NetSenderSubmission::closeRequested(int32_t& reason) const
 {
-    NetSenderSubmissionGuard lock(m_state->m_gate);
-    reason = m_state->m_closing ? m_state->m_reason : 0;
-    return m_state->m_closing;
+    const uint64_t closed = m_state->m_closeRequest.load();
+    reason = closed == 0 ? 0 : static_cast<int32_t>(static_cast<uint32_t>(closed));
+    return closed != 0;
 }
 
 void NetSenderSubmission::state(uint64_t& generation, bool& ready) const
 {
-    NetSenderSubmissionGuard lock(m_state->m_gate);
-    generation = m_state->m_generation;
-    ready = m_state->m_ready && !m_state->m_closing;
+    generation = m_state->m_generation.load();
+    ready = m_state->m_ready.load() && m_state->m_closeRequest.load() == 0;
+    // 代次切换期间宁可报告未就绪，不把前代代次与后代就绪组合。
+    if (generation != m_state->m_generation.load())
+    {
+        generation = m_state->m_generation.load();
+        ready = false;
+    }
 }
 
 int32_t NetSenderSubmission::beginPoll()
 {
-    NetSenderSubmissionGuard lock(m_state->m_gate);
+    m_state->pump(true);
     if (m_state->m_takenKind != NET_SUBMIT_NONE)
     {
         return NI_INVALID_STATE;
@@ -342,6 +492,7 @@ int32_t NetSenderSubmission::beginPoll()
     if (++m_state->m_round == 0)
     {
         m_state->m_round = 1;
+        m_state->m_directAttempt = 0;
         for (NetSenderSubmissionEntry* entry = m_state->m_pending; entry != nullptr; entry = entry->m_nextPending)
         {
             entry->m_attempt = 0;
@@ -350,10 +501,151 @@ int32_t NetSenderSubmission::beginPoll()
     return NI_OK;
 }
 
+const NetInterfaceFrame* NetSenderSubmission::nextData()
+{
+    if (m_state->m_takenKind != NET_SUBMIT_NONE || m_state->m_requests != nullptr ||
+        m_state->m_receipts != nullptr || m_state->m_closeRequest.load(std::memory_order_acquire) != 0 ||
+        !m_state->m_ready.load(std::memory_order_acquire))
+    {
+        return nullptr;
+    }
+    if (m_state->m_pending == nullptr)
+    {
+        m_state->pump();
+    }
+    NetSenderSubmissionEntry* entry = m_state->m_pending;
+    if (m_state->m_closing || m_state->m_requests != nullptr || m_state->m_receipts != nullptr ||
+        m_state->m_draining != nullptr || entry == nullptr ||
+        entry->m_command.m_kind != NET_SUBMIT_DATA || entry->m_command.m_frame.m_kind != NI_DATA ||
+        entry->m_receipt != nullptr || entry->m_cancelTaken || entry->m_attempt == m_state->m_round)
+    {
+        return nullptr;
+    }
+    // 与next相同的唯一借用标记；回调关闭时retire仍须等finish再清理正文。
+    entry->m_attempt = m_state->m_round;
+    m_state->m_taken = entry;
+    m_state->m_takenKind = NET_SUBMIT_DATA;
+    return entry->m_pool == nullptr ? &static_cast<NetSenderSubmissionItem*>(entry->m_storage)->m_inlineFrame :
+        &entry->m_command.m_frame;
+}
+
+int32_t NetSenderSubmission::drainData(void* context, int32_t (*consumer)(void* context, const NetInterfaceFrame& frame),
+    uint32_t maximum, uint32_t byteBudget, uint32_t& messages, uint64_t& bytes)
+{
+    messages = 0;
+    bytes = 0;
+    if (consumer == nullptr)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
+    if (m_state->m_takenKind != NET_SUBMIT_NONE)
+    {
+        return NI_INVALID_STATE;
+    }
+    while (messages < maximum && bytes < byteBudget)
+    {
+        if (m_state->m_pending == nullptr && m_state->m_requests == nullptr && m_state->m_receipts == nullptr)
+        {
+            if (m_state->m_directCount == 0)
+            {
+                m_state->pump(true);
+            }
+            if (m_state->m_directCount != 0)
+            {
+                if (m_state->m_closeRequest.load(std::memory_order_acquire) != 0 ||
+                    !m_state->m_ready.load(std::memory_order_acquire) || m_state->m_directAttempt == m_state->m_round)
+                {
+                    break;
+                }
+                NetSenderSubmissionItem& item = m_state->m_inlineItems[m_state->m_directIndex];
+                NetInterfaceFrame& frame = item.m_inlineFrame;
+                frame.m_payload = frame.m_payloadSize == 0 ? nullptr : item.m_inlineBody;
+                const uint32_t size = frame.m_payloadSize;
+                m_state->m_directBorrowed = true;
+                m_state->m_takenKind = NET_SUBMIT_DATA;
+                m_state->m_directAttempt = m_state->m_round;
+                int32_t result = NI_INVALID_STATE;
+                try
+                {
+                    result = consumer(context, frame);
+                }
+                catch (...)
+                {
+                    // 未知接纳状态由调用方关闭会话；同一poll内不重新执行本条。
+                }
+                m_state->m_takenKind = NET_SUBMIT_NONE;
+                m_state->m_directBorrowed = false;
+                if (result == NI_OK)
+                {
+                    // 本项由当前owner独占，直接归还；不为每条DATA进入整批关闭清理路径。
+                    if (size != 0)
+                    {
+                        NetInterface::wipe(item.m_inlineBody, size);
+                        m_state->m_asyncReturnedBytes.store(
+                            m_state->m_asyncReturnedBytes.load(std::memory_order_relaxed) + size, std::memory_order_release);
+                    }
+                    frame.m_payloadSize = 0;
+                    if (++m_state->m_directIndex == m_state->m_directCount)
+                    {
+                        m_state->m_directIndex = m_state->m_directCount = 0;
+                    }
+                    m_state->m_directAttempt = 0;
+                    ++messages;
+                    bytes += size;
+                }
+                if (m_state->m_closeRequest.load(std::memory_order_acquire) != 0 ||
+                    !m_state->m_ready.load(std::memory_order_acquire))
+                {
+                    m_state->dropDirect();
+                }
+                if (result != NI_OK)
+                {
+                    return result;
+                }
+                continue;
+            }
+        }
+        const NetInterfaceFrame* frame = nextData();
+        if (frame == nullptr)
+        {
+            break;
+        }
+        const uint32_t size = frame->m_payloadSize;
+        int32_t result = NI_INVALID_STATE;
+        try
+        {
+            result = consumer(context, *frame);
+        }
+        catch (...)
+        {
+            // 未知接纳状态不重放；先结束借用，让调用方按错误关闭本代会话。
+        }
+        finish(result);
+        if (result != NI_OK)
+        {
+            return result;
+        }
+        ++messages;
+        bytes += size;
+    }
+    return NI_OK;
+}
+
 int32_t NetSenderSubmission::next(NetSenderSubmissionCommand& command)
 {
+    return next(command, false);
+}
+
+int32_t NetSenderSubmission::next(NetSenderSubmissionCommand& command, bool dataOnly)
+{
+    // 已导入的纯DATA前缀由owner独占，逐条取出不重复扫描跨线程队列和回收域。
+    // 请求/回执仍实时检查取消和超时；关闭使用原子意图，不能被待发前缀延后。
+    if (m_state->m_pending == nullptr || m_state->m_requests != nullptr ||
+        m_state->m_receipts != nullptr || m_state->m_closeRequest.load() != 0)
+    {
+        m_state->pump();
+    }
     std::memset(&command, 0, sizeof(command));
-    NetSenderSubmissionGuard lock(m_state->m_gate);
     if (m_state->m_takenKind != NET_SUBMIT_NONE)
     {
         return NI_INVALID_STATE;
@@ -375,7 +667,7 @@ int32_t NetSenderSubmission::next(NetSenderSubmissionCommand& command)
     {
         return NI_NEED_MORE;
     }
-    const uint64_t current = now();
+    const uint64_t current = m_state->m_requests != nullptr || m_state->m_receipts != nullptr ? now() : 0;
     m_state->expireFrames(current);
     for (NetSenderSubmissionEntry* entry = m_state->m_requests; entry != nullptr; entry = entry->m_nextRequest)
     {
@@ -383,6 +675,11 @@ int32_t NetSenderSubmission::next(NetSenderSubmissionCommand& command)
         if (!entry->m_cancelTaken && (entry->m_cancelled ||
             (!registered && current >= entry->m_command.m_started + entry->m_command.m_timeout)))
         {
+            if (dataOnly && registered)
+            {
+                // CANCEL使用协议控制队列；先交付前缀，不能越过已接纳的业务帧。
+                return NI_NEED_MORE;
+            }
             entry->m_cancelTaken = true;
             command = entry->m_command;
             command.m_kind = registered ? NET_SUBMIT_CANCEL : NET_SUBMIT_TERMINAL;
@@ -398,12 +695,20 @@ int32_t NetSenderSubmission::next(NetSenderSubmissionCommand& command)
         return NI_NEED_MORE;
     }
     const bool frame = entry->m_command.m_kind == NET_SUBMIT_DATA;
+    if (dataOnly && frame && entry->m_command.m_frame.m_kind != NI_DATA)
+    {
+        return NI_NEED_MORE;
+    }
     const bool send = frame || entry->m_phase == NET_SUBMISSION_REGISTERED;
     if (send && entry->m_attempt == m_state->m_round)
     {
         return NI_NEED_MORE;
     }
     command = entry->m_command;
+    if (entry->m_pool == nullptr)
+    {
+        command.m_frame = static_cast<NetSenderSubmissionItem*>(entry->m_storage)->m_inlineFrame;
+    }
     command.m_kind = frame ? NET_SUBMIT_DATA : send ? NET_SUBMIT_SEND : NET_SUBMIT_BEGIN;
     if (send)
     {
@@ -421,9 +726,44 @@ int32_t NetSenderSubmission::next(NetSenderSubmissionCommand& command)
 
 void NetSenderSubmission::finish(int32_t result)
 {
-    NetSenderSubmissionGuard lock(m_state->m_gate);
+    // drainData独占回调借用的结束点；外部重入finish不能提前擦除正在发送的正文。
+    if (m_state->m_directBorrowed)
+    {
+        return;
+    }
     NetSenderSubmissionEntry* entry = m_state->m_taken;
     const int32_t kind = m_state->m_takenKind;
+    // 普通内联DATA由owner工作区独占，无池租约或回执；成功时直接摘除FIFO首项。
+    // 回调已退休、非首项、同步票据及背压仍走通用路径，不能提前复用借用中的正文。
+    if (entry != nullptr && entry == m_state->m_pending && entry->m_pool == nullptr &&
+        entry->m_receipt == nullptr && kind == NET_SUBMIT_DATA && result == NI_OK &&
+        entry->m_phase != NET_SUBMISSION_RETIRED)
+    {
+        m_state->m_pending = entry->m_nextPending;
+        if (m_state->m_pending != nullptr)
+        {
+            m_state->m_pending->m_previousPending = nullptr;
+        }
+        else
+        {
+            m_state->m_pendingTail = nullptr;
+        }
+        NetInterface::wipe(entry->m_input, entry->m_size);
+        m_state->m_asyncReturnedBytes.store(m_state->m_asyncReturnedBytes.load(std::memory_order_relaxed) + entry->m_size,
+            std::memory_order_release);
+        static_cast<NetSenderSubmissionItem*>(entry->m_storage)->m_inlineFrame.m_payloadSize = 0;
+        entry->m_frameBudget = nullptr;
+        entry->m_input = nullptr;
+        entry->m_size = 0;
+        entry->m_phase = NET_SUBMISSION_RETIRED;
+        entry->m_previousPending = nullptr;
+        entry->m_nextPending = nullptr;
+        entry->m_pending = false;
+        --m_state->m_inlineOutstanding;
+        m_state->m_taken = nullptr;
+        m_state->m_takenKind = NET_SUBMIT_NONE;
+        return;
+    }
     if (entry != nullptr)
     {
         NetSenderSubmissionReceipt* receipt = entry->m_receipt;
@@ -469,13 +809,9 @@ void NetSenderSubmission::finish(int32_t result)
                 m_state->remove(entry);
                 m_state->clear(entry);
             }
-            else if (kind == NET_SUBMIT_DATA)
-            {
-                m_state->retire(entry);
-            }
         }
         m_state->m_taken = nullptr;
-        if (entry->m_phase == NET_SUBMISSION_RETIRED)
+        if (entry->m_phase == NET_SUBMISSION_RETIRED || (kind == NET_SUBMIT_DATA && result == NI_OK))
         {
             m_state->retire(entry);
         }
@@ -485,8 +821,8 @@ void NetSenderSubmission::finish(int32_t result)
 
 bool NetSenderSubmission::complete(uint64_t generation, uint64_t id, NetSenderSubmissionCommand& command)
 {
+    m_state->pump();
     std::memset(&command, 0, sizeof(command));
-    NetSenderSubmissionGuard lock(m_state->m_gate);
     NetSenderSubmissionEntry* entry = m_state->find(id);
     if (entry == nullptr || entry->m_command.m_generation != generation)
     {
@@ -498,13 +834,19 @@ bool NetSenderSubmission::complete(uint64_t generation, uint64_t id, NetSenderSu
 
 void NetSenderSubmission::disconnected(uint64_t generation)
 {
-    NetSenderSubmissionGuard lock(m_state->m_gate);
     if (generation < m_state->m_generation)
     {
         return;
     }
-    m_state->m_generation = generation;
     m_state->m_ready = false;
+    m_state->quiesce();
+    do
+    {
+        m_state->pump();
+    }
+    // 没有工作区借用时完整收敛已接纳入口；有借用时由finish后的owner轮次继续。
+    while (m_state->m_incoming.size() != 0 && m_state->m_inlineOutstanding == 0 && !m_state->m_directBorrowed);
+    m_state->m_generation = generation;
     for (NetSenderSubmissionReceipt* receipt = m_state->m_receipts; receipt != nullptr; receipt = receipt->m_next)
     {
         m_state->settle(receipt, NI_INVALID_STATE);
@@ -514,8 +856,8 @@ void NetSenderSubmission::disconnected(uint64_t generation)
 
 bool NetSenderSubmission::takeClosed(NetSenderSubmissionCommand& command)
 {
+    m_state->pump();
     std::memset(&command, 0, sizeof(command));
-    NetSenderSubmissionGuard lock(m_state->m_gate);
     if (m_state->m_requests == nullptr)
     {
         return false;
@@ -526,26 +868,32 @@ bool NetSenderSubmission::takeClosed(NetSenderSubmissionCommand& command)
 
 bool NetSenderSubmission::idle() const
 {
-    NetSenderSubmissionGuard lock(m_state->m_gate);
-    return m_state->m_requests == nullptr && m_state->m_pending == nullptr && m_state->m_receipts == nullptr &&
-        m_state->m_takenKind == NET_SUBMIT_NONE;
+    // 提交者退出前入口已发布；入口为空且owner不持有动作时，不另维护逐帧原子计数。
+    // idle是owner快照；生命周期修改仍须先quiesce并由外部阻止新的调用。
+    return (m_state->m_admission.load(std::memory_order_acquire) & 0x7fffffffU) == 0 &&
+        m_state->m_incoming.size() == 0 &&
+        m_state->m_directCount == 0 &&
+        m_state->m_inputCount.load() == 0 && m_state->m_requestCount.load() == 0 && m_state->m_frameCount.load() == 0 &&
+        m_state->m_controlCount.load() == 0 && m_state->m_receiptCount.load() == 0 &&
+        m_state->m_requests == nullptr && m_state->m_pending == nullptr && m_state->m_takenKind == NET_SUBMIT_NONE;
 }
 
 uint32_t NetSenderSubmission::queuedBytes() const
 {
-    NetSenderSubmissionGuard lock(m_state->m_gate);
-    return m_state->m_bytes;
+    // 先读完成侧；其release保证之前接纳记录的原子增量对本次读取可见。
+    const uint64_t returned = m_state->m_asyncReturnedBytes.load(std::memory_order_acquire);
+    const uint64_t bytes = m_state->m_bytes.load() + (m_state->m_asyncBytes.load(std::memory_order_acquire) - returned);
+    return bytes > UINT32_MAX ? UINT32_MAX : static_cast<uint32_t>(bytes);
 }
 
 bool NetSenderSubmission::synchronousPending() const
 {
-    NetSenderSubmissionGuard lock(m_state->m_gate);
-    return m_state->pendingReceipts();
+    return m_state->m_pendingReceiptCount.load() != 0;
 }
 
 void NetSenderSubmission::advanceSynchronous(int32_t outputState)
 {
-    NetSenderSubmissionGuard lock(m_state->m_gate);
+    m_state->pump();
     if (m_state->m_takenKind != NET_SUBMIT_NONE)
     {
         return;
@@ -561,6 +909,7 @@ void NetSenderSubmission::advanceSynchronous(int32_t outputState)
         {
             continue;
         }
+        NetExecution::deadline(receipt->m_deadline, current);
         int32_t result = NI_READY;
         if (m_state->m_closing || !m_state->m_ready || receipt->m_generation != m_state->m_generation)
         {
@@ -584,6 +933,7 @@ void NetSenderSubmission::advanceSynchronous(int32_t outputState)
                 m_state->m_ready = false;
                 m_state->m_closing = true;
                 m_state->m_reason = result;
+                m_state->requestClose(result);
             }
         }
     }
@@ -599,346 +949,65 @@ void NetSenderSubmission::advanceSynchronous(int32_t outputState)
 
 int32_t NetSenderSubmission::synchronousResult(uint64_t ticket, bool consume)
 {
-    NetSenderSubmissionGuard lock(m_state->m_gate);
-    NetSenderSubmissionReceipt** link = &m_state->m_receipts;
-    while (*link != nullptr && (*link)->m_ticket != ticket)
+    NetObjectReference<NetSenderSubmissionReceipt> receipt;
+    if (!m_state->m_tickets.get(ticket, receipt))
     {
-        link = &(*link)->m_next;
+        decltype(m_state->m_tickets)::Snapshot snapshot;
+        const LockFreeHashMapResult found = m_state->m_tickets.find(ticket, snapshot);
+        if (found.m_status != LockFreeHashMapOk)
+        {
+            if (found.m_status == LockFreeHashMapNotFound)
+            {
+                return NI_NOT_FOUND;
+            }
+            m_state->requestClose(NI_NO_MEMORY);
+            m_state->wake();
+            return NI_NO_MEMORY;
+        }
+        receipt = *snapshot.m_value;
     }
-    if (*link == nullptr)
+    if (receipt->m_consumed.load())
     {
         return NI_NOT_FOUND;
     }
-    NetSenderSubmissionReceipt* receipt = *link;
-    const int32_t result = receipt->m_result;
+    const int32_t result = receipt->m_result.load(std::memory_order_acquire);
     if (consume && result != NI_READY)
     {
-        *link = receipt->m_next;
-        if (receipt->m_entry != nullptr)
+        if (receipt->m_consumed.exchange(true))
         {
-            receipt->m_entry->m_receipt = nullptr;
+            return NI_NOT_FOUND;
         }
-        --m_state->m_receiptCount;
-        delete receipt;
+        m_state->m_receiptCount.fetch_sub(1);
+        m_state->wake();
     }
     return result;
 }
 
-// NET_SENDER_SUBMISSION_UNIT_BEGIN
-// #include <cstdio>
-//  #include <vector>
-//
-// #include <chrono>
-// #if defined(_MSC_VER) && defined(_DEBUG)
-// #include <crtdbg.h>
-// #endif
-//
-// int main(int argc, const char* argv[])
-// {
-//     if (argc == 2 && std::strcmp(argv[1], "--benchmark") == 0)
-//     {
-//         NetSenderSubmission queue;
-//         if (queue.start(1, 101) != NI_OK || queue.ready(1, 128, 4096) != NI_OK)
-//         {
-//             return 1;
-//         }
-//         uint8_t bytes[128] = {};
-//         std::memset(bytes, 0x6a, sizeof(bytes));
-//         NetInterfaceFrame frame = {};
-//         frame.m_kind = NI_DATA;
-//         frame.m_productId = 101;
-//         frame.m_requestId = 1;
-//         frame.m_payload = bytes;
-//         frame.m_payloadSize = sizeof(bytes);
-//         NetSenderSubmissionCommand command = {}, metadata = {};
-//         const uint32_t rounds = 20000;
-//         uint64_t received = 0;
-//         const auto started = std::chrono::steady_clock::now();
-//         for (uint32_t round = 0; round < rounds; ++round)
-//         {
-//             uint64_t ids[8] = {};
-//             for (uint32_t index = 0; index < 8; ++index)
-//             {
-//                 if (queue.begin(101, 77, 5000, ids[index]) != NI_OK ||
-//                     queue.send(ids[index], bytes, sizeof(bytes)) != NI_OK || queue.data(frame) != NI_OK)
-//                 {
-//                     return 2;
-//                 }
-//             }
-//             if (queue.beginPoll() != NI_OK)
-//             {
-//                 return 3;
-//             }
-//             for (uint32_t index = 0; index < 8; ++index)
-//             {
-//                 if (queue.next(command) != NI_READY || command.m_kind != NET_SUBMIT_BEGIN || command.m_id != ids[index])
-//                 {
-//                     return 4;
-//                 }
-//                 queue.finish(NI_OK);
-//                 if (queue.next(command) != NI_READY || command.m_kind != NET_SUBMIT_SEND || command.m_id != ids[index] ||
-//                     command.m_size != sizeof(bytes) || std::memcmp(command.m_bytes, bytes, sizeof(bytes)) != 0)
-//                 {
-//                     return 5;
-//                 }
-//                 queue.finish(NI_OK);
-//                 if (!queue.complete(1, ids[index], metadata) || queue.next(command) != NI_READY || command.m_kind != NET_SUBMIT_DATA ||
-//                     command.m_frame.m_payloadSize != sizeof(bytes) || std::memcmp(command.m_frame.m_payload, bytes, sizeof(bytes)) != 0)
-//                 {
-//                     return 6;
-//                 }
-//                 queue.finish(NI_OK);
-//                 received += 2;
-//             }
-//             if (!queue.idle() || queue.queuedBytes() != 0)
-//             {
-//                 return 7;
-//             }
-//         }
-//         const int64_t elapsed = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count();
-//         if (received != static_cast<uint64_t>(rounds) * 16)
-//         {
-//             return 8;
-//         }
-//         std::printf("SUBMISSION_BENCHMARK messages=%llu microseconds=%lld PASS\n",
-//             static_cast<unsigned long long>(received), static_cast<long long>(elapsed));
-//         return 0;
-//     }
-//     uint32_t checks = 0;
-//  #define SUBMIT_CHECK(value) { ++checks; if (!(value)) { std::printf("FAIL line=%u %s\n", static_cast<uint32_t>(__LINE__), #value); return 1; } }
-//      NetSenderSubmission queue;
-//      uint64_t low = 0, high = 0, cancelled = 0;
-//      SUBMIT_CHECK(queue.start(1, 101) == NI_OK && queue.ready(1, 3, 65536) == NI_OK);
-//      SUBMIT_CHECK(queue.begin(0, 700, 1000, low) == NI_INVALID_ARGUMENT && low == 0);
-//      SUBMIT_CHECK(queue.begin(101, 700, 10000, low) == NI_OK);
-//      SUBMIT_CHECK(queue.begin(101, 700, 10000, high) == NI_OK && high > low);
-//      SUBMIT_CHECK(queue.begin(101, 700, 10000, cancelled) == NI_OK);
-//      uint64_t rejected = 1;
-//      SUBMIT_CHECK(queue.begin(101, 700, 1000, rejected) == NI_LIMIT_EXCEEDED && rejected == 0);
-//      uint8_t byte = 7;
-//      SUBMIT_CHECK(queue.send(high, &byte, 1) == NI_OK);
-//      NetInterfaceFrame frame = {};
-//      frame.m_kind = NI_DATA; frame.m_productId = 101; frame.m_requestId = 7001; frame.m_payload = &byte; frame.m_payloadSize = 1;
-//      SUBMIT_CHECK(queue.data(frame) == NI_OK);
-//      SUBMIT_CHECK(queue.send(low, &byte, 1) == NI_OK && queue.send(low, &byte, 1) == NI_INVALID_STATE);
-//      byte = 99;
-//      SUBMIT_CHECK(queue.cancel(cancelled) == NI_OK && queue.cancel(cancelled) == NI_NOT_FOUND);
-//      NetSenderSubmissionCommand command = {}, terminal = {};
-//      SUBMIT_CHECK(queue.beginPoll() == NI_OK && queue.next(command) == NI_READY && command.m_kind == NET_SUBMIT_TERMINAL && command.m_id == cancelled);
-//      SUBMIT_CHECK(queue.complete(1, cancelled, terminal)); queue.finish(NI_OK);
-//      SUBMIT_CHECK(queue.next(command) == NI_READY && command.m_kind == NET_SUBMIT_BEGIN && command.m_id == high); queue.finish(NI_OK);
-//      SUBMIT_CHECK(queue.next(command) == NI_READY && command.m_kind == NET_SUBMIT_SEND && command.m_id == high && command.m_bytes[0] == 7);
-//      queue.finish(NI_LIMIT_EXCEEDED);
-//      SUBMIT_CHECK(queue.next(command) == NI_NEED_MORE);
-//      SUBMIT_CHECK(queue.beginPoll() == NI_OK && queue.next(command) == NI_READY && command.m_id == high);
-//      queue.finish(NI_OK);
-//      SUBMIT_CHECK(queue.next(command) == NI_READY && command.m_kind == NET_SUBMIT_DATA && command.m_frame.m_payload[0] == 7); queue.finish(NI_OK);
-//      SUBMIT_CHECK(queue.next(command) == NI_READY && command.m_kind == NET_SUBMIT_BEGIN && command.m_id == low); queue.finish(NI_OK);
-//      SUBMIT_CHECK(queue.next(command) == NI_READY && command.m_kind == NET_SUBMIT_SEND && command.m_id == low && command.m_bytes[0] == 7);
-//      SUBMIT_CHECK(queue.complete(1, low, terminal) && command.m_bytes[0] == 7); queue.finish(NI_OK);
-//      SUBMIT_CHECK(queue.complete(1, high, terminal) && queue.idle() && queue.queuedBytes() == 0);
-//      for (uint32_t index = 0; index < 64; ++index) { SUBMIT_CHECK(queue.data(frame) == NI_OK); }
-//      SUBMIT_CHECK(queue.data(frame) == NI_LIMIT_EXCEEDED);
-//      frame.m_kind = NI_DATA_ACK;
-//      for (uint32_t index = 0; index < 16; ++index) { SUBMIT_CHECK(queue.data(frame) == NI_OK); }
-//      SUBMIT_CHECK(queue.data(frame) == NI_LIMIT_EXCEEDED);
-//      queue.close(0); queue.disconnected(1);
-//      SUBMIT_CHECK(queue.idle() && queue.queuedBytes() == 0);
-//      SUBMIT_CHECK(queue.start(2, 101) == NI_OK && queue.ready(2, 3, 65536) == NI_OK);
-//      SUBMIT_CHECK(queue.begin(101, 700, 10000, low) == NI_OK);
-//      uint64_t ticket = 0;
-//      SUBMIT_CHECK(queue.sendSynchronous(low, &byte, 1, ticket) == NI_OK);
-//      SUBMIT_CHECK(queue.beginPoll() == NI_OK && queue.next(command) == NI_READY && command.m_kind == NET_SUBMIT_BEGIN); queue.finish(NI_OK);
-//      SUBMIT_CHECK(queue.next(command) == NI_READY && command.m_kind == NET_SUBMIT_SEND); queue.finish(NI_OK);
-//      queue.advanceSynchronous(NI_READY);
-//      SUBMIT_CHECK(queue.synchronousResult(ticket, false) == NI_READY && queue.next(command) == NI_NEED_MORE);
-//      queue.advanceSynchronous(NI_OK);
-//      SUBMIT_CHECK(queue.synchronousResult(ticket, true) == NI_OK && queue.complete(2, low, terminal) && queue.idle());
-//      NetSenderSubmission bytes;
-//      SUBMIT_CHECK(bytes.start(1, 101) == NI_OK && bytes.ready(1, 4, 65536) == NI_OK);
-//      std::vector<uint8_t> big(1048560, 7);
-//      uint64_t ids[3] = {};
-//      for (uint32_t index = 0; index < 3; ++index) { SUBMIT_CHECK(bytes.begin(101, 700, 10000, ids[index]) == NI_OK); }
-//      SUBMIT_CHECK(bytes.send(ids[0], big.data(), static_cast<uint32_t>(big.size())) == NI_OK);
-//      SUBMIT_CHECK(bytes.send(ids[1], big.data(), static_cast<uint32_t>(big.size())) == NI_OK);
-//      uint8_t small[64] = {};
-//      SUBMIT_CHECK(bytes.send(ids[2], small, sizeof(small)) == NI_LIMIT_EXCEEDED);
-//      SUBMIT_CHECK(bytes.cancel(ids[0]) == NI_OK && bytes.beginPoll() == NI_OK);
-//      SUBMIT_CHECK(bytes.next(command) == NI_READY && command.m_kind == NET_SUBMIT_TERMINAL && bytes.complete(1, ids[0], terminal)); bytes.finish(NI_OK);
-//      SUBMIT_CHECK(bytes.send(ids[2], small, sizeof(small)) == NI_OK);
-//      bytes.close(0); bytes.disconnected(1);
-//      while (bytes.takeClosed(terminal)) {}
-//      SUBMIT_CHECK(bytes.idle() && bytes.queuedBytes() == 0);
-//
-//     NetSenderSubmission receipts;
-//     SUBMIT_CHECK(receipts.start(1, 101) == NI_OK && receipts.ready(1, 128, 65536) == NI_OK);
-//     uint64_t saved[128] = {};
-//     frame.m_kind = NI_DATA;
-//     for (uint32_t index = 0; index < 128; ++index)
-//     {
-//         SUBMIT_CHECK(receipts.dataSynchronous(frame, saved[index]) == NI_OK);
-//         SUBMIT_CHECK(receipts.beginPoll() == NI_OK && receipts.next(command) == NI_READY);
-//         receipts.finish(NI_OK);
-//         receipts.advanceSynchronous(NI_OK);
-//         SUBMIT_CHECK(receipts.synchronousResult(saved[index], false) == NI_OK && receipts.queuedBytes() == 0);
-//     }
-//     SUBMIT_CHECK(receipts.dataSynchronous(frame, ticket) == NI_LIMIT_EXCEEDED && ticket == 0);
-//     SUBMIT_CHECK(receipts.start(2, 101) == NI_INVALID_STATE);
-//     // 自动恢复允许保留已完成回执；慢等待者不能阻止其他生产者继续连接。
-//     SUBMIT_CHECK(receipts.ready(2, 128, 65536) == NI_OK);
-//     SUBMIT_CHECK(receipts.synchronousResult(saved[127], false) == NI_OK);
-//     for (uint32_t index = 128; index != 0; --index)
-//     {
-//         SUBMIT_CHECK(receipts.synchronousResult(saved[index - 1], true) == NI_OK);
-//         SUBMIT_CHECK(receipts.synchronousResult(saved[index - 1], true) == NI_NOT_FOUND);
-//     }
-//     SUBMIT_CHECK(receipts.idle() && receipts.dataSynchronous(frame, ticket) == NI_OK && ticket > saved[127]);
-//     SUBMIT_CHECK(receipts.ready(3, 128, 65536) == NI_PROTOCOL_ERROR);
-//     SUBMIT_CHECK(receipts.beginPoll() == NI_OK && receipts.next(command) == NI_READY);
-//     receipts.disconnected(2);
-//     SUBMIT_CHECK(command.m_frame.m_payloadSize == 1 && command.m_frame.m_payload[0] == 99);
-//     SUBMIT_CHECK(receipts.synchronousResult(ticket, true) == NI_INVALID_STATE);
-//     receipts.finish(NI_OK);
-//     SUBMIT_CHECK(receipts.idle() && receipts.queuedBytes() == 0);
-//     SUBMIT_CHECK(receipts.next(command) == NI_NEED_MORE);
-//
-//     NetSenderSubmission cancellation;
-//     SUBMIT_CHECK(cancellation.start(1, 101) == NI_OK && cancellation.ready(1, 128, 4096) == NI_OK);
-//     SUBMIT_CHECK(cancellation.begin(101, 0, 5000, low) == NI_OK);
-//     SUBMIT_CHECK(cancellation.send(low, &byte, 1) == NI_OK && cancellation.data(frame) == NI_OK);
-//     SUBMIT_CHECK(cancellation.beginPoll() == NI_OK && cancellation.next(command) == NI_READY && command.m_kind == NET_SUBMIT_BEGIN);
-//     cancellation.finish(NI_OK);
-//     SUBMIT_CHECK(cancellation.cancel(low) == NI_OK);
-//     SUBMIT_CHECK(cancellation.next(command) == NI_READY && command.m_kind == NET_SUBMIT_CANCEL);
-//     cancellation.finish(NI_OK);
-//     SUBMIT_CHECK(cancellation.next(command) == NI_READY && command.m_kind == NET_SUBMIT_DATA);
-//     cancellation.finish(NI_OK);
-//     SUBMIT_CHECK(cancellation.complete(1, low, terminal) && cancellation.idle());
-//     SUBMIT_CHECK(cancellation.begin(101, 0, 5000, low) == NI_OK);
-//     const uint8_t* wrapped = reinterpret_cast<const uint8_t*>(UINTPTR_MAX - 3);
-//     SUBMIT_CHECK(cancellation.send(low, wrapped, 8) == NI_INVALID_ARGUMENT);
-//     frame.m_payload = wrapped;
-//     frame.m_payloadSize = 8;
-//     SUBMIT_CHECK(cancellation.data(frame) == NI_INVALID_ARGUMENT);
-//     SUBMIT_CHECK(cancellation.sendSynchronous(low, &byte, 1, ticket) == NI_OK);
-//     SUBMIT_CHECK(cancellation.beginPoll() == NI_OK && cancellation.next(command) == NI_READY);
-//     cancellation.finish(NI_OK);
-//     SUBMIT_CHECK(cancellation.next(command) == NI_READY && command.m_kind == NET_SUBMIT_SEND);
-//     cancellation.finish(NI_OK);
-//     cancellation.advanceSynchronous(NI_NEED_MORE);
-//     SUBMIT_CHECK(cancellation.synchronousResult(ticket, false) == NI_READY);
-//     cancellation.advanceSynchronous(NI_OK);
-//     SUBMIT_CHECK(cancellation.synchronousResult(ticket, true) == NI_OK && cancellation.complete(1, low, terminal));
-//
-//     // 反向预留正文，与DATA和ACK混排；独立预期只取成功接纳的调用顺序。
-//     NetSenderSubmission mixed;
-//     SUBMIT_CHECK(mixed.start(1, 101) == NI_OK && mixed.ready(1, 128, 4096) == NI_OK);
-//     for (uint32_t round = 0; round < 512; ++round)
-//     {
-//         uint64_t requests[8] = {};
-//         uint8_t content[32] = {};
-//         for (uint32_t index = 0; index < 8; ++index)
-//         {
-//             SUBMIT_CHECK(mixed.begin(101, round, 5000, requests[index]) == NI_OK);
-//         }
-//         for (uint32_t index = 0; index < 8; ++index)
-//         {
-//             std::memset(content, static_cast<int>(index + 1), sizeof(content));
-//             SUBMIT_CHECK(mixed.send(requests[7 - index], content, sizeof(content)) == NI_OK);
-//             frame.m_kind = index % 2 == 0 ? NI_DATA : NI_DATA_ACK;
-//             frame.m_requestId = index + 1;
-//             frame.m_payload = content;
-//             frame.m_payloadSize = sizeof(content);
-//             SUBMIT_CHECK(mixed.data(frame) == NI_OK);
-//         }
-//         std::memset(content, 0, sizeof(content));
-//         SUBMIT_CHECK(mixed.beginPoll() == NI_OK);
-//         for (uint32_t index = 0; index < 8; ++index)
-//         {
-//             SUBMIT_CHECK(mixed.next(command) == NI_READY && command.m_kind == NET_SUBMIT_BEGIN && command.m_id == requests[7 - index]);
-//             mixed.finish(NI_OK);
-//             SUBMIT_CHECK(mixed.next(command) == NI_READY && command.m_kind == NET_SUBMIT_SEND);
-//             if ((round + index) % 3 == 0)
-//             {
-//                 mixed.finish(NI_LIMIT_EXCEEDED);
-//                 SUBMIT_CHECK(mixed.next(command) == NI_NEED_MORE);
-//                 SUBMIT_CHECK(mixed.beginPoll() == NI_OK && mixed.next(command) == NI_READY && command.m_kind == NET_SUBMIT_SEND);
-//             }
-//             std::memset(content, static_cast<int>(index + 1), sizeof(content));
-//             SUBMIT_CHECK(command.m_id == requests[7 - index] && command.m_size == sizeof(content));
-//             SUBMIT_CHECK(std::memcmp(command.m_bytes, content, sizeof(content)) == 0);
-//             // 模拟协议调用尚未返回时先回报唯一终态。
-//             SUBMIT_CHECK(mixed.complete(1, command.m_id, terminal));
-//             SUBMIT_CHECK(std::memcmp(command.m_bytes, content, sizeof(content)) == 0);
-//             mixed.finish(NI_OK);
-//             SUBMIT_CHECK(mixed.next(command) == NI_READY && command.m_kind == NET_SUBMIT_DATA);
-//             SUBMIT_CHECK(command.m_frame.m_kind == (index % 2 == 0 ? NI_DATA : NI_DATA_ACK));
-//             SUBMIT_CHECK(command.m_frame.m_requestId == index + 1 && command.m_frame.m_payloadSize == sizeof(content));
-//             SUBMIT_CHECK(std::memcmp(command.m_frame.m_payload, content, sizeof(content)) == 0);
-//             mixed.finish(NI_OK);
-//         }
-//         SUBMIT_CHECK(mixed.next(command) == NI_NEED_MORE && mixed.idle() && mixed.queuedBytes() == 0);
-//     }
-//
-// // 在每个借用阶段退出，独立验证请求、流帧、未读回执均由所属模块回收。
-// #if defined(_MSC_VER) && defined(_DEBUG)
-//     _CrtMemState heapBefore = {}, heapAfter = {};
-//     _CrtMemCheckpoint(&heapBefore);
-// #endif
-//     for (uint32_t round = 0; round < 1024; ++round)
-//     {
-//         NetSenderSubmission ending;
-//         uint8_t owned[256] = {};
-//         std::memset(owned, 0x3d, sizeof(owned));
-//         SUBMIT_CHECK(ending.start(1, 101) == NI_OK && ending.ready(1, 128, 4096) == NI_OK);
-//         SUBMIT_CHECK(ending.begin(101, 11, 5000, low) == NI_OK);
-//         const uint32_t size = round % 4 == 0 ? 0 : sizeof(owned);
-//         SUBMIT_CHECK(ending.sendSynchronous(low, size == 0 ? nullptr : owned, size, ticket) == NI_OK);
-//         frame.m_kind = round % 2 == 0 ? NI_DATA : NI_DATA_ACK;
-//         frame.m_payload = owned;
-//         frame.m_payloadSize = sizeof(owned);
-//         SUBMIT_CHECK(ending.data(frame) == NI_OK);
-//         SUBMIT_CHECK(ending.beginPoll() == NI_OK && ending.next(command) == NI_READY && command.m_kind == NET_SUBMIT_BEGIN);
-//         ending.finish(NI_OK);
-//         SUBMIT_CHECK(ending.next(command) == NI_READY && command.m_kind == NET_SUBMIT_SEND);
-//         SUBMIT_CHECK(command.m_size == size && (size == 0 ? command.m_bytes == nullptr : std::memcmp(command.m_bytes, owned, size) == 0));
-//         if (round % 4 == 0)
-//         {
-//             ending.disconnected(1);
-//             SUBMIT_CHECK(ending.complete(1, low, terminal));
-//             // 模拟外层异常兜底释放，故意保留当前借用和未读失败回执。
-//         }
-//         else if (round % 4 == 1)
-//         {
-//             SUBMIT_CHECK(ending.complete(1, low, terminal));
-//             ending.finish(NI_OK);
-//             ending.advanceSynchronous(NI_OK);
-//             SUBMIT_CHECK(ending.synchronousResult(ticket, false) == NI_OK);
-//         }
-//         else if (round % 4 == 2)
-//         {
-//             ending.close(NI_CANCELLED);
-//             ending.finish(NI_LIMIT_EXCEEDED);
-//         }
-//         else
-//         {
-//             ending.finish(NI_OK);
-//             ending.advanceSynchronous(NI_OK);
-//             SUBMIT_CHECK(ending.synchronousResult(ticket, true) == NI_OK);
-//             SUBMIT_CHECK(ending.next(command) == NI_READY && command.m_kind == NET_SUBMIT_DATA);
-//             ending.finish(NI_LIMIT_EXCEEDED);
-//         }
-//     }
-// #if defined(_MSC_VER) && defined(_DEBUG)
-//     _CrtMemCheckpoint(&heapAfter);
-//     SUBMIT_CHECK(heapAfter.lCounts[_NORMAL_BLOCK] == heapBefore.lCounts[_NORMAL_BLOCK]);
-//     SUBMIT_CHECK(heapAfter.lSizes[_NORMAL_BLOCK] == heapBefore.lSizes[_NORMAL_BLOCK]);
-//     SUBMIT_CHECK(heapAfter.lCounts[_CLIENT_BLOCK] == heapBefore.lCounts[_CLIENT_BLOCK]);
-//     SUBMIT_CHECK(heapAfter.lSizes[_CLIENT_BLOCK] == heapBefore.lSizes[_CLIENT_BLOCK]);
-//     std::printf("SUBMISSION_CLEANUP cycles=1024 live_blocks_delta=0 live_bytes_delta=0\n");
-// #endif
-//     std::printf("NetSenderSubmission FIFO and lifetime checks=%u PASS\n", checks);
-//      return 0;
-//  #undef SUBMIT_CHECK
-//  }
-// NET_SENDER_SUBMISSION_UNIT_END
+int32_t NetSenderSubmission::observeSynchronous(uint64_t ticket, const std::shared_ptr<NetSenderSubmissionSignal>& signal)
+{
+    if (!signal) { return NI_INVALID_ARGUMENT; }
+    NetObjectReference<NetSenderSubmissionReceipt> receipt;
+    if (!m_state->m_tickets.get(ticket, receipt))
+    {
+        decltype(m_state->m_tickets)::Snapshot snapshot;
+        const LockFreeHashMapResult found = m_state->m_tickets.find(ticket, snapshot);
+        if (found.m_status != LockFreeHashMapOk)
+        {
+            return found.m_status == LockFreeHashMapNotFound ? NI_NOT_FOUND : NI_NO_MEMORY;
+        }
+        receipt = *snapshot.m_value;
+    }
+    if (receipt->m_consumed.load(std::memory_order_acquire)) { return NI_NOT_FOUND; }
+    if ((receipt->m_signalState.fetch_or(1, std::memory_order_acq_rel) & 1) != 0)
+    {
+        return NI_INVALID_STATE;
+    }
+    receipt->m_signal = signal;
+    // 同一原子字上的RMW形成顺序：后到者看到另一位，恰好承担一次通知。
+    if ((receipt->m_signalState.fetch_or(2, std::memory_order_acq_rel) & 4) != 0)
+    {
+        try { signal->notify(); }
+        catch (...) { /* 等待者必须始终以票据状态为准。 */ }
+    }
+    return NI_OK;
+}

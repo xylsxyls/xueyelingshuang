@@ -33,87 +33,54 @@ fi
 librariesrely+=($'project\tCompress\t'"$Compress_dlllib")
 
 #--------------------------------------------------------------------
-ProtoMessage_bit=$1
-ProtoMessage_dlllib=$2
-ProtoMessage_debugRelease=$3
-ProtoMessage_allSame=$4
+ProtoMessageManager_bit=$1
+ProtoMessageManager_dlllib=$2
+ProtoMessageManager_debugRelease=$3
+ProtoMessageManager_allSame=$4
 if [[ $4 != only ]]; then
-    "$CLOUD_REBUILD" ProtoMessage "$ProtoMessage_bit" "$ProtoMessage_dlllib" "$ProtoMessage_debugRelease" "$ProtoMessage_allSame"
+    "$CLOUD_REBUILD" ProtoMessageManager "$ProtoMessageManager_bit" "$ProtoMessageManager_dlllib" "$ProtoMessageManager_debugRelease" "$ProtoMessageManager_allSame"
 fi
-librariesrely+=($'project\tProtoMessage\t'"$ProtoMessage_dlllib")
+librariesrely+=($'project\tProtoMessageManager\t'"$ProtoMessageManager_dlllib")
 
-# 交叉编译按目标选择已准备SDK，不把宿主平台归档用于手机或Apple目标
-SHELL_FOLDER=$(cd "$(dirname "$0")" && pwd)
-xueyelingshuang=$SHELL_FOLDER/../../..
-thirdpartylib="mbedtls"
-thirdpartylibname="mbedtls"
-sdkpath="${CLOUD_REBUILD_SDK_ROOT:-$xueyelingshuang}"
-native_target="${CMAKE_SYSTEM_NAME:-}"
-if [[ -z "$native_target" && "${CMAKE_TOOLCHAIN_FILE:-}" == *android.toolchain.cmake ]]; then
-    native_target=Android
+#--------------------------------------------------------------------
+CEncodeDecode_bit=$1
+CEncodeDecode_dlllib=$2
+CEncodeDecode_debugRelease=$3
+CEncodeDecode_allSame=$4
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" CEncodeDecode "$CEncodeDecode_bit" "$CEncodeDecode_dlllib" "$CEncodeDecode_debugRelease" "$CEncodeDecode_allSame"
 fi
-if [[ -z "$native_target" && "${CMAKE_OSX_SYSROOT:-}" == *iphone* ]]; then
-    native_target=iOS
-fi
-if [[ -z "$native_target" ]]; then
-    case "$OSTYPE" in
-        linux*) native_target=Linux ;;
-        darwin*) native_target=Darwin ;;
-        msys*|cygwin*|win32*) native_target=Windows ;;
-    esac
-fi
+librariesrely+=($'project\tCEncodeDecode\t'"$CEncodeDecode_dlllib")
 
-if [[ $1 == wasm32 || $1 == wasm64 ]]; then
-    thirdpartybit=${1#wasm}
-    thirdpartyarchive="lib${thirdpartylibname}${thirdpartybit}.a"
-    thirdpartylibrary="wasm/$thirdpartyarchive"
-    thirdpartyheaders="${thirdpartylib}wasm"
-else
-    thirdpartybit=$1
-    case "$native_target" in
-        Windows)
-            thirdpartyarchive="${thirdpartylibname}static${thirdpartybit}.lib"
-            thirdpartylibrary="$thirdpartyarchive"
-            thirdpartyheaders="${thirdpartylib}windows"
-            if [[ $3 == debug ]]; then
-                thirdpartyarchive="${thirdpartylibname}static${thirdpartybit}d.lib"
-                thirdpartylibrary="MD/$thirdpartyarchive"
-            fi
-            ;;
-        Linux)
-            thirdpartyarchive="lib${thirdpartylibname}static${thirdpartybit}.a"
-            thirdpartylibrary="$thirdpartyarchive"
-            thirdpartyheaders="${thirdpartylib}linux"
-            ;;
-        Darwin|iOS|Android)
-            thirdpartyarchive="lib${thirdpartylibname}static${thirdpartybit}.a"
-            ;;
-        *) echo "Unsupported native target: $native_target" >&2; false ;;
-    esac
-fi
 
-if [[ -n "${thirdpartylibrary:-}" ]]; then
-    thirdpartyinclude="$xueyelingshuang/tools/$thirdpartylib/include/$thirdpartyheaders"
-    thirdpartysource="$xueyelingshuang/tools/$thirdpartylib/lib/$thirdpartylibrary"
-    if [[ -f "$thirdpartysource" && -f "$thirdpartyinclude/mbedtls_sdk_config.h" ]]; then
-        mkdir -p "$sdkpath/include/$thirdpartylib" "$sdkpath/lib"
-        cp -Rf "$thirdpartyinclude/." "$sdkpath/include/$thirdpartylib/"
-        cp -f "$thirdpartysource" "$sdkpath/lib/$thirdpartyarchive"
-    else
-        echo "Missing prepared $thirdpartylib SDK: $thirdpartysource" >&2
-        false
-    fi
-else
-    # 尚无仓库预编译包的目标，由调用方提前在独立SDK中准备同目标的头与库
-    if [[ ! -f "$sdkpath/include/$thirdpartylib/mbedtls_sdk_config.h" || ! -f "$sdkpath/lib/$thirdpartyarchive" ]]; then
-        echo "Missing prepared $native_target $thirdpartylib SDK in $sdkpath" >&2
-        false
-    fi
+#--------------------------------------------------------------------
+LockFreeQueue_bit=$1
+LockFreeQueue_dlllib=$2
+LockFreeQueue_debugRelease=$3
+LockFreeQueue_allSame=$4
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" LockFreeQueue "$LockFreeQueue_bit" "$LockFreeQueue_dlllib" "$LockFreeQueue_debugRelease" "$LockFreeQueue_allSame"
 fi
-if [[ $1 == wasm32 || $1 == wasm64 ]]; then
-    librariesrely+=($'vendor\t'"tools/$thirdpartylib/lib/$thirdpartylibrary")
-else
-    librariesrely+=($'link\t'"$thirdpartyarchive")
+librariesrely+=($'project\tLockFreeQueue\t'"$LockFreeQueue_dlllib")
+
+#--------------------------------------------------------------------
+LockFreeHashMap_bit=$1
+LockFreeHashMap_dlllib=$2
+LockFreeHashMap_debugRelease=$3
+LockFreeHashMap_allSame=$4
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" LockFreeHashMap "$LockFreeHashMap_bit" "$LockFreeHashMap_dlllib" "$LockFreeHashMap_debugRelease" "$LockFreeHashMap_allSame"
 fi
+librariesrely+=($'project\tLockFreeHashMap\t'"$LockFreeHashMap_dlllib")
+
+#--------------------------------------------------------------------
+CSystem_bit=$1
+CSystem_dlllib=$2
+CSystem_debugRelease=$3
+CSystem_allSame=$4
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" CSystem "$CSystem_bit" "$CSystem_dlllib" "$CSystem_debugRelease" "$CSystem_allSame"
+fi
+librariesrely+=($'project\tCSystem\t'"$CSystem_dlllib")
 
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return

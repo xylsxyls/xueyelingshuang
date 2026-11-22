@@ -42,6 +42,8 @@ public:
     void fail(int32_t reason);
 
 public:
+    // 首次连接前复制的可选帧池配置，自动恢复沿用同一配置
+    std::unique_ptr<NetConnectionPoolConfig> m_connectionPools;
     // 借用至本通道销毁，shutdown必须收敛其全部回调
     NetGatewayTransport* m_transport;
     // 接纳后借用至唯一关闭通知；未接纳时不通知

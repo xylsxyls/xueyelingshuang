@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include <stdint.h>
 
 // 消息工作句柄在本模块创建及释放，STL存储不跨DLL／Wasm模块释放

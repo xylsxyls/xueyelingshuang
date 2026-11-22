@@ -3,6 +3,7 @@
 #include "NetInterfaceHandshake.h"
 #include <map>
 #include "NetEndpointFileStream.h"
+#include "NetObjectPool.h"
 
 /** 由路由器端点表唯一拥有的会话状态，关闭链与文件链仅借用
 */
@@ -15,10 +16,10 @@ public:
     NetEndpointPeer* m_nextClosing;
     // 文件只在第一次关闭推进时清理，不能每个请求都扫描流表。
     bool m_filesCollected;
-    // 本端点的文件链与额度；客户端最多32条，服务最多128条。
+    // 本端点的文件链；实际存储由文件池统一控制
     NetEndpointFileStream* m_firstFile;
     // 本端点当前登记的文件流数，随双端点链同步增减
-    uint32_t m_fileCount;
+    size_t m_fileCount;
     // 类型和关闭状态；服务端点没有TCP peer
     bool m_service;
     // true为外部可信通道附加的客户端，使用m_clients回送而不直接访问TCP
@@ -56,8 +57,9 @@ public:
     /** 创建有界路由；保留1为不可用服务槽，保证拒绝也消耗来源编号
     @param [in] services 借用的本地服务提交端口，存活至停止
     @param [in] clients 借用的附加客户端端口，可空；非空时不直接监听TCP
+    @param [in] pools 构造时复制的实际存储配置
     */
-    NetEndpointRouterState(NetEndpointServiceSink* services, NetEndpointServiceSink* clients);
+    NetEndpointRouterState(NetEndpointServiceSink* services, NetEndpointServiceSink* clients, const NetEndpointPools& pools);
 
     /** 获取进程内单调毫秒
     @return steady_clock毫秒
@@ -78,18 +80,19 @@ public:
     */
     void clearPayload();
 
-    /** 双索引插入成功后，无分配地接入双端点链和固定期限堆
+    /** 双索引插入成功后，准备期限数组存储再无分配接入双端点链
     @param [in] stream 已由m_streams拥有的流
+    @return NI_OK或NI_NO_MEMORY，失败时不改变链和期限索引
     */
-    void attachFile(NetEndpointFileStream* stream);
+    int32_t attachFile(NetEndpointFileStream* stream);
 
     /** 统一摘除流的全部索引、期限和两端额度，返回独占对象以完成终态通知
     @param [in] id 公开流号
     @return 独占流或空；返回对象析构时擦除秘密
     */
-    std::unique_ptr<NetEndpointFileStream> takeFile(uint64_t id);
+    NetObjectReference<NetEndpointFileStream> takeFile(uint64_t id);
 
-    /** 更新期限后恢复固定堆，不新建分配节点
+    /** 更新期限后恢复期限堆，不新建分配节点
     @param [in] stream 仍登记的流
     @param [in] deadline 新单调期限
     */
@@ -99,17 +102,17 @@ public:
     @param [in] left 第一节点
     @param [in] right 第二节点
     */
-    void exchangeFile(uint32_t left, uint32_t right);
+    void exchangeFile(size_t left, size_t right);
 
     /** 从给定下标向上恢复期限堆
     @param [in] index 有效节点
     */
-    void riseFile(uint32_t index);
+    void riseFile(size_t index);
 
     /** 从给定下标向下恢复期限堆
     @param [in] index 有效节点
     */
-    void sinkFile(uint32_t index);
+    void sinkFile(size_t index);
 
 public:
     // 借用显式传输，附加端点模式可空
@@ -126,15 +129,19 @@ public:
     NetEndpointServiceSink* m_services;
     // 借用的附加客户端回送端口，非空时不允许直接监听TCP
     NetEndpointServiceSink* m_clients;
-    // 端点唯一拥有表，关闭队列只借用它，不再执行共享引用计数。
-    std::map<uint64_t, std::unique_ptr<NetEndpointPeer>> m_endpoints;
+    // 实际端点对象池，必须晚于所有索引及关闭借用销毁
+    NetObjectPool<NetEndpointPeer> m_endpointPool;
+    // 实际文件流对象池，必须晚于文件索引和期限借用销毁
+    NetObjectPool<NetEndpointFileStream> m_filePool;
+    // 单执行者拥有端点引用，关闭队列只借用池内稳定地址
+    std::map<uint64_t, NetObjectReference<NetEndpointPeer>> m_endpoints;
     // 真实网络连接号到本路由器端点号的非拥有索引
     std::map<uint64_t, uint64_t> m_peers;
     // 可信附加客户端原始端点号到本地端点号的非拥有索引
     std::map<uint64_t, uint64_t> m_origins;
     // 产品号到本地专属服务端点号的非拥有索引
     std::map<uint32_t, uint64_t> m_products;
-    // 无分配的关闭队列头尾，最多1023个已登记端点。
+    // 无分配的关闭队列头尾，不增加条数上限。
     NetEndpointPeer* m_closingFirst;
     // 有界关闭队列尾，队列为空时与头指针同时为空
     NetEndpointPeer* m_closingLast;
@@ -146,12 +153,12 @@ public:
     bool m_dispatching;
     // 回调/推进中收到停止请求，延迟到借用结束后收敛。
     bool m_stopRequested;
-    // 唯一拥有文件流；另一个映射只保存代次，固定堆及双链只借用。
-    std::map<uint64_t, std::unique_ptr<NetEndpointFileStream>> m_streams;
-    // 按单调到期时间排列的固定最小堆，节点只借用m_streams对象
-    NetEndpointFileStream* m_fileExpiry[1024];
-    // 期限堆中有效节点数，最大1024
-    uint32_t m_fileExpiryCount;
+    // 唯一拥有文件流；另一个映射只保存代次，期限堆及双链只借用。
+    std::map<uint64_t, NetObjectReference<NetEndpointFileStream>> m_streams;
+    // 按单调到期时间排列的动态最小堆，节点只借用m_streams对象
+    std::vector<NetEndpointFileStream*> m_fileExpiry;
+    // 期限堆中有效节点数，等于实际登记的文件记录数
+    size_t m_fileExpiryCount;
     // 服务代次及本地流号到网关公开流号的非拥有反向索引
     std::map<std::pair<uint64_t, uint64_t>, uint64_t> m_serviceStreams;
     // 已分配的最大端点号，1保留为不可用服务槽，达到UINT64_MAX不再分配

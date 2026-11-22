@@ -1,4 +1,5 @@
-﻿#include "NetInterfaceMacro.h"
+﻿#include "NetExecution.h"
+#include "NetInterfaceMacro.h"
 #include "NetInterfaceHandshake.h"
 #include <algorithm>
 #include <cstring>
@@ -50,8 +51,8 @@ m_status(NI_NEED_MORE)
     std::memset(m_clientDevice, 0, sizeof(m_clientDevice));
     std::memset(m_agreed, 0, sizeof(m_agreed));
     std::memset(m_output, 0, sizeof(m_output));
-    if (options.m_server > 1 || options.m_capabilities > 15 || (options.m_capabilities & 1) == 0 || options.m_maxRequests == 0 ||
-        options.m_maxRequests > 128 || options.m_maxChunk < 1024 || options.m_maxChunk > 65536 || options.m_timeoutMs < 100 ||
+    if (options.m_server > 1 || options.m_capabilities > 31 || (options.m_capabilities & 1) == 0 || options.m_maxRequests == 0 ||
+        options.m_maxChunk < 1024 || options.m_maxChunk > 65536 || options.m_timeoutMs < 100 ||
         options.m_timeoutMs > 60000 || nowMs > UINT64_MAX - options.m_timeoutMs || !HasHandshakeIdentity(options.m_nonce) ||
         (options.m_server != 0 && (options.m_platform != 0 || HasHandshakeIdentity(options.m_device))) ||
         (options.m_server == 0 && (options.m_platform < 1 || options.m_platform > 3 || !HasHandshakeIdentity(options.m_device))))
@@ -89,6 +90,10 @@ int32_t NetInterfaceHandshake::progress(uint64_t nowMs)
         return fail(NI_INVALID_ARGUMENT);
     }
     m_lastMs = nowMs;
+    if (m_status != NI_READY)
+    {
+        NetExecution::deadline(m_deadlineMs, nowMs);
+    }
     if (m_status != NI_READY && nowMs >= m_deadlineMs)
     {
         return fail(NI_TIMEOUT);
@@ -135,8 +140,8 @@ int32_t NetInterfaceHandshake::accept(const NetInterfaceFrame& frame, uint64_t n
     const uint32_t platform = ReadHandshakeWord(body + 12);
     const uint32_t requests = ReadHandshakeWord(body + 16);
     const uint32_t chunk = ReadHandshakeWord(body + 20);
-    if (ReadHandshakeWord(body) != expectedMagic || ReadHandshakeWord(body + 4) != 2 || capabilities > 15 || (capabilities & 1) == 0 ||
-        platform < 1 || platform > 3 || requests == 0 || requests > 128 || chunk < 1024 || chunk > 65536 ||
+    if (ReadHandshakeWord(body) != expectedMagic || ReadHandshakeWord(body + 4) != 2 || capabilities > 31 || (capabilities & 1) == 0 ||
+        platform < 1 || platform > 3 || requests == 0 || chunk < 1024 || chunk > 65536 ||
         ReadHandshakeWord(body + 56) != 0 || ReadHandshakeWord(body + 60) != 0 || !HasHandshakeIdentity(body + 24) ||
         !HasHandshakeIdentity(body + 40))
     {

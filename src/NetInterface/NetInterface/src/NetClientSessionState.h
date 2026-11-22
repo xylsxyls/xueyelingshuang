@@ -49,6 +49,8 @@ public:
     bool expired(uint64_t nowMs) const;
 
 public:
+    // 首次连接前复制的可选帧池配置，自动恢复沿用同一配置
+    std::unique_ptr<NetConnectionPoolConfig> m_connectionPools;
     // 本轮尝试拥有的运输，由借用工厂创建
     std::unique_ptr<NetGatewayTransport> m_transport;
     // 本轮业务TLS协议，借用上面的运输

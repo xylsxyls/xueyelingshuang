@@ -14,18 +14,18 @@
 #include <algorithm>
 #include <ctime>
 
-void NetEndpointRouterState::exchangeFile(uint32_t left, uint32_t right)
+void NetEndpointRouterState::exchangeFile(size_t left, size_t right)
 {
     std::swap(m_fileExpiry[left], m_fileExpiry[right]);
     m_fileExpiry[left]->m_expiryIndex = left;
     m_fileExpiry[right]->m_expiryIndex = right;
 }
 
-void NetEndpointRouterState::riseFile(uint32_t index)
+void NetEndpointRouterState::riseFile(size_t index)
 {
     while (index != 0)
     {
-        const uint32_t parent = (index - 1) / 2;
+        const size_t parent = (index - 1) / 2;
         if (m_fileExpiry[parent]->m_deadline <= m_fileExpiry[index]->m_deadline)
         {
             break;
@@ -35,11 +35,11 @@ void NetEndpointRouterState::riseFile(uint32_t index)
     }
 }
 
-void NetEndpointRouterState::sinkFile(uint32_t index)
+void NetEndpointRouterState::sinkFile(size_t index)
 {
-    while (index * 2 + 1 < m_fileExpiryCount)
+    while (index < m_fileExpiryCount / 2)
     {
-        uint32_t child = index * 2 + 1;
+        size_t child = index * 2 + 1;
         if (child + 1 < m_fileExpiryCount && m_fileExpiry[child + 1]->m_deadline < m_fileExpiry[child]->m_deadline)
         {
             ++child;
@@ -53,8 +53,16 @@ void NetEndpointRouterState::sinkFile(uint32_t index)
     }
 }
 
-void NetEndpointRouterState::attachFile(NetEndpointFileStream* stream)
+int32_t NetEndpointRouterState::attachFile(NetEndpointFileStream* stream)
 {
+    try
+    {
+        m_fileExpiry.push_back(stream);
+    }
+    catch (...)
+    {
+        return NI_NO_MEMORY;
+    }
     const uint64_t ids[2] = {stream->m_client, stream->m_service};
     for (uint32_t role = 0; role < 2; ++role)
     {
@@ -68,18 +76,19 @@ void NetEndpointRouterState::attachFile(NetEndpointFileStream* stream)
         ++endpoint->m_fileCount;
     }
     stream->m_expiryIndex = m_fileExpiryCount;
-    m_fileExpiry[m_fileExpiryCount++] = stream;
+    ++m_fileExpiryCount;
     riseFile(stream->m_expiryIndex);
+    return NI_OK;
 }
 
-std::unique_ptr<NetEndpointFileStream> NetEndpointRouterState::takeFile(uint64_t id)
+NetObjectReference<NetEndpointFileStream> NetEndpointRouterState::takeFile(uint64_t id)
 {
     const auto found = m_streams.find(id);
     if (found == m_streams.end())
     {
-        return std::unique_ptr<NetEndpointFileStream>();
+        return NetObjectReference<NetEndpointFileStream>();
     }
-    std::unique_ptr<NetEndpointFileStream> stream = std::move(found->second);
+    NetObjectReference<NetEndpointFileStream> stream = std::move(found->second);
     m_streams.erase(found);
     m_serviceStreams.erase(std::make_pair(stream->m_service, stream->m_local));
     const uint64_t ids[2] = {stream->m_client, stream->m_service};
@@ -100,7 +109,7 @@ std::unique_ptr<NetEndpointFileStream> NetEndpointRouterState::takeFile(uint64_t
         }
         --endpoint->m_fileCount;
     }
-    const uint32_t index = stream->m_expiryIndex;
+    const size_t index = stream->m_expiryIndex;
     --m_fileExpiryCount;
     if (index != m_fileExpiryCount)
     {
@@ -110,7 +119,7 @@ std::unique_ptr<NetEndpointFileStream> NetEndpointRouterState::takeFile(uint64_t
         riseFile(index);
         sinkFile(replacement->m_expiryIndex);
     }
-    m_fileExpiry[m_fileExpiryCount] = nullptr;
+    m_fileExpiry.pop_back();
     return stream;
 }
 
@@ -140,14 +149,16 @@ m_pingId(0)
     std::memset(m_negotiated, 0, sizeof(m_negotiated));
 }
 
-NetEndpointRouterState::NetEndpointRouterState(NetEndpointServiceSink* services, NetEndpointServiceSink* clients) :
+NetEndpointRouterState::NetEndpointRouterState(NetEndpointServiceSink* services, NetEndpointServiceSink* clients, const NetEndpointPools& pools) :
 m_transport(nullptr),
 m_entropy(nullptr),
 m_entropyContext(nullptr),
 m_listening(false),
-m_requests(4096),
+m_requests(pools.m_requests),
 m_services(services),
 m_clients(clients),
+m_endpointPool(pools.m_endpoints),
+m_filePool(pools.m_files),
 m_closingFirst(nullptr),
 m_closingLast(nullptr),
 m_polling(false),
@@ -163,8 +174,10 @@ m_lastEvent(0),
 m_status(NI_OK),
 m_stopped(false)
 {
-    std::memset(m_fileExpiry, 0, sizeof(m_fileExpiry));
-    m_status = m_requests.addEndpoint(1, true, 0, 128);
+    m_status = m_endpointPool.status();
+    if (m_status == NI_OK) { m_status = m_filePool.status(); }
+    if (m_status == NI_OK) { m_status = m_requests.status(); }
+    if (m_status == NI_OK) { m_status = m_requests.addEndpoint(1, true, 0, 128); }
 }
 
 void NetEndpointRouterState::enqueueClosing(NetEndpointPeer* peer)

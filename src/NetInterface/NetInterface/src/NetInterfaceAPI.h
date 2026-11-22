@@ -7,11 +7,12 @@
 #ifdef __cplusplus
 #include "NetFileProtocol.h"
 #include "NetInterface.h"
+#include "NetExecution.h"
+#include "NetBufferPool.h"
 #include "NetInterfaceHandshake.h"
 #include "NetInterfaceTunnel.h"
 #include "NetClientDiscovery.h"
 #include "NetInterfaceCertificate.h"
-#include "NetInterfaceCertificateEntropy.h"
 #include "NetInterfaceLink.h"
 #include "NetInterfaceCredit.h"
 #include "NetInterfaceDirectory.h"
@@ -32,20 +33,7 @@
 #include "NetSenderSubmission.h"
 #include "NetSenderDispatch.h"
 
-#ifdef NET_GATEWAY_TEST_ACCESS
-// 仅静态白盒测试请求这些声明；正式调用方不得依赖内部布局。
-#include "NetClientSessionTest.h"
-#include "NetEndpointFileStream.h"
-#include "NetEndpointRouterState.h"
-#include "NetEndpointRouterTest.h"
-#include "NetGatewayClientChannelState.h"
-#include "NetInterfaceFileAuditTest.h"
-#include "NetInterfaceLinkAuditTest.h"
-#include "NetInterfaceLinkAuthTest.h"
-#include "NetSenderDispatchAuditTest.h"
-#include "NetSenderDispatchTest.h"
-#include "NetSessionState.h"
-#endif
+
 #else
 // 其他库的纯C ABI可借用这些值类型；NetInterface本身仅有C++调用接口
 #include "NetInterfaceHandles.h"

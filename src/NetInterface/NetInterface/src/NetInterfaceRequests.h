@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "NetInterfaceTypes.h"
+#include "NetRequestTablePools.h"
 
 class NetInterfaceRequestsState;
 
@@ -30,20 +31,34 @@ struct NetInterfaceRequest
 class NetInterfaceAPI NetInterfaceRequests
 {
     public:
-    /** 创建等待表；容量非法时后续入口返回INVALID_ARGUMENT
-    @param [in] capacity 全局在途上限，1至4096
+    /** 使用默认物理池创建等待表
     */
-    explicit NetInterfaceRequests(uint32_t capacity = 4096);
+    NetInterfaceRequests();
+
+    /** 使用显式物理请求槽数，兼容指定容量的调用；不限制端点数
+    @param [in] capacity 非零请求和提前取消池的最大槽数，无4096阈值
+    */
+    explicit NetInterfaceRequests(uint32_t capacity);
+
+    /** 使用可独立配置的物理池创建等待表
+    @param [in] pools 请求、端点和提前取消池配置，构造时复制
+    */
+    explicit NetInterfaceRequests(const NetRequestTablePools& pools);
 
     /** 释放本模块资源，不执行外部回调
     */
     ~NetInterfaceRequests();
 
+    /** 查询初始化或持续协议时钟状态
+    @return NI_OK或具体配置、资源、时钟错误
+    */
+    int32_t status() const;
+
     /** 登记已经通过宿主验证的端点，不接纳客户端自报PID/代次
-    @param [in] endpoint 必须递增且不复用的非零号，最多1024个活跃端点
+    @param [in] endpoint 必须递增且不复用的非零号，端点容量由物理池决定
     @param [in] service 是否本地可信服务端点，外部连接为false
     @param [in] product 专用服务产品号，0表示通用服务；外部连接必须为0
-    @param [in] limit 本端点入/出请求分别的上限，1至128
+    @param [in] limit 非零握手能力元数据，不作为本地排队或未完成请求上限
     @param [in] internalOnly 仅可信服务允许设置，必须经合法父请求访问
     @return OK或负数错误
     */
@@ -55,9 +70,9 @@ class NetInterfaceAPI NetInterfaceRequests
     */
     int32_t removeEndpoint(uint64_t endpoint);
 
-    /** 应用握手完成后收紧预登记端点额度，不允许低于已有在途数
+    /** 更新非零握手元数据，不以业务回复占用发送窗口
     @param [in] endpoint 既有代次
-    @param [in] limit 协商后的1至128
+    @param [in] limit 协商后的非零能力值
     @return OK、NOT_FOUND或INVALID_ARGUMENT
     */
     int32_t setEndpointLimit(uint64_t endpoint, uint32_t limit);
@@ -155,7 +170,7 @@ class NetInterfaceAPI NetInterfaceRequests
     int32_t takeEndpoint(uint64_t endpoint, NetInterfaceRequest& request);
 
     /** 在途数量
-    @return 不超过构造容量
+    @return 当前实际占用请求槽数；超过uint32范围时饱和
     */
     uint32_t count() const;
 

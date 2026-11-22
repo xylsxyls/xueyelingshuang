@@ -1,17 +1,18 @@
 ﻿#pragma once
 #include "NetInterfaceTypes.h"
+#include "NetSenderSubmissionSignal.h"
+#include "NetSenderSubmissionPools.h"
+#include <memory>
 
 class NetSenderSubmissionState;
 
-// 可选提交锁／唤醒，默认空供单执行者；函数不得抛异常或在锁内调业务
+// 可选owner通知及回收等待提示；提交本身使用无锁入口，函数不得抛异常
 struct NetSenderSubmissionGate
 {
     // 借用至所有提交者和执行者退出
     void* m_context;
-    // 成对的短临界区入口；空表示调用方已保证串行
-    void (*m_enter)(void* context);
-    // 与enter配对，不负责对象生命期
-    void (*m_leave)(void* context);
+    // 可空的回收等待间隔；仅owner封闭入口后等已进入调用时使用，不能执行用户回调
+    void (*m_pause)(void* context);
     // 可空的有界通知；失败仍由协议执行者的定时推进兜底
     void (*m_wake)(void* context);
 };
@@ -42,7 +43,7 @@ struct NetSenderSubmissionCommand
     int32_t m_kind;
     // 连接代次
     uint64_t m_generation;
-    // 请求或本地流动作编号
+    // 请求动作使用本地请求号；DATA沿用帧内业务号，不建立额外编号空间
     uint64_t m_id;
     // 请求产品
     uint32_t m_product;
@@ -62,7 +63,10 @@ struct NetSenderSubmissionCommand
     NetInterfaceFrame m_frame;
 };
 
-// 统一本地接纳，最多128预留、2MiB数据／64流项、128KiB／16控制项；不拥有协议／线程
+// 统一本地接纳：正文、入口、回执和请求记录使用可配置物理池；不拥有协议／线程。
+// begin/send/data及其同步提交、cancel/close/state/queuedBytes/synchronousResult可并发；
+// start/ready/beginPoll/next/finish/complete/disconnected/takeClosed/idle/advanceSynchronous仅协议owner调用。
+// owner生命周期回收会等已进入的提交者返回；不允许通知函数重入owner或销毁本对象。
 class NetInterfaceAPI NetSenderSubmission
 {
 public:
@@ -74,24 +78,31 @@ public:
     */
     ~NetSenderSubmission();
 
-    /** 在任何执行者启动前设置一次提交门，空门保持单执行者
-    @param [in] gate enter与leave必须同时为空或同时有效；借用context
+    /** 在任何执行者启动前设置一次owner通知，空表也不需要互斥锁
+    @param [in] gate 可空通知/等待函数；借用context至全部调用结束
     @return OK或INVALID_ARGUMENT／INVALID_STATE
     */
     int32_t configureGate(const NetSenderSubmissionGate& gate);
 
+    /** 首次start前配置实际物理池；调用期间不得存在其他执行者
+    @param [in] pools 各池初始容量、增长策略和最大存储，复制配置
+    @return NI_OK或参数/内存错误；失败保留原配置
+    */
+    int32_t configurePools(const NetSenderSubmissionPools& pools);
+
     /** owner开始新逻辑连接；请求、正文借用及同步回执全部收敛后才允许
     @param [in] generation 此次非零代次
     @param [in] product 固定产品，0表示旧通用连接
-    @return OK或INVALID_STATE
+    @return OK、INVALID_STATE或内部池初始化失败NO_MEMORY
     */
     int32_t start(uint64_t generation, uint32_t product);
 
     /** owner报告真实握手；存在旧代输入或未完成回执时禁止切换代次；已完成回执仍归原调用者读取，不扣线协议额度
+    拒绝切代保留旧代接纳状态及借用；会话层若认定真实握手失败，负责显式close和disconnected
     @param [in] generation 真实非零代次
-    @param [in] requests 协商的1至128条上限
+    @param [in] requests 对端声明的非零协议能力；本地容量由实际请求池控制
     @param [in] chunk 协商的1024至65536字节
-    @return OK、CANCELLED或PROTOCOL_ERROR
+    @return OK、CANCELLED、PROTOCOL_ERROR；未start为INVALID_STATE，内部池不可用为NO_MEMORY
     */
     int32_t ready(uint64_t generation, uint32_t requests, uint32_t chunk);
 
@@ -146,13 +157,37 @@ public:
     */
     int32_t beginPoll();
 
+    /** 借用队首普通异步DATA，省去RPC动作元数据的复制；仅协议owner调用
+    @return 稳定帧视图，须配对finish；nullptr表示使用next检查控制、回执、背压或空队列
+    */
+    const NetInterfaceFrame* nextData();
+
+    /** owner连续消费已就绪的普通DATA前缀；逐条保留借用、关闭及背压检查，不等待凑批
+    @param [in] context 仅本次调用借用的消费方上下文
+    @param [in] consumer 同步消费一帧，返回NI接纳结果；不得保留正文指针或重入领取接口
+    @param [in] maximum 本轮最多成功接纳的帧数，0不处理
+    @param [in] byteBudget 累计正文达到此值时让出执行权，最后一条允许超过此值
+    @param [out] messages 成功接纳数量
+    @param [out] bytes 成功接纳正文总字节；最大不超过byteBudget加单帧正文上限
+    @return OK表示让出执行权或遇到通用动作，LIMIT保留未接纳队首；其他负值须关闭协议
+    */
+    int32_t drainData(void* context, int32_t (*consumer)(void* context, const NetInterfaceFrame& frame),
+        uint32_t maximum, uint32_t byteBudget, uint32_t& messages, uint64_t& bytes);
+
     /** owner借用下一动作；停止／取消优先，RPC、DATA及控制帧共用实际接纳FIFO
     @param [out] command 无动作时清零
     @return READY、NEED_MORE或INVALID_STATE
     */
     int32_t next(NetSenderSubmissionCommand& command);
 
-    /** owner结束借用；协议及回调必须在调用本函数前锁外完成
+    /** owner按当前输出边界借用下一动作，不越过待发的控制命令
+    @param [out] command 无动作时清零
+    @param [in] dataOnly 前缀尚未交付时只追加同一业务FIFO的数据；取消和ACK等控制须等前缀交付
+    @return READY、NEED_MORE或INVALID_STATE；同步交付票据尚未完成时不追加数据
+    */
+    int32_t next(NetSenderSubmissionCommand& command, bool dataOnly);
+
+    /** owner结束借用；协议及回调必须在调用本函数前由owner完成
     @param [in] result 本次协议调用结果，LIMIT保留未发送数据
     */
     void finish(int32_t result);
@@ -176,7 +211,7 @@ public:
     */
     bool takeClosed(NetSenderSubmissionCommand& command);
 
-    /** 只读确认本地接纳及借用动作已经收敛
+    /** owner只读确认本地接纳及借用动作已经收敛
     @return 没有请求、流输入或owner借用
     */
     bool idle() const;
@@ -191,7 +226,7 @@ public:
     */
     static uint64_t now();
 
-    /** 接纳同步请求，每票据由其原等待者读取；128个票据满时返回LIMIT且未接纳
+    /** 接纳同步请求，每票据由其原等待者读取；实际回执池耗尽时返回LIMIT且未接纳
     @param [in] id 原预留号
     @param [in] bytes 调用时复制
     @param [in] size 业务体字节数
@@ -224,8 +259,15 @@ public:
     */
     int32_t synchronousResult(uint64_t ticket, bool consume);
 
+    /** 为一张未消费票据登记一次持久通知，不改变交付结果
+    @param [in] ticket 当前同步票据；只能由该票据等待者调用
+    @param [in] signal 非空拥有引用；完成早于登记也会通知，禁止抛异常
+    @return NI_OK已登记；重复登记或票据不存在返回错误，不消费票据
+    */
+    int32_t observeSynchronous(uint64_t ticket, const std::shared_ptr<NetSenderSubmissionSignal>& signal);
+
 private:
-    /** 在同一个提交门内接纳请求并可选登记同步票据
+    /** 在同一个有界入口接纳请求并可选登记同步票据
     @param [in] id 原预留号
     @param [in] bytes 调用时复制
     @param [in] size 字节数
@@ -235,7 +277,7 @@ private:
     */
     int32_t submitRequest(uint64_t id, const uint8_t* bytes, uint32_t size, bool synchronous, uint64_t& ticket);
 
-    /** 在同一提交门内接纳流帧并可选登记同步票据
+    /** 在同一有界入口接纳流帧并可选登记同步票据
     @param [in] frame 调用时复制
     @param [in] synchronous 是否登记交付等待
     @param [out] ticket 非同步或失败为0

@@ -6,7 +6,7 @@
 #include "NetInterfaceDirectory.h"
 #include "NetInterfaceConnection.h"
 #include "NetInterfaceTransport.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include <algorithm>
 #include <chrono>
 #include <cstring>
@@ -30,6 +30,24 @@ NetGatewayClientChannel::~NetGatewayClientChannel()
 {
     shutdown();
     delete m_state;
+}
+
+int32_t NetGatewayClientChannel::configureConnectionPools(const NetConnectionPoolConfig& config)
+{
+    if (m_state->m_phase != NET_GATEWAY_CLIENT_IDLE || m_state->m_polling)
+    {
+        return NI_INVALID_STATE;
+    }
+    try
+    {
+        std::unique_ptr<NetConnectionPoolConfig> copy(new NetConnectionPoolConfig(config));
+        m_state->m_connectionPools.swap(copy);
+        return NI_OK;
+    }
+    catch (...)
+    {
+        return NI_NO_MEMORY;
+    }
 }
 
 int32_t NetGatewayClientChannel::connect(const char* address, uint32_t port, const NetInterfaceTlsOptions& options,
@@ -156,6 +174,15 @@ bool NetGatewayClientChannel::onLinkControl(uint64_t peer, const NetInterfaceFra
         tls.authority = NetInterface::trustAuthority(&tls.authoritySize);
         tls.hostname = hostname.c_str();
         std::unique_ptr<NetInterfaceConnection> connection(new NetInterfaceConnection(tls, NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT + 32));
+        if (m_state->m_connectionPools)
+        {
+            const int32_t configured = connection->configurePools(*m_state->m_connectionPools);
+            if (configured != NI_OK)
+            {
+                m_state->fail(configured);
+                return true;
+            }
+        }
         if (connection->status() < 0)
         {
             m_state->fail(connection->status());
@@ -383,6 +410,16 @@ void NetGatewayClientChannel::advance(uint64_t now)
         }
         m_state->m_blockedSince = 0;
         m_state->m_connection->consume();
+        if (step + 1 < 32 && m_state->m_phase == NET_GATEWAY_CLIENT_ACTIVE)
+        {
+            // consume只归还当前帧；继续解析TLS中已有输入，避免每帧重新绕过整个宿主循环。
+            const int32_t next = m_state->m_connection->progress(now);
+            if (next < 0 || next == NET_INTERFACE_TLS_CLOSED)
+            {
+                m_state->fail(next < 0 ? next : NI_OK);
+                break;
+            }
+        }
     }
     if (m_state->m_phase < NET_GATEWAY_CLIENT_CLOSING)
     {
@@ -492,6 +529,16 @@ int32_t NetGatewayClientChannel::configureCompression(uint64_t peer, const uint3
     return m_state->m_connection->configureCompression(types, count, negotiated);
 }
 
+int32_t NetGatewayClientChannel::configureCompact(uint64_t peer, bool enabled)
+{
+    if (peer != 1 || !m_state->m_connection || m_state->m_phase >= NET_GATEWAY_CLIENT_CLOSING)
+    {
+        return NI_INVALID_STATE;
+    }
+    m_state->m_connection->configureCompact(enabled);
+    return NI_OK;
+}
+
 void NetGatewayClientChannel::close(uint64_t peer, int32_t reason)
 {
     if (peer == 1)
@@ -531,278 +578,3 @@ int32_t NetGatewayClientChannel::outputState(uint64_t peer) const
         return NI_INVALID_STATE;
     }
 }
-
-// NET_GATEWAY_BUSINESS_UNIT_BEGIN
-//#include "NetInterface.h"
-//#include "NetInterface/NetClientSessionTest.h"
-//#include "ProtoMessage/ProtoMessageAPI.h"
-//#include <cstdio>
-//#include <cstring>
-//#include <stdexcept>
-//#if defined(_MSC_VER) && defined(_DEBUG)
-//#include <crtdbg.h>
-//#endif
-//
-//NetGatewayChannelTestTransport::NetGatewayChannelTestTransport() :
-//m_listener(nullptr), m_connectResult(NI_OK), m_zeroPeer(false), m_busy(false), m_pollThrow(false),
-//m_stopThrow(false), m_closeDuringStop(false), m_announced(false), m_stops(0), m_controls(0), m_bytes(0), m_controlSize(0)
-//{
-//}
-//
-//int32_t NetGatewayChannelTestTransport::connect(const char* address, uint32_t port, const NetInterfaceLinkOptions& options,
-//    NetLinkTransportListener* listener, uint64_t& peer)
-//{
-//    (void)address;
-//    (void)port;
-//    (void)options;
-//    m_listener = listener;
-//    peer = m_zeroPeer ? 0 : 7;
-//    return m_connectResult;
-//}
-//
-//bool NetGatewayChannelTestTransport::poll()
-//{
-//    if (m_pollThrow)
-//    {
-//        m_pollThrow = false;
-//        throw 1;
-//    }
-//    if (!m_announced && m_listener != nullptr)
-//    {
-//        m_announced = true;
-//        NetInterfaceLinkPeer identity = {};
-//        identity.m_role = NI_LINK_NODE;
-//        m_listener->onLinkReady(7, identity);
-//    }
-//    return m_listener != nullptr;
-//}
-//
-//int32_t NetGatewayChannelTestTransport::sendControl(uint64_t peer, const NetInterfaceFrame& frame)
-//{
-//    if (peer != 7 || frame.m_payload == nullptr || frame.m_payloadSize > sizeof(m_control))
-//    {
-//        return NI_PROTOCOL_ERROR;
-//    }
-//    ++m_controls;
-//    m_controlSize = frame.m_payloadSize;
-//    std::memcpy(m_control, frame.m_payload, frame.m_payloadSize);
-//    return m_busy ? NI_LIMIT_EXCEEDED : NI_OK;
-//}
-//
-//int32_t NetGatewayChannelTestTransport::sendRecord(uint64_t peer, const NetInterfaceTunnelRecord& record)
-//{
-//    if (peer != 7 || record.m_channel != 1 || record.m_size == 0 || record.m_size > 16384 || record.m_data == nullptr)
-//    {
-//        return NI_PROTOCOL_ERROR;
-//    }
-//    m_bytes += record.m_size;
-//    return NI_OK;
-//}
-//
-//void NetGatewayChannelTestTransport::shutdown()
-//{
-//    ++m_stops;
-//    NetLinkTransportListener* listener = m_listener;
-//    m_listener = nullptr;
-//    if (m_closeDuringStop && listener != nullptr)
-//    {
-//        listener->onLinkClosed(7, NI_TIMEOUT);
-//    }
-//    if (m_stopThrow)
-//    {
-//        m_stopThrow = false;
-//        throw 2;
-//    }
-//}
-//
-//NetGatewayChannelTestListener::NetGatewayChannelTestListener() :
-//m_channel(nullptr), m_closed(0), m_other(0), m_reason(0), m_throw(false)
-//{
-//}
-//
-//void NetGatewayChannelTestListener::onReady(uint64_t peer)
-//{
-//    (void)peer;
-//    ++m_other;
-//}
-//
-//bool NetGatewayChannelTestListener::onFrame(uint64_t peer, const NetInterfaceFrame& frame)
-//{
-//    (void)peer;
-//    (void)frame;
-//    ++m_other;
-//    return true;
-//}
-//
-//void NetGatewayChannelTestListener::onClosed(uint64_t peer, int32_t reason, int32_t detail)
-//{
-//    (void)peer;
-//    (void)detail;
-//    ++m_closed;
-//    m_reason = reason;
-//    if (m_channel != nullptr)
-//    {
-//        m_channel->close(1, NI_TIMEOUT);
-//        m_channel->shutdown();
-//        m_channel->poll();
-//    }
-//    if (m_throw)
-//    {
-//        throw 3;
-//    }
-//}
-//
-//int main()
-//{
-//    uint32_t checks = 0;
-//    const auto Check = [&checks](bool pass, const char* message)
-//    {
-//        ++checks;
-//        if (!pass) { throw std::runtime_error(message); }
-//    };
-//    NetInterfaceTlsOptions options = {};
-//    options.handshakeTimeoutMs = 5000;
-//    options.entropy = [](void*, uint8_t* bytes, uint32_t size) -> int32_t { std::memset(bytes, 0x41, size); return NI_OK; };
-//    try
-//    {
-//        for (uint32_t mode = 0; mode < 4; ++mode)
-//        {
-//            NetGatewayChannelTestTransport transport;
-//            NetGatewayChannelTestListener listener;
-//            NetGatewayClientChannel channel(101, &transport);
-//            listener.m_channel = &channel;
-//            listener.m_throw = true;
-//            transport.m_stopThrow = true;
-//            transport.m_closeDuringStop = true;
-//            transport.m_pollThrow = mode == 0;
-//            transport.m_connectResult = mode == 2 ? NI_NOT_FOUND : NI_OK;
-//            transport.m_zeroPeer = mode == 3;
-//            uint64_t peer = 99;
-//            const int32_t connected = channel.connect("127.0.0.1", 1, options, &listener, peer);
-//            if (mode >= 2)
-//            {
-//                Check(connected == (mode == 2 ? NI_NOT_FOUND : NI_PROTOCOL_ERROR) && peer == 0 && listener.m_closed == 0 &&
-//                    transport.m_stops == 1 && transport.m_listener == nullptr, "rejected connect cleanup/false terminal");
-//            }
-//            else
-//            {
-//                Check(connected == NI_OK && peer == 1, "accepted connect");
-//                if (mode == 1) { channel.close(1, NI_CANCELLED); }
-//                Check(!channel.poll() && listener.m_closed == 1 && listener.m_reason == (mode == 0 ? NI_NO_MEMORY : NI_CANCELLED),
-//                    "shutdown exception lost terminal or first reason");
-//            }
-//            for (uint32_t index = 0; index < 1000; ++index)
-//            {
-//                Check(!channel.poll(), "closed poll revived");
-//            }
-//            channel.shutdown();
-//            Check(transport.m_stops == 1 && listener.m_closed == (mode < 2 ? 1U : 0U) && listener.m_other == 0,
-//                "duplicate stop/callback");
-//        }
-//        {
-//            NetGatewayChannelTestTransport transport;
-//            NetGatewayChannelTestListener listener;
-//            NetGatewayClientChannel channel(101, &transport);
-//            transport.m_busy = true;
-//            uint64_t peer = 0;
-//            Check(channel.connect("127.0.0.1", 1, options, &listener, peer) == NI_OK && channel.poll(), "busy OPEN setup");
-//            uint8_t expected[256];
-//            const uint32_t expectedSize = transport.m_controlSize;
-//            std::memcpy(expected, transport.m_control, expectedSize);
-//#if defined(_MSC_VER) && defined(_DEBUG)
-//            static uint32_t s_allocations = 0;
-//            const auto Hook = [](int operation, void*, size_t, int block, long, const unsigned char*, int) -> int
-//            {
-//                if (operation == _HOOK_ALLOC && block == _NORMAL_BLOCK) { ++s_allocations; }
-//                return 1;
-//            };
-//            _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(Hook);
-//#endif
-//            bool unchanged = true;
-//            for (uint32_t index = 0; index < 4096; ++index)
-//            {
-//                unchanged = channel.poll() && transport.m_controlSize == expectedSize &&
-//                    std::memcmp(expected, transport.m_control, expectedSize) == 0 && unchanged;
-//            }
-//#if defined(_MSC_VER) && defined(_DEBUG)
-//            _CrtSetAllocHook(previous);
-//            Check(s_allocations == 0, "busy OPEN reallocated");
-//#endif
-//            Check(unchanged && transport.m_controls == 4097, "busy OPEN changed bytes/phase");
-//            transport.m_busy = false;
-//            Check(channel.poll() && transport.m_controls == 4098, "OPEN not accepted after backpressure");
-//            Check(channel.poll() && transport.m_controls == 4098, "OPEN replayed after acceptance");
-//            channel.shutdown();
-//            Check(listener.m_closed == 1 && listener.m_reason == NI_OK, "normal close result");
-//        }
-//        for (uint32_t mode = 0; mode < 10; ++mode)
-//        {
-//            NetGatewayChannelTestTransport transport;
-//            NetGatewayChannelTestListener listener;
-//            NetGatewayClientChannel channel(101, &transport);
-//            uint64_t peer = 0;
-//            Check(channel.connect("127.0.0.1", 1, options, &listener, peer) == NI_OK && channel.poll(), "response setup");
-//            ProtoMessage message;
-//            message.setCode(NI_OK);
-//            message.setKeyValue(NI_GATEWAY_CHANNEL, Variant(static_cast<uint64_t>(mode == 3 ? 2 : 1)));
-//            message.setKeyValue(NI_GATEWAY_WINDOW, Variant(static_cast<int32_t>(mode == 4 ? 65537 : 65536)));
-//            std::string body;
-//            Check(message.toString(body), "response encoding");
-//            NetInterfaceFrame frame = {};
-//            frame.m_kind = NI_RESPONSE;
-//            frame.m_messageType = NI_GATEWAY_OPEN;
-//            frame.m_requestId = 1;
-//            frame.m_payload = reinterpret_cast<const uint8_t*>(body.data());
-//            frame.m_payloadSize = static_cast<uint32_t>(body.size());
-//            if (mode == 0) { frame.m_productId = 99; }
-//            if (mode == 1) { frame.m_requestId = 2; }
-//            if (mode == 2) { frame.m_payload = nullptr; }
-//            if (mode == 5) { frame.m_payloadSize = 16385; }
-//            Check(transport.m_listener->onLinkControl(7, frame), "response consumption");
-//            if (mode >= 6)
-//            {
-//                if (mode == 6)
-//                {
-//                    Check(transport.m_listener->onLinkControl(7, frame), "duplicate OPEN consumption");
-//                }
-//                else if (mode == 7)
-//                {
-//                    NetInterfaceTunnelRecord record = {};
-//                    record.m_kind = NI_TUNNEL_BYTES;
-//                    record.m_channel = 1;
-//                    record.m_product = 101;
-//                    record.m_data = reinterpret_cast<const uint8_t*>(body.data());
-//                    record.m_size = 16385;
-//                    Check(transport.m_listener->onLinkRecord(7, record), "oversized record consumption");
-//                }
-//                else
-//                {
-//                    message.setKeyValue(NI_GATEWAY_CREDIT_BYTES, Variant(static_cast<int32_t>(1)));
-//                    if (mode == 9) { message.setKeyValue(NI_GATEWAY_CHANNEL, Variant(static_cast<uint64_t>(2))); }
-//                    Check(message.toString(body), "event encoding");
-//                    frame.m_kind = NI_EVENT;
-//                    frame.m_requestId = 0;
-//                    frame.m_messageType = mode == 8 ? NI_GATEWAY_CREDIT : NI_GATEWAY_CHANNEL_CLOSE;
-//                    frame.m_payload = reinterpret_cast<const uint8_t*>(body.data());
-//                    frame.m_payloadSize = static_cast<uint32_t>(body.size());
-//                    Check(transport.m_listener->onLinkControl(7, frame), "event consumption");
-//                }
-//            }
-//            Check(!channel.poll() && listener.m_closed == 1 && listener.m_reason == NI_PROTOCOL_ERROR && listener.m_other == 0,
-//                "invalid control/record accepted");
-//            channel.shutdown();
-//        }
-//        std::printf("Business channel lifecycle checks=%u PASS\n", checks);
-//        return 0;
-//    }
-//    catch (const std::exception& error)
-//    {
-//        std::printf("Business channel checks=%u FAIL %s\n", checks, error.what());
-//    }
-//    catch (...)
-//    {
-//        std::printf("Business channel checks=%u FAIL escaped exception\n", checks);
-//    }
-//    return 1;
-//}
-// NET_GATEWAY_BUSINESS_UNIT_END

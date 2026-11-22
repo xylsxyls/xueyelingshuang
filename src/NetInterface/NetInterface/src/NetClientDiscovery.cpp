@@ -3,6 +3,7 @@
 #include "NetInterfaceDirectory.h"
 #include <utility>
 #include <cstring>
+#include <array>
 
 NetClientDiscovery::~NetClientDiscovery()
 {
@@ -53,7 +54,8 @@ static bool DiscoveryRangesOverlap(const void* first, size_t firstSize, const vo
 int32_t NetClientDiscovery::parseSeeds(const std::string& text, NetClientDiscoveryPoint* points,
     uint32_t capacity, uint32_t& count)
 {
-    const size_t arraySize = capacity <= 64 ? capacity * sizeof(NetClientDiscoveryPoint) : 0;
+    if (capacity > SIZE_MAX / sizeof(NetClientDiscoveryPoint)) { return NI_INVALID_ARGUMENT; }
+    const size_t arraySize = capacity * sizeof(NetClientDiscoveryPoint);
     if (DiscoveryRangesOverlap(&count, sizeof(count), points, arraySize) ||
         DiscoveryRangesOverlap(&count, sizeof(count), &text, sizeof(text)) ||
         DiscoveryRangesOverlap(&count, sizeof(count), text.data(), text.size() + 1) ||
@@ -63,7 +65,7 @@ int32_t NetClientDiscovery::parseSeeds(const std::string& text, NetClientDiscove
         return NI_INVALID_ARGUMENT;
     }
     count = 0;
-    if (capacity > 64 || (points == nullptr && capacity != 0))
+    if ((points == nullptr && capacity != 0))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -108,7 +110,7 @@ int32_t NetClientDiscovery::parseSeeds(const std::string& text, NetClientDiscove
 
 int32_t NetClientDiscovery::parseSeeds(const std::string& text, std::vector<NetGatewayAddress>& points)
 {
-    if (text.empty() || text.size() > 4096 || text.back() == ',')
+    if (text.empty() || text.back() == ',')
     {
         points.clear();
         return NI_INVALID_ARGUMENT;
@@ -116,8 +118,7 @@ int32_t NetClientDiscovery::parseSeeds(const std::string& text, std::vector<NetG
     try
     {
         std::vector<NetGatewayAddress> parsed;
-        uint8_t keys[64][16];
-        uint32_t count = 0;
+        std::vector<std::array<uint8_t, 16>> keys;
         size_t offset = 0;
         while (offset < text.size())
         {
@@ -131,7 +132,7 @@ int32_t NetClientDiscovery::parseSeeds(const std::string& text, std::vector<NetG
                 ++begin;
                 ++portBegin;
             }
-            if (++count > 64 || offset == end || addressEnd == std::string::npos || addressEnd <= begin ||
+            if (offset == end || addressEnd == std::string::npos || addressEnd <= begin ||
                 addressEnd >= end || portBegin >= end || text[portBegin - 1] != ':' || end - portBegin > 5)
             {
                 points.clear();
@@ -163,11 +164,13 @@ int32_t NetClientDiscovery::parseSeeds(const std::string& text, std::vector<NetG
             bool duplicate = false;
             for (size_t index = 0; index < parsed.size(); ++index)
             {
-                duplicate = duplicate || (point.m_port == parsed[index].m_port && std::memcmp(key, keys[index], 16) == 0);
+                duplicate = duplicate || (point.m_port == parsed[index].m_port && std::memcmp(key, keys[index].data(), 16) == 0);
             }
             if (!duplicate)
             {
-                std::memcpy(keys[parsed.size()], key, 16);
+                std::array<uint8_t, 16> saved;
+                std::memcpy(saved.data(), key, 16);
+                keys.push_back(saved);
                 parsed.push_back(std::move(point));
             }
             offset = end + 1;

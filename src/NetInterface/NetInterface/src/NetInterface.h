@@ -3,7 +3,7 @@
 
 // 协议主入口：提供NIF2解码实例及消息、TLS、会话、文件等工作对象的创建和操作
 // 各工作对象由单执行者推进、在本库释放；不拥有socket、OS线程或业务授权判定
-// 完整32字节固定头通过校验后才分配正文，READY借用直到consume/reset/析构
+// 完整固定或紧凑头通过校验后才分配正文，READY借用直到consume/reset/析构
 class NetInterfaceAPI NetInterface
 {
 public:
@@ -29,6 +29,12 @@ public:
     @return READY或当前状态
     */
     int32_t peek(NetInterfaceFrame& frame) const;
+
+    /** 借用解码器拥有的完整帧视图，不复制元数据或正文；同一执行者使用
+    @param [out] frame READY时只读借用至consume/reset/析构，其余状态为nullptr
+    @return READY或当前状态；持有视图期间不得消费、重置或销毁解码器
+    */
+    int32_t peek(const NetInterfaceFrame*& frame) const;
 
     /** 结束当前借用，复用至多4KiB的小存储；更大正文立即释放
     @return OK、不完整时INVALID_STATE或已有持续错误
@@ -62,6 +68,20 @@ public:
     @return OK、BUFFER_TOO_SMALL、LIMIT_EXCEEDED或INVALID_ARGUMENT，失败不修改输出
     */
     static int32_t encode(const NetInterfaceFrame& frame, uint8_t* output, uint32_t capacity, uint32_t& required);
+
+    /** 编码紧凑帧；保留完整编号及所有字段，只缩短头表示
+    @param [in] frame 元数据及正文，本次借用
+    @param [out] output 与正文不重叠的可写空间，capacity为0时可空
+    @param [in] capacity 输出字节容量
+    @param [out] required 所需字节数；参数错误为0，不与输入输出别名
+    @return NI_OK、NI_BUFFER_TOO_SMALL或负数错误，失败不写输出
+    */
+    static int32_t encodeCompact(const NetInterfaceFrame& frame, uint8_t* output, uint32_t capacity, uint32_t& required);
+
+    /** 单执行者在协议协商后允许紧凑头，仍接受固定头
+    @param [in] allowed 是否允许下一条紧凑帧；不改变已完整解析的帧
+    */
+    void allowCompact(bool allowed);
 
     /** 由单执行者在应用握手共同确认扩展后设置，不改变已验证的当前帧
     @param [in] allowed 是否允许下一条压缩RPC帧，其他种类仍拒绝压缩
@@ -146,7 +166,7 @@ public:
     */
     static int32_t connectionProgress(NetInterfaceConnectionHandle handle, uint32_t timeLow, uint32_t timeHigh);
 
-    /** 排队完整帧；普通最多2MiB/64项，控制独立64KiB/16项
+    /** 排队完整帧；普通与控制使用独立的可配置物理池，池满时报告背压
     @param [in] handle 有效且TLS就绪的连接
     @param [in] fields 六项kind/product/request低位/高位/type/payloadSize
     @param [in] payload 字节，当fields[5]为0时可空
@@ -609,7 +629,7 @@ public:
     /** 向调用者已有的v1值数组复制完整快照，不转交STL或释放权。
     @param [in] handle 本模块创建的有效句柄
     @param [out] nodes 调用者数组，每项预填structSize/version；容量不足不改数组
-    @param [in] capacity 0至64项，nodes为空且capacity为0可查询
+    @param [in] capacity 调用方数组容量，nodes为空且capacity为0可查询
     @param [out] count 必需项数；参数错误为0；不得与nodes重叠，重叠拒绝且保留原字节
     @return OK、BUFFER_TOO_SMALL或INVALID_ARGUMENT
     */
@@ -1024,7 +1044,7 @@ public:
     @param [in] high 端点号高32位
     @param [in] service 0外部端点，1本地可信服务
     @param [in] product 专用产品号，外部端点为0
-    @param [in] limit 每端点入/出限制1至128
+    @param [in] limit 非零兼容协商提示；实际请求存储由请求池配置决定
     @param [in] internalOnly 0普通服务，1只允许合法父请求访问
     @return OK或负数错误
     */
@@ -1174,7 +1194,7 @@ public:
     uint8_t* output, uint32_t capacity, uint32_t* required);
 
 private:
-    /** 完整固定头验证通过后，准备有界正文存储
+    /** 完整固定或紧凑头验证通过后，准备有界正文存储
     @return NEED_MORE或协议/容量/分配错误，不接纳任何正文
     */
     int32_t prepareHeader();
@@ -1220,11 +1240,15 @@ private:
     uint32_t m_payloadLimit;
     // 下一帧能否接受已协商的RPC压缩扩展
     bool m_compressionAllowed;
+    // 下一条是否允许协商后的紧凑格式
+    bool m_compactAllowed;
+    // 当前帧头已通过格式及长度校验，后续只接纳正文
+    bool m_headerReady;
     // 当前完整头已经验证的压缩标志，不随许可设置改变
     bool m_compressed;
-    // 只有完整32字节收到后才读取内容，无须预先清零
+    // 最长32字节的头缓存；只读取已接纳的前缀
     uint8_t m_header[NET_INTERFACE_HEADER_SIZE];
-    // 已接纳固定头字节数，0至32
+    // 已接纳头字节数，0至32
     uint32_t m_headerSize;
     // 当前线记录体字节数，解压后仍保留原接收边界
     uint32_t m_wireSize;
@@ -1234,6 +1258,8 @@ private:
     uint32_t m_capacity;
     // 当前已接纳线记录体字节数，不超过m_wireSize
     uint32_t m_bodySize;
+    // 最近已消费的紧凑DATA元数据，只在同一解码流内复用，不保存正文指针
+    NetInterfaceFrame m_previousCompactData;
     // 当前已验证元数据，READY时才包含完整正文借用
     NetInterfaceFrame m_frame;
     // 唯一解码状态，负值持续到显式reset

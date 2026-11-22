@@ -21,7 +21,7 @@ class NetInterfaceAPI NetInterfaceService
   public:
     /** 编码服务注册凭据；产品号放在HELLO头中，0为Account
     @param [in] secret 32字节独立服务秘密，不可全零
-    @param [in] limit 1至128个在途请求
+    @param [in] limit 非零兼容请求协商提示，实际接纳由存储池决定
     @param [out] output 至少48字节
     @param [in] capacity 输出容量
     @return OK或负数，失败不写输出

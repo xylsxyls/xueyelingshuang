@@ -17,6 +17,13 @@ public:
     */
     virtual ~NetGatewayClientChannel();
 
+    /** 首次连接前复制TLS帧池配置；不得与本对象其他调用并发
+    池资源在创建物理连接时申请并验证，失败走原有连接失败路径；不修改其他连接。
+    @param [in] config 独立数据/控制记录及正文的基础池配置
+    @return NI_OK配置已复制；状态、内存或不支持错误
+    */
+    virtual int32_t configureConnectionPools(const NetConnectionPoolConfig& config);
+
     /** 管理认证、申请目标实例后再与业务端点建立TLS；固定内置CA及service.<编号>
     @param [in] address 网关数值IP，IPC适配仅作为统一入口参数
     @param [in] port 网关端口，1至65535
@@ -58,6 +65,13 @@ public:
     @return 统一连接层的结果，停止后明确拒绝
     */
     virtual int32_t configureCompression(uint64_t peer, const uint32_t* types, uint32_t count, bool negotiated);
+
+    /** 设置已协商的紧凑业务帧，由唯一运输执行者调用
+    @param [in] peer 当前连接代次
+    @param [in] enabled 双方已共同确认
+    @return NI_OK或NI_INVALID_STATE
+    */
+    virtual int32_t configureCompact(uint64_t peer, bool enabled);
 
 public:
     /** 查询本层待发数据是否全部交给下层；只由协议执行者调用

@@ -247,8 +247,11 @@ void NetSenderDispatch::execute(const NetSenderSubmissionCommand& command)
         else
         {
             wire = ++m_nextWire;
-            result = m_mapping->insert(wire, command.m_id) ?
-                m_session->beginRequestAt(wire, command.m_product, command.m_type, command.m_started, command.m_timeout) : NI_LIMIT_EXCEEDED;
+            result = m_mapping->insert(wire, command.m_id);
+            if (result == NI_OK)
+            {
+                result = m_session->beginRequestAt(wire, command.m_product, command.m_type, command.m_started, command.m_timeout);
+            }
         }
         if (result != NI_OK)
         {
@@ -322,6 +325,16 @@ bool NetSenderDispatch::advanceOutput()
     return true;
 }
 
+/** 在同一协议owner上接纳一条DATA，不创建任务或改变会话顺序
+@param [in] context 当前有效的客户端会话，本次消费借用
+@param [in] frame 提交层持有的正文视图，仅调用期间有效
+@return 会话接纳结果
+*/
+static int32_t DispatchData(void* context, const NetInterfaceFrame& frame)
+{
+    return static_cast<NetClientSession*>(context)->sendData(frame);
+}
+
 bool NetSenderDispatch::poll()
 {
     if (executing() || m_session == nullptr)
@@ -353,24 +366,51 @@ bool NetSenderDispatch::poll()
             fail(NI_INVALID_STATE);
         }
         uint32_t bytes = 0;
-        for (uint32_t step = 0; step < 64 && bytes < 2097152; ++step)
+        bool delivered = advanceOutput();
+        // 只消费已经就绪的前缀；每轮仍受消息/字节双量子约束，不等待凑批。
+        uint32_t step = 0;
+        while (step < 2304 && bytes < 2097152)
         {
-            if (!advanceOutput())
+            uint32_t messages = 0;
+            uint64_t dataBytes = 0;
+            const int32_t result = m_submission->drainData(m_session, DispatchData, 2304 - step, 2097152 - bytes, messages, dataBytes);
+            step += messages;
+            bytes += static_cast<uint32_t>(dataBytes);
+            m_outputPending = messages != 0 || m_outputPending;
+            if (result != NI_OK)
             {
-                // 允许已接纳帧及内部维护信令继续推进；不在后面追加可能越过的业务帧。
-                active = m_session->poll();
-                if (!advanceOutput())
+                if (result != NI_LIMIT_EXCEEDED)
                 {
-                    break;
+                    fail(result);
                 }
+                break;
             }
-            NetSenderSubmissionCommand command = {};
-            if (m_submission->next(command) != NI_READY)
+            if (messages != 0)
             {
+                delivered = !m_outputPending;
+                continue;
+            }
+            ++step;
+            NetSenderSubmissionCommand command;
+            if (m_submission->next(command, !delivered) != NI_READY)
+            {
+                if (!delivered)
+                {
+                    // 仅控制屏障、同步票据或背压要求推进；普通post可连续进入业务FIFO。
+                    active = m_session->poll();
+                    delivered = advanceOutput();
+                    if (delivered)
+                    {
+                        continue;
+                    }
+                }
                 break;
             }
             bytes += command.m_size + command.m_frame.m_payloadSize;
             execute(command);
+            // 同一owner尚未推进运输，已提交输出按未排空处理；不为每条DATA重复穿越查询层。
+            // 控制屏障或同步票据会令next暂停，再由上面的poll/advanceOutput确认真实交付。
+            delivered = !m_outputPending;
         }
         active = m_session->poll();
         if (m_submission->synchronousPending())
@@ -474,580 +514,3 @@ int32_t NetSenderDispatch::waitSynchronous(uint64_t ticket)
     }
 #endif
 }
-
-// NET_SENDER_DISPATCH_UNIT_BEGIN
-//#if defined(STATIC_LIB) || defined(__EMSCRIPTEN__)
-//#include "NetInterface/NetSenderDispatchMap.h"
-//#endif
-//#include <map>
-//#include <iterator>
-//#include "NetInterface/NetSenderDispatchTest.h"
-//#include <cstdio>
-//#include <cstring>
-//NetSenderDispatchTestChannel::NetSenderDispatchTestChannel(const NetInterfaceHandshakeOptions& options) :
-//m_reply(),
-//m_handshake(new NetInterfaceHandshake(options, NetSenderSubmission::now())),
-//m_listener(nullptr),
-//m_announced(false),
-//m_closing(false),
-//m_reason(0)
-//{
-//
-//}
-//
-//NetSenderDispatchTestChannel::~NetSenderDispatchTestChannel()
-//{
-//    shutdown();
-//}
-//
-//int32_t NetSenderDispatchTestChannel::connect(const char* address, uint32_t port, const NetInterfaceTlsOptions& options,
-//    NetTransportListener* listener, uint64_t& peer)
-//{
-//    (void)address;
-//    (void)port;
-//    (void)options;
-//    peer = 0;
-//    if (m_listener != nullptr || listener == nullptr)
-//    {
-//        return NI_INVALID_STATE;
-//    }
-//    m_listener = listener;
-//    peer = 1;
-//    return NI_OK;
-//}
-//
-//bool NetSenderDispatchTestChannel::poll()
-//{
-//    if (m_closing)
-//    {
-//        shutdown();
-//        return false;
-//    }
-//    if (m_listener == nullptr)
-//    {
-//        return false;
-//    }
-//    if (!m_announced)
-//    {
-//        m_announced = true;
-//        m_listener->onReady(1);
-//    }
-//    NetInterfaceFrame frame = {};
-//    if (!m_closing && m_handshake->peekOutput(frame) == NI_READY && m_listener->onFrame(1, frame))
-//    {
-//        m_handshake->consumeOutput();
-//    }
-//    if (!m_closing && m_reply.m_kind != 0 && m_listener->onFrame(1, m_reply))
-//    {
-//        m_reply = NetInterfaceFrame();
-//        m_payload.clear();
-//    }
-//    return true;
-//}
-//
-//int32_t NetSenderDispatchTestChannel::send(uint64_t peer, const NetInterfaceFrame& frame)
-//{
-//    if (peer != 1 || m_listener == nullptr || m_closing)
-//    {
-//        return NI_INVALID_STATE;
-//    }
-//    if (frame.m_kind == NI_REQUEST)
-//    {
-//        if (m_reply.m_kind != 0) { return NI_LIMIT_EXCEEDED; }
-//        NetInterfaceRpcView view = {};
-//        if (NetInterfaceRpc::parse(frame, view) != NI_OK)
-//{
-//    return NI_PROTOCOL_ERROR;
-//}
-
-//        m_requests.push_back(frame.m_requestId);
-//        m_bytes.push_back(view.m_size == 0 ? 0 : view.m_data[0]);
-//        m_payload.resize(view.m_size + 16);
-//        uint32_t required = 0;
-//        const int32_t encoded = NetInterfaceRpc::encode(NI_RESPONSE, NI_RPC_SUCCESS, 0, view.m_data, view.m_size, m_payload.data(), static_cast<uint32_t>(m_payload.size()), required);
-//        if (encoded != NI_OK) { return encoded; }
-//        m_reply = frame;
-//        m_reply.m_kind = NI_RESPONSE;
-//        m_reply.m_payload = m_payload.data();
-//        m_reply.m_payloadSize = required;
-//        return NI_OK;
-//    }
-//    if (frame.m_kind == NI_CANCEL) { return NI_OK; }
-//    const int32_t accepted = m_handshake->accept(frame, NetSenderSubmission::now());
-//    return accepted < 0 ? accepted : NI_OK;
-//}
-//
-//void NetSenderDispatchTestChannel::close(uint64_t peer, int32_t reason)
-//{
-//    if (peer == 1 && !m_closing)
-//    {
-//        m_closing = true;
-//        m_reason = reason;
-//    }
-//}
-//
-//int32_t NetSenderDispatchTestChannel::outputState(uint64_t peer) const
-//{
-//    return peer == 1 && m_listener != nullptr && !m_closing ? NI_OK : NI_INVALID_STATE;
-//}
-//
-//void NetSenderDispatchTestChannel::shutdown()
-//{
-//    m_closing = true;
-//    NetTransportListener* listener = m_listener;
-//    m_listener = nullptr;
-//    if (listener != nullptr)
-//    {
-//        listener->onClosed(1, m_reason, 0);
-//    }
-//}
-//
-//
-//NetSenderDispatchTestListener::NetSenderDispatchTestListener() :
-//m_dispatch(nullptr), m_ready(0), m_closed(0), m_bad(false)
-//{
-//}
-//void NetSenderDispatchTestListener::onSessionReady(uint64_t generation, uint32_t requests, uint32_t chunk)
-//{
-//    ++m_ready;
-//    m_bad = m_bad || generation == 0 || requests != 4 || chunk != 4096;
-//}
-//void NetSenderDispatchTestListener::onSessionResult(uint64_t generation, uint64_t id, uint32_t product, uint32_t type, uint32_t status, const uint8_t* bytes, uint32_t size)
-//{
-//    (void)type;
-//    m_bad = m_bad || generation == 0 || product != 101 || !m_dispatch->executing() || m_dispatch->quiescent();
-//    for (size_t i = 0; i < m_ids.size(); ++i) { m_bad = m_bad || m_ids[i] == id; }
-//    m_ids.push_back(id);
-//    m_status.push_back(status);
-//    if (status == NI_RPC_SUCCESS) { m_bad = m_bad || size != 1 || bytes == nullptr || bytes[0] != 7; }
-//    m_dispatch->shutdown();
-//}
-//bool NetSenderDispatchTestListener::onSessionFrame(uint64_t generation, const NetInterfaceFrame& frame)
-//{
-//    (void)generation; (void)frame; m_bad = true; return true;
-//}
-//void NetSenderDispatchTestListener::onSessionClosed(uint64_t generation, int32_t reason, int32_t detail)
-//{
-//    (void)reason; (void)detail; m_bad = m_bad || generation == 0; ++m_closed;
-//}
-//int32_t NetSenderDispatchTestListener::entropy(void* context, uint8_t* bytes, uint32_t size)
-//{
-//    (void)context; std::memset(bytes, 0x41, size); return 0;
-//}
-//#include "NetInterface/NetSenderDispatchAuditTest.h"
-//#include <cstdio>
-//#include <cstring>
-//NetSenderDispatchAuditChannel::NetSenderDispatchAuditChannel(const NetInterfaceHandshakeOptions& options) :
-//m_reply(), m_autoReply(true), m_busy(false),
-//m_handshake(new NetInterfaceHandshake(options, NetSenderSubmission::now())),
-//m_listener(nullptr),
-//m_announced(false),
-//m_closing(false),
-//m_reason(0)
-//{
-//
-//}
-//
-//NetSenderDispatchAuditChannel::~NetSenderDispatchAuditChannel()
-//{
-//    shutdown();
-//}
-//
-//int32_t NetSenderDispatchAuditChannel::connect(const char* address, uint32_t port, const NetInterfaceTlsOptions& options,
-//    NetTransportListener* listener, uint64_t& peer)
-//{
-//    (void)address;
-//    (void)port;
-//    (void)options;
-//    peer = 0;
-//    if (m_listener != nullptr || listener == nullptr)
-//    {
-//        return NI_INVALID_STATE;
-//    }
-//    m_listener = listener;
-//    peer = 1;
-//    return NI_OK;
-//}
-//
-//bool NetSenderDispatchAuditChannel::poll()
-//{
-//    if (m_closing)
-//    {
-//        shutdown();
-//        return false;
-//    }
-//    if (m_listener == nullptr)
-//    {
-//        return false;
-//    }
-//    if (!m_announced)
-//    {
-//        m_announced = true;
-//        m_listener->onReady(1);
-//    }
-//    NetInterfaceFrame frame = {};
-//    if (!m_closing && m_handshake->peekOutput(frame) == NI_READY && m_listener->onFrame(1, frame))
-//    {
-//        m_handshake->consumeOutput();
-//    }
-//    if (!m_closing && m_reply.m_kind != 0 && m_listener->onFrame(1, m_reply))
-//    {
-//        m_reply = NetInterfaceFrame();
-//        m_payload.clear();
-//    }
-//    return true;
-//}
-//
-//int32_t NetSenderDispatchAuditChannel::send(uint64_t peer, const NetInterfaceFrame& frame)
-//{
-//    if (peer != 1 || m_listener == nullptr || m_closing)
-//    {
-//        return NI_INVALID_STATE;
-//    }
-//    if (frame.m_kind == NI_REQUEST)
-//    {
-//        if (m_busy) { return NI_LIMIT_EXCEEDED; }
-//        if (m_reply.m_kind != 0) { return NI_LIMIT_EXCEEDED; }
-//        NetInterfaceRpcView view = {};
-//        if (NetInterfaceRpc::parse(frame, view) != NI_OK)
-//{
-//    return NI_PROTOCOL_ERROR;
-//}
-
-//        m_requests.push_back(frame.m_requestId);
-//        m_bytes.push_back(view.m_size == 0 ? 0 : view.m_data[0]);
-//        if (!m_autoReply) { return NI_OK; }
-//        m_payload.resize(view.m_size + 16);
-//        uint32_t required = 0;
-//        const int32_t encoded = NetInterfaceRpc::encode(NI_RESPONSE, NI_RPC_SUCCESS, 0, view.m_data, view.m_size, m_payload.data(), static_cast<uint32_t>(m_payload.size()), required);
-//        if (encoded != NI_OK) { return encoded; }
-//        m_reply = frame;
-//        m_reply.m_kind = NI_RESPONSE;
-//        m_reply.m_payload = m_payload.data();
-//        m_reply.m_payloadSize = required;
-//        return NI_OK;
-//    }
-//    if (frame.m_kind == NI_CANCEL) { return NI_OK; }
-//    const int32_t accepted = m_handshake->accept(frame, NetSenderSubmission::now());
-//    return accepted < 0 ? accepted : NI_OK;
-//}
-//
-//void NetSenderDispatchAuditChannel::close(uint64_t peer, int32_t reason)
-//{
-//    if (peer == 1 && !m_closing)
-//    {
-//        m_closing = true;
-//        m_reason = reason;
-//    }
-//}
-//
-//int32_t NetSenderDispatchAuditChannel::outputState(uint64_t peer) const
-//{
-//    return peer == 1 && m_listener != nullptr && !m_closing ? NI_OK : NI_INVALID_STATE;
-//}
-//
-//void NetSenderDispatchAuditChannel::shutdown()
-//{
-//    m_closing = true;
-//    NetTransportListener* listener = m_listener;
-//    m_listener = nullptr;
-//    if (listener != nullptr)
-//    {
-//        listener->onClosed(1, m_reason, 0);
-//    }
-//}
-//
-//
-//NetSenderDispatchAuditListener::NetSenderDispatchAuditListener() :
-//m_dispatch(nullptr), m_ready(0), m_closed(0), m_bad(false)
-//{
-//}
-//void NetSenderDispatchAuditListener::onSessionReady(uint64_t generation, uint32_t requests, uint32_t chunk)
-//{
-//    ++m_ready;
-//    m_bad = m_bad || generation == 0 || requests != 128 || chunk != 4096;
-//}
-//void NetSenderDispatchAuditListener::onSessionResult(uint64_t generation, uint64_t id, uint32_t product, uint32_t type, uint32_t status, const uint8_t* bytes, uint32_t size)
-//{
-//    (void)type;
-//    m_bad = m_bad || generation == 0 || product != 101 || !m_dispatch->executing() || m_dispatch->quiescent();
-//    for (size_t i = 0; i < m_ids.size(); ++i) { m_bad = m_bad || m_ids[i] == id; }
-//    m_ids.push_back(id);
-//    m_status.push_back(status);
-//    if (status == NI_RPC_SUCCESS) { m_bad = m_bad || size != 1 || bytes == nullptr || bytes[0] != 7; }
-//
-//}
-//bool NetSenderDispatchAuditListener::onSessionFrame(uint64_t generation, const NetInterfaceFrame& frame)
-//{
-//    (void)generation; (void)frame; m_bad = true; return true;
-//}
-//void NetSenderDispatchAuditListener::onSessionClosed(uint64_t generation, int32_t reason, int32_t detail)
-//{
-//    (void)reason; (void)detail; m_bad = m_bad || generation == 0; ++m_closed;
-//}
-//int32_t NetSenderDispatchAuditListener::entropy(void* context, uint8_t* bytes, uint32_t size)
-//{
-//    (void)context; std::memset(bytes, 0x41, size); return 0;
-//}
-//
-//#if defined(_WIN32) && defined(_DEBUG)
-//#include <crtdbg.h>
-//static int32_t g_dispatchRejectAfter = -1;
-//static uint32_t g_dispatchAllocations = 0;
-///** 独立单元的映射分配检测与构造故障
-//@param [in] operation CRT操作
-//@param [in] data 未使用
-//@param [in] size 未使用
-//@param [in] block 内存类型
-//@param [in] request 未使用
-//@param [in] file 未使用
-//@param [in] line 未使用
-//@return 是否允许分配
-//*/
-//static int DispatchMemoryHook(int operation, void*, size_t, int block, long, const unsigned char*, int)
-//{
-//    if (operation == _HOOK_ALLOC && block == _NORMAL_BLOCK)
-//    {
-//        ++g_dispatchAllocations;
-//        if (g_dispatchRejectAfter == 0) { return 0; }
-//        if (g_dispatchRejectAfter > 0) { --g_dispatchRejectAfter; }
-//    }
-//    return 1;
-//}
-//#endif
-//int main()
-//{
-//    uint32_t checks = 0;
-//#define DISPATCH_CHECK(condition) { ++checks; if (!(condition)) { std::printf("FAIL line=%u %s\n", static_cast<uint32_t>(__LINE__), #condition); return 1; } }
-//#if defined(_WIN32) && defined(_DEBUG)
-//    _CrtMemState before;
-//    _CrtMemCheckpoint(&before);
-//#endif
-//    {
-//    for (uint32_t mode = 0; mode < 4; ++mode)
-//    {
-//        NetInterfaceHandshakeOptions client = {};
-//        client.m_platform = 1; client.m_capabilities = 7; client.m_maxRequests = 4; client.m_maxChunk = 4096; client.m_timeoutMs = 5000;
-//        std::memset(client.m_device, 0x41, 16); std::memset(client.m_nonce, 0x42, 16);
-//        NetInterfaceHandshakeOptions server = client;
-//        server.m_server = 1; server.m_platform = 0;
-//        std::memset(server.m_device, 0, 16); std::memset(server.m_nonce, 0x43, 16);
-//        NetSenderDispatchTestChannel channel(server);
-//        NetClientSession session;
-//        NetSenderDispatch dispatch(&session);
-//        NetSenderDispatchTestListener listener;
-//        listener.m_dispatch = &dispatch;
-//        DISPATCH_CHECK(session.bindChannel(&channel) == NI_OK);
-//        DISPATCH_CHECK(dispatch.prepare(&listener) == NI_OK);
-//        NetInterfaceTlsOptions tls = {}; tls.handshakeTimeoutMs = 5000; tls.entropy = listener.entropy;
-//        DISPATCH_CHECK(session.connect("mock", 1, tls, client, dispatch.listener()) == NI_OK);
-//        DISPATCH_CHECK(dispatch.started(session.generation(), 0) == NI_OK);
-//        for (uint32_t i = 0; i < 8 && listener.m_ready == 0; ++i) { dispatch.poll(); }
-//        DISPATCH_CHECK(listener.m_ready == 1 && !listener.m_bad);
-//        uint64_t id = 0;
-//        DISPATCH_CHECK(dispatch.submission().begin(101, 10, mode == 2 ? 5 : 1000, id) == NI_OK && id != 0);
-//        if (mode == 0)
-//        {
-//            uint8_t data = 7;
-//            DISPATCH_CHECK(dispatch.submission().send(id, &data, 1) == NI_OK);
-//            data = 99;
-//        }
-//        if (mode == 1) { DISPATCH_CHECK(dispatch.submission().cancel(id) == NI_OK); }
-//        if (mode == 2) { const uint64_t until = NetSenderSubmission::now() + 10; while (NetSenderSubmission::now() < until) {} }
-//        if (mode == 3) { dispatch.submission().close(0); }
-//        for (uint32_t i = 0; i < 16 && !dispatch.quiescent(); ++i) { dispatch.poll(); }
-//        DISPATCH_CHECK(dispatch.quiescent() && !listener.m_bad && listener.m_closed == 1);
-//        DISPATCH_CHECK(listener.m_ids.size() == 1 && listener.m_ids[0] == id);
-//        DISPATCH_CHECK(listener.m_status[0] == (mode == 0 ? NI_RPC_SUCCESS : mode == 2 ? NI_RPC_TIMEOUT : NI_RPC_CANCELLED));
-//        DISPATCH_CHECK(channel.m_requests.size() == (mode == 0 ? 1 : 0));
-//        if (mode == 0) { DISPATCH_CHECK(channel.m_bytes[0] == 7); }
-//        DISPATCH_CHECK(dispatch.submission().cancel(id) == NI_NOT_FOUND);
-//        DISPATCH_CHECK(!dispatch.poll() && listener.m_closed == 1);
-//    }
-//
-//    for (uint32_t mode = 0; mode < 3; ++mode)
-//    {
-//        NetInterfaceHandshakeOptions options = {};
-//        options.m_platform = 1;
-//        options.m_capabilities = 7;
-//        options.m_maxRequests = 128;
-//        options.m_maxChunk = 4096;
-//        options.m_timeoutMs = 5000;
-//        std::memset(options.m_device, 0x41, 16);
-//        std::memset(options.m_nonce, 0x42, 16);
-//        NetInterfaceHandshakeOptions server = options;
-//        server.m_server = 1;
-//        server.m_platform = 0;
-//        std::memset(server.m_device, 0, 16);
-//        std::memset(server.m_nonce, 0x43, 16);
-//        NetSenderDispatchAuditChannel channel(server);
-//        NetClientSession session;
-//        NetSenderDispatch dispatch(&session);
-//        NetSenderDispatchAuditListener listener;
-//        listener.m_dispatch = &dispatch;
-//        DISPATCH_CHECK(session.bindChannel(&channel) == NI_OK && dispatch.prepare(&listener) == NI_OK);
-//        NetInterfaceTlsOptions tls = {};
-//        tls.handshakeTimeoutMs = 5000;
-//        tls.entropy = listener.entropy;
-//        DISPATCH_CHECK(session.connect("mock", 1, tls, options, dispatch.listener()) == NI_OK);
-//        DISPATCH_CHECK(dispatch.started(session.generation(), 0) == NI_OK);
-//        for (uint32_t step = 0; step < 16 && listener.m_ready == 0; ++step) { dispatch.poll(); }
-//        DISPATCH_CHECK(listener.m_ready == 1 && !listener.m_bad);
-//        channel.m_autoReply = false;
-//        const uint32_t count = mode == 0 ? 128 : 2;
-//        uint64_t ids[128] = {};
-//        uint8_t byte = 7;
-//        for (uint32_t index = 0; index < count; ++index)
-//        {
-//            DISPATCH_CHECK(dispatch.submission().begin(101, 700, 5000, ids[index]) == NI_OK);
-//        }
-//        for (uint32_t index = 0; index < count; ++index)
-//        {
-//            DISPATCH_CHECK(dispatch.submission().send(ids[count - index - 1], &byte, 1) == NI_OK);
-//        }
-//        channel.m_busy = mode == 1;
-//        if (channel.m_busy)
-//        {
-//            for (uint32_t step = 0; step < 128; ++step) { dispatch.poll(); }
-//            DISPATCH_CHECK(channel.m_requests.empty() && listener.m_ids.empty());
-//            channel.m_busy = false;
-//        }
-//        for (uint32_t step = 0; step < 16 && channel.m_requests.size() != count; ++step) { dispatch.poll(); }
-//        DISPATCH_CHECK(channel.m_requests.size() == count && listener.m_ids.empty());
-//        const uint64_t generation = session.generation();
-//        // 注入不属于当前代的内部回调，不能摘除当前请求或把错误代次报告给业务。
-//        dispatch.listener()->onSessionResult(generation + 1, channel.m_requests[0], 101, 700, NI_RPC_SUCCESS, &byte, 1);
-//        dispatch.listener()->onSessionClosed(generation + 1, NI_INVALID_STATE, 0);
-//        dispatch.listener()->onSessionResult(generation, UINT64_MAX, 101, 700, NI_RPC_SUCCESS, &byte, 1);
-//        DISPATCH_CHECK(listener.m_ids.empty() && listener.m_closed == 0);
-//        uint64_t observed = 0;
-//        bool ready = false;
-//        dispatch.submission().state(observed, ready);
-//        DISPATCH_CHECK(observed == generation && ready);
-//        if (mode == 2)
-//        {
-//            for (uint32_t index = 0; index < count; ++index)
-//            {
-//                DISPATCH_CHECK(dispatch.submission().cancel(ids[index]) == NI_OK);
-//            }
-//            for (uint32_t step = 0; step < 8 && listener.m_ids.size() != count; ++step) { dispatch.poll(); }
-//            DISPATCH_CHECK(listener.m_ids.size() == count);
-//            for (uint32_t index = 0; index < count; ++index) { DISPATCH_CHECK(listener.m_status[index] == NI_RPC_CANCELLED); }
-//        }
-//        else
-//        {
-//            for (uint32_t index = 0; index < count; ++index)
-//            {
-//                channel.m_payload.resize(17);
-//                uint32_t required = 0;
-//                DISPATCH_CHECK(NetInterfaceRpc::encode(NI_RESPONSE, NI_RPC_SUCCESS, 0, &byte, 1,
-//                    channel.m_payload.data(), 17, required) == NI_OK);
-//                channel.m_reply = NetInterfaceFrame();
-//                channel.m_reply.m_kind = NI_RESPONSE;
-//                channel.m_reply.m_productId = 101;
-//                channel.m_reply.m_messageType = 700;
-//                channel.m_reply.m_requestId = channel.m_requests[count - index - 1];
-//                channel.m_reply.m_payload = channel.m_payload.data();
-//                channel.m_reply.m_payloadSize = required;
-//                dispatch.poll();
-//                DISPATCH_CHECK(listener.m_ids.size() == index + 1 && listener.m_ids.back() == ids[index] && listener.m_status.back() == NI_RPC_SUCCESS);
-//            }
-//        }
-//        dispatch.shutdown();
-//        DISPATCH_CHECK(dispatch.quiescent() && listener.m_closed == 1 && !listener.m_bad);
-//    }
-//
-//#if defined(STATIC_LIB) || defined(__EMSCRIPTEN__)
-//    {
-//        NetSenderDispatchMap table;
-//        std::map<uint64_t, uint64_t> expected;
-//        uint32_t random = 341123;
-//        uint64_t sequence = 0;
-//        for (uint32_t step = 0; step < 4096; ++step)
-//        {
-//            random = random * 1664525U + 1013904223U;
-//            if (step < 128 || (expected.size() < 128 && ((random >> 16) % 3 != 0 || expected.empty())))
-//            {
-//                ++sequence;
-//                // 两半异或固定为254，同时覆盖最长碰撞链和跨数组末端回移。
-//                const uint64_t wire = (sequence << 32) | (sequence ^ 254);
-//                const uint64_t local = ((sequence + 0x10000) << 32) | ((sequence + 0x10000) ^ 254);
-//                DISPATCH_CHECK(table.insert(wire, local));
-//                expected[wire] = local;
-//                DISPATCH_CHECK(!table.insert(wire, local + 1) && !table.insert(wire + 1, local));
-//            }
-//            else
-//            {
-//                auto item = expected.begin();
-//                std::advance(item, random % expected.size());
-//                const uint64_t wire = item->first;
-//                const uint64_t local = item->second;
-//                table.erase(wire);
-//                expected.erase(item);
-//                DISPATCH_CHECK(table.local(wire) == 0 && table.wire(local) == 0);
-//                table.erase(wire);
-//            }
-//            DISPATCH_CHECK(table.size() == expected.size());
-//            DISPATCH_CHECK(!table.insert(0, UINT64_MAX) && !table.insert(UINT64_MAX, 0));
-//            DISPATCH_CHECK(table.local(0) == 0 && table.wire(0) == 0);
-//            if (expected.size() == 128) { DISPATCH_CHECK(!table.insert(UINT64_MAX, UINT64_MAX)); }
-//            for (auto item = expected.begin(); item != expected.end(); ++item)
-//            {
-//                DISPATCH_CHECK(table.local(item->first) == item->second && table.wire(item->second) == item->first);
-//            }
-//        }
-//        table.clear();
-//        DISPATCH_CHECK(table.size() == 0 && table.local(UINT64_MAX) == 0 && table.wire(UINT64_MAX) == 0);
-//        DISPATCH_CHECK(table.insert(UINT64_MAX, UINT64_MAX) && table.local(UINT64_MAX) == UINT64_MAX && table.wire(UINT64_MAX) == UINT64_MAX);
-//        table.erase(UINT64_MAX);
-//        DISPATCH_CHECK(table.size() == 0);
-//    }
-//#endif
-//
-//#if defined(_WIN32) && defined(_DEBUG) && defined(STATIC_LIB)
-//    {
-//        NetSenderDispatchMap table;
-//        g_dispatchAllocations = 0;
-//        g_dispatchRejectAfter = 0;
-//        const _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(DispatchMemoryHook);
-//        bool valid = true;
-//        for (uint32_t round = 0; round < 128; ++round)
-//        {
-//            for (uint32_t index = 1; index <= 128; ++index) { valid = valid && table.insert(index, 129 - index); }
-//            for (uint32_t index = 1; index <= 128; ++index) { valid = valid && table.wire(129 - index) == index; table.erase(index); }
-//        }
-//        _CrtSetAllocHook(previous);
-//        g_dispatchRejectAfter = -1;
-//        DISPATCH_CHECK(valid && g_dispatchAllocations == 0 && table.size() == 0);
-//    }
-//    {
-//        NetClientSession session;
-//        bool complete = false;
-//        uint32_t failures = 0;
-//        for (int32_t step = 0; step < 32 && !complete; ++step)
-//        {
-//            g_dispatchRejectAfter = step;
-//            const _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(DispatchMemoryHook);
-//            NetSenderDispatch* dispatch = nullptr;
-//            try { dispatch = new NetSenderDispatch(&session); }
-//            catch (...) { ++failures; }
-//            _CrtSetAllocHook(previous);
-//            g_dispatchRejectAfter = -1;
-//            complete = dispatch != nullptr;
-//            delete dispatch;
-//        }
-//        DISPATCH_CHECK(complete && failures != 0);
-//    }
-//#endif
-//
-//    }
-//#if defined(_WIN32) && defined(_DEBUG)
-//    _CrtMemState after;
-//    _CrtMemCheckpoint(&after);
-//    DISPATCH_CHECK(before.lCounts[_NORMAL_BLOCK] == after.lCounts[_NORMAL_BLOCK] && before.lSizes[_NORMAL_BLOCK] == after.lSizes[_NORMAL_BLOCK]);
-//#endif
-//    std::printf("Dispatch checks=%u PASS\n", checks);
-//    return 0;
-//#undef DISPATCH_CHECK
-//}
-// NET_SENDER_DISPATCH_UNIT_END

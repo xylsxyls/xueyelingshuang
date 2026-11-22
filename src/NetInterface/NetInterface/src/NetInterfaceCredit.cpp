@@ -2,7 +2,7 @@
 #include "NetInterfaceMacro.h"
 #include "NetInterface.h"
 #include "NetInterfaceGatewayTypes.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 
 NetInterfaceCredit::NetInterfaceCredit() :
 m_credit()

@@ -1,11 +1,12 @@
 ﻿#pragma once
 #include "NetInterfaceLink.h"
 #include "NetInterfaceConnection.h"
+#include "NetBufferPool.h"
 #include <memory>
 #include <string>
 #include <vector>
 
-// 单个输出槽独占一条完整业务密文，存储大小与记录载荷完全相同。
+// 单个实际池槽独占一条完整业务密文，正文租约保持到消费或销毁
 class NetInterfaceLinkWrite
 {
 public:
@@ -20,8 +21,12 @@ public:
 public:
     // 已复制元数据，m_data不保存外部地址
     NetInterfaceTunnelRecord m_record;
-    // 独占精确m_record.m_size字节，消费后交给状态的一份复用缓冲
-    std::unique_ptr<uint8_t[]> m_bytes;
+    // 正文实际池槽的独占租约，不保存调用者地址
+    NetBufferLease m_bytes;
+    // 所属记录池的原始槽，队列最终归还一次
+    void* m_storage;
+    // 同一owner的下一个排队记录，不单独拥有
+    NetInterfaceLinkWrite* m_next;
 };
 
 // 认证阶段由单个状态唯一拥有，不由多个已发送标记拼出隐式组合。
@@ -110,9 +115,14 @@ public:
     */
     int32_t queueRecord(const NetInterfaceTunnelRecord& record);
 
-    /** 消费当前非空输出队首并保留一份清零的同尺寸复用缓冲
+    /** 消费当前非空输出队首并归还其实际记录和正文槽
     */
     void consumeQueuedRecord();
+
+    /** 按实际记录槽大小计算默认存储预算
+    @return 记录池的初始、最大及目录配置
+    */
+    static LockFreeHashMapPoolConfig defaultOutputRecords();
 
 public:
     // 复制的配置值；宿主随机/服务回调上下文借用至本实例析构
@@ -151,18 +161,14 @@ public:
     std::vector<uint8_t> m_receivedBytes;
     // 业务记录是否等待上层显式消费
     bool m_recordReady;
-    // 固定32槽FIFO，由本状态单执行者拥有；总载荷上限64KiB
-    NetInterfaceLinkWrite m_output[32];
-    // 当前队首索引，消费后按32回绕
-    uint32_t m_outputHead;
-    // 已提交且未消费的槽数
-    uint32_t m_outputCount;
-    // 所有已提交正文的精确字节数
-    uint32_t m_outputBytes;
-    // 最多一份16KiB的已清零正文，仅在新载荷尺寸相等时复用
-    std::unique_ptr<uint8_t[]> m_spare;
-    // 复用缓冲的精确容量，空指针时为0
-    uint32_t m_spareSize;
+    // 正文池晚于队列及记录池析构，所有租约归还后才释放
+    std::unique_ptr<NetBufferPool> m_outputBodies;
+    // 已接纳输出记录的真实存储，不以旁路计数限制接纳
+    std::unique_ptr<NetObjectPool<NetInterfaceLinkWrite>> m_outputRecords;
+    // owner独占FIFO；已peek的队首在consume前保持同一租约
+    NetInterfaceLinkWrite* m_outputHead;
+    // FIFO尾指针；插入不再分配容器节点
+    NetInterfaceLinkWrite* m_outputTail;
     // 当前待发借用的元数据快照，消费前不切换队首
     NetInterfaceTunnelRecord m_peeked;
     // 是否已有尚未消费的输出借用

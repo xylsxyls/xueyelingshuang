@@ -40,15 +40,24 @@ m_last(nullptr)
 
 }
 
-NetInterfaceRequestsState::NetInterfaceRequestsState(uint32_t capacity) :
+NetInterfaceRequestsState::NetInterfaceRequestsState(const NetRequestTablePools& pools) :
+m_requestPool(pools.m_requests),
+m_endpointPool(pools.m_endpoints),
+m_cancelPool(pools.m_cancellations),
 m_lastRoute(0),
 m_lastEndpoint(0),
 m_lastMs(0),
-m_capacity(capacity),
-m_futureCount(0),
-m_status(capacity > 0 && capacity <= 4096 ? NI_OK : NI_INVALID_ARGUMENT)
+m_status(NI_OK)
 {
-
+    const int32_t states[] = {m_requestPool.status(), m_endpointPool.status(), m_cancelPool.status()};
+    for (size_t index = 0; index < 3; ++index)
+    {
+        if (states[index] != NI_OK)
+        {
+            m_status = states[index];
+            break;
+        }
+    }
 }
 
 bool NetInterfaceRequestsState::earlier(const NetInterfaceRequestEntry* left, const NetInterfaceRequestEntry* right)
@@ -79,7 +88,7 @@ void NetInterfaceRequestsState::sink(size_t index)
 {
     NetInterfaceRequestEntry* value = m_expiry[index];
     const size_t count = m_expiry.size();
-    while (index * 2 + 1 < count)
+    while (count > 1 && index <= (count - 2) / 2)
     {
         size_t child = index * 2 + 1;
         if (child + 1 < count && earlier(m_expiry[child + 1], m_expiry[child]))
@@ -104,13 +113,25 @@ int32_t NetInterfaceRequestsState::insert(const NetInterfaceRequest& request, Ne
     bool newChildren = false;
     NetInterfaceRequestChildren* children = nullptr;
     NetInterfaceRequestEntry* entry = nullptr;
-    const std::pair<uint64_t, uint64_t> key(request.m_source, request.m_original);
+    NetObjectReference<NetInterfaceRequestEntry> owned;
+    const int32_t allocated = m_requestPool.create(owned, request);
+    if (allocated != NI_OK)
+    {
+        return allocated;
+    }
     try
     {
-        // 所有可能分配的位置在提交额度之前完成；堆只存指针，最多32KiB（64位）。
-        if (m_expiry.capacity() < m_capacity)
+        // 所有可能分配的位置在接入非拥有链之前完成；按需扩容且保留供复用。
+        if (m_expiry.size() == m_expiry.capacity())
         {
-            m_expiry.reserve(m_capacity);
+            const size_t capacity = m_expiry.capacity();
+            if (m_expiry.size() == m_expiry.max_size())
+            {
+                return NI_LIMIT_EXCEEDED;
+            }
+            const size_t next = capacity == 0 ? 128 :
+                (capacity > m_expiry.max_size() / 2 ? m_expiry.max_size() : capacity * 2);
+            m_expiry.reserve(next);
         }
         if (request.m_parent != 0)
         {
@@ -118,7 +139,7 @@ int32_t NetInterfaceRequestsState::insert(const NetInterfaceRequest& request, Ne
             children = &inserted.first->second;
             newChildren = inserted.second;
         }
-        const auto inserted = m_requests.insert(std::make_pair(request.m_route, NetInterfaceRequestEntry(request)));
+        const auto inserted = m_requests.insert(std::make_pair(request.m_route, owned));
         if (!inserted.second)
         {
             if (newChildren)
@@ -127,8 +148,8 @@ int32_t NetInterfaceRequestsState::insert(const NetInterfaceRequest& request, Ne
             }
             return NI_INVALID_STATE;
         }
-        entry = &inserted.first->second;
-        if (!m_sources.insert(std::make_pair(key, entry)).second)
+        entry = inserted.first->second.get();
+        if (!source->m_originals.insert(std::make_pair(request.m_original, entry)).second)
         {
             m_requests.erase(request.m_route);
             if (newChildren)
@@ -253,7 +274,7 @@ int32_t NetInterfaceRequestsState::take(NetInterfaceRequestEntry* entry, NetInte
             m_children.erase(found);
         }
     }
-    m_sources.erase(std::make_pair(request.m_source, request.m_original));
+    entry->m_endpoint[NI_REQUEST_SOURCE]->m_originals.erase(request.m_original);
     m_requests.erase(request.m_route);
     return NI_READY;
 }

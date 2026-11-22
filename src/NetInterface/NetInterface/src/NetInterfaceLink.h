@@ -4,6 +4,8 @@
 #include "NetInterfaceTypes.h"
 
 class NetInterfaceLinkState;
+struct NetBufferPoolConfig;
+struct LockFreeHashMapPoolConfig;
 
 // 管理TLS和NTW3组合，无socket/IPC/线程；业务TLS在各逻辑通道端点单独持有。
 class NetInterfaceAPI NetInterfaceLink
@@ -17,6 +19,13 @@ public:
     /** 在拥有状态的本模块释放并擦除身份私钥副本
     */
     ~NetInterfaceLink();
+
+    /** 首次progress/accept/peekOutput前设置业务密文输出的实际池；失败保留原配置
+    @param [in] bodies 正文大小类及实际槽预算，复制配置不长期借用
+    @param [in] records 实际记录池配置，不再另加固定条数或字节门槛
+    @return NI_OK或参数/内存/已启动错误；生命周期owner串行调用
+    */
+    int32_t configureOutputPools(const NetBufferPoolConfig& bodies, const LockFreeHashMapPoolConfig& records);
 
     /** 接纳一条完整外层记录，无空间时无副作用拒绝
     @param [in] record 调用期间借用，接纳后由本实例持有副本

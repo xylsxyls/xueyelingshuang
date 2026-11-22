@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "NetInterfaceTlsTypes.h"
 
-class NetInterfaceTlsState;
+class CEncodeDecodeTls;
 
 // 非阻塞TLS字节通道，拥有内部状态；不拥有socket，不建线程，同一实例须串行调用
 class NetInterfaceAPI NetInterfaceTls
@@ -51,6 +51,30 @@ class NetInterfaceAPI NetInterfaceTls
     */
     int32_t write(const uint8_t* data, uint32_t size, uint32_t& accepted);
 
+    /** 单执行者向尚未开始加密的记录追加明文；不等待填满，不改变write的独立记录契约
+    @param [in] data 仅size为0时可空，本次复制，返回后不借用
+    @param [in] size 输入字节数，可只接纳剩余容量对应的前缀
+    @param [out] accepted 实际接纳字节数，未接纳后缀仍归调用者
+    @return OK、WANT_IO或错误；progress开始处理的记录不可修改，须先排空后重试
+    */
+    int32_t append(const uint8_t* data, uint32_t size, uint32_t& accepted);
+
+    /** 单执行者完整追加一段明文；记录尾部不足时最多加密一条旧记录；不调用宿主或等待网络
+    @param [in] data 仅size为0时可空，本次复制，返回后不借用
+    @param [in] size 完整长度；超过TLS记录容量时返回WANT_IO，由调用者使用可分片的append
+    @return OK表示完整接纳，WANT_IO表示当前输入未接纳，旧记录可能已推进；其他错误与append一致
+    */
+    int32_t appendExact(const uint8_t* data, uint32_t size);
+
+    /** 单执行者原子追加两段明文，按first后second组成一段；免去上层正文中转复制
+    @param [in] first 首段，firstSize为0时可空，返回后不借用
+    @param [in] firstSize 首段字节数
+    @param [in] second 次段，secondSize为0时可空，返回后不借用
+    @param [in] secondSize 次段字节数；总长度超过TLS记录时返回WANT_IO
+    @return 与单段appendExact相同；失败不会只接纳一段，容量不足最多推进一条旧记录
+    */
+    int32_t appendExact(const uint8_t* first, uint32_t firstSize, const uint8_t* second, uint32_t secondSize);
+
     /** 读取经完整性验证的应用明文
     @param [out] output 有效可写缓冲，仅capacity为0时可空
     @param [in] capacity 可写字节数
@@ -98,6 +122,6 @@ public:
     NetInterfaceTls& operator=(const NetInterfaceTls& other);
 
   private:
-    // 隔离第三方TLS类型与公共ABI，实例独占并在本模块销毁
-    NetInterfaceTlsState* m_state;
+    // 实例独占的加密通道，由CEncodeDecode创建并释放
+    CEncodeDecodeTls* m_tls;
 };

@@ -36,6 +36,29 @@ NetSession::~NetSession()
     delete m_state;
 }
 
+int32_t NetSession::configureRequestPool(const LockFreeHashMapPoolConfig& config)
+{
+    if (m_state->m_generation != 0 || m_state->m_active || m_state->m_polling || m_state->m_callback || !m_state->m_pending.empty())
+    {
+        return NI_INVALID_STATE;
+    }
+    try
+    {
+        std::unique_ptr<NetObjectPool<NetSessionPending>> replacement(new NetObjectPool<NetSessionPending>(config));
+        const int32_t result = replacement->status();
+        if (result != NI_OK)
+        {
+            return result;
+        }
+        m_state->m_records.swap(replacement);
+        return NI_OK;
+    }
+    catch (...)
+    {
+        return NI_NO_MEMORY;
+    }
+}
+
 int32_t NetSession::bindChannel(NetClientChannel* channel)
 {
     if (m_state->m_active || m_state->m_callback || m_state->m_polling)
@@ -206,6 +229,12 @@ bool NetSession::onFrame(uint64_t peer, const NetInterfaceFrame& frame)
                 return true;
             }
         }
+        const int32_t compact = m_state->m_channel->configureCompact(m_state->m_peer, (fields[1] & 16) != 0);
+        if (compact != NI_OK)
+        {
+            close(compact);
+            return true;
+        }
         m_state->m_maxRequests = fields[2];
         m_state->m_ready = true;
         m_state->m_maxChunk = fields[3];
@@ -252,12 +281,12 @@ bool NetSession::onFrame(uint64_t peer, const NetInterfaceFrame& frame)
         {
             return true;
         }
-        if (!found->second.m_sent)
+        if (!found->second->m_sent)
         {
             close(NI_PROTOCOL_ERROR);
             return true;
         }
-        const NetInterfaceRequest request = found->second.m_request;
+        const NetInterfaceRequest request = found->second->m_request;
         if (frame.m_productId != request.m_product || frame.m_messageType != request.m_type)
         {
             close(NI_PROTOCOL_ERROR);
@@ -335,7 +364,7 @@ int32_t NetSession::sendRequest(uint64_t requestId, const uint8_t* body, uint32_
     {
         return NI_NOT_FOUND;
     }
-    if (found->second.m_sent)
+    if (found->second->m_sent)
     {
         return NI_INVALID_STATE;
     }
@@ -344,7 +373,7 @@ int32_t NetSession::sendRequest(uint64_t requestId, const uint8_t* body, uint32_
         return NI_INVALID_ARGUMENT;
     }
     const uint64_t now = SessionNow();
-    if (now >= found->second.m_request.m_deadline)
+    if (now >= found->second->m_request.m_deadline)
     {
         return NI_TIMEOUT;
     }
@@ -353,21 +382,21 @@ int32_t NetSession::sendRequest(uint64_t requestId, const uint8_t* body, uint32_
     {
         m_state->m_payload.resize(size + 16);
         uint32_t required = 0;
-        result = NetInterfaceRpc::encode(NI_REQUEST, static_cast<uint32_t>(found->second.m_request.m_deadline - now), 0,
+        result = NetInterfaceRpc::encode(NI_REQUEST, static_cast<uint32_t>(found->second->m_request.m_deadline - now), 0,
             body, size, m_state->m_payload.data(), static_cast<uint32_t>(m_state->m_payload.size()), required);
         if (result == NI_OK)
         {
             NetInterfaceFrame frame = {};
             frame.m_kind = NI_REQUEST;
-            frame.m_productId = found->second.m_request.m_product;
-            frame.m_messageType = found->second.m_request.m_type;
+            frame.m_productId = found->second->m_request.m_product;
+            frame.m_messageType = found->second->m_request.m_type;
             frame.m_requestId = requestId;
             frame.m_payload = m_state->m_payload.data();
             frame.m_payloadSize = required;
             result = sendFrame(frame);
             if (result == NI_OK)
             {
-                found->second.m_sent = true;
+                found->second->m_sent = true;
             }
         }
     }
@@ -382,7 +411,7 @@ int32_t NetSession::sendRequest(uint64_t requestId, const uint8_t* body, uint32_
 
 int32_t NetSession::configureCompression(const uint32_t* types, uint32_t count)
 {
-    if (count > 64 || (count != 0 && types == nullptr))
+    if ((count != 0 && types == nullptr))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -715,891 +744,3 @@ void NetSession::notifyClosed(int32_t reason, int32_t detail)
     }
     m_state->m_callback = callback;
 }
-
-// NET_PROTOCOL_SESSION_UNIT_BEGIN
-//#include "NetInterface.h"
-//#include "NetInterface/NetClientSessionTest.h"
-//#ifdef STATIC_LIB
-//#include "NetInterface/NetSessionState.h"
-//#endif
-//#include <algorithm>
-//#include <chrono>
-//#include <cstdio>
-//#include <cstring>
-//#include <iterator>
-//#include <map>
-//#if defined(_WIN32) && defined(_DEBUG)
-//#include <crtdbg.h>
-//#endif
-//NetClientSessionTestTransport::NetClientSessionTestTransport(NetClientSessionTestCounters& counters) :
-//m_counters(&counters)
-//{
-//
-//}
-//
-//NetClientSessionTestTransport::~NetClientSessionTestTransport()
-//{
-//    ++m_counters->m_destroyed;
-//}
-//
-//int32_t NetClientSessionTestTransport::connect(const char* address, uint32_t port,
-//    const NetInterfaceLinkOptions& options, NetLinkTransportListener* listener, uint64_t& peer)
-//{
-//    (void)address;
-//    (void)port;
-//    (void)options;
-//    (void)listener;
-//    ++m_counters->m_connected;
-//    peer = 0;
-//    return m_counters->m_connectResult;
-//}
-//
-//bool NetClientSessionTestTransport::poll()
-//{
-//    return false;
-//}
-//
-//int32_t NetClientSessionTestTransport::sendControl(uint64_t peer, const NetInterfaceFrame& frame)
-//{
-//    (void)peer;
-//    (void)frame;
-//    return NI_INVALID_STATE;
-//}
-//
-//int32_t NetClientSessionTestTransport::sendRecord(uint64_t peer, const NetInterfaceTunnelRecord& record)
-//{
-//    (void)peer;
-//    (void)record;
-//    return NI_INVALID_STATE;
-//}
-//
-//void NetClientSessionTestTransport::shutdown()
-//{
-//    ++m_counters->m_stopped;
-//}
-//
-//NetClientSessionTestFactory::NetClientSessionTestFactory(NetClientSessionTestCounters& counters) :
-//m_counters(&counters)
-//{
-//
-//}
-//
-//NetGatewayTransport* NetClientSessionTestFactory::create()
-//{
-//    ++m_counters->m_created;
-//    if (m_counters->m_factoryMode == 1)
-//    {
-//        return nullptr;
-//    }
-//    if (m_counters->m_factoryMode == 2)
-//    {
-//        throw 1;
-//    }
-//    return new NetClientSessionTestTransport(*m_counters);
-//}
-//
-//NetClientSessionTestListener::NetClientSessionTestListener() :
-//m_other(0),
-//m_nestedSession(nullptr),
-//m_nestedRequest(0),
-//m_nestedExecuting(false),
-//m_nestedCancelOk(false),
-//m_reenterClosed(false),
-//m_throwClosed(false),
-//m_throwResult(false)
-//{
-//
-//}
-//
-//void NetClientSessionTestListener::onSessionReady(uint64_t generation, uint32_t maxRequests, uint32_t maxChunk)
-//{
-//    (void)generation;
-//    (void)maxRequests;
-//    (void)maxChunk;
-//    ++m_other;
-//}
-//
-//void NetClientSessionTestListener::onSessionResult(uint64_t generation, uint64_t requestId, uint32_t product,
-//    uint32_t type, uint32_t status, const uint8_t* bytes, uint32_t size)
-//{
-//    (void)generation;
-//    (void)requestId;
-//    (void)product;
-//    (void)type;
-//    (void)status;
-//    (void)bytes;
-//    (void)size;
-//    ++m_other;
-//    m_resultIds.push_back(requestId);
-//    m_resultStatus.push_back(status);
-//    m_events.push_back(requestId);
-//    if (m_throwResult)
-//    {
-//        throw 1;
-//    }
-//    if (m_nestedSession != nullptr && m_nestedRequest != 0)
-//    {
-//        const uint64_t nested = m_nestedRequest;
-//        m_nestedRequest = 0;
-//        m_nestedCancelOk = m_nestedSession->cancel(nested) == NI_OK;
-//        m_nestedExecuting = m_nestedSession->executing();
-//    }
-//}
-//
-//bool NetClientSessionTestListener::onSessionFrame(uint64_t generation, const NetInterfaceFrame& frame)
-//{
-//    (void)generation;
-//    (void)frame;
-//    ++m_other;
-//    return false;
-//}
-//
-//void NetClientSessionTestListener::onSessionClosed(uint64_t generation, int32_t reason, int32_t detail)
-//{
-//    (void)detail;
-//    m_events.push_back(UINT64_MAX);
-//    m_generations.push_back(generation);
-//    m_reasons.push_back(reason);
-//    if (m_reenterClosed && m_nestedSession != nullptr)
-//    {
-//        m_nestedExecuting = m_nestedSession->executing();
-//        m_nestedSession->close(NI_TIMEOUT);
-//        m_nestedSession->shutdown();
-//        m_nestedSession->poll();
-//        m_nestedCancelOk = m_nestedSession->bindGateway(nullptr) == NI_INVALID_STATE;
-//    }
-//    if (m_throwClosed)
-//    {
-//        throw 1;
-//    }
-//}
-//
-//int32_t NetClientSessionTestListener::entropy(void* context, uint8_t* bytes, uint32_t size)
-//{
-//    (void)context;
-//    std::memset(bytes, 0x41, size);
-//    return 0;
-//}
-//
-//NetClientSessionTestDiscovery::NetClientSessionTestDiscovery() :
-//m_available(true),
-//m_invalidPoint(0),
-//m_throw(false),
-//m_drain(false),
-//m_shutdownStarted(false),
-//m_remaining(0),
-//m_fault(0)
-//{
-//
-//}
-//
-//int32_t NetClientSessionTestDiscovery::start(const std::vector<NetGatewayAddress>& seeds, const std::string& cachePath,
-//    const NetInterfaceTlsOptions& tls)
-//{
-//    (void)seeds;
-//    (void)cachePath;
-//    (void)tls;
-//    m_shutdownStarted = false;
-//    m_remaining = m_drain ? 2 : 0;
-//    if ((m_fault & 1) != 0)
-//    {
-//        m_fault &= ~1U;
-//        throw 1;
-//    }
-//    return (m_fault & 32) != 0 ? NI_INVALID_ARGUMENT : NI_OK;
-//}
-//
-//bool NetClientSessionTestDiscovery::poll()
-//{
-//    if ((m_fault & 4) != 0)
-//    {
-//        m_fault &= ~4U;
-//        throw 1;
-//    }
-//    if (m_shutdownStarted && m_remaining != 0)
-//    {
-//        --m_remaining;
-//    }
-//    return m_remaining != 0;
-//}
-//
-//void NetClientSessionTestDiscovery::shutdown()
-//{
-//    m_shutdownStarted = true;
-//    if ((m_fault & 2) != 0)
-//    {
-//        m_fault &= ~2U;
-//        throw 1;
-//    }
-//}
-//
-//bool NetClientSessionTestDiscovery::stopped() const
-//{
-//    if ((m_fault & 16) != 0)
-//    {
-//        throw 1;
-//    }
-//    return m_remaining == 0;
-//}
-//
-//bool NetClientSessionTestDiscovery::choose(NetClientDiscoveryPoint& point)
-//{
-//    if ((m_fault & 8) != 0)
-//    {
-//        m_fault &= ~8U;
-//        throw 1;
-//    }
-//    if (m_invalidPoint == 1)
-//    {
-//        point.m_structSize = 0;
-//    }
-//    else if (m_invalidPoint == 2)
-//    {
-//        point.m_version = 2;
-//    }
-//    else if (m_invalidPoint == 3)
-//    {
-//        std::memset(point.m_address, '1', sizeof(point.m_address));
-//    }
-//    else if (m_invalidPoint == 4)
-//    {
-//        point.m_port = 0;
-//    }
-//    return m_available;
-//}
-//
-///** 与真实会话相同的单调时间，仅供已验证帧的握手Mock
-//@return 单调毫秒
-//*/
-//static uint64_t RecoveryTestNow()
-//{
-//    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-//        std::chrono::steady_clock::now().time_since_epoch()).count());
-//}
-//
-//NetClientSessionTestChannel::NetClientSessionTestChannel(const NetInterfaceHandshakeOptions& options) :
-//m_fault(0),
-//m_sendCount(0),
-//m_observed(nullptr),
-//m_observedSize(0),
-//m_handshake(new NetInterfaceHandshake(options, RecoveryTestNow())),
-//m_listener(nullptr),
-//m_announced(false),
-//m_closing(false),
-//m_reason(0),
-//m_queued(false),
-//m_queuedFrame()
-//{
-//
-//}
-//
-//NetClientSessionTestChannel::~NetClientSessionTestChannel()
-//{
-//    shutdown();
-//}
-//
-//int32_t NetClientSessionTestChannel::connect(const char* address, uint32_t port, const NetInterfaceTlsOptions& options,
-//    NetTransportListener* listener, uint64_t& peer)
-//{
-//    (void)address;
-//    (void)port;
-//    (void)options;
-//    peer = 0;
-//    if (m_listener != nullptr || listener == nullptr)
-//    {
-//        return NI_INVALID_STATE;
-//    }
-//    m_listener = listener;
-//    if ((m_fault & 256) != 0)
-//    {
-//        throw 1;
-//    }
-//    peer = (m_fault & 128) != 0 ? 0 : 1;
-//    return (m_fault & 512) != 0 ? NI_NOT_FOUND : NI_OK;
-//}
-//
-//bool NetClientSessionTestChannel::poll()
-//{
-//    if ((m_fault & 64) != 0)
-//    {
-//        m_fault &= ~64U;
-//        throw 1;
-//    }
-//    if (m_closing)
-//    {
-//        shutdown();
-//        return false;
-//    }
-//    if (m_listener == nullptr)
-//    {
-//        return false;
-//    }
-//    if (!m_announced)
-//    {
-//        m_announced = true;
-//        m_listener->onReady(1);
-//    }
-//    NetInterfaceFrame frame = {};
-//    if (!m_closing && m_handshake->peekOutput(frame) == NI_READY && m_listener->onFrame(1, frame))
-//    {
-//        m_handshake->consumeOutput();
-//    }
-//    if (m_queued && !m_closing && m_listener->onFrame(1, m_queuedFrame))
-//    {
-//        m_queued = false;
-//        m_queuedBody.clear();
-//    }
-//    return true;
-//}
-//
-//int32_t NetClientSessionTestChannel::send(uint64_t peer, const NetInterfaceFrame& frame)
-//{
-//    if (peer != 1 || m_listener == nullptr || m_closing)
-//    {
-//        return NI_INVALID_STATE;
-//    }
-//    ++m_sendCount;
-//    if (frame.m_kind == NI_REQUEST)
-//    {
-//        m_observed = frame.m_payload;
-//        m_observedSize = frame.m_payloadSize;
-//        if ((m_fault & 1) != 0)
-//        {
-//            throw 1;
-//        }
-//        return (m_fault & 1024) != 0 ? NI_LIMIT_EXCEEDED : NI_OK;
-//    }
-//    if (frame.m_kind == NI_CANCEL || frame.m_kind == NI_DATA || frame.m_kind == NI_DATA_ACK)
-//    {
-//        if ((m_fault & (frame.m_kind == NI_CANCEL ? 2U : 4U)) != 0)
-//        {
-//            throw 1;
-//        }
-//        return NI_OK;
-//    }
-//    const int32_t accepted = m_handshake->accept(frame, RecoveryTestNow());
-//    return accepted < 0 ? accepted : NI_OK;
-//}
-//
-//void NetClientSessionTestChannel::close(uint64_t peer, int32_t reason)
-//{
-//    if (peer == 1 && !m_closing)
-//    {
-//        m_closing = true;
-//        m_reason = reason;
-//    }
-//    if ((m_fault & 32) != 0)
-//    {
-//        throw 1;
-//    }
-//}
-//
-//void NetClientSessionTestChannel::shutdown()
-//{
-//    m_closing = true;
-//    NetTransportListener* listener = m_listener;
-//    m_listener = nullptr;
-//    if (listener != nullptr)
-//    {
-//        listener->onClosed(1, m_reason, 0);
-//    }
-//}
-//
-//
-//int32_t NetClientSessionTestChannel::configureCompression(uint64_t peer, const uint32_t* types, uint32_t count, bool negotiated)
-//{
-//    (void)peer;
-//    (void)types;
-//    (void)count;
-//    (void)negotiated;
-//    if ((m_fault & 8) != 0)
-//    {
-//        throw 1;
-//    }
-//    return NI_OK;
-//}
-//
-//int32_t NetClientSessionTestChannel::outputState(uint64_t peer) const
-//{
-//    (void)peer;
-//    if ((m_fault & 16) != 0)
-//    {
-//        throw 1;
-//    }
-//    return NI_OK;
-//}
-//
-//void NetClientSessionTestChannel::queueFrame(const NetInterfaceFrame& frame)
-//{
-//    m_queuedBody.clear();
-//    if (frame.m_payloadSize != 0)
-//    {
-//        m_queuedBody.assign(frame.m_payload, frame.m_payload + frame.m_payloadSize);
-//    }
-//    m_queuedFrame = frame;
-//    m_queuedFrame.m_payload = m_queuedBody.empty() ? nullptr : m_queuedBody.data();
-//    m_queued = true;
-//}
-//
-//void NetClientSessionTestDiscovery::failed(const NetClientDiscoveryPoint& point)
-//{
-//    (void)point;
-//    if (m_throw)
-//    {
-//        throw 1;
-//    }
-//}
-//
-//#if defined(_WIN32) && defined(_DEBUG)
-//// 只在独立单元期间启用，释放钩子在实际内存释放前观察明文擦除。
-//static NetClientSessionTestChannel* g_protocolObserved = nullptr;
-//static uint32_t g_protocolWiped = 0;
-//static uint32_t g_protocolDirty = 0;
-//static bool g_protocolFailAllocation = false;
-//
-///** 检查请求明文释放，或者只拒绝下一次普通块分配
-//@param [in] operation CRT操作
-//@param [in] data 释放时仍有效的原始块
-//@param [in] size 未使用
-//@param [in] block CRT块类型
-//@param [in] request 未使用
-//@param [in] file 未使用
-//@param [in] line 未使用
-//@return 1允许，受控的一次分配为0
-//*/
-//static int ProtocolMemoryHook(int operation, void* data, size_t size, int block, long request,
-//    const unsigned char* file, int line)
-//{
-//    (void)size;
-//    (void)request;
-//    (void)file;
-//    (void)line;
-//    if (operation == _HOOK_ALLOC && block == _NORMAL_BLOCK && g_protocolFailAllocation)
-//    {
-//        g_protocolFailAllocation = false;
-//        return 0;
-//    }
-//    if (operation == _HOOK_FREE && g_protocolObserved != nullptr && data == g_protocolObserved->m_observed)
-//    {
-//        const uint8_t* bytes = static_cast<const uint8_t*>(data);
-//        for (uint32_t index = 0; index < g_protocolObserved->m_observedSize; ++index)
-//        {
-//            if (bytes[index] != 0)
-//            {
-//                ++g_protocolDirty;
-//            }
-//        }
-//        ++g_protocolWiped;
-//        g_protocolObserved->m_observed = nullptr;
-//    }
-//    return 1;
-//}
-//#endif
-//
-//int main()
-//{
-//    uint32_t checks = 0;
-//#if defined(_WIN32) && defined(_DEBUG)
-//    _CrtMemState before;
-//    _CrtMemCheckpoint(&before);
-//#endif
-//#define P_CHECK(condition) { ++checks; if (!(condition)) { std::printf("FAIL line %u: %s\n", static_cast<uint32_t>(__LINE__), #condition); return 1; } }
-//    {
-//        NetInterfaceTlsOptions tls = {};
-//        tls.handshakeTimeoutMs = 1000;
-//        tls.entropy = NetClientSessionTestListener::entropy;
-//        NetInterfaceHandshakeOptions hello = {};
-//        hello.m_platform = 1;
-//        hello.m_capabilities = 7;
-//        hello.m_maxRequests = 128;
-//        hello.m_maxChunk = 4096;
-//        hello.m_timeoutMs = 1000;
-//        std::memset(hello.m_device, 0x31, sizeof(hello.m_device));
-//        NetInterfaceHandshakeOptions server = hello;
-//        server.m_server = 1;
-//        server.m_platform = 0;
-//        std::memset(server.m_device, 0, sizeof(server.m_device));
-//        std::memset(server.m_nonce, 0x73, sizeof(server.m_nonce));
-//        for (uint32_t mode = 0; mode < 8; ++mode)
-//        {
-//            NetClientSessionTestChannel channel(server);
-//            NetClientSessionTestListener listener;
-//            NetSession session;
-//            P_CHECK(session.bindChannel(&channel) == NI_OK && session.connect("mock", 1, tls, hello, &listener) == NI_OK);
-//            for (uint32_t index = 0; index < 8 && !session.ready(); ++index)
-//            {
-//                session.poll();
-//            }
-//            P_CHECK(session.ready() && listener.m_other == 1);
-//            uint64_t ids[3] = {};
-//            for (uint32_t index = 0; index < 3; ++index)
-//            {
-//                P_CHECK(session.beginRequest(101, 11 + index, 1000, ids[index]) == NI_OK && ids[index] == index + 1);
-//            }
-//            channel.m_fault = mode == 0 ? 1 : mode == 1 ? 2 : mode == 2 ? 4 : mode == 3 ? 16 :
-//                mode == 4 ? 32 : mode == 5 ? 64 : mode == 6 ? 1024 : 0;
-//            if (mode == 0)
-//            {
-//                const uint8_t body[] = { 0x71, 0x72, 0x73 };
-//                P_CHECK(session.sendRequest(ids[0], body, sizeof(body)) == NI_INVALID_STATE);
-//                P_CHECK(session.cancel(ids[0]) == NI_OK);
-//            }
-//            else if (mode == 1)
-//            {
-//                P_CHECK(session.sendRequest(ids[0], nullptr, 0) == NI_OK);
-//                P_CHECK(session.cancel(ids[0]) == NI_OK && !session.ready());
-//                P_CHECK(listener.m_resultIds.size() == 1 && listener.m_resultStatus[0] == NI_RPC_CANCELLED);
-//            }
-//            else if (mode == 2)
-//            {
-//                NetInterfaceFrame frame = {};
-//                frame.m_kind = NI_DATA;
-//                frame.m_productId = 101;
-//                frame.m_requestId = 1;
-//                P_CHECK(session.sendData(frame) == NI_INVALID_STATE);
-//            }
-//            else if (mode == 3)
-//            {
-//                P_CHECK(session.outputState() == NI_INVALID_STATE);
-//            }
-//            else if (mode == 4)
-//            {
-//                session.close(NI_CANCELLED);
-//                P_CHECK(!session.ready() && listener.m_generations.size() == 1);
-//            }
-//            else if (mode == 5)
-//            {
-//                session.poll();
-//                P_CHECK(!session.ready());
-//            }
-//            else if (mode == 6)
-//            {
-//                for (uint32_t index = 0; index < 128; ++index)
-//                {
-//                    P_CHECK(session.sendRequest(ids[0], nullptr, 0) == NI_LIMIT_EXCEEDED && listener.m_resultIds.empty());
-//                }
-//                channel.m_fault = 0;
-//                P_CHECK(session.sendRequest(ids[0], nullptr, 0) == NI_OK);
-//                P_CHECK(session.sendRequest(ids[0], nullptr, 0) == NI_INVALID_STATE);
-//                P_CHECK(session.cancel(ids[0]) == NI_OK);
-//            }
-//            else
-//            {
-//                listener.m_throwResult = true;
-//                P_CHECK(session.cancel(ids[0]) == NI_OK && !session.ready());
-//            }
-//            session.shutdown();
-//            P_CHECK(listener.m_resultIds.size() == 3 && listener.m_resultStatus.size() == 3 &&
-//                listener.m_generations.size() == 1 && listener.m_events.size() == 4 && listener.m_events.back() == UINT64_MAX);
-//            std::sort(listener.m_resultIds.begin(), listener.m_resultIds.end());
-//            P_CHECK(listener.m_resultIds[0] == 1 && listener.m_resultIds[1] == 2 && listener.m_resultIds[2] == 3);
-//            for (uint32_t index = 0; index < 3; ++index)
-//            {
-//                P_CHECK(session.cancel(ids[index]) == NI_NOT_FOUND);
-//            }
-//            P_CHECK(!session.poll());
-//            session.shutdown();
-//            P_CHECK(listener.m_generations.size() == 1 && listener.m_events.size() == 4);
-//        }
-//        const uint32_t connectFaults[] = { 128, 256, 512 };
-//        for (uint32_t index = 0; index < 3; ++index)
-//        {
-//            NetClientSessionTestChannel channel(server);
-//            NetClientSessionTestListener listener;
-//            NetSession session;
-//            channel.m_fault = connectFaults[index];
-//            P_CHECK(session.bindChannel(&channel) == NI_OK);
-//            P_CHECK(session.connect("mock", 1, tls, hello, &listener) ==
-//                (index == 0 ? NI_PROTOCOL_ERROR : index == 1 ? NI_NO_MEMORY : NI_NOT_FOUND));
-//            session.shutdown();
-//            P_CHECK(!session.poll() && listener.m_generations.empty() && listener.m_resultIds.empty() && listener.m_other == 0);
-//        }
-//        for (uint32_t mode = 0; mode < 4; ++mode)
-//        {
-//            NetClientSessionTestChannel channel(server);
-//            NetClientSessionTestListener listener;
-//            NetSession session;
-//            P_CHECK(session.bindChannel(&channel) == NI_OK && session.connect("mock", 1, tls, hello, &listener) == NI_OK);
-//            for (uint32_t index = 0; index < 8 && !session.ready(); ++index)
-//            {
-//                session.poll();
-//            }
-//            P_CHECK(session.ready());
-//            uint64_t id = 0;
-//            P_CHECK(session.beginRequest(101, 11, 1000, id) == NI_OK);
-//            if (mode != 3)
-//            {
-//                P_CHECK(session.sendRequest(id, nullptr, 0) == NI_OK);
-//            }
-//            uint8_t payload[18] = { 'N', 'R', 'P', '2' };
-//            payload[16] = 0x5a;
-//            payload[17] = 0xa5;
-//            NetInterfaceFrame frame = {};
-//            frame.m_kind = NI_RESPONSE;
-//            frame.m_productId = mode == 1 ? 102 : 101;
-//            frame.m_messageType = mode == 2 ? 12 : 11;
-//            frame.m_requestId = id;
-//            frame.m_payload = payload;
-//            frame.m_payloadSize = sizeof(payload);
-//            channel.queueFrame(frame);
-//            session.poll();
-//            if (mode == 0)
-//            {
-//                P_CHECK(listener.m_resultIds.size() == 1 && listener.m_resultStatus[0] == NI_RPC_SUCCESS && session.ready());
-//                channel.queueFrame(frame);
-//                session.poll();
-//                P_CHECK(listener.m_resultIds.size() == 1 && session.ready());
-//            }
-//            session.shutdown();
-//            P_CHECK(listener.m_resultIds.size() == 1 && listener.m_resultIds[0] == id &&
-//                listener.m_resultStatus[0] == (mode == 0 ? NI_RPC_SUCCESS : NI_RPC_UNAVAILABLE));
-//            P_CHECK(listener.m_generations.size() == 1 && listener.m_events.back() == UINT64_MAX);
-//        }
-//        {
-//            NetClientSessionTestChannel channel(server);
-//            NetClientSessionTestListener listener;
-//            NetSession session;
-//            P_CHECK(session.bindChannel(&channel) == NI_OK && session.connect("mock", 1, tls, hello, &listener) == NI_OK);
-//            for (uint32_t index = 0; index < 8 && !session.ready(); ++index)
-//            {
-//                session.poll();
-//            }
-//            for (uint32_t index = 0; index < 128; ++index)
-//            {
-//                uint64_t id = 0;
-//                P_CHECK(session.beginRequest(101, 11, 60000, id) == NI_OK && id == index + 1);
-//            }
-//            uint64_t id = 99;
-//            P_CHECK(session.beginRequest(101, 11, 60000, id) == NI_LIMIT_EXCEEDED && id == 0);
-//            P_CHECK(session.cancel(1) == NI_OK);
-//            P_CHECK(session.beginRequestAt(129, 101, 11, RecoveryTestNow(), 60000) == NI_PROTOCOL_ERROR);
-//            P_CHECK(session.beginRequest(101, 11, 60000, id) == NI_OK && id == 130);
-//            session.shutdown();
-//            P_CHECK(listener.m_resultIds.size() == 129 && listener.m_generations.size() == 1);
-//            for (uint32_t index = 0; index < listener.m_resultStatus.size(); ++index)
-//            {
-//                P_CHECK(listener.m_resultStatus[index] == NI_RPC_CANCELLED);
-//            }
-//        }
-//
-//        for (uint32_t mode = 0; mode < 2; ++mode)
-//        {
-//            NetClientSessionTestChannel channel(server);
-//            NetClientSessionTestListener listener;
-//            NetSession session;
-//            P_CHECK(session.bindChannel(&channel) == NI_OK && session.connect("mock", 1, tls, hello, &listener) == NI_OK);
-//            for (uint32_t index = 0; index < 8 && !session.ready(); ++index)
-//            {
-//                session.poll();
-//            }
-//            uint64_t id = 0;
-//            P_CHECK(session.beginRequest(101, 11, 10, id) == NI_OK && session.sendRequest(id, nullptr, 0) == NI_OK);
-//            uint8_t payload[16] = { 'N', 'R', 'P', '2' };
-//            NetInterfaceFrame response = {};
-//            response.m_kind = NI_RESPONSE;
-//            response.m_productId = 101;
-//            response.m_messageType = 11;
-//            response.m_requestId = id;
-//            response.m_payload = payload;
-//            response.m_payloadSize = sizeof(payload);
-//            if (mode == 0)
-//            {
-//                channel.queueFrame(response);
-//            }
-//            else
-//            {
-//                channel.m_fault = 2;
-//            }
-//            const uint64_t afterDeadline = RecoveryTestNow() + 11;
-//            while (RecoveryTestNow() < afterDeadline)
-//            {
-//                // 测试固定11毫秒，不创建生产线程，不替代真实30秒恢复期限用例。
-//            }
-//            session.poll();
-//            P_CHECK(listener.m_resultIds.size() == 1 && listener.m_resultIds[0] == id &&
-//                listener.m_resultStatus[0] == NI_RPC_TIMEOUT && session.ready() == (mode == 0));
-//            session.shutdown();
-//            P_CHECK(listener.m_events.size() == 2 && listener.m_events.back() == UINT64_MAX);
-//        }
-//
-//
-//        {
-//            NetInterfaceHandshakeOptions compressedHello = hello;
-//            NetInterfaceHandshakeOptions compressedServer = server;
-//            compressedHello.m_capabilities = compressedServer.m_capabilities = 15;
-//            NetClientSessionTestChannel channel(compressedServer);
-//            NetClientSessionTestListener listener;
-//            NetSession session;
-//            channel.m_fault = 8;
-//            P_CHECK(session.bindChannel(&channel) == NI_OK && session.connect("mock", 1, tls, compressedHello, &listener) == NI_OK);
-//            for (uint32_t index = 0; index < 8; ++index)
-//            {
-//                session.poll();
-//            }
-//            session.shutdown();
-//            P_CHECK(!session.ready() && listener.m_generations.size() == 1 && listener.m_other == 0);
-//        }
-//        {
-//            NetClientSessionTestChannel channel(server);
-//            NetClientSessionTestListener listener;
-//            NetSession session;
-//            P_CHECK(session.bindChannel(&channel) == NI_OK && session.connect("mock", 1, tls, hello, &listener) == NI_OK);
-//            for (uint32_t index = 0; index < 8 && !session.ready(); ++index)
-//            {
-//                session.poll();
-//            }
-//            const uint32_t count = channel.m_sendCount;
-//            NetInterfaceFrame frame = {};
-//            frame.m_kind = NI_DATA;
-//            frame.m_productId = 101;
-//            frame.m_requestId = 1;
-//            frame.m_payloadSize = 1;
-//            P_CHECK(session.sendData(frame) == NI_INVALID_ARGUMENT && channel.m_sendCount == count);
-//            session.shutdown();
-//        }
-//#ifdef STATIC_LIB
-//        {
-//            NetSessionState state;
-//            state.resetRequests(128);
-//            std::map<uint64_t, uint64_t> reference;
-//            uint32_t random = 0x89173;
-//            uint64_t highest = 0;
-//            for (uint32_t step = 0; step < 10000; ++step)
-//            {
-//                random = random * 1664525U + 1013904223U;
-//                if ((random & 3) != 0 || reference.empty())
-//                {
-//                    const uint64_t deadline = 1000 + (random >> 8) % 5000;
-//                    uint64_t id = 77;
-//                    const int32_t result = state.reserve(0, 101, step, deadline, id);
-//                    ++highest;
-//                    if (reference.size() == 128)
-//                    {
-//                        P_CHECK(result == NI_LIMIT_EXCEEDED && id == 0);
-//                    }
-//                    else
-//                    {
-//                        P_CHECK(result == NI_OK && id == highest);
-//                        reference[id] = deadline;
-//                    }
-//                }
-//                else
-//                {
-//                    auto found = reference.begin();
-//                    std::advance(found, (random >> 8) % reference.size());
-//                    NetSessionPending pending = {};
-//                    P_CHECK(state.take(found->first, pending) && pending.m_request.m_original == found->first &&
-//                        pending.m_request.m_deadline == found->second && !pending.m_sent);
-//                    reference.erase(found);
-//                }
-//                P_CHECK(state.m_pending.size() == reference.size() && state.m_expiryCount == reference.size());
-//                uint64_t earliest = 0;
-//                uint64_t deadline = UINT64_MAX;
-//                for (auto found = reference.begin(); found != reference.end(); ++found)
-//                {
-//                    if (found->second < deadline)
-//                    {
-//                        earliest = found->first;
-//                        deadline = found->second;
-//                    }
-//                }
-//                P_CHECK(state.expired(UINT64_MAX) == earliest);
-//                if (earliest != 0)
-//                {
-//                    P_CHECK(state.expired(deadline - 1) == 0 && state.expired(deadline) == earliest);
-//                }
-//                for (size_t index = 0; index < state.m_expiryCount; ++index)
-//                {
-//                    P_CHECK(state.m_expiry[index]->m_heapIndex == index &&
-//                        state.m_pending.find(state.m_expiry[index]->m_request.m_original) != state.m_pending.end());
-//                }
-//            }
-//            while (!reference.empty())
-//            {
-//                const uint64_t id = state.expired(UINT64_MAX);
-//                P_CHECK(id != 0 && reference.find(id) != reference.end());
-//                NetSessionPending pending = {};
-//                P_CHECK(state.take(id, pending));
-//                reference.erase(id);
-//            }
-//            P_CHECK(state.expired(UINT64_MAX) == 0 && state.m_pending.empty());
-//            state.resetRequests(1);
-//            uint64_t id = 1;
-//            P_CHECK(state.reserve(0, 0, 0, 1, id) == NI_INVALID_ARGUMENT && id == 0 && state.m_highestOriginal == 0);
-//            P_CHECK(state.reserve(UINT64_MAX, 101, 0, 1, id) == NI_OK && id == UINT64_MAX);
-//            NetSessionPending pending = {};
-//            P_CHECK(state.take(id, pending) && state.reserve(0, 101, 0, 1, id) == NI_LIMIT_EXCEEDED && id == 0);
-//            P_CHECK(state.reserve(UINT64_MAX, 101, 0, 1, id) == NI_PROTOCOL_ERROR && id == 0);
-//            state.resetRequests(0);
-//            P_CHECK(state.reserve(0, 101, 0, 1, id) == NI_INVALID_ARGUMENT && state.m_expiryCount == 0);
-//        }
-//#endif
-//
-//
-//#if defined(_WIN32) && defined(_DEBUG)
-//        for (uint32_t mode = 0; mode < 6; ++mode)
-//        {
-//            NetClientSessionTestChannel channel(server);
-//            NetClientSessionTestListener listener;
-//            const uint32_t wiped = g_protocolWiped;
-//            const uint32_t dirty = g_protocolDirty;
-//            std::vector<uint8_t> body(mode < 3 ? 80 : 8193, 0x5a);
-//            g_protocolObserved = &channel;
-//            const _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(ProtocolMemoryHook);
-//            {
-//                NetSession session;
-//                P_CHECK(session.bindChannel(&channel) == NI_OK && session.connect("mock", 1, tls, hello, &listener) == NI_OK);
-//                for (uint32_t index = 0; index < 8 && !session.ready(); ++index)
-//                {
-//                    session.poll();
-//                }
-//                uint64_t id = 0;
-//                P_CHECK(session.beginRequest(101, 11, 1000, id) == NI_OK);
-//                channel.m_fault = mode % 3 == 0 ? 0 : mode % 3 == 1 ? 1 : 1024;
-//                const int32_t sent = session.sendRequest(id, body.data(), static_cast<uint32_t>(body.size()));
-//                P_CHECK(sent == (mode % 3 == 0 ? NI_OK : mode % 3 == 1 ? NI_INVALID_STATE : NI_LIMIT_EXCEEDED));
-//                session.shutdown();
-//            }
-//            _CrtSetAllocHook(previous);
-//            g_protocolObserved = nullptr;
-//            P_CHECK(g_protocolWiped == wiped + 1 && g_protocolDirty == dirty && listener.m_resultIds.size() == 1);
-//        }
-//        {
-//            NetClientSessionTestChannel channel(server);
-//            NetClientSessionTestListener listener;
-//            NetSession session;
-//            P_CHECK(session.bindChannel(&channel) == NI_OK && session.connect("mock", 1, tls, hello, &listener) == NI_OK);
-//            for (uint32_t index = 0; index < 8 && !session.ready(); ++index)
-//            {
-//                session.poll();
-//            }
-//            uint64_t id = 99;
-//            g_protocolFailAllocation = true;
-//            _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(ProtocolMemoryHook);
-//            const int32_t failed = session.beginRequest(101, 11, 1000, id);
-//            _CrtSetAllocHook(previous);
-//            P_CHECK(failed == NI_NO_MEMORY && id == 0 && !g_protocolFailAllocation && listener.m_resultIds.empty());
-//            P_CHECK(session.beginRequest(101, 11, 1000, id) == NI_OK && id == 2);
-//            std::vector<uint8_t> body(32768, 0x6a);
-//            g_protocolFailAllocation = true;
-//            previous = _CrtSetAllocHook(ProtocolMemoryHook);
-//            const int32_t rejected = session.sendRequest(id, body.data(), static_cast<uint32_t>(body.size()));
-//            _CrtSetAllocHook(previous);
-//            P_CHECK(rejected == NI_NO_MEMORY && !g_protocolFailAllocation && listener.m_resultIds.empty());
-//            P_CHECK(session.cancel(id) == NI_OK && listener.m_resultIds.size() == 1 && listener.m_resultIds[0] == id);
-//            session.shutdown();
-//        }
-//#endif
-//
-//    }
-//#if defined(_WIN32) && defined(_DEBUG)
-//    _CrtMemState after;
-//    _CrtMemCheckpoint(&after);
-//    P_CHECK(after.lCounts[_NORMAL_BLOCK] == before.lCounts[_NORMAL_BLOCK] &&
-//        after.lSizes[_NORMAL_BLOCK] == before.lSizes[_NORMAL_BLOCK]);
-//#endif
-//    std::printf("Protocol session checks=%u PASS\n", checks);
-//    return 0;
-//#undef P_CHECK
-//}
-// NET_PROTOCOL_SESSION_UNIT_END

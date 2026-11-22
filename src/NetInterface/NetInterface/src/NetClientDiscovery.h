@@ -36,7 +36,7 @@ public:
     virtual ~NetClientDiscovery();
 
     /** 接纳异步发现，地址/路径由实现有界复制，不解释业务载荷
-    @param [in] seeds 1至64个数值入口
+    @param [in] seeds 非空数值入口列表，数量由实际存储决定
     @param [in] cachePath 可空，空表示仅内存；非空需要宿主持久化能力
     @param [in] tls 仅使用客户端强随机和期限，上下文借用至停止，不采用外部信任根
     @return OK接纳或负数；失败后仍允许调用shutdown收敛
@@ -85,7 +85,7 @@ public:
     /** 值数组解析入口，NI只填调用者自己的固定字节，不转交容器。
     @param [in] text 非空ASCII入口列表，最多4096字节、64项
     @param [out] points 预填size/version的v1数组，不得与text重叠；容量不足或失败保持原值
-    @param [in] capacity 0至64，空数组及0可查询所需项数
+    @param [in] capacity 调用方数组容量，空数组及0可查询所需项数
     @param [out] count 必需项数；一般参数/解析错误为0；不得与points或text重叠，重叠时拒绝且全部保持原值
     @return OK、BUFFER_TOO_SMALL、INVALID_ARGUMENT或NO_MEMORY
     */

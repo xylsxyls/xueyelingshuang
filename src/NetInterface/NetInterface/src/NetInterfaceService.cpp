@@ -57,7 +57,7 @@ static bool ServiceOriginValid(const NetInterfaceOrigin& origin)
 
 int32_t NetInterfaceService::hello(const uint8_t* secret, uint32_t limit, uint8_t* output, uint32_t capacity)
 {
-    if (!ServiceSecretValid(secret) || limit == 0 || limit > 128 || (output == nullptr && capacity != 0))
+    if (!ServiceSecretValid(secret) || limit == 0 || (output == nullptr && capacity != 0))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -97,7 +97,7 @@ int32_t NetInterfaceService::authenticate(const NetInterfaceFrame& frame, const 
     {
         different |= frame.m_payload[index];
     }
-    if (different != 0 || requested == 0 || requested > 128)
+    if (different != 0 || requested == 0)
     {
         return NI_PROTOCOL_ERROR;
     }

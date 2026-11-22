@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "NetInterfaceTypes.h"
+#include "NetConnectionPoolConfig.h"
 #include "NetInterfaceTlsTypes.h"
 #include "NetInterfaceLinkTypes.h"
 #include "NetInterfaceTunnelTypes.h"
@@ -41,6 +42,13 @@ public:
     */
     virtual ~NetClientChannel();
 
+    /** 首次连接前复制TLS帧池配置；不得与本对象其他调用并发
+    池资源在创建物理连接时申请并验证，失败走原有连接失败路径；不修改其他连接。
+    @param [in] config 独立数据/控制记录及正文的基础池配置
+    @return NI_OK配置已复制；状态、内存或不支持错误
+    */
+    virtual int32_t configureConnectionPools(const NetConnectionPoolConfig& config);
+
     /** 异步连接，地址解释由适配器规定；TLS配置仍必须验证
     @param [in] address 适配器地址
     @param [in] port 端口
@@ -74,10 +82,17 @@ public:
     */
     virtual void shutdown() = 0;
 
+    /** 握手后设置紧凑帧能力，由运输层配置所属业务TLS连接
+    @param [in] peer 当前运输代次
+    @param [in] enabled 是否已由双方共同确认
+    @return NI_OK或NI_NOT_SUPPORTED；默认适配器只支持关闭
+    */
+    virtual int32_t configureCompact(uint64_t peer, bool enabled);
+
     /** 应用握手后启用压缩扩展；旧适配器默认不支持，不复制协议。
     @param [in] peer 当前运输代次
     @param [in] types 公开RPC类型数组，调用时复制；count为0可为空
-    @param [in] count 类型数量0至64，0清空白名单
+    @param [in] count 类型数量非负项数，0清空白名单
     @param [in] negotiated 是否已完成双方压缩能力协商
     @return NI_OK或状态、参数、内存错误；默认不支持的适配器返回NI_NOT_SUPPORTED
     */
@@ -105,7 +120,7 @@ public:
     @param [in] port 0至65535，0供隔离测试
     @param [in] options 服务端TLS配置，证书/密钥由适配复制
     @param [in] listener 借用至shutdown完成
-    @param [in] maxPeers 最大连接数1至256
+    @param [in] maxPeers 非零启动预留提示，实际接纳由连接池决定
     @return OK接纳或负数错误，不表示业务握手/账号授权完成
     */
     virtual int32_t listen(const char* address, uint32_t port, const NetInterfaceTlsOptions& options,

@@ -143,8 +143,8 @@ private:
     */
     uint64_t wireId(uint64_t local) const;
 
-    /** 仅由owner观察完整交付边界；前一个业务帧未交付时不能追加后续业务
-    @return 可以继续提交下一动作；false仍背压或已关闭
+    /** 仅由owner观察完整交付边界并结算同步票据
+    @return true允许任意下一动作；false只允许继续同一业务FIFO或关闭动作
     */
     bool advanceOutput();
 
@@ -172,8 +172,8 @@ private:
     int32_t m_error;
     // 线上号按实际发送顺序递增，不改变业务预留号、原期限或回调身份。
     uint64_t m_nextWire;
-    // 独占固定128条的双向编号索引，无运行期树节点分配或反向全表扫描。
+    // 单执行者动态双向编号索引，登记失败回滚；对应真实请求记录，不另设条数门槛。
     NetSenderDispatchMap* m_mapping;
-    // 当前业务帧仍有本层输出后缀；post同样需要维持发送先后。
+    // 当前业务仍有本层输出后缀；允许业务FIFO连续追加，但控制命令须等此前缀交付
     bool m_outputPending;
 };

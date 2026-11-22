@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include "NetInterfaceRequests.h"
 #include <map>
-#include <set>
+#include "NetObjectPool.h"
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -24,7 +25,7 @@ enum NetInterfaceRequestRole
 struct NetInterfaceRequestEndpoint
 {
 public:
-    // 握手协商的入/出并发上限，1至128。
+    // 握手能力元数据；实际存储由池控制，不按此值拒绝请求。
     uint32_t m_limit;
     // 专用产品或通用服务0。
     uint32_t m_product;
@@ -34,14 +35,16 @@ public:
     bool m_internalOnly;
     // 已处理来源原号的高水位，容量拒绝同样推进。
     uint64_t m_highestOriginal;
-    // 各角色仍在途的数量，根角色最多全局4096项。
-    uint32_t m_count[NI_REQUEST_ROLE_COUNT];
+    // 各角色仍在途的实际数量。
+    size_t m_count[NI_REQUEST_ROLE_COUNT];
     // 各角色最早接纳的请求，非拥有指针。
     NetInterfaceRequestEntry* m_first[NI_REQUEST_ROLE_COUNT];
     // 各角色最后接纳的请求，用于无分配追加。
     NetInterfaceRequestEntry* m_last[NI_REQUEST_ROLE_COUNT];
+    // 本端点发起的原请求号到权威节点；单执行者无序索引，不重复存储source键
+    std::unordered_map<uint64_t, NetInterfaceRequestEntry*> m_originals;
     // 尚未到达的未来取消，不按时间丢弃而重新放行业务。
-    std::set<uint64_t> m_futureCancelled;
+    std::map<uint64_t, NetObjectReference<uint64_t>> m_futureCancelled;
 
 public:
     /** 建立空索引和未授权角色
@@ -49,7 +52,7 @@ public:
     NetInterfaceRequestEndpoint();
 };
 
-// map节点是请求元数据的唯一拥有者；其它索引只借用其稳定地址。
+// 物理池持有请求元数据；索引持有租约或借用其稳定地址。
 struct NetInterfaceRequestEntry
 {
 public:
@@ -94,10 +97,10 @@ public:
 class NetInterfaceRequestsState
 {
 public:
-    /** 初始化计数和容量，不预分配4096个请求对象
-    @param [in] capacity 1至4096，非法时后续接纳失败
+    /** 初始化实际物理池和单执行者索引
+    @param [in] pools 请求、端点及提前取消的物理配置
     */
-    explicit NetInterfaceRequestsState(uint32_t capacity);
+    explicit NetInterfaceRequestsState(const NetRequestTablePools& pools);
 
     /** 原子登记已通过验证的完整元数据，不在失败后扣额度
     @param [in] request 含唯一非零route和存在的三个端点
@@ -146,26 +149,26 @@ private:
     NetInterfaceRequestsState& operator=(const NetInterfaceRequestsState& other);
 
 public:
-    // 唯一请求存储，插入map不使已有节点地址失效。
-    std::map<uint64_t, NetInterfaceRequestEntry> m_requests;
-    // 来源原号到权威节点，保持完整64位原号。
-    std::map<std::pair<uint64_t, uint64_t>, NetInterfaceRequestEntry*> m_sources;
-    // 最多1024个活跃可信端点。
-    std::map<uint64_t, NetInterfaceRequestEndpoint> m_endpoints;
-    // 最早截止位于首项；容量最多4096，空间在本实例复用。
+    // 实际池先于索引声明，确保晚于全部租约析构。
+    NetObjectPool<NetInterfaceRequestEntry> m_requestPool;
+    // 端点池在请求索引清空前始终有效。
+    NetObjectPool<NetInterfaceRequestEndpoint> m_endpointPool;
+    // 取消池在端点索引清空后析构。
+    NetObjectPool<uint64_t> m_cancelPool;
+    // 单执行者无序请求索引；实际对象地址由池保证稳定。
+    std::unordered_map<uint64_t, NetObjectReference<NetInterfaceRequestEntry>> m_requests;
+    // 活跃可信端点，各持有一个实际池槽。
+    std::unordered_map<uint64_t, NetObjectReference<NetInterfaceRequestEndpoint>> m_endpoints;
+    // 最早截止位于首项；每个在途请求对应一项，空间在本实例复用。
     std::vector<NetInterfaceRequestEntry*> m_expiry;
     // 仅有实际子请求的父路由索引，不因父结束丢掉子请求。
-    std::map<uint64_t, NetInterfaceRequestChildren> m_children;
+    std::unordered_map<uint64_t, NetInterfaceRequestChildren> m_children;
     // 内部请求号不回绕、不复用。
     uint64_t m_lastRoute;
     // 端点号不回绕、不复用。
     uint64_t m_lastEndpoint;
     // 最近单调时间，回退后保持错误。
     uint64_t m_lastMs;
-    // 全局在途容量。
-    uint32_t m_capacity;
-    // 所有端点未来取消的总数，同样受capacity限制。
-    uint32_t m_futureCount;
     // 参数或时钟造成的持续状态。
     int32_t m_status;
 };

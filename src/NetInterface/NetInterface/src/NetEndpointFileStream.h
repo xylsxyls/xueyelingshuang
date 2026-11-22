@@ -6,10 +6,10 @@
 struct NetEndpointFileStream
 {
 public:
-    // 网关公开流号和固定到期堆下标；堆及端点链仅借用本对象。
+    // 网关公开流号和到期堆下标；堆及端点链仅借用本对象。
     uint64_t m_id;
-    // 本流在固定期限堆中的下标，摘除前保持与堆一致
-    uint32_t m_expiryIndex;
+    // 本流在期限堆中的下标，摘除前保持与堆一致
+    size_t m_expiryIndex;
     // 0为客户端链，1为服务链；一条流同时属于两个互不相同的端点。
     NetEndpointFileStream* m_previous[2];
     // 分别指向客户端链和服务链的下一流，不拥有节点

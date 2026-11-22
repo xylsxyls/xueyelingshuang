@@ -42,7 +42,7 @@ typedef struct NetInterfaceDirectoryNodeData
     char m_address[40];
     // 1至65535。
     uint32_t m_port;
-    // 1至256。
+    // 非零uint32容量提示；实际接纳由对应连接池决定。
     uint32_t m_capacity;
     // 本次节点启动的非零代次。
     uint64_t m_boot;

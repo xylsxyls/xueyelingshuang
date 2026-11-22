@@ -12,6 +12,24 @@ typedef void (*NetHostClosed)(void* context, uint64_t peer, int32_t reason);
 // 宿主密码学随机，0完整成功，其余失败；只借用输出到返回，不允许弱随机回退
 typedef int32_t (*NetHostEntropy)(void* context, uint8_t* output, uint32_t size);
 
+// 可选的执行等待宿主；全空表示调用方自行调度，填写时六个函数必须完整。
+// create/exchange/begin/wait/destroy串行；只有wake可跨线程，外层必须保护借用期。
+typedef struct NetHostExecutionFunctions
+{
+    // 创建无线程的执行循环，0成功；失败输出空
+    int32_t (*create)(void** instance);
+    // 交换当前执行者中新建网络通道的循环归属，返回旧归属
+    void* (*exchange)(void* instance);
+    // 检查所有工作之前取得代次，通知不能在随后wait中丢失
+    uint64_t (*begin)(void* instance);
+    // 等待网络、wake或最长毫秒；期间已有进展立即返回，0成功
+    int32_t (*wait)(void* instance, uint64_t observed, uint32_t timeoutMs);
+    // 发布后通知，可合并但不得丢失；不得与destroy并发
+    void (*wake)(void* instance);
+    // 先释放所有通道、关闭外部唤醒者；0已释放，负数未释放
+    int32_t (*destroy)(void* instance);
+} NetHostExecutionFunctions;
+
 // v1完整函数表，调用方拥有providerContext至所有实例destroy成功
 // 所有方法和事件只允许同一个执行者；回调可同步触发但不直接调用上层业务
 // 所有操作0成功、负数未接纳；write额外以1表示完全未接纳的背压
@@ -27,7 +45,7 @@ typedef struct NetHostFunctions
     // 创建独占实例；失败通常输出null，未收敛的部分实例仅交还shutdown/destroy清理所有权；listen/connect前不发事件，事件上下文不可转交其他执行者
     int32_t (*create)(void* providerContext, void* observerContext, NetHostConnected connected, NetHostData data,
         NetHostWritable writable, NetHostClosed closed, void** instance);
-    // 可空表示不提供监听；数值IPv4/IPv6，port 0供隔离测试，maxPeers 1至256；只启动一次
+    // 可空表示不提供监听；数值IPv4/IPv6，port 0供隔离测试，maxPeers为非零预留提示，实际连接存储由宿主池配置控制；只启动一次
     int32_t (*listen)(void* instance, const char* address, uint32_t port, uint32_t maxPeers);
     // 可空表示不提供主动连接，但listen/connect至少一个非空；数值地址和1至65535端口，失败清0
     int32_t (*connect)(void* instance, const char* address, uint32_t port, uint64_t* peer);
@@ -50,4 +68,6 @@ typedef struct NetHostFunctions
     uint32_t (*peerCount)(void* instance);
     // 可空表示仅提供字节宿主；创建安全会话必须由TLS配置或此函数提供强随机
     NetHostEntropy entropy;
+    // 可选的本地执行等待；不改变poll非阻塞语义，不用于JS主动驱动宿主
+    NetHostExecutionFunctions execution;
 } NetHostFunctions;

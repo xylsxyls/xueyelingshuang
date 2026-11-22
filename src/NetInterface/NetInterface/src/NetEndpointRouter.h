@@ -5,6 +5,7 @@
 #include "NetInterfaceService.h"
 #include "NetInterfaceFile.h"
 #include "NetInterfaceEvent.h"
+#include "NetEndpointPools.h"
 #include <memory>
 #include <vector>
 
@@ -49,6 +50,12 @@ public:
     */
     virtual ~NetEndpointRouter();
 
+    /** 首次登记端点或监听之前替换整组实际存储池；只由生命周期owner串行调用
+    @param [in] pools 请求、端点和文件流的实际池配置，失败保持原配置
+    @return NI_OK或状态/配置/内存错误
+    */
+    int32_t configurePools(const NetEndpointPools& pools);
+
     /** 绑定外部物理传输，附加端点模式不接受非空传输
     @param [in] transport 借用至shutdown；只允许无端点/未监听时绑定，或停止后解除绑定
     @return OK或INVALID_STATE；不分配传输或建立网络
@@ -59,7 +66,7 @@ public:
     @param [in] address 显式数值地址
     @param [in] port 0测试随机端口，或1至65535
     @param [in] tls 服务器证书/私钥及宿主强随机回调
-    @param [in] peers 1至256
+    @param [in] peers 非零启动预留提示，实际端点及连接容量由相应存储池决定
     @return OK或负数错误
     */
     int32_t listen(const char* address, uint32_t port, const NetInterfaceTlsOptions& tls, uint32_t peers = 64);
@@ -72,7 +79,7 @@ public:
     /** 仅允许宿主在本地凭证验证成功后登记；不向公网开放此入口
     @param [in] product 普通产品非零；通用内部服务必须为0
     @param [in] internal 是否仅接内部父调用的账号服务
-    @param [in] limit 每代入/出请求限额1至128
+    @param [in] limit 非零握手能力元数据，不作为本地等待数量上限
     @param [out] endpoint 新代次，失败为0
     @return OK或负数错误；重复产品拒绝，不隐式覆盖在线服务
     */
@@ -80,7 +87,7 @@ public:
 
     /** 服务进程登记自身业务处理器，通用处理器0只供已经由宿主验证的内部来源
     @param [in] product 逻辑产品号，0可处理多个产品的内部请求
-    @param [in] limit 入/出在途上限1至128
+    @param [in] limit 非零握手能力元数据，不作为本地等待数量上限
     @param [out] endpoint 成功为新代次，失败0
     @return NI_OK或错误；不构成网络服务注册授权
     */
@@ -241,7 +248,7 @@ private:
     */
     void dropFile(uint64_t stream, int32_t reason, uint64_t skip = 0);
 
-    /** 关闭端点时只遍历其双向链；正常poll通过固定期限堆每轮回收至多64条
+    /** 关闭端点时只遍历其双向链；正常poll通过动态期限堆每轮回收至多64条
     @param [in] endpoint 关闭端点，0只处理到期
     */
     void collectFiles(uint64_t endpoint);

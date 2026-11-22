@@ -31,9 +31,22 @@ public:
     */
     int32_t configureGateways(const std::string& seeds, const std::string& cachePath);
 
+    /** 首次连接前复制TLS帧池配置；不得与本对象其他调用并发
+    池资源在创建物理连接时申请并验证，失败走原有连接失败路径；不修改其他连接。
+    @param [in] config 独立数据/控制记录及正文的基础池配置
+    @return NI_OK配置已复制；状态、内存或不支持错误
+    */
+    int32_t configureConnectionPools(const NetConnectionPoolConfig& config);
+
+    /** 首次连接前配置协议请求记录池，未完成应答不占普通DATA记录
+    @param [in] config 基础池初值、上限和增长策略；仅静止生命周期owner调用
+    @return NI_OK或状态/参数/资源错误
+    */
+    int32_t configureRequestPool(const LockFreeHashMapPoolConfig& config);
+
     /** 停止时设置公开无秘密RPC类型的压缩候选
     @param [in] types count非零时不可空
-    @param [in] count 0至64，0清空
+    @param [in] count 非负项数，0清空
     @return OK或负数，实际使用仍需对端协商
     */
     int32_t configureCompression(const uint32_t* types, uint32_t count);

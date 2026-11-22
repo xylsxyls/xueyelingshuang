@@ -5,7 +5,6 @@
 
 class ProtoMessage;
 
-#define NET_INTERFACE_DIRECTORY_NODES 64U
 #define NET_INTERFACE_DIRECTORY_BYTES 16384U
 
 // 公开候选元数据，不包含身份授权或秘密。

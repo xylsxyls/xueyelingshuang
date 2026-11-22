@@ -20,15 +20,15 @@ int32_t NetInterfaceCompression::encode(const NetInterfaceFrame& frame, uint8_t*
     }
     try
     {
-        uint32_t size = Compress::zlibRawCompressBound(frame.m_payloadSize);
+        uint32_t size = Compress::rawCompressBound(frame.m_payloadSize);
         if (size == 0)
         {
             return NI_LIMIT_EXCEEDED;
         }
         std::vector<uint8_t> zipped(static_cast<size_t>(size) + 8);
-        std::memcpy(zipped.data(), "NZC1", 4);
+        std::memcpy(zipped.data(), "NZC2", 4);
         for (uint32_t index = 0; index < 4; ++index) { zipped[4 + index] = static_cast<uint8_t>(frame.m_payloadSize >> (24 - index * 8)); }
-        const int32_t status = Compress::zlibRawCompress(zipped.data() + 8, size, frame.m_payload, frame.m_payloadSize, 1);
+        const int32_t status = Compress::rawCompress(zipped.data() + 8, size, frame.m_payload, frame.m_payloadSize, 1);
         if (status != COMPRESS_OK) { return status == COMPRESS_NO_MEMORY ? NI_NO_MEMORY : NI_PROTOCOL_ERROR; }
         if (size + 8 > frame.m_payloadSize - frame.m_payloadSize / 12)
         {
@@ -48,7 +48,7 @@ int32_t NetInterfaceCompression::decode(const uint8_t* input, uint32_t size, uin
 {
     output = nullptr;
     length = 0;
-    if (input == nullptr || size < 9 || std::memcmp(input, "NZC1", 4) != 0)
+    if (input == nullptr || size < 9 || std::memcmp(input, "NZC2", 4) != 0)
     {
         return NI_PROTOCOL_ERROR;
     }
@@ -59,7 +59,7 @@ int32_t NetInterfaceCompression::decode(const uint8_t* input, uint32_t size, uin
     if (bytes == nullptr) { return NI_NO_MEMORY; }
     uint32_t actual = original;
     uint32_t source = size - 8;
-    const int32_t status = Compress::zlibRawUnCompress(bytes, actual, input + 8, source);
+    const int32_t status = Compress::rawUncompress(bytes, actual, input + 8, source);
     if (status != COMPRESS_OK || actual != original || source != size - 8)
     {
         volatile uint8_t* wipe = bytes;

@@ -1,4 +1,5 @@
-﻿#include "NetInterface.h"
+﻿#include "NetInterfaceCompact.h"
+#include "NetInterface.h"
 #include "NetInterfaceMacro.h"
 #include "NetInterfaceRequests.h"
 #include <cstring>
@@ -9,25 +10,12 @@
 #include "NetInterfaceLink.h"
 #include "NetInterfaceDirectoryHelper.h"
 #include "NetInterfaceGatewayTypes.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include <utility>
-#include "NetInterfaceCertificateHelper.h"
 #include "NetInterfaceCertificate.h"
-#include "NetInterfaceCertificateEntropy.h"
-#include <mbedtls/ctr_drbg.h>
-#include <mbedtls/ecp.h>
-#include <mbedtls/oid.h>
-#include <mbedtls/pk.h>
-#include <mbedtls/platform_util.h>
-#include <mbedtls/sha256.h>
-#include <mbedtls/x509_crt.h>
-#include <mbedtls/x509_csr.h>
 #include "NetInterfaceConnection.h"
 #include <sstream>
-#include "mbedtls/pkcs5.h"
-#include "mbedtls/sha256.h"
-#include "mbedtls/platform_util.h"
-#include "NetInterfaceCryptoState.h"
+#include "CEncodeDecode/CEncodeDecodeAPI.h"
 #include "NetInterfaceFile.h"
 #include "NetInterfaceFileGuard.h"
 #include "NetInterfaceFileFlowState.h"
@@ -184,12 +172,15 @@ static bool CertificateRangesOverlap(const void* first, uint32_t firstSize, cons
 NetInterface::NetInterface(uint32_t payloadLimit) :
 m_payloadLimit(payloadLimit),
 m_compressionAllowed(false),
+m_compactAllowed(false),
+m_headerReady(false),
 m_compressed(false),
 m_headerSize(0),
 m_wireSize(0),
 m_body(nullptr),
 m_capacity(0),
 m_bodySize(0),
+m_previousCompactData(),
 m_frame(),
 m_status(payloadLimit == 0 || payloadLimit > NET_INTERFACE_MAX_PAYLOAD_LIMIT ? NI_INVALID_ARGUMENT : NI_NEED_MORE)
 {
@@ -222,23 +213,32 @@ void NetInterface::writeNumber(uint8_t* bytes, uint64_t value, uint32_t width)
 
 int32_t NetInterface::prepareHeader()
 {
-    const uint32_t flags = static_cast<uint32_t>(readNumber(m_header + 28, 4));
-    if (std::memcmp(m_header, "NIF2", 4) != 0 || readNumber(m_header + 4, 2) != 2 ||
-        flags > 1 || (flags == 1 && !m_compressionAllowed))
+    if (m_header[0] == 0xe3 || m_header[0] == 0xe4 || (m_header[0] & 0xc0) == 0x80)
     {
-        return NI_PROTOCOL_ERROR;
+        // feed已完整验证变长头并保存字段；这里不重复扫描相同的整数前缀。
+        m_compressed = false;
+        m_wireSize = m_frame.m_payloadSize;
     }
-    m_frame.m_kind = static_cast<uint16_t>(readNumber(m_header + 6, 2));
-    m_compressed = flags == 1;
-    if (m_frame.m_kind < NI_HELLO || m_frame.m_kind > NI_DATA_ACK ||
-        (m_compressed && m_frame.m_kind != NI_REQUEST && m_frame.m_kind != NI_RESPONSE))
+    else
     {
-        return NI_PROTOCOL_ERROR;
+        const uint32_t flags = static_cast<uint32_t>(readNumber(m_header + 28, 4));
+        if (std::memcmp(m_header, "NIF2", 4) != 0 || readNumber(m_header + 4, 2) != 2 ||
+            flags > 1 || (flags == 1 && !m_compressionAllowed))
+        {
+            return NI_PROTOCOL_ERROR;
+        }
+        m_frame.m_kind = static_cast<uint16_t>(readNumber(m_header + 6, 2));
+        m_compressed = flags == 1;
+        if (m_frame.m_kind < NI_HELLO || m_frame.m_kind > NI_DATA_ACK ||
+            (m_compressed && m_frame.m_kind != NI_REQUEST && m_frame.m_kind != NI_RESPONSE))
+        {
+            return NI_PROTOCOL_ERROR;
+        }
+        m_frame.m_productId = static_cast<uint32_t>(readNumber(m_header + 8, 4));
+        m_frame.m_requestId = readNumber(m_header + 12, 8);
+        m_wireSize = static_cast<uint32_t>(readNumber(m_header + 20, 4));
+        m_frame.m_messageType = static_cast<uint32_t>(readNumber(m_header + 24, 4));
     }
-    m_frame.m_productId = static_cast<uint32_t>(readNumber(m_header + 8, 4));
-    m_frame.m_requestId = readNumber(m_header + 12, 8);
-    m_wireSize = static_cast<uint32_t>(readNumber(m_header + 20, 4));
-    m_frame.m_messageType = static_cast<uint32_t>(readNumber(m_header + 24, 4));
     if (m_wireSize > m_payloadLimit)
     {
         return NI_LIMIT_EXCEEDED;
@@ -272,6 +272,33 @@ int32_t NetInterface::prepareHeader()
     return NI_NEED_MORE;
 }
 
+/** 复制已验证的独立正文，短片段使用定长访问，避免通用memcpy的逐帧调度
+@param [out] output 至少size字节的解码器自有存储
+@param [in] input 至少size字节的输入；不访问该区间外的字节
+@param [in] size 实际正文长度，0时不访问输入和输出
+*/
+static inline void CopyFrameBody(uint8_t* output, const uint8_t* input, uint32_t size)
+{
+    if (size >= 8)
+    {
+        std::memcpy(output, input, size);
+    }
+    else if (size >= 4)
+    {
+        std::memcpy(output, input, 4);
+        std::memcpy(output + size - 4, input + size - 4, 4);
+    }
+    else if (size >= 2)
+    {
+        std::memcpy(output, input, 2);
+        std::memcpy(output + size - 2, input + size - 2, 2);
+    }
+    else if (size != 0)
+    {
+        *output = *input;
+    }
+}
+
 int32_t NetInterface::feed(const uint8_t* data, uint32_t size, uint32_t& consumed)
 {
     consumed = 0;
@@ -283,24 +310,103 @@ int32_t NetInterface::feed(const uint8_t* data, uint32_t size, uint32_t& consume
     {
         return m_status;
     }
-    if (m_headerSize != NET_INTERFACE_HEADER_SIZE)
+    if (!m_headerReady)
     {
-        const uint32_t count = (std::min)(size, NET_INTERFACE_HEADER_SIZE - m_headerSize);
-        if (count != 0)
+        // 常见的单字节长度/编号增量直接取字段；其他宽度及分段头仍走完整规范解析。
+        // 不借用输入正文，不减少长度、协商及64位溢出检查。
+        if (m_headerSize == 0 && size != 0 && m_compactAllowed && (data[0] & 0xc0) == 0x80 &&
+            m_previousCompactData.m_kind == NI_DATA)
         {
-            std::memcpy(m_header + m_headerSize, data, count);
-            m_headerSize += count;
-            consumed = count;
+            if (m_previousCompactData.m_requestId == UINT64_MAX)
+            {
+                return fail(NI_PROTOCOL_ERROR);
+            }
+            const uint32_t length = data[0] & 63;
+            m_frame = m_previousCompactData;
+            ++m_frame.m_requestId;
+            m_frame.m_payloadSize = length;
+            m_header[0] = data[0];
+            m_headerSize = 1;
+            consumed = 1;
+            // 完整短帧复用已分配正文；不再经过通用头准备、分段合并和压缩分支。
+            // 仍拥有正文副本，接纳后调用方可以立即覆盖输入；分段和首次分配走原路径。
+            if (length <= m_capacity && length <= size - 1)
+            {
+                if (length > m_payloadLimit)
+                {
+                    return fail(NI_LIMIT_EXCEEDED);
+                }
+                CopyFrameBody(m_body, data + 1, length);
+                m_wireSize = m_bodySize = length;
+                m_headerReady = true;
+                m_compressed = false;
+                m_frame.m_payload = length == 0 ? nullptr : m_body;
+                consumed += length;
+                m_status = NI_READY;
+                return m_status;
+            }
         }
-        if (m_headerSize != NET_INTERFACE_HEADER_SIZE)
+        else if (m_headerSize == 0 && size >= 3 && m_compactAllowed && data[0] == 0xe4 &&
+            data[1] < 128 && data[2] != 0 && data[2] < 128 && m_previousCompactData.m_kind == NI_DATA)
         {
-            return NI_NEED_MORE;
+            if (m_previousCompactData.m_requestId > UINT64_MAX - data[2])
+            {
+                return fail(NI_PROTOCOL_ERROR);
+            }
+            m_frame = m_previousCompactData;
+            m_frame.m_requestId += data[2];
+            m_frame.m_payloadSize = data[1];
+            m_header[0] = 0xe4;
+            m_headerSize = 3;
+            consumed = 3;
+        }
+        else
+        {
+            const uint32_t previous = m_headerSize;
+            const uint32_t count = (std::min)(size, NET_INTERFACE_HEADER_SIZE - previous);
+            if (count != 0)
+            {
+                std::memcpy(m_header + previous, data, count);
+                m_headerSize += count;
+                consumed = count;
+            }
+            if (m_headerSize == 0)
+            {
+                return NI_NEED_MORE;
+            }
+            if (m_header[0] == 0xe3 || m_header[0] == 0xe4 || (m_header[0] & 0xc0) == 0x80)
+            {
+                if (!m_compactAllowed)
+                {
+                    return fail(NI_PROTOCOL_ERROR);
+                }
+                NetInterfaceFrame fields = {};
+                uint32_t headerSize = 0;
+                const int32_t parsed = NetInterfaceCompact::header(m_header, m_headerSize, fields, headerSize, &m_previousCompactData);
+                if (parsed == NI_NEED_MORE)
+                {
+                    return parsed;
+                }
+                if (parsed < 0)
+                {
+                    return fail(parsed);
+                }
+                // 预读到缓存的正文不算消费；原输入仍从实际头末尾接纳，不能吞下一条帧。
+                consumed = headerSize - previous;
+                m_headerSize = headerSize;
+                m_frame = fields;
+            }
+            else if (m_headerSize != NET_INTERFACE_HEADER_SIZE)
+            {
+                return NI_NEED_MORE;
+            }
         }
         const int32_t checked = prepareHeader();
         if (checked < 0)
         {
             return fail(checked);
         }
+        m_headerReady = true;
     }
     const uint32_t count = (std::min)(size - consumed, m_wireSize - m_bodySize);
     if (count != 0)
@@ -339,6 +445,12 @@ int32_t NetInterface::peek(NetInterfaceFrame& frame) const
     return m_status;
 }
 
+int32_t NetInterface::peek(const NetInterfaceFrame*& frame) const
+{
+    frame = m_status == NI_READY ? &m_frame : nullptr;
+    return m_status;
+}
+
 void NetInterface::clear(bool release)
 {
     if (release)
@@ -346,12 +458,13 @@ void NetInterface::clear(bool release)
         delete[] m_body;
         m_body = nullptr;
         m_capacity = 0;
+        m_frame = NetInterfaceFrame();
     }
     m_headerSize = 0;
+    m_headerReady = false;
     m_wireSize = 0;
     m_bodySize = 0;
     m_compressed = false;
-    m_frame = NetInterfaceFrame();
     m_status = m_payloadLimit == 0 || m_payloadLimit > NET_INTERFACE_MAX_PAYLOAD_LIMIT ? NI_INVALID_ARGUMENT : NI_NEED_MORE;
 }
 
@@ -360,6 +473,21 @@ int32_t NetInterface::consume()
     if (m_status != NI_READY)
     {
         return m_status < 0 ? m_status : NI_INVALID_STATE;
+    }
+    if (m_compactAllowed && !m_compressed && m_frame.m_kind == NI_DATA &&
+        (m_header[0] == 0xe3 || m_header[0] == 0xe4 || (m_header[0] & 0xc0) == 0x80))
+    {
+        if (m_header[0] == 0xe3)
+        {
+            m_previousCompactData = m_frame;
+            m_previousCompactData.m_payload = nullptr;
+        }
+        else
+        {
+            // 增量头已校验并继承产品和消息类型，只更新变化的字段。
+            m_previousCompactData.m_requestId = m_frame.m_requestId;
+            m_previousCompactData.m_payloadSize = m_frame.m_payloadSize;
+        }
     }
     clear(m_capacity > 4096);
     return NI_OK;
@@ -376,6 +504,7 @@ int32_t NetInterface::finish()
 
 void NetInterface::reset()
 {
+    m_previousCompactData = NetInterfaceFrame();
     clear(true);
 }
 
@@ -391,6 +520,7 @@ uint32_t NetInterface::payloadLimit() const
 
 int32_t NetInterface::fail(int32_t error)
 {
+    m_previousCompactData = NetInterfaceFrame();
     clear(true);
     m_status = error;
     return error;
@@ -399,6 +529,20 @@ int32_t NetInterface::fail(int32_t error)
 void NetInterface::allowCompression(bool allowed)
 {
     m_compressionAllowed = allowed;
+}
+
+void NetInterface::allowCompact(bool allowed)
+{
+    if (m_compactAllowed != allowed)
+    {
+        m_previousCompactData = NetInterfaceFrame();
+    }
+    m_compactAllowed = allowed;
+}
+
+int32_t NetInterface::encodeCompact(const NetInterfaceFrame& frame, uint8_t* output, uint32_t capacity, uint32_t& required)
+{
+    return NetInterfaceCompact::encode(frame, output, capacity, required);
 }
 
 int32_t NetInterface::encode(const NetInterfaceFrame& frame, uint8_t* output, uint32_t capacity, uint32_t& required)
@@ -446,278 +590,6 @@ int32_t NetInterface::encode(const NetInterfaceFrame& frame, uint8_t* output, ui
     }
     return NI_OK;
 }
-
-// NET_INTERFACE_UNIT_TEST_BEGIN
-//#include "NetInterface.h"
-//#include "NetInterfaceFileFlow.h"
-//#include "NetInterface.h"
-//#include "NetInterfaceDirectory.h"
-//#include <vector>
-//#include <cstdio>
-//#include <chrono>
-//
-///** 测试时放开本段逐行注释，测试后注释回去；普通库不包含main
-//@param [in] argc 参数个数
-//@param [in] argv 可选--benchmark只运行完整正文校验的有界性能批次
-//@return 0通过，失败输出源码行号并返回1
-//*/
-//int main(int argc, const char* argv[])
-//{
-//#define NET_INTERFACE_CHECK(value) do { if (!(value)) { std::fprintf(stderr, "NetInterface self-test failed at %d\n", __LINE__); return 1; } } while (0)
-//    if (argc == 2 && std::strcmp(argv[1], "--benchmark") == 0)
-//    {
-//        uint8_t payload[1024];
-//        for (uint32_t index = 0; index < sizeof(payload); ++index)
-//        {
-//            payload[index] = static_cast<uint8_t>(index * 37U);
-//        }
-//        NetInterfaceFrame source = {};
-//        source.m_kind = NI_REQUEST;
-//        source.m_productId = 4;
-//        source.m_requestId = UINT64_C(0x8123456789abcdef);
-//        source.m_messageType = 23;
-//        source.m_payload = payload;
-//        source.m_payloadSize = sizeof(payload);
-//        uint8_t wire[1056];
-//        uint32_t required = 0;
-//        NET_INTERFACE_CHECK(NetInterface::encode(source, wire, sizeof(wire), required) == NI_OK && required == sizeof(wire));
-//        NetInterface decoder;
-//        const auto begin = std::chrono::steady_clock::now();
-//        for (uint32_t index = 0; index < 500000; ++index)
-//        {
-//            uint32_t used = 0;
-//            NET_INTERFACE_CHECK(decoder.feed(wire, sizeof(wire), used) == NI_READY && used == sizeof(wire));
-//            NetInterfaceFrame frame = {};
-//            NET_INTERFACE_CHECK(decoder.peek(frame) == NI_READY && frame.m_payloadSize == sizeof(payload) &&
-//                frame.m_requestId == source.m_requestId && std::memcmp(frame.m_payload, payload, sizeof(payload)) == 0);
-//            NET_INTERFACE_CHECK(decoder.consume() == NI_OK);
-//        }
-//        const uint64_t microseconds = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
-//            std::chrono::steady_clock::now() - begin).count());
-//        decoder.reset();
-//        std::printf("NIF2_BENCH frames=500000 body_bytes=512000000 microseconds=%llu PASS\n", static_cast<unsigned long long>(microseconds));
-//        return 0;
-//    }
-//
-//    const uint8_t golden[] = {'N', 'I', 'F', '2', 0, 2, 0, 3, 1, 2, 3, 4,
-//        1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 3, 0x11, 0x22, 0x33, 0x44, 0, 0, 0, 0, 'A', 0, 'Z'};
-//    uint8_t target[80];
-//    NetInterfaceFrame fixed = {};
-//    fixed.m_kind = NI_REQUEST;
-//    fixed.m_productId = 0x01020304U;
-//    fixed.m_requestId = UINT64_C(0x0102030405060708);
-//    fixed.m_messageType = 0x11223344U;
-//    fixed.m_payload = golden + 32;
-//    fixed.m_payloadSize = 3;
-//    uint32_t wanted = 0;
-//    NET_INTERFACE_CHECK(NetInterface::encode(fixed, target, sizeof(target), wanted) == NI_OK && wanted == sizeof(golden));
-//    NET_INTERFACE_CHECK(std::memcmp(target, golden, wanted) == 0);
-//    for (uint32_t split = 0; split <= sizeof(golden); ++split)
-//    {
-//        NetInterface decoder;
-//        uint32_t used = 99;
-//        NET_INTERFACE_CHECK(decoder.feed(golden, split, used) == (split == sizeof(golden) ? NI_READY : NI_NEED_MORE) && used == split);
-//        NET_INTERFACE_CHECK(decoder.feed(golden + split, static_cast<uint32_t>(sizeof(golden)) - split, used) == NI_READY);
-//        NetInterfaceFrame decoded = {};
-//        NET_INTERFACE_CHECK(decoder.peek(decoded) == NI_READY && decoded.m_productId == fixed.m_productId &&
-//            decoded.m_kind == fixed.m_kind && decoded.m_requestId == fixed.m_requestId &&
-//            decoded.m_messageType == fixed.m_messageType && decoded.m_payloadSize == 3 &&
-//            std::memcmp(decoded.m_payload, golden + 32, 3) == 0);
-//        NET_INTERFACE_CHECK(decoder.consume() == NI_OK && decoder.finish() == NI_OK);
-//    }
-//    NetInterface reused;
-//    for (uint32_t round = 0; round < 10000; ++round)
-//    {
-//        uint32_t used = 0;
-//        NET_INTERFACE_CHECK(reused.feed(golden, sizeof(golden), used) == NI_READY && used == sizeof(golden));
-//        NetInterfaceFrame decoded = {};
-//        NET_INTERFACE_CHECK(reused.peek(decoded) == NI_READY && decoded.m_payloadSize == 3 && std::memcmp(decoded.m_payload, golden + 32, 3) == 0);
-//        NET_INTERFACE_CHECK(reused.consume() == NI_OK);
-//    }
-//    std::memset(target, 0x5a, sizeof(target));
-//    fixed.m_payload = target + 4;
-//    NET_INTERFACE_CHECK(NetInterface::encode(fixed, target, sizeof(target), wanted) == NI_INVALID_ARGUMENT && wanted == 0);
-//    for (uint32_t index = 0; index < sizeof(target); ++index)
-//    {
-//        NET_INTERFACE_CHECK(target[index] == 0x5a);
-//    }
-//    fixed.m_payload = golden + 32;
-//    std::vector<NetInterfaceFrame> alias(3);
-//    alias[0] = fixed;
-//    NET_INTERFACE_CHECK(NetInterface::encode(alias[0], reinterpret_cast<uint8_t*>(alias.data()),
-//        static_cast<uint32_t>(alias.size() * sizeof(NetInterfaceFrame)), wanted) == NI_OK);
-//    NET_INTERFACE_CHECK(std::memcmp(alias.data(), golden, sizeof(golden)) == 0);
-//    uint32_t usedAddress = 99;
-//    NET_INTERFACE_CHECK(reused.feed(reinterpret_cast<const uint8_t*>(UINTPTR_MAX - 1), 4, usedAddress) == NI_INVALID_ARGUMENT && usedAddress == 0);
-//    NET_INTERFACE_CHECK(reused.finish() == NI_OK);
-//
-//    NetInterfaceDirectoryPoint point;
-//    point.m_name = "node.0123456789abcdef0123456789abcdef";
-//    point.m_address = "127.0.0.1";
-//    point.m_port = 5203;
-//    point.m_capacity = 32;
-//    point.m_boot = UINT64_C(0x8123456789abcdef);
-//    const uint64_t now = UINT64_C(1792000000000);
-//    std::vector<NetInterfaceDirectoryPoint> points(1, point);
-//    std::string wire;
-//    NET_INTERFACE_CHECK(NetInterfaceDirectory::encode(points, wire) == NI_OK);
-//    NetInterfaceDirectoryHandle handle = nullptr;
-//    NET_INTERFACE_CHECK(NetInterface::directoryCreate(reinterpret_cast<const uint8_t*>(wire.data()), static_cast<uint32_t>(wire.size()), &handle) == NI_OK);
-//    uint32_t count = 0;
-//    NET_INTERFACE_CHECK(NetInterface::directoryCount(handle, &count) == NI_OK && count == 1);
-//    char name[38] = {};
-//    char address[40] = {};
-//    uint32_t fields[4] = {};
-//    NET_INTERFACE_CHECK(NetInterface::directoryNode(handle, 0, name, sizeof(name), address, sizeof(address), fields) == NI_OK &&
-//        name == point.m_name && address == point.m_address && fields[0] == 5203 && fields[1] == 32 &&
-//        fields[2] == UINT32_C(0x89abcdef) && fields[3] == UINT32_C(0x81234567));
-//    name[0] = 'X';
-//    NET_INTERFACE_CHECK(NetInterface::directoryNode(handle, 0, name, 1, address, sizeof(address), fields) == NI_BUFFER_TOO_SMALL &&
-//        name[0] == 'X' && fields[0] == 0 && fields[3] == 0);
-//    uint32_t required = 0;
-//    NET_INTERFACE_CHECK(NetInterface::directoryCache(handle, static_cast<uint32_t>(now), static_cast<uint32_t>(now >> 32), nullptr, 0, &required) == NI_BUFFER_TOO_SMALL &&
-//        required == wire.size() + 48);
-//    std::vector<uint8_t> cache(required);
-//    NET_INTERFACE_CHECK(NetInterface::directoryCache(handle, static_cast<uint32_t>(now), static_cast<uint32_t>(now >> 32), cache.data(), required, &required) == NI_OK);
-//    NetInterface::directoryDestroy(handle);
-//    handle = nullptr;
-//    NET_INTERFACE_CHECK(NetInterface::directoryCreateCache(cache.data(), required, static_cast<uint32_t>(now + 1000),
-//        static_cast<uint32_t>((now + 1000) >> 32), &handle) == NI_OK);
-//    NetInterface::directoryDestroy(handle);
-//    handle = nullptr;
-//    std::vector<NetInterfaceDirectoryPoint> decoded;
-//    NET_INTERFACE_CHECK(NetInterfaceDirectory::parseCache(cache.data(), required, now + UINT64_C(2592000001), decoded) == NI_TIMEOUT && decoded.empty());
-//    NET_INTERFACE_CHECK(NetInterfaceDirectory::parseCache(cache.data(), required, now - 300001, decoded) == NI_TIMEOUT && decoded.empty());
-//    NET_INTERFACE_CHECK(NetInterfaceDirectory::parseCache(cache.data(), required - 1, now, decoded) == NI_PROTOCOL_ERROR && decoded.empty());
-//    cache[17] ^= 1;
-//    NET_INTERFACE_CHECK(NetInterfaceDirectory::parseCache(cache.data(), required, now, decoded) == NI_PROTOCOL_ERROR && decoded.empty());
-//    NET_INTERFACE_CHECK(NetInterface::directoryCreateCache(cache.data(), required, static_cast<uint32_t>(now), static_cast<uint32_t>(now >> 32), &handle) == NI_PROTOCOL_ERROR && !handle);
-//    points.push_back(point);
-//    NET_INTERFACE_CHECK(NetInterfaceDirectory::encode(points, wire) == NI_INVALID_ARGUMENT);
-//    NET_INTERFACE_CHECK(NetInterfaceDirectory::address("::1") && NetInterfaceDirectory::address("2001:db8::1234") &&
-//        !NetInterfaceDirectory::address("0.0.0.0") && !NetInterfaceDirectory::address("127.00.0.1") &&
-//        !NetInterfaceDirectory::address("::") && !NetInterfaceDirectory::address("2001:::1") && !NetInterfaceDirectory::address("example.com"));
-//    std::vector<uint8_t> plain(65537, 0x41);
-//    NetInterfaceFrame outgoing = {};
-//    outgoing.m_kind = NI_REQUEST; outgoing.m_productId = 1; outgoing.m_requestId = 1; outgoing.m_messageType = 123;
-//    outgoing.m_payload = plain.data(); outgoing.m_payloadSize = static_cast<uint32_t>(plain.size());
-//    std::vector<uint8_t> packed(NET_INTERFACE_HEADER_SIZE + plain.size());
-//    uint32_t packedSize = 0;
-//    NET_INTERFACE_CHECK(NetInterfaceCompression::encode(outgoing, packed.data(), static_cast<uint32_t>(packed.size()), packedSize) == NI_OK);
-//    NET_INTERFACE_CHECK(packedSize < 2048 && packed[31] == 1);
-//    NetInterface denied;
-//    uint32_t used = 0;
-//    NET_INTERFACE_CHECK(denied.feed(packed.data(), packedSize, used) == NI_PROTOCOL_ERROR);
-//    NetInterface accepted;
-//    accepted.allowCompression(true);
-//    for (uint32_t offset = 0; offset < packedSize; ++offset)
-//    {
-//        NET_INTERFACE_CHECK(accepted.feed(packed.data() + offset, 1, used) >= 0 && used == 1);
-//    }
-//    NetInterfaceFrame incoming = {};
-//    NET_INTERFACE_CHECK(accepted.peek(incoming) == NI_READY && incoming.m_payloadSize == plain.size() &&
-//        std::memcmp(incoming.m_payload, plain.data(), plain.size()) == 0);
-//    NetInterface bounded(65536);
-//    bounded.allowCompression(true);
-//    NET_INTERFACE_CHECK(bounded.feed(packed.data(), packedSize, used) == NI_LIMIT_EXCEEDED);
-//    packed[packedSize - 1] ^= 1;
-//    NetInterface broken;
-//    broken.allowCompression(true);
-//    NET_INTERFACE_CHECK(broken.feed(packed.data(), packedSize, used) == NI_PROTOCOL_ERROR);
-//    uint32_t noise = 0x3e251dc7;
-//    for (size_t index = 0; index < plain.size(); ++index)
-//    {
-//        noise ^= noise << 13; noise ^= noise >> 17; noise ^= noise << 5;
-//        plain[index] = static_cast<uint8_t>(noise);
-//    }
-//    NET_INTERFACE_CHECK(NetInterfaceCompression::encode(outgoing, packed.data(), static_cast<uint32_t>(packed.size()), packedSize) == NI_OK &&
-//        packedSize == packed.size() && packed[31] == 0);
-//    NetInterfaceFileInfo info = {};
-//    info.direction = 2; info.state = NI_FILE_TRANSFERRING; info.chunk = 1024; info.window = 4;
-//    info.total = 4233; info.stream = 123; info.expiresUtc = 1792000060;
-//    info.transfer[0] = 1; info.token[0] = 2;
-//    NET_INTERFACE_CHECK(NetInterface::sha256(plain.data(), static_cast<uint32_t>(info.total), info.hash, 32) == NI_OK);
-//    NetInterfaceFileFlow receiver(info, 100, false, now), legacy(info, 100, false, now), corrupt(info, 100, false, now);
-//    NET_INTERFACE_CHECK(receiver.setWriteBatchChunks(0) == NI_INVALID_ARGUMENT && receiver.setWriteBatchChunks(5) == NI_INVALID_ARGUMENT);
-//    NET_INTERFACE_CHECK(receiver.setWriteBatchChunks(4) == NI_OK && corrupt.setWriteBatchChunks(4) == NI_OK);
-//    NetInterfaceFrame dataFrame = {};
-//    dataFrame.m_kind = NI_DATA; dataFrame.m_productId = 100; dataFrame.m_requestId = info.stream;
-//    dataFrame.m_messageType = NI_FILE_DATA_TYPE;
-//    std::vector<uint8_t> dataWire(1200);
-//    for (uint32_t block = 0; block < 5; ++block)
-//    {
-//        NetInterfaceFileData data = {};
-//        data.offset = block * 1024; data.size = block == 4 ? 137 : 1024; data.bytes = plain.data() + data.offset;
-//        std::memcpy(data.token, info.token, 32);
-//        NET_INTERFACE_CHECK(NetInterface::sha256(data.bytes, data.size, data.hash, 32) == NI_OK);
-//        NET_INTERFACE_CHECK(NetInterfaceFile::encodeData(data, dataWire.data(), static_cast<uint32_t>(dataWire.size()), dataFrame.m_payloadSize) == NI_OK);
-//        dataFrame.m_payload = dataWire.data();
-//        NET_INTERFACE_CHECK(receiver.accept(dataFrame) == NI_OK);
-//        NET_INTERFACE_CHECK(receiver.setWriteBatchChunks(1) == NI_INVALID_STATE);
-//        if (block == 0) { NET_INTERFACE_CHECK(legacy.accept(dataFrame) == NI_OK); }
-//        if (block == 1) { NET_INTERFACE_CHECK(legacy.accept(dataFrame) == NI_LIMIT_EXCEEDED); }
-//        if (block == 0)
-//        {
-//            dataWire[dataFrame.m_payloadSize - 1] ^= 1;
-//            NET_INTERFACE_CHECK(corrupt.accept(dataFrame) == NI_PROTOCOL_ERROR);
-//            dataWire[dataFrame.m_payloadSize - 1] ^= 1;
-//        }
-//        NetInterfaceFrame acknowledgement = {};
-//        NET_INTERFACE_CHECK(receiver.peekOutput(acknowledgement) == NI_NEED_MORE);
-//        if (block == 3 || block == 4)
-//        {
-//            uint64_t offset = 0; uint32_t size = 0; const uint8_t* bytes = nullptr;
-//            NET_INTERFACE_CHECK(receiver.writeRequest(offset, bytes, size) == NI_READY &&
-//                offset == (block == 3 ? 0 : 4096) && size == (block == 3 ? 4096 : 137));
-//            NET_INTERFACE_CHECK(std::memcmp(bytes, plain.data() + offset, size) == 0);
-//            // 相同重复块只确认内容一致，不能改变借出的写盘缓冲区，也不能提前ACK。
-//            NET_INTERFACE_CHECK(receiver.accept(dataFrame) == NI_OK && std::memcmp(bytes, plain.data() + offset, size) == 0);
-//            NET_INTERFACE_CHECK(receiver.peekOutput(acknowledgement) == NI_NEED_MORE);
-//            NetInterfaceFileData pending = {};
-//            pending.offset = block == 3 ? 4096 : info.total;
-//            pending.size = block == 3 ? 137 : 0;
-//            pending.flags = block == 3 ? 0 : 1;
-//            pending.bytes = block == 3 ? plain.data() + 4096 : nullptr;
-//            std::memcpy(pending.token, info.token, 32);
-//            if (block == 3)
-//            {
-//                NET_INTERFACE_CHECK(NetInterface::sha256(pending.bytes, pending.size, pending.hash, 32) == NI_OK);
-//            }
-//            else
-//            {
-//                std::memcpy(pending.hash, info.hash, 32);
-//            }
-//            std::vector<uint8_t> pendingWire(1200);
-//            NetInterfaceFrame pendingFrame = dataFrame;
-//            pendingFrame.m_payload = pendingWire.data();
-//            NET_INTERFACE_CHECK(NetInterfaceFile::encodeData(pending, pendingWire.data(),
-//                static_cast<uint32_t>(pendingWire.size()), pendingFrame.m_payloadSize) == NI_OK);
-//            // 新数据和END必须等写盘确认；背压期间原缓冲区的地址与内容保持有效。
-//            NET_INTERFACE_CHECK(receiver.accept(pendingFrame) == NI_LIMIT_EXCEEDED &&
-//                std::memcmp(bytes, plain.data() + offset, size) == 0);
-//            NET_INTERFACE_CHECK(receiver.written(offset + 1, size, NI_OK) == NI_INVALID_STATE);
-//            NET_INTERFACE_CHECK(receiver.written(offset, size, NI_OK) == NI_OK);
-//            NET_INTERFACE_CHECK(receiver.peekOutput(acknowledgement) == NI_READY);
-//            NetInterfaceFileAck ack = {};
-//            NET_INTERFACE_CHECK(NetInterfaceFile::parseAck(acknowledgement, ack) == NI_OK && ack.offset == offset + size && ack.flags == 0);
-//            NET_INTERFACE_CHECK(receiver.consumeOutput() == NI_OK);
-//        }
-//    }
-//    NetInterfaceFileData end = {};
-//    end.offset = info.total; end.flags = 1;
-//    std::memcpy(end.token, info.token, 32); std::memcpy(end.hash, info.hash, 32);
-//    NET_INTERFACE_CHECK(NetInterfaceFile::encodeData(end, dataWire.data(), static_cast<uint32_t>(dataWire.size()), dataFrame.m_payloadSize) == NI_OK);
-//    NET_INTERFACE_CHECK(receiver.accept(dataFrame) == NI_OK && receiver.takeCommit() == NI_READY);
-//    NetInterfaceFrame finalAck = {};
-//    NET_INTERFACE_CHECK(receiver.peekOutput(finalAck) == NI_NEED_MORE);
-//    NET_INTERFACE_CHECK(receiver.committed(NI_OK) == NI_READY && receiver.peekOutput(finalAck) == NI_READY);
-//    NetInterfaceFileAck committedAck = {};
-//    NET_INTERFACE_CHECK(NetInterfaceFile::parseAck(finalAck, committedAck) == NI_OK && committedAck.flags == 1 && committedAck.offset == info.total);
-//    std::puts("NetInterface directory/cache, compression and bounded durable file batching self-test PASS");
-//#undef NET_INTERFACE_CHECK
-//    return 0;
-//}
-// NET_INTERFACE_UNIT_TEST_END
 
 int32_t NetInterface::tunnelCreate(NetInterfaceTunnelHandle* handle)
 {
@@ -1042,13 +914,19 @@ int32_t NetInterface::requestsCreate(uint32_t capacity, NetInterfaceRequestsHand
         return NI_INVALID_ARGUMENT;
     }
     *handle = nullptr;
-    if (capacity == 0 || capacity > 4096)
+    if (capacity == 0)
     {
         return NI_INVALID_ARGUMENT;
     }
     try
     {
-        *handle = reinterpret_cast<NetInterfaceRequestsHandle>(new NetInterfaceRequests(capacity));
+        std::unique_ptr<NetInterfaceRequests> requests(new NetInterfaceRequests(capacity));
+        const int32_t initialized = requests->status();
+        if (initialized != NI_OK)
+        {
+            return initialized;
+        }
+        *handle = reinterpret_cast<NetInterfaceRequestsHandle>(requests.release());
         return NI_OK;
     }
     catch (...)
@@ -2035,13 +1913,13 @@ int32_t NetInterface::directoryCreateNodes(const NetInterfaceDirectoryNodeData* 
     {
         return NI_INVALID_ARGUMENT;
     }
-    if (count <= NET_INTERFACE_DIRECTORY_NODES && NetInterfaceDirectoryHelper::directoryRangesOverlap(nodes,
+    if (count <= UINT32_MAX / sizeof(NetInterfaceDirectoryNodeData) && NetInterfaceDirectoryHelper::directoryRangesOverlap(nodes,
         count * static_cast<uint32_t>(sizeof(NetInterfaceDirectoryNodeData)), handle, sizeof(*handle)))
     {
         return NI_INVALID_ARGUMENT;
     }
     *handle = nullptr;
-    if (nodes == nullptr || count == 0 || count > NET_INTERFACE_DIRECTORY_NODES)
+    if (nodes == nullptr || count == 0 || count > UINT32_MAX / sizeof(NetInterfaceDirectoryNodeData))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -2119,13 +1997,13 @@ int32_t NetInterface::directoryCopyNodes(NetInterfaceDirectoryHandle handle,
     {
         return NI_INVALID_ARGUMENT;
     }
-    if (capacity <= NET_INTERFACE_DIRECTORY_NODES && NetInterfaceDirectoryHelper::directoryRangesOverlap(nodes,
+    if (capacity <= UINT32_MAX / sizeof(NetInterfaceDirectoryNodeData) && NetInterfaceDirectoryHelper::directoryRangesOverlap(nodes,
         capacity * static_cast<uint32_t>(sizeof(NetInterfaceDirectoryNodeData)), count, sizeof(*count)))
     {
         return NI_INVALID_ARGUMENT;
     }
     *count = 0;
-    if (handle == nullptr || (nodes == nullptr && capacity != 0) || capacity > NET_INTERFACE_DIRECTORY_NODES)
+    if (handle == nullptr || (nodes == nullptr && capacity != 0) || capacity > UINT32_MAX / sizeof(NetInterfaceDirectoryNodeData))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -2210,138 +2088,64 @@ int32_t NetInterface::directoryCache(NetInterfaceDirectoryHandle handle, uint32_
     catch (...) { return NI_NO_MEMORY; }
 }
 
+/** 将密码运算结果转换为网关状态，不向调用方传播第三方错误值
+@param [in] result CEncodeDecode通用运算结果
+@return 网关状态；未知错误始终按失败处理
+*/
+static int32_t CryptoResult(int32_t result)
+{
+    switch (result)
+    {
+    case CENCODE_OK: return NI_OK;
+    case CENCODE_ARGUMENT: return NI_INVALID_ARGUMENT;
+    case CENCODE_MEMORY: return NI_NO_MEMORY;
+    case CENCODE_LIMIT: return NI_LIMIT_EXCEEDED;
+    case CENCODE_BUFFER: return NI_BUFFER_TOO_SMALL;
+    default: return NI_INVALID_STATE;
+    }
+}
+
 int32_t NetInterface::hashCreate(NetInterfaceHashHandle* handle)
 {
     if (handle == nullptr)
     {
         return NI_INVALID_ARGUMENT;
     }
-    *handle = new (std::nothrow) NetInterfaceHashOpaque();
-    if (*handle == nullptr)
-    {
-        return NI_NO_MEMORY;
-    }
-    if ((*handle)->m_status != NI_OK)
-    {
-        delete *handle;
-        *handle = nullptr;
-        return NI_INVALID_STATE;
-    }
-    return NI_OK;
+    CEncodeDecodeHash* hash = nullptr;
+    const int32_t result = CEncodeDecode::hashCreate(&hash);
+    *handle = reinterpret_cast<NetInterfaceHashHandle>(hash);
+    return CryptoResult(result);
 }
 
 int32_t NetInterface::hashUpdate(NetInterfaceHashHandle handle, const uint8_t* input, uint32_t size)
 {
-    if (handle == nullptr || (input == nullptr && size != 0) || size > 16777216)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    if (handle->m_finished)
-    {
-        return NI_INVALID_STATE;
-    }
-    if (handle->m_status < 0)
-    {
-        return handle->m_status;
-    }
-    if (handle->m_size > UINT64_C(0x1fffffffffffffff) - size)
-    {
-        handle->m_status = NI_LIMIT_EXCEEDED;
-        return handle->m_status;
-    }
-    if (size != 0 && mbedtls_sha256_update(&handle->m_context, input, size) != 0)
-    {
-        handle->m_status = NI_INVALID_STATE;
-        return handle->m_status;
-    }
-    handle->m_size += size;
-    return NI_OK;
+    return CryptoResult(CEncodeDecode::hashUpdate(reinterpret_cast<CEncodeDecodeHash*>(handle), input, size));
 }
 
 int32_t NetInterface::hashFinish(NetInterfaceHashHandle handle, uint8_t* output, uint32_t capacity)
 {
-    if (handle == nullptr || output == nullptr)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    if (handle->m_finished)
-    {
-        return NI_INVALID_STATE;
-    }
-    if (handle->m_status < 0)
-    {
-        return handle->m_status;
-    }
-    if (capacity < 32)
-    {
-        return NI_BUFFER_TOO_SMALL;
-    }
-    uint8_t hash[32] = {};
-    const int result = mbedtls_sha256_finish(&handle->m_context, hash);
-    if (result == 0)
-    {
-        std::memcpy(output, hash, sizeof(hash));
-    }
-    mbedtls_platform_zeroize(hash, sizeof(hash));
-    handle->m_finished = true;
-    handle->m_status = result == 0 ? NI_OK : NI_INVALID_STATE;
-    return handle->m_status;
+    return CryptoResult(CEncodeDecode::hashFinish(reinterpret_cast<CEncodeDecodeHash*>(handle), output, capacity));
 }
 
 void NetInterface::hashDestroy(NetInterfaceHashHandle handle)
 {
-    delete handle;
+    CEncodeDecode::hashDestroy(reinterpret_cast<CEncodeDecodeHash*>(handle));
 }
 
 int32_t NetInterface::sha256(const uint8_t* input, uint32_t size, uint8_t* output, uint32_t capacity)
 {
-    if ((input == nullptr && size != 0) || output == nullptr || size > 16777216)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    if (capacity < 32)
-    {
-        return NI_BUFFER_TOO_SMALL;
-    }
-    uint8_t hash[32] = {};
-    const int result = mbedtls_sha256(input, size, hash, 0);
-    if (result == 0)
-    {
-        std::memcpy(output, hash, sizeof(hash));
-    }
-    mbedtls_platform_zeroize(hash, sizeof(hash));
-    return result == 0 ? NI_OK : NI_INVALID_STATE;
+    return CryptoResult(CEncodeDecode::sha256(input, size, output, capacity));
 }
 
 int32_t NetInterface::pbkdf2Sha256(const uint8_t* password, uint32_t passwordSize, const uint8_t* salt, uint32_t saltSize,
-                                 uint32_t iterations, uint8_t* output, uint32_t capacity)
+    uint32_t iterations, uint8_t* output, uint32_t capacity)
 {
-    if (password == nullptr || passwordSize == 0 || passwordSize > 1024 || salt == nullptr || saltSize == 0 || saltSize > 128 ||
-        iterations == 0 || iterations > 2000000 || output == nullptr)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    if (capacity < 32)
-    {
-        return NI_BUFFER_TOO_SMALL;
-    }
-    uint8_t hash[32] = {};
-    const int result =
-        mbedtls_pkcs5_pbkdf2_hmac_ext(MBEDTLS_MD_SHA256, password, passwordSize, salt, saltSize, iterations, sizeof(hash), hash);
-    if (result == 0)
-    {
-        std::memcpy(output, hash, sizeof(hash));
-    }
-    mbedtls_platform_zeroize(hash, sizeof(hash));
-    return result == 0 ? NI_OK : NI_INVALID_STATE;
+    return CryptoResult(CEncodeDecode::pbkdf2Sha256(password, passwordSize, salt, saltSize, iterations, output, capacity));
 }
 
 void NetInterface::wipe(uint8_t* bytes, uint32_t size)
 {
-    if (bytes != nullptr && size != 0)
-    {
-        mbedtls_platform_zeroize(bytes, size);
-    }
+    CEncodeDecode::wipe(bytes, size);
 }
 
 int32_t NetInterface::entropyBytes(NetInterfaceEntropyFunction entropy, void* context, uint8_t* output, uint32_t size)
@@ -2791,54 +2595,7 @@ int32_t NetInterface::certificateCreateRequest(const uint8_t* name, uint32_t nam
     {
         return NI_NO_MEMORY;
     }
-    char subject[100] = {'C', 'N', '=', 0};
-    std::memcpy(subject + 3, name, nameSize);
-    mbedtls_ctr_drbg_context random;
-    mbedtls_pk_context key;
-    mbedtls_x509write_csr writer;
-    mbedtls_ctr_drbg_init(&random);
-    mbedtls_pk_init(&key);
-    mbedtls_x509write_csr_init(&writer);
-    NetInterfaceCertificateEntropy source = {entropy, context};
-    const unsigned char personalization[] = "NetInterface identity v2";
-    unsigned char keyBytes[4096] = {};
-    unsigned char requestBytes[4096] = {};
-    int result = mbedtls_ctr_drbg_seed(&random, NetInterfaceCertificateHelper::certificateEntropyBytes, &source, personalization, sizeof(personalization) - 1);
-    if (result == 0)
-    {
-        result = mbedtls_pk_setup(&key, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY));
-    }
-    if (result == 0)
-    {
-        result = mbedtls_ecp_gen_key(MBEDTLS_ECP_DP_SECP256R1, mbedtls_pk_ec(key), mbedtls_ctr_drbg_random, &random);
-    }
-    if (result == 0)
-    {
-        result = mbedtls_pk_write_key_pem(&key, keyBytes, sizeof(keyBytes));
-    }
-    mbedtls_x509write_csr_set_key(&writer, &key);
-    mbedtls_x509write_csr_set_md_alg(&writer, MBEDTLS_MD_SHA256);
-    if (result == 0)
-    {
-        result = mbedtls_x509write_csr_set_subject_name(&writer, subject);
-    }
-    if (result == 0)
-    {
-        result = mbedtls_x509write_csr_pem(&writer, requestBytes, sizeof(requestBytes), mbedtls_ctr_drbg_random, &random);
-    }
-    if (result == 0)
-    {
-        *keySize = static_cast<uint32_t>(std::strlen(reinterpret_cast<const char*>(keyBytes))) + 1;
-        *requestSize = static_cast<uint32_t>(std::strlen(reinterpret_cast<const char*>(requestBytes))) + 1;
-        if (keyCapacity >= *keySize && requestCapacity >= *requestSize)
-        {
-            std::memcpy(privateKey, keyBytes, *keySize);
-            std::memcpy(request, requestBytes, *requestSize);
-        }
-    }
-    mbedtls_platform_zeroize(keyBytes, sizeof(keyBytes));
-    mbedtls_x509write_csr_free(&writer);
-    mbedtls_pk_free(&key);
-    mbedtls_ctr_drbg_free(&random);
-    return result != 0 ? NI_PROTOCOL_ERROR : keyCapacity < *keySize || requestCapacity < *requestSize ? NI_BUFFER_TOO_SMALL : NI_OK;
+    const int32_t result = CEncodeDecode::p256CreateRequest(name, nameSize, entropy, context,
+        privateKey, keyCapacity, keySize, request, requestCapacity, requestSize);
+    return result == CENCODE_STATE ? NI_PROTOCOL_ERROR : CryptoResult(result);
 }

@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "NetSession.h"
-#include <map>
+#include "NetObjectPool.h"
+#include <unordered_map>
+#include <vector>
 #include <memory>
 
 // 客户端单一在途记录；元数据不再复制到另一份路由等待表。
@@ -18,7 +20,7 @@ struct NetSessionPending
 class NetSessionState
 {
 public:
-    /** 清零全部标量和固定索引，不分配128条请求节点
+    /** 初始化物理请求池和单执行者索引，不设固定128条窗口
     */
     NetSessionState();
 
@@ -27,7 +29,7 @@ public:
     ~NetSessionState();
 
     /** 清空旧代次的请求及高水位，不执行上层回调
-    @param [in] limit 本代次已验证的1至128并发上限
+    @param [in] limit 本代次已验证的非零对端声明
     */
     void resetRequests(uint32_t limit);
 
@@ -89,10 +91,12 @@ public:
     NetClientChannel* m_external;
     // 本代应用握手，TLS仍由通道负责。
     std::unique_ptr<NetInterfaceHandshake> m_handshake;
-    // 原号有序表是请求的唯一拥有者，最多128项。
-    std::map<uint64_t, NetSessionPending> m_pending;
-    // 只借用稳定map节点的固定截止堆，不按poll扫描128项。
-    NetSessionPending* m_expiry[128];
+    // 请求记录的物理池，先于索引声明，保证晚于全部引用销毁
+    std::unique_ptr<NetObjectPool<NetSessionPending>> m_records;
+    // 单执行者无序索引，每个节点对应一个已取得的池槽，不另设请求条数窗口
+    std::unordered_map<uint64_t, NetObjectReference<NetSessionPending>> m_pending;
+    // 只借用池槽的截止堆，容量随实际记录增长，关闭时复用预热容量
+    std::vector<NetSessionPending*> m_expiry;
     // 堆有效项数，始终等于m_pending.size()。
     size_t m_expiryCount;
     // 本代请求原号高水位；容量拒绝仍消耗原号。
@@ -101,7 +105,7 @@ public:
     uint32_t m_maxRequests;
     // 本次构造的RPC明文，离开发送调用前擦除。
     std::vector<uint8_t> m_payload;
-    // 启动前配置的公开无秘密消息类型，最多64项。
+    // 启动前配置的公开无秘密消息类型，动态存储且仅由协议执行者访问。
     std::vector<uint32_t> m_compressionTypes;
     // 本代固定握手参数。
     NetInterfaceHandshakeOptions m_options;

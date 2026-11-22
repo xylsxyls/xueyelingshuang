@@ -9,8 +9,9 @@ struct NetInterfaceHandshakeOptions
     // 客户端1桌面、2手机App、3微信小程序；服务器填0
     uint32_t m_platform;
     // 位0多路请求必需；位1数据块、位2业务SDK、位3压缩可选，其余位不得设置
+    // 另含bit4紧凑帧协商；不支持的对端不得接收紧凑编码
     uint32_t m_capabilities;
-    // 1至128，协商取双方较小值
+    // 非零协议能力声明，协商取双方较小值；实际容量由本地物理池控制
     uint32_t m_maxRequests;
     // 1024至65536，协商取双方较小值
     uint32_t m_maxChunk;

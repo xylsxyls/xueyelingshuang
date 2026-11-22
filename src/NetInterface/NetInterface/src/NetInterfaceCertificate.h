@@ -14,7 +14,7 @@ public:
     */
     static bool validName(const std::string& name);
 
-    /** 同模块/静态兼容入口；跨DLL使用CertificateAPI固定缓冲，不转交STL释放权
+    /** 同模块/静态兼容入口；跨DLL使用NetInterface::certificateCreateRequest固定缓冲，不转交STL释放权
     @param [in] name 逻辑身份，服务端签发时仍须独立授权
     @param [in] entropy 宿主密码学随机源
     @param [in] context 随机上下文

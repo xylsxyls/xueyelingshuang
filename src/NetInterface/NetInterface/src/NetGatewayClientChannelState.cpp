@@ -6,7 +6,7 @@
 #include "NetInterfaceConnection.h"
 #include "NetInterfaceTransport.h"
 #include "NetGatewayClientChannel.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include <algorithm>
 #include <chrono>
 #include <cstring>
