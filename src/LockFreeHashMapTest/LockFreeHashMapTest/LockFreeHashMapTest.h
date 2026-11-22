@@ -245,7 +245,7 @@ crash-runner：仅Windows，调试运行并采集本批子进程dump/候选栈�
 测试模块：cases配LockFreeHashMapTestModule=dll或static及对应ConfigurationType；module-host配LockFreeHashMapTestModuleLibrary指向匹配lib，DLL与宿主输出目录一致、对象目录分开。
 CMake：入口为本源码目录CMakeLists.txt，C++11；LOCKFREEHASHMAP_SOURCE指定生产头；实际目标和add_test登记以该文件为准，不宣称全部VS模式均有同名CMake目标。
 六端启动与判定
-Windows、Linux、macOS 桌面由 CMake 构建用例和独立 runner，选择单个 ID 或上面的显式列表。跨编译的可执行文件应送到目标端运行。非 Windows 不采集 Win32 句柄和绑核指标。Linux、macOS 按桌面 POSIX 分支检查，尚缺本机编译运行数据。
+Windows、Linux、macOS 桌面由 CMake 构建用例和独立 runner，选择单个 ID 或上面的显式列表。跨编译的可执行文件应送到目标端运行。非 Windows 不采集 Win32 句柄和绑核指标。Linux ARM 模拟运行结果见第十一节。Linux ARM 真机及 macOS 尚缺本机运行数据。
 Android 用 NDK 的 android.toolchain.cmake，指定 ANDROID_ABI 与 ANDROID_PLATFORM，构建 LockFreeHashMapTest、LockFreeHashMapEpochTests、LockFreeHashMapPoolTests、LockFreeHashMapRewriteTests。使用 adb push 将匹配 ABI 的目标及所需共享运行库放入 /data/local/tmp 下的专用目录；adb shell 内为程序设置执行权限和该目录的 LD_LIBRARY_PATH，再逐项执行，如 ./LockFreeHashMapTest 3。宿主分别检查设备端退出码、完整结果和超时。
 iOS 用 Xcode 生成器、CMAKE_SYSTEM_NAME=iOS 和相应设备或模拟器 SDK。可执行目标生成测试 bundle；签名、部署及超时由测试宿主管理。也可将静态 LockFreeHashMapChecks 链入专用测试宿主，从 LockFreeHashMapTestEntry.h 调用统一 C++ 用例入口。示例：char name[] = "cases", id[] = "3"; char* args[] = {name, id, nullptr}; int result = LockFreeHashMapRunTests(2, args); 宿主检查 result 及完整汇总，每个 ID 使用新测试进程。故障注入会替换测试进程的全局分配函数，须使用隔离宿主；池和 rewrite 各有独立分配夹具，不能把它们合并到主用例二进制。可在模拟器/设备分别启动专项测试 bundle。
 Linux 或 Android 配置测试工程时会编译并链接探测 64 位原子操作，按实际工具链需要链接 libatomic。链接成功后仍由表的初始化检查当前 ABI 是否支持所需无锁原子。
@@ -279,6 +279,10 @@ Windows 256 个整数键/4096 桶纯读，基线和当前版单线程每秒分�
 两版的逐项吞吐、采样延迟、内存计数和复测结果见第十三节“性能实测明细”。
 
 本次正确性验证结果
+
+Linux ARM 专项。Windows 宿主使用 Clang 19.1.7、Debian GNU/Linux 的 libstdc++ 12 和对应 sysroot 进行 Release 交叉构建。分别使用 BIT=arm32（ARMv7 hard-float）和 BIT=arm64（AArch64），两种架构均构建出 .a 和 .so。消费程序实例化 LockFreeHashMap.cpp 里的公开 API 演示；同时验证了先发布 SDK 后编译和空目录内直接链接 CMake 目标两条路径。另将相同指针宽度的 x86 BIT 传给各 ARM 工具链，两次配置均因实际架构不匹配被拒绝。
+QEMU virt 双核，Debian Linux 6.1.0-50-armmp（Cortex-A15）和 6.1.0-50-arm64（Cortex-A57）。每种架构分别执行静态库示例、动态库示例，均输出 demo completed 并退出 0。每种架构运行主用例 1、2、3、4、5、6、7、8、10、11 及 Pool、Epoch、Rewrite、StdMutex 四个专项，均退出 0。合计 20 次主用例和 8 次专项通过。编号 9 和吞吐性能矩阵未纳入该批。ARMv5TE 另做了一次链接探测，编译器需要 libatomic，消费程序经 CMake 自动传递该依赖后链接成功；该目标仅验证链接。
+复现时，测试工程位于 src/LockFreeHashMapTest/LockFreeHashMapTest。原生构建选择 Release，交叉构建使用与生产库相同的 Linux ARM CMake 工具链，分别编译 LockFreeHashMapTest、LockFreeHashMapPoolTests、LockFreeHashMapEpochTests、LockFreeHashMapRewriteTests、LockFreeHashMapStdMutexTests。在目标 Linux 系统中逐个执行 LockFreeHashMapTest ID 和上述四个专项程序，检查退出码、用例身份及最终 failed=0。模拟器覆盖上述配置的功能，物理处理器上的弱内存序压力、吞吐与尾延迟仍缺实测。
 
 只读遍历反例在隔离头文件副本中去掉节点键值的 const，使用同一套用例单独执行编号 3。实际检查选中了可写重载，输出指定 FAIL 并以 1 退出；正式源码通过同一用例。
 另在隔离副本中仅关闭两格缓存的查询命中，保留原容量统计。编号 1 在嵌套 get 的返回值检查处输出 FAIL 并以 1 退出，验证该用例能检出统计字段正确而实际缓存失效的情况。
