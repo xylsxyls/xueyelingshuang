@@ -19,7 +19,8 @@ Wasm 的两个位宽分别以 BIT=wasm32 和 BIT=wasm64 构建。启用 LIBRARY_
 微信将 ProtoMessageManagerTest.js、ProtoMessageManagerTest.wasm 和 LibraryTestHost.js 放入分包，调用
 await require('./LibraryTestHost')(require('./ProtoMessageManagerTest'), { wasmPath: '包内路径/ProtoMessageManagerTest.wasm' })。
 运行 wasm64 的宿主必须支持 Memory64。
-Windows、Linux x86/x64、wasm32/64 的仓库 SDK 使用 protobuf-lite 3.3.0。Linux ARM64 的仓库头库为 3.19.3。before 读取目标 SDK 头中的版本并核对宿主 protoc；交叉编译时可用 PROTOC_EXECUTABLE 指定可在宿主运行的同版本程序。3.19.3 的生成文件位于该目标 SDK 的 include/ProtoMessageManager/protoc-3.19.3，不能与 3.3.0 生成文件混用。
+Linux ARM32 的发布归档由 Arm GNU Toolchain 13.3.Rel1 构建，目标为 armv7 hard-float。ProtoMessageManager 与归档应采用相同的 C++ 参数传递约定。更换工具链后，运行 NetInterfaceTest --cases 4 检验字符串字段的编码及解码。
+Windows、Linux x86/x64、wasm32/64 使用 protobuf-lite 3.3.0。Linux ARMv7 hard-float（arm32）和 AArch64（arm64）使用 3.19.3；两种位宽分别提供可链接静态程序及共享库的 PIC 归档。before 在当前 schema 与已记录的 SHA-256 匹配时，将随仓的 3.19.3 生成文件发布到目标 SDK 的 include/ProtoMessageManager/protoc-3.19.3。更新 schema 时，用 PROTOC_EXECUTABLE 指定宿主可执行的 protoc 3.19.3；显式指定的版本不匹配会报错。
 Android、macOS、iOS 需指定目标平台及 ABI，提供对应 protobuf 的头文件和静态归档。若 tools 尚无该目标的归档，将匹配的头和 libprotobuf-lite.a 分别放入专用 CLOUD_REBUILD_SDK_ROOT 的 include/protobuf 和 lib。每个平台、位宽及配置使用独立 SDK。
 */
 
@@ -75,7 +76,7 @@ Emscripten 3.1.74、Node 24.0.0：wasm32、wasm64 的 Debug 和 Release 各完�
 以上八个配置分别运行默认、--instant、--stress、--all、--cases 1,2-3、--case=wire 及 --list。逐行核对了 --list 的数字编号、组名和分类。未知编号及倒置区间由 C++ 返回 2，Node 宿主报告对应退出码并以非零状态退出。
 从 ProtoMessageManager.cpp 注释提取的 main 示例在 Windows 两个位宽的 Debug/Release 静态库及 DLL、Node 两个位宽的 Debug/Release 均运行通过；输出包含四类消息的实际字段、行数或字节数。
 Chrome 157.0.8103.80 Release 测试包强制 wasm32、强制 wasm64、自动选择 wasm64 均通过。微信开发者工具基础库配置 3.17.4，页面回执确认强制 wasm32 和自动选择 wasm32 均通过；强制 wasm64 在 WebAssembly.instantiate 阶段报 CompileError（invalid table elements limits flags），C++ 用例未启动。
-Linux、macOS、Android、iOS 完成源码、依赖、配置及部署入口审查，未在目标平台运行。微信手机未实测。本批仅验证基准素材的正确性，未执行 --benchmark。
+Linux x86 系列、macOS、Android、iOS 完成源码、依赖、配置及部署入口审查，未在目标平台运行。微信手机未实测。本批仅验证基准素材的正确性，未执行 --benchmark。
 本批相对构建路径与执行文件 SHA-256
 native32Debug/lib/ProtoMessageManagerTestd.exe 452cd27445881b4f3131d9468ba00a5386776041fc2c38913a6061f4bdb27da5
 native32Release/lib/ProtoMessageManagerTest.exe e5609bbebd69a2c86300f2ca07820c7eb6edc670d8d8efc0d76181930dee2741
@@ -85,4 +86,14 @@ wasm32Debug/test/ProtoMessageManagerTest.wasm f5452d18f2459d83018ad94f3694151968
 wasm32Release/test/ProtoMessageManagerTest.wasm 65823752110c9f0a44a900804703bf6d6ae5fbf8ba76e7f965985171c2050b99
 wasm64Debug/test/ProtoMessageManagerTest.wasm 73aa7c72eda6c5ab60b9fac6562fb8c312b0bf5d0c4fcdf0618d29f219d94145
 wasm64Release/test/ProtoMessageManagerTest.wasm 0735bd9c126969066e61575cde59c8cd8102504b24af01e9ce1b9e3d90300db9
+*/
+
+/** Linux ARM 功能验证，2026-11-22
+ARMv7 hard-float（arm32）及 AArch64（arm64）分别交叉构建 Debug、Release 静态库和共享库，使用 Clang 19.1.7、Debian 12 sysroot 及对应的 protobuf-lite 3.19.3 PIC 归档。在 QEMU 的 Debian 6.1.0-50 内核中，四个配置的静态库测试程序各执行 4 个功能组、47438 项检查，均为 0 失败。
+四个配置均另行运行从 ProtoMessageManager.cpp 提取、动态链接两库的公开示例。Record 返回 user=10001，Array 返回 pages=3，Table 返回两行，General 返回 code=0，全部退出 0。没有测量 ARM 性能，未在物理开发板运行。
+本批 ProtoMessageManagerTest ELF 的 SHA-256
+    armhf Release aeb3cd4451039b825e8af2846bf39d470f8d519924d9c2ab453a56a00eeaac74
+    armhf Debug 9b37468839d73bac238ac38926d8454b7617e51b1db1cc9147d78fbca33718ad
+    arm64 Release 4ba107d6aa591b07ad5089887496f5b86e013aeb401d6afeac27ab18e9a83d2b
+    arm64 Debug 8901233e0d6a76d27c8f4b6b54ca11bd6adfafbb4e83abf662970662530d3194
 */
