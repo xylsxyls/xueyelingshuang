@@ -73,7 +73,7 @@ bool ProcessWork::configure(const ProcessWorkConfig& config)
     }
     try
     {
-        if (!ProcessWorkMemory::valid(config.m_receiveMemory) || !ProcessWorkMemory::valid(config.m_postMemory) ||
+        if (config.m_sendMappingReservePercent > 90 || !ProcessWorkMemory::valid(config.m_receiveMemory) || !ProcessWorkMemory::valid(config.m_postMemory) ||
             m_sendChannels.lockFreeMapConfigure(config.m_sendChannels) != LOCK_FREE_MAP_OK ||
             m_sendNameMemoryMap.lockFreeMapConfigure(config.m_sendNames) != LOCK_FREE_MAP_OK ||
             !m_postQueue.configure(config.m_postMemory))
@@ -160,26 +160,40 @@ bool ProcessWork::claimReceiveName()
     {
         return false;
     }
-    const int32_t previous = ProcessWorkAtomic::load(&directory->m_pid);
     uint64_t selfIdentity = 0;
-    uint64_t previousIdentity = 0;
     if (!CSystem::processIdentity(m_thisProcessPid, selfIdentity))
     {
-        // 身份查询失败不能发布名称记录；保留回调和已有Post任务，允许调用方重试。
         return false;
     }
-    const bool previousKnown = previous != 0 && previous != INT32_MIN && CSystem::processIdentity(previous < 0 ? -previous : previous, previousIdentity);
-    const bool previousExited = previous != 0 && previous != INT32_MIN && CSystem::processDefinitelyExited(previous < 0 ? -previous : previous);
-    const bool previousAlive = previous != 0 && !previousExited &&
-        (previous < 0 || !previousKnown || previousIdentity == static_cast<uint64_t>(ProcessWorkAtomic::load(reinterpret_cast<int64_t*>(&directory->m_identity))));
-    if ((!(previousAlive && previous < 0) && ProcessWorkAtomic::load(&directory->m_length) != 0 && (ProcessWorkAtomic::load(&directory->m_length) != name.size() ||
-            std::memcmp(directory->m_name, name.data(), name.size()) != 0)) ||
-        (!previousAlive && !ProcessWorkAtomic::replace(&directory->m_pid, previous, -m_thisProcessPid)))
+    for (;;)
     {
-        return false;
+        const int32_t previous = ProcessWorkAtomic::load(&directory->m_pid);
+        uint64_t previousIdentity = 0;
+        const bool validPid = previous != 0 && previous != INT32_MIN;
+        const int32_t ownerPid = validPid && previous < 0 ? -previous : previous;
+        const bool previousKnown = validPid && CSystem::processIdentity(ownerPid, previousIdentity);
+        const bool previousExited = validPid && CSystem::processDefinitelyExited(ownerPid);
+        const bool previousAlive = previous != 0 && !previousExited && (previous < 0 || !previousKnown ||
+            previousIdentity == static_cast<uint64_t>(ProcessWorkAtomic::load(reinterpret_cast<int64_t*>(&directory->m_identity))));
+        const int32_t length = ProcessWorkAtomic::load(&directory->m_length);
+        if (!(previousAlive && previous < 0) && length != 0 &&
+            (static_cast<size_t>(length) != name.size() || std::memcmp(directory->m_name, name.data(), name.size()) != 0))
+        {
+            return false;
+        }
+        if (previousAlive)
+        {
+            // 已有接收器持有该名称，本实例仍按自己的PID发布。
+            m_nameOwned = false;
+            break;
+        }
+        if (ProcessWorkAtomic::replace(&directory->m_pid, previous, -m_thisProcessPid))
+        {
+            m_nameOwned = true;
+            break;
+        }
+        // 另一进程刚认领或释放名称，重新核对所有者，避免同名竞争使PID接收器启动失败。
     }
-    // 同名进程仍可通过各自PID收发；名称只属于最先登记且存活的接收器。
-    m_nameOwned = !previousAlive;
     if (m_nameOwned)
     {
         int64_t* identity = reinterpret_cast<int64_t*>(&directory->m_identity);
@@ -335,7 +349,8 @@ std::shared_ptr<ProcessWorkChannel> ProcessWork::sender(int32_t pid)
         return cached;
     }
     std::shared_ptr<ProcessWorkChannel> channel(new ProcessWorkChannel(m_components.m_sendDataReady, m_components.m_sendSpaceReady));
-    if (!channel->configureProducers(m_components.m_producers) || !channel->openSender(pid))
+    if (!channel->configureProducers(m_components.m_producers) ||
+        !channel->openSender(pid, m_components.m_sendMappingReserveBytes, m_components.m_sendMappingReservePercent))
     {
         return std::shared_ptr<ProcessWorkChannel>();
     }
@@ -730,7 +745,7 @@ int32_t ProcessWork::postQueueResult(LockFreeQueueResult result)
     {
         return PROCESS_WORK_POST_BUSY;
     }
-    if (result == LockFreeQueueCapacityLimit)
+    if (result == LockFreeQueueCapacityLimit || result == LockFreeQueueGrowthDeclined)
     {
         return PROCESS_WORK_POST_CAPACITY;
     }
@@ -1036,7 +1051,8 @@ int main()
         }
 #endif
         ProcessWorkConfig config;
-        if (!config.m_receiveMemory.setLocalQueueLimitMB(128) || !config.m_postMemory.setLocalQueueLimitMB(-1))
+        if (!config.m_receiveMemory.setLocalQueueLimitMB(128) || !config.m_postMemory.setLocalQueueLimitMB(-1) ||
+            !config.setSendMappingReserve(256ULL * 1024 * 1024, 10))
         {
             return 1;
         }

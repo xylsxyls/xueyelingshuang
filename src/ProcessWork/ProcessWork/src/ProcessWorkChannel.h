@@ -81,6 +81,14 @@ public:
     */
     bool openSender(int32_t pid);
 
+    /** 打开发送通道并设置此实例主动预映射的保护，普通发送仍按需打开已有共享块
+    @param [in] pid 真实接收进程号
+    @param [in] reserveBytes 预映射时保留给系统的可用字节
+    @param [in] reservePercent 预映射时保留的物理内存百分比，0..90
+    @return true已打开，false表示参数、资源或对端无效
+    */
+    bool openSender(int32_t pid, uint64_t reserveBytes, uint32_t reservePercent);
+
     /** 在发送阶段之前准备本进程映射，减少后续首次映射成本
     @param [in] blocks 初始块前缀数量；-1准备所有初始块，正数不得超过初始容量
     @param [in] payloads 是否同时打开非内联正文映射

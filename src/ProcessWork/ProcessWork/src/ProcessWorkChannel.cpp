@@ -381,7 +381,13 @@ bool ProcessWorkChannel::prepareSend(int32_t blocks, bool payloads)
 
 bool ProcessWorkChannel::openSender(int32_t pid)
 {
-    if (pid <= 0 || m_control != nullptr || !ChannelAtomicsSupported() ||
+    const ProcessWorkMemoryConfig defaults;
+    return openSender(pid, defaults.m_reserveBytes, defaults.m_reservePercent);
+}
+
+bool ProcessWorkChannel::openSender(int32_t pid, uint64_t reserveBytes, uint32_t reservePercent)
+{
+    if (reservePercent > 90 || pid <= 0 || m_control != nullptr || !ChannelAtomicsSupported() ||
         m_dataReady.initializationResult().status != SEMAPHORE_OK || m_spaceReady.initializationResult().status != SEMAPHORE_OK)
     {
         return false;
@@ -426,8 +432,11 @@ bool ProcessWorkChannel::openSender(int32_t pid)
             close();
             return false;
         }
+        ProcessWorkMemoryConfig mapping;
+        mapping.m_reserveBytes = reserveBytes;
+        mapping.m_reservePercent = reservePercent;
         m_storage.reset(new ProcessWorkStorage(pid, m_identity, static_cast<uint32_t>(m_session),
-            m_control->m_blockBytes, m_control->m_initial, false, ProcessWorkMemoryConfig()));
+            m_control->m_blockBytes, m_control->m_initial, false, mapping));
         m_sharedQueue.reset(new ProcessWorkSharedQueue(*m_storage, *m_control));
         if (!m_sharedQueue->configureProducers(m_producerConfig) || m_storage->page(0) == nullptr)
         {

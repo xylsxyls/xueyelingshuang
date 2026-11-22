@@ -21,6 +21,10 @@ public:
     SemaphoreConfig m_sendDataReady;
     // 本进程每个发送通道的可写空间通知配置。
     SemaphoreConfig m_sendSpaceReady;
+    // 发送端主动预映射时给系统保留的可用字节，默认256 MiB
+    uint64_t m_sendMappingReserveBytes;
+    // 发送端主动预映射时给系统保留的物理内存百分比，默认10，有效范围0..90
+    uint32_t m_sendMappingReservePercent;
     // PID通道索引的节点和值池
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -91,4 +95,11 @@ public:
     /** 所有业务容量上限沿用-1，不隐式改变共享管理器
     */
     ProcessWorkConfig();
+
+    /** 设置本进程发送端主动预映射的系统保护，取字节和比例保留量中的较大值
+    @param [in] bytes 给系统保留的可用字节，0关闭此项
+    @param [in] percent 给系统保留的物理内存百分比，0..90
+    @return true已保存，false表示比例无效且保留原设置
+    */
+    bool setSendMappingReserve(uint64_t bytes, uint32_t percent);
 };
