@@ -8,6 +8,11 @@
 // No platform branch, C wrapper, runtime object or exported symbol is introduced.
 typedef LockFreeQueue<int32_t> LockFreeQueueContractType;
 
+// 自建存储和队列数组必须同时满足基本原子对齐及当前标准库中节点池的对齐
+static_assert(std::alignment_of<LockFreeQueueContractType>::value >= 8 &&
+    std::alignment_of<LockFreeQueueContractType>::value >= std::alignment_of<LockFreeQueueArena<int32_t>>::value,
+    "Queue storage must meet both the eight-byte minimum and the alignment of its arena");
+
 static_assert(std::is_same<decltype(&LockFreeQueueContractType::init),
     bool (LockFreeQueueContractType::*)()>::value, "init signature changed");
 static_assert(std::is_same<decltype(&LockFreeQueueContractType::destroy),

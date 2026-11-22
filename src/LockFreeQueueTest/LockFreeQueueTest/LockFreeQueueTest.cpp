@@ -1,5 +1,6 @@
 ﻿#include "LockFreeQueueTest.h"
 #include <iostream>
+#include <type_traits>
 #include <sstream>
 #include <stdexcept>
 #include <cstdlib>
@@ -2535,9 +2536,13 @@ bool LockFreeQueueTests::capacityContracts()
     // Check actual addresses: alignment_of alone did not detect that failure.
     LockFreeQueue<int32_t> alignedQueues[2];
     std::unique_ptr<LockFreeQueue<int32_t>> heapQueue(new LockFreeQueue<int32_t>());
-    LFQ_CHECK(reinterpret_cast<uintptr_t>(&alignedQueues[0]) % 8 == 0 &&
-              reinterpret_cast<uintptr_t>(&alignedQueues[1]) % 8 == 0 &&
-              reinterpret_cast<uintptr_t>(heapQueue.get()) % 8 == 0);
+    const size_t queueAlignment = std::alignment_of<LockFreeQueue<int32_t>>::value;
+    // Read the actual addresses even in optimized builds that assume typed pointers are aligned.
+    const volatile uintptr_t addresses[] = { reinterpret_cast<uintptr_t>(&alignedQueues[0]),
+        reinterpret_cast<uintptr_t>(&alignedQueues[1]), reinterpret_cast<uintptr_t>(heapQueue.get()) };
+    LFQ_CHECK(addresses[0] % queueAlignment == 0);
+    LFQ_CHECK(addresses[1] % queueAlignment == 0);
+    LFQ_CHECK(addresses[2] % queueAlignment == 0);
     LockFreeQueuePoolConfig config;
     config.initialCapacity = 8;
     config.maximumCapacity = 8;

@@ -12,6 +12,7 @@
 #include <chrono>
 #include <thread>
 #include <iostream>
+#include <type_traits>
 #include <algorithm>
 #include <cstdlib>
 #include <new>
@@ -154,8 +155,11 @@ bool LockFreeQueueMeasurements::preparePool(LockFreeQueue<uint64_t>& queue, size
         return false;
     }
 #ifndef LOCK_FREE_QUEUE_LIST_MUTEX
-    if (reinterpret_cast<uintptr_t>(&queue) % 8 != 0)
+    const size_t queueAlignment = std::alignment_of<LockFreeQueue<uint64_t>>::value;
+    const volatile uintptr_t address = reinterpret_cast<uintptr_t>(&queue);
+    if (address % queueAlignment != 0)
     {
+        std::cout << "FAIL queue_atomic_alignment address=" << address << " required=" << queueAlignment << std::endl;
         return false;
     }
     if (g_lockFreeQueueBenchmarkProfile != 2)
