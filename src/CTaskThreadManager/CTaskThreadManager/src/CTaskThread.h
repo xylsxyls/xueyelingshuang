@@ -26,7 +26,7 @@ public:
     */
     ~CTaskThread();
 
-    /** 接纳任务；竞争与容量不足均内部重试，容量连续重试4096次后每次等待1毫秒
+    /** 接纳任务；竞争与可恢复容量不足在内部重试；容量退避采用该任务级别的 configureCapacityWait 设置
     @param [in] task 非空任务强引用
     @param [in] taskLevel 从 1 到 INT_MAX，大值先执行，同级 FIFO
     @return true已接纳但不表示执行完成，不能重发；false为未接纳，需要详细结果时改用postTaskResult投递
@@ -44,7 +44,7 @@ public:
     @param [in] task 任务强引用
     @param [in] taskLevel 正数优先级
     @param [in] retryContention true持续重试CAS竞争，false允许返回未提交竞争状态
-    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
+    @param [in] retryCapacity true 等待可复用容量；本级默认快速重试 4096 次，随后每次请求休眠 1 毫秒，可通过 configureCapacityWait 调整
     @return 是否已接纳；具体错误使用 tryPostTaskResult，普通投递使用 postTask
     */
     bool tryPostTask(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1,
@@ -54,7 +54,7 @@ public:
     @param [in] task 非空任务强引用
     @param [in] taskLevel 正数优先级
     @param [in] retryContention true持续重试CAS竞争，false允许返回未提交竞争状态
-    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
+    @param [in] retryCapacity true 等待可复用容量；本级默认快速重试 4096 次，随后每次请求休眠 1 毫秒，可通过 configureCapacityWait 调整
     @return Busy 仅表示未提交的竞争失败；Capacity 表示额度用满，ResourceUnavailable 表示暂不可复用
     */
     CTaskThreadResult tryPostTaskResult(const std::shared_ptr<CTask>& task, int32_t taskLevel = 1,
@@ -136,10 +136,6 @@ private:
     @return 关闭结果
     */
     CTaskThreadResult finish(bool drain);
-
-    /** 发布退出意图，不等待
-    */
-    void requestStop();
 
     /** 检查是否会同步等待自身
     @return 是否处于本线程的业务回调

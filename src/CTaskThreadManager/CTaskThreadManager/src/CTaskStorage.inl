@@ -101,7 +101,7 @@ CTaskStorageSlot* CTaskStorage::acquire(CTaskStorageCache& cache, CTaskThreadRes
     // 此处不重复清零随后必被覆盖的借用字段。
     if (m_config.growFreeThreshold != 0)
     {
-        preGrow();
+        evaluateGrowth(false);
     }
     return slot;
 }

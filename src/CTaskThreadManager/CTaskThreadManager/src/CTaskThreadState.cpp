@@ -86,7 +86,6 @@ m_floorUses(0),
 m_floorMinimum(INT_MAX),
 m_preemptionFloor(1),
 m_taskClaims(0),
-m_outstanding(0),
 m_queued(0),
 m_releasedTasks(0),
 m_dequeuedTasks(0),
@@ -95,6 +94,7 @@ m_rejected(0),
 m_errors(0),
 m_wakePending(false),
 m_pressureYields(0),
+m_quotaSleepers(0),
 m_trimBuckets(false)
 {
 
@@ -114,11 +114,12 @@ CTaskThreadResult CTaskThreadState::start()
     if (m_config.m_maximumTasks < -1 || m_config.m_idleCheckMilliseconds == 0 ||
         m_config.m_idleCheckMilliseconds > 60000 || m_config.m_taskBuckets == 0 ||
         m_config.m_systemPriority < CTaskPriorityInherited || m_config.m_systemPriority > CTaskPriorityHighest ||
-        m_config.m_priorityMap.operationRecordLimit < 4 || m_config.m_taskMap.protectionRecordCount < 4)
+        m_config.m_priorityMap.operationRecordLimit < 4 || m_config.m_taskMap.protectionRecordCount < 4 ||
+        !CTaskStorage::validProtectionCount(m_config.m_taskMap.protectionRecordCount))
     {
         return CTaskThreadResult(CTaskThreadInvalid);
     }
-    if (!m_accepting.is_lock_free() || !m_current.is_lock_free() || !m_started.is_lock_free() || !m_joined.is_lock_free() || !m_readDomain.atomicsLockFree() || !m_taskClaims.is_lock_free() || !m_pressureYields.is_lock_free())
+    if (!m_accepting.is_lock_free() || !m_current.is_lock_free() || !m_started.is_lock_free() || !m_joined.is_lock_free() || !m_readDomain.atomicsLockFree() || !m_taskClaims.is_lock_free() || !m_pressureYields.is_lock_free() || !m_quotaSleepers.is_lock_free())
     {
         return CTaskThreadResult(CTaskThreadUnsupported);
     }
@@ -222,42 +223,55 @@ uint64_t CTaskThreadState::nextSequence(CTaskStorageCache& cache)
     }
     const uint64_t base = block * 512;
     cache.m_nextSequence = base + 1;
-    cache.m_lastSequence = base + (std::min)(UINT64_MAX - base, UINT64_C(512));
+    cache.m_lastSequence = base + (std::min<uint64_t>)(UINT64_MAX - base, 512);
     return base + 1;
 }
 
-bool CTaskThreadState::reserveTask(CTaskStorageCache& cache)
+CTaskThreadStatus CTaskThreadState::reserveTask(CTaskStorageCache& cache, bool& lastQuota)
 {
+    lastQuota = false;
     if (m_config.m_maximumTasks == -1)
     {
         cache.m_reserved.store(cache.m_reserved.load(std::memory_order_relaxed) + 1, std::memory_order_release);
-        return true;
+        return CTaskThreadOk;
     }
     const uint64_t limit = static_cast<uint64_t>(m_config.m_maximumTasks);
-    // 有限容量按原子加法的先后领取，不在累计领取/归还两个计数之间反复 CAS。
-    // 超限的临时登记立即撤销；其间其他调用可以观察到容量正在被申请。
-    const uint64_t previous = m_taskClaims.fetch_add(1, std::memory_order_acq_rel);
-    if (previous >= limit)
+    uint64_t used = m_taskClaims.load(std::memory_order_relaxed);
+    if (used >= limit)
+    {
+        return CTaskThreadCapacity;
+    }
+    // 满载重试只读计数，避免失败的临时加一遮住消费者刚归还的额度。
+    if (!m_taskClaims.compare_exchange_strong(used, used + 1, std::memory_order_acq_rel, std::memory_order_relaxed))
+    {
+        return used >= limit ? CTaskThreadCapacity : CTaskThreadRetry;
+    }
+    lastQuota = used + 1 == limit;
+    return CTaskThreadOk;
+}
+
+void CTaskThreadState::releaseTask()
+{
+    if (m_config.m_maximumTasks == -1)
+    {
+        m_releasedTasks.store(m_releasedTasks.load(std::memory_order_relaxed) + 1, std::memory_order_release);
+    }
+    else
     {
         m_taskClaims.fetch_sub(1, std::memory_order_release);
-        return false;
     }
-    m_outstanding.fetch_add(1, std::memory_order_release);
-    return true;
 }
 
 uint64_t CTaskThreadState::outstandingCount() const
 {
     if (m_config.m_maximumTasks != -1)
     {
-        // 单字读取接纳额度；撤销中的超额登记不属于实际任务，最多报告业务上限。
-        return (std::min)(m_taskClaims.load(std::memory_order_acquire), static_cast<uint64_t>(m_config.m_maximumTasks));
+        return m_taskClaims.load(std::memory_order_acquire);
     }
     // 查询是弱一致观察，不要求持续生产消费时得到一个全局静止快照。
     // 先读归还，再读预留；归还的 acquire 传播了对应预留，避免负数伪装成巨量积压。
     const uint64_t released = m_releasedTasks.load(std::memory_order_acquire);
-    const uint64_t reserved = m_config.m_maximumTasks == -1 ? m_storage.reservedCount() : m_outstanding.load(std::memory_order_acquire);
-    return reserved - released;
+    return m_storage.reservedCount() - released;
 }
 
 uint64_t CTaskThreadState::queuedCount() const
@@ -374,6 +388,18 @@ LockFreeQueueResult CTaskThreadState::publish(CTaskStorageCache& cache, CTaskPri
     {
         return bucket.m_queue.tryPushEntryAndFence(*record, retryTransient, false);
     }
+    if (cache.m_ownerIndex >= bucket.m_cachedProducerLimit)
+    {
+        // 已发布的外层任务可在停止回调中再次投递。临时登记在 Queue 返回时释放，
+        // 不把最后一个名额带进业务回调；缓存的空闲节点在真实资源压力下仍可回收。
+        LockFreeQueueResult result = bucket.m_queue.tryPushEntryAndFence(*record, retryTransient, false);
+        if (bucket.m_cachedProducerLimit != 0 && (result == LockFreeQueueCapacityLimit || result == LockFreeQueueResourceUnavailable) &&
+            m_storage.releaseIdleProducers() != 0)
+        {
+            result = bucket.m_queue.tryPushEntryAndFence(*record, retryTransient, false);
+        }
+        return result;
+    }
     LockFreeQueueProducer<CTaskStorageSlot*>& producer = cache.m_producers[bucket.m_level - 1];
     if (!producer.attached())
     {
@@ -407,9 +433,12 @@ CTaskThreadResult CTaskThreadState::post(const std::shared_ptr<CTask>& task, int
 {
     uint32_t attempts = 0;
     uint32_t capacityRetries = 0;
+    bool quotaSleeper = false;
+    bool lastQuota = false;
     CTaskThreadResult result;
     for (;;)
     {
+        bool quotaFull = false;
         // 首次由构造函数给出空结果；后继轮次由成功的 pause 返回同样的空结果。
         // 单次尝试在同一函数内结束；不额外调用包含异常处理、无法内联的包装层。
         // 此局部作用域结束时，读保护、未发布额度及回调作用域均已退出。
@@ -449,11 +478,13 @@ CTaskThreadResult CTaskThreadState::post(const std::shared_ptr<CTask>& task, int
             }
             CTaskStorageCache& cache = m_storage.cache(m_readDomain.indexOf(*reader));
             CTaskCallbackScope scope(this, nullptr, true);
-            if (!reserveTask(cache))
+            const CTaskThreadStatus admission = reserveTask(cache, lastQuota);
+            if (admission != CTaskThreadOk)
             {
+                quotaFull = admission == CTaskThreadCapacity;
                 m_storage.flushRequested(cache);
                 m_readDomain.leave(*reader);
-                result = CTaskThreadResult(CTaskThreadCapacity);
+                result = CTaskThreadResult(admission);
                 break;
             }
             std::shared_ptr<CTaskPriorityBucket> owner;
@@ -540,7 +571,6 @@ CTaskThreadResult CTaskThreadState::post(const std::shared_ptr<CTask>& task, int
                 }
                 else
                 {
-                    m_outstanding.fetch_sub(1, std::memory_order_release);
                     m_taskClaims.fetch_sub(1, std::memory_order_release);
                 }
             }
@@ -585,6 +615,11 @@ CTaskThreadResult CTaskThreadState::post(const std::shared_ptr<CTask>& task, int
             }
             m_pressureYields.store(64, std::memory_order_relaxed);
             const CTaskQueueConfig& queue = m_config.priorityQueueConfig(level);
+            if (quotaFull && !quotaSleeper && capacityRetries >= queue.m_capacityRetries)
+            {
+                m_quotaSleepers.fetch_add(1, std::memory_order_relaxed);
+                quotaSleeper = true;
+            }
             result = CTaskResultAdapter::pauseCapacity(capacityRetries, queue.m_capacityRetries, queue.m_capacitySleepMilliseconds);
         }
         else if (result.m_status == CTaskThreadRetry && retryTransient)
@@ -599,6 +634,10 @@ CTaskThreadResult CTaskThreadState::post(const std::shared_ptr<CTask>& task, int
         {
             break;
         }
+    }
+    if (quotaSleeper)
+    {
+        m_quotaSleepers.fetch_sub(1, std::memory_order_relaxed);
     }
     if (!result.m_committed)
     {
@@ -616,17 +655,23 @@ CTaskThreadResult CTaskThreadState::post(const std::shared_ptr<CTask>& task, int
 #else
     static thread_local uint32_t s_postCalls = 0;
 #endif
-    if ((++s_postCalls & 255) == 0)
+    // 有慢速额度等待者时，取走最后一个名额的生产者结束本次提交后让步一次。
+    // 不把额度锁给某个等待者；已暂停的对端不能阻止其他线程继续提交。
+    const bool yieldQuota = lastQuota && result.m_committed && retryCapacity && m_quotaSleepers.load(std::memory_order_relaxed) != 0 && !selfWait();
+    if ((++s_postCalls & 255) == 0 || yieldQuota)
     {
         try
         {
             uint32_t pressure = m_pressureYields.load(std::memory_order_relaxed);
-            if (retryTransient && pressure != 0 && !CTaskCallbackScope::reading(this))
+            if (yieldQuota || (retryTransient && pressure != 0 && !CTaskCallbackScope::reading(this)))
             {
                 // 仅 yield 在 Windows 受限 CPU 上仍可能长期让同一批线程相互运行。
                 // 出现资源压力后，连续成功者也短暂离开可运行队列；提示自然耗尽。
                 // CAS 只做一次，失败也让步，不把调度提示变成新的竞争等待点。
-                m_pressureYields.compare_exchange_strong(pressure, pressure - 1, std::memory_order_relaxed);
+                if (pressure != 0)
+                {
+                    m_pressureYields.compare_exchange_strong(pressure, pressure - 1, std::memory_order_relaxed);
+                }
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
             else if ((s_postCalls & 16383) == 0)
@@ -1287,11 +1332,7 @@ void CTaskThreadState::completeRedo(CTaskPriorityBucket& bucket, CTaskStorageSlo
         {
             m_storage.abandon(*backup);
         }
-        m_releasedTasks.store(m_releasedTasks.load(std::memory_order_relaxed) + 1, std::memory_order_release);
-        if (m_config.m_maximumTasks != -1)
-        {
-            m_taskClaims.fetch_sub(1, std::memory_order_release);
-        }
+        releaseTask();
     }
     m_storage.retire(record);
 }
@@ -1377,9 +1418,15 @@ void CTaskThreadState::discard()
     });
     // 保留累计基数；即使 statistics 与清理并发，也不会把旧归还量减去清零后的基数。
     m_dequeuedTasks.store(m_config.m_maximumTasks == -1 ? m_storage.publishedCount() : m_queued.load(std::memory_order_relaxed), std::memory_order_release);
-    m_releasedTasks.store(m_config.m_maximumTasks == -1 ? m_storage.reservedCount() : m_outstanding.load(std::memory_order_relaxed), std::memory_order_release);
+    if (m_config.m_maximumTasks == -1)
+    {
+        m_releasedTasks.store(m_storage.reservedCount(), std::memory_order_release);
+    }
+    else
+    {
+        m_taskClaims.store(0, std::memory_order_release);
+    }
     // 已关闭投递和观察接纳，全部在途借用归还；这里满足基础容器的静止释放契约。
-    m_taskClaims.store(0, std::memory_order_release);
     m_storage.clear();
     m_buckets.clearAndFreeMemory();
     for (size_t i = 0; i < 16; ++i)
@@ -1469,11 +1516,7 @@ void CTaskThreadState::run()
         {
             record->m_state->m_bits.store(3, std::memory_order_release);
             m_currentLevel.store(0, std::memory_order_release);
-            m_releasedTasks.store(m_releasedTasks.load(std::memory_order_relaxed) + 1, std::memory_order_release);
-            if (m_config.m_maximumTasks != -1)
-            {
-                m_taskClaims.fetch_sub(1, std::memory_order_release);
-            }
+            releaseTask();
             m_storage.retire(*record);
         }
         // 完成位关闭通知；索引可暂存已完成记录，由 below 过滤。

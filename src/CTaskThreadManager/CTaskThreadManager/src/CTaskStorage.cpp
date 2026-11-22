@@ -44,10 +44,17 @@ CTaskStorage::~CTaskStorage()
     delete[] m_counts;
 }
 
+bool CTaskStorage::validProtectionCount(size_t count)
+{
+    // 先用除法取得可容纳的缓存数，为消费者多留一项，不在外部传入的数量上做加法。
+    return count != 0 && count < UINT32_MAX &&
+        count < ((std::numeric_limits<size_t>::max)() - 63) / sizeof(CTaskStorageCache);
+}
+
 CTaskThreadResult CTaskStorage::initialize(const LockFreeHashMapPoolConfig& config)
 {
-    if (m_directory != nullptr || m_cacheStorage != nullptr || m_domain->capacity() == 0 || m_domain->capacity() >= UINT32_MAX ||
-        m_domain->capacity() + 1 > ((std::numeric_limits<size_t>::max)() - 63) / sizeof(CTaskStorageCache) || config.directoryCapacity == 0 ||
+    if (m_directory != nullptr || m_cacheStorage != nullptr || !validProtectionCount(m_domain->capacity()) ||
+        config.directoryCapacity == 0 ||
         config.directoryCapacity > (std::numeric_limits<size_t>::max)() / sizeof(std::atomic<uintptr_t>) ||
         config.maximumCapacity < -1 || (config.maximumCapacity >= 0 && config.initialCapacity > static_cast<uint64_t>(config.maximumCapacity)) ||
         config.initialCapacity / 65535 + (config.initialCapacity % 65535 != 0 ? 1 : 0) > config.directoryCapacity)
@@ -253,7 +260,7 @@ bool CTaskStorage::refill(CTaskStorageCache& cache, CTaskStorageAllocation& allo
         flushIdleCaches();
         if (!scan(cache, allocation))
         {
-            result = evaluateGrowth();
+            result = evaluateGrowth(true);
             if (!scan(cache, allocation))
             {
                 if (result.m_status == CTaskThreadOk)
@@ -269,17 +276,6 @@ bool CTaskStorage::refill(CTaskStorageCache& cache, CTaskStorageAllocation& allo
         }
     }
     return true;
-}
-
-void CTaskStorage::preGrow()
-{
-    size_t retained = 0, available = 0;
-    observe(retained, available);
-    if (available <= m_config.growFreeThreshold)
-    {
-        // 预扩容失败不撤销已经获得的槽位。
-        evaluateGrowth();
-    }
 }
 
 void CTaskStorage::abandon(CTaskStorageSlot& slot)
@@ -705,13 +701,16 @@ CTaskThreadResult CTaskStorage::grow(size_t requested, bool initial)
     return CTaskThreadResult();
 }
 
-void CTaskStorage::observe(size_t& retained, size_t& available) const
+size_t CTaskStorage::observe(size_t* available) const
 {
-    retained = 0;
-    available = 0;
-    for (size_t i = 0; i <= m_domain->capacity(); ++i)
+    size_t retained = 0;
+    if (available != nullptr)
     {
-        available += m_caches[i].m_cachedCount.load(std::memory_order_relaxed);
+        *available = 0;
+        for (size_t i = 0; i <= m_domain->capacity(); ++i)
+        {
+            *available += m_caches[i].m_cachedCount.load(std::memory_order_relaxed);
+        }
     }
     for (size_t i = 0; i < m_high.load(std::memory_order_acquire); ++i)
     {
@@ -719,19 +718,20 @@ void CTaskStorage::observe(size_t& retained, size_t& available) const
         if (address > 1)
         {
             retained += m_counts[i].load(std::memory_order_relaxed);
-            if ((address & 1) == 0)
+            if (available != nullptr && (address & 1) == 0)
             {
                 CTaskStorageBlock* block = reinterpret_cast<CTaskStorageBlock*>(address);
                 for (size_t j = 0; j < block->m_pageCount; ++j)
                 {
-                    available += bitCount(block->m_pages[j].m_free.load(std::memory_order_relaxed));
+                    *available += bitCount(block->m_pages[j].m_free.load(std::memory_order_relaxed));
                 }
             }
         }
     }
+    return retained;
 }
 
-CTaskThreadResult CTaskStorage::evaluateGrowth()
+CTaskThreadResult CTaskStorage::evaluateGrowth(bool exhausted)
 {
     // 满额优先于策略拒绝或策略异常，不让算法掩盖已经确定的容量不足。
     if (m_config.maximumCapacity != -1 && m_budget.load(std::memory_order_acquire) >= static_cast<uint64_t>(m_config.maximumCapacity))
@@ -740,8 +740,12 @@ CTaskThreadResult CTaskStorage::evaluateGrowth()
     }
     try
     {
-        size_t retained = 0, available = 0;
-        observe(retained, available);
+        size_t available = 0;
+        const size_t retained = observe(exhausted ? nullptr : &available);
+        if (!exhausted && available > m_config.growFreeThreshold)
+        {
+            return CTaskThreadResult();
+        }
         const LockFreeHashMapGrowContext context = {m_config.initialCapacity, m_grows.load(std::memory_order_relaxed), retained};
         const size_t count = m_config.growPolicy ? m_config.growPolicy(context) : (std::max)(size_t(64), retained / 2);
         if (m_config.maximumCapacity != -1 && m_budget.load(std::memory_order_acquire) >= static_cast<uint64_t>(m_config.maximumCapacity))
@@ -790,7 +794,7 @@ CTaskThreadResult CTaskStorage::maintain()
             flushIdleCaches();
             flush(m_caches[m_domain->capacity()]);
             size_t available = 0;
-            observe(retained, available);
+            retained = observe(&available);
             const uint64_t last = m_lastGrow.load(std::memory_order_relaxed);
             const LockFreeHashMapShrinkContext context = {m_config.initialCapacity, m_grows.load(std::memory_order_relaxed), retained,
                 available, last != 0, last != 0 && time >= last ? time - last : 0};

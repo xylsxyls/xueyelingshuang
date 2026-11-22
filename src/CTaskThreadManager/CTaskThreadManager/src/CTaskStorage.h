@@ -21,6 +21,12 @@ public:
     */
     ~CTaskStorage();
 
+    /** 检查读保护位置及消费者附加缓存能否由当前位宽的下标和字节数表示
+    @param [in] count 读保护位置数，消费者另占一个缓存
+    @return 位置数非零且完整缓存数组可寻址时返回 true
+    */
+    static bool validProtectionCount(size_t count);
+
     /** 静止建立目录和初始槽位；失败后对象仍可安全析构
     @param [in] config 兼容任务记录池的容量及动态策略
     @return 初始化结果
@@ -137,10 +143,6 @@ private:
     */
     bool refill(CTaskStorageCache& cache, CTaskStorageAllocation& allocation, CTaskThreadResult& result);
 
-    /** 取得槽位后评估预扩容；失败不撤销已取得的槽位
-    */
-    void preGrow();
-
     /** 并发预留预算并私有构造批次，再一次发布
     @param [in] requested 期望新增数量，内部截断上限和单块大小
     @param [in] initial 是否属于初始容量准备
@@ -148,20 +150,21 @@ private:
     */
     CTaskThreadResult grow(size_t requested, bool initial);
 
-    /** 根据当前上下文评估动态扩容，不等待正在申请的其他生产者
-    @return 增长结果
+    /** 检查硬上限并按一次容量观察评估增长
+    @param [in] exhausted true 表示取槽失败后按需增长，false 表示取槽成功后按剩余阈值预增长
+    @return 增长结果，预增长未达到阈值时返回 Ok，预增长失败不撤销已取得的槽位
     */
-    CTaskThreadResult evaluateGrowth();
+    CTaskThreadResult evaluateGrowth(bool exhausted);
 
     /** 不等待地借用空闲位置，归还其缓存供容量恢复和缩容
     */
     void flushIdleCaches();
 
     /** 在保护下计算策略所需容量和可复用槽弱观测
-    @param [out] retained 已发布容量，不含在途分配
-    @param [out] available 已发布可复用槽，含空闲缓存
+    @param [out] available 非空时写入可复用槽数量，包含空闲缓存。空指针跳过缓存和页位图统计
+    @return 已发布且仍保留的容量，不含在途分配
     */
-    void observe(size_t& retained, size_t& available) const;
+    size_t observe(size_t* available) const;
 
     /** 在位置独占或外部静止时归还全部队列上下文
     @param [in,out] cache 本次独占的位置

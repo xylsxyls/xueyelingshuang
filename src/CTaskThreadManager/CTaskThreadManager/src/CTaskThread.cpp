@@ -98,11 +98,6 @@ CTaskThreadResult CTaskThread::requestShutdown(bool drain)
     return m_state->requestFinish(drain);
 }
 
-void CTaskThread::requestStop()
-{
-    m_state->requestFinish(false);
-}
-
 bool CTaskThread::selfWait() const
 {
     return m_state->selfWait();

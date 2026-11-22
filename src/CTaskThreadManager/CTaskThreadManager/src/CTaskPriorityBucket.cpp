@@ -4,6 +4,7 @@
 CTaskPriorityBucket::CTaskPriorityBucket(int32_t level) :
 m_level(level),
 m_entryOnly(true),
+m_cachedProducerLimit(0),
 m_queue(false),
 m_redo(nullptr),
 m_readyHead(0),
@@ -58,6 +59,7 @@ CTaskThreadResult CTaskPriorityBucket::configure(const CTaskQueueConfig& config)
     if (result == LockFreeQueueSuccess)
     {
         m_entryOnly = config.m_entryOnly;
+        m_cachedProducerLimit = config.m_queue.maximumProducers - 1;
     }
     return CTaskResultAdapter::queue(result);
 }

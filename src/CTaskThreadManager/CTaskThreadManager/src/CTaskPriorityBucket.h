@@ -44,6 +44,8 @@ public:
     const int32_t m_level;
     // 建桶时从本级配置复制；仅专用模式支持按 Entry 地址读取前缀
     bool m_entryOnly;
+    // 下标小于该值的读侧缓存可长期绑定生产者，至少一个登记位留给逐次投递。
+    size_t m_cachedProducerLimit;
     // 退役门计入在途生产者；可回收桶有排队预留时还持有一份登记
     CTaskAdmission m_writers;
     // 接纳计数不与 FIFO 的首个缓存行共用

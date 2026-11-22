@@ -31,7 +31,7 @@ public:
     @param [in] task 任务强引用
     @param [in] level 大于零的任务优先级
     @param [in] retryTransient false 仅用于 tryPostTask，允许未提交竞争立即返回
-    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
+    @param [in] retryCapacity true 等待可复用容量；本级默认快速重试 4096 次，随后每次请求休眠 1 毫秒，可通过 configureCapacityWait 调整
     @return committed 为 true 时禁止重投
     */
     CTaskThreadResult post(const std::shared_ptr<CTask>& task, int32_t level,
@@ -108,9 +108,14 @@ private:
 
     /** 预留业务任务额度
     @param [in,out] cache 本调用独占的计数位置
-    @return 是否取得额度
+    @param [out] lastQuota 有限额度领取最后一个位置时为 true
+    @return Ok 表示已领取，Capacity 表示实际满载，Retry 表示 CAS 竞争
     */
-    bool reserveTask(CTaskStorageCache& cache);
+    CTaskThreadStatus reserveTask(CTaskStorageCache& cache, bool& lastQuota);
+
+    /** 唯一消费者完成一项任务后归还业务额度；被重做替换的任务沿用原额度
+    */
+    void releaseTask();
 
     /** 观察尚未归还的任务额度，先读取消费者归还量再读取生产者预留量
     @return 弱一致数量；静止时精确，累计值按 uint64_t 模运算相减
@@ -302,19 +307,15 @@ private:
     std::atomic<int32_t> m_preemptionFloor;
     // 下界观察不与额度修改共用缓存行
     char m_floorPadding[64];
-    // 有限容量的当前占用及短暂申请数；完成或失败归还，重做沿用原额度
+    // 有限容量的当前实际占用数；完成或失败归还，重做沿用原额度
     std::atomic<uint64_t> m_taskClaims;
-    // 限额原子与累计统计分开，避免消费者归还污染生产者累计缓存行
+    // 有限额度归还与生产者的累计排队写入分隔缓存行
     char m_taskClaimsPadding[64];
-    // 生产者累计预留额度，失败回滚；消费者不修改此计数
-    std::atomic<uint64_t> m_outstanding;
-    // 接纳额度与队列计数分离，避免无关原子写互相失效
-    char m_outstandingPadding[64];
     // 累计入队预留，失败回滚；重做发布也计入此项
     std::atomic<uint64_t> m_queued;
     // 并发投递计数与消费者统计隔离
     char m_queuedPadding[64];
-    // 唯一消费者累计归还业务额度，与生产者的原子修改分离
+    // 无限额度模式下唯一消费者的累计归还量，与各生产者累计预留量配对
     std::atomic<uint64_t> m_releasedTasks;
     // 唯一消费者累计取出数量；分别与入队预留做无符号模差
     std::atomic<uint64_t> m_dequeuedTasks;
@@ -330,6 +331,8 @@ private:
     std::atomic<bool> m_wakePending;
     // 生产者读取的压力提示与消费者逐项统计隔离；只影响退避，不参与任务接纳
     std::atomic<uint32_t> m_pressureYields;
+    // 在有限任务额度上已经进入休眠重试的调用数，用于提示连续成功者让出时间片。
+    std::atomic<uint32_t> m_quotaSleepers;
     // 新优先级遇到池上限时请求消费者退役空桶，之后可重试未接纳投递
     std::atomic<bool> m_trimBuckets;
 };
