@@ -1,8 +1,35 @@
 ﻿#include "HiRedisHelper.h"
+#include "HiRedisConfig.h"
 #include "HiRedisResultSet.h"
 #include "hiredisinclude/read.h"
 #include <cctype>
 #include <limits>
+
+const char* HiRedisHelper::connectionConfigError(const HiRedisConfig& config)
+{
+    if (config.m_port < 1 || config.m_port > 65535)
+    {
+        return "TCP port must be between 1 and 65535";
+    }
+    if (config.m_ip.empty() || config.m_ip.find('\0') != std::string::npos)
+    {
+        return "redis host must be nonempty and cannot contain NUL";
+    }
+    if (config.m_keepAliveIdleSeconds <= 0 || config.m_keepAliveIdleSeconds > INT32_MAX / 1000)
+    {
+        return "redis keepalive idle seconds are out of range";
+    }
+    if (config.m_readerMaxUnusedBytes != -1 && (config.m_readerMaxUnusedBytes <= 0 ||
+        static_cast<uint64_t>(config.m_readerMaxUnusedBytes) > (std::numeric_limits<size_t>::max)()))
+    {
+        return "redis unused reader buffer threshold is out of range";
+    }
+    if (config.m_readerMaxElements != -1 && config.m_readerMaxElements <= 0)
+    {
+        return "redis reader element limit is out of range";
+    }
+    return nullptr;
+}
 
 bool HiRedisHelper::integerReplyOk(const std::shared_ptr<HiRedisResultSet>& result)
 {

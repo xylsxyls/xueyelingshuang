@@ -19,7 +19,7 @@ HiRedisResultSet::~HiRedisResultSet()
 
 bool HiRedisResultSet::isValid() const
 {
-    return m_reply != nullptr && m_error.empty();
+    return m_reply != nullptr && !isError();
 }
 
 bool HiRedisResultSet::isError() const
@@ -90,10 +90,6 @@ void HiRedisResultSet::setReply(redisReply* reply)
     m_reply = reply;
     m_vecKey.clear();
     m_error.clear();
-    if (m_reply != nullptr && m_reply->type == REDIS_REPLY_ERROR && m_reply->str != nullptr)
-    {
-        m_error.assign(m_reply->str, m_reply->len);
-    }
 }
 
 void HiRedisResultSet::setKeys(const std::vector<std::string>& vecKey)
@@ -206,7 +202,7 @@ std::vector<std::vector<std::string>> HiRedisResultSet::toTable(int32_t key, con
                 continue;
             }
             std::vector<std::string> row = CStringManager::split(replyToString(m_reply->element[i]), split);
-            if (key >= 0 && key <= static_cast<int32_t>(row.size()))
+            if (key >= 0 && static_cast<size_t>(key) <= row.size())
             {
                 row.insert(row.begin() + key, m_vecKey[i]);
             }
@@ -222,7 +218,7 @@ std::vector<std::vector<std::string>> HiRedisResultSet::toTable(int32_t key, con
             continue;
         }
         std::vector<std::string> row = CStringManager::split(replyToString(m_reply->element[i + 1]), split);
-        if (key >= 0 && key <= static_cast<int32_t>(row.size()))
+        if (key >= 0 && static_cast<size_t>(key) <= row.size())
         {
             row.insert(row.begin() + key, replyToString(m_reply->element[i]));
         }
@@ -265,8 +261,14 @@ int32_t HiRedisResultSet::toCount() const
     }
     if (m_reply->type == REDIS_REPLY_INTEGER)
     {
-        if (m_reply->integer > INT32_MAX) { return INT32_MAX; }
-        if (m_reply->integer < INT32_MIN) { return INT32_MIN; }
+        if (m_reply->integer > INT32_MAX)
+        {
+            return INT32_MAX;
+        }
+        if (m_reply->integer < INT32_MIN)
+        {
+            return INT32_MIN;
+        }
         return static_cast<int32_t>(m_reply->integer);
     }
     return 0;

@@ -70,7 +70,7 @@ public:
     int64_t toInt64() const;
 
     /** 判断回复是否为空值
-    @return 返回是否没有有效回复或Redis返回NIL
+    @return 没有底层回复或 Redis 返回 NIL 时为 true；判断键缺失前先排除 isError()
     */
     bool isNull() const;
 
@@ -166,6 +166,13 @@ protected:
 #endif
     // MGET/HMGET等结果转换时使用的键名列表
     std::vector<std::string> m_vecKey;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
     // 本地记录的错误信息
     std::string m_error;
 #ifdef _MSC_VER

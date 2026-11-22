@@ -7,15 +7,7 @@
 */
 struct HiRedisAPI HiRedisCommand
 {
-    /** 构造函数，创建空命令
-    */
-    HiRedisCommand();
-
-    /** 构造函数
-    @param [in] argv Redis命令及参数列表，第一个元素通常是命令名
-    */
-    explicit HiRedisCommand(const std::vector<std::string>& argv);
-
+public:
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
@@ -25,4 +17,14 @@ struct HiRedisAPI HiRedisCommand
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+
+public:
+    /** 构造函数，创建空命令
+    */
+    HiRedisCommand();
+
+    /** 构造函数
+    @param [in] argv Redis命令及参数列表，第一个元素通常是命令名
+    */
+    explicit HiRedisCommand(const std::vector<std::string>& argv);
 };

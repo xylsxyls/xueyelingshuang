@@ -38,26 +38,26 @@ public:
     @param [in] config Redis连接配置
     @return 返回是否连接、认证和选择数据库全部成功
     */
-    bool init(const HiRedisConfig& config);
+    bool init(const HiRedisConfig& config = HiRedisConfig());
 
     /** 反初始化Redis连接，关闭当前底层连接
     */
     void uninit();
 
-    /** 使用IP和端口连接Redis，兼容旧接口，内部调用init
+    /** 使用IP和端口连接Redis，内部调用init
     @param [in] ip Redis服务器IP或域名
     @param [in] port Redis监听端口
     @return 返回是否连接成功
     */
     bool connect(const std::string& ip, int32_t port = 6379);
 
-    /** 使用完整配置连接Redis，兼容旧接口，内部调用init
+    /** 使用完整配置连接Redis，内部调用init
     @param [in] config Redis连接配置
     @return 返回是否连接、认证和选择数据库全部成功
     */
     bool connect(const HiRedisConfig& config);
 
-    /** 关闭当前Redis连接，兼容旧接口，内部调用uninit
+    /** 关闭当前Redis连接，内部调用uninit
     */
     void close();
 
@@ -89,7 +89,7 @@ public:
 
     /** 使用argv方式执行Redis命令，推荐业务代码优先使用此接口
     @param [in] args Redis命令及参数，第一个元素是命令名
-    @return 返回命令结果对象
+    @return 返回拥有回复的结果对象，通过 isError 检查执行错误
     */
     std::shared_ptr<HiRedisResultSet> command(const std::vector<std::string>& args);
 
@@ -102,13 +102,13 @@ public:
     /** 批量发送Redis管线命令
     @param [in] commands 要按顺序发送的命令列表
     @return 返回顺序对应的各项回复。服务端命令错误后继续收取余下回复，lastError 保存首个命令错误；
-    传输中断时返回已取得的回复和传输错误，并关闭连接
+    传输中断时返回已取得的回复和传输错误，并关闭连接；批次中的 C++ 异常关闭连接后向上传播
     */
     std::vector<std::shared_ptr<HiRedisResultSet>> pipeline(const std::vector<HiRedisCommand>& commands);
 
     /** 在Redis事务中执行一组命令
     @param [in] commands MULTI和EXEC之间执行的业务命令列表，禁止事务控制、QUIT 和 RESET
-    @return 返回EXEC结果，失败时返回对应错误结果
+    @return 返回 EXEC 结果，执行期逐项检查 isErrorAt；WATCH 冲突返回 NIL，未确认 DISCARD 或 EXEC 顶层报错时关闭会话并保留错误
     */
     std::shared_ptr<HiRedisResultSet> execTransaction(const std::vector<HiRedisCommand>& commands);
 
@@ -519,6 +519,12 @@ public:
     int64_t del(const std::vector<std::string>& keys);
 
 protected:
+    /** 持有 m_mutex 时按配置建立连接，供初始化和重连共用
+    @param [in] config 建连配置，可引用对象自身保存的配置
+    @return 连接、认证及选库全部成功时返回 true
+    */
+    bool initNoLock(const HiRedisConfig& config);
+
     /** 不加锁执行argv命令，调用者必须已持有m_mutex
     @param [in] args Redis命令及参数
     @return 返回命令结果对象
@@ -553,7 +559,7 @@ private:
     HiRedis& operator=(const HiRedis& other);
 
 private:
-    // 底层hiredis连接上下文
+    // 由客户端独占；完成建连前始终持锁，关闭或建连失败后为空
     redisContext* m_redis;
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -561,13 +567,18 @@ private:
 #endif
     // 保护连接、配置和错误信息的互斥锁
     std::mutex m_mutex;
-    // 最近一次Redis操作的错误信息
-    std::string m_lastError;
-    // 最近一次连接使用的配置，用于重连和运行期更新
-    HiRedisConfig m_config;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-    // 当前对象是否已经通过init完成初始化
-    bool m_isInit;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+    // 最近一次Redis操作的错误信息
+    std::string m_lastError;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+    // 最近一次连接使用的配置，用于重连和运行期更新
+    HiRedisConfig m_config;
 };

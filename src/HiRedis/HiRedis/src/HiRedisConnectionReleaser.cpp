@@ -2,16 +2,10 @@
 #include "HiRedis.h"
 #include "HiRedisConnectionPool.h"
 
-HiRedisConnectionReleaser::HiRedisConnectionReleaser() :
-m_pool(nullptr)
-{
-
-}
-
-HiRedisConnectionReleaser::HiRedisConnectionReleaser(HiRedisConnectionPool* pool, const std::shared_ptr<std::atomic<bool>>& poolAlive) :
-m_pool(pool),
-m_poolAlive(poolAlive),
-m_returnGate(pool == nullptr ? nullptr : pool->m_returnGate)
+HiRedisConnectionReleaser::HiRedisConnectionReleaser(HiRedisConnectionPool& pool) :
+m_pool(&pool),
+m_poolAlive(pool.m_aliveFlag),
+m_returnGate(pool.m_returnGate)
 {
 
 }
@@ -29,11 +23,10 @@ void HiRedisConnectionReleaser::operator()(HiRedis* connection) const
         std::lock_guard<std::mutex> guard(*m_returnGate);
         if (poolAlive->load())
         {
-            m_pool->releaseConnectionFromReleaser(connection);
+            m_pool->releaseConnection(connection);
             return;
         }
     }
 
-    connection->uninit();
     delete connection;
 }

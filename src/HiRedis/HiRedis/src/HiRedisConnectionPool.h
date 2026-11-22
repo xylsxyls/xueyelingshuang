@@ -29,7 +29,7 @@ public:
     @param [in] config 包含连接参数及 m_poolMinConnections、m_poolMaxConnections
     @return 成功或已初始化时为 true，范围无效、仍有旧借用或资源不足时为 false
     */
-    bool init(const HiRedisConfig& config);
+    bool init(const HiRedisConfig& config = HiRedisConfig());
 
     /** 初始化连接池，已经初始化时直接返回true，不会重建已有连接
     @param [in] config Redis连接配置
@@ -46,11 +46,16 @@ public:
     */
     void close();
 
-    /** 获取一个连接，shared_ptr析构时自动归还连接池
-    @param [in] timeoutMs 等待空闲连接的超时时间，负数表示一直等待
+    /** 按初始化时配置的默认等待期限借用连接
+    @return 成功返回自动归还的连接，关闭或超时返回空指针
+    */
+    std::shared_ptr<HiRedis> acquire();
+
+    /** 借用现有连接或按池配置建连；发现连接已断开时按池初始化快照恢复
+    @param [in] timeoutMs 等待池名额的毫秒数，零立即判断，负数一直等待；建连另用连接配置的期限
     @return 返回连接对象，超时或连接池关闭时返回空指针
     */
-    std::shared_ptr<HiRedis> acquire(int32_t timeoutMs = 3000);
+    std::shared_ptr<HiRedis> acquire(int32_t timeoutMs);
 
     /** 获取当前空闲连接数量
     @return 返回可立即获取的连接数量
@@ -67,13 +72,15 @@ public:
     */
     std::string lastError();
 
-    /** 供HiRedisConnectionReleaser归还连接使用，业务代码不要直接调用
-    @param [in] connection 需要归还的连接
-    */
-    void releaseConnectionFromReleaser(HiRedis* connection);
-
 private:
     friend class HiRedisConnectionReleaser;
+
+    /** 在同一个池代次中选择等待期限并借用连接
+    @param [in] useDefault 是否使用初始化配置中的等待期限
+    @param [in] timeoutMs 显式等待毫秒数，仅在 useDefault 为 false 时使用
+    @return 自动归还的连接，失败时为空
+    */
+    std::shared_ptr<HiRedis> acquireImpl(bool useDefault, int32_t timeoutMs);
 
     /** 按统一的固定或弹性边界构造池
     @param [in] config 每个连接使用的参数
@@ -89,7 +96,7 @@ private:
     */
     std::unique_ptr<HiRedis> createConnection(std::string& error);
 
-    /** 将连接归还到空闲队列
+    /** 接收本池最后一份借用，保留为空闲连接或在关闭、超过空闲目标时释放
     @param [in] connection 要归还的连接对象
     */
     void releaseConnection(HiRedis* connection);
@@ -112,16 +119,47 @@ private:
 #endif
     // 保护连接池内部状态的互斥锁
     std::mutex m_mutex;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
     // 等待和唤醒空闲连接的条件变量
     std::condition_variable m_condition;
-    // 连接池创建并负责释放的全部连接
-    std::vector<HiRedis*> m_allConnections;
-    // 当前空闲、可被acquire取走的连接
-    std::vector<HiRedis*> m_availableConnections;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+    // 已交给借用方、尚未归还的连接数，包括正在恢复会话的借用
+    size_t m_borrowed;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+    // 独占空闲连接，初始化时预留空闲目标容量，归还无需扩容
+    std::vector<std::unique_ptr<HiRedis>> m_availableConnections;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
     // 最近一次连接池操作的错误信息
     std::string m_lastError;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
     // 借用归还与池析构通过同一把锁串行，删除器可以比池本身活得更久
     std::shared_ptr<std::mutex> m_returnGate;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
     // 本轮连接使用的配置，创建请求全部结束前禁止重新初始化
     HiRedisConfig m_config;
     // 预建和空闲保留数
@@ -132,6 +170,10 @@ private:
     size_t m_pending;
     // 成功初始化一次递增；关闭期间被唤醒的旧借用不能进入下一轮池
     uint64_t m_generation;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
     // 连接池生命周期标记，外借连接的删除器会通过它判断池对象是否仍然存在
     std::shared_ptr<std::atomic<bool>> m_aliveFlag;
 #ifdef _MSC_VER

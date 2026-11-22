@@ -1,12 +1,14 @@
 ﻿#include "HiRedisConnectionPool.h"
 #include "HiRedis.h"
+#include "HiRedisHelper.h"
 #include "HiRedisConnectionReleaser.h"
 #include <chrono>
-#include <algorithm>
+#include <utility>
 #include <stdexcept>
 #include <new>
 
 HiRedisConnectionPool::HiRedisConnectionPool() :
+m_borrowed(0),
 m_returnGate(std::make_shared<std::mutex>()),
 m_minimum(1),
 m_maximum(1),
@@ -45,13 +47,19 @@ bool HiRedisConnectionPool::initRange(const HiRedisConfig& config, size_t minimu
     {
         return true;
     }
-    if (!m_aliveFlag || minimum > m_allConnections.max_size() || maximum < -1 || maximum == 0 ||
+    if (!m_aliveFlag || minimum > m_availableConnections.max_size() || maximum < -1 || maximum == 0 ||
         (maximum > 0 && minimum > static_cast<uint64_t>(maximum)))
     {
         m_lastError = "redis invalid pool capacity";
         return false;
     }
-    if (!m_allConnections.empty() || m_pending != 0)
+    const char* invalid = HiRedisHelper::connectionConfigError(config);
+    if (invalid)
+    {
+        m_lastError = invalid;
+        return false;
+    }
+    if (m_borrowed != 0 || m_pending != 0)
     {
         m_lastError = "redis pool still has active connections";
         return false;
@@ -61,8 +69,6 @@ bool HiRedisConnectionPool::initRange(const HiRedisConfig& config, size_t minimu
         m_config = config;
         std::vector<std::unique_ptr<HiRedis>> created;
         created.reserve(minimum);
-        m_allConnections.reserve(minimum);
-        m_availableConnections.reserve(minimum);
         for (size_t i = 0; i < minimum; ++i)
         {
             auto connection = createConnection(m_lastError);
@@ -72,11 +78,8 @@ bool HiRedisConnectionPool::initRange(const HiRedisConfig& config, size_t minimu
             }
             created.push_back(std::move(connection));
         }
-        for (size_t i = 0; i < minimum; ++i)
-        {
-            m_availableConnections.push_back(created[i].get());
-            m_allConnections.push_back(created[i].release());
-        }
+        // 全部预建成功才发布；中途失败由局部容器关闭已建立的连接。
+        m_availableConnections.swap(created);
     }
     catch (const std::exception& error)
     {
@@ -106,12 +109,6 @@ void HiRedisConnectionPool::uninit()
 {
     std::unique_lock<std::mutex> lock(m_mutex);
     m_isInit = false;
-    for (size_t i = 0; i < m_availableConnections.size(); ++i)
-    {
-        HiRedis* connection = m_availableConnections[i];
-        m_allConnections.erase(std::find(m_allConnections.begin(), m_allConnections.end(), connection));
-        delete connection;
-    }
     m_availableConnections.clear();
     m_lastError.clear();
     m_condition.notify_all();
@@ -124,15 +121,29 @@ void HiRedisConnectionPool::close()
 
 std::shared_ptr<HiRedis> HiRedisConnectionPool::acquire(int32_t timeoutMs)
 {
+    return acquireImpl(false, timeoutMs);
+}
+
+std::shared_ptr<HiRedis> HiRedisConnectionPool::acquire()
+{
+    return acquireImpl(true, 0);
+}
+
+std::shared_ptr<HiRedis> HiRedisConnectionPool::acquireImpl(bool useDefault, int32_t timeoutMs)
+{
     HiRedis* connection = nullptr;
     {
         std::unique_lock<std::mutex> lock(m_mutex);
+        if (useDefault)
+        {
+            timeoutMs = m_config.m_poolAcquireTimeoutMs;
+        }
         // 同时统计已创建和正在创建的名额，锁外的建连操作也受上限约束。
         const uint64_t generation = m_generation;
         const auto ready = [this, generation]() -> bool
         {
             return !m_isInit || m_generation != generation || !m_availableConnections.empty() || m_maximum < 0 ||
-                static_cast<uint64_t>(m_allConnections.size()) + m_pending < static_cast<uint64_t>(m_maximum);
+                static_cast<uint64_t>(m_borrowed) + m_pending < static_cast<uint64_t>(m_maximum);
         };
         if (timeoutMs < 0)
         {
@@ -150,17 +161,21 @@ std::shared_ptr<HiRedis> HiRedisConnectionPool::acquire(int32_t timeoutMs)
         }
         if (m_availableConnections.empty())
         {
-            ++m_pending;
-            lock.unlock();
             std::string error;
             std::unique_ptr<HiRedis> created;
+            ++m_pending;
+            lock.unlock();
             try
             {
                 created = createConnection(error);
             }
             catch (const std::exception& failure)
             {
-                error = failure.what();
+                lock.lock();
+                --m_pending;
+                m_condition.notify_all();
+                m_lastError = failure.what();
+                return nullptr;
             }
             lock.lock();
             --m_pending;
@@ -170,40 +185,30 @@ std::shared_ptr<HiRedis> HiRedisConnectionPool::acquire(int32_t timeoutMs)
                 m_lastError = error.empty() ? "redis pool closed during connection" : error;
                 return nullptr;
             }
-            try
-            {
-                m_availableConnections.reserve(m_allConnections.size() + 1);
-                m_allConnections.push_back(created.get());
-            }
-            catch (const std::exception& failure)
-            {
-                m_lastError = failure.what();
-                return nullptr;
-            }
             connection = created.release();
         }
         else
         {
-            connection = m_availableConnections.back();
+            connection = m_availableConnections.back().release();
             m_availableConnections.pop_back();
         }
+        ++m_borrowed;
         m_lastError.clear();
     }
 
-    if (!connection->isConnected())
+    HiRedisConnectionReleaser releaser(*this);
+    std::shared_ptr<HiRedis> lease(connection, releaser);
+    // 名额在归还前一直占用，期间池不能重新初始化，m_config 快照保持有效。
+    if (!connection->isConnected() && !connection->connect(m_config))
     {
-        if (!connection->reconnect())
-        {
-            std::string error = connection->lastError();
-            releaseConnection(connection);
-            std::unique_lock<std::mutex> lock(m_mutex);
-            m_lastError = error.empty() ? "redis pool reconnect failed" : error;
-            return std::shared_ptr<HiRedis>();
-        }
+        std::string error = connection->lastError();
+        lease.reset();
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_lastError = error.empty() ? "redis pool reconnect failed" : error;
+        return nullptr;
     }
 
-    HiRedisConnectionReleaser releaser(this, m_aliveFlag);
-    return std::shared_ptr<HiRedis>(connection, releaser);
+    return lease;
 }
 
 size_t HiRedisConnectionPool::availableCount()
@@ -215,7 +220,7 @@ size_t HiRedisConnectionPool::availableCount()
 size_t HiRedisConnectionPool::totalCount()
 {
     std::unique_lock<std::mutex> lock(m_mutex);
-    return m_allConnections.size();
+    return m_borrowed + m_availableConnections.size();
 }
 
 std::string HiRedisConnectionPool::lastError()
@@ -224,45 +229,15 @@ std::string HiRedisConnectionPool::lastError()
     return m_lastError;
 }
 
-void HiRedisConnectionPool::releaseConnectionFromReleaser(HiRedis* connection)
-{
-    releaseConnection(connection);
-}
-
 void HiRedisConnectionPool::releaseConnection(HiRedis* connection)
 {
-    if (connection == nullptr)
-    {
-        return;
-    }
     std::unique_lock<std::mutex> lock(m_mutex);
-    for (size_t i = 0; i < m_availableConnections.size(); ++i)
+    // 未保留的连接在解锁前关闭，下一次建连不会与其争用同一名额。
+    std::unique_ptr<HiRedis> returned(connection);
+    --m_borrowed;
+    if (m_isInit && m_availableConnections.size() < m_minimum)
     {
-        if (m_availableConnections[i] == connection)
-        {
-            m_condition.notify_one();
-            return;
-        }
-    }
-
-    for (size_t i = 0; i < m_allConnections.size(); ++i)
-    {
-        if (m_allConnections[i] != connection)
-        {
-            continue;
-        }
-
-        if (m_isInit && m_availableConnections.size() < m_minimum)
-        {
-            m_availableConnections.push_back(connection);
-        }
-        else
-        {
-            m_allConnections.erase(m_allConnections.begin() + i);
-            delete connection;
-        }
-        m_condition.notify_one();
-        return;
+        m_availableConnections.push_back(std::move(returned));
     }
     m_condition.notify_one();
 }

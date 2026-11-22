@@ -11,20 +11,18 @@ class HiRedisConnectionPool;
 class HiRedisConnectionReleaser
 {
 public:
-    /** 构造函数，创建空释放器
-    */
-    HiRedisConnectionReleaser();
-
-    /** 构造函数，绑定连接池和连接池生命周期标记
-    @param [in] pool 连接所属连接池，不负责释放
-    @param [in] poolAlive 连接池生命周期标记，用于避免连接池析构后访问悬挂指针
-    */
-    HiRedisConnectionReleaser(HiRedisConnectionPool* pool, const std::shared_ptr<std::atomic<bool>>& poolAlive);
-
     /** 归还或释放连接
     @param [in] connection 需要归还或释放的Redis连接
     */
     void operator()(HiRedis* connection) const;
+
+private:
+    friend class HiRedisConnectionPool;
+
+    /** 只由池为本次借出的连接建立删除器，池和归还门共享同一生存期协议
+    @param [in] pool 正在发放这份借用的池，其析构与归还串行
+    */
+    explicit HiRedisConnectionReleaser(HiRedisConnectionPool& pool);
 
 private:
     // 连接所属连接池，不负责释放

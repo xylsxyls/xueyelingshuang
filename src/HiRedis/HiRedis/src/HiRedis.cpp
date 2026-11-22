@@ -11,10 +11,15 @@
 #endif
 #endif
 #include "hiredisinclude/hiredis.h"
+#include <exception>
+#if defined(__linux__) && !defined(__GLIBC__)
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#endif
 
 HiRedis::HiRedis() :
-m_redis(nullptr),
-m_isInit(false)
+m_redis(nullptr)
 {
 
 }
@@ -34,6 +39,12 @@ bool HiRedis::init(const std::string& ip, int32_t port)
 
 bool HiRedis::init(const HiRedisConfig& config)
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return initNoLock(config);
+}
+
+bool HiRedis::initNoLock(const HiRedisConfig& config)
+{
     // toTimeval入参：timeoutMs是毫秒级超时时间，小于等于0时使用默认值。
     // toTimeval出参：无。
     // toTimeval返回值：返回hiredis连接和命令超时需要的timeval结构。
@@ -49,74 +60,90 @@ bool HiRedis::init(const HiRedisConfig& config)
         return tv;
     };
 
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (config.m_port < 1 || config.m_port > 65535)
+    const char* invalid = HiRedisHelper::connectionConfigError(config);
+    if (invalid)
     {
-        setLastError("TCP port must be between 1 and 65535");
-        return false;
-    }
-    if (config.m_ip.find('\0') != std::string::npos)
-    {
-        setLastError("redis host cannot contain NUL");
+        setLastError(invalid);
         return false;
     }
     closeNoLock();
     m_config = config;
-    m_isInit = false;
 
-    struct timeval connectTimeout = toTimeval(config.m_connectTimeoutMs);
-    m_redis = redisConnectWithTimeout(config.m_ip.c_str(), config.m_port, connectTimeout);
-    if (m_redis == nullptr)
+    try
     {
-        setLastError("redis connect returned null");
-        return false;
-    }
-    if (m_redis->err)
-    {
-        setLastError(m_redis->errstr[0] ? m_redis->errstr : "redis connect failed");
-        closeNoLock();
-        return false;
-    }
-
-    struct timeval commandTimeout = toTimeval(config.m_commandTimeoutMs);
-    if (redisSetTimeout(m_redis, commandTimeout) != REDIS_OK)
-    {
-        setLastError(m_redis->errstr);
-        closeNoLock();
-        return false;
-    }
-    if (config.m_enableKeepAlive && redisEnableKeepAlive(m_redis) != REDIS_OK)
-    {
-        setLastError(m_redis->errstr[0] ? m_redis->errstr : "redis TCP keepalive failed");
-        closeNoLock();
-        return false;
-    }
-
-    if (!config.m_password.empty())
-    {
-        std::shared_ptr<HiRedisResultSet> auth = commandArgvNoLock(std::vector<std::string>{ "AUTH", config.m_password });
-        if (!auth->toStatus())
+        struct timeval connectTimeout = toTimeval(config.m_connectTimeoutMs);
+        m_redis = redisConnectWithTimeout(config.m_ip.c_str(), config.m_port, connectTimeout);
+        if (m_redis == nullptr)
         {
-            setLastError(auth->error().empty() ? "redis auth failed" : auth->error());
+            setLastError("redis connect returned null");
+            return false;
+        }
+        if (m_redis->err)
+        {
+            setLastError(m_redis->errstr[0] ? m_redis->errstr : "redis connect failed");
             closeNoLock();
             return false;
         }
-    }
 
-    if (config.m_dbIndex >= 0)
-    {
-        std::shared_ptr<HiRedisResultSet> select = commandArgvNoLock(std::vector<std::string>{ "SELECT", CStringManager::toStringInt32(config.m_dbIndex) });
-        if (!select->toStatus())
+        // hiredis 用 0 表示不按阈值回收缓冲或不限制聚合元素数。
+        m_redis->reader->maxbuf = config.m_readerMaxUnusedBytes == -1 ? 0 : static_cast<size_t>(config.m_readerMaxUnusedBytes);
+        m_redis->reader->maxelements = config.m_readerMaxElements == -1 ? 0 : config.m_readerMaxElements;
+
+        struct timeval commandTimeout = toTimeval(config.m_commandTimeoutMs);
+        if (redisSetTimeout(m_redis, commandTimeout) != REDIS_OK)
         {
-            setLastError(select->error().empty() ? "redis select failed" : select->error());
+            setLastError(m_redis->errstr);
             closeNoLock();
             return false;
         }
-    }
+        if (config.m_enableKeepAlive && redisEnableKeepAliveWithInterval(m_redis, config.m_keepAliveIdleSeconds) != REDIS_OK)
+        {
+            setLastError(m_redis->errstr[0] ? m_redis->errstr : "redis TCP keepalive failed");
+            closeNoLock();
+            return false;
+        }
 
-    setLastError("");
-    m_isInit = true;
-    return true;
+#if defined(__linux__) && !defined(__GLIBC__)
+        // hiredis 在非 glibc Linux 仅设置 SO_KEEPALIVE，补上调用方要求的空闲期限。
+        if (config.m_enableKeepAlive && setsockopt(m_redis->fd, IPPROTO_TCP, TCP_KEEPIDLE,
+            &config.m_keepAliveIdleSeconds, sizeof(config.m_keepAliveIdleSeconds)) != 0)
+        {
+            setLastError("redis TCP keepalive idle time could not be set");
+            closeNoLock();
+            return false;
+        }
+#endif
+        if (!config.m_password.empty())
+        {
+            std::shared_ptr<HiRedisResultSet> auth = commandArgvNoLock(std::vector<std::string>{ "AUTH", config.m_password });
+            if (!auth->toStatus())
+            {
+                setLastError(auth->error().empty() ? "redis auth failed" : auth->error());
+                closeNoLock();
+                return false;
+            }
+        }
+
+        if (config.m_dbIndex >= 0)
+        {
+            std::shared_ptr<HiRedisResultSet> select = commandArgvNoLock(std::vector<std::string>{ "SELECT", CStringManager::toStringInt32(config.m_dbIndex) });
+            if (!select->toStatus())
+            {
+                setLastError(select->error().empty() ? "redis select failed" : select->error());
+                closeNoLock();
+                return false;
+            }
+        }
+
+        setLastError("");
+        return true;
+    }
+    catch (const std::exception&)
+    {
+        // 认证或选库期间的 C++ 异常也必须释放未就绪的连接。
+        closeNoLock();
+        throw;
+    }
 }
 
 void HiRedis::uninit()
@@ -148,17 +175,12 @@ void HiRedis::closeNoLock()
         redisFree(m_redis);
         m_redis = nullptr;
     }
-    m_isInit = false;
 }
 
 bool HiRedis::reconnect()
 {
-    HiRedisConfig config;
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        config = m_config;
-    }
-    return init(config);
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return initNoLock(m_config);
 }
 
 bool HiRedis::ping()
@@ -170,7 +192,7 @@ bool HiRedis::ping()
 bool HiRedis::isConnected()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    return m_isInit && m_redis != nullptr && !m_redis->err;
+    return m_redis != nullptr && !m_redis->err;
 }
 
 std::string HiRedis::lastError()
@@ -232,40 +254,49 @@ std::vector<std::shared_ptr<HiRedisResultSet>> HiRedis::pipeline(const std::vect
         }
     }
 
-    for (size_t i = 0; i < commands.size(); ++i)
+    try
     {
-        if (!appendCommandArgvNoLock(commands[i].m_args))
+        for (size_t i = 0; i < commands.size(); ++i)
         {
-            std::shared_ptr<HiRedisResultSet> error(new HiRedisResultSet);
-            error->setError(m_lastError);
-            result.push_back(error);
-            closeNoLock();
-            return result;
+            if (!appendCommandArgvNoLock(commands[i].m_args))
+            {
+                std::shared_ptr<HiRedisResultSet> error(new HiRedisResultSet);
+                error->setError(m_lastError);
+                result.push_back(error);
+                closeNoLock();
+                return result;
+            }
         }
-    }
 
-    m_lastError.clear();
-    for (size_t i = 0; i < commands.size(); ++i)
-    {
-        redisReply* reply = nullptr;
-        int32_t rc = redisGetReply(m_redis, reinterpret_cast<void**>(&reply));
-        std::shared_ptr<HiRedisResultSet> item(new HiRedisResultSet);
-        item->setReply(reply);
-        if (rc != REDIS_OK)
+        m_lastError.clear();
+        for (size_t i = 0; i < commands.size(); ++i)
         {
-            item->setError(m_redis->errstr[0] ? m_redis->errstr : "redis pipeline failed");
-            setLastError(item->error());
+            std::shared_ptr<HiRedisResultSet> item(new HiRedisResultSet);
+            void* reply = nullptr;
+            int32_t rc = redisGetReply(m_redis, &reply);
+            item->setReply(static_cast<redisReply*>(reply));
+            if (rc != REDIS_OK)
+            {
+                item->setError(m_redis->errstr[0] ? m_redis->errstr : "redis pipeline failed");
+                setLastError(item->error());
+                result.push_back(item);
+                closeNoLock();
+                return result;
+            }
+            if (m_lastError.empty() && item->isError())
+            {
+                setLastError(item->error());
+            }
             result.push_back(item);
-            closeNoLock();
-            return result;
         }
-        if (m_lastError.empty() && item->isError())
-        {
-            setLastError(item->error());
-        }
-        result.push_back(item);
+        return result;
     }
-    return result;
+    catch (const std::exception&)
+    {
+        // 批次可能已部分发送或读取，关闭连接以免后续调用拿到遗留回复。
+        closeNoLock();
+        throw;
+    }
 }
 
 std::shared_ptr<HiRedisResultSet> HiRedis::execTransaction(const std::vector<HiRedisCommand>& commands)
@@ -284,7 +315,10 @@ std::shared_ptr<HiRedisResultSet> HiRedis::execTransaction(const std::vector<HiR
         std::string verb = commands[i].m_args[0];
         for (size_t j = 0; j < verb.size(); ++j)
         {
-            if (verb[j] >= 'a' && verb[j] <= 'z') { verb[j] = static_cast<char>(verb[j] - 'a' + 'A'); }
+            if (verb[j] >= 'a' && verb[j] <= 'z')
+            {
+                verb[j] = static_cast<char>(verb[j] - 'a' + 'A');
+            }
         }
         if (verb == "MULTI" || verb == "EXEC" || verb == "DISCARD" || verb == "WATCH" ||
             verb == "UNWATCH" || verb == "QUIT" || verb == "RESET")
@@ -296,25 +330,45 @@ std::shared_ptr<HiRedisResultSet> HiRedis::execTransaction(const std::vector<HiR
         }
     }
 
-    std::vector<std::string> multi;
-    multi.push_back("MULTI");
-    std::shared_ptr<HiRedisResultSet> begin = commandArgvNoLock(multi);
-    if (!begin->toStatus())
+    try
     {
-        return begin;
-    }
-    for (size_t i = 0; i < commands.size(); ++i)
-    {
-        std::shared_ptr<HiRedisResultSet> queued = commandArgvNoLock(commands[i].m_args);
-        if (queued->type() != REDIS_REPLY_STATUS || queued->toString() != "QUEUED")
+        std::shared_ptr<HiRedisResultSet> begin = commandArgvNoLock({ "MULTI" });
+        if (!begin->toStatus())
         {
-            if (!queued->isError()) { queued->setError("redis transaction expected QUEUED"); }
-            commandArgvNoLock(std::vector<std::string>{ "DISCARD" });
-            setLastError(queued->error());
-            return queued;
+            return begin;
         }
+        for (size_t i = 0; i < commands.size(); ++i)
+        {
+            std::shared_ptr<HiRedisResultSet> queued = commandArgvNoLock(commands[i].m_args);
+            if (queued->type() != REDIS_REPLY_STATUS || queued->toString() != "QUEUED")
+            {
+                if (!queued->isError())
+                {
+                    queued->setError("redis transaction expected QUEUED");
+                }
+                if (!commandArgvNoLock({ "DISCARD" })->toStatus())
+                {
+                    // 服务端未确认退出 MULTI，下一次命令不能复用这个会话。
+                    closeNoLock();
+                }
+                setLastError(queued->error());
+                return queued;
+            }
+        }
+        auto executed = commandArgvNoLock({ "EXEC" });
+        if (executed->isError())
+        {
+            // EXEC 被拒绝时服务端可能仍在 MULTI，不能将该连接用于下一次业务操作。
+            closeNoLock();
+        }
+        return executed;
     }
-    return commandArgvNoLock(std::vector<std::string>{ "EXEC" });
+    catch (const std::exception&)
+    {
+        // MULTI 后内存分配等失败时，关闭连接以结束未完成的事务。
+        closeNoLock();
+        throw;
+    }
 }
 
 bool HiRedis::selectDbIndex(int32_t index)
@@ -512,9 +566,7 @@ bool HiRedis::deleteHashMap(const std::string& tableName)
 
 bool HiRedis::deleteHashMapField(const std::string& tableName, const std::string& field)
 {
-    std::vector<std::string> fields;
-    fields.push_back(field);
-    return hDel(tableName, fields);
+    return hDel(tableName, {field});
 }
 
 bool HiRedis::deleteHashMapFields(const std::string& tableName, const std::vector<std::string>& field)
@@ -573,9 +625,7 @@ bool HiRedis::setTable(const std::string& tableName, const std::vector<std::vect
 
 std::shared_ptr<HiRedisResultSet> HiRedis::getTableValues(const std::string& tableName, const std::vector<std::string>& field)
 {
-    std::shared_ptr<HiRedisResultSet> result = getHashValues(tableName, field);
-    result->setKeys(field);
-    return result;
+    return getHashValues(tableName, field);
 }
 
 bool HiRedis::setGroup(const std::string& groupName, const std::string& element)
@@ -613,9 +663,7 @@ int64_t HiRedis::getGroupCount(const std::string& groupName)
 
 bool HiRedis::deleteGroupElement(const std::string& groupName, const std::string& element)
 {
-    std::vector<std::string> elements;
-    elements.push_back(element);
-    return deleteGroupElements(groupName, elements);
+    return deleteGroupElements(groupName, {element});
 }
 
 bool HiRedis::deleteGroupElements(const std::string& groupName, const std::vector<std::string>& element)
@@ -697,9 +745,7 @@ int64_t HiRedis::getOrderGroupCountByScore(const std::string& groupName, int32_t
 
 bool HiRedis::deleteOrderGroupElement(const std::string& groupName, const std::string& element)
 {
-    std::vector<std::string> elements;
-    elements.push_back(element);
-    return deleteOrderGroupElements(groupName, elements);
+    return deleteOrderGroupElements(groupName, {element});
 }
 
 bool HiRedis::deleteOrderGroupElements(const std::string& groupName, const std::vector<std::string>& element)
@@ -752,9 +798,7 @@ bool HiRedis::orderGroupExist(const std::string& key)
 
 bool HiRedis::deleteKey(const std::string& key)
 {
-    std::vector<std::string> keys;
-    keys.push_back(key);
-    return del(keys) == 1;
+    return del({key}) == 1;
 }
 
 bool HiRedis::deleteKeys(const std::vector<std::string>& key)
@@ -780,12 +824,6 @@ std::shared_ptr<HiRedisResultSet> HiRedis::commandArgvNoLock(const std::vector<s
     if (m_redis == nullptr)
     {
         result->setError("redis is not connected");
-        setLastError(result->error());
-        return result;
-    }
-    if (args.empty())
-    {
-        result->setError("redis command args is empty");
         setLastError(result->error());
         return result;
     }
@@ -842,23 +880,49 @@ void HiRedis::setLastError(const std::string& error)
 }
 
 // 使用示例开始。单独编译本文件时可启用下方的 main。
+//#include "HiRedisConnectionPool.h"
+//#include <cerrno>
 //#include <chrono>
 //#include <cstdlib>
 //#include <iostream>
-//#include <stdexcept>
 //
 //int main()
 //{
 //    // HIREDIS_TEST_* 指向演示实例；全集合只处理本次活动报名的键。
 //    const char* host = std::getenv("HIREDIS_TEST_IP");
-//    const char* port = std::getenv("HIREDIS_TEST_PORT");
+//    // 将可选的十进制环境参数写入 value；未设置保留现值，溢出或格式错误返回 false。
+//    const auto readNumber = [](const char* name, int32_t& value) -> bool
+//    {
+//        const char* text = std::getenv(name);
+//        if (!text)
+//        {
+//            return true;
+//        }
+//        char* end = nullptr;
+//        errno = 0;
+//        const long parsed = std::strtol(text, &end, 10);
+//        if (errno == ERANGE || end == text || *end || parsed < INT32_MIN || parsed > INT32_MAX)
+//        {
+//            return false;
+//        }
+//        value = static_cast<int32_t>(parsed);
+//        return true;
+//    };
 //    const char* password = std::getenv("HIREDIS_TEST_PASSWORD");
-//    const char* database = std::getenv("HIREDIS_TEST_DB");
 //    HiRedisConfig config;
-//    config.m_ip = host ? host : "127.0.0.1";
-//    config.m_port = port ? std::atoi(port) : 6379;
-//    config.m_password = password ? password : "";
-//    config.m_dbIndex = database ? std::atoi(database) : 0;
+//    int32_t port = config.m_port, database = config.m_dbIndex;
+//    if (!readNumber("HIREDIS_TEST_PORT", port) || !readNumber("HIREDIS_TEST_DB", database))
+//    {
+//        std::cerr << "Invalid Redis port or database" << std::endl;
+//        return 1;
+//    }
+//    config.setEndpoint(host ? host : config.m_ip, port);
+//    config.setPassword(password ? password : "");
+//    config.setDatabase(database);
+//    config.setTimeouts(2000, 3000);
+//    config.setKeepAlive(true);
+//    config.setKeepAliveIdleSeconds(30);
+//    config.setReaderLimits(16384, 65536);
 //    HiRedis redis;
 //    if (!redis.connect(config) || !redis.isConnected() || !redis.ping())
 //    {
@@ -887,8 +951,8 @@ void HiRedis::setLastError(const std::string& error)
 //    {
 //        return 1;
 //    }
-//    bool completed = false;
-//    try
+//    // 返回报名及查询是否完成；所有正常失败路径汇合后统一清理本次活动的键。
+//    const auto registerEvent = [&]() -> bool
 //    {
 //        // 报名限额用字符串计数，活动资料、选手和积分分别保存在哈希、集合、有序集合中。
 //        if (!redis.setEx(slots, "20", 300) || !redis.hmSet(event, {{"venue", "Hall A"}, {"stage", "open"}}) ||
@@ -896,25 +960,29 @@ void HiRedis::setLastError(const std::string& error)
 //            !redis.setOrderGroups(scores, {{18, "Ada"}, {12, "Lin"}}) || !redis.setOrderGroup(scores, 9, "Bo") ||
 //            !redis.setTable(roster, {{"Ada", "red"}, {"Lin", "blue"}, {"Bo", "green"}}, 0))
 //        {
-//            throw std::runtime_error(redis.lastError());
+//            std::cerr << redis.lastError() << std::endl;
+//            return false;
 //        }
 //        // 取消一名选手，再一起发布状态和剩余名额。
 //        if (!redis.deleteGroupElement(players, "Bo") || !redis.deleteOrderGroupElement(scores, "Bo") ||
 //            redis.decrBy(slots, 3) != 17 || redis.incrBy(slots, 1) != 18 || !redis.hSet(event, "stage", "closed"))
 //        {
-//            throw std::runtime_error(redis.lastError());
+//            std::cerr << redis.lastError() << std::endl;
+//            return false;
 //        }
 //        const auto receipt = redis.execTransaction({HiRedisCommand({"HSET", event, "published", "yes"}),
 //            HiRedisCommand({"EXPIRE", players, "300"}), HiRedisCommand({"EXPIRE", scores, "300"})});
 //        if (receipt->isError() || receipt->size() != 3 || receipt->isErrorAt(0) || receipt->isErrorAt(1) ||
 //            receipt->isErrorAt(2) || !redis.expire(event, 300) || !redis.expire(roster, 300))
 //        {
-//            throw std::runtime_error(redis.lastError());
+//            std::cerr << redis.lastError() << std::endl;
+//            return false;
 //        }
 //        const auto snapshot = redis.pipeline({HiRedisCommand({"SCARD", players}), HiRedisCommand({"ZCARD", scores})});
 //        if (snapshot.size() != 2 || snapshot[0]->isError() || snapshot[1]->isError())
 //        {
-//            throw std::runtime_error("Cannot read registration summary");
+//            std::cerr << "Cannot read registration summary" << std::endl;
+//            return false;
 //        }
 //        std::cout << redis.get(title)->toString() << " at " << redis.hGet(event, "venue")->toString()
 //            << ", remaining=" << redis.getValue(slots)->toString() << ", ttl=" << redis.ttl(event) << '\n';
@@ -932,8 +1000,36 @@ void HiRedis::setLastError(const std::string& error)
 //                std::cout << row[0] << " team=" << row[1] << '\n';
 //            }
 //        }
-//        completed = redis.hashMapExist(event) && redis.groupExist(players) && redis.orderGroupExist(scores) &&
+//        const auto details = redis.getHashValues(event, {"stage", "published"})->toMap();
+//        const auto qualifiers = redis.getOrderGroupByScore(scores, 10, 20)->toKeys();
+//        const auto top = redis.getOrderGroupByIndex(scores, -1, -1)->at(0);
+//        config.setPoolBounds(1, 2);
+//        config.setPoolAcquireTimeout(500);
+//        HiRedisConnectionPool pool;
+//        if (!pool.init(config) || pool.totalCount() != 1 || pool.availableCount() != 1)
+//        {
+//            std::cerr << pool.lastError() << std::endl;
+//            return false;
+//        }
+//        auto reader = pool.acquire();
+//        if (!reader || reader->getValues({title, slots})->toMap().size() != 2 ||
+//            reader->hGetAll(event)->toHashMap() != redis.getHashValues(event)->toHashMap() ||
+//            reader->hKeys(event)->size() != 3 || reader->getGroup(players)->toGroup().size() != 2)
+//        {
+//            std::cerr << "Cannot read published event" << std::endl;
+//            return false;
+//        }
+//        reader.reset();
+//        std::cout << "available readers=" << pool.availableCount() << "/" << pool.totalCount() << '\n';
+//        pool.close();
+//        return details == std::map<std::string, std::string>({{"stage", "closed"}, {"published", "yes"}}) &&
+//            qualifiers.size() == 2 && top == "Ada" && redis.hashMapExist(event) && redis.groupExist(players) && redis.orderGroupExist(scores) &&
 //            redis.tableExist(roster) && redis.getGroupCount(players) == 2 && redis.getOrderGroupCount(scores) == 2;
+//    };
+//    bool completed = false;
+//    try
+//    {
+//        completed = registerEvent();
 //    }
 //    catch (const std::exception& error)
 //    {

@@ -6,12 +6,19 @@
 #include <vector>
 
 class HiRedisResultSet;
+struct HiRedisConfig;
 
 /** Redis封装内部工具类，集中放置多个类会复用但不适合放入CSystem的辅助逻辑
 */
 class HiRedisHelper
 {
 public:
+    /** 校验可在本地判定的端点、保活时间和回复读取限制
+    @param [in] config 待用于连接或延迟建连的配置
+    @return 有效时为空指针，否则返回静态错误文本
+    */
+    static const char* connectionConfigError(const HiRedisConfig& config);
+
     /** 判断Redis整型回复是否表示命令执行成功
     @param [in] result Redis命令结果对象
     @return 返回true表示结果存在、没有错误且整型值不小于0
