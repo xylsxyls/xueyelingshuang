@@ -68,13 +68,20 @@ public:
     */
     ~NetSenderServiceManaged();
 
+    /** 首次连接前配置三路队列使用的实际池
+    @param [in] bodies 正文存储配置
+    @param [in] records 记录存储配置
+    @return NI_OK或状态、配置、分配错误
+    */
+    int32_t configureQueuePools(const NetBufferPoolConfig& bodies, const LockFreeHashMapPoolConfig& records);
+
     /** 登记本服务并连接本机网关，不以PID代替认证
     @param [in] pid 本机网关PID
     @param [in] product 产品号，0为Account
     @param [in] proof 服务身份签名回调
     @param [in] context 身份回调上下文，借用至shutdown
     @param [in] listener 业务监听者，借用至关闭通知完成
-    @param [in] limit 请求限额，1至128
+    @param [in] limit 非零兼容请求协商提示，实际接纳由存储池决定
     @param [in] weight 服务负载权重
     @param [in] channels 独立通道容量，0使用网关默认值
     @return NI_OK启动，其余为负数且不对外发布半登记的服务
@@ -111,8 +118,6 @@ public:
 
 private:
     friend class NetSenderServiceManagedSink;
-    // 仅NetWorkTest核对真实有界队列的跨轮背压时序，不生成运行时测试接口。
-    friend class NetSenderServiceQueueTest;
 
     /** 生成非零服务代次并通知业务监听者，重复就绪视为协议错误
     */
@@ -227,12 +232,12 @@ private:
     */
     void fail(int32_t reason);
 
-    /** 查询三路队列及借用项的共享剩余额度，不修改状态
+    /** 临时申请广播所需的真实存储后归还，不替代后续入队分配
     @param [in] count 待新增项数
     @param [in] bytes 待新增正文总字节数
-    @return true表示两种额度都足够
+    @return NI_OK或真实池容量、分配错误
     */
-    bool room(uint32_t count, uint64_t bytes) const;
+    int32_t room(uint32_t count, uint64_t bytes);
 
     /** 复制消息到一条队列并保存入队时间
     @param [in] lane 0业务回调、1客户端、2内部依赖
@@ -296,7 +301,7 @@ private:
     uint32_t m_retryDelay;
     // 本服务产品号，0为公共Account服务
     uint32_t m_product;
-    // 单端点协商请求限额，connect接受1至128
+    // 单端点兼容请求协商提示，connect接受非零uint32
     uint32_t m_limit;
     // 主动失败时保存的关闭原因，正常停止为0
     int32_t m_reason;

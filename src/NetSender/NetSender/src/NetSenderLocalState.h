@@ -1,29 +1,72 @@
 ﻿#pragma once
 #include "NetSenderLocal.h"
 #include "NetSenderLocalPacket.h"
+#include "NetSenderLocalBuffer.h"
 #include "NetSenderIpcChannel.h"
 #include <deque>
 #include <map>
-#include "ReadWriteMutex/ReadWriteMutexAPI.h"
+#include "LockFreeHashMap/LockFreeHashMapAPI.h"
+#include "LockFreeQueue/LockFreeQueueAPI.h"
+#include <atomic>
 #include <string>
 #include <vector>
 #include <set>
 #include <array>
 
+class NetSenderLocalInboxLane;
+
+// 固定长度路由键，避免每条IPC输入构造堆字符串；目标号和远端OPEN号使用不同域
+struct NetSenderLocalRouteKey
+{
+public:
+    /** 复制回调期间的代次及已验证PID
+    @param [in] generation 16字节代次
+    @param [in] pid 正发送PID
+    @param [in] open true查找远端OPEN，false查找本地目标
+    */
+    NetSenderLocalRouteKey(const uint8_t* generation, int32_t pid, bool open);
+
+    /** 比较完整路由域，不只比较哈希
+    @param [in] other 另一固定键
+    @return 是否相同
+    */
+    bool operator==(const NetSenderLocalRouteKey& other) const;
+public:
+    // 随机通道身份，原样复制不改变协议字节序
+    std::array<uint8_t, 16> m_generation;
+    // 实际传输PID，不作为业务授权
+    int32_t m_pid;
+    // 本地目标和远端OPEN的域分隔
+    bool m_open;
+};
+
+// 无状态哈希器，支持并发const调用
+struct NetSenderLocalRouteHash
+{
+public:
+    /** 混合完整键；碰撞仍由完整相等比较处理
+    @param [in] key 固定路由键
+    @return 平台宽度的哈希
+    */
+    size_t operator()(const NetSenderLocalRouteKey& key) const;
+};
+
 // 从回调队列移交给唯一协议owner的消息；字节独占，失败通知不分配正文。
 struct NetSenderLocalInput
 {
 public:
+    // 回调发布至owner接管期间保留通道；进入owner队列前清空，避免所有权成环
+    std::shared_ptr<NetSenderLocalInboxLane> m_lane;
     // 实际ProcessWork发送PID，仅用于寻址，不作为业务授权。
     int32_t m_pid;
     // 收件箱登记的本地通道号；尚未识别的OPEN为0，绝不从网络包采用。
     uint64_t m_peer;
     // 正常输入为NI_OK；负数表示仅此通道的唯一接纳失败通知。
     int32_t m_reason;
-    // 验证后的NIP2种类，用于归还独立数据/控制槽位。
+    // 验证后的NIP2种类，用于协议分发；物理槽由正文租约独占归还
     uint32_t m_kind;
     // 本模块独占字节，回调复制一次，随后只转移所有权。
-    std::vector<uint8_t> m_bytes;
+    NetSenderLocalBuffer m_bytes;
 
 public:
     /** 创建空输入，不分配正文
@@ -54,7 +97,7 @@ private:
     NetSenderLocalInput& operator=(const NetSenderLocalInput& other);
 };
 
-// 单通道FIFO，正常数据4项、控制16项；未识别OPEN单独使用64项暂存入口。
+// owner独占FIFO；各消息的物理池槽覆盖排队及协议消费，不使用每通道条数限制
 class NetSenderLocalInboxLane
 {
 public:
@@ -72,15 +115,15 @@ public:
     uint64_t m_peer;
     // 服务端登记的远端代次；未识别或客户端尚未知时全零。
     std::array<uint8_t, 16> m_remote;
-    // 仍待交付的密文项数，不包含控制包。
-    uint32_t m_dataCount;
-    // 独立控制槽位，不能被四包数据窗口占用。
-    uint32_t m_controlCount;
     // 第一项接纳错误；后续输入丢弃直到owner移除此通道。
-    int32_t m_reason;
+    std::atomic<int32_t> m_reason;
+    // owner撤销路由后，旧快照只能释放输入，不能复活通道
+    std::atomic<bool> m_retired;
+    // owner已交付唯一失败通知，后续扫描不再重复排队
+    bool m_failureTaken;
     // 是否已连入全箱就绪链。
     bool m_queued;
-    // 就绪链前项，非拥有；所有访问在收件箱锁内。
+    // 就绪链前项，非拥有；仅协议owner访问。
     NetSenderLocalInboxLane* m_previous;
     // 就绪链后项，非拥有。
     NetSenderLocalInboxLane* m_next;
@@ -93,16 +136,51 @@ class NetSenderLocalInboxState
 {
 public:
     /** 创建停用的状态和独立OPEN入口
+    @param [in] pools 实际存储及并发入口池配置
     */
-    NetSenderLocalInboxState();
+    explicit NetSenderLocalInboxState(const NetSenderLocalInboxPools& pools = NetSenderLocalInboxPools());
+
+    /** 外部生命周期已封闭后回收全部入口；不允许与新receive或owner推进并发析构
+    */
+    ~NetSenderLocalInboxState();
+
+    /** owner撤销仅属于指定通道的键，失败后禁止继续创建新路由
+    @param [in] key 原绑定键
+    @param [in] lane 预期拥有者，不得删除其他通道的键
+    */
+    void eraseRoute(const NetSenderLocalRouteKey& key, const std::shared_ptr<NetSenderLocalInboxLane>& lane);
+
+    /** owner导入有界回调队列，路由/就绪链只由此执行者修改
+    */
+    void pump();
+
+    /** 竞争时定期让出CPU，不把CAS失败当成容量不足
+    @param [in,out] retries 本次调用的失败计数
+    */
+    static void pauseContention(uint32_t& retries);
+
+    /** 翻译路由登记结果，容量限制与真实分配失败分别报告
+    @param [in] result 底层实际结果，已提交优先于附带诊断
+    @return NI_OK或对应错误
+    */
+    static int32_t routeResult(const LockFreeHashMapResult& result);
+
+    /** 丢弃owner队列并归还正文池槽，不触碰在途生产者拥有的租约
+    @param [in,out] lane 本owner通道
+    */
+    void discard(NetSenderLocalInboxLane& lane);
+
+    /** 封闭回调入口并等已进入回调退出；只在start/stop回收边界调用
+    */
+    void quiesce();
 
     /** 空通道首次就绪时无分配追加，已有位置不变
-    @param [in,out] lane 本状态拥有的通道，锁内调用
+    @param [in,out] lane 本状态拥有的通道，owner调用
     */
     void queue(NetSenderLocalInboxLane& lane);
 
     /** 从就绪链摘除，不删除对象
-    @param [in,out] lane 本状态拥有的通道，锁内调用
+    @param [in,out] lane 本状态拥有的通道，owner调用
     */
     void unqueue(NetSenderLocalInboxLane& lane);
 
@@ -113,7 +191,7 @@ public:
     void fail(NetSenderLocalInboxLane& lane, int32_t reason);
 
     /** 登记目标后将同源的待处理OPEN移到同一FIFO，防止后续DATA越过握手尾片
-    @param [in,out] lane 已登记且已知远端代次的通道，锁内调用
+    @param [in,out] lane 已登记且已知远端代次的通道，owner调用
     */
     void adoptOpen(NetSenderLocalInboxLane& lane);
 
@@ -122,20 +200,73 @@ public:
     void clear();
 
 public:
-    // 只保护收件箱元数据与字节所有权，不在锁内调用业务或ProcessWork。
-    ReadWriteMutex m_mutex;
-    // 随机目标到稳定独占通道，最多64；同时绑定PID减少无关输入影响。
-    std::map<std::array<uint8_t, 16>, std::unique_ptr<NetSenderLocalInboxLane>> m_generations;
+    // start借用到stop的quiesce完成；回调发布后通知，不拥有执行循环
+    NetExecution* m_execution;
+    // 非独占回调借用：高位关闭，低31位在途数；新输入不等待其他生产者
+    std::atomic<uint32_t> m_admission;
+    // 路由查询或撤销失败时原子置位；owner结算旧通道并拒绝新绑定，静止clear后才复位
+    std::atomic<bool> m_routeFailed;
+    // 构造期实际池初始化结果，start失败时不开放回调
+    int32_t m_initializationResult;
+    // 基础池必须晚于所有输入和owner持有的租约销毁
+    NetBufferPool m_dataPool;
+    // 控制消息独立池
+    NetBufferPool m_controlPool;
+    // 未识别OPEN独立池
+    NetBufferPool m_openPool;
+    // 共同MPSC入口转交独占指针，保留同生产者OPEN/DATA/ACK/END发布顺序
+    LockFreeQueue<NetSenderLocalInput*> m_incoming;
+    // 发布不可变绑定；值副本保留通道生命期，删除路由不销毁正在复制输入的通道
+    LockFreeHashMap<NetSenderLocalRouteKey, std::shared_ptr<NetSenderLocalInboxLane>, NetSenderLocalRouteHash> m_routes;
+    // 随机目标到稳定通道；并发路由物理池决定可登记量，PID仅作运输绑定
+    std::map<std::array<uint8_t, 16>, std::shared_ptr<NetSenderLocalInboxLane>> m_generations;
     // 未识别OPEN独立限额，洪泛只能影响新连接，不能终止已有通道。
-    NetSenderLocalInboxLane m_open;
+    std::shared_ptr<NetSenderLocalInboxLane> m_open;
     // 就绪链首项，take为常数时间并轮转仍有输入的通道。
     NetSenderLocalInboxLane* m_first;
     // 就绪链末项。
     NetSenderLocalInboxLane* m_last;
+    // 首次start后禁止替换物理池，stop不使外部未释放租约失效
+    bool m_started;
     // start到stop期间接纳输入。
     bool m_active;
     // 只有服务端接纳目标全零的OPEN。
     bool m_acceptOpen;
+};
+
+// 单次回调的非独占生命周期借用；不同回调并行，关闭只拒绝新进入者
+class NetSenderLocalInboxCall
+{
+public:
+    /** 进入当前接纳代次，尚未读取任何可重置配置
+    @param [in,out] state 稳定收件箱状态
+    */
+    explicit NetSenderLocalInboxCall(NetSenderLocalInboxState& state);
+
+    /** 完成所有队列/错误发布后归还
+    */
+    ~NetSenderLocalInboxCall();
+
+    /** 查询本次是否可读取接纳配置
+    @return 是否已接纳
+    */
+    bool accepted() const;
+private:
+    /** 禁止复制借用
+    @param [in] other 原对象
+    */
+    NetSenderLocalInboxCall(const NetSenderLocalInboxCall& other);
+
+    /** 禁止重复归还
+    @param [in] other 原对象
+    @return 不可调用
+    */
+    NetSenderLocalInboxCall& operator=(const NetSenderLocalInboxCall& other);
+private:
+    // 由外层Hub/宿主保留至本次回调完成
+    NetSenderLocalInboxState& m_state;
+    // 仅成功时归还借用计数
+    bool m_accepted;
 };
 
 // 一片密文的独占存储及消费位置，只能移动不能复制
@@ -146,8 +277,8 @@ public:
     uint64_t m_packet;
     // 当前已消费字节数，包含内部信封偏移
     uint32_t m_offset;
-    // 本层独占字节存储或队列累计字节数，按所属类型使用
-    std::vector<uint8_t> m_bytes;
+    // 本层独占物理正文槽，移动时连同池所有权转交
+    NetSenderLocalBuffer m_bytes;
 
 public:
     /** 创建空的独占缓冲，兼容v120不隐式生成移动操作的行为
@@ -231,20 +362,18 @@ public:
     uint64_t m_pingTime;
     // 待回心跳号，0表示没有在途心跳
     uint64_t m_pingId;
-    // 本代独占的四包发送及累计接收窗口
+    // 本代独占的发送和累计接收序号，不按未确认包数阻止发送
     NetSenderLocalWindow m_window;
     // 只绑定本代ProcessWork接收器的反向发送通道
     NetSenderIpcChannel m_sender;
     // TLS模式的独占协议连接，Raw模式为空
     std::unique_ptr<NetInterfaceConnection> m_connection;
-    // 顺序拥有的最多四个完整IPC密文片
+    // 顺序拥有完整IPC密文片，每片持续占用收件箱实际正文池
     std::deque<NetSenderLocalChunk> m_input;
     // Raw模式的独占NTW3解码器，TLS模式为空
     std::unique_ptr<NetInterfaceTunnel> m_rawDecoder;
     // Raw待发记录，正文已经复制，按入队顺序分片
     std::deque<NetSenderLocalChunk> m_rawOutput;
-    // Raw队列中尚未交付IPC的字节总量
-    uint32_t m_rawOutputBytes;
     // Raw监听者首次拒绝当前完整记录的毫秒，0表示未背压
     uint64_t m_rawBlockedSince;
 };
@@ -262,11 +391,17 @@ public:
     */
     ~NetSenderLocalState();
 
+    /** 初始化实际通道池，预热提示不会成为通道接纳阈值
+    @param [in] initialPeers 非零启动预热槽数，不能超过显式物理池上限
+    @return NI_OK或配置/分配错误
+    */
+    int32_t preparePeers(uint32_t initialPeers);
+
     /** 复制TLS配置并启用收件箱
     @param [in] tls 配置
     @param [in] listener 监听者
     @param [in] server 模式
-    @param [in] maximum 通道上限
+    @param [in] maximum 启动预热提示，不是通道接纳阈值
     @return OK或负数
     */
     int32_t configure(const NetInterfaceTlsOptions& tls, NetSenderLocalListener* listener, bool server, uint32_t maximum);
@@ -276,7 +411,7 @@ public:
     @param [in] context 随机上下文
     @param [in] listener 原始记录监听
     @param [in] server 是否监听
-    @param [in] maximum 本机代次数
+    @param [in] maximum 启动预热提示，不是通道接纳阈值
     @return NI_OK或错误
     */
     int32_t configureRaw(NetInterfaceEntropyFunction entropy, void* context, NetSenderLocalRawListener* listener, bool server, uint32_t maximum);
@@ -362,6 +497,8 @@ public:
     NetSenderLocalRawListener* m_rawListener;
     // 本实例固定TLS参数，指针指向下列自有副本或已约定的宿主上下文
     NetInterfaceTlsOptions m_options;
+    // 新本机TLS连接的帧池配置，运输启动后不可替换
+    std::unique_ptr<NetConnectionPoolConfig> m_connectionPools;
     // 复制的受信任CA字节
     std::vector<uint8_t> m_authority;
     // 复制的本地服务证书字节
@@ -370,16 +507,16 @@ public:
     std::vector<uint8_t> m_privateKey;
     // 复制的TLS验证域名
     std::string m_hostname;
-    // owner独占的活跃通道表，最多64条
-    std::map<uint64_t, std::unique_ptr<NetSenderLocalPeer>> m_peers;
+    // Raw输出的物理正文池，须比全部通道队列晚销毁
+    std::unique_ptr<NetBufferPool> m_outputPool;
+    // 后续启动使用的实际通道池配置，只由生命周期owner修改
+    std::unique_ptr<LockFreeHashMapPoolConfig> m_peerConfig;
+    // 实际通道对象池，必须晚于全部通道回收；原maximum参数只作启动预热提示
+    std::unique_ptr<NetObjectPool<NetSenderLocalPeer>> m_peerPool;
+    // owner独占的活跃通道引用表，地址不受索引增长影响
+    std::map<uint64_t, NetObjectReference<NetSenderLocalPeer>> m_peers;
     // 实际ProcessWork发送PID，仅用于寻址，不作为业务授权
     int32_t m_pid;
-    // 本次初始化验证过的并发通道上限
-    uint32_t m_maximum;
-    // 当前一秒窗口已接纳的OPEN数量
-    uint32_t m_acceptCount;
-    // 当前OPEN限速窗口起点毫秒
-    uint64_t m_acceptWindow;
     // 已分配的最大本地通道号，不回绕复用
     uint64_t m_lastPeer;
     // 已分配的最大心跳号，不回绕复用

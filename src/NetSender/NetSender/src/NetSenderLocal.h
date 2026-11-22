@@ -2,6 +2,7 @@
 #include "NetSenderMacro.h"
 #include "NetInterface/NetInterfaceAPI.h"
 #include "NetSenderLocalRawListener.h"
+#include "NetSenderLocalInboxPools.h"
 #include "ProcessWork/ProcessWorkAPI.h"
 #include <memory>
 
@@ -16,12 +17,17 @@ struct NetSenderLocalInput;
 class NetSenderAPI NetSenderLocalInbox : public ProcessReceiveCallback
 {
     friend class NetSenderLocalState;
-    // 在库注释main及NetWorkTest中定义，用于验证隔离接纳，不生成测试导出
-    friend class NetSenderLocalHubTest;
 public:
-    /** 创建停用的分通道收件箱，不注册或初始化ProcessWork；最多64条四包数据窗口
+    /** 创建停用的分通道收件箱，不注册或初始化ProcessWork；容量由实际池决定
     */
     NetSenderLocalInbox();
+
+    /** 在首次start或注册到ProcessWork之前替换实际接收池配置
+    不得与任何本对象调用并发；外部不得仍持有旧收件箱输入租约。
+    @param [in] pools 数据、控制、OPEN、入口节点和路由池配置
+    @return NI_OK或配置、内存、状态错误；失败保留原配置
+    */
+    int32_t configurePools(const NetSenderLocalInboxPools& pools);
 
     /** 释放队列；宿主必须已经uninitReceive收敛原回调
     */
@@ -35,7 +41,7 @@ public:
     */
     virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type);
 
-    /** 停止接纳并释放本箱缓存，不改ProcessWork单例
+    /** 唯一协议owner停止接纳并等在途回调退出后释放缓存，不改ProcessWork单例；不能在原接收回调内调用
     */
     void stop();
 
@@ -116,6 +122,25 @@ public:
 class NetSenderAPI NetSenderLocal
 {
 public:
+    /** 首次listen/connect前配置透明传输输出的实际正文池
+    @param [in] config 五级正文池配置，不额外设置排队条数上限
+    @return NI_OK或配置、内存、状态错误；失败保留原池
+    */
+    int32_t configureOutputPool(const NetBufferPoolConfig& config);
+
+    /** 在listen/connect之前配置实际通道对象池；只由生命周期owner串行调用
+    @param [in] config 真实初始/最大槽数及增长策略，包含通道内发送器和生命周期状态
+    @return NI_OK或配置/内存/状态错误；失败不替换旧配置
+    */
+    int32_t configurePeerPool(const LockFreeHashMapPoolConfig& config);
+
+    /** 首次连接前复制TLS帧池配置；不得与本对象其他调用并发
+    池资源在创建物理连接时申请并验证，失败走原有连接失败路径；不修改其他连接。
+    @param [in] config 独立数据/控制记录及正文的基础池配置
+    @return NI_OK配置已复制；状态、内存或不支持错误
+    */
+    int32_t configureConnectionPools(const NetConnectionPoolConfig& config);
+
     /** 借用安全收件箱，生命周期须覆盖本对象
     @param [in] inbox 已注册到原ProcessWork的收件箱
     */
@@ -128,7 +153,7 @@ public:
     /** 接受本机TLS连接，不依据PID或进程名称自动信任服务
     @param [in] tls server=1，证书/私钥复制，entropy必须提供强随机且上下文持续有效
     @param [in] listener 借用到shutdown
-    @param [in] maximum 1至64个通道，默认32
+    @param [in] maximum 非零启动预热提示，默认32；实际总容量由configurePeerPool决定
     @return OK或负数错误
     */
     int32_t listen(const NetInterfaceTlsOptions& tls, NetSenderLocalListener* listener, uint32_t maximum = 32);
@@ -146,7 +171,7 @@ public:
     @param [in] entropy 强随机代次源，不能为空
     @param [in] context 随机上下文，借用至shutdown
     @param [in] listener 借用监听者
-    @param [in] maximum 1至64
+    @param [in] maximum 非零启动预热提示；实际总容量由configurePeerPool决定
     @return NI_OK或错误；身份仍由端点管理/业务TLS验证
     */
     int32_t listenRaw(NetInterfaceEntropyFunction entropy, void* context, NetSenderLocalRawListener* listener, uint32_t maximum = 32);
@@ -161,14 +186,14 @@ public:
     */
     int32_t connectRaw(int32_t pid, NetInterfaceEntropyFunction entropy, void* context, NetSenderLocalRawListener* listener, uint64_t& peer);
 
-    /** 复制一个外层路由记录，分片仍使用原NIP2窗口
+    /** 复制一个外层路由记录，分片使用NIP2有序编号，ACK不限制发送数量
     @param [in] peer 原生IPC代次
     @param [in] record NTW3记录，正文必须已由端点保护
     @return NI_OK、NI_LIMIT_EXCEEDED未接纳或错误
     */
     int32_t sendRecord(uint64_t peer, const NetInterfaceTunnelRecord& record);
 
-    /** 有界驱动收件箱/TLS/4包确认窗口，绝不调用旧阻塞send
+    /** 分轮驱动收件箱/TLS及累计确认，绝不调用旧阻塞send
     @return 启动且未停止为true
     */
     bool poll();

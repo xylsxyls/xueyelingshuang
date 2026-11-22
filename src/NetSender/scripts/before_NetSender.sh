@@ -23,14 +23,14 @@ fi
 librariesrely+=($'project\tProcessWork\t'"$ProcessWork_dlllib")
 
 #--------------------------------------------------------------------
-ProtoMessage_bit=$1
-ProtoMessage_dlllib=$2
-ProtoMessage_debugRelease=$3
-ProtoMessage_allSame=$4
+ProtoMessageManager_bit=$1
+ProtoMessageManager_dlllib=$2
+ProtoMessageManager_debugRelease=$3
+ProtoMessageManager_allSame=$4
 if [[ $4 != only ]]; then
-    "$CLOUD_REBUILD" ProtoMessage "$ProtoMessage_bit" "$ProtoMessage_dlllib" "$ProtoMessage_debugRelease" "$ProtoMessage_allSame"
+    "$CLOUD_REBUILD" ProtoMessageManager "$ProtoMessageManager_bit" "$ProtoMessageManager_dlllib" "$ProtoMessageManager_debugRelease" "$ProtoMessageManager_allSame"
 fi
-librariesrely+=($'project\tProtoMessage\t'"$ProtoMessage_dlllib")
+librariesrely+=($'project\tProtoMessageManager\t'"$ProtoMessageManager_dlllib")
 
 #--------------------------------------------------------------------
 NetInterface_bit=$1
@@ -51,5 +51,25 @@ if [[ $4 != only ]]; then
     "$CLOUD_REBUILD" CorrespondParam "$CorrespondParam_bit" "$CorrespondParam_dlllib" "$CorrespondParam_debugRelease" "$CorrespondParam_allSame"
 fi
 librariesrely+=($'project\tCorrespondParam\t'"$CorrespondParam_dlllib")
+
+#--------------------------------------------------------------------
+LockFreeHashMap_bit=$1
+LockFreeHashMap_dlllib=$2
+LockFreeHashMap_debugRelease=$3
+LockFreeHashMap_allSame=$4
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" LockFreeHashMap "$LockFreeHashMap_bit" "$LockFreeHashMap_dlllib" "$LockFreeHashMap_debugRelease" "$LockFreeHashMap_allSame"
+fi
+librariesrely+=($'project\tLockFreeHashMap\t'"$LockFreeHashMap_dlllib")
+
+#--------------------------------------------------------------------
+LockFreeQueue_bit=$1
+LockFreeQueue_dlllib=$2
+LockFreeQueue_debugRelease=$3
+LockFreeQueue_allSame=$4
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" LockFreeQueue "$LockFreeQueue_bit" "$LockFreeQueue_dlllib" "$LockFreeQueue_debugRelease" "$LockFreeQueue_allSame"
+fi
+librariesrely+=($'project\tLockFreeQueue\t'"$LockFreeQueue_dlllib")
 
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return

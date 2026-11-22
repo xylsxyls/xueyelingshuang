@@ -3,7 +3,7 @@
 
 class NetSenderServiceProxyState;
 
-/** 有界内部服务转发器，不解释业务字段；父子上下文仍由端点路由器验证。
+/** 使用真实存储池的内部服务转发器，不解释业务字段；父子上下文仍由端点路由器验证。
 宿主只把需要内部服务0处理的请求交给本对象，其余业务自己处理。
 */
 class NetSenderAPI NetSenderServiceProxy
@@ -18,14 +18,21 @@ public:
     */
     ~NetSenderServiceProxy();
 
-    /** 复制根请求、内部响应或根取消；正文失败或超预算时不提交状态
+    /** 首次accept前配置实际调用记录及正文池，全部接口由同一执行者调用
+    @param [in] bodies 分级正文池参数，不再另设8MiB累计正文门槛
+    @param [in] records 调用记录池参数，不再另设32条请求门槛
+    @return NI_OK或状态、配置、分配错误，失败保留原配置
+    */
+    int32_t configurePools(const NetBufferPoolConfig& bodies, const LockFreeHashMapPoolConfig& records);
+
+    /** 复制根请求、内部响应或根取消；正文复制失败或实际池耗尽时不提交状态
     @param [in] frame 已认证服务交付的RPC帧，正文最多1048560字节，借用到返回
     @param [in] origin 网关附加的根来源，响应及取消必须精确匹配
     @return true已处理；false仅为无副作用背压，可用原输入重试
     */
     bool accept(const NetInterfaceFrame& frame, const NetInterfaceOrigin& origin);
 
-    /** 非阻塞推进最多32条；固定槽位合计8MiB正文，外加每槽16字节头
+    /** 非阻塞推进当前活跃调用；空队列立即返回，不等待业务回复
     子请求在发送现场取号；首个子请求背压后不让后继子请求越过，响应及取消仍可推进。
     本层不在poll中分配整包；终止或回调外reset时擦除拥有正文。禁止重入或析构。
     */
@@ -40,8 +47,6 @@ public:
     */
     bool valid() const;
 private:
-    // 仅注释main和NetWorkTest核对真实槽位与状态转换。
-    friend class NetSenderServiceProxyTest;
     /** 禁止复制独占关联状态
     @param [in] other 不可复制对象
     */

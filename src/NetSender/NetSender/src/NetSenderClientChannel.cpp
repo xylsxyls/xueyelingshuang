@@ -25,6 +25,24 @@ int32_t NetSenderClientChannel::Entropy(void* context, uint8_t* output, uint32_t
     return CSystem::secureRandomBytes(output, size) ? 0 : -1;
 }
 
+int32_t NetSenderClientChannel::configureConnectionPools(const NetConnectionPoolConfig& config)
+{
+    if (!m_closed)
+    {
+        return NI_INVALID_STATE;
+    }
+    try
+    {
+        std::unique_ptr<NetConnectionPoolConfig> copy(new NetConnectionPoolConfig(config));
+        m_connectionPools.swap(copy);
+        return NI_OK;
+    }
+    catch (...)
+    {
+        return NI_NO_MEMORY;
+    }
+}
+
 int32_t NetSenderClientChannel::connect(const char* address, uint32_t port, const NetInterfaceTlsOptions& options,
                                         NetTransportListener* listener, uint64_t& peer)
 {
@@ -42,6 +60,14 @@ int32_t NetSenderClientChannel::connect(const char* address, uint32_t port, cons
         NetSenderLocal* local = new NetSenderLocal(*m_inbox);
         delete m_local;
         m_local = local;
+        if (m_connectionPools)
+        {
+            const int32_t configured = m_local->configureConnectionPools(*m_connectionPools);
+            if (configured != NI_OK)
+            {
+                return configured;
+            }
+        }
         auto tls = options;
         if (tls.entropy == nullptr)
         {

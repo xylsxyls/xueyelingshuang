@@ -20,10 +20,17 @@ public:
     */
     ~NetSenderLink();
 
+    /** 启动前配置本层实际连接记录池；底层运输的存储由其自身配置
+    @param [in] config 真实槽数及增长策略；由唯一生命周期owner串行调用
+    @return NI_OK或配置/内存/状态错误，失败保留旧池
+    */
+    int32_t configurePeerPool(const LockFreeHashMapPoolConfig& config);
+
+
     /** 网关本机服务管理监听，服务仍需独立证明，不能仅凭PID注册
     @param [in] options NODE服务端配置及服务授权回调，复制身份材料
     @param [in] listener 借用监听者
-    @param [in] maximum 1至64个代次
+    @param [in] maximum 非零启动预热提示，实际通道容量由底层池配置决定
     @return NI_OK或错误
     */
     int32_t listen(const NetInterfaceLinkOptions& options, NetLinkTransportListener* listener, uint32_t maximum = 32);

@@ -23,6 +23,10 @@ class NetSenderServiceState
   public:
     // 借用至服务停止及ProcessWork接收收敛
     NetSenderLocalInbox* m_inbox;
+    // 可选三路消息正文池配置，只在首次connectManaged前替换
+    std::unique_ptr<NetBufferPoolConfig> m_queueBodies;
+    // 与正文配置成对提交，非法配置不修改旧值
+    std::unique_ptr<LockFreeHashMapPoolConfig> m_queueRecords;
     // 当前管理协议服务实现；非空时由该实例处理服务路由与内部依赖
     std::unique_ptr<NetSenderServiceManaged> m_managed;
     // 显式旧链路模式的本机TLS运输，借用m_inbox

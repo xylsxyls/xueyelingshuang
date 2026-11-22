@@ -56,8 +56,24 @@ int32_t NetSenderIpcChannel::trySend(const uint8_t* data, uint32_t size, int32_t
     {
         return NET_SENDER_IPC_TOO_LARGE;
     }
-    // 两套公开状态码前五个值保持一致；v2提交后不重发正文，通知丢失由接收侧有限等待补查。
-    return m_state->m_channel->trySend(reinterpret_cast<const char*>(data), static_cast<int32_t>(size), type);
+    const int32_t result = m_state->m_channel->trySend(reinterpret_cast<const char*>(data), static_cast<int32_t>(size), type);
+    // 显式翻译依赖状态，避免依赖新增错误码后被当成已提交或不可恢复的连接故障。
+    switch (result)
+    {
+    case PROCESS_WORK_SENT: return NET_SENDER_IPC_ACCEPTED;
+    case PROCESS_WORK_BUSY: return NET_SENDER_IPC_BUSY;
+    case PROCESS_WORK_INVALID: return NET_SENDER_IPC_INVALID;
+    case PROCESS_WORK_TOO_LARGE: return NET_SENDER_IPC_TOO_LARGE;
+    case PROCESS_WORK_NO_MEMORY: return NET_SENDER_IPC_NO_MEMORY;
+    case PROCESS_WORK_CAPACITY: return NET_SENDER_IPC_CAPACITY;
+    case PROCESS_WORK_RESOURCE: return NET_SENDER_IPC_RESOURCE;
+    default: return NET_SENDER_IPC_UNAVAILABLE;
+    }
+}
+
+bool NetSenderIpcChannel::retryable(int32_t result)
+{
+    return result == NET_SENDER_IPC_BUSY || result == NET_SENDER_IPC_CAPACITY || result == NET_SENDER_IPC_RESOURCE;
 }
 
 int32_t NetSenderIpcChannel::flushNotifications()

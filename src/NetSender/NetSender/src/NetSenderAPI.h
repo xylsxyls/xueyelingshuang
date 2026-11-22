@@ -20,23 +20,7 @@
 #include "NetSenderServiceProxy.h"
 #include "NetSenderClientChannel.h"
 
-#ifdef NET_GATEWAY_TEST_ACCESS
-// 仅静态白盒测试请求这些声明；正式调用方不得依赖内部布局。
-#include "NetSenderLinkAuditTest.h"
-#include "NetSenderLocalHub.h"
-#include "NetSenderLocalHubTest.h"
-#include "NetSenderLocalState.h"
-#include "NetSenderServiceGatewayState.h"
-#include "NetSenderServiceGatewayTest.h"
-#include "NetSenderServiceManaged.h"
-#include "NetSenderServiceOutgoingTest.h"
-#include "NetSenderServiceProxyState.h"
-#include "NetSenderServiceProxyTest.h"
-#include "NetSenderServiceQueue.h"
-#include "NetSenderServiceQueueTest.h"
-#include "NetSenderServiceState.h"
-#include "NetSenderGatewayLaunch.h"
-#endif
+
 
 #ifdef _WIN32
 #if defined _DEBUG

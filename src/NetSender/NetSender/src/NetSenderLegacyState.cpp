@@ -1,6 +1,6 @@
 ﻿#include "NetSenderLegacyState.h"
 #include "NetSenderMacro.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include "NetSender.h"
 #include "NetSenderLegacy.h"
 #include "CSystem/CSystemAPI.h"

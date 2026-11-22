@@ -59,15 +59,27 @@ public:
     */
     ~NetSenderServiceGateway();
 
+    /** 启动前配置真实会话池，并向管理网关公开其可接纳槽数
+    @param [in] config 基础池配置；maximumCapacity=-1时按协议uint32表示范围公布
+    @return NI_OK或配置、内存、生命周期错误，失败保持原配置
+    */
+    int32_t configureClientPool(const LockFreeHashMapPoolConfig& config);
+
+    /** 在connect之前设置每条逻辑连接声明的密文字节窗口；不限制业务请求数
+    @param [in] bytes 接收信用，64KiB至1MiB且为16KiB倍数，默认1MiB
+    @return NI_OK、NI_INVALID_ARGUMENT或已开始连接时NI_INVALID_STATE
+    */
+    int32_t configureReceiveWindow(uint32_t bytes);
+
     /** 自动生成业务私钥/CSR，管理认证后由网关签发对应逻辑服务证书
     @param [in] pid 本机网关PID，仅为运输地址
     @param [in] product 逻辑服务号，0只允许可信服务访问
     @param [in] proof 服务器专属宿主的注册证明回调，不能编进公共客户端库
     @param [in] context 注册证明上下文，借用至shutdown
     @param [in] listener 借用监听者
-    @param [in] limit 并发逻辑连接及协商在途上限，1至128
+    @param [in] limit 非零兼容握手请求提示；会话容量由实际客户端池决定
     @param [in] weight 新连接分配权重，1至1000
-    @param [in] channels 允许的逻辑客户端数，0采用limit，非零为1至512
+    @param [in] channels 兼容的实际会话池最大槽数；0使用configureClientPool配置，非零初始化对应真实池，不另设数量门槛
     @return NI_OK启动或错误，不代表业务可用
     */
     int32_t connect(int32_t pid, uint32_t product, NetInterfaceLinkServiceProof proof, void* context,
@@ -110,11 +122,10 @@ public:
 private:
     friend class NetSenderServiceOutgoingTransport;
     // 仅隔离测试建立不联网的生命周期夹具，不添加运行时入口。
-    friend class NetSenderServiceOutgoingTest;
 public:
     /** 仅在尚无业务客户端时配置公开RPC压缩白名单
     @param [in] types 调用期间借用的消息类型数组，count为0时可为空
-    @param [in] count 允许压缩的类型数，0至64
+    @param [in] count 允许压缩的类型数，0清空
     @return NI_OK或参数、状态、内存错误
     */
     int32_t configureCompression(const uint32_t* types, uint32_t count);

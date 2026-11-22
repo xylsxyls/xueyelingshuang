@@ -29,9 +29,7 @@ public:
     // 路由器给出的真实来源，不能由业务正文覆盖
     NetInterfaceOrigin m_origin;
     // 独占业务正文；借用结束前不移动或清空
-    std::unique_ptr<uint8_t[]> m_bytes;
-    // 实际分配大小，不参与待发字节计数；复用仅保留小缓冲
-    uint32_t m_capacity;
+    NetBufferLease m_bytes;
     // 目标端点，由路由层解释
     uint64_t m_endpoint;
     // 首次进入本库队列的时刻，背压重试不刷新
@@ -40,25 +38,57 @@ public:
     uint64_t m_blocked;
     // 可选的直接目标物理通道，0时按端点映射
     uint64_t m_channel;
-    // 队列或空闲链中的后继；256表示末尾
+    // 队列或空闲链中的后继；UINT32_MAX表示末尾
     uint32_t m_next;
-    // 队列中的前驱；256表示队首或未排队
+    // 队列中的前驱；UINT32_MAX表示队首或未排队
     uint32_t m_previous;
     // 0至2为排队，3至5为对应队列的借用，6为空闲
     uint32_t m_lane;
 };
 
-// 三路队列共享256槽和8MiB；借用项仍属于本拥有者并继续占用额度。
+// 指向实际池对象的稳定编号目录；目录扩容不移动正文或回调借用对象
+struct NetSenderServiceQueueEntry
+{
+public:
+    // 实际记录租约，空闲目录项不占对象池
+    NetObjectReference<NetSenderServiceManagedFrame> m_value;
+    // 空闲目录项后继，不再按固定数组构造空闲链
+    uint32_t m_next;
+
+public:
+    /** 初始化无对象目录项
+    */
+    NetSenderServiceQueueEntry();
+};
+
+// 三路队列共享实际记录及正文池；借用项仍占物理存储，不额外设置排队计数门槛
 class NetSenderServiceQueue
 {
 public:
-    /** 建立固定空闲链及三条空队列
+    /** 建立实际存储池及三条空队列
     */
     NetSenderServiceQueue();
 
     /** 最终释放所有槽及复用缓冲；调用者必须先结束借用
     */
     ~NetSenderServiceQueue();
+
+    /** 在首次接纳前替换实际记录和正文池，失败保留原配置
+    @param [in] bodies 正文分级池配置
+    @param [in] records 真实记录槽配置
+    @return NI_OK或状态、配置、分配错误
+    */
+    int32_t configurePools(const NetBufferPoolConfig& bodies, const LockFreeHashMapPoolConfig& records);
+
+    /** 查询初始化状态
+    @return NI_OK或底层池初始化错误
+    */
+    int32_t status() const;
+
+    /** 依据真实记录槽大小生成默认参数
+    @return 初始128槽，最大约8MiB实际记录存储
+    */
+    static LockFreeHashMapPoolConfig defaultRecords();
 
     /** 原子接纳消息；匹配尚未交付的请求取消时直接删除该请求
     @param [in] lane 0业务回调、1客户端输出、2内部依赖
@@ -71,22 +101,22 @@ public:
     int32_t push(uint32_t lane, uint64_t endpoint, const NetInterfaceFrame& frame,
         const NetInterfaceOrigin& origin, uint64_t now);
 
-    /** 查询共享预算，包含当前回调借用的消息
+    /** 实际预申请相同大小的广播项并立即归还，不承诺后续重入操作后仍有容量
     @param [in] count 新增条数
-    @param [in] bytes 新增正文字节数
-    @return 是否能完整接纳
+    @param [in] bytes 相同长度消息的合计正文大小；必须能被count整除
+    @return NI_OK、真实池容量或分配错误；结果不是后续操作的存储预留
     */
-    bool room(uint32_t count, uint64_t bytes) const;
+    int32_t room(uint32_t count, uint64_t bytes);
 
     /** 查看指定队列第一项
     @param [in] lane 0至2
-    @return 槽号或256
+    @return 槽号或UINT32_MAX
     */
     uint32_t first(uint32_t lane) const;
 
     /** 查看指定队列最后一项
     @param [in] lane 0至2
-    @return 槽号或256
+    @return 槽号或UINT32_MAX
     */
     uint32_t last(uint32_t lane) const;
 
@@ -150,24 +180,26 @@ private:
     */
     void detach(uint32_t index);
 
-    // 固定拥有槽；只有FREE可被新接纳使用
-    NetSenderServiceManagedFrame m_items[256];
-    // 三条队首，256表示空
+    // 正文池在记录及其目录之后销毁，借用完成前不释放存储
+    std::unique_ptr<NetBufferPool> m_bodies;
+    // 每条消息对应一个真实池对象
+    std::unique_ptr<NetObjectPool<NetSenderServiceManagedFrame>> m_records;
+    // 稳定编号目录，只包含引用；正文对象不会随vector扩容移动
+    std::vector<NetSenderServiceQueueEntry> m_items;
+    // 三条队首，UINT32_MAX表示空
     uint32_t m_heads[3];
-    // 三条队尾，256表示空
+    // 三条队尾，UINT32_MAX表示空
     uint32_t m_tails[3];
-    // 三条排队计数，不含借用
+    // 三条排队统计，不含借用，不参与接纳判断
     uint32_t m_sizes[3];
-    // 空闲链首
+    // 可复用目录项链首，UINT32_MAX表示需要增长目录
     uint32_t m_free;
-    // 当前全部拥有项数，包含借用
+    // 当前拥有项数，包含借用，仅作统计
     uint32_t m_count;
-    // 当前全部正文大小，包含借用
+    // 当前有效正文字节数，包含借用，仅作统计
     uint64_t m_bytes;
-    // 最多保留一份已擦除、容量不超过4KiB的小缓冲
-    std::unique_ptr<uint8_t[]> m_spare;
-    // 复用缓冲容量，无缓冲时为0
-    uint32_t m_spareCapacity;
+    // 首次成功接纳后不得替换实际池
+    bool m_used;
 
     /** 禁止复制独占消息拥有者
     @param [in] other 不允许复制的源对象
@@ -207,7 +239,7 @@ public:
 private:
     // 借用至析构，队列必须覆盖本守卫
     NetSenderServiceQueue& m_queue;
-    // 256表示责任已经交还队列
+    // UINT32_MAX表示责任已经交还队列
     uint32_t m_index;
     /** 禁止复制借用释放责任
     @param [in] other 不允许复制的守卫

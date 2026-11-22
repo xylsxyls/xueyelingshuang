@@ -9,7 +9,7 @@ enum NetSenderIpcResult
 {
     // 正文完整提交到共享区，不代表业务完成；v2不在本层保留待通知队列
     NET_SENDER_IPC_ACCEPTED = 0,
-    // 未发布，登记待批准、共享块满或竞争，调用者可在截止时间内保序重试
+    // 未发布，仅表示仍有容量时发生CAS竞争
     NET_SENDER_IPC_BUSY = 1,
     // 参数或共享布局不合法
     NET_SENDER_IPC_INVALID = -1,
@@ -17,8 +17,12 @@ enum NetSenderIpcResult
     NET_SENDER_IPC_UNAVAILABLE = -2,
     // 超过声明或实际共享区容量，未发布
     NET_SENDER_IPC_TOO_LARGE = -3,
-    // 旧版兼容状态；v2不返回此值，提交后不因通知失败重发正文
-    NET_SENDER_IPC_UNCERTAIN = -4
+    // 本地对象或映射申请失败，未发布
+    NET_SENDER_IPC_NO_MEMORY = -4,
+    // 共享正文或队列段没有剩余容量，未发布
+    NET_SENDER_IPC_CAPACITY = -5,
+    // 登记或元数据尚未就绪，或容量正保留给先到等待者，未发布
+    NET_SENDER_IPC_RESOURCE = -6
 };
 
 // 桌面单执行者有界IPC发送器，与ProcessWork的占位、发布和故障恢复顺序配对。
@@ -42,13 +46,19 @@ public:
     */
     int32_t open(int32_t destinationPid, int32_t senderPid, uint32_t payloadLimit);
 
-    /** 共用v2通道做有界申请与提交，登记未完成或满时返回BUSY，不调用阻塞send
+    /** 有界申请与提交，不等待容量；生命周期owner稍后保序重试临时背压
     @param [in] data size非0时不可空，返回后不借用
     @param [in] size 消息体字节数
     @param [in] type 非负MessageType编号
-    @return ACCEPTED/BUSY或负数错误；v2不返回UNCERTAIN，提交成功不因通知丢失重发
+    @return NetSenderIpcResult；只有ACCEPTED表示提交，其他状态均未提交
     */
     int32_t trySend(const uint8_t* data, uint32_t size, int32_t type);
+
+    /** 判断一次未提交是否属于暂时背压，不等待、不重发
+    @param [in] result trySend的结果
+    @return BUSY、CAPACITY或RESOURCE为true；调用者仍须遵守连接和请求期限
+    */
+    static bool retryable(int32_t result);
 
     /** 保留兼容入口并检查当前接收器代次；v2接收器主动补查已提交正文
     @return ACCEPTED接收器仍就绪，UNAVAILABLE已关闭；不重放正文

@@ -122,7 +122,7 @@ NetSenderLocalWindow::NetSenderLocalWindow() : m_sent(0), m_acknowledged(0), m_r
 
 uint64_t NetSenderLocalWindow::next() const
 {
-    return m_sent == UINT64_MAX || m_sent - m_acknowledged >= 4 ? 0 : m_sent + 1;
+    return m_sent == UINT64_MAX ? 0 : m_sent + 1;
 }
 
 int32_t NetSenderLocalWindow::published(uint64_t packet)
@@ -171,7 +171,7 @@ uint64_t NetSenderLocalWindow::receipt() const
     return m_received;
 }
 
-uint32_t NetSenderLocalWindow::outstanding() const
+uint64_t NetSenderLocalWindow::outstanding() const
 {
-    return static_cast<uint32_t>(m_sent - m_acknowledged);
+    return m_sent - m_acknowledged;
 }

@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "NetSenderServiceProxy.h"
 #include <memory>
+#include <vector>
 
 // 单个根请求的唯一阶段，取消不撤销远端已经发生的业务副作用。
 enum NetSenderProxyPhase
@@ -17,7 +18,7 @@ enum NetSenderProxyPhase
     NET_SERVICE_PROXY_CANCEL
 };
 
-// 固定槽位的正文归本对象独占；只由宿主协议执行者访问。
+// 实际池槽的正文归本对象独占；只由宿主协议执行者访问。
 class NetSenderProxyCall
 {
 public:
@@ -30,10 +31,11 @@ public:
     ~NetSenderProxyCall();
 
     /** 在空正文上事务性复制RPC业务体；16字节头在prepare中填写
+    @param [in,out] bodies 实际正文池，存活至本调用清理
     @param [in] rpc 已由NetInterfaceRpc验证的输入，借用到返回
     @return false分配失败，正文和计数尚未改变
     */
-    bool assign(const NetInterfaceRpcView& rpc);
+    bool assign(NetBufferPool& bodies, const NetInterfaceRpcView& rpc);
 
     /** 擦除正文及内联头，保留请求关联
     */
@@ -69,16 +71,16 @@ public:
     uint32_t m_type;
     // 响应RPC状态
     uint32_t m_status;
-    // 当前拥有的业务体字节，不含最多32份固定16字节RPC头
+    // 当前拥有的业务体字节，不含本记录的16字节RPC头
     uint32_t m_size;
-    // 活跃FIFO前后槽位，32为空
+    // 活跃FIFO前后槽位，UINT32_MAX为空
     uint32_t m_previous;
-    // 活跃FIFO的后一槽位，32表示尾部
+    // 活跃FIFO的后一槽位，UINT32_MAX表示尾部
     uint32_t m_next;
     // 零正文时使用内联头，不分配堆内存
     uint8_t m_header[16];
     // 非空正文只复制一次；连续存储16字节头和正文，poll不再分配整包
-    std::unique_ptr<uint8_t[]> m_wire;
+    NetBufferLease m_wire;
 
 private:
     /** 禁止复制独占正文
@@ -93,7 +95,20 @@ private:
     NetSenderProxyCall& operator=(const NetSenderProxyCall& other);
 };
 
-// 32固定槽位及活跃FIFO；元数据的接纳、移除和失败回收均不分配内存。
+// 可复用稳定编号；目录扩容不移动实际调用及其正文
+struct NetSenderProxySlot
+{
+    // 真正占用记录池的租约，空闲目录项不占记录池
+    NetObjectReference<NetSenderProxyCall> m_value;
+    // 空闲编号链后继
+    uint32_t m_next;
+
+    /** 构造空闲编号
+    */
+    NetSenderProxySlot();
+};
+
+// 单执行者维护FIFO，实际记录及正文池限制存储，不设置代理请求条数门槛。
 class NetSenderServiceProxyState
 {
 public:
@@ -101,6 +116,31 @@ public:
     @param [in] service 宿主服务对象
     */
     explicit NetSenderServiceProxyState(NetSenderService& service);
+
+    /** 首次接纳前替换真实存储池，配置失败保留旧池
+    @param [in] bodies 正文分级存储配置
+    @param [in] records 调用记录存储配置
+    @return NI_OK或状态、配置、分配错误
+    */
+    int32_t configurePools(const NetBufferPoolConfig& bodies, const LockFreeHashMapPoolConfig& records);
+
+    /** 申请记录和正文，失败不改变队列及空闲编号链
+    @param [in] rpc 已校验业务输入
+    @return 尚未入队的稳定编号，UINT32_MAX为分配失败
+    */
+    uint32_t acquire(const NetInterfaceRpcView& rpc);
+
+    /** 取出仍由状态持有的记录；调用者保证编号有效
+    @param [in] index 已占用的编号
+    @return 可修改实际记录
+    */
+    NetSenderProxyCall& call(uint32_t index);
+
+    /** 只读访问已占用记录
+    @param [in] index 已占用的编号
+    @return 借用实际记录
+    */
+    const NetSenderProxyCall& call(uint32_t index) const;
 
     /** 擦除全部未完成请求，回到空且有效的代次
     */
@@ -110,10 +150,10 @@ public:
     */
     void fail();
 
-    /** 在活跃槽位中查询根或子请求，最多比较32次
+    /** 在活跃槽位中查询根或子请求
     @param [in] id 请求号
     @param [in] root true查根号，false查子号
-    @return 槽位下标，32未找到
+    @return 稳定编号，UINT32_MAX未找到
     */
     uint32_t find(uint64_t id, bool root) const;
 
@@ -145,16 +185,24 @@ public:
 public:
     // 非拥有服务指针，只在同一协议执行者调用
     NetSenderService* m_service;
-    // 固定元数据；不为每条请求分配map节点
-    NetSenderProxyCall m_calls[32];
-    // 活跃FIFO首尾，32为空
+    // 正文池在调用记录之后销毁
+    std::unique_ptr<NetBufferPool> m_bodies;
+    // 真实调用池，默认初始128槽，最大约8MiB实际记录存储
+    std::unique_ptr<NetObjectPool<NetSenderProxyCall>> m_records;
+    // 可增长的编号目录，只保存引用，扩容不移动调用记录
+    std::vector<NetSenderProxySlot> m_calls;
+    // 空闲编号链，UINT32_MAX表示需要增长目录
+    uint32_t m_free;
+    // 首次成功接纳后不得替换实际池
+    bool m_used;
+    // 活跃FIFO首尾，UINT32_MAX为空
     uint32_t m_first;
-    // 活跃FIFO尾槽，32表示没有活跃请求
+    // 活跃FIFO尾槽，UINT32_MAX表示没有活跃请求
     uint32_t m_last;
-    // 已接纳槽位数和正文总字节，最多32和8MiB
+    // 已接纳记录数，仅作统计，不用于限制入队
     uint32_t m_count;
-    // 当前独占正文总字节数，上限8MiB，erase归还预算
-    uint32_t m_bytes;
+    // 当前独占正文总字节数，仅作统计，erase归还实际存储
+    uint64_t m_bytes;
     // 协议或服务是否仍有效；reset开始新代次
     bool m_valid;
     // 同执行者poll重入守卫，不是跨线程锁

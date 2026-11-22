@@ -78,8 +78,6 @@ public:
 
 private:
     friend class NetSenderServiceGateway;
-    // 仅隔离测试观察阶段和真实映射，不增加运行时测试入口。
-    friend class NetSenderServiceOutgoingTest;
 
     /** 交付网关管理响应，恢复调用方独立的逻辑号
     @param [in] frame 当前出站通道的认证控制帧

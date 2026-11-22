@@ -212,6 +212,36 @@ int32_t NetSenderIpc::connectServiceGateway(NetSenderGatewayState* client, uint3
     }
 }
 
+int32_t NetSenderIpc::configureConnectionPools(NetSenderGatewayState* client, const NetConnectionPoolConfig& config)
+{
+    if (client == nullptr || !client->m_receiverLease || !client->m_registered || !client->m_dispatch.quiescent())
+    {
+        return NI_INVALID_STATE;
+    }
+    client->m_lastError = client->m_session.configureConnectionPools(config);
+    return client->m_lastError;
+}
+
+int32_t NetSenderIpc::configureRequestPool(NetSenderGatewayState* client, const LockFreeHashMapPoolConfig& config)
+{
+    if (client == nullptr || !client->m_receiverLease || !client->m_registered || !client->m_dispatch.quiescent())
+    {
+        return NI_INVALID_STATE;
+    }
+    client->m_lastError = client->m_session.configureRequestPool(config);
+    return client->m_lastError;
+}
+
+int32_t NetSenderIpc::configureSubmissionPools(NetSenderGatewayState* client, const NetSenderSubmissionPools& pools)
+{
+    if (client == nullptr || !client->m_receiverLease || !client->m_registered || !client->m_dispatch.quiescent())
+    {
+        return NI_INVALID_STATE;
+    }
+    client->m_lastError = client->m_dispatch.submission().configurePools(pools);
+    return client->m_lastError;
+}
+
 int32_t NetSenderIpc::configureCompression(NetSenderGatewayState* client, const uint32_t* types, uint32_t count)
 {
     if (client == nullptr || !client->m_receiverLease || !client->m_registered)
@@ -486,4 +516,16 @@ NetSenderDesktopBackend& NetSenderIpc::backend()
 {
     static NetSenderDesktopBackend s_backend;
     return s_backend;
+}
+
+int32_t NetSenderIpc::configureWorkers(uint32_t count)
+{
+    return count == 0 ? NI_INVALID_ARGUMENT : (count == 1 ? NI_OK : NI_NOT_SUPPORTED);
+}
+
+int32_t NetSenderIpc::configureDispatch(NetSenderGatewayState* client, bool parallel)
+{
+    (void)parallel;
+    if (client == nullptr) { return NI_INVALID_ARGUMENT; }
+    return gatewayGeneration(client) == 0 ? NI_OK : NI_INVALID_STATE;
 }

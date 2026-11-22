@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "NetSenderMacro.h"
 #include <stdint.h>
+#include "LockFreeHashMap/LockFreeHashMapAPI.h"
 
 // 后端只借用独立客户端，不依赖上层NetSender门面
 class NetSenderGatewayState;
@@ -21,6 +22,12 @@ public:
     @return OK仅完成登记；已有未声明接收器为INVALID_STATE，一般业务使用默认自管接收器
     */
     static int32_t prepareExternalReceiver();
+
+    /** 在任何接收租约或接收器启动之前，配置模块内收件箱借用槽的实际池
+    @param [in] config 初始化槽数、最大槽数及增长策略；同一模块的所有客户端共用
+    @return NI_OK或配置/资源/生命周期错误，失败保留原配置
+    */
+    static int32_t configureReceiverPool(const LockFreeHashMapPoolConfig& config);
 
     /** 外部宿主先释放全部Sender，再uninitReceive，最后调用本方法
     @return OK或INVALID_STATE；不停止外部资源

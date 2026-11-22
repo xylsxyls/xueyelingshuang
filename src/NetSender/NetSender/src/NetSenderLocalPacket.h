@@ -65,7 +65,7 @@ public:
     static bool sameGeneration(const uint8_t* left, const uint8_t* right);
 };
 
-// 每方向固定4个未确认16KiB包；ACK只释放字节额度，不能作为业务成功回执。
+// 本代有序运输序号；ACK只证明本地字节消费，不限制后续发送，也不是业务回执
 class NetSenderAPI NetSenderLocalWindow
 {
 public:
@@ -74,7 +74,7 @@ public:
     NetSenderLocalWindow();
 
     /** 查看待发布编号，不消耗额度
-    @return 窗口满或耗尽为0，否则不复用的下一编号
+    @return 编号耗尽为0，否则不复用的下一编号
     */
     uint64_t next() const;
 
@@ -102,9 +102,9 @@ public:
     uint64_t receipt() const;
 
     /** 当前未确认包数
-    @return 0至4
+    @return 实际未确认数量，不设固定窗口
     */
-    uint32_t outstanding() const;
+    uint64_t outstanding() const;
 
 private:
     // 本方向最后已提交IPC的数据包序号

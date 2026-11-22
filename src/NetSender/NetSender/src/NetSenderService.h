@@ -33,7 +33,6 @@ class NetSenderAPI NetSenderServiceListener
 class NetSenderAPI NetSenderService : private NetSenderLocalListener
 {
     // 仅注释main配置白盒服务状态，不改变运行时接入入口。
-    friend class NetSenderServiceProxyTest;
   public:
     /** 发现本机已就绪服务端网关，启动或替换窗口返回NOT_FOUND
     @param [in] specified 0自动发现，正数固定到该PID
@@ -51,13 +50,21 @@ class NetSenderAPI NetSenderService : private NetSenderLocalListener
     */
     ~NetSenderService();
 
+    /** connectManaged前设置业务回调、客户端输出及内部依赖共用的实际池
+    本方法由生命周期owner串行调用，不可与连接、发送、poll或回调并发。
+    @param [in] bodies 各正文大小级的初始、最大容量和增长配置，复制到本对象
+    @param [in] records 真实消息记录池配置，复制到本对象
+    @return NI_OK或状态、配置、内存错误；失败保持原配置。旧connect路径不使用此选项。
+    */
+    int32_t configureQueuePools(const NetBufferPoolConfig& bodies, const LockFreeHashMapPoolConfig& records);
+
     /** 连接本机网关，TLS校验后才发送产品凭据
     @param [in] pid 网关进程号
     @param [in] tls 客户端TLS配置，根/域名不可空
     @param [in] product 0为通用内部服务，其余为独立产品
     @param [in] secret 32字节配置秘密，调用时复制
     @param [in] listener 本实例借用至shutdown
-    @param [in] limit 1至128
+    @param [in] limit 非零兼容请求协商提示，实际接纳由存储池决定
     @return OK表示启动，认证结果通过回调给出
     */
     int32_t connect(int32_t pid, const NetInterfaceTlsOptions& tls, uint32_t product, const uint8_t* secret,
@@ -69,7 +76,7 @@ class NetSenderAPI NetSenderService : private NetSenderLocalListener
     @param [in] proof 服务器应用显式提供的注册证明，不可放入公共客户端SDK
     @param [in] context 借用证明上下文至shutdown
     @param [in] listener 借用至shutdown，回调内可以send但不能重入poll或销毁本对象
-    @param [in] limit 业务处理器在途请求上限1至128，单客户端协商请求数也受此值限制
+    @param [in] limit 非零兼容握手请求提示，实际请求由请求存储池接纳
     @param [in] weight 网关分配权重1至1000
     @param [in] channels 在线通道容量1至512，0沿用limit；未登录握手也占位
     @return NI_OK启动，完成注册通过onServiceReady报告，不重放断线前业务
@@ -90,7 +97,7 @@ class NetSenderAPI NetSenderService : private NetSenderLocalListener
 
     /** connectManaged后、首次poll前配置公开RPC白名单；默认空，不能放入含秘密或文件内容的类型。
     @param [in] types 公开RPC类型数组，调用时复制；count为0可为空
-    @param [in] count 类型数量0至64，0清空白名单
+    @param [in] count 类型数量非负项数，0清空白名单
     @return NI_OK或状态、参数、内存错误
     */
     int32_t configureCompression(const uint32_t* types, uint32_t count);

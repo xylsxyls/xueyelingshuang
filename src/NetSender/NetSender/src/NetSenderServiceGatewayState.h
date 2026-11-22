@@ -130,9 +130,11 @@ public:
     std::string m_nodeName;
     // 已认证管理节点公开证书
     std::string m_nodeCertificate;
-    // 本管理代次拥有的客户端，最多512个
-    std::map<uint64_t, std::unique_ptr<NetSenderServiceGatewayClient>> m_clients;
-    // 业务明确允许压缩的消息类型，最多64个
+    // 真实客户端会话池，覆盖TLS状态及其关闭回调生命周期
+    std::unique_ptr<NetObjectPool<NetSenderServiceGatewayClient>> m_clientPool;
+    // 本管理代次持有池记录，不额外设置客户端数量门槛
+    std::map<uint64_t, NetObjectReference<NetSenderServiceGatewayClient>> m_clients;
+    // 业务明确允许压缩的消息类型，单执行者动态存储
     std::vector<uint32_t> m_compressionTypes;
     // 借用唯一的服务依赖出站适配器
     NetSenderServiceOutgoingTransport* m_outgoing;
@@ -150,10 +152,12 @@ public:
     uint32_t m_product;
     // 每业务端点在途请求上限
     uint32_t m_limit;
-    // 允许同时服务的客户端数量
+    // 对网关公开的真实客户端池最大槽数，仅用于负载选择
     uint32_t m_channels;
     // 向网关注册的服务容量权重
     uint32_t m_weight;
+    // 注册声明的每逻辑连接密文字节窗口，与业务请求数量无关
+    uint32_t m_window;
     // 本代首次终止原因
     int32_t m_reason;
     // 唯一服务注册/停止阶段，不能同时就绪且关闭

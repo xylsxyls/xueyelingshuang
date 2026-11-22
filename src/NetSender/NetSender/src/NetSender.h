@@ -12,9 +12,23 @@ typedef NetSenderGatewayState NetSenderClient;
 typedef NetSenderDesktopBackend NetSenderBackend;
 
 // 统一无状态发送入口；所有会话状态归后端创建的独立客户端，方法只透传
+// 同一提供方的创建、准备、配置、连接及销毁共用一个生命周期执行者；不同client也不能并行执行这些操作
 class NetSenderAPI NetSender
 {
 public:
+    /** 统一初始化接口；本提供方由调用者驱动，不创建工作线程
+    @param [in] count 只支持1，多个并行执行者由NetWork提供
+    @return 1为NI_OK，0为参数错误，其他为NI_NOT_SUPPORTED
+    */
+    static int32_t configureWorkers(uint32_t count);
+
+    /** 统一连接前配置入口；本提供方仍由同一调用者推进，不改变send/post的交付边界
+    @param [in] client 本提供方已prepare且未连接的有效客户端
+    @param [in] parallel 仅NetWork有内部并行执行者，本提供方不创建线程
+    @return NI_OK或参数/生命周期错误
+    */
+    int32_t configureDispatch(NetSenderClient* client, bool parallel);
+
     /** 取得无业务成员的单例入口；不创建连接或线程
     @return 本库管理入口，首次取得应在启动生产者前完成
     */
@@ -54,11 +68,35 @@ public:
     */
     int32_t connectServiceGateway(NetSenderClient* client, uint32_t product, const NetSenderGatewayOptions& options, NetSessionListener* listener);
 
+    /** 首次连接前配置TLS待发帧物理池，须先prepareGateway
+    线程：仅唯一生命周期owner，不得与本客户端其他调用并发
+    @param [in] client 本提供方静止客户端
+    @param [in] config 基础池初始容量、上限和增长策略，复制配置
+    @return NI_OK或状态/参数/资源错误，配置复制失败保留原配置；池资源在连接创建时申请和验证
+    */
+    int32_t configureConnectionPools(NetSenderClient* client, const NetConnectionPoolConfig& config);
+
+    /** 首次连接前配置应答等待记录的物理池，须先prepareGateway
+    线程：仅唯一生命周期owner，不得与本客户端其他调用并发
+    @param [in] client 本提供方静止客户端
+    @param [in] config 基础池初始容量、上限和增长策略，复制配置
+    @return NI_OK或状态/参数/资源错误，失败保留原池
+    */
+    int32_t configureRequestPool(NetSenderClient* client, const LockFreeHashMapPoolConfig& config);
+
+    /** 首次连接前配置提交层物理池，须先prepareGateway
+    线程：仅唯一生命周期owner，不得与本客户端其他操作并发；运行后不可更换
+    @param [in] client 本提供方创建的静止客户端
+    @param [in] pools 实际组件初始容量、增长策略和最大存储，复制配置
+    @return NI_OK或参数/资源/状态错误；失败保留原池
+    */
+    int32_t configureSubmissionPools(NetSenderClient* client, const NetSenderSubmissionPools& pools);
+
     /** 连接前设置公开无秘密RPC压缩候选，默认空；不压缩身份秘密和文件内容
     线程：三种提供方均由唯一生命周期owner串行调用，不与本客户端其他接口并发；禁止在协议回调中调用
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @param [in] types count非零时不可空，仅协议许可的公开命令
-    @param [in] count 0至64，0清空
+    @param [in] count 非负项数，0清空
     @return OK或负数，实际压缩仍需协商
     */
     int32_t configureCompression(NetSenderClient* client, const uint32_t* types, uint32_t count);
@@ -153,24 +191,24 @@ public:
     */
     int32_t lastGatewayError(NetSenderClient* client) const;
 
-    /** 同步交付预留请求，不等待远端回应；仅NI_OK表示本次数据已全部交给下一责任层
-    线程：NetWork允许外部生产者并发调用，同一客户端最多128个有界同步交付票据；桌面和NetPeer仅同一执行者。均禁止在协议回调／poll中调用，原生调用会等待
+    /** 提交预留请求，不等待远端回应；NetWork接纳返回，桌面及NetPeer等待本层交付
+    线程：NetWork允许外部生产者并发提交，调用时复制正文；桌面和NetPeer仅同一执行者。均禁止在本对象协议回调／poll中调用
     提交前登记请求上下文；原生单执行者send内部推进时可交付回调，不能假定回调晚于函数返回。
-    桌面完成边界为写入ProcessWork共享内存，Peer／NetWork为实际网络宿主接口接纳。
-    禁止在协议回调／poll内同步等待；GUI宜用post。原请求总期限包含等待，同一客户端最多128个同步交付票据，满时未接纳并背压。
+    桌面完成边界为ProcessWork共享内存，NetPeer为网络宿主接纳；NetWork为本会话队列接纳，由选定工作者异步组包加密。
+    NetWork须在连接前选择parallel=true的send执行者；同一客户端不得混用send/post。需要交付确认时显式使用beginSendRequest/sendResult。
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @param [in] requestId 当前未投递的预留号
     @param [in] bytes 调用时复制，size非零时不可空
     @param [in] size 最大1048560字节
-    @return OK已交付；负数不保证对端未收到，禁止自动重放；未接纳的LIMIT可重试
+    @return NI_OK表示本提供方接纳边界已完成，不保证远端收到；未接纳的LIMIT可重试，接纳后禁止自动重放
     */
     int32_t sendRequest(NetSenderClient* client, uint64_t requestId, const uint8_t* bytes, uint32_t size);
 
-    /** 同步交付已授权的流帧，责任边界与sendRequest相同，最多等待五秒
-    线程：NetWork允许外部生产者并发调用，同一客户端最多128个有界同步交付票据；桌面和NetPeer仅同一执行者。均禁止在协议回调／poll中调用，原生调用会等待
+    /** 提交已授权的流帧，责任边界与sendRequest相同；NetWork不等待后台加密或网络交付
+    线程：NetWork允许外部生产者并发提交，调用时复制正文；桌面和NetPeer仅同一执行者。均禁止在本对象协议回调／poll中调用
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @param [in] frame DATA／ACK／文件CANCEL，调用时复制载荷
-    @return OK已交付，负数失败；失败不代表远端未收到，不能盲目重复流块
+    @return NI_OK接纳，负数失败；接纳后的异步失败不代表远端未收到，不能盲目重复流块
     */
     int32_t sendData(NetSenderClient* client, const NetInterfaceFrame& frame);
 
@@ -194,7 +232,7 @@ public:
     */
     int32_t beginSendRequest(NetSenderClient* client, uint64_t requestId, const uint8_t* bytes, uint32_t size, uint64_t& ticket);
 
-    /** 非阻塞建立流帧交付票据，完成边界与同步sendData相同
+    /** 非阻塞建立流帧交付票据，sendResult为NI_OK时才表示网络宿主或共享内存交付完成
     线程：NetWork允许生产者调用；其他提供方唯一执行者；禁止本客户端协议回调内调用
     @param [in] client 本提供方有效客户端
     @param [in] frame 接纳时复制的帧与正文

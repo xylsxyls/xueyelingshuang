@@ -101,16 +101,14 @@ public:
     std::vector<uint8_t> m_privateKey;
     // 服务角色声明的独占副本
     std::vector<uint8_t> m_claims;
+    // 实际连接记录池，必须晚于所有代次状态销毁
+    std::unique_ptr<NetObjectPool<NetSenderLinkPeer>> m_peerPool;
     // 运输代次到独占管理状态；删除前等待原始运输关闭及输入收敛
-    std::map<uint64_t, std::unique_ptr<NetSenderLinkPeer>> m_peers;
+    std::map<uint64_t, NetObjectReference<NetSenderLinkPeer>> m_peers;
     // 已消费一次配置机会，失败后不复用半初始化状态
     bool m_started;
     // 停止接纳标志；回调中只标记，外层poll退出后收敛
     bool m_stopping;
     // 单执行者重入保护，不是跨线程同步原语
     bool m_polling;
-    // 当前新连接接纳窗口起点，单调毫秒
-    uint64_t m_acceptWindow;
-    // 本秒新接纳连接数；超过16拒绝新连接，不影响既有连接
-    uint32_t m_acceptCount;
 };

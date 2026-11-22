@@ -25,3 +25,8 @@ int32_t NetSenderDesktopBackend::externalReceiverStopped()
 {
     return NetSenderLocalHub::instance().externalStopped();
 }
+
+int32_t NetSenderDesktopBackend::configureReceiverPool(const LockFreeHashMapPoolConfig& config)
+{
+    return NetSenderLocalHub::instance().configurePool(config);
+}

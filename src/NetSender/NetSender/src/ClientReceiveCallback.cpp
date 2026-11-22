@@ -1,6 +1,6 @@
 ﻿#include "NetSenderMacro.h"
 #include "ClientReceiveCallback.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include <cstring>
 
 void ClientReceiveCallback::NetClientMessage(const char* buffer, int32_t length)

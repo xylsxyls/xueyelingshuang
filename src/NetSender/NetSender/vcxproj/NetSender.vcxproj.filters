@@ -18,6 +18,8 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\NetSenderLocalInboxPools.h" />
+    <ClInclude Include="..\src\NetSenderLocalBuffer.h" />
     <ClInclude Include="..\src\NetSender.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -38,6 +40,8 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\NetSenderLocalInboxPools.cpp" />
+    <ClCompile Include="..\src\NetSenderLocalBuffer.cpp" />
     <ClCompile Include="..\src\NetSender.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -130,7 +134,6 @@
     <ClInclude Include="..\src\NetSenderServiceProxy.h" />
     <ClInclude Include="..\src\NetSenderServiceProxyState.h" />
     <ClInclude Include="..\src\NetSenderLegacyState.h" />
-    <ClInclude Include="..\src\NetSenderLegacyTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="../src/NetSenderGatewayLaunch.h"><Filter>头文件</Filter></ClInclude>
@@ -145,16 +148,11 @@
     <ClInclude Include="..\src\NetSenderMacroDll.h" />
     <ClInclude Include="..\src\NetSenderMacroLib.h" />
   </ItemGroup>
-<ItemGroup><ClInclude Include="..\src\NetSenderLocalHubTest.h" /></ItemGroup>  <ItemGroup>
-    <ClInclude Include="..\src\NetSenderLinkAuditTest.h" />
+  <ItemGroup>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\NetSenderServiceQueue.cpp" />
     <ClInclude Include="..\src\NetSenderServiceQueue.h" />
-    <ClInclude Include="..\src\NetSenderServiceQueueTest.h" />
-    <ClInclude Include="..\src\NetSenderServiceGatewayTest.h" />
-    <ClInclude Include="..\src\NetSenderServiceOutgoingTest.h" />
-    <ClInclude Include="..\src\NetSenderServiceProxyTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\NetSenderGatewayState.cpp" />

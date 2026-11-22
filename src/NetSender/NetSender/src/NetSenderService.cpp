@@ -32,6 +32,36 @@ NetSenderService::~NetSenderService()
     delete m_state;
 }
 
+int32_t NetSenderService::configureQueuePools(const NetBufferPoolConfig& bodies, const LockFreeHashMapPoolConfig& records)
+{
+    if (m_state->m_started || m_state->m_closed)
+    {
+        return NI_INVALID_STATE;
+    }
+    try
+    {
+        std::unique_ptr<NetBufferPoolConfig> preparedBodies(new NetBufferPoolConfig(bodies));
+        std::unique_ptr<LockFreeHashMapPoolConfig> preparedRecords(new LockFreeHashMapPoolConfig(records));
+        NetBufferPool bodyValidation(*preparedBodies);
+        if (bodyValidation.status() != NI_OK)
+        {
+            return bodyValidation.status();
+        }
+        NetObjectPool<NetSenderServiceManagedFrame> recordValidation(*preparedRecords);
+        if (recordValidation.status() != NI_OK)
+        {
+            return recordValidation.status();
+        }
+        m_state->m_queueBodies.swap(preparedBodies);
+        m_state->m_queueRecords.swap(preparedRecords);
+        return NI_OK;
+    }
+    catch (...)
+    {
+        return NI_NO_MEMORY;
+    }
+}
+
 int32_t NetSenderService::connect(int32_t pid, const NetInterfaceTlsOptions& tls, uint32_t product, const uint8_t* secret,
                                   NetSenderServiceListener* listener, uint32_t limit)
 {
@@ -297,6 +327,15 @@ int32_t NetSenderService::connectManaged(int32_t pid, uint32_t product, NetInter
     m_state->m_product = product;
     m_state->m_listener = listener;
     m_state->m_managed.reset(new NetSenderServiceManaged(*m_state->m_inbox));
+    if (m_state->m_queueBodies)
+    {
+        const int32_t configured = m_state->m_managed->configureQueuePools(*m_state->m_queueBodies, *m_state->m_queueRecords);
+        if (configured != NI_OK)
+        {
+            m_state->m_closed = true;
+            return configured;
+        }
+    }
     m_state->m_started = true;
     const int32_t result = m_state->m_managed->connect(pid, product, proof, context, listener, limit, weight, channels);
     if (result != NI_OK) { m_state->m_closed = true; }

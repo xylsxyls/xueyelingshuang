@@ -9,7 +9,7 @@
 int32_t NetSenderLocalState::configureRaw(NetInterfaceEntropyFunction entropy, void* context,
     NetSenderLocalRawListener* listener, bool server, uint32_t maximum)
 {
-    if (m_started || m_stopping || listener == nullptr || entropy == nullptr || maximum == 0 || maximum > 64 || m_pid <= 0)
+    if (m_started || m_stopping || listener == nullptr || entropy == nullptr || maximum == 0 || m_pid <= 0)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -22,15 +22,22 @@ int32_t NetSenderLocalState::configureRaw(NetInterfaceEntropyFunction entropy, v
     {
         return NI_BUFFER_TOO_SMALL;
     }
+    const int32_t peersReady = preparePeers(maximum);
+    if (peersReady != NI_OK) { return peersReady; }
     m_started = true;
     m_rawListener = listener;
     m_options = NetInterfaceTlsOptions();
     m_options.server = server ? 1 : 0;
     m_options.entropy = entropy;
     m_options.entropyContext = context;
-    m_maximum = maximum;
-    m_now = m_acceptWindow = now();
+    
+    m_now = now();
     m_inbox->start(server);
+    if (!m_inbox->m_state->m_active)
+    {
+        m_started = false;
+        return NI_NO_MEMORY;
+    }
     return NI_OK;
 }
 
@@ -113,7 +120,7 @@ void NetSenderLocalState::pumpRaw(uint64_t id, NetSenderLocalPeer& peer)
         {
             peer.m_ackPending = 0;
         }
-        else if (sent != NET_SENDER_IPC_BUSY)
+        else if (!NetSenderIpcChannel::retryable(sent))
         {
             sendFailure(id, peer, sent);
             return;
@@ -131,7 +138,7 @@ void NetSenderLocalState::pumpRaw(uint64_t id, NetSenderLocalPeer& peer)
         const uint32_t size = (std::min)((std::min)(static_cast<uint32_t>(front.m_bytes.size()) - front.m_offset, 16384U), budget);
         const int32_t sent = transmit(peer, peer.m_remoteKnown ? NET_LOCAL_DATA : NET_LOCAL_OPEN,
             next, front.m_bytes.data() + front.m_offset, size);
-        if (sent == NET_SENDER_IPC_BUSY)
+        if (NetSenderIpcChannel::retryable(sent))
         {
             break;
         }
@@ -150,13 +157,63 @@ void NetSenderLocalState::pumpRaw(uint64_t id, NetSenderLocalPeer& peer)
             break;
         }
         front.m_offset += size;
-        peer.m_rawOutputBytes -= size;
         budget -= size;
         if (front.m_offset == front.m_bytes.size())
         {
             peer.m_rawOutput.pop_front();
         }
     }
+}
+
+NetSenderLocalRouteKey::NetSenderLocalRouteKey(const uint8_t* generation, int32_t pid, bool open) :
+m_pid(pid), m_open(open)
+{
+    std::copy(generation, generation + 16, m_generation.begin());
+}
+
+bool NetSenderLocalRouteKey::operator==(const NetSenderLocalRouteKey& other) const
+{
+    return m_pid == other.m_pid && m_open == other.m_open && m_generation == other.m_generation;
+}
+
+size_t NetSenderLocalRouteHash::operator()(const NetSenderLocalRouteKey& key) const
+{
+    size_t value = static_cast<size_t>(key.m_pid) ^ (key.m_open ? 2166136261U : 16777619U);
+    for (size_t index = 0; index < key.m_generation.size(); ++index)
+    {
+        value = (value ^ key.m_generation[index]) * 16777619U;
+    }
+    return value;
+}
+
+NetSenderLocalInboxCall::NetSenderLocalInboxCall(NetSenderLocalInboxState& state) :
+m_state(state), m_accepted(false)
+{
+    uint32_t value = state.m_admission.load(std::memory_order_acquire);
+    uint32_t retries = 0;
+    while (value < 0x7fffffffU)
+    {
+        if (state.m_admission.compare_exchange_weak(value, value + 1, std::memory_order_acquire, std::memory_order_acquire))
+        {
+            m_accepted = true;
+            break;
+        }
+        NetSenderLocalInboxState::pauseContention(retries);
+    }
+}
+
+NetSenderLocalInboxCall::~NetSenderLocalInboxCall()
+{
+    if (m_accepted)
+    {
+        if (m_state.m_execution != nullptr) { m_state.m_execution->wake(); }
+        m_state.m_admission.fetch_sub(1, std::memory_order_release);
+    }
+}
+
+bool NetSenderLocalInboxCall::accepted() const
+{
+    return m_accepted;
 }
 
 NetSenderLocalInput::NetSenderLocalInput() :
@@ -169,6 +226,7 @@ m_kind(0)
 }
 
 NetSenderLocalInput::NetSenderLocalInput(NetSenderLocalInput&& other) :
+m_lane(std::move(other.m_lane)),
 m_pid(other.m_pid),
 m_peer(other.m_peer),
 m_reason(other.m_reason),
@@ -185,6 +243,7 @@ NetSenderLocalInput& NetSenderLocalInput::operator=(NetSenderLocalInput&& other)
 {
     if (this != &other)
     {
+        m_lane = std::move(other.m_lane);
         m_pid = other.m_pid;
         m_peer = other.m_peer;
         m_reason = other.m_reason;
@@ -202,9 +261,9 @@ NetSenderLocalInboxLane::NetSenderLocalInboxLane(int32_t pid, uint64_t peer, con
 m_pid(pid),
 m_peer(peer),
 m_remote(),
-m_dataCount(0),
-m_controlCount(0),
 m_reason(NI_OK),
+m_retired(false),
+m_failureTaken(false),
 m_queued(false),
 m_previous(nullptr),
 m_next(nullptr)
@@ -215,14 +274,53 @@ m_next(nullptr)
     }
 }
 
-NetSenderLocalInboxState::NetSenderLocalInboxState() :
-m_open(0, 0),
+NetSenderLocalInboxState::NetSenderLocalInboxState(const NetSenderLocalInboxPools& pools) :
+m_execution(nullptr),
+m_admission(0x80000000U),
+m_routeFailed(false),
+m_initializationResult(NI_OK),
+m_dataPool(pools.m_data),
+m_controlPool(pools.m_control),
+m_openPool(pools.m_open),
+m_incoming(false),
+m_routes(128, pools.m_routes),
+m_open(new NetSenderLocalInboxLane(0, 0)),
 m_first(nullptr),
 m_last(nullptr),
+m_started(false),
 m_active(false),
 m_acceptOpen(false)
 {
+    const int32_t states[] = {m_dataPool.status(), m_controlPool.status(), m_openPool.status()};
+    for (size_t index = 0; index < 3; ++index)
+    {
+        if (states[index] != NI_OK)
+        {
+            m_initializationResult = states[index];
+            return;
+        }
+    }
+    LockFreeQueueResult result = m_incoming.configurePool(pools.m_queue);
+    if (result == LockFreeQueueSuccess)
+    {
+        result = m_incoming.tryInit();
+    }
+    if (result != LockFreeQueueSuccess)
+    {
+        m_initializationResult = result == LockFreeQueueInvalidConfiguration ? NI_INVALID_ARGUMENT :
+            result == LockFreeQueueAtomicUnavailable ? NI_NOT_SUPPORTED : NI_NO_MEMORY;
+    }
+    else if (m_routes.status() != LockFreeHashMapOk)
+    {
+        m_initializationResult = m_routes.status() == LockFreeHashMapInvalidArgument ? NI_INVALID_ARGUMENT :
+            m_routes.status() == LockFreeHashMapUnsupported ? NI_NOT_SUPPORTED : NI_NO_MEMORY;
+    }
+}
 
+NetSenderLocalInboxState::~NetSenderLocalInboxState()
+{
+    quiesce();
+    clear();
 }
 
 void NetSenderLocalInboxState::queue(NetSenderLocalInboxLane& lane)
@@ -274,56 +372,174 @@ void NetSenderLocalInboxState::unqueue(NetSenderLocalInboxLane& lane)
 
 void NetSenderLocalInboxState::fail(NetSenderLocalInboxLane& lane, int32_t reason)
 {
-    if (lane.m_reason < 0)
+    int32_t expected = NI_OK;
+    lane.m_reason.compare_exchange_strong(expected, reason);
+}
+
+void NetSenderLocalInboxState::pauseContention(uint32_t& retries)
+{
+    if (++retries == 64)
+    {
+        retries = 0;
+        CSystem::Sleep(0);
+    }
+}
+
+int32_t NetSenderLocalInboxState::routeResult(const LockFreeHashMapResult& result)
+{
+    if (result.m_committed)
+    {
+        return NI_OK;
+    }
+    switch (result.m_status)
+    {
+    case LockFreeHashMapCapacityLimit:
+    case LockFreeHashMapGrowthDeclined:
+    case LockFreeHashMapProtectionUnavailable:
+    case LockFreeHashMapVersionExhausted:
+    case LockFreeHashMapDirectoryFull:
+        return NI_LIMIT_EXCEEDED;
+    case LockFreeHashMapNoMemory:
+        return NI_NO_MEMORY;
+    default:
+        return NI_INVALID_STATE;
+    }
+}
+
+void NetSenderLocalInboxState::discard(NetSenderLocalInboxLane& lane)
+{
+    lane.m_input.clear();
+}
+
+void NetSenderLocalInboxState::quiesce()
+{
+    m_admission.fetch_or(0x80000000U, std::memory_order_acq_rel);
+    while (m_admission.load(std::memory_order_acquire) != 0x80000000U)
+    {
+        CSystem::Sleep(1);
+    }
+}
+
+void NetSenderLocalInboxState::eraseRoute(const NetSenderLocalRouteKey& key, const std::shared_ptr<NetSenderLocalInboxLane>& lane)
+{
+    // 只有owner修改路由，find/erase之间不存在另一个写者；快照仅用于核对归属。
+    decltype(m_routes)::Snapshot snapshot;
+    const LockFreeHashMapResult found = m_routes.find(key, snapshot);
+    if (found.m_status == LockFreeHashMapNotFound)
     {
         return;
     }
-    lane.m_reason = reason;
-    lane.m_input.clear();
-    lane.m_dataCount = 0;
-    lane.m_controlCount = 0;
-    queue(lane);
+    if (found.m_status != LockFreeHashMapOk)
+    {
+        m_routeFailed = true;
+        return;
+    }
+    if (*snapshot.m_value == lane && !m_routes.tryEraseIf(key, snapshot.m_version, true, false).m_committed)
+    {
+        m_routeFailed = true;
+    }
+}
+
+void NetSenderLocalInboxState::pump()
+{
+    if (m_routeFailed.load())
+    {
+        // 路由查询或撤销失败后无法证明连接归属；由owner结算各通道，禁止继续静默丢包。
+        for (const auto& item : m_generations)
+        {
+            fail(*item.second, NI_INVALID_STATE);
+        }
+    }
+    NetSenderLocalInput* incoming = nullptr;
+    // 只限制本轮导入工作量，后续轮次继续消费；不是接纳或队列容量限制。
+    for (uint32_t count = 0; count < 1344 && m_incoming.pop(&incoming); ++count)
+    {
+        std::unique_ptr<NetSenderLocalInput> input(incoming);
+        std::shared_ptr<NetSenderLocalInboxLane> lane = input->m_lane;
+        // 未识别OPEN在owner按最新绑定重新归属，共同入口保证它不被同生产者后来的DATA越过。
+        if (lane == m_open)
+        {
+            for (const auto& item : m_generations)
+            {
+                if (item.second->m_pid == input->m_pid &&
+                    NetSenderLocalPacket::sameGeneration(item.second->m_remote.data(), input->m_bytes.data() + 16))
+                {
+                    lane = item.second;
+                    break;
+                }
+            }
+        }
+        input->m_lane.reset();
+        if (!lane)
+        {
+            continue;
+        }
+        if (lane->m_retired.load() || lane->m_reason.load() < 0)
+        {
+            if (!lane->m_retired.load() && !lane->m_failureTaken)
+            {
+                // 失败通知占用原通道的轮转位置，不能被随后导入的其它通道插到前面。
+                queue(*lane);
+            }
+            continue;
+        }
+        try
+        {
+            input->m_peer = lane->m_peer;
+            lane->m_input.push_back(std::move(*input));
+            queue(*lane);
+        }
+        catch (...)
+        {
+            if (lane != m_open)
+            {
+                fail(*lane, NI_NO_MEMORY);
+            }
+        }
+    }
+    // 错误标量不依赖正文队列空位；满队列/低内存仍会交付一次通道终态。
+    for (const auto& item : m_generations)
+    {
+        NetSenderLocalInboxLane& lane = *item.second;
+        if (lane.m_reason.load() < 0 && !lane.m_failureTaken)
+        {
+            discard(lane);
+            queue(lane);
+        }
+    }
+    m_incoming.maintain(16);
+    m_routes.maintain(16);
 }
 
 void NetSenderLocalInboxState::adoptOpen(NetSenderLocalInboxLane& lane)
 {
-    auto input = m_open.m_input.begin();
-    while (input != m_open.m_input.end())
+    auto input = m_open->m_input.begin();
+    while (input != m_open->m_input.end())
     {
-        // 收件箱中只有验证完整的NIP2包；源代次位于固定头16处。
         if (input->m_pid != lane.m_pid || !NetSenderLocalPacket::sameGeneration(input->m_bytes.data() + 16, lane.m_remote.data()))
         {
             ++input;
             continue;
         }
-        if (lane.m_reason == NI_OK)
+        if (lane.m_reason.load() == NI_OK)
         {
-            if (lane.m_dataCount >= 4)
+            try
             {
-                fail(lane, NI_LIMIT_EXCEEDED);
+                input->m_peer = lane.m_peer;
+                lane.m_input.push_back(std::move(*input));
             }
-            else
+            catch (...)
             {
-                try
-                {
-                    input->m_peer = lane.m_peer;
-                    lane.m_input.push_back(std::move(*input));
-                    ++lane.m_dataCount;
-                }
-                catch (...)
-                {
-                    fail(lane, NI_NO_MEMORY);
-                }
+                fail(lane, NI_NO_MEMORY);
             }
         }
-        input = m_open.m_input.erase(input);
-        --m_open.m_dataCount;
+        input = m_open->m_input.erase(input);
     }
-    if (m_open.m_input.empty())
+    if (m_open->m_input.empty())
     {
-        unqueue(m_open);
+        unqueue(*m_open);
     }
-    if (!lane.m_input.empty() || lane.m_reason < 0)
+    if (!lane.m_input.empty() || lane.m_reason.load() < 0)
     {
         queue(lane);
     }
@@ -331,16 +547,26 @@ void NetSenderLocalInboxState::adoptOpen(NetSenderLocalInboxLane& lane)
 
 void NetSenderLocalInboxState::clear()
 {
+    // quiesce完成之后才能调用，既无在途发布，也无第二个队列消费者。
+    NetSenderLocalInput* incoming = nullptr;
+    while (m_incoming.pop(&incoming))
+    {
+        std::unique_ptr<NetSenderLocalInput> input(incoming);
+    }
+    for (const auto& item : m_generations)
+    {
+        item.second->m_retired.store(true);
+        discard(*item.second);
+    }
+    m_routeFailed = !m_routes.tryClear(true, false).m_committed;
+    m_routes.maintain(128);
     m_first = nullptr;
     m_last = nullptr;
     m_generations.clear();
-    m_open.m_input.clear();
-    m_open.m_dataCount = 0;
-    m_open.m_controlCount = 0;
-    m_open.m_reason = NI_OK;
-    m_open.m_queued = false;
-    m_open.m_previous = nullptr;
-    m_open.m_next = nullptr;
+    discard(*m_open);
+    m_open->m_queued = false;
+    m_open->m_previous = nullptr;
+    m_open->m_next = nullptr;
 }
 
 NetSenderLocalChunk::NetSenderLocalChunk() : m_packet(0), m_offset(0)
@@ -380,7 +606,6 @@ m_activity(0),
 m_drainSince(0),
 m_pingTime(0),
 m_pingId(0),
-m_rawOutputBytes(0),
 m_rawBlockedSince(0)
 {
     std::memset(m_local, 0, sizeof(m_local));
@@ -401,10 +626,12 @@ void NetSenderLocalPeer::drain(uint64_t now, bool end)
 }
 
 NetSenderLocalState::NetSenderLocalState(NetSenderLocalInbox& inbox) : m_inbox(&inbox), m_listener(nullptr), m_rawListener(nullptr),
-    m_options(), m_pid(static_cast<int32_t>(CSystem::currentProcessPid())), m_maximum(0), m_acceptCount(0),
-    m_acceptWindow(0), m_lastPeer(0), m_lastPing(0), m_now(0), m_processCheckAt(0), m_started(false), m_stopping(false), m_polling(false)
+    m_options(), m_outputPool(new NetBufferPool(NetBufferPoolConfig())), m_peerConfig(new LockFreeHashMapPoolConfig), m_pid(static_cast<int32_t>(CSystem::currentProcessPid())), m_lastPeer(0), m_lastPing(0), m_now(0), m_processCheckAt(0), m_started(false), m_stopping(false), m_polling(false)
 {
-
+    m_peerConfig->initialCapacity = 128;
+    m_peerConfig->maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetSenderLocalPeer>>);
+    m_peerConfig->directoryCapacity = 128;
+    m_peerConfig->lookupCacheCapacity = 0;
 }
 
 NetSenderLocalState::~NetSenderLocalState()
@@ -419,6 +646,23 @@ NetSenderLocalState::~NetSenderLocalState()
     }
 }
 
+int32_t NetSenderLocalState::preparePeers(uint32_t initialPeers)
+{
+    try
+    {
+        LockFreeHashMapPoolConfig config = *m_peerConfig;
+        config.initialCapacity = (std::max)(config.initialCapacity, static_cast<size_t>(initialPeers));
+        std::unique_ptr<NetObjectPool<NetSenderLocalPeer>> pool(new NetObjectPool<NetSenderLocalPeer>(config));
+        if (pool->status() != NI_OK) { return pool->status(); }
+        m_peerPool.swap(pool);
+        return NI_OK;
+    }
+    catch (...)
+    {
+        return NI_NO_MEMORY;
+    }
+}
+
 uint64_t NetSenderLocalState::now()
 {
     return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -429,7 +673,7 @@ int32_t NetSenderLocalState::configure(const NetInterfaceTlsOptions& tls,
     NetSenderLocalListener* listener, bool server, uint32_t maximum)
 {
     if (m_started || m_stopping || listener == nullptr || tls.server != (server ? 1 : 0) ||
-        tls.entropy == nullptr || maximum == 0 || maximum > 64 || m_pid <= 0)
+        tls.entropy == nullptr || maximum == 0 || m_pid <= 0)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -442,6 +686,8 @@ int32_t NetSenderLocalState::configure(const NetInterfaceTlsOptions& tls,
     {
         return NI_BUFFER_TOO_SMALL;
     }
+    const int32_t peersReady = preparePeers(maximum);
+    if (peersReady != NI_OK) { return peersReady; }
     m_started = true;
     m_options = tls;
     try
@@ -472,9 +718,14 @@ int32_t NetSenderLocalState::configure(const NetInterfaceTlsOptions& tls,
             m_options.certificateSize = m_options.privateKeySize = 0;
         }
         m_listener = listener;
-        m_maximum = maximum;
-        m_now = m_acceptWindow = now();
+        
+        m_now = now();
         m_inbox->start(server);
+        if (!m_inbox->m_state->m_active)
+        {
+            m_started = false;
+            return NI_NO_MEMORY;
+        }
         return NI_OK;
     }
     catch (...)
@@ -488,13 +739,15 @@ int32_t NetSenderLocalState::createPeer(int32_t pid, const uint8_t* remote, uint
 {
     id = 0;
     if (pid <= 0 || pid == m_pid || m_stopping || !m_started || (m_listener == nullptr && m_rawListener == nullptr) ||
-        m_peers.size() >= m_maximum || m_lastPeer == UINT64_MAX)
+        !m_peerPool || m_lastPeer == UINT64_MAX)
     {
         return NI_INVALID_ARGUMENT;
     }
     try
     {
-        std::unique_ptr<NetSenderLocalPeer> peer(new NetSenderLocalPeer);
+        NetObjectReference<NetSenderLocalPeer> peer;
+        const int32_t allocated = m_peerPool->create(peer);
+        if (allocated != NI_OK) { return allocated; }
         peer->m_pid = pid;
         peer->m_activity = peer->m_ackTime = peer->m_pingTime = m_now;
         if (m_options.entropy(m_options.entropyContext, peer->m_local, 16) != 0)
@@ -527,6 +780,14 @@ int32_t NetSenderLocalState::createPeer(int32_t pid, const uint8_t* remote, uint
         else
         {
             peer->m_connection.reset(new NetInterfaceConnection(m_options, NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT + 32));
+            if (m_connectionPools)
+            {
+                const int32_t configured = peer->m_connection->configurePools(*m_connectionPools);
+                if (configured != NI_OK)
+                {
+                    return configured;
+                }
+            }
             if (peer->m_connection->status() < 0)
             {
                 return peer->m_connection->status();
@@ -591,21 +852,10 @@ void NetSenderLocalState::accept(NetSenderLocalInput& input)
     }
     if (id == 0)
     {
-        if (m_options.server != 1 || packet.m_kind != NET_LOCAL_OPEN || packet.m_packet != 1 ||
-            m_peers.size() >= m_maximum)
+        if (m_options.server != 1 || packet.m_kind != NET_LOCAL_OPEN || packet.m_packet != 1)
         {
             return;
         }
-        if (m_now - m_acceptWindow >= 1000)
-        {
-            m_acceptWindow = m_now;
-            m_acceptCount = 0;
-        }
-        if (m_acceptCount >= 16)
-        {
-            return;
-        }
-        ++m_acceptCount;
         if (createPeer(input.m_pid, packet.m_source, id) != NI_OK)
         {
             return;
@@ -623,7 +873,7 @@ void NetSenderLocalState::accept(NetSenderLocalInput& input)
     }
     if (packet.m_kind == NET_LOCAL_ACK)
     {
-        const uint32_t before = peer.m_window.outstanding();
+        const uint64_t before = peer.m_window.outstanding();
         if (peer.m_window.acknowledge(packet.m_packet) != NI_OK)
         {
             close(id, NI_PROTOCOL_ERROR);
@@ -649,7 +899,7 @@ void NetSenderLocalState::accept(NetSenderLocalInput& input)
         peer.m_ackPending = peer.m_window.receipt();
         return;
     }
-    if (peer.m_input.size() >= 4 || peer.m_window.receipt() > UINT64_MAX - peer.m_input.size() - 1 ||
+    if (peer.m_input.size() == UINT64_MAX || peer.m_window.receipt() > UINT64_MAX - peer.m_input.size() - 1 ||
         packet.m_packet != peer.m_window.receipt() + peer.m_input.size() + 1)
     {
         close(id, NI_PROTOCOL_ERROR);
@@ -700,7 +950,7 @@ void NetSenderLocalState::sendFailure(uint64_t id, NetSenderLocalPeer& peer, int
         // 这只证明反向接收入口关闭；本方向先前提交的END仍可能等待原IPC回调。
         peer.drain(m_now, false);
     }
-    else if (result != NET_SENDER_IPC_ACCEPTED && result != NET_SENDER_IPC_BUSY)
+    else if (result != NET_SENDER_IPC_ACCEPTED && !NetSenderIpcChannel::retryable(result))
     {
         close(id, NI_INVALID_STATE);
     }
@@ -847,7 +1097,7 @@ void NetSenderLocalState::pumpTls(uint64_t id, NetSenderLocalPeer& peer)
                 peer.m_ackPending = 0;
                 moved = true;
             }
-            else if (sent != NET_SENDER_IPC_BUSY)
+            else if (!NetSenderIpcChannel::retryable(sent))
             {
                 sendFailure(id, peer, sent);
                 break;
@@ -872,7 +1122,7 @@ void NetSenderLocalState::pumpTls(uint64_t id, NetSenderLocalPeer& peer)
                 outputBudget -= size;
                 moved = true;
             }
-            else if (sent != NET_SENDER_IPC_BUSY)
+            else if (!NetSenderIpcChannel::retryable(sent))
             {
                 sendFailure(id, peer, sent);
                 break;

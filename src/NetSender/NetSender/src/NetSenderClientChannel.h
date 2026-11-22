@@ -16,6 +16,13 @@ class NetSenderAPI NetSenderClientChannel : public NetClientChannel, private Net
     */
     ~NetSenderClientChannel();
 
+    /** 首次连接前复制TLS帧池配置；不得与本对象其他调用并发
+    池资源在创建物理连接时申请并验证，失败走原有连接失败路径；不修改其他连接。
+    @param [in] config 独立数据/控制记录及正文的基础池配置
+    @return NI_OK配置已复制；状态、内存或不支持错误
+    */
+    virtual int32_t configureConnectionPools(const NetConnectionPoolConfig& config);
+
     /** 连接固定的本机PID，仍验证TLS域名/证书；address/port为统一入口保留参数
     @param [in] address 非空，可传local
     @param [in] port 可传1，不作为PID
@@ -96,6 +103,8 @@ public:
     */
     NetSenderClientChannel& operator=(const NetSenderClientChannel& other);
 
+    // 首次连接前复制的帧池配置，由本机TLS运输申请物理存储
+    std::unique_ptr<NetConnectionPoolConfig> m_connectionPools;
     // 借用到shutdown完成，实际注册/注销归宿主。
     NetSenderLocalInbox* m_inbox;
     // 本模块独占，替换和析构都在本模块释放。

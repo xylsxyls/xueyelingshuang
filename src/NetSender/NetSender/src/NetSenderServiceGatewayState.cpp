@@ -4,7 +4,7 @@
 #include "CSystem/CSystemAPI.h"
 #include "NetInterface/NetInterfaceAPI.h"
 #include "NetSenderServiceOutgoingTransport.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include <algorithm>
 #include <chrono>
 #include <cstring>
@@ -47,9 +47,23 @@ m_notifyRemote(false)
 
 }
 
+/** 客户端TLS会话记录使用实际池，默认约8MiB，不以业务请求数限制会话数
+@return 启动前可覆盖的池配置
+*/
+static LockFreeHashMapPoolConfig ServiceGatewayClientPool()
+{
+    LockFreeHashMapPoolConfig config;
+    config.initialCapacity = 128;
+    config.maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetSenderServiceGatewayClient>>);
+    config.directoryCapacity = 128;
+    config.lookupCacheCapacity = 0;
+    return config;
+}
+
 NetSenderServiceGatewayState::NetSenderServiceGatewayState(NetSenderLocalInbox& inbox) :
 m_link(inbox),
 m_listener(nullptr),
+m_clientPool(new NetObjectPool<NetSenderServiceGatewayClient>(ServiceGatewayClientPool())),
 m_outgoing(nullptr),
 m_highestOutgoing(0),
 m_outgoingClose(0),
@@ -58,8 +72,9 @@ m_peer(0),
 m_highestClient(0),
 m_product(0),
 m_limit(0),
-m_channels(0),
+m_channels(static_cast<uint32_t>(ServiceGatewayClientPool().maximumCapacity)),
 m_weight(0),
+m_window(1048576),
 m_reason(0),
 m_phase(NET_SERVICE_IDLE),
 m_polling(false)
@@ -107,7 +122,7 @@ void NetSenderServiceGatewayState::pump(uint64_t id, NetSenderServiceGatewayClie
     {
         NetInterfaceHandshakeOptions options = {};
         options.m_server = 1;
-        options.m_capabilities = 15;
+        options.m_capabilities = 31;
         options.m_maxRequests = m_limit;
         options.m_maxChunk = 65536;
         options.m_timeoutMs = 5000;
@@ -142,15 +157,19 @@ void NetSenderServiceGatewayState::pump(uint64_t id, NetSenderServiceGatewayClie
                 close(id, NI_NO_MEMORY);
                 return;
             }
+            client.m_connection.configureCompact((fields[1] & 16) != 0);
             client.m_ready = true;
             m_listener->onGatewayClientReady(id, client.m_role, client.m_origin);
         }
-        for (uint32_t step = 0; step < 32 && !client.m_closing && !closing(); ++step)
+        uint32_t decodedBytes = 0;
+        for (uint32_t step = 0; step < 576 && decodedBytes < 2097152 && !client.m_closing && !closing(); ++step)
         {
-            NetInterfaceFrame frame = {};
-            const int32_t available = client.m_connection.peek(frame);
+            const NetInterfaceFrame* borrowed = nullptr;
+            const int32_t available = client.m_connection.peek(borrowed);
             if (available < 0) { close(id, available); return; }
             if (available != NI_READY) { break; }
+            // 本轮唯一执行者持有帧至consume，直接借用元数据，不逐条构造和复制中转对象。
+            const NetInterfaceFrame& frame = *borrowed;
             const int32_t accepted = client.m_handshake->accept(frame, now);
             if (accepted < 0) { close(id, accepted); return; }
             if (accepted != NI_OK)
@@ -186,8 +205,30 @@ void NetSenderServiceGatewayState::pump(uint64_t id, NetSenderServiceGatewayClie
                 }
                 client.m_blockedSince = 0;
             }
+            decodedBytes += frame.m_payloadSize + 32;
             client.m_connection.consume();
             client.m_lastReceive = now;
+            if (step + 1 < 576 && decodedBytes < 2097152 && !client.m_closing && !closing())
+            {
+                // 连续解析已接纳的TLS记录；每连接每轮576帧/2MiB后交还执行者，避免大包饥饿。
+                const int32_t buffered = client.m_connection.decodeBuffered();
+                const int32_t next = buffered == NI_NEED_MORE ? client.m_connection.progress(now) : buffered;
+                if (next < 0 || next == NET_INTERFACE_TLS_CLOSED)
+                {
+                    close(id, next < 0 ? next : NI_OK);
+                    return;
+                }
+            }
+        }
+    }
+    if (!client.m_closing && !closing())
+    {
+        // 批内已认证明文不重复进入TLS；批结束仍推进新响应和控制帧，不能等待下一次输入。
+        const int32_t next = client.m_connection.progress(now);
+        if (next < 0 || next == NET_INTERFACE_TLS_CLOSED)
+        {
+            close(id, next < 0 ? next : NI_OK);
+            return;
         }
     }
     if (client.m_input.empty() && client.m_credit.pending() != 0 && !client.m_closing && !closing())
@@ -300,8 +341,8 @@ void NetSenderServiceGatewayState::advance(uint64_t now)
     if (m_phase == NET_SERVICE_AUTHENTICATED)
     {
         ProtoMessage ready;
-        ready.setKeyValue(NI_GATEWAY_WINDOW, Variant(static_cast<int32_t>(1048576)));
-        ready.setKeyValue(NI_GATEWAY_CAPACITY, Variant(static_cast<int32_t>(m_channels)));
+        ready.setKeyValue(NI_GATEWAY_WINDOW, Variant(static_cast<int32_t>(m_window)));
+        ready.setKeyValue(NI_GATEWAY_CAPACITY, Variant(static_cast<uint64_t>(m_channels)));
         ready.setKeyValue(NI_GATEWAY_WEIGHT, Variant(static_cast<int32_t>(m_weight)));
         std::string bytes;
         NetInterfaceFrame frame = {};

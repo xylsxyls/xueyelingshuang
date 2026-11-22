@@ -1,18 +1,100 @@
 ﻿#include "NetSenderMacro.h"
 #include "NetSenderLocalHub.h"
 #include "NetSenderLocalPacket.h"
-#include <algorithm>
+#include "CSystem/CSystemAPI.h"
+
+/** CAS竞争时定期让出CPU，不把瞬时竞争变成生命周期失败
+@param [in,out] retries 当前调用的失败次数
+*/
+static void NetLocalHubContention(uint32_t& retries)
+{
+    if (++retries == 64)
+    {
+        retries = 0;
+        CSystem::Sleep(0);
+    }
+}
+
+NetSenderLocalHubSlot::NetSenderLocalHubSlot() :
+m_box(nullptr),
+m_next(nullptr),
+m_storage(nullptr),
+m_readers(0xc0000000U)
+{
+
+}
+
+bool NetSenderLocalHubSlot::acquire()
+{
+    uint32_t state = m_readers.load(std::memory_order_acquire);
+    uint32_t retries = 0;
+    while (state < 0x3fffffffU)
+    {
+        if (m_readers.compare_exchange_weak(state, state + 1, std::memory_order_acquire, std::memory_order_acquire))
+        {
+            return true;
+        }
+        NetLocalHubContention(retries);
+    }
+    return false;
+}
+
+void NetSenderLocalHubSlot::release()
+{
+    m_readers.fetch_sub(1, std::memory_order_release);
+}
+
+/** 默认只预热128个实际借用槽，最大存储按8MiB槽大小计算
+@return 可由初始化配置替换的底层池参数
+*/
+static LockFreeHashMapPoolConfig NetLocalHubPool()
+{
+    LockFreeHashMapPoolConfig result;
+    result.initialCapacity = 128;
+    result.maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetSenderLocalHubSlot>>);
+    result.directoryCapacity = 128;
+    result.lookupCacheCapacity = 0;
+    return result;
+}
 
 NetSenderLocalHub::NetSenderLocalHub() :
-m_phase(NET_LOCAL_HUB_IDLE),
-m_clients(0)
+m_slots(new NetObjectPool<NetSenderLocalHubSlot>(NetLocalHubPool())), m_first(nullptr), m_ownership(NET_LOCAL_HUB_IDLE)
 {
 
 }
 
 NetSenderLocalHub::~NetSenderLocalHub()
 {
+    NetSenderLocalHubSlot* slot = m_first.load();
+    while (slot != nullptr)
+    {
+        NetSenderLocalHubSlot* next = slot->m_next;
+        m_slots->release(slot->m_storage);
+        slot = next;
+    }
+}
 
+int32_t NetSenderLocalHub::configurePool(const LockFreeHashMapPoolConfig& config)
+{
+    if (m_ownership.load() != NET_LOCAL_HUB_IDLE) { return NI_INVALID_STATE; }
+    try
+    {
+        std::unique_ptr<NetObjectPool<NetSenderLocalHubSlot>> prepared(new NetObjectPool<NetSenderLocalHubSlot>(config));
+        if (prepared->status() != NI_OK) { return prepared->status(); }
+        NetSenderLocalHubSlot* slot = m_first.exchange(nullptr);
+        while (slot != nullptr)
+        {
+            NetSenderLocalHubSlot* next = slot->m_next;
+            m_slots->release(slot->m_storage);
+            slot = next;
+        }
+        m_slots.swap(prepared);
+        return NI_OK;
+    }
+    catch (...)
+    {
+        return NI_NO_MEMORY;
+    }
 }
 
 NetSenderLocalHub& NetSenderLocalHub::instance()
@@ -23,42 +105,81 @@ NetSenderLocalHub& NetSenderLocalHub::instance()
 
 int32_t NetSenderLocalHub::attach(NetSenderLocalInbox* inbox)
 {
-    if (inbox == nullptr)
+    if (inbox == nullptr) { return NI_INVALID_ARGUMENT; }
+    // 同一个箱的生命周期仍由其owner串行，不同箱可并行。
+    for (NetSenderLocalHubSlot* slot = m_first.load(); slot != nullptr; slot = slot->m_next)
     {
-        return NI_INVALID_ARGUMENT;
+        if (slot->m_box.load() == inbox) { return NI_OK; }
     }
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if ((m_phase != NET_LOCAL_HUB_MANAGED && m_phase != NET_LOCAL_HUB_EXTERNAL) || m_clients == 0)
+    uint64_t state = m_ownership.load();
+    uint32_t retries = 0;
+    for (;;)
     {
-        return NI_INVALID_STATE;
+        const uint64_t phase = state & 7;
+        if ((phase != NET_LOCAL_HUB_MANAGED && phase != NET_LOCAL_HUB_EXTERNAL) || ((state >> 3) & 0x1fffffffU) == 0)
+        {
+            return NI_INVALID_STATE;
+        }
+        if ((state >> 32) == UINT32_MAX) { return NI_LIMIT_EXCEEDED; }
+        if (m_ownership.compare_exchange_weak(state, state + (UINT64_C(1) << 32))) { break; }
+        NetLocalHubContention(retries);
     }
-    if (std::find(m_boxes.begin(), m_boxes.end(), inbox) != m_boxes.end())
+    for (NetSenderLocalHubSlot* slot = m_first.load(); slot != nullptr; slot = slot->m_next)
     {
-        return NI_OK;
+        uint32_t empty = 0xc0000000U;
+        if (slot->m_readers.compare_exchange_strong(empty, 0x40000000U))
+        {
+            slot->m_box.store(inbox, std::memory_order_relaxed);
+            slot->m_readers.store(0, std::memory_order_release);
+            return NI_OK;
+        }
     }
-    if (m_boxes.size() >= 64)
+    NetObjectReference<NetSenderLocalHubSlot> allocated;
+    const int32_t result = m_slots->create(allocated);
+    if (result == NI_OK)
     {
-        return NI_LIMIT_EXCEEDED;
+        allocated->m_storage = allocated.storage();
+        allocated->m_box.store(inbox);
+        allocated->m_readers.store(0);
+        NetSenderLocalHubSlot* first = m_first.load();
+        retries = 0;
+        do
+        {
+            allocated->m_next = first;
+            if (m_first.compare_exchange_weak(first, allocated.get(), std::memory_order_release, std::memory_order_relaxed))
+            {
+                allocated.release();
+                return NI_OK;
+            }
+            NetLocalHubContention(retries);
+        } while (true);
     }
-    try
-    {
-        m_boxes.push_back(inbox);
-        return NI_OK;
-    }
-    catch (...)
-    {
-        return NI_NO_MEMORY;
-    }
+    m_ownership.fetch_sub(UINT64_C(1) << 32);
+    stopUnused();
+    return result;
 }
 
 void NetSenderLocalHub::detach(NetSenderLocalInbox* inbox)
 {
+    if (inbox != nullptr)
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        const auto found = std::find(m_boxes.begin(), m_boxes.end(), inbox);
-        if (found != m_boxes.end())
+        for (NetSenderLocalHubSlot* current = m_first.load(); current != nullptr; current = current->m_next)
         {
-            m_boxes.erase(found);
+            NetSenderLocalHubSlot& slot = *current;
+            if (slot.m_box.load() != inbox)
+            {
+                continue;
+            }
+            slot.m_readers.fetch_or(0x80000000U, std::memory_order_acq_rel);
+            while (slot.m_readers.load(std::memory_order_acquire) != 0x80000000U)
+            {
+                // 回收只能等已经取得的借用；从该箱自身回调调用detach仍属非法生命周期重入。
+                CSystem::Sleep(1);
+            }
+            slot.m_box.store(nullptr);
+            slot.m_readers.store(0xc0000000U, std::memory_order_release);
+            m_ownership.fetch_sub(UINT64_C(1) << 32);
+            break;
         }
     }
     stopUnused();
@@ -66,69 +187,81 @@ void NetSenderLocalHub::detach(NetSenderLocalInbox* inbox)
 
 int32_t NetSenderLocalHub::prepare(bool external)
 {
+    uint64_t state = m_ownership.load();
+    uint32_t retries = 0;
     bool registered = false;
+    for (;;)
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        if (external && m_phase == NET_LOCAL_HUB_EXTERNAL)
+        const uint64_t phase = state & 7;
+        if (external && phase == NET_LOCAL_HUB_EXTERNAL)
         {
             return NI_OK;
         }
-        if (!external && (m_phase == NET_LOCAL_HUB_MANAGED || m_phase == NET_LOCAL_HUB_EXTERNAL))
+        if (!external && (phase == NET_LOCAL_HUB_MANAGED || phase == NET_LOCAL_HUB_EXTERNAL))
         {
-            if (m_clients >= 64)
+            if (((state >> 3) & 0x1fffffffU) == 0x1fffffffU)
             {
                 return NI_LIMIT_EXCEEDED;
             }
-            // 管理模式由本状态排除init/uninit；外部模式仍须宿主按原规范串行管理。
-            if (ProcessWork::instance().receiveBufferCount() == 0)
+            if (m_ownership.compare_exchange_weak(state, state + 8))
             {
-                return NI_INVALID_STATE;
+                // 先取得租约再读接收器，防止最后release并发uninit期间读取其配置。
+                int32_t checked = NI_OK;
+                try
+                {
+                    if (ProcessWork::instance().receiveBufferCount() == 0)
+                    {
+                        checked = NI_INVALID_STATE;
+                    }
+                    else if (ProcessWork::instance().receivePayloadCapacity() < kNetSenderLocalReceiveBytes - 12)
+                    {
+                        checked = NI_BUFFER_TOO_SMALL;
+                    }
+                }
+                catch (...)
+                {
+                    checked = NI_INVALID_STATE;
+                }
+                if (checked != NI_OK)
+                {
+                    release();
+                }
+                return checked;
             }
-            if (ProcessWork::instance().receivePayloadCapacity() < kNetSenderLocalReceiveBytes - 12)
-            {
-                return NI_BUFFER_TOO_SMALL;
-            }
-            ++m_clients;
-            return NI_OK;
+            NetLocalHubContention(retries);
+            continue;
         }
-        if ((m_phase != NET_LOCAL_HUB_IDLE && m_phase != NET_LOCAL_HUB_REGISTERED) || m_clients != 0 || !m_boxes.empty())
+        if (state != NET_LOCAL_HUB_IDLE && state != NET_LOCAL_HUB_REGISTERED)
         {
             return NI_INVALID_STATE;
         }
-        registered = m_phase == NET_LOCAL_HUB_REGISTERED;
-        m_phase = NET_LOCAL_HUB_STARTING;
+        registered = state == NET_LOCAL_HUB_REGISTERED;
+        if (m_ownership.compare_exchange_weak(state, NET_LOCAL_HUB_STARTING))
+        {
+            break;
+        }
+        NetLocalHubContention(retries);
     }
     int32_t result = NI_INVALID_STATE;
     try
     {
-        // 不接管已工作的外部接收器；登记只能发生在尚未启动时。
         if (ProcessWork::instance().receiveBufferCount() == 0)
         {
             if (!registered)
             {
-                ProcessWork::instance().addProcessReceiveCallback(this);
-                registered = true;
+                registered = ProcessWork::instance().addProcessReceiveCallback(this);
             }
-            result = external || ProcessWork::instance().initReceive(kNetSenderLocalReceiveBytes, 64) ? NI_OK : NI_INVALID_STATE;
+            result = !registered ? NI_NO_MEMORY :
+                (external || ProcessWork::instance().initReceive(kNetSenderLocalReceiveBytes, 64) ? NI_OK : NI_INVALID_STATE);
         }
     }
     catch (...)
     {
         result = NI_NO_MEMORY;
     }
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        if (result == NI_OK)
-        {
-            m_phase = external ? NET_LOCAL_HUB_EXTERNAL : NET_LOCAL_HUB_MANAGED;
-            m_clients = external ? 0 : 1;
-        }
-        else
-        {
-            // init失败保留回调；再次尝试不能重复登记或uninit掉宿主原Post模块。
-            m_phase = registered ? NET_LOCAL_HUB_REGISTERED : NET_LOCAL_HUB_IDLE;
-        }
-    }
+    // STARTING期间其他调用立即拒绝；只有本事务可以发布启动结果。
+    m_ownership.store(result == NI_OK ? (external ? NET_LOCAL_HUB_EXTERNAL : NET_LOCAL_HUB_MANAGED + 8) :
+        (registered ? NET_LOCAL_HUB_REGISTERED : NET_LOCAL_HUB_IDLE));
     return result;
 }
 
@@ -144,37 +277,37 @@ int32_t NetSenderLocalHub::prepareExternal()
 
 int32_t NetSenderLocalHub::externalStopped()
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_phase != NET_LOCAL_HUB_EXTERNAL || m_clients != 0 || !m_boxes.empty() ||
-        ProcessWork::instance().receiveBufferCount() != 0)
+    uint64_t state = NET_LOCAL_HUB_EXTERNAL;
+    if (!m_ownership.compare_exchange_strong(state, NET_LOCAL_HUB_STOPPING))
     {
         return NI_INVALID_STATE;
     }
-    m_phase = NET_LOCAL_HUB_IDLE;
-    return NI_OK;
+    const bool stopped = ProcessWork::instance().receiveBufferCount() == 0;
+    m_ownership.store(stopped ? NET_LOCAL_HUB_IDLE : NET_LOCAL_HUB_EXTERNAL);
+    return stopped ? NI_OK : NI_INVALID_STATE;
 }
 
 void NetSenderLocalHub::release()
 {
+    uint64_t state = m_ownership.load();
+    uint32_t retries = 0;
+    while (((state >> 3) & 0x1fffffffU) != 0)
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        if (m_clients != 0)
+        if (m_ownership.compare_exchange_weak(state, state - 8))
         {
-            --m_clients;
+            break;
         }
+        NetLocalHubContention(retries);
     }
     stopUnused();
 }
 
 void NetSenderLocalHub::stopUnused()
 {
+    uint64_t state = NET_LOCAL_HUB_MANAGED;
+    if (!m_ownership.compare_exchange_strong(state, NET_LOCAL_HUB_STOPPING))
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        if (m_phase != NET_LOCAL_HUB_MANAGED || m_clients != 0 || !m_boxes.empty())
-        {
-            return;
-        }
-        m_phase = NET_LOCAL_HUB_STOPPING;
+        return;
     }
     try
     {
@@ -182,12 +315,13 @@ void NetSenderLocalHub::stopUnused()
     }
     catch (...)
     {
-        // 停止未被证明完成时，不能让新对象复用未知状态；稳定Hub本身仍存活。
+        // 未确认停止时保持STOPPING，不能把未知接收器让给新实例。
         return;
     }
+    // 依赖的关闭接口可能拒绝回调内自回收；未确认任务收敛时不能开放下一代。
+    if (ProcessWork::instance().receiveBufferCount() == 0)
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_phase = NET_LOCAL_HUB_IDLE;
+        m_ownership.store(NET_LOCAL_HUB_IDLE);
     }
 }
 
@@ -197,112 +331,21 @@ void NetSenderLocalHub::receive(int32_t sendPid, const char* bytes, int32_t size
     {
         return;
     }
-    std::lock_guard<std::mutex> lock(m_mutex);
-    for (size_t index = 0; index < m_boxes.size(); ++index)
+    for (NetSenderLocalHubSlot* current = m_first.load(); current != nullptr; current = current->m_next)
     {
+        NetSenderLocalHubSlot& slot = *current;
+        if (!slot.acquire())
+        {
+            continue;
+        }
         try
         {
-            m_boxes[index]->receive(sendPid, bytes, size, type);
+            slot.m_box.load(std::memory_order_relaxed)->receive(sendPid, bytes, size, type);
         }
         catch (...)
         {
-            // 单个收件箱的异常不能阻断其他借用箱；该通道仍受原固定超时约束。
+            // 一个箱的错误不影响其他箱；无论成功失败都归还本次借用。
         }
+        slot.release();
     }
 }
-
-// NET_SENDER_HUB_LIFECYCLE_UNIT_BEGIN
-// #include <cstdio>
-//
-// int main()
-// {
-//     uint32_t checks = 0;
-// #define HUB_TEST(value, reason) { ++checks; if (!(value)) { std::printf("HUB_FAIL %s\n", reason); throw false; } }
-//     try
-//     {
-//         ProcessWork& work = ProcessWork::instance();
-//         NetSenderLocalHub& hub = NetSenderLocalHub::instance();
-//         NetSenderLocalInbox first;
-//         NetSenderLocalInbox second;
-//         uint32_t leases = 0;
-//         bool external = false;
-//         HUB_TEST(work.receiveBufferCount() == 0, "hub test requires an idle test receiver");
-//         try
-//         {
-//             // 只attach曾经会偷偷登记Hub回调，detach又忘记登记，后续重试造成重复回调。
-//             HUB_TEST(hub.attach(&first) == NI_INVALID_STATE && hub.attach(nullptr) == NI_INVALID_ARGUMENT,
-//                 "unowned attach registered a ProcessWork callback");
-//             HUB_TEST(hub.prepareExternal() == NI_OK, "hub external preparation");
-//             external = true;
-//             HUB_TEST(hub.prepareExternal() == NI_OK && hub.acquire() == NI_INVALID_STATE && hub.attach(&first) == NI_INVALID_STATE,
-//                 "hub lease accepted before receiver readiness");
-//             HUB_TEST(work.initReceive(kNetSenderLocalReceiveBytes, 4), "hub external receiver startup");
-//             HUB_TEST(hub.acquire() == NI_OK, "hub first external lease");
-//             ++leases;
-//             HUB_TEST(hub.acquire() == NI_OK, "hub second external lease");
-//             ++leases;
-//             HUB_TEST(hub.attach(&first) == NI_OK && hub.attach(&first) == NI_OK && hub.attach(&second) == NI_OK,
-//                 "hub repeated attach or shared targets");
-//             hub.release();
-//             --leases;
-//             hub.detach(&first);
-//             HUB_TEST(work.receiveBufferCount() == 4 && hub.externalStopped() == NI_INVALID_STATE,
-//                 "hub released another external client");
-//             hub.release();
-//             --leases;
-//             hub.detach(&second);
-//             HUB_TEST(work.receiveBufferCount() == 4 && hub.externalStopped() == NI_INVALID_STATE,
-//                 "hub stopped a host-owned receiver");
-//             work.uninitReceive();
-//             HUB_TEST(hub.externalStopped() == NI_OK, "hub external registration did not return to idle");
-//             external = false;
-//             HUB_TEST(hub.attach(&first) == NI_INVALID_STATE, "hub retained a stale registration");
-//             HUB_TEST(hub.acquire() == NI_OK, "hub managed startup after external shutdown");
-//             ++leases;
-//             HUB_TEST(hub.attach(&first) == NI_OK && work.receivePayloadCapacity() == 16440, "hub managed receiver capacity");
-//             hub.release();
-//             --leases;
-//             HUB_TEST(work.receiveBufferCount() == 64, "hub stopped while a borrowed inbox was still attached");
-//             hub.detach(&first);
-//             HUB_TEST(work.receiveBufferCount() == 0, "last detach did not stop managed receiver");
-//             hub.release();
-//             HUB_TEST(work.receiveBufferCount() == 0, "extra release restarted receiver");
-//             for (uint32_t index = 0; index < 64; ++index)
-//             {
-//                 HUB_TEST(hub.acquire() == NI_OK, "hub lease capacity below 64");
-//                 ++leases;
-//             }
-//             HUB_TEST(hub.acquire() == NI_LIMIT_EXCEEDED, "hub unbounded lease count");
-//             while (leases != 0)
-//             {
-//                 hub.release();
-//                 --leases;
-//             }
-//             HUB_TEST(work.receiveBufferCount() == 0, "hub final lease leaked receiver tasks");
-//         }
-//         catch (...)
-//         {
-//             hub.detach(&first);
-//             hub.detach(&second);
-//             while (leases != 0)
-//             {
-//                 hub.release();
-//                 --leases;
-//             }
-//             work.uninitReceive();
-//             if (external)
-//             {
-//                 hub.externalStopped();
-//             }
-//             throw;
-//         }
-//     }
-//     catch (...)
-//     {
-//         return 1;
-//     }
-//     std::printf("NetSender Hub ownership checks=%u PASS\n", checks);
-//     return 0;
-// #undef HUB_TEST
-// }
-// NET_SENDER_HUB_LIFECYCLE_UNIT_END
