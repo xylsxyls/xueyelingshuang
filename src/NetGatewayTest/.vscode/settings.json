@@ -1,0 +1,8 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/NetGatewayTest/",
+    "cmake.configureArgs": [
+        "-DLIBRARIESRELY=libAccountd.a;libAtomicMathd.a;libCDumpd.a;libCRandomd.a;libCStringManagerd.a;libCSystemd.a;libCTaskThreadManagerd.a;libCompressd.a;libCorrespondParamd.a;libLibuvTcpd.a;libLockFreeQueued.a;libNetChanneld.a;libNetInterfaced.a;libCEncodeDecoded.a;libNetPeerd.a;libNetSenderd.a;libNetWorkd.a;libProcessWorkd.a;libProtoMessageManagerd.a;libReadWriteMutexd.a;libSemaphored.a;libSharedMemoryd.a;libVariantd.a;libprotobuf-litestatic32.a;libuv.a;libzstdstatic32.a",
+        "-DBIT=32",
+        "-DDEBUGRELEASE=debug"
+    ]
+}

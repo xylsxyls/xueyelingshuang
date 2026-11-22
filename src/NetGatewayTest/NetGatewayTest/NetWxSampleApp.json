@@ -1,0 +1,5 @@
+{
+  "pages": ["pages/index/index"],
+  "window": {"navigationBarTitleText": "NetInterface 网络测试"},
+  "style": "v2"
+}
