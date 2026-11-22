@@ -16,6 +16,13 @@ struct CEncodeDecodeCertificateEntropy
 class CEncodeDecodeCertificate
 {
 public:
+    /** 校验证书和 TLS 共用的 ASCII DNS 标签语法
+    @param [in] name 调用期间借用的域名字节，不能带末尾根点
+    @param [in] size 名称字节数，不含结尾 NUL
+    @return 总长 1 至 253 且每个标签合法时返回 true
+    */
+    static bool validDnsName(const uint8_t* name, size_t size);
+
     /** 验证CSR并完成叶证书签发，算法参数由主类调用方提供
     @param [in] options 借用的签发参数
     @param [out] certificate PEM输出

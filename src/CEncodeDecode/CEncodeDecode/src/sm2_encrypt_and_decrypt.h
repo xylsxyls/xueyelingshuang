@@ -17,7 +17,7 @@
 #endif
 
 /**************************************************
-* Name: sm2_encrypt_data
+* Name: sm2_encrypt_code
 * Function: compute SM2 encryption
 * Parameters:
     message[in]      input message
@@ -52,7 +52,7 @@ int sm2_encrypt_code(const unsigned char *message,
 		unsigned char *c2);
 
 /**************************************************
-* Name: sm2_decrypt
+* Name: sm2_decrypt_code
 * Function: decrypt SM2 ciphertext
 * Parameters:
     c1[in]            the first segment of ciphertext

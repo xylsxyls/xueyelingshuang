@@ -103,7 +103,7 @@ int32_t CEncodeDecodeTls::progress(uint64_t monotonicMs)
         }
         if (result != 0)
         {
-            return m_state->fail(m_state->m_inputFinished ? CENCODE_TLS_TRUNCATED : CENCODE_TLS_PROTOCOL, result);
+            return m_state->fail(result == MBEDTLS_ERR_SSL_CONN_EOF ? CENCODE_TLS_TRUNCATED : CENCODE_TLS_PROTOCOL, result);
         }
         m_state->m_status = CENCODE_TLS_READY;
     }
@@ -272,7 +272,7 @@ int32_t CEncodeDecodeTls::read(uint8_t* output, uint32_t capacity, uint32_t& rec
     }
     if (result <= 0)
     {
-        return m_state->fail(result == 0 || m_state->m_inputFinished ? CENCODE_TLS_TRUNCATED : CENCODE_TLS_PROTOCOL, result);
+        return m_state->fail(result == 0 || result == MBEDTLS_ERR_SSL_CONN_EOF ? CENCODE_TLS_TRUNCATED : CENCODE_TLS_PROTOCOL, result);
     }
     received = static_cast<uint32_t>(result);
     return CENCODE_TLS_OK;

@@ -10,7 +10,6 @@
 #ifdef USE_OPENSSL
 
 #include <string.h>
-#include <stdlib.h>
 #include <openssl/crypto.h>
 #include <openssl/obj_mac.h>
 #include <openssl/evp.h>
@@ -37,7 +36,6 @@ int sm2_encrypt_code(const unsigned char *message,
 	BIGNUM *bn_x2 = NULL, *bn_y2 = NULL;
 	const BIGNUM *bn_order, *bn_cofactor;
 	EC_GROUP *group = NULL;
-	const EC_POINT *generator;
 	EC_POINT *pub_key_pt = NULL, *c1_pt = NULL, *s_pt = NULL, *ec_pt = NULL;
 	const EVP_MD *md;
 	EVP_MD_CTX *md_ctx = NULL;
@@ -51,7 +49,7 @@ int sm2_encrypt_code(const unsigned char *message,
 	memcpy(pub_key_y, (pub_key + 1 + sizeof(pub_key_x)), sizeof(pub_key_y));
 
 	error_code = ALLOCATION_MEMORY_FAIL;
-	if ( !(t = (unsigned char *)malloc(message_len)) )
+	if ( !(t = (unsigned char *)OPENSSL_malloc(message_len)) )
 	{
 		goto clean_up;
 	}
@@ -113,10 +111,6 @@ int sm2_encrypt_code(const unsigned char *message,
 		goto clean_up;
 	}
 	if ( !(bn_cofactor = EC_GROUP_get0_cofactor(group)) )
-	{
-		goto clean_up;
-	}
-	if ( !(generator = EC_GROUP_get0_generator(group)) )
 	{
 		goto clean_up;
 	}
@@ -439,7 +433,7 @@ int sm2_decrypt_code(const unsigned char *c1,
 	memcpy((x2_y2 + sizeof(x2)), y2, sizeof(y2));
 	md = EVP_sm3();
 	
-	if ( !(t = (unsigned char *)malloc(message_len)) )
+	if ( !(t = (unsigned char *)OPENSSL_malloc(message_len)) )
 	{
 		goto clean_up;
 	}
@@ -472,7 +466,7 @@ int sm2_decrypt_code(const unsigned char *c1,
 		goto clean_up;
 	}
 	
-	if ( !(M = (unsigned char *)malloc(message_len)) )
+	if ( !(M = (unsigned char *)OPENSSL_malloc(message_len)) )
 	{
 		goto clean_up;
 	}

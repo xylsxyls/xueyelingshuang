@@ -1,7 +1,12 @@
 ﻿#pragma once
 #include <stdint.h>
 
-// 宿主密码学随机源；返回0代表完整填充，失败不得使用部分输出
+/** 同步从宿主的密码学随机源获取字节
+@param [in] context 宿主上下文，是否可空由回调约定；TLS 借用至实例销毁，其他接口借用至调用返回
+@param [out] output 本次调用期间可写的缓冲区
+@param [in] size 须完整写入的字节数
+@return 完整填充返回 0，失败返回非零；调用方丢弃部分输出
+*/
 typedef int32_t (*CEncodeDecodeEntropyFunction)(void* context, uint8_t* output, uint32_t size);
 
 // 一次密码运算期间借用的字节片段，按数组顺序连接，不复制正文。

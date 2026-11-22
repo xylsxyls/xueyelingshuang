@@ -10,7 +10,7 @@ class CEncodeDecodeHash;
 typedef struct x509_st X509;
 
 // 通用密码运算入口；无全局可变密钥，独立调用可并发，TLS实例由调用者串行驱动
-// MD5、历史AES/SM4仅保留旧数据兼容；网关通信使用mbedTLS认证加密通道
+// MD5、AES-ECB 和 SM4-ECB 用于格式兼容；网关通信使用 mbedTLS 认证加密通道
 class CEncodeDecodeAPI CEncodeDecode
 {
 public:
@@ -31,10 +31,10 @@ public:
     @param [in] context 本次调用借用
     @param [out] privateKey 私钥PEM含NUL，调用者负责保密和擦除
     @param [in] keyCapacity 1至4096；不足时两个正文输出均保持原值
-    @param [out] keySize 成功或容量不足时返回含NUL的长度，其余失败为0
+    @param [out] keySize 成功或容量不足时返回含NUL的长度；前置长度指针重叠检查失败时保持原值
     @param [out] request CSR PEM含NUL
     @param [in] requestCapacity 1至4096
-    @param [out] requestSize 同keySize；所有输入和输出范围不得重叠，别名错误不修改长度
+    @param [out] requestSize 同keySize；所有输出不得与输入或其他输出重叠；通过长度指针检查后，普通参数错误将长度置0
     @return CEncodeDecodeResult；容量不足重试会重新生成密钥，不缓存上次私钥
     */
     static int32_t p256CreateRequest(const uint8_t* name, uint32_t nameSize, CEncodeDecodeEntropyFunction entropy,
@@ -48,7 +48,7 @@ public:
     @param [in] context 本次调用借用
     @param [out] signature DER签名缓冲，失败不改变正文，不得与输入或required重叠
     @param [in] capacity 1至80字节，推荐80
-    @param [out] required 成功或容量不足返回长度，其他失败为0；不得与输入输出重叠
+    @param [out] required 成功或容量不足时返回长度，范围重叠时保留原值，其他失败置零；不得与输入输出重叠
     @return CEncodeDecodeResult；别名错误保持required，不跨DLL分配输出对象
     */
     static int32_t p256SignDigest(const std::string& privateKey, const uint8_t* digest,
@@ -57,7 +57,7 @@ public:
     /** 验证单张非CA P-256叶证书的信任、时间、DNS名称和数字签名用途，可同时验签
     @param [in] certificate 不含NUL的PEM文本，最多16KiB，不接受叶证书链
     @param [in] authority 调用方指定的信任根PEM，包含结束NUL；本库无内置信任根
-    @param [in] authoritySize 1至16KiB
+    @param [in] authoritySize 2字节至16KiB，包含结束NUL
     @param [in] name 1至253字节的预期DNS名称
     @param [in] digest 可选32字节SHA256摘要，不验签时为空
     @param [in] signature 可选DER签名，必须与digest一起提供
@@ -198,21 +198,21 @@ public:
     */
     static std::string MD5Encode(const std::string& src);
 
-    /** 按历史AES-128-ECB、零填充和大写HEX格式编码，保持Package兼容
+    /** 以 AES-128-ECB 加密补零文本，输出 Package 使用的大写 HEX 格式
     @param [in] key 取前16字节，不足补零；不是口令派生函数
     @param [in] src 不含NUL的文本，长度不超过INT_MAX-16字节
     @return 密文HEX；失败返回空，不提供完整性认证或随机化
     */
     static std::string AESEncode(const std::string& key, const std::string& src);
 
-    /** 解码历史AES文本，明文在第一个NUL处结束
+    /** 解码 AES-128-ECB 十六进制文本，明文在第一个 NUL 处结束
     @param [in] key 与编码完全相同的密钥
     @param [in] src HEX长度须为32的非零整数倍，大小写均接受
     @return 明文；错误、分配失败或合法空明文均返回空，不能用于认证
     */
     static std::string AESDecode(const std::string& key, const std::string& src);
 
-    /** 生成RSA-2048密钥，公用指数65537；旧自定义短密钥格式已移除
+    /** 生成 PEM 格式的 RSA-2048 密钥对，公用指数 65537
     @param [out] publicKey PEM公钥，失败清空；不得与privateKey为同一对象
     @param [out] privateKey 未加密的PEM私钥，由调用者保密存储并及时擦除
     @param [in] entropy 原生端可省略以使用操作系统的安全随机源，Wasm 必须提供宿主强随机回调
@@ -227,13 +227,13 @@ public:
     @param [in] src NUL结尾的文本，最多190字节，可为空字符串，不可为空指针
     @param [in] entropy 原生端可省略以使用操作系统的安全随机源，Wasm 必须提供宿主强随机回调
     @param [in] context 本次调用借用的随机上下文
-    @return 256字节二进制密文，可含NUL；失败返回空，不再生成旧文本格式
+    @return 256 字节二进制密文，可含 NUL；失败返回空串
     */
     static std::string RSAEncode(const std::string& publicKey, const char* src,
         CEncodeDecodeEntropyFunction entropy = nullptr, void* context = nullptr);
 
     /** 用RSA-2048 OAEP-SHA256解密；随机源用于RSA盲化
-    @param [in] privateKey 未加密PEM私钥，最多16KiB，不接受旧短密钥格式
+    @param [in] privateKey 未加密的 RSA-2048 PEM 私钥，最多 16 KiB，正文不含 NUL
     @param [in] src 必须为RSAEncode返回的256字节二进制密文
     @param [in] entropy 原生端可省略以使用操作系统的安全随机源，Wasm 必须提供宿主强随机回调
     @param [in] context 本次调用借用的随机上下文
@@ -273,14 +273,14 @@ public:
     static std::string SM2Decode(const std::string& privateKey, const std::string& c1,
         const std::string& c2, const std::string& c3);
 
-    /** 历史SM4-ECB无填充加密；不提供完整性认证
+    /** SM4-ECB 无填充加密；不提供完整性认证
     @param [in] key 恰好16字节，可含NUL
     @param [in] src 非空且长度为16的整数倍，可含NUL
     @return 等长二进制密文，错误或分配失败返回空
     */
     static std::string SM4Encode(const std::string& key, const std::string& src);
 
-    /** 历史SM4-ECB无填充解密
+    /** SM4-ECB 无填充解密
     @param [in] key 恰好16字节，可含NUL
     @param [in] ciphertext 非空且长度为16的整数倍，可含NUL
     @return 等长明文；错误或分配失败返回空，不校验密钥是否正确

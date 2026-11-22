@@ -1,5 +1,6 @@
 ﻿#include "CEncodeDecodeMacro.h"
 #include "CEncodeDecodeTlsState.h"
+#include "CEncodeDecodeCertificate.h"
 #include "CEncodeDecode.h"
 #include "CEncodeDecodeTls.h"
 #include <mbedtls/platform_util.h>
@@ -22,8 +23,8 @@ CEncodeDecodeTlsQueue::~CEncodeDecodeTlsQueue()
 {
     while (m_first)
     {
-        Block* old = m_first;
-        m_first = old->next;
+        CEncodeDecodeTlsQueueBlock* old = m_first;
+        m_first = old->m_next;
         delete old;
     }
 }
@@ -45,18 +46,18 @@ bool CEncodeDecodeTlsQueue::append(const uint8_t* data, uint32_t size, uint32_t&
     }
     while (accepted < wanted)
     {
-        if (!m_last || m_last->end == sizeof(m_last->bytes))
+        if (!m_last || m_last->m_end == sizeof(m_last->m_bytes))
         {
-            Block* next = new (std::nothrow) Block;
+            CEncodeDecodeTlsQueueBlock* next = new (std::nothrow) CEncodeDecodeTlsQueueBlock;
             if (!next)
             {
                 return false;
             }
-            next->begin = next->end = 0;
-            next->next = nullptr;
+            next->m_begin = next->m_end = 0;
+            next->m_next = nullptr;
             if (m_last)
             {
-                m_last->next = next;
+                m_last->m_next = next;
             }
             else
             {
@@ -64,9 +65,9 @@ bool CEncodeDecodeTlsQueue::append(const uint8_t* data, uint32_t size, uint32_t&
             }
             m_last = next;
         }
-        const uint32_t count = (std::min)(wanted - accepted, static_cast<uint32_t>(sizeof(m_last->bytes)) - m_last->end);
-        std::memcpy(m_last->bytes + m_last->end, data + accepted, count);
-        m_last->end += count;
+        const uint32_t count = (std::min)(wanted - accepted, static_cast<uint32_t>(sizeof(m_last->m_bytes)) - m_last->m_end);
+        std::memcpy(m_last->m_bytes + m_last->m_end, data + accepted, count);
+        m_last->m_end += count;
         accepted += count;
         m_size += count;
     }
@@ -98,8 +99,8 @@ uint32_t CEncodeDecodeTlsQueue::peek(const uint8_t*& data) const
         data = m_data + m_head;
         return (std::min)(m_inlineSize, static_cast<uint32_t>(sizeof(m_data)) - m_head);
     }
-    data = m_first ? m_first->bytes + m_first->begin : nullptr;
-    return m_first ? m_first->end - m_first->begin : 0;
+    data = m_first ? m_first->m_bytes + m_first->m_begin : nullptr;
+    return m_first ? m_first->m_end - m_first->m_begin : 0;
 }
 
 bool CEncodeDecodeTlsQueue::consume(uint32_t size)
@@ -116,11 +117,11 @@ bool CEncodeDecodeTlsQueue::consume(uint32_t size)
     }
     else if (m_first && size != 0)
     {
-        m_first->begin += size;
-        if (m_first->begin == m_first->end)
+        m_first->m_begin += size;
+        if (m_first->m_begin == m_first->m_end)
         {
-            Block* old = m_first;
-            m_first = old->next;
+            CEncodeDecodeTlsQueueBlock* old = m_first;
+            m_first = old->m_next;
             if (!m_first)
             {
                 m_last = nullptr;
@@ -190,15 +191,18 @@ int32_t CEncodeDecodeTlsState::configure(const CEncodeDecodeTlsOptions& options)
             return fail(CENCODE_TLS_ARGUMENT, 0);
         }
         size_t hostnameSize = 0;
-        for (; hostnameSize <= 253 && options.hostname[hostnameSize] != 0; ++hostnameSize)
+        while (hostnameSize <= 253 && options.hostname[hostnameSize] != 0)
         {
-            char ch = options.hostname[hostnameSize];
-            if (!((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '.'))
-            {
-                return fail(CENCODE_TLS_ARGUMENT, 0);
-            }
+            ++hostnameSize;
         }
-        if (hostnameSize == 0 || hostnameSize > 253)
+        // 绝对域名允许一个末尾根点，证书验证仍使用调用方提供的完整名称。
+        size_t labelBytes = hostnameSize;
+        if (labelBytes != 0 && options.hostname[labelBytes - 1] == '.')
+        {
+            --labelBytes;
+        }
+        if (hostnameSize > 253 || !CEncodeDecodeCertificate::validDnsName(
+            reinterpret_cast<const uint8_t*>(options.hostname), labelBytes))
         {
             return fail(CENCODE_TLS_ARGUMENT, 0);
         }

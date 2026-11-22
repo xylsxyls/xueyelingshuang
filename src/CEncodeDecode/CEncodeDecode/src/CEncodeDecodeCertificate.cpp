@@ -10,7 +10,6 @@
 #include <mbedtls/x509_crt.h>
 #include <mbedtls/x509_csr.h>
 #include <cstring>
-#include <algorithm>
 
 /** 将安全随机回调适配为第三方错误码，异常不跨密码库边界
 @param [in] context 本次运算的回调与上下文
@@ -68,20 +67,16 @@ static bool CertificateRangesOverlap(const void* first, size_t firstSize, const 
     return firstAddress <= secondAddress ? secondAddress - firstAddress < firstSize : firstAddress - secondAddress < secondSize;
 }
 
-/** 检查DNS名称，防止CN拼接被注入第二个属性
-@param [in] name 完整DNS名称
-@return 合法且最多253字节
-*/
-static bool CertificateValidName(const std::string& name)
+bool CEncodeDecodeCertificate::validDnsName(const uint8_t* name, size_t size)
 {
-    if (name.empty() || name.size() > 253)
+    if (name == nullptr || size == 0 || size > 253)
     {
         return false;
     }
     size_t start = 0;
-    for (size_t index = 0; index <= name.size(); ++index)
+    for (size_t index = 0; index <= size; ++index)
     {
-        if (index == name.size() || name[index] == '.')
+        if (index == size || name[index] == '.')
         {
             if (index == start || index - start > 63 || name[start] == '-' || name[index - 1] == '-')
             {
@@ -121,23 +116,12 @@ int32_t CEncodeDecodeCertificate::createRequest(const uint8_t* name, uint32_t na
     }
     if (keySize == nullptr || requestSize == nullptr || privateKey == nullptr || request == nullptr ||
         keyCapacity == 0 || keyCapacity > 4096 || requestCapacity == 0 ||
-        requestCapacity > 4096 || name == nullptr || nameSize == 0 || nameSize > 253 || entropy == nullptr ||
+        requestCapacity > 4096 || entropy == nullptr ||
         CertificateRangesOverlap(privateKey, keyCapacity, request, requestCapacity) ||
         CertificateRangesOverlap(privateKey, keyCapacity, name, nameSize) ||
-        CertificateRangesOverlap(request, requestCapacity, name, nameSize))
+        CertificateRangesOverlap(request, requestCapacity, name, nameSize) || !validDnsName(name, nameSize))
     {
         return CENCODE_ARGUMENT;
-    }
-    try
-    {
-        if (!CertificateValidName(std::string(reinterpret_cast<const char*>(name), nameSize)))
-        {
-            return CENCODE_ARGUMENT;
-        }
-    }
-    catch (...)
-    {
-        return CENCODE_MEMORY;
     }
     char subject[257] = {'C', 'N', '=', 0};
     std::memcpy(subject + 3, name, nameSize);
@@ -253,13 +237,25 @@ int32_t CEncodeDecodeCertificate::signDigest(const std::string& privateKey, cons
     return status;
 }
 
+/** 检查包含NUL的借用文本，先限长与地址检查再访问
+@param [in] value 字节范围
+@param [in] maximum 包括NUL的上限
+@return 非空文本且仅末字节是NUL
+*/
+static bool CertificatePemBytes(const CEncodeDecodeBytes& value, uint32_t maximum)
+{
+    return value.m_bytes != nullptr && value.m_size >= 2 && value.m_size <= maximum &&
+        reinterpret_cast<uintptr_t>(value.m_bytes) <= UINTPTR_MAX - (value.m_size - 1) &&
+        value.m_bytes[value.m_size - 1] == 0 && std::memchr(value.m_bytes, 0, value.m_size - 1) == nullptr;
+}
+
 int32_t CEncodeDecodeCertificate::verify(const std::string& certificate, const uint8_t* authority, uint32_t authoritySize,
     const std::string& name, const uint8_t* digest, const uint8_t* signature, uint32_t signatureSize)
 {
     const bool proof = digest != nullptr || signature != nullptr || signatureSize != 0;
-    if (!CertificateText(certificate, 16384) || !CertificateValidName(name) || authority == nullptr ||
-        authoritySize < 2 || authoritySize > 16384 || authority[authoritySize - 1] != 0 ||
-        std::memchr(authority, 0, authoritySize - 1) != nullptr ||
+    const CEncodeDecodeBytes authorityText = {authority, authoritySize};
+    if (!CertificateText(certificate, 16384) || !validDnsName(reinterpret_cast<const uint8_t*>(name.data()), name.size()) ||
+        !CertificatePemBytes(authorityText, 16384) ||
         (proof && (digest == nullptr || signature == nullptr || signatureSize == 0 || signatureSize > 80)))
     {
         return CENCODE_ARGUMENT;
@@ -330,18 +326,6 @@ int32_t CEncodeDecodeCertificate::verifyPair(const std::string& certificate, con
     mbedtls_x509_crt_free(&leaf);
     mbedtls_ctr_drbg_free(&random);
     return result == 0 ? CENCODE_OK : CENCODE_STATE;
-}
-
-/** 检查包含NUL的借用文本，先限长与地址检查再访问
-@param [in] value 字节范围
-@param [in] maximum 包括NUL的上限
-@return 非空文本且仅末字节是NUL
-*/
-static bool CertificatePemBytes(const CEncodeDecodeBytes& value, uint32_t maximum)
-{
-    return value.m_bytes != nullptr && value.m_size >= 2 && value.m_size <= maximum &&
-        reinterpret_cast<uintptr_t>(value.m_bytes) <= UINTPTR_MAX - (value.m_size - 1) &&
-        value.m_bytes[value.m_size - 1] == 0 && std::memchr(value.m_bytes, 0, value.m_size - 1) == nullptr;
 }
 
 /** 校验公历UTC时间，拒绝不存在的日期和越界时分秒
@@ -422,24 +406,17 @@ int32_t CEncodeDecodeCertificate::issue(const CEncodeDecodeCertificateIssue& opt
     {
         return CENCODE_ARGUMENT;
     }
-    try
+    if (!validDnsName(options.m_name.m_bytes, options.m_name.m_size - 1))
     {
-        if (!CertificateValidName(std::string(reinterpret_cast<const char*>(options.m_name.m_bytes), options.m_name.m_size - 1)))
+        return CENCODE_ARGUMENT;
+    }
+    for (uint32_t index = 0; index < options.m_dnsNameCount; ++index)
+    {
+        const CEncodeDecodeBytes& dns = options.m_dnsNames[index];
+        if (!CertificatePemBytes(dns, 254) || !validDnsName(dns.m_bytes, dns.m_size - 1))
         {
             return CENCODE_ARGUMENT;
         }
-        for (uint32_t index = 0; index < options.m_dnsNameCount; ++index)
-        {
-            const CEncodeDecodeBytes& dns = options.m_dnsNames[index];
-            if (!CertificatePemBytes(dns, 254) || !CertificateValidName(std::string(reinterpret_cast<const char*>(dns.m_bytes), dns.m_size - 1)))
-            {
-                return CENCODE_ARGUMENT;
-            }
-        }
-    }
-    catch (...)
-    {
-        return CENCODE_MEMORY;
     }
     char subject[257] = {'C', 'N', '=', 0};
     std::memcpy(subject + 3, options.m_name.m_bytes, options.m_name.m_size);

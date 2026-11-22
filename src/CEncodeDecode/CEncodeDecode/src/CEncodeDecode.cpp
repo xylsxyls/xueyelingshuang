@@ -9,23 +9,15 @@
 #include <new>
 #include "MD5.h"
 #include "aes_encryptor.h"
-#include <vector>
-#include <time.h>
 #include <string.h>
 #include "RsaAlgorithm.h"
 #include <stdint.h>
-#include <memory>
-#include "sm2_cipher_error_codes.h"
 #include "sm2_create_key_pair.h"
 #include "sm2_encrypt_and_decrypt.h"
 #include "sm4.h"
 #ifdef USE_OPENSSL
 #include <openssl/x509.h>
 #include <openssl/pem.h>
-#include <algorithm>
-#if (_MSC_VER == 1900)
-#include <iterator>
-#endif
 #ifdef _WIN64
 #pragma comment(lib, "libcrypto64.lib")
 #pragma comment(lib, "libssl64.lib")
@@ -399,24 +391,30 @@ std::string CEncodeDecode::MD5Encode(const std::string& src)
     }
 }
 
-std::string CEncodeDecode::AESEncode(const std::string& key, const std::string& src)
+/** 按文本接口约定将密钥补零或截断至 16 字节，构造分组器后擦除临时密钥
+@param [in] key 调用期间借用的密钥字节，允许空字符串
+@param [in] text 加密时为明文，解密时为十六进制密文
+@param [in] encrypt 为 true 时加密，为 false 时解密
+@return 加密后的大写十六进制或解密后的文本，错误时为空
+*/
+static std::string TransformAesText(const std::string& key, const std::string& text, bool encrypt)
 {
     unsigned char normalized[16] = {};
-    size_t size = key.size() < sizeof(normalized) ? key.size() : sizeof(normalized);
+    const size_t size = key.size() < sizeof(normalized) ? key.size() : sizeof(normalized);
     memcpy(normalized, key.data(), size);
     AesEncryptor aes(normalized);
     mbedtls_platform_zeroize(normalized, sizeof(normalized));
-    return aes.EncryptString(src);
+    return encrypt ? aes.EncryptString(text) : aes.DecryptString(text);
+}
+
+std::string CEncodeDecode::AESEncode(const std::string& key, const std::string& src)
+{
+    return TransformAesText(key, src, true);
 }
 
 std::string CEncodeDecode::AESDecode(const std::string& key, const std::string& src)
 {
-    unsigned char normalized[16] = {};
-    size_t size = key.size() < sizeof(normalized) ? key.size() : sizeof(normalized);
-    memcpy(normalized, key.data(), size);
-    AesEncryptor aes(normalized);
-    mbedtls_platform_zeroize(normalized, sizeof(normalized));
-    return aes.DecryptString(src);
+    return TransformAesText(key, src, false);
 }
 
 bool CEncodeDecode::RSAKey(std::string& publicKey, std::string& privateKey,
@@ -559,21 +557,35 @@ std::string CEncodeDecode::SM2Decode(const std::string& privateKey, const std::s
     return "";
 }
 
-std::string CEncodeDecode::SM4Encode(const std::string& key, const std::string& src)
+/** 用一次展开的 SM4 轮密钥处理全部 ECB 分组，返回前擦除轮密钥
+@param [in] key 恰好 16 字节，调用期间借用
+@param [in] input 非空的完整 16 字节分组，可含零字节
+@param [in] mode 由公开入口指定为 SM4_ENCRYPT 或 SM4_DECRYPT
+@return 等长二进制结果，参数错误或分配失败返回空串
+*/
+static std::string TransformSm4Blocks(const std::string& key, const std::string& input, int mode)
 {
-    if (key.size() != 16 || src.empty() || src.size() % 16 != 0)
+    if (key.size() != 16 || input.empty() || input.size() % 16 != 0)
     {
         return "";
     }
     try
     {
-        std::string result(src.size(), '\0');
+        std::string result(input.size(), '\0');
         sm4_context context;
-        sm4_setkey_enc(&context, reinterpret_cast<unsigned char*>(const_cast<char*>(key.data())));
-        for (size_t i = 0; i < src.size(); i += 16)
+        unsigned char* keyBytes = reinterpret_cast<unsigned char*>(const_cast<char*>(key.data()));
+        if (mode == SM4_ENCRYPT)
         {
-            sm4_crypt_ecb(&context, SM4_ENCRYPT, 16, reinterpret_cast<unsigned char*>(const_cast<char*>(src.data()) + i),
-                reinterpret_cast<unsigned char*>(&result[i]));
+            sm4_setkey_enc(&context, keyBytes);
+        }
+        else
+        {
+            sm4_setkey_dec(&context, keyBytes);
+        }
+        for (size_t offset = 0; offset < input.size(); offset += 16)
+        {
+            sm4_crypt_ecb(&context, mode, 16, reinterpret_cast<unsigned char*>(const_cast<char*>(input.data()) + offset),
+                reinterpret_cast<unsigned char*>(&result[offset]));
         }
         mbedtls_platform_zeroize(&context, sizeof(context));
         return result;
@@ -584,29 +596,14 @@ std::string CEncodeDecode::SM4Encode(const std::string& key, const std::string& 
     }
 }
 
+std::string CEncodeDecode::SM4Encode(const std::string& key, const std::string& src)
+{
+    return TransformSm4Blocks(key, src, SM4_ENCRYPT);
+}
+
 std::string CEncodeDecode::SM4Decode(const std::string& key, const std::string& ciphertext)
 {
-    if (key.size() != 16 || ciphertext.empty() || ciphertext.size() % 16 != 0)
-    {
-        return "";
-    }
-    try
-    {
-        std::string result(ciphertext.size(), '\0');
-        sm4_context context;
-        sm4_setkey_dec(&context, reinterpret_cast<unsigned char*>(const_cast<char*>(key.data())));
-        for (size_t i = 0; i < ciphertext.size(); i += 16)
-        {
-            sm4_crypt_ecb(&context, SM4_DECRYPT, 16, reinterpret_cast<unsigned char*>(const_cast<char*>(ciphertext.data()) + i),
-                reinterpret_cast<unsigned char*>(&result[i]));
-        }
-        mbedtls_platform_zeroize(&context, sizeof(context));
-        return result;
-    }
-    catch (...)
-    {
-        return "";
-    }
+    return TransformSm4Blocks(key, ciphertext, SM4_DECRYPT);
 }
 
 X509* CEncodeDecode::getCert(const std::string& path)
@@ -675,10 +672,18 @@ std::string CEncodeDecode::getPublicKey(X509* cert)
 #endif
 }
 
-// 下列示例已用 Windows x64 Release 单独编译运行。
+// 使用示例。通过同一套 SDK 编译并链接，退出码 0 表示调用成功。
 // #include "CEncodeDecode/CEncodeDecodeAPI.h"
-// #ifdef __EMSCRIPTEN__
+// #if defined(_WIN32)
+// #include <windows.h>
+// #include <bcrypt.h>
+// #pragma comment(lib, "bcrypt.lib")
+// #elif defined(__EMSCRIPTEN__)
 // #include <unistd.h>
+// #elif defined(__APPLE__)
+// #include <stdlib.h>
+// #else
+// #include <cstdio>
 // #endif
 // #include <cstring>
 // #include <memory>
@@ -689,46 +694,124 @@ std::string CEncodeDecode::getPublicKey(X509* cert)
 //     const uint8_t message[] = {'a', 'b', 'c'};
 //     const CEncodeDecodeBytes parts[] = {{message, 1}, {message + 1, 2}};
 //     uint8_t digest[32], partial[32];
-//     // 固定数据仅用于演示 HMAC 和 PBKDF2，应用应提供自己的密钥和盐
-//     uint8_t sampleKey[32] = {1, 2, 3, 4};
 //     if (CEncodeDecode::sha256(message, 3, digest, 32) != CENCODE_OK ||
-//         CEncodeDecode::sha256Parts(parts, 2, partial, 32) != CENCODE_OK || std::memcmp(digest, partial, 32)) { return 1; }
+//         CEncodeDecode::sha256Parts(parts, 2, partial, 32) != CENCODE_OK || std::memcmp(digest, partial, 32))
+//     {
+//         return 1;
+//     }
 //     CEncodeDecodeHash* raw = nullptr;
-//     if (CEncodeDecode::hashCreate(&raw) != CENCODE_OK) { return 1; }
+//     if (CEncodeDecode::hashCreate(&raw) != CENCODE_OK)
+//     {
+//         return 1;
+//     }
 //     std::unique_ptr<CEncodeDecodeHash, void (*)(CEncodeDecodeHash*)> stream(raw, CEncodeDecode::hashDestroy);
-//     if (CEncodeDecode::hashUpdate(raw, message, 3) != CENCODE_OK ||
-//         CEncodeDecode::hashFinish(raw, partial, 32) != CENCODE_OK || std::memcmp(digest, partial, 32)) { return 1; }
-//     // 此调用在原生端使用系统随机源，Wasm 应传入宿主强随机回调。
-// #ifdef __EMSCRIPTEN__
-//     // Emscripten 的 getentropy 从宿主获取强随机字节，单次调用最多填充 256 字节。
+//     if (CEncodeDecode::hashUpdate(raw, parts[0].m_bytes, parts[0].m_size) != CENCODE_OK ||
+//         CEncodeDecode::hashUpdate(raw, parts[1].m_bytes, parts[1].m_size) != CENCODE_OK ||
+//         CEncodeDecode::hashFinish(raw, partial, 32) != CENCODE_OK || std::memcmp(digest, partial, 32))
+//     {
+//         return 1;
+//     }
+//     stream.reset();
+//     // P-256 使用宿主熵源。上下文可空；向 out 完整写入 count 字节返回 0，失败返回非零。
 //     const CEncodeDecodeEntropyFunction entropy = [](void*, uint8_t* out, uint32_t count) -> int32_t {
-//         while (count) {
+// #if defined(_WIN32)
+//         return BCryptGenRandom(nullptr, out, count, BCRYPT_USE_SYSTEM_PREFERRED_RNG) == 0 ? 0 : -1;
+// #elif defined(__EMSCRIPTEN__)
+//         while (count != 0)
+//         {
 //             const uint32_t chunk = count > 256 ? 256 : count;
-//             if (getentropy(out, chunk) != 0) { return -1; }
+//             if (getentropy(out, chunk) != 0)
+//             {
+//                 return -1;
+//             }
 //             out += chunk;
 //             count -= chunk;
 //         }
 //         return 0;
-//     };
+// #elif defined(__APPLE__)
+//         arc4random_buf(out, count);
+//         return 0;
 // #else
-//     const CEncodeDecodeEntropyFunction entropy = nullptr;
+//         std::FILE* systemRandom = std::fopen("/dev/urandom", "rb");
+//         if (!systemRandom)
+//         {
+//             return -1;
+//         }
+//         const size_t filled = std::fread(out, 1, count, systemRandom);
+//         std::fclose(systemRandom);
+//         return filled == count ? 0 : -1;
 // #endif
-//     if (CEncodeDecode::hmacSha256(sampleKey, 32, message, 3, digest, 32) != CENCODE_OK ||
-//         CEncodeDecode::hmacSha256Parts(sampleKey, 32, parts, 2, partial, 32) != CENCODE_OK || std::memcmp(digest, partial, 32)) { return 1; }
-//     if (CEncodeDecode::pbkdf2Sha256(message, 3, sampleKey, 16, 10000, partial, 32) != CENCODE_OK) { return 1; }
-//     std::string publicKey, privateKey;
-//     if (!CEncodeDecode::RSAKey(publicKey, privateKey, entropy, nullptr)) { return 1; }
-//     const std::string cipher = CEncodeDecode::RSAEncode(publicKey, "sample", entropy, nullptr);
-//     const bool verified = CEncodeDecode::RSADecode(privateKey, cipher, entropy, nullptr) == "sample";
-//     CEncodeDecode::wipe(reinterpret_cast<uint8_t*>(&privateKey[0]), static_cast<uint32_t>(privateKey.size()));
-//     // 历史格式的往返检查。网关通信使用有证书验证的 TLS 通道。
-//     std::string legacyKey(reinterpret_cast<const char*>(sampleKey), 16);
-//     const std::string block("0123456789abcdef");
-//     const bool compatible = CEncodeDecode::MD5Encode("abc") == "900150983cd24fb0d6963f7d28e17f72" &&
-//         CEncodeDecode::AESDecode(legacyKey, CEncodeDecode::AESEncode(legacyKey, block)) == block &&
-//         CEncodeDecode::SM4Decode(legacyKey, CEncodeDecode::SM4Encode(legacyKey, block)) == block;
-//     CEncodeDecode::wipe(sampleKey, sizeof(sampleKey));
-//     CEncodeDecode::wipe(reinterpret_cast<uint8_t*>(&legacyKey[0]), 16);
+//     };
+//     const uint8_t hostname[] = "service.example";
+//     uint8_t signingKey[4096], request[4096], signature[80];
+//     uint32_t keySize = 0, requestSize = 0, signatureSize = 0;
+//     if (CEncodeDecode::p256CreateRequest(hostname, sizeof(hostname) - 1, entropy, nullptr,
+//         signingKey, sizeof(signingKey), &keySize, request, sizeof(request), &requestSize) != CENCODE_OK)
+//     {
+//         return 1;
+//     }
+//     // PEM 输出长度含末尾 NUL，传给接受 std::string 的接口时去掉它。
+//     std::string keyPem(reinterpret_cast<const char*>(signingKey), keySize - 1);
+//     CEncodeDecode::wipe(signingKey, sizeof(signingKey));
+//     const int32_t signedDigest = CEncodeDecode::p256SignDigest(keyPem, digest, entropy, nullptr,
+//         signature, sizeof(signature), &signatureSize);
+//     CEncodeDecode::wipe(reinterpret_cast<uint8_t*>(&keyPem[0]), static_cast<uint32_t>(keyPem.size()));
+//     if (signedDigest != CENCODE_OK || signatureSize == 0)
+//     {
+//         return 1;
+//     }
+//     uint8_t salt[16], macKey[32];
+//     if (!CEncodeDecode::entropyBytes(entropy, nullptr, salt, sizeof(salt)) ||
+//         !CEncodeDecode::entropyBytes(entropy, nullptr, macKey, sizeof(macKey)))
+//     {
+//         return 1;
+//     }
+//     const bool macMatches = CEncodeDecode::hmacSha256(macKey, sizeof(macKey), message, 3, digest, sizeof(digest)) == CENCODE_OK &&
+//         CEncodeDecode::hmacSha256Parts(macKey, sizeof(macKey), parts, 2, partial, sizeof(partial)) == CENCODE_OK &&
+//         std::memcmp(digest, partial, sizeof(digest)) == 0;
+//     CEncodeDecode::wipe(macKey, sizeof(macKey));
+//     if (!macMatches)
+//     {
+//         return 1;
+//     }
+//     // 盐单独生成，实际应用将盐和迭代次数随派生参数保存。
+//     if (CEncodeDecode::pbkdf2Sha256(message, 3, salt, sizeof(salt), 10000, partial, sizeof(partial)) != CENCODE_OK)
+//     {
+//         return 1;
+//     }
+//     // 示例完成派生后立即擦除输出，应用在实际使用完派生密钥后擦除。
 //     CEncodeDecode::wipe(partial, sizeof(partial));
+//     std::string publicKey, privateKey;
+//     if (!CEncodeDecode::RSAKey(publicKey, privateKey, entropy, nullptr))
+//     {
+//         return 1;
+//     }
+//     const std::string cipher = CEncodeDecode::RSAEncode(publicKey, "sample", entropy, nullptr);
+//     // 密文是定长二进制，按 size() 处理，不能用 strlen()。验证成功后再使用明文。
+//     const bool verified = cipher.size() == 256 && CEncodeDecode::RSADecode(privateKey, cipher, entropy, nullptr) == "sample";
+//     CEncodeDecode::wipe(reinterpret_cast<uint8_t*>(&privateKey[0]), static_cast<uint32_t>(privateKey.size()));
+//     // 文本和定长分组接口的使用。网关通信使用有证书验证的 TLS 通道。
+//     std::string aesKey(16, '\0'), sm4Key(16, '\0');
+//     const bool haveKeys = CEncodeDecode::entropyBytes(entropy, nullptr, reinterpret_cast<uint8_t*>(&aesKey[0]), 16) &&
+//         CEncodeDecode::entropyBytes(entropy, nullptr, reinterpret_cast<uint8_t*>(&sm4Key[0]), 16);
+//     const std::string block("0123456789abcdef");
+//     // SM4 接受完整的二进制分组，第二个分组可以全部为零。
+//     const std::string binary = block + std::string(16, '\0');
+//     const bool compatible = haveKeys && CEncodeDecode::MD5Encode("abc") == "900150983cd24fb0d6963f7d28e17f72" &&
+//         CEncodeDecode::AESDecode(aesKey, CEncodeDecode::AESEncode(aesKey, block)) == block &&
+//         CEncodeDecode::SM4Decode(sm4Key, CEncodeDecode::SM4Encode(sm4Key, binary)) == binary;
+//     CEncodeDecode::wipe(reinterpret_cast<uint8_t*>(&aesKey[0]), 16);
+//     CEncodeDecode::wipe(reinterpret_cast<uint8_t*>(&sm4Key[0]), 16);
+//     CEncodeDecodeTlsQueueLimits limits;
+//     if (!limits.set(65536, 65536) || limits.inputBytes() != 65536 || limits.outputBytes() != 65536)
+//     {
+//         return 1;
+//     }
+//     CEncodeDecodeTlsOptions options = {};
+//     if (!options.setHandshakeTimeout(5000))
+//     {
+//         return 1;
+//     }
+//     // 创建 TLS 客户端前还需填入 hostname、authority、authoritySize 和强随机回调。
 //     return verified && compatible ? 0 : 1;
 // }

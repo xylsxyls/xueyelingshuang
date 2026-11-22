@@ -6,6 +6,19 @@
 #include <mbedtls/x509_crt.h>
 #include <mbedtls/pk.h>
 
+// 每个附加块地址固定，保证已借出的输出前缀在消费前不会因后续追加失效。
+struct CEncodeDecodeTlsQueueBlock
+{
+    // 此块独占的密文
+    uint8_t m_bytes[32768];
+    // 首个未消费字节
+    uint32_t m_begin;
+    // 已写入区间的末尾
+    uint32_t m_end;
+    // 下一块，由队列释放
+    CEncodeDecodeTlsQueueBlock* m_next;
+};
+
 // 密文队列；默认使用内置环形存储。较大的显式限额按实际输入分块增长。
 class CEncodeDecodeTlsQueue
 {
@@ -47,25 +60,32 @@ class CEncodeDecodeTlsQueue
     bool consume(uint32_t size);
 
   private:
-    // 每个附加块地址固定，保证已借出的输出前缀在消费前不会因后续追加失效。
-    struct Block
-    {
-        uint8_t bytes[32768];   // 此块独占的密文
-        uint32_t begin;         // 首个未消费字节
-        uint32_t end;           // 已写入区间的末尾
-        Block* next;            // 下一块，由队列释放
-    };
+    /** 队列独占密文块，禁止复制
+    @param [in] other 不可复制的队列
+    */
     CEncodeDecodeTlsQueue(const CEncodeDecodeTlsQueue& other) = delete;
+
+    /** 队列独占密文块，禁止赋值
+    @param [in] other 不可复制的队列
+    @return 不提供实现
+    */
     CEncodeDecodeTlsQueue& operator=(const CEncodeDecodeTlsQueue& other) = delete;
+
+private:
     // 默认配置在内置环形缓冲内完成所有操作。
     uint8_t m_data[32768];
     // 队首偏移
     uint32_t m_head;
-    uint32_t m_inlineSize; // 内置缓冲的已用字节
-    int64_t m_limit;       // 允许的待处理字节数
-    uint64_t m_size;       // 全部块待处理字节总数
-    Block* m_first;        // 额外存储的首块
-    Block* m_last;         // 额外存储的尾块
+    // 内置缓冲的已用字节
+    uint32_t m_inlineSize;
+    // 允许的待处理字节数
+    int64_t m_limit;
+    // 全部块待处理字节总数
+    uint64_t m_size;
+    // 额外存储的首块
+    CEncodeDecodeTlsQueueBlock* m_first;
+    // 额外存储的尾块
+    CEncodeDecodeTlsQueueBlock* m_last;
 };
 
 // TLS内部实现和私密数据，外部只能通过CEncodeDecodeTls操作
@@ -154,7 +174,7 @@ class CEncodeDecodeTlsState
     int32_t m_status;
     // 最后一个底层错误
     int32_t m_detail;
-    // 底层已读至EOF
+    // 宿主已声明输入结束，队列中仍可能有待读密文
     bool m_inputFinished;
     // 本端关闭已开始，拒绝新明文
     bool m_closeStarted;

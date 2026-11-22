@@ -26,7 +26,7 @@ class CEncodeDecodeAPI CEncodeDecodeTls
     @param [in] data 仅size为0时可空，本次调用借用
     @param [in] size 输入字节数
     @param [out] consumed 实际复制的字节数，剩余部分由宿主保留
-    @return OK、WANT_IO或持续错误
+    @return OK、WANT_IO、ARGUMENT、STATE 或持续错误
     */
     int32_t feed(const uint8_t* data, uint32_t size, uint32_t& consumed);
 
@@ -53,7 +53,7 @@ class CEncodeDecodeAPI CEncodeDecodeTls
     @param [in] data 仅size为0时可空，本次调用复制，不在返回后借用
     @param [in] size 明文字节数，超过16384时只接受前缀
     @param [out] accepted 已排队字节数，不代表送达；失败后由业务请求幂等重试
-    @return OK、WANT_IO、STATE或持续错误
+    @return OK、WANT_IO、ARGUMENT、STATE 或持续错误
     */
     int32_t write(const uint8_t* data, uint32_t size, uint32_t& accepted);
 
@@ -85,7 +85,7 @@ class CEncodeDecodeAPI CEncodeDecodeTls
     @param [out] output 有效可写缓冲，仅capacity为0时可空
     @param [in] capacity 可写字节数
     @param [out] received 实际输出字节数
-    @return OK、WANT_IO、CLOSED、STATE或持续错误
+    @return OK、WANT_IO、CLOSED、ARGUMENT、STATE 或持续错误
     */
     int32_t read(uint8_t* output, uint32_t capacity, uint32_t& received);
 

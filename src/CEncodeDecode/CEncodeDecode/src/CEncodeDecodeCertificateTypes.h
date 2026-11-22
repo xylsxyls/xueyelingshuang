@@ -23,7 +23,7 @@ struct CEncodeDecodeCertificateIssue
     uint32_t m_dnsNameCount;
     // 是否加入TLS服务端EKU；用途由调用者的授权策略决定。
     bool m_tlsServer;
-    // 是否加入TLS客户端EKU。
+    // 是否加入 TLS 客户端 EKU。两个用途都为 false 时，证书省略整个 EKU 扩展。
     bool m_tlsClient;
     // 必须提供的强随机源，用于签名和随机序列号。
     CEncodeDecodeEntropyFunction m_entropy;

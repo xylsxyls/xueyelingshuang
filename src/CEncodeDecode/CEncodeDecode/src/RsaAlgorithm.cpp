@@ -1,4 +1,5 @@
 ﻿#include "RsaAlgorithm.h"
+#include "CEncodeDecode.h"
 #include <mbedtls/rsa.h>
 #include <mbedtls/platform_util.h>
 #include <cstring>
@@ -78,22 +79,11 @@ RsaAlgorithm::~RsaAlgorithm()
 int RsaAlgorithm::entropyBytes(void* context, unsigned char* output, size_t size)
 {
     RsaAlgorithm* self = static_cast<RsaAlgorithm*>(context);
-    if (!self || !output || size > 8192)
+    if (self && output && size <= UINT32_MAX && CEncodeDecode::entropyBytes(self->m_entropy, self->m_entropyContext,
+        output, static_cast<uint32_t>(size)))
     {
-        return MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED;
+        return 0;
     }
-    try
-    {
-        if (self->m_entropy && self->m_entropy(self->m_entropyContext, output, static_cast<uint32_t>(size)) == 0)
-        {
-            return 0;
-        }
-    }
-    catch (...)
-    {
-        // 密码学随机源失败后禁止继续使用已写入的字节
-    }
-    mbedtls_platform_zeroize(output, size);
     return MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED;
 }
 

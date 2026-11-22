@@ -2,7 +2,7 @@
 #include "CEncodeDecodeMacro.h"
 #include "CEncodeDecodeTypes.h"
 
-// TLS实例状态；负数为持续错误，必须销毁实例后重新连接
+// TLS 接口返回码。status() 返回负数表示持续错误，单次操作也可返回可纠正的参数或状态错误
 typedef enum CEncodeDecodeTlsStatus
 {
     // 本次输入已接受或输出已消费
@@ -46,7 +46,7 @@ typedef struct CEncodeDecodeTlsOptions
     const uint8_t* privateKey;
     // 私钥字节数，最大32KiB，PEM包含结尾NUL
     uint32_t privateKeySize;
-    // 客户端必须指定DNS域名，1至253字节，禁止跳过域名验证
+    // 客户端预期 DNS 域名，共 1 至 253 字节；标签 1 至 63 字节，可带末尾根点
     const char* hostname;
     // 必填的密码学熵源回调，同步接收 entropyContext 并将 size 个随机字节写入 output，全部填满返回 0，失败返回非零
     CEncodeDecodeEntropyFunction entropy;

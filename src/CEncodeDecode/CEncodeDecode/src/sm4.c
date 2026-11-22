@@ -10,7 +10,6 @@
 
 #include "sm4.h"
 #include <string.h>
-#include <stdio.h>
 
 /*
  * 32-bit integer manipulation macros (big endian)
@@ -93,9 +92,7 @@ static const uint32_t CK[32] =
  */
 static unsigned char sm4Sbox(unsigned char inch)
 {
-    unsigned char *pTable = (unsigned char *)SboxTable;
-    unsigned char retVal = (unsigned char)(pTable[inch]);
-    return retVal;
+    return SboxTable[inch >> 4][inch & 15];
 }
 
 /*
@@ -157,6 +154,10 @@ static uint32_t sm4CalciRK(uint32_t ka)
     return rk;
 }
 
+/** 从原始密钥生成按加密顺序排列的轮密钥
+@param [out] SK 可写的32个32位字
+@param [in] key 16字节密钥
+*/
 static void sm4_setkey( uint32_t SK[32], unsigned char key[16] )
 {
     uint32_t MK[4];
@@ -179,10 +180,11 @@ static void sm4_setkey( uint32_t SK[32], unsigned char key[16] )
 
 }
 
-/*
- * SM4 standard one round processing
- *
- */
+/** 使用指定顺序的轮密钥转换单个分组
+@param [in] sk 32个轮密钥，解密时顺序反转
+@param [in] input 16字节输入
+@param [out] output 16字节输出，可与输入相同
+*/
 static void sm4_one_round( uint32_t sk[32],
                     unsigned char input[16],
                     unsigned char output[16] )
@@ -198,9 +200,6 @@ static void sm4_one_round( uint32_t sk[32],
     while(i<32)
     {
         ulbuf[i+4] = sm4F(ulbuf[i], ulbuf[i+1], ulbuf[i+2], ulbuf[i+3], sk[i]);
-// #ifdef _DEBUG
-//        	printf("rk(%02d) = 0x%08x,  X(%02d) = 0x%08x \n",i,sk[i], i, ulbuf[i+4] );
-// #endif
 	    i++;
     }
 	PUT_ULONG_BE(ulbuf[35],output,0);

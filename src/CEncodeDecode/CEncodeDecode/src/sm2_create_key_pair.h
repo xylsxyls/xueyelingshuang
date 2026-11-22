@@ -29,7 +29,7 @@ typedef struct sm2_key_pair_structure {
 * Function: create SM2 key pair, including private key
     and public key
 * Parameters:
-    key_pair[in]  SM2 key pair
+    key_pair[out] SM2 key pair; cleared on failure
 * Return value:
     0:                function executes successfully
     any other value:  an error occurs
