@@ -312,9 +312,9 @@ public:
     static bool isMouseMidDown();
 
     /** 复制文件或目录，目标目录不存在时会自动创建
-    @param [in] from 源路径
-    @param [in] dest 目标路径
-    @return 返回是否复制成功
+    @param [in] from 非空 ANSI 源路径，少于 MAX_PATH 字节
+    @param [in] dest 非空 ANSI 目标路径，少于 MAX_PATH 字节，可使用斜杠或反斜杠
+    @return 复制完成返回 true；参数无效、操作取消或系统错误返回 false
     @note 支持平台 Windows
     */
     static bool ShellCopy(const char* from, const char* dest);
@@ -799,7 +799,7 @@ public:
     /** 将静止目录迁到不重叠目录，逐文件核对内容后才删除源
     @param [in] source 源目录；不存在视为已完成，拒绝符号链接和重解析点
     @param [in] destination 目标目录；同名文件不同内容时不覆盖
-    @param [out] errorText 失败原因；失败保留尚未验证的源数据，可幂等重试
+    @param [out] errorText 成功清空，失败写入原因。可与任一路径共用字符串，返回后该字符串只保存诊断结果
     @return 全部文件完成且源空目录移除时返回true；同步IO不应在交互线程运行
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
@@ -1216,14 +1216,14 @@ private:
 
     /** 将系统路径宽字符串转换为UTF8，保留内嵌NUL以供调用入口校验
     @param [in] text 借用至返回的宽字符串，允许为空
-    @return 转换结果；空输入、转换或分配失败返回空串，Windows沿用系统flags=0的替代字符规则
+    @return 转换结果；空输入、转换或分配失败返回空串，Windows 拒绝非法编码序列
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static std::string widePathToUtf8(const std::wstring& text);
 
     /** 将UTF8路径转换为系统宽字符串，保留内嵌NUL以供调用入口校验
     @param [in] text 借用至返回的UTF8字节串，允许为空
-    @return 转换结果；空输入、转换或分配失败返回空串，Windows沿用系统flags=0的替代字符规则
+    @return 转换结果；空输入、转换或分配失败返回空串，Windows 拒绝非法编码序列
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static std::wstring utf8PathToWide(const std::string& text);

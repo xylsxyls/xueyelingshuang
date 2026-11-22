@@ -298,29 +298,28 @@ bool CSystem::isMouseMidDown()
 
 bool CSystem::ShellCopy(const char* from, const char* dest)
 {
-    if (from == nullptr || dest == nullptr)
+    if (from == nullptr || dest == nullptr || *from == '\0' || *dest == '\0')
     {
         return false;
     }
-    size_t fromLen = ::strlen(from);
-    size_t destLen = ::strlen(dest);
-    if (fromLen + 2 > MAX_PATH || destLen + 2 > MAX_PATH)
+    const size_t fromLen = std::strlen(from);
+    const size_t destLen = std::strlen(dest);
+    if (fromLen >= MAX_PATH || destLen >= MAX_PATH)
     {
         return false;
     }
 
-    SHFILEOPSTRUCTA fileOp = { 0 };
+    // Shell 的路径列表以双 NUL 结束，并要求使用 Windows 目录分隔符。
+    char source[MAX_PATH + 1] = {};
+    char destination[MAX_PATH + 1] = {};
+    std::replace_copy(from, from + fromLen, source, '/', '\\');
+    std::replace_copy(dest, dest + destLen, destination, '/', '\\');
+    SHFILEOPSTRUCTA fileOp = {};
     fileOp.wFunc = FO_COPY;
-    char newFrom[MAX_PATH] = {};
-    ::memcpy(newFrom, from, fromLen);
-    newFrom[fromLen + 1] = 0;
-    fileOp.pFrom = newFrom;
-    char newTo[MAX_PATH] = {};
-    ::memcpy(newTo, dest, destLen);
-    newTo[destLen + 1] = 0;
-    fileOp.pTo = newTo;
+    fileOp.pFrom = source;
+    fileOp.pTo = destination;
     fileOp.fFlags = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
-    return SHFileOperationA(&fileOp) == 0;
+    return ::SHFileOperationA(&fileOp) == 0 && !fileOp.fAnyOperationsAborted;
 }
 
 uint32_t CSystem::processFirstPid(const std::wstring& processNameW)
@@ -1316,7 +1315,9 @@ std::string CSystem::processName(uint32_t pid)
     const int count = ::proc_pidpath(static_cast<int>(pid), name, sizeof(name));
     if (count > 0 && static_cast<size_t>(count) < sizeof(name))
     {
-        return CSystem::GetName(std::string(name, count), 1);
+        // Darwin 的文件名可以包含反斜杠，只有斜杠分隔目录。
+        const char* separator = std::strrchr(name, '/');
+        return separator == nullptr ? name : separator + 1;
     }
     const int shortCount = ::proc_name(static_cast<int>(pid), name, sizeof(name));
     return shortCount > 0 && static_cast<size_t>(shortCount) < sizeof(name) ?
@@ -1680,7 +1681,6 @@ bool CSystem::isPathWithin(const std::string& path, const std::string& directory
 
 bool CSystem::migrateDirectory(const std::string& source, const std::string& destination, std::string& errorText)
 {
-    errorText.clear();
     const std::string from = canonicalPath(source, false), to = canonicalPath(destination, false);
     if (from.empty() || to.empty() || from == to || isPathWithin(from, to, false) || isPathWithin(to, from, false))
     {
@@ -1698,6 +1698,7 @@ bool CSystem::migrateDirectory(const std::string& source, const std::string& des
         if (::lstat(source.c_str(), &info) != 0 && errno == ENOENT)
 #endif
         {
+            errorText.clear();
             return true;
         }
         errorText = "Cannot inspect migration source";
@@ -1749,10 +1750,16 @@ bool CSystem::migrateDirectory(const std::string& source, const std::string& des
         return false;
     }
 #ifdef _WIN32
-    return migrateTree(source, destination, errorText);
+    const bool completed = migrateTree(source, destination, errorText);
 #else
-    return migrateTree(source, realTarget, errorText);
+    const bool completed = migrateTree(source, realTarget, errorText);
 #endif
+    // 所有路径读取已完成，允许调用方复用路径字符串接收错误信息。
+    if (completed)
+    {
+        errorText.clear();
+    }
+    return completed;
 }
 
 bool CSystem::createDirectories(const std::string& path)
@@ -2101,22 +2108,9 @@ bool CSystem::fileStampUtf8(const std::string& path, uint64_t* bytes, uint64_t* 
         return false;
     }
 #ifdef _WIN32
-    if (path.size() > INT_MAX)
-    {
-        return false;
-    }
-    const int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data(), static_cast<int>(path.size()), nullptr, 0);
-    if (length <= 0)
-    {
-        return false;
-    }
-    std::vector<wchar_t> wide(static_cast<size_t>(length) + 1, 0);
-    if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data(), static_cast<int>(path.size()), wide.data(), length) != length)
-    {
-        return false;
-    }
+    const std::wstring wide = utf8PathToWide(path);
     WIN32_FILE_ATTRIBUTE_DATA info = {};
-    if (!GetFileAttributesExW(wide.data(), GetFileExInfoStandard, &info) ||
+    if (wide.empty() || !GetFileAttributesExW(wide.c_str(), GetFileExInfoStandard, &info) ||
         (info.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) != 0)
     {
         return false;
@@ -3916,13 +3910,13 @@ std::string CSystem::widePathToUtf8(const std::wstring& text)
             return "";
         }
         const int32_t count = static_cast<int32_t>(text.size());
-        const int32_t required = ::WideCharToMultiByte(CP_UTF8, 0, text.data(), count, nullptr, 0, nullptr, nullptr);
+        const int32_t required = ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, text.data(), count, nullptr, 0, nullptr, nullptr);
         if (required <= 0)
         {
             return "";
         }
         std::string result(static_cast<size_t>(required), '\0');
-        if (::WideCharToMultiByte(CP_UTF8, 0, text.data(), count, &result[0], required, nullptr, nullptr) != required)
+        if (::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, text.data(), count, &result[0], required, nullptr, nullptr) != required)
         {
             return "";
         }
@@ -4657,13 +4651,13 @@ std::wstring CSystem::utf8PathToWide(const std::string& text)
             return L"";
         }
         const int32_t count = static_cast<int32_t>(text.size());
-        const int32_t required = ::MultiByteToWideChar(CP_UTF8, 0, text.data(), count, nullptr, 0);
+        const int32_t required = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(), count, nullptr, 0);
         if (required <= 0)
         {
             return L"";
         }
         std::wstring result(static_cast<size_t>(required), L'\0');
-        if (::MultiByteToWideChar(CP_UTF8, 0, text.data(), count, &result[0], required) != required)
+        if (::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(), count, &result[0], required) != required)
         {
             return L"";
         }
@@ -5010,6 +5004,11 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 //     const std::string renamed = CSystem::joinPath(directory, "renamed.txt");
 //     if (CSystem::rename(second, renamed))
 //     {
+// #ifdef _WIN32
+//         const std::string source = CSystem::canonicalPath(renamed);
+//         const std::string destination = CSystem::canonicalPath(second, false);
+//         valid = CSystem::ShellCopy(source.c_str(), destination.c_str()) && valid;
+// #endif
 //         CSystem::deleteFile(renamed.c_str());
 //     }
 //     CSystem::deleteFile(first.c_str());
