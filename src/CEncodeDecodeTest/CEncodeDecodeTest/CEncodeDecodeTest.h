@@ -98,9 +98,12 @@ await require('./LibraryTestHost')(require('./CEncodeDecodeTest'), { wasmPath: '
 */
 
 /** Linux 与 macOS 的 CMake 入口
-从本工程目录执行 cmake -S . -B build -DSDK_ROOT=<当前系统及架构的SDK> -DBIT=<64或arm64> -DCMAKE_BUILD_TYPE=Release，
-执行 cmake --build build，再在 build 内运行 ctest --output-on-failure。交叉编译时需另传目标工具链；
-只有与目标 ABI 匹配的系统才能直接运行产物。
+从本工程目录执行 cmake -S . -B build -DSDK_ROOT=<当前系统及架构的SDK> -DBIT=<目标位宽或架构> -DCMAKE_BUILD_TYPE=Release，
+执行 cmake --build build，再在 build 内运行 ctest --output-on-failure。交叉编译时需另传目标工具链。
+Linux ARMv7-A 硬浮点使用 arm32，AArch64 使用 arm64。先用同一目标工具链与配置准备
+PlatformTest 和 CEncodeDecode 到同一 SDK，再构建本测试工程。交叉编译后可将 CEncodeDecodeTest
+复制到对应 Linux 系统执行 ./CEncodeDecodeTest --all；共享链接还需让加载器能找到同一 SDK 的 libCEncodeDecode.so。
+预期编号 1 至 10 分别返回 0，末行输出 CEncodeDecodeTest PASS，进程退出码为 0。
 */
 
 /** 原生移动端测试
@@ -140,7 +143,12 @@ OpenSSL 的 getCert 包括文件 I/O 和解析，getPublicKey 包括曲线点导
 双位宽包 Node 使用 node run-node.js 32 --benchmark 或 64，浏览器或微信页面加 benchmark=1。
 2026-11-22 功能验证：Windows VS2013 的 Win32/x64 Debug、Release，以及 Emscripten 3.1.74
 的 Node Wasm32、Wasm64 Release，默认 mbedTLS 配置的 ID 1 至 10 均通过。Windows x64 Release 另以 USE_OPENSSL 运行全部十组：OpenSSL 3.6.5 支持 SM2，验证两种前缀和 C3 拒绝；OpenSSL 3.5.9 的 OPENSSL_NO_SM2 构建验证不可用返回。两者均通过 PEM、DER 文件读取和公钥核对。
-CEncodeDecode.cpp 注释示例在 Windows x64 Release、Node Wasm32 和 Wasm64 单独编译运行，退出码均为 0。Linux、macOS、Android、iOS 仅按源码及构建配置核对。
+CEncodeDecode.cpp 注释示例在 Windows x64 Release、Node Wasm32 和 Wasm64 单独编译运行，退出码均为 0。Linux x64、macOS、Android、iOS 按源码及构建配置核对。
+2026-11-22 Linux ARM 功能验证使用 QEMU 10.2.0 和 Debian 6.1 系列内核。ARM32 以 Arm GNU 13.2.1 构建 CEncodeDecode 与测试程序，
+使用 Debian armhf 的 glibc、libstdc++，模拟 Cortex-A15，关闭 NEON 与 VFP-D32，保留 VFPv3-D16。ARM64 使用 Zig 0.13.0 的 Clang 18.1.6、
+libc++ 和 Debian arm64 的 glibc，模拟 Cortex-A53。两端各用独立 SDK 构建 Release 静态库和共享库，执行 CEncodeDecodeTest --all。
+四种组合的 ID 1 至 10 分别返回 0，均输出 PASS。两端另从 CEncodeDecode.cpp 注释提取并静态链接 main 示例，退出码均为 0。
+本次未在 ARM 真机运行，未采集 ARM 性能数据。
 Windows x64 Release 另核对 --instant、--stress、单组 4、单组 10 和 --cases 1,6-8 的选择结果，倒序范围 8-6 和未知编号 11 均返回 2。
 本轮未运行浏览器、微信或移动设备。
 */

@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿#ifndef CENCODEDECODE_TEST_TLS_TEST_DATA_H
+#define CENCODEDECODE_TEST_TLS_TEST_DATA_H
 /*
  *  X.509 test certificates
  *
@@ -78,3 +79,5 @@
     "4AgahOxIxXx2gxJnq3yfkJfIjwf0s2DyP0kY2y6Ua1OeomPeY9mrIS4tCuDQ6LrE\r\n"     \
     "TB6l9VGoxJL4fyHnZb8L5gGvnB1bbD8cL6YPaDiOhcRseC9vBiEuVg==\r\n"             \
     "-----END RSA PRIVATE KEY-----\r\n"
+
+#endif
