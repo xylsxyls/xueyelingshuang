@@ -25,6 +25,22 @@ platform_test_sdk_library(prepared_library SharedMemory)
 target_link_libraries(SharedMemoryTest PRIVATE "${prepared_library}")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(SharedMemoryTest PRIVATE rt)
+    # 静态 SDK 的实际符号随 libc 和目标位宽而异；只包装归档中真实使用的调用。
+    if(prepared_library MATCHES "\\.a$" AND CMAKE_NM)
+        execute_process(COMMAND "${CMAKE_NM}" -u "${prepared_library}"
+            RESULT_VARIABLE nm_status OUTPUT_VARIABLE imports)
+        if(nm_status EQUAL 0 AND imports MATCHES "[ \t]U[ \t]+(posix_fallocate(64)?)[\r\n]")
+            set(reserve_symbol "${CMAKE_MATCH_1}")
+            if(imports MATCHES "[ \t]U[ \t]+(ftruncate(64)?)[\r\n]")
+                set(resize_symbol "${CMAKE_MATCH_1}")
+                target_link_options(SharedMemoryTest PRIVATE
+                    "-Wl,--wrap=${reserve_symbol}" "-Wl,--wrap=${resize_symbol}")
+                target_compile_definitions(SharedMemoryTest PRIVATE
+                    SHM_REAL_RESERVE=__real_${reserve_symbol} SHM_WRAP_RESERVE=__wrap_${reserve_symbol}
+                    SHM_REAL_RESIZE=__real_${resize_symbol} SHM_WRAP_RESIZE=__wrap_${resize_symbol})
+            endif()
+        endif()
+    endif()
 endif()
 foreach(dependency IN LISTS LIBRARIESRELY)
     if(IS_ABSOLUTE "${dependency}")

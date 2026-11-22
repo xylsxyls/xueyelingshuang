@@ -155,6 +155,81 @@ static std::string TestName()
     return key.str();
 }
 
+#ifdef SHM_WRAP_RESERVE
+// GNU ld 在静态测试程序内重定向这两个符号，其他线程和其他用例始终直接调用 libc。
+struct StorageCallProbe
+{
+    int reserveError;  // 首次预留要返回的错误，0 表示直接执行。
+    int resizeError;   // 首次设置长度要写入 errno 的错误，0 表示直接执行。
+    unsigned reserveCalls;  // 当前构造在本线程的预留次数。
+    unsigned resizeCalls;   // 当前构造在本线程的长度设置次数。
+};
+static thread_local StorageCallProbe* s_storageProbe = nullptr;  // 仅在被测构造期间指向当前记录。
+
+extern "C" int SHM_REAL_RESERVE(int descriptor, off_t offset, off_t length);
+extern "C" int SHM_REAL_RESIZE(int descriptor, off_t length);
+
+// 首次注入 POSIX 直接返回值，后续以相同描述符、偏移和长度执行真实预留。
+extern "C" int SHM_WRAP_RESERVE(int descriptor, off_t offset, off_t length)
+{
+    if (s_storageProbe != nullptr && ++s_storageProbe->reserveCalls == 1 && s_storageProbe->reserveError)
+    {
+        return s_storageProbe->reserveError;
+    }
+    return SHM_REAL_RESERVE(descriptor, offset, length);
+}
+
+// ftruncate 失败按 libc 约定返回 -1 并设置 errno；正常路径直接调用真实函数。
+extern "C" int SHM_WRAP_RESIZE(int descriptor, off_t length)
+{
+    if (s_storageProbe != nullptr && ++s_storageProbe->resizeCalls == 1 && s_storageProbe->resizeError)
+    {
+        errno = s_storageProbe->resizeError;
+        return -1;
+    }
+    return SHM_REAL_RESIZE(descriptor, length);
+}
+
+/** 核对命名映射的中断重试、真实长度和硬错误后的清理。
+@return 测试进程能创建、跨实例回读并在硬错误后排他重建时返回 0
+*/
+static int TestStorageInterrupt()
+{
+    const int errors[][2] = {{EINTR, EINTR}, {ENOSPC, 0}, {0, EFBIG}};
+    for (const auto& error : errors)
+    {
+        const std::string name = TestName();
+        StorageCallProbe probe = {error[0], error[1], 0, 0};
+        s_storageProbe = &probe;
+        SharedMemory owner(name, 16452, false);
+        s_storageProbe = nullptr;
+        if (error[0] == EINTR)
+        {
+            CHECK(probe.reserveCalls >= 2 && probe.resizeCalls >= 2);
+            CHECK(!owner.isFailed() && owner.realSize() == 16452);
+            unsigned char* data = static_cast<unsigned char*>(owner.writeWithoutLock());
+            CHECK(data != nullptr);
+            data[16451] = 0x75;
+            SharedMemory peer(name);
+            const unsigned char* read = static_cast<const unsigned char*>(peer.readWithoutLock());
+            CHECK(read != nullptr && read[16451] == 0x75);
+        }
+        else
+        {
+            CHECK(owner.isFailed() && owner.writeWithoutLock() == nullptr && owner.realSize() == 0);
+            CHECK(probe.reserveCalls >= 1 && probe.resizeCalls == (error[0] == ENOSPC ? 0u : 1u));
+            if (error[0] == ENOSPC)
+            {
+                CHECK(probe.reserveCalls == 1);
+            }
+            SharedMemory recovered(name, 16452, false);
+            CHECK(!recovered.isFailed() && recovered.writeWithoutLock() != nullptr && recovered.realSize() == 16452);
+        }
+    }
+    return 0;
+}
+#endif
+
 #ifdef _WIN32
 /** 核对同一映射内的完整容量和可安全清零的前缀。
 @return 容量、清零范围和保护页均符合预期时返回 0
@@ -869,6 +944,9 @@ int main(int argc, char** argv)
         {kWriteMappingRight, false, TestWriteMappingRight},
 #endif
         {kDefaultNameLifetime, false, TestDefaultNameLifetime},
+#ifdef SHM_WRAP_RESERVE
+        {kStorageInterrupt, false, TestStorageInterrupt},
+#endif
     };
     return LibraryCaseSelection::run(argc, argv, cases);
 }

@@ -17,15 +17,17 @@
 8　清零范围／五端。73 字节全部填入不同的非零值，以 17 字节加入后 clear。用独立预期数组比较全部 73 字节，前 17 字节为零，尾部 56 字节不变。
 9　仅授予 FILE_MAP_WRITE／Windows。系统独立打开核实允许写映射、拒绝单独读及组合权限后，检查加入、首次读、首次写、无视图容量查询、清零和重映射；原生及库视图读到相同的末字节。
 10　默认析构／五端。创建者直接退出，对端持有的旧视图仍见 0x48，close 并重映射也能读取。Windows 此时新实例可按名加入。POSIX 新打开失败，排他重建的数据从零开始，写入 0x51 不影响旧视图。释放全部引用后可排他创建，得到零数据。
+11　命名存储系统调用／Linux 静态 SDK。对首次预留和首次设置长度分别注入 EINTR，后续调用真实 libc；要求二者都重试、容量恰为 16452 字节，另一实例可读回末字节 0x75。分别注入 ENOSPC 和 EFBIG 时创建失败，错误调用仅执行一次，随后相同名称可排他重建。
 
 构建与平台范围
 Windows 使用 VS2013 v120，先用 version_debug.sh 或 version_release.sh 准备其指定的 32 位 DLL SDK，再编译对应解决方案。x64 另准备同配置的 64 位 SharedMemory、PlatformTest 及 SDK 头，TestSdkRoot 指向该 SDK；测试 EXE 旁放同批 DLL。静态链接须使用对应静态 SDK 的宏头及库。
 Linux、macOS 在本测试 CMakeLists.txt 所在目录运行 cmake -S . -B build -DSDK_ROOT=<同目标SDK> -DCMAKE_BUILD_TYPE=Release，然后 cmake --build build，在 build 内执行 ctest -V。
+Linux ARM 使用与被测库相同目标 ABI 的 PlatformTest 和编译器；交叉构建测试时加 -DCMAKE_TOOLCHAIN_FILE=<同目标工具链>。在目标 Linux 上运行 ./SharedMemoryTest --all，动态链接时确保加载同一 SDK 的库。适用编号为 1、2、3、4、5、7、8、10。Linux 单配置静态 SDK 的归档符号可由 nm 识别时再登记 11，执行 ./SharedMemoryTest --cases 11 可单独复测。
 Android 加 -DCMAKE_TOOLCHAIN_FILE=<NDK>/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24；连接 adb 设备，必要时指定 PLATFORM_TEST_DEVICE 和 PLATFORM_TEST_RUNTIME_LIBRARIES。iOS 用 -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=arm64，模拟器选择 -DCMAKE_OSX_SYSROOT=iphonesimulator，真机选择 iphoneos 并提供开发团队和设备 UDID。多配置目标使用 cmake --build build --config Release，在 build 内运行 ctest -C Release -V。
 Android/iOS 宿主设置 SHARED_MEMORY_TEST_DIR 或 TMPDIR 为绝对可写目录。iOS 运行 1、2、3、7、8、10；App Group 中两个独立签名进程之间的通信需另在设备验证。
 
 功能验证结果（2026-11-22）
-Windows VS2013 v120 的 Win32、x64 各自 Debug/Release 分别以 DLL 和静态库链接，共八种组合，均从源码构建。每种组合 --all 执行 1、2、3、4、6、7、8、9、10 共 9 项，72 次通过、0 失败。SharedMemory.cpp 末尾逐行注释的 demo 在 Windows 两种位数及 Debug/Release 四种配置下独立编译，退出码均为 0。编号 5 在 Windows 未登记，--cases 5 及无压力项的 --stress 均返回 2。Windows x64 Release 的独立 CMake/CTest 功能入口通过。另用隔离测试进程验证用例 4 的两条失败路径：子进程返回 0 却没有回写，以及子进程超过 15 秒未完成。两次父进程均返回 1，结束时均已回收测试子进程。Linux x86_64 成功交叉编译并链接，未在 Linux 运行。macOS、Android 和 iOS 仅静态审查，未在设备编译或执行。
+Windows VS2013 v120 的 Win32、x64 各自 Debug/Release 分别以 DLL 和静态库链接，共八种组合，均从源码构建。每种组合 --all 执行 1、2、3、4、6、7、8、9、10 共 9 项，72 次通过、0 失败。SharedMemory.cpp 末尾逐行注释的 demo 在 Windows 两种位数及 Debug/Release 四种配置下独立编译，退出码均为 0。编号 5 在 Windows 未登记，--cases 5 及无压力项的 --stress 均返回 2。Windows x64 Release 的独立 CMake/CTest 功能入口通过。另用隔离测试进程验证用例 4 的两条失败路径：子进程返回 0 却没有回写，以及子进程超过 15 秒未完成。两次父进程均返回 1，结束时均已回收测试子进程。Linux x86_64 成功交叉编译并链接。Linux ARMv7 硬浮点及 AArch64 各构建了 Release 动态库、静态库，以及分别链接这两种库的测试程序。已核对 ELF 类别、机器架构、ARMv7 硬浮点标志、静态归档成员和测试程序动态依赖，四种配置均符合预期。QEMU 的 ARMv7 与 AArch64 Linux 客体分别运行静态 SDK 的 --all，各 9 项通过，含编号 11 的瞬时中断和硬错误注入。两种位宽改链修复前归档后，同一用例都按预期失败。Linux x86_64 与 ARM 动态库的功能用例未运行。macOS、Android 和 iOS 仅静态审查，未在设备编译或执行。
 
 性能用例与判定
 可选的 --benchmark 运行四个 C++ 场景，独立于功能选择。两个 4096 字节匿名对象分别保持已映射和未映射；预热、校准后取九批，不把创建和首次映射计入。测试调用方关闭跨翻译单元优化，避免静态链接下重复取地址被折叠。按系统页大小或请求长度计算期望容量。每批检查地址复用次数、累计容量、未映射对象的 memory() 及清零后的回读值。清零场景每次先改写不同偏移，再 clear 并读回。Windows 固定在当前进程所允许的最低编号逻辑处理器，输出掩码。
@@ -68,5 +70,7 @@ enum SharedMemoryTestCaseId
     // 仅有写映射权限时加入和读写
     kWriteMappingRight = 9,
     // 创建者默认析构和对端重映射后的名称寿命
-    kDefaultNameLifetime = 10
+    kDefaultNameLifetime = 10,
+    // 文件预留与设置长度遭遇信号中断或硬错误
+    kStorageInterrupt = 11
 };
