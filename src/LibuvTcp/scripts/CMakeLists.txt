@@ -1452,5 +1452,35 @@ endif()
 find_package(Threads REQUIRED)
 target_link_libraries(LibuvTcp PUBLIC Threads::Threads ${CMAKE_DL_LIBS})
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_link_libraries(LibuvTcp PUBLIC rt atomic)
+    target_link_libraries(LibuvTcp PUBLIC rt)
+    # 交叉编译时也要真实链接。部分 ARM 工具链由编译器提供原子操作，无独立 libatomic。
+    include(CMakePushCheckState)
+    cmake_push_check_state(RESET)
+    set(saved_try_compile_type "${CMAKE_TRY_COMPILE_TARGET_TYPE}")
+    set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
+    set(atomic_probe [=[
+#include <atomic>
+#include <cstdint>
+std::atomic<std::uint64_t> value(0);
+int main() {
+    std::uint64_t expected = 0;
+    value.compare_exchange_strong(expected, 1);
+    return value.is_lock_free() ? 0 : 1;
+}
+]=])
+    check_cxx_source_compiles("${atomic_probe}" LIBUV_TCP_ATOMICS_LINK)
+    if(NOT LIBUV_TCP_ATOMICS_LINK)
+        set(CMAKE_REQUIRED_LIBRARIES atomic)
+        check_cxx_source_compiles("${atomic_probe}" LIBUV_TCP_ATOMICS_LINK_WITH_LIBRARY)
+        if(NOT LIBUV_TCP_ATOMICS_LINK_WITH_LIBRARY)
+            message(FATAL_ERROR "Target compiler cannot link the required atomic operations, even with libatomic")
+        endif()
+        target_link_libraries(LibuvTcp PUBLIC atomic)
+    endif()
+    if(saved_try_compile_type)
+        set(CMAKE_TRY_COMPILE_TARGET_TYPE "${saved_try_compile_type}")
+    else()
+        unset(CMAKE_TRY_COMPILE_TARGET_TYPE)
+    endif()
+    cmake_pop_check_state()
 endif()
