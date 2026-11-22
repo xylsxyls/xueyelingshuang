@@ -1,35 +1,10 @@
-﻿#ifndef __MDUMP_H__
-#define __MDUMP_H__
+﻿#pragma once
+#ifdef _WIN32
+#include <string>
 
-#ifdef _MSC_VER
-#include <windows.h>
-//#include <functional>
-
-struct _EXCEPTION_POINTERS;
-
-//typedef std::function<void()> func_on_catching_unhandled_exception;
-
-namespace WIN32DUMP
-{
-	class CMiniDumper
-	{
-		friend class CCrashHandler;
-	public:
-		static void Enable(const char* pszAppName, bool bShowErrors, const char* pszDumpDir);
-		//, func_on_catching_unhandled_exception func=NULL);
-
-	private:
-		static CHAR m_szAppName[MAX_PATH];
-		static CHAR m_szDumpDir[MAX_PATH];
-		//static func_on_catching_unhandled_exception ms_func_after_catching_unhandled_exeception;
-
-		static HMODULE GetDebugHelperDll(FARPROC* ppfnMiniDumpWriteDump, bool bShowErrors);
-		static LONG WINAPI TopLevelFilter(struct _EXCEPTION_POINTERS* pExceptionInfo);
-	};
-
-	extern CMiniDumper theCrashDumper;
-}
-
+/** 为 Windows 宿主预备输出路径和 DbgHelp 并安装异常过滤器，由注册入口串行调用
+@param [in] directory 已存在的本机代码页目录，空串选择可执行文件目录
+@return 安装成功返回 true
+*/
+bool InstallWindowsDump(const std::string& directory);
 #endif
-
-#endif //__MDUMP_H__
