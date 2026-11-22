@@ -26,9 +26,14 @@ await require('./LibraryTestHost')(require('./CompressTest'), { wasmPath: '包�
 */
 
 /** Linux 与 macOS 的 CMake 入口
-从本工程目录执行 cmake -S . -B build -DSDK_ROOT=<当前系统及架构的SDK> -DBIT=<64或arm64> -DCMAKE_BUILD_TYPE=Release，
-执行 cmake --build build，再在 build 内运行 ctest --output-on-failure。交叉编译时需另传目标工具链；
-只有与目标 ABI 匹配的系统才能直接运行产物。
+Linux ARM 测试需要同架构、同配置的 Compress 和 PlatformTest。例如准备 ARM32 Release 静态 SDK 时执行：
+    "$CLOUD_REBUILD" Compress arm32 lib release same
+    "$CLOUD_REBUILD" PlatformTest arm32 lib release same
+ARM64 将两条命令中的 arm32 改为 arm64。Debug 动态库将 lib release 改为 dll debug。使用独立 SDK 时先设置 CLOUD_REBUILD_SDK_ROOT，切换架构、配置或链接方式时使用新目录。
+从本测试工程目录执行 cmake -S . -B build -DSDK_ROOT=<目标SDK> -DBIT=<目标> -DCMAKE_BUILD_TYPE=Release，再执行 cmake --build build。
+Linux ARM 目标为 arm32（小端 ARMv7-A、VFPv3-D16、hard-float）或 arm64（小端 AArch64 LP64）。桌面 x86-64 用 64，Apple Silicon 用 arm64。
+交叉编译时另传与 SDK 相同的 -DCMAKE_TOOLCHAIN_FILE。测试在目标机直接运行 ./CompressTest，或在可运行该目标的构建环境内用 ctest --test-dir build --output-on-failure（旧版 CTest 先进入 build 目录）。
+动态链接时同时部署同配置的 Compress、PlatformTest 共享库，并设置加载器搜索路径。全量运行预期返回 0，输出 checks=383 和实际位宽。
 */
 
 /** 原生移动端测试
@@ -98,7 +103,13 @@ Windows VS2013 分别使用 x86、x64 Debug DLL（/MDd）和 x86、x64 Release �
 每个配置核对 14 种 CLI 调用，包括默认、列名、按名称选择三个单组、全量、瞬时、压力、重复数字范围和五个非法选择。--all 按 2、3、1 执行，--cases 3,1-2,2 按 1、2、3 各执行一次。非法选择在原生 CLI 返回 2；Node 宿主将 C++ 非零退出转换为宿主失败。Wasm32 和 Wasm64 均使用 Windows 反斜杠 SDK 路径成功链接并通过 CTest。
 测试设施反例（Windows x64 Release）：在独立的测试副本模拟跳过两次原地操作，原地压缩中间结果检查检出错误。第 3 组返回 1，第 1 组随后正常执行，全量退出码为 1。
 直接从 Compress.cpp 末尾逐行注释提取 demo，在 Windows x64 Release、Node wasm32/wasm64 上分别编译、链接和运行。三个消费者均将 13 字节含 NUL 原文压为 30 字节封装帧并完整还原，退出码为 0。
-Linux、macOS、Android、iOS 本次仅核查源码、构建和平台测试入口。macOS、Android、iOS 随仓缺少目标 Zstandard 静态库。浏览器和微信宿主未运行。分配器耗尽返回 COMPRESS_NO_MEMORY 的路径未做故障注入；UINT32_MAX 用例验证上界计算和伪造长度，没有申请 4 GiB 业务缓冲区。本轮未执行性能测试。
+Linux ARM 功能实测（2026-11-22）：从各自独立的 SDK 交叉构建后，在 QEMU 10.2.0 的两台 virt 模拟机上启动 Debian Linux 6.1.0-50，使用 Debian 12 glibc 2.36。ARM32 为 Cortex-A15 / armv7l，ARM64 为 Cortex-A72 / aarch64。每一行是三个功能组的全量运行，单元格为通过的检查数，六次退出码均为 0。
+                             Release 静态库     Release 动态库     Debug 动态库
+    arm32（ELF32）                 383               383               383
+    arm64（ELF64）                 383               383               383
+两端从 Compress.cpp 提取的示例均链接 Release 动态库，输出 original=13 framed=30，完整还原原文并返回 0。库和测试的 CMake 配置均已拒绝两种错误组合：ARM32 工具链声明为 arm64，以及 arm32 使用 softfp 调用约定。本次未运行 ARM 真机，缺少 Linux ARM 性能测试数据。
+已测 Zstandard 归档 SHA-256 前 16 位为 arm32 0DCE5CCA8025A9E3、arm64 FE09FA8B8133B766。
+Linux x86-64、macOS、Android、iOS 本次仅核查源码、构建和平台测试入口。macOS、Android、iOS 随仓缺少目标 Zstandard 静态库。浏览器和微信宿主未运行。分配器耗尽返回 COMPRESS_NO_MEMORY 的路径未做故障注入；UINT32_MAX 用例验证上界计算和伪造长度，没有申请 4 GiB 业务缓冲区。本轮未执行性能测试。
 测试程序或 .wasm 文件的 SHA-256 前 16 位如下。
 Windows x86 Debug  F8FD5ED6D9624C3A
 Windows x64 Debug  5A93D9CEB510B5B8
