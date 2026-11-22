@@ -19,11 +19,11 @@ class NetClientGatewayTask : public CTask
 
     /** 唯一执行者创建、驱动、停止所有网络/IPC
     */
-    virtual void DoTask();
+    virtual void doTask();
 
     /** 仅请求协作停止
     */
-    virtual void StopTask();
+    virtual void stopTask();
 
     /** 查询任务运行状态，不能据此判定业务服务器已接受请求
     @return 3模式为本机入口运行，2模式为旧远端会话就绪
@@ -41,6 +41,8 @@ class NetClientGatewayTask : public CTask
     int32_t error() const;
 
   private:
+    // 先于任务内所有连接创建，停止唤醒者退出后最后回收
+    NetExecution m_execution;
     // 启动配置的独占副本，任务开始后只读
     NetClientGatewayConfiguration m_configuration;
     // 跨线程协作停止请求，不从调用线程销毁网络对象

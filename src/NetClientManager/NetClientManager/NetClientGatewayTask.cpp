@@ -20,8 +20,15 @@ NetClientGatewayTask::~NetClientGatewayTask()
                      static_cast<uint32_t>(m_configuration.m_privateKey.size()));
 }
 
-void NetClientGatewayTask::DoTask()
+void NetClientGatewayTask::doTask()
 {
+    NetExecutionScope execution(m_execution);
+    if (m_execution.status() != NI_OK)
+    {
+        m_error.store(m_execution.status());
+        m_done.store(true);
+        return;
+    }
     try
     {
         if (m_configuration.m_protocol == 3)
@@ -40,11 +47,11 @@ void NetClientGatewayTask::DoTask()
                 }
                 if (!duplicate) { addresses.push_back(seed); }
             }
-            if (addresses.size() > 64) { m_error.store(NI_LIMIT_EXCEEDED); m_done.store(true); return; }
             m_error.store(gateway.init(addresses, m_configuration.m_cachePath));
             const auto started = std::chrono::steady_clock::now();
             while (m_error.load() == NI_OK && !m_stop.load())
             {
+                m_execution.begin();
                 if (m_configuration.m_runForMs != 0 &&
                     std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count() >=
                         m_configuration.m_runForMs)
@@ -53,7 +60,19 @@ void NetClientGatewayTask::DoTask()
                 }
                 if (!gateway.poll()) { break; }
                 m_ready.store(true);
-                CSystem::sleepPrecise(2);
+                if (!m_stop.load())
+                {
+                    const int32_t waited = m_execution.wait(100);
+                    if (waited == NI_NEED_MORE)
+                    {
+                        CSystem::sleepPrecise(2);
+                    }
+                    else if (waited < 0)
+                    {
+                        m_error.store(waited);
+                        break;
+                    }
+                }
             }
             m_ready.store(false);
             gateway.shutdown();
@@ -92,6 +111,7 @@ void NetClientGatewayTask::DoTask()
         const auto started = std::chrono::steady_clock::now();
         while (m_error.load() == NI_OK && !m_stop.load())
         {
+            m_execution.begin();
             if (m_configuration.m_runForMs != 0 &&
                 std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count() >=
                     m_configuration.m_runForMs)
@@ -103,7 +123,19 @@ void NetClientGatewayTask::DoTask()
                 break;
             }
             m_ready.store(gateway.ready());
-            CSystem::sleepPrecise(2);
+            if (!m_stop.load())
+            {
+                const int32_t waited = m_execution.wait(100);
+                if (waited == NI_NEED_MORE)
+                {
+                    CSystem::sleepPrecise(2);
+                }
+                else if (waited < 0)
+                {
+                    m_error.store(waited);
+                    break;
+                }
+            }
         }
         m_ready.store(false);
         gateway.shutdown();
@@ -115,9 +147,10 @@ void NetClientGatewayTask::DoTask()
     m_done.store(true);
 }
 
-void NetClientGatewayTask::StopTask()
+void NetClientGatewayTask::stopTask()
 {
     m_stop.store(true);
+    m_execution.wake();
 }
 
 bool NetClientGatewayTask::ready() const

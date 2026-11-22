@@ -27,8 +27,26 @@ NetClientGatewayFile::~NetClientGatewayFile()
     NetInterface::wipe(reinterpret_cast<uint8_t*>(&m_info), sizeof(m_info));
 }
 
-NetClientGateway::NetClientGateway() :
+NetClientGatewayRequest::NetClientGatewayRequest() :
+m_local(), m_peer(0), m_size(0), m_sent(false)
+{
+
+}
+
+NetClientGatewayRequest::~NetClientGatewayRequest()
+{
+    NetInterface::wipe(m_body.data(), m_size);
+}
+
+NetClientGateway::NetClientGateway(const LockFreeHashMapPoolConfig& records, const NetBufferPoolConfig& bodies) :
 m_local(m_inbox),
+m_bodies(bodies),
+m_peerPool(records),
+m_requestPool(records),
+m_filePool(records),
+m_cancelPool(records),
+m_productPool(records),
+m_fileCancelPool(records),
 m_retry(0),
 m_queuedBytes(0),
 m_remoteLimit(0),
@@ -84,7 +102,10 @@ int32_t NetClientGateway::init(const NetInterfaceTlsOptions& localTls, const Net
         {
             return NI_INVALID_STATE;
         }
-        work.addProcessReceiveCallback(&m_inbox);
+        if (!work.addProcessReceiveCallback(&m_inbox))
+        {
+            return NI_NO_MEMORY;
+        }
         if (!work.initReceive(16452, 64))
         {
             work.uninitReceive();
@@ -160,8 +181,8 @@ bool NetClientGateway::poll()
         NetInterfaceFrame frame = {};
         frame.m_kind = NI_CANCEL;
         frame.m_messageType = NI_FILE_DATA_TYPE;
-        frame.m_productId = m_fileCancels.front().first;
-        frame.m_requestId = m_fileCancels.front().second;
+        frame.m_productId = m_fileCancels.front()->first;
+        frame.m_requestId = m_fileCancels.front()->second;
         const int32_t result = m_remote.sendData(frame);
         if (result == NI_LIMIT_EXCEEDED)
         {
@@ -185,28 +206,29 @@ bool NetClientGateway::poll()
     {
         const uint64_t id = entry->first;
         auto current = entry++;
-        if (current->second.m_sent)
+        if (current->second->m_sent)
         {
             continue;
         }
         ++attempts;
-        const auto& body = current->second.m_body;
-        const int32_t sent = m_remote.sendRequest(id, body.empty() ? nullptr : body.data(), static_cast<uint32_t>(body.size()));
+        const auto& body = current->second->m_body;
+        const uint32_t bodySize = current->second->m_size;
+        const int32_t sent = m_remote.sendRequest(id, body.data(), bodySize);
         if (sent == NI_LIMIT_EXCEEDED)
         {
             break;
         }
         if (sent == NI_OK)
         {
-            current->second.m_sent = true;
-            m_queuedBytes -= static_cast<uint32_t>(body.size());
-            NetInterface::wipe(current->second.m_body.empty() ? nullptr : current->second.m_body.data(),
-                             static_cast<uint32_t>(current->second.m_body.size()));
-            current->second.m_body.clear();
+            current->second->m_sent = true;
+            m_queuedBytes -= bodySize;
+            NetInterface::wipe(current->second->m_body.data(), current->second->m_size);
+            current->second->m_body.reset();
+            current->second->m_size = 0;
         }
         else if (sent != NI_TIMEOUT)
         {
-            m_local.close(current->second.m_peer, sent);
+            m_local.close(current->second->m_peer, sent);
             m_remote.cancel(id);
         }
     }
@@ -223,7 +245,10 @@ void NetClientGateway::onLocalReady(uint64_t peer, int32_t pid)
     }
     try
     {
-        m_peers.insert(std::make_pair(peer, std::shared_ptr<NetClientGatewayPeer>(new NetClientGatewayPeer(Now()))));
+        NetObjectReference<NetClientGatewayPeer> client;
+        const int32_t created = m_peerPool.create(client, Now());
+        if (created != NI_OK) { m_local.close(peer, created); return; }
+        m_peers.insert(std::make_pair(peer, client));
     }
     catch (...)
     {
@@ -246,7 +271,7 @@ bool NetClientGateway::onLocalFrame(uint64_t peer, const NetInterfaceFrame& fram
         NetInterfaceHandshakeOptions options = {};
         options.m_server = 1;
         options.m_capabilities = m_options.capabilities;
-        options.m_maxRequests = (std::min)(m_remoteLimit, 16U);
+        options.m_maxRequests = m_remoteLimit;
         options.m_maxChunk = m_remoteChunk;
         options.m_timeoutMs = 5000;
         if (NetTransport::randomBytes(options.m_nonce, 16) != NI_OK)
@@ -370,9 +395,9 @@ bool NetClientGateway::onLocalFrame(uint64_t peer, const NetInterfaceFrame& fram
         }
         for (const auto& entry : m_requests)
         {
-            if (entry.second.m_peer == peer && entry.second.m_local.m_requestId == frame.m_requestId)
+            if (entry.second->m_peer == peer && entry.second->m_local.m_requestId == frame.m_requestId)
             {
-                if (entry.second.m_local.m_productId != frame.m_productId || entry.second.m_local.m_messageType != frame.m_messageType)
+                if (entry.second->m_local.m_productId != frame.m_productId || entry.second->m_local.m_messageType != frame.m_messageType)
                 {
                     m_local.close(peer, NI_PROTOCOL_ERROR);
                 }
@@ -385,14 +410,10 @@ bool NetClientGateway::onLocalFrame(uint64_t peer, const NetInterfaceFrame& fram
         }
         if (frame.m_requestId > client.m_highest)
         {
-            if (client.m_cancelled.size() >= client.m_limit)
-            {
-                m_local.close(peer, NI_LIMIT_EXCEEDED);
-            }
-            else
-            {
-                client.m_cancelled[frame.m_requestId] = std::make_pair(frame.m_productId, frame.m_messageType);
-            }
+            NetObjectReference<std::pair<uint32_t, uint32_t>> cancel;
+            const int32_t created = m_cancelPool.create(cancel, frame.m_productId, frame.m_messageType);
+            if (created != NI_OK) { m_local.close(peer, created); }
+            else { client.m_cancelled[frame.m_requestId] = cancel; }
         }
         return true;
     }
@@ -404,15 +425,19 @@ bool NetClientGateway::onLocalFrame(uint64_t peer, const NetInterfaceFrame& fram
         return true;
     }
     client.m_highest = frame.m_requestId;
-    if (client.m_products.size() >= 32 && client.m_products.find(frame.m_productId) == client.m_products.end())
+    if (client.m_products.find(frame.m_productId) == client.m_products.end())
     {
-        respond(peer, frame, NI_RPC_BUSY);
-        return true;
+        NetObjectReference<uint32_t> product;
+        if (m_productPool.create(product, frame.m_productId) != NI_OK)
+        {
+            respond(peer, frame, NI_RPC_BUSY);
+            return true;
+        }
+        client.m_products.insert(std::make_pair(frame.m_productId, product));
     }
-    client.m_products.insert(frame.m_productId);
     const auto cancelled = client.m_cancelled.find(frame.m_requestId);
     const bool skip = cancelled != client.m_cancelled.end();
-    if (skip && cancelled->second != std::make_pair(frame.m_productId, frame.m_messageType))
+    if (skip && *cancelled->second != std::make_pair(frame.m_productId, frame.m_messageType))
     {
         m_local.close(peer, NI_PROTOCOL_ERROR);
         return true;
@@ -426,11 +451,6 @@ bool NetClientGateway::onLocalFrame(uint64_t peer, const NetInterfaceFrame& fram
         respond(peer, frame, NI_RPC_CANCELLED);
         return true;
     }
-    if (client.m_pending >= client.m_limit || m_requests.size() >= 128 || rpc.m_size > 2097152U - m_queuedBytes)
-    {
-        respond(peer, frame, NI_RPC_BUSY);
-        return true;
-    }
     uint64_t remoteId = 0;
     const int32_t begin = m_remote.beginRequest(frame.m_productId, frame.m_messageType, rpc.m_value, remoteId);
     if (begin != NI_OK)
@@ -440,15 +460,24 @@ bool NetClientGateway::onLocalFrame(uint64_t peer, const NetInterfaceFrame& fram
     }
     try
     {
-        NetClientGatewayRequest request = {};
-        request.m_local = frame;
-        request.m_local.m_payload = nullptr;
-        request.m_local.m_payloadSize = 0;
-        request.m_peer = peer;
-        request.m_sent = false;
+        NetObjectReference<NetClientGatewayRequest> request;
+        int32_t prepared = m_requestPool.create(request);
+        if (prepared == NI_OK) { prepared = m_bodies.allocate(rpc.m_size, request->m_body); }
+        if (prepared != NI_OK)
+        {
+            m_remote.cancel(remoteId);
+            respond(peer, frame, NI_RPC_BUSY);
+            return true;
+        }
+        request->m_size = rpc.m_size;
+        request->m_local = frame;
+        request->m_local.m_payload = nullptr;
+        request->m_local.m_payloadSize = 0;
+        request->m_peer = peer;
+        request->m_sent = false;
         if (rpc.m_size != 0)
         {
-            request.m_body.assign(rpc.m_data, rpc.m_data + rpc.m_size);
+            std::memcpy(request->m_body.data(), rpc.m_data, rpc.m_size);
         }
         m_requests.insert(std::make_pair(remoteId, std::move(request)));
         m_queuedBytes += rpc.m_size;
@@ -498,11 +527,13 @@ void NetClientGateway::onLocalClosed(uint64_t peer, int32_t reason)
             ++item;
             continue;
         }
-        if (m_fileCancels.size() < 32 && cancelError == NI_OK)
+        if (cancelError == NI_OK)
         {
             try
             {
-                m_fileCancels.push_back(std::make_pair(item->second->m_product, item->first));
+                NetObjectReference<std::pair<uint32_t, uint64_t>> cancel;
+                cancelError = m_fileCancelPool.create(cancel, item->second->m_product, item->first);
+                if (cancelError == NI_OK) { m_fileCancels.push_back(cancel); }
             }
             catch (...)
             {
@@ -510,23 +541,19 @@ void NetClientGateway::onLocalClosed(uint64_t peer, int32_t reason)
                 cancelError = NI_NO_MEMORY;
             }
         }
-        else if (cancelError == NI_OK)
-        {
-            cancelError = NI_LIMIT_EXCEEDED;
-        }
         item = m_files.erase(item);
     }
     for (auto entry = m_requests.begin(); entry != m_requests.end();)
     {
-        if (entry->second.m_peer != peer)
+        if (entry->second->m_peer != peer)
         {
             ++entry;
             continue;
         }
         const uint64_t id = entry->first;
-        m_queuedBytes -= static_cast<uint32_t>(entry->second.m_body.size());
-        NetInterface::wipe(entry->second.m_body.empty() ? nullptr : entry->second.m_body.data(),
-                         static_cast<uint32_t>(entry->second.m_body.size()));
+        m_queuedBytes -= entry->second->m_size;
+        NetInterface::wipe(entry->second->m_body.data(),
+                         entry->second->m_size);
         entry = m_requests.erase(entry);
         m_remote.cancel(id);
     }
@@ -557,11 +584,11 @@ void NetClientGateway::onSessionResult(uint64_t generation, uint64_t requestId, 
     {
         return;
     }
-    const auto request = found->second.m_local;
-    const uint64_t peer = found->second.m_peer;
-    m_queuedBytes -= static_cast<uint32_t>(found->second.m_body.size());
-    NetInterface::wipe(found->second.m_body.empty() ? nullptr : found->second.m_body.data(),
-                     static_cast<uint32_t>(found->second.m_body.size()));
+    const auto request = found->second->m_local;
+    const uint64_t peer = found->second->m_peer;
+    m_queuedBytes -= found->second->m_size;
+    NetInterface::wipe(found->second->m_body.data(),
+                     found->second->m_size);
     m_requests.erase(found);
     const auto client = m_peers.find(peer);
     if (client != m_peers.end() && client->second->m_pending != 0)
@@ -593,15 +620,12 @@ void NetClientGateway::onSessionResult(uint64_t generation, uint64_t requestId, 
                 }
                 if (current == m_files.end())
                 {
-                    if (m_files.size() >= 32)
-                    {
-                        m_local.close(peer, NI_LIMIT_EXCEEDED);
-                        return;
-                    }
                     try
                     {
-                        m_files.insert(std::make_pair(
-                            info.stream, std::shared_ptr<NetClientGatewayFile>(new NetClientGatewayFile(peer, product, info))));
+                        NetObjectReference<NetClientGatewayFile> file;
+                        const int32_t created = m_filePool.create(file, peer, product, info);
+                        if (created != NI_OK) { m_local.close(peer, created); return; }
+                        m_files.insert(std::make_pair(info.stream, file));
                     }
                     catch (...)
                     {

@@ -14,7 +14,7 @@ public:
     std::string m_address;
     // 发现目录缓存文件的本地路径，空字符串表示不持久化
     std::string m_cachePath;
-    // 额外入口种子，与首选地址去重后最多64项
+    // 额外入口种子，与首选地址去重，数量由实际存储决定
     std::vector<NetGatewayAddress> m_seeds;
     // 显式旧链路模式用于TLS服务端身份匹配的主机名
     std::string m_hostname;

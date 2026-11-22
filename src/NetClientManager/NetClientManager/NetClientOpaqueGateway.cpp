@@ -16,7 +16,10 @@ static int32_t OpaqueGatewayEntropy(void* context, uint8_t* output, uint32_t siz
 NetClientOpaqueGateway::NetClientOpaqueGateway() : m_local(m_inbox), m_receiving(false),
     m_started(false), m_stopping(false)
 {
-
+    LockFreeHashMapPoolConfig config;
+    config.initialCapacity = 2;
+    config.maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetClientOpaqueGatewayPeer>>);
+    m_peerPool.reset(new NetObjectPool<NetClientOpaqueGatewayPeer>(config));
 }
 
 NetClientOpaqueGateway::~NetClientOpaqueGateway()
@@ -24,9 +27,22 @@ NetClientOpaqueGateway::~NetClientOpaqueGateway()
     shutdown();
 }
 
+int32_t NetClientOpaqueGateway::configurePeerPool(const LockFreeHashMapPoolConfig& config)
+{
+    if (m_started || m_receiving || m_stopping) { return NI_INVALID_STATE; }
+    try
+    {
+        std::unique_ptr<NetObjectPool<NetClientOpaqueGatewayPeer>> pool(new NetObjectPool<NetClientOpaqueGatewayPeer>(config));
+        if (pool->status() != NI_OK) { return pool->status(); }
+        m_peerPool.swap(pool);
+        return NI_OK;
+    }
+    catch (...) { return NI_NO_MEMORY; }
+}
+
 int32_t NetClientOpaqueGateway::init(const std::vector<NetClientGatewayAddress>& addresses, const std::string& cachePath)
 {
-    if (m_started || m_stopping || addresses.empty() || addresses.size() > 64) { return NI_INVALID_ARGUMENT; }
+    if (m_started || m_stopping || addresses.empty()) { return NI_INVALID_ARGUMENT; }
     for (const NetClientGatewayAddress& address : addresses)
     {
         if (address.m_address.empty() || address.m_port == 0 || address.m_port > 65535) { return NI_INVALID_ARGUMENT; }
@@ -38,15 +54,23 @@ int32_t NetClientOpaqueGateway::init(const std::vector<NetClientGatewayAddress>&
             return NI_INVALID_STATE;
         }
         const int32_t discovery = m_discovery.start(addresses, cachePath);
-        if (discovery != NI_OK) { return discovery; }
-        ProcessWork::instance().addProcessReceiveCallback(&m_inbox);
+        if (discovery != NI_OK)
+        {
+            shutdown();
+            return discovery;
+        }
+        if (!ProcessWork::instance().addProcessReceiveCallback(&m_inbox))
+        {
+            shutdown();
+            return NI_NO_MEMORY;
+        }
+        // 从回调登记成功开始拥有清理责任；接收器构造失败也必须撤销借用。
+        m_receiving = true;
         if (!ProcessWork::instance().initReceive(16452, 64))
         {
-            ProcessWork::instance().uninitReceive();
-            m_local.shutdown();
+            shutdown();
             return NI_INVALID_STATE;
         }
-        m_receiving = true;
         // 透明路由与TLS路径遵守同一个接收容量及启动次序。
         const int32_t listening = m_local.listenRaw(OpaqueGatewayEntropy, nullptr, this, 32);
         if (listening != NI_OK)
@@ -62,12 +86,14 @@ int32_t NetClientOpaqueGateway::init(const std::vector<NetClientGatewayAddress>&
 void NetClientOpaqueGateway::onRawLocalReady(uint64_t local, int32_t pid)
 {
     (void)pid;
-    if (m_stopping || m_peers.size() >= 32) { m_local.close(local, NI_LIMIT_EXCEEDED); return; }
+    if (m_stopping) { m_local.close(local, NI_LIMIT_EXCEEDED); return; }
     NetClientDiscoveryPoint address = {};
     address.m_structSize = sizeof(address);
     address.m_version = 1;
     if (!m_discovery.choose(address)) { m_local.close(local, NI_NOT_FOUND); return; }
-    std::unique_ptr<NetClientOpaqueGatewayPeer> peer(new NetClientOpaqueGatewayPeer(*this, local));
+    NetObjectReference<NetClientOpaqueGatewayPeer> peer;
+    const int32_t created = m_peerPool->create(peer, *this, local);
+    if (created != NI_OK) { m_local.close(local, created); return; }
     peer->m_address = address;
     uint64_t remote = 0;
     const int32_t connected = peer->m_transport.connect(address.m_address, address.m_port, peer.get(), remote);

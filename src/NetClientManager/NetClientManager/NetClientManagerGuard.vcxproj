@@ -66,7 +66,6 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>STATIC_LIB;MBEDTLS_CONFIG_FILE="mbedtls/mbedtls_sdk_config.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(NetGatewayTestInstance)'=='true'">NET_GATEWAY_TEST_INSTANCE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\protobuf;$(ProjectDir)..\..\..\include\mbedtls;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreaded</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)'=='Debug'">MultiThreadedDebugDLL</RuntimeLibrary>

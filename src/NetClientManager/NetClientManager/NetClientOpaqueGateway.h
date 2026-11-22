@@ -23,8 +23,14 @@ public:
     */
     ~NetClientOpaqueGateway();
 
+    /** 首次启动前替换实际连接对象池
+    @param [in] config 物理槽配置，失败保持原池
+    @return NI_OK或状态、内存、配置错误
+    */
+    int32_t configurePeerPool(const LockFreeHashMapPoolConfig& config);
+
     /** 注册本机收件箱并配置数值入口种子，不建立假就绪业务会话
-    @param [in] addresses 1至64个数值地址候选，端点仍用内置CA验证身份
+    @param [in] addresses 非空数值地址候选列表，数量由实际存储决定，端点仍用内置CA验证身份
     @param [in] cachePath 本地目录缓存路径，空字符串禁用持久化
     @return NI_OK或错误
     */
@@ -83,9 +89,11 @@ private:
     NetSenderLocal m_local;
     // 独占的可信入口发现与缓存管理，只由本执行者推进
     NetGatewayDiscovery m_discovery;
+    // 实际连接对象池，覆盖关闭回调及远端运输析构
+    std::unique_ptr<NetObjectPool<NetClientOpaqueGatewayPeer>> m_peerPool;
     // 本机代次到独占远端运输，每个业务端点独立TLS字节流
-    std::map<uint64_t, std::unique_ptr<NetClientOpaqueGatewayPeer>> m_peers;
-    // 本对象已取得ProcessWork接收器，shutdown只回收自己取得的接收资源
+    std::map<uint64_t, NetObjectReference<NetClientOpaqueGatewayPeer>> m_peers;
+    // 已登记本对象的ProcessWork回调，shutdown清理登记及随后取得的接收资源
     bool m_receiving;
     // 本机监听已成功启用，可由poll推进
     bool m_started;

@@ -14,7 +14,7 @@ public:
     // 本机端点的独占业务握手，TLS完成后创建
     std::unique_ptr<NetInterfaceHandshake> m_handshake;
     // 提前到达取消的请求号及产品/消息类型，用于拦截迟到请求
-    std::map<uint64_t, std::pair<uint32_t, uint32_t>> m_cancelled;
+    std::map<uint64_t, NetObjectReference<std::pair<uint32_t, uint32_t>>> m_cancelled;
     // 本机端点业务握手截止的单调毫秒
     uint64_t m_deadline;
     // 本代已接纳的最大请求号，禁止复用和倒退
@@ -26,7 +26,7 @@ public:
     // 协商的数据块上限，字节
     uint32_t m_chunk;
     // 当前端点已使用的产品集合，限制跨产品事件分派
-    std::set<uint32_t> m_products;
+    std::map<uint32_t, NetObjectReference<uint32_t>> m_products;
     // 本机端点完成应用握手，可以发送业务
     bool m_ready;
 
@@ -45,9 +45,20 @@ struct NetClientGatewayRequest
     // 所属本机运输代次，不根据请求正文改变归属
     uint64_t m_peer;
     // 待发请求自有正文，异步转发不借用输入缓冲
-    std::vector<uint8_t> m_body;
+    NetBufferLease m_body;
+    // 正文有效长度，发送成功或释放时归零
+    uint32_t m_size;
     // 请求已提交远端；断开后不能当作未发送请求重放
     bool m_sent;
+
+public:
+    /** 初始化空请求，正文尚未分配
+    */
+    NetClientGatewayRequest();
+
+    /** 擦除正文后归还实际存储
+    */
+    ~NetClientGatewayRequest();
 };
 
 // 兼容中继路径的文件归属记录，按本机代次和产品隔离
@@ -79,8 +90,11 @@ class NetClientGateway : private NetSenderLocalListener, private NetSessionListe
 {
   public:
     /** 创建未启动网关
+    @param [in] records 各类实际记录池配置，不另设请求数门槛
+    @param [in] bodies 正文实际大小级存储配置
     */
-    NetClientGateway();
+    explicit NetClientGateway(const LockFreeHashMapPoolConfig& records = LockFreeHashMapPoolConfig(),
+        const NetBufferPoolConfig& bodies = NetBufferPoolConfig());
 
     /** 停止所有拥有的通道，ProcessWork回调收敛后释放inbox
     */
@@ -196,14 +210,28 @@ class NetClientGateway : private NetSenderLocalListener, private NetSessionListe
     std::unique_ptr<NetTransport> m_remoteTransport;
     // 远端协议会话，借用先声明的物理运输适配
     NetSession m_remote;
+    // 正文实际存储，晚于所有请求引用销毁
+    NetBufferPool m_bodies;
+    // 连接实际记录池
+    NetObjectPool<NetClientGatewayPeer> m_peerPool;
+    // 请求实际记录池
+    NetObjectPool<NetClientGatewayRequest> m_requestPool;
+    // 文件实际记录池
+    NetObjectPool<NetClientGatewayFile> m_filePool;
+    // 提前取消记录的实际池
+    NetObjectPool<std::pair<uint32_t, uint32_t>> m_cancelPool;
+    // 已观察产品记录的实际池
+    NetObjectPool<uint32_t> m_productPool;
+    // 文件取消通知持有的实际槽
+    NetObjectPool<std::pair<uint32_t, uint64_t>> m_fileCancelPool;
     // 本机代次到独占握手和额度状态
-    std::map<uint64_t, std::shared_ptr<NetClientGatewayPeer>> m_peers;
+    std::map<uint64_t, NetObjectReference<NetClientGatewayPeer>> m_peers;
     // 远端请求号到原本机请求及自有待发正文
-    std::map<uint64_t, NetClientGatewayRequest> m_requests;
+    std::map<uint64_t, NetObjectReference<NetClientGatewayRequest>> m_requests;
     // 远端文件流号到本机拥有者及产品映射
-    std::map<uint64_t, std::shared_ptr<NetClientGatewayFile>> m_files;
+    std::map<uint64_t, NetObjectReference<NetClientGatewayFile>> m_files;
     // 待发的产品号与文件流号取消队列
-    std::deque<std::pair<uint32_t, uint64_t>> m_fileCancels;
+    std::deque<NetObjectReference<std::pair<uint32_t, uint64_t>>> m_fileCancels;
     // 保存的远端配置，地址/根/域名指向本对象副本
     NetWorkClientOptions m_options;
     // 远端网关连接地址副本
@@ -215,7 +243,7 @@ class NetClientGateway : private NetSenderLocalListener, private NetSessionListe
     // 下次允许远端重连的单调毫秒
     uint64_t m_retry;
     // 待发请求正文累计字节数，不含已经发送的正文
-    uint32_t m_queuedBytes;
+    uint64_t m_queuedBytes;
     // 远端会话协商的最大在途请求数
     uint32_t m_remoteLimit;
     // 远端会话协商的数据块字节上限

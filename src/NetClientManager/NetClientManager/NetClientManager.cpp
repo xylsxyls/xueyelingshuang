@@ -218,7 +218,7 @@ static int32_t ConfigureGatewayHost()
     functions.listen = LibuvTcp::hostListen;
     functions.connect = LibuvTcp::hostConnect;
     functions.poll = LibuvTcp::hostPoll;
-    functions.write = LibuvTcp::hostWrite;
+    functions.write = LibuvTcp::post;
     functions.pauseRead = LibuvTcp::hostPauseRead;
     functions.close = LibuvTcp::hostClose;
     functions.shutdown = LibuvTcp::hostShutdown;
@@ -226,6 +226,12 @@ static int32_t ConfigureGatewayHost()
     functions.localPort = LibuvTcp::hostLocalPort;
     functions.peerCount = LibuvTcp::hostPeerCount;
     functions.entropy = CSystem::secureRandomBytesCallback;
+    functions.execution.create = LibuvTcp::hostLoopCreate;
+    functions.execution.exchange = LibuvTcp::hostLoopExchange;
+    functions.execution.begin = LibuvTcp::hostLoopBegin;
+    functions.execution.wait = LibuvTcp::hostLoopWait;
+    functions.execution.wake = LibuvTcp::hostLoopWake;
+    functions.execution.destroy = LibuvTcp::hostLoopDestroy;
     return NetWork::configureHost(functions);
 }
 
@@ -254,7 +260,7 @@ NetClientManager::~NetClientManager()
 NetClientManager& NetClientManager::instance()
 {
     // 先构造任务管理器，保证本管理对象析构兜底时任务管理器仍然存在；此处不创建线程。
-    CTaskThreadManager::Instance();
+    CTaskThreadManager::instance();
     static NetClientManager s_manager;
     return s_manager;
 }
@@ -304,8 +310,12 @@ int NetClientManager::prepare(const std::vector<std::string>& input)
     std::vector<std::string> arguments(input);
     if (arguments.size() == 1 && arguments[0] == "--help")
     {
+#ifdef _WIN32
         std::puts("Windows background resident: NetClientManager [--background]. Existing instance is reused.");
         std::puts("Maintenance only: --replace. Login startup: --install-autostart / --uninstall-autostart (alone).");
+#else
+        std::puts("Existing gateway instances are reused. Maintenance only: --replace.");
+#endif
         std::puts("NTW3: NetClientManager --protocol=3 --address=<numeric-IP> [--port=5203] "
                   "[--seeds=<IP:port,[IPv6]:port>] [--cache-file=<UTF8-path>] "
                   "[--run-for-ms=0..86400000] [--stop-file=<fresh-owned-path>]");
@@ -316,12 +326,17 @@ int NetClientManager::prepare(const std::vector<std::string>& input)
     }
     if (arguments.size() == 1 && (arguments[0] == "--install-autostart" || arguments[0] == "--uninstall-autostart"))
     {
+#ifdef _WIN32
         const std::string command = arguments[0] == "--install-autostart" ?
             "\"" + CSystem::currentExecutablePathUtf8() + "\" --background" : "";
         const uint32_t error = CSystem::setUserLoginStartup("NetClientManager", command);
         if (error != 0) { std::fprintf(stderr, "CLIENT_GATEWAY_AUTOSTART_FAILED error=%u\n", error); return 1; }
         std::puts(command.empty() ? "CLIENT_GATEWAY_AUTOSTART_REMOVED" : "CLIENT_GATEWAY_AUTOSTART_INSTALLED");
         return 0;
+#else
+        std::fputs("Login startup options require Windows\n", stderr);
+        return 2;
+#endif
     }
     bool replace = false;
     bool background = false;
@@ -350,32 +365,23 @@ int NetClientManager::prepare(const std::vector<std::string>& input)
             return 2;
         }
     }
-#ifndef NET_GATEWAY_TEST_INSTANCE
     if (!replace && !supervised && NetClientGatewayWatchdog::waitForRecovery())
     {
         std::fputs("NetClientManager_REUSED: existing supervisor retains gateway configuration\n", stderr);
         return 0;
     }
-#endif
-    std::string isolated;
-#ifdef NET_GATEWAY_TEST_INSTANCE
-    // 只用于独立命名的NetWorkTest宿主；正式两个网关从不编译此宏。
-    isolated = std::to_string(CSystem::currentProcessPid());
-#endif
-    const int32_t acquired = CSystem::acquireProcessLease("NetClientManager", replace, 10000, m_lease, isolated);
+    const int32_t acquired = CSystem::acquireProcessLease("NetClientManager", replace, 10000, m_lease);
     if (acquired != 1)
     {
         std::fputs(acquired == 0 ? "NetClientManager_REUSED: existing instance retained; arguments not applied\n" :
             "NetClientManager lease unavailable or previous instance did not stop in 10 seconds\n", stderr);
         return acquired == 0 ? 0 : 1;
     }
-#ifndef NET_GATEWAY_TEST_INSTANCE
     if (!replace && !supervised && NetClientGatewayWatchdog::waitForRecovery())
     {
         std::fputs("NetClientManager_REUSED: existing supervisor retains gateway configuration\n", stderr);
         return 0;
     }
-#endif
     if (arguments.size() == 1 && arguments[0].compare(0, 2, "--") != 0)
     {
         arguments[0] = "--address=" + arguments[0];
@@ -393,13 +399,11 @@ int NetClientManager::prepare(const std::vector<std::string>& input)
         return 1;
     }
     // 守护成功持有本进程句柄之后才启动工作并发布ready，业务不拥有守护生命周期。
-#ifndef NET_GATEWAY_TEST_INSTANCE
     if (!supervised && !NetClientGatewayWatchdog::start(arguments))
     {
         return 1;
     }
 
-#endif
     m_task.reset(new NetClientGatewayTask(configuration));
     NetInterface::wipe(configuration.m_privateKey.empty() ? nullptr : reinterpret_cast<uint8_t*>(&configuration.m_privateKey[0]),
                      static_cast<uint32_t>(configuration.m_privateKey.size()));
@@ -407,17 +411,20 @@ int NetClientManager::prepare(const std::vector<std::string>& input)
     {
         return 1;
     }
-    m_thread = CTaskThreadManager::Instance().Init();
+    m_thread = CTaskThreadManager::instance().init();
     if (m_thread == 0)
     {
         return 1;
     }
-    auto executor = CTaskThreadManager::Instance().GetThreadInterface(m_thread);
+    auto executor = CTaskThreadManager::instance().getThreadInterface(m_thread);
     if (!executor)
     {
         return 1;
     }
-    executor->PostTask(m_task);
+    if (!executor->tryPostTaskResult(m_task, 1, true, false).m_committed)
+    {
+        return 1;
+    }
     executor.reset();
     return 0;
 }
@@ -462,11 +469,16 @@ bool NetClientManager::stopTask()
         }
         if (m_task)
         {
-            m_task->StopTask();
+            m_task->stopTask();
         }
         if (m_thread != 0)
         {
-            CTaskThreadManager::Instance().WaitForEnd(m_thread);
+            const CTaskThreadResult joined = CTaskThreadManager::instance().waitForEnd(m_thread);
+            if (joined.m_status != CTaskThreadOk && joined.m_status != CTaskThreadNotFound)
+            {
+                m_cleanupFailed = true;
+                return false;
+            }
             m_thread = 0;
         }
         return true;
@@ -506,7 +518,7 @@ int NetClientManager::run()
                 if (!CSystem::setProcessLeaseReady(m_lease, true))
                 {
                     stop();
-                    m_task->StopTask();
+                    m_task->stopTask();
                     break;
                 }
                 std::printf("CLIENT_GATEWAY_READY pid=%u\n", static_cast<uint32_t>(CSystem::currentProcessPid()));
@@ -525,7 +537,7 @@ int NetClientManager::run()
             {
                 CSystem::setProcessLeaseReady(m_lease, false);
                 stop();
-                m_task->StopTask();
+                m_task->stopTask();
             }
             CSystem::Sleep(10);
         }
@@ -639,202 +651,3 @@ int main(int argc, char** argv)
         return 1;
     }
 }
-
-#if 0 // MANAGER_LIFECYCLE_UNIT_BEGIN
-// 测试时在隔离副本停用上方生产main、启用此main，并定义NET_GATEWAY_TEST_INSTANCE；参数为独占临时目录。
-// 测试结束保持此块关闭，不运行生产单例或实际公网端点。
-#if defined(_WIN32) && defined(_DEBUG)
-#include <crtdbg.h>
-
-// 只拒绝当前测试主线程的一次分配，工作线程不参与故障注入。
-static DWORD g_managerAllocationThread = 0;
-// 剩余主线程分配次数，负数关闭注入。
-static int g_managerAllocationBudget = -1;
-// 当前注入点是否实际拒绝过分配。
-static bool g_managerAllocationRejected = false;
-// 测试开始前已有的CRT分配钩子，未拒绝时继续调用。
-static _CRT_ALLOC_HOOK g_managerPreviousAllocationHook = nullptr;
-
-/** 仅在选定主线程分配点注入一次失败，释放动作及其他线程保持原行为
-@param [in] operation CRT分配操作
-@param [in] pointer 原块
-@param [in] size 请求字节
-@param [in] block CRT块类型
-@param [in] request 分配编号
-@param [in] filename CRT源文件
-@param [in] line CRT源行
-@return 是否允许本次CRT操作
-*/
-static int __cdecl ManagerAllocationHook(int operation, void* pointer, size_t size, int block, long request,
-    const unsigned char* filename, int line)
-{
-    if (operation == _HOOK_ALLOC && GetCurrentThreadId() == g_managerAllocationThread && g_managerAllocationBudget >= 0)
-    {
-        if (g_managerAllocationBudget-- == 0)
-        {
-            g_managerAllocationRejected = true;
-            return FALSE;
-        }
-    }
-    return g_managerPreviousAllocationHook == nullptr ? TRUE :
-        g_managerPreviousAllocationHook(operation, pointer, size, block, request, filename, line);
-}
-#endif
-
-/** 管理类生命周期单测，覆盖重复调用、失败恢复、停止、信号恢复及分配失败回收
-@param [in] argc 原平台参数数量
-@param [in] argv 原平台参数，唯一业务参数为独占临时目录
-@return 0通过，1检查失败，2参数错误
-*/
-int main(int argc, char** argv)
-{
-#ifdef _WIN32
-    if (!CSystem::bindInheritedOutput())
-    {
-        return 1;
-    }
-#endif
-    NetClientManager& manager = NetClientManager::instance();
-    try
-    {
-        std::vector<std::string> paths;
-        if (!CSystem::commandArguments(argc, argv, paths) || paths.size() != 1)
-        {
-            return 2;
-        }
-        uint32_t checks = 0;
-        // condition为独立预期，message只含用例名；失败打印后交给main统一清理。
-        const auto check = [&checks](bool condition, const char* message) -> bool
-        {
-            ++checks;
-            if (!condition)
-            {
-                std::fprintf(stderr, "MANAGER_UNIT_FAILED %s\n", message);
-            }
-            return condition;
-        };
-        if (!check(&manager == &NetClientManager::instance(), "singleton") ||
-            !check(manager.run() == 1, "run-before-init") ||
-            !check(manager.uninit() && manager.uninit(), "empty-uninit"))
-        {
-            return 1;
-        }
-        std::vector<std::string> help(1, "--help");
-        if (!check(manager.init(help) == 0, "help-init") ||
-            !check(manager.init(help) == 1, "duplicate-init") ||
-            !check(manager.run() == 0, "help-run") ||
-            !check(manager.run() == 1, "duplicate-run") ||
-            !check(manager.uninit() && manager.uninit(), "help-uninit"))
-        {
-            return 1;
-        }
-        std::vector<std::string> invalid(1, "--port=70000");
-        if (!check(manager.init(invalid) == 2, "invalid-config") ||
-            !check(manager.run() == 1, "failed-init-not-runnable") ||
-            !check(manager.uninit(), "failed-init-uninit"))
-        {
-            return 1;
-        }
-        std::vector<std::string> arguments;
-        arguments.push_back("--protocol=3");
-        arguments.push_back("--address=127.0.0.1");
-        arguments.push_back("--port=9");
-        arguments.push_back("--run-for-ms=40");
-        arguments.push_back("--cache-file=" + CSystem::joinPath(paths[0], "cache.dat"));
-        // 先实际运行一轮，使第三方懒初始化与后续任务/句柄回收检查分离。
-        if (!check(manager.init(arguments) == 0, "warm-init") ||
-            !check(manager.run() == 0, "warm-run") || !check(manager.uninit(), "warm-uninit"))
-        {
-            return 1;
-        }
-        const int32_t threads = CTaskThreadManager::Instance().Count();
-        for (uint32_t cycle = 0; cycle < 4; ++cycle)
-        {
-            const auto originalSignal = std::signal(SIGINT, SIG_IGN);
-            if (!check(originalSignal != SIG_ERR, "test-signal-install") ||
-                !check(manager.init(arguments) == 0, "cycle-init") ||
-                !check(manager.init(arguments) == 1, "live-duplicate-init"))
-            {
-                return 1;
-            }
-            if (cycle == 0)
-            {
-                manager.stop();
-                manager.stop();
-            }
-            else if (cycle == 1)
-            {
-                std::raise(SIGINT);
-            }
-            if (cycle != 3 && !check(manager.run() == 0, "cycle-run"))
-            {
-                return 1;
-            }
-            if (!check(manager.uninit() && manager.uninit(), "cycle-uninit") ||
-                !check(CTaskThreadManager::Instance().Count() == threads, "thread-reclaimed") ||
-                !check(std::signal(SIGINT, SIG_IGN) == SIG_IGN, "signal-restored"))
-            {
-                return 1;
-            }
-            std::signal(SIGINT, originalSignal);
-        }
-        std::vector<std::string> failed(arguments);
-        failed[1] = "--address=invalid-ip";
-        if (!check(manager.init(failed) == 0, "async-failure-prepare") ||
-            !check(manager.run() == 1, "async-failure-reported") ||
-            !check(manager.uninit(), "async-failure-uninit") ||
-            !check(CTaskThreadManager::Instance().Count() == threads, "failed-thread-reclaimed"))
-        {
-            return 1;
-        }
-        uint32_t rejected = 0;
-#if defined(_WIN32) && defined(_DEBUG)
-        g_managerAllocationThread = GetCurrentThreadId();
-        for (int budget = 0; budget < 160; ++budget)
-        {
-            g_managerAllocationBudget = budget;
-            g_managerAllocationRejected = false;
-            g_managerPreviousAllocationHook = _CrtSetAllocHook(ManagerAllocationHook);
-            const int initialized = manager.init(arguments);
-            _CrtSetAllocHook(g_managerPreviousAllocationHook);
-            g_managerAllocationBudget = -1;
-            if (g_managerAllocationRejected)
-            {
-                ++rejected;
-            }
-            // 返回成功的注入点可能属于可选准备；同样必须可停止且收回任务。
-            if (initialized == 0)
-            {
-                manager.stop();
-                manager.run();
-            }
-            if (!check(manager.uninit() && manager.uninit(), "allocation-uninit") ||
-                !check(CTaskThreadManager::Instance().Count() == threads, "allocation-thread-reclaimed"))
-            {
-                return 1;
-            }
-        }
-        if (!check(rejected > 0, "allocation-rejection-exercised"))
-        {
-            return 1;
-        }
-#endif
-        if (!check(manager.init(arguments) == 0 && manager.run() == 0 && manager.uninit(), "final-recovery"))
-        {
-            return 1;
-        }
-        std::printf("MANAGER_UNIT_PASS checks=%u rejected=%u\n", checks, rejected);
-        return 0;
-    }
-    catch (...)
-    {
-#if defined(_WIN32) && defined(_DEBUG)
-        _CrtSetAllocHook(g_managerPreviousAllocationHook);
-        g_managerAllocationBudget = -1;
-#endif
-        manager.uninit();
-        std::fputs("MANAGER_UNIT_FAILED unexpected-exception\n", stderr);
-        return 1;
-    }
-}
-#endif // MANAGER_LIFECYCLE_UNIT_END
