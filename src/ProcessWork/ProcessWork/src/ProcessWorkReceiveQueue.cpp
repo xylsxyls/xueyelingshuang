@@ -51,7 +51,7 @@ ProcessWorkReceiveBatch::~ProcessWorkReceiveBatch()
 
 ProcessWorkReceiveQueue::ProcessWorkReceiveQueue() :
 m_building(nullptr), m_batchBytes(kReceiveBatchBytes), m_reserved(0), m_knownReleased(0), m_nextMemoryRetry(0), m_charged(0),
-m_active(nullptr), m_readOffset(0), m_completed(0), m_released(0), m_cached(0), m_allocatedBytes(0), m_notified(false), m_storageGrows(0)
+m_active(nullptr), m_readOffset(0), m_completed(0), m_released(0), m_cached(0), m_allocatedBytes(0), m_notified(false), m_notification(new Semaphore), m_storageGrows(0)
 {
 
 }
@@ -65,7 +65,13 @@ bool ProcessWorkReceiveQueue::configure(const ProcessWorkMemoryConfig& config)
 {
     try
     {
-        if (m_notification.initializationResult().status != SEMAPHORE_OK || hasPending() || !ProcessWorkMemory::valid(config))
+        if (hasPending() || !config.m_queueOptions.valid() || !config.m_freeQueueOptions.valid() ||
+            !ProcessWorkMemory::valid(config))
+        {
+            return false;
+        }
+        std::unique_ptr<Semaphore> notification(new Semaphore(config.m_notification));
+        if (notification->initializationResult().status != SEMAPHORE_OK)
         {
             return false;
         }
@@ -100,7 +106,8 @@ bool ProcessWorkReceiveQueue::configure(const ProcessWorkMemoryConfig& config)
         }
         m_ready.destroy();
         m_free.destroy();
-        if (m_ready.configurePool(pool) != LockFreeQueueSuccess || m_free.configurePool(freePool) != LockFreeQueueSuccess ||
+        if (!config.m_queueOptions.apply(m_ready, false) || !config.m_freeQueueOptions.apply(m_free, false) ||
+            m_ready.configurePool(pool) != LockFreeQueueSuccess || m_free.configurePool(freePool) != LockFreeQueueSuccess ||
             m_ready.setGrowPolicy(config.m_queueGrow) != LockFreeQueueSuccess || m_free.setGrowPolicy(config.m_freeQueueGrow) != LockFreeQueueSuccess ||
             m_ready.setShrinkPolicy(config.m_queueShrink) != LockFreeQueueSuccess || m_free.setShrinkPolicy(config.m_freeQueueShrink) != LockFreeQueueSuccess ||
             m_ready.tryInit() != LockFreeQueueSuccess || m_free.tryInit() != LockFreeQueueSuccess)
@@ -136,6 +143,7 @@ bool ProcessWorkReceiveQueue::configure(const ProcessWorkMemoryConfig& config)
             // 只在没有已归还热块时启用备用块，避免低积压也循环触及全部预分配内存。
             m_unused.push_back(batch);
         }
+        m_notification.swap(notification);
         return true;
     }
     catch (...)
@@ -312,7 +320,7 @@ bool ProcessWorkReceiveQueue::flush()
     m_building = nullptr;
     if (!m_notified.load(std::memory_order_acquire) && !m_notified.exchange(true, std::memory_order_acq_rel))
     {
-        m_notification.trySignal(true, false);
+        m_notification->trySignal(true, false);
     }
     return true;
 }
@@ -344,7 +352,7 @@ void ProcessWorkReceiveQueue::destroy(ProcessWorkReceiveBatch* batch)
 
 void ProcessWorkReceiveQueue::wake()
 {
-    m_notification.trySignal(true, false);
+    m_notification->trySignal(true, false);
 }
 
 void ProcessWorkReceiveQueue::clear()
@@ -378,7 +386,7 @@ void ProcessWorkReceiveQueue::clear()
     m_allocatedBytes.store(0);
     m_storageGrows = 0;
     m_notified.store(false);
-    m_notification.reset();
+    m_notification->reset();
 }
 
 uint64_t ProcessWorkReceiveQueue::used() const
@@ -400,5 +408,5 @@ bool ProcessWorkReceiveQueue::hasPending() const
 
 Semaphore& ProcessWorkReceiveQueue::notification()
 {
-    return m_notification;
+    return *m_notification;
 }

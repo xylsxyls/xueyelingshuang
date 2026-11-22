@@ -18,21 +18,27 @@ class ProcessWorkSharedQueue;
 class ProcessWorkProducerState;
 class ProcessWorkReceiveQueue;
 
-/** ProcessWork与NetSender共用的v6控制协议传输实现；业务通常使用ProcessWork门面。
-    open/close由生命周期owner串行执行；完成openSender后trySend可以多线程调用。
+/** ProcessWork与NetSender共用的v6控制协议传输实现；业务通常使用ProcessWork门面
+    open/close由生命周期owner串行执行；完成openSender后trySend可以多线程调用
 */
 class ProcessWorkAPI ProcessWorkChannel
 {
 public:
-    /** 初始化空对象，不启动线程或创建IPC资源。
+    /** 初始化空对象，不启动线程或创建IPC资源
     */
     ProcessWorkChannel();
 
-    /** 静止状态下释放本实例资源；调用方先停止所有借用任务。
+    /** 分别设置本端两种进程通知的等待策略和池配置。
+    @param [in] dataReady 数据可读通知
+    @param [in] spaceReady 空间可用通知
+    */
+    ProcessWorkChannel(const SemaphoreConfig& dataReady, const SemaphoreConfig& spaceReady);
+
+    /** 静止状态下释放本实例资源；调用方先停止所有借用任务
     */
     ~ProcessWorkChannel();
 
-    /** 准备接收区，尚不对发送者发布就绪。
+    /** 准备接收区，尚不对发送者发布就绪
     @param [in] bytes 单块总容量，含12字节头
     @param [in] initial 固定初始块数
     @param [in] threshold 剩余块数不高于此值时请求增长
@@ -44,7 +50,7 @@ public:
     bool openReceiver(int32_t bytes, int32_t initial, int32_t threshold, int32_t increment,
         int32_t idleSeconds, int32_t rounds);
 
-    /** 使用显式内存保护策略准备接收区，其余参数与六参数重载相同。
+    /** 使用显式内存保护策略准备接收区，其余参数与六参数重载相同
     @param [in] bytes 单块总容量
     @param [in] initial 初始块数
     @param [in] threshold 扩容剩余块数阈值
@@ -57,19 +63,19 @@ public:
     bool openReceiver(int32_t bytes, int32_t initial, int32_t threshold, int32_t increment,
         int32_t idleSeconds, int32_t rounds, const ProcessWorkMemoryConfig& memory);
 
-    /** 接收任务均已准备后发布入口；只由接收器生命周期owner调用。
+    /** 接收任务均已准备后发布入口；只由接收器生命周期owner调用
     */
     void publish();
 
-    /** 撤销接收入口并唤醒等待者；释放映射前仍须加入接收任务。
+    /** 撤销接收入口并唤醒等待者；释放映射前仍须加入接收任务
     */
     void stop();
 
-    /** 静止状态释放资源，重复调用安全。
+    /** 静止状态释放资源，重复调用安全
     */
     void close();
 
-    /** 打开既有接收区并请求身份登记，不等待登记完成。
+    /** 打开既有接收区并请求身份登记，不等待登记完成
     @param [in] pid 真实接收进程号
     @return true已打开，false不存在、协议不兼容或身份不可查询
     */
@@ -82,13 +88,13 @@ public:
     */
     bool prepareSend(int32_t blocks = -1, bool payloads = false);
 
-    /** 静止且未打开通道时设置生产者登记Map的完整池参数
+    /** 静止且未打开通道时设置发送端生产者登记Map的完整池参数；接收通道不登记生产者线程
     @param [in] config 节点、值、增长及保护记录参数
     @return true已保存；false已打开或复制失败
     */
     bool configureProducers(const LockFreeMapConfig& config);
 
-    /** 检查缓存是否仍对应当前接收器代次，不查询OS进程存活。
+    /** 检查缓存是否仍对应当前接收器代次，不查询OS进程存活
     @return true共享入口仍就绪
     */
     bool ready() const;
@@ -99,7 +105,7 @@ public:
     */
     int32_t payloadCapacity() const;
 
-    /** 验证名称发现记录与已打开通道属于同一进程代次。
+    /** 验证名称发现记录与已打开通道属于同一进程代次
     @param [in] identity 名称记录的完整创建标识
     @return true身份一致且本接收器代次仍就绪
     */
@@ -126,23 +132,23 @@ public:
     */
     int32_t send(const char* data, int32_t length, int32_t type, const std::atomic<bool>* stop = nullptr);
 
-    /** 满载时睡眠等待空间，并核对接收进程完整身份。
+    /** 满载时睡眠等待空间，并核对接收进程完整身份
     @return true接收端仍可用，false关闭或确认换代/退出
     */
     bool waitForSpace();
 
-    /** 唯一接收任务调用，复制FIFO正文、维护注册/死亡回收/扩缩容。
-    @param [in] queue 接收正文所有权队列
-    @param [in] notification 本地接收任务通知
-    @param [in] fullCount 合并后的满载快照，0表示没有待处理事件
-    @return 本次复制成功的消息数量
+    /** 唯一接收任务调用，保持各发送线程FIFO并轮转复制、维护登记/死亡回收/扩缩容
+    @param [in,out] queue 接收正文所有权队列
+    @param [in,out] notification 本地接收任务通知
+    @param [in,out] fullCount 合并后的满载快照，0表示没有待处理事件
+    @return 本次复制成功的消息数量；发现已提交索引或包头损坏时停止通道
     */
     int32_t pump(LockFreeQueue<char*>& queue, Semaphore& notification, std::atomic<int32_t>& fullCount);
 
-    /** 唯一读取线程复制到可复用批次，返回前发布本轮所有副本。
+    /** 唯一读取线程复制到可复用批次，返回前发布本轮所有副本
     @param [in,out] queue 接收正文批次和计费所有者
     @param [in,out] fullCount 满载事件快照
-    @return 本次复制成功的消息数量；失败的提交保留本地副本供重试
+    @return 本次复制成功的消息数量；本地发布失败保留副本重试，协议损坏停止通道
     */
     int32_t pump(ProcessWorkReceiveQueue& queue, std::atomic<int32_t>& fullCount);
 
@@ -150,16 +156,16 @@ public:
     */
     void waitForData();
 
-    /** 唤醒接收等待，用于StopTask。
+    /** 唤醒接收等待，用于StopTask
     */
     void wake();
 
-    /** 当前活动块数快照。
+    /** 当前活动块数快照
     @return 未初始化时0，运行时为初始块加当前保留扩容块
     */
     int32_t bufferCount() const;
 
-    /** 生成原生名称，最多30个ASCII字节；macOS通知为29字节，身份编码不截断、不哈希。
+    /** 生成原生名称，最多30个ASCII字节；macOS通知为29字节，身份编码不截断、不哈希
     @param [in] kind C控制区、B数据块、R数据通知、W空间通知
     @param [in] pid 进程号
     @param [in] identity 完整系统创建标识
@@ -185,6 +191,7 @@ private:
     */
     int32_t retrySend(const char* data, int32_t length, int32_t type, bool retryContention,
         bool retryCapacity, uint32_t capacity, const std::atomic<bool>* stop, int32_t result);
+
     /** 共用正文复制及提交，普通路径允许等待已登记的资源授予
     @param [in] data 正文
     @param [in] length 字节数
@@ -224,69 +231,69 @@ private:
     */
     bool waitForSpaceImpl(int32_t timeout, bool probeSpace = true);
 
-    /** 共用FIFO读取及死亡回收路径，兼容逐包队列和接收端批次队列。
-    @param [in] queue 逐包模式的输出队列，批次模式为空
-    @param [in] notification 回调线程通知
+    /** 共用FIFO读取及死亡回收路径，兼容逐包队列和接收端批次队列
+    @param [in,out] queue 逐包模式的输出队列，批次模式为空
+    @param [in,out] notification 回调线程通知
     @param [in,out] fullCount 满载快照
-    @param [in] batches 批次计费所有者，与逐包输出互斥
-    @return 已复制消息数
+    @param [in,out] batches 批次计费所有者，与逐包输出互斥
+    @return 已复制消息数；已提交索引或包头损坏时停止通道
     */
     int32_t pumpImpl(LockFreeQueue<char*>* queue, Semaphore& notification, std::atomic<int32_t>& fullCount,
         ProcessWorkReceiveQueue* batches);
 
-    /** 禁止复制独占生命周期。
+    /** 禁止复制独占生命周期
     @param [in] other 不可复制对象
     */
     ProcessWorkChannel(const ProcessWorkChannel& other);
 
-    /** 禁止复制独占生命周期。
+    /** 禁止复制独占生命周期
     @param [in] other 不可复制对象
     @return 不可调用
     */
     ProcessWorkChannel& operator=(const ProcessWorkChannel& other);
 
-    /** 创建一块且最后发布FREE。
+    /** 创建一块且最后发布FREE
     @param [in] index 从1开始的正文下标
     @return true成功，false仍保持未启用
     */
     bool createBlock(int32_t index);
 
-    /** 唯一接收任务进行有界维护。
-    @param [in] notification 本地回调通知
-    @param [in] fullCount 合并后的满载事件
+    /** 唯一接收任务进行有界维护
+    @param [in,out] notification 本地回调通知
+    @param [in,out] fullCount 合并后的满载事件
     */
     void maintain(Semaphore& notification, std::atomic<int32_t>& fullCount);
 
-    /** 唯一接收任务批准新发送者，注册号永不复用。
+    /** 唯一接收任务批准新发送者，注册号永不复用
     */
     void approveSenders();
 
-    /** 分批确认死亡，只释放未提交占位，保留已提交消息。
+    /** 分批确认死亡，只释放未提交占位，保留已提交消息
     */
     void recoverExitedSenders();
 
-    /** 唯一接收任务管理扩容块的创建和空闲退役。
+    /** 唯一接收任务管理扩容块的创建和空闲退役
     @param [in] now 开始扫描空闲状态的单调毫秒
-    @param [in] notification 本地回调通知
-    @param [in] fullCount 合并满载快照
+    @param [in,out] notification 本地回调通知
+    @param [in,out] fullCount 合并满载快照
     */
     void resizeBuffers(uint64_t now, Semaphore& notification, std::atomic<int32_t>& fullCount);
 
-    /** 取得本发送进程已获批准的注册号。
+    /** 取得本发送进程已获批准的注册号
     @return 正数批准号，0尚未批准或无容量
     */
     int64_t senderToken();
 
-    /** 合并数据通知，不为每个包在内核累积一个空唤醒。
+    /** 合并数据通知，不为每个包在内核累积一个空唤醒
     */
     void signalData();
 
-    /** 只有等待者请求空间时才发布一次空间提示。
+    /** 只有等待者请求空间时才发布一次空间提示
     */
     void signalSpace();
 
-    /** 已确认接收进程退出时清理其唯一代次的POSIX对象名称，不碰固定发现入口。
-    发送者缓存仍拥有映射引用，已有并发调用不会访问解除映射后的地址。
+    /** 已确认接收进程退出时清理其唯一代次的POSIX对象名称，不碰固定发现入口
+    发送者缓存仍拥有映射引用，已有并发调用不会访问解除映射后的地址
     */
     void cleanupExitedReceiver();
 

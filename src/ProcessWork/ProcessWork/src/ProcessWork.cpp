@@ -1,15 +1,15 @@
 ﻿#include "ProcessWork.h"
 #include "ProcessWorkAtomic.h"
-#include "ProcessWorkTime.h"
 #include "ProcessReceiveCallback.h"
 #include "CSystem/CSystemAPI.h"
-#include "AtomicMath/AtomicMathAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include "ReadTask.h"
 #include "ReceiveTask.h"
 #include "SendTask.h"
 #include <cstring>
 #include <cstdio>
 #include <limits.h>
+#include <inttypes.h>
 #include <thread>
 #include <limits>
 #include <exception>
@@ -26,6 +26,42 @@ ProcessWork& ProcessWork::instance()
 {
     static ProcessWork s_processWork;
     return s_processWork;
+}
+
+bool ProcessWork::setProcessIdentityDirectory(const std::string& directory)
+{
+    try
+    {
+        return CSystem::setProcessDirectory(directory);
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+bool ProcessWork::setSharedMemoryDirectory(const std::string& directory)
+{
+    try
+    {
+        return SharedMemory::setProcessDirectory(directory);
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+bool ProcessWork::setSemaphoreDirectory(const std::string& directory)
+{
+    try
+    {
+        return Semaphore::setProcessDirectory(directory);
+    }
+    catch (...)
+    {
+        return false;
+    }
 }
 
 bool ProcessWork::configure(const ProcessWorkConfig& config)
@@ -84,7 +120,7 @@ std::string ProcessWork::nameKey(const std::string& name)
         value *= 1099511628211ULL;
     }
     // 这里只缩短查找键，打开后必须逐字节核对完整名称。
-    return "P3N" + std::to_string(value);
+    return "P3N" + CStringManager::Format("%" PRIu64, value);
 }
 
 bool ProcessWork::setReceiveName(const std::string& name)
@@ -138,7 +174,7 @@ bool ProcessWork::claimReceiveName()
         (previous < 0 || !previousKnown || previousIdentity == static_cast<uint64_t>(ProcessWorkAtomic::load(reinterpret_cast<int64_t*>(&directory->m_identity))));
     if ((!(previousAlive && previous < 0) && ProcessWorkAtomic::load(&directory->m_length) != 0 && (ProcessWorkAtomic::load(&directory->m_length) != name.size() ||
             std::memcmp(directory->m_name, name.data(), name.size()) != 0)) ||
-        (!previousAlive && !AtomicMath::compareAndSwap(&directory->m_pid, previous, -m_thisProcessPid)))
+        (!previousAlive && !ProcessWorkAtomic::replace(&directory->m_pid, previous, -m_thisProcessPid)))
     {
         return false;
     }
@@ -147,11 +183,11 @@ bool ProcessWork::claimReceiveName()
     if (m_nameOwned)
     {
         int64_t* identity = reinterpret_cast<int64_t*>(&directory->m_identity);
-        AtomicMath::compareAndSwap(identity, ProcessWorkAtomic::load(identity), static_cast<int64_t>(selfIdentity));
+        ProcessWorkAtomic::replace(identity, ProcessWorkAtomic::load(identity), static_cast<int64_t>(selfIdentity));
         if (ProcessWorkAtomic::load(&directory->m_length) == 0)
         {
             std::memcpy(directory->m_name, name.c_str(), name.size() + 1);
-            AtomicMath::compareAndSwap(&directory->m_length, 0, static_cast<int32_t>(name.size()));
+            ProcessWorkAtomic::replace(&directory->m_length, 0, static_cast<int32_t>(name.size()));
         }
     }
     return true;
@@ -170,7 +206,7 @@ bool ProcessWork::initReceive(int32_t receiveSize, int32_t areaCount, int32_t ex
     {
         return false;
     }
-    // 唯一回滚出口：任何准备失败或异常均先加入借用任务，再销毁映射。
+    // 唯一回滚出口：任何准备失败或异常均先等待借用任务退出，再销毁映射。
     // 参数为本次尚未交付的资源；按对应所有者规则释放，不传播异常。
     auto rollback = [](ProcessWork* owner)
     {
@@ -183,9 +219,8 @@ bool ProcessWork::initReceive(int32_t receiveSize, int32_t areaCount, int32_t ex
         {
             return false;
         }
-        m_channel.reset(new ProcessWorkChannel);
-        if (!m_channel->configureProducers(m_components.m_producers) ||
-            !m_channel->openReceiver(receiveSize, areaCount, expandThreshold, expandCount, idleSeconds, maxExpandTimes, memory))
+        m_channel.reset(new ProcessWorkChannel(m_components.m_receiveDataReady, m_components.m_receiveSpaceReady));
+        if (!m_channel->openReceiver(receiveSize, areaCount, expandThreshold, expandCount, idleSeconds, maxExpandTimes, memory))
         {
             return false;
         }
@@ -215,7 +250,7 @@ bool ProcessWork::initReceive(int32_t receiveSize, int32_t areaCount, int32_t ex
         if (m_nameOwned)
         {
             ProcessWorkNameDirectory* directory = static_cast<ProcessWorkNameDirectory*>(m_nameMemory->memory());
-            AtomicMath::compareAndSwap(&directory->m_pid, -m_thisProcessPid, m_thisProcessPid);
+            ProcessWorkAtomic::replace(&directory->m_pid, -m_thisProcessPid, m_thisProcessPid);
         }
         pending.release();
         return true;
@@ -241,11 +276,11 @@ void ProcessWork::releaseReceive(bool clearProcessState)
     {
         ProcessWorkNameDirectory* directory = static_cast<ProcessWorkNameDirectory*>(m_nameMemory->memory());
         // 先保留关闭中标记，再撤POSIX名称，防止新同名接收器发布后被旧析构撤名。
-        AtomicMath::compareAndSwap(&directory->m_pid, m_thisProcessPid, -m_thisProcessPid);
+        ProcessWorkAtomic::replace(&directory->m_pid, m_thisProcessPid, -m_thisProcessPid);
         // 已撤名的旧映射保持关闭标志，不能让持有旧引用的初始化者重新认领。
         if (!m_nameMemory->unlinkName())
         {
-            AtomicMath::compareAndSwap(&directory->m_pid, -m_thisProcessPid, 0);
+            ProcessWorkAtomic::replace(&directory->m_pid, -m_thisProcessPid, 0);
         }
     }
     if (clearProcessState)
@@ -299,7 +334,7 @@ std::shared_ptr<ProcessWorkChannel> ProcessWork::sender(int32_t pid)
     {
         return cached;
     }
-    std::shared_ptr<ProcessWorkChannel> channel(new ProcessWorkChannel);
+    std::shared_ptr<ProcessWorkChannel> channel(new ProcessWorkChannel(m_components.m_sendDataReady, m_components.m_sendSpaceReady));
     if (!channel->configureProducers(m_components.m_producers) || !channel->openSender(pid))
     {
         return std::shared_ptr<ProcessWorkChannel>();
@@ -621,7 +656,7 @@ int32_t ProcessWork::enqueue(int32_t pid, const std::string& name, const char* b
         }
         // 未启动消费者、正在结束或发送线程重入都不能等待自己释放预算。
         if (!m_postStarted || m_waitEndPost.load() || SendTask::currentStopFlag() != nullptr ||
-            !ProcessWorkTime::waitCapacity(capacity))
+            !m_postQueue.waitCapacity(capacity))
         {
             return PROCESS_WORK_POST_UNAVAILABLE;
         }
@@ -665,7 +700,7 @@ int32_t ProcessWork::enqueue(int32_t pid, const std::string& name, const char* b
             result == LockFreeQueueResourceUnavailable || result == LockFreeQueueGrowthDeclined))
         {
             if (!m_postStarted || m_waitEndPost.load() || SendTask::currentStopFlag() != nullptr ||
-                !ProcessWorkTime::waitCapacity(capacity))
+                !m_postQueue.waitCapacity(capacity))
             {
                 return PROCESS_WORK_POST_UNAVAILABLE;
             }
@@ -935,6 +970,8 @@ int32_t ProcessWork::receivePayloadCapacity() const
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
+#include <cstdlib>
 #include <atomic>
 #include <chrono>
 #include <cstdio>
@@ -989,6 +1026,15 @@ int main()
         CTaskThreadManager::instance();
         ProcessWork& ipc = ProcessWork::instance();
         ProcessWorkDemoCallback callback;
+#ifdef SHARED_MEMORY_MOBILE
+        const char* directory = std::getenv("PROCESS_WORK_DIRECTORY");
+        if (directory == nullptr || !ProcessWork::setProcessIdentityDirectory(directory) ||
+            !ProcessWork::setSharedMemoryDirectory(directory) ||
+            !ProcessWork::setSemaphoreDirectory(directory))
+        {
+            return 15;
+        }
+#endif
         ProcessWorkConfig config;
         if (!config.m_receiveMemory.setLocalQueueLimitMB(128) || !config.m_postMemory.setLocalQueueLimitMB(-1))
         {
@@ -1002,7 +1048,14 @@ int main()
         // 可选128字节槽，适合64字节正文；预留槽数相同时正文池占用加倍。
         config.m_postMemory.m_postBufferSlotBytes = 128;
         config.m_postMemory.m_queuePool.initialCapacity = 64;
-        // 其他池、Map和三条任务线程的参数可通过config相应字段逐项设置。
+        // 三条线程与各自的本地通知、共享通道的可读/可写通知均可独立配置。
+        config.m_postMemory.m_queueOptions.m_maintenanceInterval = 64;
+        SemaphoreWaitPolicy waitPolicy;
+        waitPolicy.m_localSlice = 10;
+        if (config.m_receiveMemory.m_notification.setWaitPolicy(waitPolicy).status != SEMAPHORE_OK)
+        {
+            return 14;
+        }
         // 不设置m_configureManager，避免覆盖同进程其他库的线程管理器配置。
         if (!ipc.configure(config))
         {
@@ -1014,7 +1067,7 @@ int main()
             return 3;
         }
         const int32_t pid = CSystem::currentProcessPid();
-        const std::string name = "process_work_demo_" + std::to_string(pid);
+        const std::string name = "process_work_demo_" + CStringManager::toStringInt32(pid);
         if (!ipc.setReceiveName(name) || !ipc.addProcessReceiveCallback(&callback))
         {
             return 4;

@@ -7,9 +7,12 @@
 #include <new>
 
 ProcessWorkLocalQueue::ProcessWorkLocalQueue() :
-m_notified(false), m_pending(0), m_nextMemoryCheck(0), m_memoryAvailable(true)
+m_values(false), m_notification(new Semaphore), m_notified(false), m_pending(0), m_nextMemoryCheck(0), m_memoryAvailable(true)
 {
-
+    if (m_config.m_queueOptions.apply(m_values, true))
+    {
+        m_values.tryInit();
+    }
 }
 
 ProcessWorkLocalQueue::~ProcessWorkLocalQueue()
@@ -21,7 +24,12 @@ bool ProcessWorkLocalQueue::configure(const ProcessWorkMemoryConfig& config)
 {
     try
     {
-        if (!notificationReady() || m_pending.load() != 0 || !ProcessWorkMemory::valid(config))
+        if (m_pending.load() != 0 || !config.m_queueOptions.valid() || !ProcessWorkMemory::valid(config))
+        {
+            return false;
+        }
+        std::unique_ptr<Semaphore> notification(new Semaphore(config.m_notification));
+        if (notification->initializationResult().status != SEMAPHORE_OK)
         {
             return false;
         }
@@ -47,8 +55,8 @@ bool ProcessWorkLocalQueue::configure(const ProcessWorkMemoryConfig& config)
         m_nextMemoryCheck.store(0);
         m_memoryAvailable.store(true);
         m_values.destroy();
-        // 各生产者记录发布数量，避免每条Post更新同一个队列计数；排空仍由Queue汇总。
-        if (m_values.configureProducerCounters(true) != LockFreeQueueSuccess ||
+        // Post默认分散计数；显式设置只作用于这个队列。
+        if (!config.m_queueOptions.apply(m_values, true) ||
             m_values.configurePool(pool) != LockFreeQueueSuccess ||
             m_values.setGrowPolicy(config.m_queueGrow) != LockFreeQueueSuccess ||
             m_values.setShrinkPolicy(config.m_queueShrink) != LockFreeQueueSuccess || m_values.tryInit() != LockFreeQueueSuccess)
@@ -57,6 +65,7 @@ bool ProcessWorkLocalQueue::configure(const ProcessWorkMemoryConfig& config)
             m_packetPool.configure(0);
             return false;
         }
+        m_notification.swap(notification);
         return true;
     }
     catch (...)
@@ -67,7 +76,13 @@ bool ProcessWorkLocalQueue::configure(const ProcessWorkMemoryConfig& config)
 
 bool ProcessWorkLocalQueue::notificationReady() const
 {
-    return m_notification.initializationResult().status == SEMAPHORE_OK;
+    return m_notification->initializationResult().status == SEMAPHORE_OK && m_values.poolStatistics().currentCapacity != 0;
+}
+
+bool ProcessWorkLocalQueue::waitCapacity(uint32_t& attempts) const
+{
+    return ProcessWorkTime::waitCapacity(attempts, m_config.m_queueOptions.m_capacityRetries,
+        m_config.m_queueOptions.m_capacitySleepMilliseconds);
 }
 
 char* ProcessWorkLocalQueue::allocate(size_t bytes, LockFreeQueueResult& result)
@@ -251,7 +266,7 @@ bool ProcessWorkLocalQueue::take(char** packet, uint32_t milliseconds)
     }
     // 普通pop已承担活动期回收；仅在准备休眠时补做有限维护，避免重复扫描。
     m_values.maintain(8);
-    m_notification.waitResult(milliseconds);
+    m_notification->waitResult(milliseconds);
     return m_values.pop(packet);
 }
 
@@ -281,13 +296,13 @@ void ProcessWorkLocalQueue::notify()
 {
     if (!m_notified.load(std::memory_order_acquire) && !m_notified.exchange(true, std::memory_order_acq_rel))
     {
-        m_notification.trySignal(true, false);
+        m_notification->trySignal(true, false);
     }
 }
 
 void ProcessWorkLocalQueue::wake()
 {
-    m_notification.trySignal(true, false);
+    m_notification->trySignal(true, false);
 }
 
 void ProcessWorkLocalQueue::clear()
@@ -298,7 +313,7 @@ void ProcessWorkLocalQueue::clear()
         release(packet);
     }
     m_notified.store(false);
-    m_notification.reset();
+    m_notification->reset();
 }
 
 bool ProcessWorkLocalQueue::empty() const

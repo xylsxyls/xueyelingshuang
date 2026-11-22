@@ -45,6 +45,7 @@
     <ClCompile Include="..\src\ProcessWorkConfig.cpp" />
     <ClCompile Include="..\src\ProcessWorkMemoryPolicy.cpp" />
     <ClInclude Include="..\src\ProcessWorkMemory.h" />
+    <ClInclude Include="..\src\ProcessWorkMemory.inl" />
     <ClInclude Include="..\src\ProcessWorkConfig.h" />
     <ClInclude Include="..\src\ProcessWorkMemoryPolicy.h" />
     <ClInclude Include="..\src\ProcessWorkProtocol.h" />

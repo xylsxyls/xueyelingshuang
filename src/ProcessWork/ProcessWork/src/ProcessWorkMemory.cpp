@@ -10,6 +10,69 @@
 #include <unistd.h>
 #endif
 
+ProcessWorkQueueOptions::ProcessWorkQueueOptions() :
+m_distributedCounters(-1), m_maintenanceInterval(64), m_maintenanceBudget(8), m_capacityRetries(4096),
+m_capacitySleepMilliseconds(1), m_consumerYieldInterval(4096), m_cancelableReservations(false)
+{
+
+}
+
+LockFreeQueueResult ProcessWorkQueueOptions::configureProducerCounters(bool distributed)
+{
+    m_distributedCounters = distributed ? 1 : 0;
+    return LockFreeQueueSuccess;
+}
+
+LockFreeQueueResult ProcessWorkQueueOptions::configureCancelableReservations(bool enabled)
+{
+    m_cancelableReservations = enabled;
+    return LockFreeQueueSuccess;
+}
+
+LockFreeQueueResult ProcessWorkQueueOptions::configureEntryOnly(bool enabled)
+{
+    return enabled ? LockFreeQueueInvalidConfiguration : LockFreeQueueSuccess;
+}
+
+LockFreeQueueResult ProcessWorkQueueOptions::configureAutomaticMaintenance(uint32_t interval, size_t workBudget)
+{
+    if (interval == 0 || workBudget == 0)
+    {
+        return LockFreeQueueInvalidConfiguration;
+    }
+    m_maintenanceInterval = interval;
+    m_maintenanceBudget = workBudget;
+    return LockFreeQueueSuccess;
+}
+
+LockFreeQueueResult ProcessWorkQueueOptions::configureCapacityWait(uint32_t retriesBeforeSleep, uint32_t sleepMilliseconds)
+{
+    if (sleepMilliseconds == 0)
+    {
+        return LockFreeQueueInvalidConfiguration;
+    }
+    m_capacityRetries = retriesBeforeSleep;
+    m_capacitySleepMilliseconds = sleepMilliseconds;
+    return LockFreeQueueSuccess;
+}
+
+LockFreeQueueResult ProcessWorkQueueOptions::configureConsumerYieldInterval(uint32_t operations)
+{
+    if (operations == 0 || operations > 65536)
+    {
+        return LockFreeQueueInvalidConfiguration;
+    }
+    m_consumerYieldInterval = operations;
+    return LockFreeQueueSuccess;
+}
+
+bool ProcessWorkQueueOptions::valid() const
+{
+    return m_distributedCounters >= -1 && m_distributedCounters <= 1 && m_maintenanceInterval != 0 &&
+        m_maintenanceBudget != 0 && m_capacitySleepMilliseconds != 0 &&
+        m_consumerYieldInterval != 0 && m_consumerYieldInterval <= 65536;
+}
+
 ProcessWorkMemoryConfig::ProcessWorkMemoryConfig() :
 m_reserveBytes(256ULL * 1024 * 1024), m_reservePercent(10),
 m_growthBytes(4ULL * 1024 * 1024), m_retryMilliseconds(100), m_localQueueBytes(-1),

@@ -84,9 +84,9 @@ private:
     ProcessWorkSendCacheLease& operator=(const ProcessWorkSendCacheLease& other);
 };
 
-/** PID发送的有界快缓存；原Map仍是查找与创建的权威入口。
-    每个槽只填入首次目标，碰撞直接回退而不反复换项；记录耗尽、重入或分配失败也不影响发送。
-    clear与发送可并发；析构要求外部发送已停止，不等待暂停的借用者。
+/** PID发送的有界快缓存；原Map仍是查找与创建的权威入口
+    每个槽只填入首次目标，碰撞直接回退而不反复换项；记录耗尽、重入或分配失败也不影响发送
+    clear与发送可并发；析构要求外部发送已停止，不等待暂停的借用者
 */
 class ProcessWorkSendCache
 {

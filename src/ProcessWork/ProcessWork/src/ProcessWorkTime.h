@@ -2,12 +2,12 @@
 #include "ProcessWorkMacro.h"
 #include <stdint.h>
 
-/** 维护用单调时间，避开VS2013将steady_clock实现为系统墙钟的问题。
+/** 维护用单调时间，避开VS2013将steady_clock实现为系统墙钟的问题
 */
 class ProcessWorkAPI ProcessWorkTime
 {
 public:
-    /** 返回系统启动以来或平台单调时钟纪元以来的毫秒数。
+    /** 返回系统启动以来或平台单调时钟纪元以来的毫秒数
     @return 同一进程内可比较的单调时间，不用于不同系统的时间同步
     */
     static uint64_t milliseconds();
@@ -17,4 +17,12 @@ public:
     @return 可以重试返回true，等待系统接口失败返回false
     */
     static bool waitCapacity(uint32_t& attempts);
+
+    /** 以指定队列的满载策略等待一次，不限制累计重试次数。
+    @param [in,out] attempts 本轮已进行的快速尝试，饱和于fastAttempts
+    @param [in] fastAttempts 转入休眠前的尝试次数，0表示直接休眠
+    @param [in] sleepMilliseconds 转入休眠后每次等待的毫秒数，须大于0
+    @return true可重试，false为等待失败
+    */
+    static bool waitCapacity(uint32_t& attempts, uint32_t fastAttempts, uint32_t sleepMilliseconds);
 };

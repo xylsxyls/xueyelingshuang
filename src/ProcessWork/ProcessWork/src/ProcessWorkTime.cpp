@@ -18,14 +18,23 @@ uint64_t ProcessWorkTime::milliseconds()
 
 bool ProcessWorkTime::waitCapacity(uint32_t& attempts)
 {
-    if (attempts < 4096)
+    return waitCapacity(attempts, 4096, 1);
+}
+
+bool ProcessWorkTime::waitCapacity(uint32_t& attempts, uint32_t fastAttempts, uint32_t sleepMilliseconds)
+{
+    if (sleepMilliseconds == 0)
+    {
+        return false;
+    }
+    if (attempts < fastAttempts)
     {
         ++attempts;
         return true;
     }
     try
     {
-        CSystem::Sleep(1);
+        CSystem::Sleep(sleepMilliseconds);
         return true;
     }
     catch (...)

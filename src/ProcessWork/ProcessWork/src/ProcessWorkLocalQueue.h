@@ -5,17 +5,17 @@
 #include "Semaphore/SemaphoreAPI.h"
 #include <atomic>
 
-/** 带正文计费和合并唤醒的本地MPSC队列；唯一消费者完成处理后归还正文。
-    队列、正在处理和预留中的正文共用预算，避免慢回调将共享内存背压转化为无限堆积压。
+/** 带正文计费和合并唤醒的本地MPSC队列；唯一消费者完成处理后归还正文
+    队列、正在处理和预留中的正文共用预算，避免慢回调将共享内存背压转化为无限堆积压
 */
 class ProcessWorkAPI ProcessWorkLocalQueue
 {
 public:
-    /** 建立默认队列和内存保护参数。
+    /** 建立默认队列和内存保护参数
     */
     ProcessWorkLocalQueue();
 
-    /** 外部使用者全部停止之后清理尚未消费的正文。
+    /** 外部使用者全部停止之后清理尚未消费的正文
     */
     ~ProcessWorkLocalQueue();
 
@@ -30,7 +30,13 @@ public:
     */
     bool notificationReady() const;
 
-    /** 预留计费并申请正文，失败不会占用预算。
+    /** 按本队列配置处理一次可恢复的容量不足。
+    @param [in,out] attempts 同一投递的快速重试次数
+    @return true可继续，false等待失败
+    */
+    bool waitCapacity(uint32_t& attempts) const;
+
+    /** 预留计费并申请正文，失败不会占用预算
     @param [in] bytes 正文字节数，不包含内部计费前缀
     @param [out] result 失败原因，成功为LockFreeQueueSuccess
     @return 正文地址；由本类release释放，不能直接delete[]
@@ -45,7 +51,7 @@ public:
     */
     char* allocate(size_t bytes, LockFreeQueueResult& result, bool retryContention);
 
-    /** 释放从未提交或已经由唯一消费者取出的正文。
+    /** 释放从未提交或已经由唯一消费者取出的正文
     @param [in] packet allocate返回的地址，nullptr无操作
     */
     void release(char* packet);
@@ -56,13 +62,13 @@ public:
     */
     void releasePrefix(char** packets, size_t count);
 
-    /** 提交完整正文并合并通知，成功之后调用者不再访问packet。
+    /** 提交完整正文并合并通知，成功之后调用者不再访问packet
     @param [in] packet 本类已分配的完整正文
     @return Success已提交，其他状态未提交且调用者仍负责release
     */
     LockFreeQueueResult submit(char* packet);
 
-    /** 唯一消费者尝试取出正文；空队列登记睡眠后复查，避免丢通知。
+    /** 唯一消费者尝试取出正文；空队列登记睡眠后复查，避免丢通知
     @param [out] packet 取出的正文所有权
     @param [in] milliseconds 空队列最多等待毫秒
     @return true取出成功，false本次没有取出
@@ -78,30 +84,30 @@ public:
     */
     bool takePrefix(char** packets, size_t maximum, size_t& consumed, uint32_t milliseconds);
 
-    /** 不等待地取得已提交正文，只由唯一消费者或静止清理方调用。
+    /** 不等待地取得已提交正文，只由唯一消费者或静止清理方调用
     @param [out] packet 正文所有权
     @return true成功
     */
     bool pop(char** packet);
 
-    /** 合并提示，调用者先发布实际条件；不是许可计数。
+    /** 合并提示，调用者先发布实际条件；不是许可计数
     */
     void notify();
 
-    /** 无条件唤醒，用于停止和排空；不要求当前有排队正文。
+    /** 无条件唤醒，用于停止和排空；不要求当前有排队正文
     */
     void wake();
 
-    /** 静止期取消尚未取出的正文并清除通知。
+    /** 静止期取消尚未取出的正文并清除通知
     */
     void clear();
 
-    /** 观察队列是否暂时没有排队项，不包含正在处理的正文。
+    /** 观察队列是否暂时没有排队项，不包含正在处理的正文
     @return true当前没有排队项
     */
     bool empty() const;
 
-    /** 观察在途计费总量，包含每条正文的队列及分配管理余量。
+    /** 观察在途计费总量，包含每条正文的队列及分配管理余量
     @return 有限额度下已预留字节数；-1模式不计费并返回0，不能据此判断队列为空
     */
     uint64_t used() const;
@@ -111,7 +117,7 @@ public:
     */
     bool hasPending() const;
 
-    /** 有限频率刷新系统内存压力，不等待另一刷新者。
+    /** 有限频率刷新系统内存压力，不等待另一刷新者
     */
     void refreshMemory();
 
@@ -151,7 +157,7 @@ private:
 #pragma warning(push)
 #pragma warning(disable: 4251)
 #endif
-    Semaphore m_notification;
+    std::unique_ptr<Semaphore> m_notification;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

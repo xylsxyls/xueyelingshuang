@@ -77,6 +77,15 @@ inline int64_t ProcessWorkAtomic::compareExchange(int64_t* value, int64_t expect
 #endif
 }
 
+inline void ProcessWorkAtomic::add(int32_t* value, int32_t delta)
+{
+#ifdef _MSC_VER
+    _InterlockedExchangeAdd(reinterpret_cast<volatile long*>(value), delta);
+#else
+    __atomic_fetch_add(value, delta, __ATOMIC_ACQ_REL);
+#endif
+}
+
 inline int64_t ProcessWorkAtomic::increment(int64_t* value)
 {
 #if defined(_MSC_VER) && defined(_M_IX86)

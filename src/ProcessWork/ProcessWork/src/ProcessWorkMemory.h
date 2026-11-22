@@ -2,14 +2,97 @@
 #include "ProcessWorkMacro.h"
 #include "ProcessWorkMemoryPolicy.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
+#include "Semaphore/SemaphoreAPI.h"
 #include <stdint.h>
 #include <memory>
 
-/** 内存压力保护，独立于业务配置的共享缓冲块数上限。
+/** 本地指针队列的调度参数。在初始化前通过内存配置设置，池容量和扩缩策略另行配置。
+*/
+struct ProcessWorkAPI ProcessWorkQueueOptions
+{
+public:
+    // -1使用所在位置的默认值（Post分散计数，接收集中计数），0集中，1分散。
+    int32_t m_distributedCounters;
+    // 自动维护间隔和每轮维护工作量，均须为正。
+    uint32_t m_maintenanceInterval;
+    // 每次自动维护最多处理的工作量。
+    size_t m_maintenanceBudget;
+    // 满载转入休眠前的快速尝试次数，允许0。
+    uint32_t m_capacityRetries;
+    // 原生队列每次满载休眠的毫秒数，必须为正。
+    uint32_t m_capacitySleepMilliseconds;
+    // 单消费者协作退让间隔，范围1至65536。
+    uint32_t m_consumerYieldInterval;
+    // 是否使用可撤销的原生发布预留，默认关闭。
+    bool m_cancelableReservations;
+
+    /** 使用基础队列的调度默认值。
+    */
+    ProcessWorkQueueOptions();
+
+    /** 选择集中或按生产者分散计数。
+    @param [in] distributed true启用分散计数
+    @return LockFreeQueueSuccess
+    */
+    LockFreeQueueResult configureProducerCounters(bool distributed);
+
+    /** 选择是否使用可撤销的发布预留。
+    @param [in] enabled true启用
+    @return LockFreeQueueSuccess
+    */
+    LockFreeQueueResult configureCancelableReservations(bool enabled);
+
+    /** 检查值队列对Entry专用模式的支持。ProcessWork交付指针值，须保留值节点。
+    @param [in] enabled 是否只允许侵入式Entry
+    @return enabled为false时返回LockFreeQueueSuccess，为true时返回LockFreeQueueInvalidConfiguration
+    */
+    LockFreeQueueResult configureEntryOnly(bool enabled);
+
+    /** 设置周期维护参数。
+    @param [in] interval 两次维护之间的操作数，须为正
+    @param [in] workBudget 每轮工作量，须为正
+    @return 成功或参数无效，失败保留原设置
+    */
+    LockFreeQueueResult configureAutomaticMaintenance(uint32_t interval, size_t workBudget);
+
+    /** 设置满载时快速重试和随后每次休眠的时间。
+    @param [in] retriesBeforeSleep 快速重试次数
+    @param [in] sleepMilliseconds 休眠毫秒数，须为正
+    @return 成功或参数无效，失败保留原设置
+    */
+    LockFreeQueueResult configureCapacityWait(uint32_t retriesBeforeSleep, uint32_t sleepMilliseconds);
+
+    /** 设置消费端协作退让间隔。
+    @param [in] operations 两次退让之间的操作数，范围1至65536
+    @return 成功或参数无效，失败保留原设置
+    */
+    LockFreeQueueResult configureConsumerYieldInterval(uint32_t operations);
+
+    /** 检查计数模式、维护预算和退让参数的范围。
+    @return true表示适用于本地指针队列
+    */
+    bool valid() const;
+
+    /** 将本实例的设置传给尚未初始化的值队列。
+    @param [in,out] queue 已处于静止配置期的指针队列
+    @param [in] postQueue 未显式指定计数模式时是否启用分散计数
+    @return true表示全部配置成功；false时调用方不会启用此队列
+    */
+    template<class T>
+    bool apply(LockFreeQueue<T>& queue, bool postQueue) const;
+};
+
+/** 内存压力保护，独立于业务配置的共享缓冲块数上限
 */
 struct ProcessWorkAPI ProcessWorkMemoryConfig
 {
 public:
+    // 就绪队列独立的调度和退让设置。
+    ProcessWorkQueueOptions m_queueOptions;
+    // 接收备用队列独立的调度和退让设置。
+    ProcessWorkQueueOptions m_freeQueueOptions;
+    // 本地消费者通知的原生等待策略及事件池、计数池配置。
+    SemaphoreConfig m_notification;
     // 给系统保留的可用物理/提交内存字节，默认256MiB。
     uint64_t m_reserveBytes;
     // 同时保留的物理内存比例，默认10；取两种保留量的较大值，范围0..90。
@@ -95,7 +178,7 @@ public:
 #endif
 
 public:
-    /** 设置默认保护，不设置业务容量上限。
+    /** 设置默认保护，不设置业务容量上限
     */
     ProcessWorkMemoryConfig();
 
@@ -106,18 +189,18 @@ public:
     bool setLocalQueueLimitMB(int64_t megabytes);
 };
 
-/** 查询系统资源后再创建共享映射；查询失败时拒绝扩容，不循环盲试。
+/** 查询系统资源后再创建共享映射；查询失败时拒绝扩容，不循环盲试
 */
 class ProcessWorkAPI ProcessWorkMemory
 {
 public:
-    /** 检查策略参数，不分配共享内存。
+    /** 检查策略参数，不分配共享内存
     @param [in] config 内存保护参数
     @return true参数有效
     */
     static bool valid(const ProcessWorkMemoryConfig& config);
 
-    /** 检查本次新增字节是否仍留有系统余量；不是跨进程资源预留。
+    /** 检查本次新增字节是否仍留有系统余量；不是跨进程资源预留
     @param [in] config 内存保护参数
     @param [in] bytes 本次最坏新增量，包含映射及元数据
     @return true允许尝试，false查询失败或压力过高
@@ -132,3 +215,5 @@ public:
     */
     static bool queueConfig(const ProcessWorkMemoryConfig& config, bool freeQueue, LockFreeQueuePoolConfig& pool);
 };
+
+#include "ProcessWorkMemory.inl"

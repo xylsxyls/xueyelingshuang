@@ -14,7 +14,7 @@ inline bool ProcessWorkReceiveQueue::take(char** packet, uint32_t milliseconds)
             m_notified.store(false, std::memory_order_seq_cst);
             if (!m_ready.pop(&m_active))
             {
-                m_notification.waitResult(milliseconds);
+                m_notification->waitResult(milliseconds);
                 if (!m_ready.pop(&m_active))
                 {
                     return false;

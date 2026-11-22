@@ -15,7 +15,7 @@
 
 class ProcessReceiveCallback;
 
-/** Post只接纳本地副本，不表示共享提交或远端业务完成；失败均未接纳。
+/** Post只接纳本地副本，不表示共享提交或远端业务完成；失败均未接纳
 */
 enum ProcessWorkPostResult
 {
@@ -40,10 +40,11 @@ struct ProcessWorkNameDirectory
 {
     // 0未就绪，负数初始化中，正数真实PID；原子发布
     int32_t m_pid;
-    // 逻辑名字节数及完整UTF8名称，最多1023字节
+    // 逻辑名字节数，不含末尾NUL，最多1023字节
     int32_t m_length;
     // 目标进程完整创建标识，防止旧PID复用使名称永久占用
     uint64_t m_identity;
+    // 完整逻辑名称的UTF-8副本，保留末尾NUL用于本地校验
     char m_name[1024];
 };
 
@@ -62,6 +63,24 @@ public:
     */
     static ProcessWork& instance();
 
+    /** 设置CSystem保存进程身份记录的目录。移动端每个通信进程须在首次身份查询前配置。
+    @param [in] directory CSystem可使用的绝对目录，目录由应用预先创建
+    @return true表示CSystem接受，false表示路径、生命周期或系统资源不允许
+    */
+    static bool setProcessIdentityDirectory(const std::string& directory);
+
+    /** 设置进程中所有SharedMemory对象使用的后备目录，须在首次打开之前串行调用。
+    @param [in] directory 移动端传参与通信的进程均有权限访问的绝对目录；Windows传空串
+    @return true表示基础库接受，false表示路径、平台、生命周期或资源不允许
+    */
+    static bool setSharedMemoryDirectory(const std::string& directory);
+
+    /** 设置进程中所有命名Semaphore使用的后备目录，须在首次打开之前串行调用。
+    @param [in] directory 移动端使用可共享绝对目录；桌面原生命名后端传空串
+    @return true表示基础库接受此目录
+    */
+    static bool setSemaphoreDirectory(const std::string& directory);
+
     /** 静止期一次配置内部组件，必须先收敛所有调用、清空发送缓存并停止收发线程
     @param [in] config 各组件独立池参数，配置复制且运行期间冻结
     @return true配置完成；false无效、资源不足或尚未静止，失败后可修正配置重试初始化
@@ -75,7 +94,7 @@ public:
     */
     bool addProcessReceiveCallback(ProcessReceiveCallback* callback);
 
-    /** 设置本接收器发布的逻辑名称，适合Android同一宿主可执行文件中的多个服务进程。
+    /** 设置本接收器发布的逻辑名称，适合Android同一宿主可执行文件中的多个服务进程
     @param [in] name 1至1023字节且不含NUL；空值恢复默认可执行文件名
     @return 接收器尚未初始化且名称合法为true；运行中、参数无效或分配失败返回false，保留原名称
     */
@@ -94,7 +113,7 @@ public:
     bool initReceive(int32_t receiveSize = 500 * 1024, int32_t areaCount = 100,
         int32_t expandThreshold = 0, int32_t expandCount = 64, int32_t idleSeconds = 600, int32_t maxExpandTimes = -1);
 
-    /** 使用显式内存保护策略初始化，其他参数与六参数入口相同。
+    /** 使用显式内存保护策略初始化，其他参数与六参数入口相同
     @param [in] receiveSize 单块字节数，含12字节头
     @param [in] areaCount 初始保留块数
     @param [in] expandThreshold 剩余块数阈值，0只在新申请遇满后扩容
@@ -107,12 +126,13 @@ public:
     bool initReceive(int32_t receiveSize, int32_t areaCount, int32_t expandThreshold,
         int32_t expandCount, int32_t idleSeconds, int32_t maxExpandTimes, const ProcessWorkMemoryConfig& memory);
 
-    /** 销毁接收模块资源；生命周期操作须串行，不能从接收回调中等待销毁本回调线程
+    /** 关闭本实例收发线程，取消未处理正文并清除回调登记和发送缓存；须先停止外部收发调用
+    生命周期操作须串行；在接收回调内调用不能完成自身线程回收，须由外部owner再次关闭后才释放回调
     */
     void uninitReceive();
 
-    /** 清空发送模块指定pid的资源，不涉及存储pid的缓冲区map
-    @param [in] destPid 指定pid
+    /** 移除指定PID的通道缓存并使快缓存失效；已取得通道借用的发送仍可完成，不清除名称索引
+    @param [in] destPid 目标PID；后续发送可重新建立通道，本函数不关闭对端或取消已接纳Post
     */
     void clearDestPid(int32_t destPid);
 
@@ -138,7 +158,7 @@ public:
     */
     bool initPostThread();
 
-    /** Post线程未启动且没有在途正文时配置本地积压预算。
+    /** Post线程未启动且没有在途正文时配置本地积压预算
     @param [in] memory 系统余量及本地正文计费预算
     @return true配置完成；false无效或尚未静止
     */
@@ -150,7 +170,7 @@ public:
     @param [in] length 正文字节数
     @param [in] type 非负消息类型
     @param [in] retryContention true持续重试CAS竞争，false允许返回未提交竞争状态
-    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
+    @param [in] retryCapacity true等待可复用容量；默认4096次后每次等待1毫秒
     @return ProcessWorkPostResult；POSTED后不能重复提交，其余状态均未提交
     */
     int32_t tryPost(int32_t destPid, const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE,
@@ -162,7 +182,7 @@ public:
     @param [in] length 正文字节数
     @param [in] type 非负消息类型
     @param [in] retryContention true持续重试CAS竞争，false允许返回未提交竞争状态
-    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
+    @param [in] retryCapacity true等待可复用容量；默认4096次后每次等待1毫秒
     @return ProcessWorkPostResult，不代表远端接收
     */
     int32_t tryPost(const std::string& processName, const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE,
@@ -186,12 +206,12 @@ public:
     */
     int32_t postResult(const std::string& processName, const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE);
 
-    /** 查询本地Post在途计费，包含预留、排队以及正在发送的正文。
+    /** 查询本地Post在途计费，包含预留、排队以及正在发送的正文
     @return 有限额度的弱一致计费快照；-1模式返回0表示未启用计费，不表示队列为空
     */
     uint64_t postPendingBytes() const;
 
-    /** 查询本地接收在途计费，包含正在执行回调的正文。
+    /** 查询本地接收在途计费，包含正在执行回调的正文
     @return 有限额度的弱一致计费快照；-1模式返回0表示未启用计费，不包含共享映射
     */
     uint64_t receivePendingBytes() const;
@@ -200,11 +220,11 @@ public:
     */
     void uninitPostThread();
 
-    /** 向服务端发送字符串；同一线程向同一目标连续send保持提交及接收顺序，跨线程不保证全局提交或接收顺序
-    返回SENT才表示完整共享提交；不等待业务回调，满载和CAS竞争内部不限次数重试
+    /** 同步发送二进制正文；同一线程向同一稳定目标连续send保持顺序，跨线程不保证全局顺序
+    返回true才表示完整共享提交；不等待业务回调，满载和CAS竞争内部不限次数重试
     @param [in] destPid 目标进程pid
-    @param [in] buffer 字符串地址，空包填nullptr
-    @param [in] length 长度
+    @param [in] buffer 调用期间借用的正文，允许NUL；空包允许nullptr
+    @param [in] length 正文字节数，0表示空包
     @param [in] type 发送数据类型
     @return true已提交；false为参数、系统或生命周期错误，不抛异常
     */
@@ -282,7 +302,7 @@ public:
     @param [in] length 正文字节数
     @param [in] type 非负消息类型
     @param [in] retryContention true持续重试CAS竞争，false允许返回未提交竞争状态
-    @param [in] retryCapacity true等待可复用容量；前4096次快速重试，之后每次等待1毫秒
+    @param [in] retryCapacity true等待可复用容量；默认4096次后每次等待1毫秒
     @return ProcessWorkSendResult；SENT表示已提交，不表示业务已处理
     */
     int32_t trySend(int32_t destPid, const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE,
@@ -294,7 +314,7 @@ public:
     @param [in] length 非负字节数；0允许buffer为空
     @param [in] type 非负消息类型
     @param [in] retryContention CAS失败是否无限重试
-    @param [in] retryCapacity 容量不足是否无限重试；4096次后每次等待1毫秒
+    @param [in] retryCapacity 容量不足是否无限重试；默认4096次后每次等待1毫秒
     @return SENT仅表示已提交，其他结果均未提交
     */
     int32_t trySend(const std::string& processName, const char* buffer, int32_t length,
@@ -318,7 +338,7 @@ public:
     */
     int32_t sendResult(const std::string& processName, const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE);
 
-    /** 当前接收器活动块数快照；生命周期owner不与init/uninit并发。
+    /** 当前接收器活动块数快照；生命周期owner不与init/uninit并发
     @return 未初始化时0
     */
     int32_t receiveBufferCount() const;
@@ -330,29 +350,29 @@ public:
     int32_t receivePayloadCapacity() const;
 
 private:
-    /** 释放本次接收资源。
+    /** 释放本次接收资源
     @param [in] clearProcessState true额外关闭Post并清理发送缓存及回调；false只回滚初始化
     */
     void releaseReceive(bool clearProcessState);
 
-    /** 准备名称发现记录；发布PID须等待接收任务全部就绪。
+    /** 准备名称发现记录；发布PID须等待接收任务全部就绪
     @return true名称记录可用，false由初始化作用域统一回滚
     */
     bool claimReceiveName();
 
-    /** 查询不可变通道缓存；缺失时独立准备候选，竞争失败不影响本次发送。
+    /** 查询不可变通道缓存；缺失时独立准备候选，竞争失败不影响本次发送
     @param [in] pid 目标PID
     @return 可用v6通道或空指针
     */
     std::shared_ptr<ProcessWorkChannel> sender(int32_t pid);
 
-    /** 使用名称映射缓存取得绑定身份和接收代次的通道；已撤销映射允许重新打开。
+    /** 使用名称映射缓存取得绑定身份和接收代次的通道；已撤销映射允许重新打开
     @param [in] name 平台约定的进程名
     @return 已核验通道，未就绪返回空指针
     */
     std::shared_ptr<ProcessWorkChannel> resolveName(const std::string& name);
 
-    /** 在已选定通道上等待提交，不在等待期间改选同PID的新接收器。
+    /** 在已选定通道上等待提交，不在等待期间改选同PID的新接收器
     @param [in] channel 本次调用持有的通道，可空
     @param [in] buffer 已校验的借用正文，空正文可空
     @param [in] length 非负正文字节数
@@ -364,7 +384,7 @@ private:
     int32_t sendChannel(const std::shared_ptr<ProcessWorkChannel>& channel, const char* buffer, int32_t length,
         MessageType type, bool retryContention, bool retryCapacity);
 
-    /** 生成名称发现键，记录中仍核对完整名称，不靠摘要认定身份。
+    /** 生成名称发现键，记录中仍核对完整名称，不靠摘要认定身份
     @param [in] name 完整进程名
     @return 最多30字节的原生共享对象名
     */
@@ -382,7 +402,7 @@ private:
     int32_t sendUncached(int32_t destPid, const char* buffer, int32_t length, MessageType type,
         bool retryContention, bool retryCapacity);
 
-    /** 将PID或名称消息复制入唯一队列。
+    /** 将PID或名称消息复制入唯一队列
     @param [in] pid PID模式时的目标；名称模式为0
     @param [in] name 名称模式的目标；PID模式为空
     @param [in] buffer 借用正文

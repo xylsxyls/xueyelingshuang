@@ -22,6 +22,15 @@ if [[ $4 != only ]]; then
 fi
 librariesrely+=($'project\tSharedMemory\t'"$SharedMemory_dlllib")
 
+Semaphore_bit=$1
+Semaphore_dlllib=$2
+Semaphore_debugRelease=$3
+Semaphore_allSame=$4
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" Semaphore "$Semaphore_bit" "$Semaphore_dlllib" "$Semaphore_debugRelease" "$Semaphore_allSame"
+fi
+librariesrely+=($'project\tSemaphore\t'"$Semaphore_dlllib")
+
 #--------------------------------------------------------------------
 CTaskThreadManager_bit=$1
 CTaskThreadManager_dlllib=$2
@@ -81,15 +90,5 @@ if [[ $4 != only ]]; then
     "$CLOUD_REBUILD" LockFreeQueue "$LockFreeQueue_bit" "$LockFreeQueue_dlllib" "$LockFreeQueue_debugRelease" "$LockFreeQueue_allSame"
 fi
 librariesrely+=($'project\tLockFreeQueue\t'"$LockFreeQueue_dlllib")
-
-#--------------------------------------------------------------------
-AtomicMath_bit=$1
-AtomicMath_dlllib=$2
-AtomicMath_debugRelease=$3
-AtomicMath_allSame=$4
-if [[ $4 != only ]]; then
-    "$CLOUD_REBUILD" AtomicMath "$AtomicMath_bit" "$AtomicMath_dlllib" "$AtomicMath_debugRelease" "$AtomicMath_allSame"
-fi
-librariesrely+=($'project\tAtomicMath\t'"$AtomicMath_dlllib")
 
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return

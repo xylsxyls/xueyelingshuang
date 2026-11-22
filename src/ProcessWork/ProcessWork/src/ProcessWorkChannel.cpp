@@ -1,5 +1,4 @@
 ﻿#include "ProcessWorkChannel.h"
-#include "AtomicMath/AtomicMathAPI.h"
 #include "ProcessWorkAtomic.h"
 #include "ProcessWorkStorage.h"
 #include "ProcessWorkSharedQueue.h"
@@ -7,6 +6,7 @@
 #include "ProcessWorkTime.h"
 #include <algorithm>
 #include "CSystem/CSystemAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include <cstring>
 #include <limits.h>
 #include <cstddef>
@@ -14,13 +14,13 @@
 #include <thread>
 #include <new>
 
-static_assert(sizeof(ProcessWorkSharedDirectory) == 24, "v5 directory layout");
-static_assert(sizeof(ProcessWorkSharedPeer) == 24, "v5 peer layout");
-static_assert(sizeof(ProcessWorkSharedControl) == 6528, "v5 control layout");
-static_assert(sizeof(ProcessWorkSharedBlock) == 64 && sizeof(ProcessWorkSharedNode) == 256, "v5 independent owner cache lines");
-static_assert(sizeof(ProcessWorkSharedStream) == 384, "v5 stream layout");
-static_assert(sizeof(ProcessWorkSharedMetadata) == 180288, "v5 metadata layout");
-static_assert(offsetof(ProcessWorkSharedControl, m_nextStream) == 64 && offsetof(ProcessWorkSharedControl, m_streamEpoch) == 128, "v5 producer registry isolation");
+static_assert(sizeof(ProcessWorkSharedDirectory) == 24, "protocol directory layout");
+static_assert(sizeof(ProcessWorkSharedPeer) == 24, "protocol peer layout");
+static_assert(sizeof(ProcessWorkSharedControl) == 6528, "protocol control layout");
+static_assert(sizeof(ProcessWorkSharedBlock) == 64 && sizeof(ProcessWorkSharedNode) == 256, "protocol independent owner cache lines");
+static_assert(sizeof(ProcessWorkSharedStream) == 384, "protocol stream layout");
+static_assert(sizeof(ProcessWorkSharedMetadata) == 180288, "protocol metadata layout");
+static_assert(offsetof(ProcessWorkSharedControl, m_nextStream) == 64 && offsetof(ProcessWorkSharedControl, m_streamEpoch) == 128, "protocol producer registry isolation");
 
 #ifdef _MSC_VER
 static __declspec(thread) uint32_t s_reservationCursor = 0;
@@ -45,7 +45,7 @@ static uint32_t ChannelReservationStart(int32_t pid)
     return s_reservationCursor++;
 }
 
-/** 取得本进程单调毫秒。
+/** 取得本进程单调毫秒
 @return 不受墙上时钟调整影响的时间
 */
 static uint64_t ChannelNow()
@@ -85,7 +85,7 @@ static void ChannelCopyInline(char* target, const char* source, uint32_t length)
     }
 }
 
-/** 通过已验证跨进程原语读取64位值。
+/** 通过已验证跨进程原语读取64位值
 @param [in] value 8字节对齐共享字段
 @return 原子快照
 */
@@ -94,7 +94,7 @@ static int64_t ChannelLoad64(int64_t* value)
     return ProcessWorkAtomic::load(value);
 }
 
-/** 通过跨进程原语读取32位值。
+/** 通过跨进程原语读取32位值
 @param [in] value 对齐共享字段
 @return 原子快照
 */
@@ -113,12 +113,17 @@ static bool ChannelAtomicsSupported()
     return probe32.is_lock_free() && probe64.is_lock_free();
 }
 
-ProcessWorkChannel::ProcessWorkChannel() :
+ProcessWorkChannel::ProcessWorkChannel() : ProcessWorkChannel(SemaphoreConfig(), SemaphoreConfig())
+{
+
+}
+
+ProcessWorkChannel::ProcessWorkChannel(const SemaphoreConfig& dataReady, const SemaphoreConfig& spaceReady) :
 m_receiver(false), m_stopped(false), m_pid(0), m_identity(0), m_selfIdentity(0), m_session(0),
 m_selfPid(0), m_peerIndex(-1), m_senderToken(0), m_yieldThreshold(16), m_directory(nullptr), m_control(nullptr),
 m_nextGrowth(0), m_growthRemaining(0), m_successfulGrowth(0), m_nextMaintenance(0), m_peerCursor(0),
 m_readPage(nullptr), m_readPageIndex(UINT32_MAX),
-m_nextLivenessCheck(0), m_retryDelay(false)
+m_dataReady(dataReady), m_spaceReady(spaceReady), m_nextLivenessCheck(0), m_retryDelay(false)
 {
     const uint32_t processors = std::thread::hardware_concurrency();
     if (processors != 0)
@@ -167,7 +172,8 @@ bool ProcessWorkChannel::openReceiver(int32_t bytes, int32_t initial, int32_t th
     try
     {
         m_memoryConfig = memory;
-        if (!ChannelAtomicsSupported())
+        if (!ChannelAtomicsSupported() || m_dataReady.initializationResult().status != SEMAPHORE_OK ||
+            m_spaceReady.initializationResult().status != SEMAPHORE_OK)
         {
             return false;
         }
@@ -176,7 +182,7 @@ bool ProcessWorkChannel::openReceiver(int32_t bytes, int32_t initial, int32_t th
         {
             return false;
         }
-        m_directoryMemory.reset(new SharedMemory("P3D" + std::to_string(m_pid), sizeof(ProcessWorkSharedDirectory), true));
+        m_directoryMemory.reset(new SharedMemory("P3D" + CStringManager::toStringInt32(m_pid), sizeof(ProcessWorkSharedDirectory), true));
         m_directoryMemory->preserveName();
         m_directory = static_cast<ProcessWorkSharedDirectory*>(m_directoryMemory->writeWithoutLock());
         if (m_directory == nullptr || m_directoryMemory->realSize() < sizeof(ProcessWorkSharedDirectory))
@@ -190,17 +196,17 @@ bool ProcessWorkChannel::openReceiver(int32_t bytes, int32_t initial, int32_t th
         if (static_cast<uint64_t>(previousIdentity) != m_identity)
         {
             // 先发布本进程身份再争用准备标志，禁止两个初始化者把尚未写身份的-1同时认领。
-            if (!AtomicMath::compareAndSwap(directoryIdentity, previousIdentity, static_cast<int64_t>(m_identity)))
+            if (!ProcessWorkAtomic::replace(directoryIdentity, previousIdentity, static_cast<int64_t>(m_identity)))
             {
                 close();
                 return false;
             }
             if (previous != 0)
             {
-                AtomicMath::compareAndSwap(&m_directory->m_session, previous, static_cast<int64_t>(0));
+                ProcessWorkAtomic::replace(&m_directory->m_session, previous, static_cast<int64_t>(0));
             }
         }
-        if (!AtomicMath::compareAndSwap(&m_directory->m_session, static_cast<int64_t>(0), static_cast<int64_t>(-1)))
+        if (!ProcessWorkAtomic::replace(&m_directory->m_session, static_cast<int64_t>(0), static_cast<int64_t>(-1)))
         {
             close();
             return false;
@@ -211,7 +217,7 @@ bool ProcessWorkChannel::openReceiver(int32_t bytes, int32_t initial, int32_t th
             close();
             return false;
         }
-        m_session = AtomicMath::selfAddOne(&m_directory->m_nextSession);
+        m_session = ProcessWorkAtomic::increment(&m_directory->m_nextSession);
         if (m_session <= 0 || m_session > 0xffffff)
         {
             close();
@@ -240,7 +246,7 @@ bool ProcessWorkChannel::openReceiver(int32_t bytes, int32_t initial, int32_t th
         m_control->m_idleSeconds = idleSeconds;
         m_storage.reset(new ProcessWorkStorage(m_pid, m_identity, static_cast<uint32_t>(m_session), bytes, initial, true, memory));
         m_sharedQueue.reset(new ProcessWorkSharedQueue(*m_storage, *m_control));
-        if (!m_sharedQueue->configureProducers(m_producerConfig) || !m_sharedQueue->initialize())
+        if (!m_sharedQueue->initialize())
         {
             close();
             return false;
@@ -274,7 +280,7 @@ bool ProcessWorkChannel::createBlock(int32_t index)
     {
         return false;
     }
-    AtomicMath::selfAddOne(&m_control->m_active);
+    ProcessWorkAtomic::add(&m_control->m_active, 1);
     const int32_t extent = ChannelLoad32(&m_control->m_extent);
     if (index > extent)
     {
@@ -288,8 +294,8 @@ void ProcessWorkChannel::publish()
 {
     if (m_receiver && !m_stopped && m_control != nullptr)
     {
-        AtomicMath::compareAndSwap(&m_control->m_ready, 0, 1);
-        AtomicMath::compareAndSwap(&m_directory->m_session, static_cast<int64_t>(-1), m_session);
+        ProcessWorkAtomic::replace(&m_control->m_ready, 0, 1);
+        ProcessWorkAtomic::replace(&m_directory->m_session, static_cast<int64_t>(-1), m_session);
     }
 }
 
@@ -302,7 +308,7 @@ void ProcessWorkChannel::stop()
     m_stopped = true;
     if (m_control != nullptr)
     {
-        AtomicMath::compareAndSwap(&m_control->m_ready, 1, 0);
+        ProcessWorkAtomic::replace(&m_control->m_ready, 1, 0);
     }
     signalData();
     signalSpace();
@@ -333,7 +339,7 @@ void ProcessWorkChannel::close()
             const int64_t ownedSession = ChannelLoad64(&m_directory->m_session);
             if (ownedSession == m_session || ownedSession == -1)
             {
-                AtomicMath::compareAndSwap(&m_directory->m_session, ownedSession, static_cast<int64_t>(0));
+                ProcessWorkAtomic::replace(&m_directory->m_session, ownedSession, static_cast<int64_t>(0));
             }
         }
     }
@@ -375,7 +381,8 @@ bool ProcessWorkChannel::prepareSend(int32_t blocks, bool payloads)
 
 bool ProcessWorkChannel::openSender(int32_t pid)
 {
-    if (pid <= 0 || m_control != nullptr || !ChannelAtomicsSupported())
+    if (pid <= 0 || m_control != nullptr || !ChannelAtomicsSupported() ||
+        m_dataReady.initializationResult().status != SEMAPHORE_OK || m_spaceReady.initializationResult().status != SEMAPHORE_OK)
     {
         return false;
     }
@@ -387,7 +394,7 @@ bool ProcessWorkChannel::openSender(int32_t pid)
         {
             return false;
         }
-        m_directoryMemory.reset(new SharedMemory("P3D" + std::to_string(pid)));
+        m_directoryMemory.reset(new SharedMemory("P3D" + CStringManager::toStringInt32(pid)));
         m_directory = static_cast<ProcessWorkSharedDirectory*>(m_directoryMemory->writeWithoutLock());
         if (m_directory == nullptr || m_directoryMemory->realSize() < sizeof(ProcessWorkSharedDirectory))
         {
@@ -436,7 +443,7 @@ bool ProcessWorkChannel::openSender(int32_t pid)
                 // 申请轮也复查同PID：另一个本进程通道可能刚在此处赢得CAS。
                 if (pass == 1)
                 {
-                    AtomicMath::compareAndSwap(&peer.m_pid, 0, m_selfPid);
+                    ProcessWorkAtomic::replace(&peer.m_pid, 0, m_selfPid);
                 }
                 if (ChannelLoad32(&peer.m_pid) == m_selfPid &&
                     (ChannelLoad64(&peer.m_token) == 0 || static_cast<uint64_t>(ChannelLoad64(reinterpret_cast<int64_t*>(&peer.m_identity))) == m_selfIdentity) &&
@@ -1033,45 +1040,48 @@ int32_t ProcessWorkChannel::pumpImpl(LockFreeQueue<char*>* queue, Semaphore& not
         int32_t header[3] = {};
         std::memcpy(header, source, sizeof(header));
         const int32_t capacity = inlined ? (std::min)(m_control->m_blockBytes, static_cast<int32_t>(sizeof(block->m_inlineData))) : m_control->m_blockBytes;
-        if (header[0] > 0 && header[1] >= 0 && header[2] >= 0 && header[2] <= capacity - 12)
+        if (header[0] <= 0 || header[1] < 0 || header[2] < 0 || header[2] > capacity - 12)
         {
-            try
+            // 已提交正文的协议头损坏时撤销通道，不能静默消费并丢弃该消息。
+            stop();
+            break;
+        }
+        try
+        {
+            if (batches != nullptr)
             {
-                if (batches != nullptr)
+                if (!batches->append(source, static_cast<size_t>(header[2]) + 12))
                 {
-                    if (!batches->append(source, static_cast<size_t>(header[2]) + 12))
-                    {
-                        m_retryDelay.store(true, std::memory_order_relaxed);
-                        break;
-                    }
-                }
-                else
-                {
-                    const size_t bytes = static_cast<size_t>(header[2]) + 13;
-                    std::unique_ptr<char[]> packet(new (std::nothrow) char[bytes]);
-                    if (!packet)
-                    {
-                        m_retryDelay.store(true, std::memory_order_relaxed);
-                        break;
-                    }
-                    std::memcpy(packet.get(), source, static_cast<size_t>(header[2]) + 12);
-                    packet.get()[static_cast<size_t>(header[2]) + 12] = '\0';
-                    const LockFreeQueueResult result = queue->tryPush(packet.get());
-                    if (result != LockFreeQueueSuccess)
-                    {
-                        m_retryDelay.store(true, std::memory_order_relaxed);
-                        break;
-                    }
-                    packet.release();
-                    notification.trySignal(true, false);
+                    m_retryDelay.store(true, std::memory_order_relaxed);
+                    break;
                 }
             }
-            catch (...)
+            else
             {
-                // 尚未交付本地队列，保留共享正文和顺序供下次重试。
-                m_retryDelay.store(true, std::memory_order_relaxed);
-                break;
+                const size_t bytes = static_cast<size_t>(header[2]) + 13;
+                std::unique_ptr<char[]> packet(new (std::nothrow) char[bytes]);
+                if (!packet)
+                {
+                    m_retryDelay.store(true, std::memory_order_relaxed);
+                    break;
+                }
+                std::memcpy(packet.get(), source, static_cast<size_t>(header[2]) + 12);
+                packet.get()[static_cast<size_t>(header[2]) + 12] = '\0';
+                const LockFreeQueueResult result = queue->tryPush(packet.get());
+                if (result != LockFreeQueueSuccess)
+                {
+                    m_retryDelay.store(true, std::memory_order_relaxed);
+                    break;
+                }
+                packet.release();
+                notification.trySignal(true, false);
             }
+        }
+        catch (...)
+        {
+            // 尚未交付本地队列，保留共享正文和顺序供下次重试。
+            m_retryDelay.store(true, std::memory_order_relaxed);
+            break;
         }
         if (!m_sharedQueue->consume(slot, header[2] >= 0 ? static_cast<uint32_t>(header[2]) + 12 : 0))
         {
@@ -1118,15 +1128,15 @@ void ProcessWorkChannel::approveSenders()
         if (((pid == m_pid && (identity = m_identity) != 0) || CSystem::processIdentity(pid, identity)) && previousToken < INT64_MAX)
         {
             int64_t* publishedIdentity = reinterpret_cast<int64_t*>(&peer.m_identity);
-            AtomicMath::compareAndSwap(publishedIdentity, ChannelLoad64(publishedIdentity), static_cast<int64_t>(identity));
-            AtomicMath::compareAndSwap(&peer.m_token, static_cast<int64_t>(0), previousToken + 1);
+            ProcessWorkAtomic::replace(publishedIdentity, ChannelLoad64(publishedIdentity), static_cast<int64_t>(identity));
+            ProcessWorkAtomic::replace(&peer.m_token, static_cast<int64_t>(0), previousToken + 1);
             // 唯一登记写者；先批准token再发布计数，耗尽状态不能早于最后一次批准。
-            AtomicMath::compareAndSwap(&m_control->m_nextToken, previousToken, previousToken + 1);
+            ProcessWorkAtomic::replace(&m_control->m_nextToken, previousToken, previousToken + 1);
             signalSpace();
         }
         else if (CSystem::processDefinitelyExited(pid))
         {
-            AtomicMath::compareAndSwap(&peer.m_pid, pid, 0);
+            ProcessWorkAtomic::replace(&peer.m_pid, pid, 0);
         }
     }
 }
@@ -1342,7 +1352,7 @@ void ProcessWorkChannel::resizeBuffers(uint64_t now, Semaphore& notification, st
         uint64_t* idle = m_storage->idleSince(i);
         if (idle != nullptr && now >= *idle && now - *idle >= static_cast<uint64_t>(m_control->m_idleSeconds) * 1000 && m_storage->retire(i))
         {
-            AtomicMath::selfSubOne(&m_control->m_active);
+            ProcessWorkAtomic::add(&m_control->m_active, -1);
         }
     }
 }

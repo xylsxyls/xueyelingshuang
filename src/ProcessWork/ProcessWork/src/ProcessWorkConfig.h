@@ -4,7 +4,7 @@
 #include "LockFreeMap/LockFreeMapAPI.h"
 
 /** ProcessWork静止初始化配置；各池独立计量，业务容量上限默认均为-1
-    configure复制配置；修改原结构不影响运行中的实例。生命周期配置不能与收发并发。
+    configure复制配置；修改原结构不影响运行中的实例。生命周期配置不能与收发并发
 */
 struct ProcessWorkAPI ProcessWorkConfig
 {
@@ -13,6 +13,14 @@ public:
     ProcessWorkMemoryConfig m_receiveMemory;
     // Post端本地预算、小包备用池、发送Queue、系统保护和扩容策略
     ProcessWorkMemoryConfig m_postMemory;
+    // 接收端共享通道的数据就绪、空间就绪后端分别在open之前构造。
+    SemaphoreConfig m_receiveDataReady;
+    // 接收通道可写空间通知的独立等待和池配置。
+    SemaphoreConfig m_receiveSpaceReady;
+    // 本进程每个发送通道的数据就绪通知配置。
+    SemaphoreConfig m_sendDataReady;
+    // 本进程每个发送通道的可写空间通知配置。
+    SemaphoreConfig m_sendSpaceReady;
     // PID通道索引的节点和值池
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -31,7 +39,7 @@ public:
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-    // 每个通道的本进程生产者登记Map配置
+    // 本进程各发送通道使用的生产者登记Map模板；接收通道不使用此池
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4251)

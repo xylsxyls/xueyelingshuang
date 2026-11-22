@@ -5,29 +5,29 @@
 class Semaphore;
 class ProcessWork;
 class ProcessWorkSendCache;
-/** 发送任务
+/** 唯一后台Post发送任务；保留待发正文至共享提交、终止错误或显式取消
 */
 class SendTask : public CTask
 {
 public:
-    /** 构造函数
+    /** 初始化空借用和可启动状态
     */
     SendTask();
 
 public:
-    /** 执行任务
+    /** 逐项发送已接纳的本地副本；资源恢复重试保持原顺序，停止时归还未发送正文
     */
     void doTask() override;
 
-    /** 中断任务
+    /** 发布停止标志并唤醒等待，发送循环协作取消；不在本函数等待任务退出
     */
     void stopTask() override;
 
-    /** 设置参数
-    @param [in] waitEndPost 发送结束后是否退出循环
-    @param [in] postQueue 发送数据队列
+    /** 启动前绑定资源，借用对象须保持到任务退出并完成线程回收
+    @param [in] waitEndPost 借用的排空标志，true表示无待发消息后退出；nullptr使任务直接返回
+    @param [in] postQueue 借用的唯一消费队列，nullptr使任务直接返回
     @param [in] ready false时等待start，在任务投递成功后启用
-    @param [in] owner 借用的发送门面，活到任务加入完成；空指针使用单例
+    @param [in] owner 借用的发送门面，空指针使用单例
     @param [in] cache 与owner相同的通道缓存，可空；借用期覆盖任务退出
     */
     void setParam(std::atomic<bool>* waitEndPost, ProcessWorkLocalQueue* postQueue, bool ready = true,
@@ -38,7 +38,7 @@ public:
     void start();
 
     /** 取得当前执行线程的协作停止标记，普通同步调用返回nullptr
-    @return 仅本线程借用，作用域由DoTask保持
+    @return 仅本线程借用，作用域由doTask保持
     */
     static const std::atomic<bool>* currentStopFlag();
 
