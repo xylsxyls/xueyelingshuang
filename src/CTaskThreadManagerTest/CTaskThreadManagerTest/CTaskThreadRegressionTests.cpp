@@ -707,14 +707,15 @@ static void CachedPriorityFallback()
 
 #ifndef CTTM_TEST_DLL
 /** 累计值跨 UINT64_MAX 时，额度上限、FIFO 计数和关闭排空都不能失真
+@param [in] maximumTasks 有限场景取 3，无限场景取 -1
 */
-static void SplitCountersWrap()
+static void CheckCountersWrap(int64_t maximumTasks)
 {
     std::atomic<bool> entered(false), release(false);
     std::atomic<int32_t> calls(0);
     TestWorkers workers;
     CTaskThreadConfig config;
-    config.m_maximumTasks = 3;
+    config.m_maximumTasks = maximumTasks;
     const uint32_t id = CTaskThreadManager::instance().init(config);
     bbCheck(id != 0, "counter test initialization failed");
     std::shared_ptr<CTaskThread> worker = workers.adopt(id);
@@ -733,14 +734,17 @@ static void SplitCountersWrap()
     {
         return entered.load();
     }, "counter gate entered");
-    CTaskThreadTestAccess::seedPendingCounters(*worker);
+    CTaskThreadTestAccess::seedPendingCounters(*worker, maximumTasks == -1);
     std::shared_ptr<TestTask> task(new TestTask(2, [&calls](TestTask&)
     {
         ++calls;
     }));
     bbCheck(worker->postTaskResult(task).m_committed && worker->postTaskResult(task).m_committed, "counter wrap rejected allowed tasks");
-    const CTaskThreadResult full = worker->tryPostTaskResult(task, 1, true, false);
-    bbCheck(!full.m_committed && full.m_status == CTaskThreadCapacity, "counter wrap lost maximum task limit");
+    if (maximumTasks != -1)
+    {
+        const CTaskThreadResult full = worker->tryPostTaskResult(task, 1, true, false);
+        bbCheck(!full.m_committed && full.m_status == CTaskThreadCapacity, "counter wrap lost maximum task limit");
+    }
     const CTaskThreadStatistics pending = worker->statistics();
     bbCheck(pending.m_outstanding == 3 && pending.m_queued == 2, "counter wrap changed pending counts");
     release = true;
@@ -749,6 +753,14 @@ static void SplitCountersWrap()
     bbCheck(calls == 2 && ended.m_outstanding == 0 && ended.m_queued == 0 && ended.m_executed == 3,
         "counter wrap lost tasks or failed to drain");
 }
+/** 分别验证有限额度和无限额度两条真实统计路径
+*/
+static void SplitCountersWrap()
+{
+    CheckCountersWrap(3);
+    CheckCountersWrap(-1);
+}
+
 
 #endif
 

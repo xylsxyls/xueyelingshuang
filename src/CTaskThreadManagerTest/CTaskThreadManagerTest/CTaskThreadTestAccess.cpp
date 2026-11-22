@@ -12,7 +12,6 @@ CTaskTestManagerId::Type CTaskTestManagerId::m_member = nullptr;
 CTaskTestManagerThreads::Type CTaskTestManagerThreads::m_member = nullptr;
 CTaskTestSequence::Type CTaskTestSequence::m_member = nullptr;
 CTaskTestCurrent::Type CTaskTestCurrent::m_member = nullptr;
-CTaskTestOutstanding::Type CTaskTestOutstanding::m_member = nullptr;
 CTaskTestReleased::Type CTaskTestReleased::m_member = nullptr;
 CTaskTestQueued::Type CTaskTestQueued::m_member = nullptr;
 CTaskTestDequeued::Type CTaskTestDequeued::m_member = nullptr;
@@ -34,7 +33,6 @@ template struct CTaskPrivateBinding<CTaskTestManagerId, &CTaskManagerState::m_th
 template struct CTaskPrivateBinding<CTaskTestManagerThreads, &CTaskManagerState::m_threads>;
 template struct CTaskPrivateBinding<CTaskTestSequence, &CTaskThreadState::m_sequence>;
 template struct CTaskPrivateBinding<CTaskTestCurrent, &CTaskThreadState::m_current>;
-template struct CTaskPrivateBinding<CTaskTestOutstanding, &CTaskThreadState::m_outstanding>;
 template struct CTaskPrivateBinding<CTaskTestReleased, &CTaskThreadState::m_releasedTasks>;
 template struct CTaskPrivateBinding<CTaskTestQueued, &CTaskThreadState::m_queued>;
 template struct CTaskPrivateBinding<CTaskTestDequeued, &CTaskThreadState::m_dequeuedTasks>;
@@ -229,12 +227,23 @@ void CTaskThreadTestAccess::setTaskSequence(CTaskThread& thread, uint64_t sequen
     }
 }
 
-void CTaskThreadTestAccess::seedPendingCounters(CTaskThread& thread)
+void CTaskThreadTestAccess::seedPendingCounters(CTaskThread& thread, bool unlimited)
 {
-    (TestState(thread).*CTaskTestOutstanding::m_member).store(UINT64_MAX - 1, std::memory_order_relaxed);
-    (TestState(thread).*CTaskTestReleased::m_member).store(UINT64_MAX - 2, std::memory_order_release);
-    (TestState(thread).*CTaskTestQueued::m_member).store(UINT64_MAX - 1, std::memory_order_relaxed);
-    (TestState(thread).*CTaskTestDequeued::m_member).store(UINT64_MAX - 1, std::memory_order_release);
+    CTaskThreadState& state = TestState(thread);
+    const uint64_t offset = UINT64_MAX - 2;
+    if (unlimited)
+    {
+        // 门控任务已入队并被取走。给真实的生产累计量和消费累计量加同一偏移，保留净值。
+        CTaskStorageCache& cache = (state.*CTaskTestStorage::m_member).cache(0);
+        cache.m_reserved.fetch_add(offset, std::memory_order_relaxed);
+        cache.m_published.fetch_add(offset, std::memory_order_relaxed);
+        (state.*CTaskTestReleased::m_member).fetch_add(offset, std::memory_order_release);
+    }
+    else
+    {
+        (state.*CTaskTestQueued::m_member).fetch_add(offset, std::memory_order_relaxed);
+    }
+    (state.*CTaskTestDequeued::m_member).fetch_add(offset, std::memory_order_release);
 }
 
 void CTaskThreadTestAccess::setManagerSequence(uint32_t sequence)

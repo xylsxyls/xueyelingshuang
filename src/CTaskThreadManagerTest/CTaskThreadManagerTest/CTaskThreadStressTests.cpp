@@ -234,7 +234,13 @@ static void PoolResizeTraffic()
                 uint32_t id = 0;
                 std::shared_ptr<CTaskThread> worker;
                 const CTaskThreadResult selected = allocator.select(id, worker);
-                bbCheck(selected.m_status == CTaskThreadOk && selected.m_committed && worker,
+                if (selected.m_status == CTaskThreadCapacity)
+                {
+                    // 缩容后两个保留成员也可能各有 128 项在途。等待空位后仍投递同一项。
+                    bbCheck(!selected.m_committed && id == 0 && !worker, "full pool returned a selected worker");
+                    return false;
+                }
+                bbCheck(selected.m_status == CTaskThreadOk && selected.m_committed && id != 0 && worker,
                     "resize traffic allocator failed while minimum workers remained available");
                 const CTaskThreadResult result = worker->postTaskResult(task);
                 bbCheck(result.m_committed ? result.m_status == CTaskThreadOk :

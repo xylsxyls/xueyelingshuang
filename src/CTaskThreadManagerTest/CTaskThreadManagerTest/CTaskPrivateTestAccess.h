@@ -78,16 +78,6 @@ public:
     static Type m_member;
 };
 
-/** 白盒测试使用的 Outstanding 成员指针，不拥有对应对象
-*/
-struct CTaskTestOutstanding
-{
-public:
-    typedef std::atomic<uint64_t> CTaskThreadState::* Type;
-    // 由测试翻译单元中的显式实例化初始化
-    static Type m_member;
-};
-
 /** 白盒测试使用的 Released 成员指针，不拥有对应对象
 */
 struct CTaskTestReleased

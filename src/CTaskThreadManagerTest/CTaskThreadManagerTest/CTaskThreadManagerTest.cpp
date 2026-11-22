@@ -1,4 +1,5 @@
 ﻿#include "CTaskThreadManagerTest.h"
+#include <limits>
 #include "CTaskThreadBenchmark.h"
 #include "CTaskPreparedBenchmark.h"
 #include "CTaskThreadRegressionTests.h"
@@ -9,7 +10,6 @@
 #include "CTaskThreadWhiteBoxTests.h"
 #include "CTaskThreadStressTests.h"
 #include "CTaskTestAutomation.h"
-#include "CTaskIntrusivePrototype.h"
 #include "CTaskUsageTests.h"
 #include "CTaskRetryContractTests.h"
 #include "CTaskThreadTestAccess.h"
@@ -141,7 +141,7 @@ static const std::map<int32_t, CTaskTestCaseDescription> g_taskCaseDescriptions 
     // 56 优先级缓存回退
     {CTaskTestCachedPriorityFallback, {"cached-priority-fallback", "优先级缓存回退", "17 级及 INT_MAX 等超出快路径的级别；正确查询、抢占和执行。"}},
     // 57 分离计数器回绕
-    {CTaskTestSplitCountersWrap, {"split-counters-wrap", "分离计数器回绕", "UINT64 边界的生产消费计数；净数量及收尾状态正确。"}},
+    {CTaskTestSplitCountersWrap, {"split-counters-wrap", "分离计数器回绕", "有限和无限容量累计值跨 UINT64_MAX，门控时在途3项、排队2项，排空后均为零。"}},
     // 58 有界并发统计
     {CTaskTestConcurrentBoundedStatistics, {"concurrent-bounded-statistics", "有界并发统计", "4 个生产者、容量 3、20000 项；逻辑上限、提交和完成计数一致。"}},
     // 59 读域寿命及延迟回收
@@ -1026,10 +1026,48 @@ static void RegistryColdFailure()
     bbCheck(ledger.snapshot() == std::vector<int>(1, 17) && manager.count() == 0, "recovered worker did not drain cleanly");
 }
 
+/** 仅一个生产者登记位时，在高级任务触发的停止回调中向同级再次投递。
+*/
+static void ReentrantQueueRegistration()
+{
+    CTaskThreadConfig config;
+    CTaskQueueConfig high = config;
+    high.m_queue.maximumProducers = 1;
+    bbCheck(config.setPriorityQueueConfig(2, high).m_committed, "single-registration configuration rejected");
+    TaskLedger ledger;
+    std::atomic<bool> running(false), release(false), notified(false);
+    CTaskThreadResult nested;
+    TestWorkers workers;
+    const std::shared_ptr<CTaskThread> worker = workers.add(config);
+    const std::shared_ptr<TestTask> low = std::make_shared<TestTask>(1, [&running, &release](TestTask&)
+    {
+        running.store(true);
+        bbWait([&release]() { return release.load(); }, "release low task");
+    });
+    low->m_onStop = [worker, &notified, &nested, &ledger]()
+    {
+        if (!notified.exchange(true))
+        {
+            nested = worker->tryPostTaskResult(Record(ledger, 2), 2, true, false);
+        }
+    };
+    TestPost(worker, low, 1);
+    bbWait([&running]() { return running.load(); }, "low task started");
+    const CTaskThreadResult outer = worker->postTaskResult(Record(ledger, 1), 2);
+    release.store(true);
+    workers.drain();
+    const int expected[] = {1, 2};
+    bbCheck(notified.load() && outer.m_status == CTaskThreadOk && outer.m_committed, "outer task did not publish and notify");
+    bbCheck(nested.m_committed, "published task held the only producer registration during stop callback");
+    bbCheck(nested.m_status == CTaskThreadSelfWait, "recursive stop notification did not report SelfWait after publication");
+    bbCheck(ledger.snapshot() == std::vector<int>(expected, expected + 2), "nested task did not execute exactly once in FIFO order");
+}
+
 /** 两个级别各自占满配额，验证默认配置复制、逐级覆盖及非法设置回滚。
 */
 static void DependencyConfiguration()
 {
+    ReentrantQueueRegistration();
     CTaskThreadManager& manager = CTaskThreadManager::instance();
     CTaskThreadManagerConfig config;
     bbCheck(config.m_defaultThread.m_entryOnly && config.m_defaultThread.m_cancelableReservations, "unexpected default FIFO modes");
@@ -1117,6 +1155,8 @@ static void DependencyConfiguration()
         priority.configureCapacityWait(0, 2) == LockFreeQueueSuccess &&
         priority.configureProducerCounters(false) == LockFreeQueueSuccess, "valid FIFO settings rejected");
     bbCheck(priority.configureAutomaticMaintenance(0, 4) == LockFreeQueueInvalidConfiguration &&
+        priority.configureAutomaticMaintenance(2, 0) == LockFreeQueueInvalidConfiguration &&
+        priority.configureConsumerYieldInterval(65537) == LockFreeQueueInvalidConfiguration &&
         priority.configureConsumerYieldInterval(0) == LockFreeQueueInvalidConfiguration &&
         priority.configureCapacityWait(4, 0) == LockFreeQueueInvalidConfiguration &&
         priority.m_maintenanceInterval == 1 && priority.m_maintenanceBudget == 2 && priority.m_consumerYieldInterval == 3 &&
@@ -1126,6 +1166,22 @@ static void DependencyConfiguration()
 #ifndef CTTM_TEST_DLL
     CTaskThreadTestAccess::verifyQueueSettings(config.m_defaultThread, 1);
     CTaskThreadTestAccess::verifyQueueSettings(config.m_defaultThread, 2);
+#endif
+    // 复制线程模板后替换同一级配置；相同级别的原模板、其他级别及调用方配置各自独立。
+    CTaskThreadConfig copied(config.m_defaultThread);
+    CTaskQueueConfig replacementLevel(priority);
+    bbCheck(replacementLevel.configureCapacityWait(17, 5) == LockFreeQueueSuccess &&
+        copied.setPriorityQueueConfig(2, replacementLevel).m_committed &&
+        replacementLevel.configureCapacityWait(19, 7) == LockFreeQueueSuccess,
+        "cannot replace a copied priority configuration");
+    const CTaskQueueConfig& replaced = copied.priorityQueueConfig(2);
+    const CTaskQueueConfig& original = config.m_defaultThread.priorityQueueConfig(2);
+    bbCheck(replaced.m_capacityRetries == 17 && replaced.m_capacitySleepMilliseconds == 5 &&
+        original.m_capacityRetries == 0 && original.m_capacitySleepMilliseconds == 2 &&
+        copied.priorityQueueConfig(1).m_capacityRetries == config.m_defaultThread.priorityQueueConfig(1).m_capacityRetries,
+        "priority replacement changed another template, another level, or followed caller mutation");
+#ifndef CTTM_TEST_DLL
+    CTaskThreadTestAccess::verifyQueueSettings(copied, 2);
 #endif
     bbCheck(config.m_defaultThread.hasQueueShrinkPolicy(), "priority shrink policy ignored during maintenance");
     bbCheck(config.m_defaultThread.setPriorityQueueConfig(0, priority).m_status == CTaskThreadInvalid, "invalid level accepted");
@@ -1159,14 +1215,25 @@ static void DependencyConfiguration()
     CTaskThreadConfig masked;
     bbCheck(masked.setPriorityQueueConfig(1, priority).m_committed, "valid level-one override rejected");
     masked.m_maintenanceInterval = 0;
-    uint32_t invalidId = 17;
-    const CTaskThreadResult invalidDefault = manager.initialize(masked, invalidId);
-    if (invalidDefault.m_committed)
+    CTaskThreadConfig zeroBuckets;
+    zeroBuckets.m_taskBuckets = 0;
+    // 使用最大 size_t，旧实现也会在算术保护处停止，不依赖系统是否允许超量内存提交。
+    CTaskThreadConfig oversized;
+    oversized.m_taskMap.protectionRecordCount = (std::numeric_limits<size_t>::max)();
+    const CTaskThreadConfig* invalidConfigs[] = { &masked, &zeroBuckets, &oversized };
+    const char* failure[] = {"level-one override masked invalid default FIFO", "zero task bucket setting accepted",
+        "unaddressable protection/cache count did not fail as invalid before allocation"};
+    for (size_t index = 0; index < sizeof(invalidConfigs) / sizeof(invalidConfigs[0]); ++index)
     {
-        manager.waitForEnd(invalidId);
+        uint32_t invalidId = 17;
+        const CTaskThreadResult result = manager.initialize(*invalidConfigs[index], invalidId);
+        if (result.m_committed)
+        {
+            manager.waitForEnd(invalidId);
+        }
+        bbCheck(result.m_status == CTaskThreadInvalid && !result.m_committed && invalidId == 0 && manager.count() == 0,
+            failure[index]);
     }
-    bbCheck(invalidDefault.m_status == CTaskThreadInvalid && !invalidDefault.m_committed && invalidId == 0 &&
-        manager.count() == 0, "level-one override masked invalid default FIFO");
     bbCheck(manager.configure(config).m_status == CTaskThreadOk, "default thread configuration rejected");
     config.m_defaultThread.m_maximumTasks = 0;
     const uint32_t id = manager.init();
@@ -1241,6 +1308,28 @@ static void DependencyConfiguration()
     bbCheck(pool.initialize(poolConfig).m_status == CTaskThreadOk, "member map policy prevented pool startup");
     bbWait([&pool]() { return pool.statistics().m_errors > 0; }, "member map error missing from pool statistics");
     bbCheck(pool.shutdown(true).m_status == CTaskThreadOk && manager.count() == 0, "member map policy prevented pool cleanup");
+
+    // 控制线程可以接纳控制任务，唯一业务线程的零额度仍应从实际投递入口生效。
+    poolConfig = CTaskThreadPoolConfig();
+    poolConfig.m_initialThreads = 1;
+    poolConfig.m_maximumThreads = 1;
+    poolConfig.m_worker.m_maximumTasks = 0;
+    poolConfig.m_control.m_maximumTasks = 1;
+    bbCheck(pool.initialize(poolConfig).m_status == CTaskThreadOk, "control thread inherited worker limit");
+    std::vector<uint32_t> ids;
+    bbCheck(pool.threadIds(ids).m_status == CTaskThreadOk && ids.size() == 1, "missing configured worker");
+    const std::shared_ptr<CTaskThread> member = manager.getThreadInterface(ids[0]);
+    bbCheck(member.get() != nullptr, "pooled worker not registered");
+    CTaskThreadAllocator allocator(pool);
+    uint32_t selectedId = ids[0];
+    std::shared_ptr<CTaskThread> selectedWorker = member;
+    const CTaskThreadResult selection = allocator.select(selectedId, selectedWorker);
+    bbCheck(selection.m_status == CTaskThreadCapacity && !selection.m_committed && selectedId == 0 && !selectedWorker,
+        "allocator selected a worker at its configured task limit");
+    const CTaskThreadResult rejected = member->tryPostTaskResult(Record(ledger, 99));
+    bbCheck(rejected.m_status == CTaskThreadCapacity && !rejected.m_committed, "worker inherited control limit");
+    bbCheck(pool.shutdown().m_status == CTaskThreadOk && manager.count() == 0 &&
+        ledger.snapshot() == std::vector<int>(afterError, afterError + 6), "zero-capacity worker executed a rejected task");
 }
 
 /** 按顺序模型验证多优先级任务的选择结果
@@ -1870,10 +1959,6 @@ int main(int argc, char** argv)
         if (command == "--matrix" || command == "--repeat" || command == "--queue-resource-race" || command == "--automation-self-test")
         {
             return CTaskTestAutomation::run(argc - 1, argv + 1);
-        }
-        if (command == "--intrusive-prototype")
-        {
-            return taskRunIntrusivePrototype(argc - 1, argv + 1);
         }
     }
     if (argc > 1 && std::string(argv[1]) == "--fairness")

@@ -87,6 +87,10 @@ static bool CapacityCase(size_t mode)
     CTaskThreadResult result;
     CTaskThreadConfig config;
     config.m_maximumTasks = 1;
+    if (mode == 4 || mode == 5)
+    {
+        bbCheck(config.configureCapacityWait(0, 1) == LockFreeQueueSuccess, "cannot configure immediate capacity sleep");
+    }
     if (mode == 6)
     {
         config.m_maximumTasks = -1;
@@ -147,7 +151,7 @@ static bool CapacityCase(size_t mode)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
-        bool valid = finished.load() == (mode < 2);
+        bool valid = finished.load() == (mode < 2) && (mode == 6 || worker->statistics().m_outstanding == 1);
         if (mode == 5)
         {
             valid = worker->requestShutdown(false).m_status == CTaskThreadOk && valid;
@@ -155,7 +159,8 @@ static bool CapacityCase(size_t mode)
         release.store(true);
         producer.join();
         workers.drain();
-        valid = worker->statistics().m_errors == 0 && valid;
+        const CTaskThreadStatistics finalState = worker->statistics();
+        valid = finalState.m_errors == 0 && finalState.m_outstanding == 0 && valid;
         if (mode < 2)
         {
             return valid && result.m_status == CTaskThreadCapacity && !result.m_committed && calls.load() == 1;

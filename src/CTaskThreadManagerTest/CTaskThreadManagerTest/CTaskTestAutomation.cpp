@@ -31,6 +31,33 @@ static double Number(const std::string& text)
     return value;
 }
 
+/** 核对同一计时窗口内的操作数、毫秒数与每秒速率，容许 CSV 六位小数的舍入
+@param [in] cells 报告字段
+@param [in] count 与该计时终点相对应的实际操作数
+@param [in] duration 毫秒列名
+@param [in] rate 每秒操作数列名
+@param [in] required 正式矩阵必须提供完整计量；通用汇总允许仅比较已提供的指标
+*/
+static void CheckReportedRate(const std::map<std::string, std::string>& cells, uint64_t count,
+    const char* duration, const char* rate, bool required = false)
+{
+    const auto timeCell = cells.find(duration);
+    const auto rateCell = cells.find(rate);
+    if (timeCell == cells.end() || rateCell == cells.end())
+    {
+        bbCheck(!required, std::string("missing matrix measurement: ") + duration + "/" + rate);
+        return;
+    }
+    const double ms = Number(timeCell->second);
+    const double perSecond = Number(rateCell->second);
+    const double expected = static_cast<double>(count) * 1000.0;
+    const double product = ms * perSecond;
+    // 两个字段各有半个末位的舍入误差，再允许乘法的浮点误差。
+    const double tolerance = 0.00000051 * (ms + perSecond + 1.0) + expected * 1e-14;
+    bbCheck(ms > 0.0 && perSecond >= 0.0 && std::isfinite(product) &&
+        std::fabs(product - expected) <= tolerance, "rate differs from count and duration");
+}
+
 /** 解析有上下界的正整数
 @param [in] text 完整十进制参数
 @param [in] maximum 允许的最大值
@@ -213,11 +240,42 @@ static void CheckMatrixRun(const std::vector<std::vector<std::string>>& csv, con
     bbCheck(bbUnsigned(fields["total"].c_str(), UINT64_MAX) == total && bbUnsigned(fields["accepted"].c_str(), UINT64_MAX) == total &&
         bbUnsigned(fields["completed"].c_str(), UINT64_MAX) == total && bbUnsigned(fields["errors"].c_str(), UINT64_MAX) == 0,
         "matrix task ledger differs from command");
+    bbCheck(bbUnsigned(fields["retries"].c_str(), UINT64_MAX) == 0, "matrix workload reported external retries");
+    const double submitMs = Number(fields["submit_ms"]);
+    bbCheck(submitMs > 0, "invalid submission duration");
     if (auxiliary)
     {
+        CheckReportedRate(fields, total, "complete_ms", "throughput_ops_s", true);
+        if (mode == "roundtrip" || mode == "lifecycle" || mode == "lookup")
+        {
+            bbCheck(Number(fields["complete_ms"]) >= submitMs, "synchronous completion precedes submission");
+        }
+        const double p50 = Number(fields["p50_us"]);
+        const double p95 = Number(fields["p95_us"]);
+        const double p99 = Number(fields["p99_us"]);
+        bbCheck(0 <= p50 && p50 <= p95 && p95 <= p99, "invalid auxiliary latency quantiles");
         bbCheck(bbUnsigned(fields["count"].c_str(), UINT64_MAX) == static_cast<uint64_t>(count) &&
             bbUnsigned(fields["work"].c_str(), UINT64_MAX) == 0, "auxiliary workload differs from command");
+        return;
     }
+    // 正式矩阵使用固定的预建对象和预留容量，避免两端同时测错场景仍形成有效对照。
+    const bool distinctTasks = mode == "throughput" || mode == "throughput-separated" || mode == "latency";
+    bbCheck(bbUnsigned(fields["task_objects"].c_str(), UINT64_MAX) == (distinctTasks ? total : 2000) &&
+        bbUnsigned(fields["hash_slots"].c_str(), UINT64_MAX) == total + 4096 &&
+        bbUnsigned(fields["queue_nodes_per_level"].c_str(), UINT64_MAX) == (total + levels - 1) / levels + 4096,
+        "prepared task population or reserved capacity differs from command");
+    bbUnsigned(fields["consumer_mask"].c_str(), UINT64_MAX);
+    bbUnsigned(fields["producer_mask"].c_str(), UINT64_MAX);
+    CheckReportedRate(fields, total, "submit_ms", "submit_ops_s", true);
+    CheckReportedRate(fields, total, "complete_ms", "complete_ops_s", true);
+    CheckReportedRate(fields, total, "drained_ms", "drained_ops_s", true);
+    const uint64_t overlap = bbUnsigned(fields["consumed_at_submit_lower_bound"].c_str(), total);
+    CheckReportedRate(fields, overlap, "submit_ms", "overlap_consume_ops_s_lower_bound", true);
+    const double completeMs = Number(fields["complete_ms"]);
+    const double drainMs = Number(fields["drain_ms"]);
+    // 三个六位小数的独立舍入可能相差一个末位。
+    bbCheck(drainMs >= 0 && std::fabs(drainMs - (std::max)(0.0, completeMs - submitMs)) <= 0.00000151 &&
+        Number(fields["drained_ms"]) >= (std::max)(submitMs, completeMs), "inconsistent drain timestamps");
 }
 
 double CTaskTestAutomation::median(std::vector<double> values)
@@ -256,9 +314,14 @@ void CTaskTestAutomation::summarize(const std::string& output, const std::vector
             const uint64_t total = bbUnsigned(cells["total"].c_str(), UINT64_MAX);
             bbCheck(!cells["mode"].empty() && total > 0 && bbUnsigned(cells["accepted"].c_str(), UINT64_MAX) == total &&
                 bbUnsigned(cells["completed"].c_str(), UINT64_MAX) == total, "incomplete workload");
+            CheckReportedRate(cells, total, "submit_ms", "submit_ops_s");
+            CheckReportedRate(cells, total, "complete_ms", "complete_ops_s");
+            CheckReportedRate(cells, total, "complete_ms", "throughput_ops_s");
+            CheckReportedRate(cells, total, "drained_ms", "drained_ops_s");
             if (cells.count("consumed_at_submit_lower_bound"))
             {
-                bbUnsigned(cells["consumed_at_submit_lower_bound"].c_str(), total);
+                const uint64_t consumed = bbUnsigned(cells["consumed_at_submit_lower_bound"].c_str(), total);
+                CheckReportedRate(cells, consumed, "submit_ms", "overlap_consume_ops_s_lower_bound");
             }
             if (cells.count("count"))
             {
@@ -497,10 +560,99 @@ void CTaskTestAutomation::selfTest()
     bbWrite(csv, "mode,errors,accepted,completed,total,submit_ops_s\nthroughput,0,10,10,10,20\n");
     bbCheck(readCsv(csv).size() == 2, "valid CSV rejected");
     // 报告自身可以完全自洽，但仍需与本次真实启动的负载逐项匹配。
-    const std::vector<std::string> workloadHeader = {"mode", "producers", "levels", "total", "accepted", "completed", "errors", "count", "work"};
-    const std::vector<std::string> correct = {"throughput", "4", "10", "1024", "1024", "1024", "0", "256", "0"};
+    const std::vector<std::string> workloadHeader = {"mode", "producers", "levels", "total", "accepted", "completed", "errors", "count", "work", "submit_ms", "complete_ms", "throughput_ops_s", "p50_us", "p95_us", "p99_us", "retries"};
+    const std::vector<std::string> correct = {"throughput", "4", "10", "1024", "1024", "1024", "0", "256", "0", "2", "4", "256000", "1", "2", "3", "0"};
     CheckMatrixRun({workloadHeader, correct}, "throughput", 4, 10, 256, true);
-    CheckMatrixRun({workloadHeader, correct}, "throughput", 4, 10, 1024, false);
+    // 异步消费可早于最后一次投递返回；同步往返、生命周期和查询须在投递终点之后完成。
+    std::vector<std::string> early = correct;
+    early[9] = "5";
+    CheckMatrixRun({workloadHeader, early}, "throughput", 4, 10, 256, true);
+    const char* synchronous[] = {"roundtrip", "lifecycle", "lookup"};
+    for (size_t i = 0; i < sizeof(synchronous) / sizeof(synchronous[0]); ++i)
+    {
+        const bool single = i < 2;
+        const int32_t producers = single ? 1 : 4;
+        const int32_t levels = single ? 1 : 10;
+        const int32_t count = 1024 / producers;
+        early[0] = synchronous[i];
+        early[1] = bbNumber(producers);
+        early[2] = bbNumber(levels);
+        early[7] = bbNumber(count);
+        early[9] = "2";
+        CheckMatrixRun({workloadHeader, early}, synchronous[i], producers, levels, count, true);
+        early[9] = "5";
+        bool rejected = false;
+        try
+        {
+            CheckMatrixRun({workloadHeader, early}, synchronous[i], producers, levels, count, true);
+        }
+        catch (const std::exception&)
+        {
+            rejected = true;
+        }
+        bbCheck(rejected, "matrix accepted reversed synchronous endpoints");
+    }
+    const std::vector<std::string> preparedHeader = {"mode", "producers", "levels", "total", "accepted", "completed", "errors",
+        "submit_ms", "complete_ms", "submit_ops_s", "complete_ops_s", "drained_ms", "drained_ops_s",
+        "consumed_at_submit_lower_bound", "overlap_consume_ops_s_lower_bound", "drain_ms", "task_objects",
+        "hash_slots", "queue_nodes_per_level", "consumer_mask", "producer_mask", "retries"};
+    const std::vector<std::string> preparedRow = {"throughput-reused", "4", "10", "1024", "1024", "1024", "0",
+        "2", "4", "512000", "256000", "8", "128000", "256", "128000", "2", "2000", "5120", "4199", "0", "0", "0"};
+    CheckMatrixRun({preparedHeader, preparedRow}, "throughput-reused", 4, 10, 1024, false);
+    std::vector<std::string> distinct = preparedRow;
+    distinct[0] = "throughput-separated";
+    distinct[16] = "1024";
+    CheckMatrixRun({preparedHeader, distinct}, distinct[0], 4, 10, 1024, false);
+    // 最后一次 doTask 可以早于最后一次 post 返回，仍须以退出时刻结束排空计时。
+    std::vector<std::string> finishedEarly = preparedRow;
+    finishedEarly[8] = "1";
+    finishedEarly[10] = "1024000";
+    finishedEarly[15] = "0";
+    CheckMatrixRun({preparedHeader, finishedEarly}, "throughput-reused", 4, 10, 1024, false);
+    for (int32_t scenario = 0; scenario < 8; ++scenario)
+    {
+        std::vector<std::string> inconsistent = preparedRow;
+        if (scenario == 0)
+        {
+            inconsistent[11] = "2";
+            inconsistent[12] = "512000";
+        }
+        else if (scenario == 1)
+        {
+            inconsistent[15] = "3";
+        }
+        else
+        {
+            const size_t column = 16 + scenario - 2;
+            inconsistent[column] = column == 19 || column == 20 ? "invalid" : "1";
+        }
+        bool rejected = false;
+        try
+        {
+            CheckMatrixRun({preparedHeader, inconsistent}, "throughput-reused", 4, 10, 1024, false);
+        }
+        catch (const std::exception&)
+        {
+            rejected = true;
+        }
+        bbCheck(rejected, "matrix accepted inconsistent timing, task population, pool capacity, affinity or external retries");
+    }
+    for (size_t column = 7; column < preparedHeader.size(); ++column)
+    {
+        std::vector<std::vector<std::string>> rows = {preparedHeader, preparedRow};
+        rows[0].erase(rows[0].begin() + column);
+        rows[1].erase(rows[1].begin() + column);
+        bool rejected = false;
+        try
+        {
+            CheckMatrixRun(rows, "throughput-reused", 4, 10, 1024, false);
+        }
+        catch (const std::exception&)
+        {
+            rejected = true;
+        }
+        bbCheck(rejected, "matrix accepted a missing measurement");
+    }
     for (size_t column = 0; column <= correct.size(); ++column)
     {
         std::vector<std::vector<std::string>> rows = {workloadHeader, correct};
@@ -510,7 +662,8 @@ void CTaskTestAutomation::selfTest()
         }
         else
         {
-            rows[1][column] = "1";
+            // 中间分位数超出 P99 时，即使每个值单独合法也应拒收。
+            rows[1][column] = workloadHeader[column] == "p95_us" ? "4" : (workloadHeader[column] == "retries" ? "1" : "-1");
         }
         bool rejected = false;
         try
@@ -622,7 +775,14 @@ void CTaskTestAutomation::selfTest()
         bbCheck(rejected, "failed benchmark was accepted by summary");
     }
     // 单份损坏报告也须被拒绝，避免只因两版输入条件不同而间接报错。
+    bbWrite(candidate, "mode,errors,total,accepted,completed,complete_ms,complete_ops_s\nthroughput,0,10,10,10,0.003333,3000000.000000\n");
+    summarize(output, {candidate}, {"current"});
     const char* invalidLedgers[] = {
+        "mode,errors,total,accepted,completed,submit_ms,submit_ops_s\nthroughput,0,10,10,10,1,1000\n",
+        "mode,errors,total,accepted,completed,complete_ms,complete_ops_s\nthroughput,0,10,10,10,2,10000\n",
+        "mode,errors,total,accepted,completed,complete_ms,throughput_ops_s\nlookup,0,10,10,10,0,1000\n",
+        "mode,errors,total,accepted,completed,drained_ms,drained_ops_s\nthroughput,0,10,10,10,1,2000\n",
+        "mode,errors,total,accepted,completed,submit_ms,consumed_at_submit_lower_bound,overlap_consume_ops_s_lower_bound\nthroughput,0,10,10,10,1,8,10000\n",
         "mode,errors,total,accepted,completed,submit_ops_s\nthroughput,0,10,10,10,30\nthroughput,0,10,10,10,30\n",
         "mode,errors,total,accepted,completed,submit_ops_s,consumed_at_submit_lower_bound\nthroughput,0,10,10,10,30,11\n",
         "mode,errors,submit_ops_s\nthroughput,0,30\n",
@@ -776,10 +936,12 @@ void CTaskTestAutomation::selfTest()
         BlackBoxChild fairness;
         fairness.start({"--fairness", invalidCounts[i], "1", "3", "0", csv + ".fairness.csv"}, csv + ".fairness.log");
         bbCheck(fairness.wait(5000) != 0, "invalid fairness count accepted");
-        BlackBoxChild prototype;
-        prototype.start({"--intrusive-prototype", "intrusive", invalidCounts[i], "3200", "1", csv + ".prototype.csv"},
-            csv + ".prototype.log");
-        bbCheck(prototype.wait(5000) != 0, "invalid prototype count accepted");
+        BlackBoxChild prepared;
+        prepared.start({"--prepared-benchmark", "throughput-reused", invalidCounts[i], "3200", "1", csv + ".prepared.csv"},
+            csv + ".prepared.log");
+        const char* reason = i == 2 ? "integer argument out of range" : (i == 3 ? "empty integer argument" : "invalid integer argument");
+        bbCheck(prepared.wait(5000) == 1 && bbRead(csv + ".prepared.log").find(reason) != std::string::npos,
+            "invalid prepared count accepted or rejected for another reason");
     }
 }
 

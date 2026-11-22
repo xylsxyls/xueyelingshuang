@@ -1,4 +1,5 @@
 ﻿#include "CTaskThreadBenchmark.h"
+#include "PlatformTest/PlatformTestAPI.h"
 #include "BlackBoxTestSupport.h"
 #include <algorithm>
 #include <chrono>
@@ -293,6 +294,32 @@ int runTaskThreadBenchmark(int argc, char** argv)
 {
     try
     {
+        if (argc == 1)
+        {
+            // 预先建立唯一目标并持有它，计时只覆盖按 ID 查询、释放局部引用及结果累计。
+            CTaskThreadPool pool;
+            CTaskThreadPoolConfig config;
+            config.m_initialThreads = 1;
+            config.m_maximumThreads = 1;
+            bbCheck(pool.initialize(config).m_status == CTaskThreadOk, "lookup fixture failed");
+            CTaskThreadAllocator allocator(pool);
+            uint32_t id = 0;
+            std::shared_ptr<CTaskThread> expected;
+            bbCheck(allocator.select(id, expected).m_status == CTaskThreadOk && expected, "lookup selection failed");
+            CTaskThreadManager& manager = CTaskThreadManager::instance();
+            LibraryBenchmark::run("getThreadInterface.single", [&](uint32_t count) -> uint64_t
+            {
+                uint64_t matches = 0;
+                for (uint32_t i = 0; i < count; ++i)
+                {
+                    matches += manager.getThreadInterface(id) == expected;
+                }
+                bbCheck(matches == count, "lookup returned unexpected target");
+                return matches;
+            });
+            bbCheck(pool.shutdown(true).m_status == CTaskThreadOk, "lookup fixture did not close");
+            return 0;
+        }
         if (argc != 7)
         {
             throw std::runtime_error("usage: --benchmark mode producers count levels work report.csv (see CTaskThreadManagerTest.h)");

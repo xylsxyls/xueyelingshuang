@@ -30,8 +30,9 @@ public:
 
     /** 把累计计数移至回绕边界；测试必须阻塞唯一消费者并禁止并发投递
     @param [in,out] thread 仅有一个正在执行的受控任务、没有排队项的线程
+    @param [in] unlimited 是否使用分散的无限容量计数
     */
-    static void seedPendingCounters(CTaskThread& thread);
+    static void seedPendingCounters(CTaskThread& thread, bool unlimited);
 
     /** 静止设置管理器编号，测试进程结束后不再正常创建线程
     @param [in] sequence 已分配的最后编号

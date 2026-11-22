@@ -49,6 +49,12 @@ void CTaskStorageTestLifetimeTask::doTask()
 void taskStorageTest()
 {
     taskReclaimRoutingTest();
+    // 只检查可表示的边界，不分配巨型数组。所有者编号还须为消费者保留一个值。
+    const size_t cacheSlots = ((std::numeric_limits<size_t>::max)() - 63) / sizeof(CTaskStorageCache);
+    const size_t firstInvalid = (std::min)(cacheSlots, static_cast<size_t>(UINT32_MAX));
+    StorageCheck(!CTaskStorage::validProtectionCount(0) && CTaskStorage::validProtectionCount(1) &&
+        CTaskStorage::validProtectionCount(firstInvalid - 1) && !CTaskStorage::validProtectionCount(firstInvalid),
+        "protection budget lost the last addressable cache or admitted one too many");
     std::atomic<size_t> live(0);
     CTaskReadDomain domain;
     StorageCheck(domain.initialize(8), "storage domain initialization");
@@ -147,9 +153,9 @@ void taskStorageTest()
     // 验证回调只负责算法；1000 的请求由池截断为剩余预算。
     config.growPolicy = [&grows](const LockFreeHashMapGrowContext& context) -> size_t
     {
+        ++grows;
         StorageCheck(context.initialCapacity == 3 && context.currentCapacity == 3 && context.successfulGrowCount == 0,
             "growth context changed");
-        ++grows;
         return 1000;
     };
     // 返回期望释放量和连续空闲毫秒，由池保证容量下限。
@@ -163,7 +169,8 @@ void taskStorageTest()
     for (size_t i = 0; i < 13; ++i)
     {
         CTaskStorageSlot* slot = growing.acquire(growing.cache(growingDomain.indexOf(*held)), result);
-        StorageCheck(slot != nullptr, "clipped dynamic growth failed");
+        StorageCheck(slot != nullptr && grows == (i < 3 ? 0u : 1u),
+            "zero threshold did not wait for the first request beyond initial capacity");
         allocated.push_back(slot);
     }
     StorageCheck(growing.capacity() == 13 && grows.load() == 1, "growth exceeded maximum or wrong count");
@@ -178,6 +185,35 @@ void taskStorageTest()
     growing.maintain();
     growing.maintain();
     StorageCheck(growing.capacity() == 3, "shrink did not preserve initial capacity");
+
+    // 三个初始槽，剩一个时回调。发布到硬上限后继续领槽，策略及通知次数必须保持不变。
+    CTaskReadDomain thresholdDomain;
+    StorageCheck(thresholdDomain.initialize(4), "threshold domain initialization");
+    std::unique_ptr<CTaskStorage> thresholdPool(new CTaskStorage(thresholdDomain));
+    config.growFreeThreshold = 1;
+    grows = 0;
+    growthEvents = 0;
+    growthSlots = 0;
+    StorageCheck(thresholdPool->initialize(config).m_committed, "threshold pool initialization");
+    CTaskReadPosition* thresholdReader = thresholdDomain.enter();
+    StorageCheck(thresholdReader != nullptr, "threshold reader registration");
+    CTaskStorageCache& thresholdCache = thresholdPool->cache(thresholdDomain.indexOf(*thresholdReader));
+    CTaskStorageSlot* thresholdSlots[13];
+    for (size_t i = 0; i < 13; ++i)
+    {
+        thresholdSlots[i] = thresholdPool->acquire(thresholdCache, result);
+        const size_t expectedGrows = i == 0 ? 0 : 1;
+        StorageCheck(thresholdSlots[i] != nullptr && result.m_status == CTaskThreadOk &&
+            grows == expectedGrows && growthEvents == expectedGrows && growthSlots == expectedGrows * 10,
+            "threshold growth fired early, fired late or repeated at the hard limit");
+    }
+    StorageCheck(thresholdPool->acquire(thresholdCache, result) == nullptr && result.m_status == CTaskThreadCapacity &&
+        grows == 1 && growthEvents == 1, "exhausted threshold pool invoked a policy at its hard limit");
+    for (size_t i = 0; i < 13; ++i)
+    {
+        thresholdPool->abandon(*thresholdSlots[i]);
+    }
+    thresholdDomain.leave(*thresholdReader);
 
     CTaskReadDomain parallelDomain;
     StorageCheck(parallelDomain.initialize(16), "parallel storage domain");

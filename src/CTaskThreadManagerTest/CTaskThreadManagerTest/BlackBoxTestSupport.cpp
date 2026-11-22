@@ -1,4 +1,5 @@
 ﻿#include "BlackBoxTestSupport.h"
+#include "PlatformTest/PlatformTestAPI.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -415,7 +416,7 @@ int bbRun(int argc, char** argv, const char* suite, const std::vector<BlackBoxCa
         {
             const std::string arg = argv[i];
             if (arg == "--list" || arg == "--all" || arg == "--stress" || arg == "--instant" ||
-                arg == "--case" || arg == "--tests")
+                arg == "--case" || arg == "--tests" || arg == "--cases")
             {
                 bbCheck(!haveMode, "conflicting test selection modes");
                 haveMode = true;
@@ -449,28 +450,30 @@ int bbRun(int argc, char** argv, const char* suite, const std::vector<BlackBoxCa
                 childCase = static_cast<int>(bbUnsigned(argv[++i], cases.size()));
                 bbCheck(childCase > 0, "invalid child case ID");
             }
-            else if (arg == "--tests" && i + 1 < argc)
+            else if ((arg == "--tests" || arg == "--cases") && i + 1 < argc)
             {
-                std::string selection = argv[++i];
-                bbCheck(!selection.empty() && selection[0] != ',' && selection[selection.size() - 1] != ',' &&
-                    selection.find(",,") == std::string::npos && selection.find_first_not_of("0123456789,-") == std::string::npos,
-                    "invalid test selection separators");
-                std::replace(selection.begin(), selection.end(), ',', ' ');
-                std::istringstream input(selection);
-                std::string part;
-                while (input >> part)
+                const char* cursor = argv[++i];
+                const unsigned maximum = static_cast<unsigned>(cases.size());
+                for (;;)
                 {
-                    const size_t dash = part.find('-');
-                    const int first = static_cast<int>(bbUnsigned(part.substr(0, dash).c_str(), cases.size()));
-                    const int last = dash == std::string::npos ? first :
-                        static_cast<int>(bbUnsigned(part.substr(dash + 1).c_str(), cases.size()));
-                    bbCheck(first > 0 && last >= first && last <= static_cast<int>(cases.size()), "test ID out of range");
-                    for (int id = first; id <= last; ++id)
+                    unsigned first = 0, last = 0;
+                    bbCheck(PlatformTest::caseNumber(cursor, maximum, first), "invalid test ID");
+                    last = first;
+                    if (*cursor == '-')
                     {
-                        selected.insert(id);
+                        ++cursor;
+                        bbCheck(PlatformTest::caseNumber(cursor, maximum, last) && last >= first, "invalid test range");
                     }
+                    for (unsigned id = first; id <= last; ++id)
+                    {
+                        selected.insert(static_cast<int>(id));
+                    }
+                    if (*cursor == '\0')
+                    {
+                        break;
+                    }
+                    bbCheck(*cursor++ == ',', "invalid test selection separator");
                 }
-                bbCheck(!selected.empty(), "empty test selection");
             }
             else
             {

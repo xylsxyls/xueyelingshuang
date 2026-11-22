@@ -220,8 +220,6 @@
     <ClCompile Include="CTaskRedoTests.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CTaskIntrusivePrototype.h" />
-    <ClCompile Include="CTaskIntrusivePrototype.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CTaskFairnessTests.h" />
