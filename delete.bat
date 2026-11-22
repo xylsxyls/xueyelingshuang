@@ -168,8 +168,8 @@ rmdir /q /s "%~dp0common\PdfReader\PdfReader1.0_log\"
 rmdir /q /s "%~dp0common\PdfReaderTest\PdfReaderTest1.0_log\"
 
 ::-------------------É¾³ýÁÙÊ±´úÂë-----------------------------
-del "%~dp0src\ProtoMessage\ProtoMessage\src\ProtoMessage.pb.h"
-del "%~dp0src\ProtoMessage\ProtoMessage\src\ProtoMessage.pb.cc"
+del "%~dp0src\ProtoMessageMessages\ProtoMessageMessages\src\ProtoMessage.pb.h"
+del "%~dp0src\ProtoMessageMessages\ProtoMessageMessages\src\ProtoMessage.pb.cc"
 del "%~dp0src\LogSender\LogSender\src\LogTestMessage.pb.h"
 del "%~dp0src\LogSender\LogSender\src\LogTestMessage.pb.cc"
 del "%~dp0src\LogTest\LogTest\LogTestMessage.pb.h"
