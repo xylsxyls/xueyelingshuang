@@ -6,8 +6,12 @@
 #include <functional>
 #include <vector>
 
-#ifdef PROCESS_WORK_BENCH_STORAGE_GROWTH
-/** 测试内的实际池增长观察者，默认算法与未安装观察者时相同；不进入生产工程
+/** 在设备宿主准备的目录中建立共享映射和命名通知，桌面沿用原生后端。
+@return true表示本进程可以开始使用命名IPC
+*/
+bool PrepareProcessWorkTestDirectory();
+
+/** 测试内的实际池增长观察者；使用基准专用增长策略，不进入生产工程
 */
 class ProcessWorkBenchmarkGrowth : public ProcessWorkMemoryPolicy
 {
@@ -17,9 +21,9 @@ public:
     */
     explicit ProcessWorkBenchmarkGrowth(std::atomic<uint64_t>& count);
 
-    /** 保持实际存储的默认增长算法
+    /** Post按当前容量且至少64槽增长，其余存储按本次所需增量增长
     @param [in] context 资源种类、容量及所需增量
-    @return 与默认路径一致的增长量
+    @return 基准观察配置的建议增长量；无扩容验收还须检查成功增长计数为零
     */
     virtual uint64_t grow(const ProcessWorkMemoryGrowContext& context);
 
@@ -32,24 +36,23 @@ private:
     // 借用基准进程的计数，实例销毁前保持有效
     std::atomic<uint64_t>* m_count;
 };
-#endif
 
-/** 测试用任务，只负责执行预先准备的生产循环。
+/** 测试用任务，只负责执行预先准备的生产循环
 */
 class ProcessWorkBenchmarkTask : public CTask
 {
 public:
-    /** 保存生产函数；构造在计时前完成。
+    /** 保存生产函数；构造在计时前完成
     @param [in] work 生产函数
     @param [in,out] failure 测试失败标记
     */
     ProcessWorkBenchmarkTask(const std::function<void()>& work, std::atomic<bool>& failure);
 
-    /** 运行生产函数，异常转为测试失败。
+    /** 运行生产函数，异常转为测试失败
     */
     void doTask();
 
-    /** 测试被意外取消时标记失败。
+    /** 测试被意外取消时标记失败
     */
     void stopTask();
 
@@ -60,19 +63,19 @@ private:
     std::atomic<bool>* m_failure;
 };
 
-/** 单消费者核对独立序号账本；不在回调中打印、加锁或动态分配。
+/** 单消费者核对独立序号账本；不在回调中打印、加锁或动态分配
 */
 class ProcessWorkBenchmarkReceiver : public ProcessReceiveCallback
 {
 public:
-    /** 预分配各发送流的预期序号。
+    /** 预分配各发送流的预期序号
     @param [in] streams 总生产线程数
     @param [in] count 每个生产线程的消息数
     @param [in] bytes 正文长度
     */
     ProcessWorkBenchmarkReceiver(int32_t streams, int32_t count, int32_t bytes);
 
-    /** 核对消息序号、长度及完整正文，结束屏障后不允许同流继续交付。
+    /** 核对消息序号、长度及完整正文，结束屏障后不允许同流继续交付
     @param [in] pid 实际发送进程
     @param [in] data 正文
     @param [in] length 正文长度
@@ -80,7 +83,7 @@ public:
     */
     void receive(int32_t pid, const char* data, int32_t length, MessageType type);
 
-    /** 统计满载事件，不改变生产时序。
+    /** 统计满载事件，不改变生产时序
     @param [in] count 当前块数
     */
     void bufferFull(int32_t count);

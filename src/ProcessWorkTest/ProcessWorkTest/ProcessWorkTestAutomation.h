@@ -127,4 +127,10 @@ private:
     @return 中位数
     */
     static double median(std::vector<double> values);
+
+    /** 用全部有效样本计算极差占中位数的百分比，调用方同时报告样本数。
+    @param [in] values 严格为正且非空的吞吐样本
+    @return 数字越大表示本批次跨轮差异越大
+    */
+    static double sampleSpread(const std::vector<double>& values);
 };

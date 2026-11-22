@@ -1,5 +1,4 @@
-﻿#include "CTaskPostCompatibility.h"
-#include "ProcessWorkBenchmark.h"
+﻿#include "ProcessWorkBenchmark.h"
 #include "CSystem/CSystemAPI.h"
 #include <algorithm>
 #include <chrono>
@@ -17,7 +16,18 @@
 #include <Windows.h>
 #endif
 
-#ifdef PROCESS_WORK_BENCH_STORAGE_GROWTH
+bool PrepareProcessWorkTestDirectory()
+{
+#ifdef SHARED_MEMORY_MOBILE
+    const char* directory = std::getenv("SHARED_MEMORY_TEST_DIR");
+    return directory != nullptr && ProcessWork::setProcessIdentityDirectory(directory) &&
+        ProcessWork::setSharedMemoryDirectory(directory) &&
+        ProcessWork::setSemaphoreDirectory(directory);
+#else
+    return true;
+#endif
+}
+
 static std::atomic<uint64_t> s_storageGrowth(0);
 
 ProcessWorkBenchmarkGrowth::ProcessWorkBenchmarkGrowth(std::atomic<uint64_t>& count) :
@@ -28,7 +38,7 @@ m_count(&count)
 
 uint64_t ProcessWorkBenchmarkGrowth::grow(const ProcessWorkMemoryGrowContext& context)
 {
-    // 此基准共享池固定不扩容；正文池保持各自的默认分配粒度。
+    // 此基准共享池固定不扩容；Post池至少增64槽，其余实际存储按本次所需增量增长。
     return context.m_kind == ProcessWorkPostBuffers ? (std::max)(uint64_t(64), context.m_currentCapacity) : context.m_requiredGrowth;
 }
 
@@ -57,9 +67,8 @@ static void ObserveStorage(ProcessWorkMemoryConfig& memory)
     };
     memory.m_freeQueuePool.m_onGrowth = memory.m_queuePool.m_onGrowth;
 }
-#endif
 
-/** 同一系统启动周期的单调纳秒，用于合并真实进程的起止时刻。
+/** 同一系统启动周期的单调纳秒，用于合并真实进程的起止时刻
 @return Windows为QPC计数换算的纳秒，其他平台为steady_clock纳秒
 */
 static int64_t BenchmarkNow()
@@ -79,6 +88,7 @@ static int64_t BenchmarkNow()
 ProcessWorkBenchmarkTask::ProcessWorkBenchmarkTask(const std::function<void()>& work, std::atomic<bool>& failure) :
 m_work(work), m_failure(&failure)
 {
+
 }
 
 void ProcessWorkBenchmarkTask::doTask()
@@ -111,6 +121,7 @@ m_firstBadLength(0), m_firstBadReceived(0), m_armed(false), m_threadsPerProcess(
 m_received(0), m_next(streams, 0), m_ended(streams, 0),
 m_body(bytes == 6 ? std::string("123456") : std::string(bytes, 'x'))
 {
+
 }
 
 void ProcessWorkBenchmarkReceiver::receive(int32_t pid, const char* data, int32_t length, MessageType type)
@@ -208,7 +219,7 @@ void ProcessWorkBenchmarkReceiver::bufferFull(int32_t count)
     }
 }
 
-/** 子进程准备线程和正文后等待统一起点，生产与父进程消费同时发生。
+/** 子进程准备线程和正文后等待统一起点，生产与父进程消费同时发生
 @param [in] argv 已由main检查长度的参数
 @return 子进程退出状态
 */
@@ -233,31 +244,27 @@ static int BenchmarkProducer(char** argv)
     std::vector<int64_t> starts(threads, 0), ends(threads, 0);
     std::vector<uint64_t> retries(threads, 0);
     std::vector<uint32_t> workers;
+    workers.reserve(static_cast<size_t>(threads));
     const std::string body = bytes == 6 ? std::string("123456") : std::string(bytes, 'x');
     ProcessWorkChannel direct;
     int64_t prepareNanoseconds = 0;
     try
     {
-#ifdef PROCESS_WORK_BENCH_PREPARE_API
         if (std::getenv("PROCESS_WORK_BENCH_PREPARE_SEND") != nullptr)
         {
             const int64_t started = BenchmarkNow();
             bbCheck(ipc.prepareSend(target, -1, true), "benchmark mapping preparation failed");
             prepareNanoseconds = BenchmarkNow() - started;
         }
-#endif
         if (mode == 3)
         {
             bbCheck(direct.openSender(target), "diagnostic direct channel setup failed");
         }
         if (mode == 2)
         {
-#if defined(PROCESS_WORK_BENCH_RESULT_API)
             ProcessWorkMemoryConfig memory;
-#if !defined(PROCESS_WORK_BENCH_LEGACY_POOLS)
             memory.m_localQueueInitialCapacity = 16777216;
             memory.m_postBufferReserve = 16777216;
-#ifdef PROCESS_WORK_BENCH_SLOT_BYTES
             const char* slotBytes = std::getenv("PROCESS_WORK_BENCH_POST_SLOT_BYTES");
             if (slotBytes != nullptr)
             {
@@ -266,14 +273,9 @@ static int BenchmarkProducer(char** argv)
             }
             // 各构建都预留1GiB正文池；变更槽步长不额外增加基准内存预算。
             memory.m_postBufferReserve = static_cast<uint32_t>((uint64_t(1) << 30) / memory.m_postBufferSlotBytes);
-#endif
-#endif
             memory.m_localQueueBytes = 4ULL * 1024 * 1024 * 1024;
-#ifdef PROCESS_WORK_BENCH_STORAGE_GROWTH
             ObserveStorage(memory);
-#endif
             bbCheck(ipc.configurePostMemory(memory), "post pool preparation failed");
-#endif
             bbCheck(ipc.initPostThread(), "benchmark post thread initialization failed");
         }
         for (int32_t thread = 0; thread < threads; ++thread)
@@ -282,7 +284,6 @@ static int BenchmarkProducer(char** argv)
             {
                 for (int32_t i = 0; i < warmup; ++i)
                 {
-#ifdef PROCESS_WORK_BENCH_RESULT_API
                     const int32_t result = mode == 2 ?
                         ipc.postResult(target, body.data(), bytes, static_cast<MessageType>(INT_MAX)) : mode == 1 ?
                         ipc.sendResult(name, body.data(), bytes, static_cast<MessageType>(INT_MAX)) :
@@ -292,16 +293,6 @@ static int BenchmarkProducer(char** argv)
                         std::cerr << "warmup status=" << result << std::endl;
                         bbCheck(false, "ordinary warmup admission failed");
                     }
-#else
-                    if (mode == 1)
-                    {
-                        ipc.send(name, body, static_cast<MessageType>(INT_MAX));
-                    }
-                    else
-                    {
-                        ipc.send(target, body, static_cast<MessageType>(INT_MAX));
-                    }
-#endif
                 }
                 ++ready;
                 while (!go.load(std::memory_order_acquire) && !failure.load())
@@ -315,23 +306,12 @@ static int BenchmarkProducer(char** argv)
                     const MessageType type = static_cast<MessageType>(stream * count + i);
                     if (mode == 0 || mode == 1)
                     {
-#ifdef PROCESS_WORK_BENCH_RESULT_API
                         const int32_t result = mode == 0 ? ipc.sendResult(target, body.data(), bytes, type) :
                             ipc.sendResult(name, body.data(), bytes, type);
                         if (result != PROCESS_WORK_SENT)
                         {
                             bbCheck(false, "ordinary send failed or leaked Busy/capacity");
                         }
-#else
-                        if (mode == 0)
-                        {
-                            ipc.send(target, body, type);
-                        }
-                        else
-                        {
-                            ipc.send(name, body, type);
-                        }
-#endif
                     }
                     else if (mode == 3)
                     {
@@ -340,9 +320,7 @@ static int BenchmarkProducer(char** argv)
                         {
                             result = direct.trySend(body.data(), bytes, static_cast<int32_t>(type));
                             if (result != PROCESS_WORK_BUSY
-#ifdef PROCESS_WORK_BENCH_RESULT_API
                                 && result != PROCESS_WORK_CAPACITY && result != PROCESS_WORK_RESOURCE
-#endif
                                 )
                             {
                                 break;
@@ -356,40 +334,17 @@ static int BenchmarkProducer(char** argv)
                     }
                     else
                     {
-#ifdef PROCESS_WORK_BENCH_RESULT_API
                         // 普通接口负责容量和竞争重试，基准不能用外部重试掩盖错误返回。
                         const int32_t result = ipc.postResult(target, body.data(), bytes, type);
                         if (result != PROCESS_WORK_POSTED)
                         {
                             bbCheck(false, "ordinary post failed or leaked Busy/capacity");
                         }
-#else
-                        for (;;)
-                        {
-                            try
-                            {
-                                ipc.post(target, body, type);
-                                break;
-                            }
-                            catch (const LockFreeQueueError& error)
-                            {
-                                // 旧版以异常报告背压，只重试明确未提交的结果。
-                                if ((error.status() != LockFreeQueueTemporaryUnavailable && error.status() != LockFreeQueueCapacityLimit) ||
-                                    failure.load() || BenchmarkNow() - starts[thread] > 180000000000LL)
-                                {
-                                    throw;
-                                }
-                                ++retries[thread];
-                                std::this_thread::yield();
-                            }
-                        }
-#endif
                     }
                 }
                 ends[thread] = BenchmarkNow();
                 // 每个实际发送线程随后发布屏障；不计入吞吐，但必须经过同一发送路径。
                 const MessageType ending = static_cast<MessageType>(INT_MAX - 1 - stream);
-#ifdef PROCESS_WORK_BENCH_RESULT_API
                 int32_t endResult = PROCESS_WORK_INVALID;
                 if (mode == 3)
                 {
@@ -408,26 +363,12 @@ static int BenchmarkProducer(char** argv)
                         mode == 1 ? ipc.sendResult(name, body.data(), bytes, ending) : ipc.sendResult(target, body.data(), bytes, ending);
                 }
                 bbCheck(endResult == (mode == 2 ? PROCESS_WORK_POSTED : PROCESS_WORK_SENT), "benchmark end barrier failed");
-#else
-                if (mode == 2)
-                {
-                    ipc.post(target, body, ending);
-                }
-                else if (mode == 1)
-                {
-                    ipc.send(name, body, ending);
-                }
-                else
-                {
-                    ipc.send(target, body, ending);
-                }
-#endif
             }, failure));
             const uint32_t id = manager.init();
             bbCheck(id != 0, "benchmark producer initialization failed");
             workers.push_back(id);
             const std::shared_ptr<CTaskThread> worker = manager.getThreadInterface(id);
-            bbCheck(worker && CTaskPostCompatibility::submit(*worker, task, 1, 0).m_committed, "benchmark producer not admitted");
+            bbCheck(worker && worker->postTask(task, 1), "benchmark producer not admitted");
         }
         const int32_t preparationTimeout = static_cast<int32_t>((std::min)(int64_t(600000),
             int64_t(30000) + static_cast<int64_t>(threads) * warmup / 1000));
@@ -438,9 +379,7 @@ static int BenchmarkProducer(char** argv)
 #ifdef PROCESS_WORK_BENCH_MEMORY_AUDIT
         ProcessWorkBenchmarkAudit::begin();
 #endif
-#ifdef PROCESS_WORK_BENCH_STORAGE_GROWTH
         s_storageGrowth.store(0, std::memory_order_relaxed);
-#endif
         go.store(true, std::memory_order_release);
         for (size_t i = 0; i < workers.size(); ++i)
         {
@@ -465,9 +404,7 @@ static int BenchmarkProducer(char** argv)
             retryCount += retries[i];
         }
         report << *std::min_element(starts.begin(), starts.end()) << ' ' << *std::max_element(ends.begin(), ends.end()) << ' ' << retryCount;
-#ifdef PROCESS_WORK_BENCH_STORAGE_GROWTH
         report << ' ' << s_storageGrowth.load(std::memory_order_relaxed);
-#endif
         report << ' ' << prepareNanoseconds;
         bbWrite(prefix + ".result" + bbNumber(process), report.str());
         return 0;
@@ -486,7 +423,7 @@ static int BenchmarkProducer(char** argv)
     }
 }
 
-/** 真实多进程生产和接收同时运行，初始化、正文构造和预热不计入吞吐。
+/** 真实多进程生产和接收同时运行，初始化、正文构造和预热不计入吞吐
 @param [in] argv 主进程测试参数
 @return 主进程退出状态
 */
@@ -507,20 +444,14 @@ static int BenchmarkParent(char** argv)
     ProcessWorkBenchmarkReceiver receiver(processes * threads, count, bytes);
     receiver.m_threadsPerProcess = threads;
     bbCheck(ipc.addProcessReceiveCallback(&receiver), "benchmark receive callback registration failed");
-#if defined(PROCESS_WORK_BENCH_RESULT_API) && !defined(PROCESS_WORK_BENCH_LEGACY_POOLS)
     ProcessWorkMemoryConfig memory;
     // 预留256MiB接收批次，避免消费线程短暂被调度出去时把池增长计入吞吐。
     memory.m_receiveBatchReserve = 4096;
     memory.m_localQueueInitialCapacity = 8192;
     // 固定额度对照使用相同128MiB接收上限，初始化预留实际批次和队列节点。
     memory.m_localQueueBytes = 128ULL * 1024 * 1024;
-#ifdef PROCESS_WORK_BENCH_STORAGE_GROWTH
     ObserveStorage(memory);
-#endif
     bbCheck(ipc.setReceiveName(name) && ipc.initReceive(bytes + 12, blocks, 0, 0, 0, 0, memory), "benchmark receive init failed");
-#else
-    bbCheck(ipc.setReceiveName(name) && ipc.initReceive(bytes + 12, blocks), "benchmark receive init failed");
-#endif
     std::vector<std::shared_ptr<BlackBoxChild>> children;
     try
     {
@@ -573,9 +504,7 @@ static int BenchmarkParent(char** argv)
         const int32_t warmup = (std::max)(16, mode == 2 ? (blocks + threads - 1) / threads : blocks);
         bbWait([&receiver, processes, threads, warmup]() { return receiver.m_warmup.load() == processes * threads * warmup; }, "warmup drained");
         receiver.m_armed.store(true, std::memory_order_release);
-#ifdef PROCESS_WORK_BENCH_STORAGE_GROWTH
         s_storageGrowth.store(0, std::memory_order_relaxed);
-#endif
 #ifdef PROCESS_WORK_BENCH_MEMORY_AUDIT
         ProcessWorkBenchmarkAudit::begin();
 #endif
@@ -615,12 +544,10 @@ static int BenchmarkParent(char** argv)
             int64_t start = 0, end = 0;
             uint64_t retryCount = 0;
             input >> start >> end >> retryCount;
-#ifdef PROCESS_WORK_BENCH_STORAGE_GROWTH
             uint64_t growth = 0;
             input >> growth;
             bbCheck(!input.fail(), "missing producer growth audit");
             producerGrowth += growth;
-#endif
             int64_t preparation = 0;
             input >> preparation;
             bbCheck(!input.fail() && preparation >= 0, "missing producer preparation duration");
@@ -648,17 +575,11 @@ static int BenchmarkParent(char** argv)
             << ",\"uncommitted_retries\":" << retries << ",\"final_blocks\":" << finalBlocks
             << ",\"mapping_prepare_total_ms\":" << preparationTotal / 1000000.0
             << ",\"mapping_prepare_max_ms\":" << preparationMaximum / 1000000.0
-#ifdef PROCESS_WORK_BENCH_SLOT_BYTES
             << ",\"post_slot_bytes\":" << (mode != 2 ? 0 :
                 (std::getenv("PROCESS_WORK_BENCH_POST_SLOT_BYTES") == nullptr ? ProcessWorkMemoryConfig().m_postBufferSlotBytes :
                     (std::string(std::getenv("PROCESS_WORK_BENCH_POST_SLOT_BYTES")) == "128" ? 128 : 64)))
-#else
-            << ",\"post_slot_bytes\":" << (mode == 2 ? 64 : 0)
-#endif
-#ifdef PROCESS_WORK_BENCH_STORAGE_GROWTH
             << ",\"producer_pool_growth\":" << producerGrowth << ",\"receiver_pool_growth\":" << s_storageGrowth.load(std::memory_order_relaxed)
             << ",\"unlimited_local\":" << (std::getenv("PROCESS_WORK_BENCH_UNLIMITED_LOCAL") != nullptr ? "true" : "false")
-#endif
             << ",\"verified\":true}" << std::endl;
         return 0;
     }
@@ -696,8 +617,13 @@ int RunProcessWorkBenchmark(int argc, char** argv)
     }
 }
 #ifndef PROCESS_WORK_BENCH_IN_SUITE
+/** 独立性能程序入口；合入测试套件时由测试工程main分派
+@param [in] argc 命令行参数数量
+@param [in] argv 父进程工作量参数或驱动生成的子进程参数
+@return 0表示账本验证完成，非0表示配置、执行或校验失败
+*/
 int main(int argc, char** argv)
 {
-    return RunProcessWorkBenchmark(argc, argv);
+    return PrepareProcessWorkTestDirectory() ? RunProcessWorkBenchmark(argc, argv) : 1;
 }
 #endif

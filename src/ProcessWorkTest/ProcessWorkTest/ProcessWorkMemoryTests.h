@@ -103,3 +103,7 @@ int32_t runProcessWorkNotificationFailure();
 /** 配置内函数对象复制失败必须由Channel返回false，随后同一实例能重试并收发
 */
 void testProcessWorkConfigurationCopyFailure();
+
+/** 分别映射本地/共享通知、队列调度和进程后备目录，拒绝无效参数并在恢复后验证真实交付。
+*/
+void testProcessWorkDependencyOptions();

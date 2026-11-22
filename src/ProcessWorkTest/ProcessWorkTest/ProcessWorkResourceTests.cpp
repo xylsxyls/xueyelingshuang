@@ -54,10 +54,54 @@ void runProcessWorkRuntimeControl()
 #endif
 }
 
-void testProcessWorkCorruption()
+/** 改写已提交正文的协议头，验证接收端停止且不把损坏消息当作已消费
+@param [in] bytes 正文长度，分别覆盖内联和独立映射
+@param [in] field 要改写的包头字段，0为PID、1为类型、2为长度
+@param [in] value 损坏的字段值
+*/
+static void CheckCorruptHeader(int32_t bytes, int32_t field, int32_t value)
 {
     PublicChannelScope channel(2, 0, 0, 0, 0);
-    bbCheck(channel.sender.trySend("x", 1, 1) == PROCESS_WORK_SENT, "corruption fixture send failed");
+    const std::string body(static_cast<size_t>(bytes), 'x');
+    bbCheck(channel.m_sender.trySend(body.data(), bytes, 1) == PROCESS_WORK_SENT, "header fixture send failed");
+    SharedMemory directoryMemory("P3D" + bbNumber(bbPid()));
+    ProcessWorkSharedDirectory* directory = static_cast<ProcessWorkSharedDirectory*>(directoryMemory.writeWithoutLock());
+    bbCheck(directory != nullptr, "header fixture directory missing");
+    const uint32_t session = static_cast<uint32_t>(ProcessWorkAtomic::load(&directory->m_session));
+    ProcessWorkStorage storage(bbPid(), directory->m_identity, session, 76, 2, false, ProcessWorkMemoryConfig());
+    ProcessWorkSharedStream* stream = storage.stream(1);
+    bbCheck(stream != nullptr, "header fixture stream missing");
+    // 初始流使用随登记创建的首段，发送端尚未填满或切换该段。
+    const uint64_t cell = static_cast<uint64_t>(ProcessWorkAtomic::load(&stream->m_first.m_cells[0]));
+    const uint32_t index = static_cast<uint32_t>(cell & 0xffffff);
+    bbCheck(index > 0 && index <= 2, "header fixture body index invalid");
+    ProcessWorkSharedBlock* block = storage.block(index);
+    bbCheck(block != nullptr, "header fixture body missing");
+    std::unique_ptr<SharedMemory> temporary;
+    char* packet = (cell & 0x1000000) != 0 ? block->m_inlineData :
+        storage.data(index, static_cast<uint32_t>(ProcessWorkAtomic::load(&block->m_generation)), temporary);
+    bbCheck(packet != nullptr, "header fixture mapping missing");
+    std::memcpy(packet + static_cast<size_t>(field) * sizeof(int32_t), &value, sizeof(value));
+    ProcessWorkReceiveQueue received;
+    bbCheck(channel.m_receiver.pump(received, channel.m_full) == 0 && !channel.m_receiver.ready(),
+        "invalid committed header not closed");
+    char* delivered = nullptr;
+    bbCheck(!received.take(&delivered, 0), "corrupt header was delivered");
+    bbCheck(channel.m_sender.trySend("x", 1, 2) == PROCESS_WORK_UNAVAILABLE, "corrupt header channel accepted new message");
+}
+
+void testProcessWorkCorruption()
+{
+    // 每种损坏使用独立会话，避免上一次停止状态让后续检查无条件通过。
+    for (int32_t bytes = 6; bytes <= 37; bytes += 31)
+    {
+        CheckCorruptHeader(bytes, 0, 0);
+        CheckCorruptHeader(bytes, 1, -1);
+        CheckCorruptHeader(bytes, 2, -1);
+        CheckCorruptHeader(bytes, 2, bytes == 6 ? 37 : 65);
+    }
+    PublicChannelScope channel(2, 0, 0, 0, 0);
+    bbCheck(channel.m_sender.trySend("x", 1, 1) == PROCESS_WORK_SENT, "corruption fixture send failed");
     SharedMemory directoryMemory("P3D" + bbNumber(bbPid()));
     ProcessWorkSharedDirectory* directory = static_cast<ProcessWorkSharedDirectory*>(directoryMemory.writeWithoutLock());
     bbCheck(directory != nullptr, "corruption fixture directory missing");
@@ -76,12 +120,12 @@ void testProcessWorkCorruption()
     int64_t* cell = &sentinel->m_cells[stream->m_headSlot];
     const uint64_t value = static_cast<uint64_t>(ProcessWorkAtomic::load(cell));
     ProcessWorkAtomic::store(cell, static_cast<int64_t>((value & 0xffffffff00000000ULL) | 3));
-    bbCheck(channel.pump() == 0 && !channel.receiver.ready(), "invalid committed index not closed");
+    bbCheck(channel.pump() == 0 && !channel.m_receiver.ready(), "invalid committed index not closed");
     for (int32_t i = 0; i < 10; ++i)
     {
         bbCheck(channel.pump() == 0, "stopped corrupt channel delivered a packet");
     }
-    bbCheck(channel.sender.trySend("x", 1, 2) == PROCESS_WORK_UNAVAILABLE, "corrupt channel accepted new message");
+    bbCheck(channel.m_sender.trySend("x", 1, 2) == PROCESS_WORK_UNAVAILABLE, "corrupt channel accepted new message");
 }
 
 void testProcessWorkMappingFailure()
@@ -98,14 +142,14 @@ void testProcessWorkMappingFailure()
     // 仅测试映射指定一个不存在的正文代次，真实发送入口必须处理系统打开失败。
     ProcessWorkAtomic::store(&block->m_generation, generation + 1);
     const std::string body(37, 'x');
-    const int32_t result = channel.sender.send(body.data(), static_cast<int32_t>(body.size()), 7);
+    const int32_t result = channel.m_sender.send(body.data(), static_cast<int32_t>(body.size()), 7);
     const int64_t ownerAfterFailure = ProcessWorkAtomic::load(&block->m_owner);
     ProcessWorkAtomic::store(&block->m_generation, generation);
     bbCheck(result == PROCESS_WORK_NO_MEMORY && ownerAfterFailure == 0, "mapping failure became Busy, hung, or leaked reservation");
-    bbCheck(channel.sender.send(body.data(), static_cast<int32_t>(body.size()), 8) == PROCESS_WORK_SENT,
+    bbCheck(channel.m_sender.send(body.data(), static_cast<int32_t>(body.size()), 8) == PROCESS_WORK_SENT,
         "restored mapping could not send");
     ProcessWorkReceiveQueue received;
-    bbCheck(channel.receiver.pump(received, channel.full) == 1, "mapping failure committed or lost a packet");
+    bbCheck(channel.m_receiver.pump(received, channel.m_full) == 1, "mapping failure committed or lost a packet");
     char* packet = nullptr;
     bbCheck(received.take(&packet, 0) && packet != nullptr, "restored message missing");
     int32_t header[3] = {};
@@ -204,6 +248,8 @@ void testProcessWorkResourcePlateau()
         }
 #endif
     }
+#ifdef _WIN32
     std::cout << "warmup_handles=" << baselineHandles << " maximum_handles=" << maximumHandles
         << " warmup_private_bytes=" << baselineBytes << " maximum_private_bytes=" << maximumBytes << std::endl;
+#endif
 }

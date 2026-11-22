@@ -1,5 +1,6 @@
 ﻿#include "ProcessWorkTestAutomation.h"
 #include "ProcessWorkBenchmark.h"
+#include "PlatformTest/PlatformTestAPI.h"
 #include <algorithm>
 #include <cmath>
 #include <climits>
@@ -23,10 +24,18 @@
 */
 static int32_t Integer(const std::string& text, int32_t maximum)
 {
-    bbCheck(!text.empty() && text.find_first_not_of("0123456789") == std::string::npos, "invalid integer: " + text);
-    std::istringstream input(text);
-    int64_t value = 0;
-    bbCheck((input >> value) && value <= maximum, "integer overflow: " + text);
+    const char* cursor = text.c_str();
+    while (*cursor == '0')
+    {
+        ++cursor;
+    }
+    if (cursor != text.c_str() && *cursor == '\0' && static_cast<size_t>(cursor - text.c_str()) == text.size())
+    {
+        return 0;
+    }
+    unsigned value = 0;
+    bbCheck(PlatformTest::caseNumber(cursor, static_cast<unsigned>(maximum), value) &&
+        static_cast<size_t>(cursor - text.c_str()) == text.size(), "invalid integer: " + text);
     return static_cast<int32_t>(value);
 }
 
@@ -285,6 +294,13 @@ void ProcessWorkTestAutomation::cross(const std::string& output, const std::stri
     }
 }
 
+double ProcessWorkTestAutomation::sampleSpread(const std::vector<double>& values)
+{
+    const std::pair<std::vector<double>::const_iterator, std::vector<double>::const_iterator> range =
+        std::minmax_element(values.begin(), values.end());
+    return (*range.second - *range.first) * 100.0 / ProcessWorkTestAutomation::median(values);
+}
+
 int32_t ProcessWorkTestAutomation::matrix(int32_t argc, char** argv)
 {
     bbCheck(argc >= 5, "matrix OUTPUT ROUNDS BASELINE_OR_- CURRENT [--cases names] [--messages total] [--blocks count] [--custom processes,threads,bytes,blocks,mode]");
@@ -369,7 +385,7 @@ int32_t ProcessWorkTestAutomation::matrix(int32_t argc, char** argv)
     std::ofstream summary((output + "/summary.csv").c_str());
     bbCheck(raw.good() && summary.good(), "cannot open matrix reports");
     raw << "case,version,round,passed,produced_per_second,consumed_per_second,log\n";
-    summary << "case,version,passed_rounds,failed_rounds,production_median,production_min,production_max,consumption_median,consumption_min,consumption_max,production_change_percent,consumption_change_percent\n";
+    summary << "case,version,passed_rounds,failed_rounds,production_median,production_min,production_max,consumption_median,consumption_min,consumption_max,production_change_percent,consumption_change_percent,production_spread_percent,consumption_spread_percent\n";
     bool failed = false;
     for (size_t c = 0; c < selected.size(); ++c)
     {
@@ -436,7 +452,7 @@ int32_t ProcessWorkTestAutomation::matrix(int32_t argc, char** argv)
                 summary << std::setprecision(12) << ',' << median(production[p]) << ',' << *std::min_element(production[p].begin(), production[p].end()) <<
                     ',' << *std::max_element(production[p].begin(), production[p].end()) << ',' << median(consumption[p]) <<
                     ',' << *std::min_element(consumption[p].begin(), consumption[p].end()) << ',' << *std::max_element(consumption[p].begin(), consumption[p].end());
-                if (p > 0 && errors[0] == 0)
+                if (p > 0 && errors[0] == 0 && rounds >= 3)
                 {
                     summary << ',' << (median(production[p]) / median(production[0]) - 1) * 100 <<
                         ',' << (median(consumption[p]) / median(consumption[0]) - 1) * 100;
@@ -445,10 +461,11 @@ int32_t ProcessWorkTestAutomation::matrix(int32_t argc, char** argv)
                 {
                     summary << ",,";
                 }
+                summary << ',' << sampleSpread(production[p]) << ',' << sampleSpread(consumption[p]);
             }
             else
             {
-                summary << ",,,,,,,,";
+                summary << ",,,,,,,,,,";
             }
             summary << '\n' << std::flush;
             bbCheck(summary.good(), "summary write failed");
@@ -497,6 +514,8 @@ void ProcessWorkTestAutomation::selfTest()
         }
         bbCheck(rejected, "accepted malformed custom workload");
     }
+    bbCheck(sampleSpread(std::vector<double>{ 9, 10, 11 }) == 20 &&
+        sampleSpread(std::vector<double>{ 10, 10, 10 }) == 0, "sample spread");
     bbCheck(median(std::vector<double>{ 9, 1, 3 }) == 3 && median(std::vector<double>{ 4, 2 }) == 3, "median");
     bbCheck(parse("noise\n{\"verified\":true,\"x\":1.25}\n").at("x") == 1.25, "valid JSON");
     const char* invalid[] = { "", "{\"x\":NaN}", "{\"x\":1,\"x\":2}", "{\"x\":1", "{\"x\":true wrong}", "{\"x\":1}junk" };

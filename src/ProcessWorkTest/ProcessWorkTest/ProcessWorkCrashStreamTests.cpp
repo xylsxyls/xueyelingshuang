@@ -7,7 +7,8 @@
 #include <set>
 #include <algorithm>
 
-ProcessWorkCrashLedger::ProcessWorkCrashLedger() : ownCount(0), childCount(0), errors(0)
+ProcessWorkCrashLedger::ProcessWorkCrashLedger() :
+m_ownCount(0), m_childCount(0), m_errors(0)
 {
 
 }
@@ -27,15 +28,15 @@ void ProcessWorkCrashLedger::receive(int32_t pid, const char* data, int32_t leng
     }
     catch (...)
     {
-        ++errors;
+        ++m_errors;
     }
     if (pid == bbPid())
     {
-        ++ownCount;
+        ++m_ownCount;
     }
     else
     {
-        ++childCount;
+        ++m_childCount;
     }
 }
 
@@ -69,7 +70,7 @@ void testProcessWorkCrashStream()
     scope.start(&ledger, receiveName("crash-stream"), 32, 16);
     for (int32_t cycle = 0; cycle < 6; ++cycle)
     {
-        const int32_t childBefore = ledger.childCount.load();
+        const int32_t childBefore = ledger.m_childCount.load();
         const std::string prefix = bbTempPath("-crash-stream-" + bbNumber(cycle));
         BlackBoxChild child;
         std::vector<std::string> arguments;
@@ -79,8 +80,8 @@ void testProcessWorkCrashStream()
         child.start(arguments, prefix + ".log");
         bbWait([&ledger, &child, &prefix, childBefore]()
         {
-            bbCheck(child.poll() < 0 && ledger.errors.load() == 0, "stream child failed before crash");
-            return bbRead(prefix + ".ready") == "1" && ledger.childCount.load() >= childBefore + 256;
+            bbCheck(child.poll() < 0 && ledger.m_errors.load() == 0, "stream child failed before crash");
+            return bbRead(prefix + ".ready") == "1" && ledger.m_childCount.load() >= childBefore + 256;
         }, "child actively sending");
         IpcJobs survivors;
         for (int32_t stream = 0; stream < 8; ++stream)
@@ -97,8 +98,8 @@ void testProcessWorkCrashStream()
         survivors.drain();
         bbWait([&ledger, cycle]()
         {
-            bbCheck(ledger.errors.load() == 0, "crash damaged a survivor or sender prefix");
-            return ledger.ownCount.load() == (cycle + 1) * 16000;
+            bbCheck(ledger.m_errors.load() == 0, "crash damaged a survivor or sender prefix");
+            return ledger.m_ownCount.load() == (cycle + 1) * 16000;
         }, "all survivor packets delivered", 15000);
 
         // 读取真实共享协议证明完整资源归还，而不只证明剩余一个槽还能收发。
@@ -151,7 +152,7 @@ void testProcessWorkCrashStream()
         std::remove((prefix + ".ready").c_str());
         std::remove((prefix + ".log").c_str());
     }
-    bbCheck(ledger.ownCount.load() == 96000 && ledger.childCount.load() >= 1536 && ledger.errors.load() == 0,
-        "repeated sender crash final ledger mismatch");
     scope.close();
+    bbCheck(ledger.m_ownCount.load() == 96000 && ledger.m_childCount.load() >= 1536 && ledger.m_errors.load() == 0,
+        "repeated sender crash final ledger mismatch");
 }

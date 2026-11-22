@@ -70,7 +70,5 @@
   <ItemGroup>
     <ClCompile Include="ProcessWorkCompatibilityTests.cpp" />
     <ClInclude Include="ProcessWorkCompatibilityTests.h" />
-    <ClCompile Include="ProcessWorkReferenceCases.cpp" />
-    <ClInclude Include="ProcessWorkReferenceCases.h" />
   </ItemGroup>
 </Project>

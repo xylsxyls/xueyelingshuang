@@ -7,19 +7,19 @@
 */
 void testProcessWorkResultContracts();
 
-/** 回调线程请求关闭不释放仍在借用的资源，owner随后完成关闭。
+/** 回调线程请求关闭不释放仍在借用的资源，owner随后完成关闭
 */
 void testProcessWorkSelfClose();
 
-/** 验证共享字段发布顺序、完整64位读取以及失败CAS不修改目标。
+/** 验证共享字段发布顺序、完整64位读取以及失败CAS不修改目标
 */
 void testProcessWorkAtomics();
 
-/** 验证内存保护参数、溢出边界和保留量拒绝结果。
+/** 验证内存保护参数、溢出边界和保留量拒绝结果
 */
 void testProcessWorkMemoryGuard();
 
-/** 验证分页寻址、并发映射安装及正文缩容后的代次隔离。
+/** 验证分页寻址、并发映射安装及正文缩容后的代次隔离
 */
 void testProcessWorkStorage();
 
@@ -46,7 +46,7 @@ void testProcessWorkPreparedSenderCrash();
 */
 int runProcessWorkPreparedSender(int32_t pid, const std::string& prefix);
 
-/** 验证预留不阻挡已提交节点、尾指针帮助以及源节点代次拒绝旧CAS。
+/** 验证预留不阻挡已提交节点、尾指针帮助以及源节点代次拒绝旧CAS
 */
 void testProcessWorkSharedQueue();
 
@@ -54,26 +54,26 @@ void testProcessWorkSharedQueue();
 */
 void testProcessWorkNewStreamRound();
 
-/** 验证共享队列8生产者连续复用节点，无丢失、重复或线程内乱序。
+/** 验证共享队列8生产者连续复用节点，无丢失、重复或线程内乱序
 */
 void testProcessWorkSharedQueueStress();
 
-/** 验证无配置上限能跨过旧1024边界，且零阈值不提前扩容。
+/** 验证无配置上限能跨过旧1024边界，且零阈值不提前扩容
 */
 void testProcessWorkUnlimited();
 
-/** 验证固定扩容计划按字节预算分批完成，内存保护拒绝时完整回滚。
+/** 验证固定扩容计划按字节预算分批完成，内存保护拒绝时完整回滚
 */
 void testProcessWorkGrowthBudget();
 
-/** 白盒子进程在共享提交的不同阶段退出，不插入生产库测试钩子。
+/** 白盒子进程在共享提交的不同阶段退出，不插入生产库测试钩子
 @param [in] argc 参数个数
 @param [in] argv 参数列表
 @return 子进程退出状态
 */
 int runProcessWorkFaultChild(int argc, char** argv);
 
-/** 验证死亡生产者未提交占位回收、已提交正文保留和暂停生产者不被误回收。
+/** 验证死亡生产者未提交占位回收、已提交正文保留和暂停生产者不被误回收
 @param [in] phase 0正文占位、1节点占位、2正常提交、3只链接未推进尾、4存活暂停
 @param [in] abrupt true强制终止实际子进程，false正常退出但留下占位
 */
@@ -90,27 +90,27 @@ int runProcessWorkCrashReceiver(int argc, char** argv);
 */
 void testProcessWorkReceiverCrash();
 
-/** 本地预算耗尽时杀死已提交发送者，维护不能回收尚未复制的正文。
+/** 本地预算耗尽时杀死已提交发送者，维护不能回收尚未复制的正文
 */
 void testProcessWorkDeadSenderBackpressure();
 
-/** 验证批次复制、每包计费、慢消费者预算、块复用和静止清理。
+/** 验证批次复制、每包计费、慢消费者预算、块复用和静止清理
 */
 void testProcessWorkReceiveBatches();
 
-/** 在保护页边界验证0..96字节正文的接收复制，不得越界读写或借用已变化的源数据
+/** 在保护页边界验证0..129字节正文的接收复制，不得越界读写或借用已变化的源数据
 */
 void testProcessWorkReceiveCopyBoundary();
 
-/** 验证接收批次在独立生产和消费线程之间的可变包长FIFO及预算归还。
+/** 验证接收批次在独立生产和消费线程之间的可变包长FIFO及预算归还
 */
 void testProcessWorkReceiveBatchStress();
 
-/** 验证单槽在36字节内联边界两侧复用，不读取另一种存储位置的旧正文。
+/** 验证单槽在36字节内联边界两侧复用，不读取另一种存储位置的旧正文
 */
 void testProcessWorkInlineBoundary();
 
-/** 验证通道缓存借用不复制shared_ptr，重入清空仍保护原值且回调异常不重复调用。
+/** 验证通道缓存借用不复制shared_ptr，重入清空仍保护原值且回调异常不重复调用
 */
 void testProcessWorkBorrowedCache();
 
@@ -142,11 +142,11 @@ void testProcessWorkReceiverPageReuse();
 */
 void testProcessWorkReservationWindow();
 
-/** 验证本地正文计费、单条大消息、失败归还与处理期间保留预算。
+/** 验证本地正文计费、单条大消息、失败归还与处理期间保留预算
 */
 void testProcessWorkLocalBudget();
 
-/** 验证合并通知在高并发满载和空闲切换中不丢失消息。
+/** 验证合并通知在高并发满载和空闲切换中不丢失消息
 */
 void testProcessWorkLocalQueueStress();
 
@@ -156,7 +156,7 @@ void testProcessWorkLocalQueueStress();
 void testProcessWorkPostLimitedCpu();
 #endif
 
-/** 验证tryPost预算失败不会提交，未启动发送线程时也不会无限等待。
+/** 验证tryPost预算失败不会提交，未启动发送线程时也不会无限等待
 */
 void testProcessWorkPostBudget();
 
@@ -164,11 +164,11 @@ void testProcessWorkPostBudget();
 */
 void testProcessWorkPostContention();
 
-/** 阻塞回调时本地计费不增长，共享满载产生背压，恢复后消息完整有序。
+/** 阻塞回调时本地计费不增长，共享满载产生背压，恢复后消息完整有序
 */
 void testProcessWorkSlowCallback();
 
-/** 篡改已提交节点的正文下标，验证撤销通道且不重复交付
+/** 篡改已提交节点的正文下标及内联/独立正文包头，验证撤销通道且不交付损坏消息
 */
 void testProcessWorkCorruption();
 

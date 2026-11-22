@@ -18,27 +18,35 @@ static void WaitMaintenanceWindow()
 {
     const uint64_t started = ProcessWorkTime::milliseconds();
     // 返回true时至少跨过25个维护毫秒；等待期间不消费或改变共享队列。
-    bbWait([started]()
-    {
-        return ProcessWorkTime::milliseconds() - started >= 25;
-    }, "maintenance clock window");
+    bbWait(
+        [started]()
+        {
+            return ProcessWorkTime::milliseconds() - started >= 25;
+        },
+        "maintenance clock window");
 }
 
 void testProcessWorkSelfClose()
 {
     PacketLog log;
-    IpcScope scope;
     std::atomic<bool> returned(false);
-    log.action = [&returned](const ReceivedPacket&)
+    IpcScope scope;
+    log.m_action = [&returned](const ReceivedPacket&)
     {
         ProcessWork::instance().uninitReceive();
         returned.store(true);
     };
     scope.start(&log, receiveName("self-close"), 64, 4);
     sendPacket(0, bbPid(), "", "owned", 1);
-    bbWait([&returned]() { return returned.load(); }, "self-close returned");
+    bbWait(
+        [&returned]()
+        {
+            return returned.load();
+        },
+        "self-close returned");
     scope.close();
-    bbCheck(log.errors == 0 && log.snapshot().size() == 1 && log.snapshot()[0].body == "owned", "self-close invalidated callback data");
+    bbCheck(log.m_errors == 0 && log.snapshot().size() == 1 && log.snapshot()[0].m_body == "owned",
+        "self-close invalidated callback data");
 }
 
 void testProcessWorkAtomics()
@@ -49,13 +57,14 @@ void testProcessWorkAtomics()
     for (int32_t thread = 0; thread < 4; ++thread)
     {
         // 同时跨越32位边界，确认32位构建没有丢更新或截断高位。
-        increments.add([&counter]()
-        {
-            for (int32_t i = 0; i < 10000; ++i)
+        increments.add(
+            [&counter]()
             {
-                ProcessWorkAtomic::increment(&counter.m_nextSession);
-            }
-        });
+                for (int32_t i = 0; i < 10000; ++i)
+                {
+                    ProcessWorkAtomic::increment(&counter.m_nextSession);
+                }
+            });
     }
     increments.drain();
     bbCheck(ProcessWorkAtomic::load(&counter.m_nextSession) == 0xffffff00LL + 40000,
@@ -63,56 +72,65 @@ void testProcessWorkAtomics()
     int64_t compared = 0x100000007LL;
     bbCheck(ProcessWorkAtomic::compareExchange(&compared, 7, 9) == 0x100000007LL && compared == 0x100000007LL,
         "failed CAS did not return full observed value");
-    bbCheck(ProcessWorkAtomic::compareExchange(&compared, 0x100000007LL, 0x200000009LL) == 0x100000007LL && compared == 0x200000009LL,
+    bbCheck(ProcessWorkAtomic::compareExchange(&compared, 0x100000007LL, 0x200000009LL) == 0x100000007LL &&
+            compared == 0x200000009LL,
         "successful CAS did not return previous value");
     ProcessWorkSharedDirectory state = {};
     int32_t phase = 0;
-    bbCheck(!ProcessWorkAtomic::replace(&phase, 7, 1) && ProcessWorkAtomic::load(&phase) == 0, "failed CAS wrote value");
+    bbCheck(
+        !ProcessWorkAtomic::replace(&phase, 7, 1) && ProcessWorkAtomic::load(&phase) == 0, "failed CAS wrote value");
     bbCheck(ProcessWorkAtomic::replace(&state.m_session, int64_t(0), INT64_MAX), "64-bit CAS failed");
     bbCheck(ProcessWorkAtomic::load(&state.m_session) == INT64_MAX, "64-bit load truncated");
     bbCheck(ProcessWorkAtomic::replace(&state.m_session, INT64_MAX, int64_t(0)), "64-bit reset failed");
     IpcJobs jobs;
-    jobs.add([&state]()
-    {
-        for (int32_t i = 1; i <= 10000; ++i)
+    jobs.add(
+        [&state]()
         {
-            bbWait([&state]()
+            for (int32_t i = 1; i <= 10000; ++i)
             {
-                for (int32_t spin = 0; spin < 10000; ++spin)
-                {
-                    if (ProcessWorkAtomic::load(&state.m_session) == 0)
+                bbWait(
+                    [&state]()
                     {
-                        return true;
-                    }
-                    std::this_thread::yield();
-                }
-                return false;
-            }, "writer phase");
-            state.m_identity = static_cast<uint64_t>(i) * 0x100000001ULL;
-            ProcessWorkAtomic::store(&state.m_session, static_cast<int64_t>(i) * 0x100000001LL);
-        }
-    });
-    jobs.add([&state]()
-    {
-        for (int32_t i = 1; i <= 10000; ++i)
+                        for (int32_t spin = 0; spin < 10000; ++spin)
+                        {
+                            if (ProcessWorkAtomic::load(&state.m_session) == 0)
+                            {
+                                return true;
+                            }
+                            std::this_thread::yield();
+                        }
+                        return false;
+                    },
+                    "writer phase");
+                state.m_identity = static_cast<uint64_t>(i) * 0x100000001ULL;
+                ProcessWorkAtomic::store(&state.m_session, static_cast<int64_t>(i) * 0x100000001LL);
+            }
+        });
+    jobs.add(
+        [&state]()
         {
-            bbWait([&state]()
+            for (int32_t i = 1; i <= 10000; ++i)
             {
-                for (int32_t spin = 0; spin < 10000; ++spin)
-                {
-                    if (ProcessWorkAtomic::load(&state.m_session) != 0)
+                bbWait(
+                    [&state]()
                     {
-                        return true;
-                    }
-                    std::this_thread::yield();
-                }
-                return false;
-            }, "reader phase");
-            bbCheck(state.m_identity == static_cast<uint64_t>(i) * 0x100000001ULL, "publication tore payload");
-            bbCheck(ProcessWorkAtomic::load(&state.m_session) == static_cast<int64_t>(i) * 0x100000001LL, "64-bit release store tore");
-            ProcessWorkAtomic::store(&state.m_session, int64_t(0));
-        }
-    });
+                        for (int32_t spin = 0; spin < 10000; ++spin)
+                        {
+                            if (ProcessWorkAtomic::load(&state.m_session) != 0)
+                            {
+                                return true;
+                            }
+                            std::this_thread::yield();
+                        }
+                        return false;
+                    },
+                    "reader phase");
+                bbCheck(state.m_identity == static_cast<uint64_t>(i) * 0x100000001ULL, "publication tore payload");
+                bbCheck(ProcessWorkAtomic::load(&state.m_session) == static_cast<int64_t>(i) * 0x100000001LL,
+                    "64-bit release store tore");
+                ProcessWorkAtomic::store(&state.m_session, int64_t(0));
+            }
+        });
     jobs.drain();
 }
 
@@ -143,7 +161,8 @@ void testProcessWorkStorage()
     ProcessWorkStorage sender(bbPid(), identity, 0xfffffe, 64, 1, false, config);
     bbCheck(receiver.create(1, 1) && receiver.create(256, 1) && receiver.create(65536, 1), "paged create failed");
     bbCheck(receiver.node(256) != nullptr && receiver.block(65536) != nullptr, "page boundary lookup failed");
-    bbCheck(receiver.page(0x1000000) == nullptr && sender.page(2, true) == nullptr, "invalid directory access accepted");
+    bbCheck(
+        receiver.page(0x1000000) == nullptr && sender.page(2, true) == nullptr, "invalid directory access accepted");
     std::unique_ptr<SharedMemory> temporary;
     char* source = receiver.data(1, 1, temporary);
     bbCheck(source != nullptr, "initial body missing");
@@ -151,15 +170,17 @@ void testProcessWorkStorage()
     IpcJobs jobs;
     for (int32_t i = 0; i < 8; ++i)
     {
-        jobs.add([&sender]()
-        {
-            for (int32_t n = 0; n < 1000; ++n)
+        jobs.add(
+            [&sender]()
             {
-                std::unique_ptr<SharedMemory> view;
-                char* data = sender.data(1, 1, view);
-                bbCheck(data != nullptr && data[0] == 'A' && sender.node(65536) != nullptr, "concurrent mapping publication failed");
-            }
-        });
+                for (int32_t n = 0; n < 1000; ++n)
+                {
+                    std::unique_ptr<SharedMemory> view;
+                    char* data = sender.data(1, 1, view);
+                    bbCheck(data != nullptr && data[0] == 'A' && sender.node(65536) != nullptr,
+                        "concurrent mapping publication failed");
+                }
+            });
     }
     jobs.drain();
     ProcessWorkSharedBlock* block = receiver.block(256);
@@ -178,32 +199,45 @@ void testProcessWorkStorage()
     char* received = receiver.data(*receiver.page(256), 256, 2, fresh);
     bbCheck(received != nullptr && received[0] == 0, "receiver reused retired cached address");
     bbCheck(sender.page(256)->m_addresses[0].load() == nullptr, "sender cached shrinkable body address");
-    bbCheck(ProcessWorkStorage::objectName('B', bbPid(), identity, 1, 0x1000000, 1).empty(), "name silently truncated index");
+    bbCheck(ProcessWorkStorage::objectName('B', bbPid(), identity, 1, 0x1000000, 1).empty(),
+        "name silently truncated index");
     bbCheck(ProcessWorkStorage::objectName('B', bbPid(), identity, 1, 65536, 1) !=
-        ProcessWorkStorage::objectName('B', bbPid(), identity, 1, 0, 1), "name index alias");
+            ProcessWorkStorage::objectName('B', bbPid(), identity, 1, 0, 1),
+        "name index alias");
 }
 
 void testProcessWorkPrepareSend()
 {
-    const int32_t lengths[] = { 6, 64, 65536 };
+    const int32_t lengths[] = {6, 64, 65536};
     for (size_t i = 0; i < 3; ++i)
     {
         PacketLog log;
         IpcScope scope;
         ProcessWork& ipc = ProcessWork::instance();
-        bbCheck(ipc.addProcessReceiveCallback(&log) && ipc.initReceive(lengths[i] + 12, 257, 0, 0, 0, 0), "prepare receiver init");
+        bbCheck(ipc.addProcessReceiveCallback(&log) && ipc.initReceive(lengths[i] + 12, 257, 0, 0, 0, 0),
+            "prepare receiver init");
         bbCheck(!ipc.prepareSend(0) && !ipc.prepareSend(bbPid(), 0) && !ipc.prepareSend(bbPid(), -2) &&
-            !ipc.prepareSend(bbPid(), 258), "prepare accepted invalid target or prefix");
+                !ipc.prepareSend(bbPid(), 258),
+            "prepare accepted invalid target or prefix");
         bbCheck(ipc.prepareSend(bbPid(), 1, true) && ipc.prepareSend(bbPid(), -1, false) &&
-            ipc.prepareSend(bbPid(), -1, true), "prepare mapping failed");
-        bbCheck(log.snapshot().empty() && ipc.receiveBufferCount() == 257, "prepare submitted a message or grew capacity");
+                ipc.prepareSend(bbPid(), -1, true),
+            "prepare mapping failed");
+        bbCheck(
+            log.snapshot().empty() && ipc.receiveBufferCount() == 257, "prepare submitted a message or grew capacity");
         std::string body(static_cast<size_t>(lengths[i]), 'w');
-        bbCheck(ipc.initPostThread() && ipc.send(bbPid(), body) && ipc.post(bbPid(), body), "prepared send/post failed");
-        bbWait([&log]() { return log.snapshot().size() == 2; }, "prepared deliveries");
+        bbCheck(
+            ipc.initPostThread() && ipc.send(bbPid(), body) && ipc.post(bbPid(), body), "prepared send/post failed");
+        bbWait(
+            [&log]()
+            {
+                return log.snapshot().size() == 2;
+            },
+            "prepared deliveries");
         ipc.uninitReceive();
         const std::vector<ReceivedPacket> packets = log.snapshot();
-        bbCheck(packets.size() == 2 && packets[0].body == body && packets[1].body == body &&
-            packets[0].pid == bbPid() && packets[1].pid == bbPid(), "prepared payload changed");
+        bbCheck(packets.size() == 2 && packets[0].m_body == body && packets[1].m_body == body &&
+                packets[0].m_pid == bbPid() && packets[1].m_pid == bbPid(),
+            "prepared payload changed");
     }
 }
 
@@ -232,8 +266,8 @@ static void TestGrantedBody(int32_t blocks, int32_t bytes)
             int32_t header[3] = {};
             std::memcpy(header, packet, sizeof(header));
             const int32_t stream = header[1] / 2000;
-            const bool valid = stream >= 0 && stream < 8 && header[1] % 2000 == next[stream] &&
-                header[0] == bbPid() && header[2] == bytes &&
+            const bool valid = stream >= 0 && stream < 8 && header[1] % 2000 == next[stream] && header[0] == bbPid() &&
+                header[2] == bytes &&
                 std::memcmp(packet + 12, packetBody(header[1], bytes).data(), static_cast<size_t>(bytes)) == 0;
             received.release(packet);
             bbCheck(valid, "granted page body/FIFO mismatch");
@@ -247,24 +281,42 @@ static void TestGrantedBody(int32_t blocks, int32_t bytes)
         for (int32_t stream = 0; stream < 8; ++stream)
         {
             // 每条生产流独立构造正文与序号；成功后才推进下一条。
-            jobs.add([&, stream]()
-            {
-                for (int32_t i = 0; i < 2000; ++i)
+            jobs.add(
+                [&, stream]()
                 {
-                    const int32_t type = stream * 2000 + i;
-                    const std::string body = packetBody(type, bytes);
-                    bbCheck(sender.send(body.data(), bytes, type) == PROCESS_WORK_SENT, "granted page send failed");
-                    ++sent;
-                }
-                ++done;
-            });
+                    for (int32_t i = 0; i < 2000; ++i)
+                    {
+                        const int32_t type = stream * 2000 + i;
+                        const std::string body = packetBody(type, bytes);
+                        bbCheck(sender.send(body.data(), bytes, type) == PROCESS_WORK_SENT, "granted page send failed");
+                        ++sent;
+                    }
+                    ++done;
+                });
         }
-        bbWait([&]() { pump(); return sent.load() > 0; }, "grant producers registered");
+        bbWait(
+            [&]()
+            {
+                pump();
+                return sent.load() > 0;
+            },
+            "grant producers registered");
         const int32_t copied = count;
-        bbWait([&]() { return sent.load() >= copied + blocks; }, "shared pool filled before resume");
+        bbWait(
+            [&]()
+            {
+                return sent.load() >= copied + blocks;
+            },
+            "shared pool filled before resume");
         bbSleep(30);
         bbCheck(done.load() == 0, "full pool did not hold producers");
-        bbWait([&]() { pump(); return done.load() == 8 && count == 16000; }, "cross-page granted deliveries");
+        bbWait(
+            [&]()
+            {
+                pump();
+                return done.load() == 8 && count == 16000;
+            },
+            "cross-page granted deliveries");
         jobs.drain();
         bbCheck(pump() == 16000, "granted page duplicates");
     }
@@ -298,13 +350,15 @@ void testProcessWorkIdleGrant()
     received.release(packet);
 
     SharedMemory directoryMemory("P3D" + bbNumber(bbPid()));
-    ProcessWorkSharedDirectory* directory = static_cast<ProcessWorkSharedDirectory*>(directoryMemory.writeWithoutLock());
+    ProcessWorkSharedDirectory* directory =
+        static_cast<ProcessWorkSharedDirectory*>(directoryMemory.writeWithoutLock());
     bbCheck(directory != nullptr, "idle grant directory");
     const uint32_t session = static_cast<uint32_t>(ProcessWorkAtomic::load(&directory->m_session));
     const uint64_t identity = directory->m_identity;
     SharedMemory controlMemory(ProcessWorkChannel::objectName('C', bbPid(), identity, session));
     ProcessWorkSharedControl* control = static_cast<ProcessWorkSharedControl*>(controlMemory.writeWithoutLock());
-    bbCheck(control != nullptr && ProcessWorkAtomic::load(&control->m_dataSignal) == 1, "idle grant merged notification");
+    bbCheck(
+        control != nullptr && ProcessWorkAtomic::load(&control->m_dataSignal) == 1, "idle grant merged notification");
     int64_t token = 0;
     for (size_t i = 0; i < 256; ++i)
     {
@@ -335,15 +389,15 @@ void testProcessWorkIdleGrant()
     bbCheck(block != nullptr, "idle grant block");
     char* data = storage.data(index, static_cast<uint32_t>(ProcessWorkAtomic::load(&block->m_generation)), temporary);
     bbCheck(data != nullptr, "idle grant body mapping");
-    const int32_t header[3] = { bbPid(), 1, 65536 };
+    const int32_t header[3] = {bbPid(), 1, 65536};
     const std::string body = packetBody(1, 65536);
     std::memcpy(data, header, sizeof(header));
     std::memcpy(data + 12, body.data(), body.size());
     uint32_t hint = 0;
     bbCheck(queue.enqueue(*producer, static_cast<int32_t>(index), false, 64, hint), "idle grant publish");
     bbCheck(receiver.pump(received, full) == 1 && received.take(&packet, 0), "idle grant delivery");
-    const bool valid = std::memcmp(packet, header, sizeof(header)) == 0 &&
-        std::memcmp(packet + 12, body.data(), body.size()) == 0;
+    const bool valid =
+        std::memcmp(packet, header, sizeof(header)) == 0 && std::memcmp(packet + 12, body.data(), body.size()) == 0;
     received.release(packet);
     bbCheck(valid && !received.take(&packet, 0), "idle grant corruption or duplicate");
 }
@@ -354,14 +408,24 @@ int runProcessWorkPreparedSender(int32_t pid, const std::string& prefix)
     bbCheck(ipc.prepareSend(pid, -1, true), "crash sender prepare");
     bbCheck(ipc.send(pid, "", 0, static_cast<MessageType>(0)), "crash sender registration");
     bbWrite(prefix + ".ready", "1");
-    bbWait([&]() { return bbRead(prefix + ".go") == "1"; }, "prepared sender start");
+    bbWait(
+        [&]()
+        {
+            return bbRead(prefix + ".go") == "1";
+        },
+        "prepared sender start");
     for (int32_t i = 1; i <= 100; ++i)
     {
         const std::string body = packetBody(i, i % 2 == 0 ? 65536 : 64);
         bbCheck(ipc.send(pid, body, static_cast<MessageType>(i)), "prepared public send failed");
     }
     bbWrite(prefix + ".sent", "1");
-    bbWait([]() { return false; }, "parent terminates prepared sender", 60000);
+    bbWait(
+        []()
+        {
+            return false;
+        },
+        "parent terminates prepared sender", 60000);
     return 1;
 }
 
@@ -374,35 +438,55 @@ void testProcessWorkPreparedSenderCrash()
     receiver.publish();
     const std::string prefix = bbTempPath("-prepared-crash");
     BlackBoxChild child;
-    child.start(std::vector<std::string>{ "--prepared-sender", bbNumber(bbPid()), prefix }, prefix + ".log");
-    bbWait([&]() { receiver.pump(received, full); bbCheck(child.poll() < 0, "prepared child exited");
-        return bbRead(prefix + ".ready") == "1"; }, "prepared child ready");
+    child.start(std::vector<std::string>{"--prepared-sender", bbNumber(bbPid()), prefix}, prefix + ".log");
+    bbWait(
+        [&]()
+        {
+            receiver.pump(received, full);
+            bbCheck(child.poll() < 0, "prepared child exited");
+            return bbRead(prefix + ".ready") == "1";
+        },
+        "prepared child ready");
     char* packet = nullptr;
-    bbWait([&]() { receiver.pump(received, full); return received.take(&packet, 0); }, "registration packet");
+    bbWait(
+        [&]()
+        {
+            receiver.pump(received, full);
+            return received.take(&packet, 0);
+        },
+        "registration packet");
     received.release(packet);
     bbWrite(prefix + ".go", "1");
     // 此后不pump，确保100条都还在共享缓冲区；只有全部send返回成功才允许强杀。
-    bbWait([&]() { bbCheck(child.poll() < 0, "prepared child failed sending");
-        return bbRead(prefix + ".sent") == "1"; }, "prepared messages committed");
+    bbWait(
+        [&]()
+        {
+            bbCheck(child.poll() < 0, "prepared child failed sending");
+            return bbRead(prefix + ".sent") == "1";
+        },
+        "prepared messages committed");
     CrashOwnedChild(child);
     bbSleep(30);
     int32_t count = 0;
-    bbWait([&]()
-    {
-        receiver.pump(received, full);
-        while (received.take(&packet, 0))
+    bbWait(
+        [&]()
         {
-            int32_t header[3] = {};
-            std::memcpy(header, packet, sizeof(header));
-            const std::string expected = packetBody(count + 1, (count + 1) % 2 == 0 ? 65536 : 64);
-            const bool valid = header[0] == child.pid() && header[1] == count + 1 &&
-                header[2] == static_cast<int32_t>(expected.size()) && std::memcmp(packet + 12, expected.data(), expected.size()) == 0;
-            received.release(packet);
-            bbCheck(valid, "prepared committed message lost/corrupted after sender death");
-            ++count;
-        }
-        return count == 100;
-    }, "prepared dead sender deliveries");
+            receiver.pump(received, full);
+            while (received.take(&packet, 0))
+            {
+                int32_t header[3] = {};
+                std::memcpy(header, packet, sizeof(header));
+                const std::string expected = packetBody(count + 1, (count + 1) % 2 == 0 ? 65536 : 64);
+                const bool valid = header[0] == child.pid() && header[1] == count + 1 &&
+                    header[2] == static_cast<int32_t>(expected.size()) &&
+                    std::memcmp(packet + 12, expected.data(), expected.size()) == 0;
+                received.release(packet);
+                bbCheck(valid, "prepared committed message lost/corrupted after sender death");
+                ++count;
+            }
+            return count == 100;
+        },
+        "prepared dead sender deliveries");
     receiver.pump(received, full);
     bbCheck(!received.take(&packet, 0), "prepared sender duplicate");
 }
@@ -425,7 +509,8 @@ void testProcessWorkSharedQueue()
     uint32_t slow = 0, hint = 2, next = 0;
     int32_t value = 0;
     bbCheck(queue.reserve(1, 2, 1, slow), "reserve failed");
-    bbCheck(queue.enqueue(2, 22, false, 2, hint) && queue.front(next, value) && value == 22, "unpublished reservation blocked committed node");
+    bbCheck(queue.enqueue(2, 22, false, 2, hint) && queue.front(next, value) && value == 22,
+        "unpublished reservation blocked committed node");
     const uint32_t consumed = next;
     bbCheck(queue.consume(next) && !queue.front(next, value), "consume failed");
     bbCheck(!queue.consume(consumed), "same node consumed twice");
@@ -437,7 +522,8 @@ void testProcessWorkSharedQueue()
             bool inlined = true;
             const uint32_t stale = next;
             bbCheck(queue.front(next, value, inlined) && value == 22 + i && !inlined &&
-                queue.front(next, value, inlined) && value == 22 + i, "body peek advanced or changed payload");
+                    queue.front(next, value, inlined) && value == 22 + i,
+                "body peek advanced or changed payload");
             bbCheck(!queue.consume(stale) && queue.consume(next, 13) && !queue.consume(next),
                 "consume accepted stale position or duplicate confirmation");
         }
@@ -451,13 +537,17 @@ void testProcessWorkSharedQueue()
     const int64_t committedTail = ProcessWorkAtomic::load(&producer->m_shared->m_writeNode);
     ProcessWorkAtomic::store(&producer->m_shared->m_writeNode, initialHead);
     bool inlined = false;
-    bbCheck(queue.front(next, value, inlined) && value == 11 && inlined && queue.consume(next), "lagging producer cursor stranded stream");
-    bbCheck(ProcessWorkAtomic::load(&producer->m_shared->m_head) == committedTail, "consumer did not follow committed link");
+    bbCheck(queue.front(next, value, inlined) && value == 11 && inlined && queue.consume(next),
+        "lagging producer cursor stranded stream");
+    bbCheck(ProcessWorkAtomic::load(&producer->m_shared->m_head) == committedTail,
+        "consumer did not follow committed link");
     ProcessWorkAtomic::store(&producer->m_shared->m_writeNode, committedTail);
     uint32_t reused = 0;
     bbCheck(queue.reserve(3, 2, 3, reused) && reused == initialIndex, "old stream segment not reusable");
-    bbCheck(!ProcessWorkAtomic::replace(&queue.node(reused)->m_link, originalLink, originalLink | 2), "stale writer passed generation guard");
-    bbCheck(!ProcessWorkAtomic::replace(&queue.node(reused)->m_cells[0], originalLink, originalLink | 99), "stale cell writer passed generation guard");
+    bbCheck(!ProcessWorkAtomic::replace(&queue.node(reused)->m_link, originalLink, originalLink | 2),
+        "stale writer passed generation guard");
+    bbCheck(!ProcessWorkAtomic::replace(&queue.node(reused)->m_cells[0], originalLink, originalLink | 99),
+        "stale cell writer passed generation guard");
     queue.cancel(reused, 3);
     queue.cancel(slow, 1);
     bbCheck(!queue.front(next, value), "queue duplicated entry");
@@ -485,12 +575,12 @@ void testProcessWorkFreeSlotsWithWaiters()
     ProcessWorkAtomic::store(&body->m_owner, int64_t(14));
     queue.releaseBody(1, *body);
     uint32_t granted = 0;
-    bbCheck(queue.takeGrant(*first, false, granted) && granted == 1 &&
-        ProcessWorkAtomic::load(&body->m_owner) == 11, "first waiter did not receive returned resource directly");
+    bbCheck(queue.takeGrant(*first, false, granted) && granted == 1 && ProcessWorkAtomic::load(&body->m_owner) == 11,
+        "first waiter did not receive returned resource directly");
     bbCheck(!ProcessWorkAtomic::replace(&body->m_owner, int64_t(0), int64_t(13)), "new request stole a granted body");
     queue.releaseBody(1, *body);
-    bbCheck(queue.takeGrant(*second, false, granted) && granted == 1 &&
-        ProcessWorkAtomic::load(&body->m_owner) == 12, "second waiter starved behind a new request");
+    bbCheck(queue.takeGrant(*second, false, granted) && granted == 1 && ProcessWorkAtomic::load(&body->m_owner) == 12,
+        "second waiter starved behind a new request");
     queue.releaseBody(1, *body);
     bbCheck(ProcessWorkAtomic::load(&body->m_owner) == 0, "drained waiters retained returned body");
 }
@@ -515,8 +605,7 @@ void testProcessWorkNewStreamRound()
         {
             queue.recoverToken(1);
         }
-        bbCheck(queue.front(slot, value) && value == 123,
-            "first front missed ready stream across old round boundary");
+        bbCheck(queue.front(slot, value) && value == 123, "first front missed ready stream across old round boundary");
         bbCheck(queue.consume(slot) && !queue.front(slot, value), "new stream duplicated data");
     }
 }
@@ -528,23 +617,35 @@ void testProcessWorkBorrowedCache()
     bbCheck(values.lockFreeMapSet(1, candidate) == LOCK_FREE_MAP_COMMITTED, "cache fixture insertion failed");
     const long references = candidate.use_count();
     int32_t called = 0;
-    bbCheck(values.lockFreeMapVisit(1, [&values, &candidate, references, &called](const std::shared_ptr<int32_t>& value)
-    {
-        ++called;
-        bbCheck(candidate.use_count() == references && value == candidate && *value == 73, "borrowed visit copied or corrupted value");
-        values.clear();
-        size_t released = 0;
-        values.lockFreeMapMaintain(100, released);
-        bbCheck(*value == 73, "reentrant erase invalidated protected value");
-    }) == LOCK_FREE_MAP_OK && called == 1, "borrowed callback repeated or failed");
-    bbCheck(values.lockFreeMapVisit(1, [&called](const std::shared_ptr<int32_t>&) { ++called; }) == LOCK_FREE_MAP_NOT_FOUND && called == 1,
+    bbCheck(values.lockFreeMapVisit(1,
+                [&values, &candidate, references, &called](const std::shared_ptr<int32_t>& value)
+                {
+                    ++called;
+                    bbCheck(candidate.use_count() == references && value == candidate && *value == 73,
+                        "borrowed visit copied or corrupted value");
+                    values.clear();
+                    size_t released = 0;
+                    values.lockFreeMapMaintain(100, released);
+                    bbCheck(*value == 73, "reentrant erase invalidated protected value");
+                }) == LOCK_FREE_MAP_OK &&
+            called == 1,
+        "borrowed callback repeated or failed");
+    bbCheck(values.lockFreeMapVisit(1,
+                [&called](const std::shared_ptr<int32_t>&)
+                {
+                    ++called;
+                }) == LOCK_FREE_MAP_NOT_FOUND &&
+            called == 1,
         "missing key invoked callback");
     bbCheck(values.lockFreeMapSet(1, candidate) == LOCK_FREE_MAP_COMMITTED, "cache reinsertion failed");
-    bbCheck(values.lockFreeMapVisit(1, [&called](const std::shared_ptr<int32_t>&)
-    {
-        ++called;
-        throw std::runtime_error("intentional visit failure");
-    }) == LOCK_FREE_MAP_USER_EXCEPTION && called == 2, "throwing callback retried or escaped");
+    bbCheck(values.lockFreeMapVisit(1,
+                [&called](const std::shared_ptr<int32_t>&)
+                {
+                    ++called;
+                    throw std::runtime_error("intentional visit failure");
+                }) == LOCK_FREE_MAP_USER_EXCEPTION &&
+            called == 2,
+        "throwing callback retried or escaped");
 }
 
 void testProcessWorkSharedQueueStress()
@@ -563,24 +664,26 @@ void testProcessWorkSharedQueueStress()
     const int32_t perProducer = 50000;
     std::atomic<bool> cancel(false);
     IpcJobs jobs;
-    for (int32_t producer = 0; producer < 8; ++producer)
-    {
-        jobs.add([&queue, &cancel, producer, perProducer]()
-        {
-            uint32_t hint = static_cast<uint32_t>(producer);
-            for (int32_t sequence = 0; sequence < perProducer && !cancel.load(); ++sequence)
-            {
-                while (!cancel.load() && !queue.enqueue(producer + 1, producer * perProducer + sequence + 1, false, 256, hint))
-                {
-                    std::this_thread::yield();
-                }
-            }
-        });
-    }
-    int32_t expected[8] = {};
-    const uint64_t deadline = bbNow() + 30000;
     try
     {
+        for (int32_t producer = 0; producer < 8; ++producer)
+        {
+            jobs.add(
+                [&queue, &cancel, producer, perProducer]()
+                {
+                    uint32_t hint = static_cast<uint32_t>(producer);
+                    for (int32_t sequence = 0; sequence < perProducer && !cancel.load(); ++sequence)
+                    {
+                        while (!cancel.load() &&
+                            !queue.enqueue(producer + 1, producer * perProducer + sequence + 1, false, 256, hint))
+                        {
+                            std::this_thread::yield();
+                        }
+                    }
+                });
+        }
+        int32_t expected[8] = {};
+        const uint64_t deadline = bbNow() + 30000;
         for (int32_t received = 0; received < perProducer * 8;)
         {
             uint32_t index = 0;
@@ -593,7 +696,8 @@ void testProcessWorkSharedQueueStress()
             }
             --value;
             const int32_t producer = value / perProducer;
-            bbCheck(value >= 0 && producer < 8 && value % perProducer == expected[producer], "queue lost, duplicated or reordered item");
+            bbCheck(value >= 0 && producer < 8 && value % perProducer == expected[producer],
+                "queue lost, duplicated or reordered item");
             ++expected[producer];
             bbCheck(queue.consume(index), "queue consume failed");
             ++received;
@@ -617,27 +721,31 @@ void testProcessWorkSenderAddressCache()
     {
         for (int32_t item = 0; item < 700; ++item)
         {
-            ProcessWorkChannel& sender = (item & 1) == 0 ? channel.sender : alternate;
+            ProcessWorkChannel& sender = (item & 1) == 0 ? channel.m_sender : alternate;
             // 仅尚未登记时通过公共维护推进，成功一次即停止重试，不重复投递。
-            bbWait([&sender, &channel, sequence]()
-            {
-                const int32_t result = sender.trySend("x", 1, sequence);
-                if (result == PROCESS_WORK_SENT)
+            bbWait(
+                [&sender, &channel, sequence]()
                 {
-                    return true;
-                }
-                bbCheck(result == PROCESS_WORK_RESOURCE || result == PROCESS_WORK_CAPACITY,
-                    "alternate sender returned unexpected failure");
-                channel.pump();
-                return false;
-            }, "alternating sender admission");
+                    const int32_t result = sender.trySend("x", 1, sequence);
+                    if (result == PROCESS_WORK_SENT)
+                    {
+                        return true;
+                    }
+                    bbCheck(result == PROCESS_WORK_RESOURCE || result == PROCESS_WORK_CAPACITY,
+                        "alternate sender returned unexpected failure");
+                    channel.pump();
+                    return false;
+                },
+                "alternating sender admission");
             ++sequence;
         }
-        bbWait([&channel, sequence]()
-        {
-            channel.pump();
-            return channel.delivered.size() == static_cast<size_t>(sequence);
-        }, "alternating sender drain");
+        bbWait(
+            [&channel, sequence]()
+            {
+                channel.pump();
+                return channel.m_delivered.size() == static_cast<size_t>(sequence);
+            },
+            "alternating sender drain");
         if (round % 7 == 6)
         {
             alternate.close();
@@ -646,13 +754,13 @@ void testProcessWorkSenderAddressCache()
     }
     for (int32_t index = 0; index < sequence; ++index)
     {
-        bbCheck(channel.delivered[index] == index, "cached sender address lost or reordered message");
+        bbCheck(channel.m_delivered[index] == index, "cached sender address lost or reordered message");
     }
 }
 
 void testProcessWorkReservationWindow()
 {
-    const int32_t capacities[] = { 1, 63, 64, 65, 129, 255, 256, 257, 511, 512, 513 };
+    const int32_t capacities[] = {1, 63, 64, 65, 129, 255, 256, 257, 511, 512, 513};
     for (size_t sample = 0; sample < sizeof(capacities) / sizeof(capacities[0]); ++sample)
     {
         PublicChannelScope channel(capacities[sample], 0, 0, 0, 0);
@@ -661,23 +769,25 @@ void testProcessWorkReservationWindow()
         {
             for (int32_t item = 0; item < capacities[sample]; ++item)
             {
-                bbCheck(channel.sender.trySend("x", 1, sequence) == PROCESS_WORK_SENT,
+                bbCheck(channel.m_sender.trySend("x", 1, sequence) == PROCESS_WORK_SENT,
                     "reservation hint hid available shared capacity");
                 ++sequence;
             }
-            bbCheck(channel.sender.trySend("x", 1, sequence) == PROCESS_WORK_CAPACITY,
+            bbCheck(channel.m_sender.trySend("x", 1, sequence) == PROCESS_WORK_CAPACITY,
                 "full shared capacity was bypassed or misclassified as contention");
             // 仅消费至本轮最后序号；失败的额外发送不能留下重复提交。
-            bbWait([&channel, sequence]()
-            {
-                channel.pump();
-                return channel.delivered.size() == static_cast<size_t>(sequence);
-            }, "reservation window drain");
+            bbWait(
+                [&channel, sequence]()
+                {
+                    channel.pump();
+                    return channel.m_delivered.size() == static_cast<size_t>(sequence);
+                },
+                "reservation window drain");
         }
-        bbCheck(channel.receiver.bufferCount() == capacities[sample], "fixed window test grew shared capacity");
+        bbCheck(channel.m_receiver.bufferCount() == capacities[sample], "fixed window test grew shared capacity");
         for (int32_t item = 0; item < sequence; ++item)
         {
-            bbCheck(channel.delivered[item] == item, "reservation window reuse lost FIFO");
+            bbCheck(channel.m_delivered[item] == item, "reservation window reuse lost FIFO");
         }
     }
 }
@@ -688,52 +798,76 @@ void testProcessWorkUnlimited()
     int32_t sequence = 0;
     for (int32_t i = 0; i < 1024; ++i)
     {
-        bbCheck(channel.sender.trySend("x", 1, sequence++) == PROCESS_WORK_SENT, "initial capacity not available");
+        bbCheck(channel.m_sender.trySend("x", 1, sequence++) == PROCESS_WORK_SENT, "initial capacity not available");
     }
     WaitMaintenanceWindow();
     channel.pump();
-    bbCheck(channel.receiver.bufferCount() == 1024, "threshold zero grew before an unsatisfied request");
+    bbCheck(channel.m_receiver.bufferCount() == 1024, "threshold zero grew before an unsatisfied request");
     for (int32_t i = 0; i < 256; ++i)
     {
-        bbCheck(channel.sender.trySend("x", 1, sequence++) == PROCESS_WORK_SENT, "refill failed");
+        bbCheck(channel.m_sender.trySend("x", 1, sequence++) == PROCESS_WORK_SENT, "refill failed");
     }
-    bbCheck(channel.sender.trySend("x", 1, sequence) == PROCESS_WORK_CAPACITY, "full request unexpectedly committed");
+    bbCheck(channel.m_sender.trySend("x", 1, sequence) == PROCESS_WORK_CAPACITY, "full request unexpectedly committed");
     WaitMaintenanceWindow();
-    bbWait([&channel]() { channel.pump(); return channel.receiver.bufferCount() == 1152; }, "unlimited expansion crossed 1024");
-    bbWait([&channel, sequence]() { channel.pump(); return channel.delivered.size() == static_cast<size_t>(sequence); }, "unlimited drain");
+    bbWait(
+        [&channel]()
+        {
+            channel.pump();
+            return channel.m_receiver.bufferCount() == 1152;
+        },
+        "unlimited expansion crossed 1024");
+    bbWait(
+        [&channel, sequence]()
+        {
+            channel.pump();
+            return channel.m_delivered.size() == static_cast<size_t>(sequence);
+        },
+        "unlimited drain");
     for (int32_t i = 0; i < sequence; ++i)
     {
-        bbCheck(channel.delivered[i] == i, "unlimited growth lost order");
+        bbCheck(channel.m_delivered[i] == i, "unlimited growth lost order");
     }
     // 再产生一个完整扩容请求，证明-1没有被当作单次扩容或固定旧容量。
     for (int32_t i = 0; i < 1152; ++i)
     {
-        bbCheck(channel.sender.trySend("x", 1, sequence++) == PROCESS_WORK_SENT, "expanded capacity unavailable");
+        bbCheck(channel.m_sender.trySend("x", 1, sequence++) == PROCESS_WORK_SENT, "expanded capacity unavailable");
     }
-    bbCheck(channel.sender.trySend("x", 1, sequence) == PROCESS_WORK_CAPACITY, "second full request committed");
+    bbCheck(channel.m_sender.trySend("x", 1, sequence) == PROCESS_WORK_CAPACITY, "second full request committed");
     WaitMaintenanceWindow();
-    bbWait([&channel]() { channel.pump(); return channel.receiver.bufferCount() == 1280; }, "second unlimited expansion");
-    bbWait([&channel, sequence]() { channel.pump(); return channel.delivered.size() == static_cast<size_t>(sequence); }, "second drain");
+    bbWait(
+        [&channel]()
+        {
+            channel.pump();
+            return channel.m_receiver.bufferCount() == 1280;
+        },
+        "second unlimited expansion");
+    bbWait(
+        [&channel, sequence]()
+        {
+            channel.pump();
+            return channel.m_delivered.size() == static_cast<size_t>(sequence);
+        },
+        "second drain");
     for (int32_t i = 0; i < sequence; ++i)
     {
-        bbCheck(channel.delivered[i] == i, "second expansion ledger mismatch");
+        bbCheck(channel.m_delivered[i] == i, "second expansion ledger mismatch");
     }
 }
 
 void testProcessWorkReceiverPageReuse()
 {
-    const int32_t capacities[] = { 513, 257, 3 };
+    const int32_t capacities[] = {513, 257, 3};
     PublicChannelScope channel(capacities[0], 0, 0, 0, 0);
     int32_t sequence = 0;
     for (size_t cycle = 0; cycle < 3; ++cycle)
     {
         if (cycle != 0)
         {
-            channel.sender.close();
-            channel.receiver.close();
-            bbCheck(channel.receiver.openReceiver(76, capacities[cycle], 0, 0, 0, 0), "receiver reopen failed");
-            channel.receiver.publish();
-            bbCheck(channel.sender.openSender(bbPid()), "sender reconnect failed");
+            channel.m_sender.close();
+            channel.m_receiver.close();
+            bbCheck(channel.m_receiver.openReceiver(76, capacities[cycle], 0, 0, 0, 0), "receiver reopen failed");
+            channel.m_receiver.publish();
+            bbCheck(channel.m_sender.openSender(bbPid()), "sender reconnect failed");
             channel.pump();
         }
         for (int32_t batch = 0; batch < 4; ++batch)
@@ -741,32 +875,36 @@ void testProcessWorkReceiverPageReuse()
             for (int32_t item = 0; item < capacities[cycle]; ++item)
             {
                 // 尚未登记时由公共维护推进；一旦成功即结束，不能重放已提交消息。
-                bbWait([&channel, sequence]()
-                {
-                    const int32_t result = channel.sender.trySend("x", 1, sequence);
-                    if (result == PROCESS_WORK_SENT)
+                bbWait(
+                    [&channel, sequence]()
                     {
-                        return true;
-                    }
-                    bbCheck(result == PROCESS_WORK_RESOURCE || result == PROCESS_WORK_CAPACITY,
-                        "receiver reuse unexpected send status");
-                    channel.pump();
-                    return false;
-                }, "receiver page reuse send");
+                        const int32_t result = channel.m_sender.trySend("x", 1, sequence);
+                        if (result == PROCESS_WORK_SENT)
+                        {
+                            return true;
+                        }
+                        bbCheck(result == PROCESS_WORK_RESOURCE || result == PROCESS_WORK_CAPACITY,
+                            "receiver reuse unexpected send status");
+                        channel.pump();
+                        return false;
+                    },
+                    "receiver page reuse send");
                 ++sequence;
             }
             // 返回true时全部消息已消费，随后才复用槽位或关闭旧映射。
-            bbWait([&channel, sequence]()
-            {
-                channel.pump();
-                return channel.delivered.size() == static_cast<size_t>(sequence);
-            }, "receiver page reuse drain");
+            bbWait(
+                [&channel, sequence]()
+                {
+                    channel.pump();
+                    return channel.m_delivered.size() == static_cast<size_t>(sequence);
+                },
+                "receiver page reuse drain");
         }
     }
     bbCheck(sequence == 3092, "receiver reuse fixture count changed");
     for (int32_t item = 0; item < sequence; ++item)
     {
-        bbCheck(channel.delivered[item] == item, "receiver page reuse lost FIFO or used stale mapping");
+        bbCheck(channel.m_delivered[item] == item, "receiver page reuse lost FIFO or used stale mapping");
     }
 }
 
@@ -786,15 +924,18 @@ void testProcessWorkGrowthBudget()
     Semaphore notification;
     std::atomic<int32_t> full(0);
     receiver.pump(queue, notification, full);
-    bbCheck(sender.trySend("x", 1, 0) == PROCESS_WORK_SENT && sender.trySend("x", 1, 1) == PROCESS_WORK_CAPACITY, "budget setup failed");
+    bbCheck(sender.trySend("x", 1, 0) == PROCESS_WORK_SENT && sender.trySend("x", 1, 1) == PROCESS_WORK_CAPACITY,
+        "budget setup failed");
     WaitMaintenanceWindow();
     receiver.pump(queue, notification, full);
     bbCheck(receiver.bufferCount() == 2, "single maintenance exceeded one-block budget");
-    bbWait([&receiver, &queue, &notification, &full]()
-    {
-        receiver.pump(queue, notification, full);
-        return receiver.bufferCount() == 5;
-    }, "staged growth completes planned increment");
+    bbWait(
+        [&receiver, &queue, &notification, &full]()
+        {
+            receiver.pump(queue, notification, full);
+            return receiver.bufferCount() == 5;
+        },
+        "staged growth completes planned increment");
     char* packet = nullptr;
     bbCheck(queue.pop(&packet) && packet != nullptr, "staged growth lost packet");
     delete[] packet;
@@ -839,10 +980,11 @@ void testProcessWorkSegmentLocality()
         // 暂停消费令第一页耗尽，仍必须找到后续页，不能把局部性变成容量上限。
         for (int32_t sequence = 30001; sequence <= 46000; ++sequence)
         {
-            bbCheck(sendQueue.enqueue(1, sequence, inlinedPayload, 1024, hint), "local page blocked available global capacity");
+            bbCheck(sendQueue.enqueue(1, sequence, inlinedPayload, 1024, hint),
+                "local page blocked available global capacity");
         }
         bbCheck(ProcessWorkAtomic::load(&receiveStorage.node(256)->m_link) != 0 &&
-            ProcessWorkAtomic::load(&receiveStorage.node(512)->m_link) != 0,
+                ProcessWorkAtomic::load(&receiveStorage.node(512)->m_link) != 0,
             "backlog did not exercise cross-page fallback");
         for (int32_t sequence = 30001; sequence <= 46000; ++sequence)
         {
@@ -867,7 +1009,8 @@ void testProcessWorkSenderTokenReuse()
         bbCheck(receiver.openReceiver(76, 16, 0, 0, 0, 0), "token reuse receiver");
         receiver.publish();
         SharedMemory directoryMemory("P3D" + bbNumber(bbPid()));
-        ProcessWorkSharedDirectory* directory = static_cast<ProcessWorkSharedDirectory*>(directoryMemory.writeWithoutLock());
+        ProcessWorkSharedDirectory* directory =
+            static_cast<ProcessWorkSharedDirectory*>(directoryMemory.writeWithoutLock());
         bbCheck(directory != nullptr, "token reuse directory");
         const uint32_t session = static_cast<uint32_t>(ProcessWorkAtomic::load(&directory->m_session));
         const uint64_t identity = directory->m_identity;
@@ -899,8 +1042,9 @@ void testProcessWorkSenderTokenReuse()
             bbCheck(receiver.pump(received, full) == 1, "token reuse receive count");
             char* packet = nullptr;
             bbCheck(received.take(&packet, 0), "token reuse packet");
-            const int32_t header[3] = { bbPid(), item, 5 };
-            const bool valid = std::memcmp(packet, header, sizeof(header)) == 0 && std::memcmp(packet + 12, "token", 5) == 0;
+            const int32_t header[3] = {bbPid(), item, 5};
+            const bool valid =
+                std::memcmp(packet, header, sizeof(header)) == 0 && std::memcmp(packet + 12, "token", 5) == 0;
             received.release(packet);
             bbCheck(valid, "token reuse corrupted delivery");
         }

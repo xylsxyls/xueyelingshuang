@@ -21,22 +21,26 @@ void testProcessWorkLocalBudget()
     bbCheck(packet != nullptr && result == LockFreeQueueSuccess && queue.used() == 296, "wrong allocation charge");
     bbCheck(queue.allocate(32, result) == nullptr && result == LockFreeQueueCapacityLimit, "local budget bypassed");
     bbCheck(!queue.configure(config), "live budget reconfigured");
-    bbCheck(queue.submit(nullptr) == LockFreeQueueInvalidConfiguration && !queue.take(nullptr, 0), "invalid queue input accepted");
+    bbCheck(queue.submit(nullptr) == LockFreeQueueInvalidConfiguration && !queue.take(nullptr, 0),
+        "invalid queue input accepted");
     bbCheck(queue.submit(packet) == LockFreeQueueSuccess, "local publish failed");
     char* popped = nullptr;
     bbCheck(queue.take(&popped, 0) && popped == packet && queue.used() == 296, "pop prematurely returned budget");
     queue.release(popped);
     bbCheck(queue.used() == 0, "finished packet retained budget");
     packet = queue.allocate(1024, result);
-    bbCheck(packet == nullptr && result == LockFreeQueueInvalidConfiguration, "fixed quota admitted an oversized singleton");
+    bbCheck(packet == nullptr && result == LockFreeQueueInvalidConfiguration,
+        "fixed quota admitted an oversized singleton");
     queue.release(packet);
-    bbCheck(queue.allocate((std::numeric_limits<size_t>::max)(), result) == nullptr && queue.used() == 0, "overflow request reserved capacity");
+    bbCheck(queue.allocate((std::numeric_limits<size_t>::max)(), result) == nullptr && queue.used() == 0,
+        "overflow request reserved capacity");
     packet = queue.allocate(32, result);
     bbCheck(packet != nullptr && queue.submit(packet) == LockFreeQueueSuccess, "cleanup setup failed");
     queue.clear();
     bbCheck(queue.used() == 0 && queue.empty(), "clear leaked packet charge");
     config.m_reserveBytes = (std::numeric_limits<uint64_t>::max)();
-    bbCheck(queue.configure(config) && queue.allocate(1, result) == nullptr && queue.used() == 0, "memory pressure admitted allocation");
+    bbCheck(queue.configure(config) && queue.allocate(1, result) == nullptr && queue.used() == 0,
+        "memory pressure admitted allocation");
 }
 
 /** 对默认分配与预留小包分别验证并发归还、预算与每线程FIFO
@@ -54,40 +58,41 @@ static void LocalQueueStress(uint32_t reserve, uint32_t slotBytes = 64)
     std::atomic<bool> cancel(false);
     IpcJobs jobs;
     const int32_t messages = 5000;
-    for (int32_t producer = 0; producer < 8; ++producer)
-    {
-        jobs.add([&queue, &cancel, producer, messages]()
-        {
-            for (int32_t sequence = 0; sequence < messages && !cancel.load(); ++sequence)
-            {
-                LockFreeQueueResult result;
-                char* packet = nullptr;
-                while (!cancel.load() && (packet = queue.allocate(8, result)) == nullptr)
-                {
-                    std::this_thread::yield();
-                }
-                if (packet == nullptr)
-                {
-                    return;
-                }
-                const int32_t body[2] = { producer, sequence };
-                std::memcpy(packet, body, sizeof(body));
-                result = LockFreeQueueTemporaryUnavailable;
-                while (!cancel.load() && (result = queue.submit(packet)) != LockFreeQueueSuccess)
-                {
-                    std::this_thread::yield();
-                }
-                if (result != LockFreeQueueSuccess)
-                {
-                    queue.release(packet);
-                }
-            }
-        });
-    }
-    int32_t expected[8] = {};
-    const uint64_t deadline = bbNow() + 30000;
     try
     {
+        for (int32_t producer = 0; producer < 8; ++producer)
+        {
+            jobs.add(
+                [&queue, &cancel, producer, messages]()
+                {
+                    for (int32_t sequence = 0; sequence < messages && !cancel.load(); ++sequence)
+                    {
+                        LockFreeQueueResult result;
+                        char* packet = nullptr;
+                        while (!cancel.load() && (packet = queue.allocate(8, result)) == nullptr)
+                        {
+                            std::this_thread::yield();
+                        }
+                        if (packet == nullptr)
+                        {
+                            return;
+                        }
+                        const int32_t body[2] = {producer, sequence};
+                        std::memcpy(packet, body, sizeof(body));
+                        result = LockFreeQueueTemporaryUnavailable;
+                        while (!cancel.load() && (result = queue.submit(packet)) != LockFreeQueueSuccess)
+                        {
+                            std::this_thread::yield();
+                        }
+                        if (result != LockFreeQueueSuccess)
+                        {
+                            queue.release(packet);
+                        }
+                    }
+                });
+        }
+        int32_t expected[8] = {};
+        const uint64_t deadline = bbNow() + 30000;
         for (int32_t received = 0; received < messages * 8;)
         {
             char* packet = nullptr;
@@ -99,7 +104,8 @@ static void LocalQueueStress(uint32_t reserve, uint32_t slotBytes = 64)
             int32_t body[2] = {};
             std::memcpy(body, packet, sizeof(body));
             queue.release(packet);
-            bbCheck(body[0] >= 0 && body[0] < 8 && body[1] == expected[body[0]], "local queue ordering/duplication failure");
+            bbCheck(body[0] >= 0 && body[0] < 8 && body[1] == expected[body[0]],
+                "local queue ordering/duplication failure");
             ++expected[body[0]];
             ++received;
         }
@@ -133,34 +139,37 @@ void testProcessWorkPostPacketPool()
         const size_t bytes = slotBytes - 4;
         LockFreeQueueResult result;
         char* oversized = pool.allocate(bytes + 1, result, true);
-        bbCheck(oversized != nullptr && result == LockFreeQueueSuccess &&
-            policy->m_kindCount[ProcessWorkPostBuffers] == 0, "oversized body entered fixed slots");
+        bbCheck(
+            oversized != nullptr && result == LockFreeQueueSuccess && policy->m_kindCount[ProcessWorkPostBuffers] == 0,
+            "oversized body entered fixed slots");
         pool.release(oversized);
         char* first = pool.allocate(bytes, result, true);
         bbCheck(first != nullptr && result == LockFreeQueueSuccess &&
-            policy->m_kindCount[ProcessWorkPostBuffers] == 1 && policy->m_kindAdded[ProcessWorkPostBuffers] == 2,
+                policy->m_kindCount[ProcessWorkPostBuffers] == 1 && policy->m_kindAdded[ProcessWorkPostBuffers] == 2,
             "exact slot boundary fell back instead of using the configured pool");
         char* second = pool.allocate(bytes, result, true);
         char* fallback = pool.allocate(bytes, result, true);
-        bbCheck(second != nullptr && fallback != nullptr && first != second && second != fallback && first != fallback &&
-            policy->m_kindCount[ProcessWorkPostBuffers] == 1, "full pool exceeded its cap or rejected heap fallback");
+        bbCheck(second != nullptr && fallback != nullptr && first != second && second != fallback &&
+                first != fallback && policy->m_kindCount[ProcessWorkPostBuffers] == 1,
+            "full pool exceeded its cap or rejected heap fallback");
         std::memset(first, 11, bytes);
         std::memset(second, 22, bytes);
         std::memset(fallback, 33, bytes);
         bbCheck(first[0] == 11 && first[bytes - 1] == 11 && second[0] == 22 && second[bytes - 1] == 22 &&
-            fallback[0] == 33 && fallback[bytes - 1] == 33, "slot bodies overlapped");
+                fallback[0] == 33 && fallback[bytes - 1] == 33,
+            "slot bodies overlapped");
         pool.release(first);
         pool.release(second);
         pool.release(fallback);
-        const uint32_t invalidSizes[] = { 0, 63, 65, 127, 129 };
+        const uint32_t invalidSizes[] = {0, 63, 65, 127, 129};
         for (size_t i = 0; i < sizeof(invalidSizes) / sizeof(invalidSizes[0]); ++i)
         {
             poolConfig.m_postBufferSlotBytes = invalidSizes[i];
             bbCheck(!pool.configure(poolConfig), "invalid slot size accepted");
         }
         first = pool.allocate(bytes, result, true);
-        bbCheck(first != nullptr && result == LockFreeQueueSuccess &&
-            policy->m_kindCount[ProcessWorkPostBuffers] == 1, "invalid configuration replaced existing pool");
+        bbCheck(first != nullptr && result == LockFreeQueueSuccess && policy->m_kindCount[ProcessWorkPostBuffers] == 1,
+            "invalid configuration replaced existing pool");
         pool.release(first);
     }
     ProcessWorkLocalQueue queue;
@@ -242,8 +251,8 @@ void testProcessWorkPostPacketPool()
         {
             char* ready[64] = {};
             size_t taken = 0;
-            bbCheck(queue.takePrefix(ready, 64, taken, 0) &&
-                taken > 0 && taken <= static_cast<size_t>((std::min)(64, amount - expected)),
+            bbCheck(queue.takePrefix(ready, 64, taken, 0) && taken > 0 &&
+                    taken <= static_cast<size_t>((std::min)(64, amount - expected)),
                 "prefix delivered an invalid ready count");
             for (size_t i = 0; i < taken; ++i)
             {
@@ -276,22 +285,29 @@ void testProcessWorkPostBudget()
     memory.m_localQueueBytes = 300;
     bbCheck(ipc.configurePostMemory(memory), "post memory configuration failed");
     const std::string body(16, 'x');
-    bbCheck(ipc.tryPost(bbPid(), body.data(), 16, static_cast<MessageType>(1)) == PROCESS_WORK_POSTED, "first tryPost failed");
+    bbCheck(ipc.tryPost(bbPid(), body.data(), 16, static_cast<MessageType>(1)) == PROCESS_WORK_POSTED,
+        "first tryPost failed");
     bbCheck(ipc.postPendingBytes() == 296, "post charge incorrect");
-    bbCheck(ipc.tryPost(bbPid(), body.data(), 16, static_cast<MessageType>(2)) == PROCESS_WORK_POST_CAPACITY, "over-budget tryPost must report capacity, not competition");
+    bbCheck(ipc.tryPost(bbPid(), body.data(), 16, static_cast<MessageType>(2)) == PROCESS_WORK_POST_CAPACITY,
+        "over-budget tryPost must report capacity, not competition");
     bbCheck(ipc.tryPost(0, body.data(), 16) == PROCESS_WORK_POST_INVALID &&
-        ipc.tryPost(std::string(), body.data(), 16) == PROCESS_WORK_POST_INVALID, "invalid tryPost admitted");
-    bbCheck(!ipc.configurePostMemory(memory) && ipc.postPendingBytes() == 296, "failed post/configuration changed charge");
-    bbCheck(ipc.tryPost(bbPid(), body.data(), 16, static_cast<MessageType>(3), true, false) == PROCESS_WORK_POST_CAPACITY,
+            ipc.tryPost(std::string(), body.data(), 16) == PROCESS_WORK_POST_INVALID,
+        "invalid tryPost admitted");
+    bbCheck(
+        !ipc.configurePostMemory(memory) && ipc.postPendingBytes() == 296, "failed post/configuration changed charge");
+    bbCheck(
+        ipc.tryPost(bbPid(), body.data(), 16, static_cast<MessageType>(3), true, false) == PROCESS_WORK_POST_CAPACITY,
         "contention retry must preserve capacity result");
     bbCheck(ipc.postResult(bbPid(), body.data(), 16, static_cast<MessageType>(3)) == PROCESS_WORK_POST_UNAVAILABLE &&
-        !ipc.post(bbPid(), body, static_cast<MessageType>(3)), "post cannot wait for an unstarted consumer");
+            !ipc.post(bbPid(), body, static_cast<MessageType>(3)),
+        "post cannot wait for an unstarted consumer");
     bbCheck(ipc.postPendingBytes() == 296, "failed compatibility post changed pending bytes");
     scope.start(&log, receiveName("post-budget"), 64, 2);
     bbCheck(ipc.initPostThread(), "post worker initialization failed");
     ipc.waitForPostEnd();
     waitPackets(log, 1);
-    bbCheck(log.snapshot()[0].type == 1 && log.snapshot()[0].body == body && ipc.postPendingBytes() == 0, "failed post delivered or completed charge retained");
+    bbCheck(log.snapshot()[0].m_type == 1 && log.snapshot()[0].m_body == body && ipc.postPendingBytes() == 0,
+        "failed post delivered or completed charge retained");
     ipc.uninitPostThread();
     bbCheck(ipc.configurePostMemory(ProcessWorkMemoryConfig()), "post configuration not reusable after drain");
 }
@@ -305,7 +321,7 @@ void testProcessWorkResultContracts()
     memory.m_reserveBytes = (std::numeric_limits<uint64_t>::max)();
     bbCheck(ipc.configurePostMemory(memory), "resource guard configuration rejected");
     bbCheck(ipc.tryPost(bbPid(), "123456", 6) == PROCESS_WORK_POST_RESOURCE &&
-        ipc.postResult(bbPid(), "123456", 6) == PROCESS_WORK_POST_RESOURCE && ipc.postPendingBytes() == 0,
+            ipc.postResult(bbPid(), "123456", 6) == PROCESS_WORK_POST_RESOURCE && ipc.postPendingBytes() == 0,
         "memory reserve pressure reported as competition or consumed budget");
     bbCheck(ipc.configurePostMemory(ProcessWorkMemoryConfig()), "default post budget restore failed");
     const std::string name = receiveName("results");
@@ -313,18 +329,18 @@ void testProcessWorkResultContracts()
     bbCheck(!ipc.addProcessReceiveCallback(&log) && !ipc.setReceiveName("changed-while-running"),
         "running receive state accepted lifecycle mutation");
     bbCheck(ipc.sendResult(0, "123456", 6) == PROCESS_WORK_INVALID &&
-        ipc.sendResult(name, nullptr, 1) == PROCESS_WORK_INVALID &&
-        ipc.sendResult(std::string(), "123456", 6) == PROCESS_WORK_INVALID &&
-        ipc.sendResult(bbPid(), "1234567", 7) == PROCESS_WORK_TOO_LARGE,
+            ipc.sendResult(name, nullptr, 1) == PROCESS_WORK_INVALID &&
+            ipc.sendResult(std::string(), "123456", 6) == PROCESS_WORK_INVALID &&
+            ipc.sendResult(bbPid(), "1234567", 7) == PROCESS_WORK_TOO_LARGE,
         "invalid result send was admitted");
     bbCheck(ipc.sendResult(bbPid(), "123456", 6, static_cast<MessageType>(1)) == PROCESS_WORK_SENT &&
-        ipc.sendResult(name, nullptr, 0, static_cast<MessageType>(2)) == PROCESS_WORK_SENT,
+            ipc.sendResult(name, nullptr, 0, static_cast<MessageType>(2)) == PROCESS_WORK_SENT,
         "valid result send failed");
     bbCheck(ipc.postResult(0, "123456", 6) == PROCESS_WORK_POST_INVALID &&
-        ipc.postResult(std::string(), "123456", 6) == PROCESS_WORK_POST_INVALID,
+            ipc.postResult(std::string(), "123456", 6) == PROCESS_WORK_POST_INVALID,
         "invalid result post was admitted");
     bbCheck(ipc.postResult(bbPid(), "123456", 6, static_cast<MessageType>(3)) == PROCESS_WORK_POSTED &&
-        ipc.postResult(name, "123456", 6, static_cast<MessageType>(4)) == PROCESS_WORK_POSTED,
+            ipc.postResult(name, "123456", 6, static_cast<MessageType>(4)) == PROCESS_WORK_POSTED,
         "valid result post failed");
     waitPackets(log, 2);
     bbCheck(ipc.initPostThread(), "post startup did not report success");
@@ -334,8 +350,9 @@ void testProcessWorkResultContracts()
     ipc.waitForPostEnd();
     waitPackets(log, 4);
     const std::vector<ReceivedPacket> received = log.snapshot();
-    bbCheck(received[0].type == 1 && received[1].type == 2 && received[2].type == 3 && received[3].type == 4 &&
-        received[0].body == "123456" && received[1].body.empty() && received[2].body == "123456" && received[3].body == "123456",
+    bbCheck(received[0].m_type == 1 && received[1].m_type == 2 && received[2].m_type == 3 && received[3].m_type == 4 &&
+            received[0].m_body == "123456" && received[1].m_body.empty() && received[2].m_body == "123456" &&
+            received[3].m_body == "123456",
         "result interface lost, duplicated or reordered messages");
 }
 
@@ -355,20 +372,27 @@ void testProcessWorkPostContention()
         for (int32_t thread = 0; thread < 32; ++thread)
         {
             // 每条正文只有123456；序号使用既有type字段，不往正文追加测试元数据。
-            jobs.add([&ipc, &ready, &go, thread]()
-            {
-                ++ready;
-                while (!go.load(std::memory_order_acquire))
+            jobs.add(
+                [&ipc, &ready, &go, thread]()
                 {
-                    std::this_thread::yield();
-                }
-                for (int32_t sequence = 0; sequence < 5000; ++sequence)
-                {
-                    bbCheck(ipc.post(bbPid(), "123456", 6, static_cast<MessageType>(thread * 5000 + sequence)), "ordinary post rejected");
-                }
-            });
+                    ++ready;
+                    while (!go.load(std::memory_order_acquire))
+                    {
+                        std::this_thread::yield();
+                    }
+                    for (int32_t sequence = 0; sequence < 5000; ++sequence)
+                    {
+                        bbCheck(ipc.post(bbPid(), "123456", 6, static_cast<MessageType>(thread * 5000 + sequence)),
+                            "ordinary post rejected");
+                    }
+                });
         }
-        bbWait([&ready]() { return ready.load() == 32; }, "ordinary post producer barrier");
+        bbWait(
+            [&ready]()
+            {
+                return ready.load() == 32;
+            },
+            "ordinary post producer barrier");
         go.store(true, std::memory_order_release);
         jobs.drain();
     }
@@ -386,57 +410,81 @@ void testProcessWorkPostContention()
     int32_t expected[32] = {};
     for (size_t i = 0; i < packets.size(); ++i)
     {
-        const int32_t thread = packets[i].type / count;
-        bbCheck(thread >= 0 && thread < 32 && packets[i].type % count == expected[thread] &&
-            packets[i].pid == bbPid() && packets[i].body == "123456", "ordinary post reordered or corrupted fixed payload");
+        const int32_t thread = packets[i].m_type / count;
+        bbCheck(thread >= 0 && thread < 32 && packets[i].m_type % count == expected[thread] &&
+                packets[i].m_pid == bbPid() && packets[i].m_body == "123456",
+            "ordinary post reordered or corrupted fixed payload");
         ++expected[thread];
     }
-    bbCheck(log.errors == 0 && packets.size() == 32 * count && ipc.postPendingBytes() == 0, "ordinary post incomplete");
+    bbCheck(
+        log.m_errors == 0 && packets.size() == 32 * count && ipc.postPendingBytes() == 0, "ordinary post incomplete");
 }
 
 void testProcessWorkSlowCallback()
 {
     ProcessWork& ipc = ProcessWork::instance();
     PacketLog log;
-    IpcScope scope;
     std::atomic<bool> entered(false), resume(false);
-    log.action = [&entered, &resume](const ReceivedPacket& packet)
+    IpcScope scope;
+    log.m_action = [&entered, &resume](const ReceivedPacket& packet)
     {
-        if (packet.type == 0)
+        if (packet.m_type == 0)
         {
             entered.store(true);
-            bbWait([&resume]() { return resume.load(); }, "release deliberately slow callback", 10000);
+            bbWait(
+                [&resume]()
+                {
+                    return resume.load();
+                },
+                "release deliberately slow callback", 10000);
         }
     };
     ProcessWorkMemoryConfig memory;
     memory.m_localQueueBytes = 300;
     ipc.addProcessReceiveCallback(&log);
-    bbCheck(ipc.setReceiveName(receiveName("slow-callback")) && ipc.initReceive(28, 2, 0, 0, 0, 0, memory), "slow callback setup failed");
+    bbCheck(ipc.setReceiveName(receiveName("slow-callback")) && ipc.initReceive(28, 2, 0, 0, 0, 0, memory),
+        "slow callback setup failed");
     const std::string body(16, 'x');
     try
     {
         bbCheck(ipc.send(bbPid(), body, static_cast<MessageType>(0)), "backpressure send rejected");
-        bbWait([&entered]() { return entered.load(); }, "slow callback entered");
+        bbWait(
+            [&entered]()
+            {
+                return entered.load();
+            },
+            "slow callback entered");
         bbCheck(ipc.receivePendingBytes() == 293, "executing callback not charged");
         for (int32_t type = 1; type <= 2; ++type)
         {
-            bbWait([&ipc, &body, type]()
-            {
-                const int32_t result = ipc.trySend(bbPid(), body.data(), 16, static_cast<MessageType>(type));
-                bbCheck(result == PROCESS_WORK_SENT || result == PROCESS_WORK_BUSY || result == PROCESS_WORK_CAPACITY || result == PROCESS_WORK_RESOURCE, "shared admission failed");
-                return result == PROCESS_WORK_SENT;
-            }, "shared slot returned by reader");
+            bbWait(
+                [&ipc, &body, type]()
+                {
+                    const int32_t result = ipc.trySend(bbPid(), body.data(), 16, static_cast<MessageType>(type));
+                    bbCheck(result == PROCESS_WORK_SENT || result == PROCESS_WORK_BUSY ||
+                            result == PROCESS_WORK_CAPACITY || result == PROCESS_WORK_RESOURCE,
+                        "shared admission failed");
+                    return result == PROCESS_WORK_SENT;
+                },
+                "shared slot returned by reader");
         }
-        bbCheck(ipc.trySend(bbPid(), body.data(), 16, static_cast<MessageType>(3)) == PROCESS_WORK_CAPACITY, "slow callback bypassed shared pressure");
+        bbCheck(ipc.trySend(bbPid(), body.data(), 16, static_cast<MessageType>(3)) == PROCESS_WORK_CAPACITY,
+            "slow callback bypassed shared pressure");
         bbSleep(100);
-        bbCheck(ipc.receivePendingBytes() == 293 && ipc.receiveBufferCount() == 2, "slow callback caused uncontrolled local allocation");
+        bbCheck(ipc.receivePendingBytes() == 293 && ipc.receiveBufferCount() == 2,
+            "slow callback caused uncontrolled local allocation");
         resume.store(true);
         waitPackets(log, 3);
-        bbWait([&ipc]() { return ipc.receivePendingBytes() == 0; }, "callback charges returned");
+        bbWait(
+            [&ipc]()
+            {
+                return ipc.receivePendingBytes() == 0;
+            },
+            "callback charges returned");
         const std::vector<ReceivedPacket> packets = log.snapshot();
         for (int32_t i = 0; i < 3; ++i)
         {
-            bbCheck(packets[i].type == i && packets[i].body == body, "pressure retry changed payload/order");
+            bbCheck(packets[i].m_type == i && packets[i].m_body == body, "pressure retry changed payload/order");
         }
     }
     catch (...)
@@ -469,57 +517,63 @@ static void CheckLocalQueueProgress()
         {
             sent[stream].store(0);
             // stream标识唯一生产流；每条消息有独立序号，停止时归还尚未提交的正文。
-            jobs.add([&queue, &stop, &start, &ready, &sent, stream]()
-            {
-                ready.fetch_add(1);
-                while (!start.load() && !stop.load())
+            jobs.add(
+                [&queue, &stop, &start, &ready, &sent, stream]()
                 {
-                    std::this_thread::yield();
-                }
-                int32_t sequence = 0;
-                while (!stop.load())
-                {
-                    LockFreeQueueResult result;
-                    char* packet = queue.allocate(8, result, true);
-                    if (packet == nullptr)
+                    ready.fetch_add(1);
+                    while (!start.load() && !stop.load())
                     {
-                        bbCheck(result == LockFreeQueueCapacityLimit || result == LockFreeQueueTemporaryUnavailable,
-                            "limited CPU allocation failed unexpectedly");
                         std::this_thread::yield();
-                        continue;
                     }
-                    const int32_t body[2] = { stream, sequence };
-                    std::memcpy(packet, body, sizeof(body));
-                    bool committed = false;
+                    int32_t sequence = 0;
                     while (!stop.load())
                     {
-                        result = queue.submit(packet);
-                        if (result == LockFreeQueueSuccess)
+                        LockFreeQueueResult result;
+                        char* packet = queue.allocate(8, result, true);
+                        if (packet == nullptr)
                         {
-                            committed = true;
-                            break;
+                            bbCheck(result == LockFreeQueueCapacityLimit || result == LockFreeQueueTemporaryUnavailable,
+                                "limited CPU allocation failed unexpectedly");
+                            std::this_thread::yield();
+                            continue;
                         }
-                        if (result != LockFreeQueueCapacityLimit && result != LockFreeQueueTemporaryUnavailable)
+                        const int32_t body[2] = {stream, sequence};
+                        std::memcpy(packet, body, sizeof(body));
+                        bool committed = false;
+                        while (!stop.load())
+                        {
+                            result = queue.submit(packet);
+                            if (result == LockFreeQueueSuccess)
+                            {
+                                committed = true;
+                                break;
+                            }
+                            if (result != LockFreeQueueCapacityLimit && result != LockFreeQueueTemporaryUnavailable)
+                            {
+                                queue.release(packet);
+                                bbCheck(false, "limited CPU publish failed unexpectedly");
+                            }
+                            std::this_thread::yield();
+                        }
+                        // 停止标记不撤销已经提交的所有权；仅未提交的正文由生产者归还。
+                        if (committed)
+                        {
+                            ++sequence;
+                            sent[stream].store(sequence);
+                        }
+                        else
                         {
                             queue.release(packet);
-                            bbCheck(false, "limited CPU publish failed unexpectedly");
                         }
-                        std::this_thread::yield();
                     }
-                    // 停止标记不撤销已经提交的所有权；仅未提交的正文由生产者归还。
-                    if (committed)
-                    {
-                        ++sequence;
-                        sent[stream].store(sequence);
-                    }
-                    else
-                    {
-                        queue.release(packet);
-                    }
-                }
-            });
+                });
         }
-        bbWait([&ready]() { return ready.load() == 8; }, "limited CPU producers ready");
+        bbWait(
+            [&ready]()
+            {
+                return ready.load() == 8;
+            },
+            "limited CPU producers ready");
         start.store(true);
         const uint64_t started = bbNow();
         uint64_t checkAt = started + 1000;
@@ -538,7 +592,8 @@ static void CheckLocalQueueProgress()
             {
                 for (int32_t stream = 0; stream < 8; ++stream)
                 {
-                    bbCheck(received[stream] > previous[stream], "a local producer or consumer made no progress in a full second");
+                    bbCheck(received[stream] > previous[stream],
+                        "a local producer or consumer made no progress in a full second");
                     previous[stream] = received[stream];
                 }
                 checkAt += 1000;

@@ -109,10 +109,8 @@ void ProcessWorkTestAutomation::build(const std::string& root, const std::string
     directory(output + "/test");
     const std::string support = root + "/src/CTaskThreadManagerTest/CTaskThreadManagerTest";
     const std::string suite = root + "/src/ProcessWorkTest/ProcessWorkTest";
-    const bool prepareApi = bbRead(root + "/src/ProcessWork/ProcessWork/src/ProcessWork.h").find("bool prepareSend(") != std::string::npos;
-    const bool slotBytesApi = bbRead(root + "/src/ProcessWork/ProcessWork/src/ProcessWorkMemory.h").find("m_postBufferSlotBytes") != std::string::npos;
     const char* modules[] = { "ProcessWork", "SharedMemory", "CTaskThreadManager", "CorrespondParam", "CStringManager",
-        "CSystem", "LockFreeQueue", "AtomicMath", "Semaphore", "LockFreeMap", "LockFreeHashMap" };
+        "CSystem", "PlatformTest", "LockFreeQueue", "Semaphore", "LockFreeMap", "LockFreeHashMap" };
     std::map<std::string, std::vector<std::string>> sources;
     std::ostringstream manifest;
     for (size_t i = 0; i < sizeof(modules) / sizeof(modules[0]); ++i)
@@ -127,6 +125,10 @@ void ProcessWorkTestAutomation::build(const std::string& root, const std::string
             if (!Ends(files[j], ".cpp") && !Ends(files[j], ".h") && !Ends(files[j], ".inl"))
             {
                 continue;
+            }
+            if (module == "PlatformTest" && Ends(files[j], ".cpp") && files[j] != "PlatformTest.cpp")
+            {
+                continue; // 设备部署器是宿主可执行程序，不能链接进被测程序。
             }
             const std::string from = directoryPath + "/" + files[j];
             const std::string copied = output + "/source/" + module + "/" + files[j];
@@ -156,8 +158,7 @@ void ProcessWorkTestAutomation::build(const std::string& root, const std::string
         for (size_t j = 0; j < files.size(); ++j)
         {
             const std::string& name = files[j];
-            if (i == 1 && name != "BlackBoxTestSupport.cpp" && name != "BlackBoxTestSupport.h" &&
-                name != "CTaskPostCompatibility.h" && name != "CTaskPostCompatibility.inl")
+            if (i == 1 && name != "BlackBoxTestSupport.cpp" && name != "BlackBoxTestSupport.h")
             {
                 continue;
             }
@@ -198,7 +199,7 @@ void ProcessWorkTestAutomation::build(const std::string& root, const std::string
         const char* names[] = { "LockFreeMapTest", "LockFreeMapTestRunner", "LockFreeMapBasicTest", "LockFreeMapExamples",
             "LockFreeMapPlatformTest", "LockFreeMapTests", "LockFreeMapPoolTest", "LockFreeMapHistorical",
             "LockFreeMapHeadersTest", "LockFreeMapTestThread", "LockFreeMapTestCopyKey", "LockFreeMapContentionTest",
-            "LockFreeMapStatusTest", "LockFreeMapArrivalTest", "LockFreeMapRetryTests", "LockFreeMapProgressTest" };
+            "LockFreeMapStatusTest", "LockFreeMapSearchTest", "LockFreeMapArrivalTest", "LockFreeMapRetryTests", "LockFreeMapProgressTest" };
         const std::vector<std::string> headers = Files(mapSuite);
         for (size_t i = 0; i < headers.size(); ++i)
         {
@@ -256,15 +257,7 @@ void ProcessWorkTestAutomation::build(const std::string& root, const std::string
     for (size_t i = 0; i < tests.size(); ++i)
     {
         const std::string object = output + "/Test-" + bbNumber(i) + ".obj";
-        batch << "cl " << flags << " /DPROCESS_WORK_BENCH_IN_SUITE /DPROCESS_WORK_BENCH_RESULT_API /DPROCESS_WORK_BENCH_STORAGE_GROWTH";
-        if (prepareApi)
-        {
-            batch << " /DPROCESS_WORK_BENCH_PREPARE_API";
-        }
-        if (slotBytesApi)
-        {
-            batch << " /DPROCESS_WORK_BENCH_SLOT_BYTES";
-        }
+        batch << "cl " << flags << " /DPROCESS_WORK_BENCH_IN_SUITE";
         if (mode == "memory")
         {
             batch << " /DPROCESS_WORK_BENCH_MEMORY_AUDIT";

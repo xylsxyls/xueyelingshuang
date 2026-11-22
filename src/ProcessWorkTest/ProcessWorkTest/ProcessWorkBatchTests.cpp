@@ -10,7 +10,7 @@
 #include <unistd.h>
 #endif
 
-/** 构造真实12字节头，不在正文增加测试元数据。
+/** 构造真实12字节头，不在正文增加测试元数据
 @param [in] sequence 消息类型字段中的序号
 @param [in] body 完整正文
 @return 包头及正文
@@ -137,9 +137,10 @@ void testProcessWorkReceiveBatchStress()
     config.m_localQueueBytes = 200000;
     bbCheck(queue.configure(config), "batch stress configuration failed");
     std::atomic<bool> cancel(false);
-    IpcJobs jobs;
     const int32_t count = 20000;
     const int32_t sizes[4] = { 0, 6, 64, 65536 };
+    // 借用数据先于线程容器创建；异常清理先等待生产者退出，再结束数组生命周期。
+    IpcJobs jobs;
     jobs.add([&queue, &cancel, &sizes]()
     {
         for (int32_t sequence = 0; sequence < 20000 && !cancel.load(); ++sequence)
@@ -205,13 +206,13 @@ void testProcessWorkInlineBoundary()
     const std::vector<ReceivedPacket> packets = log.snapshot();
     for (int32_t sequence = 0; sequence < 1000; ++sequence)
     {
-        bbCheck(packets[sequence].type == sequence && packets[sequence].pid == bbPid() &&
-            packets[sequence].body == packetBody(sequence, sizes[sequence % 5]), "inline/mapped slot transition corrupted packet");
+        bbCheck(packets[sequence].m_type == sequence && packets[sequence].m_pid == bbPid() &&
+            packets[sequence].m_body == packetBody(sequence, sizes[sequence % 5]), "inline/mapped slot transition corrupted packet");
     }
     for (int32_t length = 0; length <= 36; ++length)
     {
-        bbCheck(packets[length + 1000].type == length + 1000 &&
-            packets[length + 1000].body == packetBody(length + 1000, length), "short unaligned copy corrupted payload");
+        bbCheck(packets[length + 1000].m_type == length + 1000 &&
+            packets[length + 1000].m_body == packetBody(length + 1000, length), "short unaligned copy corrupted payload");
     }
 }
 

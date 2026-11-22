@@ -93,8 +93,8 @@ void ProcessWorkCompatibilityTests::payloadRestart()
     waitPackets(log, 3);
     scope.close();
     const std::vector<ReceivedPacket> rows = log.snapshot();
-    bbCheck(rows.size() == 3 && rows[0].body == large && rows[1].body == large.substr(0, 1) &&
-        rows[2].body.empty() && rows[2].nullData && rows[0].type == 65536 && rows[1].type == 1 && rows[2].type == 0,
+    bbCheck(rows.size() == 3 && rows[0].m_body == large && rows[1].m_body == large.substr(0, 1) &&
+        rows[2].m_body.empty() && rows[2].m_nullData && rows[0].m_type == 65536 && rows[1].m_type == 1 && rows[2].m_type == 0,
         "restart payload/type/ownership mismatch");
 }
 
@@ -137,7 +137,7 @@ void ProcessWorkCompatibilityTests::typeDomain()
     bbCheck(rows.size() == 55, "type domain missing/extra messages");
     for (size_t i = 0; i < rows.size(); ++i)
     {
-        bbCheck(rows[i].pid == bbPid() && rows[i].type == types[i % 11] && rows[i].body == packetBody(static_cast<int32_t>(i), 127),
+        bbCheck(rows[i].m_pid == bbPid() && rows[i].m_type == types[i % 11] && rows[i].m_body == packetBody(static_cast<int32_t>(i), 127),
             "type domain payload or FIFO mismatch");
     }
 }
@@ -195,8 +195,8 @@ void ProcessWorkCompatibilityTests::guardedInput()
                     ipc.uninitPostThread();
                 }
                 const std::vector<ReceivedPacket> rows = log.snapshot();
-                bbCheck(rows.size() == count && rows.back().body == expected && rows.back().pid == bbPid() &&
-                    rows.back().type == static_cast<int32_t>(count - 1) && rows.back().nullData == (length == 0),
+                bbCheck(rows.size() == count && rows.back().m_body == expected && rows.back().m_pid == bbPid() &&
+                    rows.back().m_type == static_cast<int32_t>(count - 1) && rows.back().m_nullData == (length == 0),
                     "guarded source copy/FIFO mismatch");
             }
         }
@@ -284,10 +284,10 @@ void ProcessWorkCompatibilityTests::overloadRejection()
             int32_t next[4] = {};
             for (size_t i = 0; i < rows.size(); ++i)
             {
-                const int32_t producer = rows[i].type / 100000, sequence = rows[i].type % 100000;
+                const int32_t producer = rows[i].m_type / 100000, sequence = rows[i].m_type % 100000;
                 bbCheck(producer >= 0 && producer < 4 && sequence == next[producer]++, "overload per-stream FIFO");
                 const int32_t length = sequence % 3 == 0 ? 0 : (sequence % 3 == 1 ? (std::min)(1, capacity) : capacity);
-                bbCheck(rows[i].pid == bbPid() && rows[i].body == packetBody(rows[i].type, length) && rows[i].nullData == (length == 0),
+                bbCheck(rows[i].m_pid == bbPid() && rows[i].m_body == packetBody(rows[i].m_type, length) && rows[i].m_nullData == (length == 0),
                     "overload content mismatch");
             }
             for (int32_t i = 0; i < 4; ++i)

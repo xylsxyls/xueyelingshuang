@@ -13,7 +13,7 @@
 #include <signal.h>
 #endif
 
-/** 强制终止本用例创建的子进程，跳过所有析构和库清理以模拟崩溃。
+/** 强制终止本用例创建的子进程，跳过所有析构和库清理以模拟崩溃
 @param [in,out] child 已启动且仍由用例持有的子进程
 */
 void CrashOwnedChild(BlackBoxChild& child)
@@ -177,9 +177,12 @@ void testProcessWorkDeadProducer(int32_t phase, bool abrupt)
         bbCheck(child.wait(10000) == 0, "fault child failed: " + bbRead(prefix + ".log"));
     }
     int32_t childDelivered = 0;
+    int32_t preludeCount = 0;
     const uint64_t deadline = bbNow() + 5000;
     bool first = false;
     bool second = false;
+    int32_t survivorAccepted = 0;
+    int32_t survivorDelivered = 0;
     while (!first || !second)
     {
         bbCheck(bbNow() < deadline, "dead reservation did not recover");
@@ -197,27 +200,43 @@ void testProcessWorkDeadProducer(int32_t phase, bool abrupt)
             }
             else if (header[0] == child.pid())
             {
-                bbCheck(phase == 3 && header[1] >= 1000 && header[1] < 1000 + kProcessWorkSegmentCells && header[2] == 1 && packet[12] == 'x', "tail prelude corrupt");
+                bbCheck(phase == 3 && header[1] == 1000 + preludeCount &&
+                    preludeCount < kProcessWorkSegmentCells && header[2] == 1 && packet[12] == 'x', "tail prelude corrupt");
+                ++preludeCount;
+            }
+            else
+            {
+                bbCheck(header[0] == bbPid() && header[1] == 20 && header[2] == 1 && packet[12] == 'x',
+                    "recovery retry delivered an unexpected message");
+                ++survivorDelivered;
             }
         }
         // 同轮占满两槽，证明死进程占位已回收，不是仅剩一槽循环使用。
         first = survivor.trySend("x", 1, 20) == PROCESS_WORK_SENT;
         second = first && survivor.trySend("x", 1, 21) == PROCESS_WORK_SENT;
+        survivorAccepted += (first ? 1 : 0) + (second ? 1 : 0);
         if (!second)
         {
             bbSleep(20);
         }
     }
     bbCheck(childDelivered == ((phase == 2 || phase == 3) ? 1 : 0), "dead-sender delivery count wrong");
+    bbCheck(preludeCount == (phase == 3 ? kProcessWorkSegmentCells : 0), "tail prelude count wrong");
     receiver.pump(queue, notification, full);
     int32_t finalCount = 0;
     char* packet = nullptr;
     while (queue.pop(&packet))
     {
+        std::unique_ptr<char[]> held(packet);
+        int32_t header[3] = {};
+        std::memcpy(header, packet, sizeof(header));
+        bbCheck(header[0] == bbPid() && header[1] == 20 + finalCount && header[2] == 1 && packet[12] == 'x',
+            "recovery final payload or FIFO wrong");
         ++finalCount;
-        delete[] packet;
+        ++survivorDelivered;
     }
     bbCheck(finalCount == 2, "recovery final capacity/delivery wrong");
+    bbCheck(survivorDelivered == survivorAccepted, "recovery retries lost or duplicated survivor messages");
     std::remove((prefix + ".reserved").c_str());
     std::remove((prefix + ".exit").c_str());
     std::remove((prefix + ".log").c_str());
@@ -228,9 +247,9 @@ void testProcessWorkDeadSenderBackpressure()
     ProcessWork& ipc = ProcessWork::instance();
     std::atomic<bool> entered(false), release(false);
     PacketLog log;
-    log.action = [&entered, &release](const ReceivedPacket& packet)
+    log.m_action = [&entered, &release](const ReceivedPacket& packet)
     {
-        if (packet.type == 1)
+        if (packet.m_type == 1)
         {
             entered.store(true);
             bbWait([&release]() { return release.load(); }, "release held callback", 15000);
@@ -276,7 +295,7 @@ void testProcessWorkDeadSenderBackpressure()
         release.store(true);
         waitPackets(log, 2);
         const std::vector<ReceivedPacket> packets = log.snapshot();
-        bbCheck(packets[0].body == "123456" && packets[1].pid == child.pid() && packets[1].type == 7 && packets[1].body == "x",
+        bbCheck(packets[0].m_body == "123456" && packets[1].m_pid == child.pid() && packets[1].m_type == 7 && packets[1].m_body == "x",
             "retained message lost, duplicated or corrupted");
         bbWait([&storage]()
         {
@@ -307,9 +326,9 @@ int runProcessWorkCrashReceiver(int argc, char** argv)
     IpcScope scope;
     if (stalled)
     {
-        log.action = [&prefix](const ReceivedPacket& packet)
+        log.m_action = [&prefix](const ReceivedPacket& packet)
         {
-            bbCheck(packet.body == "123456", "crash receiver initial body mismatch");
+            bbCheck(packet.m_body == "123456", "crash receiver initial body mismatch");
             bbWrite(prefix + ".entered", "1");
             // 故意不释放正在执行的正文，父进程在共享区也占满后直接终止本进程。
             bbWait([&prefix]() { return bbRead(prefix + ".release") == "1"; }, "crash receiver held callback", 30000);
@@ -330,8 +349,9 @@ int runProcessWorkCrashReceiver(int argc, char** argv)
     }
     else
     {
-        bbWait([&ledger]() { return ledger.bad.load() != 0 || ledger.received.load() == 4000; }, "restarted receiver deliveries", 20000);
-        bbCheck(ledger.bad.load() == 0, "restarted receiver corrupt/duplicate/out of order");
+        bbWait([&ledger]() { return ledger.m_bad.load() != 0 || ledger.m_received.load() == 4000; }, "restarted receiver deliveries", 20000);
+        scope.close();
+        bbCheck(ledger.m_received.load() == 4000 && ledger.m_bad.load() == 0, "restarted receiver corrupt/duplicate/out of order");
         bbWrite(prefix + ".verified", "4000");
     }
     return 0;
