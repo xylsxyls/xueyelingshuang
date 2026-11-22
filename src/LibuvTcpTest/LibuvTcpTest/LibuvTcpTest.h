@@ -8,7 +8,7 @@ LibuvTcpTest 测试文档
 
 二、构建、入口与证据
 Windows先version准备PlatformTest、LibuvTcp和CTaskThreadManager及其依赖，再用VS/MSBuild构建本工程。白盒测试链接静态库，32/64位各分Debug/Release；头文件、库、CRT和位数必须匹配。
-version_debug准备32位Debug，version_release准备64位Release；其他组合显式准备目标依赖，不能靠切换VS配置复用不匹配SDK。
+测试工程的version_debug固定准备32位Debug静态依赖，version_release固定准备64位Release静态依赖。构建Linux ARM测试程序时，按脚本中的依赖清单直接调用CloudRebuild，各条命令统一写arm32或arm64，再用相同目标的工具链编译测试工程。
 非Windows用本目录CMakeLists、目标工具链、BIT、DEBUGRELEASE和LIBRARIESRELY指定已编译依赖。
 入口：--list、--cases 1,3-5（或--case 1,3-5）、--instant、--stress、--all；无参数等同--all。编号稳定、重复去重、非法选择非零退出。
 每个选中编号输出case=ID PASS/FAIL及耗时，PlatformTest汇总退出码。预期编号须全部实际执行且均通过；无效选择返回2。
@@ -384,7 +384,7 @@ HOST_POST计时到接收校验完成，同时保留提交耗时和背压重试�
 七、当前性能数据与覆盖边界
 Windows功能复核（北京时间2026-11-22 13:32）：Win32 Debug、Win32 Release、x64 Debug、x64 Release分别执行编号1至101。每组62个瞬时用例、39个压力用例全部通过，四组合计404项次，失败0项。x64 Release另以10个独立测试进程分别执行10、72、73号，每项再次通过10次。
 对应的四组DLL各由独立程序仅通过公开API验证。每组完成10000次1024字节原始写入，接收10240000字节，并完整接收10000条长度帧。x64 Release还实际编译和运行LibuvTcp.cpp里的main示例，原始模式接收6字节，双进程模式的客户端与服务端各接收8帧。x64 Release独立性能入口完成构建，非法轮数和原始字节入口的非法生产者数均按约定返回2。
-Linux、macOS、Android、iOS本轮按源码和构建配置审查，均未运行实机用例。
+Linux ARM32（ARMv7-A硬浮点）与ARM64（AArch64）已交叉编译Debug和Release的LibuvTcpTest，并分别使用公开API链接同配置的LibuvTcp静态库和动态库。已经核对ELF架构。Linux ARM设备上的TCP收发尚未实测。macOS、Android、iOS按源码和构建配置审查，尚无实机结果。
 当前源码缺少性能测试数据。本轮运行功能、压力回归和性能驱动自身的判定用例，不执行吞吐、延迟、CPU或峰值内存基准。功能用例输出的毫秒数包含建连、等待和校验，不作为post耗时或吞吐。初始化、参数设置和收尾以生效、回滚及生命周期为验收条件，无需单列每秒调用次数。
 Windows、Linux、macOS、Android、iOS共用C++收发场景。移动端用PlatformTest的CTest设备入口；iOS不登记72号桌面子进程监督器用例，性能场景按单项入口在应用内运行。用例72在支持子进程的平台单独验证。
 32/64 Debug/Release及独立DLL消费者分别执行，不能由一个配置推定另一个通过。
