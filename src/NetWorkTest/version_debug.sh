@@ -1,5 +1,2 @@
-"$CLOUD_REBUILD" NetWork 32 dll debug same
-"$CLOUD_REBUILD" LibuvTcp 32 dll debug same
-"$CLOUD_REBUILD" CDump 32 dll debug same
-"$CLOUD_REBUILD" CRandom 32 dll debug same
-"$CLOUD_REBUILD" NetSender 32 dll debug same
+"$CLOUD_REBUILD" NetWork "${1:-32}" lib debug same
+"$CLOUD_REBUILD" PlatformTest "${1:-32}" lib debug same
