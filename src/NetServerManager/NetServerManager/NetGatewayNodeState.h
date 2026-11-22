@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "NetWork/NetWorkAPI.h"
 #include "NetGatewayPeerHistory.h"
+#include "NetGatewayNodeRecord.h"
 #include "NetInterface/NetInterfaceAPI.h"
 #include <deque>
 #include <string>
@@ -221,14 +222,16 @@ public:
     // 复制的管理帧头，发送时再绑定自有正文地址
     NetInterfaceFrame m_frame;
     // 自有管理正文，不借用调用方临时缓冲
-    std::string m_payload;
+    NetBufferLease m_payload;
 
 public:
-    /** 拥有管理消息体，保存期间不借用输入帧
-    @param [in] frame 管理头
-    @param [in] payload 自有protobuf消息体
+    /** 创建尚未填充的控制记录
     */
-    NetGatewayNodeControl(const NetInterfaceFrame& frame, const std::string& payload);
+    NetGatewayNodeControl();
+
+    /** 擦除有效正文并归还实际池槽
+    */
+    ~NetGatewayNodeControl();
 };
 
 // 一个已认证物理连接的管理水位、角色、负载及输出队列
@@ -277,14 +280,12 @@ public:
     uint32_t m_active;
     // 此物理连接作为请求方已打开的逻辑通道数
     uint32_t m_opened;
-    // 待发管理正文的累计字节数，用于独立队列限额
-    uint32_t m_controlBytes;
     // SERVICE角色完成注册，可以参与实例选择
     bool m_serviceReady;
     // 已请求关闭该物理连接，拒绝新的管理和路由工作
     bool m_closing;
-    // 自有管理帧FIFO，与业务数据使用独立限额
-    std::deque<NetGatewayNodeControl> m_controls;
+    // 自有管理帧FIFO，持有独立控制池的实际记录与正文租约
+    std::deque<NetObjectReference<NetGatewayNodeControl>> m_controls;
 
 public:
     /** 创建未注册服务状态
@@ -326,9 +327,9 @@ public:
     bool m_pending;
     // One credit window per direction. A blocked destination must not pin the
     // shared NODE input decoder and prevent unrelated channels from progressing.
-    std::deque<std::vector<uint8_t>> m_forwardQueue;
-    // 服务端到客户端的有界密文FIFO，与正向队列分开计额
-    std::deque<std::vector<uint8_t>> m_reverseQueue;
+    std::deque<NetObjectReference<NetGatewayNodeRecord>> m_forwardQueue;
+    // 服务端到客户端的密文FIFO，记录持续占用节点的实际共享池
+    std::deque<NetObjectReference<NetGatewayNodeRecord>> m_reverseQueue;
     // 正向当前队头首次发送受阻的单调毫秒，0表示无阻塞
     uint64_t m_forwardBlocked;
     // 反向当前队头首次发送受阻的单调毫秒，0表示无阻塞

@@ -3,7 +3,7 @@
 #include "NetGatewayAuthority.h"
 #include "NetServerEnrollment.h"
 #include "NetInterface/NetInterfaceAPI.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include <cstring>
 #include <algorithm>
 #include <chrono>
@@ -103,15 +103,18 @@ void NetGatewayNodeConnection::onLinkClosed(uint64_t peer, int32_t reason)
     m_owner->onLinkClosed(m_id, reason);
 }
 
-NetGatewayNodeControl::NetGatewayNodeControl(const NetInterfaceFrame& frame, const std::string& payload) :
-    m_frame(frame), m_payload(payload)
+NetGatewayNodeControl::NetGatewayNodeControl() : m_frame()
 {
-    m_frame.m_payload = nullptr;
-    m_frame.m_payloadSize = static_cast<uint32_t>(m_payload.size());
+
+}
+
+NetGatewayNodeControl::~NetGatewayNodeControl()
+{
+    NetInterface::wipe(m_payload.data(), m_frame.m_payloadSize);
 }
 
 NetGatewayNodePeer::NetGatewayNodePeer() : m_role(0), m_request(0), m_highestChannel(0), m_product(0),
-    m_capacity(0), m_window(65536), m_weight(1), m_active(0), m_opened(0), m_controlBytes(0), m_serviceReady(false), m_closing(false)
+    m_capacity(0), m_window(65536), m_weight(1), m_active(0), m_opened(0), m_serviceReady(false), m_closing(false)
 {
     m_outRequest = 0;
     m_outChannel = 0;

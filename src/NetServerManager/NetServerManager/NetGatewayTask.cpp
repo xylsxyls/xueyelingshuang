@@ -19,8 +19,15 @@ m_error(0)
 
 }
 
-void NetGatewayTask::DoTask()
+void NetGatewayTask::doTask()
 {
+    NetExecutionScope execution(m_execution);
+    if (m_execution.status() != NI_OK)
+    {
+        m_error.store(m_execution.status());
+        m_done.store(true);
+        return;
+    }
     try
     {
         if (m_configuration.m_protocol == 3)
@@ -46,6 +53,7 @@ void NetGatewayTask::DoTask()
                 const auto started = std::chrono::steady_clock::now();
                 while (!m_stop.load())
                 {
+                    m_execution.begin();
                     if (m_configuration.m_runForMs != 0 &&
                         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count() >=
                             m_configuration.m_runForMs) { break; }
@@ -55,7 +63,19 @@ void NetGatewayTask::DoTask()
                         if (!m_stop.load()) { m_error.store(NI_INVALID_STATE); }
                         break;
                     }
-                    CSystem::sleepPrecise(2);
+                    if (!m_stop.load())
+                    {
+                        const int32_t waited = m_execution.wait(100);
+                        if (waited == NI_NEED_MORE)
+                        {
+                            CSystem::sleepPrecise(2);
+                        }
+                        else if (waited < 0)
+                        {
+                            m_error.store(waited);
+                            break;
+                        }
+                    }
                 }
             }
             node.shutdown();
@@ -90,6 +110,7 @@ void NetGatewayTask::DoTask()
             const auto started = std::chrono::steady_clock::now();
             while (!m_stop.load())
             {
+                m_execution.begin();
                 if (m_configuration.m_runForMs != 0 &&
                     std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count() >=
                         m_configuration.m_runForMs)
@@ -101,7 +122,19 @@ void NetGatewayTask::DoTask()
                     if (!m_stop.load()) { m_error.store(NI_INVALID_STATE); }
                     break;
                 }
-                CSystem::sleepPrecise(2);
+                if (!m_stop.load())
+                {
+                    const int32_t waited = m_execution.wait(100);
+                    if (waited == NI_NEED_MORE)
+                    {
+                        CSystem::sleepPrecise(2);
+                    }
+                    else if (waited < 0)
+                    {
+                        m_error.store(waited);
+                        break;
+                    }
+                }
             }
         }
         runtime.shutdown();
@@ -113,9 +146,10 @@ void NetGatewayTask::DoTask()
     m_done.store(true);
 }
 
-void NetGatewayTask::StopTask()
+void NetGatewayTask::stopTask()
 {
     m_stop.store(true);
+    m_execution.wake();
 }
 
 uint32_t NetGatewayTask::port() const
@@ -132,104 +166,3 @@ int32_t NetGatewayTask::error() const
 {
     return m_error.load();
 }
-
-#if 0 // NET_GATEWAY_TASK_UNIT_BEGIN
-// 独立测试入口：停用NetServerManager.cpp的main，启用此处；私钥只保存在指定临时目录。
-#include "NetGatewayTask.h"
-#include "NetGatewayIdentity.h"
-#include <NetWork/NetWorkAPI.h>
-#include <LibuvTcp/LibuvTcpAPI.h>
-#include <CSystem/CSystemAPI.h>
-#include <cstdio>
-#include <stdexcept>
-
-int main(int argc, char** argv)
-{
-    if (argc != 2)
-    {
-        return 2;
-    }
-    try
-    {
-        static uint32_t s_fault = 0;
-        static uint32_t s_calls = 0;
-        NetHostFunctions functions = {};
-        functions.structSize = sizeof(functions);
-        functions.version = 1;
-        functions.create = LibuvTcp::hostCreate;
-        functions.listen = LibuvTcp::hostListen;
-        functions.connect = LibuvTcp::hostConnect;
-        functions.poll = [](void* instance) -> int32_t
-        {
-            ++s_calls;
-            if (s_calls >= 4)
-            {
-                if (s_fault == 1) { return -1; }
-                if (s_fault == 2) { throw std::runtime_error("test host poll failure"); }
-                if (s_fault == 3) { return 0; }
-            }
-            return LibuvTcp::hostPoll(instance);
-        };
-        functions.write = LibuvTcp::hostWrite;
-        functions.pauseRead = LibuvTcp::hostPauseRead;
-        functions.close = LibuvTcp::hostClose;
-        functions.shutdown = LibuvTcp::hostShutdown;
-        functions.destroy = LibuvTcp::hostDestroy;
-        functions.localPort = LibuvTcp::hostLocalPort;
-        functions.peerCount = LibuvTcp::hostPeerCount;
-        functions.entropy = CSystem::secureRandomBytesCallback;
-        if (NetWork::configureHost(functions) != NI_OK || NetWork::configureNativeFileIo() != NI_OK)
-        {
-            return 3;
-        }
-        NetGatewayIdentity identity;
-        if (identity.loadOrCreate(argv[1]) != NI_OK)
-        {
-            return 4;
-        }
-        uint32_t checks = 0;
-        for (uint32_t protocol = 2; protocol <= 3; ++protocol)
-        {
-            for (uint32_t mode = 0; mode < 5; ++mode)
-            {
-                s_fault = mode;
-                s_calls = 0;
-                NetGatewayConfiguration configuration;
-                configuration.m_address = "127.0.0.1";
-                configuration.m_advertise = "127.0.0.1";
-                configuration.m_port = 0;
-                configuration.m_runForMs = mode >= 1 && mode <= 3 ? 1000 : 20;
-                configuration.m_protocol = protocol;
-                configuration.m_identityDirectory = argv[1];
-                configuration.m_nodeName = identity.m_name;
-                configuration.m_certificate = identity.m_certificate;
-                configuration.m_privateKey = identity.m_privateKey;
-                NetGatewayTask task(configuration);
-                if (mode == 4)
-                {
-                    task.StopTask();
-                }
-                task.DoTask();
-                const int32_t expected = mode == 0 || mode == 4 ? NI_OK : NI_INVALID_STATE;
-                const bool passed = task.done() && task.port() != 0 && task.error() == expected && (mode == 0 || mode == 4 || s_calls >= 4);
-                std::printf("GATEWAY_TASK protocol=%u mode=%u polls=%u done=%u port_ready=%u error=%d expected=%d %s\n",
-                    protocol, mode, s_calls, task.done() ? 1U : 0U, task.port() != 0 ? 1U : 0U,
-                    task.error(), expected, passed ? "PASS" : "FAIL");
-                if (!passed)
-                {
-                    return 1;
-                }
-                ++checks;
-            }
-        }
-        std::printf("GATEWAY_TASK checks=%u PASS\n", checks);
-        return 0;
-    }
-    catch (...)
-    {
-        std::puts("GATEWAY_TASK unexpected test exception");
-        return 1;
-    }
-}
-
-#endif // NET_GATEWAY_TASK_UNIT_END

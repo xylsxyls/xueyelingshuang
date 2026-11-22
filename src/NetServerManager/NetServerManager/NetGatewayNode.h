@@ -2,6 +2,7 @@
 #include "NetWork/NetWorkAPI.h"
 #include "NetSender/NetSenderAPI.h"
 #include "NetGatewayNodeState.h"
+#include "NetGatewayNodeRecordPool.h"
 #include <map>
 #include <string>
 
@@ -10,7 +11,6 @@ class NetGatewayNode : private NetLinkTransportListener
 {
     friend class NetGatewayNodeLocalListener;
     friend class NetGatewayNodeConnection;
-    friend class NetGatewayNodeLoadTest;
 public:
     /** 复制本机节点身份，不在构造启动网络
     @param [in] name 唯一节点证书名
@@ -23,11 +23,37 @@ public:
     */
     ~NetGatewayNode();
 
+    /** 在首次监听、建立路由或停止前替换转发记录与正文的实际池
+    @param [in] bodies 正文大小级存储配置
+    @param [in] records 转发记录槽配置
+    @return NI_OK或状态、配置、分配错误，失败保留原池
+    */
+    int32_t configureRecordPools(const NetBufferPoolConfig& bodies, const LockFreeHashMapPoolConfig& records);
+
+    /** 在首次启动前配置控制记录及正文的实际存储，与数据转发池独立
+    @param [in] bodies 正文大小级配置
+    @param [in] records 控制记录槽配置
+    @return NI_OK或配置、状态、内存错误；失败保留原配置
+    */
+    int32_t configureControlPools(const NetBufferPoolConfig& bodies, const LockFreeHashMapPoolConfig& records);
+
+    /** 首次启动前配置实际逻辑路由记录池，每项覆盖从OPEN准备到终态回收
+    @param [in] config 实际槽容量及增长策略，不另设每来源通道数限制
+    @return NI_OK或配置、状态、内存错误，失败保留原池
+    */
+    int32_t configureRoutePool(const LockFreeHashMapPoolConfig& config);
+
+    /** 首次登记种子或启动前配置发现候选、成员和主动连接的实际记录池
+    @param [in] config 每类物理槽配置；失败不改变原池
+    @return NI_OK或配置、状态、内存错误
+    */
+    int32_t configureDiscoveryPools(const LockFreeHashMapPoolConfig& config);
+
     /** 启动NTW3公开管理入口；不允许公共服务注册
     @param [in] address 数值监听地址
     @param [in] port 0用于隔离测试
     @param [in] advertise 数值可达地址，不能发布0.0.0.0/::
-    @param [in] capacity 1至256个连接
+    @param [in] capacity 非零预留提示；真实连接接纳由底层连接池决定
     @return NI_OK或错误
     */
     int32_t listen(const char* address, uint32_t port, const std::string& advertise, uint32_t capacity);
@@ -95,12 +121,14 @@ private:
     */
     int32_t reply(uint64_t peer, const NetInterfaceFrame& original, int32_t status, const std::string& bytes);
 
-    /** 本轮管理输出是否有独立剩余额度；先检查再建立路由
-    @param [in] peer 管理代次
-    @param [in] bytes 预计正文
-    @return 是否能完整接纳
+    /** 在实际池中完整准备控制输出，尚不加入任何目标队列
+    @param [in] frame 管理帧元数据
+    @param [in] bytes 正文副本来源；长度按管理协议检查
+    @param [out] output 必须为空；成功持有记录与正文的实际租约
+    @return NI_OK或实际池容量、参数、分配错误
     */
-    bool controlSpace(uint64_t peer, uint32_t bytes) const;
+    int32_t prepareControl(const NetInterfaceFrame& frame, const std::string& bytes,
+        NetObjectReference<NetGatewayNodeControl>& output);
 
     /** 将完整控制帧复制进有界节点队列
     @param [in] peer 代次
@@ -275,28 +303,44 @@ private:
     uint64_t m_lastOutbound;
     // 本机服务或占用变化后需更新快照
     bool m_meshDirty;
-    // 公开TCP最大连接数，listen接纳1至256
+    // 公开的非零TCP容量提示；真实接纳由运输层连接池决定
     uint32_t m_capacity;
     // 最近分配的逻辑路由号，当前节点生命周期内不复用
     uint64_t m_lastRoute;
-    // 全部路由排队密文的总字节数，用于全局内存上限
-    uint32_t m_recordBytes;
+    // 全部路由排队密文字节数，仅用于空闲快路径和资源统计，不用于接纳门槛
+    uint64_t m_recordBytes;
+    // 最近排空的路由；跨轮从后继继续，避免低编号连接独占预算
+    uint64_t m_flushAfter;
     // 本节点拥有ProcessWork接收器，shutdown负责收敛
     bool m_receiving;
     // 已禁止新接入并进入统一停止过程
     bool m_stopping;
+    // 真实路由对象池，晚于路由索引与其转发队列销毁
+    std::unique_ptr<NetObjectPool<NetGatewayNodeRoute>> m_routePool;
+    // 节点全部方向的实际转发存储，必须比m_routes晚销毁
+    std::unique_ptr<NetGatewayNodeRecordPool> m_recordPool;
+    // 控制正文池比控制记录和所有peer晚销毁，不借用临时字符串
+    std::unique_ptr<NetBufferPool> m_controlBodies;
+    // 控制帧真实记录槽，不额外限制每个连接的排队数量
+    std::unique_ptr<NetObjectPool<NetGatewayNodeControl>> m_controlRecords;
     // 带作用域的TCP、IPC和主动NODE连接状态表
     std::map<uint64_t, NetGatewayNodePeer> m_peers;
     // 节点路由号到固定服务实例的双向信用及队列状态
-    std::map<uint64_t, NetGatewayNodeRoute> m_routes;
+    std::map<uint64_t, NetObjectReference<NetGatewayNodeRoute>> m_routes;
     // 物理代次与逻辑通道号到本机路由的双向索引
     std::map<std::pair<uint64_t, uint64_t>, uint64_t> m_channels;
     // 独占主动NODE连接，终态后才删除
-    std::map<uint64_t, std::unique_ptr<NetGatewayNodeConnection>> m_outbound;
+    std::unique_ptr<NetObjectPool<NetGatewayNodeConnection>> m_outboundPool;
+    // 发现成员的实际记录池
+    std::unique_ptr<NetObjectPool<NetGatewayNodeMember>> m_memberPool;
+    // 候选地址的实际记录池
+    std::unique_ptr<NetObjectPool<NetGatewayNodeCandidate>> m_candidatePool;
+    // 主动节点连接的索引；引用保持到关闭回调结束
+    std::map<uint64_t, NetObjectReference<NetGatewayNodeConnection>> m_outbound;
     // 节点名称到有界发现记录，未认证信息只作连接提示
-    std::map<std::string, NetGatewayNodeMember> m_members;
+    std::map<std::string, NetObjectReference<NetGatewayNodeMember>> m_members;
     // 数值地址和端口到候选退避状态，显式种子不随过期删除
-    std::map<std::pair<std::string, uint32_t>, NetGatewayNodeCandidate> m_candidates;
+    std::map<std::pair<std::string, uint32_t>, NetObjectReference<NetGatewayNodeCandidate>> m_candidates;
     // 远端NODE代次和OPEN请求号到等待确认的路由
     std::map<std::pair<uint64_t, uint64_t>, uint64_t> m_pendingOpens;
     // 公开节点候选的异步原子存储，不含认证私钥

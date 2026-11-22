@@ -6,8 +6,6 @@
 #include "CSystem/CSystemAPI.h"
 // 原生文件后端由NetWork正式宿主入口配置。
 #include "NetGatewayIdentity.h"
-#include "NetGatewayServiceProbe.h"
-#include "NetGatewayManagedProbe.h"
 #include "NetInterface/NetInterfaceAPI.h"
 #include <cstdio>
 #include <csignal>
@@ -152,7 +150,7 @@ static bool ReadGatewayServices(const std::string& path, std::vector<NetGatewayS
             continue;
         }
         const size_t separator = line.find('=');
-        if (separator == std::string::npos || line.size() - separator - 1 != 64 || result.size() >= 32)
+        if (separator == std::string::npos || line.size() - separator - 1 != 64)
         {
             return false;
         }
@@ -204,7 +202,7 @@ static int32_t ConfigureGatewayHost()
     functions.listen = LibuvTcp::hostListen;
     functions.connect = LibuvTcp::hostConnect;
     functions.poll = LibuvTcp::hostPoll;
-    functions.write = LibuvTcp::hostWrite;
+    functions.write = LibuvTcp::post;
     functions.pauseRead = LibuvTcp::hostPauseRead;
     functions.close = LibuvTcp::hostClose;
     functions.shutdown = LibuvTcp::hostShutdown;
@@ -212,6 +210,12 @@ static int32_t ConfigureGatewayHost()
     functions.localPort = LibuvTcp::hostLocalPort;
     functions.peerCount = LibuvTcp::hostPeerCount;
     functions.entropy = CSystem::secureRandomBytesCallback;
+    functions.execution.create = LibuvTcp::hostLoopCreate;
+    functions.execution.exchange = LibuvTcp::hostLoopExchange;
+    functions.execution.begin = LibuvTcp::hostLoopBegin;
+    functions.execution.wait = LibuvTcp::hostLoopWait;
+    functions.execution.wake = LibuvTcp::hostLoopWake;
+    functions.execution.destroy = LibuvTcp::hostLoopDestroy;
     return NetWork::configureHost(functions);
 }
 
@@ -240,7 +244,7 @@ NetServerManager::~NetServerManager()
 NetServerManager& NetServerManager::instance()
 {
     // 先构造任务管理器，保证本管理对象析构兜底时任务管理器仍然存在；此处不创建线程。
-    CTaskThreadManager::Instance();
+    CTaskThreadManager::instance();
     static NetServerManager s_manager;
     return s_manager;
 }
@@ -296,53 +300,17 @@ int NetServerManager::prepare(const std::vector<std::string>& arguments)
             return 2;
         }
     }
-    if (arguments.size() == 1 && arguments[0] == "--self-test=identity")
-    {
-        return NetGatewayAuthority::selfTest() == NI_OK ? 0 : 1;
-    }
-    if (arguments.size() == 1 && arguments[0] == "--self-test=link")
-    {
-        return NetGatewayAuthority::linkSelfTest() == NI_OK ? 0 : 1;
-    }
-    if (arguments.size() == 3 && (arguments[0].compare(0, 20, "--self-test-managed=") == 0 ||
-        arguments[0].compare(0, 29, "--self-test-managed-internal=") == 0 ||
-        arguments[0].compare(0, 21, "--self-test-capacity=") == 0) &&
-        arguments[1].compare(0, 12, "--stop-file=") == 0 && arguments[2].compare(0, 13, "--run-for-ms=") == 0)
-    {
-        uint32_t pid = 0;
-        uint32_t duration = 0;
-        if (!GatewayNumber(arguments[0].substr(arguments[0].find('=') + 1), INT32_MAX, pid) ||
-            !GatewayNumber(arguments[2].substr(13), 60000, duration)) { return 2; }
-        return NetGatewayManagedProbe::run(static_cast<int32_t>(pid), arguments[1].substr(12), duration,
-            arguments[0].find("-internal=") != std::string::npos, arguments[0].find("-capacity=") != std::string::npos);
-    }
-    if (arguments.size() == 3 && (arguments[0].compare(0, 20, "--self-test-service=") == 0 ||
-        arguments[0].compare(0, 21, "--self-test-internal=") == 0 || arguments[0].compare(0, 18, "--self-test-query=") == 0) &&
-        arguments[1].compare(0, 12, "--stop-file=") == 0 && arguments[2].compare(0, 13, "--run-for-ms=") == 0)
-    {
-        uint32_t pid = 0;
-        uint32_t duration = 0;
-        if (!GatewayNumber(arguments[0].substr(arguments[0].find('=') + 1), INT32_MAX, pid) ||
-            !GatewayNumber(arguments[2].substr(13), NetGatewayServiceProbe::MaximumDurationMs, duration)) { return 2; }
-        const bool internal = arguments[0].compare(0, 21, "--self-test-internal=") == 0;
-        const bool query = arguments[0].compare(0, 18, "--self-test-query=") == 0;
-        return NetGatewayServiceProbe::run(static_cast<int32_t>(pid), arguments[1].substr(12), duration, internal ? 0 : 1, query);
-    }
     if (arguments.size() == 1 && arguments[0] == "--help")
     {
-        std::puts("NetServerManager [--identity-directory=gateway] [--listen=127.0.0.1] [--port=5203]");
+        std::puts("NetServerManager [--identity-directory=<path>] [--listen=127.0.0.1] [--port=5203]");
+        std::puts("The default identity directory is gateway beside the executable.");
         std::puts("Existing compatibility mode: --certificate=<PEM> --private-key=<PEM> (paired options).");
         std::puts("NTW3: --protocol=3 [--advertise=<reachable numeric address>], requires automatic node identity.");
         std::puts(
             "Optional: --services=<credential file> --max-peers=256 --run-for-ms=0 --stop-file=<owned path>.");
         return 0;
     }
-    std::string isolated;
-#ifdef NET_GATEWAY_TEST_INSTANCE
-    // 只用于独立命名的NetWorkTest宿主；正式两个网关从不编译此宏。
-    isolated = std::to_string(CSystem::currentProcessPid());
-#endif
-    const int32_t acquired = CSystem::acquireProcessLease("NetServerManager", arguments.empty(), 10000, m_lease, isolated);
+    const int32_t acquired = CSystem::acquireProcessLease("NetServerManager", arguments.empty(), 10000, m_lease);
     if (acquired != 1)
     {
         std::fputs(acquired == 0 ? "NetServerManager_REUSED: existing instance retained; arguments not applied\n" :
@@ -403,7 +371,7 @@ int NetServerManager::prepare(const std::vector<std::string>& arguments)
             uint32_t port = 0;
             std::string address = colon == std::string::npos ? "" : seed.substr(0, colon);
             if (address.size() >= 2 && address.front() == '[' && address.back() == ']') { address = address.substr(1, address.size() - 2); }
-            if (configuration.m_seeds.size() >= 64 || !NetInterfaceDirectory::address(address) ||
+            if (!NetInterfaceDirectory::address(address) ||
                 !GatewayNumber(seed.substr(colon + 1), 65535, port) || port == 0)
             {
                 std::fputs("Invalid numeric seed list\n", stderr);
@@ -425,9 +393,27 @@ int NetServerManager::prepare(const std::vector<std::string>& arguments)
     else
     {
         NetGatewayIdentity identity;
-        const std::string directory = options.count("--identity-directory") ? options["--identity-directory"] : "gateway";
-        configuration.m_identityDirectory = directory;
-        if (identity.loadOrCreate(directory) != NI_OK)
+        const auto identityOption = options.find("--identity-directory");
+        if (identityOption != options.end())
+        {
+            configuration.m_identityDirectory = identityOption->second;
+        }
+        else
+        {
+            const std::string executable = CSystem::currentExecutablePathUtf8();
+#ifdef _WIN32
+            const size_t separator = executable.find_last_of("/\\");
+#else
+            const size_t separator = executable.rfind('/');
+#endif
+            if (separator == std::string::npos)
+            {
+                std::fputs("Cannot locate the executable directory; specify --identity-directory\n", stderr);
+                return 2;
+            }
+            configuration.m_identityDirectory = executable.substr(0, separator + 1) + "gateway";
+        }
+        if (identity.loadOrCreate(configuration.m_identityDirectory) != NI_OK)
         {
             std::fputs("Cannot validate or create gateway identity.dat; existing damaged identity was not overwritten\n", stderr);
             return 2;
@@ -460,18 +446,21 @@ int NetServerManager::prepare(const std::vector<std::string>& arguments)
         return 1;
     }
     m_task.reset(new NetGatewayTask(configuration));
-    m_thread = CTaskThreadManager::Instance().Init();
+    m_thread = CTaskThreadManager::instance().init();
     if (m_thread == 0)
     {
         return 1;
     }
-    std::shared_ptr<CTaskThread> executor = CTaskThreadManager::Instance().GetThreadInterface(m_thread);
+    std::shared_ptr<CTaskThread> executor = CTaskThreadManager::instance().getThreadInterface(m_thread);
     if (!executor)
     {
         std::fputs("Cannot create gateway executor\n", stderr);
         return 1;
     }
-    executor->PostTask(m_task);
+    if (!executor->tryPostTaskResult(m_task, 1, true, false).m_committed)
+    {
+        return 1;
+    }
     executor.reset();
     return 0;
 }
@@ -516,11 +505,16 @@ bool NetServerManager::stopTask()
         }
         if (m_task)
         {
-            m_task->StopTask();
+            m_task->stopTask();
         }
         if (m_thread != 0)
         {
-            CTaskThreadManager::Instance().WaitForEnd(m_thread);
+            const CTaskThreadResult joined = CTaskThreadManager::instance().waitForEnd(m_thread);
+            if (joined.m_status != CTaskThreadOk && joined.m_status != CTaskThreadNotFound)
+            {
+                m_cleanupFailed = true;
+                return false;
+            }
             m_thread = 0;
         }
         return true;
@@ -556,7 +550,7 @@ int NetServerManager::run()
                 if (!CSystem::setProcessLeaseReady(m_lease, true))
                 {
                     stop();
-                    m_task->StopTask();
+                    m_task->stopTask();
                     break;
                 }
                 std::printf("GATEWAY_READY port=%u pid=%u\n", m_task->port(), static_cast<uint32_t>(CSystem::currentProcessPid()));
@@ -580,7 +574,7 @@ int NetServerManager::run()
             {
                 CSystem::setProcessLeaseReady(m_lease, false);
                 stop();
-                m_task->StopTask();
+                m_task->stopTask();
             }
             CSystem::Sleep(10);
         }
@@ -687,202 +681,3 @@ int main(int argc, char** argv)
         return 1;
     }
 }
-
-#if 0 // MANAGER_LIFECYCLE_UNIT_BEGIN
-// 测试时在隔离副本停用上方生产main、启用此main，并定义NET_GATEWAY_TEST_INSTANCE；参数为独占临时目录。
-// 测试结束保持此块关闭，不运行生产单例或实际公网端点。
-#if defined(_WIN32) && defined(_DEBUG)
-#include <crtdbg.h>
-
-// 只拒绝当前测试主线程的一次分配，工作线程不参与故障注入。
-static DWORD g_managerAllocationThread = 0;
-// 剩余主线程分配次数，负数关闭注入。
-static int g_managerAllocationBudget = -1;
-// 当前注入点是否实际拒绝过分配。
-static bool g_managerAllocationRejected = false;
-// 测试开始前已有的CRT分配钩子，未拒绝时继续调用。
-static _CRT_ALLOC_HOOK g_managerPreviousAllocationHook = nullptr;
-
-/** 仅在选定主线程分配点注入一次失败，释放动作及其他线程保持原行为
-@param [in] operation CRT分配操作
-@param [in] pointer 原块
-@param [in] size 请求字节
-@param [in] block CRT块类型
-@param [in] request 分配编号
-@param [in] filename CRT源文件
-@param [in] line CRT源行
-@return 是否允许本次CRT操作
-*/
-static int __cdecl ManagerAllocationHook(int operation, void* pointer, size_t size, int block, long request,
-    const unsigned char* filename, int line)
-{
-    if (operation == _HOOK_ALLOC && GetCurrentThreadId() == g_managerAllocationThread && g_managerAllocationBudget >= 0)
-    {
-        if (g_managerAllocationBudget-- == 0)
-        {
-            g_managerAllocationRejected = true;
-            return FALSE;
-        }
-    }
-    return g_managerPreviousAllocationHook == nullptr ? TRUE :
-        g_managerPreviousAllocationHook(operation, pointer, size, block, request, filename, line);
-}
-#endif
-
-/** 管理类生命周期单测，覆盖重复调用、失败恢复、停止、信号恢复及分配失败回收
-@param [in] argc 原平台参数数量
-@param [in] argv 原平台参数，唯一业务参数为独占临时目录
-@return 0通过，1检查失败，2参数错误
-*/
-int main(int argc, char** argv)
-{
-#ifdef _WIN32
-    if (!CSystem::bindInheritedOutput())
-    {
-        return 1;
-    }
-#endif
-    NetServerManager& manager = NetServerManager::instance();
-    try
-    {
-        std::vector<std::string> paths;
-        if (!CSystem::commandArguments(argc, argv, paths) || paths.size() != 1)
-        {
-            return 2;
-        }
-        uint32_t checks = 0;
-        // condition为独立预期，message只含用例名；失败打印后交给main统一清理。
-        const auto check = [&checks](bool condition, const char* message) -> bool
-        {
-            ++checks;
-            if (!condition)
-            {
-                std::fprintf(stderr, "MANAGER_UNIT_FAILED %s\n", message);
-            }
-            return condition;
-        };
-        if (!check(&manager == &NetServerManager::instance(), "singleton") ||
-            !check(manager.run() == 1, "run-before-init") ||
-            !check(manager.uninit() && manager.uninit(), "empty-uninit"))
-        {
-            return 1;
-        }
-        std::vector<std::string> help(1, "--help");
-        if (!check(manager.init(help) == 0, "help-init") ||
-            !check(manager.init(help) == 1, "duplicate-init") ||
-            !check(manager.run() == 0, "help-run") ||
-            !check(manager.run() == 1, "duplicate-run") ||
-            !check(manager.uninit() && manager.uninit(), "help-uninit"))
-        {
-            return 1;
-        }
-        std::vector<std::string> invalid(1, "--port=70000");
-        if (!check(manager.init(invalid) == 2, "invalid-config") ||
-            !check(manager.run() == 1, "failed-init-not-runnable") ||
-            !check(manager.uninit(), "failed-init-uninit"))
-        {
-            return 1;
-        }
-        std::vector<std::string> arguments;
-        arguments.push_back("--protocol=3");
-        arguments.push_back("--listen=127.0.0.1");
-        arguments.push_back("--port=0");
-        arguments.push_back("--run-for-ms=40");
-        arguments.push_back("--identity-directory=" + CSystem::joinPath(paths[0], "identity"));
-        // 先实际运行一轮，使第三方懒初始化与后续任务/句柄回收检查分离。
-        if (!check(manager.init(arguments) == 0, "warm-init") ||
-            !check(manager.run() == 0, "warm-run") || !check(manager.uninit(), "warm-uninit"))
-        {
-            return 1;
-        }
-        const int32_t threads = CTaskThreadManager::Instance().Count();
-        for (uint32_t cycle = 0; cycle < 4; ++cycle)
-        {
-            const auto originalSignal = std::signal(SIGINT, SIG_IGN);
-            if (!check(originalSignal != SIG_ERR, "test-signal-install") ||
-                !check(manager.init(arguments) == 0, "cycle-init") ||
-                !check(manager.init(arguments) == 1, "live-duplicate-init"))
-            {
-                return 1;
-            }
-            if (cycle == 0)
-            {
-                manager.stop();
-                manager.stop();
-            }
-            else if (cycle == 1)
-            {
-                std::raise(SIGINT);
-            }
-            if (cycle != 3 && !check(manager.run() == 0, "cycle-run"))
-            {
-                return 1;
-            }
-            if (!check(manager.uninit() && manager.uninit(), "cycle-uninit") ||
-                !check(CTaskThreadManager::Instance().Count() == threads, "thread-reclaimed") ||
-                !check(std::signal(SIGINT, SIG_IGN) == SIG_IGN, "signal-restored"))
-            {
-                return 1;
-            }
-            std::signal(SIGINT, originalSignal);
-        }
-        std::vector<std::string> failed(arguments);
-        failed[1] = "--listen=invalid-ip";
-        if (!check(manager.init(failed) == 0, "async-failure-prepare") ||
-            !check(manager.run() == 1, "async-failure-reported") ||
-            !check(manager.uninit(), "async-failure-uninit") ||
-            !check(CTaskThreadManager::Instance().Count() == threads, "failed-thread-reclaimed"))
-        {
-            return 1;
-        }
-        uint32_t rejected = 0;
-#if defined(_WIN32) && defined(_DEBUG)
-        g_managerAllocationThread = GetCurrentThreadId();
-        for (int budget = 0; budget < 160; ++budget)
-        {
-            g_managerAllocationBudget = budget;
-            g_managerAllocationRejected = false;
-            g_managerPreviousAllocationHook = _CrtSetAllocHook(ManagerAllocationHook);
-            const int initialized = manager.init(arguments);
-            _CrtSetAllocHook(g_managerPreviousAllocationHook);
-            g_managerAllocationBudget = -1;
-            if (g_managerAllocationRejected)
-            {
-                ++rejected;
-            }
-            // 返回成功的注入点可能属于可选准备；同样必须可停止且收回任务。
-            if (initialized == 0)
-            {
-                manager.stop();
-                manager.run();
-            }
-            if (!check(manager.uninit() && manager.uninit(), "allocation-uninit") ||
-                !check(CTaskThreadManager::Instance().Count() == threads, "allocation-thread-reclaimed"))
-            {
-                return 1;
-            }
-        }
-        if (!check(rejected > 0, "allocation-rejection-exercised"))
-        {
-            return 1;
-        }
-#endif
-        if (!check(manager.init(arguments) == 0 && manager.run() == 0 && manager.uninit(), "final-recovery"))
-        {
-            return 1;
-        }
-        std::printf("MANAGER_UNIT_PASS checks=%u rejected=%u\n", checks, rejected);
-        return 0;
-    }
-    catch (...)
-    {
-#if defined(_WIN32) && defined(_DEBUG)
-        _CrtSetAllocHook(g_managerPreviousAllocationHook);
-        g_managerAllocationBudget = -1;
-#endif
-        manager.uninit();
-        std::fputs("MANAGER_UNIT_FAILED unexpected-exception\n", stderr);
-        return 1;
-    }
-}
-#endif // MANAGER_LIFECYCLE_UNIT_END

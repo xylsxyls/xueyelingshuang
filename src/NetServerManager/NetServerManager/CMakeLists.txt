@@ -35,7 +35,9 @@ elseif(CMAKE_HOST_APPLE OR CMAKE_SYSTEM_NAME MATCHES "^(Darwin|iOS)$")
         set(CMAKE_OSX_ARCHITECTURES "${native_apple_arch}" CACHE STRING "Apple target architecture")
     endif()
 elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
-    string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}" native_host_arch)
+    # This block runs before project(), when CMAKE_HOST_SYSTEM_PROCESSOR can still be empty.
+    cmake_host_system_information(RESULT native_host_arch QUERY OS_PLATFORM)
+    string(TOLOWER "${native_host_arch}" native_host_arch)
     if(BIT STREQUAL "32" OR BIT STREQUAL "64")
         if(NOT native_host_arch MATCHES "^(x86_64|amd64|i[3-6]86|x86)$")
             message(FATAL_ERROR "An x86 cross toolchain is required on this host")
@@ -161,11 +163,11 @@ add_executable(NetServerManager
     "NetGatewayAuthority.cpp"
     "NetGatewayIdentity.cpp"
     "NetGatewayNode.cpp"
+    "NetGatewayNodeRecord.cpp"
+    "NetGatewayNodeRecordPool.cpp"
     "NetGatewayNodeState.cpp"
     "NetGatewayPeerHistory.cpp"
-    "NetGatewayServiceProbe.cpp"
     "NetServerEnrollment.cpp"
-    "NetGatewayManagedProbe.cpp"
 )
 set_target_properties(NetServerManager PROPERTIES OUTPUT_NAME NetServerManager1.1 RUNTIME_OUTPUT_DIRECTORY "${SDK_ROOT}/lib")
 foreach(native_config DEBUG RELEASE)
@@ -222,7 +224,7 @@ if(APPLE)
 endif()
 target_compile_definitions(NetServerManager PRIVATE MBEDTLS_CONFIG_FILE="mbedtls/mbedtls_sdk_config.h")
 
-if(NOT EXISTS "${SDK_ROOT}/lib/libmbedtlsstatic${BIT}.a" OR NOT EXISTS "${SDK_ROOT}/include/mbedtls/mbedtls_sdk_config.h")
+if(NOT EXISTS "${SDK_ROOT}/lib/libmbedtls.a" OR NOT EXISTS "${SDK_ROOT}/include/mbedtls/mbedtls_sdk_config.h")
     message(FATAL_ERROR "Missing target vendor SDK; run before/version with this platform's prepared SDK")
 endif()
-target_link_libraries(NetServerManager PUBLIC "${SDK_ROOT}/lib/libmbedtlsstatic${BIT}.a")
+target_link_libraries(NetServerManager PUBLIC "${SDK_ROOT}/lib/libmbedtls.a")

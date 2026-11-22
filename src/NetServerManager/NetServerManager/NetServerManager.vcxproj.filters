@@ -42,12 +42,6 @@
     <ClCompile Include="NetGatewayNode.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="NetGatewayServiceProbe.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="NetGatewayManagedProbe.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClInclude Include="NetGatewayAuthority.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -60,15 +54,6 @@
     <ClInclude Include="NetGatewayNodeState.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="NetGatewayNodeLoadTest.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="NetGatewayServiceProbe.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="NetGatewayManagedProbe.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NetGatewayPeerHistory.cpp" />
@@ -78,5 +63,11 @@
     <ClCompile Include="NetGatewayNodeState.cpp" />
     <ClCompile Include="NetServerEnrollment.cpp" />
     <ClInclude Include="NetServerEnrollment.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetGatewayNodeRecord.cpp" />
+    <ClInclude Include="NetGatewayNodeRecord.h" />
+    <ClCompile Include="NetGatewayNodeRecordPool.cpp" />
+    <ClInclude Include="NetGatewayNodeRecordPool.h" />
   </ItemGroup>
 </Project>

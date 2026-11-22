@@ -1,6 +1,6 @@
 ﻿#include "NetGatewayNode.h"
 #include "NetInterface/NetInterfaceAPI.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include <algorithm>
 #include <set>
 #include <chrono>
@@ -101,11 +101,45 @@ static uint64_t GatewayNodeNow()
 static const uint64_t g_nodeLocalPeer = UINT64_C(0x8000000000000000);
 static const uint64_t g_nodeOutboundPeer = UINT64_C(0x4000000000000000);
 
+/** 依据控制记录实际槽大小设置默认存储，允许初始化前覆盖
+@return 初始128槽，最大约8MiB实际记录存储
+*/
+static LockFreeHashMapPoolConfig GatewayControlRecords()
+{
+    LockFreeHashMapPoolConfig config;
+    config.initialCapacity = 128;
+    config.maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetGatewayNodeControl>>);
+    config.directoryCapacity = 128;
+    config.lookupCacheCapacity = 0;
+    return config;
+}
+
+/** 默认路由对象池，内含两方向队列状态，记录数量不再作为第二层接纳门槛
+@return 预热128槽、最大约8MiB的物理池配置
+*/
+static LockFreeHashMapPoolConfig GatewayRouteRecords()
+{
+    LockFreeHashMapPoolConfig config;
+    config.initialCapacity = 128;
+    config.maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetGatewayNodeRoute>>);
+    config.directoryCapacity = 128;
+    config.lookupCacheCapacity = 0;
+    return config;
+}
+
 NetGatewayNode::NetGatewayNode(const std::string& name, const std::string& certificate, const std::string& privateKey) :
     m_localListener(*this), m_local(m_inbox), m_name(name), m_certificate(certificate), m_privateKey(privateKey),
     m_boot(0), m_snapshotRevision(0), m_snapshotAt(0), m_lastOutbound(0), m_meshDirty(true),
-    m_capacity(0), m_lastRoute(0), m_recordBytes(0), m_receiving(false), m_stopping(false)
+    m_capacity(0), m_lastRoute(0), m_recordBytes(0), m_flushAfter(0), m_receiving(false), m_stopping(false), m_routePool(new NetObjectPool<NetGatewayNodeRoute>(GatewayRouteRecords())), m_recordPool(new NetGatewayNodeRecordPool),
+    m_controlBodies(new NetBufferPool(NetBufferPoolConfig())),
+    m_controlRecords(new NetObjectPool<NetGatewayNodeControl>(GatewayControlRecords()))
 {
+    LockFreeHashMapPoolConfig discovery;
+    discovery.initialCapacity = 2;
+    discovery.maximumCapacity = 4096;
+    m_candidatePool.reset(new NetObjectPool<NetGatewayNodeCandidate>(discovery));
+    m_memberPool.reset(new NetObjectPool<NetGatewayNodeMember>(discovery));
+    m_outboundPool.reset(new NetObjectPool<NetGatewayNodeConnection>(discovery));
     m_cacheEnabled = false;
     m_cacheDirty = true;
     m_cacheQueued = 0;
@@ -120,14 +154,99 @@ NetGatewayNode::~NetGatewayNode()
     }
 }
 
+int32_t NetGatewayNode::configureDiscoveryPools(const LockFreeHashMapPoolConfig& config)
+{
+    if (m_stopping || m_receiving || m_capacity != 0 || !m_candidates.empty() || !m_members.empty()) { return NI_INVALID_STATE; }
+    try
+    {
+        std::unique_ptr<NetObjectPool<NetGatewayNodeCandidate>> candidates(new NetObjectPool<NetGatewayNodeCandidate>(config));
+        std::unique_ptr<NetObjectPool<NetGatewayNodeMember>> members(new NetObjectPool<NetGatewayNodeMember>(config));
+        std::unique_ptr<NetObjectPool<NetGatewayNodeConnection>> outbound(new NetObjectPool<NetGatewayNodeConnection>(config));
+        if (candidates->status() != NI_OK) { return candidates->status(); }
+        if (members->status() != NI_OK) { return members->status(); }
+        if (outbound->status() != NI_OK) { return outbound->status(); }
+        m_candidatePool.swap(candidates);
+        m_memberPool.swap(members);
+        m_outboundPool.swap(outbound);
+        return NI_OK;
+    }
+    catch (...) { return NI_NO_MEMORY; }
+}
+
+int32_t NetGatewayNode::configureRoutePool(const LockFreeHashMapPoolConfig& config)
+{
+    if (m_stopping || m_receiving || m_capacity != 0 || !m_routes.empty())
+    {
+        return NI_INVALID_STATE;
+    }
+    try
+    {
+        std::unique_ptr<NetObjectPool<NetGatewayNodeRoute>> pool(new NetObjectPool<NetGatewayNodeRoute>(config));
+        if (pool->status() != NI_OK)
+        {
+            return pool->status();
+        }
+        m_routePool.swap(pool);
+        return NI_OK;
+    }
+    catch (...)
+    {
+        return NI_NO_MEMORY;
+    }
+}
+
+int32_t NetGatewayNode::configureRecordPools(const NetBufferPoolConfig& bodies, const LockFreeHashMapPoolConfig& records)
+{
+    if (m_stopping || m_receiving || m_capacity != 0 || !m_routes.empty())
+    {
+        return NI_INVALID_STATE;
+    }
+    try
+    {
+        std::unique_ptr<NetGatewayNodeRecordPool> pool(new NetGatewayNodeRecordPool(bodies, records));
+        if (pool->status() != NI_OK)
+        {
+            return pool->status();
+        }
+        m_recordPool.swap(pool);
+        return NI_OK;
+    }
+    catch (...)
+    {
+        return NI_NO_MEMORY;
+    }
+}
+
+int32_t NetGatewayNode::configureControlPools(const NetBufferPoolConfig& bodies, const LockFreeHashMapPoolConfig& records)
+{
+    if (m_stopping || m_receiving || m_capacity != 0 || !m_peers.empty() || !m_routes.empty())
+    {
+        return NI_INVALID_STATE;
+    }
+    try
+    {
+        std::unique_ptr<NetBufferPool> newBodies(new NetBufferPool(bodies));
+        if (newBodies->status() != NI_OK) { return newBodies->status(); }
+        std::unique_ptr<NetObjectPool<NetGatewayNodeControl>> newRecords(new NetObjectPool<NetGatewayNodeControl>(records));
+        if (newRecords->status() != NI_OK) { return newRecords->status(); }
+        m_controlBodies.swap(newBodies);
+        m_controlRecords.swap(newRecords);
+        return NI_OK;
+    }
+    catch (...) { return NI_NO_MEMORY; }
+}
+
 int32_t NetGatewayNode::listen(const char* address, uint32_t port, const std::string& advertise, uint32_t capacity)
 {
-    if (m_stopping || m_receiving || !NetInterfaceDirectory::address(advertise) || capacity == 0 || capacity > 256 ||
+    if (m_stopping || m_receiving || !NetInterfaceDirectory::address(advertise) || capacity == 0 || capacity > UINT32_MAX ||
         m_name.size() != 37 || m_name.compare(0, 5, "node.") != 0 ||
         m_name.find_first_not_of("0123456789abcdef", 5) != std::string::npos)
     {
         return NI_INVALID_ARGUMENT;
     }
+    if (m_recordPool->status() != NI_OK) { return m_recordPool->status(); }
+    if (m_controlBodies->status() != NI_OK) { return m_controlBodies->status(); }
+    if (m_controlRecords->status() != NI_OK) { return m_controlRecords->status(); }
     m_advertise = advertise;
     m_capacity = capacity;
     if (GatewayNodeEntropy(nullptr, reinterpret_cast<uint8_t*>(&m_boot), sizeof(m_boot)) != 0 || m_boot == 0) { return NI_INVALID_STATE; }
@@ -147,7 +266,10 @@ int32_t NetGatewayNode::listen(const char* address, uint32_t port, const std::st
     {
         return NI_INVALID_STATE;
     }
-    ProcessWork::instance().addProcessReceiveCallback(&m_inbox);
+    if (!ProcessWork::instance().addProcessReceiveCallback(&m_inbox))
+    {
+        return NI_NO_MEMORY;
+    }
     if (!ProcessWork::instance().initReceive(16452, 64))
     {
         ProcessWork::instance().uninitReceive();
@@ -242,31 +364,35 @@ void NetGatewayNode::onLinkReady(uint64_t peer, const NetInterfaceLinkPeer& iden
     }
 }
 
-bool NetGatewayNode::controlSpace(uint64_t peer, uint32_t bytes) const
+int32_t NetGatewayNode::prepareControl(const NetInterfaceFrame& frame, const std::string& bytes,
+    NetObjectReference<NetGatewayNodeControl>& output)
 {
-    auto found = m_peers.find(peer);
-    return found != m_peers.end() && !found->second.m_closing && bytes <= 16384 &&
-        found->second.m_controls.size() < 32 && found->second.m_controlBytes <= 65536 - bytes;
+    if (output || bytes.size() > 16384) { return NI_INVALID_ARGUMENT; }
+    NetObjectReference<NetGatewayNodeControl> record;
+    int32_t result = m_controlRecords->create(record);
+    if (result == NI_OK) { result = m_controlBodies->allocate(static_cast<uint32_t>(bytes.size()), record->m_payload); }
+    if (result != NI_OK) { return result; }
+    if (!bytes.empty()) { std::memcpy(record->m_payload.data(), bytes.data(), bytes.size()); }
+    record->m_frame = frame;
+    record->m_frame.m_payload = nullptr;
+    record->m_frame.m_payloadSize = static_cast<uint32_t>(bytes.size());
+    output = std::move(record);
+    return NI_OK;
 }
 
 int32_t NetGatewayNode::queueControl(uint64_t peer, const NetInterfaceFrame& frame, const std::string& bytes)
 {
     auto target = m_peers.find(peer);
-    if (target == m_peers.end() || target->second.m_closing) { return NI_LIMIT_EXCEEDED; }
-    NetGatewayNodePeer& destination = target->second;
-    const bool closing = frame.m_kind == NI_EVENT && frame.m_messageType == NI_GATEWAY_CHANNEL_CLOSE &&
-        frame.m_requestId == 0 && frame.m_productId == 0;
-    if (closing)
+    if (target == m_peers.end() || target->second.m_closing) { return NI_NOT_FOUND; }
+    NetObjectReference<NetGatewayNodeControl> record;
+    const int32_t result = prepareControl(frame, bytes, record);
+    if (result != NI_OK) { return result; }
+    try
     {
-        // 节点至多4096条活跃路由，关闭各有一次通知；与32项普通预算分开，避免批量退出误杀共享服务。
-        // 普通接纳仍受原controlSpace限制，通知积压时不继续OPEN；每轮只发送原有32步，五秒停滞仍收敛。
-        if (bytes.size() > 128 || destination.m_controls.size() >= 32 + 4096 ||
-            destination.m_controlBytes > 65536 + 4096 * 128 - bytes.size()) { return NI_LIMIT_EXCEEDED; }
+        target->second.m_controls.push_back(record);
+        return NI_OK;
     }
-    else if (!controlSpace(peer, static_cast<uint32_t>(bytes.size()))) { return NI_LIMIT_EXCEEDED; }
-    destination.m_controls.push_back(NetGatewayNodeControl(frame, bytes));
-    destination.m_controlBytes += static_cast<uint32_t>(bytes.size());
-    return NI_OK;
+    catch (...) { return NI_NO_MEMORY; }
 }
 
 void NetGatewayNode::flushControls()
@@ -276,7 +402,7 @@ void NetGatewayNode::flushControls()
         NetGatewayNodePeer& peer = item.second;
         for (uint32_t step = 0; step < 32 && !peer.m_closing && !peer.m_controls.empty(); ++step)
         {
-            NetGatewayNodeControl& pending = peer.m_controls.front();
+            NetGatewayNodeControl& pending = *peer.m_controls.front();
             NetInterfaceFrame frame = pending.m_frame;
             frame.m_payload = reinterpret_cast<const uint8_t*>(pending.m_payload.data());
             const int32_t sent = sendControl(item.first, frame);
@@ -289,7 +415,6 @@ void NetGatewayNode::flushControls()
             }
             if (sent != NI_OK) { close(item.first, sent); break; }
             peer.m_blockedSince = 0;
-            peer.m_controlBytes -= static_cast<uint32_t>(pending.m_payload.size());
             peer.m_controls.pop_front();
         }
     }
@@ -314,15 +439,15 @@ bool NetGatewayNode::select(uint64_t peer, uint32_t product, uint64_t instance, 
 {
     NetGatewayNodeSelection best = {};
     uint64_t bestLoad = UINT64_MAX;
-    // 路由总数有硬上限；每次选择只聚合一遍，避免每个远端实例都扫描全部路由。
+    // 每次选择只聚合一遍实际路由，避免每个远端实例都重复扫描全部记录。
     std::map<std::pair<uint64_t, uint64_t>, uint32_t> reservations;
     for (const auto& route : m_routes)
     {
-        const auto target = m_peers.find(route.second.m_service);
+        const auto target = m_peers.find(route.second->m_service);
         if (target != m_peers.end() && target->second.m_role == NI_LINK_NODE &&
-            (route.second.m_pending || route.second.m_loadRevision > target->second.m_snapshotRevision))
+            (route.second->m_pending || route.second->m_loadRevision > target->second.m_snapshotRevision))
         {
-            ++reservations[std::make_pair(route.second.m_service, route.second.m_instance)];
+            ++reservations[std::make_pair(route.second->m_service, route.second->m_instance)];
         }
     }
     for (const auto& item : m_peers)
@@ -344,7 +469,7 @@ bool NetGatewayNode::select(uint64_t peer, uint32_t product, uint64_t instance, 
             }
         }
         if (instance != 0 || candidate.m_role != NI_LINK_NODE || candidate.m_snapshotReceived == 0 ||
-            now < candidate.m_snapshotReceived || now - candidate.m_snapshotReceived >= 7000 || candidate.m_active >= 512) { continue; }
+            now < candidate.m_snapshotReceived || now - candidate.m_snapshotReceived >= 7000) { continue; }
         for (const auto& service : candidate.m_remoteServices)
         {
             if (service.m_product != product) { continue; }
@@ -408,7 +533,7 @@ int32_t NetGatewayNode::open(uint64_t peer, const NetInterfaceFrame& frame, bool
     }
     else if (source.m_role == NI_LINK_NODE) { return rejectOpen(NI_NOT_SUPPORTED); }
     if (product == 0 && sourceRole != NI_LINK_SERVICE) { return rejectOpen(NI_NOT_SUPPORTED); }
-    if (source.m_opened >= (source.m_role == NI_LINK_NODE ? 512U : 32U) || m_routes.size() >= 4096 || m_lastRoute == g_nodeLocalPeer - 1)
+    if (m_lastRoute == g_nodeLocalPeer - 1)
     {
         return rejectOpen(NI_LIMIT_EXCEEDED);
     }
@@ -425,9 +550,14 @@ int32_t NetGatewayNode::open(uint64_t peer, const NetInterfaceFrame& frame, bool
     const uint64_t instance = choice.m_instance;
     const uint64_t boot = choice.m_boot;
     const uint32_t selectedWindow = (std::min)(requestedWindow, choice.m_window);
-    if (!controlSpace(selected, 4096) || !controlSpace(peer, 4096)) { return NI_LIMIT_EXCEEDED; }
     const uint64_t routeId = m_lastRoute + 1;
-    NetGatewayNodeRoute route;
+    NetObjectReference<NetGatewayNodeRoute> ownedRoute;
+    const int32_t allocated = m_routePool->create(ownedRoute);
+    if (allocated != NI_OK)
+    {
+        return rejectOpen(allocated);
+    }
+    NetGatewayNodeRoute& route = *ownedRoute;
     route.m_clientWindow.configure(selectedWindow);
     route.m_serviceWindow.configure(selectedWindow);
     route.m_client = peer;
@@ -476,7 +606,19 @@ int32_t NetGatewayNode::open(uint64_t peer, const NetInterfaceFrame& frame, bool
     // 本执行者之后产生的快照才包含本次接纳；OPEN回应之前的旧快照不能解除预留。
     if (mesh) { accepted.setKeyValue(NI_GATEWAY_LOAD_REVISION, Variant(m_snapshotRevision + 1)); }
     std::string response;
+    accepted.setCode(NI_OK);
     if (!accepted.toString(response)) { return NI_PROTOCOL_ERROR; }
+    NetObjectReference<NetGatewayNodeControl> serviceNotice;
+    NetObjectReference<NetGatewayNodeControl> clientReply;
+    int32_t prepared = prepareControl(event, payload, serviceNotice);
+    if (prepared != NI_OK) { return prepared; }
+    if (!route.m_pending)
+    {
+        NetInterfaceFrame responseFrame = frame;
+        responseFrame.m_kind = NI_RESPONSE;
+        prepared = prepareControl(responseFrame, response, clientReply);
+        if (prepared != NI_OK) { return prepared; }
+    }
     // 先完整登记路由及全部索引，再提交水位和容量；部分分配失败不能留下孤儿索引，
     // 也不能让随后关闭未完成的路由错误扣减同服务上其他连接的容量。
     const auto clientKey = std::make_pair(peer, channel);
@@ -486,17 +628,29 @@ int32_t NetGatewayNode::open(uint64_t peer, const NetInterfaceFrame& frame, bool
     bool insertedClient = false;
     bool insertedService = false;
     bool insertedPending = false;
+    bool queuedService = false;
+    bool queuedClient = false;
     int32_t registration = NI_INVALID_STATE;
     try
     {
-        insertedRoute = m_routes.insert(std::make_pair(routeId, route)).second;
+        insertedRoute = m_routes.insert(std::make_pair(routeId, ownedRoute)).second;
         if (insertedRoute) { insertedClient = m_channels.insert(std::make_pair(clientKey, routeId)).second; }
         if (insertedClient) { insertedService = m_channels.insert(std::make_pair(serviceKey, routeId)).second; }
         if (insertedService && route.m_pending)
         {
             insertedPending = m_pendingOpens.insert(std::make_pair(pendingKey, routeId)).second;
         }
-        if (insertedService && (!route.m_pending || insertedPending)) { registration = NI_OK; }
+        if (insertedService && (!route.m_pending || insertedPending))
+        {
+            destination.m_controls.push_back(serviceNotice);
+            queuedService = true;
+            if (!route.m_pending)
+            {
+                source.m_controls.push_back(clientReply);
+                queuedClient = true;
+            }
+            registration = NI_OK;
+        }
     }
     catch (...)
     {
@@ -504,13 +658,15 @@ int32_t NetGatewayNode::open(uint64_t peer, const NetInterfaceFrame& frame, bool
     }
     if (registration != NI_OK)
     {
+        if (queuedClient) { source.m_controls.pop_back(); }
+        if (queuedService) { destination.m_controls.pop_back(); }
         if (insertedPending) { m_pendingOpens.erase(pendingKey); }
         if (insertedService) { m_channels.erase(serviceKey); }
         if (insertedClient) { m_channels.erase(clientKey); }
         if (insertedRoute) { m_routes.erase(routeId); }
         return registration;
     }
-    // 两侧控制空间已预留；提交后只接纳一次，flush不再选实例或重复SERVICE_OPEN。
+    // 两侧输出已经持有实际池租约并入队；全部索引成功后才提交水位和负载。
     m_lastRoute = routeId;
     source.m_highestChannel = channel;
     source.m_channelHistory.remember(channel);
@@ -523,11 +679,6 @@ int32_t NetGatewayNode::open(uint64_t peer, const NetInterfaceFrame& frame, bool
         destination.m_outRequest = route.m_remoteRequest;
     }
     m_meshDirty = true;
-    if (queueControl(selected, event, payload) != NI_OK || (!route.m_pending && reply(peer, frame, NI_OK, response) != NI_OK))
-    {
-        retire(routeId, 0, NI_NO_MEMORY);
-        close(peer, NI_NO_MEMORY);
-    }
     return NI_OK;
 }
 
@@ -544,7 +695,6 @@ bool NetGatewayNode::onLinkControl(uint64_t peer, const NetInterfaceFrame& frame
         close(peer, NI_PROTOCOL_ERROR);
         return true;
     }
-    if (!controlSpace(peer, 4096)) { return false; }
     int32_t sent = NI_OK;
     if (frame.m_messageType == NI_GATEWAY_DISCOVER && frame.m_payloadSize == 0)
     {
@@ -560,7 +710,7 @@ bool NetGatewayNode::onLinkControl(uint64_t peer, const NetInterfaceFrame& frame
         uint32_t window = 0;
         if (source->second.m_role != NI_LINK_SERVICE || source->second.m_serviceReady || frame.m_payloadSize == 0 ||
             !ready.from(std::string(reinterpret_cast<const char*>(frame.m_payload), frame.m_payloadSize)) ||
-            !GatewayNodeNumber(ready, NI_GATEWAY_CAPACITY, capacity) || capacity == 0 || capacity > 4096 ||
+            !GatewayNodeNumber(ready, NI_GATEWAY_CAPACITY, capacity) || capacity == 0 || capacity > UINT32_MAX ||
             NetInterfaceCredit::window(ready, window) != NI_OK || !GatewayNodeNumber(ready, NI_GATEWAY_WEIGHT, weight) || weight == 0 || weight > 1000)
         {
             sent = reply(peer, frame, NI_INVALID_ARGUMENT, "");
@@ -608,7 +758,7 @@ bool NetGatewayNode::credit(uint64_t peer, const NetInterfaceFrame& frame)
         if (!retired(peer, channel)) { close(peer, NI_PROTOCOL_ERROR); }
         return true;
     }
-    NetGatewayNodeRoute& route = m_routes.find(indexed->second)->second;
+    NetGatewayNodeRoute& route = *m_routes.find(indexed->second)->second;
     const bool fromService = route.m_service == peer;
     NetInterfaceCredit& window = fromService ? route.m_clientWindow : route.m_serviceWindow;
     if (amount == 0 || amount > window.capacity() - window.available()) { close(peer, NI_PROTOCOL_ERROR); return true; }
@@ -616,8 +766,8 @@ bool NetGatewayNode::credit(uint64_t peer, const NetInterfaceFrame& frame)
     message.setKeyValue(NI_GATEWAY_CHANNEL, Variant(fromService ? route.m_clientChannel : route.m_serviceChannel));
     std::string bytes;
     if (!message.toString(bytes)) { close(peer, NI_PROTOCOL_ERROR); return true; }
-    if (!controlSpace(destination, static_cast<uint32_t>(bytes.size()))) { return false; }
     const int32_t queued = queueControl(destination, frame, bytes);
+    if (queued == NI_LIMIT_EXCEEDED) { return false; }
     if (queued != NI_OK || window.grant(static_cast<uint32_t>(amount)) != NI_OK) { close(peer, NI_PROTOCOL_ERROR); }
     return true;
 }
@@ -673,18 +823,18 @@ bool NetGatewayNode::onLinkRecord(uint64_t peer, const NetInterfaceTunnelRecord&
         return true;
     }
     auto routed = m_routes.find(indexed->second);
-    if (routed == m_routes.end() || routed->second.m_product != record.m_product)
+    if (routed == m_routes.end() || routed->second->m_product != record.m_product)
     {
         close(peer, NI_PROTOCOL_ERROR);
         return true;
     }
-    if (routed->second.m_pending) { close(peer, NI_PROTOCOL_ERROR); return true; }
-    NetGatewayNodeRoute& route = routed->second;
+    if (routed->second->m_pending) { close(peer, NI_PROTOCOL_ERROR); return true; }
+    NetGatewayNodeRoute& route = *routed->second;
     const bool forward = route.m_client == peer;
     const uint64_t destination = forward ? route.m_service : route.m_client;
     NetInterfaceTunnelRecord outgoing = record;
     outgoing.m_channel = forward ? route.m_serviceChannel : route.m_clientChannel;
-    NetInterfaceCredit& window = forward ? routed->second.m_clientWindow : routed->second.m_serviceWindow;
+    NetInterfaceCredit& window = forward ? routed->second->m_clientWindow : routed->second->m_serviceWindow;
     if (record.m_kind == NI_TUNNEL_BYTES && record.m_size > window.available())
     {
         close(peer, NI_PROTOCOL_ERROR);
@@ -695,16 +845,31 @@ bool NetGatewayNode::onLinkRecord(uint64_t peer, const NetInterfaceTunnelRecord&
         retire(indexed->second, peer, NI_TRUNCATED);
         return true;
     }
-    std::deque<std::vector<uint8_t>>& queue = forward ? route.m_forwardQueue : route.m_reverseQueue;
+    std::deque<NetObjectReference<NetGatewayNodeRecord>>& queue = forward ? route.m_forwardQueue : route.m_reverseQueue;
     const int32_t sent = queue.empty() ? sendRecord(destination, outgoing) : NI_LIMIT_EXCEEDED;
     if (sent == NI_LIMIT_EXCEEDED)
     {
-        if (queue.size() >= 64 || m_recordBytes + record.m_size > 8 * 1024 * 1024)
+        NetObjectReference<NetGatewayNodeRecord> pending;
+        const int32_t copied = m_recordPool->copy(record.m_data, record.m_size, pending);
+        if (copied == NI_LIMIT_EXCEEDED)
         {
-            retire(indexed->second, 0, NI_LIMIT_EXCEEDED);
+            // 仅实际池耗尽产生可重试背压；保留原运输队首，不消耗信用。
+            return false;
+        }
+        if (copied != NI_OK)
+        {
+            retire(indexed->second, 0, copied);
             return true;
         }
-        queue.push_back(std::vector<uint8_t>(record.m_data, record.m_data + record.m_size));
+        try
+        {
+            queue.push_back(std::move(pending));
+        }
+        catch (...)
+        {
+            retire(indexed->second, 0, NI_NO_MEMORY);
+            return true;
+        }
         m_recordBytes += record.m_size;
         uint64_t& blocked = forward ? route.m_forwardBlocked : route.m_reverseBlocked;
         if (blocked == 0) { blocked = GatewayNodeNow(); }
@@ -716,35 +881,61 @@ bool NetGatewayNode::onLinkRecord(uint64_t peer, const NetInterfaceTunnelRecord&
 
 void NetGatewayNode::flushRecords()
 {
-    // 所有积压字节由接纳／弹出／retire成对计数；无积压时不扫描已建立的通道。
-    if (m_recordBytes == 0) { return; }
-    const uint64_t now = GatewayNodeNow();
-    for (auto item = m_routes.begin(); item != m_routes.end();)
+    // 无积压不扫描；每方向最多八项，整轮最多256次发送尝试。
+    if (m_recordBytes == 0 || m_routes.empty())
     {
+        return;
+    }
+    const uint64_t now = GatewayNodeNow();
+    size_t remaining = m_routes.size();
+    uint32_t budget = 256;
+    auto item = m_routes.upper_bound(m_flushAfter);
+    while (remaining-- != 0 && budget != 0 && !m_routes.empty())
+    {
+        if (item == m_routes.end())
+        {
+            item = m_routes.begin();
+        }
         const uint64_t id = item->first;
-        NetGatewayNodeRoute& route = (item++)->second;
-        for (uint32_t direction = 0; direction < 2; ++direction)
+        NetGatewayNodeRoute& route = *(item++)->second;
+        m_flushAfter = id;
+        bool removed = false;
+        for (uint32_t direction = 0; direction < 2 && !removed; ++direction)
         {
             auto& queue = direction == 0 ? route.m_forwardQueue : route.m_reverseQueue;
             uint64_t& blocked = direction == 0 ? route.m_forwardBlocked : route.m_reverseBlocked;
-            if (queue.empty()) { blocked = 0; continue; }
-            NetInterfaceTunnelRecord record = {};
-            record.m_kind = NI_TUNNEL_BYTES;
-            record.m_product = route.m_product;
-            record.m_channel = direction == 0 ? route.m_serviceChannel : route.m_clientChannel;
-            record.m_data = queue.front().data();
-            record.m_size = static_cast<uint32_t>(queue.front().size());
-            const int32_t sent = sendRecord(direction == 0 ? route.m_service : route.m_client, record);
-            if (sent == NI_OK)
+            if (queue.empty())
             {
-                m_recordBytes -= record.m_size;
-                queue.pop_front();
-                blocked = queue.empty() ? 0 : now;
+                blocked = 0;
+                continue;
             }
-            else if (sent != NI_LIMIT_EXCEEDED || now - blocked >= 5000)
+            for (uint32_t batch = 0; batch < 8 && budget != 0 && !queue.empty(); ++batch)
             {
-                retire(id, 0, sent == NI_LIMIT_EXCEEDED ? NI_TIMEOUT : sent);
-                break;
+                --budget;
+                NetInterfaceTunnelRecord record = {};
+                record.m_kind = NI_TUNNEL_BYTES;
+                record.m_product = route.m_product;
+                record.m_channel = direction == 0 ? route.m_serviceChannel : route.m_clientChannel;
+                record.m_data = queue.front()->m_bytes.data();
+                record.m_size = queue.front()->m_size;
+                const int32_t sent = sendRecord(direction == 0 ? route.m_service : route.m_client, record);
+                if (sent == NI_OK)
+                {
+                    m_recordBytes -= record.m_size;
+                    queue.pop_front();
+                    blocked = queue.empty() ? 0 : now;
+                    // 已释放本地容量，重试上层尚未消费的队首，不等待新的网络字节。
+                    NetExecution::progress();
+                }
+                else
+                {
+                    if (sent != NI_LIMIT_EXCEEDED || now - blocked >= 5000)
+                    {
+                        retire(id, 0, sent == NI_LIMIT_EXCEEDED ? NI_TIMEOUT : sent);
+                        removed = true;
+                    }
+                    break;
+                }
             }
         }
     }
@@ -755,14 +946,14 @@ void NetGatewayNode::retire(uint64_t id, uint64_t sender, int32_t reason)
     const auto found = m_routes.find(id);
     if (found == m_routes.end()) { return; }
     // 只快照通知需要的标量，不能为关闭操作复制含正文的deque或依赖其移动分配。
-    const NetGatewayNodeRoute& route = found->second;
+    const NetGatewayNodeRoute& route = *found->second;
     const uint64_t peers[2] = {route.m_client, route.m_service};
     const uint64_t channels[2] = {route.m_clientChannel, route.m_serviceChannel};
     const bool pending = route.m_pending;
     const uint64_t remoteRequest = route.m_remoteRequest;
     const NetInterfaceFrame original = route.m_original;
-    for (const auto& bytes : route.m_forwardQueue) { m_recordBytes -= static_cast<uint32_t>(bytes.size()); }
-    for (const auto& bytes : route.m_reverseQueue) { m_recordBytes -= static_cast<uint32_t>(bytes.size()); }
+    for (const auto& bytes : route.m_forwardQueue) { m_recordBytes -= bytes->m_size; }
+    for (const auto& bytes : route.m_reverseQueue) { m_recordBytes -= bytes->m_size; }
     m_routes.erase(found);
     m_channels.erase(std::make_pair(peers[0], channels[0]));
     m_channels.erase(std::make_pair(peers[1], channels[1]));
@@ -823,7 +1014,7 @@ void NetGatewayNode::onLinkClosed(uint64_t peer, int32_t reason)
     for (auto item = m_routes.begin(); item != m_routes.end();)
     {
         const auto current = item++;
-        if (current->second.m_client == peer || current->second.m_service == peer)
+        if (current->second->m_client == peer || current->second->m_service == peer)
         {
             retire(current->first, peer, reason < 0 ? reason : NI_TRUNCATED);
         }
@@ -831,430 +1022,6 @@ void NetGatewayNode::onLinkClosed(uint64_t peer, int32_t reason)
     m_peers.erase(peer);
     m_meshDirty = true;
 }
-
-#if 0 // NODE_LOAD_UNIT_TEST_BEGIN
-#ifdef _WIN32
-#include <windows.h>
-#endif
-#include "NetGatewayNodeLoadTest.h"
-#include <cstdio>
-
-#if defined(_MSC_VER) && defined(_DEBUG)
-#include <crtdbg.h>
-// 仅独占单测main使用；非负数为下一次拒绝分配前允许的普通CRT分配次数。
-static int32_t g_nodeAllocationBudget = -1;
-
-/** 对真实节点路由路径逐次拒绝普通堆分配，不修改生产分配器
-@param [in] operation CRT分配操作
-@param [in] block 堆块类型，只对普通业务堆块注入失败
-@param [in] pointer CRT传入的堆块，只在钩子返回前借用；本用例未使用时忽略
-@param [in] size CRT请求的字节数，是否参与注入判定由本用例决定
-@param [in] request CRT分配序号，本用例不使用
-@param [in] filename CRT传入的来源文件名，本用例不读取
-@param [in] line 来源代码行号，本用例不使用
-@return 1允许，0拒绝；测试退出临界区立即恢复原钩子
-*/
-static int __cdecl GatewayNodeAllocationHook(int operation, void* pointer, size_t size, int block, long request, const unsigned char* filename, int line)
-{
-    (void)pointer;
-    (void)size;
-    (void)request;
-    (void)filename;
-    (void)line;
-    if (block == _NORMAL_BLOCK && (operation == _HOOK_ALLOC || operation == _HOOK_REALLOC))
-    {
-        if (g_nodeAllocationBudget == 0) { return 0; }
-        if (g_nodeAllocationBudget > 0) { --g_nodeAllocationBudget; }
-    }
-    return 1;
-}
-
-#endif
-
-int NetGatewayNodeLoadTest::run()
-{
-    uint32_t checks = 0;
-    uint32_t failures = 0;
-    const auto check = [&](bool pass, const char* name)
-    {
-        ++checks;
-        if (!pass) { ++failures; std::printf("FAIL %s\n", name); }
-    };
-    NetGatewayNode node("node.test", "", "");
-    node.m_boot = 53;
-    NetGatewayNodePeer remote;
-    remote.m_role = NI_LINK_NODE;
-    remote.m_snapshotReceived = 100;
-    remote.m_snapshotRevision = 10;
-    remote.m_node.m_boot = 79;
-    NetGatewayNodeService service;
-    service.m_instance = 7;
-    service.m_product = 101;
-    service.m_capacity = 8;
-    service.m_weight = 1;
-    service.m_window = 131072;
-    remote.m_remoteServices.push_back(service);
-    node.m_peers.insert(std::make_pair(2, remote));
-    NetGatewayNodeSelection selected = {};
-    check(node.select(1, 101, 0, 100, selected) && selected.m_peer == 2 && selected.m_instance == 7 &&
-        selected.m_boot == 79 && selected.m_window == 131072, "authenticated remote values");
-    selected.m_peer = 999;
-    check(!node.select(1, 102, 0, 100, selected) && selected.m_peer == 999, "product isolation and atomic no-result");
-    check(!node.select(2, 101, 0, 100, selected), "no route back to requester");
-    check(!node.select(1, 101, 7, 100, selected), "mesh exact instance cannot hop again");
-    check(node.select(1, 101, 0, 7099, selected), "snapshot just inside TTL");
-    check(!node.select(1, 101, 0, 7100, selected), "expired snapshot excluded");
-    check(!node.select(1, 101, 0, 99, selected), "future snapshot time excluded");
-    node.m_peers[2].m_closing = true;
-    check(!node.select(1, 101, 0, 100, selected), "closing node excluded");
-    node.m_peers[2].m_closing = false;
-    node.m_peers[2].m_active = 512;
-    check(!node.select(1, 101, 0, 100, selected), "node link hard capacity");
-    node.m_peers[2].m_active = 0;
-    node.m_peers[2].m_remoteServices[0].m_capacity = 3;
-    node.m_peers[2].m_remoteServices[0].m_active = 1;
-    NetGatewayNodeRoute reservation;
-    reservation.m_service = 2;
-    reservation.m_instance = 7;
-    reservation.m_pending = true;
-    node.m_routes.insert(std::make_pair(1, reservation));
-    node.m_routes.insert(std::make_pair(2, reservation));
-    check(!node.select(1, 101, 0, 100, selected), "pending admissions consume hard capacity");
-    node.m_routes[1].m_pending = node.m_routes[2].m_pending = false;
-    node.m_routes[1].m_loadRevision = node.m_routes[2].m_loadRevision = 11;
-    check(!node.select(1, 101, 0, 100, selected), "acknowledged admissions retained before snapshot");
-    node.m_peers[2].m_snapshotRevision = 11;
-    node.m_peers[2].m_remoteServices[0].m_active = 3;
-    check(!node.select(1, 101, 0, 100, selected), "new snapshot at hard capacity");
-    node.m_peers[2].m_remoteServices[0].m_active = 2;
-    check(node.select(1, 101, 0, 100, selected), "reflected admissions no longer double counted");
-    node.m_peers[2].m_snapshotRevision = 10;
-    node.m_routes[1].m_instance = node.m_routes[2].m_instance = 8;
-    check(node.select(1, 101, 0, 100, selected), "reservations scoped to target instance");
-    node.m_routes[1].m_service = node.m_routes[2].m_service = 3;
-    node.m_routes[1].m_instance = node.m_routes[2].m_instance = 7;
-    check(node.select(1, 101, 0, 100, selected), "reservations scoped to node generation");
-    node.m_routes.clear();
-    node.m_peers[2].m_remoteServices[0] = service;
-    node.m_peers.insert(std::make_pair(3, remote));
-    uint32_t admitted[2] = {};
-    for (uint64_t route = 1; route <= 12; ++route)
-    {
-        const bool found = node.select(1, 101, 0, 100, selected);
-        check(found && (selected.m_peer == 2 || selected.m_peer == 3), "burst selects healthy target");
-        if (!found) { break; }
-        ++admitted[selected.m_peer - 2];
-        reservation.m_service = selected.m_peer;
-        reservation.m_instance = selected.m_instance;
-        reservation.m_pending = false;
-        reservation.m_loadRevision = 11;
-        node.m_routes.insert(std::make_pair(route, reservation));
-    }
-    check(admitted[0] == 6 && admitted[1] == 6, "burst acknowledgements spread before snapshots");
-    node.m_routes.clear();
-    node.m_peers[2].m_remoteServices[0].m_active = 6;
-    node.m_peers[3].m_remoteServices[0].m_active = 1;
-    check(node.select(1, 101, 0, 100, selected) && selected.m_peer == 3, "prefer spare capacity");
-    node.m_peers[2].m_remoteServices[0].m_active = 0;
-    node.m_peers[3].m_remoteServices[0].m_active = 0;
-    node.m_peers[3].m_remoteServices[0].m_weight = 2;
-    check(node.select(1, 101, 0, 100, selected) && selected.m_peer == 3, "relative weight affects selection");
-    node.m_peers.clear();
-    NetGatewayNodePeer local;
-    local.m_role = NI_LINK_SERVICE;
-    local.m_serviceReady = true;
-    local.m_product = 101;
-    local.m_capacity = 8;
-    local.m_window = 65536;
-    node.m_peers.insert(std::make_pair(g_nodeLocalPeer | 11, local));
-    check(node.select(1, 101, 11, 100, selected) && selected.m_instance == 11 && selected.m_boot == 53 &&
-        selected.m_window == 65536, "local exact instance and boot");
-    check(!node.select(1, 101, 12, 100, selected), "no substitution for requested instance");
-    node.m_peers[g_nodeLocalPeer | 11].m_active = 8;
-    check(!node.select(1, 101, 11, 100, selected), "target enforces own hard capacity");
-    node.m_peers[g_nodeLocalPeer | 11].m_active = 0;
-    remote.m_name = "node.alpha";
-    remote.m_remoteServices.clear();
-    node.m_peers.insert(std::make_pair(2, remote));
-    node.m_snapshotRevision = 10;
-    ProtoMessage request;
-    request.setKeyValue(NI_GATEWAY_TARGET_PRODUCT, Variant(static_cast<int32_t>(101)));
-    request.setKeyValue(NI_GATEWAY_CHANNEL, Variant(UINT64_C(1)));
-    request.setKeyValue(NI_GATEWAY_INSTANCE, Variant(UINT64_C(11)));
-    request.setKeyValue(NI_GATEWAY_BOOT, Variant(node.m_boot));
-    request.setKeyValue(NI_GATEWAY_SOURCE_ROLE, Variant(static_cast<int32_t>(NI_LINK_CLIENT)));
-    request.setKeyValue(NI_GATEWAY_WINDOW, Variant(static_cast<int32_t>(65536)));
-    std::string payload;
-    check(request.toString(payload), "mesh OPEN fixture encoding");
-    NetInterfaceFrame frame = {};
-    frame.m_kind = NI_REQUEST;
-    frame.m_messageType = NI_GATEWAY_MESH_OPEN;
-    frame.m_requestId = 1;
-    frame.m_payload = reinterpret_cast<const uint8_t*>(payload.data());
-    frame.m_payloadSize = static_cast<uint32_t>(payload.size());
-    check(node.open(2, frame, true) == NI_OK && node.m_routes.size() == 1 &&
-        node.m_peers[g_nodeLocalPeer | 11].m_active == 1, "real OPEN reserves target once");
-    ProtoMessage response;
-    uint64_t revision = 0;
-    check(!node.m_peers[2].m_controls.empty() && response.from(node.m_peers[2].m_controls.back().m_payload) &&
-        response.getCode() == NI_OK && GatewayNodeNumber(response, NI_GATEWAY_LOAD_REVISION, revision) &&
-        revision == 11, "real mesh ACK carries future load revision");
-    // 候选回收属于纯管理状态白盒单测；实际TLS发现及故障转移仍由独占多节点用例验证。
-    NetGatewayNode discovery("node.self", "", "");
-    check(discovery.addSeed("127.0.0.1", 5203) == NI_OK, "configured seed admitted");
-    NetInterfaceDirectoryPoint point;
-    point.m_name = "node." + std::string(32, 'a');
-    point.m_address = "127.0.0.2";
-    point.m_capacity = 8;
-    for (uint32_t generation = 0; generation < 130; ++generation)
-    {
-        point.m_port = 30000 + generation;
-        point.m_boot = generation + 1;
-        check(discovery.remember(point, true) == NI_OK, "authenticated address change remains admissible");
-        check(discovery.m_candidates.size() == 2, "old learned address must not consume a permanent candidate slot");
-    }
-    check(discovery.addSeed(point.m_address, point.m_port) == NI_OK, "learned endpoint can be promoted to configured seed");
-    const uint32_t pinnedPort = point.m_port;
-    ++point.m_port;
-    ++point.m_boot;
-    check(discovery.remember(point, true) == NI_OK && discovery.m_candidates.size() == 3,
-        "moving a node retains configured seeds and only the current learned address");
-    point.m_name = "node." + std::string(32, 'b');
-    check(discovery.remember(point, true) == NI_OK && discovery.m_members.size() == 1 && discovery.m_candidates.size() == 3,
-        "new authenticated identity at the same address replaces old membership without candidate growth");
-    // 固定白盒单调时钟，调用真实过期分支；不冒称执行过五分钟浸泡。
-    discovery.m_members.begin()->second.m_seen = 100;
-    discovery.expireMembers(300099);
-    check(discovery.m_members.size() == 1 && discovery.m_candidates.size() == 3, "membership just inside expiry stays usable");
-    discovery.expireMembers(300100);
-    check(discovery.m_members.empty() && discovery.m_candidates.size() == 2 &&
-        discovery.m_candidates.count(std::make_pair(std::string("127.0.0.1"), 5203U)) == 1 &&
-        discovery.m_candidates.count(std::make_pair(point.m_address, pinnedPort)) == 1,
-        "expired learned membership releases its candidate while configured seeds survive");
-    // 普通控制队列已满时，批量通道关闭不能终止仍健康的共享服务。
-    NetGatewayNode retiring("node.closing", "", "");
-    retiring.m_peers[1].m_opened = 40;
-    retiring.m_peers[2].m_active = 40;
-    NetInterfaceFrame normal = {};
-    normal.m_kind = NI_EVENT;
-    for (uint32_t index = 0; index < 32; ++index)
-    {
-        check(retiring.queueControl(2, normal, "") == NI_OK, "prepare full ordinary control budget");
-    }
-    for (uint32_t index = 1; index <= 40; ++index)
-    {
-        NetGatewayNodeRoute route;
-        route.m_client = 1;
-        route.m_clientChannel = index;
-        route.m_service = 2;
-        route.m_serviceChannel = UINT64_C(0x8000000000000000) | index;
-        retiring.m_routes.insert(std::make_pair(index, route));
-        retiring.m_channels[std::make_pair(1, route.m_clientChannel)] = index;
-        retiring.m_channels[std::make_pair(2, route.m_serviceChannel)] = index;
-        retiring.retire(index, 1, NI_TRUNCATED);
-        check(!retiring.m_peers[2].m_closing, "closing one channel must retain the shared service");
-    }
-    check(retiring.m_routes.empty() && retiring.m_channels.empty() && retiring.m_peers[2].m_active == 0 &&
-        retiring.m_peers[1].m_opened == 0 && retiring.m_peers[2].m_controls.size() == 72,
-        "all channels release capacity and each close remains queued exactly once");
-    check(retiring.queueControl(2, normal, "") == NI_LIMIT_EXCEEDED,
-        "close reserve cannot admit ordinary work above its original bound");
-    NetInterfaceFrame closing = {};
-    closing.m_kind = NI_EVENT;
-    closing.m_messageType = NI_GATEWAY_CHANNEL_CLOSE;
-    check(retiring.queueControl(2, closing, std::string(129, 'x')) == NI_LIMIT_EXCEEDED,
-        "close reserve rejects oversized payloads");
-    uint32_t extra = 0;
-    while (retiring.queueControl(2, closing, "") == NI_OK) { ++extra; }
-    check(extra == 4056 && retiring.m_peers[2].m_controls.size() == 4128 &&
-        retiring.m_peers[2].m_controlBytes <= 589824,
-        "close reserve remains bounded by ordinary controls plus maximum node routes");
-    // 4096条已建立且无积压的通道不应在每轮转发／OPEN期限检查中逐条做无用工作。
-    // 此处只测管理状态的CPU耗时；真实网络吞吐和故障迁移由NetWorkTest多进程用例验证。
-    NetGatewayNode idle("node.idle", "", "");
-    idle.m_snapshot = "fixed test snapshot";
-    idle.m_snapshotAt = GatewayNodeNow();
-    idle.m_meshDirty = false;
-    idle.m_lastOutbound = g_nodeOutboundPeer - 1;
-    NetGatewayNodeRoute established;
-    for (uint64_t id = 1; id <= 4096; ++id) { idle.m_routes.insert(std::make_pair(id, established)); }
-#ifdef _WIN32
-    LARGE_INTEGER idleBegin = {};
-    LARGE_INTEGER frequency = {};
-    QueryPerformanceFrequency(&frequency);
-    QueryPerformanceCounter(&idleBegin);
-#else
-    const auto idleBegin = std::chrono::steady_clock::now();
-#endif
-    for (uint32_t step = 0; step < 5000; ++step) { idle.flushRecords(); idle.pollMesh(); }
-#ifdef _WIN32
-    LARGE_INTEGER idleEnd = {};
-    QueryPerformanceCounter(&idleEnd);
-    const long long idleMicros = (idleEnd.QuadPart - idleBegin.QuadPart) * 1000000 / frequency.QuadPart;
-#else
-    const long long idleMicros = std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::steady_clock::now() - idleBegin).count();
-#endif
-    check(idle.m_routes.size() == 4096 && idle.m_recordBytes == 0 && idle.m_pendingOpens.empty(),
-        "idle polls retain established channels and accounting");
-    for (uint64_t id = 4097; id <= 4100; ++id)
-    {
-        NetGatewayNodeRoute pending;
-        pending.m_pending = true;
-        pending.m_service = 2;
-        pending.m_remoteRequest = id;
-        pending.m_deadline = id == 4100 ? UINT64_MAX : 1;
-        idle.m_routes.insert(std::make_pair(id, pending));
-        idle.m_pendingOpens.insert(std::make_pair(std::make_pair(pending.m_service, id), id));
-    }
-    idle.pollMesh();
-    check(idle.m_routes.size() == 4097 && idle.m_pendingOpens.size() == 1 &&
-        idle.m_routes.count(4100) == 1 && idle.m_pendingOpens.begin()->second == 4100,
-        "adjacent expired OPENs retire once; future and established routes remain");
-    idle.m_routes[4100].m_deadline = 1;
-    idle.m_snapshotAt = GatewayNodeNow();
-    idle.m_meshDirty = false;
-    idle.pollMesh();
-    check(idle.m_routes.size() == 4096 && idle.m_pendingOpens.empty(), "last pending OPEN releases its index");
-    // 有积压时仍必须推进真实发送错误和清理，不能把快速路径写成无条件跳过。
-    NetGatewayNodeRoute broken;
-    broken.m_client = 1;
-    broken.m_service = 2;
-    broken.m_forwardQueue.push_back(std::vector<uint8_t>(16, 7));
-    broken.m_reverseQueue.push_back(std::vector<uint8_t>(8, 9));
-    idle.m_routes.insert(std::make_pair(4101, broken));
-    idle.m_recordBytes = 24;
-    idle.flushRecords();
-    check(idle.m_routes.size() == 4096 && idle.m_routes.count(4101) == 0 && idle.m_recordBytes == 0,
-        "nonempty failed route is retired and both directions release bytes");
-
-#if defined(_MSC_VER) && defined(_DEBUG)
-    // 原关闭路径分配临时vector并复制路由；内存紧张时抛出会使终态回调留下孤儿路由。
-    NetGatewayNode exhausted("node.oom-close", "", "");
-    exhausted.m_peers[1].m_opened = 2;
-    exhausted.m_peers[2].m_active = 2;
-    for (uint64_t id = 1; id <= 2; ++id)
-    {
-        NetGatewayNodeRoute route;
-        route.m_client = 1;
-        route.m_clientChannel = id;
-        route.m_service = 2;
-        route.m_serviceChannel = g_nodeLocalPeer | id;
-        route.m_pending = id == 2;
-        route.m_remoteRequest = id;
-        route.m_forwardQueue.push_back(std::vector<uint8_t>(16, 1));
-        route.m_reverseQueue.push_back(std::vector<uint8_t>(8, 2));
-        exhausted.m_routes.insert(std::make_pair(id, route));
-        exhausted.m_channels[std::make_pair(1, route.m_clientChannel)] = id;
-        exhausted.m_channels[std::make_pair(2, route.m_serviceChannel)] = id;
-        if (route.m_pending) { exhausted.m_pendingOpens[std::make_pair(2, id)] = id; }
-        exhausted.m_recordBytes += 24;
-    }
-    bool closeThrew = false;
-    g_nodeAllocationBudget = 0;
-    _CRT_ALLOC_HOOK previousHook = _CrtSetAllocHook(GatewayNodeAllocationHook);
-    try { exhausted.onLinkClosed(1, NI_TRUNCATED); }
-    catch (...) { closeThrew = true; }
-    _CrtSetAllocHook(previousHook);
-    g_nodeAllocationBudget = -1;
-    check(!closeThrew && exhausted.m_routes.empty() && exhausted.m_channels.empty() &&
-        exhausted.m_pendingOpens.empty() && exhausted.m_recordBytes == 0 && exhausted.m_peers.count(1) == 0 &&
-        exhausted.m_peers[2].m_active == 0, "allocation failure cannot interrupt route teardown");
-    check(exhausted.m_peers[2].m_closing, "unavailable close notification must terminate its recipient safely");
-
-    uint32_t failedOpenAllocations = 0;
-    uint32_t successfulOpenPaths = 0;
-    for (uint32_t remoteTarget = 0; remoteTarget < 2; ++remoteTarget)
-    for (int32_t budget = 0; budget < 1024; ++budget)
-    {
-        NetGatewayNode opening("node.oom-open", "", "");
-        opening.m_boot = 19;
-        opening.m_lastRoute = 1;
-        opening.m_peers[1].m_role = NI_LINK_CLIENT;
-        opening.m_peers[3].m_opened = 1;
-        const uint64_t target = remoteTarget == 0 ? (g_nodeLocalPeer | 11) : 2;
-        NetGatewayNodePeer& destination = opening.m_peers[target];
-        destination.m_role = NI_LINK_SERVICE;
-        destination.m_serviceReady = true;
-        destination.m_product = 101;
-        destination.m_capacity = 8;
-        destination.m_active = 1;
-        if (remoteTarget != 0)
-        {
-            destination.m_role = NI_LINK_NODE;
-            destination.m_name = "node.z";
-            destination.m_serviceReady = false;
-            destination.m_snapshotReceived = GatewayNodeNow();
-            destination.m_snapshotRevision = 1;
-            destination.m_node.m_boot = 23;
-            NetGatewayNodeService offered;
-            offered.m_instance = 11;
-            offered.m_product = 101;
-            offered.m_capacity = 8;
-            offered.m_active = 1;
-            offered.m_weight = 1;
-            destination.m_remoteServices.push_back(offered);
-        }
-        NetGatewayNodeRoute prior;
-        prior.m_client = 3;
-        prior.m_clientChannel = 1;
-        prior.m_service = target;
-        prior.m_serviceChannel = g_nodeLocalPeer | 1;
-        opening.m_routes.insert(std::make_pair(1, prior));
-        opening.m_channels[std::make_pair(3, prior.m_clientChannel)] = 1;
-        opening.m_channels[std::make_pair(target, prior.m_serviceChannel)] = 1;
-        ProtoMessage wanted;
-        wanted.setKeyValue(NI_GATEWAY_TARGET_PRODUCT, Variant(static_cast<int32_t>(101)));
-        wanted.setKeyValue(NI_GATEWAY_CHANNEL, Variant(UINT64_C(1)));
-        wanted.setKeyValue(NI_GATEWAY_WINDOW, Variant(static_cast<int32_t>(65536)));
-        std::string body;
-        check(wanted.toString(body), "allocation OPEN fixture encoding");
-        NetInterfaceFrame openingFrame = {};
-        openingFrame.m_kind = NI_REQUEST;
-        openingFrame.m_messageType = NI_GATEWAY_OPEN;
-        openingFrame.m_requestId = 1;
-        openingFrame.m_payload = reinterpret_cast<const uint8_t*>(body.data());
-        openingFrame.m_payloadSize = static_cast<uint32_t>(body.size());
-        g_nodeAllocationBudget = budget;
-        previousHook = _CrtSetAllocHook(GatewayNodeAllocationHook);
-        try { opening.open(1, openingFrame); }
-        catch (...) { }
-        const bool rejected = g_nodeAllocationBudget == 0;
-        _CrtSetAllocHook(previousHook);
-        g_nodeAllocationBudget = -1;
-        if (rejected) { ++failedOpenAllocations; }
-        bool indexed = opening.m_channels.size() == opening.m_routes.size() * 2;
-        for (const auto& route : opening.m_routes)
-        {
-            indexed = indexed && opening.m_channels.count(std::make_pair(route.second.m_client, route.second.m_clientChannel)) == 1 &&
-                opening.m_channels.count(std::make_pair(route.second.m_service, route.second.m_serviceChannel)) == 1;
-        }
-        check(indexed, "partial OPEN allocation must not publish orphan indexes");
-        opening.onLinkClosed(1, NI_NO_MEMORY);
-        check(opening.m_routes.size() == 1 && opening.m_routes.count(1) == 1 && opening.m_channels.size() == 2 &&
-            opening.m_peers[target].m_active == 1 && opening.m_peers[3].m_opened == 1,
-            "failed OPEN teardown preserves unrelated route and capacity");
-        if (!rejected) { ++successfulOpenPaths; break; }
-    }
-    check(successfulOpenPaths == 2, "allocation walk reaches a successful local and remote OPEN");
-    check(failedOpenAllocations > 20, "allocation walk exercises actual OPEN allocations");
-    std::printf("NODE_ALLOCATION failed_positions=%u\n", failedOpenAllocations);
-#endif
-
-    std::printf("NODE_IDLE_TIMING channels=4096 polls=5000 elapsed_us=%lld\n", idleMicros);
-    std::printf("NODE_LOAD checks=%u failures=%u %s\n", checks, failures, failures == 0 ? "PASS" : "FAIL");
-    return failures == 0 ? 0 : 1;
-}
-
-/** 仅在独占单测副本中放开，生产源码始终保持关闭
-@return 单测退出码
-*/
-int main()
-{
-    return NetGatewayNodeLoadTest::run();
-}
-
-#endif // NODE_LOAD_UNIT_TEST_END
 
 NetInterfaceDirectoryPoint NetGatewayNode::self() const
 {
@@ -1279,11 +1046,13 @@ int32_t NetGatewayNode::addSeed(const std::string& address, uint32_t port)
         auto candidate = m_candidates.find(key);
         if (candidate == m_candidates.end())
         {
-            if (m_candidates.size() >= 128) { return NI_LIMIT_EXCEEDED; }
-            candidate = m_candidates.insert(std::make_pair(key, NetGatewayNodeCandidate())).first;
+            NetObjectReference<NetGatewayNodeCandidate> record;
+            const int32_t allocated = m_candidatePool->create(record);
+            if (allocated != NI_OK) { return allocated; }
+            candidate = m_candidates.insert(std::make_pair(key, record)).first;
         }
         // 允许将已学习的候选提升为固定种子，重复配置不创建额外条目。
-        candidate->second.m_seed = true;
+        candidate->second->m_seed = true;
         return NI_OK;
     }
     catch (...)
@@ -1308,47 +1077,77 @@ int32_t NetGatewayNode::remember(const NetInterfaceDirectoryPoint& point, bool v
     }
     if (point.m_name == m_name) { return NI_OK; }
     if (point.m_address == m_advertise && point.m_port == localPort()) { return NI_PROTOCOL_ERROR; }
-    const uint64_t now = MeshNow();
-    auto found = m_members.find(point.m_name);
-    if (found != m_members.end() && !verified) { return NI_OK; }
-    for (auto item = m_members.begin(); item != m_members.end();)
+    try
     {
-        if (item->first != point.m_name && item->second.m_point.m_address == point.m_address && item->second.m_point.m_port == point.m_port)
+        auto found = m_members.find(point.m_name);
+        if (found != m_members.end() && !verified) { return NI_OK; }
+        for (const auto& item : m_members)
         {
-            if (!verified) { return NI_OK; }
-            item = m_members.erase(item);
+            if (item.first != point.m_name && item.second->m_point.m_address == point.m_address &&
+                item.second->m_point.m_port == point.m_port && !verified) { return NI_OK; }
         }
-        else { ++item; }
+        // 两个物理池和两个索引都准备成功后才发布身份，失败不删除旧身份或留下半条成员。
+        NetInterfaceDirectoryPoint prepared = point;
+        std::string expectedName = point.m_name;
+        const auto key = std::make_pair(point.m_address, point.m_port);
+        auto candidate = m_candidates.find(key);
+        NetObjectReference<NetGatewayNodeMember> memberRecord;
+        NetObjectReference<NetGatewayNodeCandidate> candidateRecord;
+        if (found == m_members.end())
+        {
+            const int32_t allocated = m_memberPool->create(memberRecord);
+            if (allocated != NI_OK) { return allocated; }
+        }
+        if (candidate == m_candidates.end())
+        {
+            const int32_t allocated = m_candidatePool->create(candidateRecord);
+            if (allocated != NI_OK) { return allocated; }
+        }
+        const bool insertedMember = found == m_members.end();
+        if (insertedMember) { found = m_members.insert(std::make_pair(point.m_name, memberRecord)).first; }
+        try
+        {
+            if (candidate == m_candidates.end())
+            {
+                candidate = m_candidates.insert(std::make_pair(key, candidateRecord)).first;
+            }
+        }
+        catch (...)
+        {
+            if (insertedMember) { m_members.erase(found); }
+            return NI_NO_MEMORY;
+        }
+        NetInterfaceDirectoryPoint& previous = found->second->m_point;
+        if (previous.m_boot != point.m_boot || previous.m_address != point.m_address ||
+            previous.m_port != point.m_port || previous.m_capacity != point.m_capacity) { m_cacheDirty = true; }
+        previous.m_name.swap(prepared.m_name);
+        previous.m_address.swap(prepared.m_address);
+        previous.m_port = point.m_port;
+        previous.m_capacity = point.m_capacity;
+        previous.m_boot = point.m_boot;
+        found->second->m_seen = MeshNow();
+        found->second->m_verified = verified;
+        candidate->second->m_expectedName.swap(expectedName);
+        for (auto item = m_members.begin(); item != m_members.end();)
+        {
+            if (item->first != point.m_name && item->second->m_point.m_address == point.m_address &&
+                item->second->m_point.m_port == point.m_port) { item = m_members.erase(item); }
+            else { ++item; }
+        }
+        pruneCandidates();
+        return NI_OK;
     }
-    found = m_members.find(point.m_name);
-    if (found == m_members.end())
+    catch (...)
     {
-        if (m_members.size() >= NET_INTERFACE_DIRECTORY_NODES - 1) { return NI_LIMIT_EXCEEDED; }
-        found = m_members.insert(std::make_pair(point.m_name, NetGatewayNodeMember())).first;
+        return NI_NO_MEMORY;
     }
-    if (found->second.m_point.m_boot != point.m_boot || found->second.m_point.m_address != point.m_address ||
-        found->second.m_point.m_port != point.m_port || found->second.m_point.m_capacity != point.m_capacity) { m_cacheDirty = true; }
-    found->second.m_point = point;
-    found->second.m_seen = now;
-    found->second.m_verified = verified;
-    // 先更新成员，再裁去其旧地址；学习地址不能被当成永不回收的配置种子。
-    pruneCandidates();
-    const auto key = std::make_pair(point.m_address, point.m_port);
-    auto candidate = m_candidates.find(key);
-    if (candidate == m_candidates.end())
-    {
-        if (m_candidates.size() >= 128) { return NI_LIMIT_EXCEEDED; }
-        candidate = m_candidates.insert(std::make_pair(key, NetGatewayNodeCandidate())).first;
-    }
-    candidate->second.m_expectedName = point.m_name;
-    return NI_OK;
 }
 
 int32_t NetGatewayNode::directory(std::string& output) const
 {
     std::vector<NetInterfaceDirectoryPoint> points;
     points.push_back(self());
-    for (const auto& item : m_members) { points.push_back(item.second.m_point); }
+    for (const auto& item : m_members) { points.push_back(item.second->m_point); }
     return NetInterfaceDirectory::encode(points, output);
 }
 
@@ -1367,14 +1166,14 @@ int32_t NetGatewayNode::buildSnapshot()
     {
         const NetGatewayNodePeer& peer = item.second;
         if (!peer.m_serviceReady || peer.m_closing || (item.first & g_meshLocal) == 0) { continue; }
-        if (++count > 64) { return NI_LIMIT_EXCEEDED; }
+        if (++count >= INT32_MAX) { return NI_LIMIT_EXCEEDED; }
         const int32_t group = static_cast<int32_t>(count + 1);
         message.setKeyValue(NI_GATEWAY_INSTANCE, Variant(item.first & ~g_meshLocal), group);
         message.setKeyValue(NI_GATEWAY_TARGET_PRODUCT, Variant(static_cast<uint64_t>(peer.m_product)), group);
         message.setKeyValue(NI_GATEWAY_WINDOW, Variant(static_cast<int32_t>(peer.m_window)), group);
-        message.setKeyValue(NI_GATEWAY_CAPACITY, Variant(static_cast<int32_t>(peer.m_capacity)), group);
+        message.setKeyValue(NI_GATEWAY_CAPACITY, Variant(static_cast<uint64_t>(peer.m_capacity)), group);
         message.setKeyValue(NI_GATEWAY_WEIGHT, Variant(static_cast<int32_t>(peer.m_weight)), group);
-        message.setKeyValue(NI_GATEWAY_ACTIVE, Variant(static_cast<int32_t>(peer.m_active)), group);
+        message.setKeyValue(NI_GATEWAY_ACTIVE, Variant(static_cast<uint64_t>(peer.m_active)), group);
     }
     message.setKeyValue(NI_GATEWAY_SERVICE_COUNT, Variant(static_cast<int32_t>(count)));
     if (!message.toString(bytes) || bytes.size() > 16384 || m_snapshotRevision == UINT64_MAX) { return NI_LIMIT_EXCEEDED; }
@@ -1396,7 +1195,7 @@ bool NetGatewayNode::snapshot(uint64_t peer, const NetInterfaceFrame& frame)
         NetInterfaceDirectory::parse(frame.m_payload, frame.m_payloadSize, own) != NI_OK || own.size() != 1 ||
         own[0].m_name != source->second.m_name ||
         !message.from(std::string(reinterpret_cast<const char*>(frame.m_payload), frame.m_payloadSize)) ||
-        !NetInterfaceDirectory::number(message, NI_GATEWAY_SERVICE_COUNT, count) || count > 64)
+        !NetInterfaceDirectory::number(message, NI_GATEWAY_SERVICE_COUNT, count) || count > frame.m_payloadSize)
     {
         close(peer, NI_PROTOCOL_ERROR);
         return true;
@@ -1413,7 +1212,7 @@ bool NetGatewayNode::snapshot(uint64_t peer, const NetInterfaceFrame& frame)
         if (!NetInterfaceDirectory::number(message, NI_GATEWAY_INSTANCE, service.m_instance, group) || service.m_instance == 0 ||
             service.m_instance >= g_meshOutbound || !instances.insert(service.m_instance).second ||
             !NetInterfaceDirectory::number(message, NI_GATEWAY_TARGET_PRODUCT, product, group) || product > UINT32_MAX ||
-            !NetInterfaceDirectory::number(message, NI_GATEWAY_CAPACITY, capacity, group) || capacity == 0 || capacity > 4096 ||
+            !NetInterfaceDirectory::number(message, NI_GATEWAY_CAPACITY, capacity, group) || capacity == 0 || capacity > UINT32_MAX ||
             NetInterfaceCredit::window(message, service.m_window, group) != NI_OK || !NetInterfaceDirectory::number(message, NI_GATEWAY_WEIGHT, weight, group) || weight == 0 || weight > 1000 ||
             !NetInterfaceDirectory::number(message, NI_GATEWAY_ACTIVE, active, group) || active > capacity)
         {
@@ -1465,8 +1264,8 @@ bool NetGatewayNode::meshResponse(uint64_t peer, const NetInterfaceFrame& frame)
     }
     if (frame.m_messageType != NI_GATEWAY_MESH_OPEN || pending == m_pendingOpens.end()) { close(peer, NI_PROTOCOL_ERROR); return true; }
     auto found = m_routes.find(pending->second);
-    if (found == m_routes.end() || !found->second.m_pending) { close(peer, NI_PROTOCOL_ERROR); return true; }
-    NetGatewayNodeRoute& route = found->second;
+    if (found == m_routes.end() || !found->second->m_pending) { close(peer, NI_PROTOCOL_ERROR); return true; }
+    NetGatewayNodeRoute& route = *found->second;
     ProtoMessage response;
     uint64_t channel = 0;
     uint64_t instance = 0;
@@ -1492,7 +1291,6 @@ bool NetGatewayNode::meshResponse(uint64_t peer, const NetInterfaceFrame& frame)
     if (response.getCode() == NI_OK && (NetInterfaceCredit::window(response, window) != NI_OK ||
         window > route.m_clientWindow.capacity() || route.m_clientWindow.configure(window) != NI_OK ||
         route.m_serviceWindow.configure(window) != NI_OK)) { close(peer, NI_PROTOCOL_ERROR); return true; }
-    if (!controlSpace(route.m_client, 4096)) { return false; }
     response.setKeyValue(NI_GATEWAY_CHANNEL, Variant(route.m_clientChannel));
     std::string bytes;
     if (!response.toString(bytes)) { close(peer, NI_PROTOCOL_ERROR); return true; }
@@ -1547,8 +1345,8 @@ void NetGatewayNode::pollMesh()
             {
                 random = 0;
             }
-            candidate->second.m_retryAt = now + candidate->second.m_delay / 2 + random % candidate->second.m_delay;
-            candidate->second.m_delay = (std::min)(candidate->second.m_delay * 2, 10000U);
+            candidate->second->m_retryAt = now + candidate->second->m_delay / 2 + random % candidate->second->m_delay;
+            candidate->second->m_delay = (std::min)(candidate->second->m_delay * 2, 10000U);
         }
         item->second->shutdown();
         item = m_outbound.erase(item);
@@ -1558,7 +1356,7 @@ void NetGatewayNode::pollMesh()
     {
         m_cache.poll();
         uint32_t cachedCount = 0;
-        if (m_cache.takeLoaded(nullptr, 0, cachedCount) == NI_BUFFER_TOO_SMALL && cachedCount > 0 && cachedCount <= 64)
+        if (m_cache.takeLoaded(nullptr, 0, cachedCount) == NI_BUFFER_TOO_SMALL && cachedCount > 0)
         {
             std::vector<NetInterfaceDirectoryNodeData> cached(cachedCount);
             for (auto& record : cached)
@@ -1593,7 +1391,7 @@ void NetGatewayNode::pollMesh()
         {
             std::vector<NetInterfaceDirectoryPoint> points;
             points.push_back(self());
-            for (const auto& item : m_members) { points.push_back(item.second.m_point); }
+            for (const auto& item : m_members) { points.push_back(item.second->m_point); }
             if (m_cache.queue(points) == NI_OK) { m_cacheDirty = false; m_cacheQueued = now; }
         }
         if (m_cache.stopped())
@@ -1610,7 +1408,7 @@ void NetGatewayNode::pollMesh()
     {
         NetGatewayNodePeer& peer = item.second;
         if (peer.m_role != NI_LINK_NODE || peer.m_closing) { continue; }
-        if (peer.m_snapshotSent != m_snapshotRevision && controlSpace(item.first, static_cast<uint32_t>(m_snapshot.size())))
+        if (peer.m_snapshotSent != m_snapshotRevision)
         {
             NetInterfaceFrame frame = {};
             frame.m_kind = NI_EVENT;
@@ -1619,7 +1417,7 @@ void NetGatewayNode::pollMesh()
             if (queueControl(item.first, frame, m_snapshot) == NI_OK) { peer.m_snapshotSent = m_snapshotRevision; }
         }
         if (peer.m_discoverRequest != 0 && now - peer.m_discoverAt >= 5000) { close(item.first, NI_TIMEOUT); continue; }
-        if (peer.m_discoverRequest == 0 && (peer.m_discoverAt == 0 || now - peer.m_discoverAt >= 2000) && controlSpace(item.first, 0))
+        if (peer.m_discoverRequest == 0 && (peer.m_discoverAt == 0 || now - peer.m_discoverAt >= 2000))
         {
             NetInterfaceFrame frame = {};
             frame.m_kind = NI_REQUEST;
@@ -1640,17 +1438,17 @@ void NetGatewayNode::pollMesh()
     {
         const auto current = pending++;
         const auto route = m_routes.find(current->second);
-        if (route == m_routes.end() || !route->second.m_pending)
+        if (route == m_routes.end() || !route->second->m_pending)
         {
             m_pendingOpens.erase(current);
             continue;
         }
-        if (now >= route->second.m_deadline) { retire(route->first, 0, NI_TIMEOUT); }
+        if (now >= route->second->m_deadline) { retire(route->first, 0, NI_TIMEOUT); }
     }
-    if (m_outbound.size() >= 64 || m_lastOutbound >= g_meshOutbound - 1) { return; }
+    if (m_lastOutbound >= g_meshOutbound - 1) { return; }
     for (auto& item : m_candidates)
     {
-        if (now < item.second.m_retryAt || (item.first.first == m_advertise && item.first.second == localPort())) { continue; }
+        if (now < item.second->m_retryAt || (item.first.first == m_advertise && item.first.second == localPort())) { continue; }
         bool connected = false;
         for (const auto& connection : m_outbound)
         {
@@ -1659,7 +1457,7 @@ void NetGatewayNode::pollMesh()
         for (const auto& peer : m_peers)
         {
             if (peer.second.m_role == NI_LINK_NODE && !peer.second.m_closing &&
-                ((!item.second.m_expectedName.empty() && peer.second.m_name == item.second.m_expectedName) ||
+                ((!item.second->m_expectedName.empty() && peer.second.m_name == item.second->m_expectedName) ||
                  (peer.second.m_node.m_address == item.first.first && peer.second.m_node.m_port == item.first.second))) { connected = true; break; }
         }
         if (connected) { continue; }
@@ -1673,16 +1471,17 @@ void NetGatewayNode::pollMesh()
         options.m_tls.privateKeySize = static_cast<uint32_t>(m_privateKey.size() + 1);
         options.m_tls.handshakeTimeoutMs = 5000;
         const uint64_t id = g_meshOutbound | ++m_lastOutbound;
-        std::unique_ptr<NetGatewayNodeConnection> connection(new NetGatewayNodeConnection(*this, id,
-            item.first.first, item.first.second, item.second.m_expectedName));
+        NetObjectReference<NetGatewayNodeConnection> connection;
+        const int32_t allocated = m_outboundPool->create(connection, *this, id, item.first.first, item.first.second, item.second->m_expectedName);
+        if (allocated != NI_OK) { break; }
         const int32_t started = connection->connect(options);
         if (started == NI_OK) { m_outbound.insert(std::make_pair(id, std::move(connection))); }
         else
         {
             uint32_t random = 0;
             NetTransport::randomBytes(reinterpret_cast<uint8_t*>(&random), sizeof(random));
-            item.second.m_retryAt = now + item.second.m_delay / 2 + random % item.second.m_delay;
-            item.second.m_delay = (std::min)(item.second.m_delay * 2, 10000U);
+            item.second->m_retryAt = now + item.second->m_delay / 2 + random % item.second->m_delay;
+            item.second->m_delay = (std::min)(item.second->m_delay * 2, 10000U);
         }
         break;
     }
@@ -1692,11 +1491,11 @@ void NetGatewayNode::pruneCandidates()
 {
     for (auto candidate = m_candidates.begin(); candidate != m_candidates.end();)
     {
-        bool retained = candidate->second.m_seed;
+        bool retained = candidate->second->m_seed;
         for (auto member = m_members.begin(); !retained && member != m_members.end(); ++member)
         {
-            retained = member->second.m_point.m_address == candidate->first.first &&
-                member->second.m_point.m_port == candidate->first.second;
+            retained = member->second->m_point.m_address == candidate->first.first &&
+                member->second->m_point.m_port == candidate->first.second;
         }
         if (retained)
         {
@@ -1714,7 +1513,7 @@ void NetGatewayNode::expireMembers(uint64_t now)
     bool changed = false;
     for (auto member = m_members.begin(); member != m_members.end();)
     {
-        if (now >= member->second.m_seen && now - member->second.m_seen >= 300000)
+        if (now >= member->second->m_seen && now - member->second->m_seen >= 300000)
         {
             member = m_members.erase(member);
             changed = true;

@@ -38,7 +38,7 @@ uint64_t NetGatewayLocalServer::now()
 
 int32_t NetGatewayLocalServer::startLocal(const NetInterfaceTlsOptions& tls, const std::vector<NetGatewayServiceCredential>& credentials)
 {
-    if (m_receiving || m_stopping || !m_credentials.empty() || credentials.empty() || credentials.size() > 32)
+    if (m_receiving || m_stopping || !m_credentials.empty() || credentials.empty())
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -64,7 +64,10 @@ int32_t NetGatewayLocalServer::startLocal(const NetInterfaceTlsOptions& tls, con
         {
             return NI_INVALID_STATE;
         }
-        work.addProcessReceiveCallback(&m_inbox);
+        if (!work.addProcessReceiveCallback(&m_inbox))
+        {
+            return NI_NO_MEMORY;
+        }
         if (!work.initReceive(16452, 64))
         {
             m_local.shutdown();

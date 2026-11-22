@@ -50,11 +50,11 @@ class NetGatewayTask : public CTask
 
     /** 在线程中构造、驱动、销毁网关
     */
-    virtual void DoTask();
+    virtual void doTask();
 
     /** 只置停止标志，由所属执行者回收
     */
-    virtual void StopTask();
+    virtual void stopTask();
 
     /** 实际监听端口
     @return 启动中或失败为0
@@ -72,6 +72,8 @@ class NetGatewayTask : public CTask
     int32_t error() const;
 
   private:
+    // 先于任务内所有连接创建，停止唤醒者退出后最后回收
+    NetExecution m_execution;
     // 任务独占的完整启动配置副本，运行中只读
     NetGatewayConfiguration m_configuration;
     // 跨线程协作停止请求，由网络执行者实际回收资源
