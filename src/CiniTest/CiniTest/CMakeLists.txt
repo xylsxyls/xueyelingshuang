@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.15)
+if(BIT STREQUAL "wasm64")
+    string(APPEND CMAKE_C_FLAGS " -sMEMORY64=1")
+    string(APPEND CMAKE_CXX_FLAGS " -sMEMORY64=1")
+    string(APPEND CMAKE_EXE_LINKER_FLAGS " -sMEMORY64=1")
+endif()
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../PlatformTest/PlatformTest/src/PlatformTest.cmake")
+platform_test_select_linux_arm()
+project(CiniTest LANGUAGES CXX)
+include(CTest)
+build_sdk_test(CiniTest PROJECTS Cini
+    ARCHIVES ${vendors} SYSTEM_LIBRARIES ${system_libraries})
