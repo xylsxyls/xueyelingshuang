@@ -68,7 +68,23 @@ case "$version" in
     *) echo "Unsupported target protobuf version: $version" >&2; exit 1 ;;
 esac
 generator="${PROTOC_EXECUTABLE:-}"
-if [[ -z $generator ]]; then
+# 隔离 SDK 可直接使用由对应版本 protoc 生成且与当前 schema 匹配的文件。
+prepared=
+if [[ -z $generator && $version == 3019003 ]]; then
+    bundled="$src/../protoc-3.19.3"
+    if command -v sha256sum >/dev/null 2>&1; then
+        hash=(sha256sum)
+    else
+        hash=(shasum -a 256)
+    fi
+    # 统一 LF 和末行换行，保留字段或字符串中的全部内容。
+    schema_hash=$(set -o pipefail; awk '{ sub(/\r$/, ""); print }' "$src/ProtoMessage.proto" | "${hash[@]}") || schema_hash=
+    if [[ ${schema_hash%% *} == 8c122c9d5b6e481cfe3dd912810e3f8af9a5ffad6c3346f048ea2ce84b0fc585 &&
+        -s $bundled/ProtoMessage.pb.h && -s $bundled/ProtoMessage.pb.cc ]]; then
+        prepared="$bundled"
+    fi
+fi
+if [[ -z $generator && -z $prepared ]]; then
     case "$OSTYPE:$(uname -m):$expected" in
         msys*:3.3.0|cygwin*:3.3.0|win32*:3.3.0) generator="$root/tools/protobuf/bin/windows/x86/protoc.exe" ;;
         linux*:x86_64:3.3.0) generator="$root/tools/protobuf/bin/linux/x64/protoc" ;;
@@ -76,14 +92,20 @@ if [[ -z $generator ]]; then
         *) generator=$(command -v protoc) ;;
     esac
 fi
-if [[ -n $generator ]]; then
-    actual=$("$generator" --version) || exit 1
-    [[ $actual == "libprotoc $expected" ]] || { echo "Expected protoc $expected, found $actual" >&2; exit 1; }
+if [[ -n $generator || -n $prepared ]]; then
+    if [[ -n $generator ]]; then
+        actual=$("$generator" --version) || exit 1
+        [[ $actual == "libprotoc $expected" ]] || { echo "Expected protoc $expected, found $actual" >&2; exit 1; }
+    fi
     mkdir -p "$destination" || exit 1
     # 临时文件与最终路径同一文件系统，读者只会打开完整文件。
     generated=$(mktemp -d "$destination/.protoc.XXXXXX") || exit 1
     (
-        "$generator" -I="$src" --cpp_out="$generated" "$src/ProtoMessage.proto" || exit 1
+        if [[ -n $prepared ]]; then
+            cp "$prepared/ProtoMessage.pb.h" "$prepared/ProtoMessage.pb.cc" "$generated/" || exit 1
+        else
+            "$generator" -I="$src" --cpp_out="$generated" "$src/ProtoMessage.proto" || exit 1
+        fi
         for name in ProtoMessage.pb.h ProtoMessage.pb.cc; do
             if ! cmp -s "$generated/$name" "$destination/$name"; then
                 mv -f "$generated/$name" "$destination/$name" || exit 1
@@ -94,7 +116,7 @@ if [[ -n $generator ]]; then
     rm -f "$generated/ProtoMessage.pb.h" "$generated/ProtoMessage.pb.cc" || exit 1
     rmdir "$generated" || exit 1
     [[ $generated_status == 0 ]] || exit 1
-elif [[ ! -s $destination/ProtoMessage.pb.cc || ! -s $destination/ProtoMessage.pb.h ||
+elif [[ $version == 3019003 || ! -s $destination/ProtoMessage.pb.cc || ! -s $destination/ProtoMessage.pb.h ||
     $src/ProtoMessage.proto -nt $destination/ProtoMessage.pb.cc || $src/ProtoMessage.proto -nt $destination/ProtoMessage.pb.h ]]; then
     echo "Set PROTOC_EXECUTABLE to a host build of protoc $expected for this schema." >&2
     exit 1
