@@ -4,7 +4,7 @@
 #include <vector>
 
 /** Semaphore测试文档
-更新日期：2026-11-20。白盒只使用测试构建目录的私有副本。
+更新日期：2026-11-22。白盒只使用测试构建目录的私有副本。
 Wasm入口：默认Release，设置环境变量 SEMAPHORE_TEST_WASM_CONFIGURATION=Debug 可运行调试配置。node run_wasm.js <src/temp/Semaphore下全新目录> [工具根] [nmake路径]，启动器只从本次选用的 SDK 复制已有的 C/C++ 运行库归档到私有缓存，缺少的归档由工具链生成，Semaphore 和测试模块逐配置从源码构建。单独运行 SemaphoreWasmRunnerTests.js 可检查启动器错误收尾。
 阅读顺序：范围与契约 → 构建配置 → 执行与判定 → 逐项用例 → 性能测量 → 平台缺口与清理。
 
@@ -525,7 +525,8 @@ IPC：独立子进程，预热100、采样2000次往返；双方请求/回执精
 六、平台范围、已知限制和后续执行要求
 
 Windows：现有工程覆盖Win32/x64、lib/dll及Debug/Release；unit的native/legacy/portable/posixname用途不同，逐配置记录。57/58/55/66/69/71至74/79的现有性能或对齐实现使用Windows系统接口，不能把原生非Windows返回77计通过。
-Linux/macOS：可用原生CMake及系统后端；需要本机实际构建、进程启动、超时、名称和资源验证。当前没有这些平台的新执行证据。
+Linux ARM：2026-11-22 在 Windows 使用正式 CMake 入口和 Zig 0.13.0 交叉构建 Release。ARMv7（Cortex-A7，GNU hard-float）和 AArch64（GNU）各生成 libSemaphore.a、libSemaphore.so，四组产物分别用配套 SDK 头文件链接 SemaphoreTest。readelf 核对了每个归档成员、共享库和测试程序的 ELF 架构，以及动态消费者对 libSemaphore.so 的依赖。两个目标均通过 32 位、64 位及指针原子无锁能力的编译检查。当前缺少 ARM Linux 运行环境，目标机上的 futex 唤醒、超时和跨进程用例尚未执行。
+Linux 其他架构及 macOS：本次未验证构建或运行。
 Android：共享目录/UID、原子对齐、移动计数及真正跨进程须在目标环境验证；Windows portable只模拟协议。81的FIFO场景需要真实POSIX共享后端。
 iOS：App Group和双方宿主须配置；41/60的桌面子进程夹具明确不适用，可用 --ipc-session 从两个具备共享容器权限的宿主验证。不能用Windows或macOS结果代替。
 Wasm：四配置驱动只能证明相应Node宿主的这些C++场景；浏览器、微信实际宿主、跨域隔离/线程配置另测。48验证明确拒绝主线程阻塞/IPC，49/67需要pthread，87覆盖32/64位表示和登记顺序。
