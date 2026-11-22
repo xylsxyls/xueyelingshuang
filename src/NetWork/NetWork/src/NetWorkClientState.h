@@ -3,44 +3,24 @@
 #include <NetPeer/NetPeerAPI.h>
 #include "NetInterface/NetInterfaceAPI.h"
 #include <CTaskThreadManager/CTaskThreadManagerAPI.h>
-#include <mutex>
+#include "Semaphore/SemaphoreAPI.h"
 #include <atomic>
-#include "NetWorkPlatform.h"
+#if defined(__EMSCRIPTEN__)
+#include <pthread.h>
+#endif
 
+class NetWorkWorker;
 struct NetWorkClientOpaque;
-
-// 每个客户端只投递一次长任务；停止仅提交关闭，不在回调中等待
-class NetWorkClientTask : public CTask
-{
-public:
-    /** 借用客户端，直到任务退出且生命期owner回收线程
-    @param [in] client 唯一上下文
-    */
-    explicit NetWorkClientTask(NetWorkClientOpaque* client);
-
-    /** 在本CTask中独占推进Peer，所有用户回调也在此处
-    */
-    virtual void DoTask();
-
-    /** 只标记关闭，由DoTask收敛
-    */
-    virtual void StopTask();
-private:
-    // 生命期owner在回收本任务之前保留
-    NetWorkClientOpaque* m_client;
-};
 
 // 仅本库分配／释放；生产者只访问submission，不能访问Peer
 struct NetWorkClientOpaque
 {
 public:
-    // 先声明门，端口析构期间仍可使用；所有原生门在创建时验证，停止不再分配。
-    NetWorkGate m_submitMutex;
-    // 只唤醒协议owner；通知标志与检查、等待在本门下配对。
-    NetWorkGate m_wakeGate;
-    // 同步交付回执有独立等待门，不能抢走协议owner的工作通知。
-    NetWorkGate m_sendGate;
-    // 合并重复通知
+    // 生命周期owner持有共享执行者，全部通道和生产者收敛后才释放
+    std::shared_ptr<NetWorkWorker> m_worker;
+    // 首次连接前选择：true为并行send执行者，false为共享串行post执行者
+    bool m_parallel;
+    // 合并提交提示；配置原生事件宿主后直接唤醒等待，提示不承担数据同步
     std::atomic<bool> m_notified;
     // 从投递接纳至任务最后一条访问；拒绝提前释放
     std::atomic<bool> m_running;
@@ -50,14 +30,13 @@ public:
     std::atomic<uintptr_t> m_owner;
     // 最近内部错误；提交错误由各次调用直接返回
     std::atomic<int32_t> m_error;
-    // 统一有界接纳，只有其短临界区可被生产者访问
+    // 统一无锁有界接纳，生产者不访问协议执行者的链结和正文借用
     NetSenderSubmission m_submission;
     // 用户表只读，context由外部保留
     NetWorkClientCallbacks m_callbacks;
     // 只在创建／连接生命期owner或已移交的协议执行者访问
     NetPeerClientHandle m_peer;
-    // 仅生命期owner回收，不能被外部线程池停止
-    uint32_t m_thread;
+
 
 public:
     /** 初始化静止上下文
@@ -69,36 +48,25 @@ public:
     */
     ~NetWorkClientOpaque();
 
-    /** 进入生产者提交短锁，不在锁内执行协议或用户回调
-    @param [in] context 本实例，提交端口销毁前保持有效
+    /** owner回收边界等待一个调度间隔，不持提交锁、不执行业务回调
+    @param [in] context 本实例，仅保留函数表形状
     */
-    static void enter(void* context);
+    static void pause(void* context);
 
-    /** 释放生产者提交短锁
-    @param [in] context 与enter配对的本实例
-    */
-    static void leave(void* context);
-
-    /** 释放提交锁后合并通知协议执行者
+    /** 输入发布后合并通知协议执行者
     @param [in] context 本实例，全部外部调用退出前保持有效
     */
     static void wake(void* context);
 
-    /** 创建独占CTask并投递一次任务；不把投递视作协议就绪
+    /** 在共享执行者中登记客户端；不把任务接纳视作协议就绪
     @return OK仅本地接纳，失败保存可观察错误
     */
     int32_t start();
 
-    /** 生命期owner回收已退出的独占任务；不能由GUI／回调调用
+    /** 生命周期owner检查客户端是否已退出，不停止其他客户端的线程
     @return 活跃时INVALID_STATE，否则OK
     */
     int32_t reap();
-
-    /** 生产者等待本次同步交付；不持提交锁，禁止owner或回调线程调用
-    @param [in] ticket 当前同步票据
-    @return 交付结果，不等待远端业务结果
-    */
-    int32_t waitSynchronous(uint64_t ticket);
 
     /** 判断调用者是否为本协议执行者
     @return 是否同一系统线程

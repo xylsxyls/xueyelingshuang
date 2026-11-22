@@ -61,7 +61,7 @@ void NetFileIoState::hash(NetFileIoEntry& entry, NetFileIoHandle& file)
         }
         if (entry.m_result.result == NI_OK)
         {
-            entry.m_output.resize(32);
+            entry.m_outputSize = 32;
             entry.m_result.result = NetInterface::hashFinish(hash, entry.m_output.data(), 32);
             entry.m_result.length = length;
         }
@@ -70,8 +70,7 @@ void NetFileIoState::hash(NetFileIoEntry& entry, NetFileIoHandle& file)
     catch (...)
     {
         NetInterface::wipe(bytes.empty() ? nullptr : bytes.data(), static_cast<uint32_t>(bytes.size()));
-        NetInterface::hashDestroy(hash);
-        throw;
+        entry.m_result.result = NI_NO_MEMORY;
     }
     NetInterface::hashDestroy(hash);
 }
@@ -81,12 +80,17 @@ void NetFileIoState::execute(NetFileIoEntry& entry)
     const auto& request = entry.m_request;
     if (request.operation <= NET_FILE_IO_DUPLICATE_READ || request.operation == NET_FILE_IO_OPEN_TEMPORARY)
     {
-        if (m_files.size() >= 32 || m_lastFile == UINT64_MAX)
+        if (m_lastFile == UINT64_MAX)
         {
             entry.m_result.result = NI_LIMIT_EXCEEDED;
             return;
         }
-        std::unique_ptr<NetFileIoHandle> file(new NetFileIoHandle());
+        NetObjectReference<NetFileIoHandle> file;
+        entry.m_result.result = m_filePool.create(file);
+        if (entry.m_result.result != NI_OK)
+        {
+            return;
+        }
         const bool opened = request.operation == NET_FILE_IO_OPEN_TEMPORARY ? file->openTemporary(entry.m_path.c_str()) :
             (request.operation == NET_FILE_IO_DUPLICATE_READ ? file->duplicate(request.descriptor, false) :
             file->open(entry.m_path.c_str(), request.operation));
@@ -145,15 +149,14 @@ void NetFileIoState::execute(NetFileIoEntry& entry)
     bool result = false;
     if (request.operation == NET_FILE_IO_READ)
     {
-        entry.m_output.resize(request.size);
         uint32_t received = 0;
         result = file.read(request.offset, request.size ? entry.m_output.data() : nullptr, request.size, &received);
-        entry.m_output.resize(result ? received : 0);
+        entry.m_outputSize = result ? received : 0;
         entry.m_result.length = received;
     }
     else if (request.operation == NET_FILE_IO_WRITE)
     {
-        result = file.write(request.offset, entry.m_input.empty() ? nullptr : entry.m_input.data(), request.size);
+        result = file.write(request.offset, entry.m_inputSize == 0 ? nullptr : entry.m_input.data(), request.size);
         if (result && request.flags != 0)
         {
             result = file.flush();
@@ -352,6 +355,8 @@ uint32_t NetFileIoHandle::lastError() const
 
 NetFileIoEntry::NetFileIoEntry(const NetFileIoRequest& request) :
 m_request(request),
+m_inputSize(0),
+m_outputSize(0),
 m_cancelled(false),
 m_completed(false)
 {
@@ -369,10 +374,6 @@ m_completed(false)
     {
         m_destination = request.destination;
     }
-    if (request.operation == NET_FILE_IO_WRITE && request.size != 0)
-    {
-        m_input.assign(request.bytes, request.bytes + request.size);
-    }
     m_request.path = nullptr;
     m_request.destination = nullptr;
     m_request.bytes = nullptr;
@@ -380,11 +381,20 @@ m_completed(false)
 
 NetFileIoEntry::~NetFileIoEntry()
 {
-    NetInterface::wipe(m_input.empty() ? nullptr : m_input.data(), static_cast<uint32_t>(m_input.size()));
-    NetInterface::wipe(m_output.empty() ? nullptr : m_output.data(), static_cast<uint32_t>(m_output.size()));
+    NetInterface::wipe(m_input.data(), m_inputSize);
+    NetInterface::wipe(m_output.data(), m_output.capacity());
 }
 
-NetFileIoState::NetFileIoState() :
+std::atomic<size_t> NetFileIoState::m_instances(0);
+
+NetFileIoState::NetFileIoState(const NetWorkFilePools& pools) :
+m_notified(false),
+m_admission(0),
+m_poolStatus(NI_OK),
+m_queued(false),
+m_bodies(pools.m_bodies),
+m_entryPool(pools.m_entries),
+m_filePool(pools.m_files),
 m_stop(false),
 m_done(false),
 m_waitFailed(false),
@@ -393,22 +403,59 @@ m_allocatedRequest(0),
 m_lastFile(0),
 m_inputBytes(0)
 {
+    m_poolStatus = m_entryPool.status();
+    if (m_poolStatus == NI_OK) { m_poolStatus = m_filePool.status(); }
+    if (m_poolStatus == NI_OK) { m_poolStatus = m_bodies.status(); }
+    const LockFreeQueueResult configured = m_queued.configurePool(pools.m_queue);
+    const LockFreeQueueResult initialized = configured == LockFreeQueueSuccess ? m_queued.tryInit() : configured;
+    if (m_poolStatus == NI_OK && initialized != LockFreeQueueSuccess)
+    {
+        m_poolStatus = initialized == LockFreeQueueAllocationFailure ? NI_NO_MEMORY : NI_INVALID_ARGUMENT;
+    }
+    m_instances.fetch_add(1);
+}
 
+NetFileIoState::~NetFileIoState()
+{
+    m_instances.fetch_sub(1);
 }
 
 void NetFileIoState::stop()
 {
-    if (!m_gate.valid())
+    m_admission.fetch_or(2);
+    m_stop.store(true);
+    wake();
+}
+
+void NetFileIoState::wake()
+{
+    if (!m_notified.exchange(true))
     {
-        m_stop.store(true);
-        return;
+        // 竞争在信号量内重试，容量不等待；合并标志保证最多保留一个唤醒提示。
+        m_wake.trySignal(true, false);
     }
+}
+
+NetFileIoAdmission::NetFileIoAdmission(NetFileIoState& state) :
+m_state(state),
+m_accepted(false)
+{
+    uint32_t expected = 0;
+    m_accepted = m_state.m_admission.compare_exchange_strong(expected, 1);
+}
+
+NetFileIoAdmission::~NetFileIoAdmission()
+{
+    if (m_accepted)
     {
-        // 与DoTask的谓词检查和原子解锁／等待配对，避免停止通知丢失后永久阻塞回收。
-        std::lock_guard<NetWorkGate> lock(m_gate);
-        m_stop.store(true);
+        m_state.m_admission.fetch_sub(1);
+        m_state.wake();
     }
-    m_gate.notify();
+}
+
+bool NetFileIoAdmission::accepted() const
+{
+    return m_accepted;
 }
 
 NetFileIoTask::NetFileIoTask(const std::shared_ptr<NetFileIoState>& state) :
@@ -417,33 +464,40 @@ m_state(state)
 
 }
 
-void NetFileIoTask::StopTask()
+void NetFileIoTask::stopTask()
 {
     m_state->stop();
 }
 
-void NetFileIoTask::DoTask()
+void NetFileIoTask::doTask()
 {
     for (;;)
     {
-        std::shared_ptr<NetFileIoEntry> entry;
+        NetFileIoEntry* entry = nullptr;
+        if (!m_state->m_queued.pop(&entry))
         {
-            std::lock_guard<NetWorkGate> lock(m_state->m_gate);
-            while (!m_state->m_stop.load() && m_state->m_queued.empty())
+            // 先清合并标志并消费旧提示，再观察队列；若新发布被提前消费也能从队列看到。
+            m_state->m_notified.store(false);
+            while (m_state->m_wake.waitResult(0).committed)
             {
-                if (!m_state->m_gate.wait())
+            }
+            const bool closed = m_state->m_admission.load() == 2;
+            if (!m_state->m_queued.pop(&entry))
+            {
+                if (closed)
                 {
-                    m_state->m_waitFailed = true;
-                    m_state->m_stop.store(true);
                     break;
                 }
+                const SemaphoreResult waited = m_state->m_wake.waitResult(100);
+                if (waited.status != SEMAPHORE_OK && waited.status != SEMAPHORE_TIMEOUT)
+                {
+                    m_state->m_waitFailed = true;
+                    m_state->stop();
+                    CSystem::Sleep(1);
+                }
+                m_state->m_queued.maintain(16);
+                continue;
             }
-            if (m_state->m_queued.empty())
-            {
-                break;
-            }
-            entry = m_state->m_queued.front();
-            m_state->m_queued.pop_front();
         }
         try
         {
@@ -466,11 +520,8 @@ void NetFileIoTask::DoTask()
         {
             m_state->m_files.erase(entry->m_request.file);
         }
-        {
-            std::lock_guard<NetWorkGate> lock(m_state->m_gate);
-            // 完成标志原地更新，内存不足时也不会丢失已接纳工作或阻塞done。
-            entry->m_completed = true;
-        }
+        // 此release为工作线程最后一次访问entry，owner取得完成后即可consume并释放。
+        entry->m_completed.store(true, std::memory_order_release);
     }
     m_state->m_files.clear();
     m_state->m_done.store(true);

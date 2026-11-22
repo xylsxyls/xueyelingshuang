@@ -43,16 +43,6 @@ fi
 librariesrely+=($'project\tCSystem\t'"$CSystem_dlllib")
 
 #--------------------------------------------------------------------
-ReadWriteMutex_bit=$1
-ReadWriteMutex_dlllib=$2
-ReadWriteMutex_debugRelease=$3
-ReadWriteMutex_allSame=$4
-if [[ $4 != only ]]; then
-    "$CLOUD_REBUILD" ReadWriteMutex "$ReadWriteMutex_bit" "$ReadWriteMutex_dlllib" "$ReadWriteMutex_debugRelease" "$ReadWriteMutex_allSame"
-fi
-librariesrely+=($'project\tReadWriteMutex\t'"$ReadWriteMutex_dlllib")
-
-#--------------------------------------------------------------------
 CStringManager_bit=$1
 CStringManager_dlllib=$2
 CStringManager_debugRelease=$3
@@ -61,5 +51,35 @@ if [[ $4 != only ]]; then
     "$CLOUD_REBUILD" CStringManager "$CStringManager_bit" "$CStringManager_dlllib" "$CStringManager_debugRelease" "$CStringManager_allSame"
 fi
 librariesrely+=($'project\tCStringManager\t'"$CStringManager_dlllib")
+
+#--------------------------------------------------------------------
+Semaphore_bit=$1
+Semaphore_dlllib=$2
+Semaphore_debugRelease=$3
+Semaphore_allSame=$4
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" Semaphore "$Semaphore_bit" "$Semaphore_dlllib" "$Semaphore_debugRelease" "$Semaphore_allSame"
+fi
+librariesrely+=($'project\tSemaphore\t'"$Semaphore_dlllib")
+
+#--------------------------------------------------------------------
+LockFreeQueue_bit=$1
+LockFreeQueue_dlllib=$2
+LockFreeQueue_debugRelease=$3
+LockFreeQueue_allSame=$4
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" LockFreeQueue "$LockFreeQueue_bit" "$LockFreeQueue_dlllib" "$LockFreeQueue_debugRelease" "$LockFreeQueue_allSame"
+fi
+librariesrely+=($'project\tLockFreeQueue\t'"$LockFreeQueue_dlllib")
+
+#--------------------------------------------------------------------
+LockFreeHashMap_bit=$1
+LockFreeHashMap_dlllib=$2
+LockFreeHashMap_debugRelease=$3
+LockFreeHashMap_allSame=$4
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" LockFreeHashMap "$LockFreeHashMap_bit" "$LockFreeHashMap_dlllib" "$LockFreeHashMap_debugRelease" "$LockFreeHashMap_allSame"
+fi
+librariesrely+=($'project\tLockFreeHashMap\t'"$LockFreeHashMap_dlllib")
 
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return

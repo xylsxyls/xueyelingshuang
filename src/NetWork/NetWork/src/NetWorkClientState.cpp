@@ -1,26 +1,31 @@
 ﻿#include "NetWorkClientState.h"
+#include "NetWorkWorker.h"
 #include "NetWork.h"
+#ifdef __EMSCRIPTEN__
+#include <chrono>
+#include <thread>
+#else
 #include "CSystem/CSystemAPI.h"
+#endif
 #include <cstring>
 #include <memory>
 
 NetWorkClientOpaque::NetWorkClientOpaque(const NetWorkClientCallbacks& callbacks) :
+m_parallel(true),
 m_notified(false),
 m_running(false),
 m_entered(false),
 m_owner(0),
 m_error(NI_OK),
 m_callbacks(callbacks),
-m_peer(nullptr),
-m_thread(0)
+m_peer(nullptr)
 {
     NetSenderSubmissionGate gate = {};
     gate.m_context = this;
-    gate.m_enter = enter;
-    gate.m_leave = leave;
+    gate.m_pause = pause;
     gate.m_wake = wake;
-    m_error = m_submitMutex.valid() && m_wakeGate.valid() && m_sendGate.valid() ?
-        m_submission.configureGate(gate) : NI_INVALID_STATE;
+    m_error = m_submission.configureGate(gate);
+
 }
 
 NetWorkClientOpaque::~NetWorkClientOpaque()
@@ -28,25 +33,26 @@ NetWorkClientOpaque::~NetWorkClientOpaque()
 
 }
 
-void NetWorkClientOpaque::enter(void* context)
+void NetWorkClientOpaque::pause(void* context)
 {
-    static_cast<NetWorkClientOpaque*>(context)->m_submitMutex.lock();
-}
-
-void NetWorkClientOpaque::leave(void* context)
-{
-    static_cast<NetWorkClientOpaque*>(context)->m_submitMutex.unlock();
+    (void)context;
+#ifdef __EMSCRIPTEN__
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+#else
+    CSystem::Sleep(1);
+#endif
 }
 
 void NetWorkClientOpaque::wake(void* context)
 {
     NetWorkClientOpaque* client = static_cast<NetWorkClientOpaque*>(context);
+    // 一个未消费通知已保证owner再检查队列；只在false→true时唤醒宿主。
+    // 入口发布屏障与owner清通知后的SC屏障配对：要么本次重新唤醒，要么本轮看见入口。
+    if (!client->m_notified.load(std::memory_order_acquire) &&
+        !client->m_notified.exchange(true, std::memory_order_acq_rel) && client->m_worker)
     {
-        // 与owner检查标志及wait的原子解锁配对，不能丢失检查后、等待前的通知。
-        std::lock_guard<NetWorkGate> lock(client->m_wakeGate);
-        client->m_notified.store(true);
+        client->m_worker->wake();
     }
-    client->m_wakeGate.notify();
 }
 
 uintptr_t NetWorkClientOpaque::currentThreadId()
@@ -65,101 +71,14 @@ bool NetWorkClientOpaque::onOwner() const
 
 int32_t NetWorkClientOpaque::reap()
 {
-    if (m_running.load() || onOwner())
-    {
-        return NI_INVALID_STATE;
-    }
-    if (m_thread != 0)
-    {
-        CTaskThreadManager::Instance().Uninit(m_thread);
-        m_thread = 0;
-    }
-    return NI_OK;
+    return m_running.load() || onOwner() ? NI_INVALID_STATE : NI_OK;
 }
 
 int32_t NetWorkClientOpaque::start()
 {
-    if (m_thread != 0 || m_running.load())
-    {
-        return NI_INVALID_STATE;
-    }
-    try
-    {
-        std::shared_ptr<CTask> task(new NetWorkClientTask(this));
-        m_thread = CTaskThreadManager::Instance().Init();
-        std::shared_ptr<CTaskThread> thread = CTaskThreadManager::Instance().GetThreadInterface(m_thread);
-        if (!thread)
-        {
-            m_submission.close(NI_INVALID_STATE);
-            m_error = NI_INVALID_STATE;
-            return NI_INVALID_STATE;
-        }
-        m_entered = false;
-        m_error = NI_OK;
-        m_running = true;
-        // 新建且独占的线程，生命期owner不会并发停止；协议就绪仍只认实际握手。
-        thread->PostTask(task);
-        return NI_OK;
-    }
-    catch (...)
-    {
-        m_running = false;
-        m_error = NI_NO_MEMORY;
-        m_submission.close(NI_NO_MEMORY);
-        return NI_NO_MEMORY;
-    }
-}
-
-NetWorkClientTask::NetWorkClientTask(NetWorkClientOpaque* client) :
-m_client(client)
-{
-
-}
-
-void NetWorkClientTask::StopTask()
-{
-    NetWork::instance().clientClose(m_client, NI_CANCELLED);
-}
-
-void NetWorkClientTask::DoTask()
-{
-    m_client->m_owner = NetWorkClientOpaque::currentThreadId();
-    m_client->m_entered = true;
-    for (;;)
-    {
-        const int32_t result = NetPeer::instance().clientPoll(m_client->m_peer);
-        if (result < 0)
-        {
-            m_client->m_error = result;
-            m_client->m_submission.close(result);
-        }
-        {
-            // 回执检查和通知使用同一门；不持submission门，不执行业务回调。
-            std::lock_guard<NetWorkGate> lock(m_client->m_sendGate);
-            m_client->m_sendGate.notifyAll();
-        }
-        bool waited = true;
-        {
-            // 协议owner独占推进，生产者只需完成短提交；等待超时仍驱动协议期限。
-            std::lock_guard<NetWorkGate> lock(m_client->m_wakeGate);
-            if (result != NI_OK && !m_client->m_notified.exchange(false))
-            {
-                waited = m_client->m_wakeGate.waitFor(2);
-            }
-        }
-        if (!waited)
-        {
-            m_client->m_error = NI_INVALID_STATE;
-            NetPeer::instance().clientClose(m_client->m_peer, NI_INVALID_STATE);
-        }
-        if (result == NI_OK)
-        {
-            break;
-        }
-    }
-    m_client->m_owner = 0;
-    // 最后一条对client的访问；生命期owner先join独占CTask再释放上下文。
-    m_client->m_running = false;
+    if (m_running.load() || !m_worker) { return NI_INVALID_STATE; }
+    m_error = NI_OK;
+    return m_worker->add(this);
 }
 
 void NetWorkClientOpaque::ready(void* context, uint64_t generation, uint32_t requests, uint32_t chunk)
@@ -200,29 +119,4 @@ void NetWorkClientOpaque::closed(void* context, uint64_t generation, int32_t rea
         return;
     }
     client->m_callbacks.closed(client->m_callbacks.context, generation, reason, detail);
-}
-
-int32_t NetWorkClientOpaque::waitSynchronous(uint64_t ticket)
-{
-    for (;;)
-    {
-        const int32_t result = m_submission.synchronousResult(ticket, true);
-        if (result != NI_READY)
-        {
-            return result;
-        }
-        bool waited = true;
-        {
-            // 只查询内部回执，不执行协议；wake在释放submission门以后调用。
-            std::lock_guard<NetWorkGate> lock(m_sendGate);
-            if (m_submission.synchronousResult(ticket, false) == NI_READY)
-            {
-                waited = m_sendGate.waitFor(2);
-            }
-        }
-        if (!waited)
-        {
-            m_submission.close(NI_INVALID_STATE);
-        }
-    }
 }

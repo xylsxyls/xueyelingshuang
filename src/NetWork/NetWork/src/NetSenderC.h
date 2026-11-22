@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "NetWorkMacro.h"
 #include "NetSenderHostC.h"
+#define netSenderConfigureWorkers netWorkSenderConfigureWorkers
+#define netSenderClientConfigureDispatch netWorkSenderClientConfigureDispatch
 #define netSenderClientCreate netWorkSenderClientCreate
 #define netSenderClientConfigureCompression netWorkSenderClientConfigureCompression
 #define netSenderClientConnectService netWorkSenderClientConnectService
@@ -21,6 +23,19 @@ extern "C"
 #endif
     typedef struct NetWorkSenderClientOpaque* NetSenderClientHandle;
 
+    /** 启动前配置并行执行者数量，生命周期owner串行调用
+    @param [in] count NetWork为非零线程数，NetPeer只支持1
+    @return NI_OK或参数/生命周期/不支持错误
+    */
+    NET_WORK_C_EXPORT NetWorkAPI int32_t netSenderConfigureWorkers(uint32_t count);
+
+    /** 首次连接前选择send并行或post串行调度，不改变NetPeer单线程性质
+    @param [in] handle 已创建且未连接的句柄
+    @param [in] parallel 0为post串行，1为send并行；NetPeer不创建线程
+    @return NI_OK或参数/生命周期错误
+    */
+    NET_WORK_C_EXPORT NetWorkAPI int32_t netSenderClientConfigureDispatch(NetSenderClientHandle handle, int32_t parallel);
+
     /** 创建独立C接口发送器，不表示会话就绪
     线程：由唯一生命周期owner串行调用，不与本对象其他接口并发；禁止在协议回调中调用
     create／configure／connect／destroy由唯一生命期owner串行调用，禁止在回调中更换配置或销毁。
@@ -32,11 +47,11 @@ extern "C"
     */
     NET_WORK_C_EXPORT NetWorkAPI int32_t netSenderClientCreate(const NetInterfaceClientCallbacks* callbacks, NetSenderClientHandle* handle);
 
-    /** 连接前配置公开RPC类型白名单；最多64项，0清空，默认不压缩。
+    /** 连接前配置公开RPC类型白名单；动态存储，0清空，默认不压缩。
     线程：由唯一生命周期owner串行调用，不与本对象其他接口并发；禁止在协议回调中调用
     @param [in] handle 有效发送器句柄
     @param [in] types 公开RPC类型数组，调用时复制；count为0可为空
-    @param [in] count 类型数量0至64，0清空白名单
+    @param [in] count 类型数量非负项数，0清空白名单
     @return NI_OK或参数、状态、内存错误
     */
     NET_WORK_C_EXPORT NetWorkAPI int32_t netSenderClientConfigureCompression(NetSenderClientHandle handle, const uint32_t* types, uint32_t count);
@@ -123,22 +138,22 @@ extern "C"
     */
     NET_WORK_C_EXPORT NetWorkAPI int32_t netSenderClientDestroy(NetSenderClientHandle handle);
 
-    /** 同步交付请求到共享内存或实际宿主网络接口；不等远端响应
-    调用前登记请求关联；单执行者send可能在推进过程中交付回调。
-    线程：NetWork允许外部生产者并发调用，同实例最多128个有界同步交付票据；NetPeer仅同一执行者。均禁止在协议回调／poll中调用，原生调用会等待
+    /** 并发接纳请求副本到会话队列，不等后台组包加密或远端响应
+    调用前登记请求关联；工作者回调可能早于本函数返回。
+    线程：允许外部生产者并发调用，不与配置、连接和释放并发；本对象协议回调内调用被拒绝
     @param [in] handle 本提供方有效句柄
     @param [in] requestId 未投递预留号
     @param [in] bytes 调用时复制，size非零时不可空
     @param [in] size 最大1048560字节
-    @return 0表示已全部交付，负数失败；回调内拒绝且不接纳；失败禁止自动重放
+    @return 0表示副本已入队，负数失败；回调内拒绝且不接纳；失败禁止自动重放
     */
     NET_WORK_C_EXPORT NetWorkAPI int32_t netSenderClientSend(NetSenderClientHandle handle, uint64_t requestId, const uint8_t* bytes, uint32_t size);
 
-    /** 同步交付流帧，责任边界同Send，交付期限五秒
-    线程：NetWork允许外部生产者并发调用，同实例最多128个有界同步交付票据；NetPeer仅同一执行者。均禁止在协议回调／poll中调用，原生调用会等待
+    /** 并发接纳流帧副本，责任边界同Send
+    线程：允许外部生产者并发调用，不与配置、连接和释放并发；本对象协议回调内调用被拒绝
     @param [in] handle 本提供方有效句柄
     @param [in] frame 调用时复制的授权流帧
-    @return 0已交付或负数失败，不代表远端收到
+    @return 0已入队或负数未接纳，不代表远端收到
     */
     NET_WORK_C_EXPORT NetWorkAPI int32_t netSenderClientSendData(NetSenderClientHandle handle, const NetInterfaceFrame* frame);
 

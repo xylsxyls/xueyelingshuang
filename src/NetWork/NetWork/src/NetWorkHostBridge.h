@@ -1,27 +1,70 @@
 ﻿#pragma once
 #include <NetPeer/NetPeerAPI.h>
 #include "NetInterface/NetInterfaceAPI.h"
-#include <NetInterface/NetInterfaceAPI.h>
-#include <ReadWriteMutex/ReadWriteMutexAPI.h>
+#include "LockFreeHashMap/LockFreeHashMapAPI.h"
+#include "LockFreeQueue/LockFreeQueueAPI.h"
 #include <atomic>
 #include <memory>
+#include <map>
+#include "NetWorkHostPools.h"
+
+// 一个宿主连接的跨线程入口；路由快照保留本对象，owner独占协议和派发状态
+struct NetWorkHostMail
+{
+public:
+    /** 初始化不可复用的宿主连接身份
+    @param [in] peer 非零宿主连接号
+    */
+    explicit NetWorkHostMail(uint64_t peer);
+
+    /** 取得非独占发布借用，关闭后立即失败
+    @return 是否成功，成功后必须leave
+    */
+    bool enter();
+
+    /** 完成队列发布后归还，不等待其他生产者
+    */
+    void leave();
+
+public:
+    // 不变连接身份
+    uint64_t m_peer;
+    // 高位禁止新输入，低31位为仍可能发布输入的回调数
+    std::atomic<uint32_t> m_calls;
+    // 已预留且owner尚未导入的事件数，含正在复制/发布的项；终态必须等其归零
+    std::atomic<uint64_t> m_pending;
+    // 原始连接通知已经发生，owner据此先通告连接再转交输入
+    std::atomic<bool> m_connected;
+    // 合并尚未导入owner的可写提示
+    std::atomic<bool> m_writable;
+    // 高32位非零表示原始关闭，低32位保存首次原因，包括0
+    std::atomic<uint64_t> m_closed;
+    // 仅本连接首次接纳失败，独立于数据队列容量
+    std::atomic<int32_t> m_failure;
+    // owner已交付终态，旧快照只能退出，不能再次创建同一连接
+    std::atomic<bool> m_retired;
+};
 
 // 原生事件输入：0连接，1字节，2可写，3关闭；只拷贝原始输入
 struct NetWorkHostEvent
 {
 public:
+    // 正文占用额度的归属，跨线程入口与owner槽共同保留至消费，不形成引用环
+    NetObjectReference<NetWorkHostMail> m_mail;
     // 事件种类
     uint32_t m_kind;
     // 不复用的宿主连接号
     uint64_t m_peer;
     // 终态原因
     int32_t m_reason;
-    // 下一队列槽或空闲槽，2048表示尾部
-    uint32_t m_next;
+    // owner独占FIFO下一项，nullptr表示尾部
+    NetWorkHostEvent* m_next;
+    // 本对象的池槽所有权，仅出队后的owner归还一次
+    void* m_storage;
     // 本槽独占输入长度，最多16384字节
     uint32_t m_size;
     // 输入只复制一次，派发时转交独占所有权
-    std::unique_ptr<uint8_t[]> m_bytes;
+    NetBufferLease m_bytes;
 
 public:
     /** 初始化空标量槽，不分配正文
@@ -37,16 +80,18 @@ public:
     void clear();
 };
 
-// 每个连接的提交门下状态；协议不访问这些字段
+// 每个连接的owner独占派发状态；跨线程回调只访问NetWorkHostMail
 struct NetWorkHostPeer
 {
 public:
-    // 0表示空槽；终态交付后归还，不保存已关闭连接的无界墓碑
+    // 非零活动身份；终态交付前删除，不保留无界墓碑
     uint64_t m_id;
-    // 本连接FIFO的首尾槽，2048表示空
-    uint32_t m_head;
-    // 本连接FIFO尾槽，2048表示空；由m_mutex保护
-    uint32_t m_tail;
+    // 本连接FIFO首项，nullptr表示空；仅owner访问
+    NetWorkHostEvent* m_head;
+    // 本连接FIFO尾项，nullptr表示空
+    NetWorkHostEvent* m_tail;
+    // 实际连接池槽，独立于正文和输入队列容量
+    NetObjectReference<NetWorkHostMail> m_mail;
     // 原始连接事件已接纳，重复事件不占队列
     bool m_connected;
     // owner已按连接号顺序通告；通告独立于数据槽和轮询游标。
@@ -79,14 +124,25 @@ public:
     @param [in] data 字节事件
     @param [in] writable 可写事件
     @param [in] closed 终态事件
+    @param [in] pools 构造时复制的实际存储配置
     */
-    NetWorkHostBridge(const NetHostFunctions& functions, void* observer, NetHostConnected connected, NetHostData data, NetHostWritable writable, NetHostClosed closed);
+    NetWorkHostBridge(const NetHostFunctions& functions, void* observer, NetHostConnected connected, NetHostData data, NetHostWritable writable, NetHostClosed closed, const NetWorkHostPools& pools);
+
+    /** 宿主确认全部回调退出后，释放未派发入口及owner槽；不在这里销毁宿主
+    */
+    ~NetWorkHostBridge();
 
     /** 注册完整原生宿主；只能在任何实例／执行者启动之前调用
     @param [in] functions 完整v1表，context借用至全部实例释放
     @return OK或明确参数／配置错误
     */
     static int32_t configure(const NetHostFunctions* functions);
+
+    /** 设置后续宿主实例的实际存储池；生命周期owner串行调用，存在实例时拒绝
+    @param [in] pools 各底层组件池配置，失败保持原配置
+    @return NI_OK或配置/内存/生命周期错误
+    */
+    static int32_t configurePools(const NetWorkHostPools& pools);
 
     /** 复制宿主表并创建桥接器；部分创建失败时先停用回调再回收宿主
     @param [in] provider 完整NetHostFunctions表
@@ -217,30 +273,46 @@ private:
     */
     void enqueue(uint32_t kind, uint64_t peer, int32_t reason, const uint8_t* bytes, uint32_t size);
 
-    /** 在锁内查找活动连接
-    @param [in] peer 非零连接号
-    @return 槽位或256表示不存在
+    /** 查找或有界创建不可变连接入口，回调/owner均可调用
+    @param [in] peer 非零身份
+    @param [in] create 是否允许创建，迟到数据/可写禁止创建
+    @return 独立强引用，失败为空
     */
-    uint32_t find(uint64_t peer) const;
+    NetObjectReference<NetWorkHostMail> mailbox(uint64_t peer, bool create);
 
-    /** 在锁内登记活动连接，禁止超过256个
-    @param [in] peer 非零连接号
-    @return 既有或新槽位，256表示满
+    /** owner按新增提示导入连接索引；每轮检查已有mail的连接/失败/终态并导入输入
     */
-    uint32_t insert(uint64_t peer);
+    void pumpMail();
 
-    /** 在锁内归还本连接全部输入槽，安全擦除未交付字节
+    /** owner撤销连接入口；旧快照保持对象有效但不能再派发
+    @param [in] peer 即将交付终态的连接号
+    */
+    void retireMail(uint64_t peer);
+
+    /** 由owner查找活动连接
+    @param [in] peer 非零连接号
+    @return owner状态或nullptr；只借用至下次删除此连接
+    */
+    NetWorkHostPeer* find(uint64_t peer);
+
+    /** 由owner登记已占有实际连接池槽的活动连接
+    @param [in] mail 有效连接池引用
+    @return 既有或新状态，分配失败为nullptr并记录宿主故障
+    */
+    NetWorkHostPeer* insert(const NetObjectReference<NetWorkHostMail>& mail);
+
+    /** 由owner归还本连接全部输入槽，安全擦除未交付字节
     @param [in,out] peer 活动连接
     */
     void discard(NetWorkHostPeer& peer);
 
-    /** 在锁内记录首次接纳失败；终态另有位置，不分配内存
+    /** 由owner记录首次接纳失败；终态另有位置，不分配内存
     @param [in,out] peer 活动连接
     @param [in] reason 负数原因
     */
     void fail(NetWorkHostPeer& peer, int32_t reason);
 
-    /** 只在owner锁外轮流交付有界事件，保持每peer顺序
+    /** 只在owner轮流交付有界事件，保持每peer顺序
     */
     void drain();
 
@@ -259,6 +331,10 @@ private:
     static NetHostFunctions m_provider;
     // 启动配置不和实例创建并发
     static bool m_configured;
+    // 已验证的后续实例配置，启动前串行替换
+    static std::unique_ptr<NetWorkHostPools> m_pools;
+    // 实际存活的桥数量，禁止配置覆盖存活实例
+    static std::atomic<size_t> m_instances;
     // 本实例固定提供方表
     NetHostFunctions m_functions;
     // 原始字节宿主，直至其destroy成功前始终保留
@@ -273,29 +349,35 @@ private:
     NetHostWritable m_writable;
     // 终态观察者，只由poll执行者在已接纳输入排空后调用
     NetHostClosed m_closed;
-    // 仅保护原始事件／复制体及本地暂停状态
-    ReadWriteMutex m_mutex;
-    // 固定2048个槽，无deque移动、扩容或收发期间节点分配
-    NetWorkHostEvent m_events[2048];
-    // 固定256个连接槽；关闭标量独立于满数据队列
-    NetWorkHostPeer m_peers[256];
-    // 空闲槽链首，2048表示已满
-    uint32_t m_free;
-    // 活动连接数，连接接纳和主动connect都检查同一上限
-    uint32_t m_peerCount;
-    // 尚未通告的新连接数；为0时热路径不额外扫描连接表。
-    uint32_t m_announcements;
-    // 下次派发优先位置，防止暂停或繁忙连接饿死其他连接
-    uint32_t m_cursor;
-    // 排队输入预算
-    uint32_t m_bytes;
+    // 构造期实际池初始化结果
+    int32_t m_poolStatus;
+    // 实际正文池，晚于所有事件及回调借用销毁
+    NetBufferPool m_bodies;
+    // 连接对象池，晚于索引、owner状态及输入引用销毁
+    NetObjectPool<NetWorkHostMail> m_mailPool;
+    // 输入记录池，晚于跨线程队列和owner队列销毁
+    NetObjectPool<NetWorkHostEvent> m_records;
+    // 无锁连接索引；数据/可写不创建未知入口
+    LockFreeHashMap<uint64_t, NetObjectReference<NetWorkHostMail>> m_mailboxes;
+    // 独占池记录指针，成功发布后生产者不再访问记录
+    LockFreeQueue<NetWorkHostEvent*> m_incoming;
+    // 新mail发布后置位，owner先交换清零再扫描
+    std::atomic<bool> m_mailDirty;
+    // owner独占，按连接号通告和轮询；每节点对应真实mail池槽，不另设连接数门槛
+    std::map<uint64_t, NetWorkHostPeer> m_peers;
+    // 尚未通告的连接数量，仅统计而非接纳限制
+    size_t m_announcements;
+    // 连续通告工作量，达到32后给已通告连接一次交付机会
+    uint32_t m_announcementBurst;
+    // 下轮优先查找大于此号的连接，避免暂停或繁忙连接饿死其他连接
+    uint64_t m_cursor;
     // 原始connect调用尚未返回，可接纳同步失败的关闭事件
-    bool m_connecting;
+    std::atomic<bool> m_connecting;
     // owner已请求停止，拒绝新增连接和输入，仍接纳已知连接终态
-    bool m_stopping;
+    std::atomic<bool> m_stopping;
     // 原始shutdown已成功接纳，故障收敛和重复停止不再重复提交
     bool m_shutdownAccepted;
-    // 第一次输入失败，锁内写、owner读取
+    // 第一次输入失败，回调原子发布、owner读取
     std::atomic<int32_t> m_fault;
     // owner已经向所有已知peer报告故障
     bool m_faultReported;

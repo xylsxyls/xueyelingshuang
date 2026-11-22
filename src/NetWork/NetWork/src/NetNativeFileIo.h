@@ -1,11 +1,13 @@
 ﻿#pragma once
 #include "NetFileIoBackend.h"
+#include "NetWorkFilePools.h"
 #include <stdint.h>
 #include <memory>
 
 class NetFileIoState;
 
-// 由SDK拥有的一名CTask文件执行者。有界64项/2MiB输入/最多4MiB结果/32句柄；不占网络线程做磁盘I/O。
+// nextRequestId/submit/cancel/peek/consume由同一协议owner串行调用，StopTask仅操作原子停止标志。
+// 由SDK拥有的一名CTask文件执行者。记录、正文和文件句柄由实际池控制；网络线程不执行磁盘I/O。
 class NetNativeFileIo : public NetFileIoBackend
 {
   public:
@@ -21,6 +23,12 @@ class NetNativeFileIo : public NetFileIoBackend
     /** 兜底停止及回收，仅生命周期负责人调用，不在自身/网络回调中销毁
     */
     ~NetNativeFileIo();
+
+    /** 创建任何文件后端前配置默认实际池；生命周期owner串行调用
+    @param [in] pools 各组件配置，失败保持原配置
+    @return NI_OK或配置、内存、状态错误
+    */
+    static int32_t configurePools(const NetWorkFilePools& pools);
 
     /** 创建CTask执行者
     @return NI_OK或负数，可在uninit后重新初始化
@@ -83,6 +91,8 @@ class NetNativeFileIo : public NetFileIoBackend
     NetNativeFileIo& operator=(const NetNativeFileIo& other);
 
   private:
+    // 创建后端前选定的不可变配置，存在协调状态时禁止替换
+    static std::unique_ptr<NetWorkFilePools> m_pools;
     // 本后端与唯一文件任务共同保留的协调状态，uninit等待任务后释放
     std::shared_ptr<NetFileIoState> m_state;
     // 本实例独占的CTask线程编号；0表示未创建或已回收

@@ -1,15 +1,15 @@
 ﻿#pragma once
 #include "NetNativeFileIo.h"
+#include "NetWorkFilePools.h"
 #include "NetInterface/NetInterfaceAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include <atomic>
-#include <deque>
+#include "LockFreeQueue/LockFreeQueueAPI.h"
+#include "Semaphore/SemaphoreAPI.h"
 #include <map>
-#include <mutex>
 #include <string>
 #include <vector>
-#include "NetWorkPlatform.h"
 
 // 仅文件执行者使用的独占资源所有者；平台系统操作全部调用CSystem静态函数。
 class NetFileIoHandle
@@ -128,20 +128,24 @@ struct NetFileIoEntry
 public:
     // 请求标量副本，借用指针均清空，数据由下列独占字段保留
     NetFileIoRequest m_request;
-    // 执行结果元数据；完成后由协调门保护交付，bytes在peek时绑定
+    // 文件执行者写结果，完成原子发布后只读；bytes在owner的peek时绑定
     NetFileIoResult m_result;
     // 请求源路径的UTF8副本，不再借用调用方字符串
     std::string m_path;
     // 发布目标路径的UTF8副本，仅PUBLISH使用
     std::string m_destination;
     // WRITE输入的独占副本，接纳后至consume计入排队字节预算
-    std::vector<uint8_t> m_input;
+    NetBufferLease m_input;
+    // 输入有效长度，跨线程执行期间不变
+    uint32_t m_inputSize;
     // READ或HASH结果的独占字节，consume前保持有效
-    std::vector<uint8_t> m_output;
+    NetBufferLease m_output;
+    // 输出有效长度，完成release后供owner读取
+    uint32_t m_outputSize;
     // 跨线程取消标志；文件执行者在工作开始及摘要分块间检查
     std::atomic<bool> m_cancelled;
-    // 仅在协调门内提交和读取；true后结果保持只读直到consume
-    bool m_completed;
+    // 文件执行者release发布，协议owner acquire读取；完成发布为工作线程最后一次访问
+    std::atomic<bool> m_completed;
 
 public:
     /** 复制有界请求
@@ -154,17 +158,26 @@ public:
     ~NetFileIoEntry();
 };
 
-// 文件后台任务的协调状态；队列由短锁保护，磁盘操作只在唯一执行者进行
+// 协议owner独占接纳表；无锁队列交给唯一文件执行者，结果以release/acquire发布
 class NetFileIoState
 {
   public:
-    /** 初始化有界协调状态
+    /** 初始化独立存储池及协调状态
+    @param [in] pools 启动前选定的实际配置，复制进各组件
     */
-    NetFileIoState();
+    explicit NetFileIoState(const NetWorkFilePools& pools = NetWorkFilePools());
 
-    /** 在队列短锁内标记停止，再唤醒空闲执行者；不持锁等任务或做磁盘操作。
+    /** 文件任务已经停止后释放状态，更新存活计数；禁止在任务执行中销毁
+    */
+    ~NetFileIoState();
+
+    /** 原子关闭接纳并通知文件执行者；已进入提交者结束后才能判定排空。
     */
     void stop();
+
+    /** 合并非阻塞提示；持久许可覆盖等待登记前发布
+    */
+    void wake();
 
     /** 文件执行者处理一个请求；不持协调锁做I/O
     @param [in,out] entry 当前独占工作
@@ -178,14 +191,26 @@ class NetFileIoState
     void hash(NetFileIoEntry& entry, NetFileIoHandle& file);
 
   public:
-    // 同时保护任务表和等待谓词，停止/完成阶段不依赖分配
-    NetWorkGate m_gate;
-    // 按接纳顺序排列的待执行请求，所有访问由m_gate保护
-    std::deque<std::shared_ptr<NetFileIoEntry>> m_queued;
-    // 已接纳且未consume的请求，最多64项；按请求号有序交付结果
-    std::map<uint64_t, std::shared_ptr<NetFileIoEntry>> m_entries;
+    // 持久计数提示；等待有100ms兜底，提示失败不会导致停止永久挂起
+    Semaphore m_wake;
+    // 合并提示；实际队列发布先于置位，空观察后消费提示并再次检查队列
+    std::atomic<bool> m_notified;
+    // 0开放、1唯一提交者在途、2关闭、3关闭且原提交者仍在途；不是互斥锁
+    std::atomic<uint32_t> m_admission;
+    // 构造期真实错误码；区分配置非法与系统分配失败，失败时不创建文件任务
+    int32_t m_poolStatus;
+    // 多生产者能力只使用单生产者子集；指针由owner表保留到完成后consume
+    LockFreeQueue<NetFileIoEntry*> m_queued;
+    // 实际正文池，晚于所有在途请求归还
+    NetBufferPool m_bodies;
+    // 真实任务记录，不能在文件执行者仍访问时归还
+    NetObjectPool<NetFileIoEntry> m_entryPool;
+    // 实际句柄记录，只由文件执行者修改对象
+    NetObjectPool<NetFileIoHandle> m_filePool;
+    // 仅协议owner访问；cancel/peek/consume串行，StopTask不访问此表
+    std::map<uint64_t, NetObjectReference<NetFileIoEntry>> m_entries;
     // 只有文件执行者访问下面句柄表。
-    std::map<uint64_t, std::unique_ptr<NetFileIoHandle>> m_files;
+    std::map<uint64_t, NetObjectReference<NetFileIoHandle>> m_files;
     // 停止接纳并取消排队工作；执行者收到停止后仍逐项提交完成结果
     std::atomic<bool> m_stop;
     // 执行者已关闭全部文件并完成最后一次状态访问
@@ -198,8 +223,46 @@ class NetFileIoState
     uint64_t m_allocatedRequest;
     // 唯一文件执行者分配的文件编号高水位，关闭后不复用
     uint64_t m_lastFile;
-    // 已接纳WRITE副本总字节数，consume释放预算，上限2MiB
-    uint32_t m_inputBytes;
+    // 已接纳WRITE副本总字节，仅统计；consume后归还实际缓冲
+    uint64_t m_inputBytes;
+    // 已经构造的协调状态数，存在任何文件后端时禁止替换默认配置
+    static std::atomic<size_t> m_instances;
+};
+
+// 单生产者接纳租约；不等待竞争者，关闭位与在途位在同一个CAS字中
+class NetFileIoAdmission
+{
+public:
+    /** 尝试取得唯一生产者资格，关闭或误用并发时立即拒绝
+    @param [in,out] state 生存期覆盖本次submit
+    */
+    explicit NetFileIoAdmission(NetFileIoState& state);
+
+    /** 归还在途位并提示停止方复查；不访问已完成的请求对象
+    */
+    ~NetFileIoAdmission();
+
+    /** 观察本次是否接纳，不能据此允许另一个生产者并发修改表
+    @return 本次CAS成功为true
+    */
+    bool accepted() const;
+
+private:
+    /** 禁止复制提交租约
+    @param [in] other 原对象
+    */
+    NetFileIoAdmission(const NetFileIoAdmission& other);
+
+    /** 禁止重复归还在途位
+    @param [in] other 原对象
+    @return 不可调用
+    */
+    NetFileIoAdmission& operator=(const NetFileIoAdmission& other);
+private:
+    // 借用固定状态，生命周期由backend和Task共同持有
+    NetFileIoState& m_state;
+    // 只有CAS成功的租约负责归还在途计数
+    bool m_accepted;
 };
 
 // 独占文件句柄表的长任务；停止后排空取消结果并回收所有句柄
@@ -213,11 +276,11 @@ class NetFileIoTask : public CTask
 
     /** 唯一文件执行者
     */
-    virtual void DoTask();
+    virtual void doTask();
 
     /** 仅置停止位并唤醒
     */
-    virtual void StopTask();
+    virtual void stopTask();
 
   private:
     // 与后端共享的协调状态，任务退出前保留其生命周期

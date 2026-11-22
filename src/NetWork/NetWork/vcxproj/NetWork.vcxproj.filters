@@ -15,7 +15,6 @@
     <ClInclude Include="..\src\NetEndpointRouterState.h" />
     <ClInclude Include="..\src\NetFileIo.h" />
     <ClInclude Include="..\src\NetFileIoBackend.h" />
-    <ClInclude Include="..\src\NetFileIoTest.h" />
     <ClInclude Include="..\src\NetFileIoTypes.h" />
     <ClInclude Include="..\src\NetFileTransfer.h" />
     <ClInclude Include="..\src\NetFileTransferState.h" />
@@ -23,14 +22,12 @@
     <ClInclude Include="..\src\NetGatewayClientChannelState.h" />
     <ClInclude Include="..\src\NetGatewayDirectoryStore.h" />
     <ClInclude Include="..\src\NetGatewayDirectoryStoreState.h" />
-    <ClInclude Include="..\src\NetGatewayDirectoryStoreTest.h" />
     <ClInclude Include="..\src\NetGatewayDiscovery.h" />
     <ClInclude Include="..\src\NetGatewayDiscoveryState.h" />
     <ClInclude Include="..\src\NetGatewayHostTransportFactory.h" />
     <ClInclude Include="..\src\NetGatewayTransport.h" />
     <ClInclude Include="..\src\NetHostSocket.h" />
     <ClInclude Include="..\src\NetHostSocketState.h" />
-    <ClInclude Include="..\src\NetHostSocketTest.h" />
     <ClInclude Include="..\src\NetHostTypes.h" />
     <ClInclude Include="..\src\NetLinkTransport.h" />
     <ClInclude Include="..\src\NetLinkTransportState.h" />
@@ -57,19 +54,12 @@
     <ClInclude Include="..\src\NetWorkMacro.h" />
     <ClInclude Include="..\src\NetWorkMacroDll.h" />
     <ClInclude Include="..\src\NetWorkMacroLib.h" />
-    <ClInclude Include="..\src\NetWorkPlatform.h" />
     <ClInclude Include="..\src\NetWorkSenderState.h" />
   </ItemGroup>
 
   <ItemGroup>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="..\src\NetWorkHostBridge.cpp" />
     <ClInclude Include="..\src\NetWorkHostBridge.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\src\NetWorkHostBridgeTest.h" />
-    <ClInclude Include="..\src\NetWorkThreadTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\NetSenderCState.cpp" />
@@ -78,6 +68,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\NetNativeFileIoState.cpp" />
-    <ClCompile Include="..\src\NetWorkPlatform.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetWorkHostPools.h" />
+    <ClInclude Include="..\src\NetWorkFilePools.h" />
+    <ClCompile Include="..\src\NetWorkHostPools.cpp" />
+    <ClCompile Include="..\src\NetWorkFilePools.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\NetWorkWorker.h" />
+    <ClCompile Include="..\src\NetWorkWorker.cpp" />
   </ItemGroup>
 </Project>

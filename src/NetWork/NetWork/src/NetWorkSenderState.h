@@ -57,5 +57,6 @@ public:
     // 连接之前设置，协议及回调收敛之后才可更换
     NetSessionListener* m_listener;
     // 多生产者各次结果仍以直接返回为准
+    // 仅诊断快照，不作为其他成员发布或生命期同步信号
     std::atomic<int32_t> m_lastError;
 };
