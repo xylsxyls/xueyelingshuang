@@ -75,9 +75,9 @@ await require('./LibraryTestHost')(require('./CStringManagerTest'), { wasmPath: 
 */
 
 /** Linux 与 macOS 的 CMake 入口
-从本工程目录执行 cmake -S . -B build -DSDK_ROOT=<当前系统及架构的SDK> -DBIT=<64或arm64> -DCMAKE_BUILD_TYPE=Release，
+从本工程目录执行 cmake -S . -B build -DSDK_ROOT=<当前系统及架构的SDK> -DBIT=<目标架构> -DCMAKE_BUILD_TYPE=Release，
 执行 cmake --build build，再在 build 内运行 ctest --output-on-failure。交叉编译时需另传目标工具链；
-只有与目标 ABI 匹配的系统才能直接运行产物。
+Linux ARM32 选择 arm32，AArch64 选择 arm64。先为目标分别准备 CStringManager 和 PlatformTest；交叉构建这两个库及本测试程序时均传入同一个 -DCMAKE_TOOLCHAIN_FILE=<Linux工具链文件>。在目标设备上运行 CStringManagerTest --all。macOS 的目标架构为 64 或 arm64。
 */
 
 /** 原生移动端测试
@@ -139,5 +139,6 @@ Wasm：Emscripten 3.1.74 Release，Node 模块化宿主。wasm32、wasm64 分别
 测试设施反例（Windows x64 Release 静态链接）：在隔离的测试源码副本中仅改动用例 11 十六进制预期的一位数字，运行 --all。程序报告 StrToHex 输出不符，用例 11 返回 1；其余 10 项通过，包括随后调度的压力用例，进程正常返回 1。
 测试设施反例（Windows x64 Debug 静态链接）：在隔离副本中让 Utf8ToUnicode 的 8 个分配位置全部放行，以 --cases 3,8 运行。用例 3 检出该接口未触发故障并返回 1，用例 8 继续执行并通过，进程正常返回 1。
 StrToHex 在乘二前检查字符串长度上限。当前环境未构造超过输入字符串 max_size()/2 的实际输入，此分支仅做静态核对。用例 6、11 对实际可分配输入逐字节比对。
-Linux、macOS、Android、iOS 已静态核对源码、公开头和构建入口。本次没有在这四端或浏览器、微信宿主上运行。
+Linux ARMv7 hard-float 与 AArch64 已用 Zig 0.13.0 交叉编译 Release 静态库与共享库，并分别用静态库链接 CStringManagerTest，核对了 ELF32/ARM、ELF64/AArch64 及对应的 Linux 动态加载器。以 ARM32 工具链配置 BIT=arm64 时，库的 CMake 按预期拒绝配置。两种 ARM 架构均未运行功能用例。
+macOS、Android、iOS 已静态核对源码、公开头和构建入口。本次没有在这三端或浏览器、微信宿主上运行。
 */
