@@ -219,6 +219,30 @@ void ProcessWorkBenchmarkReceiver::bufferFull(int32_t count)
     }
 }
 
+/** 通过实际诊断通道提交一包，累计本次调用观察到的未提交重试
+@param [in,out] channel 已打开的发送通道
+@param [in] body 正文，长度为0时忽略
+@param [in] bytes 正文字节数
+@param [in] type 流内序号或结束标记
+@param [in,out] retries 当前生产线程的累计次数
+*/
+static void SendBenchmarkChannelPacket(ProcessWorkChannel& channel, const char* body, int32_t bytes,
+    MessageType type, uint64_t& retries)
+{
+    for (;;)
+    {
+        const int32_t status = channel.trySend(body, bytes, static_cast<int32_t>(type));
+        if (status == PROCESS_WORK_SENT)
+        {
+            return;
+        }
+        bbCheck(status == PROCESS_WORK_BUSY || status == PROCESS_WORK_CAPACITY || status == PROCESS_WORK_RESOURCE,
+            "diagnostic direct channel send failed");
+        ++retries;
+        bbCheck(channel.waitForSpace(), "diagnostic direct channel closed");
+    }
+}
+
 /** 子进程准备线程和正文后等待统一起点，生产与父进程消费同时发生
 @param [in] argv 已由main检查长度的参数
 @return 子进程退出状态
@@ -250,21 +274,21 @@ static int BenchmarkProducer(char** argv)
     int64_t prepareNanoseconds = 0;
     try
     {
-        if (std::getenv("PROCESS_WORK_BENCH_PREPARE_SEND") != nullptr)
-        {
-            const int64_t started = BenchmarkNow();
-            bbCheck(ipc.prepareSend(target, -1, true), "benchmark mapping preparation failed");
-            prepareNanoseconds = BenchmarkNow() - started;
-        }
         if (mode == 3)
         {
             bbCheck(direct.openSender(target), "diagnostic direct channel setup failed");
+        }
+        if (std::getenv("PROCESS_WORK_BENCH_PREPARE_SEND") != nullptr)
+        {
+            const int64_t started = BenchmarkNow();
+            const bool prepared = mode == 3 ? direct.prepareSend(-1, true) : ipc.prepareSend(target, -1, true);
+            bbCheck(prepared, "benchmark mapping preparation failed");
+            prepareNanoseconds = BenchmarkNow() - started;
         }
         if (mode == 2)
         {
             ProcessWorkMemoryConfig memory;
             memory.m_localQueueInitialCapacity = 16777216;
-            memory.m_postBufferReserve = 16777216;
             const char* slotBytes = std::getenv("PROCESS_WORK_BENCH_POST_SLOT_BYTES");
             if (slotBytes != nullptr)
             {
@@ -287,6 +311,7 @@ static int BenchmarkProducer(char** argv)
                     const int32_t result = mode == 2 ?
                         ipc.postResult(target, body.data(), bytes, static_cast<MessageType>(INT_MAX)) : mode == 1 ?
                         ipc.sendResult(name, body.data(), bytes, static_cast<MessageType>(INT_MAX)) :
+                        mode == 3 ? direct.send(body.data(), bytes, INT_MAX) :
                         ipc.sendResult(target, body.data(), bytes, static_cast<MessageType>(INT_MAX));
                     if (result != (mode == 2 ? PROCESS_WORK_POSTED : PROCESS_WORK_SENT))
                     {
@@ -315,22 +340,7 @@ static int BenchmarkProducer(char** argv)
                     }
                     else if (mode == 3)
                     {
-                        int32_t result = PROCESS_WORK_BUSY;
-                        for (;;)
-                        {
-                            result = direct.trySend(body.data(), bytes, static_cast<int32_t>(type));
-                            if (result != PROCESS_WORK_BUSY
-                                && result != PROCESS_WORK_CAPACITY && result != PROCESS_WORK_RESOURCE
-                                )
-                            {
-                                break;
-                            }
-                            bbCheck(direct.waitForSpace(), "diagnostic direct channel closed");
-                        }
-                        if (result != PROCESS_WORK_SENT)
-                        {
-                            bbCheck(false, "diagnostic direct send failed");
-                        }
+                        SendBenchmarkChannelPacket(direct, body.data(), bytes, type, retries[thread]);
                     }
                     else
                     {
@@ -348,14 +358,9 @@ static int BenchmarkProducer(char** argv)
                 int32_t endResult = PROCESS_WORK_INVALID;
                 if (mode == 3)
                 {
-                    do
-                    {
-                        endResult = direct.trySend(body.data(), bytes, static_cast<int32_t>(ending));
-                        if (endResult == PROCESS_WORK_BUSY || endResult == PROCESS_WORK_CAPACITY || endResult == PROCESS_WORK_RESOURCE)
-                        {
-                            bbCheck(direct.waitForSpace(), "diagnostic end barrier channel closed");
-                        }
-                    } while (endResult == PROCESS_WORK_BUSY || endResult == PROCESS_WORK_CAPACITY || endResult == PROCESS_WORK_RESOURCE);
+                    uint64_t barrierRetries = 0;
+                    SendBenchmarkChannelPacket(direct, body.data(), bytes, ending, barrierRetries);
+                    endResult = PROCESS_WORK_SENT;
                 }
                 else
                 {

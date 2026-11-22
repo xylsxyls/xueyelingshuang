@@ -309,6 +309,37 @@ void testProcessWorkPostBudget()
     bbCheck(log.snapshot()[0].m_type == 1 && log.snapshot()[0].m_body == body && ipc.postPendingBytes() == 0,
         "failed post delivered or completed charge retained");
     ipc.uninitPostThread();
+    ProcessWorkMemoryConfig denied;
+    // 不启动消费者，填完已有节点。回调返回0拒绝一次节点池增长，原有队列仍可排空。
+    const std::shared_ptr<std::atomic<bool>> asked = std::make_shared<std::atomic<bool>>(false);
+    denied.m_queueGrow = [asked](const LockFreeQueueGrowContext&) -> size_t
+    {
+        asked->store(true);
+        return 0;
+    };
+    bbCheck(ipc.configurePostMemory(denied), "refusing queue policy rejected");
+    int32_t admitted = 0;
+    int32_t status = PROCESS_WORK_POSTED;
+    while (admitted < 256 && status == PROCESS_WORK_POSTED)
+    {
+        status = ipc.tryPost(bbPid(), "node", 4, static_cast<MessageType>(admitted + 10), true, false);
+        if (status == PROCESS_WORK_POSTED)
+        {
+            ++admitted;
+        }
+    }
+    bbCheck(asked->load() && admitted > 0 && admitted < 256 && status == PROCESS_WORK_POST_CAPACITY,
+        "declined node growth did not report recoverable capacity");
+    bbCheck(ipc.initPostThread(), "consumer failed after declined growth");
+    ipc.waitForPostEnd();
+    waitPackets(log, static_cast<size_t>(admitted + 1));
+    ipc.uninitPostThread();
+    const std::vector<ReceivedPacket> deliveries = log.snapshot();
+    for (int32_t i = 0; i < admitted; ++i)
+    {
+        bbCheck(deliveries[i + 1].m_type == i + 10 && deliveries[i + 1].m_body == "node",
+            "declined growth changed admitted FIFO");
+    }
     bbCheck(ipc.configurePostMemory(ProcessWorkMemoryConfig()), "post configuration not reusable after drain");
 }
 

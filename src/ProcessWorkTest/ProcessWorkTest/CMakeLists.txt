@@ -65,7 +65,7 @@ enable_testing()
 configure_platform_test(ProcessWorkTest ProcessWorkTest.cpp TAKES_ARGS)
 if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
     # 设备宿主按次限时。逐用例启动，避免把整套回归计入单次设备超时。
-    foreach(id RANGE 1 109)
+    foreach(id RANGE 1 110)
         add_platform_test(ProcessWorkCase${id} ProcessWorkTest --case ${id})
         set_tests_properties(ProcessWorkCase${id} PROPERTIES SKIP_RETURN_CODE 77)
     endforeach()

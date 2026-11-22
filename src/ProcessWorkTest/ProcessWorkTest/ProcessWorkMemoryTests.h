@@ -107,3 +107,8 @@ void testProcessWorkConfigurationCopyFailure();
 /** 分别映射本地/共享通知、队列调度和进程后备目录，拒绝无效参数并在恢复后验证真实交付。
 */
 void testProcessWorkDependencyOptions();
+
+
+/** 校验发送预映射保护可独立限制准备工作，拒绝后仍可正常提交，重新配置可恢复准备
+*/
+void testProcessWorkMappingReserve();

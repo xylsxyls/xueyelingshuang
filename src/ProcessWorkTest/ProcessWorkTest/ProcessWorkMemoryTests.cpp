@@ -649,3 +649,35 @@ void testProcessWorkDependencyOptions()
     bbCheck(log.snapshot()[0].m_body == "configured", "configured queue corrupted payload");
     scope.close();
 }
+
+
+void testProcessWorkMappingReserve()
+{
+    ProcessWorkConfig config;
+    const ProcessWorkMemoryConfig defaults;
+    bbCheck(config.m_sendMappingReserveBytes == defaults.m_reserveBytes &&
+        config.m_sendMappingReservePercent == defaults.m_reservePercent, "unexpected sender mapping defaults");
+    bbCheck(config.setSendMappingReserve(UINT64_MAX, 0) && !config.setSendMappingReserve(1, 91) &&
+        config.m_sendMappingReserveBytes == UINT64_MAX && config.m_sendMappingReservePercent == 0,
+        "invalid sender protection overwrote the last settings");
+    ProcessWork& ipc = ProcessWork::instance();
+    PacketLog ledger;
+    IpcScope scope;
+    config.m_sendMappingReservePercent = 91;
+    bbCheck(!ipc.configure(config), "invalid raw mapping percentage accepted");
+    bbCheck(config.setSendMappingReserve(UINT64_MAX, 90) && ipc.configure(config), "sender policy rejected");
+    scope.start(&ledger, receiveName("mapping-reserve"), 76, 2);
+    bbCheck(!ipc.prepareSend(bbPid(), -1, true), "sender map ignored its own reserve");
+    sendPacket(0, bbPid(), "", "ordinary", 1);
+    waitPackets(ledger, 1);
+    scope.close();
+    bbCheck(config.setSendMappingReserve(0, 0) && ipc.configure(config), "sender policy reset failed");
+    scope.start(&ledger, receiveName("mapping-reserve"), 76, 2);
+    bbCheck(ipc.prepareSend(bbPid(), -1, true), "sender prepare failed after lowering its reserve");
+    sendPacket(0, bbPid(), "", "prepared", 2);
+    waitPackets(ledger, 2);
+    scope.close();
+    const std::vector<ReceivedPacket> packets = ledger.snapshot();
+    bbCheck(packets.size() == 2 && packets[0].m_body == "ordinary" && packets[1].m_body == "prepared" &&
+        packets[0].m_type == 1 && packets[1].m_type == 2, "preparation altered delivery");
+}

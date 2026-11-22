@@ -562,6 +562,101 @@ static void ConcurrentClear(bool post)
     bbCheck(ledger.m_received == 1200 && ledger.m_bad == 0, "cache clear raced with send: loss/duplicate/corruption");
 }
 
+/** 参与同名接收器同时启动，校验定向正文以及仅可能交付一次的名称正文
+@param [in] name 四个进程共用的名称
+@param [in] prefix 本子进程独有的屏障路径前缀
+@param [in] gate 启动前等待的公共屏障路径
+@param [in] parent 预期的发送进程号
+@return 0表示核对完成，其他错误由外层测试入口报告
+*/
+static int RunConcurrentName(const std::string& name, const std::string& prefix,
+    const std::string& gate, int32_t parent)
+{
+    PacketLog log;
+    IpcScope scope;
+    bbWrite(prefix + ".armed", "1");
+    bbWait([&gate]() { return bbRead(gate) == "1"; }, "release concurrent receivers");
+    scope.start(&log, name, 32, 4);
+    bbWrite(prefix + ".ready", "1");
+    bbWait([&log]()
+    {
+        const std::vector<ReceivedPacket> messages = log.snapshot();
+        return !messages.empty() && messages.back().m_type == 3;
+    }, "concurrent name end marker");
+    scope.close();
+    const std::vector<ReceivedPacket> messages = log.snapshot();
+    bbCheck((messages.size() == 2 || messages.size() == 3) && messages.front().m_body == "pid" &&
+        messages.front().m_type == 1 && messages.back().m_body == "end", "incorrect PID delivery");
+    for (size_t i = 0; i < messages.size(); ++i)
+    {
+        bbCheck(messages[i].m_pid == parent, "unexpected concurrent name sender");
+    }
+    if (messages.size() == 3)
+    {
+        bbCheck(messages[1].m_type == 2 && messages[1].m_body == "name", "wrong name delivery");
+    }
+    bbWrite(prefix + ".owner", messages.size() == 3 ? "1" : "0");
+    return 0;
+}
+
+/** 四个已就绪进程同时初始化同名接收器，所有PID须可达且名称只交付给其中一个
+*/
+static void ConcurrentName()
+{
+    const std::string name = receiveName("concurrent-name");
+    const std::string path = bbTempPath("-name");
+    const std::string gate = path + ".go";
+    std::vector<std::shared_ptr<BlackBoxChild>> peers;
+    for (int32_t i = 0; i < 4; ++i)
+    {
+        const std::string prefix = path + bbNumber(i);
+        std::shared_ptr<BlackBoxChild> peer(new BlackBoxChild);
+        peer->start(std::vector<std::string>{ "--concurrent-name", name, prefix, gate, bbNumber(bbPid()) }, prefix + ".log");
+        peers.push_back(peer);
+    }
+    // 等待每个子进程发布当前阶段，提前退出时立即报告失败。
+    const auto waitAll = [&](const std::string& stage)
+    {
+        for (size_t i = 0; i < peers.size(); ++i)
+        {
+            const std::string file = path + bbNumber(i) + stage;
+            const std::string description = "concurrent name barrier " + stage;
+            bbWait([&]()
+            {
+                bbCheck(peers[i]->poll() < 0, "receiver exited before " + stage);
+                return bbRead(file) == "1";
+            }, description.c_str());
+        }
+    };
+    waitAll(".armed");
+    bbWrite(gate, "1");
+    waitAll(".ready");
+    for (size_t i = 0; i < peers.size(); ++i)
+    {
+        sendPacket(0, peers[i]->pid(), "", "pid", 1);
+    }
+    sendPacket(1, 0, name, "name", 2);
+    for (size_t i = 0; i < peers.size(); ++i)
+    {
+        sendPacket(0, peers[i]->pid(), "", "end", 3);
+    }
+    size_t owners = 0;
+    for (size_t i = 0; i < peers.size(); ++i)
+    {
+        const std::string prefix = path + bbNumber(i);
+        bbCheck(peers[i]->wait(10000) == 0, "concurrent name peer failed: " + prefix + ".log");
+        const std::string owner = bbRead(prefix + ".owner");
+        bbCheck(owner == "0" || owner == "1", "missing name delivery ledger");
+        owners += owner == "1" ? 1 : 0;
+        std::remove((prefix + ".owner").c_str());
+        std::remove((prefix + ".armed").c_str());
+        std::remove((prefix + ".ready").c_str());
+        std::remove((prefix + ".log").c_str());
+    }
+    std::remove(gate.c_str());
+    bbCheck(owners == 1, "name delivery missing or sent to multiple receivers");
+}
+
 /** 验证同名接收器冲突不夺取活跃名称且仍可按PID通信
 */
 static void NameCollision()
@@ -596,6 +691,8 @@ static void NameCollision()
     waitPackets(log, 2);
     bbCheck(log.snapshot()[1].m_body == "owner", "second receiver close damaged first owner's name");
     std::remove(ready.c_str());
+    scope.close();
+    ConcurrentName();
 }
 
 /** 验证1024个初始块配置与空正文收发
@@ -990,6 +1087,8 @@ std::vector<BlackBoxCase> processCases()
         false, testProcessWorkStreamLedger);
     add("dependency-options", "independent native queue and semaphore settings; rejection and recovery with verified delivery",
         false, testProcessWorkDependencyOptions);
+    add("sender-mapping-reserve", "custom sender protection rejects pre-mapping only; reconfigure restores it and both sends arrive",
+        false, testProcessWorkMappingReserve);
 #ifdef CTTM_TEST_SINGLE_PROCESS
     // 签名应用不能自行启动测试子进程。保留原编号，由设备宿主记录未执行。
     const int childCases[] = { 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 35, 46, 47, 48, 49, 50,
@@ -1076,6 +1175,10 @@ int main(int argc, char** argv)
         if (argc == 2 && std::string(argv[1]) == "--exit-peer")
         {
             return 0;
+        }
+        if (argc == 6 && std::string(argv[1]) == "--concurrent-name")
+        {
+            return RunConcurrentName(argv[2], argv[3], argv[4], static_cast<int32_t>(bbUnsigned(argv[5], INT32_MAX)));
         }
         if (argc == 5 && std::string(argv[1]) == "--share-name")
         {

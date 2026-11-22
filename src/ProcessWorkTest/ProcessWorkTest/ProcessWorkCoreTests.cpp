@@ -310,20 +310,35 @@ static void TestGrantedBody(int32_t blocks, int32_t bytes)
             "shared pool filled before resume");
         bbSleep(30);
         bbCheck(done.load() == 0, "full pool did not hold producers");
+        // 大包场景要逐字节核对约1 GiB，检查持续前进和总体期限，避免把校验耗时误报为通道停滞。
+        uint64_t lastProgress = bbNow();
         bbWait(
             [&]()
             {
+                const int32_t previous = count;
                 pump();
+                if (count != previous)
+                {
+                    lastProgress = bbNow();
+                }
+                bbCheck(bbNow() - lastProgress < 10000, "granted deliveries made no progress for ten seconds");
                 return done.load() == 8 && count == 16000;
             },
-            "cross-page granted deliveries");
+            "cross-page granted deliveries", 60000);
         jobs.drain();
         bbCheck(pump() == 16000, "granted page duplicates");
     }
     catch (...)
     {
         receiver.stop();
-        jobs.drain();
+        try
+        {
+            jobs.drain();
+        }
+        catch (...)
+        {
+            // 停止通道会让尚未提交的发送失败。优先向用例入口报告触发收尾的原始错误。
+        }
         throw;
     }
 }

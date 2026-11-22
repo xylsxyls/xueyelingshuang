@@ -296,9 +296,11 @@ void ProcessWorkTestAutomation::cross(const std::string& output, const std::stri
 
 double ProcessWorkTestAutomation::sampleSpread(const std::vector<double>& values)
 {
+    const double middle = median(values);
     const std::pair<std::vector<double>::const_iterator, std::vector<double>::const_iterator> range =
         std::minmax_element(values.begin(), values.end());
-    return (*range.second - *range.first) * 100.0 / ProcessWorkTestAutomation::median(values);
+    bbCheck(*range.first > 0.0, "throughput samples must be positive");
+    return (*range.second - *range.first) * 100.0 / middle;
 }
 
 int32_t ProcessWorkTestAutomation::matrix(int32_t argc, char** argv)
@@ -513,6 +515,20 @@ void ProcessWorkTestAutomation::selfTest()
             rejected = true;
         }
         bbCheck(rejected, "accepted malformed custom workload");
+    }
+    const std::vector<double> badSamples[] = { std::vector<double>(), std::vector<double>{ 0, 1 } };
+    for (size_t i = 0; i < sizeof(badSamples) / sizeof(badSamples[0]); ++i)
+    {
+        bool rejected = false;
+        try
+        {
+            sampleSpread(badSamples[i]);
+        }
+        catch (const std::exception&)
+        {
+            rejected = true;
+        }
+        bbCheck(rejected, "invalid throughput sample accepted");
     }
     bbCheck(sampleSpread(std::vector<double>{ 9, 10, 11 }) == 20 &&
         sampleSpread(std::vector<double>{ 10, 10, 10 }) == 0, "sample spread");
