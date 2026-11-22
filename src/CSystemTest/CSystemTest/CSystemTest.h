@@ -201,9 +201,11 @@ await require('./LibraryTestHost')(require('./CSystemTest'), { wasmPath: '包内
 */
 
 /** Linux 与 macOS 的 CMake 入口
-从本工程目录执行 cmake -S . -B build -DSDK_ROOT=<当前系统及架构的SDK> -DBIT=<64或arm64> -DCMAKE_BUILD_TYPE=Release，
-执行 cmake --build build，再在 build 内运行 ctest --output-on-failure。交叉编译时需另传目标工具链；
-只有与目标 ABI 匹配的系统才能直接运行产物。
+Linux 32 位 ARM 取 BIT=arm32，AArch64 取 BIT=arm64，Linux x86/x86-64 取 BIT=32/64；macOS 取 64 或 arm64。
+先用相同的目标工具链、配置、链接方式和 SDK_ROOT 分别构建 src/CSystem/scripts 和 src/PlatformTest/scripts。
+从本测试工程目录执行 cmake -S . -B build -DSDK_ROOT=<同一SDK绝对路径> -DBIT=<目标架构> -DCMAKE_BUILD_TYPE=Release，
+交叉编译时另传 -DCMAKE_TOOLCHAIN_FILE=<同一工具链文件>。执行 cmake --build build。在匹配目标 ABI 的系统上，
+原生构建可在 build 内运行 ctest --output-on-failure；交叉构建可将 CSystemTest 和所需共享库部署到目标机后执行 ./CSystemTest --all。若共享库放在测试程序旁，可在该目录执行 LD_LIBRARY_PATH="$PWD" ./CSystemTest --all。
 */
 
 /** 原生移动端测试
@@ -244,6 +246,7 @@ Windows MSVC v120，Win32/x64 × Debug/Release × 静态库/DLL 共 8 种配置�
 Node + Emscripten 3.1.74 的 wasm32/wasm64 Release 均通过 1、3、4 和编号拒绝检查，项目的 CMake/CTest 宿主入口分别通过。两个位宽也分别以独立 Node 进程只选 1、3、4 中的一项，六次均通过。另经生产 CMake 入口构建两种位宽的 lib 和 dll，静态归档分别链接并通过三个功能用例；模块在 Node 宿主实例化后完成一次内存分配和释放。Windows Win32/x64 Release 和两个 Wasm 位宽另行编译运行 CSystem.cpp 中的 main 示例，退出码均为 0。示例按不同公开函数名统计直接调用 93/129 个，Windows 路径另演示摄像头名称与设备分组枚举；交付源码的 main 已全部注释。
 另用 Windows x64 Debug 静态库验证共享目录身份后端，10 个 ID 通过，首次查询未配置目录应失败，在有效目录重试应成功，并产生可读回的身份记录。故障用例先检查本次租约操作前后的堆和进程句柄，再单独启动竞争线程。
 桌面 SDK 启用共享身份目录时，测试 CMake 同传 -DPROCESS_WORK_PORTABLE_IDENTITY=ON；MSBuild 为库和测试均定义 PROCESS_WORK_PORTABLE_IDENTITY 并设置 CSYSTEM_TEST_DIR 为本次可写目录。
+Linux ARM 交叉构建验证（Release，Clang 18.1.6，glibc 2.31 目标）：Cortex-A7 硬浮点与 AArch64 各自编译 CSystem、PlatformTest 的静态库和共享库，四种组合均成功链接 CSystemTest。核对 ELF 后，ARM32 产物为 32 位 ARM，已链接产物标记为硬浮点；ARM64 产物为 64 位 AArch64。共享库测试程序引用 libCSystem.so 和 libPlatformTest.so，静态库测试程序不依赖这两个共享库。将 Linux x86-64 编译器误配为 arm64 时，测试工程在配置阶段拒绝。Linux ARM 的用例 1 至 9 尚未在目标系统运行，缺少性能测试数据。
 Linux x86-64 普通身份和共享目录身份配置的生产源码及两个测试翻译单元均通过 Debug 语法检查；macOS、Android、iOS 进行了预处理分支、声明、实现和构建入口检查。四端均未运行。浏览器、微信、剪贴板交互、摄像头采集、指定设备型号、登录启动项及实时调度权限未进行实机验证。Windows 实际调用了两种设备枚举接口；允许无摄像头，设备数量依主机而定。Windows Shell 复制取消分支仅作代码检查。macOS 文件名含反斜杠、POSIX 文件时间保留与用户名并发查询未在目标机执行。POSIX 普通文件与租约的 FIFO 回归、带反斜杠的程序名及扩展名、线程调度回读均待目标机运行。Windows 的 Win32 Debug 静态库及 x64 Debug 共享目录身份静态库还在含中文和空格的代码页 936 临时目录各执行 2、3、10，退出码为 0，目录内无遗留文件。Windows ARM64 仿真、原生 32 位操作系统及位数查询失败分支未实机执行。上述 10 个 ID 的通过范围限于列出的断言。
 */
 
