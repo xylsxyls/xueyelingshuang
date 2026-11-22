@@ -1,5 +1,5 @@
 ﻿#include "LibuvTcpTestModels.h"
-#include "uv.h"
+#include "libuv/uv.h"
 #include <cstring>
 #include <algorithm>
 #include <cstdio>
@@ -248,6 +248,7 @@ void LibuvTestReceiver::onClosed(uint64_t peer, int32_t reason)
 }
 
 LibuvTestHost::LibuvTestHost() :
+m_sibling(nullptr),
 m_instance(nullptr),
 m_peer(0),
 m_received(0),
@@ -286,6 +287,10 @@ void LibuvTestHost::connected(void* context, uint64_t peer)
     ++observer->m_connected;
     observer->m_failed = observer->m_failed || LibuvTcp::hostPoll(observer->m_instance) >= 0 ||
         LibuvTcp::hostDestroy(observer->m_instance) >= 0;
+    if (observer->m_sibling != nullptr && LibuvTcp::hostPoll(observer->m_sibling) >= 0)
+    {
+        observer->m_failed = true;
+    }
     if (observer->m_throwOn == 1)
     {
         throw 1;
@@ -366,6 +371,11 @@ void LibuvTestWindowProbe::tick(uv_timer_t* timer)
     LibuvTestWindowProbe* probe = static_cast<LibuvTestWindowProbe*>(timer->data);
     LibuvBase* state = probe->m_client->m_libuv;
     probe->m_ticks.fetch_add(1);
+    if (state == nullptr)
+    {
+        uv_close(reinterpret_cast<uv_handle_t*>(timer), nullptr);
+        return;
+    }
     if (probe->m_pauseLoop.load())
     {
         probe->m_loopPaused.store(true);
@@ -374,7 +384,6 @@ void LibuvTestWindowProbe::tick(uv_timer_t* timer)
             uv_sleep(1);
         }
     }
-#ifndef LIBUV_TEST_BASELINE
     if (probe->m_checkOwnerWait && !probe->m_ownerWaitChecked.load() &&
         state->m_pendingBytes.load() > 63U * 1024U * 1024U && !state->m_stopping.load())
     {
@@ -407,7 +416,6 @@ void LibuvTestWindowProbe::tick(uv_timer_t* timer)
     {
         probe->m_canceled.store(true);
     }
-#endif
     if (state->m_stopping.load())
     {
         uv_close(reinterpret_cast<uv_handle_t*>(timer), nullptr);

@@ -98,6 +98,11 @@ public:
     */
     ~LibuvTcpPublicTest();
 
+    /** 用分片、合并、交换等长块和重复块验证接收判定器
+    @return 正确字节流通过且两种错误字节流均被拒绝
+    */
+    static bool checkStream();
+
     /** 建立回环连接并逐字节验证真实交付，性能计时不包含建立和销毁
     @param [in] payload 单次写长度，1 至 32768
     @param [in] count 写入次数，1 至 1000000
@@ -107,6 +112,12 @@ public:
     static int run(uint32_t payload, uint32_t count, double& milliseconds);
 
 private:
+    /** 根据接收流的绝对字节位置产生可验证图样，每八字节编码独立块号
+    @param [in] offset 从本次传输首字节起的偏移
+    @return 此位置的预期字节
+    */
+    static uint8_t streamByte(uint64_t offset);
+
     /** 创建库内实例
     @return 是否成功
     */

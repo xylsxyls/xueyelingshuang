@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "uv.h"
+#include "libuv/uv.h"
 #include <string>
 #include <vector>
 
@@ -12,9 +12,9 @@ public:
     */
     LibuvTcpPerformance();
 
-    /** 执行46个稳定场景，每版一次预热，交替运行并输出原始样本及中位数CSV
+    /** 执行46个稳定场景，每个场景先预热一轮，再输出本次构建的正式样本、中位数及分布
     @param [in] argc 参数数量
-    @param [in] argv --suite 正式轮数 基准EXE或- 可选场景编号；编号0表示全部
+    @param [in] argv --suite 正式轮数9至100 可选场景编号；编号0表示全部
     @return 0所选样本全部有效，非零参数、子进程、超时或数据错误
     */
     static int run(int argc, char** argv);
@@ -41,9 +41,9 @@ private:
     @param [in] arguments 四个数值及测试模式
     @param [out] output 完整标准输出
     @param [in] milliseconds 截止时限，自检使用短时限，其余默认120秒
-    @return 子进程正常退出且没有超时或采集失败
+    @return 0正常完成，子进程非零退出时返回其退出码，启动、超时、管道或循环错误返回负的libuv错误码
     */
-    bool execute(const char* executable, const std::vector<std::string>& arguments, std::string& output,
+    int64_t execute(const char* executable, const std::vector<std::string>& arguments, std::string& output,
         uint64_t milliseconds = 120000);
 
     /** 分析最后一行完整CSV并验证实际交付；未知指标不填零
@@ -96,6 +96,11 @@ private:
     */
     static void timeout(uv_timer_t* timer);
 
+    /** 保存首次监督错误并收尾本次子进程及管道
+    @param [in] error 负的libuv错误码
+    */
+    void cancel(int error);
+
     /** 进程退出和stdout收敛都完成后停止超时计时器
     */
     void finish();
@@ -117,6 +122,8 @@ private:
     bool m_exited;
     // 已经观察stdout结束
     bool m_eof;
-    // 超时、信号、退出码或管道失败
-    bool m_failed;
+    // 首个采集或监督错误；由所属循环写入，零表示正常
+    int m_error;
+    // 从实际子进程终态回调得到的退出码
+    int64_t m_exitCode;
 };

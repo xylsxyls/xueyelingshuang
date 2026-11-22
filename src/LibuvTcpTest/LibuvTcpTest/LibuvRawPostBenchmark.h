@@ -87,12 +87,8 @@ private:
     std::atomic<uint64_t> m_received;
     // 最后一字节验证后的单调时钟纳秒值
     std::atomic<uint64_t> m_finished;
-    // 正文长度，计时前固定
-    uint32_t m_payload;
     // 包含预热的预期总条数
     uint64_t m_expected;
-    // 接收侧是否检查三参数接口增加的长度头
-    bool m_framed;
     // 使用六字节生产者编号和序号审计模式
     bool m_ordered;
     // 跨TCP回调保存的一帧，回调线程独占

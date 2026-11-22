@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "uv.h"
+#include "libuv/uv.h"
 #include "LibuvTcp/LibuvTcpAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include <atomic>
@@ -228,6 +228,8 @@ public:
     */
     static void closed(void* context, uint64_t peer, int32_t reason);
 
+    // 可选的同一循环宿主，连接回调中尝试驱动它应被拒绝
+    void* m_sibling;
     // 本观测器拥有的 host 实例
     void* m_instance;
     // 最近连接号，只由当前测试执行者读写

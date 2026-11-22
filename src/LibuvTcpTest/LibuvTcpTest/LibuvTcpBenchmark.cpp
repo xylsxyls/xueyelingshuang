@@ -1,6 +1,6 @@
 ﻿#include "LibuvTcpBenchmark.h"
 #include "LibuvTcpTestModels.h"
-#include "uv.h"
+#include "libuv/uv.h"
 #include "LibuvTcp/LibuvBase.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 #include <algorithm>
@@ -60,7 +60,7 @@ int LibuvTcpBenchmark::profile()
     started = uv_hrtime();
     for (uint32_t index = 0; index < count; ++index)
     {
-        if (state.tryReserveSend(200, true) != 0)
+        if (state.tryReserveSend(200) != 0)
         {
             return 4;
         }
@@ -107,7 +107,7 @@ int LibuvTcpBenchmark::profile()
 // 固定亲和设置失败使本轮无效，不能静默按系统调度运行后标记为固定CPU。
 static std::atomic<bool> s_affinityFailed(false);
 
-/** 可选固定基准执行角色的CPU，减少调度迁移；只用于性能进程且前后版采用相同设置
+/** 可选固定基准执行角色的CPU，减少调度迁移；只用于性能进程，按进程获准的CPU选择
 @param [in] role 0发送循环，1接收循环，2及以后生产者
 @return 原线程亲和掩码，未指定或非Windows时为0
 */
@@ -116,14 +116,26 @@ static uintptr_t PinBenchmarkRole(uint32_t role)
 #if defined(_WIN32) && defined(LIBUV_TEST_BENCHMARK)
     if (std::getenv("LIBUV_TEST_FIXED_CPUS") != nullptr)
     {
-        const uint32_t cpus[] = {14, 12, 6, 8, 10, 2};
-        if (role < sizeof(cpus) / sizeof(cpus[0]))
+        DWORD_PTR allowed = 0, system = 0;
+        if (GetProcessAffinityMask(GetCurrentProcess(), &allowed, &system))
         {
-            const uintptr_t previous = static_cast<uintptr_t>(
-                SetThreadAffinityMask(GetCurrentThread(), DWORD_PTR(1) << cpus[role]));
-            if (previous != 0)
+            // 使用指定进程实际获准的CPU，角色编号对应其中第几个置位。
+            for (uint32_t bit = 0; bit < sizeof(allowed) * 8; ++bit)
             {
-                return previous;
+                const DWORD_PTR mask = DWORD_PTR(1) << bit;
+                if ((allowed & mask) == 0)
+                {
+                    continue;
+                }
+                if (role-- == 0)
+                {
+                    const DWORD_PTR previous = SetThreadAffinityMask(GetCurrentThread(), mask);
+                    if (previous != 0)
+                    {
+                        return static_cast<uintptr_t>(previous);
+                    }
+                    break;
+                }
             }
         }
         s_affinityFailed.store(true);
@@ -174,25 +186,25 @@ static double ProcessCpuMs()
 }
 
 /** 输出测试进程峰值驻留量；它包括收发双方和测试校验器，不等于库独占内存
-@return 峰值字节数，无法取得时为零
+@return 峰值字节数，无法取得时为-1
 */
-static uint64_t PeakResidentBytes()
+static double PeakResidentBytes()
 {
 #ifdef _WIN32
     PROCESS_MEMORY_COUNTERS counters = {};
     counters.cb = sizeof(counters);
-    return GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters)) ?
-        static_cast<uint64_t>(counters.PeakWorkingSetSize) : 0;
+    return GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters)) && counters.PeakWorkingSetSize != 0 ?
+        static_cast<double>(counters.PeakWorkingSetSize) : -1.0;
 #else
     rusage usage = {};
-    if (getrusage(RUSAGE_SELF, &usage) != 0)
+    if (getrusage(RUSAGE_SELF, &usage) != 0 || usage.ru_maxrss <= 0)
     {
-        return 0;
+        return -1.0;
     }
 #if defined(__APPLE__)
-    return static_cast<uint64_t>(usage.ru_maxrss);
+    return static_cast<double>(usage.ru_maxrss);
 #else
-    return static_cast<uint64_t>(usage.ru_maxrss) * 1024;
+    return static_cast<double>(usage.ru_maxrss) * 1024.0;
 #endif
 #endif
 }
@@ -377,7 +389,7 @@ int LibuvTcpBenchmark::run(uint32_t producers, uint32_t payload, uint32_t count,
     receiver.m_exit.store(true);
     complete = server.join() && complete;
     if (!complete || receiver.m_failed.load() || client.m_failed.load() ||
-        ended <= began || receiver.m_latencies.empty() || cpuStart < 0 || cpuEnd < cpuStart)
+        ended <= began || receiver.m_latencies.empty())
     {
         std::fputs("benchmark did not deliver the requested verified frames\n", stderr);
         return 4;
@@ -392,7 +404,7 @@ int LibuvTcpBenchmark::run(uint32_t producers, uint32_t payload, uint32_t count,
         receiver.m_latencies[(samples - 1) * 50 / 100] / 1000.0,
         receiver.m_latencies[(samples - 1) * 95 / 100] / 1000.0,
         receiver.m_latencies[(samples - 1) * 99 / 100] / 1000.0,
-        cpuEnd - cpuStart, double(PeakResidentBytes()));
+        cpuStart >= 0 && cpuEnd >= cpuStart ? cpuEnd - cpuStart : -1.0, PeakResidentBytes());
     return observation.m_notified ? 5 : 0;
 }
 
@@ -469,7 +481,21 @@ void LibuvTinyReceiver::receive(uv_tcp_t* sender, const char* buffer, int32_t le
     }
     if (count == m_expected && m_finished.load(std::memory_order_relaxed) == 0)
     {
-        m_finished.store(uv_hrtime(), std::memory_order_release);
+        if (m_ordered)
+        {
+            for (uint32_t producer = 0; producer < m_producers; ++producer)
+            {
+                if (m_sequences[producer] != m_expected / m_producers)
+                {
+                    m_failed.store(true);
+                    return;
+                }
+            }
+        }
+        if (!m_failed.load(std::memory_order_relaxed))
+        {
+            m_finished.store(uv_hrtime(), std::memory_order_release);
+        }
     }
     m_received.store(count, std::memory_order_release);
 }
@@ -484,11 +510,11 @@ void LibuvTinyReceiver::uvClientDisconnected(uv_tcp_t* client)
     (void)client;
 }
 
-int LibuvTcpBenchmark::tiny(uint32_t producers, uint32_t ordered, uint32_t count, uint32_t batch, bool congested, bool copy, bool post)
+int LibuvTcpBenchmark::tiny(uint32_t producers, uint32_t ordered, uint32_t count, uint32_t batch, bool congested, bool copy, bool useTry)
 {
     s_affinityFailed.store(false);
     if (producers < 1 || producers > 16 || ordered > 2 || count < 1 || count > 200000000 || batch < 1 || batch > 4096 ||
-        (post && batch != 1))
+        (useTry && batch != 1))
     {
         return 2;
     }
@@ -503,11 +529,7 @@ int LibuvTcpBenchmark::tiny(uint32_t producers, uint32_t ordered, uint32_t count
     LibuvTestThread receiverThread;
     LibuvTestThread clientThread;
     LibuvTestThread senders[16];
-#ifdef LIBUV_TEST_BEFORE_BATCH
-    if (!receiver.initServer(0))
-#else
     if (!receiver.initServer("127.0.0.1", 0))
-#endif
     {
         return 3;
     }
@@ -548,7 +570,6 @@ int LibuvTcpBenchmark::tiny(uint32_t producers, uint32_t ordered, uint32_t count
         valid = senders[producer].start([&, producer]()
         {
             const uintptr_t affinity = PinBenchmarkRole(producer + 2);
-#ifndef LIBUV_TEST_BEFORE_BATCH
             std::vector<LibuvSendBuffer> descriptions(batch);
             std::vector<char> bodies(batch * 6);
             for (uint32_t index = 0; index < batch; ++index)
@@ -556,7 +577,6 @@ int LibuvTcpBenchmark::tiny(uint32_t producers, uint32_t ordered, uint32_t count
                 descriptions[index].m_data = ordered ? &bodies[index * 6] : "123456";
                 descriptions[index].m_size = 6;
             }
-#endif
             ready.fetch_add(1);
             while (!start.load() && !cancel.load())
             {
@@ -566,7 +586,6 @@ int LibuvTcpBenchmark::tiny(uint32_t producers, uint32_t ordered, uint32_t count
             const uint32_t payload = 6;
             for (uint32_t sequence = 0; sequence < count && !cancel.load();)
             {
-#ifndef LIBUV_TEST_BEFORE_BATCH
                 if (batch != 1 && (ordered != 2 || ((sequence / batch) & 1U) == 0))
                 {
                     const uint32_t take = (std::min)(batch, count - sequence);
@@ -588,13 +607,6 @@ int LibuvTcpBenchmark::tiny(uint32_t producers, uint32_t ordered, uint32_t count
                     sequence += take;
                     continue;
                 }
-#else
-                if (batch != 1)
-                {
-                    cancel.store(true);
-                    break;
-                }
-#endif
                 char localBody[6];
                 char* buffer = nullptr;
                 char* body = localBody;
@@ -617,15 +629,24 @@ int LibuvTcpBenchmark::tiny(uint32_t producers, uint32_t ordered, uint32_t count
                     std::memcpy(body, "123456", 6);
                 }
                 bool sent = false;
-#ifndef LIBUV_TEST_BEFORE_COPY
                 if (copyOne)
                 {
-                    sent = client.post(target, body, payload);
+                    sent = useTry ? client.tryPost(target, body, payload, true, true) == 0 : client.post(target, body, payload);
                 }
                 else
-#endif
                 {
-                    sent = client.post(buffer);
+                    if (useTry)
+                    {
+                        sent = client.tryPost(buffer, true, true) == 0;
+                        if (!sent)
+                        {
+                            client.releaseSendMemory(buffer);
+                        }
+                    }
+                    else
+                    {
+                        sent = client.post(buffer);
+                    }
                 }
                 if (!sent)
                 {
@@ -675,8 +696,8 @@ int LibuvTcpBenchmark::tiny(uint32_t producers, uint32_t ordered, uint32_t count
         !client.m_failed.load() && ended > began;
     const double ms = valid ? double(ended - began) / 1000000.0 : 0;
     std::printf("%s,%u,%u,%u,%u,%.6f,%.3f,%.3f,%.0f,%llu,%d\n",
-        post ? (copy ? "TINYCOPYPOST" : "TINYPOST") : (copy ? "TINYCOPY" : "TINY"), producers, ordered, count, batch,
-        ms, ms > 0 ? expected * 1000.0 / ms : 0, cpuEnd - cpuStart, double(PeakResidentBytes()),
+        useTry ? (copy ? "TINYTRYCOPY" : "TINYTRY") : (copy ? "TINYCOPY" : "TINY"), producers, ordered, count, batch,
+        ms, ms > 0 ? expected * 1000.0 / ms : 0, cpuStart >= 0 && cpuEnd >= cpuStart ? cpuEnd - cpuStart : -1.0, PeakResidentBytes(),
         static_cast<unsigned long long>(receiver.m_received.load()), int(valid));
     return valid ? 0 : 4;
 }

@@ -1,5 +1,5 @@
 ﻿#include "LibuvRawPostBenchmark.h"
-#include "uv.h"
+#include "libuv/uv.h"
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -17,7 +17,7 @@ static uint64_t RawPostNow()
 
 LibuvRawPostBenchmark::LibuvRawPostBenchmark() :
 m_host(nullptr), m_loop(nullptr), m_peer(0), m_target(nullptr), m_port(0), m_stop(false),
-m_failed(false), m_received(0), m_finished(0), m_payload(6), m_expected(0), m_framed(false),
+m_failed(false), m_received(0), m_finished(0), m_expected(0),
 m_ordered(false), m_offset(0)
 {
     std::memset(m_sequences, 0, sizeof(m_sequences));
@@ -247,8 +247,6 @@ int LibuvRawPostBenchmark::run(int argc, char** argv)
             return 3;
         }
     }
-    receiver.m_payload = payload;
-    receiver.m_framed = framed;
     receiver.m_ordered = ordered;
     receiver.m_expected = static_cast<uint64_t>(warm) * producers + count;
     receiver.m_pattern.resize(payload + (framed ? 4 : 0));
@@ -280,6 +278,11 @@ int LibuvRawPostBenchmark::run(int argc, char** argv)
             {
                 sender.m_failed.store(true);
                 return;
+            }
+            // 启动超时可能先于initClient完成，补交停止通知，保证网络任务可以回收。
+            if (sender.m_stop.load())
+            {
+                sender.stop();
             }
             sender.loop();
         }

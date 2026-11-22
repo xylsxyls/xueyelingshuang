@@ -88,7 +88,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\libuv;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STATIC_LIB;WIN32_LEAN_AND_MEAN;_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -106,7 +106,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\libuv;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STATIC_LIB;WIN32_LEAN_AND_MEAN;_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -126,7 +126,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\libuv;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STATIC_LIB;WIN32_LEAN_AND_MEAN;NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -148,7 +148,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\libuv;$(ProjectDir)..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STATIC_LIB;WIN32_LEAN_AND_MEAN;NDEBUG;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -168,7 +168,6 @@
     <ClInclude Include="LibuvRawPostBenchmark.h" />
     <ClInclude Include="LibuvTcpPublicTest.h" />
     <ClInclude Include="LibuvTcpTest.h" />
-    <ClInclude Include="LibuvTcpTestDiagnostics.h" />
     <ClInclude Include="LibuvTcpBenchmark.h" />
     <ClInclude Include="LibuvTcpTestModels.h" />
   </ItemGroup>
@@ -177,7 +176,6 @@
     <ClCompile Include="LibuvRawPostBenchmark.cpp" />
     <ClCompile Include="LibuvTcpPublicTest.cpp" />
     <ClCompile Include="LibuvTcpTest.cpp" />
-    <ClCompile Include="LibuvTcpTestDiagnostics.cpp" />
     <ClCompile Include="LibuvTcpBenchmark.cpp" />
     <ClCompile Include="LibuvTcpTestModels.cpp" />
   </ItemGroup>

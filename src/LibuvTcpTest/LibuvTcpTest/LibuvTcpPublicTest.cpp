@@ -1,4 +1,5 @@
 ﻿#include "LibuvTcpPublicTest.h"
+#include "libuv/uv.h"
 #include <chrono>
 #include <vector>
 #include <cstdio>
@@ -12,6 +13,37 @@ m_instance(nullptr), m_peer(0), m_received(0), m_connected(0), m_closed(0), m_fa
 LibuvTcpPublicTest::~LibuvTcpPublicTest()
 {
     LibuvTcp::hostDestroy(m_instance);
+}
+
+uint8_t LibuvTcpPublicTest::streamByte(uint64_t offset)
+{
+    const unsigned shift = static_cast<unsigned>(offset & 7U) * 8U;
+    return static_cast<uint8_t>(((offset >> 3) >> shift) + offset);
+}
+
+bool LibuvTcpPublicTest::checkStream()
+{
+    uint8_t bytes[2048];
+    for (size_t offset = 0; offset < sizeof(bytes); offset += 8)
+    {
+        uint64_t block = offset / 8;
+        for (size_t index = 0; index < 8; ++index)
+        {
+            bytes[offset + index] = static_cast<uint8_t>(block + offset + index);
+            block /= 256;
+        }
+    }
+    LibuvTcpPublicTest correct, swapped, repeated;
+    connected(&correct, 1);
+    connected(&swapped, 1);
+    connected(&repeated, 1);
+    data(&correct, 1, bytes, 17);
+    data(&correct, 1, bytes + 17, sizeof(bytes) - 17);
+    data(&swapped, 1, bytes + 1024, 1024);
+    data(&swapped, 1, bytes, 1024);
+    data(&repeated, 1, bytes, 1024);
+    data(&repeated, 1, bytes, 1024);
+    return !correct.m_failed && correct.m_received == sizeof(bytes) && swapped.m_failed && repeated.m_failed;
 }
 
 bool LibuvTcpPublicTest::initialize()
@@ -35,7 +67,7 @@ void LibuvTcpPublicTest::data(void* context, uint64_t peer, const uint8_t* bytes
     state->m_failed = state->m_failed || peer != state->m_peer;
     for (uint32_t index = 0; index < size; ++index)
     {
-        if (bytes[index] != static_cast<uint8_t>(state->m_received + index))
+        if (bytes[index] != streamByte(state->m_received + index))
         {
             state->m_failed = true;
         }
@@ -100,7 +132,7 @@ int LibuvTcpPublicTest::run(uint32_t payload, uint32_t count, double& millisecon
             const uint64_t offset = static_cast<uint64_t>(submitted) * payload;
             for (uint32_t index = 0; index < payload; ++index)
             {
-                bytes[index] = static_cast<uint8_t>(offset + index);
+                bytes[index] = streamByte(offset + index);
             }
             const int32_t result = LibuvTcp::post(client.m_instance, peer, &bytes[0], payload);
             if (result == 1)
@@ -186,10 +218,25 @@ void LibuvTcpDllSender::data(void* context, uint64_t peer, const uint8_t* bytes,
     uint8_t expected[10];
     const uint32_t length = 6;
     std::memcpy(expected, &length, 4);
-    std::memcpy(expected + 4, "123456", 6);
     for (uint32_t index = 0; index < size; ++index)
     {
-        if (bytes[index] != expected[(self->m_received + index) % 10])
+        const uint64_t offset = self->m_received + index;
+        const uint32_t position = static_cast<uint32_t>(offset % sizeof(expected));
+        if (index == 0 || position == 0)
+        {
+            const uint32_t sequence = static_cast<uint32_t>(offset / sizeof(expected));
+            if (sequence == 0)
+            {
+                std::memcpy(expected + 4, "123456", 6);
+            }
+            else
+            {
+                expected[4] = 'L';
+                std::memcpy(expected + 5, &sequence, sizeof(sequence));
+                expected[9] = 'T';
+            }
+        }
+        if (bytes[index] != expected[position])
         {
             self->m_failed.store(true);
         }
@@ -241,8 +288,15 @@ bool LibuvTcpDllSender::run()
                 uv_tcp_t* target = client.m_target.load(std::memory_order_acquire);
                 if (target != nullptr && submitted < 10000)
                 {
-                    const bool accepted = submitted % 2 == 0 ? client.post(target, "123456", 6) :
-                        client.tryPost(target, "123456", 6, true, true) == 0;
+                    char body[6] = { '1', '2', '3', '4', '5', '6' };
+                    if (submitted != 0)
+                    {
+                        body[0] = 'L';
+                        std::memcpy(body + 1, &submitted, sizeof(submitted));
+                        body[5] = 'T';
+                    }
+                    const bool accepted = submitted % 2 == 0 ? client.post(target, body, sizeof(body)) :
+                        client.tryPost(target, body, sizeof(body), true, true) == 0;
                     if (!accepted)
                     {
                         client.m_failed.store(true);
@@ -281,6 +335,11 @@ int main()
     try
     {
         // 分配和失败后的释放都调用DLL导出接口，不由消费者的静态CRT释放库内数组。
+        LibuvChannel channel;
+        if (!channel.canDestroy() || channel.poll())
+        {
+            return 12;
+        }
         LibuvTcp allocation;
         LibuvQueuePoolConfig queue;
         LibuvConnectionPoolConfig connections;
@@ -301,16 +360,9 @@ int main()
             allocation.releaseSendMemory(bytes);
         }
         allocation.releaseSendMemory(nullptr);
-        char* posted = allocation.memoryForSend(size);
-        std::memset(posted, 0, size);
-        const int32_t postResult = allocation.tryPost(posted);
-        if (postResult != 0)
-        {
-            allocation.releaseSendMemory(posted);
-        }
         char* owned = allocation.memoryForSend(size);
         std::memset(owned, 0, size);
-        if (allocation.post(owned) || postResult >= 0)
+        if (allocation.post(owned))
         {
             return 9;
         }

@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <stdint.h>
-#include "uv.h"
+#include "libuv/uv.h"
 #include "LibuvTcp/LibuvTcpAPI.h"
 #include <atomic>
 
@@ -54,11 +54,11 @@ public:
     @param [in] batch 每次提交帧数，1使用原单帧入口，2至4096使用postBatch
     @param [in] congested 是否限制系统发送缓冲并延迟启动接收，覆盖部分写和背压
     @param [in] copy 是否逐条调用借用正文重载，独立报告而不混充原数组入口
-    @param [in] post 是否使用配对post入口；单条比较仍要求batch为1
+    @param [in] useTry 是否用 tryPost 重试竞争及容量；仅支持单帧，数组提交失败仍由测试端释放
     @return 0全部逐帧校验通过，非零失败
     */
     static int tiny(uint32_t producers, uint32_t ordered, uint32_t count, uint32_t batch, bool congested = false,
-        bool copy = false, bool post = false);
+        bool copy = false, bool useTry = false);
 };
 
 /** 六字节基准的单循环接收器；只在回调末发布计数，不用每帧原子计数和计时干扰吞吐

@@ -27,9 +27,6 @@
     <ClInclude Include="LibuvTcpTest.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="LibuvTcpTestDiagnostics.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="LibuvTcpBenchmark.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -48,9 +45,6 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="LibuvTcpTest.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="LibuvTcpTestDiagnostics.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="LibuvTcpBenchmark.cpp">

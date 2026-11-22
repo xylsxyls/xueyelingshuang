@@ -4,6 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
+                "${workspaceFolder}/../../include/libuv/",
                 "${workspaceFolder}/../../include/"
             ],
             "defines": [],

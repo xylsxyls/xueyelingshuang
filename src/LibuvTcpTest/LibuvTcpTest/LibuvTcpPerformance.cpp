@@ -16,7 +16,8 @@ m_pipe(),
 m_timer(),
 m_exited(false),
 m_eof(false),
-m_failed(false)
+m_error(0),
+m_exitCode(0)
 {
 }
 
@@ -45,19 +46,22 @@ void LibuvTcpPerformance::read(uv_stream_t* stream, ssize_t count, const uv_buf_
         {
             if (state->m_output.size() + static_cast<size_t>(count) > 65536)
             {
-                timeout(&state->m_timer);
+                state->cancel(UV_ENOBUFS);
                 return;
             }
             state->m_output.append(buffer->base, static_cast<size_t>(count));
         }
         catch (...)
         {
-            timeout(&state->m_timer);
+            state->cancel(UV_ENOMEM);
         }
     }
     else if (count < 0)
     {
-        state->m_failed = state->m_failed || count != UV_EOF;
+        if (count != UV_EOF && state->m_error == 0)
+        {
+            state->m_error = static_cast<int>(count);
+        }
         state->m_eof = true;
         uv_close(reinterpret_cast<uv_handle_t*>(stream), nullptr);
         state->finish();
@@ -67,7 +71,11 @@ void LibuvTcpPerformance::read(uv_stream_t* stream, ssize_t count, const uv_buf_
 void LibuvTcpPerformance::exited(uv_process_t* process, int64_t code, int signal)
 {
     LibuvTcpPerformance* state = static_cast<LibuvTcpPerformance*>(process->data);
-    state->m_failed = state->m_failed || code != 0 || signal != 0;
+    state->m_exitCode = code;
+    if (signal != 0 && state->m_error == 0)
+    {
+        state->m_error = UV_ECANCELED;
+    }
     state->m_exited = true;
     uv_close(reinterpret_cast<uv_handle_t*>(process), nullptr);
     state->finish();
@@ -75,21 +83,28 @@ void LibuvTcpPerformance::exited(uv_process_t* process, int64_t code, int signal
 
 void LibuvTcpPerformance::timeout(uv_timer_t* timer)
 {
-    LibuvTcpPerformance* state = static_cast<LibuvTcpPerformance*>(timer->data);
-    state->m_failed = true;
-    if (!state->m_exited)
-    {
-        uv_process_kill(&state->m_process, SIGKILL);
-    }
-    if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&state->m_pipe)))
-    {
-        uv_close(reinterpret_cast<uv_handle_t*>(&state->m_pipe), nullptr);
-    }
-    state->m_eof = true;
-    state->finish();
+    static_cast<LibuvTcpPerformance*>(timer->data)->cancel(UV_ETIMEDOUT);
 }
 
-bool LibuvTcpPerformance::execute(const char* executable, const std::vector<std::string>& arguments,
+void LibuvTcpPerformance::cancel(int error)
+{
+    if (m_error == 0)
+    {
+        m_error = error;
+    }
+    if (!m_exited)
+    {
+        uv_process_kill(&m_process, SIGKILL);
+    }
+    if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_pipe)))
+    {
+        uv_close(reinterpret_cast<uv_handle_t*>(&m_pipe), nullptr);
+    }
+    m_eof = true;
+    finish();
+}
+
+int64_t LibuvTcpPerformance::execute(const char* executable, const std::vector<std::string>& arguments,
     std::string& output, uint64_t milliseconds)
 {
     // 在创建任何uv句柄之前完成可能分配的参数准备。
@@ -100,21 +115,25 @@ bool LibuvTcpPerformance::execute(const char* executable, const std::vector<std:
         args.push_back(const_cast<char*>(arguments[index].c_str()));
     }
     args.push_back(nullptr);
-    if (uv_loop_init(&m_loop) != 0)
+    output.clear();
+    int result = uv_loop_init(&m_loop);
+    if (result != 0)
     {
-        return false;
+        return result;
     }
-    if (uv_pipe_init(&m_loop, &m_pipe, 0) != 0)
+    result = uv_pipe_init(&m_loop, &m_pipe, 0);
+    if (result != 0)
     {
-        uv_loop_close(&m_loop);
-        return false;
+        const int closed = uv_loop_close(&m_loop);
+        return closed != 0 ? closed : result;
     }
-    if (uv_timer_init(&m_loop, &m_timer) != 0)
+    result = uv_timer_init(&m_loop, &m_timer);
+    if (result != 0)
     {
         uv_close(reinterpret_cast<uv_handle_t*>(&m_pipe), nullptr);
         uv_run(&m_loop, UV_RUN_DEFAULT);
-        uv_loop_close(&m_loop);
-        return false;
+        const int closed = uv_loop_close(&m_loop);
+        return closed != 0 ? closed : result;
     }
     m_pipe.data = m_timer.data = m_process.data = this;
     uv_stdio_container_t streams[3] = {};
@@ -132,7 +151,7 @@ bool LibuvTcpPerformance::execute(const char* executable, const std::vector<std:
 #ifdef _WIN32
     options.flags = UV_PROCESS_WINDOWS_HIDE;
 #endif
-    const int result = uv_spawn(&m_loop, &m_process, &options);
+    result = uv_spawn(&m_loop, &m_process, &options);
     if (result != 0)
     {
         uv_close(reinterpret_cast<uv_handle_t*>(&m_pipe), nullptr);
@@ -143,18 +162,26 @@ bool LibuvTcpPerformance::execute(const char* executable, const std::vector<std:
             uv_close(reinterpret_cast<uv_handle_t*>(&m_process), nullptr);
         }
         uv_run(&m_loop, UV_RUN_DEFAULT);
-        uv_loop_close(&m_loop);
-        return false;
+        const int closed = uv_loop_close(&m_loop);
+        return closed != 0 ? closed : result;
     }
-    if (uv_read_start(reinterpret_cast<uv_stream_t*>(&m_pipe), &allocate, &read) != 0 ||
-        uv_timer_start(&m_timer, &timeout, milliseconds, 1000) != 0)
+    result = uv_read_start(reinterpret_cast<uv_stream_t*>(&m_pipe), &allocate, &read);
+    if (result == 0)
     {
-        timeout(&m_timer);
+        result = uv_timer_start(&m_timer, &timeout, milliseconds, 1000);
+    }
+    if (result != 0)
+    {
+        cancel(result);
     }
     uv_run(&m_loop, UV_RUN_DEFAULT);
-    const bool closed = uv_loop_close(&m_loop) == 0;
+    const int closed = uv_loop_close(&m_loop);
     output.swap(m_output);
-    return closed && m_exited && m_eof && !m_failed;
+    if (closed != 0 || !m_exited || !m_eof)
+    {
+        return closed != 0 ? closed : UV_EIO;
+    }
+    return m_error != 0 ? m_error : m_exitCode;
 }
 
 bool LibuvTcpPerformance::parse(const std::string& output, int kind, uint64_t expected, double* metrics,
@@ -181,7 +208,7 @@ bool LibuvTcpPerformance::parse(const std::string& output, int kind, uint64_t ex
         begin = comma + 1;
     }
     if ((kind == 0 && (fields.size() != 11 || (fields[0] != "TINY" && fields[0] != "TINYCOPY" &&
-        fields[0] != "TINYPOST" && fields[0] != "TINYCOPYPOST"))) ||
+        fields[0] != "TINYTRY" && fields[0] != "TINYTRYCOPY"))) ||
         (kind == 1 && (fields.size() != 13 || fields[0] != "BENCH")) ||
         (kind == 2 && (fields.size() != 5 || fields[0] != "RAW")) || kind < 0 || kind > 2)
     {
@@ -193,8 +220,10 @@ bool LibuvTcpPerformance::parse(const std::string& output, int kind, uint64_t ex
         char* tail = nullptr;
         errno = 0;
         values[index] = std::strtod(fields[index].c_str(), &tail);
-        if (errno != 0 || tail == fields[index].c_str() || *tail != 0 ||
-            !(values[index] >= 0 && values[index] <= DBL_MAX))
+        const bool optionalCounter = (kind == 0 && (index == 7 || index == 8)) ||
+            (kind == 1 && (index == 11 || index == 12));
+        if (errno != 0 || tail == fields[index].c_str() || tail != fields[index].c_str() + fields[index].size() ||
+            (!(values[index] >= 0 && values[index] <= DBL_MAX) && !(optionalCounter && values[index] == -1)))
         {
             return false;
         }
@@ -226,9 +255,10 @@ bool LibuvTcpPerformance::parse(const std::string& output, int kind, uint64_t ex
     const double count = kind == 2 ? values[2] : values[1] * values[3];
     const double milliseconds = values[kind == 2 ? 3 : 5];
     const double rate = values[kind == 2 ? 4 : 6];
-    if (count <= 0 || milliseconds <= 0 || rate <= 0 ||
+    if (count <= 0 || milliseconds < 1e-6 || rate <= 0 ||
         (kind != 2 && (values[1] < 1 || values[1] > 16 || values[4] < 1)) ||
-        (kind == 0 && (values[2] > 2 || count != values[9])) ||
+        (kind == 0 && (values[2] > 2 || count != values[9] || values[8] == 0)) ||
+        (kind == 1 && values[12] == 0) ||
         (kind == 1 && (values[2] < 16 || values[8] > values[9] || values[9] > values[10])))
     {
         return false;
@@ -299,7 +329,7 @@ bool LibuvTcpPerformance::parseHost(const std::string& output, uint32_t producer
         char* tail = nullptr;
         errno = 0;
         values[index] = std::strtod(text, &tail);
-        if (errno != 0 || tail == text || *tail != 0 || !(values[index] >= 0 && values[index] <= DBL_MAX) ||
+        if (errno != 0 || tail == text || tail != word.c_str() + word.size() || !(values[index] >= 0 && values[index] <= DBL_MAX) ||
             ((index < 6 || index == 9) && std::floor(values[index]) != values[index]))
         {
             return false;
@@ -313,7 +343,7 @@ bool LibuvTcpPerformance::parseHost(const std::string& output, uint32_t producer
     const uint64_t bytes = static_cast<uint64_t>(count) * (static_cast<uint64_t>(payload) + (framed ? 4 : 0));
     if (values[0] != producers || values[1] != payload || values[2] != count || values[3] != warmup ||
         values[4] != static_cast<uint64_t>(warmup) + count || values[5] != static_cast<double>(bytes) ||
-        values[6] <= 0 || values[7] <= 0 || values[8] <= 0)
+        values[6] < 1e-9 || values[6] > DBL_MAX / 1000 || values[7] <= 0 || values[8] <= 0)
     {
         return false;
     }
@@ -353,7 +383,8 @@ bool LibuvTcpPerformance::checkParser()
             return false;
         }
     }
-    if (parseHost(host.substr(0, host.find(" status=")), 2, 6, 8, "raw", metrics) ||
+    if (parseHost(std::string(host).insert(host.find("payload=6") + 9, 1, '\0'), 2, 6, 8, "raw", metrics) ||
+        parseHost(host.substr(0, host.find(" status=")), 2, 6, 8, "raw", metrics) ||
         parseHost(host + "extra", 2, 6, 8, "raw", metrics) || parseHost("", 2, 6, 8, "raw", metrics))
     {
         return false;
@@ -361,13 +392,18 @@ bool LibuvTcpPerformance::checkParser()
     const uint32_t expectedInput[4] = {1, 0, 8, 1};
     if (!parse("TINY,1,0,8,1,2,4000,1,100,8,1\n", 0, 8, metrics, expectedInput, "TINY") ||
         parse("TINY,2,0,4,1,2,4000,1,100,8,1\n", 0, 8, metrics, expectedInput, "TINY") ||
-        parse("TINYPOST,1,0,8,1,2,4000,1,100,8,1\n", 0, 8, metrics, expectedInput, "TINY"))
+        parse("TINYTRY,1,0,8,1,2,4000,1,100,8,1\n", 0, 8, metrics, expectedInput, "TINY"))
     {
         return false;
     }
     return parse("TINY,1,0,8,1,2,4000,1,100,8,1\n", 0, 8, metrics) && metrics[0] == 4000 &&
+        parse("TINY,1,0,8,1,2,4000,-1,-1,8,1\n", 0, 8, metrics) && metrics[2] == -1 && metrics[3] == -1 &&
+        !parse("TINY,1,0,8,1,2,4000,1,0,8,1\n", 0, 8, metrics) &&
+        !parse("TINY,1,0,8,1,2,4000,-2,100,8,1\n", 0, 8, metrics) &&
         !parse("TINY,1,0,8,1,2,4000,1,100,7,1\n", 0, 8, metrics) &&
         !parse("TINY,1,0,8,1,2,4000,1,100,8,0\n", 0, 8, metrics) &&
+        !parse(std::string("RAW,6,10,1,10000") + '\0' + "junk", 2, 0, metrics) &&
+        !parse("RAW,6,10,1e-290,1000\n", 2, 0, metrics) &&
         !parse("RAW,6,10,1,nan\n", 2, 0, metrics) &&
         !parse("RAW,6,10,1,inf\n", 2, 0, metrics) &&
         !parse("WRONG,1,0,8,1,2,4000,1,100,8,1\n", 0, 8, metrics) &&
@@ -424,13 +460,14 @@ bool LibuvTcpPerformance::checkRunner()
     }
     self[size] = 0;
     const char* modes[] = { "0", "1", "2", "3" };
+    const int64_t expected[] = { 0, 7, UV_ENOBUFS, UV_ETIMEDOUT };
     for (uint32_t index = 0; index < 4; ++index)
     {
         LibuvTcpPerformance child;
         const std::vector<std::string> args = { "--runner-probe", modes[index] };
         std::string output;
-        const bool success = child.execute(self, args, output, index == 3 ? 200 : 5000);
-        if (success != (index == 0) || (success && output.find("runner-ok") == std::string::npos))
+        const int64_t result = child.execute(self, args, output, index == 3 ? 200 : 5000);
+        if (result != expected[index] || (index == 0 && output.find("runner-ok") == std::string::npos))
         {
             return false;
         }
@@ -438,25 +475,25 @@ bool LibuvTcpPerformance::checkRunner()
     LibuvTcpPerformance missing;
     std::string output;
     const std::vector<std::string> empty;
-    return !missing.execute((std::string(self) + ".missing").c_str(), empty, output);
+    return missing.execute((std::string(self) + ".missing").c_str(), empty, output) == UV_ENOENT;
 }
 
 int LibuvTcpPerformance::run(int argc, char** argv)
 {
-    if (argc != 4 && argc != 5)
+    if (argc != 3 && argc != 4)
     {
-        std::fputs("usage: --suite rounds baseline-exe-or-dash [case:0-46]\n", stderr);
+        std::fputs("usage: --suite rounds(9-100) [case:0-46]\n", stderr);
         return 2;
     }
     uint32_t parsed[2] = {};
-    for (size_t index = 0; index < (argc == 5 ? 2U : 1U); ++index)
+    for (size_t index = 0; index < (argc == 4 ? 2U : 1U); ++index)
     {
-        const char* input = argv[index == 0 ? 2 : 4];
+        const char* input = argv[index + 2];
         char* tail = nullptr;
         errno = 0;
         const unsigned long value = std::strtoul(input, &tail, 10);
         if (*input < '0' || *input > '9' || tail == input || *tail != 0 || errno != 0 ||
-            value > (index == 0 ? 100U : 46U) || (index == 0 && value == 0))
+            value > (index == 0 ? 100U : 46U) || (index == 0 && value < 9))
         {
             return 2;
         }
@@ -469,10 +506,8 @@ int LibuvTcpPerformance::run(int argc, char** argv)
         return 2;
     }
     self[selfSize] = 0;
-    const char* executables[2] = { argv[3], self };
-    const bool compare = std::strcmp(argv[3], "-") != 0;
     const char* names[] = { "rate", "ms", "cpu_ms", "peak_bytes", "mib_s", "p50_us", "p95_us", "p99_us" };
-    const char* modes[] = { "--tinycopybenchmark", "--tinycopypostbenchmark", "--tinybenchmark", "--tinypostbenchmark" };
+    const char* modes[] = { "--tinycopybenchmark", "--tinytrycopybenchmark", "--tinybenchmark", "--tinytrybenchmark" };
     const uint32_t latency[10][4] = { {1,16,50000,1}, {1,16,100000,128}, {4,16,100000,128},
         {16,16,50000,128}, {1,64,100000,128}, {16,64,50000,128}, {1,1024,50000,128},
         {16,1024,10000,128}, {1,65536,4000,32}, {16,65536,1000,32} };
@@ -533,39 +568,35 @@ int LibuvTcpPerformance::run(int argc, char** argv)
         {
             return 2;
         }
-        std::vector<double> samples[2][8];
+        std::vector<double> samples[8];
         bool good = true;
         try
         {
             for (uint32_t round = 0; round <= parsed[0] && good; ++round)
             {
-                for (uint32_t order = 0; order < (compare ? 2U : 1U); ++order)
+                LibuvTcpPerformance child;
+                std::string output;
+                double metrics[8];
+                good = child.execute(self, arguments, output) == 0 &&
+                    (host ? parseHost(output, values[0], values[1], values[2], hostMode, metrics) :
+                        parse(output, kind, 8000000, metrics, values,
+                            kind == 2 ? "RAW" : kind == 1 ? "BENCH" : index >= 26 ? "TINY" :
+                            index / 3 == 0 ? "TINYCOPY" : index / 3 == 1 ? "TINYTRYCOPY" :
+                            index / 3 == 2 ? "TINY" : "TINYTRY"));
+                std::printf("SAMPLE,%u,%u,%s,%s\n%s", test,
+                    round, round == 0 ? "warmup" : "formal", good ? "PASS" : "FAIL", output.c_str());
+                std::fflush(stdout);
+                if (!good)
                 {
-                    const uint32_t version = compare ? (order + round % 2) % 2 : 1;
-                    LibuvTcpPerformance child;
-                    std::string output;
-                    double metrics[8];
-                    good = child.execute(executables[version], arguments, output) &&
-                        (host ? parseHost(output, values[0], values[1], values[2], hostMode, metrics) :
-                            parse(output, kind, 8000000, metrics, values,
-                                kind == 2 ? "RAW" : kind == 1 ? "BENCH" : index >= 26 ? "TINY" :
-                                index / 3 == 0 ? "TINYCOPY" : index / 3 == 1 ? "TINYCOPYPOST" :
-                                index / 3 == 2 ? "TINY" : "TINYPOST"));
-                    std::printf("SAMPLE,%u,%s,%u,%s,%s\n%s", test, version == 0 ? "before" : "after",
-                        round, round == 0 ? "warmup" : "formal", good ? "PASS" : "FAIL", output.c_str());
-                    std::fflush(stdout);
-                    if (!good)
+                    break;
+                }
+                if (round != 0)
+                {
+                    for (size_t metric = 0; metric < 8; ++metric)
                     {
-                        break;
-                    }
-                    if (round != 0)
-                    {
-                        for (size_t metric = 0; metric < 8; ++metric)
+                        if (metrics[metric] >= 0)
                         {
-                            if (metrics[metric] >= 0)
-                            {
-                                samples[version][metric].push_back(metrics[metric]);
-                            }
+                            samples[metric].push_back(metrics[metric]);
                         }
                     }
                 }
@@ -583,28 +614,19 @@ int LibuvTcpPerformance::run(int argc, char** argv)
         }
         for (size_t metric = 0; metric < 8; ++metric)
         {
-            if (samples[1][metric].empty())
+            std::vector<double>& data = samples[metric];
+            if (!host && kind != 2 && (metric == 2 || metric == 3) && data.size() != parsed[0])
             {
-                continue;
+                std::printf("SUMMARY,%u,%s,unavailable\n", test, names[metric]);
             }
-            double median[2] = {};
-            for (size_t version = compare ? 0 : 1; version < 2; ++version)
+            else if (!data.empty())
             {
-                std::vector<double>& data = samples[version][metric];
                 std::sort(data.begin(), data.end());
-                median[version] = (data[(data.size() - 1) / 2] + data[data.size() / 2]) / 2;
+                const size_t last = data.size() - 1;
+                const double median = (data[last / 2] + data[data.size() / 2]) / 2;
+                std::printf("SUMMARY,%u,%s,median=%.6f,q1=%.6f,q3=%.6f,min=%.6f,max=%.6f\n",
+                    test, names[metric], median, data[last / 4], data[3 * last / 4], data.front(), data.back());
             }
-            std::printf("SUMMARY,%u,%s,before=", test, names[metric]);
-            if (compare)
-            {
-                std::printf("%.6f", median[0]);
-            }
-            std::printf(",after=%.6f,change_percent=", median[1]);
-            if (compare && median[0] != 0)
-            {
-                std::printf("%.6f", 100 * (median[1] / median[0] - 1));
-            }
-            std::printf(",after_min=%.6f,after_max=%.6f\n", samples[1][metric].front(), samples[1][metric].back());
         }
         std::fflush(stdout);
     }
