@@ -267,10 +267,25 @@ m_descriptor(-1), m_readOnly(false), m_capacity(0), m_created(false), m_nameUnli
                 allocation.fst_length = static_cast<off_t>(size);
                 allocated = ::fcntl(m_descriptor, F_PREALLOCATE, &allocation) == 0;
 #else
-                allocated = ::posix_fallocate(m_descriptor, 0, static_cast<off_t>(size)) == 0;
+                // posix_fallocate直接返回错误码；信号中断后重新预留同一范围。
+                int result;
+                do
+                {
+                    result = ::posix_fallocate(m_descriptor, 0, static_cast<off_t>(size));
+                } while (result == EINTR);
+                allocated = result == 0;
 #endif
             }
-            if (!allocated || ::ftruncate(m_descriptor, size) != 0)
+            if (allocated)
+            {
+                int result;
+                do
+                {
+                    result = ::ftruncate(m_descriptor, size);
+                } while (result < 0 && errno == EINTR);
+                allocated = result == 0;
+            }
+            if (!allocated)
             {
                 ::close(m_descriptor);
                 m_descriptor = -1;
