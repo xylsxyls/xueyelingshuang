@@ -9,7 +9,8 @@ template <class T>
 #if defined(_MSC_VER)
 class __declspec(align(8)) LockFreeQueue
 #else
-class alignas(8) LockFreeQueue
+// 保留队列的 8 字节最低对齐，同时满足当前标准库中节点池的自然对齐
+class alignas(8) alignas(LockFreeQueueArena<T>) LockFreeQueue
 #endif
 {
 public:
