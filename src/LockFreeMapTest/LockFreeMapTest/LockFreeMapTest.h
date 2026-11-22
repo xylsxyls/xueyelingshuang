@@ -663,6 +663,17 @@ int main(int argc, char** argv);
 //
 // 设备和桌面测试入口
 // Windows 使用 VS 或 CMake。Linux、macOS 可从本目录配置 CMake，运行 LockFreeMapTest --all --repeat 2 --report result.csv。
+// Linux ARM 测试使用同一套 C++ 用例。ARMv7 hard-float 和 AArch64 分别建立构建目录。
+// 在目标设备上从仓库根目录运行下列命令，将 <build> 换为该 ABI 的构建目录。
+// cmake -S src/LockFreeMapTest/LockFreeMapTest -B <build> -DCMAKE_BUILD_TYPE=Release
+// cmake --build <build> --target LockFreeMapTest
+// <build>/LockFreeMapTest --all --repeat 2 --report result.csv
+// 交叉编译时，在第一条命令添加 -DCMAKE_TOOLCHAIN_FILE=<Linux ARM 工具链文件>，再将测试程序部署到对应设备。
+// 24 号核对无锁能力及对齐。atomics 行的四项能力均应为 1，pointer_bytes 在 arm32 上为 4，在 arm64 上为 8。
+// 2026-11-22 交叉构建验证：Windows 宿主，Zig 0.13.0 / Clang 18，Linux ARMv7-A hard-float 和 AArch64 Release。
+// 每个 ABI 均验证静态库、共享库、分别使用两种 SDK 链接的 main 示例和完整测试程序，共 10 个 ARM ELF 产物（静态归档核对成员）。
+// 同位宽但误选 x86 的两次配置均被拒绝。本批未在 Linux ARM 上执行功能用例。
+// LockFreeMapTest 的 version_debug.sh 和 version_release.sh 各用一条固定命令准备依赖库 LockFreeMap，默认分别为 32 dll debug same 和 32 dll release same。
 // Android 使用 NDK 的 android.toolchain.cmake 和目标 ABI；命令行测试程序及其 C++ 运行库需放到设备可访问的位置。
 // iOS 使用 Xcode 生成器、CMAKE_SYSTEM_NAME=iOS 和目标 SDK。iOS 测试应用或 Android 专用原生测试宿主可通过 add_subdirectory 引用本工程，
 // 链接静态目标 LockFreeMapTestHost 并包含 LockFreeMapTestRunner.h，在宿主中调用 LockFreeMapTestRunner::run(argc, argv)。
