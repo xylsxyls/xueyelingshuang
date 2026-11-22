@@ -2,6 +2,7 @@
 #include "PlatformTest/PlatformTestAPI.h"
 #include <cstdio>
 #include <cstdlib>
+#include <climits>
 #include <exception>
 #include <cstring>
 #include <algorithm>
@@ -63,8 +64,27 @@ static int RunBenchmarks()
 
 #define CHECK(expression) do { if (!(expression)) { std::fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #expression); return 1; } } while (false)
 #if CSYSTEM_HAS_NATIVE_API
+std::string TestPathUtf8(const std::string& path)
+{
+#ifdef _WIN32
+    const int size = ::MultiByteToWideChar(CP_ACP, 0, path.c_str(), -1, nullptr, 0);
+    if (size <= 0)
+    {
+        return "";
+    }
+    std::vector<wchar_t> wide(size);
+    if (!::MultiByteToWideChar(CP_ACP, 0, path.c_str(), -1, wide.data(), size))
+    {
+        return "";
+    }
+    return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(wide.data());
+#else
+    return path;
+#endif
+}
+
 CSystemTestFile::CSystemTestFile(const std::string& path) :
-    m_path(path), m_handle(CSystem::openFileHandle(path.c_str(), 2)), m_duplicate(-1)
+    m_path(path), m_handle(CSystem::openFileHandle(TestPathUtf8(path).c_str(), 2)), m_duplicate(-1)
 {
     if (m_handle == -1)
     {
@@ -191,8 +211,9 @@ static int TestCommon()
     int** matrix = CSystem::CreateDyadicArray<int>(2, 3);
     CHECK(matrix != nullptr);
     matrix[0][2] = 19; matrix[1][2] = 23;
-    CHECK(matrix[0][2] == 19 && matrix[1][2] == 23);
+    const bool independentRows = matrix[0][2] == 19 && matrix[1][2] == 23;
     CSystem::DestroyDyadicArray(matrix, 2);
+    CHECK(independentRows);
     CSystem::DestroyDyadicArray<int>(nullptr, 0);
     CSystemTestRect r = {-3, 2, 7, -1};
     r = CSystem::rectValid(r);
@@ -207,6 +228,16 @@ static int TestCommon()
     const CSystemTestQtRect otherQt = {5, -7, -2, 9};
     const CSystemTestQtRect otherQtResult = CSystem::qrectValid(otherQt);
     CHECK(otherQtResult.left() == 5 && otherQtResult.top() == 0 && otherQtResult.right() == 0 && otherQtResult.bottom() == 9);
+    const std::string leaf = "\xe6\x96\x87.tar.Gz";
+    const std::string directory = "top.dot/sub\\";
+    CHECK(CSystem::GetName(directory + leaf, 1) == leaf);
+    CHECK(CSystem::GetName(directory + leaf, 2) == "Gz");
+    CHECK(CSystem::GetName(directory + leaf, 3) == "\xe6\x96\x87.tar");
+    CHECK(CSystem::GetName(directory + leaf, 4) == directory);
+    CHECK(CSystem::GetName(".config", 2) == "config");
+    CHECK(CSystem::GetName("", 1).empty() && CSystem::GetName(leaf, 5).empty());
+    CHECK(CSystem::joinPath("top.dot/sub", leaf) == "top.dot/sub/" + leaf);
+    CHECK(CSystem::joinPath(directory, leaf) == directory + leaf);
     CHECK(CSystem::GetName("dir/abc.txt", 1) == "abc.txt");
     CHECK(CSystem::GetName("dir/abc.txt", 3) == "abc");
     CHECK(CSystem::GetName("dot.dir/trailing", 2).empty());
@@ -263,6 +294,17 @@ static int TestCommon()
     const auto b = a + std::chrono::seconds(2);
     CHECK(CSystem::GetMilliRunTime(b, a) == 2000 && CSystem::GetMicroRunTime(b, a) == 2000000);
     CHECK(CSystem::GetNanoRunTime(b, a) == 2000000000LL);
+    CHECK(CSystem::GetMilliRunTime(a, b) == -2000 && CSystem::GetMicroRunTime(a, b) == -2000000);
+    CHECK(CSystem::GetNanoRunTime(a, b) == -2000000000LL && CSystem::GetNanoRunTime(a, a) == 0);
+    // 给起点预留一秒，使不同单位可区分；上界取自这组三次读取之后的同一时钟。
+    const auto start = std::chrono::high_resolution_clock::now() - std::chrono::seconds(1);
+    const int32_t millis = CSystem::GetHighTickCountMilliRunTime(start);
+    const int32_t micros = CSystem::GetHighTickCountMicroRunTime(start);
+    const int64_t nanos = CSystem::GetHighTickCountNanoRunTime(start);
+    const auto elapsed = std::chrono::high_resolution_clock::now() - start;
+    CHECK(millis >= 1000 && millis <= std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+    CHECK(micros >= 1000000 && micros <= std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count());
+    CHECK(nanos >= 1000000000 && nanos <= std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count());
     return 0;
 }
 
@@ -284,7 +326,8 @@ static int TestNative()
         CSystem::DestroyDir(identityDirectory);
     };
     const std::unique_ptr<const std::string, decltype(cleanIdentity)> ownedDirectory(&identityDirectory, cleanIdentity);
-    CHECK(CSystem::setProcessDirectory(identityDirectory));
+    const std::string identityUtf8 = TestPathUtf8(identityDirectory);
+    CHECK(CSystem::setProcessDirectory(identityUtf8));
 #else
     CHECK(CSystem::setProcessDirectory(""));
 #endif
@@ -293,16 +336,36 @@ static int TestNative()
     CHECK(CSystem::processIdentity(CSystem::currentProcessPid(), identity) && identity != 0);
     CHECK(CSystem::processIdentity(CSystem::currentProcessPid(), repeated) && repeated == identity);
 #ifdef CSYSTEM_SHARED_IDENTITY
-    CHECK(CSystem::setProcessDirectory(identityDirectory) && !CSystem::setProcessDirectory(""));
+    CHECK(CSystem::setProcessDirectory(identityUtf8) && !CSystem::setProcessDirectory(""));
     const std::string marker = CSystem::readFile(CSystem::joinPath(identityDirectory, "m_P2I" + std::to_string(CSystem::currentProcessPid())));
     CHECK(marker.size() == sizeof(identity) && std::memcmp(marker.data(), &identity, sizeof(identity)) == 0);
 #endif
     CHECK(CSystem::currentProcessPid() != 0 && CSystem::SystemThreadId() != 0);
+    CHECK(!CSystem::processDefinitelyExited(CSystem::currentProcessPid()) &&
+        !CSystem::processDefinitelyExited(0) && !CSystem::processDefinitelyExited(UINT32_MAX));
 #ifdef _WIN32
     SYSTEM_INFO systemInfo = {};
     ::GetSystemInfo(&systemInfo);
     CHECK(CSystem::GetCPUCoreCount() == static_cast<int32_t>(systemInfo.dwNumberOfProcessors));
+    typedef BOOL (WINAPI *QueryMachine)(HANDLE, USHORT*, USHORT*);
+    const QueryMachine queryMachine = reinterpret_cast<QueryMachine>(
+        ::GetProcAddress(::GetModuleHandleW(L"kernel32.dll"), "IsWow64Process2"));
+    if (queryMachine != nullptr)
+    {
+        USHORT process = 0, machine = 0;
+        CHECK(queryMachine(::GetCurrentProcess(), &process, &machine));
+        // 0xaa64 是旧 SDK 未定义的 IMAGE_FILE_MACHINE_ARM64。
+        const bool native64 = machine == IMAGE_FILE_MACHINE_AMD64 || machine == IMAGE_FILE_MACHINE_IA64 || machine == 0xaa64;
+        CHECK(CSystem::GetSystemBits() == (native64 ? 64 : 32));
+    }
+    else
+    {
+        BOOL emulated = FALSE;
+        CHECK(::IsWow64Process(::GetCurrentProcess(), &emulated));
+        CHECK(CSystem::GetSystemBits() == (sizeof(void*) == 8 || emulated ? 64 : 32));
+    }
 #else
+    CHECK(CSystem::GetSystemBits() == static_cast<int>(sizeof(void*) * CHAR_BIT));
     CHECK(CSystem::GetCPUCoreCount() == static_cast<int32_t>(std::thread::hardware_concurrency()));
 #endif
 #if !defined(__APPLE__) || !TARGET_OS_IPHONE
@@ -324,7 +387,10 @@ static int TestNative()
     random[0] = random[33] = 123;
     CHECK(CSystem::secureRandomBytes(random + 1, 32) && random[0] == 123 && random[33] == 123);
     CHECK(CSystem::secureRandomBytesCallback(nullptr, nullptr, 0) == 0 && CSystem::secureRandomBytesCallback(nullptr, nullptr, 1) != 0);
-    CHECK(!CSystem::secureRandomBytes(random + 1, 8193) && random[0] == 123 && random[33] == 123);
+    // 为完整请求和两端哨兵分配空间，库误接收超限长度时也能正常报告失败。
+    std::vector<uint8_t> overLimit(8195, 123);
+    CHECK(!CSystem::secureRandomBytes(overLimit.data() + 1, 8193));
+    CHECK(std::count(overLimit.begin(), overLimit.end(), static_cast<uint8_t>(123)) == 8195);
     CHECK(!CSystem::uuid().empty());
     const std::string compactId = CSystem::uuid(0);
     const std::string dashedId = CSystem::uuid(1);
@@ -333,7 +399,6 @@ static int TestNative()
     std::string digits = dashedId;
     digits.erase(std::remove(digits.begin(), digits.end(), '-'), digits.end());
     CHECK(digits.size() == 32 && digits.find_first_not_of("0123456789abcdef") == std::string::npos);
-    CHECK(CSystem::GetSystemBits() == 32 || CSystem::GetSystemBits() == 64);
 #if CSYSTEM_HAS_DESKTOP_API
 #ifdef _WIN32
     const DWORD scheduling = ::GetPriorityClass(::GetCurrentProcess());
@@ -357,12 +422,13 @@ static int TestNative()
     if (scratch == nullptr) { scratch = std::getenv("TMPDIR"); }
     const std::string directory = scratch == nullptr ? "." : scratch;
     const std::string path = CSystem::joinPath(directory, "csystem-test-" + CSystem::uuid(0) + ".bin");
+    const std::string utf8Path = TestPathUtf8(path);
     CSystemTestFile file(path);
-    CHECK(file.m_handle != -1 && CSystem::plainFileUtf8(path));
+    CHECK(file.m_handle != -1 && CSystem::plainFileUtf8(utf8Path));
     uint32_t error = 0;
-    CHECK(CSystem::openFileHandle(path.c_str(), 2, &error) == -1 && error != 0);
-    CHECK(CSystem::openFileHandle(path.c_str(), 0, &error) == -1 && error != 0);
-    CHECK(CSystem::openFileHandle(path.c_str(), 4, &error) == -1 && error != 0);
+    CHECK(CSystem::openFileHandle(utf8Path.c_str(), 2, &error) == -1 && error != 0);
+    CHECK(CSystem::openFileHandle(utf8Path.c_str(), 0, &error) == -1 && error != 0);
+    CHECK(CSystem::openFileHandle(utf8Path.c_str(), 4, &error) == -1 && error != 0);
     const uint8_t content[] = {0x42, 0, 0x80, 0x7f, 0xff};
     CHECK(CSystem::writeFileHandle(file.m_handle, 0, content, sizeof(content)) && CSystem::flushFileHandle(file.m_handle));
     uint64_t length = 0;
@@ -379,12 +445,15 @@ static int TestNative()
     CHECK(CSystem::readFileHandle(file.m_handle, sizeof(content), bytes, sizeof(bytes), &received) && received == 0);
     CHECK(CSystem::resizeFileHandle(file.m_handle, 2));
     CHECK(CSystem::fileHandleSize(file.m_duplicate, &length) && length == 2);
+    CHECK(CSystem::closeFileHandle(&file.m_handle) && file.m_handle == -1);
+    CHECK(CSystem::readFileHandle(file.m_duplicate, 0, bytes, sizeof(bytes), &received, &error) &&
+        received == 2 && error == 0 && std::memcmp(bytes, content, 2) == 0);
     CHECK(CSystem::closeFileHandle(&file.m_duplicate) && file.m_duplicate == -1);
     CHECK(CSystem::closeFileHandle(&file.m_duplicate));
     CHECK(CSystem::closeFileHandle(&file.m_handle));
     const std::wstring widePath = sizeof(wchar_t) == 2 ?
-        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(path) :
-        std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(path);
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(utf8Path) :
+        std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(utf8Path);
     CHECK(CSystem::fileExists(widePath));
     const std::wstring invalidWide = widePath + std::wstring(L"\0suffix", 7);
     CHECK(!CSystem::fileExists(invalidWide) && !CSystem::deleteFile(invalidWide));
@@ -405,17 +474,29 @@ static int TestNative()
     CHECK(CSystem::isPathWithin(path, directory) && !CSystem::isPathWithin(directory, directory));
     uint64_t stamp = 123;
     length = 123;
-    CHECK(!CSystem::fileStampUtf8(path, &length, nullptr) && length == 0);
-    CHECK(!CSystem::fileStampUtf8(path, nullptr, &stamp) && stamp == 0);
+    CHECK(!CSystem::fileStampUtf8(utf8Path, &length, nullptr) && length == 0);
+    CHECK(!CSystem::fileStampUtf8(utf8Path, nullptr, &stamp) && stamp == 0);
     stamp = 123;
-    CHECK(!CSystem::fileStampUtf8(path, &stamp, &stamp) && stamp == 0);
+    CHECK(!CSystem::fileStampUtf8(utf8Path, &stamp, &stamp) && stamp == 0);
     length = stamp = 123;
-    CHECK(!CSystem::fileStampUtf8(directory, &length, &stamp) && length == 0 && stamp == 0);
-    CHECK(!CSystem::fileStampUtf8(path + std::string("\0tail", 5), &length, &stamp));
-    CHECK(CSystem::fileStampUtf8(path, &length, &stamp) && length == 2);
+    CHECK(!CSystem::fileStampUtf8(TestPathUtf8(directory), &length, &stamp) && length == 0 && stamp == 0);
+    CHECK(!CSystem::fileStampUtf8(utf8Path + std::string("\0tail", 5), &length, &stamp));
+    CHECK(CSystem::fileStampUtf8(utf8Path, &length, &stamp) && length == 2);
     std::string blocks(32771, '\0');
     for (size_t i = 0; i < blocks.size(); ++i) { blocks[i] = static_cast<char>(i % 251); }
     CSystem::saveFile(blocks, path);
+    CHECK(CSystem::readFile(path) == blocks);
+    file.m_handle = CSystem::openFileHandle(utf8Path.c_str(), 1, &error);
+    CHECK(file.m_handle != -1 && error == 0);
+    const size_t middle = blocks.size() / 2;
+    CHECK(!CSystem::writeFileHandle(file.m_handle, middle, content, sizeof(content), &error) && error != 0);
+    CHECK(CSystem::closeFileHandle(&file.m_handle) && CSystem::readFile(path) == blocks);
+    file.m_handle = CSystem::openFileHandle(utf8Path.c_str(), 3, &error);
+    CHECK(file.m_handle != -1 && error == 0);
+    CHECK(CSystem::fileHandleSize(file.m_handle, &length) && length == blocks.size());
+    CHECK(CSystem::writeFileHandle(file.m_handle, middle, content, sizeof(content), &error) && error == 0);
+    CHECK(CSystem::closeFileHandle(&file.m_handle));
+    blocks.replace(middle, sizeof(content), reinterpret_cast<const char*>(content), sizeof(content));
     CHECK(CSystem::readFile(path) == blocks);
 #if CSYSTEM_HAS_DESKTOP_API
     // 无效路径不访问桌面或修改文件。
@@ -425,15 +506,104 @@ static int TestNative()
 #endif
     CSystem::saveFile("sentinel", path + std::string("\0suffix", 7));
     CHECK(CSystem::readFile(path) == blocks);
-    CHECK(CSystem::deleteFile(path.c_str()) && !CSystem::plainFileUtf8(path));
+    CHECK(CSystem::deleteFile(path.c_str()) && !CSystem::plainFileUtf8(utf8Path));
     file.m_path.clear();
+    file.m_handle = CSystem::createObservedOutputFile(utf8Path.c_str(), &error);
+    CHECK(file.m_handle != -1 && error == 0);
+    file.m_path = path;
+    CHECK(CSystem::writeFileHandle(file.m_handle, 0, content, 2));
+    CHECK(CSystem::readBinaryFile(widePath, 2, saved) && saved == std::vector<uint8_t>(content, content + 2));
+    CHECK(CSystem::writeFileHandle(file.m_handle, 2, content + 2, 3));
+    CHECK(CSystem::readBinaryFile(widePath, 5, saved) && saved == std::vector<uint8_t>(content, content + 5));
+    CHECK(CSystem::createObservedOutputFile(utf8Path.c_str(), &error) == -1 && error != 0);
+    CHECK(CSystem::closeFileHandle(&file.m_handle));
+    CSystemTestFile draft(path + ".draft");
+    CHECK(draft.m_handle != -1 && CSystem::writeFileHandle(draft.m_handle, 0, content + 2, 3));
+    CHECK(CSystem::flushFileHandle(draft.m_handle) && CSystem::closeFileHandle(&draft.m_handle));
+    const std::wstring wideDraft = widePath + L".draft";
+    CHECK(!CSystem::installFileIfAbsent(wideDraft, widePath));
+    CHECK(CSystem::readBinaryFile(wideDraft, 3, saved) && saved == std::vector<uint8_t>(content + 2, content + 5));
+    CHECK(CSystem::readBinaryFile(widePath, 5, saved) && saved == std::vector<uint8_t>(content, content + 5));
+    CHECK(CSystem::replaceFile(wideDraft, widePath) && !CSystem::fileExists(wideDraft));
+    CHECK(!CSystem::replaceFile(wideDraft, widePath));
+    CHECK(CSystem::readBinaryFile(widePath, 3, saved) && saved == std::vector<uint8_t>(content + 2, content + 5));
+    CHECK(CSystem::installFileIfAbsent(widePath, wideDraft));
+    CHECK(CSystem::readBinaryFile(wideDraft, 3, saved) && saved == std::vector<uint8_t>(content + 2, content + 5));
+    CHECK(!CSystem::writeBinaryOutputFile(nullptr, content, 1) && !CSystem::flushBinaryOutputFile(nullptr) &&
+        !CSystem::closeBinaryOutputFile(nullptr));
+    writeError = "previous error";
+    std::unique_ptr<FILE, decltype(&CSystem::closeBinaryOutputFile)> stream(
+        CSystem::openBinaryOutputFile(wideDraft, &writeError), &CSystem::closeBinaryOutputFile);
+    CHECK(stream && writeError.empty());
+    CHECK(!CSystem::writeBinaryOutputFile(stream.get(), nullptr, 1));
+    CHECK(CSystem::writeBinaryOutputFile(stream.get(), content, 0));
+    CHECK(CSystem::writeBinaryOutputFile(stream.get(), content, 2) && CSystem::flushBinaryOutputFile(stream.get()));
+    CHECK(CSystem::closeBinaryOutputFile(stream.release()));
+    CHECK(CSystem::readFile(draft.m_path) == std::string("B\0", 2));
+    CHECK(CSystem::deleteFile(wideDraft));
+    writeError = "previous error";
+    stream.reset(CSystem::openPrivateBinaryOutputFile(wideDraft, &writeError));
+    CHECK(stream && writeError.empty());
+    CHECK(CSystem::writeBinaryOutputFile(stream.get(), content, sizeof(content)) && CSystem::flushBinaryOutputFile(stream.get()));
+    CHECK(CSystem::closeBinaryOutputFile(stream.release()));
+    CHECK(CSystem::readFile(draft.m_path) == std::string(reinterpret_cast<const char*>(content), sizeof(content)));
 #ifdef _WIN32
+    // 在专用线程中依次进入 MTA 和 STA。重复初始化的返回值可验证库没有消耗宿主的引用。
+    CHECK(RunSystemWorkers(1, [](size_t) -> bool {
+        const DWORD models[] = {COINIT_MULTITHREADED, COINIT_APARTMENTTHREADED};
+        for (size_t i = 0; i < 2; ++i)
+        {
+            const HRESULT first = ::CoInitializeEx(nullptr, models[i]);
+            if (FAILED(first))
+            {
+                return false;
+            }
+            const auto release = [](const DWORD*) { ::CoUninitialize(); };
+            std::unique_ptr<const DWORD, decltype(release)> apartment(&models[i], release);
+            CSystem::allCameraName();
+            const HRESULT second = ::CoInitializeEx(nullptr, models[i]);
+            if (SUCCEEDED(second))
+            {
+                ::CoUninitialize();
+            }
+            if (first != S_OK || second != S_FALSE)
+            {
+                return false;
+            }
+        }
+        return true;
+    }));
+    const auto devices = CSystem::allDeviceInfo();
+    for (const auto& group : devices)
+    {
+        CHECK(!group.first.empty() && !group.second.empty());
+        for (const std::string& id : group.second)
+        {
+            CHECK(id.substr(0, id.find('\\')) == group.first);
+        }
+    }
     CHECK(CSystem::GetVisibleHeight() == ::GetSystemMetrics(SM_CYFULLSCREEN));
+    const int width = ::GetSystemMetrics(SM_CXSCREEN);
+    const int height = ::GetSystemMetrics(SM_CYSCREEN);
+    const RECT bounds = CSystem::GetWindowResolution();
+    const POINT center = CSystem::screenCenterPoint();
+    CHECK(bounds.left == 0 && bounds.top == 0 && bounds.right == width && bounds.bottom == height);
+    CHECK(center.x == width / 2 && center.y == height / 2);
     std::vector<char> modulePath(32768);
     const DWORD copied = ::GetModuleFileNameA(nullptr, modulePath.data(), static_cast<DWORD>(modulePath.size()));
     CHECK(copied > 0 && copied < modulePath.size());
     const std::string executable(modulePath.data(), copied);
     const std::string baseName = executable.substr(executable.find_last_of("\\/") + 1);
+    CHECK(CSystem::processName(::GetCurrentProcessId()) == baseName);
+    std::vector<wchar_t> wideModule(32768);
+    const DWORD wideLength = ::GetModuleFileNameW(nullptr, wideModule.data(), static_cast<DWORD>(wideModule.size()));
+    CHECK(wideLength > 0 && wideLength < wideModule.size());
+    const std::wstring wideExecutable(wideModule.data(), wideLength);
+    const std::wstring wideBase = wideExecutable.substr(wideExecutable.find_last_of(L"\\/") + 1);
+    CHECK(CSystem::processNameW(::GetCurrentProcessId()) == wideBase);
+    const std::vector<uint32_t> wideMatches = CSystem::processPid(wideBase);
+    CHECK(std::find(wideMatches.begin(), wideMatches.end(), ::GetCurrentProcessId()) != wideMatches.end());
+    CHECK(CSystem::processFirstPid(wideBase) != 0);
     const std::vector<std::string> modules = CSystem::processMountDll(::GetCurrentProcessId());
     CHECK(std::find(modules.begin(), modules.end(), baseName) != modules.end());
     uint64_t monitor = CSystem::openProcessMonitor(CSystem::currentProcessPid());
@@ -552,7 +722,7 @@ static bool CheckChildExit(uint32_t pid, uint64_t& monitor, int32_t expected)
     int32_t code = -1;
     const bool correct = monitor != 0 && pid != 0 && ::GetProcessId(process) == pid &&
         ::WaitForSingleObject(process, 10000) == WAIT_OBJECT_0 &&
-        CSystem::pollProcessMonitor(monitor, code) == 1 && code == expected;
+        CSystem::pollProcessMonitor(monitor, code) == 1 && code == expected && CSystem::processDefinitelyExited(pid);
     CSystem::closeProcessMonitor(monitor);
     return correct && monitor == 0;
 }
@@ -702,29 +872,44 @@ int main(int argc, char** argv) try
         return std::feof(stdin) ? 0 : 1;
     }
 #endif
-    const LibraryTestCase cases[] = {
-        {1, false, TestCommon},
+    const CSystemCase cases[] = {
+        {CSystemCaseCommon, false, "纯工具", "数组回滚、路径、时间单位和参数符合独立预期", TestCommon},
 #if CSYSTEM_HAS_NATIVE_API
-        {2, false, TestNative},
+        {CSystemCaseNative, false, "原生系统与文件", "进程位数、系统资源、文件内容和句柄状态与独立观察一致", TestNative},
 #endif
-        {3, false, RunSystemInterfaceTests},
-        {4, false, TestPriority},
+        {CSystemCaseInterfaces, false, "接口组合", "目录枚举、改名、复制和迁移保留预期字节及属性", RunSystemInterfaceTests},
+        {CSystemCasePriority, false, "线程调度", "等级及系统回读结果一致，未生效时返回对应状态", TestPriority},
 #if CSYSTEM_HAS_NATIVE_API
-        {5, false, []() -> int { return TestSleep(false); }},
-        {6, false, RunSystemEntropyTests},
-        {7, true, RunSystemConcurrentTests},
+        {CSystemCaseSleep, false, "短等待", "预热后的累计等待达到下界", []() -> int { return TestSleep(false); }},
+        {CSystemCaseEntropy, false, "系统熵源", "有效请求成功，越界请求保留完整缓冲区", RunSystemEntropyTests},
+        {CSystemCaseConcurrent, true, "并发身份", "八个线程的身份稳定且独立，全部 UUID 互异", RunSystemConcurrentTests},
 #endif
 #if CSYSTEM_HAS_DESKTOP_API
-        {8, false, []() -> int { return SystemLeaseAudit() ? 0 : 1; }},
+        {CSystemCaseLease, false, "进程租约", "竞争、就绪、释放与重试符合租约状态", []() -> int { return SystemLeaseAudit() ? 0 : 1; }},
 #endif
 #if CSYSTEM_HAS_NATIVE_API && (!defined(__APPLE__) || !TARGET_OS_IPHONE)
-        {9, false, TestCommand},
+        {CSystemCaseCommand, false, "命令执行", "输出字节和退出码与子进程约定一致", TestCommand},
 #endif
 #ifdef _WIN32
-        {10, false, TestChildProcesses},
+        {CSystemCaseChild, false, "子进程与日志", "启动参数、排他日志、输出字节和监视退出码一致", TestChildProcesses},
 #endif
     };
-    return LibraryCaseSelection::run(argc, argv, cases);
+    unsigned previous = 0;
+    for (const auto& item : cases)
+    {
+        if (item.id <= previous || item.name == nullptr || *item.name == 0 ||
+            item.expected == nullptr || *item.expected == 0 || item.run == nullptr)
+        {
+            std::fputs("Invalid CSystem test registration\n", stderr);
+            return 1;
+        }
+        previous = item.id;
+    }
+    // 平台调度器选中用例后先输出中文场景和预期，再返回真实入口的退出码。
+    return LibraryCaseSelection::run(argc, argv, cases, [](const CSystemCase& item) -> int {
+        std::printf("[%u] %s - %s\n", static_cast<unsigned>(item.id), item.name, item.expected);
+        return item.run();
+    });
 }
 catch (const std::exception& error)
 {

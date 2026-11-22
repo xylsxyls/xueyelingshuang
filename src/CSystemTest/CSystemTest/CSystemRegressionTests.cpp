@@ -5,6 +5,7 @@
 #include <exception>
 #include <functional>
 #include <iostream>
+#include <memory>
 #if CSYSTEM_HAS_NATIVE_API
 #include <algorithm>
 #include <atomic>
@@ -14,6 +15,85 @@
 #include <sys/time.h>
 #include <unistd.h>
 #endif
+#endif
+
+#if CSYSTEM_HAS_NATIVE_API
+/** 在本进程的独占目录验证环境变更、仓库根路径和版本选择，退出时恢复原环境
+@param [in] root 本轮已创建的临时目录
+@return 可正确看到环境变更并找到预期版本时返回 true
+*/
+static bool CheckCommonProgram(const std::string& root)
+{
+    const char* key = "XUEYELINGSHUANG";
+#ifdef _WIN32
+    std::vector<wchar_t> original(32768);
+    ::SetLastError(ERROR_SUCCESS);
+    const DWORD count = ::GetEnvironmentVariableW(L"XUEYELINGSHUANG", original.data(), static_cast<DWORD>(original.size()));
+    const DWORD readError = ::GetLastError();
+    if (count >= original.size() || (count == 0 && readError != ERROR_SUCCESS && readError != ERROR_ENVVAR_NOT_FOUND))
+    {
+        return false;
+    }
+    const bool present = count != 0 || readError == ERROR_SUCCESS;
+    const auto restore = [&](const char*) {
+        ::SetEnvironmentVariableW(L"XUEYELINGSHUANG", present ? original.data() : nullptr);
+    };
+    const auto setRoot = [&](const std::string& value) { return ::SetEnvironmentVariableA(key, value.c_str()) != FALSE; };
+    const char* suffix = ".exe";
+#else
+    const char* previous = std::getenv(key);
+    const bool present = previous != nullptr;
+    const std::string original = present ? previous : "";
+    const auto restore = [&](const char*) {
+        if (present)
+        {
+            ::setenv(key, original.c_str(), 1);
+        }
+        else
+        {
+            ::unsetenv(key);
+        }
+    };
+    const auto setRoot = [&](const std::string& value) { return ::setenv(key, value.c_str(), 1) == 0; };
+    const char* suffix = "";
+#endif
+    std::unique_ptr<const char, decltype(restore)> environment(key, restore);
+    const std::string directory = root + "/common";
+    if (!CSystem::CreateDir(directory))
+    {
+        return false;
+    }
+    const std::string older = directory + "/CSystemLookup1.0" + suffix;
+#ifdef _WIN32
+    const std::string newer = directory + "/CSystemLookup2.5.EXE";
+#else
+    const std::string newer = directory + "/CSystemLookup2.5";
+    const std::string literal = directory + "/part\\CSystemLookup9.9";
+    CSystem::saveFile("different basename", literal);
+#endif
+    const std::string numberOnly = directory + "/42.0" + suffix;
+    CSystem::saveFile("no prefix", numberOnly);
+    CSystem::saveFile("older", older);
+    CSystem::saveFile("newer", newer);
+    const bool filesReady = CSystem::readFile(older) == "older" && CSystem::readFile(newer) == "newer";
+    const bool withoutSlash = setRoot(root) && CSystem::GetEnvironment(key) == root &&
+        CSystem::readFile(CSystem::commonFile("CSystemLookup")) == "newer";
+    const bool withSlash = setRoot(root + "/") && CSystem::GetEnvironment(key) == root + "/" &&
+        CSystem::readFile(CSystem::commonFile("CSystemLookup")) == "newer";
+    const bool rejectsEmpty = CSystem::commonFile("").empty();
+    const bool removedOlder = CSystem::deleteFile(older.c_str());
+    const bool removedNewer = CSystem::deleteFile(newer.c_str());
+    const bool removedNumber = CSystem::deleteFile(numberOnly.c_str());
+#ifndef _WIN32
+    const bool removedLiteral = CSystem::deleteFile(literal.c_str());
+    if (!removedLiteral)
+    {
+        return false;
+    }
+#endif
+    const bool removedDirectory = CSystem::DestroyDir(directory);
+    return filesReady && withoutSlash && withSlash && rejectsEmpty && removedOlder && removedNewer && removedNumber && removedDirectory;
+}
 #endif
 
 /** 验证本进程的系统接口，文件操作限制在本轮新建的独占目录
@@ -97,6 +177,12 @@ int RunSystemInterfaceTests()
         return 1;
     }
     check(CSystem::DirOrFileExist(root), "CSystem DirOrFileExist dir");
+    const std::string utf8Parent = CSystem::joinPath(root, "nested-dirs");
+    const std::string utf8Leaf = CSystem::joinPath(utf8Parent, "leaf");
+    check(CSystem::createDirectoriesUtf8(TestPathUtf8(utf8Leaf)) && CSystem::DirOrFileExist(utf8Leaf) &&
+        CSystem::createDirectoriesUtf8(TestPathUtf8(utf8Leaf)), "UTF-8 nested directories exist and can be requested twice");
+    check(CSystem::DestroyDir(utf8Leaf) && CSystem::DestroyDir(utf8Parent), "remove UTF-8 directory fixture");
+    check(CheckCommonProgram(root), "current environment and versioned program with both root spellings");
     const std::string invalidRoot = root + std::string("\0tail", 5);
     check(!CSystem::DirOrFileExist(invalidRoot) && !CSystem::DestroyDir(invalidRoot) &&
         CSystem::DirOrFileExist(root), "embedded NUL never observes or removes a different directory");
@@ -147,15 +233,15 @@ int RunSystemInterfaceTests()
         "set independent subsecond modification times");
 #endif
     uint64_t length = 0, dataStamp = 0, emptyStamp = 0, observed = 0;
-    check(CSystem::fileStampUtf8(sourceData, &length, &dataStamp) && length == 17 &&
-        CSystem::fileStampUtf8(sourceEmpty, &length, &emptyStamp) && length == 0, "record source modification times");
+    check(CSystem::fileStampUtf8(TestPathUtf8(sourceData), &length, &dataStamp) && length == 17 &&
+        CSystem::fileStampUtf8(TestPathUtf8(sourceEmpty), &length, &emptyStamp) && length == 0, "record source modification times");
     check(!CSystem::migrateDirectory(migrationSource, CSystem::joinPath(migrationSource, "child"), migrationError), "CSystem migrateDirectory rejects overlap");
     check(!CSystem::DirOrFileExist(CSystem::joinPath(migrationSource, "child")) && CSystem::readFile(CSystem::joinPath(migrationSource, "data.bin")) == "migration content", "CSystem migrateDirectory overlap has no side effect");
     check(CSystem::migrateDirectory(migrationSource, migrationTarget, migrationError), "CSystem migrateDirectory merges matching content");
     check(!CSystem::DirOrFileExist(migrationSource) && CSystem::readFile(CSystem::joinPath(migrationTarget, "data.bin")) == "migration content", "CSystem migrateDirectory verifies bytes before source removal");
     check(CSystem::DirOrFileExist(CSystem::joinPath(migrationTarget, "empty.bin")), "CSystem migrateDirectory preserves empty file");
-    check(CSystem::fileStampUtf8(CSystem::joinPath(migrationTarget, "data.bin"), &length, &observed) &&
-        observed == dataStamp && CSystem::fileStampUtf8(CSystem::joinPath(migrationTarget, "empty.bin"), &length, &observed) &&
+    check(CSystem::fileStampUtf8(TestPathUtf8(CSystem::joinPath(migrationTarget, "data.bin")), &length, &observed) &&
+        observed == dataStamp && CSystem::fileStampUtf8(TestPathUtf8(CSystem::joinPath(migrationTarget, "empty.bin")), &length, &observed) &&
         observed == emptyStamp, "migration preserves modification time on merge and copy");
     check(!CSystem::createDirectories(CSystem::joinPath(migrationTarget, "data.bin")), "CSystem createDirectories rejects file");
     check(CSystem::createDirectories(migrationSource), "CSystem migration conflict source");
@@ -215,11 +301,45 @@ int RunSystemInterfaceTests()
     check(CSystem::readFile(emptyFilePath) == "hello system", "copy with overwrite replaces existing bytes");
     CSystem::saveFile("", emptyFilePath);
     check(CSystem::DirOrFileExist(emptyFilePath) && CSystem::readFile(emptyFilePath).empty(), "CSystem empty readFile");
+    CSystem::saveFile("previous destination", renamePath);
+#ifdef _WIN32
+    check(!CSystem::rename(filePath, renamePath) && CSystem::readFile(filePath) == "hello system" &&
+        CSystem::readFile(renamePath) == "previous destination", "Windows rename preserves both existing files");
+    check(CSystem::deleteFile(renamePath.c_str()), "remove existing rename destination");
+#else
+    check(CSystem::rename(filePath, renamePath) && !CSystem::DirOrFileExist(filePath) &&
+        CSystem::readFile(renamePath) == "hello system", "POSIX rename replaces the existing file");
+    check(CSystem::rename(renamePath, filePath), "restore source before ordinary rename");
+#endif
     check(CSystem::rename(filePath, renamePath), "CSystem rename file");
     check(CSystem::readFile(renamePath) == "hello system", "CSystem read renamed file");
     std::vector<std::string> findFiles = CSystem::findFilePath(root, 1, "rename.txt");
     check(findFiles.size() == 1 && CSystem::canonicalPath(findFiles.front()) == CSystem::canonicalPath(renamePath),
         "CSystem findFilePath exact result");
+    // 从输出列表中借用两个输入，与调用前已知的实际文件比较。
+    std::vector<std::string> retryPaths;
+    retryPaths.push_back(root);
+    retryPaths.push_back("rename.txt");
+    const auto retried = CSystem::findFilePath(retryPaths[0], 1, retryPaths[1], nullptr, &retryPaths);
+    check(retryPaths.empty() && retried.size() == 1 &&
+        CSystem::canonicalPath(retried[0]) == CSystem::canonicalPath(renamePath),
+        "reuse prior unvisited entries as root and exact filename");
+    const std::string missingDirectory = CSystem::joinPath(root, "missing-retry");
+    CSystem::findFilePath(missingDirectory, 3, "", nullptr, &retryPaths);
+    const bool recorded = retryPaths.size() == 1;
+    check(recorded, "record unavailable enumeration root");
+    if (recorded)
+    {
+        check(CSystem::CreateDir(missingDirectory), "prepare previously unavailable directory");
+        const std::string entry = CSystem::joinPath(missingDirectory, "retry.txt");
+        CSystem::saveFile("retry", entry);
+        const auto found = CSystem::findFilePath(retryPaths.front(), 2, "txt", nullptr, &retryPaths);
+        check(retryPaths.empty() && found.size() == 1 &&
+            CSystem::canonicalPath(found[0]) == CSystem::canonicalPath(entry),
+            "retry a previously unavailable root and replace the diagnostics");
+        CSystem::deleteFile(entry.c_str());
+        CSystem::DestroyDir(missingDirectory);
+    }
     const std::string nested = CSystem::joinPath(root, "nested");
     const std::string concurrentDir = CSystem::joinPath(root, "mkdir-race");
     const bool createdTogether = RunSystemWorkers(4, [&concurrentDir](size_t) -> bool {
@@ -436,6 +556,55 @@ static int __cdecl LeaseMemoryHook(int operation, void*, size_t, int block, long
     }
     return 1;
 }
+
+/** 逐个拒绝结果构造时的普通堆分配，并检查每次调用前后的快照句柄数
+@param [in] query 已预热的同步查询，返回结果在调用期间销毁
+@param [in] positions 从首次普通分配起覆盖的位置数
+@return 观察到 bad_alloc 的位置数，句柄泄漏或异常类型不符时返回 -1
+*/
+static int32_t CheckSnapshotAllocations(const std::function<void()>& query, uint32_t positions)
+{
+    int32_t failures = 0;
+    query();
+    for (uint32_t position = 0; position < positions; ++position)
+    {
+        DWORD before = 0, after = 0;
+        if (!::GetProcessHandleCount(::GetCurrentProcess(), &before))
+        {
+            return -1;
+        }
+        s_leaseRemaining = position;
+        s_leaseRejected = 0;
+        const _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(LeaseMemoryHook);
+        bool rejected = false;
+        bool unexpected = false;
+        try
+        {
+            query();
+        }
+        catch (const std::bad_alloc&)
+        {
+            rejected = true;
+        }
+        catch (...)
+        {
+            unexpected = true;
+        }
+        _CrtSetAllocHook(previous);
+        if (unexpected || rejected != (s_leaseRejected != 0) ||
+            !::GetProcessHandleCount(::GetCurrentProcess(), &after) || before != after)
+        {
+            std::fprintf(stderr, "snapshot allocation %u: rejected=%u, handles %lu -> %lu\n",
+                position, s_leaseRejected, before, after);
+            return -1;
+        }
+        if (rejected)
+        {
+            ++failures;
+        }
+    }
+    return failures;
+}
 #endif
 
 /** 使用测试专属名称验证租约取得失败回滚、就绪及释放，不操作正式网关租约
@@ -453,12 +622,31 @@ bool SystemLeaseAudit()
     const _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(LeaseMemoryHook);
     try { warm.resize(4096); } catch (...) {}
     _CrtSetAllocHook(previous);
+    const DWORD self = ::GetCurrentProcessId();
+    const std::string name = CSystem::processName(self);
+    const std::wstring wideName = CSystem::processNameW(self);
+    LEASE_CHECK(!name.empty() && !wideName.empty());
+    LEASE_CHECK(!CSystem::processMountDll(self).empty());
+    LEASE_CHECK(CheckSnapshotAllocations([&]() { CSystem::processMountDll(self); }, 6) == 6);
+    LEASE_CHECK(CheckSnapshotAllocations([&]() { CSystem::processPid(name); }, 6) > 0);
+    LEASE_CHECK(CheckSnapshotAllocations([&]() { CSystem::processPid(wideName); }, 6) > 0);
+    LEASE_CHECK(CheckSnapshotAllocations([&]() { CSystem::processFirstPid(name); }, 2) >= 0);
+    LEASE_CHECK(CheckSnapshotAllocations([&]() { CSystem::processFirstPid(wideName); }, 2) >= 0);
+    LEASE_CHECK(CheckSnapshotAllocations([&]() { CSystem::processName(self); }, 2) >= 0);
+    LEASE_CHECK(CheckSnapshotAllocations([&]() { CSystem::processNameW(self); }, 2) >= 0);
 #endif
 #ifdef _WIN32
     // 本进程的编号已独占命名空间，快照前避免初始化 RPC 的 UUID 后台工作。
     const std::string prefix = "CSystemTestLease." + std::to_string(CSystem::currentProcessPid());
 #else
     const std::string prefix = "CSystemTestLease." + CSystem::uuid(0);
+    const std::string role = prefix + ".fifo";
+    const uint32_t pid = CSystem::currentProcessPid();
+    const std::string marker = "/tmp/xyls." + role + ".ready." + std::to_string(pid);
+    LEASE_CHECK(::mkfifo(marker.c_str(), 0600) == 0);
+    const bool ready = CSystem::isProcessLeaseReady(role, pid);
+    const bool removed = ::unlink(marker.c_str()) == 0;
+    LEASE_CHECK(!ready && removed);
 #endif
     for (uint32_t position = 0; position < 32; ++position)
     {
