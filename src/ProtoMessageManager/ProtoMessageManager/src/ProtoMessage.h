@@ -128,24 +128,24 @@ public:
     */
     bool serializeTo(void* output, size_t capacity, size_t& written) const;
 
-    /** 选择历史链式写入键；msg[dataKey]=value或msg[key][dataKey]=value
-    @param [in] key 键值，-1保留为历史未选择标记
+    /** 选择链式写入键；msg[dataKey]=value或msg[key][dataKey]=value
+    @param [in] key 键值，-1保留为未选择标记
     @return 当前实例，完成一次写入后重置选择状态
     */
     ProtoMessage& operator[](const int32_t& key);
 
     /** 向已选容器写值；返回当前对象引用，不复制整条消息
     @param [in] value 本次借用，深拷贝
-    @return 当前实例，成功写入后重置键选择
+    @return 当前实例；写入前即消耗已选键，分配失败后重试需重新选键
     */
     ProtoMessage& operator=(const Variant& value);
 
-    /** 向已选列表尾部追加，未选择时使用全局列表
+    /** 向已选列表尾部追加，未选择时使用全局列表；分配失败不改变列表
     @param [in] value 本次借用，深拷贝
     */
     void push_back(const Variant& value);
 
-    /** 向已选列表头部追加，未选择时使用全局列表
+    /** 向已选列表头部追加，未选择时使用全局列表；分配失败不改变列表
     @param [in] value 本次借用，深拷贝
     */
     void push_front(const Variant& value);
@@ -155,7 +155,7 @@ public:
     */
     void setTable(const std::vector<std::vector<Variant>>& table);
 
-    /** 设置响应码；分配失败不提交新码，成功清除解析失败标记
+    /** 设置响应码；错误文本复制完成后才覆盖当前响应状态，分配失败保留原值
     @param [in] code 业务响应码
     @param [in] errorMsg 完整错误文本，可含NUL
     */
@@ -186,7 +186,7 @@ public:
     */
     bool getKeyValue(int32_t dataKey, Variant& value, int32_t key = PROTO_GLOBAL) const;
 
-    /** 向指定列表追加值
+    /** 向指定列表追加值，分配失败保留原内容及分组存在性
     @param [in] value 本次借用，深拷贝
     @param [in] key 容器键
     */
@@ -283,6 +283,13 @@ public:
     void clearTable();
 
 private:
+    /** 写入一个列表元素，新分组与首元素一起提交，分配异常由调用方处理
+    @param [in] key 列表分组键
+    @param [in] value 本次同步借用并深拷贝，允许来自已有列表
+    @param [in] front 为true时插到头部，否则插到尾部
+    */
+    void insertListValue(int32_t key, const Variant& value, bool front);
+
     /** 无分配提交完整消息所有权
     @param [in,out] other 与当前消息交换，借用至本次结束
     */
@@ -334,8 +341,8 @@ private:
     int32_t m_code;
     // 区分未设置响应字段和显式设置零响应码，保留既有线格式。
     bool m_hasCode;
-    // 历史链式接口的容器键，-1为未选择。
+    // 链式接口的容器键，-1为未选择。
     int32_t m_key;
-    // 历史链式接口的数据键，-1为未选择。
+    // 链式接口的数据键，-1为未选择。
     int32_t m_dataKey;
 };

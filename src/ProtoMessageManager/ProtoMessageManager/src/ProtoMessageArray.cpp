@@ -48,8 +48,8 @@ bool ProtoMessageArray::append(const Variant& value)
     try
     {
         // 在扩容前复制来自本数组的借用，避免其地址随扩容失效
-        Variant copy(value);
-        return append(std::move(copy));
+        m_values.push_back(value);
+        return true;
     }
     catch (...)
     {

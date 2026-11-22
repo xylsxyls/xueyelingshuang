@@ -1431,6 +1431,13 @@ set(SDK_ROOT "${native_default_sdk}" CACHE PATH "Target SDK prepared by before/v
 get_filename_component(SDK_ROOT "${SDK_ROOT}" ABSOLUTE)
 set(native_source "${CMAKE_CURRENT_SOURCE_DIR}/../ProtoMessageManager/src")
 file(GLOB native_sources CONFIGURE_DEPENDS "${native_source}/*.c" "${native_source}/*.cpp" "${native_source}/*.cc" "${native_source}/*.cxx")
+# before 为独立目标 SDK 准备与目标运行库匹配的生成文件。
+file(STRINGS "${SDK_ROOT}/include/protobuf/google/protobuf/stubs/common.h" protobuf_version
+    REGEX "^#define GOOGLE_PROTOBUF_VERSION [0-9]+$")
+if(protobuf_version MATCHES " 3019003$")
+    list(FILTER native_sources EXCLUDE REGEX "/ProtoMessage[.]pb[.]cc$")
+    list(APPEND native_sources "${SDK_ROOT}/include/ProtoMessageManager/protoc-3.19.3/ProtoMessage.pb.cc")
+endif()
 if(NOT native_sources)
     message(FATAL_ERROR "No implementation sources found")
 endif()

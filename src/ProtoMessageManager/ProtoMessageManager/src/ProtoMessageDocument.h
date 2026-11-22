@@ -42,7 +42,7 @@ public:
 
     /** 解析与本对象同结构的protobuf消息，失败清空旧内容；不抛异常
     @param [in] data 本次借用，允许来自旧字段；通用空消息允许nullptr和零长度，专用结构拒绝空帧
-    @param [in] size 完整帧，最大1MiB；最多65536个组/行/值节点
+    @param [in] size 完整帧，最大1MiB；通用消息最多65536个组/行/值节点，专用结构按各自节点预算校验
     @return 完整消费输入；protobuf合法未知字段按协议处理；规则表成功时采用线上列数
     */
     virtual bool from(const void* data, size_t size) = 0;
@@ -54,7 +54,7 @@ public:
     virtual bool serializedSize(size_t& size) const = 0;
 
     /** 先验证整包再写入，容量不足不修改输出；内部使用临时protobuf对象
-    @param [out] output 非空独占缓冲，不能与消息内容或written重叠
+    @param [out] output 独占缓冲，编码长度为0时可为空；不能与消息内容或written重叠
     @param [in] capacity 完整容量
     @param [out] written 成功为完整长度，失败0
     @return 完整编码成功

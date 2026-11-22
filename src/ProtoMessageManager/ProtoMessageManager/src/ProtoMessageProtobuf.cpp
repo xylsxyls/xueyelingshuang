@@ -175,7 +175,13 @@ bool ProtoMessageProtobuf::getValues(const pt::ProtoValues& input, std::vector<V
     {
         return false;
     }
+    // 压缩 INIT 序列只记录个数；相同长度的旧元素也必须恢复为默认值。
+    values.clear();
     values.resize(count);
+    if (input.has_emptyvalues())
+    {
+        return true;
+    }
     for (size_t i = 0; i < count; ++i)
     {
         const int32_t index = static_cast<int32_t>(i);
@@ -214,7 +220,11 @@ bool ProtoMessageProtobuf::parse(const void* data, size_t size, google::protobuf
     }
     const uint8_t empty = 0;
     google::protobuf::io::CodedInputStream stream(size == 0 ? &empty : static_cast<const uint8_t*>(data), static_cast<int32_t>(size));
+#if GOOGLE_PROTOBUF_VERSION == 3019003
+    stream.SetTotalBytesLimit(1048576);
+#else
     stream.SetTotalBytesLimit(1048576, 1048576);
+#endif
     stream.SetRecursionLimit(16);
     return message.ParseFromCodedStream(&stream) && stream.ConsumedEntireMessage();
 }

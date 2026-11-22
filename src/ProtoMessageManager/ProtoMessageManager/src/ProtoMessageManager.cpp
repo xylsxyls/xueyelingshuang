@@ -49,7 +49,7 @@ void ProtoMessageManager::release(ProtoMessageDocument* message)
 //        typedef std::unique_ptr<ProtoMessageDocument, void (*)(ProtoMessageDocument*)> MessageOwner;
 //        MessageOwner request(ProtoMessageManager::create(PROTO_MESSAGE_RECORD), &ProtoMessageManager::release);
 //        MessageOwner received(ProtoMessageManager::create(PROTO_MESSAGE_RECORD), &ProtoMessageManager::release);
-//        if (!request || !received)
+//        if (!request || !received || request->kind() != PROTO_MESSAGE_RECORD)
 //        {
 //            return 1;
 //        }
@@ -59,7 +59,7 @@ void ProtoMessageManager::release(ProtoMessageDocument* message)
 //        const char product[] = "LumaPlayer";
 //        if (!fields->reserve(3) || !fields->setValue(1, Variant(uint64_t(10001))) ||
 //            !fields->setBytes(2, product, sizeof(product) - 1, Variant::STRING) ||
-//            !fields->setValue(3, Variant(int32_t(2))))
+//            !fields->setValue(3, Variant(int32_t(2))) || fields->size() != 3)
 //        {
 //            return 1;
 //        }
@@ -67,12 +67,14 @@ void ProtoMessageManager::release(ProtoMessageDocument* message)
 //        // 生产代码在这里通过NetSender发送实际written字节；本例直接交给接收对象
 //        char output[2048];
 //        size_t written = 0;
-//        if (!request->serializeTo(output, sizeof(output), written) || !received->from(output, written))
+//        size_t required = 0;
+//        if (!request->serializedSize(required) || required > sizeof(output) ||
+//            !request->serializeTo(output, sizeof(output), written) || written != required || !received->from(output, written))
 //        {
 //            return 1;
 //        }
 //        const Variant* userId = received->record()->findValue(1);
-//        if (userId == nullptr || userId->type() != Variant::UINT64)
+//        if (userId == nullptr || userId->type() != Variant::UINT64 || static_cast<uint64_t>(*userId) != 10001)
 //        {
 //            return 1;
 //        }
@@ -84,6 +86,11 @@ void ProtoMessageManager::release(ProtoMessageDocument* message)
 //        if (!pageList || !pageList->array()->reserve(3) || !pageList->array()->append(Variant(int32_t(1))) ||
 //            !pageList->array()->append(Variant(int32_t(4))) || !pageList->array()->append(Variant(int32_t(7))) ||
 //            !pageList->serializeTo(output, sizeof(output), written))
+//        {
+//            return 1;
+//        }
+//        const Variant* page = pageList->array()->at(1);
+//        if (page == nullptr || page->type() != Variant::INT32 || static_cast<int32_t>(*page) != 4)
 //        {
 //            return 1;
 //        }
@@ -104,14 +111,14 @@ void ProtoMessageManager::release(ProtoMessageDocument* message)
 //            return 1;
 //        }
 //        const Variant* title = resources->table()->at(0, 1);
-//        if (title == nullptr || title->type() != Variant::STRING)
+//        if (resources->table()->columns() != 2 || title == nullptr || title->type() != Variant::STRING)
 //        {
 //            return 1;
 //        }
 //        std::printf("Table: first=%.*s, rows=%u, bytes=%u\n", static_cast<int>(title->size()), title->data(),
 //            static_cast<unsigned>(resources->table()->rows()), static_cast<unsigned>(written));
 //
-//        // 通用消息：同一消息中组合字段组、列表与响应码，保留旧protobuf格式
+//        // 通用消息：同一消息中组合字段组、列表、表格与响应码
 //        MessageOwner response(ProtoMessageManager::create(PROTO_MESSAGE_GENERAL), &ProtoMessageManager::release);
 //        if (!response)
 //        {
@@ -121,7 +128,26 @@ void ProtoMessageManager::release(ProtoMessageDocument* message)
 //        general->setKeyValue(1, Variant(uint64_t(10001)));
 //        general->addListValue(Variant(int32_t(501)));
 //        general->addListValue(Variant(int32_t(502)));
+//        (*general)[8][3] = Variant("ready");
+//        (*general)[8].push_front(Variant(int32_t(500)));
+//        (*general)[8].push_back(Variant(int32_t(503)));
+//        std::vector<std::vector<Variant>> summary(1);
+//        summary[0].push_back(Variant(int32_t(2)));
+//        general->setKeyTable(summary, 8);
 //        general->setCode(0);
+//        std::string body;
+//        ProtoMessage decoded;
+//        Variant status;
+//        if (!general->toString(body) || !decoded.from(body) || !decoded.getKeyValue(3, status, 8) ||
+//            status.type() != Variant::STRING || decoded.findList(8) == nullptr || decoded.findTable(8) == nullptr ||
+//            decoded.findMap() == nullptr || !decoded.getErrorMessage().empty())
+//        {
+//            return 1;
+//        }
+//        decoded.clearMap();
+//        decoded.clearList();
+//        decoded.clearTable();
+//        received->clear();
 //        if (!response->serializeTo(output, sizeof(output), written))
 //        {
 //            return 1;
@@ -131,7 +157,7 @@ void ProtoMessageManager::release(ProtoMessageDocument* message)
 //    }
 //    catch (...)
 //    {
-//        // 通用类的历史void写入接口及值构造可能分配；智能指针仍负责释放
+//        // 通用类的void写入接口及值构造可能分配；智能指针仍负责释放
 //        std::fprintf(stderr, "Message construction failed\n");
 //        return 2;
 //    }

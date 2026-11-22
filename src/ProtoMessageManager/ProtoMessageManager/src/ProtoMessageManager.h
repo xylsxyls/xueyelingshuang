@@ -14,7 +14,7 @@ public:
     static ProtoMessageDocument* create(ProtoMessageKind kind);
 
     /** 在创建库内释放工厂对象
-    @param [in,out] message create返回的拥有指针，nullptr可用；调用前结束所有借用，返回后原指针不可再用
+    @param [in] message create返回的拥有指针，nullptr可用；调用前结束所有借用，返回后原指针不可再用
     */
     static void release(ProtoMessageDocument* message);
 };

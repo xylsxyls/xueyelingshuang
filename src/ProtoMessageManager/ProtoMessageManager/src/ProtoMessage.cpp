@@ -1,17 +1,6 @@
 ﻿#include "ProtoMessage.h"
-#include "ProtoMessage.pb.h"
 #include "ProtoMessageProtobuf.h"
-#include "google/protobuf/io/coded_stream.h"
 #include <utility>
-#include <cstring>
-
-#if defined(_MSC_VER)
-#if defined(_DEBUG)
-#pragma comment(lib, "libprotobuf-lited.lib")
-#else
-#pragma comment(lib, "libprotobuf-lite.lib")
-#endif
-#endif
 
 const int32_t ProtoMessage::PROTO_ERROR = -2;
 
@@ -97,7 +86,7 @@ void ProtoMessage::push_front(const Variant& value)
     const int32_t key = m_dataKey == -1 ? PROTO_GLOBAL : m_dataKey;
     m_key = -1;
     m_dataKey = -1;
-    m_keyListData[key].push_front(value);
+    insertListValue(key, value, true);
 }
 
 void ProtoMessage::setTable(const std::vector<std::vector<Variant>>& table)
@@ -153,7 +142,21 @@ bool ProtoMessage::getKeyValue(int32_t dataKey, Variant& value, int32_t key) con
 
 void ProtoMessage::addListValue(const Variant& value, const int32_t& key)
 {
-    m_keyListData[key].push_back(value);
+    insertListValue(key, value, false);
+}
+
+void ProtoMessage::insertListValue(int32_t key, const Variant& value, bool front)
+{
+    const auto group = m_keyListData.lower_bound(key);
+    if (group == m_keyListData.end() || group->first != key)
+    {
+        // 先在独立列表内构造首元素，失败时不会留下可查询、可编码的空分组。
+        std::list<Variant> first(1, value);
+        m_keyListData.emplace_hint(group, key, std::move(first));
+        return;
+    }
+    std::list<Variant>& values = group->second;
+    values.insert(front ? values.begin() : values.end(), value);
 }
 
 void ProtoMessage::setKeyMap(const std::map<int32_t, Variant>& mapData, const int32_t& key)
@@ -269,21 +272,12 @@ bool ProtoMessage::from(const void* data, size_t size)
 {
     try
     {
-        if (size > 1048576 || (data == nullptr && size != 0))
+        pt::ProtoMessage parsed;
+        if (!ProtoMessageProtobuf::parse(data, size, parsed))
         {
             return fail();
         }
         ProtoMessage decoded;
-        pt::ProtoMessage parsed;
-        const uint8_t empty = 0;
-        google::protobuf::io::CodedInputStream input(
-            size == 0 ? &empty : static_cast<const uint8_t*>(data), static_cast<int32_t>(size));
-        input.SetTotalBytesLimit(1048576, 1048576);
-        input.SetRecursionLimit(16);
-        if (!parsed.ParseFromCodedStream(&input) || !input.ConsumedEntireMessage())
-        {
-            return fail();
-        }
         size_t entries = 0;
         for (int32_t index = 0; index < parsed.keymapdata_size(); ++index)
         {
@@ -506,13 +500,13 @@ const std::vector<std::vector<Variant>>* ProtoMessage::findTable(int32_t key) co
     return group == m_keyTableData.end() ? nullptr : &group->second;
 }
 
-/** 将原始Variant填入历史protobuf值，保留原有字节约定
+/** 将原始Variant填入通用protobuf值，保留原有字节约定
 @param [in] value 稳定借用
 @param [out] output 新建的生成消息
 @param [in,out] bytes 累计原始正文预算
 @return 不超过1MiB且字段合法
 */
-static bool PutLegacyValue(const Variant& value, pt::VariantData& output, size_t& bytes)
+static bool PutGeneralValue(const Variant& value, pt::VariantData& output, size_t& bytes)
 {
     if (!ProtoMessageProtobuf::validValue(value) || value.size() > 1048576 - bytes)
     {
@@ -588,7 +582,7 @@ static bool BuildGeneral(const std::map<int32_t, std::map<int32_t, Variant>>& ma
             {
                 field->set_key(value->first);
             }
-            if (!PutLegacyValue(value->second, *field->mutable_value(), bytes))
+            if (!PutGeneralValue(value->second, *field->mutable_value(), bytes))
             {
                 return false;
             }
@@ -610,7 +604,7 @@ static bool BuildGeneral(const std::map<int32_t, std::map<int32_t, Variant>>& ma
         data->mutable_value()->Reserve(static_cast<int32_t>(group->second.size()));
         for (auto value = group->second.begin(); value != group->second.end(); ++value)
         {
-            if (!PutLegacyValue(*value, *data->add_value(), bytes))
+            if (!PutGeneralValue(*value, *data->add_value(), bytes))
             {
                 return false;
             }
@@ -642,7 +636,7 @@ static bool BuildGeneral(const std::map<int32_t, std::map<int32_t, Variant>>& ma
             list->mutable_value()->Reserve(static_cast<int32_t>(values.size()));
             for (size_t column = 0; column < values.size(); ++column)
             {
-                if (!PutLegacyValue(values[column], *list->add_value(), bytes))
+                if (!PutGeneralValue(values[column], *list->add_value(), bytes))
                 {
                     return false;
                 }

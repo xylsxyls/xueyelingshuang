@@ -1,5 +1,10 @@
 ﻿#pragma once
+#include <google/protobuf/stubs/common.h>
+#if GOOGLE_PROTOBUF_VERSION == 3019003
+#include "ProtoMessageManager/protoc-3.19.3/ProtoMessage.pb.h"
+#else
 #include "ProtoMessage.pb.h"
+#endif
 #include "Variant/VariantAPI.h"
 #include <vector>
 
@@ -44,7 +49,7 @@ public:
 
     /** 完整恢复序列到独占容器，先检查数量再分配
     @param [in] input 已解析序列
-    @param [out] values 本次临时容器，失败时由调用者丢弃
+    @param [out] values 本次独占的临时容器，可含旧元素，成功后完整替换；失败时由调用者丢弃
     @return 类型、节点数和分配合法
     */
     static bool getValues(const pt::ProtoValues& input, std::vector<Variant>& values);
