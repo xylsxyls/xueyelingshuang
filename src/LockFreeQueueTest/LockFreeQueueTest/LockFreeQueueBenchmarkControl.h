@@ -24,8 +24,6 @@ public:
     std::atomic<size_t> m_ready;
     // Number of producers that completed their loop.
     std::atomic<size_t> m_done;
-    // Last producer completion timestamp in benchmark nanoseconds.
-    std::atomic<uint64_t> m_ended;
     // Total rejected attempts; all retries remain inside the timed interval.
     std::atomic<uint64_t> m_refused;
     // Subset of rejected attempts caused by an actual capacity limit.

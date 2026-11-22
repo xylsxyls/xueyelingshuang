@@ -36,6 +36,18 @@ public:
     */
     static double median(std::vector<double> values);
 
+    /** Describe repeated observed ranges on the same metric, including touching endpoints
+    @param [in] leftCount Number of measured samples in the first group
+    @param [in] leftMin Smallest observed first-group value
+    @param [in] leftMax Largest observed first-group value
+    @param [in] rightCount Number of measured samples in the comparison group
+    @param [in] rightMin Smallest observed comparison value
+    @param [in] rightMax Largest observed comparison value
+    @return Sample-range label for the export, independent of whether larger values are preferable
+    */
+    static const char* rangeEvidence(size_t leftCount, double leftMin, double leftMax,
+        size_t rightCount, double rightMin, double rightMax);
+
     /** Derive throughput and separately charged maintenance cost
     @param [in] sample Valid workload row
     @param [in] extraMaintenanceNs Nonnegative maintenance outside the timed loop
@@ -62,7 +74,7 @@ private:
 
     /** Independently enumerate the retained performance workload contract
     @param [in] suite 35, 38, 40 or extra
-    @param [in] reference Original implementation without pool APIs
+    @param [in] reference std::list and mutex comparison without queue pool APIs
     @return Scenario/cycle keys mapped to exact item or operation counts
     */
     static std::map<std::string, double> scenarios(const std::string& suite, bool reference);

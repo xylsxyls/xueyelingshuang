@@ -1026,8 +1026,8 @@ bool LockFreeQueueTests::exceptions()
         LFQ_CHECK(fallback.configurePool(config) == LockFreeQueueSuccess && fallback.tryInit() == LockFreeQueueSuccess);
         LockFreeQueueTestMove input(41), output(0);
         LockFreeQueueTestThrowMove copyInput(42), copyOutput(0);
-        movable.tryPush(input, true, false);
-        fallback.tryPush(copyInput, true, false);
+        LFQ_CHECK(movable.tryPush(input, true, false) == LockFreeQueueSuccess);
+        LFQ_CHECK(fallback.tryPush(copyInput, true, false) == LockFreeQueueSuccess);
         LFQ_CHECK(input.m_value == 41 && copyInput.m_value == 42);
         LFQ_CHECK(movable.pop(&output) && output.m_value == 41 && movable.empty());
         LFQ_CHECK(fallback.pop(&copyOutput) && copyOutput.m_value == 42 && fallback.empty());
@@ -1043,7 +1043,7 @@ bool LockFreeQueueTests::exceptions()
         const LockFreeQueueResult pushed = queue.tryPush(source, true, false);
         LockFreeQueueTestValue::m_throwCopy = false;
         LFQ_CHECK(pushed == LockFreeQueueConstructionFailure && queue.empty() && queue.poolStatistics().usedNodes == 1);
-        queue.tryPush(source, true, false);
+        LFQ_CHECK(queue.tryPush(source, true, false) == LockFreeQueueSuccess);
         LockFreeQueueTestValue::m_throwAssign = true;
         caught = false;
         try
@@ -3421,6 +3421,8 @@ bool LockFreeQueueTests::cooperativeProgress()
 bool LockFreeQueueTests::configuration()
 {
     // Both live queues must keep their own copy when the caller reuses its config.
+    size_t notifications = 0, addedCapacity = 0;
+    uint64_t lastGrowth = 0;
     LockFreeQueue<int32_t> fixed(false), growing(false);
     LockFreeQueuePoolConfig limits;
     limits.initialCapacity = 2;
@@ -3428,12 +3430,22 @@ bool LockFreeQueueTests::configuration()
     limits.maximumProducers = 1;
     LFQ_CHECK(fixed.configurePool(limits) == LockFreeQueueSuccess);
     limits.maximumCapacity = 4;
+    limits.m_onGrowth = [&](size_t amount, uint64_t serial)
+    {
+        ++notifications;
+        addedCapacity += amount;
+        lastGrowth = serial;
+    };
     LFQ_CHECK(growing.configurePool(limits) == LockFreeQueueSuccess);
+    limits.m_onGrowth = nullptr;
     limits.maximumCapacity = 1;
     LFQ_CHECK(growing.configurePool(limits) == LockFreeQueueInvalidConfiguration);
     for (size_t generation = 0; generation < 2; ++generation)
     {
+        notifications = addedCapacity = 0;
+        lastGrowth = 0;
         LFQ_CHECK(fixed.tryInit() == LockFreeQueueSuccess && growing.tryInit() == LockFreeQueueSuccess);
+        LFQ_CHECK(notifications == 0);
         LFQ_CHECK(fixed.tryPush(10) == LockFreeQueueSuccess && fixed.tryPush(11) == LockFreeQueueCapacityLimit);
         LFQ_CHECK(growing.tryPush(20) == LockFreeQueueSuccess && growing.tryPush(21) == LockFreeQueueSuccess);
         LFQ_CHECK(fixed.poolStatistics().currentCapacity == 2);
@@ -3441,10 +3453,19 @@ bool LockFreeQueueTests::configuration()
         LFQ_CHECK(fixed.pop(&value) && value == 10 && fixed.empty());
         fixed.destroy();
         const size_t capacity = growing.poolStatistics().currentCapacity;
-        LFQ_CHECK(capacity > 2 && capacity <= 4);
+        LFQ_CHECK(capacity > 2 && capacity <= 4 && notifications == 1 &&
+            addedCapacity == capacity - 2 && lastGrowth == growing.poolStatistics().successfulGrowCount);
         LFQ_CHECK(growing.pop(&value) && value == 20 && growing.pop(&value) && value == 21 && growing.empty());
         growing.destroy();
     }
+    // Clear the notification, force growth again and verify the old callback stays detached.
+    limits.maximumCapacity = 4;
+    LFQ_CHECK(growing.configurePool(limits) == LockFreeQueueSuccess && growing.tryInit() == LockFreeQueueSuccess);
+    LFQ_CHECK(growing.tryPush(30) == LockFreeQueueSuccess && growing.tryPush(31) == LockFreeQueueSuccess);
+    LFQ_CHECK(growing.poolStatistics().successfulGrowCount == 1 && notifications == 1);
+    int32_t deliveredValue = 0;
+    LFQ_CHECK(growing.pop(&deliveredValue) && deliveredValue == 30 && growing.pop(&deliveredValue) &&
+        deliveredValue == 31 && growing.empty());
     // Switch the same instance from a finite limit to -1, then restore its original limit.
     limits.maximumCapacity = -1;
     LFQ_CHECK(fixed.configurePool(limits) == LockFreeQueueSuccess && fixed.tryInit() == LockFreeQueueSuccess);

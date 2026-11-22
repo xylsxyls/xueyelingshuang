@@ -823,6 +823,10 @@ void LockFreeQueueTestTool::selfTest() const
     check(LockFreeQueueTestWhitebox::strip("a\n#ifdef LOCK_FREE_QUEUE_TESTING\n#if X\ntest\n#endif\n#else\nb\n#endif\nc") == "a\nb\nc", "nested reversible patch");
     check(LockFreeQueueTestResults::median({1, 9, 3, 7}) == 5, "even median");
     check(LockFreeQueueTestResults::median({9, 1, 3}) == 3, "odd median");
+    check(std::string(LockFreeQueueTestResults::rangeEvidence(1, 2, 2, 3, 4, 6)) == "single_sample", "one sample cannot establish spread");
+    check(std::string(LockFreeQueueTestResults::rangeEvidence(3, 2, 4, 3, 4, 6)) == "overlapping_ranges", "touching sample ranges overlap");
+    check(std::string(LockFreeQueueTestResults::rangeEvidence(3, 1, 3, 3, 4, 6)) == "separate_ranges", "lower sample range is separate");
+    check(std::string(LockFreeQueueTestResults::rangeEvidence(3, 7, 9, 3, 4, 6)) == "separate_ranges", "higher sample range is separate");
     Json::Value sample;
     sample["items"] = 100;
     sample["elapsed_ns"] = 100.0;
@@ -1105,8 +1109,8 @@ void LockFreeQueueTestTool::selfTest() const
     std::string sufficient = bench;
     for (int32_t p = 1; p <= 16; p *= 2)
     {
-        sufficient += "SCENARIO phase=producer producers=" + integer(p) + "\nREGISTERED_PRODUCERS producers=" + integer(p) + " items=4000000 elapsed_ns=100 allocations=0 valid=1\nPOOL_VERIFY allocation_delta=0 grow_delta=0\n";
-        sufficient += "SCENARIO phase=mpsc producers=" + integer(p) + "\nREGISTERED_MPSC producers=" + integer(p) + " items=1000000 elapsed_ns=100 allocations=0 valid=1\nPOOL_VERIFY allocation_delta=0 grow_delta=0\n";
+        sufficient += "SCENARIO phase=producer producers=" + integer(p) + "\nREGISTERED_PRODUCERS producers=" + integer(p) + " items=4000000 elapsed_ns=100 producer_elapsed_ns=100 items_per_second=4e13 allocations=0 valid=1\nPOOL_VERIFY allocation_delta=0 grow_delta=0\n";
+        sufficient += "SCENARIO phase=mpsc producers=" + integer(p) + "\nREGISTERED_MPSC producers=" + integer(p) + " items=1000000 elapsed_ns=100 producer_elapsed_ns=110 items_per_second=1e13 allocations=0 valid=1\nPOOL_VERIFY allocation_delta=0 grow_delta=0\n";
     }
     sufficient += "PASS id=35\n";
     check(LockFreeQueueTestResults::parse(sufficient, perf, 0)["samples"].size() == 10, "sufficient pool row/verification contract");
@@ -1116,6 +1120,12 @@ void LockFreeQueueTestTool::selfTest() const
     std::string allocationFailure = sufficient;
     allocationFailure.replace(allocationFailure.find("allocations=0"), 13, "allocations=1");
     badLogs.push_back(allocationFailure);
+    badLogs.push_back(replaceOnce(sufficient, "REGISTERED_MPSC producers=1 items=1000000 elapsed_ns=100 producer_elapsed_ns=110 items_per_second=1e13",
+        "REGISTERED_MPSC producers=1 items=1000000 elapsed_ns=100 producer_elapsed_ns=110 items_per_second=2e13"));
+    badLogs.push_back(replaceOnce(sufficient, "REGISTERED_MPSC producers=1 items=1000000 elapsed_ns=100 producer_elapsed_ns=110 items_per_second=1e13",
+        "REGISTERED_MPSC producers=1 items=1000000 elapsed_ns=100 producer_elapsed_ns=0 items_per_second=1e13"));
+    badLogs.push_back(replaceOnce(sufficient, "REGISTERED_PRODUCERS producers=1 items=4000000 elapsed_ns=100 producer_elapsed_ns=100 items_per_second=4e13",
+        "REGISTERED_PRODUCERS producers=1 items=4000000 elapsed_ns=100 producer_elapsed_ns=200 items_per_second=4e13"));
     badLogs.push_back(sufficient.substr(bench.size()));
     badLogs.push_back(bench + sufficient);
     badLogs.push_back(replaceOnce(sufficient, "BENCH variant=1", "BENCH variant=3"));

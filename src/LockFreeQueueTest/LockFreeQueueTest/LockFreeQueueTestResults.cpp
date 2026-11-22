@@ -460,7 +460,18 @@ Json::Value LockFreeQueueTestResults::parse(const std::string& text, const Json:
                 throw std::runtime_error("Result row belongs to a different benchmark suite");
             }
             const double count = number(values, values.isMember("items") ? "items" : "operations", true);
-            number(values, "elapsed_ns", true);
+            const double elapsed = number(values, "elapsed_ns", true);
+            if (suite == "35")
+            {
+                const double producerElapsed = number(values, "producer_elapsed_ns", true);
+                const double rate = number(values, "items_per_second", true);
+                // Allow default ostream precision while checking independently against the work count.
+                if ((tag == "REGISTERED_PRODUCERS" && producerElapsed != elapsed) ||
+                    std::abs(rate * elapsed / (count * 1e9) - 1.0) > 0.00001)
+                {
+                    throw std::runtime_error("Inconsistent throughput or producer timing window");
+                }
+            }
             if (!expected.count(scenario) || expected.find(scenario)->second != count || !measured.insert(scenario).second)
             {
                 throw std::runtime_error("Unexpected/duplicate scenario or wrong count: " + scenario);
@@ -713,6 +724,16 @@ double LockFreeQueueTestResults::median(std::vector<double> values)
     return values.size() % 2 ? values[middle] : values[middle - 1] / 2 + values[middle] / 2;
 }
 
+const char* LockFreeQueueTestResults::rangeEvidence(size_t leftCount, double leftMin, double leftMax,
+    size_t rightCount, double rightMin, double rightMax)
+{
+    if (leftCount < 2 || rightCount < 2)
+    {
+        return "single_sample";
+    }
+    return leftMin > rightMax || rightMin > leftMax ? "separate_ranges" : "overlapping_ranges";
+}
+
 Json::Value LockFreeQueueTestResults::rates(const Json::Value& input, double extra)
 {
     Json::Value row(input);
@@ -729,7 +750,10 @@ Json::Value LockFreeQueueTestResults::rates(const Json::Value& input, double ext
     row["rate_per_second"] = count * 1e9 / elapsed;
     row["complete_rate_per_second"] = count * 1e9 / (elapsed + extra);
     row["extra_maintenance_ns"] = extra;
-    row["cpu_ns_per_operation"] = row.get("cpu_ns", 0).asDouble() / count;
+    if (row.isMember("cpu_ns"))
+    {
+        row["cpu_ns_per_operation"] = number(row, "cpu_ns", false) / count;
+    }
     return row;
 }
 
@@ -899,7 +923,8 @@ void LockFreeQueueTestResults::summarize(const std::string& batch)
                 for (Json::Value::UInt j = 0; j < data["maintenance"].size(); ++j)
                 {
                     const Json::Value& m = data["maintenance"][j];
-                    if (m["arch"] == row["arch"] && m["version"] == row["version"] && m["profile"] == row["profile"] && m["suite"] == row["suite"] &&
+                    if (m["arch"] == row["arch"] && m["configuration"] == row["configuration"] && m["version"] == row["version"] &&
+                        m["profile"] == row["profile"] && m["suite"] == row["suite"] &&
                         m["case"] == row["case"] && m["cycle"] == row["cycle"] && m["round"] == row["round"] && m["counted"] == row["counted"] && m["phase_group"] == row["phase_group"])
                     {
                         extra += m.get("elapsed_ns", 0).asDouble();
@@ -961,6 +986,10 @@ void LockFreeQueueTestResults::summarize(const std::string& batch)
                     if (medians[candidate].count(*metric) && reference->second.count(*metric) && reference->second.find(*metric)->second != 0)
                     {
                         out[label] = (medians[candidate][*metric] / reference->second.find(*metric)->second - 1) * 100;
+                        const std::string left = candidate + "_" + *metric, right = reference->first + "_" + *metric;
+                        out[label + "_evidence"] = rangeEvidence(out[candidate + "_samples"].asUInt(),
+                            out[left + "_min"].asDouble(), out[left + "_max"].asDouble(),
+                            out[reference->first + "_samples"].asUInt(), out[right + "_min"].asDouble(), out[right + "_max"].asDouble());
                     }
                     else
                     {

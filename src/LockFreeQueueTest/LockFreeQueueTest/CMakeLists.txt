@@ -111,40 +111,37 @@ if(EMSCRIPTEN)
     endif()
 else()
     find_package(Threads REQUIRED)
+    set(queue_link_libraries Threads::Threads)
     if(CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android)$")
-        # Some 32-bit ABIs lower 64-bit atomics to a runtime symbol. Probe at
-        # link time; the queue still checks lock freedom on the actual device.
         include(CheckCXXSourceCompiles)
-        set(queue_atomic_probe [=[
+        # Cross toolchains may default to archive-only try_compile. Link an executable
+        # to detect the atomic runtime dependency without running target code.
+        function(lock_free_queue_check_atomics result)
+            set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
+            check_cxx_source_compiles([=[
 #include <atomic>
 #include <cstdint>
-struct Word { uint64_t value; };
-int main() {
-    std::atomic<Word> value(Word{1});
-    Word expected = {1};
-    value.compare_exchange_strong(expected, Word{2});
-    return value.is_lock_free() && value.load().value == 2 ? 0 : 1;
+struct Word { std::uint64_t value; };
+std::atomic<Word> word(Word{0});
+int main(int argc, char**) {
+    Word expected = word.load();
+    word.compare_exchange_strong(expected, Word{static_cast<std::uint64_t>(argc)});
+    word.store(expected);
+    return word.is_lock_free() ? 0 : 1;
 }
-]=])
-        include(CMakePushCheckState)
-        # Mobile toolchain files can default try_compile to a static archive,
-        # which cannot detect a missing runtime symbol. Limit the override to this probe.
-        function(queue_check_atomic_link result_variable)
-            set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
-            check_cxx_source_compiles("${queue_atomic_probe}" ${result_variable})
+]=] ${result})
         endfunction()
+        include(CMakePushCheckState)
         cmake_push_check_state(RESET)
         set(CMAKE_REQUIRED_LIBRARIES Threads::Threads)
-        queue_check_atomic_link(QUEUE_TEST_ATOMICS_LINK)
+        lock_free_queue_check_atomics(QUEUE_TEST_ATOMICS_LINK)
         if(NOT QUEUE_TEST_ATOMICS_LINK)
             list(APPEND CMAKE_REQUIRED_LIBRARIES atomic)
-            queue_check_atomic_link(QUEUE_TEST_LIBATOMIC_LINK)
+            lock_free_queue_check_atomics(QUEUE_TEST_LIBATOMIC_LINK)
             if(NOT QUEUE_TEST_LIBATOMIC_LINK)
-                message(FATAL_ERROR "Target toolchain cannot link the required 64-bit atomic operations")
+                message(FATAL_ERROR "Target toolchain cannot link the required 64-bit atomic operations, even with libatomic")
             endif()
-            foreach(target IN LISTS queue_targets)
-                target_link_libraries(${target} PRIVATE atomic)
-            endforeach()
+            list(APPEND queue_link_libraries atomic)
         endif()
         cmake_pop_check_state()
     endif()
@@ -152,7 +149,7 @@ int main() {
         target_link_libraries(LockFreeQueueTestTool PRIVATE Threads::Threads)
     endif()
     foreach(target IN LISTS queue_targets)
-        target_link_libraries(${target} PRIVATE Threads::Threads)
+        target_link_libraries(${target} PRIVATE ${queue_link_libraries})
     endforeach()
 endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")

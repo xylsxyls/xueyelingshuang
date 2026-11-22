@@ -1,5 +1,6 @@
 ﻿#include "LockFreeQueueMeasurements.h"
 #include "LockFreeQueueThreadGroup.h"
+#include "LockFreeQueueBenchmarkAffinity.h"
 #include "LockFreeQueue.h"
 #include "LockFreeQueueBenchmarkPush.h"
 #include <atomic>
@@ -14,7 +15,9 @@
 #include <memory>
 #include <limits>
 #ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <Windows.h>
 #include <Psapi.h>
 #include <TlHelp32.h>
@@ -286,8 +289,8 @@ bool LockFreeQueueMeasurements::concurrent(size_t producers, size_t count)
     std::vector<uint64_t> popSamples;
     std::vector<std::vector<uint64_t>> pushSamples(producers);
     std::atomic<bool> start(false), stop(false), error(false);
-    std::atomic<size_t> done(0);
-    std::atomic<uint64_t> producersEnded(0);
+    std::atomic<size_t> ready(0);
+    std::vector<uint64_t> finished(producers);
     std::atomic<uint64_t> refused(0);
     LockFreeQueueThreadGroup group(stop, &start);
     std::vector<std::thread>& workers = group.m_threads;
@@ -297,6 +300,12 @@ bool LockFreeQueueMeasurements::concurrent(size_t producers, size_t count)
     {
         pushSamples[lane].reserve(count / 64 + 1);
         workers.emplace_back([&, lane]() {
+            if (!LockFreeQueueBenchmarkAffinity::pin(lane + 1))
+            {
+                error.store(true);
+                stop.store(true);
+            }
+            ready.fetch_add(1);
             try
             {
             while (!start.load())
@@ -333,11 +342,12 @@ bool LockFreeQueueMeasurements::concurrent(size_t producers, size_t count)
                 error.store(true);
                 stop.store(true);
             }
-            if (done.fetch_add(1) + 1 == producers)
-            {
-                producersEnded.store(ticks());
-            }
+            finished[lane] = ticks();
         });
+    }
+    while (ready.load() != producers)
+    {
+        std::this_thread::yield();
     }
     g_lockFreeQueueMeasureCalls.store(0);
     g_lockFreeQueueMeasureBytes.store(0);
@@ -348,7 +358,7 @@ bool LockFreeQueueMeasurements::concurrent(size_t producers, size_t count)
     bool valid = true;
     g_lockFreeQueueMeasureAllocations.store(!g_lockFreeQueueMeasureSkipAllocations);
     start.store(true);
-    while ((done.load() != producers || !queue.empty()) && ticks() < deadline)
+    while (received < producers * count && !stop.load() && ticks() < deadline)
     {
         uint64_t value = 0;
         const uint64_t popStart = received % 64 == 0 ? ticks() : 0;
@@ -370,22 +380,22 @@ bool LockFreeQueueMeasurements::concurrent(size_t producers, size_t count)
             std::this_thread::yield();
         }
     }
+    const uint64_t elapsed = ticks() - begin;
     stop.store(true);
     group.join();
     g_lockFreeQueueMeasureAllocations.store(false);
-    const uint64_t elapsed = ticks() - begin;
     const uint64_t cpuElapsed = cpu() - cpuStart;
     for (size_t lane = 0; lane < producers; ++lane)
     {
         valid = next[lane] == count && valid;
     }
-    valid = valid && !error.load() && received == producers * count;
+    valid = valid && !error.load() && received == producers * count && queue.empty() && !queue.pop(nullptr);
     if (g_lockFreeQueueMeasurePreallocated)
     {
         valid = verifyPool(queue, producers * count, allocationBaseline) && valid;
     }
     std::cout << "MPSC producers=" << producers << " items=" << received << " elapsed_ns=" << elapsed <<
-        " producer_elapsed_ns=" << producersEnded.load() - begin <<
+        " producer_elapsed_ns=" << *std::max_element(finished.begin(), finished.end()) - begin <<
         " cpu_ns=" << cpuElapsed << " items_per_second=" << received * 1000000000.0 / elapsed <<
         " allocations=" << g_lockFreeQueueMeasureCalls.load() << " allocated_bytes=" << g_lockFreeQueueMeasureBytes.load() <<
         " rejected_retries=" << refused.load() << " valid=" << valid << std::endl;
@@ -416,14 +426,21 @@ bool LockFreeQueueMeasurements::producersOnly(size_t producers, size_t count)
         return false;
     }
     std::atomic<bool> start(false), stop(false), failed(false);
-    std::atomic<uint64_t> last(0), refused(0);
-    std::atomic<size_t> done(0);
+    std::vector<uint64_t> finished(producers);
+    std::atomic<uint64_t> refused(0);
+    std::atomic<size_t> ready(0);
     std::vector<std::vector<uint64_t>> samples(producers);
     LockFreeQueueThreadGroup group(stop, &start);
     for (size_t lane = 0; lane < producers; ++lane)
     {
         samples[lane].reserve(count / 64 + 1);
         group.m_threads.emplace_back([&, lane]() {
+            if (!LockFreeQueueBenchmarkAffinity::pin(lane + 1))
+            {
+                failed.store(true);
+                stop.store(true);
+            }
+            ready.fetch_add(1);
             while (!start.load())
             {
                 std::this_thread::yield();
@@ -461,11 +478,12 @@ bool LockFreeQueueMeasurements::producersOnly(size_t producers, size_t count)
                 failed.store(true);
                 stop.store(true);
             }
-            if (done.fetch_add(1) + 1 == producers)
-            {
-                last.store(ticks());
-            }
+            finished[lane] = ticks();
         });
+    }
+    while (ready.load() != producers)
+    {
+        std::this_thread::yield();
     }
     g_lockFreeQueueMeasureCalls.store(0);
     g_lockFreeQueueMeasureBytes.store(0);
@@ -476,7 +494,7 @@ bool LockFreeQueueMeasurements::producersOnly(size_t producers, size_t count)
     // The caller performs no queue reads, pops or validation during enqueue.
     group.join();
     g_lockFreeQueueMeasureAllocations.store(false);
-    const uint64_t elapsed = last.load() - begin;
+    const uint64_t elapsed = *std::max_element(finished.begin(), finished.end()) - begin;
     const uint64_t cpuElapsed = cpu() - cpuStart;
     bool valid = !failed.load() && queue.size() == producers * count;
     std::vector<uint64_t> next(producers, 0);
@@ -525,8 +543,9 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
         return false;
     }
     std::atomic<bool> start(false), stop(false), failed(false);
-    std::atomic<size_t> ready(0), done(0);
-    std::atomic<uint64_t> ended(0), refused(0);
+    std::atomic<size_t> ready(0);
+    std::vector<uint64_t> finished(producers);
+    std::atomic<uint64_t> refused(0);
     std::vector<std::vector<uint64_t>> samples(producers);
     std::vector<uint64_t> popSamples;
     popSamples.reserve(producers * count / 64 + 1);
@@ -538,7 +557,8 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
         samples[lane].reserve(count / 64 + 1);
         group.m_threads.emplace_back([&, lane]() {
             LockFreeQueueProducer<uint64_t> producer;
-            if (queue.tryAcquireProducer(producer) != LockFreeQueueSuccess)
+            if (!LockFreeQueueBenchmarkAffinity::pin(lane + 1) ||
+                queue.tryAcquireProducer(producer) != LockFreeQueueSuccess)
             {
                 failed.store(true);
                 stop.store(true);
@@ -581,11 +601,8 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
                 failed.store(true);
                 stop.store(true);
             }
+            finished[lane] = ticks();
             producer.release();
-            if (done.fetch_add(1) + 1 == producers)
-            {
-                ended.store(ticks());
-            }
         });
     }
     while (ready.load() != producers)
@@ -600,6 +617,7 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
     g_lockFreeQueueMeasureAllocations.store(!g_lockFreeQueueMeasureSkipAllocations);
     size_t received = 0;
     bool valid = true;
+    uint64_t consumerEnd = 0;
     start.store(true);
     if (consume)
     {
@@ -625,11 +643,13 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
                 std::this_thread::yield();
             }
         }
+        consumerEnd = ticks();
         stop.store(true);
     }
     group.join();
     g_lockFreeQueueMeasureAllocations.store(false);
-    const uint64_t elapsed = (consume ? ticks() : ended.load()) - begin;
+    const uint64_t producerEnd = *std::max_element(finished.begin(), finished.end());
+    const uint64_t elapsed = (consume ? consumerEnd : producerEnd) - begin;
     const uint64_t cpuElapsed = cpu() - cpuStart;
     if (!consume)
     {
@@ -653,7 +673,7 @@ bool LockFreeQueueMeasurements::registered(size_t producers, size_t count, bool 
     valid = verifyPool(queue, capacityItems, allocationBaseline) && valid;
     std::cout << (consume ? "REGISTERED_MPSC" : "REGISTERED_PRODUCERS") << " producers=" << producers <<
         " items=" << received << " capacity_items=" << capacityItems << " elapsed_ns=" << elapsed <<
-        " producer_elapsed_ns=" << ended.load() - begin << " cpu_ns=" << cpuElapsed <<
+        " producer_elapsed_ns=" << producerEnd - begin << " cpu_ns=" << cpuElapsed <<
         " items_per_second=" << received * 1e9 / elapsed <<
         " allocations=" << g_lockFreeQueueMeasureCalls.load() << " allocated_bytes=" << g_lockFreeQueueMeasureBytes.load() <<
         " rejected_retries=" << refused.load() << " valid=" << valid << std::endl;
@@ -865,6 +885,10 @@ int LockFreeQueueMeasurements::run(int argc, char** argv)
 */
 int main(int argc, char** argv)
 {
+    if (!LockFreeQueueBenchmarkAffinity::pin(0, true))
+    {
+        return 2;
+    }
     try
     {
         return LockFreeQueueMeasurements::run(argc, argv);
