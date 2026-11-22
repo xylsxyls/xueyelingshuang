@@ -13,6 +13,7 @@
 #include <new>
 
 #ifdef _WIN32
+// libuv 的 Windows 进程实现引用 DbgHelp；静态消费者也需要传递此链接依赖
 #pragma comment(lib, "Dbghelp.lib")
 #endif
 
@@ -35,21 +36,17 @@ LibuvTcp::~LibuvTcp()
     {
         uv_sleep(1);
     }
-    closeSubmissions();
+    m_lifecycle->close();
     LibuvBase *state = m_libuv;
     m_libuv = nullptr;
     if (state != nullptr)
     {
+        state->m_submissionGate = nullptr;
         state->m_libuvTcp = nullptr;
     }
     DestroyState(state);
     delete m_lifecycle;
     delete m_settings;
-}
-
-void LibuvTcp::closeSubmissions()
-{
-    m_lifecycle->close();
 }
 
 void LibuvTcp::DestroyState(LibuvBase *state)
@@ -85,8 +82,43 @@ int32_t LibuvTcp::configureSendQueue(const LibuvQueuePoolConfig& config)
     {
         return UV_EINVAL;
     }
-    m_settings->m_sendQueue = config;
-    return 0;
+    LibuvQueueSettings complete(true);
+    complete.initialCapacity = config.m_initialCapacity;
+    complete.maximumCapacity = config.m_maximumCapacity;
+    complete.growThreshold = config.m_growThreshold;
+    complete.maximumProducers = config.m_maximumProducers;
+    return configureSendQueue(complete);
+}
+
+int32_t LibuvTcp::configureSendQueue(const LibuvQueueSettings& config)
+{
+    return configureQueue(config, true);
+}
+
+int32_t LibuvTcp::configureQueue(const LibuvQueueSettings& config, bool sending)
+{
+    if (m_libuv != nullptr || m_running.load(std::memory_order_acquire))
+    {
+        return UV_EBUSY;
+    }
+    try
+    {
+        LockFreeQueue<LibuvPendingSend> validation(false);
+        const LockFreeQueueResult result = LibuvPoolSettings::configureQueue(validation, config);
+        if (result != LockFreeQueueSuccess)
+        {
+            return result == LockFreeQueueAllocationFailure ? UV_ENOMEM : UV_EINVAL;
+        }
+        std::unique_ptr<LibuvPoolSettings> settings(new LibuvPoolSettings(*m_settings));
+        (sending ? settings->m_sendQueue : settings->m_closeQueue) = config;
+        delete m_settings;
+        m_settings = settings.release();
+        return 0;
+    }
+    catch (...)
+    {
+        return UV_ENOMEM;
+    }
 }
 
 int32_t LibuvTcp::configureCloseQueue(const LibuvQueuePoolConfig& config)
@@ -99,8 +131,17 @@ int32_t LibuvTcp::configureCloseQueue(const LibuvQueuePoolConfig& config)
     {
         return UV_EINVAL;
     }
-    m_settings->m_closeQueue = config;
-    return 0;
+    LibuvQueueSettings complete(false);
+    complete.initialCapacity = config.m_initialCapacity;
+    complete.maximumCapacity = config.m_maximumCapacity;
+    complete.growThreshold = config.m_growThreshold;
+    complete.maximumProducers = config.m_maximumProducers;
+    return configureCloseQueue(complete);
+}
+
+int32_t LibuvTcp::configureCloseQueue(const LibuvQueueSettings& config)
+{
+    return configureQueue(config, false);
 }
 
 int32_t LibuvTcp::configureConnectionPool(const LibuvConnectionPoolConfig& config)
@@ -113,8 +154,42 @@ int32_t LibuvTcp::configureConnectionPool(const LibuvConnectionPoolConfig& confi
     {
         return UV_EINVAL;
     }
-    m_settings->m_connections = config;
-    return 0;
+    LockFreeHashMapConfig complete;
+    complete.initialCapacity = config.m_initialCapacity;
+    complete.maximumCapacity = config.m_maximumCapacity;
+    complete.growFreeThreshold = config.m_growFreeThreshold;
+    complete.directoryCapacity = config.m_directoryCapacity;
+    complete.protectionRecordCount = config.m_protectionRecordCount;
+    complete.lookupCacheCapacity = config.m_lookupCacheCapacity;
+    complete.m_bucketCount = config.m_bucketCount;
+    return configureConnectionPool(complete);
+}
+
+int32_t LibuvTcp::configureConnectionPool(const LockFreeHashMapConfig& config)
+{
+    if (m_libuv != nullptr || m_running.load(std::memory_order_acquire))
+    {
+        return UV_EBUSY;
+    }
+    try
+    {
+        if (config.maximumCapacity < -1 || (config.maximumCapacity >= 0 &&
+            static_cast<uint64_t>(config.maximumCapacity) < config.initialCapacity) || config.directoryCapacity == 0 ||
+            config.protectionRecordCount == 0 || (config.lookupCacheCapacity & (config.lookupCacheCapacity - 1)) != 0 ||
+            config.initialCapacity / 65535 + (config.initialCapacity % 65535 != 0) > config.directoryCapacity)
+        {
+            return UV_EINVAL;
+        }
+        std::unique_ptr<LibuvPoolSettings> settings(new LibuvPoolSettings(*m_settings));
+        settings->m_connections = config;
+        delete m_settings;
+        m_settings = settings.release();
+        return 0;
+    }
+    catch (...)
+    {
+        return UV_ENOMEM;
+    }
 }
 
 int32_t LibuvTcp::configureSendPool(const LibuvSendPoolConfig& config)
@@ -183,6 +258,7 @@ bool LibuvTcp::initClient(const char *ip, int32_t port)
         DestroyState(state.release());
         return false;
     }
+    state->m_submissionGate = m_lifecycle;
     m_libuv = state.release();
     m_lifecycle->open();
     return true;
@@ -233,6 +309,7 @@ bool LibuvTcp::initServer(const char* ip, int32_t port, int32_t backlog)
         DestroyState(state.release());
         return false;
     }
+    state->m_submissionGate = m_lifecycle;
     m_libuv = state.release();
     m_lifecycle->open();
     return true;
@@ -259,7 +336,7 @@ void LibuvTcp::loop()
     state->m_ownerReady.store(true, std::memory_order_release);
     uv_run(state->m_loop, UV_RUN_DEFAULT);
     state->drain();
-    closeSubmissions();
+    m_lifecycle->close();
     m_libuv = nullptr;
     DestroyState(state);
     // 最后访问外层对象；析构等待者观察到false后才允许销毁计数器。
@@ -339,7 +416,13 @@ int32_t LibuvTcp::trySubmitData(uv_tcp_t* target, const char* data, uint32_t siz
         LibuvBase::copySmall(pending.m_inlineBytes + 4, data, size);
         return trySubmit(pending, retryContention, waitForSpace, true);
     }
-    if (pending.m_charge > m_settings->m_send.m_maximumPendingBytes)
+    LibuvCall call(*m_lifecycle, retryContention);
+    if (!call.accepted())
+    {
+        return call.status();
+    }
+    const int64_t budget = m_libuv->m_settings.m_send.m_maximumPendingBytes;
+    if (budget >= 0 && pending.m_charge > static_cast<uint64_t>(budget))
     {
         return UV_EINVAL;
     }
@@ -355,7 +438,7 @@ int32_t LibuvTcp::trySubmitData(uv_tcp_t* target, const char* data, uint32_t siz
     {
         std::memcpy(wire + 4, data, size);
     }
-    const int32_t result = trySubmit(pending, retryContention, waitForSpace, true);
+    const int32_t result = submitBorrowed(pending, retryContention, waitForSpace, true);
     if (result == 0)
     {
         bytes.release();
@@ -381,7 +464,13 @@ int32_t LibuvTcp::trySubmitBatch(uv_tcp_t* target, const LibuvSendBuffer* buffer
         }
         wireSize += size + 4;
     }
-    if (wireSize + sizeof(target) + sizeof(LibuvPendingWrite) > m_settings->m_send.m_maximumPendingBytes)
+    LibuvCall call(*m_lifecycle, retryContention);
+    if (!call.accepted())
+    {
+        return call.status();
+    }
+    const int64_t budget = m_libuv->m_settings.m_send.m_maximumPendingBytes;
+    if (budget >= 0 && wireSize + sizeof(target) + sizeof(LibuvPendingWrite) > static_cast<uint64_t>(budget))
     {
         return UV_EINVAL;
     }
@@ -408,7 +497,7 @@ int32_t LibuvTcp::trySubmitBatch(uv_tcp_t* target, const LibuvSendBuffer* buffer
     pending.m_buffer = bytes.get();
     pending.m_wireSize = wireSize;
     pending.m_charge = wireSize + static_cast<uint32_t>(sizeof(target) + sizeof(LibuvPendingWrite));
-    const int32_t result = trySubmit(pending, retryContention, waitForSpace, false);
+    const int32_t result = submitBorrowed(pending, retryContention, waitForSpace, false);
     if (result == 0)
     {
         bytes.release();
@@ -461,6 +550,11 @@ int32_t LibuvTcp::trySubmit(LibuvPendingSend& pending, bool retryContention, boo
     {
         return call.status();
     }
+    return submitBorrowed(pending, retryContention, waitForSpace, coalesceNotify);
+}
+
+int32_t LibuvTcp::submitBorrowed(LibuvPendingSend& pending, bool retryContention, bool waitForSpace, bool coalesceNotify)
+{
     LibuvBase* state = m_libuv;
     if (state->m_stopping.load())
     {
@@ -486,7 +580,7 @@ int32_t LibuvTcp::trySubmit(LibuvPendingSend& pending, bool retryContention, boo
                 return UV_ENOTCONN;
             }
         }
-        int32_t result = state->tryReserveSend(pending.m_charge, retryContention);
+        int32_t result = state->tryReserveSend(pending.m_charge);
         if (result == 0)
         {
             // 容量等待由本层执行，才能每轮检查停止和连接代次，不能被下层无限等待困住。
@@ -510,7 +604,8 @@ int32_t LibuvTcp::trySubmit(LibuvPendingSend& pending, bool retryContention, boo
             {
                 result = UV_EAGAIN;
             }
-            else if (queued == LockFreeQueueCapacityLimit || queued == LockFreeQueueResourceUnavailable)
+            else if (queued == LockFreeQueueCapacityLimit || queued == LockFreeQueueResourceUnavailable ||
+                queued == LockFreeQueueGrowthDeclined)
             {
                 result = UV_ENOBUFS;
             }
@@ -536,7 +631,7 @@ int32_t LibuvTcp::trySubmit(LibuvPendingSend& pending, bool retryContention, boo
             // 等待尚未运行或当前栈上的循环会阻塞释放容量的唯一执行者，属于非法调用上下文。
             return UV_EPERM;
         }
-        LibuvBase::WaitForSpace(spaceAttempts);
+        state->waitForSpace(spaceAttempts, state->m_settings.m_sendQueue);
     }
 }
 
@@ -592,10 +687,10 @@ void LibuvTcp::close(uv_tcp_t *tcp)
             }
             break;
         }
-        if ((result == LockFreeQueueCapacityLimit || result == LockFreeQueueResourceUnavailable) &&
+        if ((result == LockFreeQueueCapacityLimit || result == LockFreeQueueResourceUnavailable || result == LockFreeQueueGrowthDeclined) &&
             m_libuv->m_ownerReady.load(std::memory_order_acquire))
         {
-            LibuvBase::WaitForSpace(spaceAttempts);
+            m_libuv->waitForSpace(spaceAttempts, m_libuv->m_settings.m_closeQueue);
             continue;
         }
         break;
@@ -742,7 +837,7 @@ int32_t LibuvTcp::hostConnect(void* instance, const char* address, uint32_t port
 int32_t LibuvTcp::hostPoll(void* instance)
 {
     LibuvHostState* state = static_cast<LibuvHostState*>(instance);
-    if (state == nullptr || state->m_depth != 0 || state->m_polling)
+    if (state == nullptr || state->m_depth != 0 || state->m_polling || !state->m_channel.canDestroy())
     {
         return -1;
     }
@@ -872,12 +967,21 @@ uint32_t LibuvTcp::hostPeerCount(void* instance)
 
 int32_t LibuvTcp::hostLoopCreate(void** instance)
 {
-    if (instance == nullptr) { return UV_EINVAL; }
+    if (instance == nullptr)
+    {
+        return UV_EINVAL;
+    }
     *instance = nullptr;
     LibuvHostLoop* loop = new (std::nothrow) LibuvHostLoop();
-    if (loop == nullptr) { return UV_ENOMEM; }
+    if (loop == nullptr)
+    {
+        return UV_ENOMEM;
+    }
     const int32_t result = loop->init();
-    if (result != 0) { delete loop; return result; }
+    if (result != 0)
+    {
+        delete loop; return result;
+    }
     *instance = loop;
     return 0;
 }
@@ -899,14 +1003,23 @@ int32_t LibuvTcp::hostLoopWait(void* instance, uint64_t observed, uint32_t timeo
 
 void LibuvTcp::hostLoopWake(void* instance)
 {
-    if (instance != nullptr) { static_cast<LibuvHostLoop*>(instance)->wake(); }
+    if (instance != nullptr)
+    {
+        static_cast<LibuvHostLoop*>(instance)->wake();
+    }
 }
 
 int32_t LibuvTcp::hostLoopDestroy(void* instance)
 {
     LibuvHostLoop* loop = static_cast<LibuvHostLoop*>(instance);
-    if (loop == nullptr) { return 0; }
-    if (loop->m_running || loop->m_channels != 0 || LibuvHostLoop::current() == loop) { return UV_EBUSY; }
+    if (loop == nullptr)
+    {
+        return 0;
+    }
+    if (loop->m_running || loop->m_channels != 0 || LibuvHostLoop::current() == loop)
+    {
+        return UV_EBUSY;
+    }
     delete loop;
     return 0;
 }
@@ -1240,7 +1353,9 @@ int32_t LibuvTcp::hostLoopDestroy(void* instance)
 //             // 本例没有每连接的额外清理对象
 //             void uvDisconnectedClear(uv_tcp_t* peer) override { (void)peer; }
 //         } tcp;
-//         LibuvQueuePoolConfig sendQueue;
+//         LibuvQueueSettings sendQueue(true);
+//         sendQueue.initialCapacity = 128;
+//         sendQueue.maximumCapacity = -1;
 //         LibuvQueuePoolConfig closeQueue;
 //         closeQueue.m_initialCapacity = 32;
 //         closeQueue.m_maximumCapacity = 256;

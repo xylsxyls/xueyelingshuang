@@ -1,5 +1,5 @@
 ﻿#include "LibuvBase.h"
-#include "uv.h"
+#include "libuv/uv.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 #include "LibuvTcp.h"
 #include "LibuvClient.h"
@@ -199,36 +199,6 @@ LibuvReadCall::~LibuvReadCall()
     m_owner.releaseReadBytes(m_bytes);
 }
 
-/** 把公开数值配置转换为依赖库配置，不在此处创建池
-@param [in] input 已校验的连接池参数
-@return 独立配置副本，沿用依赖默认扩缩容策略
-*/
-static LockFreeHashMapPoolConfig LibuvConnectionIndexConfig(const LibuvConnectionPoolConfig& input)
-{
-    LockFreeHashMapPoolConfig config;
-    config.initialCapacity = input.m_initialCapacity;
-    config.maximumCapacity = input.m_maximumCapacity;
-    config.growFreeThreshold = input.m_growFreeThreshold;
-    config.directoryCapacity = input.m_directoryCapacity;
-    config.protectionRecordCount = input.m_protectionRecordCount;
-    config.lookupCacheCapacity = input.m_lookupCacheCapacity;
-    return config;
-}
-
-/** 把公开数值配置转换为依赖队列配置，不分配节点
-@param [in] input 已校验的队列池参数
-@return 供configurePool复制的配置
-*/
-static LockFreeQueuePoolConfig LibuvQueueConfig(const LibuvQueuePoolConfig& input)
-{
-    LockFreeQueuePoolConfig config;
-    config.initialCapacity = input.m_initialCapacity;
-    config.maximumCapacity = input.m_maximumCapacity;
-    config.growThreshold = input.m_growThreshold;
-    config.maximumProducers = input.m_maximumProducers;
-    return config;
-}
-
 LibuvBase::LibuvBase(const LibuvPoolSettings& settings) :
 m_settings(settings),
 m_sendProducers(nullptr),
@@ -236,6 +206,7 @@ m_producerMask(settings.m_send.m_producerCacheCapacity != 0 &&
     (settings.m_send.m_producerCacheCapacity & (settings.m_send.m_producerCacheCapacity - 1)) == 0 ?
     settings.m_send.m_producerCacheCapacity - 1 : UINT32_MAX),
 m_libuvTcp(nullptr),
+m_submissionGate(nullptr),
 m_loop(nullptr),
 m_asyncHandle(nullptr),
 m_queueReady(false),
@@ -243,7 +214,7 @@ m_queue(nullptr),
 m_closeQueue(nullptr),
 m_asyncCloseHandle(nullptr),
 m_isClient(false),
-m_connections(settings.m_connections.m_bucketCount, LibuvConnectionIndexConfig(settings.m_connections)),
+m_connections(settings.m_connections),
 m_stopping(false),
 m_nextConnection(1),
 m_loopInitialized(false),
@@ -264,15 +235,15 @@ m_parallelCursor(0)
     std::unique_ptr<uv_async_t> stop(new uv_async_t);
     std::unique_ptr<LockFreeQueue<LibuvPendingSend>> queue(new LockFreeQueue<LibuvPendingSend>(false));
     std::unique_ptr<LockFreeQueue<LibuvPendingSend>> closes(new LockFreeQueue<LibuvPendingSend>(false));
-    std::unique_ptr<char*[]> reads(settings.m_read.m_maximumCachedBuffers == 0 ? nullptr :
-        new (std::nothrow) char*[settings.m_read.m_maximumCachedBuffers]);
     std::unique_ptr<LibuvSendProducer[]> producers(settings.m_send.m_producerCacheCapacity == 0 ? nullptr :
         new (std::nothrow) LibuvSendProducer[settings.m_send.m_producerCacheCapacity]);
     // 附加描述符总槽数不超过发送队列配置上限；每槽通道不大于主通道容量。
     // 保留足够突发容量，避免批量操作因过小通道持续等待；不运行时增长或换路。
+    const uint64_t laneBudget = settings.m_sendQueue.maximumCapacity < 0 ?
+        settings.m_sendQueue.initialCapacity : static_cast<uint64_t>(settings.m_sendQueue.maximumCapacity);
     const uint32_t share = settings.m_send.m_producerCacheCapacity == 0 ? 0 :
-        (std::min)(settings.m_send.m_laneCapacity,
-            settings.m_sendQueue.m_maximumCapacity / settings.m_send.m_producerCacheCapacity);
+        static_cast<uint32_t>((std::min)(uint64_t(settings.m_send.m_laneCapacity),
+            laneBudget / settings.m_send.m_producerCacheCapacity));
     uint32_t laneCapacity = share == 0 ? 0 : 1;
     while (laneCapacity != 0 && laneCapacity <= share / 2)
     {
@@ -286,20 +257,13 @@ m_parallelCursor(0)
         lane.m_items = laneCapacity == 0 ? nullptr : new (std::nothrow) LibuvPendingSend[laneCapacity];
         lanesReady = lanesReady && (laneCapacity == 0 || lane.m_items != nullptr);
     }
-    LockFreeQueuePoolConfig queueConfig = LibuvQueueConfig(settings.m_sendQueue);
-    // 每生产者顺序由发布协议保证；重叠调用不要求跨线程全局次序，允许取消未完成预约。
-    m_queueReady = queue->configurePool(queueConfig) == LockFreeQueueSuccess &&
-        queue->configureProducerCounters(true) == LockFreeQueueSuccess &&
-        queue->configureCancelableReservations(true) == LockFreeQueueSuccess &&
-        queue->tryInit() == LockFreeQueueSuccess;
-    queueConfig = LibuvQueueConfig(settings.m_closeQueue);
-    m_queueReady = closes->configurePool(queueConfig) == LockFreeQueueSuccess &&
-        closes->tryInit() == LockFreeQueueSuccess && m_queueReady;
+    m_queueReady = LibuvPoolSettings::configureQueue(*queue, settings.m_sendQueue) == LockFreeQueueSuccess &&
+        queue->tryInit() == LockFreeQueueSuccess &&
+        LibuvPoolSettings::configureQueue(*closes, settings.m_closeQueue) == LockFreeQueueSuccess &&
+        closes->tryInit() == LockFreeQueueSuccess;
     m_queueReady = m_queueReady && lanesReady && settings.valid() &&
         (settings.m_send.m_laneCapacity == 0 || m_sendLane.m_items != nullptr) &&
-        (settings.m_read.m_maximumCachedBuffers == 0 || reads.get() != nullptr) &&
         (settings.m_send.m_producerCacheCapacity == 0 || producers.get() != nullptr);
-    m_readBuffers = reads.release();
     m_sendProducers = producers.release();
     m_loop = loop.release();
     m_asyncHandle = send.release();
@@ -330,9 +294,8 @@ LibuvBase::~LibuvBase()
     delete m_loop;
     while (m_cachedReads != 0)
     {
-        delete[] m_readBuffers[--m_cachedReads];
+        delete[] acquireReadBytes();
     }
-    delete[] m_readBuffers;
     while (m_freeWrites != nullptr)
     {
         LibuvPendingWrite* next = m_freeWrites->m_next;
@@ -476,10 +439,10 @@ void LibuvBase::beginClose()
     }
     m_closing = true;
     m_stopping.store(true);
-    if (m_libuvTcp != nullptr)
+    if (m_submissionGate != nullptr)
     {
         // 外层借用涵盖队列发布和最后一次uv_async_send；归还后才能关闭async句柄。
-        m_libuvTcp->closeSubmissions();
+        m_submissionGate->close();
     }
     uv_walk(m_loop, &WalkClose, this);
 }
@@ -518,7 +481,15 @@ void LibuvBase::AllocateRead(uv_handle_t *handle, size_t suggestedSize, uv_buf_t
 
 char* LibuvBase::acquireReadBytes()
 {
-    return m_cachedReads == 0 ? new (std::nothrow) char[m_settings.m_read.m_bufferBytes] : m_readBuffers[--m_cachedReads];
+    char* bytes = m_readBuffers;
+    if (bytes == nullptr)
+    {
+        const size_t capacity = (std::max)(size_t(m_settings.m_read.m_bufferBytes), sizeof(bytes));
+        return new (std::nothrow) char[capacity];
+    }
+    std::memcpy(&m_readBuffers, bytes, sizeof(m_readBuffers));
+    --m_cachedReads;
+    return bytes;
 }
 
 void LibuvBase::releaseReadBytes(char* bytes)
@@ -527,12 +498,14 @@ void LibuvBase::releaseReadBytes(char* bytes)
     {
         return;
     }
-    if (m_closing || m_cachedReads == m_settings.m_read.m_maximumCachedBuffers)
+    if (m_closing || m_cachedReads == size_t(m_settings.m_read.m_maximumCachedBuffers))
     {
         delete[] bytes;
         return;
     }
-    m_readBuffers[m_cachedReads++] = bytes;
+    std::memcpy(bytes, &m_readBuffers, sizeof(m_readBuffers));
+    m_readBuffers = bytes;
+    ++m_cachedReads;
 }
 
 int32_t LibuvBase::startRead(uv_tcp_t *tcp)
@@ -666,7 +639,8 @@ void LibuvBase::SendPending(uv_async_t *handle)
     uint64_t bytes = 0;
     while (count < 1024 && (bytes < 524288U || state->m_stopping.load()))
     {
-        const size_t available = state->m_stopping.load() ? 256 : state->m_settings.m_send.m_maximumActiveWrites - state->m_activeWrites;
+        const int64_t window = state->m_settings.m_send.m_maximumActiveWrites;
+        const size_t available = state->m_stopping.load() || window == -1 ? 256 : size_t(window) - state->m_activeWrites;
         const size_t maximum = (std::min)(available, (std::min)(size_t(256), 1024 - count));
         consumed = 0;
         while (consumed < maximum)
@@ -706,7 +680,8 @@ void LibuvBase::SendPending(uv_async_t *handle)
     // 一个已取出的前缀必须完整处理；预算最多额外跨过一个 256 项前缀。
     const bool moreCloses = closed == 128 && state->m_closeQueue->possiblyReady();
     const bool moreData = (count >= 1024 || bytes >= 524288U) &&
-        state->m_activeWrites < state->m_settings.m_send.m_maximumActiveWrites && state->sendsReady();
+        (state->m_settings.m_send.m_maximumActiveWrites == -1 ||
+            state->m_activeWrites < size_t(state->m_settings.m_send.m_maximumActiveWrites)) && state->sendsReady();
     if (!state->m_stopping.load() && (moreCloses || moreData))
     {
         LibuvBase::Wake(handle);
@@ -736,21 +711,25 @@ void LibuvBase::WaitForContention(uint32_t& attempts)
     }
 }
 
-void LibuvBase::WaitForSpace(uint32_t& attempts)
+void LibuvBase::waitForSpace(uint32_t& attempts, const LibuvQueueSettings& config) const
 {
-    if (attempts < 4096)
+    if (attempts < config.m_capacityRetries)
     {
         ++attempts;
-    }
-    if (attempts == 4096)
-    {
-        uv_sleep(1);
+        uv_sleep(0);
     }
     else
     {
-        // 满队列时立即让出当前时间片，使唯一消费者能腾出空间。
-        // 零时长只请求调度让步；达到4096次后仍按原契约每轮请求休眠1毫秒。
-        uv_sleep(0);
+        // 即使配置为第一次满池就休眠，也要让提交者在下一轮重新核对连接代次。
+        attempts = attempts == 0 ? 1 : attempts;
+        // 保持配置的重试间隔，停止时分段退出，避免关闭线程等待一个很长的休眠。
+        uint32_t remaining = config.m_sleepMilliseconds;
+        while (remaining != 0 && !m_stopping.load(std::memory_order_acquire))
+        {
+            const uint32_t slice = (std::min)(remaining, 16U);
+            uv_sleep(slice);
+            remaining -= slice;
+        }
     }
 }
 
@@ -774,7 +753,7 @@ void LibuvBase::releaseWrite(LibuvPendingWrite* request)
     request->m_buffer = nullptr;
     request->m_charge = 0;
     request->m_owner = nullptr;
-    if (m_closing || m_cachedWrites == m_settings.m_send.m_maximumCachedWrites)
+    if (m_closing || m_cachedWrites == size_t(m_settings.m_send.m_maximumCachedWrites))
     {
         delete request;
         return;
@@ -1040,7 +1019,7 @@ void LibuvBase::Written(uv_write_t *request, int status)
     LibuvPendingWrite* write = static_cast<LibuvPendingWrite*>(request->data);
     LibuvBase* owner = write->m_owner;
     uv_tcp_t* tcp = reinterpret_cast<uv_tcp_t*>(request->handle);
-    const bool reopen = owner->m_activeWrites == owner->m_settings.m_send.m_maximumActiveWrites;
+    const bool reopen = owner->m_activeWrites == size_t(owner->m_settings.m_send.m_maximumActiveWrites);
     --owner->m_activeWrites;
     owner->releaseWrite(write);
     if (status != 0)

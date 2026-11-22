@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "uv.h"
+#include "libuv/uv.h"
 #include <stdint.h>
 #include <vector>
 #include <atomic>
@@ -31,12 +31,8 @@ public:
     uv_connect_t m_connect;
     // 借用的所属循环，生命周期覆盖全部句柄回调
     LibuvChannelState* m_owner;
-    // 实例内永不复用的连接号，0表示拒绝槽位
+    // 实例内永不复用的连接号，登记失败的句柄在关闭前置零
     uint64_t m_id;
-    // 已接纳且尚未完成或取消的字节数，包括待提交和libuv在途
-    uint64_t m_queuedBytes;
-    // 已接纳的逻辑写请求数，实际池槽在完成或取消时逐一归还
-    uint64_t m_queuedWrites;
     // 首次关闭原因，后续重复关闭不能覆盖
     int32_t m_reason;
     // TCP连接已成功建立，尚不代表上层完成认证

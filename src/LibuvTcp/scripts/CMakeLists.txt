@@ -1393,7 +1393,7 @@ foreach(native_config DEBUG RELEASE)
         ARCHIVE_OUTPUT_DIRECTORY_${native_config} "${SDK_ROOT}/lib"
         LIBRARY_OUTPUT_DIRECTORY_${native_config} "${SDK_ROOT}/lib")
 endforeach()
-target_include_directories(LibuvTcp PUBLIC "${SDK_ROOT}/include")
+target_include_directories(LibuvTcp PRIVATE "${SDK_ROOT}/include/libuv" PUBLIC "${SDK_ROOT}/include")
 target_compile_options(LibuvTcp PRIVATE "$<$<CONFIG:Release>:-O2>" "$<$<CONFIG:Release>:-g>")
 if(APPLE)
     set_target_properties(LibuvTcp PROPERTIES MACOSX_RPATH ON INSTALL_NAME_DIR "@rpath")
@@ -1441,10 +1441,13 @@ add_custom_command(TARGET LibuvTcp POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${native_macro}" "${SDK_ROOT}/include/LibuvTcp/LibuvTcpMacro.h"
     VERBATIM)
 
-if(NOT EXISTS "${SDK_ROOT}/lib/libuvstatic${BIT}.a" OR NOT EXISTS "${SDK_ROOT}/include/uv.h")
+set(libuv_archive "${SDK_ROOT}/lib/libuv.a")
+if(NOT EXISTS "${libuv_archive}" OR NOT EXISTS "${SDK_ROOT}/include/libuv/uv.h")
     message(FATAL_ERROR "Missing target vendor SDK; run before/version with this platform's prepared SDK")
 endif()
-target_link_libraries(LibuvTcp PUBLIC "${SDK_ROOT}/lib/libuvstatic${BIT}.a")
+if(NOT libuv_archive IN_LIST native_prepared_libraries)
+    target_link_libraries(LibuvTcp PUBLIC "${libuv_archive}")
+endif()
 
 find_package(Threads REQUIRED)
 target_link_libraries(LibuvTcp PUBLIC Threads::Threads ${CMAKE_DL_LIBS})

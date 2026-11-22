@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <uv.h>
+#include "libuv/uv.h"
 #include <atomic>
 
 /** 原始字节宿主的共同执行循环；连接由一个执行者拥有，外部线程只允许wake
@@ -30,7 +30,7 @@ public:
     */
     void wake();
 
-    /** 记录当前轮次后等待事件；期间已有进展则直接返回
+    /** 等待本轮事件；若通知代次已变化，非阻塞驱动一次循环后返回
     @param [in] observed 本轮开始前读取的代次
     @param [in] timeoutMs 最迟维护期限，0只非阻塞推进
     @return 0正常，负数宿主失败

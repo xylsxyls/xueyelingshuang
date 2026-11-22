@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "uv.h"
+#include "libuv/uv.h"
 #include "LibuvPoolSettings.h"
 #include "LockFreeHashMap/LockFreeHashMapAPI.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
@@ -70,7 +70,7 @@ private:
     LibuvLifecycleSlot m_slots[32];
 };
 
-// 一个方法调用的非独占借用；多个send可同时持有，不能复制或提前归还
+// 方法执行期间持有的非独占借用，允许多个生产者同时提交，借用随调用结束归还
 class LibuvCall
 {
 public:
@@ -290,6 +290,8 @@ public:
     const uint32_t m_producerMask;
     // 借用的外层宿主，存活至全部uv回调及排空结束
     LibuvTcp *m_libuvTcp;
+    // 借用外层的提交门，初始化成功后绑定，直到事件循环结束并排空全部回调
+    LibuvLifecycleGate* m_submissionGate;
     // 拥有的私有循环，成功初始化后才能运行和关闭
     uv_loop_t *m_loop;
     // 发送队列唤醒句柄，允许多生产者提交后唤醒唯一循环
@@ -317,10 +319,10 @@ public:
     bool m_loopInitialized;
     // 循环执行者已开始幂等关闭，禁止再次提交读写
     bool m_closing;
-    // 按读池配置创建的空闲数组目录，在途数组不在此表中
-    char** m_readBuffers;
+    // 读缓存链表头，链接只占用已经归还的块
+    char* m_readBuffers;
     // 当前空闲数组数，仅由循环执行者更新
-    uint32_t m_cachedReads;
+    size_t m_cachedReads;
     // 分隔只由owner写入的读缓存与跨线程预算，避免共享缓存行
     char m_beforeBudget[64];
     // 发送者预留，取消或完成后归还；成功接纳不超过配置预算，64位容纳并发失败预留的临时加数
@@ -330,9 +332,9 @@ public:
     // owner专用的空写请求链，数量由发送池配置限制
     LibuvPendingWrite* m_freeWrites;
     // owner 当前空写请求数
-    uint32_t m_cachedWrites;
+    size_t m_cachedWrites;
     // owner已交给uv_write且尚未回调的请求数，不超过配置写窗口
-    uint32_t m_activeWrites;
+    size_t m_activeWrites;
     // loop 启动时写入一次，发布 m_ownerReady 后不再改变
     uv_thread_t m_ownerThread;
     // release 发布循环执行者身份，其他线程读取前 acquire
@@ -457,20 +459,20 @@ public:
 
     /** 通过原子加减预留发送预算，无CAS竞争失败返回
     @param [in] charge 数组和请求开销，须在有效上限内
-    @param [in] retryContention 保留统一调用签名，本预留路径无需CAS重试
     @return 0 成功，UV_ENOBUFS 当前预留容量不足，UV_EINVAL 永远无法容纳的请求
     */
-    int32_t tryReserveSend(uint32_t charge, bool retryContention);
+    int32_t tryReserveSend(uint32_t charge);
 
     /** 判断当前执行者是否正是需要腾出空间的循环线程
     @return true 表示不得在当前栈等待自身循环进度
     */
     bool isLoopOwner() const;
 
-    /** 空间不足时先让出时间片再重试，达到4096次后每轮请求休眠1毫秒
-    @param [in,out] attempts 已发生的容量失败次数，饱和在4096避免溢出
+    /** 空间不足时按当前队列的等待策略让步或休眠
+    @param [in,out] attempts 已发生的容量失败次数，达到配置次数后保持饱和
+    @param [in] config 当前发送或关闭队列的退避设置
     */
-    static void WaitForSpace(uint32_t& attempts);
+    void waitForSpace(uint32_t& attempts, const LibuvQueueSettings& config) const;
 
     /** CAS持续竞争时定期让出执行机会；不将内部重试转换为业务Busy
     @param [in,out] attempts 本次调用的竞争计数，每64次让步、每4096次请求休眠1毫秒，允许无符号回绕
@@ -518,7 +520,7 @@ public:
     */
     void failTcp(uv_tcp_t* tcp);
 
-    /** 在状态发布之后唤醒循环，兼容旧 libuv 合并唤醒的内存顺序
+    /** 在状态发布之后唤醒循环，合并唤醒时仍保证队列发布先于通知
     @param [in] handle 借用保护内或 owner 持有的有效 async 句柄
     @return libuv 唤醒结果；成功不代表业务数据已经送达
     */

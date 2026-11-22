@@ -49,7 +49,7 @@ private:
     */
     virtual void onData(uint64_t peer, const uint8_t* data, uint32_t size);
 
-    /** 转交本地写完成
+    /** 转交本连接写完成或共享池释放后的可写提示
     @param [in] peer 连接代次
     */
     virtual void onWritable(uint64_t peer);
@@ -80,7 +80,7 @@ public:
     LibuvHostConnected m_connected;
     // 仅回调期间借用输入
     LibuvHostData m_data;
-    // 本地写完成事件
+    // 可写提示，由所属循环调用
     LibuvHostWritable m_writable;
     // 唯一连接终态事件
     LibuvHostClosed m_closed;

@@ -1,5 +1,6 @@
 ﻿#include "LibuvHostLoop.h"
 
+// 当前执行线程选定的共同循环；绑定通道借用它，离开作用域前由调用者恢复。
 #ifdef _MSC_VER
 static __declspec(thread) LibuvHostLoop* s_hostLoop = nullptr;
 #else
@@ -81,12 +82,9 @@ int32_t LibuvHostLoop::wait(uint64_t observed, uint32_t timeoutMs)
     {
         return UV_EBUSY;
     }
-    if (m_generation.load(std::memory_order_acquire) != observed)
+    if (timeoutMs == 0 || m_generation.load(std::memory_order_acquire) != observed)
     {
-        return 0;
-    }
-    if (timeoutMs == 0)
-    {
+        // 业务已有通知时无需睡眠，仍须处理本轮就绪的网络事件。
         return run(UV_RUN_NOWAIT);
     }
     // 更新libuv缓存时间，避免上层处理较久后把维护期限误算成已过期。

@@ -21,6 +21,9 @@
     <ClInclude Include="..\src\LibuvPoolSettings.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\LibuvPoolSettings.inl">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\LibuvTcp.h">
       <Filter>头文件</Filter>
     </ClInclude>

@@ -154,9 +154,8 @@ m_wireSize(0)
     std::memset(m_inlineBytes, 0, sizeof(m_inlineBytes));
 }
 
-inline int32_t LibuvBase::tryReserveSend(uint32_t charge, bool retryContention)
+inline int32_t LibuvBase::tryReserveSend(uint32_t charge)
 {
-    (void)retryContention;
     // 一次原子预留避免多发送线程反复竞争CAS；失败项立即归还，尚未发布数据。
     // 每次调用由32个有界分片或31位后备计数保护，临时加数总和远小于UINT64_MAX。
     const uint64_t kLimit = m_settings.m_send.m_maximumPendingBytes;

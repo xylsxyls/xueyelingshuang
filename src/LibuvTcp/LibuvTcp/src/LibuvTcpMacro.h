@@ -10,7 +10,7 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define LibuvTcpAPI __attribute__ ((visibility("default")))
     #else
-        #define LibuvTcpAPI
+        #define LibuvTcpAPI 
     #endif
 #endif
 

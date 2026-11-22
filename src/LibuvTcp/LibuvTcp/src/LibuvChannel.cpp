@@ -1,4 +1,5 @@
 ﻿#include "LibuvChannelState.h"
+#include "LibuvPoolSettings.h"
 #include "LibuvChannel.h"
 #include <memory>
 
@@ -39,9 +40,18 @@ int32_t LibuvChannel::configureWritePool(const LibuvChannelWritePoolConfig& conf
         }
         std::unique_ptr<LockFreeQueue<LibuvChannelWrite*>> incoming(new LockFreeQueue<LibuvChannelWrite*>(false));
         std::unique_ptr<LockFreeHashMap<uint64_t, uint32_t>> connections(
-            new LockFreeHashMap<uint64_t, uint32_t>(256, config.m_connections));
-        if (incoming->configurePool(config.m_submission) != LockFreeQueueSuccess ||
-            incoming->tryInit() != LockFreeQueueSuccess || connections->status() != LockFreeHashMapOk)
+            new LockFreeHashMap<uint64_t, uint32_t>(config.m_connectionBuckets, config.m_connections));
+        const LockFreeQueueResult configured = LibuvPoolSettings::configureQueue(*incoming, config.m_submission);
+        if (configured != LockFreeQueueSuccess)
+        {
+            return configured == LockFreeQueueAllocationFailure ? UV_ENOMEM : UV_EINVAL;
+        }
+        const LockFreeHashMapStatus indexStatus = connections->status();
+        if (indexStatus != LockFreeHashMapOk)
+        {
+            return indexStatus == LockFreeHashMapNoMemory ? UV_ENOMEM : UV_EINVAL;
+        }
+        if (incoming->tryInit() != LockFreeQueueSuccess)
         {
             return UV_ENOMEM;
         }
@@ -110,11 +120,6 @@ int32_t LibuvChannel::listen(const char* address, uint32_t port,
     {
         return result;
     }
-    result = m_state->initialize();
-    if (result != 0)
-    {
-        return result;
-    }
     try
     {
         // 在监听前准备桶表，连接接纳期间不因桶扩容产生额外抖动。
@@ -124,9 +129,13 @@ int32_t LibuvChannel::listen(const char* address, uint32_t port,
     {
         return UV_ENOMEM;
     }
+    result = m_state->initialize();
+    if (result != 0)
+    {
+        return result;
+    }
     m_state->m_callback = listener;
     m_state->m_started = true;
-    (void)maxPeers;
     result = uv_tcp_init(m_state->loop(), &m_state->m_listener);
     if (result != 0)
     {
@@ -171,11 +180,6 @@ int32_t LibuvChannel::connect(const char* address, uint32_t port,
     {
         return result;
     }
-    result = m_state->initialize();
-    if (result != 0)
-    {
-        return result;
-    }
     try
     {
         m_state->m_peers.reserve(1);
@@ -184,9 +188,14 @@ int32_t LibuvChannel::connect(const char* address, uint32_t port,
     {
         return UV_ENOMEM;
     }
+    result = m_state->initialize();
+    if (result != 0)
+    {
+        return result;
+    }
     m_state->m_started = true;
     m_state->m_callback = listener;
-    LibuvChannelPeer* peer = m_state->createPeer(false);
+    LibuvChannelPeer* peer = m_state->createPeer();
     if (peer == nullptr)
     {
         return UV_ENOMEM;
@@ -209,7 +218,7 @@ bool LibuvChannel::poll()
     {
         return false;
     }
-    if (m_state->m_polling)
+    if (!canDestroy())
     {
         return m_state->m_listenerInitialized || m_state->m_rejectPending || m_state->m_overflowClosing || !m_state->m_peers.empty();
     }
@@ -244,7 +253,10 @@ int32_t LibuvChannel::post(uint64_t id, const uint8_t* data, uint32_t size)
         return UV_EINVAL;
     }
     const int32_t failed = m_state->m_submissionError.load(std::memory_order_acquire);
-    if (failed != 0) { return failed; }
+    if (failed != 0)
+    {
+        return failed;
+    }
     LibuvChannelLane* lane = m_state->producerLane();
     if (lane != nullptr)
     {
@@ -294,7 +306,10 @@ int32_t LibuvChannel::post(uint64_t id, const uint8_t* data, uint32_t size)
     LibuvChannelWrite* request = m_state->prepareWrite(id, data, size, result);
     if (request == nullptr)
     {
-        if (result == UV_ENOBUFS) { m_state->m_notifyCapacity.store(true, std::memory_order_release); }
+        if (result == UV_ENOBUFS)
+        {
+            m_state->m_notifyCapacity.store(true, std::memory_order_release);
+        }
         // 分配正文失败会归还刚取得的共享槽，也可能解除其他生产者的满池等待。
         uv_async_send(&m_state->m_postAsync);
         return result;
@@ -312,7 +327,12 @@ int32_t LibuvChannel::post(uint64_t id, const uint8_t* data, uint32_t size)
             m_state->m_notifyCapacity.store(true, std::memory_order_release);
             // 提交失败也归还了共享写槽，唤醒因满池暂停消费的专用通道。
             uv_async_send(&m_state->m_postAsync);
-            return queued == LockFreeQueueAllocationFailure ? UV_ENOMEM : UV_ENOBUFS;
+            if (queued == LockFreeQueueCapacityLimit || queued == LockFreeQueueResourceUnavailable ||
+                queued == LockFreeQueueGrowthDeclined)
+            {
+                return UV_ENOBUFS;
+            }
+            return queued == LockFreeQueueAllocationFailure ? UV_ENOMEM : UV_EIO;
         }
     }
     // 先发布完整描述符再唤醒；成功后不能再读request，消费者可能已经回收。

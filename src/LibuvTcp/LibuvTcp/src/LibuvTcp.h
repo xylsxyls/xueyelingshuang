@@ -27,14 +27,14 @@ struct LibuvSendBuffer
 */
 class LibuvTcpAPI LibuvTcp
 {
-  public:
+public:
     /** 创建共同事件循环；不启动线程，先创建再串行移交唯一执行者
     @param [out] instance 不可空，失败清空；成功由hostLoopDestroy回收
     @return 0成功，负数失败
     */
     static int32_t hostLoopCreate(void** instance);
 
-    /** 设置当前执行者中新建原始通道的循环归属，离开作用域须恢复
+    /** 设置当前执行者的共同循环；原始通道在listen/connect首次初始化循环时绑定，离开作用域须恢复
     @param [in] instance 共同循环或空；不得由两个执行者并行操作同一循环
     @return 之前的借用循环
     */
@@ -46,7 +46,7 @@ class LibuvTcpAPI LibuvTcp
     */
     static uint64_t hostLoopBegin(void* instance);
 
-    /** 等待网络、跨线程唤醒或维护期限，已发生进展则立即返回
+    /** 等待网络、跨线程唤醒或维护期限；已有新通知时非阻塞处理一轮就绪事件
     @param [in] instance 共同循环，唯一执行者调用，回调内禁止
     @param [in] observed 本轮检查工作之前取得的通知代次
     @param [in] timeoutMs 最多等待毫秒，0为非阻塞推进
@@ -70,7 +70,7 @@ class LibuvTcpAPI LibuvTcp
     @param [in] observerContext 四个回调借用的上下文，存活至destroy成功
     @param [in] connected 非空连接建立回调
     @param [in] data 非空借用字节回调
-    @param [in] writable 非空本地写完成回调
+    @param [in] writable 非空可写提示回调，本连接完成写入或其他连接归还共享额度时均可能触发
     @param [in] closed 非空唯一终态回调
     @param [out] instance 不可空，失败清零；只由hostDestroy释放
     @return 0成功，负数未创建；C边界不抛异常
@@ -117,7 +117,7 @@ class LibuvTcpAPI LibuvTcp
     */
     static int32_t hostConnect(void* instance, const char* address, uint32_t port, uint64_t* peer);
 
-    /** 非阻塞驱动；回调内调用被拒绝
+    /** 非阻塞驱动；所属循环任一宿主的回调内调用均返回负值
     @param [in] instance 有效实例
     @return 1仍有资源，0已经收敛，负数非法状态
     */
@@ -181,12 +181,18 @@ class LibuvTcpAPI LibuvTcp
     */
     virtual ~LibuvTcp();
 
-  public:
+public:
     /** 初始化前设置发送队列，只复制参数；不与任何其他实例操作并发
     @param [in] config 借用至返回；失败保留上次有效配置，运行期间拒绝修改
     @return 0成功，UV_EINVAL参数非法，UV_EBUSY实例已经初始化；最终组合检查在init执行
     */
     int32_t configureSendQueue(const LibuvQueuePoolConfig& config);
+
+    /** 设置完整基础池及策略，生命周期所有者在初始化前调用
+    @param [in] config 当前通路的独立配置，回调捕获的数据须存活到实例停止
+    @return 0成功，运行中返回UV_EBUSY，参数无效返回UV_EINVAL
+    */
+    int32_t configureSendQueue(const LibuvQueueSettings& config);
 
     /** 初始化前设置独立关闭队列，只复制参数；不与任何其他实例操作并发
     @param [in] config 借用至返回；失败保留上次有效配置，运行期间拒绝修改
@@ -194,11 +200,23 @@ class LibuvTcpAPI LibuvTcp
     */
     int32_t configureCloseQueue(const LibuvQueuePoolConfig& config);
 
+    /** 设置完整基础池及策略，生命周期所有者在初始化前调用
+    @param [in] config 当前通路的独立配置，回调捕获的数据须存活到实例停止
+    @return 0成功，运行中返回UV_EBUSY，参数无效返回UV_EINVAL
+    */
+    int32_t configureCloseQueue(const LibuvQueueSettings& config);
+
     /** 初始化前设置跨线程连接索引，只复制参数；不与任何其他实例操作并发
     @param [in] config 借用至返回；失败保留上次有效配置，运行期间拒绝修改
     @return 0成功，UV_EINVAL参数非法，UV_EBUSY实例已经初始化；最终组合检查在init执行
     */
     int32_t configureConnectionPool(const LibuvConnectionPoolConfig& config);
+
+    /** 设置完整基础池及策略，生命周期所有者在初始化前调用
+    @param [in] config 当前通路的独立配置，回调捕获的数据须存活到实例停止
+    @return 0成功，运行中返回UV_EBUSY，参数无效返回UV_EINVAL
+    */
+    int32_t configureConnectionPool(const LockFreeHashMapConfig& config);
 
     /** 初始化前设置本库发送预算和缓存，只复制参数；不与任何其他实例操作并发
     @param [in] config 借用至返回；失败保留上次有效配置，运行期间拒绝修改
@@ -323,7 +341,7 @@ class LibuvTcpAPI LibuvTcp
 
     /** 线程安全提交幂等关闭，由loop优先消费，拒绝非当前连接的指针
     关闭是取消，不是刷新确认；可取消尚未处理的数据，也不等待网络写窗口空闲
-    循环内直接请求关闭；跨线程等待取消队列容量，4096次后每次休眠1毫秒，停止会结束等待
+    循环内直接请求关闭；跨线程按关闭队列策略等待容量，默认4096次后每次休眠1毫秒，停止会结束等待
     @param [in] tcp 当前借用TCP，空/已关闭无操作；不能跨连接代次保留旧指针
     */
     void close(uv_tcp_t *tcp);
@@ -368,18 +386,11 @@ class LibuvTcpAPI LibuvTcp
     */
     virtual void uvDisconnectedClear(uv_tcp_t *tcp);
 
-  public:
-    // 仅兼容旧诊断借用，业务不得修改，也不得在其他线程直接解引用
+public:
+    // 生命周期执行者可借用的诊断状态；业务不得修改，也不得跨线程解引用
     LibuvBase *m_libuv;
 
-  private:
-    // 内部循环在关闭uv句柄前封闭提交入口，不对外暴露回收协议
-    friend struct LibuvBase;
-
-    /** 循环owner拒绝新借用并等待原提交调用结束，不从持有借用的post/stop中调用
-    */
-    void closeSubmissions();
-
+private:
     /** post各重载共用的数组提交实现，避免两套校验及所有权逻辑产生分歧
     @param [in] buffer 本库完整发送数组，成功接管，失败不接管
     @param [in] retryContention 是否持续重试竞争
@@ -419,6 +430,22 @@ class LibuvTcpAPI LibuvTcp
     */
     int32_t trySubmit(LibuvPendingSend& pending, bool retryContention, bool waitForSpace, bool coalesceNotify);
 
+    /** 已持有生命周期借用时提交，保持容量检查、复制和发布属于同一轮初始化
+    @param [in,out] pending 本次独占描述符
+    @param [in] retryContention 是否等待争用消退
+    @param [in] waitForSpace 是否等待消费者归还容量
+    @param [in] coalesceNotify 是否合并循环通知
+    @return 0表示本地已接纳，负值表示未接纳
+    */
+    int32_t submitBorrowed(LibuvPendingSend& pending, bool retryContention, bool waitForSpace, bool coalesceNotify);
+
+    /** 保存长度帧队列的独立设置，复制成功后才替换已保存配置
+    @param [in] config 队列节点和运行策略
+    @param [in] sending true选择发送，false选择关闭
+    @return 0成功，负值表示原配置继续有效
+    */
+    int32_t configureQueue(const LibuvQueueSettings& config, bool sending);
+
     /** 收敛上下文后按真实类型销毁，不在uv回调内调用
     @param [in] state 独占上下文，可空
     */
@@ -435,7 +462,7 @@ class LibuvTcpAPI LibuvTcp
     */
     LibuvTcp &operator=(const LibuvTcp &other);
 
-  private:
+private:
     // 外层拥有的非独占借用计数，覆盖上下文及uv_async句柄的回收边界
     LibuvLifecycleGate* m_lifecycle;
     // 初始化前复制的配置，运行期间不可变，供下次初始化继续使用

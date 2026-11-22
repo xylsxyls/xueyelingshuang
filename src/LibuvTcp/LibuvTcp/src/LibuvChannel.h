@@ -5,7 +5,7 @@
 
 class LibuvChannelState;
 
-// All callbacks run in the thread that calls poll. The listener must outlive close.
+// 回调在推进所属循环的线程上执行；监听者须活到终态回调返回。
 class LibuvTcpAPI LibuvChannelListener
 {
 public:
@@ -25,8 +25,8 @@ public:
     */
     virtual void onData(uint64_t peer, const uint8_t* data, uint32_t size) = 0;
 
-    /** 一次底层写完成后释放额度；不代表业务接收确认
-    @param [in] peer 连接号
+    /** 在所属循环提示可以重试，触发来源包括本连接写完成及其他连接归还共享容量
+    @param [in] peer 可以尝试继续提交的连接号，新的提交仍需检查背压
     */
     virtual void onWritable(uint64_t peer) = 0;
 
@@ -37,8 +37,7 @@ public:
     virtual void onClosed(uint64_t peer, int32_t reason) = 0;
 };
 
-// Raw TCP transport for NetInterface. No implicit length prefix, compression or
-// background thread. Existing LibuvTcp behavior remains available to old callers.
+// 原始TCP字节通道，由所属执行者推进；消息边界和压缩由上层协议负责。
 class LibuvTcpAPI LibuvChannel
 {
 public:
@@ -52,7 +51,7 @@ public:
 
     /** listen/connect前设置实际写请求池，验证并准备存储；配置和生命周期由唯一执行者调用，post可跨线程
     @param [in] config 有效配置，借用到返回；失败不改变已有配置
-    @return 0成功，UV_EINVAL非法参数，UV_EBUSY已启动或已停止
+    @return 0成功，UV_EINVAL配置无效，UV_ENOMEM分配失败，UV_EBUSY已启动或已停止
     */
     int32_t configureWritePool(const LibuvChannelWritePoolConfig& config);
 
@@ -117,7 +116,7 @@ public:
     */
     void shutdown();
 
-    /** 查询当前是否允许析构；共同循环任意回调内均不允许销毁通道
+    /** 查询能否从外层驱动或销毁通道；同一循环正在执行回调时须先返回外层
     @return 本通道及所属循环均未驱动时为true
     */
     bool canDestroy() const;

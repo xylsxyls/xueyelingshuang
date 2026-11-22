@@ -7,11 +7,11 @@ struct LibuvPoolSettings
 {
 public:
     // 跨线程发送队列
-    LibuvQueuePoolConfig m_sendQueue;
+    LibuvQueueSettings m_sendQueue;
     // 独立关闭队列，不占发送窗口
-    LibuvQueuePoolConfig m_closeQueue;
+    LibuvQueueSettings m_closeQueue;
     // 连接代次索引
-    LibuvConnectionPoolConfig m_connections;
+    LockFreeHashMapConfig m_connections;
     // 本库发送预算及缓存
     LibuvSendPoolConfig m_send;
     // 本库读缓冲及缓存
@@ -26,4 +26,14 @@ public:
     @return 是否可进行最终初始化
     */
     bool valid() const;
+
+    /** 将一条队列的参数设置到尚未初始化的值队列，保留基础库的首个错误
+    @param [in,out] queue 目标队列，必须尚未初始化
+    @param [in] config 对应通路的独立设置
+    @return 基础队列配置结果
+    */
+    template<class T>
+    static LockFreeQueueResult configureQueue(LockFreeQueue<T>& queue, const LibuvQueueSettings& config);
 };
+
+#include "LibuvPoolSettings.inl"

@@ -92,10 +92,9 @@ public:
     int32_t parseAddress(const char* address, uint32_t port, sockaddr_storage& result);
 
     /** 初始化并登记一个拥有的连接
-    @param [in] rejectOnly 仅接收后拒绝，不发业务回调
     @return 成功连接；分配或uv初始化失败返回null
     */
-    LibuvChannelPeer* createPeer(bool rejectOnly);
+    LibuvChannelPeer* createPeer();
 
     /** 归还实际连接槽；只能在句柄未初始化或最终关闭回调后调用
     @param [in] peer 本实例拥有的记录，可空
@@ -278,7 +277,7 @@ public:
     bool m_stopping;
     // 正处于循环或析构排空中，防止回调重入驱动循环
     bool m_polling;
-    // 最多一个未登记的拒绝句柄等待关闭，避免连接洪峰无限创建临时对象
+    // 连接索引登记失败，未登记的TCP句柄仍等待最终关闭回调
     bool m_rejectPending;
     // libuv的接纳就绪尚未消费；关闭后由下一次异步回调或poll重试，不能在关闭栈递归接纳
     bool m_acceptPending;
