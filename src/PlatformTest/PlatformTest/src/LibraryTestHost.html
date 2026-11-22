@@ -26,6 +26,8 @@ if (!/^[A-Za-z][A-Za-z0-9]*Test$/.test(name || '')) {
             const samples = [];
             await runLibraryTest(createLibraryTest, {
                 benchmark: query.get('benchmark') === '1',
+                origin: query.get('origin') || decodeURIComponent(document.documentElement.dataset.fixtureOrigin || '') ||
+                    (name === 'HttpRequestTest' ? location.origin : ''),
                 args: query.has('args') ? JSON.parse(query.get('args')) : undefined,
                 print(line) {
                     console.log(line);

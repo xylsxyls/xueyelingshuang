@@ -26,6 +26,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\PlatformTest.cpp" />
+    <ClCompile Include="..\src\PlatformTestHost.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0EDB1E28-5CC8-41B1-AB6A-14A330A17B60}</ProjectGuid>

@@ -23,6 +23,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\PlatformTestHost.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\PlatformTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>

@@ -1,4 +1,7 @@
 ﻿#include "PlatformTestHost.hpp"
+#ifndef PLATFORM_TEST_CMAKE
+#include "PlatformTest.h"
+#endif
 #include <atomic>
 #include <chrono>
 #include <cstdio>
@@ -42,14 +45,23 @@ static std::string Literal(const std::string& value)
 */
 static bool ExecuteScript(const std::string& script)
 {
+#ifdef PLATFORM_TEST_CMAKE
+    const char* cmake = PLATFORM_TEST_CMAKE;
+#else
+    const char* cmake = std::getenv("PLATFORM_TEST_CMAKE");
+    if (!cmake || !*cmake)
+    {
+        cmake = "cmake";
+    }
+#endif
 #ifdef _WIN32
-    std::string command = std::string("\"") + PLATFORM_TEST_CMAKE + "\" -P \"" + script + "\"";
+    std::string command = std::string("\"") + cmake + "\" -P \"" + script + "\"";
     std::vector<char> writable(command.begin(), command.end());
     writable.push_back('\0');
     STARTUPINFOA info = {};
     info.cb = sizeof(info);
     PROCESS_INFORMATION process = {};
-    if (!CreateProcessA(PLATFORM_TEST_CMAKE, writable.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &info, &process))
+    if (!CreateProcessA(nullptr, writable.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &info, &process))
     {
         return false;
     }
@@ -60,9 +72,9 @@ static bool ExecuteScript(const std::string& script)
     CloseHandle(process.hProcess);
     return status == 0;
 #else
-    char* const arguments[] = {const_cast<char*>(PLATFORM_TEST_CMAKE), const_cast<char*>("-P"), const_cast<char*>(script.c_str()), nullptr};
+    char* const arguments[] = {const_cast<char*>(cmake), const_cast<char*>("-P"), const_cast<char*>(script.c_str()), nullptr};
     pid_t child = 0;
-    if (posix_spawn(&child, arguments[0], nullptr, nullptr, arguments, environ) != 0)
+    if (posix_spawnp(&child, arguments[0], nullptr, nullptr, arguments, environ) != 0)
     {
         return false;
     }
@@ -239,3 +251,15 @@ std::vector<std::string> PlatformTestHost::files(const std::string& directory)
 #endif
     return names;
 }
+
+#ifndef PLATFORM_TEST_CMAKE
+int PlatformTest::runDesktopProcess(const std::vector<std::string>& arguments, int timeoutSeconds, std::string& output)
+{
+    if (arguments.empty() || arguments.front().empty() || timeoutSeconds <= 0)
+    {
+        throw std::invalid_argument("Expected executable and positive timeout");
+    }
+    PlatformTestHost host;
+    return host.command(arguments, timeoutSeconds, output, false);
+}
+#endif

@@ -97,7 +97,7 @@ function fixtureOrigin(origin) {
 }
 
 function nodeEntry(test, host, origin) {
-    const settings = origin ? JSON.stringify(origin) + ', settings' : 'settings';
+    const settings = test === 'HttpWorkTest' ? JSON.stringify(origin) + ', settings' : 'settings';
     return `const run = require('./${host}');
 const runPair = require('./LibraryTestWidth').runPair;
 function start(bits) {
@@ -105,6 +105,7 @@ function start(bits) {
     const args = process.argv.slice(3);
     const settings = { wasmBinary: require('fs').readFileSync(base + '.wasm'), benchmark: args.length === 1 && args[0] === '--benchmark' };
     if (args.length && !settings.benchmark) settings.args = args;
+    ${test === 'HttpRequestTest' && origin ? 'settings.origin = ' + JSON.stringify(origin) + ';' : ''}
     return run(require(base + '.js'), ${settings});
 }
 runPair(() => start(32), () => start(64), process.argv[2] || 'auto').then(
@@ -116,8 +117,9 @@ runPair(() => start(32), () => start(64), process.argv[2] || 'auto').then(
 function wechatPage(test, host, origin) {
     function run(bits) {
         const stem = 'wasm' + bits + '/' + test;
-        const server = origin ? JSON.stringify(origin) + ', ' : '';
-        return `() => run(require('../${stem}'), ${server}{wasmPath: "/${stem}.wasm", benchmark: query.benchmark === '1', args: query.args === undefined ? undefined : JSON.parse(query.args), print: printLine})`;
+        const server = test === 'HttpWorkTest' ? JSON.stringify(origin) + ', ' : '';
+        const requestOrigin = test === 'HttpRequestTest' ? 'origin: query.origin || ' + JSON.stringify(origin) + ', ' : '';
+        return `() => run(require('../${stem}'), ${server}{${requestOrigin}wasmPath: "/${stem}.wasm", benchmark: query.benchmark === '1', args: query.args === undefined ? undefined : JSON.parse(query.args), print: printLine})`;
     }
     return `const run = require('../${host}');
 const runPair = require('../LibraryTestWidth').runPair;
@@ -140,9 +142,10 @@ Page({
 }
 
 function browserPage(test, origin) {
-    if (!origin) {
+    if (test !== 'HttpWorkTest') {
         return fs.readFileSync(path.join(__dirname, 'LibraryTestHost.html'), 'utf8')
-            .replace('<html lang="zh-CN">', '<html lang="zh-CN" data-paired-test="' + test + '">');
+            .replace('<html lang="zh-CN">', '<html lang="zh-CN" data-paired-test="' + test +
+                '"' + (origin ? ' data-fixture-origin="' + encodeURIComponent(origin) + '"' : '') + '>');
     }
     const server = JSON.stringify(origin).replace(/</g, '\\u003c');
     return `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>HttpWorkTest</title>
@@ -170,7 +173,7 @@ function browserPage(test, origin) {
 function packageTest(test, options) {
     if (!/^[A-Za-z][A-Za-z0-9]*Test$/.test(test)) throw new Error('Expected the CMake test target name');
     const http = test === 'HttpWorkTest';
-    const origin = http ? fixtureOrigin(options.origin) : '';
+    const origin = http || (test === 'HttpRequestTest' && options.origin) ? fixtureOrigin(options.origin) : '';
     const host = http ? 'HttpWorkHost' : 'LibraryTestHost';
     const option = http ? 'HTTPWORK_WASM_HOST' : 'LIBRARY_TEST_HOST';
     const copies = new Map();

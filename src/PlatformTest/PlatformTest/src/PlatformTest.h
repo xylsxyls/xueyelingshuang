@@ -4,12 +4,26 @@
 #include <stdint.h>
 #include <cstring>
 #include <string>
+#include <vector>
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
 
 /** 为测试程序按编号选择用例，并按批量统计公共接口的耗时
 */
 class PlatformTestAPI PlatformTest
 {
 public:
+#if defined(_WIN32) || (defined(__linux__) && !defined(__ANDROID__)) || (defined(__APPLE__) && !TARGET_OS_IPHONE)
+    /** 在桌面宿主运行一个测试进程，使用独立参数，合并输出并施加运行期限
+    @param [in] arguments 程序路径及每个独立实参；本机需安装 CMake 或由 PLATFORM_TEST_CMAKE 指定其路径
+    @param [in] timeoutSeconds 正数，秒
+    @param [out] output 标准输出及错误输出
+    @return 子进程退出码；命令未启动或超时返回1，测试环境无法创建时抛出异常
+    */
+    static int runDesktopProcess(const std::vector<std::string>& arguments, int timeoutSeconds, std::string& output);
+#endif
+
     /** 从当前位置读取不超过上界的正整数
     @param [in,out] cursor 首个待解析字符，成功时指向数字后的字符
     @param [in] maximum 允许的最大编号

@@ -5,6 +5,7 @@
  */
 async function runLibraryTest(createModule, settings = {}) {
     let timeout;
+    let originServer;
     let rejectModule;
     const failure = new Promise((resolve, reject) => { rejectModule = reject; });
     const deadline = setTimeout(() => rejectModule(new Error('Test module timed out')), settings.timeoutMs || 60000);
@@ -24,13 +25,39 @@ async function runLibraryTest(createModule, settings = {}) {
             };
         }
         const instance = await Promise.race([createModule(options), failure]);
-        const args = settings.args === undefined ? (settings.benchmark ? ['--benchmark'] : []) : settings.args;
+        let args = settings.args === undefined ? (settings.benchmark ? ['--benchmark'] : []) : settings.args;
         if (!Array.isArray(args) || !args.every(value => typeof value === 'string')) {
             throw new TypeError('args must be an array of command-line strings');
         }
+        const httpResult = instance._httpRequestTestResult;
+        if (typeof httpResult === 'function' && !args.includes('--benchmark') && !args.includes('--origin')) {
+            let origin = settings.origin;
+            if (!origin && typeof process !== 'undefined' && process.versions && process.versions.node) {
+                // Node 上为本模块分配回环端口。设备和浏览器使用调用者提供的可达源站。
+                originServer = require('http').createServer((req, res) => {
+                    if (req.method === 'POST' && req.url === '/echo') {
+                        req.pipe(res);
+                    } else if (req.method === 'GET' && req.url === '/video/sample') {
+                        const body = Buffer.from([65, 0, 66, 67, 68]);
+                        res.writeHead(200, {'Content-Length': body.length});
+                        res.end(body);
+                    } else {
+                        res.writeHead(404);
+                        res.end('missing');
+                    }
+                });
+                await Promise.race([new Promise((resolve, reject) => {
+                    originServer.once('error', reject);
+                    originServer.listen(0, '127.0.0.1', resolve);
+                }), failure]);
+                origin = 'http://127.0.0.1:' + originServer.address().port;
+            }
+            if (origin) args = ['--origin', origin, ...args];
+        }
         let result = instance.callMain(args);
-        if (result === 0 && !args.includes('--benchmark') && typeof instance._timerTestResult === 'function') {
-            while ((result = instance._timerTestResult()) === -1) {
+        const poll = httpResult || instance._timerTestResult;
+        if (result === 0 && !args.includes('--benchmark') && typeof poll === 'function') {
+            while ((result = poll()) === -1) {
                 await Promise.race([new Promise(resolve => { timeout = setTimeout(resolve, 20); }), failure]);
             }
         }
@@ -39,6 +66,10 @@ async function runLibraryTest(createModule, settings = {}) {
     } finally {
         clearTimeout(timeout);
         clearTimeout(deadline);
+        if (originServer && originServer.listening) {
+            originServer.close();
+            originServer.closeAllConnections();
+        }
     }
 }
 if (typeof module !== 'undefined' && module.exports) {
