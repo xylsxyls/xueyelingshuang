@@ -1,231 +1,308 @@
 ﻿#include "Cini.h"
-#ifdef _MSC_VER
-#include <windows.h>
-#endif
-#include <vector>
+// UTF-8 名称仅对 ASCII 字母折叠大小写，各端使用同一比较规则
+#define SI_NO_MBCS
 #include "SimpleIni.h"
+#include <memory>
+#include <cerrno>
+#include <cstdio>
+#ifdef _WIN32
+#include <windows.h>
+#include <algorithm>
+#include <limits>
+#endif
 
-Cini::Cini(const std::string& iniPath, bool useSimpleIni):
-m_useSimpleIni(false),
+/** 检查名称能否原样写回单行 INI 文本
+@param [in] name 键名或分区名；空分区名表示全局分区
+@param [in] section 为 true 检查分区语法，为 false 检查键语法
+@return 写入后能按同名重新解析时返回 true
+*/
+static bool IsWritableName(const std::string& name, bool section)
+{
+    if (name.empty())
+    {
+        return section;
+    }
+    if (name.front() == ' ' || name.front() == '\t' || name.back() == ' ' || name.back() == '\t')
+    {
+        return false;
+    }
+    if (!section && (name.front() == ';' || name.front() == '#' || name.front() == '['))
+    {
+        return false;
+    }
+    return name.find_first_of(section ? "]\r\n\0" : "=\r\n\0", 0, 4) == std::string::npos;
+}
+
+#ifdef _WIN32
+/** 使用实际内容所需的缓冲区读取 Profile，达到调用方预算后遵循系统截断语义
+@param [in] path 文件路径
+@param [in] section 分区名，空指针请求分区列表
+@param [in] key 键名，空指针请求名称列表
+@param [in] limit 包含结尾零的字节预算
+@return 系统写入的字节；列表保留项间的零字符
+*/
+static std::string ReadProfile(const std::string& path, const char* section, const char* key, uint64_t limit)
+{
+    const DWORD reserved = key ? 1 : 2;
+    if (path.empty() || limit <= reserved)
+    {
+        return "";
+    }
+    limit = (std::min<uint64_t>)(limit, (std::numeric_limits<DWORD>::max)());
+    DWORD capacity = static_cast<DWORD>((std::min<uint64_t>)(256, limit));
+    std::string buffer;
+    for (;;)
+    {
+        buffer.resize(capacity);
+        DWORD count = section ? GetPrivateProfileStringA(section, key, "", &buffer[0], capacity, path.c_str()) :
+            GetPrivateProfileSectionNamesA(&buffer[0], capacity, path.c_str());
+        if (count < capacity - reserved || capacity == limit)
+        {
+            buffer.resize(count);
+            return buffer;
+        }
+        capacity = static_cast<DWORD>((std::min<uint64_t>)(uint64_t(capacity) * 2, limit));
+    }
+}
+#endif
+
+Cini::Cini(const std::string& iniPath, bool useSimpleIni) :
+m_iniPath(iniPath),
 m_length(1024),
 m_sectionNum(1024),
 m_simpleIni(nullptr),
-m_loadSuccess(false)
+m_ready(false)
 {
-	m_iniPath = iniPath;
-#ifdef _MSC_VER
-	m_useSimpleIni = useSimpleIni;
-#elif defined(__unix__) || defined(__APPLE__)
-	m_useSimpleIni = true;
+    if (m_iniPath.find('\0') != std::string::npos)
+    {
+        m_iniPath.clear();
+        return;
+    }
+#ifdef _WIN32
+    if (!useSimpleIni)
+    {
+        return;
+    }
+#else
+    (void)useSimpleIni;
 #endif
-	if (m_useSimpleIni)
-	{
-		m_simpleIni = new CSimpleIniA(true);
-		if (m_simpleIni != nullptr)
-		{
-			m_loadSuccess = (((CSimpleIniA*)m_simpleIni)->LoadFile(iniPath.c_str()) == SI_OK);
-		}
-	}
+    std::unique_ptr<CSimpleIniA> ini(new CSimpleIniA(true));
+    m_ready = iniPath.empty();
+    if (!iniPath.empty())
+    {
+        std::unique_ptr<FILE, int (*)(FILE*)> file(std::fopen(iniPath.c_str(), "rb"), std::fclose);
+        m_ready = file ? ini->LoadFile(file.get()) == SI_OK : errno == ENOENT;
+    }
+    m_simpleIni = ini.release();
 }
 
 Cini::~Cini()
 {
-	if (m_useSimpleIni && m_simpleIni != nullptr)
-	{
-		delete ((CSimpleIniA*)m_simpleIni);
-	}
+    delete static_cast<CSimpleIniA*>(m_simpleIni);
 }
 
 bool Cini::loadData(const std::string& data)
 {
-    if (!m_useSimpleIni || m_simpleIni == nullptr) return false;
     CSimpleIniA* ini = static_cast<CSimpleIniA*>(m_simpleIni);
+    if (!ini)
+    {
+        return false;
+    }
+    m_ready = false;
     ini->Reset();
-    m_loadSuccess = ini->LoadData(data.data(), data.size()) == SI_OK;
-    return m_loadSuccess;
+    m_ready = ini->LoadData(data.data(), data.size()) == SI_OK;
+    return m_ready;
 }
 
 void Cini::setMaxLength(int32_t length)
 {
-	m_length = length;
+    m_length = length;
 }
 
 void Cini::setMaxSection(int32_t sectionNum)
 {
-	m_sectionNum = sectionNum;
+    m_sectionNum = sectionNum;
 }
 
 std::string Cini::readIni(const std::string& key, const std::string& section) const
 {
-	if (m_loadSuccess)
-	{
-		return ((CSimpleIniA*)m_simpleIni)->GetValue(section.c_str(), key.c_str(), "");
-	}
-
-#ifdef _MSC_VER
-	if (m_length == 0)
-	{
-		return "";
-	}
-	std::string value;
-	value.resize(m_length);
-	GetPrivateProfileStringA(section.c_str(), key.c_str(), "", &value[0], m_length, m_iniPath.c_str());
-	value.resize(strlen(&value[0]));
-	return value;
-#elif defined(__unix__) || defined(__APPLE__)
-	return "";
+    if (key.find('\0') != std::string::npos || section.find('\0') != std::string::npos)
+    {
+        return "";
+    }
+    if (m_ready)
+    {
+        return static_cast<CSimpleIniA*>(m_simpleIni)->GetValue(section.c_str(), key.c_str(), "");
+    }
+#ifdef _WIN32
+    if (!m_simpleIni && m_length > 0)
+    {
+        return ReadProfile(m_iniPath, section.c_str(), key.c_str(), m_length);
+    }
 #endif
+    return "";
 }
 
 void Cini::writeIni(const std::string& key, const std::string& value, const std::string& section) const
 {
-	if (m_loadSuccess)
-	{
-		((CSimpleIniA*)m_simpleIni)->SetValue(section.c_str(), key.c_str(), value.c_str(), nullptr, true);
-		((CSimpleIniA*)m_simpleIni)->SaveFile(m_iniPath.c_str(), false);
-		return;
-	}
-
-#ifdef _MSC_VER
-	WritePrivateProfileStringA(section.c_str(), key.c_str(), value.c_str(), m_iniPath.c_str());
+    if (!IsWritableName(key, false) || !IsWritableName(section, true) ||
+        value.find_first_of("\r\n\0", 0, 3) != std::string::npos)
+    {
+        return;
+    }
+    if (m_ready)
+    {
+        CSimpleIniA* ini = static_cast<CSimpleIniA*>(m_simpleIni);
+        if (ini->SetValue(section.c_str(), key.c_str(), value.c_str()) >= SI_OK && !m_iniPath.empty())
+        {
+            ini->SaveFile(m_iniPath.c_str(), false);
+        }
+    }
+#ifdef _WIN32
+    else if (!m_simpleIni && !m_iniPath.empty())
+    {
+        WritePrivateProfileStringA(section.c_str(), key.c_str(), value.c_str(), m_iniPath.c_str());
+    }
 #endif
 }
 
 std::vector<std::string> Cini::getAllSection() const
 {
-	if (m_loadSuccess)
-	{
-		CSimpleIniTempl<char, SI_NoCase<char>, SI_ConvertA<char>>::TNamesDepend sections;
-		((CSimpleIniA*)m_simpleIni)->GetAllSections(sections);
-		std::vector<std::string> result;
-		for (auto it = sections.begin(); it != sections.end(); ++it)
-		{
-			result.push_back(it->pItem);
-		}
-		return result;
-	}
-
-#ifdef _MSC_VER
-	std::vector<std::string> vecSection;
-	int32_t iLength = 0;
-	int32_t iPos = 0;
-	//总长度
-	uint32_t maxSectionLength = (uint32_t)m_sectionNum * (uint32_t)m_length;
-	//总的提出来的字符串
-	CHAR* chSectionNames = new CHAR[maxSectionLength];
-	//存放一个段名
-	CHAR* chSection = new CHAR[m_length];
-	DWORD nChar = GetPrivateProfileSectionNamesA(chSectionNames, maxSectionLength, m_iniPath.c_str());
-	//以下循环，截断到两个连续的0
-	for (int32_t i = 0; (DWORD)i < nChar; i++)
-	{
-		if (chSectionNames[i] == 0)
-		{
-			chSection[iLength] = 0;
-			vecSection.push_back(chSection);
-			if (chSectionNames[i] == chSectionNames[i + 1])
-			{
-				break;
-			}
-			memset(chSection, 0, iLength);
-			iPos = 0;
-			iLength = 0;
-		}
-		else
-		{
-			chSection[iPos++] = chSectionNames[i];
-			iLength++;
-		}
-	}
-	delete[] chSectionNames;
-	delete[] chSection;
-	return vecSection;
-#elif defined(__unix__) || defined(__APPLE__)
-	return std::vector<std::string>();
+    std::vector<std::string> result;
+    if (m_ready)
+    {
+        CSimpleIniA::TNamesDepend names;
+        static_cast<CSimpleIniA*>(m_simpleIni)->GetAllSections(names);
+        for (const auto& name : names)
+        {
+            result.push_back(name.pItem);
+        }
+    }
+#ifdef _WIN32
+    else if (!m_simpleIni && m_length > 0 && m_sectionNum > 0)
+    {
+        std::string names = ReadProfile(m_iniPath, nullptr, nullptr, uint64_t(m_length) * m_sectionNum);
+        size_t start = 0;
+        while (start < names.size() && result.size() < static_cast<size_t>(m_sectionNum))
+        {
+            size_t end = names.find('\0', start);
+            if (end == std::string::npos || end == start)
+            {
+                break;
+            }
+            result.push_back(names.substr(start, end - start));
+            start = end + 1;
+        }
+    }
 #endif
+    return result;
 }
 
 std::vector<std::string> Cini::getAllKey(const std::string& section) const
 {
-	if (m_loadSuccess)
-	{
-		CSimpleIniTempl<char, SI_NoCase<char>, SI_ConvertA<char>>::TNamesDepend sections;
-		((CSimpleIniA*)m_simpleIni)->GetAllKeys(section.c_str(), sections);
-		std::vector<std::string> result;
-		for (auto it = sections.begin(); it != sections.end(); ++it)
-		{
-			result.push_back(it->pItem);
-		}
-		return result;
-	}
-	return std::vector<std::string>();
+    if (section.find('\0') != std::string::npos)
+    {
+        return {};
+    }
+    std::vector<std::string> result;
+    if (m_ready)
+    {
+        CSimpleIniA::TNamesDepend keys;
+        static_cast<CSimpleIniA*>(m_simpleIni)->GetAllKeys(section.c_str(), keys);
+        for (const auto& key : keys)
+        {
+            result.push_back(key.pItem);
+        }
+    }
+    return result;
 }
 
 std::string Cini::getFirstKey(const std::string& section) const
 {
-	if (m_loadSuccess)
-	{
-		CSimpleIniTempl<char, SI_NoCase<char>, SI_ConvertA<char>>::TNamesDepend sections;
-		((CSimpleIniA*)m_simpleIni)->GetAllKeys(section.c_str(), sections);
-		if (sections.empty())
-		{
-			return "";
-		}
-		return sections.begin()->pItem;
-	}
-
-#ifdef _MSC_VER
-	std::string result;
-	result.resize(m_length);
-	GetPrivateProfileStringA(section.c_str(), nullptr, "", &result[0], m_length, m_iniPath.c_str());
-	result.resize(strlen(&result[0]));
-	return result;
-#elif defined(__unix__) || defined(__APPLE__)
-	return "";
+    if (section.find('\0') != std::string::npos)
+    {
+        return "";
+    }
+    if (m_ready)
+    {
+        const CSimpleIniA::TKeyVal* keys = static_cast<CSimpleIniA*>(m_simpleIni)->GetSection(section.c_str());
+        if (keys && !keys->empty())
+        {
+            return keys->begin()->first.pItem;
+        }
+    }
+#ifdef _WIN32
+    else if (!m_simpleIni && m_length > 0)
+    {
+        std::string keys = ReadProfile(m_iniPath, section.c_str(), nullptr, m_length);
+        return keys.substr(0, keys.find('\0'));
+    }
 #endif
+    return "";
 }
 
 void Cini::deleteKey(const std::string& key, const std::string& section) const
 {
-	if (m_loadSuccess)
-	{
-		((CSimpleIniA*)m_simpleIni)->Delete(section.c_str(), key.c_str());
-		((CSimpleIniA*)m_simpleIni)->SaveFile(m_iniPath.c_str(), false);
-		return;
-	}
-#ifdef _MSC_VER
-	WritePrivateProfileStringA(section.c_str(), key.c_str(), nullptr, m_iniPath.c_str());
+    if (key.find('\0') != std::string::npos || section.find('\0') != std::string::npos)
+    {
+        return;
+    }
+    if (m_ready)
+    {
+        CSimpleIniA* ini = static_cast<CSimpleIniA*>(m_simpleIni);
+        if (ini->Delete(section.c_str(), key.c_str()) && !m_iniPath.empty())
+        {
+            ini->SaveFile(m_iniPath.c_str(), false);
+        }
+    }
+#ifdef _WIN32
+    else if (!m_simpleIni && !m_iniPath.empty())
+    {
+        WritePrivateProfileStringA(section.c_str(), key.c_str(), nullptr, m_iniPath.c_str());
+    }
 #endif
 }
 
 void Cini::deleteSection(const std::string& section) const
 {
-	if (m_loadSuccess)
-	{
-		std::vector<std::string> vecKeys = getAllKey(section);
-		int32_t index = -1;
-		while (index++ != vecKeys.size() - 1)
-		{
-			((CSimpleIniA*)m_simpleIni)->Delete(section.c_str(), vecKeys[index].c_str(), true);
-		}
-		((CSimpleIniA*)m_simpleIni)->SaveFile(m_iniPath.c_str(), false);
-		return;
-	}
-#ifdef _MSC_VER
-	WritePrivateProfileSectionA(section.c_str(), nullptr, m_iniPath.c_str());
+    if (section.find('\0') != std::string::npos)
+    {
+        return;
+    }
+    if (m_ready)
+    {
+        CSimpleIniA* ini = static_cast<CSimpleIniA*>(m_simpleIni);
+        if (ini->Delete(section.c_str(), nullptr) && !m_iniPath.empty())
+        {
+            ini->SaveFile(m_iniPath.c_str(), false);
+        }
+    }
+#ifdef _WIN32
+    else if (!m_simpleIni && !m_iniPath.empty())
+    {
+        WritePrivateProfileSectionA(section.c_str(), nullptr, m_iniPath.c_str());
+    }
 #endif
 }
 
-//int32_t main()
-//{
-//	Cini ini("D:\\xueyelingshuang\\lib\\save.ini");
-//	ini.WriteIni("sad", "1234a");
-//	std::string str = ini.ReadIni("sad");
-//	printf("str = %s, len = %d\n", str.c_str(), str.length());
-//	std::string key = ini.GetFirstKey();
-//	printf("key = %s\n", key.c_str());
-//	std::vector<std::string> vecSection = ini.GetSection();
-//	printf("vec.size = %d, vec[0] = %s\n", vecSection.size(), vecSection[0].c_str());
-//	getchar();
-//	return 0;
-//}
+// 内存配置用法示例，取消以下各行注释即可单独构建运行
+// int main()
+// {
+//     Cini ini("", true);
+//     // 这两个设置只限制 Windows Profile 的查询缓冲区
+//     ini.setMaxLength(256);
+//     ini.setMaxSection(16);
+//     if (!ini.loadData("[Section]\nname=Cini\n[Extra]\nk=v\n"))
+//     {
+//         return 1;
+//     }
+//     ini.writeIni("level", "2");
+//     if (ini.readIni("level") != "2" || ini.getAllSection().size() != 2 ||
+//         ini.getAllKey().size() != 2 || ini.getFirstKey("Extra") != "k")
+//     {
+//         return 1;
+//     }
+//     ini.deleteKey("level");
+//     ini.deleteSection("Extra");
+//     return ini.readIni("level").empty() && ini.getAllSection().size() == 1 ? 0 : 1;
+// }

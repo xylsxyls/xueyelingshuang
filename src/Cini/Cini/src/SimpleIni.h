@@ -218,21 +218,14 @@
 #include <string>
 #include <map>
 #include <list>
+#include <memory>
+#include <functional>
 #include <algorithm>
 #include <stdio.h>
 
 #ifdef SI_SUPPORT_IOSTREAMS
 # include <iostream>
 #endif // SI_SUPPORT_IOSTREAMS
-
-#ifdef _DEBUG
-# ifndef assert
-#  include <cassert>
-# endif
-# define SI_ASSERT(x)   assert(x)
-#else
-# define SI_ASSERT(x)
-#endif
 
 enum SI_Error {
     SI_OK       =  0,   //!< No error
@@ -429,12 +422,12 @@ public:
             if (uLen == (size_t)(-1)) {
                 return false;
             }
-            while (uLen > m_scratch.size()) {
-                m_scratch.resize(m_scratch.size() * 2);
+            if (uLen > m_scratch.size()) {
+                m_scratch.resize(uLen);
             }
             return SI_CONVERTER::ConvertToStore(
                 a_pszString,
-                const_cast<char*>(m_scratch.data()),
+                &m_scratch[0],
                 m_scratch.size());
         }
         const char * Data() { return m_scratch.data(); }
@@ -606,7 +599,7 @@ public:
     /** Load INI file data direct from memory
 
         @param a_pData      Data to be loaded
-        @param a_uDataLen   Length of the data in bytes
+        @param a_uDataLen   Text length in bytes, excluding any terminator. Zero bytes in this range are invalid.
 
         @return SI_Error    See error definitions
      */
@@ -1306,6 +1299,7 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::Reset()
     delete[] m_pData;
     m_pData = NULL;
     m_uDataLen = 0;
+    m_nOrder = 0;
     m_pFileComment = NULL;
     if (!m_data.empty()) {
         m_data.erase(m_data.begin(), m_data.end());
@@ -1387,7 +1381,8 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::LoadFile(
     }
     
     // allocate and ensure NULL terminated
-    char * pData = new(std::nothrow) char[lSize+1];
+    std::unique_ptr<char[]> data(new(std::nothrow) char[static_cast<size_t>(lSize) + 1]);
+    char * pData = data.get();
     if (!pData) {
         return SI_NOMEM;
     }
@@ -1397,14 +1392,11 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::LoadFile(
     fseek(a_fpFile, 0, SEEK_SET);
     size_t uRead = fread(pData, sizeof(char), lSize, a_fpFile);
     if (uRead != (size_t) lSize) {
-        delete[] pData;
         return SI_FILE;
     }
 
     // convert the raw data to unicode
-    SI_Error rc = LoadData(pData, uRead);
-    delete[] pData;
-    return rc;
+    return LoadData(pData, uRead);
 }
 
 template<class SI_CHAR, class SI_STRLESS, class SI_CONVERTER>
@@ -1418,13 +1410,17 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::LoadData(
         return SI_OK;
     }
     
+    // A zero inside counted text would hide the remaining entries from the parser.
+    if (memchr(a_pData, 0, a_uDataLen)) {
+        return SI_FAIL;
+    }
+
     // if the UTF-8 BOM exists, consume it and set mode to unicode, if we have
-    // already loaded data and try to change mode half-way through then this will
-    // be ignored and we will assert in debug versions
+    // already loaded non-Unicode data, reject a mode change.
     if (a_uDataLen >= 3 && memcmp(a_pData, SI_UTF8_SIGNATURE, 3) == 0) {
         a_pData    += 3;
         a_uDataLen -= 3;
-        SI_ASSERT(m_bStoreIsUtf8 || !m_pData); // we don't expect mixed mode data
+        if (!m_bStoreIsUtf8 && m_pData) return SI_FAIL;
         SetUnicode();
     }
 
@@ -1441,7 +1437,9 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::LoadData(
 
     // allocate memory for the data, ensure that there is a NULL
     // terminator wherever the converted data ends
-    SI_CHAR * pData = new(std::nothrow) SI_CHAR[uLen+1];
+    if (uLen >= (size_t)(-1) / sizeof(SI_CHAR)) return SI_NOMEM;
+    std::unique_ptr<SI_CHAR[]> storage(new(std::nothrow) SI_CHAR[uLen+1]);
+    SI_CHAR * pData = storage.get();
     if (!pData) {
         return SI_NOMEM;
     }
@@ -1449,7 +1447,6 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::LoadData(
 
     // convert the data
     if (!converter.ConvertFromStore(a_pData, a_uDataLen, pData, uLen)) {
-        delete[] pData;
         return SI_FAIL;
     }
 
@@ -1465,6 +1462,11 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::LoadData(
     // already have stored some.
     bool bCopyStrings = (m_pData != NULL);
 
+    if (!bCopyStrings) {
+        m_pData = storage.release();
+        m_uDataLen = uLen+1;
+    }
+
     // find a file comment if it exists, this is a comment that starts at the
     // beginning of the file and continues until the first blank line.
     SI_Error rc = FindFileComment(pWork, bCopyStrings);
@@ -1474,15 +1476,6 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::LoadData(
     while (FindEntry(pWork, pSection, pItem, pVal, pComment)) {
         rc = AddEntry(pSection, pItem, pVal, pComment, false, bCopyStrings);
         if (rc < 0) return rc;
-    }
-
-    // store these strings if we didn't copy them
-    if (bCopyStrings) {
-        delete[] pData;
-    }
-    else {
-        m_pData = pData;
-        m_uDataLen = uLen+1;
     }
 
     return SI_OK;
@@ -1498,10 +1491,13 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::LoadData(
     std::string strData;
     char szBuf[512];
     do {
-        a_istream.get(szBuf, sizeof(szBuf), '\0');
-        strData.append(szBuf);
+        a_istream.read(szBuf, sizeof(szBuf));
+        strData.append(szBuf, static_cast<size_t>(a_istream.gcount()));
     }
     while (a_istream.good());
+    if (a_istream.bad() || !a_istream.eof()) {
+        return SI_FILE;
+    }
     return LoadData(strData);
 }
 #endif // SI_SUPPORT_IOSTREAMS
@@ -1566,13 +1562,13 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::FindEntry(
         if (*a_pData == '[') {
             // skip leading spaces
             ++a_pData;
-            while (*a_pData && IsSpace(*a_pData)) {
+            while (*a_pData && !IsNewLineChar(*a_pData) && IsSpace(*a_pData)) {
                 ++a_pData;
             }
 
             // find the end of the section name (it may contain spaces)
             // and convert it to lowercase as necessary
-            a_pSection = a_pData;
+            const SI_CHAR * pSectionStart = a_pData;
             while (*a_pData && *a_pData != ']' && !IsNewLineChar(*a_pData)) {
                 ++a_pData;
             }
@@ -1582,6 +1578,7 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::FindEntry(
                 continue;
             }
 
+            a_pSection = pSectionStart;
             // remove trailing spaces from the section
             pTrail = a_pData - 1;
             while (pTrail >= a_pSection && IsSpace(*pTrail)) {
@@ -1849,7 +1846,7 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::LoadMultiLineText(
     // if looking for a tag and if we aren't at the end of the data,
     // then move a_pData to the start of the next line.
     if (a_pTagName && cEndOfLineChar) {
-        SI_ASSERT(IsNewLineChar(cEndOfLineChar));
+        if (!IsNewLineChar(cEndOfLineChar)) return false;
         *a_pData = cEndOfLineChar;
         SkipNewLine(a_pData);
     }
@@ -1874,13 +1871,14 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::CopyString(
         for ( ; a_pString[uLen]; ++uLen) /*loop*/ ;
     }
     ++uLen; // NULL character
-    SI_CHAR * pCopy = new(std::nothrow) SI_CHAR[uLen];
+    std::unique_ptr<SI_CHAR[]> storage(new(std::nothrow) SI_CHAR[uLen]);
+    SI_CHAR * pCopy = storage.get();
     if (!pCopy) {
         return SI_NOMEM;
     }
     memcpy(pCopy, a_pString, sizeof(SI_CHAR)*uLen);
     m_strings.push_back(pCopy);
-    a_pString = pCopy;
+    a_pString = storage.release();
     return SI_OK;
 }
 
@@ -1898,7 +1896,7 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::AddEntry(
     SI_Error rc;
     bool bInserted = false;
 
-    SI_ASSERT(!a_pComment || IsComment(*a_pComment));
+    if (a_pComment && !IsComment(*a_pComment)) return SI_FAIL;
 
     // if we are copying strings then make a copy of the comment now
     // because we will need it when we add the entry.
@@ -1986,6 +1984,9 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::AddEntry(
         iKey = keyval.insert(oEntry);
     }
 
+    if (iKey->second && iKey->second != a_pValue) {
+        DeleteString(iKey->second);
+    }
     iKey->second = a_pValue;
     return bInserted ? SI_INSERTED : SI_UPDATED;
 }
@@ -2282,7 +2283,7 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::GetSectionSize(
     int nCount = 0;
     const SI_CHAR * pLastKey = NULL;
     typename TKeyVal::const_iterator iKeyVal = section.begin();
-    for (int n = 0; iKeyVal != section.end(); ++iKeyVal, ++n) {
+    for (; iKeyVal != section.end(); ++iKeyVal) {
         if (!pLastKey || IsLess(pLastKey, iKeyVal->first.pItem)) {
             ++nCount;
             pLastKey = iKeyVal->first.pItem;
@@ -2314,7 +2315,7 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::GetAllSections(
 {
     a_names.clear();
     typename TSection::const_iterator i = m_data.begin();
-    for (int n = 0; i != m_data.end(); ++i, ++n ) {
+    for (; i != m_data.end(); ++i) {
         a_names.push_back(i->first);
     }
 }
@@ -2340,7 +2341,7 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::GetAllKeys(
     const TKeyVal & section = iSection->second;
     const SI_CHAR * pLastKey = NULL;
     typename TKeyVal::const_iterator iKeyVal = section.begin();
-    for (int n = 0; iKeyVal != section.end(); ++iKeyVal, ++n ) {
+    for (; iKeyVal != section.end(); ++iKeyVal) {
         if (!pLastKey || IsLess(pLastKey, iKeyVal->first.pItem)) {
             a_names.push_back(iKeyVal->first);
             pLastKey = iKeyVal->first.pItem;
@@ -2439,7 +2440,7 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::Save(
         if (!*is->pItem) {
             // move the empty section name to the front of the section list
             if (is != oSections.begin()) {
-                oSections.splice(oSections.begin(), oSections, is, std::next(is));
+                oSections.splice(oSections.begin(), oSections, is);
             }
             break;
         }
@@ -2669,7 +2670,8 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::DeleteString(
     // strings may exist either inside the data block, or they will be
     // individually allocated and stored in m_strings. We only physically
     // delete those stored in m_strings.
-    if (a_pString < m_pData || a_pString >= m_pData + m_uDataLen) {
+    std::less<const SI_CHAR *> less;
+    if (!m_pData || less(a_pString, m_pData) || !less(a_pString, m_pData + m_uDataLen)) {
         typename TNamesDepend::iterator i = m_strings.begin();
         for (;i != m_strings.end(); ++i) {
             if (a_pString == i->pItem) {
@@ -2783,7 +2785,6 @@ public:
         size_t          a_uInputDataLen)
     {
         (void)a_pInputData;
-        SI_ASSERT(a_uInputDataLen != (size_t) -1);
 
         // ASCII/MBCS/UTF-8 needs no conversion
         return a_uInputDataLen;
@@ -2911,7 +2912,7 @@ public:
         const char *    a_pInputData,
         size_t          a_uInputDataLen)
     {
-        SI_ASSERT(a_uInputDataLen != (size_t) -1);
+        if (a_uInputDataLen == (size_t) -1) return (size_t) -1;
 
         if (m_bStoreIsUtf8) {
             // worst case scenario for UTF-8 to wchar_t is 1 char -> 1 wchar_t
@@ -3122,7 +3123,7 @@ public:
         const char *    a_pInputData,
         size_t          a_uInputDataLen)
     {
-        SI_ASSERT(a_uInputDataLen != (size_t) -1);
+        if (a_uInputDataLen == (size_t) -1) return (size_t) -1;
 
         UErrorCode nError;
 
@@ -3343,7 +3344,7 @@ public:
         const char *    a_pInputData,
         size_t          a_uInputDataLen)
     {
-        SI_ASSERT(a_uInputDataLen != (size_t) -1);
+        if (a_uInputDataLen == (size_t) -1) return (size_t) -1;
 
         int retval = MultiByteToWideChar(
             m_uCodePage, 0,
@@ -3471,4 +3472,3 @@ typedef CSimpleIniTempl<wchar_t,
 #endif
 
 #endif // INCLUDED_SimpleIni_h
-

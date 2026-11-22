@@ -40,9 +40,6 @@
 
 
 #include "ConvertUTF.h"
-#ifdef CVTUTF_DEBUG
-#include <stdio.h>
-#endif
 
 static const int halfShift  = 10; /* used for shifting by 10 bits */
 
@@ -85,7 +82,9 @@ ConversionResult ConvertUTF32toUTF16 (
 	    }
 	} else if (ch > UNI_MAX_LEGAL_UTF32) {
 	    if (flags == strictConversion) {
-		result = sourceIllegal;
+                --source;
+                result = sourceIllegal;
+                break;
 	    } else {
 		*target++ = UNI_REPLACEMENT_CHAR;
 	    }
@@ -153,12 +152,6 @@ ConversionResult ConvertUTF16toUTF32 (
     }
     *sourceStart = source;
     *targetStart = target;
-#ifdef CVTUTF_DEBUG
-if (result == sourceIllegal) {
-    fprintf(stderr, "ConvertUTF16toUTF32 illegal seq 0x%04x,%04x\n", ch, ch2);
-    fflush(stderr);
-}
-#endif
     return result;
 }
 
@@ -261,11 +254,11 @@ ConversionResult ConvertUTF16toUTF8 (
 					    ch = UNI_REPLACEMENT_CHAR;
 	}
 
-	target += bytesToWrite;
-	if (target > targetEnd) {
+	if (targetEnd - target < bytesToWrite) {
 	    source = oldSource; /* Back up source pointer! */
-	    target -= bytesToWrite; result = targetExhausted; break;
+	    result = targetExhausted; break;
 	}
+	target += bytesToWrite;
 	switch (bytesToWrite) { /* note: everything falls through. */
 	    case 4: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6;
 	    case 3: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6;
@@ -300,7 +293,7 @@ static Boolean isLegalUTF8(const UTF8 *source, int length) {
 	/* Everything else falls through when "true"... */
     case 4: if ((a = (*--srcptr)) < 0x80 || a > 0xBF) return false;
     case 3: if ((a = (*--srcptr)) < 0x80 || a > 0xBF) return false;
-    case 2: if ((a = (*--srcptr)) > 0xBF) return false;
+    case 2: if ((a = (*--srcptr)) < 0x80 || a > 0xBF) return false;
 
 	switch (*source) {
 	    /* no fall-through in this inner switch */
@@ -324,8 +317,10 @@ static Boolean isLegalUTF8(const UTF8 *source, int length) {
  * This is not used here; it's just exported.
  */
 Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd) {
-    int length = trailingBytesForUTF8[*source]+1;
-    if (source+length > sourceEnd) {
+    int length;
+    if (!source || !sourceEnd || source >= sourceEnd) return false;
+    length = trailingBytesForUTF8[*source]+1;
+    if (sourceEnd - source < length) {
 	return false;
     }
     return isLegalUTF8(source, length);
@@ -342,7 +337,7 @@ ConversionResult ConvertUTF8toUTF16 (
     while (source < sourceEnd) {
 	UTF32 ch = 0;
 	unsigned short extraBytesToRead = trailingBytesForUTF8[*source];
-	if (source + extraBytesToRead >= sourceEnd) {
+	if (sourceEnd - source <= extraBytesToRead) {
 	    result = sourceExhausted; break;
 	}
 	/* Do this check whether lenient or strict */
@@ -419,8 +414,8 @@ ConversionResult ConvertUTF32toUTF8 (
 	const UTF32 byteMark = 0x80; 
 	ch = *source++;
 	if (flags == strictConversion ) {
-	    /* UTF-16 surrogate values are illegal in UTF-32 */
-	    if (ch >= UNI_SUR_HIGH_START && ch <= UNI_SUR_LOW_END) {
+	    /* Surrogates and out-of-range values are illegal in UTF-32. */
+	    if ((ch >= UNI_SUR_HIGH_START && ch <= UNI_SUR_LOW_END) || ch > UNI_MAX_LEGAL_UTF32) {
 		--source; /* return to the illegal value itself */
 		result = sourceIllegal;
 		break;
@@ -439,11 +434,11 @@ ConversionResult ConvertUTF32toUTF8 (
 					    result = sourceIllegal;
 	}
 	
-	target += bytesToWrite;
-	if (target > targetEnd) {
+	if (targetEnd - target < bytesToWrite) {
 	    --source; /* Back up source pointer! */
-	    target -= bytesToWrite; result = targetExhausted; break;
+	    result = targetExhausted; break;
 	}
+	target += bytesToWrite;
 	switch (bytesToWrite) { /* note: everything falls through. */
 	    case 4: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6;
 	    case 3: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6;
@@ -468,7 +463,7 @@ ConversionResult ConvertUTF8toUTF32 (
     while (source < sourceEnd) {
 	UTF32 ch = 0;
 	unsigned short extraBytesToRead = trailingBytesForUTF8[*source];
-	if (source + extraBytesToRead >= sourceEnd) {
+	if (sourceEnd - source <= extraBytesToRead) {
 	    result = sourceExhausted; break;
 	}
 	/* Do this check whether lenient or strict */
