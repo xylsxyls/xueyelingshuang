@@ -2,28 +2,30 @@
 #include "NetPeerMacro.h"
 #include <chrono>
 #include <cstring>
+#include <new>
 
 NetRelayTransportWrite::NetRelayTransportWrite() :
 m_size(0),
-m_capacity(0),
-m_control(false)
+m_pool(nullptr),
+m_storage(nullptr),
+m_next(nullptr)
 {
 
 }
 
 NetRelayTransportWrite::~NetRelayTransportWrite()
 {
-    NetInterface::wipe(m_bytes.get(), m_capacity);
+    NetInterface::wipe(m_bytes.data(), m_size);
 }
 
-NetRelayTransportPeer::NetRelayTransportPeer(uint64_t now) :
-m_recycledCapacity(0),
-m_outputHead(0),
+NetRelayTransportPeer::NetRelayTransportPeer(uint64_t now, const NetRelayPoolConfig& pools) :
+m_dataPool(pools.m_dataBytes),
+m_controlPool(pools.m_controlBytes),
+m_dataRecords(pools.m_dataRecords),
+m_controlRecords(pools.m_controlRecords),
+m_outputHead(nullptr),
+m_outputTail(nullptr),
 m_inputOffset(0),
-m_dataBytes(0),
-m_controlBytes(0),
-m_dataCount(0),
-m_controlCount(0),
 m_started(now),
 m_blockedSince(0),
 m_phase(NET_RELAY_CONNECTING),
@@ -37,7 +39,23 @@ m_reason(NI_OK)
 NetRelayTransportPeer::~NetRelayTransportPeer()
 {
     NetInterface::wipe(m_input.empty() ? nullptr : m_input.data(), static_cast<uint32_t>(m_input.size()));
-    NetInterface::wipe(m_recycled.get(), m_recycledCapacity);
+    while (m_outputHead != nullptr)
+    {
+        pop();
+    }
+}
+
+int32_t NetRelayTransportPeer::status() const
+{
+    const int32_t states[] = {m_dataPool.status(), m_controlPool.status(), m_dataRecords.status(), m_controlRecords.status()};
+    for (size_t index = 0; index < 4; ++index)
+    {
+        if (states[index] != NI_OK)
+        {
+            return states[index];
+        }
+    }
+    return NI_OK;
 }
 
 int32_t NetRelayTransportPeer::enqueue(const NetInterfaceTunnelRecord& record)
@@ -49,70 +67,54 @@ int32_t NetRelayTransportPeer::enqueue(const NetInterfaceTunnelRecord& record)
         return checked;
     }
     const bool control = record.m_kind != NI_TUNNEL_BYTES;
-    const uint32_t limit = (NET_INTERFACE_TUNNEL_PAYLOAD_LIMIT + NET_INTERFACE_TUNNEL_HEADER_SIZE) * (control ? 2 : 4);
-    uint32_t& bytes = control ? m_controlBytes : m_dataBytes;
-    uint32_t& count = control ? m_controlCount : m_dataCount;
-    if (required > limit - bytes || count >= 32)
+    NetObjectPool<NetRelayTransportWrite>& pool = control ? m_controlRecords : m_dataRecords;
+    NetObjectReference<NetRelayTransportWrite> slot;
+    int32_t result = pool.create(slot);
+    if (result != NI_OK)
     {
-        return NI_LIMIT_EXCEEDED;
+        return result;
     }
-    NetRelayTransportWrite& slot = m_output[(m_outputHead + m_dataCount + m_controlCount) % 64];
-    try
+    result = (control ? m_controlPool : m_dataPool).allocate(required, slot->m_bytes);
+    if (result != NI_OK)
     {
-        if (m_recycledCapacity >= required)
-        {
-            slot.m_bytes.swap(m_recycled);
-            slot.m_capacity = m_recycledCapacity;
-            m_recycledCapacity = 0;
-        }
-        else
-        {
-            slot.m_bytes.reset(new uint8_t[required]);
-            slot.m_capacity = required;
-        }
+        return result;
     }
-    catch (...)
+    slot->m_size = required;
+    result = NetInterfaceTunnel::encode(record, slot->m_bytes.data(), slot->m_bytes.capacity(), required);
+    if (result != NI_OK)
     {
-        return NI_NO_MEMORY;
+        return result;
     }
-    const int32_t encoded = NetInterfaceTunnel::encode(record, slot.m_bytes.get(), slot.m_capacity, required);
-    if (encoded != NI_OK)
+    slot->m_pool = &pool;
+    slot->m_storage = slot.storage();
+    NetRelayTransportWrite* write = slot.release();
+    if (m_outputTail == nullptr)
     {
-        // 未提交槽位和额度；encode拒绝时不改输出，缓冲可直接释放。
-        slot.m_bytes.reset();
-        slot.m_capacity = 0;
-        return encoded;
+        m_outputHead = write;
     }
-    slot.m_size = required;
-    slot.m_control = control;
-    bytes += required;
-    ++count;
+    else
+    {
+        m_outputTail->m_next = write;
+    }
+    m_outputTail = write;
     return NI_OK;
 }
 
 void NetRelayTransportPeer::pop()
 {
-    if (m_dataCount + m_controlCount == 0)
+    NetRelayTransportWrite* slot = m_outputHead;
+    if (slot == nullptr)
     {
         return;
     }
-    NetRelayTransportWrite& slot = m_output[m_outputHead];
-    uint32_t& bytes = slot.m_control ? m_controlBytes : m_dataBytes;
-    uint32_t& count = slot.m_control ? m_controlCount : m_dataCount;
-    bytes -= slot.m_size;
-    --count;
-    // 本层只持有外层头和密文，不含密钥或业务明文；复用时整块清零，释放仍做安全擦除。
-    std::memset(slot.m_bytes.get(), 0, slot.m_size);
-    if (slot.m_capacity > m_recycledCapacity)
+    m_outputHead = slot->m_next;
+    if (m_outputHead == nullptr)
     {
-        slot.m_bytes.swap(m_recycled);
-        m_recycledCapacity = slot.m_capacity;
+        m_outputTail = nullptr;
     }
-    slot.m_bytes.reset();
-    slot.m_size = 0;
-    slot.m_capacity = 0;
-    slot.m_control = false;
-    m_outputHead = (m_outputHead + 1) % 64;
+    NetObjectPool<NetRelayTransportWrite>* pool = slot->m_pool;
+    void* storage = slot->m_storage;
+    pool->release(storage);
 }
 
 void NetRelayTransportPeer::clearInput()
@@ -127,6 +129,7 @@ void NetRelayTransportPeer::clearInput()
 
 NetRelayTransportState::NetRelayTransportState() :
 m_listener(nullptr),
+m_pools(new NetRelayPoolConfig),
 m_phase(NET_RELAY_IDLE),
 m_server(false),
 m_polling(false)
@@ -164,7 +167,12 @@ void NetRelayTransportState::onConnected(uint64_t id)
         auto found = m_peers.find(id);
         if (found == m_peers.end())
         {
-            std::unique_ptr<NetRelayTransportPeer> peer(new NetRelayTransportPeer(now()));
+            std::unique_ptr<NetRelayTransportPeer> peer(new NetRelayTransportPeer(now(), *m_pools));
+            if (peer->status() != NI_OK)
+            {
+                m_channel.close(id, peer->status());
+                return;
+            }
             found = m_peers.insert(std::make_pair(id, std::move(peer))).first;
         }
         NetRelayTransportPeer& peer = *found->second;
@@ -343,11 +351,57 @@ void NetRelayTransportState::pump(uint64_t id, NetRelayTransportPeer& peer)
             break;
         }
     }
-    for (uint32_t step = 0; step < 64 && peer.m_dataCount + peer.m_controlCount != 0 &&
-        !peer.m_closed && peer.m_phase != NET_RELAY_CLOSING && m_phase == NET_RELAY_ACTIVE; ++step)
+    for (uint32_t step = 0; step < 64 && peer.m_outputHead != nullptr &&
+        !peer.m_closed && peer.m_phase != NET_RELAY_CLOSING && m_phase == NET_RELAY_ACTIVE;)
     {
-        NetRelayTransportWrite& write = peer.m_output[peer.m_outputHead];
-        const int32_t result = m_channel.write(id, write.m_bytes.get(), write.m_size);
+        NetRelayTransportWrite& write = *peer.m_outputHead;
+        uint32_t count = 1;
+        uint32_t size = write.m_size;
+        const NetRelayTransportWrite* next = write.m_next;
+        while (next != nullptr && count < 64 - step)
+        {
+            if (next->m_size > 32768 - size)
+            {
+                break;
+            }
+            size += next->m_size;
+            next = next->m_next;
+            ++count;
+        }
+        if (count > 1 && !m_batch)
+        {
+            m_batch.reset(new (std::nothrow) uint8_t[32768]);
+        }
+        const uint8_t* data = write.m_bytes.data();
+        if (count > 1 && m_batch)
+        {
+            uint32_t offset = 0;
+            const NetRelayTransportWrite* part = &write;
+            for (uint32_t index = 0; index < count; ++index)
+            {
+                std::memcpy(m_batch.get() + offset, part->m_bytes.data(), part->m_size);
+                offset += part->m_size;
+                part = part->m_next;
+            }
+            data = m_batch.get();
+        }
+        else
+        {
+            count = 1;
+            size = write.m_size;
+        }
+        int32_t result = m_channel.write(id, data, size);
+        if (count > 1)
+        {
+            // 宿主只借用到返回；临时副本包含密文，队列原件只在完整接纳后释放。
+            std::memset(m_batch.get(), 0, size);
+            if (NetHostSocket::isBackpressure(result))
+            {
+                // 剩余容量可能容得下队首；不能因合并包过大使本可前进的连接停住。
+                count = 1;
+                result = m_channel.write(id, write.m_bytes.data(), write.m_size);
+            }
+        }
         if (NetHostSocket::isBackpressure(result))
         {
             break;
@@ -357,6 +411,10 @@ void NetRelayTransportState::pump(uint64_t id, NetRelayTransportPeer& peer)
             close(id, result);
             break;
         }
-        peer.pop();
+        for (uint32_t index = 0; index < count; ++index)
+        {
+            peer.pop();
+        }
+        step += count;
     }
 }

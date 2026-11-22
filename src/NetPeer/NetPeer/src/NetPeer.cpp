@@ -57,6 +57,45 @@ int32_t NetPeer::clientDestroy(NetPeerClientHandle handle)
     return NI_OK;
 }
 
+int32_t NetPeer::clientConfigureConnectionPools(NetPeerClientHandle handle, const NetConnectionPoolConfig& config)
+{
+    if (handle == nullptr)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
+    if (!handle->inactive())
+    {
+        return NI_INVALID_STATE;
+    }
+    return handle->m_session.configureConnectionPools(config);
+}
+
+int32_t NetPeer::clientConfigureRequestPool(NetPeerClientHandle handle, const LockFreeHashMapPoolConfig& config)
+{
+    if (handle == nullptr)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
+    if (!handle->inactive())
+    {
+        return NI_INVALID_STATE;
+    }
+    return handle->m_session.configureRequestPool(config);
+}
+
+int32_t NetPeer::clientConfigureSubmissionPools(NetPeerClientHandle handle, const NetSenderSubmissionPools& pools)
+{
+    if (handle == nullptr)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
+    if (!handle->inactive())
+    {
+        return NI_INVALID_STATE;
+    }
+    return handle->m_dispatch.submission().configurePools(pools);
+}
+
 int32_t NetPeer::clientConfigureCompression(NetPeerClientHandle handle, const uint32_t* types, uint32_t count)
 {
     if (handle == nullptr)
@@ -106,7 +145,7 @@ int32_t NetPeer::clientConfigureGateways(NetPeerClientHandle handle, const char*
     {
         return NI_INVALID_STATE;
     }
-    if ((seeds != nullptr && std::strlen(seeds) > 4096) || (cachePath != nullptr && std::strlen(cachePath) > 4096))
+    if (cachePath != nullptr && std::strlen(cachePath) > 4096)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -428,6 +467,39 @@ int32_t NetPeer::connectServiceGateway(NetPeerSenderState* client, uint32_t prod
     return client->m_lastError;
 }
 
+int32_t NetPeer::configureConnectionPools(NetPeerSenderState* client, const NetConnectionPoolConfig& config)
+{
+    if (client == nullptr || client->m_client == nullptr)
+    {
+        return NI_INVALID_STATE;
+    }
+    const int32_t result = clientConfigureConnectionPools(client->m_client, config);
+    client->m_lastError = result;
+    return result;
+}
+
+int32_t NetPeer::configureRequestPool(NetPeerSenderState* client, const LockFreeHashMapPoolConfig& config)
+{
+    if (client == nullptr || client->m_client == nullptr)
+    {
+        return NI_INVALID_STATE;
+    }
+    const int32_t result = clientConfigureRequestPool(client->m_client, config);
+    client->m_lastError = result;
+    return result;
+}
+
+int32_t NetPeer::configureSubmissionPools(NetPeerSenderState* client, const NetSenderSubmissionPools& pools)
+{
+    if (client == nullptr || client->m_client == nullptr)
+    {
+        return NI_INVALID_STATE;
+    }
+    const int32_t result = clientConfigureSubmissionPools(client->m_client, pools);
+    client->m_lastError = result;
+    return result;
+}
+
 int32_t NetPeer::configureCompression(NetPeerSenderState* client, const uint32_t* types, uint32_t count)
 {
     if (client == nullptr || client->m_client == nullptr)
@@ -583,527 +655,6 @@ int32_t NetPeer::configureHost(const NetHostFunctions& functions)
     return NetHostSocket::configureDefault(functions);
 }
 
-// NET_PEER_UNIT_TEST_BEGIN
-//#include "NetPeer.h"
-//#if defined(STATIC_LIB) || defined(__EMSCRIPTEN__)
-//#include "NetPeer/NetPeerSenderState.h"
-//#include "NetPeer/NetPeerClientState.h"
-//#endif
-//#include "NetPeer/NetPeerTest.h"
-//#include <cstdio>
-//#include <cstring>
-//
-//uint32_t NetPeerTest::m_created = 0;
-//
-//NetPeerTest::NetPeerTest() :
-//m_closed(0),
-//m_other(0),
-//m_generation(0), m_client(nullptr), m_cpp(nullptr), m_reenter(nullptr), m_throwEvents(0), m_bad(false)
-//{
-//}
-//void NetPeerTest::onSessionReady(uint64_t generation, uint32_t requests, uint32_t chunk)
-//{
-//    (void)generation; (void)requests; (void)chunk; ++m_other; if (m_reenter) { m_reenter(*this); } if (m_throwEvents & 1) { throw 1; }
-//}
-//void NetPeerTest::onSessionResult(uint64_t generation, uint64_t id, uint32_t product, uint32_t type, uint32_t status, const uint8_t* bytes, uint32_t size)
-//{
-//    (void)generation; (void)product; (void)type; (void)status; m_resultIds.push_back(id); m_resultBytes.push_back(size == 0 ? 0 : bytes[0]); ++m_other; if (m_reenter) { m_reenter(*this); } if (m_throwEvents & 2) { throw 2; }
-//}
-//bool NetPeerTest::onSessionFrame(uint64_t generation, const NetInterfaceFrame& frame)
-//{
-//    (void)generation; (void)frame; ++m_other; if (m_reenter) { m_reenter(*this); } if (m_throwEvents & 4) { throw 4; } return false;
-//}
-//void NetPeerTest::onSessionClosed(uint64_t generation, int32_t reason, int32_t detail)
-//{
-//    (void)reason; (void)detail; ++m_closed; m_generation = generation; if (m_reenter) { m_reenter(*this); } if (m_throwEvents & 8) { throw 8; }
-//}
-//int32_t NetPeerTest::entropy(void* context, uint8_t* bytes, uint32_t size)
-//{
-//    (void)context; std::memset(bytes, 0x71, size); return 0;
-//}
-//NetHostFunctions NetPeerTest::functions()
-//{
-//    NetHostFunctions value = {};
-//    value.structSize = sizeof(value); value.version = 1;
-//    value.create = create; value.connect = connect; value.poll = operation; value.write = write;
-//    value.pauseRead = control; value.close = control; value.shutdown = operation; value.destroy = operation;
-//    value.localPort = query; value.peerCount = query; value.entropy = entropy;
-//    return value;
-//}
-//int32_t NetPeerTest::create(void* context, void* observer, NetHostConnected connected, NetHostData data, NetHostWritable writable, NetHostClosed closed, void** instance)
-//{
-//    ++m_created;
-//    (void)context; (void)observer; (void)connected; (void)data; (void)writable; (void)closed; *instance = nullptr; return -1;
-//}
-//int32_t NetPeerTest::connect(void* instance, const char* address, uint32_t port, uint64_t* peer)
-//{
-//    (void)instance; (void)address; (void)port; *peer = 0; return -1;
-//}
-//int32_t NetPeerTest::operation(void* instance)
-//{
-//    (void)instance; return 0;
-//}
-//int32_t NetPeerTest::write(void* instance, uint64_t peer, const uint8_t* bytes, uint32_t size)
-//{
-//    (void)instance; (void)peer; (void)bytes; (void)size; return -1;
-//}
-//int32_t NetPeerTest::control(void* instance, uint64_t peer, int32_t value)
-//{
-//    (void)instance; (void)peer; (void)value; return 0;
-//}
-//uint32_t NetPeerTest::query(void* instance)
-//{
-//    (void)instance; return 0;
-//}
-//void NetPeerTest::ready(void* context, uint64_t generation, uint32_t requests, uint32_t chunk)
-//{
-//    static_cast<NetPeerTest*>(context)->onSessionReady(generation, requests, chunk);
-//}
-//void NetPeerTest::result(void* context, uint64_t generation, uint64_t id, uint32_t product, uint32_t type, uint32_t status, const uint8_t* bytes, uint32_t size)
-//{
-//    static_cast<NetPeerTest*>(context)->onSessionResult(generation, id, product, type, status, bytes, size);
-//}
-//int32_t NetPeerTest::frame(void* context, uint64_t generation, const NetInterfaceFrame* frame)
-//{
-//    return static_cast<NetPeerTest*>(context)->onSessionFrame(generation, *frame) ? 1 : 0;
-//}
-//void NetPeerTest::closed(void* context, uint64_t generation, int32_t reason, int32_t detail)
-//{
-//    static_cast<NetPeerTest*>(context)->onSessionClosed(generation, reason, detail);
-//}
-//
-//NetPeerClientOptions NetPeerTest::options()
-//{
-//    NetPeerClientOptions value = {};
-//    value.structSize = sizeof(value);
-//    value.version = 1;
-//    value.address = "127.0.0.1";
-//    value.port = 1;
-//    value.platform = 1;
-//    value.capabilities = 7;
-//    value.maxRequests = 4;
-//    value.maxChunk = 4096;
-//    value.handshakeTimeoutMs = 1000;
-//    value.tls.handshakeTimeoutMs = 1000;
-//    value.tls.entropy = entropy;
-//    std::memset(value.device, 0x31, sizeof(value.device));
-//    return value;
-//}
-//
-//NetPeerClientCallbacks NetPeerTest::callbacks()
-//{
-//    NetPeerClientCallbacks value = {};
-//    value.structSize = sizeof(value);
-//    value.version = 1;
-//    value.context = this;
-//    value.ready = ready;
-//    value.result = result;
-//    value.frame = frame;
-//    value.closed = closed;
-//    return value;
-//}
-//
-//void NetPeerTest::inspectC(NetPeerTest& test)
-//{
-//    const NetPeerClientOptions options = NetPeerTest::options();
-//    uint64_t ticket = 99;
-//    NetInterfaceFrame frame = {};
-//    test.m_bad = test.m_bad || NetPeer::instance().clientDestroy(test.m_client) != NI_INVALID_STATE ||
-//        NetPeer::instance().clientPoll(test.m_client) != NI_INVALID_STATE ||
-//        NetPeer::instance().clientConnect(test.m_client, &options) != NI_INVALID_STATE ||
-//        NetPeer::instance().clientConnectService(test.m_client, 101, &options) != NI_INVALID_STATE ||
-//        NetPeer::instance().clientConfigureCompression(test.m_client, nullptr, 0) != NI_INVALID_STATE ||
-//        NetPeer::instance().clientConfigureGateways(test.m_client, nullptr, nullptr) != NI_INVALID_STATE ||
-//        NetPeer::instance().clientSend(test.m_client, 1, nullptr, 0) != NI_INVALID_STATE ||
-//        NetPeer::instance().clientSendData(test.m_client, &frame) != NI_INVALID_STATE ||
-//        NetPeer::instance().clientSendBegin(test.m_client, 1, nullptr, 0, &ticket) != NI_INVALID_STATE || ticket != 0;
-//}
-//
-//#include "NetInterface/NetInterfaceAPI.h"
-//NetSenderDispatchTestChannel::NetSenderDispatchTestChannel(const NetInterfaceHandshakeOptions& options) :
-//m_reply(),
-//m_handshake(new NetInterfaceHandshake(options, NetSenderSubmission::now())),
-//m_listener(nullptr),
-//m_announced(false),
-//m_closing(false),
-//m_reason(0)
-//{
-//
-//}
-//
-//NetSenderDispatchTestChannel::~NetSenderDispatchTestChannel()
-//{
-//    shutdown();
-//}
-//
-//int32_t NetSenderDispatchTestChannel::connect(const char* address, uint32_t port, const NetInterfaceTlsOptions& options,
-//    NetTransportListener* listener, uint64_t& peer)
-//{
-//    (void)address;
-//    (void)port;
-//    (void)options;
-//    peer = 0;
-//    if (m_listener != nullptr || listener == nullptr)
-//    {
-//        return NI_INVALID_STATE;
-//    }
-//    m_listener = listener;
-//    peer = 1;
-//    return NI_OK;
-//}
-//
-//bool NetSenderDispatchTestChannel::poll()
-//{
-//    if (m_closing)
-//    {
-//        shutdown();
-//        return false;
-//    }
-//    if (m_listener == nullptr)
-//    {
-//        return false;
-//    }
-//    if (!m_announced)
-//    {
-//        m_announced = true;
-//        m_listener->onReady(1);
-//    }
-//    NetInterfaceFrame frame = {};
-//    if (!m_closing && m_handshake->peekOutput(frame) == NI_READY && m_listener->onFrame(1, frame))
-//    {
-//        m_handshake->consumeOutput();
-//    }
-//    if (!m_closing && m_reply.m_kind != 0 && m_listener->onFrame(1, m_reply))
-//    {
-//        m_reply = NetInterfaceFrame();
-//        m_payload.clear();
-//    }
-//    return true;
-//}
-//
-//int32_t NetSenderDispatchTestChannel::send(uint64_t peer, const NetInterfaceFrame& frame)
-//{
-//    if (peer != 1 || m_listener == nullptr || m_closing)
-//    {
-//        return NI_INVALID_STATE;
-//    }
-//    if (frame.m_kind == NI_REQUEST)
-//    {
-//        if (m_reply.m_kind != 0) { return NI_LIMIT_EXCEEDED; }
-//        NetInterfaceRpcView view = {};
-//        if (NetInterfaceRpc::parse(frame, view) != NI_OK)
-//{
-//    return NI_PROTOCOL_ERROR;
-//}
-
-//        m_requests.push_back(frame.m_requestId);
-//        m_bytes.push_back(view.m_size == 0 ? 0 : view.m_data[0]);
-//        m_payload.resize(view.m_size + 16);
-//        uint32_t required = 0;
-//        const int32_t encoded = NetInterfaceRpc::encode(NI_RESPONSE, NI_RPC_SUCCESS, 0, view.m_data, view.m_size, m_payload.data(), static_cast<uint32_t>(m_payload.size()), required);
-//        if (encoded != NI_OK) { return encoded; }
-//        m_reply = frame;
-//        m_reply.m_kind = NI_RESPONSE;
-//        m_reply.m_payload = m_payload.data();
-//        m_reply.m_payloadSize = required;
-//        return NI_OK;
-//    }
-//    if (frame.m_kind == NI_CANCEL) { return NI_OK; }
-//    const int32_t accepted = m_handshake->accept(frame, NetSenderSubmission::now());
-//    return accepted < 0 ? accepted : NI_OK;
-//}
-//
-//void NetSenderDispatchTestChannel::close(uint64_t peer, int32_t reason)
-//{
-//    if (peer == 1 && !m_closing)
-//    {
-//        m_closing = true;
-//        m_reason = reason;
-//    }
-//}
-//
-//int32_t NetSenderDispatchTestChannel::outputState(uint64_t peer) const
-//{
-//    return peer == 1 && m_listener != nullptr && !m_closing ? NI_OK : NI_INVALID_STATE;
-//}
-//
-//void NetSenderDispatchTestChannel::shutdown()
-//{
-//    m_closing = true;
-//    NetTransportListener* listener = m_listener;
-//    m_listener = nullptr;
-//    if (listener != nullptr)
-//    {
-//        listener->onClosed(1, m_reason, 0);
-//    }
-//}
-//
-//
-//
-//void NetPeerTest::inspectCpp(NetPeerTest& test)
-//{
-//    NetSenderGatewayOptions options = {};
-//    options.m_network = NetPeerTest::options();
-//    NetPeerTest wrong;
-//    test.m_bad = test.m_bad || NetPeer::instance().connectServiceGateway(test.m_cpp, 101, options, &wrong) != NI_INVALID_STATE ||
-//        NetPeer::instance().configureCompression(test.m_cpp, nullptr, 0) != NI_INVALID_STATE ||
-//        NetPeer::instance().prepareGateway(test.m_cpp) != NI_INVALID_STATE || NetPeer::instance().sendRequest(test.m_cpp, 1, nullptr, 0) != NI_INVALID_STATE;
-//    NetPeer::instance().destroyClient(test.m_cpp);
-//    test.m_bad = test.m_bad || NetPeer::instance().lastGatewayError(test.m_cpp) != NI_INVALID_STATE || NetPeer::instance().gatewayGeneration(test.m_cpp) == 0;
-//}
-//
-//#if defined(_WIN32) && defined(_DEBUG)
-//#include <crtdbg.h>
-//static int32_t g_peerRejectAfter = -1;
-///** 单元专用逐次构造分配故障
-//@param [in] operation CRT操作
-//@param [in] data 未使用
-//@param [in] size 未使用
-//@param [in] block 内存类型
-//@param [in] request 未使用
-//@param [in] file 未使用
-//@param [in] line 未使用
-//@return 是否允许分配
-//*/
-//static int PeerMemoryHook(int operation, void*, size_t, int block, long, const unsigned char*, int)
-//{
-//    if (operation == _HOOK_ALLOC && block == _NORMAL_BLOCK && g_peerRejectAfter >= 0)
-//    {
-//        if (g_peerRejectAfter == 0) { return 0; }
-//        --g_peerRejectAfter;
-//    }
-//    return 1;
-//}
-//#endif
-//
-//int main()
-//{
-//    uint32_t checks = 0;
-//#define PEER_CHECK(condition) { ++checks; if (!(condition)) { std::printf("FAIL line=%u condition=%s\n", static_cast<uint32_t>(__LINE__), #condition); return 1; } }
-//    NetFileIo noBackend;
-//    PEER_CHECK(noBackend.init() == NI_NOT_SUPPORTED && noBackend.done());
-//    NetPeerClientHandle invalid = nullptr;
-//    PEER_CHECK(NetPeer::instance().clientCreate(nullptr, &invalid) == NI_INVALID_ARGUMENT && invalid == nullptr);
-//    const NetHostFunctions host = NetPeerTest::functions();
-//    PEER_CHECK(NetPeer::configureHost(host) == NI_OK);
-//#if defined(_WIN32) && defined(_DEBUG)
-//    _CrtMemState before;
-//    _CrtMemCheckpoint(&before);
-//#endif
-//    {
-//
-//    {
-//        NetPeerTest test;
-//        NetPeerClientCallbacks callbacks = test.callbacks();
-//        NetPeerClientHandle handle = nullptr;
-//        PEER_CHECK(NetPeer::instance().clientCreate(&callbacks, &handle) == NI_OK);
-//        test.m_client = handle;
-//        test.m_reenter = NetPeerTest::inspectC;
-//        NetPeerClientOptions options = NetPeerTest::options();
-//        uint64_t id = 99;
-//        PEER_CHECK(NetPeer::instance().clientBegin(handle, 101, 700, 1000, &id) == NI_INVALID_STATE && id == 0);
-//        PEER_CHECK(NetPeer::instance().clientConfigureGateways(handle, "bad", nullptr) == NI_INVALID_ARGUMENT);
-//        PEER_CHECK(NetPeer::instance().clientConfigureGateways(handle, "127.0.0.1:1", nullptr) == NI_OK);
-//        for (uint32_t iteration = 0; iteration < 64; ++iteration)
-//        {
-//            options.platform = iteration % 3 + 1;
-//            PEER_CHECK(NetPeer::instance().clientConnectService(handle, 101, &options) == NI_OK);
-//            uint64_t generation = 0;
-//            int32_t ready = 1;
-//            PEER_CHECK(NetPeer::instance().clientState(handle, &generation, &ready) == NI_OK && generation == iteration + 1 && ready == 0);
-//            PEER_CHECK(NetPeer::instance().clientDestroy(handle) == NI_INVALID_STATE);
-//            PEER_CHECK(NetPeer::instance().clientConnect(handle, &options) == NI_INVALID_STATE);
-//            PEER_CHECK(NetPeer::instance().clientConnectService(handle, 102, &options) == NI_INVALID_STATE);
-//            PEER_CHECK(NetPeer::instance().clientConfigureCompression(handle, nullptr, 0) == NI_INVALID_STATE);
-//            PEER_CHECK(NetPeer::instance().clientConfigureGateways(handle, nullptr, nullptr) == NI_INVALID_STATE);
-//            id = 99;
-//            PEER_CHECK(NetPeer::instance().clientBegin(handle, 101, 700, 1000, &id) == NI_INVALID_STATE && id == 0);
-//            test.m_throwEvents = (iteration & 1) ? 8 : 0;
-//            PEER_CHECK(NetPeer::instance().clientClose(handle, NI_CANCELLED) == NI_OK);
-//            PEER_CHECK(NetPeer::instance().clientPoll(handle) == NI_OK);
-//            PEER_CHECK(test.m_closed == iteration + 1 && test.m_generation == iteration + 1 && test.m_other == 0 && !test.m_bad);
-//            PEER_CHECK(NetPeer::instance().clientPoll(handle) == NI_OK && test.m_closed == iteration + 1);
-//        }
-//        const uint32_t invalidPlatforms[] = {0, 4, UINT32_MAX};
-//        for (uint32_t index = 0; index < 3; ++index)
-//        {
-//            options.platform = invalidPlatforms[index];
-//            PEER_CHECK(NetPeer::instance().clientConnectService(handle, 101, &options) == NI_INVALID_ARGUMENT);
-//        }
-//        PEER_CHECK(NetPeer::instance().clientConfigureCompression(handle, nullptr, 0) == NI_OK);
-//        PEER_CHECK(NetPeer::instance().clientDestroy(handle) == NI_OK);
-//        PEER_CHECK(NetPeer::instance().clientDestroy(nullptr) == NI_OK);
-//    }
-//
-//    {
-//        NetPeer& sender = NetPeer::instance();
-//        NetPeerSenderState* client = nullptr;
-//        PEER_CHECK(sender.createClient(client) == NI_OK);
-//        NetPeerTest original;
-//        NetPeerTest wrong;
-//        original.m_cpp = client;
-//        original.m_reenter = NetPeerTest::inspectCpp;
-//        PEER_CHECK(sender.prepareGateway(client) == NI_OK && sender.prepareGateway(client) == NI_OK);
-//        NetSenderGatewayOptions options = {};
-//        options.m_network = NetPeerTest::options();
-//        for (uint32_t iteration = 0; iteration < 64; ++iteration)
-//        {
-//            options.m_network.platform = iteration % 3 + 1;
-//            PEER_CHECK(sender.connectServiceGateway(client, 101, options, &original) == NI_OK);
-//            PEER_CHECK(!sender.gatewayReady(client) && sender.gatewayGeneration(client) == iteration + 1);
-//            PEER_CHECK(sender.connectServiceGateway(client, 101, options, &wrong) == NI_INVALID_STATE);
-//            PEER_CHECK(sender.connectGateway(client, options, &wrong) == NI_INVALID_STATE);
-//            sender.destroyClient(client);
-//            PEER_CHECK(sender.lastGatewayError(client) == NI_INVALID_STATE && sender.gatewayGeneration(client) == iteration + 1);
-//            original.m_throwEvents = (iteration & 1) ? 8 : 0;
-//            sender.closeGateway(client, NI_CANCELLED);
-//            PEER_CHECK(!sender.pollGateway(client));
-//            PEER_CHECK(original.m_closed == iteration + 1 && original.m_other == 0 && !original.m_bad && wrong.m_closed == 0);
-//            PEER_CHECK(!sender.pollGateway(client));
-//        }
-//        options.m_localGatewayPid = 1;
-//        PEER_CHECK(sender.connectServiceGateway(client, 101, options, &wrong) == NI_INVALID_ARGUMENT);
-//        options.m_localGatewayPid = 0;
-//        PEER_CHECK(sender.connectServiceGateway(client, 0, options, &wrong) == NI_INVALID_ARGUMENT);
-//        PEER_CHECK(sender.connectServiceGateway(client, UINT32_MAX, options, &wrong) == NI_INVALID_ARGUMENT);
-//        sender.destroyClient(client);
-//        PEER_CHECK(sender.gatewayGeneration(client) == 0 && !sender.gatewayReady(client));
-//    }
-//
-//#if defined(STATIC_LIB) || defined(__EMSCRIPTEN__)
-//
-//    {
-//        NetInterfaceHandshakeOptions server = {};
-//        server.m_server = 1;
-//        server.m_capabilities = 7;
-//        server.m_maxRequests = 4;
-//        server.m_maxChunk = 4096;
-//        server.m_timeoutMs = 5000;
-//        std::memset(server.m_nonce, 0x43, sizeof(server.m_nonce));
-//        NetSenderDispatchTestChannel channel(server);
-//        NetPeerTest observer;
-//        NetPeerClientHandle handle = nullptr;
-//        const NetPeerClientCallbacks callbacks = observer.callbacks();
-//        PEER_CHECK(NetPeer::instance().clientCreate(&callbacks, &handle) == NI_OK);
-//        observer.m_client = handle;
-//        observer.m_reenter = NetPeerTest::inspectC;
-//        PEER_CHECK(handle->m_session.bindChannel(&channel) == NI_OK);
-//        const NetPeerClientOptions options = NetPeerTest::options();
-//        PEER_CHECK(NetPeer::instance().clientConnect(handle, &options) == NI_OK);
-//        for (uint32_t step = 0; step < 16 && observer.m_other == 0; ++step) { NetPeer::instance().clientPoll(handle); }
-//        PEER_CHECK(observer.m_other == 1 && !observer.m_bad);
-//        uint64_t generation = 0;
-//        int32_t ready = 0;
-//        PEER_CHECK(NetPeer::instance().clientState(handle, &generation, &ready) == NI_OK && ready == 1);
-//        std::vector<uint64_t> submitted;
-//        for (uint32_t round = 0; round < 128; ++round)
-//        {
-//            uint64_t ids[4] = {};
-//            for (uint32_t index = 0; index < 4; ++index)
-//            {
-//                PEER_CHECK(NetPeer::instance().clientBegin(handle, 101, 700, 1000, &ids[index]) == NI_OK);
-//            }
-//            for (uint32_t index = 0; index < 4; ++index)
-//            {
-//                uint8_t byte = static_cast<uint8_t>(index + 1);
-//                const uint64_t id = ids[3 - index];
-//                submitted.push_back(id);
-//                if (index != 3)
-//                {
-//                    PEER_CHECK(NetPeer::instance().clientPost(handle, id, &byte, 1) == NI_OK);
-//                    PEER_CHECK(channel.m_requests.size() == round * 4);
-//                }
-//                else
-//                {
-//                    uint64_t ticket = 0;
-//                    PEER_CHECK(NetPeer::instance().clientSendBegin(handle, id, &byte, 1, &ticket) == NI_OK && ticket != 0);
-//                    int32_t result = NI_READY;
-//                    for (uint32_t step = 0; step < 32 && result == NI_READY; ++step)
-//                    {
-//                        NetPeer::instance().clientPoll(handle);
-//                        result = NetPeer::instance().clientSendResult(handle, ticket);
-//                    }
-//                    PEER_CHECK(result == NI_OK && channel.m_requests.size() == (round + 1) * 4);
-//                    PEER_CHECK(NetPeer::instance().clientSendResult(handle, ticket) == NI_NOT_FOUND);
-//                }
-//                byte = 99;
-//            }
-//            for (uint32_t step = 0; step < 16 && observer.m_resultIds.size() != submitted.size(); ++step) { NetPeer::instance().clientPoll(handle); }
-//            PEER_CHECK(observer.m_resultIds == submitted && !observer.m_bad);
-//        }
-//        for (uint32_t index = 0; index < 512; ++index)
-//        {
-//            PEER_CHECK(channel.m_requests[index] == index + 1);
-//            PEER_CHECK(channel.m_bytes[index] == index % 4 + 1 && observer.m_resultBytes[index] == index % 4 + 1);
-//        }
-//        uint64_t cancelled = 0;
-//        PEER_CHECK(NetPeer::instance().clientBegin(handle, 101, 700, 1000, &cancelled) == NI_OK);
-//        PEER_CHECK(NetPeer::instance().clientCancel(handle, cancelled) == NI_OK);
-//        NetPeer::instance().clientPoll(handle);
-//        PEER_CHECK(observer.m_resultIds.size() == 513 && observer.m_resultIds.back() == cancelled && channel.m_requests.size() == 512);
-//        PEER_CHECK(NetPeer::instance().clientClose(handle, NI_CANCELLED) == NI_OK);
-//        PEER_CHECK(NetPeer::instance().clientPoll(handle) == NI_OK && observer.m_closed == 1 && !observer.m_bad);
-//        PEER_CHECK(NetPeer::instance().clientDestroy(handle) == NI_OK);
-//    }
-//    // 注入四类事件只核对C/C++桥接和异常边界；真实TLS另由进程集成测试核对。
-//    for (uint32_t mode = 0; mode < 16; ++mode)
-//    {
-//        NetPeerSenderState bridge;
-//        NetPeerTest observer;
-//        bridge.m_listener = &observer;
-//        const NetPeerClientCallbacks callbacks = bridge.callbacks();
-//        PEER_CHECK(NetPeer::instance().clientCreate(&callbacks, &bridge.m_client) == NI_OK);
-//        observer.m_client = bridge.m_client;
-//        observer.m_reenter = NetPeerTest::inspectC;
-//        observer.m_throwEvents = mode;
-//        bridge.m_client->onSessionReady(7, 4, 4096);
-//        bridge.m_client->onSessionResult(7, 1, 101, 700, 0, nullptr, 0);
-//        NetInterfaceFrame frame = {};
-//        const bool accepted = bridge.m_client->onSessionFrame(7, frame);
-//        PEER_CHECK(accepted == ((mode & 4) != 0));
-//        bridge.m_client->onSessionClosed(7, NI_CANCELLED, 0);
-//        PEER_CHECK(observer.m_other == 3 && observer.m_closed == 1 && !observer.m_bad);
-//        PEER_CHECK(bridge.m_client->m_callbackDepth == 0 && bridge.m_client->inactive());
-//        PEER_CHECK(NetPeer::instance().clientDestroy(bridge.m_client) == NI_OK);
-//    }
-//#endif
-//#if defined(_WIN32) && defined(_DEBUG)
-//    // 逐次拒绝构造中每一处分配，恢复后允许同一门面重试，不能泄漏部分核心。
-//    uint32_t testedFailures = 0;
-//    bool complete = false;
-//    for (int32_t step = 0; step < 128 && !complete; ++step)
-//    {
-//        NetPeer& sender = NetPeer::instance();
-//        NetPeerSenderState* client = nullptr;
-//        PEER_CHECK(sender.createClient(client) == NI_OK);
-//        g_peerRejectAfter = step;
-//        const _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(PeerMemoryHook);
-//        const int32_t prepared = sender.prepareGateway(client);
-//        _CrtSetAllocHook(previous);
-//        g_peerRejectAfter = -1;
-//        PEER_CHECK(prepared == NI_OK || prepared == NI_NO_MEMORY);
-//        complete = prepared == NI_OK;
-//        if (!complete) { ++testedFailures; }
-//        PEER_CHECK(sender.prepareGateway(client) == NI_OK);
-//        sender.destroyClient(client);
-//        PEER_CHECK(sender.gatewayGeneration(client) == 0);
-//    }
-//    PEER_CHECK(complete && testedFailures != 0);
-//#endif
-//
-//    }
-//#if defined(_WIN32) && defined(_DEBUG)
-//    _CrtMemState after;
-//    _CrtMemCheckpoint(&after);
-//    PEER_CHECK(before.lCounts[_NORMAL_BLOCK] == after.lCounts[_NORMAL_BLOCK] && before.lSizes[_NORMAL_BLOCK] == after.lSizes[_NORMAL_BLOCK]);
-//#endif
-//    PEER_CHECK(NetPeerTest::m_created == 0);
-//    std::printf("Peer facade checks=%u PASS\n", checks);
-//    return 0;
-//#undef PEER_CHECK
-//}
-// NET_PEER_UNIT_TEST_END
-
 int32_t NetPeer::gatewayState(NetPeerSenderState* client, uint64_t& generation, bool& ready)
 {
     generation = 0;
@@ -1176,4 +727,16 @@ NetPeerBackend& NetPeer::backend()
 {
     static NetPeerBackend s_backend;
     return s_backend;
+}
+
+int32_t NetPeer::configureWorkers(uint32_t count)
+{
+    return count == 0 ? NI_INVALID_ARGUMENT : (count == 1 ? NI_OK : NI_NOT_SUPPORTED);
+}
+
+int32_t NetPeer::configureDispatch(NetPeerSenderState* client, bool parallel)
+{
+    (void)parallel;
+    if (client == nullptr) { return NI_INVALID_ARGUMENT; }
+    return gatewayGeneration(client) == 0 ? NI_OK : NI_INVALID_STATE;
 }

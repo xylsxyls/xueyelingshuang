@@ -18,7 +18,7 @@ public:
     ~NetGatewayDiscovery();
 
     /** 启动有界发现，宿主在网络执行者初始化；缓存路径空时仅内存缓存
-    @param [in] seeds 1至64个数值入口
+    @param [in] seeds 非空数值入口列表，数量由实际存储决定
     @param [in] cachePath 可空UTF8路径，非空需要已配置文件后端，磁盘操作仅在后端
     @param [in] tls 仅采用客户端熵/期限；空熵使用显式字节宿主，0期限默认5000毫秒
     @return NI_OK或错误，不代表已认证远端；同一执行者调用，失败可shutdown收敛

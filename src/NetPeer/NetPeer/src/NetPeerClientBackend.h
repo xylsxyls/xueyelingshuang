@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "NetPeerTypes.h"
 #include "NetInterface/NetInterfaceAPI.h"
-#include <NetInterface/NetInterfaceAPI.h>
 
 // 原生组合入口，只在执行者启动前借用本地提交端口；不是业务NetSender接口
 class NetPeerAPI NetPeerClientBackend

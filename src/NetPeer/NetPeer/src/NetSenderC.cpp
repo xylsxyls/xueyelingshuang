@@ -371,3 +371,15 @@ int32_t netSenderClientConfigureGateways(NetSenderClientHandle handle, const cha
         return NI_NO_MEMORY;
     }
 }
+
+int32_t netSenderConfigureWorkers(uint32_t count)
+{
+    return NetSender::configureWorkers(count);
+}
+
+int32_t netSenderClientConfigureDispatch(NetSenderClientHandle handle, int32_t parallel)
+{
+    if (handle == nullptr || (parallel != 0 && parallel != 1)) { return NI_INVALID_ARGUMENT; }
+    if (handle->m_callbackDepth.load() != 0) { return NI_INVALID_STATE; }
+    return NetSender::instance().configureDispatch(handle->m_client, parallel != 0);
+}

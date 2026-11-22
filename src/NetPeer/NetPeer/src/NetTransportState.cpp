@@ -12,9 +12,22 @@ m_closing(false), m_tcpClosed(false), m_reason(0), m_detail(0)
 
 }
 
+/** 按实际连接记录槽大小设置默认存储，不限制每秒连接数
+@return 初始化前可替换的真实池配置
+*/
+static LockFreeHashMapPoolConfig NetTransportPeerPool()
+{
+    LockFreeHashMapPoolConfig config;
+    config.initialCapacity = 128;
+    config.maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetTransportPeer>>);
+    config.directoryCapacity = 128;
+    config.lookupCacheCapacity = 0;
+    return config;
+}
+
 NetTransportState::NetTransportState() :
-m_listener(nullptr), m_options(), m_started(false), m_stopping(false),
-m_polling(false), m_now(now()), m_acceptWindow(m_now), m_acceptCount(0)
+m_peerPool(new NetObjectPool<NetTransportPeer>(NetTransportPeerPool())), m_listener(nullptr), m_options(), m_started(false), m_stopping(false),
+m_polling(false), m_now(now())
 {
 
 }
@@ -105,18 +118,9 @@ void NetTransportState::onConnected(uint64_t id)
             m_channel.close(id, NI_INVALID_STATE);
             return;
         }
-        if (m_now - m_acceptWindow >= 1000)
-        {
-            m_acceptWindow = m_now;
-            m_acceptCount = 0;
-        }
-        if (m_acceptCount >= 16)
-        {
-            m_channel.close(id, NI_LIMIT_EXCEEDED);
-            return;
-        }
-        ++m_acceptCount;
-        std::unique_ptr<NetTransportPeer> peer(new NetTransportPeer);
+        NetObjectReference<NetTransportPeer> peer;
+        const int32_t allocated = m_peerPool->create(peer);
+        if (allocated != NI_OK) { m_channel.close(id, allocated); return; }
         entry = m_peers.insert(std::make_pair(id, std::move(peer))).first;
     }
     entry->second->m_connected = true;
@@ -224,6 +228,15 @@ void NetTransportState::pump(uint64_t id, NetTransportPeer& peer)
     if (!peer.m_connection)
     {
         peer.m_connection.reset(new NetInterfaceConnection(m_options));
+        if (m_connectionPools)
+        {
+            const int32_t configured = peer.m_connection->configurePools(*m_connectionPools);
+            if (configured != NI_OK)
+            {
+                close(id, configured);
+                return;
+            }
+        }
     }
     bool applicationBlocked = false;
     uint32_t outputBudget = 65536;

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "NetPeerMacro.h"
+#include "NetRelayPoolConfig.h"
 #include "NetInterface/NetInterfaceAPI.h"
 
 class NetRelayTransportState;
@@ -44,11 +45,17 @@ public:
     */
     ~NetRelayTransport();
 
+    /** 首次listen/connect前配置输出实际池；与其他调用串行
+    @param [in] pools 数据、控制记录及正文配置，复制到每个新连接
+    @return NI_OK或配置、内存、状态错误，失败不改变原配置
+    */
+    int32_t configurePools(const NetRelayPoolConfig& pools);
+
     /** 监听数值地址；公网监听必须显式指定0.0.0.0或::
     @param [in] address 数值IP
     @param [in] port 0用于本机测试，生产为1至65535
     @param [in] listener 借用至shutdown，不可空
-    @param [in] maxPeers 1至256
+    @param [in] maxPeers为非零预留提示，实际连接存储由宿主池配置控制
     @return NI_OK或底层错误
     */
     int32_t listen(const char* address, uint32_t port, NetRelayTransportListener* listener, uint32_t maxPeers = 64);
@@ -68,7 +75,7 @@ public:
     bool poll();
 
     /** 接纳外层头和密文副本；仅单执行者调用，不等待下层接纳
-    每连接业务最多4*16408字节/32条、控制最多2*16408字节/32条；两类共用FIFO
+    两类各用实际记录及正文池，不另设32条或若干分片字节量门槛；共用FIFO
     成功后由poll交给宿主，outputState为OK才表示本层全部交付；不是NetSender的同步send
     @param [in] peer 已建TCP代次
     @param [in] record 一条完整记录，返回后不借用数据

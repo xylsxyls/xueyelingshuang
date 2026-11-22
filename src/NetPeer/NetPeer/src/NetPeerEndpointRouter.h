@@ -21,7 +21,7 @@ public:
     @param [in] address 数值地址
     @param [in] port 0至65535，0供隔离测试
     @param [in] tls 服务端配置，调用时复制
-    @param [in] peers 1至256
+    @param [in] peers 非零启动预留提示，实际端点及连接容量由相应存储池决定
     @return OK接纳或负数，不代表业务授权成功
     */
     int32_t listen(const char* address, uint32_t port, const NetInterfaceTlsOptions& tls, uint32_t peers = 64);

@@ -217,7 +217,7 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
         if (address) { module.HEAPU8.fill(0, address, address + Math.max(1, size)); module._free(address); }
     };
     const textBytes = value => {
-        if (typeof value !== 'string' || value.indexOf('\0') >= 0 || value.length > 4096) throw new RangeError('Invalid UTF-8 input');
+        if (typeof value !== 'string' || value.indexOf('\0') >= 0) throw new RangeError('Invalid UTF-8 input');
         const text = unescape(encodeURIComponent(value));
         const bytes = new Uint8Array(text.length + 1);
         for (let i = 0; i < text.length; ++i) bytes[i] = text.charCodeAt(i);
@@ -346,28 +346,38 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
                 const chunk = options.maxChunk === undefined ? 65536 : options.maxChunk;
                 const timeout = options.timeoutMs === undefined ? 5000 : options.timeoutMs;
                 if (!device || device.length !== 16 || !device.some(value => value !== 0) || !integer(options.platform, 1, 3) ||
-                    !integer(options.port, 1, 65535) || !integer(capabilities, 0, 0xffffffff) || !integer(requests, 1, 128) ||
+                    !integer(options.port, 1, 65535) || !integer(capabilities, 0, 0xffffffff) || !integer(requests, 1, 0xffffffff) ||
                     !integer(chunk, 1024, 65536) || !integer(timeout, 100, 60000)) return this._record(-1);
+                const deviceOffset = device.buffer === module.HEAPU8.buffer ? device.byteOffset : -1;
+                const tls = options.tls || {};
+                const tlsTimeout = tls.timeoutMs === undefined ? timeout : tls.timeoutMs;
+                if (!integer(tlsTimeout, 100, 60000)) return this._record(-1);
+                // 在第一次malloc之前保存全部借用的偏移及长度，后面的每次分配都可能扩容。
+                const tlsInputs = [];
+                for (const name of ['authority', 'certificate', 'privateKey']) {
+                    if (tls[name] !== undefined) {
+                        const bytes = binary(tls[name]);
+                        if (!bytes) return this._record(-1);
+                        tlsInputs.push({ name, bytes, size: bytes.length,
+                            offset: bytes.buffer === module.HEAPU8.buffer ? bytes.byteOffset : -1 });
+                    }
+                }
                 memory = allocate(offsets.optionsSize);
                 const copy = bytes => { const address = allocate(bytes.length); owned.push([address, bytes.length]); module.HEAPU8.set(bytes, address); return address; };
                 putPointer(memory + offsets.options_address, copy(textBytes(options.address)));
                 u32(memory, offsets.optionsSize); u32(memory + 4, 1); u32(memory + offsets.options_port, options.port);
                 u32(memory + offsets.options_platform, options.platform); u32(memory + offsets.options_capabilities, capabilities);
                 u32(memory + offsets.options_maxRequests, requests); u32(memory + offsets.options_maxChunk, chunk);
-                u32(memory + offsets.options_handshakeTimeoutMs, timeout); module.HEAPU8.set(device, memory + offsets.options_device);
-                const tls = options.tls || {};
+                u32(memory + offsets.options_handshakeTimeoutMs, timeout);
+                module.HEAPU8.set(deviceOffset < 0 ? device : module.HEAPU8.subarray(deviceOffset, deviceOffset + 16), memory + offsets.options_device);
                 const tlsAddress = memory + offsets.options_tls;
-                const tlsTimeout = tls.timeoutMs === undefined ? timeout : tls.timeoutMs;
-                if (!integer(tlsTimeout, 100, 60000)) return this._record(-1);
                 u32(tlsAddress + offsets.tls_handshakeTimeoutMs, tlsTimeout);
                 if (tls.hostname) putPointer(tlsAddress + offsets.tls_hostname, copy(textBytes(tls.hostname)));
-                for (const name of ['authority', 'certificate', 'privateKey']) {
-                    if (tls[name] !== undefined) {
-                        const bytes = binary(tls[name]);
-                        if (!bytes) return this._record(-1);
-                        putPointer(tlsAddress + offsets['tls_' + name], copy(bytes));
-                        u32(tlsAddress + offsets['tls_' + name + 'Size'], bytes.length);
-                    }
+                for (const input of tlsInputs) {
+                    const address = allocate(input.size); owned.push([address, input.size]);
+                    module.HEAPU8.set(input.offset < 0 ? input.bytes : module.HEAPU8.subarray(input.offset, input.offset + input.size), address);
+                    putPointer(tlsAddress + offsets['tls_' + input.name], address);
+                    u32(tlsAddress + offsets['tls_' + input.name + 'Size'], input.size);
                 }
                 const previousListener = state.listener;
                 state.listener = listener;
@@ -381,7 +391,7 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
         configureCompression(types) {
             const state = senderStates.get(this);
             if (!state.handle) return this._record(-7);
-            if (!Array.isArray(types) || types.length > 64 || types.some(value => !integer(value, 1, 0xffffffff))) return this._record(-1);
+            if (!Array.isArray(types) || types.length > Math.floor(0xffffffff / 4) || types.some(value => !integer(value, 1, 0xffffffff))) return this._record(-1);
             let memory = 0;
             try {
                 memory = allocate(types.length * 4);
@@ -422,12 +432,16 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
             bytes = binary(bytes);
             if (!state.handle) return this._record(-7);
             if (!bytes || bytes.length > 1048560) return this._record(-1);
+            const size = bytes.length;
+            const offset = bytes.buffer === module.HEAPU8.buffer ? bytes.byteOffset : -1;
             let memory = 0;
             try {
-                requestNumber(requestId); memory = allocate(bytes.length); module.HEAPU8.set(bytes, memory);
-                return this._record(module._netPeerSenderClientPost(state.handle, requestId, memory, bytes.length));
+                requestNumber(requestId); memory = allocate(size);
+                // malloc可以扩容并分离旧堆视图；保存偏移后重新取视图，不额外复制普通JS输入。
+                module.HEAPU8.set(offset < 0 ? bytes : module.HEAPU8.subarray(offset, offset + size), memory);
+                return this._record(module._netPeerSenderClientPost(state.handle, requestId, memory, size));
             } catch (error) { return this._record(-1); }
-            finally { wipeFree(memory, bytes.length); }
+            finally { wipeFree(memory, size); }
         }
         // send返回Promise；await结果为0才表示交付网络宿主，绝不阻塞唯一JS线程。
         // 线程：仅所属JS执行者调用，可同时等待多个Promise；禁止在本对象协议回调中调用，不能忙等。
@@ -436,15 +450,18 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
             bytes = binary(bytes);
             if (!state.handle || state.depth) return this._record(-7);
             if (!bytes || bytes.length > 1048560) return this._record(-1);
+            const size = bytes.length;
+            const offset = bytes.buffer === module.HEAPU8.buffer ? bytes.byteOffset : -1;
             let memory = 0;
             let ticket = 0n;
             try {
-                requestNumber(requestId); memory = allocate(bytes.length + 8); module.HEAPU8.set(bytes, memory + 8);
-                const accepted = module._netPeerSenderClientSendBegin(state.handle, requestId, memory + 8, bytes.length, memory);
+                requestNumber(requestId); memory = allocate(size + 8);
+                module.HEAPU8.set(offset < 0 ? bytes : module.HEAPU8.subarray(offset, offset + size), memory + 8);
+                const accepted = module._netPeerSenderClientSendBegin(state.handle, requestId, memory + 8, size, memory);
                 if (accepted !== 0) return this._record(accepted);
                 ticket = view().getBigUint64(memory, true);
             } catch (error) { return this._record(-1); }
-            finally { wipeFree(memory, bytes.length + 8); }
+            finally { wipeFree(memory, size + 8); }
             return this._waitSend(ticket);
         }
         // 同一JS执行者调用；await到0才表示全部交给网络库，禁止协议回调中等待。
@@ -454,20 +471,22 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
             if (!state.handle || state.depth) return this._record(-7);
             const bytes = frame && binary(frame.bytes);
             if (!bytes || bytes.length > 65664 || !integer(frame.kind, 0, 65535) || !integer(frame.product, 1, 0xffffffff) || !integer(frame.type, 0, 0xffffffff)) return this._record(-1);
+            const size = bytes.length;
+            const offset = bytes.buffer === module.HEAPU8.buffer ? bytes.byteOffset : -1;
             let memory = 0;
             let ticket = 0n;
             try {
-                requestNumber(frame.requestId); memory = allocate(offsets.frameSize + bytes.length + 15);
+                requestNumber(frame.requestId); memory = allocate(offsets.frameSize + size + 15);
                 u32(memory + offsets.frame_m_productId, frame.product); view().setBigUint64(memory + offsets.frame_m_requestId, frame.requestId, true);
                 u32(memory + offsets.frame_m_messageType, frame.type); view().setUint16(memory + offsets.frame_m_kind, frame.kind, true);
-                u32(memory + offsets.frame_m_payloadSize, bytes.length); putPointer(memory + offsets.frame_m_payload, memory + offsets.frameSize);
-                module.HEAPU8.set(bytes, memory + offsets.frameSize);
-                const output = memory + ((offsets.frameSize + bytes.length + 7) & ~7);
+                u32(memory + offsets.frame_m_payloadSize, size); putPointer(memory + offsets.frame_m_payload, memory + offsets.frameSize);
+                module.HEAPU8.set(offset < 0 ? bytes : module.HEAPU8.subarray(offset, offset + size), memory + offsets.frameSize);
+                const output = memory + ((offsets.frameSize + size + 7) & ~7);
                 const accepted = module._netPeerSenderClientSendDataBegin(state.handle, memory, output);
                 if (accepted !== 0) return this._record(accepted);
                 ticket = view().getBigUint64(output, true);
             } catch (error) { return this._record(-1); }
-            finally { wipeFree(memory, offsets.frameSize + bytes.length + 15); }
+            finally { wipeFree(memory, offsets.frameSize + size + 15); }
             return this._waitSend(ticket);
         }
         async _waitSend(ticket) {
@@ -494,16 +513,18 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
             if (!state.handle) return this._record(-7);
             const bytes = frame && binary(frame.bytes);
             if (!bytes || bytes.length > 65664 || !integer(frame.kind, 0, 65535) || !integer(frame.product, 1, 0xffffffff) || !integer(frame.type, 0, 0xffffffff)) return this._record(-1);
+            const size = bytes.length;
+            const offset = bytes.buffer === module.HEAPU8.buffer ? bytes.byteOffset : -1;
             let memory = 0;
             try {
-                requestNumber(frame.requestId); memory = allocate(offsets.frameSize + bytes.length);
+                requestNumber(frame.requestId); memory = allocate(offsets.frameSize + size);
                 u32(memory + offsets.frame_m_productId, frame.product); view().setBigUint64(memory + offsets.frame_m_requestId, frame.requestId, true);
                 u32(memory + offsets.frame_m_messageType, frame.type); view().setUint16(memory + offsets.frame_m_kind, frame.kind, true);
-                u32(memory + offsets.frame_m_payloadSize, bytes.length); putPointer(memory + offsets.frame_m_payload, memory + offsets.frameSize);
-                module.HEAPU8.set(bytes, memory + offsets.frameSize);
+                u32(memory + offsets.frame_m_payloadSize, size); putPointer(memory + offsets.frame_m_payload, memory + offsets.frameSize);
+                module.HEAPU8.set(offset < 0 ? bytes : module.HEAPU8.subarray(offset, offset + size), memory + offsets.frameSize);
                 return this._record(module._netPeerSenderClientPostData(state.handle, memory));
             } catch (error) { return this._record(-1); }
-            finally { wipeFree(memory, offsets.frameSize + bytes.length); }
+            finally { wipeFree(memory, offsets.frameSize + size); }
         }
         // 线程：仅所属JS执行者提交，可在回调中调用；禁止跨Worker共享实例或句柄。
         closeGateway(reason = 0) {
@@ -543,12 +564,46 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
         _record(result) { senderStates.get(this).error = result; return result; }
     }
 
+    // JS宿主独占的实际缓冲池，存储按大小类复用；异步网络写完成前不归还。
+    class NetHostBufferPool {
+        /** 配置本执行者的实际ArrayBuffer存储上限，默认8MiB，不按消息条数计费 */
+        constructor(maximum = 8388608) {
+            if (!Number.isSafeInteger(maximum) || maximum < 32768) throw new TypeError('Invalid host buffer pool capacity');
+            this.maximum = maximum; this.reserved = 0;
+            this.classes = [64, 1024, 16384, 32768]; this.free = this.classes.map(() => []);
+        }
+        /** 借出一个实际缓冲；无可用容量时返回null，分配异常交给调用边界 */
+        acquire(size) {
+            const at = this.classes.findIndex(value => value >= size);
+            if (at < 0) return null;
+            if (this.free[at].length) return this.free[at].pop();
+            const capacity = this.classes[at];
+            // 其他大小类的空闲缓冲可以回收，避免闲置大块阻止小块分配。
+            for (let slot = 0; this.reserved + capacity > this.maximum && slot < this.free.length; ++slot) {
+                while (this.free[slot].length && this.reserved + capacity > this.maximum) {
+                    this.free[slot].pop(); this.reserved -= this.classes[slot];
+                }
+            }
+            if (this.reserved + capacity > this.maximum) return null;
+            const bytes = new Uint8Array(capacity); this.reserved += capacity; return bytes;
+        }
+        /** 归还一次真实缓冲，擦除旧内容；调用者之后不得保留可变借用 */
+        release(bytes) {
+            bytes.fill(0);
+            const at = this.classes.indexOf(bytes.length);
+            try { this.free[at].push(bytes); }
+            catch (error) { this.reserved -= bytes.length; }
+        }
+    }
     // 每个Wasm模块唯一的JS宿主，管理字节连接、强随机池和Sender生命周期。
     class NetPeerRuntime {
         constructor(options) {
             if (runtimeInstance) throw new Error('One native byte host is allowed per module');
             if (!options || typeof options.createSocket !== 'function' || typeof options.randomSource !== 'function') throw new TypeError('Raw socket and strong random hosts are required');
             this.module = module; this.options = options; this.randomSource = options.randomSource;
+            const pools = options.hostBufferPools || {};
+            this.inputPool = new NetHostBufferPool(pools.inputBytes);
+            this.outputPool = new NetHostBufferPool(pools.outputBytes);
             this.random = new Uint8Array(0); this.randomOffset = 0; this.refilling = null; this.randomError = null;
             this.clients = 0; this.hosts = new Map(); this.nextHost = 0; this.memory = 0; this.lastBindingError = null;
         }
@@ -613,22 +668,33 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
                 try {
                 if (kind === 'data') {
                     bytes = binary(bytes);
-                    if (!bytes || host.bytes + bytes.length > 4194304 || host.events.length + Math.ceil(bytes.length / 16384) > 512) {
-                        host.fault = -3; return;
+                    if (!bytes) { host.fault = -1; return; }
+                    for (let at = 0; at < bytes.length; at += 16384) {
+                        const size = Math.min(16384, bytes.length - at);
+                        const copy = this.inputPool.acquire(size);
+                        if (!copy) { host.fault = -3; return; }
+                        try { copy.set(bytes.subarray(at, at + size)); host.events.push({ kind, bytes: copy, size }); }
+                        catch (error) { this.inputPool.release(copy); throw error; }
+                        host.bytes += size;
                     }
-                    for (let at = 0; at < bytes.length; at += 16384) { const copy = bytes.slice(at, at + 16384); host.events.push({ kind, bytes: copy }); host.bytes += copy.length; }
                 } else {
                     if (kind === 'writable' && host.writablePending) return;
-                    if (host.events.length >= 1024) { host.fault = -3; return; }
+                    if (kind === 'connected') { if (host.connectedQueued) { host.fault = -7; return; } host.connectedQueued = true; }
                     if (kind === 'writable') host.writablePending = true;
                     if (kind === 'closed') host.ended = true;
                     host.events.push({ kind, reason: reason || 0 });
                 }
                 } catch (error) { host.fault = -5; }
             };
+            const discardInput = host => {
+                for (let at = host.eventHead; at < host.events.length; ++at) {
+                    if (host.events[at].kind === 'data') this.inputPool.release(host.events[at].bytes);
+                }
+                host.events = []; host.eventHead = 0; host.bytes = 0;
+            };
             const fail = (host, reason) => {
                 if (host.closeReported) return;
-                host.closeReported = true; host.ended = true; host.events = []; host.bytes = 0; host.output = []; host.outputBytes = 0;
+                host.closeReported = true; host.ended = true; discardInput(host);
                 try { host.socket.close(); } catch (error) {}
                 notify(host, host.closed, 1n, reason);
             };
@@ -636,7 +702,7 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
                 add('create', (provider, observer, connected, data, writable, closed, output) => {
                     if (this.nextHost >= 0x7fffffff) return -1;
                     const host = { id: ++this.nextHost, observer: Number(observer), connected, data, writable, closed, socket: null,
-                        scratch: 0, events: [], bytes: 0, output: [], outputBytes: 0, writing: false, writablePending: false,
+                        scratch: 0, events: [], eventHead: 0, bytes: 0, output: new Set(), outputBytes: 0, connectedQueued: false, writablePending: false,
                         started: false, ready: false, paused: false, ended: false, closeReported: false, dead: false, stopping: false, polling: false, fault: 0 };
                     try {
                         host.scratch = allocate(16384);
@@ -644,7 +710,7 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
                             onWritable: () => queue(host, 'writable'), onClose: reason => queue(host, 'closed', null, reason), onError: () => { if (!host.dead) host.fault = -7; } });
                         if (!host.socket || typeof host.socket.connect !== 'function' || typeof host.socket.write !== 'function' || typeof host.socket.close !== 'function') throw new TypeError('Raw host is incomplete');
                         this.hosts.set(host.id, host); putPointer(index(output), host.id); return 0;
-                    } catch (error) { host.dead = true; if (host.socket) { try { host.socket.close(); if (typeof host.socket.dispose === 'function') host.socket.dispose(); } catch (ignored) {} } wipeFree(host.scratch, 16384); putPointer(index(output), 0); return -1; }
+                    } catch (error) { host.dead = true; if (host.socket) { try { host.socket.close(); if (typeof host.socket.dispose === 'function') host.socket.dispose(); } catch (ignored) {} } discardInput(host); wipeFree(host.scratch, 16384); putPointer(index(output), 0); return -1; }
                 });
                 add('connect', (instance, address, port, peer) => {
                     const host = hostAt(instance); putPointer(index(peer), 0);
@@ -659,16 +725,22 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
                     host.polling = true;
                     try {
                         if (host.fault) { fail(host, host.fault); return 0; }
-                        for (let step = 0; step < 256 && host.events.length; ++step) {
-                            const event = host.events[0];
+                        for (let step = 0; step < 256 && host.eventHead < host.events.length; ++step) {
+                            const event = host.events[host.eventHead];
                             if (event.kind === 'data' && host.paused && !host.stopping) break;
-                            host.events.shift();
+                            host.events[host.eventHead++] = null;
                             if (event.kind === 'connected') { host.ready = true; notify(host, host.connected, 1n); }
                             else if (event.kind === 'data') {
-                                host.bytes -= event.bytes.length;
-                                if (!host.stopping) { module.HEAPU8.set(event.bytes, host.scratch); notify(host, host.data, 1n, nativePointer(host.scratch), event.bytes.length); }
+                                host.bytes -= event.size;
+                                try {
+                                    if (!host.stopping) { module.HEAPU8.set(event.bytes.subarray(0, event.size), host.scratch); notify(host, host.data, 1n, nativePointer(host.scratch), event.size); }
+                                } finally { this.inputPool.release(event.bytes); }
                             } else if (event.kind === 'writable') { host.writablePending = false; notify(host, host.writable, 1n); }
                             else { fail(host, event.reason); break; }
+                        }
+                        if (host.eventHead === host.events.length) { host.events = []; host.eventHead = 0; }
+                        else if (host.eventHead >= 4096 && host.eventHead >= host.events.length / 2) {
+                            host.events = host.events.slice(host.eventHead); host.eventHead = 0;
                         }
                         if (host.fault) fail(host, host.fault);
                         return host.closeReported ? 0 : 1;
@@ -677,21 +749,24 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
                 add('write', (instance, peer, bytes, size) => {
                     const host = hostAt(instance); bytes = index(bytes);
                     if (!host || peer !== 1n || !host.ready || host.stopping || host.ended || size > 32768 || bytes + size > module.HEAPU8.length) return -1;
-                    if (host.output.length >= 64 || host.outputBytes + size > 65536) return 1;
+                    if (size === 0) return 0;
                     let copy;
-                    try { copy = module.HEAPU8.slice(bytes, bytes + size); host.output.push(copy); host.outputBytes += size; }
-                    catch (error) { return -1; }
+                    try {
+                        copy = this.outputPool.acquire(size);
+                        if (!copy) return 1;
+                        copy.set(module.HEAPU8.subarray(bytes, bytes + size)); host.output.add(copy); host.outputBytes += size;
+                    } catch (error) { if (copy) this.outputPool.release(copy); return -1; }
                     let retained = true;
                     const completed = () => {
-                        if (!retained || host.dead || host.closeReported) return;
+                        if (!retained) return;
                         retained = false;
-                        const at = host.output.indexOf(copy);
-                        if (at >= 0) { host.output.splice(at, 1); host.outputBytes -= size; }
-                        queue(host, 'writable');
+                        host.output.delete(copy); host.outputBytes -= size;
+                        this.outputPool.release(copy);
+                        if (!host.dead && !host.closeReported) queue(host, 'writable');
                     };
                     try {
                         // write返回0前已真实调用网络库；output仅保留在途内存与预算，不是待调用的发送队列。
-                        const result = host.socket.write(copy);
+                        const result = host.socket.write(copy.subarray(0, size));
                         if (result && typeof result.then === 'function') {
                             result.then(completed, () => { completed(); if (!host.dead) host.fault = -7; });
                         } else {
@@ -711,7 +786,9 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
                 const stop = (instance, reason) => {
                     const host = hostAt(instance); if (!host) return -1;
                     if (!host.stopping) {
-                        host.stopping = true; host.events = host.events.filter(event => event.kind === 'closed'); host.bytes = 0;
+                        host.stopping = true;
+                        const ending = host.events.slice(host.eventHead).filter(event => event.kind === 'closed');
+                        discardInput(host); host.events = ending;
                         try { host.socket.close(); } catch (error) { host.fault = -7; }
                         if (!host.ended) queue(host, 'closed', null, reason);
                     }
@@ -724,8 +801,8 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
                     if (host.polling) return -1;
                     if (!host.stopping) stop(instance, 0);
                     host.dead = true;
-                    if (typeof host.socket.dispose === 'function') host.socket.dispose();
-                    this.hosts.delete(host.id); wipeFree(host.scratch, 16384); host.scratch = 0; host.events = []; host.output = []; return 0;
+                    try { if (typeof host.socket.dispose === 'function') host.socket.dispose(); } catch (error) { this.lastBindingError = error; }
+                    this.hosts.delete(host.id); wipeFree(host.scratch, 16384); host.scratch = 0; discardInput(host); return 0;
                 });
                 add('localPort', () => 0);
                 add('peerCount', instance => { const host = hostAt(instance); return host && host.started && !host.closeReported ? 1 : 0; });
@@ -790,9 +867,10 @@ EM_JS(void, NetPeerInstallJsBindings, (const uint32_t* layout, const uintptr_t* 
                 typeof io.close !== 'function' || (!sender && (typeof io.write !== 'function' || typeof io.flush !== 'function' ||
                 typeof io.commit !== 'function'))) throw new Error('File host adapter is incomplete');
             try {
+                const metadataOffset = metadata.buffer === this.module.HEAPU8.buffer ? metadata.byteOffset : -1;
                 this.memory = this.module._malloc(66000);
                 if (!this.memory) throw new Error('File memory budget exceeded');
-                this.module.HEAPU8.set(metadata, this.memory + 128);
+                this.module.HEAPU8.set(metadataOffset < 0 ? metadata : this.module.HEAPU8.subarray(metadataOffset, metadataOffset + 160), this.memory + 128);
                 this.check(this.module._netPeerFileInfoFields(this.memory + 128, 160, this.memory,
                     this.memory + 48, this.memory + 64, this.memory + 96));
                 const fields = this.module.HEAPU32.slice(this.memory >>> 2, (this.memory + 48) >>> 2);

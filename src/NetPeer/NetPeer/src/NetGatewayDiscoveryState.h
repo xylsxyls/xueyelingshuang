@@ -26,15 +26,15 @@ public:
     // 只复制强随机上下文和期限
     NetInterfaceTlsOptions m_tls;
     // 调用者提供的数值入口
-    NetClientDiscoveryPoint m_seeds[64];
+    std::vector<NetClientDiscoveryPoint> m_seeds;
     // 已复制的种子数，启动后不受远端目录删改
     uint32_t m_seedCount;
     // 种子与发现合并后的去重提示
-    NetGatewayDiscoveryCandidate m_candidates[128];
+    std::vector<NetGatewayDiscoveryCandidate> m_candidates;
     // 已初始化候选数，所有读取严格限制在此范围
     uint32_t m_candidateCount;
     // 本轮认证返回或启动缓存中的节点
-    NetInterfaceDirectoryNodeData m_nodes[64];
+    std::vector<NetInterfaceDirectoryNodeData> m_nodes;
     // 已验证的完整目录记录数
     uint32_t m_nodeCount;
     // 当前管理探测候选
@@ -66,7 +66,8 @@ public:
     */
     NetGatewayDiscoveryState();
 
-    /** 无分配合并64种子与64目录，按数值地址去重并保留仍存在候选的退避
+    /** 按需合并种子与目录，按数值地址去重并保留仍存在候选的退避
+    @return NI_OK或内存错误；失败保留原候选
     */
-    void rebuild();
+    int32_t rebuild();
 };

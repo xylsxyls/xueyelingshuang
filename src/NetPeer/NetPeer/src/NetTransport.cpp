@@ -3,6 +3,22 @@
 #include "NetTransportState.h"
 #include "NetTransportEntropy.h"
 
+int32_t NetTransport::configurePeerPool(const LockFreeHashMapPoolConfig& config)
+{
+    if (m_state->m_started || m_state->m_stopping) { return NI_INVALID_STATE; }
+    try
+    {
+        std::unique_ptr<NetObjectPool<NetTransportPeer>> pool(new NetObjectPool<NetTransportPeer>(config));
+        if (pool->status() != NI_OK) { return pool->status(); }
+        m_state->m_peerPool.swap(pool);
+        return NI_OK;
+    }
+    catch (...)
+    {
+        return NI_NO_MEMORY;
+    }
+}
+
 int32_t NetTransport::randomBytes(uint8_t* output, uint32_t size)
 {
     return NetTransportEntropy(nullptr, output, size) == 0 ? NI_OK : NI_INVALID_STATE;
@@ -18,10 +34,28 @@ NetTransport::~NetTransport()
     delete m_state;
 }
 
+int32_t NetTransport::configureConnectionPools(const NetConnectionPoolConfig& config)
+{
+    if (m_state->m_started || m_state->m_stopping || m_state->m_polling)
+    {
+        return NI_INVALID_STATE;
+    }
+    try
+    {
+        std::unique_ptr<NetConnectionPoolConfig> copy(new NetConnectionPoolConfig(config));
+        m_state->m_connectionPools.swap(copy);
+        return NI_OK;
+    }
+    catch (...)
+    {
+        return NI_NO_MEMORY;
+    }
+}
+
 int32_t NetTransport::listen(const char* address, uint32_t port,
     const NetInterfaceTlsOptions& options, NetTransportListener* listener, uint32_t maxPeers)
 {
-    if (maxPeers == 0 || maxPeers > 256)
+    if (maxPeers == 0)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -41,7 +75,9 @@ int32_t NetTransport::connect(const char* address, uint32_t port,
     try
     {
         // 在提交底层连接之前准备拥有者，后续容器分配失败必须撤销底层请求。
-        std::unique_ptr<NetTransportPeer> peer(new NetTransportPeer);
+        NetObjectReference<NetTransportPeer> peer;
+        const int32_t allocated = m_state->m_peerPool->create(peer);
+        if (allocated != NI_OK) { return allocated; }
         peer->m_started = NetTransportState::now();
         const int32_t result = m_state->m_channel.connect(address, port, m_state, id);
         if (result < 0)
@@ -80,6 +116,14 @@ int32_t NetTransport::configureCompression(uint64_t peer, const uint32_t* types,
     const auto found = m_state->m_peers.find(peer);
     if (found == m_state->m_peers.end() || found->second->m_closing || !found->second->m_connection) { return NI_INVALID_STATE; }
     return found->second->m_connection->configureCompression(types, count, negotiated);
+}
+
+int32_t NetTransport::configureCompact(uint64_t peer, bool enabled)
+{
+    const auto found = m_state->m_peers.find(peer);
+    if (found == m_state->m_peers.end() || found->second->m_closing || !found->second->m_connection) { return NI_INVALID_STATE; }
+    found->second->m_connection->configureCompact(enabled);
+    return NI_OK;
 }
 
 void NetTransport::close(uint64_t id, int32_t reason)

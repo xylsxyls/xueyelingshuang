@@ -16,12 +16,19 @@ public:
     */
     ~NetLinkTransport();
 
+    /** 启动前配置本层实际连接记录池；底层运输的存储由其自身配置
+    @param [in] config 真实槽数及增长策略；由唯一生命周期owner串行调用
+    @return NI_OK或配置/内存/状态错误，失败保留旧池
+    */
+    int32_t configurePeerPool(const LockFreeHashMapPoolConfig& config);
+
+
     /** 监听管理和不透明业务通道，只启动一次
     @param [in] address 数值地址
     @param [in] port 0隔离测试或1至65535
     @param [in] options server必须1；公网角色掩码禁止SERVICE
     @param [in] listener 借用至shutdown
-    @param [in] maxPeers 1至256
+    @param [in] maxPeers为非零预留提示，实际连接存储由宿主池配置控制
     @return NI_OK或错误
     */
     int32_t listen(const char* address, uint32_t port, const NetInterfaceLinkOptions& options,

@@ -33,7 +33,7 @@ enum NetRelayPeerPhase
     NET_RELAY_CLOSING
 };
 
-// 固定队列中的唯一缓冲所有者；析构清理有效字节，不保留密文副本
+// 实际记录池中的独占缓冲；到宿主接纳或连接销毁才归还记录和正文槽
 class NetRelayTransportWrite
 {
 public:
@@ -47,13 +47,15 @@ public:
 
 public:
     // 独占整条NTW3记录；空槽必须为空
-    std::unique_ptr<uint8_t[]> m_bytes;
+    NetBufferLease m_bytes;
     // 有效字节数，只有接纳成功后才写入
     uint32_t m_size;
-    // 已分配容量，最多16408字节
-    uint32_t m_capacity;
-    // 使用控制额度还是业务额度
-    bool m_control;
+    // 所属记录池，须活到本记录归还
+    NetObjectPool<NetRelayTransportWrite>* m_pool;
+    // 记录池原始槽标识，最后由pop归还
+    void* m_storage;
+    // 有序输出链后继，非拥有
+    NetRelayTransportWrite* m_next;
 };
 
 // 单个TCP代次：输入解码、输出FIFO和额度由同一执行者独占
@@ -62,12 +64,18 @@ class NetRelayTransportPeer
 public:
     /** 创建未连接、未报告的独占代次
     @param [in] now 单调毫秒
+    @param [in] pools 记录及正文池配置，构造时复制
     */
-    explicit NetRelayTransportPeer(uint64_t now);
+    explicit NetRelayTransportPeer(uint64_t now, const NetRelayPoolConfig& pools = NetRelayPoolConfig());
 
     /** 清理输入和仍未交付的输出，不发回调
     */
     ~NetRelayTransportPeer();
+
+    /** 校验实际物理池的初始化状态
+    @return NI_OK或具体错误
+    */
+    int32_t status() const;
 
     /** 验证并复制完整记录，失败不改变队列和额度
     @param [in] record 借用到返回，不允许引用本队列存储
@@ -75,7 +83,7 @@ public:
     */
     int32_t enqueue(const NetInterfaceTunnelRecord& record);
 
-    /** 下层完整接纳队首后归还额度并清理缓冲，最多保留一份空缓冲
+    /** 下层完整接纳队首后清理有效字节，并归还实际记录及正文槽
     */
     void pop();
 
@@ -88,24 +96,20 @@ public:
     NetInterfaceTunnel m_decoder;
     // 暂停接收后的唯一原始块，最多16384字节
     std::vector<uint8_t> m_input;
-    // 32条业务与32条控制共用FIFO，控制不得越过已接纳业务
-    NetRelayTransportWrite m_output[64];
-    // 只缓存一份已清理的输出缓冲，避免64个空槽各自保留大缓冲
-    std::unique_ptr<uint8_t[]> m_recycled;
-    // 空缓冲容量；所有有效数据已清理
-    uint32_t m_recycledCapacity;
-    // 输出FIFO队首，队尾由两类数量之和派生
-    uint32_t m_outputHead;
+    // 正文池先构造后销毁，覆盖记录中的租约
+    NetBufferPool m_dataPool;
+    // 独立控制正文池
+    NetBufferPool m_controlPool;
+    // 数据记录的物理槽
+    NetObjectPool<NetRelayTransportWrite> m_dataRecords;
+    // 控制记录的物理槽
+    NetObjectPool<NetRelayTransportWrite> m_controlRecords;
+    // 两类记录共享FIFO首项，不允许控制越过先前数据
+    NetRelayTransportWrite* m_outputHead;
+    // FIFO尾项，空时为空
+    NetRelayTransportWrite* m_outputTail;
     // 当前原始块已交给解码器的字节数
     uint32_t m_inputOffset;
-    // 已接纳业务记录总字节，最多4*16408
-    uint32_t m_dataBytes;
-    // 已接纳控制记录总字节，最多2*16408
-    uint32_t m_controlBytes;
-    // 已接纳业务条数，最多32
-    uint32_t m_dataCount;
-    // 已接纳控制条数，最多32
-    uint32_t m_controlCount;
     // 连接开始时间，不因重复事件延期
     uint64_t m_started;
     // 上层拒绝接收同一记录的起点，0表示未背压
@@ -174,8 +178,12 @@ public:
     NetHostSocket m_channel;
     // 借用上层监听者直到shutdown返回
     NetRelayTransportListener* m_listener;
+    // 每个新连接使用的输出池配置，只在启动前修改
+    std::unique_ptr<NetRelayPoolConfig> m_pools;
     // 每个TCP代次的唯一所有者
     std::map<uint64_t, std::unique_ptr<NetRelayTransportPeer>> m_peers;
+    // 当前执行者共享的32KiB密文拼接区，按需分配；不新增排队或改变记录顺序
+    std::unique_ptr<uint8_t[]> m_batch;
     // 单次启动/停止阶段
     NetRelayTransportPhase m_phase;
     // 成功启动了监听，允许空连接时继续poll

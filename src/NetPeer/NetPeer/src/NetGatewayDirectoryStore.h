@@ -33,7 +33,7 @@ public:
 
     /** 取一次已加载且校验有效的公开候选，仍不构成网络认证
     @param [out] points 调用者数组，每项预填v1 size/version；失败不改数组
-    @param [in] capacity 0至64，允许空数组及0查询必需项数
+    @param [in] capacity 调用方数组容量，允许空数组及0查询必需项数
     @param [out] count 必需项数，不得与points重叠
     @return READY、NEED_MORE、BUFFER_TOO_SMALL或参数错误；只有READY消费快照
     */

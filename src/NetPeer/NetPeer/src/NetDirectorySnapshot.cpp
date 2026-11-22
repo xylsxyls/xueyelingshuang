@@ -40,7 +40,7 @@ int32_t NetDirectorySnapshot::values(std::vector<NetInterfaceDirectoryNodeData>&
 {
     uint32_t count = 0;
     const int32_t measured = NetInterface::directoryCount(m_handle, &count);
-    if (measured != NI_OK || count == 0 || count > 64)
+    if (measured != NI_OK || count == 0)
     {
         return measured < 0 ? measured : NI_PROTOCOL_ERROR;
     }

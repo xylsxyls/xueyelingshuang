@@ -38,7 +38,7 @@ public:
 
     /** 复制到调用者数组；容量不足保留快照，输出元数据必须为v1。
     @param [out] nodes 调用者已有数组，预填size/version；可空查询
-    @param [in] capacity 0至64
+    @param [in] capacity 调用方数组容量，0可查询
     @param [out] count 必需项数，不得与nodes重叠
     @return NI结果
     */

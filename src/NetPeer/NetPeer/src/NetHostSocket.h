@@ -63,11 +63,23 @@ public:
     */
     static bool defaultSupports(bool server);
 
+    /** 启动前配置实际连接对象池，标量事件嵌入连接槽，单执行者调用
+    @param [in] config 真实池容量和增长策略；失败保持原配置
+    @return NI_OK或配置、内存、状态错误
+    */
+    int32_t configurePeerPool(const LockFreeHashMapPoolConfig& config);
+
+    /** 启动前配置输入正文池；在活动回调返回前继续持有槽，单执行者调用
+    @param [in] config 各大小类实际存储，失败保持原配置
+    @return NI_OK或配置、内存、状态错误
+    */
+    int32_t configureInputPool(const NetBufferPoolConfig& config);
+
     /** 监听一个宿主实例，只能启动一次
     @param [in] address 数值地址，借用到返回
     @param [in] port 0至65535
     @param [in] listener 借用至shutdown完成，不可空
-    @param [in] maxPeers 1至256，默认64
+    @param [in] maxPeers 非零宿主启动参数，本层连接容量由configurePeerPool决定，默认传64
     @return OK或负数；未配置宿主为NOT_SUPPORTED
     */
     int32_t listen(const char* address, uint32_t port, NetHostSocketListener* listener, uint32_t maxPeers = 64);

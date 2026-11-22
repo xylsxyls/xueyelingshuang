@@ -112,10 +112,14 @@ public:
     virtual void onClosed(uint64_t peer, int32_t reason, int32_t detail);
 
 public:
+    // 新连接使用的独立TLS帧池配置，连接启动后不可替换
+    std::unique_ptr<NetConnectionPoolConfig> m_connectionPools;
     // 独占字节宿主，监听者就是本对象；不依赖具体TCP库
     NetHostSocket m_channel;
+    // 实际连接记录池，必须晚于所有代次状态销毁
+    std::unique_ptr<NetObjectPool<NetTransportPeer>> m_peerPool;
     // 有界连接表，删除只发生在collectClosed
-    std::map<uint64_t, std::unique_ptr<NetTransportPeer> > m_peers;
+    std::map<uint64_t, NetObjectReference<NetTransportPeer>> m_peers;
     // 借用到shutdown，所有调用都在所属执行者
     NetTransportListener* m_listener;
     // 指针均指向下面自有配置或借用随机上下文
@@ -136,8 +140,4 @@ public:
     bool m_polling;
     // 当前poll时间及服务端新连接令牌桶时间
     uint64_t m_now;
-    // 当前服务端新TLS接纳窗口起点，单位单调毫秒
-    uint64_t m_acceptWindow;
-    // 每秒至多16个新TLS会话，限制计算放大
-    uint32_t m_acceptCount;
 };

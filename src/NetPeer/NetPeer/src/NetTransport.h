@@ -9,6 +9,13 @@ class NetTransportState;
 class NetPeerAPI NetTransport : public NetServerChannel
 {
 public:
+    /** 首次连接前复制TLS帧池配置；不得与本对象其他调用并发
+    池资源在创建物理连接时申请并验证，失败走原有连接失败路径；不修改其他连接。
+    @param [in] config 独立数据/控制记录及正文的基础池配置
+    @return NI_OK配置已复制；状态、内存或不支持错误
+    */
+    virtual int32_t configureConnectionPools(const NetConnectionPoolConfig& config);
+
     /** 创建独占传输资源，初始化失败抛异常
     */
     NetTransport();
@@ -17,12 +24,19 @@ public:
     */
     ~NetTransport();
 
+    /** 启动前配置本层实际连接记录池；底层运输的存储由其自身配置
+    @param [in] config 真实槽数及增长策略；由唯一生命周期owner串行调用
+    @return NI_OK或配置/内存/状态错误，失败保留旧池
+    */
+    int32_t configurePeerPool(const LockFreeHashMapPoolConfig& config);
+
+
     /** 监听TCP并使用同源TLS/帧协议；实例只能启动一次
     @param [in] address 数值IPv4/IPv6，0.0.0.0/::须显式指定
     @param [in] port 0至65535，0用于隔离测试
     @param [in] options server必须为1，证书/私钥调用时复制；entropy为空时使用系统强随机
     @param [in] listener 借用至shutdown完成，不可空
-    @param [in] maxPeers 最大连接数，1至256，默认64
+    @param [in] maxPeers 非零启动预留提示，默认64，实际接纳由连接池决定
     @return 0接纳或负数配置/监听错误
     */
     int32_t listen(const char* address, uint32_t port, const NetInterfaceTlsOptions& options,
@@ -102,11 +116,18 @@ public:
     /** 为指定TLS通道配置显式RPC压缩白名单
     @param [in] peer 当前运输代次
     @param [in] types 调用期间借用的业务类型数组
-    @param [in] count 类型数量，最多64项
+    @param [in] count 类型数量，受uint32长度表示及实际内存约束
     @param [in] negotiated 是否已通过对端能力协商
     @return NI_OK或参数、状态、内存错误
     */
     virtual int32_t configureCompression(uint64_t peer, const uint32_t* types, uint32_t count, bool negotiated);
+
+    /** 设置已协商的紧凑业务帧，由唯一运输执行者调用
+    @param [in] peer 当前连接代次
+    @param [in] enabled 双方已共同确认
+    @return NI_OK或NI_INVALID_STATE
+    */
+    virtual int32_t configureCompact(uint64_t peer, bool enabled);
 
 private:
     // 本模块独占状态，隔离宿主适配及容器布局

@@ -30,8 +30,21 @@ NetLinkTransportPeer::NetLinkTransportPeer(const NetInterfaceLinkOptions& option
 
 }
 
-NetLinkTransportState::NetLinkTransportState() : m_listener(nullptr), m_options(), m_started(false), m_stopping(false),
-    m_polling(false), m_acceptWindow(0), m_acceptCount(0)
+/** 按实际连接记录槽大小设置默认存储，不限制每秒连接数
+@return 初始化前可替换的真实池配置
+*/
+static LockFreeHashMapPoolConfig NetLinkTransportPeerPool()
+{
+    LockFreeHashMapPoolConfig config;
+    config.initialCapacity = 128;
+    config.maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetLinkTransportPeer>>);
+    config.directoryCapacity = 128;
+    config.lookupCacheCapacity = 0;
+    return config;
+}
+
+NetLinkTransportState::NetLinkTransportState() : m_listener(nullptr), m_options(), m_peerPool(new NetObjectPool<NetLinkTransportPeer>(NetLinkTransportPeerPool())), m_started(false), m_stopping(false),
+    m_polling(false)
 {
 
 }
@@ -109,15 +122,9 @@ void NetLinkTransportState::onRelayConnected(uint64_t id)
         auto found = m_peers.find(id);
         if (found == m_peers.end())
         {
-            const uint64_t now = LinkTransportNow();
-            if (now - m_acceptWindow >= 1000)
-            {
-                m_acceptWindow = now;
-                m_acceptCount = 0;
-            }
-            if (m_acceptCount >= 16) { m_raw.close(id, NI_LIMIT_EXCEEDED); return; }
-            ++m_acceptCount;
-            std::unique_ptr<NetLinkTransportPeer> peer(new NetLinkTransportPeer(m_options));
+            NetObjectReference<NetLinkTransportPeer> peer;
+            const int32_t allocated = m_peerPool->create(peer, m_options);
+            if (allocated != NI_OK) { m_raw.close(id, allocated); return; }
             found = m_peers.insert(std::make_pair(id, std::move(peer))).first;
         }
         found->second->m_connected = true;
