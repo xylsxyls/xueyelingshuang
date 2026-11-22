@@ -1,40 +1,35 @@
-﻿#include "PlatformTest/PlatformTestAPI.h"
-#include "VariantTest.h"
-#include <cstring>
+﻿#include "VariantTest.h"
+#include "PlatformTest/PlatformTestAPI.h"
 #include "Variant/VariantAPI.h"
+#include <algorithm>
+#include <cstring>
 #include <cstdio>
 #include <cstdlib>
 #include <clocale>
-#include <limits>
+#include <new>
 #if defined(_MSC_VER) && !defined(_DLL)
 #include <windows.h>
 #endif
 #if defined(_MSC_VER) && defined(_DEBUG)
-#include <crtdbg.h>
-#endif
-
-/** 对本库的一项固定规模操作连续采样，结果用于同平台的改动前后比较。 */
-static void RunBenchmark()
+VariantTestAllocHook::VariantTestAllocHook(_CRT_ALLOC_HOOK hook) :
+m_previous(_CrtSetAllocHook(hook))
 {
-    Variant value;
-    const std::string payload(1024, 'x');
-    LibraryBenchmark::run("Variant", [&](uint32_t count) -> uint64_t
-    {
-        uint64_t checksum = 0;
-        for (uint32_t index = 0; index < count; ++index)
-        {
-            value = payload;
-            checksum += value.size();
-        }
-        return checksum;
-    });
+
 }
 
-/** 核对数值位表示、字节所有权与分配异常下的恢复。 */
+VariantTestAllocHook::~VariantTestAllocHook()
+{
+    _CrtSetAllocHook(m_previous);
+}
+#endif
+
+/** 核对数值位表示、字节所有权与分配异常下的恢复
+@return 全部预期符合返回 0
+*/
 static int TestOwnership()
 {
     uint32_t checks = 0;
-    // condition为期望结果，message为静态失败说明；异常仅由本main捕获。
+    // condition为期望结果，message为静态失败说明；异常由本用例捕获。
     const auto Check = [&checks](bool condition, const char* message)
     {
         ++checks;
@@ -63,15 +58,30 @@ static int TestOwnership()
         const std::string savedLocale = std::setlocale(LC_NUMERIC, nullptr);
         const bool commaLocale = std::setlocale(LC_NUMERIC, "German_Germany.1252") != nullptr &&
             std::strcmp(std::localeconv()->decimal_point, ",") == 0;
-        const Variant original(-1234.25);
-        const bool roundTrip = static_cast<double>(Variant(original.toString(), Variant::DOUBLE)) == -1234.25;
-        const bool signedFraction = static_cast<double>(Variant("  -.25e1suffix", Variant::DOUBLE)) == -2.5;
-        // 独立 CRT 保持初始 C 区域，逗号会终止 strtod 的数字前缀
-        const double expectedLocal = usesTestLocale ? 1.25 : 1.0;
-        const bool local = static_cast<double>(Variant("1,25", Variant::DOUBLE)) == expectedLocal;
+        bool localeValuesCorrect = false;
+        try
+        {
+            const Variant original(-1234.25);
+            const bool roundTrip = static_cast<double>(Variant(original.toString(), Variant::DOUBLE)) == -1234.25;
+            const bool signedFraction = static_cast<double>(Variant("  -.25e1suffix", Variant::DOUBLE)) == -2.5;
+            // 独立 CRT 保持初始 C 区域，逗号会终止 strtod 的数字前缀。
+            const double expectedLocal = usesTestLocale ? 1.25 : 1.0;
+            localeValuesCorrect = roundTrip && signedFraction && static_cast<double>(Variant("1,25", Variant::DOUBLE)) == expectedLocal;
+        }
+        catch (...)
+        {
+            std::setlocale(LC_NUMERIC, savedLocale.c_str());
+            throw;
+        }
         const bool restored = std::setlocale(LC_NUMERIC, savedLocale.c_str()) != nullptr;
-        Check(commaLocale && roundTrip && signedFraction && local && restored, "comma locale canonical and local fractions");
+        Check(commaLocale && localeValuesCorrect && restored, "comma locale canonical and local fractions");
 #endif
+        Variant doubleAssigned(int32_t(1));
+        Check(&(doubleAssigned = -0.25) == &doubleAssigned && doubleAssigned.type() == Variant::DOUBLE &&
+            static_cast<double>(doubleAssigned) == -0.25, "double assignment returns current value");
+        Check(static_cast<int32_t>(Variant("bad", Variant::INT32)) == 0 &&
+            static_cast<uint64_t>(Variant("  +42tail", Variant::UINT64)) == 42 &&
+            static_cast<uint64_t>(Variant("18446744073709551616", Variant::UINT64)) == UINT64_MAX, "integer text prefixes and overflow");
         const std::string first(64, 'a');
         Check(static_cast<int32_t>(Variant("2147483648", Variant::INT32)) == INT32_MAX, "positive text overflow saturates");
         Check(static_cast<int32_t>(Variant("-2147483649", Variant::INT32)) == INT32_MIN, "negative text overflow saturates");
@@ -81,6 +91,9 @@ static int TestOwnership()
         Variant reused(first + second);
         Check(reused.assignBytes(reused.data() + 32, 80) && reused.toBlob() == (first + second).substr(32, 80),
             "overlapping long blob assignment preserves original bytes");
+        reused = first;
+        reused = second;
+        Check(reused.type() == Variant::BLOB && reused.toBlob() == second, "same-length assignment replaces every byte");
         const int32_t signedValues[] = {0, -1, INT32_MIN, INT32_MAX, 1234567};
         const uint64_t unsignedValues[] = {0, 1, UINT64_MAX, UINT64_C(0xfedcba9876543210)};
         for (uint32_t pass = 0; pass < 1000; ++pass)
@@ -109,7 +122,7 @@ static int TestOwnership()
                     "unsigned assignment snapshot");
                 assigned = static_cast<int32_t>(-7);
                 Check(static_cast<uint64_t>(returned) == unsignedValues[index] && static_cast<int32_t>(assigned) == -7,
-                    "assignment return value must remain independent");
+                    "explicit copy of assignment result is independent");
             }
         }
         const uint64_t floatBits[] = {0, UINT64_C(0x8000000000000000), UINT64_C(0x3ff4000000000000),
@@ -146,7 +159,12 @@ static int TestOwnership()
         Check(zeroFirst.type() == Variant::STRING && zeroFirst == Variant("") &&
             zeroBlob.type() == Variant::BLOB && zeroBlob != zeroFirst, "leading NUL text and blob distinction");
         Variant text(bytes, Variant::STRING, true);
-        Check(blob == text && blob.type() == Variant::BLOB && text.type() == Variant::STRING, "historical byte-only comparison changed");
+        Check(blob == text && blob.type() == Variant::BLOB && text.type() == Variant::STRING, "equality compares bytes across types");
+        const Variant different(std::string("A\0B\xfe", 4));
+        Check(blob != different && !(blob == different), "same length differs in final byte");
+        const Variant positiveZero(0.0);
+        const Variant negativeZero(-0.0);
+        Check(positiveZero != negativeZero && positiveZero == Variant(uint64_t(0)), "scalar equality uses raw bits");
         Variant textCopy(text);
         Variant textAssigned;
         textAssigned = text;
@@ -179,7 +197,7 @@ static int TestOwnership()
             "numeric text compatibility");
         Variant emptyNumber(std::string(), Variant::UINT64, false);
         Check(emptyNumber.type() == Variant::UINT64 && emptyNumber.toBlob().empty() && static_cast<uint64_t>(emptyNumber) == 0,
-            "legacy empty numeric text changed");
+            "empty numeric text has zero serialized length");
 #if defined(_MSC_VER) && defined(_DEBUG)
         static uint32_t s_seen = 0;
         static uint32_t s_failAt = 0;
@@ -192,15 +210,17 @@ static int TestOwnership()
             }
             return 1;
         };
+        s_failAt = 0;
         s_seen = 0;
-        _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(Hook);
-        for (uint32_t index = 0; index < 10000; ++index)
         {
-            Variant first(static_cast<uint64_t>(index));
-            Variant second(first);
-            second = static_cast<int32_t>(index);
+            const VariantTestAllocHook guard(Hook);
+            for (uint32_t index = 0; index < 10000; ++index)
+            {
+                Variant first(static_cast<uint64_t>(index));
+                Variant second(first);
+                second = static_cast<int32_t>(index);
+            }
         }
-        _CrtSetAllocHook(previous);
         Check(s_seen == 0, "scalar construction/copy/assignment allocated");
         const std::string payload(100, 'x');
         _CrtMemState before;
@@ -211,19 +231,21 @@ static int TestOwnership()
         {
             Variant original(static_cast<int32_t>(17));
             s_seen = 0;
-            previous = _CrtSetAllocHook(Hook);
+            bool failed = false;
             try
             {
+                const VariantTestAllocHook guard(Hook);
                 Variant value(payload);
                 Variant copied(value);
                 original = copied;
             }
-            catch (...)
+            catch (const std::bad_alloc&)
             {
+                failed = true;
                 ++rejected;
             }
-            _CrtSetAllocHook(previous);
-            Check(original.type() == Variant::INT32 || original.type() == Variant::BLOB, "failed assignment corrupted type");
+            Check(failed ? original.type() == Variant::INT32 && static_cast<int32_t>(original) == 17 :
+                original.type() == Variant::BLOB && original.toBlob() == payload, "assignment commit or rollback");
             original = static_cast<uint64_t>(19);
             Check(static_cast<uint64_t>(original) == 19, "assignment did not recover after failure");
         }
@@ -241,19 +263,81 @@ static int TestOwnership()
     }
 }
 
-/** 按稳定功能用例号或显式性能参数运行。 */
+/** 验证两个原始输入入口接受非对齐字节，并核对输出参数、类型和空值行为
+@return 所有结果符合独立预期时返回 0
+*/
+static int TestRawOutput()
+{
+    const int32_t negative = -123456;
+    const uint64_t wide = UINT64_C(0xfedcba9876543210);
+    const double fraction = -0.125;
+    const void* numbers[] = {&negative, &wide, &fraction};
+    const size_t widths[] = {sizeof(negative), sizeof(wide), sizeof(fraction)};
+    const Variant::VariantType types[] = {Variant::INT32, Variant::UINT64, Variant::DOUBLE};
+    const char* texts[] = {"-123456", "18364758544493064720", "-0.125"};
+    for (size_t i = 0; i < 3; ++i)
+    {
+        uint64_t aligned[2] = {};
+        char* input = reinterpret_cast<char*>(aligned) + 1;
+        std::memcpy(input, numbers[i], widths[i]);
+        const std::string raw(input, widths[i]);
+        Variant decoded(raw, types[i], true);
+        Variant assigned("previous value");
+        std::string output(64, 'x');
+        decoded.toBlob(output);
+        if (!assigned.assignBytes(input, widths[i], types[i]) || assigned.type() != types[i] ||
+            decoded.type() != types[i] || assigned.toBlob() != raw || output != raw)
+        {
+            std::fprintf(stderr, "raw scalar round trip failed at %u\n", static_cast<unsigned>(i));
+            return 1;
+        }
+        const char* original = assigned.data();
+        if (original == nullptr || assigned.size() != widths[i] ||
+            !assigned.assignBytes(original, widths[i], Variant::BLOB) || assigned.type() != Variant::BLOB ||
+            assigned.toBlob() != raw || !assigned.assignBytes(assigned.data(), widths[i], types[i]) ||
+            assigned.type() != types[i] || assigned.toBlob() != raw)
+        {
+            std::fprintf(stderr, "aliased scalar / byte transitions failed at %u\n", static_cast<unsigned>(i));
+            return 1;
+        }
+        assigned.toString(output);
+        if (output != texts[i] || decoded.toString() != texts[i])
+        {
+            std::fprintf(stderr, "scalar output replacement failed at %u\n", static_cast<unsigned>(i));
+            return 1;
+        }
+        assigned.clear();
+        assigned.toBlob(output);
+        if (!output.empty())
+        {
+            return 1;
+        }
+        output = "reset";
+        assigned.toString(output);
+        if (!output.empty())
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/** 按稳定功能用例号或显式性能参数运行
+@param [in] argc 参数个数，包含程序名
+@param [in] argv 命令行参数数组
+@return 0 表示通过，1 表示失败，2 表示选择无效
+*/
 int main(int argc, char** argv)
 {
     if (argc == 2 && std::strcmp(argv[1], "--benchmark") == 0)
     {
-        RunBenchmark();
-        return RunVariantScenarios(true, -1);
+        return RunAllVariantBenchmarks();
     }
     if (argc >= 2 && std::strcmp(argv[1], "--benchmark-operations") == 0)
     {
         if (argc == 2)
         {
-            return RunVariantScenarios(true, -1);
+            return RunVariantBenchmarks(-1);
         }
         if (argc != 3)
         {
@@ -265,11 +349,19 @@ int main(int argc, char** argv)
         {
             return 2;
         }
-        return RunVariantScenarios(true, static_cast<int>(selected));
+        return RunVariantBenchmarks(static_cast<int>(selected));
     }
-    const LibraryTestCase cases[] = {
-        {1, false, TestOwnership},
-        {2, true, []() { return RunVariantScenarios(false, -1); }}
+    LibraryTestCase cases[] = {
+        {TestVariantOwnership, false, TestOwnership},
+        {TestVariantScenarios, true, RunVariantScenarios},
+        {TestVariantRawOutput, false, TestRawOutput},
+        {TestVariantBenchmarkBatches, false, CheckVariantBenchmarkBatches}
     };
+    if (argc == 1 || (argc == 2 && std::strcmp(argv[1], "--all") == 0))
+    {
+        // 全量先运行瞬时场景；指定编号仍按登记顺序执行。
+        std::stable_partition(cases, cases + sizeof(cases) / sizeof(cases[0]),
+            [](const LibraryTestCase& item) { return !item.stress; });
+    }
     return LibraryCaseSelection::run(argc, argv, cases);
 }

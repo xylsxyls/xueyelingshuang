@@ -1,24 +1,204 @@
 ﻿#include "VariantTest.h"
 #include "Variant/VariantAPI.h"
 #include "PlatformTest/PlatformTestAPI.h"
-#include <cstdlib>
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <locale>
 #include <sstream>
 #include <utility>
-#include <vector>
-#if defined(_MSC_VER) && defined(_DEBUG)
-#include <crtdbg.h>
-#endif
+#include <stdexcept>
 
-/** 核对 Variant 的二进制输入、对象移动、十进制输出与内存故障；可单独运行十二项性能场景
-@param [in] benchmark true 时只计时，false 时逐项验证公开接口
-@param [in] selected 负值选择所有性能用例，0 到 11 选择对应编号；只在计时模式使用
-@return 0 表示全部通过，非零表示输入或结果不符合预期
+/** 用同一操作完成预热、校准和九轮计时，每批比较一次校验和
+@param [in] timed true 使用公共计时器，false 仅运行固定批量核对结果
+@param [in] name 输出场景名
+@param [in] expected 每项固定贡献；-1 表示贡献等于从零开始的迭代下标
+@param [in] operation 接收迭代下标并返回本次操作的可观察结果
 */
-int RunVariantScenarios(bool benchmark, int selected)
+template<class Operation>
+static void RunOperation(bool timed, const char* name, int32_t expected, const Operation& operation)
+{
+    const auto batch = [&](uint32_t count) -> uint64_t
+    {
+        uint64_t checksum = 0;
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            checksum += operation(i);
+        }
+        const uint64_t n = count;
+        const uint64_t required = expected < 0 ? n * (n - 1) / 2 : n * expected;
+        if (checksum != required)
+        {
+            throw std::runtime_error(name);
+        }
+        return checksum;
+    };
+    if (timed)
+    {
+        LibraryBenchmark::run(name, batch);
+        return;
+    }
+    const uint32_t counts[] = {1, 2, 3, 127, 128};
+    for (size_t i = 0; i < sizeof(counts) / sizeof(counts[0]); ++i)
+    {
+        batch(counts[i]);
+    }
+}
+
+/** 观察字节值的类型和首字节，让正文参与每批校验和
+@param [in] value 本次操作产生的非空值
+@return 类型号加无符号首字节；缺少正文时只返回类型号，批校验会失败
+*/
+static uint32_t SampleBlob(const Variant& value)
+{
+    const char* bytes = value.data();
+    return value.type() + (bytes == nullptr ? 0 : static_cast<unsigned char>(bytes[0]));
+}
+
+/** 从指定的起止编号执行工作负载
+@param [in] first 首个操作编号
+@param [in] last 最后一个操作编号，12 为独立的 1024 字节复用场景
+@param [in] timed 是否调用公共基准计时器
+@return 完成返回 0，校验或分配失败返回 1
+*/
+static int RunOperations(uint32_t first, uint32_t last, bool timed)
+{
+    try
+    {
+        const char* names[] = {"scalar_construct", "scalar_assign", "blob16_assign", "blob64_assign", "blob4096_assign",
+            "blob16_copy", "blob64_copy", "integer_text", "blob4096_copy_read", "blob4096_move_chain", "raw64_ingest", "blob4096_borrow", "Variant"};
+        std::string payloads[] = {std::string(16, 'x'), std::string(64, 'y'), std::string(4096, 'z')};
+        Variant source16(payloads[0]);
+        Variant source64(payloads[1]);
+        Variant source4096(payloads[2]);
+        for (uint32_t scenario = first; scenario <= last; ++scenario)
+        {
+            Variant target;
+            // 选择场景和准备输入都在计时循环之外。
+            switch (scenario)
+            {
+            case 0:
+                RunOperation(timed, names[scenario], -1, [](uint32_t i)
+                {
+                    Variant value(static_cast<int32_t>(i));
+                    return static_cast<int32_t>(value);
+                });
+                break;
+            case 1:
+                RunOperation(timed, names[scenario], -1, [&](uint32_t i)
+                {
+                    target = static_cast<int32_t>(i);
+                    return static_cast<int32_t>(target);
+                });
+                break;
+            case 2:
+            case 3:
+            case 4:
+                {
+                    const std::string& payload = payloads[scenario - 2];
+                    RunOperation(timed, names[scenario], Variant::BLOB + payload[0], [&](uint32_t)
+                    {
+                        target = payload;
+                        return SampleBlob(target);
+                    });
+                    break;
+                }
+            case 5:
+            case 6:
+                {
+                    const Variant& source = scenario == 5 ? source16 : source64;
+                    RunOperation(timed, names[scenario], Variant::BLOB + (scenario == 5 ? 'x' : 'y'), [&](uint32_t)
+                    {
+                        Variant copy(source);
+                        return SampleBlob(copy);
+                    });
+                    break;
+                }
+            case 7:
+                RunOperation(timed, names[scenario], 8, [](uint32_t)
+                {
+                    Variant value(static_cast<int32_t>(-1234567));
+                    return value.toString().size();
+                });
+                break;
+            case 8:
+                RunOperation(timed, names[scenario], 4096 + 'z', [&](uint32_t)
+                {
+                    const std::string output = source4096.toBlob();
+                    return output.size() + (output.empty() ? 0 : static_cast<unsigned char>(output[0]));
+                });
+                break;
+            case 9:
+                RunOperation(timed, names[scenario], Variant::BLOB + 'z', [&](uint32_t)
+                {
+                    Variant first(payloads[2]);
+                    Variant second(std::move(first));
+                    Variant third(std::move(second));
+                    return SampleBlob(third);
+                });
+                break;
+            case 10:
+                RunOperation(timed, names[scenario], Variant::BLOB + 'y', [&](uint32_t)
+                {
+                    if (!target.assignBytes(payloads[1].data(), payloads[1].size()))
+                    {
+                        throw std::runtime_error("raw64_ingest");
+                    }
+                    return SampleBlob(target);
+                });
+                break;
+            case 11:
+                RunOperation(timed, names[scenario], 4096 + 'z', [&](uint32_t)
+                {
+                    const char* bytes = source4096.data();
+                    return source4096.size() + (bytes == nullptr ? 0 : static_cast<unsigned char>(bytes[0]));
+                });
+                break;
+            case 12:
+                {
+                    const std::string payload(1024, 'x');
+                    RunOperation(timed, names[scenario], 1024 + Variant::BLOB + 'x', [&](uint32_t)
+                    {
+                        target = payload;
+                        return target.size() + SampleBlob(target);
+                    });
+                    break;
+                }
+            }
+        }
+        return 0;
+    }
+    catch (const std::exception& error)
+    {
+        std::fprintf(stderr, "Variant benchmark failed: %s\n", error.what());
+        return 1;
+    }
+}
+
+int RunVariantBenchmarks(int selected)
+{
+    if (selected < -1 || selected > 11)
+    {
+        return 2;
+    }
+    return selected == -1 ? RunOperations(0, 11, true) : RunOperations(selected, selected, true);
+}
+
+int RunAllVariantBenchmarks()
+{
+    return RunOperations(12, 12, true) == 0 ? RunVariantBenchmarks(-1) : 1;
+}
+
+int CheckVariantBenchmarkBatches()
+{
+    if (RunVariantBenchmarks(-2) != 2 || RunVariantBenchmarks(12) != 2)
+    {
+        return 1;
+    }
+    return RunOperations(0, 12, false);
+}
+
+int RunVariantScenarios()
 {
     uint32_t checks = 0;
     uint32_t failures = 0;
@@ -34,95 +214,6 @@ int RunVariantScenarios(bool benchmark, int selected)
     };
     try
     {
-        if (benchmark)
-        {
-            const char* names[] = {"scalar_construct", "scalar_assign", "blob16_assign", "blob64_assign", "blob4096_assign",
-                "blob16_copy", "blob64_copy", "integer_text", "blob4096_copy_read", "blob4096_move_chain", "raw64_ingest", "blob4096_borrow"};
-            std::string payloads[] = {std::string(16, 'x'), std::string(64, 'y'), std::string(4096, 'z')};
-            Variant source16(payloads[0]);
-            Variant source64(payloads[1]);
-            Variant source4096(payloads[2]);
-            Variant target;
-            for (uint32_t scenario = 0; scenario < 12; ++scenario)
-            {
-                if (selected >= 0 && scenario != static_cast<uint32_t>(selected))
-                {
-                    continue;
-                }
-                LibraryBenchmark::run(names[scenario], [&](uint32_t iterations) -> uint64_t
-                {
-                    uint64_t checksum = 0;
-                    for (uint32_t i = 0; i < iterations; ++i)
-                    {
-                        switch (scenario)
-                        {
-                        case 0:
-                            {
-                                Variant value(static_cast<int32_t>(i));
-                                checksum += static_cast<int32_t>(value);
-                                break;
-                            }
-                        case 1:
-                            target = static_cast<int32_t>(i);
-                            checksum += static_cast<int32_t>(target);
-                            break;
-                        case 2:
-                        case 3:
-                        case 4:
-                            target = payloads[scenario - 2];
-                            checksum += target.type();
-                            break;
-                        case 5:
-                            {
-                                Variant value(source16);
-                                checksum += value.type();
-                                break;
-                            }
-                        case 6:
-                            {
-                                Variant value(source64);
-                                checksum += value.type();
-                                break;
-                            }
-                        case 7:
-                            {
-                                Variant value(static_cast<int32_t>(-1234567));
-                                checksum += value.toString().size();
-                                break;
-                            }
-                        case 8:
-                            checksum += source4096.toBlob().size();
-                            break;
-                        case 9:
-                            {
-                                Variant first(payloads[2]);
-                                Variant second(std::move(first));
-                                Variant third(std::move(second));
-                                checksum += third.type();
-                                break;
-                            }
-                        case 10:
-                            {
-                                if (!target.assignBytes(payloads[1].data(), payloads[1].size()))
-                                {
-                                    throw std::runtime_error("Variant raw64_ingest failed");
-                                }
-                                checksum += target.type();
-                                break;
-                            }
-                        case 11:
-                            {
-                                const char* bytes = source4096.data();
-                                checksum += source4096.size() + static_cast<unsigned char>(bytes[0]);
-                                break;
-                            }
-                        }
-                    }
-                    return checksum;
-                });
-            }
-            return 0;
-        }
         const size_t sizes[] = {0, 1, 7, 8, 15, 16, 17, 31, 64, 4096, 65536};
         for (size_t index = 0; index < sizeof(sizes) / sizeof(sizes[0]); ++index)
         {
@@ -137,28 +228,32 @@ int RunVariantScenarios(bool benchmark, int selected)
                 Variant first;
                 Check(first.assignBytes(expected.data(), expected.size(), type), "length ingestion");
                 Check(first.type() == type && first.size() == expected.size() && first.toBlob() == expected, "exact bytes");
-                Check(first.size() == 0 ? first.data() == nullptr : std::memcmp(first.data(), expected.data(), first.size()) == 0, "borrow view");
+                Check(expected.empty() ? first.data() == nullptr : first.size() == expected.size() && first.data() != nullptr &&
+                    std::memcmp(first.data(), expected.data(), expected.size()) == 0, "borrow view");
                 Variant copied(first);
                 Variant moved(std::move(first));
-                Check(first.type() == Variant::INIT && first.size() == 0 && moved == copied, "move source reset");
+                Check(first.type() == Variant::INIT && first.data() == nullptr && first.size() == 0 &&
+                    moved.type() == type && copied.type() == type && moved == copied, "move source reset");
                 copied = copied;
                 moved = std::move(moved);
-                Check(moved.toBlob() == expected && copied == moved, "self assignment");
+                Check(moved.type() == type && moved.toBlob() == expected && copied.type() == type && copied == moved, "self assignment");
                 Variant assigned;
-                Check(&(assigned = moved) == &assigned && assigned == moved, "reference assignment");
+                Check(&(assigned = moved) == &assigned && assigned.type() == type && assigned == moved, "reference assignment");
                 assigned = std::move(moved);
-                Check(moved.type() == Variant::INIT && assigned.toBlob() == expected, "move assignment");
+                Check(moved.type() == Variant::INIT && moved.data() == nullptr && moved.size() == 0 &&
+                    assigned.type() == type && assigned.toBlob() == expected, "move assignment");
                 const Variant& readOnly = assigned;
                 Check(static_cast<std::string>(readOnly) == expected, "const text read");
-                if (expected.size() > 1)
+                if (expected.size() > 1 && assigned.data() != nullptr && assigned.size() == expected.size())
                 {
                     const std::string suffix = expected.substr(1);
                     Check(assigned.assignBytes(assigned.data() + 1, assigned.size() - 1, type) && assigned.toBlob() == suffix, "self slice");
                 }
-                Check(!assigned.assignBytes(nullptr, 1) && assigned.type() == type, "invalid pointer rollback");
+                const std::string retained = expected.size() > 1 ? expected.substr(1) : expected;
+                Check(!assigned.assignBytes(nullptr, 1) && assigned.type() == type && assigned.toBlob() == retained, "invalid pointer rollback");
                 Variant empty;
                 assigned.swap(empty);
-                Check(assigned.type() == Variant::INIT, "swap empty");
+                Check(assigned.type() == Variant::INIT && assigned.data() == nullptr && empty.type() == type && empty.toBlob() == retained, "swap empty");
             }
         }
         for (int32_t type = -1; type <= 7; ++type)
@@ -171,7 +266,12 @@ int RunVariantScenarios(bool benchmark, int selected)
                 Variant value(int32_t(42));
                 Check(Variant::isValidBlob(size, type) == valid, "length validation");
                 Check(value.assignBytes(bytes, size, static_cast<Variant::VariantType>(type)) == valid, "ingestion validation");
-                if (!valid)
+                if (valid)
+                {
+                    Check(value.type() == static_cast<Variant::VariantType>(type) && value.size() == size &&
+                        value.toBlob() == std::string(bytes, size), "valid raw input commits type, width and bytes");
+                }
+                else
                 {
                     Check(value.type() == Variant::INT32 && static_cast<int32_t>(value) == 42, "failure strong state");
                 }
@@ -221,49 +321,59 @@ int RunVariantScenarios(bool benchmark, int selected)
             }
             return 1;
         };
-        _CRT_ALLOC_HOOK previousFree = _CrtSetAllocHook(observe);
-        const bool shortened = shrinking.assignBytes(shrinking.data() + 32, 64);
-        shrinking.clear();
-        _CrtSetAllocHook(previousFree);
+        bool shortened = false;
+        {
+            const VariantTestAllocHook guard(observe);
+            shortened = shrinking.assignBytes(shrinking.data() + 32, 64);
+            shrinking.clear();
+        }
         trackedBuffer = nullptr;
         Check(shortened && observedFree && entirelyErased, "shrunk allocation fully erased before release");
         const char shortText[] = "1234567890123456";
         s_seen = 0;
-        _CRT_ALLOC_HOOK previous = _CrtSetAllocHook(Hook);
-        for (uint32_t i = 0; i < 1000; ++i)
         {
-            Variant first(shortText);
-            Variant second(first);
-            second = first;
-            Variant third(std::move(second));
+            const VariantTestAllocHook guard(Hook);
+            for (uint32_t i = 0; i < 1000; ++i)
+            {
+                Variant first(shortText);
+                Variant second(first);
+                second = first;
+                Variant third(std::move(second));
+            }
         }
-        _CrtSetAllocHook(previous);
         Check(s_seen == 0, "small bytes must not allocate");
         const std::string large(4096, 'x');
         Variant original(large);
         s_seen = 0;
-        previous = _CrtSetAllocHook(Hook);
-        Variant moved(std::move(original));
-        original = std::move(moved);
-        _CrtSetAllocHook(previous);
+        {
+            const VariantTestAllocHook guard(Hook);
+            Variant moved(std::move(original));
+            original = std::move(moved);
+        }
         Check(s_seen == 0, "heap move must not allocate");
         _CrtMemState before;
         _CrtMemState after;
         _CrtMemCheckpoint(&before);
+        uint32_t rejected = 0;
         for (s_failAt = 1; s_failAt <= 8; ++s_failAt)
         {
             Variant value(int32_t(73));
             s_seen = 0;
-            previous = _CrtSetAllocHook(Hook);
-            const bool accepted = value.assignBytes(large.data(), large.size());
-            _CrtSetAllocHook(previous);
-            Check(accepted ? value.toBlob() == large : static_cast<int32_t>(value) == 73, "allocation rollback");
+            bool accepted = false;
+            {
+                const VariantTestAllocHook guard(Hook);
+                accepted = value.assignBytes(large.data(), large.size());
+            }
+            rejected += accepted ? 0 : 1;
+            Check(accepted ? value.type() == Variant::BLOB && value.toBlob() == large :
+                value.type() == Variant::INT32 && static_cast<int32_t>(value) == 73, "allocation rollback");
         }
+        Check(rejected != 0, "fault injection reached assignBytes");
         s_failAt = 0;
         _CrtMemCheckpoint(&after);
         Check(before.lCounts[_NORMAL_BLOCK] == after.lCounts[_NORMAL_BLOCK] && before.lSizes[_NORMAL_BLOCK] == after.lSizes[_NORMAL_BLOCK], "allocation failure leak");
 #endif
-        std::printf("Variant performance API checks=%u failures=%u sizeof=%llu\n", checks, failures, static_cast<unsigned long long>(sizeof(Variant)));
+        std::printf("Variant scenario checks=%u failures=%u sizeof=%llu\n", checks, failures, static_cast<unsigned long long>(sizeof(Variant)));
         return failures == 0 ? 0 : 1;
     }
     catch (...)
