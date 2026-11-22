@@ -37,6 +37,7 @@
 */
 static int RunBenchmarks()
 {
+    std::ostringstream processor;
 #ifdef _WIN32
     // 固定到调用方允许的一个逻辑处理器，避免同一批在不同类型的核心间迁移。
     DWORD_PTR processMask = 0;
@@ -50,9 +51,21 @@ static int RunBenchmarks()
     {
         return 1;
     }
-    std::ostringstream mask;
-    mask << std::hex << selected;
-    std::printf("benchmark affinity mask = 0x%s\n", mask.str().c_str());
+    PROCESSOR_NUMBER current = {};
+    // 支持处理器组的系统提供扩展查询，早期系统只有第 0 组。
+    const auto queryProcessor = reinterpret_cast<decltype(&::GetCurrentProcessorNumberEx)>(
+        ::GetProcAddress(::GetModuleHandleW(L"kernel32.dll"), "GetCurrentProcessorNumberEx"));
+    if (queryProcessor != nullptr)
+    {
+        queryProcessor(&current);
+    }
+    else
+    {
+        current.Number = static_cast<BYTE>(::GetCurrentProcessorNumber());
+    }
+    processor << current.Group << '/' << static_cast<unsigned>(current.Number);
+#else
+    processor << "scheduler";
 #endif
     SharedMemory mapping("", 4096, false);
     uint8_t* data = static_cast<uint8_t*>(mapping.writeWithoutLock());
@@ -66,6 +79,8 @@ static int RunBenchmarks()
     {
         return 1;
     }
+    std::printf("SharedMemory benchmark capacity_bytes=%u processor=%s\n",
+        static_cast<unsigned>(capacity), processor.str().c_str());
     bool invalid = false;
     // 各批接收调用次数 count，返回该批的实际累加值；发现后置条件不符即记录到最终退出状态。
     LibraryBenchmark::run("SharedMemory.writeWithoutLock.warm", [&](uint32_t count) -> uint64_t {
@@ -156,36 +171,58 @@ static std::string TestName()
 }
 
 #ifdef SHM_WRAP_RESERVE
-// GNU ld 在静态测试程序内重定向这两个符号，其他线程和其他用例始终直接调用 libc。
-struct StorageCallProbe
+// 仅在本线程的被测构造期间指向调用记录。
+static thread_local StorageCallProbe* s_storageProbe = nullptr;
+
+StorageCallProbe::~StorageCallProbe()
 {
-    int reserveError;  // 首次预留要返回的错误，0 表示直接执行。
-    int resizeError;   // 首次设置长度要写入 errno 的错误，0 表示直接执行。
-    unsigned reserveCalls;  // 当前构造在本线程的预留次数。
-    unsigned resizeCalls;   // 当前构造在本线程的长度设置次数。
-};
-static thread_local StorageCallProbe* s_storageProbe = nullptr;  // 仅在被测构造期间指向当前记录。
+    s_storageProbe = nullptr;
+}
 
 extern "C" int SHM_REAL_RESERVE(int descriptor, off_t offset, off_t length);
 extern "C" int SHM_REAL_RESIZE(int descriptor, off_t length);
 
-// 首次注入 POSIX 直接返回值，后续以相同描述符、偏移和长度执行真实预留。
+/** 记录预留范围并按用例指定的错误码中断首次预留
+@param [in] descriptor 当前命名后备的描述符
+@param [in] offset 预留起点（字节）
+@param [in] length 预留长度（字节）
+@return 注入的错误码或 libc 的预留结果
+*/
 extern "C" int SHM_WRAP_RESERVE(int descriptor, off_t offset, off_t length)
 {
-    if (s_storageProbe != nullptr && ++s_storageProbe->reserveCalls == 1 && s_storageProbe->reserveError)
+    if (s_storageProbe != nullptr)
     {
-        return s_storageProbe->reserveError;
+        if (++s_storageProbe->m_reserveCalls == 1)
+        {
+            s_storageProbe->m_descriptor = descriptor;
+        }
+        s_storageProbe->m_argumentsMatch &= descriptor >= 0 && descriptor == s_storageProbe->m_descriptor &&
+            offset == 0 && length == s_storageProbe->m_expectedBytes;
+        if (s_storageProbe->m_reserveCalls == 1 && s_storageProbe->m_reserveError != 0)
+        {
+            return s_storageProbe->m_reserveError;
+        }
     }
     return SHM_REAL_RESERVE(descriptor, offset, length);
 }
 
-// ftruncate 失败按 libc 约定返回 -1 并设置 errno；正常路径直接调用真实函数。
+/** 记录目标长度并按用例指定的 errno 中断首次设置长度
+@param [in] descriptor 应与预留时相同的后备描述符
+@param [in] length 文件目标长度（字节）
+@return 成功为 0，失败为 -1 并设置 errno
+*/
 extern "C" int SHM_WRAP_RESIZE(int descriptor, off_t length)
 {
-    if (s_storageProbe != nullptr && ++s_storageProbe->resizeCalls == 1 && s_storageProbe->resizeError)
+    if (s_storageProbe != nullptr)
     {
-        errno = s_storageProbe->resizeError;
-        return -1;
+        ++s_storageProbe->m_resizeCalls;
+        s_storageProbe->m_argumentsMatch &= descriptor >= 0 && descriptor == s_storageProbe->m_descriptor &&
+            length == s_storageProbe->m_expectedBytes;
+        if (s_storageProbe->m_resizeCalls == 1 && s_storageProbe->m_resizeError != 0)
+        {
+            errno = s_storageProbe->m_resizeError;
+            return -1;
+        }
     }
     return SHM_REAL_RESIZE(descriptor, length);
 }
@@ -195,17 +232,19 @@ extern "C" int SHM_WRAP_RESIZE(int descriptor, off_t length)
 */
 static int TestStorageInterrupt()
 {
+    CHECK(ConfigureDirectory() == 0);
     const int errors[][2] = {{EINTR, EINTR}, {ENOSPC, 0}, {0, EFBIG}};
     for (const auto& error : errors)
     {
         const std::string name = TestName();
-        StorageCallProbe probe = {error[0], error[1], 0, 0};
+        StorageCallProbe probe = {error[0], error[1], 16452, 0, 0, -1, true};
         s_storageProbe = &probe;
         SharedMemory owner(name, 16452, false);
         s_storageProbe = nullptr;
+        CHECK(probe.m_argumentsMatch);
         if (error[0] == EINTR)
         {
-            CHECK(probe.reserveCalls >= 2 && probe.resizeCalls >= 2);
+            CHECK(probe.m_reserveCalls >= 2 && probe.m_resizeCalls >= 2);
             CHECK(!owner.isFailed() && owner.realSize() == 16452);
             unsigned char* data = static_cast<unsigned char*>(owner.writeWithoutLock());
             CHECK(data != nullptr);
@@ -217,10 +256,10 @@ static int TestStorageInterrupt()
         else
         {
             CHECK(owner.isFailed() && owner.writeWithoutLock() == nullptr && owner.realSize() == 0);
-            CHECK(probe.reserveCalls >= 1 && probe.resizeCalls == (error[0] == ENOSPC ? 0u : 1u));
+            CHECK(probe.m_reserveCalls >= 1 && probe.m_resizeCalls == (error[0] == ENOSPC ? 0u : 1u));
             if (error[0] == ENOSPC)
             {
-                CHECK(probe.reserveCalls == 1);
+                CHECK(probe.m_reserveCalls == 1);
             }
             SharedMemory recovered(name, 16452, false);
             CHECK(!recovered.isFailed() && recovered.writeWithoutLock() != nullptr && recovered.realSize() == 16452);
@@ -286,7 +325,7 @@ static int TestViews()
     CHECK(ConfigureDirectory() == 0);
     const std::string name = TestName();
     SharedMemory owner(name, 128, false);
-    CHECK(!owner.isFailed() && owner.size() == 128 && owner.realSize() >= 128 && owner.mapName() == name);
+    CHECK(!owner.isFailed() && owner.size() == 128 && owner.mapName() == name);
 #ifdef SHARED_MEMORY_MOBILE
     CHECK(ConfigureDirectory() == 0 && !SharedMemory::setProcessDirectory(""));
 #else
@@ -324,22 +363,27 @@ static int TestViews()
     const int queried = ::fstat(native, &region);
     ::close(native);
     CHECK(queried == 0 && region.st_size >= 128 && region.st_size < UINT32_MAX);
-    CHECK(owner.realSize() == region.st_size && withinPage.isFailed() == (region.st_size < 129));
+    const uint32_t expectedCapacity = static_cast<uint32_t>(region.st_size);
+    CHECK(withinPage.isFailed() == (expectedCapacity < 129));
     SharedMemory outside(name, static_cast<uint32_t>(region.st_size) + 1, true);
     CHECK(outside.isFailed());
 #elif defined(_WIN32)
     SYSTEM_INFO information = {};
     ::GetSystemInfo(&information);
-    CHECK(information.dwPageSize >= 129 && !withinPage.isFailed());
+    const uint32_t expectedCapacity = information.dwPageSize;
+    CHECK(expectedCapacity >= 129 && !withinPage.isFailed());
     SharedMemory nextPage(name, information.dwPageSize + 1, true);
     CHECK(nextPage.isFailed());
 #else
+    const uint32_t expectedCapacity = 128;
     CHECK(withinPage.isFailed());
 #endif
+    CHECK(owner.realSize() == expectedCapacity && owner.memory() == nullptr);
     SharedMemory reader(name);
     const uint8_t* view = static_cast<const uint8_t*>(reader.readWithoutLock());
     uint8_t* contents = static_cast<uint8_t*>(owner.writeWithoutLock());
     CHECK(view && contents);
+    CHECK(reader.realSize() == expectedCapacity && owner.realSize() == expectedCapacity);
     uint8_t expected[128];
     for (size_t i = 0; i < sizeof(expected); ++i)
     {
@@ -350,7 +394,7 @@ static int TestViews()
     CHECK(unopened.isFailed() && unopened.memory() == nullptr);
     unopened.clear();
     CHECK(unopened.isFailed() && unopened.memory() == nullptr && std::memcmp(contents, expected, sizeof(expected)) == 0);
-    CHECK(unopened.realSize() == owner.realSize() && !unopened.isFailed() && unopened.memory() == nullptr);
+    CHECK(unopened.realSize() == expectedCapacity && !unopened.isFailed() && unopened.memory() == nullptr);
     CHECK(std::memcmp(view, expected, sizeof(expected)) == 0);
     CHECK(reader.size() == 0 && reader.memory() == view);
     reader.clear();
@@ -404,9 +448,13 @@ static int TestPartialClear()
     }
     std::memcpy(contents, expected, sizeof(expected));
     SharedMemory prefix(name, prefixSize, true);
-    CHECK(!prefix.isFailed() && prefix.writeWithoutLock() != nullptr && prefix.size() == prefixSize);
+    CHECK(!prefix.isFailed() && prefix.size() == prefixSize && prefix.memory() == nullptr);
     prefix.clear();
     std::memset(expected, 0, prefixSize);
+    CHECK(std::memcmp(contents, expected, sizeof(expected)) == 0);
+    std::memset(contents, 0xa5, prefixSize);
+    CHECK(prefix.writeWithoutLock() != nullptr);
+    prefix.clear();
     CHECK(std::memcmp(contents, expected, sizeof(expected)) == 0);
     return 0;
 }
@@ -439,16 +487,22 @@ static int TestAnonymous()
         CHECK(privateData[i] == 0);
     }
     CHECK(separate[15] == 0x51);
-    privateData[0] = 0x49;
+    uint8_t pattern[16];
+    for (size_t i = 0; i < sizeof(pattern); ++i)
+    {
+        pattern[i] = static_cast<uint8_t>(0x49 + i);
+    }
+    std::memcpy(privateData, pattern, sizeof(pattern));
     anonymous.close();
     CHECK(anonymous.memory() == nullptr);
     privateData = static_cast<uint8_t*>(anonymous.writeWithoutLock());
     CHECK(privateData != nullptr);
 #ifdef _WIN32
-    CHECK(privateData[0] == 0x49);
+    CHECK(std::memcmp(privateData, pattern, sizeof(pattern)) == 0);
 #else
-    CHECK(privateData[0] == 0);
+    CHECK(std::memcmp(privateData, zero, sizeof(zero)) == 0);
 #endif
+    CHECK(separate[15] == 0x51);
     return 0;
 }
 
@@ -497,6 +551,7 @@ static int TestDefaultNameLifetime()
     const std::string name = TestName();
     {
         SharedMemory peer(name);
+        SharedMemory capacityOnly(name);
         const uint8_t* read = nullptr;
         {
             SharedMemory owner(name, 32, false);
@@ -505,6 +560,7 @@ static int TestDefaultNameLifetime()
             data[31] = 0x48;
             read = static_cast<const uint8_t*>(peer.readWithoutLock());
             CHECK(read != nullptr && read[31] == 0x48);
+            CHECK(capacityOnly.realSize() >= 32 && !capacityOnly.isFailed() && capacityOnly.memory() == nullptr);
         }
         CHECK(read[31] == 0x48 && peer.memory() == read);
         peer.close();
@@ -523,6 +579,8 @@ static int TestDefaultNameLifetime()
         newData[31] = 0x51;
         CHECK(read[31] == 0x48);
 #endif
+        const uint8_t* delayed = static_cast<const uint8_t*>(capacityOnly.readWithoutLock());
+        CHECK(delayed != nullptr && delayed[31] == 0x48);
     }
     SharedMemory fresh(name, 32, false);
     const uint8_t* read = static_cast<const uint8_t*>(fresh.readWithoutLock());
