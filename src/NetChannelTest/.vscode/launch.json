@@ -1,29 +1,42 @@
 {
-    // 使用 IntelliSense 了解相关属性。 
-    // 悬停以查看现有属性的描述。
-    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "g++ - 生成和调试活动文件",
+            "name": "NetChannelTest（Linux、macOS）",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/../../lib/",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "为 gdb 启用整齐打印",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+                "--all"
             ],
-            "preLaunchTask": "C/C++: g++ build active file",
-            "miDebuggerPath": "/usr/bin/gdb",
+            "cwd": "${workspaceFolder}",
+            "linux": {
+                "MIMode": "gdb"
+            },
+            "osx": {
+                "MIMode": "lldb"
+            }
+        },
+        {
+            "name": "NetChannelTest（Windows，VS 构建）",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/../../lib/${input:netChannelTestExe}",
+            "args": [
+                "--all"
+            ],
+            "cwd": "${workspaceFolder}"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "netChannelTestExe",
+            "type": "pickString",
+            "description": "选择已通过 VS 构建的测试程序",
+            "options": [
+                "NetChannelTestd.exe",
+                "NetChannelTest.exe"
+            ]
         }
     ]
 }

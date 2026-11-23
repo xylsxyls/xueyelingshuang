@@ -8,5 +8,4 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/../../PlatformTest/PlatformTest/src/Platfor
 platform_test_select_linux_arm()
 project(NetChannelTest LANGUAGES CXX)
 include(CTest)
-build_sdk_test(NetChannelTest PROJECTS NetChannel
-    ARCHIVES ${vendors} SYSTEM_LIBRARIES ${system_libraries})
+build_sdk_test(NetChannelTest PROJECTS NetChannel)
