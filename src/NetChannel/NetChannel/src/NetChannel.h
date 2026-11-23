@@ -18,7 +18,7 @@ public:
     /** 单执行者增量接纳一条记录，完整记录未消费时不读取新输入
     @param [in] data 至少size字节的有效输入，size为0时可空
     @param [in] size 本次输入字节数，未接纳的后缀仍归调用者
-    @param [out] consumed 本次完整复制的字节数，参数拒绝时为0
+    @param [out] consumed 本次完整复制的字节数，参数拒绝时为0；使用独立变量，不得与输入重叠
     @return NC_READY、NC_NEED_MORE或错误；协议、截断及分配错误持续到析构
     */
     int32_t feed(const uint8_t* data, uint32_t size, uint32_t& consumed);
@@ -35,7 +35,7 @@ public:
     int32_t consume();
 
     /** 单执行者报告输入结束，未完成的固定头或正文形成持续错误
-    @return 边界完整为NC_OK，待消费记录为NC_READY，否则返回持续错误
+    @return 记录边界返回NC_OK并可继续feed，待消费时返回NC_READY，半条记录返回NC_TRUNCATED，已有错误保持原值
     */
     int32_t finish();
 

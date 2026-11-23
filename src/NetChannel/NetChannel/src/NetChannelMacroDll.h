@@ -10,6 +10,6 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define NetChannelAPI __attribute__ ((visibility("default")))
     #else
-        #define NetChannelAPI
+        #define NetChannelAPI 
     #endif
 #endif

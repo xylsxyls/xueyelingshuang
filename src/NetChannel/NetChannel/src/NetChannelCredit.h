@@ -10,7 +10,7 @@ public:
     */
     NetChannelCredit();
 
-    /** 使用前配置协商窗口，错误不修改原窗口
+    /** 首次成功调用 sent 或 received 前可重复配置协商窗口，错误不修改原窗口
     @param [in] bytes 64KiB至1MiB且为16KiB倍数
     @return NC_OK、参数或状态错误
     */
@@ -51,7 +51,7 @@ public:
 
     /** 仅在管理队列已拥有额度消息后扣除待返还量
     @param [in] size 非0且不超过pending
-    @return NC_OK或无副作用参数错误
+    @return NC_OK、无副作用参数错误或已有的持续协议错误
     */
     int32_t consume(uint32_t size);
 

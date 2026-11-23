@@ -62,7 +62,11 @@ typedef struct NetChannelRecord
     uint32_t m_size;
 } NetChannelRecord;
 
+// NTW3 固定头长度，单位为字节
 #define NET_CHANNEL_HEADER_SIZE 24U
+// 单条记录的最大正文字节数，也是窗口配置的步长
 #define NET_CHANNEL_PAYLOAD_LIMIT 16384U
+// 单方向信用窗口的默认值和最小值，单位为字节
 #define NET_CHANNEL_DEFAULT_WINDOW 65536U
+// 单方向信用窗口允许协商的最大字节数
 #define NET_CHANNEL_MAX_WINDOW 1048576U
