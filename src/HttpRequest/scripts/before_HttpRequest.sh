@@ -12,24 +12,25 @@ fi
 librariesrely+=($'project\tDllRelyTest\t'"$DllRelyTest_dlllib")
 !EOF!
 
+#--------------------------------------------------------------------
+CEncodeDecode_bit=$1
+CEncodeDecode_dlllib=$2
+CEncodeDecode_debugRelease=$3
+CEncodeDecode_allSame=$4
 if [[ $4 != only ]]; then
-    "$CLOUD_REBUILD" CEncodeDecode "$1" "$2" "$3" "$4"
+    "$CLOUD_REBUILD" CEncodeDecode "$CEncodeDecode_bit" "$CEncodeDecode_dlllib" "$CEncodeDecode_debugRelease" "$CEncodeDecode_allSame" || exit 1
 fi
-librariesrely+=($'project\tCEncodeDecode\t'"$2")
+librariesrely+=($'project\tCEncodeDecode\t'"$CEncodeDecode_dlllib")
 
-root=$(cd "$(dirname "$0")/../../.." && pwd)
-if [[ $1 != wasm32 && $1 != wasm64 ]]; then
-    case "${THIRDPARTY_PLATFORM:-${CMAKE_SYSTEM_NAME:-}}:${CMAKE_TOOLCHAIN_FILE:-}:$OSTYPE" in
-        :*android.toolchain.cmake:*) archive=libcurl.a; linkage=lib; config=release ;;
-        windows:*|Windows:*|:*:msys*|:*:cygwin*|:*:win32*)
-            archive=libcurl.lib
-            [[ $3 != debug ]] || archive=libcurld.lib
-            linkage=lib; config=$3 ;;
-        linux:*|Linux:*|arm:*|:*:linux*) archive=libcurl.so.4; linkage=dll; config=release ;;
-        *) archive=libcurl.a; linkage=lib; config=release ;;
-    esac
-    THIRDPARTY_INCLUDE_NAME=curl THIRDPARTY_FILES="$archive" bash "$root/tools/thirdparty.sh" libcurl "$1" "$linkage" "$config" "$4" || exit 1
-    librariesrely+=($'link\t'"$archive")
+thirdparty="${XUEYELINGSHUANG}tools/thirdparty.sh"
+platform=$(bash "$thirdparty" --target-platform "$1") || exit 1
+if [[ $platform != wasm ]]; then
+    linkage=lib
+    if [[ $platform == linux || $platform == arm ]]; then linkage=dll; fi
+    records=$(THIRDPARTY_INCLUDE_NAME=curl bash "$thirdparty" --print-rely libcurl "$1" "$linkage" "$3" "$4") || exit 1
+    while IFS= read -r record; do
+        if [[ -n $record ]]; then librariesrely+=("$record"); fi
+    done <<< "$records"
 fi
 
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return
