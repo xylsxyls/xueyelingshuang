@@ -9,7 +9,7 @@
 #endif
 #if defined(_WIN32) && defined(PROCESS_WORK_PORTABLE_NOTIFY)
 #include "SemaphoreTestProcessMemory.h"
-#else
+#elif !defined(_WIN32)
 #include "SemaphoreProcessMemory.h"
 #endif
 #include <algorithm>

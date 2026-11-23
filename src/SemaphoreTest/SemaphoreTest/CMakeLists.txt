@@ -97,6 +97,13 @@ elseif(EXISTS "${SEMAPHORE_TEST_LIBRARY}")
 else()
     message(FATAL_ERROR "Set SEMAPHORE_TEST_LIBRARY to a matching prepared library")
 endif()
+# 原生测试通过私有头识别移动共享计数后端；其引用的公开头仍从被测 SDK 读取。
+if(NOT EMSCRIPTEN AND NOT SEMAPHORE_TEST_INSTRUMENTATION)
+    set(semaphore_private_dir "${CMAKE_CURRENT_BINARY_DIR}/SemaphoreTestPrivate")
+    configure_file("${semaphore_source}/SemaphoreProcessMemory.h"
+        "${semaphore_private_dir}/SemaphoreProcessMemory.h" COPYONLY)
+    target_compile_options(SemaphoreTest PRIVATE "-iquote${semaphore_private_dir}")
+endif()
 # 私有白盒和直接传入的静态库路径都需要目标平台的链接依赖。
 # CMake目标自带依赖；对于裸归档，实际链接一次，以免在不需要的架构强加libatomic。
 if(CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android)$" AND (SEMAPHORE_TEST_INSTRUMENTATION OR NOT TARGET Semaphore))
