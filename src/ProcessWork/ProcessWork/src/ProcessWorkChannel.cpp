@@ -14,6 +14,12 @@
 #include <thread>
 #include <new>
 
+#if defined(__linux__) && (defined(__arm__) || defined(__aarch64__))
+// 不同进程不会共享原子运行库的进程内锁，协议要求自然对齐的共享字段能直接原子读写。
+static_assert(__atomic_always_lock_free(4, nullptr) && __atomic_always_lock_free(8, nullptr),
+    "ProcessWork Linux ARM requires native lock-free 32-bit and 64-bit shared atomics");
+#endif
+
 static_assert(sizeof(ProcessWorkSharedDirectory) == 24, "protocol directory layout");
 static_assert(sizeof(ProcessWorkSharedPeer) == 24, "protocol peer layout");
 static_assert(sizeof(ProcessWorkSharedControl) == 6528, "protocol control layout");
@@ -239,6 +245,12 @@ bool ProcessWorkChannel::openReceiver(int32_t bytes, int32_t initial, int32_t th
         m_control->m_maxPayloadBytes = memory.m_localQueueBytes == -1 ? bytes - 12 :
             static_cast<int32_t>((std::min)(static_cast<int64_t>(bytes - 12),
                 (std::max)(int64_t(-1), memory.m_localQueueBytes - 277)));
+        if (memory.m_receiveBatchMaximumBytes != -1)
+        {
+            // 一条完整记录包括12字节包头、4字节长度、NUL和批次对象。超过整池的包永远不可搬运。
+            const int64_t maximumBody = memory.m_receiveBatchMaximumBytes - static_cast<int64_t>(sizeof(ProcessWorkReceiveBatch)) - 17;
+            m_control->m_maxPayloadBytes = static_cast<int32_t>((std::min)(static_cast<int64_t>(m_control->m_maxPayloadBytes), maximumBody));
+        }
         m_control->m_initial = initial;
         m_control->m_limit = static_cast<int32_t>(limit);
         m_control->m_threshold = threshold;
@@ -1049,9 +1061,10 @@ int32_t ProcessWorkChannel::pumpImpl(LockFreeQueue<char*>* queue, Semaphore& not
         int32_t header[3] = {};
         std::memcpy(header, source, sizeof(header));
         const int32_t capacity = inlined ? (std::min)(m_control->m_blockBytes, static_cast<int32_t>(sizeof(block->m_inlineData))) : m_control->m_blockBytes;
-        if (header[0] <= 0 || header[1] < 0 || header[2] < 0 || header[2] > capacity - 12)
+        if (header[0] <= 0 || header[1] < 0 || header[2] < 0 ||
+            header[2] > capacity - 12 || header[2] > m_control->m_maxPayloadBytes)
         {
-            // 已提交正文的协议头损坏时撤销通道，不能静默消费并丢弃该消息。
+            // 超出已发布单包上限的记录永远无法入队，须按协议损坏关闭通道。
             stop();
             break;
         }
@@ -1092,7 +1105,7 @@ int32_t ProcessWorkChannel::pumpImpl(LockFreeQueue<char*>* queue, Semaphore& not
             m_retryDelay.store(true, std::memory_order_relaxed);
             break;
         }
-        if (!m_sharedQueue->consume(slot, header[2] >= 0 ? static_cast<uint32_t>(header[2]) + 12 : 0))
+        if (!m_sharedQueue->consume(slot, static_cast<uint32_t>(header[2]) + 12))
         {
             // 本地队列已经接收所有权，不能再次复制同一共享正文。
             // 单消费者下不应失败；协议损坏时撤销入口，等待owner关闭重建。

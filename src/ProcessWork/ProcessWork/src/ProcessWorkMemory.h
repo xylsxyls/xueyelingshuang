@@ -107,6 +107,12 @@ public:
     uint32_t m_localQueueInitialCapacity;
     // 接收端初始化时预分配的标准批次数，默认0按需申请；空闲备用块不占用消息积压额度
     uint32_t m_receiveBatchReserve;
+    // 标准接收批次的记录区字节数，默认65568，至少17以容纳空包。
+    uint32_t m_receiveBatchBytes;
+    // 接收批次对象和记录区的总字节上限，包含使用中、预留和已回收批次；-1不设业务上限。
+    int64_t m_receiveBatchMaximumBytes;
+    // 已归还标准批次的缓存上限，至少保留初始预留数的复用能力；默认8，-1不限，零预留下0关闭复用。
+    int64_t m_receiveBatchCacheLimit;
     // Post小包备用槽数，默认0；每槽字节数由m_postBufferSlotBytes指定
     uint32_t m_postBufferReserve;
     // 每槽64或128字节，默认128；扣除4字节所有者及消息内部头
@@ -187,6 +193,14 @@ public:
     @return true已更新本配置的m_localQueueBytes，false保持原配置不变
     */
     bool setLocalQueueLimitMB(int64_t megabytes);
+
+    /** 一次设置接收批次的实际存储策略，初始化前调用
+    @param [in] batchBytes 标准记录区字节数，17至INT32_MAX，较大的单条记录可用一次性批次
+    @param [in] maximumBytes 批次对象和记录区总字节数，-1不限；有限时须能容纳一个标准批次和初始预留
+    @param [in] cacheLimit 已归还标准批次的缓存数，-1不限，否则取该值与初始预留数的较大值
+    @return true设置已保存，false表示参数无效，原配置保留
+    */
+    bool setReceiveBatchPool(uint32_t batchBytes, int64_t maximumBytes, int64_t cacheLimit);
 };
 
 /** 查询系统资源后再创建共享映射；查询失败时拒绝扩容，不循环盲试
@@ -210,8 +224,8 @@ public:
     /** 合并旧初始容量参数与新的完整队列配置，检查冲突
     @param [in] config 初始化配置
     @param [in] freeQueue true选择接收空闲批次队列
-    @param [out] pool 合并后的配置
-    @return true参数一致，false初始容量冲突
+    @param [out] pool 成功时为合并后的配置，失败时输出不可用
+    @return true复制完成，false初始容量冲突或配置中的回调复制失败
     */
     static bool queueConfig(const ProcessWorkMemoryConfig& config, bool freeQueue, LockFreeQueuePoolConfig& pool);
 };

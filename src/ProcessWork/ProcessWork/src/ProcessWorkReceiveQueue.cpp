@@ -6,9 +6,6 @@
 #include <climits>
 #include <new>
 
-// 容纳64KiB正文、12字节包头、4字节批内长度和NUL，避免常用64KiB正文每次越界走临时分配。
-static const size_t kReceiveBatchBytes = 65536 + 32;
-
 /** 复制接收记录，短包以固定宽度首尾复制避免逐包调用通用memcpy
 @param [out] target 至少bytes个可写字节，与source不重叠
 @param [in] source 至少bytes个可读字节，允许未对齐；不会读取声明范围之外
@@ -50,7 +47,7 @@ ProcessWorkReceiveBatch::~ProcessWorkReceiveBatch()
 }
 
 ProcessWorkReceiveQueue::ProcessWorkReceiveQueue() :
-m_building(nullptr), m_batchBytes(kReceiveBatchBytes), m_reserved(0), m_knownReleased(0), m_nextMemoryRetry(0), m_charged(0),
+m_building(nullptr), m_reserved(0), m_knownReleased(0), m_nextMemoryRetry(0), m_charged(0),
 m_active(nullptr), m_readOffset(0), m_completed(0), m_released(0), m_cached(0), m_allocatedBytes(0), m_notified(false), m_notification(new Semaphore), m_storageGrows(0)
 {
 
@@ -77,8 +74,7 @@ bool ProcessWorkReceiveQueue::configure(const ProcessWorkMemoryConfig& config)
         }
         clear();
         m_config = config;
-        m_batchBytes = kReceiveBatchBytes;
-        const uint64_t allocation = static_cast<uint64_t>(m_batchBytes) + sizeof(ProcessWorkReceiveBatch);
+        const uint64_t allocation = static_cast<uint64_t>(m_config.m_receiveBatchBytes) + sizeof(ProcessWorkReceiveBatch);
         const uint64_t reserve = allocation * config.m_receiveBatchReserve;
         LockFreeQueuePoolConfig pool;
         LockFreeQueuePoolConfig freePool;
@@ -128,7 +124,7 @@ bool ProcessWorkReceiveQueue::configure(const ProcessWorkMemoryConfig& config)
         }
         for (uint32_t i = 0; i < config.m_receiveBatchReserve; ++i)
         {
-            ProcessWorkReceiveBatch* batch = new (std::nothrow) ProcessWorkReceiveBatch(m_batchBytes);
+            ProcessWorkReceiveBatch* batch = new (std::nothrow) ProcessWorkReceiveBatch(m_config.m_receiveBatchBytes);
             if (batch == nullptr || batch->m_data == nullptr)
             {
                 delete batch;
@@ -138,7 +134,7 @@ bool ProcessWorkReceiveQueue::configure(const ProcessWorkMemoryConfig& config)
                 return false;
             }
             // 初始化期间触及预留正文页；性能计时不包含首次触页。
-            std::memset(batch->m_data, 0, m_batchBytes);
+            std::memset(batch->m_data, 0, m_config.m_receiveBatchBytes);
             m_allocatedBytes.fetch_add(allocation, std::memory_order_relaxed);
             // 只在没有已归还热块时启用备用块，避免低积压也循环触及全部预分配内存。
             m_unused.push_back(batch);
@@ -155,27 +151,28 @@ bool ProcessWorkReceiveQueue::configure(const ProcessWorkMemoryConfig& config)
 ProcessWorkReceiveBatch* ProcessWorkReceiveQueue::acquire(size_t bytes)
 {
     ProcessWorkReceiveBatch* batch = nullptr;
-    if (bytes <= m_batchBytes && m_free.pop(&batch))
+    if (bytes <= m_config.m_receiveBatchBytes && m_free.pop(&batch))
     {
         m_cached.fetch_sub(1, std::memory_order_relaxed);
         batch->m_size = 0;
         return batch;
     }
-    if (bytes <= m_batchBytes && !m_unused.empty())
+    if (bytes <= m_config.m_receiveBatchBytes && !m_unused.empty())
     {
         batch = m_unused.back();
         m_unused.pop_back();
         batch->m_size = 0;
         return batch;
     }
-    size_t capacity = (std::max)(bytes, m_batchBytes);
+    size_t capacity = (std::max)(bytes, static_cast<size_t>(m_config.m_receiveBatchBytes));
     uint64_t allocation = static_cast<uint64_t>(capacity) + sizeof(ProcessWorkReceiveBatch);
-    const uint64_t limit = static_cast<uint64_t>(INT64_MAX);
+    const uint64_t limit = m_config.m_receiveBatchMaximumBytes == -1 ? static_cast<uint64_t>(INT64_MAX) :
+        static_cast<uint64_t>(m_config.m_receiveBatchMaximumBytes);
     if (allocation > limit)
     {
         return nullptr;
     }
-    // 只保护实际存储总量的数值范围；必要时回收空闲块，不调整或占用消息积压额度。
+    // 为超标准记录先归还空闲块；仍在回调的批次保留所有权，搬运线程稍后重试。
     while (m_allocatedBytes.load(std::memory_order_acquire) > limit - allocation)
     {
         if (!m_unused.empty())
@@ -205,7 +202,7 @@ ProcessWorkReceiveBatch* ProcessWorkReceiveQueue::acquire(size_t bytes)
         {
             ProcessWorkMemoryGrowContext context;
             context.m_kind = ProcessWorkReceiveBuffers;
-            context.m_initialCapacity = (m_batchBytes + sizeof(ProcessWorkReceiveBatch)) * static_cast<uint64_t>(m_config.m_receiveBatchReserve);
+            context.m_initialCapacity = (m_config.m_receiveBatchBytes + sizeof(ProcessWorkReceiveBatch)) * static_cast<uint64_t>(m_config.m_receiveBatchReserve);
             context.m_currentCapacity = before;
             context.m_successfulGrowCount = m_storageGrows;
             context.m_requiredGrowth = allocation;
@@ -327,8 +324,9 @@ bool ProcessWorkReceiveQueue::flush()
 
 void ProcessWorkReceiveQueue::recycle(ProcessWorkReceiveBatch* batch)
 {
-    if (batch->m_capacity == m_batchBytes &&
-        m_cached.load(std::memory_order_relaxed) < (std::max)(uint32_t(8), m_config.m_receiveBatchReserve))
+    if (batch->m_capacity == m_config.m_receiveBatchBytes &&
+        (m_config.m_receiveBatchCacheLimit == -1 || m_cached.load(std::memory_order_relaxed) <
+        (std::max)(static_cast<uint64_t>(m_config.m_receiveBatchCacheLimit), static_cast<uint64_t>(m_config.m_receiveBatchReserve))))
     {
         m_cached.fetch_add(1, std::memory_order_relaxed);
         if (m_free.tryPush(batch) == LockFreeQueueSuccess)

@@ -992,21 +992,17 @@ int32_t ProcessWork::receivePayloadCapacity() const
 #include <cstdio>
 #include <cstring>
 #include <exception>
+#include <memory>
 #include <string>
 #include <thread>
 
-// 示例回调对象由main拥有；析构先关闭工作线程，再销毁回调中的状态。
+// 示例回调由 main 持有，收发线程退出后才结束其生命周期。
 class ProcessWorkDemoCallback : public ProcessReceiveCallback
 {
 public:
     ProcessWorkDemoCallback() : m_received(0), m_bad(false)
     {
 
-    }
-
-    ~ProcessWorkDemoCallback()
-    {
-        ProcessWork::instance().uninitReceive();
     }
 
     void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type)
@@ -1058,6 +1054,10 @@ int main()
         }
         // 队列节点、正文备用槽和积压额度是三个不同概念。
         config.m_receiveMemory.m_receiveBatchReserve = 4;
+        if (!config.m_receiveMemory.setReceiveBatchPool(65568, 8 * 1024 * 1024, 8))
+        {
+            return 16;
+        }
         config.m_receiveMemory.m_queuePool.initialCapacity = 64;
         config.m_receiveMemory.m_freeQueuePool.initialCapacity = 64;
         config.m_postMemory.m_postBufferReserve = 64;
@@ -1082,6 +1082,13 @@ int main()
         {
             return 3;
         }
+        // 守卫比 callback 晚创建。提前返回或发生异常时，先等待收发线程退出，再析构回调。
+        // 参数是借用的单例，只关闭其 IPC 资源，由单例自身管理存储。
+        auto close = [](ProcessWork* owner)
+        {
+            owner->uninitReceive();
+        };
+        std::unique_ptr<ProcessWork, decltype(close)> cleanup(&ipc, close);
         const int32_t pid = CSystem::currentProcessPid();
         const std::string name = "process_work_demo_" + CStringManager::toStringInt32(pid);
         if (!ipc.setReceiveName(name) || !ipc.addProcessReceiveCallback(&callback))
@@ -1143,7 +1150,7 @@ int main()
         ipc.clearUseless();
         ipc.clear();
         ipc.uninitPostThread();
-        ipc.uninitReceive();
+        cleanup.reset();
         // uninitReceive也清除回调登记；重新启动需要重新登记回调。
         const int32_t received = callback.m_received.load();
         std::printf("received=%d\n", received);

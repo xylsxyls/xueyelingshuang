@@ -12,7 +12,7 @@ enum ProcessWorkSendResult
     PROCESS_WORK_INVALID = -1,
     // 接收器或底层资源不可用，本次未提交
     PROCESS_WORK_UNAVAILABLE = -2,
-    // 超过声明正文容量，不截断也不提交
+    // 正文超过接收端公布的单包上限，不截断也不提交
     PROCESS_WORK_TOO_LARGE = -3,
     // 本次本地对象或映射申请失败，未提交
     PROCESS_WORK_NO_MEMORY = -4,
@@ -154,7 +154,7 @@ struct PROCESS_WORK_ALIGN64 ProcessWorkSharedControl
     int32_t m_dataSignal;
     // 发送者先置1再复查空间，接收器置0并提示
     int32_t m_spaceSignal;
-    // 最大可接纳正文字节数，兼顾共享单块和接收本地单项额度；-1表示连空正文也放不下
+    // 最大可接纳正文字节数，取共享块正文容量、本地积压单项额度及批次存储单包上限的最小值；-1表示连空正文也放不下
     int32_t m_maxPayloadBytes;
     // 单调分配发送流下标；0保留，每个登记只申请一次，不用CAS争抢登记槽。
     PROCESS_WORK_ALIGN64 int64_t m_nextStream;

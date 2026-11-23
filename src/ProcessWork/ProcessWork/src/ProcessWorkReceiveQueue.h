@@ -148,8 +148,6 @@ private:
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-    // 静止配置的标准块容量；超过它的单条消息使用一次性块
-    size_t m_batchBytes;
     // 有限额度累计接纳字节，-1模式仅累计消息数；允许无符号回绕
     uint64_t m_reserved;
     // 读取线程缓存的完成进度，仅在预算将满时刷新，避免逐包读取消费端缓存行
@@ -202,12 +200,12 @@ private:
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-    // 缓存标准块，限额为max(8,配置的初始预分配块数)，不随峰值无限增长
+    // 已归还且可复用的标准批次数；初始预留中尚未领取的批次由m_unused持有
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4251)
 #endif
-    std::atomic<uint32_t> m_cached;
+    std::atomic<uint64_t> m_cached;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

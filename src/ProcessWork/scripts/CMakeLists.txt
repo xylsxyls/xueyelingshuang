@@ -1261,7 +1261,9 @@ elseif(CMAKE_HOST_APPLE OR CMAKE_SYSTEM_NAME MATCHES "^(Darwin|iOS)$")
         set(CMAKE_OSX_ARCHITECTURES "${native_apple_arch}" CACHE STRING "Apple target architecture")
     endif()
 elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
-    string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}" native_host_arch)
+    # Compiler selection precedes project(), which normally initializes CMAKE_HOST_SYSTEM_PROCESSOR.
+    cmake_host_system_information(RESULT native_host_arch QUERY OS_PLATFORM)
+    string(TOLOWER "${native_host_arch}" native_host_arch)
     if(BIT STREQUAL "32" OR BIT STREQUAL "64")
         if(NOT native_host_arch MATCHES "^(x86_64|amd64|i[3-6]86|x86)$")
             message(FATAL_ERROR "An x86 cross toolchain is required on this host")
@@ -1444,7 +1446,10 @@ add_custom_command(TARGET ProcessWork POST_BUILD
 find_package(Threads REQUIRED)
 TARGET_LINK_LIBRARIES(ProcessWork PUBLIC Threads::Threads)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR ANDROID)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND BIT MATCHES "^arm(32|64)$")
+    include("${native_repository}/common/linux/LinuxArmAtomics.cmake")
+    target_linux_arm_atomics(ProcessWork PUBLIC)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR ANDROID)
     TARGET_LINK_LIBRARIES(ProcessWork PUBLIC atomic)
 endif()
 
