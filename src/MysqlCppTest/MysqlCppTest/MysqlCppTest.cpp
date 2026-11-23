@@ -1,5 +1,7 @@
 ﻿#include "PlatformTest/PlatformTestAPI.h"
 #include "MysqlCppTest.h"
+#include <cerrno>
+#include <climits>
 #include <cstring>
 #include <cstdio>
 #include <fstream>
@@ -10,25 +12,101 @@
 #include "mysql-connector-cpp/cppconn/exception.h"
 #include <atomic>
 #include <cstdlib>
-#include <ctime>
-#include <functional>
+#include <stdexcept>
 #include <future>
 #include <iostream>
 #include <sstream>
 #include <thread>
+#ifndef _WIN32
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 
-/** 对本库的一项固定规模操作连续采样，结果用于同平台的改动前后比较。 */
+#ifndef _WIN32
+/** 检查清空环境后的宿主仍能给工具传递独立的凭据
+@return 子进程成功运行工具，且工具读到期望的测试值时返回 true
+*/
+static bool CheckEmptyToolEnvironment()
+{
+    const std::vector<std::string> arguments = {"/bin/sh", "-c", R"(test "$MYSQL_PWD" = mysqlcpp_fixture)"};
+    const pid_t child = fork();
+    if (child < 0)
+    {
+        return false;
+    }
+    if (child == 0)
+    {
+        // 离线用例在创建工作线程前运行，只清空这个子进程的环境。
+        const bool passed = clearenv() == 0 && MysqlCppHelper::runTool(arguments, "/dev/null", true, "mysqlcpp_fixture") == 0;
+        _exit(passed ? 0 : 1);
+    }
+    int status = 0;
+    pid_t waited;
+    do
+    {
+        waited = waitpid(child, &status, 0);
+    } while (waited < 0 && errno == EINTR);
+    return waited == child && WIFEXITED(status) && WEXITSTATUS(status) == 0;
+}
+#endif
+
+/** 用工具启动入口运行测试程序自身的一个子进程步骤
+@param [in] executable 当前测试程序的启动路径
+@param [in] step 子进程执行的测试步骤
+@param [in] password 仅用于本次子进程的合成密码
+@return 返回子进程退出状态，无法启动时返回非零值
+*/
+static int RunEnvironmentStep(const char* executable, const char* step, const char* password)
+{
+#ifdef _WIN32
+    const char* input = "NUL";
+#else
+    const char* input = "/dev/null";
+#endif
+    return MysqlCppHelper::runTool({executable, step}, input, true, password);
+}
+
+/** 在独立宿主中设置模拟环境，再检查真实子进程与宿主的环境隔离
+@param [in] executable 当前测试程序的启动路径
+@return 子进程继承自定义变量且宿主密码未被改写时返回 0
+*/
+static int CheckToolEnvironment(const char* executable)
+{
+    const char* marker = "MYSQL_PWD_MYSQLCPP_TEST_MARKER";
+#ifdef _WIN32
+    const bool prepared = _putenv_s(marker, "retained") == 0;
+#else
+    const bool prepared = setenv(marker, "retained", 1) == 0;
+#endif
+    if (!prepared || RunEnvironmentStep(executable, "--read-tool-environment", "child_fixture") != 0)
+    {
+        return 1;
+    }
+    const char* password = std::getenv("MYSQL_PWD");
+    return password && std::strcmp(password, "parent_fixture") == 0 ? 0 : 1;
+}
+
+/** 测量固定 SQL 样本的首词分类，逐条核对预期
+*/
 static void RunBenchmark()
 {
-    const std::string sql(" /* caller */ -- comment\n select value FROM user_info");
+    const std::string inputs[] = {" /* caller */ -- comment\n select value FROM user_info", "insert into t values(1)",
+        "# meta\nSHOW TABLES", "select_count"};
+    const bool expected[] = {true, false, true, false};
+    // count 是本批操作数，每次选择一个已构造样本；返回本批分类正确的条数。
     LibraryBenchmark::run("MysqlCpp", [&](uint32_t count) -> uint64_t
     {
-        uint64_t checksum = 0;
+        uint64_t matched = 0;
         for (uint32_t index = 0; index < count; ++index)
         {
-            checksum += MysqlCppHelper::isQuerySql(sql) ? 1 : 0;
+            const uint32_t sample = index % 4;
+            matched += MysqlCppHelper::isQuerySql(inputs[sample]) == expected[sample] ? 1 : 0;
         }
-        return checksum;
+        if (matched != count)
+        {
+            throw std::runtime_error("SQL classification mismatch");
+        }
+        return matched;
     });
 }
 
@@ -60,18 +138,77 @@ static void RunDatabaseBenchmark(MysqlCpp& mysql)
     });
 }
 
-/** 在独立进程中核对离线接口或连接到真实的隔离服务。
-@param [in] offline 执行离线断言
-@param [in] online 执行数据库场景
+/** 在零预建的池上同时借用，检查容量上限、真实会话身份及归还后的回收
+@param [in] config 可用测试数据库的连接参数副本
+@return 全部容量和会话检查通过时返回 0
+*/
+static int CheckConcurrentGrowth(const MysqlCppConfig& config)
+{
+    MysqlCppConfig limits = config;
+    MysqlCppConnectionPool pool;
+    if (!limits.setPoolLimits(0, 2) || !pool.init(limits) || pool.totalCount() != 0)
+    {
+        return 1;
+    }
+    const size_t kWorkers = 6;
+    std::future<std::shared_ptr<MysqlCpp>> requests[kWorkers];
+    // 先销毁启动信号，再等待已启动的任务，允许部分线程创建失败时自然退出。
+    std::promise<void> start;
+    const std::shared_future<void> signal = start.get_future().share();
+    for (size_t i = 0; i < kWorkers; ++i)
+    {
+        // 全部请求使用同一个起点；返回值由 future 持有，检查容量前不会归还。
+        requests[i] = std::async(std::launch::async, [&pool, signal]() -> std::shared_ptr<MysqlCpp>
+        {
+            signal.wait();
+            return pool.acquire(0);
+        });
+    }
+    start.set_value();
+    std::vector<std::shared_ptr<MysqlCpp>> leases;
+    for (size_t i = 0; i < kWorkers; ++i)
+    {
+        const auto lease = requests[i].get();
+        if (lease)
+        {
+            leases.push_back(lease);
+        }
+    }
+    if (leases.size() != 2 || pool.totalCount() != 2 || pool.availableCount() != 0)
+    {
+        std::cerr << "Concurrent pool capacity mismatch, successful leases: " << leases.size() << std::endl;
+        return 1;
+    }
+    uint64_t ids[2] = {};
+    for (size_t i = 0; i < leases.size(); ++i)
+    {
+        const auto rows = leases[i]->query(leases[i]->prepare("SELECT CONNECTION_ID()"), false);
+        if (!rows || !rows->next())
+        {
+            return 1;
+        }
+        ids[i] = rows->getUInt64(0);
+    }
+    leases.clear();
+    if (ids[0] == 0 || ids[1] == 0 || ids[0] == ids[1] || pool.totalCount() != 0 || pool.availableCount() != 0)
+    {
+        return 1;
+    }
+    const auto next = pool.acquire(0);
+    return next && next->ping() ? 0 : 1;
+}
+
+/** 按选定用例核对离线接口或连接隔离的数据库服务
+@param [in] testCase 离线、在线集成或独立会话用例编号
 @param [in] benchmark 连接成功后执行数据库计时
 @return 成功返回 0，断言失败返回 1
 */
-static int RunChecks(bool offline, bool online, bool benchmark)
+static int RunChecks(MysqlCppTestCase testCase, bool benchmark = false)
 {
     int32_t totalCount = 0;
     int32_t failCount = 0;
-    int32_t skipCount = 0;
 
+    // 比较本次观察值并按名称累计失败，返回本项是否通过。
     auto check = [&totalCount, &failCount](bool condition, const std::string& name) -> bool
     {
         ++totalCount;
@@ -85,6 +222,7 @@ static int RunChecks(bool offline, bool online, bool benchmark)
         return false;
     };
 
+    // 指定环境变量为空或缺失时返回传入的默认文本。
     auto envString = [](const char* name, const std::string& defaultValue) -> std::string
     {
         const char* value = std::getenv(name);
@@ -95,6 +233,7 @@ static int RunChecks(bool offline, bool online, bool benchmark)
         return value;
     };
 
+    // 从环境变量读取完整的有符号整数，非法输入结束本次用例。
     auto envInt32 = [&envString](const char* name, int32_t defaultValue) -> int32_t
     {
         std::string value = envString(name, "");
@@ -102,17 +241,17 @@ static int RunChecks(bool offline, bool online, bool benchmark)
         {
             return defaultValue;
         }
-        return static_cast<int32_t>(std::atoi(value.c_str()));
+        char* end = nullptr;
+        errno = 0;
+        const long parsed = std::strtol(value.c_str(), &end, 10);
+        if (errno == ERANGE || end == value.c_str() || *end != 0 || parsed < INT32_MIN || parsed > INT32_MAX)
+        {
+            throw std::invalid_argument(std::string("Invalid integer in ") + name);
+        }
+        return static_cast<int32_t>(parsed);
     };
 
-    auto toStringInt32 = [](int32_t value) -> std::string
-    {
-        std::ostringstream oss;
-        oss << value;
-        return oss.str();
-    };
-
-    if (offline)
+    if (testCase == MysqlCppOffline)
     {
         check(MysqlCppHelper::firstSqlWord("  select * from t") == "SELECT", "MysqlCppHelper first word whitespace");
         check(MysqlCppHelper::firstSqlWord("-- comment\r\nshow tables") == "SHOW", "MysqlCppHelper first word line comment");
@@ -123,6 +262,11 @@ static int RunChecks(bool offline, bool online, bool benchmark)
         check(MysqlCppHelper::isQuerySql("/*x*/ show tables"), "MysqlCppHelper query show");
         check(!MysqlCppHelper::isQuerySql("SeLeCtEd field") && MysqlCppHelper::isQuerySql("dEsCrIbE t"),
             "MysqlCppHelper complete ASCII keyword match");
+        check(MysqlCppHelper::firstSqlWord(" select_key2") == "SELECT_KEY2", "complete unquoted identifier");
+        check(!MysqlCppHelper::isQuerySql("select_1") && !MysqlCppHelper::isQuerySql("SHOW2") &&
+            !MysqlCppHelper::isLastInsertIdSql("INSERT$log"), "identifier suffix cannot end a SQL keyword");
+        check(!MysqlCppHelper::isQuerySql("--label\nSELECT 1") && MysqlCppHelper::isQuerySql("--\tlabel\nSELECT 1"),
+            "MySQL double dash comment requires whitespace or control");
         check(!MysqlCppHelper::isQuerySql("insert into t values(1)"), "MysqlCppHelper non query insert");
         check(MysqlCppHelper::isLastInsertIdSql("insert into t values(1)"), "MysqlCppHelper last insert id insert");
         check(MysqlCppHelper::isLastInsertIdSql(" replace into t values(1)"), "MysqlCppHelper last insert id replace");
@@ -140,6 +284,7 @@ static int RunChecks(bool offline, bool online, bool benchmark)
         const char separator = '\\';
 #else
         check(MysqlCppHelper::quoteCommandText("one 'two'") == "'one '\\''two'\\'''", "MysqlCppHelper quote POSIX argument");
+        check(CheckEmptyToolEnvironment(), "tool runs with only its credential in a cleared host environment");
         const char separator = '/';
 #endif
         std::string expectedToolPath = envString("MYSQL_ROOT", "");
@@ -181,6 +326,15 @@ static int RunChecks(bool offline, bool online, bool benchmark)
         check(MysqlSqlString::importString("in.sql", "127.0.0.1", "db", "100% real", "db").empty(),
             "command preview refuses ambiguous Windows substitution");
 #endif
+        const std::string plainImport = MysqlSqlString::importString("input.sql", "::1", "user", "pwd", "db");
+        const std::string plainExport = MysqlSqlString::exportString("output.sql", "::1", "user", "pwd", "db");
+        check(!plainImport.empty() && plainImport == MysqlSqlString::importString("input.sql", "[::1]", "user", "pwd", "db"),
+            "both IPv6 forms produce the same import host argument");
+        check(!plainExport.empty() && plainExport == MysqlSqlString::exportString("output.sql", "[::1]", "user", "pwd", "db"),
+            "both IPv6 forms produce the same export host argument");
+        check(MysqlSqlString::importString("input.sql", "", "user", "pwd", "db").empty() &&
+            MysqlSqlString::exportString("output.sql", "[::1]other", "user", "pwd", "db").empty(),
+            "command previews reject empty and malformed hosts");
         check(quotedImportCommand.find("root user") != std::string::npos &&
             quotedImportCommand.find("pass word") != std::string::npos &&
             quotedImportCommand.find("cook db") != std::string::npos, "MysqlSqlString quote command arguments");
@@ -275,26 +429,28 @@ static int RunChecks(bool offline, bool online, bool benchmark)
         emptyPool.uninit();
         emptyPool.uninit();
         check(emptyPool.totalCount() == 0 && emptyPool.availableCount() == 0, "MysqlCppConnectionPool duplicate uninit without init safe");
+        std::cout << "[SUMMARY] total=" << totalCount << " failed=" << failCount << std::endl;
+        return failCount == 0 ? 0 : 1;
     }
-    if (!online) { return failCount == 0 ? 0 : 1; }
 
     MysqlCppConfig mysqlConfig;
-    mysqlConfig.m_ip = envString("MYSQLCPP_TEST_IP", "127.0.0.1");
-    mysqlConfig.m_port = envInt32("MYSQLCPP_TEST_PORT", 33841);
-    mysqlConfig.m_account = envString("MYSQLCPP_TEST_ACCOUNT", "root");
-    mysqlConfig.m_password = envString("MYSQLCPP_TEST_PASSWORD", "");
-    mysqlConfig.m_dbName = envString("MYSQLCPP_TEST_DB", "test");
-    mysqlConfig.m_autoCommit = false;
-    mysqlConfig.m_autoReconnect = true;
-    mysqlConfig.m_connectTimeoutSeconds = envInt32("MYSQLCPP_TEST_CONNECT_TIMEOUT_SECONDS", 3);
-    mysqlConfig.m_readTimeoutSeconds = envInt32("MYSQLCPP_TEST_READ_TIMEOUT_SECONDS", 5);
-    mysqlConfig.m_writeTimeoutSeconds = envInt32("MYSQLCPP_TEST_WRITE_TIMEOUT_SECONDS", 5);
+    if (!mysqlConfig.setEndpoint(envString("MYSQLCPP_TEST_IP", "127.0.0.1"), envInt32("MYSQLCPP_TEST_PORT", 33841)) ||
+        !mysqlConfig.setCredentials(envString("MYSQLCPP_TEST_ACCOUNT", "root"), envString("MYSQLCPP_TEST_PASSWORD", "")) ||
+        !mysqlConfig.setDatabase(envString("MYSQLCPP_TEST_DB", "test")))
+    {
+        std::cerr << "Invalid MySQL test connection parameters" << std::endl;
+        return 1;
+    }
+    mysqlConfig.setAutoCommit(false);
+    mysqlConfig.setAutoReconnect(true);
+    mysqlConfig.setTimeouts(envInt32("MYSQLCPP_TEST_CONNECT_TIMEOUT_SECONDS", 3),
+        envInt32("MYSQLCPP_TEST_READ_TIMEOUT_SECONDS", 5), envInt32("MYSQLCPP_TEST_WRITE_TIMEOUT_SECONDS", 5));
 
     MysqlCpp mysql;
-    if (!mysql.connect(mysqlConfig))
+    if (!mysql.configure(mysqlConfig) || !mysql.init() || !mysql.connect())
     {
         check(false, "MysqlCpp test instance connection failed: " + mysql.lastError());
-        std::cout << "[SUMMARY] total=" << totalCount << " failed=" << failCount << " skipped=" << skipCount << std::endl;
+        std::cout << "[SUMMARY] total=" << totalCount << " failed=" << failCount << std::endl;
         return 1;
     }
 
@@ -317,6 +473,208 @@ static int RunChecks(bool offline, bool online, bool benchmark)
             std::cerr << error.what() << std::endl;
             return 1;
         }
+        return failCount == 0 ? 0 : 1;
+    }
+    if (testCase == MysqlCppConcurrentGrowth)
+    {
+        return CheckConcurrentGrowth(mysqlConfig);
+    }
+    if (testCase == MysqlCppPoolAuthentication)
+    {
+        MysqlCppConfig options = mysqlConfig;
+        // 使用本次生成的账号名制造认证失败，避免触发已配置账号的登录失败锁定策略。
+        const auto unique = mysql.query(mysql.prepare("SELECT REPLACE(UUID(), '-', '')"), false);
+        if (!check(unique->next(), "generate an independent login name for the refused connection"))
+        {
+            return 1;
+        }
+        const std::string unknownAccount = unique->getString(0);
+        if (!check(unknownAccount.size() == 32 && unknownAccount != mysqlConfig.m_account &&
+            options.setCredentials(unknownAccount, "unused-test-password"), "configure the unprovisioned login"))
+        {
+            return 1;
+        }
+        MysqlCppConnectionPool pool;
+        const bool refused = !pool.init(options, 1);
+        check(refused && pool.lastError().find("code=1045") != std::string::npos &&
+            pool.totalCount() == 0 && pool.availableCount() == 0, "failed prewarm leaves no session or slot");
+        options.setPoolLimits(0, 1);
+        check(pool.init(options), "zero prewarm defers authentication");
+        const auto lease = pool.acquire(0);
+        check(!lease && pool.lastError().find("code=1045") != std::string::npos &&
+            pool.totalCount() == 0 && pool.availableCount() == 0, "failed lazy authentication releases its reservation");
+        pool.close();
+        options.setCredentials(mysqlConfig.m_account, mysqlConfig.m_password);
+        options.setAutoCommit(true);
+        const bool saved = pool.init(options);
+        options.setCredentials("unused", "unused");
+        options.setDatabase("information_schema");
+        options.setAutoCommit(false);
+        auto recovered = pool.acquire(0);
+        check(saved && recovered && pool.lastError().empty() && pool.totalCount() == 1,
+            "corrected credentials reopen the pool after authentication failure");
+        if (recovered)
+        {
+            const auto row = recovered->query(recovered->prepare("SELECT DATABASE(), @@session.autocommit, CURRENT_USER()"), false);
+            check(row->next() && row->getString(0) == mysqlConfig.m_dbName && row->getInt(1) == 1 &&
+                row->getString(2).substr(0, mysqlConfig.m_account.size() + 1) == mysqlConfig.m_account + "@",
+                "lazy session uses the original database mode and account");
+        }
+        recovered.reset();
+        check(pool.totalCount() == 0 && pool.availableCount() == 0, "corrected zero-prewarm pool releases the last session");
+        std::cout << "[SUMMARY] total=" << totalCount << " failed=" << failCount << std::endl;
+        return failCount == 0 ? 0 : 1;
+    }
+    if (testCase == MysqlCppPoolRecovery)
+    {
+        MysqlCppConnectionPool pool;
+        if (!check(pool.init(mysqlConfig, 1), "initialize recovery pool"))
+        {
+            return 1;
+        }
+        auto borrowed = pool.acquire(0);
+        if (!check(borrowed && borrowed->isConnected(), "obtain initial live lease"))
+        {
+            return 1;
+        }
+        const auto initial = borrowed->query(borrowed->prepare("SELECT DATABASE(), @@session.autocommit"), false);
+        check(initial->next() && initial->getString(0) == mysqlConfig.m_dbName && initial->getInt(1) == 0,
+            "initial lease uses the configured schema and commit mode");
+        MysqlCppConfig other = mysqlConfig;
+        other.setDatabase("information_schema");
+        other.setAutoCommit(true);
+        borrowed->uninit();
+        check(borrowed->configure(other), "closed borrower accepts different local configuration");
+        borrowed.reset();
+        auto recovered = pool.acquire(0);
+        if (!check(recovered && recovered->isConnected(), "recover a closed pooled connection"))
+        {
+            return 1;
+        }
+        const auto state = recovered->query(recovered->prepare("SELECT DATABASE(), @@session.autocommit"), false);
+        check(state->next() && state->getString(0) == mysqlConfig.m_dbName && state->getInt(1) == 0,
+            "recovery applies the pool's saved schema and autocommit");
+        // 不存在的普通标识符应得到数据库不存在或无权限错误，原会话仍然可用。
+        const bool refused = !mysql.selectDb("mysqlcpp_absent`name");
+        const std::string reason = mysql.lastError();
+        const auto unchanged = mysql.query(mysql.prepare("SELECT DATABASE()"), false);
+        check(refused && (reason.find("code=1049") != std::string::npos || reason.find("code=1044") != std::string::npos) &&
+            unchanged->next() && unchanged->getString(0) == mysqlConfig.m_dbName, "literal schema failure preserves current database");
+        std::cout << "[SUMMARY] total=" << totalCount << " failed=" << failCount << std::endl;
+        return failCount == 0 ? 0 : 1;
+    }
+    if (testCase == MysqlCppSession)
+    {
+        // 将借用对象保留到连接析构之后，再调用其公开入口并按不同顺序释放。
+        std::unique_ptr<MysqlCppTransaction> ended;
+        std::shared_ptr<MysqlCppPrepareStatement> prepared;
+        std::shared_ptr<MysqlCppResultSet> rows;
+        {
+            MysqlCpp owner;
+            if (!check(owner.connect(mysqlConfig), "connect short-lived session"))
+            {
+                return 1;
+            }
+            ended.reset(new MysqlCppTransaction(owner));
+            prepared = owner.prepare("SELECT 47");
+            rows = owner.query(prepared, false);
+            check(ended->isActive() && rows->next() && rows->getInt(0) == 47,
+                "short-lived owner has active transaction and readable rows");
+        }
+        check(!ended->isActive() && !ended->commit() && !prepared->isValid() && !rows->isValid() &&
+            !rows->next() && rows->getInt(0) == 0, "all borrowed handles expire when owner is destroyed");
+        ended->rollback();
+        ended.reset();
+        prepared.reset();
+        rows.reset();
+        const auto write = mysql.prepare("SET @mysqlcpp_bind_marker=?");
+        write->setInt(0, 41);
+        const bool seeded = mysql.executeUpdate(write, false).m_success;
+        auto oldValue = mysql.query(mysql.prepare("SELECT @mysqlcpp_bind_marker"), false);
+        check(seeded && oldValue->next() && oldValue->getInt(0) == 41, "valid binding reaches server");
+        const bool cleared = mysql.executeUpdate(mysql.prepare("SET @mysqlcpp_bind_marker=NULL"), false).m_success;
+        write->setInt(1, 99);
+        const std::string bindingError = write->lastError();
+        const auto refused = mysql.executeUpdate(write, false);
+        const auto marker = mysql.query(mysql.prepare("SELECT @mysqlcpp_bind_marker IS NULL"), false);
+        check(cleared && !bindingError.empty() && !refused.m_success && refused.m_errorMessage == bindingError && marker->next() && marker->getInt(0) == 1,
+            "failed rebind cannot execute a retained value");
+        auto query = mysql.prepare("SELECT CAST(? AS SIGNED)");
+        query->setInt(0, 17);
+        query->setInt(UINT32_MAX, 31);
+        check(!mysql.query(query, false)->isValid() && !mysql.lastError().empty(), "overflow binding blocks query");
+        query->setInt(0, 33);
+        check(!mysql.execute(query, false)->isValid() && !mysql.lastError().empty(), "later setter cannot mask a failed binding");
+        auto blob = mysql.prepare("SELECT ?");
+        blob->setBlob(0, nullptr);
+        check(!blob->isValid() && !blob->lastError().empty(), "null BLOB stream rejected before execution");
+        auto fresh = mysql.prepare("SELECT CAST(? AS SIGNED)");
+        fresh->setInt(0, 23);
+        const auto value = mysql.query(fresh, false);
+        check(fresh->lastError().empty() && value->next() && value->getInt(0) == 23, "fresh statement recovers from binding failure");
+
+        const auto malformed = mysql.prepare("SELECT (");
+        const std::string prepareError = malformed->lastError();
+        mysql.prepare("SELECT 1");
+        check(!malformed->isValid() && !prepareError.empty() && !mysql.query(malformed, false)->isValid() &&
+            mysql.lastError() == prepareError, "failed prepare retains its own driver error after another operation");
+        MysqlCpp observer;
+        auto id = mysql.query(mysql.prepare("SELECT CONNECTION_ID()"), false);
+        if (!check(observer.connect(mysqlConfig) && id->next(), "independent observer and source connection ID"))
+        {
+            return 1;
+        }
+        // 驱动为同一语句复用游标和列缓冲，检查旧包装不能读到新一轮结果。
+        const auto repeated = mysql.prepare("SELECT CAST(? AS SIGNED) AS value_read");
+        repeated->setInt(0, 13);
+        auto previous = mysql.query(repeated, false);
+        const auto separate = mysql.query(mysql.prepare("SELECT 19"), false);
+        const bool foreign = !observer.query(repeated, false)->isValid() && !observer.lastError().empty();
+        check(foreign && separate->next() && separate->getInt(0) == 19 && previous->isValid() &&
+            previous->next() && previous->getInt(0) == 13, "foreign or unrelated execution preserves the current cursor");
+        repeated->setInt(0, 29);
+        const auto replacement = mysql.execute(repeated, false);
+        check(!previous->isValid() && !previous->next() && previous->getInt(0) == 0,
+            "re-execution retires the previous cursor");
+        previous.reset();
+        check(replacement->isValid() && replacement->next() && replacement->getInt(0) == 29 && !replacement->next(),
+            "destroying old rows leaves the replacement cursor intact");
+        const auto wrongEntry = mysql.executeUpdate(repeated, false);
+        check(!wrongEntry.m_success && !wrongEntry.m_errorMessage.empty() && replacement->isValid() &&
+            replacement->previous() && replacement->getInt(0) == 29, "wrong update entry preserves the unexecuted query cursor");
+        replacement->close();
+        replacement->close();
+        const auto reopened = mysql.query(repeated, false);
+        check(!replacement->isValid() && reopened->next() && reopened->getInt(0) == 29,
+            "closing a result twice leaves the statement reusable");
+        repeated->close();
+        repeated->close();
+        check(!repeated->isValid() && !reopened->isValid() && !mysql.query(repeated, false)->isValid(),
+            "closing a statement twice releases its cursor and blocks execution");
+        const uint64_t originalId = id->getUInt64(0);
+        std::ostringstream name;
+        name << "mysqlcpp_session_" << originalId;
+        const std::string table = name.str();
+        if (!check(observer.executeUpdate(observer.prepare("CREATE TABLE " + table + " (n INT) ENGINE=InnoDB")).m_success,
+            "create owned transaction table"))
+        {
+            return 1;
+        }
+        MysqlCppTransaction transaction(mysql);
+        const bool inserted = transaction.isActive() &&
+            mysql.executeUpdate(mysql.prepare("INSERT INTO " + table + " VALUES (17)"), false).m_success;
+        const auto before = observer.query(observer.prepare("SELECT COUNT(*) FROM " + table));
+        check(inserted && before->next() && before->getInt(0) == 0, "pending insert is private before reconnect");
+        const bool replaced = mysql.reconnect();
+        auto after = mysql.query(mysql.prepare("SELECT CONNECTION_ID(), DATABASE(), @@session.autocommit"), false);
+        check(replaced && !transaction.isActive() && !fresh->isValid() && !id->isValid() && after->next() &&
+            after->getUInt64(0) != originalId && after->getString(1) == mysqlConfig.m_dbName && after->getInt(2) == 0,
+            "explicit reconnect opens a distinct configured server session");
+        const bool committed = mysql.commit();
+        const auto remaining = observer.query(observer.prepare("SELECT COUNT(*) FROM " + table));
+        check(committed && remaining->next() && remaining->getInt(0) == 0, "new session cannot commit old transaction");
+        check(observer.executeUpdate(observer.prepare("DROP TABLE " + table)).m_success, "remove owned transaction table");
+        std::cout << "[SUMMARY] total=" << totalCount << " failed=" << failCount << std::endl;
         return failCount == 0 ? 0 : 1;
     }
     check(mysql.isInit(), "MysqlCpp real connection is init");
@@ -345,15 +703,138 @@ static int RunChecks(bool offline, bool online, bool benchmark)
                 std::string("reject embedded NUL in ") + labels[i] + " before replacing active session");
         }
     }
+    {
+        const auto statement = mysql.prepare("SELECT CONNECTION_ID()");
+        uint64_t originalId = 0;
+        {
+            const auto before = mysql.query(statement, false);
+            if (before->next())
+            {
+                originalId = before->getUInt64(0);
+            }
+        }
+        MysqlCppConfig invalid = mysqlConfig;
+        invalid.m_ip = "[::1]" + mysqlConfig.m_ip;
+        const bool refused = !mysql.connect(invalid) && !mysql.lastError().empty();
+        const auto after = mysql.query(statement, false);
+        check(refused && originalId != 0 && after->next() && after->getUInt64(0) == originalId,
+            "malformed bracketed endpoint preserves the live session and its statement");
+        invalid.m_ip = "localhost:3306";
+        const bool singleHost = !mysql.connect(invalid) && !mysql.lastError().empty();
+        const auto retained = mysql.query(statement, false);
+        check(singleHost && originalId != 0 && retained->next() && retained->getUInt64(0) == originalId,
+            "a port embedded in the host does not replace the active session");
+    }
     check(mysql.ping(), "MysqlCpp real ping");
     {
+        const auto aliases = mysql.query(mysql.prepare("SELECT 37 AS Amount, CAST('xy' AS BINARY) AS Payload"), false);
+        const bool positioned = aliases->next();
+        std::unique_ptr<std::istream> bytes(aliases->getBlob("PAYLOAD"));
+        std::ostringstream contents;
+        if (bytes)
+        {
+            contents << bytes->rdbuf();
+        }
+        check(positioned && aliases->getInt("amount") == 37 && aliases->getUInt("AMOUNT") == 37 &&
+            aliases->getInt64("Amount") == 37 && aliases->getUInt64("Amount") == 37 &&
+            aliases->getDouble("amount") == 37 && aliases->getBoolean("amount") &&
+            aliases->getString("PAYLOAD") == "xy" && contents.str() == "xy", "resolve complete case-insensitive aliases");
+        const std::string invalidLabels[] = {std::string("Amount\0suffix", 13), "missing"};
+        for (size_t i = 0; i < sizeof(invalidLabels) / sizeof(invalidLabels[0]); ++i)
+        {
+            const std::string& label = invalidLabels[i];
+            std::unique_ptr<std::istream> invalid(aliases->getBlob(label));
+            check(!invalid && !aliases->getBoolean(label) && aliases->getDouble(label) == 0 &&
+                aliases->getInt(label) == 0 && aliases->getUInt(label) == 0 && aliases->getInt64(label) == 0 &&
+                aliases->getUInt64(label) == 0 && aliases->getString(label).empty() && aliases->getInt("Amount") == 37,
+                i == 0 ? "embedded NUL cannot select an alias prefix" : "unknown label leaves the current row readable");
+        }
+    }
+    // 两条独立会话执行相同的只读语句，以服务器结果和错误码判定读超时配置。
+    for (int32_t i = 0; i < 2; ++i)
+    {
+        MysqlCppConfig options = mysqlConfig;
+        options.setAutoReconnect(false);
+        options.setTimeouts(5, i == 0 ? 1 : 10, 10);
+        MysqlCpp timed;
+        if (!check(timed.configure(options) && timed.connect(), "connect with independent read deadline"))
+        {
+            return 1;
+        }
+        const auto wait = timed.prepare("SELECT SLEEP(3)");
+        if (!check(wait->isValid(), "prepare delayed response outside the read operation"))
+        {
+            return 1;
+        }
+        const auto reply = timed.query(wait, false);
+        if (i == 0)
+        {
+            const std::string failure = timed.lastError();
+            check(!reply->isValid() && (failure.find("code=2013") != std::string::npos ||
+                failure.find("code=2006") != std::string::npos), "short read deadline reports a lost server response");
+        }
+        else
+        {
+            check(reply->isValid() && reply->next() && reply->getInt(0) == 0 && timed.lastError().empty(),
+                "long read deadline permits the same server response");
+        }
+    }
+    {
+        const auto cursor = mysql.query(mysql.prepare("SELECT 11 AS n UNION ALL SELECT 22 UNION ALL SELECT 33 ORDER BY n"), false);
+        check(cursor->isValid() && cursor->rowsCount() == 3 && cursor->columnCount() == 1 &&
+            !cursor->previous(), "buffered result starts before three rows");
+        check(cursor->next() && cursor->getInt("n") == 11 && cursor->next() && cursor->getInt(0) == 22 &&
+            cursor->previous() && cursor->getInt(0) == 11, "cursor returns from second row to first");
+        check(!cursor->previous() && cursor->next() && cursor->getInt(0) == 11, "cursor resumes after moving before first row");
+        const auto tail = cursor->toVector();
+        check(tail == std::vector<std::vector<std::string>>({{"22"}, {"33"}}) && !cursor->next() &&
+            cursor->previous() && cursor->getInt(0) == 33 && cursor->rowsCount() == 3,
+            "conversion consumes remaining rows and cursor can move back from end");
+    }
+    {
         MysqlCpp second;
-        check(second.connect(mysqlConfig), "second SQL session opens");
+        MysqlCppConfig options = mysqlConfig;
+        options.setAutoCommit(true);
+        options.setAutoReconnect(false);
+        MysqlCppConfig earlier;
+        const bool staged = earlier.setEndpoint("127.0.0.1", 1) && earlier.setCredentials("unused", "unused") &&
+            earlier.setDatabase("information_schema") && second.configure(earlier);
+        const bool saved = second.configure(options);
+        MysqlCppConfig rejected = earlier;
+        rejected.m_port = 0;
+        check(staged && saved && !second.configure(rejected) && !second.lastError().empty() && !second.isInit(),
+            "last valid pre-init configuration survives a rejected replacement");
+        options.setEndpoint("127.0.0.1", 1);
+        options.setCredentials("unused", "unused");
+        options.setDatabase("unused");
+        options.setAutoCommit(false);
+        check(saved && second.init() && !second.configure(options) && second.connect(),
+            "pre-init settings are copied and remain active after refused reconfiguration");
+        const auto actual = second.query(second.prepare("SELECT DATABASE(), @@session.autocommit, CURRENT_USER()"), false);
+        check(actual->next() && actual->getString(0) == mysqlConfig.m_dbName && actual->getInt(1) == 1 &&
+            actual->getString(2).substr(0, mysqlConfig.m_account.size() + 1) == mysqlConfig.m_account + "@",
+            "configured database account and autocommit observed by server");
+        const auto types = second.prepare("SELECT CAST(? AS SIGNED), CAST(? AS UNSIGNED), CAST(? AS SIGNED), "
+            "CAST(? AS UNSIGNED), CAST(? AS SIGNED), CAST(? AS DATETIME), ? IS NULL");
+        types->setInt64(0, -5000000000LL);
+        types->setUInt64(1, 12000000000000000000ULL);
+        types->setBigInt(2, "6000000000");
+        types->setUInt(3, 4000000000U);
+        types->setBoolean(4, true);
+        types->setDateTime(5, "2026-01-02 03:04:05");
+        types->setNull(6, 0);
+        const auto typed = second.query(types, false);
+        check(typed->next() && typed->getInt64(0) == -5000000000LL && typed->getUInt64(1) == 12000000000000000000ULL &&
+            typed->getInt64(2) == 6000000000LL && typed->getUInt(3) == 4000000000U && typed->getBoolean(4) &&
+            typed->getString(5) == "2026-01-02 03:04:05" && typed->getInt(6) == 1 && !typed->next(),
+            "typed setters deliver exact values and SQL NULL to server");
         auto query = mysql.prepare("SELECT CONNECTION_ID()");
         auto write = mysql.prepare("SET @mysqlcpp_cross_session=7");
         check(!second.query(query)->isValid() && !second.lastError().empty(), "foreign query rejected by receiving session");
         check(!second.execute(query)->isValid() && !second.lastError().empty(), "foreign generic statement rejected");
         check(!second.executeUpdate(write).m_success && !second.lastError().empty(), "foreign update rejected");
+        const auto receivingMark = second.query(second.prepare("SELECT @mysqlcpp_cross_session IS NULL"));
+        check(receivingMark->next() && receivingMark->getInt(0) == 1, "foreign write never reached receiving session");
         auto mark = mysql.query(mysql.prepare("SELECT @mysqlcpp_cross_session IS NULL"));
         check(mark->next() && mark->getInt(0) == 1, "foreign write never reached owning session");
         check(!second.query(std::shared_ptr<MysqlCppPrepareStatement>())->isValid() && !second.lastError().empty(),
@@ -403,15 +884,23 @@ static int RunChecks(bool offline, bool online, bool benchmark)
     check(mysql.selectDb(mysqlConfig.m_dbName, false), "MysqlCpp real select db");
     mysql.setAutoCommit(false);
 
-    std::ostringstream uniqueName;
-    uniqueName << "mysqlcpp_test_" << std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    const std::string tableName = uniqueName.str();
+    // 共享工作目录或数据库的测试进程须使用各自的表、存储过程与文件名。
+    const auto fixtureId = mysql.query(mysql.prepare("SELECT REPLACE(UUID(), '-', '')"), false);
+    const std::string suffix = fixtureId && fixtureId->next() ? fixtureId->getString(0) : std::string();
+    if (suffix.size() != 32 || suffix.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos)
+    {
+        std::cerr << "Cannot allocate a unique fixture name" << std::endl;
+        return 1;
+    }
+    const std::string tableName = "mysqlcpp_test_" + suffix;
 
+    // 对本轮独占表执行 SQL 并请求提交，返回实际更新状态。
     auto executeSql = [&mysql](const std::string& sqlText) -> MysqlCppExecuteResult
     {
         return mysql.executeUpdate(mysql.prepare(sqlText));
     };
 
+    // 在当前会话的事务中执行一条 SQL，由用例显式控制提交点。
     auto executeSqlNoCommit = [&mysql](const std::string& sqlText) -> MysqlCppExecuteResult
     {
         return mysql.executeUpdate(mysql.prepare(sqlText), false);
@@ -419,8 +908,9 @@ static int RunChecks(bool offline, bool online, bool benchmark)
 
     if (!check(executeSql("CREATE TABLE " + tableName + " (id INT PRIMARY KEY, name VARCHAR(64), score INT, flag TINYINT, amount DOUBLE)").m_success, "MysqlCpp create table")) { return 1; }
 
-    // 8.4 的预处理协议允许 CALL，但不支持直接准备 XA。经独立 CLI 建立并清理三个短过程。
+    // 8.4 的预处理协议允许 CALL，但不支持直接准备 XA。经独立 CLI 建立并清理事务和多结果测试过程。
     const std::string xaPath = tableName + " xa.sql";
+    // create 决定生成创建或清理脚本，返回真实 CLI 的执行状态。
     const auto installXa = [&](bool create) -> bool
     {
         std::ofstream sqlFile(xaPath.c_str(), std::ios::binary | std::ios::trunc);
@@ -431,12 +921,63 @@ static int RunChecks(bool offline, bool online, bool benchmark)
             if (create) { sqlFile << "CREATE PROCEDURE " << procedure << "() XA " << actions[i] << " '" << tableName << "';\n"; }
             else { sqlFile << "DROP PROCEDURE IF EXISTS " << procedure << ";\n"; }
         }
+        const std::string dynamicRows = tableName + "_rows";
+        if (create)
+        {
+            sqlFile << "DELIMITER //\nCREATE PROCEDURE " << dynamicRows
+                << "() BEGIN SELECT 61; SELECT 62; END//\n"
+                << "CREATE PROCEDURE " << dynamicRows << "_error() BEGIN SELECT 63; "
+                << "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='tail failure'; END//\nDELIMITER ;\n";
+        }
+        else
+        {
+            sqlFile << "DROP PROCEDURE IF EXISTS " << dynamicRows << ";\n"
+                << "DROP PROCEDURE IF EXISTS " << dynamicRows << "_error;\n";
+        }
         sqlFile.close();
         if (!sqlFile) { return false; }
         mysql.importSql(xaPath, mysqlConfig.m_ip, mysqlConfig.m_account, mysqlConfig.m_password, mysqlConfig.m_dbName);
         return mysql.lastError().empty();
     };
     const bool xaInstalled = installXa(true);
+    const auto dynamicCall = mysql.prepare("CALL " + tableName + "_rows()");
+    const auto unexpectedRows = mysql.executeUpdate(dynamicCall, false);
+    const auto healthy = mysql.query(mysql.prepare("SELECT 67"), false);
+    check(xaInstalled && !unexpectedRows.m_success && !unexpectedRows.m_errorMessage.empty() &&
+        healthy->next() && healthy->getInt(0) == 67, "unexpected procedure rows do not block the next command");
+    const auto procedure = mysql.prepare("CALL " + tableName + "_rows()");
+    const auto procedureRows = mysql.query(procedure, false);
+    const std::string readFailure = mysql.lastError();
+    const bool firstRow = procedureRows->isValid() && procedureRows->next() && procedureRows->getInt(0) == 61;
+    const bool consumed = procedureRows->close();
+    const bool finished = mysql.commit();
+    const std::string commitFailure = mysql.lastError();
+    const auto nextCommand = mysql.query(mysql.prepare("SELECT 71"), false);
+    if (!firstRow || !consumed || !finished || !nextCommand->isValid())
+    {
+        std::cerr << "CALL read=" << firstRow << " " << readFailure << ", commit=" << finished << " "
+            << commitFailure << ", next=" << mysql.lastError() << std::endl;
+    }
+    check(firstRow && consumed && finished && nextCommand->next() && nextCommand->getInt(0) == 71,
+        "closing the first result consumes all remaining procedure responses before commit");
+    const auto badBindRows = mysql.query(procedure, false);
+    procedure->setInt(0, 9);
+    const bool bindConsumed = badBindRows->close();
+    const auto afterBadBind = mysql.query(mysql.prepare("SELECT 72"), false);
+    check(!procedure->isValid() && bindConsumed && afterBadBind->next() && afterBadBind->getInt(0) == 72,
+        "a failed rebind still permits draining the live procedure result");
+    procedure->close();
+    const auto failingCall = mysql.prepare("CALL " + tableName + "_rows_error()");
+    const auto errorRows = mysql.query(failingCall, false);
+    const bool hasErrorRow = errorRows->next() && errorRows->getInt(0) == 63;
+    const bool tailFailed = !errorRows->close();
+    const auto afterTail = mysql.query(mysql.prepare("SELECT 74"), false);
+    check(hasErrorRow && tailFailed && errorRows->close() && afterTail->next() && afterTail->getInt(0) == 74,
+        "a later procedure error is reported on close and the connection accepts the next query");
+    const auto firstRun = mysql.query(failingCall, false);
+    const auto secondRun = mysql.query(failingCall, false);
+    check(!firstRun->isValid() && !secondRun->isValid() && !mysql.lastError().empty(),
+        "reusing a statement reports the previous unconsumed procedure error");
     const bool xaStarted = xaInstalled && executeSqlNoCommit("CALL " + tableName + "_START()").m_success;
     check(xaStarted, "start isolated XA branch through prepared CALL");
     bool pendingInsert = false;
@@ -481,6 +1022,19 @@ static int RunChecks(bool offline, bool online, bool benchmark)
     const bool removedXa = installXa(false);
     check(std::remove(xaPath.c_str()) == 0 && removedXa, "remove XA test procedures and script");
 
+    {
+        const auto created = executeSql("CREATE TEMPORARY TABLE mysqlcpp_generated_ids "
+            "(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, marker INT UNIQUE) AUTO_INCREMENT=37");
+        const auto inserted = executeSql("INSERT INTO mysqlcpp_generated_ids(marker) VALUES (7)");
+        const auto replaced = executeSql("REPLACE INTO mysqlcpp_generated_ids(marker) VALUES (8)");
+        const auto ids = mysql.query(mysql.prepare("SELECT id, marker FROM mysqlcpp_generated_ids ORDER BY marker"));
+        check(created.m_success && inserted.m_success && inserted.m_affectedRows == 1 && inserted.m_lastInsertId > 0 &&
+            ids->next() && ids->getInt(1) == 7 && ids->getUInt64(0) == inserted.m_lastInsertId, "generated INSERT ID matches stored row");
+        check(replaced.m_success && replaced.m_affectedRows == 1 && replaced.m_lastInsertId > inserted.m_lastInsertId &&
+            ids->next() && ids->getInt(1) == 8 && ids->getUInt64(0) == replaced.m_lastInsertId && !ids->next(),
+            "generated REPLACE ID matches second stored row");
+        check(executeSql("DROP TEMPORARY TABLE mysqlcpp_generated_ids").m_success, "release generated ID fixture");
+    }
     std::shared_ptr<MysqlCppPrepareStatement> insertStatement = mysql.prepare("INSERT INTO " + tableName + " (id, name, score, flag, amount) VALUES (?, ?, ?, ?, ?)");
     check(insertStatement.get() != nullptr && insertStatement->isValid(), "MysqlCpp prepare insert");
     if (insertStatement.get() != nullptr)
@@ -513,12 +1067,12 @@ static int RunChecks(bool offline, bool online, bool benchmark)
     }
     check(rowOk, "MysqlCpp query row getters");
     check(selectResult.get() != nullptr && selectResult->columnCount() == 5, "MysqlCpp result column count");
-    check(selectResult.get() != nullptr && selectResult->columnNames().size() == 5, "MysqlCpp result column names");
+    check(selectResult.get() != nullptr && selectResult->columnNames() == std::vector<std::string>({"id", "name", "score", "flag", "amount"}), "MysqlCpp result column names");
 
     std::shared_ptr<MysqlCppPrepareStatement> vectorStatement = mysql.prepare("SELECT id, name FROM " + tableName + " ORDER BY id");
     std::shared_ptr<MysqlCppResultSet> vectorResult = mysql.query(vectorStatement);
     std::vector<std::vector<std::string>> vectorRows = vectorResult.get() == nullptr ? std::vector<std::vector<std::string>>() : vectorResult->toVector();
-    check(vectorRows.size() == 1 && vectorRows[0].size() == 2, "MysqlCpp result to vector");
+    check(vectorRows.size() == 1 && vectorRows[0] == std::vector<std::string>({"1", "alpha"}), "MysqlCpp result to vector");
 
     std::shared_ptr<MysqlCppResultSet> mapResult = mysql.query(mysql.prepare("SELECT id, name FROM " + tableName + " ORDER BY id"));
     std::vector<std::map<std::string, std::string>> mapRows = mapResult.get() == nullptr ? std::vector<std::map<std::string, std::string>>() : mapResult->toMapVector();
@@ -537,21 +1091,25 @@ static int RunChecks(bool offline, bool online, bool benchmark)
     std::shared_ptr<MysqlCppResultSet> executeSelectResult = mysql.execute(mysql.prepare("SELECT id FROM " + tableName + " WHERE id=1"));
     check(executeSelectResult.get() != nullptr && executeSelectResult->isValid() && executeSelectResult->next(), "MysqlCpp execute select dispatcher");
     std::shared_ptr<MysqlCppResultSet> executeUpdateResult = mysql.execute(mysql.prepare("UPDATE " + tableName + " SET score=97 WHERE id=1"));
-    check(executeUpdateResult.get() != nullptr && !executeUpdateResult->isValid(), "MysqlCpp execute update dispatcher");
+    check(executeUpdateResult.get() != nullptr && !executeUpdateResult->isValid() && mysql.lastError().empty(), "MysqlCpp execute update dispatcher");
 
+    MysqlCpp observer;
+    check(observer.connect(mysqlConfig), "independent transaction observer");
     MysqlCppTransaction transaction(mysql);
     check(transaction.isActive(), "MysqlCppTransaction begin");
     check(executeSqlNoCommit("INSERT INTO " + tableName + " (id, name, score, flag, amount) VALUES (2, 'beta', 88, 0, 2.5)").m_success, "MysqlCppTransaction insert before commit");
+    const auto beforeCommit = observer.query(observer.prepare("SELECT COUNT(*) FROM " + tableName + " WHERE id=2"));
+    check(beforeCommit->next() && beforeCommit->getInt(0) == 0, "uncommitted insert hidden from other session");
     check(transaction.commit(), "MysqlCppTransaction commit");
-    std::shared_ptr<MysqlCppResultSet> commitResult = mysql.query(mysql.prepare("SELECT id FROM " + tableName + " WHERE id=2"));
+    std::shared_ptr<MysqlCppResultSet> commitResult = observer.query(observer.prepare("SELECT id FROM " + tableName + " WHERE id=2"));
     check(commitResult.get() != nullptr && commitResult->next(), "MysqlCppTransaction commit visible");
 
     MysqlCppTransaction rollbackTransaction(mysql);
     check(rollbackTransaction.isActive(), "MysqlCppTransaction rollback begin");
     check(executeSqlNoCommit("INSERT INTO " + tableName + " (id, name, score, flag, amount) VALUES (3, 'gamma', 77, 1, 3.5)").m_success, "MysqlCppTransaction insert before rollback");
     rollbackTransaction.rollback();
-    std::shared_ptr<MysqlCppResultSet> rollbackResult = mysql.query(mysql.prepare("SELECT id FROM " + tableName + " WHERE id=3"));
-    check(rollbackResult.get() != nullptr && !rollbackResult->next(), "MysqlCppTransaction rollback invisible");
+    std::shared_ptr<MysqlCppResultSet> rollbackResult = observer.query(observer.prepare("SELECT id FROM " + tableName + " WHERE id=3"));
+    check(rollbackResult.get() != nullptr && rollbackResult->isValid() && observer.lastError().empty() && !rollbackResult->next(), "MysqlCppTransaction rollback invisible");
 
     {
         MysqlCppConfig limits = mysqlConfig;
@@ -567,18 +1125,23 @@ static int RunChecks(bool offline, bool online, bool benchmark)
         limits.m_poolMinConnections = 3;
         limits.m_poolMaxConnections = 2;
         check(!elastic.init(limits), "pool maximum below minimum");
-        limits.m_poolMinConnections = 0;
+        check(limits.setPoolLimits(0, 2), "configure finite pool");
+        limits.setPoolAcquireTimeout(35);
         check(elastic.init(limits) && elastic.totalCount() == 0, "pool lazy initialization");
         auto first = elastic.acquire(0);
         auto second = elastic.acquire(0);
         check(first && second && first != second && elastic.totalCount() == 2, "pool growth to limit");
         check(!elastic.acquire(0), "pool limit immediate timeout");
+        const auto waitStart = std::chrono::steady_clock::now();
+        const bool timedOut = !elastic.acquire() && !elastic.lastError().empty();
+        const auto waited = std::chrono::steady_clock::now() - waitStart;
+        check(timedOut && waited >= std::chrono::milliseconds(35) && waited < std::chrono::seconds(2),
+            "configured default pool wait applies at capacity");
         first.reset();
         second.reset();
         check(elastic.totalCount() == 0 && elastic.availableCount() == 0, "pool zero idle retention");
         elastic.close();
-        limits.m_poolMinConnections = 1;
-        limits.m_poolMaxConnections = -1;
+        check(limits.setPoolLimits(1, -1), "configure unlimited pool");
         check(elastic.init(limits) && elastic.availableCount() == 1, "pool unbounded warm start");
         first = elastic.acquire();
         second = elastic.acquire();
@@ -588,7 +1151,68 @@ static int RunChecks(bool offline, bool online, bool benchmark)
         second.reset();
         third.reset();
         check(elastic.totalCount() == 1 && elastic.availableCount() == 1, "pool retains configured minimum");
-        limits.m_poolMaxConnections = 1;
+        elastic.close();
+        // 重开池时检查已归还的空闲会话与仍有共享引用的外借会话分别计数。
+        check(limits.setPoolLimits(1, 2) && elastic.init(limits) && elastic.totalCount() == 1 &&
+            elastic.availableCount() == 1, "reopen with one idle session and a two-session limit");
+        auto primary = elastic.acquire(0);
+        auto shared = primary;
+        auto spare = elastic.acquire(0);
+        uint64_t keptId = 0;
+        {
+            const auto sharedId = shared ? shared->query(shared->prepare("SELECT CONNECTION_ID()"), false) : nullptr;
+            const auto spareId = spare ? spare->query(spare->prepare("SELECT CONNECTION_ID()"), false) : nullptr;
+            keptId = sharedId && sharedId->next() ? sharedId->getUInt64(0) : 0;
+            primary.reset();
+            check(keptId && spareId && spareId->next() && keptId != spareId->getUInt64(0) && !elastic.acquire(0) &&
+                elastic.totalCount() == 2 && elastic.availableCount() == 0,
+                "releasing one shared owner does not return an occupied slot");
+        }
+        spare.reset();
+        check(elastic.totalCount() == 2 && elastic.availableCount() == 1, "last spare owner returns one idle session");
+        elastic.close();
+        {
+            const auto survivor = shared ? shared->query(shared->prepare("SELECT CONNECTION_ID()"), false) : nullptr;
+            check(elastic.totalCount() == 1 && elastic.availableCount() == 0 && !elastic.acquire(0) &&
+                !elastic.init(limits) && survivor && survivor->next() && survivor->getUInt64(0) == keptId,
+                "closing removes only the idle session and leaves the shared borrower usable");
+        }
+        shared.reset();
+        check(elastic.totalCount() == 0 && elastic.availableCount() == 0 && elastic.init(limits) &&
+            elastic.totalCount() == 1 && elastic.availableCount() == 1, "last outstanding owner permits a fresh generation");
+        elastic.close();
+        limits.setPoolAcquireTimeout(-1);
+        check(limits.setPoolLimits(1, 1) && elastic.init(limits), "configure one reusable session and unlimited default wait");
+        auto held = elastic.acquire(0);
+        if (check(held && !elastic.acquire(0), "explicit zero overrides indefinite default on full pool"))
+        {
+            uint64_t id = 0;
+            {
+                const auto identity = held->query(held->prepare("SELECT CONNECTION_ID()"), false);
+                id = identity->next() ? identity->getUInt64(0) : 0;
+            }
+            std::promise<void> entered;
+            auto started = entered.get_future();
+            // 等待任务使用池的默认期限，返回实际借到的连接，随后由主线程核对服务器会话。
+            auto waiting = std::async(std::launch::async, [&elastic, &entered]() {
+                entered.set_value();
+                return elastic.acquire();
+            });
+            started.wait();
+            check(waiting.wait_for(std::chrono::milliseconds(3200)) == std::future_status::timeout,
+                "default indefinite acquire waits for the occupied slot");
+            held.reset();
+            const bool completed = waiting.wait_for(std::chrono::seconds(5)) == std::future_status::ready;
+            if (!completed)
+            {
+                elastic.close();
+            }
+            const auto nextLease = waiting.get();
+            const auto actual = nextLease ? nextLease->query(nextLease->prepare("SELECT CONNECTION_ID()"), false) : nullptr;
+            check(completed && id != 0 && actual && actual->next() && actual->getUInt64(0) == id,
+                "returned session satisfies indefinite default acquire");
+        }
+        elastic.close();
         for (int i = 0; i < 8; ++i)
         {
             std::unique_ptr<MysqlCppConnectionPool> owner(new MysqlCppConnectionPool);
@@ -630,9 +1254,11 @@ static int RunChecks(bool offline, bool online, bool benchmark)
         check(held && pending.wait_for(std::chrono::milliseconds(20)) == std::future_status::timeout,
             "indefinite acquire waits while fixed pool is full");
         closing.close();
+        // 先观察旧等待者的返回，再重新开放池，避免尚未调度到的线程误入新一代。
+        check(!pending.get(), "closing wakes old generation without lending a session");
+        check(!closing.init(mysqlConfig, 1), "outstanding old lease prevents reopening");
         held.reset();
         const bool reopened = closing.init(mysqlConfig, 1);
-        check(!pending.get(), "closing wakes old generation without lending a session");
         check(reopened && closing.acquire(0) != nullptr,
             "new generation accepts new borrowers");
     }
@@ -659,54 +1285,68 @@ static int RunChecks(bool offline, bool online, bool benchmark)
         const int32_t loopCount = 20;
         std::atomic<int32_t> threadFailures(0);
         std::vector<std::thread> threads;
-        for (int32_t i = 0; i < threadCount; ++i)
+        threads.reserve(threadCount);
+        try
         {
-            threads.push_back(std::thread([&pool, &threadFailures, &tableName, i, loopCount]() -> void
+            for (int32_t i = 0; i < threadCount; ++i)
             {
-                for (int32_t j = 0; j < loopCount; ++j)
+                threads.emplace_back([&pool, &threadFailures, &tableName, i, loopCount]() -> void
                 {
-                    std::shared_ptr<MysqlCpp> connection = pool.acquire(3000);
-                    if (connection.get() == nullptr)
+                    try
                     {
-                        ++threadFailures;
-                        continue;
-                    }
-                    int32_t id = 10000 + i * 100 + j;
-                    std::ostringstream oss;
-                    oss << "INSERT INTO " << tableName << " (id, name, score, flag, amount) VALUES (?, ?, ?, ?, ?)";
-                    std::shared_ptr<MysqlCppPrepareStatement> threadInsert = connection->prepare(oss.str());
-                    if (threadInsert.get() == nullptr || !threadInsert->isValid())
-                    {
-                        ++threadFailures;
-                        continue;
-                    }
-                    threadInsert->setInt(0, id);
-                    threadInsert->setString(1, "thread");
-                    threadInsert->setInt(2, j);
-                    threadInsert->setBoolean(3, true);
-                    threadInsert->setDouble(4, 1.0);
-                    if (!connection->executeUpdate(threadInsert).m_success)
-                    {
-                        ++threadFailures;
-                        continue;
-                    }
+                        for (int32_t j = 0; j < loopCount; ++j)
+                        {
+                            std::shared_ptr<MysqlCpp> connection = pool.acquire(3000);
+                            if (connection.get() == nullptr)
+                            {
+                                ++threadFailures;
+                                continue;
+                            }
+                            int32_t id = 10000 + i * 100 + j;
+                            std::shared_ptr<MysqlCppPrepareStatement> threadInsert = connection->prepare(
+                                "INSERT INTO " + tableName + " (id, name, score, flag, amount) VALUES (?, ?, ?, ?, ?)");
+                            if (threadInsert.get() == nullptr || !threadInsert->isValid())
+                            {
+                                ++threadFailures;
+                                continue;
+                            }
+                            threadInsert->setInt(0, id);
+                            threadInsert->setString(1, "thread");
+                            threadInsert->setInt(2, j);
+                            threadInsert->setBoolean(3, true);
+                            threadInsert->setDouble(4, 1.0);
+                            if (!connection->executeUpdate(threadInsert).m_success)
+                            {
+                                ++threadFailures;
+                                continue;
+                            }
 
-                    std::ostringstream selectOss;
-                    selectOss << "SELECT id FROM " << tableName << " WHERE id=?";
-                    std::shared_ptr<MysqlCppPrepareStatement> threadSelect = connection->prepare(selectOss.str());
-                    if (threadSelect.get() == nullptr || !threadSelect->isValid())
+                            std::shared_ptr<MysqlCppPrepareStatement> threadSelect = connection->prepare(
+                                "SELECT id FROM " + tableName + " WHERE id=?");
+                            if (threadSelect.get() == nullptr || !threadSelect->isValid())
+                            {
+                                ++threadFailures;
+                                continue;
+                            }
+                            threadSelect->setInt(0, id);
+                            std::shared_ptr<MysqlCppResultSet> threadResult = connection->query(threadSelect);
+                            if (threadResult.get() == nullptr || !threadResult->next() || threadResult->getInt(0) != id)
+                            {
+                                ++threadFailures;
+                            }
+                        }
+                    }
+                    catch (...)
                     {
                         ++threadFailures;
-                        continue;
                     }
-                    threadSelect->setInt(0, id);
-                    std::shared_ptr<MysqlCppResultSet> threadResult = connection->query(threadSelect);
-                    if (threadResult.get() == nullptr || !threadResult->next() || threadResult->getInt(0) != id)
-                    {
-                        ++threadFailures;
-                    }
-                }
-            }));
+                });
+            }
+        }
+        catch (const std::exception& error)
+        {
+            ++threadFailures;
+            std::cerr << "Cannot start pool worker: " << error.what() << std::endl;
         }
 
         for (size_t i = 0; i < threads.size(); ++i)
@@ -743,7 +1383,27 @@ static int RunChecks(bool offline, bool online, bool benchmark)
     {
         std::ofstream input(importPath.c_str(), std::ios::binary);
         input << "INSERT INTO " << tableName << " (id,name) VALUES(-300,'roundtrip');\n";
+        input.close();
         check(input.good(), "write isolated SQL input");
+    }
+    mysql.importSql(importPath, "", mysqlConfig.m_account, mysqlConfig.m_password, mysqlConfig.m_dbName);
+    const bool rejectedImport = !mysql.lastError().empty();
+    {
+        const auto row = mysql.query(mysql.prepare("SELECT COUNT(*) FROM " + tableName + " WHERE id=-300"));
+        check(rejectedImport && row->next() && row->getUInt(0) == 0, "empty import host cannot fall back to localhost");
+    }
+    {
+        const std::string marker = "existing export contents";
+        std::ofstream output(exportPath.c_str(), std::ios::binary | std::ios::trunc);
+        output << marker;
+        output.close();
+        const bool preparedFile = output.good();
+        mysql.exportSql(exportPath, "", mysqlConfig.m_account, mysqlConfig.m_password, mysqlConfig.m_dbName, tableName);
+        const bool rejectedExport = !mysql.lastError().empty();
+        std::ifstream original(exportPath.c_str(), std::ios::binary);
+        std::ostringstream contents;
+        contents << original.rdbuf();
+        check(preparedFile && rejectedExport && contents.str() == marker, "invalid export host preserves the destination file");
     }
     mysql.importSql(importPath, mysqlConfig.m_ip, mysqlConfig.m_account, mysqlConfig.m_password, mysqlConfig.m_dbName);
     check(mysql.lastError().empty(), "real mysql tool imports independent argument file");
@@ -760,7 +1420,9 @@ static int RunChecks(bool offline, bool online, bool benchmark)
         check(content.str().find(tableName) != std::string::npos &&
             content.str().find("roundtrip") != std::string::npos, "exported table and inserted data present");
     }
-    check(std::remove(importPath.c_str()) == 0 && std::remove(exportPath.c_str()) == 0, "remove owned SQL files");
+    const bool removedInput = std::remove(importPath.c_str()) == 0;
+    const bool removedOutput = std::remove(exportPath.c_str()) == 0;
+    check(removedInput && removedOutput, "remove owned SQL files");
     mysql.importSql(importPath, mysqlConfig.m_ip, mysqlConfig.m_account, mysqlConfig.m_password, mysqlConfig.m_dbName);
     check(!mysql.lastError().empty(), "missing import file reports error");
     if (check(executeSql("DROP TABLE IF EXISTS " + tableName).m_success, "MysqlCpp cleanup test table"))
@@ -772,23 +1434,276 @@ static int RunChecks(bool offline, bool online, bool benchmark)
     mysql.uninit();
     check(!mysql.isInit(), "MysqlCpp real uninit");
 
-    std::cout << "[SUMMARY] total=" << totalCount << " failed=" << failCount << " skipped=" << skipCount << std::endl;
+    std::cout << "[SUMMARY] total=" << totalCount << " failed=" << failCount << std::endl;
     return failCount == 0 ? 0 : 1;
 }
 
-/** 按功能用例号或显式性能参数运行。 */
+/** 检查配置的默认值、失败原子性和最终驱动参数
+@return 每项符合预期时返回 0
+*/
+static int RunConfigurationChecks()
+{
+    MysqlCppConfig config;
+    if (!config.m_account.empty() || !config.m_password.empty() || !config.m_dbName.empty() ||
+        config.m_poolAcquireTimeoutMs != 3000 || config.m_poolMinConnections != 1 || config.m_poolMaxConnections != 1)
+    {
+        std::cerr << "Incorrect default configuration" << std::endl;
+        return 1;
+    }
+    if (!config.setCredentials("alpha", "beta") || !config.setCredentials(config.m_password, config.m_account) ||
+        config.m_account != "beta" || config.m_password != "alpha")
+    {
+        std::cerr << "Credential setter lost aliased input" << std::endl;
+        return 1;
+    }
+    // 每次只覆盖一个驱动期限，同时核对另两项以及默认的自动重连策略。
+    const int32_t timeouts[][3] = {{5, 10, 10}, {17, 10, 10}, {5, 23, 10}, {5, 10, 31}};
+    for (size_t i = 0; i < sizeof(timeouts) / sizeof(timeouts[0]); ++i)
+    {
+        MysqlCppConfig isolated;
+        if (i != 0)
+        {
+            isolated.setTimeouts(timeouts[i][0], timeouts[i][1], timeouts[i][2]);
+        }
+        sql::ConnectOptionsMap properties;
+        MysqlCppHelper::connectionOptions(isolated, properties);
+        if (*properties.at("OPT_CONNECT_TIMEOUT").get<int>() != timeouts[i][0] ||
+            *properties.at("OPT_READ_TIMEOUT").get<int>() != timeouts[i][1] ||
+            *properties.at("OPT_WRITE_TIMEOUT").get<int>() != timeouts[i][2] ||
+            !*properties.at("OPT_RECONNECT").get<bool>())
+        {
+            std::cerr << "Independent driver option failed at index " << i << std::endl;
+            return 1;
+        }
+    }
+    MysqlCppConfig endpoint;
+    const bool invalidHost = !endpoint.setEndpoint("db.example/schema", 4407) &&
+        endpoint.m_ip == "127.0.0.1" && endpoint.m_port == 3306;
+    endpoint.m_ip = "tcp://db.example";
+    endpoint.setPoolLimits(0, 1);
+    MysqlCpp uninitialized;
+    MysqlCppConnectionPool lazyPool;
+    const bool validFields = endpoint.validConnection();
+    const bool configured = uninitialized.configure(endpoint);
+    const bool opened = lazyPool.init(endpoint);
+    if (!invalidHost || validFields || configured || opened)
+    {
+        std::cerr << "Path or URI in the host field accepted: setter=" << !invalidHost
+            << " validConnection=" << validFields << " configure=" << configured << " lazyPool=" << opened << std::endl;
+        return 1;
+    }
+    const char* invalidHosts[] = {"", "db example", "db\tname", "[::1", "::1]", "[]", "[::1]other", "db[::1]", "[[::1]]",
+        "localhost:3306", "127.0.0.1:3306", "[localhost:3306]", "2001:db8:::1", "1:2:3:4:5:6:7",
+        "[2001:db8::gg]", "1:2:3:4:5:6:7:8:9", "2001::db8::1", "::ffff:192.0.2.300", "fe80::1%", "fe80::1%2%3"};
+    for (size_t i = 0; i < sizeof(invalidHosts) / sizeof(invalidHosts[0]); ++i)
+    {
+        MysqlCppConfig candidate;
+        candidate.setPoolLimits(0, 1);
+        const bool accepted = candidate.setEndpoint(invalidHosts[i], 4407);
+        const bool retained = candidate.m_ip == "127.0.0.1" && candidate.m_port == 3306;
+        candidate.m_ip = invalidHosts[i];
+        MysqlCpp single;
+        MysqlCppConnectionPool pool;
+        if (accepted || !retained || candidate.validConnection() || single.configure(candidate) || pool.init(candidate))
+        {
+            std::cerr << "Malformed host accepted at index " << i << std::endl;
+            return 1;
+        }
+    }
+    const char* ipv6[] = {"::", "[2001:db8::1]", "1:2:3:4:5:6:7:8", "::ffff:192.0.2.1", "fe80::1%3", "[fe80::1%eth0]"};
+    for (size_t i = 0; i < sizeof(ipv6) / sizeof(ipv6[0]); ++i)
+    {
+        if (!endpoint.setEndpoint(ipv6[i], 3306) || endpoint.m_ip != ipv6[i] || !endpoint.validConnection())
+        {
+            std::cerr << "Valid IPv6 address rejected at index " << i << std::endl;
+            return 1;
+        }
+    }
+    if (!endpoint.setEndpoint("::1", 65535) || !endpoint.validConnection() || !endpoint.setEndpoint("[::1]", 1) ||
+        !endpoint.validConnection() || !endpoint.setEndpoint("db.example", 3306))
+    {
+        std::cerr << "Valid TCP endpoint rejected" << std::endl;
+        return 1;
+    }
+    // 负的上限只有 -1 合法。直接填写公开字段也要通过同一组池容量边界。
+    const int32_t bounds[][2] = {{0, 0}, {0, -2}, {-1, -1}, {2, 1}};
+    for (size_t i = 0; i < sizeof(bounds) / sizeof(bounds[0]); ++i)
+    {
+        MysqlCppConfig capacity;
+        if (capacity.setPoolLimits(bounds[i][0], bounds[i][1]) ||
+            capacity.m_poolMinConnections != 1 || capacity.m_poolMaxConnections != 1)
+        {
+            std::cerr << "Invalid pool limits replaced previous settings" << std::endl;
+            return 1;
+        }
+        capacity.m_poolMinConnections = bounds[i][0];
+        capacity.m_poolMaxConnections = bounds[i][1];
+        MysqlCppConnectionPool pool;
+        if (pool.init(capacity) || pool.lastError().empty() || pool.totalCount() != 0 || pool.availableCount() != 0)
+        {
+            std::cerr << "Invalid raw pool limits accepted" << std::endl;
+            return 1;
+        }
+    }
+    const std::string invalid("x\0y", 3);
+    if (!config.setEndpoint("db.example", 4406) || !config.setCredentials("test-user", "test-password") ||
+        !config.setDatabase("test-db") || !config.setPoolLimits(0, -1) || config.setPoolLimits(3, 2) ||
+        config.setPoolLimits(-1, -1) || config.setEndpoint(invalid, 123) || config.setEndpoint("a", 65536) ||
+        config.setCredentials(invalid, "other") || config.setCredentials("other", invalid) || config.setDatabase(invalid))
+    {
+        std::cerr << "Incorrect setter acceptance" << std::endl;
+        return 1;
+    }
+    config.setAutoCommit(true);
+    config.setAutoReconnect(false);
+    config.setPoolAcquireTimeout(-1);
+    config.setTimeouts(2, 7, 13);
+    sql::ConnectOptionsMap driver;
+    MysqlCppHelper::connectionOptions(config, driver);
+    if (*driver.at("hostName").get<sql::SQLString>() != "tcp://db.example:4406" ||
+        *driver.at("userName").get<sql::SQLString>() != "test-user" || *driver.at("password").get<sql::SQLString>() != "test-password" ||
+        *driver.at("OPT_CONNECT_TIMEOUT").get<int>() != 2 || *driver.at("OPT_READ_TIMEOUT").get<int>() != 7 ||
+        *driver.at("OPT_WRITE_TIMEOUT").get<int>() != 13 || *driver.at("OPT_RECONNECT").get<bool>() ||
+        !config.m_autoCommit || config.m_dbName != "test-db" || config.m_poolAcquireTimeoutMs != -1 ||
+        config.m_poolMinConnections != 0 || config.m_poolMaxConnections != -1)
+    {
+        std::cerr << "Incorrect driver or pool settings" << std::endl;
+        return 1;
+    }
+    MysqlCppConfig reset = config;
+    if (!reset.setEndpoint("127.0.0.1", 3306) || !reset.setCredentials("", "") || !reset.setDatabase("") ||
+        !reset.setPoolLimits(1, 1))
+    {
+        std::cerr << "Cannot restore default endpoint, credentials, database or pool capacity" << std::endl;
+        return 1;
+    }
+    reset.setAutoCommit(false);
+    reset.setAutoReconnect(true);
+    reset.setTimeouts(5, 10, 10);
+    reset.setPoolAcquireTimeout(3000);
+    sql::ConnectOptionsMap restored;
+    MysqlCppHelper::connectionOptions(reset, restored);
+    if (*restored.at("hostName").get<sql::SQLString>() != "tcp://127.0.0.1:3306" ||
+        *restored.at("userName").get<sql::SQLString>() != "" || *restored.at("password").get<sql::SQLString>() != "" ||
+        !*restored.at("OPT_RECONNECT").get<bool>() || *restored.at("OPT_CONNECT_TIMEOUT").get<int>() != 5 ||
+        *restored.at("OPT_READ_TIMEOUT").get<int>() != 10 || *restored.at("OPT_WRITE_TIMEOUT").get<int>() != 10 ||
+        reset.m_autoCommit || !reset.m_dbName.empty() || reset.m_poolMinConnections != 1 ||
+        reset.m_poolMaxConnections != 1 || reset.m_poolAcquireTimeoutMs != 3000 ||
+        config.m_ip != "db.example" || config.m_port != 4406 || config.m_account != "test-user" ||
+        config.m_password != "test-password" || config.m_dbName != "test-db" || !config.m_autoCommit ||
+        config.m_autoReconnect || config.m_connectTimeoutSeconds != 2 || config.m_readTimeoutSeconds != 7 ||
+        config.m_writeTimeoutSeconds != 13 || config.m_poolMinConnections != 0 || config.m_poolMaxConnections != -1 ||
+        config.m_poolAcquireTimeoutMs != -1)
+    {
+        std::cerr << "Resetting a configuration retained obsolete settings or modified its source" << std::endl;
+        return 1;
+    }
+    // 逐项改变超时，其中两项回退，第三项必须保留显式值。
+    config.setTimeouts(0, -1, 19);
+    MysqlCppHelper::connectionOptions(config, driver);
+    if (*driver.at("OPT_CONNECT_TIMEOUT").get<int>() != 5 || *driver.at("OPT_READ_TIMEOUT").get<int>() != 10 ||
+        *driver.at("OPT_WRITE_TIMEOUT").get<int>() != 19)
+    {
+        std::cerr << "One timeout changed another option" << std::endl;
+        return 1;
+    }
+    config.setTimeouts(0, -1, 0);
+    MysqlCppHelper::connectionOptions(config, driver);
+    MysqlCpp mysql;
+    if (*driver.at("OPT_CONNECT_TIMEOUT").get<int>() != 5 || *driver.at("OPT_READ_TIMEOUT").get<int>() != 10 ||
+        *driver.at("OPT_WRITE_TIMEOUT").get<int>() != 10 || !mysql.configure(config) || !mysql.init() || mysql.configure(config))
+    {
+        std::cerr << "Incorrect timeout fallback or configuration lifecycle" << std::endl;
+        return 1;
+    }
+    mysql.uninit();
+    config.m_port = -1;
+    MysqlCppConnectionPool lazy;
+    if (mysql.configure(config) || lazy.init(config) || !mysql.configure(MysqlCppConfig()))
+    {
+        std::cerr << "Invalid endpoint accepted or configure after uninit failed" << std::endl;
+        return 1;
+    }
+    return 0;
+}
+
+/** 根据命令行执行指定功能用例或显式请求的性能基准
+@param [in] argc 命令行参数个数
+@param [in] argv 参数数组
+@return 成功 0、用例失败 1、选择无效 2
+*/
 int main(int argc, char** argv)
 {
-    if (argc == 2 && std::strcmp(argv[1], "--benchmark") == 0)
+    try
     {
-        RunBenchmark();
-        return 0;
+        if (argc == 2 && std::strcmp(argv[1], "--prepare-tool-environment") == 0)
+        {
+            return CheckToolEnvironment(argv[0]);
+        }
+        if (argc == 2 && std::strcmp(argv[1], "--read-tool-environment") == 0)
+        {
+            const char* password = std::getenv("MYSQL_PWD");
+            const char* marker = std::getenv("MYSQL_PWD_MYSQLCPP_TEST_MARKER");
+            return password && marker && std::strcmp(password, "child_fixture") == 0 &&
+                std::strcmp(marker, "retained") == 0 ? 0 : 1;
+        }
+        if (argc == 2 && std::strcmp(argv[1], "--benchmark") == 0)
+        {
+            RunBenchmark();
+            return 0;
+        }
+        if (argc == 2 && std::strcmp(argv[1], "--benchmark-db") == 0)
+        {
+            return RunChecks(MysqlCppOnline, true);
+        }
+        // 命令行路径在 main 内始终有效，供无参用例回调再次启动本程序。
+        static const char* const s_executable = argv[0];
+        const LibraryTestCase cases[] = {
+            {MysqlCppOffline, false, []() { return RunChecks(MysqlCppOffline); }},
+            {MysqlCppOnline, true, []() { return RunChecks(MysqlCppOnline); }},
+            {MysqlCppConfiguration, false, RunConfigurationChecks},
+            {MysqlCppSession, true, []() { return RunChecks(MysqlCppSession); }},
+            {MysqlCppPoolRecovery, true, []() { return RunChecks(MysqlCppPoolRecovery); }},
+            {MysqlCppPoolAuthentication, true, []() { return RunChecks(MysqlCppPoolAuthentication); }},
+            {MysqlCppToolEnvironment, false, []()
+            {
+                return RunEnvironmentStep(s_executable, "--prepare-tool-environment", "parent_fixture");
+            }},
+            {MysqlCppConcurrentGrowth, true, []() { return RunChecks(MysqlCppConcurrentGrowth); }}
+        };
+        // 同步执行一项，异常计为该项失败，其他独立用例继续运行。
+        const auto execute = [](const LibraryTestCase& item) -> int
+        {
+            try
+            {
+                return item.run();
+            }
+            catch (const std::exception& error)
+            {
+                std::cerr << "case " << item.id << ": " << error.what() << std::endl;
+            }
+            catch (...)
+            {
+                std::cerr << "case " << item.id << ": unexpected exception" << std::endl;
+            }
+            return 1;
+        };
+        if (argc == 1 || (argc == 2 && std::strcmp(argv[1], "--all") == 0))
+        {
+            // 共用同一用例登记和调度器，全量先运行瞬时用例，两组分别记录失败。
+            char instant[] = "--instant";
+            char stress[] = "--stress";
+            char* instantArgs[] = {argv[0], instant, nullptr};
+            char* stressArgs[] = {argv[0], stress, nullptr};
+            const int instantCode = LibraryCaseSelection::run(2, instantArgs, cases, execute);
+            const int stressCode = LibraryCaseSelection::run(2, stressArgs, cases, execute);
+            return instantCode == 0 && stressCode == 0 ? 0 : 1;
+        }
+        return LibraryCaseSelection::run(argc, argv, cases, execute);
     }
-    if (argc == 2 && std::strcmp(argv[1], "--benchmark-db") == 0) { return RunChecks(false, true, true); }
-    if (argc == 1 || (argc == 2 && std::strcmp(argv[1], "--all") == 0)) { return RunChecks(true, true, false); }
-    const LibraryTestCase cases[] = {
-        {1, false, []() { return RunChecks(true, false, false); }},
-        {2, true, []() { return RunChecks(false, true, false); }}
-    };
-    return LibraryCaseSelection::run(argc, argv, cases);
+    catch (const std::exception& error)
+    {
+        std::cerr << error.what() << std::endl;
+        return 1;
+    }
 }

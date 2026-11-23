@@ -1,2 +1,6 @@
-"$CLOUD_REBUILD" MysqlCpp 32 lib release same
-"$CLOUD_REBUILD" PlatformTest 32 dll release same
+"$CLOUD_REBUILD" MysqlCpp "${1:-32}" lib release same
+mysqlcpp_build_status=$?
+if [ "$mysqlcpp_build_status" -ne 0 ]; then
+    exit "$mysqlcpp_build_status"
+fi
+"$CLOUD_REBUILD" PlatformTest "${1:-32}" dll release same
