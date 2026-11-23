@@ -54,6 +54,10 @@ if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:DebugDLL>")
 endif()
 add_executable(MysqlCppTest MysqlCppTest.cpp)
+# 仅为白盒用例暂存同版本内部声明，依赖的公开类型仍从目标 SDK 读取。
+configure_file("${root}/src/MysqlCpp/MysqlCpp/src/MysqlCppHelper.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/include/whitebox/MysqlCppHelper.h" COPYONLY)
+target_include_directories(MysqlCppTest PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include" "${SDK_ROOT}/include/MysqlCpp")
 platform_test_link(MysqlCppTest "${SDK_ROOT}")
 target_include_directories(MysqlCppTest PRIVATE "${SDK_ROOT}/include/mysql-connector-cpp" "${SDK_ROOT}/include")
 target_compile_definitions(MysqlCppTest PRIVATE CPPCONN_LIB_BUILD)

@@ -37,6 +37,7 @@
 
 /** 运行
 Test 使用目标 SDK 中的 MysqlCpp 静态库、匹配 CRT 的 Connector/C++、C 客户端运行库和 PlatformTest。
+白盒用例的 Helper 声明由测试工程从同版本 MysqlCpp 源码暂存到构建目录，配置和驱动类型取自目标 SDK。
 Windows 使用 VS2013。Linux x86 和 ARM 使用相同 C++ 用例。BIT 可指定 32、64、arm32、arm64，每种 ABI 使用单独的构建目录和匹配的 SDK。
 依赖准备脚本 version_debug.sh、version_release.sh 以首个参数指定上述目标，省略时沿用 32。脚本为同一目标准备 MysqlCpp 静态库与 PlatformTest 动态库。
 MysqlCppTest 无参数或 --all 先运行全部瞬时用例，再运行全部压力用例。--instant 选 1、3、7，--stress 选 2、4、5、6、8，--cases 1,3 或 --cases 1-8 指定编号。

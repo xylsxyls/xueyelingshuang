@@ -6,7 +6,7 @@
 #include <cstdio>
 #include <fstream>
 #include "MysqlCpp/MysqlCppAPI.h"
-#include "MysqlCpp/MysqlCppHelper.h"
+#include "whitebox/MysqlCppHelper.h"
 #include <chrono>
 
 #include "mysql-connector-cpp/cppconn/exception.h"

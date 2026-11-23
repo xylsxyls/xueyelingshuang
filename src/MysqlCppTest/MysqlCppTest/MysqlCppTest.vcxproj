@@ -163,8 +163,13 @@
     <ClInclude Include="MysqlCppTest.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MysqlCppTest.cpp" />
+    <ClCompile Include="MysqlCppTest.cpp">
+      <AdditionalIncludeDirectories>$(IntDir)include;$(TestSdkRoot)\include\MysqlCpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
   </ItemGroup>
+  <Target Name="PrepareMysqlCppWhiteBoxHeader" BeforeTargets="ClCompile">
+    <Copy SourceFiles="$(ProjectDir)..\..\MysqlCpp\MysqlCpp\src\MysqlCppHelper.h" DestinationFiles="$(IntDir)include\whitebox\MysqlCppHelper.h" SkipUnchangedFiles="true" />
+  </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
