@@ -1,12 +1,14 @@
 ﻿#include "MysqlCppTransaction.h"
 #include "MysqlCpp.h"
+#include "MysqlCppExecution.h"
 
 MysqlCppTransaction::MysqlCppTransaction(MysqlCpp& mysql) :
 m_mysql(&mysql),
-m_session(mysql.m_session),
-m_active(mysql.beginTransaction())
+m_active(false)
 {
-
+    MysqlCppExecution execution = {};
+    m_active = mysql.beginScopedTransaction(execution);
+    m_session = execution.m_session;
 }
 
 MysqlCppTransaction::~MysqlCppTransaction()

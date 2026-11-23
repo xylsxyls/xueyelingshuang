@@ -1,31 +1,26 @@
 ﻿#include "MysqlCppConnectionPool.h"
 #include "MysqlCpp.h"
-#include "MysqlCppConnectionReleaser.h"
+#include "MysqlCppPoolLifetime.h"
 #include <chrono>
-#include <algorithm>
-#include <stdexcept>
-#include <new>
+#include <exception>
 
 MysqlCppConnectionPool::MysqlCppConnectionPool() :
-m_returnGate(std::make_shared<std::mutex>()),
-m_minimum(1),
-m_maximum(1),
+m_lifetime(std::make_shared<MysqlCppPoolLifetime>()),
+m_minimum(m_config.m_poolMinConnections),
+m_maximum(m_config.m_poolMaxConnections),
+m_total(0),
 m_pending(0),
 m_generation(0),
-m_aliveFlag(new (std::nothrow) std::atomic<bool>(true)),
 m_isInit(false)
 {
-
+    m_lifetime->m_pool = this;
 }
 
 MysqlCppConnectionPool::~MysqlCppConnectionPool()
 {
-    std::lock_guard<std::mutex> guard(*m_returnGate);
+    std::lock_guard<std::mutex> guard(m_lifetime->m_mutex);
     uninit();
-    if (m_aliveFlag.get() != nullptr)
-    {
-        m_aliveFlag->store(false);
-    }
+    m_lifetime->m_pool = nullptr;
 }
 
 bool MysqlCppConnectionPool::init(const MysqlCppConfig& config)
@@ -45,13 +40,18 @@ bool MysqlCppConnectionPool::initRange(const MysqlCppConfig& config, size_t mini
     {
         return true;
     }
-    if (!m_aliveFlag || minimum > m_allConnections.max_size() || maximum < -1 || maximum == 0 ||
+    if (!config.validConnection())
+    {
+        m_lastError = "invalid mysql connection parameters";
+        return false;
+    }
+    if (minimum > m_availableConnections.max_size() || maximum < -1 || maximum == 0 ||
         (maximum > 0 && minimum > static_cast<uint64_t>(maximum)))
     {
         m_lastError = "mysql invalid pool capacity";
         return false;
     }
-    if (!m_allConnections.empty() || m_pending != 0)
+    if (m_total != 0 || m_pending != 0)
     {
         m_lastError = "mysql pool still has active connections";
         return false;
@@ -61,7 +61,6 @@ bool MysqlCppConnectionPool::initRange(const MysqlCppConfig& config, size_t mini
         m_config = config;
         std::vector<std::unique_ptr<MysqlCpp>> created;
         created.reserve(minimum);
-        m_allConnections.reserve(minimum);
         m_availableConnections.reserve(minimum);
         for (size_t i = 0; i < minimum; ++i)
         {
@@ -74,8 +73,7 @@ bool MysqlCppConnectionPool::initRange(const MysqlCppConfig& config, size_t mini
         }
         for (size_t i = 0; i < minimum; ++i)
         {
-            m_availableConnections.push_back(created[i].get());
-            m_allConnections.push_back(created[i].release());
+            m_availableConnections.push_back(created[i].release());
         }
     }
     catch (const std::exception& error)
@@ -83,6 +81,7 @@ bool MysqlCppConnectionPool::initRange(const MysqlCppConfig& config, size_t mini
         m_lastError = error.what();
         return false;
     }
+    m_total = minimum;
     m_minimum = minimum;
     m_maximum = maximum;
     m_lastError.clear();
@@ -108,10 +107,9 @@ void MysqlCppConnectionPool::uninit()
     m_isInit = false;
     for (size_t i = 0; i < m_availableConnections.size(); ++i)
     {
-        MysqlCpp* connection = m_availableConnections[i];
-        m_allConnections.erase(std::find(m_allConnections.begin(), m_allConnections.end(), connection));
-        delete connection;
+        delete m_availableConnections[i];
     }
+    m_total -= m_availableConnections.size();
     m_availableConnections.clear();
     m_lastError.clear();
     m_condition.notify_all();
@@ -122,17 +120,28 @@ void MysqlCppConnectionPool::close()
     uninit();
 }
 
+std::shared_ptr<MysqlCpp> MysqlCppConnectionPool::acquire()
+{
+    return acquireWithTimeout(nullptr);
+}
+
 std::shared_ptr<MysqlCpp> MysqlCppConnectionPool::acquire(int32_t timeoutMs)
+{
+    return acquireWithTimeout(&timeoutMs);
+}
+
+std::shared_ptr<MysqlCpp> MysqlCppConnectionPool::acquireWithTimeout(const int32_t* requestedTimeout)
 {
     MysqlCpp* connection = nullptr;
     {
         std::unique_lock<std::mutex> lock(m_mutex);
         // 同时统计已创建和正在创建的名额，锁外的建连操作也受上限约束。
+        const int32_t timeoutMs = requestedTimeout ? *requestedTimeout : m_config.m_poolAcquireTimeoutMs;
         const uint64_t generation = m_generation;
         const auto ready = [this, generation]() -> bool
         {
             return !m_isInit || m_generation != generation || !m_availableConnections.empty() || m_maximum < 0 ||
-                static_cast<uint64_t>(m_allConnections.size()) + m_pending < static_cast<uint64_t>(m_maximum);
+                static_cast<uint64_t>(m_total) + m_pending < static_cast<uint64_t>(m_maximum);
         };
         if (timeoutMs < 0)
         {
@@ -170,16 +179,7 @@ std::shared_ptr<MysqlCpp> MysqlCppConnectionPool::acquire(int32_t timeoutMs)
                 m_lastError = error.empty() ? "mysql pool closed during connection" : error;
                 return nullptr;
             }
-            try
-            {
-                m_availableConnections.reserve(m_allConnections.size() + 1);
-                m_allConnections.push_back(created.get());
-            }
-            catch (const std::exception& failure)
-            {
-                m_lastError = failure.what();
-                return nullptr;
-            }
+            ++m_total;
             connection = created.release();
         }
         else
@@ -190,20 +190,30 @@ std::shared_ptr<MysqlCpp> MysqlCppConnectionPool::acquire(int32_t timeoutMs)
         m_lastError.clear();
     }
 
-    if (!connection->ping())
+    // 外借者可以修改乃至清空连接自身的配置。名额归还后，重建必须使用本代池的配置。
+    if (!connection->ping() && !connection->connect(m_config))
     {
-        if (!connection->reconnect())
-        {
-            std::string error = connection->lastError();
-            releaseConnection(connection);
-            std::unique_lock<std::mutex> lock(m_mutex);
-            m_lastError = error.empty() ? "mysql pool reconnect failed" : error;
-            return std::shared_ptr<MysqlCpp>();
-        }
+        const std::string error = connection->lastError();
+        releaseConnection(connection, false);
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_lastError = error.empty() ? "mysql pool reconnect failed" : error;
+        return nullptr;
     }
 
-    MysqlCppConnectionReleaser releaser(this, m_aliveFlag);
-    return std::shared_ptr<MysqlCpp>(connection, releaser);
+    const auto lifetime = m_lifetime;
+    // 最后一次释放时接管 borrowed；持锁检查池的存活状态，析构完成后直接释放连接。
+    return std::shared_ptr<MysqlCpp>(connection, [lifetime](MysqlCpp* borrowed)
+    {
+        std::lock_guard<std::mutex> guard(lifetime->m_mutex);
+        if (lifetime->m_pool)
+        {
+            lifetime->m_pool->releaseConnection(borrowed);
+        }
+        else
+        {
+            delete borrowed;
+        }
+    });
 }
 
 size_t MysqlCppConnectionPool::availableCount()
@@ -215,7 +225,7 @@ size_t MysqlCppConnectionPool::availableCount()
 size_t MysqlCppConnectionPool::totalCount()
 {
     std::unique_lock<std::mutex> lock(m_mutex);
-    return m_allConnections.size();
+    return m_total;
 }
 
 std::string MysqlCppConnectionPool::lastError()
@@ -224,45 +234,18 @@ std::string MysqlCppConnectionPool::lastError()
     return m_lastError;
 }
 
-void MysqlCppConnectionPool::releaseConnectionFromReleaser(MysqlCpp* connection)
+void MysqlCppConnectionPool::releaseConnection(MysqlCpp* connection, bool reusable)
 {
-    releaseConnection(connection);
-}
-
-void MysqlCppConnectionPool::releaseConnection(MysqlCpp* connection)
-{
-    if (connection == nullptr)
-    {
-        return;
-    }
     std::unique_lock<std::mutex> lock(m_mutex);
-    for (size_t i = 0; i < m_availableConnections.size(); ++i)
+    if (reusable && m_isInit && m_availableConnections.size() < m_minimum)
     {
-        if (m_availableConnections[i] == connection)
-        {
-            m_condition.notify_one();
-            return;
-        }
+        // 初始化时已预留空闲目标容量，归还到该范围不会再分配。
+        m_availableConnections.push_back(connection);
     }
-
-    for (size_t i = 0; i < m_allConnections.size(); ++i)
+    else
     {
-        if (m_allConnections[i] != connection)
-        {
-            continue;
-        }
-
-        if (m_isInit && m_availableConnections.size() < m_minimum)
-        {
-            m_availableConnections.push_back(connection);
-        }
-        else
-        {
-            m_allConnections.erase(m_allConnections.begin() + i);
-            delete connection;
-        }
-        m_condition.notify_one();
-        return;
+        --m_total;
+        delete connection;
     }
     m_condition.notify_one();
 }

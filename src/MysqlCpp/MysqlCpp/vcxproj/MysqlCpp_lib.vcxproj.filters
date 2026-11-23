@@ -24,7 +24,10 @@
     <ClInclude Include="..\src\MysqlCpp.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\MysqlCppConnectionReleaser.h">
+    <ClInclude Include="..\src\MysqlCppExecution.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MysqlCppPoolLifetime.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\MysqlCppConnectionPool.h">
@@ -42,6 +45,9 @@
     <ClInclude Include="..\src\MysqlCppPrepareStatement.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\MysqlCppPrepareStatement.inl">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\MysqlCppResultSet.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -54,9 +60,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\MysqlCpp.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\MysqlCppConnectionReleaser.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\MysqlCppConnectionPool.cpp">

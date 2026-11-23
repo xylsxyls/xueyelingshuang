@@ -1508,17 +1508,36 @@ add_custom_command(TARGET MysqlCpp POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${native_macro}" "${SDK_ROOT}/include/MysqlCpp/MysqlCppMacro.h"
     VERBATIM)
 
+# CloudRebuild runs the same hook after its final header and Macro copy.
+option(CLOUD_REBUILD_DEFER_AFTER "Let the outer build driver run after following SDK publication" OFF)
+if(NOT CLOUD_REBUILD_DEFER_AFTER)
+    add_custom_command(TARGET MysqlCpp POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E env "CLOUD_REBUILD_SDK_ROOT=${SDK_ROOT}"
+            bash "${CMAKE_CURRENT_LIST_DIR}/after_MysqlCpp.sh"
+        VERBATIM)
+endif()
 
 target_compile_definitions(MysqlCpp PRIVATE CPPCONN_LIB_BUILD)
-target_compile_options(MysqlCpp PRIVATE -w)
+find_package(Threads REQUIRED)
 if(NOT EXISTS "${SDK_ROOT}/include/mysql-connector-cpp/cppconn/driver.h")
     message(FATAL_ERROR "Missing prepared Linux header: ${SDK_ROOT}/include/mysql-connector-cpp/cppconn/driver.h; run before/version")
 endif()
 if(NOT LIBRARIESRELY)
-    foreach(dependency libmysqlcppconn-static.a libmysqlclient.so)
+    if(DLLLIB STREQUAL "lib")
+        set(string_suffix .a)
+    else()
+        set(string_suffix .so)
+    endif()
+    if(DEBUGRELEASE STREQUAL "debug")
+        set(string_debug d)
+    else()
+        set(string_debug "")
+    endif()
+    foreach(dependency "libCStringManager${string_debug}${string_suffix}" libmysqlcppconn-static.a libmysqlclient.so)
         if(NOT EXISTS "${SDK_ROOT}/lib/${dependency}")
             message(FATAL_ERROR "Missing prepared Linux dependency: ${SDK_ROOT}/lib/${dependency}; run before/version")
         endif()
         target_link_libraries(MysqlCpp PUBLIC "${SDK_ROOT}/lib/${dependency}")
     endforeach()
 endif()
+target_link_libraries(MysqlCpp PUBLIC Threads::Threads ${CMAKE_DL_LIBS})

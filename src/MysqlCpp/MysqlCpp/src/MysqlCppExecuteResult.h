@@ -7,10 +7,7 @@
 */
 struct MysqlCppAPI MysqlCppExecuteResult
 {
-    /** 构造函数，会初始化为失败、影响行数0、自增ID0
-    */
-    MysqlCppExecuteResult();
-
+public:
     // SQL是否执行成功
     bool m_success;
     // INSERT/UPDATE/DELETE影响的行数，执行失败时为0
@@ -26,4 +23,9 @@ struct MysqlCppAPI MysqlCppExecuteResult
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+
+public:
+    /** 构造函数，会初始化为失败、影响行数0、自增ID0
+    */
+    MysqlCppExecuteResult();
 };

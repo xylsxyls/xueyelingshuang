@@ -1,9 +1,11 @@
 ﻿#include "MysqlCpp.h"
+#include "MysqlCppExecution.h"
 #include "MysqlCppHelper.h"
 #include "MysqlCppPrepareStatement.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include <cstdlib>
 #include <memory>
+#include <mutex>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -15,21 +17,57 @@
 #include "mysql-connector-cpp/cppconn/exception.h"
 #include "mysql-connector-cpp/cppconn/prepared_statement.h"
 #include "mysql-connector-cpp/cppconn/resultset.h"
+#include "mysql-connector-cpp/cppconn/resultset_metadata.h"
 #include "mysql-connector-cpp/cppconn/statement.h"
 
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 
-/** 在当前连接上执行固定的事务控制语句，服务器拒绝时由驱动的语句接口抛出 SQL 异常。
+// Connector/C++ 的驱动工厂共享进程级实例表，首次取驱动也需要串行。
+static std::mutex g_driverMutex;
+
+/** 执行当前会话的控制语句，服务端拒绝时由驱动抛出 SQL 异常
 @param [in] connection 已连接的会话
-@param [in] command 本文件选定的固定语句
+@param [in] command 本文件构造的完整控制语句，同步执行
 */
 static void ExecuteSessionCommand(sql::Connection& connection, const char* command)
 {
     // Connector/C++ 1.1.13 的 Connection::commit、rollback 和 setAutoCommit 会忽略 C API 的错误返回值。
     std::unique_ptr<sql::Statement> statement(connection.createStatement());
     statement->execute(command);
+}
+
+/** 切换到指定库，将库名作为一个 MySQL 标识符发送
+@param [in] connection 已建立的服务器会话
+@param [in] database 原始库名，调用方已检查不含 NUL
+*/
+static void SelectSessionSchema(sql::Connection& connection, const std::string& database)
+{
+    std::string command("USE `");
+    for (size_t i = 0; i < database.size(); ++i)
+    {
+        if (database[i] == '`')
+        {
+            command.push_back('`');
+        }
+        command.push_back(database[i]);
+    }
+    command.push_back('`');
+    ExecuteSessionCommand(connection, command.c_str());
+}
+
+/** 关闭将被同一原生语句的下一次执行覆盖的游标
+@param [in,out] cursor 本次已校验语句的活动结果弱引用
+*/
+static void ClosePreviousCursor(std::weak_ptr<MysqlCppResultSet>& cursor)
+{
+    auto previous = cursor.lock();
+    cursor.reset();
+    if (previous && !previous->close())
+    {
+        throw sql::SQLException("failed to consume the previous procedure result");
+    }
 }
 
 MysqlCpp::MysqlCpp() :
@@ -42,7 +80,24 @@ m_isInit(false)
 
 MysqlCpp::~MysqlCpp()
 {
-    uninit();
+    close();
+}
+
+bool MysqlCpp::configure(const MysqlCppConfig& config)
+{
+    if (m_isInit || !config.validConnection())
+    {
+        setLastError("configure requires an uninitialized object and valid connection parameters");
+        return false;
+    }
+    m_config = config;
+    m_lastError.clear();
+    return true;
+}
+
+bool MysqlCpp::connect()
+{
+    return connect(m_config);
 }
 
 bool MysqlCpp::init()
@@ -54,6 +109,7 @@ bool MysqlCpp::init()
 
     try
     {
+        std::lock_guard<std::mutex> guard(g_driverMutex);
         m_driver = get_driver_instance();
         if (m_driver == nullptr)
         {
@@ -102,41 +158,21 @@ bool MysqlCpp::connect(const std::string& ip,
 
 bool MysqlCpp::connect(const MysqlCppConfig& config)
 {
-    if (config.m_port < 1 || config.m_port > 65535)
+    if (!config.validConnection())
     {
-        setLastError("TCP port must be between 1 and 65535");
-        return false;
-    }
-    if (config.m_ip.find('\0') != std::string::npos || config.m_account.find('\0') != std::string::npos ||
-        config.m_password.find('\0') != std::string::npos || config.m_dbName.find('\0') != std::string::npos)
-    {
-        setLastError("mysql connection text cannot contain NUL");
+        setLastError("invalid TCP endpoint or embedded NUL in connection parameters");
         return false;
     }
     if (!m_isInit && !init())
     {
         return false;
     }
-    if (m_driver == nullptr)
-    {
-        setLastError("mysql driver is null");
-        return false;
-    }
-
     close();
     m_config = config;
     try
     {
-        MysqlCppConfig defaultConfig;
-        std::string url = "tcp://" + config.m_ip + ":" + CStringManager::toStringInt32(config.m_port);
         sql::ConnectOptionsMap connectionProperties;
-        connectionProperties["hostName"] = url;
-        connectionProperties["userName"] = config.m_account;
-        connectionProperties["password"] = config.m_password;
-        connectionProperties["OPT_CONNECT_TIMEOUT"] = MysqlCppHelper::normalizeTimeoutSeconds(config.m_connectTimeoutSeconds, defaultConfig.m_connectTimeoutSeconds);
-        connectionProperties["OPT_READ_TIMEOUT"] = MysqlCppHelper::normalizeTimeoutSeconds(config.m_readTimeoutSeconds, defaultConfig.m_readTimeoutSeconds);
-        connectionProperties["OPT_WRITE_TIMEOUT"] = MysqlCppHelper::normalizeTimeoutSeconds(config.m_writeTimeoutSeconds, defaultConfig.m_writeTimeoutSeconds);
-        connectionProperties["OPT_RECONNECT"] = config.m_autoReconnect;
+        MysqlCppHelper::connectionOptions(config, connectionProperties);
         m_con = m_driver->connect(connectionProperties);
         if (m_con == nullptr)
         {
@@ -145,7 +181,7 @@ bool MysqlCpp::connect(const MysqlCppConfig& config)
         }
         if (!config.m_dbName.empty())
         {
-            m_con->setSchema(config.m_dbName.c_str());
+            SelectSessionSchema(*m_con, config.m_dbName);
         }
         ExecuteSessionCommand(*m_con, config.m_autoCommit ? "SET SESSION autocommit=1" : "SET SESSION autocommit=0");
         if (!m_con->isValid())
@@ -184,27 +220,7 @@ void MysqlCpp::close()
 
 bool MysqlCpp::reconnect()
 {
-    m_session.reset();
-    if (m_con != nullptr)
-    {
-        try
-        {
-            if (m_con->reconnect())
-            {
-                if (!m_config.m_dbName.empty())
-                {
-                    m_con->setSchema(m_config.m_dbName.c_str());
-                }
-                ExecuteSessionCommand(*m_con, m_config.m_autoCommit ? "SET SESSION autocommit=1" : "SET SESSION autocommit=0");
-                m_session = std::make_shared<unsigned char>(0);
-                setLastError("");
-                return true;
-            }
-        }
-        catch (...)
-        {
-        }
-    }
+    // 驱动的 reconnect 在 ping 成功时保留原事务；显式重连需要真正结束旧会话。
     return connect(m_config);
 }
 
@@ -248,7 +264,7 @@ bool MysqlCpp::selectDb(const std::string& dbName, bool autoCommit)
     }
     try
     {
-        m_con->setSchema(dbName.c_str());
+        SelectSessionSchema(*m_con, dbName);
         m_config.m_dbName = dbName;
         ExecuteSessionCommand(*m_con, autoCommit ? "SET SESSION autocommit=1" : "SET SESSION autocommit=0");
         m_config.m_autoCommit = autoCommit;
@@ -274,29 +290,15 @@ std::shared_ptr<MysqlCppPrepareStatement> MysqlCpp::preparedStatementCreator(con
 
 std::shared_ptr<MysqlCppPrepareStatement> MysqlCpp::prepare(const std::string& sqlString)
 {
-    if (!check())
-    {
-        setLastError("mysql connection is not available");
-        return std::shared_ptr<MysqlCppPrepareStatement>(new MysqlCppPrepareStatement(nullptr, sqlString));
-    }
-    try
-    {
-        std::shared_ptr<MysqlCppPrepareStatement> statement(new MysqlCppPrepareStatement(nullptr, sqlString));
-        statement->m_session = m_session;
-        statement->m_preparedStatement = m_con->prepareStatement(sqlString);
-        setLastError(statement->isValid() ? "" : "prepare statement returned null");
-        return statement;
-    }
-    catch (const sql::SQLException& e)
-    {
-        setLastError(MysqlCppHelper::exceptionText(e));
-        return std::shared_ptr<MysqlCppPrepareStatement>(new MysqlCppPrepareStatement(nullptr, sqlString));
-    }
-    catch (...)
-    {
-        setLastError("prepare statement failed");
-        return std::shared_ptr<MysqlCppPrepareStatement>(new MysqlCppPrepareStatement(nullptr, sqlString));
-    }
+    auto statement = std::make_shared<MysqlCppPrepareStatement>(currentExecution(), sqlString);
+    setLastError(statement->lastError());
+    return statement;
+}
+
+MysqlCppExecution MysqlCpp::currentExecution() const
+{
+    MysqlCppExecution execution = {m_con, m_session, nullptr, nullptr};
+    return execution;
 }
 
 std::shared_ptr<MysqlCppResultSet> MysqlCpp::execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement, bool isCommit)
@@ -306,24 +308,24 @@ std::shared_ptr<MysqlCppResultSet> MysqlCpp::execute(const std::shared_ptr<Mysql
 
 std::shared_ptr<MysqlCppResultSet> MysqlCpp::query(const std::shared_ptr<MysqlCppPrepareStatement>& statement, bool isCommit)
 {
-    if (!checkStatement(statement))
+    MysqlCppExecution execution = currentExecution();
+    if (!selectStatement(statement, execution))
     {
-        return std::shared_ptr<MysqlCppResultSet>(new MysqlCppResultSet(nullptr));
+        return std::make_shared<MysqlCppResultSet>(execution, nullptr);
     }
     try
     {
-        std::shared_ptr<MysqlCppResultSet> rows(new MysqlCppResultSet(nullptr));
-        sql::PreparedStatement* prepared = statement->preparedStatement();
-        if (prepared->execute())
-        {
-            rows->m_statement = statement;
-            rows->m_resultSet = prepared->getResultSet();
-        }
+        ClosePreviousCursor(*execution.m_cursor);
+        auto rows = std::make_shared<MysqlCppResultSet>(execution, statement);
         if (isCommit && !commit())
         {
-            return std::shared_ptr<MysqlCppResultSet>(new MysqlCppResultSet(nullptr));
+            return std::make_shared<MysqlCppResultSet>(execution, nullptr);
         }
         setLastError("");
+        if (rows->isValid())
+        {
+            *execution.m_cursor = rows;
+        }
         return rows;
     }
     catch (const sql::SQLException& e)
@@ -333,7 +335,7 @@ std::shared_ptr<MysqlCppResultSet> MysqlCpp::query(const std::shared_ptr<MysqlCp
             rollback();
         }
         setLastError(MysqlCppHelper::exceptionText(e));
-        return std::shared_ptr<MysqlCppResultSet>(new MysqlCppResultSet(nullptr));
+        return std::make_shared<MysqlCppResultSet>(execution, nullptr);
     }
     catch (...)
     {
@@ -342,21 +344,43 @@ std::shared_ptr<MysqlCppResultSet> MysqlCpp::query(const std::shared_ptr<MysqlCp
             rollback();
         }
         setLastError("query failed");
-        return std::shared_ptr<MysqlCppResultSet>(new MysqlCppResultSet(nullptr));
+        return std::make_shared<MysqlCppResultSet>(execution, nullptr);
     }
 }
 
 MysqlCppExecuteResult MysqlCpp::executeUpdate(const std::shared_ptr<MysqlCppPrepareStatement>& statement, bool isCommit)
 {
     MysqlCppExecuteResult result;
-    if (!checkStatement(statement))
+    MysqlCppExecution execution = currentExecution();
+    if (!selectStatement(statement, execution))
     {
         result.m_errorMessage = lastError();
         return result;
     }
     try
     {
-        const int32_t affectedRows = statement->preparedStatement()->executeUpdate();
+        // 驱动的 executeUpdate 不会消费返回行。静态已知有列时，在发送 SQL 前拒绝。
+        sql::ResultSetMetaData* metadata = execution.m_statement->getMetaData();
+        if (metadata && metadata->getColumnCount() != 0)
+        {
+            result.m_errorMessage = "executeUpdate requires a statement without result columns";
+            setLastError(result.m_errorMessage);
+            return result;
+        }
+        ClosePreviousCursor(*execution.m_cursor);
+        const int32_t affectedRows = execution.m_statement->executeUpdate();
+        if (affectedRows < 0)
+        {
+            // 动态返回行的过程或超出接口范围的行数：关闭原生语句以释放未读响应。
+            statement->close();
+            if (isCommit)
+            {
+                rollback();
+            }
+            result.m_errorMessage = "executeUpdate did not return a representable affected row count";
+            setLastError(result.m_errorMessage);
+            return result;
+        }
         const uint64_t lastInsertId = MysqlCppHelper::isLastInsertIdSql(statement->sql()) ? queryLastInsertId() : 0;
         if (isCommit && !commit())
         {
@@ -391,58 +415,37 @@ MysqlCppExecuteResult MysqlCpp::executeUpdate(const std::shared_ptr<MysqlCppPrep
     }
 }
 
+bool MysqlCpp::beginScopedTransaction(MysqlCppExecution& execution)
+{
+    const bool started = beginTransaction();
+    if (started)
+    {
+        execution.m_session = m_session;
+    }
+    else
+    {
+        execution.m_session.reset();
+    }
+    return started;
+}
+
 bool MysqlCpp::beginTransaction()
 {
-    if (!check())
-    {
-        setLastError("mysql connection is not available");
-        return false;
-    }
-    try
-    {
-        ExecuteSessionCommand(*m_con, "SET SESSION autocommit=0");
-        m_config.m_autoCommit = false;
-        setLastError("");
-        return true;
-    }
-    catch (const sql::SQLException& e)
-    {
-        setLastError(MysqlCppHelper::exceptionText(e));
-        return false;
-    }
-    catch (...)
-    {
-        setLastError("begin transaction failed");
-        return false;
-    }
+    setAutoCommit(false);
+    return m_lastError.empty();
 }
 
 bool MysqlCpp::commit()
 {
-    if (!check())
-    {
-        setLastError("mysql connection is not available");
-        return false;
-    }
-    try
-    {
-        ExecuteSessionCommand(*m_con, "COMMIT");
-        setLastError("");
-        return true;
-    }
-    catch (const sql::SQLException& e)
-    {
-        setLastError(MysqlCppHelper::exceptionText(e));
-        return false;
-    }
-    catch (...)
-    {
-        setLastError("commit failed");
-        return false;
-    }
+    return executeControl("COMMIT", "commit failed");
 }
 
 bool MysqlCpp::rollback()
+{
+    return executeControl("ROLLBACK", "rollback failed");
+}
+
+bool MysqlCpp::executeControl(const char* command, const char* failure)
 {
     if (!check())
     {
@@ -451,7 +454,7 @@ bool MysqlCpp::rollback()
     }
     try
     {
-        ExecuteSessionCommand(*m_con, "ROLLBACK");
+        ExecuteSessionCommand(*m_con, command);
         setLastError("");
         return true;
     }
@@ -462,7 +465,7 @@ bool MysqlCpp::rollback()
     }
     catch (...)
     {
-        setLastError("rollback failed");
+        setLastError(failure);
         return false;
     }
 }
@@ -478,8 +481,14 @@ void MysqlCpp::importSql(const std::string& sqlPath,
 #else
     const char* name = "mysql";
 #endif
+    const std::string address = MysqlCppHelper::toolHost(host);
+    if (address.empty())
+    {
+        setLastError("invalid MySQL tool host");
+        return;
+    }
     const std::vector<std::string> arguments = {MysqlCppHelper::mysqlToolPath(name), "--protocol=TCP",
-        "--port=" + CStringManager::toStringInt32(m_config.m_port), "--host=" + host, "--user=" + user,
+        "--port=" + CStringManager::toStringInt32(m_config.m_port), "--host=" + address, "--user=" + user,
         "--database=" + database};
     const int result = MysqlCppHelper::runTool(arguments, sqlPath, true, password);
     setLastError(result == 0 ? "" : "mysql import command failed, result=" + CStringManager::toStringInt32(result));
@@ -502,8 +511,14 @@ void MysqlCpp::exportSql(const std::string& sqlPath, const std::string& host, co
 #else
     const char* name = "mysqldump";
 #endif
+    const std::string address = MysqlCppHelper::toolHost(host);
+    if (address.empty())
+    {
+        setLastError("invalid MySQL tool host");
+        return;
+    }
     std::vector<std::string> arguments = {MysqlCppHelper::mysqlToolPath(name), "--protocol=TCP",
-        "--port=" + CStringManager::toStringInt32(m_config.m_port), "--host=" + host, "--user=" + user,
+        "--port=" + CStringManager::toStringInt32(m_config.m_port), "--host=" + address, "--user=" + user,
         "--no-tablespaces", "--", database};
     if (!table.empty())
     {
@@ -515,24 +530,9 @@ void MysqlCpp::exportSql(const std::string& sqlPath, const std::string& host, co
 
 void MysqlCpp::setAutoCommit(bool autoCommit)
 {
-    if (!check())
+    if (executeControl(autoCommit ? "SET SESSION autocommit=1" : "SET SESSION autocommit=0", "set auto commit failed"))
     {
-        setLastError("mysql connection is not available");
-        return;
-    }
-    try
-    {
-        ExecuteSessionCommand(*m_con, autoCommit ? "SET SESSION autocommit=1" : "SET SESSION autocommit=0");
         m_config.m_autoCommit = autoCommit;
-        setLastError("");
-    }
-    catch (const sql::SQLException& e)
-    {
-        setLastError(MysqlCppHelper::exceptionText(e));
-    }
-    catch (...)
-    {
-        setLastError("set auto commit failed");
     }
 }
 
@@ -543,24 +543,28 @@ bool MysqlCpp::check() const
 
 bool MysqlCpp::checkStatement(const std::shared_ptr<MysqlCppPrepareStatement>& statement)
 {
+    MysqlCppExecution execution = currentExecution();
+    return selectStatement(statement, execution);
+}
+
+bool MysqlCpp::selectStatement(const std::shared_ptr<MysqlCppPrepareStatement>& statement, MysqlCppExecution& execution)
+{
     if (!check())
     {
         setLastError("mysql connection is not available");
     }
-    else if (!statement || !statement->isValid())
+    else if (statement && statement->selectForExecution(execution))
     {
-        if (!statement || m_lastError.empty())
-        {
-            setLastError("invalid mysql statement");
-        }
+        return true;
     }
-    else if (statement->m_session.lock() != m_session)
+    else if (statement && statement->isValid())
     {
         setLastError("statement belongs to a different mysql connection");
     }
     else
     {
-        return true;
+        const std::string reason = statement ? statement->lastError() : std::string();
+        setLastError(reason.empty() ? "invalid mysql statement" : reason);
     }
     return false;
 }
@@ -596,6 +600,9 @@ uint64_t MysqlCpp::queryLastInsertId() const
 }
 
 // 使用示例开始。单独编译本文件时可启用下方的 main。
+//#include "MysqlCppConnectionPool.h"
+//#include "MysqlCppTransaction.h"
+//#include <cerrno>
 //#include <iostream>
 //
 //int main()
@@ -612,19 +619,32 @@ uint64_t MysqlCpp::queryLastInsertId() const
 //        return 1;
 //    }
 //    MysqlCppConfig config;
-//    config.m_ip = host ? host : "127.0.0.1";
-//    config.m_port = port ? std::atoi(port) : 33841;
-//    config.m_account = user;
-//    config.m_password = password;
-//    config.m_dbName = database;
+//    char* end = nullptr;
+//    errno = 0;
+//    const long number = port ? std::strtol(port, &end, 10) : config.m_port;
+//    if ((port && (end == port || *end != 0 || errno == ERANGE)) || number < 1 || number > 65535 ||
+//        !config.setEndpoint(host ? host : config.m_ip, static_cast<int32_t>(number)) ||
+//        !config.setCredentials(user, password) || !config.setDatabase(database))
+//    {
+//        return 1;
+//    }
+//    config.setTimeouts(3, 5, 7);
+//    config.setAutoCommit(false);
+//    config.setAutoReconnect(false);
 //    MysqlCpp mysql;
-//    if (!mysql.init() || !mysql.connect(config) || !mysql.isConnected() || !mysql.ping() ||
+//    if (!config.validConnection() || !mysql.configure(config) || !mysql.init() || !mysql.isInit() ||
+//        !mysql.connect() || !mysql.isConnected() || !mysql.ping() ||
 //        !mysql.selectDb(config.m_dbName))
 //    {
 //        std::cerr << mysql.lastError() << std::endl;
 //        return 1;
 //    }
 //    mysql.setAutoCommit(false);
+//    if (!mysql.lastError().empty())
+//    {
+//        std::cerr << mysql.lastError() << std::endl;
+//        return 1;
+//    }
 //    const auto created = mysql.executeUpdate(mysql.prepare(
 //        "CREATE TEMPORARY TABLE demo_orders (id INT PRIMARY KEY, customer VARCHAR(64), quantity INT)"));
 //    if (!created.m_success || !mysql.beginTransaction())
@@ -640,6 +660,11 @@ uint64_t MysqlCpp::queryLastInsertId() const
 //    insert->setInt(0, 101);
 //    insert->setString(1, "Ada");
 //    insert->setInt(2, 3);
+//    if (!insert->isValid())
+//    {
+//        std::cerr << insert->lastError() << std::endl;
+//        return 1;
+//    }
 //    const auto written = mysql.executeUpdate(insert, false);
 //    if (!written.m_success || written.m_affectedRows != 1 || !mysql.commit())
 //    {
@@ -655,12 +680,18 @@ uint64_t MysqlCpp::queryLastInsertId() const
 //    }
 //    byId->setInt(0, 101);
 //    const auto row = mysql.query(byId, false);
-//    if (!row || !row->next())
+//    if (!row || row->rowsCount() != 1 || row->columnCount() != 2 || !row->next())
 //    {
 //        return 1;
 //    }
 //    std::cout << "Order 101, customer " << row->getString("customer")
 //        << ", quantity " << row->getInt("quantity") << '\n';
+//    if (!row->close())
+//    {
+//        mysql.rollback();
+//        return 1;
+//    }
+//    byId->close();
 //    const auto totals = mysql.execute(mysql.prepare("SELECT SUM(quantity) FROM demo_orders"));
 //    if (!totals || !totals->next())
 //    {
@@ -668,7 +699,39 @@ uint64_t MysqlCpp::queryLastInsertId() const
 //    }
 //    std::cout << "Total units " << totals->getInt(0) << '\n';
 //    const auto dropped = mysql.executeUpdate(mysql.prepare("DROP TEMPORARY TABLE demo_orders"));
-//    // 若中途返回，服务端也会在连接析构时自动释放该临时表。
-//    return dropped.m_success ? 0 : 1;
+//    if (!dropped.m_success || !mysql.reconnect() || insert->isValid() || row->isValid())
+//    {
+//        return 1;
+//    }
+//    mysql.close();
+//    mysql.uninit();
+//    MysqlCppConnectionPool pool;
+//    if (!config.setPoolLimits(0, 2))
+//    {
+//        return 1;
+//    }
+//    config.setPoolAcquireTimeout(1000);
+//    if (!pool.init(config))
+//    {
+//        std::cerr << pool.lastError() << std::endl;
+//        return 1;
+//    }
+//    {
+//        const auto session = pool.acquire();
+//        if (!session || pool.totalCount() != 1 || pool.availableCount() != 0)
+//        {
+//            return 1;
+//        }
+//        MysqlCppTransaction transaction(*session);
+//        const auto values = session->query(session->prepare("SELECT 3 AS units"), false);
+//        const auto records = values->toMapVector();
+//        if (!transaction.isActive() || !values->isValid() || values->columnCount() != 1 ||
+//            records.size() != 1 || records[0].count("units") != 1 || records[0].at("units") != "3" || !transaction.commit())
+//        {
+//            return 1;
+//        }
+//    }
+//    pool.close();
+//    return 0;
 //}
 // 使用示例结束。

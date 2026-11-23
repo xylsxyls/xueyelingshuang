@@ -20,7 +20,7 @@ public:
 
 public:
     /** 判断事务是否仍处于活动状态
-    @return 返回事务是否已成功开启且尚未提交或回滚
+    @return 本对象已开启、尚未通过本对象完成且原会话仍有效时返回 true；不查询服务端事务状态
     */
     bool isActive() const;
 
@@ -48,8 +48,15 @@ private:
 private:
     // 事务绑定的MySQL连接对象，不负责释放
     MysqlCpp* m_mysql;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
     // 事务创建时的会话标识，过期后不得在另一会话提交或回滚。
     std::weak_ptr<unsigned char> m_session;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
     // 事务是否已开启且尚未提交或回滚
     bool m_active;
 };

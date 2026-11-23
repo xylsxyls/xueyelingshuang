@@ -1,4 +1,5 @@
 ﻿#include "MysqlCppResultSet.h"
+#include "MysqlCppExecution.h"
 #include "MysqlCppPrepareStatement.h"
 #include "MysqlCppHelper.h"
 
@@ -7,6 +8,7 @@
 #pragma warning(disable:4251)
 #endif
 
+#include "mysql-connector-cpp/cppconn/prepared_statement.h"
 #include "mysql-connector-cpp/cppconn/resultset.h"
 #include "mysql-connector-cpp/cppconn/resultset_metadata.h"
 
@@ -14,15 +16,53 @@
 #pragma warning(pop)
 #endif
 
-MysqlCppResultSet::MysqlCppResultSet(sql::ResultSet* resultSet) :
-m_resultSet(resultSet)
+MysqlCppResultSet::MysqlCppResultSet(const MysqlCppExecution& execution,
+    const std::shared_ptr<MysqlCppPrepareStatement>& statement) :
+m_resultSet(nullptr),
+m_pendingStatement(nullptr)
 {
-
+    if (statement && execution.m_statement && execution.m_statement->execute())
+    {
+        m_statement = statement;
+        sql::ResultSetMetaData* metadata = execution.m_statement->getMetaData();
+        if (metadata && metadata->getColumnCount() == 0)
+        {
+            m_pendingStatement = execution.m_statement;
+            m_pendingSession = execution.m_session;
+        }
+        m_resultSet = execution.m_statement->getResultSet();
+    }
 }
 
 MysqlCppResultSet::~MysqlCppResultSet()
 {
+    close();
+}
+
+bool MysqlCppResultSet::close()
+{
     delete m_resultSet;
+    m_resultSet = nullptr;
+    bool success = true;
+    if (m_pendingStatement && !m_pendingSession.expired())
+    {
+        // CALL 在首组行后还会发送结束状态，也可能继续返回行；先释放各组再取下一响应。
+        try
+        {
+            while (m_pendingStatement->getMoreResults())
+            {
+                std::unique_ptr<sql::ResultSet> remaining(m_pendingStatement->getResultSet());
+            }
+        }
+        catch (...)
+        {
+            success = false;
+        }
+    }
+    m_pendingStatement = nullptr;
+    m_pendingSession.reset();
+    m_statement.reset();
+    return success;
 }
 
 bool MysqlCppResultSet::isValid() const
@@ -115,6 +155,23 @@ std::vector<std::string> MysqlCppResultSet::columnNames() const
     return names;
 }
 
+uint32_t MysqlCppResultSet::findColumnIndex(const std::string& label) const
+{
+    if (!isValid() || label.find('\0') != std::string::npos)
+    {
+        return UINT32_MAX;
+    }
+    try
+    {
+        const uint32_t index = m_resultSet->findColumn(label);
+        return index == 0 ? UINT32_MAX : index - 1;
+    }
+    catch (...)
+    {
+        return UINT32_MAX;
+    }
+}
+
 std::istream* MysqlCppResultSet::getBlob(uint32_t columnIndex) const
 {
     if (!isValid())
@@ -138,18 +195,7 @@ std::istream* MysqlCppResultSet::getBlob(uint32_t columnIndex) const
 
 std::istream* MysqlCppResultSet::getBlob(const std::string& columnLabel) const
 {
-    if (!isValid())
-    {
-        return nullptr;
-    }
-    try
-    {
-        return m_resultSet->getBlob(columnLabel);
-    }
-    catch (...)
-    {
-        return nullptr;
-    }
+    return getBlob(findColumnIndex(columnLabel));
 }
 
 bool MysqlCppResultSet::getBoolean(uint32_t columnIndex) const
@@ -175,18 +221,7 @@ bool MysqlCppResultSet::getBoolean(uint32_t columnIndex) const
 
 bool MysqlCppResultSet::getBoolean(const std::string& columnLabel) const
 {
-    if (!isValid())
-    {
-        return false;
-    }
-    try
-    {
-        return m_resultSet->getBoolean(columnLabel);
-    }
-    catch (...)
-    {
-        return false;
-    }
+    return getBoolean(findColumnIndex(columnLabel));
 }
 
 long double MysqlCppResultSet::getDouble(uint32_t columnIndex) const
@@ -212,18 +247,7 @@ long double MysqlCppResultSet::getDouble(uint32_t columnIndex) const
 
 long double MysqlCppResultSet::getDouble(const std::string& columnLabel) const
 {
-    if (!isValid())
-    {
-        return 0;
-    }
-    try
-    {
-        return m_resultSet->getDouble(columnLabel);
-    }
-    catch (...)
-    {
-        return 0;
-    }
+    return getDouble(findColumnIndex(columnLabel));
 }
 
 int32_t MysqlCppResultSet::getInt(uint32_t columnIndex) const
@@ -249,18 +273,7 @@ int32_t MysqlCppResultSet::getInt(uint32_t columnIndex) const
 
 int32_t MysqlCppResultSet::getInt(const std::string& columnLabel) const
 {
-    if (!isValid())
-    {
-        return 0;
-    }
-    try
-    {
-        return m_resultSet->getInt(columnLabel);
-    }
-    catch (...)
-    {
-        return 0;
-    }
+    return getInt(findColumnIndex(columnLabel));
 }
 
 uint32_t MysqlCppResultSet::getUInt(uint32_t columnIndex) const
@@ -286,18 +299,7 @@ uint32_t MysqlCppResultSet::getUInt(uint32_t columnIndex) const
 
 uint32_t MysqlCppResultSet::getUInt(const std::string& columnLabel) const
 {
-    if (!isValid())
-    {
-        return 0;
-    }
-    try
-    {
-        return m_resultSet->getUInt(columnLabel);
-    }
-    catch (...)
-    {
-        return 0;
-    }
+    return getUInt(findColumnIndex(columnLabel));
 }
 
 int64_t MysqlCppResultSet::getInt64(uint32_t columnIndex) const
@@ -323,18 +325,7 @@ int64_t MysqlCppResultSet::getInt64(uint32_t columnIndex) const
 
 int64_t MysqlCppResultSet::getInt64(const std::string& columnLabel) const
 {
-    if (!isValid())
-    {
-        return 0;
-    }
-    try
-    {
-        return m_resultSet->getInt64(columnLabel);
-    }
-    catch (...)
-    {
-        return 0;
-    }
+    return getInt64(findColumnIndex(columnLabel));
 }
 
 uint64_t MysqlCppResultSet::getUInt64(uint32_t columnIndex) const
@@ -360,18 +351,7 @@ uint64_t MysqlCppResultSet::getUInt64(uint32_t columnIndex) const
 
 uint64_t MysqlCppResultSet::getUInt64(const std::string& columnLabel) const
 {
-    if (!isValid())
-    {
-        return 0;
-    }
-    try
-    {
-        return m_resultSet->getUInt64(columnLabel);
-    }
-    catch (...)
-    {
-        return 0;
-    }
+    return getUInt64(findColumnIndex(columnLabel));
 }
 
 std::string MysqlCppResultSet::getString(uint32_t columnIndex) const
@@ -397,18 +377,7 @@ std::string MysqlCppResultSet::getString(uint32_t columnIndex) const
 
 std::string MysqlCppResultSet::getString(const std::string& columnLabel) const
 {
-    if (!isValid())
-    {
-        return "";
-    }
-    try
-    {
-        return m_resultSet->getString(columnLabel);
-    }
-    catch (...)
-    {
-        return "";
-    }
+    return getString(findColumnIndex(columnLabel));
 }
 
 bool MysqlCppResultSet::next()

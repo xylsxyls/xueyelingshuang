@@ -22,19 +22,20 @@
     <ClInclude Include="..\src\MysqlCppAPI.h" />
     <ClInclude Include="..\src\MysqlCppMacro.h" />
     <ClInclude Include="..\src\MysqlCpp.h" />
-    <ClInclude Include="..\src\MysqlCppConnectionReleaser.h" />
+    <ClInclude Include="..\src\MysqlCppExecution.h" />
+    <ClInclude Include="..\src\MysqlCppPoolLifetime.h" />
     <ClInclude Include="..\src\MysqlCppConnectionPool.h" />
     <ClInclude Include="..\src\MysqlCppTransaction.h" />
     <ClInclude Include="..\src\MysqlCppExecuteResult.h" />
     <ClInclude Include="..\src\MysqlCppConfig.h" />
     <ClInclude Include="..\src\MysqlCppPrepareStatement.h" />
+    <ClInclude Include="..\src\MysqlCppPrepareStatement.inl" />
     <ClInclude Include="..\src\MysqlCppResultSet.h" />
     <ClInclude Include="..\src\MysqlSqlString.h" />
     <ClInclude Include="..\src\MysqlCppHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\MysqlCpp.cpp" />
-    <ClCompile Include="..\src\MysqlCppConnectionReleaser.cpp" />
     <ClCompile Include="..\src\MysqlCppConnectionPool.cpp" />
     <ClCompile Include="..\src\MysqlCppTransaction.cpp" />
     <ClCompile Include="..\src\MysqlCppExecuteResult.cpp" />

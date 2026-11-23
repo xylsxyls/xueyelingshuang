@@ -1,18 +1,13 @@
 ﻿#pragma once
 #include "MysqlCppConfig.h"
-#include "MysqlCppExecuteResult.h"
 #include "MysqlCppMacro.h"
+#include "MysqlCppExecuteResult.h"
 #include "MysqlCppResultSet.h"
 #include "MysqlCppPrepareStatement.h"
+#include "mysql-connector-cpp/cppconn/connection.h"
 #include <memory>
 #include <stdint.h>
 #include <string>
-
-namespace sql
-{
-    class Driver;
-    class Connection;
-}
 
 /** MySQL连接封装，隐藏mysql-connector-cpp底层类型，提供连接、查询、更新和事务操作
 */
@@ -28,6 +23,17 @@ public:
     ~MysqlCpp();
 
 public:
+    /** 在初始化前复制连接配置，uninit 后可以重新配置
+    @param [in] config 主机、认证、选库、自动提交、重连及超时参数
+    @return 保存成功返回 true，已初始化或连接参数非法返回 false 并保留已有配置
+    */
+    bool configure(const MysqlCppConfig& config);
+
+    /** 使用保存的配置建连，尚未配置时使用默认参数，必要时自动初始化驱动
+    @return 成功返回 true，失败原因见 lastError
+    */
+    bool connect();
+
     /** 初始化MySQL驱动入口，可在connect前显式调用，也会在首次connect时自动触发
     @return 返回true表示底层驱动入口获取成功
     */
@@ -42,7 +48,7 @@ public:
     */
     bool isInit() const;
 
-    /** 兼容旧接口的连接函数，只设置地址、端口、账号和密码，不自动选择数据库
+    /** 使用指定地址、端口、账号和密码，不自动选择数据库
     @param [in] ip MySQL服务器IP或域名
     @param [in] port MySQL端口
     @param [in] account 登录账号
@@ -64,7 +70,7 @@ public:
     */
     void close();
 
-    /** 使用上一次保存的连接配置重连当前连接
+    /** 关闭原会话，以保存的配置建立新会话；原会话未提交的事务随断开而回滚
     @return 返回是否重连成功
     */
     bool reconnect();
@@ -85,21 +91,21 @@ public:
     std::string lastError() const;
 
     /** 先切换数据库，再设置自动提交策略。第二步失败时，已切换的库仍是当前库，重连也使用该库。
-    @param [in] dbName 数据库名
+    @param [in] dbName 原始数据库名，不含 NUL；名称中的反引号由本库编码
     @param [in] autoCommit 是否自动提交事务
     @return 返回是否选择成功
     */
     bool selectDb(const std::string& dbName, bool autoCommit = false);
 
-    /** 兼容旧接口的预处理语句创建函数
+    /** 创建预处理语句，等同于 prepare
     @param [in] sqlString 带占位符的SQL语句
-    @return 返回预处理语句对象，创建失败时返回空对象或无效对象
+    @return 返回预处理语句对象，准备失败时用 isValid 和 lastError 检查原因
     */
     std::shared_ptr<MysqlCppPrepareStatement> preparedStatementCreator(const std::string& sqlString);
 
     /** 创建预处理语句
     @param [in] sqlString 带占位符的SQL语句
-    @return 返回预处理语句对象，创建失败时返回空对象或无效对象
+    @return 返回预处理语句对象，准备失败时用 isValid 和 lastError 检查原因
     */
     std::shared_ptr<MysqlCppPrepareStatement> prepare(const std::string& sqlString);
 
@@ -117,12 +123,18 @@ public:
     */
     std::shared_ptr<MysqlCppResultSet> query(const std::shared_ptr<MysqlCppPrepareStatement>& statement, bool isCommit = true);
 
-    /** 执行INSERT/UPDATE/DELETE等非查询SQL
+    /** 执行 INSERT/UPDATE/DELETE 等非查询 SQL，已知返回列的语句会在发送前被拒绝
     @param [in] statement 已绑定参数的预处理语句
     @param [in] isCommit 执行后是否提交事务
     @return 返回行数、会话自增 ID 及错误信息。执行或请求的提交失败时，行数和 ID 均为 0
     */
     MysqlCppExecuteResult executeUpdate(const std::shared_ptr<MysqlCppPrepareStatement>& statement, bool isCommit = true);
+
+    /** 为库内作用域事务开启事务并记录其所属会话
+    @param [out] execution 仅填写弱会话标识，失败时该标识为空
+    @return 已切换到手动提交时返回 true
+    */
+    bool beginScopedTransaction(MysqlCppExecution& execution);
 
     /** 开启事务，会把当前连接切到非自动提交
     @return 返回是否开启成功
@@ -141,7 +153,7 @@ public:
 
     /** 执行mysql命令行导入SQL文件
     @param [in] sqlPath SQL文件路径
-    @param [in] host MySQL服务器地址
+    @param [in] host 非空 MySQL 主机，遵循 setEndpoint 的地址规则，IPv6 可带方括号
     @param [in] user 登录账号
     @param [in] password 登录密码
     @param [in] database 目标数据库名
@@ -154,7 +166,7 @@ public:
 
     /** 用 mysqldump 导出一个数据库，端口取当前连接配置
     @param [in] sqlPath 导出文件保存路径
-    @param [in] host MySQL服务器地址
+    @param [in] host 非空 MySQL 主机，遵循 setEndpoint 的地址规则，IPv6 可带方括号
     @param [in] user 登录账号
     @param [in] password 登录密码
     @param [in] exportData 数据库名，按一个独立参数传递
@@ -167,7 +179,7 @@ public:
 
     /** 导出指定数据库中的一张表，结果通过 lastError 查询
     @param [in] sqlPath SQL 输出路径，已存在的文件会被覆盖
-    @param [in] host 服务器主机，端口取当前连接配置，默认 3306
+    @param [in] host 非空服务器主机，格式同 setEndpoint。端口取保存的配置，默认 3306
     @param [in] user 登录账号
     @param [in] password 登录密码
     @param [in] database 数据库名
@@ -204,6 +216,25 @@ protected:
     uint64_t queryLastInsertId() const;
 
 private:
+    /** 检查连接与预处理语句的归属并记录错误。
+    @param [in] statement 本次准备执行的语句
+    @param [in,out] execution 当前调用的上下文，成功时填入借用语句
+    @return 当前连接拥有该有效语句时返回 true
+    */
+    bool selectStatement(const std::shared_ptr<MysqlCppPrepareStatement>& statement, MysqlCppExecution& execution);
+
+    /** 执行事务控制命令并记录驱动错误
+    @param [in] command 库内固定的 SQL 命令
+    @param [in] failure 捕获非 SQL 异常时记录的诊断
+    @return 服务端接受命令时返回 true
+    */
+    bool executeControl(const char* command, const char* failure);
+
+    /** 获取内部同步调用所用的会话快照，供语句、结果与作用域事务校验归属
+    @return 仅在库实现中定义的借用上下文，关闭或重连使原会话标识失效
+    */
+    MysqlCppExecution currentExecution() const;
+
     /** 禁止拷贝构造，避免多个对象同时释放同一底层连接
     @param [in] other 另一个MySQL连接对象
     */
@@ -216,9 +247,15 @@ private:
     MysqlCpp& operator=(const MysqlCpp& other);
 
 private:
-    friend class MysqlCppTransaction;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
     // 仅当前连接持有的会话标识；关闭和重连使已借出的语句、结果和事务同时失效。
     std::shared_ptr<unsigned char> m_session;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
     // mysql-connector-cpp驱动对象，不由本类释放
     sql::Driver* m_driver;
     // 当前连接对象，由本类负责释放
