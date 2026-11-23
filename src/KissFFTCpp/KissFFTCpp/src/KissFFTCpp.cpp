@@ -1,5 +1,5 @@
 ﻿#include "KissFFTCpp.h"
-#include "KissFFT/kiss_fftr.h"
+#include "kissfft/kiss_fftr.h"
 #ifdef _MSC_VER
 #ifdef _DEBUG
 #pragma comment(lib, "kissfftd.lib")
