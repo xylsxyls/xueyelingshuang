@@ -117,29 +117,48 @@ static int BuildCommand(const std::vector<std::string>& command)
 
 #endif
 
+/** 从 CloudRebuild BIT 取得目标目录名。只有纯位宽参数使用宿主系统。
+@param [in] bit 完整平台前缀及 32/64，或桌面宿主的 32/64
+@return 平台目录名，参数或宿主不支持时为空
+*/
+static std::string TargetPlatform(const std::string& bit)
+{
+    if (bit.size() < 2 || (bit.compare(bit.size() - 2, 2, "32") != 0 && bit.compare(bit.size() - 2, 2, "64") != 0))
+        return "";
+    const std::string prefix = bit.substr(0, bit.size() - 2);
+    if (prefix.empty())
+    {
+#ifdef _WIN32
+        return "windows";
+#elif defined(__linux__)
+        return "linux";
+#else
+        return "";
+#endif
+    }
+    const char* const platforms[] = { "arm", "wasm", "android", "mac-intel", "mac-apple-silicon",
+        "iOS-arm", "iOS-intel-simulator", "iOS-apple-silicon-simulator" };
+    for (const char* platform : platforms)
+    {
+        if (prefix == platform) return prefix;
+    }
+    return "";
+}
+
 /** 根据真实原生目标和链接类型确定产物名称
 @param [in] library 库名，不含路径
 @param [in] linkage lib或dll
 @param [in] mode debug或release
+@param [in] platform 由 BIT 指定的目标平台目录名
 @return 已准备SDK中的归档或动态库文件名
 */
-static std::string NativeLibraryName(const std::string& library, const std::string& linkage, const std::string& mode)
+static std::string NativeLibraryName(const std::string& library, const std::string& linkage, const std::string& mode, const std::string& platform)
 {
-#ifdef _WIN32
-    return library + (mode == "debug" ? "d" : "") + ".lib";
-#else
-    std::string suffix = ".so";
-#ifdef __APPLE__
-    suffix = ".dylib";
-#endif
-    const char* targetSystem = std::getenv("CMAKE_SYSTEM_NAME");
-    if (targetSystem != nullptr && targetSystem[0] != '\0')
-    {
-        const std::string target(targetSystem);
-        suffix = target == "Darwin" || target == "iOS" ? ".dylib" : ".so";
-    }
-    return "lib" + library + (mode == "debug" ? "d" : "") + (linkage == "lib" ? ".a" : suffix);
-#endif
+    const std::string name = library + (mode == "debug" ? "d" : "");
+    if (platform == "windows") return name + ".lib";
+    if (linkage == "lib") return "lib" + name + ".a";
+    const bool apple = platform.compare(0, 4, "mac-") == 0 || platform.compare(0, 4, "iOS-") == 0;
+    return "lib" + name + (apple ? ".dylib" : ".so");
 }
 
 /** 校验项目标识，拒绝路径和命令解释字符
@@ -230,8 +249,10 @@ static int CaptureBefore(const std::vector<std::string>& command, std::vector<st
     PROCESS_INFORMATION process = {};
     std::vector<char> arguments(line.begin() + 1, line.end());
     arguments.push_back('\0');
-    // 两条流均使用管道，子进程不共享或改写外层控制台的光标、换行和颜色状态。
-    const BOOL started = CreateProcessA(nullptr, arguments.data(), nullptr, nullptr, TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &startup, &process);
+    // 标准输出与诊断各走独立管道。若输入来自控制台，子进程需共享此控制台才能读键。
+    DWORD inputMode = 0;
+    const DWORD flags = GetConsoleMode(startup.hStdInput, &inputMode) ? 0 : CREATE_NO_WINDOW;
+    const BOOL started = CreateProcessA(nullptr, arguments.data(), nullptr, nullptr, TRUE, flags, nullptr, nullptr, &startup, &process);
     CloseHandle(errorWriter);
     CloseHandle(writer);
     if (!started)
@@ -617,7 +638,7 @@ static bool PreparedDependencies(const std::string& root, const std::vector<std:
             {
                 continue; // 独立Wasm模块由运行时桥接，不把其静态闭包混入调用方。
             }
-            path = wasm ? child + (mode == "debug" ? "d" : "") + ".a" : NativeLibraryName(child, link, mode);
+            path = wasm ? child + (mode == "debug" ? "d" : "") + ".a" : NativeLibraryName(child, link, mode, TargetPlatform(bit));
             if (std::find(libraries.begin(), libraries.end(), path) == libraries.end())
             {
                 libraries.push_back(path);
@@ -838,7 +859,7 @@ static int RunMain(int argc, char** argv)
         const char* configuredRoot = std::getenv("XUEYELINGSHUANG");
         const std::string bit(argv[3]), linkage(argv[4]), mode(argv[5]), scope(argv[6]);
         if (configuredRoot == nullptr || configuredRoot[0] == '\0' || !ValidLibrary(argv[2]) ||
-            (bit != "32" && bit != "64" && bit != "arm32" && bit != "arm64" && bit != "wasm32" && bit != "wasm64") ||
+            TargetPlatform(bit).empty() ||
             (linkage != "dll" && linkage != "lib") || (mode != "release" && mode != "debug") ||
             (scope != "only" && scope != "same"))
         {
@@ -922,7 +943,8 @@ static int RunMain(int argc, char** argv)
 	dlllib = argv[3];
 	debugRelease = argv[4];
 	allSame = argv[5];
-    if (!ValidLibrary(projectName) || (bit != "32" && bit != "64" && bit != "arm32" && bit != "arm64") ||
+    const std::string platform = TargetPlatform(bit);
+    if (!ValidLibrary(projectName) || platform.empty() ||
         (dlllib != "lib" && dlllib != "dll") || (debugRelease != "debug" && debugRelease != "release") ||
         (allSame != "only" && allSame != "same" && allSame != "librely"))
     {
@@ -930,6 +952,12 @@ static int RunMain(int argc, char** argv)
     }
 	
 	//xueyelingshuang路径
+    if (platform != "windows" && platform != "linux" && platform != "arm")
+    {
+        std::fprintf(stderr, "Build toolchain for %s is not integrated; use --before %s %s %s %s only to prepare dependencies.\n",
+            platform.c_str(), projectName.c_str(), bit.c_str(), dlllib.c_str(), debugRelease.c_str());
+        return 2;
+    }
     const char* configuredRoot = std::getenv("XUEYELINGSHUANG");
     if (configuredRoot == nullptr || configuredRoot[0] == '\0')
     {
