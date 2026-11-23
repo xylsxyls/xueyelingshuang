@@ -74,9 +74,10 @@
 #endif
 #ifdef __APPLE__
 #include <TargetConditionals.h>
+#include <mach/mach.h>
 #include <sys/attr.h>
-#if !TARGET_OS_IPHONE
 #include <sys/sysctl.h>
+#if !TARGET_OS_IPHONE
 #include <sys/proc.h>
 #include <libproc.h>
 #endif
@@ -1376,6 +1377,68 @@ uint64_t CSystem::currentMemory()
 #endif
 }
 #endif // CSYSTEM_PLATFORM_CAPABILITY
+
+bool CSystem::queryMemoryAvailability(uint64_t& physicalBytes, uint64_t& availableBytes, uint64_t& virtualBytes)
+{
+    physicalBytes = 0;
+    availableBytes = 0;
+    virtualBytes = 0;
+#ifdef _WIN32
+    MEMORYSTATUSEX state = {};
+    state.dwLength = sizeof(state);
+    if (!GlobalMemoryStatusEx(&state))
+    {
+        return false;
+    }
+    physicalBytes = state.ullTotalPhys;
+    availableBytes = (std::min)(state.ullAvailPhys, state.ullAvailPageFile);
+    virtualBytes = state.ullAvailVirtual;
+#elif defined(__APPLE__)
+    uint64_t total = 0;
+    size_t size = sizeof(total);
+    if (sysctlbyname("hw.memsize", &total, &size, nullptr, 0) != 0)
+    {
+        return false;
+    }
+    vm_statistics64_data_t statistics = {};
+    mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
+    const mach_port_t host = mach_host_self();
+    const kern_return_t result = host_statistics64(host, HOST_VM_INFO64,
+        reinterpret_cast<host_info64_t>(&statistics), &count);
+    mach_port_deallocate(mach_task_self(), host);
+    if (result != KERN_SUCCESS)
+    {
+        return false;
+    }
+    physicalBytes = total;
+    availableBytes = (static_cast<uint64_t>(statistics.free_count) + statistics.inactive_count) * vm_page_size;
+    virtualBytes = UINT64_MAX;
+#elif defined(__linux__)
+    const long page = sysconf(_SC_PAGESIZE);
+    const long freePages = sysconf(_SC_AVPHYS_PAGES);
+    const long totalPages = sysconf(_SC_PHYS_PAGES);
+    if (page <= 0 || freePages < 0 || totalPages <= 0)
+    {
+        return false;
+    }
+    physicalBytes = static_cast<uint64_t>(totalPages) * page;
+    availableBytes = static_cast<uint64_t>(freePages) * page;
+    virtualBytes = UINT64_MAX;
+#else
+    return false;
+#endif
+    return true;
+}
+
+uint64_t CSystem::monotonicMilliseconds()
+{
+#ifdef _WIN32
+    return ::GetTickCount64();
+#else
+    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count());
+#endif
+}
 #endif // CSYSTEM_NATIVE_API
 
 uint32_t CSystem::GetTickCount()

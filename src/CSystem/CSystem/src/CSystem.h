@@ -643,6 +643,21 @@ public:
     */
     static uint64_t currentMemory();
 #endif // CSYSTEM_PLATFORM_CAPABILITY
+
+    /** 查询本机用于分配保护的内存快照
+    @param [out] physicalBytes 物理内存总字节数
+    @param [out] availableBytes 可供参考的物理内存字节数；Windows 同时取可提交余量的较小值
+    @param [out] virtualBytes Windows 当前进程可用虚拟地址字节数，其他原生端为 UINT64_MAX
+    @return true 表示查询成功，false 时三个输出均为零。成功快照不预留资源
+    @note 支持平台 Windows、Linux、Linux ARM、macOS、Android、iOS
+    */
+    static bool queryMemoryAvailability(uint64_t& physicalBytes, uint64_t& availableBytes, uint64_t& virtualBytes);
+
+    /** 获取原生单调时钟的 64 位毫秒数，用于比较同一平台上的间隔
+    @return 单调时钟纪元以来的毫秒数
+    @note 支持平台 Windows、Linux、Linux ARM、macOS、Android、iOS
+    */
+    static uint64_t monotonicMilliseconds();
 #endif // CSYSTEM_NATIVE_API
 
     /** 获取系统运行毫秒计数
