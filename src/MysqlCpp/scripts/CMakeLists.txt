@@ -1508,15 +1508,6 @@ add_custom_command(TARGET MysqlCpp POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${native_macro}" "${SDK_ROOT}/include/MysqlCpp/MysqlCppMacro.h"
     VERBATIM)
 
-# CloudRebuild runs the same hook after its final header and Macro copy.
-option(CLOUD_REBUILD_DEFER_AFTER "Let the outer build driver run after following SDK publication" OFF)
-if(NOT CLOUD_REBUILD_DEFER_AFTER)
-    add_custom_command(TARGET MysqlCpp POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E env "CLOUD_REBUILD_SDK_ROOT=${SDK_ROOT}"
-            bash "${CMAKE_CURRENT_LIST_DIR}/after_MysqlCpp.sh"
-        VERBATIM)
-endif()
-
 target_compile_definitions(MysqlCpp PRIVATE CPPCONN_LIB_BUILD)
 find_package(Threads REQUIRED)
 if(NOT EXISTS "${SDK_ROOT}/include/mysql-connector-cpp/cppconn/driver.h")
