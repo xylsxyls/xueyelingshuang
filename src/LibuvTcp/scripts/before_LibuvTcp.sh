@@ -42,23 +42,10 @@ if [[ $4 != only ]]; then
 fi
 librariesrely+=($'project\tLockFreeHashMap\t'"$LockFreeHashMap_dlllib")
 
-root=$(cd "$(dirname "$0")/../../.." && pwd) || exit 1
-config=release
-archive=libuv.a
-target=${THIRDPARTY_PLATFORM:-${CMAKE_SYSTEM_NAME:-}}
-if [[ -z $target && ${CMAKE_TOOLCHAIN_FILE:-} == *android.toolchain.cmake ]]; then target=android; fi
-if [[ -z $target && -n ${CMAKE_OSX_SYSROOT:-} ]]; then
-    echo "libuv: select the Apple target using THIRDPARTY_PLATFORM" >&2; exit 1
-fi
-case "$1:${target:-$OSTYPE}" in
-    wasm*:*) ;;
-    *:[Ww]indows|*:msys*|*:cygwin*|*:win32*)
-        case "$1" in 32|64) ;; *) echo "libuv: unsupported Windows target $1" >&2; exit 1 ;; esac
-        config=$3
-        if [[ $config == debug ]]; then archive=libuvd.lib; else archive=libuv.lib; fi
-        ;;
-esac
-THIRDPARTY_FILES="$archive" bash "$root/tools/thirdparty.sh" libuv "$1" lib "$config" "$4" || exit 1
-librariesrely+=($'link\t'"$archive")
+thirdparty="${XUEYELINGSHUANG}tools/thirdparty.sh"
+records=$(bash "$thirdparty" --print-rely libuv "$1" lib "$3" "$4") || exit 1
+while IFS= read -r record; do
+    if [[ -n $record ]]; then librariesrely+=("$record"); fi
+done <<< "$records"
 
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return
