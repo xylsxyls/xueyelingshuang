@@ -1,6 +1,12 @@
 ﻿#include "FFmpegCppAudioTempo.h"
+#ifdef __EMSCRIPTEN__
+// Wasm 的包含目录由本次 before 选中的版本包提供。
+#include <SoundTouch.h>
+#include <SoundTouchDLL.h>
+#else
 #include "soundtouch/SoundTouch.h"
 #include "soundtouch/SoundTouchDLL.h"
+#endif
 #ifdef _MSC_VER
 #ifdef _DEBUG
 #pragma comment(lib, "SoundTouchDLLd.lib")

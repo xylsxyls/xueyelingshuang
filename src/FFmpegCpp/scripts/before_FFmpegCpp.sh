@@ -12,48 +12,29 @@ fi
 librariesrely+=($'project\tDllRelyTest\t'"$DllRelyTest_dlllib")
 !EOF!
 
-root=$(cd "$(dirname "$0")/../../.." && pwd) || exit 1
-case "$1" in 32|wasm32|arm32) bits=x86 ;; 64|wasm64|arm64) bits=x64 ;; *) exit 2 ;; esac
-case "${THIRDPARTY_PLATFORM:-${CMAKE_SYSTEM_NAME:-$OSTYPE}}" in
-    [Ww]indows|msys*|cygwin*|win32*) windows=1 ;;
-    *) windows=0 ;;
-esac
-components=(avformat avcodec swscale swresample avutil)
-if [[ $1 != wasm* && $windows == 1 ]]; then
-    # Windows builds can enable ANSI file paths using CStringManager.
+thirdparty="${XUEYELINGSHUANG}tools/thirdparty.sh"
+platform=$(bash "$thirdparty" --target-platform "$1") || exit 1
+vendors=(ffmpeg soundtouch-2.4.1)
+if [[ $platform == windows ]]; then
+    #--------------------------------------------------------------------
+    CStringManager_bit=$1
+    CStringManager_dlllib=$2
+    CStringManager_debugRelease=$3
+    CStringManager_allSame=$4
     if [[ $4 != only ]]; then
-        "$CLOUD_REBUILD" CStringManager "$1" "$2" "$3" "$4"
+        "$CLOUD_REBUILD" CStringManager "$CStringManager_bit" "$CStringManager_dlllib" "$CStringManager_debugRelease" "$CStringManager_allSame" || exit 1
     fi
-    librariesrely+=($'project\tCStringManager\t'"$2")
-    suffix=
-    if [[ $3 == debug ]]; then suffix=d; fi
-    names=()
-    for name in "${components[@]}"; do
-        names+=("$name$suffix.lib")
-        librariesrely+=($'link\t'"$name$suffix.lib")
-    done
-    for name in "avcodec-60$suffix.dll" "avformat-60$suffix.dll" "swscale-7$suffix.dll" "swresample-4$suffix.dll" "avutil-58$suffix.dll"; do
-        names+=("$name")
-    done
-    THIRDPARTY_FILES="$(printf '%s\n' "${names[@]}")" bash "$root/tools/thirdparty.sh" ffmpeg "$1" dll "$3" "$4" || exit 1
-    base="SoundTouchDLL$suffix"
-    THIRDPARTY_FILES="$(printf '%s\n' "$base.lib" "$base.dll" "$base.pdb")" bash "$root/tools/thirdparty.sh" soundtouch "$1" dll "$3" "$4" || exit 1
-    librariesrely+=($'link\t'"$base.lib")
+    librariesrely+=($'project\tCStringManager\t'"$CStringManager_dlllib")
+    linkage=dll
 else
-    for vendor in ffmpeg soundtouch openh264; do
-        case $vendor in ffmpeg) names=("${components[@]}") ;; soundtouch) names=(SoundTouchDLL) ;; openh264) names=(openh264) ;; esac
-        files=()
-        for name in "${names[@]}"; do
-            archive="lib$name.a"
-            files+=("$archive")
-            if [[ $1 == wasm* ]]; then
-                librariesrely+=($'vendor\t'"tools/$vendor/lib/wasm/static/$bits/$archive")
-            else
-                librariesrely+=($'link\t'"$archive")
-            fi
-        done
-        THIRDPARTY_FILES="$(printf '%s\n' "${files[@]}")" bash "$root/tools/thirdparty.sh" "$vendor" "$1" lib release "$4" || exit 1
-    done
+    linkage=lib
+    vendors+=(openh264)
 fi
+for vendor in "${vendors[@]}"; do
+    records=$(bash "$thirdparty" --print-rely "$vendor" "$1" "$linkage" "$3" "$4") || exit 1
+    while IFS= read -r record; do
+        if [[ -n $record ]]; then librariesrely+=("$record"); fi
+    done <<< "$records"
+done
 
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return
