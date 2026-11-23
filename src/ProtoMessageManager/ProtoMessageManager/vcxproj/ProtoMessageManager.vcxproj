@@ -191,6 +191,11 @@
       <AdditionalLibraryDirectories>$(VendorSDKRoot)\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug' and !Exists('$(VendorSDKRoot)\lib\libprotobuf-lited.lib')">
+    <ClCompile>
+      <PreprocessorDefinitions>PROTO_MESSAGE_USE_RELEASE_PROTOBUF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="..\src\ProtoMessage.proto" />
   </ItemGroup>

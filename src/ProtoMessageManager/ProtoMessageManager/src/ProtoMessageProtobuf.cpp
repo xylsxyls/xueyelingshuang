@@ -1,13 +1,6 @@
 ﻿#include "ProtoMessageProtobuf.h"
 #include <google/protobuf/io/coded_stream.h>
 #include <cstring>
-#ifdef _MSC_VER
-#if defined(_DEBUG)
-#pragma comment(lib, "libprotobuf-lited.lib")
-#else
-#pragma comment(lib, "libprotobuf-lite.lib")
-#endif
-#endif
 
 bool ProtoMessageProtobuf::validValue(const Variant& value)
 {

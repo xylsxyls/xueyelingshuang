@@ -1,12 +1,16 @@
 ﻿#pragma once
 #include <google/protobuf/stubs/common.h>
-#if GOOGLE_PROTOBUF_VERSION == 3019003
-#include "ProtoMessageManager/protoc-3.19.3/ProtoMessage.pb.h"
-#else
 #include "ProtoMessage.pb.h"
-#endif
 #include "Variant/VariantAPI.h"
 #include <vector>
+
+#ifdef _MSC_VER
+#if defined(_DEBUG) && !defined(PROTO_MESSAGE_USE_RELEASE_PROTOBUF)
+#pragma comment(lib, "libprotobuf-lited.lib")
+#else
+#pragma comment(lib, "libprotobuf-lite.lib")
+#endif
+#endif
 
 /** 内部protobuf适配，只转换值、控制资源预算和调用生成代码，不实现字节编码
 临时protobuf对象由调用栈独占；分配异常由公开消息入口捕获
