@@ -20,8 +20,10 @@ Wasm 的两个位宽分别以 BIT=wasm32 和 BIT=wasm64 构建。启用 LIBRARY_
 await require('./LibraryTestHost')(require('./ProtoMessageManagerTest'), { wasmPath: '包内路径/ProtoMessageManagerTest.wasm' })。
 运行 wasm64 的宿主必须支持 Memory64。
 Linux ARM32 的发布归档由 Arm GNU Toolchain 13.3.Rel1 构建，目标为 armv7 hard-float。ProtoMessageManager 与归档应采用相同的 C++ 参数传递约定。更换工具链后，运行 NetInterfaceTest --cases 4 检验字符串字段的编码及解码。
-Windows、Linux x86/x64、wasm32/64 使用 protobuf-lite 3.3.0。Linux ARMv7 hard-float（arm32）和 AArch64（arm64）使用 3.19.3；两种位宽分别提供可链接静态程序及共享库的 PIC 归档。before 在当前 schema 与已记录的 SHA-256 匹配时，将随仓的 3.19.3 生成文件发布到目标 SDK 的 include/ProtoMessageManager/protoc-3.19.3。更新 schema 时，用 PROTOC_EXECUTABLE 指定宿主可执行的 protoc 3.19.3；显式指定的版本不匹配会报错。
-Android、macOS、iOS 需指定目标平台及 ABI，提供对应 protobuf 的头文件和静态归档。若 tools 尚无该目标的归档，将匹配的头和 libprotobuf-lite.a 分别放入专用 CLOUD_REBUILD_SDK_ROOT 的 include/protobuf 和 lib。每个平台、位宽及配置使用独立 SDK。
+before 默认使用 tools/protobuf-3.3.0，Windows、Linux x86/x64、Linux ARMv7 hard-float/AArch64 及 wasm32/64 都使用该包的 3.3.0 头文件和运行库。将 before_ProtoMessageManager.sh 内的 version=3.3.0 改为 version=3.19.3 即选择 tools/protobuf-3.19.3，该包目前提供 arm32 和 arm64 的运行库。version 只从所选包准备头库。缺少目标库或头目录为空、缺失时会显示路径并暂停。按一个键跳过此次复制，保留现有 SDK，继续生成和编译。标准输入已关闭时返回失败。
+before 通过 thirdparty.sh --host-tool 从同一个包取宿主 protoc。64 位宿主先查 x64，再查同平台 x86；均缺失时显示路径，按键跳过生成。工具可用时，两种版本都直接从 src/ProtoMessageManager/ProtoMessageManager/src/ProtoMessage.proto 在同目录生成 ProtoMessage.pb.h 和 ProtoMessage.pb.cc。不同版本并行构建使用不同源码工作区和 SDK。
+在 Windows 上手工恢复时，把同版本的头文件放入目标 SDK/include/protobuf，把匹配位数、CRT 和 Debug/Release 的库放入 SDK/lib。若也跳过了 protoc，须备齐同版本的两个生成文件。之后可直接在 VS 重新编译。下次运行 version 时仍会检查 tools。
+Windows 的 Debug 默认链接 libprotobuf-lited.lib。Wasm32 和 Wasm64 各只交付一份 Release 的 libprotobuf-lite.a；Debug 工程按约定回退到相同位宽的 Release 归档。原生 SDK 的第三方头在 include/protobuf；Wasm 的 3.3.0 头在 include/protobuf-3.3.0，与 vendor 回执一致。原生发布的公开头由 ProtoMessageManagerAPI.h 引入，白盒测试需要的 ProtoMessage.pb.h 和 ProtoMessageProtobuf.h 由测试工程在依赖发布后准备。
 */
 
 /** 性能用例
@@ -86,6 +88,14 @@ wasm32Debug/test/ProtoMessageManagerTest.wasm f5452d18f2459d83018ad94f3694151968
 wasm32Release/test/ProtoMessageManagerTest.wasm 65823752110c9f0a44a900804703bf6d6ae5fbf8ba76e7f965985171c2050b99
 wasm64Debug/test/ProtoMessageManagerTest.wasm 73aa7c72eda6c5ab60b9fac6562fb8c312b0bf5d0c4fcdf0618d29f219d94145
 wasm64Release/test/ProtoMessageManagerTest.wasm 0735bd9c126969066e61575cde59c8cd8102504b24af01e9ce1b9e3d90300db9
+*/
+
+/** 版本选择与 SDK 发布验证，2026-11-23
+Windows Win32、x64 均通过 version_debug.sh、version_release.sh 和 MSBuild 构建后执行 --cases 1,2,3,4。每个位宽的 Debug 执行 47462 项检查，Release 执行 47450 项，全部 0 失败。Wasm32、Wasm64 均通过 CloudRebuild、Emscripten 3.1.74 构建 Debug、Release，并在 Node 执行 --cases 1,2,3。四种组合各 47436 项检查，全部 0 失败。八种组合均使用默认 protobuf 3.3.0。
+thirdparty.sh 宿主工具测试覆盖 x64 优先、同平台 x86 回退、32 位宿主只查 x86、找不到工具时的非零退出码及路径提示。Windows 实测查询，Linux 与 macOS 使用模拟宿主信息验证目录选择。发布测试核对原生 link 和 Wasm vendor 记录、多库顺序、DLL/PDB 复制、纯头包和失败时无记录。四个日志调用脚本均用 3.3.0 生成了对应的 LogTestMessage 文件。
+第三方库选择用例：平铺四个带 d、五个不带 d 的库，Debug 返回四个，Release 返回五个。显式配置子目录按目录接入；两种配置均复制父目录的 libd.lib，分别链接 debug/libad.lib 和 release/liba.lib。只交付 Release 时 Debug 沿用同名的 Release 制品和头；只交付 Debug 时 Release 提示并暂停，按键跳过后无 protobuf 链接记录，也不发布头库。Windows、Wasm 的构建组合及功能结果见本段首行。
+切换 3.3.0、3.19.3、3.3.0 时，应每次在 src 生成与所选 protoc 对应的两个文件。缺目标库时，应在 CloudRebuild 中显示路径并等待一个按键，跳过复制后仍须生成同版源码。缺少宿主工具时，应列出已查路径并允许跳过生成。无人确认且输入已关闭时，应返回失败。上述场景均已验证。Windows 控制台从 version_release.sh 启动，缺库提示可见，单键无需回车。另用空 SDK 确认跳过后 MSBuild 报 C1083；手工补齐对应头库后，直接用 MSBuild 构建同一 Win32 Release 的 VS 工程，成功生成 DLL。含空格的 SDK 上连续两次执行 after 均成功，仅移除两个私有头。
+两版运行库分别在 ARMv7 hard-float 和 AArch64 上交叉编译 Variant、ProtoMessageManager 的 Release 静态库、共享库，并链接公开 main 示例，8 种组合全部链接成功。本批未在 ARM 板上运行，也未测量性能。
 */
 
 /** Linux ARM 功能验证，2026-11-22

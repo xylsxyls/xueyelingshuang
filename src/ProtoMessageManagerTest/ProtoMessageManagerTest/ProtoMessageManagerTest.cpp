@@ -13,14 +13,6 @@
 #include <new>
 #include <cstdlib>
 
-#ifdef _MSC_VER
-#ifdef _DEBUG
-#pragma comment(lib, "libprotobuf-lited.lib")
-#else
-#pragma comment(lib, "libprotobuf-lite.lib")
-#endif
-#endif
-
 // 仅当前测试线程参与注入，避免设备宿主或并发读取线程消耗故障预算。
 #if defined(_MSC_VER) && _MSC_VER < 1900
 static __declspec(thread) int32_t allocationBudget = -1;

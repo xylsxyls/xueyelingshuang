@@ -159,6 +159,11 @@
       <AdditionalLibraryDirectories>$(TestSdkRoot)\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug' and !Exists('$(TestSdkRoot)\lib\libprotobuf-lited.lib')">
+    <ClCompile>
+      <PreprocessorDefinitions>PROTO_MESSAGE_USE_RELEASE_PROTOBUF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ProtoMessageManagerTest.h" />
   </ItemGroup>
