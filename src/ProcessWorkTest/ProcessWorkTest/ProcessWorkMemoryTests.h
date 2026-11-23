@@ -112,3 +112,7 @@ void testProcessWorkDependencyOptions();
 /** 校验发送预映射保护可独立限制准备工作，拒绝后仍可正常提交，重新配置可恢复准备
 */
 void testProcessWorkMappingReserve();
+
+/** 交替使用 1 MiB 和 2 MiB 的收、发积压额度，通过实际交付检查配置副本及两侧的独立计费
+*/
+void testProcessWorkIndependentLimits();

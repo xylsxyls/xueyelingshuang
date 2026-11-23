@@ -812,7 +812,7 @@ std::vector<BlackBoxCase> processCases()
         {
             meshTest(4, false, 48, 3, 2);
         });
-    add("mesh-fixed-six", "legacy 123456 payload; fixed128 block configuration", false,
+    add("mesh-fixed-six", "exact 123456 payload, 128 initial shared blocks", false,
         []()
         {
             meshTest(4, true, 100, 3, 2, 128);
@@ -1089,6 +1089,10 @@ std::vector<BlackBoxCase> processCases()
         false, testProcessWorkDependencyOptions);
     add("sender-mapping-reserve", "custom sender protection rejects pre-mapping only; reconfigure restores it and both sends arrive",
         false, testProcessWorkMappingReserve);
+    add("receive-batch-pool", "record size, storage ceiling, idle reuse, large record recovery and public send boundary",
+        false, testProcessWorkReceiveBatchPool);
+    add("independent-local-limits", "frozen receive and Post limits independently control admission, charge and delivery",
+        false, testProcessWorkIndependentLimits);
 #ifdef CTTM_TEST_SINGLE_PROCESS
     // 签名应用不能自行启动测试子进程。保留原编号，由设备宿主记录未执行。
     const int childCases[] = { 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 35, 46, 47, 48, 49, 50,

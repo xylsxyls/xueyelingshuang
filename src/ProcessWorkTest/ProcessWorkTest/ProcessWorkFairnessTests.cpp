@@ -37,7 +37,7 @@ void testProcessWorkFairProgress(bool mixed)
     memory.m_localQueueBytes = mixed ? 4 * (65536 + 277) : 4 * 283;
     ProcessWork& ipc = ProcessWork::instance();
     bbCheck(ipc.setReceiveName(receiveName(mixed ? "fair-mixed" : "fair-single-slot")), "fairness receive name failed");
-    ipc.addProcessReceiveCallback(&ledger);
+    bbCheck(ipc.addProcessReceiveCallback(&ledger), "fairness callback registration failed");
     bbCheck(ipc.initReceive(mixed ? 65548 : 32, mixed ? 8 : 1, 0, 0, 0, 0, memory), "fairness receive initialization failed");
     std::atomic<bool> stop(false);
     std::atomic<int32_t> ready(0);

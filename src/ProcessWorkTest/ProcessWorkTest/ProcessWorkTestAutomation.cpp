@@ -152,9 +152,10 @@ void ProcessWorkTestAutomation::replaceOnce(std::string& text, const std::string
 
 std::map<std::string, double> ProcessWorkTestAutomation::parse(const std::string& text)
 {
-    const size_t start = text.rfind('{');
-    bbCheck(start != std::string::npos, "missing benchmark JSON");
-    std::istringstream input(text.substr(start));
+    const size_t end = text.find_last_not_of(" \t\r\n");
+    bbCheck(end != std::string::npos, "missing benchmark JSON");
+    const size_t newline = text.rfind('\n', end);
+    std::istringstream input(text.substr(newline == std::string::npos ? 0 : newline + 1));
     std::map<std::string, double> result;
     char token = 0;
     bbCheck((input >> token) && token == '{', "invalid JSON start");
@@ -272,7 +273,15 @@ void ProcessWorkTestAutomation::cross(const std::string& output, const std::stri
                 for (size_t i = 0; i < children.size(); ++i)
                 {
                     bbCheck(children[i]->poll() == -1, "cross peer exited before " + suffix);
-                    ready = !bbRead(prefix + suffix + bbNumber(i)).empty() && ready;
+                    const std::string value = bbRead(prefix + suffix + bbNumber(i));
+                    if (suffix == ".armed")
+                    {
+                        ready = (value == "32" || value == "64") && ready;
+                    }
+                    else
+                    {
+                        ready = value == (suffix == ".ready" ? bbNumber(children[i]->pid()) : "1") && ready;
+                    }
                 }
                 return ready;
             }, suffix.c_str(), 120000);
@@ -281,6 +290,9 @@ void ProcessWorkTestAutomation::cross(const std::string& output, const std::stri
         bbWrite(prefix + ".pids.tmp", bbNumber(children[0]->pid()) + " " + bbNumber(children[1]->pid()) + " " + bbNumber(children[2]->pid()));
         bbCheck(std::rename((prefix + ".pids.tmp").c_str(), (prefix + ".pids").c_str()) == 0, "cannot publish complete PID list");
         waitFiles(".armed");
+        const std::string firstBits = bbRead(prefix + ".armed0");
+        bbCheck(firstBits == bbRead(prefix + ".armed2") && firstBits != bbRead(prefix + ".armed1"),
+            "cross requires one 32-bit and one 64-bit executable");
         bbWrite(prefix + ".go", "1");
         waitFiles(".done");
         bbWrite(prefix + ".finish", "1");
@@ -292,6 +304,18 @@ void ProcessWorkTestAutomation::cross(const std::string& output, const std::stri
         bbCheck(report.good(), "cross report write failed");
         std::cout << "cross mode " << modes[mode] << " passed" << std::endl;
     }
+}
+
+/** 核对共享池终值；六字节五千万包的固定池场景另需生产端和接收端均未发生增长
+@param [in] row 基准程序输出的单轮结果
+@param [in] blocks 本轮配置的共享块数
+@param [in] fixedPools 是否按零增长场景验收
+@return true 表示报告的容量和增长次数符合本轮条件
+*/
+static bool ValidPoolSample(const std::map<std::string, double>& row, int32_t blocks, bool fixedPools)
+{
+    return row.at("final_blocks") == blocks && (!fixedPools ||
+        (row.at("producer_pool_growth") == 0 && row.at("receiver_pool_growth") == 0));
 }
 
 double ProcessWorkTestAutomation::sampleSpread(const std::vector<double>& values)
@@ -419,6 +443,7 @@ int32_t ProcessWorkTestAutomation::matrix(int32_t argc, char** argv)
                         row.at("threads_per_process") == value.m_threads && row.at("bytes") == value.m_bytes &&
                         row.at("messages") == int64_t(value.m_processes) * value.m_threads * value.m_count &&
                         row.at("blocks") == value.m_blocks && row.at("mode") == value.m_mode &&
+                        ValidPoolSample(row, value.m_blocks, value.m_bytes == 6 && row.at("messages") == 50000000) &&
                         row.at("produced_per_second") > 0 && row.at("consumed_per_second") > 0, "benchmark verification mismatch");
                     // 日志秒数保留六位小数，只容许其舍入误差，不能用任意正速率冒充有效成绩。
                     const char* rates[] = { "produced_per_second", "consumed_per_second" };
@@ -496,6 +521,13 @@ void ProcessWorkTestAutomation::selfTest()
         bbCheck(rejected, "accepted malformed integer argument");
     }
     bbCheck(workloads().size() == 23, "workload loss");
+    std::map<std::string, double> pool = { { "final_blocks", 64 }, { "producer_pool_growth", 0 }, { "receiver_pool_growth", 0 } };
+    bbCheck(ValidPoolSample(pool, 64, true) && !ValidPoolSample(pool, 63, true), "fixed shared capacity");
+    pool["producer_pool_growth"] = 1;
+    bbCheck(!ValidPoolSample(pool, 64, true) && ValidPoolSample(pool, 64, false), "producer growth classification");
+    pool["producer_pool_growth"] = 0;
+    pool["receiver_pool_growth"] = 1;
+    bbCheck(!ValidPoolSample(pool, 64, true), "receiver growth classification");
     const char* badCustom[] = { "1,4,6,1024,0,", "1,4,,1024,0", "1,4,6,1024", "1,4,6,1024,0,1" };
     for (size_t i = 0; i < sizeof(badCustom) / sizeof(badCustom[0]); ++i)
     {
@@ -534,7 +566,8 @@ void ProcessWorkTestAutomation::selfTest()
         sampleSpread(std::vector<double>{ 10, 10, 10 }) == 0, "sample spread");
     bbCheck(median(std::vector<double>{ 9, 1, 3 }) == 3 && median(std::vector<double>{ 4, 2 }) == 3, "median");
     bbCheck(parse("noise\n{\"verified\":true,\"x\":1.25}\n").at("x") == 1.25, "valid JSON");
-    const char* invalid[] = { "", "{\"x\":NaN}", "{\"x\":1,\"x\":2}", "{\"x\":1", "{\"x\":true wrong}", "{\"x\":1}junk" };
+    const char* invalid[] = { "", "{\"x\":NaN}", "{\"x\":1,\"x\":2}", "{\"x\":1", "{\"x\":true wrong}", "{\"x\":1}junk",
+        "broken {\"x\":1}", "{\"truncated\":{\"x\":1}" };
     for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
     {
         bool rejected = false;

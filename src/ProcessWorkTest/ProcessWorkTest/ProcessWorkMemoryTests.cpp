@@ -1,6 +1,7 @@
 ﻿#include "ProcessWorkMemoryTests.h"
 #include "ProcessWorkTest.h"
 #include "ProcessWork/ProcessWorkTime.h"
+#include "CSystem/CSystemAPI.h"
 #include <limits>
 #include <cstring>
 #include <stdexcept>
@@ -119,11 +120,17 @@ void testProcessWorkConfigurationCopyFailure()
     bool copyFails = false;
     ProcessWorkMemoryConfig config;
     config.m_queuePool.m_onGrowth = ProcessWorkTestGrowthObserver(copyFails);
+    config.m_freeQueuePool.m_onGrowth = ProcessWorkTestGrowthObserver(copyFails);
+    LockFreeQueuePoolConfig merged;
     ProcessWorkChannel receiver;
     copyFails = true;
+    bbCheck(!ProcessWorkMemory::queueConfig(config, false, merged) && !ProcessWorkMemory::queueConfig(config, true, merged),
+        "throwing growth observer escaped or merged successfully");
     bbCheck(!receiver.openReceiver(76, 2, 0, 0, 0, 0, config), "failed configuration copy reported success");
     bbCheck(!receiver.ready() && receiver.bufferCount() == 0, "failed configuration published receiver");
     copyFails = false;
+    bbCheck(ProcessWorkMemory::queueConfig(config, false, merged) && merged.m_onGrowth &&
+        ProcessWorkMemory::queueConfig(config, true, merged) && merged.m_onGrowth, "pool copy did not recover");
     bbCheck(receiver.openReceiver(76, 2, 0, 0, 0, 0, config), "receiver could not retry configuration");
     receiver.publish();
     ProcessWorkChannel sender;
@@ -329,6 +336,21 @@ void testProcessWorkMemoryConfiguration()
     bbCheck(ipc.configure(components), "component retry setup");
     bbCheck(!ipc.initReceive(76, 4, 0, 0, 0, 0), "receive startup ignored task admission limit");
     components.m_receiveThread.m_maximumTasks = -1;
+    components.m_readThread.m_maximumTasks = 0;
+    bbCheck(ipc.configure(components) && !ipc.initReceive(76, 4, 0, 0, 0, 0),
+        "shared reader ignored its independent task limit");
+    components.m_readThread.m_maximumTasks = -1;
+    components.m_sendNames.nodes.initialCapacity = 1;
+    components.m_sendNames.nodes.maximumCapacity = 0;
+    bbCheck(!ipc.configure(components), "invalid name Map pool ignored");
+    components.m_sendNames.nodes.maximumCapacity = -1;
+    components.m_manager.m_threadMap.nodes.initialCapacity = 1;
+    components.m_manager.m_threadMap.nodes.maximumCapacity = 0;
+    bbCheck(ipc.configure(components), "disabled shared manager configuration was applied");
+    components.m_configureManager = true;
+    bbCheck(!ipc.configure(components), "enabled shared manager ignored its registry pool");
+    components.m_manager.m_threadMap.nodes.maximumCapacity = -1;
+    bbCheck(ipc.configure(components), "shared manager did not recover after rejected settings");
     components.m_sendChannels.nodes.initialCapacity = 1;
     components.m_sendChannels.nodes.maximumCapacity = 0;
     bbCheck(!ipc.configure(components), "invalid native Map config was silently ignored");
@@ -556,6 +578,17 @@ void testProcessWorkSharedGrowth()
 
 void testProcessWorkDependencyOptions()
 {
+    uint64_t total = 0, available = 0, virtualBytes = 0;
+    bbCheck(CSystem::queryMemoryAvailability(total, available, virtualBytes) && total != 0 &&
+        available <= total && virtualBytes != 0, "native memory snapshot invalid");
+#ifdef _WIN32
+    bbCheck(virtualBytes != UINT64_MAX, "Windows virtual address budget missing");
+#else
+    bbCheck(virtualBytes == UINT64_MAX, "unexpected virtual address budget on POSIX");
+#endif
+    const uint64_t before = CSystem::monotonicMilliseconds();
+    const uint64_t current = ProcessWorkTime::milliseconds();
+    bbCheck(before <= current && current <= CSystem::monotonicMilliseconds(), "maintenance clock mismatch");
     bbCheck(!ProcessWork::setProcessIdentityDirectory("invalid/relative") &&
         !ProcessWork::setSharedMemoryDirectory("invalid/relative") &&
         !ProcessWork::setSemaphoreDirectory("invalid/relative"), "relative IPC directory accepted");
@@ -666,12 +699,14 @@ void testProcessWorkMappingReserve()
     config.m_sendMappingReservePercent = 91;
     bbCheck(!ipc.configure(config), "invalid raw mapping percentage accepted");
     bbCheck(config.setSendMappingReserve(UINT64_MAX, 90) && ipc.configure(config), "sender policy rejected");
+    // 修改调用方副本；发送端仍须保留刚才复制的保护值，直到下次显式 configure。
+    bbCheck(config.setSendMappingReserve(0, 0), "cannot edit sender configuration copy");
     scope.start(&ledger, receiveName("mapping-reserve"), 76, 2);
     bbCheck(!ipc.prepareSend(bbPid(), -1, true), "sender map ignored its own reserve");
     sendPacket(0, bbPid(), "", "ordinary", 1);
     waitPackets(ledger, 1);
     scope.close();
-    bbCheck(config.setSendMappingReserve(0, 0) && ipc.configure(config), "sender policy reset failed");
+    bbCheck(ipc.configure(config), "sender policy reset failed");
     scope.start(&ledger, receiveName("mapping-reserve"), 76, 2);
     bbCheck(ipc.prepareSend(bbPid(), -1, true), "sender prepare failed after lowering its reserve");
     sendPacket(0, bbPid(), "", "prepared", 2);
@@ -680,4 +715,46 @@ void testProcessWorkMappingReserve()
     const std::vector<ReceivedPacket> packets = ledger.snapshot();
     bbCheck(packets.size() == 2 && packets[0].m_body == "ordinary" && packets[1].m_body == "prepared" &&
         packets[0].m_type == 1 && packets[1].m_type == 2, "preparation altered delivery");
+}
+
+void testProcessWorkIndependentLimits()
+{
+    const int32_t bytes = 1024 * 1024;
+    std::string body(bytes, 'q');
+    body[bytes / 2] = '\0';
+    ProcessWork& ipc = ProcessWork::instance();
+    for (int32_t postMB = 1; postMB <= 2; ++postMB)
+    {
+        ProcessWorkConfig config;
+        bbCheck(config.m_postMemory.setLocalQueueLimitMB(postMB) &&
+            config.m_receiveMemory.setLocalQueueLimitMB(3 - postMB) && ipc.configure(config), "set independent limits");
+        // 修改调用方副本，运行中的配置仍须采用刚才交给 configure 的值。
+        bbCheck(config.m_postMemory.setLocalQueueLimitMB(-1) && config.m_receiveMemory.setLocalQueueLimitMB(-1),
+            "edit caller-owned settings");
+        PacketLog ledger;
+        IpcScope scope;
+        scope.start(&ledger, receiveName("independent-limits"), bytes + 12, 2);
+        const int32_t pid = bbPid();
+        const bool receiveFits = postMB == 1;
+        bbCheck(ipc.sendResult(pid, body.data(), bytes, static_cast<MessageType>(1)) ==
+            (receiveFits ? PROCESS_WORK_SENT : PROCESS_WORK_TOO_LARGE), "receiver did not use its frozen limit");
+        if (receiveFits)
+        {
+            waitPackets(ledger, 1);
+        }
+        // 后台线程尚未启动，可精确观察本地接纳是否计费。
+        bbCheck(ipc.postResult(pid, body.data(), bytes, static_cast<MessageType>(2)) ==
+            (receiveFits ? PROCESS_WORK_POST_INVALID : PROCESS_WORK_POSTED), "Post did not use its own frozen limit");
+        bbCheck(ipc.postPendingBytes() == (receiveFits ? 0U : static_cast<uint64_t>(bytes) + 280),
+            "unexpected local charge before sender startup");
+        bbCheck(ipc.initPostThread() && ipc.post(pid, "end", 3, static_cast<MessageType>(3)), "Post barrier failed");
+        ipc.waitForPostEnd();
+        const size_t expected = receiveFits ? 2 : 1;
+        waitPackets(ledger, expected);
+        scope.close();
+        const std::vector<ReceivedPacket> packets = ledger.snapshot();
+        bbCheck(packets.size() == expected && packets.back().m_pid == pid && packets.back().m_type == 3 &&
+            packets.back().m_body == "end" && (!receiveFits || (packets.front().m_pid == pid &&
+            packets.front().m_type == 1 && packets.front().m_body == body)), "unexpected delivery after quota rejection");
+    }
 }

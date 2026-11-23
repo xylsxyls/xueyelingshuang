@@ -58,10 +58,16 @@ void runProcessWorkRuntimeControl()
 @param [in] bytes 正文长度，分别覆盖内联和独立映射
 @param [in] field 要改写的包头字段，0为PID、1为类型、2为长度
 @param [in] value 损坏的字段值
+@param [in] limitToBody true表示接收积压额度恰好允许原正文，物理块仍有余量
 */
-static void CheckCorruptHeader(int32_t bytes, int32_t field, int32_t value)
+static void CheckCorruptHeader(int32_t bytes, int32_t field, int32_t value, bool limitToBody = false)
 {
-    PublicChannelScope channel(2, 0, 0, 0, 0);
+    ProcessWorkMemoryConfig memory;
+    if (limitToBody)
+    {
+        memory.m_localQueueBytes = 277 + bytes;
+    }
+    PublicChannelScope channel(2, 0, 0, 0, 0, memory);
     const std::string body(static_cast<size_t>(bytes), 'x');
     bbCheck(channel.m_sender.trySend(body.data(), bytes, 1) == PROCESS_WORK_SENT, "header fixture send failed");
     SharedMemory directoryMemory("P3D" + bbNumber(bbPid()));
@@ -83,6 +89,7 @@ static void CheckCorruptHeader(int32_t bytes, int32_t field, int32_t value)
     bbCheck(packet != nullptr, "header fixture mapping missing");
     std::memcpy(packet + static_cast<size_t>(field) * sizeof(int32_t), &value, sizeof(value));
     ProcessWorkReceiveQueue received;
+    bbCheck(received.configure(memory), "receive budget setup failed");
     bbCheck(channel.m_receiver.pump(received, channel.m_full) == 0 && !channel.m_receiver.ready(),
         "invalid committed header not closed");
     char* delivered = nullptr;
@@ -99,6 +106,7 @@ void testProcessWorkCorruption()
         CheckCorruptHeader(bytes, 1, -1);
         CheckCorruptHeader(bytes, 2, -1);
         CheckCorruptHeader(bytes, 2, bytes == 6 ? 37 : 65);
+        CheckCorruptHeader(bytes, 2, bytes + 1, true);
     }
     PublicChannelScope channel(2, 0, 0, 0, 0);
     bbCheck(channel.m_sender.trySend("x", 1, 1) == PROCESS_WORK_SENT, "corruption fixture send failed");

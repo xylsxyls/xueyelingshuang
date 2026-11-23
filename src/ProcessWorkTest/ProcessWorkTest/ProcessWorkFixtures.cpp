@@ -314,10 +314,11 @@ void testProcessWorkStreamLedger()
     bbCheck(self.m_received == 2 && self.m_bad == 0, "explicit self-send ledger was rejected");
 }
 
-PublicChannelScope::PublicChannelScope(int initial, int threshold, int increment, int idle, int rounds) :
+PublicChannelScope::PublicChannelScope(int initial, int threshold, int increment, int idle, int rounds,
+    const ProcessWorkMemoryConfig& memory) :
 m_full(0)
 {
-    bbCheck(m_receiver.openReceiver(76, initial, threshold, increment, idle, rounds), "open m_receiver failed");
+    bbCheck(m_receiver.openReceiver(76, initial, threshold, increment, idle, rounds, memory), "open m_receiver failed");
     m_receiver.publish();
     bbCheck(m_sender.openSender(bbPid()), "open m_sender failed");
     pump(); // 公共接收维护批准发送方身份。
@@ -380,7 +381,7 @@ int runIpcNode(int argc, char** argv)
             bbCheck(static_cast<bool>(input >> pids[i]) && pids[i] > 0, "invalid PID list");
         }
         ledger.configure(pids, bbPid());
-        bbWrite(prefix + ".armed" + bbNumber(node), "1");
+        bbWrite(prefix + ".armed" + bbNumber(node), bbNumber(sizeof(void*) * 8));
         bbWait(
             [&prefix]()
             {
@@ -508,7 +509,15 @@ void meshTest(int mode, bool fixed, int packets, int nodes, int threads, int ini
                 [&prefix, &children, node]()
                 {
                     bbCheck(children[node]->poll() < 0, "peer exited before ARMED");
-                    return bbRead(prefix + ".armed" + bbNumber(node)) == "1";
+                    const std::string bits = bbRead(prefix + ".armed" + bbNumber(node));
+                    if (bits != "32" && bits != "64")
+                    {
+                        return false;
+                    }
+                    const char* peer = std::getenv("PROCESS_WORK_TEST_PEER");
+                    const bool mixedPeer = node % 2 != 0 && peer != nullptr && peer[0] != '\0';
+                    bbCheck((bits != bbNumber(sizeof(void*) * 8)) == mixedPeer, "peer pointer width mismatch");
+                    return true;
                 },
                 "peer ARMED", 20000);
         }

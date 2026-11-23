@@ -195,3 +195,7 @@ void testProcessWorkSegmentLocality();
 /** 重开同一发送对象并切换批准号，验证缓存不跨会话复用且每次恰好提交一个正文
 */
 void testProcessWorkSenderTokenReuse();
+
+/** 验证接收标准批次的尺寸、总字节上限、空闲复用与公开发送端的永久超长判定
+*/
+void testProcessWorkReceiveBatchPool();

@@ -1,5 +1,6 @@
 ﻿#include "ProcessWorkCoreTests.h"
 #include "ProcessWorkTest.h"
+#include "ProcessWorkMemoryTests.h"
 #include "ProcessWork/ProcessWorkReceiveQueue.h"
 #include <cstring>
 #include <thread>
@@ -321,4 +322,65 @@ void testProcessWorkReceiveReserve()
     config.m_localQueueInitialCapacity = 0;
     bbCheck(!queue.configure(config), "zero queue pool was accepted");
     queue.clear();
+}
+
+void testProcessWorkReceiveBatchPool()
+{
+    const int64_t one = 64 + sizeof(ProcessWorkReceiveBatch);
+    ProcessWorkMemoryConfig memory;
+    bbCheck(memory.m_receiveBatchBytes == 65568 && memory.m_receiveBatchMaximumBytes == -1 &&
+        memory.m_receiveBatchCacheLimit == 8, "default receive batch pool changed");
+    bbCheck(memory.setReceiveBatchPool(64, one, 0) && !memory.setReceiveBatchPool(16, one, 0) &&
+        !memory.setReceiveBatchPool(64, one - 1, 0) && !memory.setReceiveBatchPool(64, -2, 0) &&
+        !memory.setReceiveBatchPool(64, one, -2) && memory.m_receiveBatchBytes == 64 &&
+        memory.m_receiveBatchMaximumBytes == one && memory.m_receiveBatchCacheLimit == 0, "invalid setting changed pool");
+    const std::string first = BatchPacket(3, std::string(47, 'a'));
+    const std::string second = BatchPacket(4, std::string(47, 'b'));
+    ProcessWorkReceiveQueue queue;
+    memory.m_receiveBatchReserve = 2;
+    bbCheck(!queue.configure(memory), "over-budget reserve accepted");
+    memory.m_receiveBatchReserve = 0;
+    for (int32_t cache = -1; cache <= 1; ++cache)
+    {
+        std::shared_ptr<ProcessWorkTestMemoryPolicy> growth = std::make_shared<ProcessWorkTestMemoryPolicy>();
+        memory.m_policy = growth;
+        bbCheck(memory.setReceiveBatchPool(64, one, cache) && queue.configure(memory), "batch pool configuration failed");
+        bbCheck(queue.append(first.data(), first.size()) && queue.flush(), "first record admission");
+        char* packet = nullptr;
+        bbCheck(queue.take(&packet, 0) && std::memcmp(packet, first.data(), first.size()) == 0 &&
+            !queue.append(second.data(), second.size()), "borrowed batch exceeded cap or wrong data");
+        queue.release(packet);
+        bbCheck(queue.append(second.data(), second.size()) && queue.flush() && queue.take(&packet, 0) &&
+            std::memcmp(packet, second.data(), second.size()) == 0, "space not reusable or wrong second record");
+        queue.release(packet);
+        bbCheck(growth->m_kindCount[ProcessWorkReceiveBuffers].load() == (cache == 0 ? 2U : 1U) &&
+            growth->m_kindAdded[ProcessWorkReceiveBuffers].load() == static_cast<uint64_t>(one) * (cache == 0 ? 2 : 1),
+            "batch growth accounting or idle reuse");
+    }
+    memory.m_receiveBatchReserve = 2;
+    memory.m_policy.reset();
+    bbCheck(memory.setReceiveBatchPool(64, one * 2, 0) && queue.configure(memory), "two preallocated batches");
+    const std::string large = BatchPacket(5, std::string(static_cast<size_t>(one * 2 - sizeof(ProcessWorkReceiveBatch) - 17), 'c'));
+    char* packet = nullptr;
+    bbCheck(queue.append(large.data(), large.size()) && queue.flush() && queue.take(&packet, 0) &&
+        std::memcmp(packet, large.data(), large.size()) == 0, "unused reserve trapped capacity for large message");
+    queue.release(packet);
+
+    ProcessWorkConfig config;
+    config.m_receiveMemory.m_receiveBatchReserve = 1;
+    bbCheck(config.m_receiveMemory.setReceiveBatchPool(64, one, 0), "public batch pool configuration");
+    PacketLog ledger;
+    IpcScope scope;
+    ProcessWork& ipc = ProcessWork::instance();
+    bbCheck(ipc.configure(config), "public configuration rejected");
+    scope.start(&ledger, receiveName("batch-pool-limit"), 65548, 2);
+    bbCheck(ipc.sendResult(bbPid(), first.data() + 12, 47, static_cast<MessageType>(3)) == PROCESS_WORK_SENT &&
+        ipc.sendResult(bbPid(), large.data() + 12, 48, static_cast<MessageType>(5)) == PROCESS_WORK_TOO_LARGE &&
+        ipc.sendResult(bbPid(), second.data() + 12, 47, static_cast<MessageType>(4)) == PROCESS_WORK_SENT,
+        "public permanent-fit boundary");
+    waitPackets(ledger, 2);
+    scope.close();
+    const std::vector<ReceivedPacket> deliveries = ledger.snapshot();
+    bbCheck(deliveries.size() == 2 && deliveries[0].m_type == 3 && deliveries[0].m_body == first.substr(12) &&
+        deliveries[1].m_type == 4 && deliveries[1].m_body == second.substr(12), "wrong public FIFO after rejection");
 }
