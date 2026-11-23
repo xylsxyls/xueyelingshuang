@@ -5,11 +5,7 @@
 #endif
 #include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include <google/protobuf/stubs/common.h>
-#if GOOGLE_PROTOBUF_VERSION == 3019003
-#include "ProtoMessageManager/protoc-3.19.3/ProtoMessage.pb.h"
-#else
 #include "ProtoMessageManager/ProtoMessage.pb.h"
-#endif
 #include <google/protobuf/stubs/once.h>
 #include <cstring>
 #include <stdexcept>

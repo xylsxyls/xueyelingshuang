@@ -172,7 +172,7 @@ int NetTestBuild::run(int argc, char** argv)
             "NetIdentityTestCases.cpp", "NetTunnelTestCases.cpp", "NetLinkTestCases.cpp", "NetTestTlsCertificates.c" };
     }
     std::vector<std::string> common = { "-O2", "-g1", "-fexceptions", "-DSTATIC_LIB", "-sMEMORY64=" + std::string(bits == "64" ? "1" : "0"),
-        "-iquote", sdk + "/include", "-I" + sdk + "/include/protobuf", "-I" + sdk + "/include/mbedtls",
+        "-iquote", sdk + "/include", "-I" + sdk + "/include/protobuf-3.3.0", "-I" + sdk + "/include/mbedtls",
         "-iquote", headers, "-iquote", source };
     std::vector<std::string> objects;
     for (size_t index = 0; index < sources.size(); ++index)

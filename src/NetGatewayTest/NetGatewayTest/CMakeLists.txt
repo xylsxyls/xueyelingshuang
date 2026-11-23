@@ -36,7 +36,7 @@ if(BIT MATCHES "^wasm" OR EMSCRIPTEN OR CMAKE_TOOLCHAIN_FILE MATCHES "Emscripten
     endforeach()
     file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/test-sdk.js" "module.exports.sdk = { bits: ${test_bits} };\n")
     function(configure_wasm_test target)
-        target_include_directories(${target} PRIVATE "${SDK_ROOT}/include/protobuf" "${SDK_ROOT}/include/mbedtls")
+        target_include_directories(${target} PRIVATE "${SDK_ROOT}/include/protobuf-3.3.0" "${SDK_ROOT}/include/mbedtls")
         target_compile_definitions(${target} PRIVATE STATIC_LIB)
         target_compile_options(${target} PRIVATE -O2 -g1 -fexceptions
             "SHELL:-iquote \"${SDK_ROOT}/include\"" "SHELL:-iquote \"${TEST_HEADERS}\""
