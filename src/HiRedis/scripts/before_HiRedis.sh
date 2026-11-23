@@ -18,27 +18,20 @@ CStringManager_dlllib=$2
 CStringManager_debugRelease=$3
 CStringManager_allSame=$4
 if [[ $4 != only ]]; then
-    "$CLOUD_REBUILD" CStringManager "$CStringManager_bit" "$CStringManager_dlllib" "$CStringManager_debugRelease" "$CStringManager_allSame"
+    "$CLOUD_REBUILD" CStringManager "$CStringManager_bit" "$CStringManager_dlllib" "$CStringManager_debugRelease" "$CStringManager_allSame" || exit 1
 fi
 librariesrely+=($'project\tCStringManager\t'"$CStringManager_dlllib")
 
-SHELL_FOLDER=$(cd "$(dirname "$0")"; pwd)
-root="$SHELL_FOLDER/../../.."
-case "${THIRDPARTY_PLATFORM:-${CMAKE_SYSTEM_NAME:-$OSTYPE}}" in
-    [Ww]indows|msys*|cygwin*|win32*) windows=1 ;;
-    [Ll]inux*|arm) windows=0 ;;
-    *) echo "HiRedis supports Windows and Linux" >&2; exit 2 ;;
+thirdparty="${XUEYELINGSHUANG}tools/thirdparty.sh"
+platform=$(bash "$thirdparty" --target-platform "$1") || exit 1
+case "$platform" in
+    windows|linux|arm) ;;
+    *) echo "HiRedis supports Windows and Linux" >&2; exit 1 ;;
 esac
-if [[ $windows == 1 ]]; then
-    suffix=""
-    if [[ $3 == debug ]]; then suffix=d; fi
-    vendor_archive="hiredisstatic${suffix}.lib"
-    THIRDPARTY_INCLUDE_NAME=hiredisinclude THIRDPARTY_FILES="$vendor_archive" \
-        bash "$root/tools/thirdparty.sh" hiredis "$1" lib "$3" "$4" || exit $?
-else
-    vendor_archive=libhiredis.a
-    THIRDPARTY_INCLUDE_NAME=hiredisinclude THIRDPARTY_FILES="$vendor_archive" bash "$root/tools/thirdparty.sh" hiredis "$1" lib release "$4" || exit 1
-fi
-librariesrely+=($'link\t'"$vendor_archive")
+
+records=$(THIRDPARTY_INCLUDE_NAME=hiredisinclude bash "$thirdparty" --print-rely hiredis "$1" lib "$3" "$4") || exit 1
+while IFS= read -r record; do
+    if [[ -n $record ]]; then librariesrely+=("$record"); fi
+done <<< "$records"
 
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return
