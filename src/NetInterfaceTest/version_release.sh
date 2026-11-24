@@ -1,2 +1,4 @@
-"$CLOUD_REBUILD" NetInterface "${1:-64}" lib release same
-"$CLOUD_REBUILD" PlatformTest "${1:-64}" lib release same
+set -e
+
+"$CLOUD_REBUILD" NetInterface 64 lib release same
+"$CLOUD_REBUILD" PlatformTest 64 lib release same
