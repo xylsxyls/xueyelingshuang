@@ -7,6 +7,22 @@
  *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
+#define TEST_CA_CRT_EC_PEM                                                     \
+    "-----BEGIN CERTIFICATE-----\r\n"                                          \
+    "MIICBzCCAYugAwIBAgIJAMFD4n5iQ8zoMAwGCCqGSM49BAMCBQAwPjELMAkGA1UE\r\n"     \
+    "BhMCTkwxETAPBgNVBAoMCFBvbGFyU1NMMRwwGgYDVQQDDBNQb2xhcnNzbCBUZXN0\r\n"     \
+    "IEVDIENBMB4XDTE5MDIxMDE0NDQwMFoXDTI5MDIxMDE0NDQwMFowPjELMAkGA1UE\r\n"     \
+    "BhMCTkwxETAPBgNVBAoMCFBvbGFyU1NMMRwwGgYDVQQDDBNQb2xhcnNzbCBUZXN0\r\n"     \
+    "IEVDIENBMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEw9orNEE3WC+HVv78ibopQ0tO\r\n"     \
+    "4G7DDldTMzlY1FK0kZU5CyPfXxckYkj8GpUpziwth8KIUoCv1mqrId240xxuWLjK\r\n"     \
+    "6LJpjvNBrSnDtF91p0dv1RkpVWmaUzsgtGYWYDMeo1MwUTAPBgNVHRMBAf8EBTAD\r\n"     \
+    "AQH/MB0GA1UdDgQWBBSdbSAkSQE/K8t4tRm8fiTJ2/s2fDAfBgNVHSMEGDAWgBSd\r\n"     \
+    "bSAkSQE/K8t4tRm8fiTJ2/s2fDAMBggqhkjOPQQDAgUAA2gAMGUCMQDpNWfBIlzq\r\n"     \
+    "6xV2UwQD/1YGz9fQUM7AfNKzVa2PVBpf/QD1TAylTYTF4GI6qlb6EPYCMF/YVa29\r\n"     \
+    "N5yC1mFAir19jb9Pl9iiIkRm17dM4y6m5VIMepEPm/VlWAa8H5p1+BPbGw==\r\n"         \
+    "-----END CERTIFICATE-----\r\n"
+/* END FILE */
+
 #define TEST_CA_CRT_RSA_SHA256_PEM                                             \
     "-----BEGIN CERTIFICATE-----\r\n"                                          \
     "MIIDQTCCAimgAwIBAgIBAzANBgkqhkiG9w0BAQsFADA7MQswCQYDVQQGEwJOTDER\r\n"     \

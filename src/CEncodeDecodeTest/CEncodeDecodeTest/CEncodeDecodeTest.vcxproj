@@ -164,7 +164,14 @@
     <ClInclude Include="CEncodeDecodeTlsTestData.h" />
     <ClInclude Include="CEncodeDecodeTest.h" />
   </ItemGroup>
+  <PropertyGroup>
+    <CEncodeTestPrivateCases Condition="'$(CEncodeTestPrivateCases)'=='' and '$(Configuration)'=='Release'">true</CEncodeTestPrivateCases>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(CEncodeTestPrivateCases)'=='true'">
+    <ClCompile><PreprocessorDefinitions>CENCODE_TEST_PRIVATE_CASES;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CEncodeDecodeCompatibilityCases.cpp" />
     <ClCompile Include="CEncodeDecodeTest.cpp" />
     <ClCompile Include="CEncodeDecodeHashCases.cpp" />
     <ClCompile Include="CEncodeDecodeCertificateCases.cpp" />

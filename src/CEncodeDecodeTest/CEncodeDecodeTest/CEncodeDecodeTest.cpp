@@ -627,7 +627,22 @@ int main(int argc, char** argv)
             {kCryptoTlsWrongHost, false, []() -> int { CheckTls(false); return 0; }},
             {kCryptoTlsDeadline, false, CheckTlsDeadline},
             {kCryptoTlsQueueLimits, false, CheckTlsQueueLimits},
-            {kCryptoEntropy, false, CheckEntropyBoundaries}
+            {kCryptoEntropy, false, CheckEntropyBoundaries},
+#ifdef CENCODE_TEST_PRIVATE_CASES
+            {11, false, []() -> int { return cEncodeCompatibilityCase(1); }},
+            {12, false, []() -> int { return cEncodeCompatibilityCase(2); }},
+            {13, false, []() -> int { return cEncodeCompatibilityCase(3); }},
+            {14, false, []() -> int { return cEncodeCompatibilityCase(4); }},
+            {15, true, []() -> int { return cEncodeCompatibilityCase(5); }},
+            {16, true, []() -> int { return cEncodeCompatibilityCase(6); }},
+            {17, true, []() -> int { return cEncodeCompatibilityCase(7); }},
+            {18, true, []() -> int { return cEncodeCompatibilityCase(8); }},
+            {19, false, []() -> int { return cEncodeCompatibilityCase(9); }},
+#ifdef USE_OPENSSL
+            {20, false, []() -> int { return cEncodeCompatibilityCase(10); }},
+#endif
+            {21, false, []() -> int { return cEncodeCompatibilityCase(11); }},
+#endif
         };
         const int result = LibraryCaseSelection::run(argc, argv, cases, [](const LibraryTestCase& item) -> int
         {

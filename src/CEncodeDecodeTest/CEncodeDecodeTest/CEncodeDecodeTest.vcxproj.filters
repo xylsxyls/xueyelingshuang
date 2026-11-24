@@ -29,6 +29,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CEncodeDecodeCompatibilityCases.cpp" />
     <ClCompile Include="CEncodeDecodeTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>

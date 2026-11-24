@@ -26,7 +26,8 @@
    旧记录因密文背压被冻结时，write、append 的接纳数均为零，appendExact 返回 WANT_IO。排空后重试，新旧明文各交付一次。双向设为 -1，连续排队传送 65549 字节，在消费前核对借用前缀，最终核对完整明文。
 10　直接核对 entropyBytes。零长度应成功且不调用熵源；非零长度的空输出和 8193 字节请求应失败且不调用熵源。8192 字节成功时恰好调用一次，完整结果及前后哨兵须匹配；缺少回调时只清零有效请求范围。
 
-无参或 --all 执行全部，--cases 1,6-8 选择编号，--instant 选择除 ID 5 外的用例，--stress 选择 ID 5。
+无参或 --all 执行当前构建登记的所有用例，--cases 1,6-8 选择编号。公开接口组的 --stress 执行 ID 5，--instant 执行其他公开接口用例。
+桌面静态 SDK 可同时启用算法实现专项。11 散列、12 AES、13 畸形输入、14 SM4、15 RSA、16 吞吐对照、17 并发、18 TLS、19 SM2、20 OpenSSL 互通、21 文件边界。15～18 归入 --stress，其余归入 --instant；20 仅在 USE_OPENSSL 构建登记。每项预期返回 0。
 每组开始时按稳定编号重置测试熵源，单独选择与全量运行使用相同的测试随机序列。每组成功返回 0，失败时输出组号和步骤，继续运行其余选中组。全通过时进程返回 0，有失败返回 1，选择参数无效返回 2。
 Windows 用 version_debug.sh 准备 Win32 Debug DLL，version_release.sh 准备 x64 Release 静态库，
 再用同配置的 VS2013 构建 CEncodeDecodeTest.sln 并运行。另选位宽时为两个依赖准备匹配的 SDK。
@@ -149,6 +150,16 @@ CEncodeDecode.cpp 注释示例在 Windows x64 Release、Node Wasm32 和 Wasm64 �
 libc++ 和 Debian arm64 的 glibc，模拟 Cortex-A53。两端各用独立 SDK 构建 Release 静态库和共享库，执行 CEncodeDecodeTest --all。
 四种组合的 ID 1 至 10 分别返回 0，均输出 PASS。两端另从 CEncodeDecode.cpp 注释提取并静态链接 main 示例，退出码均为 0。
 本次未在 ARM 真机运行，未采集 ARM 性能数据。
-Windows x64 Release 另核对 --instant、--stress、单组 4、单组 10 和 --cases 1,6-8 的选择结果，倒序范围 8-6 和未知编号 11 均返回 2。
+Windows x64 Release 公开接口组另核对 --instant、--stress、单组 4、单组 10 和 --cases 1,6-8 的选择结果。倒序范围和当前构建未登记的编号返回 2。
 本轮未运行浏览器、微信或移动设备。
 */
+#ifdef CENCODE_TEST_PRIVATE_CASES
+/** 使用静态 SDK 的私有算法实现验证兼容性。用例11至21对应散列、AES、畸形输入、
+    SM4、RSA、性能对照、并发、TLS、SM2、可选OpenSSL互通、文件边界。
+    Windows 的 Release 静态 SDK 默认启用；CMake 的桌面静态构建可打开 CENCODE_TEST_PRIVATE_CASES。
+    用例20仅在启用OpenSSL时登记。
+@param [in] id 算法用例号1至11
+@return 0通过，1失败，2不支持
+*/
+int cEncodeCompatibilityCase(int id);
+#endif
