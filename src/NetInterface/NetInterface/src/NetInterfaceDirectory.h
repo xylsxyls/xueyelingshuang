@@ -6,6 +6,8 @@
 class ProtoMessage;
 
 #define NET_INTERFACE_DIRECTORY_BYTES 16384U
+// node. 加32个十六进制字符，每个节点在未压缩的目录正文中至少占这些字节。
+#define NET_INTERFACE_DIRECTORY_NAME_BYTES 37U
 
 // 公开候选元数据，不包含身份授权或秘密。
 struct NetInterfaceDirectoryPoint
@@ -42,7 +44,7 @@ public:
 };
 
 // 原生/Wasm共用发现表结构和校验。解析成功只得到地址候选，不代替管理TLS身份验证。
-// 带STL可变输出的方法仅供同模块/静态组合；跨DLL使用DirectoryAPI的固定值或字节缓冲。
+// 带STL可变输出的方法仅供同模块/静态组合；跨DLL使用NetInterface的directory系列值记录或字节缓冲接口。
 class NetInterfaceAPI NetInterfaceDirectory
 {
 public:
@@ -59,7 +61,7 @@ public:
     static bool valid(const NetInterfaceDirectoryPoint& point);
 
     /** 将完整的有界节点表编码为既有protobuf3.3.0管理协议
-    @param [in] points 1至64项，节点名与地址端口不得重复
+    @param [in] points 非空，完整protobuf最多16 KiB；节点名与数值地址端口不得重复
     @param [out] output 成功为完整消息；失败清空
     @return NI_OK或错误，不能静默截断列表
     */

@@ -1,5 +1,6 @@
 ﻿#include "NetInterfaceMacro.h"
 #include "NetInterfaceService.h"
+#include "NetInterfaceFileGuard.h"
 #include <cstring>
 
 /** 固定大端32位读取
@@ -70,11 +71,7 @@ int32_t NetInterfaceService::hello(const uint8_t* secret, uint32_t limit, uint8_
     ServiceWrite32(bytes + 4, limit);
     std::memcpy(bytes + 8, secret, 32);
     std::memcpy(output, bytes, sizeof(bytes));
-    volatile uint8_t* wipe = bytes;
-    for (uint32_t index = 0; index < sizeof(bytes); ++index)
-    {
-        wipe[index] = 0;
-    }
+    NetInterface::wipe(bytes, sizeof(bytes));
     return NI_OK;
 }
 
@@ -108,6 +105,12 @@ int32_t NetInterfaceService::authenticate(const NetInterfaceFrame& frame, const 
 int32_t NetInterfaceService::wrap(const NetInterfaceOrigin& origin, const uint8_t* data, uint32_t size, uint8_t* output, uint32_t capacity,
                                   uint32_t& required)
 {
+    if (NetInterfaceFileGuard::overlap(&required, sizeof(required), data, size) ||
+        NetInterfaceFileGuard::overlap(&required, sizeof(required), &origin, sizeof(origin)) ||
+        NetInterfaceFileGuard::overlap(&required, sizeof(required), output, capacity))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     required = 0;
     if (!ServiceOriginValid(origin) || (data == nullptr && size != 0) || (output == nullptr && capacity != 0))
     {
@@ -121,6 +124,12 @@ int32_t NetInterfaceService::wrap(const NetInterfaceOrigin& origin, const uint8_
     if (capacity < required)
     {
         return NI_BUFFER_TOO_SMALL;
+    }
+    if (NetInterfaceFileGuard::overlap(data, size, output, required) ||
+        NetInterfaceFileGuard::overlap(&origin, sizeof(origin), output, required))
+    {
+        required = 0;
+        return NI_INVALID_ARGUMENT;
     }
     std::memcpy(output, "NOI2", 4);
     ServiceWrite32(output + 4, origin.m_platform);

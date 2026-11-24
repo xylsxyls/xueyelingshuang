@@ -26,7 +26,7 @@ class NetInterfaceAPI NetInterfaceRpc
     @param [in] size 最大1048560
     @param [out] output 调用者空间，必须与data不重叠；不足时不改写
     @param [in] capacity 空间字节数
-    @param [out] required 合法参数所需空间，否则0
+    @param [out] required 与data和output独立。容量不足写入所需空间，别名错误保留原缓冲，其他非法参数置0
     @return OK、BUFFER_TOO_SMALL或INVALID_ARGUMENT
     */
     static int32_t encode(uint16_t kind, uint32_t value, uint64_t parent, const uint8_t* data, uint32_t size, uint8_t* output,

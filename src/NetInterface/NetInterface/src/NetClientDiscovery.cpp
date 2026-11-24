@@ -65,7 +65,7 @@ int32_t NetClientDiscovery::parseSeeds(const std::string& text, NetClientDiscove
         return NI_INVALID_ARGUMENT;
     }
     count = 0;
-    if ((points == nullptr && capacity != 0))
+    if (points == nullptr && capacity != 0)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -76,6 +76,10 @@ int32_t NetClientDiscovery::parseSeeds(const std::string& text, NetClientDiscove
         if (result != NI_OK)
         {
             return result;
+        }
+        if (parsed.size() > UINT32_MAX)
+        {
+            return NI_LIMIT_EXCEEDED;
         }
         if (capacity < parsed.size())
         {
@@ -139,9 +143,10 @@ int32_t NetClientDiscovery::parseSeeds(const std::string& text, std::vector<NetG
                 return NI_INVALID_ARGUMENT;
             }
             NetGatewayAddress point;
-            point.m_address.assign(text.data() + begin, addressEnd - begin);
+            const size_t addressSize = addressEnd - begin;
             uint8_t key[16];
-            if (!NetInterfaceDirectoryAddress::parse(point.m_address.data(), static_cast<uint32_t>(point.m_address.size()), key))
+            if (addressSize > UINT32_MAX ||
+                !NetInterfaceDirectoryAddress::parse(text.data() + begin, static_cast<uint32_t>(addressSize), key))
             {
                 points.clear();
                 return NI_INVALID_ARGUMENT;
@@ -168,6 +173,7 @@ int32_t NetClientDiscovery::parseSeeds(const std::string& text, std::vector<NetG
             }
             if (!duplicate)
             {
+                point.m_address.assign(text.data() + begin, addressSize);
                 std::array<uint8_t, 16> saved;
                 std::memcpy(saved.data(), key, 16);
                 keys.push_back(saved);

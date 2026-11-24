@@ -1,5 +1,6 @@
 ﻿#include "NetInterfaceMacro.h"
 #include "NetInterfaceRpc.h"
+#include "NetInterfaceFileGuard.h"
 #include <cstring>
 
 /** 不依赖内存对齐读取网络字节序
@@ -45,6 +46,11 @@ static bool ValidRpc(uint16_t kind, uint32_t value, uint64_t parent, uint32_t si
 int32_t NetInterfaceRpc::encode(uint16_t kind, uint32_t value, uint64_t parent, const uint8_t* data, uint32_t size, uint8_t* output,
                                 uint32_t capacity, uint32_t& required)
 {
+    if (NetInterfaceFileGuard::overlap(&required, sizeof(required), data, size) ||
+        NetInterfaceFileGuard::overlap(&required, sizeof(required), output, capacity))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     required = 0;
     if (!ValidRpc(kind, value, parent, size) || (size != 0 && data == nullptr) || (capacity != 0 && output == nullptr))
     {
@@ -54,6 +60,11 @@ int32_t NetInterfaceRpc::encode(uint16_t kind, uint32_t value, uint64_t parent, 
     if (capacity < required)
     {
         return NI_BUFFER_TOO_SMALL;
+    }
+    if (NetInterfaceFileGuard::overlap(data, size, output, required))
+    {
+        required = 0;
+        return NI_INVALID_ARGUMENT;
     }
     std::memcpy(output, "NRP2", 4);
     WriteRpcWord(output + 4, value);

@@ -11,9 +11,9 @@ struct NetInterfaceRequestEntry;
 // 同一请求在三个端点集合中的职责，数组索引不从网络输入取得。
 enum NetInterfaceRequestRole
 {
-    // 请求来源，用于来源并发额度和原号查找。
+    // 请求来源，用于原号查找和断线清理。
     NI_REQUEST_SOURCE = 0,
-    // 真实目标服务，用于目标并发额度和断线清理。
+    // 真实目标服务，用于按目标清理请求。
     NI_REQUEST_TARGET = 1,
     // 根客户端，包括内部子请求，用于整条业务链的断线清理。
     NI_REQUEST_ORIGIN = 2,
@@ -35,8 +35,6 @@ public:
     bool m_internalOnly;
     // 已处理来源原号的高水位，容量拒绝同样推进。
     uint64_t m_highestOriginal;
-    // 各角色仍在途的实际数量。
-    size_t m_count[NI_REQUEST_ROLE_COUNT];
     // 各角色最早接纳的请求，非拥有指针。
     NetInterfaceRequestEntry* m_first[NI_REQUEST_ROLE_COUNT];
     // 各角色最后接纳的请求，用于无分配追加。

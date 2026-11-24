@@ -34,15 +34,21 @@ int32_t NetInterfaceFileFlow::setWriteBatchChunks(uint32_t chunks)
 
 int32_t NetInterfaceFileFlow::fail(int32_t result)
 {
-    if (m_state->m_phase != NI_FILE_PHASE_DONE && m_state->m_phase != NI_FILE_PHASE_FAILED)
+    if (m_state->m_phase == NI_FILE_PHASE_FAILED)
     {
-        m_state->m_error = result < 0 ? result : NI_INVALID_STATE;
+        return m_state->m_error;
+    }
+    const int32_t error = result < 0 ? result : NI_INVALID_STATE;
+    // 宿主已经提交的文件保持完成；准备最终 ACK 失败时，本次 peek 仍须报告错误。
+    if (m_state->m_phase != NI_FILE_PHASE_DONE)
+    {
+        m_state->m_error = error;
         m_state->m_phase = NI_FILE_PHASE_FAILED;
         m_state->clearData();
         m_state->clearOutput();
         m_state->m_ackPending = !m_state->m_sender;
     }
-    return m_state->status();
+    return error;
 }
 
 int32_t NetInterfaceFileFlow::prime(uint64_t offset, const uint8_t* bytes, uint32_t size)
@@ -311,6 +317,8 @@ int32_t NetInterfaceFileFlow::acceptData(const NetInterfaceFrame& frame)
         const size_t offset = m_state->m_data.size();
         m_state->m_data.resize(offset + data.size);
         std::memcpy(m_state->m_data.data() + offset, data.bytes, data.size);
+        // 只有首次接纳新的连续字节才刷新期限；持久化偏移仍由 written 更新。
+        m_state->m_progress = m_state->m_now;
     }
     catch (...)
     {

@@ -13,7 +13,6 @@ m_highestOriginal(0)
 {
     for (uint32_t role = 0; role < NI_REQUEST_ROLE_COUNT; ++role)
     {
-        m_count[role] = 0;
         m_first[role] = nullptr;
         m_last[role] = nullptr;
     }
@@ -188,7 +187,6 @@ int32_t NetInterfaceRequestsState::insert(const NetInterfaceRequest& request, Ne
             endpoint->m_last[role]->m_next[role] = entry;
         }
         endpoint->m_last[role] = entry;
-        ++endpoint->m_count[role];
     }
     if (children != nullptr)
     {
@@ -248,7 +246,6 @@ int32_t NetInterfaceRequestsState::take(NetInterfaceRequestEntry* entry, NetInte
         {
             entry->m_next[role]->m_previous[role] = entry->m_previous[role];
         }
-        --endpoint->m_count[role];
     }
     if (request.m_parent != 0)
     {

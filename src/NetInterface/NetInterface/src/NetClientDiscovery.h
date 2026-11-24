@@ -83,16 +83,16 @@ public:
     static bool addressKey(const NetClientDiscoveryPoint& endpoint, uint8_t* key);
 
     /** 值数组解析入口，NI只填调用者自己的固定字节，不转交容器。
-    @param [in] text 非空ASCII入口列表，最多4096字节、64项
+    @param [in] text 逗号分隔的数值地址和端口，IPv6用方括号，单个地址最多39字节
     @param [out] points 预填size/version的v1数组，不得与text重叠；容量不足或失败保持原值
     @param [in] capacity 调用方数组容量，空数组及0可查询所需项数
     @param [out] count 必需项数；一般参数/解析错误为0；不得与points或text重叠，重叠时拒绝且全部保持原值
-    @return OK、BUFFER_TOO_SMALL、INVALID_ARGUMENT或NO_MEMORY
+    @return OK、BUFFER_TOO_SMALL、INVALID_ARGUMENT、NO_MEMORY；独立项数无法用uint32表示时返回LIMIT_EXCEEDED
     */
     static int32_t parseSeeds(const std::string& text, NetClientDiscoveryPoint* points, uint32_t capacity, uint32_t& count);
 
     /** 同模块/静态兼容纯解析器；跨DLL调用值数组重载，不转交STL释放权
-    @param [in] text 非空ASCII入口列表，最多4096字节、64项
+    @param [in] text 逗号分隔的数值地址和端口，IPv6用方括号，单个地址最多39字节
     @param [out] points 成功去重数值候选，非法输入失败时清空
     @return OK、INVALID_ARGUMENT或NO_MEMORY
     */

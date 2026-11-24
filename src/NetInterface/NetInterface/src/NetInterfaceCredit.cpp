@@ -22,12 +22,22 @@ uint32_t NetInterfaceCredit::capacity() const
 
 int32_t NetInterfaceCredit::window(const ProtoMessage& message, uint32_t& bytes, int32_t group)
 {
-    bytes = 65536;
-    Variant value;
-    if (!message.getKeyValue(NI_GATEWAY_WINDOW, value, group)) { return NI_OK; }
-    if (value.type() != Variant::INT32) { return NI_PROTOCOL_ERROR; }
-    const int32_t number = static_cast<int32_t>(value);
-    if (number < 65536 || number > 1048576 || number % 16384 != 0) { return NI_PROTOCOL_ERROR; }
+    const Variant* value = message.findValue(NI_GATEWAY_WINDOW, group);
+    bytes = NET_CHANNEL_DEFAULT_WINDOW;
+    if (value == nullptr)
+    {
+        return NI_OK;
+    }
+    if (value->type() != Variant::INT32)
+    {
+        return NI_PROTOCOL_ERROR;
+    }
+    const int32_t number = static_cast<int32_t>(*value);
+    if (number < static_cast<int32_t>(NET_CHANNEL_DEFAULT_WINDOW) || number > static_cast<int32_t>(NET_CHANNEL_MAX_WINDOW) ||
+        number % static_cast<int32_t>(NET_CHANNEL_PAYLOAD_LIMIT) != 0)
+    {
+        return NI_PROTOCOL_ERROR;
+    }
     bytes = static_cast<uint32_t>(number);
     return NI_OK;
 }

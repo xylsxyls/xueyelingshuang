@@ -46,7 +46,7 @@ public:
     */
     int32_t finish();
 
-    /** 新连接时释放全部存储和错误，保留构造限额及显式压缩许可
+    /** 新连接时释放全部存储和错误，保留构造限额及显式设置的紧凑和压缩许可
     */
     void reset();
 
@@ -79,7 +79,7 @@ public:
     static int32_t encodeCompact(const NetInterfaceFrame& frame, uint8_t* output, uint32_t capacity, uint32_t& required);
 
     /** 单执行者在协议协商后允许紧凑头，仍接受固定头
-    @param [in] allowed 是否允许下一条紧凑帧；不改变已完整解析的帧
+    @param [in] allowed 是否允许紧凑帧；切换许可清除增量基线，已接纳完整头的当前帧仍可继续读取和消费
     */
     void allowCompact(bool allowed);
 
@@ -105,11 +105,11 @@ public:
     @param [in] handle 当前未完成摘要
     @param [in] input size非零时不可空，只借用到返回
     @param [in] size 单次最大16MiB，总量不超过SHA256算法的2^61-1字节
-    @return NI_OK或负数，错误保持至销毁
+    @return NI_OK 或负数。参数错误可修正后重试；累计超限或摘要计算失败时须销毁句柄
     */
     static int32_t hashUpdate(NetInterfaceHashHandle handle, const uint8_t* input, uint32_t size);
 
-    /** 完成一次摘要；空间探测不足不改变状态
+    /** 完成一次摘要；空间不足时保留输出和摘要状态
     @param [in] handle 未完成摘要
     @param [out] output 不可空，调用者拥有
     @param [in] capacity 至少32字节
@@ -259,7 +259,13 @@ public:
     */
     static int32_t messageCreate(NetInterfaceMessageHandle* handle);
 
-    /** 握手共同确认位8后启用有界解压；仅白名单类型会自动尝试压缩，默认全部关闭。 */
+    /** 设置当前连接的压缩协商结果和发送白名单，已入队帧保持其编码
+    @param [in] handle 有效连接，由单个执行者驱动
+    @param [in] types 本次借用的消息类型数组；每项非零，可重复，count为0时可空
+    @param [in] count 类型数；传空列表时保留协商许可但不主动压缩
+    @param [in] negotiated 双方已协商压缩时为1，关闭时为0
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_NO_MEMORY；失败保留此前配置
+    */
     static int32_t connectionConfigureCompression(NetInterfaceConnectionHandle handle,
         const uint32_t* types, uint32_t count, int32_t negotiated);
 
@@ -299,12 +305,12 @@ public:
     @param [in] type INIT0/INT32=1/UINT64=2/DOUBLE=3/STRING=4/BLOB=5
     @param [in] value 字节，size为0时可空；数字为现有小端4/8字节
     @param [in] size 字节数，固定宽度会校验
-    @return NI_OK或负数错误；非法输入不改旧值
+    @return NI_OK或负数错误；非法输入或分配失败保留原字段和修改预算
     */
     static int32_t messageSetValue(NetInterfaceMessageHandle handle, int32_t group, int32_t key, int32_t type,
                                                         const uint8_t* value, uint32_t size);
 
-    /** 查询单个map字段
+    /** 按键查询字段；查询无堆分配，容量足够时直接复制到调用方缓冲
     @param [in] handle 有效实例
     @param [in] group 容器键
     @param [in] key 字段键
@@ -317,7 +323,7 @@ public:
     static int32_t messageGetValue(NetInterfaceMessageHandle handle, int32_t group, int32_t key, int32_t* type,
                                                         uint8_t* output, uint32_t capacity, uint32_t* required);
 
-    /** 设置状态码，序列化不会清除它
+    /** 设置状态码和错误文本；分配失败时保留原状态、字段和修改预算
     @param [in] handle 有效实例
     @param [in] code 业务码
     @param [in] error UTF8错误文本，size为0时可空
@@ -588,9 +594,9 @@ public:
 
     /** 从调用者值记录创建本模块拥有的候选句柄，统一校验及编码仍由NI负责。
     @param [in] nodes 借用至返回；每项structSize/version及有界NUL字符串必须正确
-    @param [in] count 1至64，完整列表不得有重复节点名或地址端口
+    @param [in] count 非零，整表编码最多16 KiB，不得有重复节点名或数值地址端口
     @param [out] handle 不可空且不得与输入数组重叠；一般失败置null，重叠拒绝且不写输入；成功由本模块Destroy释放
-    @return NI_OK、INVALID_ARGUMENT或NO_MEMORY，不授予身份
+    @return NI_OK、NI_INVALID_ARGUMENT、NI_LIMIT_EXCEEDED或其他编码错误；不授予身份
     */
     static int32_t directoryCreateNodes(const NetInterfaceDirectoryNodeData* nodes, uint32_t count,
         NetInterfaceDirectoryHandle* handle);
@@ -621,7 +627,7 @@ public:
 
     /** 查询已验证的完整候选数量
     @param [in] handle 有效句柄
-    @param [out] count 成功1至64，失败0
+    @param [out] count 成功时为完整节点数，失败为0
     @return NI_OK或错误
     */
     static int32_t directoryCount(NetInterfaceDirectoryHandle handle, uint32_t* count);
@@ -789,7 +795,7 @@ public:
     /** 取一次持久写请求，宿主复制借用bytes后投递文件执行者
     @param [in] handle 流
     @param [out] fields 三项offset低/高位和长度
-    @param [out] bytes 借用至written/cancel/destroy
+    @param [out] bytes 借用至written、流失败（含超时或取消）或销毁
     @return 同Flow.writeRequest，失败输出0/null
     */
     static int32_t fileFlowWrite(NetInterfaceFileFlowHandle handle, uint32_t* fields, const uint8_t** bytes);
@@ -821,7 +827,7 @@ public:
     /** 借用输出；背压时不消费
     @param [in] handle 流
     @param [out] fields 六项kind/product/id低高/type/size
-    @param [out] payload 借用至consume/cancel/destroy
+    @param [out] payload 借用至consume、流失败或销毁
     @return READY或其他结果，失败清输出
     */
     static int32_t fileFlowPeek(NetInterfaceFileFlowHandle handle, uint32_t* fields, const uint8_t** payload);
@@ -1027,7 +1033,7 @@ public:
     static int32_t linkStatus(NetInterfaceLinkHandle handle);
 
     /** 创建等待表
-    @param [in] capacity 1至4096
+    @param [in] capacity 请求及提前取消池各自的最大槽数，必须非零
     @param [out] handle 不可空，失败清空
     @return OK或负数错误
     */
@@ -1105,7 +1111,7 @@ public:
 
     /** 查询在途数
     @param [in] handle 有效实例
-    @return 0至4096，空句柄INVALID_ARGUMENT
+    @return 在途请求数；超过INT32_MAX时饱和，空句柄返回NI_INVALID_ARGUMENT
     */
     static int32_t requestsCount(NetInterfaceRequestsHandle handle);
 
@@ -1118,7 +1124,7 @@ public:
     @param [in] size 字节数
     @param [out] output 不重叠输出空间
     @param [in] capacity 输出容量
-    @param [out] required 不可空，所需空间
+    @param [out] required 不可空且与正文和输出独立。别名错误保留原缓冲；其他非法参数置0。
     @return NetInterfaceRpc::encode结果
     */
     static int32_t rpcEncode(uint32_t kind, uint32_t value, uint32_t parentLow, uint32_t parentHigh,
@@ -1258,7 +1264,7 @@ private:
     uint32_t m_capacity;
     // 当前已接纳线记录体字节数，不超过m_wireSize
     uint32_t m_bodySize;
-    // 最近已消费的紧凑DATA元数据，只在同一解码流内复用，不保存正文指针
+    // 当前紧凑许可下最近解析的 DATA 头，复用产品、类型和编号，不借用正文
     NetInterfaceFrame m_previousCompactData;
     // 当前已验证元数据，READY时才包含完整正文借用
     NetInterfaceFrame m_frame;

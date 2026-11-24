@@ -14,7 +14,7 @@
 #include <utility>
 #include "NetInterfaceCertificate.h"
 #include "NetInterfaceConnection.h"
-#include <sstream>
+#include <string>
 #include "CEncodeDecode/CEncodeDecodeAPI.h"
 #include "NetInterfaceFile.h"
 #include "NetInterfaceFileGuard.h"
@@ -26,6 +26,7 @@
 #include "NetInterfaceCompression.h"
 #include <algorithm>
 
+// 业务 TLS 客户端内置的网关信任根，PEM 长度包含末尾 NUL。
 static const char g_networkAuthority[] =
 "-----BEGIN CERTIFICATE-----\n"
 "MIIDFTCCAf2gAwIBAgIUNr7MWN6soOVUJlBfxQjnNDCgSmswDQYJKoZIhvcNAQEL\n"
@@ -74,22 +75,23 @@ static uint64_t RequestPair(const uint32_t* words)
 }
 
 /** 检查长度并复制输出；不足空间不修改调用方缓冲
-@param [in] value 包含NUL的原始字节
+@param [in] bytes 调用期间借用的字节，size为0时可空
+@param [in] size 完整字节数，当前消息最多1MiB
 @param [out] output 调用方内存，可在capacity为0时为空
 @param [in] capacity 容量
 @param [out] required 必需字节数，不含额外结束符
 @return NetInterfaceResult
 */
-static int32_t CopyMessageOutput(const std::string& value, uint8_t* output, uint32_t capacity, uint32_t* required)
+static int32_t CopyMessageOutput(const char* bytes, size_t size, uint8_t* output, uint32_t capacity, uint32_t* required)
 {
-    *required = static_cast<uint32_t>(value.size());
-    if (value.size() > capacity)
+    *required = static_cast<uint32_t>(size);
+    if (size > capacity)
     {
         return NI_BUFFER_TOO_SMALL;
     }
-    if (!value.empty())
+    if (size != 0)
     {
-        std::memcpy(output, value.data(), value.size());
+        std::memcpy(output, bytes, size);
     }
     return NI_OK;
 }
@@ -149,24 +151,6 @@ static int32_t DirectoryCreate(const uint8_t* data, uint32_t size, uint64_t utcM
         return NI_OK;
     }
     catch (...) { return NI_NO_MEMORY; }
-}
-
-/** 比较有界借用区间，不做可能溢出的指针加法
-@param [in] first 首地址，可空
-@param [in] firstSize 首区间字节数
-@param [in] second 次地址，可空
-@param [in] secondSize 次区间字节数
-@return 是否重叠
-*/
-static bool CertificateRangesOverlap(const void* first, uint32_t firstSize, const void* second, uint32_t secondSize)
-{
-    if (first == nullptr || second == nullptr || firstSize == 0 || secondSize == 0)
-    {
-        return false;
-    }
-    const uintptr_t firstAddress = reinterpret_cast<uintptr_t>(first);
-    const uintptr_t secondAddress = reinterpret_cast<uintptr_t>(second);
-    return firstAddress <= secondAddress ? secondAddress - firstAddress < firstSize : firstAddress - secondAddress < secondSize;
 }
 
 NetInterface::NetInterface(uint32_t payloadLimit) :
@@ -322,8 +306,8 @@ int32_t NetInterface::feed(const uint8_t* data, uint32_t size, uint32_t& consume
                 return fail(NI_PROTOCOL_ERROR);
             }
             const uint32_t length = data[0] & 63;
+            ++m_previousCompactData.m_requestId;
             m_frame = m_previousCompactData;
-            ++m_frame.m_requestId;
             m_frame.m_payloadSize = length;
             m_header[0] = data[0];
             m_headerSize = 1;
@@ -353,8 +337,8 @@ int32_t NetInterface::feed(const uint8_t* data, uint32_t size, uint32_t& consume
             {
                 return fail(NI_PROTOCOL_ERROR);
             }
+            m_previousCompactData.m_requestId += data[2];
             m_frame = m_previousCompactData;
-            m_frame.m_requestId += data[2];
             m_frame.m_payloadSize = data[1];
             m_header[0] = 0xe4;
             m_headerSize = 3;
@@ -395,6 +379,11 @@ int32_t NetInterface::feed(const uint8_t* data, uint32_t size, uint32_t& consume
                 consumed = headerSize - previous;
                 m_headerSize = headerSize;
                 m_frame = fields;
+                if (fields.m_kind == NI_DATA)
+                {
+                    // 头解析完成时建立基线。撤销许可或正文失败会清除它，消费旧帧不会再次建立。
+                    m_previousCompactData = fields;
+                }
             }
             else if (m_headerSize != NET_INTERFACE_HEADER_SIZE)
             {
@@ -473,21 +462,6 @@ int32_t NetInterface::consume()
     if (m_status != NI_READY)
     {
         return m_status < 0 ? m_status : NI_INVALID_STATE;
-    }
-    if (m_compactAllowed && !m_compressed && m_frame.m_kind == NI_DATA &&
-        (m_header[0] == 0xe3 || m_header[0] == 0xe4 || (m_header[0] & 0xc0) == 0x80))
-    {
-        if (m_header[0] == 0xe3)
-        {
-            m_previousCompactData = m_frame;
-            m_previousCompactData.m_payload = nullptr;
-        }
-        else
-        {
-            // 增量头已校验并继承产品和消息类型，只更新变化的字段。
-            m_previousCompactData.m_requestId = m_frame.m_requestId;
-            m_previousCompactData.m_payloadSize = m_frame.m_payloadSize;
-        }
     }
     clear(m_capacity > 4096);
     return NI_OK;
@@ -829,12 +803,9 @@ int32_t NetInterface::rpcEncode(uint32_t kind, uint32_t value, uint32_t parentLo
     {
         return NI_INVALID_ARGUMENT;
     }
-    *required = 0;
-    if (kind > 65535)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    return NetInterfaceRpc::encode(static_cast<uint16_t>(kind), value, (static_cast<uint64_t>(parentHigh) << 32) | parentLow, data, size,
+    // 超过字段宽度的种类交给同一参数校验，禁止截断为有效种类。
+    const uint16_t wireKind = kind <= UINT16_MAX ? static_cast<uint16_t>(kind) : 0;
+    return NetInterfaceRpc::encode(wireKind, value, (static_cast<uint64_t>(parentHigh) << 32) | parentLow, data, size,
                                    output, capacity, *required);
 }
 
@@ -1050,7 +1021,12 @@ int32_t NetInterface::requestsTake(NetInterfaceRequestsHandle handle, uint32_t o
 
 int32_t NetInterface::requestsCount(NetInterfaceRequestsHandle handle)
 {
-    return handle == nullptr ? NI_INVALID_ARGUMENT : static_cast<int32_t>(reinterpret_cast<NetInterfaceRequests*>(handle)->count());
+    if (handle == nullptr)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
+    const uint32_t count = reinterpret_cast<NetInterfaceRequests*>(handle)->count();
+    return static_cast<int32_t>((std::min)(count, static_cast<uint32_t>(INT32_MAX)));
 }
 
 int32_t NetInterface::messageCreate(NetInterfaceMessageHandle* handle)
@@ -1104,12 +1080,7 @@ int32_t NetInterface::messageParse(NetInterfaceMessageHandle handle, const uint8
     }
     try
     {
-        std::string bytes;
-        if (size != 0)
-        {
-            bytes.assign(reinterpret_cast<const char*>(input), size);
-        }
-        if (!state->m_message.from(bytes))
+        if (!state->m_message.from(input, size))
         {
             return NI_PROTOCOL_ERROR;
         }
@@ -1144,7 +1115,7 @@ int32_t NetInterface::messageEncode(NetInterfaceMessageHandle handle, uint8_t* o
         {
             return NI_LIMIT_EXCEEDED;
         }
-        return CopyMessageOutput(bytes, output, capacity, required);
+        return CopyMessageOutput(bytes.data(), bytes.size(), output, capacity, required);
     }
     catch (...)
     {
@@ -1164,26 +1135,16 @@ int32_t NetInterface::messageSetValue(NetInterfaceMessageHandle handle, int32_t 
     {
         return NI_LIMIT_EXCEEDED;
     }
-    try
+    if (!Variant::isValidBlob(size, type))
     {
-        std::string bytes;
-        if (size != 0)
-        {
-            bytes.assign(reinterpret_cast<const char*>(value), size);
-        }
-        if (!Variant::isValidBlob(bytes, type))
-        {
-            return NI_INVALID_ARGUMENT;
-        }
-        state->m_message.setKeyValue(key, Variant(bytes, static_cast<Variant::VariantType>(type), true), group);
-        state->m_budget += 64 + size;
-        return NI_OK;
+        return NI_INVALID_ARGUMENT;
     }
-    catch (...)
+    if (!state->m_message.setBytes(key, value, size, static_cast<Variant::VariantType>(type), group))
     {
-        state->clear();
         return NI_NO_MEMORY;
     }
+    state->m_budget += 64 + size;
+    return NI_OK;
 }
 
 int32_t NetInterface::messageGetValue(NetInterfaceMessageHandle handle, int32_t group, int32_t key, int32_t* type, uint8_t* output,
@@ -1201,20 +1162,14 @@ int32_t NetInterface::messageGetValue(NetInterfaceMessageHandle handle, int32_t 
     {
         return NI_INVALID_ARGUMENT;
     }
-    try
+    const ProtoMessage& message = reinterpret_cast<NetInterfaceMessage*>(handle)->m_message;
+    const Variant* value = message.findValue(key, group);
+    if (value == nullptr)
     {
-        Variant value;
-        if (!reinterpret_cast<NetInterfaceMessage*>(handle)->m_message.getKeyValue(key, value, group))
-        {
-            return NI_NOT_FOUND;
-        }
-        *type = static_cast<int32_t>(value.type());
-        return CopyMessageOutput(value.toBlob(), output, capacity, required);
+        return NI_NOT_FOUND;
     }
-    catch (...)
-    {
-        return NI_NO_MEMORY;
-    }
+    *type = static_cast<int32_t>(value->type());
+    return CopyMessageOutput(value->data(), value->size(), output, capacity, required);
 }
 
 int32_t NetInterface::messageSetCode(NetInterfaceMessageHandle handle, int32_t code, const uint8_t* error, uint32_t size)
@@ -1236,7 +1191,6 @@ int32_t NetInterface::messageSetCode(NetInterfaceMessageHandle handle, int32_t c
     }
     catch (...)
     {
-        state->clear();
         return NI_NO_MEMORY;
     }
 }
@@ -1259,7 +1213,8 @@ int32_t NetInterface::messageGetCode(NetInterfaceMessageHandle handle, int32_t* 
     {
         ProtoMessage& message = reinterpret_cast<NetInterfaceMessage*>(handle)->m_message;
         *code = message.getCode();
-        return CopyMessageOutput(message.getErrorMessage(), error, capacity, required);
+        const std::string text = message.getErrorMessage();
+        return CopyMessageOutput(text.data(), text.size(), error, capacity, required);
     }
     catch (...)
     {
@@ -1923,6 +1878,10 @@ int32_t NetInterface::directoryCreateNodes(const NetInterfaceDirectoryNodeData* 
     {
         return NI_INVALID_ARGUMENT;
     }
+    if (count > NET_INTERFACE_DIRECTORY_BYTES / NET_INTERFACE_DIRECTORY_NAME_BYTES)
+    {
+        return NI_LIMIT_EXCEEDED;
+    }
     try
     {
         std::vector<NetInterfaceDirectoryPoint> points;
@@ -1942,7 +1901,7 @@ int32_t NetInterface::directoryCreateNodes(const NetInterfaceDirectoryNodeData* 
             point.m_port = input.m_port;
             point.m_capacity = input.m_capacity;
             point.m_boot = input.m_boot;
-            points.push_back(point);
+            points.push_back(std::move(point));
         }
         std::string encoded;
         const int32_t result = NetInterfaceDirectory::encode(points, encoded);
@@ -2284,9 +2243,7 @@ int32_t NetInterface::connectionCreateServiceClient(uint32_t product, NetInterfa
     if (detail != nullptr) { *detail = 0; }
     try
     {
-        std::ostringstream name;
-        name << "service." << product;
-        const std::string hostname = name.str();
+        const std::string hostname = "service." + std::to_string(product);
         NetInterfaceTlsOptions options = {};
         options.authority = NetInterface::trustAuthority(&options.authoritySize);
         options.hostname = hostname.c_str();
@@ -2557,13 +2514,13 @@ int32_t NetInterface::certificateCreateRequest(const uint8_t* name, uint32_t nam
     NetInterfaceEntropyFunction entropy, void* context, uint8_t* privateKey, uint32_t keyCapacity,
     uint32_t* keySize, uint8_t* request, uint32_t requestCapacity, uint32_t* requestSize)
 {
-    if (CertificateRangesOverlap(keySize, sizeof(uint32_t), requestSize, sizeof(uint32_t)) ||
-        CertificateRangesOverlap(keySize, sizeof(uint32_t), privateKey, keyCapacity) ||
-        CertificateRangesOverlap(keySize, sizeof(uint32_t), request, requestCapacity) ||
-        CertificateRangesOverlap(keySize, sizeof(uint32_t), name, nameSize) ||
-        CertificateRangesOverlap(requestSize, sizeof(uint32_t), privateKey, keyCapacity) ||
-        CertificateRangesOverlap(requestSize, sizeof(uint32_t), request, requestCapacity) ||
-        CertificateRangesOverlap(requestSize, sizeof(uint32_t), name, nameSize))
+    if (NetInterfaceDirectoryHelper::directoryRangesOverlap(keySize, sizeof(uint32_t), requestSize, sizeof(uint32_t)) ||
+        NetInterfaceDirectoryHelper::directoryRangesOverlap(keySize, sizeof(uint32_t), privateKey, keyCapacity) ||
+        NetInterfaceDirectoryHelper::directoryRangesOverlap(keySize, sizeof(uint32_t), request, requestCapacity) ||
+        NetInterfaceDirectoryHelper::directoryRangesOverlap(keySize, sizeof(uint32_t), name, nameSize) ||
+        NetInterfaceDirectoryHelper::directoryRangesOverlap(requestSize, sizeof(uint32_t), privateKey, keyCapacity) ||
+        NetInterfaceDirectoryHelper::directoryRangesOverlap(requestSize, sizeof(uint32_t), request, requestCapacity) ||
+        NetInterfaceDirectoryHelper::directoryRangesOverlap(requestSize, sizeof(uint32_t), name, nameSize))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -2578,9 +2535,9 @@ int32_t NetInterface::certificateCreateRequest(const uint8_t* name, uint32_t nam
     if (keySize == nullptr || requestSize == nullptr || privateKey == nullptr || request == nullptr ||
         keyCapacity == 0 || keyCapacity > NET_INTERFACE_IDENTITY_PEM_BYTES || requestCapacity == 0 ||
         requestCapacity > NET_INTERFACE_IDENTITY_PEM_BYTES || name == nullptr || nameSize == 0 || nameSize > 96 || entropy == nullptr ||
-        CertificateRangesOverlap(privateKey, keyCapacity, request, requestCapacity) ||
-        CertificateRangesOverlap(privateKey, keyCapacity, name, nameSize) ||
-        CertificateRangesOverlap(request, requestCapacity, name, nameSize))
+        NetInterfaceDirectoryHelper::directoryRangesOverlap(privateKey, keyCapacity, request, requestCapacity) ||
+        NetInterfaceDirectoryHelper::directoryRangesOverlap(privateKey, keyCapacity, name, nameSize) ||
+        NetInterfaceDirectoryHelper::directoryRangesOverlap(request, requestCapacity, name, nameSize))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -2599,3 +2556,240 @@ int32_t NetInterface::certificateCreateRequest(const uint8_t* name, uint32_t nam
         privateKey, keyCapacity, keySize, request, requestCapacity, requestSize);
     return result == CENCODE_STATE ? NI_PROTOCOL_ERROR : CryptoResult(result);
 }
+
+/* 使用示例：将下列内容作为 SDK 调用方的独立源文件编译。
+#include "NetInterface/NetInterfaceAPI.h"
+#include "CSystem/CSystemAPI.h"
+#include <cstdio>
+#include <cstring>
+#ifdef __EMSCRIPTEN__
+#include <unistd.h>
+#endif
+
+// 宿主提供强随机。Wasm 的 getentropy 由运行时连接到宿主随机源。
+static int32_t DemoEntropy(void*, uint8_t* out, uint32_t length)
+{
+#ifdef __EMSCRIPTEN__
+    while (length != 0)
+    {
+        const uint32_t count = length > 256 ? 256 : length;
+        if (getentropy(out, count) != 0) { return -1; }
+        out += count;
+        length -= count;
+    }
+    return 0;
+#else
+    return CSystem::secureRandomBytesCallback(nullptr, out, length);
+#endif
+}
+
+// 每个句柄由创建它的模块销毁。中途返回时也会释放，局部借用均先于这个对象结束。
+struct DemoResources
+{
+    NetInterfaceMessageHandle message;
+    NetInterfaceHashHandle hash;
+    NetInterfaceCreditHandle credit;
+    NetInterfaceDirectoryHandle directory;
+    NetInterfaceDirectoryHandle cached;
+    NetInterfaceRequestsHandle requests;
+    NetInterfaceTunnelHandle tunnel;
+    NetInterfaceConnectionHandle connection;
+    NetInterfaceHandshakeHandle initiator;
+    NetInterfaceHandshakeHandle responder;
+    NetInterfaceFileFlowHandle upload;
+    NetInterfaceFileFlowHandle download;
+
+    ~DemoResources()
+    {
+        NetInterface::fileFlowDestroy(download);
+        NetInterface::fileFlowDestroy(upload);
+        NetInterface::handshakeDestroy(responder);
+        NetInterface::handshakeDestroy(initiator);
+        NetInterface::connectionDestroy(connection);
+        NetInterface::tunnelDestroy(tunnel);
+        NetInterface::requestsDestroy(requests);
+        NetInterface::directoryDestroy(cached);
+        NetInterface::directoryDestroy(directory);
+        NetInterface::creditDestroy(credit);
+        NetInterface::hashDestroy(hash);
+        NetInterface::messageDestroy(message);
+    }
+};
+
+// 主机把协议输出交给对应通道，只有下层接纳后才消费。此处在内存中衔接两个业务握手对象。
+static bool DemoHello(DemoResources& r)
+{
+    uint8_t clientId[32], serverId[32] = {};
+    const uint32_t client[] = {0,1,7,32,16384,1000};
+    const uint32_t server[] = {1,0,3,16,4096,1000};
+    if (NetInterface::entropyBytes(DemoEntropy,nullptr,clientId,sizeof(clientId)) != NI_OK ||
+        NetInterface::entropyBytes(DemoEntropy,nullptr,serverId,16) != NI_OK ||
+        NetInterface::handshakeCreate(client,6,clientId,32,100,0,&r.initiator) != NI_NEED_MORE ||
+        NetInterface::handshakeCreate(server,6,serverId,32,100,0,&r.responder) != NI_NEED_MORE) { return false; }
+    uint32_t fields[6];
+    const uint8_t* body = nullptr;
+    if (NetInterface::handshakeProgress(r.initiator,101,0) < 0 ||
+        NetInterface::handshakePeekOutput(r.initiator,fields,&body) != NI_READY ||
+        NetInterface::handshakeAccept(r.responder,fields,body,101,0) < 0 ||
+        NetInterface::handshakeConsumeOutput(r.initiator) < 0 ||
+        NetInterface::handshakePeekOutput(r.responder,fields,&body) != NI_READY ||
+        NetInterface::handshakeAccept(r.initiator,fields,body,102,0) != NI_READY ||
+        NetInterface::handshakeConsumeOutput(r.responder) != NI_READY) { return false; }
+    uint8_t peer[32];
+    if (NetInterface::handshakePeerInfo(r.initiator,fields,peer) != NI_READY) { return false; }
+    std::printf("HELLO capabilities %u, chunk %u\n",fields[1],fields[3]);
+    return true;
+}
+
+// 缓存只保存公开候选。示例的 UTC/单调时钟取自同一次模拟会话，两者在真实宿主分别提供。
+static bool DemoRoute(DemoResources& r)
+{
+    NetInterfaceDirectoryNodeData node = {};
+    node.m_structSize = sizeof(node);
+    node.m_version = 1;
+    std::memcpy(node.m_name,"node.0123456789abcdef0123456789abcdef",sizeof(node.m_name));
+    std::memcpy(node.m_address,"127.0.0.1",10);
+    node.m_port = 8000;
+    node.m_capacity = 32;
+    node.m_boot = 1;
+    uint8_t cache[1024];
+    uint32_t count = 0, size = 0, addressFields[4];
+    char name[38], address[40];
+    if (NetInterface::directoryCreateNodes(&node,1,&r.directory) != NI_OK ||
+        NetInterface::directoryCache(r.directory,1000,0,cache,sizeof(cache),&size) != NI_OK ||
+        NetInterface::directoryCreateCache(cache,size,1001,0,&r.cached) != NI_OK ||
+        NetInterface::directoryCount(r.cached,&count) != NI_OK || count == 0 ||
+        NetInterface::directoryCopyNodes(r.cached,&node,1,&count) != NI_OK ||
+        NetInterface::directoryNode(r.cached,0,name,sizeof(name),address,sizeof(address),addressFields) != NI_OK) { return false; }
+    std::printf("%s %s %u\n",name,address,addressFields[0]);
+    uint32_t in[] = {1,0,0,0,2,0,7,9,0,0,100,0,50}, out[16];
+    if (NetInterface::requestsCreate(16,&r.requests) != NI_OK ||
+        NetInterface::requestsAddEndpoint(r.requests,1,0,0,0,16,0) != NI_OK ||
+        NetInterface::requestsAddEndpoint(r.requests,2,0,1,7,16,0) != NI_OK ||
+        NetInterface::requestsBegin(r.requests,in,13,1,out) != NI_OK) { return false; }
+    std::printf("pending requests %d\n",NetInterface::requestsCount(r.requests));
+    uint32_t reply[] = {2,0,out[0],out[1],7,9,101,0};
+    in[10] = 101;
+    if (NetInterface::requestsComplete(r.requests,reply,8,out) != NI_READY ||
+        NetInterface::requestsBegin(r.requests,in,13,1,out) != NI_OK ||
+        NetInterface::requestsCancel(r.requests,1,0,out[4],out[5],out) != NI_READY ||
+        NetInterface::requestsBegin(r.requests,in,13,1,out) != NI_OK ||
+        NetInterface::requestsTake(r.requests,0,151,0,out) != NI_READY) { return false; }
+    return NetInterface::requestsRemoveEndpoint(r.requests,2,0) == NI_OK &&
+        NetInterface::requestsRemoveEndpoint(r.requests,1,0) == NI_OK;
+}
+
+// 上层从已认证的文件服务取得会话信息。这里用三个内存字节示范发送、接收和持久写请求的生命周期。
+static bool DemoFile(DemoResources& r)
+{
+    const uint8_t file[] = {'a','b','c'};
+    NetInterfaceFileInfo info = {};
+    info.direction = 1;
+    info.state = NI_FILE_TRANSFERRING;
+    info.chunk = 1024;
+    info.window = 1;
+    info.total = sizeof(file);
+    info.stream = 1;
+    info.expiresUtc = 2000;
+    uint8_t encoded[NET_INTERFACE_FILE_INFO_SIZE];
+    int32_t status = 0;
+    if (NetInterface::entropyBytes(DemoEntropy,nullptr,info.transfer,sizeof(info.transfer)) != NI_OK ||
+        NetInterface::entropyBytes(DemoEntropy,nullptr,info.token,sizeof(info.token)) != NI_OK ||
+        NetInterface::sha256(file,sizeof(file),info.hash,sizeof(info.hash)) != NI_OK ||
+        NetInterface::fileFlowCreate(&info,7,1,100,0,1000,&r.upload) != NI_OK ||
+        NetInterface::fileFlowSnapshotWire(r.upload,encoded,sizeof(encoded),&status) != NI_OK ||
+        NetInterface::fileParseInfo(encoded,sizeof(encoded),&info) != NI_OK ||
+        NetInterface::fileFlowCreateWire(encoded,sizeof(encoded),7,0,100,0,1000,&r.download) != NI_OK ||
+        NetInterface::fileFlowSetWriteBatchChunks(r.download,1) != NI_OK) { return false; }
+    uint32_t request[3], fields[6];
+    const uint8_t* payload = nullptr;
+    if (NetInterface::fileFlowProgress(r.upload,101,0) < 0 ||
+        NetInterface::fileFlowRead(r.upload,request) != NI_READY ||
+        NetInterface::fileFlowProduced(r.upload,request[0],request[1],file,sizeof(file)) != NI_OK ||
+        NetInterface::fileFlowPeek(r.upload,fields,&payload) != NI_READY ||
+        NetInterface::fileFlowAccept(r.download,fields,payload) < 0 ||
+        NetInterface::fileFlowConsume(r.upload) != NI_OK ||
+        NetInterface::fileFlowWrite(r.download,request,&payload) != NI_READY) { return false; }
+    // 展示宿主选择取消的分支。真实落盘后才调用 fileFlowWritten，随后检查并执行提交。
+    std::printf("host has %u file bytes to write\n",request[2]);
+    if (NetInterface::fileFlowCancel(r.download,NI_CANCELLED) != NI_OK ||
+        NetInterface::fileFlowSnapshot(r.download,&info,&status) != NI_OK) { return false; }
+    NetInterface::wipe(encoded,sizeof(encoded));
+    NetInterface::wipe(reinterpret_cast<uint8_t*>(&info),sizeof(info));
+    return true;
+}
+
+// 从业务值到 protobuf、RPC 信封和 NIF2 帧，再在接收侧按层取回业务值。
+static bool DemoMessage(DemoResources& r)
+{
+    const uint8_t value[] = {'a',0,'z'};
+    uint8_t body[256], envelope[512], wire[1024], digest[32];
+    uint32_t n = 0, size = 0, used = 0;
+    if (NetInterface::messageCreate(&r.message) != NI_OK ||
+        NetInterface::messageSetValue(r.message,0,1,5,value,sizeof(value)) != NI_OK ||
+        NetInterface::messageSetCode(r.message,0,nullptr,0) != NI_OK ||
+        NetInterface::messageEncode(r.message,body,sizeof(body),&n) != NI_OK ||
+        NetInterface::rpcEncode(NI_REQUEST,500,0,0,body,n,envelope,sizeof(envelope),&size) != NI_OK) { return false; }
+    NetInterfaceFrame frame = {7,1,9,NI_REQUEST,size,envelope};
+    if (NetInterface::encode(frame,wire,sizeof(wire),n) != NI_OK) { return false; }
+    NetInterface decoder(1024);
+    // 新连接起始使用固定帧。只有业务握手已协商相应能力才开启下列选项。
+    decoder.allowCompact(false);
+    decoder.allowCompression(false);
+    if (decoder.feed(wire,n,used) != NI_READY || used != n || decoder.peek(frame) != NI_READY) { return false; }
+    uint32_t fields[] = {frame.m_kind,frame.m_productId,static_cast<uint32_t>(frame.m_requestId),
+        static_cast<uint32_t>(frame.m_requestId >> 32),frame.m_messageType,frame.m_payloadSize};
+    uint32_t rpc[5];
+    int32_t type = 0, code = 0;
+    if (NetInterface::rpcParse(fields,6,frame.m_payload,rpc) != NI_OK ||
+        NetInterface::messageClear(r.message) != NI_OK ||
+        NetInterface::messageParse(r.message,frame.m_payload + rpc[3],rpc[4]) != NI_OK ||
+        NetInterface::messageGetValue(r.message,0,1,&type,body,sizeof(body),&size) != NI_OK ||
+        NetInterface::messageGetCode(r.message,&code,nullptr,0,&n) != NI_OK ||
+        decoder.consume() != NI_OK || decoder.finish() != NI_OK) { return false; }
+    decoder.reset();
+    std::printf("field type %d, %u bytes, business status %d\n",type,size,code);
+    if (NetInterface::hashCreate(&r.hash) != NI_OK || NetInterface::hashUpdate(r.hash,body,size) != NI_OK ||
+        NetInterface::hashFinish(r.hash,digest,sizeof(digest)) != NI_OK) { return false; }
+    std::printf("digest prefix %02x%02x\n",digest[0],digest[1]);
+    NetInterface::wipe(digest,sizeof(digest));
+    return true;
+}
+
+// 管理隧道承载已经形成的密文。此处使用真实客户端的首段握手输出演示信用额度、借用与消费。
+static bool DemoTransport(DemoResources& r)
+{
+    int32_t detail = 0;
+    if (NetInterface::connectionCreateServiceClient(7,DemoEntropy,nullptr,5000,&r.connection,&detail) != NET_INTERFACE_TLS_HANDSHAKE ||
+        NetInterface::connectionGetStatus(r.connection,&detail) < 0 || NetInterface::connectionProgress(r.connection,100,0) < 0 ||
+        NetInterface::creditCreate(&r.credit) != NI_OK || NetInterface::creditConfigure(r.credit,65536) != NI_OK ||
+        NetInterface::tunnelCreate(&r.tunnel) != NI_OK) { return false; }
+    const uint8_t* bytes = nullptr;
+    uint32_t size = 0, budget[2], written = 0, used = 0;
+    uint8_t carrier[NET_INTERFACE_TUNNEL_HEADER_SIZE + NET_INTERFACE_TUNNEL_PAYLOAD_LIMIT];
+    if (NetInterface::connectionPeekOutput(r.connection,&bytes,&size) < 0 || size == 0 ||
+        NetInterface::creditGet(r.credit,budget) != NI_OK) { return false; }
+    const uint32_t count = size > NET_INTERFACE_TUNNEL_PAYLOAD_LIMIT ? NET_INTERFACE_TUNNEL_PAYLOAD_LIMIT : size;
+    if (count > budget[0]) { return false; }
+    uint32_t record[] = {NI_TUNNEL_BYTES,7,1,0,count};
+    if (NetInterface::tunnelEncode(record,bytes,carrier,sizeof(carrier),&written) != NI_OK ||
+        NetInterface::tunnelFeed(r.tunnel,carrier,written,&used) != NI_READY || used != written ||
+        NetInterface::creditSent(r.credit,count) != NI_OK ||
+        NetInterface::connectionConsumeOutput(r.connection,count) < 0 ||
+        NetInterface::tunnelPeek(r.tunnel,record,&bytes) != NI_READY ||
+        NetInterface::creditReceived(r.credit,record[4]) != NI_OK) { return false; }
+    std::printf("tunnel channel %u, %u TLS bytes\n",record[2],record[4]);
+    return NetInterface::tunnelConsume(r.tunnel) == NI_OK && NetInterface::tunnelFinish(r.tunnel) == NI_OK &&
+        NetInterface::creditConsume(r.credit,count) == NI_OK && NetInterface::creditGrant(r.credit,count) == NI_OK;
+}
+
+int main()
+{
+    DemoResources resources = {};
+    if (!DemoMessage(resources)) { return 1; }
+    if (!DemoRoute(resources)) { return 2; }
+    if (!DemoHello(resources)) { return 3; }
+    if (!DemoTransport(resources)) { return 4; }
+    return DemoFile(resources) ? 0 : 5;
+}
+*/

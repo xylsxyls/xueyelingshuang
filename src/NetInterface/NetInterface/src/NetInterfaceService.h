@@ -40,9 +40,9 @@ class NetInterfaceAPI NetInterfaceService
     @param [in] origin 来源；全零仅限没有根上下文的控制或失败响应
     @param [in] data 原体，仅size0可空
     @param [in] size 原体不超过1MiB
-    @param [out] output 至少size+32且不与data重叠
+    @param [out] output 至少size+32且不与data、origin或required重叠
     @param [in] capacity 容量
-    @param [out] required 所需字节数
+    @param [out] required 独立的长度输出；别名错误保留原缓冲，容量不足返回所需字节数
     @return OK或负数
     */
     static int32_t wrap(const NetInterfaceOrigin& origin, const uint8_t* data, uint32_t size, uint8_t* output, uint32_t capacity,

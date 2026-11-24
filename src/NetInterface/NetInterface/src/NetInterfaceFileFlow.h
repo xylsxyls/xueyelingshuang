@@ -34,7 +34,7 @@ public:
     */
     int32_t prime(uint64_t offset, const uint8_t* bytes, uint32_t size);
 
-    /** 更新时钟并检查固定无进度期限，重复ACK不延长期限
+    /** 更新单调时钟并检查无进度期限，新接纳的连续字节刷新期限，重复DATA或ACK不刷新
     @param [in] nowMs 同一单调时间
     @return OK在传输，READY成功完成，NEED_MORE待前缀/文件提交，负数失败
     */
@@ -63,7 +63,7 @@ public:
 
     /** 请求异步写入当前块或有界批次，返回借用数据，宿主投递时须复制
     @param [out] offset 文件位置
-    @param [out] bytes 借用至written/cancel/destroy
+    @param [out] bytes 借用至written、流失败（含超时或取消）或析构，异步写盘须复制
     @param [out] size 长度
     @return READY取一次，NEED_MORE无新工作，负数错误
     */
@@ -89,7 +89,7 @@ public:
     int32_t committed(int32_t result);
 
     /** 借用待发DATA/ACK；背压时不消费，下一次取得同一内容
-    @param [out] frame 成功借用至consumeOutput/cancel/destroy，否则清空
+    @param [out] frame 成功借用至consumeOutput、流失败或析构，否则清空
     @return READY有输出，NEED_MORE等待，负数错误
     */
     int32_t peekOutput(NetInterfaceFrame& frame);
@@ -123,9 +123,9 @@ private:
     */
     int32_t acceptData(const NetInterfaceFrame& frame);
 
-    /** 锁定首错，收端可回报失败ACK
+    /** 记录首次流错误，收端可回报失败ACK；已提交的文件保留成功终态
     @param [in] result 负数
-    @return 同一错误
+    @return 首个流错误；已提交时返回当前操作的错误
     */
     int32_t fail(int32_t result);
 

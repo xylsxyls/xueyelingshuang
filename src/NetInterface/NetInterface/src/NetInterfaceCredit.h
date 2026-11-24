@@ -27,7 +27,7 @@ public:
     */
     uint32_t capacity() const;
 
-    /** 读取可选管理窗口字段；旧端点缺字段保持64KiB
+    /** 读取指定组的可选窗口，无需复制字段或分配内存；仅缺字段时采用64KiB
     @param [in] message 同源protobuf
     @param [out] bytes 成功窗口
     @param [in] group 消息组号

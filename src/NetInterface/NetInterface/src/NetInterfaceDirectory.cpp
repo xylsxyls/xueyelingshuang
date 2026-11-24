@@ -2,11 +2,24 @@
 #include "NetInterfaceMacro.h"
 #include "NetInterfaceGatewayTypes.h"
 #include "NetInterface.h"
-#include "NetInterfaceCredit.h"
 #include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include <cstring>
 #include <utility>
 #include <array>
+
+/** 校验单个公开候选并保留数值地址键，供整张表检查重复端点
+@param [in] point 待检查的候选记录
+@param [out] addressKey 成功时写入16字节数值地址
+@return 身份、地址、端口、容量及代次全部有效时为true
+*/
+static bool ValidDirectoryPoint(const NetInterfaceDirectoryPoint& point, uint8_t* addressKey)
+{
+    return point.m_name.size() == NET_INTERFACE_DIRECTORY_NAME_BYTES && point.m_name.compare(0, 5, "node.") == 0 &&
+        point.m_name.find_first_not_of("0123456789abcdef", 5) == std::string::npos &&
+        point.m_port > 0 && point.m_port <= 65535 && point.m_capacity > 0 && point.m_boot != 0 &&
+        point.m_address.size() <= 39 && NetInterfaceDirectoryAddress::parse(point.m_address.data(),
+        static_cast<uint32_t>(point.m_address.size()), addressKey);
+}
 
 /** 验证当前条目与之前已验证条目的唯一性，地址按数值而非拼写比较
 @param [in] points 原完整表，至少index+1项
@@ -17,8 +30,7 @@
 static bool DirectoryUnique(const std::vector<NetInterfaceDirectoryPoint>& points, uint32_t index, std::vector<std::array<uint8_t, 16>>& keys)
 {
     const NetInterfaceDirectoryPoint& point = points[index];
-    if (!NetInterfaceDirectory::valid(point) || !NetInterfaceDirectoryAddress::parse(point.m_address.data(),
-        static_cast<uint32_t>(point.m_address.size()), keys[index].data()))
+    if (!ValidDirectoryPoint(point, keys[index].data()))
     {
         return false;
     }
@@ -178,9 +190,8 @@ bool NetInterfaceDirectory::address(const std::string& value)
 
 bool NetInterfaceDirectory::valid(const NetInterfaceDirectoryPoint& point)
 {
-    return point.m_name.size() == 37 && point.m_name.compare(0, 5, "node.") == 0 &&
-        point.m_name.find_first_not_of("0123456789abcdef", 5) == std::string::npos && address(point.m_address) &&
-        point.m_port > 0 && point.m_port <= 65535 && point.m_capacity > 0 && point.m_boot != 0;
+    uint8_t addressKey[16];
+    return ValidDirectoryPoint(point, addressKey);
 }
 
 bool NetInterfaceDirectory::number(const ProtoMessage& message, int32_t field, uint64_t& value, int32_t group)
@@ -238,10 +249,15 @@ bool NetInterfaceDirectory::text(const ProtoMessage& message, int32_t field, std
 
 int32_t NetInterfaceDirectory::encode(const std::vector<NetInterfaceDirectoryPoint>& points, std::string& output)
 {
-    if (points.empty() || points.size() > INT32_MAX)
+    if (points.empty())
     {
         output.clear();
         return NI_INVALID_ARGUMENT;
+    }
+    if (points.size() > NET_INTERFACE_DIRECTORY_BYTES / NET_INTERFACE_DIRECTORY_NAME_BYTES)
+    {
+        output.clear();
+        return NI_LIMIT_EXCEEDED;
     }
     try
     {
@@ -300,8 +316,8 @@ int32_t NetInterfaceDirectory::parse(const uint8_t* data, uint32_t size, std::ve
         // 输入可能借用points内部字符串；完成读取前不能清空原拥有者。
         ProtoMessage message;
         uint64_t count = 0;
-        if (!message.from(std::string(reinterpret_cast<const char*>(data), size)) || message.getCode() != NI_OK ||
-            !number(message, NI_GATEWAY_NODE_COUNT, count) || count == 0 || count > size)
+        if (!message.from(data, size) || message.getCode() != NI_OK ||
+            !number(message, NI_GATEWAY_NODE_COUNT, count) || count == 0 || count > size / NET_INTERFACE_DIRECTORY_NAME_BYTES)
         {
             points.clear();
             return NI_PROTOCOL_ERROR;
@@ -314,7 +330,7 @@ int32_t NetInterfaceDirectory::parse(const uint8_t* data, uint32_t size, std::ve
             NetInterfaceDirectoryPoint point;
             uint64_t port = 0;
             uint64_t capacity = 0;
-            if (!text(message, NI_GATEWAY_NODE_ID, point.m_name, 37, group) ||
+            if (!text(message, NI_GATEWAY_NODE_ID, point.m_name, NET_INTERFACE_DIRECTORY_NAME_BYTES, group) ||
                 !text(message, NI_GATEWAY_ADDRESS, point.m_address, 39, group) ||
                 !number(message, NI_GATEWAY_PORT, port, group) || port > 65535 ||
                 !number(message, NI_GATEWAY_CAPACITY, capacity, group) || capacity > UINT32_MAX ||

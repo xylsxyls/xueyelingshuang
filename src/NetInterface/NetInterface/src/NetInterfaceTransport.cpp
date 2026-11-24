@@ -46,7 +46,6 @@ NetGatewayTransport::~NetGatewayTransport()
 
 }
 
-
 int32_t NetClientChannel::outputState(uint64_t peer) const
 {
     (void)peer;
