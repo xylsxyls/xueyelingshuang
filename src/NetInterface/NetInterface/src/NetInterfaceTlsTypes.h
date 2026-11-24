@@ -2,7 +2,7 @@
 #include "NetInterfaceMacro.h"
 #include <stdint.h>
 
-// TLS实例状态；负数为持续错误，必须销毁实例后重新连接
+// TLS实例及操作返回码。status()报告的持续错误需要重建实例。长度输出与缓冲重叠是本次调用的参数错误，可以改正后重试。
 typedef enum NetInterfaceTlsStatus
 {
     // 本次输入已接受或输出已消费
@@ -55,6 +55,22 @@ typedef struct NetInterfaceTlsOptions
     NetInterfaceEntropyFunction entropy;
     // 随机回调上下文，可空，生命周期覆盖TLS实例
     void* entropyContext;
-    // 握手时限，100至60000毫秒
+    // 握手时限毫秒，0 采用 10000，可指定 100 至 60000
     uint32_t handshakeTimeoutMs;
+#ifdef __cplusplus
+    /** 创建前设置握手时限，无效值保留原配置
+    @param [in] value 0 采用默认值，或 100 至 60000 毫秒
+    @return 是否保存成功
+    */
+    bool setHandshakeTimeout(uint32_t value);
+
+    /** 取得本实例用于握手及外层推进的有效时限
+    @return 单调毫秒时限，未显式设置时为 10000
+    */
+    uint32_t effectiveHandshakeTimeout() const;
+#endif
 } NetInterfaceTlsOptions;
+
+#ifdef __cplusplus
+#include "NetInterfaceTlsTypes.inl"
+#endif

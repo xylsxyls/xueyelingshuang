@@ -105,25 +105,38 @@ void NetExecution::deadline(uint64_t expiresMs, uint64_t nowMs)
     s_execution->m_waitUntil = (std::min)(s_execution->m_waitUntil, until);
 }
 
+/** 同时更新宿主和协议层在线程上的归属
+@param [in] execution 协议执行者，可空
+@param [in] host 宿主实际循环，可独立于协议执行者存在
+@return 之前绑定的宿主循环
+*/
+static void* BindExecution(NetExecution* execution, void* host)
+{
+    void* previousHost = s_functions.exchange == nullptr ? nullptr : s_functions.exchange(host);
+    s_execution = execution;
+    return previousHost;
+}
+
 NetExecution* NetExecution::exchange(NetExecution* execution)
 {
+    void* previousHost = nullptr;
+    return exchange(execution, previousHost);
+}
+
+NetExecution* NetExecution::exchange(NetExecution* execution, void*& previousHost)
+{
     NetExecution* previous = s_execution;
-    // 已登记的宿主对所有执行者相同；空作用域恢复宿主独立通道模式。
-    if (s_functions.exchange != nullptr)
-    {
-        s_functions.exchange(execution == nullptr ? nullptr : execution->m_instance);
-    }
-    s_execution = execution;
+    previousHost = BindExecution(execution, execution == nullptr ? nullptr : execution->m_instance);
     return previous;
 }
 
 NetExecutionScope::NetExecutionScope(NetExecution& execution) :
-m_previous(NetExecution::exchange(&execution))
+m_previousHost(nullptr), m_previous(NetExecution::exchange(&execution, m_previousHost))
 {
 
 }
 
 NetExecutionScope::~NetExecutionScope()
 {
-    NetExecution::exchange(m_previous);
+    BindExecution(m_previous, m_previousHost);
 }

@@ -1,11 +1,37 @@
 ﻿#pragma once
+#include "NetConnectionPoolConfig.h"
+#include "CEncodeDecode/CEncodeDecodeAPI.h"
 #include "NetInterfaceLinkTypes.h"
 #include "NetInterfaceTunnelTypes.h"
 #include "NetInterfaceTypes.h"
 
 class NetInterfaceLinkState;
-struct NetBufferPoolConfig;
-struct LockFreeHashMapPoolConfig;
+// 每条链路的业务输出与管理 TLS 独立配置、分配和释放
+struct NetInterfaceAPI NetInterfaceLinkPools
+{
+public:
+    // 空闲至发送管理 PING 的毫秒数，必须大于零
+    uint32_t m_pingIntervalMs;
+    // 发出 PING 后等待对应 PONG 的毫秒数，必须大于零
+    uint32_t m_pongTimeoutMs;
+    // EOF 后允许上层消费已接纳数据的毫秒数，必须大于零
+    uint32_t m_drainTimeoutMs;
+    // 每次progress最多处理的管理帧数，默认64，至少1
+    uint32_t m_controlStepBudget;
+    // 业务密文按大小分级的正文池
+    NetBufferPoolConfig m_outputBodies;
+    // 每条待输出业务记录占一个槽
+    LockFreeHashMapPoolConfig m_outputRecords;
+    // 管理 TLS 自己的控制、数据记录及两套正文池
+    NetConnectionPoolConfig m_controlConnection;
+    // 仅管理 TLS 的输入、输出密文字节预算，与业务 TLS 独立
+    CEncodeDecodeTlsQueueLimits m_controlCiphertext;
+
+public:
+    /** 使用各组件的默认配置，业务记录初始128槽
+    */
+    NetInterfaceLinkPools();
+};
 
 // 管理TLS和NTW3组合，无socket/IPC/线程；业务TLS在各逻辑通道端点单独持有。
 class NetInterfaceAPI NetInterfaceLink
@@ -15,6 +41,12 @@ public:
     @param [in] options v3配置、强随机及可选服务端专用回调
     */
     explicit NetInterfaceLink(const NetInterfaceLinkOptions& options);
+
+    /** 用指定的管理连接和业务输出池创建链路，结果由 status 返回
+    @param [in] options 身份、角色及宿主回调
+    @param [in] pools 当前实例各物理池配置
+    */
+    NetInterfaceLink(const NetInterfaceLinkOptions& options, const NetInterfaceLinkPools& pools);
 
     /** 在拥有状态的本模块释放并擦除身份私钥副本
     */

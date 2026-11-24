@@ -1,5 +1,6 @@
 ﻿#include "NetInterfaceMacro.h"
 #include "NetInterfaceTunnel.h"
+#include "NetInterfaceFileGuard.h"
 
 static_assert(static_cast<int32_t>(NI_OK) == NC_OK && static_cast<int32_t>(NI_NEED_MORE) == NC_NEED_MORE && static_cast<int32_t>(NI_READY) == NC_READY &&
     static_cast<int32_t>(NI_INVALID_ARGUMENT) == NC_INVALID_ARGUMENT && static_cast<int32_t>(NI_PROTOCOL_ERROR) == NC_PROTOCOL_ERROR &&
@@ -24,6 +25,7 @@ NetInterfaceTunnel::~NetInterfaceTunnel()
 
 int32_t NetInterfaceTunnel::feed(const uint8_t* data, uint32_t size, uint32_t& consumed)
 {
+    if (NetInterfaceFileGuard::overlap(data, size, &consumed, sizeof(consumed))) { return NI_INVALID_ARGUMENT; }
     return m_decoder.feed(data, size, consumed);
 }
 
@@ -51,6 +53,12 @@ int32_t NetInterfaceTunnel::finish()
 
 int32_t NetInterfaceTunnel::encode(const NetInterfaceTunnelRecord& record, uint8_t* output, uint32_t capacity, uint32_t& required)
 {
+    if (NetInterfaceFileGuard::overlap(&required, sizeof(required), &record, sizeof(record)) ||
+        NetInterfaceFileGuard::overlap(&required, sizeof(required), record.m_data, record.m_size) ||
+        NetInterfaceFileGuard::overlap(&required, sizeof(required), output, capacity))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     NetChannelRecord view = {};
     view.m_kind = record.m_kind;
     view.m_product = record.m_product;

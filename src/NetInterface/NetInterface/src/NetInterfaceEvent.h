@@ -26,7 +26,7 @@ class NetInterfaceAPI NetInterfaceEvent
     @param [in] size 最多1048552字节
     @param [out] output 容量不足可空；禁止与data重叠
     @param [in] capacity 空间
-    @param [out] required 所需长度或0
+    @param [out] required 容量不足时返回所需长度；必须独立于输入和输出缓冲，重叠时保持原值
     @return OK、BUFFER_TOO_SMALL或INVALID_ARGUMENT
     */
     static int32_t encode(uint64_t target, uint32_t flags, const uint8_t* data, uint32_t size, uint8_t* output, uint32_t capacity,
@@ -34,8 +34,8 @@ class NetInterfaceAPI NetInterfaceEvent
 
     /** 解析已认证服务事件；源角色、产品、接收者仍由网关验证
     @param [in] frame EVENT/非零事件号
-    @param [out] view 借用字段或清零
-    @return OK或PROTOCOL_ERROR
+    @param [out] view 独立于帧描述及正文；成功时借用正文，格式错误时清零，重叠时保持原值
+    @return OK、PROTOCOL_ERROR或输出重叠时的INVALID_ARGUMENT
     */
     static int32_t parse(const NetInterfaceFrame& frame, NetInterfaceEventView& view);
 };

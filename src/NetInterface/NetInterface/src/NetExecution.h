@@ -61,6 +61,13 @@ public:
     */
     static NetExecution* exchange(NetExecution* execution);
 
+    /** 切换执行者并保存宿主在线程上绑定的循环，供作用域精确恢复
+    @param [in] execution 新借用的执行者或空
+    @param [out] previousHost 切换前的实际宿主循环，未登记宿主时为空
+    @return 之前借用的协议执行者，宿主独立运行时为空
+    */
+    static NetExecution* exchange(NetExecution* execution, void*& previousHost);
+
 private:
     /** 禁止复制拥有的宿主循环
     @param [in] other 原对象
@@ -115,6 +122,8 @@ private:
     NetExecutionScope& operator=(const NetExecutionScope& other);
 
 private:
+    // 进入作用域前宿主线程的实际循环，可能由协议库以外的调用方绑定
+    void* m_previousHost;
     // 外层执行者，只借用至恢复
     NetExecution* m_previous;
 };

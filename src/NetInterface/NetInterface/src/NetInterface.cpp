@@ -8,7 +8,6 @@
 #include "NetInterfaceMessage.h"
 #include <new>
 #include "NetInterfaceLink.h"
-#include "NetInterfaceDirectoryHelper.h"
 #include "NetInterfaceGatewayTypes.h"
 #include "ProtoMessageManager/ProtoMessageManagerAPI.h"
 #include <utility>
@@ -74,6 +73,20 @@ static uint64_t RequestPair(const uint32_t* words)
     return (static_cast<uint64_t>(words[1]) << 32) | words[0];
 }
 
+/** 校验消息的输出字节、长度与可选元数据各自拥有独立的存储空间
+@param [in] output 输出缓冲首地址
+@param [in] capacity 调用方声明的字节容量
+@param [in] required 长度输出位置
+@param [in] metadata 类型或状态码的输出位置，无此参数时为空
+@return 任意两个有效输出区域相交时为true
+*/
+static bool MessageOutputsOverlap(const uint8_t* output, uint32_t capacity, const uint32_t* required, const int32_t* metadata)
+{
+    return NetInterfaceFileGuard::overlap(required, sizeof(*required), output, capacity) ||
+        NetInterfaceFileGuard::overlap(metadata, sizeof(*metadata), output, capacity) ||
+        NetInterfaceFileGuard::overlap(required, sizeof(*required), metadata, sizeof(*metadata));
+}
+
 /** 检查长度并复制输出；不足空间不修改调用方缓冲
 @param [in] bytes 调用期间借用的字节，size为0时可空
 @param [in] size 完整字节数，当前消息最多1MiB
@@ -94,6 +107,24 @@ static int32_t CopyMessageOutput(const char* bytes, size_t size, uint8_t* output
         std::memcpy(output, bytes, size);
     }
     return NI_OK;
+}
+
+/** 准备借用视图的字段与指针输出。输出重叠时保持原值
+@param [out] fields 长度或元数据的输出区
+@param [in] count 接口规定的字段个数
+@param [out] payload 底层存储的借用指针
+@return 两个输出均存在且占用独立空间时为true
+*/
+static bool PrepareViewOutputs(uint32_t* fields, size_t count, const uint8_t** payload)
+{
+    const size_t fieldBytes = count * sizeof(uint32_t);
+    if (NetInterfaceFileGuard::overlap(fields, fieldBytes, payload, sizeof(*payload)))
+    {
+        return false;
+    }
+    if (fields != nullptr) { std::memset(fields, 0, fieldBytes); }
+    if (payload != nullptr) { *payload = nullptr; }
+    return fields != nullptr && payload != nullptr;
 }
 
 /** 复制借用记录的布局无关字段
@@ -136,7 +167,7 @@ static NetInterfaceTunnelRecord LinkApiRecord(const uint32_t* fields, const uint
 */
 static int32_t DirectoryCreate(const uint8_t* data, uint32_t size, uint64_t utcMs, NetInterfaceDirectoryHandle* handle)
 {
-    if (handle == nullptr || NetInterfaceDirectoryHelper::directoryRangesOverlap(data, size, handle, sizeof(*handle)))
+    if (handle == nullptr || NetInterfaceFileGuard::overlap(data, size, handle, sizeof(*handle)))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -155,6 +186,7 @@ static int32_t DirectoryCreate(const uint8_t* data, uint32_t size, uint64_t utcM
 
 NetInterface::NetInterface(uint32_t payloadLimit) :
 m_payloadLimit(payloadLimit),
+m_retentionLimit((std::min)(payloadLimit, static_cast<uint32_t>(NET_INTERFACE_DEFAULT_DECODER_RETENTION))),
 m_compressionAllowed(false),
 m_compactAllowed(false),
 m_headerReady(false),
@@ -233,14 +265,14 @@ int32_t NetInterface::prepareHeader()
     }
     if (m_wireSize > m_capacity)
     {
-        // 常用小消息按几何容量复用；大消息只占本条所需空间，consume立即释放。
+        // 可保留的正文按几何容量增长；一次性大帧只分配实际长度。
         uint32_t capacity = m_wireSize;
-        if (capacity <= 4096)
+        if (capacity <= m_retentionLimit)
         {
-            capacity = 256;
+            capacity = (std::min)(256U, m_retentionLimit);
             while (capacity < m_wireSize)
             {
-                capacity *= 2;
+                capacity = (std::min)(capacity * 2, m_retentionLimit);
             }
         }
         delete[] m_body;
@@ -285,8 +317,7 @@ static inline void CopyFrameBody(uint8_t* output, const uint8_t* input, uint32_t
 
 int32_t NetInterface::feed(const uint8_t* data, uint32_t size, uint32_t& consumed)
 {
-    consumed = 0;
-    if (size != 0 && (data == nullptr || reinterpret_cast<uintptr_t>(data) > UINTPTR_MAX - size))
+    if (!NetInterfaceFileGuard::prepareCount(data, size, &consumed) || (size != 0 && data == nullptr))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -463,7 +494,7 @@ int32_t NetInterface::consume()
     {
         return m_status < 0 ? m_status : NI_INVALID_STATE;
     }
-    clear(m_capacity > 4096);
+    clear(m_capacity > m_retentionLimit);
     return NI_OK;
 }
 
@@ -485,6 +516,29 @@ void NetInterface::reset()
 int32_t NetInterface::status() const
 {
     return m_status;
+}
+
+int32_t NetInterface::configureDecoderRetention(int32_t bytes)
+{
+    if (bytes < -1 || m_payloadLimit == 0 || m_payloadLimit > NET_INTERFACE_MAX_PAYLOAD_LIMIT)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
+    if (m_status != NI_NEED_MORE || m_headerSize != 0)
+    {
+        return NI_INVALID_STATE;
+    }
+    m_retentionLimit = bytes == -1 ? m_payloadLimit : (std::min)(static_cast<uint32_t>(bytes), m_payloadLimit);
+    if (m_capacity > m_retentionLimit)
+    {
+        clear(true);
+    }
+    return NI_OK;
+}
+
+uint32_t NetInterface::decoderBufferCapacity() const
+{
+    return m_capacity;
 }
 
 uint32_t NetInterface::payloadLimit() const
@@ -522,6 +576,10 @@ int32_t NetInterface::encodeCompact(const NetInterfaceFrame& frame, uint8_t* out
 int32_t NetInterface::encode(const NetInterfaceFrame& frame, uint8_t* output, uint32_t capacity, uint32_t& required)
 {
     // 先固定元数据，避免输出写入调用方frame存储时覆盖后续读取的字段。
+    if (NetInterfaceFileGuard::overlapsFrameLength(frame, output, capacity, required))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     const NetInterfaceFrame input = frame;
     required = 0;
     if (input.m_kind < NI_HELLO || input.m_kind > NI_DATA_ACK ||
@@ -588,25 +646,17 @@ void NetInterface::tunnelDestroy(NetInterfaceTunnelHandle handle)
 
 int32_t NetInterface::tunnelFeed(NetInterfaceTunnelHandle handle, const uint8_t* data, uint32_t size, uint32_t* consumed)
 {
-    if (consumed == nullptr)
+    if (handle == nullptr || consumed == nullptr)
     {
+        NetInterfaceFileGuard::prepareCount(data, size, consumed);
         return NI_INVALID_ARGUMENT;
     }
-    *consumed = 0;
-    return handle == nullptr ? NI_INVALID_ARGUMENT : reinterpret_cast<NetInterfaceTunnel*>(handle)->feed(data, size, *consumed);
+    return reinterpret_cast<NetInterfaceTunnel*>(handle)->feed(data, size, *consumed);
 }
 
 int32_t NetInterface::tunnelPeek(NetInterfaceTunnelHandle handle, uint32_t* fields, const uint8_t** payload)
 {
-    if (fields != nullptr)
-    {
-        std::memset(fields, 0, 5 * sizeof(uint32_t));
-    }
-    if (payload != nullptr)
-    {
-        *payload = nullptr;
-    }
-    if (handle == nullptr || fields == nullptr || payload == nullptr)
+    if (!PrepareViewOutputs(fields, 5, payload) || handle == nullptr)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -614,12 +664,7 @@ int32_t NetInterface::tunnelPeek(NetInterfaceTunnelHandle handle, uint32_t* fiel
     const int32_t result = reinterpret_cast<NetInterfaceTunnel*>(handle)->peek(record);
     if (result == NI_READY)
     {
-        fields[0] = record.m_kind;
-        fields[1] = record.m_product;
-        fields[2] = static_cast<uint32_t>(record.m_channel);
-        fields[3] = static_cast<uint32_t>(record.m_channel >> 32);
-        fields[4] = record.m_size;
-        *payload = record.m_data;
+        LinkApiRecordFields(record, fields, payload);
     }
     return result;
 }
@@ -637,22 +682,16 @@ int32_t NetInterface::tunnelFinish(NetInterfaceTunnelHandle handle)
 int32_t NetInterface::tunnelEncode(const uint32_t* fields, const uint8_t* payload, uint8_t* output,
     uint32_t capacity, uint32_t* required)
 {
-    if (required == nullptr)
+    if (required == nullptr || NetInterfaceFileGuard::overlap(fields, 5 * sizeof(uint32_t), required, sizeof(*required)))
     {
         return NI_INVALID_ARGUMENT;
     }
-    *required = 0;
     if (fields == nullptr)
     {
+        if (!NetInterfaceFileGuard::overlap(output, capacity, required, sizeof(*required))) { *required = 0; }
         return NI_INVALID_ARGUMENT;
     }
-    NetInterfaceTunnelRecord record = {};
-    record.m_kind = fields[0];
-    record.m_product = fields[1];
-    record.m_channel = static_cast<uint64_t>(fields[3]) << 32 | fields[2];
-    record.m_data = payload;
-    record.m_size = fields[4];
-    return NetInterfaceTunnel::encode(record, output, capacity, *required);
+    return NetInterfaceTunnel::encode(LinkApiRecord(fields, payload), output, capacity, *required);
 }
 
 const uint8_t* NetInterface::trustAuthority(uint32_t* size)
@@ -668,6 +707,14 @@ int32_t NetInterface::tlsCreateClient(const uint8_t* authority, uint32_t authori
                                     NetInterfaceEntropyFunction entropy, void* context, uint32_t timeoutMs, NetInterfaceTlsHandle* handle,
                                     int32_t* detail)
 {
+    return tlsCreateClient(authority, authoritySize, hostname, entropy, context, timeoutMs, handle, detail, CEncodeDecodeTlsQueueLimits());
+}
+
+int32_t NetInterface::tlsCreateClient(const uint8_t* authority, uint32_t authoritySize, const char* hostname,
+                                    NetInterfaceEntropyFunction entropy, void* context, uint32_t timeoutMs, NetInterfaceTlsHandle* handle,
+                                    int32_t* detail,
+    const CEncodeDecodeTlsQueueLimits& limits)
+{
     NetInterfaceTlsOptions options = {};
     options.authority = authority;
     options.authoritySize = authoritySize;
@@ -675,10 +722,16 @@ int32_t NetInterface::tlsCreateClient(const uint8_t* authority, uint32_t authori
     options.entropy = entropy;
     options.entropyContext = context;
     options.handshakeTimeoutMs = timeoutMs;
-    return NetInterface::tlsCreate(&options, handle, detail);
+    return NetInterface::tlsCreate(&options, handle, detail, limits);
 }
 
 int32_t NetInterface::tlsCreate(const NetInterfaceTlsOptions* options, NetInterfaceTlsHandle* handle, int32_t* detail)
+{
+    return tlsCreate(options, handle, detail, CEncodeDecodeTlsQueueLimits());
+}
+
+int32_t NetInterface::tlsCreate(const NetInterfaceTlsOptions* options, NetInterfaceTlsHandle* handle, int32_t* detail,
+    const CEncodeDecodeTlsQueueLimits& limits)
 {
     if (detail != nullptr)
     {
@@ -693,7 +746,7 @@ int32_t NetInterface::tlsCreate(const NetInterfaceTlsOptions* options, NetInterf
     {
         return NET_INTERFACE_TLS_ARGUMENT;
     }
-    NetInterfaceTls* instance = new (std::nothrow) NetInterfaceTls(*options);
+    NetInterfaceTls* instance = new (std::nothrow) NetInterfaceTls(*options, limits);
     if (instance == nullptr)
     {
         return NET_INTERFACE_TLS_MEMORY;
@@ -721,12 +774,12 @@ void NetInterface::tlsDestroy(NetInterfaceTlsHandle handle)
 
 int32_t NetInterface::tlsFeed(NetInterfaceTlsHandle handle, const uint8_t* data, uint32_t size, uint32_t* consumed)
 {
-    if (consumed == nullptr)
+    if (handle == nullptr || consumed == nullptr)
     {
+        NetInterfaceFileGuard::prepareCount(data, size, consumed);
         return NET_INTERFACE_TLS_ARGUMENT;
     }
-    *consumed = 0;
-    return handle == nullptr ? NET_INTERFACE_TLS_ARGUMENT : reinterpret_cast<NetInterfaceTls*>(handle)->feed(data, size, *consumed);
+    return reinterpret_cast<NetInterfaceTls*>(handle)->feed(data, size, *consumed);
 }
 
 int32_t NetInterface::tlsProgress(NetInterfaceTlsHandle handle, uint32_t timeLow, uint32_t timeHigh)
@@ -737,15 +790,7 @@ int32_t NetInterface::tlsProgress(NetInterfaceTlsHandle handle, uint32_t timeLow
 
 int32_t NetInterface::tlsPeekOutput(NetInterfaceTlsHandle handle, const uint8_t** data, uint32_t* size)
 {
-    if (data != nullptr)
-    {
-        *data = nullptr;
-    }
-    if (size != nullptr)
-    {
-        *size = 0;
-    }
-    if (handle == nullptr || data == nullptr || size == nullptr)
+    if (!PrepareViewOutputs(size, 1, data) || handle == nullptr)
     {
         return NET_INTERFACE_TLS_ARGUMENT;
     }
@@ -759,22 +804,22 @@ int32_t NetInterface::tlsConsumeOutput(NetInterfaceTlsHandle handle, uint32_t si
 
 int32_t NetInterface::tlsWrite(NetInterfaceTlsHandle handle, const uint8_t* data, uint32_t size, uint32_t* accepted)
 {
-    if (accepted == nullptr)
+    if (handle == nullptr || accepted == nullptr)
     {
+        NetInterfaceFileGuard::prepareCount(data, size, accepted);
         return NET_INTERFACE_TLS_ARGUMENT;
     }
-    *accepted = 0;
-    return handle == nullptr ? NET_INTERFACE_TLS_ARGUMENT : reinterpret_cast<NetInterfaceTls*>(handle)->write(data, size, *accepted);
+    return reinterpret_cast<NetInterfaceTls*>(handle)->write(data, size, *accepted);
 }
 
 int32_t NetInterface::tlsRead(NetInterfaceTlsHandle handle, uint8_t* output, uint32_t capacity, uint32_t* received)
 {
-    if (received == nullptr)
+    if (handle == nullptr || received == nullptr)
     {
+        NetInterfaceFileGuard::prepareCount(output, capacity, received);
         return NET_INTERFACE_TLS_ARGUMENT;
     }
-    *received = 0;
-    return handle == nullptr ? NET_INTERFACE_TLS_ARGUMENT : reinterpret_cast<NetInterfaceTls*>(handle)->read(output, capacity, *received);
+    return reinterpret_cast<NetInterfaceTls*>(handle)->read(output, capacity, *received);
 }
 
 int32_t NetInterface::tlsFinishInput(NetInterfaceTlsHandle handle)
@@ -815,6 +860,10 @@ int32_t NetInterface::rpcParse(const uint32_t* frameFields, uint32_t count, cons
     if (frameFields != nullptr && count == 6)
     {
         std::memcpy(snapshot, frameFields, sizeof(snapshot));
+        if (NetInterfaceFileGuard::overlap(fields, 5 * sizeof(uint32_t), data, snapshot[5]))
+        {
+            return NI_INVALID_ARGUMENT;
+        }
     }
     if (fields != nullptr)
     {
@@ -878,20 +927,17 @@ int32_t NetInterface::rpcControl(const uint32_t* fields, uint32_t count, uint32_
     return result;
 }
 
-int32_t NetInterface::requestsCreate(uint32_t capacity, NetInterfaceRequestsHandle* handle)
+/** 按容量或独立的各池配置创建请求表，初始化失败时不交出所有权
+@param [in] config 请求表构造参数
+@param [out] handle 已验证且清空的输出地址
+@return NI_OK 或底层初始化错误
+*/
+template<class Config>
+static int32_t CreateRequestTable(const Config& config, NetInterfaceRequestsHandle* handle)
 {
-    if (handle == nullptr)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    *handle = nullptr;
-    if (capacity == 0)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
     try
     {
-        std::unique_ptr<NetInterfaceRequests> requests(new NetInterfaceRequests(capacity));
+        std::unique_ptr<NetInterfaceRequests> requests(new NetInterfaceRequests(config));
         const int32_t initialized = requests->status();
         if (initialized != NI_OK)
         {
@@ -904,6 +950,27 @@ int32_t NetInterface::requestsCreate(uint32_t capacity, NetInterfaceRequestsHand
     {
         return NI_NO_MEMORY;
     }
+}
+
+int32_t NetInterface::requestsCreate(uint32_t capacity, NetInterfaceRequestsHandle* handle)
+{
+    if (handle == nullptr)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
+    *handle = nullptr;
+    if (capacity == 0)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
+    return CreateRequestTable(capacity, handle);
+}
+
+int32_t NetInterface::requestsCreate(const NetRequestTablePools& pools, NetInterfaceRequestsHandle* handle)
+{
+    if (handle == nullptr) { return NI_INVALID_ARGUMENT; }
+    *handle = nullptr;
+    return CreateRequestTable(pools, handle);
 }
 
 void NetInterface::requestsDestroy(NetInterfaceRequestsHandle handle)
@@ -1047,6 +1114,23 @@ int32_t NetInterface::messageCreate(NetInterfaceMessageHandle* handle)
     }
 }
 
+int32_t NetInterface::messageConfigureLimits(NetInterfaceMessageHandle handle, int64_t modificationBytes, int32_t errorTextBytes)
+{
+    if (!handle || modificationBytes < -1 || errorTextBytes < -1)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
+    NetInterfaceMessage* state = reinterpret_cast<NetInterfaceMessage*>(handle);
+    if (state->m_budget != 0)
+    {
+        return NI_INVALID_STATE;
+    }
+    state->m_budgetLimit = modificationBytes;
+    state->m_errorLimit = errorTextBytes == -1 ? NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT :
+        (std::min)(static_cast<uint32_t>(errorTextBytes), NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT);
+    return NI_OK;
+}
+
 void NetInterface::messageDestroy(NetInterfaceMessageHandle handle)
 {
     delete reinterpret_cast<NetInterfaceMessage*>(handle);
@@ -1074,7 +1158,7 @@ int32_t NetInterface::messageParse(NetInterfaceMessageHandle handle, const uint8
     {
         return NI_INVALID_ARGUMENT;
     }
-    if (size > NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT)
+    if (size > NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT || !state->canCharge(size))
     {
         return NI_LIMIT_EXCEEDED;
     }
@@ -1096,6 +1180,10 @@ int32_t NetInterface::messageParse(NetInterfaceMessageHandle handle, const uint8
 
 int32_t NetInterface::messageEncode(NetInterfaceMessageHandle handle, uint8_t* output, uint32_t capacity, uint32_t* required)
 {
+    if (MessageOutputsOverlap(output, capacity, required, nullptr))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     if (required != nullptr)
     {
         *required = 0;
@@ -1131,7 +1219,7 @@ int32_t NetInterface::messageSetValue(NetInterfaceMessageHandle handle, int32_t 
         return NI_INVALID_ARGUMENT;
     }
     NetInterfaceMessage* state = reinterpret_cast<NetInterfaceMessage*>(handle);
-    if (size > NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT - 64 || state->m_budget > NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT - 64 - size)
+    if (size > NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT || !state->canCharge(64ULL + size))
     {
         return NI_LIMIT_EXCEEDED;
     }
@@ -1150,6 +1238,10 @@ int32_t NetInterface::messageSetValue(NetInterfaceMessageHandle handle, int32_t 
 int32_t NetInterface::messageGetValue(NetInterfaceMessageHandle handle, int32_t group, int32_t key, int32_t* type, uint8_t* output,
                                     uint32_t capacity, uint32_t* required)
 {
+    if (MessageOutputsOverlap(output, capacity, required, type))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     if (required != nullptr)
     {
         *required = 0;
@@ -1179,7 +1271,7 @@ int32_t NetInterface::messageSetCode(NetInterfaceMessageHandle handle, int32_t c
         return NI_INVALID_ARGUMENT;
     }
     NetInterfaceMessage* state = reinterpret_cast<NetInterfaceMessage*>(handle);
-    if (size > 4096 || state->m_budget > NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT - size - 32)
+    if (size > state->m_errorLimit || !state->canCharge(32ULL + size))
     {
         return NI_LIMIT_EXCEEDED;
     }
@@ -1197,6 +1289,10 @@ int32_t NetInterface::messageSetCode(NetInterfaceMessageHandle handle, int32_t c
 
 int32_t NetInterface::messageGetCode(NetInterfaceMessageHandle handle, int32_t* code, uint8_t* error, uint32_t capacity, uint32_t* required)
 {
+    if (MessageOutputsOverlap(error, capacity, required, code))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     if (required != nullptr)
     {
         *required = 0;
@@ -1224,13 +1320,18 @@ int32_t NetInterface::messageGetCode(NetInterfaceMessageHandle handle, int32_t* 
 
 int32_t NetInterface::linkCreate(const NetInterfaceLinkOptions* options, NetInterfaceLinkHandle* handle)
 {
+    return linkCreate(options, handle, nullptr);
+}
+
+int32_t NetInterface::linkCreate(const NetInterfaceLinkOptions* options, NetInterfaceLinkHandle* handle,
+    const NetInterfaceLinkPools* pools)
+{
     if (handle == nullptr) { return NI_INVALID_ARGUMENT; }
     *handle = nullptr;
     if (options == nullptr) { return NI_INVALID_ARGUMENT; }
     try
     {
-        NetInterfaceLink* link = new (std::nothrow) NetInterfaceLink(*options);
-        if (link == nullptr) { return NI_NO_MEMORY; }
+        NetInterfaceLink* link = pools ? new NetInterfaceLink(*options, *pools) : new NetInterfaceLink(*options);
         const int32_t status = link->status();
         if (status < 0) { delete link; return status; }
         *handle = reinterpret_cast<NetInterfaceLinkHandle>(link);
@@ -1258,9 +1359,10 @@ int32_t NetInterface::linkProgress(NetInterfaceLinkHandle handle, uint32_t low, 
 
 int32_t NetInterface::linkPeekOutput(NetInterfaceLinkHandle handle, uint32_t* fields, const uint8_t** payload)
 {
-    if (fields != nullptr) { std::memset(fields, 0, 5 * sizeof(uint32_t)); }
-    if (payload != nullptr) { *payload = nullptr; }
-    if (handle == nullptr || fields == nullptr || payload == nullptr) { return NI_INVALID_ARGUMENT; }
+    if (!PrepareViewOutputs(fields, 5, payload) || handle == nullptr)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     NetInterfaceTunnelRecord record = {};
     const int32_t result = reinterpret_cast<NetInterfaceLink*>(handle)->peekOutput(record);
     if (result == NI_READY) { LinkApiRecordFields(record, fields, payload); }
@@ -1280,9 +1382,10 @@ int32_t NetInterface::linkSendRecord(NetInterfaceLinkHandle handle, const uint32
 
 int32_t NetInterface::linkPeekRecord(NetInterfaceLinkHandle handle, uint32_t* fields, const uint8_t** payload)
 {
-    if (fields != nullptr) { std::memset(fields, 0, 5 * sizeof(uint32_t)); }
-    if (payload != nullptr) { *payload = nullptr; }
-    if (handle == nullptr || fields == nullptr || payload == nullptr) { return NI_INVALID_ARGUMENT; }
+    if (!PrepareViewOutputs(fields, 5, payload) || handle == nullptr)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     NetInterfaceTunnelRecord record = {};
     const int32_t result = reinterpret_cast<NetInterfaceLink*>(handle)->peekRecord(record);
     if (result == NI_READY) { LinkApiRecordFields(record, fields, payload); }
@@ -1309,9 +1412,10 @@ int32_t NetInterface::linkSendControl(NetInterfaceLinkHandle handle, const uint3
 
 int32_t NetInterface::linkPeekControl(NetInterfaceLinkHandle handle, uint32_t* fields, const uint8_t** payload)
 {
-    if (fields != nullptr) { std::memset(fields, 0, 6 * sizeof(uint32_t)); }
-    if (payload != nullptr) { *payload = nullptr; }
-    if (handle == nullptr || fields == nullptr || payload == nullptr) { return NI_INVALID_ARGUMENT; }
+    if (!PrepareViewOutputs(fields, 6, payload) || handle == nullptr)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     NetInterfaceFrame frame = {};
     const int32_t result = reinterpret_cast<NetInterfaceLink*>(handle)->peekControl(frame);
     if (result == NI_READY)
@@ -1335,6 +1439,15 @@ int32_t NetInterface::linkConsumeControl(NetInterfaceLinkHandle handle)
 int32_t NetInterface::linkPeerInfo(NetInterfaceLinkHandle handle, uint32_t* fields,
     const uint8_t** name, const uint8_t** certificate, const uint8_t** claims)
 {
+    if (NetInterfaceFileGuard::overlap(fields, 4 * sizeof(*fields), name, sizeof(*name)) ||
+        NetInterfaceFileGuard::overlap(fields, 4 * sizeof(*fields), certificate, sizeof(*certificate)) ||
+        NetInterfaceFileGuard::overlap(fields, 4 * sizeof(*fields), claims, sizeof(*claims)) ||
+        NetInterfaceFileGuard::overlap(name, sizeof(*name), certificate, sizeof(*certificate)) ||
+        NetInterfaceFileGuard::overlap(name, sizeof(*name), claims, sizeof(*claims)) ||
+        NetInterfaceFileGuard::overlap(certificate, sizeof(*certificate), claims, sizeof(*claims)))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     if (fields != nullptr) { std::memset(fields, 0, 4 * sizeof(uint32_t)); }
     if (name != nullptr) { *name = nullptr; }
     if (certificate != nullptr) { *certificate = nullptr; }
@@ -1441,15 +1554,7 @@ int32_t NetInterface::handshakeAccept(NetInterfaceHandshakeHandle handle, const 
 
 int32_t NetInterface::handshakePeekOutput(NetInterfaceHandshakeHandle handle, uint32_t* fields, const uint8_t** payload)
 {
-    if (fields != nullptr)
-    {
-        std::memset(fields, 0, 6 * sizeof(uint32_t));
-    }
-    if (payload != nullptr)
-    {
-        *payload = nullptr;
-    }
-    if (handle == nullptr || fields == nullptr || payload == nullptr)
+    if (!PrepareViewOutputs(fields, 6, payload) || handle == nullptr)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -1472,6 +1577,10 @@ int32_t NetInterface::handshakeConsumeOutput(NetInterfaceHandshakeHandle handle)
 
 int32_t NetInterface::handshakePeerInfo(NetInterfaceHandshakeHandle handle, uint32_t* fields, uint8_t* identities)
 {
+    if (NetInterfaceFileGuard::overlap(fields, 4 * sizeof(*fields), identities, 32))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     if (fields != nullptr)
     {
         std::memset(fields, 0, 4 * sizeof(uint32_t));
@@ -1678,19 +1787,7 @@ int32_t NetInterface::fileFlowAccept(NetInterfaceFileFlowHandle handle, const ui
 
 int32_t NetInterface::fileFlowWrite(NetInterfaceFileFlowHandle handle, uint32_t* fields, const uint8_t** bytes)
 {
-    if (NetInterfaceFileGuard::overlap(fields, 3 * sizeof(uint32_t), bytes, sizeof(*bytes)))
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    if (fields != nullptr)
-    {
-        std::memset(fields, 0, sizeof(uint32_t) * 3);
-    }
-    if (bytes != nullptr)
-    {
-        *bytes = nullptr;
-    }
-    if (handle == nullptr || fields == nullptr || bytes == nullptr)
+    if (!PrepareViewOutputs(fields, 3, bytes) || handle == nullptr)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -1725,19 +1822,7 @@ int32_t NetInterface::fileFlowCommitted(NetInterfaceFileFlowHandle handle, int32
 
 int32_t NetInterface::fileFlowPeek(NetInterfaceFileFlowHandle handle, uint32_t* fields, const uint8_t** payload)
 {
-    if (NetInterfaceFileGuard::overlap(fields, 6 * sizeof(uint32_t), payload, sizeof(*payload)))
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    if (fields != nullptr)
-    {
-        std::memset(fields, 0, sizeof(uint32_t) * 6);
-    }
-    if (payload != nullptr)
-    {
-        *payload = nullptr;
-    }
-    if (handle == nullptr || fields == nullptr || payload == nullptr)
+    if (!PrepareViewOutputs(fields, 6, payload) || handle == nullptr)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -1868,7 +1953,7 @@ int32_t NetInterface::directoryCreateNodes(const NetInterfaceDirectoryNodeData* 
     {
         return NI_INVALID_ARGUMENT;
     }
-    if (count <= UINT32_MAX / sizeof(NetInterfaceDirectoryNodeData) && NetInterfaceDirectoryHelper::directoryRangesOverlap(nodes,
+    if (count <= UINT32_MAX / sizeof(NetInterfaceDirectoryNodeData) && NetInterfaceFileGuard::overlap(nodes,
         count * static_cast<uint32_t>(sizeof(NetInterfaceDirectoryNodeData)), handle, sizeof(*handle)))
     {
         return NI_INVALID_ARGUMENT;
@@ -1926,7 +2011,7 @@ int32_t NetInterface::directoryCreate(const uint8_t* data, uint32_t size, NetInt
 int32_t NetInterface::directoryCreateCache(const uint8_t* data, uint32_t size, uint32_t utcLow, uint32_t utcHigh,
     NetInterfaceDirectoryHandle* handle)
 {
-    if (handle == nullptr || NetInterfaceDirectoryHelper::directoryRangesOverlap(data, size, handle, sizeof(*handle)))
+    if (handle == nullptr || NetInterfaceFileGuard::overlap(data, size, handle, sizeof(*handle)))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -1956,7 +2041,7 @@ int32_t NetInterface::directoryCopyNodes(NetInterfaceDirectoryHandle handle,
     {
         return NI_INVALID_ARGUMENT;
     }
-    if (capacity <= UINT32_MAX / sizeof(NetInterfaceDirectoryNodeData) && NetInterfaceDirectoryHelper::directoryRangesOverlap(nodes,
+    if (capacity <= UINT32_MAX / sizeof(NetInterfaceDirectoryNodeData) && NetInterfaceFileGuard::overlap(nodes,
         capacity * static_cast<uint32_t>(sizeof(NetInterfaceDirectoryNodeData)), count, sizeof(*count)))
     {
         return NI_INVALID_ARGUMENT;
@@ -2000,9 +2085,9 @@ int32_t NetInterface::directoryCopyNodes(NetInterfaceDirectoryHandle handle,
 int32_t NetInterface::directoryNode(NetInterfaceDirectoryHandle handle, uint32_t index, char* name, uint32_t nameCapacity,
     char* address, uint32_t addressCapacity, uint32_t* fields)
 {
-    if (fields == nullptr || NetInterfaceDirectoryHelper::directoryRangesOverlap(name, nameCapacity, address, addressCapacity) ||
-        NetInterfaceDirectoryHelper::directoryRangesOverlap(name, nameCapacity, fields, 4 * sizeof(uint32_t)) ||
-        NetInterfaceDirectoryHelper::directoryRangesOverlap(address, addressCapacity, fields, 4 * sizeof(uint32_t)))
+    if (fields == nullptr || NetInterfaceFileGuard::overlap(name, nameCapacity, address, addressCapacity) ||
+        NetInterfaceFileGuard::overlap(name, nameCapacity, fields, 4 * sizeof(uint32_t)) ||
+        NetInterfaceFileGuard::overlap(address, addressCapacity, fields, 4 * sizeof(uint32_t)))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -2027,7 +2112,7 @@ int32_t NetInterface::directoryNode(NetInterfaceDirectoryHandle handle, uint32_t
 int32_t NetInterface::directoryCache(NetInterfaceDirectoryHandle handle, uint32_t utcLow, uint32_t utcHigh,
     uint8_t* output, uint32_t capacity, uint32_t* required)
 {
-    if (required == nullptr || NetInterfaceDirectoryHelper::directoryRangesOverlap(output, capacity, required, sizeof(*required)))
+    if (required == nullptr || NetInterfaceFileGuard::overlap(output, capacity, required, sizeof(*required)))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -2198,6 +2283,12 @@ int32_t NetInterface::creditConsume(NetInterfaceCreditHandle handle, uint32_t si
 
 int32_t NetInterface::connectionCreate(const NetInterfaceTlsOptions* options, NetInterfaceConnectionHandle* handle, int32_t* detail)
 {
+    return connectionCreate(options, handle, detail, nullptr);
+}
+
+int32_t NetInterface::connectionCreate(const NetInterfaceTlsOptions* options, NetInterfaceConnectionHandle* handle, int32_t* detail,
+    const NetConnectionPoolConfig* pools, const CEncodeDecodeTlsQueueLimits* limits)
+{
     if (detail != nullptr)
     {
         *detail = 0;
@@ -2213,7 +2304,11 @@ int32_t NetInterface::connectionCreate(const NetInterfaceTlsOptions* options, Ne
     }
     try
     {
-        NetInterfaceConnection* connection = new NetInterfaceConnection(*options);
+        const CEncodeDecodeTlsQueueLimits defaults;
+        const CEncodeDecodeTlsQueueLimits& ciphertext = limits ? *limits : defaults;
+        NetInterfaceConnection* connection = pools ?
+            new NetInterfaceConnection(*options, NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT, *pools, ciphertext) :
+            new NetInterfaceConnection(*options, NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT, NetConnectionPoolConfig(), ciphertext);
         const int32_t result = connection->status();
         if (detail != nullptr)
         {
@@ -2238,6 +2333,13 @@ int32_t NetInterface::connectionCreate(const NetInterfaceTlsOptions* options, Ne
 int32_t NetInterface::connectionCreateServiceClient(uint32_t product, NetInterfaceEntropyFunction entropy, void* context,
     uint32_t timeoutMs, NetInterfaceConnectionHandle* handle, int32_t* detail)
 {
+    return connectionCreateServiceClient(product, entropy, context, timeoutMs, handle, detail, nullptr);
+}
+
+int32_t NetInterface::connectionCreateServiceClient(uint32_t product, NetInterfaceEntropyFunction entropy, void* context,
+    uint32_t timeoutMs, NetInterfaceConnectionHandle* handle, int32_t* detail,
+    const NetConnectionPoolConfig* pools, const CEncodeDecodeTlsQueueLimits* limits)
+{
     if (handle == nullptr) { return NI_INVALID_ARGUMENT; }
     *handle = nullptr;
     if (detail != nullptr) { *detail = 0; }
@@ -2250,7 +2352,7 @@ int32_t NetInterface::connectionCreateServiceClient(uint32_t product, NetInterfa
         options.entropy = entropy;
         options.entropyContext = context;
         options.handshakeTimeoutMs = timeoutMs;
-        return NetInterface::connectionCreate(&options, handle, detail);
+        return NetInterface::connectionCreate(&options, handle, detail, pools, limits);
     }
     catch (...) { return NI_NO_MEMORY; }
 }
@@ -2262,12 +2364,9 @@ void NetInterface::connectionDestroy(NetInterfaceConnectionHandle handle)
 
 int32_t NetInterface::connectionFeed(NetInterfaceConnectionHandle handle, const uint8_t* data, uint32_t size, uint32_t* consumed)
 {
-    if (consumed != nullptr)
-    {
-        *consumed = 0;
-    }
     if (handle == nullptr || consumed == nullptr)
     {
+        NetInterfaceFileGuard::prepareCount(data, size, consumed);
         return NI_INVALID_ARGUMENT;
     }
     return reinterpret_cast<NetInterfaceConnection*>(handle)->feed(data, size, *consumed);
@@ -2306,15 +2405,7 @@ int32_t NetInterface::connectionSend(NetInterfaceConnectionHandle handle, const 
 
 int32_t NetInterface::connectionPeek(NetInterfaceConnectionHandle handle, uint32_t* fields, const uint8_t** payload)
 {
-    if (fields != nullptr)
-    {
-        std::memset(fields, 0, 6 * sizeof(uint32_t));
-    }
-    if (payload != nullptr)
-    {
-        *payload = nullptr;
-    }
-    if (handle == nullptr || fields == nullptr || payload == nullptr)
+    if (!PrepareViewOutputs(fields, 6, payload) || handle == nullptr)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -2340,15 +2431,7 @@ int32_t NetInterface::connectionConsume(NetInterfaceConnectionHandle handle)
 
 int32_t NetInterface::connectionPeekOutput(NetInterfaceConnectionHandle handle, const uint8_t** data, uint32_t* size)
 {
-    if (data != nullptr)
-    {
-        *data = nullptr;
-    }
-    if (size != nullptr)
-    {
-        *size = 0;
-    }
-    if (handle == nullptr || data == nullptr || size == nullptr)
+    if (!PrepareViewOutputs(size, 1, data) || handle == nullptr)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -2394,6 +2477,11 @@ int32_t NetInterface::create(uint32_t payloadLimit, NetInterfaceHandle* handle)
     return NI_OK;
 }
 
+int32_t NetInterface::configureDecoderRetention(NetInterfaceHandle handle, int32_t bytes)
+{
+    return handle ? reinterpret_cast<NetInterface*>(handle)->configureDecoderRetention(bytes) : NI_INVALID_ARGUMENT;
+}
+
 void NetInterface::destroy(NetInterfaceHandle handle)
 {
     delete reinterpret_cast<NetInterface*>(handle);
@@ -2401,13 +2489,9 @@ void NetInterface::destroy(NetInterfaceHandle handle)
 
 int32_t NetInterface::feed(NetInterfaceHandle handle, const uint8_t* data, uint32_t size, uint32_t* consumed)
 {
-    if (consumed == nullptr)
+    if (handle == nullptr || consumed == nullptr)
     {
-        return NI_INVALID_ARGUMENT;
-    }
-    *consumed = 0;
-    if (handle == nullptr)
-    {
+        NetInterfaceFileGuard::prepareCount(data, size, consumed);
         return NI_INVALID_ARGUMENT;
     }
     return reinterpret_cast<NetInterface*>(handle)->feed(data, size, *consumed);
@@ -2453,9 +2537,9 @@ int32_t NetInterface::encode(const NetInterfaceFrame* frame, uint8_t* output, ui
     {
         return NI_INVALID_ARGUMENT;
     }
-    *required = 0;
     if (frame == nullptr)
     {
+        if (!NetInterfaceFileGuard::overlap(required, sizeof(*required), output, capacity)) { *required = 0; }
         return NI_INVALID_ARGUMENT;
     }
     return NetInterface::encode(*frame, output, capacity, *required);
@@ -2463,15 +2547,7 @@ int32_t NetInterface::encode(const NetInterfaceFrame* frame, uint8_t* output, ui
 
 int32_t NetInterface::peekFields(NetInterfaceHandle handle, uint32_t* fields, const uint8_t** payload)
 {
-    if (fields != nullptr)
-    {
-        std::memset(fields, 0, 6 * sizeof(uint32_t));
-    }
-    if (payload != nullptr)
-    {
-        *payload = nullptr;
-    }
-    if (fields == nullptr || payload == nullptr)
+    if (!PrepareViewOutputs(fields, 6, payload) || handle == nullptr)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -2492,12 +2568,15 @@ int32_t NetInterface::peekFields(NetInterfaceHandle handle, uint32_t* fields, co
 
 int32_t NetInterface::encodeFields(const uint32_t* fields, const uint8_t* payload, uint8_t* output, uint32_t capacity, uint32_t* required)
 {
-    if (required != nullptr)
+    if (required == nullptr || NetInterfaceFileGuard::overlap(required, sizeof(*required), fields, 6 * sizeof(*fields)) ||
+        NetInterfaceFileGuard::overlap(required, sizeof(*required), output, capacity) ||
+        (fields != nullptr && NetInterfaceFileGuard::overlap(required, sizeof(*required), payload, fields[5])))
     {
-        *required = 0;
+        return NI_INVALID_ARGUMENT;
     }
     if (fields == nullptr || fields[0] > UINT16_MAX)
     {
+        *required = 0;
         return NI_INVALID_ARGUMENT;
     }
     NetInterfaceFrame frame = {};
@@ -2514,13 +2593,13 @@ int32_t NetInterface::certificateCreateRequest(const uint8_t* name, uint32_t nam
     NetInterfaceEntropyFunction entropy, void* context, uint8_t* privateKey, uint32_t keyCapacity,
     uint32_t* keySize, uint8_t* request, uint32_t requestCapacity, uint32_t* requestSize)
 {
-    if (NetInterfaceDirectoryHelper::directoryRangesOverlap(keySize, sizeof(uint32_t), requestSize, sizeof(uint32_t)) ||
-        NetInterfaceDirectoryHelper::directoryRangesOverlap(keySize, sizeof(uint32_t), privateKey, keyCapacity) ||
-        NetInterfaceDirectoryHelper::directoryRangesOverlap(keySize, sizeof(uint32_t), request, requestCapacity) ||
-        NetInterfaceDirectoryHelper::directoryRangesOverlap(keySize, sizeof(uint32_t), name, nameSize) ||
-        NetInterfaceDirectoryHelper::directoryRangesOverlap(requestSize, sizeof(uint32_t), privateKey, keyCapacity) ||
-        NetInterfaceDirectoryHelper::directoryRangesOverlap(requestSize, sizeof(uint32_t), request, requestCapacity) ||
-        NetInterfaceDirectoryHelper::directoryRangesOverlap(requestSize, sizeof(uint32_t), name, nameSize))
+    if (NetInterfaceFileGuard::overlap(keySize, sizeof(uint32_t), requestSize, sizeof(uint32_t)) ||
+        NetInterfaceFileGuard::overlap(keySize, sizeof(uint32_t), privateKey, keyCapacity) ||
+        NetInterfaceFileGuard::overlap(keySize, sizeof(uint32_t), request, requestCapacity) ||
+        NetInterfaceFileGuard::overlap(keySize, sizeof(uint32_t), name, nameSize) ||
+        NetInterfaceFileGuard::overlap(requestSize, sizeof(uint32_t), privateKey, keyCapacity) ||
+        NetInterfaceFileGuard::overlap(requestSize, sizeof(uint32_t), request, requestCapacity) ||
+        NetInterfaceFileGuard::overlap(requestSize, sizeof(uint32_t), name, nameSize))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -2535,9 +2614,9 @@ int32_t NetInterface::certificateCreateRequest(const uint8_t* name, uint32_t nam
     if (keySize == nullptr || requestSize == nullptr || privateKey == nullptr || request == nullptr ||
         keyCapacity == 0 || keyCapacity > NET_INTERFACE_IDENTITY_PEM_BYTES || requestCapacity == 0 ||
         requestCapacity > NET_INTERFACE_IDENTITY_PEM_BYTES || name == nullptr || nameSize == 0 || nameSize > 96 || entropy == nullptr ||
-        NetInterfaceDirectoryHelper::directoryRangesOverlap(privateKey, keyCapacity, request, requestCapacity) ||
-        NetInterfaceDirectoryHelper::directoryRangesOverlap(privateKey, keyCapacity, name, nameSize) ||
-        NetInterfaceDirectoryHelper::directoryRangesOverlap(request, requestCapacity, name, nameSize))
+        NetInterfaceFileGuard::overlap(privateKey, keyCapacity, request, requestCapacity) ||
+        NetInterfaceFileGuard::overlap(privateKey, keyCapacity, name, nameSize) ||
+        NetInterfaceFileGuard::overlap(request, requestCapacity, name, nameSize))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -2559,27 +2638,52 @@ int32_t NetInterface::certificateCreateRequest(const uint8_t* name, uint32_t nam
 
 /* 使用示例：将下列内容作为 SDK 调用方的独立源文件编译。
 #include "NetInterface/NetInterfaceAPI.h"
-#include "CSystem/CSystemAPI.h"
 #include <cstdio>
 #include <cstring>
-#ifdef __EMSCRIPTEN__
+#if defined(_WIN32)
+#include <windows.h>
+#include <bcrypt.h>
+#pragma comment(lib, "bcrypt.lib")
+#elif defined(__EMSCRIPTEN__)
+#include <unistd.h>
+#elif defined(__APPLE__)
+#include <stdlib.h>
+#elif defined(__linux__)
+#include <cerrno>
+#include <linux/random.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 #endif
 
-// 宿主提供强随机。Wasm 的 getentropy 由运行时连接到宿主随机源。
+// 宿主负责完整填充输出。系统随机源不可用时向协议层返回失败。
 static int32_t DemoEntropy(void*, uint8_t* out, uint32_t length)
 {
-#ifdef __EMSCRIPTEN__
+    if (length == 0) { return 0; }
+    if (out == nullptr) { return -1; }
+#if defined(_WIN32)
+    return BCryptGenRandom(nullptr, out, length, BCRYPT_USE_SYSTEM_PREFERRED_RNG) == 0 ? 0 : -1;
+#elif defined(__APPLE__)
+    arc4random_buf(out, length);
+    return 0;
+#elif defined(__EMSCRIPTEN__) || (defined(__linux__) && defined(SYS_getrandom))
     while (length != 0)
     {
         const uint32_t count = length > 256 ? 256 : length;
+#ifdef __EMSCRIPTEN__
         if (getentropy(out, count) != 0) { return -1; }
-        out += count;
-        length -= count;
+        const uint32_t filled = count;
+#else
+        const long result = syscall(SYS_getrandom, out, count, GRND_NONBLOCK);
+        if (result < 0 && errno == EINTR) { continue; }
+        if (result <= 0) { return -1; }
+        const uint32_t filled = static_cast<uint32_t>(result);
+#endif
+        out += filled;
+        length -= filled;
     }
     return 0;
 #else
-    return CSystem::secureRandomBytesCallback(nullptr, out, length);
+    return -1;
 #endif
 }
 
@@ -2644,6 +2748,21 @@ static bool DemoHello(DemoResources& r)
 // 缓存只保存公开候选。示例的 UTC/单调时钟取自同一次模拟会话，两者在真实宿主分别提供。
 static bool DemoRoute(DemoResources& r)
 {
+    NetClientSession business;
+    NetHeartbeatConfig heartbeat;
+    heartbeat.m_pingIntervalMs = 15000;
+    if (business.configureHeartbeat(heartbeat) != NI_OK || business.configurePayloadRetention(4096) != NI_OK ||
+        business.configureExpiryBudget(32) != NI_OK || business.configureServicePollBudgets(8, 16) != NI_OK ||
+        business.configureRecovery(30000, 250, 5000) != NI_OK) { return false; }
+    // 一次性发布此实例的池和队列策略。满池时由提交者保留本次业务数据并稍后重试。
+    NetSenderSubmissionPools submissionPools;
+    NetSenderSubmissionOptions submissionOptions;
+    submissionOptions.m_consumerYieldInterval = 1024;
+    NetSenderSubmission submission(submissionPools, submissionOptions);
+    if (submission.start(1, 7) != NI_OK) { return false; }
+    // 直接监听时可在绑定运输前设置HELLO，端点登记和监听成功后配置固定。
+    NetEndpointRouter listener(nullptr);
+    if (listener.configureClientHandshake(7, 64, 16384, 5000) != NI_OK) { return false; }
     NetInterfaceDirectoryNodeData node = {};
     node.m_structSize = sizeof(node);
     node.m_version = 1;
@@ -2663,7 +2782,10 @@ static bool DemoRoute(DemoResources& r)
         NetInterface::directoryNode(r.cached,0,name,sizeof(name),address,sizeof(address),addressFields) != NI_OK) { return false; }
     std::printf("%s %s %u\n",name,address,addressFields[0]);
     uint32_t in[] = {1,0,0,0,2,0,7,9,0,0,100,0,50}, out[16];
-    if (NetInterface::requestsCreate(16,&r.requests) != NI_OK ||
+    NetRequestTablePools pools;
+    pools.m_requests.initialCapacity = 4;
+    pools.m_requests.maximumCapacity = 16;
+    if (NetInterface::requestsCreate(pools,&r.requests) != NI_OK ||
         NetInterface::requestsAddEndpoint(r.requests,1,0,0,0,16,0) != NI_OK ||
         NetInterface::requestsAddEndpoint(r.requests,2,0,1,7,16,0) != NI_OK ||
         NetInterface::requestsBegin(r.requests,in,13,1,out) != NI_OK) { return false; }
@@ -2726,6 +2848,7 @@ static bool DemoMessage(DemoResources& r)
     uint8_t body[256], envelope[512], wire[1024], digest[32];
     uint32_t n = 0, size = 0, used = 0;
     if (NetInterface::messageCreate(&r.message) != NI_OK ||
+        NetInterface::messageConfigureLimits(r.message,4096,128) != NI_OK ||
         NetInterface::messageSetValue(r.message,0,1,5,value,sizeof(value)) != NI_OK ||
         NetInterface::messageSetCode(r.message,0,nullptr,0) != NI_OK ||
         NetInterface::messageEncode(r.message,body,sizeof(body),&n) != NI_OK ||
@@ -2733,6 +2856,10 @@ static bool DemoMessage(DemoResources& r)
     NetInterfaceFrame frame = {7,1,9,NI_REQUEST,size,envelope};
     if (NetInterface::encode(frame,wire,sizeof(wire),n) != NI_OK) { return false; }
     NetInterface decoder(1024);
+    if (decoder.configureDecoderRetention(256) != NI_OK)
+    {
+        return false;
+    }
     // 新连接起始使用固定帧。只有业务握手已协商相应能力才开启下列选项。
     decoder.allowCompact(false);
     decoder.allowCompression(false);
@@ -2753,6 +2880,13 @@ static bool DemoMessage(DemoResources& r)
         NetInterface::hashFinish(r.hash,digest,sizeof(digest)) != NI_OK) { return false; }
     std::printf("digest prefix %02x%02x\n",digest[0],digest[1]);
     NetInterface::wipe(digest,sizeof(digest));
+    // 用独立的长度变量编码定向事件。解析出的正文借用 envelope，处理完再复用这块缓冲。
+    uint32_t eventSize = 0;
+    if (NetInterfaceEvent::encode(17,0,body,size,envelope,sizeof(envelope),eventSize) != NI_OK) { return false; }
+    const NetInterfaceFrame event = {7,2,9,NI_EVENT,eventSize,envelope};
+    NetInterfaceEventView view = {};
+    if (NetInterfaceEvent::parse(event,view) != NI_OK) { return false; }
+    std::printf("event body has %u bytes\n",view.m_size);
     return true;
 }
 
@@ -2760,7 +2894,18 @@ static bool DemoMessage(DemoResources& r)
 static bool DemoTransport(DemoResources& r)
 {
     int32_t detail = 0;
-    if (NetInterface::connectionCreateServiceClient(7,DemoEntropy,nullptr,5000,&r.connection,&detail) != NET_INTERFACE_TLS_HANDSHAKE ||
+    NetConnectionPoolConfig pools;
+    pools.m_dataRecords.setInitialCapacity(8);
+    // 普通帧64字节级先准备8槽，最多64槽。其他大小级和控制帧各自沿用默认预算。
+    pools.m_dataBytes.m_classes[0].setInitialCapacity(8);
+    pools.m_dataBytes.m_classes[0].setMaximumCapacity(64);
+    pools.m_compressionLevel = 1;
+    pools.m_compressionMinPayload = 2048;
+    pools.m_controlBurst = 8;
+    pools.m_progressFrameBudget = 128;
+    CEncodeDecodeTlsQueueLimits ciphertext;
+    if (!ciphertext.set(32768, 65536) ||
+        NetInterface::connectionCreateServiceClient(7,DemoEntropy,nullptr,5000,&r.connection,&detail,&pools,&ciphertext) != NET_INTERFACE_TLS_HANDSHAKE ||
         NetInterface::connectionGetStatus(r.connection,&detail) < 0 || NetInterface::connectionProgress(r.connection,100,0) < 0 ||
         NetInterface::creditCreate(&r.credit) != NI_OK || NetInterface::creditConfigure(r.credit,65536) != NI_OK ||
         NetInterface::tunnelCreate(&r.tunnel) != NI_OK) { return false; }

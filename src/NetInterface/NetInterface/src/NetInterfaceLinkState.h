@@ -54,8 +54,9 @@ class NetInterfaceLinkState
 {
 public:
     /** 创建空状态
+    @param [in] pools 当前链路的业务输出池
     */
-    NetInterfaceLinkState();
+    explicit NetInterfaceLinkState(const NetInterfaceLinkPools& pools);
 
     /** 擦除身份私钥与随机挑战
     */
@@ -63,9 +64,10 @@ public:
 
     /** 复制并校验固定根管理配置
     @param [in] options 配置，回调上下文借用至析构
+    @param [in] settings 管理 TLS 私有物理池与密文字节预算
     @return NI_NEED_MORE或错误
     */
-    int32_t configure(const NetInterfaceLinkOptions& options);
+    int32_t configure(const NetInterfaceLinkOptions& options, const NetInterfaceLinkPools& settings);
 
     /** 保存第一个持续失败
     @param [in] error 负数错误
@@ -119,10 +121,6 @@ public:
     */
     void consumeQueuedRecord();
 
-    /** 按实际记录槽大小计算默认存储预算
-    @return 记录池的初始、最大及目录配置
-    */
-    static LockFreeHashMapPoolConfig defaultOutputRecords();
 
 public:
     // 复制的配置值；宿主随机/服务回调上下文借用至本实例析构
@@ -185,6 +183,14 @@ public:
     uint64_t m_lastTime;
     // 最近管理活动时刻，用于心跳空闲间隔
     uint64_t m_activity;
+    // 本管理链路的空闲、应答和输入排空期限，单位毫秒
+    const uint32_t m_pingIntervalMs;
+    // 已发送管理心跳后等待应答的期限
+    const uint32_t m_pongTimeoutMs;
+    // 输入结束后交付已接纳数据的期限
+    const uint32_t m_drainTimeoutMs;
+    // 每次progress最多处理的管理帧数，默认64，至少1
+    const uint32_t m_controlStepBudget;
     // 未答心跳发送时刻，0表示没有未答心跳
     uint64_t m_pingTime;
     // 本端心跳编号高水位，不允许溢出或旧PONG复用

@@ -64,7 +64,7 @@ public:
     */
     NetConnectionWrite* active();
 
-    /** 完成当前帧并归还其物理资源
+    /** 擦除已交付的明文并缓存当前记录及其缓冲，供同连接后续发送复用
     */
     void complete();
 
@@ -97,7 +97,9 @@ private:
     NetObjectPool<NetConnectionWrite> m_controlRecords;
     // 已从队列摘下的当前帧，仍拥有池槽
     NetConnectionWrite* m_active;
-    // 连续控制帧调度次数；32帧后让普通帧取得一次机会，不限制接纳数量
+    // 两个FIFO均有积压时，连续控制帧轮转的上限
+    const uint32_t m_controlBurst;
+    // 自上次选中普通帧以来已选择的控制帧数，饱和于本连接的轮转上限
     uint32_t m_controlRun;
     // 两级FIFO首项
     NetConnectionWrite* m_heads[2];

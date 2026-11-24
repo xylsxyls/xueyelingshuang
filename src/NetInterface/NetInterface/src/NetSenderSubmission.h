@@ -74,13 +74,19 @@ public:
     */
     NetSenderSubmission();
 
+    /** 从指定池配置直接构造接纳表，首次 start 返回初始化结果
+    @param [in] pools 当前实例的独立物理池
+    @param [in] options 索引和队列策略
+    */
+    NetSenderSubmission(const NetSenderSubmissionPools& pools, const NetSenderSubmissionOptions& options);
+
     /** 释放本模块内存；拥有者须已拒绝新调用并收敛执行者
     */
     ~NetSenderSubmission();
 
     /** 在任何执行者启动前设置一次owner通知，空表也不需要互斥锁
     @param [in] gate 可空通知/等待函数；借用context至全部调用结束
-    @return OK或INVALID_ARGUMENT／INVALID_STATE
+    @return NI_OK；已经登记或已经启动时返回 NI_INVALID_STATE
     */
     int32_t configureGate(const NetSenderSubmissionGate& gate);
 
@@ -90,19 +96,27 @@ public:
     */
     int32_t configurePools(const NetSenderSubmissionPools& pools);
 
+    /** 在首次 start 前独立配置本实例的物理池、两个索引及入口队列，失败时保留原实例
+    @param [in] pools 对象池、节点池和正文池的配置
+    @param [in] options 索引桶数及队列维护策略，复制回调；捕获的外部对象须活到此实例销毁
+    @return NI_OK 或配置、内存、生命周期错误
+    */
+    int32_t configurePools(const NetSenderSubmissionPools& pools, const NetSenderSubmissionOptions& options);
+
     /** owner开始新逻辑连接；请求、正文借用及同步回执全部收敛后才允许
     @param [in] generation 此次非零代次
     @param [in] product 固定产品，0表示旧通用连接
-    @return OK、INVALID_STATE或内部池初始化失败NO_MEMORY
+    @return NI_OK、NI_INVALID_STATE 或构造时的配置及资源错误
     */
     int32_t start(uint64_t generation, uint32_t product);
 
     /** owner报告真实握手；存在旧代输入或未完成回执时禁止切换代次；已完成回执仍归原调用者读取，不扣线协议额度
+    断线后再次握手前须结束借用并取完关闭请求，即使代号相同；活动连接重复报告同代就绪可保留请求
     拒绝切代保留旧代接纳状态及借用；会话层若认定真实握手失败，负责显式close和disconnected
     @param [in] generation 真实非零代次
     @param [in] requests 对端声明的非零协议能力；本地容量由实际请求池控制
     @param [in] chunk 协商的1024至65536字节
-    @return OK、CANCELLED、PROTOCOL_ERROR；未start为INVALID_STATE，内部池不可用为NO_MEMORY
+    @return NI_OK、NI_CANCELLED、NI_PROTOCOL_ERROR；未启动时为 NI_INVALID_STATE，构造失败时返回其配置或资源错误
     */
     int32_t ready(uint64_t generation, uint32_t requests, uint32_t chunk);
 
@@ -152,8 +166,8 @@ public:
     */
     void state(uint64_t& generation, bool& ready) const;
 
-    /** owner开始有界一轮，不能在尚有借用动作时调用
-    @return OK或INVALID_STATE
+    /** owner开始有界一轮；有未结束的借用时拒绝，保留入口槽和当前正文
+    @return NI_OK、NI_INVALID_STATE 或构造时的配置及资源错误
     */
     int32_t beginPoll();
 
@@ -192,7 +206,7 @@ public:
     */
     void finish(int32_t result);
 
-    /** owner取出唯一终态的可信元数据，未知／旧代返回false
+    /** owner取出已导入请求的唯一终态；未导入、未知或旧代请求返回false
     @param [in] generation 原代次
     @param [in] id 原请求号
     @param [out] command 成功填充关联字段，否则清零
@@ -200,7 +214,7 @@ public:
     */
     bool complete(uint64_t generation, uint64_t id, NetSenderSubmissionCommand& command);
 
-    /** owner关闭快照，清理普通流帧；请求仍逐个取终态
+    /** owner关闭接纳并收尽队列；当前借用正文保持有效，未完成请求可立即逐个取终态
     @param [in] generation 此次关闭代次
     */
     void disconnected(uint64_t generation);
@@ -235,7 +249,7 @@ public:
     */
     int32_t sendSynchronous(uint64_t id, const uint8_t* bytes, uint32_t size, uint64_t& ticket);
 
-    /** 接纳同步数据帧，交付期限五秒
+    /** 接纳同步数据帧，交付期限由配置决定，默认五秒
     @param [in] frame 调用时复制
     @param [out] ticket 接纳后非零
     @return 接纳结果
@@ -251,6 +265,12 @@ public:
     @param [in] outputState OK已全部交付、READY仍有后缀或负数失败
     */
     void advanceSynchronous(int32_t outputState);
+
+    /** 使用 owner 本轮已有的单调时钟样本结算交付，避免为每项重复取时
+    @param [in] outputState 完整运输输出状态，同单参数版本
+    @param [in] current 与 now() 同源的单调毫秒，owner 按非递减顺序传入
+    */
+    void advanceSynchronous(int32_t outputState, uint64_t current);
 
     /** 等待者读取一次交付结果；不等待远端业务回应
     @param [in] ticket 本次接纳票据

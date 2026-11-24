@@ -2,6 +2,15 @@
 #include "NetInterfaceMacro.h"
 #include "NetSenderSubmissionState.h"
 
+NetSenderSubmissionOptions::NetSenderSubmissionOptions() :
+m_requestBuckets(128), m_receiptBuckets(128), m_distributedCounters(true), m_cancelableReservations(false),
+m_maintenanceInterval(64), m_maintenanceBudget(8), m_capacityRetriesBeforeSleep(4096), m_capacitySleepMilliseconds(1),
+m_consumerYieldInterval(4096), m_inputBatchBudget(8), m_inputBatchSize(32),
+m_queuePollBudget(16), m_requestPollBudget(16), m_receiptPollBudget(16), m_deliveryTimeoutMs(5000)
+{
+
+}
+
 /** 按实际池槽大小换算默认物理存储预算，调用者可显式覆盖
 @param [in] slotBytes 包含引用计数与池槽元数据的单槽大小
 @return 初始化后可增长的物理池配置

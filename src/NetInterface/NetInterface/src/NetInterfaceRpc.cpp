@@ -79,6 +79,10 @@ int32_t NetInterfaceRpc::encode(uint16_t kind, uint32_t value, uint64_t parent, 
 
 int32_t NetInterfaceRpc::parse(const NetInterfaceFrame& frame, NetInterfaceRpcView& view)
 {
+    if (NetInterfaceFileGuard::overlapsFrame(frame, &view, sizeof(view)))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     std::memset(&view, 0, sizeof(view));
     if (frame.m_productId == 0 || frame.m_requestId == 0 || frame.m_payload == nullptr || frame.m_payloadSize < 16 ||
         frame.m_payloadSize > NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT || std::memcmp(frame.m_payload, "NRP2", 4) != 0)

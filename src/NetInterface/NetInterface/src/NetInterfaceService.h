@@ -31,8 +31,8 @@ class NetInterfaceAPI NetInterfaceService
     /** 验证完整本地HELLO及其产品对应秘密，固定32字节比较
     @param [in] frame HELLO/type3/request0/payload48
     @param [in] secret 网关配置的该产品32字节秘密
-    @param [out] limit 验证成功后的请求限额；失败清零
-    @return OK或PROTOCOL_ERROR，不区分错误凭据细节
+    @param [out] limit 验证成功后的请求限额；须独立于帧和秘密，重叠时保持原值，其余失败清零
+    @return OK或PROTOCOL_ERROR；输出与输入重叠时返回INVALID_ARGUMENT
     */
     static int32_t authenticate(const NetInterfaceFrame& frame, const uint8_t* secret, uint32_t& limit);
 
@@ -49,9 +49,9 @@ class NetInterfaceAPI NetInterfaceService
                         uint32_t& required);
 
     /** 拆出可信网关本地通道上的来源；公网消息不得调用本入口采信来源
-    @param [in] frame 本地请求、响应或取消，含32字节前缀
-    @param [out] origin 来源；失败清零
-    @param [out] business 保留原头且移除前缀的借用视图；失败清零
+    @param [in] frame 本地 REQUEST、RESPONSE、CANCEL、DATA、DATA_ACK 或 EVENT，含32字节前缀
+    @param [out] origin 独立的来源结果；格式错误时清零，重叠时保持原值
+    @param [out] business 移除前缀的借用视图；允许复用frame，不能与来源结果或正文重叠
     @return OK或负数
     */
     static int32_t unwrap(const NetInterfaceFrame& frame, NetInterfaceOrigin& origin, NetInterfaceFrame& business);

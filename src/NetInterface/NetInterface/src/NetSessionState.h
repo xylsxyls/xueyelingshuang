@@ -56,7 +56,7 @@ public:
     */
     uint64_t expired(uint64_t nowMs) const;
 
-    /** 擦除全部暂存明文，小于等于4KiB的容量复用，大缓冲立即释放
+    /** 擦除全部暂存明文，容量超过本会话的非负预算时立即释放
     */
     void clearPayload();
 
@@ -103,6 +103,12 @@ public:
     uint64_t m_highestOriginal;
     // 握手协商后的请求上限。
     uint32_t m_maxRequests;
+    // 本会话独立的心跳及总无输入期限
+    NetHeartbeatConfig m_heartbeat;
+    // 每次RPC发送后可保留的容量，-1保留，关闭时全部释放
+    int64_t m_payloadRetentionBytes;
+    // 每次poll可结算的到期请求数
+    uint32_t m_requestExpiryBudget;
     // 本次构造的RPC明文，离开发送调用前擦除。
     std::vector<uint8_t> m_payload;
     // 启动前配置的公开无秘密消息类型，动态存储且仅由协议执行者访问。

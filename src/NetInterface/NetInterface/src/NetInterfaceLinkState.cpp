@@ -116,14 +116,14 @@ NetInterfaceLinkWrite::~NetInterfaceLinkWrite()
     NetInterface::wipe(m_bytes.data(), m_record.m_size);
 }
 
-NetInterfaceLinkState::NetInterfaceLinkState() :
+NetInterfaceLinkState::NetInterfaceLinkState(const NetInterfaceLinkPools& pools) :
 m_options(),
 m_peerRole(0),
 m_inputOffset(0),
 m_received(),
 m_recordReady(false),
-m_outputBodies(new NetBufferPool(NetBufferPoolConfig())),
-m_outputRecords(new NetObjectPool<NetInterfaceLinkWrite>(defaultOutputRecords())),
+m_outputBodies(new NetBufferPool(pools.m_outputBodies)),
+m_outputRecords(new NetObjectPool<NetInterfaceLinkWrite>(pools.m_outputRecords)),
 m_outputHead(nullptr),
 m_outputTail(nullptr),
 m_peeked(),
@@ -134,6 +134,10 @@ m_clockStarted(false),
 m_started(0),
 m_lastTime(0),
 m_activity(0),
+m_pingIntervalMs(pools.m_pingIntervalMs),
+m_pongTimeoutMs(pools.m_pongTimeoutMs),
+m_drainTimeoutMs(pools.m_drainTimeoutMs),
+m_controlStepBudget(pools.m_controlStepBudget),
 m_pingTime(0),
 m_pingId(0),
 m_receivedHello(false),
@@ -157,16 +161,6 @@ NetInterfaceLinkState::~NetInterfaceLinkState()
     {
         consumeQueuedRecord();
     }
-}
-
-LockFreeHashMapPoolConfig NetInterfaceLinkState::defaultOutputRecords()
-{
-    LockFreeHashMapPoolConfig config;
-    config.initialCapacity = 128;
-    config.maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetInterfaceLinkWrite>>);
-    config.directoryCapacity = 128;
-    config.lookupCacheCapacity = 0;
-    return config;
 }
 
 int32_t NetInterfaceLinkState::queueRecord(const NetInterfaceTunnelRecord& record)
@@ -228,7 +222,7 @@ int32_t NetInterfaceLinkState::status() const
     return m_phase == NET_LINK_READY || m_phase == NET_LINK_DRAINING ? NI_READY : NI_NEED_MORE;
 }
 
-int32_t NetInterfaceLinkState::configure(const NetInterfaceLinkOptions& options)
+int32_t NetInterfaceLinkState::configure(const NetInterfaceLinkOptions& options, const NetInterfaceLinkPools& settings)
 {
     const int32_t pools = m_outputBodies->status() == NI_OK ? m_outputRecords->status() : m_outputBodies->status();
     if (pools != NI_OK)
@@ -236,7 +230,8 @@ int32_t NetInterfaceLinkState::configure(const NetInterfaceLinkOptions& options)
         return fail(pools);
     }
     const uint32_t roles = (1U << NI_LINK_CLIENT) | (1U << NI_LINK_NODE) | (1U << NI_LINK_SERVICE);
-    if (options.m_version != 3 || options.m_role < NI_LINK_CLIENT || options.m_role > NI_LINK_SERVICE ||
+    if (!m_controlStepBudget || !m_pingIntervalMs || !m_pongTimeoutMs || !m_drainTimeoutMs ||
+        options.m_version != 3 || options.m_role < NI_LINK_CLIENT || options.m_role > NI_LINK_SERVICE ||
         (options.m_tls.server != 0 && options.m_tls.server != 1) || options.m_tls.entropy == nullptr ||
         options.m_claimsSize > 4096 || (options.m_claimsSize != 0 && options.m_claims == nullptr) ||
         (options.m_tls.server != 0 && (options.m_role != NI_LINK_NODE || options.m_peerRoles == 0 ||
@@ -246,6 +241,7 @@ int32_t NetInterfaceLinkState::configure(const NetInterfaceLinkOptions& options)
         return fail(NI_INVALID_ARGUMENT);
     }
     m_options = options;
+    m_options.m_tls.handshakeTimeoutMs = options.m_tls.effectiveHandshakeTimeout();
     if (options.m_name != nullptr)
     {
         uint32_t size = 0;
@@ -306,7 +302,7 @@ int32_t NetInterfaceLinkState::configure(const NetInterfaceLinkOptions& options)
         tls.privateKey = reinterpret_cast<const uint8_t*>(m_privateKey.c_str());
         tls.privateKeySize = static_cast<uint32_t>(m_privateKey.size() + 1);
     }
-    m_control.reset(new NetInterfaceConnection(tls, 16384));
+    m_control.reset(new NetInterfaceConnection(tls, 16384, settings.m_controlConnection, settings.m_controlCiphertext));
     return m_control->status() < 0 ? fail(m_control->status()) : NI_NEED_MORE;
 }
 
@@ -517,7 +513,8 @@ int32_t NetInterfaceLinkState::progress(uint64_t now)
     m_lastTime = now;
     if (m_phase == NET_LINK_DRAINING)
     {
-        if (now - m_drainStarted >= 5000)
+        NetExecution::deadline(m_drainTimeoutMs, now - m_drainStarted);
+        if (now - m_drainStarted >= m_drainTimeoutMs)
         {
             return fail(NI_TIMEOUT);
         }
@@ -529,13 +526,13 @@ int32_t NetInterfaceLinkState::progress(uint64_t now)
     if (status() != NI_READY)
     {
         const uint64_t timeout = m_options.m_tls.handshakeTimeoutMs;
-        NetExecution::deadline(m_started > UINT64_MAX - timeout ? UINT64_MAX : m_started + timeout, now);
+        NetExecution::deadline(timeout, now - m_started);
     }
     if (status() != NI_READY && now - m_started >= m_options.m_tls.handshakeTimeoutMs)
     {
         return fail(NI_TIMEOUT);
     }
-    for (uint32_t step = 0; step < 64; ++step)
+    for (uint32_t step = 0; step < m_controlStepBudget; ++step)
     {
         if (m_inputOffset < m_input.size())
         {
@@ -674,14 +671,15 @@ int32_t NetInterfaceLinkState::progress(uint64_t now)
             }
             break;
         }
+        if (step + 1 == m_controlStepBudget) { NetExecution::progress(); }
     }
     if (status() == NI_READY && m_phase != NET_LINK_DRAINING)
     {
-        if (m_pingTime != 0 && now - m_pingTime >= 10000)
+        if (m_pingTime != 0 && now - m_pingTime >= m_pongTimeoutMs)
         {
             return fail(NI_TIMEOUT);
         }
-        if (m_pingTime == 0 && now - m_activity >= 15000)
+        if (m_pingTime == 0 && now - m_activity >= m_pingIntervalMs)
         {
             if (m_pingId == UINT64_MAX)
             {
@@ -701,6 +699,14 @@ int32_t NetInterfaceLinkState::progress(uint64_t now)
             {
                 return fail(sent);
             }
+        }
+        if (m_pingTime != 0)
+        {
+            NetExecution::deadline(m_pongTimeoutMs, now - m_pingTime);
+        }
+        else if (now - m_activity < m_pingIntervalMs)
+        {
+            NetExecution::deadline(m_pingIntervalMs, now - m_activity);
         }
     }
     return status();

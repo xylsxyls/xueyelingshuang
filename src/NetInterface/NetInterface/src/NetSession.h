@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "NetInterfaceTransport.h"
+#include "NetHeartbeatConfig.h"
 #include "NetInterfaceConnection.h"
 #include "NetInterfaceHandshake.h"
 #include "NetInterfaceRequests.h"
@@ -61,6 +62,29 @@ public:
     /** 停止并释放；监听者必须仍然存活，不得在回调内销毁
     */
     ~NetSession();
+
+    /** 首次连接前设置本会话独立的PING间隔、PONG和总无输入期限
+    @param [in] config 三个单调毫秒期限，复制数值，失败保留原配置
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE
+    */
+    int32_t configureHeartbeat(const NetHeartbeatConfig& config);
+
+    /** 设置每轮poll最多结算的到期请求数，只能在首次连接前调用
+    @param [in] count 至少1，默认128
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE
+    */
+    int32_t configureExpiryBudget(uint32_t count);
+
+    /** 首次连接前设置每次请求编码后允许保留的暂存容量
+    @param [in] bytes 字节数，默认4096，0立即释放，-1保留增长后的容量
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE，失败保留原配置
+    */
+    int32_t configurePayloadRetention(int64_t bytes);
+
+    /** 在所属执行者上查询RPC编码缓冲的实际保留容量
+    @return 容量字节数，shutdown后为0
+    */
+    uint64_t payloadCapacity() const;
 
     /** 首次连接前配置协议请求记录池，未完成应答不占普通DATA记录
     @param [in] config 基础池初值、上限和增长策略；仅静止生命周期owner调用

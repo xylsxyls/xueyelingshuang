@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "NetInterfaceTlsTypes.h"
 
+class CEncodeDecodeTlsQueueLimits;
+
 class CEncodeDecodeTls;
 
 // 非阻塞TLS字节通道，拥有内部状态；不拥有socket，不建线程，同一实例须串行调用
@@ -12,6 +14,12 @@ class NetInterfaceAPI NetInterfaceTls
     */
     explicit NetInterfaceTls(const NetInterfaceTlsOptions& options);
 
+    /** 使用调用方预先配置的双向密文队列创建 TLS
+    @param [in] options TLS 身份、随机源和握手时限
+    @param [in] limits 两个方向各自的正数字节上限或 -1
+    */
+    NetInterfaceTls(const NetInterfaceTlsOptions& options, const CEncodeDecodeTlsQueueLimits& limits);
+
     /** 在本模块释放TLS内存，并擦除密钥及待发明文
     */
     ~NetInterfaceTls();
@@ -19,7 +27,7 @@ class NetInterfaceAPI NetInterfaceTls
     /** 输入网络密文，输入缓冲满时只接受前缀
     @param [in] data 仅size为0时可空，本次调用借用
     @param [in] size 输入字节数
-    @param [out] consumed 实际复制的字节数，剩余部分由宿主保留
+    @param [out] consumed 实际复制的字节数，与输入分开存放，剩余部分由宿主保留
     @return OK、WANT_IO或持续错误
     */
     int32_t feed(const uint8_t* data, uint32_t size, uint32_t& consumed);
@@ -32,7 +40,7 @@ class NetInterfaceAPI NetInterfaceTls
 
     /** 借用一段待发密文，发送完成之前不得consume；本方法不消费
     @param [out] data 下次consumeOutput或析构之前有效，无数据时为空
-    @param [out] size 连续可用字节数；环形队列可能需多次取出
+    @param [out] size 连续可用字节数，与指针输出分开存放，环形队列可能需多次取出
     @return OK或持续错误；错误时仍可获取待发TLS警报
     */
     int32_t peekOutput(const uint8_t*& data, uint32_t& size) const;
@@ -46,7 +54,7 @@ class NetInterfaceAPI NetInterfaceTls
     /** 排队最多一条TLS记录的明文，满时施加背压
     @param [in] data 仅size为0时可空，本次调用复制，不在返回后借用
     @param [in] size 明文字节数，超过16384时只接受前缀
-    @param [out] accepted 已排队字节数，不代表送达；失败后由业务请求幂等重试
+    @param [out] accepted 已排队字节数，与输入分开存放，未接纳后缀由调用者保留
     @return OK、WANT_IO、STATE或持续错误
     */
     int32_t write(const uint8_t* data, uint32_t size, uint32_t& accepted);
@@ -54,7 +62,7 @@ class NetInterfaceAPI NetInterfaceTls
     /** 单执行者向尚未开始加密的记录追加明文；不等待填满，不改变write的独立记录契约
     @param [in] data 仅size为0时可空，本次复制，返回后不借用
     @param [in] size 输入字节数，可只接纳剩余容量对应的前缀
-    @param [out] accepted 实际接纳字节数，未接纳后缀仍归调用者
+    @param [out] accepted 实际接纳字节数，与输入分开存放，未接纳后缀仍归调用者
     @return OK、WANT_IO或错误；progress开始处理的记录不可修改，须先排空后重试
     */
     int32_t append(const uint8_t* data, uint32_t size, uint32_t& accepted);
@@ -78,7 +86,7 @@ class NetInterfaceAPI NetInterfaceTls
     /** 读取经完整性验证的应用明文
     @param [out] output 有效可写缓冲，仅capacity为0时可空
     @param [in] capacity 可写字节数
-    @param [out] received 实际输出字节数
+    @param [out] received 实际输出字节数，与明文输出分开存放
     @return OK、WANT_IO、CLOSED、STATE或持续错误
     */
     int32_t read(uint8_t* output, uint32_t capacity, uint32_t& received);

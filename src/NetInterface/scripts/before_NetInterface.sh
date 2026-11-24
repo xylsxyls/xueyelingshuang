@@ -73,14 +73,4 @@ if [[ $4 != only ]]; then
 fi
 librariesrely+=($'project\tLockFreeHashMap\t'"$LockFreeHashMap_dlllib")
 
-#--------------------------------------------------------------------
-CSystem_bit=$1
-CSystem_dlllib=$2
-CSystem_debugRelease=$3
-CSystem_allSame=$4
-if [[ $4 != only ]]; then
-    "$CLOUD_REBUILD" CSystem "$CSystem_bit" "$CSystem_dlllib" "$CSystem_debugRelease" "$CSystem_allSame"
-fi
-librariesrely+=($'project\tCSystem\t'"$CSystem_dlllib")
-
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return

@@ -1,18 +1,9 @@
 ﻿#include "NetEndpointRouterState.h"
-#include "NetInterfaceMacro.h"
 #include "NetInterface.h"
-#include "NetInterfaceRequests.h"
-#include "NetInterfaceRpc.h"
-#include "NetInterfaceFile.h"
-#include "NetInterfaceEvent.h"
-#include "NetInterfaceTransport.h"
-#include "NetEndpointRouter.h"
 #include <chrono>
 #include <cstring>
 #include <vector>
 #include <utility>
-#include <algorithm>
-#include <ctime>
 
 void NetEndpointRouterState::exchangeFile(size_t left, size_t right)
 {
@@ -37,10 +28,11 @@ void NetEndpointRouterState::riseFile(size_t index)
 
 void NetEndpointRouterState::sinkFile(size_t index)
 {
-    while (index < m_fileExpiryCount / 2)
+    const size_t count = m_fileExpiry.size();
+    while (index < count / 2)
     {
         size_t child = index * 2 + 1;
-        if (child + 1 < m_fileExpiryCount && m_fileExpiry[child + 1]->m_deadline < m_fileExpiry[child]->m_deadline)
+        if (child + 1 < count && m_fileExpiry[child + 1]->m_deadline < m_fileExpiry[child]->m_deadline)
         {
             ++child;
         }
@@ -73,10 +65,8 @@ int32_t NetEndpointRouterState::attachFile(NetEndpointFileStream* stream)
             endpoint->m_firstFile->m_previous[role] = stream;
         }
         endpoint->m_firstFile = stream;
-        ++endpoint->m_fileCount;
     }
-    stream->m_expiryIndex = m_fileExpiryCount;
-    ++m_fileExpiryCount;
+    stream->m_expiryIndex = m_fileExpiry.size() - 1;
     riseFile(stream->m_expiryIndex);
     return NI_OK;
 }
@@ -107,19 +97,17 @@ NetObjectReference<NetEndpointFileStream> NetEndpointRouterState::takeFile(uint6
         {
             stream->m_next[role]->m_previous[role] = stream->m_previous[role];
         }
-        --endpoint->m_fileCount;
     }
     const size_t index = stream->m_expiryIndex;
-    --m_fileExpiryCount;
-    if (index != m_fileExpiryCount)
+    NetEndpointFileStream* replacement = m_fileExpiry.back();
+    m_fileExpiry.pop_back();
+    if (index != m_fileExpiry.size())
     {
-        NetEndpointFileStream* replacement = m_fileExpiry[m_fileExpiryCount];
         m_fileExpiry[index] = replacement;
         replacement->m_expiryIndex = index;
         riseFile(index);
         sinkFile(replacement->m_expiryIndex);
     }
-    m_fileExpiry.pop_back();
     return stream;
 }
 
@@ -135,7 +123,6 @@ m_id(0),
 m_nextClosing(nullptr),
 m_filesCollected(false),
 m_firstFile(nullptr),
-m_fileCount(0),
 m_service(false),
 m_attached(false),
 m_closing(false),
@@ -153,6 +140,7 @@ NetEndpointRouterState::NetEndpointRouterState(NetEndpointServiceSink* services,
 m_transport(nullptr),
 m_entropy(nullptr),
 m_entropyContext(nullptr),
+m_handshake(),
 m_listening(false),
 m_requests(pools.m_requests),
 m_services(services),
@@ -161,10 +149,14 @@ m_endpointPool(pools.m_endpoints),
 m_filePool(pools.m_files),
 m_closingFirst(nullptr),
 m_closingLast(nullptr),
+m_payloadRetentionBytes(pools.m_payloadRetentionBytes),
+m_expiredRequestBudget(pools.m_expiredRequestBudget),
+m_closingEndpointBudget(pools.m_closingEndpointBudget),
+m_expiredFileBudget(pools.m_expiredFileBudget),
+m_heartbeat(pools.m_heartbeat),
 m_polling(false),
 m_dispatching(false),
 m_stopRequested(false),
-m_fileExpiryCount(0),
 m_lastEndpoint(1),
 m_internal(0),
 m_generic(0),
@@ -174,7 +166,13 @@ m_lastEvent(0),
 m_status(NI_OK),
 m_stopped(false)
 {
-    m_status = m_endpointPool.status();
+    m_handshake.m_server = 1;
+    m_handshake.m_capabilities = 7;
+    m_handshake.m_maxRequests = 32;
+    m_handshake.m_maxChunk = 65536;
+    m_handshake.m_timeoutMs = 5000;
+    m_status = (m_payloadRetentionBytes < -1 || !m_heartbeat.valid() || !m_expiredRequestBudget ||
+        !m_closingEndpointBudget || !m_expiredFileBudget) ? NI_INVALID_ARGUMENT : m_endpointPool.status();
     if (m_status == NI_OK) { m_status = m_filePool.status(); }
     if (m_status == NI_OK) { m_status = m_requests.status(); }
     if (m_status == NI_OK) { m_status = m_requests.addEndpoint(1, true, 0, 128); }
@@ -216,7 +214,7 @@ void NetEndpointRouterState::clearPayload()
         NetInterface::wipe(m_payload.data(), static_cast<uint32_t>(m_payload.size()));
         m_payload.clear();
     }
-    if (m_payload.capacity() > 4096)
+    if (m_payloadRetentionBytes >= 0 && m_payload.capacity() > static_cast<uint64_t>(m_payloadRetentionBytes))
     {
         std::vector<uint8_t>().swap(m_payload);
     }

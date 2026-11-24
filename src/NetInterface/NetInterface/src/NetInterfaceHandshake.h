@@ -8,8 +8,7 @@ struct NetInterfaceHandshakeOptions
     uint32_t m_server;
     // 客户端1桌面、2手机App、3微信小程序；服务器填0
     uint32_t m_platform;
-    // 位0多路请求必需；位1数据块、位2业务SDK、位3压缩可选，其余位不得设置
-    // 另含bit4紧凑帧协商；不支持的对端不得接收紧凑编码
+    // 位0多路请求必选，位1数据块、位2业务SDK、位3压缩和位4紧凑帧可协商，其余位须为零
     uint32_t m_capabilities;
     // 非零协议能力声明，协商取双方较小值；实际容量由本地物理池控制
     uint32_t m_maxRequests;
@@ -27,6 +26,15 @@ struct NetInterfaceHandshakeOptions
 class NetInterfaceAPI NetInterfaceHandshake
 {
   public:
+    /** 验证本地能力及应用握手范围
+    @param [in] capabilities 本地能力位，位0必选
+    @param [in] requests 非零请求能力
+    @param [in] chunk 文件块大小，单位字节
+    @param [in] timeoutMs 应用握手期限，单位毫秒
+    @return 全部符合握手契约时为true
+    */
+    static bool validLimits(uint32_t capabilities, uint32_t requests, uint32_t chunk, uint32_t timeoutMs);
+
     /** TLS就绪后创建；校验失败保持负数状态
     @param [in] options 本次复制的本地能力和随机数
     @param [in] nowMs 宿主单调毫秒时间

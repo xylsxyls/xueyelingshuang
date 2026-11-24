@@ -1,6 +1,7 @@
 ﻿#include "NetInterfaceMacro.h"
 #include "NetClientDiscovery.h"
 #include "NetInterfaceDirectory.h"
+#include "NetInterfaceFileGuard.h"
 #include <utility>
 #include <cstring>
 #include <array>
@@ -33,34 +34,16 @@ bool NetClientDiscovery::addressKey(const NetClientDiscoveryPoint& endpoint, uin
     return true;
 }
 
-/** 写输出前检查别名，使用地址差避免末端地址相加溢出
-@param [in] first 第一段地址
-@param [in] firstSize 第一段长度
-@param [in] second 第二段地址
-@param [in] secondSize 第二段长度
-@return 两个非空范围相交
-*/
-static bool DiscoveryRangesOverlap(const void* first, size_t firstSize, const void* second, size_t secondSize)
-{
-    if (first == nullptr || second == nullptr || firstSize == 0 || secondSize == 0)
-    {
-        return false;
-    }
-    const uintptr_t left = reinterpret_cast<uintptr_t>(first);
-    const uintptr_t right = reinterpret_cast<uintptr_t>(second);
-    return left <= right ? right - left < firstSize : left - right < secondSize;
-}
-
 int32_t NetClientDiscovery::parseSeeds(const std::string& text, NetClientDiscoveryPoint* points,
     uint32_t capacity, uint32_t& count)
 {
     if (capacity > SIZE_MAX / sizeof(NetClientDiscoveryPoint)) { return NI_INVALID_ARGUMENT; }
     const size_t arraySize = capacity * sizeof(NetClientDiscoveryPoint);
-    if (DiscoveryRangesOverlap(&count, sizeof(count), points, arraySize) ||
-        DiscoveryRangesOverlap(&count, sizeof(count), &text, sizeof(text)) ||
-        DiscoveryRangesOverlap(&count, sizeof(count), text.data(), text.size() + 1) ||
-        DiscoveryRangesOverlap(points, arraySize, &text, sizeof(text)) ||
-        DiscoveryRangesOverlap(points, arraySize, text.data(), text.size() + 1))
+    if (NetInterfaceFileGuard::overlap(&count, sizeof(count), points, arraySize) ||
+        NetInterfaceFileGuard::overlap(&count, sizeof(count), &text, sizeof(text)) ||
+        NetInterfaceFileGuard::overlap(&count, sizeof(count), text.data(), text.size() + 1) ||
+        NetInterfaceFileGuard::overlap(points, arraySize, &text, sizeof(text)) ||
+        NetInterfaceFileGuard::overlap(points, arraySize, text.data(), text.size() + 1))
     {
         return NI_INVALID_ARGUMENT;
     }

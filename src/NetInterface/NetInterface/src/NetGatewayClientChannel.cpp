@@ -1,6 +1,7 @@
 ﻿#include "NetGatewayClientChannel.h"
 #include "NetInterfaceMacro.h"
 #include "NetGatewayClientChannelState.h"
+#include "NetExecution.h"
 #include "NetInterface.h"
 #include "NetInterfaceCredit.h"
 #include "NetInterfaceDirectory.h"
@@ -32,12 +33,38 @@ NetGatewayClientChannel::~NetGatewayClientChannel()
     delete m_state;
 }
 
+int32_t NetGatewayClientChannel::configureServicePollBudgets(uint32_t readFrames, uint32_t writeRecords)
+{
+    if (m_state->m_phase != NET_GATEWAY_CLIENT_IDLE) { return NI_INVALID_STATE; }
+    return m_state->m_timing.configurePollBudgets(readFrames, writeRecords);
+}
+
+int32_t NetGatewayClientChannel::configureServiceTimeouts(uint32_t startupMs, uint32_t backpressureMs)
+{
+    if (m_state->m_phase != NET_GATEWAY_CLIENT_IDLE) { return NI_INVALID_STATE; }
+    return m_state->m_timing.configure(startupMs, backpressureMs);
+}
+
+int32_t NetGatewayClientChannel::configureServiceWindow(uint32_t bytes)
+{
+    if (m_state->m_phase != NET_GATEWAY_CLIENT_IDLE) { return NI_INVALID_STATE; }
+    return m_state->m_credit.configure(bytes);
+}
+
+int32_t NetGatewayClientChannel::configureTlsQueueLimits(const CEncodeDecodeTlsQueueLimits& limits)
+{
+    if (m_state->m_phase != NET_GATEWAY_CLIENT_IDLE) { return NI_INVALID_STATE; }
+    m_state->m_ciphertext = limits;
+    return NI_OK;
+}
+
 int32_t NetGatewayClientChannel::configureConnectionPools(const NetConnectionPoolConfig& config)
 {
     if (m_state->m_phase != NET_GATEWAY_CLIENT_IDLE || m_state->m_polling)
     {
         return NI_INVALID_STATE;
     }
+    if (!config.validCodecSettings()) { return NI_INVALID_ARGUMENT; }
     try
     {
         std::unique_ptr<NetConnectionPoolConfig> copy(new NetConnectionPoolConfig(config));
@@ -56,7 +83,7 @@ int32_t NetGatewayClientChannel::connect(const char* address, uint32_t port, con
     peer = 0;
     if (m_state->m_phase != NET_GATEWAY_CLIENT_IDLE || listener == nullptr || address == nullptr ||
         port == 0 || port > 65535 || options.server != 0 || options.entropy == nullptr ||
-        options.handshakeTimeoutMs < 100 || options.handshakeTimeoutMs > 60000)
+        options.effectiveHandshakeTimeout() < 100 || options.handshakeTimeoutMs > 60000)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -66,7 +93,7 @@ int32_t NetGatewayClientChannel::connect(const char* address, uint32_t port, con
     }
     m_state->m_options.entropy = options.entropy;
     m_state->m_options.entropyContext = options.entropyContext;
-    m_state->m_options.handshakeTimeoutMs = options.handshakeTimeoutMs;
+    m_state->m_options.handshakeTimeoutMs = options.effectiveHandshakeTimeout();
     m_state->m_listener = listener;
     m_state->m_phase = NET_GATEWAY_CLIENT_MANAGING;
     m_state->m_startedAt = GatewayClientNow();
@@ -124,7 +151,7 @@ bool NetGatewayClientChannel::onLinkControl(uint64_t peer, const NetInterfaceFra
         ProtoMessage message;
         Variant channel;
         if (frame.m_productId != 0 || frame.m_payload == nullptr || frame.m_payloadSize == 0 || frame.m_payloadSize > 16384 ||
-            !message.from(std::string(reinterpret_cast<const char*>(frame.m_payload), frame.m_payloadSize)))
+            !message.from(frame.m_payload, frame.m_payloadSize))
         {
             m_state->fail(NI_PROTOCOL_ERROR);
             return true;
@@ -164,7 +191,8 @@ bool NetGatewayClientChannel::onLinkControl(uint64_t peer, const NetInterfaceFra
         }
         uint32_t window = 0;
         if (!message.getKeyValue(NI_GATEWAY_CHANNEL, channel) || channel.type() != Variant::UINT64 || static_cast<uint64_t>(channel) != 1 ||
-            NetInterfaceCredit::window(message, window) != NI_OK || m_state->m_credit.configure(window) != NI_OK)
+            NetInterfaceCredit::window(message, window) != NI_OK || window > m_state->m_credit.capacity() ||
+            m_state->m_credit.configure(window) != NI_OK)
         {
             m_state->fail(NI_PROTOCOL_ERROR);
             return true;
@@ -173,16 +201,10 @@ bool NetGatewayClientChannel::onLinkControl(uint64_t peer, const NetInterfaceFra
         NetInterfaceTlsOptions tls = m_state->m_options;
         tls.authority = NetInterface::trustAuthority(&tls.authoritySize);
         tls.hostname = hostname.c_str();
-        std::unique_ptr<NetInterfaceConnection> connection(new NetInterfaceConnection(tls, NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT + 32));
-        if (m_state->m_connectionPools)
-        {
-            const int32_t configured = connection->configurePools(*m_state->m_connectionPools);
-            if (configured != NI_OK)
-            {
-                m_state->fail(configured);
-                return true;
-            }
-        }
+        const uint32_t limit = NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT + 32;
+        std::unique_ptr<NetInterfaceConnection> connection(m_state->m_connectionPools ?
+            new NetInterfaceConnection(tls, limit, *m_state->m_connectionPools, m_state->m_ciphertext) :
+            new NetInterfaceConnection(tls, limit, NetConnectionPoolConfig(), m_state->m_ciphertext));
         if (connection->status() < 0)
         {
             m_state->fail(connection->status());
@@ -248,7 +270,7 @@ void NetGatewayClientChannel::sendOpen()
     if (m_state->m_control.empty())
     {
         ProtoMessage open;
-        open.setKeyValue(NI_GATEWAY_WINDOW, Variant(static_cast<int32_t>(1048576)));
+        open.setKeyValue(NI_GATEWAY_WINDOW, Variant(static_cast<int32_t>(m_state->m_credit.capacity())));
         open.setKeyValue(NI_GATEWAY_TARGET_PRODUCT, Variant(static_cast<uint64_t>(m_state->m_product)));
         open.setKeyValue(NI_GATEWAY_CHANNEL, Variant(static_cast<uint64_t>(1)));
         if (!open.toString(m_state->m_control))
@@ -316,19 +338,19 @@ void NetGatewayClientChannel::sendCredit()
 
 void NetGatewayClientChannel::sendOutput()
 {
-    for (uint32_t step = 0; step < 32 && m_state->m_phase < NET_GATEWAY_CLIENT_CLOSING; ++step)
-    {
+    m_state->m_timing.writeRecords([&](uint32_t) -> bool {
+        if (m_state->m_phase >= NET_GATEWAY_CLIENT_CLOSING) { return false; }
         const uint8_t* bytes = nullptr;
         uint32_t size = 0;
         const int32_t pending = m_state->m_connection->peekOutput(bytes, size);
         if (pending < 0)
         {
             m_state->fail(pending);
-            break;
+            return false;
         }
         if (size == 0 || m_state->m_credit.available() == 0)
         {
-            break;
+            return false;
         }
         NetInterfaceTunnelRecord record = {};
         record.m_kind = NI_TUNNEL_BYTES;
@@ -339,19 +361,20 @@ void NetGatewayClientChannel::sendOutput()
         const int32_t sent = m_state->m_transport->sendRecord(m_state->m_linkPeer, record);
         if (sent == NI_LIMIT_EXCEEDED)
         {
-            break;
+            return false;
         }
         if (sent != NI_OK)
         {
             m_state->fail(sent);
-            break;
+            return false;
         }
         if (m_state->m_credit.sent(record.m_size) != NI_OK || m_state->m_connection->consumeOutput(record.m_size) < 0)
         {
             m_state->fail(NI_PROTOCOL_ERROR);
-            break;
+            return false;
         }
-    }
+        return true;
+    });
 }
 
 void NetGatewayClientChannel::advance(uint64_t now)
@@ -383,44 +406,37 @@ void NetGatewayClientChannel::advance(uint64_t now)
         m_state->m_phase = NET_GATEWAY_CLIENT_ACTIVE;
         m_state->m_listener->onReady(1);
     }
-    for (uint32_t step = 0; step < 32 && m_state->m_phase == NET_GATEWAY_CLIENT_ACTIVE; ++step)
-    {
+    m_state->m_timing.readFrames([&](uint32_t step) -> bool {
+        if (m_state->m_phase != NET_GATEWAY_CLIENT_ACTIVE) { return false; }
+        if (step != 0)
+        {
+            const int32_t next = m_state->m_connection->progress(now);
+            if (next < 0 || next == NET_INTERFACE_TLS_CLOSED)
+            {
+                m_state->fail(next < 0 ? next : NI_OK);
+                return false;
+            }
+        }
         NetInterfaceFrame frame = {};
         const int32_t available = m_state->m_connection->peek(frame);
         if (available < 0)
         {
             m_state->fail(available);
-            break;
+            return false;
         }
         if (available != NI_READY)
         {
-            break;
+            return false;
         }
-        if (!m_state->m_listener->onFrame(1, frame))
+        const int32_t delivered = m_state->m_timing.deliver(*m_state->m_listener, frame, now, m_state->m_blockedDeadline);
+        if (delivered != NI_OK)
         {
-            if (m_state->m_blockedSince == 0)
-            {
-                m_state->m_blockedSince = now;
-            }
-            else if (now - m_state->m_blockedSince >= 5000)
-            {
-                m_state->fail(NI_TIMEOUT);
-            }
-            break;
+            if (delivered != NI_LIMIT_EXCEEDED) { m_state->fail(delivered); }
+            return false;
         }
-        m_state->m_blockedSince = 0;
         m_state->m_connection->consume();
-        if (step + 1 < 32 && m_state->m_phase == NET_GATEWAY_CLIENT_ACTIVE)
-        {
-            // consume只归还当前帧；继续解析TLS中已有输入，避免每帧重新绕过整个宿主循环。
-            const int32_t next = m_state->m_connection->progress(now);
-            if (next < 0 || next == NET_INTERFACE_TLS_CLOSED)
-            {
-                m_state->fail(next < 0 ? next : NI_OK);
-                break;
-            }
-        }
-    }
+        return true;
+    });
     if (m_state->m_phase < NET_GATEWAY_CLIENT_CLOSING)
     {
         sendCredit();
@@ -484,10 +500,13 @@ bool NetGatewayClientChannel::poll()
             m_state->m_transport->poll();
         }
         const uint64_t now = GatewayClientNow();
-        if (m_state->m_phase < NET_GATEWAY_CLIENT_ACTIVE &&
-            now - m_state->m_startedAt >= static_cast<uint64_t>(m_state->m_options.handshakeTimeoutMs) * 3)
+        if (m_state->m_phase < NET_GATEWAY_CLIENT_ACTIVE)
         {
-            m_state->fail(NI_TIMEOUT);
+            const uint32_t budget = m_state->m_timing.m_startupMs == 0 ?
+                m_state->m_options.handshakeTimeoutMs * 3 : m_state->m_timing.m_startupMs;
+            const uint64_t elapsed = now - m_state->m_startedAt;
+            NetExecution::deadline(budget, elapsed);
+            if (elapsed >= budget) { m_state->fail(NI_TIMEOUT); }
         }
         if (m_state->m_phase == NET_GATEWAY_CLIENT_OPEN_PENDING)
         {

@@ -7,12 +7,30 @@
 #include <algorithm>
 #include <cstring>
 
+NetInterfaceLinkPools::NetInterfaceLinkPools() :
+m_pingIntervalMs(15000),
+m_pongTimeoutMs(10000),
+m_drainTimeoutMs(5000),
+m_controlStepBudget(64)
+{
+    m_outputRecords.initialCapacity = 128;
+    m_outputRecords.maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetInterfaceLinkWrite>>);
+    m_outputRecords.directoryCapacity = 128;
+    m_outputRecords.lookupCacheCapacity = 0;
+}
+
 NetInterfaceLink::NetInterfaceLink(const NetInterfaceLinkOptions& options) :
-m_state(new NetInterfaceLinkState())
+NetInterfaceLink(options, NetInterfaceLinkPools())
+{
+
+}
+
+NetInterfaceLink::NetInterfaceLink(const NetInterfaceLinkOptions& options, const NetInterfaceLinkPools& pools) :
+m_state(new NetInterfaceLinkState(pools))
 {
     try
     {
-        m_state->configure(options);
+        m_state->configure(options, pools);
     }
     catch (...)
     {

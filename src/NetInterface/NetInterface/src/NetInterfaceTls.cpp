@@ -1,4 +1,5 @@
 ﻿#include "NetInterfaceTls.h"
+#include "NetInterfaceFileGuard.h"
 #include "CEncodeDecode/CEncodeDecodeAPI.h"
 
 
@@ -16,6 +17,12 @@ static_assert(static_cast<int>(NET_INTERFACE_TLS_TRUNCATED) == static_cast<int>(
 static_assert(static_cast<int>(NET_INTERFACE_TLS_STATE) == static_cast<int>(CENCODE_TLS_STATE), "TLS status mapping");
 
 NetInterfaceTls::NetInterfaceTls(const NetInterfaceTlsOptions& options) :
+NetInterfaceTls(options, CEncodeDecodeTlsQueueLimits())
+{
+
+}
+
+NetInterfaceTls::NetInterfaceTls(const NetInterfaceTlsOptions& options, const CEncodeDecodeTlsQueueLimits& limits) :
 m_tls(nullptr)
 {
     CEncodeDecodeTlsOptions crypto = {};
@@ -30,7 +37,7 @@ m_tls(nullptr)
     crypto.entropy = options.entropy;
     crypto.entropyContext = options.entropyContext;
     crypto.handshakeTimeoutMs = options.handshakeTimeoutMs;
-    m_tls = CEncodeDecode::createTls(crypto);
+    m_tls = CEncodeDecode::createTls(crypto, limits);
 }
 
 NetInterfaceTls::~NetInterfaceTls()
@@ -40,7 +47,7 @@ NetInterfaceTls::~NetInterfaceTls()
 
 int32_t NetInterfaceTls::feed(const uint8_t* data, uint32_t size, uint32_t& consumed)
 {
-    consumed = 0;
+    if (!NetInterfaceFileGuard::prepareCount(data, size, &consumed)) { return NET_INTERFACE_TLS_ARGUMENT; }
     return m_tls ? m_tls->feed(data, size, consumed) : NET_INTERFACE_TLS_MEMORY;
 }
 
@@ -51,6 +58,7 @@ int32_t NetInterfaceTls::progress(uint64_t monotonicMs)
 
 int32_t NetInterfaceTls::peekOutput(const uint8_t*& data, uint32_t& size) const
 {
+    if (NetInterfaceFileGuard::overlap(&data, sizeof(data), &size, sizeof(size))) { return NET_INTERFACE_TLS_ARGUMENT; }
     data = nullptr;
     size = 0;
     return m_tls ? m_tls->peekOutput(data, size) : NET_INTERFACE_TLS_MEMORY;
@@ -63,13 +71,13 @@ int32_t NetInterfaceTls::consumeOutput(uint32_t size)
 
 int32_t NetInterfaceTls::write(const uint8_t* data, uint32_t size, uint32_t& accepted)
 {
-    accepted = 0;
+    if (!NetInterfaceFileGuard::prepareCount(data, size, &accepted)) { return NET_INTERFACE_TLS_ARGUMENT; }
     return m_tls ? m_tls->write(data, size, accepted) : NET_INTERFACE_TLS_MEMORY;
 }
 
 int32_t NetInterfaceTls::append(const uint8_t* data, uint32_t size, uint32_t& accepted)
 {
-    accepted = 0;
+    if (!NetInterfaceFileGuard::prepareCount(data, size, &accepted)) { return NET_INTERFACE_TLS_ARGUMENT; }
     return m_tls ? m_tls->append(data, size, accepted) : NET_INTERFACE_TLS_MEMORY;
 }
 
@@ -85,7 +93,7 @@ int32_t NetInterfaceTls::appendExact(const uint8_t* first, uint32_t firstSize, c
 
 int32_t NetInterfaceTls::read(uint8_t* output, uint32_t capacity, uint32_t& received)
 {
-    received = 0;
+    if (!NetInterfaceFileGuard::prepareCount(output, capacity, &received)) { return NET_INTERFACE_TLS_ARGUMENT; }
     return m_tls ? m_tls->read(output, capacity, received) : NET_INTERFACE_TLS_MEMORY;
 }
 

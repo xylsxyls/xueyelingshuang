@@ -1,6 +1,11 @@
 ﻿#pragma once
 #include "NetInterfaceHandles.h"
 
+class CEncodeDecodeTlsQueueLimits;
+struct NetConnectionPoolConfig;
+struct NetInterfaceLinkPools;
+struct NetRequestTablePools;
+
 // 协议主入口：提供NIF2解码实例及消息、TLS、会话、文件等工作对象的创建和操作
 // 各工作对象由单执行者推进、在本库释放；不拥有socket、OS线程或业务授权判定
 // 完整固定或紧凑头通过校验后才分配正文，READY借用直到consume/reset/析构
@@ -19,7 +24,7 @@ public:
     /** 单执行者接纳到一条完整帧为止，READY时保留调用方的剩余输入
     @param [in] data 至少size字节的借用输入，仅size为0时可空
     @param [in] size 可读字节数，不得与实例借出的存储重叠
-    @param [out] consumed 本次复制的字节数，包含拒绝的完整固定头；参数错误为0
+    @param [out] consumed 本次复制的字节数，包含拒绝的完整固定头。长度与输入重叠时两者保持原值
     @return NEED_MORE、READY或持续错误；分配、协议和截断错误须关闭当前连接
     */
     int32_t feed(const uint8_t* data, uint32_t size, uint32_t& consumed);
@@ -36,7 +41,7 @@ public:
     */
     int32_t peek(const NetInterfaceFrame*& frame) const;
 
-    /** 结束当前借用，复用至多4KiB的小存储；更大正文立即释放
+    /** 结束当前借用，按本实例配置复用正文缓冲；超过保留上限立即释放
     @return OK、不完整时INVALID_STATE或已有持续错误
     */
     int32_t consume();
@@ -55,6 +60,17 @@ public:
     */
     int32_t status() const;
 
+    /** 在空闲帧边界设置消费后允许保留的正文缓冲，缩小上限可立即释放空闲内存
+    @param [in] bytes 字节数，0表示消费即释放，-1表示最多保留到单帧上限
+    @return NI_OK、NI_INVALID_ARGUMENT 或 NI_INVALID_STATE；失败保留原配置和当前借用
+    */
+    int32_t configureDecoderRetention(int32_t bytes);
+
+    /** 查询当前解码正文缓冲的实际分配量，可在消费前后监测内存占用
+    @return 字节数，未分配或已释放时为0
+    */
+    uint32_t decoderBufferCapacity() const;
+
     /** 单执行者读取创建时确定的单帧上限
     @return 正文字节上限，非法配置仍返回原值
     */
@@ -64,7 +80,7 @@ public:
     @param [in] frame 借用元数据及完整正文，输出可覆盖元数据但不得与正文重叠
     @param [out] output 调用方可写区域，capacity为0时可空
     @param [in] capacity 可写字节数，实际只写required字节
-    @param [out] required 所需字节数，参数错误为0；不得与输入或输出别名
+    @param [out] required 所需字节数；若与输入或输出重叠，拒绝并保留原值；其他参数错误置0
     @return OK、BUFFER_TOO_SMALL、LIMIT_EXCEEDED或INVALID_ARGUMENT，失败不修改输出
     */
     static int32_t encode(const NetInterfaceFrame& frame, uint8_t* output, uint32_t capacity, uint32_t& required);
@@ -73,7 +89,7 @@ public:
     @param [in] frame 元数据及正文，本次借用
     @param [out] output 与正文不重叠的可写空间，capacity为0时可空
     @param [in] capacity 输出字节容量
-    @param [out] required 所需字节数；参数错误为0，不与输入输出别名
+    @param [out] required 所需字节数；长度与输入输出别名时拒绝且保留原值，其他参数错误置0
     @return NI_OK、NI_BUFFER_TOO_SMALL或负数错误，失败不写输出
     */
     static int32_t encodeCompact(const NetInterfaceFrame& frame, uint8_t* output, uint32_t capacity, uint32_t& required);
@@ -131,17 +147,44 @@ public:
     static int32_t connectionCreate(const NetInterfaceTlsOptions* options, NetInterfaceConnectionHandle* handle,
                                                          int32_t* detail);
 
+    /** 创建原生/Wasm共用的TLS和完整帧驱动
+    @param [in] options 不可空，证书调用时借用，随机回调上下文借用至destroy
+    @param [out] handle 不可空；失败清空
+    @param [out] detail 可空，TLS底层诊断
+    @param [in] pools 当前实例的物理池配置，空指针选择默认值
+    @param [in] limits TLS 密文字节上限，空指针采用默认值
+    @return TLS_HANDSHAKE或负数错误，未代表账号已登录
+    */
+    static int32_t connectionCreate(const NetInterfaceTlsOptions* options, NetInterfaceConnectionHandle* handle,
+                                                         int32_t* detail,
+        const NetConnectionPoolConfig* pools, const CEncodeDecodeTlsQueueLimits* limits = nullptr);
+
     /** 逻辑服务业务TLS客户端，固定内置CA及service.<目标号>域名，不能注入动态信任根
     @param [in] product 逻辑目标服务号；0的可达权限仍由管理路由授权
     @param [in] entropy 宿主强随机
     @param [in] context 随机上下文，借用至destroy
-    @param [in] timeoutMs 100至60000毫秒
+    @param [in] timeoutMs 0使用默认10000毫秒，或100至60000毫秒
     @param [out] handle 成功创建的业务TLS连接，否则null
     @param [out] detail 可空，TLS诊断
     @return TLS_HANDSHAKE或负数，不代表已连接或账号认证
     */
     static int32_t connectionCreateServiceClient(uint32_t product, NetInterfaceEntropyFunction entropy,
         void* context, uint32_t timeoutMs, NetInterfaceConnectionHandle* handle, int32_t* detail);
+
+    /** 逻辑服务业务TLS客户端，固定内置CA及service.<目标号>域名，不能注入动态信任根
+    @param [in] product 逻辑目标服务号；0的可达权限仍由管理路由授权
+    @param [in] entropy 宿主强随机
+    @param [in] context 随机上下文，借用至destroy
+    @param [in] timeoutMs 0使用默认10000毫秒，或100至60000毫秒
+    @param [out] handle 成功创建的业务TLS连接，否则null
+    @param [out] detail 可空，TLS诊断
+    @param [in] pools 当前实例的物理池配置，空指针选择默认值
+    @param [in] limits TLS 密文字节上限，空指针采用默认值
+    @return TLS_HANDSHAKE或负数，不代表已连接或账号认证
+    */
+    static int32_t connectionCreateServiceClient(uint32_t product, NetInterfaceEntropyFunction entropy,
+        void* context, uint32_t timeoutMs, NetInterfaceConnectionHandle* handle, int32_t* detail,
+        const NetConnectionPoolConfig* pools, const CEncodeDecodeTlsQueueLimits* limits = nullptr);
 
     /** 释放连接和拥有的队列
     @param [in] handle 实例或null，禁止重复释放
@@ -152,7 +195,7 @@ public:
     @param [in] handle 有效连接
     @param [in] data size为0时可空
     @param [in] size 字节数
-    @param [out] consumed 不可空，已复制长度
+    @param [out] consumed 不可空，已复制长度，须独立于输入缓冲
     @return TLS状态或负数错误
     */
     static int32_t connectionFeed(NetInterfaceConnectionHandle handle, const uint8_t* data, uint32_t size,
@@ -178,7 +221,7 @@ public:
     @param [in] handle 有效连接
     @param [out] fields 不可空，六项与Send相同
     @param [out] payload 不可空，借用至consume或destroy
-    @return NI_READY、NI_NEED_MORE或负数错误
+    @return NI_READY、NI_NEED_MORE或负数错误。输出存储相互重叠时返回参数错误并保留原值
     */
     static int32_t connectionPeek(NetInterfaceConnectionHandle handle, uint32_t* fields, const uint8_t** payload);
 
@@ -192,7 +235,7 @@ public:
     @param [in] handle 有效连接
     @param [out] data 不可空，消费前有效
     @param [out] size 不可空，连续长度
-    @return TLS状态或错误
+    @return TLS状态或错误。输出存储相互重叠时返回参数错误并保留原值
     */
     static int32_t connectionPeekOutput(NetInterfaceConnectionHandle handle, const uint8_t** data, uint32_t* size);
 
@@ -259,6 +302,14 @@ public:
     */
     static int32_t messageCreate(NetInterfaceMessageHandle* handle);
 
+    /** 在创建或 clear 后设置本句柄的写入预算。成功解析非空输入或写入后需先 clear
+    @param [in] handle 有效消息句柄，同一执行者调用
+    @param [in] modificationBytes 每条消息累计允许的写入成本，默认1MiB；0禁止收费写入，-1取消累计限额
+    @param [in] errorTextBytes 单次设置错误文本的字节上限，默认4096；0仅允许空文本，-1放宽到线路正文上限
+    @return NI_OK、NI_INVALID_ARGUMENT 或 NI_INVALID_STATE；失败保留两个原设置
+    */
+    static int32_t messageConfigureLimits(NetInterfaceMessageHandle handle, int64_t modificationBytes, int32_t errorTextBytes);
+
     /** 设置当前连接的压缩协商结果和发送白名单，已入队帧保持其编码
     @param [in] handle 有效连接，由单个执行者驱动
     @param [in] types 本次借用的消息类型数组；每项非零，可重复，count为0时可空
@@ -292,14 +343,14 @@ public:
     @param [in] handle 有效实例
     @param [out] output 输出，capacity为0时可空
     @param [in] capacity 容量
-    @param [out] required 不可空，所需字节数；不足空间时缓冲保持不变
+    @param [out] required 不可空，所需字节数，与输出缓冲重叠时返回 NI_INVALID_ARGUMENT 并保留原值；不足空间时缓冲保持不变
     @return NI_OK或负数错误，最大1MiB
     */
     static int32_t messageEncode(NetInterfaceMessageHandle handle, uint8_t* output, uint32_t capacity,
                                                       uint32_t* required);
 
     /** 设置map字段，保留既有Variant编号及二进制格式，字符串可以含NUL
-    @param [in] handle 有效实例，单消息累计修改成本最多1MiB，clear后恢复预算
+    @param [in] handle 有效实例，累计修改成本按句柄配置，clear后恢复预算
     @param [in] group 容器键
     @param [in] key 字段键
     @param [in] type INIT0/INT32=1/UINT64=2/DOUBLE=3/STRING=4/BLOB=5
@@ -317,7 +368,7 @@ public:
     @param [out] type 不可空，Variant类型
     @param [out] output 字节缓冲，capacity为0时可空
     @param [in] capacity 字节容量
-    @param [out] required 不可空，实际字节数；不足空间不写缓冲
+    @param [out] required 不可空，实际字节数；type、required、输出缓冲两两独立，重叠时报参数错误且不写任何输出；不足空间不写缓冲
     @return NI_OK、NI_NOT_FOUND或负数错误
     */
     static int32_t messageGetValue(NetInterfaceMessageHandle handle, int32_t group, int32_t key, int32_t* type,
@@ -327,7 +378,7 @@ public:
     @param [in] handle 有效实例
     @param [in] code 业务码
     @param [in] error UTF8错误文本，size为0时可空
-    @param [in] size 最多4096字节
+    @param [in] size 本句柄当前错误文本上限以内，默认4096字节
     @return NI_OK或负数错误
     */
     static int32_t messageSetCode(NetInterfaceMessageHandle handle, int32_t code, const uint8_t* error, uint32_t size);
@@ -337,7 +388,7 @@ public:
     @param [out] code 不可空
     @param [out] error 调用方缓冲，capacity为0时可空
     @param [in] capacity 缓冲容量
-    @param [out] required 不可空，文本字节数，不添加NUL
+    @param [out] required 不可空，文本字节数，不添加NUL；code、required、文本缓冲重叠时报参数错误且不写任何输出
     @return NI_OK或负数错误；不足空间时code及required仍有效
     */
     static int32_t messageGetCode(NetInterfaceMessageHandle handle, int32_t* code, uint8_t* error, uint32_t capacity,
@@ -350,6 +401,13 @@ public:
     */
     static int32_t create(uint32_t payloadLimit, NetInterfaceHandle* handle);
 
+    /** 为解码句柄设置空闲时保留的缓冲预算
+    @param [in] handle 有效解码句柄，单执行者在空闲帧边界调用
+    @param [in] bytes 字节数，0立即释放空闲缓存，-1保留至单帧上限
+    @return 与实例 configureDecoderRetention 相同，空句柄返回 NI_INVALID_ARGUMENT
+    */
+    static int32_t configureDecoderRetention(NetInterfaceHandle handle, int32_t bytes);
+
     /** 在分配模块内销毁实例
     @param [in] handle 有效实例或null，销毁后禁止再使用
     */
@@ -359,7 +417,7 @@ public:
     @param [in] handle 有效实例
     @param [in] data 本次调用借用字节，仅size为0时可空
     @param [in] size 输入字节数
-    @param [out] consumed 已消费字节数，即使输入为空也必须提供
+    @param [out] consumed 已消费字节数，即使输入为空也必须提供，须独立于输入缓冲
     @return NEED_MORE、READY或负数错误
     */
     static int32_t feed(NetInterfaceHandle handle, const uint8_t* data, uint32_t size, uint32_t* consumed);
@@ -402,7 +460,7 @@ public:
     @param [in] handle 有效解码器
     @param [out] fields 不可空，6项依次为kind、product、request低位、request高位、type、payloadSize
     @param [out] payload 不可空，消息体借用至consume/reset/destroy
-    @return READY或当前状态，非READY时输出清空
+    @return READY或当前状态。非就绪时清空独立的有效输出。输出存储相互重叠时返回参数错误并保留原值
     */
     static int32_t peekFields(NetInterfaceHandle handle, uint32_t* fields, const uint8_t** payload);
 
@@ -423,7 +481,7 @@ public:
     @param [in] hostname 必须验证的域名，1至253字节，仅调用时借用
     @param [in] entropy 操作系统密码学随机函数，借用至destroy
     @param [in] context 随机上下文，可空，借用至destroy
-    @param [in] timeoutMs 握手时限，100至60000毫秒
+    @param [in] timeoutMs 握手时限，0使用默认10000毫秒，或100至60000毫秒
     @param [out] handle 不可空，成功的TLS实例，失败清空
     @param [out] detail 可空，底层错误
     @return TLS_HANDSHAKE或负数错误
@@ -432,6 +490,23 @@ public:
                                                         NetInterfaceEntropyFunction entropy, void* context, uint32_t timeoutMs,
                                                         NetInterfaceTlsHandle* handle, int32_t* detail);
 
+    /** 创建客户端TLS，无需跨语言构建C结构体
+    @param [in] authority 受信根PEM或DER，仅调用时借用
+    @param [in] authoritySize 字节数，PEM含NUL，最大128KiB
+    @param [in] hostname 必须验证的域名，1至253字节，仅调用时借用
+    @param [in] entropy 操作系统密码学随机函数，借用至destroy
+    @param [in] context 随机上下文，可空，借用至destroy
+    @param [in] timeoutMs 握手时限，0使用默认10000毫秒，或100至60000毫秒
+    @param [out] handle 不可空，成功的TLS实例，失败清空
+    @param [out] detail 可空，底层错误
+    @param [in] limits TLS 输入、输出的独立密文字节上限
+    @return TLS_HANDSHAKE或负数错误
+    */
+    static int32_t tlsCreateClient(const uint8_t* authority, uint32_t authoritySize, const char* hostname,
+                                                        NetInterfaceEntropyFunction entropy, void* context, uint32_t timeoutMs,
+                                                        NetInterfaceTlsHandle* handle, int32_t* detail,
+        const CEncodeDecodeTlsQueueLimits& limits);
+
     /** 创建非阻塞TLS通道，验证配置并复制证书
     @param [in] options 证书调用时借用，随机回调上下文借用至destroy
     @param [out] handle 成功创建的实例；失败时清空
@@ -439,6 +514,16 @@ public:
     @return TLS_HANDSHAKE或负数错误
     */
     static int32_t tlsCreate(const NetInterfaceTlsOptions* options, NetInterfaceTlsHandle* handle, int32_t* detail);
+
+    /** 创建非阻塞TLS通道，验证配置并复制证书
+    @param [in] options 证书调用时借用，随机回调上下文借用至destroy
+    @param [out] handle 成功创建的实例；失败时清空
+    @param [out] detail 可空，接收底层Mbed TLS错误
+    @param [in] limits TLS 输入、输出的独立密文字节上限
+    @return TLS_HANDSHAKE或负数错误
+    */
+    static int32_t tlsCreate(const NetInterfaceTlsOptions* options, NetInterfaceTlsHandle* handle, int32_t* detail,
+        const CEncodeDecodeTlsQueueLimits& limits);
 
     /** 销毁TLS实例，释放并擦除私密数据
     @param [in] handle 有效实例或null，销毁后禁止再用
@@ -449,7 +534,7 @@ public:
     @param [in] handle 有效TLS实例
     @param [in] data size非0时不可空，本次调用复制
     @param [in] size 字节数
-    @param [out] consumed 实际复制字节数，不可空
+    @param [out] consumed 实际复制字节数，不可空，与输入重叠时返回参数错误并保留原值
     @return TLS_OK、TLS_WANT_IO或负数错误
     */
     static int32_t tlsFeed(NetInterfaceTlsHandle handle, const uint8_t* data, uint32_t size, uint32_t* consumed);
@@ -466,7 +551,7 @@ public:
     @param [in] handle 有效TLS实例
     @param [out] data 不可空，消费或销毁之前有效
     @param [out] size 不可空，连续字节数
-    @return TLS_OK或负数错误
+    @return TLS_OK或负数错误。输出存储相互重叠时返回参数错误并保留原值
     */
     static int32_t tlsPeekOutput(NetInterfaceTlsHandle handle, const uint8_t** data, uint32_t* size);
 
@@ -481,7 +566,7 @@ public:
     @param [in] handle 有效TLS实例
     @param [in] data size非0时不可空，返回后不再借用
     @param [in] size 字节数，最多接受16384字节
-    @param [out] accepted 不可空，已复制的前缀长度，不表示送达
+    @param [out] accepted 不可空，与输入分开存放。记录已复制的前缀长度
     @return TLS_OK、TLS_WANT_IO或负数错误
     */
     static int32_t tlsWrite(NetInterfaceTlsHandle handle, const uint8_t* data, uint32_t size, uint32_t* accepted);
@@ -490,7 +575,7 @@ public:
     @param [in] handle 有效TLS实例
     @param [out] output capacity非0时不可空
     @param [in] capacity 可写字节数
-    @param [out] received 不可空，实际输出字节数
+    @param [out] received 不可空，与明文输出分开存放。记录实际输出字节数
     @return TLS_OK、TLS_WANT_IO、TLS_CLOSED或负数错误
     */
     static int32_t tlsRead(NetInterfaceTlsHandle handle, uint8_t* output, uint32_t capacity, uint32_t* received);
@@ -796,7 +881,7 @@ public:
     @param [in] handle 流
     @param [out] fields 三项offset低/高位和长度
     @param [out] bytes 借用至written、流失败（含超时或取消）或销毁
-    @return 同Flow.writeRequest，失败输出0/null
+    @return 同Flow.writeRequest。非就绪时清空独立的有效输出。输出存储相互重叠时返回参数错误并保留原值
     */
     static int32_t fileFlowWrite(NetInterfaceFileFlowHandle handle, uint32_t* fields, const uint8_t** bytes);
 
@@ -828,7 +913,7 @@ public:
     @param [in] handle 流
     @param [out] fields 六项kind/product/id低高/type/size
     @param [out] payload 借用至consume、流失败或销毁
-    @return READY或其他结果，失败清输出
+    @return READY或其他结果。非就绪时清空独立的有效输出。输出存储相互重叠时返回参数错误并保留原值
     */
     static int32_t fileFlowPeek(NetInterfaceFileFlowHandle handle, uint32_t* fields, const uint8_t** payload);
 
@@ -905,7 +990,7 @@ public:
     @param [in] handle 有效实例
     @param [out] fields 六项固定帧字段，未就绪时清空
     @param [out] payload 借用到consume/destroy，未就绪时清空
-    @return READY有输出、NEED_MORE无输出或负数错误
+    @return READY有输出、NEED_MORE无输出或负数错误。输出存储相互重叠时返回参数错误并保留原值
     */
     static int32_t handshakePeekOutput(NetInterfaceHandshakeHandle handle, uint32_t* fields, const uint8_t** payload);
 
@@ -919,7 +1004,7 @@ public:
     @param [in] handle 有效实例
     @param [out] fields 平台/能力/在途上限/块大小四项
     @param [out] identities 对端随机数16字节及客户端设备标识16字节
-    @return READY、NEED_MORE或负数错误
+    @return READY、NEED_MORE或负数错误。输出存储相互重叠时返回参数错误并保留原值
     */
     static int32_t handshakePeerInfo(NetInterfaceHandshakeHandle handle, uint32_t* fields, uint8_t* identities);
 
@@ -929,6 +1014,15 @@ public:
     @return NI_NEED_MORE或错误，管理认证完成后才READY
     */
     static int32_t linkCreate(const NetInterfaceLinkOptions* options, NetInterfaceLinkHandle* handle);
+
+    /** 创建管理连接；调用方显式提供身份、运输及熵源，不提供JS工厂
+    @param [in] options v3配置，不可空
+    @param [out] handle 不可空，失败清零
+    @param [in] pools 当前实例的物理池配置，空指针选择默认值
+    @return NI_NEED_MORE或错误，管理认证完成后才READY
+    */
+    static int32_t linkCreate(const NetInterfaceLinkOptions* options, NetInterfaceLinkHandle* handle,
+        const NetInterfaceLinkPools* pools);
 
     /** 释放独占管理连接
     @param [in] handle 有效实例或null，不得重复释放
@@ -955,7 +1049,7 @@ public:
     @param [in] handle 实例
     @param [out] fields 五项路由字段，不可空
     @param [out] payload 不可空，借用至consume/destroy
-    @return NI_READY、NI_NEED_MORE或错误
+    @return NI_READY、NI_NEED_MORE或错误。输出存储相互重叠时返回参数错误并保留原值
     */
     static int32_t linkPeekOutput(NetInterfaceLinkHandle handle, uint32_t* fields, const uint8_t** payload);
 
@@ -977,7 +1071,7 @@ public:
     @param [in] handle 实例
     @param [out] fields 五项字段
     @param [out] payload 借用至consumeRecord
-    @return NI_READY、NI_NEED_MORE或错误
+    @return NI_READY、NI_NEED_MORE或错误。输出存储相互重叠时返回参数错误并保留原值
     */
     static int32_t linkPeekRecord(NetInterfaceLinkHandle handle, uint32_t* fields, const uint8_t** payload);
 
@@ -999,7 +1093,7 @@ public:
     @param [in] handle 实例
     @param [out] fields 六项帧字段
     @param [out] payload 借用至consumeControl
-    @return NI_READY、NI_NEED_MORE或错误
+    @return NI_READY、NI_NEED_MORE或错误。输出存储相互重叠时返回参数错误并保留原值
     */
     static int32_t linkPeekControl(NetInterfaceLinkHandle handle, uint32_t* fields, const uint8_t** payload);
 
@@ -1015,7 +1109,7 @@ public:
     @param [out] name 字符串字节借用至destroy
     @param [out] certificate PEM字节，不含末尾NUL，借用至destroy
     @param [out] claims 声明字节，借用至destroy
-    @return NI_READY或状态，非READY清空有效输出
+    @return NI_READY或状态。非就绪时清空独立的有效输出。输出存储相互重叠时返回参数错误并保留原值
     */
     static int32_t linkPeerInfo(NetInterfaceLinkHandle handle, uint32_t* fields,
     const uint8_t** name, const uint8_t** certificate, const uint8_t** claims);
@@ -1038,6 +1132,13 @@ public:
     @return OK或负数错误
     */
     static int32_t requestsCreate(uint32_t capacity, NetInterfaceRequestsHandle* handle);
+
+    /** 创建等待表
+    @param [in] pools 请求、端点和提前取消的独立存储配置
+    @param [out] handle 不可空，失败清空
+    @return OK或负数错误
+    */
+    static int32_t requestsCreate(const NetRequestTablePools& pools, NetInterfaceRequestsHandle* handle);
 
     /** 释放等待表，不执行宿主回调
     @param [in] handle 实例或null，非null不得重复释放
@@ -1135,7 +1236,7 @@ public:
     @param [in] frameFields kind/product/requestLow/requestHigh/type/payloadSize共6项
     @param [in] count 必须为6
     @param [in] data frameFields声明长度的消息体
-    @param [out] fields value/parentLow/parentHigh/bodyOffset/bodySize共5项；失败清零，允许与输入字段重叠
+    @param [out] fields value/parentLow/parentHigh/bodyOffset/bodySize共5项；允许复用输入字段数组，与正文重叠时原值保持，其余失败清零
     @return OK或负数错误
     */
     static int32_t rpcParse(const uint32_t* frameFields, uint32_t count, const uint8_t* data, uint32_t* fields);
@@ -1163,7 +1264,7 @@ public:
     @param [in] handle 实例
     @param [in] data size非零时不可空
     @param [in] size 字节数
-    @param [out] consumed 不可空，实际接纳量
+    @param [out] consumed 不可空，实际接纳量；与输入字节重叠时报参数错误且不写入
     @return NI_READY、NI_NEED_MORE或错误
     */
     static int32_t tunnelFeed(NetInterfaceTunnelHandle handle, const uint8_t* data, uint32_t size, uint32_t* consumed);
@@ -1172,7 +1273,7 @@ public:
     @param [in] handle 实例
     @param [out] fields 五项kind/product/channelLow/channelHigh/size，不可空
     @param [out] payload 不可空，借用至consume/destroy
-    @return NI_READY或当前状态，非READY输出清零
+    @return NI_READY或当前状态。非就绪时清空独立的有效输出。输出存储相互重叠时返回参数错误并保留原值
     */
     static int32_t tunnelPeek(NetInterfaceTunnelHandle handle, uint32_t* fields, const uint8_t** payload);
 
@@ -1193,7 +1294,7 @@ public:
     @param [in] payload fields[4]非0时不可空
     @param [out] output 调用者输出，不允许与payload重叠
     @param [in] capacity 输出空间
-    @param [out] required 不可空，合法输入所需字节数
+    @param [out] required 不可空，合法输入所需字节数；与路由字段、正文或输出缓冲重叠时拒绝且不写入
     @return NI_OK、NI_BUFFER_TOO_SMALL或错误
     */
     static int32_t tunnelEncode(const uint32_t* fields, const uint8_t* payload,
@@ -1244,6 +1345,8 @@ private:
 private:
     // 构造时固定的明文及线记录体上限
     uint32_t m_payloadLimit;
+    // 消费后允许保留的实际字节数，已按本实例单帧上限裁剪
+    uint32_t m_retentionLimit;
     // 下一帧能否接受已协商的RPC压缩扩展
     bool m_compressionAllowed;
     // 下一条是否允许协商后的紧凑格式

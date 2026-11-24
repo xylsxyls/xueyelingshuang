@@ -3,6 +3,8 @@
 #include "NetGatewayClientChannel.h"
 #include "NetClientDiscovery.h"
 
+class CEncodeDecodeTlsQueueLimits;
+
 class NetClientSessionState;
 
 // 共用恢复协调及业务会话；不拥有网络/IPC/线程/文件，只借用显式工厂与发现器
@@ -37,6 +39,63 @@ public:
     @return NI_OK配置已复制；状态、内存或不支持错误
     */
     int32_t configureConnectionPools(const NetConnectionPoolConfig& config);
+
+    /** 设置每次推进服务通道的接收及发送预算，在首次连接前配置
+    @param [in] readFrames 一次最多交付的业务帧数，默认32，至少1
+    @param [in] writeRecords 一次最多提交的隧道密文记录数，默认32，至少1
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE，失败保留原配置
+    */
+    int32_t configureServicePollBudgets(uint32_t readFrames, uint32_t writeRecords);
+
+    /** 设置一次服务连接的总启动期限及应用拒收一帧的最长等待时间
+    @param [in] startupMs 管理认证、OPEN和业务TLS的总毫秒数，0表示采用有效TLS握手期限的三倍
+    @param [in] backpressureMs 首次拒收至下次接纳的毫秒数，必须大于零，默认5000
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE，失败时原设置仍有效
+    */
+    int32_t configureServiceTimeouts(uint32_t startupMs, uint32_t backpressureMs);
+
+    /** 首次连接前设置 OPEN 申请的每方向密文字节窗口；服务端可选择更小的有效窗口
+    @param [in] bytes 64KiB 至 1MiB，按16KiB对齐，默认1MiB
+    @return NI_OK、NI_INVALID_ARGUMENT 或 NI_INVALID_STATE；失败保留原值
+    */
+    int32_t configureServiceWindow(uint32_t bytes);
+
+    /** 在首次连接前设置 connectService 所创建业务 TLS 的双向密文预算
+    @param [in] limits 输入与输出字节上限，复制数值；直接绑定的外部通道由其拥有者配置
+    @return NI_OK 或 NI_INVALID_STATE
+    */
+    int32_t configureServiceTlsQueueLimits(const CEncodeDecodeTlsQueueLimits& limits);
+
+    /** 首次连接前设置本会话独立的PING间隔、PONG和总无输入期限
+    @param [in] config 三个单调毫秒期限，复制数值，失败保留原配置
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE
+    */
+    int32_t configureHeartbeat(const NetHeartbeatConfig& config);
+
+    /** 设置每轮poll最多结算的到期请求数，只能在首次连接前调用
+    @param [in] count 至少1，默认128
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE
+    */
+    int32_t configureExpiryBudget(uint32_t count);
+
+    /** 首次连接前设置每次请求编码后允许保留的暂存容量
+    @param [in] bytes 字节数，默认4096，0立即释放，-1保留增长后的容量
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE，失败保留原配置
+    */
+    int32_t configurePayloadRetention(int64_t bytes);
+
+    /** 在所属执行者上查询RPC编码缓冲的实际保留容量
+    @return 容量字节数，shutdown后为0
+    */
+    uint64_t payloadCapacity() const;
+
+    /** 首次连接前设置服务发现及失败后的自动恢复期限
+    @param [in] timeoutMs 单轮恢复总期限，默认30000毫秒，必须非零
+    @param [in] initialDelayMs 无候选时的重试间隔及指数退避初值，默认250毫秒，必须非零
+    @param [in] maxDelayMs 指数退避基数上限，默认5000毫秒，至少为初值；实际重试带随机抖动
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE，失败保留原配置
+    */
+    int32_t configureRecovery(uint32_t timeoutMs, uint32_t initialDelayMs, uint32_t maxDelayMs);
 
     /** 首次连接前配置协议请求记录池，未完成应答不占普通DATA记录
     @param [in] config 基础池初值、上限和增长策略；仅静止生命周期owner调用

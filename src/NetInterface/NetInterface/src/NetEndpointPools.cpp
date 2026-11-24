@@ -2,7 +2,11 @@
 #include "NetInterfaceMacro.h"
 #include "NetEndpointRouterState.h"
 
-NetEndpointPools::NetEndpointPools()
+NetEndpointPools::NetEndpointPools() :
+m_payloadRetentionBytes(4096),
+m_expiredRequestBudget(64),
+m_closingEndpointBudget(64),
+m_expiredFileBudget(64)
 {
     m_endpoints.initialCapacity = m_files.initialCapacity = 128;
     m_endpoints.maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetEndpointPeer>>);

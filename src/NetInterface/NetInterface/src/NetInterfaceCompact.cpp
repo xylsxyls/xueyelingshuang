@@ -1,4 +1,5 @@
 ﻿#include "NetInterfaceCompact.h"
+#include "NetInterfaceFileGuard.h"
 #include <cstring>
 
 uint32_t NetInterfaceCompact::write(uint8_t* output, uint32_t value)
@@ -135,6 +136,11 @@ int32_t NetInterfaceCompact::header(const uint8_t* input, uint32_t size, NetInte
 int32_t NetInterfaceCompact::encode(const NetInterfaceFrame& frame, uint8_t* output, uint32_t capacity, uint32_t& required,
     const NetInterfaceFrame* previous)
 {
+    if (NetInterfaceFileGuard::overlapsFrameLength(frame, output, capacity, required) ||
+        NetInterfaceFileGuard::overlap(&required, sizeof(required), previous, sizeof(frame)))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     const NetInterfaceFrame input = frame;
     required = 0;
     if (input.m_kind < NI_HELLO || input.m_kind > NI_DATA_ACK ||

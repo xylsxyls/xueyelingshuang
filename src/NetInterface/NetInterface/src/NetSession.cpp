@@ -4,6 +4,7 @@
 #include "NetInterface.h"
 #include "NetClientDiscovery.h"
 #include "NetInterfaceRequests.h"
+#include "NetExecution.h"
 #include "NetInterfaceRpc.h"
 #include "NetInterfaceTransport.h"
 #include <chrono>
@@ -34,6 +35,35 @@ NetSession::~NetSession()
 {
     shutdown();
     delete m_state;
+}
+
+int32_t NetSession::configureHeartbeat(const NetHeartbeatConfig& config)
+{
+    if (m_state->m_generation != 0) { return NI_INVALID_STATE; }
+    if (!config.valid()) { return NI_INVALID_ARGUMENT; }
+    m_state->m_heartbeat = config;
+    return NI_OK;
+}
+
+int32_t NetSession::configureExpiryBudget(uint32_t count)
+{
+    if (m_state->m_generation != 0) { return NI_INVALID_STATE; }
+    if (count == 0) { return NI_INVALID_ARGUMENT; }
+    m_state->m_requestExpiryBudget = count;
+    return NI_OK;
+}
+
+int32_t NetSession::configurePayloadRetention(int64_t bytes)
+{
+    if (m_state->m_generation != 0) { return NI_INVALID_STATE; }
+    if (bytes < -1) { return NI_INVALID_ARGUMENT; }
+    m_state->m_payloadRetentionBytes = bytes;
+    return NI_OK;
+}
+
+uint64_t NetSession::payloadCapacity() const
+{
+    return m_state->m_payload.capacity();
 }
 
 int32_t NetSession::configureRequestPool(const LockFreeHashMapPoolConfig& config)
@@ -92,7 +122,8 @@ int32_t NetSession::connect(const char* address, uint32_t port, const NetInterfa
     }
     const uint64_t now = SessionNow();
     NetInterfaceHandshake validation(options, now);
-    if (validation.progress(now) < 0)
+    NetInterfaceFrame hello = {};
+    if (validation.peekOutput(hello) != NI_READY)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -503,11 +534,10 @@ bool NetSession::poll()
     try
     {
         m_state->m_channel->poll();
-        const uint64_t now = SessionNow();
-        progressHandshake(now);
+        progressHandshake(SessionNow());
         if (ready())
         {
-            for (uint32_t index = 0; index < 128 && ready(); ++index)
+            for (uint32_t index = 0; index < m_state->m_requestExpiryBudget && ready(); ++index)
             {
                 // 回调可提交新请求；每次重新取单调时间，不延长任何原始截止。
                 const uint64_t original = m_state->expired(SessionNow());
@@ -529,11 +559,15 @@ bool NetSession::poll()
                 m_state->m_polling = false;
                 return m_state->m_active;
             }
-            if ((m_state->m_pingSent != 0 && now - m_state->m_pingSent >= 60000) || now - m_state->m_lastReceive >= 90000)
+            const uint64_t now = SessionNow();
+            const NetHeartbeatConfig& heartbeat = m_state->m_heartbeat;
+            const uint64_t idle = now - m_state->m_lastReceive;
+            if ((m_state->m_pingSent != 0 && now - m_state->m_pingSent >= heartbeat.m_pongTimeoutMs) ||
+                idle >= heartbeat.m_receiveTimeoutMs)
             {
                 close(NI_TIMEOUT);
             }
-            else if (m_state->m_pingSent == 0 && now - m_state->m_lastReceive >= 30000)
+            else if (m_state->m_pingSent == 0 && idle >= heartbeat.m_pingIntervalMs)
             {
                 if (m_state->m_ping == UINT64_MAX)
                 {
@@ -553,6 +587,18 @@ bool NetSession::poll()
                     {
                         close(result);
                     }
+                }
+            }
+            if (ready())
+            {
+                NetExecution::deadline(heartbeat.m_receiveTimeoutMs, idle);
+                if (m_state->m_pingSent == 0)
+                {
+                    NetExecution::deadline(heartbeat.m_pingIntervalMs, idle);
+                }
+                else
+                {
+                    NetExecution::deadline(heartbeat.m_pongTimeoutMs, now - m_state->m_pingSent);
                 }
             }
         }
@@ -637,6 +683,7 @@ void NetSession::shutdown()
     }
     m_state->m_handshake.reset();
     m_state->resetRequests(0);
+    std::vector<uint8_t>().swap(m_state->m_payload);
     m_state->m_channel = nullptr;
     m_state->m_listener = nullptr;
 }

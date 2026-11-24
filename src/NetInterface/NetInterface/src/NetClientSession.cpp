@@ -2,6 +2,8 @@
 #include "NetInterfaceMacro.h"
 #include "NetClientSessionState.h"
 #include "NetInterface.h"
+#include "NetInterfaceCredit.h"
+#include "NetExecution.h"
 #include "NetClientDiscovery.h"
 #include "NetInterfaceTransport.h"
 #include "NetSession.h"
@@ -138,6 +140,39 @@ int32_t NetClientSession::configureGateways(const std::string& seeds, const std:
     }
 }
 
+int32_t NetClientSession::configureHeartbeat(const NetHeartbeatConfig& config)
+{
+    if (m_state->m_generation != 0 || executing()) { return NI_INVALID_STATE; }
+    return m_state->m_session.configureHeartbeat(config);
+}
+
+int32_t NetClientSession::configureExpiryBudget(uint32_t count)
+{
+    if (m_state->m_generation != 0 || executing()) { return NI_INVALID_STATE; }
+    return m_state->m_session.configureExpiryBudget(count);
+}
+
+int32_t NetClientSession::configurePayloadRetention(int64_t bytes)
+{
+    if (m_state->m_generation != 0 || executing()) { return NI_INVALID_STATE; }
+    return m_state->m_session.configurePayloadRetention(bytes);
+}
+
+uint64_t NetClientSession::payloadCapacity() const
+{
+    return m_state->m_session.payloadCapacity();
+}
+
+int32_t NetClientSession::configureRecovery(uint32_t timeoutMs, uint32_t initialDelayMs, uint32_t maxDelayMs)
+{
+    if (m_state->m_generation != 0 || executing()) { return NI_INVALID_STATE; }
+    if (timeoutMs == 0 || initialDelayMs == 0 || maxDelayMs < initialDelayMs) { return NI_INVALID_ARGUMENT; }
+    m_state->m_recoveryTimeoutMs = timeoutMs;
+    m_state->m_initialDelayMs = initialDelayMs;
+    m_state->m_maxDelayMs = maxDelayMs;
+    return NI_OK;
+}
+
 int32_t NetClientSession::configureRequestPool(const LockFreeHashMapPoolConfig& config)
 {
     if (m_state->active() || m_state->m_callback)
@@ -172,12 +207,44 @@ int32_t NetClientSession::bindChannel(NetClientChannel* channel)
     return result;
 }
 
+int32_t NetClientSession::configureServicePollBudgets(uint32_t readFrames, uint32_t writeRecords)
+{
+    if (m_state->m_generation != 0 || executing()) { return NI_INVALID_STATE; }
+    return m_state->m_timing.configurePollBudgets(readFrames, writeRecords);
+}
+
+int32_t NetClientSession::configureServiceTimeouts(uint32_t startupMs, uint32_t backpressureMs)
+{
+    if (m_state->m_generation != 0 || executing()) { return NI_INVALID_STATE; }
+    return m_state->m_timing.configure(startupMs, backpressureMs);
+}
+
+int32_t NetClientSession::configureServiceWindow(uint32_t bytes)
+{
+    if (m_state->m_generation != 0 || m_state->active() || executing()) { return NI_INVALID_STATE; }
+    NetInterfaceCredit credit;
+    const int32_t result = credit.configure(bytes);
+    if (result == NI_OK)
+    {
+        m_state->m_serviceWindow = bytes;
+    }
+    return result;
+}
+
+int32_t NetClientSession::configureServiceTlsQueueLimits(const CEncodeDecodeTlsQueueLimits& limits)
+{
+    if (m_state->m_generation != 0 || m_state->active() || executing()) { return NI_INVALID_STATE; }
+    m_state->m_serviceCiphertext = limits;
+    return NI_OK;
+}
+
 int32_t NetClientSession::configureConnectionPools(const NetConnectionPoolConfig& config)
 {
     if (m_state->m_generation != 0 || m_state->active() || executing())
     {
         return NI_INVALID_STATE;
     }
+    if (!config.validCodecSettings()) { return NI_INVALID_ARGUMENT; }
     try
     {
         std::unique_ptr<NetConnectionPoolConfig> copy(new NetConnectionPoolConfig(config));
@@ -226,7 +293,7 @@ int32_t NetClientSession::connectService(uint32_t product, const char* address, 
         return NI_INVALID_STATE;
     }
     if (listener == nullptr || address == nullptr || port == 0 || port > 65535 || tls.server != 0 ||
-        tls.handshakeTimeoutMs < 100 || tls.handshakeTimeoutMs > 60000 || handshake.m_server != 0)
+        tls.effectiveHandshakeTimeout() < 100 || tls.handshakeTimeoutMs > 60000 || handshake.m_server != 0)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -254,7 +321,8 @@ int32_t NetClientSession::connectService(uint32_t product, const char* address, 
     }
     const uint64_t now = ClientSessionNow();
     NetInterfaceHandshake checked(validation, now);
-    if (checked.progress(now) < 0)
+    NetInterfaceFrame hello = {};
+    if (checked.peekOutput(hello) != NI_READY)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -308,14 +376,14 @@ int32_t NetClientSession::connectService(uint32_t product, const char* address, 
     m_state->m_tls = NetInterfaceTlsOptions();
     m_state->m_tls.entropy = tls.entropy;
     m_state->m_tls.entropyContext = tls.entropyContext;
-    m_state->m_tls.handshakeTimeoutMs = tls.handshakeTimeoutMs;
+    m_state->m_tls.handshakeTimeoutMs = tls.effectiveHandshakeTimeout();
     m_state->m_handshake = handshake;
     m_state->m_handshake.m_capabilities |= 24;
     m_state->m_product = product;
     m_state->m_service = true;
     m_state->m_retryAt = 0;
-    m_state->m_delay = 250;
-    m_state->m_recoveryDeadline = now + 30000;
+    m_state->m_delay = m_state->m_initialDelayMs;
+    m_state->m_recoveryDeadline = now + m_state->m_recoveryTimeoutMs;
     reserveGeneration();
     return NI_OK;
 }
@@ -365,7 +433,7 @@ void NetClientSession::attempt()
     }
     if (m_state->m_discovery != nullptr && !m_state->m_discovery->choose(m_state->m_destination))
     {
-        m_state->m_retryAt = ClientSessionNow() + 250;
+        m_state->m_retryAt = ClientSessionNow() + m_state->m_initialDelayMs;
         return;
     }
     if (m_state->m_discovery != nullptr && !NetClientDiscovery::validPoint(m_state->m_destination))
@@ -387,14 +455,27 @@ void NetClientSession::attempt()
         return;
     }
     m_state->m_channel.reset(new NetGatewayClientChannel(m_state->m_product, m_state->m_transport.get()));
-    if (m_state->m_connectionPools)
+    int32_t configured = m_state->m_channel->configureTlsQueueLimits(m_state->m_serviceCiphertext);
+    if (configured == NI_OK)
     {
-        const int32_t configured = m_state->m_channel->configureConnectionPools(*m_state->m_connectionPools);
-        if (configured != NI_OK)
-        {
-            failAttempt(configured);
-            return;
-        }
+        configured = m_state->m_channel->configureServiceWindow(m_state->m_serviceWindow);
+    }
+    if (configured == NI_OK)
+    {
+        configured = m_state->m_channel->configureServiceTimeouts(m_state->m_timing.m_startupMs, m_state->m_timing.m_backpressureMs);
+    }
+    if (configured == NI_OK)
+    {
+        configured = m_state->m_channel->configureServicePollBudgets(m_state->m_timing.m_readFrames, m_state->m_timing.m_writeRecords);
+    }
+    if (configured == NI_OK && m_state->m_connectionPools)
+    {
+        configured = m_state->m_channel->configureConnectionPools(*m_state->m_connectionPools);
+    }
+    if (configured != NI_OK)
+    {
+        failAttempt(configured);
+        return;
     }
     const int32_t bound = m_state->m_session.bindChannel(m_state->m_channel.get());
     if (bound != NI_OK)
@@ -413,6 +494,10 @@ void NetClientSession::attempt()
     if (started != NI_OK)
     {
         onSessionClosed(m_state->m_generation, started, 0);
+    }
+    else
+    {
+        NetExecution::progress();
     }
 }
 
@@ -450,6 +535,15 @@ bool NetClientSession::poll()
         {
             attempt();
         }
+        if (m_state->recovering() && m_state->m_recoveryDeadline != 0)
+        {
+            const uint64_t now = ClientSessionNow();
+            NetExecution::deadline(m_state->m_recoveryDeadline, now);
+            if (m_state->m_phase == NET_CLIENT_PENDING || m_state->m_phase == NET_CLIENT_BACKOFF)
+            {
+                NetExecution::deadline(m_state->m_retryAt, now);
+            }
+        }
     }
     catch (...)
     {
@@ -469,7 +563,7 @@ void NetClientSession::onSessionReady(uint64_t generation, uint32_t maxRequests,
     }
     m_state->m_phase = NET_CLIENT_READY;
     m_state->m_recoveryDeadline = 0;
-    m_state->m_delay = 250;
+    m_state->m_delay = m_state->m_initialDelayMs;
     const bool callback = m_state->m_callback;
     m_state->m_callback = true;
     try
@@ -545,7 +639,7 @@ void NetClientSession::onSessionClosed(uint64_t generation, int32_t reason, int3
     {
         if (m_state->m_recoveryDeadline == 0)
         {
-            m_state->m_recoveryDeadline = now + 30000;
+            m_state->m_recoveryDeadline = now + m_state->m_recoveryTimeoutMs;
         }
         if (now >= m_state->m_recoveryDeadline)
         {
@@ -564,7 +658,7 @@ void NetClientSession::onSessionClosed(uint64_t generation, int32_t reason, int3
             else
             {
                 m_state->m_retryAt = now + m_state->m_delay / 2 + random % m_state->m_delay;
-                m_state->m_delay = (std::min)(m_state->m_delay * 2, 5000U);
+                m_state->m_delay += (std::min)(m_state->m_delay, m_state->m_maxDelayMs - m_state->m_delay);
                 m_state->m_phase = NET_CLIENT_BACKOFF;
                 if (m_state->m_discovery != nullptr)
                 {

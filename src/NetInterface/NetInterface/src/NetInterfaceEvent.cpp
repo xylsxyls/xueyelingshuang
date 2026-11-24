@@ -1,11 +1,17 @@
 ﻿#include "NetInterfaceMacro.h"
 #include "NetInterfaceEvent.h"
 #include "NetInterfaceFileTypes.h"
+#include "NetInterfaceFileGuard.h"
 #include <cstring>
 
 int32_t NetInterfaceEvent::encode(uint64_t target, uint32_t flags, const uint8_t* data, uint32_t size, uint8_t* output, uint32_t capacity,
                                   uint32_t& required)
 {
+    if (NetInterfaceFileGuard::overlap(&required, sizeof(required), data, size) ||
+        NetInterfaceFileGuard::overlap(&required, sizeof(required), output, capacity))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     required = 0;
     if (flags > 1 || (flags == 0 && target == 0) || (data == nullptr && size != 0) || size > 1048552 || (flags == 1 && size != 16))
     {
@@ -28,14 +34,10 @@ int32_t NetInterfaceEvent::encode(uint64_t target, uint32_t flags, const uint8_t
     {
         return NI_BUFFER_TOO_SMALL;
     }
-    if (size != 0)
+    if (NetInterfaceFileGuard::overlap(data, size, output, required))
     {
-        const uintptr_t from = reinterpret_cast<uintptr_t>(data);
-        const uintptr_t to = reinterpret_cast<uintptr_t>(output);
-        if ((from <= to && to - from < size) || (to <= from && from - to < required))
-        {
-            return NI_INVALID_ARGUMENT;
-        }
+        required = 0;
+        return NI_INVALID_ARGUMENT;
     }
     std::memset(output, 0, 24);
     std::memcpy(output, "NVE2", 4);
@@ -54,6 +56,10 @@ int32_t NetInterfaceEvent::encode(uint64_t target, uint32_t flags, const uint8_t
 
 int32_t NetInterfaceEvent::parse(const NetInterfaceFrame& frame, NetInterfaceEventView& view)
 {
+    if (NetInterfaceFileGuard::overlapsFrame(frame, &view, sizeof(view)))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     std::memset(&view, 0, sizeof(view));
     if (frame.m_kind != NI_EVENT || frame.m_requestId == 0 || frame.m_payload == nullptr || frame.m_payloadSize < 24 ||
         frame.m_payloadSize > 1048576 || std::memcmp(frame.m_payload, "NVE2", 4) != 0)

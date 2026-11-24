@@ -40,6 +40,12 @@ static bool HasHandshakeIdentity(const uint8_t* bytes)
     return combined != 0;
 }
 
+bool NetInterfaceHandshake::validLimits(uint32_t capabilities, uint32_t requests, uint32_t chunk, uint32_t timeoutMs)
+{
+    return capabilities <= 31 && (capabilities & 1) != 0 && requests != 0 && chunk >= 1024 && chunk <= 65536 &&
+        timeoutMs >= 100 && timeoutMs <= 60000;
+}
+
 NetInterfaceHandshake::NetInterfaceHandshake(const NetInterfaceHandshakeOptions& options, uint64_t nowMs) :
 m_options(options),
 m_lastMs(nowMs),
@@ -51,9 +57,7 @@ m_status(NI_NEED_MORE)
     std::memset(m_clientDevice, 0, sizeof(m_clientDevice));
     std::memset(m_agreed, 0, sizeof(m_agreed));
     std::memset(m_output, 0, sizeof(m_output));
-    if (options.m_server > 1 || options.m_capabilities > 31 || (options.m_capabilities & 1) == 0 || options.m_maxRequests == 0 ||
-        options.m_maxChunk < 1024 || options.m_maxChunk > 65536 || options.m_timeoutMs < 100 ||
-        options.m_timeoutMs > 60000 || nowMs > UINT64_MAX - options.m_timeoutMs || !HasHandshakeIdentity(options.m_nonce) ||
+    if (options.m_server > 1 || !validLimits(options.m_capabilities, options.m_maxRequests, options.m_maxChunk, options.m_timeoutMs) || nowMs > UINT64_MAX - options.m_timeoutMs || !HasHandshakeIdentity(options.m_nonce) ||
         (options.m_server != 0 && (options.m_platform != 0 || HasHandshakeIdentity(options.m_device))) ||
         (options.m_server == 0 && (options.m_platform < 1 || options.m_platform > 3 || !HasHandshakeIdentity(options.m_device))))
     {

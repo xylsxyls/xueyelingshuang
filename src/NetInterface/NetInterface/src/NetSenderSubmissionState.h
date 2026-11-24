@@ -17,7 +17,7 @@ public:
     */
     NetSenderSubmissionFront();
 public:
-    // 仅owner使用的关联记录；入队前设置，退休后不得解引用
+    // 仅由owner在BEGIN接入请求链表后设置；退休后不得解引用
     NetSenderSubmissionEntry* m_entry;
     // 发布后不变的可信请求元数据
     NetSenderSubmissionCommand m_command;
@@ -306,8 +306,10 @@ class NetSenderSubmissionState
 public:
     /** 初始化无输入、无回执的静止状态
     @param [in] pools 各物理池配置，构造时复制
+    @param [in] options 两个索引和入口队列的配置
     */
-    explicit NetSenderSubmissionState(const NetSenderSubmissionPools& pools = NetSenderSubmissionPools());
+    explicit NetSenderSubmissionState(const NetSenderSubmissionPools& pools,
+        const NetSenderSubmissionOptions& options);
 
     /** 所有执行者退出后释放剩余所有权，不调用外部函数
     */
@@ -316,6 +318,15 @@ public:
     /** owner关闭接纳并等已进入的发布者退出；不得从提交借用内调用
     */
     void quiesce();
+
+    /** 将池持有的请求、正文及回执转给执行者；短内联帧由调用方处理
+    @param [in,out] item 已出队的独占项，返回后已转交其持有的记录
+    */
+    void importOwned(NetSenderSubmissionItem& item);
+
+    /** 在断线并封闭入口后收尽余项，保留当前借用，登记待结算的请求和回执
+    */
+    void drainDisconnected();
 
     /** owner有界导入队列及清理已消费回执，不执行业务回调
     @param [in] deferData true允许保留纯短DATA前缀，供drainData直接借用
@@ -450,6 +461,18 @@ public:
     uint64_t m_round;
     // 同一调度轮内只做一次队列/索引域维护；短帧分批导入不重复扫描保护记录
     uint64_t m_maintainedRound;
+    // 单次导入最多领取的批数，至少1
+    const uint32_t m_inputBatchBudget;
+    // 每批领取的项数，由固定工作区的物理长度约束
+    const uint32_t m_inputBatchSize;
+    // owner 推进各组件时独立的维护预算
+    const size_t m_queuePollBudget;
+    // 请求索引每轮维护预算
+    const size_t m_requestPollBudget;
+    // 回执索引每轮维护预算
+    const size_t m_receiptPollBudget;
+    // 同步 DATA 的本地交付期限毫秒
+    const uint32_t m_deliveryTimeoutMs;
     // 握手协商的流块上限。
     std::atomic<uint32_t> m_chunk;
     // 已拥有的请求和普通流字节数，包含当前借用。

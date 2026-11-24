@@ -6,7 +6,7 @@
 #include <cstring>
 #include <new>
 #if !defined(__EMSCRIPTEN__)
-#include "CSystem/CSystemAPI.h"
+#include <thread>
 #endif
 
 NetSenderSubmissionFront::NetSenderSubmissionFront() :
@@ -222,7 +222,7 @@ NetSenderSubmissionItem::~NetSenderSubmissionItem()
     }
 }
 
-NetSenderSubmissionState::NetSenderSubmissionState(const NetSenderSubmissionPools& pools) :
+NetSenderSubmissionState::NetSenderSubmissionState(const NetSenderSubmissionPools& pools, const NetSenderSubmissionOptions& options) :
 m_gate(),
 m_gateConfigured(false),
 m_generation(0),
@@ -231,6 +231,12 @@ m_nextId(0),
 m_nextSync(0),
 m_round(0),
 m_maintainedRound(UINT64_MAX),
+m_inputBatchBudget(options.m_inputBatchBudget),
+m_inputBatchSize(options.m_inputBatchSize),
+m_queuePollBudget(options.m_queuePollBudget),
+m_requestPollBudget(options.m_requestPollBudget),
+m_receiptPollBudget(options.m_receiptPollBudget),
+m_deliveryTimeoutMs(options.m_deliveryTimeoutMs),
 m_chunk(0),
 m_bytes(0),
 m_asyncBytes(0),
@@ -256,8 +262,8 @@ m_receiptsPool(pools.m_receipts),
 m_inputsPool(pools.m_inputs),
 m_payloadsPool(pools.m_payloads),
 m_controlPayloadsPool(pools.m_controlPayloads),
-m_fronts(128, pools.m_requestIndex),
-m_tickets(128, pools.m_receiptIndex),
+m_fronts(options.m_requestBuckets, pools.m_requestIndex),
+m_tickets(options.m_receiptBuckets, pools.m_receiptIndex),
 m_incoming(false),
 m_inlineOutstanding(0),
 m_directCount(0),
@@ -276,11 +282,40 @@ m_takenKind(NET_SUBMIT_NONE),
 m_receipts(nullptr),
 m_draining(nullptr)
 {
+    if (m_inputBatchBudget == 0 || m_inputBatchSize == 0 || m_inputBatchSize > sizeof(m_inlineItems) / sizeof(m_inlineItems[0]) ||
+        m_queuePollBudget == 0 || m_requestPollBudget == 0 || m_receiptPollBudget == 0 || m_deliveryTimeoutMs == 0)
+    {
+        m_initializationResult = NI_INVALID_ARGUMENT;
+        return;
+    }
     LockFreeQueueResult configured = m_incoming.configurePool(pools.m_queue);
     if (configured == LockFreeQueueSuccess)
     {
-        // 仅分散入口计数，不改变发布顺序合同；生产者与唯一消费者不逐条争写总计数。
-        configured = m_incoming.configureProducerCounters(true);
+        configured = m_incoming.configureProducerCounters(options.m_distributedCounters);
+    }
+    if (configured == LockFreeQueueSuccess)
+    {
+        configured = m_incoming.configureCancelableReservations(options.m_cancelableReservations);
+    }
+    if (configured == LockFreeQueueSuccess)
+    {
+        configured = m_incoming.configureAutomaticMaintenance(options.m_maintenanceInterval, options.m_maintenanceBudget);
+    }
+    if (configured == LockFreeQueueSuccess)
+    {
+        configured = m_incoming.configureCapacityWait(options.m_capacityRetriesBeforeSleep, options.m_capacitySleepMilliseconds);
+    }
+    if (configured == LockFreeQueueSuccess)
+    {
+        configured = m_incoming.configureConsumerYieldInterval(options.m_consumerYieldInterval);
+    }
+    if (configured == LockFreeQueueSuccess)
+    {
+        configured = m_incoming.setGrowPolicy(options.m_growPolicy);
+    }
+    if (configured == LockFreeQueueSuccess)
+    {
+        configured = m_incoming.setShrinkPolicy(options.m_shrinkPolicy);
     }
     m_initializationResult = queueResult(configured == LockFreeQueueSuccess ? m_incoming.tryInit() : configured);
     const int32_t states[] = {m_bodies.status(), m_controlBodies.status(), m_requestsPool.status(),
@@ -296,6 +331,11 @@ m_draining(nullptr)
 
 NetSenderSubmissionState::~NetSenderSubmissionState()
 {
+    if (m_initializationResult != NI_OK)
+    {
+        // 初始化失败的对象没有已接纳的动作，各成员自行释放已经取得的资源。
+        return;
+    }
     quiesce();
     // 外层已退出所有借用者；先解除借用保护，退休项若已脱离链表则单独收回。
     NetSenderSubmissionEntry* borrowed = m_taken;
@@ -341,14 +381,14 @@ void NetSenderSubmissionState::quiesce()
             {
                 requestClose(NI_INVALID_STATE);
 #if !defined(__EMSCRIPTEN__)
-                CSystem::Sleep(1);
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif
             }
         }
 #if !defined(__EMSCRIPTEN__)
         else
         {
-            CSystem::Sleep(1);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
 #endif
         // 单线程Wasm不会有并行提交者；多线程提供方必须配置pause，不占用JS事件循环等待。
@@ -376,7 +416,7 @@ void NetSenderSubmissionState::pauseContention(uint32_t& attempts)
     {
         attempts = 0;
 #if !defined(__EMSCRIPTEN__)
-        CSystem::Sleep(0);
+        std::this_thread::yield();
 #endif
     }
 }
@@ -557,6 +597,87 @@ void NetSenderSubmissionState::dropDirect()
     }
 }
 
+void NetSenderSubmissionState::importOwned(NetSenderSubmissionItem& item)
+{
+    if (item.m_frame)
+    {
+        NetSenderSubmissionEntry* entry = item.m_frame;
+        item.m_frame = nullptr;
+        entry->m_phase = NET_SUBMISSION_QUEUED;
+        append(entry);
+        return;
+    }
+    NetObjectReference<NetSenderSubmissionInput>& input = item.m_input;
+    NetSenderSubmissionEntry* entry = nullptr;
+    if (input->m_kind == NET_SUBMIT_BEGIN)
+    {
+        entry = input->m_entry.release();
+        entry->m_previousRequest = m_requestsTail;
+        if (m_requestsTail != nullptr)
+        {
+            m_requestsTail->m_nextRequest = entry;
+        }
+        else
+        {
+            m_requests = entry;
+        }
+        m_requestsTail = entry;
+        entry->m_front->m_entry = entry;
+    }
+    else
+    {
+        entry = input->m_kind == NET_SUBMIT_DATA ? input->m_entry.release() : find(input->m_front->m_command.m_id);
+        if (entry != nullptr && entry->m_phase != NET_SUBMISSION_RETIRED)
+        {
+            // 发布后的输入字段只由owner访问；转交引用，不为同一正文增减共享计数。
+            entry->m_payload = std::move(input->m_payload);
+            entry->m_input = entry->m_payload->m_bytes;
+            entry->m_size = entry->m_payload->m_size;
+            entry->m_phase = NET_SUBMISSION_QUEUED;
+            if (input->m_kind == NET_SUBMIT_DATA)
+            {
+                entry->m_command.m_frame.m_payload = entry->m_input;
+            }
+            append(entry);
+        }
+        if (input->m_receipt)
+        {
+            addReceipt(input->m_receipt.get(), entry);
+            if (entry == nullptr)
+            {
+                settle(input->m_receipt.get(), NI_CANCELLED);
+            }
+        }
+    }
+    // 通用输入的所有权已转移到owner，不能由持久消费缓冲延长其计数或租约。
+    input.reset();
+}
+
+void NetSenderSubmissionState::drainDisconnected()
+{
+    // 入口已封闭。使用独立槽，仍在回调中借用的内联正文必须存活到finish或回调返回。
+    NetSenderSubmissionItem item;
+    size_t consumed = 0;
+    uint64_t returned = 0;
+    while (m_incoming.popReadyPrefix(&item, 1, consumed))
+    {
+        if (item.m_inlineFrame.m_kind == 0)
+        {
+            importOwned(item);
+        }
+        else
+        {
+            // 下一次覆盖或离开作用域时，item负责擦除自己的短正文副本。
+            returned += item.m_inlineFrame.m_payloadSize;
+        }
+    }
+    if (returned != 0)
+    {
+        m_asyncReturnedBytes.store(m_asyncReturnedBytes.load(std::memory_order_relaxed) + returned,
+            std::memory_order_release);
+    }
+}
+
 void NetSenderSubmissionState::pump(bool deferData)
 {
     if (!deferData || m_pending != nullptr || m_requests != nullptr || m_receipts != nullptr)
@@ -587,10 +708,10 @@ void NetSenderSubmissionState::pump(bool deferData)
     }
     // 每批只领取已发布的FIFO前缀，由基础队列合并归还节点；不等待凑满批次。
     NetSenderSubmissionItem* items = m_inlineItems;
-    for (uint32_t batch = 0; batch < 8 && m_inlineOutstanding == 0 && m_directCount == 0; ++batch)
+    for (uint32_t batch = 0; batch < m_inputBatchBudget && m_inlineOutstanding == 0 && m_directCount == 0; ++batch)
     {
         size_t consumed = 0;
-        if (!m_incoming.popReadyPrefix(items, 32, consumed))
+        if (!m_incoming.popReadyPrefix(items, m_inputBatchSize, consumed))
         {
             break;
         }
@@ -632,57 +753,7 @@ void NetSenderSubmissionState::pump(bool deferData)
                 append(&entry);
                 continue;
             }
-            if (item.m_frame)
-            {
-                NetSenderSubmissionEntry* entry = item.m_frame;
-                item.m_frame = nullptr;
-                entry->m_phase = NET_SUBMISSION_QUEUED;
-                append(entry);
-                continue;
-            }
-            NetObjectReference<NetSenderSubmissionInput>& input = item.m_input;
-            NetSenderSubmissionEntry* entry = nullptr;
-            if (input->m_kind == NET_SUBMIT_BEGIN)
-            {
-                entry = input->m_entry.release();
-                entry->m_previousRequest = m_requestsTail;
-                if (m_requestsTail != nullptr)
-                {
-                    m_requestsTail->m_nextRequest = entry;
-                }
-                else
-                {
-                    m_requests = entry;
-                }
-                m_requestsTail = entry;
-            }
-            else
-            {
-                entry = input->m_kind == NET_SUBMIT_DATA ? input->m_entry.release() : find(input->m_front->m_command.m_id);
-                if (entry != nullptr && entry->m_phase != NET_SUBMISSION_RETIRED)
-                {
-                    // 发布后的输入字段只由owner访问；转交引用，不为同一正文增减共享计数。
-                    entry->m_payload = std::move(input->m_payload);
-                    entry->m_input = entry->m_payload->m_bytes;
-                    entry->m_size = entry->m_payload->m_size;
-                    entry->m_phase = NET_SUBMISSION_QUEUED;
-                    if (input->m_kind == NET_SUBMIT_DATA)
-                    {
-                        entry->m_command.m_frame.m_payload = entry->m_input;
-                    }
-                    append(entry);
-                }
-                if (input->m_receipt)
-                {
-                    addReceipt(input->m_receipt.get(), entry);
-                    if (entry == nullptr)
-                    {
-                        settle(input->m_receipt.get(), NI_CANCELLED);
-                    }
-                }
-            }
-            // 通用输入的所有权已转移到owner，不能由持久消费缓冲延长其计数或租约。
-            input.reset();
+            importOwned(item);
         }
     }
     for (NetSenderSubmissionEntry* entry = m_requests; entry != nullptr; entry = entry->m_nextRequest)
@@ -705,9 +776,9 @@ void NetSenderSubmissionState::pump(bool deferData)
     if (m_maintainedRound != m_round || (m_pending == nullptr && m_directCount == 0))
     {
         m_maintainedRound = m_round;
-        m_incoming.maintain(16);
-        m_fronts.maintain(16);
-        m_tickets.maintain(16);
+        m_incoming.maintain(m_queuePollBudget);
+        m_fronts.maintain(m_requestPollBudget);
+        m_tickets.maintain(m_receiptPollBudget);
     }
 }
 

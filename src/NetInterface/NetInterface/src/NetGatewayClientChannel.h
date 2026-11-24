@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "NetInterfaceTransport.h"
 
+class CEncodeDecodeTlsQueueLimits;
+
 class NetGatewayClientChannelState;
 
 // 桌面IPC、原生及Wasm宿主共用的业务TLS通道；同一执行者串行调用，不创建线程
@@ -12,6 +14,32 @@ public:
     @param [in] external 借用到shutdown；空仅允许构造，connect明确返回NOT_SUPPORTED
     */
     explicit NetGatewayClientChannel(uint32_t product, NetGatewayTransport* external = nullptr);
+
+    /** 设置每次推进服务通道的接收及发送预算，在首次连接前配置
+    @param [in] readFrames 一次最多交付的业务帧数，默认32，至少1
+    @param [in] writeRecords 一次最多提交的隧道密文记录数，默认32，至少1
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE，失败保留原配置
+    */
+    int32_t configureServicePollBudgets(uint32_t readFrames, uint32_t writeRecords);
+
+    /** 设置一次服务连接的总启动期限及应用拒收一帧的最长等待时间
+    @param [in] startupMs 管理认证、OPEN和业务TLS的总毫秒数，0表示采用有效TLS握手期限的三倍
+    @param [in] backpressureMs 首次拒收至下次接纳的毫秒数，必须大于零，默认5000
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE，失败时原设置仍有效
+    */
+    int32_t configureServiceTimeouts(uint32_t startupMs, uint32_t backpressureMs);
+
+    /** 首次连接前设置 OPEN 申请的每方向密文字节窗口；服务端可选择更小的有效窗口
+    @param [in] bytes 64KiB 至 1MiB，按16KiB对齐，默认1MiB
+    @return NI_OK、NI_INVALID_ARGUMENT 或 NI_INVALID_STATE；失败保留原值
+    */
+    int32_t configureServiceWindow(uint32_t bytes);
+
+    /** 设置本通道创建的业务 TLS 密文预算，只能在 connect 前调用
+    @param [in] limits 输入与输出字节上限，复制数值
+    @return NI_OK 或 NI_INVALID_STATE
+    */
+    int32_t configureTlsQueueLimits(const CEncodeDecodeTlsQueueLimits& limits);
 
     /** 监听者有效期间收敛全部资源
     */
@@ -60,7 +88,7 @@ public:
     /** 设置公开帧类型的压缩白名单
     @param [in] peer 本次业务代次1
     @param [in] types 借用类型数组
-    @param [in] count 数组长度，最大64
+    @param [in] count 数组项数，0清空；配置失败时保留原白名单
     @param [in] negotiated 能力是否协商通过
     @return 统一连接层的结果，停止后明确拒绝
     */
@@ -89,11 +117,11 @@ private:
     */
     void sendCredit();
 
-    /** 每轮至多32条密文，下层接纳后才扣额度和消费TLS输出
+    /** 按本实例发送预算交付密文，下层接纳后才扣额度和消费TLS输出
     */
     void sendOutput();
 
-    /** 推进TLS及至多32条应用帧，拒收保留原帧及首次期限
+    /** 按本实例接收预算推进TLS应用帧，拒收保留原帧及首次期限
     @param [in] now 当前单调毫秒
     */
     void advance(uint64_t now);

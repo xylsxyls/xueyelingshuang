@@ -41,36 +41,3 @@ public:
     */
     ~NetEndpointFileStream();
 };
-
-// 栈上协议秘密的退出擦除；不拥有存储，不抛异常，也不引入动态分配。
-class NetEndpointSecretScope
-{
-public:
-    /** 借用当前作用域中有效的秘密区域
-    @param [in,out] bytes 需在离开作用域时擦除的区域
-    @param [in] size 字节数
-    */
-    NetEndpointSecretScope(void* bytes, uint32_t size);
-
-    /** 正常或异常退出均擦除
-    */
-    ~NetEndpointSecretScope();
-
-private:
-    /** 不可复制借用清理器
-    @param [in] other 禁止复制
-    */
-    NetEndpointSecretScope(const NetEndpointSecretScope& other);
-
-    /** 不可复制借用清理器
-    @param [in] other 禁止复制
-    @return 不可调用
-    */
-    NetEndpointSecretScope& operator=(const NetEndpointSecretScope& other);
-
-private:
-    // 借用的栈内存及其固定长度。
-    void* m_bytes;
-    // 借用秘密区域的固定字节数，必须覆盖需清理的有效范围
-    uint32_t m_size;
-};

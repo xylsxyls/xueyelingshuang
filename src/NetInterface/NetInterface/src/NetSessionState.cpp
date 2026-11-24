@@ -31,6 +31,8 @@ m_records(new NetObjectPool<NetSessionPending>(NetSessionRecordConfig())),
 m_expiryCount(0),
 m_highestOriginal(0),
 m_maxRequests(0),
+m_payloadRetentionBytes(4096),
+m_requestExpiryBudget(128),
 m_listener(nullptr),
 m_peer(0),
 m_generation(0),
@@ -47,7 +49,6 @@ m_localClose(false),
 m_closeReason(0)
 {
     std::memset(&m_options, 0, sizeof(m_options));
-    m_expiry.clear();
 }
 
 NetSessionState::~NetSessionState()
@@ -224,7 +225,7 @@ void NetSessionState::clearPayload()
         NetInterface::wipe(m_payload.data(), static_cast<uint32_t>(m_payload.size()));
         m_payload.clear();
     }
-    if (m_payload.capacity() > 4096)
+    if (m_payloadRetentionBytes >= 0 && m_payload.capacity() > static_cast<uint64_t>(m_payloadRetentionBytes))
     {
         std::vector<uint8_t>().swap(m_payload);
     }

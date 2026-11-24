@@ -22,6 +22,7 @@ m_controlBytes(config.m_controlBytes),
 m_dataRecords(config.m_dataRecords),
 m_controlRecords(config.m_controlRecords),
 m_active(nullptr),
+m_controlBurst(config.m_controlBurst),
 m_controlRun(0)
 {
     m_heads[0] = m_heads[1] = m_tails[0] = m_tails[1] = nullptr;
@@ -114,11 +115,11 @@ NetConnectionWrite* NetConnectionQueue::active()
 {
     if (m_active == nullptr)
     {
-        const uint32_t queue = m_heads[1] != nullptr && (m_heads[0] == nullptr || m_controlRun < 32) ? 1 : 0;
+        const uint32_t queue = m_heads[1] != nullptr && (m_heads[0] == nullptr || m_controlRun < m_controlBurst) ? 1 : 0;
         m_active = m_heads[queue];
         if (m_active != nullptr)
         {
-            m_controlRun = queue == 0 ? 0 : (m_controlRun < 32 ? m_controlRun + 1 : 32);
+            m_controlRun = queue == 0 ? 0 : (m_controlRun < m_controlBurst ? m_controlRun + 1 : m_controlBurst);
             m_heads[queue] = m_active->m_next;
             if (m_heads[queue] == nullptr)
             {

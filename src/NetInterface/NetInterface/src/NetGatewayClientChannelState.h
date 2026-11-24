@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include "NetGatewayClientTiming.h"
+#include "CEncodeDecode/CEncodeDecodeAPI.h"
 #include "NetGatewayClientChannel.h"
 #include "NetInterfaceConnection.h"
 #include "NetInterfaceCredit.h"
@@ -54,6 +56,8 @@ public:
     NetInterfaceCredit m_credit;
     // 只保存强随机上下文和期限，身份始终采用内置根
     NetInterfaceTlsOptions m_options;
+    // 本通道创建业务 TLS 时复制的双向密文预算
+    CEncodeDecodeTlsQueueLimits m_ciphertext;
     // 单条记录未被TLS消费的密文，长度不超过16KiB
     uint8_t m_input[16384];
     // 已复制密文总长度，0表示没有积压
@@ -66,10 +70,12 @@ public:
     uint32_t m_controlCredit;
     // 本次管理运输代次，成功接纳后非零
     uint64_t m_linkPeer;
+    // 此实例独立配置的总启动和应用拒收期限
+    NetGatewayClientTiming m_timing;
     // 初次连接的单调时间，不因各握手阶段重置
     uint64_t m_startedAt;
-    // 业务拒收首帧的时刻，0表示没有拒收
-    uint64_t m_blockedSince;
+    // 首次拒收加上等待预算所得的绝对期限，0表示没有拒收
+    uint64_t m_blockedDeadline;
     // 固定业务目标，0仍受内部服务路由权限控制
     uint32_t m_product;
     // 首个关闭原因

@@ -8,7 +8,13 @@
 #include <new>
 
 NetSenderSubmission::NetSenderSubmission() :
-m_state(new NetSenderSubmissionState())
+NetSenderSubmission(NetSenderSubmissionPools(), NetSenderSubmissionOptions())
+{
+
+}
+
+NetSenderSubmission::NetSenderSubmission(const NetSenderSubmissionPools& pools, const NetSenderSubmissionOptions& options) :
+m_state(new NetSenderSubmissionState(pools, options))
 {
 
 }
@@ -31,6 +37,11 @@ int32_t NetSenderSubmission::configureGate(const NetSenderSubmissionGate& gate)
 
 int32_t NetSenderSubmission::configurePools(const NetSenderSubmissionPools& pools)
 {
+    return configurePools(pools, NetSenderSubmissionOptions());
+}
+
+int32_t NetSenderSubmission::configurePools(const NetSenderSubmissionPools& pools, const NetSenderSubmissionOptions& options)
+{
     if (m_state->m_generation.load() != 0 || !idle())
     {
         return NI_INVALID_STATE;
@@ -38,7 +49,7 @@ int32_t NetSenderSubmission::configurePools(const NetSenderSubmissionPools& pool
     NetSenderSubmissionState* replacement = nullptr;
     try
     {
-        replacement = new NetSenderSubmissionState(pools);
+        replacement = new NetSenderSubmissionState(pools, options);
     }
     catch (...)
     {
@@ -59,6 +70,10 @@ int32_t NetSenderSubmission::configurePools(const NetSenderSubmissionPools& pool
 
 int32_t NetSenderSubmission::start(uint64_t generation, uint32_t product)
 {
+    if (m_state->m_initializationResult != NI_OK)
+    {
+        return m_state->m_initializationResult;
+    }
     if (generation == 0 || !idle())
     {
         return NI_INVALID_STATE;
@@ -72,10 +87,6 @@ int32_t NetSenderSubmission::start(uint64_t generation, uint32_t product)
             m_state->m_admission.store(0, std::memory_order_release);
         }
         return NI_INVALID_STATE;
-    }
-    if (m_state->m_initializationResult != NI_OK)
-    {
-        return m_state->m_initializationResult;
     }
     // 全部请求/回执已经收敛，清掉可能由撤销失败留下的不可再使用身份。
     if (!m_state->m_fronts.tryClear(true, false).m_committed || !m_state->m_tickets.tryClear(true, false).m_committed)
@@ -111,10 +122,16 @@ int32_t NetSenderSubmission::ready(uint64_t generation, uint32_t requests, uint3
     {
         return NI_CANCELLED;
     }
+    // 断线后即使复用相同代号，也必须先结算上一连接；活动连接重复报告就绪可保留请求。
+    const bool opening = !m_state->m_ready.load() || generation != m_state->m_generation.load();
+    if (opening && m_state->m_takenKind != NET_SUBMIT_NONE)
+    {
+        return NI_PROTOCOL_ERROR;
+    }
     m_state->quiesce();
     m_state->pump();
-    if (generation != m_state->m_generation.load() && (m_state->m_requests != nullptr || m_state->m_pending != nullptr ||
-        m_state->m_takenKind != NET_SUBMIT_NONE || m_state->pendingReceipts()))
+    if (opening && (m_state->m_requests != nullptr || m_state->m_pending != nullptr ||
+        m_state->m_incoming.size() != 0 || m_state->pendingReceipts()))
     {
         // 拒绝新代握手不撤销旧代的合法提交；原会话继续拥有待发正文和借用回执。
         if (m_state->m_ready.load() && m_state->m_closeRequest.load() == 0)
@@ -185,7 +202,6 @@ int32_t NetSenderSubmission::begin(uint32_t product, uint32_t type, uint32_t tim
         command.m_started = started;
         command.m_timeout = timeoutMs;
         front->m_command = command;
-        front->m_entry = input->m_entry.get();
         input->m_entry->m_front = front;
         result = NetSenderSubmissionState::indexResult(m_state->m_fronts.trySet(key, front, nullptr, true, false));
         indexed = result == NI_OK;
@@ -339,7 +355,7 @@ int32_t NetSenderSubmission::submitData(const NetInterfaceFrame& frame, bool syn
     std::atomic<uint32_t>& count = control ? m_state->m_controlCount : m_state->m_frameCount;
     // 只有同步票据使用交付截止，普通DATA不逐条读取系统时钟。
     const uint64_t current = synchronous ? now() : 0;
-    if (current > UINT64_MAX - 5000)
+    if (synchronous && current > UINT64_MAX - m_state->m_deliveryTimeoutMs)
     {
         return NI_LIMIT_EXCEEDED;
     }
@@ -421,7 +437,7 @@ int32_t NetSenderSubmission::submitData(const NetInterfaceFrame& frame, bool syn
     }
     if (result == NI_OK && synchronous)
     {
-        receipt = m_state->reserveReceipt(m_state->m_generation.load(), current + 5000, result);
+        receipt = m_state->reserveReceipt(m_state->m_generation.load(), current + m_state->m_deliveryTimeoutMs, result);
     }
     if (result == NI_OK)
     {
@@ -484,11 +500,15 @@ void NetSenderSubmission::state(uint64_t& generation, bool& ready) const
 
 int32_t NetSenderSubmission::beginPoll()
 {
-    m_state->pump(true);
+    if (m_state->m_initializationResult != NI_OK)
+    {
+        return m_state->m_initializationResult;
+    }
     if (m_state->m_takenKind != NET_SUBMIT_NONE)
     {
         return NI_INVALID_STATE;
     }
+    m_state->pump(true);
     if (++m_state->m_round == 0)
     {
         m_state->m_round = 1;
@@ -638,17 +658,17 @@ int32_t NetSenderSubmission::next(NetSenderSubmissionCommand& command)
 
 int32_t NetSenderSubmission::next(NetSenderSubmissionCommand& command, bool dataOnly)
 {
+    std::memset(&command, 0, sizeof(command));
+    if (m_state->m_takenKind != NET_SUBMIT_NONE)
+    {
+        return NI_INVALID_STATE;
+    }
     // 已导入的纯DATA前缀由owner独占，逐条取出不重复扫描跨线程队列和回收域。
     // 请求/回执仍实时检查取消和超时；关闭使用原子意图，不能被待发前缀延后。
     if (m_state->m_pending == nullptr || m_state->m_requests != nullptr ||
         m_state->m_receipts != nullptr || m_state->m_closeRequest.load() != 0)
     {
         m_state->pump();
-    }
-    std::memset(&command, 0, sizeof(command));
-    if (m_state->m_takenKind != NET_SUBMIT_NONE)
-    {
-        return NI_INVALID_STATE;
     }
     if (m_state->m_closing)
     {
@@ -840,12 +860,8 @@ void NetSenderSubmission::disconnected(uint64_t generation)
     }
     m_state->m_ready = false;
     m_state->quiesce();
-    do
-    {
-        m_state->pump();
-    }
-    // 没有工作区借用时完整收敛已接纳入口；有借用时由finish后的owner轮次继续。
-    while (m_state->m_incoming.size() != 0 && m_state->m_inlineOutstanding == 0 && !m_state->m_directBorrowed);
+    m_state->pump();
+    m_state->drainDisconnected();
     m_state->m_generation = generation;
     for (NetSenderSubmissionReceipt* receipt = m_state->m_receipts; receipt != nullptr; receipt = receipt->m_next)
     {
@@ -893,12 +909,16 @@ bool NetSenderSubmission::synchronousPending() const
 
 void NetSenderSubmission::advanceSynchronous(int32_t outputState)
 {
+    advanceSynchronous(outputState, now());
+}
+
+void NetSenderSubmission::advanceSynchronous(int32_t outputState, uint64_t current)
+{
     m_state->pump();
     if (m_state->m_takenKind != NET_SUBMIT_NONE)
     {
         return;
     }
-    const uint64_t current = now();
     if (m_state->m_ready && !m_state->m_closing)
     {
         m_state->expireFrames(current);

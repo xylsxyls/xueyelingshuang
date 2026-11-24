@@ -17,7 +17,7 @@ public:
     /** 只消费到一条完整记录；未接纳后缀仍由宿主持有
     @param [in] data 原始网络/IPC字节，size为0可空
     @param [in] size 字节数
-    @param [out] consumed 实际消费，READY未consume时始终0
+    @param [out] consumed 实际消费，须独立于输入字节；重叠时保留原值和解码状态，READY未consume时始终0
     @return NI_READY、NI_NEED_MORE或持续负数错误
     */
     int32_t feed(const uint8_t* data, uint32_t size, uint32_t& consumed);
@@ -42,7 +42,7 @@ public:
     @param [in] record 控制通道为0；业务/关闭通道非0；单块至多16KiB
     @param [out] output 调用者空间，不允许与record数据重叠
     @param [in] capacity 空间，探测时0且output可空
-    @param [out] required 合法输入所需大小，非法输入为0
+    @param [out] required 合法输入所需大小；须独立于记录、正文和输出缓冲，重叠时保留原值
     @return NI_OK、NI_BUFFER_TOO_SMALL或负数，拒绝时不改输出
     */
     static int32_t encode(const NetInterfaceTunnelRecord& record, uint8_t* output, uint32_t capacity, uint32_t& required);
@@ -60,6 +60,6 @@ private:
     NetInterfaceTunnel& operator=(const NetInterfaceTunnel& other);
 
 private:
-    // 旧公开入口只委托，实际记录状态由底层NetChannel独占
+    // NTW3 记录的解码状态与正文由本连接的 NetChannel 独占
     NetChannel m_decoder;
 };

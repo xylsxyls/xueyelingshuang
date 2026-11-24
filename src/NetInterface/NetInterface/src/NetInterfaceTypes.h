@@ -96,6 +96,8 @@ typedef struct NetInterfaceFrame
     const uint8_t* m_payload;
 } NetInterfaceFrame;
 
+// 默认消费后保留的解码正文缓冲字节数。
+#define NET_INTERFACE_DEFAULT_DECODER_RETENTION 4096
 #define NET_INTERFACE_HEADER_SIZE 32U
 #define NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT 1048576U
 #define NET_INTERFACE_MAX_PAYLOAD_LIMIT 16777216U

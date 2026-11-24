@@ -2,19 +2,31 @@
 #include "NetInterfaceCompression.h"
 #include "NetInterface.h"
 #include "NetInterfaceFileTypes.h"
+#include "NetInterfaceFileGuard.h"
 #include "Compress/CompressAPI.h"
 #include <cstring>
 #include <new>
 #include <vector>
 
-int32_t NetInterfaceCompression::encode(const NetInterfaceFrame& frame, uint8_t* output, uint32_t capacity, uint32_t& required)
+bool NetInterfaceCompression::supports(const NetInterfaceFrame& frame)
 {
+    return (frame.m_kind == NI_REQUEST || frame.m_kind == NI_RESPONSE) &&
+        (frame.m_messageType < NI_FILE_OPEN_UPLOAD || frame.m_messageType > NI_FILE_REVOKE_SCOPE);
+}
+
+int32_t NetInterfaceCompression::encode(const NetInterfaceFrame& frame, uint8_t* output, uint32_t capacity, uint32_t& required,
+    uint32_t minPayload, int32_t level)
+{
+    if (NetInterfaceFileGuard::overlapsFrameLength(frame, output, capacity, required))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     required = 0;
+    if (level < 0 || level > 9 || (output == nullptr && capacity != 0)) { return NI_INVALID_ARGUMENT; }
     uint32_t raw = 0;
     const int32_t validation = NetInterface::encode(frame, nullptr, 0, raw);
     if (validation != NI_BUFFER_TOO_SMALL) { return validation; }
-    if ((frame.m_kind != NI_REQUEST && frame.m_kind != NI_RESPONSE) || frame.m_payloadSize < 1024 ||
-        (frame.m_messageType >= NI_FILE_OPEN_UPLOAD && frame.m_messageType <= NI_FILE_REVOKE_SCOPE))
+    if (!supports(frame) || frame.m_payloadSize == 0 || frame.m_payloadSize < minPayload)
     {
         return NetInterface::encode(frame, output, capacity, required);
     }
@@ -28,12 +40,14 @@ int32_t NetInterfaceCompression::encode(const NetInterfaceFrame& frame, uint8_t*
         std::vector<uint8_t> zipped(static_cast<size_t>(size) + 8);
         std::memcpy(zipped.data(), "NZC2", 4);
         for (uint32_t index = 0; index < 4; ++index) { zipped[4 + index] = static_cast<uint8_t>(frame.m_payloadSize >> (24 - index * 8)); }
-        const int32_t status = Compress::rawCompress(zipped.data() + 8, size, frame.m_payload, frame.m_payloadSize, 1);
+        const int32_t status = Compress::rawCompress(zipped.data() + 8, size, frame.m_payload, frame.m_payloadSize, level);
         if (status != COMPRESS_OK) { return status == COMPRESS_NO_MEMORY ? NI_NO_MEMORY : NI_PROTOCOL_ERROR; }
         if (size + 8 > frame.m_payloadSize - frame.m_payloadSize / 12)
         {
             return NetInterface::encode(frame, output, capacity, required);
         }
+        if (capacity >= NET_INTERFACE_HEADER_SIZE + size + 8 && NetInterfaceFileGuard::overlap(frame.m_payload,
+            frame.m_payloadSize, output, NET_INTERFACE_HEADER_SIZE + size + 8)) { return NI_INVALID_ARGUMENT; }
         NetInterfaceFrame compressed = frame;
         compressed.m_payload = zipped.data();
         compressed.m_payloadSize = static_cast<uint32_t>(size + 8);
@@ -62,8 +76,7 @@ int32_t NetInterfaceCompression::decode(const uint8_t* input, uint32_t size, uin
     const int32_t status = Compress::rawUncompress(bytes, actual, input + 8, source);
     if (status != COMPRESS_OK || actual != original || source != size - 8)
     {
-        volatile uint8_t* wipe = bytes;
-        for (uint32_t index = 0; index < original; ++index) { wipe[index] = 0; }
+        NetInterface::wipe(bytes, original);
         delete[] bytes;
         return status == COMPRESS_NO_MEMORY ? NI_NO_MEMORY : NI_PROTOCOL_ERROR;
     }

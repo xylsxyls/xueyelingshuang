@@ -56,6 +56,15 @@ public:
     */
     int32_t configurePools(const NetEndpointPools& pools);
 
+    /** 直接监听时设置本机提供的应用握手参数，首次监听或登记端点前调用
+    @param [in] capabilities 能力位，位0必选，位1与位2可选，默认7
+    @param [in] requests 非零请求能力声明，默认32，由双方取较小值
+    @param [in] chunk 文件块字节数1024至65536，默认65536
+    @param [in] timeoutMs TLS就绪后等待应用握手的毫秒数100至60000，默认5000
+    @return NI_OK或参数、状态错误，失败保留之前的设置
+    */
+    int32_t configureClientHandshake(uint32_t capabilities, uint32_t requests, uint32_t chunk, uint32_t timeoutMs);
+
     /** 绑定外部物理传输，附加端点模式不接受非空传输
     @param [in] transport 借用至shutdown；只允许无端点/未监听时绑定，或停止后解除绑定
     @return OK或INVALID_STATE；不分配传输或建立网络
@@ -130,8 +139,13 @@ public:
     */
     uint32_t localPort() const;
 
+    /** 从所属执行者查询转发暂存缓冲的实际容量，供调整实例预算
+    @return 当前已分配的字节容量
+    */
+    uint64_t payloadCapacity() const;
+
     /** 全部外部A及内部B的在途总数
-    @return 不超过4096
+    @return 当前请求记录数，受本实例请求存储池容量约束
     */
     uint32_t pendingCount() const;
 

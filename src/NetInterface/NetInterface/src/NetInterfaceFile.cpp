@@ -177,8 +177,7 @@ int32_t NetInterfaceFile::encodeData(const NetInterfaceFileData& data, uint8_t* 
 
 int32_t NetInterfaceFile::parseData(const NetInterfaceFrame& frame, NetInterfaceFileData& data)
 {
-    if (NetInterfaceFileGuard::overlap(&frame, sizeof(frame), &data, sizeof(data)) ||
-        NetInterfaceFileGuard::overlap(frame.m_payload, frame.m_payloadSize, &data, sizeof(data)))
+    if (NetInterfaceFileGuard::overlapsFrame(frame, &data, sizeof(data)))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -233,8 +232,7 @@ int32_t NetInterfaceFile::encodeAck(const NetInterfaceFileAck& ack, uint8_t* out
 
 int32_t NetInterfaceFile::parseAck(const NetInterfaceFrame& frame, NetInterfaceFileAck& ack)
 {
-    if (NetInterfaceFileGuard::overlap(&frame, sizeof(frame), &ack, sizeof(ack)) ||
-        NetInterfaceFileGuard::overlap(frame.m_payload, frame.m_payloadSize, &ack, sizeof(ack)))
+    if (NetInterfaceFileGuard::overlapsFrame(frame, &ack, sizeof(ack)))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -285,8 +283,7 @@ int32_t NetInterfaceFile::encodeNotice(const NetInterfaceFileNotice& notice, uin
 
 int32_t NetInterfaceFile::parseNotice(const NetInterfaceFrame& frame, NetInterfaceFileNotice& notice)
 {
-    if (NetInterfaceFileGuard::overlap(&frame, sizeof(frame), &notice, sizeof(notice)) ||
-        NetInterfaceFileGuard::overlap(frame.m_payload, frame.m_payloadSize, &notice, sizeof(notice)))
+    if (NetInterfaceFileGuard::overlapsFrame(frame, &notice, sizeof(notice)))
     {
         return NI_INVALID_ARGUMENT;
     }

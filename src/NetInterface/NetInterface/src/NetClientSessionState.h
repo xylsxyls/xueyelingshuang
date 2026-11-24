@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include "NetGatewayClientTiming.h"
+#include "CEncodeDecode/CEncodeDecodeAPI.h"
 #include "NetClientSession.h"
 #include <memory>
 #include <vector>
@@ -51,6 +53,12 @@ public:
 public:
     // 首次连接前复制的可选帧池配置，自动恢复沿用同一配置
     std::unique_ptr<NetConnectionPoolConfig> m_connectionPools;
+    // 通过服务发现创建的每条业务 TLS 连接的密文预算
+    CEncodeDecodeTlsQueueLimits m_serviceCiphertext;
+    // 此实例独立配置的总启动和应用拒收期限
+    NetGatewayClientTiming m_timing;
+    // 每次重连重新向管理端申请的 OPEN 字节窗口
+    uint32_t m_serviceWindow;
     // 本轮尝试拥有的运输，由借用工厂创建
     std::unique_ptr<NetGatewayTransport> m_transport;
     // 本轮业务TLS协议，借用上面的运输
@@ -85,7 +93,13 @@ public:
     uint64_t m_retryAt;
     // 恢复总期限，0表示已就绪
     uint64_t m_recoveryDeadline;
-    // 退避上限250至5000毫秒
+    // 单轮服务恢复总预算，不随重试续期
+    uint32_t m_recoveryTimeoutMs;
+    // 初次退避基数，同时作为发现无候选的重试间隔
+    uint32_t m_initialDelayMs;
+    // 指数退避基数的最大毫秒数
+    uint32_t m_maxDelayMs;
+    // 当前退避基数，重连成功后恢复初值
     uint32_t m_delay;
     // 逻辑目标，0的权限仍由服务角色判断
     uint32_t m_product;

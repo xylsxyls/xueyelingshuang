@@ -38,6 +38,7 @@
   <ItemGroup><ClInclude Include="..\src\NetInterfaceTypes.h" /></ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\NetInterfaceTlsTypes.h" />
+    <ClInclude Include="..\src\NetInterfaceTlsTypes.inl" />
     <ClInclude Include="..\src\NetInterfaceTls.h" />
     <ClCompile Include="..\src\NetInterfaceTls.cpp" />
   </ItemGroup>
@@ -156,6 +157,12 @@
     <ClInclude Include="..\src\NetGatewayClientChannelState.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\NetGatewayClientTiming.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetGatewayClientTiming.inl">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClCompile Include="..\src\NetGatewayClientChannel.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -222,8 +229,6 @@
     <ClCompile Include="..\src\NetEndpointFileStream.cpp" />
     <ClCompile Include="..\src\NetEndpointRouterState.cpp" />
     <ClCompile Include="..\src\NetGatewayClientChannelState.cpp" />
-    <ClCompile Include="..\src\NetInterfaceDirectoryHelper.cpp" />
-    <ClInclude Include="..\src\NetInterfaceDirectoryHelper.h" />
     <ClCompile Include="..\src\NetInterfaceFileFlowState.cpp" />
     <ClCompile Include="..\src\NetInterfaceFileGuard.cpp" />
     <ClCompile Include="..\src\NetInterfaceRequestsState.cpp" />
@@ -251,7 +256,9 @@
     <ClInclude Include="..\src\NetBufferPool.inl" />
     <ClCompile Include="..\src\NetBufferPool.cpp" />
     <ClInclude Include="..\src\NetBufferPoolConfig.h" />
+    <ClInclude Include="..\src\NetHeartbeatConfig.h" />
     <ClCompile Include="..\src\NetBufferPoolConfig.cpp" />
+    <ClCompile Include="..\src\NetHeartbeatConfig.cpp" />
     <ClInclude Include="..\src\NetSenderSubmissionPools.h" />
     <ClCompile Include="..\src\NetSenderSubmissionPools.cpp" />
   </ItemGroup>

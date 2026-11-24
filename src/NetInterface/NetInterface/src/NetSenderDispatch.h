@@ -23,6 +23,13 @@ public:
     */
     int32_t bindSubmission(NetSenderSubmission* submission);
 
+    /** 设置每次poll的命令及正文字节预算，在登记监听者前调用
+    @param [in] commands 命令或推进步骤数，默认2304，至少1
+    @param [in] bytes 正文字节数，默认2097152，至少1，完整帧可跨越本轮剩余预算
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE
+    */
+    int32_t configurePollBudgets(uint32_t commands, uint32_t bytes);
+
     /** 为下一次连接借用监听者，只允许完全静止时调用
     @param [in] listener 非空，活到回调收敛
     @return OK或错误
@@ -176,4 +183,8 @@ private:
     NetSenderDispatchMap* m_mapping;
     // 当前业务仍有本层输出后缀；允许业务FIFO连续追加，但控制命令须等此前缀交付
     bool m_outputPending;
+    // 一轮最多执行的命令或推进步骤数
+    uint32_t m_commandBudget;
+    // 一轮正文字节预算，先开始的完整帧总能提交
+    uint32_t m_byteBudget;
 };

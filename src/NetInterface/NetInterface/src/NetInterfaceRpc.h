@@ -34,8 +34,8 @@ class NetInterfaceAPI NetInterfaceRpc
 
     /** 校验完整RPC帧并借用业务部分；只管线格式，权限由真实来源路由表验证
     @param [in] frame 完整REQUEST/RESPONSE，产品和请求号必须非零
-    @param [out] view 成功填充，否则清空
-    @return OK或PROTOCOL_ERROR
+    @param [out] view 独立于帧描述及正文；格式错误时清空，重叠时保持原值
+    @return OK、PROTOCOL_ERROR或输出重叠时的INVALID_ARGUMENT
     */
     static int32_t parse(const NetInterfaceFrame& frame, NetInterfaceRpcView& view);
 

@@ -24,6 +24,22 @@ public:
     */
     NetInterfaceConnection(const NetInterfaceTlsOptions& options, uint32_t payloadLimit);
 
+    /** 使用指定的控制与数据池直接创建连接，创建结果由 status 返回
+    @param [in] options TLS 身份、强随机及握手时限
+    @param [in] payloadLimit 本连接允许的最大帧正文
+    @param [in] pools 本连接独占的记录和正文池配置
+    */
+    NetInterfaceConnection(const NetInterfaceTlsOptions& options, uint32_t payloadLimit, const NetConnectionPoolConfig& pools);
+
+    /** 同时指定帧记录、明文正文与 TLS 双向密文队列
+    @param [in] options 身份与宿主随机源
+    @param [in] payloadLimit 单帧正文上限
+    @param [in] pools 当前连接的记录与正文池
+    @param [in] limits 密文输入和输出的独立字节上限
+    */
+    NetInterfaceConnection(const NetInterfaceTlsOptions& options, uint32_t payloadLimit,
+        const NetConnectionPoolConfig& pools, const CEncodeDecodeTlsQueueLimits& limits);
+
     /** 清除拥有的待发明文，并由成员析构释放TLS及消息
     */
     ~NetInterfaceConnection();
@@ -37,7 +53,7 @@ public:
     /** 提交网络密文，未接纳后缀仍由宿主保管
     @param [in] data size为0时可空
     @param [in] size 字节数
-    @param [out] consumed 实际接纳字节数
+    @param [out] consumed 实际接纳字节数，与输入重叠时保留原值并返回参数错误
     @return TLS状态或负数持续错误
     */
     int32_t feed(const uint8_t* data, uint32_t size, uint32_t& consumed);
@@ -99,6 +115,11 @@ public:
     @return NetInterfaceTlsStatus或NetInterfaceResult负数
     */
     int32_t status() const;
+
+    /** 单执行者查询接收方向帧解码器当前的正文缓冲容量
+    @return 实际分配字节数，不含 TLS 或发送队列
+    */
+    uint32_t decoderBufferCapacity() const;
 
     /** 最近TLS底层错误，0为无底层错误
     @return Mbed TLS诊断码
@@ -190,6 +211,16 @@ private:
     uint32_t m_activeOffset;
     // 首次驱动后冻结池配置，避免替换仍被TLS借用的帧存储。
     bool m_started;
+    // 控制帧使用独立队列的正文字节门槛，-1允许所有合法长度
+    int32_t m_controlPayloadLimit;
+    // 单次推进交付给TLS的完整排队帧预算
+    uint32_t m_progressFrameBudget;
+    // 单次推进可以执行的TLS读写轮数
+    uint32_t m_progressStepBudget;
+    // 发送白名单RPC的最小压缩正文长度，按当前连接独立配置
+    uint32_t m_compressionMinPayload;
+    // 传递给Compress的Zstandard压缩等级
+    int32_t m_compressionLevel;
     // 本库拥有排序去重后的白名单，查询二分查找；调用方不持有容器内存。
 #ifdef _MSC_VER
 #pragma warning(push)

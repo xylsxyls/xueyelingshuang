@@ -44,7 +44,7 @@ public:
     @param [in] bytes 固定160字节
     @param [in] size 精确长度
     @param [out] info 成功填充，通常失败清零，别名拒绝时不写
-    @return OK或PROTOCOL_ERROR
+    @return NI_OK；格式错误返回 NI_PROTOCOL_ERROR，结果与输入重叠返回 NI_INVALID_ARGUMENT
     */
     static int32_t parseInfo(const uint8_t* bytes, uint32_t size, NetInterfaceFileInfo& info);
 
@@ -60,7 +60,7 @@ public:
     /** 解析数据帧，hash校验和offset确认交给流状态机
     @param [in] frame DATA/框架数据类型，非零产品和流号
     @param [out] data 成功借用输入bytes，通常失败清零，别名拒绝时不写
-    @return OK或PROTOCOL_ERROR
+    @return NI_OK；格式错误返回 NI_PROTOCOL_ERROR，结果与输入重叠返回 NI_INVALID_ARGUMENT
     */
     static int32_t parseData(const NetInterfaceFrame& frame, NetInterfaceFileData& data);
 
@@ -75,7 +75,7 @@ public:
     /** 解析确认；累计偏移的范围仍由流拥有者验证
     @param [in] frame DATA_ACK/框架数据类型
     @param [out] ack 成功字段，通常失败清零，别名拒绝时不写
-    @return OK或PROTOCOL_ERROR
+    @return NI_OK；格式错误返回 NI_PROTOCOL_ERROR，结果与输入重叠返回 NI_INVALID_ARGUMENT
     */
     static int32_t parseAck(const NetInterfaceFrame& frame, NetInterfaceFileAck& ack);
 
@@ -90,7 +90,7 @@ public:
     /** 解析经网关投递的流终止通知，不用于客户端向服务器伪造推送
     @param [in] frame EVENT/FILE_CANCEL/非零产品流号
     @param [out] notice 输出，通常失败清零，别名拒绝时不写
-    @return OK或PROTOCOL_ERROR
+    @return NI_OK；格式错误返回 NI_PROTOCOL_ERROR，结果与输入重叠返回 NI_INVALID_ARGUMENT
     */
     static int32_t parseNotice(const NetInterfaceFrame& frame, NetInterfaceFileNotice& notice);
 

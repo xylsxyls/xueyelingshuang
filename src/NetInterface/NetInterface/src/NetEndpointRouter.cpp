@@ -1,17 +1,18 @@
 ﻿#include "NetEndpointRouter.h"
 #include "NetInterfaceMacro.h"
 #include "NetEndpointRouterState.h"
+#include "NetExecution.h"
 #include "NetInterface.h"
 #include "NetInterfaceRequests.h"
 #include "NetInterfaceRpc.h"
 #include "NetInterfaceFile.h"
+#include "NetInterfaceFileGuard.h"
 #include "NetInterfaceEvent.h"
 #include <algorithm>
 #include <cstring>
 #include <ctime>
 #include <utility>
 #include "NetInterfaceTransport.h"
-#include <chrono>
 #include <vector>
 
 NetEndpointServiceSink::~NetEndpointServiceSink()
@@ -41,6 +42,7 @@ int32_t NetEndpointRouter::configurePools(const NetEndpointPools& pools)
     {
         std::unique_ptr<NetEndpointRouterState> prepared(new NetEndpointRouterState(m_state->m_services, m_state->m_clients, pools));
         if (prepared->m_status != NI_OK) { return prepared->m_status; }
+        prepared->m_handshake = m_state->m_handshake;
         prepared->m_transport = m_state->m_transport;
         delete m_state;
         m_state = prepared.release();
@@ -50,6 +52,24 @@ int32_t NetEndpointRouter::configurePools(const NetEndpointPools& pools)
     {
         return NI_NO_MEMORY;
     }
+}
+
+int32_t NetEndpointRouter::configureClientHandshake(uint32_t capabilities, uint32_t requests, uint32_t chunk, uint32_t timeoutMs)
+{
+    if (m_state->m_clients != nullptr || m_state->m_listening || m_state->m_lastEndpoint != 1 || m_state->m_stopped ||
+        m_state->m_polling || m_state->m_dispatching)
+    {
+        return NI_INVALID_STATE;
+    }
+    if ((capabilities & ~7U) != 0 || !NetInterfaceHandshake::validLimits(capabilities, requests, chunk, timeoutMs))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
+    m_state->m_handshake.m_capabilities = capabilities;
+    m_state->m_handshake.m_maxRequests = requests;
+    m_state->m_handshake.m_maxChunk = chunk;
+    m_state->m_handshake.m_timeoutMs = timeoutMs;
+    return NI_OK;
 }
 
 int32_t NetEndpointRouter::bindTransport(NetServerChannel* transport)
@@ -125,6 +145,11 @@ uint32_t NetEndpointRouter::localPort() const
     {
         return 0;
     }
+}
+
+uint64_t NetEndpointRouter::payloadCapacity() const
+{
+    return m_state->m_payload.capacity();
 }
 
 uint32_t NetEndpointRouter::pendingCount() const
@@ -279,12 +304,7 @@ void NetEndpointRouter::onReady(uint64_t peer)
     const uint64_t id = ++m_state->m_lastEndpoint;
     try
     {
-        NetInterfaceHandshakeOptions options = {};
-        options.m_server = 1;
-        options.m_capabilities = 7;
-        options.m_maxRequests = 32;
-        options.m_maxChunk = 65536;
-        options.m_timeoutMs = 5000;
+        NetInterfaceHandshakeOptions options = m_state->m_handshake;
         if (NetInterface::entropyBytes(m_state->m_entropy, m_state->m_entropyContext, options.m_nonce, sizeof(options.m_nonce)) != NI_OK)
         {
             closePeer(peer, NI_INVALID_STATE);
@@ -299,7 +319,7 @@ void NetEndpointRouter::onReady(uint64_t peer)
         value->m_handshake.reset(new NetInterfaceHandshake(options, value->m_activity));
         m_state->m_endpoints.insert(std::make_pair(id, std::move(value)));
         m_state->m_peers.insert(std::make_pair(peer, id));
-        if (m_state->m_requests.addEndpoint(id, false, 0, 32) != NI_OK)
+        if (m_state->m_requests.addEndpoint(id, false, 0, options.m_maxRequests) != NI_OK)
         {
             closeEndpoint(id, NI_LIMIT_EXCEEDED);
         }
@@ -807,11 +827,14 @@ bool NetEndpointRouter::advance()
                 closeEndpoint(entry.first, sent);
             }
         }
-        if (now - endpoint->m_activity >= 90000 || (endpoint->m_pingId != 0 && now - endpoint->m_pingTime >= 60000))
+        const NetHeartbeatConfig& heartbeat = m_state->m_heartbeat;
+        NetExecution::deadline(heartbeat.m_receiveTimeoutMs, now - endpoint->m_activity);
+        if (now - endpoint->m_activity >= heartbeat.m_receiveTimeoutMs ||
+            (endpoint->m_pingId != 0 && now - endpoint->m_pingTime >= heartbeat.m_pongTimeoutMs))
         {
             closeEndpoint(entry.first, NI_TIMEOUT);
         }
-        else if (state == NI_READY && endpoint->m_pingId == 0 && now - endpoint->m_pingTime >= 30000)
+        else if (state == NI_READY && endpoint->m_pingId == 0 && now - endpoint->m_pingTime >= heartbeat.m_pingIntervalMs)
         {
             if (m_state->m_lastPing == UINT64_MAX)
             {
@@ -828,8 +851,12 @@ bool NetEndpointRouter::advance()
             endpoint->m_pingId = ping.m_requestId;
             endpoint->m_pingTime = now;
         }
+        if (!endpoint->m_closing && (state == NI_READY || endpoint->m_pingId != 0))
+        {
+            NetExecution::deadline(endpoint->m_pingId == 0 ? heartbeat.m_pingIntervalMs : heartbeat.m_pongTimeoutMs, now - endpoint->m_pingTime);
+        }
     }
-    for (uint32_t count = 0; count < 64; ++count)
+    for (uint32_t count = 0; count < m_state->m_expiredRequestBudget; ++count)
     {
         NetInterfaceRequest request = {};
         if (m_state->m_requests.takeExpired(now, request) != NI_READY)
@@ -838,7 +865,7 @@ bool NetEndpointRouter::advance()
         }
         terminate(request, NI_RPC_TIMEOUT, true);
     }
-    for (uint32_t count = 0; count < 64; ++count)
+    for (uint32_t count = 0; count < m_state->m_closingEndpointBudget; ++count)
     {
         NetEndpointPeer* endpoint = m_state->takeClosing();
         if (endpoint == nullptr)
@@ -865,6 +892,7 @@ bool NetEndpointRouter::advance()
             m_state->m_endpoints.erase(id);
         }
     }
+    if (m_state->m_closingFirst != nullptr) { NetExecution::progress(); }
     return true;
 }
 
@@ -907,7 +935,6 @@ void NetEndpointRouter::shutdown()
     }
     m_state->m_closingFirst = nullptr;
     m_state->m_closingLast = nullptr;
-    m_state->m_fileExpiryCount = 0;
     m_state->m_fileExpiry.clear();
     m_state->m_streams.clear();
     m_state->m_serviceStreams.clear();
@@ -915,6 +942,7 @@ void NetEndpointRouter::shutdown()
     m_state->m_peers.clear();
     m_state->m_products.clear();
     m_state->m_origins.clear();
+    m_state->m_payloadRetentionBytes = 0;
     m_state->clearPayload();
     m_state->m_listening = false;
     m_state->m_entropy = nullptr;
@@ -932,7 +960,7 @@ int32_t NetEndpointRouter::bindFileReply(const NetInterfaceRequest& request, con
         return NI_NO_MEMORY;
     }
     NetInterfaceFileInfo info = {};
-    NetEndpointSecretScope infoScope(&info, sizeof(info));
+    NetInterfaceFileGuard infoScope(&info, sizeof(info));
     if (NetInterfaceFile::parseInfo(rpc.m_data, rpc.m_size, info) != NI_OK)
     {
         return NI_PROTOCOL_ERROR;
@@ -969,10 +997,8 @@ int32_t NetEndpointRouter::bindFileReply(const NetInterfaceRequest& request, con
         {
             return NI_TIMEOUT;
         }
-        const uint64_t deadline =
-            NetEndpointRouterState::now() +
-            (std::min<uint64_t>)(UINT64_C(1800000),
-                (std::min<uint64_t>)(UINT64_C(1800), info.expiresUtc - static_cast<uint64_t>(utc)) * 1000);
+        const uint64_t validSeconds = (std::min<uint64_t>)(1800, info.expiresUtc - static_cast<uint64_t>(utc));
+        const uint64_t deadline = NetEndpointRouterState::now() + validSeconds * 1000;
         const auto key = std::make_pair(request.m_target, info.stream);
         const auto existing = m_state->m_serviceStreams.find(key);
         uint64_t publicId = 0;
@@ -1041,7 +1067,7 @@ int32_t NetEndpointRouter::bindFileReply(const NetInterfaceRequest& request, con
         }
     }
     uint8_t data[NET_INTERFACE_FILE_INFO_SIZE] = {};
-    NetEndpointSecretScope dataScope(data, sizeof(data));
+    NetInterfaceFileGuard dataScope(data, sizeof(data));
     const int32_t encoded = NetInterfaceFile::encodeInfo(info, data, sizeof(data));
     if (encoded != NI_OK)
     {
@@ -1095,7 +1121,7 @@ int32_t NetEndpointRouter::routeFile(uint64_t endpoint, const NetInterfaceFrame&
     if (frame.m_kind == NI_DATA)
     {
         NetInterfaceFileData data = {};
-        NetEndpointSecretScope dataScope(&data, sizeof(data));
+        NetInterfaceFileGuard dataScope(&data, sizeof(data));
         if (!sendsData || NetInterfaceFile::parseData(frame, data) != NI_OK ||
             !NetInterfaceFile::equal(data.token, stream->m_info.token, 32) || data.offset > stream->m_info.total ||
             data.size > stream->m_info.total - data.offset || data.size > stream->m_info.chunk)
@@ -1106,7 +1132,7 @@ int32_t NetEndpointRouter::routeFile(uint64_t endpoint, const NetInterfaceFrame&
     else if (frame.m_kind == NI_DATA_ACK)
     {
         NetInterfaceFileAck ack = {};
-        NetEndpointSecretScope ackScope(&ack, sizeof(ack));
+        NetInterfaceFileGuard ackScope(&ack, sizeof(ack));
         if (sendsData || NetInterfaceFile::parseAck(frame, ack) != NI_OK || !NetInterfaceFile::equal(ack.token, stream->m_info.token, 32) ||
             ack.offset > stream->m_info.total)
         {
@@ -1117,7 +1143,7 @@ int32_t NetEndpointRouter::routeFile(uint64_t endpoint, const NetInterfaceFrame&
     else
     {
         NetInterfaceFileNotice notice = {};
-        NetEndpointSecretScope noticeScope(&notice, sizeof(notice));
+        NetInterfaceFileGuard noticeScope(&notice, sizeof(notice));
         if (!source->second->m_service || NetInterfaceFile::parseNotice(frame, notice) != NI_OK ||
             !NetInterfaceFile::equal(notice.token, stream->m_info.token, 32) ||
             !NetInterfaceFile::equal(notice.transfer, stream->m_info.transfer, 16))
@@ -1145,12 +1171,12 @@ void NetEndpointRouter::dropFile(uint64_t id, int32_t reason, uint64_t skip)
         return;
     }
     NetInterfaceFileNotice notice = {};
-    NetEndpointSecretScope noticeScope(&notice, sizeof(notice));
+    NetInterfaceFileGuard noticeScope(&notice, sizeof(notice));
     notice.result = reason < 0 ? reason : NI_CANCELLED;
     std::memcpy(notice.token, stream->m_info.token, 32);
     std::memcpy(notice.transfer, stream->m_info.transfer, 16);
     uint8_t payload[NET_INTERFACE_FILE_NOTICE_SIZE] = {};
-    NetEndpointSecretScope payloadScope(payload, sizeof(payload));
+    NetInterfaceFileGuard payloadScope(payload, sizeof(payload));
     if (NetInterfaceFile::encodeNotice(notice, payload, sizeof(payload)) != NI_OK)
     {
         return;
@@ -1190,7 +1216,7 @@ void NetEndpointRouter::collectFiles(uint64_t endpoint)
         return;
     }
     const uint64_t now = NetEndpointRouterState::now();
-    for (uint32_t count = 0; count < 64 && m_state->m_fileExpiryCount != 0; ++count)
+    for (uint32_t count = 0; count < m_state->m_expiredFileBudget && !m_state->m_fileExpiry.empty(); ++count)
     {
         NetEndpointFileStream* stream = m_state->m_fileExpiry[0];
         if (now < stream->m_deadline)
@@ -1198,6 +1224,10 @@ void NetEndpointRouter::collectFiles(uint64_t endpoint)
             break;
         }
         dropFile(stream->m_id, NI_TIMEOUT);
+    }
+    if (!m_state->m_fileExpiry.empty())
+    {
+        NetExecution::deadline(m_state->m_fileExpiry.front()->m_deadline, now);
     }
 }
 

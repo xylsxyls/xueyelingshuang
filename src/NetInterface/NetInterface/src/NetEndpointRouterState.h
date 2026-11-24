@@ -18,8 +18,6 @@ public:
     bool m_filesCollected;
     // 本端点的文件链；实际存储由文件池统一控制
     NetEndpointFileStream* m_firstFile;
-    // 本端点当前登记的文件流数，随双端点链同步增减
-    size_t m_fileCount;
     // 类型和关闭状态；服务端点没有TCP peer
     bool m_service;
     // true为外部可信通道附加的客户端，使用m_clients回送而不直接访问TCP
@@ -76,7 +74,7 @@ public:
     */
     NetEndpointPeer* takeClosing();
 
-    /** 擦除本轮转发的暂存明文，最多保留4KiB容量
+    /** 擦除本轮转发的暂存明文，按当前实例的保留预算释放缓冲
     */
     void clearPayload();
 
@@ -121,6 +119,8 @@ public:
     NetInterfaceEntropyFunction m_entropy;
     // 随机上下文借用至停止
     void* m_entropyContext;
+    // 直接监听时复制给每个新连接的握手参数，随机数由连接独立生成
+    NetInterfaceHandshakeOptions m_handshake;
     // 物理监听接纳后不允许热换传输
     bool m_listening;
     // 独占的有界请求配额与双端请求映射
@@ -145,6 +145,16 @@ public:
     NetEndpointPeer* m_closingFirst;
     // 有界关闭队列尾，队列为空时与头指针同时为空
     NetEndpointPeer* m_closingLast;
+    // 两次转发之间保留暂存容量的字节预算，-1保留已分配容量
+    int64_t m_payloadRetentionBytes;
+    // 单轮poll最多结算的超时请求数，默认64，至少1
+    const uint32_t m_expiredRequestBudget;
+    // 单轮poll最多执行的端点关闭步骤数，默认64，至少1
+    const uint32_t m_closingEndpointBudget;
+    // 单轮poll最多回收的到期文件流数，默认64，至少1
+    const uint32_t m_expiredFileBudget;
+    // 此路由器独立的业务心跳配置
+    NetHeartbeatConfig m_heartbeat;
     // 只在单一dispatch期间保存转发明文，不借给后续轮次。
     std::vector<uint8_t> m_payload;
     // 拒绝嵌套推进和同步再次投递；宿主回调只能请求关闭。
@@ -157,8 +167,6 @@ public:
     std::map<uint64_t, NetObjectReference<NetEndpointFileStream>> m_streams;
     // 按单调到期时间排列的动态最小堆，节点只借用m_streams对象
     std::vector<NetEndpointFileStream*> m_fileExpiry;
-    // 期限堆中有效节点数，等于实际登记的文件记录数
-    size_t m_fileExpiryCount;
     // 服务代次及本地流号到网关公开流号的非拥有反向索引
     std::map<std::pair<uint64_t, uint64_t>, uint64_t> m_serviceStreams;
     // 已分配的最大端点号，1保留为不可用服务槽，达到UINT64_MAX不再分配

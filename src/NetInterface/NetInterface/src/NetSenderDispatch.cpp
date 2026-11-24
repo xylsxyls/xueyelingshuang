@@ -1,6 +1,7 @@
 ﻿#include "NetSenderDispatch.h"
 #include "NetInterfaceMacro.h"
 #include "NetSenderDispatchMap.h"
+#include "NetExecution.h"
 #include <cstring>
 
 #if !defined(__EMSCRIPTEN__)
@@ -18,7 +19,9 @@ m_closedGeneration(0),
 m_error(NI_OK),
 m_nextWire(0),
 m_mapping(new NetSenderDispatchMap()),
-m_outputPending(false)
+m_outputPending(false),
+m_commandBudget(2304),
+m_byteBudget(2097152)
 {
 
 }
@@ -39,6 +42,15 @@ int32_t NetSenderDispatch::bindSubmission(NetSenderSubmission* submission)
         return NI_INVALID_STATE;
     }
     m_submission = submission;
+    return NI_OK;
+}
+
+int32_t NetSenderDispatch::configurePollBudgets(uint32_t commands, uint32_t bytes)
+{
+    if (m_listener != nullptr || !quiescent()) { return NI_INVALID_STATE; }
+    if (commands == 0 || bytes == 0) { return NI_INVALID_ARGUMENT; }
+    m_commandBudget = commands;
+    m_byteBudget = bytes;
     return NI_OK;
 }
 
@@ -365,17 +377,18 @@ bool NetSenderDispatch::poll()
         {
             fail(NI_INVALID_STATE);
         }
-        uint32_t bytes = 0;
+        uint64_t bytes = 0;
         bool delivered = advanceOutput();
         // 只消费已经就绪的前缀；每轮仍受消息/字节双量子约束，不等待凑批。
         uint32_t step = 0;
-        while (step < 2304 && bytes < 2097152)
+        while (step < m_commandBudget && bytes < m_byteBudget)
         {
             uint32_t messages = 0;
             uint64_t dataBytes = 0;
-            const int32_t result = m_submission->drainData(m_session, DispatchData, 2304 - step, 2097152 - bytes, messages, dataBytes);
+            const int32_t result = m_submission->drainData(m_session, DispatchData, m_commandBudget - step,
+                m_byteBudget - static_cast<uint32_t>(bytes), messages, dataBytes);
             step += messages;
-            bytes += static_cast<uint32_t>(dataBytes);
+            bytes += dataBytes;
             m_outputPending = messages != 0 || m_outputPending;
             if (result != NI_OK)
             {
@@ -390,7 +403,6 @@ bool NetSenderDispatch::poll()
                 delivered = !m_outputPending;
                 continue;
             }
-            ++step;
             NetSenderSubmissionCommand command;
             if (m_submission->next(command, !delivered) != NI_READY)
             {
@@ -406,12 +418,14 @@ bool NetSenderDispatch::poll()
                 }
                 break;
             }
-            bytes += command.m_size + command.m_frame.m_payloadSize;
+            ++step;
+            bytes += static_cast<uint64_t>(command.m_size) + command.m_frame.m_payloadSize;
             execute(command);
             // 同一owner尚未推进运输，已提交输出按未排空处理；不为每条DATA重复穿越查询层。
             // 控制屏障或同步票据会令next暂停，再由上面的poll/advanceOutput确认真实交付。
             delivered = !m_outputPending;
         }
+        if (step == m_commandBudget || bytes >= m_byteBudget) { NetExecution::progress(); }
         active = m_session->poll();
         if (m_submission->synchronousPending())
         {

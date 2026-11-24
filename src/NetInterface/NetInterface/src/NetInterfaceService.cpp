@@ -77,6 +77,11 @@ int32_t NetInterfaceService::hello(const uint8_t* secret, uint32_t limit, uint8_
 
 int32_t NetInterfaceService::authenticate(const NetInterfaceFrame& frame, const uint8_t* secret, uint32_t& limit)
 {
+    if (NetInterfaceFileGuard::overlapsFrame(frame, &limit, sizeof(limit)) ||
+        NetInterfaceFileGuard::overlap(&limit, sizeof(limit), secret, 32))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     limit = 0;
     if (!ServiceSecretValid(secret) || frame.m_kind != NI_HELLO || frame.m_messageType != 3 || frame.m_requestId != 0 ||
         frame.m_payloadSize != 48 || frame.m_payload == nullptr || std::memcmp(frame.m_payload, "NIS2", 4) != 0)
@@ -145,6 +150,12 @@ int32_t NetInterfaceService::wrap(const NetInterfaceOrigin& origin, const uint8_
 
 int32_t NetInterfaceService::unwrap(const NetInterfaceFrame& frame, NetInterfaceOrigin& origin, NetInterfaceFrame& business)
 {
+    if (NetInterfaceFileGuard::overlapsFrame(frame, &origin, sizeof(origin)) ||
+        NetInterfaceFileGuard::overlap(&origin, sizeof(origin), &business, sizeof(business)) ||
+        NetInterfaceFileGuard::overlap(&business, sizeof(business), frame.m_payload, frame.m_payloadSize))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     const NetInterfaceFrame input = frame;
     origin = NetInterfaceOrigin();
     business = NetInterfaceFrame();

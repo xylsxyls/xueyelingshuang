@@ -1,6 +1,8 @@
 ﻿#include "NetInterfaceMacro.h"
 #include "NetInterfaceConnection.h"
+#include "NetInterfaceFileGuard.h"
 #include "NetConnectionQueue.h"
+#include "CEncodeDecode/CEncodeDecodeAPI.h"
 #include "NetExecution.h"
 #include "NetInterfaceCompression.h"
 #include "NetInterfaceCompact.h"
@@ -15,22 +17,45 @@ NetInterfaceConnection(options, NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT)
 }
 
 NetInterfaceConnection::NetInterfaceConnection(const NetInterfaceTlsOptions& options, uint32_t payloadLimit) :
+NetInterfaceConnection(options, payloadLimit, NetConnectionPoolConfig())
+{
+
+}
+
+NetInterfaceConnection::NetInterfaceConnection(const NetInterfaceTlsOptions& options, uint32_t payloadLimit,
+    const NetConnectionPoolConfig& pools) :
+NetInterfaceConnection(options, payloadLimit, pools, CEncodeDecodeTlsQueueLimits())
+{
+
+}
+
+NetInterfaceConnection::NetInterfaceConnection(const NetInterfaceTlsOptions& options, uint32_t payloadLimit,
+    const NetConnectionPoolConfig& pools, const CEncodeDecodeTlsQueueLimits& limits) :
 m_compact(false),
 m_previousCompactData(),
-m_tls(options),
+m_tls(options, limits),
 m_decoder(payloadLimit),
-m_error(payloadLimit == 0 || payloadLimit > NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT + 32 ? NI_INVALID_ARGUMENT : 0),
+m_error(!pools.validCodecSettings() || payloadLimit == 0 || payloadLimit > NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT + 32 ? NI_INVALID_ARGUMENT : 0),
 m_closed(false),
 m_readBlocked(false),
 m_plainSize(0),
 m_plainOffset(0),
-m_queue(new (std::nothrow) NetConnectionQueue(NetConnectionPoolConfig())),
+m_queue(new (std::nothrow) NetConnectionQueue(pools)),
 m_activeOffset(0),
-m_started(false)
+m_started(false),
+m_controlPayloadLimit(pools.m_controlPayloadLimit),
+m_progressFrameBudget(pools.m_progressFrameBudget),
+m_progressStepBudget(pools.m_progressStepBudget),
+m_compressionMinPayload(pools.m_compressionMinPayload),
+m_compressionLevel(pools.m_compressionLevel)
 {
     if (m_error == 0)
     {
-        m_error = m_queue ? m_queue->status() : NI_NO_MEMORY;
+        m_error = m_decoder.configureDecoderRetention(pools.m_decoderRetentionBytes);
+        if (m_error == NI_OK)
+        {
+            m_error = m_queue ? m_queue->status() : NI_NO_MEMORY;
+        }
     }
 }
 
@@ -52,13 +77,23 @@ int32_t NetInterfaceConnection::configurePools(const NetConnectionPoolConfig& co
     {
         return NI_INVALID_STATE;
     }
+    if (!config.validCodecSettings()) { return NI_INVALID_ARGUMENT; }
     try
     {
         std::unique_ptr<NetConnectionQueue> replacement(new (std::nothrow) NetConnectionQueue(config));
-        const int32_t result = replacement ? replacement->status() : NI_NO_MEMORY;
+        int32_t result = replacement ? replacement->status() : NI_NO_MEMORY;
+        if (result == NI_OK)
+        {
+            result = m_decoder.configureDecoderRetention(config.m_decoderRetentionBytes);
+        }
         if (result == NI_OK)
         {
             m_queue.swap(replacement);
+            m_controlPayloadLimit = config.m_controlPayloadLimit;
+            m_progressFrameBudget = config.m_progressFrameBudget;
+            m_progressStepBudget = config.m_progressStepBudget;
+            m_compressionMinPayload = config.m_compressionMinPayload;
+            m_compressionLevel = config.m_compressionLevel;
         }
         return result;
     }
@@ -85,9 +120,13 @@ void NetInterfaceConnection::clearWrites()
 
 int32_t NetInterfaceConnection::feed(const uint8_t* data, uint32_t size, uint32_t& consumed)
 {
-    consumed = 0;
+    if (m_error != 0)
+    {
+        return NetInterfaceFileGuard::prepareCount(data, size, &consumed) ? m_error : NI_INVALID_ARGUMENT;
+    }
+    const int32_t result = m_tls.feed(data, size, consumed);
+    if (result == NET_INTERFACE_TLS_ARGUMENT) { return result; }
     m_started = true;
-    const int32_t result = m_error != 0 ? m_error : m_tls.feed(data, size, consumed);
     if (consumed != 0)
     {
         m_readBlocked = false;
@@ -127,7 +166,7 @@ int32_t NetInterfaceConnection::progress(uint64_t monotonicMs)
         return status();
     }
     uint32_t frames = 0;
-    for (uint32_t step = 0; step < 64; ++step)
+    for (uint32_t step = 0; step < m_progressStepBudget; ++step)
     {
         bool moved = false;
         const int32_t tlsStatus = m_tls.progress(monotonicMs);
@@ -139,9 +178,9 @@ int32_t NetInterfaceConnection::progress(uint64_t monotonicMs)
         {
             return tlsStatus;
         }
-        // 只聚合已经排队的帧，不等待新消息；512帧公平量子覆盖本次整个progress。
+        // 只聚合已经排队的帧，不等待新消息；帧预算覆盖本次整个progress。
         // TLS复制成功后才释放帧，记录已交给mbedTLS时append会背压且保持重试输入不变。
-        while (frames < 512)
+        while (frames < m_progressFrameBudget)
         {
             NetConnectionWrite* active = m_queue->active();
             if (active == nullptr)
@@ -205,6 +244,15 @@ int32_t NetInterfaceConnection::progress(uint64_t monotonicMs)
         {
             break;
         }
+        if (step + 1 == m_progressStepBudget)
+        {
+            // 本轮因预算让出时，已接纳的明文可能尚未转成可写密文，宿主应再推进一次。
+            NetExecution::progress();
+        }
+    }
+    if (frames == m_progressFrameBudget && !m_queue->empty())
+    {
+        NetExecution::progress();
     }
     return status();
 }
@@ -222,7 +270,8 @@ int32_t NetInterfaceConnection::send(const NetInterfaceFrame& frame)
         return NI_LIMIT_EXCEEDED;
     }
     uint32_t required = 0;
-    const bool compress = std::binary_search(m_compressionTypes.begin(), m_compressionTypes.end(), frame.m_messageType);
+    const bool compress = NetInterfaceCompression::supports(frame) &&
+        std::binary_search(m_compressionTypes.begin(), m_compressionTypes.end(), frame.m_messageType);
     const bool compact = m_compact && !compress;
     // 只在不存在待发前缀时使用TLS已有存储；短DATA不再逐帧申请/释放中转记录。
     // TLS最多转换一条已满记录，不创建额外缓冲池；容量不足时完整回退，不能重复发送部分帧。
@@ -277,7 +326,7 @@ int32_t NetInterfaceConnection::send(const NetInterfaceFrame& frame)
     {
         return validation;
     }
-    const bool control = frame.m_payloadSize <= 4096 &&
+    const bool control = (m_controlPayloadLimit < 0 || frame.m_payloadSize <= static_cast<uint32_t>(m_controlPayloadLimit)) &&
         (frame.m_kind == NI_HELLO || frame.m_kind == NI_HELLO_REPLY || frame.m_kind == NI_EVENT ||
         frame.m_kind == NI_CANCEL || frame.m_kind == NI_PING || frame.m_kind == NI_PONG || frame.m_kind == NI_DATA_ACK);
     NetObjectReference<NetConnectionWrite> write;
@@ -289,7 +338,8 @@ int32_t NetInterfaceConnection::send(const NetInterfaceFrame& frame)
     // 编码失败可能留下前缀，租约析构必须擦除本次编码可写的全部区域。
     write->m_size = required;
     const uint32_t capacity = required;
-    const int32_t result = compress ? NetInterfaceCompression::encode(frame, write->m_buffer.data(), capacity, required) :
+    const int32_t result = compress ? NetInterfaceCompression::encode(frame, write->m_buffer.data(), capacity, required,
+        m_compressionMinPayload, m_compressionLevel) :
         (compact ? NetInterfaceCompact::encode(frame, write->m_buffer.data(), capacity, required, &m_previousCompactData) :
         NetInterface::encode(frame, write->m_buffer.data(), capacity, required));
     if (result != NI_OK)
@@ -391,6 +441,11 @@ int32_t NetInterfaceConnection::finishInput()
 {
     m_readBlocked = false;
     return m_error != 0 ? m_error : m_tls.finishInput();
+}
+
+uint32_t NetInterfaceConnection::decoderBufferCapacity() const
+{
+    return m_decoder.decoderBufferCapacity();
 }
 
 int32_t NetInterfaceConnection::status() const
