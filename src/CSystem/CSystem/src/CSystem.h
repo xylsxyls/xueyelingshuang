@@ -58,7 +58,7 @@ public:
     /** 将路径固定到调用时的工作目录，保留文件名大小写，目标可以尚未创建
     @param [in] path 非空系统路径，Wasm 使用虚拟文件系统路径
     @return 可直接打开的绝对路径；路径含 NUL 或无法取得工作目录时返回空串
-    @note 支持 Windows、Linux、Linux ARM、macOS、Android、iOS、Wasm；POSIX 保留 .. 的文件系统语义
+    @note 支持 Windows、Linux（含 ARM）、macOS、Android、iOS、Wasm；POSIX 保留 .. 的文件系统语义
     */
     static std::string absolutePath(const std::string& path);
 
@@ -71,7 +71,7 @@ public:
 
     /** 同步提交持久化文件上此前的写入
     @param [in] handle createDurableFile 返回的有效句柄，由调用者保证其存活
-    @return 系统确认刷新时返回 true
+    @return 系统确认刷新时返回 true；POSIX 和 Wasm 的描述符超出非负 int 范围时返回 false
     @note 支持 Windows、Linux、macOS、Android、iOS、Wasm；纯内存挂载无法确认
     */
     static bool syncDurableFile(intptr_t handle);
@@ -114,20 +114,20 @@ public:
 #if CSYSTEM_HAS_DESKTOP_API
     /** 取得桌面整机命名进程租约；内核锁在崩溃时自动释放
     @param [in] name ASCII角色名，所有安装目录和版本使用同一个名称
-    @param [in] replace 已占用时请求旧进程正常退出并等待
+    @param [in] replace 已占用时请求原持有者正常退出并等待，同一线程再次请求也遵守此约定
     @param [in] timeoutMs 替换等待上限，最多30000毫秒
-    @param [out] state 不透明租约；成功后由同一线程释放
+    @param [in,out] state 传入空容器，成功后由同一线程释放；传入有效租约时拒绝并保留原值
     @return 1取得，0已有实例应复用，-1系统失败或替换超时
     @note 支持平台 Windows、Linux、macOS
     */
     static int32_t acquireProcessLease(const std::string& name, bool replace, uint32_t timeoutMs,
         std::vector<uint64_t>& state);
 
-    /** 按角色与隔离后缀取得锁，就绪记录始终按角色和进程号查询
+    /** 按角色与隔离后缀取得锁；同一角色和进程号只允许一份就绪记录
     @param [in] name 用于查询就绪记录的角色名
     @param [in] replace 是否要求旧实例正常退出
     @param [in] timeoutMs 等待上限，最多30000毫秒
-    @param [out] state 成功取得的独占租约
+    @param [in,out] state 传入空容器，成功取得的独占租约由当前线程释放
     @param [in] isolated 隔离后缀，最多 40 个 ASCII 字母、数字、点、下划线或连字符；空串使用角色名
     @return 1取得，0已有实例，-1失败
     @note 支持平台 Windows、Linux、macOS
@@ -204,7 +204,7 @@ public:
     @param [out] cpuTime100ns 内核和用户CPU时间之和，单位100纳秒
     @param [out] handles 进程句柄数
     @param [out] threads 进程线程数
-    @return 完整采样成功true；失败各输出清0，不把无权限当已退出
+    @return 完整采样成功true；同类型输出引用重合或采样失败时返回false，所有输出清0
     @note 支持平台 Windows
     */
     static bool queryProcessResources(uint64_t monitor, uint64_t& privateBytes, uint64_t& workingSet,
@@ -300,8 +300,8 @@ public:
     static HWND findVisibleWindowByProcessId(uint32_t processId);
 
     /** 返回OCX注册路径
-    @param [in] classid OCX的ClassId
-    @return 返回OCX所在目录，带路径分隔符，失败返回空字符串
+    @param [in] classid 不带花括号的组件 CLSID，按本进程注册表视图查询
+    @return 展开环境变量后的系统窄字符目录，保留末尾分隔符；没有目录或查询失败时返回空串
     @note 支持平台 Windows
     */
     static std::string GetRegOcxPath(const std::string& classid);
@@ -422,13 +422,13 @@ public:
     static void sleepPrecise(uint32_t milliseconds);
 
     /** 生成UUID字符串
-    @param [in] flag 1表示带横线，0表示不带横线
-    @return 返回小写UUID字符串
+    @param [in] flag 0 使用紧凑格式，非零使用带连字符的格式，默认 1
+    @return 成功返回 32 个小写十六进制字符，带连字符时按 8-4-4-4-12 分组；生成失败返回空串
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static std::string uuid(int flag = 1);
 
-    /** 复制文件，覆盖同一文件保留原内容。路径内嵌 NUL 时忽略本次操作
+    /** 复制文件，覆盖同一文件保留原内容。POSIX 只复制普通文件，符号链接按其指向的文件处理。路径内嵌 NUL 时忽略本次操作
     @param [in] dstFile 目标文件路径
     @param [in] srcFile 源文件路径
     @param [in] over 目标存在时是否覆盖
@@ -476,9 +476,9 @@ public:
     */
     static bool DirOrFileExist(const std::string& dir);
 
-    /** 判断普通文件是否存在，支持Windows宽字符路径
-    @param [in] path 文件路径
-    @return 文件存在且不是目录时返回true，否则返回false
+    /** 通过宽字符路径查询文件是否存在
+    @param [in] path 非空文件路径，不能包含 NUL
+    @return Windows 对现存非目录项返回 true；POSIX 跟随符号链接，只有目标为普通文件时返回 true
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static bool fileExists(const std::wstring& path);
@@ -545,14 +545,14 @@ public:
 
 #if CSYSTEM_HAS_NATIVE_API
     /** 输出字符串map到控制台或文件
-    @param [in] stringMap 要输出的map
+    @param [in] stringMap 按键顺序逐行输出，键和值均保留内嵌 NUL
     @param [in] path 输出文件路径，空字符串表示输出到控制台
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static void OutputMap(const std::map<std::string, std::string>& stringMap, const std::string& path = "");
 
     /** 输出字符串vector到控制台或文件
-    @param [in] stringVector 要输出的vector
+    @param [in] stringVector 按元素顺序逐行输出，保留空行及内嵌 NUL
     @param [in] path 输出文件路径，空字符串表示输出到控制台
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
@@ -686,20 +686,20 @@ public:
     @param [out] physicalBytes 物理内存总字节数
     @param [out] availableBytes 可供参考的物理内存字节数；Windows 同时取可提交余量的较小值
     @param [out] virtualBytes Windows 当前进程可用虚拟地址字节数，其他原生端为 UINT64_MAX
-    @return true 表示查询成功，false 时三个输出均为零。成功快照不预留资源
-    @note 支持平台 Windows、Linux、Linux ARM、macOS、Android、iOS
+    @return true 表示查询成功，输出引用重叠或系统查询失败时返回 false 并清零全部输出。成功快照不预留资源
+    @note 支持平台 Windows、Linux（含 ARM）、macOS、Android、iOS
     */
     static bool queryMemoryAvailability(uint64_t& physicalBytes, uint64_t& availableBytes, uint64_t& virtualBytes);
 
     /** 获取原生单调时钟的 64 位毫秒数，用于比较同一平台上的间隔
     @return 单调时钟纪元以来的毫秒数
-    @note 支持平台 Windows、Linux、Linux ARM、macOS、Android、iOS
+    @note 支持平台 Windows、Linux（含 ARM）、macOS、Android、iOS
     */
     static uint64_t monotonicMilliseconds();
 #endif // CSYSTEM_NATIVE_API
 
     /** 获取系统运行毫秒计数
-    @return 返回毫秒计数，可能按系统API语义回绕
+    @return 返回会回绕的 32 位毫秒计数；POSIX 和 Wasm 时钟读取失败时返回 0
     @note 支持平台 Windows、Linux、macOS、Android、iOS、Wasm
     */
     static uint32_t GetTickCount();
@@ -819,7 +819,7 @@ public:
     /** 规范绝对路径，可按要求解析实际文件和目录链接
     @param [in] path 非空路径，不允许零字符
     @param [in] requireExisting 为true时解析实际存在目标，为false时规范词法绝对路径
-    @return 规范路径；失败返回空，Windows比较用路径统一ASCII大小写
+    @return 规范路径；失败返回空，Windows 按系统窄字符编码，仅将独立 ASCII 大写字母转为小写
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
     static std::string canonicalPath(const std::string& path, bool requireExisting = true);
@@ -905,7 +905,7 @@ public:
     static bool flushBinaryOutputFile(FILE* file);
 
     /** 将已完成的同目录临时文件排他安装，目标存在时保持原目标不变
-    @param [in] sourcePath 已提交并关闭的临时文件
+    @param [in] sourcePath 已提交并关闭的临时文件；传入普通目录将返回 false
     @param [in] destinationPath 正式路径
     @return 成功安装；失败时源可能仍存在，宿主只能清理自己创建的临时文件
     @note 支持平台 Windows、Linux、macOS、Android、iOS
@@ -975,7 +975,7 @@ public:
     static bool rename(const std::string& oldPath, const std::string& newPath);
 
     /** 将同文件系统临时文件替换目标文件，不预先删除目标
-    @param [in] sourcePath 已写完并关闭的临时文件，失败时保留
+    @param [in] sourcePath 已写完并关闭的临时文件，失败时保留；传入普通目录将返回 false
     @param [in] destinationPath 目标宽字符路径，允许已存在
     @return 替换成功返回 true；失败保留原目标
     @note 支持平台 Windows、Linux、macOS、Android、iOS
@@ -1067,8 +1067,8 @@ public:
     @param [in] offset 字节位置，offset+capacity不超过INT64_MAX
     @param [out] output capacity非零时不可空
     @param [in] capacity 最大16MiB
-    @param [out] received 不可空，成功字节数，失败0
-    @param [out] error 可空系统错误
+    @param [out] received 不可空，成功时为实际字节数，失败为0；须与 error 分开存储
+    @param [out] error 可空，成功为0，失败为系统错误。若与 received 相同则返回 false，共用变量置0且不读取
     @return 是否读取成功
     @note 支持平台 Windows、Linux、macOS、Android、iOS
     */
@@ -1147,6 +1147,22 @@ public:
 #endif // CSYSTEM_NATIVE_API
 
 private:
+#ifdef _WIN32
+    /** 校验整数监视值并转换到当前进程句柄位宽
+    @param [in] monitor 本库返回的监视值
+    @return 可表示的句柄值，空值、越界或无效句柄哨兵返回0
+    @note 支持平台 Windows
+    */
+    static uintptr_t processMonitorValue(uint64_t monitor);
+
+    /** 取得系统窄路径扫描下一步的字节数，跳过双字节字符的尾字节
+    @param [in] path 系统 ANSI 代码页字符串
+    @param [in] offset 小于字符串大小的当前字符起点
+    @return 双字节字符返回2，其余返回1；用于识别独立的 ASCII 字符
+    @note 支持平台 Windows
+    */
+    static size_t nativeCharacterSize(const std::string& path, size_t offset);
+#endif
 #if CSYSTEM_HAS_DESKTOP_API
     /** 取得角色名对应的锁、结束通知和就绪记录。
     @param [in] name 就绪查询使用的公共角色名
@@ -1170,6 +1186,37 @@ private:
 #endif
 #endif
 #if CSYSTEM_HAS_NATIVE_API
+    /** 将调用方已关闭的临时文件安装到同一文件系统的目标路径
+    @param [in] sourcePath 源文件宽路径，拒绝普通目录和内嵌 NUL
+    @param [in] destinationPath 目标宽路径，不可为空或内嵌 NUL
+    @param [in] replace 允许替换目标时为 true；否则排他安装
+    @return 文件成功安装时返回 true；POSIX 排他安装后清理源别名失败仍视为已安装
+    @note 支持平台 Windows、Linux、macOS、Android、iOS
+    */
+    static bool publishWideFile(const std::wstring& sourcePath, const std::wstring& destinationPath, bool replace);
+
+    /** 定位本机路径最后一个分量，Windows 按系统窄字符边界识别分隔符
+    @param [in] path 本机窄路径
+    @param [out] trimmedEnd 可空；提供时忽略末尾分隔符并接收有效结尾的下一个字节位置
+    @return 最后分量的字节起点；未要求裁剪时末尾分隔符对应空分量
+    @note 支持平台 Windows、Linux、macOS、Android、iOS
+    */
+    static size_t nativeFileNameOffset(const std::string& path, size_t* trimmedEnd = nullptr);
+
+    /** 用本机分隔符规则连接目录与子项
+    @param [in] directory 本机窄路径目录
+    @param [in] name 子项名称
+    @return 拼接后的路径，单个参数为空时返回另一参数
+    @note 支持平台 Windows、Linux、macOS、Android、iOS
+    */
+    static std::string nativeChildPath(const std::string& directory, const std::string& name);
+
+    /** 折叠窄路径字符的大小写，Windows 仅处理独立 ASCII 大写字母
+    @param [in,out] name 本机窄路径或扩展名
+    @note 支持平台 Windows、Linux、macOS、Android、iOS
+    */
+    static void lowerNativeName(std::string& name);
+
     /** 取得当前可执行文件路径中的指定部分，Windows 使用系统窄字符编码
     @param [in] flag 1 取全名，3 去掉扩展名，4 取目录并保留末尾分隔符
     @return 指定路径部分，查询失败返回空串

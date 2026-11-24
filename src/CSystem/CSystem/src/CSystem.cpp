@@ -5,6 +5,7 @@
 #endif
 #include "CSystem.h"
 #include <cstring>
+#include <climits>
 #include <cstdlib>
 #include <memory>
 #ifdef __EMSCRIPTEN__
@@ -53,7 +54,6 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <sys/wait.h>
-#include <limits.h>
 #include <codecvt>
 #include <dirent.h>
 #include <dlfcn.h>
@@ -232,30 +232,33 @@ HWND CSystem::findVisibleWindowByProcessId(uint32_t processId)
 
 std::string CSystem::GetRegOcxPath(const std::string& classid)
 {
-    HKEY hKey = nullptr;
-    LONG openRet = ::RegOpenKeyExA(HKEY_CLASSES_ROOT, ("CLSID\\{" + classid + "}\\InprocServer32").c_str(), 0, KEY_READ, &hKey);
-    if (openRet != ERROR_SUCCESS)
+    if (classid.empty() || classid.find('\0') != std::string::npos || classid.find_first_of("{}\\/") != std::string::npos)
     {
         return "";
     }
-    DWORD dwType = REG_SZ;
-    char data[1024] = {};
-    DWORD cbData = sizeof(data);
-    LONG queryRet = ::RegQueryValueExA(hKey, "", nullptr, &dwType, reinterpret_cast<LPBYTE>(data), &cbData);
-    ::RegCloseKey(hKey);
-    if (queryRet != ERROR_SUCCESS || (dwType != REG_SZ && dwType != REG_EXPAND_SZ))
+    const std::string key = "CLSID\\{" + classid + "}\\InprocServer32";
+    DWORD bytes = 0;
+    if (::RegGetValueA(HKEY_CLASSES_ROOT, key.c_str(), nullptr, RRF_RT_REG_SZ, nullptr, nullptr, &bytes) != ERROR_SUCCESS)
     {
         return "";
     }
-    data[sizeof(data) - 1] = '\0';
-    std::string temp = data;
-    size_t position = temp.find_last_of("\\/");
-    if (position == std::string::npos)
+    // 让系统展开 REG_EXPAND_SZ，并按实际字节数读取当前注册表视图中的路径。
+    std::vector<char> buffer;
+    while (bytes > buffer.size())
     {
-        return "";
+        buffer.resize(bytes);
+        const LONG result = ::RegGetValueA(HKEY_CLASSES_ROOT, key.c_str(), nullptr, RRF_RT_REG_SZ, nullptr, buffer.data(), &bytes);
+        if (result == ERROR_SUCCESS)
+        {
+            const std::string path(buffer.data());
+            return path.substr(0, nativeFileNameOffset(path));
+        }
+        if (result != ERROR_MORE_DATA)
+        {
+            break;
+        }
     }
-    std::string result = temp.substr(0, position + 1);
-    return result;
+    return "";
 }
 
 void* CSystem::ForbidRedir()
@@ -413,7 +416,17 @@ std::vector<std::string> CSystem::processMountDll(uint32_t pid)
     BOOL bRet = ::Module32First(hShot, &te);
     while (bRet)
     {
-        result.push_back(te.szModule);
+        // 快照的短名称可能从双字节字符中间截断；完整路径可用时按系统字符边界取末段。
+        std::string module(te.szExePath);
+        if (!module.empty() && module.size() < sizeof(te.szExePath) - 1)
+        {
+            module.erase(0, nativeFileNameOffset(module));
+        }
+        else
+        {
+            module = te.szModule;
+        }
+        result.push_back(std::move(module));
         bRet = ::Module32Next(hShot, &te);
     }
     return result;
@@ -701,16 +714,36 @@ void CSystem::CopyFileOver(const std::string& dstFile, const std::string& srcFil
 #ifdef _WIN32
     ::CopyFileA(srcFile.c_str(), dstFile.c_str(), over == false);
 #elif defined(__unix__) || defined(__APPLE__)
-    std::unique_ptr<FILE, int(*)(FILE*)> source(std::fopen(srcFile.c_str(), "rb"), std::fclose);
+    // 用描述符确认类型后再截断；非阻塞打开避免等候 FIFO 的另一端。
+    const int sourceFd = ::open(srcFile.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+    if (sourceFd < 0)
+    {
+        return;
+    }
+    std::unique_ptr<FILE, int(*)(FILE*)> source(::fdopen(sourceFd, "rb"), std::fclose);
+    if (!source)
+    {
+        ::close(sourceFd);
+        return;
+    }
     struct stat from = {}, to = {};
-    if (!source || ::fstat(::fileno(source.get()), &from) != 0 || S_ISDIR(from.st_mode)) { return; }
-    const int fd = ::open(dstFile.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC | (over ? 0 : O_EXCL), 0666);
-    if (fd < 0) { return; }
+    if (::fstat(sourceFd, &from) != 0 || !S_ISREG(from.st_mode))
+    {
+        return;
+    }
+    const int fd = ::open(dstFile.c_str(), O_WRONLY | O_CREAT | O_NONBLOCK | O_CLOEXEC | (over ? 0 : O_EXCL), 0666);
+    if (fd < 0)
+    {
+        return;
+    }
     std::unique_ptr<FILE, int(*)(FILE*)> destination(::fdopen(fd, "wb"), std::fclose);
-    if (!destination) { ::close(fd); return; }
-    if (::fstat(fd, &to) != 0 ||
-        (from.st_dev == to.st_dev && from.st_ino == to.st_ino) ||
-        (S_ISREG(to.st_mode) && ::ftruncate(fd, 0) != 0))
+    if (!destination)
+    {
+        ::close(fd);
+        return;
+    }
+    if (::fstat(fd, &to) != 0 || !S_ISREG(to.st_mode) ||
+        (from.st_dev == to.st_dev && from.st_ino == to.st_ino) || ::ftruncate(fd, 0) != 0)
     {
         return;
     }
@@ -749,11 +782,12 @@ void CSystem::OutputMap(const std::map<std::string, std::string>& stringMap, con
     {
         if (path.empty())
         {
-            printf("[%s] = %s\n", itData->first.c_str(), itData->second.c_str());
+            const std::string line = "[" + itData->first + "] = " + itData->second + "\n";
+            std::fwrite(line.data(), 1, line.size(), stdout);
         }
         else
         {
-            file << "[" << itData->first.c_str() << "] = " << itData->second.c_str() << "\n";
+            file << "[" << itData->first << "] = " << itData->second << "\n";
         }
     }
 }
@@ -767,11 +801,12 @@ void CSystem::OutputVector(const std::vector<std::string>& stringVector, const s
     {
         if (path.empty())
         {
-            printf("%s\n", itData->c_str());
+            const std::string line = *itData + "\n";
+            std::fwrite(line.data(), 1, line.size(), stdout);
         }
         else
         {
-            file << itData->c_str() << "\n";
+            file << *itData << "\n";
         }
     }
 }
@@ -1387,6 +1422,10 @@ bool CSystem::queryMemoryAvailability(uint64_t& physicalBytes, uint64_t& availab
     physicalBytes = 0;
     availableBytes = 0;
     virtualBytes = 0;
+    if (&physicalBytes == &availableBytes || &physicalBytes == &virtualBytes || &availableBytes == &virtualBytes)
+    {
+        return false;
+    }
 #ifdef _WIN32
     MEMORYSTATUSEX state = {};
     state.dwLength = sizeof(state);
@@ -1538,6 +1577,12 @@ intptr_t CSystem::createDurableFile(const std::string& path)
 
 bool CSystem::syncDurableFile(intptr_t handle)
 {
+#ifndef _WIN32
+    if (handle < 0 || handle > INT_MAX)
+    {
+        return false;
+    }
+#endif
 #ifdef __EMSCRIPTEN__
     return EM_ASM_INT({
         try {
@@ -1580,31 +1625,39 @@ bool CSystem::movePathIfAbsent(const std::string& source, const std::string& des
             var disk = require('fs');
             var oldPath = node.mount.type.realPath(node);
             var newPath = require('path').join(parent.mount.type.realPath(parent), to.slice(to.lastIndexOf('/') + 1));
-            if (disk.lstatSync(oldPath).isSymbolicLink()) {
+            var info = disk.lstatSync(oldPath);
+            if (info.isSymbolicLink()) {
                 disk.symlinkSync(disk.readlinkSync(oldPath), newPath);
-            } else {
+            } else if (info.isFile()) {
                 disk.linkSync(oldPath, newPath);
+            } else {
+                return 0;
             }
             FS.unlink(from);
             return 1;
         } catch (e) { return 0; }
     }, source.c_str(), destination.c_str()) != 0;
 #elif defined(_WIN32)
-    return CSystem::rename(source, destination);
+    const DWORD attributes = ::GetFileAttributesA(source.c_str());
+    return attributes != INVALID_FILE_ATTRIBUTES &&
+        (!(attributes & FILE_ATTRIBUTE_DIRECTORY) || (attributes & FILE_ATTRIBUTE_REPARSE_POINT)) &&
+        ::MoveFileExA(source.c_str(), destination.c_str(), 0) != FALSE;
 #else
-    return link(source.c_str(), destination.c_str()) == 0 && unlink(source.c_str()) == 0;
+    struct stat info = {};
+    return ::lstat(source.c_str(), &info) == 0 && (S_ISREG(info.st_mode) || S_ISLNK(info.st_mode)) &&
+        ::link(source.c_str(), destination.c_str()) == 0 && ::unlink(source.c_str()) == 0;
 #endif
 }
 
 #if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
-bool CSystem::syncParentDirectory(const std::string& path)
+bool CSystem::syncParentDirectory(const std::string& path) try
 {
     if (path.empty() || path.find('\0') != std::string::npos)
     {
         return false;
     }
     const size_t slash = path.rfind('/');
-    const std::string parent = slash == std::string::npos ? "." : path.substr(0, slash ? slash : 1);
+    const std::string parent = slash == std::string::npos ? "." : path.substr(0, slash + 1);
     const int fd = open(parent.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
     if (fd < 0)
     {
@@ -1618,6 +1671,10 @@ bool CSystem::syncParentDirectory(const std::string& path)
     close(fd);
     return result == 0;
 }
+catch (const std::bad_alloc&)
+{
+    return false;
+}
 #endif
 
 uint32_t CSystem::GetTickCount()
@@ -1625,8 +1682,11 @@ uint32_t CSystem::GetTickCount()
 #ifdef _MSC_VER
     return ::GetTickCount();
 #elif defined(__unix__) || defined(__APPLE__)
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
+    struct timespec ts = {};
+    if (::clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+    {
+        return 0;
+    }
     return static_cast<uint32_t>(static_cast<uint64_t>(ts.tv_sec) * 1000 + ts.tv_nsec / 1000000);
 #endif
 }
@@ -1693,7 +1753,8 @@ std::string CSystem::GetCurrentDllPath()
     }
     char path[32768];
     const DWORD size = ::GetModuleFileNameA(module, path, sizeof(path));
-    return size > 0 && size < sizeof(path) ? GetName(std::string(path, size), 4) : "";
+    const std::string modulePath = size > 0 && size < sizeof(path) ? std::string(path, size) : "";
+    return modulePath.substr(0, nativeFileNameOffset(modulePath));
 #else
     Dl_info info = {};
     if (::dladdr(reinterpret_cast<const void*>(&CSystem::GetCurrentDllPath), &info) == 0 || info.dli_fname == nullptr)
@@ -1733,22 +1794,92 @@ std::string CSystem::currentExecutablePathUtf8()
 #endif
 }
 
+#ifdef _WIN32
+size_t CSystem::nativeCharacterSize(const std::string& path, size_t offset)
+{
+    const BYTE byte = static_cast<BYTE>(path[offset]);
+    return byte >= 0x80 && offset + 1 < path.size() && ::IsDBCSLeadByteEx(CP_ACP, byte) ? 2 : 1;
+}
+#endif
+
+size_t CSystem::nativeFileNameOffset(const std::string& path, size_t* trimmedEnd)
+{
+    size_t start = 0, lastStart = 0, end = 0;
+    for (size_t i = 0; i < path.size();)
+    {
+#ifdef _WIN32
+        const size_t next = i + nativeCharacterSize(path, i);
+        const bool separator = path[i] == '/' || path[i] == '\\';
+#else
+        const size_t next = i + 1;
+        const bool separator = path[i] == '/';
+#endif
+        if (separator)
+        {
+            start = next;
+        }
+        else
+        {
+            lastStart = start;
+            end = next;
+        }
+        i = next;
+    }
+    if (trimmedEnd != nullptr)
+    {
+        *trimmedEnd = end;
+        return lastStart;
+    }
+    return start;
+}
+
+std::string CSystem::nativeChildPath(const std::string& directory, const std::string& name)
+{
+    if (directory.empty() || name.empty())
+    {
+        return directory.empty() ? name : directory;
+    }
+    bool separated = directory.back() == '/';
+#ifdef _WIN32
+    separated = separated || (directory.back() == '\\' && nativeFileNameOffset(directory) == directory.size());
+#endif
+    return separated ? directory + name : directory + "/" + name;
+}
+
+void CSystem::lowerNativeName(std::string& name)
+{
+#ifdef _WIN32
+    for (size_t i = 0; i < name.size(); i += nativeCharacterSize(name, i))
+    {
+        if (name[i] >= 'A' && name[i] <= 'Z')
+        {
+            name[i] = static_cast<char>(name[i] - 'A' + 'a');
+        }
+    }
+#else
+    for (char& byte : name)
+    {
+        byte = static_cast<char>(std::tolower(static_cast<unsigned char>(byte)));
+    }
+#endif
+}
+
 std::string CSystem::executablePathPart(int32_t flag)
 {
 #ifdef _WIN32
-    char path[32768];
-    const DWORD size = ::GetModuleFileNameA(nullptr, path, sizeof(path));
-    return size > 0 && size < sizeof(path) ? GetName(std::string(path, size), flag) : "";
+    char buffer[32768];
+    const DWORD size = ::GetModuleFileNameA(nullptr, buffer, sizeof(buffer));
+    const std::string path = size > 0 && size < sizeof(buffer) ? std::string(buffer, size) : "";
 #else
     const std::string path = currentExecutablePathUtf8();
-    const size_t start = path.rfind('/') + 1;
+#endif
+    const size_t start = nativeFileNameOffset(path);
     if (flag == 4)
     {
         return path.substr(0, start);
     }
     const size_t dot = path.rfind('.');
-    return path.substr(start, flag == 3 && dot >= start ? dot - start : std::string::npos);
-#endif
+    return path.substr(start, flag == 3 && dot != std::string::npos && dot >= start ? dot - start : std::string::npos);
 }
 
 std::string CSystem::GetCurrentExePath()
@@ -1816,7 +1947,7 @@ std::string CSystem::canonicalPath(const std::string& path, bool requireExisting
     std::string result;
     if (requireExisting)
     {
-        HANDLE handle = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        HANDLE handle = CreateFileA(path.c_str(), FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
             nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
         if (handle == INVALID_HANDLE_VALUE)
         {
@@ -1844,33 +1975,15 @@ std::string CSystem::canonicalPath(const std::string& path, bool requireExisting
     }
     else
     {
-        const DWORD required = GetFullPathNameA(path.c_str(), 0, nullptr, nullptr);
-        if (required == 0)
-        {
-            return "";
-        }
-        std::vector<char> buffer(static_cast<size_t>(required) + 1, '\0');
-        const DWORD written = GetFullPathNameA(path.c_str(), static_cast<DWORD>(buffer.size()), &buffer[0], nullptr);
-        if (written == 0 || written >= buffer.size())
-        {
-            return "";
-        }
-        result.assign(&buffer[0], written);
+        result = absolutePath(path);
     }
-    for (char& byte : result)
+    std::replace(result.begin(), result.end(), '/', '\\');
+    lowerNativeName(result);
+    if (result.size() > 3 && result.back() == '\\')
     {
-        if (byte == '/')
-        {
-            byte = '\\';
-        }
-        else if (byte >= 'A' && byte <= 'Z')
-        {
-            byte = static_cast<char>(byte - 'A' + 'a');
-        }
-    }
-    while (result.size() > 3 && result.back() == '\\')
-    {
-        result.pop_back();
+        size_t end = 0;
+        nativeFileNameOffset(result, &end);
+        result.resize(end < 3 ? 3 : end);
     }
     return result;
 #elif defined(__linux__) || defined(__APPLE__) || defined(__ANDROID__)
@@ -1935,7 +2048,7 @@ bool CSystem::isPathWithin(const std::string& path, const std::string& directory
 #else
     const char separator = '/';
 #endif
-    if (root.back() != separator)
+    if (root.back() != separator || nativeFileNameOffset(root) != root.size())
     {
         root += separator;
     }
@@ -1977,23 +2090,17 @@ bool CSystem::migrateDirectory(const std::string& source, const std::string& des
     const std::string realSource = canonicalPath(source);
     std::string ancestor = destination;
     std::string tail;
-#ifdef _WIN32
-    const char* separators = "/\\";
-#else
-    const char* separators = "/";
-#endif
     while (!DirOrFileExist(ancestor))
     {
-        const size_t end = ancestor.find_last_not_of(separators);
-        if (end == std::string::npos)
+        size_t end = 0;
+        const size_t start = nativeFileNameOffset(ancestor, &end);
+        if (end == 0)
         {
             errorText = "Cannot resolve migration destination";
             return false;
         }
-        const size_t slash = ancestor.find_last_of(separators, end);
-        const size_t start = slash == std::string::npos ? 0 : slash + 1;
-        const std::string component = ancestor.substr(start, end + 1 - start);
-        if (component == ".." || (slash == std::string::npos && ancestor == "."))
+        const std::string component = ancestor.substr(start, end - start);
+        if (component == ".." || (start == 0 && ancestor == "."))
         {
             errorText = "Cannot resolve migration destination parent";
             return false;
@@ -2002,7 +2109,7 @@ bool CSystem::migrateDirectory(const std::string& source, const std::string& des
         {
             tail = "/" + component + tail;
         }
-        ancestor = slash == std::string::npos ? "." : ancestor.substr(0, slash + 1);
+        ancestor = start == 0 ? "." : ancestor.substr(0, start);
     }
     const std::string realAncestor = canonicalPath(ancestor);
     const std::string realTarget = realAncestor.empty() ? "" : canonicalPath(realAncestor + tail, false);
@@ -2036,13 +2143,8 @@ bool CSystem::createDirectories(const std::string& path)
     {
         return plainDirectory(target);
     }
-#ifdef _WIN32
-    const size_t slash = target.rfind('\\');
-#else
-    const size_t slash = target.rfind('/');
-#endif
-    if (slash != std::string::npos && slash != 0 &&
-        (slash + 1 == target.size() || !createDirectories(target.substr(0, slash + 1))))
+    const size_t start = nativeFileNameOffset(target);
+    if (start > 1 && (start == target.size() || !createDirectories(target.substr(0, start))))
     {
         return false;
     }
@@ -2323,26 +2425,7 @@ bool CSystem::flushBinaryOutputFile(FILE* file)
 
 bool CSystem::installFileIfAbsent(const std::wstring& sourcePath, const std::wstring& destinationPath)
 {
-    if (sourcePath.empty() || destinationPath.empty() || sourcePath.find(L'\0') != std::wstring::npos ||
-        destinationPath.find(L'\0') != std::wstring::npos)
-    {
-        return false;
-    }
-#ifdef _WIN32
-    return MoveFileExW(sourcePath.c_str(), destinationPath.c_str(), MOVEFILE_WRITE_THROUGH) != 0;
-#elif defined(__unix__) || defined(__APPLE__)
-    const std::string source = widePathToUtf8(sourcePath);
-    const std::string destination = widePathToUtf8(destinationPath);
-    if (source.empty() || destination.empty() || ::link(source.c_str(), destination.c_str()) != 0)
-    {
-        return false;
-    }
-    // 目标安装成功后，临时别名删除失败不撤回已提交目标；宿主可清理自己的别名。
-    ::unlink(source.c_str());
-    return true;
-#else
-    return false;
-#endif
+    return publishWideFile(sourcePath, destinationPath, false);
 }
 
 bool CSystem::plainFileUtf8(const std::string& path)
@@ -2494,19 +2577,45 @@ bool CSystem::rename(const std::string& oldPath, const std::string& newPath)
 
 bool CSystem::replaceFile(const std::wstring& sourcePath, const std::wstring& destinationPath)
 {
+    return publishWideFile(sourcePath, destinationPath, true);
+}
+
+bool CSystem::publishWideFile(const std::wstring& sourcePath, const std::wstring& destinationPath, bool replace)
+{
     if (sourcePath.empty() || destinationPath.empty() || sourcePath.find(L'\0') != std::wstring::npos ||
         destinationPath.find(L'\0') != std::wstring::npos)
     {
         return false;
     }
 #ifdef _WIN32
-    return MoveFileExW(sourcePath.c_str(), destinationPath.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
-#elif defined(__unix__) || defined(__APPLE__)
+    const DWORD attributes = ::GetFileAttributesW(sourcePath.c_str());
+    if (attributes == INVALID_FILE_ATTRIBUTES ||
+        ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && (attributes & FILE_ATTRIBUTE_REPARSE_POINT) == 0))
+    {
+        return false;
+    }
+    const DWORD flags = MOVEFILE_WRITE_THROUGH | (replace ? MOVEFILE_REPLACE_EXISTING : 0);
+    return ::MoveFileExW(sourcePath.c_str(), destinationPath.c_str(), flags) != FALSE;
+#else
     const std::string source = widePathToUtf8(sourcePath);
     const std::string destination = widePathToUtf8(destinationPath);
-    return !source.empty() && !destination.empty() && ::rename(source.c_str(), destination.c_str()) == 0;
-#else
-    return false;
+    if (source.empty() || destination.empty())
+    {
+        return false;
+    }
+    if (replace)
+    {
+        struct stat info = {};
+        return ::lstat(source.c_str(), &info) == 0 && !S_ISDIR(info.st_mode) &&
+            ::rename(source.c_str(), destination.c_str()) == 0;
+    }
+    // link 对已存在的目标和目录源均失败，不会改动源。目标安装后允许留下临时别名。
+    if (::link(source.c_str(), destination.c_str()) != 0)
+    {
+        return false;
+    }
+    ::unlink(source.c_str());
+    return true;
 #endif
 }
 
@@ -2621,7 +2730,7 @@ void CSystem::openDesktopPath(const std::string& program, const char* option, co
         {
             const size_t end = paths.find(':', start);
             const std::string dir = paths.substr(start, end - start);
-            executable = joinPath(dir.empty() ? "." : dir, program);
+            executable = nativeChildPath(dir.empty() ? "." : dir, program);
             if (::access(executable.c_str(), X_OK) == 0) { break; }
             if (end == std::string::npos) { return; }
             start = end + 1;
@@ -2743,17 +2852,13 @@ std::string CSystem::commonFile(const std::string& name)
     {
         return "";
     }
-#ifdef _WIN32
-    const std::string directory = joinPath(root, "common");
-#else
-    const std::string directory = root + (root.back() == '/' ? "common" : "/common");
-#endif
+    const std::string directory = nativeChildPath(root, "common");
     double highest = 0;
     std::string result;
     for (const std::string& path : findFilePath(directory, 3))
     {
 #ifdef _WIN32
-        std::string fileName = GetName(path, 1);
+        std::string fileName = path.substr(nativeFileNameOffset(path));
         if (fileName.size() < 4 || ::_stricmp(fileName.c_str() + fileName.size() - 4, ".exe") != 0)
         {
             continue;
@@ -2852,7 +2957,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 #elif defined(__unix__) || defined(__APPLE__)
     char level = '/';
 #endif
-    if (dir.back() != level)
+    if (dir.back() != level || nativeFileNameOffset(dir) != dir.size())
     {
         dir.push_back(level);
     }
@@ -2864,13 +2969,11 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
     struct dirent *pDirent = nullptr;
 #endif
 
-    // 将当前 C 区域设置中的一个无符号字节转为小写，同样用于筛选串和目录项。
-    const auto lowerByte = [](unsigned char byte) -> char { return static_cast<char>(std::tolower(byte)); };
     std::vector<std::string> extensions;
     if (flag == 2)
     {
         std::string filter = fileStr;
-        std::transform(filter.begin(), filter.end(), filter.begin(), lowerByte);
+        lowerNativeName(filter);
         split(extensions, filter, '.');
     }
 
@@ -2961,7 +3064,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
                 // strName 已是系统返回的单个目录项，POSIX 允许反斜杠出现在扩展名中。
                 const size_t dot = strName.rfind('.');
                 std::string suffix = dot == std::string::npos ? std::string() : strName.substr(dot + 1);
-                std::transform(suffix.begin(), suffix.end(), suffix.begin(), lowerByte);
+                lowerNativeName(suffix);
                 if (std::find(extensions.begin(), extensions.end(), suffix) == extensions.end())
                 {
                     continue;
@@ -3063,23 +3166,14 @@ std::string CSystem::canonicalPathUtf8(const std::string& path, bool requireExis
         {
             return "";
         }
+        std::unique_ptr<void, decltype(&::CloseHandle)> handle(file, &::CloseHandle);
         needed = GetFinalPathNameByHandleW(file, nullptr, 0, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
         if (needed == 0 || needed > 32768)
         {
-            CloseHandle(file);
             return "";
         }
-        try
-        {
-            wide.resize(needed + 1);
-        }
-        catch (...)
-        {
-            CloseHandle(file);
-            throw;
-        }
+        wide.resize(needed + 1);
         count = GetFinalPathNameByHandleW(file, wide.data(), static_cast<DWORD>(wide.size()), FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
-        CloseHandle(file);
         if (count == 0 || count >= wide.size())
         {
             return "";
@@ -3275,6 +3369,11 @@ bool CSystem::readFileHandle(intptr_t handle, uint64_t offset, uint8_t* output, 
     if (received)
     {
         *received = 0;
+    }
+    if (received != nullptr && received == error)
+    {
+        // 两个输出共用存储时保留零字节结果，且不移动文件位置或写入读取缓冲区。
+        return false;
     }
     if (error)
     {
@@ -3610,16 +3709,7 @@ bool CSystem::publishFileUtf8(const char* source, const char* destination, bool 
         // 目标已经原子发布，残留临时链接交宿主恢复时清理，不伪装成没有发布。
         ::unlink(source);
     }
-    const char* slash = std::strrchr(destination, '/');
-    const std::string parent = slash == nullptr ? "." : std::string(destination, slash + 1);
-    const int directory = ::open(parent.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
-    if (directory < 0)
-    {
-        return false;
-    }
-    const bool durable = fsync(directory) == 0;
-    ::close(directory);
-    return durable;
+    return syncParentDirectory(destination);
 #endif
 }
 
@@ -3679,12 +3769,23 @@ uint32_t CSystem::startCapturedProcess(const std::string& executable, const std:
     return startOwnedProcess(executable, arguments, output, pid, monitor);
 }
 
+uintptr_t CSystem::processMonitorValue(uint64_t monitor)
+{
+    const uintptr_t value = static_cast<uintptr_t>(monitor);
+    return static_cast<uint64_t>(value) == monitor && value != UINTPTR_MAX ? value : 0;
+}
+
 bool CSystem::queryProcessResources(uint64_t monitor, uint64_t& privateBytes, uint64_t& workingSet,
     uint64_t& cpuTime100ns, uint32_t& handles, uint32_t& threads)
 {
     privateBytes = workingSet = cpuTime100ns = 0;
     handles = threads = 0;
-    HANDLE process = monitor == 0 ? GetCurrentProcess() : reinterpret_cast<HANDLE>(static_cast<uintptr_t>(monitor));
+    HANDLE process = monitor == 0 ? GetCurrentProcess() : reinterpret_cast<HANDLE>(processMonitorValue(monitor));
+    if (process == nullptr || &privateBytes == &workingSet || &privateBytes == &cpuTime100ns ||
+        &workingSet == &cpuTime100ns || &handles == &threads)
+    {
+        return false;
+    }
     PROCESS_MEMORY_COUNTERS_EX memory = {};
     memory.cb = sizeof(memory);
     FILETIME created = {}, exited = {}, kernel = {}, user = {};
@@ -3736,11 +3837,11 @@ uint64_t CSystem::openProcessMonitor(uint32_t pid)
 int32_t CSystem::pollProcessMonitor(uint64_t monitor, int32_t& exitCode)
 {
     exitCode = 0;
-    if (monitor == 0)
+    HANDLE process = reinterpret_cast<HANDLE>(processMonitorValue(monitor));
+    if (process == nullptr)
     {
         return -1;
     }
-    HANDLE process = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(monitor));
     const DWORD state = WaitForSingleObject(process, 0);
     if (state == WAIT_TIMEOUT)
     {
@@ -3757,9 +3858,10 @@ int32_t CSystem::pollProcessMonitor(uint64_t monitor, int32_t& exitCode)
 
 void CSystem::closeProcessMonitor(uint64_t& monitor)
 {
-    if (monitor != 0)
+    HANDLE process = reinterpret_cast<HANDLE>(processMonitorValue(monitor));
+    if (process != nullptr)
     {
-        CloseHandle(reinterpret_cast<HANDLE>(static_cast<uintptr_t>(monitor)));
+        CloseHandle(process);
     }
     monitor = 0;
 }
@@ -3836,41 +3938,63 @@ int32_t CSystem::acquireNamedProcessLease(const std::string& name, const std::st
         const std::string ownerName = prefix + ".owner";
         const std::string stopName = prefix + ".stop";
         const std::string readyName = "Global\\xyls." + name + ".ready." + std::to_string(currentProcessPid());
-        HANDLE owner = CreateMutexA(nullptr, FALSE, ownerName.c_str());
-        if (owner == nullptr)
+        // 新建时即取得所有权。Windows 允许同线程递归等待已有互斥量，不能用等待成功判断租约空闲。
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
+        HANDLE owner = nullptr;
+        for (;;)
         {
-            return -1;
-        }
-        DWORD acquired = WaitForSingleObject(owner, 0);
-        if (acquired == WAIT_TIMEOUT && !replace)
-        {
-            CloseHandle(owner);
-            return 0;
-        }
-        const auto start = std::chrono::steady_clock::now();
-        while (acquired == WAIT_TIMEOUT && replace)
-        {
-            HANDLE stop = OpenEventA(EVENT_MODIFY_STATE, FALSE, stopName.c_str());
-            if (stop != nullptr)
+            ::SetLastError(ERROR_SUCCESS);
+            owner = ::CreateMutexA(nullptr, TRUE, ownerName.c_str());
+            if (owner == nullptr)
             {
-                SetEvent(stop);
-                CloseHandle(stop);
-            }
-            if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() >= timeoutMs)
-            {
-                CloseHandle(owner);
                 return -1;
             }
-            acquired = WaitForSingleObject(owner, 20);
+            if (::GetLastError() != ERROR_ALREADY_EXISTS)
+            {
+                break;
+            }
+            HANDLE stop = ::OpenEventA(replace ? EVENT_MODIFY_STATE : SYNCHRONIZE, FALSE, stopName.c_str());
+            if (stop == nullptr && ::GetLastError() == ERROR_FILE_NOT_FOUND)
+            {
+                // 外部可能仍持有已释放互斥量的引用。无活动停止事件时，允许取得空闲或遗弃的锁。
+                const DWORD acquired = ::WaitForSingleObject(owner, 0);
+                if (acquired == WAIT_OBJECT_0 || acquired == WAIT_ABANDONED)
+                {
+                    break;
+                }
+                if (acquired != WAIT_TIMEOUT)
+                {
+                    ::CloseHandle(owner);
+                    return -1;
+                }
+            }
+            if (stop != nullptr)
+            {
+                if (replace)
+                {
+                    ::SetEvent(stop);
+                }
+                ::CloseHandle(stop);
+            }
+            ::CloseHandle(owner);
+            if (!replace)
+            {
+                return 0;
+            }
+            const auto now = std::chrono::steady_clock::now();
+            if (now >= deadline)
+            {
+                return -1;
+            }
+            std::this_thread::sleep_until((std::min)(deadline, now + std::chrono::milliseconds(20)));
         }
-        if (acquired != WAIT_OBJECT_0 && acquired != WAIT_ABANDONED)
-        {
-            CloseHandle(owner);
-            return -1;
-        }
+        ::SetLastError(ERROR_SUCCESS);
         HANDLE stop = CreateEventA(nullptr, TRUE, FALSE, stopName.c_str());
+        const bool reusedStop = stop != nullptr && ::GetLastError() == ERROR_ALREADY_EXISTS;
+        ::SetLastError(ERROR_SUCCESS);
         HANDLE ready = CreateEventA(nullptr, TRUE, FALSE, readyName.c_str());
-        if (stop == nullptr || ready == nullptr)
+        // 同一角色和 PID 只发布一份就绪记录，第二个隔离槽不能覆盖它。
+        if (stop == nullptr || ready == nullptr || ::GetLastError() == ERROR_ALREADY_EXISTS)
         {
             if (stop != nullptr)
             {
@@ -3884,19 +4008,14 @@ int32_t CSystem::acquireNamedProcessLease(const std::string& name, const std::st
             CloseHandle(owner);
             return -1;
         }
-        ResetEvent(stop);
-        ResetEvent(ready);
-        try
+        if (reusedStop)
         {
-            state.push_back(reinterpret_cast<uint64_t>(owner));
-            state.push_back(reinterpret_cast<uint64_t>(stop));
-            state.push_back(reinterpret_cast<uint64_t>(ready));
+            ResetEvent(stop);
         }
-        catch (...)
-        {
-            state.clear(); CloseHandle(ready); CloseHandle(stop); ReleaseMutex(owner); CloseHandle(owner);
-            return -1;
-        }
+        // reserve(3) 已在打开句柄前完成，以下三个整数直接写入现有容量。
+        state.push_back(reinterpret_cast<uint64_t>(owner));
+        state.push_back(reinterpret_cast<uint64_t>(stop));
+        state.push_back(reinterpret_cast<uint64_t>(ready));
         return 1;
 #elif defined(__linux__) || defined(__APPLE__)
         const std::string file = "/tmp/xyls." + slot + ".lease";
@@ -3951,8 +4070,9 @@ int32_t CSystem::acquireNamedProcessLease(const std::string& name, const std::st
             close(descriptor);
             return -1;
         }
-        try { state.push_back(descriptor); state.push_back(ready); state.push_back(0); }
-        catch (...) { state.clear(); close(ready); close(descriptor); return -1; }
+        state.push_back(descriptor);
+        state.push_back(ready);
+        state.push_back(0);
         return 1;
 #else
         (void)replace; (void)slot;
@@ -3961,7 +4081,7 @@ int32_t CSystem::acquireNamedProcessLease(const std::string& name, const std::st
     }
     catch (...)
     {
-        // 此处只接到取得资源之前的准备异常；句柄后的提交仍有各平台就地回滚。
+        // 输出容量和对象名称均在取得句柄前准备。
         state.clear();
         return -1;
     }
@@ -4545,7 +4665,7 @@ bool CSystem::migrateTree(const std::string& source, const std::string& destinat
     std::vector<std::string> names;
 #ifdef _WIN32
     WIN32_FIND_DATAA info;
-    HANDLE search = FindFirstFileA(CSystem::joinPath(source, "*").c_str(), &info);
+    HANDLE search = FindFirstFileA(nativeChildPath(source, "*").c_str(), &info);
     if (search == INVALID_HANDLE_VALUE)
     {
         errorText = "Cannot enumerate migration source";
@@ -4602,12 +4722,7 @@ bool CSystem::migrateTree(const std::string& source, const std::string& destinat
 #endif
     for (size_t i = 0; i < names.size(); ++i)
     {
-#ifdef _WIN32
-        const std::string from = joinPath(source, names[i]), to = joinPath(destination, names[i]);
-#else
-        // POSIX 的反斜杠可能是目录名称的一部分，子路径必须用斜杠连接。
-        const std::string from = source + "/" + names[i], to = destination + "/" + names[i];
-#endif
+        const std::string from = nativeChildPath(source, names[i]), to = nativeChildPath(destination, names[i]);
         if (!(plainDirectory(from) ? migrateTree(from, to, errorText) : migrateFile(from, to, errorText)))
         {
             return false;
@@ -5129,6 +5244,13 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 //     const auto begin = CSystem::GetHighTickCount();
 //     const std::string leaf = CSystem::ensureFileExtension("session", ".txt");
 //     const std::string example = CSystem::joinPath("logs", leaf);
+//     // 路径可在文件创建前固定下来。Wasm 返回虚拟文件系统中的绝对路径。
+//     const std::string absolute = CSystem::absolutePath(example);
+//     if (absolute.empty())
+//     {
+//         return 1;
+//     }
+//     std::printf("log path=%s\n", absolute.c_str());
 //     std::printf("%s %s %s\n", CSystem::timetToStr(std::time(nullptr), false).c_str(),
 //         CSystem::GetName(example, 1).c_str(), CSystem::GetName(example, 2).c_str());
 //     int** counts = CSystem::CreateDyadicArray<int>(2, 3);
@@ -5149,15 +5271,38 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 //     {
 //         return 3;
 //     }
+//     const std::string pending = CSystem::absolutePath(CSystem::joinPath(directory, "pending.bin"));
+//     const std::string committed = CSystem::joinPath(directory, "committed.bin");
+//     intptr_t durable = CSystem::createDurableFile(pending);
+//     valid = durable != -1;
+//     if (valid)
+//     {
+//         const uint8_t record[] = {'r', 'e', 'a', 'd', 'y'};
+//         const bool saved = CSystem::writeFileHandle(durable, 0, record, sizeof(record)) &&
+//             CSystem::syncDurableFile(durable);
+//         const bool closed = CSystem::closeFileHandle(&durable);
+//         valid = saved && closed && CSystem::movePathIfAbsent(pending, committed);
+// #ifndef _WIN32
+//         valid = valid && CSystem::syncParentDirectory(committed);
+// #endif
+//         CSystem::deleteFile(committed.c_str());
+//         CSystem::deleteFile(pending.c_str());
+//     }
 //     const std::string first = CSystem::joinPath(directory, "draft.txt");
 //     const std::string target = CSystem::joinPath(directory, leaf);
 //     const uint8_t text[] = {'l', 'o', 'g'};
 //     intptr_t writer = CSystem::openFileHandle(first.c_str(), 2);
+//     if (writer != -1)
+//     {
+//         const std::string opened = CSystem::canonicalPath(first);
+//         std::printf("opened file=%s\n", opened.c_str());
+//         valid = !opened.empty() && valid;
+//     }
 //     intptr_t duplicate = CSystem::duplicateFileHandle(writer);
 //     uint64_t size = 0;
 //     uint8_t readback[3] = {};
 //     uint32_t received = 0;
-//     valid = writer != -1 && duplicate != -1 && CSystem::writeFileHandle(writer, 0, text, 3) &&
+//     valid = valid && writer != -1 && duplicate != -1 && CSystem::writeFileHandle(writer, 0, text, 3) &&
 //         CSystem::flushFileHandle(writer) && CSystem::fileHandleSize(duplicate, &size) && size == 3 &&
 //         CSystem::readFileHandle(duplicate, 0, readback, 3, &received) && received == 3 &&
 //         std::memcmp(readback, text, sizeof(text)) == 0 && CSystem::resizeFileHandle(writer, 3);
@@ -5202,6 +5347,11 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 //     }
 //     const std::string second = CSystem::joinPath(directory, "copy.txt");
 //     CSystem::saveFile("demo", second);
+//     CSystem::OutputVector(std::vector<std::string>(1, " ready"), second);
+//     std::map<std::string, std::string> properties;
+//     properties["role"] = "worker";
+//     CSystem::OutputMap(properties, second);
+//     valid = CSystem::readFile(second) == "demo ready\n[role] = worker\n" && valid;
 //     const std::string renamed = CSystem::joinPath(directory, "renamed.txt");
 //     if (CSystem::rename(second, renamed))
 //     {
@@ -5229,6 +5379,12 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 //         CSystem::GetCurrentExePath().c_str(), CSystem::GetCurrentExeFullName().c_str(), CSystem::currentExecutablePathUtf8().c_str());
 //     uint64_t identity = 0;
 //     CSystem::processIdentity(pid, identity);
+//     uint64_t physical = 0, available = 0, virtualSpace = 0;
+//     if (CSystem::queryMemoryAvailability(physical, available, virtualSpace))
+//     {
+//         std::printf("available bytes=%llu monotonic ms=%llu\n", static_cast<unsigned long long>(available),
+//             static_cast<unsigned long long>(CSystem::monotonicMilliseconds()));
+//     }
 //     CSystem::Sleep(1);
 //     CSystem::sleepPrecise(1);
 // #if CSYSTEM_HAS_DESKTOP_API
@@ -5257,12 +5413,17 @@ CSystemThreadPriorityResult CSystem::setThreadPriority(std::thread& thread, int3
 //     if (monitor != 0)
 //     {
 //         int32_t exitCode = 0;
-//         CSystem::queryProcessResources(monitor, privateBytes, resident, cpu, handles, threads);
-//         CSystem::pollProcessMonitor(monitor, exitCode);
+//         if (CSystem::queryProcessResources(monitor, privateBytes, resident, cpu, handles, threads))
+//         {
+//             std::printf("working set=%llu bytes threads=%u\n", static_cast<unsigned long long>(resident), threads);
+//         }
+//         valid = CSystem::pollProcessMonitor(monitor, exitCode) == 0 && valid;
 //         CSystem::closeProcessMonitor(monitor);
 //     }
 //     RECT screen = CSystem::rectValid(CSystem::GetWindowResolution());
 //     const RECT taskbar = CSystem::GetTaskbarRect();
+//     const std::string componentDir = CSystem::GetRegOcxPath("00021400-0000-0000-C000-000000000046");
+//     std::printf("Shell Link component directory=%s\n", componentDir.c_str());
 //     const POINT corner = CSystem::taskbarRightBottomPoint();
 //     const POINT center = CSystem::screenCenterPoint();
 //     std::printf("screen=%ldx%ld center=%ld,%ld taskbar=%ld,%ld corner=%ld,%ld visible=%d\n",
