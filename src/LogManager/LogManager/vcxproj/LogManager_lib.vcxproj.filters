@@ -19,9 +19,6 @@
     <ClInclude Include="..\src\LogManagerHelper.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\LogManagerOldFile.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -42,9 +39,6 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\LogManagerHelper.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\LogManagerOldFile.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

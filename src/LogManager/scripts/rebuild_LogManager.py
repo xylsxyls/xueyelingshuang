@@ -736,8 +736,16 @@ if __name__ != '__main__' or wasm_arguments:
                     dependencies={dep: artifact_digest(validate(dep, bit, mode)) for dep in dependencies(library)},
                     dependencyLinkages={dep: BUILD_LINKAGES[dep] for dep in dependencies(library)})
         target = SDK_ROOT / 'include' / library
+        source = ROOT / 'src' / library / library / 'src'
+        public = SDK_ROOT / 'include' / 'wasm' / library
+        headers = {name: (source / name).read_bytes() for name in
+                   ('LogManagerAPI.h', 'LogManager.h', 'LogManagerConfig.h')}
+        headers['LogManagerMacro.h'] = (source / 'LogManagerMacroLib.h').read_bytes()
+        data['projectHeaderSha256'] = {name: hashlib.sha256(content).hexdigest() for name, content in headers.items()}
+        data['vendorHeaderSha256'] = {}
         updates = {SDK_ROOT / 'lib' / archive.name: payload,
                    target / (library + 'WasmSDK.json'): json.dumps(data, indent=2, sort_keys=True).encode('utf-8')}
+        updates.update({public / name: content for name, content in headers.items()})
         updates[target / (library + 'WasmLICENSE.txt')] = None
         commit_sdk(library, updates, bit, mode)
         wasm_message('[wasm] PASS ' + library + ' ' + str(bit) + ' ' + mode + ': C++ static archive ' + str(len(payload)) + ' bytes')
@@ -811,6 +819,8 @@ if __name__ != '__main__' or wasm_arguments:
         # before any legacy native copies still present at the shared include root.
         includes.append(SDK_ROOT / 'include')
         definitions = ['STATIC_LIB'] + (sdk_setting(library, 'WASM_BUILD_DEFINITIONS') or [])
+        if mode == 'debug':
+            definitions.append('_DEBUG')
         if runtime_dependencies(library):
             definitions += sdk_setting(library, 'WASM_BUILD_RUNTIME_DEFINITIONS') or []
         config = sdk_setting(library, 'WASM_BUILD_CONFIG_HEADER') or []
@@ -859,6 +869,8 @@ if __name__ != '__main__' or wasm_arguments:
             source = SDK_ROOT / 'include' / name
             for file in source.rglob('*'):
                 if file.is_file() and (file.suffix == '.js' or file.name.endswith('WasmSDK.json')): copy(file)
+            for header in (SDK_ROOT / 'include' / 'wasm' / name).rglob('*'):
+                if header.is_file(): copy(header)
             for suffix in ('.a', 'd.a', '.wasm', 'd.wasm'): copy(SDK_ROOT / 'lib' / (name + suffix))
         for relative in vendors:
             source = ROOT / relative
@@ -889,6 +901,9 @@ if __name__ != '__main__' or wasm_arguments:
             data = validate(name, bit, mode)
             files.add(SDK_ROOT / 'lib' / data.get('archive', data.get('wasm')))
             public = SDK_ROOT / 'include' / name
+            header_root = SDK_ROOT / 'include' / 'wasm' / name
+            for header in header_root.rglob('*'):
+                if header.is_file(): files.add(header)
             if data.get('entryAlias'):
                 alias = data['entryAlias']
                 files.add(SDK_ROOT / 'include' / alias / (alias + 'API.js'))

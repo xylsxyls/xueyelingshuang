@@ -23,16 +23,6 @@ fi
 librariesrely+=($'project\tCSystem\t'"$CSystem_dlllib")
 
 #--------------------------------------------------------------------
-ReadWriteMutex_bit=$1
-ReadWriteMutex_dlllib=$2
-ReadWriteMutex_debugRelease=$3
-ReadWriteMutex_allSame=$4
-if [[ $4 != only ]]; then
-    "$CLOUD_REBUILD" ReadWriteMutex "$ReadWriteMutex_bit" "$ReadWriteMutex_dlllib" "$ReadWriteMutex_debugRelease" "$ReadWriteMutex_allSame"
-fi
-librariesrely+=($'project\tReadWriteMutex\t'"$ReadWriteMutex_dlllib")
-
-#--------------------------------------------------------------------
 IntDateTime_bit=$1
 IntDateTime_dlllib=$2
 IntDateTime_debugRelease=$3
