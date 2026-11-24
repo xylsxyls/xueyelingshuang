@@ -102,7 +102,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>NetInterfaced.lib;NetChanneld.lib;Compressd.lib;ProtoMessageManagerd.lib;Variantd.lib;CEncodeDecoded.lib;LockFreeQueued.lib;LockFreeHashMapd.lib;CSystemd.lib;zstdd.lib;libprotobuf-lited.lib;mbedtlsd.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>NetInterfaced.lib;NetChanneld.lib;Compressd.lib;ProtoMessageManagerd.lib;Variantd.lib;CEncodeDecoded.lib;LockFreeQueued.lib;LockFreeHashMapd.lib;zstdd.lib;libprotobuf-lited.lib;mbedtlsd.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(TestSdkRoot)\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -119,7 +119,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>NetInterfaced.lib;NetChanneld.lib;Compressd.lib;ProtoMessageManagerd.lib;Variantd.lib;CEncodeDecoded.lib;LockFreeQueued.lib;LockFreeHashMapd.lib;CSystemd.lib;zstdd.lib;libprotobuf-lited.lib;mbedtlsd.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>NetInterfaced.lib;NetChanneld.lib;Compressd.lib;ProtoMessageManagerd.lib;Variantd.lib;CEncodeDecoded.lib;LockFreeQueued.lib;LockFreeHashMapd.lib;zstdd.lib;libprotobuf-lited.lib;mbedtlsd.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(TestSdkRoot)\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -138,7 +138,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>NetInterface.lib;NetChannel.lib;Compress.lib;ProtoMessageManager.lib;Variant.lib;CEncodeDecode.lib;LockFreeQueue.lib;LockFreeHashMap.lib;CSystem.lib;zstd.lib;libprotobuf-lite.lib;mbedtls.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>NetInterface.lib;NetChannel.lib;Compress.lib;ProtoMessageManager.lib;Variant.lib;CEncodeDecode.lib;LockFreeQueue.lib;LockFreeHashMap.lib;zstd.lib;libprotobuf-lite.lib;mbedtls.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
@@ -159,7 +159,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>NetInterface.lib;NetChannel.lib;Compress.lib;ProtoMessageManager.lib;Variant.lib;CEncodeDecode.lib;LockFreeQueue.lib;LockFreeHashMap.lib;CSystem.lib;zstd.lib;libprotobuf-lite.lib;mbedtls.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>NetInterface.lib;NetChannel.lib;Compress.lib;ProtoMessageManager.lib;Variant.lib;CEncodeDecode.lib;LockFreeQueue.lib;LockFreeHashMap.lib;zstd.lib;libprotobuf-lite.lib;mbedtls.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>

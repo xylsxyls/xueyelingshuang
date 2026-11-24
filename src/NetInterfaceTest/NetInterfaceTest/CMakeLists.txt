@@ -19,5 +19,5 @@ else()
         list(APPEND system_libraries "-framework Security")
     endif()
 endif()
-build_sdk_test(NetInterfaceTest PROJECTS NetInterface NetChannel Compress ProtoMessageManager Variant CEncodeDecode LockFreeQueue LockFreeHashMap CSystem
+build_sdk_test(NetInterfaceTest PROJECTS NetInterface NetChannel Compress ProtoMessageManager Variant CEncodeDecode LockFreeQueue LockFreeHashMap
     ARCHIVES ${vendors} SYSTEM_LIBRARIES ${system_libraries})
