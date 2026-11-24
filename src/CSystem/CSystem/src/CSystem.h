@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "CSystemMacro.h"
-// Wasm只提供时间、路径字节串、参数解析及纯模板工具；其余原生系统能力须条件调用
+// Wasm 仅提供标注支持该端的接口；持久化文件操作还要求宿主提供真实存储
 #if defined(__EMSCRIPTEN__)
 #define CSYSTEM_HAS_NATIVE_API 0
 #else
@@ -55,6 +55,44 @@ enum CSystemThreadPriorityResult
 class CSystemAPI CSystem
 {
 public:
+    /** 将路径固定到调用时的工作目录，保留文件名大小写，目标可以尚未创建
+    @param [in] path 非空系统路径，Wasm 使用虚拟文件系统路径
+    @return 可直接打开的绝对路径；路径含 NUL 或无法取得工作目录时返回空串
+    @note 支持 Windows、Linux、Linux ARM、macOS、Android、iOS、Wasm；POSIX 保留 .. 的文件系统语义
+    */
+    static std::string absolutePath(const std::string& path);
+
+    /** 排他新建可供观察的持久化文件，已有文件保持原内容
+    @param [in] path 非空路径，Windows 使用系统窄字符编码，Wasm 使用 NODEFS 虚拟路径
+    @return Windows HANDLE 或 POSIX/Wasm 描述符，失败返回 -1。调用方按平台关闭
+    @note 支持 Windows、Linux、macOS、Android、iOS、Wasm。Wasm 需要 Node 的真实磁盘挂载和 fsync
+    */
+    static intptr_t createDurableFile(const std::string& path);
+
+    /** 同步提交持久化文件上此前的写入
+    @param [in] handle createDurableFile 返回的有效句柄，由调用者保证其存活
+    @return 系统确认刷新时返回 true
+    @note 支持 Windows、Linux、macOS、Android、iOS、Wasm；纯内存挂载无法确认
+    */
+    static bool syncDurableFile(intptr_t handle);
+
+    /** 在同一文件系统内排他移动普通文件或符号链接
+    @param [in] source 已关闭且由调用方拥有的源项
+    @param [in] destination 新名称，已存在时保留其内容
+    @return 目标已安装且源项已移除时返回 true；安装后移除失败可能留下两个名称
+    @note 支持 Windows、Linux、macOS、Android、iOS 和 NODEFS Wasm。POSIX 普通文件需要硬链接支持
+    */
+    static bool movePathIfAbsent(const std::string& source, const std::string& destination);
+
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
+    /** 同步新建目录项的父目录
+    @param [in] path 新建项路径，不带末尾分隔符
+    @return 父目录刷新成功时返回 true
+    @note 支持 Linux、macOS、Android、iOS
+    */
+    static bool syncParentDirectory(const std::string& path);
+#endif
+
     /** 设置 joinable 线程的调度等级，调用方负责与 join、detach 及析构互斥。
     @param [in] thread 已启动的线程
     @param [in] relative 相对普通等级 -2 至 2，Windows 支持全部等级；Linux/macOS/Android/iOS 支持普通和两种实时等级，实时调度可能需要权限；Wasm 返回 Unsupported

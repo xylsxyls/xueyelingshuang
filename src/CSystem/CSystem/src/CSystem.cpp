@@ -5,6 +5,12 @@
 #endif
 #include "CSystem.h"
 #include <cstring>
+#include <cstdlib>
+#include <memory>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <unistd.h>
+#endif
 #include <system_error>
 #if CSYSTEM_HAS_NATIVE_API
 #include <mutex>
@@ -56,13 +62,11 @@
 #include <fstream>
 #include <locale>
 #include <sstream>
-#include <memory>
 #include <utility>
 #include <queue>
 #include <iostream>
 #include <iterator>
 #include <cctype>
-#include <cstdlib>
 #include <functional>
 #ifdef _WIN32
 #include <bcrypt.h>
@@ -1440,6 +1444,181 @@ uint64_t CSystem::monotonicMilliseconds()
 #endif
 }
 #endif // CSYSTEM_NATIVE_API
+
+std::string CSystem::absolutePath(const std::string& path)
+{
+    if (path.empty() || path.find('\0') != std::string::npos)
+    {
+        return "";
+    }
+#ifdef _WIN32
+    const DWORD size = GetFullPathNameA(path.c_str(), 0, nullptr, nullptr);
+    if (size == 0)
+    {
+        return "";
+    }
+    std::vector<char> buffer(size);
+    const DWORD length = GetFullPathNameA(path.c_str(), size, buffer.data(), nullptr);
+    return length && length < size ? std::string(buffer.data(), length) : "";
+#else
+    if (path[0] == '/')
+    {
+        return path;
+    }
+    std::unique_ptr<char, decltype(&std::free)> cwd(getcwd(nullptr, 0), &std::free);
+    if (!cwd)
+    {
+        return "";
+    }
+    size_t begin = 0;
+    while (path.compare(begin, 2, "./") == 0)
+    {
+        begin += 2;
+        while (begin < path.size() && path[begin] == '/')
+        {
+            ++begin;
+        }
+    }
+    std::string absolute(cwd.get());
+    if (begin != path.size() && path.compare(begin, std::string::npos, ".") != 0)
+    {
+        if (absolute.back() != '/')
+        {
+            absolute.push_back('/');
+        }
+        absolute.append(path, begin, std::string::npos);
+    }
+    return absolute;
+#endif
+}
+
+intptr_t CSystem::createDurableFile(const std::string& path)
+{
+    if (path.empty() || path.find('\0') != std::string::npos)
+    {
+        return -1;
+    }
+#ifdef __EMSCRIPTEN__
+    return EM_ASM_INT({
+        try {
+            var path = UTF8ToString(Number($0));
+            var parent = FS.lookupPath(path, {parent:true, follow:true}).node;
+            if (!parent.mount.type.realPath || typeof require !== 'function') return -1;
+            var disk = require('fs');
+            var host = require('path').join(parent.mount.type.realPath(parent), path.slice(path.lastIndexOf('/') + 1));
+            // NODEFS 的 mknod 可能先按覆盖模式创建文件。直接在宿主排他占用名称。
+            var fd = disk.openSync(host, 'wx+', 438);
+            try {
+                disk.fsyncSync(fd);
+                if (process.platform !== 'win32') {
+                    var directory = disk.openSync(parent.mount.type.realPath(parent), 'r');
+                    try { disk.fsyncSync(directory); } finally { disk.closeSync(directory); }
+                }
+                return FS.open(path, 'r+').fd;
+            } catch (e) {
+                disk.unlinkSync(host);
+                return -1;
+            } finally { disk.closeSync(fd); }
+        } catch (e) { return -1; }
+    }, path.c_str());
+#elif defined(_WIN32)
+    return reinterpret_cast<intptr_t>(CreateFileA(path.c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+        nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr));
+#else
+    int fd = open(path.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC, 0666);
+    if (fd >= 0 && !syncParentDirectory(path))
+    {
+        close(fd);
+        unlink(path.c_str());
+        return -1;
+    }
+    return fd;
+#endif
+}
+
+bool CSystem::syncDurableFile(intptr_t handle)
+{
+#ifdef __EMSCRIPTEN__
+    return EM_ASM_INT({
+        try {
+            var stream = FS.getStream($0);
+            if (!stream || !Number.isInteger(stream.nfd) || typeof require !== 'function') return 0;
+            require('fs').fsyncSync(stream.nfd);
+            return 1;
+        } catch (e) { return 0; }
+    }, static_cast<int>(handle)) != 0;
+#elif defined(_WIN32)
+    return flushFileHandle(handle);
+#else
+    int result;
+    do
+    {
+#ifdef F_FULLFSYNC
+        result = fcntl(static_cast<int>(handle), F_FULLFSYNC);
+#else
+        result = fsync(static_cast<int>(handle));
+#endif
+    } while (result < 0 && errno == EINTR);
+    return result == 0;
+#endif
+}
+
+bool CSystem::movePathIfAbsent(const std::string& source, const std::string& destination)
+{
+    if (source.empty() || destination.empty() || source.find('\0') != std::string::npos || destination.find('\0') != std::string::npos)
+    {
+        return false;
+    }
+#ifdef __EMSCRIPTEN__
+    return EM_ASM_INT({
+        try {
+            var from = UTF8ToString(Number($0));
+            var to = UTF8ToString(Number($1));
+            var node = FS.lookupPath(from, {follow:false}).node;
+            var parent = FS.lookupPath(to, {parent:true, follow:true}).node;
+            if (node.mount !== parent.mount || !parent.mount.type.realPath || typeof require !== 'function') return 0;
+            var disk = require('fs');
+            var oldPath = node.mount.type.realPath(node);
+            var newPath = require('path').join(parent.mount.type.realPath(parent), to.slice(to.lastIndexOf('/') + 1));
+            if (disk.lstatSync(oldPath).isSymbolicLink()) {
+                disk.symlinkSync(disk.readlinkSync(oldPath), newPath);
+            } else {
+                disk.linkSync(oldPath, newPath);
+            }
+            FS.unlink(from);
+            return 1;
+        } catch (e) { return 0; }
+    }, source.c_str(), destination.c_str()) != 0;
+#elif defined(_WIN32)
+    return CSystem::rename(source, destination);
+#else
+    return link(source.c_str(), destination.c_str()) == 0 && unlink(source.c_str()) == 0;
+#endif
+}
+
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
+bool CSystem::syncParentDirectory(const std::string& path)
+{
+    if (path.empty() || path.find('\0') != std::string::npos)
+    {
+        return false;
+    }
+    const size_t slash = path.rfind('/');
+    const std::string parent = slash == std::string::npos ? "." : path.substr(0, slash ? slash : 1);
+    const int fd = open(parent.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (fd < 0)
+    {
+        return false;
+    }
+    int result;
+    do
+    {
+        result = fsync(fd);
+    } while (result < 0 && errno == EINTR);
+    close(fd);
+    return result == 0;
+}
+#endif
 
 uint32_t CSystem::GetTickCount()
 {
