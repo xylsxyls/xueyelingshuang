@@ -1,9 +1,21 @@
 ﻿#include "CSystemTest.h"
+#include <type_traits>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
 #include <functional>
+#include <fstream>
+#include <iterator>
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <unistd.h>
+#include <sys/stat.h>
+#endif
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #include <iostream>
 #include <memory>
 #if CSYSTEM_HAS_NATIVE_API
@@ -11,9 +23,8 @@
 #include <atomic>
 #include <thread>
 #ifndef _WIN32
-#include <sys/stat.h>
 #include <sys/time.h>
-#include <unistd.h>
+#include <fcntl.h>
 #endif
 #endif
 
@@ -96,6 +107,295 @@ static bool CheckCommonProgram(const std::string& root)
 }
 #endif
 
+/** 在独占目录创建并读回二进制文件，检查刷新和目标冲突。
+@param [in] root 本轮独占的可写目录，Windows 使用系统窄字符编码
+@return 文件内容、状态及清理均符合预期时返回 true
+*/
+static bool CheckDurableContents(const std::string& root)
+{
+    const std::string from = root + "/source";
+    const std::string to = root + "/target";
+    const std::string data("a\0b", 3);
+    // 独立二进制流观察路径上的实际内容。
+    const auto matches = [](const std::string& path, const std::string& expected) -> bool {
+        std::ifstream input(path.c_str(), std::ios::binary);
+        return input && std::string(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()) == expected;
+    };
+    const intptr_t file = CSystem::createDurableFile(from);
+    if (file == -1)
+    {
+        return false;
+    }
+#ifdef _WIN32
+    DWORD count = 0;
+    const bool written = ::WriteFile(reinterpret_cast<HANDLE>(file), data.data(), 3, &count, nullptr) && count == 3;
+#else
+    const bool written = ::write(static_cast<int>(file), data.data(), 3) == 3;
+#endif
+    bool valid = written && CSystem::syncDurableFile(file) && matches(from, data);
+#ifdef __EMSCRIPTEN__
+    // 只让本用例已打开的宿主描述符刷新失败，随后恢复并检查确实触达磁盘接口。
+    EM_ASM({
+        var fs = require('fs');
+        var original = fs.fsyncSync;
+        var fd = FS.getStream($0).nfd;
+        var observed = false;
+        fs.fsyncSync = function(current) {
+            if (current === fd) {
+                observed = true;
+                throw new Error('CSystemTest fsync failure');
+            }
+            return original.call(fs, current);
+        };
+        Module.restoreDurableSync = function() {
+            fs.fsyncSync = original;
+            delete Module.restoreDurableSync;
+            return observed;
+        };
+    }, static_cast<int>(file));
+    const bool refused = !CSystem::syncDurableFile(file);
+    const bool observed = EM_ASM_INT({ return Module.restoreDurableSync() ? 1 : 0; }) != 0;
+    valid = refused && observed && CSystem::syncDurableFile(file) && valid;
+#endif
+#if !defined(_WIN32) && INTPTR_MAX > INT32_MAX
+    valid = !CSystem::syncDurableFile(file + INT64_C(0x100000000)) && valid;
+#endif
+#ifdef _WIN32
+    valid = (::CloseHandle(reinterpret_cast<HANDLE>(file)) != FALSE) && valid;
+#else
+    valid = (::close(static_cast<int>(file)) == 0) && valid;
+#endif
+    const std::string malformed = root + "/invalid" + std::string("\0suffix", 7);
+    const intptr_t duplicate = CSystem::createDurableFile(from);
+    if (duplicate != -1)
+    {
+#ifdef _WIN32
+        ::CloseHandle(reinterpret_cast<HANDLE>(duplicate));
+#else
+        ::close(static_cast<int>(duplicate));
+#endif
+        valid = false;
+    }
+    const intptr_t invalidFile = CSystem::createDurableFile(malformed);
+    if (invalidFile != -1)
+    {
+#ifdef _WIN32
+        ::CloseHandle(reinterpret_cast<HANDLE>(invalidFile));
+#else
+        ::close(static_cast<int>(invalidFile));
+#endif
+        std::remove(malformed.c_str());
+        valid = false;
+    }
+    {
+        std::ofstream target(to.c_str(), std::ios::binary);
+        target << "old";
+        target.close();
+        valid = target.good() && valid;
+    }
+    valid = !CSystem::movePathIfAbsent(from, to) && matches(from, data) && matches(to, "old") && valid;
+    valid = std::remove(to.c_str()) == 0 && valid;
+    valid = !CSystem::movePathIfAbsent(from + std::string("\0suffix", 7), to) && matches(from, data) && valid;
+    valid = CSystem::movePathIfAbsent(from, to) && !std::ifstream(from.c_str()).is_open() && matches(to, data) && valid;
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
+    valid = CSystem::syncParentDirectory(to) && !CSystem::syncParentDirectory(root + "/missing/file") && valid;
+#endif
+    std::remove(from.c_str());
+    valid = std::remove(to.c_str()) == 0 && valid;
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
+    const std::string linkPath = root + "/link";
+    char linkText[16] = {};
+    valid = ::symlink("missing", linkPath.c_str()) == 0 && CSystem::movePathIfAbsent(linkPath, to) &&
+        ::readlink(to.c_str(), linkText, sizeof(linkText)) == 7 && std::memcmp(linkText, "missing", 7) == 0 && valid;
+    ::unlink(linkPath.c_str());
+    valid = (::unlink(to.c_str()) == 0) && valid;
+#if CSYSTEM_HAS_DESKTOP_API
+    const std::string fifo = root + "/fifo";
+    valid = ::mkfifo(fifo.c_str(), 0600) == 0 && !CSystem::movePathIfAbsent(fifo, to) && valid;
+    ::unlink(to.c_str());
+    valid = (::unlink(fifo.c_str()) == 0) && valid;
+#endif
+#endif
+    const std::string directory = root + "/directory";
+#ifdef _WIN32
+    const bool created = ::_mkdir(directory.c_str()) == 0;
+#else
+    const bool created = ::mkdir(directory.c_str(), 0700) == 0;
+#endif
+    valid = created && !CSystem::movePathIfAbsent(directory, to) && valid;
+#ifdef _WIN32
+    ::_rmdir(to.c_str());
+    valid = (::_rmdir(directory.c_str()) == 0) && valid;
+#else
+    ::rmdir(to.c_str());
+    valid = (::rmdir(directory.c_str()) == 0) && valid;
+#endif
+    return valid;
+}
+
+int RunDurableFileTests()
+{
+#ifdef _WIN32
+    std::unique_ptr<char, decltype(&std::free)> cwd(::_getcwd(nullptr, 0), &std::free);
+    const char separator = '\\';
+#else
+    std::unique_ptr<char, decltype(&std::free)> cwd(::getcwd(nullptr, 0), &std::free);
+    const char separator = '/';
+#endif
+    if (!cwd || CSystem::absolutePath(".") != cwd.get())
+    {
+        return 1;
+    }
+    std::string absolute(cwd.get());
+#ifdef _WIN32
+    // 从本机字符边界检查工作目录末尾，避免把双字节字符的尾字节识别为反斜杠。
+    const char* last = ::CharPrevA(absolute.c_str(), absolute.c_str() + absolute.size());
+    const bool separated = *last == separator;
+#else
+    const bool separated = absolute.back() == separator;
+#endif
+    if (!separated)
+    {
+        absolute += separator;
+    }
+    const std::string invalid("bad\0name", 8);
+    if (CSystem::absolutePath("./absent") != absolute + "absent" || !CSystem::absolutePath(invalid).empty() ||
+        !CSystem::absolutePath("").empty() ||
+        CSystem::createDurableFile("") != -1 || CSystem::syncDurableFile(-1))
+    {
+        return 1;
+    }
+#ifdef _WIN32
+    const char* scratch = std::getenv("CSYSTEM_TEST_DIR");
+    const std::string id = CSystem::uuid(0);
+    const std::string root = std::string(scratch ? scratch : ".") + "/durable-" + id;
+    if (id.empty() || ::_mkdir(root.c_str()) != 0)
+    {
+        return 1;
+    }
+    const bool valid = CheckDurableContents(root);
+    return ::_rmdir(root.c_str()) == 0 && valid ? 0 : 1;
+#else
+#ifdef __EMSCRIPTEN__
+    char mount[] = "/tmp/csystem-mount-XXXXXX";
+    if (!::mkdtemp(mount))
+    {
+        return 1;
+    }
+    const std::string memoryFile = std::string(mount) + "/memory";
+    bool valid = CSystem::createDurableFile(memoryFile) == -1 && ::access(memoryFile.c_str(), F_OK) != 0;
+    if (!EM_ASM_INT({ return typeof process === 'object' && !!process.versions && !!process.versions.node; }))
+    {
+        return ::rmdir(mount) == 0 && valid ? 0 : 1;
+    }
+    const bool mounted = EM_ASM_INT({
+        try {
+            FS.mount(NODEFS, {root: require('os').tmpdir()}, UTF8ToString(Number($0)));
+            return 1;
+        } catch (e) { return 0; }
+    }, mount) != 0;
+    if (!mounted)
+    {
+        ::rmdir(mount);
+        return 1;
+    }
+    const std::string parent(mount);
+#else
+    const char* scratch = std::getenv("CSYSTEM_TEST_DIR");
+    if (!scratch)
+    {
+        scratch = std::getenv("TMPDIR");
+    }
+    const std::string parent(scratch ? scratch : ".");
+    bool valid = true;
+#endif
+    std::string root = parent + "/durable-XXXXXX";
+    if (::mkdtemp(&root[0]))
+    {
+        valid = CheckDurableContents(root) && valid;
+        valid = (::rmdir(root.c_str()) == 0) && valid;
+    }
+    else
+    {
+        valid = false;
+    }
+#ifdef __EMSCRIPTEN__
+    EM_ASM({ FS.unmount(UTF8ToString(Number($0))); }, mount);
+    valid = (::rmdir(mount) == 0) && valid;
+#endif
+    return valid ? 0 : 1;
+#endif
+}
+
+#ifdef _WIN32
+/** 以系统宽路径独立观察中文代码页中含 ASCII 尾字节的目录与文件。
+@param [in] root 本轮独占的测试根目录，使用活动 ANSI 代码页
+@return 实际文件内容、路径与筛选结果均正确时返回 true
+*/
+static bool CheckMultibytePaths(const std::string& root)
+{
+    const std::string letter("\x81\x41", 2);
+    const std::string lower("\x81\x61", 2);
+    const std::string slash("\x81\x5c", 2);
+    const std::string directory = root + "\\" + letter + slash;
+    const std::string nested = directory + "\\branch";
+    const std::string source = nested + "\\note.X" + letter;
+    const std::string target = root + "\\copy" + slash;
+    const std::string moved = target + "\\branch\\note.X" + letter;
+    const int size = ::MultiByteToWideChar(CP_ACP, 0, moved.c_str(), -1, nullptr, 0);
+    std::vector<wchar_t> wide(size);
+    if (!size || !::MultiByteToWideChar(CP_ACP, 0, moved.c_str(), -1, wide.data(), size) ||
+        !CSystem::createDirectories(nested))
+    {
+        return false;
+    }
+    {
+        std::ofstream file(source.c_str(), std::ios::binary);
+        file << "ACP";
+        file.close();
+        if (!file)
+        {
+            return false;
+        }
+    }
+    const std::string lexical = CSystem::canonicalPath(directory, false);
+    const bool correctName = lexical.size() >= 4 && lexical.substr(lexical.size() - 4) == letter + slash &&
+        CSystem::canonicalPath(directory) == lexical;
+    const bool contained = CSystem::isPathWithin(source, directory) && !CSystem::isPathWithin(directory + "x", directory, false);
+    const bool selected = CSystem::findFilePath(directory, 2, "x" + letter).size() == 1 &&
+        CSystem::findFilePath(directory, 2, "x" + lower).empty();
+    std::string error;
+    const bool published = CSystem::migrateDirectory(directory, target, error);
+    const bool observed = ::GetFileAttributesW(wide.data()) != INVALID_FILE_ATTRIBUTES && CSystem::readFile(moved) == "ACP";
+    // 在本进程映射独占副本，只枚举名称，不解析导入或执行其中的代码。
+    const std::string moduleName = "fixture-" + slash + ".dll";
+    const std::string modulePath = root + "\\" + moduleName;
+    std::vector<char> executable(32768);
+    const DWORD length = ::GetModuleFileNameA(nullptr, executable.data(), static_cast<DWORD>(executable.size()));
+    bool moduleFound = false;
+    if (length > 0 && length < executable.size() && ::CopyFileA(executable.data(), modulePath.c_str(), TRUE))
+    {
+        {
+            std::unique_ptr<std::remove_pointer<HMODULE>::type, decltype(&::FreeLibrary)> module(
+                ::LoadLibraryExA(modulePath.c_str(), nullptr, DONT_RESOLVE_DLL_REFERENCES), &::FreeLibrary);
+            if (module)
+            {
+                const auto names = CSystem::processMountDll(::GetCurrentProcessId());
+                moduleFound = std::find(names.begin(), names.end(), moduleName) != names.end();
+            }
+        }
+        moduleFound = ::DeleteFileA(modulePath.c_str()) && moduleFound;
+    }
+    std::remove(source.c_str());
+    std::remove(moved.c_str());
+    ::RemoveDirectoryA(nested.c_str());
+    ::RemoveDirectoryA(directory.c_str());
+    ::RemoveDirectoryA((target + "\\branch").c_str());
+    ::RemoveDirectoryA(target.c_str());
+    return correctName && contained && selected && published && observed && moduleFound;
+}
+#endif
+
 /** 验证本进程的系统接口，文件操作限制在本轮新建的独占目录
 @return 所有已执行检查均通过时返回 0
 */
@@ -147,8 +447,14 @@ int RunSystemInterfaceTests()
 
 #if CSYSTEM_HAS_NATIVE_API
     std::chrono::high_resolution_clock::time_point beginTime = CSystem::GetHighTickCount();
-    CSystem::Sleep(1);
-    check(CSystem::GetHighTickCountMilliRunTime(beginTime) >= 0, "CSystem Sleep and high tick");
+    const auto wallStart = std::chrono::steady_clock::now();
+    const uint32_t tick = CSystem::GetTickCount();
+    CSystem::Sleep(40);
+    const uint32_t elapsedTicks = CSystem::GetTickCount() - tick;
+    const auto wallMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - wallStart).count();
+    check(wallMs >= 38 && CSystem::GetHighTickCountMilliRunTime(beginTime) >= 0, "ordinary Sleep waits for the requested interval");
+    check(elapsedTicks >= 16 && elapsedTicks <= static_cast<uint64_t>(wallMs) + 32, "32-bit monotonic tick advances across sleep");
 
 #ifdef _WIN32
     std::string separator = "\\";
@@ -160,13 +466,13 @@ int RunSystemInterfaceTests()
     {
         scratch = std::getenv("TMPDIR");
     }
-    const std::string parent = CSystem::canonicalPath(scratch == nullptr ? "." : scratch);
+    const std::string parent = CSystem::absolutePath(scratch == nullptr ? "." : scratch);
     const std::string id = CSystem::uuid(0);
     if (parent.empty() || id.empty())
     {
         return 1;
     }
-    const std::string root = CSystem::joinPath(parent, "CSystemTest_" + id);
+    const std::string root = parent + "/CSystemTest_" + id;
     std::string filePath = root + separator + "data.txt";
     std::string emptyFilePath = root + separator + "empty.txt";
     std::string renamePath = root + separator + "rename.txt";
@@ -177,6 +483,12 @@ int RunSystemInterfaceTests()
         return 1;
     }
     check(CSystem::DirOrFileExist(root), "CSystem DirOrFileExist dir");
+#ifdef _WIN32
+    if (::GetACP() == 936)
+    {
+        check(CheckMultibytePaths(root), "ACP 936 multibyte path boundaries and migration");
+    }
+#endif
     const std::string utf8Parent = CSystem::joinPath(root, "nested-dirs");
     const std::string utf8Leaf = CSystem::joinPath(utf8Parent, "leaf");
     check(CSystem::createDirectoriesUtf8(TestPathUtf8(utf8Leaf)) && CSystem::DirOrFileExist(utf8Leaf) &&
@@ -192,6 +504,30 @@ int RunSystemInterfaceTests()
     check(CSystem::canonicalPath("").empty(), "CSystem canonicalPath empty");
     check(CSystem::canonicalPath(std::string("a\0b", 3), false).empty(), "CSystem canonicalPath embedded null");
     check(!CSystem::canonicalPath(root).empty(), "CSystem canonicalPath existing");
+#ifdef _WIN32
+    const std::string held = root + "/metadata-only.bin";
+    HANDLE writer = ::CreateFileA(held.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+    check(writer != INVALID_HANDLE_VALUE, "create exclusive writer for path queries");
+    if (writer != INVALID_HANDLE_VALUE)
+    {
+        std::unique_ptr<void, decltype(&::CloseHandle)> owner(writer, ::CloseHandle);
+        HANDLE reader = ::CreateFileA(held.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        const bool blocked = reader == INVALID_HANDLE_VALUE && ::GetLastError() == ERROR_SHARING_VIOLATION;
+        if (reader != INVALID_HANDLE_VALUE)
+        {
+            ::CloseHandle(reader);
+        }
+        const std::string utf8 = TestPathUtf8(held);
+        const std::string lexical = CSystem::canonicalPath(held, false);
+        const std::string lexicalUtf8 = CSystem::canonicalPathUtf8(utf8, false);
+        check(blocked && !lexical.empty() && !lexicalUtf8.empty() &&
+            CSystem::canonicalPath(held) == lexical && CSystem::canonicalPathUtf8(utf8) == lexicalUtf8,
+            "canonical path resolves metadata while content access is denied");
+        owner.reset();
+        check(::DeleteFileA(held.c_str()) != FALSE, "remove exclusive metadata fixture");
+    }
+#endif
     check(CSystem::canonicalPath(root, false) == CSystem::canonicalPath(root), "CSystem canonicalPath lexical and existing");
     check(CSystem::canonicalPath(CSystem::joinPath(root, "missing")).empty(), "CSystem canonicalPath missing");
     check(CSystem::isPathWithin(CSystem::joinPath(root, "child"), root, false), "CSystem isPathWithin child");
@@ -301,6 +637,19 @@ int RunSystemInterfaceTests()
     check(CSystem::readFile(emptyFilePath) == "hello system", "copy with overwrite replaces existing bytes");
     CSystem::saveFile("", emptyFilePath);
     check(CSystem::DirOrFileExist(emptyFilePath) && CSystem::readFile(emptyFilePath).empty(), "CSystem empty readFile");
+    const std::string key("k\0K", 3), value("v\0V", 3);
+    std::vector<std::string> lines(1, value);
+    lines.push_back("");
+    CSystem::OutputVector(lines, emptyFilePath);
+    std::map<std::string, std::string> entries;
+    entries[key] = value;
+    CSystem::OutputMap(entries, emptyFilePath);
+    {
+        std::ifstream input(emptyFilePath.c_str(), std::ios::binary);
+        const std::string expected = value + "\n\n[" + key + "] = " + value + "\n";
+        check(input && std::string(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()) == expected,
+            "container output appends complete strings, delimiters and empty lines");
+    }
     CSystem::saveFile("previous destination", renamePath);
 #ifdef _WIN32
     check(!CSystem::rename(filePath, renamePath) && CSystem::readFile(filePath) == "hello system" &&
@@ -348,13 +697,48 @@ int RunSystemInterfaceTests()
     check(createdTogether && CSystem::DestroyDir(concurrentDir), "all concurrent directory creators succeed");
 #ifndef _WIN32
 #if CSYSTEM_HAS_DESKTOP_API
+    const std::string linkedSource = root + "/copy-source-link";
+    const std::string copy = root + "/linked-copy";
+    if (::symlink(renamePath.c_str(), linkedSource.c_str()) == 0)
+    {
+        CSystem::CopyFileOver(copy, linkedSource, false);
+        check(CSystem::readFile(copy) == "hello system", "copy follows a regular file symlink");
+        check(::unlink(copy.c_str()) == 0 && ::unlink(linkedSource.c_str()) == 0, "remove copy and symbolic link");
+    }
+    else
+    {
+        check(false, "create symbolic link to the regular source");
+    }
+    if (::link(renamePath.c_str(), linkedSource.c_str()) == 0)
+    {
+        CSystem::CopyFileOver(linkedSource, renamePath, true);
+        check(CSystem::readFile(renamePath) == "hello system" && CSystem::readFile(linkedSource) == "hello system",
+            "copy across two names for the same inode preserves bytes");
+        check(::unlink(linkedSource.c_str()) == 0, "remove hard link");
+    }
+    else
+    {
+        check(false, "create hard link to the regular source");
+    }
     const std::string fifo = root + "/ordinary-file-check.fifo";
     check(::mkfifo(fifo.c_str(), 0600) == 0, "create private FIFO fixture");
     uint32_t openError = 0;
     intptr_t fifoHandle = CSystem::openFileHandle(fifo.c_str(), 1, &openError);
     const bool rejectedFifo = fifoHandle == -1 && openError != 0;
     CSystem::closeFileHandle(&fifoHandle);
-    check(rejectedFifo && ::unlink(fifo.c_str()) == 0, "regular-file API rejects a FIFO without a writer");
+    check(rejectedFifo, "regular-file API rejects a FIFO without a writer");
+    CSystem::CopyFileOver(renamePath, fifo, true);
+    check(CSystem::readFile(renamePath) == "hello system", "FIFO source leaves the regular destination intact");
+    const int fifoReader = ::open(fifo.c_str(), O_RDONLY | O_NONBLOCK);
+    check(fifoReader >= 0, "open independent FIFO reader");
+    if (fifoReader >= 0)
+    {
+        CSystem::CopyFileOver(fifo, renamePath, true);
+        char byte = 0;
+        check(::read(fifoReader, &byte, 1) == 0, "copy to a FIFO writes no bytes");
+        ::close(fifoReader);
+    }
+    check(::unlink(fifo.c_str()) == 0, "remove private FIFO");
 #endif
     const std::string pending = root + "/draft";
     const std::string published = root + "/final\\name";
@@ -540,10 +924,16 @@ static uint32_t s_leaseRemaining = 0;
 static uint32_t s_leaseRejected = 0;
 /** 从指定普通堆分配位置开始持续拒绝，其他参数沿用CRT原型
 @param [in] operation CRT 分配操作
-@param [in] block CRT 内存块类型，其余未命名参数按回调原型忽略
+@param [in] data 释放或调整的内存地址，此钩子不解引用
+@param [in] bytes 请求的字节数
+@param [in] block CRT 内存块类型
+@param [in] request CRT 分配编号
+@param [in] file 调试信息中的源文件名，可为空
+@param [in] line 调试信息中的源行号
 @return 是否允许
 */
-static int __cdecl LeaseMemoryHook(int operation, void*, size_t, int block, long, const unsigned char*, int)
+static int __cdecl LeaseMemoryHook(int operation, void* data, size_t bytes, int block, long request,
+    const unsigned char* file, int line)
 {
     if ((operation == _HOOK_ALLOC || operation == _HOOK_REALLOC) && block == _NORMAL_BLOCK)
     {
@@ -738,6 +1128,24 @@ bool SystemLeaseAudit()
     const std::string contest = prefix + ".contest";
     std::vector<uint64_t> owner;
     LEASE_CHECK(CSystem::acquireProcessLease(contest, false, 0, owner) == 1);
+    const uint32_t ownerPid = CSystem::currentProcessPid();
+    std::vector<uint64_t> duplicate;
+    const bool announced = CSystem::setProcessLeaseReady(owner, true);
+    const int32_t otherSlot = CSystem::acquireProcessLease(contest, false, 0, duplicate, "other");
+    const bool oneReadyOwner = otherSlot == -1 && duplicate.empty() && CSystem::isProcessLeaseReady(contest, ownerPid);
+    CSystem::releaseProcessLease(duplicate);
+    const int32_t repeated = CSystem::acquireProcessLease(contest, false, 0, duplicate);
+    const bool kept = announced && repeated == 0 && duplicate.empty() &&
+        CSystem::isProcessLeaseReady(contest, ownerPid) && !CSystem::processLeaseStopRequested(owner);
+    CSystem::releaseProcessLease(duplicate);
+    const int32_t replaced = CSystem::acquireProcessLease(contest, true, 0, duplicate);
+    const bool stopped = replaced == -1 && duplicate.empty() &&
+        CSystem::isProcessLeaseReady(contest, ownerPid) && CSystem::processLeaseStopRequested(owner);
+    CSystem::releaseProcessLease(duplicate);
+    if (!kept || !stopped)
+    {
+        std::fprintf(stderr, "lease reentry: acquire=%d replace=%d kept=%d stop=%d\n", repeated, replaced, kept, stopped);
+    }
     const bool competing = RunSystemWorkers(1, [&](size_t) -> bool {
         std::vector<uint64_t> another;
         const int32_t result = CSystem::acquireProcessLease(contest, false, 0, another);
@@ -745,11 +1153,53 @@ bool SystemLeaseAudit()
         return result == 0;
     });
     CSystem::releaseProcessLease(owner);
+    const bool renewed = CSystem::acquireProcessLease(contest, false, 0, owner) == 1 &&
+        !CSystem::isProcessLeaseReady(contest, ownerPid) && !CSystem::processLeaseStopRequested(owner);
+    CSystem::releaseProcessLease(owner);
+    // 原线程和替换线程各自释放自己取得的租约。先确认原租约就绪，再测试真实的停止与交接。
+    std::atomic<bool> prepared(false);
+    const bool transferred = RunSystemWorkers(2, [&](size_t index) -> bool {
+        std::vector<uint64_t> state;
+        const auto release = [](std::vector<uint64_t>* owned) { CSystem::releaseProcessLease(*owned); };
+        std::unique_ptr<std::vector<uint64_t>, decltype(release)> guard(&state, release);
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        if (index == 0)
+        {
+            if (CSystem::acquireProcessLease(contest, false, 0, state) != 1 || !CSystem::setProcessLeaseReady(state, true))
+            {
+                return false;
+            }
+            prepared.store(true);
+            while (!CSystem::processLeaseStopRequested(state) && std::chrono::steady_clock::now() < deadline)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            return CSystem::processLeaseStopRequested(state);
+        }
+        while (!prepared.load() && std::chrono::steady_clock::now() < deadline)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        return prepared.load() && CSystem::isProcessLeaseReady(contest, ownerPid) &&
+            CSystem::acquireProcessLease(contest, true, 5000, state) == 1 && !CSystem::processLeaseStopRequested(state) &&
+            !CSystem::isProcessLeaseReady(contest, ownerPid) && CSystem::setProcessLeaseReady(state, true) &&
+            CSystem::isProcessLeaseReady(contest, ownerPid);
+    });
 #ifndef _WIN32
     LEASE_CHECK(CSystem::deleteFile(("/tmp/xyls." + contest + ".lease").c_str()));
     LEASE_CHECK(CSystem::deleteFile(("/tmp/xyls." + contest + ".ready." + std::to_string(CSystem::currentProcessPid())).c_str()));
 #endif
-    LEASE_CHECK(competing && owner.empty());
+#ifdef _WIN32
+    // 仅观察到同名内核对象，不表示已有租约。模拟另一调用者尚持有句柄的交接窗口。
+    const std::string objectName = "Global\\xyls." + contest + ".owner";
+    std::unique_ptr<void, decltype(&::CloseHandle)> reference(::CreateMutexA(nullptr, FALSE, objectName.c_str()), &::CloseHandle);
+    const bool available = reference && CSystem::acquireProcessLease(contest, false, 0, owner) == 1;
+    CSystem::releaseProcessLease(owner);
+    LEASE_CHECK(available);
+#else
+    LEASE_CHECK(CSystem::deleteFile(("/tmp/xyls." + contest + ".test.other.lease").c_str()));
+#endif
+    LEASE_CHECK(oneReadyOwner && kept && stopped && competing && renewed && transferred && owner.empty());
     std::printf("System lease positions=32 failed=%u acquired=%u checks=%u PASS\n", failures, successes, checks);
     return true;
 #undef LEASE_CHECK

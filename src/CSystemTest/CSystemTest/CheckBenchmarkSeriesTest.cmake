@@ -12,7 +12,7 @@ file(WRITE "${work}/CTestTestfile.cmake"
     "add_test(CSystemTestBenchmark \"${CMAKE_COMMAND}\" -P \"${work}/report.cmake\")\n")
 
 set(failure "")
-foreach(scenario IN ITEMS complete truncated inconsistent)
+foreach(scenario IN ITEMS complete truncated inconsistent wrong_checksum boundary unstable noisy_process iqr_boundary zero_sample impossible_batch impossible_total missing_metric duplicate_metric)
     set(records "")
     foreach(metric IN ITEMS CSystem.GetName.filename CSystem.GetName.extension CSystem.joinPath)
         set(line "[BENCH] ${metric} iterations=16384 ops_per_iteration=1 median_ns=10.000 q1_ns=8.000")
@@ -30,18 +30,75 @@ foreach(scenario IN ITEMS complete truncated inconsistent)
         if(scenario STREQUAL "inconsistent" AND metric STREQUAL "CSystem.joinPath")
             string(REPLACE "median_ns=10.000" "median_ns=11.000" line "${line}")
         endif()
+        if(scenario STREQUAL "wrong_checksum" AND metric STREQUAL "CSystem.joinPath")
+            string(REPLACE "0000000000120000" "0000000000000000" line "${line}")
+        endif()
+        if(NOT scenario STREQUAL "noisy_process")
+            # 中位数均为 10。把 q1/q3 收窄到 9/11，恰好触及默认的 20% 进程内容差。
+            string(REPLACE "8.000" "9.000" line "${line}")
+            string(REPLACE "12.000" "11.000" line "${line}")
+        endif()
+        if(scenario STREQUAL "iqr_boundary" AND metric STREQUAL "CSystem.joinPath")
+            # 0.010 ns 的中位数检验小数计时转皮秒后的阈值运算。
+            string(REGEX REPLACE "([=,])([0-9])[.]000" "\\10.00\\2" line "${line}")
+            string(REGEX REPLACE "([=,])1([0-9])[.]000" "\\10.01\\2" line "${line}")
+        endif()
+        if(scenario STREQUAL "impossible_total")
+            # 每个指标约 295 秒，三个指标依次执行至少 884 秒；每项内部及各进程间都无波动。
+            string(REGEX REPLACE "[0-9]+[.]000" "2000000.000" line "${line}")
+        endif()
+        if(metric STREQUAL "CSystem.joinPath")
+            if(scenario STREQUAL "missing_metric")
+                continue()
+            elseif(scenario STREQUAL "duplicate_metric")
+                string(APPEND records "message(\"${line}\")\n")
+            elseif(scenario STREQUAL "impossible_batch")
+                # 16384 次各 40 ms 已超过整个进程的 600 秒上限，中位数和四分位数仍与原记录相同。
+                string(REPLACE "14.000," "40000000.000," line "${line}")
+            elseif(scenario STREQUAL "zero_sample")
+                string(REPLACE "6.000," "0.000," line "${line}")
+            endif()
+        endif()
         string(APPEND records "message(\"${line}\")\n")
     endforeach()
+    set(tolerance -DMAX_SPREAD_PERCENT=0)
+    if(scenario STREQUAL "boundary" OR scenario STREQUAL "unstable")
+        unset(tolerance)
+        # 最后一个正式样本的全部原值和统计量同步平移，其他四个进程保持原值。
+        if(scenario STREQUAL "boundary")
+            set(delta 2)
+        else()
+            set(delta 3)
+        endif()
+        set(shifted "${records}")
+        foreach(value RANGE 14 6 -1)
+            math(EXPR higher "${value} + ${delta}")
+            string(REGEX REPLACE "([=,])${value}[.]000" "\\1${higher}.000" shifted "${shifted}")
+        endforeach()
+        file(WRITE "${work}/round" "0")
+        set(records "file(READ round n)\nmath(EXPR n \"\${n} + 1\")\nfile(WRITE round \"\${n}\")\nif(n EQUAL 6)\n${shifted}else()\n${records}endif()\n")
+    endif()
     file(WRITE "${work}/report.cmake" "${records}")
-    execute_process(COMMAND "${CMAKE_COMMAND}" -DMAX_SPREAD_PERCENT=0 -P "${CMAKE_CURRENT_LIST_DIR}/CheckBenchmarkSeries.cmake"
+    execute_process(COMMAND "${CMAKE_COMMAND}" ${tolerance} -P "${CMAKE_CURRENT_LIST_DIR}/CheckBenchmarkSeries.cmake"
         WORKING_DIRECTORY "${work}" TIMEOUT 60 RESULT_VARIABLE status OUTPUT_VARIABLE output ERROR_VARIABLE errors)
-    if(scenario STREQUAL "complete")
+    if(scenario STREQUAL "complete" OR scenario STREQUAL "boundary")
         if(NOT status STREQUAL "0" OR NOT output MATCHES "CSystem[.]joinPath across 5 processes: median=10000 ps/call")
             set(failure "${scenario}: ${output}\n${errors}")
         endif()
+    elseif(scenario STREQUAL "iqr_boundary")
+        if(NOT status STREQUAL "0" OR NOT output MATCHES "CSystem[.]joinPath across 5 processes: median=10 ps/call")
+            set(failure "${scenario}: ${output}\n${errors}")
+        endif()
     elseif(status STREQUAL "0" OR
+        ((scenario STREQUAL "missing_metric" OR scenario STREQUAL "duplicate_metric") AND NOT errors MATCHES "Expected one record") OR
+        (scenario STREQUAL "zero_sample" AND NOT errors MATCHES "Timer resolution") OR
+        (scenario STREQUAL "impossible_batch" AND NOT errors MATCHES "exceeds the process timeout") OR
+        (scenario STREQUAL "impossible_total" AND NOT errors MATCHES "Combined batches exceed") OR
+        (scenario STREQUAL "noisy_process" AND NOT errors MATCHES "Interquartile range") OR
         (scenario STREQUAL "truncated" AND NOT errors MATCHES "Incomplete benchmark record") OR
-        (scenario STREQUAL "inconsistent" AND NOT errors MATCHES "quartiles or median disagree"))
+        (scenario STREQUAL "inconsistent" AND NOT errors MATCHES "quartiles or median disagree") OR
+        (scenario STREQUAL "wrong_checksum" AND NOT errors MATCHES "Checksum disagrees") OR
+        (scenario STREQUAL "unstable" AND NOT errors MATCHES "repeatability tolerance"))
         set(failure "${scenario}: ${output}\n${errors}")
     endif()
     if(failure)

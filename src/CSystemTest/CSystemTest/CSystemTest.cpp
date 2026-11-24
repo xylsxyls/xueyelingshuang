@@ -6,6 +6,9 @@
 #include <exception>
 #include <cstring>
 #include <algorithm>
+#ifndef _WIN32
+#include <time.h>
+#endif
 #include <memory>
 #if CSYSTEM_HAS_NATIVE_API
 #include <codecvt>
@@ -193,7 +196,9 @@ static bool CheckSleep(void (*wait)(uint32_t), bool strict)
 }
 #endif
 
-/** 核对数组异常清理、时间单位、路径以及参数转换，成功返回 0。 */
+/** 核对数组异常清理、时间单位、路径以及参数转换
+@return 全部预期满足时返回 0
+*/
 static int TestCommon()
 {
     bool threw = false;
@@ -249,6 +254,15 @@ static int TestCommon()
     CHECK(CSystem::joinPath("dir/", "abc.txt") == "dir/abc.txt");
     CHECK(CSystem::ensureFileExtension("abc", ".txt") == "abc.txt");
     CHECK(CSystem::ensureFileExtension("a.TxT", ".txt") == "a.txt" && CSystem::ensureFileExtension("", ".txt").empty());
+#ifndef _WIN32
+    struct timespec first = {}, last = {};
+    CHECK(::clock_gettime(CLOCK_MONOTONIC, &first) == 0);
+    const uint32_t tick = CSystem::GetTickCount();
+    CHECK(::clock_gettime(CLOCK_MONOTONIC, &last) == 0);
+    const uint32_t firstMs = static_cast<uint32_t>(uint64_t(first.tv_sec) * 1000 + first.tv_nsec / 1000000);
+    const uint32_t lastMs = static_cast<uint32_t>(uint64_t(last.tv_sec) * 1000 + last.tv_nsec / 1000000);
+    CHECK(tick - firstMs <= lastMs - firstMs);
+#endif
     CHECK(CSystem::timetToStr(0, false) == "1970-01-01 00:00:00");
 #ifndef _WIN32
     if (sizeof(time_t) >= 8)
@@ -309,17 +323,44 @@ static int TestCommon()
 }
 
 #if CSYSTEM_HAS_NATIVE_API
-/** 在本次独占文件上核对系统资源、目录配置和文件操作，成功返回 0。 */
+/** 在本次独占文件上核对系统资源、目录配置和文件操作
+@return 系统观察和文件字节与预期一致时返回 0
+*/
 static int TestNative()
 {
+    uint64_t physical = 1, available = 1, virtualSpace = 1;
+    CHECK(!CSystem::queryMemoryAvailability(physical, physical, virtualSpace) && physical == 0 && virtualSpace == 0);
+    physical = 1;
+    CHECK(!CSystem::queryMemoryAvailability(physical, available, physical) && physical == 0 && available == 0);
+    available = physical = 1;
+    CHECK(!CSystem::queryMemoryAvailability(physical, available, available) && physical == 0 && available == 0);
+    CHECK(CSystem::queryMemoryAvailability(physical, available, virtualSpace));
+    CHECK(physical > 0 && available <= physical);
+#ifdef _WIN32
+    MEMORYSTATUSEX systemMemory = {};
+    systemMemory.dwLength = sizeof(systemMemory);
+    CHECK(::GlobalMemoryStatusEx(&systemMemory) && physical == systemMemory.ullTotalPhys &&
+        virtualSpace > 0 && virtualSpace <= systemMemory.ullTotalVirtual);
+#else
+    CHECK(virtualSpace == UINT64_MAX);
+#endif
+    const auto wallStart = std::chrono::steady_clock::now();
+    const uint64_t firstMs = CSystem::monotonicMilliseconds();
+    std::this_thread::sleep_for(std::chrono::milliseconds(40));
+    const uint64_t lastMs = CSystem::monotonicMilliseconds();
+    const auto wallMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - wallStart).count();
+    CHECK(lastMs >= firstMs && lastMs - firstMs >= 16 && lastMs - firstMs <= static_cast<uint64_t>(wallMs) + 32);
     CHECK(!CSystem::setProcessDirectory("relative-path"));
 #ifdef CSYSTEM_SHARED_IDENTITY
     const char* parent = std::getenv("CSYSTEM_TEST_DIR");
     if (parent == nullptr) { parent = std::getenv("TMPDIR"); }
-    CHECK(parent != nullptr);
+    const std::string identityParent = CSystem::absolutePath(parent == nullptr ? "." : parent);
+    CHECK(!identityParent.empty());
     uint64_t unavailable = 123;
     CHECK(!CSystem::processIdentity(CSystem::currentProcessPid(), unavailable) && unavailable == 0);
-    const std::string identityDirectory = CSystem::joinPath(parent, "identity-" + CSystem::uuid(0));
+    const std::string unique = CSystem::uuid(0);
+    CHECK(!unique.empty());
+    const std::string identityDirectory = identityParent + "/identity-" + unique;
     CHECK(CSystem::CreateDir(identityDirectory));
     const auto cleanIdentity = [&identityDirectory](const std::string*) {
         CSystem::deleteFile(CSystem::joinPath(identityDirectory, "m_P2I" + std::to_string(CSystem::currentProcessPid())).c_str());
@@ -391,14 +432,16 @@ static int TestNative()
     std::vector<uint8_t> overLimit(8195, 123);
     CHECK(!CSystem::secureRandomBytes(overLimit.data() + 1, 8193));
     CHECK(std::count(overLimit.begin(), overLimit.end(), static_cast<uint8_t>(123)) == 8195);
-    CHECK(!CSystem::uuid().empty());
     const std::string compactId = CSystem::uuid(0);
-    const std::string dashedId = CSystem::uuid(1);
     CHECK(compactId.size() == 32 && compactId.find_first_not_of("0123456789abcdef") == std::string::npos);
-    CHECK(dashedId.size() == 36 && dashedId[8] == '-' && dashedId[13] == '-' && dashedId[18] == '-' && dashedId[23] == '-');
-    std::string digits = dashedId;
-    digits.erase(std::remove(digits.begin(), digits.end(), '-'), digits.end());
-    CHECK(digits.size() == 32 && digits.find_first_not_of("0123456789abcdef") == std::string::npos);
+    const std::string dashedIds[] = {CSystem::uuid(), CSystem::uuid(1), CSystem::uuid(2), CSystem::uuid(-1)};
+    for (const std::string& dashedId : dashedIds)
+    {
+        CHECK(dashedId.size() == 36 && dashedId[8] == '-' && dashedId[13] == '-' && dashedId[18] == '-' && dashedId[23] == '-');
+        std::string digits = dashedId;
+        digits.erase(std::remove(digits.begin(), digits.end(), '-'), digits.end());
+        CHECK(digits.size() == 32 && digits.find_first_not_of("0123456789abcdef") == std::string::npos);
+    }
 #if CSYSTEM_HAS_DESKTOP_API
 #ifdef _WIN32
     const DWORD scheduling = ::GetPriorityClass(::GetCurrentProcess());
@@ -421,7 +464,7 @@ static int TestNative()
     const char* scratch = std::getenv("CSYSTEM_TEST_DIR");
     if (scratch == nullptr) { scratch = std::getenv("TMPDIR"); }
     const std::string directory = scratch == nullptr ? "." : scratch;
-    const std::string path = CSystem::joinPath(directory, "csystem-test-" + CSystem::uuid(0) + ".bin");
+    const std::string path = directory + "/csystem-test-" + CSystem::uuid(0) + ".bin";
     const std::string utf8Path = TestPathUtf8(path);
     CSystemTestFile file(path);
     CHECK(file.m_handle != -1 && CSystem::plainFileUtf8(utf8Path));
@@ -440,6 +483,16 @@ static int TestNative()
     CHECK(!CSystem::readFileHandle(file.m_handle, UINT64_MAX, bytes, 1, &received, &error) && received == 0 && error != 0);
     CHECK(!CSystem::writeFileHandle(file.m_handle, UINT64_MAX, content, 1, &error) && error != 0);
     CHECK(CSystem::readFileHandle(file.m_handle, 0, nullptr, 0, &received, &error) && received == 0 && error == 0);
+    // 低 32 位为 1；若偏移被截断，就会读出文件的第二个字节并改写哨兵。
+    bytes[0] = 0xa5;
+    received = error = 99;
+    CHECK(CSystem::readFileHandle(file.m_duplicate, (UINT64_C(1) << 32) + 1, bytes, 1, &received, &error) &&
+        received == 0 && error == 0 && bytes[0] == 0xa5);
+    CHECK(CSystem::fileHandleSize(file.m_handle, &length) && length == sizeof(content));
+    uint32_t sharedResult = 123;
+    bytes[0] = 0xa5;
+    CHECK(!CSystem::readFileHandle(file.m_duplicate, 1, bytes, sizeof(bytes), &sharedResult, &sharedResult) &&
+        sharedResult == 0 && bytes[0] == 0xa5);
     CHECK(CSystem::readFileHandle(file.m_duplicate, 1, bytes, sizeof(bytes), &received) && received == 4 &&
         std::memcmp(bytes, content + 1, 4) == 0);
     CHECK(CSystem::readFileHandle(file.m_handle, sizeof(content), bytes, sizeof(bytes), &received) && received == 0);
@@ -521,6 +574,24 @@ static int TestNative()
     CHECK(draft.m_handle != -1 && CSystem::writeFileHandle(draft.m_handle, 0, content + 2, 3));
     CHECK(CSystem::flushFileHandle(draft.m_handle) && CSystem::closeFileHandle(&draft.m_handle));
     const std::wstring wideDraft = widePath + L".draft";
+    bool directoriesKept = true;
+    for (int index = 0; index < 2; ++index)
+    {
+        const bool replace = index != 0;
+        const std::string source = path + (replace ? ".replace-dir" : ".install-dir");
+        const std::string target = source + ".target";
+        const std::wstring wideSource = widePath + (replace ? L".replace-dir" : L".install-dir");
+        CHECK(CSystem::CreateDir(source));
+        CSystem::saveFile("keep", source + "/child");
+        const bool ready = CSystem::readFile(source + "/child") == "keep";
+        const bool moved = replace ? CSystem::replaceFile(wideSource, wideSource + L".target") :
+            CSystem::installFileIfAbsent(wideSource, wideSource + L".target");
+        directoriesKept = ready && !moved && CSystem::readFile(source + "/child") == "keep" &&
+            !CSystem::DirOrFileExist(target) && directoriesKept;
+        const std::string& location = moved ? target : source;
+        CHECK(CSystem::deleteFile((location + "/child").c_str()) && CSystem::DestroyDir(location));
+    }
+    CHECK(directoriesKept);
     CHECK(!CSystem::installFileIfAbsent(wideDraft, widePath));
     CHECK(CSystem::readBinaryFile(wideDraft, 3, saved) && saved == std::vector<uint8_t>(content + 2, content + 5));
     CHECK(CSystem::readBinaryFile(widePath, 5, saved) && saved == std::vector<uint8_t>(content, content + 5));
@@ -582,6 +653,37 @@ static int TestNative()
             CHECK(id.substr(0, id.find('\\')) == group.first);
         }
     }
+    // 只读取系统组件注册，不加载组件。宽字符路径依据实际注册类型独立展开。
+    const std::string shellClass = "00021400-0000-0000-C000-000000000046";
+    std::vector<wchar_t> registered(32768);
+    DWORD type = 0, bytesAvailable = static_cast<DWORD>(registered.size() * sizeof(wchar_t));
+    const LONG lookup = ::RegGetValueW(HKEY_CLASSES_ROOT, L"CLSID\\{00021400-0000-0000-C000-000000000046}\\InprocServer32",
+        nullptr, RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ | RRF_NOEXPAND, &type, registered.data(), &bytesAvailable);
+    std::string expectedDirectory;
+    if (lookup == ERROR_SUCCESS)
+    {
+        std::wstring full(registered.data());
+        if (type == REG_EXPAND_SZ)
+        {
+            const DWORD required = ::ExpandEnvironmentStringsW(full.c_str(), nullptr, 0);
+            CHECK(required > 0);
+            std::vector<wchar_t> expanded(required);
+            CHECK(::ExpandEnvironmentStringsW(full.c_str(), expanded.data(), required) == required);
+            full.assign(expanded.data());
+        }
+        const std::wstring directoryName = full.substr(0, full.find_last_of(L"\\/") + 1);
+        const int size = ::WideCharToMultiByte(CP_ACP, 0, directoryName.c_str(), -1, nullptr, 0, nullptr, nullptr);
+        CHECK(size > 0);
+        std::vector<char> narrow(size);
+        CHECK(::WideCharToMultiByte(CP_ACP, 0, directoryName.c_str(), -1, narrow.data(), size, nullptr, nullptr) == size);
+        expectedDirectory.assign(narrow.data());
+    }
+    else
+    {
+        CHECK(lookup == ERROR_FILE_NOT_FOUND || lookup == ERROR_PATH_NOT_FOUND);
+    }
+    CHECK(CSystem::GetRegOcxPath(shellClass) == expectedDirectory);
+    CHECK(CSystem::GetRegOcxPath("").empty() && CSystem::GetRegOcxPath(shellClass + std::string("\0x", 2)).empty());
     CHECK(CSystem::GetVisibleHeight() == ::GetSystemMetrics(SM_CYFULLSCREEN));
     const int width = ::GetSystemMetrics(SM_CXSCREEN);
     const int height = ::GetSystemMetrics(SM_CYSCREEN);
@@ -592,9 +694,14 @@ static int TestNative()
     std::vector<char> modulePath(32768);
     const DWORD copied = ::GetModuleFileNameA(nullptr, modulePath.data(), static_cast<DWORD>(modulePath.size()));
     CHECK(copied > 0 && copied < modulePath.size());
-    const std::string executable(modulePath.data(), copied);
-    const std::string baseName = executable.substr(executable.find_last_of("\\/") + 1);
-    CHECK(CSystem::processName(::GetCurrentProcessId()) == baseName);
+    std::vector<char> fullPath(32768);
+    char* filePart = nullptr;
+    const DWORD fullLength = ::GetFullPathNameA(modulePath.data(), static_cast<DWORD>(fullPath.size()), fullPath.data(), &filePart);
+    CHECK(fullLength > 0 && fullLength < fullPath.size() && filePart != nullptr);
+    const std::string baseName(filePart);
+    CHECK(CSystem::processName(::GetCurrentProcessId()) == baseName && CSystem::GetCurrentExeFullName() == baseName);
+    CHECK(CSystem::GetCurrentExeName() == baseName.substr(0, baseName.rfind('.')));
+    CHECK(CSystem::GetCurrentExePath() == std::string(fullPath.data(), static_cast<size_t>(filePart - fullPath.data())));
     std::vector<wchar_t> wideModule(32768);
     const DWORD wideLength = ::GetModuleFileNameW(nullptr, wideModule.data(), static_cast<DWORD>(wideModule.size()));
     CHECK(wideLength > 0 && wideLength < wideModule.size());
@@ -608,21 +715,47 @@ static int TestNative()
     CHECK(std::find(modules.begin(), modules.end(), baseName) != modules.end());
     uint64_t monitor = CSystem::openProcessMonitor(CSystem::currentProcessPid());
     CHECK(monitor != 0);
-    uint64_t commit = 0, resident = 0, cpu = 0;
-    uint32_t handles = 0, threads = 0;
+    uint64_t commit = 1, resident = 1, cpu = 1;
+    uint32_t handles = 1, threads = 1;
     int32_t exitCode = -1;
+    bool boundaries = !CSystem::queryProcessResources(0, commit, commit, cpu, handles, threads) &&
+        commit == 0 && cpu == 0 && handles == 0 && threads == 0;
+    commit = resident = 1;
+    handles = threads = 1;
+    boundaries = !CSystem::queryProcessResources(0, commit, resident, commit, handles, threads) &&
+        commit == 0 && resident == 0 && handles == 0 && threads == 0 && boundaries;
+    commit = resident = 1;
+    handles = threads = 1;
+    boundaries = !CSystem::queryProcessResources(0, commit, resident, resident, handles, threads) &&
+        commit == 0 && resident == 0 && handles == 0 && threads == 0 && boundaries;
+    commit = resident = cpu = 1;
+    handles = 1;
+    boundaries = !CSystem::queryProcessResources(0, commit, resident, cpu, handles, handles) &&
+        commit == 0 && resident == 0 && cpu == 0 && handles == 0 && boundaries;
+#ifndef _WIN64
+    uint64_t oversized = monitor | (UINT64_C(1) << 32);
+    const bool rejected = !CSystem::queryProcessResources(oversized, commit, resident, cpu, handles, threads) &&
+        commit == 0 && resident == 0 && cpu == 0 && handles == 0 && threads == 0;
+    const int32_t invalidStatus = CSystem::pollProcessMonitor(oversized, exitCode);
+    CSystem::closeProcessMonitor(oversized);
+    CHECK(::GetProcessId(reinterpret_cast<HANDLE>(static_cast<uintptr_t>(monitor))) == ::GetCurrentProcessId());
+    boundaries = rejected && invalidStatus == -1 && exitCode == 0 && oversized == 0 && boundaries;
+#endif
     const bool sampled = CSystem::queryProcessResources(0, commit, resident, cpu, handles, threads);
     const bool sampledSelf = sampled && commit > 0 && resident > 0 && handles > 0 && threads > 0;
     const bool sampledHandle = CSystem::queryProcessResources(monitor, commit, resident, cpu, handles, threads);
     const int32_t status = CSystem::pollProcessMonitor(monitor, exitCode);
     CSystem::closeProcessMonitor(monitor);
-    CHECK(sampledSelf && sampledHandle && commit > 0 && resident > 0 && handles > 0 && threads > 0);
+    CHECK(boundaries && sampledSelf && sampledHandle && commit > 0 && resident > 0 && handles > 0 && threads > 0);
     CHECK(status == 0 && exitCode == 0 && monitor == 0 && CSystem::pollProcessMonitor(0, exitCode) == -1);
 #endif
     return 0;
 }
 
-/** 验证公共等待及 Windows 通用计时器分支会等待指定时间，成功返回 0。 */
+/** 验证公共等待及 Windows 通用计时器分支
+@param [in] strict 是否额外检查累计等待的上界
+@return 所有适用等待满足时间界限时返回 0
+*/
 static int TestSleep(bool strict)
 {
     CHECK(CheckSleep(CSystem::sleepPrecise, strict));
@@ -633,7 +766,9 @@ static int TestSleep(bool strict)
 }
 #endif
 
-/** 核对线程及等级合法性，并从系统观察实际设置，成功返回 0。 */
+/** 核对线程及等级合法性，并从系统观察实际设置
+@return 状态、错误码和可观察的调度策略均正确时返回 0
+*/
 static int TestPriority()
 {
     int32_t nativeError = -1;
@@ -682,7 +817,9 @@ static int TestPriority()
 }
 
 #if CSYSTEM_HAS_NATIVE_API && (!defined(__APPLE__) || !TARGET_OS_IPHONE)
-/** 验证短输出在子进程结束后完整交付，并保留真实的非零退出状态。 */
+/** 验证短输出在子进程结束后完整交付，并保留真实的非零退出状态
+@return 命令输出和退出状态符合预期时返回 0
+*/
 static int TestCommand()
 {
     std::string output("unchanged");
@@ -749,7 +886,11 @@ static int CapturedChild(int argc, char** argv)
     CHECK(::CreatePipe(&reader, &writer, nullptr, 0));
     std::unique_ptr<void, decltype(&::CloseHandle)> readEnd(reader, ::CloseHandle), writeEnd(writer, ::CloseHandle);
     CHECK(::SetStdHandle(STD_OUTPUT_HANDLE, writer) && CSystem::bindInheritedOutput());
-    CSystem::OutputVector(std::vector<std::string>(1, "library-pipe"));
+    const std::string line("library-pipe\0V", 14), key("k\0K", 3), value("v\0V", 3);
+    CSystem::OutputVector(std::vector<std::string>(1, line));
+    std::map<std::string, std::string> entries;
+    entries[key] = value;
+    CSystem::OutputMap(entries);
     // 再次绑定会关闭并刷新此前绑定的库内流。先检查可读量，错误时直接退出。
     CHECK(CSystem::bindInheritedOutput());
     char buffer[32] = {};
@@ -757,7 +898,8 @@ static int CapturedChild(int argc, char** argv)
     CHECK(::PeekNamedPipe(reader, nullptr, 0, nullptr, &available, nullptr) && available > 0 && available <= sizeof(buffer));
     CHECK(::ReadFile(reader, buffer, available, &received, nullptr) && received == available);
     const std::string observed(buffer, received);
-    CHECK(observed == "library-pipe\n" || observed == "library-pipe\r\n");
+    const std::string pair = "[" + key + "] = " + value;
+    CHECK(observed == line + "\n" + pair + "\n" || observed == line + "\r\n" + pair + "\r\n");
     return 23;
 }
 
@@ -815,6 +957,11 @@ static int TestChildProcesses()
     CHECK(CSystem::readBinaryFile(log, 64, data) && std::string(data.begin(), data.end()) == "stdout|stderr|");
     CHECK(CSystem::startDetachedProcess(exe, {"--csystem-detached"}, pid, monitor) == 0);
     CHECK(CheckChildExit(pid, monitor, 37));
+    const std::string releasedRole = "CSystemTest.exit." + std::to_string(pid);
+    std::vector<uint64_t> recovered;
+    const bool reclaimed = CSystem::acquireProcessLease(releasedRole, false, 0, recovered) == 1;
+    CSystem::releaseProcessLease(recovered);
+    CHECK(reclaimed);
     return 0;
 }
 #endif
@@ -828,6 +975,10 @@ int main(int argc, char** argv) try
     }
     if (argc == 2 && std::strcmp(argv[1], "--csystem-detached") == 0)
     {
+        const std::string role = "CSystemTest.exit." + std::to_string(CSystem::currentProcessPid());
+        std::vector<uint64_t> lease;
+        CHECK(CSystem::acquireProcessLease(role, false, 0, lease) == 1 && CSystem::setProcessLeaseReady(lease, true));
+        // 保留句柄到进程正常退出，由父进程观察操作系统回收后的接替结果。
         return 37;
     }
 #endif
@@ -876,9 +1027,12 @@ int main(int argc, char** argv) try
         {CSystemCaseCommon, false, "纯工具", "数组回滚、路径、时间单位和参数符合独立预期", TestCommon},
 #if CSYSTEM_HAS_NATIVE_API
         {CSystemCaseNative, false, "原生系统与文件", "进程位数、系统资源、文件内容和句柄状态与独立观察一致", TestNative},
-#endif
         {CSystemCaseInterfaces, false, "接口组合", "目录枚举、改名、复制和迁移保留预期字节及属性", RunSystemInterfaceTests},
         {CSystemCasePriority, false, "线程调度", "等级及系统回读结果一致，未生效时返回对应状态", TestPriority},
+#else
+        {CSystemCaseInterfaces, false, "接口组合", "本地及 UTC 时间可格式化，二维数组可写且零行申请失败", RunSystemInterfaceTests},
+        {CSystemCasePriority, false, "线程调度", "空线程返回 Invalid 并将系统错误清零", TestPriority},
+#endif
 #if CSYSTEM_HAS_NATIVE_API
         {CSystemCaseSleep, false, "短等待", "预热后的累计等待达到下界", []() -> int { return TestSleep(false); }},
         {CSystemCaseEntropy, false, "系统熵源", "有效请求成功，越界请求保留完整缓冲区", RunSystemEntropyTests},
@@ -893,8 +1047,10 @@ int main(int argc, char** argv) try
 #ifdef _WIN32
         {CSystemCaseChild, false, "子进程与日志", "启动参数、排他日志、输出字节和监视退出码一致", TestChildProcesses},
 #endif
+        {CSystemCaseDurable, false, "持久文件", "文件字节、排他发布和描述符边界符合独立观察", RunDurableFileTests},
     };
     unsigned previous = 0;
+    bool hasStress = false;
     for (const auto& item : cases)
     {
         if (item.id <= previous || item.name == nullptr || *item.name == 0 ||
@@ -904,12 +1060,23 @@ int main(int argc, char** argv) try
             return 1;
         }
         previous = item.id;
+        hasStress = hasStress || item.stress;
     }
     // 平台调度器选中用例后先输出中文场景和预期，再返回真实入口的退出码。
-    return LibraryCaseSelection::run(argc, argv, cases, [](const CSystemCase& item) -> int {
+    const auto execute = [](const CSystemCase& item) -> int {
         std::printf("[%u] %s - %s\n", static_cast<unsigned>(item.id), item.name, item.expected);
         return item.run();
-    });
+    };
+    if (argc == 1 || (argc == 2 && std::strcmp(argv[1], "--all") == 0))
+    {
+        char instant[] = "--instant", stress[] = "--stress";
+        char* selection[] = {argv[0], instant, nullptr};
+        const int first = LibraryCaseSelection::run(2, selection, cases, execute);
+        selection[1] = stress;
+        const int second = hasStress ? LibraryCaseSelection::run(2, selection, cases, execute) : 0;
+        return first != 0 ? first : second;
+    }
+    return LibraryCaseSelection::run(argc, argv, cases, execute);
 }
 catch (const std::exception& error)
 {

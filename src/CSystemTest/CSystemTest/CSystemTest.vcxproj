@@ -86,6 +86,10 @@
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(CLOUD_REBUILD_SDK_ROOT)'!='' Or '$(CLOUD_REBUILD_INT_ROOT)'!=''">
+    <IntDir Condition="'$(CLOUD_REBUILD_INT_ROOT)'==''">$(TestSdkRoot)\.msbuild\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir Condition="'$(CLOUD_REBUILD_INT_ROOT)'!=''">$(CLOUD_REBUILD_INT_ROOT)\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
