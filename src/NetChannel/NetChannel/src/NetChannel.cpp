@@ -3,6 +3,20 @@
 #include <cstring>
 #include <new>
 
+/** 检查计数字段是否与调用者提供的字节范围共用存储，按地址差比较以避免末地址回卷
+@param [in] count 四字节长度输出
+@param [in] bytes 数据范围首地址，空指针或零长度没有交集
+@param [in] size 数据范围长度，单位字节
+@return 计数和字节范围重叠返回 true
+*/
+static bool OverlapsCount(const uint32_t& count, const void* bytes, uint32_t size)
+{
+    if (!bytes || !size) { return false; }
+    const uintptr_t word = reinterpret_cast<uintptr_t>(&count);
+    const uintptr_t start = reinterpret_cast<uintptr_t>(bytes);
+    return word >= start ? word - start < size : start - word < sizeof(count);
+}
+
 NetChannel::NetChannel() :
 m_headerBytes(0),
 m_bodyBytes(0),
@@ -110,6 +124,7 @@ int32_t NetChannel::acceptHeader()
 
 int32_t NetChannel::feed(const uint8_t* data, uint32_t size, uint32_t& consumed)
 {
+    if (OverlapsCount(consumed, data, size)) { return NC_INVALID_ARGUMENT; }
     consumed = 0;
     if (size != 0 && (data == nullptr || reinterpret_cast<uintptr_t>(data) > UINTPTR_MAX - size))
     {
@@ -189,6 +204,11 @@ int32_t NetChannel::finish()
 int32_t NetChannel::encode(const NetChannelRecord& record, uint8_t* output, uint32_t capacity, uint32_t& required)
 {
     // 输出可以覆盖调用方的record结构；先固定元数据，正文仍不得与输出重叠
+    if (OverlapsCount(required, &record, sizeof(record)) || OverlapsCount(required, record.m_data, record.m_size) ||
+        OverlapsCount(required, output, capacity))
+    {
+        return NC_INVALID_ARGUMENT;
+    }
     const NetChannelRecord input = record;
     required = 0;
     if (!valid(input) || (input.m_size != 0 && (input.m_data == nullptr ||

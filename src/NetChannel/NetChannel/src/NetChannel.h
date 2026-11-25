@@ -18,7 +18,7 @@ public:
     /** 单执行者增量接纳一条记录，完整记录未消费时不读取新输入
     @param [in] data 至少size字节的有效输入，size为0时可空
     @param [in] size 本次输入字节数，未接纳的后缀仍归调用者
-    @param [out] consumed 本次完整复制的字节数，参数拒绝时为0；使用独立变量，不得与输入重叠
+    @param [out] consumed 本次完整复制的字节数，参数拒绝时为0；使用独立变量；与输入重叠时拒绝且保留原值
     @return NC_READY、NC_NEED_MORE或错误；协议、截断及分配错误持续到析构
     */
     int32_t feed(const uint8_t* data, uint32_t size, uint32_t& consumed);
@@ -43,7 +43,7 @@ public:
     @param [in] record 合法字段及借用正文，正文不得与实际输出区重叠
     @param [out] output 至少capacity字节的输出，查询长度时可空
     @param [in] capacity 可写字节数，0表示只查询所需长度
-    @param [out] required 所需字节数，非法输入时为0；不得与输入输出别名
+    @param [out] required 所需字节数，非法输入时为0；与描述符、正文或输出缓冲重叠时拒绝且保留原值
     @return NC_OK、NC_BUFFER_TOO_SMALL或NC_INVALID_ARGUMENT；失败不写输出
     */
     static int32_t encode(const NetChannelRecord& record, uint8_t* output, uint32_t capacity, uint32_t& required);
