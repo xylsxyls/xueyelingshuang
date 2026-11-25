@@ -286,7 +286,18 @@ static int EncodeBounds()
     record.m_size = NET_CHANNEL_PAYLOAD_LIMIT + 1;
     CHECK_TEST(NetChannel::encode(record, nullptr, 0, required) == NC_INVALID_ARGUMENT && required == 0);
     uint32_t consumed = 0;
+    // 长度输出与记录描述、正文或输出缓冲相交时，拒绝整次操作并保留原字节。
+    record.m_size = sizeof(payload);
+    uint32_t words[16] = {0x12345678};
+    NetChannelRecord shared = {NC_BYTES, 7, 1, reinterpret_cast<const uint8_t*>(words), sizeof(words[0])};
+    CHECK_TEST(NetChannel::encode(shared, output, sizeof(output), shared.m_size) == NC_INVALID_ARGUMENT && shared.m_size == 4);
+    CHECK_TEST(NetChannel::encode(shared, output, sizeof(output), words[0]) == NC_INVALID_ARGUMENT && words[0] == 0x12345678);
+    CHECK_TEST(NetChannel::encode(record, reinterpret_cast<uint8_t*>(words), sizeof(words), words[1]) == NC_INVALID_ARGUMENT &&
+        words[0] == 0x12345678 && words[1] == 0);
     NetChannel invalidAddress;
+    std::memcpy(words, golden, wireSize);
+    CHECK_TEST(invalidAddress.feed(reinterpret_cast<const uint8_t*>(words), wireSize, words[0]) == NC_INVALID_ARGUMENT &&
+        std::memcmp(words, golden, wireSize) == 0 && invalidAddress.finish() == NC_OK);
     CHECK_TEST(invalidAddress.feed(reinterpret_cast<const uint8_t*>(UINTPTR_MAX - 1), 4, consumed) == NC_INVALID_ARGUMENT && consumed == 0);
     CHECK_TEST(invalidAddress.finish() == NC_OK);
     CHECK_TEST(invalidAddress.feed(golden, wireSize, consumed) == NC_READY && consumed == wireSize);
