@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "NetInterface/NetInterfaceAPI.h"
+#include "NetInterface/NetObjectPool.h"
 #include <locale>
 #include <vector>
 
@@ -93,7 +94,7 @@ Linux 在 VS Code 中先配置 CMake、选定并构建 NetInterfaceTest，再用
 
 35 业务会话缓存与心跳（瞬时）。真实 HELLO 应答后，等待宿主分别观察到默认30000及自定义11000毫秒空闲期限。依次接纳40、8192字节和零字节 RPC，另行解析并逐字节核对，末次收到空正文。默认预算只保留小缓冲，0在每次交付后释放，-1在会话内复用；关闭后容量均为零。非法参数保留前值，连接后重配返回 NI_INVALID_STATE。三个请求同时超时时分别检查自定义每轮一个回调及默认一次结算全部。另让传输实际接纳一次 PING 但不回应，分别核对总无输入和 PONG 两个期限先到的等待值。
 
-36 服务恢复与启动期限（瞬时）。发现器始终无候选时，宿主须分别得到约250、1400、700毫秒的预算，第三种由较短的总期限决定。另一组在首次建立运输后应立即继续推进，观察到 OPEN 后，在没有应答时等待默认30000或自定义2100毫秒。非法和迟到配置均须拒绝。读写轮次另验默认32/32、自定义1/3和4/2，检查帧观察者的实际调用数、发送工作步数、耗尽后的立即推进与空闲后的等待。连续拒绝两次物理连接并固定抖动样本时，初始基数32毫秒、最大40毫秒的两次等待应为16及20毫秒。时间预算以测试期间实际流逝的毫秒数校正。白盒部分调用通道实际使用的解密后帧交付策略，分别测试默认5000和自定义750毫秒。第一次拒收可发生在零时刻，重复拒收不能续期，截止时不再进入观察者，到期前接纳应解除期限。
+36 服务恢复与启动期限（瞬时）。提交填满地址字段且没有终止符的服务地址，应返回 NI_INVALID_ARGUMENT、代次仍为零，随后合法连接可恢复。发现器始终无候选时，宿主须分别得到约250、1400、700毫秒的预算，第三种由较短的总期限决定。另一组在首次建立运输后应立即继续推进，观察到 OPEN 后，在没有应答时等待默认30000或自定义2100毫秒。非法和迟到配置均须拒绝。读写轮次另验默认32/32、自定义1/3和4/2，检查帧观察者的实际调用数、发送工作步数、耗尽后的立即推进与空闲后的等待。连续拒绝两次物理连接并固定抖动样本时，初始基数32毫秒、最大40毫秒的两次等待应为16及20毫秒。时间预算以测试期间实际流逝的毫秒数校正。白盒部分调用通道实际使用的解密后帧交付策略，分别测试默认5000和自定义750毫秒。第一次拒收可发生在零时刻，重复拒收不能续期，截止时不再进入观察者，到期前接纳应解除期限。
 
 37 隧道与借用输出（瞬时）。使用手写 NTW3 记录，分别让长度与正文、元数据和目标重叠。两个编码入口都应返回 NI_INVALID_ARGUMENT 并保留原字节，长度紧邻目标时应逐字节匹配手写记录。consumed 与输入重叠时不得消费，随后在同一解码器上完整重试。相交的读取输出应保留调用前的值，改用独立输出仍可读取并消费同一帧。
 
@@ -110,16 +111,323 @@ Linux 在 VS Code 中先配置 CMake、选定并构建 NetInterfaceTest，再用
 42 宿主随机输出（瞬时）。零字节与非法参数均不触发回调；8192 字节逐字节校验，8193 字节拒绝且保留原值。缺少回调或回调只写一字节后失败，均须擦除整个请求区间，且保留首尾保护字节。
 43 密码派生（瞬时）。密码和盐各含 NUL，PBKDF2-HMAC-SHA256 迭代两次，与独立 .NET 实现生成的 32 字节向量比较。31 字节输出、零次及超过上限的迭代须返回对应错误，原输出与保护字节均保持。
 
-功能验证结果（北京时间 2026-11-25 01:44）
---all 含43项，其中40项瞬时、3项压力。Windows Win32 Debug、x64 Release 分别用正式工程构建静态库和 DLL，四种组合各通过43项，并核对调用方的 DLL 导入表。Wasm32、Wasm64 的 Node 和 Chrome 四种组合也各通过43项。合计344项次。
-Windows 正式测试工程另验 --instant、--stress、重复与范围选择、逐个编号运行，以及无效编号44的退出码2。Wasm 正式 CMake 测试宿主在 Node 上完整通过。--link-timers 使用隔离网关的叶身份，在 Windows 两种配置与 Node 两种位宽上通过。NetInterface.cpp 中的 main 示例在上述两种 Windows 配置和两种 Wasm 位宽运行成功。Wasm32 另启用未定义行为检查，43项及示例通过。编号6、8、14、20、22、25、27、35、36、37、38、39、41、42、43在 Win32 Debug、x64 Release、Node Wasm32 和 Node Wasm64 上分别连续运行8轮，共480项次通过。上述附加验证均单独统计。
-Windows x64 Release 另验用例的判错能力。在隔离副本中错配正文池容量、改变随机回调输出、改错派生向量首字节，编号14、42、43分别返回失败。同轮使用正确输入时三项均通过。
-Linux、Linux ARM、macOS、Android和iOS完成源码与构建配置静态检查，缺少实机运行结果。Android及Apple目标还需准备匹配ABI的第三方归档。
+44 执行宿主异常。create 部分创建后抛出，预期拒绝绑定且只回收一次。分别使进入、退出、begin、wait、wake 和 destroy 抛出，核对错误状态、回调次数与 current() 的归属。
+45 文件协议门面。检查短元数据、字段、控制包查询与编码、1024 字节已持久前缀和剩余两字节读请求。输错偏移或产出长度应被拒绝，取消后快照保留唯一终态。
+46 TLS 与连接句柄。两对独立 TLS 客户端和服务端实际握手，一对传完整 NIF2 帧，一对传原始明文。检查无效配置、未就绪发送、消费后清空、保护字节及输入结束。
+47 解码句柄。对独立样本检查截断后的复位、字段数组的高低字顺序、两种视图的正文借用、消费及空句柄错误。
+48 目录与证书。二进制目录查询包含长度不足、越界和合法索引。分别以写满且无终止符的目录名称和地址调用创建入口，预期返回 NI_INVALID_ARGUMENT 并保持空句柄，更正后可创建。另检查固定候选的版本、端口和地址终止符、规范地址键。合法名称和熵源应产生非空 PEM，缺少熵源时两个长度清零。
+49 请求路由与通道。检查来源号与路由号的双向查询、错误产品和已完成请求，通用处理器重复注册，连接池非法配置、初始会话和默认运输接口的返回值。
+50 并发提交（压力）。四个生产者各预留64个请求，核对256个不同编号和关闭后返回值及清零的输出。单线程 Wasm 按相同输入串行执行。多线程构建由四个执行线程同时开始。
+51 对象池与引用（瞬时）。两槽池满时创建第三个对象应被拒绝。分别将根引用复制或移动赋值为它持有的子引用，预期父对象恰好析构一次、子对象仍存活。逐次检查构造失败后槽复用、空引用、自赋值、裸所有权归还和最终析构次数。
+--link-timers 先用97个不含终止符的字节作节点名称，构造结果应为 NI_INVALID_ARGUMENT。随后通过不透明句柄建立独立认证链路，核对对端名称、证书、完整高低位编号、两个方向的控制帧及隧道正文，最后验证 EOF 后的持续错误。
+
+功能验证结果（2026-11-25）
+Win32 Debug、Windows x64 Release、Node Wasm32 Release 和 Node Wasm64 Release 均运行全部51项及带隔离叶身份的 --link-timers。Linux、Linux ARM、macOS、Android及iOS检查源码及构建配置，缺少实机运行结果。
 
 性能入口与已有数据
 --benchmark 单独运行，--all 不启动计时。interface.encode1024 只测一个固定 NIF2 帧，正文1024字节，
 复用1056字节输出。计时前独立比较全部头和正文。计时内逐次调用编码、检查交付长度、轮转读取正文形成校验值。每批结束按 256 字节周期的独立预期核对总和。
 当前固定编码包含长度参数的重叠检查，缺少这一实现的性能测试数据，本次仅执行功能回归。紧凑编码、RPC、NVE2 事件、NOI2 本地服务信封、压缩等级和门槛、TLS、文件和路由等场景也缺少可比的专项耗时。随机回调、密码派生和不同大小级正文池缺少当前版本的独立计时数据。配置、创建、销毁和状态查询按功能验收，无需单列吞吐。
+
+当前回归验证了 Windows 静态库及 DLL 的实际链接，Wasm32 和 Wasm64 的未定义行为检测构建均通过全部编号用例。Chrome 无界面浏览器的 Wasm32 和 Wasm64 各通过51 项（47 项瞬时、4 项压力）。
+
+函数与用例索引（Win32 Debug）
+逐项单独运行并跟踪进入的生产函数，共 786 个具名入口。下列编号可用 --cases 单独运行；认证时限专项使用上文的独立入口。
+每个函数列出至少一个实际进入它的用例。同名重载可能对应多个编号。输入、预期输出和状态变化见相应的编号说明。仅内联且没有独立符号的函数随调用场景检查。
+NetBufferLease
+  14 号　NetBufferLease、 adopt、 capacity、 data、 reset、 swap、 ~NetBufferLease
+NetBufferPool
+  14 号　NetBufferPool、 allocate、 release、 statistics、 status、 ~NetBufferPool
+NetBufferPoolConfig
+  14 号　NetBufferPoolConfig、 status、 ~NetBufferPoolConfig
+  26 号　NetBufferPoolConfig
+NetClientChannel
+  32 号　NetClientChannel、 ~NetClientChannel
+  35 号　configureCompact
+  49 号　configureCompression、 configureConnectionPools、 outputState
+NetClientDiscovery
+  19 号　parseSeeds
+  36 号　~NetClientDiscovery
+  48 号　addressKey、 validPoint
+NetClientSession
+  26 号　NetClientSession、 close、 configureCompression、 configureConnectionPools、 configureGateways
+      configureRequestPool、 connect、 discoveryStopped、 executing、 quiescent、 releaseAttempt、 shutdown
+      stopDiscovery、 ~NetClientSession
+  28 号　configureServicePollBudgets、 configureServiceTlsQueueLimits、 configureServiceWindow、 failAttempt
+  35 号　beginRequest、 bindChannel、 cancel、 configureExpiryBudget、 configureHeartbeat
+      configurePayloadRetention、 onSessionReady、 onSessionResult、 payloadCapacity、 ready、 sendRequest
+  36 号　attempt、 bindGateway、 configureRecovery、 configureServiceTimeouts、 connectService、 expireRecovery
+      onSessionClosed、 poll、 reserveGeneration
+  39 号　onSessionFrame、 outputState、 sendData
+  49 号　beginRequestAt、 boundGatewayFactory、 detachBindingsForDestruction、 generation、 hasBoundChannel
+      serviceMode
+NetClientSessionState
+  26 号　NetClientSessionState、 active、 ~NetClientSessionState
+  36 号　expired、 recovering
+NetConnectionPoolConfig
+  12 号　NetConnectionPoolConfig、 validCodecSettings、 ~NetConnectionPoolConfig
+  26 号　NetConnectionPoolConfig
+NetConnectionQueue
+  12 号　NetConnectionQueue、 clear、 complete、 status、 ~NetConnectionQueue
+  13 号　active、 allocate、 append、 bufferClass
+  34 号　empty
+NetConnectionWrite
+  13 号　NetConnectionWrite、 ~NetConnectionWrite
+NetEndpointFileStream
+  40 号　NetEndpointFileStream、 ~NetEndpointFileStream
+NetEndpointPeer
+  32 号　NetEndpointPeer、 ~NetEndpointPeer
+NetEndpointPools
+  32 号　NetEndpointPools、 ~NetEndpointPools
+NetEndpointRouter
+  26 号　addPort、 addService
+  32 号　NetEndpointRouter、 advance、 bindTransport、 closeEndpoint、 closePeer、 collectFiles
+      configureClientHandshake、 configurePools、 deliver、 listen、 onClosed、 onFrame、 onReady、 pendingCount
+      poll、 shutdown、 ~NetEndpointRouter
+  33 号　routeFile
+  40 号　addClient、 bindFileReply、 dispatch、 dropFile、 origin、 payloadCapacity、 receiveClient、 receiveService
+      reject、 routeEvent、 routeFrame、 terminate
+  49 号　addHandler、 localPort
+NetEndpointRouterState
+  32 号　NetEndpointRouterState、 clearPayload、 enqueueClosing、 now、 takeClosing、 ~NetEndpointRouterState
+  33 号　exchangeFile
+  40 号　attachFile、 renewFile、 riseFile、 sinkFile、 takeFile
+NetEndpointServiceSink
+  32 号　~NetEndpointServiceSink
+NetExecution
+  31 号　NetExecution、 begin、 bind、 configure、 current、 deadline、 progress、 status、 wait、 wake、 ~NetExecution
+  44 号　exchange
+NetExecutionScope
+  31 号　NetExecutionScope、 ~NetExecutionScope
+NetFileProtocol
+  20 号　fileFlowAccept、 fileFlowCommitted、 fileFlowConsume、 fileFlowCreate、 fileFlowPeek
+      fileFlowSetWriteBatchChunks、 fileFlowSnapshot、 fileFlowTakeCommit、 fileFlowWrite、 fileFlowWritten
+  45 号　fileControlEncode、 fileFlowCancel、 fileFlowCreateWire、 fileFlowDestroy、 fileFlowPrime
+      fileFlowProduced、 fileFlowProgress、 fileFlowRead、 fileFlowSnapshotWire、 fileInfoFields、 fileParseInfo
+NetGatewayAddress
+  19 号　NetGatewayAddress、 ~NetGatewayAddress
+NetGatewayClientChannel
+  28 号　advance、 onLinkClosed、 onLinkControl、 onLinkRecord、 sendCredit、 sendOutput
+  36 号　NetGatewayClientChannel、 close、 configureServicePollBudgets、 configureServiceTimeouts
+      configureServiceWindow、 configureTlsQueueLimits、 connect、 finish、 onLinkReady、 poll、 sendOpen
+      shutdown、 ~NetGatewayClientChannel
+  49 号　configureCompact、 configureCompression、 configureConnectionPools、 outputState、 send
+NetGatewayClientChannelState
+  36 号　NetGatewayClientChannelState、 fail、 ~NetGatewayClientChannelState
+NetGatewayClientTiming
+  26 号　NetGatewayClientTiming
+  36 号　configure、 configurePollBudgets、 deliver
+NetGatewayTransport
+  36 号　~NetGatewayTransport
+  49 号　outputState
+NetGatewayTransportFactory
+  36 号　~NetGatewayTransportFactory
+NetHeartbeatConfig
+  32 号　NetHeartbeatConfig、 valid
+NetInterface
+  1 号　encode、 payloadLimit、 status、 writeNumber
+  2 号　encodeCompact
+  3 号　hashCreate、 hashDestroy、 hashFinish、 hashUpdate、 sha256
+  4 号　messageClear、 messageCreate、 messageDestroy、 messageEncode、 messageGetCode、 messageParse
+      messageSetCode
+  5 号　NetInterface、 clear、 consume、 feed、 finish、 peek、 prepareHeader、 readNumber、 ~NetInterface
+  6 号　encode、 encodeFields
+  7 号　allowCompact、 reset
+  8 号　rpcControl、 rpcEncode、 rpcParse
+  9 号　creditConsume、 creditGrant、 creditReceived
+  10 号　allowCompression、 fail、 peek
+  11 号　handshakeAccept、 handshakeConsumeOutput、 handshakeCreate、 handshakeDestroy、 handshakePeekOutput
+      handshakePeerInfo、 handshakeProgress
+  12 号　connectionCreate、 connectionCreateServiceClient、 connectionDestroy、 connectionProgress
+      trustAuthority
+  15 号　directoryCache、 directoryCopyNodes、 directoryCreateCache、 directoryCreateNodes、 directoryDestroy
+  16 号　directoryCount
+  17 号　requestsAddEndpoint、 requestsBegin、 requestsCancel、 requestsComplete、 requestsCount、 requestsCreate
+      requestsDestroy、 requestsRemoveEndpoint、 requestsTake
+  20 号　fileFlowAccept、 fileFlowCommitted、 fileFlowConsume、 fileFlowPeek、 fileFlowSetWriteBatchChunks
+      fileFlowSnapshot、 fileFlowTakeCommit、 fileFlowWrite、 fileFlowWritten
+  22 号　messageGetValue、 messageSetValue
+  23 号　creditConfigure、 creditConfigureMessage、 creditCreate、 creditDestroy、 creditGet、 creditSent
+  24 号　linkCreate、 linkDestroy、 requestsCreate
+  27 号　connectionConfigureCompression、 connectionFeed、 tlsCreate、 tlsDestroy、 tlsFeed、 tlsRead、 tlsWrite
+  29 号　configureDecoderRetention、 decoderBufferCapacity
+  30 号　messageConfigureLimits
+  37 号　connectionPeekOutput、 linkPeerInfo、 tunnelConsume、 tunnelCreate、 tunnelDestroy、 tunnelEncode
+      tunnelFeed、 tunnelFinish、 tunnelPeek
+  42 号　entropyBytes、 wipe
+  43 号　pbkdf2Sha256
+  45 号　fileControlEncode、 fileFlowCancel、 fileFlowCreate、 fileFlowCreateWire、 fileFlowDestroy、 fileFlowPrime
+      fileFlowProduced、 fileFlowProgress、 fileFlowRead、 fileFlowSnapshotWire、 fileInfoFields、 fileParseInfo
+  46 号　connectionConsume、 connectionConsumeOutput、 connectionCreate、 connectionFinishInput
+      connectionGetStatus、 connectionPeek、 connectionSend、 tlsClose、 tlsConsumeOutput、 tlsCreate
+      tlsCreateClient、 tlsFinishInput、 tlsGetStatus、 tlsPeekOutput、 tlsProgress
+  47 号　consume、 create、 destroy、 feed、 finish、 peek、 peekFields、 reset
+  48 号　certificateCreateRequest、 directoryCreate、 directoryNode
+  认证时限专项　linkAccept、 linkConsumeControl、 linkConsumeOutput、 linkConsumeRecord、 linkCreate、 linkFinishInput
+      linkPeekControl、 linkPeekOutput、 linkPeekRecord、 linkProgress、 linkSendControl、 linkSendRecord
+      linkStatus
+NetInterfaceCertificate
+  48 号　createRequest、 validName
+  认证时限专项　signProof、 verify、 verifyPair、 verifyProof
+NetInterfaceCompact
+  2 号　encode、 write
+  7 号　header、 read
+NetInterfaceCompression
+  10 号　decode
+  13 号　supports
+  34 号　encode
+NetInterfaceConnection
+  12 号　NetInterfaceConnection、 clearWrites、 detail、 peekOutput、 progress、 status、 wipe
+      ~NetInterfaceConnection
+  13 号　NetInterfaceConnection、 completeActive、 configurePools、 consume、 consumeOutput、 decodePending
+      decoderBufferCapacity、 peek、 send
+  27 号　configureCompression、 feed
+  34 号　configureCompact
+  38 号　decodeBuffered
+  46 号　finishInput、 peek
+  认证时限专项　fail、 outputState
+NetInterfaceCredit
+  9 号　consume、 grant、 received
+  23 号　NetInterfaceCredit、 available、 configure、 pending、 sent、 status、 window
+  36 号　capacity
+NetInterfaceDirectory
+  15 号　encode、 encodeCache、 number、 parse、 parseCache、 text
+  48 号　address、 valid
+NetInterfaceDirectoryAddress
+  19 号　parse
+NetInterfaceDirectoryPoint
+  15 号　NetInterfaceDirectoryPoint、 ~NetInterfaceDirectoryPoint
+NetInterfaceEvent
+  41 号　encode、 parse
+NetInterfaceFile
+  21 号　encodeAck、 encodeData、 encodeInfo、 equal、 parseAck、 parseData、 read32、 read64、 validInfo、 write32
+      write64、 zero
+  40 号　encodeNotice、 parseNotice
+  45 号　encodeControl、 isControl、 parseControl、 parseInfo
+NetInterfaceFileFlow
+  20 号　setWriteBatchChunks、 writeRequest、 written
+  21 号　NetInterfaceFileFlow、 accept、 acceptAck、 acceptData、 committed、 consumeOutput、 fail、 peekOutput
+      snapshot、 takeCommit、 ~NetInterfaceFileFlow
+  45 号　cancel、 prime、 produced、 progress、 readRequest
+NetInterfaceFileFlowOpaque
+  45 号　NetInterfaceFileFlowOpaque、 ~NetInterfaceFileFlowOpaque
+NetInterfaceFileFlowState
+  21 号　NetInterfaceFileFlowState、 clearData、 clearOutput、 prepareOutput、 status、 ~NetInterfaceFileFlowState
+NetInterfaceFileGuard
+  2 号　overlapsFrameLength
+  5 号　prepareCount
+  21 号　NetInterfaceFileGuard、 ~NetInterfaceFileGuard
+  41 号　overlap、 overlapsFrame
+NetInterfaceHandshake
+  11 号　NetInterfaceHandshake、 accept、 consumeOutput、 fail、 makeOutput、 peekOutput、 peerInfo、 progress
+      validLimits
+NetInterfaceLink
+  24 号　NetInterfaceLink、 status、 ~NetInterfaceLink
+  27 号　consumeOutput、 peekOutput、 progress
+  认证时限专项　NetInterfaceLink、 accept、 configureOutputPools、 consumeControl、 consumeRecord、 drainInput
+      finishInput、 outputState、 peekControl、 peekRecord、 peerInfo、 sendControl、 sendRecord、 serviceGrant
+NetInterfaceLinkPools
+  24 号　NetInterfaceLinkPools、 ~NetInterfaceLinkPools
+NetInterfaceLinkState
+  24 号　NetInterfaceLinkState、 configure、 fail、 status、 ~NetInterfaceLinkState
+  27 号　progress
+  认证时限专项　consumeQueuedRecord、 handshakeFrame、 prove、 queueRecord、 verifyAcceptance、 verifyProof
+NetInterfaceLinkWrite
+  认证时限专项　NetInterfaceLinkWrite、 ~NetInterfaceLinkWrite
+NetInterfaceMessage
+  4 号　NetInterfaceMessage、 canCharge、 clear、 ~NetInterfaceMessage
+NetInterfaceRequestChildren
+  49 号　NetInterfaceRequestChildren
+NetInterfaceRequestEndpoint
+  18 号　NetInterfaceRequestEndpoint、 ~NetInterfaceRequestEndpoint
+NetInterfaceRequestEntry
+  18 号　NetInterfaceRequestEntry
+NetInterfaceRequests
+  17 号　complete、 take
+  18 号　NetInterfaceRequests、 addEndpoint、 advance、 begin、 beginNext、 cancel、 count、 removeEndpoint
+      setEndpointLimit、 status、 takeExpired、 ~NetInterfaceRequests
+  24 号　NetInterfaceRequests
+  32 号　takeEndpoint
+  40 号　takeChild
+  49 号　NetInterfaceRequests、 completeOriginal、 parentContext
+NetInterfaceRequestsState
+  18 号　NetInterfaceRequestsState、 earlier、 insert、 rise、 sink、 take、 ~NetInterfaceRequestsState
+NetInterfaceRpc
+  8 号　control、 encode、 parse
+NetInterfaceService
+  8 号　authenticate、 hello、 unwrap、 wrap
+NetInterfaceTls
+  12 号　NetInterfaceTls、 detail、 peekOutput、 progress、 status、 ~NetInterfaceTls
+  13 号　consumeOutput
+  27 号　NetInterfaceTls、 append、 feed、 read、 write
+  34 号　appendExact
+  46 号　close、 finishInput
+  认证时限专项　outputState
+NetInterfaceTlsOptions
+  24 号　effectiveHandshakeTimeout
+NetInterfaceTunnel
+  37 号　NetInterfaceTunnel、 consume、 encode、 feed、 finish、 peek、 ~NetInterfaceTunnel
+NetLinkTransportListener
+  36 号　NetLinkTransportListener、 ~NetLinkTransportListener
+NetRequestTablePools
+  18 号　NetRequestTablePools、 ~NetRequestTablePools
+NetSenderDispatch
+  39 号　NetSenderDispatch、 advanceOutput、 bindSubmission、 configurePollBudgets、 error、 execute、 executing
+      fail、 listener、 onSessionClosed、 onSessionFrame、 onSessionReady、 onSessionResult、 poll、 prepare
+      quiescent、 report、 sendData、 sendRequest、 shutdown、 started、 submission、 waitSynchronous、 wireId
+      ~NetSenderDispatch
+NetSenderDispatchMap
+  39 号　NetSenderDispatchMap、 clear、 erase、 insert、 local、 size、 wire、 ~NetSenderDispatchMap
+NetSenderSubmission
+  25 号　advanceSynchronous、 beginPoll、 complete、 configureGate、 configurePools、 data、 dataSynchronous
+      disconnected、 drainData、 finish、 next、 nextData、 observeSynchronous、 queuedBytes、 sendSynchronous
+      submitData、 submitRequest、 synchronousResult、 takeClosed
+  39 号　advanceSynchronous、 cancel、 closeRequested、 send、 state、 synchronousPending
+  50 号　NetSenderSubmission、 begin、 close、 idle、 now、 ready、 start、 ~NetSenderSubmission
+NetSenderSubmissionAccess
+  50 号　NetSenderSubmissionAccess、 accepted、 ~NetSenderSubmissionAccess
+NetSenderSubmissionEntry
+  50 号　NetSenderSubmissionEntry、 clear、 ~NetSenderSubmissionEntry
+NetSenderSubmissionFront
+  50 号　NetSenderSubmissionFront
+NetSenderSubmissionInput
+  50 号　NetSenderSubmissionInput、 ~NetSenderSubmissionInput
+NetSenderSubmissionItem
+  25 号　NetSenderSubmissionItem
+  50 号　NetSenderSubmissionItem、 operator=、 ~NetSenderSubmissionItem
+NetSenderSubmissionOptions
+  50 号　NetSenderSubmissionOptions、 ~NetSenderSubmissionOptions
+NetSenderSubmissionPayload
+  25 号　NetSenderSubmissionPayload、 ~NetSenderSubmissionPayload
+NetSenderSubmissionPools
+  50 号　NetSenderSubmissionPools、 ~NetSenderSubmissionPools
+NetSenderSubmissionReceipt
+  25 号　NetSenderSubmissionReceipt、 ~NetSenderSubmissionReceipt
+NetSenderSubmissionSignal
+  25 号　~NetSenderSubmissionSignal
+NetSenderSubmissionState
+  25 号　addReceipt、 append、 drainDisconnected、 expireFrames、 find、 reserveReceipt、 rollbackReceipt、 settle
+  50 号　NetSenderSubmissionState、 clear、 dropDirect、 dropFrames、 importOwned、 indexResult、 materializeDirect
+      nextId、 pauseContention、 pendingReceipts、 pump、 queueResult、 quiesce、 remove、 requestClose、 retire
+      take、 wake、 ~NetSenderSubmissionState
+NetServerChannel
+  32 号　~NetServerChannel
+NetSession
+  26 号　NetSession、 bindChannel、 configureCompression、 configureRequestPool、 generation、 shutdown
+      ~NetSession
+  35 号　beginRequest、 cancel、 configureExpiryBudget、 configureHeartbeat、 configurePayloadRetention
+      notifyReady、 notifyResult、 onFrame、 onReady、 payloadCapacity、 reserveRequest、 sendCancel、 sendFrame
+      sendRequest
+  36 号　close、 connect、 notifyClosed、 onClosed、 poll、 progressHandshake、 ready
+  39 号　notifyFrame、 outputState、 sendData
+  49 号　beginRequestAt
+NetSessionListener
+  26 号　NetSessionListener、 ~NetSessionListener
+NetSessionState
+  26 号　NetSessionState、 clearPayload、 resetRequests、 ~NetSessionState
+  35 号　earlier、 exchange、 expired、 reserve、 rise、 sink、 take
+NetTransportListener
+  32 号　NetTransportListener、 ~NetTransportListener
 */
 
 // 稳定用例编号，供命令行及多平台测试宿主选择。
@@ -210,7 +518,41 @@ enum NetInterfaceTestCase
     // 随机回调交付长度及失败时的输出擦除范围
     CaseEntropyOutput = 42,
     // 二进制密码和盐的 PBKDF2 派生及失败边界
-    CasePasswordDerivation = 43
+    CasePasswordDerivation = 43,
+    // 执行宿主六个回调异常与嵌套归属恢复。
+    CaseExecutionExceptions = 44,
+    // 文件协议门面核对线格式、恢复前缀、宿主读长度和取消终态
+    CaseFileProtocolFacade = 45,
+    // 通过不透明句柄完成双向 TLS 握手、输入输出交接和普通帧解码
+    CaseTlsHandles = 46,
+    // 核对解码句柄的完整视图、短输入、消费、复位和终态
+    CaseDecoderHandleFields = 47,
+    // 校验目录编码句柄、候选规范化、精确缓冲容量及证书申请的输出边界
+    CaseDirectoryHandles = 48,
+    // 核对请求双向索引、端点注册及通道初始化前的边界
+    CaseRoutingBoundaries = 49,
+    // 核对多生产者同时预留的请求号、唯一性和关闭后的输出
+    CaseSubmissionProducers = 50,
+    // 检查池槽实际归还和父子引用间的复制、转交。
+    CaseObjectReferences = 51
+};
+
+// 记录实际析构次数；父对象可以持有同一池中的另一个对象。
+struct TestReferenceNode
+{
+    /** 建立计数节点；按输入模拟对象构造失败
+    @param [in,out] destroyed 外部计数，须覆盖节点的生存期
+    @param [in] reject 为 true 时构造函数抛出异常
+    */
+    TestReferenceNode(unsigned& destroyed, bool reject);
+
+    /** 对已构造的节点记录一次析构 */
+    ~TestReferenceNode();
+
+    // 外部维护的析构计数。
+    unsigned& m_destroyed;
+    // 持有子节点所有权。
+    NetObjectReference<TestReferenceNode> m_child;
 };
 
 /** 模拟业务进程启用数字千位分组的环境
@@ -258,6 +600,8 @@ public:
     uint64_t m_request;
     // 客户端在授权应答中读到的最近流号
     uint64_t m_stream;
+    // 收到并核对的定向业务事件数。
+    unsigned m_events = 0;
     // 服务端按顺序收到的本地流终止编号
     std::vector<uint64_t> m_notices;
 };
@@ -303,6 +647,9 @@ private:
     NetTransportListener* m_listener;
     // 已交付的运输事件数
     unsigned m_events;
+public:
+    // 用例安排在下一次推进中发生的宿主关闭。
+    bool m_endInput = false;
 
 public:
     // 客户端接收应答的结果或提前关闭原因
@@ -391,6 +738,11 @@ public:
     uint32_t m_reply;
     // 是否在每次连接时报告协议失败以触发真实恢复流程
     bool m_refuseConnect = false;
+    // 下一次创建或推进使用的受控故障，1空工厂、2远端关闭、3意外业务记录。
+    unsigned m_fault = 0;
+    // 验证业务帧的异常回调及交付次数。
+    bool m_throwFrame = false;
+    unsigned m_frames = 0;
     // 已收到的终态通知数
     uint32_t m_closes = 0;
     // 已实际交付的请求超时通知数
@@ -441,6 +793,8 @@ public:
     std::vector<uint64_t> m_dataIds;
     // 运输实际接纳的心跳数
     uint32_t m_pings = 0;
+    // 用例交由已绑定会话的下一条业务事件，测试期间借用。
+    const NetInterfaceFrame* m_event = nullptr;
     // 接纳的业务正文，与调用方的原始内容独立比较
     std::vector<uint8_t> m_body;
 

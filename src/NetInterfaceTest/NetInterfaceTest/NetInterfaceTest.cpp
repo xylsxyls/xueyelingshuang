@@ -7,11 +7,13 @@
 #include <chrono>
 #include <algorithm>
 #include <ctime>
-#if !defined(__EMSCRIPTEN__)
+#include <atomic>
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
 #include <thread>
 #endif
 #include <cstring>
 #include <exception>
+#include <stdexcept>
 #include <vector>
 #include <memory>
 #if defined(_MSC_VER) && defined(_DEBUG)
@@ -1368,6 +1370,7 @@ static int DiscoverySeeds()
 */
 static int FileBatchProgress()
 {
+    NetFileProtocol protocol;
     uint8_t content[1537];
     for (size_t i = 0; i < sizeof(content); ++i)
     {
@@ -1390,12 +1393,13 @@ static int FileBatchProgress()
     NetInterfaceFileFlow sender(info, 7, true, 100, 1000), receiver(info, 7, false, 100, 1000);
     NetInterfaceFileFlow stalled(info, 7, false, 100, 1000), defaultReceiver(info, 7, false, 100, 1000);
     NetInterfaceFileFlowHandle flow = nullptr;
-    CHECK_TEST(NetInterface::fileFlowCreate(&info, 7, 0, 100, 0, 1000, &flow) == NI_OK && flow);
-    std::unique_ptr<NetInterfaceFileFlowOpaque, void (*)(NetInterfaceFileFlowHandle)> flowOwner(flow, NetInterface::fileFlowDestroy);
+    CHECK_TEST(protocol.fileFlowCreate(&info, 7, 0, 100, 0, 1000, &flow) == NI_OK && flow);
+    const auto dispose = [&](NetInterfaceFileFlowHandle handle) { protocol.fileFlowDestroy(handle); };
+    std::unique_ptr<NetInterfaceFileFlowOpaque, decltype(dispose)> flowOwner(flow, dispose);
     CHECK_TEST(sender.setWriteBatchChunks(1) == NI_INVALID_STATE && receiver.setWriteBatchChunks(0) == NI_INVALID_ARGUMENT &&
-        NetInterface::fileFlowSetWriteBatchChunks(flow, 0) == NI_INVALID_ARGUMENT &&
-        NetInterface::fileFlowSetWriteBatchChunks(flow, 2) == NI_OK &&
-        NetInterface::fileFlowSetWriteBatchChunks(flow, 3) == NI_INVALID_ARGUMENT);
+        protocol.fileFlowSetWriteBatchChunks(flow, 0) == NI_INVALID_ARGUMENT &&
+        protocol.fileFlowSetWriteBatchChunks(flow, 2) == NI_OK &&
+        protocol.fileFlowSetWriteBatchChunks(flow, 3) == NI_INVALID_ARGUMENT);
     CHECK_TEST(receiver.setWriteBatchChunks(3) == NI_INVALID_ARGUMENT && receiver.setWriteBatchChunks(2) == NI_OK &&
         stalled.setWriteBatchChunks(2) == NI_OK);
 
@@ -1412,9 +1416,9 @@ static int FileBatchProgress()
         defaultReceiver.written(offset, size, NI_OK) == NI_OK && receiver.setWriteBatchChunks(1) == NI_INVALID_STATE);
     uint32_t fields[] = {data.m_kind, 7, 61, 0, data.m_messageType, data.m_payloadSize};
     uint32_t write[3] = {};
-    CHECK_TEST(NetInterface::fileFlowAccept(flow, fields, data.m_payload) == NI_OK &&
-        NetInterface::fileFlowWrite(flow, write, &borrowed) == NI_NEED_MORE && !borrowed && write[2] == 0 &&
-        NetInterface::fileFlowSetWriteBatchChunks(flow, 1) == NI_INVALID_STATE);
+    CHECK_TEST(protocol.fileFlowAccept(flow, fields, data.m_payload) == NI_OK &&
+        protocol.fileFlowWrite(flow, write, &borrowed) == NI_NEED_MORE && !borrowed && write[2] == 0 &&
+        protocol.fileFlowSetWriteBatchChunks(flow, 1) == NI_INVALID_STATE);
     CHECK_TEST(receiver.writeRequest(offset, borrowed, size) == NI_NEED_MORE && !borrowed && size == 0 &&
         receiver.peekOutput(ack) == NI_NEED_MORE);
     CHECK_TEST(stalled.progress(1700) == NI_OK && stalled.accept(data) == NI_OK && stalled.progress(1799) == NI_OK &&
@@ -1424,8 +1428,8 @@ static int FileBatchProgress()
         sender.produced(offset, content + 1024, size) == NI_OK && sender.peekOutput(data) == NI_READY &&
         receiver.accept(data) == NI_OK);
     fields[5] = data.m_payloadSize;
-    CHECK_TEST(NetInterface::fileFlowAccept(flow, fields, data.m_payload) == NI_OK &&
-        NetInterface::fileFlowWrite(flow, write, &borrowed) == NI_READY && write[0] == 0 && write[1] == 0 &&
+    CHECK_TEST(protocol.fileFlowAccept(flow, fields, data.m_payload) == NI_OK &&
+        protocol.fileFlowWrite(flow, write, &borrowed) == NI_READY && write[0] == 0 && write[1] == 0 &&
         write[2] == sizeof(content) && borrowed && !std::memcmp(borrowed, content, sizeof(content)));
     CHECK_TEST(sender.consumeOutput() == NI_OK);
     CHECK_TEST(receiver.writeRequest(offset, borrowed, size) == NI_READY && offset == 0 && size == sizeof(content) &&
@@ -1437,20 +1441,20 @@ static int FileBatchProgress()
         receiver.peekOutput(ack) == NI_READY && ack.m_kind == NI_DATA_ACK && sender.accept(ack) == NI_OK &&
         receiver.consumeOutput() == NI_OK);
     uint32_t ackFields[6] = {};
-    CHECK_TEST(NetInterface::fileFlowPeek(flow, ackFields, &borrowed) == NI_NEED_MORE &&
-        NetInterface::fileFlowWritten(flow, write[0], write[1], write[2], NI_OK) == NI_OK &&
-        NetInterface::fileFlowPeek(flow, ackFields, &borrowed) == NI_READY && ackFields[0] == NI_DATA_ACK &&
-        NetInterface::fileFlowConsume(flow) == NI_OK);
+    CHECK_TEST(protocol.fileFlowPeek(flow, ackFields, &borrowed) == NI_NEED_MORE &&
+        protocol.fileFlowWritten(flow, write[0], write[1], write[2], NI_OK) == NI_OK &&
+        protocol.fileFlowPeek(flow, ackFields, &borrowed) == NI_READY && ackFields[0] == NI_DATA_ACK &&
+        protocol.fileFlowConsume(flow) == NI_OK);
     CHECK_TEST(sender.peekOutput(data) == NI_READY && receiver.accept(data) == NI_OK);
     fields[0] = data.m_kind;
     fields[4] = data.m_messageType;
     fields[5] = data.m_payloadSize;
-    CHECK_TEST(NetInterface::fileFlowAccept(flow, fields, data.m_payload) == NI_OK &&
-        NetInterface::fileFlowTakeCommit(flow) == NI_READY && NetInterface::fileFlowTakeCommit(flow) == NI_NEED_MORE &&
-        NetInterface::fileFlowPeek(flow, ackFields, &borrowed) == NI_NEED_MORE &&
-        NetInterface::fileFlowCommitted(flow, NI_OK) == NI_READY &&
-        NetInterface::fileFlowPeek(flow, ackFields, &borrowed) == NI_READY && ackFields[0] == NI_DATA_ACK &&
-        NetInterface::fileFlowConsume(flow) == NI_OK && NetInterface::fileFlowSnapshot(flow, &snapshot, &status) == NI_OK &&
+    CHECK_TEST(protocol.fileFlowAccept(flow, fields, data.m_payload) == NI_OK &&
+        protocol.fileFlowTakeCommit(flow) == NI_READY && protocol.fileFlowTakeCommit(flow) == NI_NEED_MORE &&
+        protocol.fileFlowPeek(flow, ackFields, &borrowed) == NI_NEED_MORE &&
+        protocol.fileFlowCommitted(flow, NI_OK) == NI_READY &&
+        protocol.fileFlowPeek(flow, ackFields, &borrowed) == NI_READY && ackFields[0] == NI_DATA_ACK &&
+        protocol.fileFlowConsume(flow) == NI_OK && protocol.fileFlowSnapshot(flow, &snapshot, &status) == NI_OK &&
         status == NI_READY && snapshot.state == NI_FILE_COMPLETED && snapshot.offset == sizeof(content) && snapshot.stream == 0);
     CHECK_TEST(sender.consumeOutput() == NI_OK &&
         receiver.takeCommit() == NI_READY && receiver.takeCommit() == NI_NEED_MORE && receiver.peekOutput(ack) == NI_NEED_MORE);
@@ -2100,8 +2104,18 @@ static int SubmissionConfiguration()
     const NetInterfaceFrame synchronous = {7, 33, 0, NI_DATA, 0, nullptr};
     uint64_t ticket = 0;
     CHECK_TEST(submission.dataSynchronous(synchronous, ticket) == NI_OK && ticket);
+    struct Observer : NetSenderSubmissionSignal
+    {
+        unsigned count;
+        Observer() : count(0) {}
+        void notify() override { ++count; }
+    };
+    std::shared_ptr<Observer> observer(new Observer);
+    CHECK_TEST(submission.observeSynchronous(ticket, std::shared_ptr<NetSenderSubmissionSignal>()) == NI_INVALID_ARGUMENT &&
+        submission.observeSynchronous(ticket, observer) == NI_OK && submission.observeSynchronous(ticket, observer) == NI_INVALID_STATE);
     submission.advanceSynchronous(NI_READY, NetSenderSubmission::now() + 1);
-    CHECK_TEST(submission.synchronousResult(ticket, true) == NI_TIMEOUT);
+    CHECK_TEST(observer->count == 1 && submission.synchronousResult(ticket, true) == NI_TIMEOUT &&
+        submission.observeSynchronous(ticket, observer) == NI_NOT_FOUND);
     NetSenderSubmissionPools bounded;
     bounded.m_queue.initialCapacity = 2;
     bounded.m_queue.maximumCapacity = 2;
@@ -2183,7 +2197,7 @@ static int OwnerPools()
     CHECK_TEST(session.configureRequestPool(cfg) == NI_INVALID_ARGUMENT && client.configureRequestPool(cfg) == NI_INVALID_ARGUMENT);
     cfg.initialCapacity = 1;
     cfg.maximumCapacity = -1;
-    CHECK_TEST(session.configureRequestPool(cfg) == NI_OK && client.configureRequestPool(cfg) == NI_OK);
+    CHECK_TEST(session.configureRequestPool(cfg) == NI_OK && client.configureRequestPool(cfg) == NI_OK && !session.generation());
     CHECK_TEST(client.configureCompression(nullptr, 1) == NI_INVALID_ARGUMENT);
     const uint32_t types[] = {1, 2};
     CHECK_TEST(client.configureCompression(types, 2) == NI_OK && session.configureCompression(types, 2) == NI_OK);
@@ -2302,6 +2316,13 @@ bool CiphertextProbeTransport::poll()
         m_ready = true;
         m_listener->onLinkReady(1, identity);
     }
+    else if (m_host.m_fault == 2 || m_host.m_fault == 3)
+    {
+        const unsigned fault = m_host.m_fault;
+        m_host.m_fault = 0;
+        if (fault == 2) { m_listener->onLinkClosed(1, 0); }
+        else { const NetInterfaceTunnelRecord record = {}; m_listener->onLinkRecord(1, record); }
+    }
     else if (!m_response.empty())
     {
         const NetInterfaceFrame response = {0, 1, NI_GATEWAY_OPEN, NI_RESPONSE,
@@ -2359,7 +2380,7 @@ CiphertextProbeHost::CiphertextProbeHost() : m_first(0), m_offered(0), m_reply(0
 
 NetGatewayTransport* CiphertextProbeHost::create()
 {
-    return new CiphertextProbeTransport(*this);
+    return m_fault == 1 ? nullptr : new CiphertextProbeTransport(*this);
 }
 
 void CiphertextProbeHost::onSessionReady(uint64_t, uint32_t, uint32_t)
@@ -2372,8 +2393,11 @@ void CiphertextProbeHost::onSessionResult(uint64_t, uint64_t, uint32_t, uint32_t
     if (status == NI_RPC_TIMEOUT) { ++m_timeouts; }
 }
 
-bool CiphertextProbeHost::onSessionFrame(uint64_t, const NetInterfaceFrame&)
+bool CiphertextProbeHost::onSessionFrame(uint64_t, const NetInterfaceFrame& frame)
 {
+    if (frame.m_kind == NI_EVENT && frame.m_requestId == 99 && frame.m_payloadSize == 2 && frame.m_payload &&
+        frame.m_payload[0] == 19 && frame.m_payload[1] == 31) { ++m_frames; }
+    if (m_throwFrame) { throw std::runtime_error("frame"); }
     return false;
 }
 
@@ -2431,6 +2455,16 @@ static int ServiceCiphertextConfiguration()
         {
             CHECK_TEST(host.m_first == outputs[i] && host.m_closed == NI_OK);
         }
+        session.shutdown();
+    }
+    for (unsigned fault = 1; fault <= 3; ++fault)
+    {
+        CiphertextProbeHost host;
+        host.m_fault = fault;
+        NetClientSession session;
+        CHECK_TEST(session.connectService(7, "127.0.0.1", 8000, tls, hello, &host, &host) == NI_OK);
+        for (unsigned i = 0; i < 16 && !host.m_closes; ++i) { session.poll(); }
+        CHECK_TEST(host.m_closes == 1 && host.m_closed == (fault == 1 ? NI_NO_MEMORY : fault == 2 ? NI_TRUNCATED : NI_PROTOCOL_ERROR));
         session.shutdown();
     }
     return 0;
@@ -2586,6 +2620,83 @@ static int ExecutionConfiguration()
     return 0;
 }
 
+/** 验证执行宿主抛异常时的错误、绑定归属、回调次数和析构
+@return 宿主故障均由执行者收敛时返回0
+*/
+static int ExecutionExceptions()
+{
+    static unsigned fault, destroys, binds, waits;
+    static int loop, external;
+    static void* active;
+    NetHostExecutionFunctions host = {};
+    host.create = [](void** instance) -> int32_t {
+        *instance = &loop;
+        if (fault == 1) { throw std::runtime_error("create"); }
+        return 0;
+    };
+    host.exchange = [](void* to) -> void* {
+        ++binds;
+        if ((fault == 2 && binds == 1) || (fault == 6 && binds == 2)) { throw std::runtime_error("exchange"); }
+        void* old = active;
+        active = to;
+        return old;
+    };
+    host.begin = [](void*) -> uint64_t {
+        if (fault == 3) { throw std::runtime_error("begin"); }
+        return 7;
+    };
+    host.wait = [](void*, uint64_t, uint32_t) -> int32_t {
+        ++waits;
+        if (fault == 4) { throw std::runtime_error("wait"); }
+        return 0;
+    };
+    host.wake = [](void*) { if (fault == 5) { throw std::runtime_error("wake"); } };
+    host.destroy = [](void*) -> int32_t {
+        ++destroys;
+        if (fault == 7) { throw std::runtime_error("destroy"); }
+        return 0;
+    };
+    CHECK_TEST(NetExecution::configure(host) == NI_OK);
+    bool valid = true;
+    for (fault = 1; fault <= 7; ++fault)
+    {
+        destroys = binds = waits = 0;
+        active = &external;
+        {
+            NetExecution execution;
+            if (fault == 1)
+            {
+                void* previousHost = &external;
+                NetExecutionScope rejected(execution);
+                valid = valid && !NetExecution::exchange(&execution, previousHost) && !previousHost &&
+                    !NetExecution::current() && binds == 0 && active == &external && execution.wait(0) == NI_INVALID_STATE;
+            }
+            else
+            {
+                {
+                    NetExecutionScope scope(execution);
+                    valid = valid && NetExecution::current() == (fault == 2 ? nullptr : &execution);
+                    execution.begin();
+                    execution.wake();
+                    const int32_t status = execution.wait(0);
+                    valid = valid && status == (fault >= 2 && fault <= 5 ? NI_INVALID_STATE : NI_OK);
+                }
+                valid = valid && !NetExecution::current() && binds == (fault == 2 ? 1U : 2U);
+                if (fault != 6) { valid = valid && active == &external; }
+            }
+            valid = valid && execution.status() == (fault == 7 ? NI_OK : NI_INVALID_STATE);
+            valid = valid && waits == (fault == 4 || fault >= 6 ? 1U : 0U);
+        }
+        valid = valid && destroys == 1;
+    }
+    NetHostExecutionFunctions empty = {};
+    CHECK_TEST(NetExecution::configure(empty) == NI_OK && valid);
+    NetExecution local;
+    CHECK_TEST(NetExecution::exchange(&local) == nullptr && NetExecution::current() == &local);
+    CHECK_TEST(NetExecution::exchange(nullptr) == &local && !NetExecution::current());
+    return 0;
+}
+
 RouterHandshakeTransport::RouterHandshakeTransport(NetInterfaceHandshake& client) :
 m_client(client), m_listener(nullptr), m_events(0), m_result(NI_NEED_MORE)
 {
@@ -2607,6 +2718,7 @@ int32_t RouterHandshakeTransport::listen(const char*, uint32_t, const NetInterfa
 bool RouterHandshakeTransport::poll()
 {
     if (m_listener == nullptr) { return false; }
+    if (m_endInput) { m_endInput = false; m_listener->onClosed(9, NI_CANCELLED, 0); return true; }
     if (m_events == 0)
     {
         ++m_events;
@@ -2714,6 +2826,8 @@ static int CheckRouterHandshake(bool custom, const uint32_t& waited)
     CHECK_TEST(client.peerInfo(fields, nonce, device) == NI_READY && fields[0] == 2 &&
         fields[1] == (custom ? 3U : 7U) && fields[2] == (custom ? 9U : 32U) &&
         fields[3] == (custom ? 2048U : 65536U) && !std::memcmp(device, offer.m_device, sizeof(device)));
+    transport.m_endInput = true;
+    CHECK_TEST(router.poll() && !transport.m_endInput && !router.pendingCount());
     return 0;
 }
 
@@ -2767,6 +2881,7 @@ bool SessionProbeChannel::poll()
         m_listener->onReady(7);
     }
     NetInterfaceFrame frame = {};
+    if (m_event && m_listener->onFrame(7, *m_event)) { m_event = nullptr; }
     if (m_server.peekOutput(frame) == NI_READY && m_listener->onFrame(7, frame))
     {
         m_server.consumeOutput();
@@ -3093,6 +3208,10 @@ static int RecoveryBackoff(const uint32_t& waited)
     hello.m_device[0] = 2;
     NetExecution owner;
     NetExecutionScope scope(owner);
+    NetClientDiscoveryPoint unterminated = {};
+    std::memset(unterminated.m_address, '1', sizeof(unterminated.m_address));
+    CHECK_TEST(session.connectService(7, unterminated.m_address, 8000, tls, hello, &host, &host) == NI_INVALID_ARGUMENT &&
+        session.generation() == 0 && host.m_closes == 0);
     CHECK_TEST(session.configureRecovery(90000, 32, 40) == NI_OK &&
         session.connectService(7, "127.0.0.1", 8000, tls, hello, &host, &host) == NI_OK);
     for (unsigned step = 1; step <= 2; ++step)
@@ -3217,7 +3336,13 @@ m_request(0), m_stream(0)
 
 int32_t RouterFileSink::send(uint64_t, const NetInterfaceFrame& frame, const NetEndpointOrigin&)
 {
-    if (frame.m_kind == NI_EVENT)
+    if (frame.m_kind == NI_EVENT && frame.m_messageType == 72)
+    {
+        if (frame.m_productId != 7 || !frame.m_requestId || frame.m_payloadSize != 2 ||
+            !frame.m_payload || frame.m_payload[0] != 0 || frame.m_payload[1] != 81) { return NI_PROTOCOL_ERROR; }
+        ++m_events;
+    }
+    else if (frame.m_kind == NI_EVENT)
     {
         NetInterfaceFileNotice notice = {};
         if (NetInterfaceFile::parseNotice(frame, notice) != NI_OK) { return NI_PROTOCOL_ERROR; }
@@ -3285,12 +3410,19 @@ static int CheckRouterStorage(int64_t retention, const uint32_t& waited, bool ex
     frame.m_requestId = service.m_request;
     frame.m_payloadSize = length;
     CHECK_TEST(router.receiveService(server, frame) == NI_OK && router.pendingCount() == 0);
+    const uint8_t business[] = {0,81};
+    uint8_t envelope[64] = {};
+    CHECK_TEST(NetInterfaceEvent::encode(origin.m_endpoint, 0, business, sizeof(business), envelope, sizeof(envelope), length) == NI_OK);
+    const NetInterfaceFrame event = {7, 100, 72, NI_EVENT, length, envelope};
+    CHECK_TEST(router.receiveService(server, event) == NI_OK && client.m_events == 1 && !service.m_events);
     const auto created = std::chrono::steady_clock::now();
     uint8_t payload[NET_INTERFACE_FILE_INFO_SIZE];
     uint64_t ids[3] = {};
     const uint32_t durations[] = {90, 30, 60};
-    for (unsigned i = 0; i < 3; ++i)
+    for (unsigned iteration = 0; iteration < 4; ++iteration)
     {
+        // 对最后一条流再次索取同一授权，更新已有期限并复用公开流号。
+        const unsigned i = (std::min)(iteration, 2U);
         NetInterfaceFileControl open = {};
         open.operation = NI_FILE_OPEN_DOWNLOAD;
         open.chunk = 1024;
@@ -3301,7 +3433,7 @@ static int CheckRouterStorage(int64_t retention, const uint32_t& waited, bool ex
         uint32_t count = 0;
         CHECK_TEST(NetInterfaceFile::encodeControl(open, payload, sizeof(payload), count) == NI_OK &&
             NetInterfaceRpc::encode(NI_REQUEST, 30000, 0, payload, count, wire.data(), static_cast<uint32_t>(wire.size()), length) == NI_OK);
-        frame.m_requestId = 2 + i;
+        frame.m_requestId = 2 + iteration;
         frame.m_messageType = NI_FILE_OPEN_DOWNLOAD;
         frame.m_kind = NI_REQUEST;
         frame.m_payloadSize = length;
@@ -3323,6 +3455,7 @@ static int CheckRouterStorage(int64_t retention, const uint32_t& waited, bool ex
         frame.m_kind = NI_RESPONSE;
         frame.m_payloadSize = length;
         CHECK_TEST(router.receiveService(server, frame) == NI_OK && client.m_stream != 0);
+        CHECK_TEST(iteration < 3 || ids[i] == client.m_stream);
         ids[i] = client.m_stream;
     }
     CHECK_TEST(ids[0] != ids[1] && ids[1] != ids[2] && ids[0] != ids[2]);
@@ -3442,6 +3575,9 @@ static int CheckLinkTimers(NetInterfaceLink& client, NetInterfaceLink& server, b
             MoveLinkRecord(client, server) && MoveLinkRecord(server, client));
     }
     CHECK_TEST(client.status() == NI_READY && server.status() == NI_READY);
+    const uint8_t* grant = nullptr;
+    uint32_t grantSize = 99;
+    CHECK_TEST(client.serviceGrant(grant, grantSize) == NI_INVALID_STATE && !grant && !grantSize);
     CHECK_TEST(client.configureOutputPools(pools.m_outputBodies, pools.m_outputRecords) == NI_INVALID_STATE);
     uint8_t bytes[1025] = {31};
     NetInterfaceTunnelRecord smallRecord = {NI_TUNNEL_BYTES, 7, 1, bytes, 1};
@@ -3518,6 +3654,57 @@ static int CheckLinkTimers(NetInterfaceLink& client, NetInterfaceLink& server, b
     return 0;
 }
 
+/** 验证不透明管理链路的身份视图、双向控制与隧道记录及终态。
+@param [in] clientOptions 客户端配置
+@param [in] nodeOptions 持隔离证书的节点配置
+@return 句柄按约定接受、交付和消费全部字段时返回0
+*/
+static int AuthenticatedLinkHandles(const NetInterfaceLinkOptions& clientOptions, const NetInterfaceLinkOptions& nodeOptions)
+{
+    NetInterfaceLinkHandle client = nullptr, node = nullptr;
+    NetInterfaceLinkPools pools;
+    CHECK_TEST(NetInterface::linkCreate(&clientOptions, &client) >= 0 && client);
+    std::unique_ptr<NetInterfaceLinkOpaque, void (*)(NetInterfaceLinkHandle)> left(client, NetInterface::linkDestroy);
+    CHECK_TEST(NetInterface::linkCreate(&nodeOptions, &node, &pools) >= 0 && node);
+    std::unique_ptr<NetInterfaceLinkOpaque, void (*)(NetInterfaceLinkHandle)> right(node, NetInterface::linkDestroy);
+    const auto move = [](NetInterfaceLinkHandle from, NetInterfaceLinkHandle to) -> bool {
+        uint32_t fields[5] = {};
+        const uint8_t* data = nullptr;
+        const int32_t status = NetInterface::linkPeekOutput(from, fields, &data);
+        return status == NI_NEED_MORE || (status == NI_READY && NetInterface::linkAccept(to, fields, data) == NI_OK &&
+            NetInterface::linkConsumeOutput(from) == NI_OK);
+    };
+    const auto pump = [&]() -> bool {
+        return NetInterface::linkProgress(client, 100, 1) >= 0 && NetInterface::linkProgress(node, 100, 1) >= 0 &&
+            move(client, node) && move(node, client);
+    };
+    for (unsigned i = 0; i < 1024 && (NetInterface::linkStatus(client) != NI_READY ||
+        NetInterface::linkStatus(node) != NI_READY); ++i) { CHECK_TEST(pump()); }
+    const uint8_t* name = nullptr;
+    const uint8_t* certificate = nullptr;
+    const uint8_t* claims = nullptr;
+    uint32_t fields[6] = {};
+    CHECK_TEST(NetInterface::linkPeerInfo(client, fields, &name, &certificate, &claims) == NI_READY &&
+        fields[0] == NI_LINK_NODE && fields[1] == std::strlen(nodeOptions.m_name) && name &&
+        !std::memcmp(name, nodeOptions.m_name, fields[1]) && fields[2] && certificate);
+    const uint8_t body[] = {0, 203, 71};
+    const uint32_t record[] = {NI_TUNNEL_BYTES, 9, 31, 7, sizeof(body)};
+    const uint32_t control[] = {NI_EVENT, 0, 71, 3, 42, sizeof(body)};
+    CHECK_TEST(NetInterface::linkConsumeRecord(node) == NI_INVALID_STATE &&
+        NetInterface::linkConsumeControl(client) == NI_INVALID_STATE &&
+        NetInterface::linkSendRecord(client, record, body) == NI_OK && NetInterface::linkSendControl(node, control, body) == NI_OK);
+    const uint8_t* view = nullptr;
+    for (unsigned i = 0; i < 128 && (NetInterface::linkPeekRecord(node, fields, &view) != NI_READY ||
+        NetInterface::linkPeekControl(client, fields, &view) != NI_READY); ++i) { CHECK_TEST(pump()); }
+    CHECK_TEST(NetInterface::linkPeekRecord(node, fields, &view) == NI_READY && !std::memcmp(fields, record, sizeof(record)) &&
+        view && !std::memcmp(view, body, sizeof(body)) && NetInterface::linkConsumeRecord(node) == NI_OK);
+    CHECK_TEST(NetInterface::linkPeekControl(client, fields, &view) == NI_READY && !std::memcmp(fields, control, sizeof(control)) &&
+        view && !std::memcmp(view, body, sizeof(body)) && NetInterface::linkConsumeControl(client) == NI_OK);
+    CHECK_TEST(NetInterface::linkFinishInput(node) == NI_TRUNCATED && NetInterface::linkStatus(node) == NI_TRUNCATED &&
+        NetInterface::linkPeekRecord(node, fields, &view) == NI_TRUNCATED && !fields[4] && !view);
+    return 0;
+}
+
 /** 从显式传入的隔离测试叶身份构造真实认证的管理TLS对
 @param [in] path 测试宿主提供的NGI3文件，私钥不写入程序或日志
 @return 0通过，1样本或完整链路验证失败
@@ -3560,6 +3747,13 @@ static int LinkTimers(const char* path)
     options.m_tls.certificate = options.m_tls.privateKey + lengths[1];
     options.m_tls.certificateSize = lengths[2];
     options.m_tls.entropyContext = seeds + 1;
+    char unterminated[97];
+    std::memset(unterminated, 'n', sizeof(unterminated));
+    NetInterfaceLinkOptions invalidName = options;
+    invalidName.m_name = unterminated;
+    NetInterfaceLink invalidLink(invalidName);
+    CHECK_TEST(invalidLink.status() == NI_INVALID_ARGUMENT);
+    CHECK_TEST(AuthenticatedLinkHandles(clientOptions, options) == 0);
     return WithWaitProbe([&](const uint32_t& waited) -> int {
         NetInterfaceLinkPools pools;
         for (unsigned i = 0; i < 2; ++i)
@@ -3618,6 +3812,8 @@ static int CollectScheduled(NetInterfaceConnection& sender, NetInterfaceConnecti
         }
         ++received;
         CHECK_TEST(receiver.consume() == NI_OK);
+        const int32_t buffered = receiver.decodeBuffered();
+        CHECK_TEST(buffered == NI_NEED_MORE || (buffered == NI_READY && received < expected.size()));
     }
 }
 
@@ -3759,7 +3955,12 @@ static int CheckDispatchBudget(uint32_t commands, uint32_t bytes, size_t expecte
     SessionProbeChannel channel(server);
     CiphertextProbeHost events;
     NetClientSession client;
+    NetSenderSubmission submission;
     NetSenderDispatch dispatch(&client);
+    const auto stop = [](NetSenderDispatch* active) { active->shutdown(); };
+    std::unique_ptr<NetSenderDispatch, decltype(stop)> lifetime(&dispatch, stop);
+    CHECK_TEST(dispatch.bindSubmission(nullptr) == NI_INVALID_ARGUMENT && dispatch.bindSubmission(&submission) == NI_OK &&
+        &dispatch.submission() == &submission);
     CHECK_TEST(dispatch.configurePollBudgets(commands, bytes) == NI_OK &&
         dispatch.configurePollBudgets(0, 1) == NI_INVALID_ARGUMENT &&
         dispatch.configurePollBudgets(1, 0) == NI_INVALID_ARGUMENT && dispatch.prepare(&events) == NI_OK &&
@@ -3775,6 +3976,11 @@ static int CheckDispatchBudget(uint32_t commands, uint32_t bytes, size_t expecte
         client.connect("127.0.0.1", 9001, tls, hello, dispatch.listener()) == NI_OK &&
         dispatch.started(client.generation(), 7) == NI_OK && dispatch.poll() && client.ready());
     const uint8_t body[] = {19,31};
+    const NetInterfaceFrame event = {7, 99, 72, NI_EVENT, sizeof(body), body};
+    channel.m_event = &event;
+    CHECK_TEST(dispatch.poll() && channel.m_event == &event && events.m_frames > 0 && dispatch.error() == NI_OK);
+    const unsigned refused = events.m_frames;
+    channel.m_event = nullptr;
     for (uint32_t i = 1; i <= 5; ++i)
     {
         const NetInterfaceFrame data = {7, i, 9, NI_DATA, sizeof(body), body};
@@ -3791,7 +3997,26 @@ static int CheckDispatchBudget(uint32_t commands, uint32_t bytes, size_t expecte
     }
     owner.begin();
     CHECK_TEST(dispatch.poll() && owner.wait(5000) == NI_OK && waited == 5000);
-    dispatch.shutdown();
+    uint64_t id = 0;
+    CHECK_TEST(submission.begin(7, 11, 60000, id) == NI_OK && id && submission.send(id, body, sizeof(body)) == NI_OK);
+    for (unsigned i = 0; i < 32 && channel.m_body.empty(); ++i) { CHECK_TEST(dispatch.poll()); }
+    CHECK_TEST(channel.m_body.size() == sizeof(body) && !std::memcmp(channel.m_body.data(), body, sizeof(body)) &&
+        submission.cancel(id) == NI_OK);
+    for (unsigned i = 0; i < 8; ++i) { CHECK_TEST(dispatch.poll()); }
+    CHECK_TEST(submission.cancel(id) == NI_NOT_FOUND);
+    NetInterfaceFrame sixth = {7, 6, 9, NI_DATA, sizeof(body), body};
+    CHECK_TEST(submission.begin(7, 13, 60000, id) == NI_OK);
+#if defined(__EMSCRIPTEN__)
+    CHECK_TEST(dispatch.sendRequest(id, body, sizeof(body)) == NI_NOT_SUPPORTED && dispatch.sendData(sixth) == NI_NOT_SUPPORTED);
+#else
+    CHECK_TEST(dispatch.sendRequest(id, body, sizeof(body)) == NI_OK && dispatch.sendData(sixth) == NI_OK &&
+        channel.m_dataIds.size() == 6 && channel.m_dataIds.back() == 6);
+#endif
+    submission.advanceSynchronous(NI_OK);
+    events.m_throwFrame = true;
+    channel.m_event = &event;
+    dispatch.poll();
+    CHECK_TEST(dispatch.error() == NI_INVALID_STATE && events.m_frames == refused + 1);
     return 0;
 }
 
@@ -3804,6 +4029,391 @@ static int OwnerBudgets()
         return CheckDispatchBudget(1, 100, 1, waited) || CheckDispatchBudget(10, 3, 2, waited) ||
             CheckDispatchBudget(10, 1, 1, waited);
     });
+}
+
+/** 文件协议门面核对线格式、恢复前缀、宿主读长度和取消终态
+@return 全部符合预期时返回0
+*/
+static int FileProtocolFacade()
+{
+    NetFileProtocol protocol;
+    uint8_t payload[1026] = {17, 29, 43};
+    payload[1025] = 97;
+    NetInterfaceFileInfo info = {};
+    info.direction = 1;
+    info.state = NI_FILE_TRANSFERRING;
+    info.chunk = 1024;
+    info.window = 1;
+    info.total = sizeof(payload);
+    info.offset = 1024;
+    info.stream = 17;
+    info.expiresUtc = 1000;
+    info.transfer[0] = 3;
+    info.token[0] = 5;
+    CHECK_TEST(NetInterface::sha256(payload, sizeof(payload), info.hash, sizeof(info.hash)) == NI_OK);
+    uint8_t wire[NET_INTERFACE_FILE_INFO_SIZE] = {};
+    CHECK_TEST(NetInterfaceFile::encodeInfo(info, wire, sizeof(wire)) == NI_OK);
+    NetInterfaceFileInfo parsed = {};
+    CHECK_TEST(protocol.fileParseInfo(wire, sizeof(wire) - 1, &parsed) < 0 && !parsed.stream);
+    CHECK_TEST(protocol.fileParseInfo(wire, sizeof(wire), &parsed) == NI_OK && parsed.offset == 1024 && parsed.stream == 17);
+    uint32_t fields[12] = {};
+    uint8_t transfer[16], token[32], hash[32];
+    CHECK_TEST(protocol.fileInfoFields(wire, sizeof(wire), fields, transfer, token, hash) == NI_OK &&
+        fields[4] == sizeof(payload) && fields[6] == 1024 && fields[8] == 17 && transfer[0] == 3 && token[0] == 5 &&
+        !std::memcmp(hash, info.hash, sizeof(hash)));
+    const uint32_t control[] = {NI_FILE_OPEN_UPLOAD, 1024, 1, 3, 0};
+    uint8_t emptyToken[32] = {};
+    uint32_t size = 0;
+    CHECK_TEST(protocol.fileControlEncode(control, transfer, emptyToken, hash, payload, 3, nullptr, 0, nullptr, 0, &size) ==
+        NI_BUFFER_TOO_SMALL && size == NET_INTERFACE_FILE_CONTROL_HEADER_SIZE + 3);
+    std::vector<uint8_t> packet(size);
+    CHECK_TEST(protocol.fileControlEncode(control, transfer, emptyToken, hash, payload, 3, nullptr, 0, packet.data(), size, &size) == NI_OK);
+    NetInterfaceFileControl decoded = {};
+    CHECK_TEST(NetInterfaceFile::parseControl(control[0], packet.data(), size, decoded) == NI_OK && decoded.operation == control[0] &&
+        decoded.keySize == 3 && !std::memcmp(decoded.key, payload, 3));
+    NetInterfaceFileFlowHandle handle = nullptr;
+    CHECK_TEST(protocol.fileFlowCreateWire(wire, sizeof(wire), 7, 2, 0, 0, 1000, &handle) == NI_INVALID_ARGUMENT && !handle);
+    CHECK_TEST(protocol.fileFlowCreateWire(wire, sizeof(wire), 7, 1, 0, 0, 1000, &handle) == NI_OK && handle);
+    const auto release = [&](NetInterfaceFileFlowHandle flow) { protocol.fileFlowDestroy(flow); };
+    std::unique_ptr<NetInterfaceFileFlowOpaque, decltype(release)> owner(handle, release);
+    CHECK_TEST(protocol.fileFlowRead(handle, fields) == NI_NEED_MORE && !fields[0] && !fields[1] && !fields[2]);
+    CHECK_TEST(protocol.fileFlowPrime(handle, 1, 0, payload, 1) == NI_INVALID_ARGUMENT);
+    CHECK_TEST(protocol.fileFlowPrime(handle, 0, 0, payload, 1024) == NI_OK && protocol.fileFlowProgress(handle, 2, 0) == NI_OK);
+    CHECK_TEST(protocol.fileFlowRead(handle, fields) == NI_READY && fields[0] == 1024 && fields[1] == 0 && fields[2] == 2);
+    CHECK_TEST(protocol.fileFlowProduced(handle, 1024, 0, payload + 1024, 1) == NI_INVALID_ARGUMENT);
+    CHECK_TEST(protocol.fileFlowProduced(handle, 1024, 0, payload + 1024, 2) == NI_OK);
+    CHECK_TEST(protocol.fileFlowCancel(handle, NI_CANCELLED) == NI_OK);
+    int32_t status = 0;
+    CHECK_TEST(protocol.fileFlowSnapshotWire(handle, wire, sizeof(wire), &status) == NI_OK && status == NI_CANCELLED);
+    CHECK_TEST(protocol.fileParseInfo(wire, sizeof(wire), &parsed) == NI_OK && parsed.state == NI_FILE_CANCELLED && parsed.stream == 0);
+    return 0;
+}
+
+/** 通过不透明句柄完成双向 TLS 握手、输入输出交接和普通帧解码
+@return 全部符合预期时返回0
+*/
+static int TlsHandles()
+{
+    static const uint8_t ca[] = TEST_CA_CRT_RSA_SHA256_PEM, crt[] = TEST_SRV_CRT_RSA_SHA256_PEM, key[] = TEST_SRV_KEY_RSA_PEM;
+    uint32_t seeds[2] = {13, 17};
+    NetInterfaceTlsOptions cli = {}, srv = {};
+    cli.entropy = srv.entropy = HelloEntropy;
+    cli.entropyContext = &seeds[0];
+    srv.entropyContext = &seeds[1];
+    cli.authority = ca; cli.authoritySize = sizeof(ca); cli.hostname = "localhost";
+    srv.server = 1; srv.certificate = crt; srv.certificateSize = sizeof(crt);
+    srv.privateKey = key; srv.privateKeySize = sizeof(key);
+    NetInterfaceConnectionHandle client = nullptr, server = nullptr;
+    int32_t detail = 73;
+    CHECK_TEST(NetInterface::connectionCreate(nullptr, &client, &detail) == NI_INVALID_ARGUMENT && !client && !detail);
+    CHECK_TEST(NetInterface::connectionCreate(&cli, &client, &detail) == NET_INTERFACE_TLS_HANDSHAKE && client);
+    std::unique_ptr<NetInterfaceConnectionOpaque, void (*)(NetInterfaceConnectionHandle)> left(client, NetInterface::connectionDestroy);
+    CHECK_TEST(NetInterface::connectionCreate(&srv, &server, &detail) == NET_INTERFACE_TLS_HANDSHAKE && server);
+    std::unique_ptr<NetInterfaceConnectionOpaque, void (*)(NetInterfaceConnectionHandle)> right(server, NetInterface::connectionDestroy);
+    const auto move = [](NetInterfaceConnectionHandle from, NetInterfaceConnectionHandle to) -> bool {
+        const uint8_t* bytes = nullptr;
+        uint32_t size = 0, used = 0;
+        if (NetInterface::connectionPeekOutput(from, &bytes, &size) < 0) { return false; }
+        return !size || (bytes && NetInterface::connectionFeed(to, bytes, size, &used) >= 0 && used <= size &&
+            NetInterface::connectionConsumeOutput(from, used) == NI_OK);
+    };
+    const uint8_t body[] = {9, 0, 77};
+    uint32_t fields[] = {NI_REQUEST, 19, 41, 3, 7, sizeof(body)};
+    CHECK_TEST(NetInterface::connectionSend(client, fields, body) == NI_INVALID_STATE);
+    for (unsigned i = 0; i < 1024 && (NetInterface::connectionGetStatus(client, nullptr) != NET_INTERFACE_TLS_READY ||
+        NetInterface::connectionGetStatus(server, &detail) != NET_INTERFACE_TLS_READY); ++i)
+    {
+        CHECK_TEST(NetInterface::connectionProgress(client, i, 1) >= 0 && NetInterface::connectionProgress(server, i, 1) >= 0 &&
+            move(client, server) && move(server, client));
+    }
+    CHECK_TEST(NetInterface::connectionGetStatus(client, &detail) == NET_INTERFACE_TLS_READY && detail == 0);
+    CHECK_TEST(NetInterface::connectionSend(client, fields, body) == NI_OK);
+    uint32_t received[6] = {};
+    const uint8_t* data = nullptr;
+    for (unsigned i = 0; i < 1024 && NetInterface::connectionPeek(server, received, &data) != NI_READY; ++i)
+    {
+        CHECK_TEST(NetInterface::connectionProgress(client, 1024 + i, 1) >= 0 && move(client, server) &&
+            NetInterface::connectionProgress(server, 1024 + i, 1) >= 0);
+    }
+    CHECK_TEST(NetInterface::connectionPeek(server, received, &data) == NI_READY && data &&
+        !std::memcmp(received, fields, sizeof(fields)) && !std::memcmp(data, body, sizeof(body)));
+    CHECK_TEST(NetInterface::connectionConsume(server) == NI_OK && NetInterface::connectionPeek(server, received, &data) == NI_NEED_MORE &&
+        !data && !received[5] && NetInterface::connectionFinishInput(server) >= 0);
+    NetInterfaceTlsHandle tls = nullptr, listener = nullptr;
+    CHECK_TEST(NetInterface::tlsCreateClient(ca, sizeof(ca), "localhost", HelloEntropy, seeds, 5000, &tls, &detail) ==
+        NET_INTERFACE_TLS_HANDSHAKE && tls);
+    std::unique_ptr<NetInterfaceTlsOpaque, void (*)(NetInterfaceTlsHandle)> sender(tls, NetInterface::tlsDestroy);
+    CHECK_TEST(NetInterface::tlsCreate(&srv, &listener, &detail) == NET_INTERFACE_TLS_HANDSHAKE && listener);
+    std::unique_ptr<NetInterfaceTlsOpaque, void (*)(NetInterfaceTlsHandle)> receiver(listener, NetInterface::tlsDestroy);
+    const auto transfer = [](NetInterfaceTlsHandle from, NetInterfaceTlsHandle to) -> bool {
+        const uint8_t* bytes = nullptr;
+        uint32_t size = 0, used = 0;
+        return NetInterface::tlsPeekOutput(from, &bytes, &size) >= 0 && (!size || (bytes &&
+            NetInterface::tlsFeed(to, bytes, size, &used) >= 0 && used <= size && NetInterface::tlsConsumeOutput(from, used) == NET_INTERFACE_TLS_OK));
+    };
+    for (unsigned i = 0; i < 1024 && (NetInterface::tlsGetStatus(tls, &detail) != NET_INTERFACE_TLS_READY ||
+        NetInterface::tlsGetStatus(listener, nullptr) != NET_INTERFACE_TLS_READY); ++i)
+    {
+        CHECK_TEST(NetInterface::tlsProgress(tls, i, 1) >= 0 && NetInterface::tlsProgress(listener, i, 1) >= 0 &&
+            transfer(tls, listener) && transfer(listener, tls));
+    }
+    CHECK_TEST(NetInterface::tlsGetStatus(tls, &detail) == NET_INTERFACE_TLS_READY && !detail);
+    uint32_t used = 0;
+    CHECK_TEST(NetInterface::tlsWrite(tls, body, sizeof(body), &used) >= 0 && used == sizeof(body));
+    uint8_t clear[5] = {1, 1, 1, 1, 1};
+    for (unsigned i = 0; i < 32; ++i)
+    {
+        CHECK_TEST(NetInterface::tlsProgress(tls, 1024 + i, 1) >= 0 && transfer(tls, listener));
+        CHECK_TEST(NetInterface::tlsRead(listener, clear + 1, sizeof(body), &used) >= 0);
+        if (used) { break; }
+    }
+    CHECK_TEST(used == sizeof(body) && !std::memcmp(clear + 1, body, sizeof(body)) && clear[0] == 1 && clear[4] == 1);
+    CHECK_TEST(NetInterface::tlsClose(tls) >= 0 && transfer(tls, listener) && NetInterface::tlsFinishInput(listener) >= 0);
+    return 0;
+}
+
+/** 核对解码句柄的完整视图、短输入、消费、复位和终态
+@return 全部符合预期时返回0
+*/
+static int DecoderHandleFields()
+{
+    NetInterfaceHandle handle = nullptr;
+    CHECK_TEST(NetInterface::create(3, &handle) == NI_OK && handle);
+    std::unique_ptr<NetInterfaceOpaque, void (*)(NetInterfaceHandle)> owner(handle, NetInterface::destroy);
+    uint32_t used = 9, fields[6] = {};
+    const uint8_t* data = kFrame;
+    NetInterfaceFrame frame = {};
+    CHECK_TEST(NetInterface::peek(nullptr, &frame) == NI_INVALID_ARGUMENT && !frame.m_payload &&
+        NetInterface::peekFields(handle, fields, &data) == NI_NEED_MORE && !data);
+    CHECK_TEST(NetInterface::feed(handle, kFrame, 1, &used) == NI_NEED_MORE && used == 1 &&
+        NetInterface::finish(handle) == NI_TRUNCATED && NetInterface::reset(handle) == NI_OK);
+    CHECK_TEST(NetInterface::feed(handle, kFrame, sizeof(kFrame), &used) == NI_READY && used == sizeof(kFrame));
+    const uint32_t expected[] = {NI_REQUEST, 7, 0x05060708, 0x01020304, 9, 3};
+    CHECK_TEST(NetInterface::peekFields(handle, fields, &data) == NI_READY && !std::memcmp(fields, expected, sizeof(fields)) &&
+        data && !std::memcmp(data, kFrame + 32, 3) && NetInterface::peek(handle, &frame) == NI_READY &&
+        frame.m_payload == data && frame.m_requestId == UINT64_C(0x0102030405060708));
+    CHECK_TEST(NetInterface::consume(handle) == NI_OK && NetInterface::finish(handle) == NI_OK &&
+        NetInterface::peekFields(handle, fields, &data) == NI_NEED_MORE && !data && !fields[5] &&
+        NetInterface::reset(nullptr) == NI_INVALID_ARGUMENT && NetInterface::finish(nullptr) == NI_INVALID_ARGUMENT);
+    return 0;
+}
+
+TestReferenceNode::TestReferenceNode(unsigned& destroyed, bool reject) : m_destroyed(destroyed)
+{
+    if (reject) { throw std::runtime_error("construction refused"); }
+}
+
+TestReferenceNode::~TestReferenceNode()
+{
+    ++m_destroyed;
+}
+
+/** 验证固定容量池的构造回滚、嵌套所有权转交和可观察的实际析构次数
+@return 所有用例条件成立返回0
+*/
+static int ObjectReferences()
+{
+    for (unsigned move = 0; move != 2; ++move)
+    {
+        unsigned destroyed = 0;
+        LockFreeHashMapPoolConfig config;
+        config.setInitialCapacity(2);
+        config.setMaximumCapacity(2);
+        NetObjectPool<TestReferenceNode> pool(config);
+        NetObjectReference<TestReferenceNode> root, spare;
+        CHECK_TEST(pool.status() == NI_OK && !pool.value(nullptr) && !root.get() && !root.storage() && !root.release());
+        pool.retain(nullptr);
+        pool.release(nullptr);
+        CHECK_TEST(pool.create(root, destroyed, true) == NI_NO_MEMORY && !root && !destroyed &&
+            pool.create(root, destroyed, false) == NI_OK && pool.create(root, destroyed, false) == NI_INVALID_ARGUMENT);
+        CHECK_TEST(pool.create(root->m_child, destroyed, false) == NI_OK && pool.create(spare, destroyed, false) == NI_LIMIT_EXCEEDED);
+        TestReferenceNode* child = root->m_child.get();
+        if (move) { root = std::move(root->m_child); } else { root = root->m_child; }
+        CHECK_TEST(root && root.get() == child && &*root == child && destroyed == 1 && pool.statistics().occupied == 1);
+        NetObjectReference<TestReferenceNode> copy(root);
+        NetObjectReference<TestReferenceNode> moved(std::move(copy));
+        root = root;
+        root = std::move(root);
+        CHECK_TEST(!copy && root.get() == child && moved.get() == child);
+        void* storage = moved.storage();
+        CHECK_TEST(moved.release() == child && !moved && pool.value(storage) == child);
+        spare.adopt(pool, storage);
+        root.reset();
+        CHECK_TEST(spare.get() == child && destroyed == 1);
+        spare.reset();
+        CHECK_TEST(destroyed == 2 && !pool.statistics().occupied);
+    }
+    return 0;
+}
+
+/** 校验目录编码句柄、候选规范化、精确缓冲容量及证书申请的输出边界
+@return 全部符合预期时返回0
+*/
+static int DirectoryHandles()
+{
+    NetInterfaceDirectoryPoint point;
+    const NetInterfaceDirectoryNodeData node = DirectoryNode(0);
+    point.m_name = node.m_name;
+    point.m_address = node.m_address;
+    point.m_port = node.m_port;
+    point.m_capacity = node.m_capacity;
+    point.m_boot = node.m_boot;
+    CHECK_TEST(NetInterfaceDirectory::valid(point));
+    NetInterfaceDirectoryHandle original = nullptr;
+    NetInterfaceDirectoryNodeData invalid = node;
+    std::memset(invalid.m_name, 'n', sizeof(invalid.m_name));
+    CHECK_TEST(NetInterface::directoryCreateNodes(&invalid, 1, &original) == NI_INVALID_ARGUMENT && !original);
+    invalid = node;
+    std::memset(invalid.m_address, '1', sizeof(invalid.m_address));
+    CHECK_TEST(NetInterface::directoryCreateNodes(&invalid, 1, &original) == NI_INVALID_ARGUMENT && !original);
+    CHECK_TEST(NetInterface::directoryCreateNodes(&node, 1, &original) == NI_OK && original);
+    std::unique_ptr<NetInterfaceDirectoryOpaque, void (*)(NetInterfaceDirectoryHandle)> encoded(original, NetInterface::directoryDestroy);
+    uint32_t cacheSize = 0;
+    CHECK_TEST(NetInterface::directoryCache(original, 1, 0, nullptr, 0, &cacheSize) == NI_BUFFER_TOO_SMALL && cacheSize > 48);
+    std::vector<uint8_t> cache(cacheSize);
+    CHECK_TEST(NetInterface::directoryCache(original, 1, 0, cache.data(), cacheSize, &cacheSize) == NI_OK);
+    point.m_port = 65536;
+    CHECK_TEST(!NetInterfaceDirectory::valid(point) && NetInterfaceDirectory::address("::1") &&
+        !NetInterfaceDirectory::address("::") && !NetInterfaceDirectory::address("127.0.0.256"));
+    std::string privateText("old"), requestText("old");
+    CHECK_TEST(NetInterfaceCertificate::createRequest("invalid.", nullptr, nullptr, privateText, requestText) ==
+        NI_INVALID_ARGUMENT && privateText.empty() && requestText.empty());
+    NetInterfaceDirectoryHandle handle = nullptr;
+    // NGC3 的16字节头与32字节摘要之间是目录线上正文。
+    CHECK_TEST(NetInterface::directoryCreate(cache.data() + 16, cacheSize - 48, &handle) == NI_OK && handle);
+    std::unique_ptr<NetInterfaceDirectoryOpaque, void (*)(NetInterfaceDirectoryHandle)> owner(handle, NetInterface::directoryDestroy);
+    char name[sizeof(node.m_name)] = {}, address[sizeof(node.m_address)] = {};
+    uint32_t fields[4] = {};
+    CHECK_TEST(NetInterface::directoryNode(handle, 1, name, sizeof(name), address, sizeof(address), fields) == NI_NOT_FOUND &&
+        !fields[0] && NetInterface::directoryNode(handle, 0, name, static_cast<uint32_t>(point.m_name.size()), address,
+        sizeof(address), fields) == NI_BUFFER_TOO_SMALL && !name[0]);
+    CHECK_TEST(NetInterface::directoryNode(handle, 0, name, sizeof(name), address, sizeof(address), fields) == NI_OK &&
+        !std::strcmp(name, node.m_name) && !std::strcmp(address, node.m_address) && fields[0] == node.m_port &&
+        fields[1] == node.m_capacity && fields[2] == 0 && fields[3] == 1);
+    NetClientDiscoveryPoint candidate = {sizeof(NetClientDiscoveryPoint), 1, "127.0.0.1", 65535};
+    uint8_t key[16] = {};
+    CHECK_TEST(NetClientDiscovery::validPoint(candidate) && NetClientDiscovery::addressKey(candidate, key) &&
+        key[10] == 255 && key[11] == 255 && key[12] == 127 && key[15] == 1);
+    std::memset(candidate.m_address, '1', sizeof(candidate.m_address));
+    CHECK_TEST(!NetClientDiscovery::validPoint(candidate) && !NetClientDiscovery::addressKey(candidate, key) && key[12] == 127);
+    uint8_t privateKey[NET_INTERFACE_IDENTITY_PEM_BYTES] = {}, request[NET_INTERFACE_IDENTITY_PEM_BYTES] = {};
+    const uint8_t validName[] = {'n','o','d','e'};
+    uint32_t keySize = 77, requestSize = 88, seed = 13;
+    CHECK_TEST(NetInterface::certificateCreateRequest(validName, sizeof(validName), nullptr, &seed, privateKey, sizeof(privateKey),
+        &keySize, request, sizeof(request), &requestSize) == NI_INVALID_ARGUMENT && !keySize && !requestSize);
+    const int32_t result = NetInterface::certificateCreateRequest(validName, sizeof(validName), HelloEntropy, &seed,
+        privateKey, sizeof(privateKey), &keySize, request, sizeof(request), &requestSize);
+    const bool pem = result == NI_OK && keySize >= 11 && requestSize >= 11 && !std::memcmp(privateKey, "-----BEGIN ", 11) &&
+        !std::memcmp(request, "-----BEGIN ", 11);
+    NetInterface::wipe(privateKey, sizeof(privateKey));
+    CHECK_TEST(pem);
+    return 0;
+}
+
+/** 核对请求双向索引、端点注册及通道初始化前的边界
+@return 全部符合预期时返回0
+*/
+static int RoutingBoundaries()
+{
+    NetInterfaceRequests requests;
+    CHECK_TEST(requests.status() == NI_OK && requests.addEndpoint(10, false, 0, 2) == NI_OK &&
+        requests.addEndpoint(20, true, 7, 2) == NI_OK);
+    NetInterfaceRequest created = {}, actual = {};
+    CHECK_TEST(requests.begin(10, 41, 20, 7, 11, 0, 50, 5, created) == NI_OK && created.m_route &&
+        created.m_source == 10 && created.m_original == 41 && created.m_deadline == 55);
+    CHECK_TEST(requests.addEndpoint(30, true, 7, 1) == NI_OK);
+    NetInterfaceRequest child = {};
+    CHECK_TEST(requests.begin(20, 100, 30, 7, 8, created.m_route, 50, 15, child) == NI_OK &&
+        child.m_origin == 10 && child.m_parent == created.m_route && child.m_deadline == created.m_deadline &&
+        requests.takeChild(created.m_route, actual) == NI_READY && actual.m_original == 100);
+    CHECK_TEST(requests.parentContext(20, created.m_route, 8, actual) == NI_NOT_FOUND && !actual.m_route &&
+        requests.parentContext(20, created.m_route, 7, actual) == NI_READY && actual.m_origin == 10);
+    CHECK_TEST(requests.completeOriginal(10, 41, 20, 7, 12, 51, actual) == NI_PROTOCOL_ERROR && !actual.m_route &&
+        requests.completeOriginal(10, 41, 20, 7, 11, 52, actual) == NI_READY && actual.m_route == created.m_route &&
+        requests.completeOriginal(10, 41, 20, 7, 11, 53, actual) == NI_NOT_FOUND && !actual.m_source);
+    RouterFileSink sink;
+    NetEndpointRouter router(&sink);
+    uint64_t endpoint = 42;
+    CHECK_TEST(!router.localPort() && router.addHandler(0, 0, endpoint) == NI_INVALID_ARGUMENT && !endpoint &&
+        router.addHandler(0, 1, endpoint) == NI_OK && endpoint);
+    uint64_t duplicate = 99;
+    CHECK_TEST(router.addHandler(0, 1, duplicate) == NI_INVALID_ARGUMENT && !duplicate);
+    router.shutdown();
+    NetGatewayClientChannel gateway(7);
+    CiphertextProbeHost host;
+    CiphertextProbeTransport transport(host);
+    NetConnectionPoolConfig pools;
+    CHECK_TEST(transport.NetGatewayTransport::outputState(1) == NI_NOT_SUPPORTED &&
+        gateway.NetClientChannel::configureCompression(1, nullptr, 0, false) == NI_NOT_SUPPORTED &&
+        gateway.NetClientChannel::outputState(1) == NI_NOT_SUPPORTED &&
+        gateway.NetClientChannel::configureConnectionPools(pools) == NI_NOT_SUPPORTED);
+    CHECK_TEST(gateway.configureConnectionPools(pools) == NI_OK);
+    pools.m_controlBurst = 0;
+    CHECK_TEST(gateway.configureConnectionPools(pools) == NI_INVALID_ARGUMENT);
+    const NetInterfaceFrame frame = {};
+    CHECK_TEST(gateway.send(1, frame) == NI_INVALID_STATE && gateway.outputState(1) == NI_INVALID_STATE &&
+        gateway.configureCompact(1, true) == NI_INVALID_STATE && gateway.configureCompression(1, nullptr, 0, false) == NI_INVALID_STATE);
+    struct AttachedSession : NetClientSession
+    {
+        using NetClientSession::hasBoundChannel;
+        using NetClientSession::boundGatewayFactory;
+        ~AttachedSession() { detachBindingsForDestruction(); }
+    } session;
+    CHECK_TEST(!session.hasBoundChannel() && !session.boundGatewayFactory() &&
+        session.bindGateway(&host, nullptr) == NI_OK && session.boundGatewayFactory() == &host &&
+        session.bindChannel(&gateway) == NI_OK && session.hasBoundChannel());
+    CHECK_TEST(!session.serviceMode() && !session.generation() && session.beginRequestAt(0, 7, 3, 0, 1) == NI_INVALID_ARGUMENT &&
+        session.beginRequestAt(1, 7, 3, 0, 1) == NI_INVALID_STATE);
+    return 0;
+}
+
+/** 核对多生产者同时预留的请求号、唯一性和关闭后的输出
+@return 全部符合预期时返回0
+*/
+static int SubmissionProducers()
+{
+    enum { Workers = 4, Requests = 64 };
+    NetSenderSubmission submission;
+    CHECK_TEST(submission.start(7, 11) == NI_OK && submission.ready(7, Workers * Requests, 1024) == NI_OK);
+    uint64_t ids[Workers * Requests] = {};
+    bool ok[Workers] = {};
+    const auto run = [&](unsigned worker) {
+        try
+        {
+            for (unsigned i = 0; i < Requests; ++i)
+            {
+                if (submission.begin(11, worker + 1, 60000, ids[worker * Requests + i]) != NI_OK) { return; }
+            }
+            ok[worker] = true;
+        }
+        catch (...) { ok[worker] = false; }
+    };
+#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+    for (unsigned i = 0; i < Workers; ++i) { run(i); }
+#else
+    std::thread threads[Workers];
+    std::atomic<bool> start(false);
+    try
+    {
+        for (unsigned i = 0; i < Workers; ++i)
+        {
+            threads[i] = std::thread([&, i]() {
+                while (!start.load(std::memory_order_acquire)) { std::this_thread::yield(); }
+                run(i);
+            });
+        }
+    }
+    catch (...) { /* 已经启动的生产者仍须放行并回收。 */ }
+    start.store(true, std::memory_order_release);
+    for (unsigned i = 0; i < Workers; ++i) { if (threads[i].joinable()) { threads[i].join(); } }
+#endif
+    for (unsigned i = 0; i < Workers; ++i) { CHECK_TEST(ok[i]); }
+    std::sort(ids, ids + Workers * Requests);
+    for (unsigned i = 0; i < Workers * Requests; ++i) { CHECK_TEST(ids[i] == i + 1); }
+    submission.close(NI_CANCELLED);
+    uint64_t denied = 99;
+    CHECK_TEST(submission.begin(11, 1, 1, denied) == NI_INVALID_STATE && !denied);
+    return 0;
 }
 
 /** 按稳定编号选择用例，返回库测试调度器的退出码
@@ -3865,7 +4475,15 @@ try
         {CaseRouterPollBudgets, true, RouterPollBudgets},
         {CaseEventEnvelope, false, EventEnvelope},
         {CaseEntropyOutput, false, EntropyOutput},
-        {CasePasswordDerivation, false, PasswordDerivation}
+        {CasePasswordDerivation, false, PasswordDerivation},
+        {CaseExecutionExceptions, false, ExecutionExceptions},
+        {CaseFileProtocolFacade, false, FileProtocolFacade},
+        {CaseTlsHandles, false, TlsHandles},
+        {CaseDecoderHandleFields, false, DecoderHandleFields},
+        {CaseDirectoryHandles, false, DirectoryHandles},
+        {CaseRoutingBoundaries, false, RoutingBoundaries},
+        {CaseSubmissionProducers, true, SubmissionProducers},
+        {CaseObjectReferences, false, ObjectReferences}
     };
     return LibraryCaseSelection::run(argc, argv, cases);
 }
