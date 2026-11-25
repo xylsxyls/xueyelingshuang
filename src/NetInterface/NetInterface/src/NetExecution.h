@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "NetInterfaceMacro.h"
 #include "NetHostTypes.h"
+#include <atomic>
 
 /** 协议执行者的可选事件等待；不依赖网络库或线程库，不负责消息同步
 */
@@ -21,8 +22,8 @@ public:
     */
     static int32_t configure(const NetHostExecutionFunctions& functions);
 
-    /** 查询构造时宿主创建结果；未提供事件宿主也返回NI_OK
-    @return NI_OK或创建失败
+    /** 查询宿主创建及运行结果，宿主异常留下 NI_INVALID_STATE；未提供事件宿主返回 NI_OK
+    @return NI_OK 表示可用，NI_INVALID_STATE 表示宿主创建失败或回调抛出异常
     */
     int32_t status() const;
 
@@ -32,7 +33,7 @@ public:
 
     /** 无新进展时等待事件，回调和其他线程只能wake
     @param [in] timeoutMs 下一次维护期限的最大等待毫秒，不是每轮固定休眠
-    @return NI_OK已推进，NI_NEED_MORE没有事件宿主，负数失败
+    @return NI_OK 表示宿主正常结束等待，NI_NEED_MORE 表示没有事件宿主，NI_INVALID_STATE 表示宿主失败
     */
     int32_t wait(uint32_t timeoutMs);
 
@@ -55,7 +56,7 @@ public:
     */
     static void deadline(uint64_t expiresMs, uint64_t nowMs);
 
-    /** 交换当前执行归属；仅供NetExecutionScope成对调用
+    /** 交换当前线程的执行归属；显式切换的调用方负责在退出时恢复
     @param [in] execution 新的借用执行者或空
     @return 之前的借用执行者
     */
@@ -69,6 +70,16 @@ public:
     static NetExecution* exchange(NetExecution* execution, void*& previousHost);
 
 private:
+    friend class NetExecutionScope;
+
+    /** 在宿主成功切换后更新线程归属；宿主异常时保留原协议归属并记录错误
+    @param [in] execution 新的协议执行者或空
+    @param [in] host 应绑定的宿主循环
+    @param [out] previousHost 成功时为原宿主循环，失败时为空
+    @return 切换成功返回 true
+    */
+    static bool bind(NetExecution* execution, void* host, void*& previousHost);
+
     /** 禁止复制拥有的宿主循环
     @param [in] other 原对象
     */
@@ -89,8 +100,8 @@ private:
     uint64_t m_observed;
     // 转换成本机单调时间的最早截止；每轮begin重置，不延长业务原期限
     uint64_t m_waitUntil;
-    // 构造结果，失败不能退化成忙轮询
-    int32_t m_status;
+    // 创建或回调异常由等待执行者及并发唤醒者共同观察。
+    std::atomic<int32_t> m_status;
     // 当前owner轮次已经消费过工作；只影响本轮wait，不向自己的宿主循环发通知
     bool m_progressed;
 };
@@ -126,4 +137,6 @@ private:
     void* m_previousHost;
     // 外层执行者，只借用至恢复
     NetExecution* m_previous;
+    // 本层是否成功接管宿主归属，只有成功进入才需要恢复。
+    bool m_bound;
 };

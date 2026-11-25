@@ -1,6 +1,7 @@
 ﻿#include "NetInterfaceMacro.h"
 #include "NetClientDiscovery.h"
 #include "NetInterfaceDirectory.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include "NetInterfaceFileGuard.h"
 #include <utility>
 #include <cstring>
@@ -23,10 +24,10 @@ bool NetClientDiscovery::addressKey(const NetClientDiscoveryPoint& endpoint, uin
     {
         return false;
     }
-    const char* end = static_cast<const char*>(std::memchr(endpoint.m_address, 0, sizeof(endpoint.m_address)));
+    const size_t length = CStringManager::boundedLength(endpoint.m_address, sizeof(endpoint.m_address));
     uint8_t bytes[16];
-    if (end == nullptr || !NetInterfaceDirectoryAddress::parse(endpoint.m_address,
-        static_cast<uint32_t>(end - endpoint.m_address), bytes))
+    if (length == sizeof(endpoint.m_address) || !NetInterfaceDirectoryAddress::parse(endpoint.m_address,
+        static_cast<uint32_t>(length), bytes))
     {
         return false;
     }

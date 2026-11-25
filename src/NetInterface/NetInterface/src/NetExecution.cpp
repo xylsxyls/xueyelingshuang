@@ -23,10 +23,11 @@ static uint64_t ExecutionNow()
 NetExecution::NetExecution() :
 m_functions(s_functions), m_instance(nullptr), m_observed(0), m_waitUntil(UINT64_MAX), m_status(NI_OK), m_progressed(false)
 {
-    if (m_functions.create != nullptr && (m_functions.create(&m_instance) != 0 || m_instance == nullptr))
+    try
     {
-        m_status = NI_INVALID_STATE;
+        if (m_functions.create && (m_functions.create(&m_instance) != 0 || !m_instance)) { m_status = NI_INVALID_STATE; }
     }
+    catch (...) { m_status = NI_INVALID_STATE; }
 }
 
 NetExecution::~NetExecution()
@@ -34,7 +35,8 @@ NetExecution::~NetExecution()
     if (m_instance != nullptr)
     {
         // 宿主拒绝释放时宁可保留循环；不能释放仍被连接或通知者借用的状态。
-        m_functions.destroy(m_instance);
+        try { m_functions.destroy(m_instance); }
+        catch (...) { /* 宿主继续管理未确认释放的资源，析构不能重复释放。 */ }
     }
 }
 
@@ -52,34 +54,37 @@ int32_t NetExecution::configure(const NetHostExecutionFunctions& functions)
 
 int32_t NetExecution::status() const
 {
-    return m_status;
+    return m_status.load(std::memory_order_relaxed);
 }
 
 void NetExecution::begin()
 {
     m_waitUntil = UINT64_MAX;
     m_progressed = false;
-    if (m_instance != nullptr)
+    if (m_instance && status() == NI_OK)
     {
-        m_observed = m_functions.begin(m_instance);
+        try { m_observed = m_functions.begin(m_instance); }
+        catch (...) { m_status = NI_INVALID_STATE; }
     }
 }
 
 int32_t NetExecution::wait(uint32_t timeoutMs)
 {
-    if (m_status != NI_OK) { return m_status; }
+    if (status() != NI_OK) { return NI_INVALID_STATE; }
     if (m_instance == nullptr) { return NI_NEED_MORE; }
     const uint64_t now = ExecutionNow();
     const uint64_t remaining = m_waitUntil > now ? m_waitUntil - now : 0;
     timeoutMs = static_cast<uint32_t>((std::min)(remaining, static_cast<uint64_t>(timeoutMs)));
-    return m_functions.wait(m_instance, m_observed, m_progressed ? 0 : timeoutMs) == 0 ? NI_OK : NI_INVALID_STATE;
+    try { return m_functions.wait(m_instance, m_observed, m_progressed ? 0 : timeoutMs) == 0 ? NI_OK : NI_INVALID_STATE; }
+    catch (...) { m_status = NI_INVALID_STATE; return NI_INVALID_STATE; }
 }
 
 void NetExecution::wake()
 {
-    if (m_instance != nullptr)
+    if (m_instance && status() == NI_OK)
     {
-        m_functions.wake(m_instance);
+        try { m_functions.wake(m_instance); }
+        catch (...) { m_status = NI_INVALID_STATE; }
     }
 }
 
@@ -105,16 +110,21 @@ void NetExecution::deadline(uint64_t expiresMs, uint64_t nowMs)
     s_execution->m_waitUntil = (std::min)(s_execution->m_waitUntil, until);
 }
 
-/** 同时更新宿主和协议层在线程上的归属
-@param [in] execution 协议执行者，可空
-@param [in] host 宿主实际循环，可独立于协议执行者存在
-@return 之前绑定的宿主循环
-*/
-static void* BindExecution(NetExecution* execution, void* host)
+bool NetExecution::bind(NetExecution* execution, void* host, void*& previousHost)
 {
-    void* previousHost = s_functions.exchange == nullptr ? nullptr : s_functions.exchange(host);
+    previousHost = nullptr;
+    try
+    {
+        if (s_functions.exchange) { previousHost = s_functions.exchange(host); }
+    }
+    catch (...)
+    {
+        if (execution) { execution->m_status = NI_INVALID_STATE; }
+        if (s_execution) { s_execution->m_status = NI_INVALID_STATE; }
+        return false;
+    }
     s_execution = execution;
-    return previousHost;
+    return true;
 }
 
 NetExecution* NetExecution::exchange(NetExecution* execution)
@@ -126,17 +136,30 @@ NetExecution* NetExecution::exchange(NetExecution* execution)
 NetExecution* NetExecution::exchange(NetExecution* execution, void*& previousHost)
 {
     NetExecution* previous = s_execution;
-    previousHost = BindExecution(execution, execution == nullptr ? nullptr : execution->m_instance);
+    previousHost = nullptr;
+    if (!execution || execution->status() == NI_OK)
+    {
+        bind(execution, execution ? execution->m_instance : nullptr, previousHost);
+    }
     return previous;
 }
 
 NetExecutionScope::NetExecutionScope(NetExecution& execution) :
-m_previousHost(nullptr), m_previous(NetExecution::exchange(&execution, m_previousHost))
+m_previousHost(nullptr), m_previous(NetExecution::current()),
+m_bound(execution.status() == NI_OK && NetExecution::bind(&execution, execution.m_instance, m_previousHost))
 {
 
 }
 
 NetExecutionScope::~NetExecutionScope()
 {
-    BindExecution(m_previous, m_previousHost);
+    if (m_bound)
+    {
+        void* discarded = nullptr;
+        if (!NetExecution::bind(m_previous, m_previousHost, discarded))
+        {
+            // 宿主切换失败已记录。当前作用域即将退出，不再暴露即将失效的协议执行者。
+            s_execution = m_previous;
+        }
+    }
 }

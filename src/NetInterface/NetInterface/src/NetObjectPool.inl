@@ -45,13 +45,11 @@ NetObjectReference<T>& NetObjectReference<T>::operator=(const NetObjectReference
 {
     if (this != &other)
     {
-        if (other.m_storage != nullptr)
-        {
-            other.m_owner->retain(other.m_storage);
-        }
-        reset();
+        // 源引用可能是当前对象的成员，须在复制两个字段后才释放原对象。
+        NetObjectReference previous(std::move(*this));
         m_owner = other.m_owner;
         m_storage = other.m_storage;
+        if (m_storage != nullptr) { m_owner->retain(m_storage); }
     }
     return *this;
 }
@@ -61,7 +59,8 @@ NetObjectReference<T>& NetObjectReference<T>::operator=(NetObjectReference&& oth
 {
     if (this != &other)
     {
-        reset();
+        // 先完成转交，再让原对象及其成员析构。
+        NetObjectReference previous(std::move(*this));
         m_owner = other.m_owner;
         m_storage = other.m_storage;
         other.m_owner = nullptr;
@@ -194,6 +193,7 @@ int32_t NetObjectPool<T>::create(NetObjectReference<T>& output, Args&&... args)
 template <class T>
 void NetObjectPool<T>::retain(void* storage)
 {
+    if (storage == nullptr) { return; }
     static_cast<LockFreeHashMapPoolSlot<NetObjectPoolItem<T>>*>(storage)->payload()->m_references.fetch_add(1, std::memory_order_relaxed);
 }
 

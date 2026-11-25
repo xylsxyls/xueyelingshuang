@@ -1,6 +1,7 @@
 ﻿#include "NetExecution.h"
 #include "NetInterfaceMacro.h"
 #include "NetInterfaceLinkState.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include "NetInterfaceCertificate.h"
 #include "NetInterface.h"
 #include "NetInterfaceLink.h"
@@ -244,11 +245,7 @@ int32_t NetInterfaceLinkState::configure(const NetInterfaceLinkOptions& options,
     m_options.m_tls.handshakeTimeoutMs = options.m_tls.effectiveHandshakeTimeout();
     if (options.m_name != nullptr)
     {
-        uint32_t size = 0;
-        while (size <= 96 && options.m_name[size] != 0)
-        {
-            ++size;
-        }
+        const size_t size = CStringManager::boundedLength(options.m_name, 97);
         if (size > 96)
         {
             return fail(NI_INVALID_ARGUMENT);

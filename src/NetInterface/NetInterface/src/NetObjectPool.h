@@ -131,7 +131,7 @@ public:
     template <class... Args> int32_t create(NetObjectReference<T>& output, Args&&... args);
 
     /** 增加已拥有槽的引用；不能用于已释放的裸标识
-    @param [in] storage 存活的本池槽
+    @param [in] storage 存活的本池槽，空指针无操作
     */
     void retain(void* storage);
 

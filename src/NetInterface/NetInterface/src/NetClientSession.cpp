@@ -1,6 +1,7 @@
 ﻿#include "NetClientSession.h"
 #include "NetInterfaceMacro.h"
 #include "NetClientSessionState.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include "NetInterface.h"
 #include "NetInterfaceCredit.h"
 #include "NetExecution.h"
@@ -297,11 +298,7 @@ int32_t NetClientSession::connectService(uint32_t product, const char* address, 
     {
         return NI_INVALID_ARGUMENT;
     }
-    uint32_t addressSize = 0;
-    while (addressSize < sizeof(m_state->m_destination.m_address) && address[addressSize] != 0)
-    {
-        ++addressSize;
-    }
+    const size_t addressSize = CStringManager::boundedLength(address, sizeof(m_state->m_destination.m_address));
     if (addressSize == 0 || addressSize == sizeof(m_state->m_destination.m_address))
     {
         return NI_INVALID_ARGUMENT;

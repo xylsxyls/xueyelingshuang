@@ -13,6 +13,16 @@ librariesrely+=($'project\tDllRelyTest\t'"$DllRelyTest_dlllib")
 !EOF!
 
 #--------------------------------------------------------------------
+CStringManager_bit=$1
+CStringManager_dlllib=$2
+CStringManager_debugRelease=$3
+CStringManager_allSame=$4
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" CStringManager "$CStringManager_bit" "$CStringManager_dlllib" "$CStringManager_debugRelease" "$CStringManager_allSame"
+fi
+librariesrely+=($'project\tCStringManager\t'"$CStringManager_dlllib")
+
+#--------------------------------------------------------------------
 NetChannel_bit=$1
 NetChannel_dlllib=$2
 NetChannel_debugRelease=$3

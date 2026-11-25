@@ -2,6 +2,7 @@
 #include "NetInterface.h"
 #include "NetInterfaceMacro.h"
 #include "NetInterfaceRequests.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include <cstring>
 #include "NetInterfaceCredit.h"
 #include "NetInterfaceDirectory.h"
@@ -1461,7 +1462,7 @@ int32_t NetInterface::linkPeerInfo(NetInterfaceLinkHandle handle, uint32_t* fiel
     if (result == NI_READY)
     {
         fields[0] = peer.m_role;
-        fields[1] = static_cast<uint32_t>(std::strlen(peer.m_name));
+        fields[1] = static_cast<uint32_t>(CStringManager::boundedLength(peer.m_name, 96));
         fields[2] = peer.m_certificateSize;
         fields[3] = peer.m_claimsSize;
         *name = reinterpret_cast<const uint8_t*>(peer.m_name);
@@ -1975,8 +1976,8 @@ int32_t NetInterface::directoryCreateNodes(const NetInterfaceDirectoryNodeData* 
         {
             const NetInterfaceDirectoryNodeData& input = nodes[index];
             if (input.m_structSize != sizeof(NetInterfaceDirectoryNodeData) || input.m_version != 1 ||
-                std::memchr(input.m_name, 0, sizeof(input.m_name)) == nullptr ||
-                std::memchr(input.m_address, 0, sizeof(input.m_address)) == nullptr)
+                CStringManager::boundedLength(input.m_name, sizeof(input.m_name)) == sizeof(input.m_name) ||
+                CStringManager::boundedLength(input.m_address, sizeof(input.m_address)) == sizeof(input.m_address))
             {
                 return NI_INVALID_ARGUMENT;
             }
