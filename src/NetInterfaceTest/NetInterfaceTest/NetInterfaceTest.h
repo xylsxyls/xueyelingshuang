@@ -8,10 +8,10 @@
 
 被测入口为已构建 SDK 的 NetInterface/NetInterfaceAPI.h。所有功能用例调用真实 C++ 接口。
 两端 TLS 共用测试工程已有的公开测试证书样本，只在当前进程的内存中交换密文，避免网络和端口影响判定。
-通过 NetInterfaceTest --all 运行全部用例，--cases 2,8 可按编号选择，--instant 和 --stress 分别运行瞬时与压力用例。
+不带参数或使用 --all 都先执行全部瞬时用例，再执行压力用例。--cases 2,8 可按编号选择，--instant 和 --stress 分别运行瞬时与压力用例。
 Windows 运行对应配置的 EXE；Wasm 使用对应位宽的 LibraryTestHost.js 和 NetInterfaceTest.js。
 Linux、Linux ARM、macOS、Android、iOS 通过项目 CMake 和 PlatformTest 的相应宿主构建或启动同一组用例。
-Linux 在 VS Code 中先配置 CMake、选定并构建 NetInterfaceTest，再用同名调试项运行 --all。
+Linux 和 Linux ARM 的 SDK 静态归档沿用生产库声明的 rt 与 atomic 系统链接项。Linux 在 VS Code 中先配置 CMake、选定并构建 NetInterfaceTest，再用同名调试项运行 --all。
 
 编号、输入与独立预期
 01 固定帧（瞬时）。手写32字节 NIF2 头和3字节二进制正文；编码逐字节一致，按片解码还原全部字段。
@@ -26,7 +26,7 @@ Linux 在 VS Code 中先配置 CMake、选定并构建 NetInterfaceTest，再用
    前半只返回 NEED_MORE，后半 READY，消费长度准确；每轮正文完整，consume 后 EOF 干净。
 06 连续帧与借用（瞬时）。固定帧的引用、指针及字段数组入口和紧凑帧入口分别令长度覆盖正文、元数据或输出，期待 NI_INVALID_ARGUMENT 且原字节保持。长度紧邻输出的合法调用应成功。短输出预填与各位置预期编码不同的字节，检验失败时目标和两侧保护字节完整。一次送入两个不同帧，只接纳第一帧；覆盖原输入后已接纳的正文仍正确。
    句柄 feed 的消费长度落入输入时应保持全部字节和解析位置，换用相邻的独立长度后完整收帧。READY 时再次 feed 消费0，consume 后续帧可读。无效构造参数不能通过 reset 变成有效。
-07 紧凑增量（瞬时）。对完整 DATA 基线送入单字节增量和跨分片的变长增量，请求号依次为40、41、44。
+07 紧凑增量（瞬时）。静态测试构建（STATIC_LIB）另以旧编号字段作为编码输出，41 到 44 的跳号和单字节正文 77 须得到 E4 01 03 4D。对完整 DATA 基线送入单字节增量和跨分片的变长增量，请求号依次为40、41、44。
    类型和产品继承，正文分别核对。完整 DATA 头已接纳时，分别在正文尚未收全、已就绪待消费和已消费时关闭再开启紧凑许可。当前帧仍可完整读取，随后两种增量头都须等到新的完整基线。重复开启已有许可保留基线。
 08 RPC（瞬时）。与独立 NRP2 信封字节比较，核对父编号高低字、正文偏移和时限。重叠缓冲或长度输出别名
    拒绝且不写输出，相邻区间可用，超出16位的种类拒绝；PING 原地转为 PONG，PONG 无回复。本地 NOI2 来源前缀另验独立输出、正文别名与长度别名。解析 RPC 时允许复用字段数组，结果覆盖正文时拒绝。NIS2 服务握手核对输入秘密、帧元数据与协商输出的独立性；NOI2 拆包允许原地更新帧描述，输出与正文重叠时保持输入。
@@ -34,9 +34,9 @@ Linux 在 VS Code 中先配置 CMake、选定并构建 NetInterfaceTest，再用
    各自归还后两项恢复；多还1字节触发持续协议错误。
 10 压缩（瞬时）。手写 Zstandard RLE 数据块，期望1024个 A。未协商拒绝，1023字节预算拒绝；
    协商且容量足够时整个输出逐字节一致。
-11 HELLO（瞬时）。驱动客户端和服务端互换握手记录，协商得到能力3、窗口16、块4096，核对双方身份字段。
+11 HELLO（瞬时）。身份字节覆盖句柄输出时返回 NI_INVALID_ARGUMENT，仍能用独立句柄正常握手。驱动客户端和服务端互换握手记录，协商得到能力3、窗口16、块4096，核对双方身份字段。句柄入口的能力字段和身份区重叠时返回 NI_INVALID_ARGUMENT，整段输出保持原值。
    单独的未完成握手在截止前仍等待，到截止时刻返回 NI_TIMEOUT。
-12 TLS 服务名（瞬时）。临时设置带千位分组的数值 locale，为产品12345构造真实 TLS ClientHello。
+12 TLS 服务名（瞬时）。临时设置带千位分组的数值 locale，为产品12345构造真实 TLS ClientHello。 同时核对产品号 0 和 UINT32_MAX 的完整十进制名称。
    按记录、握手及扩展长度定位 server_name，只接受域名列表中完整的 service.12345；测试结束恢复原 locale。
 13 TLS 队列与背压（瞬时）。两端用独立 TLS 会话握手，每次最多转交97字节密文。控制和普通记录池各设1槽，
    非法配置须保留原设置，启动后配置须拒绝。连续两轮各接纳一条请求与心跳，第二条同类消息拒绝，
@@ -45,7 +45,7 @@ Linux 在 VS Code 中先配置 CMake、选定并构建 NetInterfaceTest，再用
    零字节不分配，超出最大档拒绝，租约先于池析构。
 15 发现表快照（瞬时）。65个互异节点走缓存编码、解码后完整复制；少一槽时保留原数组，最后一项版本无效时前面的项也不得写入。
    同一数值IPv6和同一端口的两种拼写不得重复入表；400个有效节点实际编码超过16 KiB、443个节点仅名称即超预算，两者均整体拒绝。
-16 发现缓存（瞬时）。固定UTC毫秒写出NGC3；从实际导出的缓存验证未来5分钟及过去30天的精确边界，
+16 发现缓存（瞬时）。固定UTC毫秒写出NGC3。当前时间为零须返回 NI_INVALID_ARGUMENT 并清空输出句柄。从实际导出的缓存验证未来5分钟及过去30天的精确边界，
    两侧各超1毫秒返回NI_TIMEOUT，改动摘要返回NI_PROTOCOL_ERROR，失败不得交付句柄。
 
 17 请求路由终态（瞬时）。两个来源使用相同原号各发一条，按目标身份完成第一条。错误目标与重复回复均不得消耗另一条；
@@ -69,16 +69,16 @@ Linux 在 VS Code 中先配置 CMake、选定并构建 NetInterfaceTest，再用
    给已设为 128 KiB 的窗口提交类型不符的消息，预期错误且保留额度；缺字段时可采用 64 KiB，已使用后拒绝再次配置。
    Win32 Debug 在检查长 BLOB 类型期间拒绝一次相同大小的分配，仍须判为类型错误，且不应触发该分配。
 
-24 句柄工厂的池配置（瞬时）。请求、TLS 连接和链路分别使用自定义池。无效配置必须清空输出句柄，单槽端点池满后释放并可复用。
-25 提交队列与索引（瞬时）。验证一次登记的唤醒回调在换池后仍能随真实提交触发、重复登记被拒绝，以及两个索引独立配置、队列策略和参数失败回滚，启动后禁止重配，实际提交、领取和归还数据。检查队列容量等待参数的默认值、零次重试、无效零毫秒，以及使用有限池时提交仍返回背压。用65字节 DATA 填满16槽入口，按1批×1项、2批×4项及默认8批×32项分别推进一次，再实测生产者可重新占用的槽数应为1、8及全部原有可用槽。2批×3项时允许基础队列对短前缀改为逐项领取，实际归还须在2至6项之间。持有第一帧时重复 beginPoll 和 next 须返回 NI_INVALID_STATE，队列仍满。最终逐条核对编号和全部65个正文字节，归还全部预算。把同步 DATA 交付期限设为 1 毫秒，用 owner 的单调时间样本推进后须收到 NI_TIMEOUT。
+24 句柄工厂的池配置（瞬时）。请求、TLS 连接和链路分别使用自定义池。句柄落在请求池配置或链路声明内时拒绝创建并保留原存储。无效配置必须清空输出句柄，单槽端点池满后释放并可复用。
+25 提交队列与索引（瞬时）。令同步请求的票据输出与正文重叠，令同步 DATA 的票据输出分别与帧请求号或正文重叠。三次均须返回 NI_INVALID_ARGUMENT，保留输入，不接纳请求或帧。换用独立票据后，原请求和原 DATA 仍可提交。生产者连续竞争64次让步，原生回收和同步发送的轮询休眠各默认1毫秒。两个实例分别读回各自配置，输入对象改动、非法重配和换池均应保留已设置值，启动后设置须被拒绝。验证一次登记的唤醒回调在换池后仍能随真实提交触发、重复登记被拒绝，以及两个索引独立配置、队列策略和参数失败回滚，启动后禁止重配，实际提交、领取和归还数据。检查队列容量等待参数的默认值、零次重试、无效零毫秒，以及使用有限池时提交仍返回背压。用65字节 DATA 填满16槽入口，按1批×1项、2批×4项及默认8批×32项分别推进一次，再实测生产者可重新占用的槽数应为1、8及全部原有可用槽。2批×3项时允许基础队列对短前缀改为逐项领取，实际归还须在2至6项之间。持有第一帧时重复 beginPoll 和 next 须返回 NI_INVALID_STATE，队列仍满。最终逐条核对编号和全部65个正文字节，归还全部预算。把同步 DATA 交付期限设为 1 毫秒，用 owner 的单调时间样本推进后须收到 NI_TIMEOUT。同步回执还须交付与原请求期限一致的剩余毫秒，结束或消费后查询写0。
    十个记录池和索引分别限制为一个槽，每次只限制其中一项。两次真实提交应依次得到接纳和背压，独立的短 DATA 仍可接纳。断线后逐个归还请求和票据，字节计数回到零。
    执行者每次仅导入一项，提前 complete 队尾的第三个请求应返回 false。断线后尚有请求时，用原代号或新代号握手都应被拒绝；按原序取完三个请求，各一次。普通借用中断线时，旧代积压帧全部丢弃，同步票据可立即读取失败终态，队尾请求可在 finish 前结算，借用的正文仍有效。结束借用并重新握手只交付新代帧。另在 drainData 的第一帧回调中断线，核对成功消费1帧1字节、后续帧被丢弃、队尾请求可结算及最终空闲。
 
-26 路由与会话配置（瞬时）。五个物理池分别验证错误配置。一个端点槽耗尽后关闭并复用，已启动的路由器拒绝换池。会话验证请求池的参数、压缩类型、发现配置及外部通道缺失时的错误。
+26 路由与会话配置（瞬时）。五个物理池分别验证错误配置。一个端点槽耗尽后关闭并复用，已启动的路由器拒绝换池。会话验证请求池的参数、压缩类型、发现配置及外部通道缺失时的错误。 请求表的端点池只给保留槽时，首次服务或客户端登记必须返回 NI_LIMIT_EXCEEDED 并清零输出。扩大到两槽且重新设置租约后，同一端点可以登记。
 
-27 TLS 密文字节预算（瞬时）。填满 7 字节输入后零接纳，ClientHello 输出上限精确为 19 字节。另一实例一次接纳 40000 字节。管理链路独立限制为 11 字节，握手恰到 10000 毫秒超时。TLS 及连接句柄另验字节数与输入或输出重叠时内容保持，改用独立计数后仍可接纳数据。另外验证压缩协商开关、非法标志和缺失的类型数组。
+27 TLS 密文字节预算（瞬时）。创建时让诊断字段与角色、物理池、CA、证书、密钥、主机名或句柄输出共用存储，预期参数错误且原值保持。相邻的主机名和诊断字段可正常创建。填满 7 字节输入后零接纳，ClientHello 输出上限精确为 19 字节。另一实例一次接纳 40000 字节。管理链路创建后尚未借出 HELLO 时 outputState 就应返回 NI_READY，借出后保持同一状态，消费 HELLO 后暂时返回 NI_OK。推进生成密文后恢复 NI_READY，首段保持独立的 11 字节上限。握手恰到 10000 毫秒超时，输出状态返回同一错误。TLS 及连接句柄另验字节数与输入或输出重叠时内容保持，改用独立计数后仍可接纳数据。另外验证压缩协商开关、非法标志和缺失的类型数组。
 
-28 服务通道协商（瞬时）。运输回调独立解析 OPEN 的目标、通道与窗口。默认申请 1 MiB、应答省略窗口，以及申请并获得 128 KiB 时，应分别收到 13 和 29 字节的 TLS 首段。申请 64 KiB 而节点应答 80 KiB 时，应收到 NI_PROTOCOL_ERROR 关闭通知，业务 TLS 输出计为零。启动后重设应报状态错误。
+28 服务通道协商（瞬时）。用 1 字节 TLS 密文输入队列接收一次送达的 4 字节记录头前缀。运输暂停供给后，执行者仍应得到三次零等待提示，完成本地暂存前三次搬运。前缀全部交给 TLS 后应恢复正等待预算，整段信用只归还一次。管理链路单独配置相同的密文输入大小和每轮一步预算，同样应在没有新密文时继续推进，前缀全部接纳后恢复正等待。另将管理 TLS 输出也设为 1 字节且暂停取走 ClientHello。首次接纳后再次推进，双向没有移动时必须恢复正等待。直接构造网关通道时，空地址应被拒绝并清零输出代次，可在原对象上改用有效地址。服务模式已终止而未绑定直连通道时，调用直连应返回 NI_NOT_SUPPORTED，代次和通知次数均保持。为三个独立会话预设不同窗口与 TLS 输出限额，配置并接纳全部三个连接后才开始推进。修改调用方的限额对象，各会话仍应采用自己的原值。运输回调独立解析 OPEN 的目标、通道与窗口。默认申请 1 MiB、应答省略窗口，以及申请并获得 128 KiB 时，应分别收到 13 和 29 字节的 TLS 首段。申请 64 KiB 而节点应答 80 KiB 时，应收到 NI_PROTOCOL_ERROR 关闭通知，业务 TLS 输出计为零。启动后重设应报状态错误。管理运输在 poll 时静默结束，期望 NI_TRUNCATED；当次先给出错误再结束，保留原错误。分配异常应报告 NI_NO_MEMORY，其他运输异常应报告 NI_INVALID_STATE。每次只能收到一次关闭通知。运输在 connect 中抛出普通异常或分配异常时，返回相应错误，输出连接号归零。
 
 29 解码正文缓存（瞬时）。5001 字节帧在默认设置下消费后释放。设置 -1 时在单帧 6000 字节限额内复用。半帧及 READY 期间拒绝修改；空闲时缩小预算立即释放。核对 0、非二次幂、非法负值、reset 后的保留策略及不透明句柄入口。用例13还在真实 TLS 接收端核对消费后的容量。
 
@@ -86,21 +86,28 @@ Linux 在 VS Code 中先配置 CMake、选定并构建 NetInterfaceTest，再用
 
 31 执行宿主（瞬时）。先绑定由宿主独立创建的循环，再嵌套进入两个不同执行者。每层回调应收到自己的实例和 begin 时观察到的代次。wake 后本轮仍交付旧代次，下次 begin 才取新值。到期或已推进时等待为零。内层退出恢复外层，最外层退出恢复原宿主循环。两个实例各释放一次。缺少 begin 的函数表须被拒绝，未登记宿主时 wait 返回 NI_NEED_MORE。
 
-32 直接监听的握手配置（瞬时）。独立客户端分别与默认路由器和自定义路由器交换完整 HELLO。默认应协商能力7、请求32、块65536，宿主等待预算最长5000毫秒。自定义应协商3、9、2048，预算最长24000毫秒。分别拒绝能力位、零请求、块大小和期限的无效值。重新配置物理池后仍沿用握手设置，监听开始后及附加客户端模式均拒绝重配。握手完成后，默认与自定义心跳的下一次等待预算分别为30000和12345毫秒，零间隔须被拒绝。
+32 直接监听的握手配置（瞬时）。绑定运输后、监听失败回滚后分别调用路由器 poll，两次均应返回 true，运输的 poll 调用数保持零。成功重试后连续两次 poll，运输恰好推进两次并完成应用握手。空地址、错误 TLS 角色和非法握手时限应在调用运输前被拒绝。运输接纳和失败回滚期间禁止重绑与改参数。如果宿主在回滚中请求停止，返回后同样拒绝重配，下一次 poll 应完成停止。分配异常返回 NI_NO_MEMORY 并停止部分启动的资源，随后可在同一实例重试。独立客户端分别与默认路由器和自定义路由器交换完整 HELLO。默认应协商能力7、请求32、块65536，宿主等待预算最长5000毫秒。自定义应协商3、9、2048，预算最长24000毫秒。分别拒绝能力位、零请求、块大小和期限的无效值。重新配置物理池后仍沿用握手设置，监听开始后及附加客户端模式均拒绝重配。握手完成后，默认与自定义心跳的下一次等待预算分别为30000和12345毫秒，零间隔须被拒绝。直接调用 peerInfo 时，分别核对三个输出区域任意两组相交或缺少输出地址，应返回 NI_INVALID_ARGUMENT 且保留原数据。随后用独立输出读取，核对能力和设备标识。
 
 33 路由缓存与文件回收（瞬时）。每种配置转发8192字节真实RPC并完成响应。默认4096字节和零保留时暂存容量应降为零，-1时仍能容纳原信封。随后建立期限不同的三个文件流，按非创建顺序取消。下一次可等待时间随最早在册期限变化。每一条重复取消均只向服务发出一次终止通知，服务看到自己的流号，关闭后释放暂存容量。
+   将文件租约上限设为45秒，经过真实 OPEN 和重复 OPEN，核对客户端应答与宿主实际等待的较早期限，分别为30和45秒。无效设置和重配物理池均保留上限，登记端点后设置应失败。
 
-34 发送端压缩配置（瞬时）。独立 TLS 对端解密后读取 NIF2 字节。4096 字节样本在门槛 4096 时压缩、4097 时原样发送。等级 1 和 9 的压缩字节与直接调用 Compress 的结果比对。验证等级 0、零门槛、启动前重配及无效等级，均检查失败后先前配置的实际效果。未列入白名单、文件控制、事件、无收益短正文和不可压缩正文应逐字节原样交付。协商紧凑格式后，与白名单 RPC 同类型的连续 DATA 应分别产生完整头及单字节增量头；重新协商后恢复完整头。
+34 发送端压缩配置（瞬时）。独立 TLS 对端解密后读取 NIF2 字节。4096 字节样本在门槛 4096 时压缩、4097 时原样发送。等级 1 和 9 的压缩字节与直接调用 Compress 的结果比对。验证等级 0、零门槛、启动前重配及无效等级，均检查失败后先前配置的实际效果。未列入白名单、文件控制、事件、无收益短正文和不可压缩正文应逐字节原样交付。协商紧凑格式后，独立 TLS 对端逐字节比对九帧 DATA。编号增加 1、3、127、128、UINT32_MAX 时核对相应的紧凑头。增加 UINT32_MAX+1、编号回退和重新协商时均应使用完整头。
 
-35 业务会话缓存与心跳（瞬时）。真实 HELLO 应答后，等待宿主分别观察到默认30000及自定义11000毫秒空闲期限。依次接纳40、8192字节和零字节 RPC，另行解析并逐字节核对，末次收到空正文。默认预算只保留小缓冲，0在每次交付后释放，-1在会话内复用；关闭后容量均为零。非法参数保留前值，连接后重配返回 NI_INVALID_STATE。三个请求同时超时时分别检查自定义每轮一个回调及默认一次结算全部。另让传输实际接纳一次 PING 但不回应，分别核对总无输入和 PONG 两个期限先到的等待值。
+35 直连生命周期、业务缓存与心跳（瞬时）。底层拒绝、异常或返回零连接号时，首次连接的代次应保持零，可以继续设置池、心跳、超时预算及正文缓存。每次失败只停止一次通道。重试接纳后代次应为1，后续失败应保留最近一次接纳的代次。显式 shutdown 后重新连接需要绑定通道。持续抛异常的 poll 应当场报告唯一关闭和在途请求终态，并保留先前主动关闭的原因。运输 close 抛异常后，下一次 poll 或 shutdown 须停止适配器一次并保留首次关闭原因；在帧回调中触发此故障时，须等运输交付返回后才停止。收尾前已绑定通道和各项初始配置仍受保护，收尾后可替换压缩白名单，首次连接限定的配置仍拒绝。真实 HELLO 应答后，等待宿主分别观察到默认30000及自定义11000毫秒空闲期限。依次接纳40、8192字节和零字节 RPC，另行解析并逐字节核对，末次收到空正文。默认预算只保留小缓冲，0在每次交付后释放，-1在会话内复用；关闭后容量均为零。非法参数保留前值，连接后重配返回 NI_INVALID_STATE。三个请求同时超时时分别检查自定义每轮一个回调及默认一次结算全部。另让传输实际接纳一次 PING 但不回应，分别核对总无输入和 PONG 两个期限先到的等待值。
+   已设置池时，非法地址指针、端口、监听者、TLS 时限或 HELLO 参数均应在通道接到配置前被拒绝。随机源失败也应保留零代次和零配置调用。改正输入后可继续使用同一会话。直接调用 NetSession::connectWithPools 并提供零控制轮转预算，预期同样拒绝且不进入通道。混合期限场景中从堆内取消两项，余下超时通知按原号104、101、103、105抵达，仍未到期的100可正常取消。
+   直连适配器在 connect 中抛出普通异常或分配异常时，分别返回 NI_INVALID_STATE 或 NI_NO_MEMORY，未接纳连接没有关闭通知，原会话可重试。接纳后先请求以 NI_TIMEOUT 关闭、再请求取消时，运输只收到一次关闭请求。排队的就绪事件不得重新启动 HELLO，已送达 HELLO 后才开始关闭时，迟到的真实握手应答也不得让会话重新就绪，shutdown 在运输没有回报时仍应交付最初的 NI_TIMEOUT。
+   已有待办请求时，运输在 poll 中不再持有资源且没有关闭回调，应在同一轮交付 NI_RPC_UNAVAILABLE 和 NI_TRUNCATED。本地主动取消则交付 NI_RPC_CANCELLED 和 NI_CANCELLED。再次推进和停止均不应重发终态。
+   绑定通道后，空地址指针或空字符串应返回 NI_INVALID_ARGUMENT，随机源与池配置回调的调用数均为零。
+   直连前设置数据记录池上限257，再将调用者原值改为513，外部通道每次均应读到257。依次模拟容量拒绝、分配异常和其他异常，核对错误码、零代次、没有关闭回调和原会话重试成功。配置回调内重绑、重配应被拒绝。默认配置不调用通道配置入口。握手期限1、99、60001及最大32位无符号数应在使用随机源前拒绝，0、100和60000应成功。底层会话、直连门面及36号服务连接的握手随机回调均应拒绝重新设置启动参数。
 
-36 服务恢复与启动期限（瞬时）。提交填满地址字段且没有终止符的服务地址，应返回 NI_INVALID_ARGUMENT、代次仍为零，随后合法连接可恢复。发现器始终无候选时，宿主须分别得到约250、1400、700毫秒的预算，第三种由较短的总期限决定。另一组在首次建立运输后应立即继续推进，观察到 OPEN 后，在没有应答时等待默认30000或自定义2100毫秒。非法和迟到配置均须拒绝。读写轮次另验默认32/32、自定义1/3和4/2，检查帧观察者的实际调用数、发送工作步数、耗尽后的立即推进与空闲后的等待。连续拒绝两次物理连接并固定抖动样本时，初始基数32毫秒、最大40毫秒的两次等待应为16及20毫秒。时间预算以测试期间实际流逝的毫秒数校正。白盒部分调用通道实际使用的解密后帧交付策略，分别测试默认5000和自定义750毫秒。第一次拒收可发生在零时刻，重复拒收不能续期，截止时不再进入观察者，到期前接纳应解除期限。
+36 服务恢复与启动期限（瞬时）。提交填满地址字段且没有终止符的服务地址，应返回 NI_INVALID_ARGUMENT、代次仍为零，随后合法连接可恢复。在首次服务连接前设置请求池应成功，发现器启动且未给出候选时关闭会话，代次须保留，再次设置请求池应返回 NI_INVALID_STATE。发现器始终无候选时，宿主须分别得到约250、1400、700毫秒的预算，第三种由较短的总期限决定。另一组在首次建立运输后应立即继续推进，观察到 OPEN 后，在没有应答时等待默认30000或自定义2100毫秒。非法和迟到配置均须拒绝。读写轮次另验默认32/32、自定义1/3和4/2，检查帧观察者的实际调用数、发送工作步数、耗尽后的立即推进与空闲后的等待。连续拒绝两次物理连接并固定抖动样本时，初始基数32毫秒、最大40毫秒的两次等待应为16及20毫秒。时间预算以测试期间实际流逝的毫秒数校正。白盒部分调用通道实际使用的解密后帧交付策略，分别测试默认5000和自定义750毫秒。第一次拒收可发生在零时刻，重复拒收不能续期，截止时不再进入观察者，到期前接纳应解除期限。背压时限取 UINT32_MAX 且时钟距离 UINT64_MAX 仅剩三毫秒时，期限须饱和至 UINT64_MAX，恰好到期应返回 NI_TIMEOUT 并保持交付次数。
 
+   发现器第一次返回 false 并清空输出，重试时仍应收到正确的 v1 结构大小和版本，随后选择合法候选并送出 OPEN。发现器在启动、推进、选择或记录失败时抛出普通异常或 std::bad_alloc，分别应报告 NI_INVALID_STATE 或 NI_NO_MEMORY。未接纳的启动可重试，已接纳的代次只交付一次关闭原因。发现器反复抛异常且异步停止未完成时，底层会话仍须推进并交付关闭原因，之后才能解除发现器借用。
 37 隧道与借用输出（瞬时）。使用手写 NTW3 记录，分别让长度与正文、元数据和目标重叠。两个编码入口都应返回 NI_INVALID_ARGUMENT 并保留原字节，长度紧邻目标时应逐字节匹配手写记录。consumed 与输入重叠时不得消费，随后在同一解码器上完整重试。相交的读取输出应保留调用前的值，改用独立输出仍可读取并消费同一帧。
 
 38 TLS 队列调度（瞬时）。为三对真实 TLS 会话分别使用默认设置、较小的轮转与推进预算、不限控制帧正文长度。两类队列持续有数据时按独立的编号序列逐帧核对解密结果，包括事件的全部正文。验证默认连续优先32个控制帧、可改为2个、0和-1两种控制正文门槛、推进1轮及最多交付2帧的边界。无效配置须保留原配置。预算让出后宿主收到零等待，全部排空后可重新等待。
 
-39 分派预算（瞬时）。逐条提交5条双字节 DATA，在运输回调核对每条的编号、正文和先后顺序。命令／字节预算分别为1／100、10／3、10／1时，第一轮各须交付1、2、1条。空队列恢复5000毫秒可等待状态，非法和启动后重配分别验证。
+39 分派预算（瞬时）。未登记业务监听者时，started 返回 NI_INVALID_STATE，提交端口代次保持为零。若宿主仍交付就绪，分派器记录 NI_INVALID_STATE，提交端口保持未就绪。随后登记监听者，可正常接纳新连接并交付数据。逐条提交5条双字节 DATA，在运输回调核对每条的编号、正文和先后顺序。命令／字节预算分别为1／100、10／3、10／1时，第一轮各须交付1、2、1条。空队列恢复5000毫秒可等待状态，非法和启动后重配分别验证。
 
 40 同时到期（压力）。让三条真实文件流和三个已路由请求同时到期，每轮最多清理一个文件、两个请求。三轮后两端分别收到正确流号的三条通知，在册请求数依次为1、0、0。另让两个端点同时关闭，回收预算为一步，每轮只归还一个可供新服务使用的物理槽。
 
@@ -111,29 +118,32 @@ Linux 在 VS Code 中先配置 CMake、选定并构建 NetInterfaceTest，再用
 42 宿主随机输出（瞬时）。零字节与非法参数均不触发回调；8192 字节逐字节校验，8193 字节拒绝且保留原值。缺少回调或回调只写一字节后失败，均须擦除整个请求区间，且保留首尾保护字节。
 43 密码派生（瞬时）。密码和盐各含 NUL，PBKDF2-HMAC-SHA256 迭代两次，与独立 .NET 实现生成的 32 字节向量比较。31 字节输出、零次及超过上限的迭代须返回对应错误，原输出与保护字节均保持。
 
-44 执行宿主异常。create 部分创建后抛出，预期拒绝绑定且只回收一次。分别使进入、退出、begin、wait、wake 和 destroy 抛出，核对错误状态、回调次数与 current() 的归属。
-45 文件协议门面。检查短元数据、字段、控制包查询与编码、1024 字节已持久前缀和剩余两字节读请求。输错偏移或产出长度应被拒绝，取消后快照保留唯一终态。
-46 TLS 与连接句柄。两对独立 TLS 客户端和服务端实际握手，一对传完整 NIF2 帧，一对传原始明文。检查无效配置、未就绪发送、消费后清空、保护字节及输入结束。
-47 解码句柄。对独立样本检查截断后的复位、字段数组的高低字顺序、两种视图的正文借用、消费及空句柄错误。
-48 目录与证书。二进制目录查询包含长度不足、越界和合法索引。分别以写满且无终止符的目录名称和地址调用创建入口，预期返回 NI_INVALID_ARGUMENT 并保持空句柄，更正后可创建。另检查固定候选的版本、端口和地址终止符、规范地址键。合法名称和熵源应产生非空 PEM，缺少熵源时两个长度清零。
-49 请求路由与通道。检查来源号与路由号的双向查询、错误产品和已完成请求，通用处理器重复注册，连接池非法配置、初始会话和默认运输接口的返回值。
+44 执行宿主异常（瞬时）。create 部分创建后抛出，预期拒绝绑定且只回收一次。分别使进入、退出、begin、wait、wake 和 destroy 抛出，核对错误状态、回调次数与 current() 的归属。
+45 文件协议门面（瞬时）。检查短元数据、字段、控制包查询与编码、1024 字节已持久前缀和剩余两字节读请求。输错偏移、传入空前缀或重复提交已哈希的前缀时应保留进度，按正确偏移补齐后仍可读取后续两字节。对端确认数据后，END 记录内的 SHA-256 必须与独立计算的 1026 字节文件摘要逐字节相同。输错产出长度应被拒绝，取消后快照保留唯一终态。
+46 TLS 与连接句柄（瞬时）。两对独立 TLS 客户端和服务端实际握手，一对传完整 NIF2 帧，一对传原始明文。检查无效配置、未就绪发送、消费后清空、保护字节及输入结束。
+47 解码句柄（瞬时）。对独立样本检查截断后的复位、字段数组的高低字顺序、两种视图的正文借用、消费及空句柄错误。
+48 目录与证书（瞬时）。二进制目录查询包含长度不足、越界和合法索引。分别以写满且无终止符的目录名称和地址调用创建入口，预期返回 NI_INVALID_ARGUMENT 并保持空句柄，更正后可创建。另检查固定候选的版本、端口和地址终止符、规范地址键。证书申请的名称、私钥区和申请区两两重叠时，两个长度输出、输入和输出缓冲均须保持原值，也不能调用随机源。合法名称和熵源应产生非空 PEM，缺少熵源时两个长度清零。
+49 请求路由与通道（瞬时）。检查来源号与路由号的双向查询、错误产品和已完成请求，通用处理器重复注册，连接池非法配置、初始会话和默认运输接口的返回值。
 50 并发提交（压力）。四个生产者各预留64个请求，核对256个不同编号和关闭后返回值及清零的输出。单线程 Wasm 按相同输入串行执行。多线程构建由四个执行线程同时开始。
 51 对象池与引用（瞬时）。两槽池满时创建第三个对象应被拒绝。分别将根引用复制或移动赋值为它持有的子引用，预期父对象恰好析构一次、子对象仍存活。逐次检查构造失败后槽复用、空引用、自赋值、裸所有权归还和最终析构次数。
---link-timers 先用97个不含终止符的字节作节点名称，构造结果应为 NI_INVALID_ARGUMENT。随后通过不透明句柄建立独立认证链路，核对对端名称、证书、完整高低位编号、两个方向的控制帧及隧道正文，最后验证 EOF 后的持续错误。
+静态库的 --link-timers 还使用同一向量存放挑战和签名。验证端以独立保存的原始挑战验签，改动一个字节后必须拒绝。
+--link-timers 先用97个不含终止符的字节作节点名称，构造结果应为 NI_INVALID_ARGUMENT。声明长度非零而指针为空、或长度为4097字节时，创建须返回 NI_INVALID_ARGUMENT 并清空输出句柄。传入4096字节含 NUL 的声明后改写原缓冲，对端仍应逐字节读到最初的声明，反向无声明的长度和指针均为零。随后通过不透明句柄建立独立认证链路，核对对端名称、证书、完整高低位编号、两个方向的控制帧及隧道正文，最后验证 EOF 后的持续错误。
 
-功能验证结果（2026-11-25）
-Win32 Debug、Windows x64 Release、Node Wasm32 Release 和 Node Wasm64 Release 均运行全部51项及带隔离叶身份的 --link-timers。Linux、Linux ARM、macOS、Android及iOS检查源码及构建配置，缺少实机运行结果。
+功能验证结果（2026-11-26）
+Win32 Debug 静态库和 DLL、Windows x64 Release 静态库、Node Wasm32 和 Wasm64 Release 均通过 51 项编号用例（47 项瞬时、4 项压力）、隔离测试身份的 --link-timers 和 NetInterface.cpp 的 main 示例。
+用例 48 的三组缓冲重叠分别返回 NI_INVALID_ARGUMENT，输入、输出、两个长度及随机源状态均保持原值。静态库认证专项在原向量内生成签名，原挑战验签成功，更改一字节后返回 NI_PROTOCOL_ERROR。main 示例使用独立缓冲生成私钥和申请，随后擦除私钥。
+Linux、Linux ARM、macOS、Android 及 iOS 已检查源码和构建配置，缺少实机运行结果。
 
-性能入口与已有数据
+性能入口与数据状态
 --benchmark 单独运行，--all 不启动计时。interface.encode1024 只测一个固定 NIF2 帧，正文1024字节，
 复用1056字节输出。计时前独立比较全部头和正文。计时内逐次调用编码、检查交付长度、轮转读取正文形成校验值。每批结束按 256 字节周期的独立预期核对总和。
-当前固定编码包含长度参数的重叠检查，缺少这一实现的性能测试数据，本次仅执行功能回归。紧凑编码、RPC、NVE2 事件、NOI2 本地服务信封、压缩等级和门槛、TLS、文件和路由等场景也缺少可比的专项耗时。随机回调、密码派生和不同大小级正文池缺少当前版本的独立计时数据。配置、创建、销毁和状态查询按功能验收，无需单列吞吐。
+固定编码会检查长度参数重叠。当前版本缺少性能测试数据，本次仅执行功能回归。紧凑编码、RPC、NVE2 事件、NOI2 本地服务信封、压缩等级和门槛、TLS、文件和路由等场景也缺少可比的专项耗时。随机回调、密码派生和不同大小级正文池缺少当前版本的独立计时数据。配置、创建、销毁和状态查询按功能验收，无需单列吞吐。
 
-当前回归验证了 Windows 静态库及 DLL 的实际链接，Wasm32 和 Wasm64 的未定义行为检测构建均通过全部编号用例。Chrome 无界面浏览器的 Wasm32 和 Wasm64 各通过51 项（47 项瞬时、4 项压力）。
+Wasm32 和 Wasm64 另启用未定义行为检测，两组均通过。以上七组配置各执行三轮。第一轮重新构建并运行完整套件，第二轮核对默认、瞬时、压力、指定编号和非法编号入口，第三轮把每个编号放在独立进程中运行，再运行完整套件。每轮均通过认证时限专项和示例。Wasm 的单线程配置在 50 号用例中验证串行语义，Windows 同一用例使用四个实际线程。
 
-函数与用例索引（Win32 Debug）
-逐项单独运行并跟踪进入的生产函数，共 786 个具名入口。下列编号可用 --cases 单独运行；认证时限专项使用上文的独立入口。
-每个函数列出至少一个实际进入它的用例。同名重载可能对应多个编号。输入、预期输出和状态变化见相应的编号说明。仅内联且没有独立符号的函数随调用场景检查。
+函数与用例索引
+Win32 Debug 单独运行各编号及认证时限专项，在函数入口记录执行地址，并按链接映射逐一核对了下列 767 个非模板函数名、共 804 个入口（含重载）。各条列出的用例均实际进入对应函数。覆盖到函数入口不代表覆盖函数内所有分支。
+每个函数列出至少一个实际进入它的用例。同名重载可能对应多个编号。输入、预期输出和状态变化见相应的编号说明。模板另按实际对象行为核对。14号通过五级缓冲分配、归还和池统计验证 NetBufferPoolBlock 的实际构造及 NetBufferPool::acquire。51号覆盖 NetObjectPoolItem 构造、NetObjectPool 的创建/引用计数/状态转换/统计，以及 NetObjectReference 的默认构造、复制、移动、两种赋值、解引用、布尔查询、获取与移交所有权、清空和析构。
 NetBufferLease
   14 号　NetBufferLease、 adopt、 capacity、 data、 reset、 swap、 ~NetBufferLease
 NetBufferPool
@@ -147,7 +157,7 @@ NetClientChannel
   49 号　configureCompression、 configureConnectionPools、 outputState
 NetClientDiscovery
   19 号　parseSeeds
-  36 号　~NetClientDiscovery
+  36 号　NetClientDiscovery、 ~NetClientDiscovery
   48 号　addressKey、 validPoint
 NetClientSession
   26 号　NetClientSession、 close、 configureCompression、 configureConnectionPools、 configureGateways
@@ -180,6 +190,7 @@ NetEndpointPeer
 NetEndpointPools
   32 号　NetEndpointPools、 ~NetEndpointPools
 NetEndpointRouter
+  33 号　configureFileLeaseLimit
   26 号　addPort、 addService
   32 号　NetEndpointRouter、 advance、 bindTransport、 closeEndpoint、 closePeer、 collectFiles
       configureClientHandshake、 configurePools、 deliver、 listen、 onClosed、 onFrame、 onReady、 pendingCount
@@ -189,11 +200,11 @@ NetEndpointRouter
       reject、 routeEvent、 routeFrame、 terminate
   49 号　addHandler、 localPort
 NetEndpointRouterState
-  32 号　NetEndpointRouterState、 clearPayload、 enqueueClosing、 now、 takeClosing、 ~NetEndpointRouterState
+  32 号　NetEndpointRouterState、 canConfigure、 clearPayload、 enqueueClosing、 now、 takeClosing、 ~NetEndpointRouterState
   33 号　exchangeFile
   40 号　attachFile、 renewFile、 riseFile、 sinkFile、 takeFile
 NetEndpointServiceSink
-  32 号　~NetEndpointServiceSink
+  32 号　NetEndpointServiceSink、 ~NetEndpointServiceSink
 NetExecution
   31 号　NetExecution、 begin、 bind、 configure、 current、 deadline、 progress、 status、 wait、 wake、 ~NetExecution
   44 号　exchange
@@ -218,10 +229,10 @@ NetGatewayClientTiming
   26 号　NetGatewayClientTiming
   36 号　configure、 configurePollBudgets、 deliver
 NetGatewayTransport
-  36 号　~NetGatewayTransport
+  36 号　NetGatewayTransport、 ~NetGatewayTransport
   49 号　outputState
 NetGatewayTransportFactory
-  36 号　~NetGatewayTransportFactory
+  36 号　NetGatewayTransportFactory、 ~NetGatewayTransportFactory
 NetHeartbeatConfig
   32 号　NetHeartbeatConfig、 valid
 NetInterface
@@ -271,7 +282,7 @@ NetInterfaceCertificate
   认证时限专项　signProof、 verify、 verifyPair、 verifyProof
 NetInterfaceCompact
   2 号　encode、 write
-  7 号　header、 read
+  7 号　encode、 header、 read
 NetInterfaceCompression
   10 号　decode
   13 号　supports
@@ -316,6 +327,7 @@ NetInterfaceFileFlowState
 NetInterfaceFileGuard
   2 号　overlapsFrameLength
   5 号　prepareCount
+  7 号　copyFrameBody
   21 号　NetInterfaceFileGuard、 ~NetInterfaceFileGuard
   41 号　overlap、 overlapsFrame
 NetInterfaceHandshake
@@ -323,7 +335,7 @@ NetInterfaceHandshake
       validLimits
 NetInterfaceLink
   24 号　NetInterfaceLink、 status、 ~NetInterfaceLink
-  27 号　consumeOutput、 peekOutput、 progress
+  27 号　consumeOutput、 outputState、 peekOutput、 progress
   认证时限专项　NetInterfaceLink、 accept、 configureOutputPools、 consumeControl、 consumeRecord、 drainInput
       finishInput、 outputState、 peekControl、 peekRecord、 peerInfo、 sendControl、 sendRecord、 serviceGrant
 NetInterfaceLinkPools
@@ -365,6 +377,7 @@ NetInterfaceTls
   认证时限专项　outputState
 NetInterfaceTlsOptions
   24 号　effectiveHandshakeTimeout
+  27 号　setHandshakeTimeout
 NetInterfaceTunnel
   37 号　NetInterfaceTunnel、 consume、 encode、 feed、 finish、 peek、 ~NetInterfaceTunnel
 NetLinkTransportListener
@@ -379,7 +392,7 @@ NetSenderDispatch
 NetSenderDispatchMap
   39 号　NetSenderDispatchMap、 clear、 erase、 insert、 local、 size、 wire、 ~NetSenderDispatchMap
 NetSenderSubmission
-  25 号　advanceSynchronous、 beginPoll、 complete、 configureGate、 configurePools、 data、 dataSynchronous
+  25 号　advanceSynchronous、 beginPoll、 complete、 configureGate、 configurePools、 configureProducerWait、 producerWait、 data、 dataSynchronous
       disconnected、 drainData、 finish、 next、 nextData、 observeSynchronous、 queuedBytes、 sendSynchronous
       submitData、 submitRequest、 synchronousResult、 takeClosed
   39 号　advanceSynchronous、 cancel、 closeRequested、 send、 state、 synchronousPending
@@ -404,23 +417,27 @@ NetSenderSubmissionPools
 NetSenderSubmissionReceipt
   25 号　NetSenderSubmissionReceipt、 ~NetSenderSubmissionReceipt
 NetSenderSubmissionSignal
-  25 号　~NetSenderSubmissionSignal
+  25 号　NetSenderSubmissionSignal、 ~NetSenderSubmissionSignal
+NetSenderSubmissionWait
+  25 号　NetSenderSubmissionWait
 NetSenderSubmissionState
   25 号　addReceipt、 append、 drainDisconnected、 expireFrames、 find、 reserveReceipt、 rollbackReceipt、 settle
   50 号　NetSenderSubmissionState、 clear、 dropDirect、 dropFrames、 importOwned、 indexResult、 materializeDirect
       nextId、 pauseContention、 pendingReceipts、 pump、 queueResult、 quiesce、 remove、 requestClose、 retire
       take、 wake、 ~NetSenderSubmissionState
 NetServerChannel
-  32 号　~NetServerChannel
+  32 号　NetServerChannel、 ~NetServerChannel
 NetSession
   26 号　NetSession、 bindChannel、 configureCompression、 configureRequestPool、 generation、 shutdown
       ~NetSession
-  35 号　beginRequest、 cancel、 configureExpiryBudget、 configureHeartbeat、 configurePayloadRetention
+  35 号　beginRequest、 cancel、 configureExpiryBudget、 configureHeartbeat、 configurePayloadRetention、 connectWithPools、 stopChannel
       notifyReady、 notifyResult、 onFrame、 onReady、 payloadCapacity、 reserveRequest、 sendCancel、 sendFrame
       sendRequest
   36 号　close、 connect、 notifyClosed、 onClosed、 poll、 progressHandshake、 ready
   39 号　notifyFrame、 outputState、 sendData
   49 号　beginRequestAt
+NetSessionCallbackScope
+  35 号　NetSessionCallbackScope、 ~NetSessionCallbackScope
 NetSessionListener
   26 号　NetSessionListener、 ~NetSessionListener
 NetSessionState
@@ -537,6 +554,59 @@ enum NetInterfaceTestCase
     CaseObjectReferences = 51
 };
 
+// 借用指针和字段共享同一起点，用于检查输出区域相交时的返回值。
+struct TestBorrowedView
+{
+    // 当前借用的正文地址
+    const uint8_t* m_pointer;
+    // 提供完整字段数组的空间，并保留用于核对的预填值
+    uint32_t m_padding[6];
+};
+
+// 身份输入覆盖句柄存储，尾部提供足够的身份数据。
+struct TestHandshakeStorage
+{
+    // 与身份输入共用起始地址的输出句柄
+    NetInterfaceHandshakeHandle m_handle;
+    // 两个身份字段的额外存储
+    uint8_t m_suffix[32];
+};
+
+// 在同一地址分别提供正确对齐的 TLS 句柄和诊断输出。
+union TestTlsOutputs
+{
+    // 初始为空的活动成员
+    NetInterfaceTlsHandle m_handle;
+    // 只取地址，检测与句柄重叠的诊断输出
+    int32_t m_detail;
+};
+
+// 记录同一同步提交收到的通知次数。
+class TestSubmissionObserver : public NetSenderSubmissionSignal
+{
+public:
+    /** 以零次通知开始 */
+    TestSubmissionObserver();
+
+    /** 记录一次已送达的通知 */
+    void notify() override;
+
+public:
+    // 已收到的通知数
+    unsigned m_count;
+};
+
+// 检查直连绑定，并在测试对象析构时结束对外部宿主的借用。
+class TestAttachedSession : public NetClientSession
+{
+public:
+    using NetClientSession::hasBoundChannel;
+    using NetClientSession::boundGatewayFactory;
+
+    /** 在派生对象销毁前解除绑定 */
+    ~TestAttachedSession();
+};
+
 // 记录实际析构次数；父对象可以持有同一池中的另一个对象。
 struct TestReferenceNode
 {
@@ -600,6 +670,8 @@ public:
     uint64_t m_request;
     // 客户端在授权应答中读到的最近流号
     uint64_t m_stream;
+    // 客户端实际收到的最迟授权 UTC 秒。
+    uint64_t m_expiresUtc = 0;
     // 收到并核对的定向业务事件数。
     unsigned m_events = 0;
     // 服务端按顺序收到的本地流终止编号
@@ -648,6 +720,20 @@ private:
     // 已交付的运输事件数
     unsigned m_events;
 public:
+    // 监听及失败回滚期间检查路由器对重入的处理。
+    NetEndpointRouter* m_router = nullptr;
+    // 监听与失败回滚时重绑或改参数的操作均须被拒绝。
+    bool m_reentryRejected = true;
+    // 模拟部分启动后分配失败。
+    bool m_failListen = false;
+    // 在监听失败的回滚调用中请求路由器整体停止。
+    bool m_stopDuringRollback = false;
+    // 运输接到的轮询次数，监听成功前应始终为零。
+    uint32_t m_pollCalls = 0;
+    // 传输接到的启动次数。
+    uint32_t m_listenCalls = 0;
+    // 传输回收部分启动资源的次数。
+    uint32_t m_stops = 0;
     // 用例安排在下一次推进中发生的宿主关闭。
     bool m_endInput = false;
 
@@ -658,7 +744,7 @@ public:
 
 class CiphertextProbeHost;
 
-/** 在网关运输边界记录真实业务 TLS 交付的首段密文，只模拟管理节点的 OPEN 响应
+/** 模拟管理节点的 OPEN 响应，观测业务 TLS 首段输出，并可交付一次固定密文前缀
 */
 class CiphertextProbeTransport : public NetGatewayTransport
 {
@@ -681,7 +767,7 @@ public:
     */
     int32_t sendControl(uint64_t peer, const NetInterfaceFrame& frame) override;
 
-    /** 读取真实 TLS ClientHello 的记录类型及第一段长度，然后模拟运输背压
+    /** 读取真实 TLS ClientHello 的类型和长度，按用例设置模拟接纳或背压
     */
     int32_t sendRecord(uint64_t peer, const NetInterfaceTunnelRecord& record) override;
 
@@ -732,21 +818,37 @@ public:
 public:
     // 在实际运输回调处观测到的首份密文长度
     uint32_t m_first;
+    // 是否在初始握手输出交付后只提供一次 TLS 记录头前缀
+    bool m_offerPrefix;
+    // 运输是否已把该前缀交给被测通道
+    bool m_prefixSent;
+    // 被测通道实际归还的前缀密文字节数
+    uint32_t m_prefixCredit;
     // 收到的有效 OPEN 申请窗口
     uint32_t m_offered;
     // 模拟节点选定的窗口，0表示省略可选字段
     uint32_t m_reply;
     // 是否在每次连接时报告协议失败以触发真实恢复流程
     bool m_refuseConnect = false;
-    // 下一次创建或推进使用的受控故障，1空工厂、2远端关闭、3意外业务记录。
+    // 运输场景依次模拟空工厂、远端关闭、意外记录、静默结束、带原因结束、推进异常和分配失败；8、9 分别在连接时抛普通异常及分配异常。
     unsigned m_fault = 0;
     // 验证业务帧的异常回调及交付次数。
     bool m_throwFrame = false;
     unsigned m_frames = 0;
+    // 最近一次业务终态的请求号
+    uint64_t m_resultId = 0;
+    // 最近一次业务终态的状态码
+    uint32_t m_resultStatus = 0;
+    // 业务终态交付总数
+    uint32_t m_results = 0;
+    // 最近一次关闭通知到达时，已经交付的请求结果数。
+    uint32_t m_resultsAtClose;
     // 已收到的终态通知数
     uint32_t m_closes = 0;
     // 已实际交付的请求超时通知数
     uint32_t m_timeouts = 0;
+    // 超时回调报告的原号，保留抵达顺序以检查相同截止时间的排序。
+    std::vector<uint64_t> m_timeoutIds;
     // 最近的会话关闭回调原因
     int32_t m_closed;
 };
@@ -759,6 +861,37 @@ public:
     @param [in,out] server 服务端状态，存活到通道停止
     */
     explicit SessionProbeChannel(NetInterfaceHandshake& server);
+
+    /** 记录由会话复制并提交给直连通道的配置，模拟一次宿主失败
+    @param [in] config 此次创建物理连接应采用的参数
+    @return NI_OK；测试指定时返回背压或抛出异常
+    */
+    int32_t configureConnectionPools(const NetConnectionPoolConfig& config) override;
+
+    // 当前配置的会话，回调时尝试重绑以验证配置借用期。
+    NetClientSession* m_configuringSession;
+    // 所有配置回调都应在受保护的会话内执行。
+    bool m_reentryRejected;
+    // 配置回调进入次数，用于核对重试及默认配置路径
+    uint32_t m_poolCalls;
+    // 从外部会话收到的物理池上限
+    int64_t m_recordLimit;
+    // 连接接纳阶段模拟宿主异常，NI_OK 允许正常接纳
+    int32_t m_connectException = NI_OK;
+    // 每次推进都产生指定的宿主异常，直到测试复位。
+    int32_t m_pollException = NI_OK;
+    // 模拟运输关闭入口与最终停止入口异常。
+    bool m_throwClose;
+    // 完成监听解绑后模拟停止异常。
+    bool m_throwStop;
+    // 正在交付观察者的借用帧。
+    bool m_deliveringFrame;
+    // 记录是否在帧回调尚未返回时停止了运输。
+    bool m_stoppedInFrame;
+    // 下层实际收到的停止次数。
+    uint32_t m_stops = 0;
+    // 由测试指定的本次配置结果
+    int32_t m_poolResult;
 
     /** 启动唯一连接，保存监听者直到shutdown
     @param [in] address 会话请求的地址
@@ -791,6 +924,14 @@ public:
 
     // 运输实际接纳的DATA编号，按交付顺序记录
     std::vector<uint64_t> m_dataIds;
+    // 暂缓交付已就绪的 HELLO 应答，恢复后在下一次 poll 交付
+    bool m_deferReply = false;
+    // 模拟异步关闭，在下一轮仍可送达已排队的就绪事件
+    bool m_deferClose = false;
+    // 下层收到的关闭请求总数
+    uint32_t m_closeCalls = 0;
+    // 下层收到的 HELLO 总数
+    uint32_t m_hellos = 0;
     // 运输实际接纳的心跳数
     uint32_t m_pings = 0;
     // 用例交由已绑定会话的下一条业务事件，测试期间借用。
@@ -838,7 +979,22 @@ public:
     uint32_t m_calls = 0;
 };
 
-// 没有就绪候选的发现器，用于验证无网络事件时的重试与总期限
+// 发现器可在指定的一次宿主调用中模拟错误。
+enum class DiscoveryFault
+{
+    // 正常完成各宿主调用
+    None,
+    // 开始发现时失败
+    Start,
+    // 推进现有发现任务时失败
+    Poll,
+    // 选择连接候选时失败
+    Choose,
+    // 接收候选连接失败通知时失败
+    Failed
+};
+
+// 可延迟返回候选或在指定阶段抛出异常，供真实会话验证恢复与错误传递
 class PendingDiscovery : public NetClientDiscovery
 {
 public:
@@ -854,11 +1010,29 @@ public:
     /** 查询资源是否已收敛 */
     bool stopped() const override;
 
-    /** 记录一次选择，始终没有就绪的候选 */
+    /** 记录本次输入表头，按用例选择合法候选或清空输出并返回 false */
     bool choose(NetClientDiscoveryPoint& endpoint) override;
 
-    /** 没有候选被尝试 */
+    /** 记录已选择候选的连接失败 */
     void failed(const NetClientDiscoveryPoint& endpoint) override;
+
+    // 指定宿主发生异常的入口
+    DiscoveryFault m_fault = DiscoveryFault::None;
+    // 选择分配异常或普通异常
+    bool m_allocationFailure = false;
+    // 返回合法的 127.0.0.1:8001，否则清空输出并等待。
+    bool m_provide = false;
+    // 每次收到的输入表头均应符合 v1 契约。
+    bool m_headersValid = true;
+    // 模拟异步停止，宿主随后才允许释放发现资源。
+    bool m_holdStop = false;
+    // 已选候选的失败通知数。
+    uint32_t m_failures = 0;
+
+    /** 在选定入口模拟底层分配失败或其他运行错误
+    @param [in] operation 当前宿主入口
+    */
+    void checkFault(DiscoveryFault operation) const;
 
     // choose的实际调用次数
     uint32_t m_attempts = 0;

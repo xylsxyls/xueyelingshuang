@@ -1,5 +1,8 @@
 ﻿#include "NetInterfaceTest.h"
 #include "NetInterface/NetGatewayClientTiming.h"
+#if defined(STATIC_LIB)
+#include "NetInterface/NetInterfaceCompact.h"
+#endif
 #include "PlatformTest/PlatformTestAPI.h"
 #include "Compress/CompressAPI.h"
 #include "ProtoMessageManager/ProtoMessageManagerAPI.h"
@@ -13,6 +16,7 @@
 #endif
 #include <cstring>
 #include <exception>
+#include <new>
 #include <stdexcept>
 #include <vector>
 #include <memory>
@@ -25,6 +29,9 @@
 
 // 手工构造的 NIF2 网络字节序样本，正文含零字节。
 static const uint8_t kFrame[] = {'N','I','F','2',0,2,0,3,0,0,0,7,1,2,3,4,5,6,7,8,0,0,0,3,0,0,0,9,0,0,0,0,0,255,17};
+
+// 正常分片，仅包含 5 字节 TLS 记录头的前四字节。
+static const uint8_t kTlsHeaderPrefix[] = {22, 3, 3, 0};
 
 /** 用独立NTW3字节校验编码、接收和重试，所有输入及输出由调用者实际分配
 @return 重叠参数被拒绝且未扰动解码器，独立或相邻参数得到完整记录时为0
@@ -65,20 +72,16 @@ static int TunnelBuffers()
         !std::memcmp(input, wire, sizeof(wire)));
     CHECK_TEST(NetInterface::tunnelFeed(tunnel, bytes, sizeof(wire), &input[7]) == NI_READY && input[7] == sizeof(wire));
     const uint8_t* payload = nullptr;
-    struct BorrowedView
-    {
-        const uint8_t* pointer;
-        uint32_t padding[6];
-    } shared = {bytes, {11,22,33,44,55,66}};
+    TestBorrowedView shared = {bytes, {11,22,33,44,55,66}};
     uint32_t* overlapping = reinterpret_cast<uint32_t*>(&shared);
-    CHECK_TEST(NetInterface::tunnelPeek(tunnel, overlapping, &shared.pointer) == NI_INVALID_ARGUMENT &&
-        shared.pointer == bytes && shared.padding[0] == 11 && shared.padding[1] == 22);
-    CHECK_TEST(NetInterface::connectionPeekOutput(nullptr, &shared.pointer, overlapping) == NI_INVALID_ARGUMENT &&
-        shared.pointer == bytes);
+    CHECK_TEST(NetInterface::tunnelPeek(tunnel, overlapping, &shared.m_pointer) == NI_INVALID_ARGUMENT &&
+        shared.m_pointer == bytes && shared.m_padding[0] == 11 && shared.m_padding[1] == 22);
+    CHECK_TEST(NetInterface::connectionPeekOutput(nullptr, &shared.m_pointer, overlapping) == NI_INVALID_ARGUMENT &&
+        shared.m_pointer == bytes);
     uint32_t identityFields[8] = {37,38,39,40,41,42,43,44};
     const uint8_t* certificate = bytes;
-    CHECK_TEST(NetInterface::linkPeerInfo(nullptr, identityFields, &shared.pointer, &certificate, &shared.pointer) ==
-        NI_INVALID_ARGUMENT && certificate == bytes && shared.pointer == bytes && identityFields[0] == 37);
+    CHECK_TEST(NetInterface::linkPeerInfo(nullptr, identityFields, &shared.m_pointer, &certificate, &shared.m_pointer) ==
+        NI_INVALID_ARGUMENT && certificate == bytes && shared.m_pointer == bytes && identityFields[0] == 37);
     CHECK_TEST(NetInterface::handshakePeerInfo(nullptr, identityFields, reinterpret_cast<uint8_t*>(identityFields)) ==
         NI_INVALID_ARGUMENT && identityFields[0] == 37 && identityFields[7] == 44);
     uint32_t received[5] = {};
@@ -396,6 +399,15 @@ static int CompactSequence()
     const uint8_t base[] = {0xe3,NI_DATA,7,9,0,0,0,0,0,0,0,0,40};
     const uint8_t next[] = {0x82,0,255};
     const uint8_t jump[] = {0xe4,1,3,77};
+#if defined(STATIC_LIB)
+    // 静态 SDK 提供内部编码器。旧编号的存储可复用作输出，正文和长度各自独立。
+    NetInterfaceFrame previous = {7, 41, 9, NI_DATA, 0, nullptr};
+    const NetInterfaceFrame current = {7, 44, 9, NI_DATA, 1, jump + 3};
+    uint8_t* encoded = reinterpret_cast<uint8_t*>(&previous.m_requestId);
+    uint32_t required = 0;
+    CHECK_TEST(NetInterfaceCompact::encode(current, encoded, sizeof(previous.m_requestId), required, &previous) == NI_OK &&
+        required == sizeof(jump) && !std::memcmp(encoded, jump, sizeof(jump)));
+#endif
     NetInterface decoder(2);
     decoder.allowCompact(true);
     uint32_t used = 0;
@@ -653,8 +665,15 @@ static int Handshake()
         remote[i] = static_cast<uint8_t>(33 + i);
         local[16 + i] = static_cast<uint8_t>(65 + i);
     }
+    TestHandshakeStorage identityStorage = {};
+    identityStorage.m_suffix[0] = 1;
+    identityStorage.m_suffix[16] = 2;
+    CHECK_TEST(NetInterface::handshakeCreate(clientOptions, 6, reinterpret_cast<const uint8_t*>(&identityStorage),
+        32, 1000, 0, &identityStorage.m_handle) == NI_INVALID_ARGUMENT && !identityStorage.m_handle);
     NetInterfaceHandshakeHandle a = nullptr, b = nullptr, late = nullptr;
     uint32_t fields[6] = {};
+    uint32_t shared[8] = {17, 19, 23, 29, 31, 37, 41, 43};
+    const uint32_t saved[8] = {17, 19, 23, 29, 31, 37, 41, 43};
     const uint8_t* bytes = nullptr;
     const bool ok = NetInterface::handshakeCreate(clientOptions,6,local,32,1000,0,&a) == NI_NEED_MORE &&
         NetInterface::handshakeCreate(serverOptions,6,remote,32,1000,0,&b) == NI_NEED_MORE &&
@@ -664,6 +683,8 @@ static int Handshake()
         NetInterface::handshakeAccept(b,fields,bytes,1001,0) == NI_NEED_MORE && NetInterface::handshakeConsumeOutput(a) == NI_NEED_MORE &&
         NetInterface::handshakePeekOutput(b,fields,&bytes) == NI_READY && fields[0] == NI_HELLO_REPLY && bytes &&
         NetInterface::handshakeAccept(a,fields,bytes,1002,0) == NI_READY && NetInterface::handshakeConsumeOutput(b) == NI_READY &&
+        NetInterface::handshakePeerInfo(a, shared, reinterpret_cast<uint8_t*>(shared)) == NI_INVALID_ARGUMENT &&
+        !std::memcmp(shared, saved, sizeof(shared)) &&
         NetInterface::handshakePeerInfo(a,fields,peer) == NI_READY && fields[0] == 1 && fields[1] == 3 &&
         fields[2] == 16 && fields[3] == 4096 && !std::memcmp(peer, remote, 16) && !std::memcmp(peer + 16, local + 16, 16) &&
         NetInterface::handshakePeerInfo(b,fields,peer) == NI_READY && fields[0] == 1 && fields[1] == 3 &&
@@ -690,6 +711,23 @@ static int32_t HelloEntropy(void* context, uint8_t* bytes, uint32_t size)
         bytes[i] = static_cast<uint8_t>(state >> 24);
     }
     return 0;
+}
+
+/** 在直连或服务启动的随机回调里核对启动前设置已冻结
+@param [in,out] context 当前正在连接的 NetClientSession，在回调返回前有效
+@param [out] bytes 随机样本的目标缓冲
+@param [in] size 目标字节数
+@return 配置重入已被拒绝且样本写完为0
+*/
+static int32_t CheckStartEntropy(void* context, uint8_t* bytes, uint32_t size)
+{
+    NetClientSession& session = *static_cast<NetClientSession*>(context);
+    if (!session.executing() || session.configureExpiryBudget(3) != NI_INVALID_STATE)
+    {
+        return -1;
+    }
+    uint32_t seed = 91;
+    return HelloEntropy(&seed, bytes, size);
 }
 
 std::string NetInterfaceTestGroupedDigits::do_grouping() const
@@ -774,19 +812,23 @@ static bool HelloHasServerName(const uint8_t* bytes, size_t size, const char* na
 */
 static int ServiceName()
 {
-    uint32_t state = 1;
-    NetInterfaceConnectionHandle connection = nullptr;
-    int32_t detail = 0;
-    const std::locale original = std::locale::global(std::locale(std::locale(),new NetInterfaceTestGroupedDigits));
-    const int32_t result = NetInterface::connectionCreateServiceClient(12345,HelloEntropy,&state,5000,&connection,&detail);
-    std::locale::global(original);
-
-    const uint8_t* bytes = nullptr;
-    uint32_t size = 0;
-    const bool found = result == NET_INTERFACE_TLS_HANDSHAKE && NetInterface::connectionProgress(connection, 1, 0) >= 0 &&
-        NetInterface::connectionPeekOutput(connection, &bytes, &size) >= 0 && HelloHasServerName(bytes, size, "service.12345");
-    NetInterface::connectionDestroy(connection);
-    CHECK_TEST(found);
+    const uint32_t products[] = {0, 12345, UINT32_MAX};
+    const char* const expected[] = {"service.0", "service.12345", "service.4294967295"};
+    for (size_t i = 0; i < sizeof(products) / sizeof(products[0]); ++i)
+    {
+        uint32_t state = 1;
+        NetInterfaceConnectionHandle connection = nullptr;
+        int32_t detail = 0;
+        const std::locale original = std::locale::global(std::locale(std::locale(), new NetInterfaceTestGroupedDigits));
+        const int32_t result = NetInterface::connectionCreateServiceClient(products[i], HelloEntropy, &state, 5000, &connection, &detail);
+        std::locale::global(original);
+        const uint8_t* bytes = nullptr;
+        uint32_t size = 0;
+        const bool found = result == NET_INTERFACE_TLS_HANDSHAKE && NetInterface::connectionProgress(connection, 1, 0) >= 0 &&
+            NetInterface::connectionPeekOutput(connection, &bytes, &size) >= 0 && HelloHasServerName(bytes, size, expected[i]);
+        NetInterface::connectionDestroy(connection);
+        CHECK_TEST(found);
+    }
     return 0;
 }
 
@@ -1009,15 +1051,26 @@ static int CheckOutboundCompression(int32_t level, uint32_t threshold, bool reco
     }
     // 同一消息类型可用于RPC及DATA。压缩白名单只约束RPC，DATA按该方向的协商格式发送。
     const uint8_t marker = 0x4d;
-    for (uint32_t i = 0; i < 3; ++i)
+    const uint64_t identifiers[] = {40, 41, 44, 171, 299, UINT64_C(0x10000012a), UINT64_C(0x20000012a), 42, 43};
+    // 手写跳号的网络字节，覆盖短增量、两字节变长、最大32位增量及必须退回完整头的情况。
+    const uint8_t wireFrames[][14] = {
+        {0xe3, NI_DATA, 7, 9, 1, 0,0,0,0,0,0,0,40, marker},
+        {0x81, marker},
+        {0xe4, 1, 3, marker},
+        {0xe4, 1, 127, marker},
+        {0xe4, 1, 0x80, 1, marker},
+        {0xe4, 1, 0xff,0xff,0xff,0xff,15, marker},
+        {0xe3, NI_DATA, 7, 9, 1, 0,0,0,2,0,0,1,42, marker},
+        {0xe3, NI_DATA, 7, 9, 1, 0,0,0,0,0,0,0,42, marker},
+        {0xe3, NI_DATA, 7, 9, 1, 0,0,0,0,0,0,0,43, marker}
+    };
+    const uint32_t lengths[] = {14, 2, 4, 4, 5, 8, 14, 14, 14};
+    for (size_t i = 0; i < sizeof(identifiers) / sizeof(identifiers[0]); ++i)
     {
-        if (i == 2) { client->configureCompact(false); }
+        if (i == 8) { client->configureCompact(false); }
         client->configureCompact(true);
-        const uint32_t id = 40 + i;
-        NetInterfaceFrame data = {7, id, type, NI_DATA, 1, &marker};
-        const uint8_t full[] = {0xe3, NI_DATA, 7, 9, 1, 0, 0, 0, 0, 0, 0, 0, static_cast<uint8_t>(id), marker};
-        const uint8_t delta[] = {0x81, marker};
-        const uint32_t expected = i == 1 ? sizeof(delta) : sizeof(full);
+        NetInterfaceFrame data = {7, identifiers[i], type, NI_DATA, 1, &marker};
+        const uint32_t expected = lengths[i];
         uint8_t actual[NET_INTERFACE_HEADER_SIZE + 1];
         uint32_t total = 0;
         CHECK_TEST(client->send(data) == NI_OK);
@@ -1029,7 +1082,7 @@ static int CheckOutboundCompression(int32_t level, uint32_t threshold, bool reco
             CHECK_TEST(server.read(actual + total, sizeof(actual) - total, received) >= 0);
             total += received;
         }
-        CHECK_TEST(total == expected && !std::memcmp(actual, i == 1 ? delta : full, expected));
+        CHECK_TEST(total == expected && !std::memcmp(actual, wireFrames[i], expected));
     }
     return 0;
 }
@@ -1221,6 +1274,8 @@ static int DirectoryCache()
     std::vector<uint8_t> cache(bytes);
     CHECK_TEST(NetInterface::directoryCache(raw, saved, 0, cache.data(), bytes, &bytes) == NI_OK && cache.size() == bytes);
     CHECK_TEST(!std::memcmp(cache.data(), "NGC3", 4));
+    NetInterfaceDirectoryHandle invalidTime = raw;
+    CHECK_TEST(NetInterface::directoryCreateCache(cache.data(), bytes, 0, 0, &invalidTime) == NI_INVALID_ARGUMENT && !invalidTime);
     const uint32_t times[] = {saved - 300000, saved - 300001, saved + 2592000000U, saved + 2592000001U, saved};
     const int32_t expected[] = {NI_OK, NI_TIMEOUT, NI_OK, NI_TIMEOUT, NI_PROTOCOL_ERROR};
     for (uint32_t i = 0; i < 5; ++i)
@@ -1704,6 +1759,8 @@ static int HandlePools()
     NetRequestTablePools tables;
     tables.m_endpoints.initialCapacity = 1;
     tables.m_endpoints.maximumCapacity = 1;
+    CHECK_TEST(NetInterface::requestsCreate(tables, reinterpret_cast<NetInterfaceRequestsHandle*>(&tables)) == NI_INVALID_ARGUMENT &&
+        tables.m_endpoints.initialCapacity == 1 && tables.m_endpoints.maximumCapacity == 1);
     NetInterfaceRequestsHandle raw = nullptr;
     CHECK_TEST(NetInterface::requestsCreate(tables, &raw) == NI_OK && raw);
     std::unique_ptr<NetInterfaceRequestsOpaque, void (*)(NetInterfaceRequestsHandle)> owner(raw, NetInterface::requestsDestroy);
@@ -1730,6 +1787,11 @@ static int HandlePools()
     options.m_tls.handshakeTimeoutMs = 5000;
     NetInterfaceLinkPools linkPools;
     NetInterfaceLinkHandle link = nullptr;
+    options.m_claims = reinterpret_cast<const uint8_t*>(&link);
+    options.m_claimsSize = sizeof(link);
+    CHECK_TEST(NetInterface::linkCreate(&options, &link, &linkPools) == NI_INVALID_ARGUMENT && !link);
+    options.m_claims = nullptr;
+    options.m_claimsSize = 0;
     CHECK_TEST(NetInterface::linkCreate(&options, &link, &linkPools) >= 0 && link);
     std::unique_ptr<NetInterfaceLinkOpaque, void (*)(NetInterfaceLinkHandle)> linkOwner(link, NetInterface::linkDestroy);
     uint32_t* deadlines[] = {&linkPools.m_pingIntervalMs, &linkPools.m_pongTimeoutMs, &linkPools.m_drainTimeoutMs, &linkPools.m_controlStepBudget};
@@ -1851,8 +1913,17 @@ static int SubmissionOwnerLifetime()
     const NetInterfaceFrame* borrowed = submission.nextData();
     CHECK_TEST(borrowed && borrowed->m_payload && borrowed->m_requestId == 1);
     uint64_t pending = 0, ticket = 0;
-    CHECK_TEST(submission.begin(7, 8, 60000, pending) == NI_OK && pending &&
-        submission.sendSynchronous(pending, &value, 1, ticket) == NI_OK && ticket);
+    const uint64_t before = NetSenderSubmission::now();
+    CHECK_TEST(submission.begin(7, 8, 60000, pending) == NI_OK && pending);
+    const uint64_t originalBody = UINT64_C(0x2122232425262728);
+    uint64_t bodyAndTicket = originalBody;
+    const uint8_t* requestBody = reinterpret_cast<const uint8_t*>(&bodyAndTicket);
+    CHECK_TEST(submission.sendSynchronous(pending, requestBody, sizeof(bodyAndTicket), bodyAndTicket) == NI_INVALID_ARGUMENT &&
+        bodyAndTicket == originalBody && !submission.synchronousPending());
+    CHECK_TEST(submission.sendSynchronous(pending, &value, 1, ticket) == NI_OK && ticket);
+    uint32_t remaining = 0;
+    CHECK_TEST(submission.synchronousResult(ticket, false, &remaining) == NI_READY);
+    CHECK_TEST(remaining <= 60000 && remaining + NetSenderSubmission::now() - before >= 60000);
     submission.disconnected(1);
     NetSenderSubmissionCommand command = {};
     CHECK_TEST(submission.synchronousResult(ticket, true) == NI_INVALID_STATE);
@@ -1910,7 +1981,8 @@ static int SubmissionOwnerLifetime()
 static int SubmissionPrefetch(uint32_t batches, uint32_t items)
 {
     NetSenderSubmissionPools pools;
-    pools.m_queue.initialCapacity = pools.m_queue.maximumCapacity = 16;
+    pools.m_queue.initialCapacity = 16;
+    pools.m_queue.maximumCapacity = 16;
     NetSenderSubmissionOptions options;
     CHECK_TEST(options.m_inputBatchBudget == 8 && options.m_inputBatchSize == 32);
     options.m_inputBatchBudget = batches;
@@ -2021,6 +2093,29 @@ static int SubmissionConfiguration()
     gate.m_context = &wakes;
     gate.m_wake = [](void* context) { ++*static_cast<uint32_t*>(context); };
     NetSenderSubmission submission(pools, options);
+    NetSenderSubmissionWait wait;
+    NetSenderSubmission independent;
+    CHECK_TEST(wait.m_yieldInterval == 64 && wait.m_quiesceSleepMs == 1 &&
+        submission.producerWait().m_yieldInterval == 64 && submission.producerWait().m_quiesceSleepMs == 1);
+    CHECK_TEST(wait.m_syncPollSleepMs == 1 && submission.producerWait().m_syncPollSleepMs == 1);
+    wait.m_yieldInterval = UINT32_MAX;
+    wait.m_quiesceSleepMs = UINT32_MAX;
+    wait.m_syncPollSleepMs = UINT32_MAX;
+    CHECK_TEST(submission.configureProducerWait(wait) == NI_OK);
+    wait.m_yieldInterval = 1;
+    wait.m_quiesceSleepMs = 2;
+    wait.m_syncPollSleepMs = 3;
+    CHECK_TEST(submission.producerWait().m_syncPollSleepMs == UINT32_MAX && submission.producerWait().m_yieldInterval == UINT32_MAX &&
+        submission.producerWait().m_quiesceSleepMs == UINT32_MAX && submission.configureProducerWait(wait) == NI_OK);
+    wait.m_yieldInterval = 0;
+    CHECK_TEST(submission.configureProducerWait(wait) == NI_INVALID_ARGUMENT);
+    wait.m_yieldInterval = 7;
+    wait.m_syncPollSleepMs = 0;
+    CHECK_TEST(submission.configureProducerWait(wait) == NI_INVALID_ARGUMENT);
+    wait.m_syncPollSleepMs = 3;
+    wait.m_quiesceSleepMs = 0;
+    CHECK_TEST(submission.configureProducerWait(wait) == NI_INVALID_ARGUMENT &&
+        independent.producerWait().m_yieldInterval == 64 && independent.producerWait().m_quiesceSleepMs == 1);
     CHECK_TEST(submission.configureGate(gate) == NI_OK && submission.configureGate(gate) == NI_INVALID_STATE);
     CHECK_TEST(submission.configurePools(pools, options) == NI_OK);
     LockFreeHashMapPoolConfig* records[] = {&pools.m_requests, &pools.m_frames, &pools.m_controls,
@@ -2084,7 +2179,10 @@ static int SubmissionConfiguration()
     CHECK_TEST(submission.configurePools(pools, options) == NI_INVALID_ARGUMENT);
     pools.m_queue.maximumCapacity = -1;
     CHECK_TEST(submission.start(1, 7) == NI_OK && submission.ready(1, 1, 1024) == NI_OK);
-    CHECK_TEST(submission.configurePools(pools, options) == NI_INVALID_STATE);
+    CHECK_TEST(submission.configurePools(pools, options) == NI_INVALID_STATE &&
+        submission.configureProducerWait(wait) == NI_INVALID_STATE &&
+        submission.producerWait().m_yieldInterval == 1 && submission.producerWait().m_quiesceSleepMs == 2 &&
+        submission.producerWait().m_syncPollSleepMs == 3);
     for (uint32_t i = 1; i <= 32; ++i)
     {
         const uint8_t byte = static_cast<uint8_t>(i);
@@ -2101,20 +2199,25 @@ static int SubmissionConfiguration()
     }
     CHECK_TEST(submission.beginPoll() == NI_OK && !submission.nextData() && submission.idle() &&
         submission.queuedBytes() == 0 && maintenance > 0);
-    const NetInterfaceFrame synchronous = {7, 33, 0, NI_DATA, 0, nullptr};
+    const uint64_t originalBody = UINT64_C(0x3132333435363738);
+    uint64_t dataAndTicket = originalBody;
+    const uint8_t* data = reinterpret_cast<const uint8_t*>(&dataAndTicket);
+    NetInterfaceFrame synchronous = {7, 33, 0, NI_DATA, sizeof(dataAndTicket), data};
+    CHECK_TEST(submission.dataSynchronous(synchronous, synchronous.m_requestId) == NI_INVALID_ARGUMENT &&
+        synchronous.m_requestId == 33 && submission.idle());
+    CHECK_TEST(submission.dataSynchronous(synchronous, dataAndTicket) == NI_INVALID_ARGUMENT &&
+        dataAndTicket == originalBody && submission.idle());
     uint64_t ticket = 0;
     CHECK_TEST(submission.dataSynchronous(synchronous, ticket) == NI_OK && ticket);
-    struct Observer : NetSenderSubmissionSignal
-    {
-        unsigned count;
-        Observer() : count(0) {}
-        void notify() override { ++count; }
-    };
-    std::shared_ptr<Observer> observer(new Observer);
+    std::shared_ptr<TestSubmissionObserver> observer(new TestSubmissionObserver);
     CHECK_TEST(submission.observeSynchronous(ticket, std::shared_ptr<NetSenderSubmissionSignal>()) == NI_INVALID_ARGUMENT &&
         submission.observeSynchronous(ticket, observer) == NI_OK && submission.observeSynchronous(ticket, observer) == NI_INVALID_STATE);
+    uint32_t remaining = UINT32_MAX;
+    CHECK_TEST(submission.synchronousResult(ticket, false, &remaining) == NI_READY && remaining <= 1);
     submission.advanceSynchronous(NI_READY, NetSenderSubmission::now() + 1);
-    CHECK_TEST(observer->count == 1 && submission.synchronousResult(ticket, true) == NI_TIMEOUT &&
+    remaining = UINT32_MAX;
+    CHECK_TEST(observer->m_count == 1 && submission.synchronousResult(ticket, true, &remaining) == NI_TIMEOUT && remaining == 0 &&
+        submission.synchronousResult(ticket, true, &remaining) == NI_NOT_FOUND && remaining == 0 &&
         submission.observeSynchronous(ticket, observer) == NI_NOT_FOUND);
     NetSenderSubmissionPools bounded;
     bounded.m_queue.initialCapacity = 2;
@@ -2161,6 +2264,25 @@ void PoolTestSink::close(uint64_t)
 static int OwnerPools()
 {
     PoolTestSink sink;
+    for (unsigned attached = 0; attached < 2; ++attached)
+    {
+        NetEndpointRouter limited(&sink, attached ? &sink : nullptr);
+        NetEndpointPools pools;
+        pools.m_requests.m_endpoints.initialCapacity = 1;
+        pools.m_requests.m_endpoints.maximumCapacity = 1;
+        CHECK_TEST(limited.configurePools(pools) == NI_OK);
+        NetEndpointOrigin origin = {};
+        origin.m_endpoint = 88;
+        origin.m_platform = origin.m_device[0] = 1;
+        const uint32_t features[] = {1, 3, 32, 1024};
+        uint64_t id = 99;
+        const int32_t rejected = attached ? limited.addClient(origin, features, id) : limited.addService(7, false, 32, id);
+        CHECK_TEST(rejected == NI_LIMIT_EXCEEDED && id == 0 && limited.pendingCount() == 0);
+        pools.m_requests.m_endpoints.maximumCapacity = 2;
+        CHECK_TEST(limited.configurePools(pools) == NI_OK && limited.configureFileLeaseLimit(30) == NI_OK);
+        const int32_t accepted = attached ? limited.addClient(origin, features, id) : limited.addService(7, false, 32, id);
+        CHECK_TEST(accepted == NI_OK && id > 1 && limited.configureFileLeaseLimit(31) == NI_INVALID_STATE);
+    }
     NetEndpointRouter router(&sink);
     NetEndpointPools config;
     LockFreeHashMapPoolConfig* all[] = {&config.m_files, &config.m_endpoints, &config.m_requests.m_endpoints,
@@ -2180,7 +2302,8 @@ static int OwnerPools()
         CHECK_TEST(router.configurePools(config) == NI_INVALID_ARGUMENT);
         *budgets[i] = 1;
     }
-    config.m_endpoints.initialCapacity = config.m_endpoints.maximumCapacity = 1;
+    config.m_endpoints.initialCapacity = 1;
+    config.m_endpoints.maximumCapacity = 1;
     CHECK_TEST(router.configurePools(config) == NI_OK);
     uint64_t first = 0, second = 0;
     CHECK_TEST(router.addService(7, false, 1, first) == NI_OK && first);
@@ -2233,6 +2356,43 @@ static int CiphertextConfiguration()
         !tls.setHandshakeTimeout(60001) && tls.handshakeTimeoutMs == 60000 && tls.setHandshakeTimeout(0));
     uint32_t used = 0, length = 0;
     std::vector<uint8_t> incoming(40000, 0);
+    tls.server = 1;
+    NetInterfaceTlsHandle aliasRaw = nullptr;
+    const int32_t aliasStatus = NetInterface::tlsCreate(&tls, &aliasRaw, &tls.server, limits);
+    std::unique_ptr<NetInterfaceTlsOpaque, void (*)(NetInterfaceTlsHandle)> aliasOwner(aliasRaw, NetInterface::tlsDestroy);
+    CHECK_TEST(aliasStatus == NET_INTERFACE_TLS_ARGUMENT && tls.server == 1 && !aliasRaw);
+    NetInterfaceConnectionHandle aliasConnection = nullptr;
+    CHECK_TEST(NetInterface::connectionCreate(&tls, &aliasConnection, &tls.server) == NI_INVALID_ARGUMENT &&
+        tls.server == 1 && !aliasConnection);
+    int32_t certWord = 37, keyWord = 19;
+    tls.certificate = reinterpret_cast<const uint8_t*>(&certWord);
+    tls.certificateSize = sizeof(certWord);
+    tls.privateKey = reinterpret_cast<const uint8_t*>(&keyWord);
+    tls.privateKeySize = sizeof(keyWord);
+    CHECK_TEST(NetInterface::tlsCreate(&tls, &aliasRaw, &certWord) == NET_INTERFACE_TLS_ARGUMENT && certWord == 37 && !aliasRaw);
+    CHECK_TEST(NetInterface::connectionCreate(&tls, &aliasConnection, &keyWord) == NI_INVALID_ARGUMENT &&
+        keyWord == 19 && !aliasConnection);
+    tls.server = 0;
+    NetConnectionPoolConfig factoryPools;
+    const int32_t originalLevel = factoryPools.m_compressionLevel;
+    CHECK_TEST(NetInterface::connectionCreateServiceClient(7, HelloEntropy, &entropy, 0, &aliasConnection,
+        &factoryPools.m_compressionLevel, &factoryPools, &limits) == NI_INVALID_ARGUMENT &&
+        !aliasConnection && factoryPools.m_compressionLevel == originalLevel);
+    int32_t caWord = 17;
+    CHECK_TEST(NetInterface::tlsCreateClient(reinterpret_cast<const uint8_t*>(&caWord), sizeof(caWord),
+        tls.hostname, HelloEntropy, &entropy, 0, &aliasRaw, &caWord) == NET_INTERFACE_TLS_ARGUMENT && !aliasRaw && caWord == 17);
+    TestTlsOutputs sharedOutput = {};
+    CHECK_TEST(NetInterface::tlsCreate(&tls, &sharedOutput.m_handle, &sharedOutput.m_detail) == NET_INTERFACE_TLS_ARGUMENT &&
+        !sharedOutput.m_handle);
+    int32_t hostStorage[4] = {};
+    char* nameBytes = reinterpret_cast<char*>(hostStorage);
+    std::memcpy(nameBytes, "service.7", 10);
+    CHECK_TEST(NetInterface::tlsCreateClient(tls.authority, tls.authoritySize, nameBytes, HelloEntropy, &entropy,
+        0, &aliasRaw, &hostStorage[1], limits) == NET_INTERFACE_TLS_ARGUMENT && !aliasRaw &&
+        std::memcmp(nameBytes, "service.7", 10) == 0);
+    CHECK_TEST(NetInterface::tlsCreateClient(tls.authority, tls.authoritySize, nameBytes, HelloEntropy, &entropy,
+        0, &aliasRaw, &hostStorage[3], limits) == NET_INTERFACE_TLS_HANDSHAKE && aliasRaw);
+    NetInterface::tlsDestroy(aliasRaw);
     NetInterfaceTlsHandle raw = nullptr;
     CHECK_TEST(NetInterface::tlsCreate(&tls, &raw, nullptr, limits) == NET_INTERFACE_TLS_HANDSHAKE && raw);
     std::unique_ptr<NetInterfaceTlsOpaque, void (*)(NetInterfaceTlsHandle)> owner(raw, NetInterface::tlsDestroy);
@@ -2277,10 +2437,12 @@ static int CiphertextConfiguration()
     CHECK_TEST(pools.m_controlCiphertext.set(31, 11));
     NetInterfaceLink link(options, pools);
     NetInterfaceTunnelRecord record = {};
-    CHECK_TEST(link.peekOutput(record) == NI_READY && record.m_kind == NI_TUNNEL_HELLO && link.consumeOutput() == NI_OK);
-    CHECK_TEST(link.progress(50) >= 0 && link.peekOutput(record) == NI_READY && record.m_kind == NI_TUNNEL_CONTROL &&
-        record.m_size == 11 && record.m_data);
-    CHECK_TEST(link.progress(10049) >= 0 && link.progress(10050) == NI_TIMEOUT);
+    CHECK_TEST(link.outputState() == NI_READY);
+    CHECK_TEST(link.peekOutput(record) == NI_READY && record.m_kind == NI_TUNNEL_HELLO && record.m_size == 0 &&
+        link.outputState() == NI_READY && link.consumeOutput() == NI_OK && link.outputState() == NI_OK);
+    CHECK_TEST(link.progress(50) >= 0 && link.outputState() == NI_READY &&
+        link.peekOutput(record) == NI_READY && record.m_kind == NI_TUNNEL_CONTROL && record.m_size == 11 && record.m_data);
+    CHECK_TEST(link.progress(10049) >= 0 && link.progress(10050) == NI_TIMEOUT && link.outputState() == NI_TIMEOUT);
     return 0;
 }
 
@@ -2293,6 +2455,14 @@ int32_t CiphertextProbeTransport::connect(const char*, uint32_t, const NetInterf
     uint64_t& peer)
 {
     peer = 0;
+    if (m_host.m_fault == 8)
+    {
+        throw std::runtime_error("transport connect");
+    }
+    if (m_host.m_fault == 9)
+    {
+        throw std::bad_alloc();
+    }
     if (m_host.m_refuseConnect) { return NI_PROTOCOL_ERROR; }
     if (!listener || options.m_tls.handshakeTimeoutMs != 10000)
     {
@@ -2323,6 +2493,23 @@ bool CiphertextProbeTransport::poll()
         if (fault == 2) { m_listener->onLinkClosed(1, 0); }
         else { const NetInterfaceTunnelRecord record = {}; m_listener->onLinkRecord(1, record); }
     }
+    else if (m_host.m_fault == 4 || m_host.m_fault == 5)
+    {
+        if (m_host.m_fault == 5)
+        {
+            m_listener->onLinkClosed(1, NI_LIMIT_EXCEEDED);
+        }
+        m_listener = nullptr;
+        return false;
+    }
+    else if (m_host.m_fault == 6)
+    {
+        throw std::runtime_error("transport poll");
+    }
+    else if (m_host.m_fault == 7)
+    {
+        throw std::bad_alloc();
+    }
     else if (!m_response.empty())
     {
         const NetInterfaceFrame response = {0, 1, NI_GATEWAY_OPEN, NI_RESPONSE,
@@ -2330,11 +2517,36 @@ bool CiphertextProbeTransport::poll()
         m_listener->onLinkControl(1, response);
         m_response.clear();
     }
+    else if (m_host.m_offerPrefix && !m_host.m_prefixSent && m_host.m_first != 0)
+    {
+        NetInterfaceTunnelRecord record = {};
+        record.m_kind = NI_TUNNEL_BYTES;
+        record.m_product = 7;
+        record.m_channel = 1;
+        record.m_data = kTlsHeaderPrefix;
+        record.m_size = sizeof(kTlsHeaderPrefix);
+        m_host.m_prefixSent = m_listener->onLinkRecord(1, record);
+    }
     return true;
 }
 
 int32_t CiphertextProbeTransport::sendControl(uint64_t peer, const NetInterfaceFrame& frame)
 {
+    if (m_host.m_offerPrefix && peer == 1 && frame.m_kind == NI_EVENT && frame.m_messageType == NI_GATEWAY_CREDIT)
+    {
+        ProtoMessage credit;
+        if (!frame.m_payload || !credit.from(frame.m_payload, frame.m_payloadSize))
+        {
+            return NI_PROTOCOL_ERROR;
+        }
+        const Variant* bytes = credit.findValue(NI_GATEWAY_CREDIT_BYTES);
+        if (bytes == nullptr || bytes->type() != Variant::INT32 || static_cast<int32_t>(*bytes) != 4)
+        {
+            return NI_PROTOCOL_ERROR;
+        }
+        m_host.m_prefixCredit += static_cast<uint32_t>(static_cast<int32_t>(*bytes));
+        return NI_OK;
+    }
     if (peer != 1 || frame.m_kind != NI_REQUEST || frame.m_messageType != NI_GATEWAY_OPEN || frame.m_requestId != 1)
     {
         return NI_PROTOCOL_ERROR;
@@ -2365,7 +2577,7 @@ int32_t CiphertextProbeTransport::sendRecord(uint64_t peer, const NetInterfaceTu
         return NI_PROTOCOL_ERROR;
     }
     m_host.m_first = record.m_size;
-    return NI_LIMIT_EXCEEDED;
+    return m_host.m_offerPrefix ? NI_OK : NI_LIMIT_EXCEEDED;
 }
 
 void CiphertextProbeTransport::shutdown()
@@ -2373,7 +2585,15 @@ void CiphertextProbeTransport::shutdown()
     m_listener = nullptr;
 }
 
-CiphertextProbeHost::CiphertextProbeHost() : m_first(0), m_offered(0), m_reply(0), m_closed(NI_OK)
+CiphertextProbeHost::CiphertextProbeHost() :
+m_first(0),
+m_offerPrefix(false),
+m_prefixSent(false),
+m_prefixCredit(0),
+m_offered(0),
+m_reply(0),
+m_resultsAtClose(0),
+m_closed(NI_OK)
 {
 
 }
@@ -2388,9 +2608,16 @@ void CiphertextProbeHost::onSessionReady(uint64_t, uint32_t, uint32_t)
 
 }
 
-void CiphertextProbeHost::onSessionResult(uint64_t, uint64_t, uint32_t, uint32_t, uint32_t status, const uint8_t*, uint32_t)
+void CiphertextProbeHost::onSessionResult(uint64_t, uint64_t requestId, uint32_t, uint32_t, uint32_t status, const uint8_t*, uint32_t)
 {
-    if (status == NI_RPC_TIMEOUT) { ++m_timeouts; }
+    ++m_results;
+    m_resultId = requestId;
+    m_resultStatus = status;
+    if (status == NI_RPC_TIMEOUT)
+    {
+        ++m_timeouts;
+        m_timeoutIds.push_back(requestId);
+    }
 }
 
 bool CiphertextProbeHost::onSessionFrame(uint64_t, const NetInterfaceFrame& frame)
@@ -2403,9 +2630,15 @@ bool CiphertextProbeHost::onSessionFrame(uint64_t, const NetInterfaceFrame& fram
 
 void CiphertextProbeHost::onSessionClosed(uint64_t, int32_t reason, int32_t)
 {
+    m_resultsAtClose = m_results;
     ++m_closes;
     m_closed = reason;
 }
+
+/** 验证暂存在业务通道内的 TLS 密文不需要新的运输事件即可继续推进
+@return 等待预算和信用确认正确时为零
+*/
+static int StagedCiphertextProgress();
 
 /** 单独创建两个客户端会话，在运输边界核对各自的 TLS 输出预算
 @return 成功为0
@@ -2426,11 +2659,13 @@ static int ServiceCiphertextConfiguration()
     const uint32_t outputs[] = {13, 29, 17};
     const uint32_t windows[] = {1048576, 131072, 65536};
     const uint32_t replies[] = {0, 131072, 81920};
+    CiphertextProbeHost hosts[3];
+    NetClientSession sessions[3];
     for (size_t i = 0; i < 3; ++i)
     {
-        CiphertextProbeHost host;
+        CiphertextProbeHost& host = hosts[i];
+        NetClientSession& session = sessions[i];
         host.m_reply = replies[i];
-        NetClientSession session;
         if (i != 0)
         {
             CHECK_TEST(session.configureServiceWindow(windows[i]) == NI_OK);
@@ -2441,11 +2676,20 @@ static int ServiceCiphertextConfiguration()
         CHECK_TEST(session.configureServiceWindow(65537) == NI_INVALID_ARGUMENT);
         CEncodeDecodeTlsQueueLimits limits;
         CHECK_TEST(limits.set(-1, outputs[i]) && session.configureServiceTlsQueueLimits(limits) == NI_OK);
+        CHECK_TEST(limits.set(-1, 101));
         CHECK_TEST(session.connectService(7, "127.0.0.1", 8000, tls, hello, &host, &host) == NI_OK);
         CHECK_TEST(session.configureServiceTlsQueueLimits(limits) == NI_INVALID_STATE);
         CHECK_TEST(session.configureServiceWindow(65536) == NI_INVALID_STATE &&
             session.configureServicePollBudgets(2, 3) == NI_INVALID_STATE);
-        for (unsigned step = 0; step != 16 && !host.m_first && !host.m_closed; ++step) { session.poll(); }
+    }
+    for (size_t i = 0; i < 3; ++i)
+    {
+        CiphertextProbeHost& host = hosts[i];
+        NetClientSession& session = sessions[i];
+        for (unsigned step = 0; step != 16 && !host.m_first && !host.m_closed; ++step)
+        {
+            session.poll();
+        }
         CHECK_TEST(host.m_offered == windows[i]);
         if (replies[i] > windows[i])
         {
@@ -2457,17 +2701,40 @@ static int ServiceCiphertextConfiguration()
         }
         session.shutdown();
     }
-    for (unsigned fault = 1; fault <= 3; ++fault)
+    for (unsigned fault = 8; fault <= 9; ++fault)
+    {
+        CiphertextProbeHost host;
+        host.m_fault = fault;
+        CiphertextProbeTransport transport(host);
+        FrameDeliveryProbe listener;
+        NetGatewayClientChannel gateway(7, &transport);
+        uint64_t peer = 99;
+        CEncodeDecodeTlsQueueLimits limits;
+        CHECK_TEST(limits.set(29, 31) && gateway.configureTlsQueueLimits(limits) == NI_OK &&
+            gateway.connect("", 8000, tls, &listener, peer) == NI_INVALID_ARGUMENT && peer == 0);
+        CHECK_TEST(gateway.connect("127.0.0.1", 8000, tls, &listener, peer) ==
+            (fault == 8 ? NI_INVALID_STATE : NI_NO_MEMORY) && peer == 0 && !gateway.poll());
+    }
+    const int32_t expectedReasons[] = {NI_NO_MEMORY, NI_TRUNCATED, NI_PROTOCOL_ERROR, NI_TRUNCATED,
+        NI_LIMIT_EXCEEDED, NI_INVALID_STATE, NI_NO_MEMORY};
+    for (unsigned fault = 1; fault <= sizeof(expectedReasons) / sizeof(expectedReasons[0]); ++fault)
     {
         CiphertextProbeHost host;
         host.m_fault = fault;
         NetClientSession session;
         CHECK_TEST(session.connectService(7, "127.0.0.1", 8000, tls, hello, &host, &host) == NI_OK);
         for (unsigned i = 0; i < 16 && !host.m_closes; ++i) { session.poll(); }
-        CHECK_TEST(host.m_closes == 1 && host.m_closed == (fault == 1 ? NI_NO_MEMORY : fault == 2 ? NI_TRUNCATED : NI_PROTOCOL_ERROR));
+        CHECK_TEST(host.m_closes == 1 && host.m_closed == expectedReasons[fault - 1]);
+        if (expectedReasons[fault - 1] == NI_NO_MEMORY)
+        {
+            CHECK_TEST(session.quiescent() &&
+                session.connect("127.0.0.1", 8000, tls, hello, &host) == NI_NOT_SUPPORTED &&
+                session.generation() == 1 && host.m_closes == 1);
+        }
         session.shutdown();
+        CHECK_TEST(!session.poll() && host.m_closes == 1);
     }
-    return 0;
+    return StagedCiphertextProgress();
 }
 
 /** 独立实例在消费与复位时按各自预算保留或回收正文，重新配置需处于空闲边界
@@ -2711,12 +2978,20 @@ int32_t RouterHandshakeTransport::connect(const char*, uint32_t, const NetInterf
 
 int32_t RouterHandshakeTransport::listen(const char*, uint32_t, const NetInterfaceTlsOptions&, NetTransportListener* listener, uint32_t)
 {
+    ++m_listenCalls;
     m_listener = listener;
+    if (m_router != nullptr)
+    {
+        m_reentryRejected = m_reentryRejected && m_router->bindTransport(this) == NI_INVALID_STATE &&
+            m_router->configureFileLeaseLimit(3) == NI_INVALID_STATE;
+    }
+    if (m_failListen) { throw std::bad_alloc(); }
     return NI_OK;
 }
 
 bool RouterHandshakeTransport::poll()
 {
+    ++m_pollCalls;
     if (m_listener == nullptr) { return false; }
     if (m_endInput) { m_endInput = false; m_listener->onClosed(9, NI_CANCELLED, 0); return true; }
     if (m_events == 0)
@@ -2751,6 +3026,17 @@ void RouterHandshakeTransport::close(uint64_t, int32_t reason)
 
 void RouterHandshakeTransport::shutdown()
 {
+    ++m_stops;
+    if (m_stopDuringRollback && m_router != nullptr)
+    {
+        m_stopDuringRollback = false;
+        m_router->shutdown();
+    }
+    if (m_failListen && m_router != nullptr)
+    {
+        m_reentryRejected = m_reentryRejected && m_router->bindTransport(this) == NI_INVALID_STATE &&
+            m_router->configureFileLeaseLimit(4) == NI_INVALID_STATE;
+    }
     m_listener = nullptr;
 }
 
@@ -2787,7 +3073,7 @@ static int CheckRouterHandshake(bool custom, const uint32_t& waited)
     tls.entropy = HelloEntropy;
     tls.entropyContext = &seed;
     NetEndpointPools pools;
-    CHECK_TEST(router.bindTransport(&transport) == NI_OK);
+    CHECK_TEST(router.bindTransport(&transport) == NI_OK && router.poll() && transport.m_pollCalls == 0);
     if (custom)
     {
         pools.m_heartbeat.m_pingIntervalMs = 0;
@@ -2803,7 +3089,36 @@ static int CheckRouterHandshake(bool custom, const uint32_t& waited)
             router.configureClientHandshake(7, 4, 4096, 99) == NI_INVALID_ARGUMENT &&
             router.configureClientHandshake(7, 4, 4096, 60001) == NI_INVALID_ARGUMENT);
     }
-    CHECK_TEST(router.listen("127.0.0.1", 8081, tls, 1) == NI_OK &&
+    if (custom)
+    {
+        RouterHandshakeTransport cancelled(client);
+        NetEndpointRouter stopping(nullptr);
+        cancelled.m_router = &stopping;
+        cancelled.m_failListen = true;
+        cancelled.m_stopDuringRollback = true;
+        NetInterfaceTlsOptions serverTls = tls;
+        serverTls.server = 1;
+        CHECK_TEST(stopping.bindTransport(&cancelled) == NI_OK &&
+            stopping.listen("127.0.0.1", 8081, serverTls, 1) == NI_NO_MEMORY && !cancelled.m_stopDuringRollback);
+        CHECK_TEST(stopping.configurePools(pools) == NI_INVALID_STATE && stopping.configureFileLeaseLimit(3) == NI_INVALID_STATE &&
+            stopping.configureClientHandshake(1, 1, 1024, 100) == NI_INVALID_STATE &&
+            stopping.bindTransport(nullptr) == NI_INVALID_STATE && !stopping.poll() && stopping.bindTransport(nullptr) == NI_OK);
+    }
+    transport.m_router = &router;
+    CHECK_TEST(router.listen("127.0.0.1", 8081, tls, 1) == NI_INVALID_ARGUMENT);
+    tls.server = 1;
+    CHECK_TEST(router.listen("", 8081, tls, 1) == NI_INVALID_ARGUMENT);
+    tls.handshakeTimeoutMs = 99;
+    CHECK_TEST(router.listen("127.0.0.1", 8081, tls, 1) == NI_INVALID_ARGUMENT);
+    tls.handshakeTimeoutMs = 60001;
+    CHECK_TEST(router.listen("127.0.0.1", 8081, tls, 1) == NI_INVALID_ARGUMENT && transport.m_listenCalls == 0);
+    tls.handshakeTimeoutMs = custom ? 100 : 0;
+    transport.m_failListen = true;
+    CHECK_TEST(router.listen("127.0.0.1", 8081, tls, 1) == NI_NO_MEMORY && transport.m_stops == 1 &&
+        transport.m_reentryRejected && router.localPort() == 0 && router.poll() && transport.m_pollCalls == 0);
+    transport.m_failListen = false;
+    CHECK_TEST(router.listen("127.0.0.1", 8081, tls, 1) == NI_OK && transport.m_listenCalls == 2 &&
+        transport.m_reentryRejected && router.localPort() == 8081 &&
         router.configureClientHandshake(1, 1, 1024, 100) == NI_INVALID_STATE);
     NetExecution owner;
     NetExecutionScope scope(owner);
@@ -2814,7 +3129,7 @@ static int CheckRouterHandshake(bool custom, const uint32_t& waited)
         std::chrono::steady_clock::now() - start).count());
     const uint32_t timeout = custom ? 24000 : 5000;
     CHECK_TEST(waited <= timeout && waited + elapsed + 2 >= timeout);
-    CHECK_TEST(router.poll() && transport.m_result == NI_READY);
+    CHECK_TEST(router.poll() && transport.m_pollCalls == 2 && transport.m_result == NI_READY);
     owner.begin();
     CHECK_TEST(router.poll() && owner.wait(60000) == NI_OK);
     const uint64_t sinceReady = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -2822,7 +3137,16 @@ static int CheckRouterHandshake(bool custom, const uint32_t& waited)
     const uint32_t ping = custom ? 12345 : 30000;
     CHECK_TEST(waited <= ping && waited + sinceReady + 2 >= ping);
     uint32_t fields[4] = {};
-    uint8_t nonce[16] = {}, device[16] = {};
+    uint8_t nonce[16], device[16], sentinel[16];
+    std::memset(sentinel, 0xa5, sizeof(sentinel));
+    std::memcpy(nonce, sentinel, sizeof(nonce));
+    std::memcpy(device, sentinel, sizeof(device));
+    fields[0] = 17;
+    CHECK_TEST(client.peerInfo(fields, nonce, nonce) == NI_INVALID_ARGUMENT);
+    CHECK_TEST(client.peerInfo(fields, reinterpret_cast<uint8_t*>(fields), device) == NI_INVALID_ARGUMENT);
+    CHECK_TEST(client.peerInfo(fields, nonce, reinterpret_cast<uint8_t*>(fields)) == NI_INVALID_ARGUMENT);
+    CHECK_TEST(client.peerInfo(fields, nonce, nullptr) == NI_INVALID_ARGUMENT);
+    CHECK_TEST(fields[0] == 17 && !std::memcmp(nonce, sentinel, sizeof(nonce)) && !std::memcmp(device, sentinel, sizeof(device)));
     CHECK_TEST(client.peerInfo(fields, nonce, device) == NI_READY && fields[0] == 2 &&
         fields[1] == (custom ? 3U : 7U) && fields[2] == (custom ? 9U : 32U) &&
         fields[3] == (custom ? 2048U : 65536U) && !std::memcmp(device, offer.m_device, sizeof(device)));
@@ -2859,21 +3183,142 @@ static int WithWaitProbe(Scenario scenario)
     return result;
 }
 
+/** 限制业务 TLS 输入队列并观察每轮等待与信用归还
+@return 缓冲可推进时不等待且前缀只归还一次时为零
+*/
+static int StagedCiphertextProgress()
+{
+    return WithWaitProbe([](const uint32_t& waited) -> int {
+        NetExecution owner;
+        NetExecutionScope scope(owner);
+        uint32_t entropy = 173;
+        NetInterfaceTlsOptions tls = {};
+        tls.entropy = HelloEntropy;
+        tls.entropyContext = &entropy;
+        CiphertextProbeHost host;
+        host.m_offerPrefix = true;
+        CiphertextProbeTransport transport(host);
+        FrameDeliveryProbe listener;
+        NetGatewayClientChannel gateway(7, &transport);
+        CEncodeDecodeTlsQueueLimits limits;
+        uint64_t peer = 0;
+        CHECK_TEST(limits.set(1, -1) && gateway.configureTlsQueueLimits(limits) == NI_OK &&
+            gateway.connect("127.0.0.1", 8000, tls, &listener, peer) == NI_OK && peer == 1);
+        CHECK_TEST(gateway.poll() && gateway.poll() && host.m_first > 0 && !host.m_prefixSent);
+        for (uint32_t remaining = 3; remaining != 0; --remaining)
+        {
+            owner.begin();
+            CHECK_TEST(gateway.poll() && host.m_prefixSent && host.m_prefixCredit == 4);
+            CHECK_TEST(owner.wait(60000) == NI_OK && waited == 0);
+        }
+        owner.begin();
+        CHECK_TEST(gateway.poll() && owner.wait(60000) == NI_OK && waited > 0 && host.m_prefixCredit == 4);
+        gateway.shutdown();
+
+        NetInterfaceLinkOptions options = {};
+        options.m_version = 3;
+        options.m_role = NI_LINK_CLIENT;
+        options.m_tls = tls;
+        NetInterfaceLinkPools pools;
+        pools.m_controlStepBudget = 1;
+        CHECK_TEST(pools.m_controlCiphertext.set(1, -1));
+        NetInterfaceLink link(options, pools);
+        NetInterfaceTunnelRecord record = {};
+        record.m_kind = NI_TUNNEL_HELLO;
+        CHECK_TEST(link.accept(record) == NI_OK && link.peekOutput(record) == NI_READY &&
+            record.m_kind == NI_TUNNEL_HELLO && link.consumeOutput() == NI_OK);
+        CHECK_TEST(link.progress(200) == NI_NEED_MORE && link.peekOutput(record) == NI_READY &&
+            record.m_kind == NI_TUNNEL_CONTROL && link.consumeOutput() == NI_OK);
+        record.m_kind = NI_TUNNEL_CONTROL;
+        record.m_data = kTlsHeaderPrefix;
+        record.m_size = sizeof(kTlsHeaderPrefix);
+        CHECK_TEST(link.accept(record) == NI_OK);
+        for (uint32_t step = 1; step <= 3; ++step)
+        {
+            owner.begin();
+            CHECK_TEST(link.progress(200 + step) == NI_NEED_MORE && owner.wait(60000) == NI_OK && waited == 0);
+        }
+        owner.begin();
+        CHECK_TEST(link.progress(204) == NI_NEED_MORE && owner.wait(60000) == NI_OK && waited > 0);
+
+        // 双向各一字节。让 ClientHello 暂留在已满的输出队列，TLS 不能继续读取。
+        CHECK_TEST(pools.m_controlCiphertext.set(1, 1));
+        NetInterfaceLink blocked(options, pools);
+        record = NetInterfaceTunnelRecord();
+        record.m_kind = NI_TUNNEL_HELLO;
+        CHECK_TEST(blocked.accept(record) == NI_OK && blocked.peekOutput(record) == NI_READY &&
+            blocked.consumeOutput() == NI_OK && blocked.progress(300) == NI_NEED_MORE);
+        CHECK_TEST(blocked.peekOutput(record) == NI_READY && record.m_kind == NI_TUNNEL_CONTROL && record.m_size == 1);
+        record.m_data = kTlsHeaderPrefix;
+        record.m_size = sizeof(kTlsHeaderPrefix);
+        CHECK_TEST(blocked.accept(record) == NI_OK);
+        owner.begin();
+        CHECK_TEST(blocked.progress(301) == NI_NEED_MORE && owner.wait(60000) == NI_OK && waited == 0);
+        owner.begin();
+        CHECK_TEST(blocked.progress(302) == NI_NEED_MORE && owner.wait(60000) == NI_OK && waited > 0);
+        return 0;
+    });
+}
+
 SessionProbeChannel::SessionProbeChannel(NetInterfaceHandshake& server) :
-m_server(server), m_listener(nullptr), m_announced(false)
+m_configuringSession(nullptr),
+m_reentryRejected(true),
+m_poolCalls(0),
+m_recordLimit(0),
+m_throwClose(false),
+m_throwStop(false),
+m_deliveringFrame(false),
+m_stoppedInFrame(false),
+m_poolResult(NI_OK),
+m_server(server),
+m_listener(nullptr),
+m_announced(false)
 {
 
 }
 
+int32_t SessionProbeChannel::configureConnectionPools(const NetConnectionPoolConfig& config)
+{
+    ++m_poolCalls;
+    m_recordLimit = config.m_dataRecords.maximumCapacity;
+    if (m_configuringSession != nullptr)
+    {
+        m_reentryRejected = m_reentryRejected && m_configuringSession->executing() &&
+            m_configuringSession->bindChannel(nullptr) == NI_INVALID_STATE &&
+            m_configuringSession->configureConnectionPools(config) == NI_INVALID_STATE;
+    }
+    if (m_poolResult == NI_NO_MEMORY)
+    {
+        throw std::bad_alloc();
+    }
+    if (m_poolResult == NI_INVALID_STATE)
+    {
+        throw std::runtime_error("configureConnectionPools");
+    }
+    return m_poolResult;
+}
+
 int32_t SessionProbeChannel::connect(const char*, uint32_t, const NetInterfaceTlsOptions&, NetTransportListener* listener, uint64_t& peer)
 {
-    peer = 7;
+    if (m_connectException == NI_NO_MEMORY)
+    {
+        throw std::bad_alloc();
+    }
+    if (m_connectException == NI_INVALID_STATE)
+    {
+        throw std::runtime_error("channel connect");
+    }
+    if (m_connectException == NI_LIMIT_EXCEEDED) { return NI_LIMIT_EXCEEDED; }
+    peer = m_connectException == NI_PROTOCOL_ERROR ? 0 : 7;
+    m_announced = false;
     m_listener = listener;
     return NI_OK;
 }
 
 bool SessionProbeChannel::poll()
 {
+    if (m_pollException == NI_NO_MEMORY) { throw std::bad_alloc(); }
+    if (m_pollException == NI_INVALID_STATE) { throw std::runtime_error("channel poll"); }
     if (m_listener == nullptr) { return false; }
     if (!m_announced)
     {
@@ -2881,8 +3326,16 @@ bool SessionProbeChannel::poll()
         m_listener->onReady(7);
     }
     NetInterfaceFrame frame = {};
-    if (m_event && m_listener->onFrame(7, *m_event)) { m_event = nullptr; }
-    if (m_server.peekOutput(frame) == NI_READY && m_listener->onFrame(7, frame))
+    if (m_event != nullptr)
+    {
+        m_deliveringFrame = true;
+        if (m_listener->onFrame(7, *m_event))
+        {
+            m_event = nullptr;
+        }
+        m_deliveringFrame = false;
+    }
+    if (!m_deferReply && m_server.peekOutput(frame) == NI_READY && m_listener->onFrame(7, frame))
     {
         m_server.consumeOutput();
     }
@@ -2892,7 +3345,11 @@ bool SessionProbeChannel::poll()
 int32_t SessionProbeChannel::send(uint64_t peer, const NetInterfaceFrame& frame)
 {
     if (peer != 7) { return NI_INVALID_ARGUMENT; }
-    if (frame.m_kind == NI_HELLO) { return m_server.accept(frame, 1) < 0 ? NI_PROTOCOL_ERROR : NI_OK; }
+    if (frame.m_kind == NI_HELLO)
+    {
+        ++m_hellos;
+        return m_server.accept(frame, 1) < 0 ? NI_PROTOCOL_ERROR : NI_OK;
+    }
     if (frame.m_kind == NI_PING) { ++m_pings; return NI_OK; }
     if (frame.m_kind == NI_DATA)
     {
@@ -2922,12 +3379,26 @@ int32_t SessionProbeChannel::outputState(uint64_t peer) const
 
 void SessionProbeChannel::close(uint64_t, int32_t)
 {
-    m_listener = nullptr;
+    ++m_closeCalls;
+    if (m_throwClose)
+    {
+        throw std::runtime_error("channel close");
+    }
+    if (!m_deferClose)
+    {
+        m_listener = nullptr;
+    }
 }
 
 void SessionProbeChannel::shutdown()
 {
+    ++m_stops;
+    m_stoppedInFrame = m_stoppedInFrame || m_deliveringFrame;
     m_listener = nullptr;
+    if (m_throwStop)
+    {
+        throw std::runtime_error("channel shutdown");
+    }
 }
 
 /** 给原生事件线程一次重新调度机会；单线程Wasm只在本用例的短时钟窗口内推进 */
@@ -2946,14 +3417,15 @@ static void YieldTimerProbe()
 */
 static int CheckSessionOptions(int64_t retention, const uint32_t& waited, unsigned heartbeatMode = 0)
 {
-    NetInterfaceHandshakeOptions options = {};
-    options.m_server = 1;
-    options.m_capabilities = 1;
-    options.m_maxRequests = 4;
-    options.m_maxChunk = 1024;
-    options.m_timeoutMs = 5000;
-    options.m_nonce[0] = 19;
-    NetInterfaceHandshake server(options, 0);
+    NetInterfaceHandshakeOptions serverOptions = {};
+    serverOptions.m_server = 1;
+    serverOptions.m_capabilities = 1;
+    serverOptions.m_maxRequests = 4;
+    serverOptions.m_maxChunk = 1024;
+    serverOptions.m_timeoutMs = 5000;
+    serverOptions.m_nonce[0] = 19;
+    NetInterfaceHandshake server(serverOptions, 0);
+    NetInterfaceHandshakeOptions options = serverOptions;
     SessionProbeChannel channel(server);
     CiphertextProbeHost events;
     NetClientSession client;
@@ -2982,8 +3454,156 @@ static int CheckSessionOptions(int64_t retention, const uint32_t& waited, unsign
     tls.entropy = HelloEntropy;
     tls.entropyContext = &seed;
     if (custom) { CHECK_TEST(client.configureExpiryBudget(1) == NI_OK); }
-    CHECK_TEST(client.configureExpiryBudget(0) == NI_INVALID_ARGUMENT &&
-        client.bindChannel(&channel) == NI_OK && client.connect("127.0.0.1", 9001, tls, options, &events) == NI_OK);
+    CHECK_TEST(client.configureExpiryBudget(0) == NI_INVALID_ARGUMENT && client.bindChannel(&channel) == NI_OK);
+    if (custom)
+    {
+        NetConnectionPoolConfig pools;
+        pools.m_dataRecords.maximumCapacity = 257;
+        CHECK_TEST(client.configureConnectionPools(pools) == NI_OK);
+        pools.m_dataRecords.maximumCapacity = 513;
+        channel.m_configuringSession = &client;
+        channel.m_poolResult = NI_LIMIT_EXCEEDED;
+        CHECK_TEST(client.connect(nullptr, 9001, tls, options, &events) == NI_INVALID_ARGUMENT &&
+            client.connect("", 9001, tls, options, &events) == NI_INVALID_ARGUMENT &&
+            channel.m_poolCalls == 0 && seed == 91);
+        CHECK_TEST(client.connect("127.0.0.1", 0, tls, options, &events) == NI_INVALID_ARGUMENT &&
+            client.connect("127.0.0.1", 65536, tls, options, &events) == NI_INVALID_ARGUMENT &&
+            client.connect("127.0.0.1", 9001, tls, options, nullptr) == NI_INVALID_ARGUMENT);
+        NetInterfaceTlsOptions invalidTls = tls;
+        invalidTls.handshakeTimeoutMs = 99;
+        CHECK_TEST(client.connect("127.0.0.1", 9001, invalidTls, options, &events) == NI_INVALID_ARGUMENT);
+        invalidTls = tls;
+        invalidTls.entropy = nullptr;
+        CHECK_TEST(client.connect("127.0.0.1", 9001, invalidTls, options, &events) == NI_INVALID_STATE);
+        NetInterfaceHandshakeOptions invalidHello = options;
+        invalidHello.m_maxRequests = 0;
+        CHECK_TEST(client.connect("127.0.0.1", 9001, tls, invalidHello, &events) == NI_INVALID_ARGUMENT &&
+            !channel.m_poolCalls && client.generation() == 0 && client.quiescent() && !events.m_closes);
+        const int32_t failures[] = {NI_LIMIT_EXCEEDED, NI_NO_MEMORY, NI_INVALID_STATE};
+        for (size_t i = 0; i < sizeof(failures) / sizeof(failures[0]); ++i)
+        {
+            channel.m_poolResult = failures[i];
+            CHECK_TEST(client.connect("127.0.0.1", 9001, tls, options, &events) == failures[i] &&
+                channel.m_poolCalls == i + 1 && channel.m_recordLimit == 257 &&
+                client.generation() == 0 && client.quiescent() && !events.m_closes);
+        }
+        channel.m_poolResult = NI_OK;
+    }
+    if (!custom)
+    {
+        const uint32_t invalidTimeouts[] = {1, 99, 60001, UINT32_MAX};
+        for (size_t i = 0; i < sizeof(invalidTimeouts) / sizeof(invalidTimeouts[0]); ++i)
+        {
+            tls.handshakeTimeoutMs = invalidTimeouts[i];
+            CHECK_TEST(client.connect("127.0.0.1", 9001, tls, options, &events) == NI_INVALID_ARGUMENT &&
+                client.generation() == 0 && client.quiescent() && seed == 91);
+        }
+    }
+    if (!custom)
+    {
+        tls.handshakeTimeoutMs = 0;
+        NetSession protocol;
+        CHECK_TEST(protocol.bindChannel(&channel) == NI_OK);
+        // 以底层会话为上下文，在返回测试随机字节前核对初次连接的重入边界。
+        tls.entropy = [](void* context, uint8_t* bytes, uint32_t size) -> int32_t {
+            NetSession& session = *static_cast<NetSession*>(context);
+            if (session.configureExpiryBudget(2) != NI_INVALID_STATE ||
+                session.configurePayloadRetention(0) != NI_INVALID_STATE ||
+                session.configureHeartbeat(NetHeartbeatConfig()) != NI_INVALID_STATE)
+            {
+                return -1;
+            }
+            uint32_t state = 17;
+            return HelloEntropy(&state, bytes, size);
+        };
+        tls.entropyContext = &protocol;
+        NetConnectionPoolConfig invalidPools;
+        invalidPools.m_controlBurst = 0;
+        CHECK_TEST(protocol.connectWithPools("127.0.0.1", 9001, tls, options, &events, &invalidPools) == NI_INVALID_ARGUMENT &&
+            protocol.generation() == 0 && channel.m_poolCalls == 0);
+        const int32_t errors[] = {NI_INVALID_STATE, NI_NO_MEMORY, NI_LIMIT_EXCEEDED, NI_PROTOCOL_ERROR};
+        for (size_t i = 0; i < sizeof(errors) / sizeof(errors[0]); ++i)
+        {
+            channel.m_connectException = errors[i];
+            CHECK_TEST(protocol.connect("127.0.0.1", 9001, tls, options, &events) == errors[i] &&
+                !protocol.poll() && !events.m_closes && protocol.generation() == 0 && channel.m_stops == i + 1);
+            CHECK_TEST(protocol.configureRequestPool(LockFreeHashMapPoolConfig()) == NI_OK &&
+                protocol.configureHeartbeat(NetHeartbeatConfig()) == NI_OK && protocol.configureExpiryBudget(2) == NI_OK &&
+                protocol.configurePayloadRetention(0) == NI_OK);
+        }
+        channel.m_connectException = NI_OK;
+        CHECK_TEST(protocol.connect("127.0.0.1", 9001, tls, options, &events) == NI_OK && protocol.generation() == 1);
+        channel.m_deferClose = true;
+        protocol.close(NI_TIMEOUT);
+        protocol.close(NI_CANCELLED);
+        CHECK_TEST(channel.m_closeCalls == 1 && protocol.poll() && !protocol.ready() && !channel.m_hellos);
+        protocol.shutdown();
+        CHECK_TEST(events.m_closes == 1 && events.m_closed == NI_TIMEOUT && !protocol.poll());
+        channel.m_deferClose = false;
+        CHECK_TEST(protocol.connect("127.0.0.1", 9001, tls, options, &events) == NI_NOT_SUPPORTED &&
+            protocol.bindChannel(&channel) == NI_OK);
+        channel.m_connectException = NI_LIMIT_EXCEEDED;
+        CHECK_TEST(protocol.connect("127.0.0.1", 9001, tls, options, &events) == NI_LIMIT_EXCEEDED &&
+            protocol.generation() == 1 && events.m_closes == 1 && channel.m_stops == 6);
+        protocol.shutdown();
+        CHECK_TEST(channel.m_stops == 6);
+        channel.m_connectException = NI_OK;
+
+        NetInterfaceHandshake lateServer(serverOptions, 0);
+        SessionProbeChannel lateChannel(lateServer);
+        NetSession lateProtocol;
+        tls.entropyContext = &lateProtocol;
+        lateChannel.m_deferReply = true;
+        lateChannel.m_deferClose = true;
+        CHECK_TEST(lateProtocol.bindChannel(&lateChannel) == NI_OK &&
+            lateProtocol.connect("127.0.0.1", 9001, tls, options, &events) == NI_OK &&
+            lateProtocol.poll() && !lateProtocol.ready() && lateChannel.m_hellos == 1);
+        NetInterfaceFrame reply = {};
+        CHECK_TEST(lateChannel.m_closeCalls == 0 && lateServer.peekOutput(reply) == NI_READY && reply.m_kind == NI_HELLO_REPLY);
+        lateProtocol.close(NI_CANCELLED);
+        lateChannel.m_deferReply = false;
+        CHECK_TEST(lateProtocol.poll() && !lateProtocol.ready() && lateChannel.m_closeCalls == 1 &&
+            lateServer.peekOutput(reply) == NI_NEED_MORE);
+        lateProtocol.shutdown();
+        CHECK_TEST(events.m_closes == 2 && events.m_closed == NI_CANCELLED);
+
+        const int32_t pollFaults[] = {NI_INVALID_STATE, NI_NO_MEMORY, NI_INVALID_STATE};
+        for (size_t i = 0; i < sizeof(pollFaults) / sizeof(pollFaults[0]); ++i)
+        {
+            NetInterfaceHandshake faultServer(serverOptions, 0);
+            SessionProbeChannel faultChannel(faultServer);
+            CiphertextProbeHost observer;
+            NetClientSession session;
+            tls.entropy = CheckStartEntropy;
+            tls.entropyContext = &session;
+            CHECK_TEST(session.bindChannel(&faultChannel) == NI_OK);
+            faultChannel.m_connectException = NI_LIMIT_EXCEEDED;
+            CHECK_TEST(session.connect("localhost", 9001, tls, options, &observer) == NI_LIMIT_EXCEEDED &&
+                session.generation() == 0 && session.quiescent() && !observer.m_closes &&
+                session.configureRequestPool(LockFreeHashMapPoolConfig()) == NI_OK &&
+                session.configureHeartbeat(NetHeartbeatConfig()) == NI_OK && session.configureExpiryBudget(2) == NI_OK &&
+                session.configurePayloadRetention(0) == NI_OK);
+            faultChannel.m_connectException = NI_OK;
+            uint64_t id = 0;
+            CHECK_TEST(session.connect("localhost", 9001, tls, options, &observer) == NI_OK &&
+                session.generation() == 1 && session.poll() && session.ready() &&
+                session.beginRequest(7, 1, 60000, id) == NI_OK && id != 0);
+            faultChannel.m_deferClose = true;
+            if (i == 2) { session.close(NI_CANCELLED); }
+            faultChannel.m_pollException = pollFaults[i];
+            CHECK_TEST(!session.poll() && session.quiescent() && !session.ready() &&
+                !session.poll() && observer.m_closes == 1 && observer.m_results == 1 && observer.m_resultId == id &&
+                observer.m_closed == (i == 2 ? NI_CANCELLED : pollFaults[i]) &&
+                observer.m_resultStatus == (i == 2 ? NI_RPC_CANCELLED : NI_RPC_UNAVAILABLE));
+            session.shutdown();
+            CHECK_TEST(faultChannel.m_stops == 2 && observer.m_closes == 1 && observer.m_results == 1);
+        }
+    }
+    tls.entropy = CheckStartEntropy;
+    tls.entropyContext = &client;
+    tls.handshakeTimeoutMs = custom ? (heartbeatMode == 0 ? 100U : 60000U) : 0U;
+    CHECK_TEST(client.connect("127.0.0.1", 9001, tls, options, &events) == NI_OK &&
+        channel.m_poolCalls == (custom ? 4U : 0U) && channel.m_reentryRejected);
     CHECK_TEST(client.configureExpiryBudget(2) == NI_INVALID_STATE);
     NetExecution owner;
     NetExecutionScope scope(owner);
@@ -3036,8 +3656,114 @@ static int CheckSessionOptions(int64_t retention, const uint32_t& waited, unsign
     while (std::chrono::steady_clock::now() < expired) { YieldTimerProbe(); }
     CHECK_TEST(client.poll() && events.m_timeouts == (custom ? 1U : 3U));
     if (custom) { CHECK_TEST(client.poll() && events.m_timeouts == 2 && client.poll() && events.m_timeouts == 3); }
+    if (!custom)
+    {
+        const auto startTime = std::chrono::steady_clock::now();
+        const uint64_t started = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+            startTime.time_since_epoch()).count());
+        const uint32_t deadlines[] = {60000, 100, 60000, 100, 50, 100, 50000};
+        for (uint32_t i = 0; i < sizeof(deadlines) / sizeof(deadlines[0]); ++i)
+        {
+            CHECK_TEST(client.beginRequestAt(100 + i, 7, 9, started, deadlines[i]) == NI_OK);
+        }
+        CHECK_TEST(client.cancel(102) == NI_OK && client.cancel(106) == NI_OK);
+        const auto flush = startTime + std::chrono::milliseconds(105);
+        while (std::chrono::steady_clock::now() < flush)
+        {
+            YieldTimerProbe();
+        }
+        events.m_timeoutIds.clear();
+        const uint64_t expected[] = {104, 101, 103, 105};
+        CHECK_TEST(client.poll() && events.m_timeoutIds.size() == 4 &&
+            std::equal(events.m_timeoutIds.begin(), events.m_timeoutIds.end(), expected) && client.cancel(100) == NI_OK);
+    }
+    const bool localClose = retention == 0;
+    uint64_t pending = 0;
+    CHECK_TEST(client.beginRequest(7, 9, 60000, pending) == NI_OK && pending != 0);
+    const uint32_t results = events.m_results;
+    const uint32_t closes = events.m_closes;
+    if (localClose)
+    {
+        client.close(NI_CANCELLED);
+    }
+    else
+    {
+        channel.shutdown();
+    }
+    CHECK_TEST(!client.poll() && client.quiescent() && !client.ready() && events.m_closes == closes + 1 &&
+        events.m_closed == (localClose ? NI_CANCELLED : NI_TRUNCATED) && events.m_results == results + 1 &&
+        events.m_resultId == pending && events.m_resultStatus == (localClose ? NI_RPC_CANCELLED : NI_RPC_UNAVAILABLE));
     client.shutdown();
-    CHECK_TEST(client.payloadCapacity() == 0);
+    CHECK_TEST(!client.poll() && events.m_closes == closes + 1 && events.m_results == results + 1 &&
+        client.payloadCapacity() == 0);
+    return 0;
+}
+
+/** 在 API 调用和运输帧回调中触发关闭异常，核对清理顺序、请求结果及首次关闭原因
+@return 三种收尾路径均只停止一次并交付唯一终态时为0
+*/
+static int CheckCloseException()
+{
+    for (uint32_t mode = 0; mode < 3; ++mode)
+    {
+        NetInterfaceHandshakeOptions hello = {};
+        hello.m_server = hello.m_capabilities = hello.m_maxRequests = 1;
+        hello.m_maxChunk = 1024;
+        hello.m_timeoutMs = 5000;
+        hello.m_nonce[0] = 13;
+        NetInterfaceHandshake server(hello, 0);
+        SessionProbeChannel channel(server);
+        CiphertextProbeHost events;
+        NetSession session;
+        uint32_t seed = 27;
+        NetInterfaceTlsOptions tls = {};
+        tls.entropy = HelloEntropy;
+        tls.entropyContext = &seed;
+        hello.m_server = 0;
+        hello.m_platform = 2;
+        hello.m_device[0] = 7;
+        uint64_t request = 0;
+        CHECK_TEST(session.bindChannel(&channel) == NI_OK &&
+            session.connect("localhost", 9001, tls, hello, &events) == NI_OK && session.poll() && session.ready() &&
+            session.beginRequest(7, 9, 60000, request) == NI_OK && request != 0);
+        channel.m_throwClose = true;
+        channel.m_throwStop = mode == 2;
+        const int32_t reason = mode == 0 ? NI_CANCELLED : mode == 1 ? NI_INVALID_STATE : NI_OK;
+        if (mode == 1)
+        {
+            const uint8_t body[] = {19, 31};
+            const NetInterfaceFrame frame = {7, 99, 11, NI_EVENT, sizeof(body), body};
+            channel.m_event = &frame;
+            events.m_throwFrame = true;
+            CHECK_TEST(!session.poll() && events.m_frames == 1 && !channel.m_stoppedInFrame);
+        }
+        else
+        {
+            session.close(reason);
+            session.close(NI_TIMEOUT);
+            CHECK_TEST(!session.ready() && !events.m_closes && !events.m_results && !channel.m_stops);
+            CHECK_TEST(session.bindChannel(nullptr) == NI_INVALID_STATE &&
+                session.configureCompression(nullptr, 0) == NI_INVALID_STATE &&
+                session.configureRequestPool(LockFreeHashMapPoolConfig()) == NI_INVALID_STATE &&
+                session.configureExpiryBudget(1) == NI_INVALID_STATE && session.configurePayloadRetention(-1) == NI_INVALID_STATE &&
+                session.configureHeartbeat(NetHeartbeatConfig()) == NI_INVALID_STATE);
+            if (mode == 2)
+            {
+                session.shutdown();
+            }
+            else
+            {
+                CHECK_TEST(!session.poll());
+            }
+        }
+        CHECK_TEST(channel.m_closeCalls == 1 && channel.m_stops == 1 && !channel.m_stoppedInFrame &&
+            events.m_closed == reason && events.m_closes == 1 && events.m_results == 1 && events.m_resultsAtClose == 1 &&
+            events.m_resultId == request &&
+            events.m_resultStatus == (mode == 1 ? NI_RPC_UNAVAILABLE : NI_RPC_CANCELLED));
+        session.shutdown();
+        CHECK_TEST(!session.poll() && channel.m_stops == 1 && events.m_closes == 1 && events.m_results == 1 &&
+            session.configureCompression(nullptr, 0) == NI_OK && session.configureExpiryBudget(1) == NI_INVALID_STATE);
+    }
     return 0;
 }
 
@@ -3047,26 +3773,37 @@ static int CheckSessionOptions(int64_t retention, const uint32_t& waited, unsign
 static int SessionOptions()
 {
     return WithWaitProbe([](const uint32_t& waited) -> int {
-        if (CheckSessionOptions(4096, waited) || CheckSessionOptions(0, waited)) { return 1; }
+        if (CheckCloseException() || CheckSessionOptions(4096, waited) || CheckSessionOptions(0, waited)) { return 1; }
         if (CheckSessionOptions(-1, waited) || CheckSessionOptions(-1, waited, 1)) { return 1; }
         return CheckSessionOptions(-1, waited, 2);
     });
 }
 
+void PendingDiscovery::checkFault(DiscoveryFault operation) const
+{
+    if (m_fault == operation)
+    {
+        if (m_allocationFailure) { throw std::bad_alloc(); }
+        throw std::runtime_error("discovery unavailable");
+    }
+}
+
 int32_t PendingDiscovery::start(const std::vector<NetGatewayAddress>&, const std::string&, const NetInterfaceTlsOptions&)
 {
     m_running = true;
+    checkFault(DiscoveryFault::Start);
     return NI_OK;
 }
 
 bool PendingDiscovery::poll()
 {
+    checkFault(DiscoveryFault::Poll);
     return m_running;
 }
 
 void PendingDiscovery::shutdown()
 {
-    m_running = false;
+    if (!m_holdStop) { m_running = false; }
 }
 
 bool PendingDiscovery::stopped() const
@@ -3074,15 +3811,25 @@ bool PendingDiscovery::stopped() const
     return !m_running;
 }
 
-bool PendingDiscovery::choose(NetClientDiscoveryPoint&)
+bool PendingDiscovery::choose(NetClientDiscoveryPoint& endpoint)
 {
     ++m_attempts;
-    return false;
+    m_headersValid = m_headersValid && endpoint.m_structSize == sizeof(endpoint) && endpoint.m_version == 1;
+    checkFault(DiscoveryFault::Choose);
+    if (!m_provide || !m_headersValid)
+    {
+        endpoint = NetClientDiscoveryPoint();
+        return false;
+    }
+    std::memcpy(endpoint.m_address, "127.0.0.1", sizeof("127.0.0.1"));
+    endpoint.m_port = 8001;
+    return true;
 }
 
-void PendingDiscovery::failed(const NetClientDiscoveryPoint&)
+void PendingDiscovery::failed(const NetClientDiscoveryPoint& endpoint)
 {
-
+    if (endpoint.m_port == 8001) { ++m_failures; }
+    checkFault(DiscoveryFault::Failed);
 }
 
 void FrameDeliveryProbe::onReady(uint64_t)
@@ -3172,6 +3919,13 @@ static int FrameBackpressure(const uint32_t& waited)
         listener.m_accept = true;
         CHECK_TEST(timing.deliver(listener, frame, 11, deadline) == NI_OK && deadline == 0 && listener.m_valid);
     }
+    CHECK_TEST(timing.configure(0, UINT32_MAX) == NI_OK);
+    uint64_t deadline = 0;
+    const uint32_t calls = listener.m_calls;
+    listener.m_accept = false;
+    CHECK_TEST(timing.deliver(listener, frame, UINT64_MAX - 3, deadline) == NI_LIMIT_EXCEEDED && deadline == UINT64_MAX);
+    listener.m_accept = true;
+    CHECK_TEST(timing.deliver(listener, frame, UINT64_MAX, deadline) == NI_TIMEOUT && listener.m_calls == calls + 1);
     return 0;
 }
 
@@ -3239,6 +3993,67 @@ static int RecoveryBackoff(const uint32_t& waited)
     return 0;
 }
 
+/** 从实际服务连接入口验证发现器异常的分类、停止和重试
+@return 每个已接纳代次只报告一次预期错误时为0
+*/
+static int DiscoveryErrors()
+{
+    const DiscoveryFault operations[] = {DiscoveryFault::Start, DiscoveryFault::Poll,
+        DiscoveryFault::Choose, DiscoveryFault::Failed};
+    for (const auto operation : operations)
+    {
+        for (unsigned allocation = 0; allocation < 2; ++allocation)
+        {
+            CiphertextProbeHost host;
+            PendingDiscovery discovery;
+            NetClientSession session;
+            uint32_t seed = 17;
+            NetInterfaceTlsOptions tls = {};
+            tls.entropy = HelloEntropy;
+            tls.entropyContext = &seed;
+            NetInterfaceHandshakeOptions hello = {};
+            hello.m_platform = hello.m_capabilities = hello.m_maxRequests = 1;
+            hello.m_maxChunk = 1024;
+            hello.m_timeoutMs = 1000;
+            hello.m_device[0] = 2;
+            host.m_refuseConnect = true;
+            // Poll 的异常安排在运输已接纳以后，并让发现器暂时无法停止。
+            discovery.m_fault = operation == DiscoveryFault::Poll ? DiscoveryFault::None : operation;
+            discovery.m_provide = true;
+            discovery.m_allocationFailure = allocation != 0;
+            const int32_t error = allocation ? NI_NO_MEMORY : NI_INVALID_STATE;
+            CHECK_TEST(session.bindGateway(&host, &discovery) == NI_OK);
+            const int32_t result = session.connectService(7, "127.0.0.1", 8000, tls, hello, &host);
+            if (operation == DiscoveryFault::Start)
+            {
+                CHECK_TEST(result == error && session.generation() == 0 && session.quiescent() && host.m_closes == 0);
+                discovery.m_fault = DiscoveryFault::None;
+                CHECK_TEST(session.connectService(7, "127.0.0.1", 8000, tls, hello, &host) == NI_OK);
+                session.shutdown();
+                CHECK_TEST(host.m_closes == 1 && session.quiescent());
+                continue;
+            }
+            CHECK_TEST(result == NI_OK);
+            if (operation == DiscoveryFault::Poll)
+            {
+                host.m_refuseConnect = false;
+                CHECK_TEST(session.poll() && discovery.m_attempts == 1 && host.m_closes == 0);
+                discovery.m_holdStop = true;
+                discovery.m_fault = operation;
+            }
+            for (unsigned i = 0; i < 8 && host.m_closes == 0; ++i) { session.poll(); }
+            CHECK_TEST(host.m_closes == 1 && host.m_closed == error && discovery.m_headersValid);
+            CHECK_TEST(discovery.m_failures == (operation == DiscoveryFault::Failed ? 1U : 0U));
+            if (operation == DiscoveryFault::Poll) { CHECK_TEST(!session.quiescent()); }
+            discovery.m_fault = DiscoveryFault::None;
+            discovery.m_holdStop = false;
+            session.shutdown();
+            CHECK_TEST(!session.poll() && session.quiescent() && host.m_closes == 1);
+        }
+    }
+    return 0;
+}
+
 /** 无候选时核对实际宿主等待预算，分别让重试和总期限先到
 @return 全部通过为0
 */
@@ -3256,14 +4071,17 @@ static int RecoveryWait()
             CHECK_TEST(session.configureRecovery(0, 1, 3) == NI_INVALID_ARGUMENT &&
                 session.configureRecovery(5, 0, 3) == NI_INVALID_ARGUMENT && session.configureRecovery(5, 4, 3) == NI_INVALID_ARGUMENT);
             NetInterfaceTlsOptions tls = {};
-            uint32_t seed = 17;
-            tls.entropy = HelloEntropy;
-            tls.entropyContext = &seed;
+            tls.entropy = CheckStartEntropy;
+            tls.entropyContext = &session;
             NetInterfaceHandshakeOptions options = {};
             options.m_platform = options.m_capabilities = options.m_maxRequests = 1;
             options.m_maxChunk = 1024;
             options.m_timeoutMs = 1000;
             options.m_device[0] = 1;
+            LockFreeHashMapPoolConfig requestPool;
+            requestPool.initialCapacity = 1;
+            requestPool.maximumCapacity = 2;
+            CHECK_TEST(session.configureRequestPool(requestPool) == NI_OK);
             CHECK_TEST(session.bindGateway(&host, &discovery) == NI_OK);
             NetExecution owner;
             NetExecutionScope scope(owner);
@@ -3274,9 +4092,23 @@ static int RecoveryWait()
             const uint64_t elapsed = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - start).count());
             CHECK_TEST(waited <= expected[i] && elapsed + waited + 2 >= expected[i]);
+            if (i == 0)
+            {
+                discovery.m_provide = true;
+                const auto watchdog = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+                while (discovery.m_attempts < 2 && std::chrono::steady_clock::now() < watchdog)
+                {
+                    CHECK_TEST(session.poll());
+                    YieldTimerProbe();
+                }
+                CHECK_TEST(discovery.m_headersValid && discovery.m_attempts == 2);
+                CHECK_TEST(session.poll() && host.m_offered != 0 && host.m_closes == 0);
+            }
             CHECK_TEST(session.configureRecovery(50, 1, 2) == NI_INVALID_STATE);
             session.shutdown();
             CHECK_TEST(discovery.stopped());
+            // 已建立服务连接代次，即使发现一直没有候选、内部协议会话尚未启动，池也必须冻结。
+            CHECK_TEST(session.generation() != 0 && session.configureRequestPool(requestPool) == NI_INVALID_STATE);
         }
         for (unsigned i = 0; i < 2; ++i)
         {
@@ -3309,7 +4141,7 @@ static int RecoveryWait()
                 session.configureServiceTimeouts(100, 500) == NI_INVALID_STATE);
             session.shutdown();
         }
-        return 0;
+        return DiscoveryErrors();
     });
 }
 
@@ -3355,6 +4187,7 @@ int32_t RouterFileSink::send(uint64_t, const NetInterfaceFrame& frame, const Net
         if (NetInterfaceRpc::parse(frame, rpc) != NI_OK || rpc.m_value != NI_RPC_SUCCESS ||
             NetInterfaceFile::parseInfo(rpc.m_data, rpc.m_size, info) != NI_OK) { return NI_PROTOCOL_ERROR; }
         m_stream = info.stream;
+        m_expiresUtc = info.expiresUtc;
     }
     else if (frame.m_kind == NI_REQUEST)
     {
@@ -3381,12 +4214,19 @@ static int CheckRouterStorage(int64_t retention, const uint32_t& waited, bool ex
     NetEndpointPools pools;
     CHECK_TEST(pools.m_payloadRetentionBytes == 4096);
     pools.m_payloadRetentionBytes = retention;
+    if (retention == 0)
+    {
+        CHECK_TEST(router.configureFileLeaseLimit(1) == NI_OK && router.configureFileLeaseLimit(1800) == NI_OK &&
+            router.configureFileLeaseLimit(45) == NI_OK && router.configureFileLeaseLimit(0) == NI_INVALID_ARGUMENT &&
+            router.configureFileLeaseLimit(1801) == NI_INVALID_ARGUMENT && router.configureFileLeaseLimit(UINT32_MAX) == NI_INVALID_ARGUMENT);
+    }
     if (expireTogether)
     {
         pools.m_expiredRequestBudget = 2;
         pools.m_closingEndpointBudget = 1;
         pools.m_expiredFileBudget = 1;
-        pools.m_endpoints.initialCapacity = pools.m_endpoints.maximumCapacity = 2;
+        pools.m_endpoints.initialCapacity = 2;
+        pools.m_endpoints.maximumCapacity = 2;
     }
     CHECK_TEST(router.configurePools(pools) == NI_OK);
     pools.m_payloadRetentionBytes = -2;
@@ -3454,7 +4294,12 @@ static int CheckRouterStorage(int64_t retention, const uint32_t& waited, bool ex
         frame.m_requestId = service.m_request;
         frame.m_kind = NI_RESPONSE;
         frame.m_payloadSize = length;
+        const uint64_t beforeReply = static_cast<uint64_t>(std::time(nullptr));
         CHECK_TEST(router.receiveService(server, frame) == NI_OK && client.m_stream != 0);
+        const uint64_t afterReply = static_cast<uint64_t>(std::time(nullptr));
+        const uint64_t limit = retention == 0 ? 45 : 1800;
+        CHECK_TEST(client.m_expiresUtc >= (std::min)(info.expiresUtc, beforeReply + limit) &&
+            client.m_expiresUtc <= (std::min)(info.expiresUtc, afterReply + limit));
         CHECK_TEST(iteration < 3 || ids[i] == client.m_stream);
         ids[i] = client.m_stream;
     }
@@ -3496,7 +4341,9 @@ static int CheckRouterStorage(int64_t retention, const uint32_t& waited, bool ex
         return 0;
     }
     const unsigned order[] = {1, 0, 2};
-    const uint32_t nextDeadline[] = {30000, 60000, 60000};
+    CHECK_TEST(router.configureFileLeaseLimit(5) == NI_INVALID_STATE);
+    const uint32_t later = retention == 0 ? 45000 : 60000;
+    const uint32_t nextDeadline[] = {30000, later, later};
     NetExecution owner;
     NetExecutionScope scope(owner);
     for (unsigned i = 0; i < 3; ++i)
@@ -3663,7 +4510,18 @@ static int AuthenticatedLinkHandles(const NetInterfaceLinkOptions& clientOptions
 {
     NetInterfaceLinkHandle client = nullptr, node = nullptr;
     NetInterfaceLinkPools pools;
-    CHECK_TEST(NetInterface::linkCreate(&clientOptions, &client) >= 0 && client);
+    NetInterfaceLinkOptions options = clientOptions;
+    options.m_claimsSize = 1;
+    CHECK_TEST(NetInterface::linkCreate(&options, &client) == NI_INVALID_ARGUMENT && !client);
+    std::vector<uint8_t> supplied(4096);
+    for (size_t i = 0; i < supplied.size(); ++i) { supplied[i] = static_cast<uint8_t>(i); }
+    const std::vector<uint8_t> expected = supplied;
+    options.m_claims = supplied.data();
+    options.m_claimsSize = static_cast<uint32_t>(supplied.size()) + 1;
+    CHECK_TEST(NetInterface::linkCreate(&options, &client) == NI_INVALID_ARGUMENT && !client);
+    options.m_claimsSize = static_cast<uint32_t>(supplied.size());
+    CHECK_TEST(NetInterface::linkCreate(&options, &client) >= 0 && client);
+    std::fill(supplied.begin(), supplied.end(), 0);
     std::unique_ptr<NetInterfaceLinkOpaque, void (*)(NetInterfaceLinkHandle)> left(client, NetInterface::linkDestroy);
     CHECK_TEST(NetInterface::linkCreate(&nodeOptions, &node, &pools) >= 0 && node);
     std::unique_ptr<NetInterfaceLinkOpaque, void (*)(NetInterfaceLinkHandle)> right(node, NetInterface::linkDestroy);
@@ -3686,7 +4544,10 @@ static int AuthenticatedLinkHandles(const NetInterfaceLinkOptions& clientOptions
     uint32_t fields[6] = {};
     CHECK_TEST(NetInterface::linkPeerInfo(client, fields, &name, &certificate, &claims) == NI_READY &&
         fields[0] == NI_LINK_NODE && fields[1] == std::strlen(nodeOptions.m_name) && name &&
-        !std::memcmp(name, nodeOptions.m_name, fields[1]) && fields[2] && certificate);
+        !std::memcmp(name, nodeOptions.m_name, fields[1]) && fields[2] && certificate && !fields[3] && !claims);
+    CHECK_TEST(NetInterface::linkPeerInfo(node, fields, &name, &certificate, &claims) == NI_READY &&
+        fields[0] == NI_LINK_CLIENT && !fields[1] && !fields[2] && !certificate && fields[3] == expected.size() &&
+        claims && !std::memcmp(claims, expected.data(), expected.size()));
     const uint8_t body[] = {0, 203, 71};
     const uint32_t record[] = {NI_TUNNEL_BYTES, 9, 31, 7, sizeof(body)};
     const uint32_t control[] = {NI_EVENT, 0, 71, 3, 42, sizeof(body)};
@@ -3713,9 +4574,9 @@ static int LinkTimers(const char* path)
 {
     std::unique_ptr<FILE, int (*)(FILE*)> file(std::fopen(path, "rb"), std::fclose);
     CHECK_TEST(file.get() != nullptr);
-    enum { IdentityCapacity = 24577 };
-    uint8_t bytes[IdentityCapacity] = {};
-    const auto wipe = [](uint8_t* data) { NetInterface::wipe(data, IdentityCapacity); };
+    static const uint32_t kIdentityCapacity = 24577;
+    uint8_t bytes[kIdentityCapacity] = {};
+    const auto wipe = [](uint8_t* data) { NetInterface::wipe(data, kIdentityCapacity); };
     std::unique_ptr<uint8_t, decltype(wipe)> cleanup(bytes, wipe);
     const size_t n = std::fread(bytes, 1, sizeof(bytes), file.get());
     CHECK_TEST(!std::ferror(file.get()) && n >= 48 && n < sizeof(bytes) && !std::memcmp(bytes, "NGI3", 4));
@@ -3747,6 +4608,24 @@ static int LinkTimers(const char* path)
     options.m_tls.certificate = options.m_tls.privateKey + lengths[1];
     options.m_tls.certificateSize = lengths[2];
     options.m_tls.entropyContext = seeds + 1;
+#if defined(STATIC_LIB)
+    uint8_t challenge[] = {5, 0, 19, 87};
+    std::vector<uint8_t> proof(challenge, challenge + sizeof(challenge));
+    const uint8_t* cert = options.m_tls.certificate;
+    const uint8_t* key = options.m_tls.privateKey;
+    const std::string certPem(reinterpret_cast<const char*>(cert), lengths[2] - (cert[lengths[2] - 1] == 0));
+    std::string keyPem(reinterpret_cast<const char*>(key), lengths[1] - (key[lengths[1] - 1] == 0));
+    CHECK_TEST(!keyPem.empty());
+    const int32_t signedResult = NetInterfaceCertificate::signProof(keyPem, proof.data(),
+        static_cast<uint32_t>(proof.size()), HelloEntropy, seeds + 1, proof);
+    NetInterface::wipe(reinterpret_cast<uint8_t*>(&keyPem[0]), static_cast<uint32_t>(keyPem.size()));
+    CHECK_TEST(signedResult == NI_OK && !proof.empty() && proof.size() <= 80 &&
+        NetInterfaceCertificate::verifyProof(certPem, name, challenge, sizeof(challenge), proof.data(),
+        static_cast<uint32_t>(proof.size())) == NI_OK);
+    ++challenge[0];
+    CHECK_TEST(NetInterfaceCertificate::verifyProof(certPem, name, challenge, sizeof(challenge), proof.data(),
+        static_cast<uint32_t>(proof.size())) == NI_PROTOCOL_ERROR);
+#endif
     char unterminated[97];
     std::memset(unterminated, 'n', sizeof(unterminated));
     NetInterfaceLinkOptions invalidName = options;
@@ -3961,6 +4840,14 @@ static int CheckDispatchBudget(uint32_t commands, uint32_t bytes, size_t expecte
     std::unique_ptr<NetSenderDispatch, decltype(stop)> lifetime(&dispatch, stop);
     CHECK_TEST(dispatch.bindSubmission(nullptr) == NI_INVALID_ARGUMENT && dispatch.bindSubmission(&submission) == NI_OK &&
         &dispatch.submission() == &submission);
+    CHECK_TEST(dispatch.started(1, 7) == NI_INVALID_STATE);
+    uint64_t inactiveGeneration = UINT64_MAX;
+    bool inactiveReady = true;
+    dispatch.submission().state(inactiveGeneration, inactiveReady);
+    CHECK_TEST(inactiveGeneration == 0 && !inactiveReady);
+    dispatch.listener()->onSessionReady(1, 8, 1024);
+    dispatch.submission().state(inactiveGeneration, inactiveReady);
+    CHECK_TEST(dispatch.error() == NI_INVALID_STATE && inactiveGeneration == 0 && !inactiveReady);
     CHECK_TEST(dispatch.configurePollBudgets(commands, bytes) == NI_OK &&
         dispatch.configurePollBudgets(0, 1) == NI_INVALID_ARGUMENT &&
         dispatch.configurePollBudgets(1, 0) == NI_INVALID_ARGUMENT && dispatch.prepare(&events) == NI_OK &&
@@ -4078,10 +4965,31 @@ static int FileProtocolFacade()
     std::unique_ptr<NetInterfaceFileFlowOpaque, decltype(release)> owner(handle, release);
     CHECK_TEST(protocol.fileFlowRead(handle, fields) == NI_NEED_MORE && !fields[0] && !fields[1] && !fields[2]);
     CHECK_TEST(protocol.fileFlowPrime(handle, 1, 0, payload, 1) == NI_INVALID_ARGUMENT);
-    CHECK_TEST(protocol.fileFlowPrime(handle, 0, 0, payload, 1024) == NI_OK && protocol.fileFlowProgress(handle, 2, 0) == NI_OK);
+    CHECK_TEST(protocol.fileFlowPrime(handle, 0, 0, payload, 511) == NI_OK);
+    CHECK_TEST(protocol.fileFlowPrime(handle, 511, 0, nullptr, 1) == NI_INVALID_ARGUMENT);
+    CHECK_TEST(protocol.fileFlowPrime(handle, 0, 0, payload, 511) == NI_INVALID_ARGUMENT);
+    CHECK_TEST(protocol.fileFlowProgress(handle, 1, 0) == NI_NEED_MORE);
+    CHECK_TEST(protocol.fileFlowPrime(handle, 511, 0, payload + 511, 513) == NI_OK && protocol.fileFlowProgress(handle, 2, 0) == NI_OK);
     CHECK_TEST(protocol.fileFlowRead(handle, fields) == NI_READY && fields[0] == 1024 && fields[1] == 0 && fields[2] == 2);
     CHECK_TEST(protocol.fileFlowProduced(handle, 1024, 0, payload + 1024, 1) == NI_INVALID_ARGUMENT);
     CHECK_TEST(protocol.fileFlowProduced(handle, 1024, 0, payload + 1024, 2) == NI_OK);
+    const uint8_t* output = nullptr;
+    CHECK_TEST(protocol.fileFlowPeek(handle, fields, &output) == NI_READY && fields[0] == NI_DATA &&
+        protocol.fileFlowConsume(handle) == NI_OK);
+    uint32_t ackFields[] = {NI_DATA_ACK, 7, 17, 0, NI_FILE_DATA_TYPE, NET_INTERFACE_FILE_ACK_SIZE};
+    NetInterfaceFileAck ack = {};
+    ack.offset = sizeof(payload);
+    std::memcpy(ack.token, token, sizeof(token));
+    uint8_t ackWire[NET_INTERFACE_FILE_ACK_SIZE];
+    CHECK_TEST(NetInterfaceFile::encodeAck(ack, ackWire, sizeof(ackWire)) == NI_OK &&
+        protocol.fileFlowAccept(handle, ackFields, ackWire) == NI_OK);
+    // 独立 SHA-256 向量覆盖恢复前缀及最后两个字节。
+    const uint8_t expectedHash[32] = {
+        0x3a, 0x01, 0xbd, 0xde, 0x02, 0x24, 0xb3, 0x59, 0xbe, 0x85, 0x54, 0x52, 0x9c, 0x8f, 0xd9, 0xd5,
+        0x84, 0xcc, 0x83, 0x34, 0x9d, 0x29, 0xcb, 0xec, 0x75, 0x1d, 0x9d, 0xef, 0xae, 0x55, 0x43, 0xad};
+    CHECK_TEST(protocol.fileFlowPeek(handle, fields, &output) == NI_READY && output && fields[0] == NI_DATA &&
+        fields[5] == NET_INTERFACE_FILE_DATA_HEADER_SIZE && output[7] == 1 &&
+        std::memcmp(output + 56, expectedHash, sizeof(expectedHash)) == 0);
     CHECK_TEST(protocol.fileFlowCancel(handle, NI_CANCELLED) == NI_OK);
     int32_t status = 0;
     CHECK_TEST(protocol.fileFlowSnapshotWire(handle, wire, sizeof(wire), &status) == NI_OK && status == NI_CANCELLED);
@@ -4198,6 +5106,22 @@ static int DecoderHandleFields()
     return 0;
 }
 
+TestSubmissionObserver::TestSubmissionObserver() :
+m_count(0)
+{
+
+}
+
+void TestSubmissionObserver::notify()
+{
+    ++m_count;
+}
+
+TestAttachedSession::~TestAttachedSession()
+{
+    detachBindingsForDestruction();
+}
+
 TestReferenceNode::TestReferenceNode(unsigned& destroyed, bool reject) : m_destroyed(destroyed)
 {
     if (reject) { throw std::runtime_error("construction refused"); }
@@ -4299,6 +5223,19 @@ static int DirectoryHandles()
     uint8_t privateKey[NET_INTERFACE_IDENTITY_PEM_BYTES] = {}, request[NET_INTERFACE_IDENTITY_PEM_BYTES] = {};
     const uint8_t validName[] = {'n','o','d','e'};
     uint32_t keySize = 77, requestSize = 88, seed = 13;
+    // 每种输入只让一对区域相交，其余区域分别独立。
+    const unsigned keyOffsets[] = {2, 8, 4};
+    const unsigned requestOffsets[] = {8, 2, 6};
+    for (unsigned pair = 0; pair < 3; ++pair)
+    {
+        uint8_t storage[] = {'n','o','d','e',5,6,7,8,9,10,11,12};
+        const uint8_t expected[] = {'n','o','d','e',5,6,7,8,9,10,11,12};
+        uint8_t* key = storage + keyOffsets[pair];
+        uint8_t* csr = storage + requestOffsets[pair];
+        CHECK_TEST(NetInterface::certificateCreateRequest(storage, 4, HelloEntropy, &seed, key, 4, &keySize,
+            csr, 4, &requestSize) == NI_INVALID_ARGUMENT && keySize == 77 && requestSize == 88 &&
+            seed == 13 && !std::memcmp(storage, expected, sizeof(storage)));
+    }
     CHECK_TEST(NetInterface::certificateCreateRequest(validName, sizeof(validName), nullptr, &seed, privateKey, sizeof(privateKey),
         &keySize, request, sizeof(request), &requestSize) == NI_INVALID_ARGUMENT && !keySize && !requestSize);
     const int32_t result = NetInterface::certificateCreateRequest(validName, sizeof(validName), HelloEntropy, &seed,
@@ -4353,12 +5290,7 @@ static int RoutingBoundaries()
     const NetInterfaceFrame frame = {};
     CHECK_TEST(gateway.send(1, frame) == NI_INVALID_STATE && gateway.outputState(1) == NI_INVALID_STATE &&
         gateway.configureCompact(1, true) == NI_INVALID_STATE && gateway.configureCompression(1, nullptr, 0, false) == NI_INVALID_STATE);
-    struct AttachedSession : NetClientSession
-    {
-        using NetClientSession::hasBoundChannel;
-        using NetClientSession::boundGatewayFactory;
-        ~AttachedSession() { detachBindingsForDestruction(); }
-    } session;
+    TestAttachedSession session;
     CHECK_TEST(!session.hasBoundChannel() && !session.boundGatewayFactory() &&
         session.bindGateway(&host, nullptr) == NI_OK && session.boundGatewayFactory() == &host &&
         session.bindChannel(&gateway) == NI_OK && session.hasBoundChannel());
@@ -4372,30 +5304,31 @@ static int RoutingBoundaries()
 */
 static int SubmissionProducers()
 {
-    enum { Workers = 4, Requests = 64 };
+    const unsigned kWorkers = 4;
+    const unsigned kRequests = 64;
     NetSenderSubmission submission;
-    CHECK_TEST(submission.start(7, 11) == NI_OK && submission.ready(7, Workers * Requests, 1024) == NI_OK);
-    uint64_t ids[Workers * Requests] = {};
-    bool ok[Workers] = {};
+    CHECK_TEST(submission.start(7, 11) == NI_OK && submission.ready(7, kWorkers * kRequests, 1024) == NI_OK);
+    uint64_t ids[kWorkers * kRequests] = {};
+    bool ok[kWorkers] = {};
     const auto run = [&](unsigned worker) {
         try
         {
-            for (unsigned i = 0; i < Requests; ++i)
+            for (unsigned i = 0; i < kRequests; ++i)
             {
-                if (submission.begin(11, worker + 1, 60000, ids[worker * Requests + i]) != NI_OK) { return; }
+                if (submission.begin(11, worker + 1, 60000, ids[worker * kRequests + i]) != NI_OK) { return; }
             }
             ok[worker] = true;
         }
         catch (...) { ok[worker] = false; }
     };
 #if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
-    for (unsigned i = 0; i < Workers; ++i) { run(i); }
+    for (unsigned i = 0; i < kWorkers; ++i) { run(i); }
 #else
-    std::thread threads[Workers];
+    std::thread threads[kWorkers];
     std::atomic<bool> start(false);
     try
     {
-        for (unsigned i = 0; i < Workers; ++i)
+        for (unsigned i = 0; i < kWorkers; ++i)
         {
             threads[i] = std::thread([&, i]() {
                 while (!start.load(std::memory_order_acquire)) { std::this_thread::yield(); }
@@ -4405,11 +5338,11 @@ static int SubmissionProducers()
     }
     catch (...) { /* 已经启动的生产者仍须放行并回收。 */ }
     start.store(true, std::memory_order_release);
-    for (unsigned i = 0; i < Workers; ++i) { if (threads[i].joinable()) { threads[i].join(); } }
+    for (unsigned i = 0; i < kWorkers; ++i) { if (threads[i].joinable()) { threads[i].join(); } }
 #endif
-    for (unsigned i = 0; i < Workers; ++i) { CHECK_TEST(ok[i]); }
-    std::sort(ids, ids + Workers * Requests);
-    for (unsigned i = 0; i < Workers * Requests; ++i) { CHECK_TEST(ids[i] == i + 1); }
+    for (unsigned i = 0; i < kWorkers; ++i) { CHECK_TEST(ok[i]); }
+    std::sort(ids, ids + kWorkers * kRequests);
+    for (unsigned i = 0; i < kWorkers * kRequests; ++i) { CHECK_TEST(ids[i] == i + 1); }
     submission.close(NI_CANCELLED);
     uint64_t denied = 99;
     CHECK_TEST(submission.begin(11, 1, 1, denied) == NI_INVALID_STATE && !denied);
@@ -4485,6 +5418,16 @@ try
         {CaseSubmissionProducers, true, SubmissionProducers},
         {CaseObjectReferences, false, ObjectReferences}
     };
+    if (argc == 1 || (argc == 2 && std::strcmp(argv[1], "--all") == 0))
+    {
+        char instant[] = "--instant";
+        char stress[] = "--stress";
+        char* selected[] = {argv[0], instant, nullptr};
+        const int instantResult = LibraryCaseSelection::run(2, selected, cases);
+        selected[1] = stress;
+        const int stressResult = LibraryCaseSelection::run(2, selected, cases);
+        return instantResult != 0 ? instantResult : stressResult;
+    }
     return LibraryCaseSelection::run(argc, argv, cases);
 }
 catch (const std::exception& error)
