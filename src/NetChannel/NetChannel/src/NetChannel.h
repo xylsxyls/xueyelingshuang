@@ -49,7 +49,7 @@ public:
     static int32_t encode(const NetChannelRecord& record, uint8_t* output, uint32_t capacity, uint32_t& required);
 
 private:
-    /** 验证独立于正文内容的字段与记录类型约束
+    /** 检查记录类型与路由、正文长度的组合；调用处先检查协议统一长度上限
     @param [in] record 待验证视图，正文地址由调用入口另行检查
     @return 字段满足固定线格式时为true
     */

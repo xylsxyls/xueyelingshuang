@@ -11,7 +11,10 @@
 */
 static bool OverlapsCount(const uint32_t& count, const void* bytes, uint32_t size)
 {
-    if (!bytes || !size) { return false; }
+    if (!bytes || !size)
+    {
+        return false;
+    }
     const uintptr_t word = reinterpret_cast<uintptr_t>(&count);
     const uintptr_t start = reinterpret_cast<uintptr_t>(bytes);
     return word >= start ? word - start < size : start - word < sizeof(count);
@@ -35,10 +38,6 @@ NetChannel::~NetChannel()
 
 bool NetChannel::valid(const NetChannelRecord& record)
 {
-    if (record.m_size > NET_CHANNEL_PAYLOAD_LIMIT)
-    {
-        return false;
-    }
     switch (record.m_kind)
     {
     case NC_HELLO:
@@ -110,11 +109,10 @@ int32_t NetChannel::acceptHeader()
             capacity *= 2;
         }
         delete[] m_storage;
-        m_storage = nullptr;
-        m_capacity = 0;
         m_storage = new (std::nothrow) uint8_t[capacity];
         if (m_storage == nullptr)
         {
+            m_capacity = 0;
             return NC_NO_MEMORY;
         }
         m_capacity = capacity;
@@ -124,7 +122,10 @@ int32_t NetChannel::acceptHeader()
 
 int32_t NetChannel::feed(const uint8_t* data, uint32_t size, uint32_t& consumed)
 {
-    if (OverlapsCount(consumed, data, size)) { return NC_INVALID_ARGUMENT; }
+    if (OverlapsCount(consumed, data, size))
+    {
+        return NC_INVALID_ARGUMENT;
+    }
     consumed = 0;
     if (size != 0 && (data == nullptr || reinterpret_cast<uintptr_t>(data) > UINTPTR_MAX - size))
     {
@@ -211,7 +212,7 @@ int32_t NetChannel::encode(const NetChannelRecord& record, uint8_t* output, uint
     }
     const NetChannelRecord input = record;
     required = 0;
-    if (!valid(input) || (input.m_size != 0 && (input.m_data == nullptr ||
+    if (input.m_size > NET_CHANNEL_PAYLOAD_LIMIT || !valid(input) || (input.m_size != 0 && (input.m_data == nullptr ||
         reinterpret_cast<uintptr_t>(input.m_data) > UINTPTR_MAX - input.m_size)))
     {
         return NC_INVALID_ARGUMENT;
@@ -280,7 +281,9 @@ int32_t NetChannel::encode(const NetChannelRecord& record, uint8_t* output, uint
 //     while (offset < written)
 //     {
 //         uint32_t consumed = 0;
-//         const int32_t state = decoder.feed(wire + offset, written - offset, consumed);
+//         // 模拟下层每次最多交付八字节，头和正文可以跨多次输入。
+//         const uint32_t chunk = (std::min)(8U, written - offset);
+//         const int32_t state = decoder.feed(wire + offset, chunk, consumed);
 //         if (state < 0 || consumed == 0)
 //         {
 //             return 1;
@@ -289,7 +292,10 @@ int32_t NetChannel::encode(const NetChannelRecord& record, uint8_t* output, uint
 //         if (state == NC_READY)
 //         {
 //             NetChannelRecord incoming = {};
-//             if (decoder.peek(incoming) != NC_READY || receiver.received(incoming.m_size) != NC_OK)
+//             // 业务额度只登记交给本逻辑通道的 BYTES 正文。
+//             if (decoder.peek(incoming) != NC_READY || incoming.m_kind != NC_BYTES ||
+//                 incoming.m_channel != outgoing.m_channel || incoming.m_product != outgoing.m_product ||
+//                 receiver.received(incoming.m_size) != NC_OK)
 //             {
 //                 return 1;
 //             }
