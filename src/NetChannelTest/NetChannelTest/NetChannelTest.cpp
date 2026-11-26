@@ -6,6 +6,9 @@
 #include <algorithm>
 #include <stdexcept>
 #include <vector>
+#if defined(_WIN32) && defined(_MSC_VER) && defined(_DEBUG)
+#include <crtdbg.h>
+#endif
 
 #define CHECK_TEST(expr) do { if (!(expr)) { std::fprintf(stderr, "%s:%d: %s\n", __FILE__, __LINE__, #expr); return 1; } } while (false)
 
@@ -25,7 +28,7 @@ static int Wire()
     {
         CHECK_TEST(output[i] == 0xa5);
     }
-    CHECK_TEST(NetChannel::encode(input, output, sizeof(output), used) == NC_OK && !std::memcmp(kWire, output, sizeof(output)));
+    CHECK_TEST(NetChannel::encode(input, output, sizeof(output), used) == NC_OK && used == sizeof(output) && !std::memcmp(kWire, output, sizeof(output)));
     NetChannel decoder;
     CHECK_TEST(decoder.feed(kWire, sizeof(kWire), used) == NC_READY && used == sizeof(kWire));
     NetChannelRecord frame = {};
@@ -213,7 +216,10 @@ static int InvalidHeader()
         CHECK_TEST(decoder.finish() == NC_LIMIT_EXCEEDED);
     }
     // 同一类型的非法元数据与合法线格式仅相差一个字段。
-    const uint8_t changes[][3] = {{1, 23, 4}, {2, 11, 1}, {2, 19, 1}, {2, 23, 0}, {3, 23, 0}, {4, 23, 3}};
+    const uint8_t changes[][3] = {
+        {1, 11, 1}, {1, 19, 1}, {1, 23, 4}, {2, 11, 1}, {2, 19, 1}, {2, 23, 0},
+        {3, 19, 0}, {3, 23, 0}, {4, 19, 0}, {4, 23, 3}, {4, 23, 5}
+    };
     for (size_t index = 0; index < sizeof(changes) / sizeof(changes[0]); ++index)
     {
         uint8_t header[24];
@@ -225,6 +231,15 @@ static int InvalidHeader()
         NetChannel decoder;
         uint32_t used = 0;
         CHECK_TEST(decoder.feed(header, sizeof(header), used) == NC_PROTOCOL_ERROR && used == sizeof(header));
+        const uint8_t body[5] = {};
+        NetChannelRecord invalid = {header[5], header[11], header[19], body, header[23]};
+        uint8_t target[32];
+        std::memset(target, 0xa5, sizeof(target));
+        CHECK_TEST(NetChannel::encode(invalid, target, sizeof(target), used) == NC_INVALID_ARGUMENT && used == 0);
+        for (size_t byte = 0; byte < sizeof(target); ++byte)
+        {
+            CHECK_TEST(target[byte] == 0xa5);
+        }
     }
     return 0;
 }
@@ -266,13 +281,27 @@ static int EncodeBounds()
             CHECK_TEST(output[offset] == 0xa5);
         }
     }
-    std::memset(output, 0xa5, sizeof(output));
-    record.m_data = output + 30;
-    CHECK_TEST(NetChannel::encode(record, output, sizeof(output), required) == NC_OK);
-    record.m_data = output + wireSize;
-    CHECK_TEST(NetChannel::encode(record, output, sizeof(output), required) == NC_OK);
-    record.m_data = output + 4;
-    CHECK_TEST(NetChannel::encode(record, output, sizeof(output), required) == NC_INVALID_ARGUMENT && required == 0);
+    // 输出从偏移 8 开始。正文在两端可以恰好相邻，哪怕只有一个字节相交也必须整次拒绝。
+    const uint32_t start = 8;
+    const uint32_t bodyOffsets[] = {start - sizeof(payload), start - sizeof(payload) + 1, start + 4,
+        start + 24, start + wireSize - 1, start + wireSize, start + wireSize + 2};
+    for (size_t index = 0; index < sizeof(bodyOffsets) / sizeof(bodyOffsets[0]); ++index)
+    {
+        const uint32_t offset = bodyOffsets[index];
+        std::memset(output, 0xa5, sizeof(output));
+        std::memcpy(output + offset, payload, sizeof(payload));
+        uint8_t expected[sizeof(output)];
+        std::memcpy(expected, output, sizeof(expected));
+        record.m_data = output + offset;
+        const bool disjoint = index == 0 || index >= 5;
+        if (disjoint)
+        {
+            std::memcpy(expected + start, golden, wireSize);
+        }
+        const int32_t result = NetChannel::encode(record, output + start, sizeof(output) - start, required);
+        CHECK_TEST(result == (disjoint ? NC_OK : NC_INVALID_ARGUMENT) && required == (disjoint ? wireSize : 0));
+        CHECK_TEST(std::memcmp(output, expected, sizeof(output)) == 0);
+    }
     record.m_data = reinterpret_cast<const uint8_t*>(UINTPTR_MAX - 1);
     CHECK_TEST(NetChannel::encode(record, output, sizeof(output), required) == NC_INVALID_ARGUMENT && required == 0);
     record.m_data = payload;
@@ -334,6 +363,25 @@ static int StorageReuse()
     }
     CHECK_TEST(largeDecoder.peek(view) == NC_READY && view.m_size == large.size());
     CHECK_TEST(view.m_data && std::memcmp(view.m_data, large.data(), large.size()) == 0);
+    // 同一实例依次接收每档容量边界的前一字节、边界和后一字节，头部独立构造。
+    NetChannel growing;
+    uint8_t header[24];
+    std::memcpy(header, golden, sizeof(header));
+    for (uint32_t boundary = 256; boundary <= NET_CHANNEL_PAYLOAD_LIMIT; boundary *= 2)
+    {
+        const uint32_t last = (std::min)(boundary + 1, NET_CHANNEL_PAYLOAD_LIMIT);
+        for (uint32_t size = boundary - 1; size <= last; ++size)
+        {
+            header[22] = static_cast<uint8_t>(size >> 8);
+            header[23] = static_cast<uint8_t>(size);
+            CHECK_TEST(growing.feed(header, sizeof(header), consumed) == NC_NEED_MORE && consumed == sizeof(header));
+            CHECK_TEST(growing.feed(large.data(), size - 1, consumed) == NC_NEED_MORE && consumed == size - 1);
+            CHECK_TEST(growing.feed(large.data() + size - 1, 1, consumed) == NC_READY && consumed == 1);
+            CHECK_TEST(growing.peek(view) == NC_READY && view.m_size == size && view.m_data &&
+                std::memcmp(view.m_data, large.data(), size) == 0);
+            CHECK_TEST(growing.consume() == NC_OK && growing.finish() == NC_OK);
+        }
+    }
     // 同一解码器交替接收大、小、空记录；原字节全部校验，不能读出上条残留
     NetChannel reuse;
     for (uint32_t round = 0; round < 64; ++round)
@@ -410,6 +458,121 @@ static int WindowLimits()
     return 0;
 }
 
+/** 核对调用者传错参数后仍能使用原有的输入前缀和 READY 视图
+@return 检查通过返回0，失败返回1
+*/
+static int FeedRecovery()
+{
+    const uint32_t cuts[] = {11, 25};
+    for (size_t index = 0; index < sizeof(cuts) / sizeof(cuts[0]); ++index)
+    {
+        const uint32_t cut = cuts[index];
+        NetChannel decoder;
+        uint32_t used = 99;
+        CHECK_TEST(decoder.feed(golden, cut, used) == NC_NEED_MORE && used == cut);
+        CHECK_TEST(decoder.feed(nullptr, 1, used) == NC_INVALID_ARGUMENT && used == 0);
+        CHECK_TEST(decoder.feed(nullptr, 0, used) == NC_NEED_MORE && used == 0);
+        CHECK_TEST(decoder.consume() == NC_INVALID_STATE);
+        NetChannelRecord view = {NC_BYTES, 9, 8, payload, sizeof(payload)};
+        CHECK_TEST(decoder.peek(view) == NC_NEED_MORE && view.m_kind == 0 && view.m_product == 0 &&
+            view.m_channel == 0 && view.m_data == nullptr && view.m_size == 0);
+        CHECK_TEST(decoder.feed(golden + cut, wireSize - cut, used) == NC_READY && used == wireSize - cut);
+        CHECK_TEST(decoder.peek(view) == NC_READY && view.m_kind == NC_BYTES && view.m_product == 0x01020304U &&
+            view.m_channel == 0x1122334455667788ULL && view.m_data && view.m_size == sizeof(payload));
+        const uint8_t* borrowed = view.m_data;
+        CHECK_TEST(decoder.feed(nullptr, 1, used) == NC_INVALID_ARGUMENT && used == 0);
+        CHECK_TEST(decoder.feed(nullptr, 0, used) == NC_READY && used == 0 && decoder.finish() == NC_READY);
+        CHECK_TEST(decoder.peek(view) == NC_READY && view.m_data == borrowed &&
+            std::memcmp(borrowed, payload, sizeof(payload)) == 0);
+        CHECK_TEST(decoder.consume() == NC_OK && decoder.finish() == NC_OK);
+        CHECK_TEST(decoder.feed(hello, sizeof(hello), used) == NC_READY && used == sizeof(hello));
+        CHECK_TEST(decoder.peek(view) == NC_READY && view.m_kind == NC_HELLO && view.m_data == nullptr && view.m_size == 0);
+        CHECK_TEST(decoder.consume() == NC_OK && decoder.finish() == NC_OK);
+    }
+    return 0;
+}
+
+/** 核对本地拒绝、双向部分结算和另一实例在协议错误后的可用性
+@return 检查通过返回0，失败返回1
+*/
+static int CreditIsolation()
+{
+    NetChannelCredit client;
+    NetChannelCredit other;
+    CHECK_TEST(client.sent(UINT32_MAX) == NC_INVALID_ARGUMENT && client.consume(UINT32_MAX) == NC_INVALID_ARGUMENT);
+    CHECK_TEST(client.configure(81920) == NC_OK && client.configure(81921) == NC_INVALID_ARGUMENT);
+    CHECK_TEST(client.capacity() == 81920 && client.available() == 81920 && client.pending() == 0);
+    CHECK_TEST(client.sent(5) == NC_OK && client.received(7) == NC_OK);
+    CHECK_TEST(client.grant(2) == NC_OK && client.consume(3) == NC_OK);
+    CHECK_TEST(client.available() == 81917 && client.pending() == 4 && client.status() == NC_OK);
+    CHECK_TEST(client.consume(5) == NC_INVALID_ARGUMENT && client.pending() == 4 && client.available() == 81917);
+    CHECK_TEST(client.grant(3) == NC_OK && client.consume(4) == NC_OK);
+    CHECK_TEST(client.configure(65536) == NC_INVALID_STATE && client.capacity() == 81920);
+    CHECK_TEST(other.capacity() == 65536 && other.received(9) == NC_OK && other.sent(2) == NC_OK);
+    CHECK_TEST(client.grant(UINT32_MAX) == NC_PROTOCOL_ERROR && client.status() == NC_PROTOCOL_ERROR);
+    CHECK_TEST(client.configure(65536) == NC_INVALID_STATE && client.capacity() == 81920);
+    CHECK_TEST(client.available() == 0 && client.pending() == 0 && client.received(1) == NC_PROTOCOL_ERROR);
+    CHECK_TEST(other.status() == NC_OK && other.available() == 65534 && other.pending() == 9);
+    CHECK_TEST(other.consume(9) == NC_OK && other.grant(2) == NC_OK && other.available() == 65536 && other.pending() == 0);
+    return 0;
+}
+
+#if defined(_WIN32) && defined(_MSC_VER) && defined(_DEBUG)
+// 保存本进程原有的调试堆钩子，在同步 feed 调用后立即恢复。
+static _CRT_ALLOC_HOOK s_previousHook = nullptr;
+// 只拒绝一次目标大小的申请，并记录是否实际触发。
+static bool s_rejectedGrowth = false;
+
+/** 在测试进程内拒绝一次 512 字节正文扩容
+@param [in] operation 调试堆操作类型
+@param [in] block CRT 传入的原内存块
+@param [in] size 请求字节数
+@param [in] type 调试堆块种类
+@param [in] request CRT 分配序号
+@param [in] file 可空的源文件名
+@param [in] line 对应源文件行号
+@return 0 拒绝分配，其余操作沿用原钩子的决定
+*/
+static int __cdecl RejectGrowth(int operation, void* block, size_t size, int type, long request,
+    const unsigned char* file, int line)
+{
+    if (operation == _HOOK_ALLOC && type == _NORMAL_BLOCK && size == 512 && !s_rejectedGrowth)
+    {
+        s_rejectedGrowth = true;
+        return 0;
+    }
+    return s_previousHook ? s_previousHook(operation, block, size, type, request, file, line) : 1;
+}
+
+/** 让真实解码器扩容失败，然后确认持续错误和新实例的可用性
+@return 检查通过返回0，失败返回1
+*/
+static int AllocationFailure()
+{
+    uint8_t wire[24 + 257] = {};
+    std::memcpy(wire, golden, 24);
+    wire[22] = 1;
+    wire[23] = 1;
+    NetChannel decoder;
+    uint32_t used = 0;
+    CHECK_TEST(decoder.feed(golden, wireSize, used) == NC_READY && decoder.consume() == NC_OK);
+    s_rejectedGrowth = false;
+    s_previousHook = _CrtSetAllocHook(RejectGrowth);
+    const int32_t state = decoder.feed(wire, sizeof(wire), used);
+    _CrtSetAllocHook(s_previousHook);
+    CHECK_TEST(s_rejectedGrowth && state == NC_NO_MEMORY && used == 24);
+    NetChannelRecord view = {NC_BYTES, 7, 3, payload, sizeof(payload)};
+    CHECK_TEST(decoder.peek(view) == NC_NO_MEMORY && !view.m_kind && !view.m_product && !view.m_channel && !view.m_data && !view.m_size);
+    CHECK_TEST(decoder.feed(wire, sizeof(wire), used) == NC_NO_MEMORY && used == 0);
+    CHECK_TEST(decoder.finish() == NC_NO_MEMORY && decoder.consume() == NC_NO_MEMORY);
+    NetChannel fresh;
+    CHECK_TEST(fresh.feed(wire, sizeof(wire), used) == NC_READY && used == sizeof(wire));
+    CHECK_TEST(fresh.peek(view) == NC_READY && view.m_data && view.m_size == 257 && !std::memcmp(view.m_data, wire + 24, 257));
+    CHECK_TEST(fresh.consume() == NC_OK && fresh.finish() == NC_OK);
+    return 0;
+}
+#endif
+
 /** 度量已有输出缓冲时的固定大小记录编码，消费每次调用的结果
 @return 计时完成返回0
 */
@@ -427,6 +590,7 @@ static int Benchmark()
     CHECK_TEST(NetChannel::encode(input, output, sizeof(output), required) == NC_OK && required == sizeof(output));
     CHECK_TEST(!std::memcmp(output, header, sizeof(header)) && !std::memcmp(output + sizeof(header), payload, sizeof(payload)));
     auto volatile encode = &NetChannel::encode;
+    // count 为本批真实调用次数，返回值累加输出长度和抽样字节供计时器校验。
     LibraryBenchmark::run("channel.encode1024", [&](uint32_t count) -> uint64_t {
         uint64_t bytes = 0;
         for (uint32_t i = 0; i < count; ++i)
@@ -463,13 +627,20 @@ try
         {NetChannelCaseInvalidHeader, false, "坏头与超长正文", "消费固定头后保留错误", InvalidHeader},
         {NetChannelCaseEncodeBounds, false, "编码缓冲边界", "拒绝非法重叠和长度，失败保留输出", EncodeBounds},
         {NetChannelCaseStorageReuse, true, "大小正文交替复用", "最大、短小和空正文逐字节匹配", StorageReuse},
-        {NetChannelCaseWindowLimits, false, "信用窗口边界", "按协议接受全范围窗口并保持额度不变量", WindowLimits}
+        {NetChannelCaseWindowLimits, false, "信用窗口边界", "按协议接受全范围窗口并保持额度不变量", WindowLimits},
+        {NetChannelCaseFeedRecovery, false, "中途参数错误", "保留前缀和借用，记录边界可复用", FeedRecovery},
+        {NetChannelCaseCreditIsolation, false, "配置和通道隔离", "本地拒绝可恢复，独立实例继续记账", CreditIsolation},
+#if defined(_WIN32) && defined(_MSC_VER) && defined(_DEBUG)
+        {NetChannelCaseAllocationFailure, false, "正文扩容失败", "保留分配错误且只消费固定头", AllocationFailure},
+#endif
     };
     for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
     {
-        CHECK_TEST(cases[i].id == i + 1 && cases[i].m_run && cases[i].m_name[0] && cases[i].m_expected[0]);
+        CHECK_TEST(cases[i].id > 0 && (i == 0 || cases[i - 1].id < cases[i].id));
+        CHECK_TEST(cases[i].m_run && cases[i].m_name && cases[i].m_name[0] && cases[i].m_expected && cases[i].m_expected[0]);
     }
-    return LibraryCaseSelection::run(argc, argv, cases, [](const NetChannelTestCase& item) -> int
+    // item 为选中的用例，返回用例退出码，失败时补充场景及预期。
+    const auto run = [](const NetChannelTestCase& item) -> int
     {
         const int result = item.m_run();
         if (result != 0)
@@ -477,7 +648,18 @@ try
             std::fprintf(stderr, "%s: %s\n", item.m_name, item.m_expected);
         }
         return result;
-    });
+    };
+    if (argc == 1 || (argc == 2 && std::strcmp(argv[1], "--all") == 0))
+    {
+        char instant[] = "--instant";
+        char stress[] = "--stress";
+        char* group[] = {argv[0], instant, nullptr};
+        const int instantResult = LibraryCaseSelection::run(2, group, cases, run);
+        group[1] = stress;
+        const int stressResult = LibraryCaseSelection::run(2, group, cases, run);
+        return instantResult != 0 ? instantResult : stressResult;
+    }
+    return LibraryCaseSelection::run(argc, argv, cases, run);
 }
 catch (const std::exception& error)
 {
