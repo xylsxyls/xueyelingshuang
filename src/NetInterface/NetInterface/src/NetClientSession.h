@@ -118,24 +118,25 @@ public:
     @param [in] handshake 客户端平台/能力/设备声明，不等于账号授权
     @param [in] listener 借用至shutdown，包含后续恢复代次
     @param [in] factory 可空用已绑定工厂；非空只借用本工厂并跳过默认发现
-    @return OK接纳，结果由poll交付；无工厂NOT_SUPPORTED，无强随机明确失败
+    @return OK接纳，结果由poll交付；无工厂NOT_SUPPORTED，发现器启动分配异常为NO_MEMORY、其他异常为INVALID_STATE，无强随机明确失败
     */
     int32_t connectService(uint32_t product, const char* address, uint32_t port, const NetInterfaceTlsOptions& tls,
         const NetInterfaceHandshakeOptions& handshake, NetSessionListener* listener, NetGatewayTransportFactory* factory = nullptr);
 
-    /** 绑定旧直连/IPC协议通道，只借用，不开启服务发现和恢复
+    /** 绑定显式直连或 IPC 协议通道，只借用，不开启服务发现和恢复
     @param [in] channel 可空解除；非空借用至shutdown/更换
     @return OK或INVALID_STATE；活跃/回调期间拒绝
     */
     int32_t bindChannel(NetClientChannel* channel);
 
-    /** 在显式通道上接纳旧协议连接，不分配默认网络
+    /** 在已绑定的直连或 IPC 通道上发起连接，不分配默认网络
     @param [in] address 由通道解释的非空地址
     @param [in] port 1至65535
     @param [in] tls 客户端TLS与强随机
     @param [in] handshake 客户端能力和设备
     @param [in] listener 借用至shutdown
-    @return OK接纳或负数；未绑定通道NOT_SUPPORTED
+    @return NI_OK 已接纳，未绑定通道返回 NI_NOT_SUPPORTED。通道配置返回的错误原样传回。
+    配置回调抛出内存分配异常返回 NI_NO_MEMORY，其他异常返回 NI_INVALID_STATE，可修正后重试。
     */
     int32_t connect(const char* address, uint32_t port, const NetInterfaceTlsOptions& tls,
         const NetInterfaceHandshakeOptions& handshake, NetSessionListener* listener);
@@ -176,7 +177,7 @@ public:
     uint64_t generation() const;
 
     /** 是否采用逻辑服务语义
-    @return true为服务模式，主动关闭不切换成旧直连
+    @return true为服务模式，主动关闭后仍可查询本代模式
     */
     bool serviceMode() const;
 
@@ -191,7 +192,7 @@ public:
 
     /** 由唯一执行者接收提交层原号，保留原始总期限
     @param [in] requestId 本地已接纳原号
-    @param [in] product 固定服务产品或旧通用连接产品
+    @param [in] product 固定服务产品或显式通道的请求产品
     @param [in] type 业务命令
     @param [in] startedMs 原始单调开始
     @param [in] timeoutMs 原总期限
@@ -220,7 +221,7 @@ public:
     int32_t sendData(const NetInterfaceFrame& frame);
 
 protected:
-    /** 供进程内组合判断是否已经由调用者提供旧协议通道
+    /** 供进程内组合判断是否已经由调用者提供直连或 IPC 通道
     @return 是否存在借用通道，不包含内部服务TLS通道
     */
     bool hasBoundChannel() const;

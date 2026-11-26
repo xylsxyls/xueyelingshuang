@@ -98,18 +98,30 @@ public:
     */
     int32_t bindChannel(NetClientChannel* channel);
 
-    /** 异步发起新连接；失败重连保留对象但不复用代次
+    /** 异步发起新连接；通道接纳后分配新代次，同步拒绝时可沿用绑定重试
     @param [in] address 数值IPv4/IPv6
     @param [in] port 1至65535
     @param [in] tls 客户端配置，根/域名及强随机回调必需，调用时复制
     @param [in] handshake 客户端能力和持久device；nonce由本方法生成，传入值忽略
     @param [in] listener 借用至本代次关闭，不可空
-    @return OK启动，其余负数未启动；未绑定通道NOT_SUPPORTED；READY仅由回调报告
+    @return OK启动，其余负数未启动；未绑定通道NOT_SUPPORTED；通道抛出分配异常为 NI_NO_MEMORY，其他异常为 NI_INVALID_STATE。READY仅由回调报告
     */
     int32_t connect(const char* address, uint32_t port, const NetInterfaceTlsOptions& tls, const NetInterfaceHandshakeOptions& handshake,
                     NetSessionListener* listener);
 
-    /** 非阻塞驱动；同一对象仅一个执行者，不重入
+    /** 验证直连参数和 HELLO 后，将可选池配置交给已绑定的通道，再启动连接
+    @param [in] address 由已绑定的通道解释的非空地址
+    @param [in] port 1至65535
+    @param [in] tls 客户端 TLS 配置，随机回调及上下文在连接期间有效
+    @param [in] handshake 客户端能力和持久设备标识，nonce 在本次调用生成
+    @param [in] listener 借用至本代关闭，不可空
+    @param [in] pools 独立的连接池参数，借用至返回，为空时保留通道自身配置
+    @return NI_OK 已接纳。配置失败保留原代次并返回通道错误。配置回调抛出分配异常返回 NI_NO_MEMORY，其他异常返回 NI_INVALID_STATE
+    */
+    int32_t connectWithPools(const char* address, uint32_t port, const NetInterfaceTlsOptions& tls,
+        const NetInterfaceHandshakeOptions& handshake, NetSessionListener* listener, const NetConnectionPoolConfig* pools);
+
+    /** 非阻塞驱动；运输耗尽且未报告关闭时用本地原因或 NI_TRUNCATED 结算。推进抛异常时停止通道并结算在途请求。单执行者调用，不重入
     @return 仍有正在连接/关闭的资源
     */
     bool poll();
@@ -153,12 +165,13 @@ public:
     */
     int32_t sendData(const NetInterfaceFrame& frame);
 
-    /** 请求关闭，由poll回报终态；回调中可调用
-    @param [in] reason 默认0
+    /** 请求关闭，回调中可调用。首次请求后停止握手和业务交付，重复请求沿用首次原因
+    运输 close 抛异常时，下一次 poll 或 shutdown 在运输回调返回后停止通道并结算已接纳的请求
+    @param [in] reason 默认0；运输未报告终态时由 poll 或 shutdown 用此原因结算
     */
     void close(int32_t reason = 0);
 
-    /** 非回调调用者立即收敛；回调内仅发close，销毁/再次connect由外层负责
+    /** 非回调调用者立即收敛并解除通道绑定；回调中仅请求关闭，执行者随后完成收敛
     */
     void shutdown();
 
@@ -167,8 +180,8 @@ public:
     */
     bool ready() const;
 
-    /** 最近发起连接的代次
-    @return 未连接为0，之后递增
+    /** 最近获得通道接纳的连接代次
+    @return 首次接纳前为0，每次接纳后递增；同步错误保留原代次
     */
     uint64_t generation() const;
 
@@ -179,6 +192,10 @@ public:
     int32_t outputState() const;
 
 private:
+    /** 停止本次尝试的通道一次；允许其同步报告关闭，隔离宿主异常和生命周期重入
+    */
+    void stopChannel();
+
     /** 隔离就绪回调并还原嵌套回调标志，异常只关闭本代
     @param [in] requests 实际协商请求上限
     @param [in] chunk 实际协商块长

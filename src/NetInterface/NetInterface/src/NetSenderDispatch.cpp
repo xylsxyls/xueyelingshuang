@@ -71,6 +71,10 @@ int32_t NetSenderDispatch::prepare(NetSessionListener* listener)
 
 int32_t NetSenderDispatch::started(uint64_t generation, uint32_t product)
 {
+    if (m_listener == nullptr)
+    {
+        return NI_INVALID_STATE;
+    }
     return m_submission->start(generation, product);
 }
 
@@ -130,6 +134,11 @@ void NetSenderDispatch::report(const NetSenderSubmissionCommand& metadata, uint3
 
 void NetSenderDispatch::onSessionReady(uint64_t generation, uint32_t requests, uint32_t chunk)
 {
+    if (m_listener == nullptr)
+    {
+        fail(NI_INVALID_STATE);
+        return;
+    }
     const int32_t ready = m_submission->ready(generation, requests, chunk);
     if (ready != NI_OK)
     {
@@ -184,6 +193,11 @@ bool NetSenderDispatch::onSessionFrame(uint64_t generation, const NetInterfaceFr
     m_submission->state(current, ready);
     if (!ready || generation != current)
     {
+        return true;
+    }
+    if (m_listener == nullptr)
+    {
+        fail(NI_INVALID_STATE);
         return true;
     }
     ++m_callbackDepth;
@@ -512,6 +526,7 @@ int32_t NetSenderDispatch::waitSynchronous(uint64_t ticket)
     (void)ticket;
     return NI_NOT_SUPPORTED;
 #else
+    const uint32_t interval = m_submission->producerWait().m_syncPollSleepMs;
     for (;;)
     {
         const int32_t result = m_submission->synchronousResult(ticket, true);
@@ -520,9 +535,10 @@ int32_t NetSenderDispatch::waitSynchronous(uint64_t ticket)
             return result;
         }
         poll();
-        if (m_submission->synchronousResult(ticket, false) == NI_READY)
+        uint32_t remaining = 0;
+        if (m_submission->synchronousResult(ticket, false, &remaining) == NI_READY && remaining != 0)
         {
-            try { std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
+            try { std::this_thread::sleep_for(std::chrono::milliseconds(remaining < interval ? remaining : interval)); }
             catch (...) { fail(NI_INVALID_STATE); }
         }
     }

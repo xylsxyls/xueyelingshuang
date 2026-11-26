@@ -216,6 +216,7 @@
   </ItemGroup>
 <ItemGroup></ItemGroup>  <ItemGroup>
     <ClInclude Include="..\src\NetInterfaceFileGuard.h" />
+    <ClInclude Include="..\src\NetInterfaceFileGuard.inl" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>

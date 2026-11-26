@@ -63,6 +63,8 @@ int32_t NetInterfaceFileFlow::prime(uint64_t offset, const uint8_t* bytes, uint3
         return NI_INVALID_ARGUMENT;
     }
     const int32_t result = NetInterface::hashUpdate(m_state->m_hash, bytes, size);
+    // 输入参数错误发生在摘要更新前，宿主可从原偏移重试。
+    if (result == NI_INVALID_ARGUMENT) { return result; }
     if (result != NI_OK)
     {
         return fail(result);

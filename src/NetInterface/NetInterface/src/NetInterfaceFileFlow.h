@@ -30,7 +30,7 @@ public:
     @param [in] offset 本次前缀位置，必须是当前未补齐位置；拒绝旧I/O结果
     @param [in] bytes 宿主读取的文件前缀，仅调用时借用
     @param [in] size 最大16MiB，不超过恢复偏移剩余长度
-    @return OK或负数；前缀未补齐不得传输
+    @return OK 或负数。参数错误时保留已有摘要，可从当前偏移重试。补齐前不得传输
     */
     int32_t prime(uint64_t offset, const uint8_t* bytes, uint32_t size);
 

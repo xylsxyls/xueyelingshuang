@@ -153,6 +153,7 @@ m_payloadRetentionBytes(pools.m_payloadRetentionBytes),
 m_expiredRequestBudget(pools.m_expiredRequestBudget),
 m_closingEndpointBudget(pools.m_closingEndpointBudget),
 m_expiredFileBudget(pools.m_expiredFileBudget),
+m_fileLeaseLimitSeconds(1800),
 m_heartbeat(pools.m_heartbeat),
 m_polling(false),
 m_dispatching(false),
@@ -176,6 +177,11 @@ m_stopped(false)
     if (m_status == NI_OK) { m_status = m_filePool.status(); }
     if (m_status == NI_OK) { m_status = m_requests.status(); }
     if (m_status == NI_OK) { m_status = m_requests.addEndpoint(1, true, 0, 128); }
+}
+
+bool NetEndpointRouterState::canConfigure() const
+{
+    return m_lastEndpoint == 1 && !m_listening && !m_stopped && !m_stopRequested && !m_polling && !m_dispatching;
 }
 
 void NetEndpointRouterState::enqueueClosing(NetEndpointPeer* peer)

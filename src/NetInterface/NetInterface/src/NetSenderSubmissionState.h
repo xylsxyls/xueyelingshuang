@@ -345,12 +345,12 @@ public:
     @param [in,out] counter 单调高水位
     @return 新非零编号，耗尽为0
     */
-    static uint64_t nextId(std::atomic<uint64_t>& counter);
+    uint64_t nextId(std::atomic<uint64_t>& counter) const;
 
     /** 竞争时周期性让出时间片；不持有资源等待，也不把竞争作为提交失败
     @param [in,out] attempts 本次CAS循环的失败次数
     */
-    static void pauseContention(uint32_t& attempts);
+    void pauseContention(uint32_t& attempts) const;
 
     /** 转换身份索引结果，容量不足与系统分配失败分别报告
     @param [in] result 索引操作结果，已提交时优先返回OK
@@ -449,6 +449,8 @@ public:
     NetSenderSubmissionGate m_gate;
     // 是否已经完成通知配置。
     bool m_gateConfigured;
+    // 本实例的生产者让步及回收等待参数，首次启动后只读。
+    NetSenderSubmissionWait m_producerWait;
     // 当前连接代次。
     std::atomic<uint64_t> m_generation;
     // 固定产品，0允许旧通用连接选择产品。

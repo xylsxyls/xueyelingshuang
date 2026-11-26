@@ -56,6 +56,12 @@ public:
     */
     int32_t configurePools(const NetEndpointPools& pools);
 
+    /** 首次登记端点或监听之前，设置本实例接受文件授权的最长时间
+    @param [in] seconds 1至1800秒，默认1800，服务授权的更短期限始终优先
+    @return NI_OK、NI_INVALID_ARGUMENT 或 NI_INVALID_STATE；失败保留当前设置
+    */
+    int32_t configureFileLeaseLimit(uint32_t seconds);
+
     /** 直接监听时设置本机提供的应用握手参数，首次监听或登记端点前调用
     @param [in] capabilities 能力位，位0必选，位1与位2可选，默认7
     @param [in] requests 非零请求能力声明，默认32，由双方取较小值
@@ -74,13 +80,13 @@ public:
     /** 启动TLS监听，不接受明文降级
     @param [in] address 显式数值地址
     @param [in] port 0测试随机端口，或1至65535
-    @param [in] tls 服务器证书/私钥及宿主强随机回调
+    @param [in] tls 服务端角色、证书/私钥及宿主强随机回调。握手时限为0或100至60000毫秒
     @param [in] peers 非零启动预留提示，实际端点及连接容量由相应存储池决定
-    @return OK或负数错误
+    @return OK已接纳；启动失败会停止部分启动的运输，分配异常为 NI_NO_MEMORY，其他宿主异常为 NI_INVALID_STATE
     */
     int32_t listen(const char* address, uint32_t port, const NetInterfaceTlsOptions& tls, uint32_t peers = 64);
 
-    /** 有界驱动网络/握手/超时/关闭回收，不创建线程
+    /** 有界驱动握手、超时和关闭回收；仅在 listen 成功后轮询物理运输
     @return 仍运行为true
     */
     bool poll();
@@ -179,10 +185,9 @@ private:
     */
     virtual void onClosed(uint64_t peer, int32_t reason, int32_t detail);
 
-    /** 在公共poll保护内推进一轮，不重入
-    @return 是否仍运行
+    /** 在公共 poll 的运行状态和重入保护内推进一轮
     */
-    bool advance();
+    void advance();
 
     /** 隔离物理关闭异常，端点回收由本地关闭队列负责
     @param [in] peer 物理代次

@@ -1,6 +1,7 @@
 ﻿#include "NetSenderSubmissionState.h"
 #include "NetInterfaceMacro.h"
 #include "NetInterface.h"
+#include "NetInterfaceFileGuard.h"
 #include "NetSenderSubmission.h"
 #include <chrono>
 #include <cstring>
@@ -63,7 +64,7 @@ m_state(state), m_accepted(false)
             m_accepted = true;
             break;
         }
-        NetSenderSubmissionState::pauseContention(attempts);
+        state.pauseContention(attempts);
     }
 }
 
@@ -134,33 +135,6 @@ void NetSenderSubmissionEntry::clear()
     m_payload.reset();
 }
 
-/** 复制已验证的短正文，定长复制覆盖实际范围，不越过调用者的缓冲
-@param [out] output 至少size字节的独占存储
-@param [in] input 至少size字节的输入，size为0时允许为空
-@param [in] size 正文长度，不超过64字节
-*/
-static inline void CopySubmissionBody(uint8_t* output, const uint8_t* input, uint32_t size)
-{
-    if (size >= 8)
-    {
-        std::memcpy(output, input, size);
-    }
-    else if (size >= 4)
-    {
-        std::memcpy(output, input, 4);
-        std::memcpy(output + size - 4, input + size - 4, 4);
-    }
-    else if (size >= 2)
-    {
-        std::memcpy(output, input, 2);
-        std::memcpy(output + size - 2, input + size - 2, 2);
-    }
-    else if (size != 0)
-    {
-        *output = *input;
-    }
-}
-
 NetSenderSubmissionItem::NetSenderSubmissionItem() :
 m_inlineFrame(), m_inlineGeneration(0), m_borrowedInline(false), m_frame(nullptr)
 {
@@ -186,7 +160,7 @@ m_input(other.m_input), m_frame(other.m_frame)
     m_inlineFrame.m_payload = nullptr;
     if (m_inlineFrame.m_payloadSize != 0)
     {
-        CopySubmissionBody(m_inlineBody, other.m_borrowedInline ? other.m_inlineFrame.m_payload : other.m_inlineBody,
+        NetInterfaceFileGuard::copyFrameBody(m_inlineBody, other.m_borrowedInline ? other.m_inlineFrame.m_payload : other.m_inlineBody,
             m_inlineFrame.m_payloadSize);
     }
 }
@@ -207,7 +181,7 @@ NetSenderSubmissionItem& NetSenderSubmissionItem::operator=(const NetSenderSubmi
         m_borrowedInline = false;
         if (m_inlineFrame.m_payloadSize != 0)
         {
-            CopySubmissionBody(m_inlineBody, other.m_borrowedInline ? other.m_inlineFrame.m_payload : other.m_inlineBody,
+            NetInterfaceFileGuard::copyFrameBody(m_inlineBody, other.m_borrowedInline ? other.m_inlineFrame.m_payload : other.m_inlineBody,
                 m_inlineFrame.m_payloadSize);
         }
     }
@@ -376,26 +350,21 @@ void NetSenderSubmissionState::quiesce()
             try
             {
                 m_gate.m_pause(m_gate.m_context);
+                continue;
             }
             catch (...)
             {
                 requestClose(NI_INVALID_STATE);
-#if !defined(__EMSCRIPTEN__)
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-#endif
             }
         }
 #if !defined(__EMSCRIPTEN__)
-        else
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(m_producerWait.m_quiesceSleepMs));
 #endif
         // 单线程Wasm不会有并行提交者；多线程提供方必须配置pause，不占用JS事件循环等待。
     }
 }
 
-uint64_t NetSenderSubmissionState::nextId(std::atomic<uint64_t>& counter)
+uint64_t NetSenderSubmissionState::nextId(std::atomic<uint64_t>& counter) const
 {
     uint64_t value = counter.load();
     uint32_t attempts = 0;
@@ -410,9 +379,9 @@ uint64_t NetSenderSubmissionState::nextId(std::atomic<uint64_t>& counter)
     return 0;
 }
 
-void NetSenderSubmissionState::pauseContention(uint32_t& attempts)
+void NetSenderSubmissionState::pauseContention(uint32_t& attempts) const
 {
-    if (++attempts == 64)
+    if (++attempts == m_producerWait.m_yieldInterval)
     {
         attempts = 0;
 #if !defined(__EMSCRIPTEN__)

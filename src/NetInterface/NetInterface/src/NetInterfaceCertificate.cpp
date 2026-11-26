@@ -1,5 +1,6 @@
 ﻿#include "NetInterfaceCertificate.h"
 #include "NetInterfaceMacro.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include "NetInterface.h"
 #include "CEncodeDecode/CEncodeDecodeAPI.h"
 #include <cstring>
@@ -114,14 +115,16 @@ int32_t NetInterfaceCertificate::createRequest(const std::string& name, NetInter
 int32_t NetInterfaceCertificate::signProof(const std::string& privateKey, const uint8_t* data, uint32_t size,
     NetInterfaceEntropyFunction entropy, void* context, std::vector<uint8_t>& signature)
 {
-    signature.clear();
-    if (privateKey.empty() || privateKey.size() > 4096 || privateKey.find('\0') != std::string::npos || entropy == nullptr ||
+    if (privateKey.empty() || privateKey.size() > 4096 || CStringManager::Find(privateKey, '\0') != std::string::npos || entropy == nullptr ||
         data == nullptr || size == 0 || size > 16384)
     {
+        signature.clear();
         return NI_INVALID_ARGUMENT;
     }
     unsigned char digest[32] = {};
     int32_t result = CertificateProofDigest(data, size, digest);
+    // 挑战可以借用输出向量的元素，读取完毕后才能使这些元素失效。
+    signature.clear();
     if (result == CENCODE_OK)
     {
         uint8_t bytes[80] = {};
@@ -135,7 +138,6 @@ int32_t NetInterfaceCertificate::signProof(const std::string& privateKey, const 
             }
             catch (...)
             {
-                signature.clear();
                 result = CENCODE_MEMORY;
             }
         }
@@ -151,7 +153,7 @@ int32_t NetInterfaceCertificate::verifyProof(const std::string& certificate, con
     {
         return NI_INVALID_ARGUMENT;
     }
-    if (!validName(name) || certificate.empty() || certificate.size() > 16384 || certificate.find('\0') != std::string::npos)
+    if (!validName(name) || certificate.empty() || certificate.size() > 16384 || CStringManager::Find(certificate, '\0') != std::string::npos)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -169,7 +171,7 @@ int32_t NetInterfaceCertificate::verifyProof(const std::string& certificate, con
 
 int32_t NetInterfaceCertificate::verify(const std::string& certificate, const std::string& name)
 {
-    if (!validName(name) || certificate.empty() || certificate.size() > 16384 || certificate.find('\0') != std::string::npos)
+    if (!validName(name) || certificate.empty() || certificate.size() > 16384 || CStringManager::Find(certificate, '\0') != std::string::npos)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -181,7 +183,7 @@ int32_t NetInterfaceCertificate::verify(const std::string& certificate, const st
 int32_t NetInterfaceCertificate::verifyPair(const std::string& certificate, const std::string& privateKey,
     const std::string& name, NetInterfaceEntropyFunction entropy, void* context)
 {
-    if (entropy == nullptr || privateKey.empty() || privateKey.size() > 4096 || privateKey.find('\0') != std::string::npos)
+    if (entropy == nullptr || privateKey.empty() || privateKey.size() > 4096 || CStringManager::Find(privateKey, '\0') != std::string::npos)
     {
         return NI_INVALID_ARGUMENT;
     }

@@ -159,13 +159,18 @@ int32_t NetInterfaceCompact::encode(const NetInterfaceFrame& frame, uint8_t* out
     }
     uint8_t header[25];
     uint32_t length = 0;
-    const bool delta = previous != nullptr && previous->m_kind == NI_DATA && input.m_kind == NI_DATA &&
+    uint64_t increment = 0;
+    if (previous != nullptr && previous->m_kind == NI_DATA && input.m_kind == NI_DATA &&
         previous->m_productId == input.m_productId && previous->m_messageType == input.m_messageType &&
-        input.m_requestId > previous->m_requestId && input.m_requestId - previous->m_requestId <= UINT32_MAX;
-    if (delta && input.m_payloadSize < 128 && input.m_requestId - previous->m_requestId < 128)
+        input.m_requestId > previous->m_requestId)
+    {
+        // 输出允许复用元数据存储，写入首字节前保存编号差值。
+        increment = input.m_requestId - previous->m_requestId;
+    }
+    if (increment != 0 && increment < 128 && input.m_payloadSize < 128)
     {
         // 常用增量头直接落在最终输出，避免中转头及两次变长整数调用；校验先于任何写入。
-        const bool next = input.m_payloadSize < 64 && input.m_requestId - previous->m_requestId == 1;
+        const bool next = input.m_payloadSize < 64 && increment == 1;
         const uint32_t prefix = next ? 1 : 3;
         required = prefix + input.m_payloadSize;
         if (capacity < required)
@@ -187,7 +192,7 @@ int32_t NetInterfaceCompact::encode(const NetInterfaceFrame& frame, uint8_t* out
         {
             output[0] = 0xe4;
             output[1] = static_cast<uint8_t>(input.m_payloadSize);
-            output[2] = static_cast<uint8_t>(input.m_requestId - previous->m_requestId);
+            output[2] = static_cast<uint8_t>(increment);
         }
         if (input.m_payloadSize != 0)
         {
@@ -195,11 +200,11 @@ int32_t NetInterfaceCompact::encode(const NetInterfaceFrame& frame, uint8_t* out
         }
         return NI_OK;
     }
-    if (delta)
+    if (increment != 0 && increment <= UINT32_MAX)
     {
         header[length++] = 0xe4;
         length += write(header + length, input.m_payloadSize);
-        length += write(header + length, static_cast<uint32_t>(input.m_requestId - previous->m_requestId));
+        length += write(header + length, static_cast<uint32_t>(increment));
     }
     else
     {

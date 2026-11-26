@@ -1,5 +1,6 @@
 ﻿#include "NetInterfaceDirectory.h"
 #include "NetInterfaceMacro.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include "NetInterfaceGatewayTypes.h"
 #include "NetInterface.h"
 #include "ProtoMessageManager/ProtoMessageManagerAPI.h"
@@ -233,7 +234,7 @@ bool NetInterfaceDirectory::text(const ProtoMessage& message, int32_t field, std
             return false;
         }
         std::string parsed = static_cast<std::string>(item);
-        if (parsed.empty() || parsed.size() > maximum || parsed.find('\0') != std::string::npos ||
+        if (parsed.empty() || parsed.size() > maximum || CStringManager::Find(parsed, '\0') != std::string::npos ||
             parsed.find_first_not_of("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:") != std::string::npos)
         {
             return false;

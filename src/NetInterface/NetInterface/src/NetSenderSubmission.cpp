@@ -3,6 +3,7 @@
 #include "NetInterfaceMacro.h"
 #include "NetSenderSubmissionState.h"
 #include "NetInterface.h"
+#include "NetInterfaceFileGuard.h"
 #include <chrono>
 #include <cstring>
 #include <new>
@@ -35,6 +36,19 @@ int32_t NetSenderSubmission::configureGate(const NetSenderSubmissionGate& gate)
     return NI_OK;
 }
 
+int32_t NetSenderSubmission::configureProducerWait(const NetSenderSubmissionWait& wait)
+{
+    if (m_state->m_generation != 0) { return NI_INVALID_STATE; }
+    if (wait.m_yieldInterval == 0 || wait.m_quiesceSleepMs == 0 || wait.m_syncPollSleepMs == 0) { return NI_INVALID_ARGUMENT; }
+    m_state->m_producerWait = wait;
+    return NI_OK;
+}
+
+NetSenderSubmissionWait NetSenderSubmission::producerWait() const
+{
+    return m_state->m_producerWait;
+}
+
 int32_t NetSenderSubmission::configurePools(const NetSenderSubmissionPools& pools)
 {
     return configurePools(pools, NetSenderSubmissionOptions());
@@ -61,6 +75,7 @@ int32_t NetSenderSubmission::configurePools(const NetSenderSubmissionPools& pool
         delete replacement;
         return result;
     }
+    replacement->m_producerWait = m_state->m_producerWait;
     replacement->m_gate = m_state->m_gate;
     replacement->m_gateConfigured = m_state->m_gateConfigured;
     delete m_state;
@@ -175,7 +190,7 @@ int32_t NetSenderSubmission::begin(uint32_t product, uint32_t type, uint32_t tim
         return NI_INVALID_ARGUMENT;
     }
     m_state->m_requestCount.fetch_add(1);
-    const uint64_t key = NetSenderSubmissionState::nextId(m_state->m_nextId);
+    const uint64_t key = m_state->nextId(m_state->m_nextId);
     NetObjectReference<NetSenderSubmissionFront> front;
     NetObjectReference<NetSenderSubmissionInput> input;
     bool indexed = false;
@@ -238,6 +253,10 @@ int32_t NetSenderSubmission::send(uint64_t id, const uint8_t* bytes, uint32_t si
 
 int32_t NetSenderSubmission::sendSynchronous(uint64_t id, const uint8_t* bytes, uint32_t size, uint64_t& ticket)
 {
+    if (NetInterfaceFileGuard::overlap(&ticket, sizeof(ticket), bytes, size))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     return submitRequest(id, bytes, size, true, ticket);
 }
 
@@ -328,6 +347,10 @@ int32_t NetSenderSubmission::data(const NetInterfaceFrame& frame)
 
 int32_t NetSenderSubmission::dataSynchronous(const NetInterfaceFrame& frame, uint64_t& ticket)
 {
+    if (NetInterfaceFileGuard::overlapsFrame(frame, &ticket, sizeof(ticket)))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     return submitData(frame, true, ticket);
 }
 
@@ -969,6 +992,12 @@ void NetSenderSubmission::advanceSynchronous(int32_t outputState, uint64_t curre
 
 int32_t NetSenderSubmission::synchronousResult(uint64_t ticket, bool consume)
 {
+    return synchronousResult(ticket, consume, nullptr);
+}
+
+int32_t NetSenderSubmission::synchronousResult(uint64_t ticket, bool consume, uint32_t* remainingMs)
+{
+    if (remainingMs != nullptr) { *remainingMs = 0; }
     NetObjectReference<NetSenderSubmissionReceipt> receipt;
     if (!m_state->m_tickets.get(ticket, receipt))
     {
@@ -991,6 +1020,15 @@ int32_t NetSenderSubmission::synchronousResult(uint64_t ticket, bool consume)
         return NI_NOT_FOUND;
     }
     const int32_t result = receipt->m_result.load(std::memory_order_acquire);
+    if (remainingMs != nullptr && result == NI_READY)
+    {
+        const uint64_t current = now();
+        if (current < receipt->m_deadline)
+        {
+            const uint64_t left = receipt->m_deadline - current;
+            *remainingMs = left > UINT32_MAX ? UINT32_MAX : static_cast<uint32_t>(left);
+        }
+    }
     if (consume && result != NI_READY)
     {
         if (receipt->m_consumed.exchange(true))

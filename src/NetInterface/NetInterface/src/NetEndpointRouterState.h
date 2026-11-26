@@ -59,6 +59,11 @@ public:
     */
     NetEndpointRouterState(NetEndpointServiceSink* services, NetEndpointServiceSink* clients, const NetEndpointPools& pools);
 
+    /** 判断执行者是否可以修改启动配置
+    @return 尚未登记外部端点、监听或请求停止，且未在宿主调用中时为真
+    */
+    bool canConfigure() const;
+
     /** 获取进程内单调毫秒
     @return steady_clock毫秒
     */
@@ -153,6 +158,8 @@ public:
     const uint32_t m_closingEndpointBudget;
     // 单轮poll最多回收的到期文件流数，默认64，至少1
     const uint32_t m_expiredFileBudget;
+    // 路由器允许的单次文件授权持续秒数，最多1800，服务可要求更早到期。
+    uint32_t m_fileLeaseLimitSeconds;
     // 此路由器独立的业务心跳配置
     NetHeartbeatConfig m_heartbeat;
     // 只在单一dispatch期间保存转发明文，不借给后续轮次。

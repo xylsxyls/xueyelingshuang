@@ -58,12 +58,12 @@ public:
     @param [in] options server必须0，强随机回调及期限必需；不采用外部根/域名
     @param [in] listener 借用监听者
     @param [out] peer 本次业务代次，成功非零
-    @return NI_OK启动或错误；就绪须等待业务TLS回调
+    @return NI_OK启动或错误；运输抛出分配异常为 NI_NO_MEMORY，其他异常为 NI_INVALID_STATE。就绪须等待业务TLS回调
     */
     virtual int32_t connect(const char* address, uint32_t port, const NetInterfaceTlsOptions& options,
         NetTransportListener* listener, uint64_t& peer);
 
-    /** 有界推进认证、额度和数据，捕获适配器异常；禁止重入
+    /** 有界推进认证、额度和数据，禁止重入。运输静默结束报告 NI_TRUNCATED，已收到的关闭原因优先。分配异常报告 NI_NO_MEMORY，其他异常报告 NI_INVALID_STATE
     @return 是否尚有本次通道资源
     */
     virtual bool poll();

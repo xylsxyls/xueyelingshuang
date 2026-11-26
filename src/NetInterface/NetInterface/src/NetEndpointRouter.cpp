@@ -34,7 +34,7 @@ NetEndpointRouter::~NetEndpointRouter()
 
 int32_t NetEndpointRouter::configurePools(const NetEndpointPools& pools)
 {
-    if (m_state->m_lastEndpoint != 1 || m_state->m_listening || m_state->m_stopped || m_state->m_polling || m_state->m_dispatching)
+    if (!m_state->canConfigure())
     {
         return NI_INVALID_STATE;
     }
@@ -42,6 +42,7 @@ int32_t NetEndpointRouter::configurePools(const NetEndpointPools& pools)
     {
         std::unique_ptr<NetEndpointRouterState> prepared(new NetEndpointRouterState(m_state->m_services, m_state->m_clients, pools));
         if (prepared->m_status != NI_OK) { return prepared->m_status; }
+        prepared->m_fileLeaseLimitSeconds = m_state->m_fileLeaseLimitSeconds;
         prepared->m_handshake = m_state->m_handshake;
         prepared->m_transport = m_state->m_transport;
         delete m_state;
@@ -54,10 +55,20 @@ int32_t NetEndpointRouter::configurePools(const NetEndpointPools& pools)
     }
 }
 
+int32_t NetEndpointRouter::configureFileLeaseLimit(uint32_t seconds)
+{
+    if (!m_state->canConfigure())
+    {
+        return NI_INVALID_STATE;
+    }
+    if (seconds == 0 || seconds > 1800) { return NI_INVALID_ARGUMENT; }
+    m_state->m_fileLeaseLimitSeconds = seconds;
+    return NI_OK;
+}
+
 int32_t NetEndpointRouter::configureClientHandshake(uint32_t capabilities, uint32_t requests, uint32_t chunk, uint32_t timeoutMs)
 {
-    if (m_state->m_clients != nullptr || m_state->m_listening || m_state->m_lastEndpoint != 1 || m_state->m_stopped ||
-        m_state->m_polling || m_state->m_dispatching)
+    if (m_state->m_clients != nullptr || !m_state->canConfigure())
     {
         return NI_INVALID_STATE;
     }
@@ -74,7 +85,7 @@ int32_t NetEndpointRouter::configureClientHandshake(uint32_t capabilities, uint3
 
 int32_t NetEndpointRouter::bindTransport(NetServerChannel* transport)
 {
-    if ((!m_state->m_stopped && (m_state->m_listening || !m_state->m_endpoints.empty())) ||
+    if (m_state->m_stopRequested || m_state->m_polling || m_state->m_dispatching || (!m_state->m_stopped && (m_state->m_listening || !m_state->m_endpoints.empty())) ||
         (transport != nullptr && (m_state->m_stopped || m_state->m_clients != nullptr)))
     {
         return NI_INVALID_STATE;
@@ -85,7 +96,8 @@ int32_t NetEndpointRouter::bindTransport(NetServerChannel* transport)
 
 int32_t NetEndpointRouter::listen(const char* address, uint32_t port, const NetInterfaceTlsOptions& tls, uint32_t peers)
 {
-    if (m_state->m_clients != nullptr || m_state->m_stopped || m_state->m_stopRequested || m_state->m_listening)
+    if (m_state->m_clients != nullptr || m_state->m_stopped || m_state->m_stopRequested || m_state->m_listening ||
+        m_state->m_polling || m_state->m_dispatching)
     {
         return NI_INVALID_STATE;
     }
@@ -97,14 +109,21 @@ int32_t NetEndpointRouter::listen(const char* address, uint32_t port, const NetI
     {
         return NI_NOT_SUPPORTED;
     }
-    if (address == nullptr || port > 65535 || peers == 0 || tls.entropy == nullptr)
+    if (address == nullptr || address[0] == 0 || port > 65535 || peers == 0 || tls.server != 1 || tls.entropy == nullptr ||
+        tls.effectiveHandshakeTimeout() < 100 || tls.handshakeTimeoutMs > 60000)
     {
         return NI_INVALID_ARGUMENT;
     }
     int32_t result = NI_INVALID_STATE;
+    // 在适配器接纳及失败回滚期间保留同一运输和配置，宿主仍可请求稍后关闭。
+    m_state->m_polling = true;
     try
     {
         result = m_state->m_transport->listen(address, port, tls, this, peers);
+    }
+    catch (const std::bad_alloc&)
+    {
+        result = NI_NO_MEMORY;
     }
     catch (...)
     {
@@ -128,6 +147,7 @@ int32_t NetEndpointRouter::listen(const char* address, uint32_t port, const NetI
             m_state->m_status = NI_INVALID_STATE;
         }
     }
+    m_state->m_polling = false;
     return result;
 }
 
@@ -159,11 +179,6 @@ uint32_t NetEndpointRouter::pendingCount() const
 
 int32_t NetEndpointRouter::addService(uint32_t product, bool internal, uint32_t limit, uint64_t& endpoint)
 {
-    endpoint = 0;
-    if (internal != (product == 0))
-    {
-        return NI_INVALID_ARGUMENT;
-    }
     return addPort(product, internal, false, limit, endpoint);
 }
 
@@ -182,7 +197,7 @@ int32_t NetEndpointRouter::addPort(uint32_t product, bool internal, bool generic
     {
         return NI_INVALID_ARGUMENT;
     }
-    const uint64_t id = ++m_state->m_lastEndpoint;
+    const uint64_t id = m_state->m_lastEndpoint + 1;
     try
     {
         NetObjectReference<NetEndpointPeer> value;
@@ -218,6 +233,7 @@ int32_t NetEndpointRouter::addPort(uint32_t product, bool internal, bool generic
     {
         m_state->m_generic = id;
     }
+    m_state->m_lastEndpoint = id;
     endpoint = id;
     return NI_OK;
 }
@@ -236,7 +252,7 @@ int32_t NetEndpointRouter::addClient(const NetEndpointOrigin& input, const uint3
     {
         return NI_INVALID_ARGUMENT;
     }
-    const uint64_t id = ++m_state->m_lastEndpoint;
+    const uint64_t id = m_state->m_lastEndpoint + 1;
     try
     {
         NetObjectReference<NetEndpointPeer> value;
@@ -263,6 +279,7 @@ int32_t NetEndpointRouter::addClient(const NetEndpointOrigin& input, const uint3
         m_state->m_origins.erase(context.m_endpoint);
         return added;
     }
+    m_state->m_lastEndpoint = id;
     endpoint = id;
     return NI_OK;
 }
@@ -769,25 +786,17 @@ bool NetEndpointRouter::poll()
     return !m_state->m_stopped;
 }
 
-bool NetEndpointRouter::advance()
+void NetEndpointRouter::advance()
 {
-    if (m_state->m_stopped)
+    if (m_state->m_listening && !m_state->m_transport->poll())
     {
-        return false;
-    }
-    if (m_state->m_transport != nullptr)
-    {
-        const bool active = m_state->m_transport->poll();
-        if (m_state->m_listening && !active)
-        {
-            // 已建立的监听不应自行静止；传播终态，防止业务继续向失效宿主提交。
-            m_state->m_status = NI_INVALID_STATE;
-            m_state->m_stopRequested = true;
-        }
+        // 已建立的监听自行停止时，终止依赖该运输的业务。
+        m_state->m_status = NI_INVALID_STATE;
+        m_state->m_stopRequested = true;
     }
     if (m_state->m_stopRequested)
     {
-        return false;
+        return;
     }
     collectFiles(0);
     const uint64_t now = NetEndpointRouterState::now();
@@ -893,7 +902,6 @@ bool NetEndpointRouter::advance()
         }
     }
     if (m_state->m_closingFirst != nullptr) { NetExecution::progress(); }
-    return true;
 }
 
 void NetEndpointRouter::shutdown()
@@ -997,7 +1005,8 @@ int32_t NetEndpointRouter::bindFileReply(const NetInterfaceRequest& request, con
         {
             return NI_TIMEOUT;
         }
-        const uint64_t validSeconds = (std::min<uint64_t>)(1800, info.expiresUtc - static_cast<uint64_t>(utc));
+        const uint64_t validSeconds = (std::min<uint64_t>)(m_state->m_fileLeaseLimitSeconds, info.expiresUtc - static_cast<uint64_t>(utc));
+        info.expiresUtc = static_cast<uint64_t>(utc) + validSeconds;
         const uint64_t deadline = NetEndpointRouterState::now() + validSeconds * 1000;
         const auto key = std::make_pair(request.m_target, info.stream);
         const auto existing = m_state->m_serviceStreams.find(key);

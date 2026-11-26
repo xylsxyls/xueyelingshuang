@@ -1,6 +1,7 @@
 ﻿#include "NetExecution.h"
 #include "NetInterfaceMacro.h"
 #include "NetInterfaceHandshake.h"
+#include "NetInterfaceFileGuard.h"
 #include <algorithm>
 #include <cstring>
 
@@ -213,11 +214,14 @@ int32_t NetInterfaceHandshake::consumeOutput()
 
 int32_t NetInterfaceHandshake::peerInfo(uint32_t fields[4], uint8_t peerNonce[16], uint8_t clientDevice[16]) const
 {
-    if (fields == nullptr || peerNonce == nullptr || clientDevice == nullptr)
+    if (fields == nullptr || peerNonce == nullptr || clientDevice == nullptr ||
+        NetInterfaceFileGuard::overlap(fields, sizeof(m_agreed), peerNonce, sizeof(m_peerNonce)) ||
+        NetInterfaceFileGuard::overlap(fields, sizeof(m_agreed), clientDevice, sizeof(m_clientDevice)) ||
+        NetInterfaceFileGuard::overlap(peerNonce, sizeof(m_peerNonce), clientDevice, sizeof(m_clientDevice)))
     {
         return NI_INVALID_ARGUMENT;
     }
-    std::memset(fields, 0, 4 * sizeof(uint32_t));
+    std::memset(fields, 0, sizeof(m_agreed));
     std::memset(peerNonce, 0, 16);
     std::memset(clientDevice, 0, 16);
     if (m_status == NI_READY)

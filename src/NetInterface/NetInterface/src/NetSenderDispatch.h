@@ -36,10 +36,10 @@ public:
     */
     int32_t prepare(NetSessionListener* listener);
 
-    /** owner记录协议已接纳连接，不制造就绪
+    /** owner 在 prepare 成功且协议接纳连接后记录代次
     @param [in] generation 本次非零代次
     @param [in] product 固定服务产品或0
-    @return OK或错误
+    @return NI_OK 或错误。尚未登记业务监听者时返回 NI_INVALID_STATE，保持原代次
     */
     int32_t started(uint64_t generation, uint32_t product);
 

@@ -162,11 +162,11 @@ static NetInterfaceTunnelRecord LinkApiRecord(const uint32_t* fields, const uint
 /** 通过同一解析器创建不透明候选，不从缓存或地址授予身份
 @param [in] data 输入
 @param [in] size 有界字节数
-@param [in] utcMs 0为发现表，否则为缓存当前UTC
+@param [in] cacheUtcMs 解析发现表时为空，解析缓存时指向当前UTC毫秒，缓存要求时间非零
 @param [out] handle 失败清空
 @return NI_OK或错误
 */
-static int32_t DirectoryCreate(const uint8_t* data, uint32_t size, uint64_t utcMs, NetInterfaceDirectoryHandle* handle)
+static int32_t DirectoryCreate(const uint8_t* data, uint32_t size, const uint64_t* cacheUtcMs, NetInterfaceDirectoryHandle* handle)
 {
     if (handle == nullptr || NetInterfaceFileGuard::overlap(data, size, handle, sizeof(*handle)))
     {
@@ -176,8 +176,8 @@ static int32_t DirectoryCreate(const uint8_t* data, uint32_t size, uint64_t utcM
     try
     {
         std::vector<NetInterfaceDirectoryPoint> points;
-        const int32_t result = utcMs == 0 ? NetInterfaceDirectory::parse(data, size, points) :
-            NetInterfaceDirectory::parseCache(data, size, utcMs, points);
+        const int32_t result = cacheUtcMs == nullptr ? NetInterfaceDirectory::parse(data, size, points) :
+            NetInterfaceDirectory::parseCache(data, size, *cacheUtcMs, points);
         if (result != NI_OK) { return result; }
         *handle = reinterpret_cast<NetInterfaceDirectoryHandle>(new std::vector<NetInterfaceDirectoryPoint>(std::move(points)));
         return NI_OK;
@@ -289,33 +289,6 @@ int32_t NetInterface::prepareHeader()
     return NI_NEED_MORE;
 }
 
-/** 复制已验证的独立正文，短片段使用定长访问，避免通用memcpy的逐帧调度
-@param [out] output 至少size字节的解码器自有存储
-@param [in] input 至少size字节的输入；不访问该区间外的字节
-@param [in] size 实际正文长度，0时不访问输入和输出
-*/
-static inline void CopyFrameBody(uint8_t* output, const uint8_t* input, uint32_t size)
-{
-    if (size >= 8)
-    {
-        std::memcpy(output, input, size);
-    }
-    else if (size >= 4)
-    {
-        std::memcpy(output, input, 4);
-        std::memcpy(output + size - 4, input + size - 4, 4);
-    }
-    else if (size >= 2)
-    {
-        std::memcpy(output, input, 2);
-        std::memcpy(output + size - 2, input + size - 2, 2);
-    }
-    else if (size != 0)
-    {
-        *output = *input;
-    }
-}
-
 int32_t NetInterface::feed(const uint8_t* data, uint32_t size, uint32_t& consumed)
 {
     if (!NetInterfaceFileGuard::prepareCount(data, size, &consumed) || (size != 0 && data == nullptr))
@@ -352,7 +325,7 @@ int32_t NetInterface::feed(const uint8_t* data, uint32_t size, uint32_t& consume
                 {
                     return fail(NI_LIMIT_EXCEEDED);
                 }
-                CopyFrameBody(m_body, data + 1, length);
+                NetInterfaceFileGuard::copyFrameBody(m_body, data + 1, length);
                 m_wireSize = m_bodySize = length;
                 m_headerReady = true;
                 m_compressed = false;
@@ -704,6 +677,55 @@ const uint8_t* NetInterface::trustAuthority(uint32_t* size)
     return reinterpret_cast<const uint8_t*>(g_networkAuthority);
 }
 
+/** 检查输出槽是否覆盖输入名称的有效字节，包括存在的终止符。
+@param [in] output 输出槽地址，可空
+@param [in] size 输出槽的字节数
+@param [in] name 调用方借用的名称，可空
+@param [in] capacity 协议允许读取的最大字节数，含终止符
+@return 两段存储有交集时为 true
+*/
+static bool OutputOverlapsName(const void* output, size_t size, const char* name, size_t capacity)
+{
+    if (!NetInterfaceFileGuard::overlap(output, size, name, capacity)) { return false; }
+    const size_t length = CStringManager::boundedLength(name, capacity);
+    return NetInterfaceFileGuard::overlap(output, size, name, length < capacity ? length + 1 : length);
+}
+
+/** 检查 TLS 工厂的两个输出槽和本次创建借用的输入范围；任何重叠都在写输出之前报告。
+@param [in] handle 句柄输出槽的地址
+@param [in] detail 可空的底层诊断输出槽
+@param [in] options 原始 TLS 配置；服务工厂准备内置配置前可空
+@param [in] pools 连接池配置，可空
+@param [in] limits 密文预算，可空
+@return 输出相互覆盖或覆盖本次调用的配置时为 true
+*/
+template<class Handle>
+static bool TlsFactoryOutputsOverlap(Handle* handle, int32_t* detail, const NetInterfaceTlsOptions* options,
+    const NetConnectionPoolConfig* pools, const CEncodeDecodeTlsQueueLimits* limits)
+{
+    const auto overlapsOutput = [&](const void* data, size_t size) -> bool
+    {
+        return NetInterfaceFileGuard::overlap(handle, sizeof(*handle), data, size) ||
+            NetInterfaceFileGuard::overlap(detail, sizeof(*detail), data, size);
+    };
+    if (NetInterfaceFileGuard::overlap(handle, sizeof(*handle), detail, sizeof(*detail)) ||
+        overlapsOutput(options, sizeof(*options)) || overlapsOutput(pools, sizeof(*pools)) ||
+        overlapsOutput(limits, sizeof(*limits)))
+    {
+        return true;
+    }
+    if (!options) { return false; }
+    if (options->server == 1)
+    {
+        return overlapsOutput(options->certificate, options->certificateSize) ||
+            overlapsOutput(options->privateKey, options->privateKeySize);
+    }
+    // DNS 名最多 253 字节，另有一个结束符。
+    return options->server == 0 && (overlapsOutput(options->authority, options->authoritySize) ||
+        OutputOverlapsName(handle, sizeof(*handle), options->hostname, 254) ||
+        OutputOverlapsName(detail, sizeof(*detail), options->hostname, 254));
+}
+
 int32_t NetInterface::tlsCreateClient(const uint8_t* authority, uint32_t authoritySize, const char* hostname,
                                     NetInterfaceEntropyFunction entropy, void* context, uint32_t timeoutMs, NetInterfaceTlsHandle* handle,
                                     int32_t* detail)
@@ -734,6 +756,7 @@ int32_t NetInterface::tlsCreate(const NetInterfaceTlsOptions* options, NetInterf
 int32_t NetInterface::tlsCreate(const NetInterfaceTlsOptions* options, NetInterfaceTlsHandle* handle, int32_t* detail,
     const CEncodeDecodeTlsQueueLimits& limits)
 {
+    if (TlsFactoryOutputsOverlap(handle, detail, options, nullptr, &limits)) { return NET_INTERFACE_TLS_ARGUMENT; }
     if (detail != nullptr)
     {
         *detail = 0;
@@ -969,7 +992,10 @@ int32_t NetInterface::requestsCreate(uint32_t capacity, NetInterfaceRequestsHand
 
 int32_t NetInterface::requestsCreate(const NetRequestTablePools& pools, NetInterfaceRequestsHandle* handle)
 {
-    if (handle == nullptr) { return NI_INVALID_ARGUMENT; }
+    if (handle == nullptr || NetInterfaceFileGuard::overlap(handle, sizeof(*handle), &pools, sizeof(pools)))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     *handle = nullptr;
     return CreateRequestTable(pools, handle);
 }
@@ -1327,7 +1353,20 @@ int32_t NetInterface::linkCreate(const NetInterfaceLinkOptions* options, NetInte
 int32_t NetInterface::linkCreate(const NetInterfaceLinkOptions* options, NetInterfaceLinkHandle* handle,
     const NetInterfaceLinkPools* pools)
 {
-    if (handle == nullptr) { return NI_INVALID_ARGUMENT; }
+    if (!handle || NetInterfaceFileGuard::overlap(handle, sizeof(*handle), options, sizeof(*options)) ||
+        NetInterfaceFileGuard::overlap(handle, sizeof(*handle), pools, sizeof(*pools)))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
+    if (options && (NetInterfaceFileGuard::overlap(handle, sizeof(*handle), options->m_claims, options->m_claimsSize) ||
+        OutputOverlapsName(handle, sizeof(*handle), options->m_name, 97) ||
+        (options->m_role != NI_LINK_CLIENT &&
+            NetInterfaceFileGuard::overlap(handle, sizeof(*handle), options->m_tls.privateKey, options->m_tls.privateKeySize)) ||
+        (options->m_role == NI_LINK_NODE &&
+            NetInterfaceFileGuard::overlap(handle, sizeof(*handle), options->m_tls.certificate, options->m_tls.certificateSize))))
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     *handle = nullptr;
     if (options == nullptr) { return NI_INVALID_ARGUMENT; }
     try
@@ -1485,7 +1524,9 @@ int32_t NetInterface::linkStatus(NetInterfaceLinkHandle handle)
 int32_t NetInterface::handshakeCreate(const uint32_t* options, uint32_t optionCount, const uint8_t* identities, uint32_t identitySize,
                                     uint32_t timeLow, uint32_t timeHigh, NetInterfaceHandshakeHandle* handle)
 {
-    if (handle == nullptr)
+    const size_t optionBytes = (std::min)(optionCount, uint32_t(6)) * sizeof(*options);
+    if (handle == nullptr || NetInterfaceFileGuard::overlap(handle, sizeof(*handle), options, optionBytes) ||
+        NetInterfaceFileGuard::overlap(handle, sizeof(*handle), identities, identitySize))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -1578,23 +1619,22 @@ int32_t NetInterface::handshakeConsumeOutput(NetInterfaceHandshakeHandle handle)
 
 int32_t NetInterface::handshakePeerInfo(NetInterfaceHandshakeHandle handle, uint32_t* fields, uint8_t* identities)
 {
-    if (NetInterfaceFileGuard::overlap(fields, 4 * sizeof(*fields), identities, 32))
+    if (handle != nullptr && fields != nullptr && identities != nullptr)
     {
-        return NI_INVALID_ARGUMENT;
+        return reinterpret_cast<NetInterfaceHandshake*>(handle)->peerInfo(fields, identities, identities + 16);
     }
-    if (fields != nullptr)
+    if (!NetInterfaceFileGuard::overlap(fields, 4 * sizeof(*fields), identities, 32))
     {
-        std::memset(fields, 0, 4 * sizeof(uint32_t));
+        if (fields != nullptr)
+        {
+            std::memset(fields, 0, 4 * sizeof(*fields));
+        }
+        if (identities != nullptr)
+        {
+            std::memset(identities, 0, 32);
+        }
     }
-    if (identities != nullptr)
-    {
-        std::memset(identities, 0, 32);
-    }
-    if (handle == nullptr || fields == nullptr || identities == nullptr)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    return reinterpret_cast<NetInterfaceHandshake*>(handle)->peerInfo(fields, identities, identities + 16);
+    return NI_INVALID_ARGUMENT;
 }
 
 int32_t NetInterface::fileParseInfo(const uint8_t* bytes, uint32_t size, NetInterfaceFileInfo* info)
@@ -2006,19 +2046,14 @@ int32_t NetInterface::directoryCreateNodes(const NetInterfaceDirectoryNodeData* 
 
 int32_t NetInterface::directoryCreate(const uint8_t* data, uint32_t size, NetInterfaceDirectoryHandle* handle)
 {
-    return DirectoryCreate(data, size, 0, handle);
+    return DirectoryCreate(data, size, nullptr, handle);
 }
 
 int32_t NetInterface::directoryCreateCache(const uint8_t* data, uint32_t size, uint32_t utcLow, uint32_t utcHigh,
     NetInterfaceDirectoryHandle* handle)
 {
-    if (handle == nullptr || NetInterfaceFileGuard::overlap(data, size, handle, sizeof(*handle)))
-    {
-        return NI_INVALID_ARGUMENT;
-    }
-    *handle = nullptr;
     const uint64_t utc = (static_cast<uint64_t>(utcHigh) << 32) | utcLow;
-    return utc == 0 ? NI_INVALID_ARGUMENT : DirectoryCreate(data, size, utc, handle);
+    return DirectoryCreate(data, size, &utc, handle);
 }
 
 void NetInterface::directoryDestroy(NetInterfaceDirectoryHandle handle)
@@ -2290,6 +2325,7 @@ int32_t NetInterface::connectionCreate(const NetInterfaceTlsOptions* options, Ne
 int32_t NetInterface::connectionCreate(const NetInterfaceTlsOptions* options, NetInterfaceConnectionHandle* handle, int32_t* detail,
     const NetConnectionPoolConfig* pools, const CEncodeDecodeTlsQueueLimits* limits)
 {
+    if (TlsFactoryOutputsOverlap(handle, detail, options, pools, limits)) { return NI_INVALID_ARGUMENT; }
     if (detail != nullptr)
     {
         *detail = 0;
@@ -2341,12 +2377,13 @@ int32_t NetInterface::connectionCreateServiceClient(uint32_t product, NetInterfa
     uint32_t timeoutMs, NetInterfaceConnectionHandle* handle, int32_t* detail,
     const NetConnectionPoolConfig* pools, const CEncodeDecodeTlsQueueLimits* limits)
 {
-    if (handle == nullptr) { return NI_INVALID_ARGUMENT; }
+    if (handle == nullptr || TlsFactoryOutputsOverlap(handle, detail, nullptr, pools, limits)) { return NI_INVALID_ARGUMENT; }
     *handle = nullptr;
     if (detail != nullptr) { *detail = 0; }
     try
     {
-        const std::string hostname = "service." + std::to_string(product);
+        const std::string hostname = CStringManager::Format("service.%u", static_cast<unsigned int>(product));
+        if (hostname.empty()) { return NI_NO_MEMORY; }
         NetInterfaceTlsOptions options = {};
         options.authority = NetInterface::trustAuthority(&options.authoritySize);
         options.hostname = hostname.c_str();
@@ -2600,7 +2637,10 @@ int32_t NetInterface::certificateCreateRequest(const uint8_t* name, uint32_t nam
         NetInterfaceFileGuard::overlap(keySize, sizeof(uint32_t), name, nameSize) ||
         NetInterfaceFileGuard::overlap(requestSize, sizeof(uint32_t), privateKey, keyCapacity) ||
         NetInterfaceFileGuard::overlap(requestSize, sizeof(uint32_t), request, requestCapacity) ||
-        NetInterfaceFileGuard::overlap(requestSize, sizeof(uint32_t), name, nameSize))
+        NetInterfaceFileGuard::overlap(requestSize, sizeof(uint32_t), name, nameSize) ||
+        NetInterfaceFileGuard::overlap(privateKey, keyCapacity, request, requestCapacity) ||
+        NetInterfaceFileGuard::overlap(privateKey, keyCapacity, name, nameSize) ||
+        NetInterfaceFileGuard::overlap(request, requestCapacity, name, nameSize))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -2614,10 +2654,7 @@ int32_t NetInterface::certificateCreateRequest(const uint8_t* name, uint32_t nam
     }
     if (keySize == nullptr || requestSize == nullptr || privateKey == nullptr || request == nullptr ||
         keyCapacity == 0 || keyCapacity > NET_INTERFACE_IDENTITY_PEM_BYTES || requestCapacity == 0 ||
-        requestCapacity > NET_INTERFACE_IDENTITY_PEM_BYTES || name == nullptr || nameSize == 0 || nameSize > 96 || entropy == nullptr ||
-        NetInterfaceFileGuard::overlap(privateKey, keyCapacity, request, requestCapacity) ||
-        NetInterfaceFileGuard::overlap(privateKey, keyCapacity, name, nameSize) ||
-        NetInterfaceFileGuard::overlap(request, requestCapacity, name, nameSize))
+        requestCapacity > NET_INTERFACE_IDENTITY_PEM_BYTES || name == nullptr || nameSize == 0 || nameSize > 96 || entropy == nullptr)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -2740,9 +2777,14 @@ static bool DemoHello(DemoResources& r)
         NetInterface::handshakePeekOutput(r.responder,fields,&body) != NI_READY ||
         NetInterface::handshakeAccept(r.initiator,fields,body,102,0) != NI_READY ||
         NetInterface::handshakeConsumeOutput(r.responder) != NI_READY) { return false; }
-    uint8_t peer[32];
-    if (NetInterface::handshakePeerInfo(r.initiator,fields,peer) != NI_READY) { return false; }
-    std::printf("HELLO capabilities %u, chunk %u\n",fields[1],fields[3]);
+    // 能力字段与身份区各自使用独立存储，身份区依次保存对端随机数和客户端设备标识。
+    uint32_t agreed[4];
+    uint8_t identities[32];
+    if (NetInterface::handshakePeerInfo(r.initiator, agreed, identities) != NI_READY)
+    {
+        return false;
+    }
+    std::printf("HELLO capabilities %u, chunk %u\n", agreed[1], agreed[3]);
     return true;
 }
 
@@ -2752,18 +2794,64 @@ static bool DemoRoute(DemoResources& r)
     NetClientSession business;
     NetHeartbeatConfig heartbeat;
     heartbeat.m_pingIntervalMs = 15000;
-    if (business.configureHeartbeat(heartbeat) != NI_OK || business.configurePayloadRetention(4096) != NI_OK ||
+    LockFreeHashMapPoolConfig requestPool;
+    requestPool.initialCapacity = 8;
+    requestPool.maximumCapacity = 64;
+    NetConnectionPoolConfig connectionPools;
+    connectionPools.m_dataRecords.maximumCapacity = 256;
+    CEncodeDecodeTlsQueueLimits serviceTls;
+    // 只让业务协议中明确允许压缩的公开消息类型参与协商。
+    const uint32_t publicTypes[] = {9, 11};
+    if (business.configureCompression(publicTypes, 2) != NI_OK ||
+        !serviceTls.set(65536, 131072) || business.configureServiceTlsQueueLimits(serviceTls) != NI_OK ||
+        !business.quiescent() || business.generation() != 0) { return false; }
+    if (business.configureGateways("127.0.0.1:8000,[::1]:8001", "") != NI_OK ||
+        business.configureConnectionPools(connectionPools) != NI_OK ||
+        business.configureRequestPool(requestPool) != NI_OK || business.configureHeartbeat(heartbeat) != NI_OK ||
+        business.configurePayloadRetention(4096) != NI_OK ||
         business.configureExpiryBudget(32) != NI_OK || business.configureServicePollBudgets(8, 16) != NI_OK ||
+        business.configureServiceTimeouts(15000, 3000) != NI_OK || business.configureServiceWindow(131072) != NI_OK ||
         business.configureRecovery(30000, 250, 5000) != NI_OK) { return false; }
     // 一次性发布此实例的池和队列策略。满池时由提交者保留本次业务数据并稍后重试。
     NetSenderSubmissionPools submissionPools;
     NetSenderSubmissionOptions submissionOptions;
     submissionOptions.m_consumerYieldInterval = 1024;
     NetSenderSubmission submission(submissionPools, submissionOptions);
-    if (submission.start(1, 7) != NI_OK) { return false; }
+    NetSenderSubmissionWait wait;
+    wait.m_yieldInterval = 128;
+    if (submission.configureProducerWait(wait) != NI_OK || submission.start(1, 7) != NI_OK ||
+        submission.ready(1, 64, 16384) != NI_OK)
+    {
+        return false;
+    }
+    // 生产者使用独立的票据变量。执行者处理借用帧后结束借用，再根据运输结果结算票据。
+    const uint8_t queuedBody[] = {1, 2, 3};
+    const NetInterfaceFrame queued = {7, 1, 9, NI_DATA, sizeof(queuedBody), queuedBody};
+    uint64_t ticket = 0;
+    NetSenderSubmissionCommand command = {};
+    if (submission.dataSynchronous(queued, ticket) != NI_OK || ticket == 0 ||
+        submission.beginPoll() != NI_OK || submission.next(command) != NI_READY)
+    {
+        return false;
+    }
+    const bool delivered = command.m_kind == NET_SUBMIT_DATA && command.m_frame.m_requestId == queued.m_requestId &&
+        command.m_frame.m_payloadSize == sizeof(queuedBody) && command.m_frame.m_payload != nullptr &&
+        std::memcmp(command.m_frame.m_payload, queuedBody, sizeof(queuedBody)) == 0;
+    submission.finish(delivered ? NI_OK : NI_INVALID_STATE);
+    // 示例用上面的正文核对模拟运输完整接纳。实际应用应读取运输层的交付状态。
+    submission.advanceSynchronous(delivered ? NI_OK : NI_INVALID_STATE);
+    if (submission.synchronousResult(ticket, true) != NI_OK)
+    {
+        return false;
+    }
+    std::printf("synchronous DATA accepted\n");
     // 直接监听时可在绑定运输前设置HELLO，端点登记和监听成功后配置固定。
     NetEndpointRouter listener(nullptr);
-    if (listener.configureClientHandshake(7, 64, 16384, 5000) != NI_OK) { return false; }
+    NetEndpointPools routerPools;
+    routerPools.m_expiredRequestBudget = 16;
+    routerPools.m_closingEndpointBudget = 8;
+    if (listener.configurePools(routerPools) != NI_OK || listener.configureFileLeaseLimit(900) != NI_OK ||
+        listener.configureClientHandshake(7, 64, 16384, 5000) != NI_OK) { return false; }
     NetInterfaceDirectoryNodeData node = {};
     node.m_structSize = sizeof(node);
     node.m_version = 1;
@@ -2855,7 +2943,13 @@ static bool DemoMessage(DemoResources& r)
         NetInterface::messageEncode(r.message,body,sizeof(body),&n) != NI_OK ||
         NetInterface::rpcEncode(NI_REQUEST,500,0,0,body,n,envelope,sizeof(envelope),&size) != NI_OK) { return false; }
     NetInterfaceFrame frame = {7,1,9,NI_REQUEST,size,envelope};
-    if (NetInterface::encode(frame,wire,sizeof(wire),n) != NI_OK) { return false; }
+    // 固定帧可先查询完整容量，宿主随后选择已有缓冲或按需申请。
+    uint32_t required = 0;
+    if (NetInterface::encode(frame, nullptr, 0, required) != NI_BUFFER_TOO_SMALL || required > sizeof(wire) ||
+        NetInterface::encode(frame, wire, sizeof(wire), n) != NI_OK || n != required)
+    {
+        return false;
+    }
     NetInterface decoder(1024);
     if (decoder.configureDecoderRetention(256) != NI_OK)
     {
@@ -2894,9 +2988,31 @@ static bool DemoMessage(DemoResources& r)
 // 管理隧道承载已经形成的密文。此处使用真实客户端的首段握手输出演示信用额度、借用与消费。
 static bool DemoTransport(DemoResources& r)
 {
+    NetInterfaceLinkOptions linkOptions = {};
+    linkOptions.m_version = 3;
+    linkOptions.m_role = NI_LINK_CLIENT;
+    linkOptions.m_tls.entropy = DemoEntropy;
+    NetInterfaceLink link(linkOptions);
+    NetInterfaceTunnelRecord hello = {};
+    if (link.outputState() != NI_READY || link.peekOutput(hello) != NI_READY ||
+        hello.m_kind != NI_TUNNEL_HELLO || hello.m_size != 0)
+    {
+        return false;
+    }
+    // 此处模拟下层已接受完整外层记录，再结束借用。
+    if (link.consumeOutput() != NI_OK || link.outputState() != NI_OK)
+    {
+        return false;
+    }
+    std::printf("management HELLO delivered\n");
+
+    // 句柄与诊断分别存放，配置在创建期间只读。
     int32_t detail = 0;
     NetConnectionPoolConfig pools;
     pools.m_dataRecords.setInitialCapacity(8);
+    // 给控制帧独立预留四条记录，普通帧用尽自己的记录时仍能接纳心跳。
+    pools.m_controlRecords.setInitialCapacity(4);
+    pools.m_controlRecords.setMaximumCapacity(4);
     // 普通帧64字节级先准备8槽，最多64槽。其他大小级和控制帧各自沿用默认预算。
     pools.m_dataBytes.m_classes[0].setInitialCapacity(8);
     pools.m_dataBytes.m_classes[0].setMaximumCapacity(64);
@@ -2929,9 +3045,24 @@ static bool DemoTransport(DemoResources& r)
         NetInterface::creditConsume(r.credit,count) == NI_OK && NetInterface::creditGrant(r.credit,count) == NI_OK;
 }
 
+// 私钥和申请使用独立缓冲。成功时应安全保存私钥并只提交申请，这里演示用完即擦除。
+static bool DemoCertificateRequest()
+{
+    const uint8_t name[] = {'n', 'o', 'd', 'e'};
+    uint8_t key[NET_INTERFACE_IDENTITY_PEM_BYTES] = {};
+    uint8_t request[NET_INTERFACE_IDENTITY_PEM_BYTES] = {};
+    uint32_t keySize = 0;
+    uint32_t requestSize = 0;
+    const int32_t result = NetInterface::certificateCreateRequest(name, sizeof(name), DemoEntropy, nullptr,
+        key, sizeof(key), &keySize, request, sizeof(request), &requestSize);
+    NetInterface::wipe(key, sizeof(key));
+    return result == NI_OK && keySize > 1 && requestSize > 1;
+}
+
 int main()
 {
     DemoResources resources = {};
+    if (!DemoCertificateRequest()) { return 6; }
     if (!DemoMessage(resources)) { return 1; }
     if (!DemoRoute(resources)) { return 2; }
     if (!DemoHello(resources)) { return 3; }

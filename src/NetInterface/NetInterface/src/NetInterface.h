@@ -140,8 +140,8 @@ public:
 
     /** 创建原生/Wasm共用的TLS和完整帧驱动
     @param [in] options 不可空，证书调用时借用，随机回调上下文借用至destroy
-    @param [out] handle 不可空；失败清空
-    @param [out] detail 可空，TLS底层诊断
+    @param [out] handle 创建成功时接收实例，通常失败时清空；与配置或另一输出重叠时保持原值
+    @param [out] detail 可空，底层诊断。须独立于句柄、配置及本次使用的证书、密钥和主机名
     @return TLS_HANDSHAKE或负数错误，未代表账号已登录
     */
     static int32_t connectionCreate(const NetInterfaceTlsOptions* options, NetInterfaceConnectionHandle* handle,
@@ -149,8 +149,8 @@ public:
 
     /** 创建原生/Wasm共用的TLS和完整帧驱动
     @param [in] options 不可空，证书调用时借用，随机回调上下文借用至destroy
-    @param [out] handle 不可空；失败清空
-    @param [out] detail 可空，TLS底层诊断
+    @param [out] handle 创建成功时接收实例，通常失败时清空；与配置或另一输出重叠时保持原值
+    @param [out] detail 可空，底层诊断。须独立于句柄、配置及本次使用的证书、密钥和主机名
     @param [in] pools 当前实例的物理池配置，空指针选择默认值
     @param [in] limits TLS 密文字节上限，空指针采用默认值
     @return TLS_HANDSHAKE或负数错误，未代表账号已登录
@@ -164,8 +164,8 @@ public:
     @param [in] entropy 宿主强随机
     @param [in] context 随机上下文，借用至destroy
     @param [in] timeoutMs 0使用默认10000毫秒，或100至60000毫秒
-    @param [out] handle 成功创建的业务TLS连接，否则null
-    @param [out] detail 可空，TLS诊断
+    @param [out] handle 创建成功时接收实例，通常失败时清空；与配置或另一输出重叠时保持原值
+    @param [out] detail 可空，底层诊断。须独立于句柄、配置及本次使用的证书、密钥和主机名
     @return TLS_HANDSHAKE或负数，不代表已连接或账号认证
     */
     static int32_t connectionCreateServiceClient(uint32_t product, NetInterfaceEntropyFunction entropy,
@@ -176,8 +176,8 @@ public:
     @param [in] entropy 宿主强随机
     @param [in] context 随机上下文，借用至destroy
     @param [in] timeoutMs 0使用默认10000毫秒，或100至60000毫秒
-    @param [out] handle 成功创建的业务TLS连接，否则null
-    @param [out] detail 可空，TLS诊断
+    @param [out] handle 创建成功时接收实例，通常失败时清空；与配置或另一输出重叠时保持原值
+    @param [out] detail 可空，底层诊断。须独立于句柄、配置及本次使用的证书、密钥和主机名
     @param [in] pools 当前实例的物理池配置，空指针选择默认值
     @param [in] limits TLS 密文字节上限，空指针采用默认值
     @return TLS_HANDSHAKE或负数，不代表已连接或账号认证
@@ -482,8 +482,8 @@ public:
     @param [in] entropy 操作系统密码学随机函数，借用至destroy
     @param [in] context 随机上下文，可空，借用至destroy
     @param [in] timeoutMs 握手时限，0使用默认10000毫秒，或100至60000毫秒
-    @param [out] handle 不可空，成功的TLS实例，失败清空
-    @param [out] detail 可空，底层错误
+    @param [out] handle 创建成功时接收实例，通常失败时清空；与配置或另一输出重叠时保持原值
+    @param [out] detail 可空，底层诊断。须独立于句柄、配置及本次使用的证书、密钥和主机名
     @return TLS_HANDSHAKE或负数错误
     */
     static int32_t tlsCreateClient(const uint8_t* authority, uint32_t authoritySize, const char* hostname,
@@ -497,8 +497,8 @@ public:
     @param [in] entropy 操作系统密码学随机函数，借用至destroy
     @param [in] context 随机上下文，可空，借用至destroy
     @param [in] timeoutMs 握手时限，0使用默认10000毫秒，或100至60000毫秒
-    @param [out] handle 不可空，成功的TLS实例，失败清空
-    @param [out] detail 可空，底层错误
+    @param [out] handle 创建成功时接收实例，通常失败时清空；与配置或另一输出重叠时保持原值
+    @param [out] detail 可空，底层诊断。须独立于句柄、配置及本次使用的证书、密钥和主机名
     @param [in] limits TLS 输入、输出的独立密文字节上限
     @return TLS_HANDSHAKE或负数错误
     */
@@ -509,16 +509,16 @@ public:
 
     /** 创建非阻塞TLS通道，验证配置并复制证书
     @param [in] options 证书调用时借用，随机回调上下文借用至destroy
-    @param [out] handle 成功创建的实例；失败时清空
-    @param [out] detail 可空，接收底层Mbed TLS错误
+    @param [out] handle 创建成功时接收实例，通常失败时清空；与配置或另一输出重叠时保持原值
+    @param [out] detail 可空，底层诊断。须独立于句柄、配置及本次使用的证书、密钥和主机名
     @return TLS_HANDSHAKE或负数错误
     */
     static int32_t tlsCreate(const NetInterfaceTlsOptions* options, NetInterfaceTlsHandle* handle, int32_t* detail);
 
     /** 创建非阻塞TLS通道，验证配置并复制证书
     @param [in] options 证书调用时借用，随机回调上下文借用至destroy
-    @param [out] handle 成功创建的实例；失败时清空
-    @param [out] detail 可空，接收底层Mbed TLS错误
+    @param [out] handle 创建成功时接收实例，通常失败时清空；与配置或另一输出重叠时保持原值
+    @param [out] detail 可空，底层诊断。须独立于句柄、配置及本次使用的证书、密钥和主机名
     @param [in] limits TLS 输入、输出的独立密文字节上限
     @return TLS_HANDSHAKE或负数错误
     */
@@ -838,7 +838,7 @@ public:
     @param [in] offsetHigh 高位
     @param [in] bytes 文件前缀
     @param [in] size 不超过剩余量且最多16MiB
-    @return 同Flow.prime
+    @return 前缀参数错误时返回 NI_INVALID_ARGUMENT，已累积的摘要和下一偏移保持
     */
     static int32_t fileFlowPrime(NetInterfaceFileFlowHandle handle, uint32_t offsetLow, uint32_t offsetHigh,
                                                       const uint8_t* bytes, uint32_t size);
@@ -955,7 +955,7 @@ public:
     @param [in] identitySize 必须为32
     @param [in] timeLow 单调毫秒低32位
     @param [in] timeHigh 单调毫秒高32位
-    @param [out] handle 必须非空，失败清空
+    @param [out] handle 与本次输入配置和字节区分别存放，重叠时返回 NI_INVALID_ARGUMENT 并保留原值
     @return NEED_MORE或负数错误
     */
     static int32_t handshakeCreate(const uint32_t* options, uint32_t optionCount, const uint8_t* identities,
@@ -1010,14 +1010,14 @@ public:
 
     /** 创建管理连接；调用方显式提供身份、运输及熵源，不提供JS工厂
     @param [in] options v3配置，不可空
-    @param [out] handle 不可空，失败清零
+    @param [out] handle 与本次输入配置和字节区分别存放，重叠时返回 NI_INVALID_ARGUMENT 并保留原值
     @return NI_NEED_MORE或错误，管理认证完成后才READY
     */
     static int32_t linkCreate(const NetInterfaceLinkOptions* options, NetInterfaceLinkHandle* handle);
 
     /** 创建管理连接；调用方显式提供身份、运输及熵源，不提供JS工厂
     @param [in] options v3配置，不可空
-    @param [out] handle 不可空，失败清零
+    @param [out] handle 与本次输入配置和字节区分别存放，重叠时返回 NI_INVALID_ARGUMENT 并保留原值
     @param [in] pools 当前实例的物理池配置，空指针选择默认值
     @return NI_NEED_MORE或错误，管理认证完成后才READY
     */
@@ -1135,7 +1135,7 @@ public:
 
     /** 创建等待表
     @param [in] pools 请求、端点和提前取消的独立存储配置
-    @param [out] handle 不可空，失败清空
+    @param [out] handle 与本次输入配置和字节区分别存放，重叠时返回 NI_INVALID_ARGUMENT 并保留原值
     @return OK或负数错误
     */
     static int32_t requestsCreate(const NetRequestTablePools& pools, NetInterfaceRequestsHandle* handle);

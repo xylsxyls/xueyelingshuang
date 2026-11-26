@@ -149,8 +149,8 @@ public:
     int32_t status() const;
 
 public:
-    /** 查询本层待发数据是否全部交给下层；只由协议执行者调用
-    @return OK全部交付，READY仍有本层待发数据，负数失败；不表示远端收到
+    /** 查询本层待发数据是否全部交给下层，含创建后尚未交付的外层 HELLO。只由协议执行者调用
+    @return NI_OK 本层已排空，NI_READY 有待发记录，负数表示错误。此状态不表示远端收到
     */
     int32_t outputState() const;
 

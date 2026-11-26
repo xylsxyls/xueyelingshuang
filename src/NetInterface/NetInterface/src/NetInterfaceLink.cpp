@@ -439,7 +439,7 @@ int32_t NetInterfaceLink::outputState() const
     {
         return NI_INVALID_STATE;
     }
-    if (m_state->m_outputHead != nullptr || m_state->m_outputPeeked)
+    if (!m_state->m_sentHello || m_state->m_outputHead != nullptr || m_state->m_outputPeeked)
     {
         return NI_READY;
     }

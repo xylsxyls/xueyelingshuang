@@ -529,23 +529,32 @@ int32_t NetInterfaceLinkState::progress(uint64_t now)
     {
         return fail(NI_TIMEOUT);
     }
+    // 把暂存后缀交给 TLS，返回接纳字节数及底层状态。
+    const auto feedInput = [this](uint32_t& consumed) -> int32_t
+    {
+        const int32_t fed = m_control->feed(m_input.data() + m_inputOffset,
+            static_cast<uint32_t>(m_input.size()) - m_inputOffset, consumed);
+        if (fed >= 0)
+        {
+            m_inputOffset += consumed;
+            if (m_inputOffset == m_input.size())
+            {
+                m_input.clear();
+                m_inputOffset = 0;
+            }
+        }
+        return fed;
+    };
     for (uint32_t step = 0; step < m_controlStepBudget; ++step)
     {
-        if (m_inputOffset < m_input.size())
+        uint32_t consumed = 0;
+        if (!m_input.empty())
         {
-            uint32_t consumed = 0;
-            const int32_t fed = m_control->feed(m_input.data() + m_inputOffset,
-                static_cast<uint32_t>(m_input.size()) - m_inputOffset, consumed);
+            const int32_t fed = feedInput(consumed);
             if (fed < 0)
             {
                 return fail(fed);
             }
-            m_inputOffset += consumed;
-        }
-        if (m_inputOffset == m_input.size())
-        {
-            m_input.clear();
-            m_inputOffset = 0;
         }
         if (m_phase == NET_LINK_DRAINING && m_input.empty())
         {
@@ -562,6 +571,22 @@ int32_t NetInterfaceLinkState::progress(uint64_t now)
             }
             m_drainResult = terminal;
             return m_recordReady ? NI_READY : fail(terminal);
+        }
+        if (!m_input.empty())
+        {
+            // 入口原先满时，TLS 推进后可能已腾出容量。只重试一次，仍无接纳则等待运输或次数预算。
+            if (consumed == 0)
+            {
+                const int32_t fed = feedInput(consumed);
+                if (fed < 0)
+                {
+                    return fail(fed);
+                }
+            }
+            if (consumed != 0)
+            {
+                NetExecution::progress();
+            }
         }
         if (tlsStatus != NET_INTERFACE_TLS_READY)
         {

@@ -24,11 +24,22 @@ static LockFreeHashMapPoolConfig NetSessionRecordConfig()
     return config;
 }
 
+NetSessionCallbackScope::NetSessionCallbackScope(bool& flag) :
+m_flag(flag),
+m_previous(flag)
+{
+    m_flag = true;
+}
+
+NetSessionCallbackScope::~NetSessionCallbackScope()
+{
+    m_flag = m_previous;
+}
+
 NetSessionState::NetSessionState() :
 m_channel(nullptr),
 m_external(nullptr),
 m_records(new NetObjectPool<NetSessionPending>(NetSessionRecordConfig())),
-m_expiryCount(0),
 m_highestOriginal(0),
 m_maxRequests(0),
 m_payloadRetentionBytes(4096),
@@ -46,6 +57,7 @@ m_ready(false),
 m_polling(false),
 m_callback(false),
 m_localClose(false),
+m_closeFailed(false),
 m_closeReason(0)
 {
     std::memset(&m_options, 0, sizeof(m_options));
@@ -58,7 +70,6 @@ NetSessionState::~NetSessionState()
 
 void NetSessionState::resetRequests(uint32_t limit)
 {
-    m_expiryCount = 0;
     m_expiry.clear();
     m_pending.clear();
     m_highestOriginal = 0;
@@ -97,10 +108,11 @@ void NetSessionState::rise(size_t index)
 
 void NetSessionState::sink(size_t index)
 {
-    while (m_expiryCount > 1 && index <= (m_expiryCount - 2) / 2)
+    const size_t count = m_expiry.size();
+    while (index < count / 2)
     {
         size_t child = index * 2 + 1;
-        if (child + 1 < m_expiryCount && earlier(m_expiry[child + 1], m_expiry[child]))
+        if (child + 1 < count && earlier(m_expiry[child + 1], m_expiry[child]))
         {
             ++child;
         }
@@ -149,7 +161,7 @@ int32_t NetSessionState::reserve(uint64_t original, uint32_t product, uint32_t t
     pending.m_request.m_product = product;
     pending.m_request.m_type = type;
     pending.m_request.m_deadline = deadline;
-    pending.m_heapIndex = m_expiryCount;
+    pending.m_heapIndex = m_expiry.size();
     try
     {
         // 堆扩容在索引发布前完成；之后push_back不会分配，任何失败均由局部池引用回滚
@@ -169,7 +181,6 @@ int32_t NetSessionState::reserve(uint64_t original, uint32_t product, uint32_t t
             return NI_PROTOCOL_ERROR;
         }
         m_expiry.push_back(owned.get());
-        ++m_expiryCount;
         rise(owned->m_heapIndex);
     }
     catch (...)
@@ -190,10 +201,11 @@ bool NetSessionState::take(uint64_t original, NetSessionPending& pending)
     }
     pending = *found->second;
     const size_t index = pending.m_heapIndex;
-    --m_expiryCount;
-    if (index != m_expiryCount)
+    NetSessionPending* last = m_expiry.back();
+    m_expiry.pop_back();
+    if (index < m_expiry.size())
     {
-        m_expiry[index] = m_expiry[m_expiryCount];
+        m_expiry[index] = last;
         m_expiry[index]->m_heapIndex = index;
         if (index != 0 && earlier(m_expiry[index], m_expiry[(index - 1) / 2]))
         {
@@ -204,18 +216,19 @@ bool NetSessionState::take(uint64_t original, NetSessionPending& pending)
             sink(index);
         }
     }
-    m_expiry.pop_back();
     m_pending.erase(found);
     return true;
 }
 
 uint64_t NetSessionState::expired(uint64_t nowMs) const
 {
-    if (m_expiryCount != 0)
+    if (m_expiry.empty())
     {
-        NetExecution::deadline(m_expiry[0]->m_request.m_deadline, nowMs);
+        return 0;
     }
-    return m_expiryCount != 0 && m_expiry[0]->m_request.m_deadline <= nowMs ? m_expiry[0]->m_request.m_original : 0;
+    const NetInterfaceRequest& next = m_expiry.front()->m_request;
+    NetExecution::deadline(next.m_deadline, nowMs);
+    return next.m_deadline <= nowMs ? next.m_original : 0;
 }
 
 void NetSessionState::clearPayload()

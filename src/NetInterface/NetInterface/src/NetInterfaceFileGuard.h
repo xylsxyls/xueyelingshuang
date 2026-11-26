@@ -16,6 +16,13 @@ public:
     */
     ~NetInterfaceFileGuard();
 
+    /** 从互不重叠的区域复制帧正文，短片段只访问其实际范围
+    @param [out] output 至少 size 字节的独占存储，长度为0时可空
+    @param [in] input 至少 size 字节的输入，长度为0时可空
+    @param [in] size 正文字节数
+    */
+    static void copyFrameBody(uint8_t* output, const uint8_t* input, uint32_t size);
+
     /** 在写输出前排除别名和地址加法溢出，不读取待比较内存
     @param [in] left 第一段首地址
     @param [in] leftSize 第一段长度
@@ -69,3 +76,5 @@ private:
     // 借用区域的固定字节数，不能超过该区域生命周期内的有效容量
     uint32_t m_size;
 };
+
+#include "NetInterfaceFileGuard.inl"

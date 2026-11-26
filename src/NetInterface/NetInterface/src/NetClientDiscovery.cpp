@@ -110,10 +110,10 @@ int32_t NetClientDiscovery::parseSeeds(const std::string& text, std::vector<NetG
         size_t offset = 0;
         while (offset < text.size())
         {
-            const size_t comma = text.find(',', offset);
+            const size_t comma = CStringManager::Find(text, ',', offset);
             const size_t end = comma == std::string::npos ? text.size() : comma;
             size_t begin = offset;
-            size_t addressEnd = text.find(text[begin] == '[' ? ']' : ':', begin);
+            size_t addressEnd = CStringManager::Find(text, text[begin] == '[' ? ']' : ':', begin);
             size_t portBegin = addressEnd + 1;
             if (text[begin] == '[')
             {

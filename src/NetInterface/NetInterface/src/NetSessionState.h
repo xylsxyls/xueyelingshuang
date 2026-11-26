@@ -5,6 +5,38 @@
 #include <vector>
 #include <memory>
 
+// 在单执行者会话调用外部代码期间阻止重入，离开当前作用域即恢复原状态。
+class NetSessionCallbackScope
+{
+public:
+    /** 标记回调期间的借用
+    @param [in,out] flag 所属会话的回调标志，寿命覆盖本作用域
+    */
+    explicit NetSessionCallbackScope(bool& flag);
+
+    /** 恢复进入时的标志，保留外层回调的状态
+    */
+    ~NetSessionCallbackScope();
+
+private:
+    /** 禁止复制一份恢复责任
+    @param [in] other 原作用域
+    */
+    NetSessionCallbackScope(const NetSessionCallbackScope& other) = delete;
+
+    /** 禁止转移恢复责任
+    @param [in] other 原作用域
+    @return 当前作用域
+    */
+    NetSessionCallbackScope& operator=(const NetSessionCallbackScope& other) = delete;
+
+private:
+    // 所属会话的回调标志，在析构前有效。
+    bool& m_flag;
+    // 进入回调前的标志，用于嵌套恢复。
+    bool m_previous;
+};
+
 // 客户端单一在途记录；元数据不再复制到另一份路由等待表。
 struct NetSessionPending
 {
@@ -69,8 +101,8 @@ private:
     static bool earlier(const NetSessionPending* left, const NetSessionPending* right);
 
     /** 交换两个堆位置并同步节点反向位置
-    @param [in] left 小于m_expiryCount
-    @param [in] right 小于m_expiryCount
+    @param [in] left 第一个节点在当前截止堆中的有效下标
+    @param [in] right 第二个节点在当前截止堆中的有效下标
     */
     void exchange(size_t left, size_t right);
 
@@ -97,8 +129,6 @@ public:
     std::unordered_map<uint64_t, NetObjectReference<NetSessionPending>> m_pending;
     // 只借用池槽的截止堆，容量随实际记录增长，关闭时复用预热容量
     std::vector<NetSessionPending*> m_expiry;
-    // 堆有效项数，始终等于m_pending.size()。
-    size_t m_expiryCount;
     // 本代请求原号高水位；容量拒绝仍消耗原号。
     uint64_t m_highestOriginal;
     // 握手协商后的请求上限。
@@ -141,6 +171,8 @@ public:
     bool m_callback;
     // 已记录首次本地关闭意图。
     bool m_localClose;
+    // 运输的 close 抛出异常，等待退出借用回调后停止该通道。
+    bool m_closeFailed;
     // 0/CANCELLED为主动停止；其它值为连接故障。
     int32_t m_closeReason;
 };

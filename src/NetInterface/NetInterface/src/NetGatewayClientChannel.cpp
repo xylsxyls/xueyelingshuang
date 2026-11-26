@@ -2,6 +2,7 @@
 #include "NetInterfaceMacro.h"
 #include "NetGatewayClientChannelState.h"
 #include "NetExecution.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include "NetInterface.h"
 #include "NetInterfaceCredit.h"
 #include "NetInterfaceDirectory.h"
@@ -11,6 +12,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <new>
 
 /** 本通道全部期限使用同一单调时钟
 @return 单调毫秒
@@ -81,7 +83,7 @@ int32_t NetGatewayClientChannel::connect(const char* address, uint32_t port, con
     NetTransportListener* listener, uint64_t& peer)
 {
     peer = 0;
-    if (m_state->m_phase != NET_GATEWAY_CLIENT_IDLE || listener == nullptr || address == nullptr ||
+    if (m_state->m_phase != NET_GATEWAY_CLIENT_IDLE || listener == nullptr || address == nullptr || *address == 0 ||
         port == 0 || port > 65535 || options.server != 0 || options.entropy == nullptr ||
         options.effectiveHandshakeTimeout() < 100 || options.handshakeTimeoutMs > 60000)
     {
@@ -110,9 +112,13 @@ int32_t NetGatewayClientChannel::connect(const char* address, uint32_t port, con
             result = NI_PROTOCOL_ERROR;
         }
     }
-    catch (...)
+    catch (const std::bad_alloc&)
     {
         result = NI_NO_MEMORY;
+    }
+    catch (...)
+    {
+        result = NI_INVALID_STATE;
     }
     if (result != NI_OK)
     {
@@ -197,7 +203,12 @@ bool NetGatewayClientChannel::onLinkControl(uint64_t peer, const NetInterfaceFra
             m_state->fail(NI_PROTOCOL_ERROR);
             return true;
         }
-        const std::string hostname = "service." + std::to_string(m_state->m_product);
+        const std::string hostname = CStringManager::Format("service.%u", static_cast<unsigned int>(m_state->m_product));
+        if (hostname.empty())
+        {
+            m_state->fail(NI_NO_MEMORY);
+            return true;
+        }
         NetInterfaceTlsOptions tls = m_state->m_options;
         tls.authority = NetInterface::trustAuthority(&tls.authoritySize);
         tls.hostname = hostname.c_str();
@@ -379,6 +390,13 @@ void NetGatewayClientChannel::sendOutput()
 
 void NetGatewayClientChannel::advance(uint64_t now)
 {
+    const int32_t status = m_state->m_connection->progress(now);
+    if (status < 0 || status == NET_INTERFACE_TLS_CLOSED)
+    {
+        m_state->fail(status < 0 ? status : 0);
+        return;
+    }
+    // 先让 TLS 消费已持有的密文，再搬运本通道暂存的后缀。
     if (m_state->m_inputSize != 0)
     {
         uint32_t consumed = 0;
@@ -389,17 +407,16 @@ void NetGatewayClientChannel::advance(uint64_t now)
             m_state->fail(fed < 0 ? fed : NI_PROTOCOL_ERROR);
             return;
         }
-        m_state->m_inputOffset += consumed;
+        if (consumed != 0)
+        {
+            m_state->m_inputOffset += consumed;
+            // 新入队的字节可能无需外部 I/O 就能继续处理。
+            NetExecution::progress();
+        }
         if (m_state->m_inputOffset == m_state->m_inputSize)
         {
             m_state->m_inputSize = m_state->m_inputOffset = 0;
         }
-    }
-    const int32_t status = m_state->m_connection->progress(now);
-    if (status < 0 || status == NET_INTERFACE_TLS_CLOSED)
-    {
-        m_state->fail(status < 0 ? status : 0);
-        return;
     }
     if (status == NET_INTERFACE_TLS_READY && m_state->m_phase == NET_GATEWAY_CLIENT_HANDSHAKING)
     {
@@ -495,9 +512,10 @@ bool NetGatewayClientChannel::poll()
     m_state->m_polling = true;
     try
     {
-        if (m_state->m_phase != NET_GATEWAY_CLIENT_CLOSING)
+        if (m_state->m_phase != NET_GATEWAY_CLIENT_CLOSING && !m_state->m_transport->poll())
         {
-            m_state->m_transport->poll();
+            // 若本次推进已经收到关闭回调，fail 会保留该回调的首个原因。
+            m_state->fail(NI_TRUNCATED);
         }
         const uint64_t now = GatewayClientNow();
         if (m_state->m_phase < NET_GATEWAY_CLIENT_ACTIVE)
@@ -517,9 +535,13 @@ bool NetGatewayClientChannel::poll()
             advance(now);
         }
     }
-    catch (...)
+    catch (const std::bad_alloc&)
     {
         m_state->fail(NI_NO_MEMORY);
+    }
+    catch (...)
+    {
+        m_state->fail(NI_INVALID_STATE);
     }
     finish();
     m_state->m_polling = false;

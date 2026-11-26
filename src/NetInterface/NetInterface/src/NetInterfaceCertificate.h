@@ -49,7 +49,7 @@ public:
     @param [in] size 1至16384字节
     @param [in] entropy 强随机源
     @param [in] context 随机上下文
-    @param [out] signature 成功为ECDSA签名，失败清空
+    @param [out] signature 成功为ECDSA签名，失败清空；data可借用调用前此向量中的连续字节
     @return NI_OK或负数错误；签名不替代宿主对挑战期限和唯一消费的检查
     */
     static int32_t signProof(const std::string& privateKey, const uint8_t* data, uint32_t size,

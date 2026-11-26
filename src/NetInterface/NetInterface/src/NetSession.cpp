@@ -9,6 +9,7 @@
 #include "NetInterfaceTransport.h"
 #include <chrono>
 #include <cstring>
+#include <new>
 #include <vector>
 
 /** 原生会话使用与传输一致的单调时钟
@@ -39,7 +40,10 @@ NetSession::~NetSession()
 
 int32_t NetSession::configureHeartbeat(const NetHeartbeatConfig& config)
 {
-    if (m_state->m_generation != 0) { return NI_INVALID_STATE; }
+    if (m_state->m_generation != 0 || m_state->m_callback)
+    {
+        return NI_INVALID_STATE;
+    }
     if (!config.valid()) { return NI_INVALID_ARGUMENT; }
     m_state->m_heartbeat = config;
     return NI_OK;
@@ -47,7 +51,10 @@ int32_t NetSession::configureHeartbeat(const NetHeartbeatConfig& config)
 
 int32_t NetSession::configureExpiryBudget(uint32_t count)
 {
-    if (m_state->m_generation != 0) { return NI_INVALID_STATE; }
+    if (m_state->m_generation != 0 || m_state->m_callback)
+    {
+        return NI_INVALID_STATE;
+    }
     if (count == 0) { return NI_INVALID_ARGUMENT; }
     m_state->m_requestExpiryBudget = count;
     return NI_OK;
@@ -55,7 +62,10 @@ int32_t NetSession::configureExpiryBudget(uint32_t count)
 
 int32_t NetSession::configurePayloadRetention(int64_t bytes)
 {
-    if (m_state->m_generation != 0) { return NI_INVALID_STATE; }
+    if (m_state->m_generation != 0 || m_state->m_callback)
+    {
+        return NI_INVALID_STATE;
+    }
     if (bytes < -1) { return NI_INVALID_ARGUMENT; }
     m_state->m_payloadRetentionBytes = bytes;
     return NI_OK;
@@ -103,11 +113,19 @@ int32_t NetSession::bindChannel(NetClientChannel* channel)
 int32_t NetSession::connect(const char* address, uint32_t port, const NetInterfaceTlsOptions& tls,
                             const NetInterfaceHandshakeOptions& handshake, NetSessionListener* listener)
 {
+    return connectWithPools(address, port, tls, handshake, listener, nullptr);
+}
+
+int32_t NetSession::connectWithPools(const char* address, uint32_t port, const NetInterfaceTlsOptions& tls,
+    const NetInterfaceHandshakeOptions& handshake, NetSessionListener* listener, const NetConnectionPoolConfig* pools)
+{
     if (m_state->m_active || m_state->m_polling || m_state->m_callback || m_state->m_generation == UINT64_MAX)
     {
         return NI_INVALID_STATE;
     }
-    if (listener == nullptr || tls.server != 0 || handshake.m_server != 0 || address == nullptr || port == 0 || port > 65535)
+    if (listener == nullptr || tls.server != 0 || handshake.m_server != 0 || address == nullptr || *address == 0 ||
+        port == 0 || port > 65535 ||
+        tls.effectiveHandshakeTimeout() < 100 || tls.handshakeTimeoutMs > 60000 || (pools != nullptr && !pools->validCodecSettings()))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -115,6 +133,7 @@ int32_t NetSession::connect(const char* address, uint32_t port, const NetInterfa
     {
         return NI_NOT_SUPPORTED;
     }
+    NetSessionCallbackScope callback(m_state->m_callback);
     NetInterfaceHandshakeOptions options = handshake;
     if (NetInterface::entropyBytes(tls.entropy, tls.entropyContext, options.m_nonce, sizeof(options.m_nonce)) != NI_OK)
     {
@@ -127,6 +146,26 @@ int32_t NetSession::connect(const char* address, uint32_t port, const NetInterfa
     {
         return NI_INVALID_ARGUMENT;
     }
+    if (pools != nullptr)
+    {
+        int32_t configured;
+        try
+        {
+            configured = m_state->m_external->configureConnectionPools(*pools);
+        }
+        catch (const std::bad_alloc&)
+        {
+            configured = NI_NO_MEMORY;
+        }
+        catch (...)
+        {
+            configured = NI_INVALID_STATE;
+        }
+        if (configured != NI_OK)
+        {
+            return configured;
+        }
+    }
     m_state->m_channel = m_state->m_external;
     m_state->resetRequests(options.m_maxRequests);
     m_state->m_handshake.reset();
@@ -138,10 +177,8 @@ int32_t NetSession::connect(const char* address, uint32_t port, const NetInterfa
     m_state->m_pingSent = 0;
     m_state->m_maxChunk = 0;
     m_state->m_capabilities = 0;
-    ++m_state->m_generation;
     m_state->m_localClose = false;
     m_state->m_closeReason = 0;
-    m_state->m_active = true;
     int32_t result = NI_NO_MEMORY;
     try
     {
@@ -151,29 +188,34 @@ int32_t NetSession::connect(const char* address, uint32_t port, const NetInterfa
             result = NI_PROTOCOL_ERROR;
         }
     }
-    catch (...)
+    catch (const std::bad_alloc&)
     {
         result = NI_NO_MEMORY;
     }
-    if (result != NI_OK)
+    catch (...)
     {
-        // 未接纳连接不交付业务终态；适配器部分启动的资源仍须停止。
-        m_state->m_active = false;
+        result = NI_INVALID_STATE;
+    }
+    if (result == NI_OK)
+    {
+        ++m_state->m_generation;
+        m_state->m_active = true;
+    }
+    else
+    {
+        // 同步拒绝不占用代次，停止适配器可能已分配的部分资源。
         m_state->m_listener = nullptr;
-        try
-        {
-            m_state->m_channel->shutdown();
-        }
-        catch (...)
-        {
-            // 适配器必须先收敛借用；异常不能把会话重新变成active。
-        }
+        stopChannel();
     }
     return result;
 }
 
 void NetSession::onReady(uint64_t peer)
 {
+    if (!m_state->m_active || m_state->m_localClose)
+    {
+        return;
+    }
     if (peer != m_state->m_peer || m_state->m_handshake)
     {
         close(NI_PROTOCOL_ERROR);
@@ -195,7 +237,7 @@ void NetSession::onReady(uint64_t peer)
 
 void NetSession::progressHandshake(uint64_t nowMs)
 {
-    if (!m_state->m_handshake || !m_state->m_active)
+    if (!m_state->m_handshake || !m_state->m_active || m_state->m_localClose)
     {
         return;
     }
@@ -222,11 +264,11 @@ void NetSession::progressHandshake(uint64_t nowMs)
 
 bool NetSession::onFrame(uint64_t peer, const NetInterfaceFrame& frame)
 {
-    const uint64_t now = SessionNow();
-    if (peer != m_state->m_peer || !m_state->m_active || !m_state->m_handshake)
+    if (peer != m_state->m_peer || !m_state->m_active || m_state->m_localClose || !m_state->m_handshake)
     {
         return true;
     }
+    const uint64_t now = SessionNow();
     const int32_t accepted = m_state->m_handshake->accept(frame, now);
     if (accepted < 0)
     {
@@ -526,39 +568,41 @@ int32_t NetSession::sendData(const NetInterfaceFrame& frame)
 
 bool NetSession::poll()
 {
-    if (!m_state->m_active || m_state->m_polling || m_state->m_callback)
+    if ((!m_state->m_active && !m_state->m_closeFailed) || m_state->m_polling || m_state->m_callback)
     {
         return false;
     }
     m_state->m_polling = true;
+    int32_t failure = NI_OK;
     try
     {
-        m_state->m_channel->poll();
+        // poll 中的回调也可能请求关闭并遇到异常；这种情况统一走下方停止分支。
+        const bool transportActive = m_state->m_closeFailed || m_state->m_channel->poll();
+        if (!transportActive && m_state->m_active && !m_state->m_closeFailed)
+        {
+            // 运输已没有资源，随后不会再有关闭回调；保留本地主动关闭的原因。
+            onClosed(m_state->m_peer, m_state->m_localClose ? m_state->m_closeReason : NI_TRUNCATED, 0);
+        }
         progressHandshake(SessionNow());
+        for (uint32_t index = 0; index < m_state->m_requestExpiryBudget && ready(); ++index)
+        {
+            // 回调可提交新请求；每次重新取单调时间，不延长任何原始截止。
+            const uint64_t original = m_state->expired(SessionNow());
+            if (original == 0)
+            {
+                break;
+            }
+            NetSessionPending pending = {};
+            m_state->take(original, pending);
+            const int32_t sent = pending.m_sent ? sendCancel(pending.m_request) : NI_OK;
+            notifyResult(pending.m_request, NI_RPC_TIMEOUT, nullptr, 0);
+            if (sent != NI_OK)
+            {
+                close(sent);
+            }
+        }
         if (ready())
         {
-            for (uint32_t index = 0; index < m_state->m_requestExpiryBudget && ready(); ++index)
-            {
-                // 回调可提交新请求；每次重新取单调时间，不延长任何原始截止。
-                const uint64_t original = m_state->expired(SessionNow());
-                if (original == 0)
-                {
-                    break;
-                }
-                NetSessionPending pending = {};
-                m_state->take(original, pending);
-                const int32_t sent = pending.m_sent ? sendCancel(pending.m_request) : NI_OK;
-                notifyResult(pending.m_request, NI_RPC_TIMEOUT, nullptr, 0);
-                if (sent != NI_OK)
-                {
-                    close(sent);
-                }
-            }
-            if (!ready())
-            {
-                m_state->m_polling = false;
-                return m_state->m_active;
-            }
             const uint64_t now = SessionNow();
             const NetHeartbeatConfig& heartbeat = m_state->m_heartbeat;
             const uint64_t idle = now - m_state->m_lastReceive;
@@ -603,10 +647,25 @@ bool NetSession::poll()
             }
         }
     }
+    catch (const std::bad_alloc&)
+    {
+        failure = NI_NO_MEMORY;
+    }
     catch (...)
     {
-        // 任一外部适配器或容器异常均不得遗留polling，按同一关闭路径结算。
-        close(NI_INVALID_STATE);
+        failure = NI_INVALID_STATE;
+    }
+    if (m_state->m_closeFailed || (failure != NI_OK && m_state->m_active))
+    {
+        // 运输调用已经返回，此处可停止通道并结算待办，保留首次关闭原因。
+        if (!m_state->m_localClose)
+        {
+            m_state->m_localClose = true;
+            m_state->m_closeReason = failure;
+        }
+        m_state->m_ready = false;
+        stopChannel();
+        onClosed(m_state->m_peer, m_state->m_closeReason, 0);
     }
     m_state->m_polling = false;
     return m_state->m_active;
@@ -633,23 +692,39 @@ void NetSession::onClosed(uint64_t peer, int32_t reason, int32_t detail)
 
 void NetSession::close(int32_t reason)
 {
-    if (m_state->m_active && !m_state->m_localClose)
+    if (!m_state->m_active || m_state->m_localClose)
     {
-        m_state->m_localClose = true;
-        m_state->m_closeReason = reason;
+        return;
     }
+    m_state->m_localClose = true;
+    m_state->m_closeReason = reason;
     m_state->m_ready = false;
-    if (m_state->m_active && m_state->m_channel)
+    try
     {
-        try
-        {
-            m_state->m_channel->close(m_state->m_peer, reason);
-        }
-        catch (...)
-        {
-            // 借用适配器违反异常约定时也结算本地请求，不保留永久active状态。
-            onClosed(m_state->m_peer, NI_INVALID_STATE, 0);
-        }
+        m_state->m_channel->close(m_state->m_peer, reason);
+    }
+    catch (...)
+    {
+        // close 可由运输的帧回调触发，先退回执行者再解绑监听和交付终态。
+        m_state->m_closeFailed = true;
+        NetExecution::progress();
+    }
+}
+
+void NetSession::stopChannel()
+{
+    NetClientChannel* channel = m_state->m_channel;
+    m_state->m_channel = nullptr;
+    m_state->m_closeFailed = false;
+    if (channel == nullptr) { return; }
+    NetSessionCallbackScope callback(m_state->m_callback);
+    try
+    {
+        channel->shutdown();
+    }
+    catch (...)
+    {
+        // 调用方在运输返回后统一处理尚未交付的终态，包括主动正常关闭。
     }
 }
 
@@ -665,26 +740,17 @@ void NetSession::shutdown()
         m_state->m_localClose = true;
         m_state->m_closeReason = NI_OK;
     }
-    if (m_state->m_channel)
-    {
-        try
-        {
-            m_state->m_channel->shutdown();
-        }
-        catch (...)
-        {
-            onClosed(m_state->m_peer, NI_INVALID_STATE, 0);
-        }
-    }
+    m_state->m_ready = false;
+    stopChannel();
     if (m_state->m_active)
     {
         // 即使适配器停止时没有额外事件，共用会话也必须结算已接纳请求
-        onClosed(m_state->m_peer, 0, 0);
+        onClosed(m_state->m_peer, m_state->m_closeReason, 0);
     }
     m_state->m_handshake.reset();
     m_state->resetRequests(0);
     std::vector<uint8_t>().swap(m_state->m_payload);
-    m_state->m_channel = nullptr;
+    m_state->m_external = nullptr;
     m_state->m_listener = nullptr;
 }
 
@@ -716,19 +782,12 @@ int32_t NetSession::outputState() const
 
 void NetSession::notifyReady(uint32_t requests, uint32_t chunk)
 {
-    const bool callback = m_state->m_callback;
-    m_state->m_callback = true;
-    bool failed = false;
     try
     {
+        NetSessionCallbackScope callback(m_state->m_callback);
         m_state->m_listener->onSessionReady(m_state->m_generation, requests, chunk);
     }
     catch (...)
-    {
-        failed = true;
-    }
-    m_state->m_callback = callback;
-    if (failed)
     {
         close(NI_INVALID_STATE);
     }
@@ -736,20 +795,13 @@ void NetSession::notifyReady(uint32_t requests, uint32_t chunk)
 
 void NetSession::notifyResult(const NetInterfaceRequest& request, uint32_t status, const uint8_t* bytes, uint32_t size)
 {
-    const bool callback = m_state->m_callback;
-    m_state->m_callback = true;
-    bool failed = false;
     try
     {
+        NetSessionCallbackScope callback(m_state->m_callback);
         m_state->m_listener->onSessionResult(m_state->m_generation, request.m_original, request.m_product,
             request.m_type, status, bytes, size);
     }
     catch (...)
-    {
-        failed = true;
-    }
-    m_state->m_callback = callback;
-    if (failed)
     {
         close(NI_INVALID_STATE);
     }
@@ -757,37 +809,27 @@ void NetSession::notifyResult(const NetInterfaceRequest& request, uint32_t statu
 
 bool NetSession::notifyFrame(const NetInterfaceFrame& frame)
 {
-    const bool callback = m_state->m_callback;
-    m_state->m_callback = true;
-    bool accepted = true;
-    bool failed = false;
     try
     {
-        accepted = m_state->m_listener->onSessionFrame(m_state->m_generation, frame);
+        NetSessionCallbackScope callback(m_state->m_callback);
+        return m_state->m_listener->onSessionFrame(m_state->m_generation, frame);
     }
     catch (...)
     {
-        failed = true;
-    }
-    m_state->m_callback = callback;
-    if (failed)
-    {
         close(NI_INVALID_STATE);
+        return true;
     }
-    return accepted;
 }
 
 void NetSession::notifyClosed(int32_t reason, int32_t detail)
 {
-    const bool callback = m_state->m_callback;
-    m_state->m_callback = true;
     try
     {
+        NetSessionCallbackScope callback(m_state->m_callback);
         m_state->m_listener->onSessionClosed(m_state->m_generation, reason, detail);
     }
     catch (...)
     {
-        // 终态已产生，不重发通知，也不让观察者异常阻止本对象回收。
+        // 关闭通知只交付一次，观察者异常不会延长该代次。
     }
-    m_state->m_callback = callback;
 }

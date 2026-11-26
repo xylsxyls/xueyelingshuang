@@ -8,10 +8,12 @@
 #include "NetClientDiscovery.h"
 #include "NetInterfaceTransport.h"
 #include "NetSession.h"
+#include "NetSessionState.h"
 #include "NetGatewayClientChannel.h"
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <new>
 
 /** 恢复期限只使用同一执行者的单调时间
 @return 单调毫秒
@@ -40,6 +42,7 @@ bool NetClientSession::discoveryStopped() const
     {
         return true;
     }
+    NetSessionCallbackScope callback(m_state->m_callback);
     try
     {
         return m_state->m_discovery->stopped();
@@ -57,6 +60,7 @@ void NetClientSession::stopDiscovery()
     {
         return;
     }
+    NetSessionCallbackScope callback(m_state->m_callback);
     try
     {
         m_state->m_discovery->shutdown();
@@ -118,7 +122,7 @@ int32_t NetClientSession::configureGateways(const std::string& seeds, const std:
     {
         return NI_INVALID_STATE;
     }
-    if (cachePath.size() > 4096 || cachePath.find('\0') != std::string::npos)
+    if (cachePath.size() > 4096 || CStringManager::Find(cachePath, '\0') != std::string::npos)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -176,10 +180,7 @@ int32_t NetClientSession::configureRecovery(uint32_t timeoutMs, uint32_t initial
 
 int32_t NetClientSession::configureRequestPool(const LockFreeHashMapPoolConfig& config)
 {
-    if (m_state->active() || m_state->m_callback)
-    {
-        return NI_INVALID_STATE;
-    }
+    if (m_state->m_generation != 0 || executing()) { return NI_INVALID_STATE; }
     return m_state->m_session.configureRequestPool(config);
 }
 
@@ -222,7 +223,7 @@ int32_t NetClientSession::configureServiceTimeouts(uint32_t startupMs, uint32_t 
 
 int32_t NetClientSession::configureServiceWindow(uint32_t bytes)
 {
-    if (m_state->m_generation != 0 || m_state->active() || executing()) { return NI_INVALID_STATE; }
+    if (m_state->m_generation != 0 || executing()) { return NI_INVALID_STATE; }
     NetInterfaceCredit credit;
     const int32_t result = credit.configure(bytes);
     if (result == NI_OK)
@@ -234,14 +235,14 @@ int32_t NetClientSession::configureServiceWindow(uint32_t bytes)
 
 int32_t NetClientSession::configureServiceTlsQueueLimits(const CEncodeDecodeTlsQueueLimits& limits)
 {
-    if (m_state->m_generation != 0 || m_state->active() || executing()) { return NI_INVALID_STATE; }
+    if (m_state->m_generation != 0 || executing()) { return NI_INVALID_STATE; }
     m_state->m_serviceCiphertext = limits;
     return NI_OK;
 }
 
 int32_t NetClientSession::configureConnectionPools(const NetConnectionPoolConfig& config)
 {
-    if (m_state->m_generation != 0 || m_state->active() || executing())
+    if (m_state->m_generation != 0 || executing())
     {
         return NI_INVALID_STATE;
     }
@@ -265,16 +266,13 @@ int32_t NetClientSession::connect(const char* address, uint32_t port, const NetI
     {
         return NI_INVALID_STATE;
     }
-    if (m_state->m_connectionPools)
+    if (m_state->m_external == nullptr && (m_state->m_connectionPools || m_state->m_service))
     {
-        const int32_t configured = m_state->m_external == nullptr ? NI_NOT_SUPPORTED :
-            m_state->m_external->configureConnectionPools(*m_state->m_connectionPools);
-        if (configured != NI_OK)
-        {
-            return configured;
-        }
+        return NI_NOT_SUPPORTED;
     }
-    const int32_t result = m_state->m_session.connect(address, port, tls, handshake, listener == nullptr ? nullptr : this);
+    NetSessionCallbackScope callback(m_state->m_callback);
+    const int32_t result = m_state->m_session.connectWithPools(address, port, tls, handshake,
+        listener == nullptr ? nullptr : this, m_state->m_connectionPools.get());
     if (result == NI_OK)
     {
         reserveGeneration();
@@ -310,6 +308,7 @@ int32_t NetClientSession::connectService(uint32_t product, const char* address, 
     {
         return NI_NOT_SUPPORTED;
     }
+    NetSessionCallbackScope callback(m_state->m_callback);
     NetInterfaceHandshakeOptions validation = handshake;
     validation.m_capabilities |= 24;
     if (NetInterface::entropyBytes(tls.entropy, tls.entropyContext, validation.m_nonce, sizeof(validation.m_nonce)) != NI_OK)
@@ -357,10 +356,15 @@ int32_t NetClientSession::connectService(uint32_t product, const char* address, 
             }
         }
     }
-    catch (...)
+    catch (const std::bad_alloc&)
     {
         stopDiscovery();
         return NI_NO_MEMORY;
+    }
+    catch (...)
+    {
+        stopDiscovery();
+        return NI_INVALID_STATE;
     }
     NetClientDiscoveryPoint destination = {};
     destination.m_structSize = sizeof(destination);
@@ -428,15 +432,22 @@ void NetClientSession::attempt()
     {
         return;
     }
-    if (m_state->m_discovery != nullptr && !m_state->m_discovery->choose(m_state->m_destination))
+    if (m_state->m_discovery != nullptr)
     {
-        m_state->m_retryAt = ClientSessionNow() + m_state->m_initialDelayMs;
-        return;
-    }
-    if (m_state->m_discovery != nullptr && !NetClientDiscovery::validPoint(m_state->m_destination))
-    {
-        failAttempt(NI_PROTOCOL_ERROR);
-        return;
+        NetClientDiscoveryPoint candidate = {};
+        candidate.m_structSize = sizeof(candidate);
+        candidate.m_version = 1;
+        if (!m_state->m_discovery->choose(candidate))
+        {
+            m_state->m_retryAt = ClientSessionNow() + m_state->m_initialDelayMs;
+            return;
+        }
+        if (!NetClientDiscovery::validPoint(candidate))
+        {
+            failAttempt(NI_PROTOCOL_ERROR);
+            return;
+        }
+        m_state->m_destination = candidate;
     }
     const int32_t detached = m_state->m_session.bindChannel(nullptr);
     if (detached != NI_OK)
@@ -518,7 +529,19 @@ bool NetClientSession::poll()
         }
         if (m_state->m_discovery != nullptr)
         {
-            m_state->m_discovery->poll();
+            // 发现器和已接纳的运输分别收敛。发现器持续异常时仍须推进运输的关闭通知。
+            try
+            {
+                m_state->m_discovery->poll();
+            }
+            catch (const std::bad_alloc&)
+            {
+                failAttempt(NI_NO_MEMORY);
+            }
+            catch (...)
+            {
+                failAttempt(NI_INVALID_STATE);
+            }
             if (!m_state->recovering() && discoveryStopped())
             {
                 m_state->m_discovery = nullptr;
@@ -542,9 +565,13 @@ bool NetClientSession::poll()
             }
         }
     }
-    catch (...)
+    catch (const std::bad_alloc&)
     {
         failAttempt(NI_NO_MEMORY);
+    }
+    catch (...)
+    {
+        failAttempt(NI_INVALID_STATE);
     }
     m_state->m_polling = false;
     return m_state->active() || !discoveryStopped();
@@ -561,8 +588,7 @@ void NetClientSession::onSessionReady(uint64_t generation, uint32_t maxRequests,
     m_state->m_phase = NET_CLIENT_READY;
     m_state->m_recoveryDeadline = 0;
     m_state->m_delay = m_state->m_initialDelayMs;
-    const bool callback = m_state->m_callback;
-    m_state->m_callback = true;
+    NetSessionCallbackScope callback(m_state->m_callback);
     try
     {
         m_state->m_listener->onSessionReady(m_state->m_generation, maxRequests, maxChunk);
@@ -571,15 +597,13 @@ void NetClientSession::onSessionReady(uint64_t generation, uint32_t maxRequests,
     {
         close(NI_INVALID_STATE);
     }
-    m_state->m_callback = callback;
 }
 
 void NetClientSession::onSessionResult(uint64_t generation, uint64_t requestId, uint32_t product, uint32_t type,
     uint32_t status, const uint8_t* bytes, uint32_t size)
 {
     (void)generation;
-    const bool callback = m_state->m_callback;
-    m_state->m_callback = true;
+    NetSessionCallbackScope callback(m_state->m_callback);
     try
     {
         if (m_state->m_listener != nullptr)
@@ -591,7 +615,6 @@ void NetClientSession::onSessionResult(uint64_t generation, uint64_t requestId, 
     {
         close(NI_INVALID_STATE);
     }
-    m_state->m_callback = callback;
 }
 
 bool NetClientSession::onSessionFrame(uint64_t generation, const NetInterfaceFrame& frame)
@@ -601,19 +624,16 @@ bool NetClientSession::onSessionFrame(uint64_t generation, const NetInterfaceFra
     {
         return false;
     }
-    bool accepted = false;
-    const bool callback = m_state->m_callback;
-    m_state->m_callback = true;
+    NetSessionCallbackScope callback(m_state->m_callback);
     try
     {
-        accepted = m_state->m_listener->onSessionFrame(m_state->m_generation, frame);
+        return m_state->m_listener->onSessionFrame(m_state->m_generation, frame);
     }
     catch (...)
     {
         close(NI_INVALID_STATE);
     }
-    m_state->m_callback = callback;
-    return accepted;
+    return false;
 }
 
 void NetClientSession::onSessionClosed(uint64_t generation, int32_t reason, int32_t detail)
@@ -663,18 +683,23 @@ void NetClientSession::onSessionClosed(uint64_t generation, int32_t reason, int3
                     {
                         m_state->m_discovery->failed(m_state->m_destination);
                     }
-                    catch (...)
+                    catch (const std::bad_alloc&)
                     {
                         m_state->m_phase = NET_CLIENT_CLOSED;
                         reason = NI_NO_MEMORY;
+                        detail = 0;
+                    }
+                    catch (...)
+                    {
+                        m_state->m_phase = NET_CLIENT_CLOSED;
+                        reason = NI_INVALID_STATE;
                         detail = 0;
                     }
                 }
             }
         }
     }
-    const bool callback = m_state->m_callback;
-    m_state->m_callback = true;
+    NetSessionCallbackScope callback(m_state->m_callback);
     try
     {
         if (m_state->m_listener != nullptr)
@@ -686,7 +711,6 @@ void NetClientSession::onSessionClosed(uint64_t generation, int32_t reason, int3
     {
         m_state->m_phase = NET_CLIENT_CLOSED;
     }
-    m_state->m_callback = callback;
 }
 
 void NetClientSession::close(int32_t reason)

@@ -17,6 +17,17 @@ struct NetSenderSubmissionGate
     void (*m_wake)(void* context);
 };
 
+// 单个提交实例在竞争和关闭入口时采用的等待参数。
+struct NetSenderSubmissionWait
+{
+    // 竞争入口或分配编号时每多少次 CAS 失败让步；默认64，至少1。
+    uint32_t m_yieldInterval = 64;
+    // 原生 owner 等待已进入的提交者退出时，每次无宿主 pause 的休眠毫秒数；默认1，至少1。
+    uint32_t m_quiesceSleepMs = 1;
+    // 原生同步发送两轮推进之间的最长休眠毫秒，默认1，至少1；同时受回执剩余期限约束。
+    uint32_t m_syncPollSleepMs = 1;
+};
+
 // 本地提交动作，不是线协议种类
 enum NetSenderSubmissionKind
 {
@@ -89,6 +100,17 @@ public:
     @return NI_OK；已经登记或已经启动时返回 NI_INVALID_STATE
     */
     int32_t configureGate(const NetSenderSubmissionGate& gate);
+
+    /** 由独占 owner 在首次 start 前配置本实例的竞争让步及回收等待；各参数均须为正
+    @param [in] wait 复制到本实例，独立于队列策略及宿主的 pause 回调
+    @return NI_OK、NI_INVALID_ARGUMENT 或 NI_INVALID_STATE；失败保留先前配置
+    */
+    int32_t configureProducerWait(const NetSenderSubmissionWait& wait);
+
+    /** 读取本实例当前生效的等待配置；首次 start 前与设置操作由同一 owner 串行调用
+    @return 配置值副本
+    */
+    NetSenderSubmissionWait producerWait() const;
 
     /** 首次start前配置实际物理池；调用期间不得存在其他执行者
     @param [in] pools 各池初始容量、增长策略和最大存储，复制配置
@@ -244,15 +266,15 @@ public:
     @param [in] id 原预留号
     @param [in] bytes 调用时复制
     @param [in] size 业务体字节数
-    @param [out] ticket 接纳后非零，失败为0
-    @return 接纳结果；交付结果须继续读取票据
+    @param [out] ticket 接纳后非零；输出与正文重叠时保留原值，其他失败时为零
+    @return 接纳结果；票据覆盖正文时返回 NI_INVALID_ARGUMENT；交付结果须继续读取票据
     */
     int32_t sendSynchronous(uint64_t id, const uint8_t* bytes, uint32_t size, uint64_t& ticket);
 
     /** 接纳同步数据帧，交付期限由配置决定，默认五秒
     @param [in] frame 调用时复制
-    @param [out] ticket 接纳后非零
-    @return 接纳结果
+    @param [out] ticket 接纳后非零；输出与帧字段或正文重叠时保留原值，其他失败时为零
+    @return 接纳结果；票据覆盖帧字段或正文时返回 NI_INVALID_ARGUMENT
     */
     int32_t dataSynchronous(const NetInterfaceFrame& frame, uint64_t& ticket);
 
@@ -278,6 +300,14 @@ public:
     @return READY尚未交付、OK已交付或负数失败
     */
     int32_t synchronousResult(uint64_t ticket, bool consume);
+
+    /** 查询同一回执的交付结果，可同时获取下一次推进前最多可等待的时间
+    @param [in] ticket 本次接纳的票据
+    @param [in] consume 是否消费已经终结的结果
+    @param [out] remainingMs 可空；等待中为截至原期限的剩余毫秒，已到期、结束或无效时写0
+    @return 同两参数重载；剩余时间为0时仍由 owner 推进实际终态
+    */
+    int32_t synchronousResult(uint64_t ticket, bool consume, uint32_t* remainingMs);
 
     /** 为一张未消费票据登记一次持久通知，不改变交付结果
     @param [in] ticket 当前同步票据；只能由该票据等待者调用
