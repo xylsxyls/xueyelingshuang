@@ -213,13 +213,20 @@ static int EntropyOutput()
         out[0] = 0x70;
         return -1;
     };
-    const NetInterfaceEntropyFunction failures[] = {partial, nullptr};
-    for (size_t i = 0; i < 2; ++i)
+    // 模拟宿主在合法输出区写入首字节后抛出异常，context 记录实际调用次数。
+    NetInterfaceEntropyFunction throwing = [](void* context, uint8_t* out, uint32_t) -> int32_t {
+        ++*static_cast<uint32_t*>(context);
+        out[0] = 0x80;
+        throw NI_INVALID_ARGUMENT;
+    };
+    const NetInterfaceEntropyFunction failures[] = {partial, throwing, nullptr};
+    for (size_t i = 0; i < sizeof(failures) / sizeof(failures[0]); ++i)
     {
         uint8_t guarded[] = {1, 2, 3, 4, 5};
         const uint8_t expected[] = {1, 0, 0, 0, 5};
+        const uint32_t expectedCalls = calls + (failures[i] ? 1U : 0U);
         CHECK_TEST(NetInterface::entropyBytes(failures[i], &calls, guarded + 1, 3) == NI_INVALID_STATE &&
-            !std::memcmp(guarded, expected, sizeof(expected)) && calls == 2);
+            !std::memcmp(guarded, expected, sizeof(expected)) && calls == expectedCalls);
     }
     return 0;
 }
@@ -7425,7 +7432,13 @@ static int DirectoryHandles()
     point.m_port = 65536;
     CHECK_TEST(!NetInterfaceDirectory::valid(point) && NetInterfaceDirectory::address("::1") &&
         !NetInterfaceDirectory::address("::") && !NetInterfaceDirectory::address("127.0.0.256"));
-    std::string privateText("old"), requestText("old");
+    std::string privateText("key"), requestText("request");
+    CHECK_TEST(NetInterfaceCertificate::createRequest(privateText, nullptr, nullptr, privateText, requestText) ==
+        NI_INVALID_ARGUMENT && privateText == "key" && requestText == "request");
+    CHECK_TEST(NetInterfaceCertificate::createRequest(requestText, nullptr, nullptr, privateText, requestText) ==
+        NI_INVALID_ARGUMENT && privateText == "key" && requestText == "request");
+    CHECK_TEST(NetInterfaceCertificate::createRequest("node", nullptr, nullptr, privateText, privateText) ==
+        NI_INVALID_ARGUMENT && privateText == "key");
     CHECK_TEST(NetInterfaceCertificate::createRequest("invalid.", nullptr, nullptr, privateText, requestText) ==
         NI_INVALID_ARGUMENT && privateText.empty() && requestText.empty());
     NetInterfaceDirectoryHandle handle = nullptr;
