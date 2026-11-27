@@ -67,6 +67,7 @@
   <PropertyGroup Label="UserMacros">
     <TestSdkRoot Condition="'$(TestSdkRoot)'=='' and '$(CLOUD_REBUILD_SDK_ROOT)'!=''">$(CLOUD_REBUILD_SDK_ROOT)</TestSdkRoot>
     <TestSdkRoot Condition="'$(TestSdkRoot)'==''">$(ProjectDir)..\..\..</TestSdkRoot>
+    <IncludePath>$(TestSdkRoot)\include\mbedtls;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(TestSdkRoot)\lib\</OutDir>
