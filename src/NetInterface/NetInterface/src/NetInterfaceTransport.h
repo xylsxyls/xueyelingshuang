@@ -99,11 +99,10 @@ public:
     virtual int32_t configureCompression(uint64_t peer, const uint32_t* types, uint32_t count, bool negotiated);
 
 public:
-    /** 查询本层待发数据是否全部交给下层；只由协议执行者调用
+    /** 查询本层待发数据交付下层的状态，由协议执行者据此保证 send 与 post 的交付顺序
     @param [in] peer 当前连接代次
-    @return OK全部交付，READY仍有本层待发数据，负数失败；不表示远端收到
+    @return NI_OK 表示本层已交付下层，NI_READY 表示仍有待发数据，负数表示错误，基类返回 NI_NOT_SUPPORTED
     */
-    // 统一NetSender的send／post保序均依赖真实输出状态；定制后端必须实现，不能把本层队列当作已交付。
     virtual int32_t outputState(uint64_t peer) const;
 };
 
@@ -232,9 +231,9 @@ public:
     virtual void shutdown() = 0;
 
 public:
-    /** 查询本层待发数据是否全部交给下层；只由协议执行者调用
+    /** 查询本层待发数据交付下层的状态，供协议执行者安排后续发送
     @param [in] peer 当前连接代次
-    @return OK全部交付，READY仍有本层待发数据，负数失败；不表示远端收到
+    @return NI_OK 表示本层已交付下层，NI_READY 表示仍有待发数据，负数表示错误，基类返回 NI_NOT_SUPPORTED
     */
     virtual int32_t outputState(uint64_t peer) const;
 };

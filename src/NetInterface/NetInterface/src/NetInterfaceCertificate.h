@@ -15,11 +15,11 @@ public:
     static bool validName(const std::string& name);
 
     /** 同模块/静态兼容入口；跨DLL使用NetInterface::certificateCreateRequest固定缓冲，不转交STL释放权
-    @param [in] name 逻辑身份，服务端签发时仍须独立授权
+    @param [in] name 逻辑身份，服务端签发时仍须独立授权。name、privateKey、request 任意两者为同一对象时，两个输出都保留原值
     @param [in] entropy 宿主密码学随机源
     @param [in] context 随机上下文
-    @param [out] privateKey 成功为PEM；与name/request为同一对象时拒绝并保留原值，其他失败清空；不得记录日志
-    @param [out] request 成功为PEM；与name/privateKey为同一对象时拒绝并保留原值，其他失败清空
+    @param [out] privateKey 成功为PEM，参数对象重合以外的失败清空，不得记录日志
+    @param [out] request 成功为PEM，参数对象重合以外的失败清空
     @return NI_OK或负数错误
     */
     static int32_t createRequest(const std::string& name, NetInterfaceEntropyFunction entropy, void* context,
