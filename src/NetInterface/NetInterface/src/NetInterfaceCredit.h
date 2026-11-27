@@ -28,7 +28,7 @@ public:
     uint32_t capacity() const;
 
     /** 读取指定组的可选窗口，无需复制字段或分配内存；仅缺字段时采用64KiB
-    @param [in] message 同源protobuf
+    @param [in] message 管理协议的通用 protobuf，窗口字段为小端 INT32
     @param [out] bytes 成功窗口
     @param [in] group 消息组号
     @return NI_OK或非法字段协议错误

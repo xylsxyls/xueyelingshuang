@@ -10,6 +10,30 @@ class NetInterfaceMessage
     */
     NetInterfaceMessage();
 
+    /** 将有符号 32 位管理字段按小端字节存入 INT32 Variant
+    @param [in] value 本机数值
+    @return 供通用 ProtoMessage 原样序列化的字段
+    */
+    static Variant encodeInteger(int32_t value);
+
+    /** 将无符号 64 位管理字段按小端字节存入 UINT64 Variant
+    @param [in] value 本机数值
+    @return 供通用 ProtoMessage 原样序列化的字段
+    */
+    static Variant encodeInteger(uint64_t value);
+
+    /** 从小端管理字段读取有符号整数
+    @param [in] value 调用者已确认类型为 INT32 的线路字段
+    @return 本机数值
+    */
+    static int32_t decodeInt32(const Variant& value);
+
+    /** 从小端管理字段读取无符号整数
+    @param [in] value 调用者已确认类型为 UINT64 的线路字段
+    @return 本机数值
+    */
+    static uint64_t decodeUint64(const Variant& value);
+
     /** 清除消息内容及预算；解析失败时同样清空旧身份信息
     */
     void clear();

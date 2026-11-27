@@ -3,16 +3,22 @@
 #include "NetInterfaceTransport.h"
 
 // 逻辑会话和每次新建通道共用的期限策略，各通道独自保存正在拒收的帧期限。
-struct NetGatewayClientTiming
+struct NetInterfaceAPI NetGatewayClientTiming
 {
+public:
     // 从管理连接到业务就绪的总毫秒数，0采用三倍有效TLS握手期限
-    uint32_t m_startupMs = 0;
+    uint32_t m_startupMs;
     // 连续拒收同一应用帧的最长毫秒数
-    uint32_t m_backpressureMs = 5000;
+    uint32_t m_backpressureMs;
     // 一次推进最多交付的解密业务帧数
-    uint32_t m_readFrames = 32;
+    uint32_t m_readFrames;
     // 一次推进最多交给运输的密文记录数
-    uint32_t m_writeRecords = 32;
+    uint32_t m_writeRecords;
+
+public:
+    /** 建立默认启动、背压和推进预算
+    */
+    NetGatewayClientTiming() throw();
 
     /** 同时配置两种推进预算
     @param [in] readFrames 接收帧数，必须为正

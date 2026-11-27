@@ -40,10 +40,8 @@ private:
 // 客户端单一在途记录；元数据不再复制到另一份路由等待表。
 struct NetSessionPending
 {
-    // 原号、产品、命令和不可延长的截止时间。
+    // m_original 为业务预留号；m_route 为已接纳的线路号，未发送时为0。
     NetInterfaceRequest m_request;
-    // 下层接纳请求后才置true，背压不改变它。
-    bool m_sent;
     // 最小截止堆中的位置，摘除时不扫描全部请求。
     size_t m_heapIndex;
 };
@@ -59,6 +57,15 @@ public:
     /** 擦除发送缓冲区的最后一份明文
     */
     ~NetSessionState();
+
+    /** 复制调用方的客户端 HELLO 参数，生成随机数后校验完整握手
+    @param [in] offered 本次连接声明的能力及上限
+    @param [in] tls 提供随机源和上下文
+    @param [out] prepared 成功时为本次验证过的配置
+    @return NI_OK、NI_INVALID_ARGUMENT 或 NI_INVALID_STATE
+    */
+    static int32_t prepareHandshake(const NetInterfaceHandshakeOptions& offered, const NetInterfaceTlsOptions& tls,
+        NetInterfaceHandshakeOptions& prepared);
 
     /** 清空旧代次的请求及高水位，不执行上层回调
     @param [in] limit 本代次已验证的非零对端声明
@@ -127,10 +134,14 @@ public:
     std::unique_ptr<NetObjectPool<NetSessionPending>> m_records;
     // 单执行者无序索引，每个节点对应一个已取得的池槽，不另设请求条数窗口
     std::unordered_map<uint64_t, NetObjectReference<NetSessionPending>> m_pending;
+    // 只为线路号与业务号不同的已发送请求保存反向索引。
+    std::unique_ptr<std::unordered_map<uint64_t, uint64_t>> m_remapped;
     // 只借用池槽的截止堆，容量随实际记录增长，关闭时复用预热容量
     std::vector<NetSessionPending*> m_expiry;
     // 本代请求原号高水位；容量拒绝仍消耗原号。
     uint64_t m_highestOriginal;
+    // 本代运输已接纳的最后一个请求号，背压不推进它。
+    uint64_t m_highestWire;
     // 握手协商后的请求上限。
     uint32_t m_maxRequests;
     // 本会话独立的心跳及总无输入期限
@@ -169,6 +180,8 @@ public:
     bool m_polling;
     // 允许嵌套业务调用，但禁止重连/释放的回调保护。
     bool m_callback;
+    // 正在结算本代关闭，区别于连接准备及普通业务回调。
+    bool m_notifyingClose;
     // 已记录首次本地关闭意图。
     bool m_localClose;
     // 运输的 close 抛出异常，等待退出借用回调后停止该通道。

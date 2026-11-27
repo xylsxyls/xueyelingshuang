@@ -19,14 +19,14 @@ public:
     */
     virtual ~NetClientSession();
 
-    /** 绑定默认服务运输与可选发现，只允许会话停止后调用
+    /** 绑定默认服务运输与可选发现，只允许会话停止后调用；成功会解除当前直连通道绑定
     @param [in] factory 借用至解除绑定；空仅允许解除，不提供隐式原生运输
     @param [in] discovery 可空；非空借用至解除绑定，必须同时有factory
     @return OK或INVALID_ARGUMENT/INVALID_STATE
     */
     int32_t bindGateway(NetGatewayTransportFactory* factory, NetClientDiscovery* discovery = nullptr);
 
-    /** 停止时配置候选及缓存提示，算法不访问路径
+    /** 会话与发现器均停止后配置候选及缓存提示，算法不访问路径
     @param [in] seeds 可空的数值入口列表，空采用connectService地址
     @param [in] cachePath 可空UTF8路径，最多4096字节；实际支持由发现器决定
     @return OK或负数；失败不替换既有配置
@@ -103,8 +103,8 @@ public:
     */
     int32_t configureRequestPool(const LockFreeHashMapPoolConfig& config);
 
-    /** 停止时设置公开无秘密RPC类型的压缩候选
-    @param [in] types count非零时不可空
+    /** 会话与发现器均停止后设置公开无秘密 RPC 类型的压缩候选
+    @param [in] types count非零时不可空，每项必须非零；成功复制数组，失败保留原配置
     @param [in] count 非负项数，0清空
     @return OK或负数，实际使用仍需对端协商
     */
@@ -112,13 +112,13 @@ public:
 
     /** 接纳逻辑服务恢复，已接纳业务只结算一次且绝不自动重放
     @param [in] product 固定逻辑目标，0的权限仍由服务角色及路由决定
-    @param [in] address 最多39字节及NUL的默认数值入口，或由显式IPC运输解释的本地参数
+    @param [in] address 以 NUL 终止，最多 39 字节。由发现器用作默认种子时须为可连接的数值 IPv4 或 IPv6。显式 IPC 工厂可解释本地地址标识
     @param [in] port 1至65535，IPC也必须提供有效占位端口
-    @param [in] tls 只采用强随机及100至60000毫秒期限，根/目标身份内置
-    @param [in] handshake 客户端平台/能力/设备声明，不等于账号授权
+    @param [in] tls 只采用强随机及握手期限。0 采用 10000 毫秒，显式值为 100 至 60000 毫秒。根和目标身份内置。
+    @param [in] handshake 客户端平台、能力掩码及设备声明，协商采用声明与对端能力的交集
     @param [in] listener 借用至shutdown，包含后续恢复代次
     @param [in] factory 可空用已绑定工厂；非空只借用本工厂并跳过默认发现
-    @return OK接纳，结果由poll交付；无工厂NOT_SUPPORTED，发现器启动分配异常为NO_MEMORY、其他异常为INVALID_STATE，无强随机明确失败
+    @return OK接纳，结果由poll交付；无工厂或默认工厂无发现器而配置了非空种子/路径时NOT_SUPPORTED，发现器启动分配异常为NO_MEMORY、其他异常为INVALID_STATE，无强随机明确失败
     */
     int32_t connectService(uint32_t product, const char* address, uint32_t port, const NetInterfaceTlsOptions& tls,
         const NetInterfaceHandshakeOptions& handshake, NetSessionListener* listener, NetGatewayTransportFactory* factory = nullptr);
@@ -181,18 +181,18 @@ public:
     */
     bool serviceMode() const;
 
-    /** 预留请求，服务模式禁止跨目标产品
-    @param [in] product 非零请求产品，必须匹配固定普通服务目标
+    /** 预留请求，产品筛选后由当前协议会话检查就绪状态
+    @param [in] product 非零业务产品；普通服务匹配固定目标，内部目标0沿用调用来源的业务产品
     @param [in] type RPC命令
     @param [in] timeoutMs 1至60000毫秒，从本次预留开始计时
-    @param [out] requestId 成功非零，失败0
+    @param [out] requestId 成功返回递增的本地业务号，发送、取消及终态使用该号；失败为0
     @return OK接纳或负数，未接纳没有请求回调
     */
     int32_t beginRequest(uint32_t product, uint32_t type, uint32_t timeoutMs, uint64_t& requestId);
 
     /** 由唯一执行者接收提交层原号，保留原始总期限
     @param [in] requestId 本地已接纳原号
-    @param [in] product 固定服务产品或显式通道的请求产品
+    @param [in] product 非零业务产品，与 beginRequest 使用相同的服务目标检查
     @param [in] type 业务命令
     @param [in] startedMs 原始单调开始
     @param [in] timeoutMs 原总期限
@@ -200,7 +200,7 @@ public:
     */
     int32_t beginRequestAt(uint64_t requestId, uint32_t product, uint32_t type, uint64_t startedMs, uint32_t timeoutMs);
 
-    /** 发送已预留请求，仅下层接纳后标记已发送
+    /** 发送已预留请求，线路号按下层接纳顺序递增，可以与预留顺序不同
     @param [in] requestId 当前代次的预留编号
     @param [in] bytes size非零时不可空，借用至返回
     @param [in] size 最多1048560字节
@@ -215,7 +215,7 @@ public:
     int32_t cancel(uint64_t requestId);
 
     /** 提交已授权数据/确认/文件取消帧，不解释业务权限
-    @param [in] frame 借用至返回，服务模式必须匹配固定目标
+    @param [in] frame 借用至返回，产品须非零，普通服务匹配固定目标，内部目标0沿用已授权业务产品
     @return OK、背压或错误
     */
     int32_t sendData(const NetInterfaceFrame& frame);
@@ -278,7 +278,7 @@ private:
 
     /** 仅在原始恢复期限内转交一次业务就绪，然后结束期限
     @param [in] generation 代次
-    @param [in] maxRequests 协商额度
+    @param [in] maxRequests 握手协商的非零请求能力值
     @param [in] maxChunk 协商块大小
     */
     virtual void onSessionReady(uint64_t generation, uint32_t maxRequests, uint32_t maxChunk);
@@ -319,6 +319,12 @@ private:
     @return 不可调用
     */
     NetClientSession& operator=(const NetClientSession& other);
+
+public:
+    /** 在onSessionClosed回调中查询本代请求终态，供调用方结算尚未进入协议的请求
+    @return 本地主动正常关闭为CANCELLED，其他关闭为UNAVAILABLE；仅owner在关闭回调中使用此结果
+    */
+    uint32_t requestCloseStatus() const;
 
 private:
     // 协议状态由本库独占，不跨DLL暴露STL布局

@@ -134,18 +134,9 @@ int32_t NetSession::connectWithPools(const char* address, uint32_t port, const N
         return NI_NOT_SUPPORTED;
     }
     NetSessionCallbackScope callback(m_state->m_callback);
-    NetInterfaceHandshakeOptions options = handshake;
-    if (NetInterface::entropyBytes(tls.entropy, tls.entropyContext, options.m_nonce, sizeof(options.m_nonce)) != NI_OK)
-    {
-        return NI_INVALID_STATE;
-    }
-    const uint64_t now = SessionNow();
-    NetInterfaceHandshake validation(options, now);
-    NetInterfaceFrame hello = {};
-    if (validation.peekOutput(hello) != NI_READY)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
+    NetInterfaceHandshakeOptions options = {};
+    const int32_t validated = NetSessionState::prepareHandshake(handshake, tls, options);
+    if (validated != NI_OK) { return validated; }
     if (pools != nullptr)
     {
         int32_t configured;
@@ -269,15 +260,21 @@ bool NetSession::onFrame(uint64_t peer, const NetInterfaceFrame& frame)
         return true;
     }
     const uint64_t now = SessionNow();
+    if (m_state->m_ready && m_state->m_heartbeat.expired(now - m_state->m_lastReceive,
+            m_state->m_pingSent == 0 ? 0 : now - m_state->m_pingSent))
+    {
+        close(NI_TIMEOUT);
+        return true;
+    }
     const int32_t accepted = m_state->m_handshake->accept(frame, now);
     if (accepted < 0)
     {
         close(accepted);
         return true;
     }
-    m_state->m_lastReceive = now;
     if (!m_state->m_ready)
     {
+        m_state->m_lastReceive = now;
         if (accepted != NI_READY)
         {
             return true;
@@ -339,24 +336,33 @@ bool NetSession::onFrame(uint64_t peer, const NetInterfaceFrame& frame)
         {
             m_state->m_pingSent = 0;
         }
+        m_state->m_lastReceive = now;
         return true;
     }
     if (frame.m_kind == NI_RESPONSE)
     {
+        m_state->m_lastReceive = now;
         NetInterfaceRpcView view = {};
         if (NetInterfaceRpc::parse(frame, view) != NI_OK)
         {
             close(NI_PROTOCOL_ERROR);
             return true;
         }
-        const auto found = m_state->m_pending.find(frame.m_requestId);
+        uint64_t original = frame.m_requestId;
+        if (m_state->m_remapped)
+        {
+            const auto mapped = m_state->m_remapped->find(frame.m_requestId);
+            if (mapped != m_state->m_remapped->end()) { original = mapped->second; }
+        }
+        const auto found = m_state->m_pending.find(original);
         if (found == m_state->m_pending.end())
         {
             return true;
         }
-        if (!found->second->m_sent)
+        if (found->second->m_request.m_route != frame.m_requestId)
         {
-            close(NI_PROTOCOL_ERROR);
+            // 已退役的线路号可能仍是一条业务预留的原号；迟到或重复的响应不结算它。
+            if (frame.m_requestId > m_state->m_highestWire) { close(NI_PROTOCOL_ERROR); }
             return true;
         }
         const NetInterfaceRequest request = found->second->m_request;
@@ -366,7 +372,7 @@ bool NetSession::onFrame(uint64_t peer, const NetInterfaceFrame& frame)
             return true;
         }
         NetSessionPending completed = {};
-        m_state->take(frame.m_requestId, completed);
+        m_state->take(original, completed);
         const bool expired = now >= request.m_deadline;
         notifyResult(request, expired ? NI_RPC_TIMEOUT : view.m_value,
             expired ? nullptr : view.m_data, expired ? 0 : view.m_size);
@@ -376,7 +382,9 @@ bool NetSession::onFrame(uint64_t peer, const NetInterfaceFrame& frame)
         (frame.m_kind == NI_EVENT || (frame.m_productId != 0 && (m_state->m_capabilities & 2) != 0)) && frame.m_requestId != 0 &&
         (frame.m_kind == NI_EVENT || frame.m_payloadSize <= m_state->m_maxChunk + 128))
     {
-        return notifyFrame(frame);
+        const bool delivered = notifyFrame(frame);
+        if (delivered) { m_state->m_lastReceive = now; }
+        return delivered;
     }
     close(NI_PROTOCOL_ERROR);
     return true;
@@ -410,7 +418,14 @@ int32_t NetSession::reserveRequest(uint64_t original, uint32_t product, uint32_t
         return NI_INVALID_ARGUMENT;
     }
     const uint64_t deadline = startedMs + timeoutMs;
-    return now >= deadline ? NI_TIMEOUT : m_state->reserve(original, product, type, deadline, requestId);
+    if (now >= deadline) { return NI_TIMEOUT; }
+    const int32_t result = m_state->reserve(original, product, type, deadline, requestId);
+    if (result == NI_OK && NetExecution::current() != nullptr)
+    {
+        // 预留可发生在本轮 poll 之后，先登记真实截止时间再交还业务编号。
+        NetExecution::deadline(deadline, SessionNow());
+    }
+    return result;
 }
 
 int32_t NetSession::sendFrame(const NetInterfaceFrame& frame)
@@ -437,7 +452,7 @@ int32_t NetSession::sendRequest(uint64_t requestId, const uint8_t* body, uint32_
     {
         return NI_NOT_FOUND;
     }
-    if (found->second->m_sent)
+    if (found->second->m_request.m_route != 0)
     {
         return NI_INVALID_STATE;
     }
@@ -449,6 +464,10 @@ int32_t NetSession::sendRequest(uint64_t requestId, const uint8_t* body, uint32_
     if (now >= found->second->m_request.m_deadline)
     {
         return NI_TIMEOUT;
+    }
+    if (m_state->m_highestWire == UINT64_MAX)
+    {
+        return NI_LIMIT_EXCEEDED;
     }
     int32_t result = NI_NO_MEMORY;
     try
@@ -463,13 +482,24 @@ int32_t NetSession::sendRequest(uint64_t requestId, const uint8_t* body, uint32_
             frame.m_kind = NI_REQUEST;
             frame.m_productId = found->second->m_request.m_product;
             frame.m_messageType = found->second->m_request.m_type;
-            frame.m_requestId = requestId;
+            frame.m_requestId = requestId > m_state->m_highestWire ? requestId : m_state->m_highestWire + 1;
             frame.m_payload = m_state->m_payload.data();
             frame.m_payloadSize = required;
+            if (frame.m_requestId != requestId)
+            {
+                // 运输接纳前完成可能失败的索引分配，接纳后只发布线路号。
+                if (!m_state->m_remapped) { m_state->m_remapped.reset(new std::unordered_map<uint64_t, uint64_t>()); }
+                m_state->m_remapped->emplace(frame.m_requestId, requestId);
+            }
             result = sendFrame(frame);
             if (result == NI_OK)
             {
-                found->second->m_sent = true;
+                found->second->m_request.m_route = frame.m_requestId;
+                m_state->m_highestWire = frame.m_requestId;
+            }
+            else if (frame.m_requestId != requestId)
+            {
+                m_state->m_remapped->erase(frame.m_requestId);
             }
         }
     }
@@ -519,7 +549,7 @@ int32_t NetSession::sendCancel(const NetInterfaceRequest& request)
 {
     NetInterfaceFrame frame = {};
     frame.m_kind = NI_CANCEL;
-    frame.m_requestId = request.m_original;
+    frame.m_requestId = request.m_route;
     frame.m_productId = request.m_product;
     frame.m_messageType = request.m_type;
     return sendFrame(frame);
@@ -532,7 +562,7 @@ int32_t NetSession::cancel(uint64_t requestId)
     {
         return NI_NOT_FOUND;
     }
-    const int32_t sent = pending.m_sent && ready() ? sendCancel(pending.m_request) : NI_OK;
+    const int32_t sent = pending.m_request.m_route != 0 && ready() ? sendCancel(pending.m_request) : NI_OK;
     // 已摘除请求的终态必须先交付；控制失败后再关闭，不能丢失本请求。
     notifyResult(pending.m_request, NI_RPC_CANCELLED, nullptr, 0);
     if (sent != NI_OK)
@@ -594,7 +624,7 @@ bool NetSession::poll()
             }
             NetSessionPending pending = {};
             m_state->take(original, pending);
-            const int32_t sent = pending.m_sent ? sendCancel(pending.m_request) : NI_OK;
+            const int32_t sent = pending.m_request.m_route != 0 ? sendCancel(pending.m_request) : NI_OK;
             notifyResult(pending.m_request, NI_RPC_TIMEOUT, nullptr, 0);
             if (sent != NI_OK)
             {
@@ -606,8 +636,7 @@ bool NetSession::poll()
             const uint64_t now = SessionNow();
             const NetHeartbeatConfig& heartbeat = m_state->m_heartbeat;
             const uint64_t idle = now - m_state->m_lastReceive;
-            if ((m_state->m_pingSent != 0 && now - m_state->m_pingSent >= heartbeat.m_pongTimeoutMs) ||
-                idle >= heartbeat.m_receiveTimeoutMs)
+            if (heartbeat.expired(idle, m_state->m_pingSent == 0 ? 0 : now - m_state->m_pingSent))
             {
                 close(NI_TIMEOUT);
             }
@@ -671,6 +700,13 @@ bool NetSession::poll()
     return m_state->m_active;
 }
 
+bool NetSession::closedRequestStatus(uint32_t& status) const
+{
+    status = m_state->m_localClose && (m_state->m_closeReason == NI_OK || m_state->m_closeReason == NI_CANCELLED) ?
+        NI_RPC_CANCELLED : NI_RPC_UNAVAILABLE;
+    return m_state->m_notifyingClose && m_state->m_callback;
+}
+
 void NetSession::onClosed(uint64_t peer, int32_t reason, int32_t detail)
 {
     if (peer != m_state->m_peer || !m_state->m_active)
@@ -679,8 +715,14 @@ void NetSession::onClosed(uint64_t peer, int32_t reason, int32_t detail)
     }
     m_state->m_ready = false;
     m_state->m_active = false;
-    const uint32_t status = m_state->m_localClose && (m_state->m_closeReason == NI_OK || m_state->m_closeReason == NI_CANCELLED) ?
-        NI_RPC_CANCELLED : NI_RPC_UNAVAILABLE;
+    NetSessionCallbackScope closing(m_state->m_notifyingClose);
+    if (m_state->m_localClose)
+    {
+        reason = m_state->m_closeReason;
+        detail = 0;
+    }
+    uint32_t status = NI_RPC_UNAVAILABLE;
+    closedRequestStatus(status);
     while (!m_state->m_pending.empty())
     {
         NetSessionPending pending = {};

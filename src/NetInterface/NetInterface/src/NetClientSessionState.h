@@ -44,6 +44,12 @@ public:
     */
     bool recovering() const;
 
+    /** 核对服务连接的业务产品；目标0沿用调用来源的非零产品，实际授权由网关及服务验证
+    @param [in] product 业务请求或数据帧的产品号
+    @return 直连交给协议校验；服务连接接受匹配目标的非零产品或内部目标承载的非零产品
+    */
+    bool acceptsProduct(uint32_t product) const;
+
     /** 检查固定总期限，不在重试或迟到ready时续期
     @param [in] nowMs 当前单调毫秒
     @return 总期限非零且已到达
@@ -111,6 +117,6 @@ public:
     bool m_callback;
     // 是否在poll中
     bool m_polling;
-    // 主动关闭首个原因
+    // 本代主动关闭首个原因，NI_READY表示尚无主动关闭意图
     int32_t m_closeReason;
 };

@@ -31,6 +31,8 @@ typedef struct NetInterfaceLinkPeer
 } NetInterfaceLinkPeer;
 
 // 服务证明由服务端专用宿主提供；32字节凭证不能编入客户端/公共SDK/Wasm。
+// 证明和验证回调同步运行，只计算并返回本次结果；不得在回调内修改、推进或销毁所属链路。
+// 拒绝本次认证应返回非NI_OK；finishInput/drainInput等操作须等外层调用返回后再执行。
 typedef int32_t (*NetInterfaceLinkServiceProof)(void* context, const uint8_t* statement, uint32_t statementSize,
     uint8_t* proof, uint32_t capacity);
 

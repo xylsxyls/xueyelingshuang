@@ -18,8 +18,8 @@ public:
     @param [in] name 逻辑身份，服务端签发时仍须独立授权
     @param [in] entropy 宿主密码学随机源
     @param [in] context 随机上下文
-    @param [out] privateKey 成功为PEM，失败清空；不得与name/request为同一对象，不得记录日志
-    @param [out] request 成功为PEM，失败清空
+    @param [out] privateKey 成功为PEM；与name/request为同一对象时拒绝并保留原值，其他失败清空；不得记录日志
+    @param [out] request 成功为PEM；与name/privateKey为同一对象时拒绝并保留原值，其他失败清空
     @return NI_OK或负数错误
     */
     static int32_t createRequest(const std::string& name, NetInterfaceEntropyFunction entropy, void* context,

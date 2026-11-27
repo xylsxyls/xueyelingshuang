@@ -199,6 +199,7 @@ NetSenderSubmissionItem::~NetSenderSubmissionItem()
 NetSenderSubmissionState::NetSenderSubmissionState(const NetSenderSubmissionPools& pools, const NetSenderSubmissionOptions& options) :
 m_gate(),
 m_gateConfigured(false),
+m_stateRevision(0),
 m_generation(0),
 m_product(0),
 m_nextId(0),
@@ -595,7 +596,7 @@ void NetSenderSubmissionState::importOwned(NetSenderSubmissionItem& item)
     }
     else
     {
-        entry = input->m_kind == NET_SUBMIT_DATA ? input->m_entry.release() : find(input->m_front->m_command.m_id);
+        entry = input->m_kind == NET_SUBMIT_DATA ? input->m_entry.release() : input->m_front->m_entry;
         if (entry != nullptr && entry->m_phase != NET_SUBMISSION_RETIRED)
         {
             // 发布后的输入字段只由owner访问；转交引用，不为同一正文增减共享计数。
@@ -751,14 +752,31 @@ void NetSenderSubmissionState::pump(bool deferData)
     }
 }
 
+int32_t NetSenderSubmissionState::lookupFront(uint64_t id, NetObjectReference<NetSenderSubmissionFront>& front) const
+{
+    return lookupIndex(m_fronts, id, front);
+}
+
+int32_t NetSenderSubmissionState::lookupReceipt(uint64_t ticket, NetObjectReference<NetSenderSubmissionReceipt>& receipt) const
+{
+    if (ticket == 0 || ticket > m_nextSync.load(std::memory_order_relaxed)) { return NI_NOT_FOUND; }
+    return lookupIndex(m_tickets, ticket, receipt);
+}
+
 NetSenderSubmissionEntry* NetSenderSubmissionState::find(uint64_t id) const
 {
     NetObjectReference<NetSenderSubmissionFront> front;
-    if (!m_fronts.get(id, front) || front->m_retired.load())
+    const int32_t result = lookupFront(id, front);
+    if (result == NI_OK) { return front->m_entry; }
+    if (result != NI_NOT_FOUND)
     {
-        return nullptr;
+        // 并发保护记录可能暂时用尽；owner仍须识别已经导入的合法应答。
+        for (NetSenderSubmissionEntry* entry = m_requests; entry != nullptr; entry = entry->m_nextRequest)
+        {
+            if (entry->m_command.m_id == id) { return entry; }
+        }
     }
-    return front->m_entry;
+    return nullptr;
 }
 
 void NetSenderSubmissionState::append(NetSenderSubmissionEntry* entry)
@@ -861,6 +879,7 @@ void NetSenderSubmissionState::retire(NetSenderSubmissionEntry* entry)
 void NetSenderSubmissionState::take(NetSenderSubmissionEntry* entry, NetSenderSubmissionCommand& command)
 {
     command = entry->m_command;
+    entry->m_front->m_entry = nullptr;
     entry->m_front->m_retired.store(true);
     const int32_t result = indexResult(m_fronts.tryErase(entry->m_command.m_id, true, false));
     if (result != NI_OK)

@@ -36,7 +36,7 @@ public:
     uint32_t m_negotiated[4];
     // 最近收到完整合法帧的单调时间；业务空闲也需回应心跳
     uint64_t m_activity;
-    // 最近发送心跳或初始化连接的单调毫秒，用于响应期限
+    // 最近发出 PING 的单调毫秒，存在在途心跳时用于计算 PONG 期限
     uint64_t m_pingTime;
     // 正在等待响应的心跳号，0表示无在途心跳
     uint64_t m_pingId;
@@ -166,7 +166,7 @@ public:
     std::vector<uint8_t> m_payload;
     // 拒绝嵌套推进和同步再次投递；宿主回调只能请求关闭。
     bool m_polling;
-    // 当前正在转发一条帧，阻止回调同步重入投递
+    // 正在转发帧或交付端点关闭回调，阻止嵌套投递及同步整体回收
     bool m_dispatching;
     // 回调/推进中收到停止请求，延迟到借用结束后收敛。
     bool m_stopRequested;

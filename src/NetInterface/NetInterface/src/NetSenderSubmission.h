@@ -18,14 +18,20 @@ struct NetSenderSubmissionGate
 };
 
 // 单个提交实例在竞争和关闭入口时采用的等待参数。
-struct NetSenderSubmissionWait
+struct NetInterfaceAPI NetSenderSubmissionWait
 {
+public:
     // 竞争入口或分配编号时每多少次 CAS 失败让步；默认64，至少1。
-    uint32_t m_yieldInterval = 64;
+    uint32_t m_yieldInterval;
     // 原生 owner 等待已进入的提交者退出时，每次无宿主 pause 的休眠毫秒数；默认1，至少1。
-    uint32_t m_quiesceSleepMs = 1;
-    // 原生同步发送两轮推进之间的最长休眠毫秒，默认1，至少1；同时受回执剩余期限约束。
-    uint32_t m_syncPollSleepMs = 1;
+    uint32_t m_quiesceSleepMs;
+    // 原生同步发送两轮推进之间的最长休眠毫秒，默认1，至少1。可读回执按其剩余期限缩短等待。
+    uint32_t m_syncPollSleepMs;
+
+public:
+    /** 建立竞争让步与同步推进的默认等待参数
+    */
+    NetSenderSubmissionWait() throw();
 };
 
 // 本地提交动作，不是线协议种类
@@ -159,9 +165,9 @@ public:
     */
     int32_t send(uint64_t id, const uint8_t* bytes, uint32_t size);
 
-    /** 不分配内存的取消接纳，满数据队列也可调用
+    /** 取消接纳不占入口队列槽，索引快速查找成功时不分配内存
     @param [in] id 当前未终结请求
-    @return OK或NOT_FOUND
+    @return NI_OK、NI_NOT_FOUND 或索引资源错误
     */
     int32_t cancel(uint64_t id);
 
@@ -297,14 +303,14 @@ public:
     /** 等待者读取一次交付结果；不等待远端业务回应
     @param [in] ticket 本次接纳票据
     @param [in] consume 结果完成后是否归还本地票据槽
-    @return READY尚未交付、OK已交付或负数失败
+    @return READY表示仍需查询（尚未交付或索引读取资源暂不可用）；OK已交付或负数失败
     */
     int32_t synchronousResult(uint64_t ticket, bool consume);
 
-    /** 查询同一回执的交付结果，可同时获取下一次推进前最多可等待的时间
+    /** 查询同一回执的交付结果，可同时获取下次推进或重试查询的时间提示
     @param [in] ticket 本次接纳的票据
     @param [in] consume 是否消费已经终结的结果
-    @param [out] remainingMs 可空；等待中为截至原期限的剩余毫秒，已到期、结束或无效时写0
+    @param [out] remainingMs 可空；可读的待办回执给出剩余毫秒，已到期、结束或确认无效时写0。索引暂不可读时写入配置的 m_syncPollSleepMs，作为重试间隔
     @return 同两参数重载；剩余时间为0时仍由 owner 推进实际终态
     */
     int32_t synchronousResult(uint64_t ticket, bool consume, uint32_t* remainingMs);
@@ -312,7 +318,7 @@ public:
     /** 为一张未消费票据登记一次持久通知，不改变交付结果
     @param [in] ticket 当前同步票据；只能由该票据等待者调用
     @param [in] signal 非空拥有引用；完成早于登记也会通知，禁止抛异常
-    @return NI_OK已登记；重复登记或票据不存在返回错误，不消费票据
+    @return NI_OK已登记；保护记录暂不可用返回 NI_LIMIT_EXCEEDED，可以重试。未找到返回 NI_NOT_FOUND，重复登记返回 NI_INVALID_STATE；均不消费票据
     */
     int32_t observeSynchronous(uint64_t ticket, const std::shared_ptr<NetSenderSubmissionSignal>& signal);
 

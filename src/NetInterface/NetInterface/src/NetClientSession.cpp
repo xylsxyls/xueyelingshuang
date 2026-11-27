@@ -6,6 +6,7 @@
 #include "NetInterfaceCredit.h"
 #include "NetExecution.h"
 #include "NetClientDiscovery.h"
+#include "NetInterfaceDirectory.h"
 #include "NetInterfaceTransport.h"
 #include "NetSession.h"
 #include "NetSessionState.h"
@@ -118,7 +119,7 @@ int32_t NetClientSession::bindGateway(NetGatewayTransportFactory* factory, NetCl
 
 int32_t NetClientSession::configureGateways(const std::string& seeds, const std::string& cachePath)
 {
-    if (m_state->active() || executing())
+    if (!quiescent())
     {
         return NI_INVALID_STATE;
     }
@@ -186,8 +187,7 @@ int32_t NetClientSession::configureRequestPool(const LockFreeHashMapPoolConfig& 
 
 int32_t NetClientSession::configureCompression(const uint32_t* types, uint32_t count)
 {
-    return m_state->active() || executing() ? NI_INVALID_STATE :
-        m_state->m_session.configureCompression(types, count);
+    return quiescent() ? m_state->m_session.configureCompression(types, count) : NI_INVALID_STATE;
 }
 
 int32_t NetClientSession::bindChannel(NetClientChannel* channel)
@@ -308,20 +308,20 @@ int32_t NetClientSession::connectService(uint32_t product, const char* address, 
     {
         return NI_NOT_SUPPORTED;
     }
+    if (discovery != nullptr && m_state->m_seeds.empty())
+    {
+        // 发现器接收的默认种子与显式种子遵守相同的数值地址约定。
+        uint8_t addressKey[16];
+        if (!NetInterfaceDirectoryAddress::parse(address, static_cast<uint32_t>(addressSize), addressKey))
+        {
+            return NI_INVALID_ARGUMENT;
+        }
+    }
     NetSessionCallbackScope callback(m_state->m_callback);
-    NetInterfaceHandshakeOptions validation = handshake;
-    validation.m_capabilities |= 24;
-    if (NetInterface::entropyBytes(tls.entropy, tls.entropyContext, validation.m_nonce, sizeof(validation.m_nonce)) != NI_OK)
-    {
-        return NI_INVALID_STATE;
-    }
+    NetInterfaceHandshakeOptions options = {};
+    const int32_t validated = NetSessionState::prepareHandshake(handshake, tls, options);
+    if (validated != NI_OK) { return validated; }
     const uint64_t now = ClientSessionNow();
-    NetInterfaceHandshake checked(validation, now);
-    NetInterfaceFrame hello = {};
-    if (checked.peekOutput(hello) != NI_READY)
-    {
-        return NI_INVALID_ARGUMENT;
-    }
     const int32_t detached = m_state->m_session.bindChannel(nullptr);
     if (detached != NI_OK)
     {
@@ -378,8 +378,7 @@ int32_t NetClientSession::connectService(uint32_t product, const char* address, 
     m_state->m_tls.entropy = tls.entropy;
     m_state->m_tls.entropyContext = tls.entropyContext;
     m_state->m_tls.handshakeTimeoutMs = tls.effectiveHandshakeTimeout();
-    m_state->m_handshake = handshake;
-    m_state->m_handshake.m_capabilities |= 24;
+    m_state->m_handshake = options;
     m_state->m_product = product;
     m_state->m_service = true;
     m_state->m_retryAt = 0;
@@ -398,7 +397,7 @@ bool NetClientSession::reserveGeneration()
     }
     ++m_state->m_generation;
     m_state->m_phase = NET_CLIENT_PENDING;
-    m_state->m_closeReason = 0;
+    m_state->m_closeReason = NI_READY;
     return true;
 }
 
@@ -636,6 +635,17 @@ bool NetClientSession::onSessionFrame(uint64_t generation, const NetInterfaceFra
     return false;
 }
 
+uint32_t NetClientSession::requestCloseStatus() const
+{
+    uint32_t status = NI_RPC_UNAVAILABLE;
+    if (m_state->m_session.closedRequestStatus(status))
+    {
+        return status;
+    }
+    return m_state->m_closeReason == NI_OK || m_state->m_closeReason == NI_CANCELLED ?
+        NI_RPC_CANCELLED : NI_RPC_UNAVAILABLE;
+}
+
 void NetClientSession::onSessionClosed(uint64_t generation, int32_t reason, int32_t detail)
 {
     (void)generation;
@@ -646,7 +656,9 @@ void NetClientSession::onSessionClosed(uint64_t generation, int32_t reason, int3
     const bool retry = m_state->recovering();
     const bool local = m_state->m_phase == NET_CLIENT_CANCELLING || m_state->m_phase == NET_CLIENT_STOPPING;
     m_state->m_phase = NET_CLIENT_CLOSED;
-    if (local)
+    uint32_t status = NI_RPC_UNAVAILABLE;
+    // 协议层已封闭的终态不能被较晚的请求结果回调中的close覆盖。
+    if (local && !m_state->m_session.closedRequestStatus(status))
     {
         reason = m_state->m_closeReason;
         detail = 0;
@@ -800,14 +812,12 @@ void NetClientSession::detachBindingsForDestruction()
 int32_t NetClientSession::beginRequest(uint32_t product, uint32_t type, uint32_t timeoutMs, uint64_t& requestId)
 {
     requestId = 0;
-    return m_state->m_service && product != m_state->m_product ? NI_INVALID_ARGUMENT :
-        m_state->m_session.beginRequest(product, type, timeoutMs, requestId);
+    return m_state->acceptsProduct(product) ? m_state->m_session.beginRequest(product, type, timeoutMs, requestId) : NI_INVALID_ARGUMENT;
 }
 
 int32_t NetClientSession::beginRequestAt(uint64_t requestId, uint32_t product, uint32_t type, uint64_t startedMs, uint32_t timeoutMs)
 {
-    return m_state->m_service && product != m_state->m_product ? NI_INVALID_ARGUMENT :
-        m_state->m_session.beginRequestAt(requestId, product, type, startedMs, timeoutMs);
+    return m_state->acceptsProduct(product) ? m_state->m_session.beginRequestAt(requestId, product, type, startedMs, timeoutMs) : NI_INVALID_ARGUMENT;
 }
 
 int32_t NetClientSession::sendRequest(uint64_t requestId, const uint8_t* bytes, uint32_t size)
@@ -822,8 +832,7 @@ int32_t NetClientSession::cancel(uint64_t requestId)
 
 int32_t NetClientSession::sendData(const NetInterfaceFrame& frame)
 {
-    return m_state->m_service && frame.m_productId != m_state->m_product ? NI_INVALID_ARGUMENT :
-        m_state->m_session.sendData(frame);
+    return m_state->acceptsProduct(frame.m_productId) ? m_state->m_session.sendData(frame) : NI_INVALID_ARGUMENT;
 }
 
 int32_t NetClientSession::outputState() const

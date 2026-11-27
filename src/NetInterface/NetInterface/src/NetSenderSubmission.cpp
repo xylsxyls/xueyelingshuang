@@ -8,6 +8,14 @@
 #include <cstring>
 #include <new>
 
+NetSenderSubmissionWait::NetSenderSubmissionWait() throw() :
+m_yieldInterval(64),
+m_quiesceSleepMs(1),
+m_syncPollSleepMs(1)
+{
+
+}
+
 NetSenderSubmission::NetSenderSubmission() :
 NetSenderSubmission(NetSenderSubmissionPools(), NetSenderSubmissionOptions())
 {
@@ -108,10 +116,12 @@ int32_t NetSenderSubmission::start(uint64_t generation, uint32_t product)
     {
         return NI_INVALID_STATE;
     }
+    ++m_state->m_stateRevision;
+    m_state->m_ready = false;
     m_state->m_generation = generation;
     m_state->m_product = product;
-    m_state->m_ready = false;
     m_state->m_closeRequest = 0;
+    ++m_state->m_stateRevision;
     m_state->m_closing = false;
     m_state->m_closeTaken = false;
     m_state->m_reason = 0;
@@ -159,9 +169,11 @@ int32_t NetSenderSubmission::ready(uint64_t generation, uint32_t requests, uint3
     {
         return NI_CANCELLED;
     }
+    ++m_state->m_stateRevision;
     m_state->m_generation = generation;
     m_state->m_chunk = chunk;
     m_state->m_ready = true;
+    ++m_state->m_stateRevision;
     m_state->m_admission.store(0, std::memory_order_release);
     return NI_OK;
 }
@@ -273,7 +285,9 @@ int32_t NetSenderSubmission::submitRequest(uint64_t id, const uint8_t* bytes, ui
         return NI_INVALID_STATE;
     }
     NetObjectReference<NetSenderSubmissionFront> front;
-    if (!m_state->m_fronts.get(id, front) || !front->m_published.load() || front->m_retired.load() || front->m_cancelled.load())
+    const int32_t lookup = m_state->lookupFront(id, front);
+    if (lookup != NI_OK) { return lookup; }
+    if (!front->m_published.load() || front->m_retired.load() || front->m_cancelled.load())
     {
         return NI_NOT_FOUND;
     }
@@ -331,7 +345,9 @@ int32_t NetSenderSubmission::cancel(uint64_t id)
         return NI_NOT_FOUND;
     }
     NetObjectReference<NetSenderSubmissionFront> front;
-    if (!m_state->m_fronts.get(id, front) || !front->m_published.load() || front->m_retired.load() || front->m_cancelled.exchange(true))
+    const int32_t lookup = m_state->lookupFront(id, front);
+    if (lookup != NI_OK) { return lookup; }
+    if (!front->m_published.load() || front->m_retired.load() || front->m_cancelled.exchange(true))
     {
         return NI_NOT_FOUND;
     }
@@ -511,13 +527,22 @@ bool NetSenderSubmission::closeRequested(int32_t& reason) const
 
 void NetSenderSubmission::state(uint64_t& generation, bool& ready) const
 {
-    generation = m_state->m_generation.load();
-    ready = m_state->m_ready.load() && m_state->m_closeRequest.load() == 0;
-    // 代次切换期间宁可报告未就绪，不把前代代次与后代就绪组合。
-    if (generation != m_state->m_generation.load())
+    uint32_t attempts = 0;
+    for (;;)
     {
-        generation = m_state->m_generation.load();
-        ready = false;
+        const uint64_t revision = m_state->m_stateRevision.load();
+        if ((revision & 1) == 0)
+        {
+            const uint64_t current = m_state->m_generation.load();
+            const bool active = m_state->m_ready.load() && m_state->m_closeRequest.load() == 0;
+            if (m_state->m_stateRevision.load() == revision)
+            {
+                generation = current;
+                ready = active;
+                return;
+            }
+        }
+        m_state->pauseContention(attempts);
     }
 }
 
@@ -712,16 +737,23 @@ int32_t NetSenderSubmission::next(NetSenderSubmissionCommand& command, bool data
     }
     const uint64_t current = m_state->m_requests != nullptr || m_state->m_receipts != nullptr ? now() : 0;
     m_state->expireFrames(current);
+    uint64_t nearestDeadline = UINT64_MAX;
+    bool controlBlocked = false;
     for (NetSenderSubmissionEntry* entry = m_state->m_requests; entry != nullptr; entry = entry->m_nextRequest)
     {
         const bool registered = entry->m_phase == NET_SUBMISSION_REGISTERED || entry->m_phase == NET_SUBMISSION_SENT;
-        if (!entry->m_cancelTaken && (entry->m_cancelled ||
-            (!registered && current >= entry->m_command.m_started + entry->m_command.m_timeout)))
+        const uint64_t deadline = entry->m_command.m_started + entry->m_command.m_timeout;
+        if (!registered && !entry->m_cancelTaken && deadline < nearestDeadline)
+        {
+            nearestDeadline = deadline;
+        }
+        if (!entry->m_cancelTaken && (entry->m_cancelled || (!registered && current >= deadline)))
         {
             if (dataOnly && registered)
             {
-                // CANCEL使用协议控制队列；先交付前缀，不能越过已接纳的业务帧。
-                return NI_NEED_MORE;
+                // 阻止发送新的控制命令，同时继续核对其他本地预留的到期时间。
+                controlBlocked = true;
+                continue;
             }
             entry->m_cancelTaken = true;
             command = entry->m_command;
@@ -732,8 +764,10 @@ int32_t NetSenderSubmission::next(NetSenderSubmissionCommand& command, bool data
             return NI_READY;
         }
     }
+    // 尚未交给会话的预留由本层唤醒；一轮扫描只登记一个最近期限。
+    if (nearestDeadline != UINT64_MAX) { NetExecution::deadline(nearestDeadline, current); }
     NetSenderSubmissionEntry* entry = m_state->m_pending;
-    if (m_state->m_draining != nullptr || entry == nullptr || entry->m_cancelTaken)
+    if (controlBlocked || m_state->m_draining != nullptr || entry == nullptr || entry->m_cancelTaken)
     {
         return NI_NEED_MORE;
     }
@@ -864,7 +898,6 @@ void NetSenderSubmission::finish(int32_t result)
 
 bool NetSenderSubmission::complete(uint64_t generation, uint64_t id, NetSenderSubmissionCommand& command)
 {
-    m_state->pump();
     std::memset(&command, 0, sizeof(command));
     NetSenderSubmissionEntry* entry = m_state->find(id);
     if (entry == nullptr || entry->m_command.m_generation != generation)
@@ -885,7 +918,9 @@ void NetSenderSubmission::disconnected(uint64_t generation)
     m_state->quiesce();
     m_state->pump();
     m_state->drainDisconnected();
+    ++m_state->m_stateRevision;
     m_state->m_generation = generation;
+    ++m_state->m_stateRevision;
     for (NetSenderSubmissionReceipt* receipt = m_state->m_receipts; receipt != nullptr; receipt = receipt->m_next)
     {
         m_state->settle(receipt, NI_INVALID_STATE);
@@ -999,22 +1034,14 @@ int32_t NetSenderSubmission::synchronousResult(uint64_t ticket, bool consume, ui
 {
     if (remainingMs != nullptr) { *remainingMs = 0; }
     NetObjectReference<NetSenderSubmissionReceipt> receipt;
-    if (!m_state->m_tickets.get(ticket, receipt))
+    const int32_t lookup = m_state->lookupReceipt(ticket, receipt);
+    if (lookup == NI_LIMIT_EXCEEDED || lookup == NI_NO_MEMORY)
     {
-        decltype(m_state->m_tickets)::Snapshot snapshot;
-        const LockFreeHashMapResult found = m_state->m_tickets.find(ticket, snapshot);
-        if (found.m_status != LockFreeHashMapOk)
-        {
-            if (found.m_status == LockFreeHashMapNotFound)
-            {
-                return NI_NOT_FOUND;
-            }
-            m_state->requestClose(NI_NO_MEMORY);
-            m_state->wake();
-            return NI_NO_MEMORY;
-        }
-        receipt = *snapshot.m_value;
+        // 回执尚不可读，无法取得其期限；短暂让出后复查，终态仍由 owner 发布。
+        if (remainingMs != nullptr) { *remainingMs = m_state->m_producerWait.m_syncPollSleepMs; }
+        return NI_READY;
     }
+    if (lookup != NI_OK) { return lookup; }
     if (receipt->m_consumed.load())
     {
         return NI_NOT_FOUND;
@@ -1045,16 +1072,8 @@ int32_t NetSenderSubmission::observeSynchronous(uint64_t ticket, const std::shar
 {
     if (!signal) { return NI_INVALID_ARGUMENT; }
     NetObjectReference<NetSenderSubmissionReceipt> receipt;
-    if (!m_state->m_tickets.get(ticket, receipt))
-    {
-        decltype(m_state->m_tickets)::Snapshot snapshot;
-        const LockFreeHashMapResult found = m_state->m_tickets.find(ticket, snapshot);
-        if (found.m_status != LockFreeHashMapOk)
-        {
-            return found.m_status == LockFreeHashMapNotFound ? NI_NOT_FOUND : NI_NO_MEMORY;
-        }
-        receipt = *snapshot.m_value;
-    }
+    const int32_t lookup = m_state->lookupReceipt(ticket, receipt);
+    if (lookup != NI_OK) { return lookup; }
     if (receipt->m_consumed.load(std::memory_order_acquire)) { return NI_NOT_FOUND; }
     if ((receipt->m_signalState.fetch_or(1, std::memory_order_acq_rel) & 1) != 0)
     {

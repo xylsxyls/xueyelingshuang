@@ -8,9 +8,8 @@
 #include "NetInterfaceFile.h"
 #include "NetInterfaceFileGuard.h"
 #include "NetInterfaceEvent.h"
-#include <algorithm>
+#include <chrono>
 #include <cstring>
-#include <ctime>
 #include <utility>
 #include "NetInterfaceTransport.h"
 #include <vector>
@@ -148,6 +147,7 @@ int32_t NetEndpointRouter::listen(const char* address, uint32_t port, const NetI
         }
     }
     m_state->m_polling = false;
+    if (m_state->m_stopRequested) { NetExecution::progress(); }
     return result;
 }
 
@@ -332,13 +332,14 @@ void NetEndpointRouter::onReady(uint64_t peer)
         if (allocated != NI_OK) { closePeer(peer, allocated); return; }
         value->m_id = id;
         value->m_peer = peer;
-        value->m_activity = value->m_pingTime = NetEndpointRouterState::now();
+        value->m_activity = NetEndpointRouterState::now();
         value->m_handshake.reset(new NetInterfaceHandshake(options, value->m_activity));
         m_state->m_endpoints.insert(std::make_pair(id, std::move(value)));
         m_state->m_peers.insert(std::make_pair(peer, id));
-        if (m_state->m_requests.addEndpoint(id, false, 0, options.m_maxRequests) != NI_OK)
+        const int32_t registered = m_state->m_requests.addEndpoint(id, false, 0, options.m_maxRequests);
+        if (registered != NI_OK)
         {
-            closeEndpoint(id, NI_LIMIT_EXCEEDED);
+            closeEndpoint(id, registered);
         }
     }
     catch (...)
@@ -365,6 +366,12 @@ bool NetEndpointRouter::onFrame(uint64_t peer, const NetInterfaceFrame& frame)
     }
     const uint64_t now = NetEndpointRouterState::now();
     const int32_t accepted = endpoint->m_handshake->accept(frame, now);
+    if (accepted == NI_OK && m_state->m_heartbeat.expired(now - endpoint->m_activity,
+            endpoint->m_pingId == 0 ? 0 : now - endpoint->m_pingTime))
+    {
+        closeEndpoint(id, NI_TIMEOUT);
+        return true;
+    }
     const int32_t result = accepted == NI_OK ? dispatch(id, frame) : accepted;
     if (result == NI_LIMIT_EXCEEDED && (frame.m_kind == NI_DATA || frame.m_kind == NI_DATA_ACK || frame.m_kind == NI_EVENT))
     {
@@ -397,7 +404,8 @@ NetEndpointOrigin NetEndpointRouter::origin(uint64_t endpoint) const
     return found == m_state->m_endpoints.end() ? NetEndpointOrigin() : found->second->m_origin;
 }
 
-int32_t NetEndpointRouter::deliver(uint64_t endpoint, const NetInterfaceFrame& frame, const NetEndpointOrigin& context)
+int32_t NetEndpointRouter::deliver(uint64_t endpoint, const NetInterfaceFrame& frame, const NetEndpointOrigin& context,
+    bool closeOnFailure)
 {
     const auto found = m_state->m_endpoints.find(endpoint);
     if (found == m_state->m_endpoints.end() || found->second->m_closing)
@@ -411,10 +419,10 @@ int32_t NetEndpointRouter::deliver(uint64_t endpoint, const NetInterfaceFrame& f
             found->second->m_attached ? m_state->m_clients->send(endpoint, frame, context) :
                                       m_state->m_transport->send(found->second->m_peer, frame);
     }
-    catch (...)
-    {
-        result = NI_NO_MEMORY;
-    }
+    catch (const std::bad_alloc&) { result = NI_NO_MEMORY; }
+    catch (...) { result = NI_INVALID_STATE; }
+    if (result > NI_OK) { result = NI_INVALID_STATE; }
+    if (closeOnFailure && result != NI_OK) { closeEndpoint(endpoint, result); }
     return result;
 }
 
@@ -441,43 +449,34 @@ void NetEndpointRouter::reject(uint64_t endpoint, const NetInterfaceFrame& origi
     response.m_kind = NI_RESPONSE;
     response.m_payload = payload;
     response.m_payloadSize = sizeof(payload);
-    if (deliver(endpoint, response, origin(root)) != NI_OK)
-    {
-        closeEndpoint(endpoint, NI_LIMIT_EXCEEDED);
-    }
+    deliver(endpoint, response, origin(root), true);
 }
 
-void NetEndpointRouter::terminate(const NetInterfaceRequest& request, uint32_t status, bool notifySource)
+void NetEndpointRouter::notifyTermination(const NetInterfaceRequest& request, uint32_t status, bool notifySource)
 {
     NetInterfaceFrame frame = {};
     frame.m_kind = NI_CANCEL;
     frame.m_productId = request.m_product;
     frame.m_messageType = request.m_type;
     frame.m_requestId = request.m_route;
-    if (request.m_target != 1 && deliver(request.m_target, frame, origin(request.m_origin)) != NI_OK)
+    if (request.m_target != 1)
     {
-        closeEndpoint(request.m_target, NI_LIMIT_EXCEEDED);
+        deliver(request.m_target, frame, origin(request.m_origin), true);
     }
     if (notifySource)
     {
         frame.m_requestId = request.m_original;
         reject(request.m_source, frame, status, request.m_origin);
     }
-    // 深度只有两级；子请求由实际记录池持有，不进行递归。
+}
+
+void NetEndpointRouter::terminate(const NetInterfaceRequest& request, uint32_t status, bool notifySource)
+{
+    notifyTermination(request, status, notifySource);
     NetInterfaceRequest child = {};
     while (m_state->m_requests.takeChild(request.m_route, child) == NI_READY)
     {
-        NetInterfaceFrame cancel = {};
-        cancel.m_kind = NI_CANCEL;
-        cancel.m_productId = child.m_product;
-        cancel.m_messageType = child.m_type;
-        cancel.m_requestId = child.m_route;
-        if (deliver(child.m_target, cancel, origin(child.m_origin)) != NI_OK)
-        {
-            closeEndpoint(child.m_target, NI_LIMIT_EXCEEDED);
-        }
-        cancel.m_requestId = child.m_original;
-        reject(child.m_source, cancel, status, child.m_origin);
+        notifyTermination(child, status, true);
     }
 }
 
@@ -527,9 +526,12 @@ int32_t NetEndpointRouter::routeFrame(uint64_t endpoint, const NetInterfaceFrame
     }
     NetEndpointPeer* source = found->second.get();
     const uint64_t now = NetEndpointRouterState::now();
-    if (frame.m_kind == NI_DATA || frame.m_kind == NI_DATA_ACK ||
-        (frame.m_kind == NI_EVENT && frame.m_messageType == NI_FILE_CANCEL && frame.m_payloadSize >= 4 && frame.m_payload != nullptr &&
-         std::memcmp(frame.m_payload, "NFN2", 4) == 0))
+    if (frame.m_kind == NI_DATA || frame.m_kind == NI_DATA_ACK)
+    {
+        return frame.m_messageType == NI_FILE_DATA_TYPE ? routeFile(endpoint, frame) : NI_NOT_SUPPORTED;
+    }
+    if (frame.m_kind == NI_EVENT && frame.m_messageType == NI_FILE_CANCEL && frame.m_payloadSize >= 4 && frame.m_payload != nullptr &&
+        std::memcmp(frame.m_payload, "NFN2", 4) == 0)
     {
         return routeFile(endpoint, frame);
     }
@@ -625,10 +627,7 @@ int32_t NetEndpointRouter::routeFrame(uint64_t endpoint, const NetInterfaceFrame
             response.m_payload = filePayload.data();
             response.m_payloadSize = static_cast<uint32_t>(filePayload.size());
         }
-        if (deliver(request.m_source, response, origin(request.m_origin)) != NI_OK)
-        {
-            closeEndpoint(request.m_source, NI_LIMIT_EXCEEDED);
-        }
+        deliver(request.m_source, response, origin(request.m_origin), true);
         return NI_OK;
     }
     if (frame.m_kind != NI_REQUEST || (source->m_service ? rpc.m_parent == 0 : rpc.m_parent != 0))
@@ -665,7 +664,16 @@ int32_t NetEndpointRouter::routeFrame(uint64_t endpoint, const NetInterfaceFrame
         return NI_OK;
     }
     std::vector<uint8_t>& payload = m_state->m_payload;
-    payload.resize(rpc.m_size + 16);
+    try
+    {
+        payload.resize(rpc.m_size + 16);
+    }
+    catch (...)
+    {
+        // 尚未向目标投递；来源关闭时只能取消此前已交付的请求。
+        m_state->m_requests.cancel(endpoint, frame.m_requestId, request);
+        return NI_NO_MEMORY;
+    }
     uint32_t required = 0;
     NetInterfaceRpc::encode(NI_REQUEST, static_cast<uint32_t>(request.m_deadline - now), request.m_parent, rpc.m_data, rpc.m_size,
                             payload.data(), static_cast<uint32_t>(payload.size()), required);
@@ -683,6 +691,11 @@ int32_t NetEndpointRouter::routeFrame(uint64_t endpoint, const NetInterfaceFrame
         {
             closeEndpoint(target, sent);
         }
+    }
+    else if (!m_state->m_polling && NetExecution::current() != nullptr)
+    {
+        // 运输回调中的请求由本轮到期堆登记；挂接端点也可在路由轮询结束后交付。
+        NetExecution::deadline(request.m_deadline, NetEndpointRouterState::now());
     }
     return NI_OK;
 }
@@ -712,6 +725,7 @@ void NetEndpointRouter::closeEndpoint(uint64_t endpoint, int32_t reason)
     }
     found->second->m_closing = true;
     m_state->enqueueClosing(found->second.get());
+    if (!m_state->m_polling && !m_state->m_stopped) { NetExecution::progress(); }
     if (found->second->m_service)
     {
         if (m_state->m_internal == endpoint)
@@ -726,33 +740,21 @@ void NetEndpointRouter::closeEndpoint(uint64_t endpoint, int32_t reason)
         {
             m_state->m_products.erase(found->second->m_product);
         }
-        try
-        {
-            m_state->m_services->close(endpoint);
-        }
-        catch (...)
-        {
-            // 路由已失效，宿主关闭异常不能重新激活此代次或逃出析构。
-        }
     }
-    else
+    // 外部 owner 也能直接关闭端点。宿主回调栈退出前，嵌套 shutdown 只能登记停止。
+    const bool dispatching = m_state->m_dispatching;
+    m_state->m_dispatching = true;
+    try
     {
-        if (found->second->m_attached)
-        {
-            try
-            {
-                m_state->m_clients->close(endpoint);
-            }
-            catch (...)
-            {
-                // 端点已经从接入表失效，关闭队列仍负责回收资源。
-            }
-        }
-        else
-        {
-            closePeer(found->second->m_peer, reason);
-        }
+        if (found->second->m_service) { m_state->m_services->close(endpoint); }
+        else if (found->second->m_attached) { m_state->m_clients->close(endpoint); }
+        else { closePeer(found->second->m_peer, reason); }
     }
+    catch (...)
+    {
+        // 端点已失效并排队，宿主关闭异常不会跳过其回收。
+    }
+    m_state->m_dispatching = dispatching;
 }
 
 bool NetEndpointRouter::poll()
@@ -799,7 +801,7 @@ void NetEndpointRouter::advance()
         return;
     }
     collectFiles(0);
-    const uint64_t now = NetEndpointRouterState::now();
+    uint64_t now = NetEndpointRouterState::now();
     for (const auto& entry : m_state->m_endpoints)
     {
         NetEndpointPeer* endpoint = entry.second.get();
@@ -807,7 +809,7 @@ void NetEndpointRouter::advance()
         {
             continue;
         }
-        const int32_t state = endpoint->m_handshake->progress(now);
+        int32_t state = endpoint->m_handshake->progress(now);
         if (state < 0)
         {
             closeEndpoint(entry.first, state);
@@ -819,7 +821,10 @@ void NetEndpointRouter::advance()
             const int32_t sent = deliver(entry.first, output, NetEndpointOrigin());
             if (sent == NI_OK)
             {
-                endpoint->m_handshake->consumeOutput();
+                state = endpoint->m_handshake->consumeOutput();
+                // 应答被运输接纳时才开始业务心跳，握手背压由握手期限约束。
+                now = NetEndpointRouterState::now();
+                endpoint->m_activity = now;
                 uint32_t fields[4] = {};
                 uint8_t nonce[16] = {};
                 endpoint->m_handshake->peerInfo(fields, nonce, endpoint->m_origin.m_device);
@@ -836,14 +841,15 @@ void NetEndpointRouter::advance()
                 closeEndpoint(entry.first, sent);
             }
         }
+        if (endpoint->m_closing || state != NI_READY) { continue; }
         const NetHeartbeatConfig& heartbeat = m_state->m_heartbeat;
-        NetExecution::deadline(heartbeat.m_receiveTimeoutMs, now - endpoint->m_activity);
-        if (now - endpoint->m_activity >= heartbeat.m_receiveTimeoutMs ||
-            (endpoint->m_pingId != 0 && now - endpoint->m_pingTime >= heartbeat.m_pongTimeoutMs))
+        const uint64_t idle = now - endpoint->m_activity;
+        NetExecution::deadline(heartbeat.m_receiveTimeoutMs, idle);
+        if (heartbeat.expired(idle, endpoint->m_pingId == 0 ? 0 : now - endpoint->m_pingTime))
         {
             closeEndpoint(entry.first, NI_TIMEOUT);
         }
-        else if (state == NI_READY && endpoint->m_pingId == 0 && now - endpoint->m_pingTime >= heartbeat.m_pingIntervalMs)
+        else if (endpoint->m_pingId == 0 && idle >= heartbeat.m_pingIntervalMs)
         {
             if (m_state->m_lastPing == UINT64_MAX)
             {
@@ -853,16 +859,14 @@ void NetEndpointRouter::advance()
             NetInterfaceFrame ping = {};
             ping.m_kind = NI_PING;
             ping.m_requestId = ++m_state->m_lastPing;
-            if (deliver(entry.first, ping, NetEndpointOrigin()) != NI_OK)
-            {
-                closeEndpoint(entry.first, NI_LIMIT_EXCEEDED);
-            }
+            if (deliver(entry.first, ping, NetEndpointOrigin(), true) != NI_OK) { continue; }
             endpoint->m_pingId = ping.m_requestId;
             endpoint->m_pingTime = now;
         }
-        if (!endpoint->m_closing && (state == NI_READY || endpoint->m_pingId != 0))
+        if (!endpoint->m_closing)
         {
-            NetExecution::deadline(endpoint->m_pingId == 0 ? heartbeat.m_pingIntervalMs : heartbeat.m_pongTimeoutMs, now - endpoint->m_pingTime);
+            if (endpoint->m_pingId == 0) { NetExecution::deadline(heartbeat.m_pingIntervalMs, idle); }
+            else { NetExecution::deadline(heartbeat.m_pongTimeoutMs, now - endpoint->m_pingTime); }
         }
     }
     for (uint32_t count = 0; count < m_state->m_expiredRequestBudget; ++count)
@@ -872,7 +876,8 @@ void NetEndpointRouter::advance()
         {
             break;
         }
-        terminate(request, NI_RPC_TIMEOUT, true);
+        // 子请求的期限不晚于父请求，各自留在到期堆中，分别消耗一项轮询预算。
+        notifyTermination(request, NI_RPC_TIMEOUT, true);
     }
     for (uint32_t count = 0; count < m_state->m_closingEndpointBudget; ++count)
     {
@@ -906,13 +911,14 @@ void NetEndpointRouter::advance()
 
 void NetEndpointRouter::shutdown()
 {
-    if (m_state->m_polling || m_state->m_dispatching)
-    {
-        m_state->m_stopRequested = true;
-        return;
-    }
     if (m_state->m_stopped)
     {
+        return;
+    }
+    if (m_state->m_polling || m_state->m_dispatching)
+    {
+        if (!m_state->m_polling && !m_state->m_stopRequested) { NetExecution::progress(); }
+        m_state->m_stopRequested = true;
         return;
     }
     m_state->m_stopped = true;
@@ -1000,14 +1006,14 @@ int32_t NetEndpointRouter::bindFileReply(const NetInterfaceRequest& request, con
     }
     if (info.state == NI_FILE_TRANSFERRING)
     {
-        const int64_t utc = static_cast<int64_t>(std::time(nullptr));
-        if (utc <= 0 || info.expiresUtc <= static_cast<uint64_t>(utc))
+        const uint64_t nowMs = NetEndpointRouterState::now();
+        const int64_t utcMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+        uint64_t deadline = 0;
+        if (!NetEndpointFileStream::leaseDeadline(utcMs, nowMs, m_state->m_fileLeaseLimitSeconds, info.expiresUtc, deadline))
         {
             return NI_TIMEOUT;
         }
-        const uint64_t validSeconds = (std::min<uint64_t>)(m_state->m_fileLeaseLimitSeconds, info.expiresUtc - static_cast<uint64_t>(utc));
-        info.expiresUtc = static_cast<uint64_t>(utc) + validSeconds;
-        const uint64_t deadline = NetEndpointRouterState::now() + validSeconds * 1000;
         const auto key = std::make_pair(request.m_target, info.stream);
         const auto existing = m_state->m_serviceStreams.find(key);
         uint64_t publicId = 0;
@@ -1060,6 +1066,10 @@ int32_t NetEndpointRouter::bindFileReply(const NetInterfaceRequest& request, con
             }
         }
         info.stream = publicId;
+        if (!m_state->m_polling && NetExecution::current() != nullptr)
+        {
+            NetExecution::deadline(deadline, NetEndpointRouterState::now());
+        }
     }
     else
     {
@@ -1198,14 +1208,14 @@ void NetEndpointRouter::dropFile(uint64_t id, int32_t reason, uint64_t skip)
     frame.m_payloadSize = sizeof(payload);
     const auto context = origin(stream->m_client);
     frame.m_requestId = id;
-    if (skip != stream->m_client && deliver(stream->m_client, frame, context) != NI_OK)
+    if (skip != stream->m_client)
     {
-        closeEndpoint(stream->m_client, NI_LIMIT_EXCEEDED);
+        deliver(stream->m_client, frame, context, true);
     }
     frame.m_requestId = stream->m_local;
-    if (skip != stream->m_service && deliver(stream->m_service, frame, context) != NI_OK)
+    if (skip != stream->m_service)
     {
-        closeEndpoint(stream->m_service, NI_LIMIT_EXCEEDED);
+        deliver(stream->m_service, frame, context, true);
     }
 }
 

@@ -100,7 +100,7 @@ public:
     void allowCompact(bool allowed);
 
     /** 由单执行者在应用握手共同确认扩展后设置，不改变已验证的当前帧
-    @param [in] allowed 是否允许下一条压缩RPC帧，其他种类仍拒绝压缩
+    @param [in] allowed 是否允许下一条非文件 REQUEST 或 RESPONSE 使用压缩，文件保留类型始终拒绝压缩
     */
     void allowCompression(bool allowed);
 
@@ -451,7 +451,7 @@ public:
     @param [in] frame 待编码消息
     @param [out] output 与消息体不重叠，capacity为0时可空
     @param [in] capacity 可写字节数
-    @param [out] required 所需字节数，参数不合法时为0
+    @param [out] required 不可空，接收所需字节数；与输入或输出重叠时拒绝并保留原值，其他参数错误置0
     @return OK、BUFFER_TOO_SMALL（输出不变）或负数错误
     */
     static int32_t encode(const NetInterfaceFrame* frame, uint8_t* output, uint32_t capacity, uint32_t* required);
@@ -774,7 +774,7 @@ public:
     /** 解析文件成功响应
     @param [in] bytes 160字节状态体
     @param [in] size 精确长度
-    @param [out] info 不可空，失败清零
+    @param [out] info 不可空，普通解析失败清零；与输入字节区重叠时返回参数错误并保留原值
     @return OK或负数
     */
     static int32_t fileParseInfo(const uint8_t* bytes, uint32_t size, NetInterfaceFileInfo* info);
@@ -786,7 +786,7 @@ public:
     @param [out] transfer 16字节
     @param [out] token 32字节秘密
     @param [out] hash 32字节整文件摘要
-    @return OK或负数，失败输出全部清零
+    @return OK或负数；普通失败清零有效输出，输入输出或输出之间重叠时返回参数错误并保留原值
     */
     static int32_t fileInfoFields(const uint8_t* bytes, uint32_t size, uint32_t* fields, uint8_t* transfer,
                                                        uint8_t* token, uint8_t* hash);
@@ -798,7 +798,7 @@ public:
     @param [in] timeLow 单调毫秒低位
     @param [in] timeHigh 单调毫秒高位
     @param [in] timeoutMs 无进度时限1000至60000
-    @param [out] handle 不可空，失败清零
+    @param [out] handle 不可空，普通失败清空；与info存储重叠时返回参数错误并保留原值
     @return OK或负数
     */
     static int32_t fileFlowCreate(const NetInterfaceFileInfo* info, uint32_t product, uint32_t sender,
@@ -813,7 +813,7 @@ public:
     @param [in] timeLow 单调时间低位
     @param [in] timeHigh 高位
     @param [in] timeoutMs 无进度时限
-    @param [out] handle 不可空，失败清零
+    @param [out] handle 不可空，普通失败清空；与输入字节区重叠时返回参数错误并保留原值
     @return OK或负数
     */
     static int32_t fileFlowCreateWire(const uint8_t* bytes, uint32_t size, uint32_t product, uint32_t sender,
@@ -932,7 +932,7 @@ public:
 
     /** 当前显示快照
     @param [in] handle 流
-    @param [out] info 固定C布局，失败清零
+    @param [out] info 固定C布局，普通失败清零；与result存储重叠时返回参数错误并保留两个输出
     @param [out] result 不可空
     @return OK或INVALID_ARGUMENT
     */
@@ -1002,7 +1002,7 @@ public:
 
     /** 读取已协商信息；失败清空有效的输出地址
     @param [in] handle 有效实例
-    @param [out] fields 平台/能力/在途上限/块大小四项
+    @param [out] fields 平台/能力位/协商请求能力值/最大块大小四项
     @param [out] identities 对端随机数16字节及客户端设备标识16字节
     @return READY、NEED_MORE或负数错误。输出存储相互重叠时返回参数错误并保留原值
     */
@@ -1363,9 +1363,9 @@ private:
     uint32_t m_wireSize;
     // 本实例独占字节存储，READY前不向外暴露
     uint8_t* m_body;
-    // 当前分配容量，consume最多保留4KiB
+    // 当前分配容量，consume按本实例的m_retentionLimit决定是否保留
     uint32_t m_capacity;
-    // 当前已接纳线记录体字节数，不超过m_wireSize
+    // 当前正文缓冲的有效字节数，解压成功后为明文长度，回收时仅擦除有效部分
     uint32_t m_bodySize;
     // 当前紧凑许可下最近解析的 DATA 头，复用产品、类型和编号，不借用正文
     NetInterfaceFrame m_previousCompactData;

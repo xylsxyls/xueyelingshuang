@@ -22,9 +22,9 @@ public:
     */
     int32_t configureServicePollBudgets(uint32_t readFrames, uint32_t writeRecords);
 
-    /** 设置一次服务连接的总启动期限及应用拒收一帧的最长等待时间
+    /** 设置一次服务连接的总启动期限、单帧拒收和外层结束后的排空期限
     @param [in] startupMs 管理认证、OPEN和业务TLS的总毫秒数，0表示采用有效TLS握手期限的三倍
-    @param [in] backpressureMs 首次拒收至下次接纳的毫秒数，必须大于零，默认5000
+    @param [in] backpressureMs 首次拒收一帧的最长等待毫秒数，也限制从外层结束到排空的总时间，必须大于零，默认5000
     @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE，失败时原设置仍有效
     */
     int32_t configureServiceTimeouts(uint32_t startupMs, uint32_t backpressureMs);
@@ -63,7 +63,7 @@ public:
     virtual int32_t connect(const char* address, uint32_t port, const NetInterfaceTlsOptions& options,
         NetTransportListener* listener, uint64_t& peer);
 
-    /** 有界推进认证、额度和数据，禁止重入。运输静默结束报告 NI_TRUNCATED，已收到的关闭原因优先。分配异常报告 NI_NO_MEMORY，其他异常报告 NI_INVALID_STATE
+    /** 有界推进认证、额度和数据，禁止重入。外层结束后先排空已接纳的业务输入，明确的外层失败优先；正常结束需内层 TLS 认证关闭。分配异常报告 NI_NO_MEMORY，其他异常报告 NI_INVALID_STATE
     @return 是否尚有本次通道资源
     */
     virtual bool poll();
@@ -102,7 +102,7 @@ public:
     virtual int32_t configureCompact(uint64_t peer, bool enabled);
 
 public:
-    /** 查询本层待发数据是否全部交给下层；只由协议执行者调用
+    /** 查询业务密文和待返还 CREDIT 是否全部交给下层；只由协议执行者调用
     @param [in] peer 当前连接代次
     @return OK全部交付，READY仍有本层待发数据，负数失败；不表示远端收到
     */
@@ -116,15 +116,6 @@ private:
     /** 合并并提交已接纳密文的额度，成功前不扣待返还值
     */
     void sendCredit();
-
-    /** 按本实例发送预算交付密文，下层接纳后才扣额度和消费TLS输出
-    */
-    void sendOutput();
-
-    /** 按本实例接收预算推进TLS应用帧，拒收保留原帧及首次期限
-    @param [in] now 当前单调毫秒
-    */
-    void advance(uint64_t now);
 
     /** 先进入终态再停止运输、释放协议并取走唯一关闭通知，外部异常不得逃逸
     */

@@ -18,7 +18,7 @@ public:
     @param [in] control OPEN/QUERY/CANCEL字段；OPEN逻辑键1至512、授权0至2048
     @param [out] output 可空探测；不得与输入指针重叠
     @param [in] capacity 容量
-    @param [out] required 合法参数所需长度，否则0
+    @param [out] required 合法参数所需长度；与输入或输出重叠时拒绝并保留原值，其他参数错误置0
     @return OK、BUFFER_TOO_SMALL或负数
     */
     static int32_t encodeControl(const NetInterfaceFileControl& control, uint8_t* output, uint32_t capacity, uint32_t& required);
@@ -52,7 +52,7 @@ public:
     @param [in] data 数据/结束字段
     @param [out] output 空间探测可空，不能与data.bytes重叠
     @param [in] capacity 容量
-    @param [out] required 合法参数所需长度，否则0
+    @param [out] required 合法参数所需长度；与输入或输出重叠时拒绝并保留原值，其他参数错误置0
     @return OK、BUFFER_TOO_SMALL或INVALID_ARGUMENT，失败输出不变
     */
     static int32_t encodeData(const NetInterfaceFileData& data, uint8_t* output, uint32_t capacity, uint32_t& required);

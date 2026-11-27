@@ -59,12 +59,12 @@ public:
     int32_t feed(const uint8_t* data, uint32_t size, uint32_t& consumed);
 
     /** 有界推进握手、帧编码及解码，不调用宿主业务回调
-    @param [in] monotonicMs 宿主单调毫秒，必须持续检查握手期限
+    @param [in] monotonicMs 宿主单调毫秒，首次推进起算 TLS 握手期限，每轮握手待完成时向当前执行者登记剩余时间
     @return TLS状态或帧/TLS持续错误；READY仅表示TLS已验证
     */
     int32_t progress(uint64_t monotonicMs);
 
-    /** 排队完整帧，内部复制；控制帧有独立容量和优先级但不打断半个帧
+    /** 排队完整帧，内部复制；控制帧有独立容量和优先级但不打断半个帧。成功接纳提示当前 NetExecution 零等待，以继续推进 TLS
     @param [in] frame 消息体不超过创建时限额，输入只在调用期间借用
     @return NI_OK接纳；NI_LIMIT_EXCEEDED表示背压，其他负数为错误
     */
@@ -106,7 +106,7 @@ public:
     */
     int32_t consumeOutput(uint32_t size);
 
-    /** 标记TCP EOF；后续progress验证TLS关闭及剩余帧完整性
+    /** 标记 TCP EOF，首次成功时提示当前执行者继续读取；后续 progress 验证 TLS 关闭及剩余帧完整性
     @return TLS状态或错误
     */
     int32_t finishInput();
@@ -175,7 +175,7 @@ public:
     @param [in] types count为0时可空，每个类型必须非零，本次调用复制
     @param [in] count 非负项数；重复类型允许
     @param [in] negotiated 已完成压缩协商才允许收发压缩帧
-    @return NI_OK或NI_INVALID_ARGUMENT；失败不改变此前白名单
+    @return 成功返回 NI_OK，参数无效返回 NI_INVALID_ARGUMENT，复制白名单分配失败返回 NI_NO_MEMORY；失败保留此前白名单
     */
     int32_t configureCompression(const uint32_t* types, uint32_t count, bool negotiated);
 

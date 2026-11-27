@@ -24,7 +24,7 @@ class NetInterfaceAPI NetInterfaceTls
     */
     ~NetInterfaceTls();
 
-    /** 输入网络密文，输入缓冲满时只接受前缀
+    /** 输入网络密文，输入缓冲满时只接受前缀。成功接纳非空前缀时提示当前执行者继续推进
     @param [in] data 仅size为0时可空，本次调用借用
     @param [in] size 输入字节数
     @param [out] consumed 实际复制的字节数，与输入分开存放，剩余部分由宿主保留
@@ -32,8 +32,8 @@ class NetInterfaceAPI NetInterfaceTls
     */
     int32_t feed(const uint8_t* data, uint32_t size, uint32_t& consumed);
 
-    /** 推进握手和待发数据，宿主有输入或输出空间时调用
-    @param [in] monotonicMs 宿主单调毫秒时间，不得倒退；无输入也须定时调用以检查超时
+    /** 推进握手和待发数据，宿主有输入或输出空间时调用；本轮用 peekOutput 及 read 处理结果后再等待
+    @param [in] monotonicMs 宿主单调毫秒时间，不得倒退；首次推进开始计时，仍在握手时为当前执行者登记剩余期限
     @return HANDSHAKE、READY、CLOSED或持续错误
     */
     int32_t progress(uint64_t monotonicMs);
@@ -45,13 +45,13 @@ class NetInterfaceAPI NetInterfaceTls
     */
     int32_t peekOutput(const uint8_t*& data, uint32_t& size) const;
 
-    /** 移除宿主已复制或成功发送的密文前缀
+    /** 移除宿主已复制或成功发送的密文前缀；移除非零字节后提示当前执行者零等待
     @param [in] size 不得超过上次peek返回的连续长度
     @return OK或ARGUMENT
     */
     int32_t consumeOutput(uint32_t size);
 
-    /** 排队最多一条TLS记录的明文，满时施加背压
+    /** 排队最多一条TLS记录的明文，接纳非零字节后提示当前执行者零等待，满时施加背压
     @param [in] data 仅size为0时可空，本次调用复制，不在返回后借用
     @param [in] size 明文字节数，超过16384时只接受前缀
     @param [out] accepted 已排队字节数，与输入分开存放，未接纳后缀由调用者保留
@@ -96,7 +96,13 @@ class NetInterfaceAPI NetInterfaceTls
     */
     int32_t finishInput();
 
-    /** 在已排队明文之后发送认证关闭通知，仍须排空密文输出
+    /** 声明 TCP 输入结束，返回本次是否首次提交仍待处理的 EOF
+    @param [out] first 首次成功且 TLS 尚未关闭时为 true，此时提示当前执行者零等待；重复、终态、失败时为 false
+    @return 与无参数版本相同的 TLS 状态
+    */
+    int32_t finishInput(bool& first);
+
+    /** 在已排队明文之后发送认证关闭通知，仍须排空密文输出；首次受理及背压解除后实际推进关闭时提示零等待
     @return OK、WANT_IO、STATE或持续错误
     */
     int32_t close();
@@ -132,4 +138,14 @@ public:
   private:
     // 实例独占的加密通道，由CEncodeDecode创建并释放
     CEncodeDecodeTls* m_tls;
+    // 首次推进握手的宿主单调毫秒，与加密引擎使用同一起点。
+    uint64_t m_handshakeStart;
+    // 已应用默认值的握手时限，单位为毫秒。
+    uint32_t m_handshakeTimeout;
+    // 单调时间的所有取值（含0和UINT64_MAX）都可以是有效起点。
+    bool m_handshakeStarted;
+    // 已成功提交输入结束，重复 EOF 保留状态且不重发进展提示。
+    bool m_inputFinished;
+    // 已受理的主动关闭结果；首次请求、输出受阻和通知已排队可独立判断。
+    int8_t m_lastClose;
 };

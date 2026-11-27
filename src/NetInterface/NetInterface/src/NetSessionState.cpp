@@ -7,6 +7,7 @@
 #include "NetInterfaceRpc.h"
 #include "NetInterfaceTransport.h"
 #include "NetSession.h"
+#include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <vector>
@@ -41,6 +42,7 @@ m_channel(nullptr),
 m_external(nullptr),
 m_records(new NetObjectPool<NetSessionPending>(NetSessionRecordConfig())),
 m_highestOriginal(0),
+m_highestWire(0),
 m_maxRequests(0),
 m_payloadRetentionBytes(4096),
 m_requestExpiryBudget(128),
@@ -56,6 +58,7 @@ m_active(false),
 m_ready(false),
 m_polling(false),
 m_callback(false),
+m_notifyingClose(false),
 m_localClose(false),
 m_closeFailed(false),
 m_closeReason(0)
@@ -68,11 +71,28 @@ NetSessionState::~NetSessionState()
     clearPayload();
 }
 
+int32_t NetSessionState::prepareHandshake(const NetInterfaceHandshakeOptions& offered, const NetInterfaceTlsOptions& tls,
+    NetInterfaceHandshakeOptions& prepared)
+{
+    prepared = offered;
+    if (NetInterface::entropyBytes(tls.entropy, tls.entropyContext, prepared.m_nonce, sizeof(prepared.m_nonce)) != NI_OK)
+    {
+        return NI_INVALID_STATE;
+    }
+    const uint64_t now = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count());
+    NetInterfaceHandshake validation(prepared, now);
+    NetInterfaceFrame hello = {};
+    return validation.peekOutput(hello) == NI_READY ? NI_OK : NI_INVALID_ARGUMENT;
+}
+
 void NetSessionState::resetRequests(uint32_t limit)
 {
     m_expiry.clear();
+    m_remapped.reset();
     m_pending.clear();
     m_highestOriginal = 0;
+    m_highestWire = 0;
     m_maxRequests = limit;
     clearPayload();
 }
@@ -134,11 +154,12 @@ int32_t NetSessionState::reserve(uint64_t original, uint32_t product, uint32_t t
     }
     if (original == 0)
     {
-        if (m_highestOriginal == UINT64_MAX)
+        const uint64_t previous = (std::max)(m_highestOriginal, m_highestWire);
+        if (previous == UINT64_MAX)
         {
             return NI_LIMIT_EXCEEDED;
         }
-        original = m_highestOriginal + 1;
+        original = previous + 1;
     }
     if (original <= m_highestOriginal)
     {
@@ -156,7 +177,6 @@ int32_t NetSessionState::reserve(uint64_t original, uint32_t product, uint32_t t
     pending.m_request.m_source = 1;
     pending.m_request.m_target = 2;
     pending.m_request.m_origin = 1;
-    pending.m_request.m_route = original;
     pending.m_request.m_original = original;
     pending.m_request.m_product = product;
     pending.m_request.m_type = type;
@@ -215,6 +235,10 @@ bool NetSessionState::take(uint64_t original, NetSessionPending& pending)
         {
             sink(index);
         }
+    }
+    if (pending.m_request.m_route != 0 && pending.m_request.m_route != original)
+    {
+        m_remapped->erase(pending.m_request.m_route);
     }
     m_pending.erase(found);
     return true;

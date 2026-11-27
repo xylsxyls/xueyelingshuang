@@ -21,4 +21,11 @@ public:
     @return 配置可用时返回true
     */
     bool valid() const;
+
+    /** 判断现有接收或应答期限是否已到，配置须已经过valid校验
+    @param [in] idleMs 最后一次成功接收以来经过的单调毫秒
+    @param [in] pongWaitMs 已交付PING以来经过的单调毫秒，无待答PING时传0
+    @return 任一期限到达或超过时为true
+    */
+    bool expired(uint64_t idleMs, uint64_t pongWaitMs) const;
 };

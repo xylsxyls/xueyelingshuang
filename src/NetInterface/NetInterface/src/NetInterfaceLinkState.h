@@ -75,6 +75,18 @@ public:
     */
     int32_t fail(int32_t error);
 
+    /** 检查由管理协议内部消费的心跳帧
+    @param [in] frame 待检查的固定帧字段
+    @return 符合管理心跳的格式时为true
+    */
+    static bool isHeartbeat(const NetInterfaceFrame& frame);
+
+    /** 校验应用可以在已认证管理链路上收发的帧
+    @param [in] frame 检查类别、产品、正文长度及保留的消息号
+    @return 属于宿主管理消息时为true
+    */
+    static bool validControl(const NetInterfaceFrame& frame);
+
     /** 由唯一认证阶段计算公开状态，不保存第二套就绪标记
     @return READY、NEED_MORE或首个持续错误
     */

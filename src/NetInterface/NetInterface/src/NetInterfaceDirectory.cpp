@@ -3,7 +3,7 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include "NetInterfaceGatewayTypes.h"
 #include "NetInterface.h"
-#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
+#include "NetInterfaceMessage.h"
 #include <cstring>
 #include <utility>
 #include <array>
@@ -15,8 +15,8 @@
 */
 static bool ValidDirectoryPoint(const NetInterfaceDirectoryPoint& point, uint8_t* addressKey)
 {
-    return point.m_name.size() == NET_INTERFACE_DIRECTORY_NAME_BYTES && point.m_name.compare(0, 5, "node.") == 0 &&
-        point.m_name.find_first_not_of("0123456789abcdef", 5) == std::string::npos &&
+    return point.m_name.size() == NET_INTERFACE_DIRECTORY_NAME_BYTES && CStringManager::startsWith(point.m_name, "node.") &&
+        CStringManager::findFirstNotOf(point.m_name, "0123456789abcdef", 5) == std::string::npos &&
         point.m_port > 0 && point.m_port <= 65535 && point.m_capacity > 0 && point.m_boot != 0 &&
         point.m_address.size() <= 39 && NetInterfaceDirectoryAddress::parse(point.m_address.data(),
         static_cast<uint32_t>(point.m_address.size()), addressKey);
@@ -198,52 +198,49 @@ bool NetInterfaceDirectory::valid(const NetInterfaceDirectoryPoint& point)
 bool NetInterfaceDirectory::number(const ProtoMessage& message, int32_t field, uint64_t& value, int32_t group)
 {
     value = 0;
-    try
+    const Variant* item = message.findValue(field, group);
+    if (item == nullptr) { return false; }
+    if (item->type() == Variant::UINT64)
     {
-        Variant item;
-        if (!message.getKeyValue(field, item, group))
-        {
-            return false;
-        }
-        if (item.type() == Variant::UINT64)
-        {
-            value = static_cast<uint64_t>(item);
-            return true;
-        }
-        if (item.type() != Variant::INT32 || static_cast<int32_t>(item) < 0)
-        {
-            return false;
-        }
-        value = static_cast<uint32_t>(static_cast<int32_t>(item));
+        value = NetInterfaceMessage::decodeUint64(*item);
         return true;
     }
-    catch (...)
+    if (item->type() != Variant::INT32) { return false; }
+    const int32_t number = NetInterfaceMessage::decodeInt32(*item);
+    if (number < 0) { return false; }
+    value = static_cast<uint32_t>(number);
+    return true;
+}
+
+/** 从目录消息复制一个合法的有界文本；分配异常由调用入口按其返回类型处理
+@param [in] message 已解析的管理消息
+@param [in] field 字段键
+@param [out] value 成功时为完整文本，字段无效时清空
+@param [in] maximum 允许的最大字节数
+@param [in] group 字段所在组
+@return 类型、长度及字符均有效时为 true
+*/
+static bool ReadDirectoryText(const ProtoMessage& message, int32_t field, std::string& value, uint32_t maximum, int32_t group)
+{
+    const Variant* item = message.findValue(field, group);
+    if (item && item->type() == Variant::STRING && item->size() != 0 && item->size() <= maximum)
     {
-        return false;
+        value.assign(item->data(), item->size());
+        if (CStringManager::findFirstNotOf(value, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:") == std::string::npos)
+        {
+            return true;
+        }
     }
+    value.clear();
+    return false;
 }
 
 bool NetInterfaceDirectory::text(const ProtoMessage& message, int32_t field, std::string& value, uint32_t maximum, int32_t group)
 {
-    value.clear();
-    try
-    {
-        Variant item;
-        if (!message.getKeyValue(field, item, group) || item.type() != Variant::STRING)
-        {
-            return false;
-        }
-        std::string parsed = static_cast<std::string>(item);
-        if (parsed.empty() || parsed.size() > maximum || CStringManager::Find(parsed, '\0') != std::string::npos ||
-            parsed.find_first_not_of("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:") != std::string::npos)
-        {
-            return false;
-        }
-        value.swap(parsed);
-        return true;
-    }
+    try { return ReadDirectoryText(message, field, value, maximum, group); }
     catch (...)
     {
+        value.clear();
         return false;
     }
 }
@@ -273,16 +270,16 @@ int32_t NetInterfaceDirectory::encode(const std::vector<NetInterfaceDirectoryPoi
         }
         ProtoMessage message;
         message.setCode(NI_OK);
-        message.setKeyValue(NI_GATEWAY_NODE_COUNT, Variant(static_cast<int32_t>(points.size())));
+        message.setKeyValue(NI_GATEWAY_NODE_COUNT, NetInterfaceMessage::encodeInteger(static_cast<int32_t>(points.size())));
         for (uint32_t index = 0; index < points.size(); ++index)
         {
             const NetInterfaceDirectoryPoint& point = points[index];
             const int32_t group = static_cast<int32_t>(index + 1);
             message.setKeyValue(NI_GATEWAY_NODE_ID, Variant(point.m_name.c_str()), group);
             message.setKeyValue(NI_GATEWAY_ADDRESS, Variant(point.m_address.c_str()), group);
-            message.setKeyValue(NI_GATEWAY_PORT, Variant(static_cast<int32_t>(point.m_port)), group);
-            message.setKeyValue(NI_GATEWAY_CAPACITY, Variant(static_cast<uint64_t>(point.m_capacity)), group);
-            message.setKeyValue(NI_GATEWAY_BOOT, Variant(point.m_boot), group);
+            message.setKeyValue(NI_GATEWAY_PORT, NetInterfaceMessage::encodeInteger(static_cast<int32_t>(point.m_port)), group);
+            message.setKeyValue(NI_GATEWAY_CAPACITY, NetInterfaceMessage::encodeInteger(static_cast<uint64_t>(point.m_capacity)), group);
+            message.setKeyValue(NI_GATEWAY_BOOT, NetInterfaceMessage::encodeInteger(point.m_boot), group);
         }
         std::string encoded;
         if (!message.toString(encoded))
@@ -331,8 +328,8 @@ int32_t NetInterfaceDirectory::parse(const uint8_t* data, uint32_t size, std::ve
             NetInterfaceDirectoryPoint point;
             uint64_t port = 0;
             uint64_t capacity = 0;
-            if (!text(message, NI_GATEWAY_NODE_ID, point.m_name, NET_INTERFACE_DIRECTORY_NAME_BYTES, group) ||
-                !text(message, NI_GATEWAY_ADDRESS, point.m_address, 39, group) ||
+            if (!ReadDirectoryText(message, NI_GATEWAY_NODE_ID, point.m_name, NET_INTERFACE_DIRECTORY_NAME_BYTES, group) ||
+                !ReadDirectoryText(message, NI_GATEWAY_ADDRESS, point.m_address, 39, group) ||
                 !number(message, NI_GATEWAY_PORT, port, group) || port > 65535 ||
                 !number(message, NI_GATEWAY_CAPACITY, capacity, group) || capacity > UINT32_MAX ||
                 !number(message, NI_GATEWAY_BOOT, point.m_boot, group))

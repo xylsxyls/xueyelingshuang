@@ -53,6 +53,16 @@ fi
 librariesrely+=($'project\tProtoMessageManager\t'"$ProtoMessageManager_dlllib")
 
 #--------------------------------------------------------------------
+Variant_bit=$1
+Variant_dlllib=$2
+Variant_debugRelease=$3
+Variant_allSame=$4
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" Variant "$Variant_bit" "$Variant_dlllib" "$Variant_debugRelease" "$Variant_allSame"
+fi
+librariesrely+=($'project\tVariant\t'"$Variant_dlllib")
+
+#--------------------------------------------------------------------
 CEncodeDecode_bit=$1
 CEncodeDecode_dlllib=$2
 CEncodeDecode_debugRelease=$3

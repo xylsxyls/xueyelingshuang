@@ -2,7 +2,7 @@
 #include "NetInterfaceMacro.h"
 #include "NetInterface.h"
 #include "NetInterfaceGatewayTypes.h"
-#include "ProtoMessageManager/ProtoMessageManagerAPI.h"
+#include "NetInterfaceMessage.h"
 
 NetInterfaceCredit::NetInterfaceCredit() :
 m_credit()
@@ -32,7 +32,7 @@ int32_t NetInterfaceCredit::window(const ProtoMessage& message, uint32_t& bytes,
     {
         return NI_PROTOCOL_ERROR;
     }
-    const int32_t number = static_cast<int32_t>(*value);
+    const int32_t number = NetInterfaceMessage::decodeInt32(*value);
     if (number < static_cast<int32_t>(NET_CHANNEL_DEFAULT_WINDOW) || number > static_cast<int32_t>(NET_CHANNEL_MAX_WINDOW) ||
         number % static_cast<int32_t>(NET_CHANNEL_PAYLOAD_LIMIT) != 0)
     {

@@ -63,8 +63,8 @@ static bool LinkPem(const uint8_t* data, uint32_t size, uint32_t maximum, std::s
 */
 static bool LinkServiceName(const std::string& name)
 {
-    if (name.compare(0, 8, "service.") != 0 || name.size() < 9 || name.size() > 18 ||
-        (name.size() > 9 && name[8] == '0') || name.find_first_not_of("0123456789", 8) != std::string::npos)
+    if (!CStringManager::startsWith(name, "service.") || name.size() < 9 || name.size() > 18 ||
+        (name.size() > 9 && name[8] == '0') || CStringManager::findFirstNotOf(name, "0123456789", 8) != std::string::npos)
     {
         return false;
     }
@@ -190,6 +190,7 @@ int32_t NetInterfaceLinkState::queueRecord(const NetInterfaceTunnelRecord& recor
         m_outputHead = accepted;
     }
     m_outputTail = accepted;
+    NetExecution::progress();
     return NI_OK;
 }
 
@@ -212,6 +213,19 @@ int32_t NetInterfaceLinkState::fail(int32_t error)
         m_phase = NET_LINK_FAILED;
     }
     return m_error;
+}
+
+bool NetInterfaceLinkState::isHeartbeat(const NetInterfaceFrame& frame)
+{
+    return (frame.m_kind == NI_PING || frame.m_kind == NI_PONG) && frame.m_messageType == NET_INTERFACE_LINK_HEARTBEAT &&
+        frame.m_productId == 0 && frame.m_requestId != 0 && frame.m_payloadSize == 0;
+}
+
+bool NetInterfaceLinkState::validControl(const NetInterfaceFrame& frame)
+{
+    return frame.m_productId == 0 && frame.m_payloadSize <= 16384 &&
+        (frame.m_kind == NI_REQUEST || frame.m_kind == NI_RESPONSE || frame.m_kind == NI_EVENT || frame.m_kind == NI_CANCEL) &&
+        (frame.m_messageType < NET_INTERFACE_LINK_CHALLENGE || frame.m_messageType > NET_INTERFACE_LINK_HEARTBEAT);
 }
 
 int32_t NetInterfaceLinkState::status() const
@@ -262,7 +276,7 @@ int32_t NetInterfaceLinkState::configure(const NetInterfaceLinkOptions& options,
     else
     {
         if (!NetInterfaceCertificate::validName(m_name) ||
-            (options.m_role == NI_LINK_NODE && m_name.compare(0, 5, "node.") != 0) ||
+            (options.m_role == NI_LINK_NODE && !CStringManager::startsWith(m_name, "node.")) ||
             (options.m_role == NI_LINK_SERVICE && (!LinkServiceName(m_name) || options.m_serviceProof == nullptr)) ||
             !LinkPem(options.m_tls.privateKey, options.m_tls.privateKeySize, 4096, m_privateKey))
         {
@@ -390,7 +404,7 @@ int32_t NetInterfaceLinkState::verifyProof(const NetInterfaceFrame& frame)
     }
     else if (role == NI_LINK_NODE)
     {
-        if (peerName.compare(0, 5, "node.") != 0 || NetInterfaceCertificate::verifyProof(peerCert, peerName,
+        if (!CStringManager::startsWith(peerName, "node.") || NetInterfaceCertificate::verifyProof(peerCert, peerName,
             statement.data(), static_cast<uint32_t>(statement.size()), signature, sigSize) != NI_OK)
         {
             return fail(NI_PROTOCOL_ERROR);
@@ -465,7 +479,7 @@ int32_t NetInterfaceLinkState::verifyAcceptance(const NetInterfaceFrame& frame)
     std::string peerCert(reinterpret_cast<const char*>(cert), certSize);
     std::vector<uint8_t> statement(frame.m_payload, signature);
     LinkWrite(statement.data() + 20, 0);
-    if (peerName.compare(0, 5, "node.") != 0 || NetInterfaceCertificate::verifyProof(peerCert, peerName, statement.data(),
+    if (!CStringManager::startsWith(peerName, "node.") || NetInterfaceCertificate::verifyProof(peerCert, peerName, statement.data(),
         static_cast<uint32_t>(statement.size()), signature, sigSize) != NI_OK)
     {
         return fail(NI_PROTOCOL_ERROR);
@@ -526,6 +540,10 @@ int32_t NetInterfaceLinkState::progress(uint64_t now)
         NetExecution::deadline(timeout, now - m_started);
     }
     if (status() != NI_READY && now - m_started >= m_options.m_tls.handshakeTimeoutMs)
+    {
+        return fail(NI_TIMEOUT);
+    }
+    if (m_phase == NET_LINK_READY && m_pingTime != 0 && now - m_pingTime >= m_pongTimeoutMs)
     {
         return fail(NI_TIMEOUT);
     }
@@ -655,8 +673,7 @@ int32_t NetInterfaceLinkState::progress(uint64_t now)
             }
             m_activity = now;
         }
-        else if ((frame.m_kind == NI_PING || frame.m_kind == NI_PONG) && frame.m_messageType == NET_INTERFACE_LINK_HEARTBEAT &&
-            frame.m_productId == 0 && frame.m_requestId != 0 && frame.m_payloadSize == 0)
+        else if (isHeartbeat(frame))
         {
             if (frame.m_kind == NI_PING && m_phase != NET_LINK_DRAINING)
             {
@@ -685,9 +702,7 @@ int32_t NetInterfaceLinkState::progress(uint64_t now)
         }
         else
         {
-            if (frame.m_kind == NI_HELLO || frame.m_kind == NI_HELLO_REPLY || frame.m_kind == NI_PING || frame.m_kind == NI_PONG ||
-                frame.m_productId != 0 || (frame.m_messageType >= NET_INTERFACE_LINK_CHALLENGE &&
-                    frame.m_messageType <= NET_INTERFACE_LINK_HEARTBEAT))
+            if (!validControl(frame))
             {
                 return fail(NI_PROTOCOL_ERROR);
             }
@@ -697,10 +712,6 @@ int32_t NetInterfaceLinkState::progress(uint64_t now)
     }
     if (status() == NI_READY && m_phase != NET_LINK_DRAINING)
     {
-        if (m_pingTime != 0 && now - m_pingTime >= m_pongTimeoutMs)
-        {
-            return fail(NI_TIMEOUT);
-        }
         if (m_pingTime == 0 && now - m_activity >= m_pingIntervalMs)
         {
             if (m_pingId == UINT64_MAX)

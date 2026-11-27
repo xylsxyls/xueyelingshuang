@@ -16,7 +16,7 @@ typedef int32_t (*NetHostEntropy)(void* context, uint8_t* output, uint32_t size)
 // create/exchange/begin/wait/destroy串行；只有wake可跨线程，外层必须保护借用期。
 typedef struct NetHostExecutionFunctions
 {
-    // 创建无线程的执行循环，0成功；失败输出空
+    // 创建无线程执行循环。成功返回 0 并交付实例。失败通常输出空。若已交付实例后返回错误或抛出异常，执行者会调用 destroy 一次。
     int32_t (*create)(void** instance);
     // 交换当前执行者中新建网络通道的循环归属，返回旧归属
     void* (*exchange)(void* instance);

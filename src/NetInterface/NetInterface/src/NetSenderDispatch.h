@@ -39,7 +39,7 @@ public:
     /** owner 在 prepare 成功且协议接纳连接后记录代次
     @param [in] generation 本次非零代次
     @param [in] product 固定服务产品或0
-    @return NI_OK 或错误。尚未登记业务监听者时返回 NI_INVALID_STATE，保持原代次
+    @return NI_OK或错误；未prepare、连接未接纳、回调重入、代次不匹配或重复登记均返回NI_INVALID_STATE并保留提交状态
     */
     int32_t started(uint64_t generation, uint32_t product);
 
@@ -101,7 +101,7 @@ private:
 private:
     /** 协议就绪更新提交快照后转发
     @param [in] generation 协议代次
-    @param [in] requests 协商请求上限
+    @param [in] requests 对端协商的非零请求能力值，本地接纳容量取决于实际请求池
     @param [in] chunk 协商块上限
     */
     virtual void onSessionReady(uint64_t generation, uint32_t requests, uint32_t chunk);

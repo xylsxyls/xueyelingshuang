@@ -17,7 +17,7 @@ public:
     */
     NetSenderSubmissionFront();
 public:
-    // 仅由owner在BEGIN接入请求链表后设置；退休后不得解引用
+    // 仅由owner在BEGIN导入时设置、退休前清空；生产者不得读取
     NetSenderSubmissionEntry* m_entry;
     // 发布后不变的可信请求元数据
     NetSenderSubmissionCommand m_command;
@@ -386,9 +386,23 @@ public:
     */
     void rollbackReceipt(const NetObjectReference<NetSenderSubmissionReceipt>& receipt);
 
-    /** 查找未终态请求，不返回已退休的借用项
+    /** 读取并发索引中的强引用，区分未找到及保护记录不足
+    @param [in] id 本实例请求号
+    @param [out] front 成功时取得对应身份
+    @return NI_OK、NI_NOT_FOUND 或索引资源错误
+    */
+    int32_t lookupFront(uint64_t id, NetObjectReference<NetSenderSubmissionFront>& front) const;
+
+    /** 读取同步票据，零号和超过已分配上界的编号无需借用保护记录
+    @param [in] ticket 本实例的票据号
+    @param [out] receipt 成功时取得对应回执
+    @return NI_OK、NI_NOT_FOUND 或索引资源错误
+    */
+    int32_t lookupReceipt(uint64_t ticket, NetObjectReference<NetSenderSubmissionReceipt>& receipt) const;
+
+    /** owner查找已导入的未终态请求，索引暂不可用时查询本地请求链表
     @param [in] id 本实例原号
-    @return 借用项或nullptr，通过并发身份索引查找
+    @return 已导入项的owner借用或nullptr
     */
     NetSenderSubmissionEntry* find(uint64_t id) const;
 
@@ -451,6 +465,8 @@ public:
     bool m_gateConfigured;
     // 本实例的生产者让步及回收等待参数，首次启动后只读。
     NetSenderSubmissionWait m_producerWait;
+    // owner 发布代次相关字段时为奇数；读者只接纳两次读取相同偶数的快照。
+    std::atomic<uint64_t> m_stateRevision;
     // 当前连接代次。
     std::atomic<uint64_t> m_generation;
     // 固定产品，0允许旧通用连接选择产品。
@@ -577,4 +593,16 @@ public:
     NetSenderSubmissionReceipt* m_receipts;
     // 当前已交协议但尚未全链路交付的回执，非拥有。
     NetSenderSubmissionReceipt* m_draining;
+
+private:
+    /** 先直接取得强引用，只在未命中时向索引查询具体原因
+    @param [in] index 请求或回执索引
+    @param [in] id 本实例分配的编号
+    @param [out] value 成功时取得对应强引用
+    @return NI_OK、NI_NOT_FOUND 或索引资源错误
+    */
+    template <class T> static int32_t lookupIndex(const LockFreeHashMap<uint64_t, NetObjectReference<T>>& index,
+        uint64_t id, NetObjectReference<T>& value);
 };
+
+#include "NetSenderSubmissionState.inl"

@@ -353,6 +353,8 @@ int32_t NetInterfaceConnection::send(const NetInterfaceFrame& frame)
         m_previousCompactData = frame;
         m_previousCompactData.m_payload = nullptr;
     }
+    // 本轮运输可能已经推进完毕；下一轮须将新排队的明文转换成密文。
+    NetExecution::progress();
     return NI_OK;
 }
 
@@ -432,15 +434,17 @@ int32_t NetInterfaceConnection::consumeOutput(uint32_t size)
     if (result == NI_OK && size != 0)
     {
         m_readBlocked = false;
-        NetExecution::progress();
     }
     return result;
 }
 
 int32_t NetInterfaceConnection::finishInput()
 {
-    m_readBlocked = false;
-    return m_error != 0 ? m_error : m_tls.finishInput();
+    if (m_error != 0) { return m_error; }
+    bool first = false;
+    const int32_t result = m_tls.finishInput(first);
+    if (first) { m_readBlocked = false; }
+    return result;
 }
 
 uint32_t NetInterfaceConnection::decoderBufferCapacity() const

@@ -19,7 +19,7 @@ public:
 
     /** TLS和应用握手均已通过，可发起业务
     @param [in] generation 本对象连接代次，递增不复用
-    @param [in] maxRequests 协商在途上限
+    @param [in] maxRequests 对端协商的非零请求能力值，本地接纳容量取决于实际请求池
     @param [in] maxChunk 协商块上限
     */
     virtual void onSessionReady(uint64_t generation, uint32_t maxRequests, uint32_t maxChunk) = 0;
@@ -130,12 +130,12 @@ public:
     @param [in] product 非零产品号
     @param [in] type 命令号
     @param [in] timeoutMs 总期限1至60000毫秒，从本次预留开始且不因重试延长
-    @param [out] requestId 成功非零，否则0；容量拒绝可能消耗编号
+    @param [out] requestId 成功返回递增的本地业务号，发送、取消及终态使用该号；失败为0，编号允许跳过
     @return OK预留，其余负数拒绝且无终态回调
     */
     int32_t beginRequest(uint32_t product, uint32_t type, uint32_t timeoutMs, uint64_t& requestId);
 
-    /** 接收统一提交层的原号与原始期限，仅协议执行者调用
+    /** 接收统一提交层的业务原号与原始期限，仅协议执行者调用；按顺序发送时沿用原号上网
     @param [in] requestId 本来源严格递增的非零原号
     @param [in] product 非零产品
     @param [in] type 业务命令
@@ -145,7 +145,7 @@ public:
     */
     int32_t beginRequestAt(uint64_t requestId, uint32_t product, uint32_t type, uint64_t startedMs, uint32_t timeoutMs);
 
-    /** 发送预留请求，body由下层复制
+    /** 发送预留请求，body由下层复制；允许按不同于预留的顺序发送，线路号按接纳顺序递增
     @param [in] requestId 当前未发送请求号
     @param [in] body 业务二进制，非空size时不可空
     @param [in] size 不超过1048560
@@ -191,13 +191,20 @@ public:
     */
     int32_t outputState() const;
 
+public:
+    /** 在关闭期间的结果或关闭回调中查询终态，供调用方结算尚未进入协议的请求
+    @param [out] status 本地主动正常关闭为CANCELLED，其他关闭为UNAVAILABLE；返回false时不是最终结果
+    @return 当前正在交付已关闭协议会话的回调时为true，其他时刻为false；仅会话owner调用
+    */
+    bool closedRequestStatus(uint32_t& status) const;
+
 private:
     /** 停止本次尝试的通道一次；允许其同步报告关闭，隔离宿主异常和生命周期重入
     */
     void stopChannel();
 
     /** 隔离就绪回调并还原嵌套回调标志，异常只关闭本代
-    @param [in] requests 实际协商请求上限
+    @param [in] requests 实际协商的请求能力值，本地接纳受物理池容量约束
     @param [in] chunk 实际协商块长
     */
     void notifyReady(uint32_t requests, uint32_t chunk);

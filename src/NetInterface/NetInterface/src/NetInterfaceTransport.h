@@ -208,7 +208,7 @@ public:
     virtual int32_t connect(const char* address, uint32_t port, const NetInterfaceLinkOptions& options,
         NetLinkTransportListener* listener, uint64_t& peer) = 0;
 
-    /** 同一执行者非阻塞推进
+    /** 同一执行者非阻塞推进。连接接纳后，宿主也可在两轮 poll 之间由同一执行者投递管理监听回调，shutdown 收敛这些回调
     @return 是否还有资源
     */
     virtual bool poll() = 0;

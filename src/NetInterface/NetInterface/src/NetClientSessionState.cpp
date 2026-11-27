@@ -25,7 +25,7 @@ m_phase(NET_CLIENT_IDLE),
 m_service(false),
 m_callback(false),
 m_polling(false),
-m_closeReason(0)
+m_closeReason(NI_READY)
 {
     m_destination.m_structSize = sizeof(m_destination);
     m_destination.m_version = 1;
@@ -45,4 +45,9 @@ bool NetClientSessionState::recovering() const
 bool NetClientSessionState::expired(uint64_t nowMs) const
 {
     return recovering() && m_recoveryDeadline != 0 && nowMs >= m_recoveryDeadline;
+}
+
+bool NetClientSessionState::acceptsProduct(uint32_t product) const
+{
+    return !m_service || (product != 0 && (m_product == 0 || product == m_product));
 }

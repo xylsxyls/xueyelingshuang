@@ -29,7 +29,8 @@ typedef enum NetInterfaceTlsStatus
     NET_INTERFACE_TLS_STATE = -106
 } NetInterfaceTlsStatus;
 
-// 由宿主提供操作系统级密码学随机源；返回0表示完整填充，非0终止握手
+// 由宿主提供操作系统级密码学随机源；返回0表示完整填充，非0终止握手。
+// 同步填充后返回，不得重入正在调用此回调的TLS、连接或链路的修改操作，也不得销毁它们。
 typedef int32_t (*NetInterfaceEntropyFunction)(void* context, uint8_t* output, uint32_t size);
 
 // 创建时借用的配置；证书和域名在create中复制，随机回调及context借用至destroy

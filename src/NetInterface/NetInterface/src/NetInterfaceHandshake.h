@@ -66,7 +66,7 @@ class NetInterfaceAPI NetInterfaceHandshake
     int32_t consumeOutput();
 
     /** 取已协商能力；调用方仍须登录/授权，不从设备类型推导VIP
-    @param [out] fields 平台、能力、在途上限、块大小共4个uint32，不可空
+    @param [out] fields 平台、能力位、协商请求能力值、最大块大小共4个uint32，不可空
     @param [out] peerNonce 对端连接随机数16字节，不可空
     @param [out] clientDevice 本次客户端声明设备标识16字节，不可空
     @return READY 或尚未就绪、失败状态。输出为空或重叠时返回 NI_INVALID_ARGUMENT，所有输出保持原值

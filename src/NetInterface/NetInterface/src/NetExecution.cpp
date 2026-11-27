@@ -110,6 +110,12 @@ void NetExecution::deadline(uint64_t expiresMs, uint64_t nowMs)
     s_execution->m_waitUntil = (std::min)(s_execution->m_waitUntil, until);
 }
 
+bool NetExecution::bind(void*& previousHost)
+{
+    previousHost = nullptr;
+    return status() == NI_OK && bind(this, m_instance, previousHost);
+}
+
 bool NetExecution::bind(NetExecution* execution, void* host, void*& previousHost)
 {
     previousHost = nullptr;
@@ -146,7 +152,7 @@ NetExecution* NetExecution::exchange(NetExecution* execution, void*& previousHos
 
 NetExecutionScope::NetExecutionScope(NetExecution& execution) :
 m_previousHost(nullptr), m_previous(NetExecution::current()),
-m_bound(execution.status() == NI_OK && NetExecution::bind(&execution, execution.m_instance, m_previousHost))
+m_bound(execution.bind(m_previousHost))
 {
 
 }

@@ -4,6 +4,7 @@
 
 /** 无状态文件协议辅助入口，由NetSender及其核心提供
 不创建线程或文件；同一流句柄由唯一执行者串行调用，不得与释放并发。不同流互不共享状态
+各方法直接转交 NetInterface 同名接口，参数、返回值及缓冲区独立性要求一致
 */
 class NetInterfaceAPI NetFileProtocol
 {
@@ -30,7 +31,7 @@ public:
     /** 解析文件成功响应
     @param [in] bytes 160字节状态体
     @param [in] size 精确长度
-    @param [out] info 不可空，失败清零
+    @param [out] info 不可空，普通解析失败清零；与输入字节区重叠时返回参数错误并保留原值
     @return OK或负数
     */
     int32_t fileParseInfo(const uint8_t* bytes, uint32_t size, NetInterfaceFileInfo* info);
@@ -42,7 +43,7 @@ public:
     @param [out] transfer 16字节
     @param [out] token 32字节秘密
     @param [out] hash 32字节整文件摘要
-    @return OK或负数，失败输出全部清零
+    @return OK或负数；普通失败清零有效输出，输入输出或输出之间重叠时返回参数错误并保留原值
     */
     int32_t fileInfoFields(const uint8_t* bytes, uint32_t size, uint32_t* fields, uint8_t* transfer,
         uint8_t* token, uint8_t* hash);
@@ -54,7 +55,7 @@ public:
     @param [in] timeLow 单调毫秒低位
     @param [in] timeHigh 单调毫秒高位
     @param [in] timeoutMs 无进度时限1000至60000
-    @param [out] handle 不可空，失败清零
+    @param [out] handle 不可空，普通失败清空；与info存储重叠时返回参数错误并保留原值
     @return OK或负数
     */
     int32_t fileFlowCreate(const NetInterfaceFileInfo* info, uint32_t product, uint32_t sender,
@@ -69,7 +70,7 @@ public:
     @param [in] timeLow 单调时间低位
     @param [in] timeHigh 高位
     @param [in] timeoutMs 无进度时限
-    @param [out] handle 不可空，失败清零
+    @param [out] handle 不可空，普通失败清空；与输入字节区重叠时返回参数错误并保留原值
     @return OK或负数
     */
     int32_t fileFlowCreateWire(const uint8_t* bytes, uint32_t size, uint32_t product, uint32_t sender,
@@ -94,7 +95,7 @@ public:
     @param [in] offsetHigh 高位
     @param [in] bytes 文件前缀
     @param [in] size 不超过剩余量且最多16MiB
-    @return 同Flow.prime
+    @return 前缀参数错误时返回 NI_INVALID_ARGUMENT，已累积的摘要和下一偏移保持
     */
     int32_t fileFlowPrime(NetInterfaceFileFlowHandle handle, uint32_t offsetLow, uint32_t offsetHigh,
         const uint8_t* bytes, uint32_t size);
@@ -136,8 +137,8 @@ public:
     /** 取一次持久写请求，宿主复制借用bytes后投递文件执行者
     @param [in] handle 流
     @param [out] fields 三项offset低/高位和长度
-    @param [out] bytes 借用至written/cancel/destroy
-    @return 同Flow.writeRequest，失败输出0/null
+    @param [out] bytes 借用至written、流失败（含超时或取消）或销毁
+    @return 同Flow.writeRequest。非就绪时清空独立的有效输出。输出存储相互重叠时返回参数错误并保留原值
     */
     int32_t fileFlowWrite(NetInterfaceFileFlowHandle handle, uint32_t* fields, const uint8_t** bytes);
 
@@ -168,8 +169,8 @@ public:
     /** 借用输出；背压时不消费
     @param [in] handle 流
     @param [out] fields 六项kind/product/id低高/type/size
-    @param [out] payload 借用至consume/cancel/destroy
-    @return READY或其他结果，失败清输出
+    @param [out] payload 借用至consume、流失败或销毁
+    @return READY或其他结果。非就绪时清空独立的有效输出。输出存储相互重叠时返回参数错误并保留原值
     */
     int32_t fileFlowPeek(NetInterfaceFileFlowHandle handle, uint32_t* fields, const uint8_t** payload);
 
@@ -188,7 +189,7 @@ public:
 
     /** 当前显示快照
     @param [in] handle 流
-    @param [out] info 固定C布局，失败清零
+    @param [out] info 固定C布局，普通失败清零；与result存储重叠时返回参数错误并保留两个输出
     @param [out] result 不可空
     @return OK或INVALID_ARGUMENT
     */

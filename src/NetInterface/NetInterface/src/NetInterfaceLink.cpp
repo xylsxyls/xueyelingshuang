@@ -94,6 +94,7 @@ int32_t NetInterfaceLink::accept(const NetInterfaceTunnelRecord& record)
             return m_state->fail(NI_PROTOCOL_ERROR);
         }
         m_state->m_receivedHello = true;
+        NetExecution::progress();
         return NI_OK;
     }
     if (!m_state->m_receivedHello)
@@ -110,6 +111,7 @@ int32_t NetInterfaceLink::accept(const NetInterfaceTunnelRecord& record)
             }
             m_state->m_input.assign(record.m_data, record.m_data + record.m_size);
             m_state->m_inputOffset = 0;
+            NetExecution::progress();
             return NI_OK;
         }
         if (m_state->status() != NI_READY)
@@ -124,6 +126,7 @@ int32_t NetInterfaceLink::accept(const NetInterfaceTunnelRecord& record)
         m_state->m_received = record;
         m_state->m_received.m_data = m_state->m_receivedBytes.data();
         m_state->m_recordReady = true;
+        NetExecution::progress();
         return NI_OK;
     }
     catch (...)
@@ -312,9 +315,7 @@ int32_t NetInterfaceLink::sendControl(const NetInterfaceFrame& frame)
     {
         return NI_INVALID_STATE;
     }
-    if (frame.m_productId != 0 || frame.m_payloadSize > 16384 ||
-        (frame.m_kind != NI_REQUEST && frame.m_kind != NI_RESPONSE && frame.m_kind != NI_EVENT && frame.m_kind != NI_CANCEL) ||
-        (frame.m_messageType >= NET_INTERFACE_LINK_CHALLENGE && frame.m_messageType <= NET_INTERFACE_LINK_HEARTBEAT))
+    if (!NetInterfaceLinkState::validControl(frame))
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -338,18 +339,11 @@ int32_t NetInterfaceLink::peekControl(NetInterfaceFrame& frame) const
         return NI_NEED_MORE;
     }
     const int32_t result = m_state->m_control->peek(frame);
-    if (result == NI_READY && frame.m_productId != 0)
-    {
-        frame = NetInterfaceFrame();
-        return m_state->fail(NI_PROTOCOL_ERROR);
-    }
-    if (result == NI_READY && (frame.m_kind == NI_PING || frame.m_kind == NI_PONG ||
-        frame.m_kind == NI_HELLO || frame.m_kind == NI_HELLO_REPLY))
-    {
-        frame = NetInterfaceFrame();
-        return NI_NEED_MORE;
-    }
-    return result;
+    if (result != NI_READY || NetInterfaceLinkState::validControl(frame)) { return result; }
+    // 内部管理心跳由 progress 消费，可能正等待下一轮预算或可写空间。
+    const bool heartbeat = NetInterfaceLinkState::isHeartbeat(frame);
+    frame = NetInterfaceFrame();
+    return heartbeat ? NI_NEED_MORE : m_state->fail(NI_PROTOCOL_ERROR);
 }
 
 int32_t NetInterfaceLink::consumeControl()

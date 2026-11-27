@@ -7,6 +7,8 @@
 #include <memory>
 #include <string>
 
+class ProtoMessage;
+
 // 单目标通道严格按认证、OPEN、业务TLS、关闭推进
 enum NetGatewayClientPhase
 {
@@ -43,6 +45,38 @@ public:
     */
     void fail(int32_t reason);
 
+    /** 校验已确认通道号的 CHANNEL_CLOSE 原因并结束外层输入
+    @param [in] message 已解码的关闭事件
+    @param [in] now 收到事件时的单调毫秒
+    */
+    void acceptClose(const ProtoMessage& message, uint64_t now);
+
+    /** 应用本通道的对端 CREDIT，只有先前停在零额度的待发输出才需要立即再推进
+    @param [in] message 已校验通道的 CREDIT 事件
+    */
+    void acceptCredit(const ProtoMessage& message);
+
+    /** 按本实例发送预算交付密文，下层接纳后才扣额度和消费 TLS 输出
+    */
+    void sendOutput();
+
+    /** 保存首个外层终态和固定排空期限，保留此前接纳的业务密文
+    @param [in] reason 外层明确失败为负，零表示仍需验证内层 TLS 关闭
+    @param [in] now 输入结束时的单调毫秒
+    */
+    void endInput(int32_t reason, uint64_t now);
+
+    /** 接纳当前管理代次的一条记录，TLS 暂未接纳的后缀由通道持有
+    @param [in] record 外层借用的记录
+    @return 已消费，或已有待提交后缀而需原样重试
+    */
+    bool acceptRecord(const NetInterfaceTunnelRecord& record);
+
+    /** 在单轮预算内推进业务 TLS 和交付已认证的帧，外层结束后排空已接纳前缀
+    @param [in] now 单调毫秒
+    */
+    void advanceInput(uint64_t now);
+
 public:
     // 首次连接前复制的可选帧池配置，自动恢复沿用同一配置
     std::unique_ptr<NetConnectionPoolConfig> m_connectionPools;
@@ -74,8 +108,14 @@ public:
     NetGatewayClientTiming m_timing;
     // 初次连接的单调时间，不因各握手阶段重置
     uint64_t m_startedAt;
+    // 首次业务 TLS 推进起算的绝对握手期限，零表示尚未推进。
+    uint64_t m_tlsDeadline;
     // 首次拒收加上等待预算所得的绝对期限，0表示没有拒收
     uint64_t m_blockedDeadline;
+    // 外层结束后的固定排空期限，0表示仍接受外层输入
+    uint64_t m_drainDeadline;
+    // 所有暂存后缀均已交给 TLS 后，只提交一次 EOF
+    bool m_inputFinished;
     // 固定业务目标，0仍受内部服务路由权限控制
     uint32_t m_product;
     // 首个关闭原因

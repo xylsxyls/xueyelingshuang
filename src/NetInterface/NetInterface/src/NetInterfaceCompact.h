@@ -9,7 +9,7 @@ public:
     @param [in] frame 元数据及正文借用到返回
     @param [out] output 可写区域，可以复用帧元数据的存储，须与正文分开，容量为0时可空
     @param [in] capacity 输出容量，字节
-    @param [out] required 所需字节数，参数错误为0，不与输入输出别名
+    @param [out] required 所需字节数；与frame、previous、正文或输出重叠时拒绝并保留原值，其他参数错误置0
     @param [in] previous 同方向已接纳的最近紧凑DATA元数据，可空；仅相同产品/类型和正32位编号增量时复用；短正文增量1用单字节头
     @return NI_OK、NI_BUFFER_TOO_SMALL或负数参数错误
     */

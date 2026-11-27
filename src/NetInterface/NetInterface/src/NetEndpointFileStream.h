@@ -28,6 +28,16 @@ public:
     NetInterfaceFileInfo m_info;
 
 public:
+    /** 把服务和路由上限中较早的 UTC 到期秒换算成同一时刻的单调毫秒期限
+    @param [in] utcMs 从 Unix 纪元起算的 UTC 毫秒
+    @param [in] nowMs 取得 UTC 样本前的单调毫秒
+    @param [in] limitSeconds 路由器配置的正数秒上限
+    @param [in,out] expiresUtc 服务授权的到期秒，成功时改为发给客户端的到期秒
+    @param [out] deadline 成功时写入本地单调期限，无法表示时取最大值
+    @return UTC 时钟有效且授权尚未到期时为真，失败保留两个输出
+    */
+    static bool leaseDeadline(int64_t utcMs, uint64_t nowMs, uint32_t limitSeconds, uint64_t& expiresUtc, uint64_t& deadline);
+
     /** 初始化本代流的双端映射
     @param [in] client 根连接
     @param [in] service 已认证服务

@@ -54,7 +54,7 @@ public:
     virtual void shutdown() = 0;
 
     /** 是否已经收敛所有资源和回调
-    @return true后可销毁，异步文件工作未结束时必须false
+    @return 本次发现及异步工作全部结束时返回 true。会话仍绑定本发现器时可再次启动它。销毁前应等待会话收敛并成功解绑，或使本对象存活至会话析构
     */
     virtual bool stopped() const = 0;
 

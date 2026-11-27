@@ -206,7 +206,7 @@ m_status(payloadLimit == 0 || payloadLimit > NET_INTERFACE_MAX_PAYLOAD_LIMIT ? N
 
 NetInterface::~NetInterface()
 {
-    delete[] m_body;
+    clear(true);
 }
 
 uint64_t NetInterface::readNumber(const uint8_t* bytes, uint32_t width)
@@ -246,15 +246,15 @@ int32_t NetInterface::prepareHeader()
         }
         m_frame.m_kind = static_cast<uint16_t>(readNumber(m_header + 6, 2));
         m_compressed = flags == 1;
-        if (m_frame.m_kind < NI_HELLO || m_frame.m_kind > NI_DATA_ACK ||
-            (m_compressed && m_frame.m_kind != NI_REQUEST && m_frame.m_kind != NI_RESPONSE))
-        {
-            return NI_PROTOCOL_ERROR;
-        }
         m_frame.m_productId = static_cast<uint32_t>(readNumber(m_header + 8, 4));
         m_frame.m_requestId = readNumber(m_header + 12, 8);
         m_wireSize = static_cast<uint32_t>(readNumber(m_header + 20, 4));
         m_frame.m_messageType = static_cast<uint32_t>(readNumber(m_header + 24, 4));
+        if (m_frame.m_kind < NI_HELLO || m_frame.m_kind > NI_DATA_ACK ||
+            (m_compressed && !NetInterfaceCompression::supports(m_frame)))
+        {
+            return NI_PROTOCOL_ERROR;
+        }
     }
     if (m_wireSize > m_payloadLimit)
     {
@@ -382,6 +382,8 @@ int32_t NetInterface::feed(const uint8_t* data, uint32_t size, uint32_t& consume
                 }
                 // 预读到缓存的正文不算消费；原输入仍从实际头末尾接纳，不能吞下一条帧。
                 consumed = headerSize - previous;
+                // 预读可能包含正文或下一帧，只保留实际头。
+                if (headerSize < m_headerSize) { wipe(m_header + headerSize, m_headerSize - headerSize); }
                 m_headerSize = headerSize;
                 m_frame = fields;
                 if (fields.m_kind == NI_DATA)
@@ -423,9 +425,10 @@ int32_t NetInterface::feed(const uint8_t* data, uint32_t size, uint32_t& consume
         {
             return fail(result);
         }
+        wipe(m_body, m_bodySize);
         delete[] m_body;
         m_body = decoded;
-        m_capacity = length;
+        m_bodySize = m_capacity = length;
         m_frame.m_payloadSize = length;
     }
     m_frame.m_payload = m_frame.m_payloadSize == 0 ? nullptr : m_body;
@@ -447,6 +450,8 @@ int32_t NetInterface::peek(const NetInterfaceFrame*& frame) const
 
 void NetInterface::clear(bool release)
 {
+    if (m_bodySize != 0) { wipe(m_body, m_bodySize); }
+    if (m_headerSize != 0) { wipe(m_header, m_headerSize); }
     if (release)
     {
         delete[] m_body;

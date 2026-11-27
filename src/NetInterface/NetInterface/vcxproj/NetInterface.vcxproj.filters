@@ -157,6 +157,9 @@
     <ClInclude Include="..\src\NetGatewayClientChannelState.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClCompile Include="..\src\NetGatewayClientTiming.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClInclude Include="..\src\NetGatewayClientTiming.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -211,6 +214,7 @@
     <ClCompile Include="..\src\NetSenderSubmission.cpp" />
     <ClInclude Include="..\src\NetSenderSubmission.h" />
     <ClInclude Include="..\src\NetSenderSubmissionState.h" />
+    <ClInclude Include="..\src\NetSenderSubmissionState.inl" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>

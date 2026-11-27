@@ -116,21 +116,21 @@ public:
     */
     int32_t addClient(const NetEndpointOrigin& context, const uint32_t negotiated[4], uint64_t& endpoint);
 
-    /** 由挂接端点交付完整业务帧，不能自报PID/来源/目标
+    /** 由挂接端点交付完整业务帧，不能自报PID/来源/目标；成功转发请求时向当前执行者登记到期时间
     @param [in] endpoint addClient返回的当前代次
     @param [in] frame 已经由端点TLS解密并完整解析的帧
-    @return NI_OK接纳，文件LIMIT_EXCEEDED无副作用背压，其他错误关闭此来源
+    @return NI_OK 接纳或忽略迟到文件记录，文件背压返回 NI_LIMIT_EXCEEDED。非文件 DATA/ACK 返回 NI_NOT_SUPPORTED 并关闭来源
     */
     int32_t receiveClient(uint64_t endpoint, const NetInterfaceFrame& frame);
 
-    /** 已认证本地适配交付一帧，来源身份不可从消息体采用
+    /** 已认证本地适配交付一帧，身份取自登记端点；成功转发内部请求、建立或更新文件租约时登记到期时间
     @param [in] endpoint 先前登记的服务代次
     @param [in] frame 完整借用帧，普通服务只能在合法父请求内查询通用内部服务
-    @return OK接纳/忽略迟到，其他负数拒绝
+    @return NI_OK 接纳或忽略迟到记录，非文件 DATA/ACK 返回 NI_NOT_SUPPORTED 并关闭该服务端点
     */
     int32_t receiveService(uint64_t endpoint, const NetInterfaceFrame& frame);
 
-    /** 无分配地关闭一代服务或外部连接；每轮至多64个关闭工作，未收完的端点排尾
+    /** 无分配地关闭一代服务或外部连接；轮询外首次关闭提示当前执行者立即推进，每轮按关闭预算回收，默认64步，未收完的端点排尾
     @param [in] endpoint 既有代次
     @param [in] reason 原因
     */
@@ -213,9 +213,11 @@ private:
     @param [in] endpoint 目标代次
     @param [in] frame 借用帧
     @param [in] origin 根上下文
-    @return OK或负数错误
+    @param [in] closeOnFailure true 表示此投递无法重试，使用真实错误关闭目标端点
+    @return OK或负数错误，宿主分配异常返回 NI_NO_MEMORY，其他异常返回 NI_INVALID_STATE
     */
-    int32_t deliver(uint64_t endpoint, const NetInterfaceFrame& frame, const NetEndpointOrigin& origin);
+    int32_t deliver(uint64_t endpoint, const NetInterfaceFrame& frame, const NetEndpointOrigin& origin,
+        bool closeOnFailure = false);
 
     /** 回传无业务体的传输失败
     @param [in] endpoint 来源代次
@@ -225,7 +227,14 @@ private:
     */
     void reject(uint64_t endpoint, const NetInterfaceFrame& original, uint32_t status, uint64_t root = 0);
 
-    /** 一条已从等待表取出的请求终止，通知原来源及目标
+    /** 通知单个已移除的请求终止，保持其他请求及其到期索引
+    @param [in] request 本次终止的记录
+    @param [in] status 超时、取消或不可用的业务状态
+    @param [in] notifySource 是否向来源回送终态
+    */
+    void notifyTermination(const NetInterfaceRequest& request, uint32_t status, bool notifySource);
+
+    /** 终止已移除的请求，并立即结算其仍在册的子请求
     @param [in] request 元数据
     @param [in] status 超时/取消/不可用
     @param [in] notifySource 是否通知来源
@@ -267,7 +276,7 @@ private:
     */
     void dropFile(uint64_t stream, int32_t reason, uint64_t skip = 0);
 
-    /** 关闭端点时只遍历其双向链；正常poll通过动态期限堆每轮回收至多64条
+    /** 关闭端点时只遍历其双向链；正常poll通过动态期限堆按到期文件预算回收，默认每轮64条
     @param [in] endpoint 关闭端点，0只处理到期
     */
     void collectFiles(uint64_t endpoint);

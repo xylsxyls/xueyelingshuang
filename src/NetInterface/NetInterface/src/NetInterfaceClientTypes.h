@@ -19,7 +19,7 @@ typedef struct NetInterfaceClientOptions
     uint32_t platform;
     // 应用握手能力位
     uint32_t capabilities;
-    // 协商的在途请求上限
+    // 握手协商的非零请求能力值，本地容量由请求池决定
     uint32_t maxRequests;
     // 协商的数据块字节上限
     uint32_t maxChunk;

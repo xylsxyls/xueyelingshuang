@@ -69,17 +69,21 @@ public:
     */
     static NetExecution* exchange(NetExecution* execution, void*& previousHost);
 
-private:
-    friend class NetExecutionScope;
+    /** 将本实例与自身宿主绑定到当前线程，作用域退出前须恢复原归属
+    @param [out] previousHost 成功时为之前借用的宿主循环，失败时为空
+    @return 绑定成功为true；实例状态失败或宿主切换异常为false，均不接管协议归属
+    */
+    bool bind(void*& previousHost);
 
-    /** 在宿主成功切换后更新线程归属；宿主异常时保留原协议归属并记录错误
-    @param [in] execution 新的协议执行者或空
-    @param [in] host 应绑定的宿主循环
-    @param [out] previousHost 成功时为原宿主循环，失败时为空
-    @return 切换成功返回 true
+    /** 按先前保存的协议与宿主配对恢复归属；通常使用NetExecutionScope自动管理
+    @param [in] execution 先前借用的协议执行者或空，恢复期间保持存活
+    @param [in] host 对应的有效宿主循环或空，必须来自先前的exchange或bind输出
+    @param [out] previousHost 成功时为被替换的宿主循环，失败时为空
+    @return 切换成功为true；宿主异常时保留当前协议归属、记录错误并返回false
     */
     static bool bind(NetExecution* execution, void* host, void*& previousHost);
 
+private:
     /** 禁止复制拥有的宿主循环
     @param [in] other 原对象
     */

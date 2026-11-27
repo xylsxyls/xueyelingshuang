@@ -71,7 +71,15 @@ int32_t NetSenderDispatch::prepare(NetSessionListener* listener)
 
 int32_t NetSenderDispatch::started(uint64_t generation, uint32_t product)
 {
-    if (m_listener == nullptr)
+    if (m_listener == nullptr || m_session == nullptr || executing() || m_session->quiescent() ||
+        generation == 0 || generation != m_session->generation())
+    {
+        return NI_INVALID_STATE;
+    }
+    uint64_t current = 0;
+    bool ready = false;
+    m_submission->state(current, ready);
+    if (generation <= current)
     {
         return NI_INVALID_STATE;
     }
@@ -219,10 +227,14 @@ void NetSenderDispatch::onSessionClosed(uint64_t generation, int32_t reason, int
     uint64_t current = 0;
     bool ready = false;
     m_submission->state(current, ready);
-    if (generation == 0 || generation != current || generation <= m_closedGeneration)
+    // 重试在握手前失败时尚无 ready 通知，仅接受绑定会话确实已进入的新代次。
+    if (current == 0 || generation < current || generation <= m_closedGeneration ||
+        (generation != current && (m_session == nullptr || generation != m_session->generation())))
     {
         return;
     }
+    // 先固定终态，后续业务回调请求close不能改写同代剩余请求的结果。
+    const uint32_t status = m_session == nullptr ? NI_RPC_UNAVAILABLE : m_session->requestCloseStatus();
     m_closedGeneration = generation;
     m_mapping->clear();
     m_outputPending = false;
@@ -230,7 +242,7 @@ void NetSenderDispatch::onSessionClosed(uint64_t generation, int32_t reason, int
     NetSenderSubmissionCommand metadata = {};
     while (m_submission->takeClosed(metadata))
     {
-        report(metadata, reason == 0 || reason == NI_CANCELLED ? NI_RPC_CANCELLED : NI_RPC_UNAVAILABLE, nullptr, 0);
+        report(metadata, status, nullptr, 0);
     }
     if (m_listener == nullptr)
     {
@@ -395,7 +407,9 @@ bool NetSenderDispatch::poll()
         bool delivered = advanceOutput();
         // 只消费已经就绪的前缀；每轮仍受消息/字节双量子约束，不等待凑批。
         uint32_t step = 0;
-        while (step < m_commandBudget && bytes < m_byteBudget)
+        bool commandsReady = m_session->ready();
+        // 关闭可在本轮协议推进中发起；剩余请求等待统一终态，不能再导入已停止的协议。
+        while (commandsReady && step < m_commandBudget && bytes < m_byteBudget)
         {
             uint32_t messages = 0;
             uint64_t dataBytes = 0;
@@ -424,6 +438,7 @@ bool NetSenderDispatch::poll()
                 {
                     // 仅控制屏障、同步票据或背压要求推进；普通post可连续进入业务FIFO。
                     active = m_session->poll();
+                    commandsReady = m_session->ready();
                     delivered = advanceOutput();
                     if (delivered)
                     {
@@ -435,6 +450,7 @@ bool NetSenderDispatch::poll()
             ++step;
             bytes += static_cast<uint64_t>(command.m_size) + command.m_frame.m_payloadSize;
             execute(command);
+            commandsReady = m_session->ready();
             // 同一owner尚未推进运输，已提交输出按未排空处理；不为每条DATA重复穿越查询层。
             // 控制屏障或同步票据会令next暂停，再由上面的poll/advanceOutput确认真实交付。
             delivered = !m_outputPending;

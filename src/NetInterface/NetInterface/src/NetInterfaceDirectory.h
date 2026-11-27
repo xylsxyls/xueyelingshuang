@@ -71,7 +71,7 @@ public:
     @param [in] data protobuf字节，最大16KiB
     @param [in] size 非零字节数
     @param [out] points 成功为完整候选表；失败清空
-    @return NI_OK或错误；调用者仍须验证来源及后续节点身份
+    @return NI_OK或错误；已解包后创建节点表或复制节点文本失败时返回 NI_NO_MEMORY。调用者仍须验证来源及后续节点身份
     */
     static int32_t parse(const uint8_t* data, uint32_t size, std::vector<NetInterfaceDirectoryPoint>& points);
 
@@ -92,7 +92,7 @@ public:
     */
     static int32_t parseCache(const uint8_t* data, uint32_t size, uint64_t utcMs, std::vector<NetInterfaceDirectoryPoint>& points);
 
-    /** 管理元数据严格读取无符号数，不接受字符串/浮点隐式转换
+    /** 按小端读取管理元数据的 UINT64 或非负 INT32，拒绝字符串、浮点等类型
     @param [in] message 已经解析且受外层预算限制的protobuf
     @param [in] field 字段号
     @param [out] value 完整uint64或非负int32；失败0
@@ -107,7 +107,7 @@ public:
     @param [out] value 成功字符串；失败清空
     @param [in] maximum 最大非零字节数
     @param [in] group 容器号，默认0
-    @return 字段存在且是无NUL的非空STRING
+    @return 字段必须是长度在 1 至 maximum 的 STRING，字节仅允许 ASCII 数字、大小写字母、点、连字符和冒号
     */
     static bool text(const ProtoMessage& message, int32_t field, std::string& value, uint32_t maximum, int32_t group = 0);
 };

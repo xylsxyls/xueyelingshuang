@@ -34,6 +34,7 @@ public:
 };
 
 // 管理TLS和NTW3组合，无socket/IPC/线程；业务TLS在各逻辑通道端点单独持有。
+// 同一实例由一个执行者串行调用；随机、服务证明和验证回调不得重入其非const操作或销毁实例。
 class NetInterfaceAPI NetInterfaceLink
 {
 public:
@@ -59,7 +60,7 @@ public:
     */
     int32_t configureOutputPools(const NetBufferPoolConfig& bodies, const LockFreeHashMapPoolConfig& records);
 
-    /** 接纳一条完整外层记录，无空间时无副作用拒绝
+    /** 接纳一条完整外层记录，成功交接提示当前执行者继续处理；无空间时无副作用拒绝
     @param [in] record 调用期间借用，接纳后由本实例持有副本
     @return NI_OK接纳、NI_LIMIT_EXCEEDED背压、其他负数持续错误
     */
@@ -83,7 +84,7 @@ public:
     */
     int32_t consumeOutput();
 
-    /** 管理就绪后排队业务密文或关闭，仅复制外层，不解业务TLS
+    /** 管理就绪后排队业务密文或关闭。成功入队后当前执行者可以零等待取得输出
     @param [in] record BYTES/CLOSE、非零通道号，宿主负责已授权的路由归属
     @return NI_OK、NI_LIMIT_EXCEEDED未接纳可重试或错误
     */
@@ -137,7 +138,7 @@ public:
 
     /** 原始运输已结束后有界排空已认证输入；仅同一执行者调用
     第一次调用禁止接纳/输出新记录；随后仍按peek/consume交付完整管理帧和业务密文
-    未完成认证立即失败；首次排空起五秒内必须消费完，不因重复调用延期
+    未完成认证立即失败；首次排空起必须在配置的 m_drainTimeoutMs 内消费完，默认五秒，不因重复调用延期
     @param [in] nowMs 单调毫秒，不得小于上次progress时间
     @return NI_READY仍需消费/推进；负数为唯一终态，裸运输结束仍为TRUNCATED而非业务成功
     */
