@@ -71,6 +71,11 @@ int32_t NetFileProtocol::fileFlowAccept(NetInterfaceFileFlowHandle handle, const
     return NetInterface::fileFlowAccept(handle, fields, payload);
 }
 
+int32_t NetFileProtocol::fileFlowAcceptForDispatch(NetInterfaceFileFlowHandle handle, const uint32_t* fields, const uint8_t* payload)
+{
+    return NetInterface::fileFlowAcceptForDispatch(handle, fields, payload);
+}
+
 int32_t NetFileProtocol::fileFlowWrite(NetInterfaceFileFlowHandle handle, uint32_t* fields, const uint8_t** bytes)
 {
     return NetInterface::fileFlowWrite(handle, fields, bytes);

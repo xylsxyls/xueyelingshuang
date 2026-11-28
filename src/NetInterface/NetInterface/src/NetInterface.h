@@ -21,6 +21,12 @@ public:
     */
     ~NetInterface();
 
+    /** 获取本平台单调时钟毫秒，用于同一运行环境内的协议期限
+    @return 非递减的64位毫秒数，时钟纪元由平台决定，不能解释为UTC或跨主机比较
+    @note VS2013及更早的MSVC使用GetTickCount64，其他工具链使用steady_clock；外部传入的now仍须保持原时钟一致
+    */
+    static uint64_t monotonicMilliseconds();
+
     /** 单执行者接纳到一条完整帧为止，READY时保留调用方的剩余输入
     @param [in] data 至少size字节的借用输入，仅size为0时可空
     @param [in] size 可读字节数，不得与实例借出的存储重叠
@@ -876,6 +882,14 @@ public:
     @return 同Flow.accept
     */
     static int32_t fileFlowAccept(NetInterfaceFileFlowHandle handle, const uint32_t* fields, const uint8_t* payload);
+
+    /** 分派完整帧并识别已验证的对端失败 ACK
+    @param [in] handle 本文件流句柄
+    @param [in] fields 六项 kind/product/id 低高/type/size
+    @param [in] payload fields[5] 非零时不可空，借用至返回
+    @return NI_READY 表示已消费失败 ACK，随后 progress 取得原始原因；其他情况同 fileFlowAccept
+    */
+    static int32_t fileFlowAcceptForDispatch(NetInterfaceFileFlowHandle handle, const uint32_t* fields, const uint8_t* payload);
 
     /** 取一次持久写请求，宿主复制借用bytes后投递文件执行者
     @param [in] handle 流

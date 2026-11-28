@@ -61,6 +61,12 @@ public:
     */
     int32_t accept(const NetInterfaceFrame& frame);
 
+    /** 分派一帧，区分已验证的对端失败确认与本地拒收
+    @param [in] frame 本次调用借用的完整帧
+    @return 已接纳对端失败 ACK 时为 NI_READY，此时 progress 返回原始失败码；其他情况同 accept
+    */
+    int32_t acceptForDispatch(const NetInterfaceFrame& frame);
+
     /** 请求异步写入当前块或有界批次，返回借用数据，宿主投递时须复制
     @param [out] offset 文件位置
     @param [out] bytes 借用至written、流失败（含超时或取消）或析构，异步写盘须复制

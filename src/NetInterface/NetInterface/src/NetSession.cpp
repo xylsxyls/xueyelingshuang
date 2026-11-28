@@ -7,7 +7,6 @@
 #include "NetExecution.h"
 #include "NetInterfaceRpc.h"
 #include "NetInterfaceTransport.h"
-#include <chrono>
 #include <cstring>
 #include <new>
 #include <vector>
@@ -17,8 +16,7 @@
 */
 static uint64_t SessionNow()
 {
-    return static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+    return NetInterface::monotonicMilliseconds();
 }
 
 NetSessionListener::~NetSessionListener()

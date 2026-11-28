@@ -9,7 +9,6 @@
 #include "NetInterfaceConnection.h"
 #include "NetInterfaceTransport.h"
 #include "NetInterfaceMessage.h"
-#include <chrono>
 #include <new>
 
 /** 本通道全部期限使用同一单调时钟
@@ -17,8 +16,7 @@
 */
 static uint64_t GatewayClientNow()
 {
-    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count());
+    return NetInterface::monotonicMilliseconds();
 }
 
 NetGatewayClientChannel::NetGatewayClientChannel(uint32_t product, NetGatewayTransport* external) :

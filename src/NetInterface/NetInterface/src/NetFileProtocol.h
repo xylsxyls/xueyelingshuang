@@ -134,6 +134,14 @@ public:
     */
     int32_t fileFlowAccept(NetInterfaceFileFlowHandle handle, const uint32_t* fields, const uint8_t* payload);
 
+    /** 向指定流分派完整帧，并区分已消费的对端失败 ACK
+    @param [in] handle 当前文件流
+    @param [in] fields 六项 kind/product/id 低高/type/size
+    @param [in] payload 按 size 借用至返回
+    @return NI_READY 表示已接收对端失败原因，progress 可查询；其他情况同 fileFlowAccept
+    */
+    int32_t fileFlowAcceptForDispatch(NetInterfaceFileFlowHandle handle, const uint32_t* fields, const uint8_t* payload);
+
     /** 取一次持久写请求，宿主复制借用bytes后投递文件执行者
     @param [in] handle 流
     @param [out] fields 三项offset低/高位和长度

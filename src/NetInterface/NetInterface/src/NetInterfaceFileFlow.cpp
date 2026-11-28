@@ -2,6 +2,7 @@
 #include "NetInterfaceMacro.h"
 #include "NetInterfaceFileFlowState.h"
 #include "NetInterfaceFileGuard.h"
+#include "NetExecution.h"
 #include <algorithm>
 #include <cstring>
 
@@ -89,6 +90,7 @@ int32_t NetInterfaceFileFlow::progress(uint64_t nowMs)
         return fail(NI_INVALID_ARGUMENT);
     }
     m_state->m_now = nowMs;
+    NetExecution::deadline(m_state->m_timeout, nowMs - m_state->m_progress);
     if (nowMs - m_state->m_progress >= m_state->m_timeout)
     {
         return fail(NI_TIMEOUT);
@@ -170,6 +172,12 @@ int32_t NetInterfaceFileFlow::produced(uint64_t offset, const uint8_t* bytes, ui
 
 int32_t NetInterfaceFileFlow::accept(const NetInterfaceFrame& frame)
 {
+    const int32_t result = acceptForDispatch(frame);
+    return result == NI_READY ? m_state->m_error : result;
+}
+
+int32_t NetInterfaceFileFlow::acceptForDispatch(const NetInterfaceFrame& frame)
+{
     if (m_state->m_phase == NI_FILE_PHASE_FAILED)
     {
         return m_state->m_error;
@@ -216,7 +224,8 @@ int32_t NetInterfaceFileFlow::acceptAck(const NetInterfaceFrame& frame)
     }
     if (ack.flags == 2)
     {
-        return fail(ack.result);
+        fail(ack.result);
+        return NI_READY;
     }
     if (ack.flags == 1)
     {

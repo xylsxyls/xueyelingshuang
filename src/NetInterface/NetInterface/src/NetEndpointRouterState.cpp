@@ -1,6 +1,5 @@
 ﻿#include "NetEndpointRouterState.h"
 #include "NetInterface.h"
-#include <chrono>
 #include <cstring>
 #include <vector>
 #include <utility>
@@ -228,6 +227,5 @@ void NetEndpointRouterState::clearPayload()
 
 uint64_t NetEndpointRouterState::now()
 {
-    return static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+    return NetInterface::monotonicMilliseconds();
 }

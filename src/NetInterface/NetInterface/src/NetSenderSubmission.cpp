@@ -4,7 +4,6 @@
 #include "NetSenderSubmissionState.h"
 #include "NetInterface.h"
 #include "NetInterfaceFileGuard.h"
-#include <chrono>
 #include <cstring>
 #include <new>
 
@@ -180,8 +179,7 @@ int32_t NetSenderSubmission::ready(uint64_t generation, uint32_t requests, uint3
 
 uint64_t NetSenderSubmission::now()
 {
-    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count());
+    return NetInterface::monotonicMilliseconds();
 }
 
 int32_t NetSenderSubmission::begin(uint32_t product, uint32_t type, uint32_t timeoutMs, uint64_t& id)

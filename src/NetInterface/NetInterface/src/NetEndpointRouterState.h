@@ -65,7 +65,7 @@ public:
     bool canConfigure() const;
 
     /** 获取进程内单调毫秒
-    @return steady_clock毫秒
+    @return NetInterface统一单调时钟毫秒
     */
     static uint64_t now();
 

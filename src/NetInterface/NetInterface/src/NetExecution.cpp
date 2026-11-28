@@ -1,6 +1,5 @@
 ﻿#include "NetExecution.h"
 #include "NetInterface.h"
-#include <chrono>
 #include <algorithm>
 
 // 仅启动期configure写入，创建执行者后不再修改。
@@ -16,8 +15,7 @@ static thread_local NetExecution* s_execution = nullptr;
 */
 static uint64_t ExecutionNow()
 {
-    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count());
+    return NetInterface::monotonicMilliseconds();
 }
 
 NetExecution::NetExecution() :

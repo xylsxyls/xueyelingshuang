@@ -12,7 +12,6 @@
 #include "NetSessionState.h"
 #include "NetGatewayClientChannel.h"
 #include <algorithm>
-#include <chrono>
 #include <cstring>
 #include <new>
 
@@ -21,8 +20,7 @@
 */
 static uint64_t ClientSessionNow()
 {
-    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count());
+    return NetInterface::monotonicMilliseconds();
 }
 
 NetClientSession::NetClientSession() :

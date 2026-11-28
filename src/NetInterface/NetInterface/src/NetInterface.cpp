@@ -25,6 +25,13 @@
 #include "NetInterfaceTunnel.h"
 #include "NetInterfaceCompression.h"
 #include <algorithm>
+#include <chrono>
+#if defined(_WIN32) && defined(_MSC_VER) && _MSC_VER <= 1800
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>
+#endif
 
 // 业务 TLS 客户端内置的网关信任根，PEM 长度包含末尾 NUL。
 static const char g_networkAuthority[] =
@@ -207,6 +214,17 @@ m_status(payloadLimit == 0 || payloadLimit > NET_INTERFACE_MAX_PAYLOAD_LIMIT ? N
 NetInterface::~NetInterface()
 {
     clear(true);
+}
+
+uint64_t NetInterface::monotonicMilliseconds()
+{
+#if defined(_WIN32) && defined(_MSC_VER) && _MSC_VER <= 1800
+    // v120的steady_clock经_Xtime_get_ticks读取墙钟，校时不能改变协议期限。
+    return ::GetTickCount64();
+#else
+    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count());
+#endif
 }
 
 uint64_t NetInterface::readNumber(const uint8_t* bytes, uint32_t width)
@@ -1817,6 +1835,13 @@ int32_t NetInterface::fileFlowProduced(NetInterfaceFileFlowHandle handle, uint32
 
 int32_t NetInterface::fileFlowAccept(NetInterfaceFileFlowHandle handle, const uint32_t* fields, const uint8_t* payload)
 {
+    const int32_t result = fileFlowAcceptForDispatch(handle, fields, payload);
+    // 兼容入口仍直接报告流失败。终态 progress 仅读取已保存原因，不更新时钟。
+    return result == NI_READY ? handle->m_flow.progress(0) : result;
+}
+
+int32_t NetInterface::fileFlowAcceptForDispatch(NetInterfaceFileFlowHandle handle, const uint32_t* fields, const uint8_t* payload)
+{
     if (handle == nullptr || fields == nullptr || fields[0] > UINT16_MAX || (fields[5] != 0 && payload == nullptr))
     {
         return NI_INVALID_ARGUMENT;
@@ -1828,7 +1853,7 @@ int32_t NetInterface::fileFlowAccept(NetInterfaceFileFlowHandle handle, const ui
     frame.m_messageType = fields[4];
     frame.m_payloadSize = fields[5];
     frame.m_payload = payload;
-    return handle->m_flow.accept(frame);
+    return handle->m_flow.acceptForDispatch(frame);
 }
 
 int32_t NetInterface::fileFlowWrite(NetInterfaceFileFlowHandle handle, uint32_t* fields, const uint8_t** bytes)

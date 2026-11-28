@@ -212,6 +212,10 @@ int32_t NetInterfaceHandshake::consumeOutput()
     return m_status;
 }
 
+// VS2013 x64 的 LTCG 内联会合并调用方未继续读取的输出栈区，误触重叠检查；保持真实调用边界。
+#if defined(_MSC_VER) && _MSC_VER == 1800 && defined(_M_X64)
+__declspec(noinline)
+#endif
 int32_t NetInterfaceHandshake::peerInfo(uint32_t fields[4], uint8_t peerNonce[16], uint8_t clientDevice[16]) const
 {
     if (fields == nullptr || peerNonce == nullptr || clientDevice == nullptr ||

@@ -8,7 +8,6 @@
 #include "NetInterfaceTransport.h"
 #include "NetSession.h"
 #include <algorithm>
-#include <chrono>
 #include <cstring>
 #include <vector>
 
@@ -79,8 +78,7 @@ int32_t NetSessionState::prepareHandshake(const NetInterfaceHandshakeOptions& of
     {
         return NI_INVALID_STATE;
     }
-    const uint64_t now = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count());
+    const uint64_t now = NetInterface::monotonicMilliseconds();
     NetInterfaceHandshake validation(prepared, now);
     NetInterfaceFrame hello = {};
     return validation.peekOutput(hello) == NI_READY ? NI_OK : NI_INVALID_ARGUMENT;
