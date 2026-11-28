@@ -11,7 +11,7 @@ class NetPeerAPI NetFileIoBackend
     */
     NetFileIoBackend();
 
-    /** 兜底停止及回收，仅生命周期负责人调用，不在自身/网络回调中销毁
+    /** 生命周期负责人销毁独占后端；派生类须停止并回收仍在运行的工作和句柄，析构不得抛异常
     */
     virtual ~NetFileIoBackend();
 

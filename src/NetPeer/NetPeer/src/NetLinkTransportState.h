@@ -12,8 +12,9 @@ class NetLinkTransportPeer
 public:
     /** 复制独立管理状态
     @param [in] options 当前身份配置
+    @param [in] pools 本管理连接实例独立的资源配置
     */
-    explicit NetLinkTransportPeer(const NetInterfaceLinkOptions& options);
+    NetLinkTransportPeer(const NetInterfaceLinkOptions& options, const NetInterfaceLinkPools& pools);
 
 public:
     // 本代管理认证、控制帧与透明数据状态；只由所属poll执行者访问
@@ -26,8 +27,10 @@ public:
     bool m_closing;
     // 原始运输已经收敛；保留协议状态到已接纳输入排空
     bool m_closed;
-    // 上层首次拒绝输入的单调毫秒；0表示当前未背压，连续5秒后关闭
-    uint64_t m_blockedSince;
+    // 当前控制帧首次被拒收的单调毫秒，UINT64_MAX 表示尚未拒收
+    uint64_t m_controlBlockedSince;
+    // 当前透明记录首次被拒收的单调毫秒，UINT64_MAX 表示尚未拒收
+    uint64_t m_recordBlockedSince;
     // 本代保存的关闭原因，原始运输失败优先保留
     int32_t m_reason;
 };
@@ -37,25 +40,33 @@ class NetLinkTransportState : public NetRelayTransportListener
 {
 public:
     /** 创建未启动状态
+    @param [in] config 实例独占的运输配置
     */
-    NetLinkTransportState();
+    explicit NetLinkTransportState(const NetLinkTransportConfig& config);
 
     /** 擦除身份私钥副本
     */
     ~NetLinkTransportState();
 
-    /** 复制校验配置，随机为空时使用原生系统强随机
+    /** 复制校验配置，随机回调为空时使用已登记字节宿主的强随机回调
     @param [in] options 原始配置
     @param [in] listener 借用宿主
     @return NI_OK或错误
     */
     int32_t configure(const NetInterfaceLinkOptions& options, NetLinkTransportListener* listener);
 
-    /** 推进单个代次，最多64条管理/业务及64条外层输出
+    /** 推进单个代次，各阶段最多推进 m_stepBudget 步
     @param [in] id 代次
     @param [in,out] peer 独占状态
     */
     void pump(uint64_t id, NetLinkTransportPeer& peer);
+
+    /** 判断同一项从首次拒收到本轮是否已达到背压期限
+    @param [in] now 本轮单调毫秒
+    @param [in,out] since 当前项首次被拒收的单调毫秒，首次拒收时填写
+    @return 本项被持续拒收且已超时返回 true
+    */
+    bool backpressureExpired(uint64_t now, uint64_t& since) const;
 
     /** 标记关闭，保持首个原因
     @param [in] id 代次
@@ -88,6 +99,12 @@ public:
 public:
     // 拥有的底层透明运输适配，生命周期覆盖全部管理通道
     NetRelayTransport m_raw;
+    // 每条新建管理连接实际采用的协议池
+    NetInterfaceLinkPools m_linkPools;
+    // 每轮各阶段的记录预算
+    uint32_t m_stepBudget;
+    // 持续背压期限，毫秒
+    uint32_t m_backpressureMs;
     // 借用宿主监听者，必须存活到shutdown返回
     NetLinkTransportListener* m_listener;
     // 校验后的身份配置；字符串和凭据指向本状态拥有的副本

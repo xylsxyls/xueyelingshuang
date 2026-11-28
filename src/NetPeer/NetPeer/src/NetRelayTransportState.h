@@ -23,7 +23,7 @@ enum NetRelayTransportPhase
 // TCP代次的上层交付状态；原始EOF另存，因为EOF前的完整记录仍须交付
 enum NetRelayPeerPhase
 {
-    // 主动连接尚未就绪，受五秒期限限制
+    // 主动连接尚未就绪，受本实例m_startupMs期限限制，默认5000毫秒
     NET_RELAY_CONNECTING,
     // TCP就绪，尚未通知上层
     NET_RELAY_CONNECTED,
@@ -129,15 +129,17 @@ class NetRelayTransportState : public NetHostSocketListener
 {
 public:
     /** 创建独占网络状态
+    @param [in] host 字节宿主资源
+    @param [in] pools 中继池及推进参数
     */
-    NetRelayTransportState();
+    NetRelayTransportState(const NetHostPoolConfig& host, const NetRelayPoolConfig& pools);
 
     /** 获得单调毫秒
     @return 时间
     */
     static uint64_t now();
 
-    /** 推进一个连接，输入和输出各最多64步，失败只关闭本连接
+    /** 推进一个连接，输入和输出分别使用本实例的 m_stepBudget，失败只关闭本连接
     @param [in] id 代次
     @param [in,out] peer 独占连接
     */

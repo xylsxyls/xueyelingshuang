@@ -4,7 +4,7 @@
 #include "NetDirectorySnapshot.h"
 #include "NetInterface/NetInterfaceAPI.h"
 #include "NetTransportEntropy.h"
-#include <chrono>
+#include "CStringManager/CStringManagerAPI.h"
 #include <cstring>
 
 /** 发现期限采用单调时钟
@@ -12,12 +12,15 @@
 */
 static uint64_t DiscoveryNow()
 {
-    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count());
+    return NetInterface::monotonicMilliseconds();
 }
 
-NetGatewayDiscovery::NetGatewayDiscovery() :
-m_state(new NetGatewayDiscoveryState())
+NetGatewayDiscovery::NetGatewayDiscovery() : NetGatewayDiscovery(NetGatewayDiscoveryConfig())
+{
+}
+
+NetGatewayDiscovery::NetGatewayDiscovery(const NetGatewayDiscoveryConfig& config) :
+m_state(new NetGatewayDiscoveryState(config))
 {
 
 }
@@ -62,7 +65,9 @@ int32_t NetGatewayDiscovery::start(const std::vector<NetGatewayAddress>& seeds, 
     {
         return NI_INVALID_STATE;
     }
-    if (seeds.empty() || seeds.size() > UINT32_MAX)
+    NetInterfaceTlsOptions discoveryTls = {};
+    if (!m_state->m_config.valid() || !discoveryTls.setHandshakeTimeout(tls.handshakeTimeoutMs == 0 ? 5000 : tls.handshakeTimeoutMs) ||
+        seeds.empty() || seeds.size() > UINT32_MAX)
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -72,7 +77,8 @@ int32_t NetGatewayDiscovery::start(const std::vector<NetGatewayAddress>& seeds, 
         for (uint32_t index = 0; index < seeds.size(); ++index)
         {
             const NetGatewayAddress& seed = seeds[index];
-            if (seed.m_address.size() >= sizeof(copied[index].m_address) || seed.m_address.find('\0') != std::string::npos)
+            if (seed.m_address.size() >= sizeof(copied[index].m_address) ||
+                CStringManager::boundedLength(seed.m_address.c_str(), seed.m_address.size()) != seed.m_address.size())
             {
                 return NI_INVALID_ARGUMENT;
             }
@@ -85,15 +91,11 @@ int32_t NetGatewayDiscovery::start(const std::vector<NetGatewayAddress>& seeds, 
                 return NI_INVALID_ARGUMENT;
             }
         }
-        m_state->m_tls = NetInterfaceTlsOptions();
-        m_state->m_tls.entropy = tls.entropy == nullptr ? NetTransportEntropy : tls.entropy;
-        m_state->m_tls.entropyContext = tls.entropy == nullptr ? nullptr : tls.entropyContext;
-        m_state->m_tls.handshakeTimeoutMs = tls.handshakeTimeoutMs == 0 ? 5000 : tls.handshakeTimeoutMs;
-        m_state->m_seedCount = static_cast<uint32_t>(seeds.size());
+        discoveryTls.entropy = tls.entropy == nullptr ? NetTransportEntropy : tls.entropy;
+        discoveryTls.entropyContext = tls.entropy == nullptr ? nullptr : tls.entropyContext;
+        m_state->m_tls = discoveryTls;
         m_state->m_seeds.swap(copied);
         m_state->m_nodes.clear();
-        m_state->m_nodeCount = m_state->m_candidateCount = 0;
-        m_state->m_cacheEnabled = false;
         if (!cachePath.empty())
         {
             const int32_t opened = m_state->m_cache.open(cachePath, m_state->m_tls.entropy, m_state->m_tls.entropyContext);
@@ -102,7 +104,6 @@ int32_t NetGatewayDiscovery::start(const std::vector<NetGatewayAddress>& seeds, 
                 shutdown();
                 return opened;
             }
-            m_state->m_cacheEnabled = true;
         }
         const int32_t rebuilt = m_state->rebuild();
         if (rebuilt != NI_OK) { shutdown(); return rebuilt; }
@@ -110,6 +111,7 @@ int32_t NetGatewayDiscovery::start(const std::vector<NetGatewayAddress>& seeds, 
         m_state->m_retryAt = 0;
         m_state->m_running = true;
         m_state->m_cached = true;
+        NetExecution::progress(); // 第一轮 poll 才会创建探测连接。
         return NI_OK;
     }
     catch (...)
@@ -127,16 +129,16 @@ bool NetGatewayDiscovery::choose(NetClientDiscoveryPoint& endpoint)
     }
     std::memset(endpoint.m_address, 0, sizeof(endpoint.m_address));
     endpoint.m_port = 0;
-    if (!m_state->m_running || m_state->m_candidateCount == 0)
+    if (!m_state->m_running || m_state->m_candidates.empty())
     {
         return false;
     }
     const uint64_t now = DiscoveryNow();
-    for (uint32_t index = 0; index < m_state->m_candidateCount; ++index)
+    for (size_t index = 0; index < m_state->m_candidates.size(); ++index)
     {
         const NetGatewayDiscoveryCandidate& candidate = m_state->m_candidates[m_state->m_next];
-        m_state->m_next = (m_state->m_next + 1) % m_state->m_candidateCount;
-        if (candidate.m_failedUntil != UINT64_MAX && now >= candidate.m_failedUntil)
+        m_state->m_next = (m_state->m_next + 1) % m_state->m_candidates.size();
+        if (now >= candidate.m_failedUntil)
         {
             endpoint = candidate.m_point;
             return true;
@@ -152,19 +154,21 @@ void NetGatewayDiscovery::failed(const NetClientDiscoveryPoint& endpoint)
     {
         return;
     }
-    for (uint32_t index = 0; index < m_state->m_candidateCount; ++index)
+    for (auto& candidate : m_state->m_candidates)
     {
-        NetGatewayDiscoveryCandidate& candidate = m_state->m_candidates[index];
         if (candidate.m_point.m_port == endpoint.m_port && std::memcmp(candidate.m_key, key, 16) == 0)
         {
-            uint32_t random = 0;
-            if (NetInterface::entropyBytes(m_state->m_tls.entropy, m_state->m_tls.entropyContext, reinterpret_cast<uint8_t*>(&random), sizeof(random)) != NI_OK)
+            uint64_t delay = m_state->m_config.m_backoffMs;
+            const uint32_t range = m_state->m_config.m_jitterMs;
+            if (range > 1)
             {
-                candidate.m_failedUntil = UINT64_MAX;
-                return;
+                uint32_t random = 0;
+                const int32_t result = NetInterface::entropyBytes(m_state->m_tls.entropy, m_state->m_tls.entropyContext,
+                    reinterpret_cast<uint8_t*>(&random), sizeof(random));
+                // 抖动取样失败时等满允许的间隔；下一次连接仍须取得真实握手熵。
+                delay += result == NI_OK ? random % range : range - 1;
             }
             const uint64_t now = DiscoveryNow();
-            const uint32_t delay = 500 + random % 1000;
             candidate.m_failedUntil = now > UINT64_MAX - delay ? UINT64_MAX : now + delay;
             break;
         }
@@ -184,9 +188,12 @@ bool NetGatewayDiscovery::onLinkControl(uint64_t peer, const NetInterfaceFrame& 
         frame.m_requestId != m_state->m_waiting || m_state->m_waiting == 0) { m_state->m_link->close(peer, NI_PROTOCOL_ERROR); return true; }
     NetDirectorySnapshot snapshot;
     std::vector<NetInterfaceDirectoryNodeData> points;
-    if (snapshot.parse(frame.m_payload, frame.m_payloadSize) != NI_OK || snapshot.values(points) != NI_OK)
+    const int32_t parsed = snapshot.parse(frame.m_payload, frame.m_payloadSize);
+    const int32_t loaded = parsed == NI_OK ? snapshot.values(points) : parsed;
+    if (loaded != NI_OK)
     {
-        m_state->m_link->close(peer, NI_PROTOCOL_ERROR);
+        // 解码与复制都可能耗尽本地内存；保留该原因，其他无效目录按远端协议错误关闭。
+        m_state->m_link->close(peer, loaded == NI_NO_MEMORY ? NI_NO_MEMORY : NI_PROTOCOL_ERROR);
         return true;
     }
     m_state->m_nodes.swap(points);
@@ -197,10 +204,13 @@ bool NetGatewayDiscovery::onLinkControl(uint64_t peer, const NetInterfaceFrame& 
         m_state->m_link->close(peer, rebuilt);
         return true;
     }
-    m_state->m_nodeCount = static_cast<uint32_t>(m_state->m_nodes.size());
     m_state->m_cached = false;
-    if (m_state->m_cacheEnabled) { m_state->m_cache.queue(m_state->m_nodes.data(), m_state->m_nodeCount); }
+    if (!m_state->m_cache.stopped())
+    {
+        m_state->m_cache.queue(m_state->m_nodes.data(), static_cast<uint32_t>(m_state->m_nodes.size()));
+    }
     m_state->m_waiting = 0;
+    m_state->m_sentAt = DiscoveryNow();
     return true;
 }
 
@@ -217,7 +227,7 @@ void NetGatewayDiscovery::onLinkClosed(uint64_t peer, int32_t reason)
     if (peer != m_state->m_peer) { return; }
     m_state->m_ready = false;
     m_state->m_closed = true;
-    if (m_state->m_running) { failed(m_state->m_current); m_state->m_retryAt = DiscoveryNow() + 250; }
+    if (m_state->m_running) { failed(m_state->m_current); m_state->m_retryAt = DiscoveryNow() + m_state->m_config.m_retryMs; }
 }
 
 bool NetGatewayDiscovery::poll()
@@ -229,7 +239,7 @@ bool NetGatewayDiscovery::poll()
     }
     try
     {
-        if (m_state->m_cacheEnabled)
+        if (!m_state->m_cache.stopped())
         {
             m_state->m_cache.poll();
             uint32_t count = 0;
@@ -244,13 +254,16 @@ bool NetGatewayDiscovery::poll()
                 if (m_state->m_cache.takeLoaded(cached.data(), count, count) == NI_READY && m_state->m_cached)
                 {
                     m_state->m_nodes.swap(cached);
-                    if (m_state->rebuild() == NI_OK) { m_state->m_nodeCount = count; }
-                    else { m_state->m_nodes.swap(cached); }
+                    if (m_state->rebuild() != NI_OK) { m_state->m_nodes.swap(cached); }
                 }
             }
         }
     }
-    catch (...) { m_state->m_cacheEnabled = false; m_state->m_cache.shutdown(); }
+    catch (...)
+    {
+        // 缓存分配失败后仍由后续 poll 推进宿主释放，目录探测继续使用已知候选。
+        m_state->m_cache.shutdown();
+    }
     if (m_state->m_link) { m_state->m_link->poll(); }
     const uint64_t now = DiscoveryNow();
     if (m_state->m_closed && m_state->m_link)
@@ -260,17 +273,28 @@ bool NetGatewayDiscovery::poll()
         m_state->m_peer = m_state->m_waiting = m_state->m_request = m_state->m_sentAt = 0;
         m_state->m_closed = false;
     }
-    if (!m_state->m_link && now >= m_state->m_retryAt)
+    if (!m_state->m_link)
     {
-        if (!choose(m_state->m_current)) { m_state->m_retryAt = now + 250; return true; }
+        if (now < m_state->m_retryAt)
+        {
+            NetExecution::deadline(m_state->m_retryAt, now);
+            return true;
+        }
+        if (!choose(m_state->m_current))
+        {
+            m_state->m_retryAt = now + m_state->m_config.m_retryMs;
+            NetExecution::deadline(m_state->m_retryAt, now);
+            return true;
+        }
         try
         {
-            m_state->m_link.reset(new NetLinkTransport());
+            m_state->m_link.reset(new NetLinkTransport(m_state->m_config.m_transport));
         }
         catch (...)
         {
             failed(m_state->m_current);
-            m_state->m_retryAt = now + 250;
+            m_state->m_retryAt = now + m_state->m_config.m_retryMs;
+            NetExecution::deadline(m_state->m_retryAt, DiscoveryNow());
             return true;
         }
         NetInterfaceLinkOptions options = {};
@@ -278,12 +302,14 @@ bool NetGatewayDiscovery::poll()
         options.m_role = NI_LINK_CLIENT;
         options.m_tls = m_state->m_tls;
         const int32_t result = m_state->m_link->connect(m_state->m_current.m_address, m_state->m_current.m_port, options, this, m_state->m_peer);
-        if (result != NI_OK) { m_state->m_closed = true; failed(m_state->m_current); m_state->m_retryAt = now + 250; }
+        if (result != NI_OK) { m_state->m_closed = true; failed(m_state->m_current); m_state->m_retryAt = now + m_state->m_config.m_retryMs; }
+        // 下一轮首次推进新建的运输，或回收本次未成功启动的运输。
+        NetExecution::progress();
     }
     if (m_state->m_ready && m_state->m_link && !m_state->m_closed)
     {
-        if (m_state->m_waiting != 0 && now - m_state->m_sentAt >= 5000) { m_state->m_link->close(m_state->m_peer, NI_TIMEOUT); }
-        else if (m_state->m_waiting == 0 && (m_state->m_sentAt == 0 || now - m_state->m_sentAt >= 5000))
+        if (m_state->m_waiting != 0 && now - m_state->m_sentAt >= m_state->m_config.m_responseMs) { m_state->m_link->close(m_state->m_peer, NI_TIMEOUT); }
+        else if (m_state->m_waiting == 0 && (m_state->m_sentAt == 0 || now - m_state->m_sentAt >= m_state->m_config.m_refreshMs))
         {
             if (m_state->m_request == UINT64_MAX) { m_state->m_link->close(m_state->m_peer, NI_LIMIT_EXCEEDED); return true; }
             NetInterfaceFrame frame = {};
@@ -294,13 +320,16 @@ bool NetGatewayDiscovery::poll()
             if (sent == NI_OK) { m_state->m_request = m_state->m_waiting = frame.m_requestId; m_state->m_sentAt = now; }
             else if (sent != NI_LIMIT_EXCEEDED) { m_state->m_link->close(m_state->m_peer, sent); }
         }
+        const uint32_t interval = m_state->m_waiting != 0 ? m_state->m_config.m_responseMs : m_state->m_config.m_refreshMs;
+        const uint64_t elapsed = now - m_state->m_sentAt;
+        if (elapsed < interval) { NetExecution::deadline(interval, elapsed); }
     }
     return true;
 }
 
 uint32_t NetGatewayDiscovery::discovered() const
 {
-    return m_state->m_cached ? 0 : m_state->m_nodeCount;
+    return m_state->m_cached ? 0 : static_cast<uint32_t>(m_state->m_nodes.size());
 }
 
 void NetGatewayDiscovery::shutdown()
@@ -309,13 +338,11 @@ void NetGatewayDiscovery::shutdown()
     if (m_state->m_link) { m_state->m_link->shutdown(); m_state->m_link.reset(); }
     m_state->m_cache.shutdown();
     m_state->m_cache.poll();
-    m_state->m_cacheEnabled = false;
     m_state->m_ready = m_state->m_closed = false;
     m_state->m_peer = m_state->m_request = m_state->m_waiting = m_state->m_sentAt = 0;
     m_state->m_seeds.clear();
     m_state->m_nodes.clear();
     m_state->m_candidates.clear();
-    m_state->m_seedCount = m_state->m_nodeCount = m_state->m_candidateCount = 0;
     m_state->m_next = 0;
     m_state->m_cached = false;
 }
@@ -324,5 +351,3 @@ bool NetGatewayDiscovery::stopped() const
 {
     return !m_state->m_running && !m_state->m_link && m_state->m_cache.stopped();
 }
-
-// 仅测试时放开此main，完成后逐行注释；不得替代真实TLS目录集成测试

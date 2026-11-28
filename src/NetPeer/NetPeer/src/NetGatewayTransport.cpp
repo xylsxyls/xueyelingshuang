@@ -1,6 +1,14 @@
 ﻿#include "NetPeerMacro.h"
 #include "NetGatewayTransport.h"
 
+NetGatewayNativeTransport::NetGatewayNativeTransport()
+{
+}
+
+NetGatewayNativeTransport::NetGatewayNativeTransport(const NetLinkTransportConfig& config) : m_transport(config)
+{
+}
+
 NetGatewayNativeTransport::~NetGatewayNativeTransport()
 {
     shutdown();

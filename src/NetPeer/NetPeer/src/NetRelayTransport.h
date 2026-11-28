@@ -41,6 +41,12 @@ public:
     */
     NetRelayTransport();
 
+    /** 使用独立的宿主池和中继池
+    @param [in] host 原始字节宿主资源
+    @param [in] pools 中继控制和数据资源
+    */
+    NetRelayTransport(const NetHostPoolConfig& host, const NetRelayPoolConfig& pools);
+
     /** 收敛所有回调，监听者必须仍存活
     */
     ~NetRelayTransport();
@@ -55,13 +61,13 @@ public:
     @param [in] address 数值IP
     @param [in] port 0用于本机测试，生产为1至65535
     @param [in] listener 借用至shutdown，不可空
-    @param [in] maxPeers为非零预留提示，实际连接存储由宿主池配置控制
+    @param [in] maxPeers 非零预留提示，实际连接存储由宿主池配置控制
     @return NI_OK或底层错误
     */
     int32_t listen(const char* address, uint32_t port, NetRelayTransportListener* listener, uint32_t maxPeers = 64);
 
-    /** 异步连接；TCP建立最多5秒，上层仍必须给管理/TLS握手设期限
-    @param [in] address 数值IP
+    /** 异步连接；TCP 建立期限取本实例的 m_startupMs，默认5000毫秒
+    @param [in] address 数值IP，空指针在取得宿主前被拒绝，可更正后重新启动
     @param [in] port 1至65535
     @param [in] listener 借用至shutdown
     @param [out] peer 成功为本代次，否则0
@@ -101,7 +107,7 @@ public:
 public:
     /** 查询本层待发数据是否全部交给下层；只由协议执行者调用
     @param [in] peer 当前连接代次
-    @return OK全部交付，READY仍有本层待发数据，负数失败；不表示远端收到
+    @return NI_OK 表示本层待发为空，NI_READY 表示仍有待发；底层已关闭时返回 NI_INVALID_STATE
     */
     int32_t outputState(uint64_t peer) const;
 

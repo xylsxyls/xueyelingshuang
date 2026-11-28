@@ -298,17 +298,13 @@ int32_t netSenderClientConnect(NetSenderClientHandle handle, const NetInterfaceC
 
 int32_t netSenderClientSendBegin(NetSenderClientHandle handle, uint64_t requestId, const uint8_t* bytes, uint32_t size, uint64_t* ticket)
 {
-    if (ticket != nullptr)
-    {
-        *ticket = 0;
-    }
-    if (handle == nullptr || ticket == nullptr)
+    if (ticket == nullptr)
     {
         return NI_INVALID_ARGUMENT;
     }
     try
     {
-        return NetSender::instance().beginSendRequest(handle->m_client, requestId, bytes, size, *ticket);
+        return NetSender::instance().beginSendRequest(handle != nullptr ? handle->m_client : nullptr, requestId, bytes, size, *ticket);
     }
     catch (...)
     {
@@ -318,17 +314,18 @@ int32_t netSenderClientSendBegin(NetSenderClientHandle handle, uint64_t requestI
 
 int32_t netSenderClientSendDataBegin(NetSenderClientHandle handle, const NetInterfaceFrame* frame, uint64_t* ticket)
 {
-    if (ticket != nullptr)
+    if (ticket == nullptr)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
+    if (frame == nullptr)
     {
         *ticket = 0;
-    }
-    if (handle == nullptr || frame == nullptr || ticket == nullptr)
-    {
         return NI_INVALID_ARGUMENT;
     }
     try
     {
-        return NetSender::instance().beginSendData(handle->m_client, *frame, *ticket);
+        return NetSender::instance().beginSendData(handle != nullptr ? handle->m_client : nullptr, *frame, *ticket);
     }
     catch (...)
     {

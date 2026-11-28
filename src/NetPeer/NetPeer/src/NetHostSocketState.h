@@ -22,7 +22,7 @@ enum NetHostSocketPhase
 {
     // 尚未创建原始宿主实例
     NET_HOST_IDLE,
-    // 正在调用宿主create，允许同步回调但尚未开始网络操作
+    // 正在调用宿主create，尚未开始网络操作；此时收到连接事件属于宿主违约
     NET_HOST_CREATING,
     // 正在调用listen或connect，结果尚未提交
     NET_HOST_STARTING,
@@ -30,7 +30,7 @@ enum NetHostSocketPhase
     NET_HOST_ACTIVE,
     // 已请求停止，仍需推进关闭回调和宿主回收
     NET_HOST_STOPPING,
-    // 宿主已完全回收，不再接纳任何事件
+    // 已停止事件交付，宿主实例仍由uninit调用destroy释放
     NET_HOST_STOPPED
 };
 
@@ -96,8 +96,9 @@ class NetHostSocketState
 public:
     /** 复制函数表，尚不创建宿主
     @param [in] functions 完整有效或全零的函数表
+    @param [in] pools 当前宿主独占的物理池预算
     */
-    explicit NetHostSocketState(const NetHostFunctions& functions);
+    NetHostSocketState(const NetHostFunctions& functions, const NetHostPoolConfig& pools);
 
     /** 检查完整v1表，不读取短结构的函数项
     @param [in] functions 调用方有效结构
@@ -105,13 +106,33 @@ public:
     */
     static bool valid(const NetHostFunctions& functions);
 
+    /** 在启动任何运输层前检查监听端点参数
+    @param [in] address 有效宿主地址，指针和字符串均不可为空
+    @param [in] port 监听端口，0允许宿主分配
+    @param [in] maxPeers 非零的宿主启动参数
+    @return 参数可提交给字节宿主时为true
+    */
+    static bool validListen(const char* address, uint32_t port, uint32_t maxPeers);
+
+    /** 在启动任何运输层前检查拨号端点参数
+    @param [in] address 有效宿主地址，指针和字符串均不可为空
+    @param [in] port 远端端口，1至65535
+    @return 参数可提交给字节宿主时为true
+    */
+    static bool validConnect(const char* address, uint32_t port);
+
+    /** 检查宿主已接纳但因本轮预算尚未向运输交付的事件
+    @param [in] socket,peer,kind 本执行者的字节宿主、连接号和事件种类
+    @return 该事件仍在派发队列时为 true
+    */
+    static bool pending(const NetHostSocket& socket, uint64_t peer, NetHostEventKind kind);
+
     /** 接纳一次启动并建立宿主，失败不保留上层监听者
     @param [in] listener 借用至停止完成
-    @param [in] maxPeers 已验证的宿主启动提示，不作为本层接纳门槛
     @param [in] server 是否监听
     @return OK或负数
     */
-    int32_t start(NetHostSocketListener* listener, uint32_t maxPeers, bool server);
+    int32_t start(NetHostSocketListener* listener, bool server);
 
     /** 非阻塞驱动，事件只在此层交付；不允许重入
     @return 是否仍有资源
@@ -200,6 +221,8 @@ public:
     std::unique_ptr<NetObjectPool<NetHostSocketPeer>> m_peerPool;
     // 单执行者索引持有真实对象池引用，不附加连接数门槛
     std::map<uint64_t, NetObjectReference<NetHostSocketPeer>> m_peers;
+    // 本执行者每次派发的事件数预算
+    const uint32_t m_eventBudget;
     // FIFO首项，指向尚未回收的连接对象内事件
     NetHostSocketEvent* m_eventHead;
     // FIFO尾项，nullptr表示空
@@ -210,8 +233,6 @@ public:
     uint32_t m_inputSize;
     // 见过的最大代次，旧事件无需永久墓碑表
     uint64_t m_lastPeer;
-    // 当前排队输入字节统计，不参与接纳判断
-    uint64_t m_queuedBytes;
     // 首个全实例错误
     int32_t m_fault;
     // 创建、启动、运行、请求停止及停止完成的唯一状态。

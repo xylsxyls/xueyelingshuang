@@ -1,49 +1,34 @@
 ﻿#include "NetLinkTransportState.h"
 #include "NetPeerMacro.h"
-#include "NetTransport.h"
-#include <chrono>
-
-/** 缺省随机只使用操作系统强随机，不退回普通伪随机
-@param [in] context 忽略
-@param [out] output 输出
-@param [in] size 字节数
-@return 0成功，否则失败
-*/
-static int32_t LinkTransportEntropy(void* context, uint8_t* output, uint32_t size)
-{
-    (void)context;
-    return NetTransport::randomBytes(output, size) == NI_OK ? 0 : -1;
-}
+#include "NetTransportEntropy.h"
 
 /** 原生管理连接统一单调时间
 @return 单调毫秒
 */
 static uint64_t LinkTransportNow()
 {
-    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count());
+    return NetInterface::monotonicMilliseconds();
 }
 
-NetLinkTransportPeer::NetLinkTransportPeer(const NetInterfaceLinkOptions& options) : m_link(options), m_connected(false),
-    m_announced(false), m_closing(false), m_closed(false), m_blockedSince(0), m_reason(0)
+NetLinkTransportPeer::NetLinkTransportPeer(const NetInterfaceLinkOptions& options, const NetInterfaceLinkPools& pools) : m_link(options, pools), m_connected(false),
+    m_announced(false), m_closing(false), m_closed(false), m_controlBlockedSince(UINT64_MAX),
+    m_recordBlockedSince(UINT64_MAX), m_reason(0)
 {
 
 }
 
-/** 按实际连接记录槽大小设置默认存储，不限制每秒连接数
-@return 初始化前可替换的真实池配置
-*/
-static LockFreeHashMapPoolConfig NetLinkTransportPeerPool()
+NetLinkTransportConfig::NetLinkTransportConfig()
 {
-    LockFreeHashMapPoolConfig config;
+    LockFreeHashMapPoolConfig& config = m_peers;
     config.initialCapacity = 128;
     config.maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetLinkTransportPeer>>);
     config.directoryCapacity = 128;
     config.lookupCacheCapacity = 0;
-    return config;
 }
 
-NetLinkTransportState::NetLinkTransportState() : m_listener(nullptr), m_options(), m_peerPool(new NetObjectPool<NetLinkTransportPeer>(NetLinkTransportPeerPool())), m_started(false), m_stopping(false),
+NetLinkTransportState::NetLinkTransportState(const NetLinkTransportConfig& config) :
+m_raw(config.m_host, config.m_relay), m_linkPools(config.m_link), m_stepBudget(config.m_stepBudget),
+m_backpressureMs(config.m_backpressureMs), m_listener(nullptr), m_options(), m_peerPool(new NetObjectPool<NetLinkTransportPeer>(config.m_peers)), m_started(false), m_stopping(false),
     m_polling(false)
 {
 
@@ -59,17 +44,16 @@ NetLinkTransportState::~NetLinkTransportState()
 
 int32_t NetLinkTransportState::configure(const NetInterfaceLinkOptions& options, NetLinkTransportListener* listener)
 {
-    if (m_started || m_stopping || listener == nullptr) { return NI_INVALID_ARGUMENT; }
-    m_started = true;
+    if (m_stepBudget == 0 || m_backpressureMs == 0 || m_started || m_stopping || listener == nullptr) { return NI_INVALID_ARGUMENT; }
     m_options = options;
     if (m_options.m_tls.entropy == nullptr)
     {
-        m_options.m_tls.entropy = LinkTransportEntropy;
+        m_options.m_tls.entropy = NetTransportEntropy;
         m_options.m_tls.entropyContext = nullptr;
     }
     try
     {
-        NetInterfaceLink validation(m_options);
+        NetInterfaceLink validation(m_options, m_linkPools);
         if (validation.status() < 0) { return validation.status(); }
         if (options.m_name != nullptr)
         {
@@ -96,6 +80,7 @@ int32_t NetLinkTransportState::configure(const NetInterfaceLinkOptions& options,
             m_claims.assign(options.m_claims, options.m_claims + options.m_claimsSize);
             m_options.m_claims = m_claims.data();
         }
+        m_started = true;
         m_listener = listener;
         return NI_OK;
     }
@@ -123,7 +108,7 @@ void NetLinkTransportState::onRelayConnected(uint64_t id)
         if (found == m_peers.end())
         {
             NetObjectReference<NetLinkTransportPeer> peer;
-            const int32_t allocated = m_peerPool->create(peer, m_options);
+            const int32_t allocated = m_peerPool->create(peer, m_options, m_linkPools);
             if (allocated != NI_OK) { m_raw.close(id, allocated); return; }
             found = m_peers.insert(std::make_pair(id, std::move(peer))).first;
         }
@@ -182,7 +167,11 @@ void NetLinkTransportState::collectClosed()
 
 void NetLinkTransportState::pump(uint64_t id, NetLinkTransportPeer& peer)
 {
-    if (peer.m_closing || !peer.m_connected || m_stopping) { return; }
+    // 拨号失败时宿主可以只报告关闭。让协议处理 EOF，再由 collectClosed 交付终态。
+    if (peer.m_closing || (!peer.m_connected && !peer.m_closed) || m_stopping)
+    {
+        return;
+    }
     const uint64_t now = LinkTransportNow();
     const int32_t progressed = peer.m_closed ? peer.m_link.drainInput(now) : peer.m_link.progress(now);
     if (progressed < 0) { close(id, progressed); return; }
@@ -193,15 +182,19 @@ void NetLinkTransportState::pump(uint64_t id, NetLinkTransportPeer& peer)
         peer.m_announced = true;
         m_listener->onLinkReady(id, identity);
     }
-    bool blocked = false;
-    for (uint32_t step = 0; step < 64 && !peer.m_closing && !m_stopping; ++step)
+    for (uint32_t step = 0; step < m_stepBudget && !peer.m_closing && !m_stopping; ++step)
     {
         NetInterfaceFrame frame = {};
         const int32_t ready = peer.m_link.peekControl(frame);
         if (ready < 0) { close(id, ready); return; }
         if (ready != NI_READY) { break; }
-        if (!m_listener->onLinkControl(id, frame)) { blocked = true; break; }
+        if (!m_listener->onLinkControl(id, frame))
+        {
+            if (backpressureExpired(now, peer.m_controlBlockedSince)) { close(id, NI_TIMEOUT); return; }
+            break;
+        }
         if (peer.m_link.consumeControl() != NI_OK) { close(id, NI_INVALID_STATE); return; }
+        peer.m_controlBlockedSince = UINT64_MAX;
         const int32_t advanced = peer.m_closed ? peer.m_link.drainInput(now) : peer.m_link.progress(now);
         if (advanced < 0) { close(id, advanced); return; }
     }
@@ -210,33 +203,37 @@ void NetLinkTransportState::pump(uint64_t id, NetLinkTransportPeer& peer)
     if (controlPending < 0) { close(id, controlPending); return; }
     // Channel ownership control must be consumed before its opaque data, even
     // when the control loop stopped because its per-poll budget was exhausted.
-    for (uint32_t step = 0; step < 64 && controlPending != NI_READY && !peer.m_closing && !m_stopping; ++step)
+    for (uint32_t step = 0; step < m_stepBudget && controlPending != NI_READY && !peer.m_closing && !m_stopping; ++step)
     {
         NetInterfaceTunnelRecord record = {};
         const int32_t ready = peer.m_link.peekRecord(record);
         if (ready < 0) { close(id, ready); return; }
         if (ready != NI_READY) { break; }
-        if (!m_listener->onLinkRecord(id, record)) { blocked = true; break; }
+        if (!m_listener->onLinkRecord(id, record))
+        {
+            if (backpressureExpired(now, peer.m_recordBlockedSince)) { close(id, NI_TIMEOUT); return; }
+            break;
+        }
         if (peer.m_link.consumeRecord() != NI_OK) { close(id, NI_INVALID_STATE); return; }
+        peer.m_recordBlockedSince = UINT64_MAX;
     }
-    if (blocked)
-    {
-        if (peer.m_blockedSince == 0) { peer.m_blockedSince = now; }
-        else if (now - peer.m_blockedSince >= 5000) { close(id, NI_TIMEOUT); return; }
-    }
-    else
-    {
-        peer.m_blockedSince = 0;
-    }
-    for (uint32_t step = 0; step < 64 && !peer.m_closed && !peer.m_closing && !m_stopping; ++step)
+    for (uint32_t step = 0; step < m_stepBudget && !peer.m_closed && !peer.m_closing && !m_stopping; ++step)
     {
         NetInterfaceTunnelRecord record = {};
         const int32_t ready = peer.m_link.peekOutput(record);
         if (ready < 0) { close(id, ready); return; }
         if (ready != NI_READY) { break; }
         const int32_t sent = m_raw.send(id, record);
-        if (sent == NI_LIMIT_EXCEEDED) { break; }
+        // 中继收到 EOF 后可能仍在交付最后的入站记录，由其关闭通知启动管理层排空。
+        if (sent == NI_LIMIT_EXCEEDED || (sent == NI_INVALID_STATE && m_raw.outputState(id) == NI_INVALID_STATE)) { break; }
         if (sent != NI_OK) { close(id, sent); return; }
         if (peer.m_link.consumeOutput() != NI_OK) { close(id, NI_INVALID_STATE); return; }
     }
+}
+
+bool NetLinkTransportState::backpressureExpired(uint64_t now, uint64_t& since) const
+{
+    if (since == UINT64_MAX) { since = now; }
+    NetExecution::deadline(m_backpressureMs, now - since);
+    return now - since >= m_backpressureMs;
 }

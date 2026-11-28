@@ -1,19 +1,11 @@
 ﻿#include "NetGatewayDiscoveryState.h"
-#include "NetPeerMacro.h"
-#include "NetGatewayDiscovery.h"
-#include "NetDirectorySnapshot.h"
-#include "NetInterface/NetInterfaceAPI.h"
-#include "NetTransportEntropy.h"
-#include <chrono>
 #include <cstring>
 #include <unordered_map>
 #include <unordered_set>
 
-NetGatewayDiscoveryState::NetGatewayDiscoveryState() :
+NetGatewayDiscoveryState::NetGatewayDiscoveryState(const NetGatewayDiscoveryConfig& config) :
+m_config(config), m_cache(config.m_cacheWriteMs),
 m_tls(),
-m_seedCount(0),
-m_candidateCount(0),
-m_nodeCount(0),
 m_current(),
 m_peer(0),
 m_request(0),
@@ -24,8 +16,7 @@ m_next(0),
 m_running(false),
 m_ready(false),
 m_closed(false),
-m_cached(false),
-m_cacheEnabled(false)
+m_cached(false)
 {
     m_current.m_structSize = sizeof(m_current);
     m_current.m_version = 1;
@@ -45,8 +36,8 @@ int32_t NetGatewayDiscoveryState::rebuild()
             key.append(reinterpret_cast<const char*>(&old.m_point.m_port), sizeof(old.m_point.m_port));
             previous.insert(std::make_pair(key, old.m_failedUntil));
         }
+        if (m_seeds.size() > UINT32_MAX || m_nodes.size() > UINT32_MAX - m_seeds.size()) { return NI_INVALID_ARGUMENT; }
         const size_t total = m_seeds.size() + m_nodes.size();
-        if (total > UINT32_MAX) { return NI_INVALID_ARGUMENT; }
         merged.reserve(total);
         for (size_t index = 0; index < total; ++index)
         {
@@ -69,8 +60,7 @@ int32_t NetGatewayDiscoveryState::rebuild()
             merged.push_back(candidate);
         }
         m_candidates.swap(merged);
-        m_candidateCount = static_cast<uint32_t>(m_candidates.size());
-        m_next = m_candidateCount == 0 ? 0 : m_next % m_candidateCount;
+        m_next = m_candidates.empty() ? 0 : m_next % m_candidates.size();
         return NI_OK;
     }
     catch (...) { return NI_NO_MEMORY; }

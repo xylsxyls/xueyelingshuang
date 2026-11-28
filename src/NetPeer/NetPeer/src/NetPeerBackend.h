@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "NetPeerMacro.h"
+#include "NetRelayPoolConfig.h"
 #include "NetInterface/NetInterfaceAPI.h"
 
 class NetPeerSenderState;
@@ -15,10 +16,26 @@ public:
     */
     static int32_t configureHost(const NetHostFunctions& functions);
 
+    /** 生命周期执行者按预设参数首次准备客户端
+    @param [in] client 本提供方已创建且尚未准备的客户端
+    @param [in] config 三条运输路径各自的配置及可选初始化回调
+    @return NI_OK 或配置、内存、生命周期错误。失败时可更正配置后重试
+    */
+    static int32_t prepareGateway(NetPeerSenderState* client, const NetPeerConfig& config);
+
+    /** 在首次连接前同时替换该客户端的提交池及调度选项
+    @param [in] client 本提供方已准备、静止的客户端，由其生命周期执行者调用
+    @param [in] pools 独立的提交记录、正文和入口队列池配置
+    @param [in] options 复制索引、批次、维护和交付参数，策略借用的对象须在使用期间存活
+    @return NI_OK 或参数、状态、资源错误。失败时保留原配置
+    */
+    static int32_t configureSubmissionPools(NetPeerSenderState* client, const NetSenderSubmissionPools& pools,
+        const NetSenderSubmissionOptions& options);
+
     /** 配置备用网关及公开目录缓存，不创建连接
     线程：唯一生命周期owner在已prepare且静止时调用，不与配置、连接、释放并发；回调内拒绝
     @param [in] client 本提供方创建且已准备的客户端
-    @param [in] seeds 网关列表，可空清除；调用时复制，容量由实际发现存储决定
+    @param [in] seeds 网关列表，可空清除；调用时复制，最多4096字节
     @param [in] cachePath 公开目录缓存路径，可空禁用；调用时复制，最多4096字节
     @return NI_OK或参数、状态错误；失败不启动网络
     */

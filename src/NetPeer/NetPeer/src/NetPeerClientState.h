@@ -24,8 +24,9 @@ public:
 public:
     /** 初始化借用的回调表
     @param [in] callbacks 已验证v1表
+    @param [in] config 三条运输的独立配置
     */
-    explicit NetPeerClientOpaque(const NetPeerClientCallbacks& callbacks);
+    NetPeerClientOpaque(const NetPeerClientCallbacks& callbacks, const NetPeerConfig& config);
 
     /** 收敛会话后销毁适配器
     */

@@ -1,16 +1,19 @@
 ﻿#include "NetRelayTransport.h"
 #include "NetPeerMacro.h"
 #include "NetRelayTransportState.h"
-#include <chrono>
-#include <cstring>
+#include "NetHostSocketState.h"
 
 NetRelayTransportListener::~NetRelayTransportListener()
 {
 
 }
 
-NetRelayTransport::NetRelayTransport() :
-m_state(new NetRelayTransportState())
+NetRelayTransport::NetRelayTransport() : NetRelayTransport(NetHostPoolConfig(), NetRelayPoolConfig())
+{
+}
+
+NetRelayTransport::NetRelayTransport(const NetHostPoolConfig& host, const NetRelayPoolConfig& pools) :
+m_state(new NetRelayTransportState(host, pools))
 {
 
 }
@@ -27,6 +30,7 @@ int32_t NetRelayTransport::configurePools(const NetRelayPoolConfig& pools)
     {
         return NI_INVALID_STATE;
     }
+    if (!pools.valid()) { return NI_INVALID_ARGUMENT; }
     try
     {
         std::unique_ptr<NetRelayPoolConfig> copy(new NetRelayPoolConfig(pools));
@@ -46,7 +50,8 @@ int32_t NetRelayTransport::configurePools(const NetRelayPoolConfig& pools)
 
 int32_t NetRelayTransport::listen(const char* address, uint32_t port, NetRelayTransportListener* listener, uint32_t maxPeers)
 {
-    if (m_state->m_phase != NET_RELAY_IDLE || listener == nullptr)
+    if (!NetHostSocketState::validListen(address, port, maxPeers) || m_state->m_phase != NET_RELAY_IDLE ||
+        listener == nullptr || !m_state->m_pools->valid())
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -65,7 +70,8 @@ int32_t NetRelayTransport::listen(const char* address, uint32_t port, NetRelayTr
 int32_t NetRelayTransport::connect(const char* address, uint32_t port, NetRelayTransportListener* listener, uint64_t& peer)
 {
     peer = 0;
-    if (m_state->m_phase != NET_RELAY_IDLE || listener == nullptr)
+    if (!NetHostSocketState::validConnect(address, port) || m_state->m_phase != NET_RELAY_IDLE ||
+        listener == nullptr || !m_state->m_pools->valid())
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -162,7 +168,8 @@ int32_t NetRelayTransport::send(uint64_t peer, const NetInterfaceTunnelRecord& r
 {
     auto found = m_state->m_peers.find(peer);
     if (m_state->m_phase != NET_RELAY_ACTIVE || found == m_state->m_peers.end() ||
-        found->second->m_phase == NET_RELAY_CONNECTING || found->second->m_phase == NET_RELAY_CLOSING || found->second->m_closed)
+        found->second->m_phase == NET_RELAY_CONNECTING || found->second->m_phase == NET_RELAY_CLOSING || found->second->m_closed ||
+        NetHostSocketState::pending(m_state->m_channel, peer, NET_HOST_CLOSED))
     {
         return NI_INVALID_STATE;
     }
@@ -219,7 +226,8 @@ uint32_t NetRelayTransport::localPort() const
 int32_t NetRelayTransport::outputState(uint64_t peer) const
 {
     const auto found = m_state->m_peers.find(peer);
-    if (m_state->m_phase != NET_RELAY_ACTIVE || found == m_state->m_peers.end() || found->second->m_phase == NET_RELAY_CLOSING)
+    if (m_state->m_phase != NET_RELAY_ACTIVE || found == m_state->m_peers.end() ||
+        found->second->m_closed || found->second->m_phase == NET_RELAY_CLOSING || NetHostSocketState::pending(m_state->m_channel, peer, NET_HOST_CLOSED))
     {
         return NI_INVALID_STATE;
     }

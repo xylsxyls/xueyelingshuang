@@ -1,10 +1,13 @@
 ﻿#include "NetLinkTransport.h"
 #include "NetPeerMacro.h"
 #include "NetLinkTransportState.h"
-#include "NetTransport.h"
-#include <chrono>
+#include "NetHostSocketState.h"
 
-NetLinkTransport::NetLinkTransport() : m_state(new NetLinkTransportState())
+NetLinkTransport::NetLinkTransport() : NetLinkTransport(NetLinkTransportConfig())
+{
+}
+
+NetLinkTransport::NetLinkTransport(const NetLinkTransportConfig& config) : m_state(new NetLinkTransportState(config))
 {
 
 }
@@ -35,7 +38,11 @@ int32_t NetLinkTransport::listen(const char* address, uint32_t port, const NetIn
     NetLinkTransportListener* listener, uint32_t maxPeers)
 {
     // 该适配器是TCP公共/节点入口，服务首次注册只允许独立本机IPC适配。
-    if (options.m_tls.server != 1 || (options.m_peerRoles & (1U << NI_LINK_SERVICE)) != 0) { return NI_INVALID_ARGUMENT; }
+    if (!NetHostSocketState::validListen(address, port, maxPeers) || options.m_tls.server != 1 ||
+        (options.m_peerRoles & (1U << NI_LINK_SERVICE)) != 0)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     const int32_t configured = m_state->configure(options, listener);
     return configured == NI_OK ? m_state->m_raw.listen(address, port, m_state, maxPeers) : configured;
 }
@@ -44,7 +51,10 @@ int32_t NetLinkTransport::connect(const char* address, uint32_t port, const NetI
     NetLinkTransportListener* listener, uint64_t& peer)
 {
     peer = 0;
-    if (options.m_tls.server != 0) { return NI_INVALID_ARGUMENT; }
+    if (!NetHostSocketState::validConnect(address, port) || options.m_tls.server != 0)
+    {
+        return NI_INVALID_ARGUMENT;
+    }
     const int32_t configured = m_state->configure(options, listener);
     if (configured != NI_OK) { return configured; }
     const int32_t connected = m_state->m_raw.connect(address, port, m_state, peer);
@@ -52,7 +62,7 @@ int32_t NetLinkTransport::connect(const char* address, uint32_t port, const NetI
     try
     {
         NetObjectReference<NetLinkTransportPeer> entry;
-        const int32_t allocated = m_state->m_peerPool->create(entry, m_state->m_options);
+        const int32_t allocated = m_state->m_peerPool->create(entry, m_state->m_options, m_state->m_linkPools);
         if (allocated != NI_OK) { m_state->m_raw.close(peer, allocated); peer = 0; return allocated; }
         const int32_t status = entry->m_link.status();
         m_state->m_peers.insert(std::make_pair(peer, std::move(entry)));

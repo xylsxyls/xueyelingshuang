@@ -14,8 +14,12 @@ enum NetFileIoPhase
     // 拒绝新任务，但允许取消及消费已有结果。
     NET_FILE_BACKEND_STOPPING,
     // done后正在释放，禁止后端回入释放自身。
-    NET_FILE_BACKEND_RELEASING
+    NET_FILE_BACKEND_RELEASING,
+    // 已请求停止，待当前宿主调用结束后转交通知；宿主抛异常可重试。
+    NET_FILE_BACKEND_STOP_PENDING
 };
+
+struct NetPeerFileIoState;
 
 // 无线程文件协议门面；所有平台须显式提供后端，原生默认适配由NetWork配置
 class NetPeerAPI NetFileIo
@@ -31,7 +35,7 @@ public:
     */
     static int32_t configureBackend(NetFileIoBackendFactory factory);
 
-    /** 兜底停止及回收，仅生命周期负责人调用，不在自身/网络回调中销毁
+    /** 生命周期负责人最终停止并回收后端，可能等待工作线程；禁止在后端调用、网络回调或工作线程中销毁
     */
     ~NetFileIo();
 
@@ -70,11 +74,16 @@ public:
     */
     int32_t consume(uint64_t id);
 
-    /** 非阻塞协作停止，拒绝新工作，排队项回报CANCELLED
+    /** 非阻塞请求停止，拒绝新工作；后端调用期间推迟通知，已成功通知后可重复调用
     */
     void stop();
 
-    /** 工作执行者已释放全部句柄
+    /** 查询能否接管新文件流，须在同一执行者上调用
+    @return 后端处于活动状态且明确回报尚未结束时为true
+    */
+    bool accepting() const;
+
+    /** 查询工作执行者是否已释放全部句柄；后端回入查询返回false
     @return 是否已结束
     */
     bool done() const;
@@ -83,21 +92,25 @@ public:
     */
     void uninit();
 
+    /** 查询文件后端是否已完全释放，可再次初始化
+    @return 初始空闲或已完成uninit时为true
+    */
+    bool released() const;
+
     /** 最近初始化或后端异常结果，未完成uninit明确INVALID_STATE且保留后端
     @return NI结果；不代替每个工作自己的结果
     */
     int32_t status() const;
 
 private:
-    /** 有界检查可空路径，最多读取4097字节
-    @param [in] path 调用方提供的NUL结尾路径
-    @return 空指针或长度不超过4096
+    /** 借用后端查询是否结束，查询返回后处理其间的停止请求
+    @return READY已结束，NEED_MORE仍在运行，INVALID_STATE表示查询失败或期间请求停止
     */
-    static bool validPath(const char* path);
+    int32_t queryCompletion() const;
 
     /** 结束一次后端借用，并执行其间被延迟的停止请求
     */
-    void finishCall();
+    void finishCall() const;
 
 private:
     /** 禁止复制所有权
@@ -114,12 +127,8 @@ private:
 private:
     // 启动前配置一次，之后只读的宿主选择
     static NetFileIoBackendFactory m_factory;
-    // 本实例独占后端，uninit前不得释放宿主依赖
-    NetFileIoBackend* m_backend;
-    // 门面初始化/异常/生命周期违约结果
-    int32_t m_error;
-    // 唯一生命周期状态，stop抛异常也不能回到可接纳状态。
-    NetFileIoPhase m_phase;
-    // 非const后端调用正在借用自身，禁止回入提交或释放。
-    bool m_calling;
+    // 当前初始化周期独占的后端状态；空指针表示已完整释放。
+    NetPeerFileIoState* m_state;
+    // 空闲时保留最近一次初始化或宿主错误，直到下次初始化。
+    int32_t m_idleError;
 };

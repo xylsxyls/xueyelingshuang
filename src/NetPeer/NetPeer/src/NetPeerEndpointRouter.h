@@ -13,6 +13,13 @@ public:
     */
     explicit NetPeerEndpointRouter(NetEndpointServiceSink* services, NetEndpointServiceSink* clients = nullptr);
 
+    /** 创建使用独立直连运输预算的端点路由
+    @param [in] services 服务端业务接收者
+    @param [in] clients 外部客户端接收者，可空
+    @param [in] config 内置监听运输使用的配置
+    */
+    NetPeerEndpointRouter(NetEndpointServiceSink* services, NetEndpointServiceSink* clients, const NetDirectTransportConfig& config);
+
     /** 先停止借用本传输的协议，再销毁传输资源
     */
     virtual ~NetPeerEndpointRouter();

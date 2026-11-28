@@ -2,8 +2,9 @@
 #include "NetPeer.h"
 #include <cstring>
 
-NetPeerClientOpaque::NetPeerClientOpaque(const NetPeerClientCallbacks& callbacks) :
+NetPeerClientOpaque::NetPeerClientOpaque(const NetPeerClientCallbacks& callbacks, const NetPeerConfig& config) :
 m_callbacks(callbacks),
+m_session(config),
 m_dispatch(&m_session),
 m_polling(false),
 m_callbackDepth(0)

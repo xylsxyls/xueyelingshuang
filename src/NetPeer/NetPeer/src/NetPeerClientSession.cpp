@@ -3,8 +3,12 @@
 #include "NetHostSocket.h"
 #include "NetTransportEntropy.h"
 
-NetPeerClientSession::NetPeerClientSession() :
-m_direct(nullptr)
+NetPeerClientSession::NetPeerClientSession() : NetPeerClientSession(NetPeerConfig())
+{
+}
+
+NetPeerClientSession::NetPeerClientSession(const NetPeerConfig& config) :
+m_factory(config.m_service), m_discovery(config.m_discovery), m_direct(nullptr), m_directConfig(config.m_direct)
 {
     bindGateway(&m_factory, &m_discovery);
 }
@@ -35,16 +39,14 @@ int32_t NetPeerClientSession::connect(const char* address, uint32_t port, const 
         {
             return NI_NOT_SUPPORTED;
         }
-        const int32_t detached = NetClientSession::bindChannel(nullptr);
+        const int32_t detached = bindChannel(nullptr);
         if (detached != NI_OK)
         {
             return detached;
         }
         try
         {
-            delete m_direct;
-            m_direct = nullptr;
-            m_direct = new NetTransport();
+            m_direct = new NetTransport(m_directConfig);
         }
         catch (...)
         {
@@ -73,13 +75,11 @@ int32_t NetPeerClientSession::connectService(uint32_t product, const char* addre
     {
         return NI_NOT_SUPPORTED;
     }
-    const int32_t detached = NetClientSession::bindChannel(nullptr);
+    const int32_t detached = bindChannel(nullptr);
     if (detached != NI_OK)
     {
         return detached;
     }
-    delete m_direct;
-    m_direct = nullptr;
     NetInterfaceTlsOptions configured = tls;
     if (configured.entropy == nullptr)
     {

@@ -71,7 +71,7 @@ int32_t NetDirectorySnapshot::cache(uint64_t utcMs, std::string& bytes) const
     uint32_t required = 0;
     const int32_t measured = NetInterface::directoryCache(m_handle, static_cast<uint32_t>(utcMs),
         static_cast<uint32_t>(utcMs >> 32), nullptr, 0, &required);
-    if (measured != NI_BUFFER_TOO_SMALL || required <= 48 || required > 16432)
+    if (measured != NI_BUFFER_TOO_SMALL || required <= 48 || required > NET_INTERFACE_DIRECTORY_BYTES + 48)
     {
         return measured < 0 && measured != NI_BUFFER_TOO_SMALL ? measured : NI_PROTOCOL_ERROR;
     }

@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "NetPeerMacro.h"
 #include "NetHostTypes.h"
+#include "NetRelayPoolConfig.h"
 #include "NetInterface/NetInterfaceAPI.h"
 
 class NetHostSocketState;
@@ -46,6 +47,12 @@ public:
     @param [in] functions 可空使用预先配置的默认表；非空复制表，context仍借用
     */
     explicit NetHostSocket(const NetHostFunctions* functions = nullptr);
+
+    /** 使用指定物理池创建字节宿主
+    @param [in] functions 可空使用默认宿主，复制函数表
+    @param [in] pools 本实例连接槽和各级输入正文池
+    */
+    NetHostSocket(const NetHostFunctions* functions, const NetHostPoolConfig& pools);
 
     /** 同一执行者停止并释放，禁止在本实例回调内销毁
     */
@@ -140,7 +147,7 @@ public:
     uint32_t localPort() const;
 
     /** 查询尚未交付终态的连接数
-    @return 0至256
+    @return 尚未结算的实际连接数
     */
     uint32_t peerCount() const;
 
@@ -172,4 +179,5 @@ private:
 private:
     // 独占事件队列和宿主，跨边界不暴露STL
     NetHostSocketState* m_state;
+    friend class NetHostSocketState;
 };

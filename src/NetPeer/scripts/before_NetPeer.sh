@@ -32,4 +32,9 @@ if [[ $4 != only ]]; then
 fi
 librariesrely+=($'project\tNetChannel\t'"$NetChannel_dlllib")
 
+if [[ $4 != only ]]; then
+    "$CLOUD_REBUILD" CStringManager "$1" "$2" "$3" "$4"
+fi
+librariesrely+=($'project\tCStringManager\t'"$2")
+
 printf 'CLOUD_REBUILD_LIBRARIESRELY\t%s\n' "${librariesrely[@]}" return

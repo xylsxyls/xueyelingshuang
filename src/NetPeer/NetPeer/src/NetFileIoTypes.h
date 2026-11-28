@@ -72,7 +72,7 @@ struct NetFileIoResult
     uint32_t detail;
     // 原请求的字节偏移
     uint64_t offset;
-    // SIZE、HASH等操作报告的文件长度或处理长度，按操作含义解释
+    // OPEN_READ、SIZE、HASH 成功时报告文件字节数，WRITE 成功时报告本次实际写入的字节数
     uint64_t length;
     // 借用至consume/uninit；不可由外部释放。
     const uint8_t* bytes;

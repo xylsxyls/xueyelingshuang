@@ -17,7 +17,7 @@ extern "C"
 @param [in] authorizationSize 0至2048
 @param [out] output 可空探测
 @param [in] capacity 容量
-@param [out] required 不可空
+@param [out] required 不可空；与输入或输出缓冲重叠时返回 NI_INVALID_ARGUMENT，保留原值
 @return NetInterfaceResult
 */
 NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileControlEncode(const uint32_t* fields, const uint8_t* transfer, const uint8_t* token,
@@ -28,7 +28,7 @@ NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileControlEncode(const uint32_t* fi
 /** 解析文件成功响应
 @param [in] bytes 160字节状态体
 @param [in] size 精确长度
-@param [out] info 不可空，失败清零
+@param [out] info 不可空；与输入重叠时返回 NI_INVALID_ARGUMENT 并保留原值，其他解析失败时清零
 @return OK或负数
 */
 NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileParseInfo(const uint8_t* bytes, uint32_t size, NetInterfaceFileInfo* info);
@@ -40,7 +40,7 @@ NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileParseInfo(const uint8_t* bytes, 
 @param [out] transfer 16字节
 @param [out] token 32字节秘密
 @param [out] hash 32字节整文件摘要
-@return OK或负数，失败输出全部清零
+@return OK或负数。输入与输出或各输出之间重叠时返回 NI_INVALID_ARGUMENT，所有区域保持原值；其他失败清零已提供的输出
 */
 NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileInfoFields(const uint8_t* bytes, uint32_t size, uint32_t* fields, uint8_t* transfer,
     uint8_t* token, uint8_t* hash);
@@ -52,7 +52,7 @@ NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileInfoFields(const uint8_t* bytes,
 @param [in] timeLow 单调毫秒低位
 @param [in] timeHigh 单调毫秒高位
 @param [in] timeoutMs 无进度时限1000至60000
-@param [out] handle 不可空，失败清零
+@param [out] handle 不可空；与本次输入重叠时返回 NI_INVALID_ARGUMENT 并保留原值，其他失败置空
 @return OK或负数
 */
 NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileFlowCreate(const NetInterfaceFileInfo* info, uint32_t product, uint32_t sender,
@@ -67,7 +67,7 @@ NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileFlowCreate(const NetInterfaceFil
 @param [in] timeLow 单调时间低位
 @param [in] timeHigh 高位
 @param [in] timeoutMs 无进度时限
-@param [out] handle 不可空，失败清零
+@param [out] handle 不可空；与本次输入重叠时返回 NI_INVALID_ARGUMENT 并保留原值，其他失败置空
 @return OK或负数
 */
 NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileFlowCreateWire(const uint8_t* bytes, uint32_t size, uint32_t product, uint32_t sender,
@@ -135,7 +135,7 @@ NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileFlowAccept(NetInterfaceFileFlowH
 @param [in] handle 流
 @param [out] fields 三项offset低/高位和长度
 @param [out] bytes 借用至written/cancel/destroy
-@return 同Flow.writeRequest，失败输出0/null
+@return 同Flow.writeRequest；fields 与 bytes 输出变量重叠时返回 NI_INVALID_ARGUMENT 并保留原值，其他失败清零已提供的输出
 */
 NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileFlowWrite(NetInterfaceFileFlowHandle handle, uint32_t* fields, const uint8_t** bytes);
 
@@ -167,7 +167,7 @@ NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileFlowCommitted(NetInterfaceFileFl
 @param [in] handle 流
 @param [out] fields 六项kind/product/id低高/type/size
 @param [out] payload 借用至consume/cancel/destroy
-@return READY或其他结果，失败清输出
+@return READY或其他结果。fields 与 payload 输出变量重叠时返回 NI_INVALID_ARGUMENT 并保留原值，其他失败清零已提供的输出
 */
 NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileFlowPeek(NetInterfaceFileFlowHandle handle, uint32_t* fields, const uint8_t** payload);
 
@@ -186,8 +186,8 @@ NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileFlowCancel(NetInterfaceFileFlowH
 
 /** 当前显示快照
 @param [in] handle 流
-@param [out] info 固定C布局，失败清零
-@param [out] result 不可空
+@param [out] info 固定C布局；与 result 重叠时保留两者原值，其他参数错误清零已提供的 info
+@param [out] result 不可空；与 info 分开时，参数错误写入 NI_INVALID_ARGUMENT
 @return OK或INVALID_ARGUMENT
 */
 NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileFlowSnapshot(NetInterfaceFileFlowHandle handle, NetInterfaceFileInfo* info, int32_t* result);
@@ -196,7 +196,7 @@ NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileFlowSnapshot(NetInterfaceFileFlo
 @param [in] handle 流
 @param [out] bytes 状态体，可空探测
 @param [in] capacity 至少160
-@param [out] result 流结果，不可空
+@param [out] result 流结果，不可空。与 bytes 的容量区间重叠时返回 NI_INVALID_ARGUMENT 并保留原值；独立输出在参数无效或容量不足时为 NI_INVALID_STATE
 @return 编码结果；秘密只供恢复，不向展示/日志输出
 */
 NET_PEER_C_EXPORT NetPeerAPI int32_t netPeerFileFlowSnapshotWire(NetInterfaceFileFlowHandle handle, uint8_t* bytes, uint32_t capacity,

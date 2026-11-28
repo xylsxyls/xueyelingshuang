@@ -1,6 +1,6 @@
 ﻿#include "NetRelayTransportState.h"
+#include "NetHostSocketState.h"
 #include "NetPeerMacro.h"
-#include <chrono>
 #include <cstring>
 #include <new>
 
@@ -91,6 +91,8 @@ int32_t NetRelayTransportPeer::enqueue(const NetInterfaceTunnelRecord& record)
     if (m_outputTail == nullptr)
     {
         m_outputHead = write;
+        // 此运输本轮可能已经 poll；空队列首次接纳后，执行者下一轮即可尝试交付。
+        NetExecution::progress();
     }
     else
     {
@@ -127,9 +129,10 @@ void NetRelayTransportPeer::clearInput()
     m_inputOffset = 0;
 }
 
-NetRelayTransportState::NetRelayTransportState() :
+NetRelayTransportState::NetRelayTransportState(const NetHostPoolConfig& host, const NetRelayPoolConfig& pools) :
+m_channel(nullptr, host),
 m_listener(nullptr),
-m_pools(new NetRelayPoolConfig),
+m_pools(new NetRelayPoolConfig(pools)),
 m_phase(NET_RELAY_IDLE),
 m_server(false),
 m_polling(false)
@@ -139,8 +142,7 @@ m_polling(false)
 
 uint64_t NetRelayTransportState::now()
 {
-    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count());
+    return NetInterface::monotonicMilliseconds();
 }
 
 void NetRelayTransportState::close(uint64_t id, int32_t reason)
@@ -258,13 +260,16 @@ void NetRelayTransportState::onClosed(uint64_t id, int32_t reason, int32_t detai
 
 void NetRelayTransportState::pump(uint64_t id, NetRelayTransportPeer& peer)
 {
-    if (peer.m_phase == NET_RELAY_CLOSING || m_phase != NET_RELAY_ACTIVE)
+    if (peer.m_phase == NET_RELAY_CLOSING || m_phase != NET_RELAY_ACTIVE ||
+        NetHostSocketState::pending(m_channel, id, NET_HOST_CLOSED))
     {
         return;
     }
     if (peer.m_phase == NET_RELAY_CONNECTING)
     {
-        if (now() - peer.m_started >= 5000)
+        const uint64_t elapsed = now() - peer.m_started;
+        NetExecution::deadline(m_pools->m_startupMs, elapsed);
+        if (elapsed >= m_pools->m_startupMs)
         {
             close(id, NI_TIMEOUT);
         }
@@ -275,7 +280,8 @@ void NetRelayTransportState::pump(uint64_t id, NetRelayTransportPeer& peer)
         peer.m_phase = NET_RELAY_ESTABLISHED;
         m_listener->onRelayConnected(id);
     }
-    for (uint32_t step = 0; step < 64 && peer.m_phase != NET_RELAY_CLOSING && m_phase == NET_RELAY_ACTIVE; ++step)
+    uint32_t inputSteps = 0;
+    for (; inputSteps < m_pools->m_stepBudget && peer.m_phase != NET_RELAY_CLOSING && m_phase == NET_RELAY_ACTIVE; ++inputSteps)
     {
         NetInterfaceTunnelRecord record = {};
         int32_t result = peer.m_decoder.peek(record);
@@ -288,11 +294,14 @@ void NetRelayTransportState::pump(uint64_t id, NetRelayTransportPeer& peer)
             }
             if (!accepted)
             {
+                const uint64_t current = now();
                 if (peer.m_blockedSince == 0)
                 {
-                    peer.m_blockedSince = now();
+                    peer.m_blockedSince = current;
                 }
-                else if (now() - peer.m_blockedSince >= 5000)
+                const uint64_t elapsed = current - peer.m_blockedSince;
+                NetExecution::deadline(m_pools->m_backpressureMs, elapsed);
+                if (elapsed >= m_pools->m_backpressureMs)
                 {
                     close(id, NI_TIMEOUT);
                 }
@@ -351,14 +360,19 @@ void NetRelayTransportState::pump(uint64_t id, NetRelayTransportPeer& peer)
             break;
         }
     }
-    for (uint32_t step = 0; step < 64 && peer.m_outputHead != nullptr &&
+    if (inputSteps == m_pools->m_stepBudget)
+    {
+        // 已消耗本轮量子，下一轮还须检查解码器、未读字节或恢复宿主读取。
+        NetExecution::progress();
+    }
+    for (uint32_t step = 0; step < m_pools->m_stepBudget && peer.m_outputHead != nullptr &&
         !peer.m_closed && peer.m_phase != NET_RELAY_CLOSING && m_phase == NET_RELAY_ACTIVE;)
     {
         NetRelayTransportWrite& write = *peer.m_outputHead;
         uint32_t count = 1;
         uint32_t size = write.m_size;
         const NetRelayTransportWrite* next = write.m_next;
-        while (next != nullptr && count < 64 - step)
+        while (next != nullptr && count < m_pools->m_stepBudget - step)
         {
             if (next->m_size > 32768 - size)
             {
@@ -402,7 +416,7 @@ void NetRelayTransportState::pump(uint64_t id, NetRelayTransportPeer& peer)
                 result = m_channel.write(id, write.m_bytes.data(), write.m_size);
             }
         }
-        if (NetHostSocket::isBackpressure(result))
+        if (NetHostSocket::isBackpressure(result) || (result < 0 && NetHostSocketState::pending(m_channel, id, NET_HOST_CLOSED)))
         {
             break;
         }
@@ -416,5 +430,9 @@ void NetRelayTransportState::pump(uint64_t id, NetRelayTransportPeer& peer)
             peer.pop();
         }
         step += count;
+        if (step == m_pools->m_stepBudget && peer.m_outputHead != nullptr)
+        {
+            NetExecution::progress();
+        }
     }
 }

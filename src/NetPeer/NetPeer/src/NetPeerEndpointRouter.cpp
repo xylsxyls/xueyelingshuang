@@ -3,7 +3,12 @@
 #include "NetTransportEntropy.h"
 
 NetPeerEndpointRouter::NetPeerEndpointRouter(NetEndpointServiceSink* services, NetEndpointServiceSink* clients) :
-NetEndpointRouter(services, clients)
+NetPeerEndpointRouter(services, clients, NetDirectTransportConfig())
+{
+}
+
+NetPeerEndpointRouter::NetPeerEndpointRouter(NetEndpointServiceSink* services, NetEndpointServiceSink* clients, const NetDirectTransportConfig& config) :
+NetEndpointRouter(services, clients), m_transport(config)
 {
     if (clients == nullptr)
     {

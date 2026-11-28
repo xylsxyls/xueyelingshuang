@@ -32,8 +32,9 @@ class NetGatewayDirectoryStoreState
 {
 public:
     /** 初始化静止状态，不请求宿主能力
+    @param [in] writeIntervalMs 缓存写合并间隔
     */
-    NetGatewayDirectoryStoreState();
+    explicit NetGatewayDirectoryStoreState(uint32_t writeIntervalMs);
 
 public:
     // 显式配置的文件后端门面
@@ -62,6 +63,8 @@ public:
     uint64_t m_length;
     // 最近启动一次写尝试的单调时刻
     uint64_t m_lastWrite;
+    // 两次尝试的最小毫秒间隔
+    uint32_t m_writeIntervalMs;
     // 当前在途操作，用于核对宿主结果
     uint32_t m_operation;
     // 最近加载/写出结果，不构成授权证明

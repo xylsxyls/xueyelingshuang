@@ -2,21 +2,31 @@
 #include "NetPeerMacro.h"
 #include "NetGatewayDirectoryStoreState.h"
 #include "NetHostSocket.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include "NetInterface/NetInterfaceAPI.h"
 #include <chrono>
 #include <cstring>
+
+// 同目录临时名称在目标路径后追加标记和十六进制随机数。
+static const char DirectoryTemporaryMarker[] = ".tmp.";
+static const uint32_t DirectoryRandomBytes = 16;
+// 文件后端没有执行循环通知接口，等待完成或容量时采用有限补查。
+static const uint32_t kDirectoryFilePollMs = 100;
 
 /** 合并间隔使用单调时钟，UTC只用于缓存格式中的期限
 @return 单调毫秒
 */
 static uint64_t DirectoryStoreNow()
 {
-    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count());
+    return NetInterface::monotonicMilliseconds();
 }
 
-NetGatewayDirectoryStore::NetGatewayDirectoryStore() :
-m_state(new NetGatewayDirectoryStoreState())
+NetGatewayDirectoryStore::NetGatewayDirectoryStore() : NetGatewayDirectoryStore(2000)
+{
+}
+
+NetGatewayDirectoryStore::NetGatewayDirectoryStore(uint32_t writeIntervalMs) :
+m_state(new NetGatewayDirectoryStoreState(writeIntervalMs))
 {
 
 }
@@ -47,7 +57,7 @@ int32_t NetGatewayDirectoryStore::open(const std::string& path, NetInterfaceEntr
     {
         return NI_INVALID_STATE;
     }
-    if (path.empty() || path.size() > 4096 || path.find('\0') != std::string::npos)
+    if (path.empty() || path.size() > 4096 || CStringManager::boundedLength(path.c_str(), path.size()) != path.size())
     {
         return NI_INVALID_ARGUMENT;
     }
@@ -57,6 +67,12 @@ int32_t NetGatewayDirectoryStore::open(const std::string& path, NetInterfaceEntr
         const int32_t initialized = m_state->m_io.init();
         if (initialized != NI_OK)
         {
+            m_state->m_result = initialized;
+            if (!m_state->m_io.released())
+            {
+                m_state->m_phase = NET_CACHE_STOPPING;
+                NetExecution::progress();
+            }
             return initialized;
         }
         m_state->m_entropy = entropy;
@@ -68,6 +84,7 @@ int32_t NetGatewayDirectoryStore::open(const std::string& path, NetInterfaceEntr
         m_state->m_lastWrite = 0;
         m_state->m_result = NI_OK;
         m_state->m_loadedReady = false;
+        NetExecution::progress();
         return NI_OK;
     }
     catch (...)
@@ -96,9 +113,13 @@ int32_t NetGatewayDirectoryStore::takeLoaded(NetInterfaceDirectoryNodeData* poin
 
 int32_t NetGatewayDirectoryStore::queue(const std::vector<NetInterfaceDirectoryPoint>& points)
 {
-    if (points.empty() || points.size() > UINT32_MAX)
+    if (points.empty())
     {
         return NI_INVALID_ARGUMENT;
+    }
+    if (points.size() > NET_INTERFACE_DIRECTORY_BYTES / NET_INTERFACE_DIRECTORY_NAME_BYTES)
+    {
+        return NI_LIMIT_EXCEEDED;
     }
     try
     {
@@ -107,7 +128,8 @@ int32_t NetGatewayDirectoryStore::queue(const std::vector<NetInterfaceDirectoryP
         {
             const NetInterfaceDirectoryPoint& point = points[index];
             if (point.m_name.size() >= sizeof(records[index].m_name) || point.m_address.size() >= sizeof(records[index].m_address) ||
-                point.m_name.find('\0') != std::string::npos || point.m_address.find('\0') != std::string::npos)
+                CStringManager::boundedLength(point.m_name.c_str(), point.m_name.size()) != point.m_name.size() ||
+                CStringManager::boundedLength(point.m_address.c_str(), point.m_address.size()) != point.m_address.size())
             {
                 return NI_INVALID_ARGUMENT;
             }
@@ -132,6 +154,10 @@ int32_t NetGatewayDirectoryStore::queue(const NetInterfaceDirectoryNodeData* poi
     }
     try
     {
+        if (m_state->m_path.size() > 4096 - (sizeof(DirectoryTemporaryMarker) - 1) - 2 * DirectoryRandomBytes)
+        {
+            return NI_INVALID_ARGUMENT;
+        }
         std::string encoded;
         NetDirectorySnapshot snapshot;
         const int32_t created = snapshot.create(points, count);
@@ -143,6 +169,13 @@ int32_t NetGatewayDirectoryStore::queue(const NetInterfaceDirectoryNodeData* poi
         if (result == NI_OK)
         {
             m_state->m_pending.swap(encoded);
+            if (m_state->m_phase == NET_CACHE_IDLE)
+            {
+                // 同轮空闲 poll 之后仍可接纳新快照；覆盖只更换正文，不延长原写入期限。
+                const uint64_t elapsed = m_state->m_lastWrite == 0 ? m_state->m_writeIntervalMs :
+                    DirectoryStoreNow() - m_state->m_lastWrite;
+                NetExecution::deadline(m_state->m_writeIntervalMs, elapsed);
+            }
         }
         return result;
     }
@@ -285,13 +318,16 @@ void NetGatewayDirectoryStore::complete(const NetFileIoResult& result)
 
 int32_t NetGatewayDirectoryStore::poll()
 {
-    if (m_state->m_phase == NET_CACHE_STOPPING || m_state->m_phase == NET_CACHE_CLOSED)
+    if (m_state->m_phase == NET_CACHE_CLOSED) { return m_state->m_result; }
+    if (m_state->m_phase == NET_CACHE_STOPPING)
     {
         if (m_state->m_io.done())
         {
             m_state->m_io.uninit();
-            m_state->m_phase = NET_CACHE_CLOSED;
+            if (m_state->m_io.released()) { m_state->m_phase = NET_CACHE_CLOSED; }
+            else if (m_state->m_result == NI_OK) { m_state->m_result = m_state->m_io.status(); }
         }
+        if (m_state->m_phase != NET_CACHE_CLOSED) { NetExecution::deadline(kDirectoryFilePollMs, 0); }
         return m_state->m_result;
     }
     try
@@ -302,9 +338,12 @@ int32_t NetGatewayDirectoryStore::poll()
             const int32_t available = m_state->m_io.peek(result);
             if (available == NI_NEED_MORE)
             {
+                NetExecution::deadline(kDirectoryFilePollMs, 0);
                 return m_state->m_result;
             }
-            if (available != NI_READY || result.id != m_state->m_job || result.operation != m_state->m_operation)
+            // 打开成功时宿主分配文件号。后续读、写、关闭和发布都必须回报该文件号。
+            if (available != NI_READY || result.id != m_state->m_job || result.operation != m_state->m_operation ||
+                result.offset != 0 || (m_state->m_file != 0 && result.file != m_state->m_file))
             {
                 m_state->m_result = available < 0 ? available : NI_PROTOCOL_ERROR;
                 shutdown();
@@ -321,20 +360,25 @@ int32_t NetGatewayDirectoryStore::poll()
             }
         }
         const uint64_t now = DirectoryStoreNow();
-        if (m_state->m_phase == NET_CACHE_IDLE && !m_state->m_pending.empty() &&
-            (m_state->m_lastWrite == 0 || now - m_state->m_lastWrite >= 2000))
+        if (m_state->m_phase == NET_CACHE_IDLE && !m_state->m_pending.empty())
         {
+            if (m_state->m_lastWrite != 0 && now - m_state->m_lastWrite < m_state->m_writeIntervalMs)
+            {
+                NetExecution::deadline(m_state->m_writeIntervalMs, now - m_state->m_lastWrite);
+                return m_state->m_result;
+            }
             m_state->m_lastWrite = now;
-            uint8_t random[16] = {};
+            uint8_t random[DirectoryRandomBytes] = {};
             const int32_t entropy = m_state->m_entropy == nullptr ? NetHostSocket::randomBytes(random, sizeof(random)) :
                 NetInterface::entropyBytes(m_state->m_entropy, m_state->m_context, random, sizeof(random));
             if (entropy != NI_OK)
             {
                 m_state->m_result = entropy;
+                NetExecution::deadline(m_state->m_writeIntervalMs != 0 ? m_state->m_writeIntervalMs : kDirectoryFilePollMs, 0);
                 return entropy;
             }
             const char* hex = "0123456789abcdef";
-            m_state->m_temporary = m_state->m_path + ".tmp.";
+            m_state->m_temporary = m_state->m_path + DirectoryTemporaryMarker;
             for (uint32_t index = 0; index < sizeof(random); ++index)
             {
                 m_state->m_temporary.push_back(hex[random[index] >> 4]);
@@ -344,7 +388,16 @@ int32_t NetGatewayDirectoryStore::poll()
             m_state->m_phase = NET_CACHE_SAVE_OPEN;
         }
         const int32_t submitted = submit();
-        if (submitted < 0 && submitted != NI_LIMIT_EXCEEDED)
+        if (submitted == NI_OK)
+        {
+            // 只在新工作被接纳时补一次推进；后端尚未完成时由上面的有限补查等待。
+            NetExecution::progress();
+        }
+        else if (submitted == NI_LIMIT_EXCEEDED)
+        {
+            NetExecution::deadline(kDirectoryFilePollMs, 0);
+        }
+        else if (submitted < 0)
         {
             m_state->m_result = submitted;
             shutdown();
@@ -360,6 +413,10 @@ int32_t NetGatewayDirectoryStore::poll()
 
 void NetGatewayDirectoryStore::shutdown()
 {
+    if (stopped())
+    {
+        return;
+    }
     m_state->m_pending.clear();
     m_state->m_active.clear();
     m_state->m_loaded.reset();
@@ -367,10 +424,14 @@ void NetGatewayDirectoryStore::shutdown()
     m_state->m_entropy = nullptr;
     m_state->m_context = nullptr;
     m_state->m_io.stop();
-    m_state->m_phase = NET_CACHE_STOPPING;
+    if (m_state->m_phase != NET_CACHE_STOPPING)
+    {
+        m_state->m_phase = NET_CACHE_STOPPING;
+        NetExecution::progress();
+    }
 }
 
 bool NetGatewayDirectoryStore::stopped() const
 {
-    return m_state->m_phase == NET_CACHE_CLOSED && m_state->m_io.done();
+    return m_state->m_phase == NET_CACHE_CLOSED && m_state->m_io.released();
 }

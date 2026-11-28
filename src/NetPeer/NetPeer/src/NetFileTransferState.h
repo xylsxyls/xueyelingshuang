@@ -16,6 +16,8 @@ enum NetFileTransferPhase
     NET_FILE_TRANSFER_DRAIN,
     // 不再接纳新工作，收敛在途任务并关闭仍拥有的句柄。
     NET_FILE_TRANSFER_STOPPING,
+    // 已完成本地提交，待交付的 ACK 无法继续发送；文件及任务均已收敛。
+    NET_FILE_TRANSFER_OUTPUT_FAILED,
     // 不再拥有任务、文件或待交付的输出。
     NET_FILE_TRANSFER_DONE
 };
@@ -45,10 +47,18 @@ public:
     NetFileIoRequest m_job;
     // 已补摘要的前缀和本次恢复的固定目标。
     uint64_t m_prime;
+    // 当前批正文由协议流持有至整批写完成或取消
+    const uint8_t* m_batchData;
+    // 当前写批的文件起点
+    uint64_t m_batchOffset;
+    // 当前写批总字节数
+    uint32_t m_batchSize;
     // 本次恢复起始位置，补摘要只推进到这个固定字节偏移
     uint64_t m_resume;
     // 最近一次poll时间；cancel不推进时钟。
     uint64_t m_now;
+    // 首次在 poll 观察到已提交文件仍有 ACK 待交付的时刻，尚未观察时为 UINT64_MAX。
+    uint64_t m_finalOutputSince;
     // 协调阶段，不从I/O操作数值或多个完成标志反推。
     NetFileTransferPhase m_phase;
     // 首个失败原因；成功终态不被迟到取消改写。

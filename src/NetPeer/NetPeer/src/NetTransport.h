@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "NetRelayPoolConfig.h"
 #include "NetPeerMacro.h"
 #include "NetInterface/NetInterfaceAPI.h"
 #include <stdint.h>
@@ -10,15 +11,20 @@ class NetPeerAPI NetTransport : public NetServerChannel
 {
 public:
     /** 首次连接前复制TLS帧池配置；不得与本对象其他调用并发
-    池资源在创建物理连接时申请并验证，失败走原有连接失败路径；不修改其他连接。
+    数值预算在复制前校验，失败保留原配置。物理池资源在创建连接时申请并验证。
     @param [in] config 独立数据/控制记录及正文的基础池配置
-    @return NI_OK配置已复制；状态、内存或不支持错误
+    @return NI_OK配置已复制；参数、状态或内存错误
     */
     virtual int32_t configureConnectionPools(const NetConnectionPoolConfig& config);
 
     /** 创建独占传输资源，初始化失败抛异常
     */
     NetTransport();
+
+    /** 使用独立的传输资源配置创建实例
+    @param [in] config 当前实例的物理池、推进预算与期限
+    */
+    explicit NetTransport(const NetDirectTransportConfig& config);
 
     /** 收敛本实例回调及句柄；监听对象必须仍存活，不得在回调中销毁
     */
@@ -30,11 +36,10 @@ public:
     */
     int32_t configurePeerPool(const LockFreeHashMapPoolConfig& config);
 
-
     /** 监听TCP并使用同源TLS/帧协议；实例只能启动一次
     @param [in] address 数值IPv4/IPv6，0.0.0.0/::须显式指定
     @param [in] port 0至65535，0用于隔离测试
-    @param [in] options server必须为1，证书/私钥调用时复制；entropy为空时使用系统强随机
+    @param [in] options server必须为1，证书/私钥调用时复制；entropy为空时使用已登记字节宿主的强随机回调
     @param [in] listener 借用至shutdown完成，不可空
     @param [in] maxPeers 非零启动预留提示，默认64，实际接纳由连接池决定
     @return 0接纳或负数配置/监听错误
@@ -43,6 +48,7 @@ public:
         NetTransportListener* listener, uint32_t maxPeers = 64);
 
     /** 异步连接；TCP和TLS各自受handshakeTimeoutMs约束
+    地址指针为空、字符串为空、端口非法或取不到本层连接槽时尚未创建宿主，可更正后重试
     @param [in] address 数值地址，TLS验证域名仍使用options.hostname
     @param [in] port 1至65535
     @param [in] options server必须为0，调用时复制；随机上下文若提供须活到shutdown
@@ -89,14 +95,14 @@ public:
     /** 为应用握手、设备和本地服务代次生成强随机字节，不建立网络连接
     @param [out] output size非零时不可空
     @param [in] size 单次最多8192字节
-    @return OK或INVALID_STATE，失败清空输出，不回退到伪随机
+    @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE；有效范围内宿主失败时清零
     */
     static int32_t randomBytes(uint8_t* output, uint32_t size);
 
 public:
     /** 查询本层待发数据是否全部交给下层；只由协议执行者调用
     @param [in] peer 当前连接代次
-    @return OK全部交付，READY仍有本层待发数据，负数失败；不表示远端收到
+    @return NI_OK 表示本层待发为空，NI_READY 表示仍有待发；底层已关闭时返回 NI_INVALID_STATE
     */
     virtual int32_t outputState(uint64_t peer) const;
 

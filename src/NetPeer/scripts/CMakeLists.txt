@@ -293,6 +293,15 @@ def sdk_checked_path(directory, relative):
     return path
 
 
+def sdk_static_header_alias(library):
+    aliases = sdk_setting(library, 'WASM_SDK_ENTRY_ALIAS') or []
+    if not aliases:
+        return None
+    if len(aliases) != 1 or not aliases[0].isidentifier() or aliases[0] == library:
+        raise ValueError('Expected one distinct public SDK header alias for ' + library)
+    return aliases[0]
+
+
 def sdk_header_updates(source, sdk, library, linkage, vendors, data):
     """Return project header writes and record the exact third-party headers prepared by before."""
     public = sdk / 'include' / 'wasm' / library
@@ -305,7 +314,15 @@ def sdk_header_updates(source, sdk, library, linkage, vendors, data):
             relative = path.relative_to(include).as_posix()
             vendor_headers[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
     data['vendorHeaderSha256'] = vendor_headers
-    return {public / relative: payload for relative, payload in contents.items()}
+    updates = {public / relative: payload for relative, payload in contents.items()}
+    alias = sdk_static_header_alias(library) if linkage == 'lib' else None
+    if alias:
+        header = alias + 'API.h'
+        if header not in contents:
+            raise ValueError('Missing public SDK header alias source: ' + header)
+        data['staticHeaderAlias'] = alias
+        updates[public.parent / alias / header] = contents[header]
+    return updates
 
 
 def sdk_receipt_paths(sdk, data):
@@ -320,6 +337,14 @@ def sdk_receipt_paths(sdk, data):
     include = sdk / 'include'
     for relative, digest in project.items():
         yield sdk_checked_path(include / 'wasm' / library, relative), digest
+    alias = sdk_static_header_alias(library) if data.get('kind') == 'static' else None
+    if data.get('staticHeaderAlias') != alias:
+        raise ValueError('Rebuild ' + library + ' to publish the matching static SDK header alias')
+    if alias:
+        header = alias + 'API.h'
+        if header not in project:
+            raise ValueError('Missing SDK provider header in receipt: ' + header)
+        yield sdk_checked_path(include / 'wasm' / alias, header), project[header]
     owners = {sdk_vendor_name(archive) for archive in data.get('vendorSha256', {})}
     for relative, digest in vendors.items():
         if PurePosixPath(relative).parts[0] not in owners:
@@ -1485,6 +1510,14 @@ if(native_prepared_libraries)
     else()
         target_link_libraries(NetPeer PUBLIC ${native_prepared_libraries})
     endif()
+endif()
+
+# SDK 库按文件路径链接，无法携带其 CMake 目标上的原子运行库依赖。
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND BIT MATCHES "^arm(32|64)$")
+    set(NET_PEER_LINUX_ARM_ATOMICS_MODULE "${native_repository}/common/linux/LinuxArmAtomics.cmake"
+        CACHE FILEPATH "Repository atomic link probe for an independently copied Linux ARM source tree")
+    include("${NET_PEER_LINUX_ARM_ATOMICS_MODULE}")
+    target_linux_arm_atomics(NetPeer PUBLIC)
 endif()
 
 # Publish this library's headers only; before/CloudRebuild remains responsible for dependencies.

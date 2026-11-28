@@ -10,6 +10,12 @@ public:
     */
     NetPeerSenderState();
 
+    /** 检查配置或业务操作所需的已准备核心，失败时更新已有门面的诊断
+    @param [in,out] client 调用期间借用的门面，可空
+    @return 是否已有可用核心
+    */
+    static bool requirePrepared(NetPeerSenderState* client);
+
     /** 构造将核心事件送到借用C++监听者的完整回调表
     @return context为本状态的v1表
     */
@@ -65,6 +71,8 @@ public:
     NetPeerClientHandle m_client;
     // 借用至本代所有回调完成；失败重连不能覆盖运行中的监听者。
     NetSessionListener* m_listener;
-    // 最近有返回码操作的诊断，查询和正常poll不清除。
+    // 最近记录的门面操作诊断；状态查询、正常 poll、关闭和票据操作保留原值。
     int32_t m_lastError;
+    // 创建核心期间由本客户端的生命周期执行者置位，直至配置回调结束。
+    bool m_preparing;
 };

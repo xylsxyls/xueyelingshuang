@@ -1,9 +1,8 @@
 ﻿#include "NetPeerMacro.h"
 #include "NetTransportState.h"
+#include "NetHostSocketState.h"
 #include "NetTransportEntropy.h"
 #include <algorithm>
-#include <chrono>
-#include <cstring>
 
 NetTransportPeer::NetTransportPeer() :
 m_pendingOffset(0), m_started(0), m_connected(false), m_ready(false),
@@ -12,22 +11,20 @@ m_closing(false), m_tcpClosed(false), m_reason(0), m_detail(0)
 
 }
 
-/** 按实际连接记录槽大小设置默认存储，不限制每秒连接数
-@return 初始化前可替换的真实池配置
-*/
-static LockFreeHashMapPoolConfig NetTransportPeerPool()
+NetDirectTransportConfig::NetDirectTransportConfig()
 {
-    LockFreeHashMapPoolConfig config;
+    LockFreeHashMapPoolConfig& config = m_peers;
     config.initialCapacity = 128;
     config.maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetTransportPeer>>);
     config.directoryCapacity = 128;
     config.lookupCacheCapacity = 0;
-    return config;
 }
 
-NetTransportState::NetTransportState() :
-m_peerPool(new NetObjectPool<NetTransportPeer>(NetTransportPeerPool())), m_listener(nullptr), m_options(), m_started(false), m_stopping(false),
-m_polling(false), m_now(now())
+NetTransportState::NetTransportState(const NetDirectTransportConfig& config) :
+m_connectionPools(new NetConnectionPoolConfig(config.m_connection)), m_ciphertext(config.m_ciphertext),
+m_payloadLimit(config.m_payloadLimit), m_channel(nullptr, config.m_host),
+m_peerPool(new NetObjectPool<NetTransportPeer>(config.m_peers)), m_listener(nullptr), m_options(), m_started(false), m_stopping(false),
+m_polling(false), m_now(now()), m_frameBudget(config.m_frameBudget), m_outputBudget(config.m_outputBudget), m_drainTimeoutMs(config.m_drainTimeoutMs)
 {
 
 }
@@ -37,28 +34,22 @@ NetTransportState::~NetTransportState()
     shutdown();
     if (!m_privateKey.empty())
     {
-        volatile uint8_t* key = &m_privateKey[0];
-        for (size_t index = 0; index < m_privateKey.size(); ++index)
-        {
-            key[index] = 0;
-        }
+        NetInterface::wipe(m_privateKey.data(), static_cast<uint32_t>(m_privateKey.size()));
     }
 }
 
 uint64_t NetTransportState::now()
 {
-    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count());
+    return NetInterface::monotonicMilliseconds();
 }
 
 int32_t NetTransportState::configure(const NetInterfaceTlsOptions& options,
     NetTransportListener* listener, bool server)
 {
-    if (m_started || m_stopping || listener == nullptr || options.server != (server ? 1 : 0))
+    if (m_payloadLimit == 0 || m_payloadLimit > NET_INTERFACE_DEFAULT_PAYLOAD_LIMIT || m_outputBudget == 0 || m_frameBudget == 0 || m_drainTimeoutMs == 0 || m_started || m_stopping || listener == nullptr || options.server != (server ? 1 : 0))
     {
         return NI_INVALID_ARGUMENT;
     }
-    m_started = true;
     m_options = options;
     if (m_options.entropy == nullptr)
     {
@@ -68,7 +59,7 @@ int32_t NetTransportState::configure(const NetInterfaceTlsOptions& options,
     try
     {
         // 先通过同源TLS验证指针/长度/证书，不能先按不可信长度分配。
-        NetInterfaceConnection validation(m_options);
+        NetInterfaceConnection validation(m_options, m_payloadLimit, *m_connectionPools, m_ciphertext);
         if (validation.status() < 0)
         {
             return validation.status();
@@ -94,6 +85,7 @@ int32_t NetTransportState::configure(const NetInterfaceTlsOptions& options,
             m_options.privateKey = nullptr;
             m_options.privateKeySize = 0;
         }
+        m_started = true;
         m_listener = listener;
         return 0;
     }
@@ -101,6 +93,17 @@ int32_t NetTransportState::configure(const NetInterfaceTlsOptions& options,
     {
         return NI_NO_MEMORY;
     }
+}
+
+NetInterfaceConnection* NetTransportState::writableConnection(uint64_t id) const
+{
+    const auto found = m_peers.find(id);
+    if (m_stopping || found == m_peers.end() || found->second->m_closing || found->second->m_tcpClosed ||
+        NetHostSocketState::pending(m_channel, id, NET_HOST_CLOSED))
+    {
+        return nullptr;
+    }
+    return found->second->m_connection.get();
 }
 
 void NetTransportState::onConnected(uint64_t id)
@@ -125,7 +128,7 @@ void NetTransportState::onConnected(uint64_t id)
     }
     entry->second->m_connected = true;
     entry->second->m_started = m_now;
-    // 暂停到外层poll分配TLS，禁止在同次uv_run中无限创建握手工作。
+    // 暂停读取，交给外层 poll 分配 TLS，限制一次宿主事件分发触发的握手工作。
     const int32_t result = m_channel.pauseRead(id, true);
     if (result < 0)
     {
@@ -180,14 +183,12 @@ void NetTransportState::onClosed(uint64_t id, int32_t reason, int32_t detail)
     NetTransportPeer& peer = *entry->second;
     peer.m_tcpClosed = true;
     peer.m_started = m_now;
-    if (!peer.m_connected || !peer.m_connection)
+    if (!peer.m_connection && !peer.m_closing)
     {
-        if (!peer.m_closing)
-        {
-            peer.m_closing = true;
-            peer.m_reason = reason;
-            peer.m_detail = detail;
-        }
+        // TLS 尚未启动，宿主返回的 EOF 无法证明对端正常关闭。
+        peer.m_closing = true;
+        peer.m_reason = reason == NI_OK ? NET_INTERFACE_TLS_TRUNCATED : reason;
+        peer.m_detail = detail;
     }
     // 已建连接在pump中处理密文尾部和认证关闭，不能把裸TCP EOF算成功。
 }
@@ -208,39 +209,38 @@ void NetTransportState::close(uint64_t id, int32_t reason)
 
 void NetTransportState::pump(uint64_t id, NetTransportPeer& peer)
 {
-    if (peer.m_closing)
+    // 终态已经入队时先按宿主顺序派发，不再新建 TLS 或尝试写入关闭的连接。
+    if (peer.m_closing || NetHostSocketState::pending(m_channel, id, NET_HOST_CLOSED))
     {
         return;
     }
     if (!peer.m_connected)
     {
-        if (m_now - peer.m_started >= m_options.handshakeTimeoutMs)
+        const uint32_t timeout = m_options.effectiveHandshakeTimeout();
+        NetExecution::deadline(timeout, m_now - peer.m_started);
+        if (m_now - peer.m_started >= timeout)
         {
             close(id, NET_INTERFACE_TLS_TIMEOUT);
         }
         return;
     }
-    if (peer.m_tcpClosed && m_now - peer.m_started >= 5000)
+    if (peer.m_tcpClosed)
     {
-        close(id, NET_INTERFACE_TLS_TRUNCATED);
-        return;
+        NetExecution::deadline(m_drainTimeoutMs, m_now - peer.m_started);
+        if (m_now - peer.m_started >= m_drainTimeoutMs)
+        {
+            close(id, NET_INTERFACE_TLS_TRUNCATED);
+            return;
+        }
     }
     if (!peer.m_connection)
     {
-        peer.m_connection.reset(new NetInterfaceConnection(m_options));
-        if (m_connectionPools)
-        {
-            const int32_t configured = peer.m_connection->configurePools(*m_connectionPools);
-            if (configured != NI_OK)
-            {
-                close(id, configured);
-                return;
-            }
-        }
+        peer.m_connection.reset(new NetInterfaceConnection(m_options, m_payloadLimit, *m_connectionPools, m_ciphertext));
+        if (peer.m_connection->status() < 0) { close(id, peer.m_connection->status()); return; }
     }
     bool applicationBlocked = false;
-    uint32_t outputBudget = 65536;
-    for (uint32_t step = 0; step < 64 && !peer.m_closing && !m_stopping; ++step)
+    uint32_t outputBudget = m_outputBudget;
+    for (uint32_t step = 0; step < m_frameBudget && !peer.m_closing && !m_stopping; ++step)
     {
         bool moved = false;
         if (!peer.m_pending.empty())
@@ -314,7 +314,7 @@ void NetTransportState::pump(uint64_t id, NetTransportPeer& peer)
                 outputBudget -= size;
                 moved = true;
             }
-            else if (!NetHostSocket::isBackpressure(written))
+            else if (!NetHostSocket::isBackpressure(written) && !NetHostSocketState::pending(m_channel, id, NET_HOST_CLOSED))
             {
                 close(id, written);
                 break;
@@ -325,7 +325,8 @@ void NetTransportState::pump(uint64_t id, NetTransportPeer& peer)
             break;
         }
     }
-    if (!peer.m_closing && !peer.m_tcpClosed)
+    // 已接纳的输入自带暂停，交付 onData 后才能按 TLS 状态恢复读取。
+    if (!peer.m_closing && !peer.m_tcpClosed && !NetHostSocketState::pending(m_channel, id, NET_HOST_DATA))
     {
         const int32_t paused = m_channel.pauseRead(id, applicationBlocked || !peer.m_pending.empty());
         if (paused < 0)
@@ -384,7 +385,7 @@ void NetTransportState::collectClosed()
         }
         catch (...)
         {
-            // 状态已经删除；终态回调异常不得跨过libuv或导致重复通知。
+            // 连接已回收，终态回调异常只影响本次通知。
         }
     }
 }

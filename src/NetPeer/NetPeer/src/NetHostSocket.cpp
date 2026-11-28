@@ -1,8 +1,6 @@
 ﻿#include "NetHostSocket.h"
 #include "NetPeerMacro.h"
 #include "NetHostSocketState.h"
-#include <cstring>
-#include <utility>
 #include "NetInterface/NetInterfaceAPI.h"
 
 NetHostSocketListener::~NetHostSocketListener()
@@ -10,9 +8,13 @@ NetHostSocketListener::~NetHostSocketListener()
 
 }
 
-NetHostSocket::NetHostSocket(const NetHostFunctions* functions) :
+NetHostSocket::NetHostSocket(const NetHostFunctions* functions) : NetHostSocket(functions, NetHostPoolConfig())
+{
+}
+
+NetHostSocket::NetHostSocket(const NetHostFunctions* functions, const NetHostPoolConfig& pools) :
 m_state(new NetHostSocketState(functions == nullptr ? NetHostSocketState::m_default :
-    (NetHostSocketState::valid(*functions) ? *functions : NetHostFunctions())))
+    (NetHostSocketState::valid(*functions) ? *functions : NetHostFunctions()), pools))
 {
 
 }
@@ -97,11 +99,11 @@ int32_t NetHostSocket::configurePeerPool(const LockFreeHashMapPoolConfig& config
 
 int32_t NetHostSocket::listen(const char* address, uint32_t port, NetHostSocketListener* listener, uint32_t maxPeers)
 {
-    if (address == nullptr || listener == nullptr || port > 65535 || maxPeers == 0)
+    if (listener == nullptr || !NetHostSocketState::validListen(address, port, maxPeers))
     {
         return NI_INVALID_ARGUMENT;
     }
-    const int32_t started = m_state->start(listener, maxPeers, true);
+    const int32_t started = m_state->start(listener, true);
     if (started != NI_OK)
     {
         return started;
@@ -117,9 +119,10 @@ int32_t NetHostSocket::listen(const char* address, uint32_t port, NetHostSocketL
     }
     if (result != 0 || m_state->m_fault != NI_OK)
     {
+        const int32_t error = m_state->m_fault < 0 ? m_state->m_fault : NI_INVALID_STATE;
         m_state->m_listener = nullptr;
         m_state->stop();
-        return NI_INVALID_STATE;
+        return error;
     }
     m_state->m_phase = NET_HOST_ACTIVE;
     return NI_OK;
@@ -128,11 +131,11 @@ int32_t NetHostSocket::listen(const char* address, uint32_t port, NetHostSocketL
 int32_t NetHostSocket::connect(const char* address, uint32_t port, NetHostSocketListener* listener, uint64_t& peer)
 {
     peer = 0;
-    if (address == nullptr || listener == nullptr || port == 0 || port > 65535)
+    if (listener == nullptr || !NetHostSocketState::validConnect(address, port))
     {
         return NI_INVALID_ARGUMENT;
     }
-    const int32_t started = m_state->start(listener, 1, false);
+    const int32_t started = m_state->start(listener, false);
     if (started != NI_OK)
     {
         return started;
@@ -164,11 +167,14 @@ int32_t NetHostSocket::connect(const char* address, uint32_t port, NetHostSocket
     if (result != 0 || peer == 0 || m_state->m_fault != NI_OK)
     {
         peer = 0;
+        const int32_t error = m_state->m_fault < 0 ? m_state->m_fault : NI_INVALID_STATE;
         m_state->m_listener = nullptr;
         m_state->stop();
-        return NI_INVALID_STATE;
+        return error;
     }
     m_state->m_phase = NET_HOST_ACTIVE;
+    // 直连和中继都从这里接纳拨号；下一轮 poll 将推进宿主并登记启动期限。
+    NetExecution::progress();
     return NI_OK;
 }
 
@@ -337,10 +343,6 @@ int32_t NetHostSocket::randomBytes(uint8_t* output, uint32_t size)
     {
         // 宿主异常按熵失败处理，不把未完成的输出用于TLS或会话代次
     }
-    volatile uint8_t* target = output;
-    for (uint32_t index = 0; index < size; ++index)
-    {
-        target[index] = 0;
-    }
+    NetInterface::wipe(output, size);
     return NI_INVALID_STATE;
 }

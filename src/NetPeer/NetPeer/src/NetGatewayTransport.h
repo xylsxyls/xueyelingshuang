@@ -4,6 +4,15 @@
 class NetPeerAPI NetGatewayNativeTransport : public NetGatewayTransport
 {
 public:
+    /** 创建使用默认池的管理运输
+    */
+    NetGatewayNativeTransport();
+
+    /** 为服务管理连接使用独立的运输池
+    @param [in] config 服务运输配置
+    */
+    explicit NetGatewayNativeTransport(const NetLinkTransportConfig& config);
+
     /** 管理监听者保持有效至本对象停止
     */
     virtual ~NetGatewayNativeTransport();

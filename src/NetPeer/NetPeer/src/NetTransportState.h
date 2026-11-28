@@ -42,8 +42,9 @@ class NetTransportState : public NetHostSocketListener
 {
 public:
     /** 初始化独占状态
+    @param [in] config 实例独占的运输配置
     */
-    NetTransportState();
+    explicit NetTransportState(const NetDirectTransportConfig& config);
 
     /** 收敛句柄并擦除自有私钥副本
     */
@@ -57,7 +58,13 @@ public:
     */
     int32_t configure(const NetInterfaceTlsOptions& options, NetTransportListener* listener, bool server);
 
-    /** 推进一个连接，每次最多64步；异常只关闭本连接
+    /** 查询仍允许提交数据和更改编解码设置的 TLS 连接
+    @param [in] id 本实例的连接号
+    @return 借用至执行者下一次推进，连接未创建或已进入关闭流程时返回空
+    */
+    NetInterfaceConnection* writableConnection(uint64_t id) const;
+
+    /** 推进一个连接，每轮最多推进 m_frameBudget 步；异常只关闭本连接
     @param [in] id 连接号
     @param [in,out] peer 独占状态
     */
@@ -114,6 +121,10 @@ public:
 public:
     // 新连接使用的独立TLS帧池配置，连接启动后不可替换
     std::unique_ptr<NetConnectionPoolConfig> m_connectionPools;
+    // 直连双向密文字节预算
+    CEncodeDecodeTlsQueueLimits m_ciphertext;
+    // 单帧正文合法性上限
+    uint32_t m_payloadLimit;
     // 独占字节宿主，监听者就是本对象；不依赖具体TCP库
     NetHostSocket m_channel;
     // 实际连接记录池，必须晚于所有代次状态销毁
@@ -124,7 +135,7 @@ public:
     NetTransportListener* m_listener;
     // 指针均指向下面自有配置或借用随机上下文
     NetInterfaceTlsOptions m_options;
-    // 自有证书/私钥/域名
+    // 客户端校验对端使用的信任根副本
     std::vector<uint8_t> m_authority;
     // 本端证书的独占PEM副本，m_options指向其存储
     std::vector<uint8_t> m_certificate;
@@ -132,12 +143,18 @@ public:
     std::vector<uint8_t> m_privateKey;
     // 客户端TLS校验的期望主机名，运行期不更换
     std::string m_hostname;
-    // 启动/停止/重入状态
+    // 本实例的启动配置已锁定
     bool m_started;
     // 已停止接纳新连接，等待所属运输收敛
     bool m_stopping;
     // 唯一执行者的poll重入守卫，不提供跨线程同步
     bool m_polling;
-    // 当前poll时间及服务端新连接令牌桶时间
+    // 本轮 poll 采样的单调毫秒，用于连接握手和关闭期限
     uint64_t m_now;
+    // 每条连接每轮最多推进的步数，每步最多交付一帧
+    uint32_t m_frameBudget;
+    // 每轮最多输出的密文字节数
+    uint32_t m_outputBudget;
+    // EOF后允许余下输入排空的毫秒数
+    uint32_t m_drainTimeoutMs;
 };

@@ -1,7 +1,4 @@
 ﻿#include "NetFileTransferState.h"
-#include "NetPeerMacro.h"
-#include <algorithm>
-#include <cstring>
 
 NetFileTransferState::NetFileTransferState() :
 m_io(nullptr),
@@ -9,8 +6,10 @@ m_file(0),
 m_waiting(),
 m_job(),
 m_prime(0),
+m_batchData(nullptr), m_batchOffset(0), m_batchSize(0),
 m_resume(0),
 m_now(0),
+m_finalOutputSince(UINT64_MAX),
 m_phase(NET_FILE_TRANSFER_DATA),
 m_failure(NI_OK),
 m_sender(false),

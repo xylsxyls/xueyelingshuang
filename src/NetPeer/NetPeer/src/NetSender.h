@@ -17,14 +17,14 @@ class NetPeerAPI NetPeerNetSender
 {
 public:
     /** 统一初始化接口；本提供方由调用者驱动，不创建工作线程
-    @param [in] count 只支持1，多个并行执行者由NetWork提供
+    @param [in] count 单执行者取 1
     @return 1为NI_OK，0为参数错误，其他为NI_NOT_SUPPORTED
     */
     static int32_t configureWorkers(uint32_t count);
 
     /** 统一连接前配置入口；本提供方仍由同一调用者推进，不改变send/post的交付边界
     @param [in] client 本提供方已prepare且未连接的有效客户端
-    @param [in] parallel 仅NetWork有内部并行执行者，本提供方不创建线程
+    @param [in] parallel 兼容参数，true 和 false 均由所属执行者推进
     @return NI_OK或参数/生命周期错误
     */
     int32_t configureDispatch(NetSenderClient* client, bool parallel);
@@ -41,25 +41,24 @@ public:
     */
     int32_t createClient(NetSenderClient*& client);
 
-    /** 准备独立客户端；桌面默认共享本模块管理的IPC接收器，进程内准备协议上下文。
-    线程：三种提供方均由唯一生命周期owner串行调用，不与本客户端其他接口并发；禁止在协议回调中调用
-    外部接收器仅通过桌面后端在启动前声明，不在共同业务方法中传入进程细节。
+    /** 准备独立客户端的协议会话与提交队列
+    线程：同一提供方的所有客户端共用一个生命周期执行者，由其串行操作，协议回调内禁止调用
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @return NI_OK或负数；可重复调用
     */
     int32_t prepareGateway(NetSenderClient* client);
 
-    /** 连接安全网关；桌面IPC经已配置后端接本机网关，进程内接远端数值IP
-    线程：三种提供方均由唯一生命周期owner串行调用，不与本客户端其他接口并发；禁止在协议回调中调用
+    /** 通过已配置的字节宿主连接远端 TLS 网关
+    线程：同一提供方的所有客户端共用一个生命周期执行者，由其串行操作，协议回调内禁止调用
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @param [in] options v1客户端配置；nonce由核心强随机生成
-    @param [in] listener 借用至停止；桌面和NetPeer回调在poll执行者，NetWork在内部执行者；禁止销毁或等待
+    @param [in] listener 借用至停止，回调由所属执行者推进协议时交付，回调中禁止销毁客户端或同步等待
     @return OK接纳，真实就绪由回调；不降级旧协议
     */
     int32_t connectGateway(NetSenderClient* client, const NetSenderGatewayOptions& options, NetSessionListener* listener);
 
-    /** NTW3逻辑服务端到端TLS连接；桌面经透明IPC，进程内通过注入的原始字节宿主连接网关
-    线程：三种提供方均由唯一生命周期owner串行调用，不与本客户端其他接口并发；禁止在协议回调中调用
+    /** 通过原始字节宿主连接网关，为目标逻辑服务建立端到端 TLS 连接
+    线程：同一提供方的所有客户端共用一个生命周期执行者，由其串行操作，协议回调内禁止调用
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @param [in] product 目标服务号，每对象本代次固定一个目标
     @param [in] options 原v1配置布局，地址/能力/设备/强随机/期限有效，信任根/服务身份内置
@@ -93,7 +92,7 @@ public:
     int32_t configureSubmissionPools(NetSenderClient* client, const NetSenderSubmissionPools& pools);
 
     /** 连接前设置公开无秘密RPC压缩候选，默认空；不压缩身份秘密和文件内容
-    线程：三种提供方均由唯一生命周期owner串行调用，不与本客户端其他接口并发；禁止在协议回调中调用
+    线程：同一提供方的所有客户端共用一个生命周期执行者，由其串行操作，协议回调内禁止调用
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @param [in] types count非零时不可空，仅协议许可的公开命令
     @param [in] count 非负项数，0清空
@@ -101,18 +100,16 @@ public:
     */
     int32_t configureCompression(NetSenderClient* client, const uint32_t* types, uint32_t count);
 
-    /** 非阻塞推进或观察；桌面和NetPeer由单一owner推进，NetWork仅观察内部执行者状态。
-    线程：桌面和NetPeer仅唯一owner推进，禁止重入及回调中调用；NetWork允许外部线程并发观察，但禁止本客户端内部协议回调线程调用。均不得与释放并发
-    NetWork允许并发beginRequest、postRequest、cancelRequest、sendData及关闭；准备、连接、配置和释放仍串行。
-    NetPeer和桌面由后续poll推进队列，NetWork唤醒内部执行者；post不要求创建后台线程。
+    /** 非阻塞推进当前客户端的队列、网络收发和回调
+    线程：仅所属执行者推进，禁止重入及在协议回调中调用，推进期间保持客户端有效
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @return NI_READY本代仍运行（包含连接中），NI_OK已停止，负数为错误
     */
     int32_t pollGateway(NetSenderClient* client);
 
     /** 预留唯一编号，先预留再调用业务SDK构造消息
-    仅预留编号及原期限，不占发送顺序；同一客户端同目标／代次按成功send／post的提交先后交付。NetWork并发时每个生产线程自身仍保序，线程间不约定先后；业务预留号与内部线上号分开，回调始终返回原业务号。
-    线程：NetWork同一客户端允许多生产者并发并可在回调中调用；桌面src/NetSender和NetPeer仅同一执行者串行调用。均不得与配置／连接／释放并发
+    预留编号和期限后，同一客户端、目标和代次按成功 send 或 post 的提交顺序发送，回调使用原业务编号
+    线程：由所属执行者串行调用，协议回调中也可调用，不得与配置、连接或销毁并发
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @param [in] product 非零产品
     @param [in] type 命令
@@ -123,8 +120,8 @@ public:
     int32_t beginRequest(NetSenderClient* client, uint32_t product, uint32_t type, uint32_t timeoutMs, uint64_t& requestId);
 
     /** 投递预留请求到本进程有界发送队列，只能接纳一次
-    提交前登记请求上下文；NetWork的内部执行者可能在调用返回前交付回调。
-    线程：NetWork同一客户端允许多生产者并发并可在回调中调用；桌面src/NetSender和NetPeer仅同一执行者串行调用。均不得与配置／连接／释放并发
+    接纳后由所属执行者继续 poll，业务应答由结果回调报告
+    线程：由所属执行者串行调用，协议回调中也可调用，不得与配置、连接或销毁并发
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @param [in] requestId 当前预留号
     @param [in] bytes 调用期间借用；接纳后由库保留副本
@@ -134,7 +131,7 @@ public:
     int32_t postRequest(NetSenderClient* client, uint64_t requestId, const uint8_t* bytes, uint32_t size);
 
     /** 取消请求并通过listener报告唯一终态
-    线程：NetWork同一客户端允许多生产者并发并可在回调中调用；桌面src/NetSender和NetPeer仅同一执行者串行调用。均不得与配置／连接／释放并发
+    线程：由所属执行者串行调用，协议回调中也可调用，不得与配置、连接或销毁并发
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @param [in] requestId 当前号
     @return OK、NOT_FOUND或负数
@@ -142,28 +139,28 @@ public:
     int32_t cancelRequest(NetSenderClient* client, uint64_t requestId);
 
     /** 投递上层授权的数据流帧到本进程有界发送队列
-    线程：NetWork同一客户端允许多生产者并发并可在回调中调用；桌面src/NetSender和NetPeer仅同一执行者串行调用。均不得与配置／连接／释放并发
+    线程：由所属执行者串行调用，协议回调中也可调用，不得与配置、连接或销毁并发
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @param [in] frame DATA／DATA_ACK或文件CANCEL，产品／流号非零
     @return OK表示帧及载荷已复制并入队，不表示网络发送；背压未接纳，可重试
     */
     int32_t postData(NetSenderClient* client, const NetInterfaceFrame& frame);
 
-    /** 请求正常关闭；桌面和NetPeer继续poll收敛，NetWork由内部执行者收敛
-    线程：NetWork同一客户端允许多生产者并发并可在回调中调用；桌面src/NetSender和NetPeer仅同一执行者串行调用。均不得与配置／连接／释放并发
+    /** 请求关闭当前代次，随后由所属执行者继续 poll 至停止
+    线程：由所属执行者串行调用，协议回调中也可调用，不得与配置、连接或销毁并发
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @param [in] reason 默认0
     */
     void closeGateway(NetSenderClient* client, int32_t reason = 0);
 
     /** 请求关闭，不在调用方等待；继续poll／观察至停止，可重连
-    线程：NetWork同一客户端允许多生产者并发并可在回调中调用；桌面src/NetSender和NetPeer仅同一执行者串行调用。均不得与配置／连接／释放并发
+    线程：由所属执行者串行调用，协议回调中也可调用，不得与配置、连接或销毁并发
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     */
     void uninitGateway(NetSenderClient* client);
 
     /** 由非GUI生命期owner释放完整上下文，仅在实际停止、生产者退出及回调收敛之后调用
-    线程：三种提供方均由唯一生命周期owner串行调用，不与本客户端其他接口并发；禁止在协议回调中调用
+    线程：同一提供方的所有客户端共用一个生命周期执行者，由其串行操作，协议回调内禁止调用
     回调/poll或异步资源未收敛时保留对象，继续推进后重试；成功后须重新createClient再prepare。
     @param [in,out] client 本提供方创建的客户端或空；成功销毁置空，失败保留
     @return NI_OK已释放或原本为空；负数表示未释放，调用方仍须持有对象
@@ -171,49 +168,48 @@ public:
     int32_t destroyClient(NetSenderClient*& client);
 
     /** 真实握手已通过且未关闭
-    线程：NetWork支持同一客户端并发查询；桌面src/NetSender和NetPeer仅同一执行者串行查询。可在回调中查询，不得与生命周期变更并发
+    线程：由所属执行者串行查询，协议回调中也可查询，查询期间保持客户端有效
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @return 是否可提交
     */
     bool gatewayReady(NetSenderClient* client) const;
 
     /** 当前连接代次
-    线程：NetWork支持同一客户端并发查询；桌面src/NetSender和NetPeer仅同一执行者串行查询。可在回调中查询，不得与生命周期变更并发
+    线程：由所属执行者串行查询，协议回调中也可查询，查询期间保持客户端有效
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @return 未建立为0，之后递增
     */
     uint64_t gatewayGeneration(NetSenderClient* client) const;
 
-    /** 最近有返回码操作的诊断；状态查询、成功poll及关闭不清除它。多生产者以各次函数直接返回值为准
-    线程：NetWork支持同一客户端并发查询；桌面src/NetSender和NetPeer仅同一执行者串行查询。可在回调中查询，不得与生命周期变更并发
+    /** 最近记录的准备、配置、连接或业务提交诊断；状态查询、正常 poll、关闭和交付票据操作保留该值。每次调用以直接返回码为准
+    线程：由所属执行者串行查询，协议回调中也可查询，查询期间保持客户端有效
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @return NetInterface结果
     */
     int32_t lastGatewayError(NetSenderClient* client) const;
 
-    /** 提交预留请求，不等待远端回应；NetWork接纳返回，桌面及NetPeer等待本层交付
-    线程：NetWork允许外部生产者并发提交，调用时复制正文；桌面和NetPeer仅同一执行者。均禁止在本对象协议回调／poll中调用
-    提交前登记请求上下文；原生单执行者send内部推进时可交付回调，不能假定回调晚于函数返回。
-    桌面完成边界为ProcessWork共享内存，NetPeer为网络宿主接纳；NetWork为本会话队列接纳，由选定工作者异步组包加密。
-    NetWork须在连接前选择parallel=true的send执行者；同一客户端不得混用send/post。需要交付确认时显式使用beginSendRequest/sendResult。
+    /** 同步提交预留请求，推进至网络宿主接纳全部字节或发生错误
+    线程：由所属执行者串行调用，禁止在本客户端协议回调或 poll 中调用
+    同步推进期间可能交付回调，调用前须登记业务上下文
+    等待计入原请求总期限，事件循环可使用 beginSendRequest 和 sendResult 查询交付票据
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @param [in] requestId 当前未投递的预留号
     @param [in] bytes 调用时复制，size非零时不可空
     @param [in] size 最大1048560字节
-    @return NI_OK表示本提供方接纳边界已完成，不保证远端收到；未接纳的LIMIT可重试，接纳后禁止自动重放
+    @return NI_OK 表示网络宿主已接纳，业务应答由回调报告。仅明确未接纳的背压可重试
     */
     int32_t sendRequest(NetSenderClient* client, uint64_t requestId, const uint8_t* bytes, uint32_t size);
 
-    /** 提交已授权的流帧，责任边界与sendRequest相同；NetWork不等待后台加密或网络交付
-    线程：NetWork允许外部生产者并发提交，调用时复制正文；桌面和NetPeer仅同一执行者。均禁止在本对象协议回调／poll中调用
+    /** 同步交付已授权的流帧，使用本客户端提交选项的交付期限，默认 5000 毫秒
+    线程：由所属执行者串行调用，禁止在本客户端协议回调或 poll 中调用
     @param [in] client 本提供方创建的有效客户端；使用期间不得销毁
     @param [in] frame DATA／ACK／文件CANCEL，调用时复制载荷
-    @return NI_OK接纳，负数失败；接纳后的异步失败不代表远端未收到，不能盲目重复流块
+    @return NI_OK 表示网络宿主已接纳，负数表示失败。已接纳帧不应自动重发
     */
     int32_t sendData(NetSenderClient* client, const NetInterfaceFrame& frame);
 
     /** 一次读取同一客户端的代次及就绪快照，不驱动协议
-    线程：NetWork允许生产者查询；其他提供方由唯一执行者调用；均不得与销毁并发
+    线程：由所属执行者串行查询，协议回调中也可查询，查询期间保持客户端有效
     @param [in] client 本提供方有效客户端
     @param [out] generation 失败清零
     @param [out] ready 失败为false
@@ -222,27 +218,27 @@ public:
     int32_t gatewayState(NetSenderClient* client, uint64_t& generation, bool& ready);
 
     /** 非阻塞建立请求交付票据；仅sendResult返回NI_OK后才完成send责任交接
-    线程：NetWork允许生产者调用；其他提供方唯一执行者；禁止本客户端协议回调内调用
+    线程：由所属执行者串行调用，禁止在本客户端协议回调或 poll 中调用
     @param [in] client 本提供方有效客户端
     @param [in] requestId 当前预留请求号
     @param [in] bytes size非零时不可空，接纳时复制
     @param [in] size 正文字节数，受请求额度限制
-    @param [out] ticket 失败清零；接纳后须推进并读取最终结果，不得丢弃票据
+    @param [out] ticket 独立输出失败清零。与正文重叠时返回 NI_INVALID_ARGUMENT，保留输入原值。接纳后须推进并读取最终结果
     @return NI_OK只表示票据已接纳；负数失败，不表示已交付网络
     */
     int32_t beginSendRequest(NetSenderClient* client, uint64_t requestId, const uint8_t* bytes, uint32_t size, uint64_t& ticket);
 
-    /** 非阻塞建立流帧交付票据，sendResult为NI_OK时才表示网络宿主或共享内存交付完成
-    线程：NetWork允许生产者调用；其他提供方唯一执行者；禁止本客户端协议回调内调用
+    /** 非阻塞建立流帧交付票据，sendResult 返回 NI_OK 时网络宿主已接纳
+    线程：由所属执行者串行调用，禁止在本客户端协议回调或 poll 中调用
     @param [in] client 本提供方有效客户端
     @param [in] frame 接纳时复制的帧与正文
-    @param [out] ticket 失败清零；成功后必须查询至终态
+    @param [out] ticket 独立输出失败清零。与帧结构或正文重叠时返回 NI_INVALID_ARGUMENT，保留输入原值。成功后须查询至终态
     @return NI_OK只表示票据接纳，完成需查询sendResult
     */
     int32_t beginSendData(NetSenderClient* client, const NetInterfaceFrame& frame, uint64_t& ticket);
 
     /** 查询并消费交付票据终态，不等待业务应答
-    线程：NetWork允许生产者查询；其他提供方唯一执行者；不得与销毁并发
+    线程：由所属执行者串行查询，协议回调中也可查询，查询期间保持客户端有效
     @param [in] client 创建票据的客户端
     @param [in] ticket 未消费的有效票据，同一票据只有一个查询消费者
     @return NI_READY待交付，NI_OK已交付，负数终态；终态读取后不可重复查询
@@ -260,8 +256,8 @@ public:
     */
     static uint32_t pointerBytes();
 
-    /** 取得密码学强随机；桌面使用系统源，进程内提供方使用已登记宿主
-    线程：桌面可并发；Peer及Work遵守所配置宿主的执行者约束，不与宿主配置并发
+    /** 从已登记的原始字节宿主获取强随机字节
+    线程：遵守已登记宿主的执行者约束，不与宿主配置并发
     @param [out] output size非零时不可空；有效范围在熵源失败时清零
     @param [in] size 0至8192；非法范围不访问输出，0允许空指针
     @return NI_OK、NI_INVALID_ARGUMENT或NI_INVALID_STATE；没有弱随机回退
@@ -270,7 +266,7 @@ public:
 
     /** 取得本提供方的专用配置入口；不创建客户端、线程或连接
     线程：唯一生命周期owner在启动业务执行者前使用，具体方法仍遵守各自配置契约
-    桌面配置IPC目标与接收器；Peer及Work配置网络宿主、备用入口等，不属于通用业务收发
+    通过该入口登记网络宿主或配置客户端的备用网关
     @return 本模块长期有效的借用配置对象，不得delete或跨提供方使用
     */
     static NetSenderBackend& backend();

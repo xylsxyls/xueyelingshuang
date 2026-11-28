@@ -35,30 +35,26 @@ NetHostSocketPeer::~NetHostSocketPeer()
     }
 }
 
-/** 按实际池槽设置默认连接存储，调用方可在启动前覆盖
-@return 预热128槽、最大约8MiB的实际池配置
-*/
-static LockFreeHashMapPoolConfig NetHostSocketPeerPool()
+NetHostPoolConfig::NetHostPoolConfig()
 {
-    LockFreeHashMapPoolConfig config;
+    LockFreeHashMapPoolConfig& config = m_peers;
     config.initialCapacity = 128;
     config.maximumCapacity = 8388608 / sizeof(LockFreeHashMapPoolSlot<NetObjectPoolItem<NetHostSocketPeer>>);
     config.directoryCapacity = 128;
     config.lookupCacheCapacity = 0;
-    return config;
 }
 
-NetHostSocketState::NetHostSocketState(const NetHostFunctions& functions) :
+NetHostSocketState::NetHostSocketState(const NetHostFunctions& functions, const NetHostPoolConfig& pools) :
 m_functions(functions),
 m_instance(nullptr),
 m_listener(nullptr),
-m_bodies(new NetBufferPool(NetBufferPoolConfig())),
-m_peerPool(new NetObjectPool<NetHostSocketPeer>(NetHostSocketPeerPool())),
+m_bodies(new NetBufferPool(pools.m_input)),
+m_peerPool(new NetObjectPool<NetHostSocketPeer>(pools.m_peers)),
+m_eventBudget(pools.m_eventBudget),
 m_eventHead(nullptr),
 m_eventTail(nullptr),
 m_inputSize(0),
 m_lastPeer(0),
-m_queuedBytes(0),
 m_fault(NI_OK),
 m_phase(NET_HOST_IDLE),
 m_server(false),
@@ -76,18 +72,34 @@ bool NetHostSocketState::valid(const NetHostFunctions& functions)
         functions.destroy != nullptr && functions.localPort != nullptr && functions.peerCount != nullptr;
 }
 
-int32_t NetHostSocketState::start(NetHostSocketListener* listener, uint32_t maxPeers, bool server)
+bool NetHostSocketState::validListen(const char* address, uint32_t port, uint32_t maxPeers)
+{
+    return address != nullptr && address[0] != 0 && port <= 65535 && maxPeers != 0;
+}
+
+bool NetHostSocketState::validConnect(const char* address, uint32_t port)
+{
+    return address != nullptr && address[0] != 0 && port > 0 && port <= 65535;
+}
+
+bool NetHostSocketState::pending(const NetHostSocket& socket, uint64_t peer, NetHostEventKind kind)
+{
+    const auto found = socket.m_state->m_peers.find(peer);
+    return found != socket.m_state->m_peers.end() && found->second->m_events[kind].m_queued;
+}
+
+int32_t NetHostSocketState::start(NetHostSocketListener* listener, bool server)
 {
     if (m_phase != NET_HOST_IDLE || m_polling || m_callback)
     {
         return NI_INVALID_STATE;
     }
+    if (!m_eventBudget) { return NI_INVALID_ARGUMENT; }
     if (!valid(m_functions) || (server ? m_functions.listen == nullptr : m_functions.connect == nullptr))
     {
         return NI_NOT_SUPPORTED;
     }
     m_phase = NET_HOST_CREATING;
-    (void)maxPeers;
     if (m_peerPool->status() != NI_OK || m_bodies->status() != NI_OK)
     {
         m_phase = NET_HOST_IDLE;
@@ -121,9 +133,13 @@ void NetHostSocketState::fail(int32_t reason)
     {
         m_fault = reason;
     }
-    if (m_phase != NET_HOST_STOPPED)
+    if (m_phase != NET_HOST_STOPPING && m_phase != NET_HOST_STOPPED)
     {
         m_phase = NET_HOST_STOPPING;
+        if (!m_polling)
+        {
+            NetExecution::progress();
+        }
     }
 }
 
@@ -149,6 +165,11 @@ bool NetHostSocketState::queue(NetHostEventKind kind, uint64_t peer, int32_t rea
     else
     {
         m_eventHead = &event;
+        // 上一次 poll 返回后，宿主操作仍可同步入队；执行者此时还没有派发这条事件。
+        if (!m_polling)
+        {
+            NetExecution::progress();
+        }
     }
     m_eventTail = &event;
     return true;
@@ -198,7 +219,7 @@ void NetHostSocketState::connected(void* context, uint64_t peer)
     {
         auto found = state->m_peers.find(peer);
         if (state->m_phase == NET_HOST_CREATING || state->m_instance == nullptr || peer == 0 || (found == state->m_peers.end() &&
-            ((!state->m_server && state->m_phase != NET_HOST_STARTING) || peer <= state->m_lastPeer)))
+            ((!state->m_server && (state->m_phase != NET_HOST_STARTING || state->m_lastPeer != 0)) || peer <= state->m_lastPeer)))
         {
             state->fail(NI_PROTOCOL_ERROR);
             return;
@@ -286,7 +307,6 @@ void NetHostSocketState::data(void* context, uint64_t peer, const uint8_t* bytes
         {
             return;
         }
-        state->m_queuedBytes += size;
         if (state->m_functions.pauseRead(state->m_instance, peer, 1) != 0)
         {
             state->fail(NI_INVALID_STATE);
@@ -327,6 +347,12 @@ void NetHostSocketState::closed(void* context, uint64_t peer, int32_t reason)
         auto found = state->m_peers.find(peer);
         if (found == state->m_peers.end())
         {
+            // 主动连接只接纳一个编号；同步 EOF 和同步 connected 必须属于同一次拨号。
+            if (!state->m_server && state->m_phase == NET_HOST_STARTING && state->m_lastPeer != 0 && peer != state->m_lastPeer)
+            {
+                state->fail(NI_PROTOCOL_ERROR);
+                return;
+            }
             if (peer != 0 && peer <= state->m_lastPeer)
             {
                 return;
@@ -365,7 +391,7 @@ void NetHostSocketState::closed(void* context, uint64_t peer, int32_t reason)
 void NetHostSocketState::close(uint64_t peer, int32_t reason)
 {
     auto found = m_peers.find(peer);
-    if (found == m_peers.end() || found->second->m_closing)
+    if (found == m_peers.end() || found->second->m_closing || found->second->m_closed)
     {
         return;
     }
@@ -386,8 +412,11 @@ void NetHostSocketState::close(uint64_t peer, int32_t reason)
 
 void NetHostSocketState::dispatch()
 {
-    if (m_eventHead != nullptr) { NetExecution::progress(); }
-    for (uint32_t count = 0; m_eventHead != nullptr && count < 2048; ++count)
+    if (m_eventHead != nullptr)
+    {
+        NetExecution::progress();
+    }
+    for (uint32_t count = 0; m_eventHead != nullptr && count < m_eventBudget; ++count)
     {
         const NetHostSocketEvent event = *m_eventHead;
         m_eventHead->m_queued = false;
@@ -410,7 +439,6 @@ void NetHostSocketState::dispatch()
             if (event.m_kind == NET_HOST_DATA)
             {
                 found->second->m_inputPending = false;
-                m_queuedBytes -= found->second->m_inputSize;
                 m_input.swap(found->second->m_input);
                 m_inputSize = found->second->m_inputSize;
                 found->second->m_inputSize = 0;
@@ -489,7 +517,6 @@ void NetHostSocketState::stop()
     // 终态直接从既有拥有表取走，不因事件槽耗尽或分配失败遗漏关闭通知。
     m_eventHead = nullptr;
     m_eventTail = nullptr;
-    m_queuedBytes = 0;
     clearInput();
     while (!m_peers.empty())
     {
@@ -534,7 +561,7 @@ bool NetHostSocketState::poll()
             }
         }
         dispatch();
-        if (m_phase == NET_HOST_ACTIVE && active == 0 && (m_server || !m_peers.empty()))
+        if (m_phase == NET_HOST_ACTIVE && active == 0 && m_eventHead == nullptr && (m_server || !m_peers.empty()))
         {
             fail(NI_PROTOCOL_ERROR);
         }

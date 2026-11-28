@@ -14,6 +14,11 @@ public:
     */
     NetPeerClientSession();
 
+    /** 在创建时复制本实例使用的运输配置
+    @param [in] config 只作用于此实例
+    */
+    explicit NetPeerClientSession(const NetPeerConfig& config);
+
     /** 先停止共享会话并解除借用，再释放本组合成员
     */
     virtual ~NetPeerClientSession();
@@ -67,4 +72,6 @@ private:
     NetGatewayDiscovery m_discovery;
     // 旧诊断直连拥有的适配，停止协议后才释放
     NetTransport* m_direct;
+    // 每次直接连接独占的传输资源配置
+    NetDirectTransportConfig m_directConfig;
 };

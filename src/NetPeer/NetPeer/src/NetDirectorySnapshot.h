@@ -23,7 +23,7 @@ public:
 
     /** 从调用者值记录建立NI拥有的快照，失败保持空。
     @param [in] nodes 借用至返回
-    @param [in] count 1至64项
+    @param [in] count 非零节点数，所有节点编码后的目录正文合计最多16 KiB
     @return NI结果
     */
     int32_t create(const NetInterfaceDirectoryNodeData* nodes, uint32_t count);

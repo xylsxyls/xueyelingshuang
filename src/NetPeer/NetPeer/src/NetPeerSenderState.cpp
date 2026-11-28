@@ -6,9 +6,18 @@
 NetPeerSenderState::NetPeerSenderState() :
 m_client(nullptr),
 m_listener(nullptr),
-m_lastError(NI_INVALID_STATE)
+m_lastError(NI_INVALID_STATE),
+m_preparing(false)
 {
 
+}
+
+bool NetPeerSenderState::requirePrepared(NetPeerSenderState* client)
+{
+    if (client == nullptr) { return false; }
+    if (client->m_client != nullptr) { return true; }
+    client->m_lastError = NI_INVALID_STATE;
+    return false;
 }
 
 NetPeerClientCallbacks NetPeerSenderState::callbacks()

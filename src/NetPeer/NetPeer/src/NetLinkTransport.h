@@ -1,16 +1,22 @@
 ﻿#pragma once
+#include "NetRelayPoolConfig.h"
 #include "NetPeerMacro.h"
 #include "NetInterface/NetInterfaceAPI.h"
 
 class NetLinkTransportState;
 
-// 原生管理TLS+NTW3+Libuv。网关在这里只解管理消息，业务TLS状态属于逻辑通道端点。
+// 管理运输通过字节宿主承载 TLS 和 NTW3。网关处理管理消息，业务 TLS 状态由逻辑通道端点持有。
 class NetPeerAPI NetLinkTransport
 {
 public:
     /** 创建未启动运输层，不建线程
     */
     NetLinkTransport();
+
+    /** 使用独立的传输资源配置创建实例
+    @param [in] config 当前实例的物理池、推进预算与期限
+    */
+    explicit NetLinkTransport(const NetLinkTransportConfig& config);
 
     /** 同一执行者收敛回调，监听者须仍存活
     */
@@ -22,19 +28,18 @@ public:
     */
     int32_t configurePeerPool(const LockFreeHashMapPoolConfig& config);
 
-
     /** 监听管理和不透明业务通道，只启动一次
     @param [in] address 数值地址
     @param [in] port 0隔离测试或1至65535
     @param [in] options server必须1；公网角色掩码禁止SERVICE
     @param [in] listener 借用至shutdown
-    @param [in] maxPeers为非零预留提示，实际连接存储由宿主池配置控制
+    @param [in] maxPeers 非零预留提示，实际连接存储由宿主池配置控制
     @return NI_OK或错误
     */
     int32_t listen(const char* address, uint32_t port, const NetInterfaceLinkOptions& options,
         NetLinkTransportListener* listener, uint32_t maxPeers = 64);
 
-    /** 异步连接数值地址；管理验证成功才回报ready
+    /** 异步连接数值地址；空地址指针或非法端口可更正后重试，管理验证成功才回报ready
     @param [in] address 数值地址
     @param [in] port 1至65535
     @param [in] options server必须0
