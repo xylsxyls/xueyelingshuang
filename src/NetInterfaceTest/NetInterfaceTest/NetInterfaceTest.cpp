@@ -25,12 +25,26 @@
 #include <stdexcept>
 #include <vector>
 #include <memory>
+#if defined(_WIN32) && defined(_MSC_VER) && _MSC_VER <= 1800
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>
+#endif
 #if defined(_MSC_VER) && defined(_DEBUG)
 #include <crtdbg.h>
 #endif
 #include "../../NetGatewayTest/NetGatewayTest/NetTestTlsCertificateData.h"
 
 #define CHECK_TEST(expr) do { if (!(expr)) { std::fprintf(stderr, "%s:%d: %s\n", __FILE__, __LINE__, #expr); return 1; } } while (false)
+
+/** 按协议使用的统一时基构造测试时间点，避免v120墙钟与运行毫秒混算
+@return 当前协议单调时间点，用于本测试的期限和经过时间
+*/
+static std::chrono::steady_clock::time_point TimerProbeNow()
+{
+    return std::chrono::steady_clock::time_point(std::chrono::milliseconds(NetInterface::monotonicMilliseconds()));
+}
 
 // 手工构造的 NIF2 网络字节序样本，正文含零字节。
 static const uint8_t kFrame[] = {'N','I','F','2',0,2,0,3,0,0,0,7,1,2,3,4,5,6,7,8,0,0,0,3,0,0,0,9,0,0,0,0,0,255,17};
@@ -3814,10 +3828,10 @@ static int CheckRouterHandshake(bool custom, const uint32_t& waited)
     NetExecution owner;
     NetExecutionScope scope(owner);
     owner.begin();
-    const auto start = std::chrono::steady_clock::now();
+    const auto start = TimerProbeNow();
     CHECK_TEST(router.poll() && owner.wait(60000) == NI_OK);
     const uint64_t elapsed = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - start).count());
+        TimerProbeNow() - start).count());
     const uint32_t timeout = custom ? 24000 : 5000;
     CHECK_TEST(waited <= timeout && waited + elapsed + 2 >= timeout);
     owner.begin();
@@ -3827,17 +3841,17 @@ static int CheckRouterHandshake(bool custom, const uint32_t& waited)
     owner.begin();
     CHECK_TEST(router.poll() && owner.wait(60000) == NI_OK);
     const uint64_t sinceReady = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - start).count());
+        TimerProbeNow() - start).count());
     CHECK_TEST(waited <= ping && waited + sinceReady + 2 >= ping);
     if (custom)
     {
         YieldTimerProbe(50);
         transport.m_activityInput = true;
         owner.begin();
-        const auto activity = std::chrono::steady_clock::now();
+        const auto activity = TimerProbeNow();
         CHECK_TEST(router.poll() && !transport.m_activityInput && transport.m_result == NI_READY && owner.wait(60000) == NI_OK);
         const uint64_t processing = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - activity).count());
+            TimerProbeNow() - activity).count());
         CHECK_TEST(waited <= ping && waited + processing + 2 >= ping);
     }
     uint32_t fields[4] = {};
@@ -4583,7 +4597,7 @@ static void WaitTimerProbe(std::chrono::steady_clock::time_point due)
 {
     for (;;)
     {
-        const auto now = std::chrono::steady_clock::now();
+        const auto now = TimerProbeNow();
         if (now >= due) { return; }
         const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(due - now);
         YieldTimerProbe(static_cast<uint32_t>(remaining.count()) + 1);
@@ -4789,27 +4803,27 @@ static int CheckSessionOptions(int64_t retention, const uint32_t& waited, unsign
     CHECK_TEST(client.configureExpiryBudget(2) == NI_INVALID_STATE);
     NetExecution owner;
     NetExecutionScope scope(owner);
-    const auto start = std::chrono::steady_clock::now();
+    const auto start = TimerProbeNow();
     CHECK_TEST(client.poll() && client.ready());
     owner.begin();
     CHECK_TEST(client.poll() && owner.wait(120000) == NI_OK);
     const uint64_t elapsed = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - start).count());
+        TimerProbeNow() - start).count());
     if (heartbeatMode != 0)
     {
         const NetInterfaceFrame pending = {0, 99, 0, static_cast<uint16_t>(heartbeatMode == 1 ? NI_PING : NI_EVENT), 0, nullptr};
         channel.m_event = &pending;
-        YieldTimerProbe(35);
+        WaitTimerProbe(start + std::chrono::milliseconds(35));
         CHECK_TEST(client.poll() && channel.m_event == &pending && channel.m_pings == 1 && client.ready());
         owner.begin();
         CHECK_TEST(client.poll() && owner.wait(120000) == NI_OK);
         const uint64_t sinceReady = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - start).count());
+            TimerProbeNow() - start).count());
         const uint32_t next = heartbeatMode == 1 ? 525 : 325;
         CHECK_TEST(waited <= next && waited + sinceReady + 2 >= next && channel.m_pings == 1);
         const NetInterfaceFrame late = {0, 1, 0, NI_PONG, 0, nullptr};
         channel.m_event = &late;
-        YieldTimerProbe(next + 1);
+        WaitTimerProbe(TimerProbeNow() + std::chrono::milliseconds(next + 1));
         client.poll();
         client.poll();
         CHECK_TEST(!client.ready() && channel.m_closeCalls == 1 && events.m_closes == 1 && events.m_closed == NI_TIMEOUT);
@@ -4835,7 +4849,7 @@ static int CheckSessionOptions(int64_t retention, const uint32_t& waited, unsign
     owner.begin();
     CHECK_TEST(client.poll() && client.beginRequest(0, 9, 25, emptyId) == NI_INVALID_ARGUMENT &&
         emptyId == 0 && owner.wait(120000) == NI_OK && waited > 25);
-    const auto reserved = std::chrono::steady_clock::now();
+    const auto reserved = TimerProbeNow();
     for (unsigned i = 0; i < 3; ++i)
     {
         uint64_t id = 0;
@@ -4843,15 +4857,15 @@ static int CheckSessionOptions(int64_t retention, const uint32_t& waited, unsign
     }
     CHECK_TEST(owner.wait(120000) == NI_OK);
     const uint64_t reservingMs = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - reserved).count());
+        TimerProbeNow() - reserved).count());
     CHECK_TEST(waited <= 25 && waited + reservingMs + 2 >= 25);
-    const auto expired = std::chrono::steady_clock::now() + std::chrono::milliseconds(27);
+    const auto expired = TimerProbeNow() + std::chrono::milliseconds(27);
     WaitTimerProbe(expired);
     CHECK_TEST(client.poll() && events.m_timeouts == (custom ? 1U : 3U));
     if (custom) { CHECK_TEST(client.poll() && events.m_timeouts == 2 && client.poll() && events.m_timeouts == 3); }
     if (!custom)
     {
-        const auto startTime = std::chrono::steady_clock::now();
+        const auto startTime = TimerProbeNow();
         const uint64_t started = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
             startTime.time_since_epoch()).count());
         const uint32_t deadlines[] = {60000, 100, 60000, 100, 50, 100, 50000};
@@ -4950,7 +4964,7 @@ static int CheckSessionRequestOrder()
         channel.m_lastCancel == wire[3] && events.m_results == 4 && events.m_resultId == local[3] &&
         events.m_resultStatus == NI_RPC_CANCELLED && reply(3) && events.m_results == 4);
 
-    const auto start = std::chrono::steady_clock::now();
+    const auto start = TimerProbeNow();
     const uint64_t now = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(start.time_since_epoch()).count());
     const uint32_t elapsed = static_cast<uint32_t>((std::min)(now, uint64_t(10000)));
     CHECK_TEST(client.beginRequestAt(100, 7, 20, now - elapsed, elapsed + 200) == NI_OK &&
@@ -5202,11 +5216,11 @@ static int FrameBackpressure(const uint32_t& waited)
         listener.m_accept = false;
         const uint32_t count = listener.m_calls;
         owner.begin();
-        const auto start = std::chrono::steady_clock::now();
+        const auto start = TimerProbeNow();
         CHECK_TEST(timing.deliver(listener, frame, 0, deadline) == NI_LIMIT_EXCEEDED && deadline == expected &&
             owner.wait(60000) == NI_OK);
         const uint64_t elapsed = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - start).count());
+            TimerProbeNow() - start).count());
         CHECK_TEST(waited <= expected && waited + elapsed + 2 >= expected);
         CHECK_TEST(timing.deliver(listener, frame, expected - 1, deadline) == NI_LIMIT_EXCEEDED && deadline == expected);
         listener.m_accept = true;
@@ -5268,11 +5282,11 @@ static int RecoveryBackoff(const uint32_t& waited)
         session.connectService(7, "127.0.0.1", 8000, tls, hello, &host, &host) == NI_OK);
     for (unsigned step = 1; step <= 2; ++step)
     {
-        const auto watchdog = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-        while (host.m_closes < step && std::chrono::steady_clock::now() < watchdog)
+        const auto watchdog = TimerProbeNow() + std::chrono::seconds(2);
+        while (host.m_closes < step && TimerProbeNow() < watchdog)
         {
             owner.begin();
-            const auto start = std::chrono::steady_clock::now();
+            const auto start = TimerProbeNow();
             CHECK_TEST(session.poll());
             if (host.m_closes != step)
             {
@@ -5281,7 +5295,7 @@ static int RecoveryBackoff(const uint32_t& waited)
             }
             CHECK_TEST(host.m_closed == NI_PROTOCOL_ERROR && owner.wait(120000) == NI_OK);
             const uint64_t elapsed = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - start).count());
+                TimerProbeNow() - start).count());
             const uint32_t expected = step == 1 ? 16 : 20;
             CHECK_TEST(waited <= expected && waited + elapsed + 2 >= expected);
         }
@@ -5318,8 +5332,8 @@ static int DispatchRecovery(bool timeout)
         dispatch.started(session.generation(), 7) == NI_OK);
     for (uint64_t expected = 1; expected <= 2; ++expected)
     {
-        const auto watchdog = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-        while (host.m_closes < expected && std::chrono::steady_clock::now() < watchdog)
+        const auto watchdog = TimerProbeNow() + std::chrono::seconds(3);
+        while (host.m_closes < expected && TimerProbeNow() < watchdog)
         {
             dispatch.poll();
             if (host.m_closes < expected) { YieldTimerProbe(); }
@@ -5510,17 +5524,17 @@ static int RecoveryWait()
             NetExecution owner;
             NetExecutionScope scope(owner);
             owner.begin();
-            const auto start = std::chrono::steady_clock::now();
+            const auto start = TimerProbeNow();
             CHECK_TEST(session.connectService(7, "127.0.0.1", 8000, tls, options, &host) == NI_OK);
             CHECK_TEST(session.poll() && discovery.m_attempts == 1 && owner.wait(120000) == NI_OK);
             const uint64_t elapsed = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - start).count());
+                TimerProbeNow() - start).count());
             CHECK_TEST(waited <= expected[i] && elapsed + waited + 2 >= expected[i]);
             if (i == 0)
             {
                 discovery.m_provide = true;
-                const auto watchdog = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-                while (discovery.m_attempts < 2 && std::chrono::steady_clock::now() < watchdog)
+                const auto watchdog = TimerProbeNow() + std::chrono::seconds(3);
+                while (discovery.m_attempts < 2 && TimerProbeNow() < watchdog)
                 {
                     CHECK_TEST(session.poll());
                     YieldTimerProbe();
@@ -5553,14 +5567,14 @@ static int RecoveryWait()
                 session.configureRecovery(90000, 250, 5000) == NI_OK);
             NetExecution owner;
             NetExecutionScope scope(owner);
-            const auto start = std::chrono::steady_clock::now();
+            const auto start = TimerProbeNow();
             CHECK_TEST(session.connectService(7, "127.0.0.1", 8000, tls, hello, &host, &host) == NI_OK);
             owner.begin();
             CHECK_TEST(session.poll() && owner.wait(120000) == NI_OK && waited == 0);
             owner.begin();
             CHECK_TEST(session.poll() && host.m_offered != 0 && owner.wait(120000) == NI_OK);
             const uint64_t elapsed = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - start).count());
+                TimerProbeNow() - start).count());
             const uint32_t limit = i ? 2100 : 30000;
             CHECK_TEST(waited <= limit && waited + elapsed + 2 >= limit &&
                 session.configureServiceTimeouts(100, 500) == NI_INVALID_STATE);
@@ -5606,12 +5620,12 @@ static int RouterHandshake()
         if (fault == 5)
         {
             transport.m_deferHello = true;
-            WaitTimerProbe(std::chrono::steady_clock::now() + std::chrono::milliseconds(101));
+            WaitTimerProbe(TimerProbeNow() + std::chrono::milliseconds(101));
             CHECK_TEST(router.poll() && transport.m_result == NI_NEED_MORE);
             transport.m_deferHello = false;
             transport.m_deferReply = true;
             CHECK_TEST(router.poll() && transport.m_result == NI_NEED_MORE && transport.m_pingId == 0);
-            WaitTimerProbe(std::chrono::steady_clock::now() + std::chrono::milliseconds(101));
+            WaitTimerProbe(TimerProbeNow() + std::chrono::milliseconds(101));
             CHECK_TEST(router.poll() && transport.m_result == NI_NEED_MORE && transport.m_pingId == 0);
             transport.m_deferReply = false;
         }
@@ -5619,11 +5633,11 @@ static int RouterHandshake()
             NetExecution owner;
             NetExecutionScope scope(owner);
             owner.begin();
-            const auto start = std::chrono::steady_clock::now();
+            const auto start = TimerProbeNow();
             CHECK_TEST(router.poll() && transport.m_result == NI_READY && transport.m_pingId == 0 &&
                 owner.wait(5000) == NI_OK);
             const uint64_t elapsed = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - start).count());
+                TimerProbeNow() - start).count());
             CHECK_TEST(waited <= pools.m_heartbeat.m_pingIntervalMs &&
                 waited + elapsed + 2 >= pools.m_heartbeat.m_pingIntervalMs);
             return 0;
@@ -5633,17 +5647,17 @@ static int RouterHandshake()
         {
             // 保持无输入至接收期限，再交付 PING 并验证未向过期连接回复 PONG。
             transport.m_activityInput = true;
-            WaitTimerProbe(std::chrono::steady_clock::now() + std::chrono::milliseconds(pools.m_heartbeat.m_receiveTimeoutMs));
+            WaitTimerProbe(TimerProbeNow() + std::chrono::milliseconds(pools.m_heartbeat.m_receiveTimeoutMs));
             CHECK_TEST(router.poll() && transport.m_result == NI_TIMEOUT && transport.m_activityInput);
             continue;
         }
-        WaitTimerProbe(std::chrono::steady_clock::now() + std::chrono::milliseconds(pools.m_heartbeat.m_pingIntervalMs));
+        WaitTimerProbe(TimerProbeNow() + std::chrono::milliseconds(pools.m_heartbeat.m_pingIntervalMs));
         CHECK_TEST(router.poll() && transport.m_pingId != 0);
         if (fault <= 3) { CHECK_TEST(transport.m_result == reasons[fault - 1]); }
         else
         {
             transport.m_pongDue = true;
-            WaitTimerProbe(std::chrono::steady_clock::now() + std::chrono::milliseconds(pools.m_heartbeat.m_pongTimeoutMs));
+            WaitTimerProbe(TimerProbeNow() + std::chrono::milliseconds(pools.m_heartbeat.m_pongTimeoutMs));
             CHECK_TEST(router.poll() && transport.m_result == NI_TIMEOUT);
         }
     }
@@ -5867,8 +5881,7 @@ static int CheckRouterStorage(int64_t retention, const uint32_t& waited, bool ex
             std::chrono::system_clock::now().time_since_epoch()).count());
     };
     const auto steadyMillis = []() -> uint64_t {
-        return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count());
+        return NetInterface::monotonicMilliseconds();
     };
     uint8_t payload[NET_INTERFACE_FILE_INFO_SIZE];
     uint64_t ids[3] = {};
@@ -5949,7 +5962,7 @@ static int CheckRouterStorage(int64_t retention, const uint32_t& waited, bool ex
             CHECK_TEST(router.receiveClient(source, frame) == NI_OK);
         }
         CHECK_TEST(router.pendingCount() == 3);
-        const auto due = std::chrono::steady_clock::now() + std::chrono::milliseconds(2050);
+        const auto due = TimerProbeNow() + std::chrono::milliseconds(2050);
         WaitTimerProbe(due);
         for (unsigned i = 0; i < 3; ++i)
         {
@@ -6091,9 +6104,9 @@ static int RouterPollBudgets()
 {
     CHECK_TEST(RelatedRequestTimeouts() == 0);
 #if defined(__EMSCRIPTEN__)
-    const auto before = std::chrono::steady_clock::now();
+    const auto before = TimerProbeNow();
     YieldTimerProbe(2050);
-    CHECK_TEST(std::chrono::steady_clock::now() - before >= std::chrono::milliseconds(2050));
+    CHECK_TEST(TimerProbeNow() - before >= std::chrono::milliseconds(2050));
 #endif
     return WithWaitProbe([](const uint32_t& waited) -> int { return CheckRouterStorage(4096, waited, true); });
 }
@@ -6185,10 +6198,10 @@ static int CheckLinkTimers(NetInterfaceLink& client, NetInterfaceLink& server, b
     }
     auto checkWait = [&](NetInterfaceLink& link, uint64_t now, uint32_t expected) -> bool {
         owner.begin();
-        const auto start = std::chrono::steady_clock::now();
+        const auto start = TimerProbeNow();
         if (link.progress(now) != NI_READY || owner.wait(60000) != NI_OK) { return false; }
         const uint64_t elapsed = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - start).count());
+            TimerProbeNow() - start).count());
         return waited <= expected && waited + elapsed + 2 >= expected;
     };
     const uint32_t idle = custom ? 9000 : 15000;
@@ -6522,7 +6535,7 @@ static int CheckQueuedHeartbeat(NetInterfaceConnection& sender, NetInterfaceConn
         session.connect("127.0.0.1", 9001, options, hello, &events) == NI_OK && session.poll() && session.ready());
     for (uint32_t id = 1; id <= 2; ++id)
     {
-        WaitTimerProbe(std::chrono::steady_clock::now() + std::chrono::milliseconds(heartbeat.m_pingIntervalMs + 1));
+        WaitTimerProbe(TimerProbeNow() + std::chrono::milliseconds(heartbeat.m_pingIntervalMs + 1));
         owner.begin();
         const uint8_t* bytes = nullptr;
         uint32_t size = 0;
@@ -6827,7 +6840,7 @@ static int CheckDispatchBudget(uint32_t commands, uint32_t bytes, size_t expecte
     if (commands == 10 && bytes == 3)
     {
         const uint32_t prior = events.m_timeouts;
-        const auto start = std::chrono::steady_clock::now();
+        const auto start = TimerProbeNow();
         CHECK_TEST(submission.begin(7, 11, 250, id) == NI_OK && id);
         owner.begin();
         CHECK_TEST(dispatch.poll() && owner.wait(5000) == NI_OK && waited <= 250);
@@ -6926,7 +6939,7 @@ static int CheckDispatchClose()
             {
                 CHECK_TEST(dispatch.submission().send(queued, body, sizeof(body)) == NI_OK);
                 channel.m_pingResult = NI_CANCELLED;
-                WaitTimerProbe(std::chrono::steady_clock::now() + std::chrono::milliseconds(heartbeat.m_pingIntervalMs + 1));
+                WaitTimerProbe(TimerProbeNow() + std::chrono::milliseconds(heartbeat.m_pingIntervalMs + 1));
             }
             dispatch.poll();
             if (events.m_firstResultStatus != expected || events.m_resultStatus != expected)
@@ -7082,12 +7095,12 @@ static int FileProtocolFacade()
 template <typename Server>
 static bool SilentTlsStep(Server& server, NetExecution& owner, const uint32_t& waited, uint64_t now, int32_t state, uint32_t budget)
 {
-    const auto start = std::chrono::steady_clock::now();
+    const auto start = TimerProbeNow();
     owner.begin();
     const int32_t result = server.progress(now);
     if (owner.wait(60000) != NI_OK) { return false; }
     const uint64_t elapsed = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - start).count());
+        TimerProbeNow() - start).count());
     if (result != state || waited > budget || waited + elapsed + 1 < budget)
     {
         std::fprintf(stderr, "silent TLS status %d expected %d, wait %u expected %u ms\n", result, state, waited, budget);
@@ -7702,6 +7715,44 @@ static int SubmissionProducers()
     return 0;
 }
 
+/** 从平台参考时钟直接取样，Wasm沿用本测试已有的单调时钟链接包装
+@param [out] milliseconds 成功时为与被测平台匹配的单调毫秒
+@return 平台取样成功返回true
+*/
+static bool ReferenceMonotonicMilliseconds(uint64_t& milliseconds)
+{
+#if defined(_WIN32) && defined(_MSC_VER) && _MSC_VER <= 1800
+    milliseconds = ::GetTickCount64();
+#elif defined(__EMSCRIPTEN__)
+    struct timespec value = {};
+    if (::clock_gettime(CLOCK_MONOTONIC, &value) != 0) { return false; }
+    milliseconds = static_cast<uint64_t>(value.tv_sec) * 1000 + static_cast<uint64_t>(value.tv_nsec / 1000000);
+#else
+    milliseconds = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count());
+#endif
+    return true;
+}
+
+/** 夹逼实际公开取时及提交端取时，并核对连续调用非递减，不修改系统时间
+@return 256组平台参考及两个公开入口全部一致返回0
+*/
+static int MonotonicClock()
+{
+    uint64_t previous = 0;
+    for (uint32_t sample = 0; sample < 256; ++sample)
+    {
+        uint64_t before = 0, after = 0;
+        CHECK_TEST(ReferenceMonotonicMilliseconds(before));
+        const uint64_t current = NetInterface::monotonicMilliseconds();
+        const uint64_t submission = NetSenderSubmission::now();
+        CHECK_TEST(ReferenceMonotonicMilliseconds(after));
+        CHECK_TEST(before <= current && current <= submission && submission <= after && previous <= current);
+        previous = submission;
+    }
+    return 0;
+}
+
 /** 按稳定编号选择用例，返回库测试调度器的退出码
 @param [in] argc 参数个数
 @param [in] argv 命令行参数
@@ -7769,7 +7820,8 @@ try
         {CaseDirectoryHandles, false, DirectoryHandles},
         {CaseRoutingBoundaries, false, RoutingBoundaries},
         {CaseSubmissionProducers, true, SubmissionProducers},
-        {CaseObjectReferences, false, ObjectReferences}
+        {CaseObjectReferences, false, ObjectReferences},
+        {CaseMonotonicClock, false, MonotonicClock}
     };
     if (argc == 1 || (argc == 2 && std::strcmp(argv[1], "--all") == 0))
     {

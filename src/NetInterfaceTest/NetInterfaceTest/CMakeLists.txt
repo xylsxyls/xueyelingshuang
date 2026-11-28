@@ -69,5 +69,6 @@ build_sdk_test(NetInterfaceTest PROJECTS NetInterface NetChannel CStringManager 
 target_include_directories(NetInterfaceTest PRIVATE "${SDK_ROOT}/include/mbedtls")
 if(EMSCRIPTEN)
     # 仅测试可执行文件模拟单调时间，避免同步用例阻塞单线程宿主。
-    target_link_options(NetInterfaceTest PRIVATE "-Wl,--wrap=clock_gettime")
+    target_link_options(NetInterfaceTest PRIVATE "-Wl,--wrap=clock_gettime"
+        "-sEXPORTED_RUNTIME_METHODS=callMain,FS")
 endif()

@@ -107,7 +107,7 @@ Linux 和 Linux ARM 的 SDK 静态归档沿用生产库声明的 rt 与 atomic �
 
 34 发送端压缩配置（瞬时）。独立 TLS 对端解密后读取 NIF2 字节。4096 字节样本在门槛 4096 时压缩、4097 时原样发送。等级 1 和 9 的压缩字节与直接调用 Compress 的结果比对。验证等级 0、零门槛、启动前重配及无效等级，均检查失败后先前配置的实际效果。未列入白名单、文件控制、事件、无收益短正文和不可压缩正文应逐字节原样交付。协商紧凑格式后，独立 TLS 对端逐字节比对九帧 DATA。编号增加 1、3、127、128、UINT32_MAX 时核对相应的紧凑头。增加 UINT32_MAX+1、编号回退和重新协商时均应使用完整头。
 
-35 直连生命周期、业务缓存与心跳（瞬时）。让总无输入和 PONG 期限分别先到，即便到期后的首次轮询恰有匹配 PONG，观察者也须收到唯一一次 NI_TIMEOUT 关闭。底层拒绝、异常或返回零连接号时，首次连接的代次应保持零，可以继续设置池、心跳、超时预算及正文缓存。每次失败只停止一次通道。重试接纳后代次应为1，后续失败应保留最近一次接纳的代次。显式 shutdown 后重新连接需要绑定通道。持续抛异常的 poll 应当场报告唯一关闭和在途请求终态，并保留先前主动关闭的原因。运输 close 抛异常后，下一次 poll 或 shutdown 须停止适配器一次并保留首次关闭原因；在帧回调中触发此故障时，须等运输交付返回后才停止。收尾前已绑定通道和各项初始配置仍受保护，收尾后可替换压缩白名单，首次连接限定的配置仍拒绝。真实 HELLO 应答后，等待宿主分别观察到默认30000及自定义11000毫秒空闲期限。依次接纳40、8192字节和零字节 RPC，另行解析并逐字节核对，末次收到空正文。默认预算只保留小缓冲，0在每次交付后释放，-1在会话内复用；关闭后容量均为零。非法参数保留前值，连接后重配返回 NI_INVALID_STATE。三个请求同时超时时分别检查自定义每轮一个回调及默认一次结算全部。PONG 发送背压或业务事件监听者拒收时，同一帧反复交付仍应按最后一次接纳的时间发起空闲 PING。另让传输实际接纳一次 PING 但不回应，分别核对总无输入和 PONG 两个期限先到的等待值。
+35 直连生命周期、业务缓存与心跳（瞬时）。让总无输入和 PONG 期限分别先到，即便到期后的首次轮询恰有匹配 PONG，观察者也须收到唯一一次 NI_TIMEOUT 关闭。底层拒绝、异常或返回零连接号时，首次连接的代次应保持零，可以继续设置池、心跳、超时预算及正文缓存。每次失败只停止一次通道。重试接纳后代次应为1，后续失败应保留最近一次接纳的代次。显式 shutdown 后重新连接需要绑定通道。持续抛异常的 poll 应当场报告唯一关闭和在途请求终态，并保留先前主动关闭的原因。运输 close 抛异常后，下一次 poll 或 shutdown 须停止适配器一次并保留首次关闭原因；在帧回调中触发此故障时，须等运输交付返回后才停止。收尾前已绑定通道和各项初始配置仍受保护，收尾后可替换压缩白名单，首次连接限定的配置仍拒绝。真实 HELLO 应答后，等待宿主分别观察到默认30000及自定义11000毫秒空闲期限。依次接纳40、8192字节和零字节 RPC，另行解析并逐字节核对，末次收到空正文。默认预算只保留小缓冲，0在每次交付后释放，-1在会话内复用；关闭后容量均为零。非法参数保留前值，连接后重配返回 NI_INVALID_STATE。三个请求同时超时时分别检查自定义每轮一个回调及默认一次结算全部。PONG 发送背压或业务事件监听者拒收时，同一帧反复交付仍应按最后一次接纳的时间发起空闲 PING。另让传输实际接纳一次 PING 但不回应，分别核对总无输入和 PONG 两个期限先到的等待值。短等待须按协议使用的单调时钟核对已经经过的时间；系统 sleep 提前返回时补足剩余时间，再触发边界操作，不能把请求睡眠时长直接当作实际经过时长。
    已设置池时，非法地址指针、端口、监听者、TLS 时限或 HELLO 参数均应在通道接到配置前被拒绝。随机源失败也应保留零代次和零配置调用。改正输入后可继续使用同一会话。默认通道关闭紧凑帧返回 NI_OK，尝试启用返回 NI_NOT_SUPPORTED。在空闲 poll 后提交非法预留，等待预算仍沿用心跳；预留 25 毫秒请求后，本轮 wait 应立即采用其剩余期限。直接调用 NetSession::connectWithPools 并提供零控制轮转预算，预期同样拒绝且不进入通道。混合期限场景中从堆内取消两项，余下超时通知按原号104、101、103、105抵达，仍未到期的100可正常取消。
    直连适配器在 connect 中抛出普通异常或分配异常时，分别返回 NI_INVALID_STATE 或 NI_NO_MEMORY，未接纳连接没有关闭通知，原会话可重试。接纳后先请求以 NI_TIMEOUT 关闭、再请求取消时，运输只收到一次关闭请求。排队的就绪事件不得重新启动 HELLO，已送达 HELLO 后才开始关闭时，迟到的真实握手应答也不得让会话重新就绪，shutdown 在运输没有回报时仍应交付最初的 NI_TIMEOUT。
    已有待办请求时，运输在 poll 中不再持有资源且没有关闭回调，应在同一轮交付 NI_RPC_UNAVAILABLE 和 NI_TRUNCATED。本地主动取消则交付 NI_RPC_CANCELLED 和 NI_CANCELLED。再次推进和停止均不应重发终态。
@@ -146,16 +146,27 @@ Linux 和 Linux ARM 的 SDK 静态归档沿用生产库声明的 rt 与 atomic �
 49 请求路由与通道（瞬时）。检查来源号与路由号的双向查询、错误产品和已完成请求，通用处理器重复注册，连接池非法配置、初始会话和默认运输接口的返回值。
 50 并发提交（压力）。静态库占用唯一的请求索引保护记录，此时新索引查询应报 NI_LIMIT_EXCEEDED，执行线程仍应能导入已接纳的完整发送正文并识别原请求。反复启动代号 1 和 2，只对代号 1 报告握手完成。并发读者取得的快照中代号 2 应始终未就绪；单线程宿主逐个检查两次发布的状态。四个生产者各预留64个请求，核对256个不同编号和关闭后返回值及清零的输出。单线程 Wasm 按相同输入串行执行。多线程构建由四个执行线程同时开始。静态库另直接调用生产代码的竞争让步函数，默认 64 次为一周期。逐次检查第 1 至 63 次的计数、第 64 次归零及下一次重新计 1。
 51 对象池与引用（瞬时）。两槽池满时创建第三个对象应被拒绝。分别将根引用复制或移动赋值为它持有的子引用，预期父对象恰好析构一次、子对象仍存活。逐次检查构造失败后槽复用、空引用、自赋值、裸所有权归还和最终析构次数。
+52 单调时钟（瞬时）。连续256组先后采样平台参考、NetInterface::monotonicMilliseconds、NetSenderSubmission::now及平台参考；两次公开读数须落在前后参考之间，且不得倒退。VS2013及更早MSVC参考直接使用GetTickCount64，Wasm使用clock_gettime(CLOCK_MONOTONIC)并沿用测试已有的模拟推进，其他工具链参考其标准steady_clock。无需校准或修改系统时间，也不添加固定等待。v120误回退到墙钟时将不在GetTickCount64区间内。协议内部取时已统一；调用方显式传入now的接口仍要求同一单调时钟，不能混用UTC。
 --link-timers 在已认证的管理链路上连续排队两个通道的业务记录，分别验收成功后 wait 为零、正文池或记录池拒收后仍可等待 60000 毫秒，并逐条核对交付顺序和正文。
 静态库的 --link-timers 还使用同一向量存放挑战和签名。验证端以独立保存的原始挑战验签，改动一个字节后必须拒绝。
 --link-timers 还检查服务角色和本地节点的必需回调。缺少服务证明回调或允许服务角色却未提供校验回调时，创建应返回 NI_INVALID_ARGUMENT。两端配置齐全时创建成功；服务宿主在实际握手中拒绝提供证明，服务侧应报告 NI_PROTOCOL_ERROR，仅调用一次证明回调，节点不得进入就绪或发出授权。
 --link-timers 先用97个不含终止符的字节作节点名称，构造结果应为 NI_INVALID_ARGUMENT。声明长度非零而指针为空、或长度为4097字节时，创建须返回 NI_INVALID_ARGUMENT 并清空输出句柄。传入4096字节含 NUL 的声明后改写原缓冲，对端仍应逐字节读到最初的声明，反向无声明的长度和指针均为零。随后通过不透明句柄建立独立认证链路，核对对端名称、证书、完整高低位编号、两个方向的控制帧及隧道正文，最后验证 EOF 后的持续错误。
 
-功能验证结果（2026-11-27）
-Windows x64 Release 静态库、Win32 Debug 静态库、Win32 Debug DLL、Node Wasm32 和 Wasm64 Release 均通过 --all。每组实际执行 51 个不同编号，47 项瞬时、4 项压力，另用隔离测试身份运行 --link-timers，退出码均为 0。DLL 运行导出接口的检查，依赖未导出符号的白盒分支由静态库运行。50 号在 Windows 使用实际生产者线程，在单线程 Wasm 核对串行提交语义。
-42 号验证宿主随机源部分写入后返回失败、抛异常及未提供回调三种路径，状态码、擦除范围、保护字节及调用次数均符合预期。48 号验证证书申请的固定缓冲区和字符串对象重叠时保留调用方数据，独立输出仍能生成并校验 CSR。
-Wasm32 和 Wasm64 另对 NetInterface 和测试代码启用未定义行为检测，两组完整编号用例及认证时限专项均通过。Windows x64 和两种常规 Wasm 构建另核对了默认、瞬时、压力、指定编号与非法编号入口。指定 48,42,48 只执行两个不同编号，指定 52 返回失败且不执行用例。上述三组构建还将 51 个编号分别放入独立进程，逐个运行，全部通过。
-Linux、Linux ARM、macOS、Android、iOS 已核对源码平台分支、目标架构选择和构建链接配置，缺少实机运行结果。
+功能验证结果（2026-11-28）
+六种配置均通过 --all。每组52个不同编号（48瞬时、4压力），共312次编号执行，通过312、失败0、取消0、未执行编号0、删除跳过0。各配置另用隔离NGI3身份运行 --link-timers，6次专项全部通过。DLL 检查导出接口，依赖未导出符号的白盒分支由静态库检查。50号在 Windows 使用实际生产者线程，单线程 Wasm 核对串行提交语义。
+以下为功能批次耗时，不是接口性能数据，--all 六组合计31.313秒。路径相对 src/temp/NetPeer-audit-1402/，结果归位后删除临时产物。
+Windows Win32 Debug 静态库，52/52通过，9.303秒。debug/sdk/lib/NetInterfaceTestd.exe SHA256 E7FBBEFC069DC9B88862014C832B50BC4A2BE73B295D16F8ADB1051E6D5E5631。
+Windows Win32 Debug 共享 DLL，52/52通过，7.666秒。debugdll/sdk/lib/NetInterfaceTestd.exe SHA256 434CECBA56D9164B477483E28F19A7609157DF80CEBFDEB1778EBCC0A66642E7。
+    NetInterfaced.dll SHA256 B1DCF50DE458F3C8D90339043291FDC518DDF025FF5186C4E28B4DBABF412830。
+Windows x64 Release 静态库，52/52通过，7.309秒。release/sdk/lib/NetInterfaceTest.exe SHA256 8762F40BB8CFC22942EC5E2FA03A65A76B68D6798FEF5996E84D967EF9601C9E。
+Windows x64 Release 共享 DLL，52/52通过，5.948秒。releasedll/sdk/lib/NetInterfaceTest.exe SHA256 D5F142F3AEFE41D7D82A56A2D3B388586E8E0D09F32053A341F7166D086819A2。
+    NetInterface.dll SHA256 B8FF2C0BE3B492C2E2F15AC15BDE3EB258FF6E44D4F55830213494BF784B6C03。
+Node Wasm32 Release，52/52通过，0.491秒。wasm32/ni-test/NetInterfaceTest.wasm SHA256 233AC36E112B0ED27E9B6B7D8A8337D2B5C6BD69CB1B0CF69161262DF60F300B。
+    NetInterfaceTest.js SHA256 B5F0FB1FA7B08FF3D796A40F2876DD0AA0175E978B7B2C910AA2FAA6B43458C3。
+Node Wasm64 Release，52/52通过，0.596秒。wasm64/ni-test/NetInterfaceTest.wasm SHA256 6475E8F91671A3AB6CFE7E147E6BEF5778CE174F93BEF051849CC655C24D9987。
+    NetInterfaceTest.js SHA256 DD0A55208911A05339443E8325EF4F835CF7ACDF470D06D1A69C20346CFF0B14。
+52号以真实平台参考夹逼公开时钟，35号短等待以实际协议时钟达到期限为前提；不修改系统时间。Wasm 测试中的 clock_gettime 包装仅用于受控推进协议时间，Windows 使用真实时钟。当前批次未运行未定义行为检测，也未重复逐编号独立进程矩阵，不能沿用其他批次的结论。
+Linux、Linux ARM、macOS、Android、iOS 仅核对源码及平台选择，缺少实机运行结果。Wasm运行于Node，浏览器、微信和大端ARM实机未测。本轮未运行性能基准。
 
 性能入口与数据状态
 --benchmark 单独运行，--all 不启动计时。interface.encode1024 只测一个固定 NIF2 帧，正文1024字节，
@@ -163,7 +174,7 @@ Linux、Linux ARM、macOS、Android、iOS 已核对源码平台分支、目标�
 固定编码会检查长度参数重叠。当前版本缺少性能测试数据，本次仅执行功能回归。紧凑编码、RPC、NVE2 事件、NOI2 本地服务信封、压缩等级和门槛、TLS、文件和路由等场景也缺少可比的专项耗时。随机回调、密码派生和不同大小级正文池缺少当前版本的独立计时数据。配置、创建、销毁和状态查询按功能验收，无需单列吞吐。
 
 函数与用例索引
-下表按类列出 785 个非模板成员函数名及相应的用例入口。同名重载可对应多个编号，本次未采集分支覆盖率。
+下表按类列出 787 个非模板成员函数名及相应的用例入口。同名重载可对应多个编号，本次未采集分支覆盖率。
 纯虚运输和发现回调没有基类函数体。32 号通过具体运输观察 listen 收到的默认 64 与显式 1，36 号通过宿主发现器的 choose 交付候选。每个已索引的函数列出至少一个实际进入它的用例。同名重载可能对应多个编号。输入、预期输出和状态变化见相应的编号说明。模板另按实际对象行为核对。25 号和 50 号分别覆盖 NetSenderSubmissionState::lookupIndex 的回执索引与请求索引实例，包括保护资源暂时不足时的返回和重试。14号通过五级缓冲分配、归还和池统计验证 NetBufferPoolBlock 的实际构造及 NetBufferPool::acquire。51号覆盖 NetObjectPoolItem 构造、NetObjectPool 的创建/引用计数/状态转换/统计，以及 NetObjectReference 的默认构造、复制、移动、两种赋值、解引用、布尔查询、获取与移交所有权、清空和析构。
 NetBufferLease
   14 号　NetBufferLease、 adopt、 capacity、 data、 reset、 swap、 ~NetBufferLease
@@ -298,6 +309,7 @@ NetInterface
       tlsCreateClient、 tlsFinishInput、 tlsGetStatus、 tlsPeekOutput、 tlsProgress
   47 号　consume、 create、 destroy、 feed、 finish、 peek、 peekFields、 reset
   48 号　certificateCreateRequest、 directoryCreate、 directoryNode
+  52 号　monotonicMilliseconds
   认证时限专项　linkAccept、 linkConsumeControl、 linkConsumeOutput、 linkConsumeRecord、 linkCreate、 linkFinishInput、 linkPeerInfo
       linkPeekControl、 linkPeekOutput、 linkPeekRecord、 linkProgress、 linkSendControl、 linkSendRecord
       linkStatus
@@ -579,7 +591,9 @@ enum NetInterfaceTestCase
     // 核对多生产者同时预留的请求号、唯一性和关闭后的输出
     CaseSubmissionProducers = 50,
     // 检查池槽实际归还和父子引用间的复制、转交。
-    CaseObjectReferences = 51
+    CaseObjectReferences = 51,
+    // 比对平台单调参考与公开计时，连续调用不得倒退
+    CaseMonotonicClock = 52
 };
 
 // 借用指针和字段共享同一起点，用于检查输出区域相交时的返回值。
