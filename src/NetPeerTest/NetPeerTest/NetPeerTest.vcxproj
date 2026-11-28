@@ -102,7 +102,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>NetPeerd.lib;NetInterfaced.lib;NetChanneld.lib;Compressd.lib;ProtoMessageManagerd.lib;Variantd.lib;CEncodeDecoded.lib;LockFreeQueued.lib;LockFreeHashMapd.lib;CSystemd.lib;zstdd.lib;libprotobuf-lited.lib;mbedtlsd.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>zstdd.lib;libprotobuf-lited.lib;mbedtlsd.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(TestSdkRoot)\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -119,7 +119,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>NetPeerd.lib;NetInterfaced.lib;NetChanneld.lib;Compressd.lib;ProtoMessageManagerd.lib;Variantd.lib;CEncodeDecoded.lib;LockFreeQueued.lib;LockFreeHashMapd.lib;CSystemd.lib;zstdd.lib;libprotobuf-lited.lib;mbedtlsd.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>zstdd.lib;libprotobuf-lited.lib;mbedtlsd.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(TestSdkRoot)\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -138,7 +138,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>NetPeer.lib;NetInterface.lib;NetChannel.lib;Compress.lib;ProtoMessageManager.lib;Variant.lib;CEncodeDecode.lib;LockFreeQueue.lib;LockFreeHashMap.lib;CSystem.lib;zstd.lib;libprotobuf-lite.lib;mbedtls.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>zstd.lib;libprotobuf-lite.lib;mbedtls.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
@@ -159,19 +159,34 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>NetPeer.lib;NetInterface.lib;NetChannel.lib;Compress.lib;ProtoMessageManager.lib;Variant.lib;CEncodeDecode.lib;LockFreeQueue.lib;LockFreeHashMap.lib;CSystem.lib;zstd.lib;libprotobuf-lite.lib;mbedtls.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>zstd.lib;libprotobuf-lite.lib;mbedtls.lib;ws2_32.lib;iphlpapi.lib;psapi.lib;userenv.lib;bcrypt.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;gdi32.lib;user32.lib;dbghelp.lib;advapi32.lib;crypt32.lib;secur32.lib;normaliz.lib;wldap32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(TestSdkRoot)\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
+  <PropertyGroup>
+    <NetPeerFixtureSource>$(ProjectDir)..\..\NetGatewayTest\NetGatewayTest\NetTestTlsCertificateData.h</NetPeerFixtureSource>
+    <NetPeerFixtureInclude>$(IntDir)test-sdk\include</NetPeerFixtureInclude>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(NetPeerFixtureInclude);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="NetPeerTest.h" />
+    <UpToDateCheckInput Include="$(NetPeerFixtureSource)" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NetPeerTest.cpp" />
+    <ClCompile Include="NetPeerSenderCEntry.c" />
   </ItemGroup>
+  <Target Name="PrepareNetPeerTestCertificateData" BeforeTargets="ClCompile"
+      Inputs="$(NetPeerFixtureSource)" Outputs="$(NetPeerFixtureInclude)\NetGatewayTest\NetTestTlsCertificateData.h">
+    <Copy SourceFiles="$(NetPeerFixtureSource)" DestinationFiles="$(NetPeerFixtureInclude)\NetGatewayTest\NetTestTlsCertificateData.h" />
+  </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

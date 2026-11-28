@@ -20,6 +20,9 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="NetPeerSenderCEntry.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="NetPeerTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
